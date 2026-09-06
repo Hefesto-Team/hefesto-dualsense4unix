@@ -59,6 +59,11 @@ PAGINA = "05-vibracao.html"
 #: MAC da faixa SINTÉTICA da casa — há dois portões de anonimato nesta árvore.
 UNIQ = "aa:bb:cc:00:00:01"
 
+#: O SEGUNDO CONTROLE, e ele existe por uma régua só: com um controle na mesa,
+#: `P1` sai por coincidência — qualquer contagem acerta. Com dois, só o
+#: `jogador` do item de mesa dá `P2`.
+OUTRO = "aa:bb:cc:00:00:02"
+
 #: A GRAFIA COM QUE O DAEMON CHAVEIA O MAPA: doze hexa, sem dois-pontos e em
 #: minúscula (`gamepad._chave_da_peca`). Ela NÃO se digita aqui — sai do mesmo
 #: normalizador que o produto usa, senão esta régua passaria a provar a minha
@@ -139,6 +144,67 @@ def a05():
     import pacotes.a05_vibracao as mod
 
     return mod
+
+
+def _perfil_do_esquema(nome: str = "regua", **campos: Any):
+    """Um `Profile` DE VERDADE — o esquema é metade do que esta régua mede.
+
+    Um dublê aceitaria `policy="furrufu"` e a régua ficaria verde sobre um
+    perfil que o loader recusaria no disco dela.
+    """
+    from hefesto_dualsense4unix.profiles.schema import Profile
+
+    return Profile.model_validate(
+        {"name": nome, "match": {"type": "criteria"}, **campos})
+
+
+@pytest.fixture
+def disco(monkeypatch):
+    """Um disco de mentira: guarda o que o gesto mandou gravar.
+
+    ELE PRECISOU EXISTIR NESTE ARQUIVO — 06/09/2026. As réguas da faixa CHAMAM
+    o gesto e olham o que volta, em vez de ler o texto do código, e `forca`
+    grava no perfil antes de dizer qualquer coisa. Sem o dublê, a régua tocaria
+    o `~/.config` de verdade — que é o que o `conftest.py` desvia para um lar de
+    mentira, mas gravar nele mesmo assim é escrever fora do escopo.
+    """
+    from hefesto_dualsense4unix.profiles import loader
+
+    gravados: list[Any] = []
+    estado: dict[str, Any] = {}
+    monkeypatch.setattr(loader, "load_profile", lambda n: estado[n],
+                        raising=False)
+    monkeypatch.setattr(loader, "save_profile",
+                        lambda prof, **_: gravados.append(prof), raising=False)
+    return estado, gravados
+
+
+def _ctx_dois(**estado: Any):
+    """Dois controles na tela, e o SEGUNDO é o `jogador` 2.
+
+    A MESA TEM `jogador` E `pref`, e os dois são coisas diferentes: `pref` é a
+    posição (`p1`..`p4`) e `jogador` é o número que a coluna MOSTRA no rótulo.
+    A régua da faixa exige o segundo.
+    """
+    import pacotes
+
+    base = {"rumble_policy": "balanceado", "rumble_mult_applied": 0.7,
+            "active_profile": "regua"}
+    base.update(estado)
+    mesa = [{"pref": "p1", "jogador": 1, "uniq": UNIQ, "nome": "Régua",
+             "via": "USB", "cor": "starlight-blue", "plastico": "#123456",
+             "conectado": True},
+            {"pref": "p2", "jogador": 2, "uniq": OUTRO, "nome": "Régua II",
+             "via": "BT", "cor": "midnight-black", "plastico": "#123456",
+             "conectado": True}]
+    conectados = [{"uniq": UNIQ, "player": 1, "connected": True, "index": 0,
+                   "transport": "usb", "battery_pct": 90, "is_primary": True,
+                   "inputs": {}},
+                  {"uniq": OUTRO, "player": 2, "connected": True, "index": 1,
+                   "transport": "bt", "battery_pct": 80, "is_primary": False,
+                   "inputs": {}}]
+    return pacotes.Contexto(state=base, mesa=mesa, conectados=conectados,
+                            estados={})
 
 
 # --------------------------------------------------------------------------
@@ -593,7 +659,8 @@ def test_a_nota_do_testar_mora_na_dica(bancada: str) -> None:
 # --------------------------------------------------------------------------
 # 7. O RECADO DE SUCESSO — decisão [04] / D-01
 # --------------------------------------------------------------------------
-def test_o_aviso_do_que_a_coluna_mostra_e_sucesso_e_nao_recusa(a05) -> None:
+def test_o_aviso_do_que_a_coluna_mostra_e_sucesso_e_nao_recusa(
+        a05, disco) -> None:
     """A gravação aconteceu: o canal é o de SUCESSO, não o da recusa.
 
     Enquanto só existia o canal da recusa, um clique que deu certo pousava uma
@@ -601,16 +668,251 @@ def test_o_aviso_do_que_a_coluna_mostra_e_sucesso_e_nao_recusa(a05) -> None:
     ONDA0-P construiu o canal de sucesso (verde, 6 s), e um gesto que devolva
     `{"recado": …}` manda a própria frase.
 
-    MORDIDA: em `_aplicar_a_forca`, troque os três `return {"recado": …}` por
-    `raise RuntimeError(…)` — este caso reprova, e o piloto volta a anotar
-    `("recusou dizendo", …)` sobre um disco que mudou.
-    """
-    import inspect
+    **ELA DEIXOU DE LER O TEXTO DO CÓDIGO — 06/09/2026.** O que estava aqui era
+    `inspect.getsource(_aplicar_a_forca)` procurando as strings
+    `'return {"recado":'` e `"raise RuntimeError"`: a régua **mediu o FONTE**, e
+    não o que o gesto devolve. É a forma de defeito que esta casa pagou onze vezes em
+    26/08 — *a régua digita o que devia LER* — e ela reprovaria qualquer
+    mudança de forma, inclusive a desta sprint, sem que nada na tela tivesse
+    piorado. Agora ela CHAMA o gesto com o disco dublê e olha o que volta.
 
-    fonte = inspect.getsource(a05._aplicar_a_forca)
-    assert 'return {"recado":' in fonte, (
-        "o aviso do que a coluna mostra voltou a ser recusa — a gravação "
-        "aconteceu, e a tarja laranja de 30 s ensina que o botão falha")
-    assert "raise RuntimeError" not in fonte, (
-        "sobrou uma recusa em `_aplicar_a_forca`: os três desfechos dele são "
-        "recibos, não recusas")
+    MORDIDA: em `_aplicar_a_forca`, troque o `return {"recado": …}` do primeiro
+    ramo por `raise RuntimeError(…)` — este caso reprova pelo `pytest.raises`,
+    e o piloto volta a anotar `("recusou dizendo", …)` sobre um disco que mudou.
+    """
+    # O RAMO DA "ESCOLHA QUE NÃO DIVERGE", montado como o produto o produz: o
+    # global do PERFIL já é `balanceado`, então `with_controller_rumble` APAGA
+    # o override no clique do mesmo degrau; sem override, a coluna cai no
+    # `rumble_policy` que o daemon publica — aqui `max` —, e o botão que ela
+    # clicou não é o que fica aceso.
+    estado, gravados = disco
+    estado["regua"] = _perfil_do_esquema(
+        rumble={"policy": "balanceado"},
+        controllers={_chave(UNIQ): {"rumble": {"policy": "economia"}}})
+
+    volta = _gesto("forca")(_ctx(rumble_policy="max"),
+                            {"uniq": UNIQ, "forca": "balanceado"},
+                            PonteFiel())
+
+    assert isinstance(volta, dict) and volta.get("recado"), (
+        f"o gesto não devolveu recado nenhum ({volta!r}) — sem ele a coluna "
+        f"muda de degrau sem uma palavra")
+    assert gravados, "o clique não gravou — o recibo seria sobre nada"
+
+    # E O CANAL DA RECUSA CONTINUA SENDO OUTRO: um `RuntimeError` daqui faria o
+    # piloto pintar laranja por 30 s sobre um disco que MUDOU. A asserção é
+    # sobre o CAMINHO, e não sobre o texto do código: se algum dos ramos voltar
+    # a levantar, o `_gesto` acima já teria estourado antes desta linha.
+    assert not isinstance(volta, BaseException)
+
+
+# --------------------------------------------------------------------------
+# 8. A FAIXA EMBAIXO DA GRADE — 05-Q4 dela, 05/09/2026
+#
+#    *"Linha embaixo da grade — a frase entra na faixa que já existe sob a
+#    grade, nomeando a coluna (`P2 · voltou ao ajuste geral`) e some logo
+#    depois; **nada se mexe dentro das colunas**."*
+# --------------------------------------------------------------------------
+def test_a_frase_da_faixa_nomeia_a_coluna(a05, disco) -> None:
+    """Dois controles na tela, clique no SEGUNDO, e o `P2` abre a frase.
+
+    FORA DO CARTÃO A FRASE PERDE O ENDEREÇO. Dentro da coluna, o endereço era a
+    própria coluna em que o aviso pousava; uma linha embaixo da grade fala das
+    quatro ao mesmo tempo, e sem o `P2` ninguém sabe de qual. Com dois
+    controles na mesa esta é a única asserção que distingue a frase do P1 da do
+    P2.
+
+    O NÚMERO NÃO SE DIGITA: ele é o `jogador` do item de mesa, o MESMO que a
+    coluna já mostra no rótulo (`aba05`, `P{c["jogador"]}`). Por isso a régua
+    monta a mesa com `jogador: 2` no segundo e exige o `P2` — contar a posição
+    na lista daria `P2` por coincidência e `P1` no dia em que o primeiro caísse.
+
+    MORDIDA: em `_aplicar_a_forca`, troque `_na_faixa(ctx, uniq, …)` pela frase
+    crua — este caso reprova, porque o `P2` some da linha.
+    """
+    estado, _ = disco
+    estado["regua"] = _perfil_do_esquema(
+        rumble={"policy": "balanceado"},
+        controllers={_chave(OUTRO): {"rumble": {"policy": "economia"}}})
+
+    volta = _gesto("forca")(_ctx_dois(rumble_policy="max"),
+                            {"uniq": OUTRO, "forca": "balanceado"},
+                            PonteFiel())
+    frase = str((volta or {}).get("recado") or "")
+    assert frase.startswith(f"P2{a05.SEPARADOR_DA_FAIXA}"), (
+        f"a linha da faixa não nomeia a coluna: {frase!r}. Ela fala das quatro "
+        f"colunas ao mesmo tempo, e o `P2` é o único endereço que ela tem")
+    assert "P1" not in frase, (
+        f"a frase do P2 nomeou outra coluna: {frase!r}")
+
+
+def test_a_frase_da_faixa_cabe_numa_linha(a05) -> None:
+    """As três frases sob o teto MEDIDO — a faixa reserva UMA linha.
+
+    O TETO NÃO É GOSTO: `a05_vibracao.TETO_DA_LINHA_DA_FAIXA` traz a medição no
+    Chrome a 1920x1080, com três vocabulários (181 · 189 · 187 caracteres), e o
+    número guardado fica abaixo do MENOR. A segunda linha sai CORTADA — foi o
+    que a foto de 04/09/2026 mostrou com a primeira versão da
+    `_ressalva_da_mesa`, de 285 caracteres.
+
+    A CONTA É DA FRASE PRONTA, com o `P2 ·` na frente e com o nome de degrau
+    MAIS LONGO no `%s`: uma régua sobre o molde cru daria verde sobre uma linha
+    que a tela corta.
+
+    MORDIDA: devolva `FRASE_DA_MESA_EM_AUTO` ao texto de 331 caracteres de
+    04/09 — este caso reprova.
+    """
+    mais_longo = max((a05._nome_do_degrau(c) for c in ("custom", "economia",
+                                                       "balanceado", "max")),
+                     key=len)
+    prefixo = f"P4{a05.SEPARADOR_DA_FAIXA}"
+    for nome in ("FRASE_DO_AJUSTE_GERAL", "FRASE_DO_QUE_A_COLUNA_MOSTRA",
+                 "FRASE_DA_MESA_EM_AUTO"):
+        molde = getattr(a05, nome)
+        pronta = prefixo + (molde % mais_longo if "%s" in molde else molde)
+        assert len(pronta) <= a05.TETO_DA_LINHA_DA_FAIXA, (
+            f"{nome} tem {len(pronta)} caracteres na linha e o teto medido é "
+            f"{a05.TETO_DA_LINHA_DA_FAIXA} — a faixa corta a segunda linha, e "
+            f"uma explicação que ela não consegue ler ocupa o lugar sem "
+            f"informar:\n  {pronta}")
+
+
+def test_a_frase_da_faixa_diz_o_que_o_produto_diz(a05) -> None:
+    """A metade do FATO não é redigitada — ela vem da oração do produto.
+
+    A janela estável diz a mesma coisa no mesmo caso desde 25/08
+    (`rumble_actions.TEXTO_A_PECA_VOLTOU_AO_AJUSTE_GERAL`, RUM-3). O que a
+    faixa mostra é a metade do FATO dela, porque o MECANISMO não cabe numa
+    linha e mudou de casa (o `?` do rótulo "Força da vibração"). Escrever aqui
+    uma segunda oração seria a divergência que a regra das duas cópias existe
+    para matar — e esta régua **pergunta ao dono** em vez de digitar a resposta.
+
+    MORDIDA: troque `FATO_DO_AJUSTE_GERAL` por *"voltou ao ajuste padrão"* —
+    este caso reprova, porque a oração do produto não diz isso.
+    """
+    from hefesto_dualsense4unix.app.actions.rumble_actions import (
+        TEXTO_A_PECA_VOLTOU_AO_AJUSTE_GERAL,
+    )
+
+    assert a05.FATO_DO_AJUSTE_GERAL in TEXTO_A_PECA_VOLTOU_AO_AJUSTE_GERAL, (
+        f"a linha da faixa diz {a05.FATO_DO_AJUSTE_GERAL!r} e o produto diz "
+        f"{TEXTO_A_PECA_VOLTOU_AO_AJUSTE_GERAL!r} — as duas telas deixaram de "
+        f"contar o mesmo fato com as mesmas palavras")
+    assert a05.FATO_DO_AJUSTE_GERAL in a05.FRASE_DO_AJUSTE_GERAL, (
+        "a frase da faixa deixou de usar o fato que o produto nomeia")
+
+
+def test_a_frase_da_faixa_e_recibo_e_nao_alerta(a05, bancada: str) -> None:
+    """O tom da linha é o do RECIBO, e ele é verde.
+
+    LARANJA SOBRE UM CLIQUE QUE GRAVOU ENSINA QUE O BOTÃO FALHA — é o defeito
+    que a D-01 fechou em 04/09/2026, e o `alerta` desta faixa é laranja
+    (`--orange`). Verde é a cor que esta casa usa para o que deu certo em todas
+    as dez abas, e `hefesto_vivo.COR_DO_SUCESSO` lê o MESMO `--green`.
+
+    AS DUAS METADES DESTA POSSE ESTÃO AQUI: o nome do tom (o pacote) e a regra
+    que o pinta (o desenho). Sem a segunda, a linha pousa sem cor nenhuma.
+
+    MORDIDA: em `a05_vibracao`, faça `TOM_DO_RECIBO = _tela.ALERTA`, ou pinte
+    `.vib-estado .est.recibo` com `--orange` no `aba05.CSS` — este caso reprova
+    nas duas.
+    """
+    assert a05.TOM_DO_RECIBO not in (_tela.DIZ, _tela.ALERTA, _tela.INFO), (
+        f"o recibo passou a usar um tom que já tem dono ({a05.TOM_DO_RECIBO!r})"
+        f" — o `alerta` é laranja, e alerta sobre um clique que gravou ensina "
+        f"que o botão falha")
+    assert (f'data-hef-recado-classe="est {a05.TOM_DO_RECIBO}"' in bancada), (
+        f"a faixa não veste o recado com o tom {a05.TOM_DO_RECIBO!r} — o "
+        f"pacote e o desenho deixaram de falar do mesmo tom")
+    regra = f".vib-estado .est.{a05.TOM_DO_RECIBO}"
+    assert f"{regra}{{color:var(--green)}}" in bancada, (
+        f"o tom do recibo não é verde na folha desta aba ({regra})")
+    assert "--orange" not in bancada.split(regra, 1)[-1].split("}", 2)[0], (
+        "o recibo da faixa ficou laranja")
+
+
+def test_o_deu_certo_seco_nao_vira_frase(a05, disco) -> None:
+    """O clique que NÃO contradiz o botão continua sem frase nenhuma.
+
+    **É ESTA QUE GUARDA A 03-Q4 DELA**, 05/09/2026: *"nada muda de lugar e
+    nenhuma palavra nova entra na tela"*. Sem ela, alguém acrescenta um
+    `"Pronto."` na faixa e a decisão morre calada — o "deu certo" seco é a
+    piscada verde no campo, não uma linha de texto.
+
+    E É TAMBÉM A METADE QUE PROVA QUE A FAIXA SOME: sem frase não há depósito,
+    e sem depósito não há nó na faixa. A tela parada não ganha uma linha.
+
+    MORDIDA: em `_aplicar_a_forca`, troque o `return None` final por
+    `return {"recado": _na_faixa(ctx, uniq, "Pronto.")}` — este caso reprova.
+    """
+    estado, gravados = disco
+    estado["regua"] = _perfil_do_esquema(
+        controllers={_chave(UNIQ): {"rumble": {"policy": "economia"}}})
+
+    volta = _gesto("forca")(_ctx(rumble_policy="balanceado"),
+                            {"uniq": UNIQ, "forca": "max"}, PonteFiel())
+    assert gravados, "o clique não gravou — o silêncio seria sobre nada"
+    assert volta is None, (
+        f"o clique que deu certo e não tem notícia falou na tela: {volta!r}. "
+        f"A 03-Q4 dela é a piscada verde, sem palavra nova")
+
+
+def test_a_faixa_declara_que_recebe_o_recado(bancada: str) -> None:
+    """O terceiro lugar do recado é a FAIXA, e quem o declara é a página.
+
+    O PILOTO CONHECE DOIS LUGARES — o cartão do controle e a tarja de rodapé
+    (`hefesto_vivo.pintar_recados`). O terceiro é este, e o endereço tem de ser
+    da PÁGINA: cravar `#vib-estado` dentro do piloto seria o piloto único
+    sabendo o nome de um elemento de uma aba só — a mesma dívida que o `.fita`
+    de dois donos já cobra na `07-lancadores`.
+
+    O TOM VIAJA NO ATRIBUTO porque só o SUCESSO muda de lugar: a recusa
+    continua no cartão, laranja, por 30 s (§6 da sprint). Um endereço sem tom
+    mudaria as duas.
+
+    **A METADE QUE FALTA NÃO É DESTA POSSE** — `pintar_recados` ler estes dois
+    atributos está relatado com a forma exata em
+    `docs/process/agentes/2026-09-06/ONDA5-05-03.md`.
+
+    MORDIDA: tire o `data-hef-recados` do `<div class="vib-estado">` em
+    `aba05.MIOLO` e regere — a régua 17 do gerador reprova antes desta.
+    """
+    faixa = bancada.split('class="vib-estado"', 1)[-1].split(">", 1)[0]
+    assert 'data-hef-recados="sucesso"' in faixa, (
+        "a faixa deixou de declarar que recebe o recado de sucesso — sem isso "
+        "ele volta a pousar DENTRO da coluna, cobrindo o topo do desenho do "
+        "controle por 6 s a cada clique, e a 05-Q4 dela diz *nada se mexe "
+        "dentro das colunas*")
+    assert "recusa" not in faixa, (
+        "a faixa passou a receber também a recusa — ela continua no cartão, "
+        "laranja e por 30 s, e esta sprint mexe no que deu CERTO")
+
+
+def test_nenhuma_linha_da_faixa_diz_mesa(a05) -> None:
+    """A palavra "mesa" não entra em texto de tela — decisão dela, 06/09/2026.
+
+    *"Falei do termo mesa que é horrível. (…) O termo sai e coloca-se termos
+    simples pro user comum. feature fica."* — `docs/A-LINGUA-DESTA-CASA`. Na
+    tela é **força geral**; na casa continua sendo a mesa (`ctx.mesa`,
+    `mesa_viva.py`), e por isso esta régua olha só o TEXTO que sobe.
+
+    O ESCOPO É A FAIXA, e é o que esta sprint possui: as três frases do recado
+    e a ressalva que vive ao lado delas. Duas linhas na MESMA faixa, uma
+    dizendo "força da mesa" e a outra "força geral", seriam dois nomes para o
+    mesmo botão, um embaixo do outro.
+
+    MORDIDA: devolva `"a força da mesa está em Auto"` à `_ressalva_da_mesa` —
+    este caso reprova.
+    """
+    ressalva = a05._ressalva_da_mesa(
+        {"rumble": {"policy": "auto"},
+         "controllers": {_chave(UNIQ): {"rumble": {"policy": "max"}}}},
+        [{"pref": "p1", "jogador": 1, "uniq": UNIQ}])
+    assert ressalva, "a ressalva não nasceu — a régua mediria uma string vazia"
+    da_faixa = [ressalva, a05.FRASE_DA_MESA_EM_AUTO, a05.FRASE_DO_AJUSTE_GERAL,
+                a05.FRASE_DO_QUE_A_COLUNA_MOSTRA % a05._nome_do_degrau("custom"),
+                a05.FRASE_DO_QUE_A_COLUNA_MOSTRA % a05._nome_do_degrau("furrufu")]
+    for frase in da_faixa:
+        assert "mesa" not in frase.lower(), (
+            f"a palavra que ela baniu da tela voltou a uma linha da faixa: "
+            f"{frase!r}")
