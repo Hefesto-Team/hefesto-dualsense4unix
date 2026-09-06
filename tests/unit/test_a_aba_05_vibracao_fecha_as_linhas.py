@@ -17,7 +17,11 @@ esquema, os textos vêm do produto e o desenho vem da BANCADA:
    saiu se inverte, não se apaga.
 3. **A LINHA DE MESA** (decisão [05]) e o "herdado" que ela torna legível: a
    coluna sem ajuste próprio deixa de acender degrau.
-4. **A NOTA DO TESTAR NA TELA** (decisão [02]) — e uma vez só.
+4. **A NOTA DO TESTAR NA DICA** (05-Q2 dela, 05/09/2026: *"As duas na dica."*)
+   — e uma vez só. Ela era linha permanente de tela entre 04/09 e 05/09, por
+   uma decisão do PO atribuída a ela; a régua não foi apagada nem reescrita em
+   massa: o ``count == 1`` ficou byte a byte, porque ele proíbe a frase de
+   existir em dois lugares **seja qual for o lugar escolhido**.
 
 **O DUBLÊ DAQUI É FIEL, e é a razão de este arquivo existir em vez de uma linha
 no ``PROVAS``.** A ``PonteDeMentira`` da régua geral responde ``True`` a
@@ -537,22 +541,45 @@ def test_a_coluna_sem_ajuste_proprio_nao_acende_degrau() -> None:
 
 
 # --------------------------------------------------------------------------
-# 6. A NOTA DO TESTAR — decisão [02]
+# 6. A NOTA DO TESTAR — 05-Q2
 # --------------------------------------------------------------------------
-def test_a_nota_do_testar_e_linha_de_tela(bancada: str) -> None:
-    """Ela sobe do `?` para a tela — e aparece UMA vez.
+def test_a_nota_do_testar_mora_na_dica(bancada: str) -> None:
+    """Ela volta da tela para o `?` do "Testar agora" — e aparece UMA vez.
 
-    É a única frase desta aba que explica um resultado que a própria tela
-    produz: por que um "Testar" com 220 sai fraco quando o degrau está em
-    Economia. E ela é LIDA do `gui/main.glade`, nunca redigitada.
+    **05-Q2 dela, 05/09/2026: _"As duas na dica."_** Ela leu as quatro opções
+    — as duas na dica, só a nota do Testar, a do Automático quando valer, as
+    duas na tela — e escolheu a primeira. Até 05/09 o produto fazia a segunda,
+    e aquilo estava escrito como *"decisão [02] dela, 04/09/2026"* em quatro
+    lugares: a fonte real era a `ONDA2-05-VIBRACAO-01`, que decidiu no lugar
+    dela. **A palavra dela vence a atribuição.**
 
-    MORDIDA: em `aba05.MIOLO`, tire o `<div class="vib-nota">` e regere — a
-    régua 16 do gerador reprova antes desta.
+    O QUE NÃO MUDOU, e é a metade da razão de 04/09 que não caducou: a frase é
+    LIDA do `gui/main.glade` (`DICA_DOS_VALORES_QUE_PASSAM`), nunca redigitada.
+    Esta régua a compara com o que o glade diz AGORA, e por isso ela não
+    sobrevive a uma segunda cópia do texto.
+
+    O ENDEREÇO É A CÉLULA DO RÓTULO, não a página: perguntar `frase in bancada`
+    daria verde com ela de volta na linha embaixo da grade.
+
+    MORDIDA: em `aba05.MIOLO`, devolva a linha
+    `<div class="vib-nota">{DICA_DOS_VALORES_QUE_PASSAM}</div>` depois da
+    `.vib` e regere — a régua 16 do gerador reprova antes desta, pelo
+    `count == 1`.
     """
     import aba05
 
-    assert f'class="vib-nota">{aba05.DICA_DOS_VALORES_QUE_PASSAM}' in bancada, (
-        "a nota do Testar não é linha de tela")
+    celula = bancada.split('<span class="sec-rot">Testar agora', 1)
+    assert len(celula) == 2, (
+        'o rótulo "Testar agora" saiu da coluna de rótulos — sem ele não há '
+        "onde a dica morar")
+    dica = celula[-1].split("</div>", 1)[0].split('<span class="dica"', 1)
+    assert len(dica) == 2, 'o `?` do "Testar agora" sumiu da célula do rótulo'
+    assert aba05.DICA_DOS_VALORES_QUE_PASSAM in dica[-1], (
+        'a nota do Testar não está no `?` do "Testar agora" — a 05-Q2 dela é '
+        '*"As duas na dica"*')
+    assert 'class="vib-nota"' not in bancada, (
+        "a linha permanente embaixo da grade voltou — ela saiu na 05-Q2, e a "
+        "classe sem regra de CSS seria um dado morto na página")
     assert bancada.count(aba05.DICA_DOS_VALORES_QUE_PASSAM) == 1, (
         "a nota do Testar aparece duas vezes na mesma tela — o `?` e a linha")
     # A OUTRA METADE DA DECISÃO [02] ERA A DICA DOS 5 s DO AUTO, no `?`. Ela
