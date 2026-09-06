@@ -1417,7 +1417,24 @@
   .mudo-i{width:22px;height:22px;flex:0 0 22px;border-radius:5px;cursor:pointer;
           border:1px solid var(--border-forte);background:var(--panel);color:var(--texto-mudo);
           font-size:10px;line-height:20px;text-align:center;padding:0;font-family:inherit}
-  .mudo-i.on{border-color:var(--red);color:var(--red);background:rgba(255,85,85,.1)}
+  /* AS DUAS CORES DO ♪ NÃO MORAM AQUI, e a razão é que elas PERGUNTAM A PALAVRA
+     ao dono: os seletores casam o que `mesa_viva.selo_do_mic` devolve, e um
+     seletor com a palavra digitada à mão para de casar CALADO no dia em que o
+     dono mudar de palavra. Elas estão no bloco de CSS interpolado do fim deste
+     arquivo, que é onde `SELO_ATIVO`/`SELO_MUDO` já existem.
+
+     E O ENDEREÇO DESTE COMENTÁRIO É PROSA DE PROPÓSITO — 06/09/2026: citar
+     aqui, letra por letra, a abertura daquele bloco fecharia ESTA string, e a
+     casa já pagou por isso uma vez (o aviso de 05/09 sobre o `BOOTSTRAP`, que
+     virou o defeito que descrevia, na mesma noite).
+
+     `.mudo-i.on` SAIU DAQUI — 06/09/2026, com os dois últimos escritores. Ela
+     pintava `--red` no ♪ mudo (a cor da FALHA nesta casa, sobre um alto-falante
+     calado por escolha dela) e no 🎙 do segundo card, onde a classe era do
+     GERADOR e não do aparelho — a cor congelada que a decisão 02-Q9 mandou
+     tirar. Com `alto_on` e `mic_on` fora, ela perdeu o último escritor, e é a
+     regra que este arquivo já aplicou quando o `.solta` saiu: *"CSS de elemento
+     que ninguém mais escreve é promessa esperando alguém tropeçar nela"*. */
   /* SEM POSSE, SEM GESTO. `speaker.set {muted}` é RECUSADO pelo daemon enquanto
      o volume do controle for desconhecido (`ipc_handlers.py`). Um botão que a
      tela oferece e o produto recusa é a mentira que esta aba existe para não
@@ -1441,8 +1458,9 @@
      dívida que a `05-vibracao` e a `06-navegacao` já têm com o `:empty`.
 
      QUEM CARREGA O ENDEREÇO É A LINHA, e não o botão — a razão está em
-     `linha_de_volume`: o ♪ já gasta o seu único par alvo/campo para ACENDER
-     quando o alto-falante está mudo, e um elemento aceita um alvo só. */
+     `linha_de_volume`: o ♪ já gasta o seu único par alvo/campo para dizer em
+     QUAL dos dois estados o alto-falante está (02-Q9), e um elemento aceita um
+     alvo só. */
   .vol[data-porque] .mudo-i{border-color:var(--border-sutil);
                             color:var(--texto-mudo);cursor:not-allowed}
   .vol[data-porque] .mudo-i:hover{border-color:var(--border-sutil);
@@ -1626,6 +1644,37 @@
      como a única licença para nomear um termo que o desenho não escreve. */
   .nota li.foi{color:var(--texto-mudo);border-left:2px solid var(--border-forte);
     padding-left:9px;list-style:none;margin-left:-16px}
+  /* ---------- O ♪ EM DUAS CORES — decisão dela, 02-Q9 ----------
+     Ela marcou *"O botão de som acende"* e digitou por cima *"Com cor
+     diferente"*; na segunda volta fechou o que isso quer dizer:
+     **borda VERDE se ligado, ÂMBAR se desligado**.
+
+     SÃO DOIS ESTADOS PINTADOS, e o que havia era um e meio: MUDO pintava
+     `--red` e ATIVO ficava com a mesma cara de "não sei". O `--red` é a cor da
+     FALHA nesta casa, e um alto-falante calado por escolha dela não é falha; o
+     âmbar é a palavra que esta janela já usa para o meio-termo — é a razão
+     escrita do `--orange` da marca de degradação, no bloco `.degradou`.
+
+     O TERCEIRO ESTADO NÃO SE DESENHA: sem `data-som` o botão fica com o
+     `.mudo-i` de base, que é o cinza de "ninguém leu o alto-falante deste
+     controle". O piloto REMOVE o atributo no `—` (o ramo `vazio || t === '—'`
+     do alvo `atributo`), então o neutro é o que sobra sozinho.
+
+     NENHUMA COR NOVA: `--green` e `--orange` já estão na folha desta página, e
+     a palavra dos seletores vem de `mesa_viva.selo_do_mic` pelo
+     `SELO_ATIVO`/`SELO_MUDO` — nunca digitada aqui. O `rgba` do fundo é o
+     mesmo `--orange` a 10 %, e é a forma que esta página já usa duas vezes
+     (a tarja de recusa a 7 %, o `.gb.on` com o `--pink` a 55 %): `var()` não
+     entra em `rgba()`, e um segundo token só para o fundo seria uma cor a mais
+     na folha para dizer a mesma coisa.
+
+     O CINZA DA RAZÃO CONTINUA VENCENDO, e por ESPECIFICIDADE e não por ordem:
+     `.vol[data-porque] .mudo-i` é (0,3,0) contra os (0,2,0) destas duas. Um
+     botão que o produto vai recusar não pode aparecer verde — conferido na
+     foto, não na conta. */
+  .mudo-i[data-som="ATIVO"]{border-color:var(--green);color:var(--green)}
+  .mudo-i[data-som="MUDO"]{border-color:var(--orange);color:var(--orange);
+    background:rgba(255,184,108,.1)}
 
 </style>
 <style data-campo="plastico-css" data-hef-alvo="html">
@@ -2114,7 +2163,7 @@
             <div class="vol" data-campo="mic-porque" data-hef-alvo="atributo" data-hef-atributo="data-porque">
               <span class="trilho"><span class="cheio" style="width:80%"></span><input class="puxa-vol" type="range" min="0" max="100" step="1" value="80" data-gesto="volume" data-volume="microfone" aria-label="Volume do microfone deste controle" title="Arraste para escolher quanto do microfone deste controle chega ao PC — de 0 a 100. É o ganho da FONTE no sistema, e não o mudo do plástico: não apaga a luz vermelha e não tira o botão do controle. Grava na hora."></span>
               <span class="n">80</span>
-              <button class="mudo-i" data-gesto="mudo" data-mudo="microfone" title="Calar no firmware do controle — apaga a luz vermelha do plástico. A partir daqui quem manda no mudo é o Hefesto, e o botão do controle para de valer. Esta tela não devolve o comando: a volta é pela janela do aplicativo ou reiniciando o Hefesto.">🎙</button>
+              <button class="mudo-i" data-gesto="mudo" data-mudo="microfone" title="Calar no firmware do controle — apaga a luz vermelha do plástico. A partir daqui quem manda no mudo é o Hefesto, e o botão do controle para de valer. Esta tela não devolve o comando: quem devolve é hefesto-dualsense4unix mic release, ou reiniciar o Hefesto.">🎙</button>
               <span class="ajuda porque">?<span class="dica" data-campo="mic-porque" data-hef-alvo="html"><i class="nada"></i></span></span>
             </div>
             <!-- OS DOIS MODOS DESCERAM PARA CÁ — decisão dela, 31/08/2026:
@@ -2156,7 +2205,7 @@
               <span class="trilho"><span class="cheio" data-campo="alto-barra"
                 data-hef-alvo="largura" style="width:100%"></span><input class="puxa-vol" type="range" min="0" max="100" step="1" value="100" data-gesto="volume" data-volume="alto-falante" data-campo="alto-barra" data-hef-alvo="valor" aria-label="Volume do alto-falante deste controle" title="Arraste para escolher o volume do alto-falante deste controle. O DualSense não devolve este número — o primeiro arrasto é o que faz o Hefesto passar a saber qual ele é, e é ele que destrava o ♪."></span>
               <span class="n" data-campo="alto-num">100</span>
-              <button class="mudo-i" data-gesto="mudo" data-mudo="alto-falante" data-campo="alto-mudo" data-hef-alvo="classe" data-hef-classe="on" data-hef-quando="MUDO" title="Manda zero ao alto-falante do controle, sem perder o volume guardado. A partir da primeira escrita quem guarda o volume deste alto-falante é o Hefesto — o controle não o devolve, e esta tela não tem como largá-lo de volta.">♪</button>
+              <button class="mudo-i" data-gesto="mudo" data-mudo="alto-falante" data-campo="alto-mudo" data-hef-alvo="atributo" data-hef-atributo="data-som" data-som="ATIVO" title="Manda zero ao alto-falante do controle, sem perder o volume guardado. A partir da primeira escrita quem guarda o volume deste alto-falante é o Hefesto — o controle não o devolve. Quem larga é hefesto-dualsense4unix speaker release: ele devolve o controle, não o valor — o alto-falante fica com o último volume que o Hefesto mandou.">♪</button>
               <span class="ajuda porque">?<span class="dica" data-campo="alto-porque" data-hef-alvo="html"><i class="nada"></i></span></span>
             </div>
             <div class="rota">
@@ -2525,7 +2574,7 @@
             <div class="vol" data-campo="mic-porque" data-hef-alvo="atributo" data-hef-atributo="data-porque">
               <span class="trilho"><span class="cheio" style="width:0%"></span><input class="puxa-vol" type="range" min="0" max="100" step="1" value="0" data-gesto="volume" data-volume="microfone" aria-label="Volume do microfone deste controle" title="Arraste para escolher quanto do microfone deste controle chega ao PC — de 0 a 100. É o ganho da FONTE no sistema, e não o mudo do plástico: não apaga a luz vermelha e não tira o botão do controle. Grava na hora."></span>
               <span class="n">0</span>
-              <button class="mudo-i on" data-gesto="mudo" data-mudo="microfone" title="Calar no firmware do controle — apaga a luz vermelha do plástico. A partir daqui quem manda no mudo é o Hefesto, e o botão do controle para de valer. Esta tela não devolve o comando: a volta é pela janela do aplicativo ou reiniciando o Hefesto.">🎙</button>
+              <button class="mudo-i" data-gesto="mudo" data-mudo="microfone" title="Calar no firmware do controle — apaga a luz vermelha do plástico. A partir daqui quem manda no mudo é o Hefesto, e o botão do controle para de valer. Esta tela não devolve o comando: quem devolve é hefesto-dualsense4unix mic release, ou reiniciar o Hefesto.">🎙</button>
               <span class="ajuda porque">?<span class="dica" data-campo="mic-porque" data-hef-alvo="html"><i class="nada"></i></span></span>
             </div>
             <!-- OS DOIS MODOS DESCERAM PARA CÁ — decisão dela, 31/08/2026:
@@ -2567,7 +2616,7 @@
               <span class="trilho"><span class="cheio" data-campo="alto-barra"
                 data-hef-alvo="largura" style="width:70%"></span><input class="puxa-vol" type="range" min="0" max="100" step="1" value="70" data-gesto="volume" data-volume="alto-falante" data-campo="alto-barra" data-hef-alvo="valor" aria-label="Volume do alto-falante deste controle" title="Arraste para escolher o volume do alto-falante deste controle. O DualSense não devolve este número — o primeiro arrasto é o que faz o Hefesto passar a saber qual ele é, e é ele que destrava o ♪."></span>
               <span class="n" data-campo="alto-num">70</span>
-              <button class="mudo-i" data-gesto="mudo" data-mudo="alto-falante" data-campo="alto-mudo" data-hef-alvo="classe" data-hef-classe="on" data-hef-quando="MUDO" title="Manda zero ao alto-falante do controle, sem perder o volume guardado. A partir da primeira escrita quem guarda o volume deste alto-falante é o Hefesto — o controle não o devolve, e esta tela não tem como largá-lo de volta.">♪</button>
+              <button class="mudo-i" data-gesto="mudo" data-mudo="alto-falante" data-campo="alto-mudo" data-hef-alvo="atributo" data-hef-atributo="data-som" data-som="ATIVO" title="Manda zero ao alto-falante do controle, sem perder o volume guardado. A partir da primeira escrita quem guarda o volume deste alto-falante é o Hefesto — o controle não o devolve. Quem larga é hefesto-dualsense4unix speaker release: ele devolve o controle, não o valor — o alto-falante fica com o último volume que o Hefesto mandou.">♪</button>
               <span class="ajuda porque">?<span class="dica" data-campo="alto-porque" data-hef-alvo="html"><i class="nada"></i></span></span>
             </div>
             <div class="rota">
