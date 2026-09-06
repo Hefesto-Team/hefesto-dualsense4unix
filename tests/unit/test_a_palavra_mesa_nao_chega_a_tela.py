@@ -31,12 +31,26 @@ AS DUAS RÉGUAS, e elas têm pontos cegos diferentes de propósito:
    recado: *"este controle saiu da mesa"* estava em cinco lugares de
    `a02_controles.py` com a primeira régua verde.
 
-O QUE ESTA RÉGUA NÃO ALCANÇA, e está dito porque instrumento que não declara o
-próprio ponto cego mente: `interface/paginas/` (o que o produto renderiza) e
-`app/`, o motor. O primeiro só muda quando ELA publica — `--publicar` é ato
-dela.
+O TERCEIRO ALCANCE — `interface/paginas/`, 06/09/2026,
+A-REGUA-DA-PALAVRA-VE-O-PRODUTO-01:
 
-O SEGUNDO DEIXOU DE SER PONTO CEGO em 06/09/2026, na costura da ONDA E: as
+Até esta data o que o produto RENDERIZA era ponto cego declarado, com a razão
+"só muda quando ELA publica". A razão continua verdadeira e **não bastava**: o
+instrumento irmão (`olhar.py --palavra mesa --publicado`) acusava 34
+ocorrências "em o produto" sobre uma tela que não mostrava nenhuma, porque a
+página publicada carrega a `.nota` e o produto a APAGA
+(`interface/folha_da_casa.FOLHA_DA_CASA`). Régua que responde sobre o arquivo e diz
+"o produto" é pior que régua ausente.
+
+Agora as páginas do produto têm régua própria, e ela lê por
+`texto_visivel_no_produto` — a leitura com a folha do piloto aplicada. As duas
+leituras são diferentes de propósito: a bancada ela abre no navegador crua, e
+ali o bilhete de projeto é texto de verdade.
+
+O QUE ESTA RÉGUA AINDA NÃO ALCANÇA, e está dito porque instrumento que não
+declara o próprio ponto cego mente: `app/`, o motor.
+
+ELE DEIXOU DE SER PONTO CEGO em 06/09/2026, na costura da ONDA E: as
 dezesseis frases de `app/` que a sprint listou (`A-PALAVRA-MESA-SAI-01.md`) foram
 curadas no dono, e `hefesto_vivo._json` — o funil por onde todo valor passa a
 caminho do WebView — passou a chamar `primeiro_trecho_banido`. De agora em
@@ -54,11 +68,13 @@ from hefesto_dualsense4unix.interface.frases_que_ela_baniu import (
     palavra_banida_em,
     primeiro_trecho_banido,
     texto_visivel,
+    texto_visivel_no_produto,
 )
 
 RAIZ = Path(__file__).resolve().parents[2]
 INTERFACE = RAIZ / "src" / "hefesto_dualsense4unix" / "interface"
 BANCADA = RAIZ / "mockup"
+PRODUTO = INTERFACE / "paginas"  # (noqa-acento) nome de pasta
 PACOTES = INTERFACE / "pacotes"
 
 
@@ -141,6 +157,50 @@ def test_a_palavra_nao_e_lida_em_nenhuma_das_dez_abas() -> None:
         "§1 — `docs/A-LINGUA-DESTA-CASA-o-glossario-que-a-tela-e-o-codigo-"
         "falam.md`. O nome interno (`mesa_viva`, `monta.MESA`, `mesa-frase`) "
         "NÃO muda: a régua já o deixa passar, e trocá-lo é estrago."
+    )
+
+
+def _paginas_do_produto() -> list[Path]:
+    """As dez abas PUBLICADAS — as que o `WebKit2.WebView` carrega.
+
+    A mesma recusa da bancada, e pela mesma razão: as avulsas
+    (`mapa-do-controle`, `calibrar-sensores`) abrem por fora da janela e não são
+    aba, então o filtro é `??-*`, e menos que dez é caminho mudado.
+    """
+    achadas = sorted(p for p in PRODUTO.glob("??-*.html"))
+    assert len(achadas) == 10, (
+        f"achei {len(achadas)} abas em {PRODUTO} e o produto tem dez — "
+        "o caminho mudou, e uma régua que não acha a tela não mede a tela."
+    )
+    return achadas
+
+
+def test_a_palavra_nao_e_lida_em_nenhuma_das_dez_paginas_do_produto() -> None:
+    """O que a JANELA mostra — com a folha do piloto aplicada.
+
+    Esta é a régua que faltava, e a diferença dela para a irmã de cima é a
+    `.nota`: a bancada ela abre crua no navegador e o bilhete de projeto é texto
+    de verdade; a janela injeta `.nota{display:none !important}` e ele não
+    chega a olho nenhum. Medido em 06/09/2026 num Chrome com a folha posta:
+    ZERO `mesa` nas dez páginas publicadas, contra 34 que a leitura crua conta.
+
+    ELA NÃO SUBSTITUI A IRMÃ. A bancada é o que vira produto no próximo
+    `--publicar`; se só o produto tivesse régua, a palavra voltaria pelo
+    desenho e só apareceria depois de publicada.
+    """
+    sujas: list[str] = []
+    for pagina in _paginas_do_produto():
+        visivel = texto_visivel_no_produto(pagina.read_text(encoding="utf-8"))
+        for numero, linha in enumerate(visivel.splitlines(), start=1):
+            if palavra_banida_em(linha) is None:
+                continue
+            sujas.append(f"{pagina.name}:{numero}: {' '.join(linha.split())[:220]}")
+    assert not sujas, (
+        f"palavra banida LIDA na tela do PRODUTO ({', '.join(PALAVRAS_BANIDAS)}):\n  "
+        + "\n  ".join(sujas)
+        + "\n\nEstas a janela MOSTRA — não estão na `.nota`, que a folha do "
+        "piloto apaga. Cure o desenho em `mockup/`, publique, e as duas réguas "
+        "fecham juntas."
     )
 
 

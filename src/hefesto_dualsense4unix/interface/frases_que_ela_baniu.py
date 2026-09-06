@@ -55,6 +55,17 @@ com *remessa* e com todo nome de campo que a carrega (``mesa-frase``,
 ``radio-mesa``, ``perfil-da-mesa``). Por isso a lista é uma segunda tupla, com
 régua própria: :data:`PALAVRAS_BANIDAS`, casada por borda de palavra.
 
+DUAS LEITURAS, E A DIFERENÇA É O PRODUTO — 06/09/2026,
+A-REGUA-DA-PALAVRA-VE-O-PRODUTO-01:
+
+`texto_visivel` lê a página CRUA, que é o que ela abre no navegador quando olha
+a bancada. O produto renderiza a mesma página com a folha de usuário do piloto
+por cima, e a primeira regra dela apaga a `.nota` — o bilhete de projeto. Por
+isso há :func:`texto_visivel_no_produto`, que pergunta ao dono da folha o que
+ele esconde antes de contar. Sem essa separação a régua acusava **34
+ocorrências visíveis "em o produto"** onde um Chrome com a folha posta mostrava
+**zero**.
+
 **A BORDA IGNORA O QUE ESTÁ COLADO A `-`, `_` ou `.`**, e isso não é detalhe de
 regex: é a linha do glossário. `mesa` é nome interno vivo — `mesa_viva.py`,
 `app/mesa.py`, `monta.MESA`, `MESA_VAZIA`, `data-campo="mesa-frase"` — e a
@@ -145,8 +156,120 @@ def _apagar(alvo: list[str], inicio: int, fim: int) -> None:
             alvo[i] = " "
 
 
+#: As tags que NÃO FECHAM. Sem esta lista, um `<br>` dentro do elemento
+#: escondido contaria como abertura e a conta de profundidade nunca voltaria a
+#: zero — o resto do arquivo sairia apagado, e um apagão silencioso numa régua
+#: é o mesmo defeito que ela veio curar, só que ao contrário.
+_SEM_FECHO = frozenset(
+    (
+        "area", "base", "br", "col", "embed", "hr", "img", "input",
+        "link", "meta", "param", "source", "track", "wbr",
+    )
+)
+
+#: Uma tag de ABERTURA, com o nome separado dos atributos e com as aspas
+#: respeitadas: um `title="a > b"` tem `>` DENTRO do valor, e o `<[^>]*>` da
+#: leitura de tag cortaria a tag no meio dele.
+_ABERTURA = re.compile(
+    r"<([A-Za-z][A-Za-z0-9:-]*)((?:\"[^\"]*\"|'[^']*'|[^>\"'])*)>", re.S
+)
+
+
+def _valor(atributos: str, nome: str) -> str:
+    achado = re.search(
+        rf"\b{re.escape(nome)}\s*=\s*(\"([^\"]*)\"|'([^']*)'|([^\s>]+))",
+        atributos,
+        re.I | re.S,
+    )
+    if achado is None:
+        return ""
+    return next(g for g in achado.groups()[1:] if g is not None)
+
+
+def _casa(nome: str, atributos: str, seletor: str) -> bool:
+    """Este elemento é o que o seletor nomeia?
+
+    Só as três formas que a folha desta casa usa — `.classe`, `#id` e `tag`. O
+    que passa daí é RECUSADO lá no dono (`folha_da_casa.seletores_escondidos`),
+    em voz alta, antes de chegar aqui.
+    """
+    if seletor.startswith("."):
+        return seletor[1:] in _valor(atributos, "class").split()
+    if seletor.startswith("#"):
+        return _valor(atributos, "id") == seletor[1:]
+    return nome.lower() == seletor.lower()
+
+
+def _fim_do_elemento(pagina: str, nome: str, apos: int) -> int:
+    """Onde acaba o elemento aberto em ``apos`` — contando os aninhados.
+
+    A `.nota` do mockup tem `<div>` dentro de `<div>`: parar no primeiro
+    `</div>` deixaria de fora justamente o miolo, que é onde o texto mora.
+    """
+    par = re.compile(
+        rf"<(/?){re.escape(nome)}\b((?:\"[^\"]*\"|'[^']*'|[^>\"'])*)>", re.I | re.S
+    )
+    fundo = 1
+    for achada in par.finditer(pagina, apos):
+        if achada.group(1):
+            fundo -= 1
+            if fundo == 0:
+                return achada.end()
+        elif not achada.group(2).rstrip().endswith("/"):
+            fundo += 1
+    raise ValueError(
+        f"<{nome}> aberto em {apos} e nunca fechado — a régua não sabe onde o "
+        "elemento escondido termina, e chutar aqui apagaria o resto da página. "
+        "Conserte o HTML: o produto renderiza esta mesma marcação."
+    )
+
+
+def _apagar_o_escondido(
+    letras: list[str], pagina: str, escondidos: tuple[str, ...]
+) -> None:
+    """Apaga cada elemento que a folha do produto manda esconder."""
+    if not escondidos:
+        return
+    for abertura in _ABERTURA.finditer(pagina):
+        nome, atributos = abertura.group(1), abertura.group(2)
+        if not any(_casa(nome, atributos, s) for s in escondidos):
+            continue
+        if nome.lower() in _SEM_FECHO or atributos.rstrip().endswith("/"):
+            fim = abertura.end()
+        else:
+            fim = _fim_do_elemento(pagina, nome, abertura.end())
+        _apagar(letras, abertura.start(), fim)
+
+
+def _ler(pagina: str, escondidos: tuple[str, ...] = ()) -> str:
+    """O motor das duas leituras — a da bancada e a do produto.
+
+    ``escondidos`` são os seletores que a FOLHA do produto apaga, e é o único
+    ponto em que as duas diferem. Ele entra ANTES do `<code>` e das tags, e
+    DEPOIS do `<style>`/comentário de propósito: um comentário de CSS que cite
+    ``<div class="nota">`` viraria elemento de verdade se a ordem fosse outra.
+    """
+    letras = list(pagina)
+    for muda in _MUDOS.finditer(pagina):
+        _apagar(letras, muda.start(), muda.end())
+    limpo = "".join(letras)
+    _apagar_o_escondido(letras, limpo, escondidos)
+    limpo = "".join(letras)
+    for codigo in _CODIGO.finditer(limpo):
+        _apagar(letras, codigo.start(), codigo.end())
+    limpo = "".join(letras)
+    for tag in _TAG.finditer(limpo):
+        lidos = [m.span(1) for m in _ATRIBUTO_LIDO.finditer(tag.group(0))]
+        _apagar(letras, tag.start(), tag.end())
+        for a, b in lidos:
+            # o valor volta SEM as aspas — elas são sintaxe, não leitura.
+            for i in range(tag.start() + a + 1, tag.start() + b - 1):
+                letras[i] = limpo[i]
+    return "".join(letras)
+
+
 def texto_visivel(pagina: str) -> str:
-    """O que uma pessoa LÊ nesta página — sem tag, sem CSS, sem identificador.
+    """O que uma pessoa LÊ nesta página NO NAVEGADOR — a leitura da BANCADA.
 
     A ordem importa, e cada passo tem uma medição atrás:
 
@@ -169,22 +292,42 @@ def texto_visivel(pagina: str) -> str:
     o número que esta função dá é o mesmo do `innerText` da `.nota` num Chrome
     de verdade (13 · 6 · 6 · 3). Um stripper que ninguém conferiu contra o
     motor é a armadilha do `COMO-OLHAR-A-TELA.md`.
+
+    **ELA CONTA A `.nota`, E ISSO É O CERTO AQUI.** A bancada (`mockup/`) é o
+    que ela abre NO NAVEGADOR, sem folha de usuário nenhuma: ali o bilhete de
+    projeto é texto visível de verdade. Quem quer a leitura do PRODUTO chama
+    :func:`texto_visivel_no_produto` — a diferença entre as duas é o ponto
+    inteiro da separação.
     """
-    letras = list(pagina)
-    for muda in _MUDOS.finditer(pagina):
-        _apagar(letras, muda.start(), muda.end())
-    limpo = "".join(letras)
-    for codigo in _CODIGO.finditer(limpo):
-        _apagar(letras, codigo.start(), codigo.end())
-    limpo = "".join(letras)
-    for tag in _TAG.finditer(limpo):
-        lidos = [m.span(1) for m in _ATRIBUTO_LIDO.finditer(tag.group(0))]
-        _apagar(letras, tag.start(), tag.end())
-        for a, b in lidos:
-            # o valor volta SEM as aspas — elas são sintaxe, não leitura.
-            for i in range(tag.start() + a + 1, tag.start() + b - 1):
-                letras[i] = limpo[i]
-    return "".join(letras)
+    return _ler(pagina)
+
+
+def texto_visivel_no_produto(pagina: str) -> str:
+    """O que uma pessoa LÊ nesta página DENTRO DA JANELA — a leitura do PRODUTO.
+
+    A diferença para :func:`texto_visivel` é uma só, e ela custou uma sprint:
+    o produto não renderiza a página crua. O `JanelaDaAba` injeta a
+    :data:`~hefesto_dualsense4unix.interface.folha_da_casa.FOLHA_DA_CASA` pela
+    `UserContentManager`, e a primeira regra dela é
+    `.nota{display:none !important}` — *"tira os bilhetes de projeto que o
+    mockup carrega para quem o lê no navegador; eles não são produto"*.
+
+    O NÚMERO QUE PROVA, medido em 06/09/2026 sobre `interface/paginas/`:
+    `--palavra mesa --publicado` acusava **34 ocorrências visíveis "em o
+    produto"** e um Chrome com a folha posta mostrava **ZERO** — as 34 estavam
+    todas dentro da `.nota`. O instrumento respondia sobre o ARQUIVO e dizia "o
+    produto"; é a assinatura de instrumento falso que esta casa persegue.
+
+    **O SELETOR NÃO SE DIGITA AQUI.** Ele vem de
+    :func:`~hefesto_dualsense4unix.interface.folha_da_casa.seletores_escondidos`, que
+    lê o `display:none` da folha do produto: uma segunda regra de esconder
+    amanhã vale para esta régua sem ninguém tocar nela. Digitar `.nota` uma
+    segunda vez seria o defeito que esta casa mais paga — o mesmo valor com dois
+    donos.
+    """
+    from hefesto_dualsense4unix.interface.folha_da_casa import seletores_escondidos
+
+    return _ler(pagina, seletores_escondidos())
 
 
 @cache

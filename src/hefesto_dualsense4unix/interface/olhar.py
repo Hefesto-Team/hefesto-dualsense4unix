@@ -36,10 +36,17 @@ ELE TAMBÉM PROCURA PALAVRA — 06/09/2026, A-PALAVRA-MESA-SAI-01
 
 `--palavra mesa` lista, página por página, cada ocorrência que uma pessoa LÊ,
 com o contexto e o ARQUIVO:LINHA de onde ela vem. Ele não abre navegador: a
-leitura é a do `frases_que_ela_baniu.texto_visivel`, que é a mesma que a régua
-usa — instrumento e portão têm de responder o mesmo número, senão um dos dois
-mente. O `--palavra` é o "antes" da sprint, e um `--palavra mesa` vazio é o
-"depois".
+leitura é a do `frases_que_ela_baniu`, que é a mesma que a régua usa —
+instrumento e portão têm de responder o mesmo número, senão um dos dois mente.
+O `--palavra` é o "antes" da sprint, e um `--palavra mesa` vazio é o "depois".
+
+**E A LEITURA MUDA COM O ALVO — 06/09/2026, e não é detalhe.** A bancada ela
+abre no navegador crua; o produto renderiza a mesma página com a folha do
+piloto por cima, que apaga a `.nota` (o bilhete de projeto). Até esta data o
+`--publicado` contava a `.nota` e dizia **"34 ocorrência(s) visível(eis) em o
+produto"** sobre uma tela que não mostrava nenhuma — o instrumento respondia
+sobre o ARQUIVO. Agora o modo publicado lê por `texto_visivel_no_produto`, que
+pergunta à `interface.folha_da_casa` o que o produto esconde.
 
     interface/olhar.py --palavra mesa               # a bancada
     interface/olhar.py --palavra mesa --publicado   # o que o produto renderiza
@@ -110,7 +117,16 @@ def _retratar(navegador, alvo: pathlib.Path, saida: pathlib.Path,
     try:
         pg.goto(f"file://{alvo}")
         pg.wait_for_load_state("networkidle")
-        pg.add_style_tag(content=".nota{display:none}")
+        # O QUE SE ESCONDE VEM DA FOLHA DO PILOTO, e não deste arquivo —
+        # 06/09/2026. Aqui estava `.nota{display:none}` digitado, a segunda
+        # cópia de um valor que tem dono: a foto mostrava o que o produto
+        # esconde HOJE e continuaria mostrando no dia em que a folha ganhasse a
+        # segunda regra de esconder. Agora ela pergunta.
+        from hefesto_dualsense4unix.interface.folha_da_casa import seletores_escondidos
+
+        pg.add_style_tag(
+            content="".join(f"{s}{{display:none}}" for s in seletores_escondidos())
+        )
         pg.wait_for_timeout(400)
         # AS DUAS FAMÍLIAS DE PÁGINA, e ele precisa saber medir as duas: as dez
         # ABAS moram numa `.janela`; as páginas AVULSAS que abrem por fora dela (o
@@ -235,7 +251,15 @@ def _palavra(alvo: str, publicado: bool) -> int:
     from hefesto_dualsense4unix.interface.frases_que_ela_baniu import (
         _borda,
         texto_visivel,
+        texto_visivel_no_produto,
     )
+
+    # AS DUAS LEITURAS, e a diferença é o ponto inteiro deste instrumento:
+    # a BANCADA ela abre no navegador crua, e ali a `.nota` é texto de verdade;
+    # o PRODUTO renderiza com a folha do piloto por cima, que apaga a `.nota`.
+    # Contar a `.nota` no modo `--publicado` deu 34 "ocorrências visíveis em o
+    # produto" sobre uma tela que não mostrava nenhuma (06/09/2026).
+    ler = texto_visivel_no_produto if publicado else texto_visivel
 
     paginas = [p for p in onde.paginas(publicado=publicado) if E_ABA.match(p.name)]
     if len(paginas) < 10:
@@ -244,7 +268,7 @@ def _palavra(alvo: str, publicado: bool) -> int:
     total = 0
     for p in paginas:
         cru = p.read_text(encoding="utf-8")
-        visivel = texto_visivel(cru)
+        visivel = ler(cru)
         achados = list(_borda(alvo).finditer(visivel))
         total += len(achados)
         print(f"\n{p.name}  —  {len(achados)} ocorrência(s) visível(eis)")
