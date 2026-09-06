@@ -967,7 +967,17 @@
      claro que o verde, mas sem peso um cabeçalho de coluna vira dado. */
   .campo > span:first-child{color:var(--fg);font-weight:700;text-align:left;
                             white-space:nowrap}
-  .campo{display:grid;grid-template-columns:var(--rot-p) 1fr;align-items:center;gap:12px;
+  /* `minmax(0,1fr)` E NÃO `1fr`, e a diferença é MEDIDA — 06/09/2026. Uma pista
+     `1fr` é `minmax(auto,1fr)`, e o mínimo `auto` de uma pista de grade é o
+     MIN-CONTENT do que está dentro: a pista CRESCE para caber o conteúdo, em
+     vez de apertá-lo. Enquanto os campos eram `<input>` e `<select>` isso não
+     aparecia — nenhum dos dois cresce com o valor. O rótulo do jogo (10-Q4) é
+     TEXTO, e cresce: medido no Chrome com um nome de 300 caracteres, a segunda
+     coluna passou de 412px para **1990px** dentro de uma página de 1180px, e o
+     `Detectar` saiu do quadro junto com ela. O `min-width:0` dos filhos não
+     alcança isto — ele deixa o FLEX apertar, e aqui quem não apertava era a
+     GRADE. */
+  .campo{display:grid;grid-template-columns:var(--rot-p) minmax(0,1fr);align-items:center;gap:12px;
          height:var(--h-escolha);font-size:12px;color:var(--texto-mudo);margin-bottom:4px}
 
   /* AS DIVISÓRIAS SAÍRAM DESTE TRECHO — 31/08/2026, pedido dela olhando a aba:
@@ -1032,7 +1042,7 @@
 
   /* ---------- A TIRA DO DESFECHO — o toast que esta janela não tinha ----------
      PARIDADE COM A JANELA ESTÁVEL, 03/09/2026. Lá, TODO gesto desta aba termina
-     num `_toast_profile` no rodapé (`profiles_actions.py:4588`): "Perfil
+     num `_toast_profile` no rodapé (`profiles_actions.py:4615`): "Perfil
      removido: X", "Lista recarregada", `mensagem_de_ativacao`. Aqui só a
      RECUSA falava — `RuntimeError` vira tarja no piloto — e o SUCESSO era
      silêncio. Para os NOVE gestos desta aba que ESCREVEM NO DISCO DELA,
@@ -1068,8 +1078,12 @@
      sempre a metade que avisa. A carona da Steam sozinha tem 218 caracteres
      («Reposta a Opção de Inicialização … Sem ela, no Bluetooth o jogo tende a
      não enxergar controle nenhum»), vem grudada na frase de ativação, e as
-     duas passam de 280; a linha de 1.180px a 11px comporta ~200. O que sumia
-     era exatamente o *"sem ela, o jogo tende a não enxergar controle nenhum"*.
+     duas passam de 280. O que sumia era exatamente o *"sem ela, o jogo tende a
+     não enxergar controle nenhum"*.
+
+     O `~200` DE ESTIMATIVA VIROU MEDIDA — 06/09/2026: as duas linhas comportam
+     413 caracteres, medidos por bissecção no Chrome. O número tem dono
+     (`CABEM_NA_TIRA`, no alto deste arquivo) e a régua o lê de lá.
 
      AS DUAS LINHAS CONTINUAM FIXAS — o que mudou em 05/09 foi só o repouso.
      Uma tira que crescesse com o tamanho da frase daria um pulo DIFERENTE a
@@ -1130,6 +1144,52 @@
      para a direita sairia da janela. É a mesma cura que o `.tn-cx .dica` do
      `monta` já faz na aba Conexões. */
   .campo .trava .dica,.campo .exige .dica{left:auto;right:20px;width:300px}
+
+  /* ---------- O RÓTULO DO JOGO, ao lado do campo — decisão 10-Q4 dela --------
+     *"Rótulo ao lado, ao vivo: à direita do campo aparece o nome do jogo
+     enquanto você digita, ou «não está nesta máquina», ou «não reconheci este
+     endereço»."* Ela recusou a opção que o produto tinha construído em 04/09
+     (a resposta só na tira, depois do `change`) — e a escolha ACRESCENTA: o
+     campo continua se corrigindo sozinho, o que nasce é o rótulo.
+
+     ELE SE ESCONDE QUANDO NÃO HÁ O QUE DIZER, e essa é a razão de o endereço
+     `editor.jogo.rotulo` aparecer DUAS vezes. `escrever()` troca vazio por
+     `'—'` ANTES de escolher o ramo (`hefesto_vivo.py`), então um rótulo vazio
+     não fica vazio: fica um travessão solto entre o campo e o "Detectar". A
+     forma é a MESMA da tira do desfecho, nesta página, quatro blocos acima —
+     o `classe` acende, o `<span>` de dentro escreve.
+
+     A TINTA É O TERCEIRO `<span>`, e ele existe porque `data-hef-alvo` é UM por
+     elemento: a visibilidade é um fato ("há rótulo?"), o alerta é outro ("é
+     erro ou é rotina?"), e os dois têm de ser escritos ao mesmo tempo. É a
+     mesma razão pela qual `marca_com_dica` tem dois endereços em vez de um.
+
+     LARANJA SÓ NO ERRO: *"não instalado aqui (o número vale)"* é o jogo que ela
+     ainda vai comprar, e pintá-lo de alerta seria a tela chamando de problema o
+     que o dono da frase chama de normal (`jogos_locais.frase_do_campo_do_jogo`).
+
+     ELE TEM TETO, e o `<input>` encolhe para caber — que é o que a opção dela
+     diz. Nome de jogo é dado DELA e pode ser longo ("ORPHEUS: TO HELL AND
+     BACK"): sem `flex:0 1 auto` e sem reticência, o rótulo empurraria o
+     "Detectar" para fora do quadro. `text-overflow` e não `-webkit-line-clamp`
+     porque aqui é UMA linha de propósito — a fileira do campo tem 30px, e a
+     tira de baixo é quem tem duas.
+
+     O `max-width:45%` É MEDIDO, e nasceu de um defeito que a régua achou depois
+     de a primeira cura já estar escrita. Com `minmax(0,1fr)` na grade e sem
+     teto, a fileira parou de crescer — e o rótulo passou a comer o CAMPO: com
+     um nome de 60 caracteres o `<input>` ficava com **24px**, e ela não veria o
+     que digitou. Com 45%, o rótulo para em 185px, o campo fica com ~112px (uns
+     dez caracteres, mais que um appid) e a reticência entra a partir de ~38
+     caracteres de nome — que é onde o nome deixa de caber de qualquer jeito.
+     Duas guardas, dois defeitos: a grade impede a fileira de estourar, o teto
+     impede o rótulo de tomar o campo. */
+  .campo .rot{display:none;flex:0 1 auto;min-width:0;max-width:45%;
+              font-size:11.5px;
+              color:var(--texto-mudo);white-space:nowrap;overflow:hidden;
+              text-overflow:ellipsis}
+  .campo .rot.on{display:block}
+  .campo .rot .al.alerta{color:var(--orange)}
 
   /* ---------- as QUATRO configurações que cabem dentro deste perfil ----------
      O editor mostrava CINCO campos e gravava vinte, e a única frase que dizia
@@ -1598,6 +1658,7 @@
                 <span class="val">
                   <input type="text" data-hef="editor.jogo" data-hef-gesto="editor.jogo"
                          data-hef-alvo="valor" value="Mortal Kombat 1"><span class="exige" data-hef="editor.jogo.exige" data-hef-alvo="classe"><span class="dica" data-hef="editor.jogo.exigencia" data-hef-alvo="html"></span></span>
+                  <span class="rot" data-hef="editor.jogo.rotulo" data-hef-alvo="classe"><span class="al" data-hef="editor.jogo.alerta" data-hef-alvo="classe" data-hef-classe="alerta"><span data-hef="editor.jogo.rotulo"></span></span></span>
                   <button class="btn roxo" data-hef-gesto="detectar" title="Pega o jogo que está rodando atrás desta janela e monta a regra — funciona com jogo de qualquer lugar, não só da Steam.">Detectar</button>
                 </span>
               </div>

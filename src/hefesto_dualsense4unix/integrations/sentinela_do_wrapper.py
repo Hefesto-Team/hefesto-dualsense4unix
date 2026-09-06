@@ -46,6 +46,10 @@ O QUE ESTE MÓDULO FAZ, em três camadas independentes
    legível com a Steam aberta; só a ESCRITA é que não pode.
 2. **AVISAR** (`frase_do_aviso`) — a frase pronta, com o NOME do jogo, para a
    GUI e para o doctor. Diagnóstico que não chega na tela não existe.
+   **E EM DUAS FORMAS desde 06/09/2026** (decisão 10-Q5 dela): a inteira, que vai
+   ao toast da GTK e ao corpo do cartão da Steam, e a `frase_do_aviso_curta`,
+   sem o `AVISO_DA_REGRESSAO`, para a tira de duas linhas da aba Perfis. As duas
+   saem de `_frase_do_aviso` — uma redação só, e a diferença numa constante.
 3. **REPARAR** (`reparar_ou_adiar`) — repõe o wrapper PRESERVANDO o que já
    estava na linha, ou ADIA dizendo por quê.
 
@@ -402,6 +406,18 @@ def censo_do_wrapper(
     )
 
 
+#: O QUE A REGRESSÃO AVISA, e é a metade que a tira de duas linhas não comporta.
+#:
+#: Ele fica em constante própria — e não solto dentro da `f-string` — porque
+#: desde 06/09 há DUAS formas da mesma notícia, e esta é a única diferença entre
+#: elas. Um literal repetido nas duas seria a segunda escrita do mesmo aviso, e
+#: a primeira a envelhecer sozinha.
+AVISO_DA_REGRESSAO = (
+    "Sem elas, no Bluetooth o jogo tende a não enxergar controle nenhum — "
+    "mesmo com o controle vivo, a luz acesa e o perfil aplicado. "
+)
+
+
 def frase_do_aviso(censo: Censo) -> str:
     """A frase que vai para a TELA (GUI e doctor). `""` = nada a dizer.
 
@@ -414,6 +430,35 @@ def frase_do_aviso(censo: Censo) -> str:
     vivo, perfil aceso, jogo cego). Jogo novo é rotina de biblioteca, não
     susto, e por isso ganha uma frase mais fria.
     """
+    return _frase_do_aviso(censo, com_o_aviso=True)
+
+
+def frase_do_aviso_curta(censo: Censo) -> str:
+    """A MESMA notícia sem o aviso — decisão 10-Q5 dela, 06/09/2026.
+
+    *"A tira passa a dizer só a metade curta e o aviso sai do texto."* A tira do
+    desfecho da aba Perfis tem DUAS linhas (`aba10.CSS`, `.desfecho`), e a frase
+    da regressão vem grudada na frase de ativação do perfil: as duas juntas
+    passam do que cabe, e o que a reticência come é sempre o FIM — que é onde
+    mora o *"vou repor assim que…"*.
+
+    `""` QUER DIZER "não há metade curta": ou a notícia já cabe (jogo novo,
+    lista de IGNORE estendida à mão), ou não há notícia nenhuma. Quem chama cai
+    na `frase_do_aviso`, e é isso que `carona_do_wrapper.ResultadoDaCarona`
+    escreve no contrato do campo `frase_curta`.
+
+    **O AVISO NÃO SAI DO PRODUTO — sai desta tira.** Ele continua inteiro no
+    toast da janela GTK e no CORPO do cartão da Steam da aba Lançadores
+    (`a07_lancadores.noticia`), que é o lugar onde a recusa também aparece. Um
+    cartão tem corpo; uma tira tem duas linhas.
+    """
+    if not censo.regressoes:
+        return ""
+    return _frase_do_aviso(censo, com_o_aviso=False)
+
+
+def _frase_do_aviso(censo: Censo, *, com_o_aviso: bool) -> str:
+    """As duas formas, escritas UMA vez. Ver `frase_do_aviso`."""
     regressoes = censo.regressoes
     novos = censo.novos
     if regressoes:
@@ -421,9 +466,9 @@ def frase_do_aviso(censo: Censo) -> str:
         plural = "jogos perderam" if len(regressoes) > 1 else "jogo perdeu"
         return (
             f"{len(regressoes)} {plural} as Opções de Inicialização do Hefesto "
-            f"na Steam: {nomes}. Sem elas, no Bluetooth o jogo tende a não "
-            "enxergar controle nenhum — mesmo com o controle vivo, a luz acesa "
-            "e o perfil aplicado. " + _como_reparar(censo)
+            f"na Steam: {nomes}. "
+            + (AVISO_DA_REGRESSAO if com_o_aviso else "")
+            + _como_reparar(censo)
         )
     if novos:
         nomes = juntar_rotulos([j.rotulo for j in novos])
