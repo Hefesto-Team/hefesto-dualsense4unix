@@ -387,25 +387,36 @@ class _Leitor(html.parser.HTMLParser):
             # cujo aparelho não disse a cor.
             valor = d.get((d.get("data-hef-atributo") or "").strip().lower(), "")
         elif alvo == "marcado":
-            # O ALVO `marcado` FALTAVA DESTE LADO, e a régua acusava a si mesma
-            # por isso (ONDA5-02-01, 06/09/2026). O leitor de tela responde
-            # `el.checked ? 'sim' : ''` e este parser caía no ramo do TEXTO —
-            # que num `<input>` é sempre vazio. Medido no arquivo publicado:
+            # O ALVO `marcado` FALTAVA, e DUAS frentes desta leva chegaram à mesma
+            # cura sem saber uma da outra — a `ONDA5-02-01` e a `LUZES-01`,
+            # 06/09/2026. Quando duas medições independentes param no mesmo
+            # ponto, o achado é do produto, não de quem mediu.
             #
-            #     p1·card-aberto  arquivo ''   página virgem 'sim'
+            # O DEFEITO: o leitor de tela responde `el.checked ? 'sim' : ''`, e
+            # este parser caía no ramo do TEXTO — que num `<input>` é sempre
+            # vazio. A guarda do DOM virgem (`hefesto_vivo._olhar_a_pagina`)
+            # confere os dois endereço a endereço e REPROVAVA a
+            # `--prova-de-mockup` inteira:
             #
-            # e a guarda do DOM virgem (`hefesto_vivo._olhar_a_pagina`) reprovava
-            # a `--prova-de-mockup` inteira com *"o parser e o leitor de tela
-            # discordam neste alvo"*. Ela estava CERTA: as duas leituras têm de
-            # casar endereço a endereço, e uma delas não conhecia o alvo.
+            #     02-controles.html: a régua lê `p1·card-aberto` como '' no
+            #     arquivo e a página virgem mostra 'sim'
+            #     04-iluminacao.html: idem, em `auto-cores`
             #
-            # `checked` É ATRIBUTO BOOLEANO — o `html.parser` o entrega como
+            # Ela estava CERTA, e era mais cega do que a reprovação mostrava:
+            # são CINCO endereços em TRÊS abas (dois na 01, dois na 02, um na
+            # 04), ilegíveis desde que o alvo `marcado` nasceu — os outros três
+            # só não apareciam porque estavam vazios dos dois lados.
+            #
+            # `checked` É ATRIBUTO BOOLEANO: o `html.parser` o entrega como
             # chave sem valor, então a pergunta é de PRESENÇA, igual ao
             # `selected` que este mesmo leitor já usa nos `<option>`. E a
-            # palavra é `sim`, a mesma do `escrever` e a mesma do leitor de
-            # tela: devolver `True`/`checked` faria os dois lados compararem
-            # línguas diferentes, que é o defeito de forma que o alvo `cor` já
-            # custou uma medição a esta casa.
+            # ausência é `''`, não `None` — é o que o `el.checked === false` do
+            # navegador devolve.
+            #
+            # A LÍNGUA É A DO `escrever` — `sim`/`''`, a mesma do alvo `classe`
+            # booleano. Devolver `True`/`checked` faria os dois lados comparar
+            # línguas diferentes e acusar toda pintura certa: é a mesma cura de
+            # FORMA que o alvo `cor` já custou uma medição inteira a esta casa.
             valor = "sim" if "checked" in d else ""
         elif alvo == "classe":
             classe = d.get("data-hef-classe") or "on"
