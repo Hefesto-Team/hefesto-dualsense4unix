@@ -154,11 +154,20 @@ _ESTORVOS: dict[str, tuple[str, str, bool]] = {
         True,
     ),
     LINHA_INTOCAVEL: (
-        "A linha tem uma lista de dispositivos ignorados estendida à mão. "
-        "Repor o wrapper por cima quebraria o que está lá.",
-        "Só reparo manual: revise a linha na Steam antes de deixar o Hefesto "
-        "cuidar dela.",
-        False,
+        "A linha tem uma lista de dispositivos ignorados numa forma que eu não "
+        "sei desmontar sem risco de quebrar o que está lá.",
+        # A CURA VIROU AUTOMÁTICA PARA O CASO COMUM — ONDA5-07-01, 06/09/2026,
+        # decisão dela (07-Q1): *"Deve aplicar automaticamente como era no
+        # gtk"*. A lista estendida à mão deixou de cair aqui: o
+        # `steam_launch_options.subtrair_nosso_ignore` tira o NOSSO par de
+        # dentro da lista DELA, a atribuição sai inteira e volta inteira, e o
+        # jogo entra no reparo como qualquer outro. O que ainda cai neste
+        # estorvo é o que a subtração não alcança — e para esse a cura é a
+        # mesma do `SEM_WRAPPER`, porque o reparo TENTA e diz o que conseguiu.
+        "O Hefesto repõe sozinho: ao salvar ou aplicar um perfil, e também "
+        "assim que a Steam fechar (é o único instante em que a reposição "
+        "sobrevive — com ela viva, regrava o arquivo ao sair e engole).",
+        True,
     ),
     SEM_EXECUTAVEL: (
         "Não foi possível ler nenhum executável na pasta do jogo, então não dá "
@@ -397,6 +406,13 @@ class Prontuario:
 
     @property
     def linha_intocavel(self) -> bool:
+        """A linha carrega o nosso par numa forma que o reparo não desmonta.
+
+        O DONO DA PERGUNTA É O `has_extended_ignore`, e ele mudou de sentido em
+        06/09/2026: a lista estendida à mão saiu daqui e entrou no reparo. Esta
+        propriedade não mudou uma letra — ela pergunta ao dono, e é por isso que
+        a mudança chegou até aqui sozinha.
+        """
         return has_extended_ignore(self.linha or "")
 
     @property
@@ -879,6 +895,11 @@ def _curar_sem_wrapper(home: Path | None, *, dry_run: bool) -> tuple[str, list[s
 _CURAS: dict[str, Callable[..., tuple[str, list[str]]]] = {
     EXCECAO_INERTE: _curar_excecao_inerte,
     SEM_WRAPPER: _curar_sem_wrapper,
+    # A MESMA CURA, e é o ponto da ONDA5-07-01: o reparo passou a ALCANÇAR a
+    # linha com a lista de IGNORE estendida, então quem cuida dela é quem já
+    # cuidava da linha sem o atalho. Duas chaves com a mesma função não é
+    # duplicação — é o modelo dizendo que os dois estorvos têm o mesmo dono.
+    LINHA_INTOCAVEL: _curar_sem_wrapper,
 }
 
 
