@@ -436,15 +436,48 @@ def test_o_aviso_do_nativo_continua_fora_por_decisao_dela() -> None:
     a frase na coluna sem passar pelo olho dela — inclusive por baixo do
     gerador, que é o caminho que a régua §6-bis **não** cobre: o `_conferir` lê
     o HTML estático, e a coluna Atenção é escrita em tempo de execução.
+
+    ---
+
+    **A LÁPIDE FOI RELIDA — 06/09/2026, ONDA5-01-02, e ela tinha DUAS metades.**
+
+    A primeira exigia que a frase CONTINUASSE viva em `_MODE_DESCRIPTIONS`, e a
+    razão escrita era *"se a frase sumir de lá, esta lápide perde o objeto"*.
+    Foi essa linha que **prendeu a profecia na janela antiga por uma semana**: a
+    frase já não tinha defensor nenhum, e mesmo assim uma régua desta casa
+    reprovava quem a tirasse. Ela cai, com as três datas:
+
+    * **31/08/2026** — *"qualquer coisa fora isso tá incorreta"*: o texto do
+      Nativo encolheu na interface nova e a janela antiga não foi junto;
+    * **04/09/2026** — a leitura de PO do oitavo conflito: a tela diz o ESTADO
+      MEDIDO, nunca a consequência que ninguém mediu;
+    * **05/09/2026** — *"Não me lembro disso acontecer. **E não deveria.** Mas
+      caso ocorra na coluna atenção"*. É a releitura, e ela é dela.
+
+    A segunda metade — *a frase não entra na coluna Atenção por caminho nenhum*
+    — **fica, e fica mais forte**: o que a coluna diz hoje sobre o mesmo assunto
+    é a linha medida da ONDA5-01-01, e a profecia continua de fora. O objeto da
+    lápide deixou de ser a janela antiga e passou a ser a coluna.
+
+    E A JANELA ANTIGA NÃO FICOU MUDA: a chave `"native"` continua existindo,
+    encolhida e IGUAL à da interface nova — apagá-la escreveria string vazia na
+    tela, que é trocar uma frase errada por nenhuma. Quem guarda o fonte agora é
+    `test_a_frase_que_ela_baniu_nao_chega_a_tela::test_nenhuma_banida_vive_no_fonte`,
+    a terceira guarda, que nasceu no mesmo dia por causa desta lápide.
     """
     from hefesto_dualsense4unix.app.actions import home_actions
 
-    # O ALARME EXISTE NO PRODUTO ANTIGO, e é o que faz esta régua não ser vácua:
-    # se a frase sumir de lá, esta lápide perde o objeto e tem de ser relida.
+    # A METADE QUE CAIU VIRA O SEU CONTRÁRIO: a janela antiga passou a dizer o
+    # que a interface nova diz, palavra por palavra. Sem esta linha o passo 1
+    # poderia ter apagado a chave — e `_MODE_DESCRIPTIONS.get(..., "")` escreve
+    # string VAZIA, que é o defeito que a §5.4 da sprint nomeia.
     nativo = home_actions._MODE_DESCRIPTIONS["native"]
-    assert "derrubam o controle" in nativo, (
-        "a frase do Modo Nativo sumiu da janela antiga — esta lápide ficou sem "
-        "objeto e a decisão [01] precisa ser relida com ela")
+    assert nativo == (
+        "Modo Nativo: o Hefesto sai do meio e o jogo fala direto com o "
+        "controle."), (
+        f"a descrição do Modo Nativo na janela antiga divergiu da interface "
+        f"nova ({nativo!r}). Desde 06/09 as duas dizem a MESMA coisa, que é a "
+        f"regra de 31/08 dela: 'Desligado põe o Nativo online', e nada além")
 
     # E ELE NÃO CHEGA À COLUNA POR NENHUM CAMINHO — nem no Modo Nativo, que é
     # exatamente o estado em que a decisão [01] o pediria.
