@@ -1056,6 +1056,61 @@
      é `.leia`, que é o que ela faz: diz que aquele item tem texto embaixo. */
   .faixa .leia{cursor:help}
   .faixa .div{color:var(--texto-mudo)}   /* cor de texto, não de borda (topo.html: `.seta`) */
+  /* ---------- O GIROSCÓPIO NO JOGO — "fluindo para o jogo (~N Hz)" ----------
+     CONTROLES-VERDADE-01, 06/09/2026. O dono da frase é
+     `controller_card.texto_motion`, e nada dela é digitado aqui.
+
+     O QUE ELA SUBSTITUI É UM NÚMERO DE CATÁLOGO. A dica do interruptor de
+     Giroscópio, três elementos ao lado, afirma *"No cabo são 250,0 Hz exatos"*
+     — o mesmo número para todo controle e todo momento, com o controle dela
+     parado ou fluindo. O `paridade-gtk-html.csv:55` já nomeava isso, e é a
+     única linha desta família sem segunda metade: dívida viva, sem pergunta
+     pendente.
+
+     E NÃO É A LINHA DA VERDADE. Ela foi a primeira escolha desta sprint e a
+     medição a derrubou: a linha de `controller_card.py:1728` SAIU DA TELA DA
+     GTK em
+     17/08/2026, a pedido dela (*"remover guia dos status em tempo real"*,
+     SEM-BARRA-DA-VERDADE-01), e continua criada e alimentada fora da tela —
+     `controller_card.py:2916` diz isso com todas as letras, e o
+     `paridade-gtk-html.csv:56` avisa que reconstruí-la aqui seria reintroduzir
+     o que ela mandou tirar. **Quem OCUPA este lugar na GTK dela é justamente o
+     `_motion_label`** (`controller_card.py:2770`), que é esta frase.
+
+     O NOME DAQUELA FUNÇÃO NÃO SE SOLETRA NESTE ARQUIVO, e não é preciosismo: o
+     portão da paridade vigia a AUSÊNCIA do símbolo do lado HTML, e ele não
+     distingue prosa de uso — este comentário, escrito para AVISAR que a linha
+     não deve voltar, foi lido como a linha VOLTANDO na primeira corrida. É a
+     mesma armadilha que o `mesa_viva._via_do_transporte` já registrou, e a
+     forma desta casa é citar o ENDEREÇO.
+
+     ELA MORA NO VÃO DO CABEÇALHO — o mesmo lugar que ela ocupa na GTK, ao lado
+     da bateria —, e o vão foi MEDIDO antes de escolhido: com
+     a janela do produto (1212px) sobravam **410px** entre o nome da máscara e o
+     par de sensores — o maior vazio do card, e o `margin-left:auto` do
+     `.sensores-peca` era quem o segurava. Uma linha nova no CORPO custaria
+     altura, e a conta não tem folga para isso: `PARA_O_CARD` (328) menos
+     `ALTURA_DO_CARD` (304) são **24px**, e o assert lá embaixo é um portão.
+     Aqui ela custa ZERO altura.
+
+     `flex:1 1 0` + `min-width:0` são o par que faz o texto ENCOLHER num flex —
+     sem o `min-width` o item se recusa a ficar menor que o conteúdo e empurra a
+     bateria para fora. O `nowrap` é obrigatório: o `.faixa` do card aberto tem
+     `flex-wrap:wrap` e altura FIXA (`flex:0 0 var(--h-acao)`), então uma
+     segunda linha não faria o cabeçalho crescer — faria o texto vazar.
+
+     SEM FRASE, ESCONDE — e é o contrato, não economia de pixel. O alvo
+     `atributo` do piloto REMOVE o `title` quando o valor é vazio
+     (`hefesto_vivo.escrever`, ramo `atributo`), e o `:not([title])` abaixo faz
+     o vão voltar a ser vão. É o mesmo mecanismo da marca da degradação, que
+     esta faixa já usa dois elementos acima.
+
+     E ELA SÓ APARECE NO CARD ABERTO. A linha FECHADA é a mais apertada da mesa
+     — `VAO_ANTES_P3` são 103,2px com as duas leituras —, e um texto elástico
+     ali comeria a largura da bateria, que é uma só para as quatro linhas. */
+  .faixa .no-jogo{display:none}
+  .faixa .no-jogo > .no-jogo-t{overflow:hidden;text-overflow:ellipsis;
+    white-space:nowrap;display:block}
   /* os gatilhos: número EM CIMA da barra, como no original.
      O `margin-top:auto` SAIU, e ele era a causa do maior buraco da tela.
      Enquanto L2/R2 moravam dentro da moldura do giroscópio, aquele `auto`
@@ -1631,6 +1686,13 @@
   body:has(#c-todos:checked) .ctl > .corpo-cx > .card-corpo{flex:1}
   .ctl:has(> input:checked) .so-fechado,
   body:has(#c-todos:checked) .ctl .so-fechado{display:none}
+  /* A LINHA DO GIROSCÓPIO ACENDE COM O CARD, e some sem `title` — ver o bloco
+     `O GIROSCÓPIO NO JOGO` lá em cima. As duas regras são irmãs de propósito:
+     quem apagar uma sem a outra deixa ou um vão elástico vazio no cabeçalho, ou
+     a frase presa na linha fechada, que não tem largura para ela. */
+  .ctl:has(> input:checked) .faixa .no-jogo[title],
+  body:has(#c-todos:checked) .ctl .faixa .no-jogo[title]{display:block;flex:1 1 0;min-width:0;
+    color:var(--texto-mudo);font-weight:400;cursor:help}
   body:has(#c-todos:checked) .chip[for="c-todos"],
   body:has(#c-p1:checked) .chip[for="c-p1"],
   body:has(#c-p2:checked) .chip[for="c-p2"],
@@ -1907,7 +1969,7 @@
       <input class="radio-mesa" type="radio" name="mesa" id="c-p1" data-campo="card-aberto" data-hef-alvo="marcado" checked>
       <span class="anel-vivo" data-campo="luz-cor" data-hef-alvo="cor"></span>
       <label class="faixa" for="c-p1" title="Clique para abrir o card deste controle — os outros fecham. É o mesmo gesto de escolhê-lo na fita lá em cima.">
-          <span class="card-nome"><span class="so-fechado">P1 <span class="pt">•</span> </span><span data-campo="peca">Cosmic Red</span> <span class="pt">•</span> <span data-campo="via">USB</span></span>
+          <span class="card-nome"><span class="so-fechado">P1 <span class="pt">•</span> </span><span data-campo="peca">Cosmic Red</span> <span class="pt">•</span> <span data-campo="via">cabo</span></span>
           <span class="div">·</span>
           <!-- SAI O TEXTO "vê como"; O NOME DA MÁSCARA FICA — decisão dela,
                31/08/2026, em duas frases: *"remover o vê como de todos os
@@ -1944,6 +2006,37 @@
                mostrar o que ela aprovou. -->
           <span class="leia" title="O que o jogo vê deste controle. A escolha é por controle e mora na aba Jogar — DualSense, Xbox 360 ou Nintendo Pro. Aqui é leitura."><b data-campo="mascara">DualSense</b><sup class="degradou" data-campo="mascara-degradou" data-hef-alvo="atributo" data-hef-atributo="title">*</sup></span><span class="div so-fechado">·</span>
           <span class="leia so-fechado" title="Capturando: o som que entra por este controle chega ao PC.">Microfone <span class="selo-ativo on" data-campo="mic-selo" data-hef-alvo="classe" data-hef-classe="on" data-hef-quando="ATIVO"><span class="mic-glifo" data-campo="mic-selo" data-hef-alvo="classe" data-hef-classe="cortado" data-hef-quando="MUDO"><svg viewBox="0 0 24 24" width="9" height="9" aria-hidden="true" focusable="false"><rect x="9" y="2" width="6" height="11" rx="3" fill="currentColor"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M12 17.5v4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></span><span class="selo-palavra" data-campo="mic-selo">ATIVO</span></span></span>
+          <!-- O GIROSCÓPIO NO JOGO — "fluindo para o jogo (~N Hz)".
+               CONTROLES-VERDADE-01, 06/09/2026. O número que responde *"o
+               giroscópio está chegando ao jogo AGORA?"* não existia deste lado:
+               o que a tela mostrava era um número de CATÁLOGO, na dica do
+               interruptor, igual para todo controle e todo momento.
+
+               A frase é de `controller_card.texto_motion`, inclusive as duas
+               exceções (Modo Nativo e máscara Xbox) — omiti-las seria a tela
+               parecer quebrada justamente quando ela está certa: em Nativo não
+               há gamepad virtual a que perguntar, e a máscara Xbox não TEM
+               giroscópio.
+
+               DOIS ELEMENTOS, UM ENDEREÇO SÓ, e é a gramática que o selo do
+               microfone desta mesma faixa já usa: o `achar()` do piloto visita
+               os dois com o MESMO valor e cada um decide pelo próprio alvo — o
+               de fora veste o `title` (a frase inteira), o de dentro recebe o
+               texto, que o `ellipsis` corta se o vão apertar. Dois `data-campo` diferentes para o mesmo fato
+               é o que a casa persegue: eles poderiam DIVERGIR na tela.
+
+               E O DE FORA É QUEM ESCONDE. Sem frase, o alvo `atributo` remove o
+               `title` e o `:not([title])` da folha apaga o elemento inteiro —
+               ver o bloco `O GIROSCÓPIO NO JOGO` no CSS. O silêncio é a
+               resposta certa e o dono é quem a dá: sem espelho vivo, acusar
+               "sem giroscópio" em todo card seria ruído crônico. Um vão elástico vazio no
+               meio do cabeçalho empurraria a bateria sem dizer por quê.
+
+               O TEXTO DO ARQUIVO É A CENA DO MOCKUP, e ele fica: é o que ela
+               olha na página parada. O produto o troca no primeiro tique. -->
+          <span class="no-jogo" data-campo="giro-no-jogo" data-hef-alvo="atributo"
+                data-hef-atributo="title" title="Giroscópio: fluindo para o jogo (~250 Hz)"><span
+                class="no-jogo-t" data-campo="giro-no-jogo">Giroscópio: fluindo para o jogo (~250 Hz)</span></span>
           <span class="sensores-peca">
             <button class="sw" data-gesto="sensor" data-sensor="giroscopio" data-campo="giro-ligado" data-hef-alvo="classe" data-hef-classe="off" data-hef-quando="DESLIGADO" title="Ligado: o jogo recebe o giro deste controle. No cabo são 250,0 Hz exatos, e três fontes independentes concordam: o relógio do host, o relógio do controle e o descritor USB (bInterval = 6)."><span class="p"></span>Giroscópio</button>
             <button class="sw" data-gesto="sensor" data-sensor="acelerometro" data-campo="accel-ligado" data-hef-alvo="classe" data-hef-classe="off" data-hef-quando="DESLIGADO" title="Ligado: o jogo recebe a inclinação e o chacoalhar deste controle."><span class="p"></span>Acelerômetro</button>
@@ -2318,7 +2411,7 @@
       <input class="radio-mesa" type="radio" name="mesa" id="c-p2" data-campo="card-aberto" data-hef-alvo="marcado">
       <span class="anel-vivo" data-campo="luz-cor" data-hef-alvo="cor"></span>
       <label class="faixa" for="c-p2" title="Clique para abrir o card deste controle — os outros fecham. É o mesmo gesto de escolhê-lo na fita lá em cima.">
-          <span class="card-nome"><span class="so-fechado">P2 <span class="pt">•</span> </span><span data-campo="peca">Starlight Blue</span> <span class="pt">•</span> <span data-campo="via">BT</span></span>
+          <span class="card-nome"><span class="so-fechado">P2 <span class="pt">•</span> </span><span data-campo="peca">Starlight Blue</span> <span class="pt">•</span> <span data-campo="via">rádio</span></span>
           <span class="div">·</span>
           <!-- SAI O TEXTO "vê como"; O NOME DA MÁSCARA FICA — decisão dela,
                31/08/2026, em duas frases: *"remover o vê como de todos os
@@ -2355,6 +2448,37 @@
                mostrar o que ela aprovou. -->
           <span class="leia" title="O que o jogo vê deste controle. A escolha é por controle e mora na aba Jogar — DualSense, Xbox 360 ou Nintendo Pro. Aqui é leitura."><b data-campo="mascara">Xbox 360</b><sup class="degradou" data-campo="mascara-degradou" data-hef-alvo="atributo" data-hef-atributo="title">*</sup></span><span class="div so-fechado">·</span>
           <span class="leia so-fechado" title="Calado no firmware do controle — a luz vermelha do plástico está apagada.">Microfone <span class="selo-ativo" data-campo="mic-selo" data-hef-alvo="classe" data-hef-classe="on" data-hef-quando="ATIVO"><span class="mic-glifo cortado" data-campo="mic-selo" data-hef-alvo="classe" data-hef-classe="cortado" data-hef-quando="MUDO"><svg viewBox="0 0 24 24" width="9" height="9" aria-hidden="true" focusable="false"><rect x="9" y="2" width="6" height="11" rx="3" fill="currentColor"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M12 17.5v4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></span><span class="selo-palavra" data-campo="mic-selo">MUDO</span></span></span>
+          <!-- O GIROSCÓPIO NO JOGO — "fluindo para o jogo (~N Hz)".
+               CONTROLES-VERDADE-01, 06/09/2026. O número que responde *"o
+               giroscópio está chegando ao jogo AGORA?"* não existia deste lado:
+               o que a tela mostrava era um número de CATÁLOGO, na dica do
+               interruptor, igual para todo controle e todo momento.
+
+               A frase é de `controller_card.texto_motion`, inclusive as duas
+               exceções (Modo Nativo e máscara Xbox) — omiti-las seria a tela
+               parecer quebrada justamente quando ela está certa: em Nativo não
+               há gamepad virtual a que perguntar, e a máscara Xbox não TEM
+               giroscópio.
+
+               DOIS ELEMENTOS, UM ENDEREÇO SÓ, e é a gramática que o selo do
+               microfone desta mesma faixa já usa: o `achar()` do piloto visita
+               os dois com o MESMO valor e cada um decide pelo próprio alvo — o
+               de fora veste o `title` (a frase inteira), o de dentro recebe o
+               texto, que o `ellipsis` corta se o vão apertar. Dois `data-campo` diferentes para o mesmo fato
+               é o que a casa persegue: eles poderiam DIVERGIR na tela.
+
+               E O DE FORA É QUEM ESCONDE. Sem frase, o alvo `atributo` remove o
+               `title` e o `:not([title])` da folha apaga o elemento inteiro —
+               ver o bloco `O GIROSCÓPIO NO JOGO` no CSS. O silêncio é a
+               resposta certa e o dono é quem a dá: sem espelho vivo, acusar
+               "sem giroscópio" em todo card seria ruído crônico. Um vão elástico vazio no
+               meio do cabeçalho empurraria a bateria sem dizer por quê.
+
+               O TEXTO DO ARQUIVO É A CENA DO MOCKUP, e ele fica: é o que ela
+               olha na página parada. O produto o troca no primeiro tique. -->
+          <span class="no-jogo" data-campo="giro-no-jogo" data-hef-alvo="atributo"
+                data-hef-atributo="title" title="Giroscópio: fluindo para o jogo (~250 Hz)"><span
+                class="no-jogo-t" data-campo="giro-no-jogo">Giroscópio: fluindo para o jogo (~250 Hz)</span></span>
           <span class="sensores-peca">
             <button class="sw" data-gesto="sensor" data-sensor="giroscopio" data-campo="giro-ligado" data-hef-alvo="classe" data-hef-classe="off" data-hef-quando="DESLIGADO" title="Ligado: o jogo recebe o giro deste controle. No rádio não há taxa típica. Medido em cinco janelas de 8 a 10 s no mesmo controle: a média foi de 38 a 392 Hz entre janelas consecutivas, sem que nada mudasse. Os 1000 Hz que o SDL declara para Bluetooth não aparecem em janela nenhuma."><span class="p"></span>Giroscópio</button>
             <button class="sw" data-gesto="sensor" data-sensor="acelerometro" data-campo="accel-ligado" data-hef-alvo="classe" data-hef-classe="off" data-hef-quando="DESLIGADO" title="Ligado: o jogo recebe a inclinação e o chacoalhar deste controle."><span class="p"></span>Acelerômetro</button>

@@ -29,6 +29,13 @@ from monta import (monta, glifo, rotulo, cabe_o_todos, CSS_GLIFO, CSS_LUZINHAS,
 # importá-lo sem uso é F401 no portão. Ele é do PACOTE — quem o escreve na
 # tela é o tique, não o desenho.
 from hefesto_dualsense4unix.app.widgets.sensor_widgets import texto_toques
+# OS DOIS DONOS QUE O DESENHO PERGUNTA — CONTROLES-VERDADE-01, 06/09/2026.
+# `texto_motion` monta a LINHA DO GIROSCÓPIO (o desenho pergunta com uma cena,
+# ver `GIRO_NO_JOGO_DO_DESENHO`), e `palavra_do_transporte` é a dona de
+# **cabo**/**rádio** — a palavra que este cabeçalho mostra e que o pacote pinta
+# no mesmo `data-campo`. Nenhuma das duas se digita aqui.
+from hefesto_dualsense4unix.app.actions.home_actions import palavra_do_transporte
+from hefesto_dualsense4unix.app.widgets.controller_card import texto_motion
 from pacotes.a02_controles import ROTULO_DO_CLIQUE, meias_da_barra as _meias_da_barra
 from pacotes.a02_controles import texto_do_xy as _texto_do_xy
 # AS DUAS FRASES DE TELA QUE O PRODUTO PINTA — e por isso o dono delas é o
@@ -405,6 +412,61 @@ CSS = CSS_GLIFO + CSS_LUZINHAS + """
      é `.leia`, que é o que ela faz: diz que aquele item tem texto embaixo. */
   .faixa .leia{cursor:help}
   .faixa .div{color:var(--texto-mudo)}   /* cor de texto, não de borda (topo.html: `.seta`) */
+  /* ---------- O GIROSCÓPIO NO JOGO — "fluindo para o jogo (~N Hz)" ----------
+     CONTROLES-VERDADE-01, 06/09/2026. O dono da frase é
+     `controller_card.texto_motion`, e nada dela é digitado aqui.
+
+     O QUE ELA SUBSTITUI É UM NÚMERO DE CATÁLOGO. A dica do interruptor de
+     Giroscópio, três elementos ao lado, afirma *"No cabo são 250,0 Hz exatos"*
+     — o mesmo número para todo controle e todo momento, com o controle dela
+     parado ou fluindo. O `paridade-gtk-html.csv:55` já nomeava isso, e é a
+     única linha desta família sem segunda metade: dívida viva, sem pergunta
+     pendente.
+
+     E NÃO É A LINHA DA VERDADE. Ela foi a primeira escolha desta sprint e a
+     medição a derrubou: a linha de `controller_card.py:1728` SAIU DA TELA DA
+     GTK em
+     17/08/2026, a pedido dela (*"remover guia dos status em tempo real"*,
+     SEM-BARRA-DA-VERDADE-01), e continua criada e alimentada fora da tela —
+     `controller_card.py:2916` diz isso com todas as letras, e o
+     `paridade-gtk-html.csv:56` avisa que reconstruí-la aqui seria reintroduzir
+     o que ela mandou tirar. **Quem OCUPA este lugar na GTK dela é justamente o
+     `_motion_label`** (`controller_card.py:2770`), que é esta frase.
+
+     O NOME DAQUELA FUNÇÃO NÃO SE SOLETRA NESTE ARQUIVO, e não é preciosismo: o
+     portão da paridade vigia a AUSÊNCIA do símbolo do lado HTML, e ele não
+     distingue prosa de uso — este comentário, escrito para AVISAR que a linha
+     não deve voltar, foi lido como a linha VOLTANDO na primeira corrida. É a
+     mesma armadilha que o `mesa_viva._via_do_transporte` já registrou, e a
+     forma desta casa é citar o ENDEREÇO.
+
+     ELA MORA NO VÃO DO CABEÇALHO — o mesmo lugar que ela ocupa na GTK, ao lado
+     da bateria —, e o vão foi MEDIDO antes de escolhido: com
+     a janela do produto (1212px) sobravam **410px** entre o nome da máscara e o
+     par de sensores — o maior vazio do card, e o `margin-left:auto` do
+     `.sensores-peca` era quem o segurava. Uma linha nova no CORPO custaria
+     altura, e a conta não tem folga para isso: `PARA_O_CARD` (328) menos
+     `ALTURA_DO_CARD` (304) são **24px**, e o assert lá embaixo é um portão.
+     Aqui ela custa ZERO altura.
+
+     `flex:1 1 0` + `min-width:0` são o par que faz o texto ENCOLHER num flex —
+     sem o `min-width` o item se recusa a ficar menor que o conteúdo e empurra a
+     bateria para fora. O `nowrap` é obrigatório: o `.faixa` do card aberto tem
+     `flex-wrap:wrap` e altura FIXA (`flex:0 0 var(--h-acao)`), então uma
+     segunda linha não faria o cabeçalho crescer — faria o texto vazar.
+
+     SEM FRASE, ESCONDE — e é o contrato, não economia de pixel. O alvo
+     `atributo` do piloto REMOVE o `title` quando o valor é vazio
+     (`hefesto_vivo.escrever`, ramo `atributo`), e o `:not([title])` abaixo faz
+     o vão voltar a ser vão. É o mesmo mecanismo da marca da degradação, que
+     esta faixa já usa dois elementos acima.
+
+     E ELA SÓ APARECE NO CARD ABERTO. A linha FECHADA é a mais apertada da mesa
+     — `VAO_ANTES_P3` são 103,2px com as duas leituras —, e um texto elástico
+     ali comeria a largura da bateria, que é uma só para as quatro linhas. */
+  .faixa .no-jogo{display:none}
+  .faixa .no-jogo > .no-jogo-t{overflow:hidden;text-overflow:ellipsis;
+    white-space:nowrap;display:block}
   /* os gatilhos: número EM CIMA da barra, como no original.
      O `margin-top:auto` SAIU, e ele era a causa do maior buraco da tela.
      Enquanto L2/R2 moravam dentro da moldura do giroscópio, aquele `auto`
@@ -1142,6 +1204,29 @@ def luz_do_jogador(c):
 DICA_TOQUE = ("O ponto marca onde o dedo está. Sem toque não há ponto — o DualSense "
               "só publica posição enquanto alguém encosta na superfície.")
 
+# A CENA DA LINHA DO GIROSCÓPIO NO DESENHO — CONTROLES-VERDADE-01, 06/09/2026.
+#
+# ELA NÃO É DIGITADA, e essa é a regra inteira desta sprint: o dono monta a
+# frase, e o desenho PERGUNTA a ele com uma cena. O que está escrito aqui é a
+# CENA (um controle cujo espelho de giroscópio está vivo a 250 Hz e cujos outros
+# cinco recursos ainda não foram pedidos por jogo nenhum) — a frase é
+# consequência. No dia em que o motor trocar uma palavra, o mockup troca junto,
+# sem ninguém reler este arquivo.
+#
+# ONZE RÉGUAS DESTA CASA CAÍRAM EM 26/08 pela forma oposta — *digitavam o que
+# deviam LER* —, e o §1 da sprint manda não repetir: "importe a constante do
+# dono e compare com ela".
+#
+# 250 Hz É A TAXA DO CABO, e ela não é chutada: `TAXA_DO_GIRO` neste mesmo
+# arquivo já a traz, medida por três fontes independentes. A cena do mockup é a
+# do P1, que está no cabo.
+_CENA_DO_GIRO = {"player": 1, "is_primary": True, "transport": "usb"}
+_CENA_GLOBAL_DO_GIRO = {
+    "rumble_ff": {"per_vpad": [{"player": 1, "motion_streaming": True,
+                                "motion_hz": 250.0}]},
+}
+GIRO_NO_JOGO_DO_DESENHO = texto_motion(_CENA_DO_GIRO, _CENA_GLOBAL_DO_GIRO) or ""
+
 # AS CINCO LÂMPADAS SÃO DERIVADAS, E ISSO PRECISA ESTAR DITO. O `state_full`
 # publica o `player_slot` e NÃO publica `player_leds`: o padrão desenhado sai de
 # `core/led_control.py::player_led_pattern(slot)` — a mesma função com que o
@@ -1292,10 +1377,23 @@ def identidade(c, *, bat, meio=""):
     # separador e a sequência têm um dono só, e escrevê-los de novo neste arquivo
     # seria a sexta gramática da mesma janela — a cicatriz que `rotulo()` existe
     # para não repetir.
+    #
+    # A PALAVRA DO TRANSPORTE VEM DO DONO — CONTROLES-VERDADE-01, 06/09/2026.
+    # Aqui estava `c["via"]`, a sigla de máquina que `monta.MESA` traz para a
+    # CONTAGEM DO TOPO (`2 USB · 0 BT`, a exceção que ela decidiu em 06/09).
+    # Este cabeçalho não é a contagem: é texto de tela por controle, e na tela é
+    # **cabo** e **rádio** (`docs/A-LINGUA-DESTA-CASA`, §1).
+    #
+    # E SEM ISTO O DESENHO PASSARIA A CONTRADIZER O PRODUTO na primeira pintura:
+    # o pacote desta aba já escreve a palavra do dono neste mesmo `data-campo`,
+    # então o mockup diria `USB` e o produto vivo `cabo`, no mesmo elemento — a
+    # espécie de divergência que a pasta `mockup/` existe para tornar visível, e
+    # que aqui não precisa existir, porque a fonte pode ser a mesma.
+    via_na_tela = palavra_do_transporte(c.get("transporte"))
     com_endereco = {
         **c,
         "nome": f'<span data-campo="peca">{c["nome"]}</span>',
-        "via": f'<span data-campo="via">{c["via"]}</span>',
+        "via": f'<span data-campo="via">{via_na_tela}</span>',
     }
     return f'''          <span class="card-nome"><span class="so-fechado">P{c["jogador"]}{SEPARADOR}</span>{rotulo(com_endereco, "peca")}</span>
           <span class="div">·</span>
@@ -1333,6 +1431,37 @@ def identidade(c, *, bat, meio=""):
                produto sumiria da página parada, e o desenho dela deixaria de
                mostrar o que ela aprovou. -->
           <span class="leia" title="{DE_ONDE_VEM_A_MASCARA}"><b data-campo="mascara">{c["mascara"]}</b><sup class="degradou" data-campo="mascara-degradou" data-hef-alvo="atributo" data-hef-atributo="title">*</sup></span>{meio}
+          <!-- O GIROSCÓPIO NO JOGO — "fluindo para o jogo (~N Hz)".
+               CONTROLES-VERDADE-01, 06/09/2026. O número que responde *"o
+               giroscópio está chegando ao jogo AGORA?"* não existia deste lado:
+               o que a tela mostrava era um número de CATÁLOGO, na dica do
+               interruptor, igual para todo controle e todo momento.
+
+               A frase é de `controller_card.texto_motion`, inclusive as duas
+               exceções (Modo Nativo e máscara Xbox) — omiti-las seria a tela
+               parecer quebrada justamente quando ela está certa: em Nativo não
+               há gamepad virtual a que perguntar, e a máscara Xbox não TEM
+               giroscópio.
+
+               DOIS ELEMENTOS, UM ENDEREÇO SÓ, e é a gramática que o selo do
+               microfone desta mesma faixa já usa: o `achar()` do piloto visita
+               os dois com o MESMO valor e cada um decide pelo próprio alvo — o
+               de fora veste o `title` (a frase inteira), o de dentro recebe o
+               texto, que o `ellipsis` corta se o vão apertar. Dois `data-campo` diferentes para o mesmo fato
+               é o que a casa persegue: eles poderiam DIVERGIR na tela.
+
+               E O DE FORA É QUEM ESCONDE. Sem frase, o alvo `atributo` remove o
+               `title` e o `:not([title])` da folha apaga o elemento inteiro —
+               ver o bloco `O GIROSCÓPIO NO JOGO` no CSS. O silêncio é a
+               resposta certa e o dono é quem a dá: sem espelho vivo, acusar
+               "sem giroscópio" em todo card seria ruído crônico. Um vão elástico vazio no
+               meio do cabeçalho empurraria a bateria sem dizer por quê.
+
+               O TEXTO DO ARQUIVO É A CENA DO MOCKUP, e ele fica: é o que ela
+               olha na página parada. O produto o troca no primeiro tique. -->
+          <span class="no-jogo" data-campo="giro-no-jogo" data-hef-alvo="atributo"
+                data-hef-atributo="title" title="{GIRO_NO_JOGO_DO_DESENHO}"><span
+                class="no-jogo-t" data-campo="giro-no-jogo">{GIRO_NO_JOGO_DO_DESENHO}</span></span>
 {sensores_da_peca(c)}
           <!-- A BATERIA GANHOU ENDEREÇO EM 01/09/2026, e até aqui ela era a
                PINTURA DO MOCKUP para sempre: o pacote da aba emite `bateria`
@@ -2299,6 +2428,12 @@ CSS += f"""
     display:flex;flex-direction:column}}
   {_aberto(" > .corpo-cx > .card-corpo")}{{flex:1}}
   {_aberto(" .so-fechado")}{{display:none}}
+  /* A LINHA DO GIROSCÓPIO ACENDE COM O CARD, e some sem `title` — ver o bloco
+     `O GIROSCÓPIO NO JOGO` lá em cima. As duas regras são irmãs de propósito:
+     quem apagar uma sem a outra deixa ou um vão elástico vazio no cabeçalho, ou
+     a frase presa na linha fechada, que não tem largura para ela. */
+  {_aberto(" .faixa .no-jogo[title]")}{{display:block;flex:1 1 0;min-width:0;
+    color:var(--texto-mudo);font-weight:400;cursor:help}}
   {CHIP_ACESO}{{background:var(--sel-bg);color:var(--fg);font-weight:600}}
   .fita label.chip{{cursor:pointer}}
   /* A LÁPIDE DA LEGENDA. Um item que fala do que SAIU não pode ter a mesma cara
