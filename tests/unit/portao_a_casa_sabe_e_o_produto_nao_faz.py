@@ -1037,13 +1037,6 @@ _NAO_E_PROMESSA: dict[str, str] = {
 #: No dia em que o caminho nascer, a entrada deixa de bater com a árvore e
 #: ``test_a_lista_de_lacunas_nao_envelhece_calada`` cobra que ela seja apagada.
 _SEM_CAMINHO_HOJE: dict[str, str] = {
-    "integrations/canal_do_microfone.py::nome_do_canal": (
-        "ONDA5-MIC-VIRTUAL-01, 05/09/2026 — o módulo inteiro é o canal de captura"
-        " com o nome do CONTROLE (`hefesto_mic_<hex6>`), que é o 'Mic virtual' qu"
-        "e ela pediu. ONDE O CAMINHO SE PERDE e O QUE O FECHA: ver a razão de `in"
-        "tegrations/canal_do_microfone.py::abrir`, que é a porta do módulo — esta"
-        " função é alcançada por ela, e cai junto enquanto ela não for fiada."
-    ),
     # `integrations/canal_do_microfone.py::sufixo_do_canal` MOROU AQUI e a
     # entrada SAIU em 06/09/2026, no Passo 3 da mesma sprint: a função DESCEU
     # para `integrations/fontes_de_captura.py::sufixo_do_canal_do_mic`, porque
@@ -1051,6 +1044,22 @@ _SEM_CAMINHO_HOJE: dict[str, str] = {
     # produção alcançada, pelos quatro chamadores de uma vez. Não é cópia: no
     # `canal_do_microfone` ela não existe mais, e há régua que reprova se
     # voltar a existir (`test_o_caminho_de_volta_reconhece_so_o_nosso`).
+    # AS SEIS DO `canal_do_microfone` SAÍRAM EM 06/09/2026, e a entrada de
+    # `abrir` PREVIU O PRÓPRIO FIM: ela dizia, com o endereço, que o que faltava
+    # era o GESTO, e que quem o daria seria a ONDA5-MIC-VIRTUAL-02. Deu: a ponte
+    # de rádio (`integrations/dualsense_bt_audio.PonteMicBluetooth.
+    # _abrir_o_canal_por_controle`) chama `abrir` para publicar o canal daquele
+    # controle, e por ele a varredura alcança `nome_do_canal`, `desmutar`,
+    # `sufixo_do_controle`, `argv_do_alimentador` e `propriedades_do_canal`.
+    #
+    # O QUE MUDOU EM RELAÇÃO AO QUE A LÁPIDE PREVIA: ela apostava no CABO
+    # (`eleicao_de_microfone.pedir_canal` chamando `abrir` com o nó ALSA), e
+    # quem chegou primeiro foi o RÁDIO. O cabo continua devendo o gesto, e a
+    # razão está no relatório da MIC-VIRTUAL-02: no rádio a ponte é dona do
+    # ciclo de vida e sabe FECHAR o canal; no cabo ainda não há quem feche.
+    # `alimentando` FICA por isso mesmo — ela é o estado do alimentador, e o
+    # rádio não usa alimentador nenhum (o fifo é enchido pelo decodificador
+    # Opus, não por um `parec`).
     "integrations/canal_do_microfone.py::alimentando": (
         "ONDA5-MIC-VIRTUAL-01, 06/09/2026, Passo 2 — `{uniq: nó de onde o áudio "
         "vem}`, o estado que separa 'o canal existe' de 'o microfone está "
@@ -1058,55 +1067,6 @@ _SEM_CAMINHO_HOJE: dict[str, str] = {
         "`integrations/canal_do_microfone.py::abrir`, que é a porta do módulo — "
         "esta função só é alcançada depois dela, e cai junto enquanto ela não "
         "for fiada."
-    ),
-    "integrations/canal_do_microfone.py::argv_do_alimentador": (
-        "ONDA5-MIC-VIRTUAL-01, 06/09/2026, Passo 2 — a linha de comando do "
-        "leitor que enche o fifo. Ela é pública para a régua medir o argv sem "
-        "lançar processo nenhum, e é chamada por `_Alimentador.iniciar`. ONDE O "
-        "CAMINHO SE PERDE e O QUE O FECHA: ver a razão de "
-        "`integrations/canal_do_microfone.py::abrir`."
-    ),
-    "integrations/canal_do_microfone.py::desmutar": (
-        "ONDA5-MIC-VIRTUAL-01, 06/09/2026, Passo 2 — tira o mudo DE FÁBRICA do "
-        "nó (medido: todo `module-pipe-source` nasce `Mute: yes` no PipeWire "
-        "1.6.8, e mudo ele entrega 192 KB de ZEROS em vez de áudio). É chamada "
-        "por `abrir`, e é pública porque a régua a exercita sozinha. ONDE O "
-        "CAMINHO SE PERDE e O QUE O FECHA: ver a razão de "
-        "`integrations/canal_do_microfone.py::abrir`."
-    ),
-    "integrations/canal_do_microfone.py::sufixo_do_controle": (
-        "ONDA5-MIC-VIRTUAL-01, 05/09/2026 — o módulo inteiro é o canal de captura"
-        " com o nome do CONTROLE (`hefesto_mic_<hex6>`), que é o 'Mic virtual' qu"
-        "e ela pediu. ONDE O CAMINHO SE PERDE e O QUE O FECHA: ver a razão de `in"
-        "tegrations/canal_do_microfone.py::abrir`, que é a porta do módulo — esta"
-        " função é alcançada por ela, e cai junto enquanto ela não for fiada."
-    ),
-    "integrations/canal_do_microfone.py::propriedades_do_canal": (
-        "ONDA5-MIC-VIRTUAL-01, 05/09/2026 — o módulo inteiro é o canal de captura"
-        " com o nome do CONTROLE (`hefesto_mic_<hex6>`), que é o 'Mic virtual' qu"
-        "e ela pediu. ONDE O CAMINHO SE PERDE e O QUE O FECHA: ver a razão de `in"
-        "tegrations/canal_do_microfone.py::abrir`, que é a porta do módulo — esta"
-        " função é alcançada por ela, e cai junto enquanto ela não for fiada."
-    ),
-    "integrations/canal_do_microfone.py::abrir": (
-        "ONDA5-MIC-VIRTUAL-01, 05/09/2026 — o canal de captura com o nome do "
-        "CONTROLE (`hefesto_mic_<hex6>`), que é o 'Mic virtual' que ela pediu: "
-        "*'se o Mic do dualsense passa a ser lido a parte via Mic virtual. "
-        "Usaríamos essa feature do controle mesmo no Xbox.'* "
-        "ONDE O CAMINHO SE PERDE, ATUALIZADO EM 06/09/2026: a medição que o "
-        "Passo 2 exigia FOI FEITA e o nó já é alimentado — um "
-        "`module-pipe-source` não tem porta de entrada no grafo (medido com "
-        "`pw-link`/`pw-dump`), logo é preciso um leitor, e ele existe. O que "
-        "falta é o GESTO: quem chama `abrir` é `eleicao_de_microfone."
-        "pedir_canal`, e aquele arquivo está no `nao_toca` desta sprint. "
-        "O QUE FECHA: `eleicao_de_microfone.pedir_canal` chamar "
-        "`canal_do_microfone.abrir(uniq, ...)` quando o transporte for "
-        "CABO, e o atendente do rádio continuar como está até a "
-        "ONDA5-MIC-VIRTUAL-02 converter os quatro chamadores de "
-        "`fontes_de_captura.escolher_fonte`. O corte entre as duas sprints é "
-        "por REVERSIBILIDADE: no cabo existe rede embaixo (o nó ALSA continua "
-        "publicado ao lado), no rádio não existe — `hefesto_dualsense_bt_<hex6>` "
-        "é o único canal que o Bluetooth tem hoje."
     ),
     # AS TRÊS DA ONDA1-D1 MORRERAM — 04/09/2026, e elas previram o próprio fim.
     # `mic_canal_set`, `frase_do_ato_do_microfone` e `ler_as_duas_camadas`
@@ -1145,85 +1105,32 @@ _SEM_CAMINHO_HOJE: dict[str, str] = {
     # recusa virou mentira"*. **Uma dívida que se anuncia com endereço é uma
     # dívida que alguém paga.**
 
-    # LUZ-DO-MIC-01, 03/09/2026 — NOVE PROMESSAS QUE TÊM CAMINHO E O PORTÃO
-    # NÃO VÊ. As duas peças de leitura do microfone são importadas pelo laço
+    # LUZ-DO-MIC-01, 03/09/2026 — NOVE PROMESSAS QUE TINHAM CAMINHO E O
+    # PORTÃO NÃO VIA. OITO SAÍRAM em 06/09/2026 (ver a nota logo abaixo);
+    # a que sobra é `e_stream_do_medidor`, de outro módulo.
+    #
+    # As duas peças de leitura do microfone são importadas pelo laço
     # da luz com `importlib`, e o portão varre chamadas estáticas. A dívida
     # aqui não é a ausência de chamador — é a INVISIBILIDADE dele, e ela é
     # deliberada: o comentário de `luz_do_mic.py:334-338` explica que um
     # `except Exception` no import existe para que uma peça irmã quebrada não
     # derrube a luz inteira.
-    "integrations/quem_ouve_o_microfone.py::e_stream_do_hefesto": (
-        "A PEÇA A da LUZ-DO-MIC-01 (03/09/2026). Ela TEM chamador em produção — o "
-        "`daemon/subsystems/luz_do_mic.py`, que sobe do `lifecycle.py:922` —, mas o import é "
-        "DINÂMICO (`importlib.import_module`, :333) e a varredura estática não o enxerga. O "
-        "import é dinâmico por uma razão escrita no próprio arquivo: uma peça irmã que exista "
-        "mas quebre ao importar não pode derrubar o subsistema da luz. FECHA quando alguém "
-        "provar que o import estático é seguro aqui — e essa prova exige medir o que acontece "
-        "com o daemon se o `pactl` sumir da máquina."
-    ),
-    "integrations/quem_ouve_o_microfone.py::ler_quem_ouve": (
-        "A PEÇA A da LUZ-DO-MIC-01 (03/09/2026). Ela TEM chamador em produção — o "
-        "`daemon/subsystems/luz_do_mic.py`, que sobe do `lifecycle.py:922` —, mas o import é "
-        "DINÂMICO (`importlib.import_module`, :333) e a varredura estática não o enxerga. O "
-        "import é dinâmico por uma razão escrita no próprio arquivo: uma peça irmã que exista "
-        "mas quebre ao importar não pode derrubar o subsistema da luz. FECHA quando alguém "
-        "provar que o import estático é seguro aqui — e essa prova exige medir o que acontece "
-        "com o daemon se o `pactl` sumir da máquina."
-    ),
-    "integrations/quem_ouve_o_microfone.py::nomes_de_fonte_por_indice": (
-        "A PEÇA A da LUZ-DO-MIC-01 (03/09/2026). Ela TEM chamador em produção — o "
-        "`daemon/subsystems/luz_do_mic.py`, que sobe do `lifecycle.py:922` —, mas o import é "
-        "DINÂMICO (`importlib.import_module`, :333) e a varredura estática não o enxerga. O "
-        "import é dinâmico por uma razão escrita no próprio arquivo: uma peça irmã que exista "
-        "mas quebre ao importar não pode derrubar o subsistema da luz. FECHA quando alguém "
-        "provar que o import estático é seguro aqui — e essa prova exige medir o que acontece "
-        "com o daemon se o `pactl` sumir da máquina."
-    ),
-    "integrations/quem_ouve_o_microfone.py::ouvintes_por_fonte": (
-        "A PEÇA A da LUZ-DO-MIC-01 (03/09/2026). Ela TEM chamador em produção — o "
-        "`daemon/subsystems/luz_do_mic.py`, que sobe do `lifecycle.py:922` —, mas o import é "
-        "DINÂMICO (`importlib.import_module`, :333) e a varredura estática não o enxerga. O "
-        "import é dinâmico por uma razão escrita no próprio arquivo: uma peça irmã que exista "
-        "mas quebre ao importar não pode derrubar o subsistema da luz. FECHA quando alguém "
-        "provar que o import estático é seguro aqui — e essa prova exige medir o que acontece "
-        "com o daemon se o `pactl` sumir da máquina."
-    ),
-    "integrations/quem_ouve_o_microfone.py::streams_de_captura": (
-        "A PEÇA A da LUZ-DO-MIC-01 (03/09/2026). Ela TEM chamador em produção — o "
-        "`daemon/subsystems/luz_do_mic.py`, que sobe do `lifecycle.py:922` —, mas o import é "
-        "DINÂMICO (`importlib.import_module`, :333) e a varredura estática não o enxerga. O "
-        "import é dinâmico por uma razão escrita no próprio arquivo: uma peça irmã que exista "
-        "mas quebre ao importar não pode derrubar o subsistema da luz. FECHA quando alguém "
-        "provar que o import estático é seguro aqui — e essa prova exige medir o que acontece "
-        "com o daemon se o `pactl` sumir da máquina."
-    ),
-    "integrations/quem_ouve_o_microfone.py::LeituraDeOuvintes": (
-        "A PEÇA A da LUZ-DO-MIC-01 (03/09/2026). Ela TEM chamador em produção — o "
-        "`daemon/subsystems/luz_do_mic.py`, que sobe do `lifecycle.py:922` —, mas o import é "
-        "DINÂMICO (`importlib.import_module`, :333) e a varredura estática não o enxerga. O "
-        "import é dinâmico por uma razão escrita no próprio arquivo: uma peça irmã que exista "
-        "mas quebre ao importar não pode derrubar o subsistema da luz. FECHA quando alguém "
-        "provar que o import estático é seguro aqui — e essa prova exige medir o que acontece "
-        "com o daemon se o `pactl` sumir da máquina."
-    ),
-    "integrations/quem_ouve_o_microfone.py::StreamDeCaptura": (
-        "A PEÇA A da LUZ-DO-MIC-01 (03/09/2026). Ela TEM chamador em produção — o "
-        "`daemon/subsystems/luz_do_mic.py`, que sobe do `lifecycle.py:922` —, mas o import é "
-        "DINÂMICO (`importlib.import_module`, :333) e a varredura estática não o enxerga. O "
-        "import é dinâmico por uma razão escrita no próprio arquivo: uma peça irmã que exista "
-        "mas quebre ao importar não pode derrubar o subsistema da luz. FECHA quando alguém "
-        "provar que o import estático é seguro aqui — e essa prova exige medir o que acontece "
-        "com o daemon se o `pactl` sumir da máquina."
-    ),
-    "integrations/quem_ouve_o_microfone.py::descende_do_hefesto": (
-        "A PEÇA A da LUZ-DO-MIC-01 (03/09/2026). Ela TEM chamador em produção — o "
-        "`daemon/subsystems/luz_do_mic.py`, que sobe do `lifecycle.py:922` —, mas o import é "
-        "DINÂMICO (`importlib.import_module`, :333) e a varredura estática não o enxerga. O "
-        "import é dinâmico por uma razão escrita no próprio arquivo: uma peça irmã que exista "
-        "mas quebre ao importar não pode derrubar o subsistema da luz. FECHA quando alguém "
-        "provar que o import estático é seguro aqui — e essa prova exige medir o que acontece "
-        "com o daemon se o `pactl` sumir da máquina."
-    ),
+    # AS OITO DA PEÇA A SAÍRAM EM 06/09/2026, e é a MESMA forma das cinco
+    # irmãs de 05/09 logo abaixo: o caminho que a lápide dizia não existir
+    # passou a existir, e foi este portão que avisou.
+    #
+    # E O MOTIVO NÃO É O QUE A LÁPIDE ESPERAVA, o que é a metade honesta desta
+    # nota. Elas apostavam que fecharia quando alguém provasse que o import
+    # ESTÁTICO é seguro em `luz_do_mic.py:333` — e ninguém provou; o import de
+    # lá continua dinâmico, pela mesma razão de sempre. O que aconteceu foi
+    # outro: `integrations/canal_do_microfone.py` importa
+    # `PREFIXO_PROPRIEDADE_HEFESTO` deste módulo ESTATICAMENTE, e a ponte de
+    # rádio passou a chamar `canal_do_microfone.abrir` — com isso o módulo
+    # inteiro entrou no fecho de import, e as referências internas dele
+    # resolvem. A dívida que sobra, portanto, NÃO é mais a invisibilidade: é a
+    # pergunta que a lápide fazia e que continua sem resposta — *o que acontece
+    # com o daemon se o `pactl` sumir da máquina*. Ela está no relatório da
+    # MIC-VIRTUAL-02, sem instrumento e sem dono.
     # AS CINCO IRMÃS DESTA ENTRADA SAÍRAM EM 05/09/2026, e não por arrumação:
     # `integrations/ondas_de_som.py` — as ondas sonoras da aba 02 — importa
     # `Fluxo` e `abrir_fluxo` ESTATICAMENTE, e por eles a varredura alcança

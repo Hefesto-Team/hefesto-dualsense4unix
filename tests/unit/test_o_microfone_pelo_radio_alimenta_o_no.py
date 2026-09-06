@@ -504,7 +504,7 @@ def test_o_parar_desliga_o_microfone_mesmo_sem_ter_ligado(pactl, par) -> None:  
 def test_quatro_controles_no_radio_tem_quatro_canais(pactl) -> None:  # type: ignore[no-untyped-def]
     """Quatro DualSense, quatro canais com nome próprio — o foco dela.
 
-    *"4 controles os 4 tem que ter canais de entrada unico pra cada qual."*
+    *"4 controles os 4 tem que ter canais de entrada unico pra cada qual."*  (noqa-acento)
     Uma tela que conta um está descrevendo a bancada de ontem.
     """
     for uniq in OS_QUATRO:
@@ -704,23 +704,46 @@ def test_a_regra_0_alcanca_o_volume_por_controle(pactl, monkeypatch) -> None:  #
     assert ac.fonte_de_captura_do_uniq(P1, mesa=list(OS_QUATRO)) == alvo
 
 
+def _dois_canais() -> dict[str, str]:
+    """DOIS controles com canal — e a mesa cheia é o que dá valor a esta régua.
+
+    **COM UM SÓ, TODA RÉGUA DESTA SEÇÃO DAVA VERDE COM A REGRA 0 ARRANCADA**, e
+    isso foi MEDIDO ao mordê-las em 06/09/2026: com uma fonte e um candidato,
+    quem responde é a regra 4 (*um para um*), não a 0. Três das cinco réguas
+    dirigidas passavam sem a cura — a forma de instrumento falso que esta casa
+    já nomeou seis vezes em três dias.
+
+    Com DOIS controles e DOIS canais a regra 4 não pode disparar (ela exige um
+    único candidato), o casamento por USB não existe (rádio não tem placa) e a
+    regra 1 não casa (o nome não é `bluez_`). **Só a regra 0 pode responder** —
+    e é isso que faz destas réguas uma medição da cura, e não da vizinha.
+    """
+    for uniq in (P1, P2):
+        canal.abrir(uniq, f"Microfone de {uniq}")
+    return dict(canal.de_pe())
+
+
 def test_a_regra_0_alcanca_quem_ouve(pactl, monkeypatch) -> None:  # type: ignore[no-untyped-def]
     """Chamador 3/6 — `integrations/quem_ouve_o_microfone.py` (QUEM ouve)."""
     from hefesto_dualsense4unix.integrations import quem_ouve_o_microfone as qo
 
-    canal.abrir(P1, "Microfone do P1")
-    alvo = canal.de_pe()[P1]
-    curta = f"600\t{alvo}\tPipeWire\ts16le 1ch 48000Hz\tSUSPENDED"
+    canais = _dois_canais()
+    curta = "\n".join(
+        f"{600 + i}\t{nome}\tPipeWire\ts16le 1ch 48000Hz\tSUSPENDED"
+        for i, nome in enumerate(sorted(canais.values()))
+    )
 
     def _falso(argv: list[str]) -> tuple[int, str]:
         return (0, curta if "short" in argv else "")
 
     monkeypatch.setattr(qo, "_rodar", _falso)
     monkeypatch.setattr(qo, "casamento_usb_agora", lambda _u: None)
-    leitura = qo.ler_quem_ouve([P1])
-    assert leitura.lida and P1 not in leitura.sem_canal, (
-        f"quem responde 'quem te escuta' não achou o canal com identidade: {leitura}"
+    leitura = qo.ler_quem_ouve([P1, P2])
+    assert leitura.lida and leitura.sem_canal == (), (
+        "quem responde 'quem te escuta' não achou o canal com identidade dos "
+        f"dois controles: {leitura}"
     )
+    assert set(leitura.por_uniq) == {P1, P2}
 
 
 def test_a_regra_0_alcanca_a_luz(pactl, monkeypatch) -> None:  # type: ignore[no-untyped-def]
@@ -728,22 +751,20 @@ def test_a_regra_0_alcanca_a_luz(pactl, monkeypatch) -> None:  # type: ignore[no
     from hefesto_dualsense4unix.daemon.subsystems import luz_do_mic as luz
     from hefesto_dualsense4unix.integrations import eleicao_de_microfone as el
 
-    canal.abrir(P1, "Microfone do P1")
-    alvo = canal.de_pe()[P1]
-    monkeypatch.setattr(el, "fontes_de_captura_agora", lambda: [alvo])
+    canais = _dois_canais()
+    monkeypatch.setattr(el, "fontes_de_captura_agora", lambda: sorted(canais.values()))
     monkeypatch.setattr(el, "casamento_usb_agora", lambda _m: None)
-    assert luz._fontes_para([P1], [P1]) == {P1: alvo}
+    assert luz._fontes_para([P1, P2], [P1, P2]) == canais
 
 
 def test_a_regra_0_alcanca_o_medidor_da_janela(pactl, monkeypatch) -> None:  # type: ignore[no-untyped-def]
     """Chamador 5/6 — `app/mic_monitor.py` (o medidor de nível de cada card)."""
     from hefesto_dualsense4unix.app import mic_monitor as mm
 
-    canal.abrir(P1, "Microfone do P1")
-    alvo = canal.de_pe()[P1]
+    canais = _dois_canais()
     monitor = mm.MicMonitor()
     capturas: dict[str, str] = {}
-    monkeypatch.setattr(monitor, "_descobrir_fontes", lambda: [alvo])
+    monkeypatch.setattr(monitor, "_descobrir_fontes", lambda: sorted(canais.values()))
     monkeypatch.setattr(monitor, "_casar_por_usb", lambda *a, **k: None)
     monkeypatch.setattr(monitor, "_derrubar_capturas", lambda _m: None)
     monkeypatch.setattr(
@@ -752,9 +773,9 @@ def test_a_regra_0_alcanca_o_medidor_da_janela(pactl, monkeypatch) -> None:  # t
     monkeypatch.setattr(monitor, "_descobrir_saidas", lambda *a, **k: ({}, {}))
     monkeypatch.setattr(mm, "usb_pai_por_uniq", lambda _u: {})
     monitor.set_ativo(True)
-    monitor.set_controles((P1,))
+    monitor.set_controles((P1, P2))
     monitor.reconciliar()
-    assert capturas == {P1: alvo}, (
+    assert capturas == canais, (
         f"o medidor da janela não mediu o canal com identidade: {capturas}"
     )
 
@@ -799,11 +820,18 @@ def _como_o_servidor_le(source_properties: str) -> dict[str, str]:
     bruto = source_properties.split("=", 1)[1]
     entre_aspas = bruto.startswith('"') and bruto.endswith('"')
     valor = bruto[1:-1] if entre_aspas else bruto.split(" ", 1)[0]
+    try:
+        pedacos = shlex.split(valor)
+    except ValueError:
+        # O CORTE DEIXA UM FRAGMENTO MALFORMADO, e é por isso que a descrição
+        # chega como "Microfone": cortar no primeiro espaço parte a aspa simples
+        # da descrição ao meio. O servidor não levanta — ele fica com o pedaço.
+        pedacos = valor.split(" ")
     props: dict[str, str] = {}
-    for pedaco in shlex.split(valor):
+    for pedaco in pedacos:
         chave, _, val = pedaco.partition("=")
         if chave:
-            props[chave] = val
+            props[chave] = val.strip("'\"")
     return props
 
 
