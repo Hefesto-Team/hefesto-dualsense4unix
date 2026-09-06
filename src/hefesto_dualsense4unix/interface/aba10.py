@@ -376,7 +376,17 @@ CSS = CSS_GLIFO + """
      claro que o verde, mas sem peso um cabeçalho de coluna vira dado. */
   .campo > span:first-child{color:var(--fg);font-weight:700;text-align:left;
                             white-space:nowrap}
-  .campo{display:grid;grid-template-columns:var(--rot-p) 1fr;align-items:center;gap:12px;
+  /* `minmax(0,1fr)` E NÃO `1fr`, e a diferença é MEDIDA — 06/09/2026. Uma pista
+     `1fr` é `minmax(auto,1fr)`, e o mínimo `auto` de uma pista de grade é o
+     MIN-CONTENT do que está dentro: a pista CRESCE para caber o conteúdo, em
+     vez de apertá-lo. Enquanto os campos eram `<input>` e `<select>` isso não
+     aparecia — nenhum dos dois cresce com o valor. O rótulo do jogo (10-Q4) é
+     TEXTO, e cresce: medido no Chrome com um nome de 300 caracteres, a segunda
+     coluna passou de 412px para **1990px** dentro de uma página de 1180px, e o
+     `Detectar` saiu do quadro junto com ela. O `min-width:0` dos filhos não
+     alcança isto — ele deixa o FLEX apertar, e aqui quem não apertava era a
+     GRADE. */
+  .campo{display:grid;grid-template-columns:var(--rot-p) minmax(0,1fr);align-items:center;gap:12px;
          height:var(--h-escolha);font-size:12px;color:var(--texto-mudo);margin-bottom:4px}
 
   /* AS DIVISÓRIAS SAÍRAM DESTE TRECHO — 31/08/2026, pedido dela olhando a aba:
@@ -477,8 +487,12 @@ CSS = CSS_GLIFO + """
      sempre a metade que avisa. A carona da Steam sozinha tem 218 caracteres
      («Reposta a Opção de Inicialização … Sem ela, no Bluetooth o jogo tende a
      não enxergar controle nenhum»), vem grudada na frase de ativação, e as
-     duas passam de 280; a linha de 1.180px a 11px comporta ~200. O que sumia
-     era exatamente o *"sem ela, o jogo tende a não enxergar controle nenhum"*.
+     duas passam de 280. O que sumia era exatamente o *"sem ela, o jogo tende a
+     não enxergar controle nenhum"*.
+
+     O `~200` DE ESTIMATIVA VIROU MEDIDA — 06/09/2026: as duas linhas comportam
+     413 caracteres, medidos por bissecção no Chrome. O número tem dono
+     (`CABEM_NA_TIRA`, no alto deste arquivo) e a régua o lê de lá.
 
      AS DUAS LINHAS CONTINUAM FIXAS — o que mudou em 05/09 foi só o repouso.
      Uma tira que crescesse com o tamanho da frase daria um pulo DIFERENTE a
@@ -539,6 +553,52 @@ CSS = CSS_GLIFO + """
      para a direita sairia da janela. É a mesma cura que o `.tn-cx .dica` do
      `monta` já faz na aba Conexões. */
   .campo .trava .dica,.campo .exige .dica{left:auto;right:20px;width:300px}
+
+  /* ---------- O RÓTULO DO JOGO, ao lado do campo — decisão 10-Q4 dela --------
+     *"Rótulo ao lado, ao vivo: à direita do campo aparece o nome do jogo
+     enquanto você digita, ou «não está nesta máquina», ou «não reconheci este
+     endereço»."* Ela recusou a opção que o produto tinha construído em 04/09
+     (a resposta só na tira, depois do `change`) — e a escolha ACRESCENTA: o
+     campo continua se corrigindo sozinho, o que nasce é o rótulo.
+
+     ELE SE ESCONDE QUANDO NÃO HÁ O QUE DIZER, e essa é a razão de o endereço
+     `editor.jogo.rotulo` aparecer DUAS vezes. `escrever()` troca vazio por
+     `'—'` ANTES de escolher o ramo (`hefesto_vivo.py`), então um rótulo vazio
+     não fica vazio: fica um travessão solto entre o campo e o "Detectar". A
+     forma é a MESMA da tira do desfecho, nesta página, quatro blocos acima —
+     o `classe` acende, o `<span>` de dentro escreve.
+
+     A TINTA É O TERCEIRO `<span>`, e ele existe porque `data-hef-alvo` é UM por
+     elemento: a visibilidade é um fato ("há rótulo?"), o alerta é outro ("é
+     erro ou é rotina?"), e os dois têm de ser escritos ao mesmo tempo. É a
+     mesma razão pela qual `marca_com_dica` tem dois endereços em vez de um.
+
+     LARANJA SÓ NO ERRO: *"não instalado aqui (o número vale)"* é o jogo que ela
+     ainda vai comprar, e pintá-lo de alerta seria a tela chamando de problema o
+     que o dono da frase chama de normal (`jogos_locais.frase_do_campo_do_jogo`).
+
+     ELE TEM TETO, e o `<input>` encolhe para caber — que é o que a opção dela
+     diz. Nome de jogo é dado DELA e pode ser longo ("ORPHEUS: TO HELL AND
+     BACK"): sem `flex:0 1 auto` e sem reticência, o rótulo empurraria o
+     "Detectar" para fora do quadro. `text-overflow` e não `-webkit-line-clamp`
+     porque aqui é UMA linha de propósito — a fileira do campo tem 30px, e a
+     tira de baixo é quem tem duas.
+
+     O `max-width:45%` É MEDIDO, e nasceu de um defeito que a régua achou depois
+     de a primeira cura já estar escrita. Com `minmax(0,1fr)` na grade e sem
+     teto, a fileira parou de crescer — e o rótulo passou a comer o CAMPO: com
+     um nome de 60 caracteres o `<input>` ficava com **24px**, e ela não veria o
+     que digitou. Com 45%, o rótulo para em 185px, o campo fica com ~112px (uns
+     dez caracteres, mais que um appid) e a reticência entra a partir de ~38
+     caracteres de nome — que é onde o nome deixa de caber de qualquer jeito.
+     Duas guardas, dois defeitos: a grade impede a fileira de estourar, o teto
+     impede o rótulo de tomar o campo. */
+  .campo .rot{display:none;flex:0 1 auto;min-width:0;max-width:45%;
+              font-size:11.5px;
+              color:var(--texto-mudo);white-space:nowrap;overflow:hidden;
+              text-overflow:ellipsis}
+  .campo .rot.on{display:block}
+  .campo .rot .al.alerta{color:var(--orange)}
 
   /* ---------- as QUATRO configurações que cabem dentro deste perfil ----------
      O editor mostrava CINCO campos e gravava vinte, e a única frase que dizia
@@ -677,6 +737,27 @@ CSS = CSS_GLIFO + """
 # O CADEADO, EM DOIS TRAÇOS — decisão [01] do PO, 04/09/2026. Ver o bloco
 # `.trava` no CSS para a razão de ser SVG e não um caractere. `currentColor` nos
 # dois traços é o que deixa a cor morar no CSS, como em todo glifo desta casa.
+#: QUANTOS CARACTERES CABEM NAS DUAS LINHAS DA TIRA — MEDIDO, 06/09/2026.
+#:
+#: Medido no Chrome sobre `mockup/10-perfis.html`, acendendo a `.desfecho` e
+#: procurando por bissecção o maior texto com `scrollHeight <= clientHeight`.
+#: A tira mede **1140px** (o `.pagina` do `topo.html` é `width:1180px` menos os
+#: `padding:0 14px` daqui e a folga do quadro), a 11px, com `line-height:15px` e
+#: `-webkit-line-clamp:2` — e cabem **413 caracteres**; o 414º reticencia.
+#:
+#: ELE NÃO É DIGITADO NO COMENTÁRIO DE CIMA, e essa é a razão de existir: o
+#: bloco da `.desfecho` dizia *"a linha de 1.180px a 11px comporta ~200"*, e o
+#: `~200` era estimativa — dobrada, dava 400, e foi com esse número que a sprint
+#: 10-Q5 declarou que DUAS frases do produto passavam do teto. **Medidas, elas
+#: não passavam**: a carona reposta de UM jogo dá 227 caracteres com a frase de
+#: ativação grudada, e a regressão de UM jogo dá 364. Quem estoura é o NÚMERO DE
+#: JOGOS — a lista não tem teto (`steam_launch_options.lista_de_jogos`) —, e a
+#: metade curta da 10-Q5 empurra a fronteira de TRÊS jogos para CINCO.
+#:
+#: É O TETO NA LARGURA DO DESENHO, e portanto o melhor caso: o `.pagina` é
+#: `max-width:100%`, então uma janela mais estreita comporta menos.
+CABEM_NA_TIRA = 413
+
 CADEADO = ('<svg viewBox="0 0 12 12" width="11" height="11" aria-hidden="true">'
            '<path d="M3.6 5.2V3.9a2.4 2.4 0 0 1 4.8 0v1.3" fill="none" '
            'stroke="currentColor" stroke-width="1.2"/>'
@@ -715,6 +796,37 @@ def marca_com_dica(classe: str, campo_estado: str, campo_frase: str,
             f' data-hef-alvo="classe">{miolo}'
             f'<span class="dica" data-hef="{campo_frase}"'
             f' data-hef-alvo="html"></span></span>')
+
+
+def rotulo_do_jogo() -> str:
+    """O nome do jogo à direita do campo — decisão 10-Q4 dela, 06/09/2026.
+
+    TRÊS `<span>` E DOIS ENDEREÇOS, e cada casca faz UMA coisa porque
+    `data-hef-alvo` é UM por elemento:
+
+    * o de fora ACENDE (`editor.jogo.rotulo`, alvo `classe`) — sem ele, um
+      rótulo vazio vira um travessão solto entre o campo e o "Detectar", porque
+      `escrever()` troca `''` por `'—'` antes de escolher o ramo;
+    * o do meio PINTA (`editor.jogo.alerta`, alvo `classe`, classe `alerta`) —
+      é o booleano que `frase_do_campo_do_jogo` devolve e que
+      `_jogo_reconhecido` jogava fora até hoje, e é ele que separa *"não
+      instalado aqui (o número vale)"*, que é rotina, de *"não reconheci este
+      endereço"*, que é erro;
+    * o de dentro ESCREVE (`editor.jogo.rotulo`, alvo padrão).
+
+    O ENDEREÇO REPETIDO É A FORMA DA CASA, e não uma invenção deste rótulo: a
+    tira do desfecho desta MESMA página faz exatamente isto — o `classe` acende,
+    o `<span>` de dentro escreve —, e há régua cobrando as duas ocorrências.
+
+    NASCE VAZIO, pela mesma razão da `.dica` de `marca_com_dica`: o desenho não
+    sabe que jogo é o dela, e um exemplo aqui seria a tela afirmando um jogo que
+    o perfil não tem.
+    """
+    return ('<span class="rot" data-hef="editor.jogo.rotulo"'
+            ' data-hef-alvo="classe">'
+            '<span class="al" data-hef="editor.jogo.alerta"'
+            ' data-hef-alvo="classe" data-hef-classe="alerta">'
+            '<span data-hef="editor.jogo.rotulo"></span></span></span>')
 
 
 #: A FRASE DA PRIORIDADE QUE ELA APROVOU — 02/09/2026, decisão nº11 dela.
@@ -1176,6 +1288,7 @@ MIOLO = f'''
                   <input type="text" data-hef="editor.jogo" data-hef-gesto="editor.jogo"
                          data-hef-alvo="valor" value="Mortal Kombat 1">{marca_com_dica(
                            "exige", "editor.jogo.exige", "editor.jogo.exigencia")}
+                  {rotulo_do_jogo()}
                   <button class="btn roxo" data-hef-gesto="detectar" title="Pega o jogo que está rodando atrás desta janela e monta a regra — funciona com jogo de qualquer lugar, não só da Steam.">Detectar</button>
                 </span>
               </div>
@@ -1556,6 +1669,55 @@ def _conferir(html: str) -> None:
                f"o endereço sumiu, ou o mockup passou a cravar uma frase que é "
                f"dado do perfil dela")
 
+    # O RÓTULO DO JOGO — decisão 10-Q4 dela, 06/09/2026. As três coisas que o
+    # fazem funcionar, e as três somem caladas: os DOIS `editor.jogo.rotulo` (o
+    # `classe` acende, o `<span>` escreve — sem o primeiro ele mostra um
+    # travessão em todo perfil que não é da Steam), a tinta do alerta, e o
+    # NASCER VAZIO.
+    exigir(html.count('data-hef="editor.jogo.rotulo"') == 2,
+           "o rótulo do jogo perdeu um dos dois endereços — sem o `classe` ele "
+           "fica aceso com um travessão solto ao lado do campo; sem o `<span>` "
+           "ele nunca escreve o nome do jogo")
+    exigir('<span class="rot" data-hef="editor.jogo.rotulo"'
+           ' data-hef-alvo="classe">' in html,
+           "o rótulo do jogo perdeu o alvo `classe` — ele apareceria em todo "
+           "perfil, inclusive nos que não têm jogo nenhum a nomear")
+    exigir('data-hef="editor.jogo.alerta" data-hef-alvo="classe"'
+           ' data-hef-classe="alerta"' in html,
+           "o rótulo do jogo perdeu a tinta do alerta — «não reconheci este "
+           "endereço» sairia da mesma cor de «não instalado aqui», e o erro "
+           "ficaria com a cara da rotina")
+    exigir('<span data-hef="editor.jogo.rotulo"></span>' in html,
+           "o rótulo do jogo não nasce VAZIO no desenho — um exemplo aqui é a "
+           "tela afirmando um jogo que o perfil dela não tem")
+    # E ELE TEM TETO: sem a reticência, um nome longo empurra o "Detectar" para
+    # fora do quadro. As três metades da mesma cura, e cada uma sozinha não faz
+    # nada — `white-space:nowrap` sem `overflow:hidden` vaza, e as duas sem
+    # `text-overflow` cortam no meio da letra.
+    regra_rot = re.search(r"\.campo \.rot\{[^}]*\}", html)
+    exigir(regra_rot is not None, "a regra do rótulo do jogo sumiu do CSS")
+    if regra_rot:
+        corpo_rot = regra_rot.group(0)
+        for peca in ("white-space:nowrap", "overflow:hidden",
+                     "text-overflow:ellipsis", "display:none", "min-width:0",
+                     "max-width:45%"):
+            exigir(peca in corpo_rot,
+                   f"o rótulo do jogo perdeu `{peca}` — nome de jogo é dado "
+                   f"dela e pode ser longo; sem as seis peças o rótulo empurra "
+                   f"o `Detectar` para fora do quadro, come o campo, ou nasce "
+                   f"visível")
+    # A GRADE DO CAMPO NÃO PODE CRESCER COM O TEXTO — MEDIDO no Chrome em
+    # 06/09/2026, e o defeito nasceu com o rótulo. `1fr` é `minmax(auto,1fr)`, e
+    # o mínimo `auto` de uma pista é o MIN-CONTENT do que está dentro: com um
+    # nome de 300 caracteres a segunda coluna foi de 412px a **1990px** numa
+    # página de 1180px, levando o `Detectar` para fora do quadro. Enquanto os
+    # campos eram `<input>` e `<select>` ninguém via — nenhum dos dois cresce
+    # com o valor.
+    exigir("grid-template-columns:var(--rot-p) minmax(0,1fr)" in html,
+           "a fileira do campo voltou a `1fr` — uma pista de grade cresce com o "
+           "MIN-CONTENT, e o rótulo do jogo é texto: a segunda coluna estoura a "
+           "página e leva o `Detectar` junto")
+
     # A FRASE DA PRIORIDADE, E A ORDEM DAS DUAS — decisão [03] do PO. A dela
     # PRIMEIRO: é a que ela aprovou, e a do Universal responde a pergunta que a
     # dela deixa aberta.
@@ -1627,12 +1789,25 @@ def _conferir(html: str) -> None:
                          + "\n  ".join(f"- {f}" for f in falhas))
 
 
-n = monta("10-perfis", "Perfis", MIOLO, CSS, legenda=LEGENDA)
-_conferir(onde.pagina("10-perfis.html").read_text(encoding="utf-8"))
-# O NÚMERO SAI DO CSS, não de um literal aqui: ele já mentiu duas vezes hoje —
-# a coluna mudou de 82 para 87 e para 86 enquanto ela ajustava os rótulos, e a
-# linha de saída continuou anunciando o valor velho. O que tem dono não se digita.
-ROT_P = re.search(r"--rot-p:(\d+)px", CSS).group(1)
-FORA = sum(1 for c in MESA if not c.get("conectado", True))
-print(f"10-perfis: OK, {n} divs · rótulo à esquerda com dois pontos, coluna de {ROT_P}px, "
-      f"zero divisórias no editor · Perfis Salvos e Definições · {FORA} lugar(es) Desconectado")
+# A ESCRITA MORA DEBAIXO DO `__main__`, e isto é cura de defeito MEDIDO em
+# 06/09/2026: `import aba10` REESCREVIA a bancada dela como efeito de um
+# import. `interface/perfis_vivos.py:77` faz esse import no TOPO do módulo,
+# então toda execução dele reescrevia o desenho aprovado — e bastava o pytest
+# COLETAR qualquer teste que importasse o gerador para o mesmo acontecer, com o
+# estado VIVO da mesa dentro do arquivo (`1 USB · 1 BT` virando `0 USB · 0 BT`
+# porque os controles não estavam na tomada naquele instante). A régua do
+# desenho aprovado passava a reprovar por causa do que estava ligado.
+#
+# A `aba01` e a `aba02` já tinham esta guarda desde que `jogar_vivo.py` e
+# `controles_vivos.py` passaram a importá-las; a `aba04` e a `aba05` a ganharam
+# na costura do mesmo dia, e esta é a irmã delas.
+if __name__ == "__main__":
+    n = monta("10-perfis", "Perfis", MIOLO, CSS, legenda=LEGENDA)
+    _conferir(onde.pagina("10-perfis.html").read_text(encoding="utf-8"))
+    # O NÚMERO SAI DO CSS, não de um literal aqui: ele já mentiu duas vezes hoje —
+    # a coluna mudou de 82 para 87 e para 86 enquanto ela ajustava os rótulos, e a
+    # linha de saída continuou anunciando o valor velho. O que tem dono não se digita.
+    ROT_P = re.search(r"--rot-p:(\d+)px", CSS).group(1)
+    FORA = sum(1 for c in MESA if not c.get("conectado", True))
+    print(f"10-perfis: OK, {n} divs · rótulo à esquerda com dois pontos, coluna de {ROT_P}px, "
+          f"zero divisórias no editor · Perfis Salvos e Definições · {FORA} lugar(es) Desconectado")
