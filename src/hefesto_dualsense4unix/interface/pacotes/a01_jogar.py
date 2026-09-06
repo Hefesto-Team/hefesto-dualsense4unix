@@ -137,20 +137,45 @@ AVISOS_NA_COLUNA = 3
 #: 4. ``PONTE`` — por onde o jogo recebe o controle agora, quando a resposta é
 #:    má notícia;
 #: 5. ``JOGO`` — há jogo aberto fora do caminho do Hefesto;
-#: 6. ``RÁDIO`` — o transporte está frágil;
-#: 7. ``PERFIL`` — o cadeado da troca automática e o detector cego.
+#: 6. ``CONTROLE`` — o aparelho pode CAIR no meio da partida (a cura do
+#:    travamento do USB não está de pé). Entra aqui, entre ``JOGO`` e
+#:    ``RÁDIO``, pelo mesmo critério: a queda leva o controle inteiro, e o
+#:    rádio frágil só atrapalha o jogo a enxergá-lo;
+#: 7. ``RÁDIO`` — o transporte está frágil;
+#: 8. ``PERFIL`` — o cadeado da troca automática e o detector cego.
 #:
 #: O QUE NÃO ESTÁ AQUI VAI DEPOIS, na ordem em que chegou: são os achados do
 #: exame da mesa, que já vêm ordenados pelo dono deles
 #: (`a08_conexoes._exame`). Uma lista que tentasse ranqueá-los aqui seria a
 #: segunda cópia de uma escada que `secao_exame.ESCADA_DE_GRAVIDADE` já tem.
+#:
+#: **O SELO NOVO TINHA DE ENTRAR NA TUPLA, e não é asseio.** O que não está
+#: aqui vai para DEPOIS DE TUDO (`posto.get(..., fim)` em
+#: :func:`_coluna_de_avisos`) — que é o desenho certo para os achados do exame
+#: e o errado para um selo nomeado neste arquivo: com a coluna mostrando três
+#: de cada vez (:data:`AVISOS_NA_COLUNA`), um selo fora da escada é um selo que
+#: a máquina cheia esconde atrás do ``+N``.
 ORDEM_DA_GRAVIDADE: tuple[str, ...] = (
-    "PAUSA", "ERRO", "GAMEPAD", "PONTE", "JOGO", "RÁDIO", "PERFIL",
+    "PAUSA", "ERRO", "GAMEPAD", "PONTE", "JOGO", "CONTROLE", "RÁDIO", "PERFIL",
 )
 
 #: O SELO DA PONTE. Não é um selo inventado: ``PONTE_PREFIXO`` do produto é
 #: *"Ponte com o jogo: "* — a palavra é dele, e este selo é ela.
 SELO_DA_PONTE = "PONTE"
+
+#: O SELO DA CURA DO TRAVAMENTO — decisão dela, 06/09/2026: *"A cura do
+#: travamento do USB entra na coluna Atenção"*, e o selo é ``CONTROLE``.
+#:
+#: **NÃO É ``RÁDIO``, E A DIFERENÇA IMPORTA NA TELA.** Esta cura é do **cabo**
+#: (o mixer UAC do DualSense martelando o EP0, `storm_doctor._SND_QUIRK_RE`), e
+#: quem já ocupa o selo ``RÁDIO`` é o `texto_do_radio_fragil`, que fala de
+#: Bluetooth. Dois avisos com o mesmo selo, um do cabo e outro do rádio, é a
+#: coluna mandando ela procurar no lugar errado.
+#:
+#: E NÃO É PALAVRA DE MÁQUINA: ``CONTROLE`` é o termo da tela para o aparelho
+#: (`docs/A-LINGUA-DESTA-CASA`, §1) — o que cai no meio da partida é o
+#: controle, e é isso que o selo diz.
+SELO_DA_CURA = "CONTROLE"
 
 #: A LINHA DO ``+N`` — o que a coluna diz quando não coube tudo.
 #:
@@ -420,8 +445,8 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
         }
 
     # A COLUNA ATENÇÃO — as fontes do PRODUTO, não uma segunda leitura. Ver
-    # `_avisos`: das oito fontes possíveis, sete já estavam escritas em
-    # `app/actions/` e nenhuma frase nasce aqui.
+    # `_avisos`: todas já estavam escritas fora daqui (`app/actions/`, e desde
+    # 06/09 também `integrations/storm_doctor`) e nenhuma frase nasce aqui.
     avisos = _avisos(ctx)
     selos, textos = _coluna_de_avisos(avisos)
 
@@ -600,8 +625,8 @@ def _do_exame() -> list[dict[str, Any]]:
 def _avisos(ctx: Contexto) -> list[dict[str, str]]:
     """A coluna **Atenção**: ``[{"selo", "texto", "fonte"}, …]``, das fontes do produto.
 
-    **NADA SE ESCREVE AQUI.** As oito fontes já existiam, e sete delas em
-    `app/actions/` — o que faltava era o produto novo CHAMÁ-LAS. Medido em
+    **NADA SE ESCREVE AQUI.** As fontes já existiam, e todas fora deste
+    arquivo — o que faltava era o produto novo CHAMÁ-LAS. Medido em
     03/09/2026: quem consumia `painel.AVISOS_DA_TELA` era `interface/jogar_vivo.
     py`, que é BANCADA; a aba publicada mostrava, no lugar delas, o Check-up da
     aba Conexões — dois conjuntos DISJUNTOS, e o da GTK era o que respondia
@@ -620,13 +645,26 @@ def _avisos(ctx: Contexto) -> list[dict[str, str]]:
        ``gamepad_disabled.flag`` e `ctx.conectados` é a mesa. É a pergunta
        literal dela de 31/08 (*"não sei se segue desativado"*), e na máquina
        dela ela está QUENTE agora;
-    3. **os achados GRAVES do exame da mesa** (`a08_conexoes._exame`), que era o
+    3. **a ponte com o jogo** (:func:`_aviso_da_ponte`), e só quando ela é má
+       notícia;
+    4. **a cura do travamento do USB**
+       (:func:`_aviso_da_cura_do_travamento`) — a fonte que nasceu em
+       06/09/2026, ONDA5-01-01. Ela não é função de `state`: lê o disco, como
+       a ponte lê a cor do produto;
+    5. **os achados GRAVES do exame da mesa** (`a08_conexoes._exame`), que era o
        único que esta coluna já mostrava. Os ``certo`` ficam de fora: a coluna
        chama-se Atenção.
 
+    **FATO SUBSTITUÍDO — 06/09/2026.** Estas linhas diziam *"as oito fontes"* e
+    enumeravam TRÊS itens: o número foi escrito em 03/09 e a ponte entrou em
+    04/09 sem ninguém somar. Contadas hoje, uma a uma, são **dez** (as seis
+    puras mais quatro canais), e a décima é a desta sprint. Um número que
+    envelhece a cada fonte nova é convite a esta mesma correção daqui a uma
+    semana — por isso o que fica escrito é a LISTA, que se conta sozinha.
+
     O SELO DO OPT-OUT É ``GAMEPAD``, e não uma palavra nova: é o mesmo que
     `AVISOS_DA_TELA` dá ao vpad degradado, e os dois falam do mesmo assunto — o
-    gamepad virtual que o jogo vê. Inventar um sétimo selo poria uma palavra de
+    gamepad virtual que o jogo vê. Inventar um selo a mais poria uma palavra de
     tela num arquivo que não é o dono de nenhuma.
     """
     painel = _painel()
@@ -651,6 +689,20 @@ def _avisos(ctx: Contexto) -> list[dict[str, str]]:
     ponte = _aviso_da_ponte(ctx.state)
     if ponte:
         fora.append(ponte)
+
+    # A CURA DO TRAVAMENTO DO USB — sob `try` PRÓPRIO, que é a política deste
+    # arquivo: uma fonte que levanta não derruba a coluna, ela vira selo
+    # ``ERRO``. Esta lê DOIS ARQUIVOS DO SISTEMA por chamada, e é a primeira
+    # desta coluna que toca o disco a cada tique — se um `/sys` remontado ou um
+    # `/etc` sem permissão levantar, as outras nove continuam valendo.
+    try:
+        cura = _aviso_da_cura_do_travamento()
+        if cura:
+            fora.append(cura)
+    except Exception as erro:
+        fora.append({"selo": "ERRO",
+                     "texto": f"a cura do travamento não respondeu ({type(erro).__name__}).",
+                     "fonte": "storm_doctor.check_snd_quirk"})
 
     try:
         fora += [{"selo": str(i["selo"]), "texto": str(i["titulo"]),
@@ -714,6 +766,71 @@ def _aviso_da_ponte(state: dict[str, Any]) -> dict[str, str] | None:
         texto = texto[len(home_actions.PONTE_PREFIXO):]
     return {"selo": SELO_DA_PONTE, "texto": texto,
             "fonte": "home_actions.texto_da_ponte"}
+
+
+def _aviso_da_cura_do_travamento() -> dict[str, str] | None:
+    """A linha da **cura do travamento do USB**, e só quando ela pede ação.
+
+    **A PALAVRA DELA, 05/09/2026**, sobre o aviso do Modo Nativo: *"Não me
+    lembro disso acontecer. E não deveria. Mas caso ocorra na coluna atenção"* —
+    e a medição diz que ela tem razão nas três. O Hefesto **conserta** a causa
+    desde a SPRINT-GAME-RUMBLE-01 (o quirk `054c:0ce6:…ignore_ctl_error` do
+    `snd_usb_audio`, que torna o probe do mixer UAC tolerante e para de martelar
+    o EP0), e o `install.sh` a instala. Ela não se lembra porque **na máquina
+    dela a cura está de pé** — medido em 06/09/2026, ``[ OK ]``. O dia em que
+    esta linha aparece é o dia em que a cura cai: um kernel novo, um
+    `/etc/modprobe.d` limpo, uma instalação ainda sem replug.
+
+    **O DEFEITO QUE ELA FECHA: as duas telas discordavam sobre a mesma
+    máquina.** `check_snd_quirk` já chegava à aba **Sistema**, empacotada em
+    `storm_report` (`a09_sistema._achados`) — e a aba **Jogar**, que é a que
+    fica aberta enquanto o jogo roda, dizia *"nenhum aviso"*.
+
+    **NADA SE DIGITA AQUI.** A frase inteira vem de
+    `storm_doctor.check_snd_quirk`, com o ``O que fazer:`` que o
+    ``PREFIXO_DA_CURA`` já põe e com o gesto do formato desta instalação
+    (`gesto_de_atualizar`). Reescrevê-la neste arquivo seria a segunda cópia de
+    uma palavra que tem dono — o defeito que `_do_exame` já custou a esta aba,
+    quando digitou "RÁDIO" e "AVISO" por cima de um selo que o produto emitia.
+
+    **SÓ ``check_snd_quirk``, NUNCA ``storm_report``**: o pacote da 09 roda seis
+    exames, e cinco deles não têm nada a ver com esta coluna.
+
+    **O QUE ENTRA, E O QUE NÃO ENTRA.** ``[WARN]`` (a cura em lugar nenhum) e
+    ``[INFO]`` (a cura agendada, esperando o replug) são trabalho pendente e
+    entram. ``[ OK ]`` **fica de fora**: boa notícia não é Atenção, e a coluna
+    chama-se assim — a mesma disciplina que já deixa os ``certo`` do exame de
+    fora e que fez :func:`_aviso_da_ponte` recusar os dois desfechos bons. Foi
+    um ``CERTO`` sob o cabeçalho laranja, fotografado em 02/09, que ensinou.
+
+    **O CUSTO POR TIQUE, MEDIDO ANTES DE LIGAR** (06/09/2026, a máquina dela,
+    `.venv` da raiz; a 09 declara os dela por este mesmo motivo):
+
+    * **0,030 ms** por chamada no caminho ``[ OK ]``, que é o desta máquina —
+      são os dois ``open`` de `/sys/module/snd_usb_audio/parameters/quirk_flags`
+      e `/etc/modprobe.d/hefesto-dualsense-storm.conf`;
+    * **0,075 ms** no caminho ``[WARN]``, que ainda chama `gesto_de_atualizar`;
+    * **0,79 ms** na PRIMEIRA chamada do caminho ``[WARN]``, uma vez por
+      processo: é o `main.glade` sendo lido para o rótulo do botão, e ele fica
+      em `_ROTULOS_EM_CACHE`.
+
+    **O TIQUE DESTA JANELA É DE 100 ms** (`interface/hefesto_vivo.TIQUE_MS`).
+    O pior caso mede **0,8%** dele, e o normal **0,03%** — por isso **não há
+    cache aqui**. Cachear teria custo: o que estes dois arquivos dizem muda no
+    replug e no boot, e uma memória nesta função faria a coluna continuar
+    alarmando depois de a pessoa fazer exatamente o que a frase mandou.
+
+    A MORDIDA está em `tests/unit/test_a01_a_coluna_atencao_acende_o_mais_grave.py`.
+    """
+    # IMPORT TARDIO, pela rota das dez abas (`pacotes/__init__.py` declara por
+    # escrito que se evita importar no topo deste módulo).
+    from hefesto_dualsense4unix.integrations import storm_doctor
+
+    selo, frase = storm_doctor.check_snd_quirk()
+    if selo == storm_doctor.OK:
+        return None
+    return {"selo": SELO_DA_CURA, "texto": str(frase),
+            "fonte": "storm_doctor.check_snd_quirk"}
 
 
 def _coluna_de_avisos(avisos: list[dict[str, str]]) -> tuple[list[str], list[str]]:
