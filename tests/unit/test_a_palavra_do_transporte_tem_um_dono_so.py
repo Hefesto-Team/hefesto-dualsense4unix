@@ -72,6 +72,15 @@ UNIQ_B = "aa:bb:cc:00:00:02"
 
 #: A palavra que a dona NÃO diz hoje. Ela entra no lugar de `cabo` para provar
 #: que a tela SEGUE a dona em vez de repetir o que decorou.
+#: OS GERADORES JÁ CURADOS — os que põem a escrita da bancada debaixo do
+#: `if __name__ == "__main__":`. Lista explícita, e não um glob: a `aba06` e a
+#: `aba09` ainda escrevem no nível do módulo, e um `aba*.py` as reprovaria sem
+#: que ninguém tivesse decidido curá-las. Acrescentar um nome aqui é um ato que
+#: se vê no diff — que é o oposto de um glob que passa a cobrar (ou a deixar de
+#: cobrar) sozinho.
+_GERADORES_JA_CURADOS = ("aba01.py", "aba02.py", "aba03.py", "aba04.py",
+                         "aba05.py", "aba07.py", "aba08.py", "aba10.py")
+
 SENTINELA = "por um fio"
 
 
@@ -194,16 +203,9 @@ def test_o_gerador_nao_escreve_a_bancada_como_efeito_de_import() -> None:
     import pathlib as _pl
     import re as _re
 
-    #: OS GERADORES JÁ CURADOS. Lista explícita, e não um glob: `aba03`,
-    #: `aba06`..`aba09` ainda escrevem no nível do módulo, e um `aba*.py` os
-    #: reprovaria sem que ninguém tivesse decidido curá-los. Acrescentar um nome
-    #: aqui é um ato que se vê no diff — que é o oposto de um glob que passa a
-    #: cobrar (ou a deixar de cobrar) sozinho.
-    CURADOS = ("aba01.py", "aba02.py", "aba03.py", "aba04.py", "aba05.py",
-                "aba07.py", "aba08.py", "aba10.py")
     raiz = _pl.Path(__file__).resolve().parents[2]
     faltam = []
-    for nome in CURADOS:
+    for nome in _GERADORES_JA_CURADOS:
         arq = raiz / "src/hefesto_dualsense4unix/interface" / nome
         texto = arq.read_text(encoding="utf-8")
         if not _re.search(r'^if __name__ == "__main__":$', texto, _re.M):
