@@ -456,6 +456,18 @@ class _OSKController:
         O guarda pergunta ao `_pid_vivo()` e não ao `self._process`: era o
         atributo que fazia o L3 EMPILHAR um segundo teclado por cima do que o
         daemon anterior tinha deixado na tela dela.
+
+        E O SUCESSO AVISA (O-TECLADO-QUE-NAO-DIZ-COMO-SAIR-01): o `logger.info`
+        abaixo ganhou irmão na TELA. Um `osk_opened` no journal não é resposta a
+        quem acabou de clicar um analógico — foi o que deixou ela vinte minutos
+        com um teclado na tela sem saber o que o tinha aberto nem como sair.
+
+        **SÓ NO SUCESSO, e os três ramos que voltam antes NÃO avisam** — os três
+        estão acima desta linha de propósito: o "já aberto" não teve transição
+        para anunciar (dois avisos para um teclado só), o "sem binário" já tem
+        dono e frase própria (`_avisar_ausencia`, e dois avisos no mesmo gesto
+        seria ruído), e o `Popen` que estourou não abriu teclado nenhum — avisar
+        ali seria a tela mentindo sobre o que existe.
         """
         if self._pid_vivo() is not None:
             return
@@ -476,6 +488,26 @@ class _OSKController:
             self._process = None
             return
         _gravar_sessao(self._process.pid, resolved)
+        self._avisar_abertura()
+
+    def _avisar_abertura(self) -> None:
+        """Diz na TELA que o teclado na tela abriu, e como fechá-lo.
+
+        Best-effort de ponta a ponta, no molde do `_avisar_ausencia`: sem
+        jeepney, sem servidor de notificação ou sem barramento, o `notify`
+        devolve False e o teclado continua aberto. **Um aviso que estoura
+        derrubaria o gesto que ele veio explicar** — foi um recado de recusa
+        quebrando a tela que vinha explicar que custou a leva de 04/09.
+
+        O import é tardio pelo mesmo motivo do irmão: o subsistema do daemon não
+        arrasta o `jeepney` para dentro de quem só quer despachar teclas.
+        """
+        with contextlib.suppress(Exception):
+            from hefesto_dualsense4unix.integrations.desktop_notifications import (
+                notify_teclado_na_tela_aberto,
+            )
+
+            notify_teclado_na_tela_aberto()
 
     def close(self) -> None:
         """Fecha o teclado na tela — o deste daemon, ou o órfão do anterior.
