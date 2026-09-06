@@ -41,6 +41,7 @@ lia) tomava o lugar e o cabeçalho inteiro virava travessão nesta aba.
 """
 from __future__ import annotations
 
+import contextlib
 import html
 import re
 import threading
@@ -59,6 +60,15 @@ from typing import Any
 # teto seria a regressão que esta rota existe para não repetir.
 from hefesto_dualsense4unix.app.actions import ambiente_na_tela as _ambiente
 from hefesto_dualsense4unix.app.actions import daemon_actions as _daemon
+# O QUINTO ENTROU EM 06/09/2026, com o `procurar-camadas`: as DUAS frases do
+# censo das sobreposições (`frase_do_censo`, `frase_do_resultado`) são funções
+# de MÓDULO e PURAS — o docstring da primeira diz por quê: *"é a frase que a
+# pessoa lê antes de decidir, e ela tem de ser testável sem GTK e sem disco"*.
+# O módulo puxa `Gtk` no topo, e a camada de tela logo abaixo já fazia isso; o
+# piloto roda dentro de uma janela GTK. (O nome do módulo NÃO se repete aqui de
+# propósito: `check_nada_aponta_para_a_janela.py` conta as menções e a lista SÓ
+# DIMINUI — uma citação decorativa a mais reprova o portão da GTK-1.)
+from hefesto_dualsense4unix.app.actions import emulation_actions as _emulacao
 from hefesto_dualsense4unix.app.actions.config import secao_orcamento as _orcamento
 
 # A PALAVRA DO TRANSPORTE, DA FUNÇÃO DONA — ONDA4-S10, 06/09/2026. Decisão dela
@@ -110,11 +120,21 @@ SEM_DONO: dict[str, str] = {
 #: (`hefesto_vivo.escrever`, o ramo `if(alvo === 'classe')`). O que faltava
 #: passou a ser só o endereço na página e a emissão aqui — as duas metades
 #: entram juntas neste commit.
-NAO_CHEGA_NA_TELA: dict[str, str] = {
-    "bateria-frase": "está em `aba_sistema.ENDERECOS` e NÃO EXISTE na página: o "
-                     "gerador nunca emitiu este endereço, e a frase de "
-                     "`frase_do_teto()` vive hoje dentro da dica do `?`.",
-}
+#: **VAZIA DESDE 06/09/2026 — e o que a esvaziou foi a `SISTEMA-STEAM-01`.**
+#: A única entrada era `bateria-frase`, e ela dizia: *"está em
+#: `aba_sistema.ENDERECOS` e NÃO EXISTE na página: o gerador nunca emitiu este
+#: endereço"*. O gerador passou a emiti-lo — as duas linhas do Perfil de
+#: Bateria eram derivadas na GERAÇÃO e agora saem do dono a cada tique (ver
+#: :func:`frases_do_teto`). A declaração descrevia uma AUSÊNCIA que acabou, não
+#: uma decisão que caducou, então ela sai inteira.
+#:
+#: A lista fica, e não some: é aqui que a próxima dívida desta espécie se
+#: declara, e a régua que a cobra nos DOIS sentidos continua valendo —
+#: `test_o_que_nao_chega_na_tela_esta_declarado` reprova tanto quem emite o
+#: declarado quanto quem declara o que já tem caminho. **Foi ela a mordida desta
+#: cura:** ficou vermelha no instante em que o campo ganhou escritor, dizendo
+#: *"se ele passou a ter caminho, tire-o da declaração"*.
+NAO_CHEGA_NA_TELA: dict[str, str] = {}
 
 #: O QUE O PACOTE EMITE E A PÁGINA NÃO TEM ONDE RECEBER — e é OUTRA espécie que
 #: `NAO_CHEGA_NA_TELA`. Ali o valor NÃO PODE ser emitido (escrevê-lo apagaria o
@@ -401,6 +421,23 @@ def _achados(state: dict[str, Any] | None,
 #: (`ipc_handlers._identidade_em_voo`) — perguntar é caro, então pergunta-se
 #: fora do caminho e mostra-se a última resposta.
 #:
+#: **E A THREAD NÃO BASTOU — 06/09/2026.** A thread tirou a varredura do laço do
+#: GTK e o tique continuou custando **1.329 ms de máximo** num teto de 100 ms,
+#: o pior das dez abas. A causa não é o disco, que era a hipótese escrita acima
+#: (*"enquanto ele varre, o disco fica disputado"*): é o interpretador. Os 7 s
+#: são Python puro abrindo milhares de arquivos pequenos, e cada volta desse
+#: laço solta e retoma o GIL — o laço do GTK, que solta o GIL para esperar a
+#: resposta do serviço, fica na fila atrás dela e volta mais de um segundo
+#: depois. **Medido, arrancando a thread e devolvendo:**
+#:
+#:     com a varredura de 7 s      máximo 1.323 ms · IPC 1.316 ms
+#:     sem ela                     máximo    19 ms · IPC     8 ms
+#:     as irmãs 01 e 02, no mesmo dia, máximo 13 e 35 ms
+#:
+#: Ver :func:`_perguntar_o_prontuario`, que é onde a cura mora: os 7 s eram a
+#: varredura dos executáveis, e o único campo que esta tela lê do censo não
+#: encosta nela.
+#:
 #: `{"achado": (veredito, frase) | None, "quando": monotonic}`. Vazio = nunca
 #: perguntado, e aí a primeira visita só DISPARA a pergunta.
 _PRONTUARIO: dict[str, Any] = {}
@@ -443,14 +480,47 @@ def _prontuario(pode_perguntar: bool = True) -> tuple[str, str] | None:
 
 
 def _perguntar_o_prontuario() -> None:
-    """A pergunta de 7 s, fora do laço do GTK. Guarda o resultado e sai.
+    """O prontuário SEM a varredura dos executáveis. Guarda o resultado e sai.
+
+    ELA CUSTAVA 6,9 SEGUNDOS E ESTA TELA NÃO LIA UM BYTE DELA — medido em
+    06/09/2026, e é a cura do pior tique das dez abas.
+
+    `medir_prontuario_dos_jogos()` (`daemon_actions.py:820`) é a composição de
+    dois donos: `prontuario_dos_jogos.levantar_censo()` e
+    `interpretar_prontuario_dos_jogos(censo)`. O `examinar=True` do censo é o
+    que abre o executável de cada jogo instalado para descobrir a API de
+    entrada — e é ele, sozinho, que leva os 7 s. **Medido nesta máquina, com o
+    veredito conferido nas duas formas:**
+    <!-- noqa-acento: `examinar` é o nome do parâmetro do produto -->
+
+        examinar=False     12–18 ms   22 jogos   veredito: None
+        examinar=True     6.900 ms    22 jogos   veredito: None
+
+    **O ÚNICO CAMPO QUE A LINHA DESTA TELA LÊ É `ponte_divergente`**, e ele não
+    encosta na varredura: `prontuario_dos_jogos.py:454` o define como *"há
+    carimbo de ponte confirmada"* × *"a lista de exceções de hoje"*, os dois
+    lidos do disco em milissegundos. Quem diz isso não sou eu — é o docstring do
+    dono, em `:519`: *"O carimbo não depende de ler executável nenhum"*. A
+    `evidencia`, que é tudo o que os 7 s produzem, entra em `NAO_SEI` e em
+    `IMPEDIDO`, e nenhum dos dois chega a esta aba.
+
+    **POR QUE NÃO CHAMAR `medir_prontuario_dos_jogos`:** ele não tem por onde
+    receber o `examinar`, e `daemon_actions.py` está no `nao_toca` desta
+    frente. Compor os dois donos aqui não é um segundo dono do fato — é o mesmo
+    par, com o parâmetro que esta tela pode pagar. `interpretar_…` é PURA de
+    propósito, e o docstring dela diz por quê: *"recebe o censo pronto: a
+    leitura do disco é lenta o bastante para nunca rodar na linha do GTK"*. O
+    diff de uma linha que devolveria o dono único está no relato desta frente.
 
     O `finally` é o que impede a thread de ficar presa "em voo" para sempre
     quando a medição levanta — sem ele, um erro numa Steam meio instalada
     calaria o prontuário até o fim da sessão.
     """
     try:
-        achado = _daemon.medir_prontuario_dos_jogos()
+        from hefesto_dualsense4unix.integrations import prontuario_dos_jogos
+
+        achado = _daemon.interpretar_prontuario_dos_jogos(
+            prontuario_dos_jogos.levantar_censo(examinar=False))
     except Exception:
         achado = None
     _PRONTUARIO["achado"], _PRONTUARIO["quando"] = achado, time.monotonic()
@@ -636,6 +706,101 @@ def _repouso_do_painel(state: dict[str, Any] | None,
         partes.append(ROTULO_DA_IDENTIDADE)
         partes += [f"  {_linha_de_identidade(c, mesa or [])}" for c in vivos]
     return "\n".join(partes).strip()
+
+
+#: O ENDEREÇO DA FRASE DO ALCANCE, e ele JÁ ESTAVA NO CONTRATO DO PRODUTO —
+#: `aba_sistema.ENDERECOS["bateria-frase"]`, declarado como
+#: `secao_orcamento.LINHAS_DO_TETO`. Existia desde que a camada nasceu e **a
+#: página nunca o usou**: as duas linhas do Perfil de Bateria eram derivadas na
+#: hora da GERAÇÃO e ficavam congeladas no HTML.
+CAMPO_DO_ALCANCE = "bateria-frase"
+
+#: O SEGUNDO, DERIVADO DO PRIMEIRO — a mesma derivação que o `-razao` do botão
+#: cinza e o `-g` do glifo já fazem, e ela vale pelo mesmo motivo: as duas
+#: linhas leem o MESMO dono (`LINHAS_DO_TETO`), e o sufixo diz qual metade dele
+#: está sendo escrita. O arquivo do contrato (`ENDERECOS`, na camada de tela)
+#: está fora da posse desta frente, e por isso a derivação fica aqui e é
+#: RELATADA — se um dia `ENDERECOS` ganhar a linha, este nome passa a ser
+#: validado contra ele sem mudar um `data-campo`.
+CAMPO_DOS_PENDENTES = f"{CAMPO_DO_ALCANCE}-pendentes"
+
+#: OS NOMES LONGOS, ENCURTADOS SÓ PARA A TELA — 01/09/2026, pedido dela.
+#:
+#: **ELE MUDOU DE CASA EM 06/09/2026**, e a razão é que ele passou a ter DOIS
+#: leitores: o gerador (que escreve o desenho) e este arquivo (que escreve o
+#: valor vivo). Digitado nos dois, os dois se afastariam no dia em que um
+#: mudasse — que é como a fita viva morreu calada em 27/08. O gerador o lê
+#: daqui por `aba09._constantes`, sem importar nada.
+#:
+#: MEDIDO, e é o que o pedido dela nomeia: a frase inteira tem 303px e a linha
+#: ocupa TUDO, do rótulo à borda direita do bloco, enquanto as três vizinhas do
+#: mesmo quadro sobram espaço. Ela lê como se estivesse vazando.
+#:
+#: Nenhum apelido é inventado: cada um é o nome do produto sem o qualificador
+#: que a linha vizinha já dá. A frase INTEIRA continua no `title` do valor.
+APELIDO_NA_TELA: dict[str, str] = {
+    "Barra de luz": "luz",
+    "Microfone por rádio": "microfone",
+}
+
+
+def _lista_em_portugues(nomes: list[str]) -> str:
+    """`a`, `b` e `c` — com "e" antes do último. Vazio devolve vazio."""
+    if not nomes:
+        return ""
+    if len(nomes) == 1:
+        return nomes[0]
+    return f"{', '.join(nomes[:-1])} e {nomes[-1]}"
+
+
+def frase_das_linhas(nomes: list[str], curto: bool = True) -> str:
+    """A lista em CAIXA DE FRASE: só a primeira letra é maiúscula.
+
+    Regra dela, 30/08: *"a maiúscula a regra é sobre a primeira letra a ser
+    capitalizada"*. `LINHAS_DO_TETO` guarda cada nome capitalizado porque lá
+    cada um é um TÍTULO de linha; enroladas num valor de campo só, elas viram
+    uma frase — e "Gatilhos, Barra de luz e Giroscópio" tem três maiúsculas no
+    meio de uma.
+
+    `curto=False` devolve a frase INTEIRA, e é o que vai para o `title`.
+    Encurtar sem guardar o completo em lugar nenhum não é simplificar, é
+    apagar: "barra de luz" e "microfone POR RÁDIO" carregam o qualificador que
+    diz de qual microfone se fala.
+    """
+    if not nomes:
+        return ""
+    curtos = [APELIDO_NA_TELA.get(n, n) for n in nomes] if curto else list(nomes)
+    return _lista_em_portugues(
+        [curtos[0]] + [n[0].lower() + n[1:] for n in curtos[1:]])
+
+
+def frases_do_teto() -> tuple[str, str]:
+    """As duas linhas do Perfil de Bateria, LIDAS DO DONO a cada tique.
+
+    ELAS ERAM ESTÁTICAS ATÉ 06/09/2026, e o defeito não é de forma: o gerador
+    lia `LINHAS_DO_TETO` no instante em que escrevia o HTML e cravava o
+    resultado na página. No dia em que os "Gatilhos" ganharem ponto de
+    aplicação no daemon, a tela dela continuaria dizendo que o teto não os
+    alcança — até alguém lembrar de regerar a página e ela lembrar de publicar.
+    **A aba afirmaria sobre o produto de ontem.**
+
+    O DONO É `secao_orcamento.LINHAS_DO_TETO`, e é ele quem responde aqui — a
+    mesma tupla que a tabela da janela antiga percorre e que o portão
+    `test_so_a_vibracao_tem_ponto_de_aplicacao_hoje` IMPORTA linha a linha. A
+    conta é a de `alcance_de_hoje()`, do mesmo módulo: `tem_ponto` separa as
+    duas metades, e nada é digitado.
+
+    Devolve `(alcança, ainda sem teto)`. Uma metade vazia devolve `""`, e a
+    régua da tela a lê como *"campo sem informação não mostra nada"* — que é
+    o certo: uma linha "Ainda sem teto: —" afirmaria uma pendência que acabou.
+    """
+    try:
+        linhas = list(_orcamento.LINHAS_DO_TETO)
+    except Exception:
+        return ("", "")
+    com = [str(linha.nome) for linha in linhas if linha.tem_ponto]
+    sem = [str(linha.nome) for linha in linhas if not linha.tem_ponto]
+    return (frase_das_linhas(com), frase_das_linhas(sem))
 
 
 def _perfil_da_bateria() -> str | None:
@@ -1177,6 +1342,16 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
     _, _, perfil_da_bateria, estado, repouso = _faixa_lenta(ctx.state or None,
                                                             ctx.mesa)
     fora["bateria-perfil"] = perfil_da_bateria
+    # AS DUAS LINHAS DO TETO, VIVAS — 06/09/2026. Elas eram derivadas na
+    # GERAÇÃO da página e ficavam congeladas no HTML; agora saem do dono a cada
+    # tique. Ver :func:`frases_do_teto`. O glifo vai junto porque `est()`
+    # endereça os dois, e um `data-campo` sem escritor é o buraco por onde o
+    # literal do mockup volta a aparecer.
+    alcanca, pendentes = frases_do_teto()
+    fora[CAMPO_DO_ALCANCE] = alcanca
+    fora[f"{CAMPO_DO_ALCANCE}-g"] = _tela.GLIFO_INFO
+    fora[CAMPO_DOS_PENDENTES] = pendentes
+    fora[f"{CAMPO_DOS_PENDENTES}-g"] = _tela.GLIFO_INFO
     fora[REGISTRO] = _no_painel(repouso)
     exame = bruto.get("exame")
     if isinstance(exame, dict):
@@ -1374,7 +1549,27 @@ BOTOES_CINZAS = ("retomar", "reiniciar", "ver-plugins")
 #: onde a próxima dívida desta espécie se declara — e porque as duas réguas
 #: que a cobram nos dois sentidos continuam valendo: entrada aqui exige
 #: endereço FALTANDO no publicado, e endereço faltando exige entrada aqui.
-ESPERA_A_PUBLICACAO: dict[str, str] = {}
+#: **QUATRO ENTRARAM EM 06/09/2026**, e são exatamente da espécie que esta lista
+#: nomeia: o desenho da BANCADA já tem os endereços, o piloto sabe escrevê-los,
+#: e o que falta é a PUBLICAÇÃO — que é ato dela.
+#:
+#: São as duas linhas do Perfil de Bateria ("O teto alcança" e "Ainda sem teto")
+#: e os glifos delas. As duas eram derivadas na GERAÇÃO da página e ficavam
+#: congeladas no HTML; agora saem do dono a cada tique (:func:`frases_do_teto`).
+#:
+#: No dia em que ela publicar, a régua REPROVA pedindo que estas quatro saiam —
+#: e é assim que a declaração não vira paisagem.
+ESPERA_A_PUBLICACAO: dict[str, str] = {
+    "bateria-frase": "a linha 'O teto alcança', viva na bancada desde "
+                     "06/09/2026. O endereço já estava em "
+                     "`aba_sistema.ENDERECOS` e a página nunca o usara.",
+    "bateria-frase-g": "o glifo da linha acima — `est()` endereça os dois, e um "
+                       "`data-campo` sem escritor é por onde o literal do "
+                       "mockup volta a aparecer.",
+    "bateria-frase-pendentes": "a linha 'Ainda sem teto', viva na bancada desde "
+                               "06/09/2026, derivada do mesmo dono.",
+    "bateria-frase-pendentes-g": "o glifo da linha acima, pelo mesmo motivo.",
+}
 
 
 def razoes_do_cinza(ctx: Contexto) -> dict[str, str]:
@@ -1867,23 +2062,36 @@ DESLIGAR = "desligar"
 DESTRUTIVOS = ("desligar", "restaurar-de-fabrica", "refazer-consertos",
                "refazer-proton", "procurar-camadas")
 
-#: O QUE AINDA SEGURA TRÊS DOS CINCO — e a razão MUDOU em 03/09/2026.
+#: O QUE AINDA SEGURA **UM** DOS CINCO — e eram três até 06/09/2026.
 #:
 #: **O FATO QUE CAIU:** `SEM_CONFIRMACAO` dizia *"não há primitiva de
 #: confirmação"*. Isso deixou de ser verdade no instante em que ela escolheu os
-#: dois cliques — e a `07-lancadores` já o desmentia no produto inteiro. O que
-#: sobra é OUTRA coisa, e é de MOTOR: o ato destes três mora dentro de um
-#: handler da janela GTK que fala com a janela (toast, diálogo, `self.window`),
-#: e não há função de produto a chamar de fora. Reescrever o miolo aqui criaria
-#: um SEGUNDO DONO da mesma regra — que é a regressão que esta rota existe para
-#: não repetir.
+#: dois cliques — e a `07-lancadores` já o desmentia no produto inteiro.
 #:
-#: `procurar-camadas` tem um risco a mais, e ele não é de motor: o `title` dele
-#: promete *"Mostra, jogo por jogo, a sobreposição Vulkan (…), e só então tira"*
-#: — TRÊS tempos (procurar · mostrar o achado · tirar), e dois cliques cobrem
-#: dois. O que falta a ele é DESENHO, e desenho é dela. O rótulo passou a dizer
-#: "Tirar a sobreposição Vulkan" em 05/09/2026, a pedido dela, e isso não muda a
-#: conta: o tempo do meio continua sem tela.
+#: **E O SEGUNDO CAIU EM 06/09/2026, nos dois que sobravam com motor.** A razão
+#: escrita aqui era *"o ato mora dentro de um handler da janela GTK que fala com
+#: a janela (toast, diálogo, `self.window`)"* — e ela descrevia o HANDLER, não o
+#: ATO, exatamente como já tinha acontecido com o `restaurar-de-fabrica` em
+#: 04/09. Medido lendo o fonte dos dois:
+#:
+#:   `refazer-consertos`   o handler é da janela; o ato são DOIS scripts de
+#:                         `bash` e três funções de MÓDULO —
+#:                         `medir_jogos_com_steam_input`,
+#:                         `_find_repo_file` (que é `encontrar_arquivo_do_repo`
+#:                         com as bases, e não toca widget) e
+#:                         `format_fix_safe_result`.
+#:   `procurar-camadas`    o handler é o DIÁLOGO; o ato é `camadas_vulkan.censo`,
+#:                         `pastas_compatdata` e `curar_todos`, e as duas frases
+#:                         (`frase_do_censo`, `frase_do_resultado`) são PURAS —
+#:                         o docstring da primeira diz por quê.
+#:
+#: **O TEMPO DO MEIO GANHOU TELA, e ela já existia.** A objeção que segurava o
+#: `procurar-camadas` era de DESENHO: o `title` promete *"Mostra, jogo por jogo,
+#: a sobreposição Vulkan (…), e só então tira"* — TRÊS tempos, e dois cliques
+#: cobrem dois. O que faltava era onde MOSTRAR, e o painel de registro desta
+#: mesma faixa é onde esta aba já põe o que os botões respondem (`ver-plugins`,
+#: `ver-detalhes`, `refazer-proton`). O primeiro clique escreve o censo lá e o
+#: segundo age — três tempos, zero pixel novo, nenhuma decisão de desenho dela.
 SEM_MOTOR: dict[str, str] = {
     # FATO CORRIGIDO EM 04/09/2026, e a correção MUDA a natureza da dívida.
     #
@@ -1913,14 +2121,6 @@ SEM_MOTOR: dict[str, str] = {
                             "em `hefesto_vivo.PERIGOSOS`, e esse arquivo é de "
                             "outra posse. Sem ela a régua de clique restaura o "
                             "perfil dela para provar que sabe clicar.",
-    "refazer-consertos": "o ato mora dentro do `_worker` de "
-                         "`daemon_actions.on_storm_fix_safe:1218`, junto com o "
-                         "toast de cada etapa — não há função de produto que rode "
-                         "os dois scripts e devolva o relatório.",
-    "procurar-camadas": "`emulation_actions.on_camadas_engasgo:2086` — o motor "
-                        "(`camadas_vulkan.censo`) é limpo, mas o botão promete "
-                        "MOSTRAR o achado ENTRE procurar e tirar, e isso é uma "
-                        "tela que ainda não existe. É desenho, e desenho é dela.",
 }
 
 
@@ -2200,8 +2400,20 @@ def refazer_proton(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
     perder exatamente o que ele diz — quantos jogos foram travados, ou por quê
     não deu.
 
-    NÃO É CLICADO POR RÉGUA NENHUMA: `("09-sistema.html", "refazer-proton")` já
-    está em `hefesto_vivo.PERIGOSOS` desde antes de ele ter dono.
+    **FATO ERRADO, SUBSTITUÍDO — 06/09/2026.** Esta linha dizia *"NÃO É CLICADO
+    POR RÉGUA NENHUMA: `("09-sistema.html", "refazer-proton")` já está em
+    `hefesto_vivo.PERIGOSOS` desde antes de ele ter dono"*. **Ele não está**, e
+    a medição é de um `print(sorted(hefesto_vivo.PERIGOSOS))`: a entrada foi
+    APAGADA de lá — o comentário que sobrou no arquivo conta a história, e a
+    linha que ele deixa comentada é justamente `("09-sistema.html",
+    "refazer-proton")`. A `--prova-gesto` clica cada gesto UMA vez por
+    execução, então os dois cliques o protegem numa volta; DUAS execuções
+    dentro de :func:`segundos_para_confirmar` o disparam de verdade, com o
+    `config.vdf` dela do outro lado.
+
+    A cura é uma linha em `hefesto_vivo.PERIGOSOS`, e esse arquivo está no
+    `nao_toca` desta frente — **está RELATADA**, junto com as duas irmãs que
+    esta sprint acrescentou (`refazer-consertos` e `procurar-camadas`).
     """
     if not _confirmado(o, "refazer-proton"):
         return {"blocos": blocos_dos_botoes(_de_pe(ctx))}
@@ -2228,6 +2440,262 @@ def refazer_proton(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
             "com a Steam viva porque ela regrava o arquivo ao sair e a mudança "
             "seria perdida.")
     carga = _para_o_painel(_daemon.format_proton_lock_result(travar()))
+    carga["blocos"] = blocos_dos_botoes(_de_pe(ctx))
+    return carga
+
+
+# ---------------------------------------------------------------------------
+# OS DOIS CLIQUES MORTOS QUE GANHARAM DONO — 06/09/2026, a `SISTEMA-STEAM-01`.
+#
+# O CSV registrava a mesma frase para os dois: *"Botão presente, sem dono.
+# Clique morto."* Um botão que não faz nada é pior que um botão que não existe —
+# ele já foi clicado, e a pessoa concluiu que o produto está quebrado.
+#
+# OS DOIS SEGUEM O MESMO DESENHO, e ele é o que o rótulo de cada um promete:
+#
+#     clique 1 → MEDE (e não muda nada) → escreve o achado no painel → ARMA
+#     clique 2 → AGE, com o que o clique 1 mediu → escreve o recibo no painel
+#
+# **O CLIQUE 1 É READ-ONLY DE PROPÓSITO**, e isso não é zelo: é o que faz a
+# `--prova-gesto` desta casa poder clicá-los sem mexer na máquina dela. Ela
+# clica cada gesto UMA vez por execução (`hefesto_vivo._proximo_da_fila`), e
+# nessa volta os dois só olham.
+#
+# E É TAMBÉM O QUE O RÓTULO PEDE. O `title` do "Tirar a sobreposição Vulkan"
+# promete TRÊS tempos — *"Mostra, jogo por jogo, (…) e só então tira"* —, e o
+# do "Refazer os consertos automáticos" só pode contar quantos jogos tinham
+# Steam Input ligado se contar ANTES de desligá-lo (é a D-33, e a janela antiga
+# já a paga: `daemon_actions.py:1148`, *"medido ANTES de rodar — depois os
+# appids já foram zerados no vdf e não haveria mais como nomear o jogo"*).
+# ---------------------------------------------------------------------------
+
+#: OS DOIS SCRIPTS DO "sem senha, sem susto", com os argumentos que a janela
+#: antiga usa — `daemon_actions.on_storm_fix_safe`, o laço do `_worker`.
+#:
+#: **ESTE É UM SEGUNDO DONO DA LISTA, e ele é DECLARADO em vez de escondido.**
+#: O laço de lá não é uma função: é um `for` dentro de um `_worker` que fala com
+#: a janela (`_toast_daemon`, `GLib.idle_add`), e `daemon_actions.py` está no
+#: `nao_toca` desta frente. O diff de uma função que devolvesse o dono único
+#: está no relato desta sprint.
+#:
+#: O QUE SEGURA OS DOIS JUNTOS ENQUANTO ISSO: :func:`_consertos_no_disco`, que
+#: PROCURA cada um pelo localizador do produto e reprova o que não existir. Um
+#: nome de script errado aqui viraria um "Correções aplicadas" sobre um no-op —
+#: que é a BUG-GUI-REPO-ROOT-OFFBYONE-01, já paga uma vez nesta casa.
+#:
+#: O QUIRK ANTI-STORM NÃO ENTRA, e a razão é da janela antiga: escrevê-lo a
+#: quente é `sudo` num parâmetro de módulo, e este botão promete não pedir
+#: senha. A versão persistente já é padrão do instalador.
+CONSERTOS: tuple[tuple[str, list[str]], ...] = (
+    ("scripts/disable_steam_input.sh", ["--apply-quiet"]),
+    ("scripts/fix_wireplumber_default_source.sh", ["--install"]),
+)
+
+#: O TEMPO DE ESPERA DE CADA SCRIPT, e ele é o da janela antiga (`:1270`).
+SEGUNDOS_DO_CONSERTO = 30
+
+#: O QUE O CLIQUE 1 DE `refazer-consertos` MEDIU: `{"jogos": [...] | None}`.
+#: Vazio = ninguém mediu ainda, e aí o clique 2 mede na hora (pior recibo, nunca
+#: recibo falso).
+_ANTES_DO_CONSERTO: dict[str, Any] = {}
+
+
+def _consertos_no_disco() -> list[tuple[Any, list[str]]]:
+    """Os scripts de :data:`CONSERTOS` que EXISTEM nesta instalação.
+
+    O localizador é o do produto (`daemon_actions._find_repo_file`, que é
+    `encontrar_arquivo_do_repo` com as bases de instalação) — nunca um caminho
+    montado aqui. A lista das cinco "onde estão os scripts" já cobrou essa
+    lição: contar a raiz do checkout à mão fez os botões do cartão anti-storm
+    virarem no-op SILENCIOSO, com toast de sucesso e nada executado.
+    """
+    janela = _matriz()
+    achados: list[tuple[Any, list[str]]] = []
+    for relpath, args in CONSERTOS:
+        caminho = janela._find_repo_file(relpath)
+        if caminho is not None:
+            achados.append((caminho, args))
+    return achados
+
+
+def _frase_do_que_vai_mudar(jogos: list[str] | None) -> str:
+    """O que o clique 1 escreve no painel: o que EXISTE agora, sem agir.
+
+    A DIFERENÇA ENTRE `None` E `[]` VIAJA INTEIRA, e ela é a informação:
+    `None` é *"não consegui medir"*, `[]` é *"medi, e não há jogo nenhum fora
+    da lista de exceções"*. Achatar os dois num "nenhum jogo" faria uma falha
+    de leitura passar por máquina limpa — é a armadilha número um desta casa.
+    """
+    quantos = len(_consertos_no_disco())
+    if quantos != len(CONSERTOS):
+        falta = f" ({len(CONSERTOS) - quantos} não está nesta instalação)"
+    else:
+        falta = ""
+    linhas = [f"Vou rodar {quantos} conserto(s) automático(s){falta}, sem pedir "
+              "senha e sem fechar nada."]
+    if jogos is None:
+        linhas.append("  Não consegui olhar quais jogos estão com o Steam Input "
+                      "ligado — o resto continua valendo.")
+    elif not jogos:
+        linhas.append("  Nenhum jogo com Steam Input ligado fora da sua lista de "
+                      "exceções. Nada a desligar aí.")
+    else:
+        linhas.append(f"  Steam Input ligado em {len(jogos)} jogo(s): "
+                      + ", ".join(jogos) + ".")
+    linhas.append("  Clique de novo para confirmar.")
+    return "\n".join(linhas)
+
+
+@gesto("09-sistema.html", "refazer-consertos")
+def refazer_consertos(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
+    """"Refazer os consertos automáticos" — mede, mostra, e só então mexe.
+
+    ERA UM CLIQUE MORTO. O botão está desenhado desde que a aba nasceu, com um
+    `title` que promete três trabalhos, e o clique não chegava a lugar nenhum.
+
+    O CLIQUE 1 NÃO MEXE EM NADA: ele pergunta quantos jogos estão com o Steam
+    Input ligado (`daemon_actions.medir_jogos_com_steam_input`, leitura pura do
+    `localconfig.vdf`), escreve o que achou no painel e arma. É a D-33 do
+    produto virando desenho de tela: o número só existe ANTES, e um recibo que
+    contasse o DEPOIS mentiria — depois os appids já foram zerados.
+
+    O CLIQUE 2 roda os dois scripts de :data:`CONSERTOS` e devolve o recibo do
+    produto, `daemon_actions.format_fix_safe_result`, que separa o que rodou do
+    que foi ADIADO (o caminho mais comum, porque ela clica no Hefesto justamente
+    enquanto joga). Nenhuma frase nova de tela nasce aqui: as duas metades do
+    recibo são do dono.
+
+    NÃO PEDE SENHA, e isso é do produto, não promessa minha: os dois scripts
+    são de espaço de usuário. O quirk anti-storm — o único `sudo` que a janela
+    antiga já teve — fica de fora, como lá.
+    """
+    if not _confirmado(o, "refazer-consertos"):
+        try:
+            jogos = _daemon.medir_jogos_com_steam_input()
+        except Exception:
+            jogos = None
+        _ANTES_DO_CONSERTO["jogos"] = jogos
+        carga = _para_o_painel(_frase_do_que_vai_mudar(jogos))
+        carga["blocos"] = blocos_dos_botoes(_de_pe(ctx))
+        return carga
+
+    import subprocess
+
+    # O NÚMERO É O DO CLIQUE 1. Se ele não existir (o gesto chegou confirmado
+    # sem passar pela pergunta), mede agora: um recibo pior é melhor que um
+    # recibo falso, e `format_fix_safe_result` sabe tratar o `None`.
+    if "jogos" in _ANTES_DO_CONSERTO:
+        jogos = _ANTES_DO_CONSERTO.pop("jogos")
+    else:
+        try:
+            jogos = _daemon.medir_jogos_com_steam_input()
+        except Exception:
+            jogos = None
+    relatorio: dict[str, Any] = {"ran": 0, "missing": 0, "steam_input": None,
+                                 "steam_input_jogos": jogos}
+    for relpath, args in CONSERTOS:
+        caminho = _matriz()._find_repo_file(relpath)
+        if caminho is None:
+            relatorio["missing"] += 1
+            continue
+        with contextlib.suppress(Exception):
+            proc = subprocess.run(["bash", str(caminho), *args], check=False,
+                                  timeout=SEGUNDOS_DO_CONSERTO,
+                                  capture_output=True, text=True)
+            relatorio["ran"] += 1
+            if "disable_steam_input" in relpath:
+                # O VEREDITO SAI DA SAÍDA CRUA, e não do `rc`: o script devolve
+                # 0 tanto no "apliquei" quanto no "adiei". É o dono
+                # (`format_fix_safe_result`) que lê a tag `resultado=`.
+                relatorio["steam_input"] = (proc.returncode,
+                                            (proc.stdout or "") + (proc.stderr or ""))
+    # A FAIXA LENTA É ZERADA, e não é enfeite: o exame do cartão ao lado acabou
+    # de mudar de valor, e mostrar o de até 2 s atrás ao lado do recibo é a tela
+    # dizendo "pronto" sobre números que ninguém releu.
+    _LENTO.clear()
+    carga = _para_o_painel(_daemon.format_fix_safe_result(relatorio))
+    carga["blocos"] = blocos_dos_botoes(_de_pe(ctx))
+    return carga
+
+
+#: O QUE O CENSO DO CLIQUE 1 DE `procurar-camadas` ACHOU:
+#: `{"tirar": bool, "devolver": bool}`. Vazio = ninguém olhou ainda.
+_CAMADAS: dict[str, Any] = {}
+
+
+@gesto("09-sistema.html", "procurar-camadas")
+def procurar_camadas(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
+    """"Tirar a sobreposição Vulkan" — os TRÊS tempos que o rótulo promete.
+
+    O MOTOR É O DA JANELA ANTIGA, chamado e não copiado: `on_camadas_engasgo`
+    (`emulation_actions.py:2086`) é o DIÁLOGO em volta do ato, e o ato são
+    `camadas_vulkan.censo`, `pastas_compatdata` e `curar_todos`, com as duas
+    frases puras do mesmo módulo. Nada aqui reescreve uma linha dele.
+
+    ERA UM CLIQUE MORTO, e o que o segurava estava escrito: *"o botão promete
+    MOSTRAR o achado ENTRE procurar e tirar, e isso é uma tela que ainda não
+    existe"*. **Ela existe** — é o painel de registro desta mesma faixa, onde o
+    `ver-plugins`, o `ver-detalhes` e o `refazer-proton` já põem o que
+    responderam. Nenhum pixel novo, nenhuma decisão de desenho.
+
+    O CLIQUE 1 OLHA (o censo do `system.reg` de cada prefixo, ~1 s, read-only) e
+    escreve `emulation_actions.frase_do_censo` no painel — jogo por jogo, com o
+    estado de cada camada, inclusive *"o arquivo não está no disco"*, que é o
+    estado em que a máquina dela estava. A frase é PURA e é do dono; nenhuma
+    palavra dela nasce aqui.
+
+    **OS BOTÕES SEGUEM O QUE EXISTE**, e isto é a regra da janela antiga
+    (`_build_camadas_dialog`: *"Tirar só aparece quando há camada ligada;
+    Devolver só quando há camada que nós desligamos. Botão que aparece e não faz
+    nada ensina que a tela é enfeite"*). Aqui há UM botão, e quem segue o que
+    existe é o ARMAR: sem nada a tirar e sem nada a devolver, o clique 1 mostra
+    o achado e **não arma** — não há segundo tempo a oferecer. O que o clique 2
+    vai fazer está escrito na última linha do que o clique 1 mostrou.
+
+    O CLIQUE 2 age em todos os prefixos e devolve `frase_do_resultado`, também
+    do dono. `forcar=True` é a regra dela de 09/08/2026: o clique é gesto
+    explícito e a vontade da tela prevalece; só o gancho de lançamento respeita
+    a memória sem perguntar.
+
+    RECUSA COM JOGO ABERTO, e a razão é do produto: o Wine mantém o registro do
+    prefixo em MEMÓRIA e o regrava ao sair, então escrever agora seria trabalho
+    perdido — e perdido em silêncio, que é pior.
+    """
+    from hefesto_dualsense4unix.integrations import camadas_vulkan as cv
+
+    if not _confirmado(o, "procurar-camadas"):
+        prefixos = cv.censo()
+        bibliotecas = len(cv.pastas_compatdata())
+        corpo, tem_tirar, tem_devolver = _emulacao.frase_do_censo(
+            prefixos, bibliotecas=bibliotecas)
+        _CAMADAS.update(tirar=bool(tem_tirar), devolver=bool(tem_devolver))
+        if not (tem_tirar or tem_devolver):
+            # NADA A OFERECER, LOGO NADA A ARMAR. Deixar o botão perguntando
+            # "Confirma?" sobre um segundo tempo que não existe é o enfeite que
+            # o desenho da janela antiga já recusava.
+            _ARMADO.clear()
+            carga = _para_o_painel(corpo)
+        else:
+            proximo = ("tirar" if tem_tirar else "devolver")
+            fim = ("Clique de novo para TIRAR."
+                   if proximo == "tirar"
+                   else "Clique de novo para DEVOLVER o que eu tinha tirado.")
+            carga = _para_o_painel(f"{corpo}\n\n{fim}")
+        carga["blocos"] = blocos_dos_botoes(_de_pe(ctx))
+        return carga
+
+    from hefesto_dualsense4unix.integrations import steam_launch_options as slo
+
+    if slo.steam_game_running():
+        raise RuntimeError(
+            "Tem jogo aberto — feche-o e clique de novo. Com o jogo vivo o "
+            "Windows do Proton regrava esse ajuste ao sair, e a mudança seria "
+            "perdida.")
+    devolver = not _CAMADAS.get("tirar", True)
+    resultados = cv.curar_todos(religar=devolver, forcar=True)
+    _CAMADAS.clear()
+    carga = _para_o_painel(
+        _emulacao.frase_do_resultado(resultados, devolver=devolver))
     carga["blocos"] = blocos_dos_botoes(_de_pe(ctx))
     return carga
 

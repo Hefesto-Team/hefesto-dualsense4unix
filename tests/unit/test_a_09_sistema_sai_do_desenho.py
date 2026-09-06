@@ -393,14 +393,28 @@ def test_o_prontuario_de_sete_segundos_nunca_roda_no_tique(a09, monkeypatch):
 
         AssertionError: a varredura de 7 s foi disparada pela leitura SÍNCRONA
         da faixa lenta — a que roda dentro do laço do GTK.
-    """
-    chamou: list[int] = []
 
-    def _lenta():
-        chamou.append(1)
+    **A PORTA MUDOU EM 06/09/2026 (`SISTEMA-STEAM-01`), e o dublê foi junto.**
+    Este caso dublava `daemon_actions.medir_prontuario_dos_jogos`, que a thread
+    não chama mais: ela compõe os dois donos com `examinar=False`, e a varredura
+    dos executáveis — que ERA os 7 s — não acontece mais em lugar nenhum desta
+    aba. Um dublê apontado para a porta velha passaria a medir o vazio: o
+    `assert not chamou` daria verde sobre uma função que ninguém chama, e o
+    `assert chamou` de baixo é quem acusou.
+    <!-- noqa-acento: `examinar` é o nome do parâmetro do produto -->
+
+    A porta de hoje é `prontuario_dos_jogos.levantar_censo`, e o dublê confere
+    também o ARGUMENTO — é ele que carrega a cura inteira.
+    """
+    from hefesto_dualsense4unix.integrations import prontuario_dos_jogos
+
+    chamou: list[dict] = []
+
+    def _censo(*args, **kw):
+        chamou.append(kw)
         return None
 
-    monkeypatch.setattr(a09._daemon, "medir_prontuario_dos_jogos", _lenta)
+    monkeypatch.setattr(prontuario_dos_jogos, "levantar_censo", _censo)
     a09._achados(ESTADO, pode_perguntar=False)
     assert not chamou, (
         "a varredura de 7 s foi disparada pela leitura SÍNCRONA da faixa lenta "
@@ -417,6 +431,17 @@ def test_o_prontuario_de_sete_segundos_nunca_roda_no_tique(a09, monkeypatch):
         _t.sleep(0.01)
     assert chamou, ("a releitura tem de perguntar — sem isso o prontuário nunca "
                     "chega ao exame e a linha some para sempre.")
+    # E ELA PERGUNTA SEM A VARREDURA DOS EXECUTÁVEIS, que era o tique de 1,3 s.
+    # Medido em 06/09/2026 nesta máquina, com o veredito conferido nos dois:
+    # `examinar=False` custa 12–18 ms e `examinar=True` custa 6.900 ms, e os
+    # dois devolvem o mesmo — o único campo que esta tela lê do censo
+    # (`ponte_divergente`) não encosta na varredura.
+    assert chamou[0].get("examinar") is False, (  # noqa-acento: nome do parâmetro
+        "a releitura voltou a varrer os executáveis de todo jogo instalado. "
+        f"Ela pediu o censo com {chamou[0]!r}, e o `examinar=True` é o que fez o "
+        "tique da 09 custar 1.329 ms num teto de 100 — treze vezes o teto, com "
+        "a mesa parada. Esta tela lê UM campo do censo, e ele não depende de "
+        "ler executável nenhum (`prontuario_dos_jogos.py:519`).")
 
 
 def test_a_primeira_leitura_e_sincrona_e_a_releitura_e_thread(a09, ctx):

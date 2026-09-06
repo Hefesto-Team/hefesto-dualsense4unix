@@ -265,6 +265,28 @@ seção daqui**: a aba deixou de estar em trabalho.
 
 ## 09-sistema.html
 
+- **06/09/2026** — **DUAS LINHAS DO PERFIL DE BATERIA DEIXARAM DE SER
+  LITERAL** (`SISTEMA-STEAM-01`). *"O teto alcança"* e *"Ainda sem teto"*
+  ganharam `data-campo` e passam a ser lidas do dono
+  (`secao_orcamento.LINHAS_DO_TETO`) a cada tique. Até hoje elas eram derivadas
+  no instante em que alguém rodava o gerador e ficavam **cravadas no HTML**: no
+  dia em que os "Gatilhos" ganharem ponto de aplicação no daemon, a tela dela
+  continuaria dizendo que o teto não os alcança.
+
+  **NENHUM PIXEL MUDA, e é medida, não promessa.** O que entrou são quatro
+  atributos — `data-campo` e o `-g` do glifo nas duas linhas —, e `data-campo`
+  está nos INVISÍVEIS do `check_o_desenho_aprovado.py`, que compara **o que se
+  vê** (decisão dela em 01/09: *"ok, pode comparar então o que se vê"*). O
+  texto que a bancada mostra hoje é byte a byte o de ontem, porque
+  `LINHAS_DO_TETO` não mudou de valor.
+
+  **O que ela vê HOJE, até publicar:** o valor congelado do desenho. Ele está
+  CERTO hoje, e é por isso que esta divergência não urge — o custo dela é
+  futuro, e chega calado no dia em que o produto mudar.
+
+  **O que fecha:** o mesmo `--publicar 09` da linha abaixo. As duas divergências
+  desta aba fecham no mesmo ato.
+
 - **06/09/2026** — **UMA LINHA, e os dois pixels que ela mudam são PALAVRA
   DELA** (`ONDA5-09-01`, a 09-Q1 e a 09-Q3). O botão do `daemon.reload` volta a
   se chamar **"Atualizar"** e a espera a dizer **"Atualizando…"**; a dica dele
