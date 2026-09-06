@@ -91,6 +91,17 @@ FOTOS = "docs/usage/assets"
 #: mais severo que o portão que ele antecipa reclamaria de commit que a suíte
 #: aprova, e portão que reclama sem razão ensina a ignorar portão.
 CODIGO_DA_TELA = (
+    # A INTERFACE NOVA ENTROU EM 05/09/2026, e a ausência dela estava medida:
+    # mexer nas dez abas que o lançador abre não tornava foto nenhuma suspeita,
+    # e mexer no motor VELHO obrigava a refotografar a janela velha — o portão
+    # cobrava a foto errada e era cego à certa. O irmão que cobra RÉGUA de tela
+    # (`scripts/check_regua_de_tela.py`) recebeu esta mesma linha em 03/09 com a
+    # mesma razão; o da FOTO não tinha ido junto.
+    #
+    # Quem tira a foto das dez é `interface/olhar.py --todas --publicado --doc`,
+    # e ele mora DENTRO desta pasta: mudar o retratista torna as fotos suspeitas
+    # sem precisar de uma quinta entrada.
+    "src/hefesto_dualsense4unix/interface",
     "src/hefesto_dualsense4unix/app",
     "src/hefesto_dualsense4unix/gui",
     "scripts/gui-captura",
