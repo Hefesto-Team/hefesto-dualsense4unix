@@ -276,19 +276,24 @@ def test_a_area_de_transferencia_recusa_sem_laco_de_gtk(a07):
 def test_a_aba_nao_escreve_uma_segunda_frase_do_aviso(a07):
     """O texto do aviso sai de `home_actions`, e esta aba não o redige.
 
-    A DECISÃO `07[02]` é que a frase **pare de nomear lugar** — e a linha a
-    mudar está em `app/actions/home_actions.py:559-562`, que **não é a posse
-    desta frente**. O que esta régua impede é o conserto errado: escrever aqui
-    uma segunda redação faria as duas janelas do mesmo produto falarem línguas
-    diferentes, que é exatamente o que a opção *"duas frases, uma por tela"*
-    fazia — e ela foi recusada.
+    A DECISÃO `07[02]` DO PO CADUCOU em 05/09, e quem a derrubou foi ELA: a
+    `07-Q2` recusou as três opções oferecidas — só o fato, apontar o Consertar,
+    duas frases — e respondeu com uma quarta, *"O produto aplica ela"*. A frase
+    do dono (`home_actions.WRAPPER_MISSING_TEXT`) diz hoje o fato **mais** a
+    promessa que o produto cumpre, e a ONDA5-07-03 a entregou em 06/09.
+
+    **O QUE ESTA RÉGUA COBRA NÃO MUDOU COM ISSO**, e é por isso que ela
+    sobreviveu à troca sem uma linha nova: ela não conhece a frase — ela
+    PERGUNTA ao dono e compara. Escrever aqui uma segunda redação faria as duas
+    janelas do mesmo produto falarem línguas diferentes, que é exatamente o que
+    a opção *"duas frases, uma por tela"* fazia — e ela foi recusada.
 
     ELA LÊ AS DUAS PONTAS: o texto que a aba põe na tela tem de ser, palavra
     por palavra, o que a função dona devolve.
     """
     from hefesto_dualsense4unix.app.actions import home_actions as ha
 
-    state = {"gamepad_emulation": {"wrapper_used": False}}
+    state = {"gamepad_emulation": {"enabled": True, "wrapper_used": False}}
     aviso, _ = a07.aviso_do_jogo_aberto(state, None)
     assert aviso, "o aviso do jogo aberto sumiu da aba"
     dono = ha.wrapper_banner_text(state) or ""
