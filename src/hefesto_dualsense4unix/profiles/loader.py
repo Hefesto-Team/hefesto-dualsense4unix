@@ -154,6 +154,50 @@ _DEFAULT_SEED_SOURCE_DIRS: tuple[Path, ...] = (
     Path("/usr/share/hefesto-dualsense4unix/assets/profiles_default"),
 )
 
+# --- PERFIS-SAO-PERFIS-01 (06/09/2026) — os gêneros viram Estilo de Jogo ----
+# Ela, literal: *"os perfis que voltaram não fazem sentido. ação, aventura,
+# corrida. Isso não é perfil, isso é estilo de jogo."* — e sobre eles:
+# **"somem da lista e da semeadura"**, os arquivos FICAM.
+#
+# Os oito saíram de `assets/profiles_default/` para `assets/estilos_de_jogo/`,
+# que é a fonte das receitas do motor de Estilo de Jogo (decisão 8 de 03/09).
+# `seed_default_presets` não mudou uma linha: ele copia o que há na pasta, e
+# na pasta ficou só o `personalizado.json`.
+#
+# O QUE ESTA CASA NÃO É: uma lista de perfis renomeada. O motor que aplica
+# gatilho + vibração + luz por estilo é sprint POSTERIOR — aqui os arquivos são
+# só dado guardado, sem nenhum leitor de runtime além da migração abaixo.
+_ESTILO_DE_JOGO_SOURCE_DIRS: tuple[Path, ...] = (
+    Path(__file__).resolve().parents[3] / "assets" / "estilos_de_jogo",
+    Path(sys.prefix) / "share" / "hefesto-dualsense4unix" / "assets"
+    / "estilos_de_jogo",
+    Path("/usr/share/hefesto-dualsense4unix/assets/estilos_de_jogo"),
+)
+
+#: Os oito que deixam de ser perfil. A lista é FECHADA de propósito: ela nomeia
+#: o que a fábrica semeou até 06/09/2026, e um arquivo que ela mesma criou com
+#: um desses nomes não é alcançado (a régua de intocado abaixo o protege de
+#: novo, mas duas guardas custam menos que um perfil dela na subpasta errada).
+ARQUIVOS_DOS_ESTILOS_DE_JOGO: tuple[str, ...] = (
+    "acao.json",
+    "aventura.json",
+    "corrida.json",
+    "esportes.json",
+    "fallback.json",
+    "fps.json",
+    "navegacao.json",
+    "point_and_click.json",
+)
+
+#: A subpasta do diretório de perfis para onde os gêneros já semeados vão. Fica
+#: FORA do `glob("*.json")` de todo leitor desta casa — a lista da aba Perfis
+#: perde as oito linhas sem que um byte saia do disco. Mesmo desenho de
+#: `HISTORICO_DIR_NAME`, e por isso não precisa de ponto na frente: ninguém
+#: varre recursivamente o diretório de perfis.
+ESTILOS_DE_JOGO_DIR_NAME = "estilos-de-jogo"
+
+_ESTILOS_MIGRATION_MARKER = ".generos_viraram_estilo_de_jogo"
+
 # Flag once-per-process: a semeadura roda no máximo uma vez por processo
 # (daemon, GUI, CLI…), na primeira carga de perfis.
 _seed_attempted: bool = False
@@ -164,10 +208,24 @@ def _seed_source_file(
 ) -> Path | None:
     """Resolve um asset de preset no primeiro diretório-fonte existente.
 
-    Mesma cascata de `seed_default_presets` (repo editable → prefix → /usr).
+    Mesma cascata de `seed_default_presets` (repo editable → prefix → /usr), e
+    desde 06/09/2026 a de `assets/estilos_de_jogo/` logo atrás: os oito gêneros
+    mudaram de pasta, e as DUAS migrações que leem asset (`coop_local_match` e
+    `modo_jogo_nos_presets`) morreriam caladas sem esta segunda perna — o
+    `migracao_aposentada_sem_asset` passaria a sair para cinco arquivos que
+    continuam na árvore, a dois diretórios de distância.
+
+    A cascata nova NÃO entra em `_DEFAULT_SEED_SOURCE_DIRS`: quem semeia é
+    `seed_default_presets`, que varre a PASTA inteira. Misturar as duas
+    ressuscitaria os oito na lista dela, que é o oposto do pedido.
+
     None se nenhum diretório existe ou o arquivo não está em nenhum deles.
     """
-    candidates = _DEFAULT_SEED_SOURCE_DIRS if source_dirs is None else tuple(source_dirs)
+    candidates = (
+        (*_DEFAULT_SEED_SOURCE_DIRS, *_ESTILO_DE_JOGO_SOURCE_DIRS)
+        if source_dirs is None
+        else tuple(source_dirs)
+    )
     for base in candidates:
         p = base / fname
         if p.is_file():
@@ -577,6 +635,262 @@ def migrate_modo_jogo_nos_presets(dest_dir: Path | None = None) -> list[str]:
     return migrated
 
 
+@dataclass(frozen=True)
+class ResultadoDosEstilos:
+    """O que a migração dos gêneros fez com CADA arquivo — e por quê.
+
+    Quatro listas em vez de um contador, pelo mesmo motivo de `PerfilSemeado`:
+    *"movi 3"* não distingue *os outros 5 ela editou* de *os outros 5 esta
+    instalação nem tem*, e ausência de notícia é o que esta casa lê como
+    sucesso falso.
+    """
+
+    #: Foram para `profiles/estilos-de-jogo/`. Saíram da lista, ficaram no disco.
+    movidos: tuple[str, ...] = ()
+    #: Ela editou — **é perfil dela**, seja qual for o nome. Fica na lista, inteiro.
+    dela: tuple[str, ...] = ()
+    #: O asset de fábrica não existe nesta instalação: sem ele não há como saber
+    #: se ela editou, e adivinhar seria mover perfil dela.
+    sem_fabrica: tuple[str, ...] = ()
+    #: A subpasta já tem um arquivo com esse nome. Nada é sobrescrito, nunca.
+    ocupados: tuple[str, ...] = ()
+
+
+def _e_o_estilo_de_fabrica(local: Path, fabrica: Path) -> bool:
+    """True quando o arquivo local ainda é o de fábrica — ela não o editou.
+
+    A régua é o JSON DECODIFICADO, e não os bytes, e isto foi MEDIDO: os oito
+    do disco dela são byte-idênticos ao asset hoje, mas quem instalou o produto
+    antes da MODO-01 teve os cinco de gênero REESCRITOS por
+    `migrate_modo_jogo_nos_presets` — que copia `mode` do próprio asset e
+    regrava com `json.dumps(indent=2)`, mudando o espaçamento. Comparar bytes
+    marcaria como "editado por ela" um arquivo que o PRODUTO reformatou, e os
+    oito ficariam na lista para sempre na máquina de quem mais precisava.
+
+    Qualquer diferença de VALOR — uma cor, um gatilho, um `match` — reprova, e
+    aí o arquivo é dela e fica. Ilegível dos dois lados também reprova: não
+    saber é motivo para não mexer.
+    """
+    try:
+        if local.read_bytes() == fabrica.read_bytes():
+            return True
+        return bool(
+            json.loads(local.read_text(encoding="utf-8"))
+            == json.loads(fabrica.read_text(encoding="utf-8"))
+        )
+    except Exception:
+        return False
+
+
+def migrar_generos_para_estilos_de_jogo(
+    dest_dir: Path | None = None,
+) -> ResultadoDosEstilos:
+    """One-shot: os oito gêneros já semeados saem da LISTA, sem sair do disco.
+
+    PERFIS-SAO-PERFIS-01 (ver o bloco no topo do módulo). Ela pediu que eles
+    *"sumam da lista e da semeadura"* — e a semeadura já não os conhece, porque
+    os assets mudaram de pasta. Falta o disco de quem já os recebeu: são oito
+    linhas na aba Perfis que não são perfis.
+
+    **NENHUM ARQUIVO É APAGADO.** Cada um é MOVIDO para
+    `profiles/estilos-de-jogo/`, que nenhum `glob("*.json")` desta casa varre —
+    e continua carregável por nome, porque `load_profile` aprendeu a olhar lá
+    (a última camada da busca). Se ela tinha `navegacao` ativo, o boot continua
+    achando o perfil que ela ativou.
+
+    A ordem dentro do laço é a que não perde nada: o destino é escrito com
+    `os.replace`, que é atômico e no MESMO sistema de arquivos — o arquivo nunca
+    existe em zero lugares. Um destino já ocupado é RECUSA, não sobrescrita.
+
+    Idempotente por marker próprio. Best-effort: falha loga e segue.
+    """
+    directory = dest_dir if dest_dir is not None else profiles_dir(ensure=True)
+    marker = directory / _ESTILOS_MIGRATION_MARKER
+    if marker.exists():
+        return ResultadoDosEstilos()
+    movidos: list[str] = []
+    dela: list[str] = []
+    sem_fabrica: list[str] = []
+    ocupados: list[str] = []
+    with FileLock(str(_lock_path(marker))):
+        if marker.exists():
+            return ResultadoDosEstilos()
+        destino = directory / ESTILOS_DE_JOGO_DIR_NAME
+        for arquivo in ARQUIVOS_DOS_ESTILOS_DE_JOGO:
+            local = directory / arquivo
+            if not local.is_file():
+                continue
+            fabrica = _seed_source_file(arquivo)
+            if fabrica is None:
+                sem_fabrica.append(arquivo)
+                _relatar_migracao_aposentada("generos_viram_estilo_de_jogo", arquivo)
+                continue
+            if not _e_o_estilo_de_fabrica(local, fabrica):
+                dela.append(arquivo)
+                continue
+            alvo = destino / arquivo
+            if alvo.exists():
+                ocupados.append(arquivo)
+                continue
+            try:
+                destino.mkdir(parents=True, exist_ok=True)
+                os.replace(local, alvo)
+            except OSError as exc:
+                logger.warning(
+                    "genero_nao_virou_estilo",
+                    arquivo=arquivo,
+                    err=str(exc),
+                    err_type=type(exc).__name__,
+                )
+                continue
+            movidos.append(arquivo)
+        with contextlib.suppress(Exception):
+            marker.write_text("done\n", encoding="utf-8")
+    resultado = ResultadoDosEstilos(
+        movidos=tuple(movidos),
+        dela=tuple(dela),
+        sem_fabrica=tuple(sem_fabrica),
+        ocupados=tuple(ocupados),
+    )
+    with contextlib.suppress(Exception):
+        logger.info(
+            "generos_viraram_estilo_de_jogo",
+            movidos=list(movidos),
+            editados_por_ela=list(dela),
+            sem_asset_de_fabrica=list(sem_fabrica),
+            destino_ocupado=list(ocupados),
+            destino=ESTILOS_DE_JOGO_DIR_NAME,
+            efeito="saíram da lista de perfis; nenhum arquivo foi apagado",
+        )
+    return resultado
+
+
+#: PERFIS-SAO-PERFIS-01: o que sobra num perfil de jogo intocado. Ela, literal:
+#: *"mantemos só o nome e o id pra eu reconfigurar um a um"* — o "id" é o
+#: `match` por `steam_app_<n>`, e a prioridade vem junto porque é o que põe a
+#: regra do JOGO acima do genérico de desktop (sem ela o perfil nasce em 0 e
+#: nunca ganha de ninguém, que é perder o perfil por outro caminho).
+CHAVES_DO_PERFIL_DE_JOGO: tuple[str, ...] = ("name", "match", "priority")
+
+_JOGOS_ENXUTOS_MARKER = ".perfis_de_jogo_so_nome_e_id"
+
+
+def _classes_de_jogo_do_match(dados: dict[str, object]) -> list[str] | None:
+    """As `window_class` quando o `match` é EXATAMENTE um jogo da Steam.
+
+    None em todo o resto — `type` que não é `criteria`, mais de uma classe,
+    classe que não é `steam_app_<n>`, ou qualquer outro campo de critério
+    preenchido. Um perfil com `process_name` junto é regra que ela escreveu, e
+    enxugar o que ela escreveu é o oposto do pedido.
+    """
+    match = dados.get("match")
+    if not isinstance(match, dict) or match.get("type") != "criteria":
+        return None
+    if match.get("window_title_regex") or match.get("process_name"):
+        return None
+    classes = match.get("window_class")
+    if not isinstance(classes, list) or len(classes) != 1:
+        return None
+    if steam_appid_from_wm_class(classes[0]) is None:
+        return None
+    return [str(classes[0])]
+
+
+def _e_perfil_de_jogo_intocado(dados: dict[str, object]) -> bool:
+    """True quando o perfil de jogo ainda é o molde que a semeadura gerou.
+
+    O molde é RECONSTRUÍDO, não digitado: `_perfil_do_jogo` monta um `Profile`
+    só com nome, `match` e prioridade, e `_payload_do_perfil` decide o que vai
+    para o disco. Comparar contra uma lista de chaves escrita à mão seria a
+    régua digitando o que devia LER — a forma de instrumento falso que esta
+    casa já pagou onze vezes num dia só.
+
+    A prioridade fica de fora da comparação de propósito: ela é preservada, e
+    um número diferente é escolha dela sobre a ORDEM, não sobre o conteúdo.
+    """
+    classes = _classes_de_jogo_do_match(dados)
+    if classes is None:
+        return False
+    nome = dados.get("name")
+    if not isinstance(nome, str) or not nome:
+        return False
+    molde = _payload_do_perfil(
+        Profile(
+            name=nome,
+            match=MatchCriteria(window_class=classes),
+            priority=PRIORIDADE_DO_PERFIL_DE_JOGO,
+        )
+    )
+    resto_do_disco = {
+        k: v for k, v in dados.items() if k not in CHAVES_DO_PERFIL_DE_JOGO
+    }
+    resto_do_molde = {
+        k: v for k, v in molde.items() if k not in CHAVES_DO_PERFIL_DE_JOGO
+    }
+    return resto_do_disco == resto_do_molde
+
+
+def enxugar_perfis_de_jogo(dest_dir: Path | None = None) -> list[str]:
+    """One-shot: o perfil de jogo intocado fica só com nome, id e prioridade.
+
+    Ela, literal: *"ficam se o sistema antigo tiver sido adaptado pro novo
+    sistema de perfis. caso contrário mantemos só o nome e o id pra eu
+    reconfigurar um a um."* Medido no disco dela em 06/09: os 24 são o molde de
+    29/08 com um `match` — nenhum tem a seção por controle do sistema novo,
+    nenhum foi tocado desde que nasceu (mesma data, mesmo minuto).
+
+    **Nada muda de comportamento.** O que sai são as três seções que o arquivo
+    repetia do DEFAULT DO ESQUEMA (`triggers` Off/Off, `leds` com
+    `auto_player_colors`, `rumble` passthrough, mais `version` e
+    `suppress_desktop_emulation`): carregar o arquivo enxuto devolve um
+    `Profile` idêntico ao de antes — é o que
+    `test_os_generos_nao_sao_perfis` mede, chave a chave.
+
+    O QUE SEÇÃO AUSENTE SIGNIFICA HOJE, e é medição obrigatória desta sprint:
+    o **default do esquema**, NÃO o que o `Personalizado` diz. A decisão D1
+    dela (*"o perfil grava o que ela tocou"*) pede o segundo, e o `schema.py`
+    não faz isso — é `profiles/schema.py`, que não é da posse desta sprint, e
+    está RELATADO na entrega. Aqui a diferença é inócua por construção: o
+    arquivo já continha exatamente o default do esquema.
+
+    Um perfil com QUALQUER campo diferente do molde não é tocado. Idempotente
+    por marker próprio. Best-effort: falha loga e segue.
+    """
+    directory = dest_dir if dest_dir is not None else profiles_dir(ensure=True)
+    marker = directory / _JOGOS_ENXUTOS_MARKER
+    if marker.exists():
+        return []
+    enxutos: list[str] = []
+    with FileLock(str(_lock_path(marker))):
+        if marker.exists():
+            return []
+        for path in sorted(directory.glob("*.json")):
+            dados = _dados_crus_do_perfil(path)
+            if dados is None or not _e_perfil_de_jogo_intocado(dados):
+                continue
+            payload = {k: dados[k] for k in CHAVES_DO_PERFIL_DE_JOGO if k in dados}
+            try:
+                _atomic_write_json(path, payload)
+            except OSError as exc:
+                logger.warning(
+                    "perfil_de_jogo_nao_enxugou",
+                    arquivo=path.name,
+                    err=str(exc),
+                    err_type=type(exc).__name__,
+                )
+                continue
+            enxutos.append(path.name)
+        with contextlib.suppress(Exception):
+            marker.write_text("done\n", encoding="utf-8")
+    if enxutos:
+        logger.info(
+            "perfis_de_jogo_so_nome_e_id",
+            arquivos=enxutos,
+            efeito="o resto era cópia do default do esquema — nada mudou de valor",
+        )
+    return enxutos
+
+
 def _maybe_seed_presets() -> None:
     """Dispara a semeadura uma vez por processo, antes da primeira carga.
 
@@ -611,6 +925,17 @@ def _maybe_seed_presets() -> None:
         # conserta só quem instalar do zero. One-shot.
         with contextlib.suppress(Exception):
             migrate_modo_jogo_nos_presets()
+        # PERFIS-SAO-PERFIS-01: os gêneros saem da lista, e a ORDEM importa —
+        # DEPOIS da MODO-01, nunca antes. A MODO-01 reescreve os cinco de
+        # gênero que ainda não têm `mode`, copiando-o do asset; rodando antes
+        # dela, esta migração acharia o arquivo no estado pré-MODO-01, que É o
+        # de fábrica daquela época, e o moveria — deixando a receita do futuro
+        # motor sem a seção que a MODO-01 existe para lhe dar.
+        with contextlib.suppress(Exception):
+            migrar_generos_para_estilos_de_jogo()
+        # E os perfis de jogo intocados ficam só com nome, id e prioridade.
+        with contextlib.suppress(Exception):
+            enxugar_perfis_de_jogo()
     except Exception as exc:  # boundary best-effort (ver docstring)
         logger.warning(
             "presets_seed_failed",
@@ -911,6 +1236,23 @@ def _perfil_do_jogo(jogo: JogoLocal) -> Profile:
     )
 
 
+def _payload_do_perfil_de_jogo(profile: Profile) -> dict[str, object]:
+    """O que vai para o disco quando um perfil de JOGO nasce: nome, id, prioridade.
+
+    PERFIS-SAO-PERFIS-01 (06/09/2026), Passo 4: o mesmo contrato que
+    `enxugar_perfis_de_jogo` aplica ao que já está no disco, aplicado ao
+    futuro. O molde inteiro que a semeadura copiava era o DEFAULT DO ESQUEMA
+    escrito por extenso — cinco chaves repetindo o que o `Profile` já sabe —, e
+    é exatamente isso que fazia os 24 perfis dela parecerem configurados quando
+    nenhum tinha uma escolha dela dentro.
+
+    Passa por `_payload_do_perfil` e SÓ ENTÃO corta: as regras de omissão são
+    de compatibilidade e têm um dono só (ver a docstring de `save_profile`).
+    """
+    payload = _payload_do_perfil(profile)
+    return {k: payload[k] for k in CHAVES_DO_PERFIL_DE_JOGO if k in payload}
+
+
 def _gravar_sem_pisar(alvo: Path, payload: object) -> bool:
     """Grava o JSON SÓ se `alvo` ainda não existe. ``True`` = gravou.
 
@@ -1047,7 +1389,7 @@ def _semear_um_jogo(
     if any(e_janela_do_cliente_steam(c) for c in classes_do_perfil_do_jogo(jogo.appid)):
         return PerfilSemeado(jogo.appid, jogo.nome, "casa_com_a_loja", arquivo)
     perfil = _perfil_do_jogo(jogo)
-    if not _gravar_sem_pisar(directory / arquivo, _payload_do_perfil(perfil)):
+    if not _gravar_sem_pisar(directory / arquivo, _payload_do_perfil_de_jogo(perfil)):
         # Outro processo criou o arquivo entre o glob e o link. Recusa, e a
         # próxima varredura vai enxergá-lo como dono do appid.
         return PerfilSemeado(jogo.appid, jogo.nome, "nome_ocupado", arquivo)
@@ -1205,6 +1547,18 @@ def load_profile(identifier: str) -> Profile:
                 return profile
         except ValueError:
             continue
+
+    # PERFIS-SAO-PERFIS-01: a última camada é a subpasta dos Estilos de Jogo.
+    # Os oito saíram da LISTA, não do disco — e "nada se perdeu" só é verdade
+    # se `navegacao` ainda ABRIR. O `session.json` e o `active_profile.txt`
+    # dela guardam o NOME do último perfil ativado, e o daemon restaura por
+    # esse nome no boot: sem esta camada, quem tinha um gênero ativo em 06/09
+    # bootaria SEM perfil, com um `last_profile_restore_failed` no journal —
+    # o mesmo estrago que `_repontar_a_sessao_para_o_padrao_novo` evitou na
+    # renomeação do padrão, por outra porta.
+    estilo = directory / ESTILOS_DE_JOGO_DIR_NAME / f"{slug}.json"
+    if estilo.is_file():
+        return _read_profile(estilo)
 
     raise FileNotFoundError(f"perfil não encontrado: {identifier}")
 
@@ -1768,6 +2122,9 @@ def _atomic_write_bytes(target: Path, bruto: bytes) -> None:
 
 
 __all__ = [
+    "ARQUIVOS_DOS_ESTILOS_DE_JOGO",
+    "CHAVES_DO_PERFIL_DE_JOGO",
+    "ESTILOS_DE_JOGO_DIR_NAME",
     "HISTORICO_DIR_NAME",
     "HISTORICO_MAX_VERSOES",
     "INTERVALO_MINIMO_DA_VARREDURA_S",
@@ -1777,12 +2134,15 @@ __all__ = [
     "SEED_SKIP_ENV_VAR",
     "PerfilSemeado",
     "ResultadoDaSemeadura",
+    "ResultadoDosEstilos",
     "classes_do_perfil_do_jogo",
     "delete_profile",
+    "enxugar_perfis_de_jogo",
     "historico_dir",
     "listar_historico",
     "load_all_profiles",
     "load_profile",
+    "migrar_generos_para_estilos_de_jogo",
     "migrate_coop_local_match",
     "migrate_default_profile_name",
     "perfis_de_jogo_semeados",

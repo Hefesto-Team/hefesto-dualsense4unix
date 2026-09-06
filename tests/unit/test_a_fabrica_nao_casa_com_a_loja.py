@@ -66,13 +66,21 @@ from hefesto_dualsense4unix.profiles.steam_app import e_janela_do_cliente_steam
 
 RAIZ = Path(__file__).resolve().parents[2]
 FABRICA = RAIZ / "assets" / "profiles_default"
+#: PERFIS-SAO-PERFIS-01 (06/09/2026): os oito gêneros saíram da semeadura para
+#: cá — não são perfil, são Estilo de Jogo (decisão dela). A régua da loja vale
+#: para as DUAS casas: o `navegacao.json` é justamente o preset em que a
+#: D-STEAM-SAI-DA-NAVEGACAO foi paga, e ele mora aqui agora. Medir só a
+#: semeadura deixaria a cura sem guarda no dia seguinte à mudança de pasta.
+ESTILOS = RAIZ / "assets" / "estilos_de_jogo"
+CASAS_DE_FABRICA = (FABRICA, ESTILOS)
 
 
 class TestAFabricaNaoCasaComALoja:
     def test_o_diretorio_de_fabrica_existe_e_tem_perfis(self) -> None:
         """Guarda do próprio instrumento: régua que não acha nada passa sempre."""
-        assert FABRICA.is_dir(), f"o diretório de fábrica sumiu: {FABRICA}"
-        presets = sorted(FABRICA.glob("*.json"))
+        for casa in CASAS_DE_FABRICA:
+            assert casa.is_dir(), f"uma casa da fábrica sumiu: {casa}"
+        presets = sorted(p for casa in CASAS_DE_FABRICA for p in casa.glob("*.json"))
         # PISO BAIXADO de 10 para 9 em 26/08/2026, e o motivo é a poda: `bow`,
         # `coop_local` e `sackboy_nativo` saíram da fábrica a pedido dela
         # (*"em termos de perfis de jogo vamos manter os que temos ativos
@@ -88,7 +96,11 @@ class TestAFabricaNaoCasaComALoja:
 
     def test_nenhum_preset_de_fabrica_casa_com_a_loja(self) -> None:
         """O portão. Roda a régua DO PRODUTO sobre o diretório de fábrica."""
-        culpados = perfis_que_casam_com_o_cliente_steam(FABRICA)
+        culpados = [
+            achado
+            for casa in CASAS_DE_FABRICA
+            for achado in perfis_que_casam_com_o_cliente_steam(casa)
+        ]
         assert culpados == [], (
             "preset de FÁBRICA casando com a janela do cliente Steam:\n"
             + "\n".join(
@@ -110,7 +122,7 @@ class TestAFabricaNaoCasaComALoja:
         apagasse a lista inteira — o perfil pararia de mentir e pararia
         também de funcionar.
         """
-        dados = json.loads((FABRICA / "navegacao.json").read_text(encoding="utf-8"))
+        dados = json.loads((ESTILOS / "navegacao.json").read_text(encoding="utf-8"))
         classes = dados["match"]["window_class"]
         for esperada in ("firefox", "chromium", "google-chrome"):
             assert esperada in classes, (

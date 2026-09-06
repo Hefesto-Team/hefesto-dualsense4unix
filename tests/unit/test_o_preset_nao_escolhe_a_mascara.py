@@ -37,7 +37,28 @@ import tempfile
 from pathlib import Path
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
-_PRESETS_DIR = _REPO_ROOT / "assets" / "profiles_default"
+#: PERFIS-SAO-PERFIS-01 (06/09/2026): a fábrica virou DUAS pastas. A régua
+#: abaixo vale para as duas — um preset que não é semeado hoje pode voltar a
+#: ser lido pelo motor de Estilo de Jogo amanhã, e escrever máscara em perfil
+#: de alguém continua sendo o produto escolhendo por ela.
+_PRESETS_DIRS = (
+    _REPO_ROOT / "assets" / "profiles_default",
+    _REPO_ROOT / "assets" / "estilos_de_jogo",
+)
+
+
+def _presets_de_fabrica() -> list[Path]:
+    return sorted(
+        (p for d in _PRESETS_DIRS for p in d.glob("*.json")), key=lambda p: p.name
+    )
+
+
+def _preset_de_fabrica(nome: str) -> Path:
+    for casa in _PRESETS_DIRS:
+        candidato = casa / f"{nome}.json"
+        if candidato.exists():
+            return candidato
+    return _PRESETS_DIRS[0] / f"{nome}.json"
 
 
 def test_nenhum_preset_shipado_escolhe_a_mascara() -> None:
@@ -47,7 +68,7 @@ def test_nenhum_preset_shipado_escolhe_a_mascara() -> None:
     """
     ofensores: list[str] = []
     gamepads: list[str] = []
-    for path in sorted(_PRESETS_DIR.glob("*.json")):
+    for path in _presets_de_fabrica():
         data = json.loads(path.read_text(encoding="utf-8"))
         mode = data.get("mode")
         if not (isinstance(mode, dict) and mode.get("kind") == "gamepad"):
@@ -86,7 +107,7 @@ def test_o_null_do_preset_atravessa_o_esquema_intacto() -> None:
     # foram podados da fábrica em 26/08/2026 e deram lugar a dois presets de
     # gênero que continuam shipando `mode: gamepad`.
     for nome in ("acao", "aventura", "fps"):  # (noqa-acento) nomes de arquivo
-        bruto = json.loads((_PRESETS_DIR / f"{nome}.json").read_text(encoding="utf-8"))
+        bruto = json.loads(_preset_de_fabrica(nome).read_text(encoding="utf-8"))
         perfil = Profile.model_validate(bruto)
         assert perfil.mode is not None and perfil.mode.kind == "gamepad", nome
         assert perfil.mode.gamepad_flavor is None, (
