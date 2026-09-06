@@ -2929,32 +2929,32 @@ def _conferir(doc):
 def _gerar() -> None:
     n = monta("06-navegacao", "Navegação", MIOLO, CSS, legenda=LEGENDA)
 
-    # A FITA fica apagada nesta aba, mas o motivo herdado da Jogar é falso aqui: não há
+    # A fita_re fica apagada nesta aba, mas o motivo herdado da Jogar é falso aqui: não há
     # card nenhum, há 28 campos editáveis. Trocado na saída, porque o texto mora no
     # esqueleto (topo.html) e esta aba só pode mexer no arquivo dela.
     p = onde.pagina("06-navegacao.html")
     s = p.read_text()
-    ANTES = 'title="Esta aba não usa o controle escolhido aqui — os cards são leitura."'
+    antes = 'title="Esta aba não usa o controle escolhido aqui — os cards são leitura."'
     # O TÍTULO SAI DE `monta.TITULOS_DA_FITA` — 05/09/2026. Ele era digitado aqui,
     # e o PILOTO não o conhecia: como ele troca o bloco inteiro da fita a cada
     # tique, esta frase durava um tique e dava lugar ao genérico de leitura. Agora
     # há um dono, consultado pelo gerador do arquivo E pela tela viva.
-    DEPOIS = f'title="{TITULOS_DA_FITA["06-navegacao.html"]}"'
-    if f"Player {NAVEGA}" not in DEPOIS:
+    depois = f'title="{TITULOS_DA_FITA["06-navegacao.html"]}"'
+    if f"Player {NAVEGA}" not in depois:
         raise SystemExit(
             f"ERRO: a fita da 06 nomeia o Player 1 e o mockup elegeu o {NAVEGA} — "
             "reveja `monta.TITULOS_DA_FITA` antes de gerar")
-    if ANTES not in s:
+    if antes not in s:
         raise SystemExit("ERRO: o title da fita mudou no topo.html — refaça a troca")
-    s = s.replace(ANTES, DEPOIS)
+    s = s.replace(antes, depois)
 
-    # A FITA DESTA ABA GANHA ENDEREÇO — 03/09/2026, IDENTIDADE-VEM-DE-CIMA.
+    # A fita_re DESTA ABA GANHA ENDEREÇO — 03/09/2026, IDENTIDADE-VEM-DE-CIMA.
     #
     # Os dois chips nomeavam o controle do MOCKUP (`P1 · Cosmic Red · USB`,
     # `P2 · Starlight Blue · BT`) e o `title` de cada um repetia o nome. Seis dos
     # dezesseis valores congelados desta aba estavam aqui.
     #
-    # O DONO DA FITA É COMPARTILHADO (`monta.fita` desenha, `hefesto_vivo._fita`
+    # O DONO DA fita_re É COMPARTILHADO (`monta.fita` desenha, `hefesto_vivo._fita`
     # repinta), e por isso a troca é feita AQUI, na saída — a mesma razão pela qual
     # o `title` acima é trocado neste arquivo: o bloco mora no esqueleto e esta aba
     # só pode mexer no arquivo dela.
@@ -2964,21 +2964,21 @@ def _gerar() -> None:
     # c.get("cor") …) -> return ""`), e pelo rádio a cor não se lê. Treze tiques
     # depois, a fita da `06` ainda dizia Cosmic Red e Starlight Blue ao lado de um
     # cabeçalho que já contava certo. Com o endereço, quem escreve é o pacote.
-    FITA = re.compile(r'(<div class="fita inerte"[^>]*)(>)(.*?)(</div>)', re.S)
-    if not FITA.search(s):
+    fita_re = re.compile(r'(<div class="fita inerte"[^>]*)(>)(.*?)(</div>)', re.S)
+    if not fita_re.search(s):
         raise SystemExit("ERRO: a fita inerte mudou de forma — refaça o endereço")
-    s = FITA.sub(
+    s = fita_re.sub(
         lambda m: (m.group(1) + ' data-campo="fita-chips" data-hef-alvo="html"'
                    + m.group(2) + chips_da_fita(MESA_DA_FITA) + m.group(4)),
         s, count=1)
 
     # a tela nova entra IRMÃ da janela, fora do miolo (ver o comentário no MIOLO)
-    MARCA = "<!-- ================= LEGENDA DO MOCKUP ================= -->"
-    if MARCA not in s:
+    marca = "<!-- ================= LEGENDA DO MOCKUP ================= -->"
+    if marca not in s:
         raise SystemExit("ERRO: a marca da legenda mudou no fim.html")
-    TELAS = "\n".join(t.strip() for t in (TELA_DEFINICOES, TELA_TECLAS,
+    telas = "\n".join(t.strip() for t in (TELA_DEFINICOES, TELA_TECLAS,
                                           TELA_REMAPEAMENTO, TELA_PONTO))
-    s = s.replace(MARCA, TELAS + "\n\n" + MARCA, 1)
+    s = s.replace(marca, telas + "\n\n" + marca, 1)
     onde.gravar("06-navegacao.html", s)
 
     _conferir(onde.pagina("06-navegacao.html").read_text())

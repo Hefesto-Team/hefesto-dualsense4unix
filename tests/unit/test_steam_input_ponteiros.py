@@ -18,7 +18,7 @@ Até aqui ela lia os ``GtkButton`` do ``gui/main.glade``. A frase do
 ``storm_doctor`` mandava clicar em *'Consertar problemas conhecidos'*, que é o
 rótulo da janela — e na interface que ela usa aquele botão se chama **'Refazer
 os consertos automáticos'** (``paginas/09-sistema.html``). A régua dava VERDE
-sobre a frase falsa porque media a tela ERRADA: a que está saindo.
+sobre a frase falsa porque olhava a tela ERRADA: a que está saindo.
 
 Achado pela ``GTK-2`` e pela ``SISTEMA-STEAM-01``, no mesmo dia e por dois
 caminhos. A cura é um PAR — a frase e a régua —, e sem a segunda metade a
@@ -32,8 +32,6 @@ from __future__ import annotations
 
 import ast
 import re
-import xml.etree.ElementTree as ET
-from typing import Any
 from pathlib import Path
 
 import pytest
@@ -69,8 +67,13 @@ _TAGS = re.compile(r"<[^>]+>")
 
 
 def _publicadas() -> list[Path]:
-    """As dez páginas que o produto renderiza, na ordem do nome."""
-    return sorted((_PACOTE / "interface" / "paginas").glob("[0-9][0-9]-*.html"))
+    """As dez páginas que o produto renderiza, na ordem do nome.
+
+    O nome da pasta entra CRU na linha abaixo: caminho não leva acento, e
+    acentuá-lo quebraria a leitura do disco.
+    """
+    pasta = _PACOTE / "interface" / "paginas"  # noqa-acento (nome de pasta)
+    return sorted(pasta.glob("[0-9][0-9]-*.html"))
 
 
 def _nome_das_abas() -> dict[str, str]:
