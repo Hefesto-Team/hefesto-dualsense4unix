@@ -2124,6 +2124,37 @@ def _pagina_da_uri(uri: str | None) -> str:
 
 
 class Piloto:
+    #: OS DOIS TETOS DA LEITURA DOS CONTROLES QUE O HEFESTO SÓ VÊ — EXTERNOS-01,
+    #: 06/09/2026. **Os dois números são os da janela antiga**, e nenhum se
+    #: escolhe aqui: um segundo teto para a mesma pergunta seria a segunda
+    #: verdade que esta casa persegue.
+    #:
+    #: | | valor | de onde |
+    #: | --- | --- | --- |
+    #: | entre leituras | 4,0 s | `home_actions.HomeActionsMixin.EXTERNOS_THROTTLE_S` |
+    #: | espera pela resposta | 3,0 s | o `timeout_s` de `_maybe_fetch_externos` |
+    #:
+    #: **POR QUE NÃO NO TIQUE**, e o custo está medido no dono
+    #: (`daemon/ipc_handlers._handle_controller_list`): a enumeração de
+    #: `/dev/input` mais a sonda de holders custa **10-40 ms e um subprocess**, e
+    #: foi por isso que o daemon a deixou FORA do `state_full` e atrás de um
+    #: opt-in. Num orçamento de 100 ms, pedi-la a cada tique comeria até 40% do
+    #: laço para receber a mesma resposta 40 vezes.
+    #:
+    #: **A ESPERA VAI EXPLÍCITA** porque `ponte.teto` não conhece
+    #: `controller.list`: herdar os 0,25 s do bridge daria uma lista VAZIA a cada
+    #: leitura, e lista vazia se lê como *"não há externo"*.
+    #:
+    #: **POR QUE ATRIBUTO DE CLASSE, e não constante de módulo lá em cima ao lado
+    #: do `TIQUE_MS`** — o portão `citacoes-no-codigo` foi quem mostrou: QUATRO
+    #: arquivos de outras posses citam `hefesto_vivo.py:NNN` em comentário, e um
+    #: bloco novo no topo empurra as quatro citações para linhas que não dizem
+    #: mais o que elas prometem. Aqui não se move uma linha do que já existia — e
+    #: a forma passa a ser a MESMA do dono na janela antiga, que também os guarda
+    #: como atributo de classe.
+    SEGUNDOS_ENTRE_LEITURAS_DOS_EXTERNOS = 4.0
+    SEGUNDOS_DE_ESPERA_DOS_EXTERNOS = 3.0
+
     def __init__(self, args: argparse.Namespace) -> None:
         self.args = args
         self.pronto = False
@@ -2270,6 +2301,17 @@ class Piloto:
         #: Os `uniq` já perguntados ao leitor de cor. Sem esta trava, cada tique
         #: abriria uma thread nova para o mesmo controle — 2 por segundo.
         self.perguntados: set[str] = set()
+        #: OS CONTROLES QUE O HEFESTO SÓ VÊ, e as duas travas da leitura deles —
+        #: EXTERNOS-01, 06/09/2026. A lista é a ÚLTIMA resposta boa; o carimbo
+        #: diz quando ela chegou; a bandeira impede duas perguntas no ar.
+        #:
+        #: A LISTA NÃO SE APAGA ENTRE LEITURAS, e é escolha: entre um tique e o
+        #: seguinte não houve resposta nenhuma, e zerá-la faria o card do 8BitDo
+        #: PISCAR quarenta vezes por leitura. O `[]` inicial vale "ainda não
+        #: perguntei", que é o mesmo que "não há" para quem desenha.
+        self._externos: list[dict[str, Any]] = []
+        self._externos_lidos_em = 0.0
+        self._externos_no_ar = False
 
         self.tela = JanelaDaAba(
             arquivo=onde.pagina(PRIMEIRA, publicado=True),
@@ -2905,10 +2947,71 @@ class Piloto:
                     target=self.leitor.perguntar, args=(uniq,), daemon=True
                 ).start()
         conectados = ctx_conectados
+        # OS QUE O HEFESTO SÓ VÊ — EXTERNOS-01, 06/09/2026. A pergunta sai em
+        # thread e a resposta é lida do cache, pela mesma razão da cor do
+        # plástico três linhas acima: ela fala com `/dev/input` e com um
+        # subprocess, e no tique travaria o laço do GTK inteiro.
+        self._talvez_ler_os_externos()
         mesa = mesa_viva.mesa_do_estado(st, self.leitor.conhecidos())
         para_pref = {str(c.get("uniq") or ""): c["pref"] for c in mesa}
-        ctx = pacotes.Contexto(state=st, mesa=mesa, conectados=conectados, estados={})
+        ctx = pacotes.Contexto(state=st, mesa=mesa, conectados=conectados, estados={},
+                               externos=list(self._externos))
         return ctx, para_pref
+
+    def _talvez_ler_os_externos(self) -> None:
+        """Pede `controller.list {external: true}` no tique LENTO, em thread.
+
+        **AS TRÊS GUARDAS, e cada uma fecha um defeito que a janela antiga já
+        pagou** (`home_actions._maybe_fetch_externos`, de onde as três vêm):
+
+        1. **uma pergunta de cada vez** (`_externos_no_ar`) — sem ela, um daemon
+           lento acumularia uma thread por tique, dez por segundo, todas
+           enumerando `/dev/input` ao mesmo tempo;
+        2. **o teto de tempo** (`SEGUNDOS_ENTRE_LEITURAS_DOS_EXTERNOS`) — a
+           resposta muda quando alguém liga um controle, não dez vezes por
+           segundo;
+        3. **o relógio anda ANTES da thread sair**, e não quando ela volta: uma
+           chamada que nunca responde deixaria a bandeira levantada para sempre,
+           e a lista congelaria calada. O carimbo aqui faz a próxima tentativa
+           acontecer sozinha assim que a bandeira cair.
+
+        **A RESPOSTA RUIM NÃO APAGA A BOA.** `resultado()` LEVANTA quando o
+        daemon não atende (é a escolha declarada em `pacotes/ponte.py`), e um
+        `except` que zerasse a lista transformaria *"não consegui perguntar"* em
+        *"não há controle nenhum"* — a confusão que esta casa chama de *ausência
+        de notícia lida como sucesso*. Só uma resposta BOA troca a lista.
+        """
+        agora = time.monotonic()
+        if self._externos_no_ar:
+            return
+        if (agora - self._externos_lidos_em
+                < self.SEGUNDOS_ENTRE_LEITURAS_DOS_EXTERNOS):
+            return
+        self._externos_lidos_em = agora
+        self._externos_no_ar = True
+
+        def perguntar() -> None:
+            try:
+                r = ponte.resultado(
+                    "controller.list",
+                    timeout=self.SEGUNDOS_DE_ESPERA_DOS_EXTERNOS,
+                    external=True,
+                )
+            except Exception as e:
+                print(f"[externos] não li o inventário: {e}", file=sys.stderr)
+                return
+            finally:
+                self._externos_no_ar = False
+            # O DONO DA LEITURA É `home_actions.externos_na_mesa`, e ele já sabe
+            # as duas fontes e o filtro. Repetir o `isinstance` aqui seria a
+            # segunda régua para o mesmo payload.
+            from hefesto_dualsense4unix.app.actions.home_actions import externos_na_mesa
+
+            bruto = r.get("external") if isinstance(r, dict) else None
+            self._externos = externos_na_mesa(
+                None, bruto if isinstance(bruto, list) else ())
+
+        threading.Thread(target=perguntar, daemon=True).start()
 
     def _tique(self) -> bool:
         if not self.pronto:

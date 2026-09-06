@@ -17,6 +17,7 @@ interruptor, e é por isso que o botão da Jogar funciona hoje.
 """
 from __future__ import annotations
 
+import html
 from typing import Any
 
 from . import Contexto, degradacao_de, jogador_de, registrar
@@ -59,6 +60,19 @@ DA_PAGINA: tuple[str, ...] = (
     "pendente",
     "pendente-alvo",
     "pendente-ha",
+    # OS CONTROLES QUE O HEFESTO SÓ VÊ — EXTERNOS-01, 06/09/2026, linha 16 do
+    # `docs/data/paridade-gtk-html.csv`.
+    #
+    # UM ENDEREÇO SÓ, e não o par `pendente`/`pendente-ha`: a peça é a
+    # `monta.ressalva`, que já sabe NÃO OCUPAR NADA em repouso — `:empty` e
+    # `:has(.nada)` estão no esqueleto compartilhado desde a D-02 dela. Um
+    # segundo endereço para "existe?" seria reescrever em Python o que duas
+    # regras de CSS já respondem, e um a mais para a régua do casamento conferir.
+    #
+    # O ALVO É `html` porque o bloco é TROCADO INTEIRO: quantos externos existem
+    # é o que a máquina responde, e não há endereço para um cartão que ainda não
+    # nasceu. É a mesma razão do mapa do gabinete e da régua do rádio na aba 08.
+    "externos",
 )
 
 #: OS ENDEREÇOS DE DENTRO DE CADA CARTÃO.
@@ -651,6 +665,9 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
         # (`visibility`, não `display`): "muda tudo ao clicar" é queixa dela, e
         # a legenda desta aba promete que a tela não pula.
         "pendente-ha": "1" if frase else "",
+        # OS CONTROLES QUE O HEFESTO SÓ VÊ — EXTERNOS-01. Ver
+        # :func:`_html_dos_externos`.
+        "externos": _html_dos_externos(ctx),
     }
     fora["cobertura"] = {
         # A PROMESSA, e ela se conta sozinha: `DA_PAGINA` e `POR_CARTAO` são as
@@ -1142,6 +1159,93 @@ def _frase_da_mesa(ctx: Contexto) -> str:
         return (f"Há {quantos} controles ligados e esta tela mostra "
                 f"{lugares}: o cabeçalho conta todos.")
     return ""
+
+
+#: O TÍTULO DA SEÇÃO DOS EXTERNOS. **Não é palavra nova**: é a mesma linha que a
+#: janela antiga já põe no card de cada um (`home_actions._format_external_subtitle`
+#: escreve *"o Hefesto só vê"*), promovida a cabeçalho porque aqui os cards vêm
+#: em bloco e o rótulo não cabe repetido em cada um.
+#:
+#: PROVISÓRIO — texto de tela é palavra dela (PROVA-DE-TELA-01).
+EXTERNOS_TITULO = "Ligados, e o Hefesto só vê"
+
+
+def _html_dos_externos(ctx: Contexto) -> str:
+    """Um cartão por controle que o Hefesto VÊ e NÃO adota — ``""`` sem nenhum.
+
+    **A LINHA 16 DO CSV DA PARIDADE**, e o defeito que ela nomeia é uma
+    regressão: *"com dois DualSense e um 8BitDo na mesa a aba dizia '2
+    controles' ao lado de três cards noutra tela"*. A janela antiga fechou isso
+    em 25/08 (a `I5`) e a tela nova nasceu com ele de volta — não por falta de
+    dado (`controller.list {external: true}` responde), mas porque ninguém
+    perguntava.
+
+    **NADA DE TEXTO SE ESCREVE AQUI, e é o ponto inteiro.** As três frases têm
+    dono na janela antiga, e são elas que chegam:
+
+    * ``_format_external_title`` — *"Controle 3 — 8BitDo"*. O número é o SLOT
+      GLOBAL de co-op, **o mesmo que o Hefesto escreve no LED de player do
+      aparelho**; a marca vem de ``external_controllers.brand_of``, que é a
+      única que sabe desmentir o VID mentido pelo clone em modo DualShock4
+      (o OUI do MAC vence, e ele é o único sinal que os separa);
+    * ``_format_external_subtitle`` — *"cabo · o Hefesto só vê"*, e a palavra do
+      transporte sai de ``home_actions.palavra_do_transporte``, que é o §2 do
+      "o que se mede antes de escrever" desta sprint;
+    * ``external_controllers.nintendo_bt_warning`` — a armadilha do
+      ``hid-nintendo``, que é o SINAL da linha 305 do mesmo CSV. Ela só existe
+      no rádio e só para VID Nintendo; ``None`` nos outros, e aí a linha não
+      nasce.
+
+    **O CARTÃO NÃO TEM COR DE PLÁSTICO, E ISSO É HONESTO.** A folha das 28 é dos
+    DualSense (`docs/data/cores-do-dualsense.csv`); um 8BitDo não tem linha
+    nela. Inventar uma borda seria a tela afirmando um modelo que ninguém mediu
+    — a mesma regra que faz `_cor_do_plastico` devolver `""` para o que o SVG
+    não conhece.
+
+    **NEM NÚMERO DE JOGADOR ESMAECIDO, NEM BATERIA.** O externo não é jogador do
+    co-op (`plataforma.vpad@sn30` está em `existe: desconhecido` no mapa de
+    canais) e o daemon não lê a carga dele. Campo sem informação não mostra
+    nada, que é regra dela.
+
+    **NÃO É UM CARTÃO `.cartao`**, e a classe é outra de propósito: `.cartao` é
+    dos quatro assentos, tem `data-controle="pN"`, entra na conta de
+    `apagar_os_lugares_sem_dono` e recebe o alvo de edição da fita. Um externo
+    não tem assento — dar-lhe a mesma classe faria as duas coisas brigarem no
+    mesmo pixel, que é o erro que o `marcador-principal` já pagou uma vez.
+    """
+    if not ctx.externos:
+        return ""
+    from hefesto_dualsense4unix.app.actions.external_controllers import (
+        nintendo_bt_warning,
+    )
+    from hefesto_dualsense4unix.app.actions.home_actions import (
+        _format_external_subtitle,
+        _format_external_title,
+    )
+    def _e(x: object) -> str:
+        """Escapa para HTML — pelo `html.escape` da biblioteca, e não pelo `_e`
+        da janela GTK.
+
+        `gui.aba_conexoes._e` é exatamente esta linha, e importá-lo seria uma
+        citação NOVA para uma janela que está saindo (`D-0609-GTK-LEVA-INTEIRA`):
+        o portão `nada-aponta-para-a-janela` reprovou a primeira volta desta
+        sprint por isso, e a regra é que aquela lista só diminui. **O que se
+        reusa da janela é o MOTOR** — as frases, que vêm de `app/actions/` —,
+        nunca a janela. É a mesma escolha que `a09_sistema.py` já faz.
+        """
+        return html.escape(str(x), quote=True)
+
+    fora = [f'<div class="ext-rot">{_e(EXTERNOS_TITULO)}</div>']
+    for entrada in ctx.externos:
+        aviso = nintendo_bt_warning(entrada)
+        linha_do_aviso = (f'<div class="ext-aviso">{_e(aviso)}</div>'
+                          if aviso else "")
+        fora.append(
+            '<div class="ext-cartao">'
+            f'<div class="ext-nome">{_e(_format_external_title(entrada))}</div>'
+            f'<div class="ext-via">{_e(_format_external_subtitle(entrada))}</div>'
+            f'{linha_do_aviso}</div>')
+    return "".join(fora)
 
 
 def _ressalva_da_mascara(state: dict[str, Any]) -> str:

@@ -908,6 +908,24 @@
      cartões mediam 228.8 e 225.2 px — a largura vinha do nome do plástico. */
   .pecas{display:grid;grid-template-columns:repeat(4,1fr);gap:7px}
 
+  /* OS CONTROLES QUE O HEFESTO SÓ VÊ — EXTERNOS-01, 06/09/2026.
+     A CAIXA É A `.ressalva` DO ESQUELETO, e por isso não há aqui uma regra
+     para o estado vazio: `monta.py` já traz `.ressalva:empty{display:none}` e
+     `.ressalva:has(.nada){display:none}` (D-02 dela). Em repouso — que é o
+     estado desta bancada, e o desta máquina hoje — a seção mede ZERO, e a cena
+     que ela aprovou não muda um pixel.
+
+     O CARTÃO É OUTRO DE PROPÓSITO, e não o `.cartao` dos quatro assentos: um
+     externo não tem `data-controle`, não entra em `apagar_os_lugares_sem_dono`
+     e não recebe o alvo de edição da fita. Ele NÃO tem borda de plástico — a
+     folha das 28 cores é dos DualSense, e um 8BitDo não tem linha nela. */
+  .ressalva .ext-rot{color:var(--texto-suave);font-weight:600;margin-bottom:4px}
+  .ressalva .ext-cartao{border:1px solid var(--border);border-radius:6px;
+    padding:5px 8px;margin-bottom:4px}
+  .ressalva .ext-nome{color:var(--fg);font-weight:600}
+  .ressalva .ext-via{color:var(--texto-mudo)}
+  .ressalva .ext-aviso{color:var(--orange)}
+
   /* O CARTÃO VIROU COLUNA em 28/08, e o motivo é a decisão dela: a máscara
      passou a ser POR CONTROLE, e o seletor dela mora aqui dentro. Em cima a
      peça (desenho + rótulo), embaixo as três máscaras.
@@ -3153,6 +3171,19 @@
                 </div>
               </div>
             </div>
+            <!-- OS CONTROLES QUE O HEFESTO SÓ VÊ — EXTERNOS-01, 06/09/2026, e
+                 é a linha 16 do `docs/data/paridade-gtk-html.csv`: *"com dois
+                 DualSense e um 8BitDo na mesa a aba dizia '2 controles' ao lado
+                 de três cards noutra tela"*. A janela antiga fechou isso em
+                 25/08 (a `I5`); a tela nova nasceu com o defeito de volta.
+
+                 ELE NASCE VAZIO, E ISSO É O DESENHO. Quantos externos existem é
+                 o que a MÁQUINA responde, e não há endereço para um cartão que
+                 ainda não nasceu — a mesma razão do mapa do gabinete e da régua
+                 do rádio na aba 08. A peça é a `monta.ressalva`, que em repouso
+                 mede ZERO: nenhum aparelho de exemplo entra aqui, e a cena que
+                 ela aprovou continua igual até um externo ser ligado. -->
+            <div class="ressalva" data-campo="externos" data-hef-alvo="html"><i class="nada"></i></div>
           </div>
 
         <div class="col-atencao" data-lista="avisos">

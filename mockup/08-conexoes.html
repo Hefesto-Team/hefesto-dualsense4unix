@@ -1146,6 +1146,18 @@
      vizinho de nome igual que esta aba já pagou três vezes. */
   .ressalva .mais{font-style:italic}
 
+  /* OS CONTROLES QUE O HEFESTO SÓ VÊ — EXTERNOS-01, 06/09/2026, linha 305 do
+     CSV da paridade. A caixa é a MESMA `monta.ressalva` das duas linhas acima,
+     e por isso não há regra de estado vazio aqui: `.ressalva:empty` e
+     `.ressalva:has(.nada)` já vêm do esqueleto. Em repouso a seção mede ZERO.
+
+     O AVISO DO `hid-nintendo` VAI EM LARANJA, que é a cor que esta casa reserva
+     para o que pede atenção — e ele não acusa o Hefesto: a morte é do driver
+     do kernel, e a saída estável é o cabo. */
+  .ressalva .ext-linha{color:var(--texto-mudo);margin-top:2px}
+  .ressalva .ext-linha b{color:var(--fg)}
+  .ressalva .ext-aviso{color:var(--orange);display:block}
+
   /* ---- botões: todo grupo divide a largura do bloco em partes IGUAIS ----
      A régua dela é estrita: 273/273/273/273 na Jogar, 260 nos 38 da Gatilhos,
      145×4 na Vibração, 173×6 na Perfis. Aqui eram 134/159, 157/71 e 170/192. */
@@ -3156,6 +3168,19 @@
             </div>
           </div>
         </div>
+        <!-- OS CONTROLES QUE O HEFESTO SÓ VÊ — EXTERNOS-01, 06/09/2026, e é a
+             linha 305 do `docs/data/paridade-gtk-html.csv`: *"uma aba chamada
+             Conexões que não lista metade dos controles conectados"*.
+
+             FORA DO ACORDEÃO `.gc`, DE PROPÓSITO: cada `.gc-item` tem
+             `data-controle="pN"`, um rádio de alvo de saída do daemon e um
+             corpo que abre. Um externo não tem assento, não é alvo de saída de
+             nada e não tem o que abrir — pô-lo ali daria à tela um sexto rádio
+             apontando para um aparelho em que o daemon não escreve.
+
+             ELE NASCE VAZIO pela mesma razão da tabela dos adaptadores e do
+             mapa do gabinete: quantos existem é o que a máquina responde. -->
+        <div class="ressalva" data-campo="externos-lista" data-hef-alvo="html"><i class="nada"></i></div>
       </div>
     </div>
 

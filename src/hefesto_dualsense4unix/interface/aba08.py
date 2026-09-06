@@ -965,6 +965,18 @@ CSS = CSS_GLIFO + CSS_POPUP + """
      vizinho de nome igual que esta aba já pagou três vezes. */
   .ressalva .mais{font-style:italic}
 
+  /* OS CONTROLES QUE O HEFESTO SÓ VÊ — EXTERNOS-01, 06/09/2026, linha 305 do
+     CSV da paridade. A caixa é a MESMA `monta.ressalva` das duas linhas acima,
+     e por isso não há regra de estado vazio aqui: `.ressalva:empty` e
+     `.ressalva:has(.nada)` já vêm do esqueleto. Em repouso a seção mede ZERO.
+
+     O AVISO DO `hid-nintendo` VAI EM LARANJA, que é a cor que esta casa reserva
+     para o que pede atenção — e ele não acusa o Hefesto: a morte é do driver
+     do kernel, e a saída estável é o cabo. */
+  .ressalva .ext-linha{color:var(--texto-mudo);margin-top:2px}
+  .ressalva .ext-linha b{color:var(--fg)}
+  .ressalva .ext-aviso{color:var(--orange);display:block}
+
   /* ---- botões: todo grupo divide a largura do bloco em partes IGUAIS ----
      A régua dela é estrita: 273/273/273/273 na Jogar, 260 nos 38 da Gatilhos,
      145×4 na Vibração, 173×6 na Perfis. Aqui eram 134/159, 157/71 e 170/192. */
@@ -3383,6 +3395,19 @@ MIOLO = f'''
         <div class="gc">
 {chr(10).join(linha_do_controle(c) for c in MESA)}
         </div>
+        <!-- OS CONTROLES QUE O HEFESTO SÓ VÊ — EXTERNOS-01, 06/09/2026, e é a
+             linha 305 do `docs/data/paridade-gtk-html.csv`: *"uma aba chamada
+             Conexões que não lista metade dos controles conectados"*.
+
+             FORA DO ACORDEÃO `.gc`, DE PROPÓSITO: cada `.gc-item` tem
+             `data-controle="pN"`, um rádio de alvo de saída do daemon e um
+             corpo que abre. Um externo não tem assento, não é alvo de saída de
+             nada e não tem o que abrir — pô-lo ali daria à tela um sexto rádio
+             apontando para um aparelho em que o daemon não escreve.
+
+             ELE NASCE VAZIO pela mesma razão da tabela dos adaptadores e do
+             mapa do gabinete: quantos existem é o que a máquina responde. -->
+        {monta_ressalva("externos-lista")}
       </div>
     </div>
 
@@ -3757,11 +3782,27 @@ if __name__ == "__main__":
     #     produto e muda quando ele mudar; o que não pode sumir é o lugar onde
     #     ela cabe. Endereço que some é campo que o piloto não acha e escreve
     #     zero — calado, que é a forma em que os quatro viviam até hoje.
+    #     `externos-lista` ENTROU EM 06/09/2026 (EXTERNOS-01), e é a linha 305 do
+    #     CSV: a mesma doença dos quatro acima — o dono da frase existe no
+    #     produto (`home_actions._format_external_title` e as duas irmãs) e a
+    #     tela não tinha onde escrevê-la.
     for _campo in ("sem-driver", "radio-fragil", "hub-em-comum",
-                   "gabinete-contagens"):
+                   "gabinete-contagens", "externos-lista"):
         _exigir(_HTML.count(f'class="ressalva" data-campo="{_campo}"') == 1,
                 f"a linha de ressalva `{_campo}` não está na página — o dono da "
                 f"frase existe no produto e a tela volta a não ter onde escrevê-la")
+
+    #     E NENHUM APARELHO DE EXEMPLO NASCE DENTRO DELA: uma linha cravada aqui
+    #     afirmaria um 8BitDo ligado que ninguém mediu, que é o defeito exato que
+    #     a tabela dos adaptadores e o mapa do gabinete já pagaram nesta aba.
+    #     A RÉGUA CASA A MARCAÇÃO, E NÃO O TOKEN SOLTO: `_HTML` é o documento
+    #     INTEIRO, `<style>` incluído, e `"ext-linha" not in _HTML` reprovava a
+    #     própria regra de CSS que faz a linha existir. É a armadilha nomeada no
+    #     `COMO-OLHAR-A-TELA.md` — *"régua que casa um token em QUALQUER lugar
+    #     do texto"* —, e ela reprovou aqui na primeira volta.
+    _exigir('class="ext-linha"' not in _HTML,
+            "uma linha de controle externo nasceu no desenho — a tela estaria "
+            "afirmando um aparelho que ninguém mediu")
 
     # 2. O RESPIRO DO RÓTULO QUE EXPANDE. O `.quadro-topo` do esqueleto é
     #    `padding:11px 14px 0`: sem esta regra sobra 1px embaixo do texto.

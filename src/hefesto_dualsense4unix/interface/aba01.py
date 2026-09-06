@@ -64,7 +64,8 @@ import monta  # noqa: E402
 # cartão, que era identidade cravada e foi removido (ver `cartao`). O rótulo
 # VISÍVEL continua montado à mão aqui, campo a campo, porque cada pedaço dele
 # tem `data-campo` próprio — que é o que `rotulo()` não sabe fazer.
-from monta import MASCARAS, MESA, glifo, monta as montar, svg  # noqa: E402
+from monta import (MASCARAS, MESA, glifo, monta as montar,  # noqa: E402
+                   ressalva as monta_ressalva, svg)
 
 # QUANTAS LINHAS A COLUNA ATENÇÃO PUBLICA — e o dono do número é o PACOTE, não
 # este arquivo. A direção do import é essa e não a inversa: o produto pinta sem
@@ -467,6 +468,24 @@ CSS = """
   /* OS QUATRO NUMA FILEIRA SÓ, E TODOS DA MESMA LARGURA. Era `flex`, e os dois
      cartões mediam 228.8 e 225.2 px — a largura vinha do nome do plástico. */
   .pecas{display:grid;grid-template-columns:repeat(4,1fr);gap:7px}
+
+  /* OS CONTROLES QUE O HEFESTO SÓ VÊ — EXTERNOS-01, 06/09/2026.
+     A CAIXA É A `.ressalva` DO ESQUELETO, e por isso não há aqui uma regra
+     para o estado vazio: `monta.py` já traz `.ressalva:empty{display:none}` e
+     `.ressalva:has(.nada){display:none}` (D-02 dela). Em repouso — que é o
+     estado desta bancada, e o desta máquina hoje — a seção mede ZERO, e a cena
+     que ela aprovou não muda um pixel.
+
+     O CARTÃO É OUTRO DE PROPÓSITO, e não o `.cartao` dos quatro assentos: um
+     externo não tem `data-controle`, não entra em `apagar_os_lugares_sem_dono`
+     e não recebe o alvo de edição da fita. Ele NÃO tem borda de plástico — a
+     folha das 28 cores é dos DualSense, e um 8BitDo não tem linha nela. */
+  .ressalva .ext-rot{color:var(--texto-suave);font-weight:600;margin-bottom:4px}
+  .ressalva .ext-cartao{border:1px solid var(--border);border-radius:6px;
+    padding:5px 8px;margin-bottom:4px}
+  .ressalva .ext-nome{color:var(--fg);font-weight:600}
+  .ressalva .ext-via{color:var(--texto-mudo)}
+  .ressalva .ext-aviso{color:var(--orange)}
 
   /* O CARTÃO VIROU COLUNA em 28/08, e o motivo é a decisão dela: a máscara
      passou a ser POR CONTROLE, e o seletor dela mora aqui dentro. Em cima a
@@ -1409,6 +1428,19 @@ MIOLO = f'''
             <div class="pecas" data-lista="cartoes">
 {CARTOES}
             </div>
+            <!-- OS CONTROLES QUE O HEFESTO SÓ VÊ — EXTERNOS-01, 06/09/2026, e
+                 é a linha 16 do `docs/data/paridade-gtk-html.csv`: *"com dois
+                 DualSense e um 8BitDo na mesa a aba dizia '2 controles' ao lado
+                 de três cards noutra tela"*. A janela antiga fechou isso em
+                 25/08 (a `I5`); a tela nova nasceu com o defeito de volta.
+
+                 ELE NASCE VAZIO, E ISSO É O DESENHO. Quantos externos existem é
+                 o que a MÁQUINA responde, e não há endereço para um cartão que
+                 ainda não nasceu — a mesma razão do mapa do gabinete e da régua
+                 do rádio na aba 08. A peça é a `monta.ressalva`, que em repouso
+                 mede ZERO: nenhum aparelho de exemplo entra aqui, e a cena que
+                 ela aprovou continua igual até um externo ser ligado. -->
+            {monta_ressalva("externos")}
           </div>
 
         <div class="col-atencao" data-lista="avisos">
@@ -2030,6 +2062,22 @@ def _conferir(doc):
         exigir("title=" not in pedaco.split(">", 1)[0],
                "a marca de degradação nasce com o motivo cravado — ela acenderia "
                "no desenho sobre um controle que ninguém mediu")
+
+    # 14. OS CONTROLES QUE O HEFESTO SÓ VÊ — EXTERNOS-01 (06/09/2026), linha 16
+    #     do CSV. UM endereço, com o alvo `html`, e nascendo VAZIO.
+    exigir('data-campo="externos" data-hef-alvo="html"' in corpo,
+           "o bloco dos controles que o Hefesto só vê ficou sem endereço — "
+           "sem ele o pacote emite e o `querySelector` devolve `null`, que é "
+           "zero escrito e zero erro")
+    #     E NENHUM APARELHO DE EXEMPLO NASCE DENTRO DELE. Um card cravado aqui
+    #     afirmaria um 8BitDo na mesa dela que ninguém mediu — que é o defeito
+    #     que esta aba já pagou com a fita e com os lugares vazios.
+    #     A MARCAÇÃO, E NÃO O TOKEN SOLTO: o `corpo` aqui já é só o miolo (ver
+    #     o topo desta função), mas a régua irmã da aba 08 lê o documento
+    #     inteiro e reprovou a própria regra de CSS. As duas casam a mesma coisa.
+    exigir('class="ext-cartao"' not in corpo,
+           "um cartão de controle externo nasceu no desenho — a tela estaria "
+           "afirmando um aparelho que ninguém mediu")
 
     if falhas:
         raise SystemExit("ERRO em 01-jogar — decisão dela desfeita:\n  "
