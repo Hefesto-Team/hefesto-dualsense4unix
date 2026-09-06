@@ -92,9 +92,26 @@ WRAPPER_PREFIX = "sh -c '" + _WRAPPER_INNER + "' hefesto-launch"
 WRAPPER_LAUNCH = WRAPPER_PREFIX + " %command%"
 
 #: Assinatura hefesto-específica do veneno (cirúrgica por VID/PID do
-#: DualSense físico). É o ÚNICO gatilho de migração/strip — tokens
-#: adjacentes só saem em linhas que a contenham.
+#: DualSense físico). Ela cola a variável ao par, e por isso só enxerga o
+#: nosso pedaço quando ele é o PRIMEIRO da lista — quem responde "o nosso par
+#: está nesta linha?" hoje é `has_poison`, e quem o TIRA é
+#: `subtrair_nosso_ignore`. Esta constante segue sendo o texto que a
+#: documentação e o `doctor.sh` citam.
 IGNORE_SIGNATURE = "SDL_GAMECONTROLLER_IGNORE_DEVICES=0x054c/0x0ce6"
+
+#: A variável de ambiente do veneno, SEM valor, e o NOSSO par VID/PID (o
+#: DualSense físico) separados. A separação é o mecanismo inteiro da
+#: `subtrair_nosso_ignore`: a atribuição é UM token de shell com uma LISTA
+#: separada por vírgula do lado direito, e é na lista que o nosso par mora.
+IGNORE_VAR = "SDL_GAMECONTROLLER_IGNORE_DEVICES"
+IGNORE_PAR_HEFESTO = "0x054c/0x0ce6"
+
+#: A atribuição inteira, como token COMPLETO de shell. O `\S*` do lado direito
+#: é de propósito: a lista pode ter uma entrada ou dez, e o que a subtração
+#: devolve é sempre uma atribuição — nunca um pedaço solto.
+_IGNORE_ASSIGN_RE = re.compile(
+    r"(?<!\S)" + re.escape(IGNORE_VAR) + r"=(?P<lista>\S*)(?!\S)"
+)
 
 #: Tokens que o compose_launch de ondas anteriores emitia JUNTO da
 #: assinatura. Removidos apenas como co-ocorrentes (nunca caçados soltos).
@@ -191,20 +208,117 @@ def _remove_token(value: str, token: str) -> str:
     return value[:start] + value[end:]
 
 
+def subtrair_nosso_ignore(value: str) -> str:
+    """Tira o NOSSO par de dentro da lista de IGNORE, deixando a dela intacta.
+
+    ONDA5-07-01, 06/09/2026. Decisão dela (07-Q1): *"Deve aplicar
+    automaticamente como era no gtk"*. Ela leu quatro jeitos de RECEBER a linha
+    para colar na Steam à mão e recusou os quatro — porque a pergunta partia de
+    que o reparo manual é um fato do mundo. **O Hefesto não explica a própria
+    falha, ele a conserta.**
+
+    O QUE MUDA EM RELAÇÃO AO `_remove_token`: aquele trata a atribuição como
+    TEXTO e por isso só sabe tirá-la inteira; este a trata como **o que ela é**
+    — uma atribuição de shell, um token só, com uma lista separada por vírgula
+    do lado direito. A subtração acontece DENTRO da lista.
+
+    O contrato, e cada cláusula existe por um caso medido:
+
+    * o par no meio ou no fim sai igual, e a vírgula que sobraria é comida —
+      `VAR=0x054c/0x0ce6,0x057e/0x2009` vira `VAR=0x057e/0x2009`. **Nunca
+      existe um instante em que a vírgula fique órfã**, porque a atribuição sai
+      inteira e volta inteira;
+    * lista vazia depois da subtração: a atribuição INTEIRA sai (um `VAR=`
+      pendurado é resíduo — a mesma regra do `%command%` órfão do `strip_value`);
+    * linha sem o nosso par volta **byte a byte**;
+    * nenhum ramo emite token sem `=`. Quem tranca isso é
+      `test_nenhum_caminho_deixa_fragmento_sem_igual_pendurado`.
+
+    NÃO SOBRA VENENO, e é a segunda metade da razão que caiu: o que se subtrai
+    é exatamente o par que o wrapper repõe por conta própria, na env
+    materializada. O que fica é o que ELA escreveu, e o que ela escreveu vira
+    argumento do `env(1)` dentro do wrapper — o mesmo destino que a migração já
+    dá a qualquer opção da usuária.
+
+    **A subtração é o produto devolvendo o que é dele e devolvendo a ela o que
+    é dela.** É a diferença entre *"não mexo na sua linha"* e *"tiro a minha
+    sujeira de dentro da sua linha"*.
+
+    A varredura vai da DIREITA para a esquerda porque cada edição encurta a
+    string: mexer no último casamento primeiro mantém os `span()` anteriores
+    válidos, sem recompilar nada.
+    """
+    out = value
+    for m in reversed(list(_IGNORE_ASSIGN_RE.finditer(value))):
+        itens = m.group("lista").split(",")
+        restantes = [i for i in itens if i.strip().lower() != IGNORE_PAR_HEFESTO]
+        if len(restantes) == len(itens):
+            continue  # o nosso par não está NESTA atribuição — nada a fazer
+        # Só depois de saber que o par estava aqui é que as entradas vazias
+        # saem: uma lista `a,,b` que ninguém tocou volta byte a byte.
+        restantes = [i for i in restantes if i.strip()]
+        start, end = m.span()
+        if restantes:
+            out = out[:start] + IGNORE_VAR + "=" + ",".join(restantes) + out[end:]
+            continue
+        # A LISTA FICOU VAZIA: a atribuição sai inteira, comendo um espaço
+        # adjacente — a mesma preferência do `_remove_token` (à direita
+        # primeiro, à esquerda quando é o último token).
+        if end < len(out) and out[end] == " ":
+            out = out[:start] + out[end + 1:]
+        elif start > 0 and out[start - 1] == " ":
+            out = out[: start - 1] + out[end:]
+        else:
+            out = out[:start] + out[end:]
+    return out
+
+
 def has_poison(value: str) -> bool:
-    """True se a LaunchOptions carrega a assinatura do veneno como token
-    COMPLETO — o único formato que migrate/strip sabem remover com segurança."""
-    return _token_presente(value, IGNORE_SIGNATURE)
+    """A linha carrega a NOSSA variável de IGNORE e o NOSSO par?
+
+    **A PERGUNTA ERA ESTREITA E FICOU LARGA — 06/09/2026, ONDA5-07-01.** Até
+    aqui ela cobrava a `IGNORE_SIGNATURE` como TOKEN COMPLETO, o que na prática
+    quer dizer *"a atribuição tem o nosso par SOZINHO na lista"*. A assinatura
+    cola `VAR=` ao par, e daí saía um ponto cego estrutural: numa linha
+    `VAR=0x057e/0x2009,0x054c/0x0ce6` — o nosso par em SEGUNDO — a substring
+    nem aparece.
+
+    **Medido antes da cura:** `has_poison` e `has_extended_ignore` respondiam
+    **os dois `False`**, o produto não via o próprio veneno, e `migrate_value`
+    EMBRULHAVA a linha inteira — pondo o par que manda ignorar o DualSense dela
+    como argumento do `env(1)` de dentro do wrapper. O jogo continuava cego para
+    o controle, com a tela dizendo que o atalho de inicialização estava no
+    lugar.
+
+    A largura é de propósito, e ela é a rede: pega inclusive a forma que a
+    subtração não sabe desmontar (uma lista entre aspas, por exemplo), e é
+    `has_extended_ignore` quem separa essa do resto. **Quem AGE é
+    `subtrair_nosso_ignore`**, que nunca remove substring — a proteção contra o
+    fragmento-comando mora nela, não mais nesta pergunta.
+
+    `IGNORE_SIGNATURE` continua existindo: é o texto que a documentação, o
+    `launch_env` e o `doctor.sh` citam.
+    """
+    return IGNORE_VAR in value and IGNORE_PAR_HEFESTO in value
 
 
 def has_extended_ignore(value: str) -> bool:
-    """True quando a assinatura existe mas foi ESTENDIDA (ex.: `,0x057e/...`).
+    """True quando o nosso par está lá e a SUBTRAÇÃO NÃO O ALCANÇA.
 
-    Linha INTOCÁVEL para migrate/strip: mexer deixaria um fragmento-comando
-    pendurado (jogo que não abre — o pior modo de falha do sprint doc). O
-    fluxo reporta honestamente e pede migração manual.
+    O NOME FICOU E O SENTIDO MUDOU — ONDA5-07-01, 06/09/2026, e a mudança é a
+    sprint inteira. Até aqui esta função respondia *"a lista foi estendida à
+    mão"*, e a resposta era tratada como sinônimo de **intocável**: mexer
+    deixaria um fragmento-comando pendurado, o jogo não abriria, e o produto
+    reportava honestamente pedindo reparo manual.
+
+    A lista estendida deixou de ser intocável — `subtrair_nosso_ignore` a
+    alcança sem nunca deixar fragmento. O que sobra para esta função é o resto
+    honesto: a linha que carrega o nosso par numa forma que a subtração não
+    sabe desmontar. Ela continua sendo o gatilho do `MOTIVO_ESTENDIDO` do censo
+    e da frase de reparo manual — e o dia em que ela acender é o dia em que
+    aquela frase é a única coisa honesta na tela.
     """
-    return IGNORE_SIGNATURE in value and not _token_presente(value, IGNORE_SIGNATURE)
+    return has_poison(value) and subtrair_nosso_ignore(value) == value
 
 
 def count_extended_ignore(text: str) -> int:
@@ -225,12 +339,26 @@ def strip_value(value: str) -> str:
     UX-04 (uninstall, incondicional): tira a assinatura + co-ocorrentes da
     MESMA linha, preserva `__GL_SHADER_*` e opções do usuário byte a byte.
     Linha que era só nossa colapsa para "" (um `%command%` órfão é resíduo).
+
+    A LISTA ESTENDIDA TAMBÉM, E A RAZÃO É A DESINSTALAÇÃO — ONDA5-07-01,
+    06/09/2026. Enquanto a `has_poison` era o portão, numa linha estendida este
+    caminho não tirava nada: o nosso par ficava na lista dela **para sempre
+    depois de desinstalar** — e sem o wrapper, aquele par manda o jogo ignorar o
+    DualSense FÍSICO dela. Deixar sujeira nossa numa máquina de onde fomos
+    embora é o oposto de desinstalar.
     """
     out = value
     if WRAPPER_PREFIX in out:
         out = _remove_token(out, WRAPPER_PREFIX)
-    if has_poison(out):
-        out = _remove_token(out, IGNORE_SIGNATURE)
+    # A subtração cobre os DOIS casos com um mecanismo só: com o par sozinho na
+    # lista ela tira a atribuição inteira (o que o
+    # `_remove_token(IGNORE_SIGNATURE)` fazia); com a lista estendida ela tira
+    # só o nosso pedaço de dentro. Os co-ocorrentes saem SÓ quando o nosso par
+    # saiu — `SDL_JOYSTICK_HIDAPI=0` sem o nosso par é fix legítimo de controle
+    # de terceiros (o 8BitDo), e caçá-lo solto seria estragar a linha dela.
+    subtraida = subtrair_nosso_ignore(out)
+    if subtraida != out:
+        out = subtraida
         for token in _COOCCURRING_TOKENS:
             out = _remove_token(out, token)
     if out.strip() == "%command%":
@@ -252,16 +380,32 @@ def migrate_value(value: str) -> str:
     - sem `%command%` (opções são ARGUMENTOS do jogo): a migração explicita
       `%command%` antes delas — semântica idêntica, agora embrulhada.
 
-    Lista de IGNORE ESTENDIDA pela usuária (`...0x0ce6,0x057e/...`): a linha
-    volta INTACTA — remover só o nosso pedaço deixaria fragmento-comando
-    (jogo não abre) e embrulhar manteria o veneno ativo por fora do wrapper.
-    O chamador reporta via `has_extended_ignore`/`count_extended_ignore`.
+    LISTA DE IGNORE ESTENDIDA PELA USUÁRIA (`...0x0ce6,0x057e/...`): ela era
+    INTOCÁVEL, e desde 06/09/2026 (ONDA5-07-01) é **subtraída**. A razão
+    escrita para desistir era verdadeira sobre UM jeito de mexer e o produto a
+    tratou como verdadeira sobre TODOS:
+
+        *"remover só o nosso pedaço deixaria fragmento-comando (jogo não abre)
+        e embrulhar manteria o veneno ativo por fora do wrapper"*
+
+    As duas metades caem com `subtrair_nosso_ignore`, que trata a atribuição
+    como um token só: **não sobra fragmento**, porque a atribuição sai inteira e
+    volta inteira; **não sobra veneno**, porque o par subtraído é exatamente o
+    que o wrapper repõe por conta própria. O que fica na linha é o que ela
+    escreveu, e vira argumento do `env(1)` como qualquer opção dela.
     """
+    # O QUE A SUBTRAÇÃO NÃO ALCANÇA CONTINUA VOLTANDO INTACTO, e esta guarda é
+    # a metade da razão antiga que NÃO caiu: embrulhar uma linha cujo par
+    # continua vivo poria o veneno como argumento do `env(1)` de dentro do
+    # wrapper — o jogo seguiria cego para o controle dela, com a tela dizendo
+    # que o atalho de inicialização está no lugar. Quem responde é
+    # `has_extended_ignore`, que hoje significa exatamente "não alcancei".
     if has_extended_ignore(value):
         return value
     out = value
-    if has_poison(out):
-        out = _remove_token(out, IGNORE_SIGNATURE)
+    subtraida = subtrair_nosso_ignore(out)
+    if subtraida != out:
+        out = subtraida
         for token in (*_COOCCURRING_TOKENS, *_PRELOAD_TOKENS):
             out = _remove_token(out, token)
     out = out.strip()
@@ -352,6 +496,11 @@ def transform_vdf_text(text: str, mode: str) -> tuple[str, int]:
             changed += 1
             continue
         value = _vdf_unescape(m.group("value"))
+        # O PORTÃO PERGUNTA A LARGA, e é o QUARTO endereço da mesma cura
+        # (06/09/2026): com `has_poison` aqui, a lista estendida — e a lista com
+        # o nosso par em segundo — não chegava nem a ser considerada, e as três
+        # curas de cima não alcançavam o `--migrate`/`--strip` da linha de
+        # comando nem o passo do install.
         if not (has_poison(value) or WRAPPER_PREFIX in value):
             continue
         modo_aqui = mode if na_canonica else "strip"
@@ -598,6 +747,13 @@ def apply_wrapper_vdf_text(
                 skipped.append((appid, "opt_out_da_usuaria"))
                 continue
             if has_extended_ignore(value):
+                # ELE PAROU DE PULAR A LISTA ESTENDIDA — ONDA5-07-01,
+                # 06/09/2026. `has_extended_ignore` mudou de sentido no dono
+                # dela: hoje só responde `True` para a forma que a
+                # `subtrair_nosso_ignore` NÃO alcança. A lista estendida à mão,
+                # que era a razão inteira deste `skip`, passa reto daqui e cai
+                # no `migrate_value`, que subtrai o nosso par e prefixa o
+                # atalho de inicialização.
                 skipped.append((appid, "ignore_estendido"))
                 continue
             if WRAPPER_PREFIX in value:
@@ -1691,14 +1847,20 @@ def _report_status(vdfs: list[Path]) -> int:
 
 
 def _warn_extended(vdf: Path, text: str) -> None:
-    """Reporta (sem tocar) LaunchOptions com a lista de IGNORE estendida."""
+    """Reporta (sem tocar) o que a subtração do nosso par NÃO alcança.
+
+    A LISTA ESTENDIDA POR VÍRGULA SAIU DAQUI — 06/09/2026. Ela é subtraída e
+    migrada como qualquer outra; o que este aviso ainda nomeia é a forma que
+    `subtrair_nosso_ignore` não sabe desmontar, e para essa a frase continua
+    verdadeira palavra por palavra.
+    """
     n = count_extended_ignore(text)
     if n:
         print(
             f"[launch-options] ATENÇÃO: {n} LaunchOptions com IGNORE_DEVICES "
-            f"ESTENDIDO (lista com vírgula) em {vdf} — não tocadas de propósito "
-            "(remover só o trecho do Hefesto quebraria o launch); migre "
-            "manualmente para o wrapper mantendo a sua parte da lista."
+            f"numa forma que não sei desmontar em {vdf} — não tocadas de "
+            "propósito (remover só o trecho do Hefesto quebraria o launch); "
+            "migre manualmente para o wrapper mantendo a sua parte da lista."
         )
 
 

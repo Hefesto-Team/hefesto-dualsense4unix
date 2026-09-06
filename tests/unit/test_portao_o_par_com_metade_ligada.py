@@ -862,7 +862,6 @@ _CITACOES_PENDENTES: frozenset[str] = frozenset({
     "daemon/subsystems/external_mask.py::identity.py:858",
     "daemon/subsystems/hotkey.py::daemon/protocols.py:180",
     "daemon/subsystems/hotkey.py::profiles/manager.py:384-387",
-    "integrations/exame_da_mesa.py::sentinela_do_wrapper.py:524",
     # ONDA5-06-01 (06/09/2026) — AS QUATRO QUE O BOTÃO PS DESLOCOU, e as quatro
     # são de arquivo que a sprint declara em `nao_toca:`. A âncora de cada uma
     # CONTINUA EXISTINDO; só o número mudou, porque o PS ganhou dono em
