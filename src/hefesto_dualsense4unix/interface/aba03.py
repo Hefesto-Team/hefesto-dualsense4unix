@@ -58,6 +58,7 @@ from hefesto_dualsense4unix.interface.pacotes.a03_gatilhos import (  # noqa: E40
     CAMPO_DO_PLASTICO,
     CLASSE_DO_CHIP,
     DICA_DO_MODO,
+    GESTO_DE_TODOS,
     PREFIXO_DA_DICA_DO_MODO,
     PREFIXO_DA_DICA_DO_PRONTO,
     SEM_APARELHO_AQUI,
@@ -419,7 +420,7 @@ CSS = CSS_GLIFO + """
   /* O LUGAR VAZIO NÃO SE CLICA — 02/09/2026, e a régua é a foto.
      Fotografada a aba com a mesa dela (dois controles), as colunas P3 e P4
      diziam `Desconectado` no cabeçalho e traziam os dois `<select>` e o
-     "Guardar esse efeito" ABERTOS. Escolher `Rígido` num lugar onde não há
+     "Guardar" e "Em todos" ABERTOS. Escolher `Rígido` num lugar onde não há
      aparelho é um clique que só pode terminar em recusa — e um botão que
      convida para uma recusa é pior que um botão que não existe.
 
@@ -441,7 +442,7 @@ CSS = CSS_GLIFO + """
      (dois controles), as colunas P3 e P4 saíam **byte a byte iguais** às duas
      que funcionam. Medido nos pixels da foto do produto:
 
-         o texto de "Guardar esse efeito"   P1 e P2  rgb(186,145,246)
+         o texto do botão de guardar       P1 e P2  rgb(186,145,246)
                                             P3 e P4  rgb(186,145,246)
          a borda da caixa "Modo"            P1       rgb(189,147,249)
                                             P3 e P4  rgb(189,147,249)
@@ -892,10 +893,34 @@ def coluna(c):
     # a aba. Medido em 01/09/2026, no dia em que os dez geradores voltaram a
     # rodar; ninguém tinha visto porque ninguém os rodava.
     conectado = "sim" if c.get("conectado", True) else "nao"  # (noqa-acento) valor
+    # O "EM TODOS" ENTROU NA FAIXA — GATILHOS-EM-TODOS-01, 06/09/2026, e é a
+    # LINHA 110 do CSV da paridade. **PROVISÓRIO — decisão dela**: o mecanismo é
+    # do produto e está provado, mas o BOTÃO é tela nova, e tela nova é dela.
+    # Ele nasce SÓ NA BANCADA; o `--publicar 03` continua sendo ato dela, e até
+    # lá o produto não ganha um pixel. Está declarado em `mockup/DIVERGENCIAS.md`.
+    #
+    # POR QUE NA COLUNA E NÃO NA FAIXA DO TÍTULO, que é onde a `a04_iluminacao`
+    # pôs o escopo global dela: a `04` espalha um ESTADO (as cores automáticas),
+    # que não tem origem; esta espalha um EFEITO, e o efeito é o par L2+R2 de UMA
+    # coluna. Um botão na faixa do título teria de escolher a coluna de origem
+    # sozinho — e escolher a do P1 seria a tela afirmando o que ninguém pediu.
+    # A faixa do título ficou medida e vaga (980px livres), e a razão de não usá-la
+    # está aqui para a próxima pessoa não remedir.
+    #
+    # E O "GUARDAR ESSE EFEITO" ENCURTOU PARA "GUARDAR" — porque, MEDIDO, os três
+    # não cabiam. Com o rótulo longo a faixa sangrava 24px e o campo do nome caía
+    # para 16px de largura, que é um campo que não se digita. Com "Guardar" a
+    # conta fecha em 202px: campo 66 · Guardar 58 · Em todos 66, sangria ZERO e
+    # zero rolagem lateral na página (Chrome, 1920x1080, `--oculta`).
+    # O encurtamento é o que ela mesma pediu noutro botão em 31/08 — *"aonde tem
+    # Voltar ao automático deixa só Automático"* — e nada se perde: a frase longa
+    # virou o `title` do botão, que é onde esta casa põe a explicação.
+    # REVERSÍVEL NUMA FRASE: devolva o texto longo ao "Guardar" e tire o "Em todos".
+    #
     # O BOTÃO DE REENVIO SAIU DA FAIXA `guardar` — 06/09/2026, decisão dela.
     # Ele nasceu em 04/09 (a decisão [03] do PO) e ela o viu depois: perguntada
     # com o botão na tela e a foto ao lado, escolheu *"sai"*. A faixa volta a ser
-    # o que era — o campo do nome e o "Guardar esse efeito".
+    # o que era — o campo do nome e o botão de guardar.
     #
     # O GESTO `reenviar` NÃO saiu do pacote junto, e não é esquecimento: a página
     # que o PRODUTO renderiza é a PUBLICADA (o piloto abre sempre
@@ -928,7 +953,10 @@ def coluna(c):
             <input class="nome-efeito" type="text" data-linha="nome-do-efeito"
                    maxlength="60" placeholder="Nome"
                    title="Dê um nome e o par L2+R2 desta coluna entra em Meus efeitos, para você escolher em qualquer perfil. Em branco, o botão só guarda no perfil deste controle.">
-            <button class="btn roxo" data-gesto="guardar" data-hef-forma="@controle">Guardar esse efeito</button>
+            <button class="btn roxo" data-gesto="guardar" data-hef-forma="@controle"
+                    title="Guarda esse efeito: o L2 e o R2 desta coluna vão para o perfil, só deste controle. Com um nome ao lado, o par também entra em Meus efeitos.">Guardar</button>
+            <button class="btn roxo" data-gesto="{GESTO_DE_TODOS}" data-hef-forma="@controle"
+                    title="Põe o L2 e o R2 desta coluna em todos os controles ligados e guarda o efeito no perfil como o de todo mundo — um controle que você ligar depois já nasce com ele. Some o ajuste próprio que cada controle tinha nesses dois gatilhos.">Em todos</button>
           </div>
         </div>'''
 
@@ -1150,7 +1178,7 @@ LEGENDA = f'''<div class="nota">
     <li><b>O recibo saiu do pé do quadro e virou a própria coluna.</b> Ele existia para dizer
         <span class="marca">em QUAL controle escreveu</span>; com uma coluna por controle, a
         pergunta já não se faz.</li>
-    <li><b>"Guardar esse efeito" é um por controle</b>, e não um só no pé do quadro — um botão
+    <li><b>O "Guardar" é um por controle</b>, e não um só no pé do quadro — um botão
         único não diria qual dos {len(MESA)} pares ele guarda, que é exatamente a ambiguidade que
         o recibo foi criado para matar.</li>
   </ul>
@@ -1222,10 +1250,25 @@ LEGENDA = f'''<div class="nota">
         número.</li>
   </ul>
 
+  <h2>O que entrou em 06/09, e é a única coisa desta aba que espera a sua palavra</h2>
+  <ul>
+    <li><b>"Em todos" — o efeito desta coluna vale para os {len(MESA)}, e o próximo controle
+        já nasce com ele.</b> Até agora tudo o que esta tela gravava era <i>daquele</i>
+        controle: dois controles com o mesmo efeito viravam dois ajustes separados no perfil,
+        e um terceiro, ligado depois, não pegava nenhum dos dois. Este botão escreve o efeito
+        como o de <span class="marca">todo mundo</span> e tira o ajuste próprio que cada
+        controle tinha nesses dois gatilhos — é o que a janela antiga fazia com o alvo em
+        "Todos".</li>
+    <li><b>O "Guardar esse efeito" ficou só "Guardar"</b> — os três não cabiam na faixa: com o
+        texto longo o campo do nome caía para 16px, que é um campo que não se digita. A frase
+        inteira foi para o <code>?</code> do botão, e o encurtamento é o mesmo que você pediu no
+        "Voltar ao automático" em 31/08.</li>
+  </ul>
+
   <h2>O que NÃO mudou</h2>
   <ul>
     <li>Os <b>19 modos</b> e seus textos, o <b>efeito pronto</b> com "Meus efeitos" na mesma lista,
-        as <b>barras de ajuste</b>, o <b>título "Seleção de Gatilho"</b> e o "Guardar esse efeito"
+        as <b>barras de ajuste</b>, o <b>título "Seleção de Gatilho"</b> e o botão de guardar
         um por coluna.</li>
     <li><b>Os glifos são os do mapa</b> — <code>assets/glyphs/l2.svg</code> e <code>r2.svg</code>,
         a 36px, que é o piso medido para a palavra dentro deles chegar aos 10px de tipo desta casa.</li>
@@ -1361,7 +1404,7 @@ def _conferir(doc):
     # 5. OS BOTÕES TÊM ENDEREÇO — 01/09/2026. Sem `data-gesto` o clique não
     #    atravessa a ponte, e o piloto nem consegue RECUSAR dizendo o nome: o
     #    ouvinte dele (`hefesto_vivo.py:1000`) só enxerga quem está marcado.
-    for _g in ("modo", "pronto", "guardar"):
+    for _g in ("modo", "pronto", "guardar", GESTO_DE_TODOS):
         exigir(f'data-gesto="{_g}"' in corpo,
                f"o endereço do gesto {_g!r} sumiu do desenho — o clique some calado")
 
@@ -1466,7 +1509,7 @@ def _conferir(doc):
            f"sem o alvo, a régua do mockup lê a barra como TEXTO e deixa de "
            f"enxergar a largura que o produto escreveu")
     exigir(corpo.count('data-campo="aj-val-') == _barras,
-           "o número da barra perdeu o `data-campo` — o 'Guardar esse efeito' "
+           "o número da barra perdeu o `data-campo` — o 'Guardar' "
            "recolhe a coluna por endereço e passaria a gravar os PADRÕES do "
            "modo por cima do que ela salvou")
 

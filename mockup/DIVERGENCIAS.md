@@ -346,6 +346,49 @@ seção daqui**: a aba deixou de estar em trabalho.
   página publicada e o dono no pacote existam JUNTOS ou não existam. Ela fica
   VERMELHA no instante do `--publicar 03` e a mensagem dela lista o que apagar.
 
+- **06/09/2026 — NASCEU O "EM TODOS", E ELE ESPERA A SUA PALAVRA**
+  (`GATILHOS-EM-TODOS-01`, a linha 110 do CSV da paridade). Cada coluna ganhou um
+  segundo botão na faixa de ação: **"Em todos"**. Ele põe o par L2+R2 daquela
+  coluna nos controles todos e grava o efeito no perfil como o de **todo mundo**
+  — e é essa gravação que faz um controle ligado DEPOIS já nascer com ele.
+
+  **O DEFEITO QUE ELE FECHA, e ele é invisível até doer:** tudo o que esta tela
+  gravava era por controle. Com dois na mesa, pôr o mesmo efeito nos dois criava
+  DOIS ajustes separados no perfil e nenhuma opinião geral — e o terceiro
+  controle, ligado depois, pegava o gatilho de ontem. Os dois primeiros estão
+  certos, então não há como ela desconfiar de quê.
+
+  **O "Guardar esse efeito" ENCURTOU PARA "Guardar", e a razão foi MEDIDA**, no
+  Chrome a 1920x1080, com a página parada: com o texto longo os três não cabem —
+  a faixa sangra 24px e o campo do nome cai para **16px** de largura, que é um
+  campo que não se digita. Com "Guardar" a conta fecha na faixa de 202px:
+
+      campo do nome  66px  ·  Guardar  58px  ·  Em todos  66px  ·  sangria ZERO
+
+  Nada se perde: a frase inteira virou o `?` do botão. E o encurtamento é o
+  mesmo que você pediu em 31/08 noutro botão — *"aonde tem Voltar ao automático
+  deixa só Automático"*.
+
+  **POR QUE NA COLUNA E NÃO NA FAIXA DO TÍTULO**, que é onde a Iluminação pôs o
+  "Todos no automático" dela: a Iluminação espalha um ESTADO, que não tem
+  origem; aqui o que se espalha é um EFEITO, e o efeito é o par de UMA coluna.
+  Um botão lá em cima teria de escolher a coluna de origem sozinho, e escolher a
+  do P1 seria a tela afirmando o que ninguém pediu. A faixa do título ficou
+  medida e vaga (980px livres) para quem vier depois.
+
+  **Por que não publiquei:** publicar é ato seu, e aqui a mudança é VISÍVEL em
+  dois lugares — um botão a mais e um rótulo mais curto —, na mesma faixa de que
+  você mandou tirar o reenvio ontem. É o caso exato da `PROVA-DE-TELA-01`.
+
+  **O que você vê HOJE, até publicar, e o custo NÃO é zero:** a aba Gatilhos de
+  ontem, sem o "Em todos". O mecanismo já está no produto (o gesto `em-todos`
+  tem dono no pacote e régua própria), mas ninguém o alcança — a página
+  publicada não tem o botão. Enquanto isso, pôr o mesmo efeito em dois controles
+  continua criando dois ajustes separados, e o terceiro continua não pegando
+  nada.
+
+  **O que fecha:** o `--publicar 03` depois do OK seu.
+
 ## 04-iluminacao.html
 
 - **06/09/2026 — LUZES-01.** A célula LEDs ganhou a botoeira das cinco luzes de

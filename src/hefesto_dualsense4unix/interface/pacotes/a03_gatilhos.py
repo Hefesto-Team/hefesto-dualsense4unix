@@ -52,6 +52,13 @@ SEM_DONO: dict[str, str] = {}
 #: lugar só — a regra da casa é que o que tem dono não se digita.
 LADOS = {"e": "left", "d": "right"}
 
+#: O NOME DO GESTO DO ESCOPO GLOBAL — GATILHOS-EM-TODOS-01, 06/09/2026. Ele mora
+#: aqui, e não digitado no gerador, pela razão de sempre: o `aba03.py` o importa
+#: para escrever o `data-gesto` do botão, e o nome escrito duas vezes é o nome
+#: que diverge no dia em que alguém mudar um. É a mesma disciplina de
+#: `monta.GESTO_DA_FITA` e de `a04_iluminacao.GESTO_DO_AUTOMATICO_DE_TODOS`.
+GESTO_DE_TODOS = "em-todos"
+
 #: COMO A GTK CHAMA CADA GATILHO NUMA FRASE PARA ELA, copiado letra por letra de
 #: `triggers_actions._toast_trigger`. Ele existe lá por uma cura com nome — a
 #: TRG-01: a barra de status dizia `"LEFT -> Off"`, trocando a fala dela (o
@@ -2406,7 +2413,8 @@ _E_TAMBEM = " · "
 def _aplicar(p: Any, lado: str, modo_: str, params: list[int],
              uniq: str, ctx: Contexto | None = None,
              guardar: bool = True, *,
-             recibo_sempre: bool = False) -> tuple[bool, str, str]:
+             recibo_sempre: bool = False,
+             lembrar_em: list[str] | None = None) -> tuple[bool, str, str]:
     """Manda o efeito ao daemon pela porta CERTA, e a certa depende do modo.
 
     "DESLIGADO" É `trigger.reset`, E NÃO `trigger.set` COM `Off` — a R-19. O
@@ -2517,6 +2525,17 @@ def _aplicar(p: Any, lado: str, modo_: str, params: list[int],
     :func:`reenviar`, cuja docstring declara *"ELE NÃO GRAVA NADA NO DISCO
     DELA"*. O sinalizador existe para que o contrato dele continue verdadeiro
     sem que o ESCRITOR se multiplique: a gravação segue morando só aqui.
+
+    ``lembrar_em`` É PARA QUEM MANDA EM BROADCAST — :func:`em_todos`, e é o
+    único chamador. Com `uniq=""` o pedido vai para os controles todos (é o que
+    a GTK faz com o alvo em "Todos": `triggers_actions._apply_trigger` passa
+    `uniq=None`), e aí o `uniq` do envio não é endereço de ninguém — guardar o
+    rascunho sob `""` criaria uma entrada que a poda de mesa
+    (`_o_rascunho_e_de_quem_esta_na_mesa`) apaga no tique seguinte, e as quatro
+    colunas voltariam ao valor do disco enquanto ele não chega. Passando os
+    `uniq` de quem está na mesa, cada coluna lembra o que acabou de receber.
+    **O padrão continua sendo `[uniq]`**, para que o choke point não se
+    multiplique: quem grava o rascunho continua sendo só esta função.
     """
     if modo_ == "Off":
         ok, motivo, corpo = _desfecho(p.trigger_reset_detalhado(lado, uniq=uniq))
@@ -2526,8 +2545,10 @@ def _aplicar(p: Any, lado: str, modo_: str, params: list[int],
             p.trigger_set_detalhado(lado, modo_, params, uniq=uniq))
     nao_guardou = ""
     if ok and _chegou_ao_aparelho(corpo):
-        _lembrar_o_aplicado(str((ctx.state if ctx else {}).get("active_profile") or ""),
-                            uniq, lado, {"mode": modo_, "params": params})
+        for quem in (lembrar_em if lembrar_em is not None else [uniq]):
+            _lembrar_o_aplicado(
+                str((ctx.state if ctx else {}).get("active_profile") or ""),
+                quem, lado, {"mode": modo_, "params": params})
         if guardar:
             nao_guardou = _guardar_no_perfil(ctx, p, uniq, lado,
                                              {"mode": modo_, "params": params})
@@ -3167,6 +3188,222 @@ def reenviar(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
     return None
 
 
+def _o_par_da_coluna(forma: dict[str, Any]) -> dict[str, dict[str, Any]]:
+    """O par L2+R2 que está NA COLUNA, pronto para o disco. Levanta se não houver.
+
+    ELE ERA O MIOLO DO `guardar` E VIROU FUNÇÃO em 06/09/2026, quando o
+    :func:`em_todos` passou a precisar exatamente do mesmo par. Escrito duas
+    vezes, o segundo é o que esquece o `TRAVESSAO` — e `—` não é *"desligue este
+    gatilho"*, é *"não há controle neste lugar"*. Gravar um `Off` por causa dele
+    silenciaria, no perfil, um gatilho que o perfil dava a todo mundo.
+
+    O LADO SEM MODO FICA DE FORA, e é o que faz a fusão por campo funcionar: o
+    esquema lê `model_fields_set` lado a lado, e um lado ausente do pedido
+    continua *"sem opinião"*. Ver :func:`_com_os_gatilhos`.
+    """
+    dos_lados: dict[str, dict[str, Any]] = {}
+    for lado, sigla in (("left", "e"), ("right", "d")):
+        modo_ = str(forma.get(f"modo-chave-{sigla}") or "").strip()
+        if not modo_ or modo_ == TRAVESSAO:
+            continue
+        dos_lados[lado] = {"mode": modo_,
+                           "params": _ajustes_da_coluna(forma, sigla, modo_)}
+    if not dos_lados:
+        raise RuntimeError(
+            "a coluna não trouxe modo nenhum. Os dois `<select>` de modo são "
+            "`modo-chave-e` e `modo-chave-d` — se eles mudaram de endereço, o "
+            "Guardar deixou de achar o que guardar.")
+    return dos_lados
+
+
+#: O QUE O CARTÃO DIZ DEPOIS DO ESCOPO GLOBAL. Ele TEM notícia — é a única
+#: escrita desta aba cujo efeito não se vê na coluna que ela clicou —, e por
+#: isso ele fala, em vez de piscar: a regra da `03-Q4` é *"quando o gesto só
+#: repete o que ela acabou de fazer, a tela pisca; quando ele tem NOTÍCIA, a
+#: tela fala"*. A notícia é a segunda oração, e ela é o ponto inteiro da linha
+#: 110 do CSV da paridade: o controle que ainda não chegou também pega o efeito.
+_RECADO_DE_TODOS = (
+    "Este efeito passou a valer para todos os controles. Ele saiu do ajuste "
+    "próprio de cada um e foi para o perfil — um controle que você ligar "
+    "depois já nasce com ele.")
+
+
+@gesto("03-gatilhos.html", GESTO_DE_TODOS, grava="_gravar_so_o_gatilho")
+def em_todos(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
+    """"Em todos": o par desta coluna vai para a seção GLOBAL do perfil.
+
+    **A LINHA 110 DO CSV DA PARIDADE**, e o defeito que ela nomeia não é de
+    conforto: *"o perfil salvo pelo HTML fica com dois overrides por MAC em vez
+    de uma seção global, o que muda o que acontece quando ela liga um TERCEIRO
+    controle: ele herda a global (que o HTML nunca escreveu), não o efeito que
+    ela configurou"*. Até aqui **toda** escrita desta aba era por MAC — o `modo`,
+    o `pronto`, o `ajuste` e o `guardar` chamam `_com_os_gatilhos`, que escreve
+    em `controllers[uniq].triggers`. Não havia caminho nenhum, nesta tela, para
+    a seção global; e é ela que um aparelho novo herda.
+
+    **O GÊMEO NA GTK É `triggers_actions._persist_params_to_draft`**, no ramo em
+    que `alvo_de_edicao(self).uniq is None` — o alvo em `TODOS`. Ele faz DUAS
+    coisas, e as duas estão aqui:
+
+    1. grava o lado editado na seção global do rascunho;
+    2. `draft.with_override_fields_cleared("triggers", {side})` — LIMPA aquele
+       lado dos overrides por controle de todo mundo. Sem o passo 2 a global
+       seria escrita e continuaria perdendo: o override por MAC vence o global
+       no merge por campo do backend (`profiles/manager._controllers_to_specs`
+       lê `model_fields_set`), e os controles que já tinham opinião ficariam com
+       a de ontem. Quem faz os dois aqui é :func:`_com_os_gatilhos_de_todos`.
+
+    **O ENVIO VAI EM BROADCAST, e isto é o oposto do ABAS-06.** O `_uniq` desta
+    aba avisa, com razão, que *"o `trigger.reset` sem `uniq` vai em BROADCAST e
+    zera o gatilho dos quatro"* — foi um defeito quando o alvo era UM controle e
+    o pedido saía sem endereço. Aqui o alvo É toda a mesa, por um botão cujo
+    texto diz isso, e mandar quatro pedidos endereçados em vez de um seria
+    reescrever o que a ponte já resolve: a GTK, no alvo `TODOS`, passa
+    `uniq=None` pela mesma porta (`_apply_trigger`). O corpo do daemon volta com
+    `aplicado_em` cheio, e é dele que sai a frase que conta em quantos entrou.
+
+    **ESCREVER GLOBAL AQUI NÃO É O `None` QUE O `alvo_de_edicao` PROÍBE.** Aquele
+    módulo existe porque `None` carregava duas coisas — *"ela clicou em Todos"* e
+    *"eu não sei quem é o alvo"* —, e a segunda virava escrita global silenciosa.
+    Este gesto é a PRIMEIRA: `EstadoDoAlvo.TODOS`, escolha deliberada, com um
+    clique dela por trás. O que ele nunca faz é o segundo caso — sem coluna não
+    há `forma`, e sem `forma` ele recusa dizendo.
+
+    **A FONTE É A TELA, e não o disco** — a mesma razão do `reenviar`: o
+    DualSense não devolve o modo em que está, e o que ela acabou de escolher só
+    existe na coluna. O piloto recolhe a coluna pelo `data-hef-forma="@controle"`,
+    e por isso este gesto reusa o :func:`_o_par_da_coluna` do "Guardar esse
+    efeito" em vez de escrever uma segunda leitura.
+
+    **PROVISÓRIO — DECISÃO DELA.** O gesto é do produto e vale; o BOTÃO que o
+    alcança está na bancada (`mockup/03-gatilhos.html`) e **não** na página
+    publicada, porque publicar é ato dela e aqui nasce um botão VISÍVEL numa
+    faixa de que ela mandou tirar outro em 06/09. Enquanto ela não publicar, o
+    caminho existe e ninguém o alcança sem querer — que é a mesma forma com que
+    o `reenviar` espera, pelo lado inverso.
+    """
+    uniq = _exigir_controle(o, "em todos")
+    forma = o.get("forma")
+    if not isinstance(forma, dict) or not forma:
+        raise RuntimeError(
+            "não consegui ler a coluna deste controle. O botão precisa do "
+            "`data-hef-forma` para o piloto recolher os campos — e sem eles não "
+            "sei qual efeito pôr em todos, porque o daemon não devolve o modo "
+            "do gatilho.")
+    dos_lados = _o_par_da_coluna(forma)
+
+    #: OS `uniq` DE QUEM ESTÁ NA MESA — é sob eles que o rascunho lembra o que
+    #: acabou de sair, para as quatro colunas não voltarem ao valor do disco no
+    #: tique seguinte. O `uniq` da coluna clicada entra também: ela pode ser a
+    #: única, e num broadcast ninguém fica de fora.
+    na_mesa = [str(c.get("uniq") or "") for c in (ctx.conectados or [])]
+    na_mesa = [u for u in na_mesa if u] or [uniq]
+
+    for disco, cfg in dos_lados.items():
+        # O `uniq` VAZIO É O BROADCAST — `ipc_bridge._payload_trigger_set` só
+        # põe a chave no pedido quando ela é verdadeira. Ver a docstring.
+        #
+        # O `guardar=False` NÃO É "não guarda": é "não guarda POR MAC". A
+        # gravação deste gesto é a global, e ela vem logo abaixo — deixar o
+        # `_guardar_no_perfil` correr aqui escreveria em `controllers[""]`, que
+        # é o defeito que este gesto veio curar, de cabeça para baixo.
+        ok, motivo, _ = _aplicar(p, disco, str(cfg["mode"]), list(cfg["params"]),
+                                 "", ctx, guardar=False, lembrar_em=na_mesa)
+        if not ok:
+            # O ASSUNTO VAI NA FRENTE porque um clique manda os DOIS lados: a
+            # recusa traduzida do daemon não nomeia gatilho nenhum, e sem o
+            # assunto ela fica sem saber qual dos dois recusou. É a mesma cura
+            # do `reenviar`, com a mesma razão medida.
+            raise RuntimeError(
+                f"{_assunto(disco, str(cfg['mode']))} — "
+                f"{_na_lingua_da_tela(motivo, str(cfg['mode'])) or 'o daemon não aplicou'}")
+
+    nome = str((getattr(ctx, "state", None) or {}).get("active_profile") or "").strip()
+    if not nome:
+        # O EFEITO FOI PARA OS CONTROLES E NÃO HÁ ONDE GUARDÁ-LO. Não é recusa —
+        # ela está sentindo o gatilho na mão —, mas é NOTÍCIA, e das caras: sem
+        # perfil não há seção global, e é a seção global que o terceiro controle
+        # herda. Some na próxima troca de perfil, e a frase diz isso.
+        raise RuntimeError(
+            "o efeito FOI para os controles ligados, mas não há perfil ativo "
+            "agora — e o que faz um controle novo já nascer com ele é o perfil. "
+            "Escolha um perfil na aba Perfis e clique de novo.")
+    loader = perfil._com_o_src()
+    try:
+        prof = loader.load_profile(nome)
+    except Exception as erro:
+        raise RuntimeError(
+            f"o efeito FOI para os controles ligados, mas não consegui ABRIR o "
+            f"perfil {nome!r} para guardá-lo. Ele vale até a próxima troca de "
+            f"perfil — e um controle que você ligar depois não vai pegá-lo "
+            f"({erro}).") from erro
+    novo = _com_os_gatilhos_de_todos(prof, dos_lados)
+    if novo is not None:
+        _gravar_so_o_gatilho(novo, p)
+    return {"recado": _RECADO_DE_TODOS}
+
+
+def _com_os_gatilhos_de_todos(prof: Any, dos_lados: dict[str, Any]) -> Any:
+    """O perfil com o gatilho na seção GLOBAL — e o lado editado FORA de todo override.
+
+    AS DUAS METADES SÃO UMA SÓ, e separá-las seria escrever a global e continuar
+    perdendo: `profiles/manager._controllers_to_specs` monta o `OutputSpec` de
+    cada controle a partir do `model_fields_set` do override dele, e um `left`
+    escrito ali VENCE o `profile.triggers.left`. Um "em todos" que só escrevesse
+    a global mudaria a tela e não mudaria o aparelho de quem já tinha opinião.
+
+    É A REGRA DO BACKEND, e ela tem dono escrito: `draft_config`
+    `with_override_fields_cleared` — *"uma edição em 'Todos' vale para todo
+    mundo, então o campo editado sai dos overrides por-controle"*. Aquela função
+    é do `DraftConfig` (o rascunho da janela GTK) e esta escreve no `Profile`
+    direto, que é o caminho de disco desta aba; o que NÃO se reescreve é a regra
+    de quando um override some — `_override_vazio` é importado de lá.
+
+    **SEÇÃO QUE ESVAZIA VIRA `None`; ENTRADA SEM SEÇÃO SOME DO MAPA.** Um
+    `ControllerOverrides` sem nada, deixado no lugar, faz o JSON salvo carregar
+    uma chave de endereço apontando para `{}` — e a próxima leitura conclui que
+    aquele aparelho tem opinião. É a mesma disciplina, com a mesma razão, do
+    lado do rascunho.
+
+    :return: `None` quando nada mudou. Regravar um perfil idêntico troca a data
+        do arquivo e faz o daemon reaplicá-lo — e um `profile.switch` no meio de
+        uma partida não é de graça. É o mesmo contrato de :func:`_com_os_gatilhos`.
+    """
+    from hefesto_dualsense4unix.app.draft_config import _override_vazio
+    from hefesto_dualsense4unix.profiles.schema import TriggerConfig, TriggersConfig
+
+    lados_pedidos = set(dos_lados)
+    globais = prof.triggers.model_copy(
+        update={lado: TriggerConfig(**cfg) for lado, cfg in dos_lados.items()})
+    atuais: dict[str, Any] = {}
+    limpou = False
+    for chave, dele in (prof.controllers or {}).items():
+        antes = dele.triggers
+        if antes is None or not (antes.model_fields_set & lados_pedidos):
+            atuais[chave] = dele
+            continue
+        # A CONTA É O `model_fields_set`, E NÃO A IGUALDADE DO PYDANTIC — a
+        # mesma pegadinha que `_com_os_gatilhos` documenta pelo outro lado. Um
+        # `left` EXPLÍCITO em `Off` e um `left` ausente comparam IGUAIS e
+        # mandam coisas diferentes ao aparelho: o primeiro vence a seção global
+        # e o segundo a herda. Se o "nada mudou, nada grava" olhasse só o
+        # valor, a limpeza mais importante desta função — a do controle que já
+        # estava em `Off` por opinião própria — seria jogada fora em silêncio,
+        # e o "em todos" não o alcançaria nunca.
+        limpou = True
+        restantes = antes.model_fields_set - lados_pedidos
+        nova = (TriggersConfig(**{n: getattr(antes, n) for n in restantes})
+                if restantes else None)
+        depois = dele.model_copy(update={"triggers": nova})
+        if _override_vazio(depois):
+            continue  # a entrada esvaziou — some do mapa
+        atuais[chave] = depois
+    if not limpou and globais == prof.triggers:
+        return None
+    return prof.model_copy(update={"triggers": globais,
+                                   "controllers": atuais or None})
+
+
 @gesto("03-gatilhos.html", "guardar", grava="_gravar_so_o_gatilho")
 def guardar(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
     """"Guardar esse efeito": a coluna vai para o PERFIL — e, com nome, para ELA.
@@ -3213,18 +3450,7 @@ def guardar(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
             "`data-hef-forma` para o piloto recolher os campos — sem ele não há "
             "o que guardar, porque o daemon não devolve o modo do gatilho.")
 
-    dos_lados: dict[str, dict[str, Any]] = {}
-    for lado, sigla in (("left", "e"), ("right", "d")):
-        modo_ = str(forma.get(f"modo-chave-{sigla}") or "").strip()
-        if not modo_ or modo_ == TRAVESSAO:
-            continue
-        dos_lados[lado] = {"mode": modo_,
-                           "params": _ajustes_da_coluna(forma, sigla, modo_)}
-    if not dos_lados:
-        raise RuntimeError(
-            "a coluna não trouxe modo nenhum. Os dois `<select>` de modo são "
-            "`modo-chave-e` e `modo-chave-d` — se eles mudaram de endereço, o "
-            "Guardar deixou de achar o que guardar.")
+    dos_lados = _o_par_da_coluna(forma)
 
     # O NOME É OPCIONAL, E É ELE QUE FAZ O EFEITO VIRAR DELA — decisão 17.
     # Vazio, o botão faz o que sempre fez: grava a coluna no perfil deste
@@ -3457,7 +3683,11 @@ METODOS: set[str] = set()
 #: 4 → 5 EM 04/09/2026: nasceu o `reenviar`, a decisão [03] do PO — o botão que
 #: a GTK tem por lado ("Aplicar em L2"/"Aplicar em R2") e a interface nova não
 #: tinha por nenhum.
-PISO_DA_ABA = 5
+#: 5 → 6 EM 06/09/2026, com a GATILHOS-EM-TODOS-01: nasceu o `em-todos`, o
+#: ESCOPO GLOBAL desta aba — a linha 110 do CSV da paridade. Era o único caminho
+#: que faltava para a seção global do perfil, e é ela que um controle novo
+#: herda. Ver :func:`em_todos`.
+PISO_DA_ABA = 6
 #: O `uniq` da prova é a faixa sintética da casa: há dois portões de anonimato
 #: nesta árvore e eles não perdoam.
 _UNIQ = "aa:bb:cc:00:00:01"
@@ -3547,6 +3777,19 @@ PROVAS = [
      "chama": [("trigger_set_detalhado", ["left", "Rigid", _padroes("Rigid")],
                 {"uniq": _UNIQ}),
                ("trigger_reset_detalhado", ["right"], {"uniq": _UNIQ})]},
+    # O ESCOPO GLOBAL: UM clique, o par da coluna, e o `uniq` VAZIO. O `""` é o
+    # que prova o broadcast — `ipc_bridge._payload_trigger_set` só põe a chave
+    # no pedido quando ela é verdadeira, e é assim que a GTK manda com o alvo em
+    # "Todos". Se alguém passar a endereçar o pedido, esta linha reprova pelo
+    # `uniq`, que é exatamente a metade que faz o efeito valer para os quatro.
+    # E o `_GUARDOU` vem junto: sem a segunda metade, o efeito iria aos
+    # aparelhos e a seção global — a que o terceiro controle herda — ficaria com
+    # a de ontem.
+    {"pagina": PAGINA,  # (noqa-acento) chave do contrato
+     "gesto": GESTO_DE_TODOS,
+     "clique": {"forma": _forma_de_prova("e", "Rigid")},
+     "chama": [("trigger_set_detalhado", ["left", "Rigid", _padroes("Rigid")],
+                {"uniq": ""}), _GUARDOU]},
     #: O `reenviar` NÃO leva `_GUARDOU`, e não é esquecimento: ele reenvia ao
     #: aparelho o que o rascunho JÁ tem, e o rascunho veio do perfil. Não há
     #: escolha nova a guardar, e gravar aqui reescreveria o perfil a cada
