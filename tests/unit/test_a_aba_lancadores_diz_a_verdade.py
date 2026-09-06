@@ -162,11 +162,20 @@ def test_todo_gesto_do_html_tem_dono_ou_esta_declarado_sem_dono(a07):
     # tem nem leitura de disco nem linha, então ele não pode aparecer ali.
     # Quem prova que ele CHEGA à tela é
     # `test_a_aba_07_lancadores_fecha_as_linhas.py`, sobre a fileira pintada.
+    # OS TRÊS DO STEAM INPUT entraram em 06/09/2026 (decisão dela,
+    # `D-0609-STEAM-DIVIDIDO`) e caem na MESMA categoria do `copiar-a-linha`:
+    # eles só nascem no cartão de quem já teve a biblioteca LIDA
+    # (`a07_lancadores.acoes_do_steam_input`), e o HTML estático nasce em
+    # `cartoes(None)`, que não leu disco nenhum. Quem prova que chegam à tela é
+    # `test_a_aba_07_lancadores_fecha_as_linhas.py`, sobre a fileira pintada.
     assert com_dono - no_html <= {"consertar", "ver-o-que-impede",
                                   "tirar-daqui", "voltar-a-usar",
                                   "voltar-a-perguntar", "nao-perguntar",
                                   "consertar-fechando-a-steam",
-                                  "copiar-a-linha"}, (
+                                  "copiar-a-linha",
+                                  "desligar-steam-input",
+                                  "este-jogo-nao-funciona",
+                                  "deixar-tudo-pronto"}, (
         f"estes gestos têm dono e não aparecem em estado nenhum da página: "
         f"{sorted(com_dono - no_html)}")
 
@@ -481,7 +490,7 @@ def test_esta_regua_nao_alcanca_a_biblioteca_dela():
         "`conftest` caiu, e um teste desta aba passaria a ler a biblioteca dela")
 
 
-def test_o_piso_de_gestos_da_aba_e_onze(a07):
+def test_o_piso_de_gestos_da_aba_e_catorze(a07):
     """Ele SÓ SOBE. Uma queda não aparece na tela: o clique não faz nada.
 
     SUBIU DE SEIS PARA SETE em 02/09/2026, com o "Voltar a perguntar" que a
@@ -490,12 +499,15 @@ def test_o_piso_de_gestos_da_aba_e_onze(a07):
     as duas faltas de paridade que a medição das dez abas nomeou — o "Não
     perguntar para este jogo" e o "Posso fechar a Steam por uns 20 segundos?";
     e DE DEZ PARA ONZE em 04/09/2026, com o "Copiar a linha" (decisão `07[01]`
-    do PO), que é **o único botão de copiar de toda a interface nova**.
+    do PO), que é **o único botão de copiar de toda a interface nova**; e DE
+    ONZE PARA CATORZE em 06/09/2026, com os TRÊS do Steam Input que a decisão
+    dela (`D-0609-STEAM-DIVIDIDO`) trouxe para esta aba — "Desligar o Steam
+    Input", "Este jogo não funciona" e "Deixar tudo pronto".
     """
     import pacotes
 
     quantos = sum(1 for (p, _) in pacotes.GESTOS if p == PAGINA)
-    assert quantos >= a07.PISO_DA_ABA == 11, (
+    assert quantos >= a07.PISO_DA_ABA == 14, (
         f"{PAGINA} tem {quantos} gestos com dono e o piso é {a07.PISO_DA_ABA}")
 
 
