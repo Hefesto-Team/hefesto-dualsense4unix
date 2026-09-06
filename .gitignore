@@ -126,3 +126,14 @@ assets/dkms/rtw88-usb/main.h
 # Reconstruído em ~1 min por quem precisar; versioná-lo seria carregar no
 # repositório uma cópia que envelhece a cada commit.
 .code-review-graph/
+
+# O TRANSCRITO DA SESSÃO que o `/export` do Claude Code deixa na raiz —
+# 06/09/2026. Ele nasce aqui porque o comando grava no diretório de trabalho, e
+# ela pediu que ficasse na área de trabalho dela: o de 05/09 foi movido para
+# `~/Área de trabalho/hefesto-sessao-2026-09-05.txt`.
+#
+# POR QUE NÃO SE VERSIONA, e a razão é de segurança e não de tamanho: um
+# transcrito carrega a conversa INTEIRA — caminhos, saídas de comando e o que
+# ela digitou. Já houve senha de sudo dita numa sessão desta casa. Um arquivo
+# assim entra no repositório uma vez e fica no histórico para sempre.
+rodando.txt
