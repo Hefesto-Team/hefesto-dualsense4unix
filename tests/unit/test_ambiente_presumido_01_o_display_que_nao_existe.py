@@ -15,6 +15,19 @@ T-04 (o portão de invariante contra `ipc_handlers._window_detect_payload`)
 mora em `test_ambiente_presumido_01_o_portao_de_invariante.py` — arquivo
 próprio porque a régua ali é sobre o PAYLOAD publicado, não sobre estes três
 mecanismos.
+
+O T-02 MUDOU DE ENDEREÇO EM 06/09/2026, e o mecanismo é o mesmo
+----------------------------------------------------------------
+
+As duas funções que ele mede moravam no topo de `app/main.py`, o entry point
+da janela GTK que a `GTK-3` aposentou (`D-0609-GTK-LEVA-INTEIRA`). Elas não
+montam janela: acertam variável de ambiente de PROCESSO, e o processo da
+interface nova tem os mesmos dois problemas. Mudaram de casa para
+`app/arranque.py` — motor —, e os nomes viraram públicos e em português
+(`x11_alcancavel`, `forcar_xwayland_no_cosmic`) porque agora são a API de um
+módulo, e não detalhe interno de um entry point.
+
+**A régua é a mesma, linha por linha**: nenhuma asserção mudou, só o endereço.
 """
 from __future__ import annotations
 
@@ -22,7 +35,7 @@ import os
 
 import pytest
 
-from hefesto_dualsense4unix.app import main as app_main
+from hefesto_dualsense4unix.app import arranque
 from hefesto_dualsense4unix.integrations.window_backends import xlib
 
 
@@ -131,28 +144,28 @@ class TestWindowReaderDiagDelegaConexaoProvada:
 
 
 # ---------------------------------------------------------------------------
-# T-02 — _force_xwayland_on_cosmic() não força sem prova de X vivo
+# T-02 — forcar_xwayland_no_cosmic() não força sem prova de X vivo
 # ---------------------------------------------------------------------------
 
 
 class TestXAlcancavel:
-    """`_x11_alcancavel`: barata, sem `gi`, só recusa com PROVA de recusa."""
+    """`x11_alcancavel`: barata, sem `gi`, só recusa com PROVA de recusa."""
 
     def test_socket_recusa_devolve_false(self, monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.setattr("socket.socket", _SocketDublê(aceita=False))
-        assert app_main._x11_alcancavel(":0", timeout=0.05) is False
+        assert arranque.x11_alcancavel(":0", timeout=0.05) is False
 
     def test_socket_aceita_devolve_true(self, monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.setattr("socket.socket", _SocketDublê(aceita=True))
-        assert app_main._x11_alcancavel(":0", timeout=0.05) is True
+        assert arranque.x11_alcancavel(":0", timeout=0.05) is True
 
     def test_display_remoto_devolve_true_por_incerteza(self) -> None:
         # "incerteza não é prova" — a função não sabe testar display remoto
         # (host:N), então não afirma recusa.
-        assert app_main._x11_alcancavel("meuhost:0") is True
+        assert arranque.x11_alcancavel("meuhost:0") is True
 
     def test_display_nao_numerico_devolve_true_por_incerteza(self) -> None:
-        assert app_main._x11_alcancavel(":abc") is True
+        assert arranque.x11_alcancavel(":abc") is True
 
 
 class TestForceXwaylandOnCosmic:
@@ -170,7 +183,7 @@ class TestForceXwaylandOnCosmic:
         self._ambiente_cosmic(monkeypatch)
         monkeypatch.delenv("DISPLAY", raising=False)
 
-        assert app_main._force_xwayland_on_cosmic() is False
+        assert arranque.forcar_xwayland_no_cosmic() is False
         assert "GDK_BACKEND" not in os.environ
 
     def test_display_presente_e_morto_nao_mexe_em_gdk_backend(
@@ -180,9 +193,9 @@ class TestForceXwaylandOnCosmic:
         MORTO conta como inválido — não é só "sem DISPLAY"."""
         self._ambiente_cosmic(monkeypatch)
         monkeypatch.setenv("DISPLAY", ":1")
-        monkeypatch.setattr(app_main, "_x11_alcancavel", lambda display, timeout=0.2: False)
+        monkeypatch.setattr(arranque, "x11_alcancavel", lambda display, timeout=0.2: False)
 
-        assert app_main._force_xwayland_on_cosmic() is False
+        assert arranque.forcar_xwayland_no_cosmic() is False
         assert os.environ.get("GDK_BACKEND") != "x11"
 
     def test_display_presente_e_vivo_forca_x11(
@@ -190,9 +203,9 @@ class TestForceXwaylandOnCosmic:
     ) -> None:
         self._ambiente_cosmic(monkeypatch)
         monkeypatch.setenv("DISPLAY", ":1")
-        monkeypatch.setattr(app_main, "_x11_alcancavel", lambda display, timeout=0.2: True)
+        monkeypatch.setattr(arranque, "x11_alcancavel", lambda display, timeout=0.2: True)
 
-        assert app_main._force_xwayland_on_cosmic() is True
+        assert arranque.forcar_xwayland_no_cosmic() is True
         assert os.environ.get("GDK_BACKEND") == "x11"
 
     def test_sessao_nao_cosmic_nao_mexe(self, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -201,17 +214,17 @@ class TestForceXwaylandOnCosmic:
         monkeypatch.delenv("HEFESTO_DUALSENSE4UNIX_NO_XWAYLAND", raising=False)
         monkeypatch.delenv("GDK_BACKEND", raising=False)
         monkeypatch.setenv("DISPLAY", ":1")
-        monkeypatch.setattr(app_main, "_x11_alcancavel", lambda display, timeout=0.2: True)
+        monkeypatch.setattr(arranque, "x11_alcancavel", lambda display, timeout=0.2: True)
 
-        assert app_main._force_xwayland_on_cosmic() is False
+        assert arranque.forcar_xwayland_no_cosmic() is False
 
     def test_opt_out_explicito_nao_mexe(self, monkeypatch: pytest.MonkeyPatch) -> None:
         self._ambiente_cosmic(monkeypatch)
         monkeypatch.setenv("HEFESTO_DUALSENSE4UNIX_NO_XWAYLAND", "1")
         monkeypatch.setenv("DISPLAY", ":1")
-        monkeypatch.setattr(app_main, "_x11_alcancavel", lambda display, timeout=0.2: True)
+        monkeypatch.setattr(arranque, "x11_alcancavel", lambda display, timeout=0.2: True)
 
-        assert app_main._force_xwayland_on_cosmic() is False
+        assert arranque.forcar_xwayland_no_cosmic() is False
 
 
 # ---------------------------------------------------------------------------

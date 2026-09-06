@@ -228,6 +228,124 @@ EXTERNOS = frozenset(
 EXTERNOS_POR_PASTA = ("Pro2/", "SwitchMode/", "SN30ProPlus/", "xpadneo/",
                       "8bitdo-spec/", "tests_kernel/")
 
+#: OS ARQUIVOS QUE A CASA APOSENTOU POR DECISÃO — 06/09/2026, sprint `GTK-3`.
+#:
+#: São artefatos que EXISTIRAM nesta árvore e foram apagados por decisão dela
+#: (`D-0609-GTK-LEVA-INTEIRA`): *"a ideia sempre foi reaproveitar o que fiz no
+#: gtk e não apontar nada mais pra lá mas pro html"*. A janela GTK saiu; o motor
+#: ficou.
+#:
+#: **POR QUE ELES NÃO SÃO REFERÊNCIA MORTA, e o número é a razão:** apagar os
+#: quatro artefatos deixou **783 citações** mortas em `docs/`, e todas são
+#: PROSA HISTÓRICA DATADA — um relatório de agosto contando o que se mediu no
+#: `main.glade`, uma decisão explicando por que a foto era tirada pelo
+#: `retratar_abas.py`. Esta casa não apaga registro (*"não se apaga decisão
+#: medida"*), e marcar 783 linhas uma a uma com `<!-- ref-externa: … -->` seria
+#: escrever a mesma frase 783 vezes para dizer o que uma linha aqui diz melhor:
+#: **o arquivo saiu, e a data está no git.**
+#:
+#: A DIFERENÇA PARA `EXTERNOS`, e ela é o ponto: `EXTERNOS` é de arquivo que
+#: NUNCA morou aqui (projeto de fora). Este é de arquivo que morou e saiu — e
+#: por isso ele tem uma guarda que `EXTERNOS` não precisa ter.
+#:
+#: **A GUARDA CONTRA APODRECER:** `conferir_aposentados()` reprova se um
+#: caminho declarado aqui VOLTAR a existir na árvore. Sem ela, um
+#: `gui/main.glade` recriado teria todas as suas citações deixadas de conferir
+#: para sempre — um typo no nome passaria batido, que é o defeito inteiro que
+#: este portão existe para pegar.
+#: A razão compartilhada dos cinco arquivos do estúdio de foto da janela.
+_ESTUDIO = (
+    "o estúdio de fotografia da JANELA — os cinco arquivos de "
+    "`scripts/gui-captura/`. Apagados em 06/09/2026 (GTK-3). Quem fotografa as "
+    "DEZ páginas é `src/hefesto_dualsense4unix/interface/olhar.py --todas "
+    "--publicado --doc`."
+)
+
+#: E a das oito réguas que mediam a janela e saíram com ela. As que mediam o
+#: MOTOR **não** estão aqui: essas ficaram, com o berço trocado.
+_REGUAS = (
+    "régua da JANELA, apagada em 06/09/2026 (GTK-3) com a superfície que ela "
+    "media. O veredito de cada uma, uma a uma, está em "  # (noqa-acento: verbo medir, imperfeito)
+    "`docs/process/agentes/2026-09-06/GTK-3-segunda-volta.md`."
+)
+
+APOSENTADOS: dict[str, str] = {
+    "src/hefesto_dualsense4unix/gui/main.glade": (
+        "a janela GTK — o XML de 292 KB com as onze abas. Apagado em 06/09/2026 "
+        "(GTK-3). O que a tela declara hoje são as dez páginas de "
+        "`src/hefesto_dualsense4unix/interface/paginas/`."
+    ),
+    "src/hefesto_dualsense4unix/app/app.py": (
+        "o `HefestoApp`, que montava a janela. Apagado em 06/09/2026 (GTK-3). O "
+        "MOTOR que ele pendurava — `app/actions/`, `app/widgets/`, `app/telas/` "
+        "— ficou, e é o que a interface nova chama a cada tique."
+    ),
+    "src/hefesto_dualsense4unix/app/main.py": (
+        "o entry point da janela. Apagado em 06/09/2026 (GTK-3). O que nele não "
+        "montava janela mudou de casa para `app/arranque.py`; o lançador de hoje "
+        "é `scripts/abrir_interface.py`."
+    ),
+    "scripts/gui-captura/retratar_abas.py": _ESTUDIO,
+    "scripts/gui-captura/retratar_dialogos.py": _ESTUDIO,
+    "scripts/gui-captura/retrato_offscreen.py": _ESTUDIO,
+    "scripts/gui-captura/aba_ativa.sh": _ESTUDIO,
+    "scripts/gui-captura/capturar_verificado.sh": _ESTUDIO,
+    "tests/unit/test_a5_fechar_a_janela_nao_perde_a_declaracao.py": _REGUAS,
+    "tests/unit/test_a_caixinha_que_tira_do_steam_input.py": _REGUAS,
+    "tests/unit/test_layout_orcamento_altura.py": _REGUAS,
+    "tests/unit/test_lightbar_vao_vertical.py": _REGUAS,
+    "tests/unit/test_notebook_switch_page.py": _REGUAS,
+    "tests/unit/test_socorro_ao_fechar_diz_por_que_a_janela_nao_fecha.py": _REGUAS,
+    "tests/unit/test_status_minimizar_mata_a_captura.py": _REGUAS,
+    "tests/unit/test_z2_fita_declara_quem_obedece.py": _REGUAS,
+    "scripts/portao_alvo_tem_dono.py": (
+        "o portão que importava `HefestoApp` para conferir "
+        "`HefestoApp._ALVO_POR_ABA` — a fita da JANELA. Apagado em 06/09/2026 "
+        "(GTK-3), junto com o passo do `ci.yml` que o rodava."
+    ),
+}
+
+
+def aposentado(texto: str) -> str | None:
+    """A razão de o caminho ter sido aposentado, ou None se ele não foi.
+
+    Compara pelo FIM do caminho porque `docs/` cita o mesmo arquivo de três
+    jeitos — `src/hefesto_dualsense4unix/gui/main.glade`, `gui/main.glade` e
+    `main.glade` —, que é a mesma leniência de sufixo que o portão já usa para
+    resolver caminho vivo.
+    """
+    alvo = texto.lstrip("./")
+    for caminho, razao in APOSENTADOS.items():
+        if caminho.endswith("/"):
+            if caminho.rstrip("/").split("/")[-1] + "/" in alvo + "/":
+                return razao
+            continue
+        if alvo == caminho or caminho.endswith("/" + alvo) or alvo.endswith("/" + caminho):
+            return razao
+        if alvo == caminho.split("/")[-1]:
+            return razao
+    return None
+
+
+def conferir_aposentados(raiz: Path) -> list[str]:
+    """Arquivo declarado APOSENTADO não pode estar de volta na árvore.
+
+    Lista de exceção que envelhece calada vira paisagem, e aqui o preço seria
+    alto: um `gui/main.glade` recriado teria as 302 citações dele deixadas de
+    conferir para sempre.
+    """
+    problemas: list[str] = []
+    for caminho, razao in APOSENTADOS.items():
+        if (raiz / caminho.rstrip("/")).exists():
+            problemas.append(
+                f"APOSENTADO-VIVO: {caminho} está declarado em `APOSENTADOS`\n"
+                f"    ({razao})\n"
+                "    e EXISTE nesta árvore. Ou a remoção foi desfeita — e a linha sai\n"
+                "    daqui, para as citações voltarem a ser conferidas —, ou alguém\n"
+                "    recriou o que a decisão dela mandou apagar."
+            )
+    return problemas
+
 #: Marcador que a autora do documento pode escrever para dizer "eu sei que este
 #: arquivo não existe, e o assunto do parágrafo é exatamente esse".
 MARCADOR_ISENCAO = "<!-- ref-externa"
@@ -685,6 +803,10 @@ def candidatos_da_linha(linha: str) -> list[tuple[str, bool]]:
             continue
         if Path(texto).name in EXTERNOS:
             continue
+        # APOSENTADO: o arquivo existiu e saiu por decisão. A citação é prosa
+        # histórica datada, e esta casa não apaga registro. Ver `APOSENTADOS`.
+        if aposentado(texto) is not None:
+            continue
         limpos.append((texto, veio_de_crase))
     return limpos
 
@@ -855,6 +977,18 @@ def main(argv: list[str] | None = None) -> int:
     if not alvos:
         print("Nenhum documento para varrer.")
         return 0
+
+    # A LISTA DE APOSENTADOS NÃO PODE APODRECER — ver `conferir_aposentados`.
+    # Roda antes da varredura: se um dos caminhos voltou, todas as citações a
+    # ele estão sendo deixadas de conferir, e isso é pior que uma morta.
+    ressuscitados = conferir_aposentados(raiz)
+    if ressuscitados:
+        for problema in ressuscitados:
+            print(problema)
+        print("")
+        print(f"{len(ressuscitados)} arquivo(s) declarado(s) em `APOSENTADOS` "
+              "existem nesta árvore.")
+        return 1
 
     sufixos = indexar(raiz)
     raiz_nomes = nomes_de_raiz(raiz)

@@ -45,7 +45,7 @@ Requires:       libnotify
 # GdkPixbuf.Pixbuf.new_from_file_at_scale) e o icone da bandeja e um SVG
 # simbolico (app/tray.py). Sem o loader o pixbuf sai None EM SILENCIO: o icone
 # some da barra e todo glifo da interface cai junto, sem erro no log
-# (BUG-TRAY-ICONE-INVISIVEL-01, descrito em app/main.py). Nao remova por
+# (BUG-TRAY-ICONE-INVISIVEL-01, descrito em app/arranque.py). Nao remova por
 # parecer superfluo — o sintoma nao aponta para a causa.
 #
 # ARMADILHA DE NOME: no Fedora quem entrega o modulo de execucao
@@ -139,7 +139,8 @@ install -Dm644 packaging/hefesto-dualsense4unix.desktop \
 # todos os formatos) — instalar como %{app_id}.png deixava o lancador sem
 # icone. Paridade com o build_deb.sh, que ja usava hefesto.png.
 # Os DOIS nomes: o .desktop pede Icon=hefesto e o codigo pede o nome longo
-# (app/main.py set_default_icon_name, app/tray.py TRAY_ICON_NAME). So um deles
+# (scripts/abrir_interface.py set_default_icon_name, app/tray.py
+# TRAY_ICON_NAME). So um deles
 # troca o lancador sem icone pela bandeja com joystick generico.
 install -Dm644 assets/appimage/Hefesto-Dualsense4Unix.png \
     %{buildroot}%{_datadir}/icons/hicolor/256x256/apps/hefesto.png

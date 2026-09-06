@@ -24,55 +24,25 @@ exigir_gi_real("contagem emulacao: largura do rotulo de gamepads")
 import inspect
 
 from hefesto_dualsense4unix.app.actions.emulation_actions import (
-    LARGURA_MAXIMA_DO_ROTULO_DE_GAMEPADS,
     EmulationActionsMixin,
     rotulo_gamepads,
 )
-from hefesto_dualsense4unix.app.constants import MAIN_GLADE
 
 FRASE_LONGA = rotulo_gamepads(1, 1, 2, 6)
 
-
-def _pedido_do_rotulo(com_teto: bool) -> tuple[int, int]:
-    """`(mínimo, natural)` que o rótulo pede dentro do glade REAL."""
-    import gi
-
-    gi.require_version("Gtk", "3.0")
-    from gi.repository import Gtk
-
-    construtor = Gtk.Builder()
-    construtor.add_from_file(str(MAIN_GLADE))
-    rotulo = construtor.get_object("emulation_js_label")
-    caixa = construtor.get_object("emulation_box")
-    caixa.get_parent().remove(caixa)
-    janela = Gtk.OffscreenWindow()
-    janela.add(caixa)
-    janela.show_all()
-    rotulo.set_text(FRASE_LONGA)
-    if com_teto:
-        rotulo.set_line_wrap(True)
-        rotulo.set_max_width_chars(LARGURA_MAXIMA_DO_ROTULO_DE_GAMEPADS)
-    while Gtk.events_pending():
-        Gtk.main_iteration()
-    return rotulo.get_preferred_width()
-
-
 class TestOTetoDeQuebra:
-    def test_o_teto_encolhe_o_pedido_natural(self) -> None:
-        _, sem_teto = _pedido_do_rotulo(com_teto=False)
-        _, com_teto = _pedido_do_rotulo(com_teto=True)
-        assert com_teto < sem_teto
+    """06/09/2026 (`GTK-3`): os DOIS testes de medição saíram com a janela.
 
-    def test_o_teto_nao_mexe_no_minimo_da_aba(self) -> None:
-        """O mínimo é a maior palavra, e é ele que decide a rolagem do notebook.
-
-        Se algum dia alguém "curar" o espremido com `set_width_chars`, este
-        teste é o que denuncia: o mínimo subiria e a aba voltaria a empurrar
-        todas as páginas.
-        """
-        minimo_sem, _ = _pedido_do_rotulo(com_teto=False)
-        minimo_com, _ = _pedido_do_rotulo(com_teto=True)
-        assert minimo_com == minimo_sem
+    `test_o_teto_encolhe_o_pedido_natural` e `test_o_teto_nao_mexe_no_minimo_da_aba`
+    montavam o `emulation_js_label` do `gui/main.glade` numa
+    `Gtk.OffscreenWindow` e comparavam o pedido de largura com e sem o teto —
+    a aba Emulação da janela GTK, aposentada por decisão dela
+    (`D-0609-GTK-LEVA-INTEIRA`). O que fica é a única asserção que não precisa
+    da janela: que o mixin CHAMA o teto. **O que se perde é a prova do efeito**,
+    e a frase honesta que a inflava hoje é escrita em HTML —
+    `interface/paginas/09-sistema.html` —, onde a largura é CSS e não pedido de
+    widget.
+    """
 
     def test_a_aba_aplica_o_teto(self) -> None:
         """Sem esta chamada a constante existiria e não protegeria nada."""

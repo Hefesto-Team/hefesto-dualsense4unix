@@ -1,21 +1,63 @@
 #!/usr/bin/env python3
-"""Portão da palavra de tela: a janela fala a língua de quem joga.
+"""Portão da palavra de tela: a tela fala a língua de quem joga.
 
 PALAVRA-01 / E5, seção "E5. Um gate, para não voltar" de
 `docs/process/sprints/2026-07-27-PALAVRA-01-a-janela-fala-a-lingua-de-quem-joga.md`.
 A sprint pede um portão que reprove quando:
 
-- um texto de tela começa com letra minúscula, **com lista de exceções
-  explícita e justificada, não implícita** — regra do `.glade`, e só dele;
-  o porquê está acima de `DIVIDA_DA_PALAVRA_01_PY`;
 - um rótulo visível contém termo da lista de jargão banido — regra dos DOIS
   corpos de texto.
 
+A REGRA DA MINÚSCULA MORREU COM A JANELA — 06/09/2026, sprint `GTK-3`
+----------------------------------------------------------------------
+
+Ela era "regra do `.glade`, e só dele", e o porquê continua escrito acima de
+`DIVIDA_DA_PALAVRA_01_PY`: no XML, `<property name="label">` era sempre um
+rótulo INTEIRO, e "começa em maiúscula?" tinha resposta. Nos DOIS corpos que
+sobram — Python e HTML — o mesmo lugar recebe PEDAÇO, e a pergunta só é
+respondível depois que os pedaços viram um rótulo. Quem a responde é
+`tests/unit/test_config_a_palavra_de_tela_da_aba_montada.py`, que monta a aba
+de verdade. Com o `gui/main.glade` fora da árvore não sobrou um só corpo de
+texto onde a regra 1 fosse respondível, e ela saiu com o arquivo que a
+sustentava — junto com `EXCECOES_DE_MINUSCULA`, que só listava rótulos dele.
+
 O ALCANCE, declarado: DOIS corpos de texto de tela.
 
-1. o `main.glade`, onde mora o texto DECLARATIVO da janela;
+1. as PÁGINAS PUBLICADAS da interface nova
+   (`src/hefesto_dualsense4unix/interface/paginas/*.html`), onde mora o texto
+   DECLARATIVO da tela que ela abre — o herdeiro direto do `.glade`;
 2. o texto de tela MONTADO EM PYTHON em `src/hefesto_dualsense4unix/app/`,
    lido por AST — nunca por expressão regular sobre a linha.
+
+O ITEM 1 TROCOU DE CORPO EM 06/09/2026, e a conta está medida
+--------------------------------------------------------------
+
+Até este dia o item 1 era o `gui/main.glade`. A `GTK-3` o apagou por decisão
+dela (`D-0609-GTK-LEVA-INTEIRA`: *"a ideia sempre foi reaproveitar o que fiz no
+gtk e não apontar nada mais pra lá mas pro html"*), e um portão que perde o
+arquivo que lê não fica verde — ele reprova nomeando o que sumiu
+(`conferir_html` devolve "arquivo de interface não encontrado" do mesmo jeito
+que o antecessor devolvia). Trocar o corpo, e não só apagá-lo, é o que devolve
+o alcance:
+
+    do `gui/main.glade`, que morreu        219 rótulos
+    das dez páginas publicadas             6.541 rótulos e atributos de tela
+    achados na estreia                     ZERO
+
+**Zero na estreia não é régua verde sobre nada, e há duas travas contra isso:**
+`conferir_html` reprova se achar menos de dez páginas (o caminho mudou) e a
+mordida está escrita em `tests/unit/test_a_palavra_de_tela_da_interface_nova.py`
+— pôr um termo banido numa página faz este portão reprovar nomeando arquivo e
+linha.
+
+**E ESTE PORTÃO NÃO SUBSTITUI A RÉGUA IRMÃ, nem ela a ele.** Aqui a leitura é
+ESTÁTICA e roda na camada `--rapido`, sem navegador, a cada fechamento de leva;
+lá (`test_a_palavra_de_tela_da_interface_nova.py`) a página é ABERTA e o DOM é
+lido depois dos cliques, que é o único lugar onde o texto escrito por
+`<script>` aparece — em 05/09/2026 uma varredura estática de
+`mapa-das-portas.html` contou ZERO e a página tinha CATORZE, todas dentro do
+`<script>`. Cada uma alcança o que a outra não vê, e a lista de termos é UMA
+SÓ: `JARGAO_BANIDO`, aqui, importado por ela.
 
 O item 2 entrou em 23/08/2026, e ele é o conserto de um buraco MEDIDO. Até
 aqui o portão lia um arquivo só, e o docstring dizia que rótulo montado em
@@ -123,39 +165,29 @@ from __future__ import annotations
 
 import argparse
 import ast
+import re
 import sys
 from collections.abc import Iterator
+from html.parser import HTMLParser
 from pathlib import Path
-from xml.parsers import expat
 
 RAIZ = Path(__file__).resolve().parents[1]
-GLADE = RAIZ / "src" / "hefesto_dualsense4unix" / "gui" / "main.glade"
+#: Onde mora o texto DECLARATIVO da tela que ela abre — o herdeiro do
+#: `gui/main.glade`, apagado pela `GTK-3` em 06/09/2026.
+PAGINAS = RAIZ / "src" / "hefesto_dualsense4unix" / "interface" / "paginas"  # (noqa-acento)  (nome de pasta no disco)
 #: Onde mora o texto de tela montado em Python. Ver "O ALCANCE" no topo:
-#: `core/`, `integrations/` e `cli/` não falam com a janela.
+#: `core/`, `integrations/` e `cli/` não falam com a tela.
 APP = RAIZ / "src" / "hefesto_dualsense4unix" / "app"
 
-#: As propriedades do Glade que viram texto NA TELA. `label` é o grosso; as
-#: outras três entram porque a pessoa lê as quatro do mesmo jeito.
-PROPRIEDADES_DE_TELA = frozenset({"label", "title", "text", "tooltip_text"})
+#: As etiquetas cujo conteúdo NUNCA é lido por quem joga. `div.nota` entra pela
+#: mesma razão que na régua irmã: a nota de construção existe só na bancada, e
+#: fala do trabalho, não com quem joga.
+ETIQUETAS_MUDAS = frozenset({"script", "style", "template"})
 
-#: Rótulo que PODE começar em minúscula, com a justificativa ao lado. Explícita
-#: e linha a linha, como a E5 exige — uma lista de exceções sem motivo escrito
-#: vira o armário onde se guarda o que incomoda.
-EXCECOES_DE_MINUSCULA: dict[str, str] = {
-    "window_class:": (
-        "13/08/2026 — é o nome LITERAL da chave de perfil que a pessoa digita "
-        "no campo ao lado, e trocá-lo por `Janela:` (o que a E3 da PALAVRA-01 "
-        "propõe) é redação de tela, que é decisão dela e não deste portão."
-    ),
-    "title_regex:": (
-        "13/08/2026 — mesma razão de `window_class:`: chave literal de perfil. "
-        "A E3 da PALAVRA-01 propõe `Título:`; a troca é dela."
-    ),
-    "process_name:": (
-        "13/08/2026 — mesma razão de `window_class:`: chave literal de perfil. "
-        "A E3 da PALAVRA-01 propõe `Programa:`; a troca é dela."
-    ),
-}
+#: Os atributos que viram texto NA TELA. A dica do `title` é onde estavam nove
+#: das treze ocorrências que a régua irmã achou em 05/09/2026 — atributo de
+#: tela é tela.
+ATRIBUTOS_DE_TELA = ("title", "aria-label", "placeholder", "alt")
 
 #: O jargão que a E3 da PALAVRA-01 aposentou, e o que ele vira. A chave é
 #: comparada sem diferenciar maiúscula de minúscula.
@@ -258,6 +290,12 @@ _A_PALAVRA_QUE_ESPERA_A_LEX_6 = "barramento"
 #: `gui/main.glade` são `Sistema` e `Emulação`, e o rótulo ficava dentro do
 #: cartão de diagnóstico da segunda, ao lado do `Controles detectados:`. Quem
 #: fosse conferir o conserto pela aba errada não o acharia.
+#:
+#: 06/09/2026, `GTK-3`: o corpo declarativo trocou de arquivo (do `.glade` para
+#: as dez páginas publicadas) e a lista veio junto, VAZIA, porque o mecanismo é
+#: o mesmo — um rótulo de tela que nasça com jargão declara a dívida aqui, com
+#: nome e endereço, ou reprova. As cinco entradas de 26/08 continuam nomeadas
+#: acima: elas são registro de trabalho pago, não ponteiro para o XML.
 DIVIDA_DA_PALAVRA_01: dict[str, str] = {}
 
 
@@ -274,59 +312,95 @@ class Rotulo:
         return f"Rotulo({self.arquivo.name}:{self.linha} {self.texto!r})"
 
 
-def rotulos_do_glade(caminho: Path) -> list[Rotulo]:
-    """Todo texto de tela do arquivo, com a linha em que ele começa.
+class _ColheitaDaPagina(HTMLParser):
+    """Colhe o que a pessoa LÊ numa página publicada, com a linha de cada item.
 
-    O `expat` é usado em vez de expressão regular por dois motivos concretos: a
-    propriedade pode ocupar várias linhas, e o valor chega com as entidades XML
-    já desfeitas (`&amp;` vira `&`) — que é o texto que a pessoa lê de fato.
+    O critério é o MESMO da régua irmã (`COLHER`, em
+    `tests/unit/test_a_palavra_de_tela_da_interface_nova.py`), de propósito: os
+    dois instrumentos têm de discordar por CAUSA do que só o DOM mostra, nunca
+    por terem definições diferentes de "texto de tela". Fora ficam
+    `script`/`style`/`template` e `div.nota`; dentro entram os quatro atributos
+    de `ATRIBUTOS_DE_TELA`.
+
+    **O que este leitor NÃO alcança, e é por isso que a régua irmã existe:** o
+    texto que o `<script>` escreve no DOM em tempo de execução, e o que só
+    nasce depois de um clique. Nenhuma leitura de fonte os vê.
     """
-    achados: list[Rotulo] = []
-    aberta: dict[str, object] = {"nome": "", "linha": 0, "pedacos": []}
 
-    def abriu(nome: str, atributos: dict[str, str]) -> None:
-        if nome == "property" and atributos.get("name") in PROPRIEDADES_DE_TELA:
-            aberta["nome"] = atributos["name"]
-            aberta["linha"] = analisador.CurrentLineNumber
-            aberta["pedacos"] = []
+    def __init__(self, caminho: Path) -> None:
+        super().__init__(convert_charrefs=True)
+        self.caminho = caminho
+        self.rotulos: list[Rotulo] = []
+        self._pilha: list[tuple[str, bool]] = []
+        self._mudo = 0
+        self._nota = 0
 
-    def texto(dados: str) -> None:
-        if aberta["nome"]:
-            aberta["pedacos"].append(dados)  # type: ignore[union-attr]
+    def _calado(self) -> bool:
+        return bool(self._mudo or self._nota)
 
-    def fechou(nome: str) -> None:
-        if nome == "property" and aberta["nome"]:
-            achados.append(
-                Rotulo(
-                    caminho,
-                    int(aberta["linha"]),  # type: ignore[call-overload]
-                    str(aberta["nome"]),
-                    "".join(aberta["pedacos"]),  # type: ignore[arg-type]
-                )
-            )
-            aberta["nome"] = ""
+    def _atributos(self, atributos: list[tuple[str, str | None]]) -> None:
+        if self._calado():
+            return
+        como_dicionario = dict(atributos)
+        for nome in ATRIBUTOS_DE_TELA:
+            valor = (como_dicionario.get(nome) or "").strip()
+            if valor:
+                self.rotulos.append(Rotulo(self.caminho, self.getpos()[0], nome, valor))
 
-    analisador = expat.ParserCreate()
-    analisador.StartElementHandler = abriu
-    analisador.CharacterDataHandler = texto
-    analisador.EndElementHandler = fechou
-    analisador.Parse(caminho.read_bytes(), True)
-    return achados
+    def handle_starttag(self, tag: str, atributos: list[tuple[str, str | None]]) -> None:
+        self._atributos(atributos)
+        e_nota = tag == "div" and "nota" in (dict(atributos).get("class") or "").split()
+        if tag in ETIQUETAS_MUDAS:
+            self._mudo += 1
+        if e_nota:
+            self._nota += 1
+        self._pilha.append((tag, e_nota))
+
+    def handle_startendtag(self, tag: str, atributos: list[tuple[str, str | None]]) -> None:
+        self._atributos(atributos)
+
+    def handle_endtag(self, tag: str) -> None:
+        # O HTML publicado tem etiqueta aberta sem fechar (`<br>`, `<img>`), e
+        # um `pop()` cego desalinharia a pilha inteira a partir da primeira.
+        # Aqui o fecho procura a abertura correspondente e descarta o que ficou
+        # aberto por dentro dela — que é o que o navegador faz.
+        for indice in range(len(self._pilha) - 1, -1, -1):
+            aberta, _ = self._pilha[indice]
+            if aberta != tag:
+                continue
+            for descartada, era_nota in self._pilha[indice:]:
+                if descartada in ETIQUETAS_MUDAS:
+                    self._mudo -= 1
+                if era_nota:
+                    self._nota -= 1
+            del self._pilha[indice:]
+            return
+
+    def handle_data(self, dados: str) -> None:
+        if self._calado():
+            return
+        texto = dados.strip()
+        if texto:
+            self.rotulos.append(Rotulo(self.caminho, self.getpos()[0], "texto", texto))
 
 
-def comeca_em_minuscula(texto: str) -> bool:
-    """O rótulo abre com letra minúscula?
+def rotulos_da_pagina(caminho: Path) -> list[Rotulo]:
+    """Todo texto de tela da página, com a linha em que ele começa."""
+    colheita = _ColheitaDaPagina(caminho)
+    colheita.feed(caminho.read_text(encoding="utf-8"))
+    colheita.close()
+    return colheita.rotulos
 
-    Marcação Pango (`<i>`, `<b>`) e pontuação não contam como primeira letra —
-    o que interessa é a primeira LETRA que a pessoa lê.
-    """
-    sem_marcacao = texto
-    while sem_marcacao.startswith("<") and ">" in sem_marcacao:
-        sem_marcacao = sem_marcacao[sem_marcacao.index(">") + 1 :].lstrip()
-    for caractere in sem_marcacao:
-        if caractere.isalpha():
-            return caractere.islower()
-    return False
+
+#: A BORDA DO TERMO É ESCRITA À MÃO, e a razão é medida: em `re` do Python o
+#: `\b` casa entre `m` e `é`, então um termo acentuado casaria no meio de outra
+#: palavra. É a mesma expressão da régua irmã — o `s?` cobre o plural.
+#:
+#: E ela é mais fina que o `in` de `jargao_em`, de propósito: no `.glade` o
+#: rótulo era curto e o `in` bastava; um nó de texto de HTML carrega uma oração
+#: inteira, e ali "mesa" dentro de "mesada" seria falso positivo.
+def regua_do_termo(termo: str) -> re.Pattern[str]:
+    return re.compile(r"(?<![\wÀ-ÿ])" + re.escape(termo) + r"s?(?![\wÀ-ÿ])", re.IGNORECASE)
 
 
 def jargao_em(texto: str) -> str | None:
@@ -338,54 +412,63 @@ def jargao_em(texto: str) -> str | None:
     return None
 
 
-def conferir(caminho: Path) -> list[str]:
-    """As reprovações do arquivo, em ordem de linha."""
-    if not caminho.is_file():
-        return [f"{caminho}: arquivo de interface não encontrado"]
+def jargao_na_frase(texto: str) -> str | None:
+    """O primeiro termo banido que aparece na frase, com borda de palavra."""
+    for termo in JARGAO_BANIDO:
+        if regua_do_termo(termo).search(texto):
+            return termo
+    return None
+
+
+def paginas_publicadas(raiz: Path = PAGINAS) -> list[Path]:
+    """As páginas que o produto abre — as `.dc.html` são desenho, não produto."""
+    return sorted(p for p in raiz.glob("*.html") if not p.name.endswith(".dc.html"))
+
+
+def conferir_html(raiz: Path = PAGINAS) -> list[str]:
+    """As reprovações das páginas publicadas, em ordem de arquivo e linha.
+
+    PORTÃO QUE PERDE O QUE LÊ NÃO FICA VERDE — é a cicatriz do
+    `validar-acentuacao.py --check-file`, que devolvia rc=0 contra arquivo que
+    não existe. Aqui a ausência da pasta e a contagem abaixo de dez páginas
+    REPROVAM nomeando, em vez de a varredura publicar verde sobre nada.
+    """
+    if not raiz.is_dir():
+        return [f"{raiz}: pasta de interface não encontrada"]
+
+    paginas = paginas_publicadas(raiz)
+    if len(paginas) < 10:
+        return [
+            f"{raiz}: achei {len(paginas)} página(s) publicada(s), e a interface "
+            "tem DEZ abas. Ou o caminho mudou, ou a publicação quebrou — nos "
+            "dois casos este portão passaria a medir menos tela em silêncio."
+        ]
 
     achados: list[str] = []
-    rotulos = rotulos_do_glade(caminho)
+    presentes: set[str] = set()
+    for pagina in paginas:
+        for rotulo in rotulos_da_pagina(pagina):
+            if not rotulo.texto:
+                continue
+            presentes.add(rotulo.texto)
+            termo = jargao_na_frase(rotulo.texto)
+            if termo is not None and rotulo.texto not in DIVIDA_DA_PALAVRA_01:
+                achados.append(
+                    f"{rotulo.arquivo}:{rotulo.linha}: o rótulo "
+                    f"{rotulo.texto[:140]!r} ({rotulo.propriedade}) contém o "
+                    f"jargão {termo!r}, aposentado pela E3 da PALAVRA-01.\n"
+                    f"    Diga {JARGAO_BANIDO[termo]!r}. Quem joga não é "
+                    "obrigado a saber o que é um daemon.\n"
+                    "    A página é GERADA: conserte em "
+                    "`src/hefesto_dualsense4unix/interface/` e republique."
+                )
 
-    for rotulo in rotulos:
-        if not rotulo.texto:
-            continue
-
-        if comeca_em_minuscula(rotulo.texto) and rotulo.texto not in EXCECOES_DE_MINUSCULA:
-            achados.append(
-                f"{rotulo.arquivo}:{rotulo.linha}: o rótulo "
-                f"{rotulo.texto!r} ({rotulo.propriedade}) começa em "
-                "minúscula. A janela fala com quem joga: comece com "
-                "maiúscula.\n"
-                "    Se for exceção de verdade, declare em "
-                "`EXCECOES_DE_MINUSCULA` com a razão e a data — a E5 da "
-                "PALAVRA-01 exige lista explícita, não implícita."
-            )
-
-        termo = jargao_em(rotulo.texto)
-        if termo is not None and rotulo.texto not in DIVIDA_DA_PALAVRA_01:
-            achados.append(
-                f"{rotulo.arquivo}:{rotulo.linha}: o rótulo "
-                f"{rotulo.texto!r} ({rotulo.propriedade}) contém o jargão "
-                f"{termo!r}, aposentado pela E3 da PALAVRA-01.\n"
-                f"    Diga {JARGAO_BANIDO[termo]!r}. Quem joga não é "
-                "obrigado a saber o que é um daemon."
-            )
-
-    presentes = {rotulo.texto for rotulo in rotulos}
-    for rotulo_declarado in EXCECOES_DE_MINUSCULA:
-        if rotulo_declarado not in presentes:
-            achados.append(
-                f"{caminho}: a exceção de minúscula {rotulo_declarado!r} não "
-                "existe mais nesta tela. APAGUE a entrada de "
-                "`EXCECOES_DE_MINUSCULA` — lista de exceção que envelhece "
-                "calada vira paisagem."
-            )
     for rotulo_declarado in DIVIDA_DA_PALAVRA_01:
         if rotulo_declarado not in presentes:
             achados.append(
-                f"{caminho}: a dívida {rotulo_declarado!r} não existe mais "
-                "nesta tela — o rótulo foi trocado, e é uma boa notícia. "
-                "APAGUE a entrada de `DIVIDA_DA_PALAVRA_01`."
+                f"{raiz}: a dívida {rotulo_declarado!r} não existe mais nesta "
+                "tela — o rótulo foi trocado, e é uma boa notícia. APAGUE a "
+                "entrada de `DIVIDA_DA_PALAVRA_01`."
             )
 
     return achados
@@ -799,8 +882,14 @@ def conferir_app(raiz: Path = APP) -> list[str]:
 def mostrar_criterio() -> None:
     """Imprime o critério, para quem quiser conferir sem ler o código."""
     print("Portão da palavra de tela (PALAVRA-01 / E5)")
-    print(f"  XML varrido: {GLADE.relative_to(RAIZ)}")
-    print(f"  propriedades: {', '.join(sorted(PROPRIEDADES_DE_TELA))}")
+    paginas = paginas_publicadas()
+    print(f"  HTML varrido: {PAGINAS.relative_to(RAIZ)}/*.html ({len(paginas)} páginas)")
+    print("    o que conta como tela: todo texto fora de "
+          f"{'/'.join(sorted(ETIQUETAS_MUDAS))} e de `div.nota`,")
+    print(f"    mais os atributos {', '.join(ATRIBUTOS_DE_TELA)}.")
+    print("    o que ele NÃO alcança: o texto que o `<script>` escreve no DOM "
+          "e o que\n    só nasce depois de um clique — quem lê isso é "
+          "tests/unit/test_a_palavra_de_tela_da_interface_nova.py.")
     print(f"  Python varrido: {APP.relative_to(RAIZ)}/**/*.py (por AST)")
     print("  regra de tela do Python: a string CHEGA a um escoadouro de tela.")
     print(f"    escoadouros: {', '.join(sorted(ESCOADOUROS))}")
@@ -819,15 +908,16 @@ def mostrar_criterio() -> None:
         "chega a escoadouro."
     )
     print()
-    print("Regra 1 — nenhum rótulo começa em minúscula. Exceções declaradas:")
-    for rotulo, razao in EXCECOES_DE_MINUSCULA.items():
-        print(f"  {rotulo!r}: {razao}")
+    print("Regra 1 (minúscula) MORREU COM A JANELA em 06/09/2026: ela era do")
+    print("  `.glade`, onde o rótulo era inteiro. Em Python e em HTML o texto")
+    print("  chega em PEDAÇO, e quem confere maiúscula no rótulo COMPOSTO é")
+    print("  tests/unit/test_config_a_palavra_de_tela_da_aba_montada.py.")
     print()
     print("Regra 2 — nenhum rótulo contém jargão aposentado:")
     for termo, vira in JARGAO_BANIDO.items():
         print(f"  {termo!r} -> {vira!r}")
     print()
-    print("Dívida declarada da E1-E4 no .glade (rótulos ainda não trocados):")
+    print("Dívida declarada nas páginas publicadas (rótulos ainda não trocados):")
     for rotulo, razao in DIVIDA_DA_PALAVRA_01.items():
         print(f"  {rotulo!r}: {razao}")
     print()
@@ -850,8 +940,8 @@ def mostrar_criterio() -> None:
 def main(argumentos: list[str] | None = None) -> int:
     analisador = argparse.ArgumentParser(
         description=(
-            "Portão da palavra de tela: reprova minúscula e jargão no .glade "
-            "e no texto de tela montado em Python."
+            "Portão da palavra de tela: reprova jargão nas páginas publicadas "
+            "da interface e no texto de tela montado em Python."
         ),
     )
     analisador.add_argument("--all", action="store_true", help="varre a interface da árvore")
@@ -873,7 +963,7 @@ def main(argumentos: list[str] | None = None) -> int:
 
     achados: list[str] = []
     if varredura_completa:
-        achados.extend(conferir(GLADE))
+        achados.extend(conferir_html())
         achados.extend(conferir_app())
     else:
         # Um arquivo por vez: os nomes que atravessam módulo continuam vindo do
@@ -881,8 +971,16 @@ def main(argumentos: list[str] | None = None) -> int:
         # confere a seção que os declara.
         nomes_de_tela: set[str] | None = None
         for alvo in alvos:
-            if alvo.suffix == ".glade":
-                achados.extend(conferir(alvo))
+            if alvo.suffix == ".html" and not alvo.name.endswith(".dc.html"):
+                for rotulo in rotulos_da_pagina(alvo):
+                    termo = jargao_na_frase(rotulo.texto)
+                    if termo is not None and rotulo.texto not in DIVIDA_DA_PALAVRA_01:
+                        achados.append(
+                            f"{rotulo.arquivo}:{rotulo.linha}: o rótulo "
+                            f"{rotulo.texto[:140]!r} ({rotulo.propriedade}) "
+                            f"contém o jargão {termo!r}, aposentado pela E3 da "
+                            f"PALAVRA-01.\n    Diga {JARGAO_BANIDO[termo]!r}."
+                        )
             elif alvo.suffix == ".py" and APP in alvo.resolve().parents:
                 if nomes_de_tela is None:
                     nomes_de_tela = nomes_de_constante_de_tela(

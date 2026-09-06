@@ -246,17 +246,38 @@ def test_spec_tem_epoch_e_changelog_coerente() -> None:
 
 
 def test_prerm_usa_o_nome_real_do_modulo_da_gui() -> None:
-    """O padrão era 'hefesto\\.app\\.main' e NUNCA casou — o módulo se chama
-    hefesto_dualsense4unix.app.main desde o rebrand da v3.0.0."""
+    """O prerm mata padrão que casa processo VIVO — e quem diz quais são é o dono.
+
+    O padrão original era `hefesto\\.app\\.main` e NUNCA casou (o módulo se
+    chamava `hefesto_dualsense4unix.app.main` desde o rebrand da v3.0.0). Em
+    06/09/2026 o mesmo defeito quase voltou pelo outro lado: a `GTK-3` apagou
+    `app/main.py` por decisão dela (`D-0609-GTK-LEVA-INTEIRA`) e o padrão
+    passaria a nunca casar de novo, com a tela sobrevivendo ao `apt remove`.
+
+    **POR ISSO A RÉGUA PERGUNTA AO DONO em vez de digitar a lista.** Quem sabe
+    como se reconhece um processo desta casa é
+    `utils.identidade.atual().padroes_de_matanca` — digitar os nomes aqui criava
+    o par que diverge no dia seguinte, que é o defeito que acabou de acontecer
+    duas vezes.
+    """
+    from hefesto_dualsense4unix.utils import identidade
+
     prerm = _ler(DEB_PRERM)
-    assert r"hefesto_dualsense4unix\.app\.main" in prerm, (
-        "prerm não sinaliza o módulo real da GUI"
-    )
+    casa = identidade.atual()
+    permitidos = {p.replace("\\", "") for p in casa.padroes_de_matanca}
+    permitidos.add(casa.padrao_do_daemon)
+
     padroes_pkill = re.findall(r"pkill\s+-TERM\s+-f\s+'([^']+)'", prerm)
     assert padroes_pkill, "nenhum pkill -TERM -f no prerm"
     for padrao_pkill in padroes_pkill:
         alvo = padrao_pkill.replace("\\", "")
-        assert alvo in (
-            "hefesto_dualsense4unix.app.main",
-            "hefesto-dualsense4unix daemon start",
-        ), f"prerm mata padrão que não casa processo nenhum: {padrao_pkill}"
+        assert alvo in permitidos, (
+            f"prerm mata padrão que não casa processo nenhum: {padrao_pkill}.\n"
+            f"Os que a casa reconhece hoje: {sorted(permitidos)}.\n"
+            "Se a boca mudou de arquivo, mude nos DOIS lugares no mesmo commit."
+        )
+    assert any("abrir_interface" in p for p in padroes_pkill), (
+        "o prerm não mata a TELA: sem um padrão que case o lançador de hoje, "
+        "ela sobrevive ao `apt remove` segurando arquivos já apagados — que é "
+        "o PACKAGING-PRERM-PKILL-MODULO-ERRADO-01 de novo."
+    )

@@ -9,10 +9,17 @@ case "$1" in
         # systemctl --user disable --now hefesto.service antes de remover,
         # ou o postrm emitira aviso.
         # PACKAGING-PRERM-PKILL-MODULO-ERRADO-01: o padrao era
-        # 'hefesto\.app\.main', que NUNCA casou — o modulo se chama
+        # 'hefesto\.app\.main', que NUNCA casou — o modulo se chamava
         # hefesto_dualsense4unix.app.main desde o rebrand da v3.0.0. A GUI
         # sobrevivia ao apt remove segurando arquivos ja apagados.
-        pkill -TERM -f 'hefesto_dualsense4unix\.app\.main' 2>/dev/null || true
+        #
+        # ENDERECO CORRIGIDO em 06/09/2026 (GTK-3), e pela MESMA razao: a janela
+        # GTK foi aposentada por decisao dela (D-0609-GTK-LEVA-INTEIRA) e o
+        # modulo app.main nao existe mais — o padrao voltaria a nunca casar, e
+        # a tela sobreviveria ao apt remove de novo. O que a .desktop abre hoje
+        # e 'python3 <arvore>/scripts/abrir_interface.py'. A lista viva desta
+        # casa e utils.identidade.atual().padroes_de_matanca.
+        pkill -TERM -f 'scripts/abrir_interface\.py' 2>/dev/null || true
         pkill -TERM -f 'hefesto-dualsense4unix daemon start' 2>/dev/null || true
         ;;
 esac

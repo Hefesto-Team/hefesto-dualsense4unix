@@ -198,8 +198,13 @@ done < <(find packaging -name '*.desktop' \
 # leva ESQUECEU e que só apareceu na verificação independente. Alinhar tudo em
 # `hefesto.png` consertou o lançador e QUEBROU a janela e a bandeja, porque há um
 # SEGUNDO consumidor, em código e não em .desktop:
-#   src/hefesto_dualsense4unix/app/main.py  -> Gtk.Window.set_default_icon_name(...)
+#   scripts/abrir_interface.py              -> Gtk.Window.set_default_icon_name(...)
 #   src/hefesto_dualsense4unix/app/tray.py  -> TRAY_ICON_NAME, via theme.has_icon()
+# ENDEREÇO CORRIGIDO em 06/09/2026 (`GTK-3`): o primeiro consumidor era
+# `app/main.py`, o entry point da janela GTK, apagado com ela
+# (`D-0609-GTK-LEVA-INTEIRA`). Quem veste o ícone no processo hoje é o
+# `scripts/abrir_interface.py`, que é o que o `.desktop` dela abre pelo
+# `interface.sh` -> `run.sh --gui`.
 # Sem esse nome no tema, a bandeja cai no fallback "input-gaming" (joystick
 # genérico). Não havia ganho líquido: trocava um ícone quebrado por outro, e o que
 # quebrava era justamente o que ela vê rodando. Então os DOIS nomes são contrato,
@@ -208,7 +213,7 @@ echo "== Icon pedido pelo CÓDIGO (janela + bandeja) × nome instalado =="
 #
 # ONDE O NOME MORA, e por que esta régua mudou de lugar em 29/08/2026.
 # --------------------------------------------------------------------
-# Ela procurava o literal dentro de `app/main.py` e `app/tray.py`:
+# Ela procurava o literal dentro do lançador e de `app/tray.py`:
 #     set_default_icon_name("hefesto-dualsense4unix")
 #     TRAY_ICON_NAME = "hefesto-dualsense4unix-symbolic"
 # Com AS DUAS CASAS (o app dela e o de desenvolvimento), esses dois pontos
@@ -251,12 +256,30 @@ else
             fi
         fi
     fi
-    # A janela tem de pedir o ícone pelo nome da identidade, não por um literal solto.
-    if ! grep -q 'set_default_icon_name(.*\.icone)' \
-        src/hefesto_dualsense4unix/app/main.py 2>/dev/null; then
-        echo "[FAIL] app/main.py não pede mais o ícone por identidade.icone"
+    # A TELA tem de pedir o ícone pelo nome da identidade, não por um literal.
+    #
+    # 06/09/2026: o alvo mudou de `app/main.py` (apagado com a janela GTK) para
+    # `scripts/abrir_interface.py`, e a régua mudou de forma junto: lá a chamada
+    # era `set_default_icon_name(casa.icone)`, numa linha; aqui o nome passa por
+    # uma variável, porque há um SEGUNDO caminho (`set_default_icon_from_file`,
+    # para quem ainda não rodou o `install.sh`). Cobrar a forma de uma linha
+    # reprovaria a melhora — o defeito que este arquivo já pagou onze vezes.
+    # A régua passa a cobrar o EFEITO: o nome sai da identidade, e não há
+    # literal dentro da chamada.
+    LANCADOR_PY=scripts/abrir_interface.py
+    if [[ ! -f "${LANCADOR_PY}" ]]; then
+        echo "[FAIL] ${LANCADOR_PY} sumiu — ninguém veste o ícone no processo"
+        echo "       e a janela dela nasce com o ícone genérico do sistema."
+        rc=1
+    elif ! grep -q 'set_default_icon_name(' "${LANCADOR_PY}" \
+         || ! grep -q '\.icone' "${LANCADOR_PY}"; then
+        echo "[FAIL] ${LANCADOR_PY} não pede mais o ícone por identidade.icone"
         echo "       o nome do ícone voltou a estar cravado, e um literal que"
         echo "       diverge do resto do produto some do menu sem avisar."
+        rc=1
+    elif grep -qE 'set_default_icon_name\(["'"'"']' "${LANCADOR_PY}"; then
+        echo "[FAIL] ${LANCADOR_PY} passa um LITERAL a set_default_icon_name"
+        echo "       o nome tem de vir de utils/identidade.py, que é o dono."
         rc=1
     fi
     if [[ "${#code_icons[@]}" -eq 0 ]]; then
@@ -1734,7 +1757,7 @@ fi
 # de nota: sem o loader, `GdkPixbuf.Pixbuf.new_from_file_at_scale` devolve None
 # EM SILÊNCIO — o ícone some da bandeja e os 38 glifos da interface caem junto,
 # sem uma linha de erro no log (BUG-TRAY-ICONE-INVISIVEL-01, descrito em
-# app/main.py). Ninguém liga a tela vazia ao pacote que faltou.
+# app/arranque.py). Ninguém liga a tela vazia ao pacote que faltou.
 #
 # A ÂNCORA É A PROMESSA, não o pacote — mesma disciplina da seção do teclado na
 # tela: enquanto o produto DESENHAR SVG em execução, ele tem de declarar o

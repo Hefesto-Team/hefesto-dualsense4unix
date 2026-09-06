@@ -49,7 +49,10 @@ SIGTERM_POLL_INTERVAL_SEC = 0.05
 # predecessor declarado no pid file, confirmamos que o processo correspondente
 # ainda pertence ao Hefesto - Dualsense4Unix (daemon ou GUI). Cobrimos dois padrões canônicos:
 #   - daemon: `comm` == "hefesto" (entry point instalado).
-#   - GUI:    `comm` == "python3" e cmdline contém "hefesto_dualsense4unix.app.main" / "hefesto".
+#   - GUI:    `comm` == "python3" e cmdline contém "hefesto" — hoje o caminho
+#             é `python3 <árvore>/scripts/abrir_interface.py` (06/09/2026: era
+#             `-m hefesto_dualsense4unix.app.main`, e esse módulo saiu com a
+#             janela GTK, `D-0609-GTK-LEVA-INTEIRA`).
 # Limite de `/proc/<pid>/comm` é 16 chars; "hefesto" cabe.
 _HEFESTO_DUALSENSE4UNIX_PROC_MARKERS: tuple[str, ...] = ("hefesto",)
 
@@ -106,8 +109,10 @@ def _is_hefesto_dualsense4unix_process(pid: int) -> bool:
 
     Heurística (inclusiva; qualquer match basta):
       1. `comm` contém "hefesto" (daemon rodando como entry point `hefesto`).
-      2. `cmdline` contém "hefesto" (GUI rodando como `python3 -m hefesto_dualsense4unix.app.main`
-         ou daemon rodando como `python3 -m hefesto_dualsense4unix daemon start`).
+      2. `cmdline` contém "hefesto" (GUI rodando como
+         `python3 <árvore>/scripts/abrir_interface.py` — o caminho da árvore já
+         traz a palavra — ou daemon rodando como
+         `python3 -m hefesto_dualsense4unix daemon start`).
 
     Falhas de leitura (processo sumiu, EPERM, ausência de `/proc`) retornam
     False — conservador: na dúvida, NÃO mata.

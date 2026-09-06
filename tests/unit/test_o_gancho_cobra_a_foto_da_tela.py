@@ -44,8 +44,14 @@ def _carregar():
 portao = _carregar()
 
 UMA_ABA = "src/hefesto_dualsense4unix/app/widgets/controller_card.py"
-O_GLADE = "src/hefesto_dualsense4unix/gui/main.glade"
-O_RETRATO = "scripts/gui-captura/retratar_abas.py"
+#: 06/09/2026 (`GTK-3`): as DUAS entradas mudaram de arquivo, e a regra não.
+#: Eram `gui/main.glade` e `scripts/gui-captura/retratar_abas.py` — o XML da
+#: janela GTK e o retratista dela, apagados por decisão dela
+#: (`D-0609-GTK-LEVA-INTEIRA`). O que a tela declara hoje é uma das dez páginas;
+#: quem a fotografa é `interface/olhar.py`. `gui/` continua na lista por causa
+#: do `theme.css`, que é a fonte das cores da casa.
+UMA_PAGINA = "src/hefesto_dualsense4unix/interface/paginas/09-sistema.html"
+O_RETRATO = "src/hefesto_dualsense4unix/interface/olhar.py"
 UMA_FOTO = "docs/usage/assets/readme_inicio.png"
 O_RECIBO = "docs/usage/assets/PROVA-DA-FOTO.txt"
 
@@ -53,14 +59,13 @@ O_RECIBO = "docs/usage/assets/PROVA-DA-FOTO.txt"
 # ---------------------------------------------------------------- a mordida
 
 
-@pytest.mark.parametrize("arquivo_de_tela", [UMA_ABA, O_GLADE, O_RETRATO])
+@pytest.mark.parametrize("arquivo_de_tela", [UMA_ABA, UMA_PAGINA, O_RETRATO])
 def test_bloqueia_codigo_de_tela_sem_foto(arquivo_de_tela: str) -> None:
     """A MORDIDA: mexer na tela sem levar foto tem de BLOQUEAR o commit.
 
     É a situação exata de 24/08/2026 — nove branches de interface commitadas
-    sem ninguém abrir a tela. Os três casos são os três diretórios de
-    `CODIGO_DA_TELA`: a aba, o XML/CSS, e o INSTRUMENTO que decide o que a foto
-    mostra.
+    sem ninguém abrir a tela. Os três casos são o motor da aba, a PÁGINA que a
+    pessoa lê, e o INSTRUMENTO que decide o que a foto mostra.
     """
     veredito, culpados = portao.julgar(
         [arquivo_de_tela, "docs/process/uma-sprint.md"],
@@ -255,7 +260,7 @@ def test_no_git_de_verdade_a_divida_herdada_para_o_commit(tmp_path: Path) -> Non
         "o commit de fim de leva passou com a história devendo foto. "
         f"stderr={saida.stderr!r}"
     )
-    assert "retratar_abas.py" in saida.stderr
+    assert "olhar.py" in saida.stderr
 
 
 # ------------------------------------------------- as duas travas de esvaziar
@@ -345,7 +350,7 @@ def test_no_git_de_verdade_o_portao_reprova_e_ensina(tmp_path: Path) -> None:
         "o script aceitou um índice com mudança de tela e nenhuma foto. "
         f"stdout={saida.stdout!r} stderr={saida.stderr!r}"
     )
-    assert "retratar_abas.py" in saida.stderr, (
+    assert "olhar.py" in saida.stderr, (
         "a mensagem de bloqueio não diz o comando que cura. Portão que reprova "
         "sem ensinar o conserto vira portão que se desliga."
     )

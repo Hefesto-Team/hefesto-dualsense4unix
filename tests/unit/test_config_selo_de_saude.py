@@ -36,9 +36,9 @@ _gi = pytest.importorskip("gi", reason="precisa de PyGObject")
 _gi.require_version("Gtk", "3.0")
 from gi.repository import Gtk
 
-from hefesto_dualsense4unix.app.actions.config import ABA_CONFIG, ConfigActionsMixin
+from hefesto_dualsense4unix.app.actions.config import ABA_CONFIG
 from hefesto_dualsense4unix.app.actions.config import secao_exame as secao
-from hefesto_dualsense4unix.app.constants import MAIN_GLADE
+from tests.unit.aba_config_sem_a_janela import HospedeiroDaAbaConfig
 from hefesto_dualsense4unix.integrations.exame_da_mesa import (
     ESTADO_ATENCAO,
     ESTADO_CERTO,
@@ -55,18 +55,18 @@ from hefesto_dualsense4unix.integrations.exame_da_mesa import (
 PROIBIDAS = ("sudo", "json", "systemd", "systemctl", "bluetoothctl", "modprobe")
 
 
-class _Host(ConfigActionsMixin):
-    def __init__(self, builder: Gtk.Builder) -> None:
-        self.builder = builder
+def _montar_a_aba() -> tuple[HospedeiroDaAbaConfig, Gtk.Widget]:
+    """Monta a aba em CÓDIGO e devolve `(host, moldura da seção 0)`.
 
-
-def _montar_a_aba() -> tuple[_Host, Gtk.Widget]:
-    """Carrega o Glade, roda o mixin e devolve `(host, moldura da seção 0)`."""
-    builder = Gtk.Builder()
-    builder.add_from_file(str(MAIN_GLADE))
-    host = _Host(builder)
+    06/09/2026 (`GTK-3`): o `gui/main.glade` era aberto aqui só para pegar a
+    caixa vazia `tab_config_box` — a seção do exame sempre nasceu em código, em
+    `app/actions/config/secao_exame.py`, que é MOTOR e fica. O berço passou a
+    ser `tests/unit/aba_config_sem_a_janela.py`, cuja fidelidade tem régua
+    própria (`test_o_berco_nao_e_mais_frouxo_que_o_glade`).
+    """
+    host = HospedeiroDaAbaConfig()
     host.install_config_tab()
-    caixa = builder.get_object(ABA_CONFIG)
+    caixa = host.builder.get_object(ABA_CONFIG)
     for filho in caixa.get_children():
         rotulo = filho.get_label_widget()
         if rotulo is not None and rotulo.get_text() == secao.TITULO:

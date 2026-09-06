@@ -48,8 +48,13 @@ _gi = pytest.importorskip("gi", reason="precisa de PyGObject")
 _gi.require_version("Gtk", "3.0")
 from gi.repository import Gtk
 
-from hefesto_dualsense4unix.app.actions.config import ABA_CONFIG, ConfigActionsMixin
-from hefesto_dualsense4unix.app.constants import MAIN_GLADE
+from tests.unit.aba_config_sem_a_janela import (
+    FRASES_DO_ESPELHO,
+    PISO_DA_COLHEITA,
+    SECOES_NO_GLADE,
+    aba_config_montada,
+    textos_da_arvore,
+)
 
 RAIZ = Path(__file__).resolve().parents[2]
 
@@ -71,16 +76,17 @@ def _validador() -> Any:
 
 
 def _aba_montada() -> Any:
-    """Carrega o Glade, roda o mixin e devolve a caixa da aba."""
+    """Monta a aba em CÓDIGO e devolve a caixa — o berço saiu do glade.
 
-    class _Host(ConfigActionsMixin):
-        def __init__(self, builder: Gtk.Builder) -> None:
-            self.builder = builder
-
-    builder = Gtk.Builder()
-    builder.add_from_file(str(MAIN_GLADE))
-    _Host(builder).install_config_tab()
-    return builder.get_object(ABA_CONFIG)
+    06/09/2026 (`GTK-3`): esta função abria o `gui/main.glade` só para pegar a
+    caixa vazia `tab_config_box`; as cinco seções sempre nasceram em código. Com
+    o XML apagado, o berço é `tests/unit/aba_config_sem_a_janela.py`, e ele
+    entrega os DOIS widgets que as seções pedem — a caixa e o
+    `daemon_autostart_switch`. A colheita foi conferida contra o glade
+    restaurado do git: **199 textos dos dois lados**, e
+    `test_o_berco_nao_e_mais_frouxo_que_o_glade` reprova se ela encolher.
+    """
+    return aba_config_montada()
 
 
 def _textos_da_arvore(raiz: Any) -> list[tuple[str, str]]:
@@ -114,6 +120,41 @@ def _textos_da_arvore(raiz: Any) -> list[tuple[str, str]]:
         if obter_filhos is not None:
             pilha.extend(obter_filhos())
     return achados
+
+
+def test_o_berco_nao_e_mais_frouxo_que_o_glade() -> None:
+    """O berço em código entrega a MESMA aba que o `main.glade` entregava.
+
+    06/09/2026 (`GTK-3`), e a régua nasceu de um defeito real: a primeira versão
+    do berço devolvia SÓ a caixa e a aba saiu com **193 textos contra os 196**
+    do XML montado no mesmo processo — `secao_janela._linha_do_espelho` devolve
+    `None` sem o `daemon_autostart_switch` e a linha inteira some sem levantar.
+    Três frases a menos, em silêncio, numa régua de REDAÇÃO: ela passaria com a
+    frase errada dentro.
+
+    A régua cobra as FRASES e um PISO, e não a igualdade: a mesma aba colhe 199
+    textos num processo solto e 196 sob a suíte, porque três frases da seção do
+    arranjo leem o DMI da placa e o `conftest` desvia o `HOME`. Um número
+    cravado aqui mediria a bancada.
+    """
+    caixa = _aba_montada()
+    assert len(caixa.get_children()) == SECOES_NO_GLADE, (
+        f"a aba montou {len(caixa.get_children())} seções e o glade dava "
+        f"{SECOES_NO_GLADE} — o berço perdeu uma seção"
+    )
+    colhidos = textos_da_arvore(caixa)
+    for frase in FRASES_DO_ESPELHO:
+        assert frase in colhidos, (
+            f"a linha do espelho sumiu da aba: {frase!r} não foi colhida. É o "
+            "sintoma exato de `BercoDaAbaConfig` não entregar o widget que a "
+            "seção pede — a linha some sem levantar, e as três réguas desta "
+            "aba passam a medir menos sem nada acusar."
+        )
+    assert len(colhidos) >= PISO_DA_COLHEITA, (
+        f"o berço colheu {len(colhidos)} textos, abaixo do piso de "
+        f"{PISO_DA_COLHEITA}: uma seção inteira sumiu. Dê ao "
+        "`BercoDaAbaConfig` o widget que ela pede."
+    )
 
 
 def test_todo_rotulo_da_aba_comeca_em_maiuscula() -> None:

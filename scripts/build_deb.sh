@@ -136,7 +136,8 @@ cp -r assets/. "${STAGING}/usr/share/hefesto-dualsense4unix/assets/"
 if [ -f "assets/appimage/Hefesto-Dualsense4Unix.png" ]; then
     # Os DOIS nomes, porque há DOIS consumidores e eles não concordam: o
     # .desktop pede Icon=hefesto, e o código pede o nome longo em
-    # app/main.py (set_default_icon_name) e app/tray.py (TRAY_ICON_NAME).
+    # scripts/abrir_interface.py (set_default_icon_name) e app/tray.py
+    # (TRAY_ICON_NAME).
     # Instalar só o curto deixa a bandeja com o joystick genérico.
     cp "assets/appimage/Hefesto-Dualsense4Unix.png" "${STAGING}/usr/share/icons/hicolor/256x256/apps/hefesto.png"
     cp "assets/appimage/Hefesto-Dualsense4Unix.png" "${STAGING}/usr/share/icons/hicolor/256x256/apps/hefesto-dualsense4unix.png"

@@ -31,10 +31,17 @@ na tira quando há um jogo da Steam aberto e sai quando ele fecha (10/08/2026).
 Esta página diz o que cada uma faz e o que se ajusta nela — e, no fim, o
 **cabeçalho** e o **rodapé**, que valem em todas.
 
-> **Sobre as capturas.** Elas são geradas por
-> `scripts/gui-captura/retratar_abas.py` — um comando, sem clique nenhum — e
-> por isso **acompanham a versão**: quem mexe na interface roda o script antes
-> de commitar. As desta página foram conferidas pela última vez em
+> **Sobre as capturas.** Elas foram geradas por
+> `scripts/gui-captura/retratar_abas.py`, o estúdio de fotografia da janela
+> GTK. **Esse estúdio SAIU em 06/09/2026** (`GTK-3`,
+> `D-0609-GTK-LEVA-INTEIRA`), junto com a janela que fotografava: não há mais
+> como refazer estas imagens, e elas param onde estão. A frase que morava aqui
+> dizia que elas *"acompanham a versão"* e que *"quem mexe na interface roda o
+> script antes de commitar"* — **deixou de ser verdade**, e contradizia a nota
+> do topo desta página. Quem fotografa a tela de HOJE é
+> `src/hefesto_dualsense4unix/interface/olhar.py --todas --publicado --doc`, e
+> as dez imagens que ele tira são as do `README.md`. As desta página foram
+> conferidas pela última vez em
 > **24/08/2026**, e cada conferência fica registrada em
 > [`assets/CONFERIDO-EM.md`](assets/CONFERIDO-EM.md). A aba "No jogo" já
 > aparece na tira desde 10/08/2026, e a **Configurações** desde 22/08/2026.

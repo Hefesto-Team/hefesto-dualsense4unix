@@ -39,11 +39,8 @@ from tests.conftest import exigir_gi_real
 # no CI headless, em vez de pular.
 exigir_gi_real("aba configurações")
 
-import ast
 import contextlib
-import inspect
-import xml.etree.ElementTree as ET
-from pathlib import Path
+from typing import Any
 
 import pytest
 
@@ -58,208 +55,10 @@ from hefesto_dualsense4unix.app.actions.config import (
     SECOES_DA_ABA,
     ConfigActionsMixin,
 )
-from hefesto_dualsense4unix.app.constants import MAIN_GLADE
+from tests.unit.aba_config_sem_a_janela import HospedeiroDaAbaConfig
 
 #: O rótulo da aba, como a pessoa o lê na tira.
 ROTULO_DA_ABA = "Configurações"
-
-
-def _largura_da_janela() -> int:
-    """A `default-width` do próprio glade — nunca uma constante copiada.
-
-    Mesma disciplina de `test_layout_orcamento_altura._dimensao_da_janela`: um
-    número duplicado aqui viraria mentira no dia em que a janela mudasse de
-    tamanho, e o teste seguiria verde medindo contra uma largura morta.
-    """
-    arvore = ET.parse(str(MAIN_GLADE))
-    for obj in arvore.iter("object"):
-        if obj.get("id") != "main_window":
-            continue
-        for prop in obj.findall("property"):
-            if prop.get("name") == "default-width":
-                return int((prop.text or "0").strip())
-    raise AssertionError("default-width não encontrado em main_window")
-
-
-def _arvore_do_app() -> ast.Module:
-    """O `app.py` lido como árvore de sintaxe, sem importar a janela."""
-    from hefesto_dualsense4unix.app import app as modulo_app
-
-    fonte = Path(inspect.getfile(modulo_app)).read_text(encoding="utf-8")
-    return ast.parse(fonte)
-
-
-def _metodos_de(nome_da_classe: str, arvore: ast.Module) -> dict[str, ast.FunctionDef]:
-    for no in arvore.body:
-        if isinstance(no, ast.ClassDef) and no.name == nome_da_classe:
-            return {
-                filho.name: filho
-                for filho in no.body
-                if isinstance(filho, ast.FunctionDef)
-            }
-    raise AssertionError(f"classe {nome_da_classe} não encontrada em app.py")
-
-
-def _chama(metodo: ast.FunctionDef, nome: str) -> bool:
-    """Este trecho de código chama ``self.<nome>()`` em algum ponto?"""
-    for no in ast.walk(metodo):
-        if not isinstance(no, ast.Call):
-            continue
-        alvo = no.func
-        if isinstance(alvo, ast.Attribute) and alvo.attr == nome:
-            return True
-    return False
-
-
-# --- 1. A página existe no Glade -------------------------------------------
-
-
-def test_a_pagina_existe_no_glade_com_id_no_box_interno() -> None:
-    """O box de conteúdo tem id, e a aba tem rótulo.
-
-    Mordida: apagar o `id="tab_config_box"` do glade.
-    """
-    arvore = ET.parse(str(MAIN_GLADE))
-    ids = {obj.get("id") for obj in arvore.iter("object")}
-
-    assert ABA_CONFIG in ids, (
-        f"nenhum objeto com id={ABA_CONFIG!r} no glade. Sem id no box interno "
-        "a página NÃO vira `None` para `id_da_pagina` — vira um nome inventado "
-        "a partir da posição no arquivo (`___object_NNN___`), que muda sozinho "
-        "quando alguém insere um objeto antes dela. Os pollers passariam a "
-        "perguntar por uma aba que não existe mais, em silêncio."
-    )
-    assert "scroll_tab_config_box" in ids, (
-        "a página precisa do rolador próprio, como a aba Início: é ele que faz "
-        "`_wrap_notebook_pages_in_scroll` pular esta página em vez de "
-        "embrulhá-la de novo."
-    )
-
-
-def test_a_aba_tem_rotulo_na_tira() -> None:
-    """Existe um `<child type="tab">` com o rótulo Configurações.
-
-    Mordida: trocar o texto do rótulo no glade.
-    """
-    arvore = ET.parse(str(MAIN_GLADE))
-    rotulos = {
-        (prop.text or "").strip()
-        for filho in arvore.iter("child")
-        if filho.get("type") == "tab"
-        for obj in filho.iter("object")
-        for prop in obj.findall("property")
-        if prop.get("name") == "label"
-    }
-
-    assert ROTULO_DA_ABA in rotulos, (
-        f"nenhuma aba rotulada {ROTULO_DA_ABA!r} na tira: {sorted(rotulos)}"
-    )
-
-
-def test_a_aba_nova_e_a_ultima_da_tira() -> None:
-    """A ordem importa: a aba nasce no FIM, depois de Navegação.
-
-    Mordida: mover o bloco da página para antes de outra aba.
-    """
-    builder = Gtk.Builder()
-    builder.add_from_file(str(MAIN_GLADE))
-    notebook = builder.get_object("main_notebook")
-    rotulos = [
-        notebook.get_tab_label_text(notebook.get_nth_page(i))
-        for i in range(notebook.get_n_pages())
-    ]
-
-    assert rotulos[-1] == ROTULO_DA_ABA, (
-        f"a aba nova tem de ser a última da tira; hoje: {rotulos}"
-    )
-
-
-# --- 2. Os DOIS caminhos de abertura ---------------------------------------
-
-
-@pytest.mark.parametrize("caminho", ["show", "run"])
-def test_a_aba_e_instalada_nos_dois_caminhos_de_abertura(caminho: str) -> None:
-    """`show()` E `run()` chamam `install_config_tab`.
-
-    O `run()` é o caminho de quem sobe minimizado na bandeja. Esquecer a
-    segunda chamada repete o BUG-HOME-TAB-HIDDEN-INSTALL-01: a janela abre com
-    a aba em branco, e nada acusa.
-
-    Mordida: apagar `self.install_config_tab()` de um dos dois blocos.
-    """
-    metodos = _metodos_de("HefestoApp", _arvore_do_app())
-
-    assert caminho in metodos, f"HefestoApp não tem mais o método {caminho!r}"
-    assert _chama(metodos[caminho], "install_config_tab"), (
-        f"`{caminho}()` não chama `install_config_tab()`. As duas listas de "
-        "`install_*` têm de andar juntas: a visível e a da bandeja."
-    )
-
-
-def test_a_fita_de_alvo_e_avisada_a_cada_troca_de_aba() -> None:
-    """O gancho mora em `_on_notebook_switch_page`, não no mapa de refresh.
-
-    `_REFRESH_POR_ABA` só dispara ao ENTRAR na aba destino — pendurar o gancho
-    ali deixaria a fita esmaecida para sempre depois da primeira visita.
-
-    Mordida: mover a chamada para dentro de `_REFRESH_POR_ABA`.
-    """
-    metodos = _metodos_de("HefestoApp", _arvore_do_app())
-
-    assert "_on_notebook_switch_page" in metodos
-    assert _chama(metodos["_on_notebook_switch_page"], "get"), (
-        "instrumento inválido: este método deveria ler `_REFRESH_POR_ABA`"
-    )
-    fonte = ast.dump(metodos["_on_notebook_switch_page"])
-    assert "set_alvo_inativo" in fonte, (
-        "`_on_notebook_switch_page` não avisa a fita de alvo. Sem isso a fita "
-        "nunca esmaece — ou, pior, esmaece uma vez e nunca volta."
-    )
-
-
-def test_os_tres_refreshers_da_aba_estao_no_mapa() -> None:
-    """As três seções vivas da aba têm de estar na tupla — e uma faltava.
-
-    O `_refresh_config_controles` nasceu com a seção "Os controles" e nunca
-    entrou aqui. Medido na bancada em 23/08/2026, com o daemon parado: a seção
-    nascia dizendo "O Hefesto está desligado...", e religar o daemon e reentrar
-    na aba NÃO mudava nada. Nenhum outro gatilho a redesenha — os dois
-    `self.reexaminar` da própria seção exigem um card já na tela, e o
-    `install_config_tab` é idempotente e só roda no arranque.
-
-    O teste cobra pela CONSTANTE, não por um literal: repetir a string nos dois
-    lados é exatamente como um refresher nasce morto em silêncio nesta casa.
-
-    Mordida: tirar qualquer um dos três nomes da tupla de `ABA_CONFIG`.
-    """
-    from hefesto_dualsense4unix.app.actions.config import secao_controles
-    from hefesto_dualsense4unix.app.app import HefestoApp
-
-    tupla = HefestoApp._REFRESH_POR_ABA[ABA_CONFIG]
-
-    assert secao_controles.NOME_DO_REFRESH in tupla, (
-        "o refresher de 'Os controles' não está no mapa: entrar na aba nunca "
-        f"redesenha a seção. Tupla de hoje: {tupla}"
-    )
-    assert "_refresh_saude_da_mesa" in tupla, "o refresher do exame saiu do mapa"
-    assert "_reexaminar_a_mesa" in tupla, "o refresher de 'A mesa' saiu do mapa"
-
-
-# --- 3. O mixin está na MRO ------------------------------------------------
-
-
-def test_o_mixin_esta_na_mro_do_app() -> None:
-    """Sem a base, `install_config_tab` não existe no objeto e o `show()` estoura.
-
-    Mordida: tirar `ConfigActionsMixin` da lista de bases de `HefestoApp`.
-    """
-    from hefesto_dualsense4unix.app.app import HefestoApp
-
-    assert ConfigActionsMixin in HefestoApp.__mro__, (
-        "ConfigActionsMixin fora da MRO de HefestoApp: "
-        f"{[base.__name__ for base in HefestoApp.__mro__]}"
-    )
-    assert callable(getattr(HefestoApp, "install_config_tab", None))
 
 
 # --- 4. A fita de alvo esmaece e VOLTA -------------------------------------
@@ -358,21 +157,18 @@ def test_reativar_nao_exige_motivo() -> None:
 # --- 5. A aba MONTADA cabe na janela ---------------------------------------
 
 
-def _montar_a_aba() -> tuple[Gtk.Builder, Gtk.Widget]:
-    """Carrega o glade e roda o mixin — é a aba de VERDADE que se mede aqui."""
+def _montar_a_aba() -> tuple[Any, Gtk.Widget]:
+    """Monta a aba em código e a assenta — é a aba de VERDADE que se mede aqui.
 
-    class _HospedeiroDaAba(ConfigActionsMixin):
-        def __init__(self, builder: Gtk.Builder) -> None:
-            self.builder = builder
+    06/09/2026 (`GTK-3`): o berço saiu do `gui/main.glade` para
+    `tests/unit/aba_config_sem_a_janela.py`, com régua de fidelidade própria.
+    """
+    hospedeiro = HospedeiroDaAbaConfig()
+    hospedeiro.install_config_tab()
+    builder = hospedeiro.builder
 
-    builder = Gtk.Builder()
-    builder.add_from_file(str(MAIN_GLADE))
-    _HospedeiroDaAba(builder).install_config_tab()
-
-    pagina = builder.get_object("scroll_tab_config_box")
-    pai = pagina.get_parent()
-    if pai is not None:
-        pai.remove(pagina)
+    pagina = Gtk.ScrolledWindow()
+    pagina.add(builder.get_object(ABA_CONFIG))
     janela = Gtk.OffscreenWindow()
     janela.get_style_context().add_class("hefesto-dualsense4unix-window")
     janela.add(pagina)
@@ -431,38 +227,11 @@ def test_a_instalacao_e_idempotente() -> None:
     Mordida: apagar o `getattr(self, "_config_installed", False)` da guarda.
     """
 
-    class _Hospedeiro(ConfigActionsMixin):
-        def __init__(self, builder: Gtk.Builder) -> None:
-            self.builder = builder
-
-    builder = Gtk.Builder()
-    builder.add_from_file(str(MAIN_GLADE))
-    host = _Hospedeiro(builder)
+    host = HospedeiroDaAbaConfig()
     host.install_config_tab()
     host.install_config_tab()
 
-    assert len(builder.get_object(ABA_CONFIG).get_children()) == len(SECOES)
-
-
-def test_a_aba_montada_cabe_na_largura_da_janela() -> None:
-    """A medição que o portão de layout não faz: a aba MONTADA, não o glade cru.
-
-    A largura é o recurso escasso: a rolagem horizontal é `never`, então o
-    mínimo da página mais larga vira o mínimo da janela, sem escape.
-
-    Mordida: pôr um rótulo de uma linha só, sem quebra, com um parágrafo
-    inteiro dentro.
-    """
-    _builder, pagina = _montar_a_aba()
-    largura_da_janela = _largura_da_janela()
-
-    largura, _natural = pagina.get_preferred_width()
-
-    assert largura <= largura_da_janela, (
-        f"a aba Configurações pede {largura}px de largura mínima e a janela "
-        f"abre com {largura_da_janela}px ({largura - largura_da_janela}px a "
-        "mais). Sem rolagem horizontal, esse mínimo sobe intacto até a janela."
-    )
+    assert len(host.builder.get_object(ABA_CONFIG).get_children()) == len(SECOES)
 
 
 def test_nenhum_titulo_promete_numero() -> None:
@@ -484,12 +253,12 @@ def test_nenhum_titulo_promete_numero() -> None:
             )
 
 
-def _aba_com_controles_na_mesa() -> Gtk.Builder:
+def _aba_com_controles_na_mesa() -> Any:
     """A aba montada com dois controles, para a seção dos cards existir."""
 
-    class _HospedeiroComMesa(ConfigActionsMixin):
-        def __init__(self, builder: Gtk.Builder) -> None:
-            self.builder = builder
+    class _HospedeiroComMesa(HospedeiroDaAbaConfig):
+        def __init__(self) -> None:
+            super().__init__()
             self._controles_leitor = lambda: {
                 "controllers": [
                     {
@@ -507,12 +276,11 @@ def _aba_com_controles_na_mesa() -> Gtk.Builder:
                 ]
             }
 
-    builder = Gtk.Builder()
-    builder.add_from_file(str(MAIN_GLADE))
-    _HospedeiroComMesa(builder).install_config_tab()
+    hospedeiro = _HospedeiroComMesa()
+    hospedeiro.install_config_tab()
     while Gtk.events_pending():
         Gtk.main_iteration()
-    return builder
+    return hospedeiro.builder
 
 
 def test_nenhuma_secao_estica_para_ocupar_a_folga() -> None:

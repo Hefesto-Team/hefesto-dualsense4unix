@@ -34,9 +34,9 @@ sem configurar nada.
 E quando o jogo fecha, o mesmo controle vira mouse e teclado para navegar do
 sofá.
 
-Por baixo é um daemon em Python com três frentes: uma janela GTK3, uma interface
-de terminal e uma linha de comando. Controles Nintendo Pro e 8BitDo também
-entram.
+Por baixo é um daemon em Python com três frentes: uma interface de dez abas em
+HTML, uma interface de terminal e uma linha de comando. Controles Nintendo Pro e
+8BitDo também entram.
 
 > **Alfa.** Funciona e é usado todo dia, mas mexe em regra de udev, módulo de
 > kernel, serviço de sistema e configuração da Steam — e a validação em hardware

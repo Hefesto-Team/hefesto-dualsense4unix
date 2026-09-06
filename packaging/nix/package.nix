@@ -20,7 +20,7 @@
 # loaders.cache sem svg, o pixbuf sai None em silencio, o icone da bandeja
 # some da barra (app/tray.py) e os 38 glifos SVG da interface caem junto
 # (gui/widgets/button_glyph.py) — BUG-TRAY-ICONE-INVISIVEL-01, descrito em
-# app/main.py. Nao remova por parecer superfluo: o sintoma nao aponta para a
+# app/arranque.py. Nao remova por parecer superfluo: o sintoma nao aponta para a
 # causa. Paridade com librsvg2-common (.deb), librsvg2 (RPM) e librsvg (Arch);
 # no Flatpak quem cobre e o proprio runtime (org.gnome.Platform//47 ja traz
 # libpixbufloader_svg.so e librsvg-2.so.2 — medido em 19/08/2026).
@@ -173,7 +173,7 @@ python3Packages.buildPythonApplication rec {
     # os formatos) — como hefesto-dualsense4unix.png o lancador ficava sem
     # icone. Paridade com o build_deb.sh, que ja usava hefesto.png.
     # Os DOIS nomes: o .desktop pede Icon=hefesto e o codigo pede o nome longo
-    # (app/main.py set_default_icon_name, app/tray.py TRAY_ICON_NAME).
+    # (scripts/abrir_interface.py set_default_icon_name, app/tray.py TRAY_ICON_NAME).
     install -Dm644 assets/appimage/Hefesto-Dualsense4Unix.png \
         $out/share/icons/hicolor/256x256/apps/hefesto.png
     install -Dm644 assets/appimage/Hefesto-Dualsense4Unix.png \

@@ -267,18 +267,20 @@ _PONTOS_DE_ENTRADA: dict[str, tuple[str, str, str]] = {
         "console_script da CLI; é também o ExecStart da unit do daemon "
         "(assets/hefesto-dualsense4unix.service:22, `daemon start --foreground`)",
     ),
-    "app/main.py": (
-        "run.sh",
-        "python3 -m hefesto_dualsense4unix.app.main",
-        "ENDEREÇO CORRIGIDO em 01/09/2026, e por decisão DELA: *\"a versão "
-        "antiga não segue disponível, vai gerar confusão nos agentes\"*. O "
-        "console_script `-gui` deixou de apontar para a janela GTK e passa a "
-        "abrir a interface nova (a entrada abaixo). A janela antiga NÃO virou "
-        "dívida por isso — ela continua sendo aberta pelo `run.sh:78`, que é "
-        "a boca de quem desenvolve, e os 74 handlers de `app/actions/` são o "
-        "MOTOR que a interface nova chama. A boca mudou de arquivo, que é "
-        "exatamente o caso que esta régua manda CONFERIR em vez de apagar.",
-    ),
+    # A BOCA `app/main.py` MORREU em 06/09/2026 (`GTK-3`), e esta entrada saiu
+    # com ela — que é o que a própria régua manda fazer quando a boca morre, e
+    # não muda de arquivo. Em 01/09 ela tinha MUDADO de arquivo (o
+    # console_script `-gui` passou a abrir a interface nova) e por isso ficou;
+    # agora o arquivo foi apagado por decisão dela (`D-0609-GTK-LEVA-INTEIRA`):
+    # *"a ideia sempre foi reaproveitar o que fiz no gtk e não apontar nada
+    # mais pra lá mas pro html"*.
+    #
+    # O `run.sh --gui` não perdeu a boca: ele entrega ao
+    # `scripts/abrir_interface.py`, e essa cadeia inteira está declarada em
+    # `_CADEIA_DA_INTERFACE_NOVA`, elo por elo, com régua própria. O MOTOR
+    # (`app/actions/`, `app/widgets/`, `app/telas/`) continua alcançado a partir
+    # do piloto — o que saiu do alcance foi o que só a JANELA chamava, e cada um
+    # desses está classificado em `_NAO_E_PROMESSA` com a data de hoje.
     "__main__.py": (
         "src/hefesto_dualsense4unix/__main__.py",
         "from hefesto_dualsense4unix.cli.app import main",
@@ -1027,6 +1029,107 @@ _NAO_E_PROMESSA: dict[str, str] = {
     # A linha entre as duas listas foi MEDIDA uma a uma, e a régua é simples:
     # existe alguém que PINTA o que ela devolve? Se sim é dívida (falta abrir a
     # aba); se não, ela nunca foi para a tela.
+
+    # ------------------------------------------------------------------
+    # AS DOZE DA JANELA GTK — 06/09/2026, sprint `GTK-3`
+    # ------------------------------------------------------------------
+    # A janela foi aposentada por decisão dela (`D-0609-GTK-LEVA-INTEIRA`): *"a
+    # ideia sempre foi reaproveitar o que fiz no gtk e não apontar nada mais
+    # pra lá mas pro html"*. `app/app.py` e `app/main.py` saíram, e com eles o
+    # ÚNICO consumidor destes doze símbolos.
+    #
+    # Medido no dia: o fecho de import encolheu de 265 para 261 módulos, e os
+    # quatro que saíram são `app.app`, `app.main`, `app.compact_window` e
+    # `app.tray`. Nenhum outro módulo perdeu alcance.
+    #
+    # **AS SEIS MIXINS SÃO O CASO QUE PRECISA SER LIDO COM CUIDADO.** O que
+    # perdeu chamador é a CLASSE, que era o ponto de montagem do `HefestoApp`
+    # (`class HefestoApp(HomeActionsMixin, RumbleActionsMixin, …)`). Os MÓDULOS
+    # continuam sendo produção e são chamados a cada tique: `home_actions` tem
+    # 56 citações em `interface/`, `rumble_actions` 28, `input_actions` 21,
+    # `footer_actions` e `triggers_actions` 16 cada, `launch_wrapper_dialog` 15
+    # — os pacotes das dez abas chamam as FUNÇÕES e as CONSTANTES de módulo,
+    # não a mixin. É por isso que a sprint manda `app/actions/` ficar: o motor
+    # é o módulo, e o que morreu foi o arame que o pendurava na janela.
+    "app/actions/footer_actions.py::FooterActionsMixin": (
+        "06/09/2026 — LÁPIDE. Era mixin do `HefestoApp`, que saiu com a janela. "
+        "O módulo é produção viva: `interface/pacotes/rodape.py` e as dez abas "
+        "o citam 16 vezes. Evidência: `grep -rn footer_actions "
+        "src/hefesto_dualsense4unix/interface/`."
+    ),
+    "app/actions/home_actions.py::HomeActionsMixin": (
+        "06/09/2026 — LÁPIDE. Era mixin do `HefestoApp` (`app/app.py`), que "
+        "saiu com a janela. O módulo é produção viva, e a maior de todas: 56 "
+        "citações em `src/hefesto_dualsense4unix/interface/` — é dele que sai o "
+        "`id_da_pagina` e o censo da aba Início. Evidência: `grep -rn "
+        "home_actions src/hefesto_dualsense4unix/interface/`."
+    ),
+    "app/actions/input_actions.py::InputActionsMixin": (
+        "06/09/2026 — LÁPIDE. Era mixin do `HefestoApp` (`app/app.py`), que "
+        "saiu com a janela. O módulo é produção viva: 21 citações em "
+        "`src/hefesto_dualsense4unix/interface/`, entre elas o mapa de teclas "
+        "que a aba 06 lê. Evidência: `grep -rn input_actions "
+        "src/hefesto_dualsense4unix/interface/`."
+    ),
+    "app/actions/launch_wrapper_dialog.py::LaunchWrapperDialogMixin": (
+        "06/09/2026 — LÁPIDE, mesma razão. 15 citações do módulo em "
+        "`interface/`. O plano D-19 §2 já dizia que este é um dos quatro de "
+        "`app/actions/` sem chamador na interface nova, e que isso NÃO o torna "
+        "da janela."
+    ),
+    "app/actions/rumble_actions.py::RumbleActionsMixin": (
+        "06/09/2026 — LÁPIDE. Era mixin do `HefestoApp` (`app/app.py`), que "
+        "saiu com a janela. O módulo é produção viva: 28 citações em "
+        "`src/hefesto_dualsense4unix/interface/`, entre elas "
+        "`texto_do_alcance_da_intensidade` (`interface/aba05.py:834`) e "
+        "`BTN_GIVE_BACK_TO_GAME` (`aba05.py:272`). Evidência: `grep -rn "
+        "rumble_actions src/hefesto_dualsense4unix/interface/`."
+    ),
+    "app/actions/triggers_actions.py::TriggersActionsMixin": (
+        "06/09/2026 — LÁPIDE. Era mixin do `HefestoApp` (`app/app.py`), que "
+        "saiu com a janela. O módulo é produção viva: 16 citações em "
+        "`src/hefesto_dualsense4unix/interface/`, e é dele que a aba 03 lê os "
+        "19 modos de gatilho. Evidência: `grep -rn triggers_actions "
+        "src/hefesto_dualsense4unix/interface/`."
+    ),
+    "app/compact_window.py::CompactWindow": (
+        "06/09/2026 — LÁPIDE. A janela COMPACTA nascia por "
+        "`HEFESTO_DUALSENSE4UNIX_COMPACT_WINDOW`, e quem a abria era o "
+        "`app/app.py`. O próprio docstring do módulo já dizia que ela é "
+        "*\"superfície experimental de desenho, não escolha publicada\"* — está "
+        "escrito na entrada dessa chave em `_VARIAVEIS_DE_AMBIENTE`, aqui "
+        "mesmo, desde 12/08/2026."
+    ),
+    "app/gui_dialogs.py::presentar_dialogos_em_curso": (
+        "06/09/2026 — LÁPIDE. Ela trazia para a frente os diálogos abertos "
+        "quando a JANELA era reapresentada, e o único chamador era o "
+        "`app/app.py`. A interface nova não tem diálogo GTK modal: o que ela "
+        "usa é o canal de recado das dez páginas."
+    ),
+    "app/theme.py::apply_theme": (
+        "06/09/2026 — LÁPIDE do CHAMADOR, não do módulo. `apply_theme` aplicava "
+        "o `gui/theme.css` na `Gtk.Window` do `app/app.py`. O `theme.css` "
+        "CONTINUA vivo e com dois donos — `scripts/paleta_da_casa.py` e "
+        "`tests/unit/test_paleta_unica.py` derivam dele as cores da casa —, e "
+        "`app/theme.escalar_css` continua sendo chamado pelas réguas de "
+        "geometria. O que morreu foi a janela onde a folha era pendurada."
+    ),
+    "app/tray.py::AppTray": (
+        "06/09/2026 — LÁPIDE. A bandeja era construída pelo `app/app.py` e "
+        "apresentava a JANELA no clique. `TRAY_ICON_NAME` do mesmo módulo "
+        "continua sendo contrato de empacotamento e tem portão próprio "
+        "(`scripts/check_packaging_parity.sh`, seção do ícone). A interface "
+        "nova não tem bandeja hoje — e isso é linha de fila, não resto."
+    ),
+    "interface/monta.py::svg": (
+        "06/09/2026 — FERRAMENTA DE GERAÇÃO, e a entrada nasce de uma medição "
+        "que corrigiu a premissa: ela parecia alcançada, e o que a alcançava era "
+        "um nome PLANO num dos quatro módulos que saíram com a janela. Quem a "
+        "chama de verdade são os GERADORES — `interface/aba01.py:67`, "
+        "`aba04.py:5`, `aba06.py:42` e `interface/calibrar.py:185` —, que se "
+        "rodam à mão para PUBLICAR as páginas e não são carregados pelo piloto. "
+        "É o mesmo estatuto de `scripts/`: constrói o produto, não é o produto."
+    ),
 }
 
 #: As promessas públicas SEM CAMINHO de 12/08/2026 — a dívida, com endereço e
@@ -2192,6 +2295,70 @@ _SEM_CAMINHO_HOJE: dict[str, str] = {
         "chama só `default_steam_root`. O QUE FECHA: a Onda 5 · Emulação liga "
         "o botão a esta função e decide a frase final com a Z1 (§10 da "
         "sprint)."
+    ),
+
+    # ------------------------------------------------------------------
+    # O ARRANQUE DO PROCESSO — 06/09/2026, sprint `GTK-3`
+    # ------------------------------------------------------------------
+    # As quatro vieram do topo de `app/main.py` para `app/arranque.py` porque
+    # NENHUMA delas monta janela: elas acertam variável de ambiente de PROCESSO,
+    # e o processo da interface nova é uma `Gtk.Window` com um `WebKit2.WebView`
+    # dentro — tem exatamente os dois problemas que elas curam.
+    #
+    # ONDE O CAMINHO SE PERDE: o `run.sh:63-68` e `:77-82` já fazem as duas
+    # curas em SHELL, com critério grosso, antes de o Python subir. O que estas
+    # têm a mais é o critério FINO, e é ele que está sem caminho:
+    # `forcar_xwayland_no_cosmic` RECUSA quando o `DISPLAY` existe e está morto
+    # (T-02, ONDA0-Z7 — o caso em que forçar faz a janela não abrir), e
+    # `sanear_loaders_do_gdk_pixbuf` também descarta o cache cujos `.so` são de
+    # outro confinamento, que é o caso em que o GTK ABORTA o processo.
+    #
+    # O QUE FECHARIA: `scripts/abrir_interface.py` chamá-las antes de vestir o
+    # `prgname` — ele já é quem prepara o processo antes da primeira janela.
+    # Não foi feito aqui porque é mudança de COMPORTAMENTO do lançador dela, e a
+    # `GTK-3` mudou o endereço, não o produto.
+    "app/arranque.py::x11_alcancavel": (
+        "06/09/2026 — o caminho se perde entre `run.sh` (que força XWayland sem "
+        "conferir) e `scripts/abrir_interface.py` (que não confere nada). "
+        "Fecha quando o lançador chamar `forcar_xwayland_no_cosmic`, que é "
+        "quem a usa. Régua viva: "
+        "`tests/unit/test_ambiente_presumido_01_o_display_que_nao_existe.py`."
+    ),
+    "app/arranque.py::forcar_xwayland_no_cosmic": (
+        "06/09/2026 — mesmo caminho perdido. Fecha com uma chamada em "
+        "`scripts/abrir_interface.py`, antes de `GLib.set_prgname`. Régua viva: "
+        "`tests/unit/test_ambiente_presumido_01_o_display_que_nao_existe.py`."
+    ),
+    "app/arranque.py::sanear_loaders_do_gdk_pixbuf": (
+        "06/09/2026 — o `run.sh:63-68` faz a versão GROSSA (só desarma quando "
+        "TODOS os módulos do cache moram em /snap). A fina, que também pega o "
+        "cache cujos `.so` são de outro confinamento — o caso em que o GTK "
+        "aborta o processo —, não tem chamador. Fecha em "
+        "`scripts/abrir_interface.py`, antes de qualquer import de "
+        "`gi.repository`."
+    ),
+    "app/arranque.py::de_outro_confinamento": (
+        "06/09/2026 — o caminho se perde no mesmo lugar da irmã: a única "
+        "chamadora é `app/arranque.sanear_loaders_do_gdk_pixbuf`, e essa não "
+        "tem chamador em produção. FECHA no mesmo commit, quando "
+        "`scripts/abrir_interface.py` chamar `sanear_loaders_do_gdk_pixbuf` "
+        "antes de qualquer import de `gi.repository` — depois disso o "
+        "GdkPixbuf já leu o cache e a correção chega tarde."
+    ),
+    "utils/single_instance.py::acquire_or_bring_to_front": (
+        "06/09/2026 — PROMESSA REAL SEM CAMINHO, e ela custou uma capacidade. "
+        "O único chamador era `app/app.py:218`: abrir o Hefesto com uma janela "
+        "já aberta TRAZIA A JANELA PARA A FRENTE em vez de subir uma segunda "
+        "(BUG-TRAY-SINGLE-FLASH-01, o modelo *primeira vence* que o docstring "
+        "do módulo descreve). A interface nova não tem esse caminho: "
+        "`interface/hefesto_vivo.py` e `scripts/abrir_interface.py` não citam "
+        "`single_instance`, e o `_kill_previous_instances` que MATAVA a "
+        "anterior morreu com `app/main.py`. Hoje, clicar duas vezes no ícone "
+        "dela abre duas janelas. O irmão `acquire_or_takeover` continua vivo e "
+        "é o do daemon (`daemon/main.py:99`). FECHA quando o piloto chamar "
+        "`acquire_or_bring_to_front(\"gui\", cb)` com um callback que "
+        "`present()` a janela dele — o que exige decidir o que ela quer que "
+        "aconteça no segundo clique, e por isso não foi feito aqui."
     ),
 }
 

@@ -81,7 +81,7 @@ import sys
 from collections.abc import Iterable
 from pathlib import Path
 
-#: As fotos que o `scripts/gui-captura/retratar_abas.py` grava, mais os dois
+#: As fotos que o `interface/olhar.py --todas --publicado --doc` grava, mais os dois
 #: recibos que moram junto delas (`PROVA-DA-FOTO.txt`, `CONFERIDO-EM.md`).
 FOTOS = "docs/usage/assets"
 
@@ -104,7 +104,6 @@ CODIGO_DA_TELA = (
     "src/hefesto_dualsense4unix/interface",
     "src/hefesto_dualsense4unix/app",
     "src/hefesto_dualsense4unix/gui",
-    "scripts/gui-captura",
 )
 
 #: O `git` responde por esta árvore vazia quando ainda não há `HEAD`.
@@ -224,7 +223,7 @@ def historia_em_dia(raiz: Path) -> bool | None:
 
 _CURA = (
     "  Cure rodando o retrato — uma execução, nenhum clique:\n"
-    "    scripts/gui-captura/retratar_abas.py\n"
+    "    src/hefesto_dualsense4unix/interface/olhar.py --todas --publicado --doc\n"
     f"    git add {FOTOS}\n"
     "\n  Se as imagens saírem iguais, o recibo `PROVA-DA-FOTO.txt` muda "
     "sozinho\n"

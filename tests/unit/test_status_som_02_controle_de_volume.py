@@ -47,7 +47,7 @@ pytest.importorskip("cairo")
 from gi.repository import Gdk, Gtk
 
 from hefesto_dualsense4unix.app import ipc_bridge
-from hefesto_dualsense4unix.app.constants import GUI_DIR, MAIN_GLADE
+from hefesto_dualsense4unix.app.constants import GUI_DIR
 from hefesto_dualsense4unix.app.theme import (
     ESCALA_PADRAO,
     escalar_css,
@@ -77,24 +77,28 @@ from hefesto_dualsense4unix.core.speaker_scale import (
 #: A largura que a aba Status recebe na tela dela, maximizada em 1920x1080.
 LARGURA_DA_TELA_DELA = 1870
 
+# OS QUATRO TESTES DE ORÇAMENTO DESTA PÁGINA SAÍRAM EM 06/09/2026 (`GTK-3`), e
+# não porque deixaram de importar: eles montavam o `tab_status_box` do
+# `gui/main.glade` numa `Gtk.OffscreenWindow` e mediam o card DENTRO da janela
+# GTK — a superfície que a decisão dela aposentou
+# (`D-0609-GTK-LEVA-INTEIRA`). Eram
+# `test_a_aba_status_com_dois_cards_continua_cabendo_na_janela`,
+# `test_a_coluna_do_som_nao_e_a_mais_alta_da_faixa` e os dois de trilho do
+# SOM-03 (`…um_pixel_de_trilho_por_ponto_percentual`,
+# `…nao_e_mais_curto_que_a_barra_que_ele_comanda`).
+#
+# **O QUE SE PERDE, escrito porque se perde mesmo:** o requisito do SOM-03 —
+# *"a escala tem cerca de 30 pixels de largura, é só a bolinha"* — mediu o
+# `Gtk.Scale` do `controller_card.py` espremido pela aba. O card continua vivo
+# e é MOTOR (`app/widgets/`, que a sprint manda ficar), mas na interface nova
+# ele é desenhado em HTML: o trilho que a pessoa arrasta hoje é um
+# `<input type="range">`, e nenhuma régua desta casa mede a largura DELE. Quem
+# for fechar essa linha começa por `interface/paginas/01-jogar.html`.
+#
+# O que ficou aqui é o que não dependia da janela: as dez armadilhas do
+# registrador do alto-falante, os dois selos, o custo do card compacto e a
+# aritmética de volume — 17 testes.
 
-def _dimensao_da_janela(nome: str) -> int:
-    """Lê `default-width`/`default-height` direto do glade (nunca hardcode)."""
-    import xml.etree.ElementTree as ET
-
-    arvore = ET.parse(str(MAIN_GLADE))
-    for obj in arvore.iter("object"):
-        if obj.get("id") != "main_window":
-            continue
-        for prop in obj.findall("property"):
-            if prop.get("name") == nome:
-                return int((prop.text or "0").strip())
-    raise AssertionError(f"{nome} não encontrado em main_window")
-
-
-#: Largura e altura com que a janela ABRE — os dois orçamentos desta página.
-LARGURA_DE_PROJETO = _dimensao_da_janela("default-width")
-ALTURA_DE_PROJETO = _dimensao_da_janela("default-height")
 
 
 def _gtk_pronto() -> bool:
@@ -397,24 +401,6 @@ def _tema_na_escala_que_sai() -> Iterator[None]:
     if tela is not None:
         Gtk.StyleContext.remove_provider_for_screen(tela, provider)
 
-
-def _aba_status_montada() -> tuple[Any, Any]:
-    """Carrega o glade numa janela offscreen e devolve ``(builder, root)``."""
-    builder = Gtk.Builder()
-    builder.add_from_file(str(MAIN_GLADE))
-    root = builder.get_object("root_box")
-    pai = root.get_parent()
-    if pai is not None:
-        pai.remove(root)
-    win = Gtk.OffscreenWindow()
-    win.get_style_context().add_class("hefesto-dualsense4unix-window")
-    win.add(root)
-    win.set_size_request(LARGURA_DE_PROJETO, -1)
-    win.show_all()
-    while Gtk.events_pending():
-        Gtk.main_iteration()
-    _janelas_vivas.append(win)
-    return builder, root
 
 
 # ---------------------------------------------------------------------------
@@ -895,169 +881,6 @@ def test_o_controle_novo_custa_zero_largura_no_card_compacto(
     )
 
 
-def test_a_aba_status_com_dois_cards_continua_cabendo_na_janela(
-    _tema_na_escala_que_sai: None,
-) -> None:
-    """O orçamento de largura da aba, com o controle de volume dentro.
-
-    REAFERIDO nesta bancada (fonte na escala da sessão, `Gtk.OffscreenWindow`):
-    a aba Status com dois controles pede **1148px de 1180px** — 32px de folga,
-    e não os 116px que a sprint anotou antes da CARD-OCUPA-01 ter alargado os
-    desenhos. A leva da SOM-02 não gastou nenhum deles.
-
-    A mordida: qualquer piso de largura no controle deslizante ou nos botões do
-    card COMPACTO (um `set_size_request`, um `width_chars` sem ellipsize) sobe
-    somado nos dois cards e estoura os 1180.
-    """
-    builder, root = _aba_status_montada()
-    slot = builder.get_object("status_players_slot")
-    for coluna in (0, 1):
-        card = ControllerCard(compact=True)
-        card.set_hexpand(True)
-        card.set_valign(Gtk.Align.START)
-        slot.attach(card, coluna, 0, 1, 1)
-        card.update(
-            _entry_com({"volume": 180, "muted": False}), _ESTADO, _LeituraMic()
-        )
-    janela = root.get_toplevel()
-    janela.show_all()
-    while Gtk.events_pending():
-        Gtk.main_iteration()
-
-    largura, _natural = builder.get_object("tab_status_box").get_preferred_width()
-
-    assert largura <= LARGURA_DE_PROJETO, (
-        f"a aba Status com dois controles pede {largura}px e a janela abre com "
-        f"{LARGURA_DE_PROJETO}px ({largura - LARGURA_DE_PROJETO}px a mais): "
-        "sem rolagem horizontal, a janela nasce maior que o projeto"
-    )
-
-
-def test_a_coluna_do_som_nao_e_a_mais_alta_da_faixa(
-    _tema_na_escala_que_sai: None,
-) -> None:
-    """O orçamento de ALTURA desta leva, medido em PROPORÇÃO e não em pixels.
-
-    Este teste substitui uma asserção de pixels absolutos (``card <= faixa``)
-    que este arquivo duplicava de `test_layout_orcamento_altura.py`. A
-    duplicata foi REPROVADA pelo runner por um motivo que vale escrever: as
-    duas bancadas mediram a MESMA faixa como **431px lá e 383px aqui, no mesmo
-    processo** — 48px de diferença. Um orçamento absoluto cujo denominador
-    muda 48px entre dois arquivos do mesmo job não afere desenho, afere
-    ambiente. O dono único do teto absoluto passa a ser
-    `test_layout_orcamento_altura.py`, que é o arquivo com esse nome; aqui fica
-    o que é da SOM-02/03 e o que sobrevive a qualquer fonte.
-
-    **A grandeza estável.** A faixa de leitura tem três colunas (sensores,
-    miolo com analógicos e som, grade de glifos) e a altura do card é a da
-    MAIS ALTA. Enquanto a coluna do som não for a mais alta, cada pixel que o
-    comando do alto-falante ganha custa ZERO ao card — quem manda é outra
-    coluna. Isso é uma razão entre dois números que crescem JUNTOS com a
-    fonte, e por isso não depende de qual fonte o ambiente tem.
-
-    Medido nas duas pontas de fonte, sob Xvfb (`-screen 0 1280x1024x24`), card
-    de um controle:
-
-    ==========  ============  ==============  ==========
-    escala      coluna som    maior vizinha   card/faixa
-    ==========  ============  ==============  ==========
-    0 (Sans 10)    234px         246px         409/445
-    3 (12.25)      246px         246px         421/412
-    8 (Sans 16)    272px         272px         465/459
-    ==========  ============  ==============  ==========
-
-    ANTES desta rodada, na escala 3: coluna do som **280px** contra 246 — 34px
-    a mais, e os 34px iam direto para o card (455px, contra os 421 que ele
-    pedia antes da leva do som).
-
-    **Só o card de UM controle.** No compacto não existe grade de glifos por
-    baixo para servir de piso — a coluna do som é a mais alta por construção,
-    e cobrar dela uma vizinha maior seria cobrar o impossível. O que guarda o
-    compacto é o teste de LINHAS logo abaixo, que é a mesma regra dita de um
-    jeito que não depende de fonte nenhuma.
-
-    A mordida: devolver o medidor do microfone aos 56px de altura
-    (`_MIC_METER_PX_UNICO`) ou a barra fina do alto-falante aos 18
-    (`_BARRA_SPEAKER_PX_UNICO`) põe a coluna do som acima da vizinha e o card
-    volta a crescer — conferido em 01/08, 280 contra 246.
-    """
-    card = _aba_com_um_card(
-        LARGURA_DE_PROJETO, speaker={"volume": 180, "muted": False}
-    )
-
-    faixa = card._linha_inferior
-    assert len(faixa.get_children()) >= 2, "a faixa de leitura perdeu as colunas"
-    coluna_som = card._coluna_audio
-    som = coluna_som.get_preferred_height()[0]
-
-    # As colunas são nomeadas UMA A UMA, e não tiradas de `get_children()` da
-    # faixa. O motivo é a ALINHA-DUAS-LINHAS-01: ela agrupou a faixa em duas
-    # metades para a linha de cima ter em que se alinhar, e a partir daí
-    # `get_children()` devolve as METADES, não as colunas. Com a lista antiga
-    # a grade de glifos — que é o piso de altura desta faixa — saiu da
-    # comparação por ter mudado de caixa, e o teste passou a reprovar uma
-    # geometria que não piorou em nada. Nomear cada coluna prende a medida ao
-    # que ela significa e não a onde ela está pendurada.
-    vizinhas = [
-        card._touch_box.get_parent(),  # coluna dos sensores (touchpad+lightbar)
-        card._stick_left.get_parent(),  # os dois analógicos
-        card._glyph_grid,  # a grade de botões, o piso de altura da faixa
-    ]
-    maior_vizinha = max(v.get_preferred_height()[0] for v in vizinhas)
-
-    assert som > 1 and maior_vizinha > 1, (
-        "faixa sem alocação: a medida seria 1x1 e passaria com qualquer desenho"
-    )
-
-    # A FOLGA de 12px é a decisão dela de 01/08 (SOM-ROTA-NO-CARD-01), medida e
-    # paga: *"aquele botão de voltar ao anterior sai de lá de cima e fica no
-    # espaço onde tem 'não ajustado' no alto-falante"*. Para o botão caber
-    # naquele lugar, o rótulo de valor subiu para a linha da barra — e uma
-    # linha que tinha 12px (só a barra) passou a ter 20 (a altura do rótulo).
-    # São 8px, e eles saem do bloco do som.
-    #
-    # Por que a regra continua existindo com folga em vez de ser apagada: ela
-    # protege contra o bloco do som DISPARAR (a mordida abaixo mede 280 contra
-    # 246, que são 34px). Oito px de decisão consciente e trinta e quatro de
-    # regressão silenciosa são coisas diferentes, e o teto de 12 separa as
-    # duas. O que não pode ceder é o card na faixa, e isso é a asserção
-    # seguinte — o dono absoluto continua sendo
-    # `test_layout_orcamento_altura.py`.
-    folga_da_rota_no_card = 12
-    #: A faixa que a aba Status entrega aos cards, medida com a janela no
-    #: tamanho de projeto. Mesmo número de `test_status_som_04_som_de_
-    #: confirmacao.py`, que é o outro teste que o cobra.
-    #:
-    #: **467 CADUCOU em 01/08/2026 (noite), e o número não foi afrouxado para
-    #: caber — foi remedido.** Remedição, com a janela em 1180x830 e a escala
-    #: de fonte da sessão (+3), com `status_players_scroll.get_allocated_height()`:
-    #:
-    #: * frame "Estado" VISÍVEL: a faixa dá **550px**;
-    #: * frame "Estado" escondido: **708px**.
-    #:
-    #: Ou seja, 467 já estava defasado ANTES desta leva — ele é anterior à
-    #: ESTADO-TRES-LINHAS-01, que levou o frame de cinco linhas para três e
-    #: devolveu essa altura aos cards, e ninguém remediu.
-    #:
-    #: Fica o número do PIOR caso (550, com o frame na tela), e não o dos 708,
-    #: de propósito: a CARD-ÚNICO-01 esconde o frame quando há um controle só,
-    #: mas um teto que dependa dessa regra quebraria no dia em que ela mudar.
-    #: O dono absoluto continua sendo `test_layout_orcamento_altura.py`, que
-    #: MEDE a faixa em vez de repetir o número.
-    faixa_dos_cards_px = 550
-
-    assert som <= maior_vizinha + folga_da_rota_no_card, (
-        f"a coluna do som pede {som}px e a maior coluna vizinha da faixa "
-        f"{maior_vizinha}px: passou da folga de {folga_da_rota_no_card}px que "
-        f"a rota no card custou ({som - maior_vizinha}px já cresceram). A "
-        "partir daqui cada pixel do bloco de áudio cresce o card inteiro."
-    )
-    assert card.get_preferred_height()[1] <= faixa_dos_cards_px, (
-        f"o card pede {card.get_preferred_height()[1]}px de altura e a faixa "
-        f"da aba dá {faixa_dos_cards_px}px"
-    )
-
-
 # ---------------------------------------------------------------------------
 # SOM-03 — o controle deslizante tem de dar para ARRASTAR
 # ---------------------------------------------------------------------------
@@ -1080,166 +903,6 @@ def test_a_coluna_do_som_nao_e_a_mais_alta_da_faixa(
 PISO_DO_TRILHO_PX: Final[int] = 100
 
 
-def _aba_com_um_card(
-    largura: int, *, speaker: dict[str, Any] | None = None
-) -> Any:
-    """A aba Status REAL do glade com UM card, alocada em `largura`.
-
-    O card solto numa `Gtk.OffscreenWindow` MENTE para este assunto: sozinho
-    ele recebe a janela inteira até o teto elástico e o controle deslizante sai
-    com 175px mesmo com o desenho defeituoso. Quem espremia o controle era a
-    aba — a faixa de leitura pede 1338px de natural e recebe 1098 na largura de
-    projeto, e é essa compressão que fazia os 38px.
-    """
-    builder, root = _aba_status_montada()
-    slot = builder.get_object("status_players_slot")
-    card = ControllerCard(compact=False)
-    card.set_hexpand(True)
-    card.set_valign(Gtk.Align.START)
-    slot.attach(card, 0, 0, 1, 1)
-    janela = root.get_toplevel()
-    janela.set_size_request(largura, ALTURA_DE_PROJETO)
-    janela.show_all()
-    janela.resize(largura, ALTURA_DE_PROJETO)
-    card.update(_entry_com(speaker), _ESTADO_ALTO, _LeituraMic())
-    _assentar(janela, card)
-    # GUARDA DE BANCADA, e não zelo: no runner de 01/08 este card saiu
-    # **1x1** e o controle deslizante devolveu `range_rect.width == -1` —
-    # medido nesta bancada, é exatamente o que um `Gtk.Scale` não alocado
-    # devolve. A asserção de trilho então reprovava com "-1px de trilho", que
-    # descreve a bancada e não o desenho. Aqui a bancada falha com o nome dela.
-    assert card.get_allocated_width() > 1, (
-        "o card saiu SEM alocação (1x1): a medida que vem a seguir não é do "
-        "desenho, é da bancada — nenhum orçamento pode ser lido daqui"
-    )
-    return card
-
-
-@pytest.mark.parametrize(
-    ("largura", "apelido"),
-    [
-        (LARGURA_DE_PROJETO, "a janela como ela ABRE"),
-        (LARGURA_DA_TELA_DELA, "a tela dela maximizada"),
-    ],
-)
-def test_o_controle_deslizante_tem_um_pixel_de_trilho_por_ponto_percentual(
-    largura: int, apelido: str, _tema_na_escala_que_sai: None
-) -> None:
-    """SOM-03 — *"a escala tem cerca de 30 pixels de largura, é só a bolinha"*.
-
-    O defeito era de REQUISIÇÃO, não de alocação. Dividindo a linha com os dois
-    botões, o controle deslizante pedia o natural dele (34px) e os botões, os
-    deles (101 e 93px): `GtkBox` só reparte excedente depois que todo mundo
-    chega ao natural, e num bloco de 254px não havia excedente nenhum. A barra
-    de LEITURA, essa sim sozinha na linha, recebia 240px para dizer a MESMA
-    grandeza — o bloco desenhava um trilho de 216px que ninguém podia arrastar
-    logo acima de um controle de 14px que era o único que se arrastava.
-
-    Medido nesta bancada, trilho (`get_range_rect`) do card de um controle,
-    com posse — que é o estado em que alguém de fato arrasta:
-
-    ==========================  ========  =========
-    largura da janela           ANTES     DEPOIS
-    ==========================  ========  =========
-    1180 (a de projeto)          23px      216px
-    1870 (a tela dela)          143px      336px
-    ==========================  ========  =========
-
-    Sem posse — o estado da foto dela, em que o rótulo diz ``não ajustado`` e
-    come 94px da linha — o número de ANTES era pior ainda: 38px de widget,
-    14px de trilho, 7,1 pontos percentuais por pixel.
-
-    A mordida: devolver o controle deslizante à linha dos botões
-    (``linha_legenda.pack_start(escala, True, True, 0)`` com os dois botões
-    atrás, e o rótulo de valor de volta à linha dele) derruba o caso de 1180
-    com 23px de trilho contra um piso de 100 — conferido em 01/08.
-    **O caso de 1180 é o que morde** — na tela larga o desenho antigo já dava
-    143px e passaria despercebido, que é o mesmo erro de medir a altura contra
-    o card curto.
-    """
-    card = _aba_com_um_card(largura, speaker={"volume": 180, "muted": False})
-    escala = card._speaker_escala
-    assert escala.get_allocated_width() > 1, (
-        "o controle deslizante saiu sem alocação: `get_range_rect()` devolve "
-        "-1 nesse estado, e -1 é defeito de bancada, não de desenho"
-    )
-    trilho = escala.get_range_rect().width
-
-    assert trilho >= PISO_DO_TRILHO_PX, (
-        f"em {apelido} ({largura}px) o controle deslizante do alto-falante tem "
-        f"{trilho}px de trilho para 100 pontos percentuais "
-        f"({100 / max(1, trilho):.1f} pontos por pixel): não dá para escolher "
-        "um valor com o ponteiro, só uma faixa deles"
-    )
-
-
-@pytest.mark.parametrize("compact", [False, True])
-def test_o_controle_deslizante_nao_e_mais_curto_que_a_barra_que_ele_comanda(
-    compact: bool, _tema_na_escala_que_sai: None
-) -> None:
-    """A regra que impede o defeito de voltar por outra porta.
-
-    Barra e controle deslizante dizem a MESMA grandeza — uma lê, o outro manda
-    (E5). Um controle mais curto que a barra logo acima dele é a assinatura
-    exata do defeito: o bloco tem a largura, e ela está indo para a peça que
-    ninguém toca. O piso de trilho acima cobra o valor absoluto; este cobra a
-    PROPORÇÃO, e é o que continua valendo se um dia a janela abrir mais estreita
-    ou a barra encolher.
-
-    Não é uma trava no desenho: a regra não diz em que linha cada peça vive,
-    diz que o comando não pode ser mais curto que a leitura dele. O card
-    compacto a cumpre com um empilhamento diferente do card de um controle.
-
-    Medido nesta bancada na largura de projeto: card de um controle, barra
-    240px e controle 240px; compacto com dois cards, barra 113px e controle
-    113px. ANTES da SOM-03: barra 240px contra um controle de 38px (sem posse)
-    ou 47px (com posse) no card de um controle.
-
-    A mordida: pôr o controle de volta na linha dos botões derruba os dois
-    casos, e foi conferida em 01/08 nos dois — 47px de controle contra 240px de
-    barra no card de um controle, e 34px contra 126px no compacto.
-    """
-    largura = LARGURA_DE_PROJETO
-    if compact:
-        builder, root = _aba_status_montada()
-        slot = builder.get_object("status_players_slot")
-        cards = []
-        for coluna in (0, 1):
-            card = ControllerCard(compact=True)
-            card.set_hexpand(True)
-            card.set_valign(Gtk.Align.START)
-            slot.attach(card, coluna, 0, 1, 1)
-            cards.append(card)
-        janela = root.get_toplevel()
-        janela.set_size_request(largura, ALTURA_DE_PROJETO)
-        janela.show_all()
-        janela.resize(largura, ALTURA_DE_PROJETO)
-        for card in cards:
-            card.update(
-                _entry_com({"volume": 180, "muted": False}),
-                _ESTADO,
-                _LeituraMic(),
-            )
-        while Gtk.events_pending():
-            Gtk.main_iteration()
-        card = cards[0]
-    else:
-        card = _aba_com_um_card(
-            largura, speaker={"volume": 180, "muted": False}
-        )
-
-    barra = card._speaker_bar.get_allocated_width()
-    escala = card._speaker_escala.get_allocated_width()
-
-    assert barra > 1 and escala > 1, (
-        "card sem alocação: a medida seria 1x1 e passaria com qualquer desenho"
-    )
-    assert escala >= barra, (
-        f"o card {'compacto' if compact else 'de um controle'} desenha uma "
-        f"barra de leitura de {barra}px e um controle de comando de "
-        f"{escala}px logo abaixo dela: a largura do bloco está indo para a "
-        "peça que ninguém toca"
-    )
 
 
 # ---------------------------------------------------------------------------

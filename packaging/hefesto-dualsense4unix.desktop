@@ -23,7 +23,8 @@
 # smithay/src/xwayland/xwm/surface.rs:1083), e é por ele que a dock acha o
 # .desktop. Quem publica o valor do lado do código é
 # `utils/identidade.py:HEFESTO.wm_class`, aplicado por `Gdk.set_program_class`
-# em `app/main.py` e em `scripts/abrir_interface.py`.
+# em `scripts/abrir_interface.py` (06/09/2026: `app/main.py` fazia o mesmo
+# e saiu com a janela GTK — `D-0609-GTK-LEVA-INTEIRA`).
 Type=Application
 # O NOME NA DOCK É CURTO, e ele veio da MÁQUINA dela, não deste arquivo: o
 # atalho instalado dizia `Name=Hefesto` desde antes de 01/09/2026, reescrito por

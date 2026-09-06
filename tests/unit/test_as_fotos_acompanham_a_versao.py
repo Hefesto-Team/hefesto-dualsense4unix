@@ -101,18 +101,24 @@ import pytest
 
 RAIZ = Path(__file__).resolve().parents[2]
 
-#: As fotos que o `scripts/gui-captura/retratar_abas.py` grava.
+#: As fotos que o `interface/olhar.py --todas --publicado --doc` grava.
 FOTOS = "docs/usage/assets"
 
-#: O que, mudando, torna as fotos suspeitas. `app/` é o código das abas;
-#: `gui/` é o `main.glade` e o `theme.css`; `scripts/gui-captura` é o
-#: INSTRUMENTO que decide o que a foto mostra.
+#: O que, mudando, torna as fotos suspeitas. `interface/` é a tela de hoje —
+#: as dez páginas e o retratista delas; `app/` é o motor que elas chamam;
+#: `gui/` é o `theme.css`, de onde saem as cores da casa.
 #:
-#: Z0-1 (24/08/2026), §2.2/M1 da sprint Z0-01: até aqui a terceira entrada não
-#: existia, e o portão era CEGO ao próprio programa que tira a foto — uma
-#: mudança de +645 linhas em `retratar_abas.py` (o commit `3de95ff`, os cinco
-#: hosts) não tornava foto nenhuma suspeita. Ver `test_o_portao_acusa_retrato_
-#: mexido_depois_da_foto` para a mordida.
+#: Z0-1 (24/08/2026), §2.2/M1 da sprint Z0-01: até aquele dia o portão era CEGO
+#: ao próprio programa que tira a foto — uma mudança de +645 linhas em
+#: `retratar_abas.py` (o commit `3de95ff`, os cinco hosts) não tornava foto
+#: nenhuma suspeita. Ver `test_o_portao_acusa_retrato_mexido_depois_da_foto`
+#: para a mordida.
+#:
+#: `"scripts/gui-captura"` SAIU em 06/09/2026 (`GTK-3`): a pasta inteira era o
+#: retratista da JANELA GTK, aposentada por decisão dela
+#: (`D-0609-GTK-LEVA-INTEIRA`). **A regra do Z0-1 não caiu junto** — o
+#: retratista de hoje é `interface/olhar.py --todas --publicado --doc`, e ele
+#: mora DENTRO da primeira entrada. A mordida foi reapontada para ele.
 CODIGO_DA_TELA = (
     # A INTERFACE NOVA ENTROU EM 05/09/2026, e a ausência dela estava medida:
     # mexer nas dez abas que o lançador abre não tornava foto nenhuma suspeita,
@@ -127,7 +133,6 @@ CODIGO_DA_TELA = (
     "src/hefesto_dualsense4unix/interface",
     "src/hefesto_dualsense4unix/app",
     "src/hefesto_dualsense4unix/gui",
-    "scripts/gui-captura",
 )
 
 #: A DECLARAÇÃO DE CONFERÊNCIA — a segunda porta, 03/09/2026. Uma linha por
@@ -272,7 +277,7 @@ def test_as_fotos_nao_ficam_atras_do_codigo_da_tela() -> None:
         f"são de {commit_das_fotos}, que veio ANTES. As imagens do `README.md` "
         "e do `docs/usage/interface.md` documentam uma tela que pode não "
         "existir mais.\n\n"
-        "    scripts/gui-captura/retratar_abas.py\n\n"
+        "    src/hefesto_dualsense4unix/interface/olhar.py --todas --publicado --doc\n\n"
         "Uma execução, nenhum clique. Se as imagens saírem DIFERENTES, olhe-as "
         "antes de commitar: mudança de DESENHO é palavra dela "
         "(PROVA-DE-TELA-01), não de quem tirou a foto.\n\n"
@@ -349,22 +354,27 @@ def test_o_portao_acusa_foto_atrasada(tmp_path: Path) -> None:
 def test_o_portao_acusa_retrato_mexido_depois_da_foto(tmp_path: Path) -> None:
     """A MORDIDA do Z0-1 (§2.2/M1): o INSTRUMENTO conta como código da tela.
 
-    Repositório de dois commits: primeiro a foto, segundo **só**
-    `scripts/gui-captura/retratar_abas.py` — nenhum arquivo em `app/` nem em
-    `gui/`. Antes desta tarefa, `CODIGO_DA_TELA` não citava o script: o
-    segundo commit não tocava nada que o comparador olhasse, `_ultimo_commit`
-    para `CODIGO_DA_TELA` saía vazio e `fotos_em_dia` devolvia `None` — que
-    vira `pytest.skip`, verde, sem acusar nada. Com `scripts/gui-captura` na
-    tupla, o mesmo repositório tem de devolver `False`.
+    Repositório de dois commits: primeiro a foto, segundo **só** o retratista —
+    nenhum outro arquivo. Se `CODIGO_DA_TELA` não alcançasse o instrumento, o
+    segundo commit não tocaria nada que o comparador olha, `_ultimo_commit`
+    sairia vazio e `fotos_em_dia` devolveria `None` — que vira `pytest.skip`,
+    verde, sem acusar nada.
 
-    Para morder: comente a terceira entrada de `CODIGO_DA_TELA` (a linha
-    `"scripts/gui-captura"`) e rode este teste — ele reprova com
-    `assert None is False`, porque o comparador volta a ficar cego ao
+    O ALVO MUDOU DE ARQUIVO EM 06/09/2026 (`GTK-3`), e a regra não. O
+    instrumento era `scripts/gui-captura/retratar_abas.py`, o retratista da
+    JANELA GTK, apagado com ela; hoje é
+    `src/hefesto_dualsense4unix/interface/olhar.py`, que tira as DEZ. Ele mora
+    dentro da primeira entrada de `CODIGO_DA_TELA`, e por isso a tupla encolheu
+    de quatro para três sem perder o alcance — é o que este teste PROVA.
+
+    Para morder: comente a primeira entrada de `CODIGO_DA_TELA` (a linha
+    `"src/hefesto_dualsense4unix/interface"`) e rode este teste — ele reprova
+    com `assert None is False`, porque o comparador volta a ficar cego ao
     instrumento.
     """
     raiz = tmp_path / "so_retrato_mexido"
     (raiz / FOTOS).mkdir(parents=True)
-    (raiz / "scripts" / "gui-captura").mkdir(parents=True)
+    (raiz / "src" / "hefesto_dualsense4unix" / "interface").mkdir(parents=True)
     subprocess.run(["git", "init", "-q"], cwd=str(raiz), check=True)
     subprocess.run(
         ["git", "config", "user.email", "portao@exemplo.invalido"],
@@ -389,13 +399,13 @@ def test_o_portao_acusa_retrato_mexido_depois_da_foto(tmp_path: Path) -> None:
 
     _commitar(f"{FOTOS}/readme_inicio.png", "a foto", "primeiro")
     _commitar(
-        "scripts/gui-captura/retratar_abas.py",
-        "+645 linhas, os cinco hosts",
+        "src/hefesto_dualsense4unix/interface/olhar.py",
+        "o retratista das dez, mexido",
         "segundo — só o instrumento",
     )
 
     assert fotos_em_dia(raiz, FOTOS, CODIGO_DA_TELA) is False, (
-        "o comparador não acusou uma mudança em `scripts/gui-captura` "
+        "o comparador não acusou uma mudança em `interface/olhar.py` "
         "posterior à foto. É o buraco exato do F14: o instrumento que decide "
         "o que a foto mostra mudou +645 linhas no commit `3de95ff` e nada "
         "acusou, porque `CODIGO_DA_TELA` não o citava."

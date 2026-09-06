@@ -149,6 +149,49 @@ COMPARTILHADOS = frozenset({
 #: Onde a régua procura um sinal cujo escopo é o lado inteiro.
 SUFIXOS = {".py", ".html", ".glade", ".css", ".js"}
 
+#: OS ARQUIVOS QUE A CASA APOSENTOU POR DECISÃO — 06/09/2026, sprint `GTK-3`.
+#:
+#: Um endereço num deles NÃO é endereço morto: é endereço HISTÓRICO. A coluna
+#: `gtk_onde` responde *"onde a GTK fazia isto"*, e essa pergunta continua tendo
+#: resposta depois de o arquivo sair — a resposta é o git. Tratar as 126
+#: citações como defeito obrigaria a apagá-las, e apagar o endereço apagaria a
+#: única prova de que a feature EXISTIU do lado GTK, que é o que faz o
+#: `FALTA_NO_HTML` desta planilha ser dívida e não opinião.
+#:
+#: **A LISTA NÃO PODE APODRECER, e há régua para isso:** um caminho declarado
+#: aqui que VOLTE a existir na árvore reprova, nomeando. A declaração é sobre um
+#: arquivo que saiu, não uma licença para não conferir endereço.
+#:
+#: E ela só vale para `gtk_onde`. Endereço histórico no lado HTML seria a régua
+#: medindo a tela contra um arquivo que não abre — que é o defeito inteiro.
+APOSENTADOS: dict[str, str] = {
+    "src/hefesto_dualsense4unix/gui/main.glade": (
+        "a janela GTK, aposentada em 06/09/2026 por decisão dela "
+        "(D-0609-GTK-LEVA-INTEIRA): *\"a ideia sempre foi reaproveitar o que fiz "
+        "no gtk e não apontar nada mais pra lá mas pro html\"*"
+    ),
+    "src/hefesto_dualsense4unix/app/app.py": (
+        "o `HefestoApp`, que montava a janela — mesma decisão, mesmo dia"
+    ),
+    "src/hefesto_dualsense4unix/app/main.py": (
+        "o entry point da janela — mesma decisão. O que nele NÃO montava janela "
+        "mudou de casa para `app/arranque.py`"
+    ),
+    "scripts/gui-captura/": (
+        "o retratista das ONZE abas da janela — mesma decisão. Quem fotografa as "
+        "DEZ é `src/hefesto_dualsense4unix/interface/olhar.py --todas "
+        "--publicado --doc`"
+    ),
+}
+
+
+def aposentado(caminho: str) -> str | None:
+    """A razão de o arquivo ter sido aposentado, ou None se ele não foi."""
+    for prefixo, razao in APOSENTADOS.items():
+        if caminho == prefixo or caminho.startswith(prefixo):
+            return razao
+    return None
+
 #: O vocabulário de endereço da interface nova (``data-campo``, ``data-gesto``,
 #: ``data-hef-alvo``…). Um sinal ``AUSENTE` com esta forma é legítimo mesmo sem
 #: existir hoje em lugar nenhum: é O ENDEREÇO QUE A PÁGINA VAI GANHAR quando a
@@ -258,8 +301,29 @@ def ler_csv() -> tuple[list[dict[str, str]], list[str]]:
     return linhas, falhas
 
 
-def conferir(linhas: list[dict[str, str]], arvore: Arvore) -> list[str]:
+def conferir_a_lista_de_aposentados() -> list[str]:
+    """Regra 9: arquivo declarado APOSENTADO não pode estar de volta na árvore.
+
+    Lista de exceção que envelhece calada vira paisagem — é regra desta casa, e
+    aqui o preço seria alto: um `gui/main.glade` que voltasse a existir teria os
+    endereços dele deixados de conferir para sempre, e a régua daria verde sobre
+    linha que ninguém mais abre.
+    """
     falhas: list[str] = []
+    for caminho, razao in APOSENTADOS.items():
+        alvo = RAIZ / caminho
+        if alvo.exists():
+            falhas.append(
+                f"aposentado-vivo: {caminho} está declarado em `APOSENTADOS`\n"
+                f"    ({razao})\n"
+                "    e o arquivo EXISTE nesta árvore. Ou a remoção foi desfeita — e a\n"
+                "    linha sai daqui, para os endereços voltarem a ser conferidos —, ou\n"
+                "    alguém recriou o que a decisão dela mandou apagar.")
+    return falhas
+
+
+def conferir(linhas: list[dict[str, str]], arvore: Arvore) -> list[str]:
+    falhas: list[str] = conferir_a_lista_de_aposentados()
     for n, l in enumerate(linhas, 2):
         onde = f"{CSV.name}:{n}  [{l['aba']}] {l['feature'][:64]}"
         gtk, html = enderecos(l["gtk_onde"]), enderecos(l["html_onde"])
@@ -269,6 +333,18 @@ def conferir(linhas: list[dict[str, str]], arvore: Arvore) -> list[str]:
             for e in lista:
                 caminho, _, numero = e.partition(":")
                 p = RAIZ / caminho
+                razao = aposentado(caminho)
+                if razao is not None:
+                    # Endereço HISTÓRICO, não morto — ver `APOSENTADOS`. Só no
+                    # lado GTK: no lado HTML seria a régua medindo a tela contra
+                    # um arquivo que não abre.
+                    if coluna != "gtk_onde":
+                        falhas.append(
+                            f"endereco-morto: {onde}\n"
+                            f"    {coluna}: {e} — o arquivo foi APOSENTADO ({razao}),\n"
+                            "    e endereço aposentado só vale em `gtk_onde`. O lado HTML "
+                            "tem de\n    apontar para arquivo que abre.")
+                    continue
                 if not p.is_file():
                     falhas.append(f"endereco-morto: {onde}\n    {coluna}: {e} — o arquivo não existe.")
                     continue
