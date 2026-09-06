@@ -237,6 +237,62 @@ def _a_pagina_pedida(pedido: str) -> str:
             return nome
     return pedido
 
+
+#: O QUE CONTA COMO DONO DE UM CAMPO — e **assento não é modelo**.
+#:
+#: O DEFEITO foi relatado pela `ONDA5-05-02` (§4.3) e MEDIDO aqui em 06/09/2026:
+#: o desenho compartilhado leva `data-controle="dualsense"`
+#: (`interface/ds_limpo.svg:2`), e ali o valor é o MODELO do aparelho, não o
+#: assento. O piloto resolvia o dono de um campo subindo a árvore até o primeiro
+#: elemento com `data-controle` ou `data-uniq` — então todo campo de dentro do
+#: `<svg>` voltava com dono `"dualsense"` em vez de `p1`..`p4`.
+#:
+#: E ELE NÃO ERA HIPOTÉTICO. Medido nas dez páginas publicadas e nas dez da
+#: bancada: `treme-e` e `treme-d` da `05-vibracao` (alvo `classe`) moram DENTRO
+#: do `<svg>`, nas colunas do p1 e do p2 — QUATRO campos por arquivo que o
+#: `LER_CAMPOS` devolvia com o dono errado, e que a régua do mockup não casava
+#: com a coluna que os pinta. A disciplina que segurava o resto está escrita em
+#: `a04_iluminacao.banco_de_luzes` — *"nenhum `data-controle` nasce aqui"* —, e
+#: disciplina não é cura: ela cobra de toda frente futura o que uma linha aqui
+#: resolve.
+#:
+#: A LISTA É DE PERMITIDOS, e o dono dos assentos é `pacotes.TODOS_OS_LUGARES`.
+#: Uma lista de proibidos (*"tudo menos `dualsense`"*) só cresceria quando
+#: alguém se lembrasse — e o esquecimento é silencioso, que é a forma de defeito
+#: que esta casa nomeia toda semana.
+#:
+#: O VAZIO ENTRA, E ESSA É A METADE QUE A SPRINT NÃO PREVIA. `data-controle=""`
+#: não é um modelo: é o ESCUDO que `monta._endereco_do_chip` põe nos chips da
+#: fita para dizer *"este clique não é de controle nenhum"*, e ele foi MEDIDO em
+#: 05/09/2026 — sem ele, o "deu certo" de trocar do P1 para o P2 pousava no
+#: cartão do P1. Tirá-lo daqui ressuscitaria aquele defeito no mesmo commit que
+#: cura este.
+#:
+#: DONO ÚNICO IMPOSSÍVEL, RÉGUA NO LUGAR — a mesma forma de `MS_DA_PISCADA`: o
+#: bootstrap e o leitor de campos são strings CRUAS que seis réguas desta casa
+#: extraem do fonte por expressão regular, então nenhuma das duas pode ser
+#: concatenada nem interpolada. O seletor vive escrito nelas e aqui, e
+#: `test_o_seletor_do_dono_pergunta_ao_dono` exige que os três digam o mesmo.
+SELETOR_DO_DONO = '[data-uniq],[data-controle=""],' + ",".join(
+    f'[data-controle="{lugar}"]' for lugar in sorted(pacotes.TODOS_OS_LUGARES))
+
+#: O QUE UM GESTO **VIVO** NÃO PODE DEVOLVER — a quarta porta é de LEITURA.
+#:
+#: As três primeiras são o mesmo fato de forma diferente: um `input` dispara a
+#: cada TECLA, e o que estas chaves fazem custa caro dez vezes por segundo.
+#:
+#: * `blocos` e `fita` TROCAM HTML INTEIRO — `innerHTML` no container, `outerHTML`
+#:   no nó. É o defeito que a `A-TELA-SAMBA-01` mediu em 06/09/2026: quem clicou
+#:   fica com o `mousedown` num nó que já não existe. Aqui seria pior, porque o
+#:   nó arrancado é o campo em que ela está DIGITANDO;
+#: * `recado` e `recados` são o canal de AVISO, e ele tem prazo — 30 s a recusa,
+#:   6 s o recibo. Um aviso por tecla encheria o cartão de frases que ela não
+#:   pediu, e a decisão dela sobre este canal é de 02/09: *é aviso, não estado*.
+#:
+#: O QUE SOBRA É A CARGA DE PINTURA — `mesa`, `colunas`, `alvo`. É o vocabulário
+#: que o `_deu_certo` já usa, e nenhum segundo nasce aqui.
+CHAVES_QUE_O_VIVO_RECUSA = ("blocos", "fita", "recado", "recados")
+
 #: O BOOTSTRAP: uma função de pintura, genérica, para as dez.
 #:
 #: Ela NÃO sabe nada de nenhuma aba — recebe endereço e valor e escreve. Toda a
@@ -791,6 +847,41 @@ BOOTSTRAP = r"""
   function pintar_recados(lista){
     let n = 0;
     const vivas = [];
+    // UM LUGAR POR PÁGINA, E DOIS NÃO SE DESEMPATAM POR ORDEM DO DOCUMENTO.
+    //
+    // O terceiro lugar do recado é declarado pela PÁGINA — um container com
+    // `data-hef-recados`, e o `~=` casa por PALAVRA, então um só atributo pode
+    // valer para os dois tons. Com DOIS containers declarando o mesmo tom, um
+    // `querySelector` escolheria o primeiro do documento: a tela decidindo por
+    // ordem de marcação, que é o defeito da lista plana (T-04, a coluna "Ajuste
+    // próprio").
+    //
+    // ENTÃO O PILOTO RECUSA OS DOIS e cai no comportamento de sempre — cartão,
+    // depois tarja. Recusar é o que faz o defeito APARECER: escolher em silêncio
+    // deixaria a página errada funcionando por acaso até o dia em que a ordem
+    // mudasse.
+    //
+    // E ELE DIZ QUAIS SÃO, em `window.__hef.faixasDemais`, por tom. Uma recusa
+    // que não nomeia os dois obriga quem lê a procurar o atributo em mil linhas
+    // de HTML publicado.
+    //
+    // A CONTA SE REFAZ A CADA CHAMADA, e não uma vez na instalação: quem
+    // declara o container é um bloco de outra frente, e um bloco se troca
+    // inteiro no tique (`p.blocos`). Uma leitura congelada mediria a página que
+    // havia quando a janela abriu.
+    const declarados = {};
+    for(const f of document.querySelectorAll('[data-hef-recados]')){
+      const bruto = String(f.getAttribute('data-hef-recados') || '').trim();
+      for(const t of (bruto ? bruto.split(/\s+/) : [])){
+        if(!declarados[t]) declarados[t] = [];
+        declarados[t].push(f.id || (f.tagName.toLowerCase() + '.' + f.className));
+      }
+    }
+    const demais = {};
+    for(const t of Object.keys(declarados)){
+      if(declarados[t].length > 1) demais[t] = declarados[t];
+    }
+    window.__hef.faixasDemais = demais;
     for(const r of lista){
       // DOIS ENDEREÇOS, E ELES NÃO SÃO O MESMO. `chave` é a IDENTIDADE do
       // aviso — o `uniq` normalizado do controle que recusou —, e é por ela
@@ -816,7 +907,9 @@ BOOTSTRAP = r"""
       // O TERCEIRO LUGAR — A FAIXA QUE A PÁGINA DECLARA. 05-Q4 dela,
       // 06/09/2026. O endereço é da PÁGINA (`data-hef-recados`), e o tom viaja
       // nele porque só o SUCESSO muda de lugar: a recusa continua no cartão.
-      const faixa = document.querySelector('[data-hef-recados~="' + tom + '"]');
+      const faixa = demais[tom]
+        ? null
+        : document.querySelector('[data-hef-recados~="' + tom + '"]');
       const pai = faixa || cartao || document.body;
       let el = document.querySelector('.hef-recado[data-hef-recado="' + chave + '"]');
       // A PINTURA TROCA BLOCOS INTEIROS — a fita, a tabela de perfis, o mapa do
@@ -1232,7 +1325,15 @@ BOOTSTRAP = r"""
     document.addEventListener('blur', function(ev){
       if(ev.target && ev.target.isContentEditable) manda_do_alvo(ev);
     }, true);
+    // E O `input`, QUE É A QUARTA PORTA — ver `manda_do_vivo` logo abaixo. Ela
+    // é a única das quatro que NÃO despacha o gesto de `data-hef-gesto`, e a
+    // razão é que ali o gesto grava no disco dela.
+    document.addEventListener('input', function(ev){ manda_do_vivo(ev); }, true);
   }
+  // A SÉRIE DO GESTO VIVO. Ela é própria e não o contador do voo: o voo carimba
+  // o elemento e volta pelo `voltouDoVoo`; a série do vivo nunca toca o DOM —
+  // ela só diz ao Python qual leitura é a mais nova.
+  window.__hef.vivoN = window.__hef.vivoN || 0;
   function manda_do_alvo(ev){
       const alvo = ev.target.closest(
         '[data-gesto],[data-modo],[data-hef-gesto],[data-papel],[data-forca],' +
@@ -1240,16 +1341,81 @@ BOOTSTRAP = r"""
         '.r-aplicar,.r-salvar,.r-importar,.r-exportar');
       if(!alvo) return;
       const d = alvo.dataset;
-      // DE QUAL CONTROLE, e sem isto o gesto é ambíguo: a mesa tem quatro
-      // colunas iguais e um "Desligar" clicado na terceira não diz em qual
-      // barra de luz mexer. O `closest` sobe até o bloco do controle — é o
-      // mesmo `data-controle` que a pintura usa para achar onde escrever.
       // O RODAPÉ ENDEREÇA POR CLASSE, e não por `data-`: ele mora no
       // `topo.html`, o esqueleto das dez, e um `data-gesto` ali mudaria as dez
       // páginas de uma vez. A classe `r-<nome>` já era o endereço dele no
       // `jogar_vivo.py` — este é o quarto vocabulário, e é o último.
       const doRodape = (alvo.className.match(/\br-([a-z]+)\b/) || [])[1];
-      const dono = alvo.closest('[data-controle],[data-uniq]');
+      // O CARIMBO DO VOO, e ele é aplicado ANTES de a mensagem sair: a resposta
+      // tem de ser do CLIQUE, não da volta do Python. O gesto atravessa uma
+      // thread e o IPC; esperar por ele para dizer "estou trabalhando" seria
+      // dizê-lo tarde demais — que é o defeito inteiro.
+      //
+      // TODO CLIQUE QUE VAI PARA O PYTHON É CARIMBADO, inclusive o que vai ser
+      // recusado por não ter dono. O piloto despacha o pouso nos TRÊS desfechos
+      // (aplicou, recusou, sem dono), e um botão que ficasse em voo porque o
+      // gesto não existia seria a tela mentindo sobre um trabalho que ninguém
+      // começou.
+      manda(carga_do_alvo(
+        alvo, ev, d.gesto || d.hefGesto || d.papel || doRodape || 'clique',
+        em_voo(alvo)));
+  }
+  // A QUARTA PORTA — `data-hef-vivo`, o gesto que LÊ e não grava.
+  //
+  // POR QUE ELA PRECISOU EXISTIR, e o relato é da `ONDA5-10-02`: a decisão
+  // 10-Q4 dela pede o rótulo do jogo *"ao vivo"*, e `input` é o único evento que
+  // um campo de texto dispara a cada TECLA. As três portas de hoje despacham o
+  // gesto de `data-hef-gesto` — que naquele campo é `editor.jogo`, e ele GRAVA
+  // O PERFIL DELA. Ligar `input` ao mesmo atributo regravaria o `.json` a cada
+  // letra digitada.
+  //
+  // ENTÃO O ENDEREÇO É PRÓPRIO, e é essa a peça inteira: um elemento pode
+  // carregar `data-hef-vivo="<gesto>"`, e o `input` despacha ESSE gesto — nunca
+  // o de `data-hef-gesto`, ainda que o mesmo elemento traga os dois.
+  //
+  // SEM O ATRIBUTO O `input` NÃO FAZ NADA. Nenhuma das dez abas muda de
+  // comportamento por esta porta nascer: quem a usa é quem publicar o atributo,
+  // e publicar é ato dela.
+  //
+  // ELE NÃO VESTE O `em_voo`, e é decisão: o cursor `progress` e a opacidade a
+  // cada tecla seriam a tela dizendo *"trabalhando"* sobre uma leitura de
+  // milissegundos — o oposto do que aquele sinal existe para dizer.
+  //
+  // UM VIVO EM VOO POR ELEMENTO. Cada disparo leva um número de série e a
+  // identidade do elemento; o Python guarda o último e DESCARTA a resposta que
+  // chegar fora de ordem. Sem isso, a leitura da tecla `1` pode voltar depois da
+  // leitura de `15` e pintar o rótulo do jogo errado — e ficar assim até a
+  // próxima tecla.
+  function manda_do_vivo(ev){
+      const alvo = ev.target.closest('[data-hef-vivo]');
+      if(!alvo) return;
+      const g = String(alvo.dataset.hefVivo || '').trim();
+      if(!g) return;
+      const o = carga_do_alvo(alvo, ev, g, '');
+      // A IDENTIDADE DO ELEMENTO, e ela é o endereço que ele já tem: o
+      // `data-campo`/`data-hef`/`data-papel` do próprio campo mais o dono. Dois
+      // campos vivos diferentes na mesma coluna não compartilham série; dois
+      // disparos do MESMO campo, sim — que é exatamente o que se quer cancelar.
+      o.vivoChave = g + '|'
+        + (alvo.dataset.campo || alvo.dataset.hef || alvo.dataset.papel || '')
+        + '|' + String(o.controle || '');
+      o.vivo = String(++window.__hef.vivoN);
+      manda(o);
+  }
+  function carga_do_alvo(alvo, ev, gesto, voo){
+      const d = alvo.dataset;
+      // DE QUAL CONTROLE, e sem isto o gesto é ambíguo: a mesa tem quatro
+      // colunas iguais e um "Desligar" clicado na terceira não diz em qual
+      // barra de luz mexer. O `closest` sobe até o bloco do controle — é o
+      // mesmo `data-controle` que a pintura usa para achar onde escrever.
+      //
+      // O DONO É O ASSENTO, e o seletor é uma lista de PERMITIDOS — ver
+      // `SELETOR_DO_DONO` no Python, que é quem tem a razão inteira e a régua.
+      // Em uma linha: o desenho compartilhado carrega o MODELO no mesmo
+      // atributo, e um botão posto dentro dele chegaria aqui dizendo que o
+      // controle se chama como o plástico.
+      const dono = alvo.closest(
+        '[data-uniq],[data-controle=""],[data-controle="p1"],[data-controle="p2"],[data-controle="p3"],[data-controle="p4"]');
       // O DATASET INTEIRO VAI JUNTO, e ele vem PRIMEIRO para que a lista
       // explícita abaixo continue mandando no que ela nomeia.
       //
@@ -1269,20 +1435,16 @@ BOOTSTRAP = r"""
       // se lembra, e o esquecimento é silencioso. O dataset inteiro não
       // esquece — e o custo é uma cópia de meia dúzia de strings por clique.
       const tudo = Object.assign({}, d);
-      // O CARIMBO DO VOO, e ele é aplicado ANTES de a mensagem sair: a resposta
-      // tem de ser do CLIQUE, não da volta do Python. O gesto atravessa uma
-      // thread e o IPC; esperar por ele para dizer "estou trabalhando" seria
-      // dizê-lo tarde demais — que é o defeito inteiro.
-      //
-      // TODO CLIQUE QUE VAI PARA O PYTHON É CARIMBADO, inclusive o que vai ser
-      // recusado por não ter dono. O piloto despacha o pouso nos TRÊS desfechos
-      // (aplicou, recusou, sem dono), e um botão que ficasse em voo porque o
-      // gesto não existia seria a tela mentindo sobre um trabalho que ninguém
-      // começou.
-      const voo = em_voo(alvo);
-      manda(Object.assign(tudo, {
+      return Object.assign(tudo, {
         voo: voo,
-        gesto: d.gesto || d.hefGesto || d.papel || doRodape || 'clique',
+        gesto: gesto,
+        // A MARCA DO VIVO NASCE VAZIA AQUI, e quem a preenche é o
+        // `manda_do_vivo`. Sem esta linha, uma página que um dia escrevesse
+        // `data-vivo` num botão faria um CLIQUE cair no caminho do gesto vivo —
+        // sem voo, sem recado e com a guarda de gravação por cima. É a mesma
+        // razão de a lista explícita vir depois do dataset, um risco abaixo:
+        // aqui o defeito seria calado.
+        vivo: '', vivoChave: '',
         modo: d.modo || '', forca: d.forca || '', player: d.player || '',
         lado: d.lado || '', campo: d.campo || '', hef: d.hef || '',
         hex: d.hex || '', sensor: d.sensor || '', rota: d.rota || '',
@@ -1334,7 +1496,8 @@ BOOTSTRAP = r"""
           // vocabulário que a mesa inteira já usa. `@controle` quer dizer "o
           // bloco do controle em que eu estou".
           const cx = pedido === '@controle'
-            ? alvo.closest('[data-controle],[data-uniq]')
+            ? alvo.closest(
+                '[data-uniq],[data-controle=""],[data-controle="p1"],[data-controle="p2"],[data-controle="p3"],[data-controle="p4"]')
             : document.getElementById(pedido);
           if(!cx) return null;
           const fora = {};
@@ -1350,7 +1513,7 @@ BOOTSTRAP = r"""
           return fora;
         })(),
         texto: (alvo.textContent || '').trim().slice(0, 60),
-      }));
+      });
   }
   function manda(o){
     o.pagina = location.pathname.split('/').pop();
@@ -1618,7 +1781,10 @@ CLIQUE_COM_ALVO = r"""
   }
   const el = document.querySelector(sel);
   if(!el) return 'NAO ACHEI NA PAGINA';
-  const dono = el.closest('[data-controle],[data-uniq]');
+  // A MESMA REGRA DO OUVINTE — ver `SELETOR_DO_DONO`. Uma régua que resolvesse
+  // o dono de outro jeito mediria um clique que o produto não faz.
+  const dono = el.closest(
+    '[data-uniq],[data-controle=""],[data-controle="p1"],[data-controle="p2"],[data-controle="p3"],[data-controle="p4"]');
   if(dono){
     const q = dono.dataset.controle || dono.dataset.uniq || '';
     window.__hef.alvoPadrao = q;
@@ -1694,7 +1860,13 @@ LER_CAMPOS = r"""
   const fora = [];
   for(const el of document.querySelectorAll('[data-campo],[data-papel],[data-hef]')){
     const chave = el.dataset.campo || el.dataset.papel || el.dataset.hef || '';
-    const bloco = el.closest('[data-controle],[data-uniq]');
+    // O DONO É O ASSENTO — ver `SELETOR_DO_DONO`. Sem esta lista, os quatro
+    // campos que moram dentro do desenho compartilhado (`treme-e` e `treme-d`,
+    // nas colunas do p1 e do p2 da `05-vibracao`) voltavam com o nome do MODELO
+    // no lugar do assento, e a régua do mockup não os casava com a coluna que
+    // os pinta.
+    const bloco = el.closest(
+      '[data-uniq],[data-controle=""],[data-controle="p1"],[data-controle="p2"],[data-controle="p3"],[data-controle="p4"]');
     const dono = bloco ? (bloco.dataset.controle || bloco.dataset.uniq || '') : '';
     const alvo = el.dataset.hefAlvo || 'texto';
     let v;
@@ -2019,6 +2191,25 @@ class Piloto:
         #: sucesso no mesmo botão não pode deixar as duas frases na tela, uma
         #: dizendo o contrário da outra.
         self._recados: dict[str, tuple[str, float, str]] = {}
+        #: A SÉRIE MAIS NOVA DE CADA CAMPO VIVO — `{identidade: série}`.
+        #:
+        #: É a metade Python do *"um gesto vivo em voo por elemento"*. O JS
+        #: numera cada disparo e diz de que campo ele é; aqui fica o último
+        #: número visto, e a resposta que chegar com um número velho é
+        #: DESCARTADA. Sem isso, a leitura da tecla `1` pode voltar depois da
+        #: leitura de `15` e pintar o rótulo do jogo errado — e ficar assim até
+        #: a próxima tecla, porque nada mais o repinta.
+        #:
+        #: SÓ O LAÇO DO GTK ESCREVE AQUI, como no depósito de recados: o gesto
+        #: corre em thread, e a comparação acontece no `idle_add` da volta.
+        self._vivos: dict[str, str] = {}
+        #: O QUE A QUARTA PORTA FEZ, para o relato e para a régua. Os três
+        #: contados à parte: sem eles, *"o vivo respondeu"*, *"o vivo chegou
+        #: tarde"* e *"o vivo foi recusado"* sairiam iguais — que é o silêncio
+        #: que esta casa persegue.
+        self.vivos_atendidos: list[str] = []
+        self.vivos_recusados: list[str] = []
+        self.vivos_descartados = 0
         self._fila: list[str] = []
         #: O `--prova-de-mockup`: o que o ARQUIVO crava, o que o DOM mostra
         #: ANTES de qualquer pintura, e o veredito de cada campo por aba.
@@ -2142,6 +2333,113 @@ class Piloto:
                              sugestao=sugestao)
 
     # -- os gestos ---------------------------------------------------------
+    def _com_uniq(self, o: dict[str, Any]) -> dict[str, Any]:
+        """O clique com o `uniq` do controle resolvido contra a mesa de agora.
+
+        A TRADUÇÃO MORA AQUI, e não dentro do gesto: a tela endereça por `pref`
+        (`p1`), o daemon por `uniq` (`d4:2f:00:00:…`), e a mesa que traduz é do
+        piloto. Cada gesto resolvendo por conta própria seria a mesma tradução
+        escrita nove vezes — e a nona estaria errada.
+
+        E ELA É UMA FUNÇÃO desde 06/09/2026, quando a quarta porta nasceu: o
+        gesto vivo precisa do MESMO `uniq` que o clique, e uma segunda cópia
+        deste laço seria a segunda a divergir.
+        """
+        pref = str(o.get("controle") or "")
+        for c in self._mesa_de_agora:
+            if c.get("pref") == pref or str(c.get("uniq") or "") == pref:
+                return {**o, "uniq": str(c.get("uniq") or "")}
+        return o
+
+    def _gesto_vivo(self, o: dict[str, Any], pagina: str, nome: str) -> None:
+        """A quarta porta — o gesto que LÊ enquanto ela digita, e não grava.
+
+        O CONTRATO, e cada linha dele fecha um defeito que a leitura por tecla
+        cria e a por clique não tem:
+
+        * **ele não pode gravar.** Quem declara o que muda na máquina dela é o
+          próprio gesto, no decorador (`@gesto(..., grava="save_profile")`), e é
+          esse registro que esta guarda consulta — `pacotes.GESTOS_QUE_MEXEM`,
+          o mesmo dono de que `PERIGOSOS` é derivado. Um `data-hef-vivo` apontado
+          para um gesto que grava é RECUSADO aqui, nomeando o gesto, e a função
+          nem chega a ser chamada;
+        * **a resposta não pode trocar HTML nem falar** — ver
+          `CHAVES_QUE_O_VIVO_RECUSA`;
+        * **a resposta velha não pinta por cima da nova** — a série do JS decide,
+          e a que chegar atrasada é descartada em silêncio (é o caminho normal
+          de quem digita depressa, não um defeito a anunciar).
+
+        POR QUE O REGISTRO E NÃO A CONSTANTE `PERIGOSOS`: aquela é avaliada no
+        IMPORT deste módulo, e um pacote importado depois — o caminho de toda
+        régua que registra um gesto à mão — não entraria nela. A pergunta é
+        feita ao dono na hora de despachar, que é quando a resposta importa.
+        """
+        serial = str(o.get("vivo") or "")
+        chave = str(o.get("vivoChave") or f"{pagina}:{nome}")
+        acao = pacotes.gesto_da_pagina(pagina, nome)
+        if acao is None:
+            self.vivos_recusados.append(f"{pagina}:{nome} (sem dono)")
+            print(f"[vivo sem dono] {pagina} · {nome} — o `data-hef-vivo` "
+                  f"aponta para um gesto que ninguém registrou", file=sys.stderr)
+            return
+        grava = (pacotes.GESTOS_QUE_MEXEM.get((pagina, nome))
+                 or pacotes.GESTOS_QUE_MEXEM.get(("*", nome)) or "")
+        if grava:
+            self.vivos_recusados.append(f"{pagina}:{nome} (grava: {grava})")
+            print(f"[vivo recusado] {pagina} · {nome} declara gravação "
+                  f"({grava}) — a quarta porta é de LEITURA, e ela dispara a "
+                  f"cada tecla", file=sys.stderr)
+            return
+        self._vivos[chave] = serial
+        o = self._com_uniq(o)
+
+        def trabalhar() -> None:
+            try:
+                resposta = acao(self._ctx_de_agora, o, ponte)
+            except Exception as erro:
+                # A RECUSA DE UM GESTO VIVO NÃO VAI PARA O CARTÃO, e é decisão:
+                # o canal do recado tem prazo (30 s a recusa) e um aviso por
+                # tecla o encheria de frases que ela não pediu. Um vivo que
+                # levanta é defeito de quem o ligou, e quem o lê é quem depura.
+                self.vivos_recusados.append(
+                    f"{pagina}:{nome} ({type(erro).__name__}: {erro})")
+                print(f"[vivo falhou] {pagina} · {nome}: {erro}", file=sys.stderr)
+            else:
+                GLib.idle_add(
+                    lambda r=resposta: self._vivo_voltou(pagina, nome, chave,
+                                                         serial, r))
+
+        threading.Thread(target=trabalhar, daemon=True).start()
+
+    def _vivo_voltou(self, pagina: str, nome: str, chave: str, serial: str,
+                     resposta: object) -> bool:
+        """A leitura chegou. Se ainda é a mais nova, ela pinta.
+
+        O DESCARTE É SILENCIOSO DE PROPÓSITO: chegar tarde é o caminho normal de
+        quem digita depressa, e um `stderr` por tecla afogaria o terminal de
+        quem depura. O contador `vivos_descartados` é onde ele aparece.
+        """
+        if self._vivos.get(chave) != serial:
+            self.vivos_descartados += 1
+            return False
+        if not isinstance(resposta, dict) or not resposta:
+            self.vivos_atendidos.append(f"{pagina}:{nome}")
+            return False
+        proibidas = [k for k in CHAVES_QUE_O_VIVO_RECUSA if k in resposta]
+        if proibidas:
+            self.vivos_recusados.append(
+                f"{pagina}:{nome} (devolveu {', '.join(proibidas)})")
+            print(f"[vivo recusado] {pagina} · {nome} devolveu "
+                  f"{', '.join(proibidas)} — a quarta porta dispara a cada "
+                  f"tecla, e essas chaves trocam HTML inteiro ou falam no "
+                  f"cartão", file=sys.stderr)
+            return False
+        self.vivos_atendidos.append(f"{pagina}:{nome}")
+        # A GUARDA `window.__hef &&` é a mesma da pintura, e pela mesma razão:
+        # entre a tecla e a volta da thread a página pode ter trocado.
+        self._js(f"window.__hef && window.__hef.pintar({_json(resposta)})")
+        return False
+
     def _gesto(self, o: dict[str, Any]) -> None:
         """tela → Python, já em JSON. Quem recusa o que não é objeto é a ponte.
 
@@ -2154,6 +2452,13 @@ class Piloto:
         self.gestos.append(o)
         nome = str(o.get("gesto") or "")
         pagina = str(o.get("pagina") or self.pagina)  # (noqa-acento: verbo)  (nome de variável)
+        # A QUARTA PORTA SAI AQUI, e antes de tudo: o gesto vivo tem contrato
+        # próprio (não veste voo, não deposita recado, não grava, e a resposta
+        # velha é descartada). Misturá-lo no caminho do clique faria a leitura de
+        # cada tecla percorrer o depósito de avisos e o pouso do botão.
+        if str(o.get("vivo") or ""):
+            self._gesto_vivo(o, pagina, nome)
+            return
         # O NÚMERO DO VOO, carimbado pelo ouvinte no elemento clicado. Ele é o
         # que devolve o botão ao normal — e tem de ser devolvido nos TRÊS
         # desfechos, o "sem dono" incluído.
@@ -2165,15 +2470,7 @@ class Piloto:
             print(f"[gesto sem dono] {pagina} · {nome} · {o.get('texto', '')!r}")
             self._pousou(voo)
             return
-        # O `uniq` É RESOLVIDO AQUI, e não dentro do gesto: a tela endereça por
-        # `pref` (`p1`), o daemon por `uniq` (`d4:2f:00:00:…`), e a mesa que traduz é
-        # do piloto. Cada gesto resolvendo por conta própria seria a mesma
-        # tradução escrita nove vezes — e a nona estaria errada.
-        pref = str(o.get("controle") or "")
-        for c in self._mesa_de_agora:
-            if c.get("pref") == pref or str(c.get("uniq") or "") == pref:
-                o = {**o, "uniq": str(c.get("uniq") or "")}
-                break
+        o = self._com_uniq(o)
         # O RECADO É ENDEREÇADO AQUI, PELO MESMO `uniq` que o gesto recebe, e
         # não pelo `pref`: a coluna troca de dono entre o clique e o tique
         # seguinte. Ver `self._recados`. Sem `uniq` resolvido (gesto de mesa, ou

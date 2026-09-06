@@ -1598,7 +1598,7 @@ def _coluna(c, e=None):
     # é o que o pintor e o ouvinte de clique procuram. As três frentes que ele
     # destrava, medidas em 02/09 contra o daemon dela:
     #
-    # 1. A PINTURA POR CONTROLE. `hefesto_vivo.py:240` faz
+    # 1. A PINTURA POR CONTROLE. `hefesto_vivo.py:1272` faz
     #    `querySelectorAll('[data-controle="p1"]')` e pinta DENTRO. Sem o
     #    atributo, os doze valores por coluna — identidade, o multiplicador e os
     #    dois motores, nos dois controles — não tinham onde cair: a aba pintava
@@ -1606,12 +1606,12 @@ def _coluna(c, e=None):
     #    tela continuava mostrando `0 /255` e `60 /255` do desenho com o daemon
     #    dizendo `—`.
     # 2. O DONO DO CLIQUE. O ouvinte sobe com
-    #    `closest('[data-controle],[data-uniq]')` (`hefesto_vivo.py:286`) e lê
+    #    `closest` pela lista de assentos (`hefesto_vivo.py:1417`) e lê
     #    `dataset.controle || dataset.uniq`. Achava este `<div>` e lia `""`, de
     #    modo que "Testar" e "Parar" chegavam ao pacote sem controle nenhum e
     #    RECUSAVAM SEMPRE — para ela, com o rato de verdade. A régua unitária
     #    passava porque injeta o `uniq` à mão: verde sobre dois botões mortos.
-    # 3. O LUGAR QUE ESVAZIA. `hefesto_vivo.py:229` marca os lugares sem
+    # 3. O LUGAR QUE ESVAZIA. `hefesto_vivo.py:1233` marca os lugares sem
     #    controle por `[data-controle="pN"]`. Sem o atributo, um controle só na
     #    mesa deixava a coluna do P2 com os números do desenho — a sétima
     #    aparição do defeito que o pintor já sabia curar.
