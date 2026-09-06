@@ -1364,6 +1364,28 @@ async def shutdown(daemon: DaemonProtocol) -> None:
         with contextlib.suppress(Exception):
             daemon._keyboard_device.stop()
         daemon._keyboard_device = None
+    # O-TECLADO-QUE-SOBREVIVE-AO-DAEMON-01: quem fecha o que o daemon abriu.
+    # Esta função fechava o `_keyboard_device` e passava DIRETO pelo
+    # `_osk_controller` — o teclado na tela que o L3 dela abriu ficava vivo
+    # depois do `shutdown`, na tela dela, sem ninguém para fechá-lo. Na
+    # instalação com systemd o `KillMode=control-group` cobria o caso por
+    # acidente (o wvkbd nasce no cgroup do serviço); quem roda o daemon à mão
+    # com `--foreground` — que é como esta casa trabalha o dia inteiro — ficava
+    # descoberto, e a rede acidental sumiria sem aviso no dia em que a unidade
+    # ganhasse `KillMode=process` ou o produto virasse Flatpak.
+    #
+    # `osk.close()` DIRETO, e não `stop_keyboard_emulation`: aquele derruba
+    # também o `TouchpadReader` e o device virtual, que esta função já trata do
+    # seu jeito, logo acima. `suppress` porque a regra desta função é que
+    # limpeza quebrada nunca derruba a parada. Vem DEPOIS do device: o
+    # `virtual_token_callback` do device aponta para `osk.dispatch_token`, e
+    # parar o device primeiro fecha a porta por onde um token atrasado
+    # reabriria o teclado que acabamos de fechar.
+    osk = getattr(daemon, "_osk_controller", None)
+    if osk is not None:
+        with contextlib.suppress(Exception):
+            osk.close()
+        daemon._osk_controller = None
     # FEAT-DAEMON-GRACEFUL-SHUTDOWN-01: fecha IPC/UDP com timeout — um stop() que
     # trave (ex.: cliente em voo) não pode pendurar o shutdown indefinidamente.
     if daemon._ipc_server is not None:

@@ -28,10 +28,14 @@ Wire-up no Daemon (armadilha A-07 — 3 pontos):
 from __future__ import annotations
 
 import contextlib
+import json
 import os
 import shutil
+import signal
 import subprocess
+import tempfile
 import time
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 from hefesto_dualsense4unix.core.keyboard_mappings import (
@@ -97,6 +101,29 @@ _OSK_SPAWN_ARGS: dict[str, list[str]] = {
 #: loop) e no `disponivel()` que o `state_full` consulta.
 _OSK_RESOLVE_TTL_SEG = 10.0
 
+#: O-TECLADO-QUE-SOBREVIVE-AO-DAEMON-01 — o teclado na tela é ESTADO DE SESSÃO,
+#: e o arquivo abaixo é o único fio entre um daemon e o seguinte.
+#:
+#: O defeito que ele fecha, medido em 30/08/2026 e remedido em 06/09: o daemon
+#: abre o teclado na tela e para sem fechá-lo; o daemon seguinte não sabe que
+#: aquele processo existe, então o R3 dela não fecha nada e o L3 empilha um
+#: segundo teclado por cima do primeiro. O `_OSKController` recém-criado tem
+#: sempre `_process is None`, e tanto o `close()` quanto o guarda do `open()`
+#: perguntavam só a esse atributo.
+#:
+#: MORA NO `runtime_dir`, e a escolha é parte da cura: `XDG_RUNTIME_DIR` é
+#: varrido a cada boot, então um PID de outra inicialização não sobrevive para
+#: ser confundido com o de agora. O `config_dir` — onde moram o
+#: `save_paused_state` e o `load_gamepad_emulation` — guarda ESCOLHA dela, que
+#: atravessa reboots de propósito; um PID atravessando reboot é lixo perigoso.
+_OSK_SESSAO_ARQUIVO = "teclado-na-tela.json"
+
+#: `/proc/<pid>/comm` é truncado pelo kernel em 15 caracteres (`TASK_COMM_LEN`
+#: menos o terminador). `maliit-keyboard` tem exatamente 15 e passaria raspando;
+#: qualquer candidato futuro mais longo casaria por engano se a comparação
+#: fosse ingênua. Compara-se sempre truncado dos DOIS lados.
+_COMM_MAX = 15
+
 
 def _osk_candidatos() -> tuple[str, ...]:
     """Candidatos na ordem que FUNCIONA na sessão gráfica de agora.
@@ -154,13 +181,147 @@ def osk_disponivel_no_sistema() -> bool:
     return valor
 
 
+def _sessao_do_teclado() -> Path:
+    """Onde o PID do teclado na tela deste produto fica entre dois daemons."""
+    from hefesto_dualsense4unix.utils.xdg_paths import runtime_dir
+
+    return runtime_dir(ensure=True) / _OSK_SESSAO_ARQUIVO
+
+
+def _gravar_sessao(pid: int, binario: str) -> None:
+    """Anota quem abrimos: o PID e o NOME do binário que spawnamos.
+
+    Grava o nome que ESTE produto mandou abrir, e não o que o `/proc` diz — é a
+    comparação entre os dois, na adoção, que separa o nosso teclado de um PID
+    que o kernel reciclou. Best-effort de ponta a ponta: sem `XDG_RUNTIME_DIR`
+    gravável o produto perde a adoção, não o teclado.
+    """
+    try:
+        caminho = _sessao_do_teclado()
+        dados = json.dumps({"pid": int(pid), "comm": binario}, ensure_ascii=False)
+        fd, tmp = tempfile.mkstemp(dir=caminho.parent, prefix=".teclado_")
+        try:
+            os.write(fd, dados.encode())
+        finally:
+            os.close(fd)
+        os.replace(tmp, caminho)
+        logger.debug("osk_sessao_gravada", pid=pid, comm=binario)
+    except Exception as exc:
+        logger.debug("osk_sessao_gravar_falhou", err=str(exc))
+
+
+def _esquecer_sessao() -> None:
+    """Apaga o arquivo de sessão. Nunca levanta."""
+    with contextlib.suppress(Exception):
+        _sessao_do_teclado().unlink(missing_ok=True)
+
+
+def _comm_do_pid(pid: int) -> str | None:
+    """O `/proc/<pid>/comm` do processo, ou None se ele não existe mais.
+
+    Função de módulo (e não método) para ter UM ponto de dublê: é aqui que a
+    régua troca o `/proc` de verdade quando precisa medir o caso do PID
+    reciclado sem depender de o kernel reciclar um PID durante o teste.
+    """
+    try:
+        return Path(f"/proc/{int(pid)}/comm").read_text(encoding="utf-8").strip()
+    except (FileNotFoundError, ProcessLookupError, OSError, ValueError):
+        return None
+
+
+def _pid_e_zumbi(pid: int) -> bool:
+    """O processo já morreu e só falta alguém colher o corpo?
+
+    UM ZUMBI PASSARIA NAS TRÊS PERGUNTAS DA ADOÇÃO e não é um teclado na tela:
+    `/proc/<pid>` e `/proc/<pid>/comm` continuam legíveis, com o mesmo nome de
+    binário, depois que o processo morreu — o que sobrou é a entrada na tabela,
+    esperando o pai chamar `wait`. Adotar um deles faria o L3 dela achar que já
+    há teclado aberto e nunca mais abrir nenhum.
+
+    Na máquina dela isso é raro: o teclado do daemon anterior fica órfão de
+    verdade e o `init` o colhe. Mas ele é o caso COMUM em quem mede — a régua é
+    o pai do processo que ela abre —, e um instrumento que precisa contornar o
+    produto para medir é o instrumento errado.
+    """
+    try:
+        stat = Path(f"/proc/{int(pid)}/stat").read_text(encoding="utf-8")
+    except (FileNotFoundError, ProcessLookupError, OSError, ValueError):
+        return False
+    # O `comm` vem entre parênteses no `stat` e pode conter espaços e `)`: o
+    # estado é o primeiro campo DEPOIS do ÚLTIMO `)`. Partir por espaço direto
+    # erraria em qualquer binário com espaço no nome.
+    _, _, resto = stat.rpartition(")")
+    campos = resto.split()
+    return bool(campos) and campos[0] == "Z"
+
+
+def _adotar_orfao() -> int | None:
+    """O PID do teclado na tela que o daemon ANTERIOR deixou aberto, se for nosso.
+
+    A ADOÇÃO É CONSERVADORA, e isso é requisito da sprint, não zelo. Só se
+    adota um PID que passa nas TRÊS perguntas:
+
+      (a) está no arquivo que ESTE produto escreveu;
+      (b) ainda existe DE VERDADE — `/proc/<pid>` legível e o estado não é `Z`
+          (ver `_pid_e_zumbi`: um defunto por colher tem `/proc` intacto e não
+          desenha teclado nenhum);
+      (c) o `/proc/<pid>/comm` é o mesmo binário que nós mandamos abrir, E esse
+          binário é um dos candidatos que este produto conhece.
+
+    Falhando qualquer uma, o arquivo é ESQUECIDO e a resposta é None — o L3
+    seguinte abre um teclado novo, que é o comportamento honesto.
+
+    **Matar por nome (`pkill wvkbd`) está PROIBIDO** e é justamente o que estas
+    três perguntas existem para não precisar: ela pode ter um teclado na tela
+    aberto pelo COSMIC ou pela mão dela, e fechar o que não foi o produto que
+    abriu é estrago, não cura. Um PID reciclado pelo kernel cai em (c).
+    """
+    try:
+        bruto = _sessao_do_teclado().read_text(encoding="utf-8")
+        dados = json.loads(bruto)
+        pid = int(dados["pid"])
+        comm_gravado = str(dados["comm"])
+    except (FileNotFoundError, json.JSONDecodeError, OSError, KeyError, TypeError, ValueError):
+        return None
+    except Exception as exc:  # pragma: no cover - defesa de borda
+        logger.debug("osk_sessao_ler_falhou", err=str(exc))
+        return None
+
+    if comm_gravado not in _OSK_CANDIDATES:
+        # Arquivo de uma versão que abria outra coisa, ou adulterado. Não é
+        # nosso pelo critério de hoje: esquece em vez de arriscar.
+        logger.debug("osk_orfao_recusado_binario_desconhecido", comm=comm_gravado)
+        _esquecer_sessao()
+        return None
+
+    comm_vivo = _comm_do_pid(pid)
+    if comm_vivo is None or _pid_e_zumbi(pid):
+        logger.debug("osk_orfao_ja_morreu", pid=pid)
+        _esquecer_sessao()
+        return None
+    if comm_vivo[:_COMM_MAX] != comm_gravado[:_COMM_MAX]:
+        # PID reciclado pelo kernel: existe um processo com este número, e ele
+        # NÃO é o nosso. Fechá-lo mataria programa alheio.
+        logger.info("osk_orfao_recusado_pid_reciclado", pid=pid, comm=comm_vivo)
+        _esquecer_sessao()
+        return None
+    return pid
+
+
 class _OSKController:
     """Gerencia o processo do teclado virtual (onboard/wvkbd-mobintl).
 
     Detecta o binário disponível apenas 1x (cache em `_resolved_bin`); warning
     é logado uma única vez se nenhum dos candidatos estiver instalado. Abrir
     quando já há processo ativo é no-op (evita stack de janelas sobrepostas).
-    Fechar sem processo ativo também é no-op.
+
+    A PROMESSA ACIMA VALIA DENTRO DE UM DAEMON SÓ, e é isso que a
+    O-TECLADO-QUE-SOBREVIVE-AO-DAEMON-01 fechou: o teclado aberto por um daemon
+    sobrevivia à parada dele, e o controlador do daemon SEGUINTE não sabia que
+    aquele processo existia — `self._process` nasce None. O R3 não fechava nada
+    e o L3 empilhava. Agora `open`, `close` e `aberto` passam todos pelo
+    `_pid_vivo()`, que olha o processo deste daemon E o órfão anotado no arquivo
+    de sessão (`_adotar_orfao`). Fechar sem nada aberto continua no-op.
 
     TRÊS VERBOS, e o terceiro é o do L3: `open`, `close` e `toggle`. O
     alternador não é açúcar em cima dos dois primeiros — ele depende de
@@ -251,14 +412,27 @@ class _OSKController:
 
         Enxuga o atributo quando o processo morreu por fora, para o `close()`
         seguinte não ter o que terminar e o estado não ficar mentindo.
+
+        DESDE O-TECLADO-QUE-SOBREVIVE-AO-DAEMON-01 ela olha TAMBÉM o órfão do
+        daemon anterior: sem isso, um `_OSKController` recém-criado responde
+        "fechado" com o teclado dela na tela, e é dessa mentira que nascem o R3
+        que não fecha nada e o L3 que empilha.
+        """
+        return self._pid_vivo() is not None
+
+    def _pid_vivo(self) -> int | None:
+        """O PID do teclado na tela que ESTE produto abriu e ainda vive.
+
+        Duas fontes, nesta ordem: o processo deste daemon e, na falta dele, o
+        órfão que o daemon anterior deixou (`_adotar_orfao`, que só devolve o
+        que passa nas três perguntas). Devolve None quando não há nenhum.
         """
         proc = self._process
-        if proc is None:
-            return False
-        if proc.poll() is None:
-            return True
-        self._process = None
-        return False
+        if proc is not None:
+            if proc.poll() is None:
+                return proc.pid
+            self._process = None
+        return _adotar_orfao()
 
     def toggle(self) -> None:
         """O SEGUNDO TOQUE FECHA — decisão dela, 02/09/2026.
@@ -277,7 +451,13 @@ class _OSKController:
             self.open()
 
     def open(self) -> None:
-        if self._process is not None and self._process.poll() is None:
+        """Abre o teclado na tela — no-op se JÁ há um aberto, deste daemon ou do anterior.
+
+        O guarda pergunta ao `_pid_vivo()` e não ao `self._process`: era o
+        atributo que fazia o L3 EMPILHAR um segundo teclado por cima do que o
+        daemon anterior tinha deixado na tela dela.
+        """
+        if self._pid_vivo() is not None:
             return
         resolved = self._resolve()
         if resolved is None:
@@ -294,20 +474,42 @@ class _OSKController:
         except Exception as exc:
             logger.warning("osk_open_failed", binary=resolved, err=str(exc))
             self._process = None
+            return
+        _gravar_sessao(self._process.pid, resolved)
 
     def close(self) -> None:
+        """Fecha o teclado na tela — o deste daemon, ou o órfão do anterior.
+
+        A segunda metade é a cura do R3 que não fechava nada: `close()` voltava
+        na primeira linha quando `self._process is None`, e um controlador
+        recém-criado tem SEMPRE None. O aperto virava no-op silencioso com o
+        teclado dela na tela.
+
+        O órfão morre por `SIGTERM` no PID adotado — nunca por nome. Ver
+        `_adotar_orfao` para as três perguntas que decidem se o PID é nosso.
+        """
         proc = self._process
-        if proc is None:
-            return
-        if proc.poll() is not None:
+        if proc is not None:
             self._process = None
+            if proc.poll() is None:
+                try:
+                    proc.terminate()
+                    logger.info("osk_closed", pid=proc.pid)
+                except Exception as exc:
+                    logger.warning("osk_close_failed", err=str(exc))
+                _esquecer_sessao()
+                return
+        pid = _adotar_orfao()
+        if pid is None:
+            # `_adotar_orfao` já esqueceu o arquivo quando ele era inválido;
+            # aqui não há nada aberto e nada a matar.
             return
         try:
-            proc.terminate()
-            logger.info("osk_closed", pid=proc.pid)
+            os.kill(pid, signal.SIGTERM)
+            logger.info("osk_orfao_fechado", pid=pid)
         except Exception as exc:
-            logger.warning("osk_close_failed", err=str(exc))
-        self._process = None
+            logger.warning("osk_orfao_close_failed", pid=pid, err=str(exc))
+        _esquecer_sessao()
 
     def dispatch_token(self, token: str, phase: str) -> None:
         """Callback registrado no UinputKeyboardDevice.
