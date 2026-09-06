@@ -2601,59 +2601,6 @@ LEGENDA = f'''<div class="nota">
 </html>
 '''
 
-n = monta("06-navegacao", "Navegação", MIOLO, CSS, legenda=LEGENDA)
-
-# A FITA fica apagada nesta aba, mas o motivo herdado da Jogar é falso aqui: não há
-# card nenhum, há 28 campos editáveis. Trocado na saída, porque o texto mora no
-# esqueleto (topo.html) e esta aba só pode mexer no arquivo dela.
-p = onde.pagina("06-navegacao.html")
-s = p.read_text()
-ANTES = 'title="Esta aba não usa o controle escolhido aqui — os cards são leitura."'
-# O TÍTULO SAI DE `monta.TITULOS_DA_FITA` — 05/09/2026. Ele era digitado aqui,
-# e o PILOTO não o conhecia: como ele troca o bloco inteiro da fita a cada
-# tique, esta frase durava um tique e dava lugar ao genérico de leitura. Agora
-# há um dono, consultado pelo gerador do arquivo E pela tela viva.
-DEPOIS = f'title="{TITULOS_DA_FITA["06-navegacao.html"]}"'
-if f"Player {NAVEGA}" not in DEPOIS:
-    raise SystemExit(
-        f"ERRO: a fita da 06 nomeia o Player 1 e o mockup elegeu o {NAVEGA} — "
-        "reveja `monta.TITULOS_DA_FITA` antes de gerar")
-if ANTES not in s:
-    raise SystemExit("ERRO: o title da fita mudou no topo.html — refaça a troca")
-s = s.replace(ANTES, DEPOIS)
-
-# A FITA DESTA ABA GANHA ENDEREÇO — 03/09/2026, IDENTIDADE-VEM-DE-CIMA.
-#
-# Os dois chips nomeavam o controle do MOCKUP (`P1 · Cosmic Red · USB`,
-# `P2 · Starlight Blue · BT`) e o `title` de cada um repetia o nome. Seis dos
-# dezesseis valores congelados desta aba estavam aqui.
-#
-# O DONO DA FITA É COMPARTILHADO (`monta.fita` desenha, `hefesto_vivo._fita`
-# repinta), e por isso a troca é feita AQUI, na saída — a mesma razão pela qual
-# o `title` acima é trocado neste arquivo: o bloco mora no esqueleto e esta aba
-# só pode mexer no arquivo dela.
-#
-# E ELA PRECISOU EXISTIR, medido em 03/09/2026 com os dois controles dela na
-# mesa: `_fita` **desiste** quando um controle não tem cor lida (`any(not
-# c.get("cor") …) -> return ""`), e pelo rádio a cor não se lê. Treze tiques
-# depois, a fita da `06` ainda dizia Cosmic Red e Starlight Blue ao lado de um
-# cabeçalho que já contava certo. Com o endereço, quem escreve é o pacote.
-FITA = re.compile(r'(<div class="fita inerte"[^>]*)(>)(.*?)(</div>)', re.S)
-if not FITA.search(s):
-    raise SystemExit("ERRO: a fita inerte mudou de forma — refaça o endereço")
-s = FITA.sub(
-    lambda m: (m.group(1) + ' data-campo="fita-chips" data-hef-alvo="html"'
-               + m.group(2) + chips_da_fita(MESA_DA_FITA) + m.group(4)),
-    s, count=1)
-
-# a tela nova entra IRMÃ da janela, fora do miolo (ver o comentário no MIOLO)
-MARCA = "<!-- ================= LEGENDA DO MOCKUP ================= -->"
-if MARCA not in s:
-    raise SystemExit("ERRO: a marca da legenda mudou no fim.html")
-TELAS = "\n".join(t.strip() for t in (TELA_DEFINICOES, TELA_TECLAS,
-                                      TELA_REMAPEAMENTO, TELA_PONTO))
-s = s.replace(MARCA, TELAS + "\n\n" + MARCA, 1)
-onde.gravar("06-navegacao.html", s)
 
 
 def _conferir(doc):
@@ -2966,7 +2913,79 @@ def _conferir(doc):
                          + "\n  ".join(f"- {f}" for f in falhas))
 
 
-_conferir(onde.pagina("06-navegacao.html").read_text())
-print(f"06-navegacao: OK, {n} divs · {len(CONECTADOS)} conectado(s) "
-      f"+ {len(MESA) - len(CONECTADOS)} lugar(es) vazio(s) · "
-      f"quem navega: P{NAVEGA} · {len(BOTOES)} botões do mapa")
+
+# A ESCRITA MORA DENTRO DE UMA FUNÇÃO, chamada só pelo `__main__` — 06/09/2026,
+# costura da ONDA C, e esta foi a ÚLTIMA das dez a receber a guarda. Sem ela,
+# `import aba06` reescreve `mockup/06-navegacao.html` no disco com o estado vivo
+# da mesa dentro: bastou o pytest COLETAR um teste que importava a irmã `aba05`
+# para o desenho dela mudar. A régua é
+# `test_o_gerador_nao_escreve_a_bancada_como_efeito_de_import`, e agora ela
+# cobra as DEZ.
+#
+# AQUI FOI PRECISO UMA FUNÇÃO, e não só o `if`: esta aba pós-processa a saída em
+# meia centena de linhas (a fita, o `title`, as quatro telas irmãs), e o
+# `_conferir` mora no meio delas. Envolver o bloco todo num `if` deixaria o
+# `def` dentro dele; a função o mantém no lugar e é chamada depois.
+def _gerar() -> None:
+    n = monta("06-navegacao", "Navegação", MIOLO, CSS, legenda=LEGENDA)
+
+    # A FITA fica apagada nesta aba, mas o motivo herdado da Jogar é falso aqui: não há
+    # card nenhum, há 28 campos editáveis. Trocado na saída, porque o texto mora no
+    # esqueleto (topo.html) e esta aba só pode mexer no arquivo dela.
+    p = onde.pagina("06-navegacao.html")
+    s = p.read_text()
+    ANTES = 'title="Esta aba não usa o controle escolhido aqui — os cards são leitura."'
+    # O TÍTULO SAI DE `monta.TITULOS_DA_FITA` — 05/09/2026. Ele era digitado aqui,
+    # e o PILOTO não o conhecia: como ele troca o bloco inteiro da fita a cada
+    # tique, esta frase durava um tique e dava lugar ao genérico de leitura. Agora
+    # há um dono, consultado pelo gerador do arquivo E pela tela viva.
+    DEPOIS = f'title="{TITULOS_DA_FITA["06-navegacao.html"]}"'
+    if f"Player {NAVEGA}" not in DEPOIS:
+        raise SystemExit(
+            f"ERRO: a fita da 06 nomeia o Player 1 e o mockup elegeu o {NAVEGA} — "
+            "reveja `monta.TITULOS_DA_FITA` antes de gerar")
+    if ANTES not in s:
+        raise SystemExit("ERRO: o title da fita mudou no topo.html — refaça a troca")
+    s = s.replace(ANTES, DEPOIS)
+
+    # A FITA DESTA ABA GANHA ENDEREÇO — 03/09/2026, IDENTIDADE-VEM-DE-CIMA.
+    #
+    # Os dois chips nomeavam o controle do MOCKUP (`P1 · Cosmic Red · USB`,
+    # `P2 · Starlight Blue · BT`) e o `title` de cada um repetia o nome. Seis dos
+    # dezesseis valores congelados desta aba estavam aqui.
+    #
+    # O DONO DA FITA É COMPARTILHADO (`monta.fita` desenha, `hefesto_vivo._fita`
+    # repinta), e por isso a troca é feita AQUI, na saída — a mesma razão pela qual
+    # o `title` acima é trocado neste arquivo: o bloco mora no esqueleto e esta aba
+    # só pode mexer no arquivo dela.
+    #
+    # E ELA PRECISOU EXISTIR, medido em 03/09/2026 com os dois controles dela na
+    # mesa: `_fita` **desiste** quando um controle não tem cor lida (`any(not
+    # c.get("cor") …) -> return ""`), e pelo rádio a cor não se lê. Treze tiques
+    # depois, a fita da `06` ainda dizia Cosmic Red e Starlight Blue ao lado de um
+    # cabeçalho que já contava certo. Com o endereço, quem escreve é o pacote.
+    FITA = re.compile(r'(<div class="fita inerte"[^>]*)(>)(.*?)(</div>)', re.S)
+    if not FITA.search(s):
+        raise SystemExit("ERRO: a fita inerte mudou de forma — refaça o endereço")
+    s = FITA.sub(
+        lambda m: (m.group(1) + ' data-campo="fita-chips" data-hef-alvo="html"'
+                   + m.group(2) + chips_da_fita(MESA_DA_FITA) + m.group(4)),
+        s, count=1)
+
+    # a tela nova entra IRMÃ da janela, fora do miolo (ver o comentário no MIOLO)
+    MARCA = "<!-- ================= LEGENDA DO MOCKUP ================= -->"
+    if MARCA not in s:
+        raise SystemExit("ERRO: a marca da legenda mudou no fim.html")
+    TELAS = "\n".join(t.strip() for t in (TELA_DEFINICOES, TELA_TECLAS,
+                                          TELA_REMAPEAMENTO, TELA_PONTO))
+    s = s.replace(MARCA, TELAS + "\n\n" + MARCA, 1)
+    onde.gravar("06-navegacao.html", s)
+
+    _conferir(onde.pagina("06-navegacao.html").read_text())
+    print(f"06-navegacao: OK, {n} divs · {len(CONECTADOS)} conectado(s) "
+          f"+ {len(MESA) - len(CONECTADOS)} lugar(es) vazio(s) · "
+          f"quem navega: P{NAVEGA} · {len(BOTOES)} botões do mapa")
+
+
+if __name__ == "__main__":
+    _gerar()

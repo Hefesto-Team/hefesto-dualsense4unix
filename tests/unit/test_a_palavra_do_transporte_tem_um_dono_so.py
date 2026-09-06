@@ -73,13 +73,14 @@ UNIQ_B = "aa:bb:cc:00:00:02"
 #: A palavra que a dona NÃO diz hoje. Ela entra no lugar de `cabo` para provar
 #: que a tela SEGUE a dona em vez de repetir o que decorou.
 #: OS GERADORES JÁ CURADOS — os que põem a escrita da bancada debaixo do
-#: `if __name__ == "__main__":`. Lista explícita, e não um glob: a `aba06` e a
-#: `aba09` ainda escrevem no nível do módulo, e um `aba*.py` as reprovaria sem
-#: que ninguém tivesse decidido curá-las. Acrescentar um nome aqui é um ato que
+#: `if __name__ == "__main__":`. Lista explícita, e não um glob: a `aba06` ainda escreve
+#: no nível do módulo, e um `aba*.py` a reprovaria sem
+#: que ninguém tivesse decidido curá-la. Acrescentar um nome aqui é um ato que
 #: se vê no diff — que é o oposto de um glob que passa a cobrar (ou a deixar de
 #: cobrar) sozinho.
 _GERADORES_JA_CURADOS = ("aba01.py", "aba02.py", "aba03.py", "aba04.py",
-                         "aba05.py", "aba07.py", "aba08.py", "aba10.py")
+                         "aba05.py", "aba06.py", "aba07.py", "aba08.py",
+                         "aba09.py", "aba10.py")
 
 SENTINELA = "por um fio"
 
@@ -198,7 +199,7 @@ def test_o_gerador_nao_escreve_a_bancada_como_efeito_de_import() -> None:
     um `import`, e uma régua não mexe no que mede"*.
 
     A MORDIDA: tire o `if __name__ == "__main__":` de qualquer arquivo de
-    `CURADOS` e esta régua reprova nomeando o arquivo.
+    `curados` e esta régua reprova nomeando o arquivo.
     """
     import pathlib as _pl
     import re as _re

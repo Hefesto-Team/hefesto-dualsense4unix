@@ -266,7 +266,7 @@ class TestODesenhoCarregaAPeca:
     """O que a página tem de trazer para a decisão [02] existir."""
 
     def test_o_que_espera_a_publicacao_esta_declarado_nos_dois_sentidos(
-            self) -> None:
+            self, monkeypatch: pytest.MonkeyPatch) -> None:
         """A declaração morre no dia em que a dívida é paga.
 
         Os três `data-campo` do cinza existem no DESENHO e ainda não na página
@@ -275,6 +275,15 @@ class TestODesenhoCarregaAPeca:
         estrago. Esta régua cobra os DOIS sentidos: declarar o que ainda não
         chegou, e **tirar a declaração quando chegar**. Declaração que envelhece
         calada vira paisagem, e paisagem ninguém lê.
+
+        **A CONTA DEIXOU DE SER UMA LISTA CRAVADA — 06/09/2026.** Ela era
+        `{f"{n}-razao" for n in BOTOES_CINZAS}`, os três da decisão [02], e por
+        isso só mediu UMA família. Quando a `SISTEMA-STEAM-01` pôs as duas
+        linhas do Perfil de Bateria na bancada, a régua reprovou dizendo que o
+        que falta na publicada *"é `[]`"* — sobre três endereços que faltavam de
+        verdade. **Ela mede a lista de ontem, não o disco.** A conta agora é a
+        pergunta inteira: *o que o pacote EMITE, o desenho TEM e a publicada
+        ainda NÃO tem?* — que é exatamente o que a declaração diz descrever.
         """
         import re
 
@@ -282,16 +291,22 @@ class TestODesenhoCarregaAPeca:
             r'data-campo="([^"]+)"',
             _onde.pagina(PAGINA, publicado=True).read_text(encoding="utf-8")))
         no_desenho = set(re.findall(r'data-campo="([^"]+)"', _html()))
-        esperados = {f"{n}{a09.SUFIXO_DA_RAZAO}" for n in a09.BOTOES_CINZAS}
+        do_cinza = {f"{n}{a09.SUFIXO_DA_RAZAO}" for n in a09.BOTOES_CINZAS}
 
-        assert esperados <= no_desenho, (
-            f"o DESENHO não tem {sorted(esperados - no_desenho)} — rode "
+        assert do_cinza <= no_desenho, (
+            f"o DESENHO não tem {sorted(do_cinza - no_desenho)} — rode "
             "`src/hefesto_dualsense4unix/interface/aba09.py`.")
-        assert set(a09.ESPERA_A_PUBLICACAO) == esperados - publicada, (
+        # O QUE O PACOTE EMITE DE VERDADE, e não o que se supõe que ele emite:
+        # um endereço só do desenho, que ninguém escreve, não espera publicação
+        # nenhuma — ele é outra espécie de dívida e tem outra lista.
+        ctx = _com_a_leitura(monkeypatch, "online_systemd", pausado=True)
+        emitidos = set(normalizar(dict(a09.pacote(ctx)))["mesa"])
+        esperados = (no_desenho & emitidos) - publicada
+        assert set(a09.ESPERA_A_PUBLICACAO) == esperados, (
             "a declaração `ESPERA_A_PUBLICACAO` divergiu do disco: ela diz "
-            f"{sorted(a09.ESPERA_A_PUBLICACAO)} e o que falta na página "
-            f"publicada é {sorted(esperados - publicada)}. Se a aba foi "
-            "publicada, TIRE a declaração — ela já não descreve nada.")
+            f"{sorted(a09.ESPERA_A_PUBLICACAO)} e o que o pacote emite, o "
+            f"desenho tem e a publicada não tem é {sorted(esperados)}. Se a aba "
+            "foi publicada, TIRE a declaração — ela já não descreve nada.")
 
     def test_o_par_de_sufixos_nao_diverge(self) -> None:
         """O gerador escreve o `data-campo`; o pacote escreve NELE.
