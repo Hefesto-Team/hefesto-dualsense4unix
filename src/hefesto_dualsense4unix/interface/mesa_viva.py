@@ -167,6 +167,26 @@ def aciona(chave: str, transporte: str) -> str:
     return par[0] if str(transporte).lower() == "usb" else par[1]
 
 
+def _via_do_transporte(transporte: object) -> str:
+    """A palavra curta do transporte — do dono, nunca redigitada.
+
+    Ausência devolve "" (a tela mostra travessão), jamais uma das duas
+    palavras: afirmar "BT" sobre um campo vazio é a tela inventando o que não
+    leu. Ver o comentário no ponto de uso.
+
+    UMA DIFERENÇA QUE SOBRA, declarada: o dono da frase LONGA
+    (`app/actions/home_actions.py:1338`) devolve um transporte desconhecido
+    **cru**, com a razão escrita — *"um transporte novo tem de aparecer na tela
+    para alguém o ver, em vez de ser escondido atrás de uma frase genérica"*.
+    Aqui um valor fora do dicionário também vira travessão. Não há terceiro
+    transporte hoje; no dia em que houver, esta é a linha a reler, e a regra da
+    casa manda seguir o dono.
+    """
+    from hefesto_dualsense4unix.interface.pacotes import VIA_DO_TRANSPORTE
+
+    return VIA_DO_TRANSPORTE.get(str(transporte or "").lower(), "")
+
+
 # ---------------------------------------------------------------------------
 # A COR DO PLÁSTICO — o código de fábrica vira o `colorway` do desenho
 # ---------------------------------------------------------------------------
@@ -340,7 +360,17 @@ def mesa_do_estado(
                 "jogador": numero_do_controle(entrada),
                 "cor": slug,
                 "nome": nome,
-                "via": "USB" if transporte == "usb" else "BT",
+                # O TRAVESSÃO NÃO É "BT" — corrigido em 05/09/2026. Este
+                # `if/else` devolvia "BT" quando o daemon NÃO publicava o
+                # transporte, e a aba 01 afirmava rádio sobre um campo que
+                # ninguém leu. O dono da palavra curta é
+                # `pacotes.VIA_DO_TRANSPORTE`, cujo `.get(..., "")` já
+                # respondia certo na aba 02 — e o comentário DELE já afirmava
+                # (errado) que as duas traduções eram a mesma. Agora são.
+                # A razão está escrita no dono da frase longa
+                # (`app/actions/home_actions.py:1333`): *"'?' não é resposta —
+                # é a tela encolhendo os ombros"*.
+                "via": _via_do_transporte(transporte),
                 "transporte": transporte,
                 "alvo": (uniq == alvo) if alvo else (posicao == 1),
                 # O `mascara` da sessão é o FALLBACK, e não o valor: um daemon

@@ -890,8 +890,15 @@ def jogador_de(c: dict[str, Any]) -> int | None:
 #: string; a régua `test_os_donos_de_fato.py` confere que as duas são a MESMA.
 NOME_SEM_LEITURA = "Não sei"
 
-#: Como o transporte cru do daemon se escreve na tela. É a MESMA tradução do
-#: `mesa_viva.mesa_do_estado` (`"USB" if transporte == "usb" else "BT"`).
+#: Como o transporte cru do daemon se escreve na tela. **O DONO DA PALAVRA
+#: CURTA**, e o `.get(..., "")` é o ponto: ausência vira travessão, nunca uma
+#: das duas palavras.
+#:
+#: Até 05/09/2026 este comentário afirmava ser "a MESMA tradução do
+#: `mesa_viva.mesa_do_estado`", que era `"USB" if transporte == "usb" else
+#: "BT"` — e as duas divergiam exatamente na AUSÊNCIA: a de lá dizia **"BT"**
+#: sobre um campo que o daemon não publicou, e a aba 01 afirmava rádio sobre
+#: nada. Hoje o `mesa_viva` LÊ este dicionário, e a afirmação virou verdade.
 VIA_DO_TRANSPORTE = {"usb": "USB", "bt": "BT"}
 
 

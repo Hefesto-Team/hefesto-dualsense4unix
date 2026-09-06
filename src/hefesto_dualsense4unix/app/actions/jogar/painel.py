@@ -646,7 +646,11 @@ AVISOS_DA_TELA: tuple[Aviso, ...] = (
     Aviso("PAUSA", home_actions.texto_da_pausa, "home_actions.texto_da_pausa"),
     Aviso("GAMEPAD", home_actions.vpad_degradation_text, "home_actions.vpad_degradation_text"),
     Aviso("RÁDIO", home_actions.texto_do_radio_fragil, "home_actions.texto_do_radio_fragil"),
-    Aviso("JOGO", home_actions.wrapper_banner_text, "home_actions.wrapper_banner_text"),
+    # `aviso_do_wrapper`, e não `wrapper_banner_text`: o segundo responde "há
+    # jogo sem wrapper agora?" e o primeiro responde "há algo a DIZER a ela
+    # sobre isso?" — calando quando ela já dispensou o jogo. Trocado em
+    # 05/09/2026, decisão dela `07-Q3`: "as duas recusas calam tudo".
+    Aviso("JOGO", home_actions.aviso_do_wrapper, "home_actions.aviso_do_wrapper"),
     Aviso("PERFIL", home_actions.autoswitch_lock_text, "home_actions.autoswitch_lock_text"),
     Aviso("PERFIL", home_actions.texto_do_cadeado_cego, "home_actions.texto_do_cadeado_cego"),
 )
