@@ -37,12 +37,24 @@ import pytest
 RAIZ = Path(__file__).resolve().parents[2]
 SRC = RAIZ / "src" / "hefesto_dualsense4unix"
 
-#: OS SEIS ARQUIVOS DO CAMINHO DO MICROFONE, e a lista é o alcance declarado.
+#: OS OITO ARQUIVOS DO CAMINHO DO MICROFONE, e a lista é o alcance declarado.
 #:
 #: Não é "tudo que fala de áudio": é o caminho que responde *"o microfone deste
 #: controle está ligado e sendo ouvido?"* — o subsystem que o liga, a luz que
 #: diz quem escuta, a ponte de rádio, a eleição, a lista de fontes, e o dono do
 #: canal por controle.
+#:
+#: **`quem_ouve_o_microfone.py` ENTROU EM 06/09/2026**, com o Passo 2 da
+#: MIC-VIRTUAL-01, e a razão é que ele responde a SEGUNDA metade da pergunta:
+#: quem está ouvindo. Ele já estava limpo quando entrou — a régua foi ampliada
+#: sobre um arquivo verde, e não escrita para caber num vermelho.
+#:
+#: **O QUE FICOU DE FORA, e a razão:** `integrations/nivel_do_microfone.py`
+#: mede "está entrando som" e teria de entrar pela mesma linha, mas ele tem um
+#: `_mascara` no código (`:734`) que é a MÁSCARA DE EVENTOS do `selectors`, e
+#: não a máscara Xbox. Entrar hoje custaria uma isenção por colisão de palavra —
+#: e a isenção que esta régua tinha morreu de propósito quando ela passou a ler
+#: por AST. Fica registrado para quem quiser pagar o preço com conhecimento.
 O_CAMINHO = (
     "daemon/subsystems/mic_da_mesa.py",
     "daemon/subsystems/luz_do_mic.py",
@@ -51,6 +63,7 @@ O_CAMINHO = (
     "integrations/dualsense_bt_audio.py",
     "integrations/fontes_de_captura.py",
     "integrations/canal_do_microfone.py",
+    "integrations/quem_ouve_o_microfone.py",
 )
 
 #: AS PALAVRAS DA MÁSCARA, e cada uma é um jeito de perguntar a mesma coisa ao
@@ -116,7 +129,7 @@ def _codigo_com_a_palavra(arquivo: str) -> list[tuple[int, str]]:
 
 @pytest.mark.parametrize("arquivo", O_CAMINHO)
 def test_a_mascara_nao_aparece_no_caminho_do_microfone(arquivo: str) -> None:
-    """Nenhuma das quatro palavras da máscara, em nenhum dos sete arquivos.
+    """Nenhuma das quatro palavras da máscara, em nenhum dos oito arquivos.
 
     A MORDIDA: escreva `if not state.get("native_mode"): return None` em
     qualquer um deles e esta régua nomeia o arquivo e a linha.
