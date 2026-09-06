@@ -345,6 +345,23 @@ CADEADO_DICA = (
     "Desmarque para o Hefesto voltar a escolher o perfil por você."
 )
 
+#: O QUE A TELA DIZ QUANDO O SERVIÇO NÃO CONFIRMOU O CADEADO — e a frase é da
+#: janela antiga, palavra por palavra, como as duas acima.
+#:
+#: `ipc_bridge.autoswitch_lock_set` responde TRÊS coisas, e é a terceira que
+#: obriga esta frase a existir: `True` e `False` são o estado que ficou valendo,
+#: e `None` quer dizer *não houve resposta* — serviço parado, socket recusado,
+#: o teto do `_safe_call` estourando. O `_on_home_autoswitch_lock_toggled` da
+#: janela antiga já tratava os três, e esta é a frase que ele põe na tela dela
+#: no terceiro caso.
+#:
+#: **REUSAR EM VEZ DE ESCREVER, e o motivo é o de sempre:** texto de tela novo é
+#: palavra dela (PROVA-DE-TELA-01), e esta ela já leu. A régua
+#: `test_a_palavra_do_cadeado_e_a_que_ela_ja_leu` confere as TRÊS contra o fonte
+#: da GTK — no dia em que a janela antiga trocar a palavra, a tela nova não fica
+#: falando sozinha.
+CADEADO_RECUSA = "O Hefesto está desligado — o cadeado não foi aplicado."
+
 
 def _cadeado(state: dict[str, Any]) -> str:
     """``"sim"`` com o cadeado ligado, ``""`` quando não — na língua do `marcado`.
@@ -2029,10 +2046,53 @@ def cadeado(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     é exatamente o defeito que a sprint matou: a declaração passou a morar no
     PRÓPRIO decorador (`grava="autoswitch_lock_set"`), e `PERIGOSOS` é derivada
     dela. Quem escreve o gesto fecha o próprio contrato.
+
+    **FATO SUBSTITUÍDO — 06/09/2026, e a conclusão dele fica de pé por outro
+    motivo.** Este fecho dizia que a caixa só existia no desenho da BANCADA e
+    que o piloto abre o publicado, e por isso o `--prova-gesto` não a clicava.
+    A primeira metade caducou: a caixa está na página publicada, que é a que o
+    produto renderiza (`onde.PUBLICADO`), e a régua
+    `test_o_cadeado_esta_publicado` mede isso LENDO o arquivo — não este
+    parágrafo. **A conclusão continua certa, e a razão é `PERIGOSOS`:** clicar
+    esta caixa GRAVA no disco dela (`utils/session.save_autoswitch_locked`, pelo
+    `autoswitch.lock`), e uma régua de clique que mudasse uma preferência dela
+    para provar que sabe clicar seria pior que a cobertura que ela compra.
+
+    **O VERDE É O RECIBO, e ele só acende quando o serviço confirmou** —
+    05/09/2026, decisão dela na `03-Q4`: *"O campo que você acabou de mexer
+    ganha uma borda verde por cerca de um segundo e meio"*, *"nenhuma palavra
+    nova entra na tela"*. Este é o gesto da aba que mais precisava dele, e a
+    razão é medida: é o único cujo efeito **não aparece em lugar nenhum da
+    tela**. Trocar de modo acende um chip; trocar a máscara muda o cartão; o
+    cadeado só muda um booleano no disco, e a caixa que ela acabou de clicar já
+    está marcada pelo próprio clique.
+
+    **PEDIR O VERDE É VOLTAR SEM LEVANTAR**, e o mecanismo é o do piloto, não
+    uma peça deste arquivo: `hefesto_vivo._gesto` anota `"aplicou"` no ramo sem
+    exceção, e o `finally` leva esse desfecho ao pouso, que acende
+    `hef-deu-certo` por `MS_DA_PISCADA` no elemento que ela clicou. Nada a
+    inventar aqui, e endereço nenhum a criar.
+
+    **O QUE FALTAVA ERA O DIREITO DE PEDI-LO: a resposta da ponte ia para o
+    lixo.** `ipc_bridge.autoswitch_lock_set` devolve o estado que FICOU valendo,
+    e `None` quando não houve resposta. Sem ler isso, um clique com o serviço
+    parado piscava VERDE e a caixa desmarcava no tique seguinte (`_cadeado` sem
+    `autoswitch_locked` devolve `""`): a tela dizia *guardei* e *não está
+    guardado* com 100 ms entre as duas. É a metade que separa **o produto
+    confirmou** de **a tela pintou sozinha**.
+
+    A GUARDA É `is None` E NÃO UMA COMPARAÇÃO, e a medição diz por quê:
+    `_handle_autoswitch_lock` (`daemon/ipc_handlers.py`) faz `novo = bool(pedido)`
+    quando o `locked` vem no pedido — o toggle é só para quem NÃO manda valor, e
+    este gesto sempre manda. Um bool que discordasse do pedido é ramo que este
+    daemon não tem como produzir, e escrevê-lo seria inventar um desfecho para
+    poder tratá-lo.
     """
     if str(o.get("evento") or "change") != "change":
         return
-    p.autoswitch_lock_set(locked=_cadeado(ctx.state) != "sim")
+    pedido = _cadeado(ctx.state) != "sim"
+    if p.autoswitch_lock_set(locked=pedido) is None:
+        raise RuntimeError(CADEADO_RECUSA)
 
 
 @gesto("01-jogar.html", "reconectar")

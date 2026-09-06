@@ -195,11 +195,42 @@ def test_sem_daemon_a_caixa_nao_afirma_uma_escolha_dela() -> None:
         "uma string ligou o cadeado — só o `True` literal pode")
 
 
-class _PonteDeMentira:
-    """Guarda o que foi chamado. O mesmo dublê da régua dos botões."""
+#: O SENTINELA DO DUBLÊ: *responda o que o serviço responderia*.
+_ECOA = object()
 
-    def __init__(self) -> None:
+
+class _PonteDeMentira:
+    """Guarda o que foi chamado — e responde ao cadeado como o serviço responde.
+
+    O `__getattr__` responde por QUALQUER nome, e isso é de propósito: o dublê
+    não pode virar uma segunda lista das funções da ponte, que envelheceria em
+    silêncio.
+
+    **MAS O `autoswitch_lock_set` GANHOU RESPOSTA PRÓPRIA — 06/09/2026, e a
+    razão é a forma de defeito que esta casa mediu três vezes em 05/09: *o dublê
+    era mais frouxo que a função real*.** O `__getattr__` devolvia `True` para
+    tudo; `ipc_bridge.autoswitch_lock_set` devolve **o estado que ficou
+    valendo** — logo um `True` sobre um pedido de DESTRAVAR era o dublê
+    afirmando o contrário do que foi pedido, e um dublê assim não tem como
+    revelar o gesto que ignora a resposta.
+
+    `cadeado=` troca essa resposta, e é por ela que as duas metades do desfecho
+    entram na régua: `None` é *o serviço não respondeu* e uma exceção é *a ponte
+    levantou*.
+    """
+
+    def __init__(self, cadeado: Any = _ECOA) -> None:
         self.chamadas: list[tuple[str, tuple, dict]] = []
+        self.cadeado = cadeado
+
+    def autoswitch_lock_set(self, locked: Any = None) -> Any:
+        self.chamadas.append(("autoswitch_lock_set", (), {"locked": locked}))
+        if isinstance(self.cadeado, BaseException):
+            raise self.cadeado
+        # O ECO É O QUE O DAEMON FAZ, e não uma gentileza do dublê:
+        # `_handle_autoswitch_lock` responde `novo = bool(pedido)` quando o
+        # `locked` vem no pedido — o toggle é só para quem não manda valor.
+        return bool(locked) if self.cadeado is _ECOA else self.cadeado
 
     def __getattr__(self, nome: str):
         def registrar(*args, **kwargs):
@@ -265,6 +296,50 @@ def test_um_clique_grava_uma_vez_so_no_disco_dela() -> None:
         "um clique sem `evento` foi engolido — o padrão tem de ser `change`")
 
 
+def test_o_cadeado_confirma_em_verde() -> None:
+    """O gesto PEDE o verde voltando calado — e só quando o serviço confirmou.
+
+    **O MECANISMO É O DO PILOTO, e esta régua mede o desfecho que este gesto
+    devolve a ele, não o texto do código.** `hefesto_vivo._gesto` anota
+    ``"aplicou"`` no ramo sem exceção, e o `finally` leva esse desfecho ao pouso
+    (`_pousou(voo, certo)`), que acende `hef-deu-certo` por `MS_DA_PISCADA`. Um
+    gesto que volta sem levantar JÁ pediu o verde; um que levanta não pede.
+    Quem mede a piscada no DOM, com o WebKit e a página publicada, é a
+    :func:`test_o_verde_do_cadeado_no_webkit_e_do_servico`, logo abaixo.
+
+    **A MORDIDA — e ela é a que importa:** faça a ponte devolver `None` (o
+    serviço parado) e esta régua reprova, porque o gesto voltou calado e o piloto
+    vai acender o verde sobre uma escrita que não aconteceu. Era o estado do
+    produto até 06/09/2026: a resposta da ponte ia para o lixo.
+
+    A SEGUNDA MORDIDA: embrulhe a chamada num `try/except` e o caminho da ponte
+    que LEVANTA passa a pedir o verde do mesmo jeito — a régua reprova nas duas
+    metades de baixo.
+    """
+    # 1. O SERVIÇO CONFIRMOU: volta calado, e é isso que acende o verde.
+    p = _PonteDeMentira()
+    assert aba.cadeado(_ctx([], autoswitch_locked=False),
+                       {"evento": "change"}, p) is None
+    assert p.chamadas, "o cadeado não chamou NADA"
+
+    # 2. O SERVIÇO NÃO RESPONDEU (`None`): o verde não pode acender, e a frase
+    #    vai para a tela dela — `RuntimeError` é o contrato do piloto para
+    #    *"o produto recusou, e a frase VAI PARA A TELA"*.
+    p = _PonteDeMentira(cadeado=None)
+    with pytest.raises(RuntimeError) as caiu:
+        aba.cadeado(_ctx([], autoswitch_locked=False), {"evento": "change"}, p)
+    assert str(caiu.value) == aba.CADEADO_RECUSA, (
+        f"a recusa disse {str(caiu.value)!r} — a frase é a da janela antiga, e "
+        f"texto de tela novo é palavra dela")
+    assert p.chamadas, "o gesto recusou sem sequer tentar escrever"
+
+    # 3. A PONTE LEVANTOU: o gesto deixa subir. Um `try/except` aqui trocaria a
+    #    recusa por uma piscada verde sobre nada.
+    p = _PonteDeMentira(cadeado=RuntimeError("o socket recusou"))
+    with pytest.raises(RuntimeError):
+        aba.cadeado(_ctx([], autoswitch_locked=True), {"evento": "change"}, p)
+
+
 def test_a_palavra_do_cadeado_e_a_que_ela_ja_leu() -> None:
     """O rótulo e a dica são da janela antiga, palavra por palavra.
 
@@ -297,6 +372,15 @@ def test_a_palavra_do_cadeado_e_a_que_ela_ja_leu() -> None:
         "a dica do cadeado se afastou da da janela antiga. As duas dizem a "
         "mesma coisa para a mesma pessoa; duas versões vivas é o defeito que a "
         "regra do fato-errado existe para matar")
+    # A TERCEIRA FRASE — 06/09/2026, e ela nasceu com o mesmo dono. Quando o
+    # serviço não responde, o gesto recusa DIZENDO, e o que ele diz é o que o
+    # `_on_home_autoswitch_lock_toggled` já dizia no `resultado is None`.
+    assert aba.CADEADO_RECUSA in colado, (
+        f"a recusa do cadeado ({aba.CADEADO_RECUSA!r}) não é a frase que a "
+        f"janela antiga põe na tela quando o `autoswitch_lock_set` volta "
+        f"`None`. Texto de tela NOVO é decisão dela (PROVA-DE-TELA-01); esta "
+        f"linha existe para que a tela nova não invente uma segunda maneira de "
+        f"dizer o mesmo desfecho")
 
 
 def test_o_cadeado_esta_na_pagina_com_os_dois_lados() -> None:
@@ -315,6 +399,51 @@ def test_o_cadeado_esta_na_pagina_com_os_dois_lados() -> None:
     assert doc.count('data-gesto="cadeado"') == 1
     assert aba.CADEADO_ROTULO in doc, "o rótulo do cadeado não está na tela"
     assert aba.CADEADO_DICA in doc, "o cadeado está sem a razão na dica"
+
+
+def test_o_cadeado_esta_publicado() -> None:
+    """A caixa está na página que o PRODUTO abre — medido no arquivo, não na prosa.
+
+    **O FATO QUE ESTA RÉGUA SUBSTITUI.** O fecho do gesto dizia que a caixa só
+    existia no desenho da bancada e que o piloto abre o publicado — era verdade
+    quando foi escrito e deixou de ser. A conclusão daquela frase (*o
+    `--prova-gesto` não clica esta caixa*) continua de pé por OUTRO motivo, que
+    é `PERIGOSOS`, e é esse motivo que o fonte tem de carregar.
+
+    **A RÉGUA LÊ O ARQUIVO PUBLICADO, e é o que a impede de envelhecer igual à
+    frase que ela veio corrigir.** `onde.pagina(…, publicado=True)` é o dono do
+    caminho — o mesmo que o piloto abre nos seis caminhos dele —, e o número da
+    linha sai da leitura, nunca digitado aqui.
+
+    E A SEGUNDA METADE COBRA A PROSA CONTRA O FATO: com a caixa publicada, o
+    docstring deste gesto não tem por que mandar ninguém procurá-la na bancada.
+    A palavra é o sentinela, e não a frase inteira, pela lição de 05/09 — *citar
+    literalmente o padrão que se vigia é como o aviso vira o defeito que ele
+    descreve*: qualquer reformulação da afirmação morta reprova do mesmo jeito.
+
+    A MORDIDA: ponha a frase velha de volta no fecho de :func:`a01_jogar.cadeado`
+    e esta régua reprova nomeando a linha em que a caixa está publicada.
+    """
+    import inspect
+
+    alvo = onde.pagina("01-jogar.html", publicado=True)
+    assert alvo.exists(), f"a página que o produto abre não existe: {alvo}"
+    linhas = alvo.read_text().splitlines()
+    onde_esta = [n for n, linha in enumerate(linhas, 1)
+                 if 'data-gesto="cadeado"' in linha]
+    assert len(onde_esta) == 1, (
+        f"a caixa do cadeado aparece {len(onde_esta)} vez(es) na página "
+        f"publicada ({alvo}). Zero quer dizer que ela NÃO está no que o produto "
+        f"renderiza — e aí o gesto está ligado a um botão que ela não tem como "
+        f"clicar; mais de uma, que o clique tem dois endereços iguais")
+
+    fonte = inspect.getsource(aba.cadeado).lower()
+    assert "mockup" not in fonte, (
+        f"o fonte do gesto `cadeado` ainda manda quem lê procurar a caixa na "
+        f"bancada — e ela está PUBLICADA, em {alvo}:{onde_esta[0]}, que é o "
+        f"arquivo que o piloto abre. Fato errado se SUBSTITUI: o que fica "
+        f"escrito é a razão de o `--prova-gesto` não clicar esta caixa, que é "
+        f"`PERIGOSOS` (o gesto grava preferência dela no disco)")
 
 
 @pytest.mark.skipif(not pathlib.Path("/usr/bin/google-chrome").exists()
@@ -880,3 +1009,284 @@ def _painel_do_produto() -> Any:
     from hefesto_dualsense4unix.app.actions.jogar import painel
 
     return painel
+
+
+# ---------------------------------------------------------------------------
+# O VERDE DO CADEADO, MEDIDO NO DOM — o piloto do produto, a página publicada
+# ---------------------------------------------------------------------------
+#
+# POR QUE ESTA RÉGUA ABRE UM WebKit DE VERDADE: porque a forma de defeito mais
+# cara desta casa é *alguém curar o caminho e provar a cura num caminho que ela
+# não usa*. As três medições acima provam o desfecho que o gesto DEVOLVE; esta
+# prova o pixel — a caixa que ela clica, na página que o produto renderiza, com
+# o `BOOTSTRAP` vivo e o pouso do piloto decidindo a cor.
+#
+# E ELA NÃO TOCA NO DISCO DELA. O dublê entra em `hefesto_vivo.ponte`, um degrau
+# ANTES do socket: nenhum `autoswitch.lock` sai, nenhum
+# `save_autoswitch_locked` roda. É o que torna medível um gesto que está em
+# `PERIGOSOS` — a régua de clique do piloto continua, e deve continuar, sem
+# clicar esta caixa.
+
+#: A MESA DUBLÊ desta medição. `autoswitch_locked: False` é o que faz o clique
+#: pedir `locked=True` — a mesma direção da prova declarada em `PROVAS`.
+_ESTADO_DO_WEBKIT: dict[str, Any] = {
+    "active_profile": "regua",
+    "gamepad_emulation": {"flavor": "dualsense"},
+    "autoswitch_locked": False,
+    "controllers": [
+        {"uniq": P1, "connected": True, "transport": "usb", "player": 1},
+        {"uniq": P2, "connected": True, "transport": "bt", "player": 2},
+    ],
+}
+
+#: A LEITURA. A cor vem do CSSOM e não da classe, pela mesma razão da régua do
+#: recado: a classe diz que a regra foi ESCRITA, o CSSOM diz que ela PEGOU — a
+#: piscada é `outline`, e um `!important` arrancado a deixaria muda justamente
+#: nos campos que declaram cor própria.
+_LER_O_CADEADO = r"""
+(function(){
+  const c = document.querySelector('input[data-gesto="cadeado"]');
+  if(!c) return JSON.stringify({achou: false});
+  const cs = getComputedStyle(c);
+  return JSON.stringify({
+    achou: true,
+    verde: c.classList.contains('hef-deu-certo'),
+    em_voo: c.classList.contains('hef-em-voo'),
+    contorno: cs.outlineColor,
+    contorno_larg: cs.outlineWidth,
+  });
+})()
+"""
+
+#: O CLIQUE, na caixa do produto. Clicar por coordenada é a armadilha que esta
+#: casa já pagou duas vezes.
+_CLICAR_NO_CADEADO = r"""
+(function(){
+  const c = document.querySelector('input[data-gesto="cadeado"]');
+  if(!c) return 'NAO ACHEI A CAIXA DO CADEADO NA PAGINA PUBLICADA';
+  c.click();
+  return 'cliquei';
+})()
+"""
+
+
+@pytest.fixture(scope="module")
+def no_webkit() -> dict:
+    """Abre o piloto DE VERDADE, oculto, e clica a caixa nos TRÊS desfechos."""
+    gi = pytest.importorskip("gi", reason="a GUI precisa do PyGObject do sistema")
+    gi.require_version("Gtk", "3.0")
+    gi.require_version("WebKit2", "4.1")
+    from gi.repository import GLib, Gtk
+
+    if not Gtk.init_check(None)[0]:
+        pytest.skip("sem sessão gráfica — o WebKit não abre")
+
+    import argparse
+    import json
+    import time as _time
+
+    import hefesto_vivo as hv
+
+    # OS DUBLÊS SÃO DEVOLVIDOS NO FIM: `mesa_viva` e `pacotes.ponte` são módulos
+    # COMPARTILHADOS do produto, e deixá-los sujos entrega uma mesa de mentira a
+    # todo vizinho que abrir um `Piloto` depois, no mesmo processo.
+    guardado = (hv.mesa_viva.estado_do_daemon, hv.ponte.autoswitch_lock_set)
+    da_piscada_ms = int(hv.MS_DA_PISCADA)
+    hv.mesa_viva.estado_do_daemon = (  # type: ignore[assignment]
+        lambda *a, **k: _ESTADO_DO_WEBKIT)
+
+    # O QUE A PONTE RESPONDE, trocado a cada etapa. O primeiro é o ECO do
+    # serviço vivo (`_handle_autoswitch_lock` responde `bool(pedido)`).
+    resposta: dict[str, Any] = {"como": "eco"}
+
+    def _ponte_do_cadeado(locked: Any = None) -> Any:
+        if resposta["como"] == "levanta":
+            raise RuntimeError("o socket recusou o autoswitch.lock")
+        return bool(locked) if resposta["como"] == "eco" else None
+
+    hv.ponte.autoswitch_lock_set = _ponte_do_cadeado  # type: ignore[assignment]
+
+    args = argparse.Namespace(
+        oculta=True, segundos=0.0, passear=False, parada=900, foto="",
+        abre="01-jogar.html", prova_no_aparelho=False, entre=2500,
+        espera=1200, incluir_perigosos=False, prova_clique="", sem_cor=True,
+        prova_de_mockup=False, voltas_por_aba=8, teto_de_mockup=-1,
+        sem_cravado=False, sem_selo=False,
+    )
+    piloto = hv.Piloto(args)
+    fora: dict[str, Any] = {"piscada_ms": da_piscada_ms}
+
+    def ler(rotulo: str):
+        def _leu(valor, erro):
+            fora[rotulo] = (f"ERRO {erro}" if erro is not None
+                            else json.loads(str(valor)))
+        return _leu
+
+    def anotar(rotulo: str):
+        def _leu(valor, erro):
+            fora[rotulo] = f"ERRO {erro}" if erro is not None else str(valor)
+        return _leu
+
+    def comeco() -> bool:
+        # A PÁGINA TEM DE ESTAR PRONTA, e não "já deve ter carregado": sem o
+        # bootstrap o `el.click()` acha a caixa sem ouvinte que responda — o
+        # clique some, calado, e a régua fica verde sobre nada.
+        if not piloto.pronto:
+            return True
+        piloto.ponte.perguntar(_LER_O_CADEADO, ler("antes"))
+        piloto.ponte.perguntar(_CLICAR_NO_CADEADO, anotar("clique-1"))
+        GLib.timeout_add(700, no_verde)
+        return False
+
+    def no_verde() -> bool:
+        piloto.ponte.perguntar(_LER_O_CADEADO, ler("confirmou"))
+        GLib.timeout_add(da_piscada_ms + 500, apagou)
+        return False
+
+    def apagou() -> bool:
+        piloto.ponte.perguntar(_LER_O_CADEADO, ler("depois-da-piscada"))
+        GLib.timeout_add(200, sem_resposta)
+        return False
+
+    def sem_resposta() -> bool:
+        # O SERVIÇO PARADO: a ponte devolve `None`, e é o caminho que fazia a
+        # tela piscar verde sobre uma escrita que não aconteceu.
+        resposta["como"] = "none"
+        piloto.ponte.perguntar(_CLICAR_NO_CADEADO, anotar("clique-2"))
+        GLib.timeout_add(700, leu_sem_resposta)
+        return False
+
+    def leu_sem_resposta() -> bool:
+        piloto.ponte.perguntar(_LER_O_CADEADO, ler("sem-resposta"))
+        # O DEPÓSITO É LIDO AQUI, e não no fim — a chave é o `uniq`, e a caixa
+        # não mora em coluna de controle nenhuma: as duas recusas pousam na
+        # MESMA chave (a tarja de rodapé), e a terceira apagaria esta.
+        fora["recados-sem-resposta"] = {
+            k: [v[0], v[2]] for k, v in piloto._recados.items()}
+        GLib.timeout_add(da_piscada_ms + 500, levanta)
+        return False
+
+    def levanta() -> bool:
+        resposta["como"] = "levanta"
+        piloto.ponte.perguntar(_CLICAR_NO_CADEADO, anotar("clique-3"))
+        GLib.timeout_add(700, leu_o_levante)
+        return False
+
+    def leu_o_levante() -> bool:
+        piloto.ponte.perguntar(_LER_O_CADEADO, ler("levantou"))
+        GLib.timeout_add(400, fim)
+        return False
+
+    def fim() -> bool:
+        fora["desfechos"] = {k: list(v) for k, v in piloto.desfechos.items()}
+        fora["recados"] = {k: [v[0], v[2]] for k, v in piloto._recados.items()}
+        Gtk.main_quit()
+        return False
+
+    GLib.timeout_add(400, lambda: piloto._ir(args.abre))
+    GLib.timeout_add(1500, comeco)
+    # O RELÓGIO DE SEGURANÇA É DESARMADO NO `finally`: um `timeout_add` pendente
+    # depois da fixture dispara DENTRO do laço do PRÓXIMO teste de GUI do mesmo
+    # processo. Já matou onze medições de um vizinho.
+    guarda = GLib.timeout_add(60000, Gtk.main_quit)
+    try:
+        # O LAÇO REENTRA ATÉ O ROTEIRO ACABAR, e a condição é o ÚLTIMO passo: um
+        # `Gtk.main_quit` pendente de outro teste de GUI do mesmo processo cai
+        # dentro deste `Gtk.main()` e o encerra no meio.
+        limite = _time.monotonic() + 60.0
+        while "desfechos" not in fora and _time.monotonic() < limite:
+            Gtk.main()
+    finally:
+        GLib.source_remove(guarda)
+        piloto.pronto = False
+        piloto.tela.janela.destroy()
+        (hv.mesa_viva.estado_do_daemon,
+         hv.ponte.autoswitch_lock_set) = guardado  # type: ignore[assignment]
+    assert "desfechos" in fora, (
+        f"o roteiro não chegou ao fim — o que voltou foi {sorted(fora)}. Quem "
+        f"guarda os `desfechos` é o último passo, e esperar por qualquer outro "
+        f"deixa a régua verde sobre uma medição pela metade")
+    return fora
+
+
+def test_o_verde_do_cadeado_no_webkit_e_do_servico(no_webkit: dict) -> None:
+    """A piscada acende quando o serviço confirmou — e SÓ então.
+
+    **As três metades, no mesmo DOM e no mesmo minuto:**
+
+    ==========================  ==============================================
+    a ponte responde            a caixa
+    ==========================  ==============================================
+    o estado que ficou valendo  pisca VERDE por `MS_DA_PISCADA` e volta sozinha
+    `None` (serviço parado)     **não pisca** — e a frase vai para a tela
+    levanta                     **não pisca**
+    ==========================  ==============================================
+
+    A MORDIDA QUE IMPORTA é a linha do meio, e ela é a que separa *o produto
+    confirmou* de *a tela pintou sozinha*: arranque o `is None` do gesto e a
+    caixa pisca verde no exato clique em que nada foi guardado — com o
+    desmarcar chegando 100 ms depois, pelo tique.
+
+    A COR VEM DO CSSOM: a classe diz que a regra foi escrita, o `outlineColor`
+    diz que ela pegou.
+    """
+    assert no_webkit["clique-1"] == "cliquei", no_webkit["clique-1"]
+    antes, certo = no_webkit["antes"], no_webkit["confirmou"]
+    assert antes["achou"], "a caixa do cadeado não está na página que o piloto abriu"
+
+    # A LINHA DE BASE: sem ela, uma caixa que já nascesse verde daria o mesmo
+    # verde depois do clique.
+    assert not antes["verde"], "a caixa já estava piscando ANTES do clique"
+
+    assert certo["verde"], (
+        "o serviço confirmou e a caixa não piscou — é o gesto desta aba cujo "
+        "efeito não aparece em lugar nenhum da tela, e sem a piscada ele "
+        "responde ao clique dela com nada")
+    assert certo["contorno_larg"] != "0px", (
+        f"a classe entrou e a folha não pegou: `outline-width` "
+        f"{certo['contorno_larg']!r}. É a diferença entre a régua verde e o "
+        f"olho dela vendo alguma coisa")
+
+    # E ELA VOLTA SOZINHA. Um campo verde para sempre afirmaria um clique de dez
+    # minutos atrás — a mesma doença do botão que fica em voo.
+    assert not no_webkit["depois-da-piscada"]["verde"], (
+        f"a piscada não apagou depois de {no_webkit['piscada_ms']} ms")
+
+
+def test_o_cadeado_nao_pisca_sobre_o_que_nao_foi_guardado(no_webkit: dict) -> None:
+    """O serviço não respondeu — e a tela NÃO pode dizer que guardou.
+
+    **É a metade que esta sprint existe para fechar.** Até 06/09/2026 a resposta
+    de `autoswitch_lock_set` ia para o lixo: com o serviço parado o gesto voltava
+    calado, o piloto anotava `"aplicou"` e a caixa piscava VERDE — e desmarcava
+    no tique seguinte, porque `_cadeado` sem `autoswitch_locked` devolve `""`. A
+    tela dizia *guardei* e *não está guardado* com 100 ms entre as duas.
+
+    A MORDIDA: devolva o corpo do gesto ao `p.autoswitch_lock_set(...)` sem
+    guarda e esta régua reprova na primeira asserção.
+
+    A SEGUNDA: embrulhe a chamada num `try/except` e a última asserção reprova —
+    a ponte que LEVANTA passaria a pedir o verde do mesmo jeito.
+    """
+    assert no_webkit["clique-2"] == "cliquei", no_webkit["clique-2"]
+    assert not no_webkit["sem-resposta"]["verde"], (
+        "a caixa piscou VERDE com o serviço sem responder — o verde é o recibo "
+        "de uma escrita que não aconteceu")
+
+    # E A RECUSA FALA: `RuntimeError` é o contrato do piloto para *o produto
+    # recusou, e a frase VAI PARA A TELA*.
+    #
+    # ONDE ELA POUSA, MEDIDO E NÃO SUPOSTO: no cartão do controle que a FITA
+    # desta aba tem escolhido. A caixa não mora em coluna de controle nenhuma,
+    # então o ouvinte cai no `window.__hef.alvoPadrao`, que a `01` preenche
+    # (`hefesto_vivo`, `carga["alvo"]` — só as abas cuja fita ESCOLHE o fazem).
+    # O depósito é lido NO INSTANTE desta etapa porque a chave é uma só: a
+    # recusa seguinte escreveria por cima desta.
+    frases = [v[0] for v in no_webkit["recados-sem-resposta"].values()]
+    assert aba.CADEADO_RECUSA in frases, (
+        f"a recusa não chegou à tela — o que está depositado é {frases}. Um "
+        f"gesto que não pisca e não fala é o clique que some calado")
+
+    assert no_webkit["clique-3"] == "cliquei", no_webkit["clique-3"]
+    assert not no_webkit["levantou"]["verde"], (
+        "a ponte levantou e a caixa piscou VERDE mesmo assim")
