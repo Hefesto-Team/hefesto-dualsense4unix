@@ -64,7 +64,12 @@ from hefesto_dualsense4unix.profiles.schema import (  # noqa: E402
 # do `paridade-gtk-html.csv`, e citá-lo deste lado fecharia a dívida no papel).
 # Quem mediu isso não fui eu — foi o `portao_a_casa_sabe_e_o_produto_nao_faz`,
 # que reprovou nomeando as duas assim que a faixa saiu.
+#
+# E DESDE 06/09/2026 (GTK-2) as DUAS FRASES da janela estável vêm por aqui
+# também — ver o bloco "AS FRASES QUE A JANELA ESTÁVEL TEM", abaixo.
 from hefesto_dualsense4unix.app.telas.vibracao import (  # noqa: E402
+    DICA_DO_TETO_DA_MESA,
+    DICA_DOS_VALORES_QUE_PASSAM,
     html_do_estado,
     textos_do_estado,
 )
@@ -255,57 +260,34 @@ BARRA_DO_MOTOR_PADRAO = MOTOR_PCT_PADRAO
 # ---------------------------------------------------------------------------
 # AS FRASES QUE A JANELA ESTÁVEL TEM E ESTA ABA NÃO TINHA — 03/09/2026.
 #
-# Três textos de tela existem no `gui/main.glade` há semanas e não atravessaram
-# para o desenho novo. Eles não são enfeite: cada um ensina uma coisa que a aba
-# nova deixa a usuária descobrir batendo com a cara.
+# Dois textos de tela existiam no `gui/main.glade` há semanas e não
+# atravessaram para o desenho novo. Eles não são enfeite: cada um ensina uma
+# coisa que a aba nova deixa a usuária descobrir batendo com a cara.
 #
-# ELAS SÃO LIDAS DO GLADE, NÃO REDIGITADAS. É a mesma disciplina dos motores (do
-# CSV), dos degraus (do `RUMBLE_POLICY_MULT`) e da linha de estado (do
+# ELAS SÃO LIDAS, NÃO REDIGITADAS. É a mesma disciplina dos motores (do CSV),
+# dos degraus (do `RUMBLE_POLICY_MULT`) e da linha de estado (do
 # `app/telas/vibracao`): o que tem dono não se digita. Uma segunda cópia de um
 # texto de tela diverge na primeira edição — e esta casa já pagou por isso, com
 # o nome do botão "Devolver ao jogo" que não existia
 # (`rumble_actions.BTN_GIVE_BACK_TO_GAME`, RUM-01).
 #
-# E ELAS RECUSAM quando a âncora some: um `str.replace`/`re.search` que não casa
-# devolve o texto intacto e não avisa — foi assim que `svg(jogador=N)` nunca
-# acendeu uma lâmpada em aba nenhuma.
+# O DONO MUDOU EM 06/09/2026 — sprint GTK-2, `D-0609-GTK-LEVA-INTEIRA`. Até
+# aqui esta aba abria o `gui/main.glade` no corpo do módulo e casava um
+# `re.search` por âncora. A REGRA NÃO MUDOU; o dono, sim: a janela GTK está
+# sendo aposentada, e ler texto de tela de um arquivo marcado para apagar é
+# escolher o dia em que a aba nova para de montar. As duas frases moram agora
+# em `app/telas/vibracao`, que já era a fonte da linha de estado desta aba — e
+# esta linha continua sendo LEITURA, não digitação.
+#
+# ERAM TRÊS. A terceira ("Espera 5 segundos antes de trocar de faixa")
+# explicava o Modo Auto, que saiu desta tela em 05/09 por decisão dela; ela
+# nunca chegou a precisar de dono novo.
+#
+# QUEM IMPEDE AS DUAS TELAS DE DIVERGIREM enquanto o glade existe é
+# `tests/unit/test_os_leitores_do_glade_tem_dono.py`, que compara o dono novo
+# com as âncoras do XML — a recusa que o `_do_glade` fazia aqui, feita onde
+# reprovar é barato e não derruba o gerador.
 # ---------------------------------------------------------------------------
-_GLADE = (DADOS_DO_REPO.parent.parent / "src/hefesto_dualsense4unix/gui/main.glade").read_text()
-
-
-def _do_glade(padrao, oque):
-    """O primeiro grupo da busca no glade, com as entidades XML desfeitas."""
-    import html as _html
-    import re as _re
-
-    achado = _re.search(padrao, _GLADE, _re.S)
-    if not achado:
-        raise SystemExit(
-            f"ERRO em 05-vibracao: {oque} não está mais no `gui/main.glade` "
-            f"onde esta aba a lê. Ou ela mudou de lugar (e o padrão precisa "
-            f"acompanhar), ou saiu da janela estável — e aí sai daqui também, "
-            f"em vez de virar a segunda cópia de um texto que já não existe.")
-    return _html.unescape(achado.group(1)).strip()
-
-
-#: O TETO DA MESA, e ele é a oração que os QUATRO tooltips dos degraus repetem
-#: na janela estável (RUM-7, 25/08). A linha que avisa quando o teto MORDE já
-#: existe nas duas telas — é a mesma função, `texto_do_teto_do_orcamento`. O que
-#: faltava aqui era o ENSINO PREVENTIVO: aquela linha só aparece quando o teto
-#: já cortou, e por isso nunca ensinou que o teto existe.
-DICA_DO_TETO_DA_MESA = _do_glade(
-    r'id="rumble_policy_economia".*?tooltip-text[^>]*>[^<]*?'
-    r'(O Perfil de Bateria pode impor um teto[^<]*?)</property>',
-    "a oração do teto do orçamento, dos tooltips de degrau")
-
-#: A ÚNICA FRASE DA JANELA ESTÁVEL QUE LIGA OS DOIS CARDS: explica por que um
-#: "Testar" com 220 pode sair fraco (o degrau em Economia corta para 30%). Na
-#: aba nova os dois blocos estão na MESMA tabela, mais perto ainda, e a relação
-#: entre eles não estava dita em lugar nenhum.
-DICA_DOS_VALORES_QUE_PASSAM = _do_glade(
-    r'id="rumble_info".*?<property name="label"[^>]*>&lt;i&gt;'
-    r'(.*?)&lt;/i&gt;</property>',
-    "a nota do card Testar motores")
 
 #: A OITAVA FAIXA DA GRADE — a linha "Estado" — SAIU. Decisão dela, 05/09/2026:
 #:
