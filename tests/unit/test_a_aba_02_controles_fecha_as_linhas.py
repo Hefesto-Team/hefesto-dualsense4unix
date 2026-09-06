@@ -1105,3 +1105,392 @@ def test_nenhum_botao_de_som_promete_botao_nesta_tela() -> None:
         assert proibido not in a02_gerador.MIOLO, (
             f"um botão {proibido} nasceu no cartão — ela decidiu que ele fica "
             f"fora, com aviso")
+
+
+# ===========================================================================
+# 9. O GIROSCÓPIO NO JOGO, E A PALAVRA DO TRANSPORTE — CONTROLES-VERDADE-01
+# ===========================================================================
+# *"Numa mesa de quatro, o cartão é o único lugar onde se descobre por que um
+# controle não está fazendo nada."* O que a tela mostrava sobre o giroscópio era
+# um NÚMERO DE CATÁLOGO — "No cabo são 250,0 Hz exatos", na dica do interruptor,
+# igual para todo controle e todo momento. Estas réguas cobram o número MEDIDO.
+#
+# A SPRINT PEDIA A LINHA DA VERDADE (`resumo_do_que_chega_ao_jogo`) E A MEDIÇÃO
+# A DERRUBOU. Aquela linha saiu da tela da GTK em 17/08/2026 a pedido dela
+# (*"remover guia dos status em tempo real"*): `controller_card.py:2916` diz que
+# ela é criada, alimentada e nunca empacotada, e o `paridade-gtk-html.csv:56`
+# avisa que reconstruí-la aqui seria reintroduzir o que ela mandou tirar. Quem
+# ocupa aquele lugar na GTK dela É esta frase (`controller_card.py:2770`).
+# A dívida VIVA é a linha 55 do mesmo CSV, e é a única da família sem segunda
+# metade — ou seja, sem pergunta pendente para ela.
+#
+# NENHUMA FRASE ESTÁ DIGITADA AQUI, e é a instrução literal da sprint: *"se o
+# seu teste escrever a frase esperada à mão, ele mede a sua digitação, não o
+# produto. Importe a constante do dono e compare com ela."* Onze réguas desta
+# casa caíram em 26/08 pela forma oposta.
+from hefesto_dualsense4unix.app.actions.home_actions import (
+    palavra_do_transporte,
+)
+from hefesto_dualsense4unix.app.widgets.controller_card import (
+    _HZ_MAIS_LARGO,
+    resumo_do_que_chega_ao_jogo,
+    texto_motion,
+)
+
+
+def _a_frase_mais_larga_do_giroscopio() -> str:
+    """O PIOR CASO, PERGUNTADO AO DONO — nunca digitado aqui.
+
+    `texto_motion` tem três formas (o hertz, o Modo Nativo e a máscara Xbox) e
+    nenhuma constante de "frase mais larga", como a linha da verdade tem. Então
+    a régua monta as TRÊS CENAS e deixa o dono responder qual é a maior. O hertz
+    entra no maior valor que o próprio dono sabe imprimir (`_HZ_MAIS_LARGO`, os
+    quatro dígitos que ele reserva para um pico de IMU) — o número também é
+    dele.
+    """
+    largo = float(_HZ_MAIS_LARGO)
+    cenas = [
+        ({**BASE}, {"rumble_ff": {"per_vpad": [
+            {"player": 1, "motion_streaming": True, "motion_hz": largo}]}}),
+        ({**BASE}, {"native_mode": True}),
+        ({**BASE}, {"gamepad_emulation": {"flavor": "xbox"}}),
+    ]
+    frases = [f for f in (texto_motion(e, g) for e, g in cenas) if f]
+    assert len(frases) == len(cenas), "uma das três formas do dono calou"
+    return max(frases, key=len)
+
+#: O ESPELHO DE GIROSCÓPIO VIVO — o único bloco do estado global de que a linha
+#: precisa para sair do silêncio. Sem `per_vpad` não há gamepad virtual, e o dono
+#: devolve `None` de propósito.
+def _com_vpad(hz: float | None = 250.0, **extra: Any) -> dict[str, Any]:
+    item: dict[str, Any] = {"player": 1, "motion_streaming": True}
+    if hz is not None:
+        item["motion_hz"] = hz
+    return {"rumble_ff": {"per_vpad": [item]}, **extra}
+
+
+def test_a_linha_do_giroscopio_e_a_do_dono_palavra_por_palavra() -> None:
+    """O cartão NÃO redige a frase: ele lê `texto_motion`.
+
+    MORDE: troque o `texto_motion(...)` do pacote por qualquer literal e as
+    comparações caem juntas — é o dono que decide, não o pacote e muito menos
+    esta régua.
+    """
+    for hz in (250.0, 61.0):
+        estado = _com_vpad(hz)
+        card = _card({}, state=estado)
+        esperado = texto_motion({**BASE}, estado)
+        assert esperado, "o dublê não acordou o dono — a régua mediria o vazio"
+        assert card["giro-no-jogo"] == esperado, (
+            "o cartão parou de ler o dono da linha do giroscópio")
+
+
+def test_as_situacoes_dizem_frases_diferentes_no_cartao() -> None:
+    """Fluindo com hertz, fluindo sem hertz, e sem espelho — três respostas.
+
+    Uma tela que diz a MESMA coisa nos três estados não informa nada, e é assim
+    que uma linha desta família passa verde sobre um card mudo.
+    """
+    com_hz = _card({}, state=_com_vpad())
+    sem_hz = _card({}, state=_com_vpad(hz=None))
+    sem_espelho = _card({}, state={})
+    frases = {com_hz["giro-no-jogo"], sem_hz["giro-no-jogo"],
+              sem_espelho["giro-no-jogo"]}
+    assert len(frases) == 3, (
+        f"as três situações do cartão colapsaram em {len(frases)} frase(s): "
+        f"{frases!r}")
+    assert sem_espelho["giro-no-jogo"] == "", (
+        "sem espelho de giroscópio o cartão tem de CALAR — o dono devolve "
+        "`None` de propósito: acusar 'sem giroscópio' em todo card seria ruído "
+        "crônico, e quem diagnostica silêncio anômalo é o doctor")
+
+
+def test_a_excecao_do_modo_nativo_chega_ao_cartao() -> None:
+    """Em Nativo o jogo lê o controle direto, e a linha tem de dizer isso.
+
+    MORDE: arranque o ramo `native_mode` de `texto_motion` (ou deixe de passar o
+    `state` global ao dono) e o cartão CALA no exato modo em que o giroscópio
+    chega inteiro — o silêncio ali lê como defeito.
+    """
+    nativo = _card({}, state={"native_mode": True})["giro-no-jogo"]
+    comum = _card({}, state=_com_vpad())["giro-no-jogo"]
+    assert nativo == texto_motion({**BASE}, {"native_mode": True})
+    assert nativo and nativo != comum, (
+        "o Modo Nativo caiu na frase comum — a exceção sumiu do cartão")
+    assert "Hz" not in nativo, (
+        "em Nativo o cartão anunciou uma frequência de espelho: não há gamepad "
+        f"virtual a que perguntar, e o jogo lê o controle direto — {nativo!r}")
+
+
+def test_a_excecao_da_mascara_xbox_chega_ao_cartao() -> None:
+    """A máscara Xbox apaga três recursos, e o motivo NÃO é defeito nosso.
+
+    MORDE: arranque o ramo `_mascara_e_xbox` do dono e o cartão volta a calar
+    sob a máscara — mostrando o giroscópio desenhado e nenhum sinal de que o
+    dado não sai dali.
+    """
+    estado = {**_com_vpad(), "gamepad_emulation": {"flavor": "xbox"}}
+    frase = _card({}, state=estado)["giro-no-jogo"]
+    assert frase == texto_motion({**BASE}, estado)
+    assert frase != _card({}, state=_com_vpad())["giro-no-jogo"], (
+        "a máscara Xbox não mudou uma palavra da linha do giroscópio")
+    assert "Hz" not in frase, (
+        f"sob a máscara Xbox o cartão anunciou frequência: o controle de Xbox "
+        f"não TEM giroscópio, e o dado não sai dali — {frase!r}")
+
+
+def test_o_hertz_da_linha_e_medido_e_nunca_cravado() -> None:
+    """O número sai do `motion_hz` do vpad; zero não vira "~0 Hz".
+
+    O §Passo 3 da sprint é explícito — *"não crave número"*. Esta régua troca o
+    hertz no dublê e exige que a frase acompanhe; e com hertz zero exige que a
+    frase deixe de afirmar frequência nenhuma.
+
+    MORDE: escreva um número fixo na frase do dono e as duas primeiras
+    asserções caem; devolva o `~0 Hz` e cai a terceira.
+    """
+    a = _card({}, state=_com_vpad(250.0))["giro-no-jogo"]
+    b = _card({}, state=_com_vpad(61.0))["giro-no-jogo"]
+    assert a != b, "o hertz do cartão não acompanhou o do aparelho — está cravado"
+    assert "250" in a and "61" in b, (
+        "o número que o cartão mostra não é o que o vpad publicou")
+    zero = _card({}, state=_com_vpad(0.0))["giro-no-jogo"]
+    assert "0 Hz" not in zero, (
+        "com o espelho parado o cartão anunciou '~0 Hz' — uma frequência de "
+        f"zero não é medida, é ausência: {zero!r}")
+
+
+def test_a_linha_da_verdade_continua_FORA_do_cartao() -> None:
+    """A decisão dela de 17/08/2026, e esta régua é o que a segura.
+
+    *"remover guia dos status em tempo real"* — `resumo_do_que_chega_ao_jogo`
+    saiu da tela da GTK naquele dia (SEM-BARRA-DA-VERDADE-01) e continua criada,
+    alimentada e nunca empacotada (`controller_card.py:2916`). A sprint
+    CONTROLES-VERDADE-01 pedia para reconstruí-la aqui; a célula inteira do
+    `paridade-gtk-html.csv:56` diz que isso *"seria reintroduzir o que ela
+    mandou tirar"*, e o enunciado foi corrigido em vez de cumprido.
+
+    ELA CONTINUA VIVA NO MOTOR, e isso é de propósito: decisão medida não se
+    apaga, e o dia em que ela pedir a linha de volta o dono está de pé.
+
+    MORDE: emita `resumo_do_que_chega_ao_jogo` em qualquer campo do cartão e
+    esta régua reprova — que é o único aviso que existe contra desfazer uma
+    decisão dela por leitura de meia célula.
+    """
+    estado = _com_vpad(250.0)
+    frase_removida = resumo_do_que_chega_ao_jogo({**BASE}, estado)
+    assert frase_removida, "o dublê não acordou o dono — a régua mediria o vazio"
+    campos = _card({}, state=estado)
+    achados = [k for k, v in campos.items()
+               if isinstance(v, str) and v and v == frase_removida]
+    assert not achados, (
+        f"a linha que ela mandou tirar em 17/08/2026 voltou ao cartão, em "
+        f"{achados!r} — `paridade-gtk-html.csv:56` avisa que reconstruí-la aqui "
+        f"é reintroduzir o que ela removeu")
+
+
+# --------------------------------------------------------------------------
+# A PALAVRA DO TRANSPORTE — e o defeito vivo que ela cura
+# --------------------------------------------------------------------------
+@pytest.mark.parametrize("transporte", ["usb", "bt"])
+def test_o_cabecalho_do_cartao_fala_cabo_e_radio_e_nao_a_sigla(
+        transporte: str) -> None:
+    """Na tela é **cabo** e **rádio** (`docs/A-LINGUA-DESTA-CASA`, §1).
+
+    A contagem do topo (`2 USB · 0 BT`) é a única exceção, decidida por ela em
+    06/09 — e ela não passa por este campo.
+
+    MORDE: devolva o `VIA_DO_TRANSPORTE.get(...)` ao pacote e as duas voltas
+    reprovam com a sigla de máquina.
+    """
+    card = _card({"transport": transporte})
+    assert card["via"] == palavra_do_transporte(transporte), (
+        "o cabeçalho do cartão deixou de perguntar a palavra ao dono")
+    assert card["via"] not in ("USB", "BT"), (
+        f"a sigla de máquina voltou ao texto de tela: {card['via']!r}")
+
+
+def test_o_transporte_nao_aparece_duas_vezes_no_cabecalho() -> None:
+    """O defeito vivo que a costura da ONDA B abriu, e que esta sprint fecha.
+
+    Um controle sem nome lido — a mesa dela pelo rádio é exatamente este caso —
+    faz `identidade_de` cair no ÚLTIMO degrau, que é o transporte. O cabeçalho
+    tem lugar próprio para o transporte, então esse degrau vira AUSÊNCIA: o
+    desenho escreve `P2 • — • rádio`.
+
+    MEDIDO ANTES DA CURA nesta árvore: `identidade_de` devolvia `'rádio'` e a
+    comparação era contra `'BT'`, a sigla — nunca casavam, e o cabeçalho lia
+    **`P2 • rádio • rádio`** com as duas palavras na mesma língua depois de o
+    `via` ser curado.
+
+    MORDE: volte a comparar `nome_na_tela == via_na_tela` e ela reprova só no
+    dia em que as duas línguas voltarem a divergir; volte a comparação a uma
+    PALAVRA ESCRITA (`"rádio"`, `"BT"`) e ela reprova agora.
+    """
+    for transporte in ("usb", "bt"):
+        card = _card({"transport": transporte, "modelo": "", "nome_declarado": ""})
+        assert card["peca"] == "", (
+            f"o cartão escreveu {card['peca']!r} como NOME de um controle que "
+            f"só tem transporte — o cabeçalho diria o transporte duas vezes, "
+            f"ao lado de {card['via']!r}")
+    # E O NOME DE VERDADE NÃO PODE SER ENGOLIDO PELA MESMA GUARDA.
+    com_nome = _card({"transport": "bt", "modelo": "Cosmic Red"})
+    assert com_nome["peca"] == "Cosmic Red", (
+        "a guarda do transporte duplicado comeu o nome do plástico")
+
+
+# --------------------------------------------------------------------------
+# A LINHA DO GIROSCÓPIO NA TELA — o Chrome do sistema, headless
+# --------------------------------------------------------------------------
+#: O QUE A PÁGINA RESPONDE SOBRE A LINHA DO GIROSCÓPIO. A régua acende e apaga o
+#: `title` pelo MESMO caminho do produto (o alvo `atributo` do piloto escreve e
+#: REMOVE esse atributo), e não por uma classe posta à mão — medir uma classe
+#: que o produto não escreve mediria este arquivo.
+A_LINHA_DO_GIRO_NA_TELA = r"""
+((A_MAIS_LARGA) => {
+  const card = document.querySelector('.ctl.card[data-controle]');
+  const faixa = card.querySelector('.faixa');
+  const v = card.querySelector('.no-jogo');
+  if (!v) return {ausente: true};
+  const cx = e => { const b = e.getBoundingClientRect();
+                    return {x: b.x, direita: b.right, larg: b.width, alt: b.height}; };
+  const alt_com = faixa.getBoundingClientRect().height;
+  const com = {display: getComputedStyle(v).display, caixa: cx(v),
+               texto: (v.textContent || '').trim()};
+  // O QUE O PRODUTO FAZ QUANDO NÃO HÁ O QUE DIZER: o alvo `atributo` remove o
+  // `title`. A folha tem de apagar o elemento inteiro a partir daí.
+  const titulo = v.getAttribute('title');
+  v.removeAttribute('title');
+  const sem = {display: getComputedStyle(v).display,
+               alt_da_faixa: faixa.getBoundingClientRect().height};
+  v.setAttribute('title', titulo);
+  // E ELA NÃO PODE VAZAR — com A FRASE MAIS LARGA QUE O DONO SABE MONTAR, que
+  // entra por argumento em vez de ser inventada aqui.
+  //
+  // O QUE SE MEDE É A ALTURA DE UMA LINHA, e não a da caixa: a caixa não cresce
+  // de qualquer jeito (o `flex:0 0 var(--h-acao)` da faixa é fixo e o
+  // `min-width:0` segura a largura), então uma régua sobre ela passa COM A CURA
+  // ARRANCADA — medido em 06/09/2026, e foi assim que a primeira versão desta
+  // régua não mediu nada. Sem o `nowrap` a frase que o dono monta HOJE quebra em
+  // DUAS linhas dentro de um cabeçalho de uma só: 14px viram 28px.
+  //
+  // E `'x'.repeat(400)` NÃO SERVE DE SONDA: uma corrida de caracteres sem
+  // espaço não tem onde quebrar, então ela fica numa linha com ou sem a cura.
+  const t = v.querySelector('.no-jogo-t');
+  const antes = t.textContent;
+  const uma_linha = t.getBoundingClientRect().height;
+  t.textContent = A_MAIS_LARGA;
+  // O VÃO APERTADO É O CASO QUE IMPORTA, e sem ele a régua não mede nada: com
+  // os 410px que o cabeçalho tem hoje a frase mais larga do dono cabe INTEIRA,
+  // então tirar o `nowrap` não muda um pixel — medido em 06/09/2026, e foi
+  // assim que a primeira versão desta régua passou com a cura arrancada pela
+  // SEGUNDA vez. O vão não é constante: ele encolhe com o nome do plástico, com
+  // a máscara e com a largura da janela dela.
+  const largura_do_vao = v.getBoundingClientRect().width;
+  v.style.flex = '0 0 120px';
+  const esticado = {faixa: cx(faixa), no_jogo: cx(v), texto: cx(t),
+                    linhas: t.scrollHeight / (uma_linha || 1),
+                    vao_de_hoje: largura_do_vao,
+                    alt_da_faixa: faixa.getBoundingClientRect().height};
+  v.style.flex = '';
+  t.textContent = antes;
+  return {com, sem, esticado, alt_com, titulo,
+          um_endereco_so: card.querySelectorAll('[data-campo="giro-no-jogo"]').length};
+})
+"""
+
+
+@pytest.fixture(scope="module")
+def giro_na_tela() -> dict[str, Any]:
+    if not CHROME.exists():
+        pytest.skip("sem o Chrome do sistema — a régua não tem motor")
+    from playwright.sync_api import sync_playwright
+
+    alvo = onde.pagina("02-controles.html")
+    with sync_playwright() as pw:
+        navegador = pw.chromium.launch(executable_path=str(CHROME),
+                                       args=["--no-sandbox"])
+        try:
+            pg = navegador.new_page(viewport={"width": 1180, "height": 900})
+            pg.goto(alvo.as_uri())
+            saida = pg.evaluate(A_LINHA_DO_GIRO_NA_TELA,
+                                _a_frase_mais_larga_do_giroscopio())
+        finally:
+            navegador.close()
+    return dict(saida)
+
+
+def test_sem_frase_a_linha_do_giroscopio_esconde(giro_na_tela: dict[str, Any]) -> None:
+    """"Sem rótulo, esconde" é contrato, e não economia de pixel.
+
+    Um vão elástico vazio no meio do cabeçalho empurraria a bateria sem dizer
+    por quê — e o cartão de quatro controles não tem espaço para ruído.
+
+    MORDE: troque o `_aberto(" .faixa .verdade[title]")` da folha por
+    `_aberto(" .faixa .verdade")` e a segunda asserção reprova: o elemento
+    continua ocupando o vão com o `title` removido.
+    """
+    assert not giro_na_tela.get("ausente"), (
+        "o elemento da linha do giroscópio não está no desenho")
+    assert giro_na_tela["com"]["display"] != "none", (
+        "a linha do giroscópio não aparece nem COM frase — o card aberto ficou "
+        "sem o único número que diz se o giroscópio chega ao jogo AGORA")
+    assert giro_na_tela["sem"]["display"] == "none", (
+        "sem `title` a linha continuou ocupando o cabeçalho: o produto remove "
+        "o atributo quando não há o que dizer, e a folha tem de acompanhar")
+
+
+def test_a_frase_mais_larga_do_dono_cabe_em_uma_linha(
+        giro_na_tela: dict[str, Any]) -> None:
+    """A maior frase que o dono sabe montar, dentro de um cabeçalho de uma linha.
+
+    A frase entra por `_a_frase_mais_larga_do_giroscopio()`, que monta as três
+    cenas do dono e deixa ELE dizer qual é a maior — digitar um texto de prova
+    aqui mediria esta régua.
+
+    E O VÃO É APERTADO A 120px DE PROPÓSITO. Com os 410px de hoje a frase cabe
+    inteira, e a cura fica sem exercício: o vão encolhe com o nome do plástico,
+    com a máscara e com a largura da janela dela, e é nesse dia que a folha tem
+    de segurar.
+
+    **AS DUAS PRIMEIRAS VERSÕES DESTA RÉGUA NÃO MEDIRAM NADA**, e o registro
+    fica porque a forma se repetiu: a primeira olhava a ALTURA DA FAIXA e a
+    DIREITA DA CAIXA, e as duas são seguradas por outra coisa — o `flex:0 0 var(--h-acao)` da faixa é
+    altura fixa, e o `min-width:0` já impede o transbordo lateral. Com o
+    `ellipsis` e o `nowrap` ARRANCADOS ela passou verde. O que quebra de verdade
+    é o texto virar DUAS LINHAS num cabeçalho de uma: medido, 14px → 28px.
+
+    MORDE: tire o `text-overflow:ellipsis;white-space:nowrap` do `.verdade-t` e
+    a primeira asserção reprova com 2 linhas.
+    """
+    est = giro_na_tela["esticado"]
+    # O LIMIAR É 1,25 E NÃO 1,5, e o número saiu das duas medições: com a cura
+    # a razão é 1,0 (14px de texto em 14px de linha) e sem ela é 1,5 — o
+    # `scrollHeight` de duas linhas arredonda para 21. Um limiar EM CIMA do
+    # valor medido (`1.5 < 1.5`) é o mesmo que não ter limiar: qualquer
+    # arredondamento do motor de fontes o atravessa nos dois sentidos.
+    assert est["linhas"] < 1.25, (
+        f"a frase mais larga do dono ocupou {est['linhas']:.1f} linhas no "
+        f"cabeçalho — ele tem uma só, de altura fixa, e o resto vaza por baixo")
+    assert est["no_jogo"]["direita"] <= est["faixa"]["direita"] + 1, (
+        f"a linha do giroscópio passou da faixa em "
+        f"{est['verdade']['direita'] - est['faixa']['direita']:.1f}px")
+
+
+def test_a_frase_e_o_hover_sao_um_endereco_so(
+        giro_na_tela: dict[str, Any]) -> None:
+    """Dois elementos, o MESMO `data-campo` — e nunca dois campos.
+
+    Dois endereços para o mesmo fato podem DIVERGIR na tela, que é o que esta
+    casa persegue. O `achar()` do piloto visita os dois com o mesmo valor e cada
+    um decide pelo próprio alvo.
+
+    MORDE: dê um `data-campo` próprio ao elemento de dentro e ela reprova.
+    """
+    assert giro_na_tela["um_endereco_so"] == 2, (
+        f"a linha do giroscópio tem {giro_na_tela['um_endereco_so']} elementos "
+        f"com o endereço `giro-no-jogo`; são dois — o que veste o `title` e o que "
+        f"recebe o texto")
+    assert giro_na_tela["titulo"] == giro_na_tela["com"]["texto"], (
+        "o `title` e o texto do desenho divergiram: os dois saem do MESMO "
+        "valor, e no produto os dois vêm do mesmo tique")
