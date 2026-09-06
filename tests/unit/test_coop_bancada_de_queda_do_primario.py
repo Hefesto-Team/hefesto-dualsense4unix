@@ -119,6 +119,11 @@ class _Mesa:
 
     def __init__(self) -> None:
         self.nodes: dict[str, str] = {}
+        #: Em que transporte cada controle está SENTADO agora (RESERVA-DO-POSTO-01
+        #: §RESERVA-5). O `norm_mac` é estável entre cabo e rádio, então o mesmo
+        #: controle pode voltar por um transporte diferente daquele em que caiu —
+        #: e é exatamente essa a volta que a §6 da sprint infere sem ter medido.
+        self.transportes: dict[str, str] = {}
         self.dono_do_grab: dict[str, str] = {}
         #: Todo `EBUSY` recusado, com quem pediu e quem já tinha. A asserção 1
         #: lê daqui — e a lista guarda o TEXTO da colisão, para o teste que
@@ -128,18 +133,27 @@ class _Mesa:
 
     # -- o mundo muda ---------------------------------------------------
 
-    def sentar(self, uniq: str) -> str:
-        """Um controle entra. O node é SEMPRE novo — é o que o replug BT faz."""
+    def sentar(self, uniq: str, *, transporte: str = "bt") -> str:
+        """Um controle entra. O node é SEMPRE novo — é o que o replug BT faz.
+
+        `transporte` é `bt` por default porque o rádio é onde o defeito desta
+        bancada vive; `usb` existe para a volta pelo cabo (§RESERVA-5).
+        """
         node = f"/dev/input/event{self._proximo}"
         self._proximo += 1
         self.nodes[uniq] = node
+        self.transportes[uniq] = transporte
         return node
 
     def levantar(self, uniq: str) -> None:
         """Um controle sai: o node some, e o grab de quem o segurava some junto."""
         node = self.nodes.pop(uniq, None)
+        self.transportes.pop(uniq, None)
         if node is not None:
             self.dono_do_grab.pop(node, None)
+
+    def transporte_de(self, uniq: str) -> str:
+        return self.transportes.get(uniq, "bt")
 
     # -- o kernel responde ----------------------------------------------
 
@@ -315,12 +329,17 @@ class _VpadFalso:
 
 
 class _FakeHandle:
-    """Handle pydualsense de um controle no RÁDIO (é o transporte do defeito)."""
+    """Handle pydualsense de um controle. Rádio por default — é o transporte do defeito.
 
-    def __init__(self) -> None:
+    O `conType.name` é o que `_detect_transport` do produto lê (`"usb" in
+    name.lower()`), e por isso ele é a ÚNICA coisa que este dublê precisa
+    acertar para que o transporte da bancada seja o transporte do produto.
+    """
+
+    def __init__(self, transporte: str = "bt") -> None:
         self.connected = True
         self.closed = False
-        self.conType = type("CT", (), {"name": "BT"})()
+        self.conType = type("CT", (), {"name": transporte.upper()})()
 
     def close(self) -> None:
         self.closed = True
@@ -385,8 +404,8 @@ class Bancada:
 
     # -- o mundo muda ---------------------------------------------------
 
-    def sentar(self, uniq: str) -> None:
-        self.mesa.sentar(uniq)
+    def sentar(self, uniq: str, *, transporte: str = "bt") -> None:
+        self.mesa.sentar(uniq, transporte=transporte)
 
     def levantar(self, uniq: str) -> None:
         self.mesa.levantar(uniq)
@@ -394,8 +413,21 @@ class Bancada:
     # -- os dois laços do daemon ----------------------------------------
 
     def tique_do_reconnect_loop(self) -> None:
-        """Um `connect()` — o `backend_hotplug_reconcile` do `reconnect_loop`."""
-        fila = [_FakeHandle() for _ in self.mesa.nodes]
+        """Um `connect()` — o `backend_hotplug_reconcile` do `reconnect_loop`.
+
+        O handle nasce com o transporte do controle que está NAQUELE path, e
+        não em ordem de fila. A diferença passou a importar com a §RESERVA-5:
+        `connect()` só abre as keys que ainda não têm handle (`if key in
+        existing: continue`), então uma fila posicional entregaria o handle do
+        controle que voltou para... o índice errado, sempre que um dos dois já
+        estivesse de pé. Com todos os dublês idênticos isso nunca apareceu.
+        """
+        por_path = {
+            path: uniq
+            for (_key, path, _edge), uniq in zip(
+                self.mesa.como_o_backend_ve(), self.mesa.nodes, strict=True
+            )
+        }
         with patch.object(
             PyDualSenseController,
             "_enumerate_device_keys",
@@ -403,7 +435,9 @@ class Bancada:
         ), patch.object(
             PyDualSenseController,
             "_open_one",
-            side_effect=lambda _path, *, is_edge: fila.pop(0),
+            side_effect=lambda path, *, is_edge: _FakeHandle(
+                self.mesa.transporte_de(por_path[path])
+            ),
         ):
             self.inst.connect()
 
