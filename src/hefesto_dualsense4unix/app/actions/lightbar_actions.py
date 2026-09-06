@@ -100,7 +100,7 @@ _AVISO_D4 = "Cores automáticas desligadas para aplicar uma cor única"
 #: única resposta honesta: escrever numa camada que será sobrescrita é pior que
 #: não escrever, porque parece ter funcionado por meio segundo.
 _AVISO_SEM_DESTINATARIO = (
-    "Ainda não sei quais controles estão na mesa — espere um instante e "
+    "Ainda não sei quais controles estão ligados — espere um instante e "
     "tente de novo (mandar sem destinatário seria desfeito pela numeração "
     "automática)"
 )
@@ -125,7 +125,7 @@ _AVISO_SEM_DESTINATARIO = (
 #: para-todos é o sentido do botão, e dizer em quantos controles ele pegou
 #: continua sendo informação, não aviso.
 _AVISO_MESMO_DESENHO_NOS_QUATRO = (
-    "O mesmo desenho foi para os {n} controles da mesa."
+    "O mesmo desenho foi para os {n} controles ligados."
 )
 
 #: PLAYER-01: desenho vazio = SEM opinião. Um ``player_leds`` todo apagado no

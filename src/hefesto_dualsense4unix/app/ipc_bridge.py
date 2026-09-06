@@ -757,7 +757,7 @@ _MOTIVOS_NUMERO: dict[str, str] = {
         "o controle no meio da partida"
     ),
     "controle_ausente": (
-        "Este controle não está na mesa agora — só quem está ligado tem número"
+        "Este controle não está ligado agora — só quem está ligado tem número"
     ),
     "numero_fora_da_mesa": (
         "Esse número é maior do que a quantidade de controles ligados"
@@ -804,7 +804,7 @@ def identity_number_set(uniq: str, number: int) -> tuple[bool, str | None]:
 #: barra de status.
 _MOTIVOS_MAQUINA: dict[str, str] = {
     "versao_desconhecida": (
-        "O arquivo com o que você declarou sobre a mesa foi escrito por uma "
+        "O arquivo com o que você declarou sobre as entradas foi escrito por uma "
         "versão mais nova do Hefesto — não vou sobrescrever o que está lá"
     ),
     "falha_ao_gravar": (
@@ -844,7 +844,7 @@ _SECAO_DO_CAMPO: dict[str, str] = {
 #: é aberto: dizer "A mesa" aqui faria a frase do rodapé acusar a perda de outra
 #: coisa.
 _ROTULOS_SEM_SECAO: dict[str, str] = {
-    "mapa": "O desenho da mesa",
+    "mapa": "O desenho das entradas",
 }
 
 

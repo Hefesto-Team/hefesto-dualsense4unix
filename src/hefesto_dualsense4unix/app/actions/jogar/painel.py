@@ -376,13 +376,13 @@ def modo_lembrado() -> Lembranca:
             None,
             "Está gravado como DESLIGADO de propósito: “Jogar pelo Hefesto” "
             "continua desligado depois de reiniciar o Hefesto ou o computador, "
-            "e o Hefesto não o religa sozinho nem com dois controles na mesa.",
+            "e o Hefesto não o religa sozinho nem com dois controles ligados.",
         )
     return Lembranca(
         None,
         None,
         "Ninguém decidiu ainda: o Hefesto pode ligar “Jogar pelo Hefesto” "
-        "sozinho quando vir dois controles na mesa.",
+        "sozinho quando vir dois controles ligados.",
     )
 
 

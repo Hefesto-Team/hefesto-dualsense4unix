@@ -123,8 +123,8 @@ FRASE_SEM_CONTROLE = (
 
 #: O que a seção diz quando o Hefesto não respondeu.
 FRASE_SEM_RESPOSTA = (
-    "O Hefesto está desligado, então não dá para saber quais controles estão na "
-    "mesa. Ligue-o na aba Sistema e entre nesta aba de novo."
+    "O Hefesto está desligado, então não dá para saber quais controles estão "
+    "ligados. Ligue-o na aba Sistema e entre nesta aba de novo."
 )
 
 #: Título de um card sem número. "Jogador —" leria como defeito; esta frase diz

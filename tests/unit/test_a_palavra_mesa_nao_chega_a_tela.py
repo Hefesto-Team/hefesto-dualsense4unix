@@ -33,10 +33,15 @@ AS DUAS RÉGUAS, e elas têm pontos cegos diferentes de propósito:
 
 O QUE ESTA RÉGUA NÃO ALCANÇA, e está dito porque instrumento que não declara o
 próprio ponto cego mente: `interface/paginas/` (o que o produto renderiza) e
-`app/` (o motor). O primeiro só muda quando ELA publica — `--publicar` é ato
-dela —, e o segundo não é posse desta sprint; as dezesseis frases de `app/` que
-ainda dizem a palavra estão listadas, uma a uma, em
-`docs/process/agentes/2026-09-06/A-PALAVRA-MESA-SAI-01.md`.
+`app/`, o motor. O primeiro só muda quando ELA publica — `--publicar` é ato
+dela.
+
+O SEGUNDO DEIXOU DE SER PONTO CEGO em 06/09/2026, na costura da ONDA E: as
+dezesseis frases de `app/` que a sprint listou (`A-PALAVRA-MESA-SAI-01.md`) foram
+curadas no dono, e `hefesto_vivo._json` — o funil por onde todo valor passa a
+caminho do WebView — passou a chamar `primeiro_trecho_banido`. De agora em
+diante quem alcança `app/` é o PRODUTO RODANDO, que é a régua mais dura que
+existe: a frase banida derruba o tique em vez de chegar à tela.
 """
 
 from __future__ import annotations
@@ -199,11 +204,11 @@ def test_a_borda_de_palavra_deixa_o_nome_interno_em_paz() -> None:
 def test_o_primeiro_trecho_banido_consulta_as_duas_listas() -> None:
     """A função que a sprint pediu: frase e palavra numa consulta só.
 
-    Ela existe para o dia em que `app/` for curado — aí `hefesto_vivo._json`
-    troca `frase_banida_em` por esta e o funil de execução passa a recusar as
-    duas coisas. Hoje ele não pode: dezesseis frases de `app/` ainda dizem a
-    palavra, e um funil que levanta sobre frase que ninguém pode curar troca
-    uma palavra feia por uma janela morta.
+    O DIA CHEGOU em 06/09/2026: as dezesseis frases de `app/` foram curadas no
+    dono e `hefesto_vivo._json` trocou `frase_banida_em` por esta, de modo que o
+    funil de execução recusa as duas coisas. Enquanto as dezesseis viviam, ligá-lo
+    trocaria uma palavra feia por uma JANELA MORTA — e é por isso que a ordem
+    importava, não a pressa.
     """
     assert primeiro_trecho_banido("nada demais aqui") is None
     assert primeiro_trecho_banido("na mesa inteira") == "mesa"
@@ -214,6 +219,43 @@ def test_o_primeiro_trecho_banido_consulta_as_duas_listas() -> None:
     # dela que a mensagem de erro do funil fala.
     assert primeiro_trecho_banido("na mesa eles derrubam o controle") == (
         "derrubam o controle"
+    )
+
+
+def test_o_funil_de_execucao_consulta_as_duas_listas() -> None:
+    """O `_json` chama `primeiro_trecho_banido`, e não a metade dele.
+
+    Esta régua existe porque a troca é de UMA LINHA e o recuo também seria: o
+    dia em que alguém devolver `frase_banida_em` ao funil, a palavra volta a
+    chegar à tela por `app/` sem nada reprovar — foi o estado do mundo até
+    06/09/2026, e ele era declarado, não esquecido.
+
+    Ela lê o FONTE do funil em vez de exercitá-lo porque o `_json` é interno ao
+    piloto GTK e importá-lo aqui abriria uma janela na tela dela.
+
+    E ela anda pela ÁRVORE, não pelo texto. O `grep` seria a sétima vez nesta
+    casa em que um comentário vira o defeito que descreve: o do `_json` explica
+    a troca e CITA o nome da função, então uma régua que procurasse a palavra
+    daria verde com a chamada arrancada. `ast` só enxerga a chamada.
+    """
+    fonte = (
+        Path(__file__).resolve().parents[2]
+        / "src/hefesto_dualsense4unix/interface/hefesto_vivo.py"
+    ).read_text(encoding="utf-8")
+    funil = next(
+        no
+        for no in ast.parse(fonte).body
+        if isinstance(no, ast.FunctionDef) and no.name == "_json"
+    )
+    chamadas = {
+        alvo.func.id
+        for alvo in ast.walk(funil)
+        if isinstance(alvo, ast.Call) and isinstance(alvo.func, ast.Name)
+    }
+    assert "primeiro_trecho_banido" in chamadas, (
+        "o funil `hefesto_vivo._json` deixou de CHAMAR `primeiro_trecho_banido`. "
+        "Ele é por onde TODO valor passa a caminho do WebView, e "
+        f"`frase_banida_em` sozinha não vê a palavra — só a frase. Chama: {sorted(chamadas)}"
     )
 
 

@@ -1776,7 +1776,7 @@ _ENTRADA_DELA = "Entrada {numero}"
 #: do sistema não acha o número que a tela mostrou.
 #: PROVISÓRIO — decisão dela.
 _PROCEDENCIA_DA_ENTRADA = (
-    "Foi você quem desenhou esta mesa: este aparelho está na entrada {numero}. "
+    "Foi você quem desenhou este mapa: este aparelho está na entrada {numero}. "
     "O sistema o enumera como {caminho}."
 )
 
@@ -1785,7 +1785,7 @@ _PROCEDENCIA_DA_ENTRADA = (
 #: 1080 (`CONFIGURAÇÕES-FECHA-01` §2.4), e qualquer grade de quadrados aqui
 #: dentro nasceria abaixo da dobra — construir a feature e escondê-la.
 #: PROVISÓRIO — decisão dela: texto novo, e o lugar da linha é escolha dela.
-_RESUMO_DO_MAPA = "Mesa: {faces} faces, {entradas} entradas, {colocados} aparelhos colocados."
+_RESUMO_DO_MAPA = "Mapa: {faces} faces, {entradas} entradas, {colocados} aparelhos colocados."
 
 #: O que a linha diz para quem nunca desenhou. Ela é o estado mais comum lá
 #: fora, e diz o preço de não desenhar em vez de cobrar o desenho.

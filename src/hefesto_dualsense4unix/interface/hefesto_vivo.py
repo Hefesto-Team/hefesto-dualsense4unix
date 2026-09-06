@@ -3482,12 +3482,24 @@ def _json(obj: Any) -> str:
     """
     import json
 
+    # E O FUNIL PASSOU A OLHAR AS DUAS LISTAS — costura da ONDA E, 06/09/2026.
+    #
+    # Ele chamava só `frase_banida_em`, e isso foi decidido — não esquecido — no
+    # dia em que a palavra "mesa" saiu da tela: `_json` LEVANTA, e é por ele que
+    # todo valor passa a caminho do WebView. Enquanto DEZESSEIS frases de `app/`
+    # ainda diziam a palavra, ligá-lo aqui trocaria uma palavra feia por uma
+    # JANELA MORTA — e `app/` era o `nao_toca` de quem mediu.
+    #
+    # As dezesseis foram curadas no dono nesta mesma costura, e a condição que a
+    # `A-PALAVRA-MESA-SAI-01` deixou escrita está cumprida. `primeiro_trecho_banido`
+    # consulta as duas listas — a das frases que ela baniu e a das palavras —, e
+    # é uma linha, como a sprint mediu.
     from hefesto_dualsense4unix.interface.frases_que_ela_baniu import (
-        frase_banida_em,
+        primeiro_trecho_banido,
     )
 
     saida = json.dumps(obj, ensure_ascii=False, default=str)
-    banida = frase_banida_em(saida)
+    banida = primeiro_trecho_banido(saida)
     if banida is not None:
         raise ValueError(
             f"um texto banido ia para a tela dela: {banida!r}. "
