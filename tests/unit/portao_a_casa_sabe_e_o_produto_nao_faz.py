@@ -1467,25 +1467,46 @@ _SEM_CAMINHO_HOJE: dict[str, str] = {
         "caminho faltando: só a régua a chama. Fecha junto com ela, na recusa em "
         "tempo de execução. MEDIDO em 01/09/2026."
     ),
-    "interface/pacotes/mapa.py::canal": (
-        "O que o `docs/data/mapa-controles.csv` diz sobre uma peça naquele "
-        "transporte (interface/pacotes/mapa.py:47). O mapa é a rede contra "
-        "regressão cabo/rádio, e a tela deveria consultá-lo antes de prometer um "
-        "ajuste que só existe no cabo. Nenhuma aba o consulta ainda. Fecha quando a "
-        "Vibração e os Gatilhos passarem a apagar o que o transporte de agora não "
-        "aciona. MEDIDO em 01/09/2026."
-    ),
+    # `mapa.py::canal` SAIU DAQUI EM 06/09/2026, e o motivo NÃO é que alguém
+    # passou a chamá-la — **é o ponto cego da referência PLANA, e ele é o preço
+    # declarado no cabeçalho de `_Referencias`**: literal de texto conta.
+    #
+    # O QUE ACONTECEU: a `CONTROLES-OS-TRES-SELOS-01` fez a aba Controles
+    # importar `app/fatos_do_mapa.py` — a tabela GERADA do mesmo CSV, que é a que
+    # `validar-fala-de-tela.py` compara com as `Fala` da tela. Aquele arquivo é
+    # 308 entradas com a chave `'canal'` em cada uma (`'canal': 'hidraw'`), e uma
+    # delas basta: o literal vira `plana`, a `plana` casa com QUALQUER símbolo de
+    # mesmo nome, e a lápide passou a "ter caminho" sem uma linha de chamada.
+    #
+    # **NINGUÉM CHAMA `mapa.canal` HOJE.** A lacuna que a lápide descrevia
+    # continua aberta: a Vibração e os Gatilhos ainda não apagam o que o
+    # transporte de agora não aciona. O que mudou foi a régua enxergar caminho
+    # onde não há.
+    #
+    # POR QUE A ENTRADA SAI EM VEZ DE FICAR: enquanto ela estiver aqui, o
+    # `test_nenhuma_lapide_sobreviveu_a_propria_cura` fica VERMELHO — e um
+    # portão vermelho por um ponto cego dele mesmo é pior que a lápide ausente:
+    # ele para de medir as outras quarenta.
+    #
+    # O QUE FICA NO LUGAR É ESTA NOTA, e a régua que ela pede está escrita:
+    # `interface/pacotes/mapa.py::canal` volta para esta lista no dia em que
+    # alguém tirar o `fatos_do_mapa` do fecho da interface — e volta pela porta
+    # da frente, porque a outra metade do portão (`toda promessa tem registro`)
+    # cobra registro de todo símbolo sem caminho.
     "interface/pacotes/mapa.py::confere": (
         "As chaves que NÃO existem no mapa (interface/pacotes/mapa.py:90) — a "
         "recusa a inventar valor de tela sem linha no CSV, que o docstring do "
         "despachante nomeia como regra: um valor de tela sem linha lá é um valor "
-        "sem dono. Só a régua a chama. Fecha com a `canal`. MEDIDO em 01/09/2026."
+        "sem dono. Só a régua a chama. Fecha quando a Vibração e os Gatilhos "
+        "passarem a apagar o que o transporte de agora não aciona — que era a "
+        "condição da `canal`, e continua aberta (ver a nota acima). MEDIDO em "
+        "01/09/2026."
     ),
     "interface/pacotes/mapa.py::da_familia": (
         "As chaves de uma família do mapa de canais — `luz`, `gatilho`, `vibracao`, "
-        "`audio` (interface/pacotes/mapa.py:71). Mesma lacuna da `canal`: existe "
-        "para a tela perguntar, e nenhuma aba pergunta. Fecha com ela. MEDIDO em "
-        "01/09/2026."
+        "`audio` (interface/pacotes/mapa.py:71). Mesma lacuna que a `canal` "
+        "descrevia: existe para a tela perguntar, e nenhuma aba pergunta. Fecha "
+        "com a `confere`. MEDIDO em 01/09/2026."
     ),
     # `ponte.py::chamar_detalhado` MORAVA AQUI e SAIU em 06/09/2026, pela
     # `ONDA5-09-02`. A lápide dizia *"nenhum dos 50 gestos a usa… fecha quando

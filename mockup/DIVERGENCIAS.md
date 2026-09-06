@@ -329,6 +329,53 @@ seção daqui**: a aba deixou de estar em trabalho.
 
   **O que fecha:** o `--publicar 02` quando ela aprovar a aba.
 
+- **06/09/2026 — OS TRÊS SELOS DO SOM, E UMA PALAVRA NOVA NO CARTÃO**
+  (`CONTROLES-OS-TRES-SELOS-01`). O bloco do alto-falante passou a dizer três
+  coisas que a janela GTK já dizia e esta tela não:
+
+  1. **`· acordado` / `· dormindo`** no rótulo da moldura — o estado do canal no
+     PipeWire, do dono `audio_saida.estado_do_canal`. **É a única mudança
+     visível na página parada:** o cartão do P1, que está no cabo, mostra
+     `Alto-falante · acordado`. O do rádio **não mostra nada**, e a ausência é a
+     decisão — o DualSense não publica placa ALSA por rádio, e escrever
+     "acordado" a partir de ausência prometeria que o som sai inteiro num
+     controle que não tem por onde tocá-lo;
+  2. **o selo do alarme** (a saída muda do sistema, ou o canal suspenso), que
+     **nasce apagado**: acender um alarme no desenho seria afirmá-lo sobre um
+     controle que ninguém mediu;
+  3. **a guarda sem endereço** — sem MAC, as peças que MANDAM som ficam
+     esmaecidas e a razão vem no ponteiro do mouse. É a D-03 dela aplicada a
+     esta aba (*"o botão apaga e a dica diz por quê"*), e o que ela cura é o
+     estrago medido em 04/08/2026: o cartão do Controle 2 aplicando no
+     Controle 1. **A leitura fica ligada de propósito** — a onda, os rótulos e o
+     selo do microfone continuam verdadeiros sem endereço nenhum.
+
+  E o **nome do cartão** ganhou um `title` com o par físico↔gamepad virtual —
+  diagnóstico que custava apertar botão em cada controle para conferir. Ele
+  **nasce sem o atributo**: quem monta o par é o serviço.
+
+  **A PALAVRA NOVA, e ela é a única desta leva:** a ressalva do bloco passa a
+  dizer, no rádio, que **o Hefesto ainda não faz** o som sair — nunca que *o
+  controle* não faz. A frase é lida da célula `audio.alto_falante@dualsense` do
+  mapa de canais, que diz `radio_aciona=não` com causa `divida` (nossa). No dia
+  em que a `SOM-QUE-SAI-01` virar aquela célula, a frase some sozinha.
+
+  **Medido no motor, com o Chrome do sistema (nenhuma janela na tela dela):** o
+  rótulo da moldura fica em **19 px de altura e 270 px de largura nas cinco
+  cenas**, com e sem selo, sem estourar (`scrollWidth == clientWidth`), e a
+  moldura do alto-falante continua com **133,5 px**. Custo de altura: ZERO — que
+  é a mesma conta que a `SOM-ACORDADO-01` fez do lado da GTK.
+
+  **Por que não publiquei:** publicar é ato dela, e aqui nasce PALAVRA nova na
+  tela — o caso exato da `PROVA-DE-TELA-01`.
+
+  **O que ela vê HOJE, até publicar:** a aba Controles de ontem, sem o sufixo do
+  canal e sem o esmaecimento. Os cinco endereços novos saem do pacote a cada
+  tique e caem no vazio na página publicada — o `_so_se_a_pagina_tiver` pergunta
+  ao publicado antes de emitir, e nada regride enquanto ela espera.
+
+  **O que fecha:** o `--publicar 02` quando ela aprovar a aba.
+
 ## 03-gatilhos.html
 
 - **06/09/2026 — O BOTÃO DE REENVIO SAIU DO DESENHO** (`ONDA5-03-02`, a decisão
