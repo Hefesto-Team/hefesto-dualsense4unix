@@ -5,7 +5,9 @@ injetado em `daemon._hidraw_broker_client`, que `broker_client_for` respeita):
 - hide colado no grab: `start_gamepad_emulation` esconde o hidraw do primário;
 - Modo Nativo NUNCA esconde (o jogo é dono do hidraw);
 - restore no release do grab: `stop_gamepad_emulation` com `release_grab=True`
-  restaura TUDO; com `release_grab=False` (troca de flavor) NÃO restaura;
+  restaura **o nó do P1** (BORDA-DE-QUEDA-01/E2 — nunca `restore_all`, que
+  desnudaria a lease inteira e com ela os secundários); com
+  `release_grab=False` (troca de flavor) NÃO restaura;
 - backend sem `hidraw_path` (FakeController do smoke) não fala com o broker;
 - broker quebrado jamais derruba a emulação (best-effort sagrado);
 - re-hide do hotplug (`rehide_physical_hidraw`): primário + jogadores de co-op
@@ -157,10 +159,13 @@ class TestGrabP1:
         gp.start_gamepad_emulation(wired, flavor="dualsense", origin="manual")
         assert not any(c[0] == "hide" for c in wired.broker.calls)
 
-    def test_stop_com_release_restaura_tudo(self, wired: _FakeDaemon) -> None:
+    def test_stop_com_release_restaura_o_no_do_p1(self, wired: _FakeDaemon) -> None:
+        # BORDA-DE-QUEDA-01/E2: o release do P1 restaura O NÓ DO P1, e o
+        # `restore_all` (lease inteira) não aparece mais neste caminho.
         gp.start_gamepad_emulation(wired, flavor="dualsense", origin="manual")
         gp.stop_gamepad_emulation(wired)  # release_grab default True
-        assert ("restore_all",) in wired.broker.calls
+        assert ("restore", "/dev/hidraw3") in wired.broker.calls
+        assert ("restore_all",) not in wired.broker.calls
 
     def test_troca_de_flavor_nao_restaura(self, wired: _FakeDaemon) -> None:
         # release_grab=False (recriação imediata): expor o físico no meio da
@@ -169,14 +174,15 @@ class TestGrabP1:
         gp.start_gamepad_emulation(wired, flavor="dualsense", origin="manual")
         wired.broker.calls.clear()
         gp.stop_gamepad_emulation(wired, persist=False, release_grab=False)
-        assert ("restore_all",) not in wired.broker.calls
+        assert not any(c[0].startswith("restore") for c in wired.broker.calls)
 
     def test_restore_nao_tem_gate_de_modo(self, wired: _FakeDaemon) -> None:
-        # Expor nunca é errado: mesmo em Modo Nativo o release restaura.
+        # Expor nunca é errado: mesmo em Modo Nativo o release restaura. A
+        # POLÍTICA não mudou com a E2 — mudou o ALCANCE.
         gp.start_gamepad_emulation(wired, flavor="dualsense", origin="manual")
         wired._native = True
         gp.stop_gamepad_emulation(wired)
-        assert ("restore_all",) in wired.broker.calls
+        assert ("restore", "/dev/hidraw3") in wired.broker.calls
 
     def test_backend_sem_hidraw_nao_fala_com_broker(self, wired: _FakeDaemon) -> None:
         # FakeController do smoke: sem `hidraw_path` (o mesmo gate do VPAD-08).
@@ -559,7 +565,7 @@ class TestBrokerForaDoEventLoop:
         # E rodou FORA da thread do event loop.
         assert broker.threads and broker.threads[0] != loop_thread[0]
 
-    def test_sync_grab_restore_all_agenda_e_nao_bloqueia(
+    def test_sync_grab_restore_agenda_e_nao_bloqueia(
         self, wired: _FakeDaemon
     ) -> None:
         broker = self._com_broker_travado(wired)
@@ -571,7 +577,8 @@ class TestBrokerForaDoEventLoop:
         assert broker.calls == []
         broker.liberar.set()
         _drena_executor_do_broker(wired)
-        assert broker.calls == [("restore_all",)]
+        # BORDA-DE-QUEDA-01/E2: por NÓ, e ainda fora do event loop.
+        assert broker.calls == [("restore", "/dev/hidraw3")]
 
     def test_cadeia_do_setter_ipc_nao_bloqueia_o_loop(self, wired: _FakeDaemon) -> None:
         # Achado #6: `gamepad.emulation.set` → `set_gamepad_emulation` →
