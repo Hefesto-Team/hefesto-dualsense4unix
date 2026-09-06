@@ -1044,12 +1044,35 @@ _SEM_CAMINHO_HOJE: dict[str, str] = {
         "tegrations/canal_do_microfone.py::abrir`, que é a porta do módulo — esta"
         " função é alcançada por ela, e cai junto enquanto ela não for fiada."
     ),
-    "integrations/canal_do_microfone.py::sufixo_do_canal": (
-        "ONDA5-MIC-VIRTUAL-01, 05/09/2026 — o módulo inteiro é o canal de captura"
-        " com o nome do CONTROLE (`hefesto_mic_<hex6>`), que é o 'Mic virtual' qu"
-        "e ela pediu. ONDE O CAMINHO SE PERDE e O QUE O FECHA: ver a razão de `in"
-        "tegrations/canal_do_microfone.py::abrir`, que é a porta do módulo — esta"
-        " função é alcançada por ela, e cai junto enquanto ela não for fiada."
+    # `integrations/canal_do_microfone.py::sufixo_do_canal` MOROU AQUI e a
+    # entrada SAIU em 06/09/2026, no Passo 3 da mesma sprint: a função DESCEU
+    # para `integrations/fontes_de_captura.py::sufixo_do_canal_do_mic`, porque
+    # a regra 0 de `escolher_fonte` passou a precisar dela — e ali ela é
+    # produção alcançada, pelos quatro chamadores de uma vez. Não é cópia: no
+    # `canal_do_microfone` ela não existe mais, e há régua que reprova se
+    # voltar a existir (`test_o_caminho_de_volta_reconhece_so_o_nosso`).
+    "integrations/canal_do_microfone.py::alimentando": (
+        "ONDA5-MIC-VIRTUAL-01, 06/09/2026, Passo 2 — `{uniq: nó de onde o áudio "
+        "vem}`, o estado que separa 'o canal existe' de 'o microfone está "
+        "entrando'. ONDE O CAMINHO SE PERDE e O QUE O FECHA: ver a razão de "
+        "`integrations/canal_do_microfone.py::abrir`, que é a porta do módulo — "
+        "esta função só é alcançada depois dela, e cai junto enquanto ela não "
+        "for fiada."
+    ),
+    "integrations/canal_do_microfone.py::argv_do_alimentador": (
+        "ONDA5-MIC-VIRTUAL-01, 06/09/2026, Passo 2 — a linha de comando do "
+        "leitor que enche o fifo. Ela é pública para a régua medir o argv sem "
+        "lançar processo nenhum, e é chamada por `_Alimentador.iniciar`. ONDE O "
+        "CAMINHO SE PERDE e O QUE O FECHA: ver a razão de "
+        "`integrations/canal_do_microfone.py::abrir`."
+    ),
+    "integrations/canal_do_microfone.py::desmutar": (
+        "ONDA5-MIC-VIRTUAL-01, 06/09/2026, Passo 2 — tira o mudo DE FÁBRICA do "
+        "nó (medido: todo `module-pipe-source` nasce `Mute: yes` no PipeWire "
+        "1.6.8, e mudo ele entrega 192 KB de ZEROS em vez de áudio). É chamada "
+        "por `abrir`, e é pública porque a régua a exercita sozinha. ONDE O "
+        "CAMINHO SE PERDE e O QUE O FECHA: ver a razão de "
+        "`integrations/canal_do_microfone.py::abrir`."
     ),
     "integrations/canal_do_microfone.py::sufixo_do_controle": (
         "ONDA5-MIC-VIRTUAL-01, 05/09/2026 — o módulo inteiro é o canal de captura"
@@ -1070,11 +1093,12 @@ _SEM_CAMINHO_HOJE: dict[str, str] = {
         "CONTROLE (`hefesto_mic_<hex6>`), que é o 'Mic virtual' que ela pediu: "
         "*'se o Mic do dualsense passa a ser lido a parte via Mic virtual. "
         "Usaríamos essa feature do controle mesmo no Xbox.'* "
-        "ONDE O CAMINHO SE PERDE: nada chama `abrir` porque o Passo 2 da sprint "
-        "— alimentar o nó a partir do nó ALSA do cabo — **exige medição na "
-        "bancada antes do código**, e a sprint o escreve com todas as letras: "
-        "medir se um link do grafo do PipeWire basta ou se é preciso um leitor. "
-        "Sem essa medição, qualquer fiação seria chute sobre o áudio dela. "
+        "ONDE O CAMINHO SE PERDE, ATUALIZADO EM 06/09/2026: a medição que o "
+        "Passo 2 exigia FOI FEITA e o nó já é alimentado — um "
+        "`module-pipe-source` não tem porta de entrada no grafo (medido com "
+        "`pw-link`/`pw-dump`), logo é preciso um leitor, e ele existe. O que "
+        "falta é o GESTO: quem chama `abrir` é `eleicao_de_microfone."
+        "pedir_canal`, e aquele arquivo está no `nao_toca` desta sprint. "
         "O QUE FECHA: `eleicao_de_microfone.pedir_canal` chamar "
         "`canal_do_microfone.abrir(uniq, ...)` quando o transporte for "
         "CABO, e o atendente do rádio continuar como está até a "
