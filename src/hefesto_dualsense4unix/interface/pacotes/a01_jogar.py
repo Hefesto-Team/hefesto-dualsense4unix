@@ -692,9 +692,16 @@ def _avisos(ctx: Contexto) -> list[dict[str, str]]:
 
     # A CURA DO TRAVAMENTO DO USB — sob `try` PRÓPRIO, que é a política deste
     # arquivo: uma fonte que levanta não derruba a coluna, ela vira selo
-    # ``ERRO``. Esta lê DOIS ARQUIVOS DO SISTEMA por chamada, e é a primeira
-    # desta coluna que toca o disco a cada tique — se um `/sys` remontado ou um
-    # `/etc` sem permissão levantar, as outras nove continuam valendo.
+    # ``ERRO``. Esta lê DOIS ARQUIVOS DO SISTEMA por chamada — se um `/sys`
+    # remontado ou um `/etc` sem permissão levantar, as outras nove continuam
+    # valendo.
+    #
+    # FATO SUBSTITUÍDO — 06/09/2026, ONDA5-07-03. Estas linhas diziam que esta
+    # é *"a primeira desta coluna que toca o disco a cada tique"*, e não é: o
+    # aviso do selo ``JOGO`` (`home_actions.aviso_do_wrapper`, uma das seis de
+    # `AVISOS_DA_TELA`) lê as duas listas de recusa dela desde 05/09 — só que
+    # SÓ quando há jogo aberto sem o atalho, que é o caso raro. As duas somadas
+    # foram medidas: 0,050 ms por tique, contra 2,85 ms de mediana do tique.
     try:
         cura = _aviso_da_cura_do_travamento()
         if cura:
