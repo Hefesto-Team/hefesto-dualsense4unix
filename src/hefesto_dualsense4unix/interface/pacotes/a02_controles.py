@@ -765,7 +765,7 @@ def folha_do_plastico(mesa: list[dict[str, Any]]) -> str:
 #: **FATO SUBSTITUÍDO — O PILOTO PASSOU A SABER.** Aqui estava escrito que *"o
 #: `escrever` tem cinco alvos — texto, largura, fundo, valor e html — e nenhum
 #: é `color`"*. São SETE desde 02/09/2026: `classe` e `cor` entraram
-#: (`hefesto_vivo.py:217` e `:246`), e o comentário do `cor` cita exatamente
+#: (`hefesto_vivo.py:499` e `:537`), e o comentário do `cor` cita exatamente
 #: esta linha como a dívida que ele veio pagar. Guardar a frase antiga ao lado
 #: da certa obrigaria a próxima pessoa a escolher entre duas afirmações.
 #:
@@ -1595,7 +1595,7 @@ def modo_do_mic(endereco: str) -> str:
 # ENTÃO ELE PERGUNTA À PÁGINA, uma vez, e o dia em que ela publicar liga os quatro
 # sem ninguém tocar em código. É o mesmo padrão que a `03-gatilhos` já usa
 # (`a03_gatilhos._enderecos_da_pagina`), e `publicado=True` é deliberado: o
-# piloto abre SEMPRE o publicado (`hefesto_vivo.py:1290`, `:1478`, `:1650`), e
+# piloto abre SEMPRE o publicado (`hefesto_vivo.py:2010`, `:2766`, `:2963`), e
 # contar as casas da bancada endereçaria o que o `WebView` não tem.
 #: O NOME DA PÁGINA, e ele é UM só neste arquivo: a régua dos gestos o lê lá
 #: embaixo, o `_enderecos_da_pagina` o lê aqui, e o `@registrar` o repete porque
@@ -3323,7 +3323,7 @@ METODOS: set[str] = set()
 #: o que o gerador desenhou. **A RAZÃO ESCRITA AQUI CAIU** — dizia que *"a
 #: pintura do piloto só sabe escrever texto, largura, fundo e `value` — não
 #: sabe acender uma classe"*, e o piloto ganhou o alvo `classe` em 02/09/2026
-#: (`hefesto_vivo.py:217-224`), com `data-hef-quando` para escolher qual do
+#: (`hefesto_vivo.py:499-515`), com `data-hef-quando` para escolher qual do
 #: grupo acende. O que falta agora é do GERADOR e da publicação dela: os dois
 #: botões precisam de `data-campo`/`data-hef-alvo="classe"`/`data-hef-quando`,
 #: e a página publicada precisa recebê-los. Depois de clicar "Nativo", o

@@ -164,6 +164,19 @@ SEGUNDOS_DO_RECADO_DE_SUCESSO = 6.0
 #: **Ele não é o `SEGUNDOS_DO_RECADO_DE_SUCESSO`**, e a diferença é de natureza:
 #: o recado verde é frase A LER e tem 6,0 s; a piscada é sinal A VER, e um sinal
 #: que dura o tempo de uma frase vira ruído. Dois números, duas coisas.
+#:
+#: DONO ÚNICO IMPOSSÍVEL, DUAS RÉGUAS NO LUGAR — e a forma é a mesma de
+#: `dualsense_bt_audio.PRIORIDADE_SESSAO_DA_PONTE`, que convive com um `.conf`
+#: do WirePlumber pelo mesmo motivo. O `BOOTSTRAP` é um `r"""…"""` CRU, e tem de
+#: continuar sendo: **cinco réguas desta casa o extraem do fonte por
+#: `^BOOTSTRAP = r"""(.*?)"""$`** para rodá-lo mutilado num WebKit, e qualquer
+#: `.replace()` colado no fecho quebra a âncora `$` — medido em 05/09/2026, e o
+#: sintoma foram 41 erros de `SyntaxError` no bootstrap, não um vermelho
+#: legível. Uma f-string também não serve: o JS é cheio de `{` e `}`.
+#:
+#: Então o número vive nos dois sítios e `test_o_recado_de_sucesso_pousa_no_cartao
+#: .py::test_o_numero_da_piscada_e_o_mesmo_nos_dois_lados` exige que sejam o
+#: MESMO.
 MS_DA_PISCADA = 1500
 
 #: O QUE O PILOTO DIZ QUANDO A PÁGINA MORRE E ELE A RECARREGA.
@@ -859,7 +872,7 @@ BOOTSTRAP = r"""
     if(piscando.length){
       setTimeout(function(){
         for(const el of piscando){ el.classList.remove('hef-deu-certo'); }
-      }, __MS_DA_PISCADA__);
+      }, 1500);  // MS_DA_PISCADA — ver o portão logo abaixo do BOOTSTRAP
     }
     return k;
   };
@@ -1161,11 +1174,7 @@ BOOTSTRAP = r"""
   }
   return 'ok';
 })();
-""".replace("__MS_DA_PISCADA__", str(MS_DA_PISCADA))
-#: O NÚMERO DA PISCADA NÃO SE DIGITA NO JAVASCRIPT, e é a razão de este
-#: `replace` existir: `MS_DA_PISCADA` é o dono, e uma segunda cópia dentro da
-#: string crua envelheceria em silêncio — o Python diria 1500 e a tela faria
-#: outra coisa. O `r"""` não pode virar f-string: o JS está cheio de `{` e `}`.
+"""
 
 
 #: A TABELA LOCAL MORREU em 01/09/2026, e a razão é de processo: ela era um

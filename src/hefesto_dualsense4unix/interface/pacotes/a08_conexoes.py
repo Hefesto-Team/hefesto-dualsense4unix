@@ -1482,8 +1482,8 @@ def _linha(item: Any) -> dict[str, Any]:
         # classe *"ainda NÃO é pintada: o `escrever()` do piloto conhece cinco
         # alvos (`texto`, `largura`, `fundo`, `valor`, `html`) e nenhum acende
         # ou apaga uma classe CSS"*. Ele conhece SETE, e dois deles nasceram
-        # para exatamente isto: `classe` (`hefesto_vivo.py:217`, com
-        # `data-hef-classe` e `data-hef-quando`) e `cor` (`:246`). O que a
+        # para exatamente isto: `classe` (`hefesto_vivo.py:499`, com
+        # `data-hef-classe` e `data-hef-quando`) e `cor` (`:537`). O que a
         # linha descrevia — CERTO dentro da pílula laranja do desenho —
         # continua verdadeiro e continua sendo defeito; o que não é mais
         # verdade é que falte caminho.
@@ -3094,7 +3094,7 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
         # estado em cor é o DESENHO: cada pílula do gerador leva
         # `data-hef-alvo="classe" data-hef-classe="grave"
         # data-hef-quando="problema"`, e o `escrever()` do piloto acende a
-        # classe na linha cujo estado casar (`hefesto_vivo.py:217`). Emitir a
+        # classe na linha cujo estado casar (`hefesto_vivo.py:499`). Emitir a
         # classe daqui poria a folha de estilo dentro do Python, e amarraria o
         # pacote a um nome de classe que só o desenho conhece.
         #

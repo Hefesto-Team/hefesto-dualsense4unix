@@ -1037,6 +1037,53 @@ _NAO_E_PROMESSA: dict[str, str] = {
 #: No dia em que o caminho nascer, a entrada deixa de bater com a árvore e
 #: ``test_a_lista_de_lacunas_nao_envelhece_calada`` cobra que ela seja apagada.
 _SEM_CAMINHO_HOJE: dict[str, str] = {
+    "integrations/canal_do_microfone.py::nome_do_canal": (
+        "ONDA5-MIC-VIRTUAL-01, 05/09/2026 — o módulo inteiro é o canal de captura"
+        " com o nome do CONTROLE (`hefesto_mic_<hex6>`), que é o 'Mic virtual' qu"
+        "e ela pediu. ONDE O CAMINHO SE PERDE e O QUE O FECHA: ver a razão de `in"
+        "tegrations/canal_do_microfone.py::abrir`, que é a porta do módulo — esta"
+        " função é alcançada por ela, e cai junto enquanto ela não for fiada."
+    ),
+    "integrations/canal_do_microfone.py::sufixo_do_canal": (
+        "ONDA5-MIC-VIRTUAL-01, 05/09/2026 — o módulo inteiro é o canal de captura"
+        " com o nome do CONTROLE (`hefesto_mic_<hex6>`), que é o 'Mic virtual' qu"
+        "e ela pediu. ONDE O CAMINHO SE PERDE e O QUE O FECHA: ver a razão de `in"
+        "tegrations/canal_do_microfone.py::abrir`, que é a porta do módulo — esta"
+        " função é alcançada por ela, e cai junto enquanto ela não for fiada."
+    ),
+    "integrations/canal_do_microfone.py::sufixo_do_controle": (
+        "ONDA5-MIC-VIRTUAL-01, 05/09/2026 — o módulo inteiro é o canal de captura"
+        " com o nome do CONTROLE (`hefesto_mic_<hex6>`), que é o 'Mic virtual' qu"
+        "e ela pediu. ONDE O CAMINHO SE PERDE e O QUE O FECHA: ver a razão de `in"
+        "tegrations/canal_do_microfone.py::abrir`, que é a porta do módulo — esta"
+        " função é alcançada por ela, e cai junto enquanto ela não for fiada."
+    ),
+    "integrations/canal_do_microfone.py::propriedades_do_canal": (
+        "ONDA5-MIC-VIRTUAL-01, 05/09/2026 — o módulo inteiro é o canal de captura"
+        " com o nome do CONTROLE (`hefesto_mic_<hex6>`), que é o 'Mic virtual' qu"
+        "e ela pediu. ONDE O CAMINHO SE PERDE e O QUE O FECHA: ver a razão de `in"
+        "tegrations/canal_do_microfone.py::abrir`, que é a porta do módulo — esta"
+        " função é alcançada por ela, e cai junto enquanto ela não for fiada."
+    ),
+    "integrations/canal_do_microfone.py::abrir": (
+        "ONDA5-MIC-VIRTUAL-01, 05/09/2026 — o canal de captura com o nome do "
+        "CONTROLE (`hefesto_mic_<hex6>`), que é o 'Mic virtual' que ela pediu: "
+        "*'se o Mic do dualsense passa a ser lido a parte via Mic virtual. "
+        "Usaríamos essa feature do controle mesmo no Xbox.'* "
+        "ONDE O CAMINHO SE PERDE: nada chama `abrir` porque o Passo 2 da sprint "
+        "— alimentar o nó a partir do nó ALSA do cabo — **exige medição na "
+        "bancada antes do código**, e a sprint o escreve com todas as letras: "
+        "medir se um link do grafo do PipeWire basta ou se é preciso um leitor. "
+        "Sem essa medição, qualquer fiação seria chute sobre o áudio dela. "
+        "O QUE FECHA: `eleicao_de_microfone.pedir_canal` chamar "
+        "`canal_do_microfone.abrir(uniq, ...)` quando o transporte for "
+        "CABO, e o atendente do rádio continuar como está até a "
+        "ONDA5-MIC-VIRTUAL-02 converter os quatro chamadores de "
+        "`fontes_de_captura.escolher_fonte`. O corte entre as duas sprints é "
+        "por REVERSIBILIDADE: no cabo existe rede embaixo (o nó ALSA continua "
+        "publicado ao lado), no rádio não existe — `hefesto_dualsense_bt_<hex6>` "
+        "é o único canal que o Bluetooth tem hoje."
+    ),
     # AS TRÊS DA ONDA1-D1 MORRERAM — 04/09/2026, e elas previram o próprio fim.
     # `mic_canal_set`, `frase_do_ato_do_microfone` e `ler_as_duas_camadas`
     # nasceram declaradas AQUI porque a metade de tela era de outra frente da
