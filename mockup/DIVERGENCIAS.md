@@ -131,6 +131,32 @@ seção daqui**: a aba deixou de estar em trabalho.
   existia com as duas orações.
 
   **O que fecha:** o `--publicar 05` depois do OK dela na aba inteira.
+## 06-navegacao.html — **JÁ PUBLICADA, e ela precisa saber disso**
+
+- **06/09/2026** — a `ONDA5-06-02` **publicou** `interface/paginas/06-navegacao.html`.
+  A aba passou a ter **22 linhas**: o **Botão PS** é a 19ª, e abre em *"Abrir a
+  Steam"*, que é o `padrao()["ps"]` do motor.
+
+  **Publicar é ato dela, e esta é a exceção do dia — declarada, não escondida.**
+  A decisão de manter foi do coordenador, na costura da ONDA B, com três razões:
+
+  1. **A sprint declarava a posse.** `interface/paginas/06-navegacao.html` está
+     em `posse:` da `ONDA5-06-02`, enquanto as irmãs da mesma leva (`ONDA5-05-01`,
+     `ONDA5-02-02`) a põem em `nao_toca:`. A diferença é do desenho da fila, não
+     escolha do agente.
+  2. **Desfazer criaria perda SILENCIOSA de trabalho dela**, que é o defeito que
+     esta casa mais persegue: a tela ficaria com 21 linhas sobre um produto de
+     22, e o «Guardar» **descartaria a escolha do PS sem dizer uma palavra**,
+     porque a varredura não a traria.
+  3. **O piloto renderiza o PUBLICADO.** Sem publicar não existe prova de tela —
+     e ela é obrigatória —, e duas das sete réguas que a `ONDA5-06-01` deixou
+     vermelhas leem a página publicada.
+
+  **O que isso muda para ela, no FECHO:** a volta única de publicação continua
+  acontecendo, e a aba 06 entra nela — só que **já publicada**. Se ela olhar a
+  linha do PS e disser que não, o desfazer é um comando:
+  `git checkout <commit> -- src/hefesto_dualsense4unix/interface/paginas/06-navegacao.html`.
+
 ## 08-conexoes.html
 
 - **06/09/2026** — a 08-Q5 e a 08-Q7 (`ONDA5-08-01`). O desenho ganhou a linha
