@@ -41,10 +41,18 @@ _TAB = "\t"
 PRAGMATA = "3357650"
 LINHA_PRAGMATA = "VKD3D_CONFIG=no_upload_hvv %command%"
 
-#: A lista de IGNORE ESTENDIDA à mão: linha INTOCÁVEL (mexer deixaria um
-#: fragmento-comando pendurado e o jogo nunca mais abriria).
+#: A lista de IGNORE ESTENDIDA à mão. Ela era INTOCÁVEL até 06/09/2026, e desde
+#: a ONDA5-07-01 o censo a manda para o REPARO: `subtrair_nosso_ignore` tira o
+#: nosso par de dentro da lista dela sem nunca deixar fragmento pendurado.
 LINHA_ESTENDIDA = (
     "SDL_GAMECONTROLLER_IGNORE_DEVICES=0x054c/0x0ce6,0x057e/0x2009 %command%"
+)
+
+#: O QUE O CENSO AINDA CHAMA DE INTOCÁVEL — a lista entre aspas, que a
+#: subtração não sabe desmontar. É a linha para a qual `frase_do_aviso` guarda
+#: o terceiro ramo, o que termina em *"Reparo manual."*
+LINHA_FORA_DO_ALCANCE = (
+    'SDL_GAMECONTROLLER_IGNORE_DEVICES="0x054c/0x0ce6,0x057e/0x2009" %command%'
 )
 
 
@@ -193,15 +201,59 @@ def test_vdf_pego_no_meio_da_regravacao_nao_vira_alarme(tmp_path: Path, steam_fe
     assert "regravação" in censo.erros[0]
 
 
-def test_linha_com_ignore_estendido_e_intocavel(tmp_path: Path, steam_fechada):
-    """Reparo automático nela deixaria um fragmento e o jogo não abriria."""
+def test_a_lista_estendida_a_mao_entra_no_reparo(tmp_path: Path, steam_fechada):
+    """ERA `test_linha_com_ignore_estendido_e_intocavel`, e o nome dele era a
+    promessa que caducou (07-Q1, 06/09/2026: *"Deve aplicar automaticamente
+    como era no gtk"*).
+
+    O que ele mede agora é o outro lado da MESMA linha: ela sai dos intocáveis,
+    entra nos reparáveis, e a frase que a tela mostra é a de jogo novo — não a
+    de reparo manual.
+    """
     vdf = _escrever(tmp_path, {"999": LINHA_ESTENDIDA})
+
+    censo = sw.censo_do_wrapper(vdfs=[vdf], registro=_registro(tmp_path, []))
+
+    assert censo.intocaveis == []
+    assert [j.appid for j in censo.reparaveis] == ["999"]
+    frase = sw.frase_do_aviso(censo)
+    assert "não vou tocar" not in frase
+    assert "nunca recebeu" in frase
+
+
+def test_o_que_a_subtracao_nao_alcanca_continua_intocavel(
+    tmp_path: Path, steam_fechada
+):
+    """A frase de reparo manual NÃO morreu — ela deixou de ser o caso comum.
+
+    O dia em que uma linha destas aparecer é o dia em que aquela frase é a
+    única coisa honesta na tela.
+    """
+    vdf = _escrever(tmp_path, {"999": LINHA_FORA_DO_ALCANCE})
 
     censo = sw.censo_do_wrapper(vdfs=[vdf], registro=_registro(tmp_path, []))
 
     assert [j.appid for j in censo.intocaveis] == ["999"]
     assert censo.reparaveis == []
     assert "não vou tocar" in sw.frase_do_aviso(censo)
+
+
+def test_o_reparo_da_lista_estendida_preserva_o_device_dela(
+    tmp_path: Path, steam_fechada
+):
+    """A prova NO ARQUIVO, que é onde a subtração é a diferença entre curar e
+    estragar: o atalho entra, o nosso par sai, e o device que ELA escondeu
+    continua escondido."""
+    vdf = _escrever(tmp_path, {"999": LINHA_ESTENDIDA})
+
+    status, _censo, _res = sw.reparar_ou_adiar(vdfs=[vdf],
+                                               registro=_registro(tmp_path, []))
+
+    assert status == sw.REPARO_FEITO, status
+    depois = slo.read_launch_options_by_appid(vdf.read_text(encoding="utf-8"))["999"]
+    assert depois.startswith(slo.WRAPPER_PREFIX + " ")
+    assert "0x057e/0x2009" in depois, "o device que ELA escondeu foi jogado fora"
+    assert "0x054c/0x0ce6" not in depois
 
 
 # --------------------------------------------------------------------------

@@ -96,50 +96,227 @@ def test_strip_remove_o_wrapper_e_colapsa_linha_que_era_so_nossa():
 # --- lista de IGNORE ESTENDIDA por vírgula (achado MED da revisão) -----------
 
 #: A usuária estendeu a var para esconder um 2º device (Pro Controller 057e).
-#: Remover só o nosso pedaço deixaria `,0x057e/0x2009` (sem `=`) pendurado —
-#: o env(1)/sh tenta EXECUTÁ-lo → ENOENT → o jogo NUNCA MAIS abre.
+#: ELA ERA INTOCÁVEL ATÉ 06/09/2026, e a razão escrita aqui era: *"remover só o
+#: nosso pedaço deixaria `,0x057e/0x2009` (sem `=`) pendurado — o env(1)/sh
+#: tenta EXECUTÁ-lo → ENOENT → o jogo NUNCA MAIS abre"*.
+#:
+#: **A razão era verdadeira sobre UM jeito de mexer.** `subtrair_nosso_ignore`
+#: trata a atribuição como o que ela é — um token só, com lista por vírgula do
+#: lado direito — e a atribuição sai inteira e volta inteira: nunca existe um
+#: instante em que a vírgula fique órfã. Decisão dela (07-Q1): *"Deve aplicar
+#: automaticamente como era no gtk"*.
 LINHA_ESTENDIDA = (
     "SDL_JOYSTICK_HIDAPI=0 "
     "SDL_GAMECONTROLLER_IGNORE_DEVICES=0x054c/0x0ce6,0x057e/0x2009 %command%"
 )
 
+#: O NOSSO PAR EM SEGUNDO, e ela é o buraco que a ONDA5-07-01 achou LENDO o
+#: fonte e confirmou MEDINDO: `IGNORE_SIGNATURE` cola `VAR=` ao par, então numa
+#: lista que começa pelo device DELA a substring não aparece — `has_poison` e
+#: `has_extended_ignore` respondiam os dois `False`, e `migrate_value`
+#: EMBRULHAVA a linha com o veneno vivo dentro. O jogo continuava cego para o
+#: DualSense dela, com a tela dizendo que o atalho estava no lugar.
+LINHA_NOSSO_PAR_EM_SEGUNDO = (
+    "SDL_GAMECONTROLLER_IGNORE_DEVICES=0x057e/0x2009,0x054c/0x0ce6 %command%"
+)
 
-def test_migrate_nao_toca_lista_ignore_estendida():
-    assert slo.migrate_value(LINHA_ESTENDIDA) == LINHA_ESTENDIDA
+#: O QUE A SUBTRAÇÃO NÃO ALCANÇA — a lista entre aspas. É para esta forma que
+#: `has_extended_ignore`, o `MOTIVO_ESTENDIDO` do censo e a frase de reparo
+#: manual continuam existindo. As aspas dentro do valor são escapadas ao entrar
+#: no vdf de mentira (`_vdf_escape`), como a Steam faz.
+LINHA_FORA_DO_ALCANCE = (
+    'SDL_GAMECONTROLLER_IGNORE_DEVICES="0x054c/0x0ce6,0x057e/0x2009" %command%'
+)
 
 
-def test_strip_nao_toca_lista_ignore_estendida():
-    assert slo.strip_value(LINHA_ESTENDIDA) == LINHA_ESTENDIDA
+def test_a_subtracao_tira_o_nosso_par_e_deixa_o_dela():
+    """O par sai de dentro da lista; a vírgula que sobraria é comida."""
+    assert slo.subtrair_nosso_ignore(LINHA_ESTENDIDA) == (
+        "SDL_JOYSTICK_HIDAPI=0 "
+        "SDL_GAMECONTROLLER_IGNORE_DEVICES=0x057e/0x2009 %command%"
+    )
+
+
+def test_a_subtracao_alcanca_o_nosso_par_em_qualquer_posicao():
+    """No fim da lista e no MEIO dela — a assinatura colada não via nenhum."""
+    assert slo.subtrair_nosso_ignore(LINHA_NOSSO_PAR_EM_SEGUNDO) == (
+        "SDL_GAMECONTROLLER_IGNORE_DEVICES=0x057e/0x2009 %command%"
+    )
+    no_meio = ("SDL_GAMECONTROLLER_IGNORE_DEVICES="
+               "0x057e/0x2009,0x054c/0x0ce6,0x28de/0x1205 %command%")
+    assert slo.subtrair_nosso_ignore(no_meio) == (
+        "SDL_GAMECONTROLLER_IGNORE_DEVICES=0x057e/0x2009,0x28de/0x1205 %command%"
+    )
+
+
+def test_a_lista_que_fica_vazia_leva_a_atribuicao_inteira():
+    """`VAR=` pendurado é resíduo — a mesma regra do `%command%` órfão."""
+    assert slo.subtrair_nosso_ignore(
+        "SDL_GAMECONTROLLER_IGNORE_DEVICES=0x054c/0x0ce6 %command%"
+    ) == "%command%"
+
+
+def test_a_subtracao_devolve_byte_a_byte_a_linha_que_nao_e_nossa():
+    for valor in (
+        "MANGOHUD=1 %command%",
+        "SDL_GAMECONTROLLER_IGNORE_DEVICES=0x057e/0x2009 %command%",
+        "SDL_JOYSTICK_HIDAPI=0 %command%",
+        LINHA_FORA_DO_ALCANCE,
+    ):
+        assert slo.subtrair_nosso_ignore(valor) == valor, valor
+
+
+def test_migrate_subtrai_o_nosso_par_da_lista_estendida():
+    """ERA `test_migrate_nao_toca_lista_ignore_estendida`, e ele assertava o
+    DEFEITO: o `return value` que devolvia a linha intacta.
+
+    O que a linha tem de ter depois: o atalho de inicialização na frente, o
+    device DELA preservado, e o nosso par fora.
+    """
+    migrado = slo.migrate_value(LINHA_ESTENDIDA)
+    assert migrado.startswith(slo.WRAPPER_PREFIX + " ")
+    assert "0x057e/0x2009" in migrado, "o device que ELA escondeu foi jogado fora"
+    assert "0x054c/0x0ce6" not in migrado, "o nosso par continua envenenando a linha"
+
+
+def test_migrate_nao_embrulha_o_que_nao_alcanca():
+    """A metade da razão antiga que NÃO caiu: embrulhar com o veneno vivo
+    dentro deixaria o jogo cego para o controle dela, calado."""
+    assert slo.migrate_value(LINHA_FORA_DO_ALCANCE) == LINHA_FORA_DO_ALCANCE
+
+
+def test_migrate_ve_o_nosso_par_mesmo_quando_ele_nao_e_o_primeiro():
+    """O buraco do Passo 5: `has_poison` e `has_extended_ignore` diziam os dois
+    `False`, e a linha era EMBRULHADA com o veneno ativo dentro."""
+    migrado = slo.migrate_value(LINHA_NOSSO_PAR_EM_SEGUNDO)
+    assert migrado.startswith(slo.WRAPPER_PREFIX + " ")
+    assert "0x054c/0x0ce6" not in migrado
+    assert "0x057e/0x2009" in migrado
+
+
+def test_strip_subtrai_o_nosso_par_da_lista_estendida():
+    """ERA `test_strip_nao_toca_lista_ignore_estendida`. A razão de virar é a
+    DESINSTALAÇÃO: o nosso par ficava na lista dela para sempre, e sem o
+    wrapper aquele par manda o jogo ignorar o DualSense FÍSICO dela."""
+    assert slo.strip_value(LINHA_ESTENDIDA) == (
+        "SDL_GAMECONTROLLER_IGNORE_DEVICES=0x057e/0x2009 %command%"
+    )
+
+
+def _sem_o_atalho(valor: str) -> str:
+    """O valor sem a chamada do wrapper — para tokenizar o que sobra.
+
+    O `WRAPPER_PREFIX` é uma linha de `sh -c` com aspas e colchetes dentro; um
+    `.split()` nele produz `sh`, `-c`, `[`, `]`... e nenhum tem `=`. Sem esta
+    função a régua abaixo acusaria o próprio atalho como fragmento.
+    """
+    return valor.replace(slo.WRAPPER_PREFIX, "", 1).strip()
 
 
 def test_nenhum_caminho_deixa_fragmento_sem_igual_pendurado():
-    """A regressão exata reproduzida pela revisão: `,0x057e/0x2009` órfão."""
-    for resultado in (
-        slo.migrate_value(LINHA_ESTENDIDA),
-        slo.strip_value(LINHA_ESTENDIDA),
-    ):
-        for token in resultado.split():
-            assert token == "%command%" or "=" in token, resultado
+    """A regressão exata reproduzida pela revisão: `,0x057e/0x2009` órfão.
+
+    É A RÉGUA MAIS VALIOSA DESTE ARQUIVO — ela é o que separa a cura da
+    catástrofe: um token sem `=` o `env(1)` tenta EXECUTAR, dá ENOENT, e o jogo
+    nunca mais abre.
+
+    O QUE MUDOU NELA EM 06/09/2026, e por quê: até aqui ela olhava para
+    `migrate_value(LINHA_ESTENDIDA)`, que devolvia a linha INTACTA — ela nunca
+    tinha visto uma linha migrada de verdade. Agora vê, e por isso precisa tirar
+    o atalho antes de tokenizar (`_sem_o_atalho`) e passa a rodar sobre a
+    FAMÍLIA de linhas com o nosso par, não sobre uma só. O que ela mede é
+    exatamente o mesmo.
+    """
+    fontes = (
+        LINHA_ESTENDIDA,
+        LINHA_NOSSO_PAR_EM_SEGUNDO,
+        "SDL_GAMECONTROLLER_IGNORE_DEVICES=0x057e/0x2009,0x054c/0x0ce6,0x28de/0x1205 %command%",
+        "SDL_GAMECONTROLLER_IGNORE_DEVICES=0x054c/0x0ce6 %command%",
+        "SDL_GAMECONTROLLER_IGNORE_DEVICES=0x054c/0x0ce6,0x057e/0x2009 VKD3D_CONFIG=dxr %command%",
+        LINHA_914,
+    )
+    for fonte in fontes:
+        for resultado in (
+            slo.subtrair_nosso_ignore(fonte),
+            _sem_o_atalho(slo.migrate_value(fonte)),
+            _sem_o_atalho(slo.strip_value(fonte)),
+        ):
+            for token in resultado.split():
+                assert token == "%command%" or "=" in token, (fonte, resultado)
 
 
-def test_has_poison_exige_token_completo():
+def test_has_poison_ve_o_nosso_par_em_qualquer_posicao():
+    """ERA `test_has_poison_exige_token_completo`, e o que ele exigia era o
+    PONTO CEGO: a `IGNORE_SIGNATURE` cola `VAR=` ao par, então a pergunta só
+    enxergava o nosso pedaço quando ele estava sozinho na lista.
+
+    Medido em 06/09/2026: numa lista que começa pelo device DELA, `has_poison`
+    e `has_extended_ignore` respondiam os DOIS `False` — o produto não via o
+    próprio veneno e EMBRULHAVA a linha com ele vivo dentro.
+
+    A proteção contra o fragmento-comando não estava nesta pergunta e não sai
+    dela: quem nunca remove substring é `subtrair_nosso_ignore`, e quem tranca
+    isso é `test_nenhum_caminho_deixa_fragmento_sem_igual_pendurado`.
+    """
     assert slo.has_poison(LINHA_914) is True
-    assert slo.has_poison(LINHA_ESTENDIDA) is False
-    assert slo.has_extended_ignore(LINHA_ESTENDIDA) is True
+    assert slo.has_poison(LINHA_ESTENDIDA) is True
+    assert slo.has_poison(LINHA_NOSSO_PAR_EM_SEGUNDO) is True
+    assert slo.has_poison(LINHA_FORA_DO_ALCANCE) is True
+    # A linha que é toda DELA continua fora: sem o nosso par, nada a fazer.
+    assert slo.has_poison("SDL_GAMECONTROLLER_IGNORE_DEVICES=0x057e/0x2009") is False
+    assert slo.has_poison("MANGOHUD=1 %command%") is False
+    # A LISTA ESTENDIDA DEIXOU DE SER INTOCÁVEL — a subtração a alcança. Quem
+    # continua respondendo `True` é a forma que ela não desmonta.
     assert slo.has_extended_ignore(LINHA_914) is False
+    assert slo.has_extended_ignore(LINHA_ESTENDIDA) is False
+    assert slo.has_extended_ignore(LINHA_NOSSO_PAR_EM_SEGUNDO) is False
+    assert slo.has_extended_ignore(LINHA_FORA_DO_ALCANCE) is True
 
 
-def test_transform_pula_linha_estendida_nos_dois_modos():
+def test_transform_migra_a_linha_estendida_nos_dois_modos():
+    """ERA `test_transform_pula_linha_estendida_nos_dois_modos`, e ele exigia
+    `mudadas == 0` — o defeito visto do lado do arquivo."""
     texto = _vdf({"1599660": LINHA_ESTENDIDA})
+    for modo in ("migrate", "strip"):
+        novo, mudadas = slo.transform_vdf_text(texto, modo)
+        assert mudadas == 1, modo
+        assert "0x054c/0x0ce6" not in novo, modo
+        assert "0x057e/0x2009" in novo, modo
+
+
+def test_transform_nao_toca_o_que_a_subtracao_nao_alcanca():
+    texto = _vdf({"1599660": slo._vdf_escape(LINHA_FORA_DO_ALCANCE)})
     for modo in ("migrate", "strip"):
         novo, mudadas = slo.transform_vdf_text(texto, modo)
         assert mudadas == 0, modo
         assert novo == texto, modo
 
 
-def test_main_reporta_ignore_estendido_sem_tocar(tmp_path, monkeypatch, capsys):
+def test_main_migra_a_linha_estendida_preservando_a_parte_dela(
+    tmp_path, monkeypatch, capsys
+):
+    """ERA `test_main_reporta_ignore_estendido_sem_tocar`.
+
+    O nome dele era a promessa que caducou: o produto parou de REPORTAR e
+    passou a CONSERTAR. O que ele guarda agora é a metade que não pode se
+    perder — a parte DELA da lista sobrevive à migração.
+    """
     vdf = tmp_path / "localconfig.vdf"
-    original = _vdf({"1599660": LINHA_ESTENDIDA})
+    vdf.write_text(_vdf({"1599660": LINHA_ESTENDIDA}), encoding="utf-8")
+    monkeypatch.setattr(slo, "steam_running", lambda: False)
+    monkeypatch.setattr(slo, "steam_game_running", lambda: False)
+    rc = slo.main(["--migrate", "--vdf", str(vdf)])
+    assert rc == 0
+    depois = vdf.read_text(encoding="utf-8")
+    assert "hefesto-launch" in depois
+    assert "0x057e/0x2009" in depois, "o device que ELA escondeu foi jogado fora"
+    assert "0x054c/0x0ce6" not in depois
+    capsys.readouterr()
+
+
+def test_main_ainda_reporta_o_que_nao_alcanca(tmp_path, monkeypatch, capsys):
+    vdf = tmp_path / "localconfig.vdf"
+    original = _vdf({"1599660": slo._vdf_escape(LINHA_FORA_DO_ALCANCE)})
     vdf.write_text(original, encoding="utf-8")
     monkeypatch.setattr(slo, "steam_running", lambda: False)
     monkeypatch.setattr(slo, "steam_game_running", lambda: False)
@@ -147,7 +324,7 @@ def test_main_reporta_ignore_estendido_sem_tocar(tmp_path, monkeypatch, capsys):
     assert rc == 0
     assert vdf.read_text(encoding="utf-8") == original
     out = capsys.readouterr().out
-    assert "ESTENDIDO" in out
+    assert "não sei desmontar" in out
     assert "manualmente" in out
 
 
@@ -430,13 +607,32 @@ def test_apply_wrapper_remove_veneno_legado_junto():
     assert slo.read_launch_options_by_appid(novo)["1599660"] == slo.WRAPPER_LAUNCH
 
 
-def test_apply_wrapper_pula_ignore_estendido_sem_tocar():
+def test_apply_wrapper_migra_o_ignore_estendido():
+    """ERA `test_apply_wrapper_pula_ignore_estendido_sem_tocar`, e o nome dele
+    era o defeito: o `skipped.append((appid, "ignore_estendido"))`.
+
+    As TRÊS coisas que a linha resultante tem de ter, e a terceira é a que
+    torna a subtração diferente de reescrever por cima: o atalho chamando, a
+    lista DELA preservada, e o nosso par fora.
+    """
     texto = _vdf({"1599660": LINHA_ESTENDIDA, "620": ""})
+    novo, aplicados, pulados = slo.apply_wrapper_vdf_text(texto)
+    assert "1599660" in aplicados
+    assert aplicados == ["1599660", "620"]
+    assert ("1599660", "ignore_estendido") not in pulados
+    linha = slo.read_launch_options_by_appid(novo)["1599660"]
+    assert linha.startswith(slo.WRAPPER_PREFIX + " ")
+    assert "0x057e/0x2009" in linha, "o device que ELA escondeu foi jogado fora"
+    assert "0x054c/0x0ce6" not in linha
+
+
+def test_apply_wrapper_ainda_pula_o_que_nao_alcanca():
+    """O `skipped` não morreu — ele passou a nomear só o que sobra."""
+    texto = _vdf({"1599660": slo._vdf_escape(LINHA_FORA_DO_ALCANCE), "620": ""})
     novo, aplicados, pulados = slo.apply_wrapper_vdf_text(texto)
     assert ("1599660", "ignore_estendido") in pulados
     assert aplicados == ["620"]
-    # A linha estendida permanece byte a byte.
-    assert slo.read_launch_options_by_appid(novo)["1599660"] == LINHA_ESTENDIDA
+    assert slo.read_launch_options_by_appid(novo)["1599660"] == LINHA_FORA_DO_ALCANCE
 
 
 def test_apply_wrapper_to_all_games_recusa_com_steam_aberta(tmp_path, monkeypatch):

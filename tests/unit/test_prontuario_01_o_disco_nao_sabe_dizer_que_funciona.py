@@ -107,12 +107,15 @@ class TestNomeiaOQueSabe:
         assert "hefesto-launch" in estorvo.o_que
         assert estorvo.a_cura  # nunca um diagnóstico sem saída
 
-    def test_linha_intocavel_nao_promete_conserto_automatico(self) -> None:
-        """Mexer nela quebraria o launch — e prometer o contrário seria pior.
+    def test_a_lista_estendida_a_mao_e_estorvo_com_cura_automatica(self) -> None:
+        """ERA `test_linha_intocavel_nao_promete_conserto_automatico`, e o nome
+        dele era a frase que caducou em 06/09/2026 (07-Q1).
 
-        "Estendida" é a assinatura NOSSA com mais dispositivos grudados: quem
-        editou a linha à mão fica com um fragmento-comando pendurado se o
-        produto reescrever por cima, e o jogo não abre.
+        A razão escrita — *"quem editou a linha à mão fica com um
+        fragmento-comando pendurado se o produto reescrever por cima"* — valia
+        para reescrever por cima. `subtrair_nosso_ignore` não reescreve: ela
+        tira o nosso par de dentro da lista dela, e a atribuição sai inteira e
+        volta inteira.
         """
         ficha = Prontuario(
             appid="1",
@@ -121,9 +124,28 @@ class TestNomeiaOQueSabe:
             linha=f"{IGNORE_SIGNATURE},0x057e/0x2009 %command%",
         )
         chaves = [e.chave for e in ficha.estorvos]
+        assert LINHA_INTOCAVEL not in chaves
+        assert SEM_WRAPPER in chaves
+        (estorvo,) = [e for e in ficha.estorvos if e.chave == SEM_WRAPPER]
+        assert estorvo.automatica
+
+    def test_o_que_o_reparo_nao_alcanca_continua_nomeado_e_com_dono(self) -> None:
+        """O estorvo NÃO morreu — ele deixou de ser o caso comum.
+
+        E ele ganhou cura automática junto: o reparo TENTA e diz o que
+        conseguiu, que é melhor que mandá-la revisar a linha na Steam à mão.
+        Quem tranca a promessa é o portão do `test_ponte_steam_input_01`, que
+        compara `_ESTORVOS` com `_CURAS`.
+        """
+        ficha = Prontuario(
+            appid="1",
+            nome="Com IGNORE entre aspas",
+            raiz=Path("/jogo"),
+            linha='SDL_GAMECONTROLLER_IGNORE_DEVICES="0x054c/0x0ce6,0x057e/0x2009" %command%',
+        )
+        chaves = [e.chave for e in ficha.estorvos]
         assert LINHA_INTOCAVEL in chaves
         assert SEM_WRAPPER not in chaves
-        assert not [e for e in ficha.estorvos if e.automatica]
 
     def test_excecao_inerte_o_caso_do_sackboy(self) -> None:
         """Ela pôs o jogo na lista, e a lista não estava fazendo nada.

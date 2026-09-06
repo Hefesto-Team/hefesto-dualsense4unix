@@ -152,7 +152,14 @@ REGISTRO_BASENAME = "wrapper-visto.json"
 #: Motivo de um jogo estar sem o wrapper.
 MOTIVO_REGRESSAO = "regressao"       #: já teve o wrapper e PERDEU (o Pragmata)
 MOTIVO_NOVO = "novo"                 #: nunca teve (jogo novo na biblioteca)
-MOTIVO_ESTENDIDO = "ignore_estendido"  #: linha INTOCÁVEL — só reparo manual
+MOTIVO_ESTENDIDO = "ignore_estendido"  #: o nosso par está lá e não sei tirar
+#: ELE DEIXOU DE SER O CASO COMUM — ONDA5-07-01, 06/09/2026. Até aqui ele
+#: nomeava toda linha com a lista de IGNORE estendida à mão, e a decisão dela
+#: (07-Q1) foi *"Deve aplicar automaticamente como era no gtk"*: a lista
+#: estendida passou a ser SUBTRAÍDA por `steam_launch_options.subtrair_nosso_ignore`
+#: e cai no reparo como qualquer outra. O que sobra aqui é o resto honesto — a
+#: forma que a subtração não sabe desmontar —, e é para ela que a frase de
+#: reparo manual continua existindo.
 
 #: Status de `reparar_ou_adiar`.
 REPARO_NADA = "nada_a_fazer"
@@ -200,7 +207,12 @@ class Censo:
 
     @property
     def intocaveis(self) -> list[JogoSemWrapper]:
-        """Linhas com a lista de IGNORE estendida: mexer quebraria o launch."""
+        """Linhas que carregam o nosso par numa forma que não sei desmontar.
+
+        AS DUAS CATEGORIAS CONTINUAM EXISTINDO; o que mudou em 06/09/2026 é
+        QUEM cai em cada uma. A lista estendida à mão — que era a razão inteira
+        desta propriedade — passou para a de baixo.
+        """
         return [j for j in self.faltantes if j.motivo == MOTIVO_ESTENDIDO]
 
     @property
@@ -421,6 +433,10 @@ def frase_do_aviso(censo: Censo) -> str:
             f"Steam: {nomes}. " + _como_reparar(censo)
         )
     if censo.intocaveis:
+        # ESTA FRASE DEIXOU DE ACENDER NO CASO COMUM — 06/09/2026 — e ela NÃO
+        # sai: é a frase certa para a linha que ainda sobrar, e o dia em que
+        # sobrar uma é o dia em que ela é a única coisa honesta na tela. O que
+        # mudou é a frequência, não a verdade.
         nomes = juntar_rotulos([j.rotulo for j in censo.intocaveis])
         return (
             f"Opções de Inicialização com a lista de IGNORE estendida à mão em "
@@ -467,9 +483,11 @@ def reparar_ou_adiar(
     "o jogo não vê o controle" por "o jogo fecha sozinho", que não é conserto
     nenhum. Quem garante isso é o `migrate_value`, que PREPENDE.
 
-    Os jogos com IGNORE estendido ficam de fora do reparo por construção (o
-    `apply_wrapper_vdf_text` os pula) e são reportados no censo — mexer neles
-    deixaria um fragmento-comando pendurado e o jogo nunca mais abriria.
+    A LISTA DE IGNORE ESTENDIDA À MÃO ENTRA NO REPARO desde 06/09/2026
+    (ONDA5-07-01): o `migrate_value` SUBTRAI o nosso par de dentro da lista
+    dela, e a atribuição sai inteira e volta inteira — nunca há um instante em
+    que a vírgula fique órfã. Fica de fora só o que a subtração não alcança,
+    que o censo continua reportando como intocável.
     """
     censo = censo_do_wrapper(home, vdfs, registro=registro)
     if not censo.reparaveis:
