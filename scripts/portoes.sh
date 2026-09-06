@@ -62,6 +62,15 @@ rapido|contrato-ipc|py|scripts/gerar-contrato-ipc.py --check
 # rápida porque o preço foi medido: 33 ms só `docs/protocol/`, 101 ms com o
 # mapa, o caderno e as decisões dela juntos -- 903 citações conferidas.
 rapido|citacoes-de-linha|py|scripts/validar-citacoes-de-linha.py --all
+# E O `src/` NÃO ESTAVA COBERTO — 06/09/2026, achado da A-PALAVRA-MESA-SAI-01.
+# O portão acima varre `docs/` e as planilhas: 2.977 citações em 21 documentos e
+# 9 planilhas, verde. As citações escritas em COMENTÁRIO DE CÓDIGO ficavam de
+# fora, e quem as conferia era um teste que a lista de portões não rodava —
+# sete endereços mortos em `src/` atravessaram a leva inteira com os 44 verdes ao
+# lado. *"Se dois portões da suíte medem coisa que a lista não roda, o piso tem
+# furo"*, e tinha. Ele entra na camada COMPLETA porque custa ~60 s: ele abre
+# cada arquivo citado e confere a âncora, não só o número de linhas.
+completo|citacoes-no-codigo|pytest|tests/unit/test_portao_o_par_com_metade_ligada.py
 rapido|mapa-de-canais|py|scripts/gerar-mapa.py --check
 rapido|fatos-de-tela|py|scripts/gerar-fatos-de-tela.py --check
 rapido|fala-de-tela|py|scripts/validar-fala-de-tela.py --all

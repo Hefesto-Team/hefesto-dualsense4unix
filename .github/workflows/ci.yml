@@ -203,6 +203,11 @@ jobs:
       # um grau **ALTA — lido no código**.
       - name: Citação de linha que não abre no que promete
         run: python3 scripts/validar-citacoes-de-linha.py --all
+      # E O `src/` — 06/09/2026. O passo acima varre `docs/` e as planilhas; a
+      # citação escrita em COMENTÁRIO DE CÓDIGO ficava sem portão, e sete
+      # endereços mortos atravessaram uma leva inteira com o CI verde ao lado.
+      - name: Citação de linha em comentário de código
+        run: python3 -m pytest tests/unit/test_portao_o_par_com_metade_ligada.py -q
       # IPC-DOC-GERADO-01 (13/08): a lista de métodos IPC sai do dispatcher, não
       # da mão. Sem este passo um método nasce sem contrato e ninguém percebe —
       # que é como o documento chegou a ter dez linhas para 37 métodos.

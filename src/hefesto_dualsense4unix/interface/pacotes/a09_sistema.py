@@ -2637,7 +2637,7 @@ def procurar_camadas(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]
     """"Tirar a sobreposição Vulkan" — os TRÊS tempos que o rótulo promete.
 
     O MOTOR É O DA JANELA ANTIGA, chamado e não copiado: `on_camadas_engasgo`
-    (`emulation_actions.py:2101`) é o DIÁLOGO em volta do ato, e o ato são
+    (`emulation_actions.py:2125`) é o DIÁLOGO em volta do ato, e o ato são
     `camadas_vulkan.censo`, `pastas_compatdata` e `curar_todos`, com as duas
     frases puras do mesmo módulo. Nada aqui reescreve uma linha dele.
 
@@ -2805,7 +2805,7 @@ def ver_detalhes(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
 #:   `desligar`             `_run_systemctl_async("stop")` (daemon_actions.py:2234)
 #:   `refazer-consertos`    `bash scripts/*.sh` (…:1218)
 #:   `refazer-proton`       diálogo GTK + `config.vdf` da Steam (…:1793)
-#:   `procurar-camadas`     censo do `system.reg` em disco (emulation_actions.py:2110)
+#:   `procurar-camadas`     censo do `system.reg` em disco (emulation_actions.py:2146)
 #:   `restaurar-de-fabrica` cópia do asset + `DraftConfig` (footer_actions.py:1477)
 #:
 #: ERAM OITO, DEPOIS SETE, E AGORA SÃO CINCO. `ver-detalhes` e `ver-plugins`
