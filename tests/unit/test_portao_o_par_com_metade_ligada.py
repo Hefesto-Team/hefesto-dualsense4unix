@@ -863,6 +863,27 @@ _CITACOES_PENDENTES: frozenset[str] = frozenset({
     "daemon/subsystems/hotkey.py::daemon/protocols.py:180",
     "daemon/subsystems/hotkey.py::profiles/manager.py:384-387",
     "integrations/exame_da_mesa.py::sentinela_do_wrapper.py:524",
+    # ONDA5-06-01 (06/09/2026) — AS QUATRO QUE O BOTÃO PS DESLOCOU, e as quatro
+    # são de arquivo que a sprint declara em `nao_toca:`. A âncora de cada uma
+    # CONTINUA EXISTINDO; só o número mudou, porque o PS ganhou dono em
+    # `profiles/manager.py` (`_empurrar_o_ps`, `_canal_do_ps`, o campo
+    # `ps_action_sink`) e em `daemon/subsystems/hotkey.py` (`definir_acao_do_ps`,
+    # `_digitar_o_ps`, `_a_metade_da_maquina`).
+    #
+    # O NÚMERO CERTO JÁ ESTÁ MEDIDO — quem for dono do arquivo troca e apaga a
+    # linha daqui (o `test_a_lista_de_pendentes_nao_vira_paisagem` cobra):
+    #   a06_navegacao.py:626  `core/acoes_de_botao.py:285`  -> `:338` (`resolver`)
+    #   a06_navegacao.py:1161 `profiles/manager.py:570`     -> `:617`
+    #   a06_navegacao.py:1175 `profiles/manager.py:614`     -> `:673`
+    #   profiles/schema.py:997 `daemon/subsystems/hotkey.py:1004` -> `:1234`
+    #
+    # As outras QUATRO que a mesma sprint deslocou não estão aqui porque foram
+    # CORRIGIDAS no lugar (`core/rumble.py`, `a02_controles.py` e duas em
+    # `a08_conexoes.py`): fora do `nao_toca:`, o número se reescreve.
+    "interface/pacotes/a06_navegacao.py::core/acoes_de_botao.py:285",
+    "interface/pacotes/a06_navegacao.py::manager.py:614",
+    "interface/pacotes/a06_navegacao.py::profiles/manager.py:570",
+    "profiles/schema.py::daemon/subsystems/hotkey.py:1004",
     "profiles/loader.py::schema.py:52",
     "utils/repo_files.py::cli/cmd_doctor.py:23",
     "utils/repo_files.py::emulation_actions.py:1200",

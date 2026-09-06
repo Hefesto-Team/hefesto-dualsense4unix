@@ -2429,7 +2429,7 @@ def _volume_conhecido(dele: dict[str, Any]) -> dict[str, Any]:
 #:
 #: `mic.button_toggles_system` é UM por MÁQUINA: quem o lê é
 #: `hotkey.mic_button_loop`, em `daemon.config.mic_button_toggles_system`, sem
-#: consultar `uniq` nenhum (`daemon/subsystems/hotkey.py:1004`). O esquema o
+#: consultar `uniq` nenhum (`daemon/subsystems/hotkey.py:1234`). O esquema o
 #: RECUSA por peça (`ControllerMicOverride._o_que_ainda_nao_tem_caminho_por_peca`)
 #: — e a régua da casa é `test_perfil_por_controle_o_campo_espera_o_caminho.py`,
 #: nos dois sentidos. Guardá-lo por controle faria quatro controles gravarem
