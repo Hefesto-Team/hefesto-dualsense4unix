@@ -41,6 +41,35 @@ seção daqui**: a aba deixou de estar em trabalho.
   dependem dele. O custo da espera é zero, e esta é a primeira declaração desta
   lista de que isso se pode dizer com medição por trás.
 
+- **06/09/2026 — E A LINHA ACIMA DEIXOU DE SER VERDADE NO MESMO DIA.** A
+  `ONDA5-02-02` entrou e a aba mudou de VERDADE: o `♪` do alto-falante trocou o
+  alvo `classe` pelo `atributo` (`data-som`) e ganhou duas cores lidas do dono
+  (`mesa_viva.selo_do_mic`) — ATIVO no `--green` da página, MUDO no `--orange`,
+  e sem leitura o piloto REMOVE o atributo e o botão volta ao neutro. O `🎙` do
+  segundo cartão perdeu um vermelho que estava **congelado** pelo gerador
+  (`rgb(255,85,85)` → `rgb(68,71,90)`, igual ao do primeiro): a classe vinha do
+  gerador e o glifo não tinha `data-campo`. Com os dois escritores fora,
+  `.mudo-i.on` saiu da folha.
+
+  **E as duas dicas pararam de mandar para uma janela que está saindo:** o `🎙`
+  aponta para `hefesto-dualsense4unix mic release` e o `♪` para
+  `speaker release`, dizendo que devolve **o controle**, não o valor. A frase
+  banida *"janela do aplicativo"* saiu; *"linha de comando"* não entrou — o que
+  a tela mostra é o nome do verbo, LIDO de `cmd_speaker._ACOES` e
+  `cmd_mic._ACOES_FIRMWARE`.
+
+  **Nenhum botão novo no cartão:** a decisão 02-Q6 dela (Liberar/Devolver ficam
+  fora) segue intacta.
+
+  **Quem escreveu esta atualização, e por quê:** o coordenador, na costura da
+  ONDA A. O agente da `ONDA5-02-02` mediu que **este arquivo é `nao_toca` em
+  quatro sprints e `posse` em nenhuma** — o portão do desenho ficava VERDE
+  porque a seção `## 02-controles.html` existia, enquanto o corpo dela
+  descrevia uma aba que deixou de existir. *Uma declaração de divergência que
+  envelhece em silêncio é um portão verde sobre nada* — a oitava desta casa em
+  quatro dias. **Este arquivo passa a ser posse declarada do coordenador na
+  costura de cada onda.**
+
   **O que fecha:** o `--publicar 02` da próxima vez que ela aprovar a aba. Nada
   espera por isto — nenhuma sprint depende desta linha.
 
