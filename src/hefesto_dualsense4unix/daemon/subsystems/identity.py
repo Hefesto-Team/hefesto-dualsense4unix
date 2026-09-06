@@ -665,7 +665,13 @@ class ControllerIdentityRegistry:
         with self._lock:
             self._external_present = provider
 
-    def slot_for(self, uniq: str | None, *, assign: bool = True) -> int | None:
+    def slot_for(
+        self,
+        uniq: str | None,
+        *,
+        assign: bool = True,
+        autoridade_de_presenca: bool = True,
+    ) -> int | None:
         """Número EXIBIDO do controle ``uniq`` — 1..N entre os PRESENTES.
 
         NUM-01: o que se guarda de ``uniq`` é o lugar dele na fila; o que se
@@ -682,6 +688,15 @@ class ControllerIdentityRegistry:
         MESMO tick de hotplug. ``assign=False`` só consulta (leitura pura:
         não atribui, não marca conectado) e, para um uniq AUSENTE que já tem
         lugar, devolve a colocação que ele teria se estivesse na mesa.
+
+        ``autoridade_de_presenca=False`` — QUATRO-NA-MESA-01, defeito 1
+        (06/09/2026): quem chama é uma LEITURA, não o tique. Ele continua
+        podendo ATRIBUIR lugar na fila (identidade, R-14 §1) e continua
+        pondo na mesa um endereço que ESTREIA nesta consulta (D1: a cor e o
+        número nascem certos no mesmo tique de hotplug) — mas **não
+        RESSUSCITA** quem o ``sync_connected`` já declarou ausente. Ver o
+        bloco *"Os dois escritores de ``_connected``"* na docstring de
+        :func:`make_auto_output_provider` para o que isso custava.
 
         Guardas: ``None``/vazio → None; MAC de vpad (``02:fe:...``) → None
         com log (D9 — o vpad jamais é "Controle N"). SEM I/O de disco — o
@@ -701,11 +716,16 @@ class ControllerIdentityRegistry:
             return None
         with self._lock:
             self._avaliar_mesa_locked()
-            if key not in self._ordem:
+            estreia = key not in self._ordem
+            if estreia:
                 if not assign:
                     return None
                 self._assign_locked(key, persistable)
-            if assign and key not in self._connected:
+            if (
+                assign
+                and key not in self._connected
+                and (autoridade_de_presenca or estreia)
+            ):
                 self._connected.add(key)
                 self._mesa_mexeu_locked()
                 self._marcar_chegada_locked(key)
@@ -927,7 +947,13 @@ class ControllerIdentityRegistry:
             self._avaliar_mesa_locked()
             return self._numeros_da_mesa_locked()
 
-    def numero_da_lampada(self, uniq: str | None, *, assign: bool = True) -> int | None:
+    def numero_da_lampada(
+        self,
+        uniq: str | None,
+        *,
+        assign: bool = True,
+        autoridade_de_presenca: bool = True,
+    ) -> int | None:
         """Número que ``uniq`` pode ACENDER agora — None quando não há um.
 
         Irmão de ``slot_for``, e a diferença é a PERGUNTA que cada um responde:
@@ -954,9 +980,12 @@ class ControllerIdentityRegistry:
         ``assign=True`` (padrão) mantém o contrato do R-14 §1: ATRIBUIR lugar
         na fila é identidade, não aparência, e acontece pelo mesmo caminho de
         sempre (``slot_for``) antes de qualquer teste de presença.
+
+        ``autoridade_de_presenca`` é repassado ao ``slot_for`` sem tradução —
+        é o provider de cor que o desliga (QUATRO-NA-MESA-01, defeito 1).
         """
         if assign:
-            self.slot_for(uniq)
+            self.slot_for(uniq, autoridade_de_presenca=autoridade_de_presenca)
         if not uniq or not isinstance(uniq, str):
             return None
         key, persistable = self._canonical(uniq)
@@ -1518,6 +1547,35 @@ def make_auto_output_provider(
     2. Os campos saem SEPARADOS: cor sob ``auto_enabled``, padrão de número
        sob ``auto_numbers_enabled``. Desligar a paleta não pode apagar o
        número do controle.
+
+    Os dois escritores de ``_connected`` — QUATRO-NA-MESA-01, defeito 1
+    (medido em 06/09/2026, com quatro endereços na mesa):
+
+      ``_connected`` decide QUEM CONTA para a numeração 1..N
+      (:meth:`_numeros_da_mesa_locked`), e até aqui tinha DOIS escritores em
+      cadências diferentes:
+
+      - o **tique lento** (:meth:`sync_connected`, ~2,0 s pelo ``lifecycle``)
+        SUBSTITUI o conjunto inteiro pelo que o backend reporta conectado;
+      - a **leitura de cor** (:func:`make_auto_output_provider` →
+        :meth:`numero_da_lampada` → :meth:`slot_for`) ADICIONAVA — e ela roda a
+        **10 Hz** enquanto a aba Status está aberta.
+
+      A janela é exatamente a de um controle que piscou no Bluetooth: o tique o
+      tira da mesa, e a leitura o devolve dez vezes por segundo até o próximo
+      tique tirá-lo de novo. **Medido antes da cura**, com quatro endereços e o
+      terceiro ausente: o quarto ia de ``3`` para ``4`` e a lightbar dele de
+      verde para rosa a cada leitura — *"quando um controle pisca, os outros
+      trocam de cor e de número sozinhos"*.
+
+      A cura NÃO é chamar :meth:`mark_disconnected` (ele está sem chamador de
+      produção **de propósito** — R-15/D2, o lugar na fila sobrevive ao
+      disconnect). O defeito é ``_connected`` ser escrito por uma LEITURA: uma
+      consulta de cor não pode ter efeito colateral sobre quem está na mesa.
+      ``slot_for(autoridade_de_presenca=False)`` é o que separa os dois atos — o
+      provider continua ATRIBUINDO lugar (R-14 §1) e continua apresentando um
+      endereço que ESTREIA (D1: a cor nasce certa no tique do hotplug), mas quem
+      RESSUSCITA um ausente passa a ser só o tique.
     """
     from hefesto_dualsense4unix.core.backend_pydualsense import _DesiredOutput
     from hefesto_dualsense4unix.core.led_control import (
@@ -1532,7 +1590,12 @@ def make_auto_output_provider(
         # O NÚMERO, esse, sai da mesa de AGORA: quem não está nela não acende
         # (None = sem opinião), porque o lugar gravado do ausente é de outro
         # espaço de numeração e já colidiu com o de um presente (27/08/2026).
-        slot = registry.numero_da_lampada(uniq)
+        #
+        # QUATRO-NA-MESA-01 §1: `autoridade_de_presenca=False`. Esta função é
+        # o segundo escritor de `_connected` que a sprint mediu, e ela é uma
+        # LEITURA a 10 Hz (a aba Status). Quem sabe quem está na mesa é o
+        # tique de 2 s, e só ele.
+        slot = registry.numero_da_lampada(uniq, autoridade_de_presenca=False)
         if slot is None:
             return None
         campos: dict[str, Any] = {}
