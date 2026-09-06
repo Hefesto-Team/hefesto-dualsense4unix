@@ -609,7 +609,7 @@ CSS = CSS_GLIFO + CSS_LUZINHAS + """
      — fotografado em 02/09 às 19h, `touch-estado` dizendo "Sem toque" com o
      ponto ciano no lugar. A CLASSE é o único alvo do piloto que serve: os sete
      são texto·largura·fundo·valor·html·classe·cor, e `classe` é o único
-     idempotente que liga e desliga (`hefesto_vivo.py:217-224`). */
+     idempotente que liga e desliga (`hefesto_vivo.py:499-515`). */
   .touch .ponto{position:absolute;width:8px;height:8px;border-radius:50%;background:var(--cyan);
                 box-shadow:0 0 8px var(--cyan);transform:translate(-50%,-50%);opacity:0}
   .touch .ponto.on{opacity:1}

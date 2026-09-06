@@ -715,3 +715,29 @@ def test_o_botao_volta_sozinho_e_volta_inteiro(medido: dict) -> None:
     assert depois["filhos"] == antes["filhos"], (
         f"o botão voltou achatado: {antes['filhos']} filhos -> "
         f"{depois['filhos']}")
+
+
+def test_o_numero_da_piscada_e_o_mesmo_nos_dois_lados() -> None:
+    """A segunda régua do dono impossível — o Python e o JavaScript concordam.
+
+    `MS_DA_PISCADA` não pode ser interpolado no `BOOTSTRAP`: ele é uma string
+    CRUA de aspas triplas, e **cinco réguas desta casa a extraem do fonte** por
+    uma regex ancorada no fecho, para rodá-la mutilada num WebKit. Um
+    `.replace()` colado nesse fecho quebra a âncora, e a regex passa a engolir o
+    Python que vem depois — medido em 05/09/2026, e o sintoma foram 41 erros de
+    `SyntaxError` no bootstrap, que não se leem como "alguém mexeu na
+    constante". Uma f-string também não serve: o JS é cheio de chaves.
+
+    Então o número vive nos dois sítios, e esta linha é o que impede que eles se
+    afastem. É a mesma forma de `PRIORIDADE_SESSAO_DA_PONTE`, que convive com um
+    `.conf` do WirePlumber pela mesma impossibilidade.
+    """
+    import re
+
+    import hefesto_vivo as hv
+
+    achados = re.findall(r"\}, (\d+)\);", hv.BOOTSTRAP)
+    assert achados, "o `setTimeout` da piscada sumiu do BOOTSTRAP"
+    assert str(hv.MS_DA_PISCADA) in achados, (
+        f"o Python diz {hv.MS_DA_PISCADA} ms e o JavaScript diz {achados} — "
+        "a piscada duraria o que a tela mandasse, não o que ela decidiu")

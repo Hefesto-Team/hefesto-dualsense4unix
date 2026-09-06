@@ -133,7 +133,7 @@ def _e(txt: object) -> str:
 
     O `quote=False` NÃO É RELAXAMENTO — é o que impede um LAÇO INFINITO na
     máquina dela, e a razão é o piloto: ele só reescreve quando
-    `innerHTML !== valor` (`hefesto_vivo.py:160` no campo, `:303` no bloco). As
+    `innerHTML !== valor` (`hefesto_vivo.py:441` no campo, `:944` no bloco). As
     duas comparações são de TEXTO LITERAL, e o lado esquerdo é o que o DOM
     **devolve**, não o que se escreveu. Se a grafia emitida não for a que o DOM
     devolve, a comparação nunca casa e a reescrita não para nunca.
