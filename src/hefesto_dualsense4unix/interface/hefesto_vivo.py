@@ -1914,6 +1914,31 @@ PERIGOSOS = {
     # que já foi lembrado — ver a cura no próprio teste, no mesmo commit.
     ("01-jogar.html", "cadeado"),
     ("04-iluminacao.html", "auto-cores"),
+    # E MAIS TRÊS DA MESMA ABA — LUZES-01, 06/09/2026, e desta vez a linha
+    # ENTRA NO MESMO COMMIT que ensinou os gestos a gravar, que é o que o
+    # próprio teste manda fazer e o que as três levas anteriores não fizeram.
+    #
+    #   04-iluminacao·luzes       `save_profile` — grava o desenho das cinco
+    #                             luzes no override daquele controle
+    #   04-iluminacao·desenho-de  idem, e o ramo `nenhuma` ainda chama
+    #                             `gravar_e_reaplicar` (tira o override e manda
+    #                             o daemon reaplicar o perfil INTEIRO)
+    #   04-iluminacao·auto-todos  `gravar_e_reaplicar` — apaga a cor própria de
+    #                             TODOS os controles e religa o automático. É o
+    #                             gesto mais pesado que a aba tem: uma régua
+    #                             que o clicasse para provar que sabe clicar
+    #                             desfaria, de uma vez, toda cor que ela
+    #                             escolheu controle a controle.
+    #
+    # ESTE ARQUIVO ESTÁ NO `nao_toca` DA LUZES-01, e a edição é deliberada e
+    # relatada: sem estas três linhas a `--prova-gesto` ESCREVE no perfil dela
+    # na próxima volta, e o dano é da máquina dela, não da régua. É a mesma
+    # conclusão que o bloco de 04/09 acima registra — *o defeito que várias
+    # frentes acham e nenhuma pode curar* —, com a diferença de que aqui o
+    # conserto é acrescentar três pares a um conjunto, e não mexer em lógica.
+    ("04-iluminacao.html", "luzes"),
+    ("04-iluminacao.html", "desenho-de"),
+    ("04-iluminacao.html", "auto-todos"),
     # E O TERCEIRO, da mesma leva e pela mesma razão de posse: o apelido do
     # adaptador grava no BlueZ (`renomear_o_dongle`), que é estado da MÁQUINA
     # dela e não do perfil. Hoje o gesto recusa nome igual e portanto é

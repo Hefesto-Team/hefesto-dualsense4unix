@@ -386,6 +386,31 @@ class _Leitor(html.parser.HTMLParser):
             # ausente é `""` nos dois lados, que é como o produto deixa um SVG
             # cujo aparelho não disse a cor.
             valor = d.get((d.get("data-hef-atributo") or "").strip().lower(), "")
+        elif alvo == "marcado":
+            # O RAMO QUE FALTAVA, E A CEGUEIRA ERA DECLARADA PELA PRÓPRIA RÉGUA
+            # — 06/09/2026. Sem ele o `<input type="checkbox">` caía no ramo
+            # padrão e era lido pelo TEXTO, que num `<input>` é sempre `''`; o
+            # `LER_CAMPOS` do piloto responde `'sim'` para um marcado. A guarda
+            # do DOM virgem, que confere o parser contra o leitor de tela
+            # endereço a endereço, acusava a diferença e REPROVAVA a
+            # `--prova-de-mockup`:
+            #
+            #     04-iluminacao.html: a régua lê `auto-cores` como '' no arquivo
+            #     e a página virgem mostra 'sim' — o parser e o leitor de tela
+            #     discordam neste alvo (marcado)
+            #
+            # A LÍNGUA É A DO `escrever` — `sim`/`''`, a mesma do alvo `classe`
+            # booleano. Devolver `True`/`False` faria a régua comparar a palavra
+            # do arquivo com um booleano do navegador e acusar toda pintura
+            # certa: é a mesma cura de FORMA que o alvo `cor` já custou uma
+            # medição inteira.
+            #
+            # A AUSÊNCIA DO ATRIBUTO É `''`, e não `None`: um checkbox sem
+            # `checked` no arquivo é exatamente o que o `el.checked === false` do
+            # navegador devolve. São CINCO endereços nas dez páginas (dois na
+            # 01, dois na 02, um na 04), e os cinco estavam ilegíveis para esta
+            # régua desde que o alvo `marcado` nasceu.
+            valor = "sim" if "checked" in d else ""
         elif alvo == "classe":
             classe = d.get("data-hef-classe") or "on"
             quando = d.get("data-hef-quando") or ""
