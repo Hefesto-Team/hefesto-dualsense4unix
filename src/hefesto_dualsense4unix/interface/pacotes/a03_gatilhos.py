@@ -440,6 +440,13 @@ MODOS_COM_CURVA = (MODO_DA_CURVA, MODO_DA_VIBRACAO)
 # texto desta tela. A dica do campo deixa de ser fixa e passa a ser a explicação
 # do modo ESCOLHIDO, reescrita a cada tique."*
 #
+# CONFIRMADA POR ELA EM 05/09/2026, pergunta `03-Q1`: perguntada se a tela ainda
+# explica o modo escolhido, marcou *"Aparece ao parar o mouse"* — que é o que
+# esta tabela faz, no `title` do embrulho do campo. **É esta linha que vale
+# daqui em diante**, e a de cima fica: o PO decidiu, o trabalho foi feito, e ela
+# escolheu o mesmo vendo as opções lado a lado. Apagar a primeira faria a
+# próxima pessoa achar que ninguém pensou nisto.
+#
 # ELA MORA AQUI, E NÃO NO GERADOR, e a razão é a mesma da caixa de ajustes e do
 # chip da coluna: **quem reescreve a cada tique é o produto**. Enquanto o
 # dicionário vivia em `interface/aba03.py`, o texto só existia na BANCADA — o
@@ -553,6 +560,17 @@ def dica_do_pronto(modo_chave: str) -> str:
     DECISÃO [02] do PO, 04/09/2026: *"Fica como está, e a dica avisa ANTES do
     clique. O desenho é dela, o atalho de um clique é real, e a única dívida
     medida é a tela não avisar que o modo vai mudar."*
+
+    **CONFIRMADA POR ELA EM 05/09/2026, pergunta `03-Q2`**: perguntada se uma
+    curva pronta pode trocar o modo sozinha, marcou *"Aplica na hora, com
+    aviso"* — que é este comportamento, com esta frase. **É esta linha que vale
+    daqui em diante**, e a de cima fica pela mesma razão da `03-Q1`.
+
+    **NÃO REESCREVA A FRASE À MÃO.** Ela é DERIVADA: quem diz para onde cada
+    família de curva leva é :func:`destinos_do_campo_de_pronto`, lendo a tabela
+    em que a curva mora. A primeira versão prometia dois destinos onde a lista
+    abre um, e foi a mordida que a derrubou. Uma frase digitada volta a mentir
+    no dia em que a tabela mudar.
 
     A DIVERGÊNCIA COM A GTK É REAL E CONHECIDA (linha `Quando o campo "Efeito
     pronto" aparece, e o que escolhê-lo faz`): lá a linha só existe nos DOIS
@@ -2387,7 +2405,8 @@ _E_TAMBEM = " · "
 
 def _aplicar(p: Any, lado: str, modo_: str, params: list[int],
              uniq: str, ctx: Contexto | None = None,
-             guardar: bool = True) -> tuple[bool, str, str]:
+             guardar: bool = True, *,
+             recibo_sempre: bool = False) -> tuple[bool, str, str]:
     """Manda o efeito ao daemon pela porta CERTA, e a certa depende do modo.
 
     "DESLIGADO" É `trigger.reset`, E NÃO `trigger.set` COM `Off` — a R-19. O
@@ -2416,6 +2435,50 @@ def _aplicar(p: Any, lado: str, modo_: str, params: list[int],
     SUCESSO daquele envio, e ela sai daqui porque é aqui que o CORPO do daemon
     existe: montá-la nos quatro chamadores seria o quarto que esquece, que é o
     mesmo argumento pelo qual o rascunho já mora nesta função.
+
+    **A TERCEIRA CASA DEIXOU DE SER O RECIBO E PASSOU A SER A NOTÍCIA —
+    06/09/2026, a `03-Q4` dela.** Perguntada com as quatro formas lado a lado,
+    ela escolheu *"O campo pisca em verde"*, e a opção que descrevia o que esta
+    função fazia até aqui — a tarja verde no cartão com a frase do recibo — foi
+    a que ela recusou, com estas palavras: *"nenhuma palavra nova entra na
+    tela"*. A regra que isso escreve, e ela vale para a aba inteira:
+
+        *quando o gesto só repete o que ela acabou de fazer, a tela pisca;
+        quando ele tem NOTÍCIA, a tela fala.*
+
+    Então a terceira casa passa a responder **"o que ela precisa saber e não
+    está vendo"**, e são dois casos só:
+
+    * aparelho recebeu **e** perfil guardou → `""`. A piscada do campo
+      (`hefesto_vivo.MS_DA_PISCADA`) é a resposta inteira, e o cartão fica
+      calado. Um `""` cai no MESMO ramo de um `{}` porque
+      `_deu_certo_dizendo` testa `bruto.strip()` antes de aceitar a frase —
+      conferido no fonte do piloto, não suposto.
+    * aparelho recebeu **e** o disco não guardou → as duas metades, somadas
+      pelo :data:`_E_TAMBEM`, com o recibo NA FRENTE. É a `AS-DUAS-ABAS-FALAM-01`
+      inteira, e ela não se desfaz aqui: é justamente por ela existir que o
+      corte é entre *sucesso pleno* e *meio ato*, e não entre *sucesso* e
+      *recusa*.
+
+    **A ESCOLHA MORA NESTA FUNÇÃO, e não nos gestos**, pela razão de sempre:
+    escrita nos quatro, o quarto é o que esquece — e o defeito seria mudo,
+    porque um gesto que manda recibo a mais não quebra nada, só devolve à tela
+    a palavra que ela mandou tirar. É o defeito de forma que esta casa pagou
+    duas vezes em 05/09.
+
+    **`_recibo` NÃO se apagou**, e continua dono da frase: o que mudou é QUANDO
+    ele é chamado — só quando há uma segunda metade para prefixar.
+
+    ``recibo_sempre=True`` É A EXCEÇÃO, E ELA TEM UM DONO SÓ: o :func:`reenviar`,
+    que decide pelo **par** e não pelo lado. Ele manda os DOIS gatilhos da
+    coluna num clique, e a notícia dele é uma propriedade dos dois juntos —
+    *"o L2 recusou e o R2 foi"* é notícia, e nenhuma das duas chamadas a esta
+    função pode sabê-lo sozinha. Então ele pede o recibo sempre e decide depois:
+    guarda-os calados no sucesso pleno e só os usa quando há uma recusa a
+    nomear. **Sem esta porta, a frase da recusa perderia o nome do gatilho que
+    FUNCIONOU** — medido: a régua `test_um_lado_que_recusa_nao_cala_o_outro`
+    reprovou com a frase *"Gatilho esquerdo (L2): Rigid — end (3)… · "*, com o
+    separador pendurado e o R2 sumido. É a cura TRG-01 de novo, pelo avesso.
 
     **E O RECIBO PASSOU A DIZER AS DUAS METADES — 06/09/2026, a decisão D-17**
     (`docs/process/sprints/2026-09-05-AS-DUAS-ABAS-FALAM-01-*.md`). Quando o
@@ -2469,10 +2532,14 @@ def _aplicar(p: Any, lado: str, modo_: str, params: list[int],
             nao_guardou = _guardar_no_perfil(ctx, p, uniq, lado,
                                              {"mode": modo_, "params": params})
     ok, motivo = _conferir_o_desfecho(lado, modo_, ok, motivo, corpo, ctx, uniq)
-    recibo = _recibo(lado, modo_, corpo, ctx, uniq)
+    # O SUCESSO PLENO NÃO TEM NOTÍCIA — e por isso não manda frase nenhuma. A
+    # piscada do campo é a resposta inteira (`03-Q4`). Ver a docstring.
+    recibo = ""
+    if nao_guardou or recibo_sempre:
+        recibo = _recibo(lado, modo_, corpo, ctx, uniq)
     if nao_guardou:
         # A SEGUNDA METADE VEM DEPOIS DO RECIBO, NUNCA ANTES — a frase tem de
-        # abrir pelo que ela FEZ. E a soma mora aqui, e não nos três gestos:
+        # abrir pelo que ela FEZ. E a soma mora aqui, e não nos quatro gestos:
         # somada em cada um, o quarto chamador é o que esquece.
         recibo = _E_TAMBEM.join((recibo, nao_guardou))
     return ok, motivo, recibo
@@ -2683,10 +2750,25 @@ def _recibo(lado: str, modo_: str, corpo: dict[str, Any] | None,
     dela, 04/09/2026: *"No próprio cartão, como a recusa."*
 
     **NÃO HÁ CANAL NOVO AQUI, e é o ponto inteiro do conflito C-3.** A lista
-    desta aba propunha *o campo que pisca*; ela escolheu o cartão, que é a mesma
-    peça das outras quatro abas. Esta função só ESCREVE a frase — quem a leva ao
-    cartão é o `hefesto_vivo._deu_certo_dizendo`, lendo o `recado` que o gesto
-    devolve.
+    desta aba propunha *o campo que pisca*; o cartão é a mesma peça das outras
+    quatro abas. Esta função só ESCREVE a frase — quem a leva ao cartão é o
+    `hefesto_vivo._deu_certo_dizendo`, lendo o `recado` que o gesto devolve.
+
+    **QUEM ESCOLHEU O CARTÃO FOI O PO, E A ESCOLHA CADUCOU — 06/09/2026.** Este
+    parágrafo dizia *"ela escolheu o cartão"*, e a atribuição estava errada nas
+    duas metades. Quem recusou o campo que pisca foi o PO, em 04/09, lendo a
+    D-01 (*"no próprio cartão, como a recusa"*) como se ela fechasse a FORMA —
+    o conflito C-3 de `2026-09-04-O-PO-DECIDE-as-54-e-os-sete-conflitos.md` é
+    dele. Em 05/09 ELA respondeu a `03-Q4` vendo as quatro formas lado a lado e
+    escolheu **o campo que pisca**, com *"nenhuma palavra nova entra na tela"*.
+    A palavra dela vence a leitura que o PO fez da palavra dela.
+
+    **O QUE ISSO FAZ COM ESTA FUNÇÃO: ela sai do caminho do sucesso pleno, e
+    não do produto.** O `_aplicar` só a chama quando há uma segunda metade a
+    prefixar (a `AS-DUAS-ABAS-FALAM-01`), e aí a frase abre pelo que ela fez.
+    As três frases que contam esta história — esta, a do `_aplicar` e a do
+    `hefesto_vivo._deu_certo_dizendo` — têm de dizer o mesmo, ou a próxima
+    pessoa acredita na que ler primeiro.
 
     A FRASE É DO DONO DO ASSUNTO: `app/textos_de_aplicacao.frase_do_desfecho`,
     a mesma que a barra da GTK usa, com o CORPO do daemon como autoridade — é
@@ -3048,7 +3130,7 @@ def reenviar(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
         params = _ajustes_da_coluna(forma, sigla, modo_)
         try:
             ok, motivo, recibo = _aplicar(p, disco, modo_, params, uniq, ctx,
-                                          guardar=False)
+                                          guardar=False, recibo_sempre=True)
         except RuntimeError as erro:
             # O `_conferir_o_desfecho` LEVANTA quando o byte não saiu, e a
             # frase dele já nomeia o lado. Deixá-la subir aqui mataria o outro
@@ -3071,8 +3153,18 @@ def reenviar(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
             "esta coluna não tem gatilho nenhum para reenviar. Escolha um modo "
             "em L2 ou em R2 — `—` é como esta tela diz que o lugar está vazio.")
     if recusas:
-        raise RuntimeError(_E_TAMBEM.join(recusas + recibos))
-    return {"recado": _E_TAMBEM.join(recibos)}
+        # OS RECIBOS ENTRAM AQUI, E SÓ AQUI — 06/09/2026, a `03-Q4`. O gesto
+        # decide pelo PAR: com uma recusa há notícia, e a frase precisa nomear
+        # também o gatilho que FUNCIONOU, senão ela deixa a coluna pela metade
+        # sem dizer. É por isto que o laço acima pede `recibo_sempre=True`.
+        return_ = _E_TAMBEM.join(recusas + [r for r in recibos if r])
+        raise RuntimeError(return_)
+    # SUCESSO PLENO DOS DOIS LADOS: a tela PISCA e nada é dito. Devolver
+    # `{"recado": _E_TAMBEM.join(recibos)}` com os recibos calados escreveria
+    # `" · "` no cartão dela — o separador sozinho, sem uma palavra em volta.
+    # Medido nesta frente, com os DOIS lados na forma; a régua de um lado só
+    # não o via, e é a diferença entre uma régua e uma opinião.
+    return None
 
 
 @gesto("03-gatilhos.html", "guardar")

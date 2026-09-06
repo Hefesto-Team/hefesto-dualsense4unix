@@ -47,6 +47,9 @@ SPEC = {p.label: {q.label: q for q in p.params} for p in PRESETS}
 # modo ESCOLHIDO no campo. Com a decisão [01] do PO — *"a dica do campo deixa de
 # ser fixa e passa a ser a explicação do modo escolhido, reescrita a cada
 # tique"* — quem a escreve passou a ser o produto, e o dono do texto é o pacote.
+# ELA CONFIRMOU EM 05/09/2026, pergunta `03-Q1` (*"Aparece ao parar o mouse"*):
+# a decisão passa a ser dela, e a linha de 04/09 fica como registro de quem a
+# tomou primeiro.
 # A guarda de conjunto contra o `PRESETS` fica AQUI, logo abaixo, porque é aqui
 # que ela pode morder: neste arquivo o `PRESETS` é importado no topo.
 from hefesto_dualsense4unix.interface.pacotes.a03_gatilhos import (  # noqa: E402
@@ -505,35 +508,17 @@ CSS = CSS_GLIFO + """
   .duas-colunas .ctrl[data-conectado="nao"] .nome-efeito{
     pointer-events:none;opacity:.55}
 
-  /* ---------- O REENVIO — decisão [03] do PO, 04/09/2026 ----------
-     *"Um botão na faixa que JÁ EXISTE (`--r-acao`, 34 px, já desenhada e
-     aprovada), mandando os DOIS gatilhos daquela coluna. Zero trilha nova."*
+  /* O REENVIO SAIU DA FAIXA — 06/09/2026, decisão dela. As duas regras que
+     vestiam o botão (a largura do glifo e a trava do lugar vazio) saíram com
+     ele: folha que veste um elemento que ninguém emite é peso que envelhece
+     calado. A razão da saída, e o que ainda espera o `--publicar 03`, estão no
+     comentário da faixa, junto de onde o botão era escrito.
 
-     ELE É UM GLIFO, E A RAZÃO É MEDIDA. A faixa tem 202px úteis na coluna de
-     228, e ela já gasta 123 com "Guardar esse efeito" (texto dela, aprovado) e
-     6 de vão — sobram 74 para o campo do nome. A palavra "Reenviar" mede ~62px
-     com o padding, e o campo cairia para 6px: um campo de texto de seis pixels
-     não é um campo, é um traço. Com o glifo o botão custa ~26px e o campo fica
-     com ~42 — que é o que a palavra "Nome" ocupa a 11px. Não há terceira linha
-     a inventar: a decisão diz zero trilha nova, e a conta fecha.
-
-     `↻` É U+21BB (ARROWS), e não um emoji: o ADR-011 preserva o bloco
-     Arrows justamente como UI textual, e `scripts/validar-glifos.py` reprova o
-     que desenha como emoji por omissão. O emoji U+1F504, que tem o mesmo
-     desenho, seria barrado — e com razão. (Ele não é citado aqui de propósito:
-     este comentário vai para o `<style>` da página, e o portão de glifos leria
-     o exemplo como o defeito.)
-
-     E ELE LEVA `aria-label`, porque um botão que só tem símbolo não tem nome
-     para quem navega por leitor de tela. O `title` é a explicação; o
-     `aria-label` é o NOME. */
-  .duas-colunas .ctrl .guardar .reenviar{
-    width:auto;flex:0 0 auto;padding:0 5px;font-size:14px;line-height:1}
-  /* O LUGAR VAZIO NÃO REENVIA, pela mesma razão que não se digita nem se
-     escolhe nele: não há aparelho a quem mandar, e o clique só poderia terminar
-     em recusa. A trava é a MESMA do `<select>` e do campo do nome. */
-  .duas-colunas .ctrl[data-conectado="nao"] .guardar .reenviar{
-    pointer-events:none;opacity:.55}
+     O GLIFO NÃO SE ESCREVE AQUI, e a razão é medida: este comentário é EMITIDO
+     para dentro do `<style>` da página, e a régua que vigia o glifo o procura
+     no arquivo. Escrito aqui, ele passaria a achar esta prosa e daria verde
+     sobre um botão que não existe — o mesmo defeito que o comentário do
+     `sem_comentarios_de_css` documenta, e que já custou uma régua nesta aba. */
 """
 
 # ---------------------------------------------------------------------------
@@ -570,7 +555,8 @@ CSS = CSS_GLIFO + """
 # ---------------------------------------------------------------------------
 # A TABELA MUDOU DE CASA — 04/09/2026. Ela mora em
 # `pacotes/a03_gatilhos.DICA_DO_MODO`, importada no topo, porque quem a
-# reescreve a cada tique é o PRODUTO (decisão [01] do PO). O que fica aqui é a
+# reescreve a cada tique é o PRODUTO (decisão [01] do PO, confirmada por ELA em
+# 05/09/2026 na `03-Q1`). O que fica aqui é a
 # GUARDA, e ela fica porque é aqui que morde: `PRESETS` é importado no topo
 # deste arquivo, e um modo novo no produto REPROVA a geração alto.
 
@@ -897,6 +883,24 @@ def coluna(c):
     # a aba. Medido em 01/09/2026, no dia em que os dez geradores voltaram a
     # rodar; ninguém tinha visto porque ninguém os rodava.
     conectado = "sim" if c.get("conectado", True) else "nao"  # (noqa-acento) valor
+    # O BOTÃO DE REENVIO SAIU DA FAIXA `guardar` — 06/09/2026, decisão dela.
+    # Ele nasceu em 04/09 (a decisão [03] do PO) e ela o viu depois: perguntada
+    # com o botão na tela e a foto ao lado, escolheu *"sai"*. A faixa volta a ser
+    # o que era — o campo do nome e o "Guardar esse efeito".
+    #
+    # O GESTO `reenviar` NÃO saiu do pacote junto, e não é esquecimento: a página
+    # que o PRODUTO renderiza é a PUBLICADA (o piloto abre sempre
+    # `onde.pagina(..., publicado=True)`), e ela ainda tem este botão. Tirar o
+    # dono agora daria a ela um `↻` que morre CALADO — um gesto sem dono só
+    # imprime `[gesto sem dono]` no stderr de quem lançou a janela, e a tela não
+    # muda. Os dois saem no MESMO ato: `check_o_desenho_aprovado.py --publicar
+    # 03`, que é dela. Quem amarra os dois lados, para que nenhum dos dois seja
+    # esquecido, é `test_o_reenvio_sai_do_pacote_quando_sair_do_produto`.
+    #
+    # E A EXPLICAÇÃO MORA AQUI, E NÃO NUM `<!-- -->` DENTRO DA COLUNA: esta
+    # f-string é emitida UMA VEZ POR CONTROLE, e um comentário de doze linhas
+    # dentro dela sai quatro vezes na página. Medido: a primeira versão desta
+    # nota engordou a bancada em 60 linhas de prosa repetida.
     return f'''        <div class="ctrl" data-controle="{c.get("uniq") or c["pref"]}"
              data-conectado="{conectado}">
           {_chip(c)}
@@ -912,9 +916,6 @@ def coluna(c):
           <div class="vao-l2-r2"></div>
 {dire}
           <div class="guardar">
-            <button class="btn reenviar" data-gesto="reenviar" data-hef-forma="@controle"
-                    aria-label="Reenviar os dois gatilhos ao controle"
-                    title="Manda de novo ao controle o L2 e o R2 que estão nesta coluna. O gatilho é comando de ida — o DualSense não devolve o modo em que está —, então quando um jogo escreve por cima, ou o controle volta do rádio, este é o caminho de trazer o efeito de volta. Não grava nada: o que vai é o que está na tela.">↻</button>
             <input class="nome-efeito" type="text" data-linha="nome-do-efeito"
                    maxlength="60" placeholder="Nome"
                    title="Dê um nome e o par L2+R2 desta coluna entra em Meus efeitos, para você escolher em qualquer perfil. Em branco, o botão só guarda no perfil deste controle.">
@@ -1142,8 +1143,7 @@ LEGENDA = f'''<div class="nota">
         pergunta já não se faz.</li>
     <li><b>"Guardar esse efeito" é um por controle</b>, e não um só no pé do quadro — um botão
         único não diria qual dos {len(MESA)} pares ele guarda, que é exatamente a ambiguidade que
-        o recibo foi criado para matar. <b>O reenvio ao lado nasceu pela mesma regra</b>, e por
-        isso também é um por coluna.</li>
+        o recibo foi criado para matar.</li>
   </ul>
 
   <h2>O que as quatro decisões de 04/09 puseram aqui</h2>
@@ -1158,14 +1158,15 @@ LEGENDA = f'''<div class="nota">
         o gatilho fora dos dois modos por posição <b>troca o modo</b> — é o atalho de um clique que
         você aprovou, e a única dívida medida era a tela não avisar. Agora ela diz em que modo o
         gatilho está e para onde cada família de curva o leva.</li>
-    <li><b>O <span class="marca">↻</span> reenvia o L2 e o R2 desta coluna ao controle.</b>
-        O gatilho é comando de ida — o DualSense não devolve o modo em que está —, então quando um
-        jogo escreve por cima, ou o controle volta do rádio, não há como a tela saber: o caminho de
-        volta é reenviar. Ele manda <b>o que está na tela</b>, e é nisso que ele difere do
-        "Aplicar" do rodapé, que manda o que está no disco. Ele não grava nada.</li>
-    <li><b>Quando o efeito chega, a tela diz.</b> Até agora ela só falava quando RECUSAVA; o
-        "aplicado" ia para o terminal de quem abriu a janela. A confirmação nasce no <b>próprio
-        cartão</b>, como a recusa, e some sozinha em segundos.</li>
+    <li><b>O botão de reenvio SAIU do desenho</b> — decisão sua, 06/09/2026. Ele nasceu em
+        04/09 e você o viu depois, com a foto ao lado: perguntada se ficava ou saía, escolheu
+        <b>sai</b>. O caminho de volta continua existindo pelo campo Modo, que reaplica a cada
+        escolha.</li>
+    <li><b>Quando o efeito chega, o campo pisca em verde</b> e nenhuma palavra nova entra na
+        tela — decisão sua, 05/09/2026. A confirmação dura <b>cerca de um segundo e meio</b>,
+        que foi o tempo que você pediu. A caixa de aviso do cartão ficou para quem tem
+        <b>notícia</b>: se o efeito chegou ao controle mas o perfil não pôde guardar, aí sim a
+        tela diz as duas metades, em verde, e some sozinha.</li>
   </ul>
 
   <h2>O que teve de mudar de forma para caber</h2>
@@ -1351,23 +1352,24 @@ def _conferir(doc):
     # 5. OS BOTÕES TÊM ENDEREÇO — 01/09/2026. Sem `data-gesto` o clique não
     #    atravessa a ponte, e o piloto nem consegue RECUSAR dizendo o nome: o
     #    ouvinte dele (`hefesto_vivo.py:1000`) só enxerga quem está marcado.
-    for _g in ("modo", "pronto", "guardar", "reenviar"):
+    for _g in ("modo", "pronto", "guardar"):
         exigir(f'data-gesto="{_g}"' in corpo,
                f"o endereço do gesto {_g!r} sumiu do desenho — o clique some calado")
 
-    # 5-bis. O REENVIO É UM POR COLUNA, e recolhe a COLUNA — decisão [03] do PO.
-    #    Um botão só no pé do quadro não diria de QUAL controle ele fala, que é a
-    #    mesma ambiguidade que o recibo desta aba já pagou; e sem
-    #    `data-hef-forma` o piloto não recolhe os campos, e o gesto reenviaria o
-    #    que está no DISCO — que é exatamente o que o "Aplicar" do rodapé já faz,
-    #    e o que este botão existe para NÃO fazer.
-    exigir(corpo.count('data-gesto="reenviar"') == len(MESA),
-           f"o reenvio não está nas {len(MESA)} colunas — um botão só não diz "
-           f"em qual controle ele manda")
-    exigir(corpo.count('data-gesto="reenviar" data-hef-forma="@controle"')
-           == len(MESA),
-           "o reenvio perdeu o `data-hef-forma` — ele passaria a mandar o que "
-           "está no disco, e o 'Aplicar' do rodapé já faz isso")
+    # 5-bis. O REENVIO NÃO ESTÁ MAIS AQUI — 06/09/2026, decisão dela, e esta
+    #    régua INVERTEU. Ela cobrava o botão nas quatro colunas (a decisão [03]
+    #    do PO, de 04/09); ela o viu na tela, com a foto ao lado, e escolheu
+    #    *"sai"*.
+    #
+    #    POR QUE UMA RÉGUA E NÃO O SILÊNCIO: a remoção é de UM `<button>` dentro
+    #    de uma f-string de coluna, e um `git revert` desatento ou uma sprint
+    #    velha o devolvem sem barulho — o desenho voltaria a mostrar um botão que
+    #    ela recusou, e o portão do desenho não veria nada, porque a bancada
+    #    estaria só "andando" de novo. É a mesma forma da 5, do avesso.
+    exigir('data-gesto="reenviar"' not in corpo,
+           "o botão de reenvio voltou ao desenho — ela mandou tirá-lo em "
+           "06/09/2026, vendo-o na tela. Se a decisão mudou, o lugar de mudar "
+           "é a resposta dela, não esta linha")
 
     # 5-ter. A DICA DO CAMPO É PINTADA, E O `<select>` NÃO TEM `title` PRÓPRIO —
     #    decisões [01] e [02] do PO, e as DUAS metades são a mesma cura.
@@ -1496,10 +1498,27 @@ def _conferir(doc):
                          + "\n  ".join(f"- {f}" for f in falhas))
 
 
-n = monta("03-gatilhos", "Gatilhos", MIOLO, CSS + CSS_DA_CENA,
-          legenda=LEGENDA)
-_conferir(onde.pagina("03-gatilhos.html").read_text())
-print(f"03-gatilhos: OK, {n} divs · {len(monta_.CONECTADOS)} conectado(s) "
-      f"+ {len(MESA) - len(monta_.CONECTADOS)} lugar(es) vazio(s) · "
-      f"{len(MODOS)} modos · coluna {ALT_COLUNA}px de {TETO_DA_GRADE} "
-      f"({TETO_DA_GRADE - ALT_COLUNA}px de folga) · respiro {R_AR}px")
+# A ESCRITA MORA DEBAIXO DO `__main__`, e isto é cura de defeito MEDIDO em
+# 06/09/2026, achado pelo coordenador na costura: `import aba03` REESCREVIA a
+# bancada dela como efeito de um import. Bastava o pytest COLETAR um teste que
+# importasse este módulo no topo para `mockup/03-gatilhos.html` mudar no disco,
+# com o estado VIVO da mesa dentro — a contagem de controles do cabeçalho vira
+# `0 USB · 0 BT` quando nada está na tomada, e o portão do desenho aprovado
+# passa a reprovar por causa do que está na TOMADA, não do que alguém escreveu.
+#
+# OITO DOS DEZ GERADORES ESTAVAM ASSIM. A `aba01` e a `aba02` já tinham a
+# guarda desde que `jogar_vivo.py` e `controles_vivos.py` passaram a importá-
+# las; as outras oito não, e a razão é a de sempre — o defeito só aparece
+# quando alguém importa, e ninguém importava.
+#
+# A MORDIDA VIVE FORA DESTE ARQUIVO:
+# `tests/unit/test_a_palavra_do_transporte_tem_um_dono_so.py::
+# test_o_gerador_nao_escreve_a_bancada_como_efeito_de_import`.
+if __name__ == "__main__":
+    n = monta("03-gatilhos", "Gatilhos", MIOLO, CSS + CSS_DA_CENA,
+              legenda=LEGENDA)
+    _conferir(onde.pagina("03-gatilhos.html").read_text())
+    print(f"03-gatilhos: OK, {n} divs · {len(monta_.CONECTADOS)} conectado(s) "
+          f"+ {len(MESA) - len(monta_.CONECTADOS)} lugar(es) vazio(s) · "
+          f"{len(MODOS)} modos · coluna {ALT_COLUNA}px de {TETO_DA_GRADE} "
+          f"({TETO_DA_GRADE - ALT_COLUNA}px de folga) · respiro {R_AR}px")

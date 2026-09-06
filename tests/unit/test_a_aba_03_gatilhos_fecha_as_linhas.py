@@ -36,6 +36,20 @@ sys.path.insert(0, str(INTERFACE))
 PAGINA = "03-gatilhos.html"
 BANCADA = RAIZ / "mockup" / PAGINA
 
+
+def _publicada() -> str:
+    """O HTML que o PRODUTO renderiza — o mesmo que o piloto abre.
+
+    O CAMINHO TEM DONO E NÃO SE DIGITA: `interface/onde.py` é o único módulo que
+    sabe onde moram a bancada e o publicado, e montar a pasta à mão aqui seria a
+    segunda cópia — a que envelhece calada no dia em que a pasta mudar de nome.
+    Já aconteceu nesta casa: três réguas deram verde sobre nada porque *as
+    pastas mudaram de nome e as réguas não foram junto*.
+    """
+    from hefesto_dualsense4unix.interface import onde
+
+    return onde.pagina(PAGINA, publicado=True).read_text(encoding="utf-8")
+
 #: O MAC é da faixa sintética da casa (`aa:bb:cc`): há DOIS portões de anonimato
 #: nesta árvore, e o segundo pega por FORMA, sem consultar OUI nenhum.
 UNIQ = "aa:bb:cc:00:00:01"
@@ -77,6 +91,7 @@ class _Ponte:
     def __init__(self, corpo: dict | None = None,
                  recusa: tuple[str, ...] = ()) -> None:
         self.chamadas: list[tuple[str, tuple, dict]] = []
+        self.avulsas: list[str] = []
         self.corpo = APLICOU if corpo is None else corpo
         self.recusa = recusa
 
@@ -91,6 +106,25 @@ class _Ponte:
 
     def trigger_reset_detalhado(self, *a, **k):
         return self._responder("trigger_reset_detalhado", *a, **k)
+
+    def chamar(self, metodo: str, **_):
+        """O último passo da GRAVAÇÃO no perfil — `launch_env.refresh`.
+
+        O DUBLÊ ERA MAIS FROUXO QUE O DAEMON e isso importa aqui: desde a
+        decisão D2 (05/09) o gatilho que chega ao aparelho vai também ao perfil
+        ativo, e `_gravar_so_o_gatilho` termina pedindo ao daemon que releia o
+        ambiente de lançamento. Sem este método, a gravação levantaria
+        `AttributeError` dentro de `_guardar_no_perfil`, o ramo do `except`
+        devolveria a frase do disco, e a régua do SUCESSO PLENO mediria uma
+        falha que ela mesma fabricou. Três dos vermelhos de 05/09 foram dublê
+        mais frouxo que o real.
+        """
+        # LISTA SEPARADA, E NÃO A `chamadas`: as réguas do reenvio comparam
+        # `[c[0] for c in p.chamadas]` com a lista EXATA dos envios ao gatilho.
+        # Somar o `launch_env.refresh` ali faria a régua da R-19 reprovar por
+        # um método que não é envio nenhum.
+        self.avulsas.append(metodo)
+        return True
 
 
 @pytest.fixture
@@ -113,6 +147,49 @@ def ctx(monkeypatch):
                         conectados=[FALSO], estados={})
 
     return _fabricar
+
+
+@pytest.fixture
+def disco_que_guarda(monkeypatch):
+    """O disco em que o perfil ABRE e a gravação passa — o SUCESSO PLENO.
+
+    ELE É INDISPENSÁVEL PARA MEDIR A `03-Q4`, e a razão é uma medição: as
+    réguas desta aba rodam com `active_profile="régua"`, um nome que NÃO está
+    em disco. Sem esta fixture, todo clique cai no ramo do perfil que não abre
+    e o `recado` volta cheio — a régua do sucesso pleno estaria medindo a
+    `AS-DUAS-ABAS-FALAM-01`, e daria VERDE com a cura da `03-Q4` arrancada.
+
+    O `Profile` é o do PRODUTO, e não um dublê: é ele que `_com_os_gatilhos`
+    densifica, e um dicionário solto aceitaria uma escrita que o esquema real
+    recusaria.
+    """
+    from hefesto_dualsense4unix.profiles import loader
+    from hefesto_dualsense4unix.profiles.schema import Profile
+
+    gravados: list[object] = []
+    monkeypatch.setattr(loader, "load_profile",
+                        lambda nome: Profile(name=nome, match={"type": "any"}),
+                        raising=False)
+    monkeypatch.setattr(loader, "save_profile",
+                        lambda prof, **_: gravados.append(prof), raising=False)
+    return gravados
+
+
+@pytest.fixture
+def disco_que_nao_abre(monkeypatch):
+    """O disco em que `load_profile` LEVANTA — a segunda metade da frase.
+
+    É o par da de cima, e as duas juntas é que separam *"não há notícia"* de
+    *"há notícia"*. Sem esta, o Passo 1 poderia calar a
+    `AS-DUAS-ABAS-FALAM-01` inteira e nenhuma régua desta aba veria: a que
+    mede a D-17 vive noutro arquivo e interroga o gesto, não o `_aplicar`.
+    """
+    from hefesto_dualsense4unix.profiles import loader
+
+    def _sem_perfil(nome: str):
+        raise FileNotFoundError(f"perfil não encontrado: {nome}")
+
+    monkeypatch.setattr(loader, "load_profile", _sem_perfil, raising=False)
 
 
 def _rotulo(chave: str) -> str:
@@ -442,22 +519,77 @@ def test_o_reenvio_recusa_dizendo_quando_nao_ha_o_que_mandar(a03, ctx):
     assert p.chamadas == [], "recusou e chamou o daemon assim mesmo"
 
 
-def test_o_reenvio_esta_nas_quatro_colunas_do_desenho():
-    """O botão é um POR COLUNA, e recolhe a coluna.
+def test_o_reenvio_saiu_do_desenho():
+    """O `↻` SAIU da bancada — 06/09/2026, decisão dela.
 
-    Um botão só no pé do quadro não diria de QUAL controle ele fala — a mesma
-    ambiguidade que o recibo desta aba já pagou. E sem `data-hef-forma` o piloto
-    não recolhe os campos: o gesto passaria a reenviar o disco, que é o que o
-    rodapé já faz.
+    **ESTA RÉGUA INVERTEU**, e a versão antiga (`…esta_nas_quatro_colunas…`)
+    cobrava o botão em cada coluna, pela decisão [03] do PO de 04/09. Ela leu a
+    `03-Q3` — *"a coluna GANHA um botão para mandar o efeito de novo?"* — e
+    marcou *"Nada novo"* **dezenove horas depois de o botão nascer**, respondendo
+    sobre um mundo em que ele não existia. Perguntada de novo em 06/09, com o
+    botão na tela e a foto ao lado, escolheu **"sai"**.
 
-    MORDIDA: tirar o botão de uma coluna, ou o `data-hef-forma` dele, reprova
-    aqui e no `_conferir` do gerador.
+    POR QUE A RÉGUA CONTINUA EXISTINDO em vez de simplesmente sumir: a remoção é
+    de um `<button>` dentro da f-string da coluna, e um `git revert` desatento ou
+    uma sprint velha o devolvem sem barulho — o portão do desenho veria a
+    bancada só "andando" de novo, e ela reencontraria na tela um botão que
+    mandou tirar.
+
+    MORDIDA: devolva o `<button class="btn reenviar" …>` ao `aba03.py`, rode o
+    gerador, e esta régua reprova junto com a 5-bis do `_conferir`.
     """
     html = BANCADA.read_text(encoding="utf-8")
-    colunas = html.count('<div class="ctrl"')
-    assert colunas >= 2, "o desenho perdeu as colunas por controle"
-    assert html.count('data-gesto="reenviar"') == colunas
-    assert html.count('data-gesto="reenviar" data-hef-forma="@controle"') == colunas
+    assert html.count('<div class="ctrl"') >= 2, (
+        "o desenho perdeu as colunas por controle — sem elas esta régua daria "
+        "verde sobre uma página vazia")
+    assert 'data-gesto="reenviar"' not in html, (
+        "o botão de reenvio voltou ao desenho; ela mandou tirá-lo em 06/09/2026")
+
+
+def test_o_reenvio_sai_do_pacote_quando_sair_do_produto(a03):
+    """O botão e o dono dele saem JUNTOS, e esta régua é a corda entre os dois.
+
+    **O ESTADO DE HOJE, e ele é de propósito:** o `↻` saiu do DESENHO e continua
+    no PRODUTO. O piloto renderiza sempre a página PUBLICADA
+    (`onde.pagina(…, publicado=True)`), e publicar é ato dela —
+    `check_o_desenho_aprovado.py --publicar 03`. Enquanto isso não acontece, o
+    botão está na tela dela, e o gesto TEM de ter dono.
+
+    **POR QUE O GESTO NÃO SAIU JUNTO COM O DESENHO, medido e não suposto:** um
+    clique sem dono não recusa, não avisa e não muda a tela — o piloto só
+    imprime `[gesto sem dono]` no stderr de quem lançou a janela. Tirar o dono
+    agora trocaria um botão que ela mandou remover por um botão MORTO na mão
+    dela, que é a `A-CASA-SABE-E-O-PRODUTO-NAO-FAZ` em miniatura.
+
+    **E ELA MORDE NOS DOIS SENTIDOS**, que é o ponto inteiro:
+
+    * arranque o `@gesto(…, "reenviar")` hoje → reprova, porque o produto ainda
+      mostra o botão;
+    * publique a aba 03 sem tirar o gesto → reprova, porque o dono ficou para um
+      botão que ninguém mais desenha. **É esta metade que impede o resto do
+      trabalho de ser esquecido**, e ela acende exatamente no dia em que ele
+      vence.
+
+    O QUE FAZER QUANDO ELA REPROVAR PELA SEGUNDA METADE: apague a função
+    `reenviar` e o `@gesto` dela em `a03_gatilhos.py`, a entrada do `PROVAS`,
+    baixe `PISO_DA_ABA` de 5 para 4, e apague as quatro réguas de gesto desta
+    seção mais esta. O `test_reenviar_nao_grava` e o
+    `test_o_reenviar_nao_ganhou_frase_de_disco`
+    (`test_o_gatilho_aplicado_vai_para_o_perfil.py`) saem no mesmo ato.
+    """
+    from pacotes import gesto_da_pagina
+
+    publicado = _publicada()
+    no_produto = 'data-gesto="reenviar"' in publicado
+    tem_dono = gesto_da_pagina(PAGINA, "reenviar") is not None
+
+    assert no_produto == tem_dono, (
+        "o botão de reenvio e o dono dele saíram de sincronia: a página "
+        f"publicada {'TEM' if no_produto else 'NÃO tem'} o botão e o pacote "
+        f"{'TEM' if tem_dono else 'NÃO tem'} o gesto. Com botão e sem dono, o "
+        "clique dela morre calado; com dono e sem botão, sobrou código que "
+        "ninguém alcança — e o `PISO_DA_ABA` continua cobrando 5 gestos. "
+        "Ver a docstring desta régua para o que apagar.")
 
 
 def test_o_glifo_do_reenvio_nao_e_emoji():
@@ -471,50 +603,161 @@ def test_o_glifo_do_reenvio_nao_e_emoji():
 
     A régua olha o que o desenho PUBLICOU, e não a constante do gerador: é no
     arquivo que o portão morde.
+
+    **ELA MUDOU DE ARQUIVO EM 06/09/2026, e a troca é o ponto:** o botão saiu da
+    BANCADA e continua no PUBLICADO, que é o que ela clica. Deixá-la na bancada
+    a faria medir o glifo dentro de um COMENTÁRIO de CSS — e por pouco: a
+    primeira versão da nota que explica a saída escrevia o `↻` por extenso, e o
+    comentário é EMITIDO para dentro do `<style>` da página. A régua teria dado
+    verde sobre a própria prosa, que é o defeito que o
+    `a03_gatilhos.sem_comentarios_de_css` documenta e que esta aba já pagou uma
+    vez. O glifo saiu do comentário, e a régua veio para onde o botão está.
+
+    Ela se apaga no `--publicar 03`, junto com o gesto —
+    `test_o_reenvio_sai_do_pacote_quando_sair_do_produto` diz o que sai.
     """
     from unicodedata import name
 
-    html = BANCADA.read_text(encoding="utf-8")
-    assert "↻" in html, "o glifo do reenvio sumiu do desenho"
+    html = _publicada()
+    assert "↻" in html, (
+        "o glifo do reenvio sumiu da página PUBLICADA. Se foi o `--publicar 03`, "
+        "esta régua sai junto com o gesto")
     assert "ARROW" in name("↻")
     assert chr(0x1F504) not in html, (
-        "o desenho ganhou o emoji U+1F504 — o portão de glifos o reprova")
+        "a página ganhou o emoji U+1F504 — o portão de glifos o reprova")
 
 
 # ---------------------------------------------------------------------------
 # [04] A TELA AVISA QUANDO O EFEITO CHEGA — a D-01, e o conflito C-3
 # ---------------------------------------------------------------------------
-@pytest.mark.parametrize(
-    ("gesto_", "clique"),
-    [("modo", {"lado": "e", "valor": "Rigid"}),
-     ("pronto", {"lado": "d", "v": "stop_hard"}),
-     ("reenviar", {"forma": {"modo-chave-e": "Rigid"}})])
-def test_o_gesto_devolve_o_recado_que_o_piloto_leva_ao_cartao(
-        a03, ctx, gesto_, clique):
-    """O caminho de volta do sucesso, e ele é UM: a chave `recado`.
+#: OS QUATRO GESTOS QUE CHEGAM AO APARELHO. O `guardar` fica de fora porque ele
+#: nunca devolveu `recado` — ver `test_o_guardar_nao_ganhou_recibo`.
+_OS_QUE_APLICAM = [
+    ("modo", {"lado": "e", "valor": "Rigid"}),
+    ("pronto", {"lado": "d", "v": "stop_hard"}),
+    ("ajuste", {"lado": "e", "i": "1", "valor": "200",
+                "forma": {"modo-chave-e": "Rigid"}}),
+    # O REENVIO VAI COM OS DOIS LADOS, e a diferença é um defeito medido: com
+    # UM lado só, o `_E_TAMBEM.join` de um recibo calado devolve `""` e a régua
+    # dá verde; com DOIS, ele devolve `" · "` — o separador sozinho, escrito no
+    # cartão dela. A primeira versão desta régua tinha um lado só e não o viu.
+    ("reenviar", {"forma": {"modo-chave-e": "Rigid", "modo-chave-d": "Bow"}}),
+]
 
-    **O DEFEITO:** até 04/09 a interface nova só falava quando RECUSAVA. Um
-    gesto que dava certo imprimia `[gesto] … → aplicado` no terminal de quem
-    lançou a janela, e quem clica não lê terminal. Cinco linhas do CSV paravam
-    neste mesmo buraco, em cinco abas.
 
-    A decisão dela: *"No próprio cartão, como a recusa."* — e o conflito C-3
-    recusou o campo que pisca, que era o que a lista desta aba propunha.
+@pytest.mark.parametrize(("gesto_", "clique"), _OS_QUE_APLICAM)
+def test_o_sucesso_pleno_nao_manda_recado(
+        a03, ctx, disco_que_guarda, gesto_, clique):
+    """Deu tudo certo? A tela PISCA, e nenhuma palavra nova entra nela.
 
-    A RÉGUA LÊ O CONTRATO DO PILOTO, não uma cópia dele: o nome da chave sai de
-    `hefesto_vivo._deu_certo_dizendo`, que é quem a consome.
+    **ESTA RÉGUA INVERTEU EM 06/09/2026**, e a inversão é decisão dela. Ela
+    cobrava a chave `recado` em todo sucesso — a D-01 do PO, *"no próprio
+    cartão, como a recusa"*. Em 05/09 ela respondeu a `03-Q4` vendo as quatro
+    formas lado a lado e escolheu **"O campo pisca em verde"**, recusando
+    explicitamente a tarja verde no cartão, descrita na opção com a frase viva
+    desta aba. A palavra dela: *"nenhuma palavra nova entra na tela"*.
 
-    MORDIDA: voltar a devolver `None` e o `assert` da chave reprova nos três
-    gestos de uma vez.
+    **O DEFEITO QUE A VERSÃO ANTIGA GUARDAVA CONTINUA GUARDADO** — *o gesto dá
+    certo e a tela não diz nada* —, e quem o guarda agora é a piscada, medida
+    na `ONDA5-03-01` (`test_o_numero_da_piscada_e_o_mesmo_nos_dois_lados`).
+    Trocou-se o canal, não a promessa.
+
+    **ELA COBRE OS QUATRO DE UMA VEZ DE PROPÓSITO.** A cura mora no `_aplicar`,
+    que é o único lugar em que o corpo do daemon existe; escrita dentro de um
+    gesto, ela passaria em um quarto desta régua. É o defeito de forma que esta
+    casa pagou duas vezes em 05/09 — *quando a cura conhece a causa, ela cobre
+    TODOS os chamadores*.
+
+    O `disco_que_guarda` É A METADE QUE FAZ ESTA RÉGUA MEDIR ALGUMA COISA: sem
+    ele o perfil `"régua"` não abre, o `recado` volta cheio pela
+    `AS-DUAS-ABAS-FALAM-01`, e a régua daria verde com a cura arrancada.
+
+    MORDIDA: devolva o recibo sempre em `_aplicar` — os QUATRO reprovam juntos.
+    Se reprovar um só, a cura entrou no gesto e não no `_aplicar`.
+    """
+    p = _Ponte()
+    fora = _clicar(a03, gesto_, ctx(), clique, p)
+
+    assert p.chamadas, (
+        f"o gesto {gesto_!r} não chegou ao aparelho — sem envio esta régua "
+        f"mediria o silêncio de um clique que não fez nada")
+    assert not (fora or {}).get("recado"), (
+        f"o gesto {gesto_!r} devolveu recado {(fora or {}).get('recado')!r} "
+        f"num sucesso PLENO. Ela escolheu a piscada em 05/09 (`03-Q4`) e "
+        f"recusou a palavra no cartão: *'nenhuma palavra nova entra na tela'*")
+
+
+@pytest.mark.parametrize(("gesto_", "clique"), _OS_QUE_APLICAM[:3])
+def test_a_falha_de_disco_continua_falando(
+        a03, ctx, disco_que_nao_abre, gesto_, clique):
+    """Meio ato deu certo: aí SIM a tela fala, e diz as DUAS metades.
+
+    É a `AS-DUAS-ABAS-FALAM-01` (decisão **D-17** dela), e esta régua existe
+    porque o Passo 1 da `03-Q4` poderia calá-la inteira sem que nada nesta aba
+    reclamasse: a régua que mede a D-17 vive noutro arquivo e interroga o
+    GESTO, não o `_aplicar`.
+
+    A REGRA QUE AS DUAS RÉGUAS ESCREVEM JUNTAS, e ela é da `ONDA5-03-01`:
+    *quando o gesto só repete o que ela acabou de fazer, a tela pisca; quando
+    ele tem NOTÍCIA, a tela fala.*
+
+    O `reenviar` FICA DE FORA, e não é esquecimento: ele passa `guardar=False`
+    e não escreve byte nenhum no disco dela — logo não tem segunda metade a
+    dizer. Quem guarda esse contrato é
+    `test_o_gatilho_aplicado_vai_para_o_perfil.py::test_o_reenviar_nao_ganhou_frase_de_disco`.
+
+    MORDIDA: faça `_aplicar` devolver `""` sempre — os três reprovam.
     """
     fora = _clicar(a03, gesto_, ctx(), clique, _Ponte())
 
-    assert isinstance(fora, dict) and fora.get("recado"), (
-        f"o gesto {gesto_!r} devolveu {fora!r} — sem a chave `recado` o piloto "
-        f"deposita a frase genérica e o cartão não diz O QUE chegou")
-    assert a03.NOME_DO_LADO["left"] in fora["recado"] or (
-        a03.NOME_DO_LADO["right"] in fora["recado"]), (
-        f"o recibo não nomeia o gatilho: {fora['recado']!r}")
+    recado = (fora or {}).get("recado") or ""
+    assert recado, (
+        f"o gesto {gesto_!r} calou sobre um perfil que não abriu. O aparelho "
+        f"recebeu e o disco não guardou — ela descobriria a perda no dia "
+        f"seguinte, longe do clique")
+    assert a03._E_TAMBEM in recado, (
+        f"a frase não tem as duas metades: {recado!r}")
+
+
+@pytest.mark.parametrize(("gesto_", "clique"), _OS_QUE_APLICAM[:3])
+def test_o_recibo_ainda_nomeia_o_gatilho_quando_prefixa_a_noticia(
+        a03, ctx, disco_que_nao_abre, gesto_, clique):
+    """A frase abre pelo que ELA FEZ, e o recibo é quem nomeia o gatilho.
+
+    É o que `test_o_gesto_devolve_o_recado_que_o_piloto_leva_ao_cartao` cobrava
+    antes da inversão, e que não podia se perder com ela: sem o recibo na
+    frente, a segunda metade abriria por *"o efeito FOI para o aparelho…"* e a
+    tela não diria de QUAL dos dois gatilhos ela está falando.
+
+    MORDIDA: inverta a ordem do `_E_TAMBEM.join` em `_aplicar`, ou tire o
+    `_recibo` da soma, e os três reprovam.
+    """
+    recado = (_clicar(a03, gesto_, ctx(), clique, _Ponte()) or {}).get("recado") or ""
+
+    assert recado.startswith(a03.NOME_DO_LADO["left"]) or (
+        recado.startswith(a03.NOME_DO_LADO["right"])), (
+        f"a frase não abre pelo gatilho: {recado!r}. A segunda metade vem "
+        f"DEPOIS do recibo — a frase tem de abrir pelo que ela fez")
+
+
+def test_o_guardar_nao_ganhou_recibo(a03, ctx, disco_que_guarda):
+    """O "Guardar esse efeito" nunca devolveu `recado`, e continua sem.
+
+    ELE JÁ ESTAVA CERTO ANTES DA `03-Q4`, e é a razão de esta régua ser curta:
+    com a piscada da `ONDA5-03-01`, um `None` passou a dizer "deu certo" sem
+    palavra nenhuma — exatamente o que ela pediu, sem uma linha nova. O risco
+    que ela guarda é o de alguém "uniformizar" os cinco gestos acrescentando
+    recibo a este, que é a forma pela qual a palavra voltaria à tela pela porta
+    dos fundos.
+
+    MORDIDA: devolva `{"recado": …}` no `guardar` e esta régua reprova.
+    """
+    fora = _clicar(a03, "guardar", ctx(),
+                   {"forma": {"modo-chave-e": "Rigid", "modo-chave-d": "Bow"}},
+                   _Ponte())
+
+    assert not (fora or {}).get("recado"), (
+        f"o `guardar` ganhou um recibo: {(fora or {}).get('recado')!r}")
 
 
 def test_o_piloto_le_a_chave_recado_e_a_tira_da_pintura():
@@ -545,27 +788,25 @@ def test_o_recibo_nao_afirma_o_que_o_daemon_nao_disse(a03, ctx):
     (`_fala_de_destino`) é o que separa *"o daemon não falou disso"* de *"o
     daemon disse que ninguém recebeu"*.
 
+    **ELA PERGUNTA AO `_recibo`, E NÃO AO GESTO — 06/09/2026.** Até aqui lia
+    `fora["recado"]` de um clique de sucesso pleno, e desde a `03-Q4` esse
+    recado é VAZIO: a régua passaria a medir a ausência da frase em vez da
+    honestidade dela, e daria verde com a guarda `_fala_de_destino` arrancada.
+    A armadilha que ela mede é do `_recibo`, e é a ele que ela pergunta.
+
     MORDIDA: chamar `frase_do_desfecho` sem a guarda e o recibo passa a dizer
     "nenhum controle recebeu" — verde sobre defeito vivo, a quinta vez.
     """
     from hefesto_dualsense4unix.app.textos_de_aplicacao import NADA_ACONTECEU
 
-    class _PonteAntiga(_Ponte):
-        """A ponte de antes do `_detalhado`: devolve `bool`, sem corpo nenhum.
-
-        Ela é a OUTRA metade do caso — `_desfecho` traduz um `bool` em
-        `(ok, "", None)`, e um `None` também não fala de destino.
-        """
-
-        def _responder(self, nome, *a, **k):
-            self.chamadas.append((nome, a, k))
-            return True
-
-    for p in (_Ponte(corpo={}), _PonteAntiga()):
-        fora = _clicar(a03, "modo", ctx(), {"lado": "e", "valor": "Rigid"}, p)
-        assert NADA_ACONTECEU not in fora["recado"], (
-            f"o recibo de SUCESSO diz {fora['recado']!r} sobre um corpo que não "
-            f"fala de destino nenhum")
+    # `None` é a ponte ANTIGA (`_desfecho` traduz um `bool` em `(ok, "", None)`)
+    # e `{}` é o dublê da régua: nenhum dos dois fala de destino.
+    for corpo in ({}, None):
+        recibo = a03._recibo("left", "Rigid", corpo, ctx(), UNIQ)
+        assert recibo, "o recibo ficou vazio — ele é a frase, e some se calar"
+        assert NADA_ACONTECEU not in recibo, (
+            f"o recibo de SUCESSO diz {recibo!r} sobre um corpo que não fala "
+            f"de destino nenhum")
 
 
 def test_o_recibo_conta_quando_o_daemon_diz_dois_destinos(a03, ctx):
@@ -575,14 +816,18 @@ def test_o_recibo_conta_quando_o_daemon_diz_dois_destinos(a03, ctx):
     a mesma da barra da GTK), e é ela que sabe dizer "aplicado em 2 controles"
     em vez de um "aplicado" que não conta.
 
+    **REPONTADA EM 06/09/2026, pela mesma razão da régua acima:** o clique de
+    sucesso pleno não devolve mais frase, e o dono do "aplicado em 2 controles"
+    é o `_recibo` — que continua sendo chamado sempre que há uma segunda metade
+    a prefixar.
+
     MORDIDA: montar a frase à mão no pacote e o número some.
     """
     outro = "aa:bb:cc:00:00:02"
-    p = _Ponte(corpo={"status": "ok", "aplicado_em": [UNIQ, outro],
-                      "guardado_em": []})
-    fora = _clicar(a03, "modo", ctx(), {"lado": "e", "valor": "Rigid"}, p)
-    assert "2" in fora["recado"], (
-        f"o daemon disse DOIS destinos e o recibo diz {fora['recado']!r}")
+    corpo = {"status": "ok", "aplicado_em": [UNIQ, outro], "guardado_em": []}
+    recibo = a03._recibo("left", "Rigid", corpo, ctx(), UNIQ)
+    assert "2" in recibo, (
+        f"o daemon disse DOIS destinos e o recibo diz {recibo!r}")
 
 
 # ---------------------------------------------------------------------------
