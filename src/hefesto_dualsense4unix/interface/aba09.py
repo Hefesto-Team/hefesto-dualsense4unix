@@ -1668,13 +1668,23 @@ if not _RELOAD:
                      "a régua da 09-Q1 e da 09-Q3 ficou cega, e seletor que "
                      "casa ZERO é erro, não silêncio.")
 _ATRS, _ROT_RELOAD = _RELOAD.group(1), _RELOAD.group(2)
-if _ROT_RELOAD != ROTULO_ATUALIZAR:
+#    A PALAVRA DELA ENTRA AQUI LITERAL, e não pela constante — medido na
+#    costura de 06/09/2026, e é a razão de esta guarda existir. Comparar
+#    `_ROT_RELOAD` com `ROTULO_ATUALIZAR` é comparar o HTML montado com a
+#    constante que o montou: os dois lados mudam JUNTOS, e trocar o valor da
+#    constante para "Reaplicar ajustes" deixava o gerador VERDE, escrevendo o
+#    rótulo revogado na bancada. Régua que passa com a cura arrancada não mede
+#    nada — e esta media a si mesma. O literal é o único lado que não se move
+#    quando alguém move o outro.
+_PALAVRA_DELA_09Q1 = "Atualizar"
+if ROTULO_ATUALIZAR != _PALAVRA_DELA_09Q1 or _ROT_RELOAD != _PALAVRA_DELA_09Q1:
     raise SystemExit(
-        f"ERRO: o botão do `daemon.reload` diz {_ROT_RELOAD!r} e ela mandou "
-        f"manter {ROTULO_ATUALIZAR!r} (09-Q1, 05/09/2026: *\"Segue fazendo os "
-        "dois. Com mesmo nome\"*). A recomendação de 04/09 propunha rebatizá-lo "
-        "pela metade cara e PERDEU: quem para de mentir aqui é a DICA, que diz "
-        "os dois trabalhos, não o rótulo.")
+        f"ERRO: o botão do `daemon.reload` diz {_ROT_RELOAD!r} (constante: "
+        f"{ROTULO_ATUALIZAR!r}) e ela mandou manter {_PALAVRA_DELA_09Q1!r} "
+        "(09-Q1, 05/09/2026: *\"Segue fazendo os dois. Com mesmo nome\"*). A "
+        "recomendação de 04/09 propunha rebatizá-lo pela metade cara e PERDEU: "
+        "quem para de mentir aqui é a DICA, que diz os dois trabalhos, não o "
+        "rótulo.")
 if f'data-hef-em-voo="{EM_VOO_ATUALIZAR}"' not in _ATRS:
     raise SystemExit(
         f"ERRO: o botão {ROTULO_ATUALIZAR!r} perdeu o `data-hef-em-voo`. Sem "
