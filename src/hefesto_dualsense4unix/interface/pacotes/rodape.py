@@ -25,6 +25,37 @@ O que ele carrega sozinho é o **depois**: modo e máscara, que o jogo só lê
 quando abre, e que por isso não podem ir na hora. Foi um defeito real de
 08/08/2026, na palavra dela: *"quando eu clico ali no inferior no verde em
 aplicar, ele não aplica e não abre o pop up"*.
+
+A CARONA DO ATALHO DE INICIALIZAÇÃO — QUEM PEGA E QUEM NÃO PEGA (06/09/2026)
+---------------------------------------------------------------------------
+Decisão dela, `07-Q1`: *"Deve aplicar automaticamente como era no gtk"* — e o
+desenho é dela desde 16/08: *"nem precisa ter um botão na gui, mas ele se auto
+corrigir ao clicarmos em aplicar ou salvar o perfil seja dentro ou fora da guia
+de perfis."* Quem repõe é `perfil.com_a_carona()`, atrás do `carona.ligada()`
+do dono, e a notícia (quando há) volta como `{"recado": …}`.
+
+=========  =======  ==========================================================
+gesto      carona?  a razão
+=========  =======  ==========================================================
+Aplicar    SIM      manda o perfil aos controles; sem o atalho o jogo continua
+                    sem enxergar o controle
+Salvar     SIM      grava o perfil no disco dela — o "salvar" literal do
+                    pedido
+Importar   SIM      um perfil novo entra na pasta e passa a valer
+Exportar   não      copia um arquivo para FORA (`origem.read_bytes()`) e não
+                    toca o perfil ativo: não há nada a repor
+=========  =======  ==========================================================
+
+**E a carona não muda o desfecho do gesto**: ela roda DEPOIS do trabalho dar
+certo, nunca antes, e `com_a_carona` nunca levanta. Uma exceção ali
+transformaria uma gravação bem-sucedida em tarja de recusa.
+
+OS DOIS DE FORA NA JANELA ESTÁVEL CONTINUAM DE FORA AQUI, pelas razões medidas
+do dono (`app/actions/carona_do_wrapper.py:62-80`): o **«Aplicar aos jogos da
+Steam»** já É a aplicação em massa e tem uma máquina que a sentinela não tem
+(pedir consentimento para fechar a Steam) — trocá-la seria regressão; e o
+**AUTOSWITCH** aplica perfil exatamente quando o jogo está SUBINDO, que é a
+condição em que escrever a linha da Steam é jogar o reparo fora.
 """
 from __future__ import annotations
 
@@ -34,6 +65,27 @@ from typing import Any
 from . import Contexto, gesto, perfil
 
 PAGINA = "*"
+
+
+def _recado(frase: str) -> dict[str, Any] | None:
+    """A notícia da carona para o cartão — e `None` quando não há notícia.
+
+    O CANAL JÁ EXISTIA e o contrato é do piloto: *"Um gesto que devolva
+    `{"recado": "…"}` manda a própria frase para o cartão, e ela vence esta"*
+    (`interface/hefesto_vivo.py:154-157`). O `recado` sai da carga antes da
+    pintura — ele não é endereço de página nenhuma.
+
+    O SILÊNCIO É O CASO COMUM, DE PROPÓSITO. Sem nada a repor, a carona devolve
+    frase vazia e este gesto volta a `None`: o "deu certo" é o campo piscando em
+    VERDE por ~1,5 s (decisão dela, `03-Q4`), **sem palavra nova na tela**. A
+    carona só fala quando tem notícia.
+
+    UM LUGAR SÓ para os três gestos do rodapé: a terceira cópia de um `if` é a
+    que esquece o `strip()` ou devolve `{"recado": ""}` — que o piloto trataria
+    como carga vazia, e não como silêncio.
+    """
+    frase = frase.strip()
+    return {"recado": frase} if frase else None
 
 
 def _draft_do_ativo(nome: str, ctx: Contexto | None = None) -> Any:
@@ -242,8 +294,31 @@ def _o_que_e_da_mesa_inteira(draft: Any, ctx: Contexto) -> Any:
         mudancas["policy"] = str(politica)
     if passthrough is not None:
         mudancas["passthrough"] = bool(passthrough)
-    if mult is not None:
-        mudancas["custom_mult"] = float(mult)
+    # O TETO SÓ EXISTE SOB "custom", E O DAEMON PUBLICA OS DOIS SEMPRE.
+    #
+    # ACHADO ABRINDO A TELA E CLICANDO, em 06/09/2026, com o daemon dela vivo:
+    # o «Salvar Perfil» do rodapé **recusava** com
+    #
+    #     1 validation error for RumbleConfig
+    #       custom_mult só é válido com policy='custom' (policy='balanceado')
+    #
+    # e o perfil dela não era gravado — nem a cor, nem o som, nem os sensores,
+    # nem o mouse. O `rumble_policy_custom_mult` do daemon é uma MEMÓRIA (o teto
+    # que ela usou quando o degrau era "custom") e continua publicado depois de
+    # o degrau mudar; estas linhas copiavam os dois SOLTOS, e o esquema recusa o
+    # par — com razão: *"o valor seria silenciosamente ignorado pelo daemon"*.
+    #
+    # A DONA DO PAR É A ABA VIBRAÇÃO, e ela já os escreve JUNTOS
+    # (`a05_vibracao.py:1287`). Aqui a regra é a mesma, lida em vez de digitada:
+    # o teto acompanha a política que VAI VALER, e some quando ela não é
+    # "custom" — inclusive o teto que veio do DISCO, que é a metade que ler só o
+    # daemon deixaria viva.
+    politica_final = mudancas.get("policy", draft.rumble.policy)
+    teto = draft.rumble.custom_mult if mult is None else float(mult)
+    if politica_final != "custom":
+        teto = None
+    if teto != draft.rumble.custom_mult:
+        mudancas["custom_mult"] = teto
     if mudancas:
         draft = draft.model_copy(
             update={"rumble": draft.rumble.model_copy(update=mudancas)})
@@ -261,7 +336,7 @@ def _o_que_e_da_mesa_inteira(draft: Any, ctx: Contexto) -> Any:
 
 
 @gesto("*", "aplicar")
-def aplicar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
+def aplicar(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
     """O botão verde. Manda o perfil ativo aos controles, sem gravar.
 
     `profile.apply_draft` é o método, e o payload é o `to_ipc_dict()` do draft —
@@ -278,10 +353,11 @@ def aplicar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
             "aplicar: não há perfil ativo para mandar aos controles. "
             "Escolha um na aba Perfis.")
     p.apply_draft_detalhado(draft.to_ipc_dict())
+    return _recado(perfil.com_a_carona())
 
 
 @gesto("*", "salvar")
-def salvar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
+def salvar(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
     """Grava o que está valendo no perfil ATIVO, no disco dela.
 
     A JANELA ESTÁVEL PERGUNTA O NOME — `on_save_profile` abre um diálogo. Aqui
@@ -305,6 +381,7 @@ def salvar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     atual = load_profile(nome)
     save_profile(draft.to_profile(nome, priority=atual.priority),
                  origem="interface-nova")
+    return _recado(perfil.com_a_carona())
 
 
 @gesto("*", "exportar")
@@ -346,7 +423,7 @@ def exportar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
 
 
 @gesto("*", "importar")
-def importar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
+def importar(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
     """Carrega um perfil de um `.json` que ela escolhe.
 
     O SELETOR É DO SISTEMA, e por isso vem INJETADO: o WebView não abre
@@ -364,7 +441,11 @@ def importar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     """
     caminho = p.escolher_arquivo("Escolha o perfil para importar", padrao="*.json")
     if not caminho:
-        return  # ela cancelou, e cancelar não é erro
+        # ELA CANCELOU, E CANCELAR NÃO É ERRO — nem notícia. O `None` explícito
+        # é o que o gesto passou a dever desde que ele devolve recado: um
+        # `return` seco aqui é `Return value expected` no mypy, e a diferença
+        # não é de estilo — quem lê tem de ver que o silêncio é intencional.
+        return None
 
     perfil._com_o_src()
     import json as _json
@@ -393,6 +474,7 @@ def importar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     destino.write_text(_json.dumps(dados, ensure_ascii=False, indent=2),
                        encoding="utf-8")
     print(f"[importar] {novo.name!r} → {destino}")
+    return _recado(perfil.com_a_carona())
 
 
 PISO_DA_ABA = 4
