@@ -132,7 +132,14 @@ def test_nenhum_numero_do_censo_e_literal() -> None:
         "cada linha da tabela de arquivos tem de tirar o tamanho da medição:\n"
         + "\n".join(sem_marca)
     )
-    assert len(sem_marca) == 0 and len(_tabela_da_secao_1(texto)) >= 10
+    # O PISO DA TABELA — nove, e o número desceu de dez em 05/09/2026. Ele não
+    # é uma folga: existe para a régua reprovar se a tabela inteira sumir, em vez
+    # de dar verde sobre zero linha. Desceu porque TRÊS arquivos foram apagados
+    # no mesmo dia — `scripts/migrar-mapa-v2.py`, `docs/data/mapa-controles-v1.csv`
+    # e `docs/data/ensaios-v1.csv` —, por ordem dela: *"a ideia é termos menos
+    # arquivos, se algo vira a v2 deveria ser o mesmo arquivo sobrescrevendo o
+    # anterior"*. A medição que os justificava está no próprio LEIA-PRIMEIRO.
+    assert len(_tabela_da_secao_1(texto)) >= 9
 
     presentes = {chave for chave, _ in _MARCA.findall(texto)}
     faltando = sorted(CHAVES_EXIGIDAS - presentes)

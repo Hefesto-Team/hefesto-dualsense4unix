@@ -306,6 +306,11 @@ jobs:
       # FONTE, e uma dívida FECHADA reprova para o dado ser reescrito.
       - name: O terceiro número (paridade GTK × HTML)
         run: python3 scripts/check_paridade_gtk_html.py
+      # O DONO DE CADA COMPORTAMENTO (05/09/2026): o mapa dos 50 comportamentos
+      # que decidem a migração, com o endereço do dono dos dois lados. Reprova
+      # endereço morto, cura descosturada, SO-GTK já migrado, e dívida que cresce.
+      - name: Cada comportamento tem um dono só
+        run: python3 scripts/check_donos_de_comportamento.py
 
   shellcheck:
     name: Shellcheck (severidade error)

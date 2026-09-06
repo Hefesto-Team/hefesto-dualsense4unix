@@ -848,10 +848,7 @@ _JANELA = 3
 _CITACOES_PENDENTES: frozenset[str] = frozenset({
     "app/actions/config/moldura.py::test_config_a_janela_na_tela.py:262",
     "app/actions/config/secao_janela.py::desktop_notifications.py:33",
-    "app/actions/config/secao_janela.py::home_actions.py:1523",
-    "app/actions/config/secao_mesa.py::home_actions.py:1523",
     "app/actions/footer_actions.py::home_actions.py:1050-1054",
-    "app/actions/footer_actions.py::home_actions.py:1337-1341",
     "app/actions/home_actions.py::daemon/lifecycle.py:84",
     "app/actions/trigger_specs.py::app/widgets/segmented_selector.py:168-180",
     "app/actions/trigger_specs.py::profiles/schema.py:161",

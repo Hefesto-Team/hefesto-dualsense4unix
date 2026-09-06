@@ -1424,7 +1424,7 @@ def _trava(ctx: Contexto, nome: str,
 #: A ÚNICA TRAVA DA CAMADA DO PRODUTO QUE ESTE ARQUIVO **NÃO** OBEDECE, e ela é
 #: nomeada aqui em vez de ignorada em silêncio — 03/09/2026.
 #:
-#: `aba_sistema.travas()` (`gui/aba_sistema.py:606`) tranca `ver-plugins` E
+#: `aba_sistema.travas()` (`gui/aba_sistema.py:604`) tranca `ver-plugins` E
 #: `ver-detalhes` com a mesma frase: *"O serviço está desligado — não há o que
 #: perguntar a ele."* Para o `ver-plugins` a frase é exata: ele fala com o
 #: daemon por IPC (`plugin.reload` + `plugin.list`), e um daemon parado não
@@ -2230,7 +2230,7 @@ def ver_detalhes(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
 #:   `desligar`             `_run_systemctl_async("stop")` (daemon_actions.py:2234)
 #:   `refazer-consertos`    `bash scripts/*.sh` (…:1218)
 #:   `refazer-proton`       diálogo GTK + `config.vdf` da Steam (…:1793)
-#:   `procurar-camadas`     censo do `system.reg` em disco (emulation_actions.py:2086)
+#:   `procurar-camadas`     censo do `system.reg` em disco (emulation_actions.py:2110)
 #:   `restaurar-de-fabrica` cópia do asset + `DraftConfig` (footer_actions.py:1477)
 #:
 #: ERAM OITO, DEPOIS SETE, E AGORA SÃO CINCO. `ver-detalhes` e `ver-plugins`

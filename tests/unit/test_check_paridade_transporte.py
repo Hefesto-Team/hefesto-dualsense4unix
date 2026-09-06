@@ -794,10 +794,27 @@ def test_o_caderno_real_declara_a_coluna_da_feature() -> None:
 #: passou deixando os dois desalinhados EM SILÊNCIO — o `csv.writer` do
 #: `ensaio_rumble_um_bit_por_vez.py` escreve por POSIÇÃO, então uma coluna a
 #: menos não estoura: ela empurra `fonte` para dentro de `observado_por`.
-ESCRITORES_DO_CADERNO = (
-    "scripts/ensaio_rumble_um_bit_por_vez.py",
-    "scripts/migrar-mapa-v2.py",
-)
+#:
+#: A LISTA NÃO SE DIGITA MAIS — 05/09/2026. Ela trazia
+#: `scripts/migrar-mapa-v2.py`, que foi APAGADO no dia em que o grão v2 virou o
+#: único (decisão dela: *"a ideia é termos menos arquivos"*), e o parametrize
+#: passou a estourar `FileNotFoundError` sobre um arquivo que ninguém devia
+#: procurar. A régua tem de LER: quem escreve no caderno é quem chama
+#: `csv.writer` sobre `ensaios.csv`, e isso se acha varrendo `scripts/`.
+def _escritores_do_caderno() -> list[str]:
+    achados = []
+    for py in sorted((RAIZ_REAL / "scripts").rglob("*.py")):
+        texto = py.read_text(encoding="utf-8", errors="ignore")
+        if "ensaios.csv" in texto and "csv.writer" in texto:
+            achados.append(str(py.relative_to(RAIZ_REAL)))
+    # RÉGUA QUE ACHA ZERO NÃO É RÉGUA VERDE: se o caderno mudar de nome, esta
+    # linha reprova em vez de o parametrize sumir e a suíte ficar verde sobre
+    # nenhum escritor.
+    assert achados, "nenhum escritor de ensaios.csv em scripts/ — o caderno mudou de nome?"
+    return achados
+
+
+ESCRITORES_DO_CADERNO = tuple(_escritores_do_caderno())
 
 
 def _listas_literais_de_colunas(fonte: Path) -> list[list[str]]:

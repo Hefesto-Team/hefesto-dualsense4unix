@@ -82,6 +82,13 @@ rapido|paridade-transporte|py|scripts/check_paridade_transporte.py
 # reprova para o dado ser atualizado. Sem isso o número vira propaganda no dia
 # seguinte à primeira cura. Camada rápida porque custa 0,4 s.
 rapido|paridade-gtk-html|py|scripts/check_paridade_gtk_html.py
+# O DONO DE CADA COMPORTAMENTO — 05/09/2026, e a queixa é dela: *"estamos
+# recriando um produto que estava praticamente pronto pro gtk"*. Cinco laudos
+# mediram 410 comportamentos das dez abas; os 50 que decidem estão em
+# `docs/data/donos-de-comportamento.csv` com o endereço do dono. O portão não
+# julga se um código recria — ele impede o LAUDO de envelhecer: endereço morto,
+# cura descosturada, SO-GTK que já migrou, e a dívida declarada, que só desce.
+rapido|donos-de-comportamento|py|scripts/check_donos_de_comportamento.py
 rapido|test-data|bash|scripts/check_test_data.sh
 rapido|endereco-de-radio|py|scripts/check_endereco_de_radio.py
 # O IRMÃO DO DE CIMA, PARA O SERIAL — 03/09/2026, e o pedido é dela: *"sim, faz

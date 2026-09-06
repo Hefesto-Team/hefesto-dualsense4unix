@@ -45,20 +45,22 @@ entram.
 
 ## A janela
 
+Dez abas. As fotos são do produto de hoje — saem de
+`interface/olhar.py --todas --publicado --doc`, que fotografa as páginas que o
+`WebKit2.WebView` renderiza, e não um desenho ao lado.
+
 | | |
 |---|---|
-| **Início** — quando o jogo abrir | **Status** — tudo o que o controle está fazendo |
-| [![Início](docs/usage/assets/readme_inicio.png)](docs/usage/interface.md) | [![Status](docs/usage/assets/readme_status.png)](docs/usage/interface.md) |
-| **No jogo** — o que atravessa para o jogo | |
-| [![No jogo](docs/usage/assets/readme_no_jogo.png)](docs/usage/interface.md) | |
-| **Gatilhos** — os dezenove modos de resistência | **Lightbar** — a cor e o desenho das cinco luzes |
-| [![Gatilhos](docs/usage/assets/readme_gatilhos.png)](docs/usage/interface.md) | [![Lightbar](docs/usage/assets/readme_lightbar.png)](docs/usage/interface.md) |
-| **Rumble** — a intensidade da vibração dos jogos | **Perfis** — um ajuste por jogo, que entra sozinho |
-| [![Rumble](docs/usage/assets/readme_rumble.png)](docs/usage/interface.md) | [![Perfis](docs/usage/assets/readme_perfis.png)](docs/usage/interface.md) |
-| **Sistema** — o serviço, a saúde e os jogos da Steam | **Emulação** — como o jogo vê o controle |
-| [![Sistema](docs/usage/assets/readme_sistema.png)](docs/usage/interface.md) | [![Emulação](docs/usage/assets/readme_emulacao.png)](docs/usage/interface.md) |
-| **Navegação** — o controle como mouse e teclado | **Configurações** — o que o Hefesto não tem como medir |
-| [![Navegação](docs/usage/assets/readme_navegacao_dsx.png)](docs/usage/interface.md) | [![Configurações](docs/usage/assets/readme_configuracoes.png)](docs/usage/interface.md#configurações) |
+| **Jogar** — o modo, a máscara e o que o jogo recebe | **Controles** — cada controle, ao vivo |
+| [![Jogar](docs/usage/assets/aba-01-jogar.png)](docs/usage/AS-DEZ-ABAS-o-que-cada-uma-faz.md#1-jogar) | [![Controles](docs/usage/assets/aba-02-controles.png)](docs/usage/AS-DEZ-ABAS-o-que-cada-uma-faz.md#2-controles) |
+| **Gatilhos** — os dezenove modos de resistência | **Iluminação** — a cor e o desenho das cinco luzes |
+| [![Gatilhos](docs/usage/assets/aba-03-gatilhos.png)](docs/usage/AS-DEZ-ABAS-o-que-cada-uma-faz.md#3-gatilhos) | [![Iluminação](docs/usage/assets/aba-04-iluminacao.png)](docs/usage/AS-DEZ-ABAS-o-que-cada-uma-faz.md#4-iluminação) |
+| **Vibração** — a intensidade, por controle e por jogo | **Navegação** — o controle como mouse e teclado |
+| [![Vibração](docs/usage/assets/aba-05-vibracao.png)](docs/usage/AS-DEZ-ABAS-o-que-cada-uma-faz.md#5-vibração) | [![Navegação](docs/usage/assets/aba-06-navegacao.png)](docs/usage/AS-DEZ-ABAS-o-que-cada-uma-faz.md#6-navegação) |
+| **Lançadores** — abrir o jogo com o Hefesto junto | **Conexões** — cabo, rádio e o exame das portas |
+| [![Lançadores](docs/usage/assets/aba-07-lancadores.png)](docs/usage/AS-DEZ-ABAS-o-que-cada-uma-faz.md#7-lançadores) | [![Conexões](docs/usage/assets/aba-08-conexoes.png)](docs/usage/AS-DEZ-ABAS-o-que-cada-uma-faz.md#8-conexões) |
+| **Sistema** — o serviço, a saúde e os consertos | **Perfis** — um ajuste por jogo, que entra sozinho |
+| [![Sistema](docs/usage/assets/aba-09-sistema.png)](docs/usage/AS-DEZ-ABAS-o-que-cada-uma-faz.md#9-sistema) | [![Perfis](docs/usage/assets/aba-10-perfis.png)](docs/usage/AS-DEZ-ABAS-o-que-cada-uma-faz.md#10-perfis) |
 
 Aba por aba em
 [docs/usage/AS-DEZ-ABAS-o-que-cada-uma-faz.md](docs/usage/AS-DEZ-ABAS-o-que-cada-uma-faz.md).
