@@ -820,3 +820,297 @@ def test_o_veredito_continua_cego_para_a_calada(pacote, cena, mesa) -> None:
     assert falando != calada, (
         "calar uma ordem não mudou o veredito do topo — o ⊘ deixou de fazer "
         "alguma coisa visível, que é a definição de botão morto")
+
+
+# ---------------------------------------------------------------------------
+# CONEXOES-LIGAR-TUDO-01 (06/09/2026) — as linhas do balde `LIGAR` desta aba
+#
+# As cinco daqui para baixo têm a mesma forma: **o dono existe no produto, com
+# a frase ou o número prontos, e o HTML não tinha onde escrever**. Cada teste
+# pergunta ao PRODUTO e compara com o DONO — nunca com uma segunda cópia da
+# frase escrita aqui.
+# ---------------------------------------------------------------------------
+def _ctx_de_alvo(pacote, indice, quantos=2):
+    """Um `Contexto` com `quantos` controles e o alvo de saída em `indice`.
+
+    A MESA É MONTADA PELO PRODUTO (`mesa_viva.mesa_do_estado`), e não à mão: é
+    ele que decide qual `uniq` vira `p1` — e a conversão que este teste mede é
+    exatamente a que atravessa as duas ordens. Uma mesa digitada aqui casaria
+    com o que o teste espera e nunca com o que o produto faz.
+    """
+    from hefesto_dualsense4unix.interface import mesa_viva
+    from hefesto_dualsense4unix.interface.pacotes import Contexto
+
+    # O `player_slot` DESCE com a posição e o `index` SOBE: é o cruzamento que
+    # faz as duas ordens divergirem, e sem ele o teste passaria com a conversão
+    # errada. **O CAMPO É `player_slot`, e não `player`** — quem decide a
+    # identidade é `actions/base.numero_do_controle`, e ele lê o SLOT DE SESSÃO;
+    # `player` responde outra pergunta ("está jogando agora, e como quem?") e é
+    # `None` fora do co-op. Medido em 06/09/2026: com `player` a mesa saiu
+    # `p1→index 0`, as duas ordens coincidiram e a mordida NÃO mordeu.
+    controles = [
+        {"uniq": f"aa:bb:cc:00:00:{n:02x}", "connected": True, "index": n,
+         "transport": "usb", "player_slot": quantos - n}
+        for n in range(quantos)
+    ]
+    estado = {"controllers": controles, "output_target_index": indice}
+    mesa = mesa_viva.mesa_do_estado(estado, {})
+    return Contexto(state=estado, mesa=mesa, conectados=controles), mesa
+
+
+def test_o_alvo_de_saida_e_lido_de_volta_do_daemon(pacote) -> None:
+    """Ela clica "só este" no P2 e a tela passa a apontar para ele.
+
+    O DEFEITO QUE ISTO FECHA: o gesto `alvo` escrevia `controller.target.set`, o
+    daemon obedecia, e no tique seguinte o acordeão continuava aberto no P1 — o
+    `checked` do desenho. A fita do topo junto, porque o destaque dela vem das
+    regras `body:has(#gc-pN:checked)` do gerador.
+
+    MORDE: devolva a leitura ao índice CRU (`lugares[indice + 1]`, sem passar
+    pelo `uniq`) e este teste reprova — o daemon numera por posição em
+    `controllers` e o desenho por posição na mesa ORDENADA POR IDENTIDADE, e
+    aqui as duas estão trocadas de propósito.
+    """
+    ctx, mesa = _ctx_de_alvo(pacote, indice=0)
+    # O `index: 0` é o `player: 2` desta cena, e o produto o põe em `p2`.
+    esperado = next(m["pref"] for m in mesa
+                    if m["uniq"] == ctx.state["controllers"][0]["uniq"])
+    assert pacote._pref_do_alvo(ctx) == esperado, (
+        f"o alvo `index: 0` virou {pacote._pref_do_alvo(ctx)!r} e o produto põe "
+        f"aquele controle em {esperado!r} — as duas ordens foram confundidas")
+    marcado = pacote._alvo_de_saida(ctx)
+    lugares = [pacote.TODOS_NA_TELA, *sorted(pacote.TODOS_OS_LUGARES)]
+    assert len(marcado) == len(lugares), marcado
+    acesos = [onde for onde, v in zip(lugares, marcado, strict=True) if v == "sim"]
+    assert acesos == [esperado], marcado
+
+
+def test_o_alvo_todos_marca_o_primeiro_radio(pacote) -> None:
+    """`index: null` é o broadcast, e ele marca o "todos" — nunca um controle.
+
+    MORDE: trate o `None` como "não sei" e devolva a lista toda vazia; a tela
+    fica sem afirmar nada onde o daemon disse, com todas as letras, que a saída
+    vale para a mesa inteira.
+    """
+    ctx, _ = _ctx_de_alvo(pacote, indice=None)
+    marcado = pacote._alvo_de_saida(ctx)
+    assert marcado[0] == "sim", marcado
+    assert not any(marcado[1:]), marcado
+
+
+def test_um_alvo_que_o_estado_nao_traduz_nao_marca_nada(pacote) -> None:
+    """Índice fora da lista desmarca os cinco — e isso NÃO é o "todos".
+
+    A DIFERENÇA É O PONTO: marcar o "todos" afirmaria um broadcast que o daemon
+    não disse; deixar os cinco vazios não afirma nada, que é o único estado
+    honesto quando a conversão falha.
+
+    MORDE: devolva `TODOS_NA_TELA` no ramo do não-traduzido e a primeira posição
+    acende sobre um alvo que ninguém leu.
+    """
+    ctx, _ = _ctx_de_alvo(pacote, indice=97)
+    assert pacote._pref_do_alvo(ctx) == ""
+    assert not any(pacote._alvo_de_saida(ctx)), pacote._alvo_de_saida(ctx)
+
+
+def test_a_lista_do_alvo_vai_em_todo_tique_inclusive_vazia(pacote) -> None:
+    """Sem a chave `output_target_index` a lista sai VAZIA — e sai.
+
+    É a regra do botão cinza da ONDA0-F: uma chave que só aparece quando há o
+    que dizer deixa na tela a marca do tique anterior, e um acordeão preso no
+    controle de antes é a tela mentindo sobre para onde a saída vai.
+
+    A RÉGUA PASSA PELO `pacote()`, E NÃO PELO HELPER — 06/09/2026, e a primeira
+    versão dela não provava nada: perguntar direto a `_alvo_de_saida` deixa a
+    emissão de fora, que é justamente onde a chave pode sumir. A mordida que
+    embrulhou a linha do `pacote()` num condicional passou VERDE por isso.
+
+    MORDE: emita `alvo-aberto` só quando houver alvo e o `KeyError` aqui é a
+    reprovação.
+    """
+    ctx, _ = _ctx_de_alvo(pacote, indice=0)
+    ctx.state.pop("output_target_index")
+    assert pacote._alvo_de_saida(ctx) == ["", "", "", "", ""]
+    carga = pacote.pacote(ctx)
+    assert "alvo-aberto" in carga, (
+        "o pacote deixou de emitir `alvo-aberto` quando não há alvo — a tela "
+        "fica com a marca do tique anterior, apontando o controle de antes")
+    assert not any(carga["alvo-aberto"]), carga["alvo-aberto"]
+
+
+def test_o_desenho_tem_um_endereco_por_radio_do_acordeao() -> None:
+    """Os cinco `<input>` do acordeão têm o endereço, e só um nasce `checked`.
+
+    A LISTA É DISTRIBUÍDA POR POSIÇÃO no DOM. Um rádio sem `data-campo` faria o
+    valor do P1 cair no P2 e a tela apontar o controle errado — pior que o
+    defeito que esta cura fecha.
+
+    MORDE: tire o `data-campo` de um dos cinco e a contagem cai.
+    """
+    from hefesto_dualsense4unix.interface import onde
+    from hefesto_dualsense4unix.interface.pacotes import TODOS_OS_LUGARES
+
+    html = onde.pagina("08-conexoes.html").read_text(encoding="utf-8")
+    quantos = html.count('data-campo="alvo-aberto" data-hef-alvo="marcado"')
+    assert quantos == len(TODOS_OS_LUGARES) + 1, (
+        f"são {quantos} rádios com endereço e a mesa tem "
+        f"{len(TODOS_OS_LUGARES)} lugares mais o 'todos'")
+    assert html.count('data-hef-alvo="marcado" checked') <= 1, (
+        "o desenho afirma dois alvos de saída ao mesmo tempo")
+
+
+def test_o_aviso_do_controle_nao_adotado_vem_do_dono(pacote) -> None:
+    """A frase é `status_actions.texto_de_controle_nao_adotado`, palavra por palavra.
+
+    MORDE: escreva a frase aqui no pacote e ela deixa de acompanhar o dono —
+    que é quem sabe de quantos em quantos minutos o produto tenta sozinho
+    (`MINUTOS_ENTRE_TENTATIVAS`, lido da unit do systemd).
+    """
+    from hefesto_dualsense4unix.app.actions.status_actions import (
+        texto_de_controle_nao_adotado,
+    )
+
+    st = {"controles_sem_driver": {"quantidade": 2, "ids": ["x", "y"]}}
+    assert pacote._frase_do_sem_driver(st) == texto_de_controle_nao_adotado(st)
+    assert pacote._frase_do_sem_driver(st).strip(), "o dono não disse nada"
+
+
+def test_sem_controle_orfao_a_linha_do_aviso_some(pacote) -> None:
+    """Zero órfão vira `monta.NADA_A_DIZER`, e a folha esconde a linha.
+
+    NUNCA `""`: o `escrever()` do piloto troca vazio por travessão ANTES de
+    olhar o alvo, e a tela ganharia uma linha com um `—` — altura para não
+    dizer nada.
+
+    MORDE: devolva `""` no ramo vazio e a asserção do marcador cai.
+    """
+    nada = str(pacote._monta().NADA_A_DIZER)
+    assert pacote._frase_do_sem_driver({}) == nada
+    assert pacote._frase_do_sem_driver(
+        {"controles_sem_driver": {"quantidade": 0, "ids": []}}) == nada
+
+
+def test_o_aviso_do_radio_fragil_nomeia_os_controles(pacote) -> None:
+    """O aviso do Bluetooth nativo frágil sai do dono, COM os números.
+
+    A REGRA DOS DOIS DONOS É DELES: `controles_bt_frageis` lê a lista publicada
+    e `texto_native_bt_fragil` a vira frase — e lista vazia com o booleano ACESO
+    quer dizer *"não sei quais"*, não *"nenhum"*. O aviso acende sem nomes.
+
+    MORDE: acenda a linha pelo tamanho da lista (`if not numeros: return nada`)
+    e o segundo caso reprova — o aviso cala com o daemon dizendo que há frágil.
+    """
+    from hefesto_dualsense4unix.app.actions.home_actions import (
+        NATIVE_BT_FRAGIL_TEXT,
+        texto_native_bt_fragil,
+    )
+
+    st = {"native_bt_fragil": True, "native_bt_fragil_controles": [2, 3]}
+    assert pacote._frase_do_radio_fragil(st) == texto_native_bt_fragil([2, 3])
+    assert "2" in pacote._frase_do_radio_fragil(st)
+    sem_nomes = {"native_bt_fragil": True, "native_bt_fragil_controles": []}
+    assert pacote._frase_do_radio_fragil(sem_nomes) == NATIVE_BT_FRAGIL_TEXT
+
+
+def test_sem_radio_fragil_a_linha_some(pacote) -> None:
+    """Booleano apagado é silêncio — e o silêncio não ocupa pixel.
+
+    MORDE: tire a guarda do `native_bt_fragil` e o aviso acende em toda mesa que
+    não publique a chave, que é o alarme sem medição que ela baniu.
+    """
+    nada = str(pacote._monta().NADA_A_DIZER)
+    assert pacote._frase_do_radio_fragil({}) == nada
+    assert pacote._frase_do_radio_fragil({"native_bt_fragil": False}) == nada
+
+
+def test_as_quatro_ressalvas_novas_tem_endereco_na_pagina() -> None:
+    """As quatro linhas existem no desenho, com o alvo `html`.
+
+    A RÉGUA COBRA O ENDEREÇO, não a frase: a frase é do dono e muda quando ele
+    mudar; o que não pode sumir é o lugar onde ela cabe. Endereço que some é
+    campo que o piloto não acha e escreve zero — calado, que é como os quatro
+    viviam até hoje.
+
+    MORDE: tire uma das quatro do gerador, regere, e a linha dela cai aqui.
+    """
+    from hefesto_dualsense4unix.interface import onde
+
+    html = onde.pagina("08-conexoes.html").read_text(encoding="utf-8")
+    for campo in ("sem-driver", "radio-fragil", "hub-em-comum",
+                  "gabinete-contagens"):
+        achado = re.search(rf'<div class="ressalva" data-campo="{campo}"[^>]*>', html)
+        assert achado, f"o desenho não tem onde dizer o `{campo}`"
+        assert 'data-hef-alvo="html"' in achado.group(0), achado.group(0)
+
+
+def test_o_hub_em_comum_e_as_contagens_saem_dos_donos(pacote) -> None:
+    """As duas frases são de `secao_mesa`, e o produto NÃO escolhe entre elas.
+
+    A REGRA DAS CONTAGENS É A QUE MAIS IMPORTA: o que o firmware conta e o que o
+    kernel conta vão os DOIS, lado a lado. Escolher um desenharia um gabinete
+    que ninguém tem, e ela procuraria na traseira buracos que o mapa não mostra.
+
+    MORDE: faça `_frases_do_gabinete` devolver só a primeira linha e a segunda
+    asserção cai; troque o `<br>` por um espaço e a terceira cai.
+    """
+    from hefesto_dualsense4unix.app.actions.config.secao_mesa import (
+        _linhas_do_gabinete,
+    )
+
+    gabinete = {
+        "contagens": {
+            "firmware": {"valor": 5, "de_onde_sei": "lido-do-firmware"},
+            "kernel_buracos": {"valor": 15, "de_onde_sei": "lido-do-kernel"},
+        }
+    }
+    esperadas = [f for f in _linhas_do_gabinete(gabinete) if f]
+    assert len(esperadas) >= 2, "o dono não deu as duas contagens — a cena mudou"
+    antes = pacote._GABINETE
+    try:
+        pacote._GABINETE = gabinete
+        saiu = pacote._frases_do_gabinete()
+    finally:
+        pacote._GABINETE = antes
+    for frase in esperadas:
+        assert frase in saiu, f"a linha do gabinete perdeu {frase!r}"
+    assert saiu.count("<br>") == len(esperadas) - 1, saiu
+
+
+def test_sem_gabinete_json_a_linha_das_contagens_some(pacote) -> None:
+    """Primeira instalação não tem `gabinete.json`, e a linha não nasce.
+
+    Firmware é FONTE, nunca premissa — e uma linha que só sabe dizer "não sei"
+    ocupa a largura que esta aba não tem.
+
+    MORDE: devolva `""` em vez do marcador e a linha passa a ocupar altura com
+    um travessão dentro.
+    """
+    nada = str(pacote._monta().NADA_A_DIZER)
+    antes = pacote._GABINETE
+    try:
+        pacote._GABINETE = {}
+        assert pacote._frases_do_gabinete() == nada
+    finally:
+        pacote._GABINETE = antes
+
+
+def test_a_regua_do_radio_recebe_a_chave_crua_do_transporte(pacote) -> None:
+    """`_da_mesa_para_a_regua` carrega `transporte`, e sem ele a régua zera.
+
+    O DEFEITO MEDIDO (06/09/2026): a costura da ONDA B trocou o
+    `c["via"] == "BT"` de `_regua_do_radio` por `_e_radio(c)`, e o `c` de lá é o
+    dicionário que esta função devolve — que **nunca carregou `transporte`**.
+    `no_radio` ficava sempre vazio, e a régua de Desempenho mostrava ZERO
+    controle no rádio com o controle no rádio. É o sintoma exato que o
+    comentário da troca dizia estar prevenindo.
+
+    MORDE: tire a chave `transporte` do dicionário e `_e_radio` responde `False`
+    sobre um controle que está no rádio.
+    """
+    m = {"jogador": 2, "nome": "Galactic Purple", "via": "rádio",
+         "transporte": "bt", "cor": "galactic-purple", "uniq": "aa:bb:cc:00:00:02"}
+    saiu = pacote._da_mesa_para_a_regua(m, set())
+    assert pacote._e_radio(saiu), (
+        "a régua do rádio não reconhece o controle que está NO rádio — a chave "
+        "crua não viajou junto com a palavra")
+    assert saiu["via"] == "rádio", "a palavra da tela se perdeu no caminho"
