@@ -402,6 +402,10 @@ LER_A_TELA = r"""
     reaplicar: rea ? {
       rotulo: (rea.textContent || '').trim(),
       em_voo: rea.classList.contains('hef-em-voo'),
+      // A PISCADA DO "DEU CERTO" (05/09/2026, decisão dela na `03-Q4`). Ela é o
+      // que responde no lugar da frase quando o gesto não trouxe notícia — ver
+      // `test_o_gesto_que_da_certo_pisca_no_botao`.
+      deu_certo: rea.classList.contains('hef-deu-certo'),
       filhos: rea.children.length,
     } : null,
     // O RECIBO DO GESTO (D-01), que é a linha L323 do CSV. Ele não é desta
@@ -673,28 +677,37 @@ class TestNaTelaViva:
         assert pousado["em_voo"] is False, pousado
         assert pousado["rotulo"] == aba09.ROTULO_REAPLICAR, pousado
 
-    def test_o_gesto_que_da_certo_deixa_recibo_na_tela(
-            self, na_tela: dict) -> None:
+    def test_o_gesto_que_da_certo_pisca_no_botao(self, na_tela: dict) -> None:
         """A linha **L323** do CSV, medida nesta aba — e não afirmada.
 
-        O canal é da ONDA0-P (D-01, *"no próprio cartão, como a recusa"*) e esta
-        aba é uma das cinco que ele fecha. Aqui não há cartão de controle — a
-        aba é sobre a MÁQUINA —, logo o recado vira a tarja do rodapé, que é
-        honesto: não há de quem dizer.
+        A PERGUNTA FOI INVERTIDA EM 05/09/2026, e a medição continua a mesma. O
+        defeito que esta régua guarda é *o gesto voltou sem levantar e a tela
+        ficou muda* — o buraco da L323, que a D-01 fechou em 04/09 com o cartão.
+        O que mudou é a RESPOSTA: ela escolheu, na `03-Q4`, que um gesto sem
+        notícia **pisca** em vez de falar.
 
-        **A frase é a `FRASE_DE_SUCESSO` do piloto**, e não uma desta aba: a do
-        produto para estes atos (`daemon_actions._SYSTEMCTL_OK_MSG`) diz
-        *"Hefesto"*, e nesta aba a palavra ficou com a Jogar por decisão dela
-        (31/08). Está relatado.
+            *"O campo que você acabou de mexer ganha uma borda verde por cerca
+            de um segundo e meio e volta ao normal sozinho; nada muda de lugar e
+            nenhuma palavra nova entra na tela."*
+
+        O gesto desta régua devolve `None` — não traz notícia —, então a tela
+        responde com a classe e **não** com o `"Pronto."`, que era a palavra que
+        a decisão dela tirou. Um gesto desta aba que TROUXER `recado` continua
+        indo ao cartão, e é o que `test_a_frase_do_dono_vence` guarda no arquivo
+        do piloto.
+
+        AS DUAS METADES, e nenhuma vale sozinha: o campo piscando (a tela
+        respondeu) e nenhuma frase (a palavra saiu). Sem a segunda, esta régua
+        passaria com o `"Pronto."` de volta na tela.
         """
-        import hefesto_vivo as hv
-
-        recados = na_tela["depois-do-pouso"]["recados"]
-        assert recados, (
+        pousado = na_tela["depois-do-pouso"]["reaplicar"]
+        assert pousado and pousado["deu_certo"], (
             "o gesto voltou sem levantar e a tela não disse nada — é o buraco "
-            "da L323, e a D-01 o fechou em 04/09.")
-        assert any(r["texto"] == hv.FRASE_DE_SUCESSO for r in recados), recados
-        assert all(r["tom"] == "sucesso" for r in recados), recados
+            f"da L323, e agora quem o fecha é a piscada da `03-Q4`: {pousado}")
+        recados = na_tela["depois-do-pouso"]["recados"]
+        assert not recados, (
+            "o gesto não trouxe notícia e a tela falou mesmo assim — a palavra "
+            f"nova é o que a decisão dela tirou: {recados}")
 
     def test_a_peca_nao_mexe_no_numero_de_enderecos_da_pagina(
             self, na_tela: dict) -> None:

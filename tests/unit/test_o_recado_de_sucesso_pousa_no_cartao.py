@@ -15,9 +15,21 @@ DURANTE a espera, no lugar exato do clique. Há um gesto desta casa que leva
 das dez abas tinha estado em voo: o clique sumia por nove segundos e meio e o
 segundo clique parecia o primeiro.
 
-DOIS SEGUNDOS CANAIS FORAM RECUSADOS POR ELA NO MESMO DIA, e esta régua existe
-também para que ninguém os construa: *o campo que pisca* (aba 03, conflito C-3)
-e *a faixa embaixo da grade* (aba 05, conflito C-6). **Um fato, um sinal.**
+**UM FATO, UM SINAL** — e é a razão inteira de o canal do cartão não se
+duplicar. Esta metade continua valendo.
+
+A OUTRA METADE CADUCOU EM 05/09/2026. Este parágrafo dizia que ELA recusara
+*o campo que pisca* (aba 03) e *a faixa embaixo da grade* (aba 05), e que esta
+régua existia também para que ninguém os construísse. Quem recusou foi o PO,
+lendo a D-01 como se ela fechasse a forma — os conflitos C-3 e C-6 são dele. Em
+05/09 ela respondeu a `03-Q4` vendo as quatro formas lado a lado e escolheu o
+campo que pisca. **A palavra dela vence a leitura que o PO fez da palavra
+dela.**
+
+E a piscada não é um segundo canal para o mesmo fato: é o mesmo fato num sinal
+mais barato. Desde então o cartão diz só o que tem NOTÍCIA, e o gesto que só
+repete o que ela acabou de fazer responde piscando. As duas peças deixaram de
+disputar, e esta régua mede as duas.
 
 POR QUE ELA ABRE UM WebKit DE VERDADE, com o piloto do produto: porque a forma
 de defeito mais cara desta casa é *alguém curar o caminho e provar a cura num
@@ -123,9 +135,26 @@ LER_A_TELA = r"""
     botao: b ? {
       classes: b.className,
       em_voo: b.classList.contains('hef-em-voo'),
+      // A PISCADA DO "DEU CERTO" — 05/09/2026, decisão dela na `03-Q4`.
+      deu_certo: b.classList.contains('hef-deu-certo'),
+      // A COR VEM DO CSSOM, e não da classe — mesma razão do `cor` dos recados
+      // acima: a classe diz que a regra foi ESCRITA, o CSSOM diz que ela PEGOU.
+      // Sem isto, arrancar o `!important` da folha deixa a régua verde e o olho
+      // sem ver nada, que é o defeito que o `cursor:pointer` já produziu em
+      // 04/09 um degrau antes.
+      borda: getComputedStyle(b).borderTopColor,
+      contorno: getComputedStyle(b).outlineColor,
+      contorno_larg: getComputedStyle(b).outlineWidth,
       voo: b.getAttribute('data-hef-voo') || '',
       texto: (b.textContent || '').trim(),
       filhos: b.children.length,
+      // A GEOMETRIA, arredondada ao pixel: é a metade da decisão dela que
+      // nenhuma leitura de classe mede — *"nada muda de lugar"*. É o que separa
+      // o `outline` (que não ocupa espaço) de uma borda mais grossa.
+      caixa: (function(r){ return {x: Math.round(r.x), y: Math.round(r.y),
+                                   larg: Math.round(r.width),
+                                   alt: Math.round(r.height)}; })(
+               b.getBoundingClientRect()),
     } : null,
   });
 })()
@@ -215,7 +244,10 @@ def medido() -> dict:
     do_produto = {
         "sucesso": float(hv.SEGUNDOS_DO_RECADO_DE_SUCESSO),
         "recusa": float(hv.SEGUNDOS_DO_RECADO),
-        "frase": str(hv.FRASE_DE_SUCESSO),
+        # A PISCADA É DELA E TEM DONO: sem ler o valor do produto aqui, trocar
+        # 1500 por 15 deixaria a régua verde, porque ela só mede "acendeu" e
+        # "apagou". O número entra na MENSAGEM de erro, que é onde ele serve.
+        "piscada_ms": int(hv.MS_DA_PISCADA),
     }
     MESA["estado"] = ESTADO
     hv.mesa_viva.estado_do_daemon = lambda *a, **k: MESA["estado"]  # type: ignore[assignment]
@@ -417,16 +449,106 @@ def test_a_tela_estava_muda_antes(medido: dict) -> None:
 
 
 # --------------------------------------------------------------------------
-# 1. a frase de sucesso chega ao DOM, e chega ao cartão certo
+# 1. o sucesso CALADO pisca e não fala — e o que ele guarda é o mesmo defeito
 # --------------------------------------------------------------------------
-def test_a_frase_de_sucesso_chega_ao_dom(medido: dict) -> None:
-    frases = _frases(medido["depois-do-sucesso"])
-    assert frases, (
-        "o gesto deu certo e o cartão ficou MUDO. É o defeito que a D-01 fecha: "
-        "'aplicado' saía no terminal de quem lançou a janela, e quem clica não "
-        "lê terminal.")
-    assert medido["produto"]["frase"] in frases[0], (
-        f"a frase que chegou não é a do produto: {frases[0]!r}")
+def test_o_sucesso_calado_pisca_e_nao_fala(medido: dict) -> None:
+    """A PERGUNTA FOI INVERTIDA EM 05/09/2026, e a medição é a mesma.
+
+    Ela era `test_a_frase_de_sucesso_chega_ao_dom` e exigia o ``"Pronto."`` no
+    DOM. O defeito de origem que ela guarda continua sendo *o gesto deu certo e
+    o cartão ficou MUDO* — "aplicado" saía no terminal de quem lançou a janela,
+    e quem clica não lê terminal. O que mudou é a RESPOSTA, por decisão dela na
+    `03-Q4`:
+
+        *"O campo que você acabou de mexer ganha uma borda verde por cerca de um
+        segundo e meio e volta ao normal sozinho; nada muda de lugar e nenhuma
+        palavra nova entra na tela."*
+
+    O gesto deste trecho é o `mic.set` PASSANDO, e `frase_do_ato_do_microfone`
+    devolve `None` no caminho de sucesso — não há notícia. Então a tela pisca.
+
+    AS DUAS ASSERÇÕES, e nenhuma vale sozinha: o botão com a classe (a tela
+    respondeu) e o DOM sem frase (a palavra saiu). Sem a segunda, o Passo 4
+    poderia entrar com o ``"Pronto."`` ainda na tela e esta régua não veria.
+    """
+    botao = medido["depois-do-sucesso"]["botao"]
+    assert botao and botao["deu_certo"], (
+        "o gesto deu certo e o campo não piscou — é o defeito que a D-01 fecha, "
+        f"na forma que ela escolheu na 03-Q4: {botao}")
+    # E A REGRA TEM DE PEGAR, não só existir. Comparado contra o MESMO botão
+    # antes do clique, que é a régua independente — não há verde digitado aqui.
+    #
+    # O QUE ESTA LINHA **NÃO** PROVA, e a ausência é medida (05/09/2026):
+    # arrancar o `!important` da folha e rodar esta régua dá VERDE. O botão que
+    # ela clica (`.mudo-i`, apagado) não declara `border-color` própria, então a
+    # folha de usuário vence sem precisar do `!important`. Quem provaria são os
+    # elementos que declaram cor: `.mudo-i.on` (`02-controles.html:1420`, que
+    # pede `var(--red)`) e `select.modo` (`03-gatilhos.html:1050`, que pede
+    # `var(--purple)`) — e nenhum dos dois está no caminho deste clique.
+    #
+    # O `!important` FICA MESMO ASSIM, e não por precaução: a mesma folha já
+    # pagou exatamente este preço em 04/09, quando o `cursor` saiu `pointer` e
+    # não `progress` porque as dez páginas declaram `cursor` nos botões. É a
+    # mesma classe de defeito, medida, no mesmo arquivo.
+    antes = medido["antes"]["botao"]
+    assert botao["borda"] != antes["borda"] or botao["contorno_larg"] != antes["contorno_larg"], (
+        "a classe entrou e a tela não mudou de cor — o `!important` da folha "
+        f"não pegou: antes={antes['borda']}/{antes['contorno_larg']} "
+        f"durante={botao['borda']}/{botao['contorno_larg']}")
+    assert _frases(medido["depois-do-sucesso"]) == [], (
+        "o gesto não trouxe notícia e a tela falou mesmo assim — a palavra nova "
+        f"é o que a decisão dela tirou: {_frases(medido['depois-do-sucesso'])}")
+
+
+def test_a_piscada_apaga_sozinha(medido: dict) -> None:
+    """~2,9 s depois do clique a classe saiu, e o `data-hef-voo` não ficou.
+
+    Um campo que ficasse verde para sempre afirmaria um clique de dez minutos
+    atrás — a mesma doença do botão que fica em voo, que o piloto já nomeia.
+
+    E O ATRIBUTO ÓRFÃO É A SEGUNDA METADE: se o `data-hef-voo` sobrevivesse à
+    piscada, o pouso seguinte acharia DOIS elementos com o mesmo número e
+    devolveria o rótulo errado a um deles. É por isso que a retirada agendada
+    procura pela CLASSE, e o número sai antes.
+    """
+    botao = medido["depois-de-muitos-tiques"]["botao"]
+    assert botao and not botao["deu_certo"], (
+        f"a piscada não apagou sozinha em {medido['produto']['piscada_ms']} ms: {botao}")
+    assert botao["voo"] == "", (
+        f"o número do voo ficou para trás no elemento: {botao}")
+
+
+def test_a_piscada_nao_acende_na_recusa(medido: dict) -> None:
+    """Recusa é laranja, e o campo NÃO pisca verde.
+
+    É a régua do Passo 2: sem o desfecho no pouso, o `voltouDoVoo` piscaria
+    verde em cima de um cartão laranja — a tela dizendo as duas coisas de uma
+    vez sobre o mesmo clique.
+    """
+    botao = medido["com-a-recusa"]["botao"]
+    assert botao and not botao["deu_certo"], (
+        f"o gesto levantou e o campo piscou verde mesmo assim: {botao}")
+    tons = [r["tom"] for r in medido["com-a-recusa"]["recados"]]
+    assert "recusa" in tons or "erro" in tons, (
+        f"a recusa não chegou ao cartão — o outro lado da mesma medição: {tons}")
+
+
+def test_o_pisca_nao_move_a_tela(medido: dict) -> None:
+    """A metade da decisão dela que nenhuma leitura de classe mede.
+
+        *"nada muda de lugar"*
+
+    É o que separa o `outline` (que não ocupa espaço na caixa) de uma borda mais
+    grossa, que empurraria o vizinho. A comparação é do MESMO elemento, antes do
+    clique e com a piscada acesa, na mesma unidade.
+    """
+    antes = medido["antes"]["botao"]
+    piscando = medido["depois-do-sucesso"]["botao"]
+    assert antes and piscando, (antes, piscando)
+    assert piscando["deu_certo"], "a foto do 'durante' não pegou a piscada acesa"
+    assert antes["caixa"] == piscando["caixa"], (
+        "a piscada mexeu na geometria do campo — `outline` não ocupa espaço, "
+        f"borda ocupa: antes={antes['caixa']} durante={piscando['caixa']}")
 
 
 def test_a_frase_pousa_no_cartao_de_quem_foi_clicado(medido: dict) -> None:
@@ -434,8 +556,15 @@ def test_a_frase_pousa_no_cartao_de_quem_foi_clicado(medido: dict) -> None:
 
     Na mesa de quatro, o sucesso de um no cartão do vizinho é pior que sucesso
     nenhum — é a tela afirmando, sobre um aparelho, um ato que foi de outro.
+
+    A LEITURA MUDOU EM 05/09/2026, E A MEDIÇÃO NÃO. Ela lia o
+    `depois-do-sucesso`, que é o gesto CALADO — e desde a `03-Q4` ele não
+    deposita frase nenhuma, ele pisca. A pergunta *"em que cartão pousa uma
+    frase de sucesso"* continua inteira: o que mudou é onde há uma frase de
+    sucesso para medir, e é o `com-a-frase-do-dono`, o gesto que devolve
+    `{"recado": …}`.
     """
-    (r,) = _r(medido["depois-do-sucesso"])
+    (r,) = _r(medido["com-a-frase-do-dono"])
     assert r["dentro_de"] == "p1", r
     assert r["chave"] == CHAVE_P1, (
         f"o aviso foi endereçado por {r['chave']!r} — a chave é o `uniq` "
@@ -447,16 +576,30 @@ def test_o_aviso_sobrevive_aos_tiques(medido: dict) -> None:
 
     Um recibo que só existisse no instante do clique não seria visto por
     ninguém — é a mesma razão pela qual este canal é um DEPÓSITO e não um evento.
+
+    ELA MEDE O RECIBO DA RECUSA desde 05/09/2026, e a razão é a mesma da irmã
+    acima: o sucesso calado não deposita mais nada, então não há recibo dele a
+    sobreviver. A recusa deposita, dura 30 s, e atravessa os tiques da mesma
+    forma — o depósito é um só. **O `com-a-recusa` é lido 700 ms depois do
+    clique e o `depois-do-pouso` uns 3 s depois**, com a repintura correndo por
+    cima o tempo todo: é o mesmo "sobreviveu aos tiques" que ela sempre mediu.
     """
-    assert _frases(medido["depois-de-muitos-tiques"]), (
-        "o recibo sumiu depois de ~22 tiques, e não por vencimento")
+    assert _frases(medido["depois-do-pouso"]), (
+        "o recibo sumiu com a repintura, e não por vencimento")
 
 
 # --------------------------------------------------------------------------
 # 2. o tom — dois desfechos, duas cores, um canal só
 # --------------------------------------------------------------------------
 def test_o_sucesso_e_verde_e_a_recusa_e_laranja(medido: dict) -> None:
-    (sucesso,) = _r(medido["depois-do-sucesso"])
+    """Os dois tons do cartão, e eles não mudaram.
+
+    A leitura do lado do sucesso passou do `depois-do-sucesso` para o
+    `com-a-frase-do-dono` em 05/09/2026, pela razão escrita em
+    `test_a_frase_pousa_no_cartao_de_quem_foi_clicado`: o sucesso CALADO não
+    deposita mais, e um sucesso com NOTÍCIA continua depositando igual.
+    """
+    (sucesso,) = _r(medido["com-a-frase-do-dono"])
     (recusa,) = _r(medido["com-a-recusa"])
     assert sucesso["tom"] == "sucesso", sucesso
     assert recusa["tom"] == "recusa", recusa

@@ -144,18 +144,27 @@ SEGUNDOS_DO_RECADO = 30.0
 #: estado**.
 SEGUNDOS_DO_RECADO_DE_SUCESSO = 6.0
 
-#: A FRASE QUE O PILOTO DIZ QUANDO O GESTO NÃO TRAZ UMA.
+#: A FRASE QUE O PILOTO DIZIA QUANDO O GESTO NÃO TRAZIA UMA — MORTA em
+#: 05/09/2026, decisão dela na `03-Q4`: *"nenhuma palavra nova entra na tela"*.
 #:
-#: ELA NÃO É INVENÇÃO: `"Pronto."` é a palavra que a janela GTK desta casa já usa
-#: para o mesmo fato (`app/actions/daemon_actions._SYSTEMCTL_OK_MSG`), e a regra
-#: de 04/09 é a D-05 — *pela função dona*. Uma segunda palavra para "deu certo"
-#: faria as duas janelas do mesmo produto falarem línguas diferentes.
+#: Ela era `"Pronto."`, a mesma palavra que a janela GTK usa para o mesmo fato
+#: (`app/actions/daemon_actions._SYSTEMCTL_OK_MSG`), e a escolha de reusá-la
+#: continua certa pela D-05 — *pela função dona*. **O que morreu não é a
+#: palavra: é o piloto FALAR quando não tem o que dizer.** Quem responde agora é
+#: a piscada (`MS_DA_PISCADA`), e a palavra do GTK segue viva no dono dela.
 #:
-#: **QUEM TEM O QUE DIZER DIZ MELHOR.** Um gesto que devolva `{"recado": "…"}`
-#: manda a própria frase para o cartão, e ela vence esta. É onde a D-12 pousa —
-#: *"o microfone ligou, mas o canal dele está mudo no sistema"* é frase do dono
-#: do assunto, não do piloto. O piloto é o CANAL; o texto é de quem sabe.
-FRASE_DE_SUCESSO = "Pronto."
+#: **QUEM TEM O QUE DIZER CONTINUA DIZENDO.** Um gesto que devolva
+#: `{"recado": "…"}` manda a própria frase para o cartão, exatamente como antes.
+#: É onde a D-12 pousa — *"o microfone ligou, mas o canal dele está mudo no
+#: sistema"* é frase do dono do assunto, não do piloto.
+
+#: QUANTO TEMPO O CAMPO FICA VERDE depois de um gesto que deu certo — 1,5 s, e
+#: o número é dela (`03-Q4`, *"cerca de um segundo e meio"*).
+#:
+#: **Ele não é o `SEGUNDOS_DO_RECADO_DE_SUCESSO`**, e a diferença é de natureza:
+#: o recado verde é frase A LER e tem 6,0 s; a piscada é sinal A VER, e um sinal
+#: que dura o tempo de uma frase vira ruído. Dois números, duas coisas.
+MS_DA_PISCADA = 1500
 
 #: O QUE O PILOTO DIZ QUANDO A PÁGINA MORRE E ELE A RECARREGA.
 #:
@@ -818,18 +827,40 @@ BOOTSTRAP = r"""
   // do documento, e o botão que está na tela ficaria em voo para sempre. Zero
   // elementos é a resposta certa nesse caso, e o rótulo guardado é jogado fora
   // junto — senão o mapa cresce a cada gesto, para sempre.
-  window.__hef.voltouDoVoo = function(n){
+  //
+  // E O POUSO PISCA VERDE QUANDO DEU CERTO — 05/09/2026, decisão dela na
+  // `03-Q4`. O `certo` chega do `finally` do piloto, que é quem sabe qual dos
+  // três desfechos aconteceu; o JS não adivinha. Sem o segundo argumento, o
+  // pouso continua sendo só a volta do voo — que é o que uma régua chamando
+  // `voltouDoVoo(n)` à mão espera.
+  //
+  // A CLASSE SAI SOZINHA em MS_DA_PISCADA, e o número é dela (*"cerca de um
+  // segundo e meio"*). Um campo que ficasse verde para sempre afirmaria um
+  // clique de dez minutos atrás — a mesma doença do botão que fica em voo, que
+  // este arquivo já nomeia acima.
+  //
+  // O `data-hef-voo` SAI ANTES DA PISCADA, e a ordem importa: se ele ficasse
+  // até a classe apagar, o pouso seguinte acharia dois elementos com o mesmo
+  // número. Por isso a retirada agendada procura pela CLASSE, não pelo número.
+  window.__hef.voltouDoVoo = function(n, certo){
     const chave = String(n);
     let k = 0;
+    const piscando = [];
     for(const el of document.querySelectorAll('[data-hef-voo="' + chave + '"]')){
       el.classList.remove('hef-em-voo');
       if(window.__hef.rotulos[chave] !== undefined){
         el.innerHTML = window.__hef.rotulos[chave];
       }
       el.removeAttribute('data-hef-voo');
+      if(certo){ el.classList.add('hef-deu-certo'); piscando.push(el); }
       k += 1;
     }
     delete window.__hef.rotulos[chave];
+    if(piscando.length){
+      setTimeout(function(){
+        for(const el of piscando){ el.classList.remove('hef-deu-certo'); }
+      }, __MS_DA_PISCADA__);
+    }
     return k;
   };
   window.__hef.pintar = function(p){
@@ -1130,7 +1161,11 @@ BOOTSTRAP = r"""
   }
   return 'ok';
 })();
-"""
+""".replace("__MS_DA_PISCADA__", str(MS_DA_PISCADA))
+#: O NÚMERO DA PISCADA NÃO SE DIGITA NO JAVASCRIPT, e é a razão de este
+#: `replace` existir: `MS_DA_PISCADA` é o dono, e uma segunda cópia dentro da
+#: string crua envelheceria em silêncio — o Python diria 1500 e a tela faria
+#: outra coisa. O `r"""` não pode virar f-string: o JS está cheio de `{` e `}`.
 
 
 #: A TABELA LOCAL MORREU em 01/09/2026, e a razão é de processo: ela era um
@@ -1210,9 +1245,10 @@ def _escolher_na_fita(ctx: pacotes.Contexto, o: dict[str, Any],
 
     E ELE MANDA A PRÓPRIA FRASE. Todo gesto que volta sem levantar deposita um
     recado na tela — decisão dela, D-01: *"No próprio cartão, como a recusa."*
-    Sem esta frase valeria a `FRASE_DE_SUCESSO` (*"Pronto."*), que sobre uma
-    ESCOLHA não diz nada; com ela, a tarja de rodapé nomeia quem a aba passou a
-    mirar. O cartão fica de fora de propósito: ver `_endereco_do_chip`.
+    Sem esta frase a tela apenas PISCARIA (`MS_DA_PISCADA`), e uma piscada
+    sobre uma ESCOLHA não diz qual; com ela, a tarja de rodapé nomeia quem a
+    aba passou a mirar. O cartão fica de fora de propósito: ver
+    `_endereco_do_chip`.
     """
     pref = str(o.get("pref") or "").strip()
     if pref == "todos":
@@ -2122,21 +2158,36 @@ class Piloto:
                 # `idle_add` respeita a ordem de agendamento na mesma
                 # prioridade, então o recado já está na tela quando o rótulo
                 # volta ao normal.
-                GLib.idle_add(lambda v=voo: self._pousou(v))
+                #
+                # E O POUSO LEVA O DESFECHO — 05/09/2026, decisão dela na
+                # `03-Q4`. O `finally` continua sendo o dono do pouso pela razão
+                # acima; o que ele passou a levar é o fato que os dois ramos do
+                # `try` já anotaram em `self.desfechos`. Ler dali, e não de uma
+                # variável nova, é o que impede os dois de discordarem: quem
+                # mudar o desfecho muda o pouso junto.
+                deu_certo = self.desfechos.get(f"{pagina}:{nome}", ("", ""))[0] == "aplicou"
+                GLib.idle_add(lambda v=voo, c=deu_certo: self._pousou(v, c))
 
         threading.Thread(target=trabalhar, daemon=True).start()
 
-    def _pousou(self, voo: str) -> bool:
+    def _pousou(self, voo: str, certo: bool = False) -> bool:
         """O botão volta do voo — a classe sai e o rótulo original é devolvido.
 
         Sem número não há o que devolver: um gesto que chegou por caminho que
         não passa pelo ouvinte (uma régua chamando `_gesto` à mão) não carimbou
         elemento nenhum, e mandar JS por isso seria poluir o console de quem
         depura com uma varredura que não acha nada.
+
+        `certo` PISCA O CAMPO EM VERDE (05/09/2026, decisão dela na `03-Q4`), e
+        o default é `False` de propósito: quem chama sem dizer não afirma que
+        deu certo. Um default verdadeiro faria a recusa piscar verde, que é a
+        tela dizendo as duas coisas de uma vez.
         """
         if not voo:
             return False
-        self._js(f"window.__hef && window.__hef.voltouDoVoo({_json(voo)})")
+        self._js(
+            f"window.__hef && window.__hef.voltouDoVoo({_json(voo)}, {_json(bool(certo))})"
+        )
         return False
 
     def _deu_certo(self, pagina: str, nome: str, resposta: object = None) -> bool:
@@ -2228,17 +2279,40 @@ class Piloto:
             *"No próprio cartão, como a recusa."*   — D-01
 
         DUAS RECOMENDAÇÕES PROPUNHAM OUTRO CANAL e as duas foram recusadas por
-        ela no mesmo dia (os conflitos C-3 e C-6): *o campo que pisca*, na aba
-        03, e *a faixa embaixo da grade*, na 05. **Não construa nenhum dos dois.**
-        É um fato, um sinal — e é o que faz esta peça fechar as cinco abas de
-        uma vez em vez de virar cinco peças que divergem.
+        UM FATO, UM SINAL — e é o que faz esta peça fechar as cinco abas de uma
+        vez em vez de virar cinco peças que divergem. Esta metade continua
+        valendo inteira.
+
+        A OUTRA METADE CADUCOU EM 05/09/2026, e a data importa. Este parágrafo
+        dizia que ELA recusara *o campo que pisca* (aba 03) e *a faixa embaixo
+        da grade* (aba 05), e mandava: **"não construa nenhum dos dois"**. Quem
+        recusou foi o PO, lendo a D-01 (*"no próprio cartão, como a recusa"*)
+        como se ela fechasse a FORMA — os conflitos C-3 e C-6 de
+        `2026-09-04-O-PO-DECIDE-as-54-e-os-sete-conflitos.md` são dele, não
+        dela. Em 05/09 ela respondeu a `03-Q4` vendo as quatro formas lado a
+        lado e escolheu o campo que pisca. **A palavra dela vence a leitura que
+        o PO fez da palavra dela.**
+
+        E a piscada não é um segundo canal para o mesmo fato: é o mesmo fato num
+        sinal mais barato. O cartão passa a dizer só o que tem notícia, e as
+        duas peças deixam de disputar.
 
         A FRASE É DO DONO DO ASSUNTO, e não deste arquivo: um gesto que devolva
-        `{"recado": "…"}` manda a própria, e o piloto a leva. Sem isso vale a
-        `FRASE_DE_SUCESSO`, que é a palavra que a janela GTK já usa. O `recado`
+        `{"recado": "…"}` manda a própria, e o piloto a leva. O `recado`
         SAI da carga antes de a resposta ir para a pintura: ele não é endereço de
         página nenhuma, e deixá-lo entrar faria o `escrever()` procurar um
         `data-campo="recado"` que não existe.
+
+        E QUANDO NÃO HÁ FRASE, A TELA NÃO FALA — 05/09/2026, decisão dela na
+        `03-Q4`. Até aqui valia uma frase do piloto (*"Pronto."*), e ela tirou
+        a palavra nova da tela:
+
+            *"nada muda de lugar e nenhuma palavra nova entra na tela"*
+
+        **A regra que isso escreve:** *quando o gesto só repete o que ela acabou
+        de fazer, a tela pisca; quando ele tem NOTÍCIA, a tela fala.* O canal
+        continua sendo um só — o que muda é que ele para de falar sobre o que não
+        tem o que dizer. Quem pisca é o `voltouDoVoo`, no pouso.
 
         ELE NÃO SUBSTITUI O `_deu_certo`, ele o EMBRULHA — e isso é de propósito:
         `_deu_certo` é o caminho da carga de volta (`plugin.list`, "Ver
@@ -2251,7 +2325,8 @@ class Piloto:
                 frase = bruto.strip()
             if "recado" in resposta:
                 resposta = {k: v for k, v in resposta.items() if k != "recado"}
-        self._depositar(uniq, frase or FRASE_DE_SUCESSO, "sucesso")
+        if frase:
+            self._depositar(uniq, frase, "sucesso")
         return self._deu_certo(pagina, nome, resposta)
 
     def _a_pagina_morreu(self, motivo: str) -> None:
