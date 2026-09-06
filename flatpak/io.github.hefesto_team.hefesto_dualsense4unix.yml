@@ -262,6 +262,16 @@ modules:
       - install -Dm644 -t /app/share/hefesto-dualsense4unix/assets/profiles_default/
           assets/profiles_default/*.json
 
+      # PERFIS-SAO-PERFIS-01 (06/09): os oito gêneros saíram de profiles_default
+      # para cá — eles não são perfil, são Estilo de Jogo (decisão dela). O
+      # loader lê esta pasta em UM caminho: a migração one-shot que tira os
+      # gêneros JÁ SEMEADOS da lista compara cada arquivo com o de fábrica
+      # antes de mexer. Sem esta linha ela não acha com o que comparar dentro
+      # do sandbox, recua por segurança, e quem instalou pelo Flatpak fica com
+      # as oito linhas na aba Perfis para sempre.
+      - install -Dm644 -t /app/share/hefesto-dualsense4unix/assets/estilos_de_jogo/
+          assets/estilos_de_jogo/*.json
+
       # Instalar arquivo .desktop adaptado para o App ID Flatpak
       - install -Dm644 flatpak/io.github.hefesto_team.hefesto_dualsense4unix.desktop
           /app/share/applications/io.github.hefesto_team.hefesto_dualsense4unix.desktop

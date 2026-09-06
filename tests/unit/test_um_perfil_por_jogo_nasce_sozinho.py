@@ -91,15 +91,28 @@ def test_o_perfil_nasce_com_nome_appid_e_prioridade_e_nada_mais(
         "process_name": [],
     }
     assert dados["priority"] == loader.PRIORIDADE_DO_PERFIL_DE_JOGO == 80
-    # Sem opinião: nenhuma das seções opcionais foi escrita…
-    for secao in ("mode", "mic", "speaker", "mouse", "key_bindings"):
-        assert secao not in dados, f"o perfil semeado opinou sobre {secao}"
-    # …e as obrigatórias saem no default do schema, não numa escolha do produto.
-    assert dados["leds"]["lightbar"] == [0, 0, 0]
-    assert dados["leds"]["auto_player_colors"] is True
-    assert dados["triggers"]["left"]["mode"] == "Off"
-    assert dados["triggers"]["right"]["mode"] == "Off"
-    assert dados["suppress_desktop_emulation"] is False
+    # "E NADA MAIS" passou a ser LITERAL em 06/09/2026 (PERFIS-SAO-PERFIS-01).
+    # Ela, sobre os 24 que já estavam no disco: *"mantemos só o nome e o id pra
+    # eu reconfigurar um a um"*. O que saiu daqui eram cinco chaves repetindo o
+    # DEFAULT DO ESQUEMA por extenso — e era isso que fazia um perfil sem
+    # nenhuma escolha dela parecer configurado.
+    assert list(dados) == list(loader.CHAVES_DO_PERFIL_DE_JOGO), dados
+
+    # E o que o produto CARREGA continua sendo o default do esquema, chave a
+    # chave: enxugar o arquivo não mudou o comportamento de nada.
+    from hefesto_dualsense4unix.profiles.schema import Profile
+
+    perfil = Profile.model_validate(dados)
+    assert perfil.leds.lightbar == (0, 0, 0)
+    assert perfil.leds.auto_player_colors is True
+    assert perfil.triggers.left.mode == "Off"
+    assert perfil.triggers.right.mode == "Off"
+    assert perfil.suppress_desktop_emulation is False
+    assert perfil.mode is None
+    assert perfil.mic is None
+    assert perfil.speaker is None
+    assert perfil.mouse is None
+    assert perfil.key_bindings is None
 
 
 def test_o_perfil_semeado_e_valido_para_o_schema(tmp_path: Path) -> None:
@@ -699,6 +712,13 @@ def test_o_save_e_a_semeadura_gravam_o_mesmo_formato(
     downgrade). MEDIDO em 22/08/2026: arrancar a omissão de `_payload_do_perfil`
     não fazia UM teste do caminho do `save_profile` ficar vermelho — a regra
     estava sem portão dos dois lados.
+
+    O QUE MUDOU EM 06/09/2026 (PERFIS-SAO-PERFIS-01): o perfil de jogo nasce
+    com TRÊS chaves, e o save continua gravando o payload inteiro. Os dois
+    formatos não divergiram — o da semeadura é um SUBCONJUNTO EXATO do outro,
+    porque `_payload_do_perfil_de_jogo` chama `_payload_do_perfil` e só então
+    corta. É isso que esta régua passou a medir, e é a mesma propriedade de
+    antes: as regras de omissão continuam tendo um dono só.
     """
     destino = tmp_path / "perfis"
     monkeypatch.setattr(loader, "profiles_dir", lambda ensure=False: destino)
@@ -711,7 +731,9 @@ def test_o_save_e_a_semeadura_gravam_o_mesmo_formato(
     caminho = loader.save_profile(perfil, origem="teste")
     salvo = json.loads(caminho.read_text(encoding="utf-8"))
 
-    assert salvo == semeado
+    # Subconjunto EXATO: o que a semeadura gravou, o save regrava igual.
+    assert {k: salvo[k] for k in semeado} == semeado
+    assert list(semeado) == list(loader.CHAVES_DO_PERFIL_DE_JOGO)
     for secao in ("mode", "mic", "speaker", "mouse", "key_bindings", "controllers"):
         assert secao not in salvo, f"o save gravou {secao} como null (quebra downgrade)"
 

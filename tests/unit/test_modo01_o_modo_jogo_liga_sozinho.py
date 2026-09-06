@@ -71,7 +71,24 @@ from hefesto_dualsense4unix.testing import FakeController
 
 APPID_MMJ = 2111190  # Mullet Mad Jack — o jogo do relato
 WM_MMJ = f"steam_app_{APPID_MMJ}"
-ASSETS_DIR = Path(__file__).resolve().parents[2] / "assets" / "profiles_default"
+#: PERFIS-SAO-PERFIS-01 (06/09/2026): o dado de fábrica mora em DUAS casas —
+#: `profiles_default/` (o que a semeadura copia) e `estilos_de_jogo/` (os oito
+#: gêneros, que por decisão dela não são perfil e não são mais semeados). O
+#: conteúdo é o mesmo; mudou o endereço.
+_RAIZ_DOS_ASSETS = Path(__file__).resolve().parents[2] / "assets"
+CASAS_DE_FABRICA = (
+    _RAIZ_DOS_ASSETS / "profiles_default",
+    _RAIZ_DOS_ASSETS / "estilos_de_jogo",
+)
+
+
+def asset_de_fabrica(nome: str) -> Path:
+    """O arquivo de fábrica `nome.json`, na casa em que ele estiver hoje."""
+    for casa in CASAS_DE_FABRICA:
+        candidato = casa / f"{nome}.json"
+        if candidato.exists():
+            return candidato
+    return CASAS_DE_FABRICA[0] / f"{nome}.json"
 
 
 # ---------------------------------------------------------------------------
@@ -1060,7 +1077,7 @@ class TestPresetsDeJogoNascemComModo:
 
     @staticmethod
     def _preset(nome: str) -> dict[str, Any]:
-        return json.loads((ASSETS_DIR / f"{nome}.json").read_text(encoding="utf-8"))
+        return json.loads(asset_de_fabrica(nome).read_text(encoding="utf-8"))
 
     @pytest.mark.parametrize(
         # Slugs dos arquivos em assets/profiles_default/.

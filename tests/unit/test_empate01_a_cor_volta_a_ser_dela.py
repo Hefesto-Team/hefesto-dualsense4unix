@@ -101,7 +101,10 @@ APPID = "3357650"
 WM_JOGO = f"steam_app_{APPID}"
 
 RAIZ = Path(__file__).resolve().parents[2]
-FALLBACK_JSON = RAIZ / "assets" / "profiles_default" / "fallback.json"
+#: PERFIS-SAO-PERFIS-01 (06/09/2026): o `fallback` saiu da semeadura para
+#: `assets/estilos_de_jogo/` junto com os outros sete. O ARQUIVO é o mesmo — a
+#: EMPATE-01 continua sendo sobre o que ele NÃO diz sobre a cor.
+FALLBACK_JSON = RAIZ / "assets" / "estilos_de_jogo" / "fallback.json"
 GLADE = RAIZ / "src" / "hefesto_dualsense4unix" / "gui" / "main.glade"
 
 

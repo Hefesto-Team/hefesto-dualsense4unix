@@ -33,7 +33,14 @@ from pathlib import Path
 
 RAIZ = Path(__file__).resolve().parents[2]
 SCRIPT = RAIZ / "scripts" / "gui-captura" / "retratar_dialogos.py"
+#: PERFIS-SAO-PERFIS-01 (06/09/2026): o dado de fábrica mora em DUAS pastas —
+#: `profiles_default/` (semeada) e `estilos_de_jogo/` (os oito gêneros, que por
+#: decisão dela não são perfil). Para ESTE portão as duas valem igual: o que
+#: importa é que o nome fotografado já esteja VERSIONADO, e não venha do
+#: `~/.config` dela.
 PERFIS_DE_FABRICA = RAIZ / "assets" / "profiles_default"
+ESTILOS_DE_FABRICA = RAIZ / "assets" / "estilos_de_jogo"
+CASAS_DE_FABRICA = (PERFIS_DE_FABRICA, ESTILOS_DE_FABRICA)
 
 #: O que denuncia conversa com o daemon vivo. A lista é a MESMA do portão das
 #: abas de propósito: cada um destes traz, no payload, MAC, nome de máquina ou
@@ -113,7 +120,11 @@ def _constantes_do_modulo(arvore: ast.Module) -> dict[str, str]:
 
 
 def _perfis_de_fabrica() -> set[str]:
-    return {caminho.stem for caminho in PERFIS_DE_FABRICA.glob("*.json")}
+    return {
+        caminho.stem
+        for casa in CASAS_DE_FABRICA
+        for caminho in casa.glob("*.json")
+    }
 
 
 def _chamadas_de_dialogo(
@@ -184,7 +195,7 @@ def test_os_nomes_fotografados_sao_perfis_de_fabrica() -> None:
     de_fabrica = _perfis_de_fabrica()
 
     assert de_fabrica, (
-        f"{PERFIS_DE_FABRICA} não tem perfil nenhum — a premissa deste portão "
+        f"{list(CASAS_DE_FABRICA)} não têm perfil nenhum — a premissa deste portão "
         "é que os nomes fotografados já vivem no repositório"
     )
 

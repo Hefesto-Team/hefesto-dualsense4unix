@@ -87,13 +87,18 @@ def _um_nome_de_preset() -> str:
     """Um nome que o `install_profiles.sh` de fato tentaria copiar.
 
     Sai de `assets/profiles_default/`, que é a fonte que ele lê — nunca escrito
-    à mão aqui. O `personalizado` fica de fora: tem regra própria (é o slot
-    dela, copiado se ausente), e usá-lo mediria outra coisa.
+    à mão aqui.
+
+    O `personalizado` ESTAVA EXCLUÍDO daqui, e a exclusão caducou em
+    06/09/2026: a PERFIS-SAO-PERFIS-01 tirou os oito gêneros da semeadura, e
+    ele é o único preset que sobrou. A regra própria dele (o slot dela, copiado
+    só se ausente) NÃO muda o que este teste mede — a recusa por
+    `meu_perfil.json` só vale quando esse arquivo está no destino, e aqui o
+    destino tem só o perfil carimbado. O caso continua sendo o perigoso: um
+    perfil dela com o nome de um preset que o instalador copia.
     """
     presets = sorted(
-        p.stem
-        for p in (RAIZ / "assets" / "profiles_default").glob("*.json")
-        if p.stem != "personalizado"
+        p.stem for p in (RAIZ / "assets" / "profiles_default").glob("*.json")
     )
     assert presets, "assets/profiles_default/ sem preset nenhum"
     return presets[0]

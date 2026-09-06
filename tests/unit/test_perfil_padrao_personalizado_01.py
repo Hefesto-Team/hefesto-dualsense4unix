@@ -351,11 +351,16 @@ def test_o_asset_versionado_nao_carrega_mais_o_slug() -> None:
     )
     assert dados["name"] == NOME_DO_PADRAO
 
-    # E continua sendo UM catch-all só entre os presets: o `fallback` (0) e o
-    # padrão (1). Um terceiro `any` aqui reabriria a disputa por sorteio.
+    # E o catch-all da semeadura é UM SÓ desde 06/09/2026. Era o `fallback` (0)
+    # mais o padrão (1); a PERFIS-SAO-PERFIS-01 levou o `fallback` para
+    # `assets/estilos_de_jogo/` junto com os outros sete gêneros, por decisão
+    # dela — *"isso não é perfil, isso é estilo de jogo"*. O efeito colateral é
+    # bom e vale medir: a semeadura entrega exatamente o que
+    # `profiles.sanidade` tolera (`MAX_CATCH_ALL_TOLERADOS = 1`). Um segundo
+    # `any` aqui reabriria a disputa por sorteio.
     catch_all = []
     for caminho in sorted(fabrica.glob("*.json")):
         dado = json.loads(caminho.read_text(encoding="utf-8"))
         if dado.get("match", {}).get("type") == "any":
             catch_all.append((caminho.name, dado.get("priority")))
-    assert catch_all == [("fallback.json", 0), (ARQUIVO_DO_PADRAO, 1)]
+    assert catch_all == [(ARQUIVO_DO_PADRAO, 1)]
