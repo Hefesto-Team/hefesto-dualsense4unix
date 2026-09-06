@@ -1,15 +1,18 @@
 #!/usr/bin/env python3
 """AS TRÊS DECISÕES DA ABA `09` SISTEMA — e as três são sobre o mesmo botão.
 
-Decididas pelo PO em 04/09/2026
-(`docs/process/2026-09-04-O-PO-DECIDE-as-54-e-os-sete-conflitos.md`, §2 `09`):
+A [02] é do PO em 04/09/2026
+(`docs/process/2026-09-04-O-PO-DECIDE-as-54-e-os-sete-conflitos.md`, §2 `09`);
+a [01] e a [03] são DELA, em 05/09/2026, e a [01] REVERTEU o PO.
 
-**[01] — o nome vira o trabalho: "Reaplicar ajustes".** O botão fazia DOIS
-trabalhos com um nome só, e a dica NEGAVA o caro: dizia *"Relê tudo o que esta
-aba mostra. Não muda nada."* — e o clique manda o IPC `daemon.reload`, que faz
-o serviço reaplicar a configuração e rematerializar os arquivos de ambiente que
-a Steam usa para lançar jogo. A metade barata (reler a aba, 4 ms) **já acontece
-sozinha a cada 2 s** (`a09_sistema.LENTO_S`).
+**[01] — o botão continua se chamando "Atualizar".** Palavra dela na 09-Q1:
+*"Segue fazendo os dois. Com mesmo nome"*. Ele faz DOIS trabalhos, e a dica
+NEGAVA o caro: dizia *"Relê tudo o que esta aba mostra. Não muda nada."* — e o
+clique manda o IPC `daemon.reload`, que do outro lado derruba e sobe o leitor
+dos atalhos do controle e reescreve os arquivos de ambiente que a Steam usa
+para lançar jogo. Quem para de mentir é a DICA, não o rótulo: a metade barata
+(reler a aba, 4 ms) **já acontece sozinha a cada 2 s** (`a09_sistema.LENTO_S`),
+e é por isso que o nome cabe num botão que faz os dois.
 
 **[02] — apagado e ainda assim responde.** Três botões desta página ficam sem
 trabalho a fazer, e a conta de quem está sem já existia no produto
@@ -19,7 +22,8 @@ quem chega pelo controle até a razão.
 
 **[03] — o botão diz que está trabalhando.** `daemon.reload` leva **9,5 s**
 (medido no daemon dela em 01/09) e o clique sumia por nove segundos e meio: o
-segundo clique parecia o primeiro.
+segundo clique parecia o primeiro. A palavra da espera é dela, na 09-Q3:
+*"Atualizando…"*.
 
 O QUE ESTA RÉGUA MEDE, e em três camadas — cada uma pega o que a de cima não
 consegue ver:
@@ -27,14 +31,16 @@ consegue ver:
 1. **o PACOTE** emite a razão de cada botão em TODO tique, inclusive vazia, e a
    frase é a do produto — nunca uma digitada aqui;
 2. **o DESENHO** carrega a peça inteira (botão + `?` no MESMO `data-campo`), o
-   rótulo novo, o rótulo da espera, e a dica que parou de negar;
+   rótulo que ela mandou manter, o rótulo da espera, e a dica que parou de
+   negar;
 3. **a TELA VIVA**, num WebKit de verdade com o piloto do produto: a razão
    ACENDE o cinza, o `?` aparece com a frase, a razão vazia APAGA o cinza de
    volta, as duas colunas irmãs continuam acabando no mesmo `y` nos dois
    estados, e o botão troca de palavra DURANTE a espera e volta inteiro.
 
 POR QUE A CAMADA 3 ABRE O DESENHO E NÃO O PUBLICADO: **publicar é ato dela**, e
-a decisão [01] move um pixel (o rótulo). A régua aponta o `onde.PUBLICADO` para
+a [01] move dois pixels (o rótulo e o da espera). A régua aponta o
+`onde.PUBLICADO` para
 uma cópia da bancada num diretório temporário — que é o desenho de HOJE — em vez
 de dar verde sobre a página congelada, a armadilha mais cara do
 `COMO-OLHAR-A-TELA.md`.
@@ -46,8 +52,15 @@ A MORDIDA (colada no relato desta frente):
   para sempre;
 * troque um `item_cinza(...)` por `item(...)` no gerador e a régua 7 dele
   reprova antes mesmo de a página existir;
-* tire o `em_voo=EM_VOO_REAPLICAR` e a camada 3 mede o botão dizendo
-  "Reaplicar ajustes" durante a espera inteira.
+* tire o `em_voo=EM_VOO_ATUALIZAR` do gerador e a aba inteira cai no `import
+  aba09`, com o `SystemExit` da régua 9 dele — **a camada 3 nunca chega a
+  medir**, porque a página não é escrita. Medido em 06/09/2026; a guarda do
+  gerador é mais dura que esta régua, e é ela que responde;
+* tire a palavra "atalhos" da `DICA_ATUALIZAR` e a camada 2 reprova nomeando a
+  dica que voltou a esconder o trabalho caro;
+* troque só o VALOR de `ROTULO_ATUALIZAR` e as duas linhas que o comparam com
+  `aba09.ROTULO_ATUALIZAR` continuam VERDES — medido. Quem morde é a linha que
+  cobra a palavra dela LITERAL, logo abaixo delas.
 """
 from __future__ import annotations
 
@@ -329,7 +342,7 @@ class TestODesenhoCarregaAPeca:
             solto = re.search(r'(?<![-\w])disabled(?=[\s=>])', achado.group(0))
             assert not solto, achado.group(0)
 
-    def test_o_botao_do_reload_mudou_de_nome_e_diz_a_espera(self) -> None:
+    def test_o_botao_do_reload_manteve_o_nome_e_diz_a_espera(self) -> None:
         import re
 
         import aba09
@@ -339,8 +352,28 @@ class TestODesenhoCarregaAPeca:
             _html())
         assert achado, "o botão do `atualizar` sumiu da página"
         atributos, rotulo = achado.group(1), achado.group(2)
-        assert rotulo == aba09.ROTULO_REAPLICAR, rotulo
-        assert f'data-hef-em-voo="{aba09.EM_VOO_REAPLICAR}"' in atributos
+        assert rotulo == aba09.ROTULO_ATUALIZAR, rotulo
+        assert f'data-hef-em-voo="{aba09.EM_VOO_ATUALIZAR}"' in atributos
+        # AS DUAS LINHAS ACIMA NÃO SEGURAM A PALAVRA, e isso foi MEDIDO em
+        # 06/09/2026: o gerador escreve a página a partir das MESMAS duas
+        # constantes, e `import aba09` a reescreve antes desta leitura. Com
+        # `ROTULO_ATUALIZAR = "Reaplicar ajustes"` o gerador saiu `rc=0` — a
+        # faixa do serviço impressa já dizia o rótulo trocado — e esta régua
+        # passou. Uma régua que compara a constante consigo mesma mede o
+        # acordo do arquivo com ele próprio, não a decisão.
+        #
+        # AS DUAS PALAVRAS SÃO DELA, LITERAIS (09-Q1 e 09-Q3, 05/09/2026), e é
+        # por isso que elas se digitam aqui uma vez: o dono desta decisão é a
+        # frase dela, e não existe outro lugar no repositório a quem perguntar
+        # — `docs/data/decisoes-dela.csv` ainda não tem a linha da 09-Q1.
+        assert rotulo == "Atualizar", (
+            f"o botão diz {rotulo!r}. Ela mandou manter 'Atualizar' — *\"Segue "
+            "fazendo os dois. Com mesmo nome\"*, 09-Q1, 05/09/2026 —, "
+            "revertendo a recomendação de 04/09 que o rebatizava pela metade "
+            "cara.")
+        assert 'data-hef-em-voo="Atualizando…"' in atributos, (
+            f"o rótulo da espera não é o dela: {atributos!r}. Na 09-Q3 ela "
+            "escreveu *\"o botão diz Atualizando…\"*.")
 
     def test_a_dica_do_reload_parou_de_negar_o_trabalho_caro(self) -> None:
         import re
@@ -351,8 +384,16 @@ class TestODesenhoCarregaAPeca:
         assert achado, "a dica do botão do `atualizar` sumiu"
         dica = achado.group(1)
         assert "Não muda nada" not in dica, dica
-        # E ela DIZ os dois trabalhos, na ordem em que acontecem.
-        assert "reaplicar" in dica.lower() and "Steam" in dica, dica
+        # E ELA DIZ OS DOIS TRABALHOS MEDIDOS, na ordem em que acontecem —
+        # 05/09/2026. A palavra cobrada mudou junto com a medição: com
+        # `config_overrides` vazio o `daemon.reload` NÃO reaplica configuração
+        # nenhuma (`lifecycle.py:1353` e `:1361` comparam `old` com `new` e
+        # nunca disparam). O que acontece são os ATALHOS do controle religados
+        # (`lifecycle.py:1351-1352`) e os arquivos da Steam reescritos
+        # (`ipc_handlers.py:5472`). Cobrar "reaplicar" aqui era a régua
+        # exigindo da tela a frase que a medição derrubou.
+        assert "atalhos" in dica.lower() and "Steam" in dica, dica
+        assert "reaplicar" not in dica.lower(), dica
 
 
 # ---------------------------------------------------------------------------
@@ -422,10 +463,10 @@ LER_A_TELA = r"""
 })()
 """
 
-CLICAR_NO_REAPLICAR = r"""
+CLICAR_NO_ATUALIZAR = r"""
 (function(){
   const b = document.querySelector('[data-gesto="atualizar"]');
-  if(!b) return 'NAO ACHEI O BOTAO DO REAPLICAR';
+  if(!b) return 'NAO ACHEI O BOTAO DO ATUALIZAR';
   b.click();
   return 'cliquei';
 })()
@@ -543,7 +584,7 @@ def na_tela() -> dict:
         # O GESTO LENTO ENTRA PELO REGISTRO DO PRODUTO. Nada vai ao daemon.
         hv.pacotes.GESTOS[chave] = (  # type: ignore[assignment]
             lambda ctx, o, p: (_time.sleep(GESTO_LENTO_S), None)[1])
-        piloto.ponte.perguntar(CLICAR_NO_REAPLICAR, anotar("clique"))
+        piloto.ponte.perguntar(CLICAR_NO_ATUALIZAR, anotar("clique"))
         GLib.timeout_add(450, no_meio_do_voo)
         return False
 
@@ -668,14 +709,14 @@ class TestNaTelaViva:
 
         voando = na_tela["no-meio-do-voo"]["reaplicar"]
         assert voando["em_voo"] is True, voando
-        assert voando["rotulo"] == aba09.EM_VOO_REAPLICAR, voando
+        assert voando["rotulo"] == aba09.EM_VOO_ATUALIZAR, voando
 
     def test_e_volta_inteiro_quando_o_gesto_pousa(self, na_tela: dict) -> None:
         import aba09
 
         pousado = na_tela["depois-do-pouso"]["reaplicar"]
         assert pousado["em_voo"] is False, pousado
-        assert pousado["rotulo"] == aba09.ROTULO_REAPLICAR, pousado
+        assert pousado["rotulo"] == aba09.ROTULO_ATUALIZAR, pousado
 
     def test_o_gesto_que_da_certo_pisca_no_botao(self, na_tela: dict) -> None:
         """A linha **L323** do CSV, medida nesta aba — e não afirmada.
