@@ -183,8 +183,73 @@ def vestir_a_identidade(casa: object) -> list[str]:
     return feito
 
 
+#: O TETO DO DIÁRIO DA JANELA, em bytes. 1 MiB dá ~10 mil linhas de recado —
+#: mais do que uma sessão dela produz, e pouco o bastante para nunca aparecer
+#: numa conta de disco. Passou disso, o arquivo vira `.1` e recomeça: UMA volta
+#: só, porque o que interessa é a sessão de agora e a anterior.
+TETO_DO_DIARIO = 1 << 20
+
+
+def diario_da_janela() -> object:
+    """O arquivo onde a janela dela deixa rastro, ou ``None`` se há terminal.
+
+    **A-TELA-SAMBA-01, 06/09/2026, e é o Passo 5 dela.** Quando ela abre a
+    interface pelo atalho da dock, o ``stdout`` e o ``stderr`` do processo vão
+    para lugar nenhum — o ``.desktop`` não tem terminal atrás. Tudo o que o
+    piloto diz some: o ``[tique lento]``, o ``[daemon mudo]``, o ``a pintura
+    falhou``, o ``ERRO DE CARGA``. **Nenhum dos quatro sintomas de "a interface
+    tá sambando" tinha uma linha em lugar nenhum**, e o diagnóstico saiu de
+    foto — que é o instrumento que menos enxerga este defeito.
+
+    O DESVIO SÓ ACONTECE SEM TERMINAL, e é a metade que impede o remédio de
+    virar doença: quem roda o piloto à mão, numa régua ou num ensaio, continua
+    vendo tudo na tela — desviar ali esconderia a saída de quem está olhando
+    para ela. ``isatty()`` é a pergunta certa, e é a mesma que o ``rich`` e o
+    ``pytest`` fazem.
+
+    O LUGAR É O MESMO ``XDG_STATE_HOME`` que a suíte já desvia para um lar de
+    mentira (``tests/conftest.py``), então uma régua que chame esta função não
+    escreve no ``~/.local/state`` DELA.
+    """
+    fluxo = sys.stderr
+    try:
+        if fluxo is not None and hasattr(fluxo, "isatty") and fluxo.isatty():
+            return None
+    except (ValueError, OSError):
+        # Um fluxo já fechado responde levantando. Sem terminal, então.
+        pass
+
+    from hefesto_dualsense4unix.utils.xdg_paths import state_dir
+
+    casa = state_dir(ensure=True)
+    diario = casa / "interface.log"
+    try:
+        if diario.exists() and diario.stat().st_size > TETO_DO_DIARIO:
+            diario.replace(casa / "interface.log.1")
+        return diario.open("a", buffering=1, encoding="utf-8", errors="replace")
+    except OSError as erro:
+        # DISCO CHEIO NÃO IMPEDE A JANELA DE ABRIR. O diário é conforto de
+        # diagnóstico; a interface é o produto.
+        print(f"  sem diário da janela ({erro})", file=sys.stderr)
+        return None
+
+
 def main(argv: list[str] | None = None) -> int:
     args = list(sys.argv[1:] if argv is None else argv)
+
+    diario = diario_da_janela()
+    if diario is not None:
+        import datetime
+
+        # AS DUAS SAÍDAS VÃO PARA O MESMO ARQUIVO, e em ordem: o piloto imprime
+        # o relato no `stdout` e os recados no `stderr`, e ler os dois em
+        # arquivos separados obrigaria a próxima pessoa a costurar dois
+        # relógios. `sys.stderr` também é trocado para que o `print(...,
+        # file=sys.stderr)` de dentro do piloto pouse aqui.
+        sys.stdout = diario  # type: ignore[assignment]
+        sys.stderr = diario  # type: ignore[assignment]
+        print(f"\n===== a janela abriu em "
+              f"{datetime.datetime.now().isoformat(timespec='seconds')} =====")
 
     piloto = achar_o_piloto()
     if piloto is None:
