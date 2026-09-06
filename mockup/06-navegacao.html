@@ -1371,22 +1371,45 @@
      `monta.CSS_FOLHA`: borda sutil, texto mudo, `cursor:not-allowed`. Inventar
      uma segunda cara de apagado seria a doença que esta casa persegue.
 
-     E ELE CONTINUA RESPONDENDO, como o botão cinza da D-03: nada aqui é
-     `disabled` nem `pointer-events:none`. Quem navega pelo controle chega à
-     razão pelo clique, e o gesto levanta a MESMA frase que está escrita ao lado
-     (`a06_navegacao.RAZAO_DO_PORTAO`).
+     APAGADO DIZ "NÃO DÁ PARA MEXER"; NUNCA DIZ "ESTÁ DESLIGADO" — 06/09/2026,
+     esclarecimento dela na 06-Q1: *"o switch fica apagado (não clicável) MAS
+     mostra o estado real: pode ficar apagado no estado off, e pode ficar
+     apagado no estado on"*. Isto CORRIGE a construção de 04/09 em dois pontos,
+     e os dois estavam medidos:
+
+       · o portão pintava também o `.pino` — e a regra dele vale (0,6,0) contra
+         os (0,3,0) do pino aceso, então **o pino ficava cinza com o mouse
+         LIGADO**. O que sobrava dizendo o lado era o fundo esverdeado, que
+         sobrevivia por acidente (a regra do portão não declara `background`).
+         Um lado inteiro dito por uma declaração que ninguém escreveu de
+         propósito. A regra do pino SAIU: o lado sai de onde sempre saiu, e
+         passa a valer também sob o portão;
+       · o interruptor CONTINUAVA respondendo ao clique — este mesmo comentário
+         dizia, por escrito, que *"nada aqui é `disabled` nem
+         `pointer-events:none`"*, e ela pediu **não clicável**. Agora é.
+
+     E O `cursor:not-allowed` MUDOU DE ELEMENTO, porque tinha de mudar: um
+     elemento que não é alvo de ponteiro **não decide o cursor** — quem decide
+     passa a ser o pai. Aplicar só a primeira metade trocaria um defeito por
+     outro (recusa em silêncio, com cara de clicável), então a recusa mora na
+     linha que contém o interruptor, na mesma regra `:has()`.
+
+     O GESTO `modo` NÃO PERDE A RECUSA, e é de propósito:
+     `a06_navegacao` continua levantando a `RAZAO_DO_PORTAO`. A folha protege o
+     ponteiro; a página pode estar pintada com o modo de um tique atrás, e
+     tirar a guarda do Python deixaria o único caminho aberto sem ninguém.
 
      O `.laranja` É O GATILHO, e não uma classe nova: o pacote manda a razão
      dentro de um `<span class="laranja">`, como as outras linhas de estado
      fazem, e manda `<i class="nada"></i>` quando não há bloqueio — que é o
      mesmo marcador que apaga a linha. Sem bloqueio não há `.laranja` naquela
      linha, e o interruptor fica como sempre foi. ---------- */
+  .quadro-corpo:has(.estado.portao .laranja) .at-linha:has(.tog[data-gesto="modo"]){
+       cursor:not-allowed}
   .quadro-corpo:has(.estado.portao .laranja) .tog[data-gesto="modo"]{
-       border-color:var(--border-sutil);color:var(--texto-mudo);cursor:not-allowed}
+       border-color:var(--border-sutil);color:var(--texto-mudo);pointer-events:none}
   .quadro-corpo:has(.estado.portao .laranja) .tog[data-gesto="modo"]:hover{
        border-color:var(--border-sutil)}
-  .quadro-corpo:has(.estado.portao .laranja) .tog[data-gesto="modo"] .pino{
-       background:var(--border-sutil);box-shadow:none}
 
   /* ---------- A TIRA DE AVISO SOB A TABELA DE BOTÕES ----------
      Decisão do PO, 04/09/2026 (§2 `06[04]`): *"Uma tira de aviso sob a tabela.
@@ -1418,7 +1441,7 @@
   /* A COLUNA DO NOME CRESCE **SÓ DENTRO DAS POP-UPS**, e o número é medido, não
      escolhido: a decisão do PO diz que a marca *"cabe na coluna do nome"*, e ela
      NÃO cabia — `.tab td.b` tem `width:176px`, `white-space:nowrap` e
-     `overflow:hidden`, e a linha mais longa das 21 ("Touchpad · Clique
+     `overflow:hidden`, e a linha mais longa das vinte e duas ("Touchpad · Clique
      esquerdo") já usa ~168px. Fotografado em 04/09/2026: a marca saía cortada,
      com dois caracteres à mostra por baixo do `<select>` vizinho.
 
@@ -1432,10 +1455,11 @@
   .tn-cx .tab th:first-child,.tn-cx .tab td.b{width:250px}
 
   /* A DENSIDADE DE 22px FICA SÓ DENTRO DAS TELAS DE CIMA, e o número diz por quê.
-     Cada uma das duas telas de botões tem 21 listas em 21 linhas, e mede 660px
-     com elas a 22px. No token de 36 as linhas sozinhas passariam de 750px, e a
-     janela do produto tem 757. A tela não caberia na tela.
-     Na ABA, onde há cinco linhas e não vinte e uma, o token vale: veja
+     Cada uma das duas telas de botões tem uma lista por linha, e a caixa mede
+     657px com elas a 22px — REMEDIDO em 06/09/2026, com a 22ª linha (o botão
+     PS): eram 634px com 21. No token de 36 as linhas sozinhas passariam de
+     750px, e a janela do produto tem 757. A tela não caberia na tela.
+     Na ABA, onde há cinco linhas e não vinte e duas, o token vale: veja
      `.at-linha`. Esta é a única exceção da aba, e ela está aqui declarada em vez
      de espalhada.
      `.tn-cx.larga` (1120px) SAIU em 28/08: existia para caber as duas tabelas
@@ -1948,7 +1972,7 @@
       <div class="quadro-topo">
         <span class="quadro-titulo">Navegação</span>
         <span class="ajuda">?<span class="dica">Serve para navegar o computador sem largar o controle — e para os jogos que só entendem mouse e teclado.<br><br>Precisa de <b>uinput</b> e de uma regra <b>udev</b>; o instalador já deixa os dois prontos. Se a linha de estado abaixo estiver vermelha, é isso que falta.<br><br><b>Combinações:</b> junte teclas com &quot;+&quot; (ex.: Alt + Tab). Nenhum atalho de fábrica digita letra — para escrever texto, abra o teclado na tela com o <b>L3</b>.</span></span>
-        <a class="porta" href="mapa-do-controle.html" title="Abre o mapa do controle — as 28 peças do aparelho com nome, apelido e glifo, e as cores de fábrica para ver clicando. É de lá que saem as 21 linhas das duas telas de botões desta aba: o mesmo docs/data/pecas-do-dualsense.csv.">Banco de provas: o mapa do controle&nbsp;↗</a>
+        <a class="porta" href="mapa-do-controle.html" title="Abre o mapa do controle — as 28 peças do aparelho com nome, apelido e glifo, e as cores de fábrica para ver clicando. É de lá que saem as 22 linhas das duas telas de botões desta aba: o mesmo docs/data/pecas-do-dualsense.csv.">Banco de provas: o mapa do controle&nbsp;↗</a>
       </div>
       <div class="quadro-corpo">
 
@@ -3345,7 +3369,7 @@
               <label for="conf-padrao" class="veu" title="Fecha sem mudar nada."></label>
               <div class="confirma">
                 <span>Devolver a aba <b>Navegação</b> inteira ao de fábrica — as opções
-                  de ativação, os 5 gestos e as 21 linhas das duas
+                  de ativação, os 5 gestos e as 22 linhas das duas
                   telas de botões?</span>
                 <!-- O ENDEREÇO VAI NO "Confirmar", nunca no "Voltar ao padrão":
                      o de cima só ABRE a pergunta (é `<label for>` do mesmo
@@ -3444,7 +3468,7 @@
   <div class="tn-cx">
     <div class="tn-topo">
       <span class="tn-tit">Definições Controle e Mouse</span>
-      <span class="ajuda">?<span class="dica">As <b>21 linhas</b> de cada botão do controle: <b>o que ele faz</b> — mouse, tecla ou programa, tudo na mesma lista.<br><br>A lista de botões sai de <b>docs/data/pecas-do-dualsense.csv</b>, o mesmo mapa que nomeia as peças do desenho.<br><br><b>O botão PS não entra</b>, e é de propósito: ele é a saída de emergência — os 5 gestos desta aba saem dele, e segurá-lo alterna o modo jogo. Como o PS chega ao teclado pelo mesmo caminho dos outros, dar uma tecla a ele faria o botão digitar <b>sem parar</b> de abrir a Steam.<br><br><b>As três regiões do touchpad estão marcadas.</b> Enquanto o touchpad do controle for o mouse do computador, o Hefesto não transforma o clique dele em tecla — a escolha fica guardada no perfil e volta a valer no dia em que isso mudar.<br><br>Valem para o controle que navega o PC: o <b data-campo="quem-navega">P1 Cosmic Red USB</b>.</span></span>
+      <span class="ajuda">?<span class="dica">As <b>22 linhas</b> de cada botão do controle: <b>o que ele faz</b> — mouse, tecla ou programa, tudo na mesma lista.<br><br>A lista de botões sai de <b>docs/data/pecas-do-dualsense.csv</b>, o mesmo mapa que nomeia as peças do desenho.<br><br><b>O botão PS faz as duas coisas.</b> Ele continua sendo a saída de emergência — os 5 gestos desta aba saem dele, e segurá-lo alterna o modo jogo —, e a tecla que você escolher para ele acontece <b>junto</b>: no toque curto, sem combo e fora do jogo. Escolher <b>— Nada —</b> cala as duas.<br><br><b>As três regiões do touchpad estão marcadas.</b> Enquanto o touchpad do controle for o mouse do computador, o Hefesto não transforma o clique dele em tecla — a escolha fica guardada no perfil e volta a valer no dia em que isso mudar.<br><br>Valem para o controle que navega o PC: o <b data-campo="quem-navega">P1 Cosmic Red USB</b>.</span></span>
       <a class="tn-x" href="#" title="Fechar" data-gesto="fechar-definicoes">×</a>
     </div>
     <div class="tn-corpo">
@@ -3549,6 +3573,12 @@
   <line x1="8"  y1="11" x2="12.5" y2="21" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/>
   <line x1="24" y1="11" x2="19.5" y2="21" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/>
 </svg><span class="nm">Share</span></span></td><td><select class="campo-linha" data-gesto="linha-de-botao" data-linha="create" data-campo="acao-create" data-hef-alvo="valor"><optgroup label="Mouse"><option>Botão esquerdo</option><option>Botão direito</option><option>Botão do meio</option><option>Movimento do cursor</option><option>Rolagem vertical e horizontal</option></optgroup><optgroup label="Função do teclado"><option>Seta para cima</option><option>Seta para baixo</option><option>Seta para a esquerda</option><option>Seta para a direita</option><option>Enter</option><option>Esc</option><option>Espaço</option><option>Backspace</option><option>Delete</option><option>Alt + Tab</option><option>Alt + Shift + Tab</option><option>Super (tecla Windows)</option><option selected>PrintScreen</option><option>F11</option></optgroup><optgroup label="Executar Comando"><option>Abrir e fechar o teclado na tela</option><option>Abrir o teclado na tela</option><option>Fechar o teclado na tela</option><option>Abrir a Steam</option><option>Sair do modo jogo</option><option>Escolher um programa…</option></optgroup><option>— Nada —</option></select></td></tr>
+          <tr><td class="b"><span class="gls"><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>PS</title>
+
+  <g transform="translate(16 16) scale(0.99425) translate(-16.0925 -16.0)">
+    <path fill="currentColor" d="M 1.348 21.736 C 0.195 22.543 0.408 23.935 3.04 24.805 C 5.671 25.675 8.73 25.855 11.422 25.371 C 11.345 25.371 11.575 25.371 11.422 25.371 L 11.422 22.624 L 8.807 23.513 C 7.807 23.835 6.807 23.916 5.808 23.675 C 5.039 23.432 5.192 22.947 6.115 22.543 L 11.422 20.604 L 11.422 17.616 L 4.039 20.282 C 3.117 20.604 2.193 21.09 1.348 21.736 Z M 19.188 9.619 L 19.188 17.455 C 22.34 19.07 24.801 17.455 24.801 13.254 C 24.801 8.973 23.34 7.034 19.111 5.5 C 16.881 4.692 14.574 3.965 12.267 3.48 L 12.267 26.825 L 17.65 28.521 L 17.65 8.892 C 17.65 8.004 17.65 7.358 18.266 7.599 C 19.111 7.842 19.188 8.731 19.188 9.619 Z M 29.184 19.878 C 26.955 19.07 24.571 18.746 22.263 18.989 C 20.982 19.073 19.78 19.455 18.573 19.878 L 18.573 23.028 L 23.571 21.09 C 24.571 20.766 25.571 20.685 26.57 20.928 C 27.339 21.171 27.185 21.655 26.262 22.059 L 18.573 25.047 L 18.573 28.116 L 29.184 23.997 C 29.954 23.675 30.645 23.27 31.261 22.624 C 31.799 21.817 31.568 20.685 29.184 19.878 Z"/>
+  </g>
+</svg><span class="nm">PS</span></span></td><td><select class="campo-linha" data-gesto="linha-de-botao" data-linha="ps" data-campo="acao-ps" data-hef-alvo="valor"><optgroup label="Mouse"><option>Botão esquerdo</option><option>Botão direito</option><option>Botão do meio</option><option>Movimento do cursor</option><option>Rolagem vertical e horizontal</option></optgroup><optgroup label="Função do teclado"><option>Seta para cima</option><option>Seta para baixo</option><option>Seta para a esquerda</option><option>Seta para a direita</option><option>Enter</option><option>Esc</option><option>Espaço</option><option>Backspace</option><option>Delete</option><option>Alt + Tab</option><option>Alt + Shift + Tab</option><option>Super (tecla Windows)</option><option>PrintScreen</option><option>F11</option></optgroup><optgroup label="Executar Comando"><option>Abrir e fechar o teclado na tela</option><option>Abrir o teclado na tela</option><option>Fechar o teclado na tela</option><option selected>Abrir a Steam</option><option>Sair do modo jogo</option><option>Escolher um programa…</option></optgroup><option>— Nada —</option></select></td></tr>
           <tr><td class="b"><span class="gls"><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Touchpad</title>
 
   <rect x="3" y="8" width="26" height="16" rx="4" ry="4" fill="none" stroke="currentColor" stroke-width="2"/>
@@ -3579,7 +3609,7 @@
       <a class="btn btn-padrao btn-padrao-tela" href="#">Voltar ao padrão</a>
       <a class="btn roxo" href="#" data-gesto="guardar-definicoes" data-hef-forma="definicoes-mouse">Guardar</a>
       <div class="confirma">
-        <span>Devolver ao de fábrica as 21 linhas de <b>o que cada botão faz</b>? Isto apaga também os <b>atalhos de teclado</b> que este perfil guarda — inclusive os que você escreveu na janela antiga e esta lista não sabe mostrar. O <b>Remapeamento dos botões</b> não é tocado.</span>
+        <span>Devolver ao de fábrica as 22 linhas de <b>o que cada botão faz</b>? Isto apaga também os <b>atalhos de teclado</b> que este perfil guarda — inclusive os que você escreveu na janela antiga e esta lista não sabe mostrar. O <b>Remapeamento dos botões</b> não é tocado.</span>
         <button class="btn-conf vermelho" data-gesto="padrao-definicoes">Confirmar</button>
         <button class="btn-conf">Cancelar</button>
       </div>
@@ -3590,7 +3620,7 @@
   <div class="tn-cx">
     <div class="tn-topo">
       <span class="tn-tit">Remapeamento dos botões</span>
-      <span class="ajuda">?<span class="dica">As mesmas <b>21 linhas</b>, na mesma ordem, dizendo outra coisa: <b>para qual outro botão</b> cada um passa a valer.<br><br>É troca de botão por botão, e ela vale antes de o jogo ver. O que cada botão <b>faz</b> se escolhe na tela <b>Definições Controle e Mouse</b>, ao lado.<br><br>Valem para o controle que navega o PC: o <b data-campo="quem-navega">P1 Cosmic Red USB</b>.</span></span>
+      <span class="ajuda">?<span class="dica">As mesmas <b>22 linhas</b>, na mesma ordem, dizendo outra coisa: <b>para qual outro botão</b> cada um passa a valer.<br><br>É troca de botão por botão, e ela vale antes de o jogo ver. O que cada botão <b>faz</b> se escolhe na tela <b>Definições Controle e Mouse</b>, ao lado.<br><br>Valem para o controle que navega o PC: o <b data-campo="quem-navega">P1 Cosmic Red USB</b>.</span></span>
       <a class="tn-x" href="#" title="Fechar">×</a>
     </div>
     <div class="tn-corpo">
@@ -3695,6 +3725,12 @@
   <line x1="8"  y1="11" x2="12.5" y2="21" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/>
   <line x1="24" y1="11" x2="19.5" y2="21" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/>
 </svg><span class="nm">Share</span></span></td><td><select class="campo-linha"><optgroup label="Botões"><option>Triângulo</option><option>Círculo</option><option>Quadrado</option><option>Cruz</option></optgroup><optgroup label="Ombros e gatilhos"><option>L1</option><option>R1</option><option>L2</option><option>R2</option></optgroup><optgroup label="Analógicos"><option>L3 (clique)</option><option>L3 (direção)</option><option>R3 (clique)</option><option>R3 (direção)</option></optgroup><optgroup label="Direcional"><option>D-pad Cima</option><option>D-pad Direita</option><option>D-pad Baixo</option><option>D-pad Esquerda</option></optgroup><optgroup label="Sistema"><option>Share</option><option>Options</option><option>Touchpad (clique)</option><option>PS</option></optgroup><option selected>— Sem troca —</option></select></td></tr>
+          <tr><td class="b"><span class="gls"><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>PS</title>
+
+  <g transform="translate(16 16) scale(0.99425) translate(-16.0925 -16.0)">
+    <path fill="currentColor" d="M 1.348 21.736 C 0.195 22.543 0.408 23.935 3.04 24.805 C 5.671 25.675 8.73 25.855 11.422 25.371 C 11.345 25.371 11.575 25.371 11.422 25.371 L 11.422 22.624 L 8.807 23.513 C 7.807 23.835 6.807 23.916 5.808 23.675 C 5.039 23.432 5.192 22.947 6.115 22.543 L 11.422 20.604 L 11.422 17.616 L 4.039 20.282 C 3.117 20.604 2.193 21.09 1.348 21.736 Z M 19.188 9.619 L 19.188 17.455 C 22.34 19.07 24.801 17.455 24.801 13.254 C 24.801 8.973 23.34 7.034 19.111 5.5 C 16.881 4.692 14.574 3.965 12.267 3.48 L 12.267 26.825 L 17.65 28.521 L 17.65 8.892 C 17.65 8.004 17.65 7.358 18.266 7.599 C 19.111 7.842 19.188 8.731 19.188 9.619 Z M 29.184 19.878 C 26.955 19.07 24.571 18.746 22.263 18.989 C 20.982 19.073 19.78 19.455 18.573 19.878 L 18.573 23.028 L 23.571 21.09 C 24.571 20.766 25.571 20.685 26.57 20.928 C 27.339 21.171 27.185 21.655 26.262 22.059 L 18.573 25.047 L 18.573 28.116 L 29.184 23.997 C 29.954 23.675 30.645 23.27 31.261 22.624 C 31.799 21.817 31.568 20.685 29.184 19.878 Z"/>
+  </g>
+</svg><span class="nm">PS</span></span></td><td><select class="campo-linha"><optgroup label="Botões"><option>Triângulo</option><option>Círculo</option><option>Quadrado</option><option>Cruz</option></optgroup><optgroup label="Ombros e gatilhos"><option>L1</option><option>R1</option><option>L2</option><option>R2</option></optgroup><optgroup label="Analógicos"><option>L3 (clique)</option><option>L3 (direção)</option><option>R3 (clique)</option><option>R3 (direção)</option></optgroup><optgroup label="Direcional"><option>D-pad Cima</option><option>D-pad Direita</option><option>D-pad Baixo</option><option>D-pad Esquerda</option></optgroup><optgroup label="Sistema"><option>Share</option><option>Options</option><option>Touchpad (clique)</option><option>PS</option></optgroup><option selected>— Sem troca —</option></select></td></tr>
           <tr><td class="b"><span class="gls"><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Touchpad</title>
 
   <rect x="3" y="8" width="26" height="16" rx="4" ry="4" fill="none" stroke="currentColor" stroke-width="2"/>
@@ -3725,7 +3761,7 @@
       <a class="btn btn-padrao btn-padrao-tela" href="#">Voltar ao padrão</a>
       <a class="btn roxo" href="#" data-gesto="guardar-remapeamento" data-hef-forma="remapeamento">Guardar</a>
       <div class="confirma">
-        <span>Devolver as 21 linhas ao <b>— Sem troca —</b>? As <b>Definições Controle e Mouse</b> não são tocadas.</span>
+        <span>Devolver as 22 linhas ao <b>— Sem troca —</b>? As <b>Definições Controle e Mouse</b> não são tocadas.</span>
         <button class="btn-conf vermelho" data-gesto="padrao-remapeamento">Confirmar</button>
         <button class="btn-conf">Cancelar</button>
       </div>
@@ -3823,10 +3859,14 @@
     <b>1120×682px</b>, com <b>42 listas</b> e <b>42 linhas</b> de tabela.</li>
     <li><b>A divisão resolve a largura; ela NÃO resolve a densidade.</b> Cada tela
     caiu de <b>1120px</b> para a largura padrão de <b>660px</b>, e cada uma ficou
-    com <b>21 linhas</b> e <b>21 listas</b> — metade do total,
-    e ainda vinte e uma. As duas medem <b>660,3px</b> de altura contra os
-    <b>757px</b> da janela do produto: sobram 96,7px, e o rodapé com o
-    <i>Guardar</i> fecha em y=707,7 dentro dela.</li>
+    com <b>22 linhas</b> e <b>22 listas</b> — metade do total,
+    e ainda 22. As duas medem <b>657px</b> de altura contra os
+    <b>757px</b> da janela do produto: sobram 100px, e o rodapé com o
+    <i>Guardar</i> fecha dentro dela.
+    <br><br>NÚMEROS REMEDIDOS em 06/09/2026, com a 22ª linha: eram 634px com 21,
+    e o que estava escrito aqui (660,3px · 96,7px de sobra · y=707,7) já não
+    batia antes dela. A caixa tem teto e rola por dentro quando a tira sob a
+    tabela cresce — medido no WebKit com duas frases na tira.</li>
     <li><b>O teto de altura, que não existia.</b> A <code>.tn-cx</code> não tinha
     <code>max-height</code> nem <code>overflow</code>: se o conteúdo crescesse, ele
     sairia da tela <b>sem barra de rolagem e sem aviso</b>. Agora o teto é
@@ -3836,7 +3876,7 @@
     o corpo passa a rolar (568px de conteúdo em 308px de vão) e o rodapé continua
     visível; com a cura arrancada, nada rola.</li>
     <li><b>O "Voltar ao padrão" da fileira voltou a fazer o que o nome diz.</b> A
-    frase dele era <i>"Apagar as 21 linhas das duas tabelas…"</i>, e com
+    frase dele era <i>"Apagar as 22 linhas das duas tabelas…"</i>, e com
     as tabelas em telas separadas <b>"as duas tabelas" deixou de ser o que este
     botão alcança</b>. Cada tela ganhou o seu <i>Voltar ao padrão</i>, que zera só a
     tabela dela e diz o que <b>não</b> toca; o da fileira devolve a <b>aba
@@ -3954,7 +3994,7 @@
 
   <h2>A palavra dela que esta aba já cumpria, e continua cumprindo</h2>
   <ul>
-    <li><b>Os 21 valores das tabelas são dropdown, e nenhum está travado</b>
+    <li><b>Os 22 valores das tabelas são dropdown, e nenhum está travado</b>
     — [57] <i>"todos os campos (coluna da direita das três tabelas ali, pra cada
     valor de cada linha)"</i>.</li>
     <li><b>Os grupos "Função do teclado", "Executar Comando" e "Mouse" também são
