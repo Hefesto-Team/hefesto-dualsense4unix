@@ -397,6 +397,55 @@ def notify_teclado_na_tela_ausente(candidatos: list[str]) -> bool:
     )
 
 
+#: O TEXTO É PALAVRA DELA — `D-0609-A-FRASE-DO-TECLADO-NA-TELA`, decidida por
+#: delegação em 06/09/2026 (`docs/data/decisoes-dela.csv`). Duas frases, sem
+#: termo da casa: a primeira diz O QUE abriu e POR QUE, a segunda diz O QUE
+#: FAZER — que é a regra de diagnóstico desta casa. **Não reescreva sem passar
+#: por ela**: texto de tela é decisão dela, e este passou pela PROVA-DE-TELA-01.
+#:
+#: Ficam separados em constante porque a régua
+#: `tests/unit/test_o_teclado_avisa_como_sair.py` lê o TEXTO PUBLICADO em vez de
+#: redigitar a frase — uma régua que digitasse mediria a própria digitação, que
+#: é a forma exata do defeito "a régua digita o que devia LER".
+_OSK_ABERTO_TITULO = "Teclado na tela aberto pelo L3."
+_OSK_ABERTO_CORPO = "Para fechar, aperte R3."
+
+
+def notify_teclado_na_tela_aberto() -> bool:
+    """Avisa que o teclado na tela ACABOU de abrir, e ensina como fechá-lo.
+
+    O-TECLADO-QUE-NAO-DIZ-COMO-SAIR-01. O defeito medido no relógio dela em
+    30/08/2026: o teclado abriu às 00:29:23 por um clique no analógico esquerdo,
+    ela perguntou *"pq tem um teclado virtual aberto?"* às 00:49 — **vinte
+    minutos**, e nesse intervalo a tela não disse nada sobre o que tinha aberto
+    nem sobre como sair. O gesto de saída existia só em `docs/usage/hotkeys.md`,
+    que ninguém lê com o teclado tapando a barra de tarefas.
+
+    O produto funcionou como desenhado; o que faltava era ele DIZER. Esta é a
+    frase que faltava.
+
+    **Notifica SEMPRE**, sem o opt-in `HEFESTO_DUALSENSE4UNIX_DESKTOP_NOTIFICATIONS`
+    e sem `once_key`, e as duas metades são deliberadas:
+
+    - o opt-in fica de fora pelo mesmo motivo já declarado em
+      `notify_emulation_suppressed` e em `notify_teclado_na_tela_ausente` — é a
+      resposta a um gesto DELIBERADO dela (clicou o analógico agora), e gesto
+      sem resposta visível parece produto quebrado;
+    - o `once_key` fica de fora porque a segunda abertura acidental precisa da
+      frase tanto quanto a primeira; um aviso "uma vez por daemon" devolveria o
+      silêncio de 20 minutos na segunda vez. Não vira rajada porque quem chama é
+      o `open()` **depois** do guarda de "já aberto"
+      (`daemon/subsystems/keyboard.py`): só há aviso onde houve transição de
+      fechado para aberto, e cada transição é um clique dela.
+    """
+    return notify(
+        summary=_OSK_ABERTO_TITULO,
+        body=_OSK_ABERTO_CORPO,
+        icon="input-keyboard",
+        timeout_ms=10000,
+    )
+
+
 __all__ = [
     "notify",
     "notify_battery_low",
@@ -407,6 +456,7 @@ __all__ = [
     "notify_emulation_suppressed",
     "notify_profile_activated",
     "notify_system_warnings",
+    "notify_teclado_na_tela_aberto",
     "notify_teclado_na_tela_ausente",
     "reset_once_cache",
     "reset_throttle_cache",
