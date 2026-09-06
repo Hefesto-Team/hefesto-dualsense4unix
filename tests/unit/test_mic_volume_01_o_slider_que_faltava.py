@@ -177,15 +177,27 @@ class TestAchaAFonteNosDoisTransportes:
 
 
 class TestDefinirVolume:
+    """**`fonte=` PASSOU A SER OBRIGATÓRIO — ONDA5-02-01, 06/09/2026.**
+
+    Estes casos chamavam `definir_volume_da_captura(60)` seco e a função
+    resolvia a fonte sozinha, pela rota global. Essa porta fechou: quem escreve
+    declara em qual aparelho está escrevendo, como o `muted` do `mic.set` já
+    obriga. **O que cada caso MEDE não mudou uma linha** — o que mudou é que a
+    resolução da fonte, que antes acontecia escondida dentro da função, agora
+    aparece na chamada, que é o ponto inteiro da mudança.
+    """
+
     def test_sem_fonte_nao_manda_nada_e_devolve_false(self, rodado: _Rodado) -> None:
         """Sem fonte, nenhum comando de escrita pode sair."""
         rodado.saidas["pactl list"] = _SOURCES_SEM_CONTROLE
-        assert ac.definir_volume_da_captura(60) is False
+        assert ac.definir_volume_da_captura(
+            60, fonte=ac.fonte_de_captura_do_controle()) is False
         assert not [c for c in rodado.chamadas if "set-source-volume" in c]
 
     def test_com_fonte_manda_o_por_cento_na_fonte_certa(self, rodado: _Rodado) -> None:
         rodado.saidas["pactl list"] = _SOURCES_COM_PONTE_BT
-        assert ac.definir_volume_da_captura(70) is True
+        assert ac.definir_volume_da_captura(
+            70, fonte=ac.fonte_de_captura_do_controle()) is True
         (cmd,) = [c for c in rodado.chamadas if "set-source-volume" in c]
         assert cmd[2] == "hefesto_dualsense_bt_aabbcc"
         assert cmd[3] == "70%"
@@ -196,7 +208,8 @@ class TestDefinirVolume:
     ) -> None:
         """Mandar 150% ao sistema de som é o tipo de coisa que não se faz."""
         rodado.saidas["pactl list"] = _SOURCES_COM_PONTE_BT
-        ac.definir_volume_da_captura(pedido)
+        ac.definir_volume_da_captura(
+            pedido, fonte=ac.fonte_de_captura_do_controle())
         (cmd,) = [c for c in rodado.chamadas if "set-source-volume" in c]
         assert cmd[3] == esperado
 
@@ -208,8 +221,8 @@ class TestDefinirVolume:
 
         monkeypatch.setattr(ac.subprocess, "run", _boom)
         assert ac.fonte_de_captura_do_controle() is None
-        assert ac.definir_volume_da_captura(50) is False
-        assert ac.volume_da_captura() is None
+        assert ac.definir_volume_da_captura(50, fonte=None) is False
+        assert ac.volume_da_captura(fonte=None) is None
 
 
 class TestLerOVolume:
@@ -218,7 +231,8 @@ class TestLerOVolume:
         rodado.saidas["pactl get-source-volume"] = (
             "Volume: mono: 32768 /  50% / -18,06 dB\n"
         )
-        assert ac.volume_da_captura() == 50
+        assert ac.volume_da_captura(
+            fonte=ac.fonte_de_captura_do_controle()) == 50
 
     def test_le_em_vez_de_lembrar(self) -> None:
         """A função não guarda estado — não há onde um valor mandado virar

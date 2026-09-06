@@ -280,7 +280,9 @@ def _texto_do_pactl(argv: list[str]) -> str | None:
         return None
 
 
-def fonte_de_captura_do_uniq(uniq: str) -> str | None:
+def fonte_de_captura_do_uniq(
+    uniq: str, *, mesa: list[str] | None = None
+) -> str | None:
     """A fonte de captura DAQUELE controle — pela régua que já é dona da pergunta.
 
     MIC-DA-MESA-CHEIA-01 (20/08/2026). A `fonte_de_captura_do_controle` acima
@@ -322,15 +324,40 @@ def fonte_de_captura_do_uniq(uniq: str) -> str | None:
     duas verdades sobre a mesma pergunta é como esta casa fabrica divergência
     silenciosa.
 
-    A REGRA 4 FICA DESLIGADA, de propósito: ``uniqs_com_audio=[]``. Aqui só se
-    conhece UM `uniq`, e o um-para-um precisa saber que ele é o único candidato
-    da mesa para valer. Ligá-lo com a mesa desconhecida daria a única fonte da
-    lista a quem calhasse de perguntar primeiro — o chute que o `None` desta
-    função existe para não dar.
+    A REGRA 4 DEPENDE DA MESA, E A MESA AGORA ENTRA (ONDA5-02-01, 06/09/2026)
+    ------------------------------------------------------------------------
+    Aqui estava escrito que a regra 4 ficava DESLIGADA de propósito, com
+    ``uniqs_com_audio=[]``, *"porque aqui só se conhece UM `uniq`"*. A razão era
+    boa e a premissa é que caiu: **quem chama SABE a mesa** — o daemon a lê por
+    :func:`~hefesto_dualsense4unix.daemon.subsystems.recado_do_microfone.mesa_de_agora`,
+    que é a única leitura de "tem card na tela" desta casa.
+
+    O parâmetro `mesa` é o que faltava para a pergunta ser respondível:
+
+    ``None``   ninguém perguntou à mesa (é o padrão, e mantém o comportamento
+               de antes desta data, palavra por palavra: a regra 4 fica
+               desligada e a função responde só pelas regras de identidade e
+               pelo USB).
+    ``[]``     a mesa está vazia. Não inventa dono: a regra 4 exige um único
+               candidato e zero não é um.
+    ``[u]``    **o caso barato, e o que esta mudança destrava**: uma source, um
+               controle — só pode ser ele, com o :meth:`CasamentoUSB.veta`
+               ainda podendo desmentir.
+
+    O CENSO DE USB PASSA A COBRIR A MESA INTEIRA, e custa o mesmo: uma
+    varredura de ``/sys`` por chamada, independentemente de quantos `uniq`
+    entram (:func:`~integrations.usb_pai.usb_pai_por_uniq`). **O que ele muda
+    NÃO é o veredito deste `uniq`** — `casar` e `veta` leem só a entrada dele —,
+    e sim o mapa ficar completo para quem o inspecionar: dizer que mapear a mesa
+    "é o que dá ao `veta` o que vetar" seria escrever aqui uma segunda verdade
+    sobre o mesmo código, que é como esta casa fabrica divergência silenciosa.
 
     Devolve `None` quando não dá para saber de quem é a fonte — e `None` aqui é
     a resposta CERTA, não uma falha: mexer no microfone do controle errado é
-    pior que não mexer em nenhum. Quem chama decide se cai para a rota global.
+    pior que não mexer em nenhum. **E desde 06/09/2026 quem chama NÃO cai mais
+    para a rota global quando há endereço** (`daemon/ipc_handlers.py`, o
+    `mic.volume.set`): cair para a primeira da lista era, palavra por palavra, o
+    defeito que ela chamou de bug.
     """
     from hefesto_dualsense4unix.integrations.fontes_de_captura import (
         CasamentoUSB,
@@ -357,24 +384,45 @@ def fonte_de_captura_do_uniq(uniq: str) -> str | None:
     # A saída LONGA só serve ao casamento por USB — e é o único passo que o
     # controle no rádio não tem. Sem ela, as regras de IDENTIDADE continuam
     # valendo, e são justamente as que respondem por rádio.
+    # A MESA, COMO ELA CHEGOU. `None` é "não perguntei" e vira `[]` para o
+    # `escolher_fonte`, que é o comportamento de antes desta data; uma mesa
+    # conhecida entra inteira, e o `uniq` de quem pergunta entra junto mesmo
+    # que o backend não o tenha listado — perguntar pelo microfone de um
+    # controle e não pô-lo entre os candidatos seria a régua se contradizendo.
+    candidatos = list(mesa) if mesa is not None else []
+    if mesa is not None and uniq not in candidatos:
+        candidatos.append(uniq)
     usb: CasamentoUSB | None = None
     longa = _texto_do_pactl(["pactl", "list", "sources"])
     if longa is not None:
-        do_controle = usb_pai_por_uniq([uniq]).get(uniq, "")
+        censo = usb_pai_por_uniq(candidatos or [uniq])
         usb = CasamentoUSB(
-            por_uniq={uniq: do_controle} if do_controle else {},
+            por_uniq={u: pai for u, pai in censo.items() if pai},
             por_no=usb_pai_por_no(nos_e_sysfs(longa)),
         )
-    return escolher_fonte(fontes, uniq, [], usb)
+    return escolher_fonte(fontes, uniq, candidatos, usb)
 
 
-def definir_volume_da_captura(volume_pct: int, *, fonte: str | None = None) -> bool:
+def definir_volume_da_captura(volume_pct: int, *, fonte: str | None) -> bool:
     """Põe o volume da captura do controle em `volume_pct` (0-100).
 
     MIC-VOLUME-01, pedido dela: *"um slicer de microfone pra definir o volume
     do microfone real (independente de saber se tá via bt ou via cabo), o app
     deve ser inteligente pra saber qual caminho usar"*. A "inteligência" mora
-    em `fonte_de_captura_do_controle`, acima: quem chama não escolhe caminho.
+    em quem RESOLVE a fonte — `fonte_de_captura_do_uniq` quando há endereço,
+    `fonte_de_captura_do_controle` quando não há.
+
+    **`fonte` NÃO TEM PADRÃO, e a porta se fechou em 06/09/2026 (ONDA5-02-01).**
+    Ela tinha: sem `fonte`, esta função chamava `fonte_de_captura_do_controle()`
+    sozinha e escrevia na PRIMEIRA placa de DualSense da lista. Nenhum chamador
+    de `src/` usava esse caminho — os cinco já passavam `fonte=` —, e era isso
+    que o tornava perigoso: uma porta fechada com a chave na fechadura, que
+    entregaria o microfone do vizinho ao próximo que a empurrasse sem ler. É a
+    mesma disciplina do `muted` do `mic.set`, que também não tem padrão: **quem
+    chama declara em qual aparelho está escrevendo.**
+
+    `None` continua sendo valor legítimo — é "não há fonte para este controle" —
+    e a resposta a ele é `False`. O que deixou de existir é a OMISSÃO.
 
     **Isto NÃO é o mudo do firmware.** Não apaga a luz vermelha do microfone e
     não tira o botão físico do controle — quem faz as duas coisas é o
@@ -383,7 +431,7 @@ def definir_volume_da_captura(volume_pct: int, *, fonte: str | None = None) -> b
     Devolve False quando não há fonte (o caso do rádio sem ponte) ou quando o
     `pactl` falha. Nunca levanta: volume de microfone não derruba daemon.
     """
-    alvo = fonte if fonte is not None else fonte_de_captura_do_controle()
+    alvo = fonte
     if not alvo:
         return False
     pct = max(0, min(100, int(volume_pct)))
@@ -410,13 +458,19 @@ def definir_volume_da_captura(volume_pct: int, *, fonte: str | None = None) -> b
     return True
 
 
-def volume_da_captura(*, fonte: str | None = None) -> int | None:
+def volume_da_captura(*, fonte: str | None) -> int | None:
     """O volume ATUAL da captura do controle, em por cento, ou `None`.
 
     Lê em vez de lembrar: guardar o valor mandado como se fosse leitura é o
     hábito que já fez esta tela parecer mentirosa quando ela nunca mentiu.
+
+    **`fonte` NÃO TEM PADRÃO** — a mesma porta que `definir_volume_da_captura`
+    fechou em 06/09/2026, e pela mesma razão, com um agravante próprio: uma
+    LEITURA que cai na primeira fonte da lista devolve o número do microfone do
+    vizinho, e quem o recebe o pinta no card certo. Mentir na leitura é pior que
+    errar na escrita, porque não deixa rastro no aparelho.
     """
-    alvo = fonte if fonte is not None else fonte_de_captura_do_controle()
+    alvo = fonte
     if not alvo:
         return None
     try:
