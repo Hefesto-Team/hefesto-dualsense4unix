@@ -137,6 +137,23 @@ class ProfileManager:
     # None = perfil sem quem atender; a ativação ignora a seção e DIZ isso no
     # relatório, que é diferente de "aplicou".
     mouse_device_provider: Callable[[], object | None] | None = None
+    # ONDA5-06-01 (06/09/2026): O CANAL DO BOTÃO PS, que é o terceiro destino de
+    # `button_actions` e o único que não é device. Recebe o token que o perfil
+    # deu ao PS (`None` = o perfil não opinou, vale o degrau da máquina) e o
+    # guarda EM MEMÓRIA no subsistema de hotkey, que é quem atende o `ps_solo`.
+    #
+    # POR QUE EMPURRAR E NÃO DEIXAR O CALLBACK LER: o `_on_ps_solo` roda inline
+    # no poll loop, e o comentário dele proíbe trabalho bloqueante ali com um
+    # número medido — um `pgrep` travava input, IPC e co-op por até 2 s.
+    # `daemon.store.active_profile` devolve só o NOME; carregar o perfil dali
+    # seria disco dentro do laço. Quem já leu o perfil é esta classe.
+    #
+    # NÃO SE CHAMA `*_applier` DE PROPÓSITO: os appliers são a lista fechada de
+    # `APPLIERS_DO_DAEMON`, conferida contra os campos deste dataclass por
+    # `tests/unit/test_a_fabrica_do_gerente_e_a_unica_lista_de_appliers.py`. Este
+    # é um canal `lambda`, resolvido pela fábrica, da mesma família dos dois
+    # providers acima — e pela mesma razão deles não entra naquela lista.
+    ps_action_sink: Callable[[str | None], object] | None = None
     # FEAT-POINT-AND-CLICK-01: applier da seção `mouse` do perfil. Os callsites
     # injetam `daemon.set_mouse_emulation` (retorna bool — por isso o retorno é
     # `object`, não `None`). Assinatura: (enabled, speed, scroll_speed) mais o
@@ -567,16 +584,50 @@ class ProfileManager:
         except Exception as exc:
             logger.debug("auto_player_colors_configure_falhou", err=str(exc))
 
+    def _empurrar_o_ps(self, profile: Profile) -> None:
+        """A escolha do PS, entregue a quem a atende — o callback do `ps_solo`.
+
+        A QUARTA SAÍDA de `core/acoes_de_botao` (:func:`acao_do_ps`), e ela não
+        vai a device nenhum: o PS nunca chega à emulação, porque o latch do
+        combo (`integrations/hotkey_daemon.py`) o subtrai de `emu_buttons`
+        enquanto estiver pressionado. Quem o atende é o `ps_solo`, no release.
+
+        `None` É PARTE DO CONTRATO e não é ausência de chamada: ele diz "o
+        perfil não opinou sobre o PS", e é o que devolve o botão ao degrau da
+        máquina (`DaemonConfig.ps_button_action`). Um perfil sem `button_actions`
+        chega aqui igual, e é por isso que a chamada é antes da saída antecipada.
+
+        Sem `ps_action_sink` (CLI, testes sem daemon) isto é no-op silencioso —
+        a mesma disciplina dos dois providers de device.
+        """
+        empurrar = self.ps_action_sink
+        if empurrar is None:
+            return
+        from hefesto_dualsense4unix.core.acoes_de_botao import acao_do_ps
+
+        try:
+            empurrar(acao_do_ps(profile.button_actions))
+        except Exception as exc:
+            # NÃO DERRUBA A ATIVAÇÃO, e deixa rastro: o PS é um botão entre
+            # vinte e dois, e uma exceção aqui levaria junto as luzes, os
+            # gatilhos e o resto do perfil dela.
+            logger.warning(
+                "ps_action_push_failed", profile=profile.name, err=str(exc))
+
     def apply_button_actions(
         self, profile: Profile, *, relatorio: dict[str, str] | None = None
     ) -> None:
-        """Propaga `button_actions` do perfil aos DOIS devices (FEAT-ACOES-DE-BOTAO-01).
+        """Propaga `button_actions` do perfil aos TRÊS destinos (FEAT-ACOES-DE-BOTAO-01).
 
         Ele é o irmão do `apply_keyboard`, e a diferença é o alcance: aquele
         escreve os nove botões que o teclado virtual conhece; este escreve as
-        vinte e uma linhas que a tela mostra, e o
+        vinte e duas linhas que a tela mostra, e o
         `core/acoes_de_botao.resolver()` é quem as separa entre o device de
         mouse (`BTN_*`) e o de teclado (`KEY_*` e os tokens virtuais).
+
+        O TERCEIRO DESTINO NÃO É DEVICE (ONDA5-06-01): a linha do botão PS vai
+        para o subsistema de hotkey, pelo `ps_action_sink`, porque quem a atende
+        é o callback do `ps_solo` — ver :meth:`_empurrar_o_ps`.
 
         A ORDEM IMPORTA, e ela é: este método roda DEPOIS do `apply_keyboard`.
         Sem `button_actions` no perfil ele não toca em nada — o `None` do campo
@@ -588,7 +639,16 @@ class ProfileManager:
         "aplicou" nem "falhou". É a tela podendo dizer que a escolha está no
         disco e ainda não pousou em lugar nenhum, que é a verdade quando a
         emulação de mouse está desligada.
+
+        O BOTÃO PS É O TERCEIRO DESTINO (ONDA5-06-01), e ele é empurrado ANTES
+        de qualquer saída antecipada — inclusive a do perfil sem
+        `button_actions` e a do "sem device de mouse". As duas razões são
+        medidas: o PS não passa por device nenhum (quem o atende é o callback do
+        `ps_solo`), e um perfil que NÃO opina sobre o PS precisa apagar o que o
+        perfil anterior opinou — senão a escolha do perfil de ontem continua
+        digitando no perfil de hoje.
         """
+        self._empurrar_o_ps(profile)
         if profile.button_actions is None:
             if relatorio is not None:
                 relatorio["button_actions"] = "de_fabrica"
@@ -2150,6 +2210,31 @@ SECAO_DO_APPLIER: dict[str, str] = {
 HERDA_DO_DAEMON: Any = object()
 
 
+def _canal_do_ps(daemon: Any) -> Callable[[str | None], None]:
+    """O `lambda` que leva a escolha do PS ao subsistema que atende o `ps_solo`.
+
+    LAZY POR DUAS RAZÕES, e as duas são medidas. A primeira é a mesma dos dois
+    providers de device: o manager nasce antes de o daemon estar de pé, e
+    resolver agora congelaria o estado de agora. A segunda é o import — `core`
+    e `profiles` são importáveis sem daemon (é o que mantém o gerador da tela e
+    a CLI leves), e um `from ...daemon.subsystems.hotkey import ...` no topo
+    deste arquivo arrastaria o daemon inteiro para dentro dos dois.
+
+    `daemon=None` é rota legítima (CLI e dublês que passam `controller=` por
+    fora): o canal existe e não faz nada, que é o mesmo contrato do applier
+    ausente — a seção é ignorada, e ninguém levanta.
+    """
+
+    def _empurra(token: str | None) -> None:
+        if daemon is None:
+            return
+        from hefesto_dualsense4unix.daemon.subsystems.hotkey import definir_acao_do_ps
+
+        definir_acao_do_ps(daemon, token)
+
+    return _empurra
+
+
 def gerente_do_daemon(
     daemon: Any,
     *,
@@ -2222,6 +2307,11 @@ def gerente_do_daemon(
         # `button_actions` do perfil existiria, gravaria e nunca acenderia nada
         # — a cura escrita e nunca ligada, que é o defeito mais caro desta casa.
         "mouse_device_provider": lambda: getattr(daemon, "_mouse_device", None),
+        # ONDA5-06-01: e o TERCEIRO destino, que não é device. Entra aqui pela
+        # mesma razão dos dois acima — é aqui que a maioria das rotas monta o
+        # manager, e sem esta linha o `button_actions["ps"]` seria gravado,
+        # validado e nunca chegaria a quem o atende.
+        "ps_action_sink": _canal_do_ps(daemon),
     }
     if store is not None:
         argumentos["store"] = store
