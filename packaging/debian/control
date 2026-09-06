@@ -40,7 +40,7 @@ Description: Gerenciador DualSense para Linux
  e o icone da bandeja e um SVG simbolico (app/tray.py). Sem o loader o pixbuf
  sai None em silencio — o icone SOME da barra e todo glifo da interface cai
  junto, sem erro nenhum no log (BUG-TRAY-ICONE-INVISIVEL-01, descrito em
- app/main.py). Nao apague por parecer superfluo: o sintoma nao aponta para a
+ app/arranque.py). Nao apague por parecer superfluo: o sintoma nao aponta para a
  causa.
  .
  ARMADILHA DE NOME: quem desenha na tela e o librsvg2-common (o modulo

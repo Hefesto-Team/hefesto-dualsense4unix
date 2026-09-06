@@ -51,17 +51,30 @@ class Identidade:
 
     @property
     def padroes_de_matanca(self) -> tuple[str, ...]:
-        """Os regexes que ``_kill_previous_instances`` passa ao ``pgrep -f``.
+        r"""Os regexes de ``pgrep -f`` que reconhecem uma TELA nossa viva.
 
-        SÃO QUATRO PORQUE HÁ QUATRO JEITOS DE ABRIR A JANELA: o console script,
-        o ``python -m`` do módulo, e os dois app-ids que o Flatpak já publicou.
-        Um que falte deixa uma segunda janela viva falando com o mesmo daemon —
-        e duas janelas escrevendo o mesmo perfil é o defeito que esta lista
-        existe para não ter.
+        SÃO QUATRO PORQUE HÁ QUATRO JEITOS DE ABRIR A TELA: o console script,
+        o envoltório que o ``.desktop`` roda, e os dois app-ids que o Flatpak já
+        publicou. Um que falte deixa uma segunda janela viva falando com o mesmo
+        daemon — e duas janelas escrevendo o mesmo perfil é o defeito que esta
+        lista existe para não ter.
+
+        O SEGUNDO PADRÃO MUDOU EM 06/09/2026 (`GTK-3`): era
+        ``hefesto_dualsense4unix\.app\.main``, o ``python -m`` da janela GTK, e
+        esse módulo foi apagado por decisão dela (`D-0609-GTK-LEVA-INTEIRA`) —
+        um padrão que não casa mata coisa nenhuma, CALADO, que é exatamente o
+        defeito que o ``PACKAGING-PRERM-PKILL-MODULO-ERRADO-01`` custou. O que a
+        `.desktop` abre hoje é ``python3 <árvore>/scripts/abrir_interface.py``.
+
+        **SEM CHAMADOR HOJE, e está escrito porque é medido:** o único era
+        ``app/main._kill_previous_instances``, que morreu com a janela. A lista
+        fica de pé porque o ``packaging/debian/prerm`` usa o mesmo padrão, e
+        porque ela é a resposta única desta casa à pergunta *"como se reconhece
+        um processo nosso?"*.
         """
         return (
             self.entrypoint_gui,
-            r"hefesto_dualsense4unix\.app\.main",
+            r"scripts/abrir_interface\.py",
             r"io\.github\.hefesto_team\.hefesto_dualsense4unix",
             r"br\.andrefarias\.Hefesto",
         )

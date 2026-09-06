@@ -523,7 +523,7 @@ _pkg_nome() {
         # O loader SVG do gdk-pixbuf. ARMADILHA DE NOME: `librsvg2-bin` é o
         # `rsvg-convert`, ferramenta de BUILD; quem desenha na tela é o
         # `librsvg2-common`. Sem ele o ícone da bandeja some e todo glifo SVG
-        # da interface cai junto (BUG-TRAY-ICONE-INVISIVEL-01, app/main.py).
+        # da interface cai junto (BUG-TRAY-ICONE-INVISIVEL-01, app/arranque.py).
         svg-loader)
             _apt="librsvg2-common";   _dnf="librsvg2"
             _pacman="librsvg" ;;

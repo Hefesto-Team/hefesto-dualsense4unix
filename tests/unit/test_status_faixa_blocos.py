@@ -415,50 +415,6 @@ def test_o_numero_do_giroscopio_fica_perto_do_nome_do_eixo(
     )
 
 
-def test_o_frame_estado_tem_a_mesma_largura_do_card() -> None:
-    """A aba passa a ter UMA coluna de conteúdo, não duas larguras.
-
-    O frame "Estado" é do glade e recebia a tela inteira: 1870px para cinco
-    linhas de rótulo, com a barra de bateria esticando 1730px para dizer
-    "80 %" — exatamente o defeito que ela apontou nas barras de L2/R2, no
-    bloco logo acima delas. Um card de 960px centrado embaixo de um frame de
-    1870px leria como "o card encolheu", e não como "a aba se organizou".
-
-    O número mora no `controller_card.py` e é repetido no glade; este teste é
-    o que impede a repetição de virar mentira no dia em que um dos dois mudar.
-
-    SOM-01: o número compartilhado passou a ser o PISO dos dois (1040px, o que
-    o conteúdo do card pede depois de os desenhos crescerem).
-
-    SOM-01 (segunda passada): o `halign` do frame tem de ser `fill`. Com
-    `center` mais um mínimo declarado, o GTK3 trava o widget no número exato —
-    e o frame ficava em 1040px acima de um card que ia a 1400px, visivelmente
-    desalinhados na tela maximizada. O TETO dos dois passou a vir do MESMO
-    mecanismo: a `CaixaDeTetoElastico`, que o `app.py` põe em volta do frame.
-    """
-    import xml.etree.ElementTree as ET
-
-    from hefesto_dualsense4unix.app.constants import MAIN_GLADE
-
-    arvore = ET.parse(str(MAIN_GLADE))
-    for obj in arvore.iter("object"):
-        if obj.get("id") != "frame_status_estado":
-            continue
-        props = {
-            p.get("name"): (p.text or "").strip() for p in obj.findall("property")
-        }
-        assert props.get("halign") == "fill", (
-            "com halign=center o frame trava no mínimo declarado e para de "
-            "acompanhar o card — ver CaixaDeTetoElastico"
-        )
-        assert props.get("width-request") == str(LARGURA_CARD_UNICO), (
-            "o frame Estado e o card de um controle têm de ter a MESMA "
-            f"largura: o glade pede {props.get('width-request')}px e o card, "
-            f"{LARGURA_CARD_UNICO}px"
-        )
-        return
-    raise AssertionError("frame_status_estado não existe mais no glade")
-
 
 # ---------------------------------------------------------------------------
 # Entrega 3 — cada assunto num bloco, não seis itens numa lista

@@ -51,11 +51,10 @@ _gi.require_version("Gtk", "3.0")
 from gi.repository import Gtk
 
 from hefesto_dualsense4unix.app import ipc_bridge
-from hefesto_dualsense4unix.app.actions.config import ABA_CONFIG, ConfigActionsMixin
 from hefesto_dualsense4unix.app.actions.config import secao_janela, secao_mesa
 from hefesto_dualsense4unix.app.actions.config.secoes import SECOES_DA_ABA
 from hefesto_dualsense4unix.app.actions.config.moldura import RECIBO_GUARDADO, VALE_JA
-from hefesto_dualsense4unix.app.constants import MAIN_GLADE
+from tests.unit.aba_config_sem_a_janela import aba_config_montada
 from hefesto_dualsense4unix.app.widgets import external_card
 from hefesto_dualsense4unix.app.widgets.campo_de_busca import CampoDeBusca
 
@@ -158,21 +157,17 @@ NUNCA_MENOS_QUE = 2
 
 
 def _aba_montada() -> Any:
-    """Carrega o Glade, roda o mixin e devolve a caixa da aba.
+    """Monta a aba em CÓDIGO e devolve a caixa da aba.
 
-    Molde de `test_config_a_palavra_de_tela_da_aba_montada.py:73` — a aba de
+    Molde de `test_config_a_palavra_de_tela_da_aba_montada.py` — a aba de
     verdade, não um dublê: o defeito que esta leva paga só existe na aba
     montada, porque é lá que os doze parágrafos se somam.
+
+    06/09/2026 (`GTK-3`): o `gui/main.glade` era aberto aqui só para pegar a
+    caixa vazia; o berço agora é `tests/unit/aba_config_sem_a_janela.py`, com
+    régua de fidelidade própria.
     """
-
-    class _Host(ConfigActionsMixin):
-        def __init__(self, builder: Gtk.Builder) -> None:
-            self.builder = builder
-
-    builder = Gtk.Builder()
-    builder.add_from_file(str(MAIN_GLADE))
-    _Host(builder).install_config_tab()
-    return builder.get_object(ABA_CONFIG)
+    return aba_config_montada()
 
 
 def _descer(raiz: Any) -> list[Any]:

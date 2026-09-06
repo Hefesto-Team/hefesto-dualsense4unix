@@ -17,8 +17,23 @@ há uma razão de significado que sobrevive à medição: a saída padrão é um
 do SISTEMA, não do controle — com dois cards lado a lado haveria dois botões
 para um único interruptor global, e só um deles poderia estar certo.
 
-Toda medida de geometria é feita com a janela montada e ALOCADA: widget sem
-alocação devolve 1x1 e um teste de layout sobre ele passa com qualquer desenho.
+OS TRÊS TESTES DE GEOMETRIA SAÍRAM EM 06/09/2026 (`GTK-3`)
+-----------------------------------------------------------
+
+Eles montavam o `gui/main.glade` numa `Gtk.OffscreenWindow` do tamanho de
+projeto e mediam ONDE o botão mora, quanto ele custa de largura e se ele cabe
+no vão do grid. A superfície que eles mediam é a janela GTK, aposentada por
+decisão dela (`D-0609-GTK-LEVA-INTEIRA`) — eram
+`test_o_botao_mora_no_bloco_do_alto_falante_e_nasce_insensivel`,
+`test_o_botao_da_rota_custa_zero_do_orcamento_da_aba` e
+`test_o_botao_ocupa_o_vao_horizontal_que_ja_existia`.
+
+**O que fica é a FIAÇÃO, que é o motor e não muda de dono:** nenhum `pactl` na
+thread do GTK, o tique de reconexão que relê a rota, o ciclo completo de ida e
+volta, o clique sem alvo e o caso de dois controles. A medição *"+0px de
+largura e +36px de altura"* do cabeçalho acima continua sendo o registro do
+porquê de o botão não morar no bloco "Alto-falante" — ela é decisão medida, e
+esta casa não a apaga; o que morreu foi a régua que a reconferia na janela.
 """
 
 from __future__ import annotations
@@ -28,7 +43,6 @@ from tests.conftest import exigir_gi_real
 # GUARDA-GI-REAL-01: vem antes de qualquer import de `gi` de propósito.
 exigir_gi_real("status som 04 rota")
 
-import xml.etree.ElementTree as ET
 from typing import Any, NamedTuple
 
 import gi
@@ -45,13 +59,11 @@ from gi.repository import Gdk, Gtk
 from hefesto_dualsense4unix.app import ipc_bridge
 from hefesto_dualsense4unix.app.actions.status_actions import StatusActionsMixin
 from hefesto_dualsense4unix.app.audio_saida import (
-    DICA_ROTA_INICIAL,
-    DICA_ROTA_PARA_O_CONTROLE,
     TEXTO_ROTA_PARA_O_CONTROLE,
     TEXTO_ROTA_VOLTAR,
     EstadoDaRota,
 )
-from hefesto_dualsense4unix.app.constants import GUI_DIR, MAIN_GLADE
+from hefesto_dualsense4unix.app.constants import GUI_DIR
 from hefesto_dualsense4unix.app.theme import (
     ESCALA_PADRAO,
     escalar_css,
@@ -77,26 +89,6 @@ def _gtk_pronto() -> bool:
 
 
 pytestmark = pytest.mark.skipif(not _gtk_pronto(), reason="sem GTK/display utilizável")
-
-
-def _dimensao_da_janela(nome: str) -> int:
-    """Lê `default-width` do glade — nunca hardcode do orçamento."""
-    for obj in ET.parse(str(MAIN_GLADE)).iter("object"):
-        if obj.get("id") != "main_window":
-            continue
-        for prop in obj.findall("property"):
-            if prop.get("name") == nome:
-                return int((prop.text or "0").strip())
-    raise AssertionError(f"{nome} não encontrado em main_window")
-
-
-LARGURA_DE_PROJETO = _dimensao_da_janela("default-width")
-#: A ALTURA com que a janela abre. Ela não é decoração no teste de orçamento:
-#: numa `Gtk.OffscreenWindow` sem altura pedida, o vertical é INFINITO — a
-#: janela cresce e nada é espremido. Foi assim que a primeira versão deste
-#: arquivo deixou passar um botão numa linha própria do grid: ele custava
-#: altura de verdade e o teste não via, porque não havia teto para estourar.
-ALTURA_DE_PROJETO = _dimensao_da_janela("default-height")
 
 _janelas_vivas: list[Any] = []
 
@@ -146,179 +138,6 @@ def _tema_na_escala_que_sai() -> Any:
         Gtk.StyleContext.remove_provider_for_screen(tela, provider)
 
 
-def _janela_montada() -> tuple[Any, Any]:
-    """A janela real do Glade, montada e ALOCADA no tamanho de PROJETO.
-
-    Com a altura pedida — ver :data:`ALTURA_DE_PROJETO`. Sem ela o vertical é
-    infinito e um teste de orçamento de altura não mede nada.
-    """
-    builder = Gtk.Builder()
-    builder.add_from_file(str(MAIN_GLADE))
-    root = builder.get_object("root_box")
-    pai = root.get_parent()
-    if pai is not None:
-        pai.remove(root)
-    win = Gtk.OffscreenWindow()
-    win.get_style_context().add_class("hefesto-dualsense4unix-window")
-    win.add(root)
-    win.set_size_request(LARGURA_DE_PROJETO, ALTURA_DE_PROJETO)
-    win.show_all()
-    win.resize(LARGURA_DE_PROJETO, ALTURA_DE_PROJETO)
-    while Gtk.events_pending():
-        Gtk.main_iteration()
-    _janelas_vivas.append(win)
-    return builder, win
-
-
-# ---------------------------------------------------------------------------
-# Onde o botão mora, e quanto ele custa
-# ---------------------------------------------------------------------------
-
-
-def test_o_botao_mora_no_bloco_do_alto_falante_e_nasce_insensivel() -> None:
-    """Ele mora no bloco "Alto-falante" do card do primeiro controle.
-
-    SOM-ROTA-NO-CARD-01, pedido dela em 01/08 olhando a tela: *"aquele botão
-    de voltar ao anterior sai de lá de cima e fica no espaço onde tem 'não
-    ajustado' no alto-falante"*.
-
-    **O que mudou e o que NÃO mudou.** Até aqui ele morava no grid do frame
-    Estado, e havia duas razões escritas. A primeira era medida — *"não cabe
-    lá, +36px de altura num card que já pede 442 de 467"* — e valia para
-    ACRESCENTAR uma peça ao bloco; aqui ele SUBSTITUI o rótulo de valor, que
-    subiu para a linha da barra, e o custo medido foi de 8px numa faixa com
-    100px de folga. A segunda razão continua inteira: a saída padrão do
-    sistema é um fato GLOBAL, e dois cards não podem ter dois botões para um
-    interruptor só. É por isso que ele continua sendo UM widget, o do Glade,
-    REPARENTADO para o slot do card primário — e não um botão por card.
-
-    Nasce insensível no Glade de propósito: antes da primeira leitura do
-    `pactl` a janela não sabe onde o som está nem para onde ele pode ir, e um
-    botão clicável nesse intervalo prometeria uma troca que ninguém apurou.
-
-    Mordida: tirar o ``<property name="sensitive">False</property>``; ou
-    arrancar o `_alojar_botao_da_rota` da `status_actions`, que deixa o botão
-    no frame Estado e a última asserção cai.
-    """
-    builder, _win = _janela_montada()
-    botao = builder.get_object(ID_BOTAO)
-    assert botao is not None, f"{ID_BOTAO} não existe no Glade"
-    assert not botao.get_sensitive(), "o botão nasce insensível"
-
-    # A regra da casa: nenhum controle que muda alguma coisa fica mudo na tela
-    # (`test_palavra_a_janela_fala_a_lingua`). A dica inicial é cópia fiel da
-    # constante, e esta asserção é o que impede as duas de derivarem — o Glade
-    # é XML e não importa nada do Python.
-    assert botao.get_tooltip_text() == DICA_ROTA_INICIAL, (
-        "a dica do Glade tem de ser igual a `audio_saida.DICA_ROTA_INICIAL`"
-    )
-    assert DICA_ROTA_INICIAL != DICA_ROTA_PARA_O_CONTROLE, (
-        "a dica inicial NÃO é a da ação: antes da primeira leitura a janela "
-        "não sabe onde o som está, e o botão pode nascer insensível"
-    )
-
-    grid = builder.get_object("status_grid")
-    assert botao.get_parent() is grid, (
-        "no Glade o botão nasce no grid do frame Estado. Quem o muda de casa "
-        "é a `status_actions`, no momento em que os cards existem — antes "
-        "disso não há bloco de alto-falante nenhum para recebê-lo"
-    )
-
-
-def test_o_botao_da_rota_custa_zero_do_orcamento_da_aba() -> None:
-    """Os orçamentos são duros e já estavam no limite. Este botão não gasta.
-
-    O método é o único honesto: monta a janela real DUAS vezes, uma com o
-    botão e outra com ele arrancado do grid, e compara. Comparar contra um
-    número escrito à mão envelheceria na primeira troca de fonte.
-
-    As duas grandezas que ele não pode mover, e por quê:
-
-    * a largura MÍNIMA da aba Status (1064 de 1180) — é ela que sobe intacta
-      até a janela e decide se a janela abre com barra de rolagem horizontal;
-    * a ALTURA MÍNIMA da aba — é a medida certa, e não a altura alocada da
-      faixa dos cards: alocação de `Gtk.OffscreenWindow` se renegocia e pode
-      esconder o custo, enquanto o mínimo da aba é o que de fato disputa os
-      467px da faixa. Cada pixel que o frame Estado ganha sai do card, e o
-      card mais alto já pede 442 de 467.
-
-    Mordida: mover o botão para uma LINHA própria do grid
-    (``top-attach=5`` sem ``height``), que é o desenho óbvio de quem
-    acrescenta uma linha. Medido: a altura mínima da aba vai de 291 para
-    335px (+44) e a do grid de 185 para 229 — a segunda asserção cai.
-    """
-    builder, _win = _janela_montada()
-    aba = builder.get_object("tab_status_box")
-    grid = builder.get_object("status_grid")
-    botao = builder.get_object(ID_BOTAO)
-
-    com_largura = aba.get_preferred_width()[0]
-    com_altura = aba.get_preferred_height()[0]
-
-    grid.remove(botao)
-    while Gtk.events_pending():
-        Gtk.main_iteration()
-    sem_largura = aba.get_preferred_width()[0]
-    sem_altura = aba.get_preferred_height()[0]
-
-    assert com_largura == sem_largura, (
-        f"o botão mexeu na largura mínima da aba: {sem_largura} -> "
-        f"{com_largura}px, num teto de {LARGURA_DE_PROJETO}"
-    )
-    assert com_altura == sem_altura, (
-        f"o botão comeu altura da aba: {sem_altura} -> {com_altura}px, e cada "
-        "pixel daqui sai da faixa dos cards, onde o card mais alto já pede "
-        "442 de 467"
-    )
-    assert com_largura <= LARGURA_DE_PROJETO, (
-        f"a aba Status pede {com_largura}px de {LARGURA_DE_PROJETO}"
-    )
-
-
-def test_o_botao_ocupa_o_vao_horizontal_que_ja_existia() -> None:
-    """Ele não é de graça por acaso: no berço dele, ele mora num buraco pago.
-
-    O grid do frame Estado tem rótulos curtos num frame com piso de 1040px —
-    sobra vão à direita. O botão entra numa coluna DEPOIS dos dois pares
-    rótulo/valor e atravessa TODAS as linhas do grid, que é o que impede o
-    grid de ganhar uma linha só para ele.
-
-    Os dois números mudaram em 01/08 e nenhum deles é arbitrário: a
-    ESTADO-TRES-LINHAS-01 levou o grid de cinco linhas para duas (a bateria
-    saiu para uma caixa própria, com largura inteira) e de duas colunas para
-    quatro (os pares que sobravam empilhados viraram pares lado a lado). Por
-    isso a coluna do botão é a 4 e o `height` é 2. O teste os DERIVA do grid
-    em vez de repetir os literais — assim ele continua valendo na próxima vez
-    que a forma mudar, e continua reprovando quem tirar o `height`.
-
-    Mordida: tirar o ``height`` do empacotamento. O botão passa a ocupar uma
-    linha só, a linha ganha a altura dele, e a asserção do intervalo cai.
-    """
-    builder, _win = _janela_montada()
-    grid = builder.get_object("status_grid")
-    botao = builder.get_object(ID_BOTAO)
-
-    colunas_de_par = max(
-        grid.child_get_property(filho, "left-attach")
-        for filho in grid.get_children()
-        if filho is not botao
-    )
-    linhas = 1 + max(
-        grid.child_get_property(filho, "top-attach")
-        for filho in grid.get_children()
-        if filho is not botao
-    )
-
-    assert grid.child_get_property(botao, "left-attach") > colunas_de_par, (
-        "o botão fica DEPOIS das colunas de par rótulo/valor: dentro delas "
-        "ele empurraria um valor para longe do rótulo que o nomeia"
-    )
-    assert grid.child_get_property(botao, "height") >= linhas, (
-        f"o botão atravessa as {linhas} linhas do grid em vez de criar uma"
-    )
-    assert botao.get_allocated_height() <= grid.get_allocated_height(), (
-        "o botão não pode ser mais alto que o grid que o hospeda"
-    )
 
 
 # ---------------------------------------------------------------------------
@@ -602,8 +421,8 @@ def test_com_dois_controles_o_alvo_da_rota_fica_vazio() -> None:
     assert host._sink_do_controle_para_a_rota(None, ("aa",)) == ""
 
 
-def test_sem_o_botao_no_glade_a_aba_nao_quebra() -> None:
-    """Glade antigo, ou builder dublado de um teste de outra área.
+def test_sem_o_botao_no_builder_a_aba_nao_quebra() -> None:
+    """Builder sem o botão, ou dublado por um teste de outra área.
 
     A aba tem de montar do mesmo jeito — a rota some, o resto fica. É a mesma
     linha do tema sem CSS e do monitor de mic indisponível.

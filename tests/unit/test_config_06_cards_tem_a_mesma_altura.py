@@ -302,7 +302,8 @@ def test_a_secao_monta_a_mesa_de_cinco_e_ela_cabe_na_janela() -> None:
     import json
 
     from hefesto_dualsense4unix.app.actions.config import ABA_CONFIG, ConfigActionsMixin
-    from hefesto_dualsense4unix.app.constants import MAIN_GLADE
+
+    from tests.unit.aba_config_sem_a_janela import BercoDaAbaConfig
 
     fixture = json.loads(
         (RAIZ / "tests" / "fixtures" / "inventario_externos.json").read_text(
@@ -317,14 +318,14 @@ def test_a_secao_monta_a_mesa_de_cinco_e_ela_cabe_na_janela() -> None:
             self._mesa_leitor = lambda: None
             self._controles_leitor = lambda: fixture
 
-    builder = Gtk.Builder()
-    builder.add_from_file(str(MAIN_GLADE))
+    # 06/09/2026 (`GTK-3`): o berço saiu do `gui/main.glade` para
+    # `tests/unit/aba_config_sem_a_janela.py`. A seção do arranjo e os cards
+    # nascem em `app/actions/config/`, que é MOTOR; o XML só dava a caixa.
+    builder = BercoDaAbaConfig()
     _HospedeiroComMesa(builder).install_config_tab()
 
-    pagina = builder.get_object("scroll_tab_config_box")
-    pai = pagina.get_parent()
-    if pai is not None:
-        pai.remove(pagina)
+    pagina = Gtk.ScrolledWindow()
+    pagina.add(builder.get_object(ABA_CONFIG))
     janela = Gtk.OffscreenWindow()
     janela.get_style_context().add_class("hefesto-dualsense4unix-window")
     janela.add(pagina)

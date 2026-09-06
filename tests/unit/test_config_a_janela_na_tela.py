@@ -31,6 +31,21 @@ CERTA e o defeito era real — `gui_prefs` agora resolve o caminho na chamada
 volta da constante. O dublê fica pelo motivo do parágrafo acima, não mais por
 medo do `$HOME`.
 
+OS DOIS TESTES DE GEOMETRIA SAÍRAM EM 06/09/2026 (`GTK-3`)
+-----------------------------------------------------------
+
+`test_a_secao_cabe_na_largura_da_janela` e `test_as_tres_opcoes_ficam_lado_a_lado`
+mediam a seção dentro do `scroll_tab_config_box` do `gui/main.glade`, na
+`default-width` lida do próprio XML. A superfície que eles mediam é a janela
+GTK, aposentada por decisão dela (`D-0609-GTK-LEVA-INTEIRA`) — e com ela saíram
+`_realizar`, `_largura_da_janela` e o `_pagina_do_notebook`, que já não tinha
+chamador.
+
+**A regra 1 do cabeçalho — "Combo nenhum" — continua medida**, por
+`test_nenhuma_escolha_desta_secao_e_um_combo`, que não precisa de janela: ele
+anda a árvore da seção. O que se perde é a prova de que a seção CABE, e ela não
+tem equivalente na interface nova, onde a mesma decisão vira CSS.
+
 AS MORDIDAS, todas arrancadas e devolvidas em 22/08/2026 nesta árvore:
 
 * liguei o `connect("changed")` ANTES do `set_active_id` em
@@ -66,7 +81,6 @@ from tests.conftest import exigir_gi_real
 # `pytest.importorskip("gi")` aceitaria o stub que outro arquivo planta.
 exigir_gi_real("seção A janela da aba configurações")
 
-import xml.etree.ElementTree as ET
 from typing import Any
 
 import pytest
@@ -77,14 +91,13 @@ from gi.repository import Gtk
 
 from hefesto_dualsense4unix.app import ambiente as ambiente_mod
 from hefesto_dualsense4unix.app import theme as theme_mod
-from hefesto_dualsense4unix.app.actions.config import ABA_CONFIG, ConfigActionsMixin
+from hefesto_dualsense4unix.app.actions.config import ABA_CONFIG
 from hefesto_dualsense4unix.app.actions.config import secao_janela
 # `id_da_pagina_corrente` saiu do import em 25/08/2026, junto com o teste do
 # botão "Abrir a aba Sistema" que a LEX-4 removeu a pedido dela. Import órfão
 # não é sujeira de estilo: ele faz o arquivo parecer exercitar um caminho que
 # ninguém exercita mais.
-from hefesto_dualsense4unix.app.actions.home_actions import id_da_pagina
-from hefesto_dualsense4unix.app.constants import MAIN_GLADE
+from tests.unit.aba_config_sem_a_janela import HospedeiroDaAbaConfig
 
 #: O id da extensão que a instrução do GNOME precisa carregar.
 EXTENSAO_DO_GNOME = "ubuntu-appindicators@ubuntu.com"
@@ -165,11 +178,17 @@ def _montar(
     prefs: dict[str, Any] | None = None,
     ambiente: str | None = "COSMIC",
 ) -> _Bancada:
-    """Carrega o Glade, roda o mixin e devolve a bancada.
+    """Monta a aba em código, roda o mixin e devolve a bancada.
 
     `ambiente` entra por `XDG_CURRENT_DESKTOP` — a variável de verdade, para o
     caminho de produção ser o exercitado. `None` apaga as duas variáveis, que é
     o caso da sessão headless e o primeiro item do aceite desta sprint.
+
+    06/09/2026 (`GTK-3`): o berço saiu do `gui/main.glade` e virou
+    `tests/unit/aba_config_sem_a_janela.py` — a seção "A janela" sempre nasceu
+    em `app/actions/config/secao_janela.py`, que é MOTOR e fica, e o XML só
+    dava a caixa e o `daemon_autostart_switch` (que o berço entrega, com régua
+    de fidelidade própria).
     """
     bancada = _Bancada()
     bancada.prefs = dict(prefs or {})
@@ -196,60 +215,11 @@ def _montar(
     if ambiente is not None:
         monkeypatch.setenv("XDG_CURRENT_DESKTOP", ambiente)
 
-    class _Host(ConfigActionsMixin):
-        def __init__(self, builder: Gtk.Builder) -> None:
-            self.builder = builder
-
-    bancada.builder = Gtk.Builder()
-    bancada.builder.add_from_file(str(MAIN_GLADE))
-    bancada.host = _Host(bancada.builder)
+    bancada.host = HospedeiroDaAbaConfig()
+    bancada.builder = bancada.host.builder
     bancada.host.install_config_tab()
     return bancada
 
-
-def _pagina_do_notebook(notebook: Any, page_id: str) -> Any:
-    """O filho DIRETO do notebook cuja página é `page_id`.
-
-    Não é o mesmo widget que `builder.get_object(page_id)` devolve: a página
-    Sistema mora dentro de um `GtkScrolledWindow` já no Glade (ela tem rolagem
-    própria). `id_da_pagina` desembrulha, e é o dono único desse desembrulho.
-    """
-    for filho in notebook.get_children():
-        if id_da_pagina(filho) == page_id:
-            return filho
-    raise AssertionError(f"nenhuma página do notebook tem o id {page_id!r}")
-
-
-def _realizar(bancada: _Bancada) -> Any:
-    """Põe a página numa `Gtk.OffscreenWindow` e roda o laço até assentar.
-
-    `Gtk.OffscreenWindow` e não `Gtk.Window`: sob Xvfb não há gerenciador de
-    janelas, e uma `Gtk.Window` fica 1x1 para sempre — toda medição de
-    geometria sairia zerada e verde.
-    """
-    pagina = bancada.builder.get_object("scroll_tab_config_box")
-    pai = pagina.get_parent()
-    if pai is not None:
-        pai.remove(pagina)
-    janela = Gtk.OffscreenWindow()
-    janela.get_style_context().add_class("hefesto-dualsense4unix-window")
-    janela.add(pagina)
-    janela.show_all()
-    while Gtk.events_pending():
-        Gtk.main_iteration()
-    return pagina
-
-
-def _largura_da_janela() -> int:
-    """A `default-width` do próprio Glade — nunca uma constante copiada."""
-    arvore = ET.parse(str(MAIN_GLADE))
-    for obj in arvore.iter("object"):
-        if obj.get("id") != "main_window":
-            continue
-        for prop in obj.findall("property"):
-            if prop.get("name") == "default-width":
-                return int((prop.text or "0").strip())
-    raise AssertionError("default-width não encontrado em main_window")
 
 
 # --- 1. A seção existe, é a última, e não tem combo -------------------------
@@ -288,55 +258,6 @@ def test_nenhuma_escolha_desta_secao_e_um_combo(
     ]
     assert not proibidos, f"combo na aba Configurações: {proibidos}"
 
-
-def test_a_secao_cabe_na_largura_da_janela(monkeypatch: pytest.MonkeyPatch) -> None:
-    """A rolagem horizontal é `never`: o mínimo da página vira o da janela.
-
-    Mordida: um rótulo de parágrafo inteiro sem `set_line_wrap(True)` — a
-    seção salta para além dos 1180px e reprova.
-
-    O que este portão NÃO pega, medido em 22/08/2026: `set_homogeneous(True)`
-    nas fileiras leva a seção de 426px para 600px (+41%) e continua passando,
-    porque a seção é curta. A folga é real e o teto continua sendo o certo a
-    cobrar — quem defende as fileiras de homogêneo é o comentário em `_fileira`,
-    com o preço já pago no Glade (`main.glade:1644-1650`: 1004 dos 1066px da
-    largura mínima da janela inteira, para dar a "Auto" os mesmos 459px de uma
-    frase).
-    """
-    bancada = _montar(monkeypatch)
-    _realizar(bancada)
-
-    minima, _natural = bancada.secao.get_preferred_width()
-    teto = _largura_da_janela()
-    assert minima <= teto, (
-        f"a seção A janela pede {minima}px e a janela abre com {teto}px"
-    )
-
-
-def test_as_tres_opcoes_ficam_lado_a_lado(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Deitadas, como no desenho — e isso NÃO é o padrão do widget.
-
-    Sem `wrap=True`, o `SegmentedSelector` é um `Gtk.Box` VERTICAL
-    (`segmented_selector.py:206`) e empilha as opções: é assim que
-    "Sons do jogo / Todo o som do PC" aparece hoje em
-    `docs/usage/assets/readme_status.png`. Três opções empilhadas em duas
-    fileiras custariam quatro linhas de altura a mais e não seriam o desenho.
-
-    Mordida: trocar `SegmentedSelector(wrap=True)` por `SegmentedSelector()` —
-    as três passam a ter o mesmo `x` e `y` crescente, e reprova.
-    """
-    bancada = _montar(monkeypatch)
-    _realizar(bancada)
-
-    for trio in (("Compacto", "Normal", "Grande"), ("COSMIC", "GNOME", "Outro")):
-        caixas = [bancada.botao_de_opcao(nome).get_allocation() for nome in trio]
-        alturas = {caixa.y for caixa in caixas}
-        assert len(alturas) == 1, (
-            f"as opções {trio} nasceram empilhadas (topos em {sorted(alturas)})"
-        )
-        assert [caixa.x for caixa in caixas] == sorted(caixa.x for caixa in caixas), (
-            f"as opções {trio} saíram fora da ordem do desenho"
-        )
 
 
 def test_a_aba_abre_com_a_sessao_sem_declarar_ambiente(

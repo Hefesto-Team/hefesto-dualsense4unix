@@ -156,7 +156,6 @@ TELA = (
     "src/hefesto_dualsense4unix/interface",
     "src/hefesto_dualsense4unix/app",
     "src/hefesto_dualsense4unix/gui",
-    "scripts/gui-captura",
 )
 
 #: Dentro de `novo-layout`, o que NÃO é desenho: saída de ferramenta, não fonte.
@@ -488,9 +487,10 @@ def _o_ponto_cego(raiz: Path) -> None:
     com esta pasta fora seria o instrumento falso que esta casa já pegou seis
     vezes em quinze horas. Então ele DIZ.
 
-    O que sobra coberto, e é real: o lado versionado — `src/…/app`, `src/…/gui`,
-    `scripts/gui-captura` e a régua `scripts/regua_de_tela.py`. Foi por essa
-    razão que ela nasceu em `scripts/` e não em `layout/`.
+    O que sobra coberto, e é real: o lado versionado — `src/…/interface` (as dez
+    páginas e o retratista delas), `src/…/app`, `src/…/gui` e a régua
+    `scripts/regua_de_tela.py`. Foi por essa razão que ela nasceu em `scripts/`
+    e não em `layout/`.
     """
     ignorada = (
         subprocess.run(
@@ -512,7 +512,7 @@ def _o_ponto_cego(raiz: Path) -> None:
     print("  índice, e um `pre-commit` só julga o índice.")
     print()
     print("  Então este portão cobre o lado VERSIONADO da tela — `src/…/app`,")
-    print("  `src/…/gui`, `scripts/gui-captura` — e credita a régua versionada")
+    print("  `src/…/interface`, `src/…/gui` — e credita a régua versionada")
     print("  `scripts/regua_de_tela.py`. Sobre o mockup ele é mudo, e nenhum")
     print("  gancho pode deixar de ser.")
     print()

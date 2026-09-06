@@ -162,6 +162,36 @@ _O_PROPRIO_ALVO = {
 }
 
 
+def alvos_cumpridos() -> dict[str, str]:
+    """Os alvos cujo ARTEFATO já não existe nesta árvore — 06/09/2026.
+
+    POR QUE ELES SAEM DAS DUAS REGRAS, e a razão é o propósito do portão. Ele
+    nasceu para impedir que a janela CRESÇA enquanto ela sai: *"a lista só
+    diminui, senão a GTK-3 persegue um alvo que cresce"*. No dia em que o
+    arquivo é apagado, o alvo parou de crescer da única maneira que importa —
+    **não há mais o que importar.** `from hefesto_dualsense4unix.app import app`
+    passa a ser `ModuleNotFoundError`, e nenhuma régua precisa proibir o que o
+    interpretador já recusa.
+
+    O que sobra citando um alvo cumprido é PROSA: a nota datada de quem apagou,
+    o comentário que conta o que morreu, a razão no cabeçalho da régua que
+    mudou de dono. Cobrar declaração no CSV para cada uma delas pediria o
+    oposto do que esta casa manda — *não se apaga decisão medida* —, e o preço
+    seria escrever no inventário a lápide de um arquivo que o inventário existe
+    para ver morrer.
+
+    **O ALVO CUMPRIDO NÃO PODE RESSUSCITAR CALADO:** se o arquivo voltar, ele
+    volta às duas regras sozinho, porque esta função pergunta ao disco a cada
+    execução. E o cabeçalho do relatório diz quantos são e quantas citações eles
+    ainda carregam, para o número não sumir de vista.
+    """
+    return {
+        alvo: caminho
+        for alvo, caminho in _O_PROPRIO_ALVO.items()
+        if not (RAIZ / caminho).exists()
+    }
+
+
 def _prosa_do_python(texto: str) -> dict[int, list[tuple[int, int]]]:
     """As posições que são COMENTÁRIO ou DOCSTRING — a prosa, e só ela.
 
@@ -439,10 +469,20 @@ def comando_portao() -> int:
             problemas.append(f"{onde}: `ocorrencias` não é número — {chave[0]} · {chave[1]}.")
 
     # --- METADE 1: nada NOVO aponta para a janela ----------------------------
+    #
+    # OS ALVOS CUMPRIDOS SAEM DAS DUAS REGRAS — ver `alvos_cumpridos()`. O
+    # arquivo não existe mais, então não há import a proibir: o que sobra é
+    # prosa datada, e esta casa não a apaga.
+    cumpridos = alvos_cumpridos()
+    citacoes_cumpridas = sum(
+        dado["ocorrencias"] for (_arq, alvo), dado in censo.items() if alvo in cumpridos
+    )
     for chave in sorted(censo):
         arquivo, alvo = chave
         vivas = censo[chave]
         linhas = ";".join(str(numero) for numero in vivas["linhas"])
+        if alvo in cumpridos:
+            continue
         if chave not in declarado:
             problemas.append(
                 f"{arquivo}:{linhas}: CITAÇÃO NOVA para a janela ({alvo}). "
@@ -479,10 +519,20 @@ def comando_portao() -> int:
         return 1
 
     vivas_total = sum(dado["ocorrencias"] for dado in censo.values())
+    vigiadas = len([c for c in censo if c[1] not in cumpridos])
     print(
         f"OK: {len(censo)} pares (arquivo, alvo) · {vivas_total} citações à janela, "
         f"todas declaradas com veredito."
     )
+    if cumpridos:
+        print(
+            f"     ({len(cumpridos)} alvo(s) CUMPRIDO(S) — o artefato não existe mais: "
+            + ", ".join(sorted(cumpridos))
+            + f".\n      As {citacoes_cumpridas} citações a eles são prosa datada e "
+            "saem das duas regras;\n      "
+            f"{vigiadas} par(es) continuam vigiados. Se um deles voltar ao disco, "
+            "volta às regras sozinho.)"
+        )
     if encolheu or encolheu_contagem:
         print(
             f"     (a lista encolheu: {len(encolheu)} par(es) sumiram e "

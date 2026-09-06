@@ -101,15 +101,21 @@ hefesto-dualsense4unix = "hefesto_dualsense4unix.cli.app:main"
 # não segue disponivel, vai gerar confusão nos agentes. So a nova esta
 # disponivel e deve ser integrada."*
 #
-# A JANELA GTK NAO SOME DO CODIGO: `app/main:main` continua importavel, e os 74
-# handlers de `app/actions/`, o `app/ipc_bridge.py` e as camadas de `app/telas/`
-# são o MOTOR que a interface nova chama. O que saiu e o LANCADOR.
+# E A JANELA SAIU DO CODIGO EM 06/09/2026 (`GTK-3`, `D-0609-GTK-LEVA-INTEIRA`).
+# Esta linha dizia "`app/main:main` continua importavel" — deixou de ser
+# verdade: `app/main.py` e `app/app.py` foram apagados. O MOTOR ficou inteiro,
+# e e ele que a interface nova chama: os 74 handlers de `app/actions/`, o
+# `app/ipc_bridge.py` e as camadas de `app/telas/`.
 hefesto-dualsense4unix-gui = "hefesto_dualsense4unix.interface.hefesto_vivo:main"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/hefesto_dualsense4unix"]
 include = [
-    "src/hefesto_dualsense4unix/gui/*.glade",
+    # O `gui/*.glade` SAIU em 06/09/2026 (`GTK-3`): a janela GTK foi aposentada
+    # por decisão dela (D-0609-GTK-LEVA-INTEIRA) e não há mais `.glade` nesta
+    # árvore. `gui/assets/*.png` FICA — a logo do cabeçalho não é a janela, e
+    # `app/constants._resolve_icon_path` a procura ali primeiro no cenário
+    # .deb/flatpak/wheel.
     "src/hefesto_dualsense4unix/gui/assets/*.png",
     # A INTERFACE NOVA ENTRA NO WHEEL — 01/09/2026. Ate aqui as páginas viviam
     # em `layout/`, fora do pacote, e quem instalasse o Hefesto NAO RECEBIA A

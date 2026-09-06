@@ -60,10 +60,12 @@ trap 'rm -f "$POT.python" "$POT.glade"' EXIT
 # A FONTE DA JANELA: ou ela está aí, ou este script PARA e diz o que sumiu.
 if [[ ! -f "$GLADE" ]] && [[ "$SEM_A_JANELA" -eq 0 ]]; then
     cat >&2 <<FIM
-ERRO: $GLADE não existe, e ele é a fonte de 317 das 413 frases deste catálogo.
+ERRO: $GLADE não existe, e ele era a fonte de 317 das 413 frases deste catálogo.
 
-A janela GTK está sendo aposentada (D-0609-GTK-LEVA-INTEIRA:
-docs/process/sprints/2026-09-06-GTK-2-os-leitores-do-glade-ganham-dono-no-motor.md).
+A janela GTK FOI APOSENTADA em 06/09/2026 (D-0609-GTK-LEVA-INTEIRA:
+docs/process/sprints/2026-09-06-GTK-3-os-sessenta-e-dois-testes-e-a-remocao.md)
+e o arquivo não volta. Este rc=1 é permanente e é de propósito: quem gerar o
+catálogo daqui em diante decide, POR ESCRITO, aceitar um catálogo 72% menor.
 As frases da interface NOVA moram em src/hefesto_dualsense4unix/interface/
 (páginas HTML e os geradores abaNN.py) e NENHUM extrator as alcança hoje — o
 passo [1/3] só pega \`_()\` e \`N_()\` em Python.

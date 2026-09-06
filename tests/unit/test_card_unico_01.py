@@ -35,10 +35,6 @@ pytest.importorskip("cairo")
 import cairo
 from gi.repository import Gtk
 
-from hefesto_dualsense4unix.app.actions.status_actions import (
-    StatusActionsMixin,
-)
-from hefesto_dualsense4unix.app.constants import MAIN_GLADE
 from hefesto_dualsense4unix.app.widgets.controller_card import (
     TEXTO_SPEAKER_SEM_DADO,
     TITULO_SPEAKER,
@@ -87,88 +83,7 @@ def _card(*, compact: bool = False, largura: int = LARGURA_DA_TELA_DELA) -> Any:
     return card
 
 
-class _Host(StatusActionsMixin):  # type: ignore[misc]
-    """A aba Status com o mínimo que estes dois métodos precisam.
 
-    Sem IPC e sem tique: o que se afere aqui é ciclo de vida de widget, e um
-    daemon dublado só acrescentaria caminho para o teste errar de lugar.
-    """
-
-    def __init__(self) -> None:
-        self.builder = Gtk.Builder()
-        self.builder.add_from_file(str(MAIN_GLADE))
-        self._status_cards: dict[Any, Any] = {}
-        self._status_card_keys: list[Any] = []
-        root = self.builder.get_object("root_box")
-        pai = root.get_parent()
-        if pai is not None:
-            pai.remove(root)
-        self.janela = Gtk.OffscreenWindow()
-        self.janela.add(root)
-        self.janela.set_size_request(1180, 800)
-        self.janela.show_all()
-        _janelas_vivas.append(self.janela)
-        self._assentar()
-
-    def _get(self, nome: str) -> Any:
-        return self.builder.get_object(nome)
-
-    @staticmethod
-    def _assentar() -> None:
-        while Gtk.events_pending():
-            Gtk.main_iteration()
-
-    def sincronizar(self, quantos: int) -> None:
-        """Recria os cards como a aba faz quando o conjunto muda."""
-        slot = self._get("status_players_slot")
-        self._rebuild_status_cards(slot, [(f"c{i}",) for i in range(quantos)])
-        self._assentar()
-
-
-# ---------------------------------------------------------------------------
-# Entrega 1 — o frame "Estado" apaga, e o card diz o que ele dizia
-# ---------------------------------------------------------------------------
-
-
-def test_o_frame_estado_some_com_um_controle_e_volta_sem_card_unico() -> None:
-    """*"apaga estado"* — e ele só apaga quando alguém o substitui.
-
-    A regra tem três casos e os três importam:
-
-    * **um controle** — o frame some inteiro. O card passou a dizer perfil,
-      daemon e bateria, e mantê-lo seria a repetição que ela apontou;
-    * **nenhum controle** — o frame VOLTA, porque não há card nenhum para
-      falar. É justamente o momento em que a aba mais precisa explicar (o
-      daemon parado, o botão da rota de som), e uma aba em branco ali seria
-      pior que o frame repetido;
-    * **dois ou mais** — o frame volta porque perfil ativo e daemon são fatos
-      GLOBAIS. Num card por controle eles apareceriam duplicados, que é
-      exatamente o defeito que a bateria teve e que a STATUS-SIMETRIA-02
-      curou.
-
-    Mordida: trocar o `compact or not keys` do `_rebuild_status_cards` por um
-    `False` fixo. O caso do meio cai — a aba fica muda sem controle nenhum.
-    """
-    host = _Host()
-    frame = host._get("frame_status_estado")
-
-    host.sincronizar(1)
-    assert frame.get_visible() is False, (
-        "com UM controle o frame Estado tem de sair da tela: o card diz tudo "
-        "o que ele dizia"
-    )
-
-    host.sincronizar(2)
-    assert frame.get_visible() is True, (
-        "com 2+ controles perfil e daemon são fatos globais e voltam para o "
-        "frame — num card por controle eles apareceriam repetidos"
-    )
-
-    host._clear_status_cards()
-    host._assentar()
-    assert frame.get_visible() is True, (
-        "sem card nenhum o frame Estado é a ÚNICA voz da aba"
-    )
 
 
 def test_o_card_unico_mostra_perfil_e_daemon_e_o_compacto_nao() -> None:
@@ -203,32 +118,6 @@ def test_o_card_unico_mostra_perfil_e_daemon_e_o_compacto_nao() -> None:
     dois.definir_estado_global("ação", "Ligado")
 
 
-def test_a_aba_escreve_o_par_global_no_card_e_no_frame_de_uma_vez() -> None:
-    """Um escritor só para os dois lugares que mostram perfil e daemon.
-
-    Esta casa tem defeito registrado de *"a config que eu deixo nunca é
-    respeitada"* cuja causa foi três escritores sem dono. Aqui o par tem duas
-    casas (o card e o frame de fallback) e UM ponto de escrita.
-
-    E ele alcança o card que nasce DEPOIS: o `_render_state` escreve o par
-    antes de sincronizar os cards, então sem o espelho o card recém-criado
-    passaria um tique inteiro mostrando "Nenhum / Consultando...".
-
-    Mordida: trocar `_set_estado_global` de volta por `_set_label` em
-    qualquer um dos oito pontos de escrita — o card para de acompanhar.
-    """
-    host = _Host()
-    host._set_estado_global("status_active_profile", "fps")
-    host._set_estado_global("status_daemon", "Reconectando")
-
-    assert host._get("status_active_profile").get_text() == "fps"
-    assert host._get("status_daemon").get_text() == "Reconectando"
-
-    # O card nasce DEPOIS da escrita, e mesmo assim nasce certo.
-    host.sincronizar(1)
-    card = next(iter(host._status_cards.values()))
-    assert card._perfil_ativo_label.get_text() == "fps"
-    assert card._daemon_label.get_text() == "Reconectando"
 
 
 def test_a_bateria_do_card_unico_nao_desenha_o_proprio_texto() -> None:
@@ -511,69 +400,7 @@ def test_a_marca_dagua_nao_deixa_barra_atravessando_o_circulo(
 # ---------------------------------------------------------------------------
 
 
-def test_o_botao_da_rota_nao_migra_mais_para_o_card() -> None:
-    """SOM-CANAL-01/E3 (02/08/2026): o "Ouvir no controle" DEIXOU de migrar.
 
-    **O registro do que este teste travava antes fica**, porque foi um defeito
-    real e medido: com um controle o botão era reparentado para o bloco
-    "Alto-falante" do card, e plugar um segundo controle recriava os cards —
-    o `child.destroy()` do card antigo deixava o botão ÓRFÃO (`get_parent()
-    is None`), vivo mas fora da tela. Ela perdia o "desfazer" da rota no co-op.
-
-    O que mudou: o comando NASCE no card agora, como um dos dois estados do
-    seletor de canal. Ela pediu — *"ele deixa de existir como botão isolado.
-    Vira o estado 'Todo o som do PC' do seletor"* — e com isso o
-    reparenteamento inteiro deixou de fazer sentido: não há mais para onde
-    migrar, e o botão do glade fica no berço dele.
-
-    Mordida: devolver o `_speaker_rota_slot` ao card. O botão volta a migrar,
-    e volta o risco de ficar órfão na troca de conjunto.
-    """
-    host = _Host()
-    botao = host._get("btn_som_no_controle")
-    berco = host._get("status_grid")
-
-    for quantos in (1, 2, 1):
-        host.sincronizar(quantos)
-        assert botao.get_parent() is berco, (
-            f"com {quantos} controle(s) o botão fica no berço: ele não migra "
-            "mais para o card, porque o comando agora nasce lá"
-        )
-
-    # E o card NÃO oferece mais slot para ele — é isso que impede a migração
-    # de voltar por acidente.
-    host.sincronizar(1)
-    card = next(iter(host._status_cards.values()))
-    assert card._speaker_rota_slot is None
-
-def test_os_cards_ficam_um_em_cima_do_outro_e_nao_lado_a_lado() -> None:
-    """*"os dois blocos não deveriam estar lado a lado mas um em cima do outro
-    de forma que o scroll surgisse pra comportar os diferentes controles"*.
-
-    Isto REVISA a STATUS-GRID-2COL-01, e a decisão antiga não é apagada: ela
-    dizia que "empilhado, cada card somava a própria altura e dois já
-    estouravam a janela — a aba só respondia com rolagem, justamente o que as
-    sprints S3/S5 tiraram das outras abas". A observação continua correta; o
-    que mudou foi o julgamento sobre ela, e é dela: a rolagem vertical AQUI é
-    aceitável, e ler dois controles lado a lado não é.
-
-    Um card por linha também é o que escala para os quatro jogadores do co-op
-    sem espremer nada.
-
-    Mordida: devolver o `colunas = 2 if compact else 1`.
-    """
-    host = _Host()
-    host.sincronizar(2)
-
-    cards = list(host._status_cards.values())
-    assert len(cards) == 2
-
-    esquerdo, direito = (c.get_allocation() for c in cards)
-    assert esquerdo.x == direito.x, (
-        f"os dois cards começam em x diferentes ({esquerdo.x} e {direito.x}): "
-        "eles voltaram a ficar lado a lado"
-    )
-    assert direito.y > esquerdo.y, "o segundo card fica ABAIXO do primeiro"
 
 
 def test_o_card_compacto_tambem_para_de_esticar_pela_tela_toda() -> None:

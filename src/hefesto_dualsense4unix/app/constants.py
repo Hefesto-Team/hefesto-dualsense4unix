@@ -9,7 +9,11 @@ from pathlib import Path
 # relativos ao próprio módulo — cobertos pelo pyproject.toml include.
 PACKAGE_DIR = Path(__file__).resolve().parent.parent
 GUI_DIR = PACKAGE_DIR / "gui"
-MAIN_GLADE = GUI_DIR / "main.glade"
+# `MAIN_GLADE = GUI_DIR / "main.glade"` MORREU em 06/09/2026 (`GTK-3`), com o
+# arquivo: a janela GTK foi aposentada por decisão dela
+# (`D-0609-GTK-LEVA-INTEIRA`). `GUI_DIR` FICA — `gui/assets/logo.png` é lido
+# logo abaixo, e `gui/theme.css` continua sendo a fonte das cores da casa
+# (`scripts/paleta_da_casa.py`, `tests/unit/test_paleta_unica.py`).
 
 
 def _resolve_icon_path() -> Path:

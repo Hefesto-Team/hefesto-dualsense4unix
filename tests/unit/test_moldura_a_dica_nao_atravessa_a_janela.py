@@ -44,7 +44,8 @@ _gi.require_version("Gdk", "3.0")
 from gi.repository import Gdk, Gtk
 
 from hefesto_dualsense4unix.app.actions.config.mixin import ConfigActionsMixin
-from hefesto_dualsense4unix.app.constants import GUI_DIR, MAIN_GLADE
+from hefesto_dualsense4unix.app.constants import GUI_DIR
+from tests.unit.aba_config_sem_a_janela import aba_config_montada
 from hefesto_dualsense4unix.app.theme import (
     ESCALA_PADRAO,
     escalar_css,
@@ -149,14 +150,13 @@ def _e_rotulo_de_apoio(widget: Any) -> bool:
 @pytest.fixture(scope="module")
 def aba_montada() -> Any:
     """A aba de VERDADE, montada pelo mixin, numa janela da largura da medida."""
-    builder = Gtk.Builder()
-    builder.add_from_file(str(MAIN_GLADE))
-    _HospedeiroDaAba(builder).install_config_tab()
-
-    pagina = builder.get_object("scroll_tab_config_box")
-    pai = pagina.get_parent()
-    if pai is not None:
-        pai.remove(pagina)
+    # 06/09/2026 (`GTK-3`): o embrulho era o `scroll_tab_config_box` do
+    # `gui/main.glade`, apagado com a janela. O berço é
+    # `tests/unit/aba_config_sem_a_janela.py`, e o que se mede — a largura que
+    # `rotulo_de_apoio` pede — é posto pelo MOTOR, não pelo embrulho.
+    caixa = aba_config_montada()
+    pagina = Gtk.ScrolledWindow()
+    pagina.add(caixa)
     janela = Gtk.OffscreenWindow()
     janela.get_style_context().add_class("hefesto-dualsense4unix-window")
     janela.add(pagina)

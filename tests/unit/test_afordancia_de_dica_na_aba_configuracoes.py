@@ -66,13 +66,13 @@ _gi.require_version("Gtk", "3.0")
 _gi.require_version("Gdk", "3.0")
 from gi.repository import Gdk, Gtk
 
-from hefesto_dualsense4unix.app.actions.config.mixin import ConfigActionsMixin
+from tests.unit.aba_config_sem_a_janela import aba_config_montada
 from hefesto_dualsense4unix.app.actions.config.moldura import (
     CLASSE_AJUDA,
     CLASSE_TEM_DICA,
 )
 from hefesto_dualsense4unix.app.actions.config.secoes import SECOES_DA_ABA
-from hefesto_dualsense4unix.app.constants import GUI_DIR, MAIN_GLADE
+from hefesto_dualsense4unix.app.constants import GUI_DIR
 
 #: Piso de alvos que a régua tem de encontrar na aba montada.
 #:
@@ -114,11 +114,6 @@ def _folha_na_tela() -> Iterator[None]:
         Gtk.StyleContext.remove_provider_for_screen(tela, provider)
 
 
-class _HospedeiroDaAba(ConfigActionsMixin):
-    def __init__(self, builder: Gtk.Builder) -> None:
-        self.builder = builder
-
-
 def _descer(widget: Any) -> Iterator[Any]:
     yield widget
     if isinstance(widget, Gtk.Container):
@@ -136,22 +131,26 @@ def _girar(vezes: int = 5000) -> None:
 
 @pytest.fixture(scope="module")
 def aba_montada(_folha_na_tela: None) -> Any:
-    """A aba de VERDADE, montada pelo mixin, numa janela mostrada."""
-    builder = Gtk.Builder()
-    builder.add_from_file(str(MAIN_GLADE))
-    _HospedeiroDaAba(builder).install_config_tab()
+    """A aba de VERDADE, montada pelo mixin, numa janela mostrada.
 
-    pagina = builder.get_object("scroll_tab_config_box")
-    pai = pagina.get_parent()
-    if pai is not None:
-        pai.remove(pagina)
+    06/09/2026 (`GTK-3`): o `scroll_tab_config_box` do `gui/main.glade` era o
+    embrulho, e o XML foi apagado. O berço passou a ser
+    `tests/unit/aba_config_sem_a_janela.py` dentro de um `Gtk.ScrolledWindow`
+    feito aqui — as marcas de afordância que este arquivo mede são postas pelo
+    MOTOR (`app/actions/config/`), e nenhuma delas vinha do embrulho. A largura
+    de 1180 px continua sendo a da tela do produto: é a mesma que a `.janela`
+    do HTML publicado declara.
+    """
+    caixa = aba_config_montada()
+    rolagem = Gtk.ScrolledWindow()
+    rolagem.add(caixa)
     janela = Gtk.OffscreenWindow()
     janela.get_style_context().add_class("hefesto-dualsense4unix-window")
-    janela.add(pagina)
+    janela.add(rolagem)
     janela.set_size_request(1180, 1000)
     janela.show_all()
     _girar()
-    return pagina
+    return rolagem
 
 
 def _tem_dica(widget: Any) -> bool:

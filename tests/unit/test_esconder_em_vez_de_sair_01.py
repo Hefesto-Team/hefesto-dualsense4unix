@@ -449,120 +449,19 @@ def test_a_env_velha_do_appid_marcado_e_apagada_sozinha(
 
 
 # ---------------------------------------------------------------------------
-# LADO 3 — a JANELA não pode seguir contando a história velha
+# LADO 3 — a JANELA não pode seguir contando a história velha (SAIU EM 06/09)
 # ---------------------------------------------------------------------------
 #
-# A regra dela, de 09/08: *"tudo tem que focar em funcionar na interface do app
-# e no install"*. A caixinha é o gesto pelo qual esta cura chega a ela; se o
-# texto continuar prometendo o comportamento antigo, a cura não foi entregue —
-# foi escondida no daemon. Os dois lugares da janela que falam da marca são a
-# caixinha do editor de perfil e o botão "Este jogo não funciona" da aba
-# Sistema, e eles marcam a MESMA coisa: têm de dizer a mesma coisa.
-
-#: O que a janela dizia até 08/08 e não pode voltar a dizer. Cada trecho era
-#: verdadeiro quando a marca tirava o Hefesto da frente, e hoje é o contrário do
-#: que o produto faz.
-_FRASES_QUE_MORRERAM = (
-    "deixar a steam entregar",
-    "entregue pela steam",
-    "o jogo passa a ver o controle de verdade",
-    "quem manda na luz e nos gatilhos passa a ser o jogo",
-)
-
-
-def _textos_do_objeto(alvo: str) -> str:
-    """Rótulo + tooltip + nome/descrição de acessibilidade, num texto só.
-
-    Ler os quatro juntos é de propósito: o defeito que esta trava cobre é a
-    janela dizer duas coisas diferentes sobre o mesmo clique, e o leitor de tela
-    é a única voz da janela para quem não enxerga o rótulo.
-    """
-    import xml.etree.ElementTree as ET
-
-    from hefesto_dualsense4unix.app.constants import MAIN_GLADE
-
-    raiz = ET.parse(str(MAIN_GLADE)).getroot()
-    achados = [o for o in raiz.iter("object") if o.get("id") == alvo]
-    assert achados, f"o objeto {alvo!r} sumiu do glade"
-    return " ".join(
-        (prop.text or "")
-        for obj in achados[0].iter("object")
-        for prop in obj.findall("property")
-        if prop.get("name")
-        in (
-            "label",
-            "tooltip-text",
-            "AtkObject::accessible-name",
-            "AtkObject::accessible-description",
-        )
-    )
-
-
-@pytest.mark.parametrize(
-    "alvo", ["profile_steam_input_check", "btn_steam_game_broken"]
-)
-def test_a_janela_nao_promete_mais_que_o_hefesto_sai_da_frente(alvo: str) -> None:
-    """A MORDIDA: devolva qualquer uma das frases de `_FRASES_QUE_MORRERAM` ao
-    glade e este teste reprova apontando a frase.
-
-    Elas descreviam a IMPLEMENTAÇÃO antiga ("deixar a Steam entregar") e o
-    preço que vinha com ela ("quem manda na luz e nos gatilhos passa a ser o
-    jogo"). Com a inversão de 09/08 as duas coisas são falsas: quem entrega o
-    controle ao jogo marcado é o Hefesto, e a luz e os gatilhos nunca saem da
-    mão dela.
-    """
-    textos = _textos_do_objeto(alvo).lower()
-
-    for morta in _FRASES_QUE_MORRERAM:
-        assert morta not in textos, (
-            f"{alvo}: a janela voltou a dizer {morta!r}, que descreve o produto "
-            "de antes de 09/08 — a tela promete o contrário do que o daemon faz."
-        )
-
-
-@pytest.mark.parametrize(
-    "alvo", ["profile_steam_input_check", "btn_steam_game_broken"]
-)
-def test_a_janela_diz_o_efeito_e_manda_relancar(alvo: str) -> None:
-    """O texto tem de dizer o EFEITO (esconder o físico), o que ela NÃO perde e
-    que a marca só vale inteira no próximo lançamento.
-
-    O léxico é decisão dela (a memória de como propor interface): o nome novo
-    deriva do que já existia — *"o controle dobrado"* — e descreve o que
-    acontece, não como está implementado.
-    """
-    textos = _textos_do_objeto(alvo).lower()
-
-    assert "esconde" in textos or "escondido" in textos, (
-        f"{alvo}: a janela não diz que o controle físico fica escondido, que é "
-        "o que a marca passou a fazer"
-    )
-    assert "dobrado" in textos, (
-        f"{alvo}: sumiu o nome do defeito na palavra dela — é por 'dobrado' que "
-        "ela reconhece o problema que veio resolver"
-    )
-    assert "hefesto" in textos, (
-        f"{alvo}: a janela não diz de quem passa a ser o controle que o jogo vê"
-    )
-    assert "feche e abra o jogo" in textos, (
-        f"{alvo}: sumiu a instrução sem a qual a marca não vale inteira — a env "
-        "do dedup é lida UMA vez, na abertura do jogo"
-    )
-
-
-def test_a_caixinha_e_o_botao_contam_a_mesma_historia() -> None:
-    """Duas telas, o mesmo clique: o que uma promete a outra não pode negar.
-
-    A caixinha (aba Perfis) e o botão "Este jogo não funciona" (aba Sistema)
-    escrevem no MESMO `steam_input_apps.txt`. Enquanto a caixinha dizia
-    "esconder" e o botão dizia "a Steam entrega", a janela dava duas respostas
-    para a mesma pergunta — e ela decide vendo a tela.
-    """
-    caixinha = _textos_do_objeto("profile_steam_input_check").lower()
-    botao = _textos_do_objeto("btn_steam_game_broken").lower()
-
-    for fato in ("dobrado", "hefesto", "vibração", "feche e abra o jogo"):
-        assert fato in caixinha and fato in botao, (
-            f"{fato!r} está numa das duas telas e não na outra — o mesmo clique "
-            "está sendo descrito de dois jeitos."
-        )
+# Os três testes deste lado liam o `gui/main.glade` e cobravam que a caixinha do
+# editor de perfil e o botão "Este jogo não funciona" da aba Sistema NÃO
+# repetissem a promessa velha (*"deixar a steam entregar"*) e contassem a mesma
+# história um ao outro. A janela GTK foi aposentada por decisão dela
+# (`D-0609-GTK-LEVA-INTEIRA`) e os três saíram com ela, junto com
+# `_textos_do_objeto`, que os alimentava.
+#
+# **A REGRA DELA CONTINUA VALENDO, e o alvo mudou de arquivo:** *"tudo tem que
+# focar em funcionar na interface do app e no install"*. Quem vigia a mesma
+# promessa na tela de hoje é `scripts/validar-caducos.py`, que desde 06/09
+# alcança as dez páginas publicadas — e a caixinha do Steam Input mora em
+# `interface/paginas/10-perfis.html`, o botão em `09-sistema.html`. As frases
+# que morreram estão no git, no commit desta sprint.
