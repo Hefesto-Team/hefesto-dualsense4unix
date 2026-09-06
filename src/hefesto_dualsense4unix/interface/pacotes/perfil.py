@@ -34,6 +34,11 @@ precisou delas, e a segunda cópia é a que esquece um dos tempos:
 * `gravar_e_reaplicar()` (01/09/2026) — disco, reaplicar, `launch_env.refresh`;
 * `com_a_carona()` (06/09/2026) — o atalho de inicialização que a Steam comeu,
   reposto de carona no gesto que ela já dá. Ver o docstring de cada uma.
+
+E QUEM RESPONDE "QUAL PERFIL ESTÁ VALENDO" É `nome_do_ativo()` (06/09/2026,
+PERFIL-MODO-01): ele pergunta ao dono do §P1 em vez de ler
+`state["active_profile"]` cru, e `ativo()` cai nele quando o nome não vem. É a
+releitura que faltava para o «Ativar» chegar às outras nove abas.
 """
 from __future__ import annotations
 
@@ -85,6 +90,53 @@ def pasta() -> pathlib.Path | None:
         return None
 
 
+def nome_do_ativo(state: Any = None) -> str:
+    """Qual perfil está valendo AGORA, perguntado ao dono — `""` quando ninguém.
+
+    PERFIL-MODO-01, Passo 2 (06/09/2026). **É a releitura que o «Ativar» não
+    tinha**, e ela mora aqui porque o dono do estado é este módulo — a cura na
+    aba Perfis seria uma segunda leitura na aba que já sabe, e as outras nove
+    continuariam cegas.
+
+    O DONO DA PERGUNTA É `profiles_actions.perfil_que_esta_valendo` (§P1), e
+    ele resolve em DUAS pernas: o daemon primeiro, o marcador em disco depois
+    (`session.json` + `active_profile.txt`, o mesmo caminho do boot). O
+    ``state.get("active_profile")`` CRU só tem a primeira.
+
+    O QUE ISSO CURA, MEDIDO em 06/09/2026 com um perfil no disco e o daemon
+    respondendo ``active_profile: null`` — que é o estado da máquina dela
+    descrito em `perfil_que_esta_valendo` e reproduzido em régua::
+
+        perfil.ativo("régua")   ->  {'name': 'régua', …}
+        perfil.ativo(None)      ->  {}                      <- as outras abas
+        perfil_que_esta_valendo ->  PerfilQueVale('régua', fonte='disco')
+
+    Com o daemon calado, gatilho · brilho · atalhos · teto de vibração viravam
+    travessão em TODA aba, e o «Ativar» — que grava os dois marcadores em disco
+    pelo `profile.switch` — não mudava nada disso: **nenhum tique relia o
+    perfil**, porque o nome nunca chegava. É o sintoma que esta casa chama de
+    *ausência de dado lida como "não pegou"*.
+
+    NUNCA LEVANTA: quem chama é pintura de tela a duas vezes por segundo, e uma
+    exceção aqui derrubaria a aba inteira por causa de um arquivo de sessão. O
+    dono já é best-effort; a garantia final é deste `except`.
+    """
+    do_daemon = ""
+    if isinstance(state, dict):
+        do_daemon = str(state.get("active_profile") or "")
+    if do_daemon:
+        return do_daemon
+    try:
+        _com_o_src()
+        from hefesto_dualsense4unix.app.actions.profiles_actions import (
+            perfil_que_esta_valendo,
+        )
+
+        return str(perfil_que_esta_valendo(state).nome or "")
+    except Exception:
+        return ""
+
+
 def ativo(nome: str | None) -> dict[str, Any]:
     """O perfil ativo como dicionário cru, ou `{}` quando não há.
 
@@ -96,7 +148,21 @@ def ativo(nome: str | None) -> dict[str, Any]:
     O `{}` faz cada valor virar travessão, que é o que a tela sabe mostrar. Essa
     é a diferença entre "não há perfil agora" e "este valor não tem dono": a
     primeira é um estado, a segunda era um erro meu.
+
+    NOME VAZIO NÃO É "NÃO HÁ" — 06/09/2026, PERFIL-MODO-01 Passo 2. Todo
+    chamador desta função passa ``ctx.state.get("active_profile")``, e esse
+    campo é ``null`` sempre que o daemon não sabe dizer. Devolver `{}` ali era a
+    tela confundindo *"o daemon não respondeu"* com *"não há perfil"* — a mesma
+    distinção que `PerfilQueVale.fonte` existe para carregar. Quando o nome não
+    vem, **pergunta-se ao dono** (:func:`nome_do_ativo`); quando nem ele sabe, aí
+    sim é `{}`.
+
+    A CURA É AQUI E NÃO EM CADA ABA de propósito: são cinco chamadores em cinco
+    pacotes (03, 04, 06, 08 e 10), e cobrir um deixaria os outros quatro
+    remedindo o mesmo defeito — a regra que 05/09 deixou escrita.
     """
+    if not nome:
+        nome = nome_do_ativo(None)
     if not nome:
         return {}
     onde = pasta()

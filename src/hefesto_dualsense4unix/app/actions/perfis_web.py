@@ -80,6 +80,7 @@ from hefesto_dualsense4unix.profiles.schema import (
 # letras — e é por importá-las que a tela nova e a janela de hoje nunca podem
 # discordar sobre qual perfil vence a disputa.
 from hefesto_dualsense4unix.app.actions.profiles_actions import (  # isort:skip
+    _MODE_KIND_ITEMS,
     explicacao_da_disputa,
     ordem_de_exibicao,
     rotulo_quando_usar,
@@ -252,6 +253,31 @@ AMBIENTE_DO_PRESET: dict[str, str] = {
 #: cinco mais "Programas"), sem lápide dizendo qual caducou. Mapeá-las para
 #: "Todos" é o defeito R-12 pelo avesso, e por isso elas caem no estado honesto
 #: de :data:`AMBIENTE_QUE_A_TELA_NAO_MOSTRA`, com a regra do disco intacta.
+#: OS QUATRO RÓTULOS DO **MODO** DO PERFIL — o que ATIVAR este perfil liga.
+#: PERFIL-MODO-01 (06/09/2026), Passo 1.
+#:
+#: **ELES NÃO SÃO DIGITADOS AQUI**: são `profiles_actions._MODE_KIND_ITEMS`, e
+#: essa lista é a mesma que a janela GTK põe no `SegmentedSelector` do editor.
+#: A frase-dona é `home_actions._MODE_ITEMS` (UX-MODE-TERMS-01/02, decisão dela
+#: de 06/08 — *"Já tinha pedido pra deixarmos: Conexão Nativa (Sony)"*), e o
+#: `test_vocabulario_das_quatro_superficies.py` reprova quem mudar um lado só.
+#: Uma quinta superfície com as palavras redigitadas seria a quinta a envelhecer
+#: sozinha.
+#:
+#: A ORDEM É A DO DONO, e ela importa na tela: "Não mexer no modo" vem primeiro
+#: porque é o que a MAIORIA dos perfis é — perfil sem a seção `mode`.
+#:
+#: `dict` E NÃO A TUPLA CRUA: quem consome é a página, por `id → rótulo`; a
+#: ordem é preservada (dict do Python 3.7+ é ordenado) e o gerador do desenho lê
+#: os pares na mesma sequência.
+MODO_DO_PERFIL: dict[str, str] = dict(_MODE_KIND_ITEMS)
+
+#: O id do modo de um perfil SEM a seção ``mode``. Ele não é invenção da tela:
+#: é o primeiro par de :data:`MODO_DO_PERFIL`, e o
+#: `profiles_actions._mode_section_from_editor` já trata "none" como *remova a
+#: seção*. Perfil sem opinião de modo é o caso comum — 24 dos 33 perfis dela.
+MODO_SEM_OPINIAO = "none"
+
 FORA_DO_DESENHO: dict[str, str] = {
     "browser": "o preset “Navegador” existe no produto e não no desenho dela",
     "terminal": "o preset “Terminal” existe no produto e não no desenho dela",
@@ -461,6 +487,22 @@ def _pacote_do_editor(profile: Any) -> dict[str, Any]:
         # uma vez.
         "estilo_travado": False,
         "estilo_recado": ESTILO_APLICA_E_SAI,
+        # O MODO DO PERFIL — PERFIL-MODO-01, 06/09/2026. É o único campo desta
+        # função que sai como **id** e não como rótulo, e é de propósito: quem
+        # acende o botão é o alvo `classe` do piloto, que compara o valor com o
+        # `data-hef-quando` de cada um dos quatro. Mandar o rótulo faria a tela
+        # comparar palavra com palavra — e a palavra é dela, muda; o id é chave
+        # de perfil em disco, e não muda (ver `_MODE_KIND_ITEMS`, "O id `native`
+        # NÃO muda: é chave de perfil").
+        #
+        # SEM SEÇÃO É "none", E ISSO NÃO É UM DEFAULT: um perfil sem `mode` NÃO
+        # mexe no modo do sistema quando entra, e "Não mexer no modo" é
+        # exatamente essa frase. Escrever aqui o modo VIVO da máquina (o que o
+        # daemon está fazendo agora) seria a tela afirmando que o perfil pede
+        # algo que ele não pede — o defeito que `perfis_web` inteiro existe para
+        # não cometer.
+        "modo": str(getattr(getattr(profile, "mode", None), "kind", "")
+                    or MODO_SEM_OPINIAO),
     }
 
 
