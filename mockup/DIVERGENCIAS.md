@@ -153,6 +153,81 @@ seção daqui**: a aba deixou de estar em trabalho.
 
 ---
 
+
+- **06/09/2026 — A LINHA DO GIROSCÓPIO ENTROU, E A DA VERDADE NÃO**
+  (`CONTROLES-VERDADE-01`). O cabeçalho do card aberto ganhou o número que
+  responde *"o giroscópio está chegando ao jogo AGORA?"* — `Giroscópio: fluindo
+  para o jogo (~N Hz)`, do dono `controller_card.texto_motion`, com as duas
+  exceções (Modo Nativo e máscara Xbox 360). O que ele substitui é um **número
+  de catálogo**: a dica do interruptor de Giroscópio afirma *"No cabo são 250,0
+  Hz exatos"* para todo controle e todo momento.
+
+  **Ela mora no vão do cabeçalho, e custa ZERO altura.** Medido: 410 px de vazio
+  entre a máscara e o par de sensores, e o card continua com os mesmos 348 px.
+  Sem frase, o `title` some e a folha apaga o elemento. A conta do card tem 24 px
+  de folga, e uma linha no corpo os teria gasto.
+
+  **E O CABEÇALHO PASSOU A FALAR A LÍNGUA DA TELA:** `USB`/`BT` viraram
+  **cabo**/**rádio**, do dono `home_actions.palavra_do_transporte`. Isso curou um
+  defeito vivo que a costura da ONDA B abriu no mesmo dia — um controle sem cor
+  lida (a mesa dela pelo rádio) lia `P2 • rádio • BT`, o transporte duas vezes em
+  dois dialetos.
+
+  **A LINHA DA VERDADE NÃO ENTROU, e é decisão dela:** ela saiu da tela da GTK em
+  17/08/2026 (*"remover guia dos status em tempo real"*) e continua criada e
+  alimentada fora da tela. Reconstruí-la aqui seria reintroduzir o que ela mandou
+  tirar. Há régua que impede a volta.
+
+  **O que ela vê HOJE, até publicar:** exatamente a aba de ontem. O campo novo
+  não é sequer emitido — o `_so_se_a_pagina_tiver` pergunta ao publicado.
+
+  **O que fecha:** o `--publicar 02` quando ela aprovar a aba.
+
+## 03-gatilhos.html
+
+- **06/09/2026 — O BOTÃO DE REENVIO SAIU DO DESENHO** (`ONDA5-03-02`, a decisão
+  dela de 06/09, `D-0609-REENVIO-SAI`). O `↻` que morava na faixa de cada
+  coluna, ao lado do "Guardar esse efeito", não é mais emitido pelo gerador. Com
+  ele saíram as duas regras de CSS que o vestiam e o item da legenda que o
+  explicava.
+
+  **É uma REVERSÃO, e a reversão é dela.** O botão nasceu em 04/09 às 20:14 pela
+  decisão [03] do PO; ela respondeu a `03-Q3` — *"a coluna GANHA um botão para
+  mandar o efeito de novo?"* — com *"Nada novo"* **dezenove horas depois**,
+  sobre um mundo em que ele ainda não existia. Perguntada de novo em 06/09, com
+  o botão na tela e a foto ao lado, escolheu **"sai"**.
+
+  **E A LEGENDA MUDOU JUNTO, pela `03-Q4`:** o item *"Quando o efeito chega, a
+  tela diz … a confirmação nasce no próprio cartão"* descrevia a forma que ela
+  trocou. Ele passou a contar a piscada — *"o campo pisca em verde … cerca de um
+  segundo e meio"* —, e a caixa do cartão ficou nomeada como o que ela é hoje: o
+  canal de quem tem **notícia**.
+
+  **Por que não publiquei:** publicar é ato dela, e aqui a mudança é VISÍVEL —
+  um botão a menos em cada uma das quatro colunas.
+
+  **O QUE ELA VÊ HOJE, ATÉ PUBLICAR, e o custo NÃO é zero — é o ponto desta
+  declaração.** A página publicada continua com o `↻` nas quatro colunas, e ele
+  continua FUNCIONANDO: o gesto `reenviar` segue no pacote de propósito. Tirar o
+  dono junto com o desenho daria a ela um botão MORTO — medido: um clique sem
+  dono não recusa, não avisa e não muda a tela, só imprime `[gesto sem dono]` no
+  stderr de quem lançou a janela (`hefesto_vivo._chamar_gesto`).
+
+  **O que fecha, e são DOIS atos no mesmo momento:**
+
+  1. `scripts/check_o_desenho_aprovado.py --publicar 03`, depois do OK dela;
+  2. **no mesmo commit**, o gesto sai do pacote — a função `reenviar` e o
+     `@gesto` dela, a entrada do `PROVAS`, `PISO_DA_ABA` de 5 para 4, as quatro
+     réguas de gesto e as duas de página em
+     `test_a_aba_03_gatilhos_fecha_as_linhas.py`, mais o `test_reenviar_nao_grava`
+     e o `test_o_reenviar_nao_ganhou_frase_de_disco` em
+     `test_o_gatilho_aplicado_vai_para_o_perfil.py`.
+
+  **Quem impede que o passo 2 seja esquecido é uma régua, e não esta prosa:**
+  `test_o_reenvio_sai_do_pacote_quando_sair_do_produto` exige que o botão na
+  página publicada e o dono no pacote existam JUNTOS ou não existam. Ela fica
+  VERMELHA no instante do `--publicar 03` e a mensagem dela lista o que apagar.
+
 ## 04-iluminacao.html
 
 - **06/09/2026 — LUZES-01.** A célula LEDs ganhou a botoeira das cinco luzes de
@@ -218,32 +293,6 @@ seção daqui**: a aba deixou de estar em trabalho.
   `data-hef-recados`, então o piloto se comporta hoje como ontem.
 
   **O que fecha:** o `--publicar 05` depois do OK dela na aba inteira.
-## 06-navegacao.html — **JÁ PUBLICADA, e ela precisa saber disso**
-
-- **06/09/2026** — a `ONDA5-06-02` **publicou** `interface/paginas/06-navegacao.html`.
-  A aba passou a ter **22 linhas**: o **Botão PS** é a 19ª, e abre em *"Abrir a
-  Steam"*, que é o `padrao()["ps"]` do motor.
-
-  **Publicar é ato dela, e esta é a exceção do dia — declarada, não escondida.**
-  A decisão de manter foi do coordenador, na costura da ONDA B, com três razões:
-
-  1. **A sprint declarava a posse.** `interface/paginas/06-navegacao.html` está
-     em `posse:` da `ONDA5-06-02`, enquanto as irmãs da mesma leva (`ONDA5-05-01`,
-     `ONDA5-02-02`) a põem em `nao_toca:`. A diferença é do desenho da fila, não
-     escolha do agente.
-  2. **Desfazer criaria perda SILENCIOSA de trabalho dela**, que é o defeito que
-     esta casa mais persegue: a tela ficaria com 21 linhas sobre um produto de
-     22, e o «Guardar» **descartaria a escolha do PS sem dizer uma palavra**,
-     porque a varredura não a traria.
-  3. **O piloto renderiza o PUBLICADO.** Sem publicar não existe prova de tela —
-     e ela é obrigatória —, e duas das sete réguas que a `ONDA5-06-01` deixou
-     vermelhas leem a página publicada.
-
-  **O que isso muda para ela, no FECHO:** a volta única de publicação continua
-  acontecendo, e a aba 06 entra nela — só que **já publicada**. Se ela olhar a
-  linha do PS e disser que não, o desfazer é um comando:
-  `git checkout <commit> -- src/hefesto_dualsense4unix/interface/paginas/06-navegacao.html`.
-
 ## 08-conexoes.html
 
 - **06/09/2026** — a 08-Q5 e a 08-Q7 (`ONDA5-08-01`). O desenho ganhou a linha
@@ -262,6 +311,29 @@ seção daqui**: a aba deixou de estar em trabalho.
   coordenador desde 06/09, e a sprint que produziu a divergência não podia
   declará-la. O texto é o que o agente da `ONDA5-08-01` deixou pronto no
   relatório dele.
+
+- **06/09/2026** — as linhas 4, 5, 8, 14 e 15 do balde `LIGAR`
+  (`CONEXOES-LIGAR-TUDO-01`). O desenho ganhou **cinco endereços**: os
+  `data-campo="alvo-aberto"` nos cinco rádios do acordeão (que fazem a linha
+  aberta e o chip da fita seguirem o alvo de saída do serviço) e quatro linhas de
+  ressalva — o controle que o sistema não entregou, o rádio nativo frágil, o hub
+  em comum e as contagens do gabinete.
+
+  **Nenhuma delas ocupa um pixel em repouso**: as quatro são `monta.ressalva`, e
+  a folha as apaga quando não há o que dizer. Medido no WebKit: a página tem
+  **809 px** com as quatro caladas e **809 px** com as quatro falando.
+
+  **O que ela vê HOJE, enquanto não publicar:** a Conexões de ontem. Os cinco
+  rádios do acordeão da página publicada não têm endereço — medido —, então a
+  linha aberta e o chip da fita continuam onde o desenho os pôs, e não onde o
+  serviço está mirando. Os quatro avisos não têm onde aparecer. **O serviço
+  responde certo; a tela é que não pergunta.**
+
+  **E DUAS VIOLAÇÕES DE GLOSSÁRIO SAÍRAM DA BANCADA NO CAMINHO** — `"hoje no
+  USB"` e `"• BT — 260,4"` na régua de Desempenho. São as duas únicas linhas de
+  texto do diff do `mockup/` nesta frente.
+
+  **O que fecha:** o `--publicar 08`, que é ato dela.
 
 ## 09-sistema.html
 
