@@ -88,12 +88,53 @@ def test_as_cinco_bancadas_apontam_para_uma_pagina_que_existe() -> None:
           "verde sobre uma janela vazia.")
 
 
+def _recusa_a_pagina_ausente(fonte: str) -> bool:
+    """A bancada confere que a página existe e SAI com `rc=2` — pela ÁRVORE.
+
+    **ESTA RÉGUA DIGITAVA O QUE DEVIA LER — 06/09/2026.** Ela procurava a
+    literal `"if not PAGINA.exists():"` no fonte, e a `JOGAR-O-QUE-FALTA-01`
+    deu à `jogar_vivo` a bandeira `--bancada`: a página passou a ser escolhida
+    em tempo de execução (`pagina_de(args)`, o publicado ou o desenho de hoje),
+    a guarda passou a conferir o ALVO RESOLVIDO — que é MAIS certo, porque
+    também alcança a bancada — e a régua reprovou a melhora. É o defeito de
+    forma que esta casa nomeia: *a régua confunde a PALAVRA com o ATO*, e ela
+    desliga exatamente quando alguém escreve bem.
+
+    O que se mede agora é o ATO: existe um `if not <algo>.exists():` cujo corpo
+    devolve `2`. O nome do que se confere é livre — `PAGINA`, `alvo`, o que a
+    bancada resolver —, porque o nome nunca foi o ponto.
+
+    MORDIDA: troque o `return 2` da guarda por um `print`, e esta régua acusa a
+    bancada nomeando-a.
+    """
+    import ast
+
+    for no in ast.walk(ast.parse(fonte)):
+        if not isinstance(no, ast.If):
+            continue
+        teste = no.test
+        if not (isinstance(teste, ast.UnaryOp)
+                and isinstance(teste.op, ast.Not)):
+            continue
+        chamada = teste.operand
+        if not (isinstance(chamada, ast.Call)
+                and isinstance(chamada.func, ast.Attribute)
+                and chamada.func.attr == "exists"):
+            continue
+        for dentro in ast.walk(no):
+            if (isinstance(dentro, ast.Return)
+                    and isinstance(dentro.value, ast.Constant)
+                    and dentro.value.value == 2):
+                return True
+    return False
+
+
 def test_as_cinco_bancadas_recusam_a_pagina_ausente_e_a_volta_zero() -> None:
     """A guarda que faz o `rc` contar. Sem ela, achar o defeito acima é sorte."""
     sem_guarda_da_pagina, sem_guarda_da_volta = [], []
     for nome in BANCADAS:
         fonte = (INTERFACE / nome).read_text(encoding="utf-8")
-        if "if not PAGINA.exists():" not in fonte:
+        if not _recusa_a_pagina_ausente(fonte):
             sem_guarda_da_pagina.append(nome)
         # A FRASE, e não a forma do contador: a `sistema_viva` guarda os
         # custos do tique em `janela.valores` e as outras quatro têm um

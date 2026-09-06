@@ -229,11 +229,23 @@ _MODE_DESCRIPTIONS = {
 #:
 #: PROVISÓRIO — decisão dela (texto de tela é palavra dela).
 #: CLASSE DE TELA: ESTRUTURAL — estado novo.
+#: A FRASE MANDAVA PARA UMA ABA QUE NÃO EXISTE — substituída em 06/09/2026,
+#: achado da `JOGAR-O-QUE-FALTA-01`. Ela dizia *"ou a aba Emulação"*, e a
+#: interface nova tem dez abas: Jogar, Controles, Gatilhos, Iluminação,
+#: Vibração, Navegação, Lançadores, Conexões, Sistema e Perfis. É a forma que o
+#: glossário desta casa proíbe com todas as letras — *qualquer frase que mande a
+#: pessoa procurar um botão ou uma janela que não existe*.
+#:
+#: O botão foi MEDIDO, e não escolhido: quem retoma o serviço é o `Retomar` da
+#: aba Sistema (`pacotes/a09_sistema.py:1697`, `data-campo="hefesto-pausa"`). O
+#: interruptor da aba Jogar NÃO serve — ele é Ligado/Desligado entre o gamepad
+#: do Hefesto e o modo nativo, e nunca chama `daemon.pause`/`daemon.resume`
+#: (decisão dela, 31/08/2026, escrita no gesto `hefesto`).
 TEXTO_EM_PAUSA: Final[str] = (
     "O Hefesto está em pausa: nada disto está acontecendo agora — sem luzes, "
     "sem vibração e sem os seus ajustes. O controle segue funcionando nos "
     "jogos como um controle comum. Para voltar, use o atalho do controle "
-    "(PS + Options) ou a aba Emulação."
+    "(PS + Options) ou o botão “Retomar”, na aba Sistema."
 )
 
 
@@ -1338,9 +1350,9 @@ def texto_da_ponte(state: dict[str, Any] | None) -> str:
             return (
                 PONTE_PREFIXO
                 + f'<span foreground="{_COR_AVISO}">de pé, e vazia</span> — o '
-                "gamepad do Hefesto está montado, e não há nenhum controle na "
-                "mesa para alimentá-lo. Ligue um controle para o jogo receber "
-                "alguma coisa."
+                "gamepad do Hefesto está montado, e não há nenhum controle "
+                "ligado para alimentá-lo. Ligue um controle para o jogo "
+                "receber alguma coisa."
             )
         no_aparelho = mascara_do_aparelho(state)
         visto = (
@@ -1694,7 +1706,7 @@ def _format_players_hint(
             if len(players) >= 2
             else f"{len(controllers)} pelo Hefesto"
         )
-        return f"{total} controles na mesa: {pelo_hefesto} e {quantos_veem}"
+        return f"{total} controles ligados: {pelo_hefesto} e {quantos_veem}"
     if len(controllers) < 2:
         return ""
     if len(players) < 2:
