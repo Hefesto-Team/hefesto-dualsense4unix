@@ -1942,6 +1942,86 @@ def _perfil_do_editor(ctx: Contexto) -> str:
     return nome
 
 
+def _com_o_que_esta_valendo(nome: str, ctx: Contexto) -> Any:
+    """`load_profile(nome)` — mas com o que está VALENDO no aparelho por cima.
+
+    **A BASE DE UM GESTO QUE GRAVA NÃO PODE SER SÓ O DISCO**, e este é o item 13
+    dela outra vez. Todo gesto do editor desta aba lê UM campo, muda UM campo e
+    grava o perfil INTEIRO — e o inteiro vinha do `.json`. O que ela clicou
+    noutra aba e ainda não foi ao disco (a cor da barra na 04, o volume do
+    alto-falante na 02, a velocidade do mouse na 06) **não estava nesse
+    inteiro**, e o `_gravar` ainda reaplica o arquivo logo em seguida
+    (`perfil.gravar_e_reaplicar`) — então o gesto não só perdia a escolha dela
+    no disco, ele a DESFAZIA no controle.
+
+    MEDIDO NESTA ÁRVORE, em 06/09/2026, com a linha 370 do CSV da paridade como
+    enunciado — perfil "Pragmata" valendo, `[0,255,128]` no `.json`, `[255,0,255]`
+    publicado pelo daemon (a cor que ela acabou de clicar), e o gesto de
+    RENOMEAR::
+
+        no disco                (0, 255, 128)
+        viva (o daemon publica) (255, 0, 255)
+        gravado por editor.nome (0, 255, 128)   ← a cor dela morreu no renomear
+
+    **O DONO DA SOBREPOSIÇÃO JÁ EXISTE E NÃO SE COPIA:** `rodape._draft_do_ativo`
+    é quem sabe trazer o vivo por cima do disco, e é o que o «Salvar Perfil» do
+    rodapé usa desde 01/09. Ele nasceu com a cor da barra e ganhou em 05/09 o
+    som, os sensores, a política de vibração, o `passthrough`, o teto e a
+    velocidade do mouse. Reescrever essa leitura aqui seria a segunda cópia —
+    o defeito que onze réguas desta casa já tiveram —, e a segunda cópia é a que
+    não recebe o campo do dia em que alguém acrescentar um ao dono.
+
+    **A SOBREPOSIÇÃO SÓ VALE PARA O PERFIL QUE ESTÁ VALENDO**, e a guarda é por
+    SLUG (R-10). O que o daemon publica é o estado dos controles SOB o perfil
+    ativo; despejá-lo num perfil que ela está editando sem ele estar valendo
+    escreveria o estado de um perfil dentro do arquivo de outro — uma perda de
+    dado nova no lugar da que se cura. Sem perfil valendo, o disco é a verdade.
+
+    **E A VOLTA É PELO NOME ANTIGO, SEMPRE — a metade que quase custou caro.**
+    `DraftConfig.to_profile` tem um portão `mesmo_perfil` por slug
+    (`app/draft_config.py:812`) e, com um nome NOVO, ele zera `match`, `mode` e
+    `suppress_desktop_emulation` de propósito (R-11: *"o perfil nasce com a
+    regra de casamento e a prioridade de outro perfil"*). Medido aqui no mesmo
+    dia, com um perfil de `MatchCriteria` + modo `gamepad`::
+
+        to_profile("Pragmata")  → difere do original em NADA
+        to_profile("Sackboy")   → perde match, mode e suppress_desktop_emulation
+
+    Por isso esta função devolve o perfil **com o nome que ele tem**, e quem
+    renomeia (`editor_nome`) o faz DEPOIS, por `model_copy`. Invertida a ordem,
+    a cura da cor teria apagado a regra que faz o perfil dela entrar no jogo —
+    o conserto que reintroduz o defeito que cura.
+
+    NUNCA LEVANTA POR CAUSA DA SOBREPOSIÇÃO. Se o dono não souber montar o
+    rascunho (ele mesmo devolve `None` em qualquer falha de leitura), a resposta
+    é o perfil do disco — que é exatamente o comportamento de ontem. Um gesto
+    dela não pode deixar de gravar o campo que ela mexeu porque o daemon
+    publicou um estado que o esquema recusa.
+    """
+    from hefesto_dualsense4unix.profiles.loader import load_profile
+    from hefesto_dualsense4unix.profiles.slug import mesmo_slug
+
+    prof = load_profile(nome)
+    valendo = _valendo(ctx)
+    if not valendo or not mesmo_slug(nome, valendo):
+        return prof
+    # O DONO MORA NO RODAPÉ E É IMPORTADO AQUI DENTRO, não no topo: `rodape` é
+    # o pacote do rodapé das dez abas, e o import tardio mantém o custo no
+    # clique em vez de no `import` do módulo. A dívida de endereço está na
+    # entrega — o lugar certo para `_draft_do_ativo` é `pacotes/perfil.py`, que
+    # é o módulo que as abas JÁ compartilham, e `rodape.py` não é posse desta
+    # sprint.
+    from . import rodape
+
+    try:
+        draft = rodape._draft_do_ativo(nome, ctx)
+        if draft is None:
+            return prof
+        return draft.to_profile(nome, priority=prof.priority)
+    except Exception:
+        return prof
+
+
 #: O CAMINHO DE VOLTA do rótulo do seletor para a chave do produto. Ele é a
 #: INVERSÃO de `perfis_web.AMBIENTE_DO_PRESET`, e não uma segunda tabela: o
 #: dono das quatro palavras é aquele módulo, e digitá-las aqui seria a segunda
@@ -2280,7 +2360,6 @@ def editor_nome(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | No
     from hefesto_dualsense4unix.profiles.loader import (
         delete_profile,
         load_all_profiles,
-        load_profile,
     )
     from hefesto_dualsense4unix.profiles.slug import slugify
 
@@ -2290,7 +2369,7 @@ def editor_nome(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | No
     era = _perfil_do_editor(ctx)
     if not novo:
         raise RuntimeError("o perfil precisa de um nome — o campo ficou vazio.")
-    prof = load_profile(era)
+    prof = _com_o_que_esta_valendo(era, ctx)
     if prof.name == novo:
         return None
     troca_de_arquivo = slugify(novo) != slugify(prof.name)
@@ -2353,7 +2432,6 @@ def editor_prioridade(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any
     from hefesto_dualsense4unix.app.actions.profiles_actions import (
         mensagem_do_salvar,
     )
-    from hefesto_dualsense4unix.profiles.loader import load_profile
     from hefesto_dualsense4unix.profiles.schema import (
         PRIORIDADE_MAXIMA,
         PRIORIDADE_MINIMA,
@@ -2373,7 +2451,7 @@ def editor_prioridade(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any
         raise RuntimeError(
             f"prioridade {novo} está fora da faixa que o perfil aceita "
             f"({PRIORIDADE_MINIMA} a {PRIORIDADE_MAXIMA}). Nada foi salvo.")
-    prof = load_profile(nome)
+    prof = _com_o_que_esta_valendo(nome, ctx)
     if int(prof.priority or 0) == novo:
         return None
     _gravar(prof.model_copy(update={"priority": novo}), ctx, p)
@@ -2411,7 +2489,6 @@ def editor_ambiente(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] 
       desconhecida, sem reclamar (`simple_match.py:248`): escolher "Estilo de
       Jogo" gravaria um catch-all no lugar da regra do jogo dela, em silêncio.
     """
-    from hefesto_dualsense4unix.profiles.loader import load_profile
     from hefesto_dualsense4unix.profiles.simple_match import from_simple_choice
 
     if not _so_mudou(o):
@@ -2424,7 +2501,7 @@ def editor_ambiente(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] 
             f"“{rotulo}” não é uma regra que o perfil saiba guardar. O produto "
             f"conhece {', '.join(sorted(PRESET_DO_ROTULO))} — “Estilo de Jogo” "
             f"está desenhado e não tem campo nem preset atrás dele.")
-    prof = load_profile(nome)
+    prof = _com_o_que_esta_valendo(nome, ctx)
     editor = _editor_de(prof)
     if editor.get("ambiente_travado"):
         raise RuntimeError(str(editor.get("ambiente_recado") or ""))
@@ -2478,7 +2555,6 @@ def editor_modo(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | No
     `kind` fora da faixa viraria um arquivo que o próximo `load` recusa — o
     perfil dela deixando de abrir por causa de um clique.
     """
-    from hefesto_dualsense4unix.profiles.loader import load_profile
     from hefesto_dualsense4unix.profiles.schema import ProfileModeConfig
 
     kind = str(o.get("modo") or "").strip()
@@ -2486,7 +2562,7 @@ def editor_modo(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | No
         raise RuntimeError(
             f"“{kind or '—'}” não é um modo que o perfil saiba guardar. O "
             f"produto conhece {', '.join(_tela.MODO_DO_PERFIL)}.")
-    prof = load_profile(_perfil_do_editor(ctx))
+    prof = _com_o_que_esta_valendo(_perfil_do_editor(ctx), ctx)
     atual = getattr(prof, "mode", None)
     if kind == _tela.MODO_SEM_OPINIAO:
         # JÁ ESTAVA SEM SEÇÃO: recusar dizendo, em vez de gravar o mesmo arquivo
@@ -2673,7 +2749,6 @@ def editor_estilo(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | 
     gatilho chegarem ao aparelho no mesmo segundo.
     """
     from hefesto_dualsense4unix.profiles import estilos_de_jogo as receitas
-    from hefesto_dualsense4unix.profiles.loader import load_profile
 
     # SEM `_so_mudou`: um `<select>` clicado sem trocar de opção não vale como
     # escolha nova, mas o `change` é o único evento que traz a opção nova — e
@@ -2701,7 +2776,7 @@ def editor_estilo(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | 
         return _dizer(
             f"“{estilo.rotulo}” não mexe em nada: é o estilo que diz “eu ajusto "
             f"na mão”. O que vale em “{nome}” continua sendo o que está nas abas.")
-    prof = load_profile(nome)
+    prof = _com_o_que_esta_valendo(nome, ctx)
     novo, pintados = _com_o_estilo(prof, estilo, ctx.mesa)
     _gravar(novo, ctx, p)
     # O DESFECHO DIZ AS TRÊS COISAS, e a da luz diz QUANTAS peças alcançou. Com
@@ -2773,7 +2848,6 @@ def editor_jogo(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | No
     seria a segunda verdade sobre o que este campo mostra — e as duas
     divergiriam no dia em que a regra ganhasse uma terceira forma.
     """
-    from hefesto_dualsense4unix.profiles.loader import load_profile
     from hefesto_dualsense4unix.profiles.simple_match import (
         from_simple_choice,
         normalize_appid,
@@ -2784,7 +2858,7 @@ def editor_jogo(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | No
         return None
     texto = str(o.get("valor") or "").strip()
     nome = _perfil_do_editor(ctx)
-    prof = load_profile(nome)
+    prof = _com_o_que_esta_valendo(nome, ctx)
     editor = _editor_de(prof)
     if editor.get("ambiente_travado"):
         raise RuntimeError(str(editor.get("ambiente_recado") or ""))
@@ -2857,7 +2931,6 @@ def detectar(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
     (`_jogo_reconhecido`), que é a única forma de ela conferir que o detector
     pegou o jogo certo e não o launcher que estava por cima.
     """
-    from hefesto_dualsense4unix.profiles.loader import load_profile
     from hefesto_dualsense4unix.profiles.simple_match import (
         from_simple_choice,
         simple_extra,
@@ -2875,7 +2948,7 @@ def detectar(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
             "não achei janela de jogo em foco — o detector não está vendo "
             "nenhuma. Abra o jogo, deixe-o em foco por um instante e clique "
             "de novo.")
-    prof = load_profile(nome)
+    prof = _com_o_que_esta_valendo(nome, ctx)
     appid = steam_appid_from_wm_class(classe)
     if appid is not None:
         prof.match = from_simple_choice("steam_game", str(appid),
