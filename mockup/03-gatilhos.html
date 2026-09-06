@@ -1177,35 +1177,17 @@
   .duas-colunas .ctrl[data-conectado="nao"] .nome-efeito{
     pointer-events:none;opacity:.55}
 
-  /* ---------- O REENVIO — decisão [03] do PO, 04/09/2026 ----------
-     *"Um botão na faixa que JÁ EXISTE (`--r-acao`, 34 px, já desenhada e
-     aprovada), mandando os DOIS gatilhos daquela coluna. Zero trilha nova."*
+  /* O REENVIO SAIU DA FAIXA — 06/09/2026, decisão dela. As duas regras que
+     vestiam o botão (a largura do glifo e a trava do lugar vazio) saíram com
+     ele: folha que veste um elemento que ninguém emite é peso que envelhece
+     calado. A razão da saída, e o que ainda espera o `--publicar 03`, estão no
+     comentário da faixa, junto de onde o botão era escrito.
 
-     ELE É UM GLIFO, E A RAZÃO É MEDIDA. A faixa tem 202px úteis na coluna de
-     228, e ela já gasta 123 com "Guardar esse efeito" (texto dela, aprovado) e
-     6 de vão — sobram 74 para o campo do nome. A palavra "Reenviar" mede ~62px
-     com o padding, e o campo cairia para 6px: um campo de texto de seis pixels
-     não é um campo, é um traço. Com o glifo o botão custa ~26px e o campo fica
-     com ~42 — que é o que a palavra "Nome" ocupa a 11px. Não há terceira linha
-     a inventar: a decisão diz zero trilha nova, e a conta fecha.
-
-     `↻` É U+21BB (ARROWS), e não um emoji: o ADR-011 preserva o bloco
-     Arrows justamente como UI textual, e `scripts/validar-glifos.py` reprova o
-     que desenha como emoji por omissão. O emoji U+1F504, que tem o mesmo
-     desenho, seria barrado — e com razão. (Ele não é citado aqui de propósito:
-     este comentário vai para o `<style>` da página, e o portão de glifos leria
-     o exemplo como o defeito.)
-
-     E ELE LEVA `aria-label`, porque um botão que só tem símbolo não tem nome
-     para quem navega por leitor de tela. O `title` é a explicação; o
-     `aria-label` é o NOME. */
-  .duas-colunas .ctrl .guardar .reenviar{
-    width:auto;flex:0 0 auto;padding:0 5px;font-size:14px;line-height:1}
-  /* O LUGAR VAZIO NÃO REENVIA, pela mesma razão que não se digita nem se
-     escolhe nele: não há aparelho a quem mandar, e o clique só poderia terminar
-     em recusa. A trava é a MESMA do `<select>` e do campo do nome. */
-  .duas-colunas .ctrl[data-conectado="nao"] .guardar .reenviar{
-    pointer-events:none;opacity:.55}
+     O GLIFO NÃO SE ESCREVE AQUI, e a razão é medida: este comentário é EMITIDO
+     para dentro do `<style>` da página, e a régua que vigia o glifo o procura
+     no arquivo. Escrito aqui, ele passaria a achar esta prosa e daria verde
+     sobre um botão que não existe — o mesmo defeito que o comentário do
+     `sem_comentarios_de_css` documenta, e que já custou uma régua nesta aba. */
 
   .duas-colunas{
     --r-nome:24px;--r-modo:36px;--r-pronto:36px;
@@ -1595,9 +1577,6 @@
             </div>
           </div>
           <div class="guardar">
-            <button class="btn reenviar" data-gesto="reenviar" data-hef-forma="@controle"
-                    aria-label="Reenviar os dois gatilhos ao controle"
-                    title="Manda de novo ao controle o L2 e o R2 que estão nesta coluna. O gatilho é comando de ida — o DualSense não devolve o modo em que está —, então quando um jogo escreve por cima, ou o controle volta do rádio, este é o caminho de trazer o efeito de volta. Não grava nada: o que vai é o que está na tela.">↻</button>
             <input class="nome-efeito" type="text" data-linha="nome-do-efeito"
                    maxlength="60" placeholder="Nome"
                    title="Dê um nome e o par L2+R2 desta coluna entra em Meus efeitos, para você escolher em qualquer perfil. Em branco, o botão só guarda no perfil deste controle.">
@@ -1736,9 +1715,6 @@
             </div>
           </div>
           <div class="guardar">
-            <button class="btn reenviar" data-gesto="reenviar" data-hef-forma="@controle"
-                    aria-label="Reenviar os dois gatilhos ao controle"
-                    title="Manda de novo ao controle o L2 e o R2 que estão nesta coluna. O gatilho é comando de ida — o DualSense não devolve o modo em que está —, então quando um jogo escreve por cima, ou o controle volta do rádio, este é o caminho de trazer o efeito de volta. Não grava nada: o que vai é o que está na tela.">↻</button>
             <input class="nome-efeito" type="text" data-linha="nome-do-efeito"
                    maxlength="60" placeholder="Nome"
                    title="Dê um nome e o par L2+R2 desta coluna entra em Meus efeitos, para você escolher em qualquer perfil. Em branco, o botão só guarda no perfil deste controle.">
@@ -1854,9 +1830,6 @@
             <div class="ajustes-vazio">Este modo não tem o que ajustar.</div>
           </div>
           <div class="guardar">
-            <button class="btn reenviar" data-gesto="reenviar" data-hef-forma="@controle"
-                    aria-label="Reenviar os dois gatilhos ao controle"
-                    title="Manda de novo ao controle o L2 e o R2 que estão nesta coluna. O gatilho é comando de ida — o DualSense não devolve o modo em que está —, então quando um jogo escreve por cima, ou o controle volta do rádio, este é o caminho de trazer o efeito de volta. Não grava nada: o que vai é o que está na tela.">↻</button>
             <input class="nome-efeito" type="text" data-linha="nome-do-efeito"
                    maxlength="60" placeholder="Nome"
                    title="Dê um nome e o par L2+R2 desta coluna entra em Meus efeitos, para você escolher em qualquer perfil. Em branco, o botão só guarda no perfil deste controle.">
@@ -1972,9 +1945,6 @@
             <div class="ajustes-vazio">Este modo não tem o que ajustar.</div>
           </div>
           <div class="guardar">
-            <button class="btn reenviar" data-gesto="reenviar" data-hef-forma="@controle"
-                    aria-label="Reenviar os dois gatilhos ao controle"
-                    title="Manda de novo ao controle o L2 e o R2 que estão nesta coluna. O gatilho é comando de ida — o DualSense não devolve o modo em que está —, então quando um jogo escreve por cima, ou o controle volta do rádio, este é o caminho de trazer o efeito de volta. Não grava nada: o que vai é o que está na tela.">↻</button>
             <input class="nome-efeito" type="text" data-linha="nome-do-efeito"
                    maxlength="60" placeholder="Nome"
                    title="Dê um nome e o par L2+R2 desta coluna entra em Meus efeitos, para você escolher em qualquer perfil. Em branco, o botão só guarda no perfil deste controle.">
@@ -2060,8 +2030,7 @@
         pergunta já não se faz.</li>
     <li><b>"Guardar esse efeito" é um por controle</b>, e não um só no pé do quadro — um botão
         único não diria qual dos 4 pares ele guarda, que é exatamente a ambiguidade que
-        o recibo foi criado para matar. <b>O reenvio ao lado nasceu pela mesma regra</b>, e por
-        isso também é um por coluna.</li>
+        o recibo foi criado para matar.</li>
   </ul>
 
   <h2>O que as quatro decisões de 04/09 puseram aqui</h2>
@@ -2076,14 +2045,15 @@
         o gatilho fora dos dois modos por posição <b>troca o modo</b> — é o atalho de um clique que
         você aprovou, e a única dívida medida era a tela não avisar. Agora ela diz em que modo o
         gatilho está e para onde cada família de curva o leva.</li>
-    <li><b>O <span class="marca">↻</span> reenvia o L2 e o R2 desta coluna ao controle.</b>
-        O gatilho é comando de ida — o DualSense não devolve o modo em que está —, então quando um
-        jogo escreve por cima, ou o controle volta do rádio, não há como a tela saber: o caminho de
-        volta é reenviar. Ele manda <b>o que está na tela</b>, e é nisso que ele difere do
-        "Aplicar" do rodapé, que manda o que está no disco. Ele não grava nada.</li>
-    <li><b>Quando o efeito chega, a tela diz.</b> Até agora ela só falava quando RECUSAVA; o
-        "aplicado" ia para o terminal de quem abriu a janela. A confirmação nasce no <b>próprio
-        cartão</b>, como a recusa, e some sozinha em segundos.</li>
+    <li><b>O botão de reenvio SAIU do desenho</b> — decisão sua, 06/09/2026. Ele nasceu em
+        04/09 e você o viu depois, com a foto ao lado: perguntada se ficava ou saía, escolheu
+        <b>sai</b>. O caminho de volta continua existindo pelo campo Modo, que reaplica a cada
+        escolha.</li>
+    <li><b>Quando o efeito chega, o campo pisca em verde</b> e nenhuma palavra nova entra na
+        tela — decisão sua, 05/09/2026. A confirmação dura <b>cerca de um segundo e meio</b>,
+        que foi o tempo que você pediu. A caixa de aviso do cartão ficou para quem tem
+        <b>notícia</b>: se o efeito chegou ao controle mas o perfil não pôde guardar, aí sim a
+        tela diz as duas metades, em verde, e some sozinha.</li>
   </ul>
 
   <h2>O que teve de mudar de forma para caber</h2>
