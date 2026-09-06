@@ -919,6 +919,10 @@ _CITACOES_PENDENTES: frozenset[str] = frozenset({
     #   a03_gatilhos.py:1472  `hefesto_vivo.py:1515` -> `:1678` (`_fita`)
     #   a06_navegacao.py:2710 `hefesto_vivo.py:2288` -> `:2585` (`_recusou_dizendo`)
     #   a10_perfis.py:1284    `hefesto_vivo.py:2288` -> `:2585` (`_recusou_dizendo`)
+    #   a09_sistema.py:1788   `hefesto_vivo.py:2111-2113` -> `:2547-2550`
+    #                         (o ramo do sucesso do `trabalhar`; a citação já
+    #                          apontava para o docstring do `_dialogo` na base
+    #                          `72690101` — só não caía em linha vazia)
     #
     # As TRÊS que a mesma cura deslocou FORA do `nao_toca:` não estão aqui
     # porque foram corrigidas no lugar (`interface/aba05.py:1601`, `:1609` e
@@ -927,6 +931,7 @@ _CITACOES_PENDENTES: frozenset[str] = frozenset({
     # a régua consegue ancorar).
     "interface/pacotes/a03_gatilhos.py::hefesto_vivo.py:1515",
     "interface/pacotes/a06_navegacao.py::hefesto_vivo.py:2288",
+    "interface/pacotes/a09_sistema.py::interface/hefesto_vivo.py:2111-2113",
     "interface/pacotes/a10_perfis.py::hefesto_vivo.py:2288",
     "profiles/loader.py::schema.py:52",
     "utils/repo_files.py::cli/cmd_doctor.py:23",
