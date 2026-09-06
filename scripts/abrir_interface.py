@@ -81,10 +81,20 @@ import runpy
 import sys
 from pathlib import Path
 
-# Este lançador de DESENVOLVIMENTO roda o piloto no PRÓPRIO processo (`runpy`),
-# então a janela dele é uma janela de verdade — e não nasce na tela dela
-# (TELA-DELA-02). Quem quer VER a interface declara `HEFESTO_NA_TELA=1`; o
-# produto que ela usa é o lançador instalado, e não passa por aqui.
+# Este lançador roda o piloto no PRÓPRIO processo (`runpy`), então a janela dele
+# é uma janela de verdade — e não nasce na tela dela (TELA-DELA-02). Quem quer
+# VER a interface declara `HEFESTO_NA_TELA=1`.
+#
+# FATO ERRADO, SUBSTITUÍDO — 06/09/2026. Esta linha dizia *"o produto que ela
+# usa é o lançador instalado, e não passa por aqui"*, e foi com essa premissa
+# que a guarda entrou aqui em 04/09. O `.desktop` instalado aponta o `Exec=`
+# para `interface.sh`, que chama `run.sh --gui`, que chama ESTE arquivo: o
+# atalho dela PASSA por aqui, e passou desviado por dois dias — ela clicou, o
+# WebKit pintou as dez abas num `Xvfb` e a tela dela não recebeu nada.
+#
+# Quem declara o escape é o `interface.sh`, porque ele é a CARA que ela clica.
+# A guarda FICA aqui: os instrumentos que chamam este script sem passar pelo
+# lançador continuam sem tela. Há régua: `test_o_lancador_dela_nasce_na_tela_dela.py`.
 import pathlib as _pathlib
 
 _RAIZ_TELA = str(_pathlib.Path(__file__).resolve().parents[1] / "src")

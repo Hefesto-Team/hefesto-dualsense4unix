@@ -52,6 +52,28 @@ if [ ! -x "$MOTOR" ]; then
     exit 1
 fi
 
+# ELA ASSUME A TELA, E TEM DE ASSUMIR — 06/09/2026. Ela clicou o atalho duas
+# vezes (01:48 e 01:49) e NADA apareceu: o processo subia, o WebKit pintava as
+# dez abas, e a janela nascia num `Xvfb` que tela nenhuma mostra. Só ficavam
+# três processos vivos e três `Xvfb` órfãos, medidos no `ps`.
+#
+# A CAUSA é a guarda TELA-DELA-02 (`utils/tela_de_mentira.py`), que nasceu em
+# 04/09 para impedir que os 24 instrumentos de `scripts/` abrissem janela na
+# tela dela. Ela foi posta no topo de `scripts/abrir_interface.py` com o
+# comentário *"o produto que ela usa é o lançador instalado, e não passa por
+# aqui"* — e a frase estava ERRADA: o `Exec=` do `.desktop` aponta para ESTE
+# arquivo, que chama `run.sh --gui`, que chama justamente aquele script. O
+# atalho dela atravessava a guarda inteira.
+#
+# `HEFESTO_NA_TELA=1` é o escape que a própria guarda declara, e a
+# responsabilidade pela tela é de quem declara. Aqui é o lugar certo de
+# declarar: este arquivo é a CARA — o que ELA clica, no menu ou na pasta. Todo
+# instrumento continua desviado, porque nenhum passa por aqui.
+#
+# `--oculta` não é afetado: quem usa `Gtk.OffscreenWindow` não toca compositor
+# nenhum, com ou sem esta linha.
+export HEFESTO_NA_TELA="${HEFESTO_NA_TELA:-1}"
+
 echo "Hefesto — a interface nova"
 echo
 echo "As DEZ abas estão vivas, com o dado do daemon. 48 botões agem."
