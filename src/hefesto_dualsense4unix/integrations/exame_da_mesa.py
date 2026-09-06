@@ -740,7 +740,7 @@ def censo(itens: Sequence[Item] | None = None) -> dict[str, object]:
 
 
 # ---------------------------------------------------------------------------
-# CLI — o mesmo par `--censo` / `--relatorio` do `sentinela_do_wrapper.py:524`.
+# CLI — o mesmo par `--censo` / `--relatorio` do `sentinela_do_wrapper.py:560`.
 # ---------------------------------------------------------------------------
 
 #: Marca de cada estado no relatório de terminal, no vocabulário que o doctor

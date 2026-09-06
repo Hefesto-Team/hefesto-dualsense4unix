@@ -1791,7 +1791,7 @@ def _conferir(html: str) -> None:
 
 # A ESCRITA MORA DEBAIXO DO `__main__`, e isto é cura de defeito MEDIDO em
 # 06/09/2026: `import aba10` REESCREVIA a bancada dela como efeito de um
-# import. `interface/perfis_vivos.py:77` faz esse import no TOPO do módulo,
+# import. `interface/perfis_vivos.py:78` faz esse import no TOPO do módulo,
 # então toda execução dele reescrevia o desenho aprovado — e bastava o pytest
 # COLETAR qualquer teste que importasse o gerador para o mesmo acontecer, com o
 # estado VIVO da mesa dentro do arquivo (`1 USB · 1 BT` virando `0 USB · 0 BT`

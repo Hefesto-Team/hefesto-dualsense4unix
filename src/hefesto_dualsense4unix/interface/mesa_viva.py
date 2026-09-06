@@ -173,7 +173,7 @@ def _via_do_transporte(transporte: object) -> str:
     **ELA PASSOU A SER A PALAVRA — costura da ONDA B, 06/09/2026, e é o degrau
     que a ONDA4-S10 desenhou e não pôde executar.** A decisão dela (D-05) é
     *"cabo / rádio, pela função que já existe"*, e a dona da frase mora em
-    `app/actions/home_actions.py:1431`.
+    `app/actions/home_actions.py:1483`.
 
     **FATO SUBSTITUÍDO.** Aqui estava escrito que esta função devolvia a SIGLA
     DE MÁQUINA, porque a chave `via` que ela alimenta era COMPARADA em cinco

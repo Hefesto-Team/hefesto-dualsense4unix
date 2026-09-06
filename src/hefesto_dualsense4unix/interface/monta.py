@@ -887,10 +887,19 @@ def fita(ativo: str = "todos", inerte: bool = False, titulo: str | None = None,
         nome = c["nome"] if mesa is None else identidade_do_chip(c, mesa)
         # O NOME QUE NÃO ACRESCENTA NADA SAI. O último degrau de
         # `identidade_de` é *"o transporte sozinho"* — honesto num card, que só
-        # mostra o nome, e mudo aqui: o chip TERMINA no transporte, e
-        # `P2 • BT • BT` afirma o mesmo fato duas vezes. Sem nome o chip fica
+        # mostra o nome, e mudo aqui: o chip TERMINA no transporte, e um chip
+        # que o repete afirma o mesmo fato duas vezes. Sem nome o chip fica
         # `P2 • BT`, que é o que se sabe.
-        if mesa is not None and nome in (c["via"], TRAVESSAO):
+        #
+        # O DEGRAU SE PERGUNTA AO DONO, e isto é defeito MEDIDO em 06/09/2026:
+        # esta linha comparava o nome com `c["via"]`, a SIGLA — e quando o
+        # último degrau passou a devolver a palavra do glossário (a
+        # `ONDA4-S10-O-TRANSPORTE-01`), a comparação deixou de casar e o chip do
+        # rádio voltou a dizer o transporte duas vezes, uma em cada língua. A
+        # `a02_controles` já perguntava; esta não. A sigla fica na tupla porque
+        # a fita do DESENHO ainda a traz, e ela também não acrescenta nada.
+        if mesa is not None and nome in (_degrau_do_transporte(c), c["via"],
+                                         TRAVESSAO):
             nome = ""
         # A COR DO PLÁSTICO, quando ela foi lida. O `slug` vazio é a mesa viva
         # dizendo "não perguntei" (rádio) ou "ainda não voltou" (cabo, primeiros
@@ -941,6 +950,17 @@ def identidade_do_chip(c: dict[str, Any], mesa: list[dict[str, Any]]) -> str:
     from hefesto_dualsense4unix.interface.pacotes import identidade_de
 
     return identidade_de({**c, "transport": c.get("transporte", "")}, mesa)
+
+
+def _degrau_do_transporte(c: dict) -> str:
+    """O último degrau de `identidade_de`: o transporte sozinho, na palavra dele.
+
+    Existe para que a fita **pergunte** em vez de digitar. É a mesma leitura que
+    `pacotes/a02_controles.py:1834` faz para o cabeçalho do card.
+    """
+    from hefesto_dualsense4unix.interface.pacotes import identidade_de
+
+    return str(identidade_de({"transport": c.get("transporte", "")}) or "")
 
 
 def glifo(nome: str, ativo: bool = False, tam: int = 24) -> str:

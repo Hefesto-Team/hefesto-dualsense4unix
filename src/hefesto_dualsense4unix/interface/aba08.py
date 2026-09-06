@@ -947,7 +947,7 @@ CSS = CSS_GLIFO + CSS_POPUP + """
      falta card. E só nasce no dia em que sobra — sem sobra, o produto não
      emite o elemento e a coluna fica exatamente como estava.
 
-     O SELETOR É ESCOPADO, e a razão é uma colisão medida: `monta.py:800` já
+     O SELETOR É ESCOPADO, e a razão é uma colisão medida: `monta.py:1011` já
      define `.gls .mais` para o "+N" do glossário das dez páginas. Um `.mais`
      solto aqui é o vizinho de nome igual que esta aba já pagou três vezes
      (`peca`, `tira`, `mesa`) — nome de classe se confere ANTES de escrever. */

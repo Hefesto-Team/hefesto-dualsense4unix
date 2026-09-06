@@ -1940,6 +1940,20 @@ PERIGOSOS = {
     # que já foi lembrado — ver a cura no próprio teste, no mesmo commit.
     ("01-jogar.html", "cadeado"),
     ("04-iluminacao.html", "auto-cores"),
+    # E OS DOIS DA TELA DE TECLAS — NAVEGACAO-TECLAS-01, 06/09/2026. A aba 06
+    # ganhou uma tela nova (qual tecla cada botão digita) e com ela DOIS gestos
+    # que gravam, irmãos dos que já estavam aqui:
+    #
+    #   06-navegacao·guardar-teclas   `gravar_e_reaplicar` — escreve
+    #   06-navegacao·padrao-da-tecla   `Profile.key_bindings` no perfil dela e
+    #                                  manda o perfil inteiro ao serviço
+    #
+    # QUARTA VEZ que a lista fica para trás de uma cura, e desta vez sem sequer
+    # mudar de forma: os nomes `guardar-definicoes` e `padrao-definicoes` já
+    # estavam protegidos, e os gêmeos da tela nova nasceram com nome próprio e
+    # fora da lista. A régua os pegou porque lê a ÁRVORE do gesto, não o nome.
+    ("06-navegacao.html", "guardar-teclas"),
+    ("06-navegacao.html", "padrao-da-tecla"),
     # E MAIS TRÊS DA MESMA ABA — LUZES-01, 06/09/2026, e desta vez a linha
     # ENTRA NO MESMO COMMIT que ensinou os gestos a gravar, que é o que o
     # próprio teste manda fazer e o que as três levas anteriores não fizeram.

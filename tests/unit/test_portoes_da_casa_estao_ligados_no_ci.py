@@ -184,8 +184,19 @@ def portoes_da_casa() -> list[str]:
 
     Derivado, nunca digitado: portão novo no `CLAUDE.md` entra aqui sozinho.
     """
+    #: COMENTÁRIO DE SHELL NÃO É PORTÃO, e isto é defeito MEDIDO em 06/09/2026:
+    #: um comentário DENTRO da tabela `_LISTA()` explicava o custo do `bash
+    #: scripts/portoes.sh` inteiro, a expressão regular o leu como uma linha da
+    #: tabela, e a régua passou a exigir que o CI invocasse o AGREGADOR — que ele
+    #: não invoca por desenho, porque chama cada portão um a um (é o
+    #: `test_portao_a_lista_de_portoes_e_uma_so.py` quem garante que as duas
+    #: listas são a mesma). Pela quinta vez nesta casa, um comentário virou o
+    #: defeito que descrevia. O `run:` do CI já era lido sem comentário aqui
+    #: (`linhas_de_comando`); a tabela passa a ser também.
     vistos: list[str] = []
-    for achado in re.findall(r"scripts/[\w./-]+\.(?:sh|py)", bloco_de_portoes()):
+    linhas = [linha for linha in bloco_de_portoes().splitlines()
+              if not linha.lstrip().startswith("#")]
+    for achado in re.findall(r"scripts/[\w./-]+\.(?:sh|py)", "\n".join(linhas)):
         if achado not in vistos:
             vistos.append(achado)
     return vistos

@@ -132,7 +132,7 @@ def test_a_fita_pergunta_ao_dono_do_nome() -> None:
 
     MORDIDA: troque `identidade_do_chip(c, mesa)` por `c["nome"]` em `fita()` e
     este teste reprova no controle do rádio — a mesa diz "Não sei" e o dono diz
-    "BT" (que o chip então cala, porque já termina no transporte).
+    a palavra do transporte (que o chip então cala, porque já termina nele).
     """
     html = monta.fita(ativo="p1", mesa=MESA_DELA)
     for c in MESA_DELA:
@@ -143,7 +143,12 @@ def test_a_fita_pergunta_ao_dono_do_nome() -> None:
         # acrescenta ao transporte que o chip já mostra.
         chip = [x for x in _chips(html) if f'P{c["jogador"]} ' in x]
         assert chip, html
-        esperado = "" if do_dono in (c["via"], monta.TRAVESSAO) else do_dono
+        # O DEGRAU SE PERGUNTA AO DONO, e não se digita: até 06/09/2026 esta
+        # linha comparava com `c["via"]`, a sigla, e o último degrau passou a
+        # ser a palavra do glossário (cabo · rádio). A régua ficou exigindo do
+        # chip um nome que o chip cala de propósito.
+        degrau = pacotes.identidade_de({"transport": c["transporte"]})
+        esperado = "" if do_dono in (degrau, c["via"], monta.TRAVESSAO) else do_dono
         escrito = _nome_escrito(chip[0], c)
         assert escrito == esperado, (
             f"o chip de {c['pref']} escreveu {escrito!r} e o dono diz "
