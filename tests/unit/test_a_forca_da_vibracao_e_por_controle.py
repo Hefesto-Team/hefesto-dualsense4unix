@@ -234,6 +234,21 @@ def test_o_auto_limpa_o_override_e_nunca_o_grava(
     redigitada, porque duas cópias de um texto de tela divergem na primeira
     edição.
 
+    **E A FRASE ENCOLHEU PARA UMA LINHA — 05-Q4 dela, 06/09/2026:** *"a frase
+    entra na faixa que já existe sob a grade, nomeando a coluna (`P2 · voltou ao
+    ajuste geral`) e some logo depois"*. A faixa reserva UMA linha — 181
+    caracteres é o último que cabe, medido (`a05_vibracao.
+    TETO_DA_LINHA_DA_FAIXA`) — e a oração inteira do produto tem 143. O que a
+    tela mostra é a metade do FATO (`a05_vibracao.FATO_DO_AJUSTE_GERAL`, as
+    palavras dela); o MECANISMO mudou de casa e não morreu — está no `?` do
+    rótulo "Força da vibração" (`aba05.py`).
+
+    A METADE QUE NÃO MUDOU É A QUE IMPORTA AQUI: o fato **não é redigitado**.
+    Esta régua exige que ele continue DENTRO da oração do produto, e por isso
+    ela continua importando `rumble_actions` — o dia em que a janela estável
+    renomear o "ajuste geral", ela reprova em vez de as duas telas passarem a
+    contar o mesmo fato com palavras diferentes.
+
     MORDIDA: em `a05_vibracao.forca`, contorne o produto gravando
     `ControllerRumbleOverride(policy="auto")` à mão — o esquema levanta e este
     caso reprova com a recusa dele em vez do perfil limpo.
@@ -256,7 +271,13 @@ def test_o_auto_limpa_o_override_e_nunca_o_grava(
     assert isinstance(volta, dict), (
         f"o gesto não devolveu recado nenhum ({volta!r}) — o Auto voltou a "
         f"limpar o override em silêncio")
-    assert TEXTO_A_PECA_VOLTOU_AO_AJUSTE_GERAL.strip(" —") in str(volta.get("recado")), (
+    from pacotes.a05_vibracao import FATO_DO_AJUSTE_GERAL
+
+    assert FATO_DO_AJUSTE_GERAL in TEXTO_A_PECA_VOLTOU_AO_AJUSTE_GERAL, (
+        f"a linha da faixa diz {FATO_DO_AJUSTE_GERAL!r} e a oração do produto "
+        f"passou a dizer {TEXTO_A_PECA_VOLTOU_AO_AJUSTE_GERAL!r} — as duas "
+        f"telas deixaram de contar o mesmo fato com as mesmas palavras")
+    assert FATO_DO_AJUSTE_GERAL in str(volta.get("recado")), (
         f"o Auto voltou a limpar o override em silêncio: {volta!r}")
 
     assert len(gravados) == 1, "o Auto não gravou — a coluna ficaria em Economia"
