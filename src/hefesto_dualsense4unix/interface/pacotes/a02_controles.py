@@ -66,6 +66,7 @@ obrigatória nesta casa. Os dois ganharam endereço no gerador (`luz-cor` e
 from __future__ import annotations
 
 import re
+from collections.abc import Callable
 from typing import Any
 
 from hefesto_dualsense4unix.app.actions.home_actions import (
@@ -90,6 +91,7 @@ from hefesto_dualsense4unix.app.widgets.controller_card import (
     frase_do_alvo_do_mic,
     gyro_do_inputs,
     rotulo_lightbar,
+    saida_muda_do_entry,
     speaker_do_entry,
     texto_motion,
     touchpad_do_inputs,
@@ -1228,6 +1230,18 @@ def no_do_microfone(entry: Any) -> str:
     return str(fonte) if isinstance(fonte, str) and fonte else ""
 
 
+def sink_do_cache(uniq: str) -> str:
+    """O sink de SAÍDA deste controle, do cache da camada 1. ``""`` = não sei.
+
+    **NUNCA LÊ O SISTEMA**, e é por isso que ela pode ser chamada do tique: o
+    `pactl` que preenche o cache roda na thread de :func:`_camada_1`, a cada
+    dois segundos. Quem precisa da resposta mesmo com o cache frio, e pode
+    pagar por ela, é o som de confirmação — ver :func:`_sink_para_o_som`.
+    """
+    lida = _CAMADA_1.get(uniq)
+    return str(getattr(lida, "sink_do_controle", "") or "") if lida else ""
+
+
 def no_do_alto_falante(uniq: str) -> str:
     """O ``.monitor`` do sink deste controle, ou ``""`` quando não se sabe.
 
@@ -1240,8 +1254,7 @@ def no_do_alto_falante(uniq: str) -> str:
     Sai `""` nos primeiros ~2 s de aba (o cache da camada 1 ainda vazio) e numa
     máquina sem `pactl`. Os dois são "não sei", e a tela mostra sem leitura.
     """
-    lida = _CAMADA_1.get(uniq)
-    sink = str(getattr(lida, "sink_do_controle", "") or "") if lida else ""
+    sink = sink_do_cache(uniq)
     return f"{sink}.monitor" if sink else ""
 
 
@@ -2551,6 +2564,124 @@ SOM_SEM_VOLUME_PARA_GUARDAR = (
 )
 
 
+# ---------------------------------------------------------------------------
+# O SOM QUE CONFIRMA — o alto-falante dizendo que o gesto pegou
+# ---------------------------------------------------------------------------
+# IDEIA DELA, e ela é sobre entender o produto pelo ouvido: *"ao clicar em cada
+# botão ele emite o som (…) tem que ajudar a entender o conceito"*. A janela GTK
+# faz isso desde a SOM-04 em QUATRO gestos do bloco do alto-falante
+# (`app/widgets/controller_card.py:4599`); esta aba fazia em zero, e o custo
+# subiu quando o DESLIZANTE do alto-falante nasceu — ela passou a arrastar um
+# número e a não ter como saber que a mudança valeu, porque **não há leitura de
+# volta hoje**: o número que a tela mostra é o que NÓS mandamos.
+#
+# «NÃO HÁ LEITURA DE VOLTA HOJE» É O QUE SE SABE, e a frase forte que estava
+# aqui — *"o registrador não tem leitura"* — não se sustenta: o
+# `docs/data/mapa-controles.csv` põe `audio.leitura_de_volta` como
+# `existe=desconhecido`, e *"ninguém achou"* não é *"não existe"*.
+#
+# O MOTOR É DO PRODUTO E NÃO SE REESCREVE: `app/audio_saida.tocar_confirmacao`
+# tem os sete degraus de recusa, a trava de um som por vez, a guarda-mãe (um
+# `paplay` com `--device` inexistente sai com ZERO e toca no sink PADRÃO — sem
+# ela a confirmação sairia pela televisão dela) e o acordar do nó suspenso.
+# O que esta seção constrói é o CAMINHO até ele: quem sabe o sink daquele
+# controle, e onde a chamada entra sem segurar a tela.
+
+
+def _sink_para_o_som(uniq: str, na_mesa: tuple[str, ...]) -> str:
+    """O sink deste controle: o cache da camada 1 primeiro, o dono depois.
+
+    **BLOQUEANTE NO SEGUNDO CAMINHO** — `audio_saida.sink_do_controle` roda dois
+    `pactl`. Por isso ela só é chamada de dentro de :func:`_fora_do_voo`, nunca
+    do tique nem do corpo do gesto.
+
+    O CACHE VEM PRIMEIRO porque a aba 02 é a mais pintada da casa e ele está
+    quente depois de ~2 s de tela; o dono entra no caso frio (o primeiro clique
+    de uma aba recém-aberta), e é o MESMO dono que o cache consulta — não é uma
+    segunda regra de atribuição. Escrever outra aqui daria ao alto-falante do
+    controle errado o som deste, que é o defeito que `escolher_sink` existe
+    para não cometer.
+
+    `""` é resposta honesta e frequente: é o controle sem placa de som atribuída
+    — e com `""` o motor não toca, em vez de tocar no sink padrão.
+    """
+    do_cache = sink_do_cache(uniq)
+    if do_cache:
+        return do_cache
+    return str(audio_saida.sink_do_controle(uniq, list(na_mesa)) or "")
+
+
+def _fora_do_voo(fn: Callable[[], None]) -> None:
+    """Roda `fn` numa linha própria, sem segurar o botão que está em voo.
+
+    **O GESTO JÁ NÃO RODA NO TIQUE** — medido em 06/09/2026 no piloto: ele
+    despacha cada gesto numa thread (`interface/hefesto_vivo.py:2239`), porque
+    *"`daemon.reload` leva 9,5 segundos"*. Logo a tela não congela nem se o som
+    for chamado direto, e o `TIQUE_MS` de 100 ms segue livre.
+
+    O QUE ESTA FUNÇÃO EVITA É OUTRA COISA, e ela é visível: o `finally` do
+    piloto só devolve o botão do voo — e só faz o campo piscar verde (03-Q4) —
+    quando o gesto retorna. `tocar_confirmacao` custa 0,35 s medidos de ponta a
+    ponta e tem teto de 5 s; segurá-lo no corpo do gesto atrasaria a resposta
+    VISUAL do clique pelo tempo do som. A confirmação sonora não pode pagar-se
+    com a confirmação visual.
+
+    É a mesma forma da :func:`_camada_1` logo acima, e pela mesma razão: o que
+    fala com o PipeWire vive na sua própria linha.
+
+    **ELA É O PONTO DE INJEÇÃO DAS RÉGUAS.** A régua a troca por uma chamada
+    direta e mede o som sem esperar relógio nenhum — corrida na suíte é vermelho
+    que aparece uma vez em dez.
+    """
+    import threading
+
+    threading.Thread(target=fn, name="hefesto-som-de-confirmacao",
+                     daemon=True).start()
+
+
+def _confirmar_com_som(ctx: Contexto, uniq: str) -> None:
+    """O som curto no alto-falante DESTE controle. Escritor único desta aba.
+
+    **QUEM CHAMA É O DESFECHO DO ATO NO APARELHO, nunca o pedido.** Emiti-lo
+    antes de o daemon responder confirmaria uma coisa que pode não ter
+    acontecido — é o que a GTK escreve no `_confirmar_com_som` dela, que só toca
+    com o `ok` do IPC na mão.
+
+    **E ELE VEM ANTES DO `_lembrar_do_som`, de propósito:** o som responde por
+    *"o aparelho recebeu"*, e a gravação responde por *"o perfil guardou"* — as
+    duas metades que esta casa aprendeu a dizer separadas. `_lembrar_do_som`
+    pode recusar (perfil sem volume para guardar, controle sem endereço), e
+    nesse caso o volume ESTÁ no aparelho: calar o som ali faria a confirmação
+    do aparelho depender de um fato do disco.
+
+    A CHAVE DELA JÁ ESTÁ RESPEITADA, e não se inventa uma segunda: quem lê
+    `som_ligado()` é o motor, no primeiro dos sete degraus, e desligada ele sai
+    calado — sem recusa e sem recado.
+
+    O `saida_muda` VEM DO DONO (`saida_muda_do_entry`): com a saída do sistema
+    muda, tocar gastaria um processo para produzir silêncio, e ela leria o
+    silêncio como defeito do controle — que é o contrário do que a confirmação
+    existe para dizer. `None` é *não sei*, e não impede o som.
+    """
+    na_mesa = tuple(
+        str(c.get("uniq") or "") for c in ctx.conectados if c.get("uniq")
+    )
+    muda = saida_muda_do_entry(ctx.por_uniq(uniq))
+
+    def tocar() -> None:
+        try:
+            audio_saida.tocar_confirmacao(
+                _sink_para_o_som(uniq, na_mesa), saida_muda=muda)
+        except Exception:
+            # O SOM É CONFIRMAÇÃO, NÃO PRÉ-REQUISITO. Um alto-falante que
+            # impedisse o volume de mudar seria o defeito trocado de lugar — e
+            # aqui ele roda noutra linha, onde uma exceção solta viraria
+            # traceback no terminal de quem lançou a janela, que ninguém lê.
+            return
+
+    _fora_do_voo(tocar)
+
+
 def _lembrar_do_som(
     ctx: Contexto,
     uniq: str,
@@ -2807,6 +2938,55 @@ def mudo(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
         frase = frase_do_ato_do_microfone(corpo)
         if frase:
             raise RuntimeError(frase)
+        # DE QUEM ERA O MICROFONE — a outra pergunta, e ela é a razão de esta
+        # sprint existir HOJE, com quatro DualSense na mesa.
+        # `frase_do_ato_do_microfone`, logo acima, responde QUAL METADE faltou;
+        # ela não responde em QUE controle o daemon mexeu. Até 06/09/2026 este
+        # botão fazia só a primeira pergunta, e um mudo que caísse na rota
+        # global calaria o microfone de OUTRA pessoa com a tela pintando o selo
+        # do cartão certo — *aparece como sucesso*. É o mesmo par de perguntas
+        # que o deslizante do volume já faz, e a resposta vem do MESMO dono.
+        #
+        # A FRASE É DO PRODUTO, e nenhuma nasce aqui: `frase_do_alvo_do_mic`
+        # (`app/widgets/controller_card.py:2191`) é a dona dos três estados, e
+        # `alvo_honrado` (`app/ipc_bridge.py:1098`) é quem os lê do corpo. Os
+        # dois devolvem "nada a dizer" para `True` e para `None` de propósito —
+        # *"não sei" não é "não honrei"*, e inventar a confissão por ausência de
+        # notícia acusaria o produto de um erro que ninguém mediu.
+        #
+        # O QUE O DAEMON DESTA ÁRVORE RESPONDE, medido em 06/09/2026: o corpo
+        # de `mic.canal.set` NÃO traz `por_uniq` — quem o traz é o
+        # `mic.volume.set` (`daemon/ipc_handlers.py:6058`). O ato do microfone
+        # monta a resposta em `AtoDoMicrofone.como_corpo`
+        # (`daemon/subsystems/hotkey.py:1385`), e lá o campo não existe. Então
+        # `alvo_honrado` devolve `None` aqui, esta linha fica CALADA contra o
+        # daemon de hoje, e o silêncio é o certo: quem cobre o alvo errado
+        # neste caminho é a metade do CANAL, que recusa dizendo quando a
+        # eleição não é deste controle (`_eleger_ou_devolver`) — e essa recusa
+        # sobe na `frase` acima. Esta linha é a trava do dia em que o campo
+        # existir, e ela é o que impede a terceira causa de 04/09 de se repetir
+        # com outro nome: um daemon INSTALADO mais velho que esta janela.
+        #
+        # **PROVISÓRIO — DECISÃO DELA, E O CONFLITO É DE PALAVRA.** A única
+        # frase que o dono tem para este estado é `TEXTO_MIC_ALVO_NAO_HONRADO`,
+        # e ela começa por *"O volume foi para o microfone de OUTRO
+        # controle"* — foi escrita para o DESLIZANTE, e já nasceu marcada
+        # `PROVISÓRIO — decisão dela` no próprio dono
+        # (`app/widgets/controller_card.py:613`). Dita depois de um clique no
+        # 🎙, ela nomeia um gesto que ela não fez. Escrever uma frase nova aqui
+        # é o que esta casa proíbe (texto de tela é dela, e há régua), e mexer
+        # no dono é território do motor. Enquanto o daemon não disser
+        # `por_uniq` neste caminho, a linha é inerte e ninguém lê a frase
+        # errada; no dia em que disser, a palavra é dela — e há régua-estopim
+        # cobrando isso antes de a frase chegar à tela
+        # (`tests/unit/test_a02_o_botao_confessa_o_alvo_e_o_som_confirma.py`).
+        #
+        # ELA VEM ANTES DA GRAVAÇÃO pelo motivo que o `volume` já escreve:
+        # gravar antes da confissão poria no `controllers[este]` um estado que
+        # este controle nunca teve.
+        confissao = frase_do_alvo_do_mic(alvo_honrado(corpo))
+        if confissao:
+            raise RuntimeError(confissao)
         # O PERFIL LEMBRA — e só agora, depois das DUAS metades. A frase acima
         # é a que separa *"o canal foi eleito e o firmware ficou represado"* de
         # *"o firmware obedeceu e não há canal"*: gravar antes dela poria no
@@ -2864,6 +3044,9 @@ def mudo(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
                 "o daemon não confirmou o mudo do alto-falante. Se o volume "
                 "deste controle ainda é desconhecido, ele recusa de propósito: "
                 "calar antes de saber o volume tranca o alto-falante em zero")
+        # O SOM CONFIRMA, e o ♪ é um dos quatro em que a GTK o toca. Calar
+        # justamente aqui seria a tela ficando muda no gesto que MEXE no som.
+        _confirmar_com_som(ctx, uniq)
         # O PERFIL LEMBRA. O volume não vai nesta chamada porque ele não mudou:
         # quem o preenche é o `_lembrar_do_som`, com a leitura viva — a mesma
         # que a linha acima acabou de reafirmar ao daemon.
@@ -2957,6 +3140,11 @@ def rota(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
         raise RuntimeError(
             "o daemon não confirmou a rota do alto-falante — ou o Hefesto está "
             "parado, ou este controle se desligou")
+    # O SOM CONFIRMA A ROTA NOVA, e é o gesto em que ele diz mais: os dois
+    # estados prometem som no controle, e o som é o que responde *"por onde ele
+    # sai agora"* sem uma palavra na tela. A GTK o toca nos dois estados
+    # (`app/widgets/controller_card.py:4286`), e não só na ida.
+    _confirmar_com_som(ctx, uniq)
     # O PERFIL LEMBRA A ROTA — e ela é a CAMADA 2, o byte do firmware. A camada
     # 1 (a saída padrão do PipeWire) é um fato GLOBAL do sistema e não cabe num
     # perfil por controle: quem a guarda é a memória do próprio
@@ -3215,6 +3403,10 @@ def volume(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
             raise RuntimeError(
                 "o daemon não confirmou o volume do alto-falante — ou o Hefesto "
                 "está parado, ou este controle se desligou")
+        # O SOM CONFIRMA — e ESTE é o arrasto que o pedia. O número que ela
+        # acabou de escolher é o que NÓS mandamos: não há leitura de volta hoje,
+        # e sem o som ela arrasta sem ter como saber que a mudança valeu.
+        _confirmar_com_som(ctx, uniq)
         # O PERFIL LEMBRA O NÚMERO DO PROTOCOLO, e não o da tela: quem guarda
         # 0-255 é `ProfileSpeakerConfig.volume`, e é o mesmo número que acabou
         # de chegar ao aparelho. Converter de novo aqui seria a segunda escala.
