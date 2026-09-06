@@ -21,6 +21,38 @@ seção daqui**: a aba deixou de estar em trabalho.
 
 ---
 
+## 10-perfis.html
+
+- **06/09/2026** — **UMA OPÇÃO A MAIS no seletor "Funciona em": "Jogo (pela
+  janela)"**, a sexta forma que a ONDA5-10-01 (decisão 10-Q2 dela) fez o produto
+  saber guardar. É a regra que o botão "Detectar" passa a gravar quando o jogo
+  **não é da Steam** — uma classe de janela só.
+
+  **Por que não publiquei:** publicar é ato dela. Aqui a mudança é VISÍVEL (uma
+  linha nova no `<select>`), então nem a régua do que-se-vê a absolveria — e
+  não deveria.
+
+  **O que ela vê HOJE, até publicar:** a aba Perfis de ontem, com cinco opções
+  no seletor. **E o custo da espera NÃO é zero — medido no WebKit vivo** por
+  `scripts/ensaios/o_detectar_grava_o_jogo_de_fora_da_steam.py`, com o MESMO
+  perfil no disco (`window_class: ["GrimFandango"]`) pintado nas duas páginas:
+
+  | | opções do seletor | a pintura escreveu | o campo mostrou |
+  | --- | --- | --- | --- |
+  | **bancada** | 6 (com "Jogo (pela janela)") | 3 de 3 | `Jogo (pela janela)` |
+  | **publicado** | 5 | **2 de 3** | **`Jogo`** |
+
+  O `escrever()` do piloto só escreve num `<select>` quando alguma opção CASA
+  (`hefesto_vivo.py`, `if(!tem) return 0;`), então o campo **fica com o "Jogo"
+  que o desenho cravou** — e o cadeado NÃO acende, porque o produto sabe
+  descrever a regra. É o defeito que o `aba10.opts` documenta, pelo avesso: a
+  tela afirma "Jogo" sobre um perfil que casa por janela, sem nada ao lado
+  dizendo que ela não sabe. O `Detectar` **grava certo no disco** nos dois
+  casos; o que espera pelo `--publicar 10` é o rótulo.
+
+  **O que fecha:** `scripts/check_o_desenho_aprovado.py --publicar 10`, no OK
+  dela da aba. Nada mais espera por isto.
+
 ## 02-controles.html
 
 - **05/09/2026** — **UMA LINHA DE COMENTÁRIO CSS, sem um pixel de diferença.**
