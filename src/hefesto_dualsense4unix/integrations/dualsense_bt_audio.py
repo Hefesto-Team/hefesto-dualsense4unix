@@ -1295,7 +1295,7 @@ class PonteMicBluetooth:
         **tem alguém gravando deste nó AGORA?** Só :data:`ESTADO_COM_OUVINTE`
         quer dizer sim (medido em 06/09/2026 — ver a constante), e só nesse caso
         o microfone do controle precisa estar no ar. Sem ouvinte, o que se
-        economiza é o que o cabeçalho já media: ~106 quadros de áudio por
+        economiza é o que o cabeçalho já mediu: ~106 quadros de áudio por
         segundo ocupando o link do rádio, e a privacidade de um microfone que
         está capturando sem ninguém do outro lado.
 
