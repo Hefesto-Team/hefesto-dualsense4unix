@@ -227,6 +227,24 @@ class ResultadoDaCarona:
     faltantes: frozenset[str]
     #: True quando ficou trabalho pendente — é o que arma (e mantém) a vigia.
     adiado: bool
+    #: A MESMA NOTÍCIA, SEM O AVISO — decisão 10-Q5 dela, 06/09/2026:
+    #: *"A tira passa a dizer só a metade curta e o aviso sai do texto."*
+    #:
+    #: ELA É SEGUNDA FORMA, E NÃO TROCA. ``frase`` continua sendo o que a janela
+    #: GTK mostra no toast (`_carona_toast`) e o que a aba Lançadores põe no
+    #: CORPO do cartão da Steam (`a07_lancadores.py`, `noticia()`): um cartão tem
+    #: corpo, e cabe o aviso inteiro. Quem tem duas linhas é a TIRA da aba
+    #: Perfis, e é só ela que lê este campo.
+    #:
+    #: O DONO DO TEXTO É QUEM ESCREVE AS DUAS. Cortar a frase longa no primeiro
+    #: ponto seria um segundo dono do texto — e a tira passaria a depender da
+    #: pontuação de uma frase que outra pessoa escreve.
+    #:
+    #: `""` QUER DIZER "não tenho versão curta", e não "não diga nada": quem lê
+    #: cai na ``frase``. Os status sem frase longa (``REPARO_NADA``,
+    #: ``ADIADO_SEM_OLHAR``) continuam com as duas vazias, e aí o contrato de
+    #: ``frase`` vazia — *"não diga nada"* — é quem decide.
+    frase_curta: str = ""
 
 
 def ligada() -> bool:
@@ -305,18 +323,30 @@ def passada(*, completa: bool = True) -> ResultadoDaCarona:
         if not appids:
             return ResultadoDaCarona(status, "", frozenset(), False)
         plural = "jogos" if len(appids) > 1 else "jogo"
-        frase = (
+        # A METADE QUE É FATO, e ela é o começo da longa — decisão 10-Q5. O que
+        # sai são as DUAS frases de aviso ("Sem ela, no Bluetooth…" e "As opções
+        # que você já tinha…"): a primeira explica um sintoma que já não existe
+        # (a reposição ACABOU de acontecer), e a segunda tranquiliza sobre um
+        # estrago que não houve. Numa tira de duas linhas, as duas empurram para
+        # fora o NOME DO JOGO, que é a única coisa que ela não sabe.
+        curta = (
             f"Reposta a Opção de Inicialização do Hefesto em {len(appids)} "
-            f"{plural} da Steam: {slo.lista_de_jogos(appids)}. Sem ela, no "
+            f"{plural} da Steam: {slo.lista_de_jogos(appids)}."
+        )
+        frase = (
+            f"{curta} Sem ela, no "
             "Bluetooth o jogo tende a não enxergar controle nenhum. As opções "
             "que você já tinha na linha foram preservadas."
         )
-        return ResultadoDaCarona(status, frase, frozenset(), False)
+        return ResultadoDaCarona(status, frase, frozenset(), False, curta)
 
     if status in (sw.REPARO_ADIADO_JOGO, sw.REPARO_ADIADO_STEAM):
         # A frase da sentinela já nomeia o jogo E já diz o que vai acontecer
         # ("vou repor assim que…") — que é exatamente o contrato da vigia.
-        return ResultadoDaCarona(status, sw.frase_do_aviso(censo), faltantes, True)
+        # A CURTA É IRMÃ DELA, e mora no MESMO módulo: a frase é da sentinela,
+        # e as duas formas saem de quem a escreve (10-Q5).
+        return ResultadoDaCarona(status, sw.frase_do_aviso(censo), faltantes,
+                                 True, sw.frase_do_aviso_curta(censo))
 
     if status == sw.REPARO_ERRO:
         motivos = ", ".join(
