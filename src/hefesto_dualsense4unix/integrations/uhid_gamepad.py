@@ -36,7 +36,10 @@ Três detalhes custaram um PoC e não podem se perder:
 
 1. **MAC duplicado faz o probe falhar** com ``Duplicate device found for MAC
    address ... / Failed to create dualsense / probe failed -17``. Cada vpad
-   precisa do seu MAC, na faixa localmente administrada (ver `player_mac`).
+   precisa do seu MAC, na faixa localmente administrada (ver `vpad_mac`, e
+   `player_mac` para o piso). Desde COOP-QUE-NÃO-DESMONTA-01/E3 esse MAC segue
+   o CONTROLE FÍSICO, não o número do jogador: o número é reciclado quando
+   alguém sai da mesa, e o MAC não pode ser reciclado junto.
 2. **Responder UHID_GET_REPORT é obrigatório** durante o probe — sem isso o
    driver não registra o controle.
 3. **UHID_SET_REPORT também precisa de reply**, senão o probe trava.
@@ -576,14 +579,121 @@ _BIND_SETTLE_S = 0.05
 VPAD_HID_PHYS = "hefesto-vpad"
 
 
+#: Os dois octetos que marcam "este MAC é forjado por nós". Faixa
+#: **localmente administrada** (bit 1 do primeiro octeto), que por definição não
+#: colide com endereço de fábrica. Três módulos espelham este prefixo por peso
+#: de import (`broker/hidraw_broker`, `core/backend_pydualsense`,
+#: `daemon/battery_journal`) e o portão
+#: `tests/unit/test_a_bateria_nao_le_o_no_do_vpad.py` confronta as cópias com o
+#: que `player_mac()` forja — o prefixo NÃO muda sem passar por lá.
+VPAD_MAC_PREFIXO = "02:fe"
+
+#: Bit ligado no primeiro octeto DERIVADO (o terceiro do MAC) de todo endereço
+#: que sai de :func:`vpad_mac`. É o que mantém os dois espaços **disjuntos por
+#: construção**, e não por sorte:
+#:
+#:     derivado da identidade   02:fe:80..ff:xx:xx:xx
+#:     fallback por número      02:fe:00:00:00:0N   (`player_mac`)
+#:
+#: Sem ele, um hash que caísse em `00:00:00:0N` daria dois vpads com o MESMO
+#: MAC e o segundo probe morreria com -EEXIST — o defeito que a E3 existe para
+#: matar, ressuscitado pela própria cura.
+_VPAD_MAC_BIT_DERIVADO = 0x80
+
+
 def player_mac(player: int) -> str:
-    """MAC próprio do vpad do jogador (1-based).
+    """MAC do vpad DERIVADO DO NÚMERO do jogador (1-based) — o **fallback**.
 
     O probe do `hid_playstation` recusa MAC repetido (-EEXIST), então copiar o do
     físico não serve. Usamos a faixa **localmente administrada** (bit 1 do
     primeiro octeto), que por definição não colide com hardware real.
+
+    COOP-QUE-NÃO-DESMONTA-01/E3 (06/09/2026): esta função deixou de ser a
+    resposta e passou a ser o piso. Quem responde é :func:`vpad_mac`, que só cai
+    aqui quando não há identidade de aparelho em que se apoiar. **Ela continua
+    existindo e continua com esta forma exata** porque três módulos espelham o
+    prefixo e o portão da bateria os confronta com ela.
     """
-    return f"02:fe:00:00:00:{player:02x}"
+    return f"{VPAD_MAC_PREFIXO}:00:00:00:{player:02x}"
+
+
+def vpad_mac(identity: str | None, player: int) -> str:
+    """MAC do vpad deste jogador, ancorado no APARELHO e não no número.
+
+    COOP-QUE-NÃO-DESMONTA-01/E3. O defeito que esta função mata, escrito por
+    extenso porque a correção intuitiva é a errada: o número do jogador é
+    REUSADO — `_next_player_index` devolve o menor índice livre >= 2 e o
+    teardown o devolve ao poço (`daemon/subsystems/coop.py`). Com o MAC do vpad
+    saindo desse número, **uma queda no meio da mesa fazia o MAC do Jogador 2
+    passar a pertencer a outra pessoa**, e um jogo que salve por slot de
+    dispositivo trocava os perfis de dono.
+
+    A cura NÃO é parar de reusar o índice: o jogo quer P1..PN **contíguos**. A
+    cura é desacoplar as duas coisas — o número continua contíguo e reusável, o
+    MAC passa a seguir o controle físico.
+
+    `identity` é o que o resto do produto chama de identidade de aparelho
+    (`core/evdev_reader.discover_dualsense_evdevs`, `backend.primary_uniq`,
+    `_external_dedup_key`). Aquele espaço tem TRÊS formas disjuntas por prefixo,
+    e só a primeira serve aqui:
+
+    - **MAC do aparelho** (12 dígitos hex, com ou sem `:`) — é o único que
+      sobrevive ao replug, que é a coisa inteira que esta sprint pede. Vira
+      quatro octetos de `blake2b`;
+    - `dev:<instância HID>` — a chave dos clones sem endereço próprio
+      (`_is_synthetic_uniq`). Ela muda a cada replug, então derivar dela seria
+      prometer estabilidade que não existe;
+    - `path:<node>` — o último recurso, e o menos estável de todos: o node é
+      **renumerado** pelo kernel a cada reconexão. Foi um `path:` no lugar de um
+      MAC que fez nascer a guarda `BUG-COOP-BOOT-PRIMARY-DUP-01`.
+
+    As duas últimas, e `None`, caem em :func:`player_mac` — o comportamento de
+    hoje, intacto. É recuo deliberado: com identidade instável, o número do
+    jogador é a MELHOR âncora disponível, não a pior.
+
+    **`hashlib`, nunca `hash()`.** O `hash()` de `str` é salgado por processo
+    (`PYTHONHASHSEED`): o MAC do vpad mudaria a cada reinício do daemon, e o
+    sintoma seria idêntico ao defeito que estamos curando — o jogo vendo um
+    controle novo onde está o mesmo plástico.
+
+    Colisão: 31 bits úteis (o bit alto é reservado, ver
+    :data:`_VPAD_MAC_BIT_DERIVADO`). Com os quatro controles do alvo desta casa
+    são seis pares, ~2,8e-9 de chance de dois vpads nascerem com o mesmo MAC —
+    e o efeito, se acontecesse, é o -EEXIST barulhento do probe, não corrupção
+    silenciosa.
+    """
+    digitos = _somente_hex(identity)
+    if len(digitos) != 12:
+        return player_mac(player)
+    import hashlib
+
+    bruto = bytearray(hashlib.blake2b(digitos.encode("ascii"), digest_size=4).digest())
+    bruto[0] |= _VPAD_MAC_BIT_DERIVADO
+    return f"{VPAD_MAC_PREFIXO}:" + ":".join(f"{b:02x}" for b in bruto)
+
+
+def _somente_hex(valor: str | None) -> str:
+    """Os dígitos hexadecimais de `valor`, minúsculos. `None` → string vazia.
+
+    Aceita as duas grafias que circulam no produto — a colada (`a0fa9c…`, como o
+    `controllers.json` e o journal escrevem) e a com separador — pela mesma
+    razão que `daemon/battery_journal.mascarar_endereco`: quem chama não sabe de
+    qual das duas pontas o endereço veio.
+
+    **Descartar, não peneirar.** Um caractere fora de `[0-9a-f:]` invalida o
+    valor INTEIRO em vez de ser jogado fora — e a diferença é a que separa esta
+    função de um defeito: `dev:` e `path:` carregam dígitos hexadecimais no
+    meio (`d`, `e`, `a`, `c`…), e uma peneira que só ficasse com eles poderia
+    devolver doze dígitos a partir de um caminho de sysfs — dando ao vpad um
+    MAC "estável" derivado de uma identidade que muda a cada replug, que é
+    exatamente o defeito com outra roupa.
+    """
+    if not valor:
+        return ""
+    baixo = valor.lower()
+    if any(ch not in "0123456789abcdef:" for ch in baixo):
+        return ""
+    return baixo.replace(":", "")
 
 
 def _bitmask(pressed: frozenset[str], bits: dict[str, int]) -> int:
@@ -787,8 +897,21 @@ class UhidDualSense:
     eventos evdev — quem monta o report é `send_report()`.
     """
 
-    #: 1-based; define o MAC e o nome do device.
+    #: 1-based; define o NOME do device (`Hefesto PN`) e, quando não há
+    #: identidade de aparelho, também o MAC (`player_mac`, o fallback).
+    #: COOP-QUE-NÃO-DESMONTA-01/E3: ele deixou de definir o MAC sozinho — ver
+    #: :attr:`identity` e :func:`vpad_mac`.
     player: int = 1
+    #: Identidade do controle FÍSICO que este vpad representa (o `uniq`/MAC que
+    #: `discover_dualsense_evdevs` e `backend.primary_uniq` devolvem), ou None
+    #: quando o chamador não sabe de quem é o vpad.
+    #:
+    #: COOP-QUE-NÃO-DESMONTA-01/E3 (06/09/2026): é daqui que sai o MAC do vpad.
+    #: O dado já chegava até a porta — `for_flavor` o recebia desde a
+    #: MÁSCARA-POR-JOGADOR-01 (15/08) e o usava só para escolher a máscara, sem
+    #: guardá-lo. Agora ele entra no objeto, e o vpad de um controle deixa de
+    #: trocar de MAC quando o número do jogador é reciclado.
+    identity: str | None = None
     #: PID que o vpad apresenta ao kernel/jogo. Default Edge (`VPAD_PRODUCT`) —
     #: distinto do físico para desduplicar; ver a constante para o porquê.
     product: int = VPAD_PRODUCT
@@ -1035,6 +1158,10 @@ class UhidDualSense:
             return None
         return cls(
             player=player,
+            # E3: a identidade não serve só para escolher a máscara — ela é o
+            # que ancora o MAC do vpad no controle físico. Não repassá-la aqui
+            # deixava a cura sem chegar ao produto.
+            identity=identity,
             blueprint=blueprint,
             calibration_0x05=calibration_0x05,
             rumble_sink=rumble_sink,
@@ -1085,7 +1212,14 @@ class UhidDualSense:
 
     @property
     def mac(self) -> str:
-        return player_mac(self.player)
+        """O `uniq` que o vpad carimba no feature 0x09 e o kernel republica.
+
+        COOP-QUE-NÃO-DESMONTA-01/E3: segue o APARELHO (`identity`), não o número
+        do jogador. Sem identidade cai em `player_mac(self.player)`, que é o
+        comportamento histórico — e é por isso que `UhidDualSense(player=N).mac`
+        continua sendo `02:fe:00:00:00:0N`.
+        """
+        return vpad_mac(self.identity, self.player)
 
     @property
     def ff_last_sent(self) -> tuple[int, int]:
@@ -1384,8 +1518,13 @@ class UhidDualSense:
 
         O template canônico vem com as áreas de MAC ZERADAS (identidade nunca é
         fossilizada — regra de anonimato); é aqui que o vpad ganha o MAC forjado
-        `02:fe:00:00:00:0N`. O probe do hid_playstation recusa MAC repetido
+        que :attr:`mac` decide. O probe do hid_playstation recusa MAC repetido
         (-EEXIST): sem MAC próprio por jogador, o co-op de 4 vira 1.
+
+        COOP-QUE-NÃO-DESMONTA-01/E3: o MAC continua vindo de `self.mac` — o que
+        mudou é de onde `self.mac` sai (do aparelho, não do número do jogador).
+        Nada aqui digitou a forma dele, e é por isso que este método não mudou
+        uma linha de código.
         """
         assert self.blueprint is not None
         features = dict(self.blueprint["features"])
@@ -2412,9 +2551,11 @@ class UhidDualSense:
 __all__ = [
     "UHID_NODE",
     "VPAD_HID_PHYS",
+    "VPAD_MAC_PREFIXO",
     "VPAD_PRODUCT",
     "UhidDualSense",
     "capture_dualsense_blueprint",
     "player_mac",
     "uhid_available",
+    "vpad_mac",
 ]
