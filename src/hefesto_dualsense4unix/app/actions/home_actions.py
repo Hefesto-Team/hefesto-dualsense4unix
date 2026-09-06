@@ -188,13 +188,37 @@ _MODE_DESCRIPTIONS = {
         "Escolha certa para quase todos os jogos: o Hefesto acende as luzes, "
         "faz o controle vibrar e dá um jogador para cada controle."
     ),
-    # SPRINT-GAME-RUMBLE-01: sem o Hefesto no meio, o jogo fala direto com o
-    # DualSense — inclusive pelo canal de áudio (haptics do PS5), que é o que
-    # dispara o travamento/desconexão em alguns títulos.
+    # NOTA DATADA (ONDA5-01-02, 06/09/2026) — A PROFECIA SAIU DAQUI, e ela
+    # precisou de TRÊS palavras dela, em três dias diferentes, para cair:
+    #
+    #   31/08/2026 — *"o modo nativo já existe ali (…) e se eu quiser desligar
+    #     modo hefesto clico em desligado e o modo nativo fica online. Qualquer
+    #     coisa fora isso tá incorreta."* A interface nova encolheu o texto
+    #     naquele dia (`interface/aba01.py`, a constante `INTERRUPTOR`); esta
+    #     janela não foi junto, e as duas passaram uma semana divergindo.
+    #   04/09/2026 — a leitura de PO do OITAVO CONFLITO: a tela pode dizer o
+    #     ESTADO MEDIDO, nunca a consequência que ninguém mediu. É o que o
+    #     `interface/frases_que_ela_baniu` conta, e o que ele guarda.
+    #   05/09/2026 — *"Não me lembro disso acontecer. E não deveria."*
+    #
+    # O QUE SAIU, e as duas metades são banidas por medição, não por gosto:
+    # os gatilhos que endureceriam e os jogos que derrubariam o controle.
+    # **Os trechos NÃO se digitam aqui** — eles moram nos índices 0 e 2 de
+    # `interface.frases_que_ela_baniu.FRASES_BANIDAS`, e uma cópia neste
+    # comentário faria deste arquivo a primeira ocorrência de novo.
+    #
+    # CAIU JUNTO o comentário do SPRINT-GAME-RUMBLE-01, que explicava o
+    # travamento pelo canal de áudio (haptics do PS5). Ele era a CAUSA de um
+    # efeito que ensaio nenhum desta casa mede — sem a frase, ficou sem objeto.
+    #
+    # A CHAVE NÃO SE APAGA: `_MODE_DESCRIPTIONS.get(...)` é lido seco em
+    # `_render_home` e em `_on_home_mode_changed`, e apagar a chave escreveria
+    # string VAZIA na tela — trocar uma frase errada por nenhuma não é o que
+    # ela pediu. O texto que fica é o da interface nova, palavra por palavra:
+    # as duas janelas passam a dizer a mesma coisa.
     "native": (
-        "Só para jogos feitos para o PlayStation 5: os gatilhos ficam duros de "
-        "apertar, como no PS5. Alguns jogos derrubam o controle no meio da "
-        "partida neste modo — se acontecer, volte para \"Jogar pelo Hefesto\"."
+        "Modo Nativo: o Hefesto sai do meio e o jogo fala direto com o "
+        "controle."
     ),
 }
 
