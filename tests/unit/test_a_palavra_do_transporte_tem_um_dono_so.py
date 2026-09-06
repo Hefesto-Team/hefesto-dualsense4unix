@@ -199,7 +199,8 @@ def test_o_gerador_nao_escreve_a_bancada_como_efeito_de_import() -> None:
     #: reprovaria sem que ninguém tivesse decidido curá-los. Acrescentar um nome
     #: aqui é um ato que se vê no diff — que é o oposto de um glob que passa a
     #: cobrar (ou a deixar de cobrar) sozinho.
-    CURADOS = ("aba01.py", "aba02.py", "aba04.py", "aba05.py", "aba10.py")
+    CURADOS = ("aba01.py", "aba02.py", "aba03.py", "aba04.py", "aba05.py",
+                "aba07.py", "aba08.py", "aba10.py")
     raiz = _pl.Path(__file__).resolve().parents[2]
     faltam = []
     for nome in CURADOS:
