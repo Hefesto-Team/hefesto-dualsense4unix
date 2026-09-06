@@ -47,6 +47,26 @@ MARCADORES_DUALSENSE: tuple[str, ...] = (
 #: noutro arquivo, LEIA de lá.
 PREFIXO_SOURCE_PONTE_BT = "hefesto_dualsense_bt_"
 
+#: Prefixo do nome do CANAL POR CONTROLE: ``hefesto_mic_<hex6>``, o nó que
+#: :mod:`integrations.canal_do_microfone` publica (ONDA5-MIC-VIRTUAL-01).
+#:
+#: **DONO ÚNICO, e ele mora AQUI pela mesma razão de
+#: :data:`PREFIXO_SOURCE_PONTE_BT`:** quem LÊ o nome é este módulo
+#: (:func:`fontes_dualsense`, :func:`escolher_fonte`) e quem o ESCREVE é o dono
+#: do canal. Se o prefixo morasse lá, este arquivo teria de importá-lo — e
+#: `canal_do_microfone` já importa daqui (``so_hex``, ``MIN_HEX_SUFIXO_BT``),
+#: o que fecharia um ciclo. A regra da casa resolve sem ciclo: **o nome mora
+#: com quem o lê, e quem o escreve LÊ de lá.**
+#:
+#: **Por que um prefixo NOVO e não o da ponte.** ``hefesto_dualsense_bt_`` diz o
+#: TRANSPORTE no próprio nome, e é esse o defeito que o canal por controle
+#: existe para curar: troque o cabo pelo rádio e o microfone daquele controle
+#: mudava de nome. Reusar aquele prefixo apenas mudaria o defeito de lugar.
+#: Enquanto o rádio publicar o nome velho, os dois prefixos convivem e os dois
+#: leitores discriminam — é o preço declarado da transição, e a
+#: ONDA5-MIC-VIRTUAL-02 é quem o paga.
+PREFIXO_SOURCE_CANAL_DO_MIC = "hefesto_mic_"
+
 #: Tamanho mínimo do sufixo hex aceito como identidade. Seis dígitos são os
 #: três últimos octetos do MAC — o que a ponte publica. Menos que isso não
 #: distingue controles, e a ponte tem um caminho de fallback (nó sem
@@ -120,6 +140,14 @@ def fontes_dualsense(saida_pactl: str) -> list[str]:
     Monitores de saída (``.monitor``) são descartados: são o áudio que SAI
     pelo alto-falante do controle, não o microfone dele — medir aquilo faria
     o "nível do mic" subir com a trilha do jogo.
+
+    **O CANAL POR CONTROLE ENTRA POR IDENTIDADE, NÃO POR MARCADOR** — e a razão
+    foi medida em 06/09/2026, com o nó de pé no PipeWire desta máquina: o nome
+    ``hefesto_mic_000001`` não contém NENHUM dos
+    :data:`MARCADORES_DUALSENSE` (o da ponte de rádio contém, porque tem a
+    palavra ``dualsense`` dentro). Sem esta linha o nó novo nunca chegava à
+    lista, :func:`escolher_fonte` nunca o via, e a regra 0 dele seria código
+    morto que dá verde — o defeito que esta casa chama de instrumento falso.
     """
     out: list[str] = []
     for linha in saida_pactl.splitlines():
@@ -130,7 +158,7 @@ def fontes_dualsense(saida_pactl: str) -> list[str]:
         alvo = nome.lower()
         if alvo.endswith(".monitor"):
             continue
-        if any(marca in alvo for marca in MARCADORES_DUALSENSE):
+        if sufixo_do_canal_do_mic(nome) or any(marca in alvo for marca in MARCADORES_DUALSENSE):
             out.append(nome)
     return out
 
@@ -169,8 +197,27 @@ def escolher_fonte(
 ) -> str | None:
     """Source atribuível ao controle `uniq` — ou None quando não dá para saber.
 
-    Quatro regras, nesta ordem:
+    CINCO regras, nesta ordem — e a regra 0 nasceu depois das outras quatro,
+    que NÃO saíram:
 
+    0. **O nó com IDENTIDADE vence** (ONDA5-MIC-VIRTUAL-01, 06/09/2026). O
+       canal por controle publica ``hefesto_mic_<hex6>``
+       (:data:`PREFIXO_SOURCE_CANAL_DO_MIC`), e aqueles seis dígitos são os
+       três últimos octetos do MAC — a identidade DO CONTROLE, que não muda
+       quando ele troca de transporte. Quando ele está no ar, a pergunta *"qual
+       nó é o microfone deste controle"* tem resposta exata e ela não custa
+       censo de USB nenhum.
+
+       **AS QUATRO ABAIXO FICAM, e a razão é medida:** o nó com identidade só
+       existe DEPOIS que alguém pede o canal (o botão do microfone), e antes
+       disso as quatro são o único caminho — inclusive o da janela estável, que
+       abre esta mesma função. Uma regra 0 que substituísse as quatro apagaria o
+       microfone de todo controle que ninguém pediu ainda.
+
+       **E ela cobre os quatro chamadores de uma vez**, porque a cura está
+       DENTRO da função que os quatro chamam: a eleição, a luz, o áudio da
+       janela e o ``escolher_sink``. Curar um só deixaria a próxima pessoa
+       remedindo o mesmo defeito, e foi o que aconteceu duas vezes em 05/09.
     1. **O nome carrega o MAC inteiro.** Sources de Bluetooth nascem como
        ``bluez_input.XX_XX_XX_XX_XX_XX``; ali o MAC está no nome e a
        atribuição é certa mesmo com vários controles. A busca por MAC é
@@ -209,6 +256,10 @@ def escolher_fonte(
     """
     alvo = so_hex(uniq)
     if alvo:
+        for fonte in fontes:
+            sufixo = sufixo_do_canal_do_mic(fonte)
+            if sufixo and alvo.endswith(sufixo):
+                return fonte
         for fonte in fontes:
             if fonte.lower().startswith("bluez") and alvo in so_hex(fonte):
                 return fonte
@@ -250,6 +301,12 @@ def escolher_sink(
     hoje é INERTE do lado da saída: a ponte publica uma source (o mic chega
     como Opus tunelado em HID) e nenhum sink começa com aquele prefixo. Fica
     porque é a regra certa se um dia houver um sink com identidade no nome.
+
+    **A regra 0 (o canal por controle) é inerte aqui pelo mesmo motivo, e de
+    propósito:** ``hefesto_mic_<hex6>`` é um nó de CAPTURA e
+    :func:`sinks_dualsense` nunca o devolve. O microfone não sai por lugar
+    nenhum; se ele aparecesse numa lista de sinks, o defeito estaria antes
+    daqui.
     """
     return escolher_fonte(sinks, uniq, uniqs_com_audio, usb)
 
@@ -272,6 +329,29 @@ def sufixo_da_ponte_bt(fonte: str) -> str:
     return resto
 
 
+def sufixo_do_canal_do_mic(fonte: str) -> str:
+    """Rabo hex do MAC no nome do CANAL POR CONTROLE — "" se não for um.
+
+    De que controle é este nó. Mesma forma de :func:`sufixo_da_ponte_bt` e
+    mesma armadilha evitada do mesmo jeito: recorta o prefixo ANTES de filtrar
+    hex, porque ``hefesto_mic_`` tem letras hex dentro (``e``, ``f``, ``c``) e
+    passar o nome inteiro por :func:`so_hex` produziria um "MAC" com lixo
+    grudado na frente — casamento por acaso.
+
+    **ESTA FUNÇÃO MOROU EM `canal_do_microfone.sufixo_do_canal` ATÉ 06/09/2026**,
+    e desceu para cá quando a regra 0 de :func:`escolher_fonte` passou a
+    precisar dela. Não é cópia: lá ela não existe mais. Duas verdades sobre "de
+    que controle é este nó" é como esta casa fabrica divergência silenciosa.
+    """
+    baixa = fonte.lower()
+    if not baixa.startswith(PREFIXO_SOURCE_CANAL_DO_MIC):
+        return ""
+    resto = baixa[len(PREFIXO_SOURCE_CANAL_DO_MIC) :]
+    if len(resto) < MIN_HEX_SUFIXO_BT or so_hex(resto) != resto:
+        return ""
+    return resto
+
+
 def so_hex(valor: str) -> str:
     """Só os dígitos hex minúsculos — mesma normalização de MAC do projeto."""
     return "".join(ch for ch in valor.lower() if ch in "0123456789abcdef")
@@ -280,6 +360,7 @@ def so_hex(valor: str) -> str:
 __all__ = [
     "MARCADORES_DUALSENSE",
     "MIN_HEX_SUFIXO_BT",
+    "PREFIXO_SOURCE_CANAL_DO_MIC",
     "PREFIXO_SOURCE_PONTE_BT",
     "CasamentoUSB",
     "escolher_fonte",
@@ -288,4 +369,5 @@ __all__ = [
     "sinks_dualsense",
     "so_hex",
     "sufixo_da_ponte_bt",
+    "sufixo_do_canal_do_mic",
 ]

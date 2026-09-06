@@ -74,6 +74,8 @@ from hefesto_dualsense4unix.integrations.eleicao_de_microfone import (
     casamento_usb_agora,
 )
 from hefesto_dualsense4unix.integrations.fontes_de_captura import (
+    PREFIXO_SOURCE_CANAL_DO_MIC,
+    PREFIXO_SOURCE_PONTE_BT,
     escolher_fonte,
     fontes_dualsense,
 )
@@ -274,6 +276,33 @@ def streams_de_captura(saida_pactl: str) -> list[StreamDeCaptura]:
     return saidas
 
 
+#: OS NOMES DE NÓ QUE ESTA CASA PUBLICA, e que por isso NÃO valem como prova de
+#: que um processo é nosso. Lidos do dono (`fontes_de_captura`), nunca digitados.
+#:
+#: MEDIDO EM 06/09/2026, e é uma regressão que a ONDA5-MIC-VIRTUAL-01 criou ao
+#: batizar o canal por controle de ``hefesto_mic_<hex6>``: o nome do NÓ tem a
+#: palavra ``hefesto`` dentro, e todo app dela que grave daquele canal a carrega
+#: na própria linha de comando —
+#: ``obs --record --device=hefesto_mic_000001``. Sem esta poda,
+#: :func:`descende_do_hefesto` responde ``True`` para o OBS, o ouvinte de VERDADE
+#: sai da conta e **a luz vermelha nunca acende para o canal que a sprint
+#: inteira existe para construir**. Medido: o MESMO app no nó ALSA antigo dava
+#: ``False``, que é a resposta certa.
+#:
+#: O que a poda NÃO alcança, de propósito: qualquer outra ocorrência de
+#: ``hefesto`` na linha de comando (o binário, o `parec` que a janela lança, as
+#: propriedades ``hefesto.`` do alimentador) continua valendo — a regra de
+#: ancestralidade fica inteira, e o que sai é só o casamento pelo nome do nó.
+_NOMES_DE_NO_DESTA_CASA = (PREFIXO_SOURCE_CANAL_DO_MIC, PREFIXO_SOURCE_PONTE_BT)
+
+
+def _sem_os_nossos_nomes_de_no(cmdline: str) -> str:
+    """A linha de comando sem os prefixos de nó que esta casa publica."""
+    for prefixo in _NOMES_DE_NO_DESTA_CASA:
+        cmdline = cmdline.replace(prefixo.lower(), "")
+    return cmdline
+
+
 def _cmdline(pid: int, raiz_proc: Path) -> str:
     """A linha de comando do processo, em minúscula — ``""`` se não der."""
     try:
@@ -320,6 +349,11 @@ def descende_do_hefesto(pid: int | None, raiz_proc: Path | str = "/proc") -> boo
     chegar até lá faria a regra excluir a máquina inteira.
 
     ``raiz_proc`` é injetável para o teste medir a REGRA sem depender da mesa.
+
+    **O NOME DO NÓ NÃO CONTA COMO PROVA** — ver :data:`_NOMES_DE_NO_DESTA_CASA`.
+    Desde que o canal por controle passou a se chamar ``hefesto_mic_<hex6>``,
+    todo app que grava dele carrega a palavra ``hefesto`` na linha de comando, e
+    sem a poda esta função diria que o OBS dela é nosso.
     """
     if pid is None:
         return False
@@ -328,7 +362,7 @@ def descende_do_hefesto(pid: int | None, raiz_proc: Path | str = "/proc") -> boo
     for _ in range(_MAX_ANCESTRAIS):
         if atual is None or atual <= 1:
             return False
-        if MARCA_HEFESTO in _cmdline(atual, raiz):
+        if MARCA_HEFESTO in _sem_os_nossos_nomes_de_no(_cmdline(atual, raiz)):
             return True
         atual = _ppid(atual, raiz)
     return False
