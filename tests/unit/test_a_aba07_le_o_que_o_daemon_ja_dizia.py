@@ -352,13 +352,11 @@ def test_o_segundo_clique_precisa_do_data_v_que_so_o_cartao_armado_tem(
     a régua leria o DOM, clicaria uma vez e fecharia a Steam dela.
     """
     lida = _com_reparavel(a07, desenho, monkeypatch)
-    monkeypatch.setattr(a07, "_ARMADO_ATE", 0.0)
+    a07._desarmar()
     desarmado = desenho.acoes_html(_cartao_da_steam(a07, desenho, lida, None))
     assert f'data-v="{a07.CONFIRMO}"' not in desarmado
 
-    import time
-
-    monkeypatch.setattr(a07, "_ARMADO_ATE", time.monotonic() + 30)
+    a07._armar(a07.FECHAR)
     armado = desenho.acoes_html(_cartao_da_steam(a07, desenho, lida, None))
     assert f'data-v="{a07.CONFIRMO}"' in armado
     assert a07.CONFIRMA_A_STEAM in armado, (
@@ -376,7 +374,7 @@ def test_a_confirmacao_expirada_nao_fecha_a_steam(a07, monkeypatch):
         raise AssertionError("fechou a Steam com a confirmação vencida")
 
     monkeypatch.setattr(slo, "with_steam_closed", _nunca)
-    monkeypatch.setattr(a07, "_ARMADO_ATE", 0.0)
+    a07._desarmar()
     with pytest.raises(RuntimeError, match="segundos"):
         _gesto(a07.FECHAR)(_ctx(), {"v": a07.CONFIRMO}, None)
 
@@ -387,8 +385,6 @@ def test_o_segundo_clique_desce_pelo_with_steam_closed(a07, monkeypatch):
     A MORDIDA: troque o `with_steam_closed` por um `stop_steam` + `apply` +
     `reopen_steam` escritos aqui e este teste reprova por não ver a chamada.
     """
-    import time
-
     from hefesto_dualsense4unix.integrations import sentinela_do_wrapper as sw
     from hefesto_dualsense4unix.integrations import steam_launch_options as slo
 
@@ -403,7 +399,7 @@ def test_o_segundo_clique_desce_pelo_with_steam_closed(a07, monkeypatch):
         sw, "reparar_ou_adiar",
         lambda *a, **kw: (sw.REPARO_FEITO, sw.Censo(), {"applied": []}))
     monkeypatch.setattr(a07.VIGIA, "ler", lambda: None)
-    monkeypatch.setattr(a07, "_ARMADO_ATE", time.monotonic() + 30)
+    a07._armar(a07.FECHAR)
     carga = _gesto(a07.FECHAR)(_ctx(), {"v": a07.CONFIRMO}, None)
     assert chamadas == ["with_steam_closed"]
     assert "blocos" in carga
@@ -421,12 +417,10 @@ def test_a_recusa_de_fechar_e_a_frase_da_gtk(a07, monkeypatch):
     )
     from hefesto_dualsense4unix.integrations import steam_launch_options as slo
 
-    import time
-
     for janela in (slo.STEAM_JANELA_JOGO_ABERTO, slo.STEAM_JANELA_NAO_FECHOU):
         monkeypatch.setattr(slo, "with_steam_closed",
                             lambda t, j=janela, **kw: (j, None))
-        monkeypatch.setattr(a07, "_ARMADO_ATE", time.monotonic() + 30)
+        a07._armar(a07.FECHAR)
         with pytest.raises(RuntimeError) as erro:
             _gesto(a07.FECHAR)(_ctx(), {"v": a07.CONFIRMO}, None)
         assert str(erro.value) == format_steam_janela_recusa(janela)
