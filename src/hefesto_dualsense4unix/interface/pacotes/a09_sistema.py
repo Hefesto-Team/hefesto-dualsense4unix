@@ -1520,14 +1520,57 @@ def retomar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     p.chamar("daemon.resume")
 
 
+#: A FRASE DA RECUSA DO "Atualizar" — e ela diz O QUE SE SABE E O QUE NÃO SE SABE.
+#:
+#: `chamar_detalhado` só traz `motivo` quando o daemon RESPONDEU e recusou por
+#: parâmetro inválido; falha de transporte — serviço parado, socket ausente,
+#: timeout — volta `(False, None)`, e está escrito com todas as letras em
+#: `app/ipc_bridge.py:382-387`. **Na mesa dela, com o serviço parado, o motivo
+#: é `None`** — então esta frase não é o caso raro: é o caso.
+#:
+#: ELA NÃO PODE DIZER *"nada foi reaplicado"*, e isso não é cautela de redação.
+#: `daemon/ipc_handlers.py:46-60` registra o DEFEITO VIVO de 03/09/2026 em que
+#: `daemon.reload` **fez o trabalho e a resposta nunca chegou** — *"o pior
+#: desfecho não é o erro; é o trabalho feito sem resposta"*. Um timeout é
+#: exatamente esse caso, e afirmar que nada aconteceu seria a tela inventando um
+#: desfecho que ninguém mediu — a mesma doença do "Pronto." que esta cura tira.
+#:
+#: E MANDAR CLICAR DE NOVO É SEGURO, medido: sem `config_overrides` o handler
+#: faz `replace(self.daemon.config)`, uma cópia de valor igual
+#: (`ipc_handlers.py:5462`). O segundo clique custa o mesmo que o primeiro e não
+#: desfaz nada do que o primeiro possa ter feito.
+#:
+#: CONSTANTE, e não digitada dentro do gesto: a régua a LÊ daqui. Texto de tela
+#: com dois donos diverge no primeiro dia em que alguém mexe num deles.
+SEM_RESPOSTA_DO_SERVICO = (
+    "Não consegui falar com o serviço: pode não ter reaplicado nada, e pode ter "
+    "reaplicado sem me responder. Clique de novo com o serviço de pé.")
+
+
 @gesto("09-sistema.html", "atualizar")
 def atualizar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
-    """Recarregar a configuração. `daemon.reload`.
+    """O que o serviço relê agora. `daemon.reload` — e o botão CONFERE se deu.
+
+    O QUE ELE FAZ DE VERDADE, medido no fonte do daemon em 05/09/2026, e é
+    MENOS do que "recarregar a configuração" dá a entender: o clique manda
+    `daemon.reload` **sem `config_overrides`**, então `overrides` chega `{}`
+    (`daemon/ipc_handlers.py:5450`) e `new_cfg = replace(self.daemon.config)` é
+    uma cópia de valor igual (`:5462`). Os dois ramos que reaplicariam mouse e
+    teclado comparam `old` com `new` (`daemon/lifecycle.py:1353` e `:1361`) e
+    **nunca disparam** — o registro sai com `keys_changed=[]` (`:1366-1370`).
+    Duas coisas acontecem, e são estas: `lifecycle.py:1351-1352` derruba e sobe
+    o leitor dos atalhos do controle, e `ipc_handlers.py:5472` reescreve os
+    arquivos de ambiente que a Steam usa. **A dica da aba diz essas duas**
+    (`interface/aba09.py`, da `ONDA5-09-01`), e esta é a medição que a sustenta.
 
     ELE LEVA 9,5 SEGUNDOS, medido no daemon dela em 01/09/2026 — contra 1 ms do
     `daemon.resume` e 57 ms do `daemon.status`. É a razão de os gestos rodarem em
     thread: síncrono, este botão congelaria a janela inteira por nove segundos e
-    meio, e quem clicou concluiria que o app travou.
+    meio, e quem clicou concluiria que o app travou. É também a razão de
+    `daemon.reload` ter teto de 15 s em `ponte.TETOS` — e `chamar_detalhado`
+    consulta o MESMO `ponte.teto()` que o `chamar` (`pacotes/ponte.py:190`),
+    conferido: trocar de função não encolheu a espera para os 250 ms do padrão.
+    Se encolher, este botão passa a recusar todo clique que funciona.
 
     E ELE PASSA A RELER A ABA, que é a METADE que a janela antiga faz com este
     mesmo rótulo — 03/09/2026. O `on_daemon_refresh:2267` da GTK não toca no
@@ -1541,9 +1584,29 @@ def atualizar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     A ORDEM IMPORTA: zera-se DEPOIS de o `daemon.reload` voltar. Zerar antes
     faria a releitura acontecer no meio dos 9,5 s e publicar o estado de antes
     como se fosse o de depois.
+
+    **O RETORNO SE LÊ — 06/09/2026, e é a `ONDA5-09-02`.** Até hoje a linha era
+    `p.chamar("daemon.reload")`, e `chamar` devolve `bool` que ninguém lia.
+    `_safe_call` devolve `False` para serviço desligado, socket ausente, timeout
+    e erro JSON-RPC (`app/ipc_bridge.py:105-112`); o gesto não levantava, o
+    piloto executava o ramo do sucesso (`interface/hefesto_vivo.py:2111-2113`) e
+    a tela dizia **"Pronto."** em verde. **A cena inteira, com o serviço
+    parado:** o botão trocava de palavra, esperava o teto, voltava ao rótulo e
+    afirmava ter feito. Nenhum byte havia saído. E ele não fica cinza para
+    avisar — `atualizar` não está em `BOTOES_CINZAS`, de propósito (ver lá).
+
+    O PADRÃO É DO IRMÃO A 650 LINHAS DAQUI: `ver_plugins` lê o retorno do
+    `plugin.reload` e o usa na frase. `_ok_e_motivo` é o que torna isto seguro
+    contra o dublê da régua — o docstring dele diz por quê, e não é enfeite.
+
+    `_LENTO.clear()` ACONTECE NOS DOIS DESFECHOS, e é escolha: uma recusa na
+    tela ao lado de cinco leituras caras de até 2 s atrás seria a tela dizendo
+    "não deu" sobre valores que ninguém releu.
     """
-    p.chamar("daemon.reload")
+    ok, motivo = _ok_e_motivo(p.chamar_detalhado("daemon.reload"))
     _LENTO.clear()
+    if not ok:
+        raise RuntimeError(motivo or SEM_RESPOSTA_DO_SERVICO)
 
 
 def _teto_do_perfil(escolha: str) -> str | None:
@@ -2280,7 +2343,7 @@ def ver_detalhes(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
 #: OS CINCO QUE FICAM TÊM O MOTIVO EM `SEM_CONFIRMACAO`, e ele não é de
 #: mecanismo: os cinco PROMETEM perguntar antes, e não há primitiva de
 #: confirmação nesta interface.
-PONTE = {"chamar", "machine_declare", "resultado"}
+PONTE = {"chamar", "chamar_detalhado", "machine_declare", "resultado"}
 METODOS = {"daemon.resume", "daemon.reload", "machine.declare",
            "plugin.reload", "plugin.list"}
 
@@ -2309,8 +2372,13 @@ PISO_DA_ABA = 9
 PROVAS = [
     {"pagina": PAGINA, "gesto": "retomar", "clique": {},  # (noqa-acento) chave do contrato
      "chama": [("chamar", ["daemon.resume"], {})]},
+    # A PORTA É A `_detalhado` DESDE 06/09/2026 (`ONDA5-09-02`), e a prova cobra
+    # o NOME da função porque é ele que carrega a diferença: `chamar` devolve
+    # um `bool` que o gesto descartava, e a tela dizia "Pronto." com o serviço
+    # parado. Trocar de volta para `chamar` reprova AQUI, além da régua do
+    # desfecho — a régua mede a chamada que saiu, não o texto do arquivo.
     {"pagina": PAGINA, "gesto": "atualizar", "clique": {},  # (noqa-acento) chave do contrato
-     "chama": [("chamar", ["daemon.reload"], {})]},
+     "chama": [("chamar_detalhado", ["daemon.reload"], {})]},
     # A CHAVE DE DISCO NÃO SE DIGITA NA PROVA. Se a prova dissesse `"economia"`
     # e alguém trocasse a tradução no produto, a régua continuaria verde
     # cobrando o valor VELHO — a régua virando o segundo dono do fato que ela

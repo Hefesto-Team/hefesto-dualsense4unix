@@ -109,6 +109,18 @@ class PonteDeMentira:
         self.chamadas.append((metodo, a))
         return self.releu
 
+    def chamar_detalhado(self, metodo: str, *a):
+        """A porta que traz `(ok, motivo)` — a do `atualizar` desde 06/09/2026.
+
+        `motivo` sai `None` de propósito: é o que `_call_checked` devolve para
+        toda falha de transporte (`app/ipc_bridge.py:382-387`), que é o caso da
+        mesa dela com o serviço parado. **O dublê não pode ser mais frouxo que a
+        função real** — foi assim que três réguas desta casa deram verde sobre
+        defeito vivo.
+        """
+        self.chamadas.append((metodo, a))
+        return self.releu, None
+
     def resultado(self, metodo: str, *a):
         self.chamadas.append((metodo, a))
         return self.plugins
@@ -541,9 +553,9 @@ def test_o_atualizar_recarrega_antes_de_zerar(a09, ctx):
     ordem: list[str] = []
 
     class Espia(PonteDeMentira):
-        def chamar(self, metodo, *a):
+        def chamar_detalhado(self, metodo, *a):
             ordem.append(f"{metodo} · cache={'cheio' if a09._LENTO else 'vazio'}")
-            return super().chamar(metodo, *a)
+            return super().chamar_detalhado(metodo, *a)
 
     a09.atualizar(ctx, {}, Espia())
     assert ordem == ["daemon.reload · cache=cheio"], ordem

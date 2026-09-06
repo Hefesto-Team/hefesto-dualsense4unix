@@ -1400,14 +1400,15 @@ _SEM_CAMINHO_HOJE: dict[str, str] = {
         "para a tela perguntar, e nenhuma aba pergunta. Fecha com ela. MEDIDO em "
         "01/09/2026."
     ),
-    "interface/pacotes/ponte.py::chamar_detalhado": (
-        "A variante que devolve `(ok, motivo)` — a recusa do daemon traduzida em "
-        "frase de tela (interface/pacotes/ponte.py:142). Nenhum dos 50 gestos a "
-        "usa: todos chamam `chamar`, que devolve `bool`, e por isso um botão que o "
-        "daemon RECUSA falha sem dizer por quê. Fecha quando os gestos que podem "
-        "ser recusados (gatilho com trava armada, modo nativo, troca de perfil) "
-        "passarem a usá-la. MEDIDO em 01/09/2026."
-    ),
+    # `ponte.py::chamar_detalhado` MORAVA AQUI e SAIU em 06/09/2026, pela
+    # `ONDA5-09-02`. A lápide dizia *"nenhum dos 50 gestos a usa… fecha quando
+    # os gestos que podem ser recusados passarem a usá-la"*, e é exatamente o
+    # que aconteceu: o `atualizar` da aba Sistema
+    # (`interface/pacotes/a09_sistema.py:1606`) passou a chamá-la porque o
+    # `daemon.reload` que não chega ao serviço fazia a tela dizer **"Pronto."**
+    # sobre zero byte. Medido do outro lado do IPC, com o socket de mentira.
+    # A lápide sai INTEIRA em vez de virar nota: ela descrevia uma ausência que
+    # acabou — não uma decisão que caducou.
     "profiles/sanidade.py::verificar_perfis_do_disco": (
         "Carrega o diretório de perfis do XDG e verifica "
         "(profiles/sanidade.py:366). A verificação de sanidade dos perfis existe e "
