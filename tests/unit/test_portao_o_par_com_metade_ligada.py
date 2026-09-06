@@ -852,7 +852,6 @@ _CITACOES_PENDENTES: frozenset[str] = frozenset({
     "app/actions/home_actions.py::daemon/lifecycle.py:84",
     "app/actions/trigger_specs.py::app/widgets/segmented_selector.py:168-180",
     "app/actions/trigger_specs.py::profiles/schema.py:161",
-    "app/app.py::status_actions.py:548-551",
     "cli/cmd_test.py::app/ipc_bridge.py:341",
     "core/led_control.py::core/backend_pydualsense.py:2801",
     "daemon/ipc_handlers.py::app/actions/lightbar_actions.py:828",
