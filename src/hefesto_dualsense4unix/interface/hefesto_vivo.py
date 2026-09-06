@@ -2630,8 +2630,26 @@ class Piloto:
         try:
             st = mesa_viva.estado_do_daemon()
         except Exception as e:
+            # SERVIÇO MUDO NÃO É TELA PARADA — costura da ONDA E, 06/09/2026.
+            #
+            # Aqui era `return True`: o tique saía sem chamar o pacote, e a aba
+            # ficava congelada no que o último tique bem-sucedido pintou. Para
+            # quem olha, a tela CONTINUA AFIRMANDO — o interruptor no lugar em
+            # que estava, os cartões com bateria e cor de minutos atrás — sobre
+            # um serviço que não responde há minutos. É a mesma classe do card
+            # que some: o silêncio é indistinguível do caminho feliz.
+            #
+            # A `JOGAR-O-QUE-FALTA-01` construiu a metade que faltava, e ela é o
+            # ESTADO VAZIO: com `{}` a aba 01 acende a linha do selo `SERVIÇO` na
+            # coluna Atenção, com a frase do dono, e para de afirmar —
+            # interruptor, chip e cadeado saem vazios e os cartões recebem o
+            # travessão pelo molde. Ela mediu que o pacote nunca era chamado
+            # neste caminho, e por isso a metade dela não chegava à tela.
+            #
+            # `{}` E NÃO O ÚLTIMO ESTADO: um estado velho pintado como se fosse
+            # de agora é exatamente o que esta linha existe para não fazer.
             print(f"[daemon mudo] {e}", file=sys.stderr)
-            return True
+            st = {}
 
         try:
             ctx, para_pref = self._contexto(st)
