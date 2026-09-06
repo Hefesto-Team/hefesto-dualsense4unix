@@ -60,6 +60,7 @@ from typing import Any
 # teto seria a regressão que esta rota existe para não repetir.
 from hefesto_dualsense4unix.app.actions import ambiente_na_tela as _ambiente
 from hefesto_dualsense4unix.app.actions import daemon_actions as _daemon
+
 # O QUINTO ENTROU EM 06/09/2026, com o `procurar-camadas`: as DUAS frases do
 # censo das sobreposições (`frase_do_censo`, `frase_do_resultado`) são funções
 # de MÓDULO e PURAS — o docstring da primeira diz por quê: *"é a frase que a
@@ -493,12 +494,12 @@ def _perguntar_o_prontuario() -> None:
     veredito conferido nas duas formas:**
     <!-- noqa-acento: `examinar` é o nome do parâmetro do produto -->
 
-        examinar=False     12–18 ms   22 jogos   veredito: None
-        examinar=True     6.900 ms    22 jogos   veredito: None
+        examinar=False        12 a 18 ms   22 jogos   veredito: None
+        examinar=True      6.900 ms       22 jogos   veredito: None
 
     **O ÚNICO CAMPO QUE A LINHA DESTA TELA LÊ É `ponte_divergente`**, e ele não
     encosta na varredura: `prontuario_dos_jogos.py:454` o define como *"há
-    carimbo de ponte confirmada"* × *"a lista de exceções de hoje"*, os dois
+    carimbo de ponte confirmada"* contra *"a lista de exceções de hoje"*, os dois
     lidos do disco em milissegundos. Quem diz isso não sou eu — é o docstring do
     dono, em `:519`: *"O carimbo não depende de ler executável nenhum"*. A
     `evidencia`, que é tudo o que os 7 s produzem, entra em `NAO_SEI` e em

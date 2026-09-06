@@ -433,10 +433,10 @@ def test_o_prontuario_de_sete_segundos_nunca_roda_no_tique(a09, monkeypatch):
                     "chega ao exame e a linha some para sempre.")
     # E ELA PERGUNTA SEM A VARREDURA DOS EXECUTÁVEIS, que era o tique de 1,3 s.
     # Medido em 06/09/2026 nesta máquina, com o veredito conferido nos dois:
-    # `examinar=False` custa 12–18 ms e `examinar=True` custa 6.900 ms, e os
+    # `examinar=False` custa 12 a 18 ms e `examinar=True` custa 6.900 ms, e os
     # dois devolvem o mesmo — o único campo que esta tela lê do censo
     # (`ponte_divergente`) não encosta na varredura.
-    assert chamou[0].get("examinar") is False, (  # noqa-acento: nome do parâmetro
+    assert chamou[0].get("examinar") is False, (  # (noqa-acento) nome do parâmetro
         "a releitura voltou a varrer os executáveis de todo jogo instalado. "
         f"Ela pediu o censo com {chamou[0]!r}, e o `examinar=True` é o que fez o "
         "tique da 09 custar 1.329 ms num teto de 100 — treze vezes o teto, com "

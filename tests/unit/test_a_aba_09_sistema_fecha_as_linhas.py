@@ -278,10 +278,10 @@ class TestODesenhoCarregaAPeca:
 
         **A CONTA DEIXOU DE SER UMA LISTA CRAVADA — 06/09/2026.** Ela era
         `{f"{n}-razao" for n in BOTOES_CINZAS}`, os três da decisão [02], e por
-        isso só media UMA família. Quando a `SISTEMA-STEAM-01` pôs as duas
+        isso só mediu UMA família. Quando a `SISTEMA-STEAM-01` pôs as duas
         linhas do Perfil de Bateria na bancada, a régua reprovou dizendo que o
         que falta na publicada *"é `[]`"* — sobre três endereços que faltavam de
-        verdade. **Ela media a lista de ontem, não o disco.** A conta agora é a
+        verdade. **Ela mede a lista de ontem, não o disco.** A conta agora é a
         pergunta inteira: *o que o pacote EMITE, o desenho TEM e a publicada
         ainda NÃO tem?* — que é exatamente o que a declaração diz descrever.
         """
