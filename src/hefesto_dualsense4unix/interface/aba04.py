@@ -1832,9 +1832,25 @@ CSS_DAS_MEDIDAS = f"""
   }}
 """
 
-n = monta("04-iluminacao", "Iluminação", MIOLO, CSS + CSS_DAS_MEDIDAS,
-          legenda=LEGENDA)
-_conferir(onde.pagina("04-iluminacao.html").read_text())
-print(f"04-iluminacao: OK, {n} divs · {len(monta_.CONECTADOS)} conectado(s) "
-      f"+ {len(MESA) - len(monta_.CONECTADOS)} lugar(es) vazio(s) · "
-      f"números {NUMEROS} · respiro 5px, a divisória no meio do vão")
+
+# A ESCRITA MORA DEBAIXO DO `__main__`, e isto é cura de defeito MEDIDO em
+# 06/09/2026: `import aba04` REESCREVIA a bancada dela como efeito de um
+# import. Bastava o pytest COLETAR
+# `tests/unit/test_a_vibracao_diz_qual_degrau_esta_aceso.py` — que importa
+# `aba05` no topo — para `mockup/05-vibracao.html` mudar no disco, com a
+# contagem VIVA de controles dentro: `1 USB · 1 BT` virou `0 USB · 0 BT`
+# porque os controles não estavam ligados naquele instante. A régua do desenho
+# aprovado passava a reprovar por causa do que estava na tomada.
+#
+# A ironia estava escrita: o próprio teste avisa, na docstring, que *"importar
+# `aba05` REESCREVE a bancada dela como efeito de um `import`, e uma régua não
+# mexe no que mede"* — e importava assim mesmo. A `aba01` e a `aba02` já tinham
+# esta guarda desde que `jogar_vivo.py` e `controles_vivos.py` passaram a
+# importá-las; as outras oito não.
+if __name__ == "__main__":
+    n = monta("04-iluminacao", "Iluminação", MIOLO, CSS + CSS_DAS_MEDIDAS,
+              legenda=LEGENDA)
+    _conferir(onde.pagina("04-iluminacao.html").read_text())
+    print(f"04-iluminacao: OK, {n} divs · {len(monta_.CONECTADOS)} conectado(s) "
+          f"+ {len(MESA) - len(monta_.CONECTADOS)} lugar(es) vazio(s) · "
+          f"números {NUMEROS} · respiro 5px, a divisória no meio do vão")

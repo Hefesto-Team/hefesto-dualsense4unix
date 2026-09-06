@@ -137,6 +137,75 @@ def test_a_contagem_do_cabecalho_separa_os_dois_transportes() -> None:
     assert mesa_viva.texto_da_contagem(so_radio)[1] == "0 USB · 2 BT"
 
 
+def test_a_mesa_do_DESENHO_tambem_publica_a_chave_crua() -> None:
+    """A conta lê `transporte`, e a mesa do DESENHO tem de publicá-la também.
+
+    **O DEFEITO QUE ESTA RÉGUA NASCEU MEDINDO, e ele foi vivo — 06/09/2026.**
+    As duas réguas acima mediam a mesa VIVA (`mesa_viva.mesa_do_estado`) e
+    passavam verdes enquanto os dez geradores escreviam `0 USB · 0 BT` no
+    cabeçalho de TODA página regerada: a conta somava `transporte`, e
+    `monta.MESA` — a mesa do DESENHO, que é outra tabela — só tinha `via`.
+
+    Não apareceu na hora porque ninguém rodou um gerador entre a costura e o
+    fecho. Apareceu quando o `pytest` **coletou** um teste que importava
+    `aba05` e o arquivo dela mudou no disco.
+
+    A MORDIDA: tire `"transporte"` de qualquer linha de `monta.MESA` e esta
+    régua reprova nomeando a linha. Antes da cura ela reprovava nas quatro.
+    """
+    import monta
+
+    sem = [c["pref"] for c in monta.MESA if not str(c.get("transporte") or "")]
+    assert not sem, (
+        f"a mesa do DESENHO não publica `transporte` em {sem} — o cabeçalho "
+        "de toda página regerada sairia com a contagem zerada, porque quem "
+        "conta lê a chave crua e não a palavra")
+
+    usb = sum(1 for c in monta.CONECTADOS
+              if str(c.get("transporte")).lower() == "usb")
+    bt = sum(1 for c in monta.CONECTADOS
+             if str(c.get("transporte")).lower() == "bt")
+    assert (usb, bt) == (1, 1), (
+        f"a mesa do desenho conta {usb} USB e {bt} BT; o desenho aprovado diz "
+        "`2 controles: 1 USB · 1 BT` e é ele que manda")
+
+    # E AS DUAS CHAVES TÊM DE CONCORDAR: a `via` desta tabela ainda é a SIGLA
+    # (seis geradores a escrevem direto na tela), e uma tabela que diga `USB`
+    # numa chave e `bt` na outra publicaria dois fatos sobre o mesmo controle.
+    for c in monta.MESA:
+        assert str(c["via"]).lower() == str(c["transporte"]).lower(), (
+            f'{c["pref"]}: `via`={c["via"]!r} e `transporte`={c["transporte"]!r} '
+            "discordam — a mesa do desenho estaria dizendo duas coisas")
+
+
+def test_o_gerador_nao_escreve_a_bancada_como_efeito_de_import() -> None:
+    """Importar um gerador NÃO pode reescrever o desenho dela no disco.
+
+    **MEDIDO EM 06/09/2026:** bastava o `pytest` COLETAR
+    `test_a_vibracao_diz_qual_degrau_esta_aceso.py`, que importava `aba05` no
+    topo, para `mockup/05-vibracao.html` mudar no disco — com a contagem viva
+    de controles dentro. A ironia estava escrita: aquele mesmo teste avisa, na
+    docstring, que *"importar `aba05` REESCREVE a bancada dela como efeito de
+    um `import`, e uma régua não mexe no que mede"*.
+
+    A MORDIDA: tire o `if __name__ == "__main__":` de `aba04.py` ou `aba05.py` e
+    esta régua reprova nomeando o arquivo.
+    """
+    import pathlib as _pl
+    import re as _re
+
+    raiz = _pl.Path(__file__).resolve().parents[2]
+    faltam = []
+    for arq in sorted((raiz / "src/hefesto_dualsense4unix/interface").glob("aba0[45].py")):
+        texto = arq.read_text(encoding="utf-8")
+        if not _re.search(r'^if __name__ == "__main__":$', texto, _re.M):
+            faltam.append(arq.name)
+    assert not faltam, (
+        f"{faltam} escrevem a bancada dela no nível do módulo: qualquer "
+        "`import` — inclusive a COLETA do pytest — reescreve o desenho "
+        "aprovado no disco, com o estado vivo da mesa dentro")
+
+
 def test_o_quantos_da_lancadores_nao_se_mexe_quando_a_palavra_muda(monkeypatch) -> None:
     """A mesma mordida na segunda conta — a frase do "?" da aba Lançadores."""
     _, mesa = _mesa("usb", "bt")
