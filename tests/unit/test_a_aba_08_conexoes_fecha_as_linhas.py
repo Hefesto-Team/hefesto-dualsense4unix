@@ -240,11 +240,63 @@ def test_o_rodape_do_mapa_nao_manda_apertar_o_aplicar() -> None:
 
 
 def test_o_rodape_do_mapa_diz_que_o_clique_ja_gravou() -> None:
-    """E a frase nova é a do DONO desta aba, lida no ato."""
-    from hefesto_dualsense4unix.interface import aba08, onde
+    """E a frase nova é a do DONO desta aba, lida no ato.
+
+    **O ENDEREÇO MUDOU EM 06/09/2026, `ONDA5-08-02`, e o TEXTO não.** Até aqui a
+    régua lia `aba08.MAPA_JA_GRAVOU` — um literal DIGITADO no gerador, que é a
+    dívida que aquela sprint pagou. Agora lê o dono, `mapa_da_mesa`, e a frase
+    na página continua byte a byte a mesma.
+    """
+    from hefesto_dualsense4unix.app.widgets.mapa_da_mesa import GRAVA_NO_CLIQUE
+    from hefesto_dualsense4unix.interface import onde
 
     html = onde.pagina("08-conexoes.html").read_text(encoding="utf-8")
-    assert aba08.MAPA_JA_GRAVOU in html
+    assert GRAVA_NO_CLIQUE in html
+
+
+def test_o_rodape_do_mapa_vem_do_dono() -> None:
+    """A frase do rodapé tem UM dono, e o gerador não guarda uma segunda cópia.
+
+    **A DÍVIDA QUE ISTO FECHA:** entre 04/09 e 06/09 a linha era um literal em
+    `interface/aba08.py`, enquanto os quatro rótulos vizinhos da mesma
+    janelinha já saíam do produto por AST. Uma frase digitada no gerador vira a
+    segunda versão dela no dia em que o produto a corrigir — e **régua nenhuma
+    desta casa compara HTML com Python**, então o desvio seria silencioso. Esta
+    é a régua que faltava.
+
+    Ela cobra as DUAS pontas, porque uma sozinha passa por acidente:
+
+    1. **o dono chega às duas páginas** — a bancada e a publicada; e a
+       comparação é de IGUALDADE com o texto do nó `.mm-aplicar`, não um `in`
+       frouxo sobre o arquivo inteiro;
+    2. **o gerador não digita a frase** — nem no corpo nem em comentário. O
+       `MAPA` continua sendo a única porta, e o `_constantes` que o monta
+       derruba a geração quando o nome some do produto.
+    """
+    import pathlib
+
+    from hefesto_dualsense4unix.app.widgets.mapa_da_mesa import GRAVA_NO_CLIQUE
+    from hefesto_dualsense4unix.interface import aba08, onde
+
+    for publicado in (False, True):
+        pagina = onde.pagina("08-conexoes.html", publicado=publicado)
+        html = pagina.read_text(encoding="utf-8")
+        no = re.findall(r'<div class="tn-frase mm-aplicar">(.*?)</div>', html)
+        assert len(no) == 1, (
+            f"{pagina.name} ({'publicada' if publicado else 'bancada'}) tem "
+            f"{len(no)} rodapé(s) `.mm-aplicar` — seletor que casa zero é ERRO, "
+            f"não silêncio")
+        assert no[0] == GRAVA_NO_CLIQUE, (
+            f"o rodapé da página {'publicada' if publicado else 'da bancada'} "
+            f"não é o do dono:\n  página: {no[0]!r}\n  dono:   {GRAVA_NO_CLIQUE!r}")
+
+    fonte = pathlib.Path(aba08.__file__).read_text(encoding="utf-8")
+    assert GRAVA_NO_CLIQUE not in fonte, (
+        "`aba08.py` voltou a DIGITAR a frase do rodapé — ela tem dono, e o "
+        "gerador a lê por `MAPA[\"GRAVA_NO_CLIQUE\"]`")
+    assert aba08.MAPA["GRAVA_NO_CLIQUE"] == GRAVA_NO_CLIQUE, (
+        "o `MAPA` do gerador deixou de carregar a frase — sem ela no conjunto "
+        "do `_constantes`, renomear no produto some da tela em silêncio")
 
 
 # ---------------------------------------------------------------------------
