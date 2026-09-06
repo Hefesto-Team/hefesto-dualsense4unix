@@ -78,13 +78,100 @@ class TestDecisaoPura:
         assert wrapper_banner_text({"connected": True}) is None
         assert wrapper_banner_text({"gamepad_emulation": "torto"}) is None
 
-    def test_texto_e_pro_leigo_e_aponta_o_caminho(self) -> None:
-        assert "hefesto-launch" in WRAPPER_MISSING_TEXT
+    def test_a_frase_diz_o_que_o_produto_faz_em_vez_de_mandar_copiar(self) -> None:
+        """07-Q2, palavra dela em 05/09/2026: *"O produto aplica ela"*.
+
+        O nome deste caso era *"aponta o caminho"*, e o caminho era ELA: a
+        frase terminava em *"Copie as opções na aba Sistema."* e a aba Sistema
+        da interface nova não copia nada — doze botões, zero "Copiar". O
+        Hefesto não explica a própria falha, ele a conserta.
+
+        MORDIDA: devolva a oração *"Copie as opções na aba Sistema."* e os dois
+        `not in` reprovam; tire a promessa da constante e os três `in` da
+        promessa reprovam.
+        """
+        # O FATO fica, na palavra da TELA — `hefesto-launch` é da CASA
+        # (`docs/A-LINGUA-DESTA-CASA`, §2), e na tela é "atalho de
+        # inicialização", que é como a Steam chama o campo que ela vê.
+        assert "atalho de inicialização" in WRAPPER_MISSING_TEXT
         assert "duplicar" in WRAPPER_MISSING_TEXT
-        assert "aba Sistema" in WRAPPER_MISSING_TEXT
+        # ...e nenhuma aba a procurar, nenhum trabalho manual pedido.
+        assert "aba Sistema" not in WRAPPER_MISSING_TEXT
+        assert "Copie" not in WRAPPER_MISSING_TEXT
+        # A PROMESSA, com os dois gestos que a carona de fato pega e a
+        # condição que a sentinela de fato tem.
+        assert "Reponho" in WRAPPER_MISSING_TEXT
+        assert "Aplicar" in WRAPPER_MISSING_TEXT
+        assert "Salvar Perfil" in WRAPPER_MISSING_TEXT
         # Sem jargão que o estudo mandou esconder do leigo.
-        for jargao in ("env", "vdf", "wrapper_used", "dedup"):
+        for jargao in ("env", "vdf", "wrapper_used", "dedup", "hefesto-launch"):
             assert jargao not in WRAPPER_MISSING_TEXT
+
+    def test_os_dois_botoes_que_a_frase_nomeia_existem_em_toda_aba(self) -> None:
+        """A frase só pode nomear botão que existe — foi por isso que ela mudou.
+
+        A frase velha mandava a um botão de copiar que a interface nova não
+        tem. Trocá-la por outros dois nomes sem conferir repetiria o defeito
+        num vocabulário novo, e é o tipo de coisa que só aparece quando ela
+        clica. Os dois saem do RODAPÉ, que é das DEZ abas — então em qualquer
+        aba onde este aviso acenda, "Aplicar" e "Salvar Perfil" estão à vista.
+
+        As dez, e não só a 01: o aviso é uma das seis fontes da coluna Atenção
+        da aba Jogar E o corpo do cartão da Steam na aba Lançadores, e a frase
+        tem UM dono para todas.
+
+        MORDIDA: renomeie um dos dois botões do rodapé e este caso reprova
+        antes de a frase virar endereço morto.
+        """
+        paginas = Path(__file__).resolve().parents[2] / (
+            "src/hefesto_dualsense4unix/interface/paginas"
+        )
+        arquivos = sorted(paginas.glob("[0-9][0-9]-*.html"))
+        assert len(arquivos) == 10, f"as dez abas viraram {len(arquivos)}"
+        for rotulo in ("Aplicar", "Salvar Perfil"):
+            assert rotulo in WRAPPER_MISSING_TEXT
+            for html in arquivos:
+                assert f">{rotulo}</button>" in html.read_text(encoding="utf-8"), (
+                    f"o rodapé de {html.name} não tem mais o botão «{rotulo}» "
+                    "que a frase do banner nomeia"
+                )
+
+    def test_a_promessa_da_frase_tem_quem_a_cumpra(self, monkeypatch: Any) -> None:
+        """Uma promessa sem dono é o defeito mais caro desta casa.
+
+        A frase promete repor o atalho *"no próximo Aplicar ou Salvar Perfil"*.
+        Quem cumpre é a carona (`carona_do_wrapper.passada`), e ela não tem
+        relógio próprio — pega carona no gesto. Este caso EXECUTA o caminho da
+        interface nova (o rodapé das dez abas passa por `perfil.com_a_carona`)
+        e observa a chamada por dublê, em vez de procurar o nome da função no
+        texto do fonte: uma régua de substring proibiria renomear, não
+        proibiria a promessa ficar órfã.
+
+        MORDIDA: tire o `carona.passada(...)` de `perfil.com_a_carona` e este
+        caso reprova — que é exatamente o dia em que a frase passa a mentir.
+        """
+        from hefesto_dualsense4unix.app.actions import carona_do_wrapper
+        from hefesto_dualsense4unix.interface.pacotes import perfil
+
+        # `ligada()` é o desligador do dono, e a `conftest.py` o desliga em
+        # toda a suíte porque este caminho ESCREVE no arquivo da Steam. Aqui
+        # ele volta a ligar SÓ para o dublê: quem responde é o espião.
+        chamou: list[bool] = []
+
+        def _espiao(*, completa: bool = True) -> Any:
+            chamou.append(completa)
+            return carona_do_wrapper.ResultadoDaCarona(
+                status="nada", frase="", faltantes=frozenset(), adiado=False
+            )
+
+        monkeypatch.setattr(carona_do_wrapper, "ligada", lambda: True)
+        monkeypatch.setattr(carona_do_wrapper, "passada", _espiao)
+
+        assert perfil.com_a_carona() == ""
+        assert chamou == [True], (
+            "o Salvar/Aplicar do rodapé deixou de pegar a carona do wrapper — "
+            "a frase do banner promete um reparo que ninguém faz"
+        )
 
 
 # ---------------------------------------------------------------------------

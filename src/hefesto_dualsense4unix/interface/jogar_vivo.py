@@ -81,14 +81,27 @@ def _a01():  # noqa: ANN202
 
     return a01_jogar
 import monta  # noqa: E402  (o gerador do mockup, usado como BIBLIOTECA)
+import onde  # noqa: E402  (o DONO do caminho das páginas publicadas)
 
 import aba01  # noqa: E402  isort:skip
 
-#: A página é a que está AO LADO deste arquivo. O piloto da Controles ainda
-#: chumba a raiz da máquina dela; aqui não, porque um caminho absoluto num
-#: arquivo que a régua importa é o instrumento medindo a árvore errada — o
-#: defeito que a `regua_de_tela.raizes_candidatas` documenta por extenso.
-PAGINA = AQUI.parent / "01-jogar.html"
+#: A PASTA TEM UM DONO, E É O `onde.PUBLICADO` — nunca um caminho absoluto (o
+#: instrumento mediria a árvore errada, o defeito que a
+#: `regua_de_tela.raizes_candidatas` documenta por extenso) e nunca uma segunda
+#: montagem do mesmo caminho, que é como esta linha morreu da primeira vez.
+#:
+#: **ESTA BANCADA MEDIU O VAZIO — 06/09/2026, ONDA5-07-03.** A linha dizia
+#: ``AQUI.parent / "01-jogar.html"``, que era certo quando este arquivo morava
+#: em ``layout/_ferramentas/`` e a página em ``layout/``. A mudança para
+#: ``src/…/interface/`` levou as páginas para ``interface/paginas/`` e esta
+#: linha ficou: ``AQUI.parent`` passou a apontar para
+#: ``src/hefesto_dualsense4unix/01-jogar.html``, **que não existe**. Medido: a
+#: bancada imprimia *"ERRO DE CARGA: carregou OUTRA página"*, ficava em
+#: ``voltas: 0`` e **saía com rc=0** — verde sobre nada, que é a família de
+#: instrumento falso que esta casa mais paga. Três das cinco abas vivas foram
+#: corrigidas em 05/09 e duas ficaram para trás; a outra é `perfis_vivos.py:79`,
+#: com o mesmo defeito e fora desta posse.
+PAGINA = onde.PUBLICADO / "01-jogar.html"
 TITULO_ESPERADO = "Hefesto — aba JOGAR"
 
 #: O tique rápido: o mesmo período da janela de hoje
@@ -767,6 +780,15 @@ class Janela:
         # thread) nunca apareceria. É a mesma disciplina de
         # `status_actions._status_card_keys_for`, que reconstrói quando o
         # conjunto muda e faz diff no resto.
+        #
+        # A BANCADA MEDE COM O SILÊNCIO DELA, e não por lembrança — ONDA5-07-03,
+        # 06/09/2026. As duas recusas («Não perguntar para este jogo» e «Tirar
+        # daqui») calam o aviso do selo `JOGO`, e a conta mora DENTRO da função
+        # dona (`home_actions.aviso_do_wrapper`), não num parâmetro que quem
+        # chama tenha de passar. Por isso estes DOIS pontos — aqui e o
+        # `_pacote` — medem exatamente o que a aba publicada mostra. Um
+        # parâmetro seria a mesma família de defeito do dublê mais frouxo que a
+        # função real, que envenenou outro arquivo por ordem de teste em 04/09.
         avisos = painel.avisos_do_estado(state)
         chaves = (
             tuple((c["uniq"], c["cor"], c["nome"], c["via"], c["jogador"]) for c in mesa),
@@ -1034,9 +1056,28 @@ def main() -> int:
     p.add_argument("--duble", help="JSON com um state_full — em vez do daemon")
     args = p.parse_args()
 
+    if not PAGINA.exists():
+        print(f"ERRO: a página desta aba não está em {PAGINA}", file=sys.stderr)
+        return 2
+
     j = Janela(args)
     Gtk.main()
     print("\n" + j.relato())
+
+    # UMA BANCADA QUE NÃO DEU UMA VOLTA NÃO MEDIU NADA, E NÃO SAI VERDE —
+    # 06/09/2026, ONDA5-07-03. Com a página apontada para um arquivo que não
+    # existia, este comando imprimia "ERRO DE CARGA", ficava em `voltas: 0` e
+    # devolvia `rc=0`; quem o rodasse num laço ou num portão leria sucesso. A
+    # regra desta casa é a de 04/09: *instrumento que sabe do próprio risco
+    # RESOLVE, não avisa* — aviso no meio de um comando que termina verde
+    # ninguém lê.
+    #
+    # O `--sem-ponte` é a exceção, e é a MORDIDA: ele desliga a pintura de
+    # propósito para provar que a tela desaba sem ela, então zero volta ali é o
+    # resultado esperado, não a falha.
+    if j.voltas == 0 and not args.sem_ponte:
+        print("ERRO: a bancada não deu uma volta — nada foi medido.", file=sys.stderr)
+        return 1
     return 0
 
 

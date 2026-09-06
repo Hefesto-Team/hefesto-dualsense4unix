@@ -251,8 +251,15 @@ class TestBannerJogoSemWrapper:
         banner = host._home_wrapper_banner
         assert banner.visible is True
         assert banner.get_text() == home_actions.WRAPPER_MISSING_TEXT
-        assert "hefesto-launch" in banner.get_text()
-        assert "aba Sistema" in banner.get_text()
+        # A REDAÇÃO TEM UM DONO, E A RÉGUA DELA TAMBÉM — 06/09/2026,
+        # ONDA5-07-03. Estas duas linhas exigiam os literais "hefesto-launch" e
+        # "aba Sistema", que saíram da frase por decisão dela (`07-Q2`: *"O
+        # produto aplica ela"*). Era a SEGUNDA cópia da mesma régua, e uma
+        # segunda cópia só existe para reprovar quem escreve certo: o que esta
+        # aba tem de provar é que o banner mostra **o texto do dono**, e é o
+        # `assert` acima que prova isso. Quem cobra a redação é
+        # `tests/unit/test_wrapper_banner.py`, num arquivo só.
+        assert "atalho de inicialização" in banner.get_text()
 
     @pytest.mark.parametrize("valor", [True, None, "false", 0])
     def test_qualquer_coisa_que_nao_seja_false_literal_apaga(
