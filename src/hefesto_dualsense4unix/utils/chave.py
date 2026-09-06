@@ -9,7 +9,7 @@ POR QUE `systemctl mask` SOZINHO NÃO BASTA — MEDIDO, E CONTRA O ESPERADO
 O plano óbvio é `stop` + `disable` + `mask` nas units do usuário, e a suposição
 que vem junto é que isso também fecha o botão "Ligar daemon" da GUI, porque
 `systemctl --user start` numa unit mascarada falha. **Falha, e o daemon sobe
-assim mesmo.** ``app/actions/daemon_actions.py:2162-2176``: quando o
+assim mesmo.** ``app/actions/daemon_actions.py:2192-2206``: quando o
 ``systemctl start`` volta com ``rc != 0``, o código registra
 ``systemctl_start_falhou_tentando_popen`` e CAI num ``subprocess.Popen`` que
 levanta o daemon direto::

@@ -567,6 +567,61 @@ seção daqui**: a aba deixou de estar em trabalho.
 
 ## 09-sistema.html
 
+- **06/09/2026** — **DOIS BOTÕES NOVOS, e um deles NASCE ESCONDIDO**
+  (`SISTEMA-OS-QUATRO-QUE-FALTAM-01`, as linhas 315 e 340 do CSV da paridade).
+
+  1. **"Corrigir modo de execução"**, na coluna do serviço. Ele é a saída que
+     faltava: a aba já RECONHECE o modo improvisado desde 03/09 — a linha "O
+     serviço está" escreve *"Ligado, em modo improvisado"* em laranja — e não
+     oferecia conserto nenhum. **Ele nasce com `display:none`** e só acende
+     quando o produto diz que há modo a corrigir (`data-campo`
+     `corrigir-modo-quando`, alvo `classe`), e quando acende **entra no LUGAR
+     do «Reiniciar o serviço»**, não ao lado dele;
+  2. **"Aplicar aos jogos da Steam"**, na coluna dos gestos raros (Avançado),
+     ao lado do "Restaurar de fábrica". É a metade que APLICA o que o «Copiar
+     a linha» da aba Lançadores só entrega na área de transferência, e mora
+     nesta aba por decisão dela (`D-0609-STEAM-DIVIDIDO`).
+
+  **A TROCA COM O «Reiniciar» é de ALTURA e de VERDADE, e as duas metades
+  foram medidas no WebKit:**
+
+  ```
+  os dois na tela ao mesmo tempo ... a coluna vai a 194px (o irmão tem 156)
+                                     e o miolo ROLA 38px por dentro
+  a troca (`.so-avulso.mostra + .acao{display:none}`) ... rola 0px
+  ```
+
+  E no modo improvisado o «Reiniciar o serviço» é justamente o clique que **não
+  funciona**: `systemctl restart` sobe a unit, a unit encontra o Hefesto avulso
+  segurando a instância única e não sobe (é o terceiro portão de
+  `ativar_o_servico`, a BUG-MULTI-INSTANCE-01) — e `travas()` não o tranca
+  nesse estado. Pôr um no lugar do outro é trocar o clique que falha pelo que
+  conserta. É o irmão CSS das duas caras que o botão «Parar o serviço»/«Ativar
+  o serviço» já tem por decisão dela de 03/09.
+
+  **O PREÇO DO QUARTO BOTÃO DOS GESTOS RAROS, medido e pago em pixel:** a
+  coluna passou a empilhar sem vão entre os botões (`gap:0`, a MESMA gramática
+  que `.exame .col-acao` já usa nesta página) e o vão ENTRE as faixas caiu de
+  10 para 8px. **Nenhum bloco encolheu e nenhum texto mudou de tamanho.** A
+  página fecha em **530px de conteúdo para 530px de espaço útil**, sem rolar —
+  e o par `MIOLO_H, ALTURA` do gerador, que dizia `544, 542`, foi **remedido**:
+  o miolo tem 564 e o conteúdo tinha 508.
+
+  **Por que não publiquei:** publicar é ato dela, e aqui nasce **um botão que
+  ela nunca viu** e uma troca de lugar entre dois. A `PROVA-DE-TELA-01` vale
+  exatamente para isto — quem confere que a tela ficou certa é ela, olhando.
+
+  **O que ela vê HOJE, até publicar:** a aba Sistema de ontem, inteira. Os dois
+  botões não existem na página publicada, e o `corrigir-modo-quando` que o
+  pacote emite a cada tique cai no vazio lá — está declarado em
+  `a09_sistema.ESPERA_A_PUBLICACAO`, com a régua que cobra a declaração nos
+  dois sentidos. **Nada regride enquanto ela espera:** quem cair no modo
+  improvisado continua vendo o aviso que a aba já dá; só não ganha ainda o
+  botão que o conserta.
+
+  **O que fecha:** o mesmo `--publicar 09` das duas linhas abaixo. As três
+  divergências desta aba fecham no mesmo ato.
+
 - **06/09/2026** — **DUAS LINHAS DO PERFIL DE BATERIA DEIXARAM DE SER
   LITERAL** (`SISTEMA-STEAM-01`). *"O teto alcança"* e *"Ainda sem teto"*
   ganharam `data-campo` e passam a ser lidas do dono

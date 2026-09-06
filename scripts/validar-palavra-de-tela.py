@@ -524,13 +524,6 @@ DIVIDA_DA_PALAVRA_01_PY: dict[str, str] = {
         "aplicar perfil. Vira `Não consegui aplicar o perfil — o Hefesto pode "
         "estar desligado.`"
     ),
-    "Asset 'personalizado.json' não encontrado — Restaurar Default indisponível.": (
-        "23/08/2026 — `app/actions/footer_actions.py`. CITA o botão "
-        "`Restaurar Default`, que é dívida do `.glade`; muda junto com ele. "
-        "O NOME DO ASSET MUDOU EM 05/09/2026 — `meu_perfil.json` virou "
-        "`personalizado.json` por decisão dela —, e a dívida é a mesma: o "
-        "jargão está no BOTÃO, não no arquivo."
-    ),
 }
 
 #: Os ESCOADOUROS DE TELA, e quantas posições iniciais de cada um são texto de

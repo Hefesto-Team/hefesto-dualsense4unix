@@ -56,6 +56,18 @@ _SYSTEMCTL_OK_MSG: dict[str, str] = {
     "enable": "Pronto — o Hefesto vai ligar sozinho com o computador.",
     "disable": "Pronto — o Hefesto não vai mais ligar sozinho.",
 }
+#: AS DUAS FRASES DO "Corrigir modo de execução", e elas saíram de dentro do
+#: `_on_migrate_done` em 06/09/2026 — a interface nova tem o mesmo botão e
+#: precisa das MESMAS palavras. Digitadas duas vezes, elas se afastam no
+#: primeiro dia em que alguém mexe numa das duas; é a mesma lição do
+#: `_STEAM_READY_CORPO`, que já tinha sido aprendida nesta casa.
+MIGRAR_DEU_CERTO = (
+    "Pronto — o Hefesto agora liga sozinho e volta sozinho se travar."
+)
+MIGRAR_NAO_DEU = (
+    "Não consegui corrigir o modo de execução — veja os 'Detalhes "
+    "técnicos' aqui embaixo."
+)
 _SYSTEMCTL_FAIL_MSG: dict[str, str] = {
     "start": "Não consegui ligar o Hefesto",
     "stop": "Não consegui desligar o Hefesto",
@@ -337,6 +349,20 @@ def build_steam_close_consent_dialog(
             (rotulo_ok, Gtk.ResponseType.OK),
         ],
         on_response=on_response,
+    )
+
+
+def frase_sem_aplicacao_em_massa() -> str:
+    """A recusa de quem tem uma instalação velha, sem `apply_wrapper_to_all_games`.
+
+    ERA UM LITERAL EM TRÊS LUGARES a partir de 06/09/2026 — os dois caminhos
+    deste módulo (com a Steam fechada e com ela aberta) e o gesto da interface
+    nova. A frase é UMA; o `getattr` que a dispara é do contrato PATH-06, e uma
+    frase com três donos diverge no primeiro dia em que alguém mexe num deles.
+    """
+    return (
+        "Esta instalação ainda não tem a aplicação em massa — "
+        f"{como_atualizar_esta_instalacao()}."
     )
 
 
@@ -1383,6 +1409,27 @@ class DaemonActionsMixin(WidgetAccessMixin):
         dialog = self._build_steam_apply_confirm_dialog()
         dialog.show_all()
 
+    #: O CORPO DA PERGUNTA DO "Aplicar aos jogos da Steam", e ele saiu de dentro
+    #: do diálogo em 06/09/2026 pela MESMA razão do `_STEAM_READY_CORPO` logo
+    #: abaixo: a interface nova pergunta a mesma coisa em dois cliques, e uma
+    #: frase digitada duas vezes se afasta no primeiro dia em que alguém mexe
+    #: numa das duas. Quem consome a outra ponta é
+    #: `interface/pacotes/a09_sistema.aplicar_aos_jogos`.
+    _STEAM_APPLY_CORPO = (
+        "Cada jogo instalado passa a abrir pelo launcher do Hefesto — é "
+        "isso que evita o controle duplicado no jogo.\n\n"
+        "As opções que você já tem nos jogos são preservadas (o launcher "
+        "entra na frente delas) e fica um backup ao lado de cada "
+        "arquivo.\n\n"
+        # HONESTIDADE-STEAM-01: este parágrafo dizia "A Steam precisa
+        # estar FECHADA — se estiver aberta, eu aviso e não mexo em nada",
+        # que virou mentira no momento em que o botão passou a saber
+        # fechá-la. O texto agora descreve o que o botão faz de verdade.
+        "A edição só vale com a Steam fechada — se ela estiver aberta eu "
+        "peço a sua permissão antes de fechá-la por uns 20 segundos e "
+        "abro de novo em seguida. Com um jogo aberto eu não mexo em nada."
+    )
+
     def _build_steam_apply_confirm_dialog(self) -> Gtk.MessageDialog:
         """Monta o diálogo de confirmação (sem exibir) — separado p/ testes."""
         window: Gtk.Window | None = getattr(self, "window", None)
@@ -1398,20 +1445,7 @@ class DaemonActionsMixin(WidgetAccessMixin):
             dialog.get_style_context().add_class(
                 "hefesto-dualsense4unix-window"
             )
-        dialog.format_secondary_text(
-            "Cada jogo instalado passa a abrir pelo launcher do Hefesto — é "
-            "isso que evita o controle duplicado no jogo.\n\n"
-            "As opções que você já tem nos jogos são preservadas (o launcher "
-            "entra na frente delas) e fica um backup ao lado de cada "
-            "arquivo.\n\n"
-            # HONESTIDADE-STEAM-01: este parágrafo dizia "A Steam precisa
-            # estar FECHADA — se estiver aberta, eu aviso e não mexo em nada",
-            # que virou mentira no momento em que o botão passou a saber
-            # fechá-la. O texto agora descreve o que o botão faz de verdade.
-            "A edição só vale com a Steam fechada — se ela estiver aberta eu "
-            "peço a sua permissão antes de fechá-la por uns 20 segundos e "
-            "abro de novo em seguida. Com um jogo aberto eu não mexo em nada."
-        )
+        dialog.format_secondary_text(self._STEAM_APPLY_CORPO)
         dialog.add_button("Cancelar", Gtk.ResponseType.CANCEL)
         dialog.add_button("Aplicar a todos", Gtk.ResponseType.OK)
         dialog.set_default_response(Gtk.ResponseType.CANCEL)
@@ -1460,9 +1494,7 @@ class DaemonActionsMixin(WidgetAccessMixin):
                 apply_fn = getattr(slo, "apply_wrapper_to_all_games", None)
                 if apply_fn is None:
                     GLib.idle_add(
-                        self._toast_daemon,
-                        "Esta instalação ainda não tem a aplicação em massa "
-                        f"— {como_atualizar_esta_instalacao()}.",
+                        self._toast_daemon, frase_sem_aplicacao_em_massa()
                     )
                     return
                 if slo.steam_game_running():
@@ -1551,9 +1583,7 @@ class DaemonActionsMixin(WidgetAccessMixin):
             apply_fn = getattr(slo, "apply_wrapper_to_all_games", None)
             if apply_fn is None:
                 GLib.idle_add(
-                    self._toast_daemon,
-                    "Esta instalação ainda não tem a aplicação em massa — "
-                    f"{como_atualizar_esta_instalacao()}.",
+                    self._toast_daemon, frase_sem_aplicacao_em_massa()
                 )
                 return
             janela, result = slo.with_steam_closed(apply_fn)
@@ -2467,16 +2497,10 @@ class DaemonActionsMixin(WidgetAccessMixin):
     def _on_migrate_done(self, rc: int) -> bool:
         """Callback pós-migração — executa na thread principal GTK."""
         if rc == 0:
-            self._toast_daemon(
-                "Pronto — o Hefesto agora liga sozinho e volta sozinho se "
-                "travar."
-            )
+            self._toast_daemon(MIGRAR_DEU_CERTO)
         else:
             logger.warning("daemon_migrate_falhou", unit=SERVICE_NORMAL, rc=rc)
-            self._toast_daemon(
-                "Não consegui corrigir o modo de execução — veja os 'Detalhes "
-                "técnicos' aqui embaixo."
-            )
+            self._toast_daemon(MIGRAR_NAO_DEU)
         self._refresh_daemon_view_async()  # BUG-DAEMON-VIEW-SYNC-FREEZE-01: não bloquear GTK
         return False
 

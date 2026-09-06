@@ -92,6 +92,20 @@ GESTOS: dict[str, str] = {
     "restaurar-de-fabrica": "`app/actions/footer_actions.on_restore_default:1477`, "
     "hoje no RODAPÉ (`main.glade:4272`, botão `btn_footer_restore_default`), "
     "com confirmação em `app/gui_dialogs.confirm_restore_default:696`.",
+    # OS DOIS QUE ENTRARAM EM 06/09/2026 — SISTEMA-OS-QUATRO-QUE-FALTAM-01, as
+    # linhas L315 e L340 do CSV da paridade. Este dicionário é o contrato de
+    # DONO que o gerador (`interface/aba09.py`, `_gesto()`) cobra antes de
+    # escrever um `data-gesto` na página: um botão cujo gesto não tem dono
+    # declarado aqui é um botão que mente, e o gerador recusa gravar a página.
+    "corrigir-modo": "`daemon_actions.on_daemon_migrate_to_systemd` — o botão "
+    "que a janela antiga mostrava SÓ no estado `online_avulso`. Lê o pid do "
+    "Hefesto improvisado, pede que ele saia, sobe a unit pelo systemd. As duas "
+    "frases do recibo são `daemon_actions.MIGRAR_DEU_CERTO` e `MIGRAR_NAO_DEU`.",
+    "aplicar-aos-jogos": "`daemon_actions.on_steam_apply_launch` e o worker "
+    "dele — `integrations.steam_launch_options.apply_wrapper_to_all_games` "
+    "dentro de uma janela de `with_steam_closed`. É a metade que APLICA o que "
+    "o «Copiar a linha» da aba Lançadores só entrega na área de transferência; "
+    "mora nesta aba por decisão dela (`D-0609-STEAM-DIVIDIDO`).",
     "ver-plugins": "IPC `plugin.list`/`plugin.reload` (daemon/ipc_server.py:184-185). "
     "Só a CLI chama (`cli/cmd_plugin.py`). Não há botão no produto de hoje.",
     "ver-detalhes": "`daemon_actions.on_daemon_view_logs:2387` — e ele mostra "

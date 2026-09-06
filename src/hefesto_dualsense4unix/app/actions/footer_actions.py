@@ -72,6 +72,44 @@ _MEU_PERFIL_NOME = NOME_DO_PADRAO
 _MEU_PERFIL_ARQUIVO = ARQUIVO_DO_PADRAO
 
 
+def frase_do_preset_ausente() -> str:
+    """A recusa do "Restaurar de fábrica" quando não há preset em lugar nenhum.
+
+    ELA ERA DEV-FALA E ESTAVA NUM TOAST — 06/09/2026: *"Asset
+    'personalizado.json' não encontrado — Restaurar Default indisponível."*
+    Nome de arquivo, a palavra "Asset" e o rótulo de um botão que a tela nova
+    não usa. O glossário desta casa (`docs/A-LINGUA-DESTA-CASA`) diz que texto
+    de tela vem do dono e não inventa termo; o dono é este, e ele passou a
+    falar a língua dela.
+
+    UM DONO PARA OS DOIS CHAMADORES: `on_restore_default` (o motor da janela
+    que saiu) e o gesto `restaurar-de-fabrica` da interface nova. Corrigir só
+    um deixaria as duas versões vivas, que é o defeito que a regra do fato
+    errado existe para matar.
+    """
+    return _(
+        "Não encontrei o perfil de fábrica instalado nesta máquina — sem ele "
+        "não há para onde voltar."
+    )
+
+
+def frase_do_restauro(caminho: object = None) -> str:
+    """O recibo do "Restaurar de fábrica", com o destino quando há um a dizer.
+
+    O `caminho` é opcional porque os dois chamadores têm plateias diferentes: o
+    motor da janela antiga escrevia o arquivo no toast, e a interface nova põe
+    a frase no cartão — onde um caminho de disco é ruído. A FRASE é a mesma; o
+    que muda é o rabicho.
+    """
+    if caminho:
+        return _("Pronto — o perfil {nome} voltou ao de fábrica ({destino}).").format(
+            nome=NOME_DO_PADRAO, destino=caminho
+        )
+    return _("Pronto — o perfil {nome} voltou ao de fábrica.").format(
+        nome=NOME_DO_PADRAO
+    )
+
+
 def _meu_perfil_asset() -> Path | None:
     """Acha o preset do perfil padrão; ``None`` quando não há em lugar nenhum.
 
@@ -1501,12 +1539,7 @@ class FooterActionsMixin(ProfileWriterMixin):
 
         asset = _meu_perfil_asset()
         if asset is None:
-            self._footer_toast(
-                _(
-                    "Asset 'personalizado.json' não encontrado — "
-                    "Restaurar Default indisponível."
-                )
-            )
+            self._footer_toast(frase_do_preset_ausente())
             logger.warning("footer_restore_default_asset_ausente")
             return
 
@@ -1565,9 +1598,7 @@ class FooterActionsMixin(ProfileWriterMixin):
         self._gravar_perfil_async(
             _construir,
             adotar_como_ativo=True,
-            mensagem_ok=lambda _perfil, caminho: _(
-                "Personalizado restaurado para {destino}"
-            ).format(destino=caminho),
+            mensagem_ok=lambda _perfil, caminho: frase_do_restauro(caminho),
             mensagem_erro=lambda exc: _("Falha ao restaurar: {erro}").format(erro=exc),
             evento="footer_restore_default",
             depois_no_worker=_rascunho_restaurado,

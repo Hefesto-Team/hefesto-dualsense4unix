@@ -73,7 +73,7 @@ def run_daemon(poll_hz: int | None = None, auto_reconnect: bool = True) -> int:
     #
     # E ela é necessária porque `systemctl mask` NÃO fecha o caminho todo: o
     # botão "Ligar daemon" da GUI cai num `subprocess.Popen` quando o
-    # `systemctl start` falha (`app/actions/daemon_actions.py:2162-2176`), e
+    # `systemctl start` falha (`app/actions/daemon_actions.py:2192-2206`), e
     # esse caminho não passa por systemd nenhum. Medido em 29/08.
     from hefesto_dualsense4unix.utils import chave
 
