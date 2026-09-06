@@ -890,15 +890,33 @@ def jogador_de(c: dict[str, Any]) -> int | None:
 #: string; a régua `test_os_donos_de_fato.py` confere que as duas são a MESMA.
 NOME_SEM_LEITURA = "Não sei"
 
-#: Como o transporte cru do daemon se escreve na tela. **O DONO DA PALAVRA
-#: CURTA**, e o `.get(..., "")` é o ponto: ausência vira travessão, nunca uma
-#: das duas palavras.
+#: A SIGLA DE MÁQUINA do transporte — **e ela não é mais a palavra da tela.**
+#: O `.get(..., "")` é o ponto: ausência vira travessão, nunca uma das duas.
 #:
 #: Até 05/09/2026 este comentário afirmava ser "a MESMA tradução do
 #: `mesa_viva.mesa_do_estado`", que era `"USB" if transporte == "usb" else
 #: "BT"` — e as duas divergiam exatamente na AUSÊNCIA: a de lá dizia **"BT"**
 #: sobre um campo que o daemon não publicou, e a aba 01 afirmava rádio sobre
 #: nada. Hoje o `mesa_viva` LÊ este dicionário, e a afirmação virou verdade.
+#:
+#: **A PALAVRA DA TELA SAIU DAQUI — ONDA4-S10, 06/09/2026.** A decisão é dela
+#: (D-05): *"cabo / rádio, pela função que já existe."* A dona é
+#: `app/actions/home_actions.palavra_do_transporte`, e ela tem duas coisas que
+#: esta tabela não tem: transporte desconhecido volta CRU (para alguém o ver em
+#: vez de sumir atrás de uma frase genérica) e transporte AUSENTE diz *"não sei
+#: por onde"*. As abas 01, 07 e 09 já a chamam.
+#:
+#: **POR QUE ESTA TABELA CONTINUA VIVA, e é dívida DECLARADA, não descuido:**
+#: `via` é a chave que `mesa_viva.mesa_do_estado` publica, e ela é COMPARADA em
+#: dois arquivos que não são desta posse —
+#: `interface/monta.py:877` (o descarte que evita `P2 • BT • BT` na fita das dez
+#: abas) e `interface/pacotes/a08_conexoes.py:2498`, `:2499`, `:2505` e `:2513`
+#: (o agrupamento por adaptador de rádio). Trocar a palavra desta tabela sem
+#: tocar nesses cinco pontos faria a Conexões mostrar ZERO controles no rádio
+#: com os dois no rádio — calado, sem log e sem régua vermelha. O caminho está
+#: pronto e é de UMA linha em cada ponto: o item da mesa publica `transporte`,
+#: a chave crua, ao lado da palavra. Relatado em
+#: `docs/process/agentes/2026-09-06/ONDA4-S10-O-TRANSPORTE-01.md`.
 VIA_DO_TRANSPORTE = {"usb": "USB", "bt": "BT"}
 
 
