@@ -2380,6 +2380,7 @@ from hefesto_dualsense4unix.core.sysfs_leds import norm_mac  # noqa: E402
 
 from . import gesto  # noqa: E402
 from . import perfil as _perfil  # noqa: E402
+from . import ponte as _ponte  # noqa: E402
 
 
 def _corpo(r: Any) -> dict[str, Any] | None:
@@ -2632,9 +2633,26 @@ def _fora_do_voo(fn: Callable[[], None]) -> None:
     **ELA É O PONTO DE INJEÇÃO DAS RÉGUAS.** A régua a troca por uma chamada
     direta e mede o som sem esperar relógio nenhum — corrida na suíte é vermelho
     que aparece uma vez em dez.
+
+    **E ELA É A GUARDA DA MÁQUINA DELA — 06/09/2026, e o defeito era meu.** Sem
+    a janela de pé ninguém clicou, e o som não nasce. Medido na bancada: com o
+    `pactl` DUBLADO de uma régua vizinha, o sink do DualSense casa pela regra do
+    um-para-um, o motor o encontra "na lista viva" e chega ao `paplay`, que não
+    está dublado — a suíte tocava som no alto-falante do controle dela. A
+    guarda-mãe do `audio_saida` não alcança isso de propósito: ela confere o
+    sink contra a lista viva, e numa régua a lista viva é de mentira. Quem sabe
+    que ninguém clicou é `ponte.dentro_da_janela`, e a régua que QUER medir o
+    som troca esta função — que é o contrato acima.
+
+    **A PERGUNTA VAI AO MÓDULO `ponte`, e não ao `p` que o gesto recebe**: o `p`
+    é DUBLADO nas réguas, e um dublê responde `True` a todo nome que não conhece
+    — perguntar a ele se a janela está de pé receberia sempre "sim", que é o
+    instrumento respondendo por si mesmo.
     """
     import threading
 
+    if not _ponte.dentro_da_janela():
+        return
     threading.Thread(target=fn, name="hefesto-som-de-confirmacao",
                      daemon=True).start()
 

@@ -23,6 +23,14 @@ um `uniq` sintético (todos os desta casa), `audio_saida.sink_do_controle`
 devolve `""` — o casamento por dispositivo USB VETA o sink real que está na
 máquina. Nenhum som sai daqui, e o motor nunca toca no sink padrão.
 
+**E ISSO NÃO BASTAVA — o achado mais caro deste dia, e o defeito era MEU.**
+Numa régua que DUBLA o `pactl` (a irmã `test_a02_som_e_sensor_falam_quando_
+recusam.py` faz isso), o veto acima não existe: a lista viva é de mentira, o
+sink do DualSense casa pela regra do um-para-um, e o motor segue para o
+`paplay`, que **não** está dublado. Medido: `paplay --device=<o sink do controle
+dela>`. A cura é `ponte.dentro_da_janela` — sem janela de pé, ninguém clicou —
+e a `TestAGuardaDaMaquinaDela` é quem a segura.
+
 AS MORDIDAS DESTE ARQUIVO
 --------------------------
 
@@ -43,13 +51,17 @@ AS MORDIDAS DESTE ARQUIVO
 * **deixar a exceção do som subir** (tirar o `try` de `tocar`) — reprova
   `test_o_som_que_falha_nao_derruba_o_volume`;
 * **inventar uma segunda chave para o som** — reprova
-  `test_a_chave_dela_desliga_o_som_e_o_gesto_nao_recusa`.
+  `test_a_chave_dela_desliga_o_som_e_o_gesto_nao_recusa`;
+* **tirar o `dentro_da_janela` de `_fora_do_voo`** — reprovam as duas da
+  `TestAGuardaDaMaquinaDela`, e a segunda mostra o `paplay` que sairia.
 """
 from __future__ import annotations
 
 import json
 import pathlib
 import sys
+import threading
+import time
 from typing import Any
 
 import pytest
@@ -490,6 +502,97 @@ def test_a_chave_dela_desliga_o_som_e_o_gesto_nao_recusa(
     assert _do_controle(CHAVE_P1).get("speaker", {}).get("volume") is not None, (
         "a chave do som desligada recusou o gesto do volume"
     )
+
+
+def _seletor_do_piloto(*_a: Any, **_k: Any) -> None:
+    """O que o piloto põe em `ponte.escolher_arquivo` ao subir a janela.
+
+    Ela mora no módulo do TESTE de propósito: é o `__module__` diferente que
+    `ponte.dentro_da_janela` lê, e é exatamente o que acontece quando o piloto
+    substitui o ponto de extensão pelo método dele.
+    """
+    return None
+
+
+class TestAGuardaDaMaquinaDela:
+    """**Sem a janela de pé, o som não nasce — e o defeito que isto cura era MEU.**
+
+    Medido na bancada em 06/09/2026, com a cura do som já escrita: a régua irmã
+    `test_a02_som_e_sensor_falam_quando_recusam.py` dubla o `pactl` e devolve uma
+    lista com um sink de DualSense. O `escolher_sink` casa por REGRA (o
+    um-para-um: uma fonte, um controle na mesa), o motor encontra o sink "na
+    lista viva" — que é de mentira — e segue para o `paplay`, **que não está
+    dublado**. A suíte tocava som no alto-falante do controle DELA, com ela
+    trabalhando.
+
+    **A guarda-mãe do `audio_saida` não alcança este caso, e é de propósito:**
+    ela confere o sink contra a lista viva, e numa régua a lista viva é de
+    mentira. Quem sabe que ninguém clicou é a camada de cima.
+    """
+
+    def test_sem_a_janela_de_pe_o_som_nao_nasce(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """MORDIDA: tire o `dentro_da_janela` de `_fora_do_voo` e isto reprova.
+
+        Os dois lados são medidos: sem janela a linha do som **não nasce**; com
+        o ponto de extensão substituído — que é o que o piloto faz ao subir —
+        ela nasce. Uma guarda que só sabe recusar desligaria o produto.
+        """
+        import pacotes.a02_controles as a02
+        from pacotes import ponte as _ponte
+
+        assert not _ponte.dentro_da_janela(), (
+            "a régua acha que há janela de pé — sem isso ela não mede nada"
+        )
+        correu = threading.Event()
+        a02._fora_do_voo(correu.set)
+        assert not correu.wait(0.3), (
+            "o som nasceu SEM janela: numa régua com `pactl` dublado isto chega "
+            "ao `paplay` e toca no alto-falante do controle dela"
+        )
+
+        monkeypatch.setattr(_ponte, "escolher_arquivo", _seletor_do_piloto)
+        assert _ponte.dentro_da_janela()
+        a02._fora_do_voo(correu.set)
+        assert correu.wait(3.0), (
+            "com a janela de pé o som deixou de nascer — a guarda passou a "
+            "desligar o produto em vez de proteger a máquina dela"
+        )
+
+    def test_o_cenario_que_tocava_som_de_verdade(
+        self, casa: Any, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """O cenário EXATO da régua irmã, com o tocador espionado.
+
+        `pactl` dublado devolvendo o sink do DualSense, mesa de um, e o gesto
+        `rota` — que é o mesmo caminho que a irmã exercita três vezes. Com a
+        guarda, `_rodar_tocador` **não** é chamado.
+
+        MORDIDA: tire o `dentro_da_janela` de `_fora_do_voo` e o espião registra
+        um `paplay --device=<o sink do controle dela>`.
+        """
+
+        def pactl(argv: list[str]) -> str:
+            if argv[:2] == ["pactl", "get-default-sink"]:
+                return "alsa_output.pci-0000_00_1f.3.analog-stereo\n"
+            if argv[:4] == ["pactl", "list", "sinks", "short"]:
+                return f"0\t{SINK}\tmodule\ts16le 2ch 48000Hz\tSUSPENDED\n"
+            return ""
+
+        tocou: list[Any] = []
+        monkeypatch.setattr(audio_saida, "rodar_leitura", pactl)
+        monkeypatch.setattr(audio_saida, "_rodar_tocador",
+                            lambda argv: tocou.append(argv) or 0)
+
+        _gesto("rota")(_ctx(), {"uniq": P1, "rota": "jogo"}, PonteQueDizDeQuem())
+        time.sleep(0.3)
+
+        assert tocou == [], (
+            f"a suíte chegou ao tocador de áudio de verdade: {tocou!r}. O sink "
+            f"casou pela regra do um-para-um sobre uma lista de mentira, e o "
+            f"`paplay` não estava dublado"
+        )
 
 
 def test_o_sink_sai_do_cache_da_camada_1_e_nunca_do_padrao(
