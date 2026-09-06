@@ -19,7 +19,6 @@ DIZER que adiou — era ele que anunciava "Correções aplicadas" sobre um no-op
 """
 from __future__ import annotations
 
-import re
 from pathlib import Path
 from types import SimpleNamespace
 from typing import Any
@@ -35,14 +34,6 @@ from hefesto_dualsense4unix.app.actions.daemon_actions import (
     format_steam_ready_result,
 )
 from tests.conftest import skip_sem_gtk_response
-
-_GLADE = (
-    Path(__file__).resolve().parents[2]
-    / "src"
-    / "hefesto_dualsense4unix"
-    / "gui"
-    / "main.glade"
-)
 
 
 # ---------------------------------------------------------------------------
@@ -613,18 +604,6 @@ class TestResolucaoDoAppid:
 
 
 class TestGladeEWiring:
-    def test_os_dois_botoes_existem_no_glade(self) -> None:
-        xml = _GLADE.read_text(encoding="utf-8")
-        assert 'id="btn_steam_ready"' in xml
-        assert 'id="btn_steam_game_broken"' in xml
-
-    def test_nao_ha_signal_orfao_para_eles(self) -> None:
-        """BUG-GUI-EMULATION-HANDLERS-UNWIRED-01: `<signal handler="...">` sem
-        entrada no dict de `app._signal_handlers()` vira botão MORTO. Estes
-        dois são ligados em código, então o glade NÃO pode declarar o sinal."""
-        xml = _GLADE.read_text(encoding="utf-8")
-        for handler in ("on_steam_ready", "on_steam_game_broken"):
-            assert f'handler="{handler}"' not in xml
 
     def test_install_da_aba_liga_os_dois(self) -> None:
         ligados: list[tuple[str, str]] = []
@@ -648,17 +627,3 @@ class TestGladeEWiring:
                 return None
 
         _StubSemWidget()._wire_steam_simple_buttons()  # não levanta
-
-    def test_tooltip_do_desligar_steam_input_nao_promete_o_que_nao_faz(
-        self,
-    ) -> None:
-        """HONESTIDADE-STEAM-01: o tooltip prometia "(fecha e reabre a Steam)"
-        e o handler rodava `--apply-quiet`, que nunca fecha nada."""
-        xml = _GLADE.read_text(encoding="utf-8")
-        bloco = re.search(
-            r'id="emulation_steam_input_disable_button".*?</object>', xml, re.S
-        )
-        assert bloco is not None
-        texto = bloco.group(0)
-        assert "(fecha e reabre a Steam)" not in texto
-        assert "permissão" in texto

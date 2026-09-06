@@ -505,7 +505,12 @@ class TestNenhumCaminhoDeCasaNaArvore:
         assert "parents[2]" in codigo
         # E a dedução tem de dar na raiz DE VERDADE, não só num caminho bonito.
         assert alvo.resolve().parents[2] == RAIZ.resolve()
-        assert (RAIZ / "src/hefesto_dualsense4unix/gui/main.glade").exists()
+        # A ÂNCORA MUDOU EM 06/09/2026 (`GTK-3`, primeira volta): era o
+        # `gui/main.glade`, e a janela GTK sai inteira
+        # (`D-0609-GTK-LEVA-INTEIRA`). A pergunta é a mesma — a raiz deduzida
+        # é a raiz DE VERDADE —, e o `pyproject.toml` é o arquivo que existe
+        # em toda árvore deste repositório e em nenhuma outra pasta.
+        assert (RAIZ / "pyproject.toml").exists()
 
     def test_nenhum_script_traz_o_home_dela_como_padrao(self) -> None:
         """A varredura inteira, para o defeito não voltar por outro arquivo."""

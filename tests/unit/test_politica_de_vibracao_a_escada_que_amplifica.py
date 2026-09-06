@@ -45,11 +45,6 @@ from hefesto_dualsense4unix.profiles.schema import (
     RumbleConfig,
 )
 
-_GLADE = (
-    Path(__file__).resolve().parents[2]
-    / "src" / "hefesto_dualsense4unix" / "gui" / "main.glade"
-)
-
 
 def _config(policy: str, custom_mult: float = 1.0) -> DaemonConfig:
     cfg = DaemonConfig()
@@ -58,16 +53,30 @@ def _config(policy: str, custom_mult: float = 1.0) -> DaemonConfig:
     return cfg
 
 
-def _propriedade_do_adjustment(nome: str) -> float:
-    fonte = _GLADE.read_text(encoding="utf-8")
-    bloco = re.search(
-        r'<object class="GtkAdjustment" id="rumble_policy_adj">(.*?)</object>',
-        fonte,
-        re.DOTALL,
+def _atributo_do_trilho(nome: str) -> float:
+    """`max`/`min` do trilho da Intensidade, na TELA QUE ELA USA.
+
+    **A FONTE MUDOU EM 06/09/2026** (`GTK-3`, primeira volta): era o
+    `<property name="upper">` do `rumble_policy_adj` no `gui/main.glade`, e a
+    janela GTK sai inteira (`D-0609-GTK-LEVA-INTEIRA`). Quem oferece a faixa é
+    o `<input type="range" data-campo="mult-pos">` de
+    `interface/paginas/05-vibracao.html`. Continua sendo LEITURA de arquivo, e
+    não número digitado aqui.
+    """
+    pagina = (
+        Path(__file__).resolve().parents[2]
+        / "src" / "hefesto_dualsense4unix"
+        / "interface" / "paginas" / "05-vibracao.html"  # noqa-acento (pasta)
+    ).read_text(encoding="utf-8")
+    trilho = re.search(
+        r'<input[^>]*type="range"[^>]*data-campo="mult-pos"[^>]*>', pagina
     )
-    assert bloco is not None, "rumble_policy_adj sumiu do glade"
-    achado = re.search(rf'<property name="{nome}">([\d.]+)</property>', bloco.group(1))
-    assert achado is not None, f"o adjustment perdeu a propriedade {nome}"
+    assert trilho is not None, (
+        "o trilho `mult-pos` sumiu de `05-vibracao.html` — a coluna "
+        "Intensidade perdeu o ajuste livre, ou a régua ficou cega"
+    )
+    achado = re.search(rf'{nome}="([\d.]+)"', trilho.group(0))
+    assert achado is not None, f"o trilho da Intensidade perdeu o atributo {nome}"
     return float(achado.group(1))
 
 
@@ -174,7 +183,7 @@ def test_o_caminho_do_rumble_fixado_tambem_satura() -> None:
 def test_o_teto_do_deslizador_e_o_do_esquema_do_perfil() -> None:
     teto = RUMBLE_CUSTOM_MULT_MAX
     assert teto == pytest.approx(2.0)
-    assert _propriedade_do_adjustment("upper") == RUMBLE_CUSTOM_MULT_MAX * 100
+    assert _atributo_do_trilho("max") == RUMBLE_CUSTOM_MULT_MAX * 100
     RumbleConfig(policy="custom", custom_mult=RUMBLE_CUSTOM_MULT_MAX)
 
 
@@ -208,13 +217,6 @@ def test_o_rascunho_da_janela_aceita_o_mesmo_teto_do_perfil() -> None:
         RumbleDraft(policy="custom", custom_mult=RUMBLE_CUSTOM_MULT_MAX + 0.1)
 
 
-def test_o_deslizador_nasce_num_degrau_que_existe() -> None:
-    """O valor de partida era 70 — o Balanceado velho. Virou âncora morta."""
-    partida = _propriedade_do_adjustment("value")
-    assert partida == RUMBLE_POLICY_MULT["balanceado"] * 100
-    assert partida in {v * 100 for v in RUMBLE_POLICY_MULT.values()}
-
-
 # ---------------------------------------------------------------------------
 # O Auto nunca amplifica
 # ---------------------------------------------------------------------------
@@ -228,36 +230,3 @@ def test_o_auto_nunca_amplifica(bateria: int) -> None:
     assert any(
         mult == pytest.approx(degrau) for degrau in (1.0, 0.7, 0.3)
     ), f"degrau fora da escada própria do Auto: {mult}"
-
-
-def test_o_texto_do_auto_na_tela_nao_promete_o_que_ele_nao_faz() -> None:
-    """O rótulo dizia "100% (Máximo)" e "70% (Balanceado)".
-
-    Os dois viraram mentira no dia em que Máximo passou a valer 150% e
-    Balanceado 100%. E "debounce" é jargão, que ela nunca vê.
-    """
-    fonte = _GLADE.read_text(encoding="utf-8")
-    # Só o TEXTO que ela lê — o comentário do XML ao redor não é tela, e
-    # deixá-lo entrar aqui faria o portão reprovar a explicação da mudança.
-    bloco = re.search(
-        r'id="rumble_policy_auto_label">.*?<property name="label"[^>]*>(.*?)</property>',
-        fonte,
-        re.DOTALL,
-    )
-    assert bloco is not None, "o rótulo do Auto sumiu do glade"
-    texto = bloco.group(1)
-    assert "(Máximo)" not in texto
-    assert "(Balanceado)" not in texto
-    assert "debounce" not in texto.lower()
-    assert "nunca passa de 100%" in texto, (
-        "o rótulo tem de DIZER que o Auto não amplifica"
-    )
-
-
-def test_o_glade_tem_o_rotulo_do_aviso_de_alcance() -> None:
-    """Sem o widget no glade, a função que escreve o aviso nunca chega à tela.
-
-    O comportamento dela está em `test_politica_de_vibracao_o_alcance_na_tela`;
-    aqui só se confere que existe onde pendurá-lo, e isto é leitura de arquivo.
-    """
-    assert 'id="rumble_policy_aviso"' in _GLADE.read_text(encoding="utf-8")

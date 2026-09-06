@@ -19,28 +19,11 @@ no `main.glade` e rode `test_a_dica_do_footer_apply_menciona_a_aba_configuracoes
 from __future__ import annotations
 
 import inspect
-import xml.etree.ElementTree as ET
 from pathlib import Path
 
 from hefesto_dualsense4unix.app.actions.config import moldura, secoes
 
 RAIZ = Path(__file__).resolve().parents[2]
-GLADE = RAIZ / "src/hefesto_dualsense4unix/gui/main.glade"
-
-BTN_ID = "btn_footer_apply"
-
-
-def _dica_do_footer_apply() -> str:
-    """A `tooltip-text` do botão "Aplicar" do rodapé, lida do XML cru."""
-    raiz = ET.parse(GLADE).getroot()
-    for objeto in raiz.iter("object"):
-        if objeto.get("id") != BTN_ID:
-            continue
-        for propriedade in objeto.findall("property"):
-            if propriedade.get("name") == "tooltip-text":
-                return propriedade.text or ""
-        raise AssertionError(f"{BTN_ID} não tem tooltip-text em {GLADE}")
-    raise AssertionError(f"{BTN_ID} não encontrado em {GLADE}")
 
 
 def _secoes_que_prometem_o_footer() -> list[str]:
@@ -63,18 +46,6 @@ def test_pelo_menos_uma_secao_promete_o_footer_hoje() -> None:
     """Régua provada acertando: sem isto, o teste abaixo checaria o vazio."""
     assert _secoes_que_prometem_o_footer(), (
         "nenhuma seção usa QUANDO_VALE — a mordida abaixo não provaria nada"
-    )
-
-
-def test_a_dica_do_footer_apply_menciona_a_aba_configuracoes() -> None:
-    """Quem só lê a dica do rodapé tem de saber que ele grava esta aba."""
-    prometem = _secoes_que_prometem_o_footer()
-    dica = _dica_do_footer_apply()
-
-    assert prometem, "nenhuma seção promete o botão — ver teste anterior"
-    assert "Configurações" in dica, (
-        f"a dica do {BTN_ID} não menciona a aba Configurações, e "
-        f"{prometem} prometem esse botão pelo nome: {dica!r}"
     )
 
 

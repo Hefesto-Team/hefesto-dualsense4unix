@@ -84,20 +84,6 @@ def test_cores_do_python_da_gui_saem_da_paleta() -> None:
     )
 
 
-def test_glade_usa_a_paleta() -> None:
-    achadas = {
-        m.group(1).lower()
-        for m in re.finditer(
-            r'(?:foreground|background)="(#[0-9a-fA-F]{3,8})"',
-            (GUI / "main.glade").read_text(encoding="utf-8"),
-        )
-    }
-
-    assert not _fora_da_paleta(achadas), (
-        f"cores fora da paleta no glade: {sorted(_fora_da_paleta(achadas))}"
-    )
-
-
 def test_css_usa_a_paleta() -> None:
     """No CSS as cores viram tokens `@define-color`; só elas podem ser hex."""
     css = (GUI / "theme.css").read_text(encoding="utf-8")

@@ -23,27 +23,69 @@ import pytest
 
 
 def _rotulo_do_botao_de_consertar() -> str:
-    """O rótulo VIVO do botão da aba Sistema, lido do `main.glade`.
+    """O rótulo VIVO do botão da aba Sistema — na TELA QUE ELA USA.
 
-    O dono único do texto é o glade; digitá-lo aqui criaria a segunda verdade, e
-    a primeira vez que alguém melhorasse a palavra o teste reprovaria a melhora.
+    **A FONTE MUDOU EM 06/09/2026** (`GTK-3`, primeira volta). Até aqui esta
+    função lia o `<property name="label">` do `gui/main.glade` — a janela GTK,
+    que sai inteira (`D-0609-GTK-LEVA-INTEIRA`). O dono é a página publicada:
+    `interface/paginas/09-sistema.html`, o botão de `data-gesto`
+    ``refazer-consertos``. É o botão que ela tem na frente quando lê a
+    mensagem.
+
+    A leitura continua sendo LEITURA, e não uma constante digitada aqui: uma
+    palavra melhor no botão não pode fazer esta régua reprovar a melhora — foi
+    esse o defeito corrigido em 26/08/2026.
     """
+    import html as _html
     import re
     from pathlib import Path
 
-    glade = (
+    pagina = (
         Path(__file__).resolve().parents[2]
         / "src"
         / "hefesto_dualsense4unix"
-        / "gui"
-        / "main.glade"
+        / "interface"  # noqa-acento (nome de pasta)
+        / "paginas"  # noqa-acento (nome de pasta)
+        / "09-sistema.html"
     ).read_text(encoding="utf-8")
-    achados = re.findall(
-        r'<property name="label" translatable="yes">([^<]*[Cc]onsertar[^<]*)</property>',
-        glade,
+    achado = re.search(
+        r'data-gesto="refazer-consertos"[^>]*>([^<]+)</button>', pagina
     )
-    assert achados, "o botão de consertar sumiu do main.glade"
-    return achados[0]
+    assert achado, (
+        "o botão `refazer-consertos` sumiu de `interface/paginas/09-sistema."
+        "html` — a régua ficou cega sobre a tela que ela usa"
+    )
+    return _html.unescape(achado.group(1)).strip()
+
+
+#: O RÓTULO DA JANELA QUE ESTÁ SAINDO, e o defeito VIVO que ele guarda.
+#:
+#: `app/actions/emulation_actions.py:1406` digita *"Consertar problemas
+#: conhecidos"* — o rótulo do `gui/main.glade`. Na aba Sistema que ela usa esse
+#: botão se chama **"Refazer os consertos automáticos"**
+#: (`interface/paginas/09-sistema.html`), então a mensagem do microfone manda
+#: clicar num botão que não está na tela.
+#:
+#: É o defeito que a `GTK-2` mediu no `storm_doctor` (§3.2 do relatório dela),
+#: com um terceiro escritor que nenhuma régua via: a costura de 06/09 curou o
+#: `storm_doctor` (a página virou a fonte nº 1 de `rotulo_do_botao`) e **esta
+#: linha ficou para trás**, porque ela não passa por `rotulo_do_botao`.
+#:
+#: A cura é de UMA linha e mora em `app/actions/`, que é `nao_toca` da `GTK-3`.
+#: Enquanto ela não vier, o caso abaixo é `xfail(strict=True)`: no dia em que
+#: alguém trocar a frase, ele passa, o `strict` reprova o xpass e obriga a
+#: apagar esta marca. Instrumento que se limpa sozinho.
+_A_FRASE_AINDA_NOMEIA_O_BOTAO_DA_JANELA = (
+    "Consertar problemas conhecidos"
+    in (
+        __import__("pathlib").Path(__file__).resolve().parents[2]
+        / "src"
+        / "hefesto_dualsense4unix"
+        / "app"
+        / "actions"
+        / "emulation_actions.py"
+    ).read_text(encoding="utf-8")
+)
 
 def _install_gi_stubs() -> None:
     # GATE-SKIP-MASK-01: com o PyGObject real disponível, NÃO instala stubs —
@@ -150,6 +192,18 @@ def _wire(obj, monkeypatch):
     return toasts, ran
 
 
+@pytest.mark.xfail(
+    _A_FRASE_AINDA_NOMEIA_O_BOTAO_DA_JANELA,
+    reason=(
+        "DEFEITO VIVO, medido em 06/09/2026 (GTK-3, primeira volta): "
+        "`app/actions/emulation_actions.py:1406` manda clicar em “Consertar "
+        "problemas conhecidos”, que é o rótulo do `gui/main.glade`. Na aba "
+        "Sistema que ela usa o botão se chama “Refazer os consertos "
+        "automáticos”. A cura é uma linha, e `app/actions/` é `nao_toca` da "
+        "GTK-3 — o diff está no relatório. Curou? Apague esta marca."
+    ),
+    strict=True,
+)
 def test_mic_on_avisa_quando_quirk_ausente(monkeypatch: pytest.MonkeyPatch) -> None:
     obj = Mixin()
     _toasts, ran = _wire(obj, monkeypatch)

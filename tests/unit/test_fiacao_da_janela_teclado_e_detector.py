@@ -21,74 +21,15 @@ portões de TEXTO chamam as duas funções puras, que são o miolo do que ela v�
 from __future__ import annotations
 
 import ast
-import xml.etree.ElementTree as ET
 from pathlib import Path
 
 import pytest
 
 RAIZ = Path(__file__).resolve().parents[2]
 PACOTE = RAIZ / "src" / "hefesto_dualsense4unix"
-GLADE = PACOTE / "gui" / "main.glade"
 APP_PY = PACOTE / "app" / "app.py"
 EMULACAO_PY = PACOTE / "app" / "actions" / "emulation_actions.py"
 DAEMON_PY = PACOTE / "app" / "actions" / "daemon_actions.py"
-
-#: Teto de caracteres do rótulo "Modo jogo" do `emulation_combo_grid`.
-#:
-#: MEDIDO nesta leva, numa `Gtk.OffscreenWindow` de 1180px com o tema na escala
-#: que sai: aquele rótulo NÃO quebra linha, então o comprimento dele é o mínimo
-#: de largura do `emulation_combo_grid` (654px com o texto antigo, de 71
-#: caracteres) e, somado ao card irmão, é o que define o mínimo de largura da
-#: aba Emulação inteira (971px antes, 1006px depois). Cada caractere a mais
-#: custa ~8px de largura mínima numa janela que abre com 1180 e cuja aba mais
-#: larga já pede 1126. O número 78 dá folga de um punhado de caracteres sobre o
-#: texto de hoje sem chegar perto do limite — se alguém precisar de mais, tem de
-#: REMEDIR, não subir a constante.
-TETO_DO_ROTULO_DE_MODO_JOGO = 78
-
-
-def _raiz_glade() -> ET.Element:
-    return ET.parse(str(GLADE)).getroot()
-
-
-def _objeto(raiz: ET.Element, ident: str) -> ET.Element:
-    for obj in raiz.iter("object"):
-        if obj.get("id") == ident:
-            return obj
-    raise AssertionError(f"objeto {ident!r} não existe em main.glade")
-
-
-def _prop(obj: ET.Element, nome: str) -> str | None:
-    for prop in obj.findall("property"):
-        if prop.get("name") == nome:
-            return prop.text or ""
-    return None
-
-
-def _rotulos_da_linha_do_switch(raiz: ET.Element, switch_id: str) -> list[str]:
-    """Textos dos GtkLabel que dividem a mesma caixa com um GtkSwitch.
-
-    É o rótulo que NOMEIA o interruptor — o que a pessoa lê antes de clicar.
-    """
-    for caixa in raiz.iter("object"):
-        if caixa.get("class") != "GtkBox":
-            continue
-        filhos = [
-            neto
-            for filho in caixa.findall("child")
-            for neto in filho.findall("object")
-        ]
-        if not any(
-            f.get("class") == "GtkSwitch" and f.get("id") == switch_id
-            for f in filhos
-        ):
-            continue
-        return [
-            _prop(f, "label") or ""
-            for f in filhos
-            if f.get("class") == "GtkLabel"
-        ]
-    raise AssertionError(f"nenhuma caixa contém o switch {switch_id!r}")
 
 
 def _chaves_de_signal_handlers() -> set[str]:
@@ -143,50 +84,6 @@ def _refreshers_da_aba(aba: str) -> tuple[str, ...]:
 
 
 class TestOsDoisInterruptores:
-    def test_o_interruptor_do_mouse_nao_promete_mais_o_teclado(self) -> None:
-        rotulos = _rotulos_da_linha_do_switch(_raiz_glade(), "mouse_emulation_toggle")
-        assert rotulos, "a linha do switch do mouse perdeu o rótulo"
-        texto = " ".join(rotulos).lower()
-        assert "teclado" not in texto, (
-            "o rótulo do interruptor do mouse volta a prometer teclado: "
-            f"{rotulos!r}. Ele chama `mouse.emulation.set` e o teclado emulado "
-            "tem interruptor próprio — prometer os dois é o defeito que fez ela "
-            "concluir que o Alt+Tab não deveria estar acontecendo."
-        )
-        assert "mouse" in texto
-
-    def test_o_teclado_tem_interruptor_proprio_dentro_da_coluna_teclado(self) -> None:
-        raiz = _raiz_glade()
-        switch = _objeto(raiz, "keyboard_emulation_toggle")
-        assert switch.get("class") == "GtkSwitch"
-        sinais = {
-            s.get("name"): s.get("handler") for s in switch.findall("signal")
-        }
-        assert sinais.get("state-set") == "on_keyboard_toggle_set"
-        # Dentro da coluna Teclado, ao lado do do mouse: é onde ela procurou.
-        coluna = _objeto(raiz, "tab_keyboard")
-        assert any(
-            obj.get("id") == "keyboard_emulation_toggle"
-            for obj in coluna.iter("object")
-        ), "o interruptor do teclado saiu da coluna Teclado"
-        rotulos = " ".join(_rotulos_da_linha_do_switch(raiz, switch.get("id") or ""))
-        assert "teclado" in rotulos.lower()
-
-    def test_o_interruptor_do_teclado_avisa_o_que_se_perde_ao_desligar(self) -> None:
-        """Medido no daemon e NÃO é óbvio: desligar não tira só o Alt+Tab.
-
-        Sai também o teclado na tela em L3/R3 e as três regiões do touchpad
-        (Backspace/Enter/Delete) — quem usa o controle como teclado de
-        acessibilidade perde tudo de uma vez. O aviso é obrigação da interface.
-        """
-        tooltip = (
-            _prop(_objeto(_raiz_glade(), "keyboard_emulation_toggle"), "tooltip-text")
-            or ""
-        ).lower()
-        assert "l3" in tooltip and "touchpad" in tooltip, (
-            "o tooltip do interruptor do teclado parou de avisar que desligar "
-            f"tira o teclado na tela (L3/R3) e o touchpad: {tooltip!r}"
-        )
 
     def test_o_interruptor_do_teclado_esta_ligado_de_ponta_a_ponta(self) -> None:
         """Glade -> dict de sinais do app -> método do mixin, sem elo frouxo."""
@@ -260,95 +157,6 @@ class TestOsDoisInterruptores:
             "interruptor DESENHA não o relê ao ser exibida: ela vê a posição "
             "de antes do gesto"
         )
-
-
-# --- E2: a tela ensina o gesto que FUNCIONA --------------------------------
-
-
-def _rotulo_do_modo_jogo() -> str:
-    grade = _objeto(_raiz_glade(), "emulation_combo_grid")
-    for obj in grade.iter("object"):
-        rotulo = _prop(obj, "label") or ""
-        if "Modo jogo" in rotulo:
-            return rotulo
-    raise AssertionError("o rótulo 'Modo jogo' saiu do emulation_combo_grid")
-
-
-class TestOGestoQueFunciona:
-    def test_a_tela_ensina_ps_mais_options(self) -> None:
-        rotulo = _rotulo_do_modo_jogo()
-        assert "PS + Options" in rotulo, (
-            "a linha do 'Modo jogo' parou de ensinar o combo que funciona: "
-            f"{rotulo!r}"
-        )
-
-    def test_a_tela_nao_manda_mais_segurar_o_ps_para_ligar(self) -> None:
-        rotulo = _rotulo_do_modo_jogo().lower()
-        assert "segure o botão ps" not in rotulo, (
-            "a linha voltou a ensinar o gesto que está DESLIGADO por padrão "
-            "(DEFAULT_PS_LONG_PRESS_MS = 0, decisão registrada porque o hold "
-            "ligava modo jogo acidental)"
-        )
-
-    def test_a_tela_diz_que_segurar_o_ps_vem_desligado(self) -> None:
-        rotulo = _rotulo_do_modo_jogo().lower()
-        assert "segurar o ps" in rotulo and "desligad" in rotulo, (
-            "a linha deixou de avisar que segurar o PS vem desligado — sem isso "
-            f"ela tenta o gesto e não entende por que nada acontece: {rotulo!r}"
-        )
-
-    def test_o_rotulo_do_modo_jogo_nao_engorda_a_aba_emulacao(self) -> None:
-        rotulo = _rotulo_do_modo_jogo()
-        # Sem a marcação: o que mede largura é o texto pintado.
-        visivel = rotulo.replace("<b>", "").replace("</b>", "")
-        assert len(visivel) <= TETO_DO_ROTULO_DE_MODO_JOGO, (
-            f"o rótulo tem {len(visivel)} caracteres visíveis (teto "
-            f"{TETO_DO_ROTULO_DE_MODO_JOGO}). Ele NÃO quebra linha, então cada "
-            "caractere sobe o mínimo de largura da aba Emulação em ~8px — e a "
-            "janela abre com 1180. Pôr `wrap` aqui foi medido e recusado: os "
-            "dois cards já pedem 1293px naturais contra 1160, então com quebra "
-            "o rótulo wrapa no tamanho de projeto e a aba estoura a ALTURA."
-        )
-
-    def test_o_rotulo_do_modo_jogo_continua_sem_quebra_de_linha(self) -> None:
-        grade = _objeto(_raiz_glade(), "emulation_combo_grid")
-        for obj in grade.iter("object"):
-            if "Modo jogo" in (_prop(obj, "label") or ""):
-                assert _prop(obj, "wrap") is None, (
-                    "`wrap` voltou ao rótulo do 'Modo jogo'. Medido nesta leva: "
-                    "com quebra o mínimo de largura da aba Emulação cai de "
-                    "1006px para 707px (tentador), mas a aba sobe de 626px para "
-                    "648px contra um teto de 654px — porque os dois cards pedem "
-                    "1293px naturais contra 1160 alocados e o rótulo quebra já "
-                    "no tamanho de projeto. Seis pixels não são folga: a CI mede "
-                    "com outras fontes e já pediu 431px onde esta máquina pedia "
-                    "357."
-                )
-                return
-        raise AssertionError("rótulo não encontrado")
-
-
-# --- E3: a linha honesta do detector de janela -----------------------------
-
-
-class TestALinhaDoDetectorNaAbaSistema:
-    def test_a_aba_sistema_tem_a_linha_e_ela_reconcilia(self) -> None:
-        raiz = _raiz_glade()
-        cartao = _objeto(raiz, "storm_card")
-        assert any(
-            obj.get("id") == "window_detect_diag_label"
-            for obj in cartao.iter("object")
-        ), "a linha do detector saiu do cartão de saúde da aba Sistema"
-        rotulo = _objeto(raiz, "window_detect_diag_label")
-        assert _prop(rotulo, "wrap") == "True", (
-            "sem `wrap` a frase do detector empurra a largura mínima da aba "
-            "Sistema, que não tem rolagem horizontal para onde fugir"
-        )
-        fonte = DAEMON_PY.read_text(encoding="utf-8")
-        # Três entradas: bootstrap, entrar na aba e o botão "Atualizar". Cegar e
-        # voltar a ver é o comportamento NORMAL do detector (`seeing` decai),
-        # então uma foto só do bootstrap mentiria o resto da sessão.
-        assert fonte.count("self._refresh_window_detect_diag()") >= 3
 
 
 # --- o miolo: as duas funções puras ---------------------------------------

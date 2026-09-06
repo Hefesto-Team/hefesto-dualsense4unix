@@ -684,58 +684,71 @@ def test_custom_mult_round_trip(monkeypatch: pytest.MonkeyPatch) -> None:
     assert profile.rumble.custom_mult == esperado
 
 
-def test_glade_rumble_policy_adj_vai_ate_o_teto_do_schema() -> None:
-    """O slider oferece a faixa INTEIRA que o schema aceita (`mult * 100`).
+def test_o_trilho_da_intensidade_vai_ate_o_teto_do_schema() -> None:
+    """O trilho oferece a faixa INTEIRA que o schema aceita (`mult * 100`).
 
-    HARM-19: a faixa teve três donos (2.0 no schema, 1.0 no handler, 200% aqui) e
-    de 101% em diante a usuária levava erro de validação. A cura foi alinhar o
-    HANDLER ao schema — truncar o slider em 100% mataria o que o
+    HARM-19: a faixa teve três donos (2.0 no schema, 1.0 no handler, 200% na
+    tela) e de 101% em diante a usuária levava erro de validação. A cura foi
+    alinhar o HANDLER ao schema — truncar a tela em 100% mataria o que o
     BUG-RUMBLE-CUSTOM-MULT-CAP-01 entregou de propósito: acima de 100% o
     multiplicador AMPLIFICA o que o jogo pediu.
-    """
-    import xml.etree.ElementTree as ET
-    from pathlib import Path
 
+    **A FONTE MUDOU EM 06/09/2026** (`GTK-3`): a faixa era lida do
+    `rumble_policy_adj` no `gui/main.glade`, e a janela sai inteira
+    (`D-0609-GTK-LEVA-INTEIRA`). Quem oferece a faixa hoje é o
+    `<input type="range" data-campo="mult-pos">` de
+    `interface/paginas/05-vibracao.html`. A pergunta não mudou.
+    """
     from hefesto_dualsense4unix.profiles.schema import RUMBLE_CUSTOM_MULT_MAX
 
-    glade = (
+    import re
+    from pathlib import Path
+
+    pagina = (
         Path(__file__).resolve().parents[2]
-        / "src" / "hefesto_dualsense4unix" / "gui" / "main.glade"
+        / "src" / "hefesto_dualsense4unix"
+        / "interface" / "paginas" / "05-vibracao.html"  # noqa-acento (pasta)
+    ).read_text(encoding="utf-8")
+    trilho = re.search(
+        r'<input[^>]*type="range"[^>]*data-campo="mult-pos"[^>]*>', pagina
     )
-    tree = ET.parse(glade)  # também valida que o XML segue bem formado
-    adj = next(
-        (obj for obj in tree.iter("object") if obj.get("id") == "rumble_policy_adj"),
-        None,
+    assert trilho is not None, (
+        "o trilho `mult-pos` sumiu de `05-vibracao.html` — a coluna "
+        "Intensidade perdeu o ajuste livre, ou a régua ficou cega"
     )
-    assert adj is not None, "adjustment rumble_policy_adj não encontrado"
-    props = {p.get("name"): (p.text or "") for p in adj.findall("property")}
-    assert float(props["upper"]) == RUMBLE_CUSTOM_MULT_MAX * 100
-    assert float(props["lower"]) == 0.0
+    atributos = dict(re.findall(r'([a-z-]+)="([^"]*)"', trilho.group(0)))
+    assert float(atributos["max"]) == RUMBLE_CUSTOM_MULT_MAX * 100
+    assert float(atributos["min"]) == 0.0
 
 
-def test_faixa_do_slider_cabe_no_que_o_handler_do_daemon_aceita() -> None:
-    """A faixa da UI é subconjunto da faixa aceita por `rumble.policy_custom`.
+def test_faixa_do_trilho_cabe_no_que_o_handler_do_daemon_aceita() -> None:
+    """A faixa da tela é subconjunto do que `rumble.policy_custom` aceita.
 
-    Prova de coexistência (o par que estava divergente): o topo do adjustment
-    (upper/100) tem de passar pela validação do handler REAL do daemon.
+    Prova de coexistência (o par que estava divergente): o topo do trilho
+    (max/100) tem de passar pela validação do handler REAL do daemon.
     """
     import asyncio
-    import xml.etree.ElementTree as ET
-    from pathlib import Path
     from types import SimpleNamespace
 
     from hefesto_dualsense4unix.daemon.ipc_handlers import IpcHandlersMixin
 
-    glade = (
+    import re
+    from pathlib import Path
+
+    pagina = (
         Path(__file__).resolve().parents[2]
-        / "src" / "hefesto_dualsense4unix" / "gui" / "main.glade"
+        / "src" / "hefesto_dualsense4unix"
+        / "interface" / "paginas" / "05-vibracao.html"  # noqa-acento (pasta)
+    ).read_text(encoding="utf-8")
+    trilho = re.search(
+        r'<input[^>]*type="range"[^>]*data-campo="mult-pos"[^>]*>', pagina
     )
-    tree = ET.parse(glade)
-    adj = next(
-        obj for obj in tree.iter("object") if obj.get("id") == "rumble_policy_adj"
+    assert trilho is not None, (
+        "o trilho `mult-pos` sumiu de `05-vibracao.html` — a coluna "
+        "Intensidade perdeu o ajuste livre, ou a régua ficou cega"
     )
-    props = {p.get("name"): (p.text or "") for p in adj.findall("property")}
-    topo = float(props["upper"]) / 100.0
+    atributos = dict(re.findall(r'([a-z-]+)="([^"]*)"', trilho.group(0)))
+    topo = float(atributos["max"]) / 100.0
 
     class _Handlers(IpcHandlersMixin):
         def __init__(self) -> None:

@@ -367,23 +367,36 @@ def test_a_descricao_do_desktop_aponta_para_uma_aba_que_existe() -> None:
     mandar a usuária para lugares diferentes.
 
     O teste morde nos dois lados: a frase tem de citar a aba, e a aba tem de
-    existir no glade — trocar o nome da aba sem trocar a frase reprova aqui.
+    existir NA TELA — trocar o nome da aba sem trocar a frase reprova aqui.
+
+    **A TELA MUDOU DE ARQUIVO EM 06/09/2026** (`GTK-3`, primeira volta): o
+    segundo lado era o `<property>` do `gui/main.glade`, e a janela GTK sai
+    inteira (`D-0609-GTK-LEVA-INTEIRA`). O nome da aba sai agora da BARRA que
+    as dez páginas publicadas compartilham — a mesma que ela lê ao clicar.
     """
+    import re
     from pathlib import Path
 
     from hefesto_dualsense4unix.app.actions.home_actions import _MODE_DESCRIPTIONS
 
     raiz = Path(__file__).resolve().parents[2]
-    glade = (raiz / "src/hefesto_dualsense4unix/gui/main.glade").read_text(
-        encoding="utf-8"
-    )
+    barra = (
+        raiz / "src" / "hefesto_dualsense4unix"
+        / "interface" / "paginas" / "01-jogar.html"  # noqa-acento (pasta)
+    ).read_text(encoding="utf-8")
     descricao = _MODE_DESCRIPTIONS["desktop"]
 
     assert "aba Navegação" in descricao
     assert "abas Mouse e Teclado" not in descricao
-    assert ">Navegação</property>" in glade, (
+    achado = re.search(
+        r'<a[^>]*class="aba"[^>]*href="06-navegacao\.html"[^>]*>([^<]+)', barra
+    )
+    assert achado is not None, (
+        "a aba de Navegação sumiu da barra das dez — a régua ficou cega"
+    )
+    assert achado.group(1).strip() == "Navegação", (
         "a aba mudou de nome e a descrição do modo desktop ficou apontando "
-        "para um rótulo que não existe mais"
+        f"para um rótulo que não existe mais (a barra diz {achado.group(1)!r})"
     )
 
 

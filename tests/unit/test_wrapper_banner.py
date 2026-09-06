@@ -315,19 +315,3 @@ class TestFiacao:
         assert espiao.call_args_list == [call(estado)]
         assert aba._home_wrapper_banner.get_text() == "AVISO-DO-WRAPPER"
         assert aba._home_wrapper_banner.visible is True
-
-    def test_glade_tem_o_widget_do_banner_da_status(self) -> None:
-        glade = (
-            Path(__file__).resolve().parents[2]
-            / "src"
-            / "hefesto_dualsense4unix"
-            / "gui"
-            / "main.glade"
-        ).read_text(encoding="utf-8")
-        assert 'id="status_wrapper_banner"' in glade
-        bloco = glade.split('id="status_wrapper_banner"', 1)[1].split(
-            "</object>", 1
-        )[0]
-        # invisível por padrão e imune ao show_all (como o banner do vpad).
-        assert '<property name="visible">False</property>' in bloco
-        assert '<property name="no-show-all">True</property>' in bloco

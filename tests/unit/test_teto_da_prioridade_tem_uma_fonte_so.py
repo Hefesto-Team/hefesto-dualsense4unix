@@ -8,8 +8,12 @@ sem nenhum fio entre dois deles:
   duplicação de propósito ("profiles/ não pode depender de app/");
 - `app/actions/profiles_actions.py` — `PRIORIDADE_MAXIMA`, a "fonte" que os
   outros citavam;
-- `gui/main.glade` — o `upper` do `profile_priority_adj`, XML que não importa
-  nada de ninguém.
+- a TELA — o trilho da Prioridade no editor da aba Perfis, que não importa
+  nada de ninguém. **Ele mudou de arquivo em 06/09/2026** (`GTK-3`, primeira
+  volta): era o `upper` do `profile_priority_adj` no `gui/main.glade`, e a
+  janela GTK sai inteira (`D-0609-GTK-LEVA-INTEIRA`). Hoje é o
+  `<input type="range" data-hef="editor.prioridade.escolha">` de
+  `interface/paginas/10-perfis.html`.
 
 Só UM par tinha portão (`test_empate01_a_cor_volta_a_ser_dela.py`, glade
 contra `profiles_actions`). O verificador semântico — que ACUSA prioridade
@@ -28,8 +32,8 @@ literal pela AST não executa nada do módulo e vale em qualquer máquina.
 from __future__ import annotations
 
 import ast
+import re
 from pathlib import Path
-from xml.etree import ElementTree
 
 import pytest
 
@@ -37,7 +41,9 @@ from hefesto_dualsense4unix.profiles import sanidade, schema
 
 _RAIZ = Path(__file__).resolve().parents[2]
 _PACOTE = _RAIZ / "src" / "hefesto_dualsense4unix"
-_GLADE = _PACOTE / "gui" / "main.glade"
+_PAGINA_PERFIS = (
+    _PACOTE / "interface" / "paginas" / "10-perfis.html"  # noqa-acento (pasta)
+)
 _PROFILES_ACTIONS = _PACOTE / "app" / "actions" / "profiles_actions.py"
 
 
@@ -73,15 +79,23 @@ def _constante_por_ast(arquivo: Path, nome: str) -> int:
     pytest.fail(f"{arquivo.name}: `{nome}` sumiu do módulo")
 
 
-def _upper_do_glade(adjustment: str) -> int:
-    arvore = ElementTree.parse(_GLADE)
-    ajuste = next(
-        obj for obj in arvore.iter("object") if obj.get("id") == adjustment
+#: O TRILHO DA PRIORIDADE na página publicada do editor de perfis.
+_TRILHO_DA_PRIORIDADE = re.compile(
+    r'<input[^>]*type="range"[^>]*data-hef="editor\.prioridade\.escolha"[^>]*>'
+)
+
+
+def _atributo_do_trilho(nome: str) -> int:
+    """`max`/`min` do trilho da Prioridade, lido da TELA QUE ELA USA."""
+    pagina = _PAGINA_PERFIS.read_text(encoding="utf-8")
+    trilho = _TRILHO_DA_PRIORIDADE.search(pagina)
+    assert trilho is not None, (
+        "o trilho `editor.prioridade.escolha` sumiu de `10-perfis.html` — o "
+        "editor perdeu a escala, ou esta régua ficou cega"
     )
-    upper = next(
-        prop for prop in ajuste.iter("property") if prop.get("name") == "upper"
-    )
-    return int(str(upper.text).strip())
+    achado = re.search(rf'{nome}="(\d+)"', trilho.group(0))
+    assert achado is not None, f"o trilho da Prioridade perdeu o atributo {nome}"
+    return int(achado.group(1))
 
 
 class TestUmTetoSo:
@@ -95,30 +109,21 @@ class TestUmTetoSo:
         da_aba = _constante_por_ast(_PROFILES_ACTIONS, "PRIORIDADE_MAXIMA")
         assert da_aba == sanidade.PRIORIDADE_MAXIMA
 
-    def test_o_glade_acompanha_o_verificador(self) -> None:
-        """O terceiro lado do triângulo, fechado pelo XML."""
-        assert _upper_do_glade("profile_priority_adj") == sanidade.PRIORIDADE_MAXIMA
+    def test_a_tela_acompanha_o_verificador(self) -> None:
+        """O terceiro lado do triângulo, fechado pela página publicada."""
+        assert _atributo_do_trilho("max") == sanidade.PRIORIDADE_MAXIMA
 
     def test_os_tres_lugares_dizem_o_mesmo_numero(self) -> None:
         """A asserção da dona, escrita como ela pediu, numa linha só."""
         assert (
             sanidade.PRIORIDADE_MAXIMA
             == _constante_por_ast(_PROFILES_ACTIONS, "PRIORIDADE_MAXIMA")
-            == _upper_do_glade("profile_priority_adj")
+            == _atributo_do_trilho("max")
         )
 
-    def test_o_piso_da_escala_tambem_bate_com_o_glade(self) -> None:
-        """`PRIORIDADE_MINIMA` é o `lower` do mesmo adjustment."""
-        arvore = ElementTree.parse(_GLADE)
-        ajuste = next(
-            obj
-            for obj in arvore.iter("object")
-            if obj.get("id") == "profile_priority_adj"
-        )
-        lower = next(
-            prop for prop in ajuste.iter("property") if prop.get("name") == "lower"
-        )
-        assert int(str(lower.text).strip()) == sanidade.PRIORIDADE_MINIMA
+    def test_o_piso_da_escala_tambem_bate_com_a_tela(self) -> None:
+        """`PRIORIDADE_MINIMA` é o `min` do mesmo trilho."""
+        assert _atributo_do_trilho("min") == sanidade.PRIORIDADE_MINIMA
 
 
 class TestAFonteEDaCamadaMaisBaixa:

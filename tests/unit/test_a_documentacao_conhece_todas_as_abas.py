@@ -62,14 +62,11 @@ from __future__ import annotations
 
 import ast
 import re
-import xml.etree.ElementTree as ET
 from pathlib import Path
 
 import pytest
 
 RAIZ = Path(__file__).resolve().parents[2]
-
-GLADE = RAIZ / "src/hefesto_dualsense4unix/gui/main.glade"
 INTERFACE = RAIZ / "docs/usage/interface.md"
 README = RAIZ / "README.md"
 RETRATO = RAIZ / "scripts/gui-captura/retratar_abas.py"
@@ -83,36 +80,6 @@ MONTA = RAIZ / "src/hefesto_dualsense4unix/interface/monta.py"
 #: A página que descreve as dez. O `interface.md` continua descrevendo as onze
 #: da janela, com a nota datada que o declara registro.
 AS_DEZ = RAIZ / "docs/usage/AS-DEZ-ABAS-o-que-cada-uma-faz.md"
-
-#: O id do `GtkNotebook` da janela principal. É o mesmo que o `app.py` usa; a
-#: janela tem outros notebooks em potencial, e mirar pelo id evita que um deles
-#: entre na conta um dia.
-NOTEBOOK = "main_notebook"
-
-
-def _abas_do_glade() -> list[str]:
-    """Os rótulos das abas, na ordem da tira, lidos do XML.
-
-    Um `<child type="tab">` do notebook é exatamente uma aba — é o contrato do
-    `GtkNotebook`, não uma convenção deste projeto. O rótulo sai da propriedade
-    `label` do `GtkLabel` filho, que é o texto que a pessoa lê na tira.
-    """
-    raiz = ET.parse(GLADE).getroot()
-    for objeto in raiz.iter("object"):
-        if objeto.get("class") != "GtkNotebook" or objeto.get("id") != NOTEBOOK:
-            continue
-        rotulos: list[str] = []
-        for filho in objeto.findall("child"):
-            if filho.get("type") != "tab":
-                continue
-            alvo = filho.find("object")
-            if alvo is None:
-                continue
-            for propriedade in alvo.findall("property"):
-                if propriedade.get("name") == "label" and propriedade.text:
-                    rotulos.append(propriedade.text.strip())
-        return rotulos
-    raise AssertionError(f"notebook {NOTEBOOK} não encontrado em {GLADE}")
 
 
 def _tupla_de_texto(nome: str) -> tuple[str, ...]:
@@ -165,57 +132,8 @@ def _abas_da_interface_nova() -> list[tuple[str, str]]:
 
 
 @pytest.fixture(scope="module")
-def abas() -> list[str]:
-    return _abas_do_glade()
-
-
-@pytest.fixture(scope="module")
 def dez() -> list[tuple[str, str]]:
     return _abas_da_interface_nova()
-
-
-def test_a_lista_de_abas_vem_do_glade_e_nao_de_uma_lista_a_mao(
-    abas: list[str],
-) -> None:
-    """A régua é conferida contra o XML por um caminho independente.
-
-    Este teste não olha documentação nenhuma: ele existe porque o valor dos
-    outros três depende inteiramente de o extrator estar lendo o glade de
-    verdade. Um extrator que devolvesse uma constante deixaria os três verdes
-    para sempre, e é a forma mais fácil de este portão morrer sem ninguém ver.
-
-    A contagem independente é um `re.findall` sobre o texto cru — outra
-    biblioteca, outro caminho, mesmo arquivo.
-    """
-    assert abas, "nenhuma aba lida do glade"
-
-    bruto = GLADE.read_text(encoding="utf-8")
-    trecho = bruto.split(f'id="{NOTEBOOK}"', 1)[1]
-    por_texto = [
-        rotulo
-        for bloco in re.findall(r'<child type="tab">(.*?)</child>', trecho, re.S)
-        for rotulo in re.findall(r'<property name="label"[^>]*>(.*?)</property>', bloco)
-    ]
-    assert abas == por_texto, (
-        "as duas leituras do glade discordam — a régua deste portão não está "
-        f"lendo o XML: ElementTree={abas} contra regex={por_texto}"
-    )
-
-
-def test_toda_aba_do_glade_tem_secao_no_interface(abas: list[str]) -> None:
-    """Cada aba da tira tem um `## <rótulo>` no `interface.md`.
-
-    O título da seção é o rótulo EXATO da tira, e não uma paráfrase: quem abre a
-    janela procura na documentação a palavra que está vendo na tela.
-    """
-    texto = INTERFACE.read_text(encoding="utf-8")
-    titulos = set(re.findall(r"^## (.+)$", texto, re.M))
-    orfas = [aba for aba in abas if aba not in titulos]
-    assert not orfas, (
-        f"abas sem seção no interface.md: {', '.join(orfas)}. "
-        "Uma aba na tira sem seção na documentação é aba invisível para quem "
-        f"não a descobriu sozinho. Títulos presentes: {sorted(titulos)}"
-    )
 
 
 def test_toda_foto_do_retrato_aparece_no_readme() -> None:
