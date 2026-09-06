@@ -168,19 +168,30 @@ def aciona(chave: str, transporte: str) -> str:
 
 
 def _via_do_transporte(transporte: object) -> str:
-    """A palavra curta do transporte — do dono, nunca redigitada.
+    """A SIGLA DE MÁQUINA do transporte — do dono da sigla, nunca redigitada.
 
-    Ausência devolve "" (a tela mostra travessão), jamais uma das duas
-    palavras: afirmar "BT" sobre um campo vazio é a tela inventando o que não
-    leu. Ver o comentário no ponto de uso.
+    Ausência devolve "" (a tela mostra travessão), jamais uma das duas siglas:
+    afirmar "BT" sobre um campo vazio é a tela inventando o que não leu.
 
-    UMA DIFERENÇA QUE SOBRA, declarada: o dono da frase LONGA
-    (`app/actions/home_actions.py:1338`) devolve um transporte desconhecido
-    **cru**, com a razão escrita — *"um transporte novo tem de aparecer na tela
-    para alguém o ver, em vez de ser escondido atrás de uma frase genérica"*.
-    Aqui um valor fora do dicionário também vira travessão. Não há terceiro
-    transporte hoje; no dia em que houver, esta é a linha a reler, e a regra da
-    casa manda seguir o dono.
+    **ELA NÃO É MAIS A PALAVRA DA TELA — ONDA4-S10, 06/09/2026.** A decisão
+    dela (D-05) é *"cabo / rádio, pela função que já existe"*, e a função é a
+    dona da frase longa, em `app/actions/home_actions.py:1407`. Quem escreve na
+    tela pergunta a ELA, com o `transporte` cru que `mesa_do_estado` publica; o
+    que esta função alimenta é a chave `via`, que hoje ainda é COMPARADA por
+    `interface/monta.py:877` e por quatro linhas de
+    `interface/pacotes/a08_conexoes.py` — nenhum dos dois é da posse desta
+    sprint. A razão inteira está no dicionário `pacotes.VIA_DO_TRANSPORTE`.
+
+    O NOME DA DONA NÃO SE SOLETRA NESTE ARQUIVO, e não é preciosismo: o portão
+    da paridade (`docs/data/paridade-gtk-html.csv:18`) vigia a AUSÊNCIA desse
+    símbolo aqui, e em 05/09/2026 um comentário que o soletrou já foi lido como
+    uso. A forma desta casa é citar o ENDEREÇO.
+
+    UMA DIFERENÇA QUE SOBRA, declarada: a dona da PALAVRA devolve um transporte
+    desconhecido **cru**, com a razão escrita — *"um transporte novo tem de
+    aparecer na tela para alguém o ver, em vez de ser escondido atrás de uma
+    frase genérica"*. Aqui um valor fora do dicionário vira travessão, porque a
+    sigla é para o Python comparar e não para a tela mostrar.
     """
     from hefesto_dualsense4unix.interface.pacotes import VIA_DO_TRANSPORTE
 
@@ -389,6 +400,19 @@ def texto_da_contagem(mesa: list[dict[str, Any]]) -> tuple[str, str]:
 
     Devolve as duas metades porque o desenho as separa (a segunda é `<b>`), e
     porque escrever a frase inteira num `textContent` apagaria o `<b>`.
+
+    A FRASE FICA EM `USB`/`BT` POR GRAMÁTICA — decisão dela de 06/09/2026. A
+    palavra que nomeia UM controle virou `cabo`/`rádio` (D-05), e a contagem
+    não acompanha porque *"2 cabo · 0 rádio"* não é português. Ver
+    `docs/A-LINGUA-DESTA-CASA-…`, §1: esta é a única exceção declarada.
+
+    **QUEM CONTA LÊ O TRANSPORTE, NUNCA A PALAVRA** — ONDA4-S10, 06/09/2026.
+    Esta linha somava `c["via"] == "USB"`, e assim a conta ficava presa à
+    palavra: o dia em que a `via` passasse a dizer `cabo`, a tela mostraria
+    `● 2 controles: 0 USB · 2 BT` com os dois no cabo — o número errado, sem
+    erro, sem log e sem uma linha vermelha. `transporte` é a chave CRUA do
+    daemon que `mesa_do_estado` já publica ao lado da palavra; contar por ela
+    é o que faz a palavra poder mudar sem que uma única conta se mexa.
     """
     n = len(mesa)
     # `.get` E NÃO `[...]`: uma mesa pode chegar sem a chave — a de uma régua,
@@ -396,7 +420,7 @@ def texto_da_contagem(mesa: list[dict[str, Any]]) -> tuple[str, str]:
     # Derrubar a contagem por isso derruba a aba INTEIRA, e o que se perde é uma
     # palavra. Medido em 01/09/2026: `KeyError: 'via'` na suíte completa, vindo
     # do pacote da Vibração, que passou a chamar esta função.
-    usb = sum(1 for c in mesa if c.get("via") == "USB")
+    usb = sum(1 for c in mesa if str(c.get("transporte") or "").strip().lower() == "usb")
     bt = n - usb
     palavra = "controle" if n == 1 else "controles"
     return (f"● {n} {palavra}: ", f"{usb} USB · {bt} BT")

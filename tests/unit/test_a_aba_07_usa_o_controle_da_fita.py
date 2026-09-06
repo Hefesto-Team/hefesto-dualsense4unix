@@ -67,6 +67,21 @@ PAGINA = "07-lancadores.html"
 #: rádio em 03/09/2026 — e é o único estado em que o defeito aparece.
 #:
 #: As chaves são as de `mesa_viva.mesa_do_estado`, que é quem monta a mesa viva.
+def _palavra(transporte: str) -> str:
+    """A palavra do transporte PERGUNTADA À DONA — nunca digitada aqui.
+
+    ONDA4-S10, 06/09/2026. Estas asserções diziam `"USB"` e `"BT"`, e por isso
+    reprovaram a decisão dela (D-05: *"cabo / rádio, pela função que já
+    existe"*) em vez do defeito. É a forma que esta casa já pegou onze vezes: a
+    régua DIGITAVA o que devia LER. Com a pergunta à dona, ela continua
+    mordendo o chip que perde o transporte — e passa a morder também o chip que
+    inventa uma palavra que a dona não disse.
+    """
+    from hefesto_dualsense4unix.app.actions.home_actions import palavra_do_transporte
+
+    return palavra_do_transporte(transporte)
+
+
 MESA_COM_UM_SEM_COR = [
     {"pref": "p1", "jogador": 1, "cor": "white", "nome": "White",
      "via": "USB", "transporte": "usb", "alvo": True},
@@ -157,7 +172,7 @@ def test_o_chip_sem_cor_lida_nao_inventa_cor(a07) -> None:
         f"o chip escreveu {a07.SEM_LEITURA_DE_COR!r} na tela. `mesa_do_estado` "
         f"usa esse texto quando o leitor não conhece a peça — ele é a AUSÊNCIA "
         f"de leitura, e a regra dela é não mostrar nada:\n{do_radio}")
-    assert "P2" in do_radio and "BT" in do_radio, (
+    assert "P2" in do_radio and _palavra("bt") in do_radio, (
         f"o chip perdeu o jogador ou o transporte, que a leitura TROUXE. Calar "
         f"sobre o que se sabe é o defeito oposto, e igualmente caro:\n{do_radio}")
 
@@ -171,7 +186,7 @@ def test_o_chip_com_cor_lida_diz_o_modelo(a07) -> None:
     do_cabo = _chips(a07.fita_html(MESA_COM_UM_SEM_COR))[1]
     assert "White" in do_cabo, (
         f"o modelo LIDO do aparelho não chegou ao chip:\n{do_cabo}")
-    assert "P1" in do_cabo and "USB" in do_cabo, (
+    assert "P1" in do_cabo and _palavra("usb") in do_cabo, (
         f"o chip do cabo perdeu o jogador ou o transporte:\n{do_cabo}")
 
 
