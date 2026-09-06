@@ -142,6 +142,12 @@ def _broker_falso(monkeypatch: pytest.MonkeyPatch) -> None:
             def hide(self, node: str) -> None:
                 daemon.hides.append(node)
 
+            def restore(self, node: str) -> None:
+                # BORDA-DE-QUEDA-01/E2: o dublê tem de saber gravar as DUAS
+                # formas de restaurar — senão a asserção `restores == 0` daria
+                # verde por AttributeError engolido, e não por ninguém expor.
+                daemon.restores += 1
+
             def restore_all(self) -> None:
                 daemon.restores += 1
 

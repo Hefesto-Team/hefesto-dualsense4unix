@@ -232,9 +232,9 @@ def _set_evdev_grab(daemon: DaemonProtocol, grab: bool) -> None:
 
     Extraído de `_set_controller_grab` (R-06): a exceção de Steam Input por
     appid precisa soltar/retomar o grab SEM passar pela composição
-    grab+broker do caller (lá o `restore_all` do broker é chamado com
-    `grab=False`, o que é o que queremos ao ENTRAR na exceção mas não ao SAIR
-    dela). Nunca propaga exceção: em FAKE mode / sem device / sem suporte, o
+    grab+broker do caller (lá o `restore` do broker é chamado com `grab=False`
+    sobre o nó do P1 — E2 —, o que é o que queremos ao ENTRAR na exceção mas
+    não ao SAIR dela). Nunca propaga exceção: em FAKE mode / sem device, o
     gamepad ainda funciona. Falha de EVIOCGRAB deixa de ser silenciosa
     (BUG-COOP-GRAB-SILENT-FAIL-01): loga warning e conta no store — a
     GUI/doctor podem apontar "input dobrado".
@@ -288,7 +288,7 @@ def _broker_sync_grab(daemon: DaemonProtocol, grab: bool) -> None:
     emulação segue — o invariante "duplicado > zero controles" proíbe que
     qualquer falha aqui derrube start/stop. Gates: backend com `hidraw_path`
     (só o pydualsense — FakeController do smoke fica fora) e, no hide, fora
-    do Modo Nativo. O restore NÃO tem gate de modo: expor nunca é errado.
+    do Modo Nativo. O restore (nó do P1, E2) não tem gate: expor nunca é errado.
 
     Achados Onda S #6/#10: a operação do broker (I/O de socket, até ~4 s com
     broker lento) vai via `broker_call_nonblocking` — os setters de IPC
@@ -322,8 +322,8 @@ def _broker_sync_grab(daemon: DaemonProtocol, grab: bool) -> None:
             node = hidraw_fn()
             if isinstance(node, str) and node:
                 broker_call_nonblocking(daemon, lambda: client.hide(node))
-        else:
-            broker_call_nonblocking(daemon, client.restore_all)
+        elif isinstance(node := hidraw_fn(), str) and node:  # E2: o nó do P1
+            broker_call_nonblocking(daemon, lambda: client.restore(node))
 
 
 #: GRAB-DOBRADO-01: de quantas em quantas tentativas FALHADAS o journal repete

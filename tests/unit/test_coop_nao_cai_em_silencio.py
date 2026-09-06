@@ -137,7 +137,9 @@ def sem_disco_nem_broker(monkeypatch: pytest.MonkeyPatch) -> None:
     import hefesto_dualsense4unix.utils.session as session
 
     monkeypatch.setattr(bc, "broker_client_for", lambda daemon: SimpleNamespace(
-        hide=lambda node: None, restore_all=lambda: None
+        hide=lambda node: None,
+        restore=lambda node: None,
+        restore_all=lambda: None,
     ))
     monkeypatch.setattr(bc, "broker_call_nonblocking", lambda daemon, fn: fn())
     monkeypatch.setattr(gp, "_materialize_launch_env", lambda daemon: None)
