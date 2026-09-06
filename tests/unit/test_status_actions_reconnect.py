@@ -233,7 +233,19 @@ def test_initial_poll_fallback_pinta_header_quando_nenhum_poll_sucedeu(
     # renomeou a aba ("Daemon" → "Sistema") e o botão ("Iniciar" → "Ligar o
     # Hefesto"); o header aponta para os nomes que existem na tela.
     assert "aba Sistema" in header.markup
-    assert "Ligar o Hefesto" in header.markup
+    #
+    # E O NOME DO BOTÃO MUDOU DE NOVO — 06/09/2026, VIBRACAO-O-QUE-SOBROU-01.
+    # *"Ligar o Hefesto"* deixou de existir quando a interface nova passou a
+    # ser a única tela: medido varrendo o texto de todo `<button>` das dez
+    # páginas publicadas, a aba Sistema oferece "Reiniciar o serviço",
+    # "Parar o serviço" e "Retomar" — e nenhuma página tem "Ligar o Hefesto".
+    # A régua exigia o nome que sumiu, que é a forma desta casa de *"a régua
+    # media o mundo de ontem"*.  # (noqa-acento: verbo medir, imperfeito)
+    # Ela mantinha a frase impossível verde e teria reprovado a cura. Quem
+    # confere que o rótulo existe de VERDADE é
+    # `tests/unit/test_a_vibracao_nao_manda_num_botao_que_nao_existe.py`, que
+    # pergunta às páginas em vez de decorar.
+    assert "Reiniciar o serviço" in header.markup
     assert "#ff5555" in header.markup
     assert host._reconnect_state == "offline"
     daemon_label = host.builder.get_object("status_daemon")
