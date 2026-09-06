@@ -2100,6 +2100,22 @@ def _so_abriu_o_seletor(o: dict[str, Any]) -> bool:
             and str(o.get("evento") or "").lower() == "click")
 
 
+def _o_dono_da_frase() -> Any:
+    """`LightbarActionsMixin`, importado TARDE — e a demora é obrigatória.
+
+    Ele mora em `app/actions/`, que arrasta o GTK no `import`; um `import` no
+    topo deste módulo poria a janela estável dentro do processo da interface
+    nova, que é o oposto do que esta pasta existe para fazer. Os quatro pontos
+    que precisam do dono (os três degraus do `_Janela` e a frase do desfecho)
+    passam por aqui em vez de repetir a linha de `import` quatro vezes.
+    """
+    from hefesto_dualsense4unix.app.actions.lightbar_actions import (
+        LightbarActionsMixin,
+    )
+
+    return LightbarActionsMixin
+
+
 class _Janela:
     """O "host" mínimo que `app/textos_de_aplicacao.py` sabe interrogar.
 
@@ -2133,23 +2149,45 @@ class _Janela:
     __slots__ = ("_alvo_de_edicao", "_coop_ligado", "_edit_target_label",
                  "_edit_target_uniq", "_modo_nativo_ligado", "_target_uniq_by_index")
 
-    def _quantos_recebem_o_desenho(self) -> int:
-        """ZERO, e o zero é um FATO desta aba — não um valor de conveniência.
+    def _edit_uniq(self) -> Any:
+        """O alvo de edição — EMPRESTADO do dono, não reescrito aqui.
 
-        É o único degrau que `lightbar_actions._msg_do_desenho` pede além dos
-        seis campos acima, e ele existe lá para o aviso *"o mesmo desenho foi
-        para N controles"* do "Todos" da janela GTK. **Esta aba nunca escreve
-        sem `uniq`** — está dito no `_janela_do_desfecho`, e os dois gestos que
-        chegam aqui recusam antes com *"o clique não disse em qual controle"*.
-        Com alvo por controle, a própria GTK devolve 0 nesse método.
-
-        Escrever `0` aqui é declarar a ausência do ramo, e não copiar a regra:
-        a leitura de "Todos" mora em `_edit_uniq`/`_uniqs_conectados`, e nenhum
-        dos dois é alcançado por um caminho que sempre tem alvo. Se um dia esta
-        aba ganhar um "Todos", o lugar de emendar é aqui — e o método some em
-        favor do da GTK, com o mixin emprestando os dois degraus.
+        Primeiro dos dois degraus que `_quantos_recebem_o_desenho` pisa. O
+        método da GTK é uma linha (`alvo_de_edicao(self)`), e é justamente por
+        ser uma linha que ele não se digita de novo: o que ele lê são os
+        atributos que `definir_alvo` já pôs neste objeto, e a regra de qual
+        deles significa "Todos" é do `app/alvo_de_edicao.py`, não desta aba.
         """
-        return 0
+        return _o_dono_da_frase()._edit_uniq(self)
+
+    def _uniqs_conectados(self) -> list[str]:
+        """Os MACs da mesa na ordem do índice — EMPRESTADO do dono (R-14).
+
+        Segundo degrau. Ele lê `_target_uniq_by_index`, que este objeto já
+        carrega desde que a frase da cor existe (`_janela_do_desfecho` o monta
+        do `ctx.conectados`), com a deduplicação e a ordenação por índice que
+        moram na GTK. Reescrevê-las aqui seria a segunda cópia da mesma regra.
+        """
+        return list(_o_dono_da_frase()._uniqs_conectados(self))
+
+    def _quantos_recebem_o_desenho(self) -> int:
+        """Quantos controles este clique atinge — PERGUNTADO ao dono.
+
+        **AQUI HAVIA UM `return 0` CRAVADO, e ele era a segunda cópia da regra
+        pelo avesso.** O zero estava certo como FATO de hoje — todo gesto desta
+        aba leva `uniq`, e com alvo por controle a própria GTK devolve 0 — mas
+        ele era uma AFIRMAÇÃO desta aba sobre uma conta que tem dono. Uma
+        constante não erra junto com o dono quando ele muda; ela simplesmente
+        para de concordar, e o desacordo não aparece em lugar nenhum.
+
+        Agora os dois degraus estão aqui (`_edit_uniq`, `_uniqs_conectados`) e
+        quem conta é `lightbar_actions._quantos_recebem_o_desenho` — o mesmo
+        método, sobre os mesmos dados. **A resposta de hoje continua sendo 0**,
+        e a diferença é que ela passou a ser MEDIDA: no dia em que esta aba
+        ganhar um escopo "Todos" (decisão dela, e está escrita em `aba04.py`,
+        na lista *"Ainda aberto"*), o aviso aparece sem uma linha a mais aqui.
+        """
+        return int(_o_dono_da_frase()._quantos_recebem_o_desenho(self))
 
 
 def _janela_do_desfecho(ctx: Contexto, uniq: str, rotulo: str = "") -> Any:
@@ -3024,7 +3062,7 @@ def _pares_da_troca(ctx: Contexto, uniq: str, n: int) -> list[tuple[str, int]]:
     return pares
 
 
-def _acender_o_numero(ctx: Contexto, p: Any, uniq: str, n: int) -> None:
+def _acender_o_numero(ctx: Contexto, p: Any, uniq: str, n: int) -> str:
     """As cinco lâmpadas SEGUEM o número que ela acabou de escolher.
 
     **A QUEIXA DELA, 04/09/2026:** *"escolha do jogador no iluminação não
@@ -3108,18 +3146,67 @@ def _acender_o_numero(ctx: Contexto, p: Any, uniq: str, n: int) -> None:
                 f"lâmpadas não acompanharam: com o co-op ligado quem as "
                 f"acende é ele, e o Hefesto não respondeu ao pedido de "
                 f"reconciliar os controles. {sem_resposta_do_daemon()}")
-        return
+        return ""
 
+    recado = ""
     for alvo, numero in _pares_da_troca(ctx, uniq, n):
         bits = tuple(player_led_pattern(numero))
         corpo = p.player_leds_set_detalhado(bits, uniq=alvo)
         if corpo is None:
             raise RuntimeError(sem_resposta_do_daemon())
-        _cobrar_a_frase_do_desenho(ctx, alvo, bits, corpo)
+        recado = _cobrar_a_frase_do_desenho(ctx, alvo, bits, corpo) or recado
+    return recado
+
+
+def _o_recado(frase: str) -> dict[str, Any] | None:
+    """A porta do canal verde: `{"recado": …}` quando há frase, `None` quando não.
+
+    UMA SÓ para os quatro gestos de desenho (`luzes`, `desenho-de`,
+    `reenviar-desenho` e `player`), e a razão é a regra desta casa de 05/09:
+    *quando a cura conhece a causa, ela cobre TODOS os chamadores*. Quatro
+    `if frase:` copiados divergiriam no primeiro ajuste, e o primeiro a divergir
+    seria justamente o gesto em que ninguém repara.
+
+    `None` é o silêncio de sempre — e ele não é ausência de resposta: sem frase
+    quem responde é a piscada de 1,5 s do piloto
+    (`hefesto_vivo.MS_DA_PISCADA`), que é o que a `03-Q4` dela decidiu para o
+    desfecho que não tem o que dizer.
+    """
+    return {"recado": frase} if frase else None
+
+
+def _o_aviso_dos_n(janela: Any) -> str:
+    """A frase do dono para o clique que foi para N controles — "" se N < 2.
+
+    **NENHUMA SÍLABA NASCE AQUI.** O texto é
+    `lightbar_actions._AVISO_MESMO_DESENHO_NOS_QUATRO`, o dono único desde a
+    L12 (25/08/2026), e a conta é `_quantos_recebem_o_desenho`, o dono único da
+    conta. Esta função só junta os dois — que é exatamente o que o
+    `_msg_do_desenho` já faz no fim dele.
+
+    **E POR QUE ELA COMPÕE DE NOVO, se a frase do dono já vem com o aviso
+    colado:** ela não é o texto que vai à tela — o que vai à tela é a frase
+    inteira do dono. Ela é a SONDA que responde *"este desfecho carrega o aviso
+    dos N?"*, e é a única pergunta que separa um recibo de um aviso. Sem ela o
+    pacote teria de decidir pela conta sozinho, e no dia em que o dono parasse
+    de colar o aviso o canal verde receberia um recibo comum — uma frase de seis
+    segundos no lugar que existe para contar que o clique pegou em mais de um
+    controle. `_cobrar_a_frase_do_desenho` confere que a sonda está DENTRO da
+    frase antes de devolvê-la, e é essa conferência que faz as duas metades
+    andarem juntas.
+    """
+    quantos = int(janela._quantos_recebem_o_desenho())
+    if quantos < 2:
+        return ""
+    from hefesto_dualsense4unix.app.actions.lightbar_actions import (
+        _AVISO_MESMO_DESENHO_NOS_QUATRO,
+    )
+
+    return str(_AVISO_MESMO_DESENHO_NOS_QUATRO.format(n=quantos))
 
 
 def _cobrar_a_frase_do_desenho(ctx: Contexto, uniq: str,
-                               bits: tuple[bool, ...], corpo: Any) -> None:
+                               bits: tuple[bool, ...], corpo: Any) -> str:
     """Levanta com a frase da GTK quando o desenho NÃO foi para o aparelho.
 
     NADA DE TEXTO NASCE DESTE LADO, e é o mesmo contrato de `_escrever_a_cor`:
@@ -3156,16 +3243,29 @@ def _cobrar_a_frase_do_desenho(ctx: Contexto, uniq: str,
     ESTE CAMINHO SÓ CORRE COM O CO-OP FORA. Com ele ligado, `_acender_o_numero`
     volta antes — e é bom que volte: o ramo do co-op no `_msg_do_desenho`
     responde a mesma frase para os dois corpos, e a comparação ficaria cega.
-    """
-    from hefesto_dualsense4unix.app.actions.lightbar_actions import (
-        LightbarActionsMixin,
-    )
 
+    **E ELE DEVOLVE A FRASE QUANDO ELA TEM AVISO — ILUMINACAO-O-AVISO-DOS-N-01.**
+    A comparação acima é surda para o aviso dos N *por construção*: o
+    `_msg_do_desenho` cola `_AVISO_MESMO_DESENHO_NOS_QUATRO` no fim de **toda**
+    frase que ele compõe quando N ≥ 2 — na do corpo real e na do corpo feliz,
+    porque as duas saem do mesmo método com a mesma `_Janela`. As duas ficam
+    iguais, o `!=` cala, e o aviso morria aqui dentro: o clique teria pegado em
+    N controles e a tela não diria nada. É o defeito que a L12 nomeou —
+    *"nada na tela avisava"* — reaparecendo do lado HTML, um degrau adiante.
+
+    Então o desfecho FELIZ deixa de ser mudo: quem tem aviso devolve a frase
+    inteira do dono, e o chamador a manda ao canal de recado verde (6,0 s,
+    `hefesto_vivo.SEGUNDOS_DO_RECADO_DE_SUCESSO`). Sem aviso a devolução é `""`
+    — o silêncio de antes, e a piscada continua sendo quem responde.
+
+    :return: a frase do dono quando ela carrega o aviso dos N; `""` quando não.
+    """
+    dono = _o_dono_da_frase()
     janela = _janela_do_desfecho(ctx, uniq, _nome_da_coluna(ctx, uniq))
-    descricao = LightbarActionsMixin._descreve_player_leds(bits)
+    descricao = dono._descreve_player_leds(bits)
 
     def diz(qual: Any) -> str:
-        return str(LightbarActionsMixin._msg_do_desenho(
+        return str(dono._msg_do_desenho(
             janela, ok=True, motivo=None, corpo=qual, descricao=descricao,
             feito="atualizado", fazer="atualizar"))
 
@@ -3173,10 +3273,22 @@ def _cobrar_a_frase_do_desenho(ctx: Contexto, uniq: str,
     frase = diz(corpo)
     if frase != feliz:
         raise RuntimeError(frase)
+    aviso = _o_aviso_dos_n(janela)
+    if not aviso:
+        return ""
+    if aviso not in frase:
+        # O DONO PAROU DE COLAR O AVISO e a conta continua dizendo N ≥ 2. Calar
+        # aqui poria um recibo comum no canal que existe para o aviso; mandar a
+        # frase seria prometer um aviso que ela não tem. As duas metades têm de
+        # andar juntas, e quem as separou é quem conserta.
+        raise RuntimeError(
+            f"{frase} (o desenho foi para {janela._quantos_recebem_o_desenho()} "
+            f"controles e a frase do produto não disse isso)")
+    return frase
 
 
 @gesto("04-iluminacao.html", "player")
-def player(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
+def player(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
     """"Dar o Player N a este controle" — o número E as cinco lâmpadas.
 
     NÃO é `identity.renumber`, e a diferença está escrita no
@@ -3194,6 +3306,11 @@ def player(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     controle não vêm com ele. Ver `_acender_o_numero` para o que foi medido na
     mesa dela — inclusive a razão de a cura óbvia (escrever o desenho por
     `uniq`) não funcionar com o co-op ligado.
+
+    :return: `{"recado": …}` quando o desenho pegou em N > 1 controles
+        (ILUMINACAO-O-AVISO-DOS-N-01); `None` no resto. **A troca escrever em
+        DOIS controles não é esse caso** — cada um recebe o desenho do NÚMERO
+        dele, e o aviso do dono fala de um MESMO desenho.
     """
     uniq = _uniq(o)
     try:
@@ -3205,7 +3322,7 @@ def player(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     ok, motivo = p.identity_number_set(uniq, n)
     if not ok:
         raise RuntimeError(motivo or "não consegui trocar o número")
-    _acender_o_numero(ctx, p, uniq, n)
+    return _o_recado(_acender_o_numero(ctx, p, uniq, n))
 
 
 # ---------------------------------------------------------------------------
@@ -3323,7 +3440,7 @@ def _o_coop_recusa(ctx: Contexto) -> None:
 
 
 def _escrever_o_desenho(ctx: Contexto, p: Any, uniq: str,
-                        bits: tuple[bool, ...]) -> None:
+                        bits: tuple[bool, ...]) -> str:
     """O CAMINHO ÚNICO de escrita das cinco luzes — disco e aparelho, nesta ordem.
 
     UM SÓ, pela mesma razão que `_escrever_a_cor` é um só para as quatro portas
@@ -3350,7 +3467,7 @@ def _escrever_o_desenho(ctx: Contexto, p: Any, uniq: str,
     corpo = p.player_leds_set_detalhado(tuple(bits), uniq=uniq)
     if corpo is None:
         raise RuntimeError(sem_resposta_do_daemon())
-    _cobrar_a_frase_do_desenho(ctx, uniq, tuple(bits), corpo)
+    return _cobrar_a_frase_do_desenho(ctx, uniq, tuple(bits), corpo)
 
 
 #: O QUE O CARTÃO DIZ QUANDO O DESENHO VOLTA AO AUTOMÁTICO. Ela conta as duas
@@ -3402,7 +3519,7 @@ def devolver_o_desenho_ao_automatico(ctx: Contexto, p: Any, uniq: str) -> None:
 
 
 @gesto("04-iluminacao.html", GESTO_DA_LAMPADA, grava="save_profile")
-def luzes(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
+def luzes(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
     """Uma das cinco luzes de jogador acende ou apaga — **sem tocar no número**.
 
     É A LINHA `Marcar/desmarcar cada uma das 5 luzes de jogador` do CSV da
@@ -3416,6 +3533,9 @@ def luzes(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
 
     E O NÚMERO NÃO ENTRA: nenhum `identity_number_set` sai daqui. É a diferença
     inteira entre este gesto e o `player`, e é o que a régua desta sprint morde.
+
+    :return: `{"recado": …}` quando o desenho pegou em N > 1 controles
+        (ILUMINACAO-O-AVISO-DOS-N-01); `None` no clique de um controle só.
     """
     uniq = _uniq(o)
     if not uniq:
@@ -3431,7 +3551,7 @@ def luzes(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     dele = ctx.por_uniq(uniq) or {"uniq": uniq}
     bits = list(desenho_de_agora(perfil.ativo(nome), uniq, _numero(ctx, dele)))
     bits[n - 1] = not bits[n - 1]
-    _escrever_o_desenho(ctx, p, uniq, tuple(bits))
+    return _o_recado(_escrever_o_desenho(ctx, p, uniq, tuple(bits)))
 
 
 @gesto("04-iluminacao.html", GESTO_DO_DESENHO_DE, grava="save_profile")
@@ -3450,8 +3570,10 @@ def desenho_de(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | Non
     cópia dela já custou a esta casa quatro botões da GTK pintando o desenho
     antigo sem um único teste vermelho (L9, `aplicar_desenho_do_jogador`).
 
-    :return: `{"recado": …}` só no ramo "nenhuma", que é o único cujo efeito não
-        se vê no próprio botão — o cartão conta que o override saiu.
+    :return: `{"recado": …}` no ramo "nenhuma", que é o único cujo efeito não
+        se vê no próprio botão — o cartão conta que o override saiu —, e no
+        clique que pegou em N controles (`_o_aviso_dos_n`). `None` no resto,
+        que é onde a piscada de 1,5 s responde sozinha.
     """
     from hefesto_dualsense4unix.core.led_control import player_led_pattern
 
@@ -3463,8 +3585,7 @@ def desenho_de(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | Non
         devolver_o_desenho_ao_automatico(ctx, p, uniq)
         return {"recado": _RECADO_DO_DESENHO_AUTOMATICO}
     if qual == TODAS:
-        _escrever_o_desenho(ctx, p, uniq, (True,) * 5)
-        return None
+        return _o_recado(_escrever_o_desenho(ctx, p, uniq, (True,) * 5))
     try:
         n = int(qual)
     except ValueError:
@@ -3473,12 +3594,13 @@ def desenho_de(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | Non
         raise ValueError(
             f"desenho-de: preciso do desenho de um jogador de 1 a 8, de "
             f"{TODAS!r} ou de {NENHUMA!r} (veio {qual!r})")
-    _escrever_o_desenho(ctx, p, uniq, tuple(player_led_pattern(n)))
-    return None
+    return _o_recado(_escrever_o_desenho(ctx, p, uniq,
+                                        tuple(player_led_pattern(n))))
 
 
 @gesto("04-iluminacao.html", GESTO_DO_REENVIO_DO_DESENHO)
-def reenviar_desenho(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
+def reenviar_desenho(ctx: Contexto, o: dict[str, Any],
+                     p: Any) -> dict[str, Any] | None:
     """O indicador das cinco lâmpadas é o botão: o desenho vai ao controle de novo.
 
     O GÊMEO DA CAIXA `#RRGGBB`, e a decisão é a mesma dela ([03], 04/09/2026):
@@ -3498,6 +3620,9 @@ def reenviar_desenho(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     O TRAVESSÃO É RECUSA, como no `reenviar` da cor: numa coluna sem controle o
     molde do lugar sem dono não emite este bloco, e esta guarda é a segunda
     trava — a que vale se alguém alcançar o gesto por outro caminho.
+
+    :return: `{"recado": …}` quando o desenho pegou em N > 1 controles
+        (ILUMINACAO-O-AVISO-DOS-N-01); `None` no clique de um controle só.
     """
     uniq = _uniq(o)
     if not uniq:
@@ -3509,7 +3634,7 @@ def reenviar_desenho(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     corpo = p.player_leds_set_detalhado(bits, uniq=uniq)
     if corpo is None:
         raise RuntimeError(sem_resposta_do_daemon())
-    _cobrar_a_frase_do_desenho(ctx, uniq, bits, corpo)
+    return _o_recado(_cobrar_a_frase_do_desenho(ctx, uniq, bits, corpo))
 
 
 #: O QUE O CARTÃO DIZ DEPOIS DO "Todos no automático". A frase é do PRODUTO e
