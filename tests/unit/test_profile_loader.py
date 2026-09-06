@@ -23,6 +23,30 @@ from hefesto_dualsense4unix.profiles.schema import (
     TriggersConfig,
 )
 
+#: PERFIS-SAO-PERFIS-01 (06/09/2026): o dado de fábrica mora em DUAS casas —
+#: `profiles_default/` (o que a semeadura copia, hoje só o `personalizado`) e
+#: `estilos_de_jogo/` (os oito gêneros, que por decisão dela não são perfil).
+_CASAS_DE_FABRICA = (
+    Path(__file__).resolve().parents[2] / "assets" / "profiles_default",
+    Path(__file__).resolve().parents[2] / "assets" / "estilos_de_jogo",
+)
+
+
+def _asset_de_fabrica(arquivo: str) -> Path | None:
+    """O asset de fábrica pelo nome do arquivo, na casa em que ele estiver.
+
+    O `pytest.skip` que estava nos dois chamadores virou `assert`, e a troca é
+    a lição da casa: pular por ausência de arquivo é verde por AUSÊNCIA DE
+    DADO — os dois testes que mediam `aventura` e `corrida` teriam ficado
+    calados a partir do dia em que os assets mudaram de pasta, sem uma linha
+    vermelha para avisar.
+    """
+    for casa in _CASAS_DE_FABRICA:
+        candidato = casa / arquivo
+        if candidato.exists():
+            return candidato
+    return None
+
 
 @pytest.fixture
 def isolated_profiles_dir(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
@@ -199,10 +223,8 @@ def test_loader_aventura_nested_params(isolated_profiles_dir: Path):
     Após migração, `left` e `right` são MultiPositionFeedback com params
     na forma `list[list[int]]` de 10 sublistas. Loader não levanta.
     """
-    repo_root = Path(__file__).resolve().parents[2]
-    src = repo_root / "assets" / "profiles_default" / "aventura.json"
-    if not src.exists():
-        pytest.skip("aventura.json não encontrado em assets/profiles_default/")
+    src = _asset_de_fabrica("aventura.json")
+    assert src is not None, "aventura.json sumiu das duas casas de fábrica"
     dst = isolated_profiles_dir / "aventura.json"
     dst.write_text(src.read_text(encoding="utf-8"), encoding="utf-8")
 
@@ -219,10 +241,8 @@ def test_loader_aventura_nested_params(isolated_profiles_dir: Path):
 
 def test_loader_corrida_nested_params(isolated_profiles_dir: Path):
     """SCHEMA-MULTI-POSITION-PARAMS-01: corrida.json migra apenas `right`."""
-    repo_root = Path(__file__).resolve().parents[2]
-    src = repo_root / "assets" / "profiles_default" / "corrida.json"
-    if not src.exists():
-        pytest.skip("corrida.json não encontrado em assets/profiles_default/")
+    src = _asset_de_fabrica("corrida.json")
+    assert src is not None, "corrida.json sumiu das duas casas de fábrica"
     dst = isolated_profiles_dir / "corrida.json"
     dst.write_text(src.read_text(encoding="utf-8"), encoding="utf-8")
 
@@ -484,14 +504,11 @@ def test_perfil_com_mapa_invalido_vira_warning_nao_crash(
 
 def test_carrega_perfis_default_do_assets_simulado(isolated_profiles_dir: Path):
     """Mimetiza installer copiando perfis default para profiles_dir."""
-    repo_root = Path(__file__).resolve().parents[2]
-    defaults_dir = repo_root / "assets" / "profiles_default"
-    if not defaults_dir.exists():
-        pytest.skip("assets/profiles_default/ não encontrado")
-
-    for src in defaults_dir.glob("*.json"):
-        dst = isolated_profiles_dir / src.name
-        dst.write_text(src.read_text(encoding="utf-8"), encoding="utf-8")
+    for casa in _CASAS_DE_FABRICA:
+        assert casa.is_dir(), f"uma casa da fábrica sumiu: {casa}"
+        for src in casa.glob("*.json"):
+            dst = isolated_profiles_dir / src.name
+            dst.write_text(src.read_text(encoding="utf-8"), encoding="utf-8")
 
     profiles = load_all_profiles()
     names = sorted(p.name for p in profiles)

@@ -117,6 +117,17 @@ if [[ -d "$HERE/assets/profiles_default" ]]; then
         "$HERE/assets/profiles_default/"*.json
 fi
 
+# PERFIS-SAO-PERFIS-01 (06/09): os oito gêneros saíram de profiles_default para
+# assets/estilos_de_jogo/ — não são perfil, são Estilo de Jogo (decisão dela).
+# Eles NÃO são semeados; o loader lê esta pasta só para comparar antes de tirar
+# da lista um gênero já semeado. Sem a cópia, a migração recua por não ter com
+# o que comparar e as oito linhas ficam na aba Perfis.
+if [[ -d "$HERE/assets/estilos_de_jogo" ]]; then
+    install -Dm644 -t \
+        "$APPDIR/usr/share/hefesto-dualsense4unix/assets/estilos_de_jogo/" \
+        "$HERE/assets/estilos_de_jogo/"*.json
+fi
+
 # OS CINCO SCRIPTS QUE O PRODUTO EXECUTA (25/08/2026, BG-04). Até aqui só o
 # .deb os levava (build_deb.sh:234): quem instalava por AppImage apertava
 # "Deixar tudo pronto" ou o botão do microfone e recebia "Script do WirePlumber
