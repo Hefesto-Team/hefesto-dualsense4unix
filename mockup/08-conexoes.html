@@ -2431,11 +2431,51 @@
         <span class="conta" data-campo="conta-gestao" data-hef-alvo="html">2 controles <span class="pt">•</span> 1 no cabo <span class="pt">•</span> 1 no rádio</span>
       </div>
       <div class="quadro-corpo">
-        <input type="radio" name="gc" id="gc-todos" class="gc-r">
-        <input type="radio" name="gc" id="gc-p1" class="gc-r" checked>
-        <input type="radio" name="gc" id="gc-p2" class="gc-r">
-        <input type="radio" name="gc" id="gc-p3" class="gc-r">
-        <input type="radio" name="gc" id="gc-p4" class="gc-r">
+        <!-- O ACORDEÃO PASSOU A SER LIDO DE VOLTA — 06/09/2026,
+             `CONEXOES-LIGAR-TUDO-01`. Os 5 rádios são o alvo de
+             saída do daemon (`output_target_index`), e até hoje o `checked`
+             ficava onde o desenho o pôs: ela clicava "só este" no P2, o daemon
+             obedecia, e no tique seguinte a tela continuava apontando o P1.
+
+             UM ENDEREÇO, AS DUAS METADES DA QUEIXA. O destaque da FITA do topo
+             não vem do `.on` que o piloto escreve — vem das regras
+             `body:has(#gc-…:checked) .fita .chip:nth-child(n)` geradas logo
+             acima —, então marcar o rádio certo move o acordeão e a fita
+             juntos.
+
+             O ALVO É `marcado`, o décimo do pintor (decisão dela em 04/09,
+             `PINTOR-MARCADO-01`): dos nove anteriores, `valor` escreve
+             `el.value`, que num `<input type=radio>` é a string `"on"` e não o
+             estado. A LISTA vem na ordem do DOM — `todos` primeiro, depois um
+             por lugar —, que é como o piloto distribui uma lista pelos
+             elementos de mesmo `data-campo`. -->
+        <input type="radio" name="gc" id="gc-todos" class="gc-r"
+               data-campo="alvo-aberto" data-hef-alvo="marcado">
+        <input type="radio" name="gc" id="gc-p1" class="gc-r"
+               data-campo="alvo-aberto" data-hef-alvo="marcado" checked>
+        <input type="radio" name="gc" id="gc-p2" class="gc-r"
+               data-campo="alvo-aberto" data-hef-alvo="marcado">
+        <input type="radio" name="gc" id="gc-p3" class="gc-r"
+               data-campo="alvo-aberto" data-hef-alvo="marcado">
+        <input type="radio" name="gc" id="gc-p4" class="gc-r"
+               data-campo="alvo-aberto" data-hef-alvo="marcado">
+        <!-- OS DOIS AVISOS QUE A CASA SABIA E ESTA TELA NÃO DIZIA —
+             06/09/2026. Os dois têm dono no produto e zero leitor no HTML até
+             hoje:
+
+               · `status_actions.texto_de_controle_nao_adotado` — *"está ligado
+                 e não chegou até aqui"*, com o que o produto tenta sozinho, em
+                 quanto tempo, e a saída manual. O defeito que ele cura (dois
+                 DualSense ligados e a janela mostrando um, sem uma pista do
+                 porquê) voltava inteiro no HTML;
+               · `home_actions.texto_native_bt_fragil` — o Modo Nativo com o
+                 controle no rádio, COM OS NÚMEROS de quem está frágil.
+
+             ELES SÃO LINHA DE RESSALVA (a D-02 dela) e por isso entram os dois
+             sem custar altura: em repouso `.ressalva:has(.nada)` mede ZERO —
+             que é o estado desta bancada e o desta máquina hoje. -->
+        <div class="ressalva" data-campo="sem-driver" data-hef-alvo="html"><i class="nada"></i></div>
+        <div class="ressalva" data-campo="radio-fragil" data-hef-alvo="html"><i class="nada"></i></div>
         <div class="gc">
           <div class="gc-item gc-p1" data-controle="p1">
             <i class="gc-cor" data-campo="plastico" data-hef-alvo="cor" style="color:#ae335a"></i>
@@ -3168,6 +3208,24 @@
                   <td class="mudo">Intel AX211</td>
                   <td>Interno <span class="mudo">· M.2</span></td></tr>
             </table>
+            <!-- O QUE A TABELA LEVANTA E NÃO RESPONDE — 06/09/2026. A coluna
+                 "Onde está" escreve "Em hub" linha a linha e **nunca compara as
+                 linhas entre si**; quem compara é
+                 `censo_do_barramento.hub_em_comum`, que sobe a cadeia em vez de
+                 olhar o pai, e a frase é de `secao_mesa._frase_do_hub_em_comum`
+                 — fato, por quê e, só quando há para onde mandar, conselho.
+                 A GTK costurou isso em 26/08 justamente por ser a casa sabendo
+                 e o produto não fazendo; no HTML ele tinha voltado ao estado
+                 anterior.
+
+                 E AS CONTAGENS DO GABINETE, logo abaixo, na MESMA ordem da
+                 janela estável: o que o firmware conta e o que o kernel conta,
+                 LADO A LADO, e a pergunta que só ela responde. O produto
+                 **não escolhe** entre os dois números — escolher desenharia um
+                 gabinete que ninguém tem, e ela procuraria na traseira buracos
+                 que o mapa não mostra. Sem `gabinete.json`, silêncio. -->
+            <div class="ressalva" data-campo="hub-em-comum" data-hef-alvo="html"><i class="nada"></i></div>
+            <div class="ressalva" data-campo="gabinete-contagens" data-hef-alvo="html"><i class="nada"></i></div>
             <div class="acoes empurra">
               <a class="btn" href="#mapear-entradas" title="Abre o desenho do seu gabinete e numera as entradas. É lá que ficam as duas perguntas que só você pode responder: a altura do dongle e se tem gente entre ele e o sofá.">Mapear Entradas</a>
               <button class="btn" data-gesto="examinar-portas" title="Refaz o exame das entradas — energia e rádio — e repinta os selos, as linhas e as ordens de serviço do Check-up.">Examinar Portas</button>
@@ -3240,7 +3298,7 @@
         <div class="pista">
           <span class="quem" title="TP-Link UB500 — Entrada 3">Sala</span>
           <span class="trilho" title="Folgada — 276,7 das 1.600 turnos (17%). As três palavras são do produto (integrations/radio_da_mesa.py) e falam só de OCUPAÇÃO: rádio cheio tem volta, basta tirar um controle daqui.">
-            <span class="bloco usa" style="width:16.27%;background:#7eb8d4;color:var(--app-bg)" title="Starlight Blue — 260,4 turnos de entrada">P2 · 260,4</span><span class="bloco mic" style="width:1.02%" title="Microfone do Player 2 pelo rádio — +16,3 turnos"></span><span class="bloco vaga" style="width:17.29%" title="Se o Cosmic Red do Player 1 — hoje no USB — viesse para este rádio com o microfone ligado: +276,7 turnos.">+1 · 553,4</span>
+            <span class="bloco usa" style="width:16.27%;background:#7eb8d4;color:var(--app-bg)" title="Starlight Blue — 260,4 turnos de entrada">P2 · 260,4</span><span class="bloco mic" style="width:1.02%" title="Microfone do Player 2 pelo rádio — +16,3 turnos"></span><span class="bloco vaga" style="width:17.29%" title="Se o Cosmic Red do Player 1 — hoje no cabo — viesse para este rádio com o microfone ligado: +276,7 turnos.">+1 · 553,4</span>
           </span>
           <span class="num">276,7 <i>de 1.600</i></span>
         </div>
@@ -3256,7 +3314,7 @@
           </div>
 
           <div class="leg">
-            <span><i style="background:#7eb8d4"></i>P2 <span class="pt">•</span> Starlight Blue <span class="pt">•</span> BT — 260,4</span>
+            <span><i style="background:#7eb8d4"></i>P2 <span class="pt">•</span> Starlight Blue <span class="pt">•</span> rádio — 260,4</span>
             <span><i style="background:var(--orange)"></i>O microfone de cada um — +16,3</span>
             <span><i class="vaga"></i>Cada controle do cabo, se viesse — +276,7</span>
           </div>
