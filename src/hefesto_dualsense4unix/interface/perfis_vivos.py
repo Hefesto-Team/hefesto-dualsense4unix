@@ -73,10 +73,18 @@ sys.path.insert(0, str(AQUI))
 
 import mesa_viva  # noqa: E402
 import monta  # noqa: E402  (o gerador do mockup, usado como BIBLIOTECA)
+import onde  # noqa: E402  (o dono das duas pastas: bancada e publicado)
 
 import aba10  # noqa: E402  isort:skip
 
-PAGINA = AQUI.parent / "10-perfis.html"
+# O DONO DA PASTA RESPONDE, e o caminho não se soletra — 06/09/2026, costura da
+# ONDA C. Aqui estava `AQUI.parent / "10-perfis.html"`, que era certo enquanto
+# esta bancada morava em `layout/_ferramentas/` e apontava para
+# `hefesto_dualsense4unix/10-perfis.html` desde a mudança para `src/`: um
+# arquivo que não existe. É o gêmeo do defeito que a `ONDA5-07-03` achou na
+# `jogar_vivo.py`, e as duas apagavam o mesmo jeito — "ERRO DE CARGA",
+# `voltas: 0` e `rc=0`.
+PAGINA = onde.PUBLICADO / "10-perfis.html"
 TITULO_ESPERADO = "Hefesto — aba PERFIS"
 
 #: O tique desta aba. A Controles lê o `state_full` a 10 Hz porque desenha
@@ -622,9 +630,21 @@ def main() -> int:
                    help="pergunta o perfil ativo e a mesa ao daemon mesmo com --duble")
     args = p.parse_args()
 
+    if not PAGINA.exists():
+        print(f"ERRO: a página desta aba não está em {PAGINA}", file=sys.stderr)
+        return 2
+
     j = Janela(args)
     Gtk.main()
     print("\n" + j.relato())
+
+    # UMA BANCADA QUE NÃO DEU UMA VOLTA NÃO MEDIU NADA, E NÃO SAI VERDE — a
+    # mesma guarda que a `jogar_vivo.main` ganhou na `ONDA5-07-03`, pelo mesmo
+    # defeito. O `--sem-ponte` é a exceção e é a MORDIDA: ele desliga a pintura
+    # de propósito, e zero volta ali é o resultado esperado.
+    if j.voltas == 0 and not args.sem_ponte:
+        print("ERRO: a bancada não deu uma volta — nada foi medido.", file=sys.stderr)
+        return 1
     return 0
 
 
