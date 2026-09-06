@@ -1260,7 +1260,7 @@ def test_o_hertz_da_linha_e_medido_e_nunca_cravado() -> None:
         f"zero não é medida, é ausência: {zero!r}")
 
 
-def test_a_linha_da_verdade_continua_FORA_do_cartao() -> None:
+def test_a_linha_da_verdade_continua_fora_do_cartao() -> None:
     """A decisão dela de 17/08/2026, e esta régua é o que a segura.
 
     *"remover guia dos status em tempo real"* — `resumo_do_que_chega_ao_jogo`
@@ -1455,8 +1455,9 @@ def test_a_frase_mais_larga_do_dono_cabe_em_uma_linha(
 
     **AS DUAS PRIMEIRAS VERSÕES DESTA RÉGUA NÃO MEDIRAM NADA**, e o registro
     fica porque a forma se repetiu: a primeira olhava a ALTURA DA FAIXA e a
-    DIREITA DA CAIXA, e as duas são seguradas por outra coisa — o `flex:0 0 var(--h-acao)` da faixa é
-    altura fixa, e o `min-width:0` já impede o transbordo lateral. Com o
+    DIREITA DA CAIXA, e as duas são seguradas por outra coisa — o
+    `flex:0 0 var(--h-acao)` da faixa é altura fixa, e o `min-width:0` já impede
+    o transbordo lateral. Com o
     `ellipsis` e o `nowrap` ARRANCADOS ela passou verde. O que quebra de verdade
     é o texto virar DUAS LINHAS num cabeçalho de uma: medido, 14px → 28px.
 
