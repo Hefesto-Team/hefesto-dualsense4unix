@@ -924,20 +924,33 @@ CSS = """
      comum segue na folha das dez (`monta.CSS_FOLHA`), intacta para as outras
      abas. */
 
-  /* ---------- A NOTA DO TESTAR — decisão [02] dela, 04/09/2026 ----------
-     *"Só a nota do Testar sobe para a tela. A do Auto fica no `?`."*
+  /* ---------- A `.vib-nota` SAIU — 05-Q2 dela, 05/09/2026 ----------
+     *"As duas na dica."*
 
-     ELA É A ÚNICA FRASE DESTA ABA QUE EXPLICA UM RESULTADO QUE A PRÓPRIA TELA
-     PRODUZ: por que um "Testar" com 220 sai fraco quando o degrau está em
-     Economia. Na janela estável ela é um rótulo em itálico, permanente, no
-     rodapé do card de testar (`rumble_info`, no `gui/main.glade`) — e é DE LÁ
-     que ela é lida, nunca redigitada (:data:`DICA_DOS_VALORES_QUE_PASSAM`).
+     A REGRA DA NOTA MORREU JUNTO COM A LINHA QUE ELA VESTIA. O que ela
+     pintava — a frase :data:`DICA_DOS_VALORES_QUE_PASSAM` como linha
+     permanente embaixo da grade — voltou para o `?` do "Testar agora".
 
-     O ITÁLICO E O TOM APAGADO SÃO OS DA JANELA ESTÁVEL, onde ela é
-     `<i>…</i>` em cor de comentário. Atravessa as cinco colunas porque é sobre
-     a tabela inteira, não sobre uma delas. */
-  .vib-nota{font-size:11.5px;line-height:1.5;color:var(--comment);
-            font-style:italic;margin:4px 4px 0}
+     AS DUAS METADES DA RAZÃO DE 04/09, e só uma caducou:
+
+     · **"a frase é LIDA do glade e nunca redigitada"** — VALE, e vale para
+       sempre. É ela que evitou a segunda cópia de um texto de tela, e o
+       endereço da leitura continua em :data:`DICA_DOS_VALORES_QUE_PASSAM`.
+     · **"ela sobe para a tela"** — CADUCOU em 05/09/2026, decisão dela na
+       05-Q2. A atribuição *"decisão [02] dela, 04/09/2026"* que esta aba
+       carregava em quatro lugares era do PO, não dela: a fonte real é a
+       `ONDA2-05-VIBRACAO-01`, que decidiu no lugar dela a partir do
+       `2026-09-04-O-PO-DECIDE-as-54-e-os-sete-conflitos.md`. Hoje ela
+       respondeu a pergunta, e **a palavra dela vence a atribuição**.
+
+     O CUSTO QUE ELA ACEITOU, e estava escrito na opção que ela escolheu: quem
+     testar em Economia com as barras em 220 não descobre NA TELA por que o
+     tremor saiu fraco — descobre passando o rato no `?`. Ela leu isso e
+     escolheu assim mesmo.
+
+     NÃO SOBRA CSS: a regra `.vib-nota` era a única a usar esta classe, e folha
+     para elemento que a página não tem é a segunda cara de um dado morto — a
+     mesma lição das quatro regras da `.vib .ressalva`, logo acima. */
 """
 
 # ---------------------------------------------------------------------------
@@ -1707,15 +1720,36 @@ MIOLO = f'''
               <span class="ajuda">?<span class="dica">
                 <b>{DIR["nome"]}</b> ({DIR["apelido"]}). {DIR["nota"]}
               </span></span></span></div>
+            <!-- A DICA DESTE `?` ABRE PARA A DIREITA, e o número é medido — 06/09/2026.
+                 Ela carregava `style="left:auto;right:22px"`, que é o arranjo das
+                 dicas que moram do lado DIREITO da página (`.at-col:last-child` na
+                 06, `.col-acao` na 09). Este `?` mora na PRIMEIRA coluna da grade,
+                 a dos rótulos: com `right:22px` a caixa de 330 px nascia em x=146
+                 numa janela que começa em x=370 — **224 px, dois terços dela,
+                 fora da janela**, medidos no Chrome a 1920x1080.
+                 Estava assim antes desta sprint e a página publicada ainda está:
+                 com as duas orações do par a caixa tinha 72 px de altura e o corte
+                 já comia o texto. A 05-Q2 dela põe a terceira frase aqui dentro,
+                 e uma dica que não se lê não cumpre *"as duas na dica"*.
+                 O padrão da casa (`.dica`, com `left:22px` no `topo.html`) abre para a
+                 direita e cabe: x=505, fim em 835, dentro de 370..1550. -->
             <div><span class="sec-rot">Testar agora
-              <span class="ajuda" style="display:inline-block;vertical-align:-3px">?<span class="dica" style="left:auto;right:22px">
+              <span class="ajuda" style="display:inline-block;vertical-align:-3px">?<span class="dica">
                 <b>Testar</b> faz aquele controle tremer meio segundo com os valores das
                 barras daquela coluna; <b>Parar</b> corta a vibração dele agora e devolve
-                a mão ao jogo.
-                <!-- A NOTA DOS VALORES QUE PASSAM SAIU DAQUI e virou linha de
-                     tela — decisão [02] dela, 04/09/2026. Mantê-la nos dois
-                     lugares seria a mesma frase duas vezes na MESMA tela, que é
-                     a forma mais barata de as duas divergirem. Ver `.vib-nota`. -->
+                a mão ao jogo.<br><br>
+                <!-- A NOTA DOS VALORES QUE PASSAM VOLTOU PARA CÁ — 05-Q2 dela,
+                     05/09/2026: *"As duas na dica."* Ela é a única frase desta
+                     aba que explica um resultado que a PRÓPRIA TELA produz (por
+                     que um "Testar" com 220 sai fraco quando o degrau está em
+                     Economia), e por isso mora no `?` do "Testar agora", ao
+                     lado das duas orações do par.
+
+                     E ELA CONTINUA LIDA DO `gui/main.glade`, nunca redigitada
+                     (`DICA_DOS_VALORES_QUE_PASSAM`) — essa metade da razão de
+                     04/09 não caducou. Uma vez só na página: a régua 16 do
+                     gerador conta. -->
+                {DICA_DOS_VALORES_QUE_PASSAM}
               </span></span></span></div>
             <!-- O RÓTULO "Estado" SAIU EM 05/09/2026, com a faixa inteira —
                  ver `SEM_A_FAIXA_DE_ESTADO`. O `?` dele terminava confessando
@@ -1725,10 +1759,12 @@ MIOLO = f'''
 {"".join(_coluna(c) if c.get("conectado", True) else _coluna_vazia(c) for c in MESA)}
 
         </div>
-        <!-- A NOTA DO TESTAR, na tela — decisão [02] dela, 04/09/2026. A frase é
-             lida do `gui/main.glade` (ver `DICA_DOS_VALORES_QUE_PASSAM`), e é a
-             mesma que a janela estável mostra em itálico no rodapé do card. -->
-        <div class="vib-nota">{DICA_DOS_VALORES_QUE_PASSAM}</div>
+        <!-- A NOTA DO TESTAR SAIU DA TELA e voltou para o `?` do "Testar agora"
+             — 05-Q2 dela, 05/09/2026: *"As duas na dica."* A linha permanente
+             que morava aqui era decisão do PO atribuída a ela em 04/09; hoje
+             ela respondeu a pergunta. A frase continua LIDA do
+             `gui/main.glade`, que é a metade da razão que não caducou. A regra
+             `.vib-nota` morreu junto, no `<style>` desta aba. -->
         <!-- A LINHA DO ESTADO — 02/09/2026. Ela existe na janela estável desde
              sempre e NÃO existia aqui: a tela nova tinha os dois motores, os
              quatro degraus e o "Testar", e nenhuma palavra sobre o que acontece
@@ -2042,11 +2078,39 @@ def _conferir(doc):
     exigir(doc.count("var(--r-motor) var(--r-motor) var(--r-acoes);") == 1,
            "a grade da aba 05 deixou de terminar no `--r-acoes` — a oitava "
            "faixa saiu em 05/09/2026 e a `grid-template-rows` foi junto")
-    # 16. A NOTA DO TESTAR ESTÁ NA TELA — decisão [02] dela, e uma vez só: ela
-    #     saiu do `?` para não ficar escrita duas vezes na mesma tela.
-    exigir(f'class="vib-nota">{DICA_DOS_VALORES_QUE_PASSAM}' in corpo,
-           "a nota do Testar não é linha de tela — a decisão [02] dela é `só a "
-           "nota do Testar sobe`")
+    # 16. A NOTA DO TESTAR MORA NA DICA — 05-Q2 dela, 05/09/2026: *"As duas na
+    #     dica."* São dois `exigir`, e METADE desta régua inverteu enquanto a
+    #     outra metade não mudou uma letra:
+    #
+    #     · o PRIMEIRO exigia `class="vib-nota">` — a linha permanente na tela,
+    #       decisão do PO atribuída a ela em 04/09. Ele inverteu: agora cobra a
+    #       frase DENTRO do `?` do "Testar agora";
+    #     · o SEGUNDO (`count == 1`) é a metade que NÃO TEM LADO. Ele proíbe a
+    #       frase de existir em dois lugares, seja qual for o lugar escolhido:
+    #       era ele que impedia o `?` e a linha ao mesmo tempo em 04/09, e é ele
+    #       que impede o inverso agora. Por isso fica byte a byte como estava.
+    #
+    #     O ENDEREÇO É A CÉLULA, não a página: perguntar `frase in corpo` daria
+    #     verde com a frase em QUALQUER canto da aba — inclusive de volta na
+    #     linha embaixo da grade, que é exatamente o que esta régua passou a
+    #     proibir. O corte é o rótulo, e o `<span class="dica"` dentro dele.
+    _apos_o_rotulo = corpo.split('<span class="sec-rot">Testar agora', 1)
+    exigir(len(_apos_o_rotulo) == 2,
+           'o rótulo "Testar agora" saiu da coluna de rótulos — sem ele não há '
+           "onde a dica morar")
+    _celula = _apos_o_rotulo[-1].split("</div>", 1)[0]
+    _dica_do_testar = _celula.split('<span class="dica"', 1)[-1] if '<span class="dica"' in _celula else ""
+    exigir(DICA_DOS_VALORES_QUE_PASSAM in _dica_do_testar,
+           'a nota do Testar não está no `?` do "Testar agora" — a 05-Q2 dela é '
+           '*"As duas na dica"*')
+    # E ELA TEM DE CABER NA JANELA — 06/09/2026, medido no Chrome a 1920x1080.
+    # `left:auto;right:22px` é o arranjo das dicas do lado DIREITO da página;
+    # neste `?`, que mora na primeira coluna da grade, ele punha 224 dos 330 px
+    # da caixa FORA da janela. Guardar a frase num lugar que a janela corta é
+    # não guardar a frase.
+    exigir("left:auto" not in _celula,
+           'a dica do "Testar agora" voltou a abrir para a ESQUERDA — na '
+           "primeira coluna da grade isso joga 224 px dela para fora da janela")
     exigir(corpo.count(DICA_DOS_VALORES_QUE_PASSAM) == 1,
            "a nota do Testar aparece mais de uma vez na mesma tela")
     for _rot, chave in FORCA:
