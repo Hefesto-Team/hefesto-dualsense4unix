@@ -2371,6 +2371,20 @@ def _params_da_curva(modo_: str, curva: list[int]) -> list[int]:
     return fora
 
 
+#: O SEPARADOR DAS DUAS METADES DE UMA FRASE DESTA ABA. Ele é uma constante
+#: porque é `PONTO` sem a marcação — o recado do cartão é texto, não HTML
+#: (`hefesto_vivo.pintar_recados` escreve `textContent`), e um `<span>` ali
+#: apareceria escrito na tela dela.
+#:
+#: **DOIS DONOS, E O SEGUNDO É A D-17** (06/09/2026): o `reenviar` soma com ele
+#: os desfechos dos DOIS gatilhos da coluna, e o `_aplicar` soma o recibo do
+#: aparelho com o que o DISCO não guardou — *o aparelho recebeu · o perfil não
+#: guardou*. Ele subiu de junto do `reenviar` para cá quando ganhou o segundo:
+#: uma constante lida acima do primeiro chamador é uma constante que o leitor
+#: de `_aplicar` não precisa caçar.
+_E_TAMBEM = " · "
+
+
 def _aplicar(p: Any, lado: str, modo_: str, params: list[int],
              uniq: str, ctx: Contexto | None = None,
              guardar: bool = True) -> tuple[bool, str, str]:
@@ -2402,6 +2416,16 @@ def _aplicar(p: Any, lado: str, modo_: str, params: list[int],
     SUCESSO daquele envio, e ela sai daqui porque é aqui que o CORPO do daemon
     existe: montá-la nos quatro chamadores seria o quarto que esquece, que é o
     mesmo argumento pelo qual o rascunho já mora nesta função.
+
+    **E O RECIBO PASSOU A DIZER AS DUAS METADES — 06/09/2026, a decisão D-17**
+    (`docs/process/sprints/2026-09-05-AS-DUAS-ABAS-FALAM-01-*.md`). Quando o
+    efeito FOI para o aparelho e o DISCO não recebeu, a terceira casa sai como
+    *«… aplicado · o efeito FOI para o aparelho, mas não consegui ABRIR o
+    perfil …»*, somada pelo :data:`_E_TAMBEM`. Ela continua sendo a frase de
+    SUCESSO — o canal é o `{"recado": …}` do verde de 6 s, e não o `RuntimeError`
+    do laranja de 30 s, porque um gesto que fez o que prometeu no aparelho **não
+    é recusa**. É a mesma escolha que `a06_navegacao._guardar_no_perfil` já
+    tinha feito, com a razão escrita lá.
 
     E ELE PASSOU A GRAVAR NO PERFIL — 05/09/2026, a **decisão D2**
     (`docs/process/2026-09-05-AS-TRES-DECISOES-DO-PERFIL-medidas-e-decididas.md`):
@@ -2437,18 +2461,32 @@ def _aplicar(p: Any, lado: str, modo_: str, params: list[int],
     else:
         ok, motivo, corpo = _desfecho(
             p.trigger_set_detalhado(lado, modo_, params, uniq=uniq))
+    nao_guardou = ""
     if ok and _chegou_ao_aparelho(corpo):
         _lembrar_o_aplicado(str((ctx.state if ctx else {}).get("active_profile") or ""),
                             uniq, lado, {"mode": modo_, "params": params})
         if guardar:
-            _guardar_no_perfil(ctx, p, uniq, lado, {"mode": modo_, "params": params})
+            nao_guardou = _guardar_no_perfil(ctx, p, uniq, lado,
+                                             {"mode": modo_, "params": params})
     ok, motivo = _conferir_o_desfecho(lado, modo_, ok, motivo, corpo, ctx, uniq)
-    return ok, motivo, _recibo(lado, modo_, corpo, ctx, uniq)
+    recibo = _recibo(lado, modo_, corpo, ctx, uniq)
+    if nao_guardou:
+        # A SEGUNDA METADE VEM DEPOIS DO RECIBO, NUNCA ANTES — a frase tem de
+        # abrir pelo que ela FEZ. E a soma mora aqui, e não nos três gestos:
+        # somada em cada um, o quarto chamador é o que esquece.
+        recibo = _E_TAMBEM.join((recibo, nao_guardou))
+    return ok, motivo, recibo
 
 
 def _guardar_no_perfil(ctx: Contexto | None, p: Any, uniq: str, disco: str,
-                       cfg: dict[str, Any]) -> None:
+                       cfg: dict[str, Any]) -> str:
     """Grava no perfil ATIVO o gatilho que acabou de chegar ao aparelho.
+
+    :return: `""` quando gravou — e também quando não havia o que gravar, ou
+        quando não há perfil ativo. A frase do que NÃO deu quando havia perfil
+        NOMEADO e o arquivo não abriu. É a mesma assinatura de
+        `a06_navegacao._guardar_no_perfil`, e usar a mesma não é gosto: são os
+        dois únicos escritores de perfil por clique que não podem levantar.
 
     **SÓ O LADO QUE ELA TOCOU.** :func:`_com_os_gatilhos` recebe um dicionário
     de um item só, e o esquema faz o resto: `model_fields_set` decide o que é
@@ -2458,19 +2496,37 @@ def _guardar_no_perfil(ctx: Contexto | None, p: Any, uniq: str, disco: str,
     explícito no R2 e silenciaria o gatilho direito que o perfil dava a todo
     mundo — um efeito dela apagado por um clique no outro lado.
 
-    **NÃO ABRIU O PERFIL, NÃO GRAVA — E NÃO LEVANTA.** São dois casos e a
-    resposta é a mesma: não há `active_profile` (o `guardar` já explica esse na
-    frase dele), ou o nome que o daemon publica não existe para ESTE leitor. O
-    segundo não é hipótese: as réguas desta aba rodam com `active_profile` de
-    mentira, e na máquina dela o daemon pode nomear um perfil que a pasta lida
-    aqui não tem (apagado, renomeado, outra pasta). Nos dois, o gatilho FOI
-    para o aparelho e o `_RASCUNHO` o segura na tela — levantar diria "não deu"
-    sobre um efeito que ela está sentindo na mão.
+    **NÃO ABRIU O PERFIL, NÃO GRAVA — E NÃO LEVANTA.** São dois casos: não há
+    `active_profile` (o `guardar` já explica esse na frase dele), ou o nome que
+    o daemon publica não existe para ESTE leitor. O segundo não é hipótese: as
+    réguas desta aba rodam com `active_profile` de mentira, e na máquina dela o
+    daemon pode nomear um perfil que a pasta lida aqui não tem (apagado,
+    renomeado, outra pasta). Nos dois, o gatilho FOI para o aparelho e o
+    `_RASCUNHO` o segura na tela — levantar diria "não deu" sobre um efeito que
+    ela está sentindo na mão. **Esta metade vale, e é ela que escolhe o CANAL:**
+    o do `{"recado": …}` verde, nunca o do `RuntimeError` laranja.
+
+    **NÃO ABRIU O PERFIL, NÃO FALA — CADUCOU EM 05/09/2026, decisão D-17**
+    (*"as duas abas falam"*, dela). Até aqui esta função sumia neste ramo, e o
+    argumento acima era usado para as duas coisas — mas ele é verdadeiro sobre
+    o CANAL e falso sobre o SILÊNCIO. **A frase não diz "não deu": diz as duas
+    metades** — *o aparelho recebeu · o perfil não guardou* —, e é o ramo irmão
+    logo abaixo que já a escrevia. E o caso que justificava o silêncio é
+    justamente o caso em que ela precisa saber: perfil apagado, renomeado ou
+    noutra pasta quer dizer que **cada gatilho ajustado a partir dali morre na
+    próxima troca de perfil**, com o produto SABENDO e não dizendo.
 
     **MAS A GRAVAÇÃO QUE FALHA FALA.** Perfil aberto e escrita recusada é a
     promessa de amanhã que não se cumpre — o defeito exato que a decisão D2 veio
     matar. A frase diz as duas metades: o aparelho recebeu, o perfil não
     guardou. Sem isso, ela descobriria a perda no dia seguinte, longe do clique.
+
+    **E ELA AINDA FALA PELO CANAL DA RECUSA — declarado, não esquecido.** Os
+    dois ramos desta função dizem as duas metades desde a D-17, mas por canais
+    diferentes: o de ABRIR devolve frase (verde de 6 s) e o de GRAVAR levanta
+    `RuntimeError` (laranja de 30 s). Alinhá-los é outra sprint, e ela precisa
+    das réguas do outro ramo relidas uma a uma — a mesma divergência que a
+    §5 da D-17 mede entre a aba 02 e a aba 06 e deixa declarada.
 
     O CAMINHO DE DISCO É O DO `guardar` — :func:`_gravar_so_o_gatilho`, e não
     `perfil.gravar_e_reaplicar`. A razão está medida lá: reaplicar o perfil
@@ -2478,11 +2534,13 @@ def _guardar_no_perfil(ctx: Contexto | None, p: Any, uniq: str, disco: str,
     """
     nome = str((getattr(ctx, "state", None) or {}).get("active_profile") or "").strip()
     if not nome:
-        return
+        return ""
     try:
         prof = perfil._com_o_src().load_profile(nome)
     except Exception:
-        return
+        return (f"o efeito FOI para o aparelho, mas não consegui ABRIR o perfil "
+                f"{nome!r} para guardá-lo. Ele vale até a próxima troca de perfil "
+                f"— no dia seguinte o gatilho volta a ser o de antes.")
     try:
         novo = _com_os_gatilhos(prof, uniq, {disco: cfg})
         if novo is not None:
@@ -2492,6 +2550,11 @@ def _guardar_no_perfil(ctx: Contexto | None, p: Any, uniq: str, disco: str,
             f"o efeito FOI para o aparelho, mas não consegui guardá-lo no "
             f"perfil {nome!r}: {erro}. Ele vale até a próxima troca de perfil — "
             f"no dia seguinte o gatilho volta a ser o de antes.") from erro
+    # GRAVOU (ou não havia o que gravar): NADA A DIZER. A tela responde com a
+    # piscada verde de ~1,5 s, que é "deu certo" SEM palavra nova — a decisão
+    # dela na `03-Q4`. O `""` é a forma dessa escolha, e é a mesma de
+    # `a06_navegacao._guardar_no_perfil`.
+    return ""
 
 
 #: OS DOIS CAMPOS EM QUE O DAEMON DIZ ONDE A ESCRITA FOI PARAR. O vocabulário é
@@ -2917,13 +2980,6 @@ def ajuste(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
         raise RuntimeError(_na_lingua_da_tela(motivo, modo_)
                            or f"o daemon não aplicou o ajuste no modo {modo_!r}")
     return {"recado": recibo}
-
-
-#: O SEPARADOR DAS DUAS METADES DO RECIBO DO REENVIO. Ele é uma constante
-#: porque é `PONTO` sem a marcação — o recado do cartão é texto, não HTML
-#: (`hefesto_vivo.pintar_recados` escreve `textContent`), e um `<span>` ali
-#: apareceria escrito na tela dela.
-_E_TAMBEM = " · "
 
 
 @gesto("03-gatilhos.html", "reenviar")
