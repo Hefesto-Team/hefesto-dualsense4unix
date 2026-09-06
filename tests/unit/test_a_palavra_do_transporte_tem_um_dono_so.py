@@ -188,15 +188,22 @@ def test_o_gerador_nao_escreve_a_bancada_como_efeito_de_import() -> None:
     docstring, que *"importar `aba05` REESCREVE a bancada dela como efeito de
     um `import`, e uma régua não mexe no que mede"*.
 
-    A MORDIDA: tire o `if __name__ == "__main__":` de `aba04.py` ou `aba05.py` e
-    esta régua reprova nomeando o arquivo.
+    A MORDIDA: tire o `if __name__ == "__main__":` de qualquer arquivo de
+    `CURADOS` e esta régua reprova nomeando o arquivo.
     """
     import pathlib as _pl
     import re as _re
 
+    #: OS GERADORES JÁ CURADOS. Lista explícita, e não um glob: `aba03`,
+    #: `aba06`..`aba09` ainda escrevem no nível do módulo, e um `aba*.py` os
+    #: reprovaria sem que ninguém tivesse decidido curá-los. Acrescentar um nome
+    #: aqui é um ato que se vê no diff — que é o oposto de um glob que passa a
+    #: cobrar (ou a deixar de cobrar) sozinho.
+    CURADOS = ("aba01.py", "aba02.py", "aba04.py", "aba05.py", "aba10.py")
     raiz = _pl.Path(__file__).resolve().parents[2]
     faltam = []
-    for arq in sorted((raiz / "src/hefesto_dualsense4unix/interface").glob("aba0[45].py")):
+    for nome in CURADOS:
+        arq = raiz / "src/hefesto_dualsense4unix/interface" / nome
         texto = arq.read_text(encoding="utf-8")
         if not _re.search(r'^if __name__ == "__main__":$', texto, _re.M):
             faltam.append(arq.name)

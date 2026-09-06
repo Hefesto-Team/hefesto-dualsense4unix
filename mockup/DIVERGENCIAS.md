@@ -53,6 +53,52 @@ seção daqui**: a aba deixou de estar em trabalho.
   **O que fecha:** `scripts/check_o_desenho_aprovado.py --publicar 10`, no OK
   dela da aba. Nada mais espera por isto.
 
+- **06/09/2026** — **UM RÓTULO NOVO à direita do campo "Nome do Jogo"**, a
+  decisão **10-Q4** dela: *"Rótulo ao lado, ao vivo — à direita do campo aparece
+  o nome do jogo enquanto você digita, ou «não está nesta máquina», ou «não
+  reconheci este endereço»."* Ela recusou a opção que o produto tinha construído
+  em 04/09 (a resposta só na tira, depois do `change`), e a escolha ACRESCENTA:
+  o campo continua se corrigindo sozinho.
+
+  **Por que a sprint não publicou:** publicar é ato dela, e aqui a mudança é
+  VISÍVEL — nascem três `<span>` dentro do `.val` de um campo e o `<input>`
+  encolhe de 324px para até 125px.
+
+  **O que ela vê HOJE, até publicar:** a aba Perfis de ontem — o campo do jogo
+  sem rótulo nenhum ao lado. Os dois endereços novos (`editor.jogo.rotulo` e
+  `editor.jogo.alerta`) saem do pacote a cada tique e caem no vazio na página
+  publicada; estão declarados em `a10_perfis.ESPERANDO_A_PUBLICACAO`, e duas
+  réguas cobram a declaração nos dois sentidos. **Nada regride enquanto ela
+  espera** — medido: `--conta-mutacoes 100` na publicada dá 0 mutações e 35
+  valores, o mesmo de antes.
+
+  **O que ela ganha ao publicar**, medido no Chrome com o `BOOTSTRAP` do piloto
+  sobre a bancada:
+
+  | o que está no campo | o rótulo diz | cor |
+  | --- | --- | --- |
+  | `1245620` (jogo instalado) | `ELDEN RING` | cinza |
+  | `999999` (jogo que ela ainda vai comprar) | `Não instalado aqui (o número vale).` | cinza |
+  | `store.steampowered.com/app/` | `Não reconheci este endereço.` | **laranja** |
+  | `mk1.exe` (perfil por programa) | *(o rótulo some)* | — |
+
+  **A METADE QUE NÃO VEM JUNTO:** o *"ao vivo"* tecla a tecla depende de uma
+  QUARTA porta de escuta no piloto (`hefesto_vivo.py`), que é da ONDA0-P. Até
+  ela existir, o rótulo acerta em todo tique em que ela **não** está digitando —
+  ao abrir o perfil, ao trocar de perfil, e um tique depois do `change`. A
+  guarda dessa porta já nasceu: `_so_mudou` virou lista de PERMITIDOS, e o
+  `input` nasce barrado.
+
+  **E A TIRA PASSOU A DIZER A METADE CURTA** (10-Q5). A fronteira que isso move
+  foi medida, e não é a que a sprint supunha: a tira comporta **413 caracteres**
+  (bissecção no Chrome) e nenhuma das duas frases passa disso sozinha — quem
+  estoura é o NÚMERO DE JOGOS, porque a lista não tem teto. A forma longa cabe
+  até DOIS jogos; a curta, até CINCO. A janela GTK e o cartão da Steam continuam
+  com a frase inteira, com régua cobrando.
+
+  **O que fecha:** `scripts/check_o_desenho_aprovado.py --publicar 10`, no OK
+  dela da aba — junto com a sexta opção do "Funciona em", que já espera aqui.
+
 ## 02-controles.html
 
 - **05/09/2026** — **UMA LINHA DE COMENTÁRIO CSS, sem um pixel de diferença.**
