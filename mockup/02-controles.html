@@ -1029,6 +1029,26 @@
   .bat .trilho{flex:1;height:6px;border-radius:3px;background:var(--border-forte);position:relative}
   .bat .cheio{position:absolute;left:0;top:0;bottom:0;border-radius:3px;background:var(--purple)}
   .bat .n{font-family:'JetBrains Mono',monospace;color:var(--fg);flex:0 0 42px;text-align:right}
+  /* O ÍCONE DO ESTADO DE CARGA — BATERIA-ICONE-01, 06/09/2026. Ver
+     `selo_da_carga` para as duas metades da decisão dela.
+
+     O VÃO É FIXO E EXISTE SEMPRE (`flex:0 0 13px`), com ou sem ícone: o `.bat`
+     tem base fixa (`var(--larg-bateria)`) e o trilho é o `flex:1` que absorve o
+     resto, então um ícone que só às vezes ocupasse deixaria as barras de
+     bateria com larguras DIFERENTES entre as linhas — que é exatamente o
+     defeito que ela mandou curar em 27/08, quando 31% desenhava mais que 64%.
+     Assim as quatro continuam comparáveis, com ou sem carga a anunciar.
+
+     AS TRÊS FORMAS FICAM NO HTML E DUAS SE ESCONDEM. Sem `data-carga` — que é
+     o que o piloto escreve quando não há estado — nenhuma regra casa e o vão
+     fica vazio: o silêncio é a resposta certa para `descarregando`, onde o
+     número ao lado já diz tudo. */
+  .bat .carga{flex:0 0 13px;height:13px;display:flex;align-items:center;
+              justify-content:center}
+  .bat .carga-i{display:flex;align-items:center;justify-content:center;
+                width:13px;height:13px}
+  .bat .carga-i svg{display:none}
+  .ctl[data-conectado="nao"] .bat .carga-i svg{display:none !important}
   /* A LINHA DE IDENTIDADE É UMA SÓ, E AGORA É UM ELEMENTO SÓ. `.faixa` é a
      linha do card aberto E a tira do fechado: o que muda entre as duas é a
      CAIXA, nunca o conteúdo. Card e tira não podem discordar sobre quem é o
@@ -1670,6 +1690,10 @@
   .sensores-peca .sw.off{border-color:var(--border-forte);background:var(--app-bg);color:var(--texto-mudo)}
   .sensores-peca .sw.off .p{background:var(--border-forte);box-shadow:none}
 
+  .bat .carga-i[data-carga="Carregando"] .g-raio{display:block;color:var(--green)}
+  .bat .carga-i[data-carga="Cheio"] .g-cheio{display:block;color:var(--green)}
+  .bat .carga-i[data-carga="Fora de faixa"] .g-atencao{display:block;color:var(--orange)}
+  .bat .carga-i[data-carga="Erro de carga"] .g-atencao{display:block;color:var(--orange)}
   .faixa{--larg-bateria:240px}
   .ctl:has(> input:checked),
   body:has(#c-todos:checked) .ctl{height:auto;flex:1 0 auto;padding-bottom:12px;
@@ -2054,7 +2078,7 @@
           <span class="bat">Bateria
             <span class="trilho"><span class="cheio" data-campo="bateria-barra"
               data-hef-alvo="largura" style="width:100%"></span></span>
-            <span class="n" data-campo="bateria">100%</span></span>
+            <span class="n" data-campo="bateria">100%</span><span class="carga" data-campo="bateria-carga" data-hef-alvo="atributo" data-hef-atributo="title" title="Cheio"><i class="carga-i" data-campo="bateria-carga" data-hef-alvo="atributo" data-hef-atributo="data-carga" data-carga="Cheio"><svg class="g-raio" viewBox="0 0 24 24" width="11" height="11" aria-hidden="true" focusable="false"><path d="M13 2 4 14h6l-1 8 9-12h-6z" fill="currentColor"/></svg><svg class="g-cheio" viewBox="0 0 24 24" width="11" height="11" aria-hidden="true" focusable="false"><path d="M4 12.5 9.5 18 20 6.5" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg><svg class="g-atencao" viewBox="0 0 24 24" width="11" height="11" aria-hidden="true" focusable="false"><path d="M12 3 22 20H2z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M12 9.5v4.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><circle cx="12" cy="17" r="1.15" fill="currentColor"/></svg></i></span></span>
       </label>
       <div class="corpo-cx">
       <div class="card-corpo">
@@ -2496,7 +2520,7 @@
           <span class="bat">Bateria
             <span class="trilho"><span class="cheio" data-campo="bateria-barra"
               data-hef-alvo="largura" style="width:64%"></span></span>
-            <span class="n" data-campo="bateria">64%</span></span>
+            <span class="n" data-campo="bateria">64%</span><span class="carga" data-campo="bateria-carga" data-hef-alvo="atributo" data-hef-atributo="title" title="Carregando"><i class="carga-i" data-campo="bateria-carga" data-hef-alvo="atributo" data-hef-atributo="data-carga" data-carga="Carregando"><svg class="g-raio" viewBox="0 0 24 24" width="11" height="11" aria-hidden="true" focusable="false"><path d="M13 2 4 14h6l-1 8 9-12h-6z" fill="currentColor"/></svg><svg class="g-cheio" viewBox="0 0 24 24" width="11" height="11" aria-hidden="true" focusable="false"><path d="M4 12.5 9.5 18 20 6.5" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg><svg class="g-atencao" viewBox="0 0 24 24" width="11" height="11" aria-hidden="true" focusable="false"><path d="M12 3 22 20H2z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M12 9.5v4.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><circle cx="12" cy="17" r="1.15" fill="currentColor"/></svg></i></span></span>
       </label>
       <div class="corpo-cx">
       <div class="card-corpo">
@@ -2978,6 +3002,7 @@
     <li><b>E o preço, dito inteiro:</b> nesse estado o P1 aparece todo, o P2 aparece pela metade (141 px dos 301) e o <b>P3 e o P4 começam com zero pixel à mostra</b>. O que diz que eles estão ali são três coisas, e as três estão na tela: o chip <b>Todos</b> aceso, o <span class="marca">4 controles</span> do cabeçalho e a <b>barra de rolagem</b>, que nasce junto com a rolagem e ocupa 10 px. Foi por isso que a barra precisou de regra própria — a do Chrome é sobreposta e some quando ninguém está rolando, e aí seria o defeito de 27/08 de volta com outra roupa.</li>
     <li><b>2×2 foi medido e é pior.</b> Meio card tem 515 px de largura útil para cinco colunas que pedem 884; viraria três fileiras e cada card passaria a ~545 px de altura — aí só <b>um</b> aparece de cada vez.</li>
     <li><b>O corpo fechado não pode ser <code>display:none</code>, e o motivo é a régua.</b> Ela lê a altura de todo botão e reprova família com alturas divergentes; com <code>display:none</code> os dois botões de rota de cada card fechado medem <b>0</b>, e ela acusa <span class="marca">altura divergente em button.-: 0 / 36</span> — um defeito que só existiria porque o elemento sumiu. Com <code>height:0;overflow:hidden</code> o corpo continua <b>desenhado</b> no tamanho natural e só recortado: a régua segue medindo os <b>4</b> cards por dentro, não só o que está à mostra. Ela ficou mais severa, não menos.</li>
+    <li><b>O estado de carga virou ícone, e o ícone não pergunta por onde o controle fala.</b> Você decidiu assim: <i>"icone mas no radio ele pode tá carregando tambem"</i>. O <b>P2 está no rádio e aparece carregando</b> — porque o transporte diz por onde o controle <i>conversa</i> e a carga diz por onde entra <i>energia</i>, e um DualSense no rádio pode estar num cabo de energia. <b>Descarregando não ganha ícone</b>: o número ao lado já diz. O vão do ícone fica reservado mesmo vazio, senão as 4 barras voltariam a ter larguras diferentes. Passe o mouse: o nome do estado está no ponteiro, para quem não reconhecer o desenho.</li>
     <li><b>As 4 barras de bateria têm a mesma largura, e isso é leitura e não capricho.</b> Elas <i>esticavam</i> para ocupar o vão de cada linha, e os trilhos mediram <b>312, 60, 35 e 139 px</b>. O preenchimento é uma porcentagem do trilho: o <b>31%</b> do P3 num trilho de 35 px desenhava uma barra <b>menor</b> que o <b>64%</b> do P2 num de 60 — quatro réguas de tamanhos diferentes que o olho compara e lê errado. Agora são <b>240 px</b> nas 4, e a mais apertada (a do P3) tem 13,7 px de folga.</li>
     <li><b>A conta é um portão.</b> Se um dia entrar mais controle a ponto de o card aberto não caber, o gerador <b>para</b> com o número na mão, em vez de entregar de novo uma tela que esconde controle calada.</li>
     <li><b>Cicatriz: a classe não pode se chamar <code>tira</code>.</b> <code>.tira</code> é a <b>fila de abas</b> do esqueleto (<code>topo.html:109</code>). Com a regra deste arquivo batizada assim, <code>height:34px</code> e <code>text-transform:uppercase</code> caíam na fila de abas lá em cima: o cabeçalho encolheu 8 px e o miolo desta aba mediu <b>550 px contra os 542 de todas as outras nove</b> — e a régua de alinhamento passou <b>verde</b>. A classe se chama <code>.ctl</code>.</li>
