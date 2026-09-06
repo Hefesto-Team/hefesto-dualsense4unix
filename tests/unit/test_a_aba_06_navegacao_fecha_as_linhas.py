@@ -165,6 +165,26 @@ def test_a_folha_apaga_o_interruptor_pela_propria_linha():
 # ---------------------------------------------------------------------------
 # [02] AS TRÊS REGIÕES DO TOUCHPAD — ficam, com a marca
 # ---------------------------------------------------------------------------
+def _botao_da_linha(tr: str) -> str:
+    """Qual botão aquela `<tr>` endereça — `""` quando ela não endereça nenhum.
+
+    SÃO TRÊS FORMAS, e as três são endereço de verdade nesta aba: `data-linha`
+    (as 22 listas das duas telas de botões), `data-campo="acao-<botão>"` (as
+    mesmas 22, do outro lado) e `data-campo="tecla-<botão>"` (os oito campos de
+    texto da tela "Teclas do teclado", nascida em 06/09/2026). Perguntar só ao
+    `data-linha` faria toda régua daqui ficar CEGA para a tela nova — e cega dá
+    verde.
+    """
+    from pacotes.a06_navegacao import PREFIXO_DA_ACAO, PREFIXO_DA_TECLA
+
+    alvo = re.search(r'data-linha="([^"]+)"', tr)
+    if alvo:
+        return alvo.group(1)
+    prefixos = "|".join(re.escape(p) for p in (PREFIXO_DA_ACAO, PREFIXO_DA_TECLA))
+    campo = re.search(f'data-campo="(?:{prefixos})([^"]+)"', tr)
+    return campo.group(1) if campo else ""
+
+
 def test_a_marca_esta_nas_tres_regioes_do_touchpad_e_so_nelas():
     """A marca acompanha as três linhas do touchpad, e nenhuma outra.
 
@@ -172,9 +192,15 @@ def test_a_marca_esta_nas_tres_regioes_do_touchpad_e_so_nelas():
     digitadas: uma lista à mão aqui envelheceria no dia em que uma quarta
     região nascesse, e a régua daria verde sobre a linha nova sem marca.
 
-    SEIS OCORRÊNCIAS E NÃO TRÊS: a primeira coluna é a MESMA nas duas telas de
-    botões (Definições e Remapeamento) — é a segunda metade do pedido dela de
-    28/08, e o que muda de uma para a outra é a segunda coluna.
+    A CONTA DEIXOU DE SER `2 vezes` — 06/09/2026, NAVEGACAO-TECLAS-01. Ela dizia
+    *"seis ocorrências e não três: a primeira coluna é a MESMA nas duas telas de
+    botões (Definições e Remapeamento)"* — verdade enquanto as telas eram duas.
+    A tela **Teclas do teclado** nasceu com uma linha por região do touchpad, e
+    a marca foi junto porque a marca é VERDADE lá também: o touchpad continua
+    sendo o ponteiro do sistema, e a tecla escrita naquela linha não dispara.
+    A régua reprovou a MELHORA — a forma de defeito que esta casa já pagou onze
+    vezes em 26/08 —, e a cura é a de sempre: **PERGUNTAR À PÁGINA quantas
+    linhas de região existem**, em vez de digitar quantas telas há.
 
     A MORDIDA: tire o `+ MARCA_DO_TOUCHPAD` de uma das três linhas de `BOTOES`
     — este caso reprova com a conta errada.
@@ -182,10 +208,40 @@ def test_a_marca_esta_nas_tres_regioes_do_touchpad_e_so_nelas():
     from hefesto_dualsense4unix.app.actions.input_actions import REGIOES_DO_TOUCHPAD
 
     doc = _bancada()
-    quantas = doc.count('class="marca-nao-dispara"')
-    assert quantas == 2 * len(REGIOES_DO_TOUCHPAD), (
-        f"achei {quantas} marca(s) e as duas telas de botões pedem "
-        f"{2 * len(REGIOES_DO_TOUCHPAD)} — uma por região do touchpad em cada.")
+    # A CONTA É POR CÉLULA, e ela se descobre sozinha. A primeira coluna é a
+    # MESMA em toda tela que lista botões — o gerador cola a marca no rótulo
+    # dentro de `BOTOES`, então cada região aparece como uma célula IDÊNTICA em
+    # cada tela. Três células distintas com a marca, e as três com a mesma
+    # contagem: é isso que diz "nenhuma região ficou para trás", sem digitar
+    # quantas telas existem hoje.
+    celulas = re.findall(r'<td class="b">(.*?)</td>', doc, re.S)
+    com_marca = [c for c in celulas if "marca-nao-dispara" in c]
+    distintas = set(com_marca)
+    assert len(distintas) == len(REGIOES_DO_TOUCHPAD), (
+        f"achei {len(distintas)} célula(s) distinta(s) com a marca e as regiões "
+        f"do touchpad são {len(REGIOES_DO_TOUCHPAD)} — ou uma perdeu a marca, "
+        "ou a marca foi parar numa linha que não é região.")
+    contas = {c: com_marca.count(c) for c in distintas}
+    assert len(set(contas.values())) == 1, (
+        f"as três regiões não aparecem o mesmo número de vezes ({sorted(contas.values())}) "
+        "— uma delas ficou sem a marca em alguma das telas que listam botões.")
+    assert min(contas.values()) >= 2, (
+        f"cada região aparece {min(contas.values())} vez(es) com a marca — as "
+        "duas telas de botões existem desde 28/08 e a primeira coluna é a mesma "
+        "nas duas.")
+    # E CADA LINHA ENDEREÇADA DE REGIÃO TEM A SUA. A tela de Remapeamento não
+    # endereça as linhas dela (o Guardar de lá não tem dono no produto), então
+    # esta metade cobre as que endereçam — e é ela que pega a marca posta na
+    # tela certa e na LINHA errada, que a contagem sozinha não vê.
+    de_regiao = [tr for tr in re.findall(r"<tr>(.*?)</tr>", doc, re.S)
+                 if _botao_da_linha(tr) in REGIOES_DO_TOUCHPAD]
+    assert de_regiao, (
+        "não achei UMA linha de região do touchpad no desenho — as três "
+        "ficaram, com a marca, por decisão do PO de 04/09/2026.")
+    for tr in de_regiao:
+        assert "marca-nao-dispara" in tr, (
+            f"a linha de {_botao_da_linha(tr)} ficou sem a marca — a tela volta "
+            f"a PROMETER um clique que o produto não dispara.")
     # E ELA NÃO PROMETE: a marca diz que a região NÃO dispara. Uma marca que
     # dissesse o contrário seria pior que nenhuma.
     assert "não dispara" in doc
@@ -595,6 +651,18 @@ def test_o_guardar_nomeia_os_atalhos_que_param_de_valer(aba, disco):
     continua MOSTRANDO os dois campos, como se os dois valessem, e o efeito de
     `key_bindings` morre na próxima ativação.
 
+    **O BOTÃO DESTA RÉGUA MUDOU DE `r1` PARA `cross` — 06/09/2026**, e a troca é
+    a prova de que o defeito ENCOLHEU em vez de sumir. O `r1` está no
+    `DOMINIO_DO_TECLADO` e, desde a `ONDA3-MOTOR-01` (o `resolver()` que herda
+    `key_bindings`) somada à `NAVEGACAO-TECLAS-01` (o chamador que passa o
+    campo), o atalho dele **sobrevive** ao Guardar: com o `r1` esta régua passou
+    a exigir um recado sobre uma perda que não acontece mais, e reprovava com
+    `DID NOT RAISE`. O `cross` está FORA do domínio — `key_bindings` não manda
+    nele, o `apply_button_actions` reescreve o teclado inteiro sem consultá-lo,
+    e ali a perda continua real. **Os dois lados são cobrados**: este caso e o
+    `test_o_atalho_do_dominio_sobrevive_ao_guardar` em
+    `test_a_06_a_tecla_livre_chega_ao_perfil.py`.
+
     A MORDIDA: tire o ramo `if perdidos` do `guardar_definicoes` — este caso
     reprova dizendo que o gesto gravou e calou.
     """
@@ -602,9 +670,12 @@ def test_o_guardar_nomeia_os_atalhos_que_param_de_valer(aba, disco):
     from hefesto_dualsense4unix.app.actions.input_actions import humanize_button
     from hefesto_dualsense4unix.core import acoes_de_botao as acoes
 
+    assert "cross" not in acoes.DOMINIO_DO_TECLADO, (
+        "o `cross` entrou no domínio de `key_bindings`: esta régua mede a perda "
+        "que só existe FORA dele, e passou a medir outra coisa.")
     estado, gravados = disco
     estado["regua"] = _PerfilDeMentira(
-        "regua", key_bindings={"r1": ["KEY_LEFTCTRL", "KEY_W"]})
+        "regua", key_bindings={"cross": ["KEY_LEFTCTRL", "KEY_W"]})
     ctx = pacotes.Contexto(state=NO_DESKTOP, mesa=MESA, conectados=[FALSO],
                            estados={})
     forma = {b: acoes.rotulo(a) for b, a in acoes.padrao().items()}
@@ -613,7 +684,7 @@ def test_o_guardar_nomeia_os_atalhos_que_param_de_valer(aba, disco):
     with pytest.raises(RuntimeError) as caiu:
         aba.guardar_definicoes(ctx, {"forma": forma}, _PonteMuda())
     assert len(gravados) == 1, "gravou o quê? o recado não pode custar a gravação"
-    assert humanize_button("r1") in str(caiu.value), str(caiu.value)
+    assert humanize_button("cross") in str(caiu.value), str(caiu.value)
 
 
 # ---------------------------------------------------------------------------

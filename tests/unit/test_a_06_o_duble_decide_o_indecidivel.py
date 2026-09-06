@@ -302,6 +302,27 @@ def _opcoes_da_pagina(publicado: bool, chave: str) -> set[str] | None:
 _TRILHO = r'<input[^>]*type="range"[^>]*data-campo="{}"[^>]*>'
 
 
+#: O CAMPO DE TEXTO É O TERCEIRO, e a régua acima só sabia perguntar a listas e
+#: a barras. Nasceu em 06/09/2026, com a `NAVEGACAO-TECLAS-01`: a tela
+#: "Teclas do teclado" tem oito `<input type="text">` com `data-hef-alvo="valor"`,
+#: e ali **qualquer string cabe** — o `escrever()` do piloto faz `el.value = t`
+#: sem lista a consultar e sem faixa a aparar. A pergunta que sobra é a que a
+#: régua já fazia às outras duas formas: *este endereço EXISTE na página?*
+#:
+#: AFROUXAR SERIA PULAR TODO CAMPO SEM `<select>`, e é justamente o que a nota
+#: da barra logo acima recusa: deixaria de medir os oito endereços em que o
+#: dublê pode mandar valor para o vazio.
+_TEXTO = r'<input[^>]*type="text"[^>]*data-campo="{}"[^>]*>'
+
+
+def _e_campo_de_texto(publicado: bool, chave: str) -> bool:
+    """A página tem um `<input type=text>` com esse endereço?"""
+    import onde
+
+    doc = onde.pagina(PAGINA, publicado=publicado).read_text(encoding="utf-8")
+    return re.search(_TEXTO.format(re.escape(chave)), doc) is not None
+
+
 def _faixa_da_pagina(publicado: bool, chave: str) -> tuple[int, int] | None:
     """O `min`/`max` daquele `<input type=range>`, ou ``None`` se não é barra."""
     import onde
@@ -361,10 +382,18 @@ def test_todo_valor_do_duble_existe_como_opcao(monkeypatch, publicado):
                 "apara sem dizer nada, e a tela passa a AFIRMAR outro número.")
             conferidos += 1
             continue
+        if _e_campo_de_texto(publicado, campo.chave):
+            # O CAMPO DE TEXTO ACEITA QUALQUER STRING — não há lista a
+            # consultar nem faixa a aparar: o `escrever()` do piloto faz
+            # `el.value = t` direto. O que se confere aqui é que o endereço
+            # EXISTE naquela página, que é a metade que valia para as outras
+            # duas formas também.
+            conferidos += 1
+            continue
         oferece = _opcoes_da_pagina(publicado, campo.chave)
         assert oferece is not None, (
-            f"{campo.endereco}: a página {onde_estou} não tem `<select>` nem "
-            "`<input type=range>` com esse endereço")
+            f"{campo.endereco}: a página {onde_estou} não tem `<select>`, "
+            "`<input type=range>` nem `<input type=text>` com esse endereço")
         assert valor in oferece, (
             f"{campo.endereco}: na página {onde_estou} o dublê manda {valor!r} "
             f"e a lista oferece {sorted(oferece)} — o `escrever()` devolveria 0 "
@@ -377,14 +406,27 @@ def test_todo_valor_do_duble_existe_como_opcao(monkeypatch, publicado):
     # conta virou 25 e a régua reprovou a MELHORA, que é a forma exata do
     # defeito que esta casa já pagou onze vezes em 26/08. Agora ela PERGUNTA ao
     # dono da lista e soma os três campos que não são linha de botão.
-    from hefesto_dualsense4unix.core.acoes_de_botao import BOTOES
+    # E ELE PASSOU A CONTAR OS DOIS MUNDOS SEPARADAMENTE — 06/09/2026,
+    # NAVEGACAO-TECLAS-01. A tela "Teclas do teclado" está na BANCADA e ainda
+    # não no publicado (`mockup/DIVERGENCIAS.md`), então os oito campos de texto
+    # existem numa página e não na outra. Um número só para as duas voltas
+    # reprovaria a bancada por ter a tela nova, ou absolveria o publicado por
+    # não ter — as duas leituras erradas.
+    from hefesto_dualsense4unix.core.acoes_de_botao import BOTOES, DOMINIO_DO_TECLADO
 
-    esperados = len(BOTOES) + 3
+    com_tecla = sum(1 for b in sorted(DOMINIO_DO_TECLADO)
+                    if _e_campo_de_texto(publicado, f"tecla-{b}"))
+    assert com_tecla in (0, len(DOMINIO_DO_TECLADO)), (
+        f"a página {onde_estou} tem {com_tecla} dos {len(DOMINIO_DO_TECLADO)} "
+        "campos de tecla — meia tela é pior que nenhuma: o Guardar dela grava "
+        "só o que achou e cala sobre o resto.")
+    esperados = len(BOTOES) + 3 + com_tecla
     assert conferidos == esperados, (
         f"conferi {conferidos} linhas na página {onde_estou} e a aba tem "
-        f"{esperados} (as {len(BOTOES)} linhas de botão, a 'Função do teclado' "
-        "e as DUAS barras de velocidade) — se o número caiu, uma linha perdeu o "
-        "endereço e saiu da conferência sem reprovar nada.")
+        f"{esperados} (as {len(BOTOES)} linhas de botão, a 'Função do teclado', "
+        f"as DUAS barras de velocidade e {com_tecla} campo(s) de tecla) — se o "
+        "número caiu, uma linha perdeu o endereço e saiu da conferência sem "
+        "reprovar nada.")
 
 
 def test_os_sete_campos_de_texto_dizem_o_que_o_duble_diz(sob_o_duble):
@@ -467,6 +509,8 @@ def test_os_sete_campos_de_texto_dizem_o_que_o_duble_diz(sob_o_duble):
     # (`mesa_viva`, dona da ordem); o que ele É — cabo ou rádio, primário ou não
     # — sai do dublê, e é contra isso que a linha do cartão é conferida.
     por_uniq = {str(c["uniq"]): c for c in CONTROLES}
+    from hefesto_dualsense4unix.app.actions import home_actions
+
     mesa = mesa_viva.mesa_do_estado(ESTADO, CORES_LIDAS)
     conferidos = 0
     for lugar in mesa:
@@ -474,7 +518,14 @@ def test_os_sete_campos_de_texto_dizem_o_que_o_duble_diz(sob_o_duble):
         if endereco not in valor:
             continue  # o desenho só tem dois cartões; o terceiro não aparece
         c = por_uniq[str(lugar["uniq"])]
-        via = "USB" if c.get("transport") == "usb" else "BT"
+        # A PALAVRA DO TRANSPORTE É DO DONO, e ela MUDOU — 06/09/2026, com o
+        # glossário da casa (`docs/A-LINGUA-DESTA-CASA…`): a tela passou a dizer
+        # **cabo** e **rádio** onde dizia `USB` e `BT`. Esta linha digitava as
+        # duas siglas e reprovou a MELHORA: o cartão dizia `rádio • Só a janela`
+        # e a régua cobrava `BT`. Quem responde é
+        # `home_actions.palavra_do_transporte`, o mesmo dono que a mesa consulta
+        # — e no dia seguinte a uma troca de palavra a régua acompanha sozinha.
+        via = home_actions.palavra_do_transporte(c.get("transport"))
         papel = "Navega o PC" if c.get("is_primary") else "Só a janela"
         linha = str(valor[endereco])
         assert via in linha and papel in linha, (
@@ -549,8 +600,10 @@ def test_os_sete_campos_de_texto_dizem_o_que_o_duble_diz(sob_o_duble):
     lugar = primario[0]
     c = por_uniq[str(lugar["uniq"])]
     dica = str(valor["quem-navega"])
+    # A MESMA TROCA DE PALAVRA da linha do cartão, e pelo MESMO dono: `cabo` e
+    # `rádio` no lugar de `USB` e `BT` (glossário da casa, 06/09/2026).
     for pedaco in (str(lugar["pref"]).upper(), modelo[str(lugar["pref"])],
-                   "USB" if c.get("transport") == "usb" else "BT"):
+                   home_actions.palavra_do_transporte(c.get("transport"))):
         assert pedaco in dica, (
             f"quem-navega: o primário do dublê é o {lugar['pref']} "
             f"({modelo[str(lugar['pref'])]}), e a dica diz {dica!r} — falta "
