@@ -36,10 +36,15 @@ dois controles na mesa (um no cabo, um por rádio).
    dado existia: ``pacote_da_coluna`` devolve ``treme`` por lado desde que
    nasceu, e o CSS que acende também. O valor era jogado fora entre um e outro.
 
-3. **TRÊS FRASES DA JANELA ESTÁVEL NÃO TINHAM ATRAVESSADO** — o teto da mesa
-   (nos quatro tooltips de degrau), os 5 segundos do Modo Auto e a nota do card
-   "Testar motores". Elas são LIDAS do ``gui/main.glade``, nunca redigitadas:
-   uma segunda cópia de texto de tela diverge na primeira edição.
+3. **FRASES DA JANELA ESTÁVEL NÃO TINHAM ATRAVESSADO** — o teto da mesa (nos
+   quatro tooltips de degrau) e a nota do card "Testar motores". Eram TRÊS até
+   05/09/2026: a dos 5 segundos explicava o Modo Auto, que saiu desta tela por
+   decisão dela. Elas são LIDAS, nunca redigitadas — uma segunda cópia de texto
+   de tela diverge na primeira edição.
+
+   **E O DONO MUDOU DE CASA EM 06/09/2026.** A fonte era o ``gui/main.glade``;
+   a ``GTK-2`` deu às duas o dono ``app/telas/vibracao.py``, que é MOTOR e fica
+   (``D-0609-GTK-LEVA-INTEIRA``). O nome público das constantes é o mesmo.
 
 AS MORDIDAS, todas com ``cp`` para devolver:
 
@@ -52,7 +57,7 @@ AS MORDIDAS, todas com ``cp`` para devolver:
 * apague o laço do ``treme`` no pacote →
   ``test_o_pacote_emite_o_tremor_que_o_produto_calculou`` reprova;
 * tire ``{DICA_DO_TETO_DA_MESA}`` da dica e regere →
-  ``test_as_tres_frases_da_janela_estavel_estao_na_aba`` reprova nomeando qual;
+  ``test_as_frases_da_janela_estavel_estao_na_aba`` reprova nomeando qual;
 * tire a guarda ``if vez != _VEZ[0]`` do gesto ``testar`` →
   ``test_um_segundo_testar_cancela_o_primeiro`` reprova.
 
@@ -61,10 +66,8 @@ existem. A página publicada só os recebe no ``--publicar 05``, que é ato dela
 """
 from __future__ import annotations
 
-import html
 import json
 import pathlib
-import re
 import sys
 
 import pytest
@@ -308,21 +311,23 @@ def test_a_mesa_parada_nao_acende_punho_nenhum() -> None:
 # --------------------------------------------------------------------------
 # 3. as frases que a janela estável tem — DUAS desde 05/09/2026
 # --------------------------------------------------------------------------
-#: ONDE CADA FRASE MORA NO GLADE. A régua as lê do MESMO lugar que o gerador,
-#: de propósito: se alguém mudar a frase na janela estável e não regerar a aba,
-#: as duas telas divergem — e é essa divergência que esta régua pega.
-NO_GLADE = {
-    "o teto do orçamento (os tooltips de degrau)":
-        r'id="rumble_policy_economia".*?tooltip-text[^>]*>[^<]*?'
-        r'(O Perfil de Bateria pode impor um teto[^<]*?)</property>',
-    "a nota do card Testar motores":
-        r'id="rumble_info".*?<property name="label"[^>]*>&lt;i&gt;'
-        r'(.*?)&lt;/i&gt;</property>',
-}
+#: O DONO DE CADA FRASE, e ele MUDOU DE CASA em 06/09/2026.
+#:
+#: Até a `GTK-2` as duas frases moravam no `gui/main.glade` e esta régua as lia
+#: de lá — do MESMO lugar que o gerador, para pegar a divergência entre as duas
+#: telas. O dono agora é `app/telas/vibracao.py`, que é MOTOR e fica
+#: (`D-0609-GTK-LEVA-INTEIRA`): a janela sai, as frases não.
+#:
+#: O nome público de cada constante é o mesmo de antes — a `GTK-2` mudou o
+#: endereço, não o contrato.
+NO_DONO = (
+    "DICA_DO_TETO_DA_MESA",
+    "DICA_DOS_VALORES_QUE_PASSAM",
+)
 
 
 def test_as_frases_da_janela_estavel_estao_na_aba(bancada) -> None:
-    """A aba nova diz o que a estável ensina, com as MESMAS palavras.
+    """A aba nova diz o que o DONO ensina, com as MESMAS palavras.
 
     Não é preciosismo de texto: cada uma responde a uma pergunta que a aba nova
     deixava sem resposta — que o teto do orçamento existe ANTES de ele morder, e
@@ -330,36 +335,27 @@ def test_as_frases_da_janela_estavel_estao_na_aba(bancada) -> None:
 
     **ERAM TRÊS ATÉ 05/09/2026.** A terceira era *"Espera 5 segundos antes de
     trocar de faixa"*, e ela explicava o Modo Auto — que saiu desta tela por
-    decisão dela (*"segue os três modos sempre"*, ver `aba05.FORCA`). A frase
-    continua no glade porque a janela GTK continua a oferecer o Auto; o que
-    mudou é que esta aba não tem mais o botão que ela explicava.
+    decisão dela (*"segue os três modos sempre"*, ver `aba05.FORCA`).
+
+    **E A FONTE MUDOU EM 06/09/2026** (`GTK-3`, primeira volta): a régua lia o
+    XML da janela, que está saindo. Quem responde agora é `app/telas/vibracao`,
+    o dono que a `GTK-2` deu às duas frases — o mesmo lugar de onde o gerador
+    da aba as lê. A pergunta medida não mudou uma vírgula: as duas telas dizem
+    o mesmo, ou esta régua reprova.
+
+    MORDIDA: troque uma letra de `DICA_DO_TETO_DA_MESA` em
+    `app/telas/vibracao.py` sem regerar a aba — este caso reprova nomeando a
+    constante.
     """
-    glade = (RAIZ / "src/hefesto_dualsense4unix/gui/main.glade").read_text()
-    for nome, padrao in NO_GLADE.items():
-        achado = re.search(padrao, glade, re.S)
-        assert achado, f"{nome} saiu do glade — a âncora do gerador também cai"
-        frase = html.unescape(achado.group(1)).strip()
-        assert frase in bancada, (
+    from hefesto_dualsense4unix.app.telas import vibracao
+
+    for nome in NO_DONO:
+        frase = getattr(vibracao, nome, None)
+        assert frase, (
+            f"{nome} saiu de `app/telas/vibracao` — a âncora do gerador da aba "
+            "05 também cai")
+        assert frase.strip() in bancada, (
             f"a aba perdeu {nome}: {frase!r}. Regere com `python3 aba05.py`")
-
-
-def test_a_frase_do_auto_nao_volta_a_aba(bancada) -> None:
-    """E a que saiu tem de FICAR fora — dica sem botão é texto órfão.
-
-    MORDIDA: devolva `DICA_DA_ESPERA_DO_AUTO` ao `?` da Força em `aba05.py` e
-    regere; este caso reprova.
-    """
-    glade = (RAIZ / "src/hefesto_dualsense4unix/gui/main.glade").read_text()
-    achado = re.search(
-        r'id="rumble_policy_auto_label".*?\n\s*(Espera 5 segundos[^<]*?)</property>',
-        glade, re.S)
-    assert achado, (
-        "a frase dos 5 s saiu do GLADE — ela tem de continuar lá, porque a "
-        "janela GTK continua a oferecer o Modo Auto")
-    frase = html.unescape(achado.group(1)).strip()
-    assert frase not in bancada, (
-        "a dica dos 5 s do Auto voltou à aba 05, e o botão que ela explica saiu "
-        "em 05/09/2026 por decisão dela")
 
 
 # --------------------------------------------------------------------------

@@ -21,41 +21,15 @@ from __future__ import annotations
 
 import ast
 import re
-import xml.etree.ElementTree as ET
 from pathlib import Path
 
 import pytest
 
 RAIZ = Path(__file__).resolve().parents[2]
 PACOTE = RAIZ / "src" / "hefesto_dualsense4unix"
-GLADE = PACOTE / "gui" / "main.glade"
 EMULACAO_PY = PACOTE / "app" / "actions" / "emulation_actions.py"
 MOUSE_PY = PACOTE / "app" / "actions" / "mouse_actions.py"
 GATILHOS_PY = PACOTE / "app" / "actions" / "trigger_specs.py"
-
-#: Classes GTK que a pessoa aciona para MUDAR alguma coisa. Rótulo estático,
-#: caixa, moldura e imagem ficam de fora de propósito: a sprint pediu tooltip
-#: em quem decide, não nos 163 rótulos que só descrevem.
-CLASSES_INTERATIVAS = frozenset({
-    "GtkButton",
-    "GtkCheckButton",
-    "GtkColorButton",
-    "GtkComboBox",
-    "GtkComboBoxText",
-    "GtkEntry",
-    "GtkFileChooserButton",
-    "GtkFontButton",
-    "GtkLinkButton",
-    "GtkMenuButton",
-    "GtkRadioButton",
-    "GtkScale",
-    "GtkScaleButton",
-    "GtkSearchEntry",
-    "GtkSpinButton",
-    "GtkSwitch",
-    "GtkToggleButton",
-    "GtkVolumeButton",
-})
 
 #: Medido na entrega: 82 controles interativos, 82 com tooltip. O piso é o
 #: número medido — se alguém acrescentar controle sem tooltip, ou tirar um
@@ -144,45 +118,6 @@ def _comeca_em_minuscula(texto: str) -> bool:
     return m is not None and m.group(0).islower()
 
 
-def _rotulos_de_aba() -> list[str]:
-    raiz = ET.parse(GLADE).getroot()
-    rotulos: list[str] = []
-    for filho in raiz.iter("child"):
-        if filho.get("type") != "tab":
-            continue
-        for obj in filho.iter("object"):
-            for prop in obj.findall("property"):
-                if prop.get("name") == "label" and prop.text:
-                    rotulos.append(prop.text)
-    return rotulos
-
-
-def _textos_visiveis_do_glade() -> list[str]:
-    raiz = ET.parse(GLADE).getroot()
-    visiveis: list[str] = []
-    for obj in raiz.iter("object"):
-        for prop in obj.findall("property"):
-            nome = prop.get("name") or ""
-            visivel = nome in {"label", "tooltip-text", "tooltip_text", "placeholder-text"}
-            if visivel and prop.text:
-                visiveis.append(prop.text)
-    return visiveis
-
-
-def _interativos_e_com_tooltip() -> tuple[int, list[str]]:
-    raiz = ET.parse(GLADE).getroot()
-    total = 0
-    sem_tooltip: list[str] = []
-    for obj in raiz.iter("object"):
-        if obj.get("class") not in CLASSES_INTERATIVAS:
-            continue
-        total += 1
-        nomes = {p.get("name") for p in obj.findall("property")}
-        if not ({"tooltip-text", "tooltip_text"} & nomes):
-            sem_tooltip.append(obj.get("id") or f"<sem id: {obj.get('class')}>")
-    return total, sem_tooltip
-
-
 # --- Grupo 1: capitalização dos textos de estado ---------------------------
 
 
@@ -219,53 +154,6 @@ def test_os_estados_de_hoje_estao_escritos_como_frase() -> None:
     assert any(t.startswith("O mouse virtual está sem permissão") for t in mouse)
     assert any(t.startswith("O mouse virtual ainda não está pronto") for t in mouse)
     assert any(t.startswith("Falta um componente do mouse virtual") for t in mouse)
-
-
-# --- Grupo 2: a aba deixa de se chamar "Navegação DSX" ---------------------
-
-
-def test_nenhuma_aba_carrega_nome_de_produto_de_terceiro() -> None:
-    """"DSX" não diz o que a aba faz — e é nome de programa de outra casa."""
-    rotulos = _rotulos_de_aba()
-    assert rotulos, "nenhuma aba encontrada no Glade: a varredura está cega"
-    com_dsx = [r for r in rotulos if "DSX" in r.upper()]
-    assert com_dsx == [], f"aba com nome de produto de terceiro: {com_dsx}"
-
-
-def test_a_aba_do_mouse_diz_o_que_faz() -> None:
-    assert "Navegação" in _rotulos_de_aba()
-
-
-def test_nenhum_texto_visivel_da_janela_diz_dsx() -> None:
-    """O nome não pode reaparecer em rótulo, tooltip ou dica de campo."""
-    culpados = [t for t in _textos_visiveis_do_glade() if "DSX" in t.upper()]
-    assert culpados == [], f"texto visível ainda diz DSX: {culpados}"
-
-
-# --- Grupo 3: cobertura de tooltip nos controles interativos ---------------
-
-
-def test_todo_controle_que_muda_alguma_coisa_explica_o_que_faz() -> None:
-    """Botão, escala, seletor, entrada e switch: nenhum fica mudo.
-
-    Morde ao arrancar a cura: apagar um ``tooltip-text`` do Glade faz este
-    teste nomear o ``id`` que ficou sem explicação.
-    """
-    total, sem_tooltip = _interativos_e_com_tooltip()
-    assert sem_tooltip == [], f"controle interativo sem tooltip: {sem_tooltip}"
-    assert total - len(sem_tooltip) >= COBERTURA_MINIMA_DE_TOOLTIP, (
-        f"a cobertura caiu: {total - len(sem_tooltip)} de {total} "
-        f"(piso medido: {COBERTURA_MINIMA_DE_TOOLTIP})"
-    )
-
-
-def test_a_conta_de_controles_interativos_nao_encolheu_sem_aviso() -> None:
-    """Se o universo medido mudar, o piso acima precisa ser remedido a mão."""
-    total, _ = _interativos_e_com_tooltip()
-    assert total >= CONTROLES_INTERATIVOS_ESPERADOS, (
-        f"o Glade tem {total} controles interativos; a medição da entrega viu "
-        f"{CONTROLES_INTERATIVOS_ESPERADOS}. Remedir antes de baixar o piso."
-    )
 
 
 # --- Grupo 4: jargão dos gatilhos ------------------------------------------

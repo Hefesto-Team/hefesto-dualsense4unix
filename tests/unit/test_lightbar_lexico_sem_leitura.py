@@ -54,13 +54,9 @@ from hefesto_dualsense4unix.app.actions.lightbar_actions import (
 
 RAIZ = Path(__file__).resolve().parents[2]
 MAPA = RAIZ / "docs" / "data" / "mapa-controles.csv"
-GLADE = RAIZ / "src" / "hefesto_dualsense4unix" / "gui" / "main.glade"
 
 #: A chave do mapa que responde pela pergunta "dá para LER o desenho aceso?".
 CHAVE_DA_LEITURA = "luz.led_jogador.leitura@dualsense"
-
-#: O id do rótulo desta aba que afirmava a leitura.
-ROTULO_NO_GLADE = "player_leds_estado"
 
 #: As palavras que AFIRMAM o estado da lâmpada. Não é lista de estilo: cada uma
 #: só pode aparecer num rótulo desta aba se o mapa registrar canal de leitura.
@@ -91,19 +87,6 @@ def _o_mapa_registra_canal_de_leitura() -> bool:
         (linha.get(coluna) or "").strip().lower() == "sim"
         for coluna in ("cabo_aceita", "radio_aceita")
     )
-
-
-def _texto_do_glade(id_do_rotulo: str) -> str:
-    import xml.etree.ElementTree as ET
-
-    arvore = ET.parse(str(GLADE))
-    for objeto in arvore.iter("object"):
-        if objeto.get("id") != id_do_rotulo:
-            continue
-        for prop in objeto.findall("property"):
-            if prop.get("name") == "label":
-                return prop.text or ""
-    pytest.fail(f"o rótulo {id_do_rotulo} sumiu do glade — a régua ficou cega")
 
 
 #: Todas as frases que o rótulo das 5 luzes sabe produzir, nas quatro
@@ -178,24 +161,3 @@ def test_o_proprio_prefixo_nao_afirma_estado() -> None:
             f"o prefixo {_PREFIXO_DESENHO!r} afirma estado da barra "
             f"({palavra!r}) — e ele responde pelas quatro frases de uma vez"
         )
-
-
-def test_o_texto_de_espera_do_glade_obedece_a_mesma_regra() -> None:
-    """A tela também, e não só o Python (o XML é publicado na foto da aba).
-
-    A ONDA0-Z0 mediu que a foto desta aba já foi publicada com o texto CRU do
-    glade. Um rótulo que só é honesto depois do primeiro repintar é honesto
-    tarde demais.
-    """
-    texto = _texto_do_glade(ROTULO_NO_GLADE)
-    baixo = texto.lower()
-    for palavra in PALAVRAS_QUE_AFIRMAM_ESTADO:
-        assert palavra not in baixo, (
-            f"o texto de espera do glade afirma estado da barra ({palavra!r}): "
-            f"{texto!r}"
-        )
-    assert texto.startswith(f"{_PREFIXO_DESENHO}: "), (
-        f"o texto de espera do glade ({texto!r}) divergiu do prefixo que o "
-        f"Python escreve ({_PREFIXO_DESENHO!r}) — a mesma linha da tela "
-        "passaria a dizer duas coisas conforme quem a escreveu por último"
-    )

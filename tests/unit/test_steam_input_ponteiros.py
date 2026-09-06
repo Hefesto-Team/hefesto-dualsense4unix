@@ -43,7 +43,6 @@ from hefesto_dualsense4unix.integrations import storm_doctor as sd
 
 _RAIZ = Path(__file__).resolve().parents[2]
 _PACOTE = _RAIZ / "src" / "hefesto_dualsense4unix"
-_GLADE = _PACOTE / "gui" / "main.glade"
 _DAEMON_ACTIONS = _PACOTE / "app" / "actions" / "daemon_actions.py"
 _GUIA_MASCARAS = _RAIZ / "docs" / "usage" / "jogos-e-mascaras.md"
 
@@ -180,8 +179,15 @@ _GESTO_NA_STEAM = re.compile(r"Propriedades\s*(?:→|->)\s*Control")
 
 
 def _fontes_de_texto_de_interface() -> list[Path]:
+    """Todo arquivo que PINTA texto de interface: o pacote e as dez páginas.
+
+    **06/09/2026 (`GTK-3`, primeira volta):** o `gui/main.glade` saiu desta
+    lista e as dez páginas publicadas entraram no lugar dele. A varredura não
+    encolheu — ela passou a medir a tela que ela usa, que é onde a frase
+    proibida faria estrago hoje.
+    """
     arquivos = sorted(_PACOTE.rglob("*.py"))
-    arquivos.append(_GLADE)
+    arquivos.extend(_publicadas())
     return arquivos
 
 

@@ -190,26 +190,6 @@ def test_o_portao_sabe_recusar_uma_frase_pintada() -> None:
     )
 
 
-def test_a_nota_datada_da_decisao_continua_no_glade() -> None:
-    """Régua que sabe ACEITAR — e que protege o REGISTRO da decisão.
-
-    *"Não se apaga decisão medida"*: a nota datada de 09/08 no `main.glade` é
-    o que impede a próxima pessoa de reescrever o enquadramento antigo
-    achando que é novidade. Se alguém "limpar" a nota para deixar o portão
-    acima verde, este teste reprova — a cura pelo lado errado.
-
-    O `main.glade` é território de outra frente nesta madrugada; este teste
-    apenas o LÊ, e existe justamente para que ninguém o edite por engano.
-    """
-    glade = SRC / "gui" / "main.glade"
-    texto = glade.read_text(encoding="utf-8")
-
-    assert "ESCONDER-EM-VEZ-DE-SAIR-01" in texto
-    assert "entregue pela Steam" in texto, (
-        "a nota datada que registra a morte da frase sumiu do glade"
-    )
-
-
 def test_o_lexico_novo_e_o_mesmo_da_caixinha_de_perfis() -> None:
     """A frase da aba Sistema e a da aba Perfis marcam a MESMA coisa.
 

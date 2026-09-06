@@ -26,7 +26,6 @@ lidos como da máquina *pelo que fazem hoje*; a leitura é minha, e a decisão
 """
 from __future__ import annotations
 
-import re
 from pathlib import Path
 
 import pytest
@@ -38,77 +37,6 @@ from hefesto_dualsense4unix.app.actions.daemon_actions import (
 )
 
 RAIZ = Path(__file__).resolve().parents[2]
-GLADE = RAIZ / "src" / "hefesto_dualsense4unix" / "gui" / "main.glade"
-
-#: Os widgets que a usuária ACIONA. `GtkLabel`, `GtkBox` e companhia não são
-#: gestos — não mudam nada e não têm dono a declarar.
-CLASSES_DE_GESTO = ("GtkButton", "GtkSwitch", "GtkCheckButton", "GtkToggleButton")
-
-
-def _gestos_da_aba_sistema() -> list[str]:
-    """Os ids acionáveis dentro do `daemon_box`, lidos do Glade.
-
-    Ler do XML, e não de uma lista escrita à mão, é o que faz o portão morder:
-    um botão novo aparece aqui no instante em que alguém o desenha, sem
-    ninguém precisar lembrar de atualizar teste nenhum.
-    """
-    xml = GLADE.read_text(encoding="utf-8")
-    inicio = xml.index('id="daemon_box"')
-    # A aba seguinte na tira é a Emulação; o id dela delimita o bloco.
-    fim = xml.find('id="emulation_box"', inicio)
-    bloco = xml[inicio : fim if fim > 0 else len(xml)]
-
-    padrao = re.compile(
-        r'<object class="(?:' + "|".join(CLASSES_DE_GESTO) + r')" id="([^"]+)"'
-    )
-    return [m.group(1) for m in padrao.finditer(bloco)]
-
-
-def test_o_censo_acha_a_aba_e_nao_volta_vazio() -> None:
-    """Régua que mede o nada passa sempre. Esta confere que mediu algo.
-
-    Se o `daemon_box` for renomeado ou o Glade mudar de forma, o portão
-    abaixo passaria a varrer uma lista vazia e ficaria verde para sempre —
-    exatamente o modo de falhar que esta casa chama de "portão que olha para
-    o lugar errado".
-    """
-    gestos = _gestos_da_aba_sistema()
-
-    assert len(gestos) >= 10, gestos
-    assert "btn_steam_game_broken" in gestos
-    assert "daemon_start_button" in gestos
-
-
-def test_todo_gesto_da_aba_declara_de_quem_ele_e() -> None:
-    """A mordida: desenhe um botão novo no `daemon_box` e isto reprova."""
-    gestos = _gestos_da_aba_sistema()
-
-    sem_dono = [g for g in gestos if g not in DONO_DO_GESTO]
-
-    assert not sem_dono, (
-        "gesto da aba Sistema sem dono declarado: "
-        + ", ".join(sem_dono)
-        + "\n\nDeclare em `daemon_actions.DONO_DO_GESTO` se o estado dele é "
-        f"gravado por jogo ({DO_JOGO!r}) ou uma vez para a máquina inteira "
-        f"({DA_MAQUINA!r}), com a evidência ao lado. A aba Sistema é a única "
-        "cuja superfície inteira está fora do perfil — cada gesto novo que "
-        "entra sem essa resposta aumenta uma dívida que já é de doze."
-    )
-
-
-def test_nenhuma_declaracao_sobra_sem_gesto() -> None:
-    """A direção oposta: botão apagado deixa a declaração órfã.
-
-    Sem esta metade, a tabela viraria um cemitério — e cemitério de
-    declaração é como se perde a confiança no que a tabela diz.
-    """
-    gestos = set(_gestos_da_aba_sistema())
-
-    orfas = [g for g in DONO_DO_GESTO if g not in gestos]
-
-    assert not orfas, (
-        "declaração sem gesto correspondente no Glade: " + ", ".join(orfas)
-    )
 
 
 @pytest.mark.parametrize("gesto", sorted(DONO_DO_GESTO))

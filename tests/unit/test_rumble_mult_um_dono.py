@@ -4,7 +4,7 @@ A faixa valeu três valores ao mesmo tempo:
 
   - `profiles.schema.RumbleConfig.custom_mult` — 0.0 a **2.0**
   - `ipc_handlers._handle_rumble_policy_custom` — recusava mult > **1.0**
-  - `gui/main.glade` (`rumble_policy_adj`) — slider até **200%**
+  - o trilho da Intensidade na tela — até **200%**
 
 O slider manda `valor / 100` para o `rumble.policy_custom`, então de 101% em
 diante a usuária levava um erro de validação — que a aba de gatilhos ainda
@@ -24,27 +24,40 @@ import pytest
 
 from hefesto_dualsense4unix.profiles.schema import RUMBLE_CUSTOM_MULT_MAX, RumbleConfig
 
-_GLADE = (
-    Path(__file__).resolve().parents[2]
-    / "src" / "hefesto_dualsense4unix" / "gui" / "main.glade"
+#: O TETO DO TRILHO, na TELA QUE ELA USA — `interface/paginas/05-vibracao.html`,
+#: o `<input type="range" data-campo="mult-pos">` da coluna Intensidade.
+#:
+#: **A FONTE MUDOU EM 06/09/2026** (`GTK-3`, primeira volta). Até aqui esta
+#: leitura era o `<property name="upper">` do `rumble_policy_adj` no
+#: `gui/main.glade` — a janela GTK, que sai inteira
+#: (`D-0609-GTK-LEVA-INTEIRA`). A pergunta medida é a MESMA e continua sendo
+#: leitura de arquivo, não número digitado: *o que a tela OFERECE é o que o
+#: esquema do perfil ACEITA?*
+_TRILHO_DA_INTENSIDADE = re.compile(
+    r'<input[^>]*type="range"[^>]*data-campo="mult-pos"[^>]*>'
 )
 
 
-def _upper_do_slider() -> float:
-    fonte = _GLADE.read_text(encoding="utf-8")
-    bloco = re.search(
-        r'<object class="GtkAdjustment" id="rumble_policy_adj">(.*?)</object>',
-        fonte, re.DOTALL,
+def _atributo_do_trilho(nome: str) -> float:
+    """`max`/`min`/`step` do trilho da Intensidade, lido da página publicada."""
+    pagina = (
+        Path(__file__).resolve().parents[2]
+        / "src" / "hefesto_dualsense4unix"
+        / "interface" / "paginas" / "05-vibracao.html"  # noqa-acento (pasta)
+    ).read_text(encoding="utf-8")
+    achado = _TRILHO_DA_INTENSIDADE.search(pagina)
+    assert achado is not None, (
+        "o trilho `mult-pos` sumiu de `05-vibracao.html` — a coluna "
+        "Intensidade perdeu o ajuste livre, ou a régua ficou cega"
     )
-    assert bloco is not None, "rumble_policy_adj sumiu do glade"
-    upper = re.search(r'<property name="upper">([\d.]+)</property>', bloco.group(1))
-    assert upper is not None
-    return float(upper.group(1))
+    valor = re.search(rf'{nome}="([\d.]+)"', achado.group(0))
+    assert valor is not None, f"o trilho da Intensidade perdeu o atributo {nome}"
+    return float(valor.group(1))
 
 
 def test_o_slider_oferece_exatamente_o_que_o_schema_aceita() -> None:
     """O slider é `mult * 100` — a faixa dele é o teto do schema em porcento."""
-    assert _upper_do_slider() == RUMBLE_CUSTOM_MULT_MAX * 100
+    assert _atributo_do_trilho("max") == RUMBLE_CUSTOM_MULT_MAX * 100
 
 
 def test_o_schema_aceita_o_proprio_teto() -> None:
@@ -79,7 +92,7 @@ def test_todo_valor_do_slider_passa_no_handler(percentual: int) -> None:
 
 
 def test_ninguem_mais_hardcodeia_o_teto() -> None:
-    """Um dono só: nem o handler nem o glade repetem o número."""
+    """Um dono só: nem o handler nem a tela repetem o número."""
     from hefesto_dualsense4unix.daemon import ipc_handlers
 
     fonte = Path(ipc_handlers.__file__).read_text(encoding="utf-8")

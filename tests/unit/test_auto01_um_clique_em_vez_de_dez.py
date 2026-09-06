@@ -57,14 +57,6 @@ from hefesto_dualsense4unix.testing import FakeController
 from hefesto_dualsense4unix.utils import session as session_mod
 from tests.unit.fonte_do_instalador import texto_do_instalador
 
-_GLADE = (
-    Path(__file__).resolve().parents[2]
-    / "src"
-    / "hefesto_dualsense4unix"
-    / "gui"
-    / "main.glade"
-)
-
 
 # ---------------------------------------------------------------------------
 # Infra do daemon
@@ -483,25 +475,6 @@ class TestCoopSaiuDaJanelaPorqueDeixouDeSerOpcao:
     morreu com a decisão dela. O que fica no lugar mede que a decisão FOI
     cumprida, e que o gesto de recuperação não foi junto.
     """
-
-    def test_o_glade_nao_declara_mais_o_botao_de_coop(self) -> None:
-        """O aceite da sprint, ao pé da letra — e ele NÃO é ``grep -ci coop == 0``:
-        a lápide fala de co-op de propósito, e proibi-la proibiria explicar."""
-        fonte = _GLADE.read_text(encoding="utf-8")
-
-        assert 'id="home_coop_prep_btn"' not in fonte
-        assert 'id="home_coop_frame"' not in fonte
-        # O rótulo VIVO, não a palavra: a lápide nomeia o botão de propósito,
-        # e proibir a palavra proibiria explicar por que ele saiu.
-        assert "Preparar co-op</property>" not in fonte
-
-    def test_a_aba_inicio_virou_100_por_cento_codigo(self) -> None:
-        """O frame de co-op era o ÚNICO conteúdo Glade da aba."""
-        fonte = _GLADE.read_text(encoding="utf-8")
-        ini = fonte.index('<object class="GtkBox" id="tab_home_box">')
-        fim = fonte.index("<child type=\"tab\">", ini)
-
-        assert "<object class=" not in fonte[ini + 40 : fim]
 
     def test_o_plano_de_tres_ipcs_nao_existe_mais(self) -> None:
         assert not hasattr(mode_transition, "plan_coop_prep")

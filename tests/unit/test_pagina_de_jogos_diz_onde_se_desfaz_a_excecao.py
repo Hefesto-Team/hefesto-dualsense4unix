@@ -28,12 +28,10 @@ from __future__ import annotations
 
 import ast
 import re
-import xml.etree.ElementTree as ET
 from pathlib import Path
 
 _RAIZ = Path(__file__).resolve().parents[2]
 _PAGINA = Path("docs/usage/jogos-e-mascaras.md")
-_GLADE = _RAIZ / "src" / "hefesto_dualsense4unix" / "gui" / "main.glade"
 _CMD_STEAM = _RAIZ / "src" / "hefesto_dualsense4unix" / "cli" / "cmd_steam.py"
 
 #: A negação que caducou em 07/08/2026. Procurada só FORA de bloco de citação:
@@ -62,26 +60,6 @@ def _linhas_fora_de_citacao(texto: str) -> list[tuple[int, str]]:
         for n, ln in enumerate(texto.splitlines(), start=1)
         if not ln.lstrip().startswith(">")
     ]
-
-
-def _rotulo_da_caixinha() -> str:
-    """O rótulo vivo do `profile_steam_input_check`, lido do glade."""
-    raiz = ET.parse(_GLADE).getroot()
-    caixa = next(
-        (
-            obj
-            for obj in raiz.iter("object")
-            if obj.get("id") == "profile_steam_input_check"
-        ),
-        None,
-    )
-    assert caixa is not None, (
-        "o `profile_steam_input_check` sumiu do glade: se a caixinha do desfazer "
-        "foi removida, a página de uso volta a mentir e esta é a hora de decidir"
-    )
-    rotulo = caixa.find("./property[@name='label']")
-    assert rotulo is not None and rotulo.text, "a caixinha do desfazer ficou sem rótulo"
-    return rotulo.text
 
 
 def _subcomandos_do_steam_input() -> set[str]:
@@ -115,37 +93,6 @@ def test_a_pagina_nao_nega_o_desfazer() -> None:
         "a página diz que não há como desfazer a exceção do Steam Input. Isso "
         "caducou em 07/08/2026: a caixinha `profile_steam_input_check` da aba "
         "Perfis e o `gamepad steam-input remove` tiram a marca.\n" + "\n".join(achados)
-    )
-
-
-def test_a_pagina_aponta_a_caixinha_que_existe_na_janela() -> None:
-    """E diz onde: a aba, e o rótulo exato que a janela mostra hoje.
-
-    NOTA DATADA — 28/08/2026 (S4). Este caso pegava *o primeiro* parágrafo fora
-    de citação que trouxesse o rótulo, e cobrava dele "Perfis" e "Jogo da
-    Steam". Amarrar a régua à ORDEM do texto a fez reprovar a S4, que
-    acrescentou ACIMA do parágrafo do desfazer outro que cita a mesma caixinha
-    — para dizer que não é mais preciso marcar. Reprovar quem escreve um
-    parágrafo novo não é medir a página. A pergunta certa é se a página ENSINA
-    o desfazer em ALGUM lugar, e é essa que ela faz agora.
-    """
-    texto = _texto()
-    rotulo = _rotulo_da_caixinha()
-    assert rotulo in texto, (
-        f"a página não cita o rótulo vivo da caixinha do desfazer ({rotulo!r}). "
-        "Quem lê precisa achá-la na tela pelo nome que está escrito nela"
-    )
-    candidatos = [
-        p for p in texto.split("\n\n") if rotulo in p and not p.startswith(">")
-    ]
-    assert candidatos, "o parágrafo do desfazer virou bloco de citação"
-    assert any("Perfis" in p for p in candidatos), (
-        f"a página não diz em que aba a caixinha mora: {candidatos!r}"
-    )
-    assert any("Perfis" in p and "Jogo da Steam" in p for p in candidatos), (
-        "a página não diz que a caixinha só aparece com 'Jogo da Steam' escolhido "
-        "— sem isso, quem abrir o editor num perfil comum não a acha e conclui "
-        f"que ela não existe. Parágrafos que citam a caixinha: {candidatos!r}"
     )
 
 

@@ -65,14 +65,11 @@ from __future__ import annotations
 import ast
 import csv
 import re
-import xml.etree.ElementTree as ET
 from pathlib import Path
 
-import pytest
 
 _RAIZ = Path(__file__).resolve().parents[2]
 _PACOTE = _RAIZ / "src" / "hefesto_dualsense4unix"
-_GLADE = _PACOTE / "gui" / "main.glade"
 _ACOES = _PACOTE / "app" / "actions" / "emulation_actions.py"
 _MAPA = _RAIZ / "docs" / "data" / "mapa-controles.csv"
 
@@ -82,61 +79,6 @@ _ABA = "Emulação"
 _ROTULO_CITADO = re.compile(r'["“]([^"”]{3,60})["”]')
 #: "na aba Perfis" / "aba **Sistema**" — o nome da aba que a frase promete.
 _ABA_CITADA = re.compile(r"aba \*{0,2}([A-ZÁÉÍÓÚÃÕÂÊÔÇ][a-záéíóúãõâêôç]+)")
-
-
-# ---------------------------------------------------------------------------
-# As três fontes
-# ---------------------------------------------------------------------------
-def _paginas() -> list[tuple[str, ET.Element]]:
-    """[(rótulo da aba, XML da página)] do `main_notebook`, na ordem."""
-    raiz = ET.parse(_GLADE).getroot()
-    notebook = next(
-        (
-            obj
-            for obj in raiz.iter("object")
-            if obj.get("class") == "GtkNotebook" and obj.get("id") == "main_notebook"
-        ),
-        None,
-    )
-    assert notebook is not None, "main_notebook sumiu do glade"
-    saida: list[tuple[str, ET.Element]] = []
-    pendente: ET.Element | None = None
-    for filho in notebook.findall("child"):
-        if filho.get("type") != "tab":
-            pendente = filho
-            continue
-        rotulo = next(
-            (prop.text for prop in filho.iter("property") if prop.get("name") == "label"),
-            None,
-        )
-        if rotulo and pendente is not None:
-            saida.append((rotulo, pendente))
-        pendente = None
-    return saida
-
-
-def _pagina_da_emulacao() -> ET.Element:
-    for aba, pagina in _paginas():
-        if aba == _ABA:
-            return pagina
-    raise AssertionError(f"a aba {_ABA!r} sumiu do main_notebook")
-
-
-def _textos_da_aba() -> dict[str, list[str]]:
-    """{id do widget: [textos de tela dele]} da página Emulação.
-
-    Só `label` e `tooltip-text`, que são os dois que ela lê. Widget sem `id`
-    não entra: sem endereço não há o que declarar nem o que nomear num erro.
-    """
-    saida: dict[str, list[str]] = {}
-    for obj in _pagina_da_emulacao().iter("object"):
-        wid = obj.get("id")
-        if not wid:
-            continue
-        for prop in obj.findall("property"):
-            if prop.get("name") in ("label", "tooltip-text") and prop.text:
-                saida.setdefault(wid, []).append(prop.text)
-    return saida
 
 
 def _declaracao(nome: str) -> object:
@@ -191,73 +133,6 @@ def tem_lastro_nos_dois(celula: dict[str, dict[str, str]]) -> bool:
         celula.get(lado, {}).get("de_onde_sei") == "medido"
         and celula.get(lado, {}).get("aciona") == "sim"
         for lado in ("cabo", "radio")
-    )
-
-
-# ---------------------------------------------------------------------------
-# R1 — declarado sem lastro obriga a ressalva
-# ---------------------------------------------------------------------------
-def test_promessa_sem_lastro_nos_dois_transportes_carrega_a_ressalva() -> None:
-    afirmacoes = _declaracao("AFIRMACOES_DE_TRANSPORTE_DA_ABA")
-    ressalvas = _declaracao("RESSALVA_DE_TRANSPORTE")
-    assert isinstance(afirmacoes, dict) and isinstance(ressalvas, dict)
-    fatos = _fatos_do_mapa()
-    textos = _textos_da_aba()
-
-    faltando: list[str] = []
-    for wid, chaves in afirmacoes.items():
-        assert wid in textos, (
-            f"{wid} está declarado em AFIRMACOES_DE_TRANSPORTE_DA_ABA e não "
-            f"existe (com texto) na página {_ABA!r} do glade"
-        )
-        junto = " ".join(textos[wid])
-        for chave in chaves:
-            assert chave in fatos, (
-                f"{wid} declara a célula {chave!r}, que não existe em "
-                f"{_MAPA.relative_to(_RAIZ)} — `id` errado, ou o mapa mudou e "
-                "deixou a declaração para trás"
-            )
-            if tem_lastro_nos_dois(fatos[chave]):
-                continue
-            ressalva = ressalvas.get(chave)
-            assert ressalva, (
-                f"{chave!r} não tem lastro nos dois transportes e não há "
-                "ressalva declarada para ela em RESSALVA_DE_TRANSPORTE"
-            )
-            if ressalva not in junto:
-                faltando.append(
-                    f"  {wid}: afirma {chave} (cabo de_onde_sei="
-                    f"{fatos[chave]['cabo']['de_onde_sei']!r}, rádio="
-                    f"{fatos[chave]['radio']['de_onde_sei']!r}) e o texto não "
-                    f"carrega a ressalva {ressalva!r}"
-                )
-    assert not faltando, (
-        "a aba Emulação promete transporte que o mapa não mede:\n" + "\n".join(faltando)
-    )
-
-
-# ---------------------------------------------------------------------------
-# R2 — radical na tela obriga declaração
-# ---------------------------------------------------------------------------
-def test_toda_promessa_da_aba_esta_declarada() -> None:
-    afirmacoes = _declaracao("AFIRMACOES_DE_TRANSPORTE_DA_ABA")
-    radicais = _declaracao("RADICAIS_DE_TRANSPORTE")
-    assert isinstance(afirmacoes, dict) and isinstance(radicais, dict)
-
-    orfas: list[str] = []
-    for wid, textos in _textos_da_aba().items():
-        junto = " ".join(textos).lower()
-        for chave, radical in radicais.items():
-            if radical.lower() not in junto:
-                continue
-            if chave not in afirmacoes.get(wid, ()):
-                orfas.append(
-                    f"  {wid}: o texto cita {radical!r} e não declara {chave!r} "
-                    "em AFIRMACOES_DE_TRANSPORTE_DA_ABA"
-                )
-    assert not orfas, (
-        "promessa de transporte sem declaração — o portão não a alcança:\n"
-        + "\n".join(orfas)
     )
 
 
@@ -322,79 +197,6 @@ def test_o_giroscopio_e_a_lightbar_seguem_com_lastro_para_serem_afirmados() -> N
         )
 
 
-# ---------------------------------------------------------------------------
-# R3 — E9, o ponteiro
-# ---------------------------------------------------------------------------
-def _controles_por_rotulo() -> dict[str, str]:
-    """{rótulo: aba onde ele mora}, para todo controle clicável do glade."""
-    clicaveis = {"GtkButton", "GtkCheckButton", "GtkToggleButton", "GtkRadioButton"}
-    saida: dict[str, str] = {}
-    for aba, pagina in _paginas():
-        for obj in pagina.iter("object"):
-            if obj.get("class") not in clicaveis:
-                continue
-            for prop in obj.findall("property"):
-                if prop.get("name") == "label" and prop.text:
-                    saida[prop.text.strip()] = aba
-    return saida
-
-
-@pytest.mark.parametrize("wid", ["emulation_gamepad_hint_label"])
-def test_a_frase_manda_para_a_aba_onde_o_controle_realmente_mora(wid: str) -> None:
-    textos = _textos_da_aba()
-    assert wid in textos, f"{wid} sumiu da página {_ABA!r}"
-    por_rotulo = _controles_por_rotulo()
-
-    erros: list[str] = []
-    for texto in textos[wid]:
-        # O par é por FRASE: um parágrafo cita vários controles e várias abas,
-        # e cruzá-los todos com todos daria alarme falso.
-        for frase in re.split(r"(?<=[.!?])\s+", texto):
-            abas = _ABA_CITADA.findall(frase)
-            if not abas:
-                continue
-            citados = [c for c in _ROTULO_CITADO.findall(frase) if c in por_rotulo]
-            if not citados:
-                continue
-            for rotulo in citados:
-                if por_rotulo[rotulo] != abas[0]:
-                    erros.append(
-                        f"  {wid}: manda para a aba {abas[0]!r} procurar "
-                        f"{rotulo!r}, que mora na aba {por_rotulo[rotulo]!r}"
-                    )
-    assert not erros, "ponteiro errado na aba Emulação:\n" + "\n".join(erros)
-
-
-def test_a_frase_que_nomeia_uma_aba_nomeia_o_controle_que_mora_nela() -> None:
-    """Anti-"vá procurar": citar a aba sem citar o controle não vale.
-
-    Sem este caso, R3 se satisfaz apagando o nome do controle: sem rótulo
-    citado não há par a conferir, e a instrução volta a ser "vá procurar".
-
-    NOTA DATADA — 28/08/2026 (S4). Este caso nasceu ancorado na frase
-    *"…vem PELA Steam …, marque «Esconder os controles físicos neste jogo»"*
-    e exigia que ela EXISTISSE (`assert frases, "o parágrafo da exceção por
-    jogo sumiu"`). Só que essa instrução é FALSA desde 09/08/2026 — ver
-    `test_a_dica_nao_manda_marcar_a_excecao_por_jogo`, logo abaixo —, e assim
-    a régua reprovava quem a tirasse: exatamente o defeito de *reprovar a
-    melhora em vez do defeito*, que esta casa já mediu onze vezes num dia. A
-    garantia que o caso realmente dava não dependia daquela frase; agora ela
-    é dita sem âncora nenhuma, sobre toda frase que nomeie uma aba.
-    """
-    textos = _textos_da_aba()["emulation_gamepad_hint_label"]
-    por_rotulo = _controles_por_rotulo()
-    for texto in textos:
-        for frase in re.split(r"(?<=[.!?])\s+", texto):
-            if not _ABA_CITADA.search(frase):
-                continue
-            citados = [c for c in _ROTULO_CITADO.findall(frase) if c in por_rotulo]
-            assert citados, (
-                "a frase nomeia uma aba e nenhum controle que exista na "
-                f"janela — vira 'vá procurar': {frase!r}. Rótulos citados que "
-                f"não existem: {_ROTULO_CITADO.findall(frase)}"
-            )
-
-
 #: A instrução que a tela dava até 28/08/2026 e que o produto tinha curado em
 #: 09/08: mandar marcar a exceção por jogo para acabar com o controle dobrado.
 #: São as formas de ORDEM ("marque", "marcar", "marcando"), não o substantivo
@@ -402,43 +204,6 @@ def test_a_frase_que_nomeia_uma_aba_nomeia_o_controle_que_mora_nela() -> None:
 #: sem mandar usá-la continua permitido (a aba Perfis precisa disso).
 _MANDA_MARCAR = re.compile(r"\bmarqu(?:e|em)\b|\bmarcar\b|\bmarcando\b", re.IGNORECASE)
 _A_MARCA_POR_JOGO = "Esconder os controles físicos"
-
-
-def test_a_dica_nao_manda_marcar_a_excecao_por_jogo() -> None:
-    """S4 (28/08/2026) — a tela mandava pôr de volta a trava que o produto curou.
-
-    A dica dizia, em texto sempre visível: *"Quando o suporte a DualSense do
-    jogo vem PELA Steam (é o caso do Mullet Mad Jack), marque «Esconder os
-    controles físicos neste jogo» no editor de perfil, na aba Perfis."*
-
-    **Isso é falso desde 09/08/2026** (ESCONDER-EM-VEZ-DE-SAIR-01, decisão
-    dela, commit `d8022ea5`). A marca deixou de ter ramo no arquivo de saída
-    do wrapper: `daemon/launch_env.py` diz, no cabeçalho, que *"o jogo marcado
-    recebe exatamente a mesma env de qualquer outro jogo"* — o dedup
-    (`SDL_GAMECONTROLLER_IGNORE_DEVICES`) chega a TODO jogo, marcado ou não.
-    Medido em 28/08 com o parser do próprio produto
-    (`parse_steam_input_allowlist` sobre `steam_input_allowlist_path()`): a
-    allowlist da máquina dela tem **zero** appids, e mesmo assim o dobrado não
-    voltou nos três jogos da queixa.
-
-    A caixinha CONTINUA existindo na aba Perfis — quem sai é a instrução que
-    mandava usá-la. Tirar a caixinha é decisão dela, e está aberta em
-    `docs/process/SPRINT_ORDER.md`.
-
-    **A mordida:** devolva a frase antiga ao `emulation_gamepad_hint_label` e
-    este caso reprova nomeando a frase.
-    """
-    erros: list[str] = []
-    for wid, textos in _textos_da_aba().items():
-        for texto in textos:
-            for frase in re.split(r"(?<=[.!?])\s+", texto):
-                if _A_MARCA_POR_JOGO in frase and _MANDA_MARCAR.search(frase):
-                    erros.append(f"  {wid}: {frase!r}")
-    assert not erros, (
-        "a aba Emulação voltou a mandar marcar a exceção por jogo — o produto "
-        "esconde o controle físico em TODO jogo desde 09/08/2026, e a marca "
-        "não é mais necessária para curar o dobrado:\n" + "\n".join(erros)
-    )
 
 
 # ---------------------------------------------------------------------------
@@ -468,17 +233,6 @@ _ESCOADOUROS_DE_RECIBO: dict[str, tuple[int, ...]] = {
 }
 
 _BURACO = "{}"
-
-
-def _handler_do_botao(wid: str) -> str | None:
-    """O handler de `clicked` do widget, lido do glade. None se não for botão."""
-    for obj in _pagina_da_emulacao().iter("object"):
-        if obj.get("id") != wid:
-            continue
-        for sinal in obj.findall("signal"):
-            if sinal.get("name") == "clicked":
-                return sinal.get("handler")
-    return None
 
 
 def _texto_do_no(no: ast.expr, ressalvas: dict[str, str]) -> str | None:
@@ -549,57 +303,3 @@ def _recibos_do_handler(handler: str, ressalvas: dict[str, str]) -> list[str]:
                 if texto and texto.replace(_BURACO, "").strip():
                     saida.append(texto)
     return saida
-
-
-def test_o_recibo_carrega_a_mesma_ressalva_do_rotulo() -> None:
-    afirmacoes = _declaracao("AFIRMACOES_DE_TRANSPORTE_DA_ABA")
-    ressalvas = _declaracao("RESSALVA_DE_TRANSPORTE")
-    radicais = _declaracao("RADICAIS_DE_TRANSPORTE")
-    assert isinstance(afirmacoes, dict)
-    assert isinstance(ressalvas, dict)
-    assert isinstance(radicais, dict)
-    fatos = _fatos_do_mapa()
-    textos_do_glade = _textos_da_aba()
-
-    conferidos = 0
-    faltando: list[str] = []
-    for wid in afirmacoes:
-        handler = _handler_do_botao(wid)
-        if handler is None:  # rótulo, não botão: R1 já responde por ele
-            continue
-        recibos = _recibos_do_handler(handler, ressalvas)
-        assert recibos, (
-            f"{wid} é um botão e o handler {handler!r} não manda recibo nenhum "
-            "para a barra de estado — se o recibo saiu, esta régua deixou de "
-            "medir e a declaração tem de sair junto"
-        )
-        for recibo in recibos:
-            conferidos += 1
-            for chave, radical in radicais.items():
-                if radical.lower() not in recibo.lower():
-                    continue
-                if tem_lastro_nos_dois(fatos[chave]):
-                    continue
-                ressalva = ressalvas.get(chave)
-                assert ressalva, (
-                    f"{chave!r} não tem lastro nos dois transportes e não há "
-                    "ressalva declarada para ela em RESSALVA_DE_TRANSPORTE"
-                )
-                if ressalva in recibo:
-                    continue
-                faltando.append(
-                    f"  {wid} ({handler}) afirma {chave} nos DOIS lugares, e só "
-                    "o tooltip carrega a ressalva:\n"
-                    f"    tooltip: {' '.join(textos_do_glade.get(wid, []))!r}\n"
-                    f"    recibo : {recibo!r}\n"
-                    f"    falta  : {ressalva!r}"
-                )
-    assert conferidos, (
-        "nenhum recibo foi conferido — os botões da aba Emulação deixaram de "
-        "chegar a `_apply_mode`/`_toast_emulation`, e esta régua virou "
-        "decoração. Ajuste `_ESCOADOUROS_DE_RECIBO`."
-    )
-    assert not faltando, (
-        "o recibo promete o que o rótulo já ressalvou — quem clica lê o "
-        "toast:\n" + "\n".join(faltando)
-    )

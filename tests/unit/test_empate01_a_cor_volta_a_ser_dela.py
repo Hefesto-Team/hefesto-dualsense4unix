@@ -38,7 +38,6 @@ import sys
 import types
 from pathlib import Path
 from typing import Any
-from xml.etree import ElementTree
 
 import pytest
 
@@ -105,7 +104,6 @@ RAIZ = Path(__file__).resolve().parents[2]
 #: `assets/estilos_de_jogo/` junto com os outros sete. O ARQUIVO é o mesmo — a
 #: EMPATE-01 continua sendo sobre o que ele NÃO diz sobre a cor.
 FALLBACK_JSON = RAIZ / "assets" / "estilos_de_jogo" / "fallback.json"
-GLADE = RAIZ / "src" / "hefesto_dualsense4unix" / "gui" / "main.glade"
 
 
 class _FakeEntry:
@@ -434,22 +432,6 @@ class TestSalvarNaoRebaixaAPrioridade:
 class TestTetoDaEscalaSobeParaDuzentos:
     def test_a_constante_do_codigo(self) -> None:
         assert pa.PRIORIDADE_MAXIMA == 200
-
-    def test_o_glade_acompanha(self) -> None:
-        """O código e o glade têm de dizer o mesmo número.
-
-        Divergir aqui é pior que não subir: a escala aceitaria um valor que o
-        editor recorta em silêncio na volta.
-        """
-        arvore = ElementTree.parse(GLADE)
-        ajuste = next(
-            obj for obj in arvore.iter("object")
-            if obj.get("id") == "profile_priority_adj"
-        )
-        upper = next(
-            prop for prop in ajuste.iter("property") if prop.get("name") == "upper"
-        )
-        assert int(str(upper.text)) == pa.PRIORIDADE_MAXIMA
 
     def test_perfil_acima_de_cem_abre_com_o_valor_certo(self) -> None:
         """Com o teto antigo, um perfil em 150 abria mostrando 100."""
