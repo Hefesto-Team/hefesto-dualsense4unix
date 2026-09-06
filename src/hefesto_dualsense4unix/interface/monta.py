@@ -1575,8 +1575,11 @@ def monta(arq: str, titulo_aba: str, miolo: str, css_extra: str = "",
     # dois fora. O cabeçalho promete o que está na mesa AGORA; contar os quatro
     # aqui faria a janela anunciar quatro e desenhar dois acesos, que é a mesma
     # divergência que esta linha nasceu para matar.
-    usb = sum(1 for c in CONECTADOS if c["via"] == "USB")
-    bt = sum(1 for c in CONECTADOS if c["via"] == "BT")
+    # A CONTAGEM DO TOPO SOMA A CHAVE CRUA, e a palavra fica com a tela — costura
+    # da ONDA B, 06/09/2026. A contagem continua dizendo `2 USB · 0 BT` por decisão
+    # dela; o que mudou é que ela não depende mais da palavra que a `via` carrega.
+    usb = sum(1 for c in CONECTADOS if str(c.get("transporte") or "").lower() == "usb")
+    bt = sum(1 for c in CONECTADOS if str(c.get("transporte") or "").lower() == "bt")
     # OS DOIS `data-campo` SÃO O ENDEREÇO DA PINTURA, e eles valem para as DEZ
     # páginas porque o cabeçalho é um só. Sem eles o piloto tinha onde buscar o
     # número e nenhum lugar onde escrevê-lo: medido em 01/09/2026, a aba Jogar
