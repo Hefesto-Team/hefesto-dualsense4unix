@@ -94,7 +94,8 @@ CSS = CSS_GLIFO + """
      `.duas-colunas` para "colunas irmãs acabam no mesmo y" e para "as colunas
      somam a largura da caixa"; trocá-lo por um nome mais bonito desligaria as
      duas medições EM SILÊNCIO, que é o defeito desta casa. Precedente:
-     `aba08.py:701` já usa a mesma classe com TRÊS colunas.
+     `aba08.py` já usa a mesma classe (a regra `.duas-colunas` do CSS da
+     Conexões, e as duas `<div class="duas-colunas">` dos quadros 1 e 3).
 
      AS ALTURAS DE LINHA SÃO COMPARTILHADAS pelas cinco colunas — é isso que faz
      o rótulo "Ajustes" ficar na linha das quatro caixas de ajuste e as cinco
