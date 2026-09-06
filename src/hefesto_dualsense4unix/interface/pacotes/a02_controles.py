@@ -68,7 +68,10 @@ from __future__ import annotations
 import re
 from typing import Any
 
-from hefesto_dualsense4unix.app.actions.home_actions import mascara_viva
+from hefesto_dualsense4unix.app.actions.home_actions import (
+    mascara_viva,
+    palavra_do_transporte,
+)
 from hefesto_dualsense4unix.app.ipc_bridge import (
     alvo_honrado,
     frase_do_ato_do_microfone,
@@ -88,6 +91,7 @@ from hefesto_dualsense4unix.app.widgets.controller_card import (
     gyro_do_inputs,
     rotulo_lightbar,
     speaker_do_entry,
+    texto_motion,
     touchpad_do_inputs,
 )
 from hefesto_dualsense4unix.app.widgets.sensor_widgets import (
@@ -105,7 +109,6 @@ from hefesto_dualsense4unix.core.speaker_scale import (
 
 from . import (
     NOME_SEM_LEITURA,
-    VIA_DO_TRANSPORTE,
     Contexto,
     degradacao_de,
     identidade_de,
@@ -1797,8 +1800,38 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
             e, tem_leitor, onde_o_dedo)
         # A IDENTIDADE DO CABEÇALHO, pelos donos: a ordem das quatro fontes é de
         # `identidade_de`, e a tradução do transporte é a MESMA que a mesa usa.
-        via_na_tela = VIA_DO_TRANSPORTE.get(str(c.get("transport") or "").lower(), "")
+        #
+        # A PALAVRA VEM DO DONO — CONTROLES-VERDADE-01, 06/09/2026, e ela cura
+        # um DEFEITO VIVO que a costura da ONDA B abriu hoje, calado.
+        #
+        # Esta linha era `VIA_DO_TRANSPORTE.get(…)`, a SIGLA DE MÁQUINA, e o
+        # cabeçalho do card dizia `USB`/`BT` — que o glossário de hoje proíbe em
+        # texto de tela (`docs/A-LINGUA-DESTA-CASA`, §1: na tela é **cabo** e
+        # **rádio**; a contagem do topo é a única exceção, e é dela).
+        #
+        # MAS O ESTRAGO ERA MAIOR QUE A PALAVRA, e ele está DUAS LINHAS ABAIXO:
+        # o `peca` compara `nome_na_tela == via_na_tela` para não escrever o
+        # transporte DUAS VEZES no mesmo cabeçalho. Hoje `identidade_de` passou a
+        # cair na palavra da tela no último degrau — e a comparação passou a ser
+        # entre `"rádio"` e `"BT"`, que nunca casam. MEDIDO nesta árvore, com um
+        # controle sem cor lida (a mesa dela pelo rádio é exatamente este caso):
+        #
+        #   transport='bt'   identidade_de='rádio'   via_na_tela='BT'
+        #   → o cabeçalho lia  `P2 • rádio • BT`
+        #
+        # O comentário do bloco do `peca` já nomeava o defeito — *"o cabeçalho
+        # leria `BT • BT`"* — e a guarda que ele descrevia tinha deixado de
+        # valer no mesmo dia em que foi lida.
+        #
+        # A PERGUNTA É AO PRÓPRIO `identidade_de`, e não a uma palavra escrita:
+        # é a forma que a `a09_sistema` adotou na ONDA4-S10 e a razão dela vale
+        # aqui inteira — *"um conjunto de palavras é uma cópia da tradução"*, e
+        # a cópia descasa calada na próxima troca de língua. O que o dono
+        # devolve para um controle que SÓ tem o transporte **é** o último degrau,
+        # neste transporte, na língua que ele fale hoje.
+        via_na_tela = palavra_do_transporte(c.get("transport"))
         nome_na_tela = identidade_de(c, ctx.mesa)
+        ultimo_degrau = identidade_de({"transport": c.get("transport")})
         cards[uniq] = {
             # A GRAFIA DA CARGA NÃO É MAIS REDIGITADA AQUI — ver
             # `texto_da_bateria`, que PERGUNTA à GTK as duas frases.
@@ -2107,7 +2140,7 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
                 # sobrou foi o transporte, esta aba manda VAZIO, e o piloto
                 # escreve o travessão: `P2 • — • BT` é a verdade da mesa dela
                 # hoje, com a cor do rádio ainda não lida.
-                "peca": "" if nome_na_tela == via_na_tela else nome_na_tela,
+                "peca": "" if nome_na_tela == ultimo_degrau else nome_na_tela,
                 "via": via_na_tela,
                 # OS DOIS ACESOS QUE ERAM DESENHO — 03/09/2026. Cada um vai
                 # para os DOIS botões do seu par: eles compartilham o mesmo
@@ -2148,6 +2181,31 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
                 # uma marca sem motivo — e uma marca sem explicação é ruído com
                 # cara de dado, que é o que o `?` da ONDA0-F já recusa.
                 "mascara-degradou": degradacao_de(c),
+                # A LINHA DA VERDADE — "o que chega ao jogo".
+                # CONTROLES-VERDADE-01, 06/09/2026, e é a entrega central desta
+                # sprint: *"numa mesa de quatro, o cartão é o único lugar onde
+                # se descobre por que um controle não está fazendo nada"*.
+                #
+                # O DONO MONTA A FRASE INTEIRA, incluindo as DUAS EXCEÇÕES —
+                # Modo Nativo (*"o jogo fala direto com o controle — tudo
+                # chega"*) e a máscara Xbox 360. Omitir a exceção seria a tela
+                # dizer que nada chega justamente quando muita coisa chega, e o
+                # `state_global` é obrigatório por isso: as duas exceções são
+                # perguntas ao estado GLOBAL, não ao controle.
+                #
+                # O `getattr` É O MESMO DO `rotulo_lightbar` VINTE LINHAS ACIMA,
+                # e pela mesma razão declarada lá: há régua que monta um
+                # `Contexto` PARCIAL, sem `state`. Um `{}` faz o dono devolver
+                # `None` (sem gamepad virtual não há o que dizer), que é
+                # exatamente o desfecho certo para "não perguntei".
+                #
+                # `None` VIRA VAZIO, E O VAZIO ESCONDE A LINHA: o alvo
+                # `atributo` do elemento de fora remove o `title` e a folha o
+                # apaga por `:not([title])`. Ver o bloco `A LINHA DA VERDADE` no
+                # `interface/aba02.py`. Uma linha vazia num card de quatro é
+                # ruído, e este card não tem pixel para ruído.
+                "giro-no-jogo": texto_motion(
+                    c, getattr(ctx, "state", None) or {}) or "",
                 # A LEITURA VIVA — 46 campos por card, e nenhum deles tinha
                 # endereço até 03/09/2026. Ver `leitura_viva`, que traz a mesa
                 # do que a tela dizia contra o que o aparelho publicava no
