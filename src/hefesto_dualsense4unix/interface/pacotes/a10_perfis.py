@@ -1158,7 +1158,7 @@ def _rotulo_do_remover(alvo: str) -> str:
     **FATO CADUCO, SUBSTITUÍDO — 02/09/2026.** Aqui estava escrito que *"a
     recusa do piloto não serve de pergunta: ela sai em `stderr`, no terminal,
     onde a dona não está olhando"*. **Não sai mais.** O piloto ganhou
-    `_recusou_dizendo` (`hefesto_vivo.py:2229`): todo `RuntimeError` de gesto
+    `_recusou_dizendo` (`hefesto_vivo.py:2236`): todo `RuntimeError` de gesto
     vira TARJA na tela — no cartão do controle quando a página tem um, e no
     `document.body` quando não tem, que é o caso desta aba. Ela some sozinha em
     `SEGUNDOS_DO_RECADO = 30.0`.
@@ -1954,7 +1954,7 @@ def _so_mudou(o: dict[str, Any]) -> bool:
         editor.jogo   tipo=input   evento=change  valor='1599660'
         editor.nome   tipo=input   evento=click   valor='Elden Ring BR' ← só cliquei
 
-    O ouvinte do piloto escuta `click` E `change` (`hefesto_vivo.py:188-200`), e
+    O ouvinte do piloto escuta `click` E `change` (`hefesto_vivo.py:1034-1035`), e
     **clicar dentro de um campo para pôr o cursor manda o valor que já estava
     lá**. Sem esta guarda, clicar no "Nome do Jogo" de um perfil em "Todos"
     faria o gesto inferir a regra e GRAVAR — uma troca de regra disparada por
