@@ -1680,11 +1680,25 @@ def main() -> int:
     p.add_argument("--duble", help="JSON com um state_full — em vez do daemon")
     args = p.parse_args()
 
+    if not PAGINA.exists():
+        print(f"ERRO: a página desta aba não está em {PAGINA}", file=sys.stderr)
+        return 2
+
     j = Janela(args)
     Gtk.main()
     if j.mic is not None:
         j.mic.stop()
     print("\n" + j.relato())
+
+    # UMA BANCADA QUE NÃO DEU UMA VOLTA NÃO MEDIU NADA, E NÃO SAI VERDE — a
+    # guarda que a `jogar_vivo.main` ganhou na `ONDA5-07-03`, estendida às cinco
+    # na costura da ONDA C. O defeito que ela cobra é o de rc=0 sobre janela
+    # vazia; aqui a página existe, e a guarda é o que impede o dia em que ela
+    # deixar de existir de passar calado. O `--sem-ponte` é a exceção e é a
+    # MORDIDA: ele desliga a pintura de propósito.
+    if j.voltas == 0 and not args.sem_ponte:
+        print("ERRO: a bancada não deu uma volta — nada foi medido.", file=sys.stderr)
+        return 1
     return 0
 
 

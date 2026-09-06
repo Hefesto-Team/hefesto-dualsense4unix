@@ -572,6 +572,16 @@ def main(argv: list[str] | None = None) -> int:
               f"· {meio / TIQUE_MS * 100:.1f}% do orçamento de {TIQUE_MS} ms")
     print(f"gestos ouvidos: {len(janela.gestos)}")
     print(f"recusas da ponte: {len(janela.ponte.recusas)}")
+
+    # UMA BANCADA QUE NÃO DEU UMA VOLTA NÃO MEDIU NADA, E NÃO SAI VERDE — a
+    # guarda que a `jogar_vivo.main` ganhou na `ONDA5-07-03`, estendida às cinco
+    # na costura da ONDA C. Aqui a contagem não é um `voltas`: esta bancada
+    # guarda os custos do tique em `janela.valores`, e um tique medido é uma
+    # volta dada. O `--sem-ponte` é a exceção e é a MORDIDA: ele desliga a
+    # pintura de propósito, e zero volta ali é o resultado esperado.
+    if not custos and not args.sem_ponte:
+        print("ERRO: a bancada não deu uma volta — nada foi medido.", file=sys.stderr)
+        return 1
     return 0
 
 
