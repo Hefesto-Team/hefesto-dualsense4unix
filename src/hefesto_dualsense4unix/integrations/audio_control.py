@@ -153,13 +153,44 @@ class AudioControl:
     # ------------------------------------------------------------------
 
     def _run(self, argv: list[str]) -> subprocess.CompletedProcess[str]:
-        """Executa comando como lista de args, sem shell=True."""
+        """Executa comando como lista de args, sem shell=True — e em `LC_ALL=C`.
+
+        **O `LC_ALL=C` NÃO É ZELO, e a ausência dele era um instrumento que
+        mentia.** Medido na máquina dela em 06/09/2026, com o `LANG=pt_BR.UTF-8`
+        que ela usa::
+
+            pactl set-source-mute <nó> 1 ; pactl get-source-mute <nó>
+                sem LC_ALL  ->  Mute: sim
+                com LC_ALL=C ->  Mute: yes
+            desmutado, sem LC_ALL                ->  Mute: não
+
+        :meth:`_query_pactl_muted` responde ``"yes" in saida.lower()``. Nem
+        ``sim`` nem ``não`` contêm ``yes``, então nesta máquina a leitura
+        devolvia **False sempre** — e :meth:`toggle_default_source_mute`
+        afirmava *"o microfone está no ar"* tivesse ele mutado ou não. O
+        aparelho obedecia; quem mentia era a leitura de volta.
+
+        **É a MESMA causa que este arquivo já registra duas vezes** —
+        `fonte_de_captura_do_controle` (15/08/2026, *"já respondeu 'nenhum
+        controle com placa de áudio' sobre um sistema que tinha um"*) e
+        `_texto_do_pactl`. As duas ganharam o ambiente; esta ficou de fora, que
+        é a forma desta casa de deixar meia cura viva: **quando a cura conhece a
+        causa, ela cobre TODOS os chamadores.**
+
+        DÍVIDA DECLARADA, e ela não é desculpa: hoje NENHUM caminho de `src/`
+        chama `toggle_default_source_mute` — o botão do microfone deixou de
+        passar por ele em 01/09/2026, e há régua que reprova se ele voltar
+        (`test_bt_e_vpad_01.py`). O defeito era latente, não vivo; o que o torna
+        digno de conserto é que a próxima pessoa a reabrir aquela porta herdaria
+        uma leitura que responde sobre o idioma do shell, não sobre o aparelho.
+        """
         return subprocess.run(
             argv,
             timeout=SUBPROCESS_TIMEOUT_SEC,
             check=False,
             capture_output=True,
             text=True,
+            env={**os.environ, "LC_ALL": "C", "LANG": "C"},
         )
 
     def _query_wpctl_muted(self) -> bool:
