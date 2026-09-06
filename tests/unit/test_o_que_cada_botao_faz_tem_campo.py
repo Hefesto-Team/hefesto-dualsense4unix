@@ -23,6 +23,7 @@ nada as comparava.
 from __future__ import annotations
 
 import pathlib
+import re
 import sys
 
 import pytest
@@ -77,11 +78,32 @@ def test_os_gatilhos_seguem_os_botoes_que_o_produto_injeta() -> None:
 
 
 def test_as_vinte_e_uma_linhas_tem_padrao_e_rotulo() -> None:
-    """Linha sem padrão é `<select>` que abre vazio; sem rótulo, é token cru na tela."""
+    """Linha sem padrão é `<select>` que abre vazio; sem rótulo, é token cru na tela.
+
+    O NÚMERO DEIXOU DE SER DIGITADO — 06/09/2026. Estava escrito
+    `assert len(BOTOES) == 21`, com a queixa *"a tela mostra 21 linhas e BOTOES
+    tem N"* — e a régua **afirmava** o que a tela mostra em vez de perguntar a
+    ela. Quando o PS entrou no produto (ONDA5-06-01), foi este `21` que
+    reprovou, e a queixa dizia a verdade pela metade: a tela mostrava 21 porque
+    ainda não tinha sido gerada, não porque 21 fosse o certo.
+
+    **AGORA ELA PERGUNTA À TELA**, contando os `data-linha` da página publicada
+    — a que o produto renderiza. É a mesma pergunta, com o dono no lugar do
+    número, e ela passa a pegar o defeito nos DOIS sentidos: o produto que anda
+    sem a tela, e a tela que anda sem o produto.
+
+    A MORDIDA: tire uma linha de `aba06.BOTOES` e regere a página — este caso a
+    nomeia.
+    """
     from hefesto_dualsense4unix.core.acoes_de_botao import ACOES, BOTOES, padrao
+    from hefesto_dualsense4unix.interface import onde
 
     p = padrao()
-    assert len(BOTOES) == 21, f"a tela mostra 21 linhas e `BOTOES` tem {len(BOTOES)}"
+    doc = onde.pagina("06-navegacao.html", publicado=True).read_text(encoding="utf-8")
+    na_tela = set(re.findall(r'<select[^>]*data-linha="([^"]+)"', doc))
+    assert na_tela == set(BOTOES), (
+        f"a tela e o produto contam listas diferentes — a mais na tela: "
+        f"{sorted(na_tela - set(BOTOES))}; a menos: {sorted(set(BOTOES) - na_tela)}")
     faltando = [b for b in BOTOES if b not in p]
     assert not faltando, f"sem padrão: {faltando}"
     sem_rotulo = [f"{b}={p[b]}" for b in BOTOES if p[b] not in ACOES]
