@@ -907,6 +907,27 @@ _CITACOES_PENDENTES: frozenset[str] = frozenset({
     "interface/pacotes/a06_navegacao.py::integrations/uinput_mouse.py:500",
     "interface/pacotes/a06_navegacao.py::uinput_mouse.py:446",
     "interface/pacotes/a08_conexoes.py::profiles/manager.py:2106",
+    # ONDA5-P-01 (06/09/2026) — AS TRÊS QUE A QUARTA PORTA DESLOCOU. O piloto
+    # ganhou o seletor do dono, o `input` do "ao vivo" e o despacho do gesto
+    # vivo; o deslocamento em `interface/hefesto_vivo.py` é de **+163 linhas**
+    # antes do `_fita` e de **+297** antes do `_recusou_dizendo`. As três moram
+    # em `interface/pacotes/`, que a sprint declara em `nao_toca:`. A âncora de
+    # cada uma CONTINUA EXISTINDO — só o número mudou.
+    #
+    # O NÚMERO CERTO JÁ ESTÁ MEDIDO — quem for dono do arquivo troca e apaga a
+    # linha daqui (o `test_a_lista_de_pendentes_nao_vira_paisagem` cobra):
+    #   a03_gatilhos.py:1472  `hefesto_vivo.py:1515` -> `:1678` (`_fita`)
+    #   a06_navegacao.py:2710 `hefesto_vivo.py:2288` -> `:2585` (`_recusou_dizendo`)
+    #   a10_perfis.py:1284    `hefesto_vivo.py:2288` -> `:2585` (`_recusou_dizendo`)
+    #
+    # As TRÊS que a mesma cura deslocou FORA do `nao_toca:` não estão aqui
+    # porque foram corrigidas no lugar (`interface/aba05.py:1601`, `:1609` e
+    # `:1616` — as três citações do `data-controle` daquela aba, que já
+    # apontavam para linhas erradas antes desta leva e só agora caíram numa que
+    # a régua consegue ancorar).
+    "interface/pacotes/a03_gatilhos.py::hefesto_vivo.py:1515",
+    "interface/pacotes/a06_navegacao.py::hefesto_vivo.py:2288",
+    "interface/pacotes/a10_perfis.py::hefesto_vivo.py:2288",
     "profiles/loader.py::schema.py:52",
     "utils/repo_files.py::cli/cmd_doctor.py:23",
     "utils/repo_files.py::emulation_actions.py:1200",
