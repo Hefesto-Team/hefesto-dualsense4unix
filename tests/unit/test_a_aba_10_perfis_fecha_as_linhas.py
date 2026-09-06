@@ -1003,3 +1003,286 @@ def gerador() -> Any:
     import aba10  # type: ignore[import-not-found]
 
     return aba10
+
+
+# ---------------------------------------------------------------------------
+# ONDA5-10-02 · o rótulo ao lado do campo (10-Q4) e a metade curta (10-Q5)
+# ---------------------------------------------------------------------------
+def test_o_rotulo_do_jogo_separa_a_rotina_do_erro(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Três entradas, três respostas — e a terceira ACENDE, as duas primeiras não.
+
+    O BOOLEANO É O PONTO INTEIRO desta régua. Até 06/09 `_jogo_reconhecido`
+    devolvia só a PRIMEIRA metade do par, e o ``é_alerta`` que
+    ``frase_do_campo_do_jogo`` devolve morria ali — o mesmo bit que separa *"não
+    instalado aqui (o número vale)"*, que é o jogo que ela ainda vai comprar, de
+    *"não reconheci este endereço"*, que é erro de digitação. Sem ele o rótulo
+    sairia da mesma cor nos dois casos.
+
+    ELA LÊ AS CONSTANTES DE `jogos_locais` em vez de digitar as frases: foi
+    digitando o que devia LER que esta casa perdeu onze réguas em 26/08.
+
+    MORDIDA: faça `_jogo_reconhecido` devolver só a frase (ou fixe o segundo
+    membro do par em `False`) e esta régua reprova no endereço malformado.
+    """
+    from hefesto_dualsense4unix.integrations import jogos_locais
+
+    monkeypatch.setattr(a10_perfis, "_nomes_dos_jogos",
+                        lambda: {"1245620": "Elden Ring"})
+
+    instalado = a10_perfis._jogo_reconhecido("1245620")
+    assert instalado == ("Elden Ring", False), (
+        f"o appid instalado devia devolver o NOME sem alerta: {instalado!r}")
+
+    ausente = a10_perfis._jogo_reconhecido("999999")
+    assert ausente == (jogos_locais.MSG_FORA_DA_MAQUINA, False), (
+        f"o jogo que ela ainda vai comprar é ROTINA, não alerta: {ausente!r}")
+
+    # `parece_endereco` é quem decide o que "parece endereço" — a régua não
+    # inventa a forma, usa a que o dono reconhece.
+    malformado = "store.steampowered.com/app/"
+    assert jogos_locais.parece_endereco(malformado), (
+        "a semente desta régua deixou de parecer endereço para o dono — "
+        "troque a semente, não a asserção")
+    erro = a10_perfis._jogo_reconhecido(malformado)
+    assert erro == (jogos_locais.MSG_NAO_RECONHECI, True), (
+        f"o endereço malformado tem de acender o alerta: {erro!r}")
+
+    vazio = a10_perfis._jogo_reconhecido("")
+    assert vazio == ("", False), (
+        f"campo vazio é silêncio, e alerta em campo em branco é ruído: {vazio!r}")
+
+
+@pytest.mark.parametrize("publicado", [False, True], ids=["bancada", "publicada"])
+def test_o_rotulo_do_jogo_tem_onde_pousar(publicado: bool) -> None:
+    """Os dois sentidos: endereço emitido sem lugar, e lugar sem quem escreva.
+
+    É o espelho de `test_a_marca_acende_exatamente_quando_a_frase_existe`, um
+    degrau acima: lá o par é marca/frase, aqui é PRODUTO/DESENHO. Um rótulo
+    emitido para um endereço que a página não tem cai no vazio sem notícia
+    (foi o defeito do `ativo`, em 02/09); um `<span>` no desenho que ninguém
+    escreve é desenho congelado se passando por produto.
+
+    A PÁGINA PUBLICADA AINDA NÃO TEM O RÓTULO, e é por isso que os dois nomes
+    estão em `ESPERANDO_A_PUBLICACAO` — publicar é ato dela. Esta régua cobra
+    exatamente essa declaração: enquanto o endereço não estiver na publicada,
+    ele tem de estar na lista; quando ela publicar, a lista tem de esvaziar.
+
+    MORDIDA: tire `{rotulo_do_jogo()}` do `aba10.MIOLO` e regere — o ramo da
+    bancada reprova. Tire as duas entradas de `ESPERANDO_A_PUBLICACAO` e o ramo
+    da publicada reprova.
+    """
+    from hefesto_dualsense4unix.profiles.schema import MatchCriteria, Profile
+
+    html = _pagina(publicado)
+    fora = _emitido(Profile(name="Elden Ring", match=MatchCriteria(
+        window_class=["steam_app_1245620"])))
+
+    for endereco in ("editor.jogo.rotulo", "editor.jogo.alerta"):
+        assert endereco in fora, (
+            f"o produto parou de emitir `{endereco}` — o `<span>` do desenho "
+            f"fica com o que o mockup cravou, para sempre")
+        tem_lugar = f'data-hef="{endereco}"' in html
+        declarado = endereco in a10_perfis.ESPERANDO_A_PUBLICACAO
+        assert tem_lugar or declarado, (
+            f"`{endereco}` sai do pacote e a página "
+            f"{'publicada' if publicado else 'da bancada'} não tem onde pô-lo — "
+            f"e ele não está declarado em `ESPERANDO_A_PUBLICACAO`")
+        if publicado and tem_lugar:
+            assert not declarado, (
+                f"`{endereco}` já chegou à página publicada e continua na lista "
+                f"de espera — a declaração envelheceu, e uma lista que descreve "
+                f"o passado é a régua se desligando sozinha. Tire no mesmo commit")
+
+    if not publicado:
+        # A BANCADA TEM DE TER OS TRÊS `<span>`: o que acende, o que pinta e o
+        # que escreve. Sem o primeiro, `escrever()` troca o vazio por `'—'` e a
+        # tela ganha um travessão solto ao lado do campo em todo perfil que não
+        # é da Steam.
+        assert html.count('data-hef="editor.jogo.rotulo"') == 2, (
+            "o rótulo do jogo perdeu um dos dois endereços na bancada — sem o "
+            "`classe` ele acende sempre, sem o `<span>` ele nunca escreve")
+        assert ('<span class="rot" data-hef="editor.jogo.rotulo"'
+                ' data-hef-alvo="classe">') in html, (
+            "o `<span>` de fora do rótulo perdeu o alvo `classe`")
+        assert ('data-hef="editor.jogo.alerta" data-hef-alvo="classe"'
+                ' data-hef-classe="alerta"') in html, (
+            "o rótulo perdeu a tinta do alerta — «não reconheci este endereço» "
+            "sairia com a cara de «não instalado aqui»")
+        assert '<span data-hef="editor.jogo.rotulo"></span>' in html, (
+            "o rótulo não nasce VAZIO no desenho — um exemplo aqui é a tela "
+            "afirmando um jogo que o perfil dela não tem")
+
+
+def test_a_tira_diz_a_metade_curta(monkeypatch: pytest.MonkeyPatch) -> None:
+    """A carona longa não cabe nas duas linhas; a curta cabe — e a 07 não muda.
+
+    **O TETO É MEDIDO, e não digitado aqui**: `aba10.CABEM_NA_TIRA` é o número
+    que saiu da bissecção no Chrome sobre a `.desfecho` acesa (413 caracteres a
+    1140px, 11px, `line-height:15px`, `-webkit-line-clamp:2`).
+
+    **E A PREMISSA DA SPRINT CAIU AO SER MEDIDA.** A ONDA5-10-02 dizia que DUAS
+    frases do produto passavam do teto *por serem longas* — 212 e ~290
+    caracteres. Elas não passam: o que estoura é o NÚMERO DE JOGOS, porque
+    `steam_launch_options.lista_de_jogos` não tem teto. Com a frase de ativação
+    grudada, a forma longa cabe até DOIS jogos e a curta até CINCO. A escolha
+    dela continua certa e continua tendo trabalho; o que mudou foi a razão.
+
+    O DUBLÊ É OBRIGATÓRIO, e sem ele esta régua daria verde sobre a cura
+    inteira: `carona.ligada()` lê `HEFESTO_CARONA_WRAPPER`, a `conftest.py` o
+    põe em `0`, e `_com_a_carona` devolveria a frase de entrada sem tocar em
+    nada.
+
+    MORDIDA: faça `_com_a_carona` voltar a somar `resultado.frase` e esta régua
+    reprova pelo tamanho.
+    """
+    from hefesto_dualsense4unix.app.actions import carona_do_wrapper as carona
+    from hefesto_dualsense4unix.integrations import sentinela_do_wrapper as sw
+
+    jogos = [f"Jogo Número {n} (appid {1000000 + n})" for n in range(3)]
+    longa = (
+        "3 jogos perderam as Opções de Inicialização do Hefesto na Steam: "
+        f"{', '.join(jogos[:-1])} e {jogos[-1]}. {sw.AVISO_DA_REGRESSAO}"
+        "Vou repor assim que o jogo e a Steam fecharem — não mexo agora porque "
+        "fechar a Steam com um jogo aberto mata o jogo.")
+    curta = longa.replace(sw.AVISO_DA_REGRESSAO, "")
+
+    monkeypatch.setattr(carona, "ligada", lambda: True)
+    monkeypatch.setattr(
+        carona, "passada",
+        lambda **k: carona.ResultadoDaCarona(
+            sw.REPARO_ADIADO_JOGO, longa, frozenset(), True, curta))
+
+    ativacao = "Perfil ativado: Elden Ring"
+    na_tira = a10_perfis._com_a_carona(ativacao)
+
+    teto = _teto_da_tira()
+    assert len(f"{ativacao} · {longa}") > teto, (
+        "a semente desta régua deixou de estourar o teto — ela mede a cura "
+        "contra um caso que já cabia, e daria verde sobre nada")
+    assert len(na_tira) <= teto, (
+        f"a tira recebeu {len(na_tira)} caracteres e cabem {teto}: o fim da "
+        f"frase — que é o que diz «vou repor assim que…» — sai com reticências")
+    assert sw.AVISO_DA_REGRESSAO.strip() not in na_tira, (
+        "o aviso continua no texto da tira; a decisão 10-Q5 dela é que ele SAIA "
+        "daqui")
+
+    # E O CARTÃO DA ABA 07 CONTINUA RECEBENDO A FRASE INTEIRA. Sem esta metade,
+    # a cura vaza para a outra aba — e lá o aviso tem onde caber: um cartão tem
+    # CORPO, e é o mesmo lugar onde a recusa aparece.
+    resultado = carona.passada()
+    assert resultado.frase == longa, (
+        "o dono passou a devolver a frase curta em `frase` — a janela GTK e o "
+        "corpo do cartão da Steam perderiam o aviso junto com a tira")
+    assert sw.AVISO_DA_REGRESSAO.strip() in resultado.frase
+
+
+def _teto_da_tira() -> int:
+    """`aba10.CABEM_NA_TIRA`, importado como o gerador se importa."""
+    import sys
+    from pathlib import Path
+
+    pytest.importorskip(
+        "hefesto_dualsense4unix.interface.monta",
+        reason="o gerador lê o repositório no import; num pacote instalado não há",
+    )
+    pasta = Path(onde.__file__).parent
+    if str(pasta) not in sys.path:
+        sys.path.insert(0, str(pasta))
+    import aba10  # type: ignore[import-not-found]
+
+    return int(aba10.CABEM_NA_TIRA)
+
+
+def test_a_frase_curta_e_a_longa_sem_o_aviso_e_nao_um_corte(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Quem encurta é o DONO da frase, e a curta é a longa MENOS o aviso.
+
+    Cortar no primeiro ponto seria um segundo dono do texto: a tira passaria a
+    depender da pontuação de uma frase que outra pessoa escreve, e mudar a
+    redação lá quebraria a tira aqui sem ninguém ver.
+
+    E `""` CONTINUA QUERENDO DIZER "não tenho versão curta", nunca "não diga
+    nada": o jogo NOVO e a lista de IGNORE estendida à mão já cabem, e para eles
+    quem fala é a `frase`.
+
+    MORDIDA: faça `frase_do_aviso_curta` devolver `frase_do_aviso(censo)` e a
+    primeira asserção reprova; faça-a devolver `""` na regressão e a segunda.
+    """
+    from hefesto_dualsense4unix.integrations import sentinela_do_wrapper as sw
+
+    def _censo(motivo: str) -> Any:
+        return sw.Censo(
+            com_wrapper=[], recusados=[], sandbox=[], erros=[],
+            steam_aberta=True, jogo_aberto=True,
+            faltantes=[sw.JogoSemWrapper(
+                appid="1245620", rotulo="Elden Ring (appid 1245620)",
+                opcoes="", motivo=motivo, vdf="/x")])
+
+    regressao = _censo(sw.MOTIVO_REGRESSAO)
+    longa = sw.frase_do_aviso(regressao)
+    curta = sw.frase_do_aviso_curta(regressao)
+    assert curta and curta != longa, (
+        "a regressão não ganhou forma curta — é a frase que estoura a tira")
+    assert curta == longa.replace(sw.AVISO_DA_REGRESSAO, ""), (
+        f"a curta não é a longa MENOS o aviso: alguém a redigitou, e as duas "
+        f"vão envelhecer separadas.\n  longa: {longa!r}\n  curta: {curta!r}")
+    assert "Vou repor assim que" in curta, (
+        "a curta perdeu o que vai ACONTECER — é o contrato da vigia, e é o fim "
+        "da frase que a reticência comia")
+
+    assert sw.frase_do_aviso_curta(_censo(sw.MOTIVO_NOVO)) == "", (
+        "o jogo novo ganhou forma curta — a frase dele já cabe, e uma segunda "
+        "forma sem necessidade é mais um texto a envelhecer")
+
+
+def test_o_campo_do_jogo_nao_grava_por_tecla(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """O guarda-costas da QUARTA PORTA: só `change` grava — `input` não.
+
+    O "ao vivo" da decisão 10-Q4 pede que o piloto ouça `input`, o único evento
+    que um campo de texto dispara a cada TECLA. As três portas de hoje
+    (`change`, `click`, `blur`) despacham pelo `data-hef-gesto`, que aqui é
+    `editor.jogo` — e ele GRAVA NO DISCO. Ligar `input` ao mesmo atributo faria
+    o perfil ser regravado a cada tecla.
+
+    ATÉ 06/09 A GUARDA ERA UMA LISTA DE PROIBIDOS COM UM NOME (`!= "click"`), e
+    uma lista de proibidos não sabe do que ainda não nasceu: `input` não é
+    `click`, logo passava. Virou lista de permitidos, e o vazio continua
+    valendo — um dicionário de régua, montado à mão, não tem de saber o nome do
+    evento do navegador.
+
+    MORDIDA: devolva `_so_mudou` a `!= "click"` e esta régua reprova com o
+    `input` gravando.
+    """
+    from hefesto_dualsense4unix.profiles import loader
+    from hefesto_dualsense4unix.profiles.schema import MatchAny, Profile
+
+    prof = Profile(name="régua", match=MatchAny())
+    monkeypatch.setattr(loader, "load_all_profiles", lambda *a, **k: [prof])
+    monkeypatch.setattr(loader, "load_profile", lambda *a, **k: prof)
+    gravados: list[Any] = []
+    monkeypatch.setattr(a10_perfis, "_gravar",
+                        lambda p_, ctx, p, **k: gravados.append(p_))
+    monkeypatch.setattr(a10_perfis, "_ESCOLHIDO", "régua", raising=False)
+    ctx = Contexto(state={"active_profile": "régua"}, mesa=list(MESA),
+                   conectados=list(MESA), estados={})
+
+    for evento in ("input", "keyup", "paste", "click"):
+        gravados.clear()
+        a10_perfis.editor_jogo(ctx, {"valor": "1599660", "evento": evento}, None)
+        assert not gravados, (
+            f"um evento `{evento}` gravou o perfil no disco — com o `input` "
+            f"ligado, isso é uma gravação por TECLA que ela digita")
+
+    # E O CAMINHO QUE GRAVA CONTINUA GRAVANDO, senão a guarda virou uma parede.
+    for aberto in ({"valor": "1599660", "evento": "change"},
+                   {"valor": "1599660"}):
+        gravados.clear()
+        a10_perfis.editor_jogo(ctx, dict(aberto), None)
+        assert gravados, (
+            f"o gesto parou de gravar com {aberto!r} — a lista de permitidos "
+            f"virou uma parede, e o campo ficou intocável")

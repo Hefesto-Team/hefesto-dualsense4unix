@@ -318,7 +318,20 @@ def _com_a_carona(frase: str) -> str:
     except Exception:
         # Nem o log: um pacote de aba não tem logger, e o gesto já deu certo.
         return frase
-    return f"{frase} · {resultado.frase}" if resultado.frase else frase
+    # A METADE CURTA PRIMEIRO — decisão 10-Q5 dela, 06/09/2026: *"A tira passa a
+    # dizer só a metade curta e o aviso sai do texto."*
+    #
+    # NENHUMA CIRURGIA DE STRING AQUI: quem escreve as duas formas é o DONO da
+    # frase (`carona_do_wrapper.passada` e `sentinela_do_wrapper`), e cortar no
+    # primeiro ponto faria desta tira um segundo dono do texto — a tira passaria
+    # a depender da pontuação de uma frase que outra pessoa escreve.
+    #
+    # `frase_curta` VAZIA CAI NA LONGA, e não em silêncio: há status cuja frase
+    # já cabe nas duas linhas (o erro do reparo, o jogo novo), e para eles não há
+    # o que encurtar. Quem continua querendo dizer "não diga nada" é a `frase`
+    # vazia — o contrato escrito em `carona_do_wrapper.ResultadoDaCarona`.
+    curta = getattr(resultado, "frase_curta", "") or resultado.frase
+    return f"{frase} · {curta}" if resultado.frase else frase
 
 
 def _dizer(frase: str, **campos: Any) -> dict[str, Any]:
@@ -607,7 +620,21 @@ SEM_ENDERECO = {
 #: espécie se declara, e as duas réguas que a cobram nos DOIS sentidos continuam
 #: valendo — entrada aqui exige endereço FALTANDO no publicado, e endereço
 #: faltando exige entrada aqui.
-ESPERANDO_A_PUBLICACAO: dict[str, str] = {}
+#:
+#: **E ELE VOLTOU A TER DOIS — 06/09/2026, decisão 10-Q4 dela.** O rótulo ao
+#: lado do "Nome do Jogo" MUDA PIXEL: nascem três `<span>` que não existiam,
+#: dentro do `.val` de um campo, e o `<input>` encolhe para caber. Isso é
+#: DESENHO, e `--publicar-enderecos` o recusa dizendo — que é exatamente o
+#: certo. Enquanto ela não publicar, os dois valores saem e caem no vazio na
+#: página que o produto renderiza; o que ela vê hoje não muda.
+ESPERANDO_A_PUBLICACAO: dict[str, str] = {
+    "editor.jogo.rotulo": "o rótulo ao lado do campo (10-Q4) nasceu na bancada "
+                          "em 06/09 e muda pixel — três `<span>` novos dentro "
+                          "do `.val`; publicar é ato dela",
+    "editor.jogo.alerta": "a tinta do mesmo rótulo, que separa «não está nesta "
+                          "máquina» (rotina) de «não reconheci este endereço» "
+                          "(erro) — nasce e publica junto com ele",
+}
 
 
 #: O FIM DA FRASE DA EXIGÊNCIA ESCONDIDA — decisão [02] do PO, 04/09/2026:
@@ -1390,6 +1417,29 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
     fora["editor.jogo.exigencia"] = exigencia
     fora["editor.jogo.exige"] = "sim" if exigencia else ""
 
+    # O RÓTULO AO LADO DO CAMPO — decisão 10-Q4 dela, 06/09/2026: *"À direita do
+    # campo aparece o nome do jogo enquanto você digita, ou «não está nesta
+    # máquina», ou «não reconheci este endereço»"*.
+    #
+    # A FONTE É O DISCO, e não o que está no `<input>`: `editor["jogo"]` é o
+    # `simple_extra(match)` que `perfis_web:452` já apurou do perfil aberto. Ler
+    # o campo seria ler a tela — e a tela é justamente o que este rótulo explica.
+    #
+    # SÃO DUAS CHAVES E UMA DECISÃO: `frase_do_campo_do_jogo` devolve
+    # `(frase, é_alerta)` e as duas saem da MESMA linha, como o par do ponto de
+    # alerta logo acima. Divergir é impossível por construção.
+    #
+    # O `[1]` SÓ ACENDE NO ERRO: "não instalado aqui (o número vale)" é rotina —
+    # o jogo que ela ainda vai comprar —, e pintá-lo de laranja seria a tela
+    # chamando de problema o que o próprio dono chamou de normal
+    # (`jogos_locais.frase_do_campo_do_jogo`, o ramo do `MSG_FORA_DA_MAQUINA`).
+    #
+    # ELE NÃO ENTRA EM `CAMPOS_QUE_ELA_DIGITA`: ninguém digita dentro de um
+    # rótulo, e omiti-lo do tique o congelaria no que o perfil anterior dizia.
+    rotulo, alerta = _jogo_reconhecido(str(editor.get("jogo") or ""))
+    fora["editor.jogo.rotulo"] = rotulo
+    fora["editor.jogo.alerta"] = "sim" if alerta else ""
+
     # OS TRÊS CAMPOS QUE SE PINTAM UMA VEZ SÓ — e a razão é medida, não gosto.
     # Ver `_uma_vez_so`: repintar um `<input>` a cada 500 ms apagaria o que ela
     # está digitando na segunda tecla.
@@ -1895,15 +1945,64 @@ def _pergunta_antes_de_rebaixar(prof: Any, chave: str) -> None:
         f"Escolha “Todos” de novo para confirmar — o campo espera oito segundos.")
 
 
-def _jogo_reconhecido(texto: str) -> str:
-    """O NOME do jogo daquele número, ou `""` — a decisão da janela estável.
+#: A BIBLIOTECA DELA, LIDA UMA VEZ E GUARDADA — 06/09/2026, e o freio é o do
+#: dono. `catalogo_de_jogos()` abre 33 `appmanifest_*.acf` mais os `.desktop`;
+#: até hoje ele era chamado UMA vez por gesto e isso não custava nada. O rótulo
+#: ao lado do campo (10-Q4) o chama a CADA TIQUE, e o tique desta aba já é o
+#: pior das dez — 33 aberturas de arquivo dez vezes por segundo seriam a
+#: regressão que a régua de mutações mede.
+#:
+#: `assinatura_da_biblioteca` É O FREIO QUE O DONO ESCREVEU para exatamente
+#: esta pergunta (*"instalaram ou tiraram jogo desde a última vez?"*): dois
+#: `stat()` de diretório, microssegundos, e o `mtime` de uma `steamapps` muda
+#: quando um `.acf` nasce ou morre. `profiles/loader.py:1467` já o usa assim,
+#: pelo mesmo motivo — não é freio novo, é o freio de sempre.
+#:
+#: O QUE ELE NÃO ALCANÇA, e fica escrito: os `.desktop` de atalho. Um atalho
+#: novo criado com a aba Perfis ABERTA não mexe no `mtime` da `steamapps`, e o
+#: rótulo só o enxerga quando o appid do campo mudar ou a `steamapps` mudar.
+#: Declarado, e não curado: inventar aqui uma segunda assinatura seria um
+#: segundo dono da pergunta "a biblioteca mudou", que é o defeito que esta casa
+#: nomeia toda semana.
+_NOMES_DOS_JOGOS: tuple[tuple[tuple[str, int], ...], dict[str, str]] | None = None
+
+
+def _nomes_dos_jogos() -> dict[str, str]:
+    """``{appid: nome}`` do disco, relido só quando a biblioteca muda."""
+    global _NOMES_DOS_JOGOS
+    from hefesto_dualsense4unix.integrations.jogos_locais import (
+        assinatura_da_biblioteca,
+        catalogo_de_jogos,
+        nomes_por_appid,
+    )
+
+    assinatura = assinatura_da_biblioteca()
+    if _NOMES_DOS_JOGOS is not None and _NOMES_DOS_JOGOS[0] == assinatura:
+        return _NOMES_DOS_JOGOS[1]
+    nomes = nomes_por_appid(catalogo_de_jogos())
+    _NOMES_DOS_JOGOS = (assinatura, nomes)
+    return nomes
+
+
+def _jogo_reconhecido(texto: str) -> tuple[str, bool]:
+    """``(frase, é_alerta)`` para o campo do jogo — a decisão da janela estável.
 
     JOGO-QUE-SE-DIZ-01. `851100` sozinho não diz nada a ninguém, nem a ela daqui
     a um mês: a janela estável põe o nome do jogo ao lado do campo
-    (`profile_jogo_reconhecido`, `profiles_actions._atualizar_frase_do_jogo`), e
-    esta aba não tem esse rótulo no desenho. Enquanto ela não o tiver, o nome
-    chega pelo DESFECHO do gesto que gravou a regra — que é o instante em que a
-    pergunta "é esse jogo mesmo?" existe.
+    (`profile_jogo_reconhecido`, `profiles_actions._atualizar_frase_do_jogo`).
+
+    **E ESTA ABA PASSOU A TER O RÓTULO — 06/09/2026, decisão 10-Q4 dela**:
+    *"Rótulo ao lado, ao vivo — à direita do campo aparece o nome do jogo (…),
+    ou «não está nesta máquina», ou «não reconheci este endereço»"*. O desfecho
+    do gesto continua dizendo o nome; o rótulo é o segundo lugar, e é o que
+    responde SEM ela ter de gravar nada.
+
+    O BOOLEANO DEIXOU DE MORRER AQUI, e era ele que faltava. Até 06/09 esta
+    função devolvia só a PRIMEIRA metade do par e jogava fora o `é_alerta` que
+    `frase_do_campo_do_jogo` devolve — o mesmo bit que separa *"não instalado
+    aqui (o número vale)"*, que é rotina, de *"não reconheci este endereço"*,
+    que é erro. Sem ele o rótulo não tem como se pintar, e as duas frases sairiam
+    da mesma cor.
 
     A DECISÃO É DA FUNÇÃO PURA DO PRODUTO, e não desta tela:
     `jogos_locais.frase_do_campo_do_jogo(texto, nomes)` é a MESMA que alimenta o
@@ -1913,21 +2012,22 @@ def _jogo_reconhecido(texto: str) -> str:
     que é um jogo reconhecido.
 
     NUNCA LEVANTA, e é o mesmo contrato de `_com_a_carona`: ela é acabamento de
-    um gesto que JÁ GRAVOU. Uma exceção lendo a biblioteca dela (33 `.acf` em
-    duas pastas mais os `.desktop`) transformaria uma gravação bem-sucedida em
-    tarja de recusa — e o perfil já está no disco.
+    um gesto que JÁ GRAVOU — e, desde o rótulo, também é PINTURA, chamada dez
+    vezes por segundo. Uma exceção lendo a biblioteca dela transformaria uma
+    gravação bem-sucedida em tarja de recusa, e derrubaria a aba inteira por
+    causa de um rótulo.
     """
     try:
         from hefesto_dualsense4unix.integrations.jogos_locais import (
-            catalogo_de_jogos,
             frase_do_campo_do_jogo,
-            nomes_por_appid,
         )
 
-        decisao = frase_do_campo_do_jogo(texto, nomes_por_appid(catalogo_de_jogos()))
+        decisao = frase_do_campo_do_jogo(texto, _nomes_dos_jogos())
     except Exception:
-        return ""
-    return "" if decisao is None else str(decisao[0])
+        return ("", False)
+    if decisao is None:
+        return ("", False)
+    return (str(decisao[0]), bool(decisao[1]))
 
 
 def _agora_vale_em(prof: Any, texto: str = "") -> str:
@@ -1945,7 +2045,10 @@ def _agora_vale_em(prof: Any, texto: str = "") -> str:
     from hefesto_dualsense4unix.app.actions.profiles_actions import _match_label
 
     frase = f"“{prof.name}” agora vale em: {_match_label(prof.match)}"
-    jogo = _jogo_reconhecido(texto) if texto else ""
+    # O `[0]` É A FRASE, e o `[1]` é o alerta que o RÓTULO usa (10-Q4). Aqui o
+    # desfecho quer só a frase: a tira já tem cor própria (verde, e a recusa tem
+    # a tarja), e pintá-la de laranja seria um terceiro canal para o mesmo fato.
+    jogo = _jogo_reconhecido(texto)[0] if texto else ""
     return f"{frase} · {jogo}" if jogo else frase
 
 
@@ -1968,10 +2071,30 @@ def _so_mudou(o: dict[str, Any]) -> bool:
     faria o gesto inferir a regra e GRAVAR — uma troca de regra disparada por
     um clique que não mudou nada.
 
-    A guarda é `!= "click"`, e não `== "change"`, de propósito: um clique de
-    régua (um dicionário montado à mão, sem `evento`) tem de continuar valendo.
+    A GUARDA ERA `!= "click"`, E VIROU LISTA DE PERMITIDOS — 06/09/2026, e a
+    razão nasceu com a decisão 10-Q4 dela (*"Rótulo ao lado, AO VIVO"*). O
+    "ao vivo" pede que o piloto ouça `input`, que é o único evento que um campo
+    de texto dispara a cada TECLA. Enquanto a guarda fosse uma lista de
+    proibidos com UM nome, ligar essa porta ao mesmo `data-hef-gesto` faria o
+    perfil dela ser **regravado a cada tecla** — e a lista de proibidos não teria
+    como saber disso: `input` não é `click`, logo passava.
+
+    A LISTA DE PERMITIDOS TEM DOIS NOMES, e cada um é um caminho real:
+
+    * `change` — o que um `<input>` dispara quando ela SAI do campo com o valor
+      trocado. É o evento que grava;
+    * o VAZIO (ou ausente) — o clique de régua, um dicionário montado à mão. A
+      docstring anterior já protegia este caso, e ele continua valendo: uma
+      régua que constrói o gesto não deve ter de saber o nome do evento do
+      navegador para exercitar o produto.
+
+    O QUE MUDA NA PRÁTICA: `click` continua barrado como antes, e `input`,
+    `keyup`, `paste` e o que mais o piloto vier a ouvir nascem barrados —
+    que é o que torna a quarta porta segura de nascer. Ver o Passo 4 da sprint
+    ONDA5-10-02: a porta do "ao vivo" tem de carregar endereço PRÓPRIO e de
+    leitura, e é do piloto, não deste pacote.
     """
-    return str(o.get("evento") or "") != "click"
+    return str(o.get("evento") or "") in ("", "change")
 
 
 @gesto("10-perfis.html", "editor.nome")
