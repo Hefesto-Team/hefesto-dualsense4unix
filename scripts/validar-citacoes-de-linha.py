@@ -166,13 +166,13 @@ PASTA_CSV = Path("docs") / "data"
 #: Planilha de `docs/data/` que o portão NÃO cobra, com o motivo escrito. A
 #: varredura é por glob de propósito — planilha nova nasce coberta —, então
 #: toda exclusão é decisão declarada, nunca omissão.
-CSV_FORA_DO_PORTAO = {
-    "mapa-controles-v1.csv": "arqueologia da migração: o mapa ANTES do v2. "
-                             "Cobrá-lo é pedir que o registro histórico se "
-                             "atualize sozinho, que é o motivo de docs/process/ "
-                             "estar fora.",
-    "ensaios-v1.csv": "o mesmo: o caderno antes da migração.",
-}
+#: VAZIO desde 05/09/2026, e o vazio é o resultado. As duas entradas que viviam
+#: aqui isentavam `mapa-controles-v1.csv` e `ensaios-v1.csv` — os retratos
+#: congelados da migração de 11/08. Os dois foram APAGADOS naquele dia, com a
+#: razão dela: "a ideia é termos menos arquivos". Isenção para arquivo que não
+#: existe é peso morto que engana quem lê. Se um CSV precisar sair do portão de
+#: novo, ele entra aqui COM A RAZÃO escrita — toda exclusão é decisão declarada.
+CSV_FORA_DO_PORTAO: dict[str, str] = {}
 
 #: Onde um caminho citado pode estar: na raiz, ou dentro do pacote. A casa cita
 #: `core/backend_pydualsense.py` querendo dizer

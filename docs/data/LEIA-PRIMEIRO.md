@@ -44,7 +44,6 @@ onde saiu em 25/08. Corrigir à mão seria pagar o mesmo preço de novo amanhã.
 | `scripts/check_paridade_transporte.py` | <!--@bytes:scripts/check_paridade_transporte.py-->125.597<!--/--> | **O PORTÃO** do mapa, e a melhor explicação de método da casa — a docstring nomeia cada regra e o defeito real que a fez nascer. | Antes de escrever no CSV. Leia a docstring inteira — ela vai da linha 2 à <!--@ultima-linha-da-docstring-do-portao-->316<!--/-->. |
 | `scripts/eliminacao.py` | <!--@bytes:scripts/eliminacao.py-->11.675<!--/--> | **O JUIZ.** Lê o caderno e devolve um veredito por suspeito. | Seção 4. |
 | `bancada.py` | <!--@bytes:bancada.py-->25.465<!--/--> | O formulário que grava no mapa. **A escada de degraus não nasce aqui:** ele a importa do portão (`from check_paridade_transporte import VALORES_DA_ESCADA`) desde 19/08/2026 — há um dono só. | Quando for editar célula. |
-| `docs/data/mapa-controles-v1.csv` | <!--@bytes:docs/data/mapa-controles-v1.csv-->138.192<!--/--> | Arqueologia. O mapa antes da migração. | Praticamente nunca. |
 
 **O que ainda é digitado à mão**, e por que não entrou nesta leva: o `existe`,
 as duas réguas por valor e as 20 casas do cruzamento (seções 2 e 3). Esses o
@@ -442,3 +441,28 @@ não muda em nenhuma delas.**
    abra o `specs.html`.
 4. Quando a célula tiver grau forte, ensaio ou nota, **a prosa é obrigatória** —
    e ela é o motivo de este projeto não repetir trabalho já pago.
+
+## POR QUE O GRÃO É `(chave, controle)`, com `cabo_*` e `radio_*` na mesma linha
+
+A escolha foi MEDIDA antes de ser escrita, em 11/08/2026, sobre os 58 pares
+limpos do formato antigo: `comando` difere entre cabo e rádio em **100%** dos
+casos, `offset` em **78%** e `report_id` em **50%** — mas `aparelho_aceita`
+difere em **9%** e `canal` em **7%**.
+
+A regra que saiu daí: **duplicar só o que varia** — e todo campo que difere em
+ao menos um par ganha o par de colunas, `aparelho_aceita` inclusive. Os 9% que
+divergem ali são exatamente as assimetrias que este mapa existe para não deixar
+escapar; achatar aquele campo faria uma prova de cabo passar por prova de rádio,
+que é a mentira mais cara daqui.
+
+O pedido dela que originou o formato, nas palavras dela: *"cada feature de cada
+um deles deve ter o canal via bt ou cabo NA MESMA LINHA e todos os 3 controles
+devem ser possíveis de serem comparados."*
+
+<!-- O script que fez a migração (`scripts/migrar-mapa-v2.py`) e os retratos
+     congelados (`mapa-controles-v1.csv`, `ensaios-v1.csv`) foram APAGADOS em
+     05/09/2026, com a razão dela: "a ideia é termos menos arquivos, se algo
+     vira a v2 deveria ser o mesmo arquivo sobrescrevendo o anterior".
+     Rodá-lo de novo escrevia 264 linhas por cima das 308 de hoje, sem backup,
+     imprimindo verde. Não se tranca uma arma descarregada: apaga-se. O git os
+     guarda em 6ca1417d, e a medição que os justificava está acima. -->

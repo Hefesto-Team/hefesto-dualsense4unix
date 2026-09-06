@@ -266,16 +266,42 @@ def test_a_promessa_nao_atravessa_o_separador_de_bloco(arvore: Path) -> None:
         f"{saida.stdout!r}")
 
 
-def test_a_arqueologia_v1_continua_fora(arvore: Path) -> None:
-    """`mapa-controles-v1.csv` é o mapa ANTES da migração.
+def test_a_isencao_nominal_funciona_e_esta_vazia(arvore: Path) -> None:
+    """A porta de saída do portão existe, morde, e hoje não tem ninguém dentro.
 
-    Cobrá-lo é pedir que o registro histórico se atualize sozinho — o mesmo
-    motivo de `docs/process/` estar fora desde 13/08.
+    Até 05/09/2026 este teste se chamava `test_a_arqueologia_v1_continua_fora` e
+    provava que `mapa-controles-v1.csv` estava isento. Aquele arquivo FOI
+    APAGADO naquele dia, junto com `ensaios-v1.csv` e o
+    `scripts/migrar-mapa-v2.py` que os produzia — decisão dela: *"a ideia é
+    termos menos arquivos, se algo vira a v2 deveria ser o mesmo arquivo
+    sobrescrevendo o anterior"*.
+
+    A lápide perdeu o objeto, então ela foi RELIDA em vez de removida: o que
+    importava nunca foi aquele nome, e sim que a isenção seja NOMINAL e
+    DECLARADA. Um portão sem porta de saída vira impossível de satisfazer; uma
+    porta que ninguém testa deixa de abrir sem avisar. Este teste prova as duas
+    metades, e a segunda é o vazio de hoje.
     """
-    planilha(arvore, "core/exemplo.py:99999", nome="mapa-controles-v1.csv")
-    saida = rodar(arvore, "--all")
-    assert saida.returncode == 0, (
-        f"varreu a arqueologia da migração. Disse: {saida.stdout!r}")
+    import ast
+
+    fonte = (RAIZ_REAL / "scripts" / "validar-citacoes-de-linha.py").read_text(
+        encoding="utf-8"
+    )
+    isencao = None
+    for no in ast.walk(ast.parse(fonte)):
+        alvo = getattr(no, "target", None)
+        if isinstance(no, ast.AnnAssign) and getattr(alvo, "id", "") == "CSV_FORA_DO_PORTAO":
+            isencao = ast.literal_eval(no.value)
+    assert isencao == {}, (
+        "alguém isentou um CSV do portão de citações: confira se a razão está "
+        f"escrita junto — {isencao}"
+    )
+
+    # A MORDIDA, nas duas direções: sem isenção o portão acusa; com ela, cala.
+    planilha(arvore, "core/exemplo.py:99999", nome="um-csv-qualquer.csv")
+    assert rodar(arvore, "--all").returncode != 0, (
+        "o portão deixou passar um endereço podre num CSV NÃO isento"
+    )
 
 
 # --------------------------------------------------------------------------
