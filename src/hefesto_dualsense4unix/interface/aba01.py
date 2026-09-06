@@ -105,6 +105,28 @@ BATERIA = {"p1": 100, "p2": 64, "p3": 41, "p4": 87}
 #: (`aba08.py`), não do produto.
 AVISOS = [("RÁDIO", "Dois rádios da bancada estão em portas vizinhas.")]
 
+#: O QUE O MODO NATIVO DIZ SOBRE JOGADORES — **PROVISÓRIO, decisão dela**
+#: (PROVA-DE-TELA-01), COOP-NA-CONEXAO-NATIVA-01 / Caminho A, 06/09/2026.
+#:
+#: **UMA CONSTANTE PORQUE A PÁGINA DIZ ISTO EM DOIS LUGARES**, e a sprint nomeia
+#: o defeito que isso evita: *"Uma frase, com dono único — a mesma situação não
+#: pode ter duas redações"*. Os dois lugares são o ``title`` da posição
+#: Desligado e o ``?`` da linha Status, que hoje já repetiam palavra por palavra
+#: a metade velha da frase; acrescentar a metade nova a um só deixaria o ``?``
+#: explicando o modo e calando justamente sobre o que mudou.
+#:
+#: **A TERCEIRA REDAÇÃO É VIVA E MORA NO PRODUTO** —
+#: ``app/actions/jogar/painel.FRASE_DO_MODO_NATIVO``, a linha da coluna Atenção,
+#: que nomeia QUANTOS controles estão ligados e por isso não pode ser esta
+#: string. **A divergência entre as duas morre pela régua**
+#: (``tests/unit/test_o_coop_vive_na_conexao_nativa.py``), que cobra a mesma
+#: oração de quem conta nas duas — é a escolha que ``MARCA_DO_PRIMARIO`` e
+#: ``SERVICO_DESLIGADO`` já fizeram, e pelo mesmo motivo.
+NATIVO_E_OS_JOGADORES = (
+    "Aqui ele não cria um controle para cada pessoa — quem conta os jogadores "
+    "é o jogo, pelos controles que ele enxerga."
+)
+
 #: O INTERRUPTOR — **HEFESTO LIGADO / DESLIGADO**, decisão dela de 31/08/2026.
 #:
 #: A PERGUNTA QUE ABRIU ISTO É DELA, e ela era boa: *"qual a diferença de nativo
@@ -160,8 +182,29 @@ INTERRUPTOR = [
     # controle no meio da partida assim."* — a segunda metade é AFIRMAÇÃO FORTE
     # sem régua: nenhum ensaio deste repositório mede "alguns jogos derrubam".
     # Alarme sem medição é o que esta casa cobra no `check_paridade_transporte`.
+    # E ELE GANHOU A SEGUNDA FRASE — COOP-NA-CONEXAO-NATIVA-01, Caminho A
+    # (06/09/2026). **PROVISÓRIO — decisão dela** (PROVA-DE-TELA-01): é texto
+    # novo de tela, e a palavra final é dela.
+    #
+    # O QUE ELA FECHA, medido na §2.4 da sprint: esta dica é a herdeira do
+    # `painel_no_jogo.TEXTO_NATIVO`, que enumerava movimento, toque, vibração e
+    # som e concluía que *"não há aqui o que medir"* — verdadeiro sobre as
+    # quatro coisas que enumera, e **mudo sobre a única que muda de
+    # comportamento: quantos jogadores existem**. O modo mais fiel ao aparelho
+    # era o único em que a tela não dizia uma palavra sobre co-op.
+    #
+    # ELA DIZ O MECANISMO E NÃO AFIRMA O JOGO. *"O jogo vê dois jogadores"*
+    # seria alarme invertido sem régua — a §4.2 é **inferido do código**, e quem
+    # a fecha é a bancada dela (dois DualSense num jogo de co-op local, no cabo
+    # e no rádio), na MESA-DE-QUATRO-01. A frase diz de quem é a conta.
+    #
+    # A LINHA VIVA É OUTRA, e as duas são de propósito: esta é `title`, cravada
+    # no desenho e sempre disponível; a da coluna Atenção
+    # (`painel.aviso_do_modo_nativo`) só acende com DOIS ou mais controles, que
+    # é quando a pergunta existe.
     ("desligado", "native", "Desligado",
-     "Modo Nativo: o Hefesto sai do meio e o jogo fala direto com o controle."),
+     "Modo Nativo: o Hefesto sai do meio e o jogo fala direto com o controle. "
+     + NATIVO_E_OS_JOGADORES),
 ]
 #: Em qual posição a cena nasce.
 HEFESTO_LIGADO = True
@@ -1337,7 +1380,7 @@ MIOLO = f'''
 {_INTERRUPTOR}
         <span class="ajuda">?<span class="dica">
           <b>Ligado</b> — o Hefesto fica no meio: luz, vibração, gatilho e o número do jogador são por conta dele.<br><br>
-          <b>Desligado</b> — o Hefesto sai do meio e o jogo fala direto com o controle.<br><br>
+          <b>Desligado</b> — o Hefesto sai do meio e o jogo fala direto com o controle. {NATIVO_E_OS_JOGADORES}<br><br>
           Isto não encerra o serviço. Para isso, a aba <b>Sistema</b>.
         </span></span>
       </div>

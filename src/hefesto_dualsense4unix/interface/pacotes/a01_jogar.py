@@ -201,9 +201,18 @@ AVISOS_NA_COLUNA = 3
 #: Com o serviço calado nem a PAUSA se sabe — ninguém respondeu se o produto
 #: está parado ou correndo —, então toda outra linha desta coluna descreveria um
 #: estado que a tela não leu.
+#: ``MODO`` ENTRA AO LADO DE ``GAMEPAD`` — COOP-NA-CONEXAO-NATIVA-01, Caminho A
+#: (06/09/2026), e o critério é o mesmo dos outros dois degraus nomeados aqui:
+#: *o que invalida o quê*. Os dois respondem à MESMA pergunta — «como o jogo vê
+#: os controles» — em modos que se excluem: o ``GAMEPAD`` fala do vpad
+#: degradado, que só existe com o Hefesto no meio, e o ``MODO``
+#: (``painel.aviso_do_modo_nativo``) só fala na Conexão Nativa, onde não há
+#: vpad. Nunca disputam a mesma linha, e ficar vizinhos é o que impede a coluna
+#: cheia de esconder um atrás do ``+N`` enquanto mostra o outro.
 ORDEM_DA_GRAVIDADE: tuple[str, ...] = (
     "SERVIÇO",
-    "PAUSA", "ERRO", "GAMEPAD", "PONTE", "JOGO", "CONTROLE", "RÁDIO", "PERFIL",
+    "PAUSA", "ERRO", "GAMEPAD", "MODO", "PONTE", "JOGO", "CONTROLE", "RÁDIO",
+    "PERFIL",
 )
 
 #: O SELO DA PONTE. Não é um selo inventado: ``PONTE_PREFIXO`` do produto é
@@ -478,6 +487,16 @@ def _jogador_esperando(c: dict[str, Any]) -> str:
     O ``player`` É LIDO CRU DE PROPÓSITO. `jogador_de` responde *"que número o
     cartão mostra"* e cai no `player_slot` primeiro; aqui a pergunta é outra —
     *"o JOGO já viu este controle?"* —, e só a chave `player` a responde.
+
+    **A CONEXÃO NATIVA PAROU DE ESMAECER TUDO em 06/09/2026**
+    (COOP-NA-CONEXAO-NATIVA-01, Caminho B), e a cura é do outro lado do fio:
+    ``coop.resolve_player_numbers`` devolvia ``[None] * N`` naquele modo, então
+    o ``player`` era ``None`` para TODOS os controles e esta função esmaecia a
+    mesa inteira **para sempre** — prometendo uma promoção que nunca viria,
+    porque na Conexão Nativa não há grab nem vpad a esperar. Agora o número vem
+    do ``identity_registry`` e o cartão nasce aceso. **Nada mudou aqui**, e é
+    isso que se quer registrar: a função já estava certa; quem mentia era a
+    fonte.
     """
     if jogador_de(c) is None:
         return ""

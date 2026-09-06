@@ -633,10 +633,74 @@ class Aviso(NamedTuple):
     nome: str
 
 
-#: AS SEIS FONTES DE AVISO, e todas já são produto — esta aba não escreve uma
-#: frase nova. Cada uma é função PURA de ``home_actions`` que devolve o texto ou
-#: nada (``None`` ou ``""``, conforme a que estava lá antes; os dois contam como
-#: "sem aviso").
+#: A FRASE DO MODO NATIVO — **PROVISÓRIO, decisão dela** (PROVA-DE-TELA-01).
+#:
+#: COOP-NA-CONEXAO-NATIVA-01, Caminho A (06/09/2026). O que ela substitui está
+#: medido na §2.4 da sprint: a tela do modo mais fiel ao aparelho dizia, sobre
+#: dois controles na mesma sala, que *"não há aqui o que medir"* — verdadeiro
+#: sobre movimento, toque, vibração e som, e **mudo sobre a única coisa que
+#: muda de comportamento: quantos jogadores existem**.
+#:
+#: ELA DIZ O MECANISMO, NÃO A RETIRADA, e isso é cicatriz: a primeira redação
+#: do ``TEXTO_NATIVO`` foi reprovada por um portão
+#: (``tests/unit/test_a_frase_refutada_da_allowlist.py``) por começar com *"O
+#: Hefesto saiu da frente"* — a construção que a medição dela derrubou em
+#: 06/08. Aqui não há verbo de afastamento nenhum: há o que o produto NÃO monta
+#: e quem, em vez dele, conta.
+#:
+#: E ELA NÃO AFIRMA O QUE NINGUÉM MEDIU. *"O jogo vê dois jogadores"* seria
+#: afirmação forte sem régua — a §4.2 da sprint é **inferido do código**, e a
+#: medição que a fecharia (dois DualSense num jogo de co-op local, no cabo e no
+#: rádio) é bancada dela, na MESA-DE-QUATRO-01. A frase diz de quem é a conta,
+#: que é o que se sabe.
+FRASE_DO_MODO_NATIVO = (
+    "Conexão Nativa com {quantos} controles ligados: neste modo o Hefesto não "
+    "cria um controle para cada pessoa — quem conta os jogadores é o jogo, "
+    "pelos controles que ele enxerga."
+)
+
+#: O SELO DA LINHA ACIMA. ``MODO`` é a palavra do glossário
+#: (``docs/A-LINGUA-DESTA-CASA``, §2: *"**Modo**: Jogar pelo Hefesto · Conexão
+#: Nativa (Sony) · Controlar o PC"*), e a escada de gravidade que o ordena é
+#: ``a01_jogar.ORDEM_DA_GRAVIDADE``.
+SELO_DO_MODO = "MODO"
+
+
+def aviso_do_modo_nativo(state: dict[str, Any] | None) -> str | None:
+    """A linha da Conexão Nativa quando há mais de um controle, ou ``None``.
+
+    **SÓ COM DOIS OU MAIS, e o teto é o ponto.** Com um controle só não existe
+    pergunta de co-op — a linha seria ruído numa coluna que se chama Atenção, e
+    a coluna mostra três de cada vez (``a01_jogar.AVISOS_NA_COLUNA``): um aviso
+    que fala sempre empurra para o ``+N`` os que falam quando dói.
+
+    **É A ÚNICA DAS SETE QUE NÃO MORA EM ``home_actions``**, e é escolha, não
+    descuido. A frase nasceu nesta leva e o dono dela é esta aba; pô-la lá
+    criaria um segundo dono para um assunto que a janela GTK não tem mais —
+    ela saiu inteira em 06/09 (``D-0609-GTK-LEVA-INTEIRA``). O contrato é o
+    mesmo das outras seis: função PURA de ``state``, ``None`` = sem aviso.
+
+    A CONTAGEM É DE CONECTADOS, não do tamanho da lista: o ``state_full``
+    publica também os que já estiveram na sala (``connected: false``), e contar
+    a lista acenderia o aviso com um controle na mão.
+    """
+    if not isinstance(state, dict) or state.get("native_mode") is not True:
+        return None
+    entradas = state.get("controllers")
+    if not isinstance(entradas, list):
+        return None
+    quantos = sum(
+        1 for e in entradas if isinstance(e, dict) and e.get("connected") is True
+    )
+    if quantos < 2:
+        return None
+    return FRASE_DO_MODO_NATIVO.format(quantos=quantos)
+
+
+#: AS SETE FONTES DE AVISO. Seis são função PURA de ``home_actions`` que devolve
+#: o texto ou nada (``None`` ou ``""``, conforme a que estava lá antes; os dois
+#: contam como "sem aviso"); a sétima é :func:`aviso_do_modo_nativo`, que nasceu
+#: aqui em 06/09/2026 e diz por quê no próprio docstring.
 #:
 #: O aviso do mockup — *"Dois rádios da bancada estão em portas vizinhas"* — é
 #: **cena**, e a legenda dele já o declarava (``aba01.AVISOS``): a frase é da
@@ -660,6 +724,10 @@ AVISOS_DA_TELA: tuple[Aviso, ...] = (
     Aviso("JOGO", home_actions.aviso_do_wrapper, "home_actions.aviso_do_wrapper"),
     Aviso("PERFIL", home_actions.autoswitch_lock_text, "home_actions.autoswitch_lock_text"),
     Aviso("PERFIL", home_actions.texto_do_cadeado_cego, "home_actions.texto_do_cadeado_cego"),
+    # COOP-NA-CONEXAO-NATIVA-01, Caminho A: o modo mais fiel ao aparelho era o
+    # único que não dizia quantos jogadores existem nele. Entra por ÚLTIMO na
+    # declaração e por ORDEM na tela — quem ordena é `ORDEM_DA_GRAVIDADE`.
+    Aviso(SELO_DO_MODO, aviso_do_modo_nativo, "painel.aviso_do_modo_nativo"),
 )
 
 
@@ -721,16 +789,19 @@ __all__ = [
     "CHIPS_DA_ESCADA",
     "DEGRAUS_DA_TELA",
     "ESCRITOR_DOS_MODOS",
+    "FRASE_DO_MODO_NATIVO",
     "MODOS_DA_TELA",
     "MODOS_LIGADOS",
     "MODO_DESLIGADO",
     "PONTES_DO_INTERRUPTOR",
+    "SELO_DO_MODO",
     "SEM_ALGARISMO",
     "SEM_LEITOR",
     "Aviso",
     "Chip",
     "Lembranca",
     "Modo",
+    "aviso_do_modo_nativo",
     "avisos_do_estado",
     "chips_sem_degrau",
     "chips_sem_dono",

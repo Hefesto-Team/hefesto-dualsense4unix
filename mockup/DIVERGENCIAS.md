@@ -71,6 +71,34 @@ seção daqui**: a aba deixou de estar em trabalho.
   **O que fecha:** `scripts/check_o_desenho_aprovado.py --publicar 01`, depois
   do olho dela.
 
+- **06/09/2026** — **A FRASE DO MODO NATIVO DIZ, PELA PRIMEIRA VEZ, QUANTOS
+  JOGADORES EXISTEM NELE** (COOP-NA-CONEXAO-NATIVA-01, Caminho A). Ela entra em
+  DOIS lugares da mesma linha Status, por um dono só
+  (`aba01.NATIVO_E_OS_JOGADORES`): o `title` da posição **Desligado** e o `?`
+  ao lado dela. O que muda no arquivo parado são essas duas frases; **nenhum
+  elemento nasce, some ou se move**.
+
+  **O que ela substitui, medido:** a herdeira do `painel_no_jogo.TEXTO_NATIVO`
+  enumerava movimento, toque, vibração e som e concluía que *"não há aqui o que
+  medir"* — verdadeiro sobre as quatro coisas que enumera, e **mudo sobre a
+  única que muda de comportamento: quantos jogadores existem**. O modo mais
+  fiel ao aparelho era o único em que a tela não dizia uma palavra sobre co-op.
+
+  **Por que não publiquei:** é TEXTO NOVO DE TELA, que é o caso exato da
+  `PROVA-DE-TELA-01`, e a redação está marcada **PROVISÓRIO** no fonte. A frase
+  diz de QUEM é a conta e nunca qual é o resultado dela — *"o jogo vê dois
+  jogadores"* seria afirmação forte sem régua, e a medição que a fecharia (dois
+  DualSense num jogo de co-op local, no cabo e no rádio) é bancada dela, na
+  MESA-DE-QUATRO-01.
+
+  **O que NÃO espera publicação, e é a metade que chega hoje:** a linha viva da
+  coluna **Atenção** (`painel.aviso_do_modo_nativo`, selo `MODO`), que acende
+  com DOIS ou mais controles na Conexão Nativa. Ela usa os endereços
+  `aviso-selo` e `aviso-texto`, que a página publicada já tem — o mesmo caminho
+  da linha do serviço calado, logo acima. **E o número do jogador também
+  chega:** ele vem do daemon (`coop.resolve_player_numbers`) para o cartão que
+  já existe, sem endereço novo.
+
 ---
 
 ## 10-perfis.html
