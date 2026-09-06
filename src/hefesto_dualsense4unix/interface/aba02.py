@@ -1090,11 +1090,19 @@ NA_COR_DA_PECA = {"cross", "l2", "r2"}   # os que o original pinta na cor do pl�
 # leitura `Giroscópio 250 Hz`. A leitura saiu em 28/08, por decisão dela, e o
 # rótulo curto ficou sem leitor: sobrou a explicação, que desce para o `title` do
 # interruptor de giroscópio daquele controle (ver `sensores_da_peca`).
+#
+# A CHAVE É A DO DAEMON, e não a da tela — 06/09/2026. Ela era `"USB"`/`"BT"`, e
+# a `ONDA4-S10-O-TRANSPORTE-01` fez a chave `via` do item da mesa passar a
+# carregar a PALAVRA da tela (cabo · rádio). Quem indexa um dicionário de
+# máquina com texto de tela quebra com `KeyError` no dia em que a palavra muda —
+# e foi o que aconteceu aqui, com `KeyError: 'cabo'`. É a mesma cura dos cinco
+# pontos da costura da ONDA B: quem COMPARA transporte lê o `transporte` cru;
+# quem MOSTRA lê a palavra do dono.
 TAXA_DO_GIRO = {
-    "USB": "No cabo são 250,0 Hz exatos, e três fontes independentes concordam: "
+    "usb": "No cabo são 250,0 Hz exatos, e três fontes independentes concordam: "
            "o relógio do host, o relógio do controle e o descritor USB "
            "(bInterval = 6).",
-    "BT":  "No rádio não há taxa típica. Medido em cinco janelas de 8 a 10 s no "
+    "bt":  "No rádio não há taxa típica. Medido em cinco janelas de 8 a 10 s no "
            "mesmo controle: a média foi de 38 a 392 Hz entre janelas "
            "consecutivas, sem que nada mudasse. Os 1000 Hz que o SDL declara "
            "para Bluetooth não aparecem em janela nenhuma.",
@@ -1299,7 +1307,7 @@ def sensores_da_peca(c):
     medição não vira lápide. Quem a quiser por extenso tem a canônica
     (`docs/protocol/dualsense-referencia-canonica.md`, §5).
     """
-    hz_por_que = TAXA_DO_GIRO[c["via"]]
+    hz_por_que = TAXA_DO_GIRO[str(c["transporte"]).lower()]
     return f'''          <span class="sensores-peca">
             <button class="sw" data-gesto="sensor" data-sensor="giroscopio" data-campo="giro-ligado" data-hef-alvo="classe" data-hef-classe="off" data-hef-quando="DESLIGADO" title="Ligado: o jogo recebe o giro deste controle. {hz_por_que}"><span class="p"></span>Giroscópio</button>
             <button class="sw" data-gesto="sensor" data-sensor="acelerometro" data-campo="accel-ligado" data-hef-alvo="classe" data-hef-classe="off" data-hef-quando="DESLIGADO" title="Ligado: o jogo recebe a inclinação e o chacoalhar deste controle."><span class="p"></span>Acelerômetro</button>
