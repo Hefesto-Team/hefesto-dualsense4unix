@@ -43,7 +43,7 @@ uma dívida — o lado HTML passar a chamar a função da GTK que a carregava �
 símbolo aparece, esta régua REPROVA, e o CSV tem de ser atualizado. Sem isso o
 "14% de paridade" vira propaganda no dia seguinte à primeira cura.
 
-AS OITO REGRAS
+AS DOZE REGRAS
 --------------
 1. ``integridade``      cabeçalho, veredito fora do domínio, aba desconhecida,
                         par (aba, feature) repetido, CSV vazio.
@@ -73,17 +73,38 @@ AS OITO REGRAS
 8. ``numero-publicado`` a tabela do documento diverge da contagem do CSV. O
                         número que ela lê para decidir sai do mesmo dado que a
                         régua confere, ou o documento vira folheto.
+9. ``aposentado-vivo``  arquivo declarado em ``APOSENTADOS`` que voltou à árvore.
+
+AS TRÊS DO CRUZAMENTO COM O MAPA DE CANAIS (06/09/2026, PARIDADE-CRUZA-O-MAPA-01)
+
+10. ``ponte-morta``     uma ponta de ``PONTES`` não existe mais: o par
+                        ``(aba, feature)`` saiu do CSV, ou o ``id`` saiu do mapa.
+11. ``transporte-nao-declarado``
+                        a linha AFIRMA paridade (``IGUAL``/``DIFERENTE``) e o
+                        mapa restringe um transporte do canal embaixo dela — e a
+                        linha não diz ``cabo`` nem ``rádio`` em lugar nenhum.
+12. ``ponte-encolheu``  ``PONTES`` tem menos entradas que ``PISO_DAS_PONTES``.
+
+E O QUE NÃO É REGRA, e é decisão dela: ``AVISO``. Todo lado restrito cuja causa
+é ``nao-medido`` sai impresso e **não muda o rc**
+(``D-0609-O-MAPA-INFORMA-NUNCA-VETA``): a célula está ATRASADA, não fechada, e
+quem a remede é a bancada. O mapa INFORMA, nunca VETA.
 
 A MORDIDA (arranque a cura, veja reprovar, devolva)
 ---------------------------------------------------
   - apague o ``html_onde`` de uma linha ``IGUAL``:  ``sem-endereco``;
   - troque uma linha citada por um número maior que o arquivo: ``endereco-morto``;
   - crie, no lado HTML, o símbolo que uma linha ``FALTA_NO_HTML`` diz faltar:
-    ``divida-fechada`` — e é essa que prova que o número não envelhece calado.
+    ``divida-fechada`` — e é essa que prova que o número não envelhece calado;
+  - apague a palavra ``cabo`` do ``porque`` de *Alto-falante — o som de
+    confirmação*: ``transporte-nao-declarado``;
+  - troque ``CAUSA_ATRASADA``: as três linhas do brilho da barra passam de AVISO
+    a FALHA, e é essa que prova que o escape do ``nao-medido`` está vivo.
 
 Uso:
-    scripts/check_paridade_gtk_html.py            confere (rc=1 no primeiro achado)
-    scripts/check_paridade_gtk_html.py --tabela   imprime o número por aba
+    scripts/check_paridade_gtk_html.py              confere (rc=1 no primeiro achado)
+    scripts/check_paridade_gtk_html.py --tabela     imprime o número por aba
+    scripts/check_paridade_gtk_html.py --cruzamento imprime a ponte com o mapa
 """
 
 from __future__ import annotations
@@ -92,12 +113,14 @@ import argparse
 import csv
 import re
 import sys
+import unicodedata
 from collections import Counter
 from pathlib import Path
 
 RAIZ = Path(__file__).resolve().parents[1]
 CSV = RAIZ / "docs" / "data" / "paridade-gtk-html.csv"
 DOC = RAIZ / "docs" / "process" / "2026-09-03-O-TERCEIRO-NUMERO-a-paridade-com-a-gtk.md"
+MAPA = RAIZ / "docs" / "data" / "mapa-controles.csv"
 
 COLUNAS = [
     "aba", "feature", "veredito",
@@ -197,6 +220,147 @@ def aposentado(caminho: str) -> str | None:
 #: existir hoje em lugar nenhum: é O ENDEREÇO QUE A PÁGINA VAI GANHAR quando a
 #: dívida fechar, e é assim que a metade "leitura ao vivo" desta medição fecha.
 ENDERECO_DE_TELA = re.compile(r'data-[a-z-]+="[^"]+"')
+
+# ===========================================================================
+# O CRUZAMENTO COM O MAPA DE CANAIS — regras 10, 11 e 12
+# ===========================================================================
+#
+# O ACHADO QUE ISTO FECHA (A-TELA-NOVA-ENTRA-NA-REGUA-DO-MAPA-01, §5.4,
+# 06/09/2026): ``paridade-gtk-html.csv`` e ``mapa-controles.csv`` eram lidos
+# juntos por DOIS arquivos do produto (``interface/aba02.py`` e
+# ``interface/mesa_viva.py``) e por **portão nenhum**. Uma linha podia dizer
+# ``IGUAL`` — a tela nova faz o que a janela fazia — enquanto o mapa dizia que
+# o CANAL embaixo dela só aciona num transporte. Os dois números concordavam
+# consigo mesmos e ninguém perguntava ao outro.
+#
+# E ELE INFORMA, NUNCA VETA (``D-0609-O-MAPA-INFORMA-NUNCA-VETA``). Palavra
+# dela, 06/09/2026: *"Esse mapa é funcional e real. tá desatualizado no sentido
+# de não ter sido medido. foi e tudo funciona."*  Uma célula em ``aciona=não``
+# quer dizer **ninguém remediu**, não *o aparelho recusa* — por isso a causa
+# ``nao-medido`` vira AVISO impresso, jamais ``rc=1``. Quem recolhe os avisos e
+# marca a célula é a SPECS-A-PROCEDENCIA-01; este portão só põe a fila na mesa.
+#
+# POR QUE A PONTE É DECLARADA, e por que isso não é "a régua digitando o que
+# devia ler": as duas planilhas não têm UMA palavra em comum. O ``sinal`` da
+# paridade é um símbolo do código (``rumble_ff``, ``data-volume="microfone"``);
+# a ``chave`` do mapa é o endereço de um canal do aparelho
+# (``audio.microfone.mudo``). Medido em 06/09/2026: **zero** dos 396 ``sinal``
+# contém uma das 110 ``chave``, em qualquer forma. Alguém tem de dizer que a
+# fatia de tela X anda sobre o canal Y — e o que este portão NÃO deixa ser
+# digitado é o VEREDITO: ele lê ``aciona`` e a causa do mapa a cada execução, e
+# nunca guarda "esta feature é só no cabo". A ponte é o endereço; o fato é do
+# mapa. As três travas que impedem a lista de apodrecer estão nas regras 10 e
+# 12 — as duas pontas mortas reprovam, e a lista só pode CRESCER.
+
+#: A ponte: ``(aba, feature)`` da paridade → ``id`` do mapa (``chave@controle``).
+#: Uma entrada só entra aqui quando a fatia de tela ANDA SOBRE aquele canal —
+#: nunca por parecença de nome.
+PONTES: dict[tuple[str, str], str] = {
+    # ── o alto-falante: o volume tem canal nos dois transportes; o SOM, não ──
+    ("02-controles", "Alto-falante — o controle deslizante de volume"):
+        "audio.alto_falante.volume@dualsense",
+    ("02-controles", "Alto-falante — o número e a barra do bloco"):
+        "audio.alto_falante.volume@dualsense",
+    ("02-controles", "Alto-falante — o valor do volume em texto"):
+        "audio.alto_falante.volume@dualsense",
+    ("02-controles", "Alto-falante — o som de confirmação"):
+        "audio.alto_falante@dualsense",
+    ('02-controles', 'Alto-falante — "Todo o som do PC"'):
+        "audio.alto_falante@dualsense",
+    # ── o microfone ────────────────────────────────────────────────────────
+    ("02-controles", "Microfone — o gesto do mudo (mic.set)"):
+        "audio.microfone.mudo@dualsense",
+    ("08-conexoes", "Microfone — quanto ele custa de rádio (a frase da capacidade)"):
+        "audio.microfone@dualsense",
+    ("08-conexoes", "Microfone — a trava no cabo e sem endereço"):
+        "audio.microfone@dualsense",
+    # ── a barra de luz ─────────────────────────────────────────────────────
+    ("02-controles", "Barra de luz — o código hexadecimal da cor"):
+        "luz.lightbar.cor@dualsense",
+    ("02-controles", "Barra de luz — o retângulo colorido"):
+        "luz.lightbar.cor@dualsense",
+    ("04-iluminacao", "Apagar a barra (a cor vai a preto)"):
+        "luz.lightbar.cor@dualsense",
+    ("04-iluminacao", "O BRILHO viaja junto com a cor"):
+        "luz.lightbar.brilho@dualsense",
+    ("04-iluminacao", "Ajustar o brilho da barra (0–100%)"):
+        "luz.lightbar.brilho@dualsense",
+    ("04-iluminacao", "Mostrar o brilho corrente"):
+        "luz.lightbar.brilho@dualsense",
+    ('08-conexoes', '"A luz não acende" — derrubar o controle do rádio'):
+        "luz.lightbar.release_leds@dualsense",
+    ('08-conexoes', '"A luz não acende" — a trava no cabo'):
+        "luz.lightbar.release_leds@dualsense",
+    # ── o que a mesa lê do aparelho ────────────────────────────────────────
+    ("01-jogar", "A bateria de cada controle no cartão"):
+        "energia.bateria.percentual@dualsense",
+    ("02-controles", "Bateria — o número"):
+        "energia.bateria.percentual@dualsense",
+    ("08-conexoes", "Bateria de cada controle na linha do acordeão"):
+        "energia.bateria.percentual@dualsense",
+    ("02-controles", "Giroscópio — os três eixos (número e barra bipolar)"):
+        "movimento.giroscopio@dualsense",
+    ("02-controles", "Acelerômetro — os três eixos"):
+        "movimento.acelerometro@dualsense",
+    ('02-controles', 'Touchpad — a palavra ("Sem toque" / "1 toque")'):
+        "toque.touchpad@dualsense",
+    ("02-controles", "Touchpad — o pontinho e a POSIÇÃO do dedo"):
+        "toque.touchpad@dualsense",
+    ("02-controles", "Gatilhos — a barra e o número (N / 255) de L2 e R2"):
+        "gatilho.analogico@dualsense",
+    ("03-gatilhos",
+     "Escolher o modo do gatilho, por lado (L2/R2), entre os 19 do produto"):
+        "gatilho.adaptativo@dualsense",
+    ("05-vibracao", "A contagem de pedidos de vibração do JOGO (`rumble_ff`)"):
+        "vibracao.rumble.ff@dualsense",
+}
+
+#: A CATRACA (regra 12). A ponte só CRESCE: quem apagar uma linha para calar um
+#: achado é barrado, nomeando o piso. É a forma provada da casa
+#: (``PISO_DA_REGUA``, de 06/09/2026) — comparação por ``>=``, para que
+#: acrescentar uma ponte nunca seja punido.
+PISO_DAS_PONTES = 26
+
+#: Os dois lados do mapa, e o nome deles nas colunas do CSV.
+LADOS_DO_MAPA = ("cabo", "radio")
+
+#: A palavra que a linha da paridade tem de trazer para cada lado. É o glossário
+#: da casa (cabo/rádio, nunca usb/bt) — e é por isso que o `usb` NÃO conta.
+PALAVRA_DO_LADO = {"cabo": ("cabo",), "radio": ("radio", "radios")}
+
+#: A causa que quer dizer *"ninguém remediu"*, e por isso nunca veta.
+CAUSA_ATRASADA = "nao-medido"
+
+#: Só o veredito que AFIRMA paridade é cobrado. `FALTA_NO_HTML` é dívida
+#: declarada — cobrar transporte de quem já diz que não fez seria acusar duas
+#: vezes; `SO_NO_HTML` e `NAO_DA_PARA_SABER` não afirmam paridade nenhuma.
+VEREDITOS_QUE_AFIRMAM = ("IGUAL", "DIFERENTE")
+
+def sem_acento(texto: str) -> str:
+    """`Rádio` e `radio` são a mesma palavra para esta régua.
+
+    Sem isto a linha que escreve certo (com acento, que é a regra da casa)
+    escaparia da cobrança — o defeito que a casa chama de *a régua desliga
+    exatamente quando alguém escreve bem*.
+    """
+    decomposto = unicodedata.normalize("NFD", texto)
+    return "".join(c for c in decomposto if unicodedata.category(c) != "Mn").lower()
+
+
+def diz_o_transporte(linha: dict[str, str]) -> set[str]:
+    """Que transportes a linha do CSV NOMEIA, em palavra inteira.
+
+    Varre a linha inteira (a feature, o que cada lado faz e o porquê): a
+    declaração pode estar em qualquer um deles, e exigir uma coluna certa seria
+    inventar uma regra de forma sobre 396 linhas escritas antes dela.
+    """
+    texto = sem_acento(" ".join(
+        linha.get(c, "") for c in ("feature", "gtk_faz", "html_faz", "porque")))
+    achados = set()
+    for lado, palavras in PALAVRA_DO_LADO.items():
+        if any(re.search(rf"\b{p}\b", texto) for p in palavras):
+            achados.add(lado)
+    return achados
 
 
 def lado_de(caminho: str) -> str:
@@ -456,6 +620,135 @@ def conferir_o_documento(linhas: list[dict[str, str]]) -> list[str]:
     return falhas
 
 
+def ler_mapa() -> tuple[dict[str, dict[str, str]], list[str]]:
+    """O mapa de canais, indexado pelo `id` (`chave@controle`).
+
+    O mapa é `nao_toca` desta frente: aqui ele só é LIDO. Ausência dele é falha
+    de integridade e não silêncio — uma régua que se desliga sozinha quando a
+    fonte some é a régua que dá verde sobre nada.
+    """
+    if not MAPA.is_file():
+        return {}, [f"integridade: {MAPA.name} não existe, e o cruzamento com o "
+                    "mapa de canais é metade deste portão."]
+    with MAPA.open(encoding="utf-8", newline="") as fh:
+        linhas = list(csv.DictReader(fh))
+    if not linhas:
+        return {}, [f"integridade: {MAPA.name} não tem uma linha de dado."]
+    faltando = [c for c in ("id", "cabo_aciona", "radio_aciona",
+                            "cabo_por_que_nao_aciona", "radio_por_que_nao_aciona")
+                if c not in linhas[0]]
+    if faltando:
+        return {}, [f"integridade: {MAPA.name} não tem a(s) coluna(s) "
+                    f"{', '.join(faltando)} — o cruzamento não tem o que ler."]
+    return {l["id"]: l for l in linhas if l.get("id")}, []
+
+
+def cruzar_com_o_mapa(
+    linhas: list[dict[str, str]],
+    mapa: dict[str, dict[str, str]],
+    pontes: dict[tuple[str, str], str] | None = None,
+    piso: int | None = None,
+) -> tuple[list[str], list[str]]:
+    """Regras 10, 11 e 12. Devolve `(falhas, avisos)`.
+
+    10. ``ponte-morta``            uma ponta da ponte não existe mais — o par
+                                   ``(aba, feature)`` sumiu do CSV da paridade,
+                                   ou o ``id`` sumiu do mapa.
+    11. ``transporte-nao-declarado`` a linha AFIRMA paridade (``IGUAL`` /
+                                   ``DIFERENTE``) e o mapa restringe um dos dois
+                                   transportes do canal embaixo dela — e a linha
+                                   não nomeia transporte nenhum.
+    12. ``ponte-encolheu``         a ponte tem menos entradas que o piso.
+
+    O AVISO (nunca ``rc=1``): todo lado restrito cuja causa é ``nao-medido``. A
+    célula está ATRASADA, não fechada — e quem a remede é a bancada, com o
+    relatório de quem passou por ela. Se um lado restrito é só ``nao-medido``, a
+    linha não deve nada: o mapa ainda não tem o que cobrar.
+    """
+    pontes = PONTES if pontes is None else pontes
+    piso = PISO_DAS_PONTES if piso is None else piso
+    falhas: list[str] = []
+    avisos: list[str] = []
+
+    if len(pontes) < piso:
+        falhas.append(
+            f"ponte-encolheu: a ponte com o mapa tem {len(pontes)} entrada(s) e o "
+            f"piso é {piso}.\n"
+            "    Apagar uma ponte é calar o achado dela, não resolvê-lo. Se a "
+            "feature\n    saiu do CSV, a ponte sai junto E o piso desce, no mesmo "
+            "commit e com a razão escrita.")
+
+    por_chave = {(l["aba"], l["feature"]): l for l in linhas}
+    for (aba, feature), ident in sorted(pontes.items()):
+        onde = f"[{aba}] {feature[:64]}"
+        linha = por_chave.get((aba, feature))
+        if linha is None:
+            falhas.append(
+                f"ponte-morta: {onde}\n"
+                f"    a ponte aponta para {ident}, e este par (aba, feature) não "
+                "está mais no CSV\n    da paridade. Renomeou a feature? A ponte "
+                "acompanha.")
+            continue
+        celula = mapa.get(ident)
+        if celula is None:
+            falhas.append(
+                f"ponte-morta: {onde}\n"
+                f"    a ponte aponta para o id {ident!r}, que não existe em "
+                f"{MAPA.name}.\n    O mapa é o DNA do aparelho: quem muda a chave "
+                "de lugar traz a ponte junto.")
+            continue
+        if linha["veredito"] not in VEREDITOS_QUE_AFIRMAM:
+            continue
+
+        cobra: list[str] = []
+        for lado in LADOS_DO_MAPA:
+            aciona = celula.get(f"{lado}_aciona", "")
+            if aciona == "sim":
+                continue
+            causa = celula.get(f"{lado}_por_que_nao_aciona", "")
+            if causa == CAUSA_ATRASADA:
+                avisos.append(
+                    f"{ident}  [{lado}]  aciona={aciona or '(vazio)'} "
+                    f"causa=nao-medido\n"
+                    f"    a tela AFIRMA paridade em {onde}\n"
+                    "    e a célula não foi medida. Não é veto: é a fila da "
+                    "bancada (SPECS-A-PROCEDENCIA-01).")
+                continue
+            cobra.append(f"{lado}={aciona or '(vazio)'}"
+                         + (f" ({causa})" if causa else ""))
+        if not cobra:
+            continue
+        if diz_o_transporte(linha):
+            continue
+        falhas.append(
+            f"transporte-nao-declarado: {onde}\n"
+            f"    veredito {linha['veredito']}, e o mapa restringe o canal "
+            f"{ident}: {' · '.join(cobra)}.\n"
+            "    A linha não diz 'cabo' nem 'rádio' em lugar nenhum — então ela "
+            "afirma\n    paridade sem dizer ONDE ela vale. Escreva o transporte "
+            "no `porque`.\n"
+            "    (Se o aparelho contradiz o mapa, o APARELHO ganha: meça, escreva "
+            "aqui o\n    que viu, e relate a célula para a SPECS-A-PROCEDENCIA-01 "
+            "remedi-la.)")
+    return falhas, avisos
+
+
+def tabela_do_cruzamento(
+    linhas: list[dict[str, str]], mapa: dict[str, dict[str, str]]
+) -> str:
+    """A ponte inteira, com o que o mapa diz de cada canal. Relatório, não régua."""
+    por_chave = {(l["aba"], l["feature"]): l for l in linhas}
+    saida = [f"{'id do mapa':46}{'cabo':10}{'rádio':10}{'ver.':11}feature"]
+    for (aba, feature), ident in sorted(PONTES.items(), key=lambda kv: kv[1]):
+        c = mapa.get(ident, {})
+        linha = por_chave.get((aba, feature), {})
+        saida.append(
+            f"{ident:46}{c.get('cabo_aciona', '?'):10}"
+            f"{c.get('radio_aciona', '?'):10}"
+            f"{linha.get('veredito', '?'):11}[{aba}] {feature[:48]}")
+    return "\n".join(saida)
+
+
 def tabela(linhas: list[dict[str, str]]) -> str:
     saida = [f"{'aba':<15}{'feats':>6}{'IGUAL':>7}{'DIFER':>7}{'FALTA':>7}"
              f"{'SO_HTML':>9}{'?':>4}{'paridade':>10}"]
@@ -475,15 +768,34 @@ def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--tabela", action="store_true",
                     help="imprime o número por aba e sai (rc=0)")
+    ap.add_argument("--cruzamento", action="store_true",
+                    help="imprime a ponte com o mapa de canais e sai (rc=0)")
     args = ap.parse_args()
 
     linhas, falhas = ler_csv()
     if args.tabela:
         print(tabela(linhas))
         return 0
+    mapa, falhas_do_mapa = ler_mapa()
+    if args.cruzamento:
+        print(tabela_do_cruzamento(linhas, mapa))
+        return 0
+    falhas += falhas_do_mapa
+    avisos: list[str] = []
     if linhas:
         falhas += conferir(linhas, Arvore())
         falhas += conferir_o_documento(linhas)
+        do_cruzamento, avisos = cruzar_com_o_mapa(linhas, mapa)
+        falhas += do_cruzamento
+
+    if avisos:
+        print(f"AVISO: {len(avisos)} célula(s) do mapa que a tela AFIRMA e a "
+              "bancada ainda não mediu.")
+        print("       O mapa INFORMA, nunca VETA (D-0609-O-MAPA-INFORMA-NUNCA-VETA): "
+              "isto NÃO é rc=1.\n")
+        for a in avisos:
+            print("  " + a)
+        print()
 
     if falhas:
         print(f"FALHA: {len(falhas)} achado(s) em {CSV.relative_to(RAIZ)}.\n")
