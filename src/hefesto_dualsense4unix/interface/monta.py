@@ -952,7 +952,7 @@ def identidade_do_chip(c: dict[str, Any], mesa: list[dict[str, Any]]) -> str:
     return identidade_de({**c, "transport": c.get("transporte", "")}, mesa)
 
 
-def _degrau_do_transporte(c: dict) -> str:
+def _degrau_do_transporte(c: dict[str, object]) -> str:
     """O último degrau de `identidade_de`: o transporte sozinho, na palavra dele.
 
     Existe para que a fita **pergunte** em vez de digitar. É a mesma leitura que
