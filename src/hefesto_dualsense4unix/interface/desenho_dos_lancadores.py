@@ -623,6 +623,74 @@ COPIAR = "copiar-a-linha"
 #: pacote porque quem o escreve é o desenho; o pacote só atende o gesto.
 COPIAR_ROTULO = "Copiar a linha"
 
+# ---------------------------------------------------------------------------
+# O STEAM INPUT — o que a Steam põe ENTRE o controle e o jogo
+#
+# DECISÃO DELA, 06/09/2026 (`D-0609-STEAM-DIVIDIDO`): **o Steam Input e a lista
+# de exceções ficam na aba 07**; "Consertar", "Restaurar de fábrica" e "Aplicar
+# aos jogos" ficam na 09.
+#
+# OS TRÊS NOMES MORAM AQUI pela mesma razão de :data:`ABRIR` e :data:`COPIAR`: o
+# desenho os escreve no `data-gesto` e o pacote os registra em `@gesto(...)`.
+# Digitá-los duas vezes é como um botão ganha endereço que ninguém atende.
+#
+# **"Steam Input" É PALAVRA DE TELA**, e está no glossário
+# (`docs/A-LINGUA-DESTA-CASA-…`, §2) com o dono. `vdf`, `env` e `appid` NÃO
+# são — nenhuma frase daqui os pronuncia.
+# ---------------------------------------------------------------------------
+#: "Desligar o Steam Input" — o gesto que tira a Steam do meio.
+DESLIGAR_STEAM_INPUT = "desligar-steam-input"
+
+#: "Este jogo não funciona" — marca o jogo na lista de exceções do Steam Input.
+JOGO_NAO_FUNCIONA = "este-jogo-nao-funciona"
+
+#: "Deixar tudo pronto" — os DOIS trabalhos com UM consentimento só.
+TUDO_PRONTO = "deixar-tudo-pronto"
+
+#: OS RÓTULOS, e os três vêm do MOTOR — nunca da minha redação. O primeiro é o
+#: do botão que `emulation_actions.on_emulation_steam_input_disable` atende; os
+#: dois últimos são os do modo simples de `daemon_actions` (o bloco
+#: "FEAT-STEAM-SIMPLES-01", que traz `_STEAM_READY_CORPO` e
+#: `format_game_broken_result`), e nasceram da frase dela — *"tem jogos que
+#: precisamos ativar entrada steam, outros que temos que colocar comandos de
+#: inicialização — é uma confusão real"*.
+#:
+#: O ENDEREÇO É O DO MOTOR, e não o da janela que está saindo
+#: (`D-0609-GTK-LEVA-INTEIRA`): o que se reusa é a função dona da palavra, que
+#: sobrevive à aposentadoria da janela — apontar para o arquivo dela seria
+#: deixar um ponteiro que morre com ela.
+DESLIGAR_STEAM_INPUT_ROTULO = "Desligar o Steam Input"
+JOGO_NAO_FUNCIONA_ROTULO = "Este jogo não funciona"
+TUDO_PRONTO_ROTULO = "Deixar tudo pronto"
+
+
+def steam_input_html(frase: str) -> str:
+    """A linha do Steam Input dentro do cartão da Steam, ou NADA.
+
+    ELA NÃO É INVENTADA AQUI, e é o mesmo contrato frio de
+    :func:`linha_do_wrapper_html`: este módulo não importa o produto (é o que
+    deixa o gerador rodar como script solto), então a frase chega pronta em
+    `Leitura.steam_input` — e quem a enche pergunta ao DONO dela
+    (`emulation_actions.markup_status_steam_input`, a mesma que escreve a linha
+    da janela velha).
+
+    VAZIA É RESPOSTA: uma `Leitura` que não fala de Steam Input não põe linha
+    nenhuma no cartão. É o estado da primeira meia volta e o de toda régua que
+    monte uma `Leitura` à mão — e escrever "Desligado" ali seria a tela
+    afirmando o resultado de uma medição que não aconteceu.
+
+    UM `<br>` E NENHUMA CLASSE NOVA, e a escolha é de ALCANCE: a página que o
+    produto renderiza é a publicada, e publicar é ato DELA — uma classe nova
+    aqui só ganharia folha de estilo no dia em que ela aprovasse o desenho, e
+    até lá a linha nasceria sem regra nenhuma. O `<br>` é a forma que o próprio
+    cartão já usa para o aviso do jogo aberto (`a07_lancadores.
+    aviso_do_jogo_aberto`), e ela chega à tela dela HOJE, pelo `blocos`, sem
+    mexer num pixel do que ela aprovou. **A cor não se perde**: `.lanc-diz b` já
+    é laranja no CSS da aba, e é por isso que quem enche a frase põe o `<b>` só
+    no estado LIGADO.
+    """
+    return f"<br>{frase}" if frase else ""
+
 
 def linha_do_wrapper_html(linha: str) -> str:
     """A linha de inicialização À MOSTRA, para ela selecionar e copiar à mão.
@@ -701,6 +769,17 @@ class Leitura:
     #: nem o bloco. Um botão de copiar sobre uma linha que o desenho não tem
     #: copiaria o vazio e diria "Copiado!".
     linha: str = ""
+    #: A FRASE DO STEAM INPUT, já pronta para a tela — vinda do dono dela
+    #: (`emulation_actions.markup_status_steam_input`). Ver
+    #: :func:`steam_input_html`.
+    #:
+    #: VAZIA É RESPOSTA: a leitura não falou de Steam Input, e o cartão cala.
+    steam_input: str = ""
+    #: O Steam Input está LIGADO fora da lista de exceções? `None` = não sei
+    #: (não medi, ou não achei a Steam). **É ele que decide o botão**, e não a
+    #: frase: uma frase presente com `None` diz "não achei a Steam", e oferecer
+    #: "Desligar" ali seria oferecer uma recusa.
+    steam_input_ligado: bool | None = None
     erros: tuple[str, ...] = ()
 
     @property
@@ -889,6 +968,18 @@ def cartao_da_steam(lida: Leitura | None) -> Lancador:
         acoes = (abrir, criar)
         selo = "ok"
 
+    # A LINHA DO STEAM INPUT — `D-0609-STEAM-DIVIDIDO`, decisão dela.
+    #
+    # ELA VEM DEPOIS DO CORPO E ANTES DA LINHA À MOSTRA, e a ordem é de assunto:
+    # o corpo fala do ATALHO de inicialização, esta fala de quem ENTREGA o
+    # controle ao jogo, e o bloco de baixo é a saída manual do primeiro.
+    #
+    # E ELA SÓ OCUPA A TELA QUANDO HÁ MEDIÇÃO. Uma `Leitura` sem
+    # `steam_input` — a primeira meia volta, e toda régua que monte uma à mão —
+    # sai daqui byte a byte como saía antes; é a mesma regra do carimbo, da
+    # lista de jogos e do bloco da linha.
+    diz = diz + steam_input_html(lida.steam_input)
+
     # OS DOIS, SÓ QUANDO FAZ FALTA — PO, 04/09/2026, `07[01]`.
     #
     # O ESTADO É O DA LINHA INTOCÁVEL, e não o da recusa do Consertar: essa
@@ -1048,9 +1139,13 @@ __all__ = [
     "CLASSE_DA_GRADE",
     "COPIAR",
     "COPIAR_ROTULO",
+    "DESLIGAR_STEAM_INPUT",
+    "DESLIGAR_STEAM_INPUT_ROTULO",
     "DIZ_ACHEI",
     "DIZ_NAO_ACHEI",
     "DIZ_SEM_FONTE",
+    "JOGO_NAO_FUNCIONA",
+    "JOGO_NAO_FUNCIONA_ROTULO",
     "MOLDURA",
     "PROCURADOS",
     "QUANTOS",
@@ -1061,6 +1156,8 @@ __all__ = [
     "STEAM",
     "SUFIXOS",
     "SUFIXO_DA_LISTA",
+    "TUDO_PRONTO",
+    "TUDO_PRONTO_ROTULO",
     "Acao",  # (noqa-acento) nome de CLASSE — identificador Python não leva acento
     "JogoNaLista",
     "Lancador",
@@ -1081,6 +1178,7 @@ __all__ = [
     "lista_de_jogos",
     "quantos_html",
     "selo_html",
+    "steam_input_html",
     "um_cartao",
     "valores_do_cartao",
 ]

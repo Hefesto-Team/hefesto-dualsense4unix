@@ -1993,6 +1993,36 @@ PERIGOSOS = {
     # a área de transferência dela, e a `--prova-gesto` clica todo `data-gesto`.
     # O que ela tinha copiado sumiria para a régua provar que sabe clicar.
     ("07-lancadores.html", "copiar-a-linha"),
+    # E OS DOIS DO STEAM INPUT — STEAM-INPUT-01, 06/09/2026, e a linha entra NO
+    # MESMO COMMIT que ensinou os gestos a escrever, que é o que esta lista pede
+    # e o que quatro levas anteriores não fizeram.
+    #
+    #   07·desligar-steam-input    com a Steam FECHADA ele age no PRIMEIRO
+    #                              clique — roda o `disable_steam_input.sh`, que
+    #                              REESCREVE os arquivos de configuração da Steam
+    #                              dela. Só o caminho da Steam ABERTA passa pelos
+    #                              dois cliques; uma régua que o clicasse com a
+    #                              Steam fechada mudaria a configuração dela para
+    #                              provar que sabe clicar
+    #   07·este-jogo-nao-funciona  não pede confirmação DE PROPÓSITO (é
+    #                              reversível e não fecha nada), e por isso age
+    #                              no primeiro clique: escreve o appid na lista
+    #                              de exceções do Steam Input. A régua marcaria
+    #                              um jogo dela — e a marca muda quem entrega o
+    #                              controle àquele jogo
+    #
+    # O `deixar-tudo-pronto` FICA DE FORA, e é a mesma razão do
+    # `consertar-fechando-a-steam`, que também não está aqui: ele SEMPRE passa
+    # pelos dois cliques, e o segundo exige um `data-v` que só existe no cartão
+    # já armado (`a07_lancadores._este_clique_confirma`). Uma régua que clica
+    # uma vez por volta só o ARMA.
+    #
+    # ESTE ARQUIVO NÃO É DA POSSE DA `STEAM-INPUT-01`, e a edição é deliberada e
+    # relatada — o mesmo que a `LUZES-01` registrou acima, e pelo mesmo motivo:
+    # sem estas duas linhas a régua de clique mexe na máquina DELA, e o dano é
+    # dela, não da régua.
+    ("07-lancadores.html", "desligar-steam-input"),
+    ("07-lancadores.html", "este-jogo-nao-funciona"),
     # OS CAMPOS DO EDITOR GRAVAM NO DISCO DELA, e o `editor.nome` RENOMEIA o
     # perfil escolhido. Uma régua que os clicasse com o valor que estivesse na
     # tela renomearia um perfil dela para provar que sabe digitar — e o `nome` é
