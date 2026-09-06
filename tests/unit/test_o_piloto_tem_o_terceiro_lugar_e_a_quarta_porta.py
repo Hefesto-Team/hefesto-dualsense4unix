@@ -114,6 +114,11 @@ VIVO_LENTO_S = 0.9
 ROTULO_VELHO = "o rótulo da tecla velha"
 ROTULO_NOVO = "o rótulo da tecla nova"
 
+#: QUANTO O CLIQUE LENTO DA CORRIDA DEMORA. Ele tem de pousar DEPOIS de o
+#: vizinho ter escrito o desfecho dele — é esse atraso que faz a corrida
+#: existir — e ANTES de a piscada do vizinho vencer (`MS_DA_PISCADA`, 1,5 s).
+CORRIDA_LENTA_S = 0.8
+
 
 LER_A_TELA = r"""
 (function(){
@@ -146,6 +151,33 @@ CLICAR_NO_MIC = r"""
   if(!b) return 'NAO ACHEI O BOTAO DO MICROFONE NO CARTAO DO P1';
   b.click();
   return 'cliquei';
+})()
+"""
+
+#: O CLIQUE NO 🎙 DE UMA COLUNA QUALQUER — o mesmo gesto, dois elementos.
+#: É o que exercita as DUAS threads na mesma chave de desfecho: o `click` e o
+#: `change` de um `<select>` chegam assim, e dois cliques em colunas diferentes
+#: reproduzem a corrida com um roteiro que se lê.
+CLICAR_NO_MIC_DE = r"""
+(function(pref){
+  const b = document.querySelector('[data-controle="' + pref + '"] [data-mudo="microfone"]');
+  if(!b) return 'NAO ACHEI O BOTAO DO MICROFONE EM ' + pref;
+  b.click();
+  return 'cliquei em ' + pref;
+})(%s)
+"""
+
+#: O QUE CADA BOTÃO DE MICROFONE MOSTRA — a classe do "deu certo" é o que
+#: separa a piscada verde do silêncio.
+LER_OS_DOIS_BOTOES = r"""
+(function(){
+  const fora = {};
+  for(const pref of ['p1', 'p2']){
+    const b = document.querySelector('[data-controle="' + pref + '"] [data-mudo="microfone"]');
+    fora[pref] = b ? {deu_certo: b.classList.contains('hef-deu-certo'),
+                      em_voo: b.classList.contains('hef-em-voo')} : null;
+  }
+  return JSON.stringify(fora);
 })()
 """
 
@@ -320,6 +352,14 @@ def medido() -> dict:
     def campo_vivo(vivo: object, gesto: object, evento: str, valor: str) -> str:
         return O_CAMPO_VIVO % (js(vivo), js(gesto), js(evento), js(valor))
 
+    def por_gesto(fn) -> None:
+        """Troca quem atende o 🎙 — pelo REGISTRO do produto, não por atalho.
+
+        `@gesto` grava em `pacotes.GESTOS`, e é daí que o `_gesto` lê. Injetar
+        aqui é exercitar exatamente o caminho que um pacote real percorre.
+        """
+        hv.pacotes.GESTOS[(PAGINA, GESTO_DO_CLIQUE)] = fn
+
     # ---- o roteiro, um passo por peça ----------------------------------
     def sem_faixa() -> bool:
         if not piloto.pronto:
@@ -434,7 +474,74 @@ def medido() -> dict:
     def leu_a_terceira_porta() -> bool:
         fora["chamados-depois-do-change"] = list(chamados)
         piloto.ponte.perguntar(LER_A_TELA, ler("depois-do-change"))
-        GLib.timeout_add(400, ir_para_o_svg)
+        GLib.timeout_add(400, a_corrida_do_desfecho)
+        return False
+
+    # ---- a corrida do desfecho (achado da ONDA5-01-03) ------------------
+    def a_corrida_do_desfecho() -> bool:
+        """DUAS THREADS, UMA CHAVE — e a corrida é FORJADA, não esperada.
+
+        **A primeira versão desta fase não mordia**, e a razão é a forma do
+        defeito: entre o `except` que ESCREVE o desfecho e o `finally` que o LÊ
+        não passa tempo nenhum — nem uma linha. Fazer um gesto demorar não abre
+        essa fresta; medido em 06/09/2026, com a cura arrancada e a régua verde.
+
+        Então a fresta se abre POR DENTRO, no dicionário do produto: quando a
+        thread que RECUSOU escreve o desfecho dela, este `dict` a segura e deixa
+        a vizinha escrever `"aplicou"` na mesma chave. É exatamente o
+        entrelaçamento que o escalonador pode produzir sozinho e que ninguém
+        consegue agendar de fora.
+
+        O DICIONÁRIO É O DO PRODUTO — a mesma classe, o mesmo atributo, o mesmo
+        `__setitem__` que o `_gesto` chama. Não há dublê de comportamento aqui:
+        só um ponto de sincronização.
+        """
+        import threading as _th
+
+        recusou = _th.Event()
+        aplicou = _th.Event()
+
+        class DicionarioQueEntrelacaAsDuas(dict):
+            def __setitem__(self, chave, valor):
+                super().__setitem__(chave, valor)
+                if valor and valor[0] == "aplicou":
+                    aplicou.set()
+                elif valor and valor[0] == "recusou dizendo":
+                    # A THREAD QUE RECUSOU ESPERA AQUI, entre a escrita e a
+                    # leitura do `finally`. É a única fresta do defeito.
+                    recusou.set()
+                    aplicou.wait(timeout=5.0)
+
+        piloto.desfechos = DicionarioQueEntrelacaAsDuas(piloto.desfechos)
+
+        def por_controle(ctx, o, p):
+            qual = str(o.get("controle") or "")
+            chamados.append(f"corrida:{qual}")
+            if qual == "p1":
+                raise RuntimeError("o daemon não confirmou o mudo do microfone")
+            # O p2 SÓ APLICA DEPOIS de o p1 ter escrito a recusa — senão as duas
+            # escritas saem na ordem em que o escalonador quiser, e a régua
+            # mediria uma corrida diferente a cada execução.
+            recusou.wait(timeout=5.0)
+            return None
+
+        por_gesto(por_controle)
+        piloto.ponte.perguntar(CLICAR_NO_MIC_DE % js("p1"), anotar("corrida-p1"))
+        GLib.timeout_add(150, a_corrida_do_p2)
+        return False
+
+    def a_corrida_do_p2() -> bool:
+        piloto.ponte.perguntar(CLICAR_NO_MIC_DE % js("p2"), anotar("corrida-p2"))
+        # LER DENTRO DA PISCADA DOS DOIS: os dois pousam em menos de 300 ms — o
+        # p1 destrava assim que o p2 escreve —, e `MS_DA_PISCADA` é 1,5 s. Aos
+        # ~700 ms os dois estão dentro da janela, e é o único instante em que
+        # "o p2 piscou" e "o p1 não piscou" se medem juntos.
+        GLib.timeout_add(700, leu_a_corrida)
+        return False
+
+    def leu_a_corrida() -> bool:
+        piloto.ponte.perguntar(LER_OS_DOIS_BOTOES, ler("a-corrida"))
+        GLib.timeout_add(300, ir_para_o_svg)
         return False
 
     # ---- o dono do campo ------------------------------------------------
@@ -730,6 +837,42 @@ def test_as_tres_portas_de_hoje_nao_mudaram(medido: dict) -> None:
     assert [r["texto"] for r in _r(leitura)] == [FRASE_DO_RECADO], (
         f"o `change` não depositou o recado do gesto — ele caiu no caminho do "
         f"gesto vivo por causa de um `data-vivo` no dataset: {_r(leitura)!r}")
+
+
+# --------------------------------------------------------------------------
+# 2b. a corrida do desfecho — dois cliques, uma chave (achado da ONDA5-01-03)
+# --------------------------------------------------------------------------
+def test_o_botao_que_recusou_nao_pisca_verde_pelo_vizinho(medido: dict) -> None:
+    """A piscada é do desfecho DESTA execução, e não do que está na chave.
+
+    A chave de `self.desfechos` é `página:gesto`, e o MESMO gesto pode estar em
+    voo duas vezes — o `click` e o `change` de um `<select>`, ou dois cliques em
+    colunas diferentes. As duas threads escrevem na mesma chave, e o `finally`
+    de cada uma lia dali para decidir a cor do pouso.
+
+    Aqui o p1 demora e RECUSA; o p2 responde na hora e aplica. Quando o p1
+    pousa, a chave já diz `"aplicou"` — do vizinho.
+
+    ARRANQUE a cura (volte o `finally` a ler `self.desfechos`) e o botão do p1
+    pousa **verde**, dizendo que deu certo o que o produto acabou de recusar.
+    """
+    lido = medido["a-corrida"]
+    assert isinstance(lido, dict), lido
+    assert lido["p1"] and lido["p2"], (
+        f"a régua não achou os dois botões de microfone: {lido!r} — sem os "
+        f"dois não há corrida a medir")
+    assert lido["p2"]["deu_certo"], (
+        "o botão do p2 (que APLICOU) não piscou verde — a régua está medindo "
+        "fora da janela da piscada, e por isso não veria o verde falso do p1")
+    assert not lido["p1"]["deu_certo"], (
+        "o botão do p1 piscou VERDE depois de o produto ter RECUSADO: o pouso "
+        "leu o desfecho que o vizinho escreveu na mesma chave")
+    assert not lido["p1"]["em_voo"], (
+        "o botão do p1 continua 'trabalhando' — o pouso não chegou, e a "
+        "medição acima não vale")
+    corridas = [c for c in medido["chamados_finais"] if c.startswith("corrida:")]
+    assert sorted(corridas) == ["corrida:p1", "corrida:p2"], (
+        f"os dois cliques não chegaram ao mesmo gesto: {corridas!r}")
 
 
 # --------------------------------------------------------------------------

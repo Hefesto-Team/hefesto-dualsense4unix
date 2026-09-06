@@ -1449,8 +1449,23 @@ BOOTSTRAP = r"""
         lado: d.lado || '', campo: d.campo || '', hef: d.hef || '',
         hex: d.hex || '', sensor: d.sensor || '', rota: d.rota || '',
         mudo: d.mudo || '', micModo: d.micModo || '', v: d.v || '',
-        // O ALVO PADRÃO, e ele é da RÉGUA — no produto fica indefinido e esta
-        // linha vale exatamente o que valia antes: string vazia.
+        // O ALVO PADRÃO — O CONTROLE QUE A FITA APONTOU.
+        //
+        // FATO SUBSTITUÍDO EM 06/09/2026, e ele estava aqui desde que a fita
+        // aprendeu a escolher. Esta linha dizia que o alvo padrão *"é da RÉGUA —
+        // no produto fica indefinido"*. **Não fica**: o tique escreve
+        // `carga["alvo"]` nas abas cuja fita ESCOLHE, e o `pintar` o guarda em
+        // `window.__hef.alvoPadrao` (ver a nota do `carga["alvo"]` no `_tique`).
+        // No produto, um botão que não mora em coluna de controle nenhuma chega
+        // ao Python com o controle que ela apontou na fita — e isso é DESENHO,
+        // não acidente: *"Esta aba passa a mirar o P2."*
+        //
+        // O QUE ISSO CUSTA, medido pela ONDA5-01-03 em 06/09 com foto: o
+        // ENDEREÇO DO RECADO segue o mesmo caminho, e a recusa de um gesto de
+        // PÁGINA (o cadeado da 01, que liga o Hefesto inteiro) pousa no cartão
+        // do P1 e cobre o nome dele. O relato está em
+        // `docs/process/agentes/2026-09-06/ONDA5-P-01.md` §7; a saída que existe
+        // hoje é a página declarar `data-hef-recados`.
         //
         // ELE CURA A VIBRAÇÃO, e só ela. Medido com dublê em 02/09/2026:
         // `testar` e `parar` recusam com *"o clique não disse em qual controle
@@ -2484,6 +2499,26 @@ class Piloto:
         # por nove segundos e meio, sem nada na tela dizendo por quê, e quem
         # clicou concluiria que o app travou.
         def trabalhar() -> None:
+            # O DESFECHO **DESTA** EXECUÇÃO, e ele é o que decide a piscada —
+            # ONDA5-01-03, relatado em 06/09/2026 e curado aqui.
+            #
+            # O DEFEITO É DE FORMA, e não acontece hoje por acaso do JS: a chave
+            # de `self.desfechos` é `página:gesto`, e um MESMO clique pode chegar
+            # por DUAS portas — o `click` e o `change` de um `<select>`, cada um
+            # numa thread. As duas escrevem na mesma chave, e o `finally` de cada
+            # uma lia dali para decidir a cor do pouso. Com a primeira recusando
+            # e a segunda aplicando, o botão de quem RECUSOU piscaria verde.
+            #
+            # POR QUE NÃO PÔR O VOO NA CHAVE, que era a outra saída: `desfechos`
+            # é o RELATO, e a chave dele é lida por nome em toda régua desta casa
+            # e no `--prova-gesto`. Um número de voo ali trocaria um verde falso
+            # raro por um relato ilegível em todas.
+            #
+            # O DONO CONTINUA SENDO UM: as duas atribuições abaixo são a MESMA
+            # tupla, escrita no dicionário e nesta variável na mesma linha — quem
+            # mudar o desfecho continua mudando o pouso junto, que era a razão de
+            # o `finally` ler o dicionário.
+            desta_vez: tuple[str, str] = ("", "")
             try:
                 resposta = acao(self._ctx_de_agora, o, ponte)
             except Exception as erro:
@@ -2496,8 +2531,8 @@ class Piloto:
                 # é clique inválido e `RuntimeError` é o produto recusando com
                 # o motivo — as duas coisas são DESFECHO, e um relato que as
                 # some com "não fez nada" mente sobre sete botões desta casa.
-                self.desfechos[f"{pagina}:{nome}"] = (
-                    "recusou dizendo", f"{type(erro).__name__}: {erro}")
+                desta_vez = ("recusou dizendo", f"{type(erro).__name__}: {erro}")
+                self.desfechos[f"{pagina}:{nome}"] = desta_vez
                 # A FRASE VAI PARA A TELA, e o `idle_add` é o que a leva ao
                 # único laço que pode tocar o DOM e o depósito. Até 02/09/2026
                 # esta linha só imprimia no `stderr` — ver `_recusou_dizendo`.
@@ -2509,7 +2544,8 @@ class Piloto:
                 # "voltou sem levantar". Anotar o sucesso lá no `_deu_certo`
                 # separaria os dois ramos do mesmo `try`, e quem lesse um não
                 # veria o outro.
-                self.desfechos[f"{pagina}:{nome}"] = ("aplicou", "")
+                desta_vez = ("aplicou", "")
+                self.desfechos[f"{pagina}:{nome}"] = desta_vez
                 GLib.idle_add(
                     lambda r=resposta: self._deu_certo_dizendo(pagina, nome, alvo, r))
             finally:
@@ -2526,11 +2562,11 @@ class Piloto:
                 #
                 # E O POUSO LEVA O DESFECHO — 05/09/2026, decisão dela na
                 # `03-Q4`. O `finally` continua sendo o dono do pouso pela razão
-                # acima; o que ele passou a levar é o fato que os dois ramos do
-                # `try` já anotaram em `self.desfechos`. Ler dali, e não de uma
-                # variável nova, é o que impede os dois de discordarem: quem
-                # mudar o desfecho muda o pouso junto.
-                deu_certo = self.desfechos.get(f"{pagina}:{nome}", ("", ""))[0] == "aplicou"
+                # acima; o que ele leva é o fato que os dois ramos do `try`
+                # anotaram — **o desta execução**, e não o que estiver na chave
+                # compartilhada quando esta thread chegar aqui. Ver `desta_vez`,
+                # no alto desta função.
+                deu_certo = desta_vez[0] == "aplicou"
                 GLib.idle_add(lambda v=voo, c=deu_certo: self._pousou(v, c))
 
         threading.Thread(target=trabalhar, daemon=True).start()
