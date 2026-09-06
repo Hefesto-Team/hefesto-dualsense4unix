@@ -763,7 +763,16 @@
      `.duas-colunas` para "colunas irmãs acabam no mesmo y" e para "as colunas
      somam a largura da caixa"; trocá-lo por um nome mais bonito desligaria as
      duas medições EM SILÊNCIO, que é o defeito desta casa. Precedente:
-     `aba08.py:701` já usa a mesma classe com TRÊS colunas.
+     `aba08.py` já usa a mesma classe: a regra `.duas-colunas` do CSS da
+     Conexões, e as duas caixas dela nos quadros 1 e 3.
+
+     O NOME DA CLASSE VAI SEM A TAG, e isto é defeito MEDIDO em 06/09/2026:
+     este bloco mora DENTRO da `CSS`, que é uma string, e o gerador conta
+     as aberturas e os fechamentos de tag para se conferir. Escrever a tag
+     por extenso aqui somou uma abertura sem par e o gerador PAROU com
+     `84 x 83 — desbalanceado`. É a quarta vez em quatro dias que o
+     comentário escrito para explicar vira o defeito que ele descreve —
+     e desta vez quem o escreveu foi quem costura.
 
      AS ALTURAS DE LINHA SÃO COMPARTILHADAS pelas cinco colunas — é isso que faz
      o rótulo "Ajustes" ficar na linha das quatro caixas de ajuste e as cinco
