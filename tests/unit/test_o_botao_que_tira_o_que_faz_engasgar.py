@@ -4,9 +4,13 @@ O botão fica na fileira Avançado da aba Sistema, ao lado do "Travar Proton
 validado": mesma natureza (mexe no que a Steam guarda por jogo) e mesmo alcance
 (todos os jogos). O que este arquivo garante:
 
-- o botão EXISTE no glade, com rótulo e dica, e o handler está no mapa da
-  janela — sem isso a cura fica escrita e nunca ligada, o defeito mais caro
-  desta casa;
+- o botão EXISTE na página que o produto serve, com rótulo e dica, e o handler
+  está registrado no dono de hoje — sem isso a cura fica escrita e nunca ligada,
+  o defeito mais caro desta casa. **A ROTA MUDOU EM 06/09/2026**: até aqui esta
+  régua lia o mapa de handlers de `app/app.py`, e a `GTK-3` apagou o arquivo com
+  a janela inteira. O clique de hoje entra por `data-gesto="procurar-camadas"` na
+  página 09 e sai no `@gesto` de `interface/pacotes/a09_sistema.py`, que chama o
+  MESMO motor de `emulation_actions` que as classes abaixo exercitam;
 - o diálogo é o RELATÓRIO (ELO-MUDO-01): diz jogo por jogo o que achou, e
   distingue "ligada" de "pendurada mas o arquivo não está no disco" — que é o
   estado real em que a máquina dela estava;
@@ -19,6 +23,7 @@ com o gi real presente, nada é stubado.
 """
 from __future__ import annotations
 
+import ast
 import sys
 
 from tests.conftest import exigir_gi_real
@@ -105,12 +110,114 @@ _CV_MODNAME = "hefesto_dualsense4unix.integrations.camadas_vulkan"
 _SLO_MODNAME = "hefesto_dualsense4unix.integrations.steam_launch_options"
 
 
-def test_o_handler_esta_no_mapa_da_janela() -> None:
-    """Sem a linha no `app.py`, o clique não chega a lugar nenhum."""
-    fonte = (
-        RAIZ / "src" / "hefesto_dualsense4unix" / "app" / "app.py"
-    ).read_text(encoding="utf-8")
-    assert '"on_camadas_engasgo": self.on_camadas_engasgo,' in fonte
+#: O ENDEREÇO DO BOTÃO, e ele é o mesmo dos dois lados: a página o carrega em
+#: `data-gesto=`, o dono o declara em `@gesto(...)`. Escrito uma vez só.
+PAGINA = "09-sistema.html"
+GESTO = "procurar-camadas"
+
+#: O DONO DE HOJE. Até 06/09/2026 quem atendia o clique era
+#: `app/app.py`, o mapa de handlers da janela GTK — e a `GTK-3`
+#: (`D-0609-GTK-LEVA-INTEIRA`) apagou o arquivo do disco. O ato não morreu com
+#: ela: `emulation_actions` continua sendo o motor (as duas frases puras e o
+#: `_camadas_worker` abaixo), e quem entrega o clique a ele agora é o registro
+#: `@gesto` da aba 09.
+DONO = (
+    RAIZ / "src" / "hefesto_dualsense4unix" / "interface" / "pacotes"
+    / "a09_sistema.py"
+)
+PAGINA_SERVIDA = (
+    RAIZ / "src" / "hefesto_dualsense4unix" / "interface"
+    / "paginas" / PAGINA  # noqa-acento: nome da PASTA no disco, não leva acento
+)
+
+
+def _registros_de_gesto(fonte: Path) -> dict[tuple[str, str], str]:
+    """`(página, nome) → nome da função`, lidos da ÁRVORE, não do texto.
+
+    POR QUE `ast` E NÃO `in fonte`, e a cicatriz é desta mesma sprint: em
+    23/08/2026 `test_o_install_materializa_o_curador_sem_flag` era `grep` no
+    `install.sh` e **passava** com o bloco inteiro trancado atrás de um
+    `if false` — a linha continuava escrita e inalcançável. Uma busca por texto
+    dá o mesmo verde para uma linha viva, uma linha comentada e uma linha citada
+    dentro de um docstring.
+
+    E AQUI ELA DARIA, medido em 06/09/2026: com o decorador APAGADO do
+    `a09_sistema.py`, `grep -c '"procurar-camadas"'` no mesmo arquivo ainda
+    responde **2** — a literal sobrevive num comentário e na chamada
+    `_confirmado(o, "procurar-camadas")`. A árvore só enxerga o decorador que o
+    interpretador vai executar.
+    """
+    achados: dict[tuple[str, str], str] = {}
+    for no in ast.walk(ast.parse(fonte.read_text(encoding="utf-8"))):
+        if not isinstance(no, ast.FunctionDef | ast.AsyncFunctionDef):
+            continue
+        for dec in no.decorator_list:
+            if not isinstance(dec, ast.Call) or len(dec.args) < 2:
+                continue
+            alvo = dec.func
+            chamado = (
+                alvo.attr if isinstance(alvo, ast.Attribute)
+                else getattr(alvo, "id", "")
+            )
+            pagina, nome = dec.args[0], dec.args[1]
+            if (chamado == "gesto"
+                    and isinstance(pagina, ast.Constant)
+                    and isinstance(nome, ast.Constant)):
+                achados[(pagina.value, nome.value)] = no.name
+    return achados
+
+
+def test_o_botao_existe_na_pagina_que_o_produto_serve() -> None:
+    """O primeiro elo: sem o endereço na página, não há clique a entregar.
+
+    A página servida é a que o `WebKit2.WebView` carrega — e o rótulo dela vem
+    do gerador (`interface/aba09.py`), nunca deste arquivo. Aqui só se cobra
+    que os dois digam a mesma palavra.
+    """
+    pagina = PAGINA_SERVIDA.read_text(encoding="utf-8")
+    linhas = [ln for ln in pagina.splitlines() if f'data-gesto="{GESTO}"' in ln]
+    assert linhas, (
+        f"a página {PAGINA} não tem nenhum elemento com "
+        f'`data-gesto="{GESTO}"` — o botão sumiu da tela e o handler abaixo '
+        "ficou sem quem o acione.")
+    assert any(ROTULO in ln for ln in linhas), (
+        f"o botão de `{GESTO}` não diz mais {ROTULO!r} — se o rótulo mudou, "
+        "quem decide é ela, e a palavra nova entra aqui e no gerador juntas.")
+    assert any('title="' in ln for ln in linhas), (
+        "o botão perdeu a dica. Ela é o que separa 'tirei o quê?' de um clique "
+        "às cegas num ajuste que mexe no prefixo do jogo.")
+
+
+def test_o_handler_esta_registrado_no_dono_de_hoje() -> None:
+    """Sem o `@gesto`, o clique não chega a lugar nenhum — o P desta sprint."""
+    registros = _registros_de_gesto(DONO)
+    assert (PAGINA, GESTO) in registros, (
+        f"nenhuma função de `{DONO.name}` está decorada com "
+        f'`@gesto("{PAGINA}", "{GESTO}")`. É a linha que substituiu o mapa de '
+        "handlers de `app/app.py`, apagado com a janela GTK; sem ela o botão "
+        "volta a ser desenho.")
+
+
+def test_o_registro_vivo_entrega_o_clique_a_esse_handler() -> None:
+    """A outra metade, e ela morde sozinha: o decorador tem de ter RODADO.
+
+    A árvore acima prova que a linha está escrita no dono. Ela não prova que o
+    módulo é alcançado pelo carregador — um `a09_sistema.py` fora do
+    `_carregar_tudo()` passaria no teste anterior e continuaria com o botão
+    mudo. Quem responde isso é o registro depois do import.
+    """
+    from hefesto_dualsense4unix.interface import pacotes
+
+    atende = pacotes.gesto_da_pagina(PAGINA, GESTO)
+    assert atende is not None, (
+        f"`gesto_da_pagina({PAGINA!r}, {GESTO!r})` devolveu None — o registro "
+        "está vazio para este botão e o piloto vai recusar o clique.")
+    assert atende.__name__ == _registros_de_gesto(DONO)[(PAGINA, GESTO)], (
+        "quem atende o clique não é a função que o dono declara. Dois donos "
+        "para o mesmo botão é o defeito que o despachante existe para impedir.")
+    assert atende.__module__.endswith("a09_sistema"), (
+        f"o clique de `{GESTO}` foi parar em {atende.__module__} — o motor "
+        "mora na aba 09.")
 
 
 # ---------------------------------------------------------------------------
@@ -243,6 +350,20 @@ class TestFraseDoResultado:
 
 # ---------------------------------------------------------------------------
 # O worker: recusa com jogo aberto, e o clique é gesto explícito (forcar)
+#
+# LEIA ISTO ANTES DE ACREDITAR QUE ESTA SEÇÃO MEDE O PRODUTO DE HOJE.
+# `EmulationActionsMixin._camadas_worker` era o que o botão do glade acionava,
+# e desde a `GTK-3` **nada o chama**: o único chamador era
+# `on_camadas_engasgo`, ligado pelo mapa de handlers de `app/app.py`, e os dois
+# saíram do disco com a janela. O caminho vivo é
+# `a09_sistema.procurar_camadas`, que chama `camadas_vulkan.curar_todos`
+# direto e tem o SEU próprio portão de jogo aberto — coberto por
+# `test_a_09_sistema_fecha_a_paridade.py::test_as_camadas_recusam_com_jogo_aberto`.
+# Os quatro nós abaixo continuam de pé porque o dublê e as duas frases puras
+# ainda são de `emulation_actions`, e porque apagar régua de código vivo por
+# suspeita é como se perde cobertura de graça — mas quem for cobrar a recusa do
+# PRODUTO cobra lá, não aqui. `emulation_actions.py` não é da posse desta
+# sprint; a órfã está relatada na entrega.
 # ---------------------------------------------------------------------------
 
 
