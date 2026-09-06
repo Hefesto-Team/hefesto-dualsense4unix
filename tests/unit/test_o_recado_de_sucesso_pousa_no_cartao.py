@@ -741,3 +741,43 @@ def test_o_numero_da_piscada_e_o_mesmo_nos_dois_lados() -> None:
     assert str(hv.MS_DA_PISCADA) in achados, (
         f"o Python diz {hv.MS_DA_PISCADA} ms e o JavaScript diz {achados} — "
         "a piscada duraria o que a tela mandasse, não o que ela decidiu")
+
+
+def test_o_bootstrap_e_a_primeira_ocorrencia_de_si_mesmo() -> None:
+    """Seis réguas extraem o BOOTSTRAP do fonte, e nem todas ancoram no início.
+
+    O DEFEITO QUE ISTO NÃO DEIXA VOLTAR foi medido em 05/09/2026, e ele é de
+    PROSA: um comentário sobre o próprio BOOTSTRAP citou LITERALMENTE o padrão
+    com que as réguas o extraem. O comentário mora acima da definição, então
+    virou a **primeira ocorrência** do arquivo — e as réguas sem âncora de
+    início passaram a extrair o comentário em vez do JavaScript. Treze testes
+    caíram com `Unexpected token '.'`, que não se lê como *"alguém escreveu uma
+    frase infeliz num comentário"*.
+
+    A régua é simples e é a que faltava: **a primeira ocorrência do texto que
+    abre a constante tem de ser a própria constante**, no começo de uma linha.
+    """
+    import re
+    from pathlib import Path
+
+    piloto = (
+        Path(__file__).resolve().parents[2]
+        / "src/hefesto_dualsense4unix/interface/hefesto_vivo.py"
+    )
+    fonte = piloto.read_text(encoding="utf-8")
+
+    abertura = 'BOOTSTRAP = r' + '"' * 3
+    primeira = fonte.find(abertura)
+    assert primeira != -1, "o BOOTSTRAP mudou de forma — as seis réguas cegaram"
+    assert primeira == 0 or fonte[primeira - 1] == "\n", (
+        "a primeira ocorrência do texto que abre o BOOTSTRAP não está no começo "
+        "de uma linha — alguém a citou numa prosa acima da definição, e as "
+        "réguas sem âncora vão extrair a prosa. Descreva o padrão, não o "
+        f"escreva: …{fonte[max(0, primeira - 90):primeira + 30]!r}")
+
+    # E O QUE SAI TEM DE SER JAVASCRIPT, não uma linha de comentário: a régua
+    # acima pega o caso de hoje, esta pega o que ele vier a ser amanhã.
+    extraido = re.search(re.escape(abertura) + r'(.*?)' + '"' * 3, fonte, re.S)
+    assert extraido and len(extraido.group(1)) > 10_000, (
+        "o que a extração sem âncora devolve não é o bootstrap inteiro: "
+        f"{len(extraido.group(1)) if extraido else 0} caracteres")

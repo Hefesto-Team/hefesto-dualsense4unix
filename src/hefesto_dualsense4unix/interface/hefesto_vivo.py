@@ -167,15 +167,22 @@ SEGUNDOS_DO_RECADO_DE_SUCESSO = 6.0
 #:
 #: DONO ÚNICO IMPOSSÍVEL, DUAS RÉGUAS NO LUGAR — e a forma é a mesma de
 #: `dualsense_bt_audio.PRIORIDADE_SESSAO_DA_PONTE`, que convive com um `.conf`
-#: do WirePlumber pelo mesmo motivo. O `BOOTSTRAP` é um `r"""…"""` CRU, e tem de
-#: continuar sendo: **cinco réguas desta casa o extraem do fonte por
-#: `^BOOTSTRAP = r"""(.*?)"""$`** para rodá-lo mutilado num WebKit, e qualquer
-#: `.replace()` colado no fecho quebra a âncora `$` — medido em 05/09/2026, e o
-#: sintoma foram 41 erros de `SyntaxError` no bootstrap, não um vermelho
-#: legível. Uma f-string também não serve: o JS é cheio de `{` e `}`.
+#: do WirePlumber pelo mesmo motivo. O `BOOTSTRAP` é uma string CRUA de aspas
+#: triplas, e tem de continuar sendo: **seis réguas desta casa a extraem do
+#: fonte por expressão regular** para rodá-la mutilada num WebKit, e um
+#: `.replace()` colado no fecho quebra a âncora delas — medido em 05/09/2026, e
+#: o sintoma foram 41 erros de `SyntaxError` no bootstrap, não um vermelho
+#: legível. Uma f-string também não serve: o JS é cheio de chaves.
 #:
-#: Então o número vive nos dois sítios e `test_o_recado_de_sucesso_pousa_no_cartao
-#: .py::test_o_numero_da_piscada_e_o_mesmo_nos_dois_lados` exige que sejam o
+#: **E O TEXTO DESTE COMENTÁRIO É PARTE DO PROBLEMA**, o que se descobriu na
+#: mesma noite: uma das seis casa sem âncora de início, e a citação LITERAL do
+#: padrão que estava escrita aqui virou a PRIMEIRA ocorrência do arquivo — a
+#: régua passou a extrair este comentário em vez do JS, e treze testes caíram
+#: com `Unexpected token '.'`. Por isso o padrão não se escreve; descreve-se.
+#:
+#: Então o número vive nos dois sítios e o
+#: `test_o_numero_da_piscada_e_o_mesmo_nos_dois_lados`, em
+#: `tests/unit/test_o_recado_de_sucesso_pousa_no_cartao.py`, exige que sejam o
 #: MESMO.
 MS_DA_PISCADA = 1500
 
