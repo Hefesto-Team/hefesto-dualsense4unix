@@ -114,13 +114,42 @@ def _o_disco_tem(monkeypatch: pytest.MonkeyPatch, *nomes: str) -> list[Any]:
 
     SEM ISTO A PASTA É VAZIA: a ``conftest.py`` põe
     ``HEFESTO_DUALSENSE4UNIX_SKIP_PRESET_SEED=1`` em TODO teste.
+
+    **O `save_profile` GUARDA, e até 06/09/2026 ele descartava.** Ele era
+    ``lambda *a, **k: None``, e as duas réguas que conferem a regra gravada
+    liam ``todos[0].match`` — a instância que o `load_profile` deste dublê
+    devolve. Elas passavam por ALIASING: o gesto fazia ``prof.match = …`` no
+    objeto que ESTE dublê guarda, e a mutação aparecia na lista sem ninguém
+    ter gravado nada.
+
+    **No produto esse aliasing não existe:** `load_profile` lê um `.json` e
+    devolve instância nova a cada chamada, então ``todos[0]`` nunca foi o
+    objeto que o gesto escreveu. A régua estava medindo o dublê, não a
+    escrita — e ela ficou vermelha no dia em que um gesto passou a montar o
+    perfil em vez de mutar o que leu (`a10_perfis._com_o_que_esta_valendo`),
+    que é a forma normal e a que o produto usa.
+
+    Agora o dublê **substitui a entrada pelo perfil salvo**, por slug (R-10:
+    a identidade em disco é o slug, e é assim que `save_profile` grava). As
+    duas réguas passam a ler o que foi ESCRITO, que é o que elas sempre
+    quiseram perguntar.
     """
+    from hefesto_dualsense4unix.profiles.slug import slugify
+
     todos = _perfis(*nomes)
+
+    def _save(prof: Any, *a: Any, **k: Any) -> None:
+        for i, antigo in enumerate(todos):
+            if slugify(antigo.name) == slugify(prof.name):
+                todos[i] = prof
+                return
+        todos.append(prof)
+
     monkeypatch.setattr(loader, "load_all_profiles", lambda *a, **k: todos)
     monkeypatch.setattr(
         loader, "load_profile",
         lambda nome, *a, **k: next(p for p in todos if p.name == nome))
-    monkeypatch.setattr(loader, "save_profile", lambda *a, **k: None)
+    monkeypatch.setattr(loader, "save_profile", _save)
     monkeypatch.setattr(loader, "delete_profile", lambda *a, **k: None)
     return todos
 
