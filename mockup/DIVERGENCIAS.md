@@ -21,4 +21,25 @@ seção daqui**: a aba deixou de estar em trabalho.
 
 ---
 
-<!-- Nenhuma aba em trabalho: o produto está igual ao desenho dela. -->
+## 02-controles.html
+
+- **05/09/2026** — **UMA LINHA DE COMENTÁRIO CSS, sem um pixel de diferença.**
+  O gerador `aba02.py` teve um endereço de linha remedido (o alvo `classe` do
+  `escrever()` mudou de lugar quando o piloto ganhou a piscada da `03-Q4`), e o
+  comentário que o cita é EMITIDO dentro do `<style>` da página. A bancada foi
+  regerada; o produto não.
+
+  **Por que não publiquei:** publicar é ato dela, e a regra existe porque
+  publicar troca o que ela abre. Aqui a mudança é provadamente invisível — as
+  dez fotos de `docs/usage/assets/aba-NN-*.png` saíram byte a byte idênticas
+  antes desta regeração —, mas *"é só um comentário"* é exatamente o argumento
+  com que uma exceção vira hábito.
+
+  **O que ela vê HOJE, até publicar:** exatamente a mesma aba Controles de
+  ontem. A página que o produto renderiza continua com o endereço antigo dentro
+  de um comentário do `<style>` — nenhum clique, nenhuma frase e nenhum pixel
+  dependem dele. O custo da espera é zero, e esta é a primeira declaração desta
+  lista de que isso se pode dizer com medição por trás.
+
+  **O que fecha:** o `--publicar 02` da próxima vez que ela aprovar a aba. Nada
+  espera por isto — nenhuma sprint depende desta linha.
