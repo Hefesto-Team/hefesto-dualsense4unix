@@ -286,7 +286,11 @@ class UinputMouseDevice:
             self.scroll_speed = max(SCROLL_SPEED_MIN, min(SCROLL_SPEED_MAX,
                                                           int(scroll_speed)))
 
-    def set_button_actions(self, do_mouse: dict[str, str] | None) -> None:
+    def set_button_actions(
+        self,
+        do_mouse: dict[str, str] | None,
+        calados: frozenset[str] | None = None,
+    ) -> None:
         """Troca o que os botões fazem NESTE device. `None` volta ao de fábrica.
 
         FEAT-ACOES-DE-BOTAO-01 (01/09/2026). `do_mouse` é a primeira sacola do
@@ -302,18 +306,36 @@ class UinputMouseDevice:
         tap continuam vindo do padrão, porque quem os troca é o teclado virtual
         (a segunda sacola do `resolver`), e não este device. Pôr a mesma tecla
         nos dois faria o botão emitir duas vezes.
+
+        `calados` É A SEGUNDA SACOLA QUE FALTAVA — 06/09/2026, ONDA3-MOTOR-01, e
+        ela nasce de um defeito medido: `do_mouse` **não distingue "não é do
+        mouse" de "foi calado"**. Um botão que ela pôs em `— Nada —` não entra
+        em `do_mouse` (o `resolver()` o pula de propósito), logo a subtração
+        acima não o alcançava e ele **voltava ao valor de fábrica**. Escapavam
+        SEIS dos vinte e dois — as quatro direções do d-pad, o Círculo e o
+        Quadrado —, e os outros dezesseis calavam porque os mapas que os
+        atendem são SUBSTITUÍDOS inteiros.
+
+        Ela escolhia `— Nada —`, a tela confirmava, e o botão continuava fazendo
+        o que fazia: perda silenciosa de escolha dela. Quem monta a sacola é
+        `core/acoes_de_botao.botoes_calados()`; `None` aqui quer dizer "ninguém
+        informou", e é o contrato de antes byte a byte.
         """
         if do_mouse is None:
             self._mapa_botoes = dict(BUTTON_TO_UINPUT)
             self._mapa_dpad = dict(DPAD_TO_KEY)
             self._mapa_tap = dict(EDGE_KEY_MAP)
             return
+        mudos = frozenset(calados or ())
         self._mapa_botoes = dict(do_mouse)
         # O QUE SAIU DO MOUSE SAI DOS OUTROS DOIS TAMBÉM. Um `dpad_up` que
         # passou a ser `BTN_LEFT` não pode continuar emitindo `KEY_UP` pelo
-        # `_emit_dpad` — seriam duas coisas no mesmo aperto.
-        self._mapa_dpad = {b: k for b, k in DPAD_TO_KEY.items() if b not in do_mouse}
-        self._mapa_tap = {b: k for b, k in EDGE_KEY_MAP.items() if b not in do_mouse}
+        # `_emit_dpad` — seriam duas coisas no mesmo aperto. E O QUE ELA CALOU
+        # SAI IGUAL, pelo motivo escrito no docstring.
+        self._mapa_dpad = {b: k for b, k in DPAD_TO_KEY.items()
+                           if b not in do_mouse and b not in mudos}
+        self._mapa_tap = {b: k for b, k in EDGE_KEY_MAP.items()
+                          if b not in do_mouse and b not in mudos}
 
     def dispatch(
         self,
