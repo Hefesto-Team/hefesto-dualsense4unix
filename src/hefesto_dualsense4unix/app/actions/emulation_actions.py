@@ -1401,10 +1401,34 @@ class EmulationActionsMixin(WidgetAccessMixin):
         if self._usb_quirk_active():
             done = "Mic do DualSense ligado"
         else:
+            # O NOME DO BOTÃO SE PERGUNTA, E NÃO SE DIGITA — 06/09/2026, achado
+            # da GTK-3. Esta frase trazia digitado o rótulo da JANELA QUE ESTÁ
+            # SAINDO, e na aba Sistema que ela usa o botão tem outro nome. É a
+            # forma que o glossário desta casa proíbe com todas as letras —
+            # *qualquer frase que mande a pessoa procurar um botão que não
+            # existe* — e era o TERCEIRO escritor do mesmo rótulo.
+            #
+            # E O RÓTULO VELHO NÃO SE ESCREVE AQUI, nem em comentário: a marca
+            # `xfail` que a GTK-3 instalou procurava a frase NO FONTE deste
+            # arquivo, então explicá-la em prosa a manteria ligada sobre a cura.
+            # Pela sexta vez nesta casa um comentário viraria o defeito que
+            # descreve; desta vez ele foi medido antes de entrar.
+            #
+            # A régua dava verde porque lia o glade: o instrumento respondia
+            # sobre a tela que está saindo. `rotulo_do_botao` já pergunta na
+            # ordem certa — a página que o produto renderiza primeiro, o glade
+            # depois, e o `se_faltar` só quando nenhuma responde —, e por isso a
+            # frase segue certa no dia em que o glade sair (GTK-3, volta 2).
+            from hefesto_dualsense4unix.integrations.storm_doctor import (
+                rotulo_do_botao,
+            )
+
+            botao = rotulo_do_botao(
+                "btn_storm_fix_safe", "Refazer os consertos automáticos")
             done = (
                 "Mic ligado — atenção: sem o ajuste de áudio o controle pode "
                 "travar no meio do jogo. Abra a aba Sistema e clique em "
-                "“Consertar problemas conhecidos” (vale no próximo boot)."
+                f"“{botao}” (vale no próximo boot)."
             )
         self._run_mic("--enable-mic", done)
 
