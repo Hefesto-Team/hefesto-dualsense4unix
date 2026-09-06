@@ -269,6 +269,165 @@ def test_a_mascara_do_cartao_tem_a_MESA_por_dona() -> None:  # noqa: N802
 # ---------------------------------------------------------------------------
 # 2. A COLUNA ATENÇÃO — a ponte que faltava
 # ---------------------------------------------------------------------------
+#: O DAEMON COM UM JOGO ABERTO SEM O ATALHO — o único estado em que o aviso do
+#: selo ``JOGO`` acende. Só o ``False`` LITERAL de `wrapper_used` conta, e a
+#: `window_detect_last_class` é o que dá o appid ao produto.
+VIVO_JOGO_SEM_ATALHO: dict[str, Any] = {
+    "connected": True,
+    "native_mode": False,
+    "paused": False,
+    "gamepad_emulation": {"enabled": True, "flavor": "dualsense",
+                          "backend": "uhid", "wrapper_used": False},
+    "window_detect_last_class": "steam_app_570",
+    "controllers": [{"uniq": "aa", "connected": True, "player_slot": 1}],
+}
+
+
+@pytest.fixture()
+def duas_listas_vazias(tmp_path: Any, monkeypatch: Any) -> Any:
+    """As DUAS listas de recusa em disco, num diretório só deste teste.
+
+    Elas são arquivos de verdade, escritos pelos escritores de verdade
+    (`add_dismissed_appid` e `marcar_jogo_sem_wrapper`) — os mesmos que os dois
+    botões dela chamam. Um dublê de `ela_ja_respondeu_sobre` mediria a cura com
+    a cura; o que se quer medir é a volta inteira: **o clique dela grava, e a
+    coluna cala.**
+    """
+    from hefesto_dualsense4unix.app.actions import launch_wrapper_dialog as lwd
+    from hefesto_dualsense4unix.integrations import steam_launch_options as slo
+
+    dispensados = tmp_path / "launch_dialog_dismissed.json"
+    sem_wrapper = tmp_path / "jogos_sem_wrapper.txt"
+    # O `**_` NÃO É ASSEIO: `_dismissed_path(ensure=True)` é como o ESCRITOR
+    # chama, e um dublê sem ele levanta `TypeError` dentro do `except Exception`
+    # do `add_dismissed_appid` — a gravação some em silêncio e o teste mede uma
+    # lista que nunca foi escrita. Custou uma volta, em 06/09/2026.
+    monkeypatch.setattr(lwd, "_dismissed_path", lambda **_: dispensados)
+    monkeypatch.setattr(slo, "sem_wrapper_path", lambda *_a, **_k: sem_wrapper)
+    return lwd, slo
+
+
+def _coluna(ctx: Contexto) -> tuple[list[str], list[str], str]:
+    fora = aba.pacote(ctx)
+    return (
+        [s for s in fora["aviso-selo"] if s],
+        [t for t in fora["aviso-texto"] if t],
+        fora["atencao-conta"],
+    )
+
+
+def test_o_aviso_do_jogo_sem_atalho_acende_na_coluna(duas_listas_vazias: Any) -> None:
+    """Sem recusa nenhuma, a coluna acusa — e é do dono que a frase vem.
+
+    A `home_actions.WRAPPER_MISSING_TEXT` é a MESMA das abas Início, Status e
+    do cartão da Steam; esta aba não escreve uma palavra. O caso irmão do
+    silêncio: sem ele, um filtro invertido calaria tudo e passaria verde.
+    """
+    from hefesto_dualsense4unix.app.actions import home_actions
+
+    selos, textos, conta = _coluna(_ctx(VIVO_JOGO_SEM_ATALHO))
+    assert selos == ["JOGO"], f"a coluna não acendeu o aviso do jogo: {selos!r}"
+    assert textos == [home_actions.WRAPPER_MISSING_TEXT], (
+        "o texto da coluna deixou de ser o do dono")
+    assert conta == "1 aviso"
+
+
+@pytest.mark.parametrize("qual", ["dispensa", "tirar-daqui"])
+def test_as_duas_recusas_dela_calam_a_coluna_atencao(
+    duas_listas_vazias: Any, qual: str
+) -> None:
+    """07-Q3, palavra dela em 05/09/2026: *"As duas recusas calam tudo"*.
+
+    Ela tem DOIS jeitos de dizer *"eu sei, deixa assim"* — «Não perguntar para
+    este jogo» (`launch_dialog_dismissed.json`) e «Tirar daqui»
+    (`jogos_sem_wrapper.txt`) — e até 05/09 o cartão da aba Lançadores
+    respeitava os dois enquanto esta coluna não consultava lista nenhuma. Ela
+    clicava, o aviso sumia de uma tela e continuava na outra: **um aviso que
+    sobrevive à resposta dela ensina que o botão não obedece.**
+
+    MORDIDA: tire o `if ela_ja_respondeu_sobre(...)` de
+    `home_actions.aviso_do_wrapper` e os dois casos reprovam — os dois, porque
+    o parâmetro cobre as DUAS listas, que era metade do defeito.
+
+    E A CONTA ACOMPANHA: uma coluna que cala o aviso e continua dizendo
+    "1 aviso" no canto seria a mesma tela afirmando duas coisas contrárias —
+    o defeito que a linha do `+N` já pagou nesta aba.
+    """
+    lwd, slo = duas_listas_vazias
+    if qual == "dispensa":
+        lwd.add_dismissed_appid("570")
+    else:
+        slo.marcar_jogo_sem_wrapper("570")
+
+    selos, textos, conta = _coluna(_ctx(VIVO_JOGO_SEM_ATALHO))
+    assert selos == [], f"a recusa «{qual}» não calou a coluna Atenção: {selos!r}"
+    assert textos == []
+    assert conta == "nenhum aviso", (
+        f"a conta do canto não acompanhou o silêncio: {conta!r}")
+
+
+def test_a_recusa_de_outro_jogo_nao_cala_este(duas_listas_vazias: Any) -> None:
+    """Calar demais é pior que não calar: o filtro é POR APPID.
+
+    MORDIDA: troque o `appid in lista` por um `if lista:` em
+    `home_actions.ela_ja_respondeu_sobre` e este caso reprova.
+    """
+    lwd, _slo = duas_listas_vazias
+    lwd.add_dismissed_appid("730")
+    selos, _textos, _conta = _coluna(_ctx(VIVO_JOGO_SEM_ATALHO))
+    assert selos == ["JOGO"], (
+        "a recusa de OUTRO jogo calou o aviso deste — o filtro perdeu o appid")
+
+
+def test_sem_appid_o_aviso_continua(duas_listas_vazias: Any) -> None:
+    """Decisão escrita (`a07_lancadores.py:592-598`), e ela vale nas duas telas.
+
+    ``wrapper_used is False`` é o daemon AFIRMANDO que há jogo aberto sem o
+    atalho. Calar porque a `window_detect_last_class` ainda não casou trocaria
+    um aviso verdadeiro por silêncio — e a lista, aqui, está cheia.
+    """
+    lwd, slo = duas_listas_vazias
+    lwd.add_dismissed_appid("570")
+    slo.marcar_jogo_sem_wrapper("570")
+    sem_janela = {k: v for k, v in VIVO_JOGO_SEM_ATALHO.items()
+                  if k != "window_detect_last_class"}
+    selos, _textos, _conta = _coluna(_ctx(sem_janela))
+    assert selos == ["JOGO"], (
+        "sem appid o aviso sumiu — o silêncio passou na frente da afirmação do daemon")
+
+
+def test_a_bancada_desta_aba_abre_a_pagina_que_a_aba_publica() -> None:
+    """A BANCADA desta aba mediu o VAZIO — medido em 06/09/2026, ONDA5-07-03.
+
+    `interface/jogar_vivo.py` é o instrumento que roda esta aba num
+    `WebKit2.WebView` de verdade e é quem prova a coluna Atenção no tempo. A
+    constante `PAGINA` dele dizia ``AQUI.parent / "01-jogar.html"``, que era
+    certo quando o arquivo morava em ``layout/_ferramentas/``; depois da
+    mudança para ``src/…/interface/`` a página passou a ser
+    ``interface/paginas/01-jogar.html`` e a linha ficou.
+
+    O sintoma era o pior possível: a bancada imprimia *"ERRO DE CARGA"*,
+    marcava ``voltas: 0`` e **saía com `rc=0`**. Verde sobre nada, e por isso
+    esta régua não pergunta pelo TEXTO da linha — pergunta se o arquivo existe.
+
+    MORDIDA: devolva o `AQUI.parent` e este caso reprova; e o `main()` da
+    bancada passou a devolver `rc != 0` sem uma volta, para que a próxima vez
+    doa antes de alguém abrir uma foto vazia.
+    """
+    jogar_vivo = pytest.importorskip(
+        "hefesto_dualsense4unix.interface.jogar_vivo",
+        reason="a bancada precisa do Gtk/WebKit do sistema",
+    )
+    assert jogar_vivo.PAGINA.exists(), (
+        f"a bancada da aba Jogar abre {jogar_vivo.PAGINA}, que não existe — "
+        "ela mede o vazio e sai verde")
+    # E A PASTA VEM DO DONO (`onde.PUBLICADO`), que é o que impede a próxima
+    # mudança de endereço de matar esta linha em silêncio: uma segunda montagem
+    # do mesmo caminho foi exatamente como ela morreu.
+    assert jogar_vivo.PAGINA.samefile(onde.PUBLICADO / "01-jogar.html"), (
+        f"a bancada abre {jogar_vivo.PAGINA}, e não a página que esta aba publica")
+
+
 def test_a_coluna_atencao_sai_das_fontes_da_gtk(monkeypatch: Any) -> None:
     """Troca `painel.avisos_do_estado` e cobra que os avisos venham de lá.
 

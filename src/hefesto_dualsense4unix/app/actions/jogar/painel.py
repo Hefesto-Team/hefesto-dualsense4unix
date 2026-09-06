@@ -650,6 +650,13 @@ AVISOS_DA_TELA: tuple[Aviso, ...] = (
     # jogo sem wrapper agora?" e o primeiro responde "há algo a DIZER a ela
     # sobre isso?" — calando quando ela já dispensou o jogo. Trocado em
     # 05/09/2026, decisão dela `07-Q3`: "as duas recusas calam tudo".
+    #
+    # É A ÚNICA DAS SEIS QUE TOCA O DISCO, e só no caso raro: com jogo aberto
+    # sem o atalho ela lê as duas listas de recusa. Medido em 06/09/2026
+    # (ONDA5-07-03): **0,050 ms por tique** com os dois arquivos povoados,
+    # contra 2,85 ms de mediana do tique inteiro da aba Jogar. O número está no
+    # docstring de `home_actions.ela_ja_respondeu_sobre`, com a razão de não
+    # haver vigia em segundo plano aqui.
     Aviso("JOGO", home_actions.aviso_do_wrapper, "home_actions.aviso_do_wrapper"),
     Aviso("PERFIL", home_actions.autoswitch_lock_text, "home_actions.autoswitch_lock_text"),
     Aviso("PERFIL", home_actions.texto_do_cadeado_cego, "home_actions.texto_do_cadeado_cego"),
