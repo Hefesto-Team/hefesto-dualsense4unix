@@ -2484,8 +2484,15 @@ def automatico(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     ou não tiver rodando."* Então o gesto larga E pinta a cor do slot, da
     paleta que o produto já tem.
 
-    `lightbar.reset` não tem função no `ipc_bridge` — é o degrau 3 da ponte, e
-    passa pelo mesmo `_safe_call`, com o mesmo timeout.
+    E O GESTO SOLTA A TRAVA — 06/09/2026, A-TRAVA-DO-LED-NÃO-SOLTA-01. O passo
+    2 arma a trava manual da categoria `"led"` (todo `led.set` arma), e enquanto
+    ela está armada o `AutoSwitcher` não reaplica perfil por troca de janela.
+    Este botão é o gesto que significa *"pode voltar a mandar"*, e era o único
+    dos quatro que não dizia isso ao daemon: a luz armava em dois lugares e não
+    soltava em nenhum. O passo 3 é o par, e ele vem por ÚLTIMO de propósito.
+
+    `lightbar.reset` e `led.auto_release` não têm função no `ipc_bridge` — são
+    o degrau 3 da ponte, e passam pelo mesmo `_safe_call`, com o mesmo timeout.
     """
     uniq = _uniq(o)
     if not uniq:
@@ -2525,6 +2532,37 @@ def automatico(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     dele = ctx.por_uniq(uniq) or {}
     _escrever_a_cor(ctx, p, uniq,
                     player_slot_color(_numero(ctx, dele or {"uniq": uniq})))
+
+    # 3. E SOLTA A TRAVA MANUAL DA LUZ — o par que faltava, 06/09/2026.
+    #
+    #    A-TRAVA-DO-LED-NÃO-SOLTA-01. Os dois passos acima ARMAM a trava: o
+    #    `led.set` do passo 2 chama `mark_manual_trigger_active("led")`, e
+    #    enquanto qualquer categoria está armada o `AutoSwitcher` NÃO reaplica
+    #    perfil por troca de janela. Até aqui nenhum gesto do produto a soltava
+    #    — nem este, que é exatamente o que significa *"pode voltar a mandar"*.
+    #    A única saída era ela trocar de perfil na mão.
+    #
+    #    ELE É O TERCEIRO, E TEM DE SER. Posto antes do passo 2, o `led.set`
+    #    que pinta a cor do slot o desfaria na linha seguinte — a trava voltaria
+    #    armada e o botão continuaria mentindo. É por isso que a rota é própria
+    #    e não um parâmetro nos outros dois: ver `_handle_led_auto_release`.
+    #
+    #    SÓ A LUZ. `led.auto_release` limpa a categoria `"led"` e nenhuma
+    #    outra — soltar as quatro apagaria o gatilho ou a vibração que ela
+    #    deixou deliberadamente em outra aba (a regressão do ABAS-05).
+    #
+    #    E ELE NÃO TEM `uniq`: a trava mora no `StateStore` do daemon e não tem
+    #    dono por controle. Mandar o MAC daria a impressão de um alcance que o
+    #    daemon não tem.
+    #
+    #    O SILÊNCIO AQUI É DELIBERADO, e é o oposto do passo 1. Lá o `False`
+    #    interrompe porque sem largar o claim a cor nova seria o OPOSTO do que
+    #    o botão promete. Aqui a luz JÁ está no automático — o claim voltou e a
+    #    cor do slot está no plástico. O que se perde é a troca automática de
+    #    perfil voltar HOJE, e ela volta sozinha pelo teto de ociosidade
+    #    (`MANUAL_OVERRIDE_STALE_AFTER_SEC`). Levantar aqui trocaria uma
+    #    demora invisível por um recado vermelho sobre um gesto que funcionou.
+    p.chamar("led.auto_release")
 
 
 def _pct_pedido(o: dict[str, Any]) -> int:
@@ -3539,7 +3577,9 @@ PONTE = {"led_set_detalhado", "identity_number_set",
          "player_leds_set_detalhado", "chamar", "profile_switch"}
 #: `coop.sync` É O ÚNICO JEITO DE MOVER AS LÂMPADAS COM O CO-OP LIGADO —
 #: medido, e o porquê está em `_acender_o_numero`.
-METODOS = {"lightbar.reset", "coop.sync"}
+#: `led.auto_release` É O PAR DO `led.set`, e só o gesto `auto` o chama —
+#: A-TRAVA-DO-LED-NÃO-SOLTA-01. Ver o gesto `auto`, passo 3.
+METODOS = {"lightbar.reset", "coop.sync", "led.auto_release"}
 
 
 #: O QUE ESTA ABA DECLARA À RÉGUA — o piso e as provas moram AQUI, e não no
@@ -3573,11 +3613,18 @@ PROVAS = [
     {"pagina": PAGINA, "gesto": "reenviar", "clique": {"texto": "#12AB34"},  # (noqa-acento) id
      "chama": [("led_set_detalhado", [(18, 171, 52)],
                 {"uniq": "aa:bb:cc:00:00:01"})]},
-    # DUAS chamadas, e a ordem importa: largar o claim e SÓ ENTÃO pintar.
+    # TRÊS chamadas, e a ORDEM é o conserto — A-TRAVA-DO-LED-NÃO-SOLTA-01,
+    # 06/09/2026. Largar o claim, SÓ ENTÃO pintar, e SÓ ENTÃO soltar a trava.
+    # A terceira não é decoração de ordem: o `led_set_detalhado` do meio ARMA
+    # a categoria `"led"`, então um `led.auto_release` posto antes dele sairia
+    # desfeito na linha seguinte. Trocar as duas últimas de lugar deixa esta
+    # régua verde sobre um botão que continua sem soltar nada — por isso a
+    # prova declara a sequência inteira, e não um conjunto.
     {"pagina": PAGINA, "gesto": "auto", "clique": {},  # (noqa-acento) chave do contrato
      "chama": [("chamar", ["lightbar.reset"], {"uniq": "aa:bb:cc:00:00:01"}),
                ("led_set_detalhado", [(0, 0, 255)],
-                {"uniq": "aa:bb:cc:00:00:01"})]},
+                {"uniq": "aa:bb:cc:00:00:01"}),
+               ("chamar", ["led.auto_release"], {})]},
     # DUAS chamadas, e a ordem é o desfecho: sem o número novo não há padrão
     # de lâmpada a acender. A mesa da régua tem UM controle, então o parceiro
     # da troca não existe e só o alvo recebe o desenho — ver `_pares_da_troca`.

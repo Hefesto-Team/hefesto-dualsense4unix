@@ -282,9 +282,10 @@ def test_o_automatico_larga_o_claim_e_deixa_a_cor_padrao(pac, ctx):
     uma das cores default se o jogo não escolher ou não tiver rodando."*
 
     Largar o claim sozinho deixa a última cor no plástico; se a última foi um
-    "Desligar", ela fica apagada e parece defeito. São DUAS chamadas, nesta
-    ordem: soltar e então pintar. Invertidas, o `reset` apagaria a cor que
-    acabou de ir.
+    "Desligar", ela fica apagada e parece defeito. São TRÊS chamadas, nesta
+    ordem: soltar o claim, pintar, e soltar a trava manual da luz. As duas
+    primeiras invertidas, o `reset` apagaria a cor que acabou de ir; a terceira
+    fora do fim, a pintura a desfaria — ver A-TRAVA-DO-LED-NÃO-SOLTA-01.
 
     E A COR NÃO É DIGITADA: sai de `core/led_control.player_slot_color`, a
     mesma paleta que acende as cinco lâmpadas. Um literal aqui seria a segunda
@@ -301,14 +302,28 @@ def test_o_automatico_larga_o_claim_e_deixa_a_cor_padrao(pac, ctx):
     # `aplicado_em`/`guardado_em`, e sem eles este botão dizia "aplicou" para um
     # clique que não acendeu nada. Ver `a04_iluminacao._escrever_a_cor`.
     nomes = [c[0] for c in p.chamadas]
-    assert nomes == ["chamar", "led_set_detalhado"], (
-        f"o 'Automático' fez {nomes}, e devia largar o claim e então pintar. "
-        f"Só o reset deixa a barra na última cor — preta, se a última foi um "
-        f"Desligar.")
+    assert nomes == ["chamar", "led_set_detalhado", "chamar"], (
+        f"o 'Automático' fez {nomes}, e devia largar o claim, então pintar, e "
+        f"então soltar a trava. Só o reset deixa a barra na última cor — preta, "
+        f"se a última foi um Desligar.")
     assert p.chamadas[0][1] == ("lightbar.reset",)
     assert p.chamadas[1][1] == (tuple(player_slot_color(1)),), (
         f"a cor padrão veio {p.chamadas[1][1]!r} e a paleta do produto diz "
         f"{tuple(player_slot_color(1))!r}. Ela não se digita — sai da função.")
+    # A TERCEIRA, E ELA TEM DE SER A ÚLTIMA — A-TRAVA-DO-LED-NÃO-SOLTA-01,
+    # 06/09/2026. O `led_set_detalhado` do meio ARMA a categoria `"led"` no
+    # `StateStore`; enquanto ela está armada o `AutoSwitcher` não reaplica
+    # perfil por troca de janela. Posta ANTES da pintura, esta chamada sairia
+    # desfeita na linha seguinte e o botão continuaria armando sem soltar —
+    # verde sobre o defeito. Por isso a posição é afirmada, não só a presença.
+    assert p.chamadas[2][1] == ("led.auto_release",), (
+        f"a terceira chamada foi {p.chamadas[2][1]!r}. O 'Automático' é o gesto "
+        f"que significa 'pode voltar a mandar', e era o único dos quatro que "
+        f"não dizia isso ao daemon.")
+    assert p.chamadas[2][2] == {}, (
+        f"o `led.auto_release` foi com {p.chamadas[2][2]!r}. A trava mora no "
+        f"`StateStore` e não tem dono por controle — mandar `uniq` daria a "
+        f"impressão de um alcance que o daemon não tem.")
 
 
 def test_o_gesto_recusa_o_clique_sem_controle(pac, ctx):

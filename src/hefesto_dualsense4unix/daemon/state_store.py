@@ -67,8 +67,14 @@ MANUAL_OVERRIDE_CATEGORIES: frozenset[str] = frozenset(
 #   |-----------|--------------------------------------|-------------------|
 #   | `trigger` | ipc_handlers.py `trigger.set`        | `trigger.reset`   |
 #   | `rumble`  | ipc_handlers.py `rumble.set`/`stop`  | `rumble.passthrough` (2 vezes) |
-#   | `led`     | `led.set`, `led.player_set`          | **nada**          |
+#   | `led`     | `led.set`, `led.player_set`          | **nada** (†)      |
 #   | `audio`   | `speaker.set` (`_marcar_audio_manual`) | **nada**        |
+#
+# (†) `led` GANHOU O PAR em 06/09/2026 — A-TRAVA-DO-LED-NÃO-SOLTA-01. É o
+# `led.auto_release` (`ipc_handlers`), chamado pelo botão "Automático" da aba
+# Iluminação. A tabela acima fica com a data dela: é o censo que originou este
+# teto, e ele continua sendo a única porta de `audio`. Ver a nota ao fim deste
+# bloco para o que a chegada do par mudou — e o que ela NÃO mudou.
 #
 # Duas das quatro armavam e NADA as soltava. A única saída era ela trocar de
 # perfil na mão (`profile.switch`, a hotkey de ciclo, ou a exceção do perfil de
@@ -104,6 +110,24 @@ MANUAL_OVERRIDE_CATEGORIES: frozenset[str] = frozenset(
 # O que o teto NÃO faz: escrever byte nenhum. Vencer a trava só devolve ao
 # `AutoSwitcher` o direito de decidir; quem escreve continua sendo a ativação
 # de perfil, com as mesmas regras de sempre.
+#
+# O PAR DE `led` CHEGOU — 06/09/2026, A-TRAVA-DO-LED-NÃO-SOLTA-01 — E O TETO
+# FICA. As duas coisas são verdadeiras ao mesmo tempo, e a distinção importa:
+#
+#   - o parágrafo "POR QUE UM TETO, e não um clear novo" acima continua CERTO
+#     sobre o que ele mediu — o "Voltar ao automático" da JANELA GTK
+#     (`app/actions/lightbar_actions.on_lightbar_auto_reset_target`) só edita o
+#     rascunho, e pendurar o clear ali soltaria a trava com a cor manual ainda
+#     no plástico. Nada mudou lá, e nada foi pendurado lá;
+#   - o que mudou é que a INTERFACE NOVA tem um gesto que ESCREVE: o
+#     "Automático" da aba Iluminação larga o claim da barra e pinta a cor do
+#     slot antes de soltar a trava. Nele não há cor manual pendente, então a
+#     aresta que o parágrafo descreve não existe — e ele é o par honesto que
+#     aquele parágrafo dizia faltar;
+#   - o teto continua sendo a ÚNICA porta de `audio` (a E1 da ÁUDIO-QUE-TRANCA-01
+#     ainda está aberta), e continua sendo a rede de `led` para todo caminho que
+#     arma sem passar por aquele botão — a janela GTK, o `led.player_set`, a
+#     CLI. Gesto e teto são camadas, não alternativas.
 MANUAL_OVERRIDE_STALE_AFTER_SEC: float = 6 * 60 * 60.0
 
 
@@ -402,13 +426,18 @@ class StateStore:
         vibração e reabria a troca automática para reescrever a cor que a aba
         Lightbar tinha acabado de aplicar.
 
-        A-TRAVA-QUE-NINGUEM-SOLTA-01 (29/08): `led` e `audio` NÃO têm chamador
-        deste método em `src/` — arma e nada solta. Enquanto o par honesto delas
-        não existir (ver `MANUAL_OVERRIDE_STALE_AFTER_SEC`), o teto de
-        ociosidade é o que impede a trava de ser eterna. Quando o gesto
-        "Voltar ao automático" da aba Iluminação passar a falar com o daemon,
-        ele chama `clear_manual_trigger_active("led")` — e SÓ ela, pela mesma
-        razão escrita acima.
+        A-TRAVA-DO-LED-NÃO-SOLTA-01 (06/09/2026): `led` ganhou o par que lhe
+        faltava, e ele é o `led.auto_release` — o botão "Automático" da aba
+        Iluminação, que agora fala com o daemon. Ele limpa SÓ `"led"`, pela
+        mesma razão escrita acima, e é o ÚLTIMO ato do gesto: os dois passos
+        anteriores (largar o claim e pintar a cor do slot) passam por um
+        `led.set`, que re-armaria um clear posto antes deles.
+
+        `audio` CONTINUA SEM PAR — é a E1 da ÁUDIO-QUE-TRANCA-01, e o
+        `speaker.set` arma por dois caminhos, inclusive o `release`. Para ela,
+        e para todo caminho de `led` que não passa por aquele botão (a janela
+        GTK, o `led.player_set`, a CLI), o teto de ociosidade
+        (`MANUAL_OVERRIDE_STALE_AFTER_SEC`) segue sendo a rede.
         """
         with self._lock:
             if category is None:
