@@ -493,78 +493,94 @@ if _FALTAM:
         "é pintura perdida — `querySelector` devolve `null`, a pintura conta "
         "zero, e zero passa por 'nada mudou'.")
 
-n = monta("07-lancadores", "Lançadores", MIOLO, CSS, legenda=LEGENDA)
-
 # ---------------------------------------------------------------------------
-# A FITA NÃO NOMEIA UM CONTROLE QUE NÃO ESTÁ NA MESA — 03/09/2026
+# O GERADOR SÓ ESCREVE QUANDO ALGUÉM O RODA — 06/09/2026.
 #
-# A LEI, e ela é dela:
+# ATÉ HOJE ELE ESCREVIA NO IMPORT. Tudo daqui para baixo corria no NÍVEL DO
+# MÓDULO, e `import aba07` bastava para reescrever `mockup/07-lancadores.html`
+# no disco — a bancada DELA, o arquivo que ela abre para olhar o desenho.
+# Medido na costura desta leva com a irmã `aba05`: bastou o `pytest` COLETAR
+# um teste que a importava no topo para o mockup mudar em disco, com o estado
+# vivo da mesa dentro. Oito dos dez geradores estavam assim; `aba01.py` e
+# `aba02.py` já tinham a guarda, e é a forma delas que está aqui.
 #
-#     "se no topo tá mostrando controle white player 1, então cada aba vai usar
-#     os controles lá de cima. Não mistura com a info dos mockups."
-#
-# O QUE ESTAVA NA TELA, medido nesta máquina com os dois controles dela na mesa
-# (foto em `docs/process/`), na `07-lancadores`:
-#
-#     cabeçalho   2 controles: 1 USB · 1 BT      ← certo, lido do aparelho
-#     fita        P1 · Cosmic Red · USB          ← o MOCKUP; ela não tem esse
-#                 P2 · Starlight Blue · BT       ← o MOCKUP
-#
-# `monta()` injeta a fita com `fita(inerte=True)` e SEM `mesa`, e nesse caminho
-# ela cai nos `CONECTADOS` do desenho. Os seis valores que a
-# `scripts/check_identidade_vem_de_cima.py --bancada --aba 07` acusava eram
-# esses dois chips inteiros: dois `--plastico`, dois nomes de colorway no texto
-# e dois no `title`.
-#
-# POR QUE OS CHIPS SAEM DAQUI EM VEZ DE GANHAREM ENDEREÇO: a página estática não
-# sabe NADA dos controles dela, e a regra é a dela — *campo sem informação não
-# mostra nada*. Um `data-campo` no chip do desenho zeraria a régua e deixaria a
-# tela dizendo a mesma coisa errada até o produto chegar; e o produto pode nem
-# chegar a este endereço, porque `hefesto_vivo.pintar` troca `.fita` INTEIRA
-# (`p.fita`) antes de visitar campo nenhum — quando essa troca acontece, todo
-# `data-campo` que estivesse dentro da fita deixa de existir no DOM.
-#
-# QUEM ESCREVE OS CHIPS, e sem ele isto seria maquiagem: o pacote da aba,
-# `pacotes/a07_lancadores.fita_html()`, emitido em `blocos[".fita"]`. O
-# `blocos` corre DEPOIS do `p.fita` e reconsulta o documento pela classe, então
-# ele acerta o alvo com ou sem a troca do bloco inteiro.
-#
-# O QUE FICA: o `Selecionar:` e o chip `Todos`, que são ESTRUTURA — não nomeiam
-# aparelho nenhum e o `Todos` é o alvo desta aba (fora de `monta.ABAS_QUE_ESCOLHEM`).
+# A MORDIDA é `test_a_palavra_do_transporte_tem_um_dono_so.py::
+# test_o_gerador_nao_escreve_a_bancada_como_efeito_de_import`, que importa o
+# módulo e cobra que o arquivo não tenha mudado.
 # ---------------------------------------------------------------------------
-# O CHIP É `<label>` DESDE 05/09/2026 (`monta.fita`), para poder clicar nas
-# três abas que escolhem controle. Nesta, que não escolhe, ele nasce sem
-# `data-gesto` e sai daqui inteiro — mas a ÂNCORA tinha de acompanhar: com
-# `<span>` ela deixaria de casar e este bloco ficaria verde sem apagar nada.
-_CHIP_DE_CONTROLE = re.compile(r'^[ \t]*<label class="chip plastico"[^\n]*\n', re.M)
-_PAG = onde.pagina("07-lancadores.html")
-_DOC = _PAG.read_text()
-_CONGELADOS = _CHIP_DE_CONTROLE.findall(_DOC)
-if not _CONGELADOS:
-    raise SystemExit(
-        "ERRO: não achei um único `<label class=\"chip plastico\">` na página "
-        "recém-gerada. Ou `monta.fita()` mudou de forma, ou a fita saiu vazia — "
-        "e nos dois casos esta troca ficaria VERDE sem fazer nada, que é como a "
-        "fita viva morreu calada em 27/08.")
-onde.gravar("07-lancadores.html", _CHIP_DE_CONTROLE.sub("", _DOC))
+if __name__ == "__main__":
+    n = monta("07-lancadores", "Lançadores", MIOLO, CSS, legenda=LEGENDA)
 
-# ---------------------------------------------------------------------------
-# A RÉGUA DA IDENTIDADE roda sobre o HTML JÁ GRAVADO, que é a última coisa que a
-# página é. Ler o `MIOLO` deixaria de fora justamente a fita, que vem do
-# esqueleto e é onde o defeito morava.
-#
-# A REGRA MORA EM `identidade_congelada`, lá em cima, com as cinco formas e a
-# razão de cada uma. Aqui só se aplica — e a mesma função responde ao
-# `--conferir`, que é por onde o teste a morde.
-# ---------------------------------------------------------------------------
-_CRAVADAS = identidade_congelada(onde.pagina("07-lancadores.html").read_text())
-if _CRAVADAS:
-    raise SystemExit("ERRO: " + "\nERRO: ".join(_CRAVADAS))
+    # ---------------------------------------------------------------------------
+    # A FITA NÃO NOMEIA UM CONTROLE QUE NÃO ESTÁ NA MESA — 03/09/2026
+    #
+    # A LEI, e ela é dela:
+    #
+    #     "se no topo tá mostrando controle white player 1, então cada aba vai usar
+    #     os controles lá de cima. Não mistura com a info dos mockups."
+    #
+    # O QUE ESTAVA NA TELA, medido nesta máquina com os dois controles dela na mesa
+    # (foto em `docs/process/`), na `07-lancadores`:
+    #
+    #     cabeçalho   2 controles: 1 USB · 1 BT      ← certo, lido do aparelho
+    #     fita        P1 · Cosmic Red · USB          ← o MOCKUP; ela não tem esse
+    #                 P2 · Starlight Blue · BT       ← o MOCKUP
+    #
+    # `monta()` injeta a fita com `fita(inerte=True)` e SEM `mesa`, e nesse caminho
+    # ela cai nos `CONECTADOS` do desenho. Os seis valores que a
+    # `scripts/check_identidade_vem_de_cima.py --bancada --aba 07` acusava eram
+    # esses dois chips inteiros: dois `--plastico`, dois nomes de colorway no texto
+    # e dois no `title`.
+    #
+    # POR QUE OS CHIPS SAEM DAQUI EM VEZ DE GANHAREM ENDEREÇO: a página estática não
+    # sabe NADA dos controles dela, e a regra é a dela — *campo sem informação não
+    # mostra nada*. Um `data-campo` no chip do desenho zeraria a régua e deixaria a
+    # tela dizendo a mesma coisa errada até o produto chegar; e o produto pode nem
+    # chegar a este endereço, porque `hefesto_vivo.pintar` troca `.fita` INTEIRA
+    # (`p.fita`) antes de visitar campo nenhum — quando essa troca acontece, todo
+    # `data-campo` que estivesse dentro da fita deixa de existir no DOM.
+    #
+    # QUEM ESCREVE OS CHIPS, e sem ele isto seria maquiagem: o pacote da aba,
+    # `pacotes/a07_lancadores.fita_html()`, emitido em `blocos[".fita"]`. O
+    # `blocos` corre DEPOIS do `p.fita` e reconsulta o documento pela classe, então
+    # ele acerta o alvo com ou sem a troca do bloco inteiro.
+    #
+    # O QUE FICA: o `Selecionar:` e o chip `Todos`, que são ESTRUTURA — não nomeiam
+    # aparelho nenhum e o `Todos` é o alvo desta aba (fora de `monta.ABAS_QUE_ESCOLHEM`).
+    # ---------------------------------------------------------------------------
+    # O CHIP É `<label>` DESDE 05/09/2026 (`monta.fita`), para poder clicar nas
+    # três abas que escolhem controle. Nesta, que não escolhe, ele nasce sem
+    # `data-gesto` e sai daqui inteiro — mas a ÂNCORA tinha de acompanhar: com
+    # `<span>` ela deixaria de casar e este bloco ficaria verde sem apagar nada.
+    _CHIP_DE_CONTROLE = re.compile(r'^[ \t]*<label class="chip plastico"[^\n]*\n', re.M)
+    _PAG = onde.pagina("07-lancadores.html")
+    _DOC = _PAG.read_text()
+    _CONGELADOS = _CHIP_DE_CONTROLE.findall(_DOC)
+    if not _CONGELADOS:
+        raise SystemExit(
+            "ERRO: não achei um único `<label class=\"chip plastico\">` na página "
+            "recém-gerada. Ou `monta.fita()` mudou de forma, ou a fita saiu vazia — "
+            "e nos dois casos esta troca ficaria VERDE sem fazer nada, que é como a "
+            "fita viva morreu calada em 27/08.")
+    onde.gravar("07-lancadores.html", _CHIP_DE_CONTROLE.sub("", _DOC))
 
-_MODELOS = sorted({(ln.get("id") or "").strip() for ln in _mapa_das_cores()} - {""})
+    # ---------------------------------------------------------------------------
+    # A RÉGUA DA IDENTIDADE roda sobre o HTML JÁ GRAVADO, que é a última coisa que a
+    # página é. Ler o `MIOLO` deixaria de fora justamente a fita, que vem do
+    # esqueleto e é onde o defeito morava.
+    #
+    # A REGRA MORA EM `identidade_congelada`, lá em cima, com as cinco formas e a
+    # razão de cada uma. Aqui só se aplica — e a mesma função responde ao
+    # `--conferir`, que é por onde o teste a morde.
+    # ---------------------------------------------------------------------------
+    _CRAVADAS = identidade_congelada(onde.pagina("07-lancadores.html").read_text())
+    if _CRAVADAS:
+        raise SystemExit("ERRO: " + "\nERRO: ".join(_CRAVADAS))
 
-print(f"07-lancadores: OK, {n} divs · mesa {N_CTRL} ({N_USB} USB/{N_BT} BT) · "
-      f"{QUADRO.achados} encontrados, {QUADRO.impedidos} com impedimento · "
-      f"{len(_ESPERADOS) * len(dl.SUFIXOS)} endereços em {len(_ESPERADOS)} cartões · "
-      f"{len(_CONGELADOS)} chip(s) do desenho fora da fita, "
-      f"0 dos {len(_MODELOS)} modelos do mapa cravados na página")
+    _MODELOS = sorted({(ln.get("id") or "").strip() for ln in _mapa_das_cores()} - {""})
+
+    print(f"07-lancadores: OK, {n} divs · mesa {N_CTRL} ({N_USB} USB/{N_BT} BT) · "
+          f"{QUADRO.achados} encontrados, {QUADRO.impedidos} com impedimento · "
+          f"{len(_ESPERADOS) * len(dl.SUFIXOS)} endereços em {len(_ESPERADOS)} cartões · "
+          f"{len(_CONGELADOS)} chip(s) do desenho fora da fita, "
+          f"0 dos {len(_MODELOS)} modelos do mapa cravados na página")

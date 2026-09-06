@@ -412,6 +412,78 @@ def _dispensados() -> tuple[tuple[str, str], ...]:
     return tuple((a, slo.rotulo_do_jogo(a)) for a in appids)
 
 
+def _o_que_a_steam_poe_no_meio() -> tuple[str, bool | None]:
+    """`(a frase do Steam Input, está ligado?)` — os dois PERGUNTADOS ao dono.
+
+    **NENHUMA PALAVRA DAQUI É MINHA.** A frase inteira sai de
+    `emulation_actions.markup_status_steam_input`, que é quem escreve a mesma
+    linha na janela velha — ela já nomeia o JOGO, já diz o que o Hefesto vai
+    fazer e já conta a lista de exceções. Redigi-la aqui seria a segunda
+    redação de um texto que tem dono, e as duas envelheceriam separadas: a
+    docstring do dono guarda a decisão `D-33` dela (*a palavra "conflito" saiu
+    porque não é conflito nenhum*), e uma cópia perderia isso calada.
+
+    O QUE ESTA FUNÇÃO FAZ COM ELA É TRADUZIR DE MARCAÇÃO, e só: o dono devolve
+    markup do **Pango** (`<span foreground="#…">`), que um navegador não
+    entende — um `foreground=` não pinta nada no WebKit, e deixá-lo passar
+    seria pôr atributo morto na tela dela. As tarjas saem, o texto volta a ser
+    texto, e quem PINTA é a folha de estilo da própria aba: `.lanc-diz b` já é
+    laranja (`aba07.CSS`), que é a cor que o dono escolheu para o estado ligado.
+
+    O `<b>` SÓ NO ESTADO LIGADO E SÓ NA PRIMEIRA TARJA, que é exatamente o que
+    o dono pinta de laranja — a segunda tarja dele (a contagem da lista de
+    exceções) é cinza, e engordá-la junto seria dar peso de alarme a uma
+    linha que só informa. "Desligado — tudo certo" e "Steam não encontrada" saem
+    em texto corrido, que é o peso certo para uma notícia que não pede ação.
+
+    E O TOM NÃO SE LÊ PELO HEXADECIMAL, de propósito: `#ffb86c` está escrito
+    DENTRO do dono, sem nome, e digitá-lo aqui seria uma régua de cor —
+    verde no dia em que ele mudasse de tom, e a ênfase iria para a tarja errada
+    calada. O que se sabe sem adivinhar é `ligado`, e a primeira tarja é a que
+    fala do estado. É a mesma conta, sem a segunda cópia.
+
+    AS TRÊS LEITURAS SÃO DO MOTOR, e são as MESMAS que a aba Emulação usa —
+    `daemon_actions.medir_jogos_com_steam_input` já chama a do meio por este
+    mesmo caminho (`EmulationActionsMixin` como estático), o que prova que
+    chamar o mixin sem instância é o idioma desta casa e não um atalho meu.
+
+    NUNCA LEVANTA: quem chama é a :class:`_Vigia`, e um `localconfig.vdf`
+    ilegível não pode apagar a resposta sobre o resto da aba. Sem medição a
+    frase é `""` — e `""` é a tela CALANDO, não a tela dizendo "desligado".
+    """
+    import re as _re
+    from html import unescape
+
+    from hefesto_dualsense4unix.app.actions.emulation_actions import (
+        EmulationActionsMixin,
+        markup_status_steam_input,
+    )
+    from hefesto_dualsense4unix.integrations.steam_launch_options import (
+        rotulo_do_jogo,
+    )
+
+    try:
+        ligado = EmulationActionsMixin._steam_input_is_on()
+        jogos = ([rotulo_do_jogo(a)
+                  for a in EmulationActionsMixin._steam_input_appids_ligados()]
+                 if ligado else [])
+        excecoes, efetiva = EmulationActionsMixin._steam_input_excecao_status()
+        bruto = markup_status_steam_input(ligado, jogos, excecoes, efetiva)
+    except Exception:
+        return "", None
+    # O `unescape` DESFAZ O ESCAPE DO DONO (ele chama `html.escape` no ramo
+    # ligado) para o `_texto` desta aba refazê-lo do jeito que o DOM devolve —
+    # com a aspa CRUA. Escapar duas vezes poria `&amp;lt;` na tela; não
+    # desescapar poria `&amp;` num nome de jogo que tem `&`.
+    tarjas = _re.split(r"</?span[^>]*>", bruto)
+    partes = [_texto(unescape(t)) for t in tarjas if t]
+    if not partes:
+        return "", ligado
+    if ligado:
+        partes[0] = f"<b>{partes[0]}</b>"
+    return "".join(partes), ligado
+
+
 def _ler_do_disco() -> desenho.Leitura:
     """Uma passada de leitura. **Nunca escreve** — nem no vdf, nem no registro.
 
@@ -476,6 +548,13 @@ def _ler_do_disco() -> desenho.Leitura:
     def trio(jogos: list[Any]) -> tuple[tuple[str, str, str], ...]:
         return tuple((j.appid, j.rotulo, _porque(j.motivo)) for j in jogos)
 
+    # O STEAM INPUT ENTRA NA MESMA PASSADA, e por isso ele custa o que custa:
+    # ele lê os mesmos `localconfig.vdf` que o censo acabou de abrir, na THREAD
+    # DA VIGIA. Medido nesta bancada em 06/09/2026: a leitura completa foi de
+    # 64,6 ms para 68,7 ms — 4,1 ms para responder uma pergunta que a aba não
+    # sabia responder. No tique, que é de 100 ms, isto não entra nunca.
+    frase_do_steam_input, ligado = _o_que_a_steam_poe_no_meio()
+
     return desenho.Leitura(
         com_wrapper=tuple(censo.com_wrapper),
         reparaveis=trio(censo.reparaveis),
@@ -493,6 +572,8 @@ def _ler_do_disco() -> desenho.Leitura:
         # aqui seria a terceira cópia de 143 caracteres que já têm dono — e a
         # cópia envelheceria calada no dia em que o wrapper mudasse de caminho.
         linha=slo.WRAPPER_LAUNCH,
+        steam_input=frase_do_steam_input,
+        steam_input_ligado=ligado,
         erros=tuple(censo.erros),
     )
 
@@ -594,15 +675,57 @@ def aviso_do_jogo_aberto(
     `window_detect_last_class` ainda não casou trocaria um aviso verdadeiro por
     silêncio — o que some é só o botão de dispensar, que sem appid não teria
     sobre o que agir.
+
+    E AS QUATRO CONDIÇÕES SÃO AS DO DONO — 06/09/2026, `STEAM-INPUT-01`. Até
+    aqui esta função aplicava DUAS das quatro do lembrete da janela velha (o
+    `wrapper_used is False`, que já traz a janela em foco e o jogo sem o
+    atalho, e a dispensa) e **não aplicava a da EMULAÇÃO**. O buraco é medível:
+    no Modo Nativo não há gamepad virtual, logo não há o que duplicar — e a aba
+    avisava assim mesmo, com um alarme que não podia acontecer. A janela velha
+    nunca teve esse defeito, porque a decisão dela é uma função PURA
+    (`launch_wrapper_dialog.wrapper_dialog_decision`) e ela pergunta pelo modo.
+
+    ELA É IMPORTADA, E NÃO REDIGITADA. O que esta aba faz é ENTREGAR a evidência
+    que já tem no lugar da que a janela velha vai buscar: o `vdf_cache` do dono
+    responde *"falta o atalho neste jogo?"*, e aqui quem já respondeu isso foi o
+    DAEMON (`wrapper_used is False`), com evidência mais forte — o marker diz se
+    o wrapper de fato RODOU, e não só se a linha está escrita. Os dois campos que
+    não existem numa página (o popup e o diálogo do GTK) vão `False`, que é o
+    que eles são.
+
+    O `shown_this_session` VAI VAZIO DE PROPÓSITO, e é a única condição que não
+    se importa: o anti-spam da janela velha existe porque lá o lembrete é um
+    DIÁLOGO que rouba o foco, e mostrá-lo duas vezes por sessão seria castigo.
+    Aqui ele é uma linha dentro do cartão, que nasce e morre com o jogo aberto —
+    aplicá-lo faria o aviso sumir no segundo tique e voltar nunca, com o jogo
+    ainda rodando sem o atalho.
+
+    SEM O APPID A DECISÃO NÃO É CONSULTADA, e isso mantém a decisão de cima
+    (o aviso continua): o dono responde `SKIP` sem appid, e trocar um aviso
+    verdadeiro do daemon por silêncio seria o contrário do que esta função faz.
     """
     from hefesto_dualsense4unix.app.actions import home_actions as ha
+    from hefesto_dualsense4unix.app.actions import launch_wrapper_dialog as lwd
 
     texto = ha.wrapper_banner_text(state)
     if not texto:
         return "", ""
     appid = _o_jogo_em_foco(state)
-    if appid and lida is not None and appid in calados(lida):
-        return "", ""
+    if appid:
+        acao, _ = lwd.wrapper_dialog_decision(
+            state,
+            # O DAEMON JÁ RESPONDEU o que o dono iria ao disco perguntar: o
+            # `wrapper_banner_text` acima só devolve texto no `False` LITERAL de
+            # `wrapper_used`, que é *"há jogo aberto E ele não passou pelo
+            # atalho"*. `True` aqui é essa resposta, no vocabulário do dono.
+            vdf_cache={appid: True},
+            dismissed=calados(lida) if lida is not None else set(),
+            shown_this_session=set(),
+            popup_open=False,
+            dialog_open=False,
+        )
+        if acao != lwd.DECISION_PROMPT:
+            return "", ""
     return f"<b>{_texto(texto)}</b><br>", appid
 
 
@@ -632,7 +755,6 @@ DISPENSAR = "Não perguntar para este jogo"
 #: O nome do gesto que fecha a Steam, e o `data-v` que ARMA a segunda metade.
 #: Ver :func:`fechar_a_steam_e_repor`.
 FECHAR = "consertar-fechando-a-steam"
-CONFIRMO = "steam:confirmo"
 
 #: OS DOIS RÓTULOS SAEM DO DIÁLOGO DA GTK, e não de mim: o título do
 #: consentimento (`daemon_actions._pedir_para_fechar_a_steam`, o `titulo`
@@ -641,13 +763,98 @@ CONFIRMO = "steam:confirmo"
 PERGUNTA_DA_STEAM = "Posso fechar a Steam por uns 20 segundos?"
 CONFIRMA_A_STEAM = "Fechar e continuar"
 
-#: Até quando o "posso fechar a Steam?" está armado (`time.monotonic`). Zero =
-#: desarmado. Ver :func:`fechar_a_steam_e_repor`.
-_ARMADO_ATE = 0.0
+#: QUAL GESTO ESTÁ ARMADO E ATÉ QUANDO (`time.monotonic`). Vazio = nenhum.
+#:
+#: ERA UM FLOAT SÓ, e virou dicionário em 06/09/2026 com a `STEAM-INPUT-01`:
+#: passaram a existir TRÊS botões que fecham a Steam nesta aba, e um relógio
+#: único faria o consentimento de um valer para o outro — clicar em "Posso
+#: fechar a Steam?" e confirmar em "Deixar tudo pronto" rodaria o segundo com o
+#: sim dado ao primeiro. **O consentimento é do ATO, nunca da aba.**
+#:
+#: UM POR VEZ, e é de propósito: armar um DESARMA o outro. Dois consentimentos
+#: pendurados ao mesmo tempo é tela guardando duas promessas dela sobre a mesma
+#: Steam, e a segunda confirmação não teria como dizer a qual respondia.
+_ARMADO: dict[str, float] = {}
 
 
-def _armado() -> bool:
-    return time.monotonic() < _ARMADO_ATE
+def _armado_agora() -> str:
+    """O gesto armado NESTE instante, ou `""` — e ele desarma sozinho no tempo.
+
+    O relógio é LIDO aqui, e não guardado num `bool`: um `bool` armado por um
+    clique que ninguém confirmou continuaria armado depois de a janela passar,
+    e o segundo clique de dez minutos depois valeria como consentimento. É a
+    mesma conta que `a09_sistema._armado_agora` faz, com o mesmo dono do
+    número (:data:`SEGUNDOS_PARA_CONFIRMAR`).
+    """
+    for nome, ate in list(_ARMADO.items()):
+        if time.monotonic() >= ate:
+            del _ARMADO[nome]
+    return next(iter(_ARMADO), "")
+
+
+def _armar(nome: str) -> None:
+    """Arma UM gesto e desarma o que estivesse — ver :data:`_ARMADO`."""
+    _ARMADO.clear()
+    _ARMADO[nome] = time.monotonic() + SEGUNDOS_PARA_CONFIRMAR
+
+
+def _desarmar(nome: str = "") -> None:
+    """Desarma um gesto (ou todos, sem nome)."""
+    if nome:
+        _ARMADO.pop(nome, None)
+    else:
+        _ARMADO.clear()
+
+
+def _confirmo(nome: str) -> str:
+    """O `data-v` que **só existe no botão já armado** daquele gesto.
+
+    ELE É POR GESTO, e é o primeiro dos dois guardas: um `"steam:confirmo"`
+    único faria o botão armado de um ato confirmar o outro, que é justamente o
+    que :data:`_ARMADO` deixou de permitir do lado do relógio.
+    """
+    return f"{nome}:confirmo"
+
+
+#: O `data-v` do "Posso fechar a Steam?" já armado. ERA `"steam:confirmo"`
+#: cravado, e virou derivado em 06/09/2026 pela razão de :func:`_confirmo`.
+CONFIRMO = _confirmo(FECHAR)
+
+
+def _este_clique_confirma(nome: str, o: dict[str, Any]) -> bool:
+    """Este clique é a CONFIRMAÇÃO? Quando não é, ARMA o botão e devolve `False`.
+
+    OS DOIS GUARDAS SÃO INDEPENDENTES DE PROPÓSITO, e a razão está escrita em
+    :func:`fechar_a_steam_e_repor`, que os inventou:
+
+    1. o clique tem de trazer `_confirmo(nome)` no `data-v` — um valor que
+       **só existe no cartão já armado**, escrito por :func:`_botao_armavel`;
+    2. e tem de chegar dentro de :data:`SEGUNDOS_PARA_CONFIRMAR`.
+
+    O PRIMEIRO É O QUE SEGURA A RÉGUA AUTOMÁTICA: a `--prova-gesto` clica o que
+    o DOM tinha, e o DOM tinha a pergunta. Um guarda só bastaria hoje; dois é o
+    que sobrevive a uma régua que releia o DOM entre cliques.
+
+    FORA DO PRAZO ELE LEVANTA, em vez de agir ou de rearmar calado: a frase vai
+    para a tela pelo caminho do `RuntimeError`, e o tique seguinte repõe a
+    pergunta. Rearmar calado deixaria a tela dizendo "Fechar e continuar" sobre
+    um consentimento que já tinha vencido.
+
+    EXTRAÍDO EM 06/09/2026, e não é arrumação: o `fechar_a_steam_e_repor`
+    guardava esta conta dentro de si, e os dois botões novos do Steam Input
+    precisam da MESMA. Três cópias do consentimento que fecha a Steam dela é
+    exatamente onde uma delas ficaria mais frouxa que as outras.
+    """
+    if str(o.get("v") or "").strip() != _confirmo(nome):
+        _armar(nome)
+        return False
+    armado = _armado_agora() == nome
+    _desarmar(nome)
+    if not armado:
+        raise RuntimeError(
+            f"Passaram-se mais de {int(SEGUNDOS_PARA_CONFIRMAR)} segundos desde "
+            "a pergunta — não fechei nada. Clique de novo para começar.")
+    return True
 
 
 # ---------------------------------------------------------------------------
@@ -831,6 +1038,72 @@ class _VigiaDaSteam:
 VIGIA_DA_STEAM = _VigiaDaSteam()
 
 
+def _botao_armavel(nome: str, pergunta: str) -> desenho.Acao:
+    """O botão de DUAS CARAS: a pergunta, e a confirmação de quem já perguntou.
+
+    UM DONO PINTA E CONFERE. A cara armada carrega `_confirmo(nome)` no `data-v`,
+    e é o MESMO valor que o gesto exige no segundo clique — não há como a tela e
+    o guarda discordarem. É a disciplina que `a09_sistema.CONFIRMA` já aplica
+    pelo rótulo; aqui ela é pelo `data-v`, que é o vocabulário desta aba.
+
+    O `verde` NA CARA ARMADA é o que diz, sem palavra nova, que o próximo clique
+    AGE. Ver :func:`fechar_a_steam_e_repor`, que é quem escreveu esta forma.
+    """
+    if _armado_agora() == nome:
+        return desenho.Acao(CONFIRMA_A_STEAM, "verde", nome, _confirmo(nome))
+    return desenho.Acao(pergunta, "", nome, desenho.STEAM)
+
+
+def acoes_do_steam_input(lida: desenho.Leitura | None) -> tuple[desenho.Acao, ...]:
+    """Os TRÊS botões do Steam Input, e cada um só onde ele funciona.
+
+    A DECISÃO É DELA, 06/09/2026 (`D-0609-STEAM-DIVIDIDO`): *"Steam Input e a
+    lista de exceções ficam na aba 07"*. O que esta função acrescenta é a mesma
+    coisa que :func:`com_o_que_o_daemon_diz` já acrescentava para o wrapper — o
+    que só o produto VIVO sabe: se a Steam está aberta, se há jogo aberto, e o
+    que a última leitura do disco viu.
+
+    ============================  ==========================================
+    botão                         quando ele aparece
+    ============================  ==========================================
+    "Desligar o Steam Input"      o produto MEDIU e ele está ligado
+                                  (`steam_input_ligado is True`) e **não há
+                                  jogo aberto** — com jogo aberto o produto não
+                                  fecha a Steam por nada, e oferecer o botão
+                                  seria oferecer uma recusa
+    "Este jogo não funciona"      a leitura ALCANÇOU a biblioteca. É o único
+                                  gesto por-jogo que a janela velha tem para o
+                                  sintoma que ela mediu no aparelho, e ele é
+                                  reversível: não fecha nada, não edita arquivo
+                                  da Steam
+    "Deixar tudo pronto"          **os DOIS têm trabalho** — falta atalho em
+                                  algum jogo E o Steam Input está ligado. É a
+                                  razão inteira de ele existir: os dois cabem
+                                  numa janela de `with_steam_closed`, e pedir
+                                  duas vezes é fazer a pessoa pagar duas vezes
+                                  pelo mesmo fechamento da Steam. Com só um
+                                  lado pendente, o botão daquele lado basta
+    ============================  ==========================================
+
+    NENHUM DELES APARECE SEM MEDIÇÃO. Uma `Leitura` sem `steam_input` — a
+    primeira meia volta, e toda régua que monte uma à mão — sai daqui com tupla
+    vazia, e o cartão fica exatamente como estava.
+    """
+    if lida is None or not lida.viu_a_biblioteca:
+        return ()
+    fora: list[desenho.Acao] = [
+        desenho.Acao(desenho.JOGO_NAO_FUNCIONA_ROTULO, "",
+                     desenho.JOGO_NAO_FUNCIONA, desenho.STEAM)
+    ]
+    if lida.steam_input_ligado is True and not PORTOES.jogo_aberto:
+        fora.append(_botao_armavel(desenho.DESLIGAR_STEAM_INPUT,
+                                   desenho.DESLIGAR_STEAM_INPUT_ROTULO))
+        if lida.reparaveis:
+            fora.append(_botao_armavel(desenho.TUDO_PRONTO,
+                                       desenho.TUDO_PRONTO_ROTULO))
+    return tuple(fora)
+
+
 def com_o_que_o_daemon_diz(
     lancadores: list[desenho.Lancador],
     state: dict[str, Any] | None,
@@ -880,12 +1153,14 @@ def com_o_que_o_daemon_diz(
         acoes = (*acoes, desenho.Acao(DISPENSAR, "", "nao-perguntar", appid))
     if (lida is not None and lida.reparaveis
             and PORTOES.steam_aberta and not PORTOES.jogo_aberto):
-        acoes = (
-            *acoes,
-            desenho.Acao(CONFIRMA_A_STEAM, "verde", FECHAR, CONFIRMO)
-            if _armado()
-            else desenho.Acao(PERGUNTA_DA_STEAM, "", FECHAR, desenho.STEAM),
-        )
+        acoes = (*acoes, _botao_armavel(FECHAR, PERGUNTA_DA_STEAM))
+    # O `if extras` NÃO É ESTILO: sem ele a comparação de identidade lá embaixo
+    # nunca mais casaria (desempacotar uma tupla cria outra), e o cartão passaria
+    # a ser reconstruído em TODO tique — o segundo dono do samba, pela porta que
+    # a `A-TELA-SAMBA-01` acabou de fechar nesta aba.
+    extras = acoes_do_steam_input(lida)
+    if extras:
+        acoes = (*acoes, *extras)
     if cabeca == "" and acoes is steam.acoes:
         return lancadores
     fora = list(lancadores)
@@ -1500,23 +1775,14 @@ def fechar_a_steam_e_repor(ctx: Contexto, o: dict[str, Any],
     (`daemon_actions.format_steam_janela_recusa`) — ela já cobre os três
     desfechos do contrato e já diz, nos dois primeiros, que **nada foi mudado**.
     """
-    global _ARMADO_ATE
-
     from hefesto_dualsense4unix.app.actions.daemon_actions import (
         format_steam_janela_recusa,
     )
     from hefesto_dualsense4unix.integrations import sentinela_do_wrapper as sw
     from hefesto_dualsense4unix.integrations import steam_launch_options as slo
 
-    if str(o.get("v") or "").strip() != CONFIRMO:
-        _ARMADO_ATE = time.monotonic() + SEGUNDOS_PARA_CONFIRMAR
+    if not _este_clique_confirma(FECHAR, o):
         return _resposta(VIGIA.agora(), ctx.state)
-    if not _armado():
-        _ARMADO_ATE = 0.0
-        raise RuntimeError(
-            f"Passaram-se mais de {int(SEGUNDOS_PARA_CONFIRMAR)} segundos desde "
-            "a pergunta — não fechei nada. Clique de novo para começar.")
-    _ARMADO_ATE = 0.0
 
     janela, resultado = slo.with_steam_closed(sw.reparar_ou_adiar)
     VIGIA.esquecer()
@@ -1749,11 +2015,267 @@ def copiar_a_linha(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
     return {**_resposta(VIGIA.agora(), ctx.state), "recado": COPIADO}
 
 
-#: VAZIOS, E É A MEDIÇÃO QUE OS DEIXA VAZIOS: nenhum gesto desta aba fala com o
-#: daemon. O wrapper vive em dois arquivos em disco, e `pacotes.daemon.metodos()`
-#: não traz um método sequer que os toque.
-PONTE: set[str] = set()
-METODOS: set[str] = set()
+# ---------------------------------------------------------------------------
+# O STEAM INPUT — o que a Steam põe ENTRE o controle e o jogo
+#
+# DECISÃO DELA, 06/09/2026 (`D-0609-STEAM-DIVIDIDO`): **o Steam Input e a lista
+# de exceções ficam aqui, na 07**; "Consertar problemas conhecidos", "Restaurar
+# de fábrica" e "Aplicar aos jogos" ficam na 09.
+#
+# O QUE ESTAVA MEDIDO, e é o buraco que estes três fecham
+# (`docs/data/paridade-gtk-html.csv`, linhas 250, 251 e 254): a janela velha
+# desliga o Steam Input, marca o jogo que não funciona e faz as duas coisas de
+# uma vez; a interface nova **não fazia nenhuma das três**, em aba nenhuma —
+# `grep -rn steam_input_allowlist src/hefesto_dualsense4unix/interface/` devolvia
+# ZERO. Quem jogasse com o Steam Input ligado via um controle que "não funciona"
+# e nada na tela explicando por quê.
+#
+# NADA AQUI É MOTOR NOVO, e cada peça tem endereço:
+#
+#     emulation_actions.EmulationActionsMixin._steam_input_script    o script
+#     emulation_actions.EmulationActionsMixin._steam_input_is_on     o veredito
+#     emulation_actions.format_steam_input_result                    a frase
+#     emulation_actions.steam_input_result_tag                       a tag
+#     daemon_actions.format_game_broken_result                       a frase
+#     daemon_actions.format_steam_ready_result                       a frase
+#     daemon_actions.medir_jogos_com_steam_input                     a medição
+#     daemon_actions.DaemonActionsMixin._STEAM_READY_CORPO           o consentimento
+#     steam_launch_options.add_appid_to_steam_input_allowlist        a marca
+#     steam_launch_options.apply_wrapper_to_all_games                o wrapper
+#     steam_launch_options.with_steam_closed                         fechar/reabrir
+#
+# O CONSENTIMENTO É EXIGÊNCIA DO MOTOR, e não desenho meu: `with_steam_closed`
+# diz por escrito que *"o consentimento NÃO mora aqui: quem chama tem de ter
+# perguntado antes"*, porque `stop_steam()` escala para `pkill -TERM` e depois
+# `-KILL` depois de 30 s. A janela velha pergunta num diálogo; uma página
+# pergunta com o botão. Ver :func:`_este_clique_confirma`.
+#
+# E O VEREDITO É O ARQUIVO, NUNCA O `rc`: `_steam_input_is_on()` relê os
+# `localconfig.vdf` depois de tudo, e é ESSA releitura que decide se a tela diz
+# que deu certo. É a regra que a `HONESTIDADE-STEAM-01` deixou — o script pode
+# sair 0 tendo ADIADO —, e aqui ela tem uma consequência a mais: a releitura
+# escolhe entre o recado VERDE e a recusa LARANJA.
+# ---------------------------------------------------------------------------
+def _o_script_que_desliga() -> Any:
+    """O `disable_steam_input.sh` desta instalação, ou `None`.
+
+    PERGUNTADO AO DONO (`EmulationActionsMixin._steam_input_script`), que é um
+    método de instância cujo corpo não toca em `self` — o mesmo idioma que
+    `daemon_actions.medir_jogos_com_steam_input` já usa com os estáticos do
+    mixin. Digitar `"scripts/disable_steam_input.sh"` aqui seria a quarta base
+    de busca de um caminho que a `BG-BASES-01` já pagou uma vez para unificar.
+    """
+    from hefesto_dualsense4unix.app.actions.emulation_actions import (
+        EmulationActionsMixin,
+    )
+
+    return EmulationActionsMixin._steam_input_script(None)  # type: ignore[arg-type]
+
+
+def _o_steam_input_continua_ligado() -> bool | None:
+    """A releitura do arquivo — o único veredito que esta aba aceita."""
+    from hefesto_dualsense4unix.app.actions.emulation_actions import (
+        EmulationActionsMixin,
+    )
+
+    return EmulationActionsMixin._steam_input_is_on()
+
+
+def _rodar_o_script(script: Any) -> tuple[int, str]:
+    """`bash <script> --apply-quiet` — a mesma linha da janela velha.
+
+    `--apply-quiet` POR CONTRATO NUNCA FECHA A STEAM: com ela viva ele ADIA e
+    sai 0. Quem fecha é `with_steam_closed`, e é por isso que os dois nunca
+    disputam — um dono só decide matar processo da usuária.
+    """
+    import subprocess
+
+    proc = subprocess.run(["bash", str(script), "--apply-quiet"], check=False,
+                          timeout=180, capture_output=True, text=True)
+    return proc.returncode, (proc.stdout or "") + (proc.stderr or "")
+
+
+@gesto("07-lancadores.html", desenho.DESLIGAR_STEAM_INPUT)
+def desligar_o_steam_input(ctx: Contexto, o: dict[str, Any],
+                           p: Any) -> dict[str, Any]:
+    """"Desligar o Steam Input": tira a Steam do meio entre o controle e o jogo.
+
+    A ORDEM DOS PORTÕES É A DA JANELA VELHA, e ela não é negociável
+    (`emulation_actions._steam_input_decidir`):
+
+    1. **jogo aberto ⇒ RECUSA.** `steam -shutdown` mataria o jogo e o progresso
+       não salvo. A frase é a do dono (`status="jogo_aberto"`);
+    2. **só a Steam aberta ⇒ pergunta.** O primeiro clique ARMA e devolve o
+       cartão com o botão trocado; o segundo fecha a Steam por ~20 s, aplica e
+       reabre — UMA vez cada, por `with_steam_closed`;
+    3. **Steam fechada ⇒ aplica direto.** Não há consentimento a pedir quando
+       não há nada a fechar, e pedi-lo seria cobrar um preço que não existe.
+
+    A SONDAGEM É FEITA AGORA, e não lida da :data:`PORTOES`: aquela é de até 20
+    segundos atrás, e ela pode ter aberto a Steam nesse meio-tempo. Aqui isso é
+    barato — o gesto roda em thread (`hefesto_vivo._gesto`), que é onde varrer
+    `/proc` não custa tique nenhum.
+
+    O VEREDITO É O ARQUIVO. `format_steam_input_result` já recusa dizer "Pronto"
+    sem evidência, e a evidência é a releitura dos `localconfig.vdf`
+    (`ainda_ligado`). Aqui ela decide também a COR: desligado de verdade vira
+    recado verde; qualquer outra coisa é recusa laranja, com a frase do dono.
+    """
+    from hefesto_dualsense4unix.app.actions.emulation_actions import (
+        format_steam_input_result,
+        steam_input_result_tag,
+    )
+    from hefesto_dualsense4unix.integrations import steam_launch_options as slo
+
+    script = _o_script_que_desliga()
+    if script is None:
+        raise RuntimeError(format_steam_input_result(status="sem_script"))
+    if slo.steam_game_running():
+        raise RuntimeError(format_steam_input_result(status="jogo_aberto"))
+
+    if slo.steam_running():
+        if not _este_clique_confirma(desenho.DESLIGAR_STEAM_INPUT, o):
+            return {**_resposta(VIGIA.agora(), ctx.state),
+                    "recado": PERGUNTA_DA_STEAM}
+        janela, resultado = slo.with_steam_closed(lambda: _rodar_o_script(script))
+        if janela == slo.STEAM_JANELA_JOGO_ABERTO:
+            raise RuntimeError(format_steam_input_result(status="jogo_aberto"))
+        if janela == slo.STEAM_JANELA_NAO_FECHOU:
+            raise RuntimeError(format_steam_input_result(status="nao_fechou"))
+        rc, saida = resultado
+    else:
+        rc, saida = _rodar_o_script(script)
+
+    VIGIA.esquecer()
+    ainda_ligado = _o_steam_input_continua_ligado()
+    frase = format_steam_input_result(status="executado", rc=rc,
+                                      tag=steam_input_result_tag(saida),
+                                      ainda_ligado=ainda_ligado)
+    if ainda_ligado is not False:
+        raise RuntimeError(frase)
+    return {**_resposta(VIGIA.ler(), ctx.state), "recado": frase}
+
+
+@gesto("07-lancadores.html", desenho.JOGO_NAO_FUNCIONA)
+def este_jogo_nao_funciona(ctx: Contexto, o: dict[str, Any],
+                           p: Any) -> dict[str, Any]:
+    """"Este jogo não funciona": põe o jogo na lista de exceções do Steam Input.
+
+    SEM PERGUNTA, e isso é do motor e não descuido meu: o gesto **não fecha
+    nada, não edita arquivo da Steam e é reversível** (uma linha num arquivo
+    nosso, que a caixinha do editor de perfil também desfaz). É por isso que a
+    janela velha não abre diálogo aqui, e é por isso que esta tela não abre
+    também — pedir consentimento para um ato reversível ensina que todo botão
+    pede consentimento, e aí o consentimento que importa deixa de ser lido.
+
+    QUAL JOGO É: a mesma escada de três evidências de :func:`a_escada_do_jogo`,
+    e é ela que faz o botão servir ao caso REAL — *"o jogo não funcionou, ela
+    fechou, e só então veio reclamar"*. Sem jogo, a recusa é a frase do dono.
+
+    A RECARGA NÃO É ZELO — ela é a metade que faz a marca VALER AGORA. A lista
+    é relida do disco a cada consulta, mas o que entrega a entrada daquele jogo
+    ao controle físico só nasce quando o daemon rematerializa o ambiente de
+    inicialização. Sem ela a marca só valeria no próximo arranque do serviço, e
+    a pessoa clicaria de novo achando que o primeiro clique não pegou. É o
+    MESMO aviso best-effort que `daemon_actions._recarregar_apos_allowlist`
+    manda (serviço parado é normal — ele rematerializa sozinho ao subir).
+    """
+    from hefesto_dualsense4unix.app.actions.daemon_actions import (
+        format_game_broken_result,
+    )
+    from hefesto_dualsense4unix.integrations import steam_launch_options as slo
+
+    appid, _quando = a_escada_do_jogo(ctx.state)
+    if appid is None:
+        raise RuntimeError(format_game_broken_result(status="sem_jogo"))
+    status = slo.add_appid_to_steam_input_allowlist(
+        appid, nota="marcado pela tela: 'este jogo não funciona'")
+    frase = format_game_broken_result(status=status, appid=appid)
+    if status in ("appid_invalido", "erro"):
+        raise RuntimeError(frase)
+    p.chamar(METODO_DA_RECARGA)
+    VIGIA.esquecer()
+    return {**_resposta(VIGIA.ler(), ctx.state), "recado": frase}
+
+
+@gesto("07-lancadores.html", desenho.TUDO_PRONTO)
+def deixar_tudo_pronto(ctx: Contexto, o: dict[str, Any],
+                       p: Any) -> dict[str, Any]:
+    """"Deixar tudo pronto": os DOIS trabalhos, com UM consentimento só.
+
+    ELE EXISTE PORQUE ELA PEDIU, com estas palavras: *"tem jogos que precisamos
+    ativar entrada steam, outros que temos que colocar comandos de inicialização
+    — é uma confusão real"*. O que sai da tela não são os dois mecanismos: é a
+    ESCOLHA entre eles.
+
+    UM CONSENTIMENTO, E NÃO DOIS, e a razão é medida: os dois cabem numa janela
+    de `with_steam_closed`, e pedir duas vezes é fazer a pessoa pagar duas vezes
+    pelo mesmo fechamento da Steam. É por isso que o botão só aparece quando os
+    DOIS lados têm trabalho (ver :func:`acoes_do_steam_input`) — com um só
+    pendente, o botão daquele lado já resolve com um consentimento igual.
+
+    A MEDIÇÃO ACONTECE DENTRO DA JANELA E ANTES DO SCRIPT, e a ordem é do dono
+    (`D-33`): é o último instante em que o arquivo ainda diz de QUAL jogo
+    estamos falando — depois de o script rodar, já foi zerado.
+
+    A FRASE DO CONSENTIMENTO É DO MOTOR, palavra por palavra
+    (`DaemonActionsMixin._STEAM_READY_CORPO`, o corpo do diálogo da janela
+    velha). As quebras de parágrafo viram espaço porque um recado é uma linha,
+    não uma caixa — e nenhuma palavra dela muda no caminho.
+    """
+    from hefesto_dualsense4unix.app.actions.daemon_actions import (
+        DaemonActionsMixin,
+        format_steam_janela_recusa,
+        format_steam_ready_result,
+        medir_jogos_com_steam_input,
+    )
+    from hefesto_dualsense4unix.integrations import steam_launch_options as slo
+
+    if not _este_clique_confirma(desenho.TUDO_PRONTO, o):
+        return {**_resposta(VIGIA.agora(), ctx.state),
+                "recado": " ".join(
+                    DaemonActionsMixin._STEAM_READY_CORPO.split())}
+
+    script = _o_script_que_desliga()
+    aplicar = getattr(slo, "apply_wrapper_to_all_games", None)
+
+    def _acao() -> dict[str, Any]:
+        saida: dict[str, Any] = {"script": None, "wrapper": None,
+                                 "steam_input_jogos": medir_jogos_com_steam_input()}
+        if script is not None:
+            saida["script"] = _rodar_o_script(script)
+        if aplicar is not None:
+            saida["wrapper"] = aplicar()
+        return saida
+
+    janela, dados = slo.with_steam_closed(_acao)
+    VIGIA.esquecer()
+    recusa = format_steam_janela_recusa(janela)
+    if recusa is not None:
+        raise RuntimeError(recusa)
+    frase = format_steam_ready_result(janela=janela, dados=dados,
+                                      script_ok=script is not None,
+                                      wrapper_ok=aplicar is not None)
+    if _o_steam_input_continua_ligado() is True:
+        raise RuntimeError(frase)
+    return {**_resposta(VIGIA.ler(), ctx.state), "recado": frase}
+
+
+#: O ÚNICO MÉTODO DO DAEMON QUE ESTA ABA CHAMA, e ele nasceu em 06/09/2026 com
+#: o "Este jogo não funciona". Ver :func:`este_jogo_nao_funciona`.
+METODO_DA_RECARGA = "launch_env.refresh"
+
+#: FATO SUBSTITUÍDO — 06/09/2026. Aqui estava escrito que *"nenhum gesto desta
+#: aba fala com o daemon"*, e era verdade até o "Este jogo não funciona" nascer:
+#: marcar o jogo na lista de exceções só VALE AGORA se o daemon rematerializar o
+#: ambiente de inicialização, e o método existe (`launch_env.refresh`) — é o
+#: mesmo aviso best-effort que a janela velha manda depois da mesma escrita.
+#:
+#: OS OUTROS DEZ CONTINUAM SEM PONTE, e a medição que os deixou assim não mudou:
+#: o wrapper vive em dois arquivos em disco, e o `state_full` não tem UMA chave
+#: sobre a Steam, sobre a lista de recusados ou sobre a de dispensados.
+PONTE: set[str] = {"chamar"}
+METODOS: set[str] = {METODO_DA_RECARGA}
 
 
 PAGINA = "07-lancadores.html"
@@ -1764,8 +2286,11 @@ PAGINA = "07-lancadores.html"
 #: só a GTK sabia escrever) e o "Posso fechar a Steam por uns 20 segundos?" (o
 #: caminho para `with_steam_closed`, que a interface nova não tinha); e de
 #: 10 PARA 11 em 04/09/2026, com o "Copiar a linha" (decisão `07[01]` do PO) —
-#: o único botão de copiar de toda a interface nova.
-PISO_DA_ABA = 11
+#: o único botão de copiar de toda a interface nova; e de 11 PARA 14 em
+#: 06/09/2026, com os TRÊS do Steam Input (decisão dela,
+#: `D-0609-STEAM-DIVIDIDO`): "Desligar o Steam Input", "Este jogo não funciona"
+#: e "Deixar tudo pronto".
+PISO_DA_ABA = 14
 
 #: SEM `PROVAS`, e a razão é o contrato da régua dos botões: ela injeta uma
 #: `PonteDeMentira` e cobra QUAL função da ponte o gesto chamou. Um gesto que
@@ -1792,6 +2317,17 @@ PROVAS: list[dict[str, Any]] = []
 #: O `copiar-a-linha` ENTROU EM 04/09/2026 pelo mesmo motivo do
 #: `abrir-lancador`, e ainda mais forte: o efeito dele é a ÁREA DE
 #: TRANSFERÊNCIA do ambiente gráfico dela, que o daemon não vê de jeito nenhum.
+#:
+#: E OS TRÊS DO STEAM INPUT ENTRAM PELO MESMO MOTIVO — 06/09/2026. O
+#: `state_full` não tem UMA chave sobre o Steam Input: quem responde se ele está
+#: ligado é o `localconfig.vdf` da Steam, lido do disco
+#: (`emulation_actions._steam_input_is_on`), e a lista de exceções é um arquivo
+#: nosso. O `este-jogo-nao-funciona` PARECE a exceção porque manda
+#: `launch_env.refresh` ao daemon — e não é: o método rematerializa o ambiente
+#: de inicialização e **não publica nada** no `state_full`. Uma régua que
+#: cobrasse eco dele reprovaria o botão por estar CERTO.
 SEM_ECO = ("procurar", "consertar", "ver-o-que-impede", "detectar",
            "tirar-daqui", "voltar-a-usar", "voltar-a-perguntar",
-           "abrir-lancador", "nao-perguntar", FECHAR, desenho.COPIAR)
+           "abrir-lancador", "nao-perguntar", FECHAR, desenho.COPIAR,
+           desenho.DESLIGAR_STEAM_INPUT, desenho.JOGO_NAO_FUNCIONA,
+           desenho.TUDO_PRONTO)
