@@ -843,11 +843,24 @@ def ordens_novas(
     viu, e se ela mudar os cabos e a mesma regra disparar com um arranjo novo, é
     fato novo e a ordem volta. Chavear só pelo slug faria a decisão de ontem
     calar uma medição de hoje.
+
+    **ARRANJO VAZIO NÃO É ASSINATURA — medido em 06/09/2026, e o defeito é do
+    lado que CALA.** `Ordem.arranjo` tem `""` por padrão, e a `ONDA5-08-01`
+    ensinou o desfazer a gravar `arranjo=""` na dispensa. As duas pontas vazias
+    casavam: uma ordem VIVA que chegasse sem arranjo — o padrão do campo — batia
+    com o vazio guardado e nascia CALADA para os dois consumidores deste módulo,
+    a janela GTK inclusive. Uma ordem que ninguém dispensou sumia da tela, e ela
+    deixaria de saber que existe uma medição ali.
+
+    Relatado por TRÊS frentes seguidas (08-01, 08-02 e CONEXOES-LIGAR-TUDO-01)
+    sem uma linha de mudança, porque o arquivo estava fora da posse das três. A
+    aba nova tinha guarda local (`a08_conexoes._ordem_calada`) e por isso não
+    sofria — o que é a definição de cura pela metade.
     """
     return tuple(
         ordem
         for ordem in ordens
-        if dispensadas.get(ordem.chave) != ordem.arranjo
+        if not ordem.arranjo or dispensadas.get(ordem.chave) != ordem.arranjo
     )
 
 
@@ -858,11 +871,15 @@ def ordens_caladas(
 
     Dispensa que some sem deixar marca é a mesma classe de defeito do card que
     some: ela deixaria de saber que existe uma decisão dela ali.
+
+    O `ordem.arranjo and` é a outra metade da cura de 06/09/2026 — ver
+    :func:`ordens_novas`. Sem ele esta contagem incluiria as ordens vivas de
+    arranjo vazio, e a tela diria que há uma decisão dela onde não há nenhuma.
     """
     return tuple(
         ordem
         for ordem in ordens
-        if dispensadas.get(ordem.chave) == ordem.arranjo
+        if ordem.arranjo and dispensadas.get(ordem.chave) == ordem.arranjo
     )
 
 
