@@ -17,6 +17,12 @@ from hefesto_dualsense4unix.core.acoes_de_botao import (  # noqa: E402
 from hefesto_dualsense4unix.core.acoes_de_botao import (  # noqa: E402
     padrao as _padrao_dos_botoes,
 )
+#: A LISTA DO PRODUTO, para a autoconferência de `_conferir` — a tela e o
+#: produto têm de listar os MESMOS botões. Aqui moram a ordem e os glifos, que
+#: são desenho; quais botões existem é fato, e fato tem um dono só.
+from hefesto_dualsense4unix.core.acoes_de_botao import (  # noqa: E402
+    BOTOES as _BOTOES_DO_PRODUTO,
+)
 from hefesto_dualsense4unix.integrations.uinput_mouse import (  # noqa: E402
     DEFAULT_MOUSE_SPEED,
     DEFAULT_SCROLL_SPEED,
@@ -703,22 +709,45 @@ CSS = CSS_GLIFO + """
      `monta.CSS_FOLHA`: borda sutil, texto mudo, `cursor:not-allowed`. Inventar
      uma segunda cara de apagado seria a doença que esta casa persegue.
 
-     E ELE CONTINUA RESPONDENDO, como o botão cinza da D-03: nada aqui é
-     `disabled` nem `pointer-events:none`. Quem navega pelo controle chega à
-     razão pelo clique, e o gesto levanta a MESMA frase que está escrita ao lado
-     (`a06_navegacao.RAZAO_DO_PORTAO`).
+     APAGADO DIZ "NÃO DÁ PARA MEXER"; NUNCA DIZ "ESTÁ DESLIGADO" — 06/09/2026,
+     esclarecimento dela na 06-Q1: *"o switch fica apagado (não clicável) MAS
+     mostra o estado real: pode ficar apagado no estado off, e pode ficar
+     apagado no estado on"*. Isto CORRIGE a construção de 04/09 em dois pontos,
+     e os dois estavam medidos:
+
+       · o portão pintava também o `.pino` — e a regra dele vale (0,6,0) contra
+         os (0,3,0) do pino aceso, então **o pino ficava cinza com o mouse
+         LIGADO**. O que sobrava dizendo o lado era o fundo esverdeado, que
+         sobrevivia por acidente (a regra do portão não declara `background`).
+         Um lado inteiro dito por uma declaração que ninguém escreveu de
+         propósito. A regra do pino SAIU: o lado sai de onde sempre saiu, e
+         passa a valer também sob o portão;
+       · o interruptor CONTINUAVA respondendo ao clique — este mesmo comentário
+         dizia, por escrito, que *"nada aqui é `disabled` nem
+         `pointer-events:none`"*, e ela pediu **não clicável**. Agora é.
+
+     E O `cursor:not-allowed` MUDOU DE ELEMENTO, porque tinha de mudar: um
+     elemento que não é alvo de ponteiro **não decide o cursor** — quem decide
+     passa a ser o pai. Aplicar só a primeira metade trocaria um defeito por
+     outro (recusa em silêncio, com cara de clicável), então a recusa mora na
+     linha que contém o interruptor, na mesma regra `:has()`.
+
+     O GESTO `modo` NÃO PERDE A RECUSA, e é de propósito:
+     `a06_navegacao` continua levantando a `RAZAO_DO_PORTAO`. A folha protege o
+     ponteiro; a página pode estar pintada com o modo de um tique atrás, e
+     tirar a guarda do Python deixaria o único caminho aberto sem ninguém.
 
      O `.laranja` É O GATILHO, e não uma classe nova: o pacote manda a razão
      dentro de um `<span class="laranja">`, como as outras linhas de estado
      fazem, e manda `<i class="nada"></i>` quando não há bloqueio — que é o
      mesmo marcador que apaga a linha. Sem bloqueio não há `.laranja` naquela
      linha, e o interruptor fica como sempre foi. ---------- */
+  .quadro-corpo:has(.estado.portao .laranja) .at-linha:has(.tog[data-gesto="modo"]){
+       cursor:not-allowed}
   .quadro-corpo:has(.estado.portao .laranja) .tog[data-gesto="modo"]{
-       border-color:var(--border-sutil);color:var(--texto-mudo);cursor:not-allowed}
+       border-color:var(--border-sutil);color:var(--texto-mudo);pointer-events:none}
   .quadro-corpo:has(.estado.portao .laranja) .tog[data-gesto="modo"]:hover{
        border-color:var(--border-sutil)}
-  .quadro-corpo:has(.estado.portao .laranja) .tog[data-gesto="modo"] .pino{
-       background:var(--border-sutil);box-shadow:none}
 
   /* ---------- A TIRA DE AVISO SOB A TABELA DE BOTÕES ----------
      Decisão do PO, 04/09/2026 (§2 `06[04]`): *"Uma tira de aviso sob a tabela.
@@ -750,7 +779,7 @@ CSS = CSS_GLIFO + """
   /* A COLUNA DO NOME CRESCE **SÓ DENTRO DAS POP-UPS**, e o número é medido, não
      escolhido: a decisão do PO diz que a marca *"cabe na coluna do nome"*, e ela
      NÃO cabia — `.tab td.b` tem `width:176px`, `white-space:nowrap` e
-     `overflow:hidden`, e a linha mais longa das 21 ("Touchpad · Clique
+     `overflow:hidden`, e a linha mais longa das vinte e duas ("Touchpad · Clique
      esquerdo") já usa ~168px. Fotografado em 04/09/2026: a marca saía cortada,
      com dois caracteres à mostra por baixo do `<select>` vizinho.
 
@@ -764,10 +793,11 @@ CSS = CSS_GLIFO + """
   .tn-cx .tab th:first-child,.tn-cx .tab td.b{width:250px}
 
   /* A DENSIDADE DE 22px FICA SÓ DENTRO DAS TELAS DE CIMA, e o número diz por quê.
-     Cada uma das duas telas de botões tem 21 listas em 21 linhas, e mede 660px
-     com elas a 22px. No token de 36 as linhas sozinhas passariam de 750px, e a
-     janela do produto tem 757. A tela não caberia na tela.
-     Na ABA, onde há cinco linhas e não vinte e uma, o token vale: veja
+     Cada uma das duas telas de botões tem uma lista por linha, e a caixa mede
+     657px com elas a 22px — REMEDIDO em 06/09/2026, com a 22ª linha (o botão
+     PS): eram 634px com 21. No token de 36 as linhas sozinhas passariam de
+     750px, e a janela do produto tem 757. A tela não caberia na tela.
+     Na ABA, onde há cinco linhas e não vinte e duas, o token vale: veja
      `.at-linha`. Esta é a única exceção da aba, e ela está aqui declarada em vez
      de espalhada.
      `.tn-cx.larga` (1120px) SAIU em 28/08: existia para caber as duas tabelas
@@ -1487,6 +1517,34 @@ BOTOES = [
     (gl("dpad_right", rot=dir_de("dpad_right")), "dpad_right"),
     (gl("options"),                              "options"),
     (gl("share"),                                "create"),
+    # O BOTÃO PS — 06/09/2026, decisão dela na 06-Q3: *"O PS ganha a mesma lista
+    # das outras 21 linhas; se você der uma tecla a ele, ele passa a digitar SEM
+    # parar de abrir a Steam, e a tabela não avisa isso."*
+    #
+    # A POSIÇÃO É A DO APARELHO — depois do `create`, antes do touchpad —, e é a
+    # MESMA de `core/acoes_de_botao.BOTOES`. As duas ordens não se comparam por
+    # régua nenhuma hoje; o que se compara é o CONJUNTO. Manter as duas na mesma
+    # ordem é o que faz a tabela e o produto se lerem em paralelo.
+    #
+    # ISTO REVERTE a decisão de 04/09 (*"o PS fica fora, e a razão vira dica"*),
+    # e a reversão é dela. O motor chegou primeiro (ONDA5-06-01): o PS tem valor
+    # de fábrica (`token_do_ps_da_maquina`), tem porta própria de resolução
+    # (`acoes_de_botao.acao_do_ps`) e tem atendente (`build_ps_solo_callback`).
+    # Sem aquele degrau, esta linha nasceria em `— Nada —` sobre o botão que
+    # abre a Steam há meses.
+    #
+    # A ÚLTIMA ORAÇÃO DA FRASE DELA — *"e a tabela não avisa isso"* — é a TIRA,
+    # não esta linha: quem a faz deixar de ser verdade é
+    # `a06_navegacao._o_que_o_ps_faz`, pela regra da 06-Q4 (*o que se perde
+    # ocupa linha; o que se explica mora no `?`*).
+    #
+    # ELE VEM COM O NOME AO LADO, como as outras dezessete linhas que não são
+    # face nem direcional. `linha_combo` faz o CONTRÁRIO (só o glifo), e a razão
+    # é dela, de 27/08: lá o PS aparece dentro de um combo — *"temos o icone do
+    # PS e do lado direito PS escrito novamente, tira a parte escrita"*. Aqui
+    # ele é uma LINHA, e a coluna se chama "Botão do controle": uma linha sem
+    # palavra seria a única das vinte e duas que não se lê em texto.
+    (gl("ps"),                                   "ps"),
     # as TRÊS regiões do touchpad ganharam linha — ela, 27/08: "o touchpad tem o
     # click pra esquerda, linha do clique direita linha do click centro".
     #
@@ -1622,14 +1680,23 @@ VALEM_PARA = (
     + rotulo_de_quem_navega(NAVEGA, QUEM_NAVEGA["nome"], QUEM_NAVEGA["via"])
     + "</b>.")
 
-#: AS DUAS RESPOSTAS QUE ESTA DICA PASSOU A DAR — 04/09/2026, decisões do PO:
+#: AS DUAS RESPOSTAS QUE ESTA DICA DÁ:
 #:
-#:   · §2 `06[03]` — *"O botão PS fica fora, e a razão vira dica."* Ele é a
-#:     única saída de emergência (os cinco combos desta aba mais o modo jogo), e
-#:     como o PS chega ao teclado virtual pelo mesmo caminho dos outros, dar-lhe
-#:     uma tecla o faria digitar SEM parar de abrir a Steam. A janela antiga
-#:     oferece; esta não, e agora diz por quê em vez de a tabela parecer
-#:     incompleta;
+#:   · **o botão PS, e o parágrafo VIROU O CONTRÁRIO em 06/09/2026.** Ele dizia
+#:     *"o botão PS não entra, e é de propósito"* — a decisão do PO de 04/09
+#:     (§2 `06[03]`), que **a palavra dela reverteu** na 06-Q3: *"O PS ganha a
+#:     mesma lista das outras 21 linhas; se você der uma tecla a ele, ele passa
+#:     a digitar SEM parar de abrir a Steam."*
+#:
+#:     O QUE ELE PASSOU A DIZER é o que ela precisa saber para USAR a linha, e
+#:     não por que ela falta: o PS continua sendo a saída de emergência (os
+#:     cinco gestos desta aba saem dele, e segurá-lo alterna o modo jogo) **e**
+#:     a tecla escolhida acontece junto. A precedência é do motor e está escrita
+#:     em tabela em `daemon/subsystems/hotkey._a_metade_da_maquina`; aqui só se
+#:     diz o que se vê acontecer.
+#:
+#:     O QUE **NÃO** ENTRA AQUI é o que se PERDE — isso ocupa linha, na tira sob
+#:     a tabela (`a06_navegacao._o_que_o_ps_faz`), pela regra que a 06-Q4 fixou;
 #:   · §2 `06[02]` — a frase que explica a marca das três regiões do touchpad.
 #:     A marca diz *o quê*; a dica diz *por quê* e o que continua guardado.
 #:
@@ -1642,10 +1709,11 @@ D_DEFINICOES = ajuda(
     "— mouse, tecla ou programa, tudo na mesma lista.<br><br>"
     "A lista de botões sai de <b>docs/data/pecas-do-dualsense.csv</b>, o mesmo mapa "
     "que nomeia as peças do desenho.<br><br>"
-    "<b>O botão PS não entra</b>, e é de propósito: ele é a saída de emergência "
-    f"— os {len(COMBOS)} gestos desta aba saem dele, e segurá-lo alterna o modo "
-    "jogo. Como o PS chega ao teclado pelo mesmo caminho dos outros, dar uma "
-    "tecla a ele faria o botão digitar <b>sem parar</b> de abrir a Steam.<br><br>"
+    "<b>O botão PS faz as duas coisas.</b> Ele continua sendo a saída de "
+    f"emergência — os {len(COMBOS)} gestos desta aba saem dele, e segurá-lo "
+    "alterna o modo jogo —, e a tecla que você escolher para ele acontece "
+    "<b>junto</b>: no toque curto, sem combo e fora do jogo. Escolher "
+    "<b>— Nada —</b> cala as duas.<br><br>"
     "<b>As três regiões do touchpad estão marcadas.</b> Enquanto o touchpad do "
     "controle for o mouse do computador, o Hefesto não transforma o clique dele "
     "em tecla — a escolha fica guardada no perfil e volta a valer no dia em que "
@@ -2204,9 +2272,13 @@ LEGENDA = f'''<div class="nota">
     <li><b>A divisão resolve a largura; ela NÃO resolve a densidade.</b> Cada tela
     caiu de <b>1120px</b> para a largura padrão de <b>660px</b>, e cada uma ficou
     com <b>{len(BOTOES)} linhas</b> e <b>{len(BOTOES)} listas</b> — metade do total,
-    e ainda vinte e uma. As duas medem <b>660,3px</b> de altura contra os
-    <b>757px</b> da janela do produto: sobram 96,7px, e o rodapé com o
-    <i>Guardar</i> fecha em y=707,7 dentro dela.</li>
+    e ainda {len(BOTOES)}. As duas medem <b>657px</b> de altura contra os
+    <b>757px</b> da janela do produto: sobram 100px, e o rodapé com o
+    <i>Guardar</i> fecha dentro dela.
+    <br><br>NÚMEROS REMEDIDOS em 06/09/2026, com a 22ª linha: eram 634px com 21,
+    e o que estava escrito aqui (660,3px · 96,7px de sobra · y=707,7) já não
+    batia antes dela. A caixa tem teto e rola por dentro quando a tira sob a
+    tabela cresce — medido no WebKit com duas frases na tira.</li>
     <li><b>O teto de altura, que não existia.</b> A <code>.tn-cx</code> não tinha
     <code>max-height</code> nem <code>overflow</code>: se o conteúdo crescesse, ele
     sairia da tela <b>sem barra de rolagem e sem aviso</b>. Agora o teto é
@@ -2545,7 +2617,33 @@ def _conferir(doc):
            f"referência morta, e o desenho deles SOME (não fica cinza). Falta o "
            f"`BLOCO_DA_TINTA` no miolo")
 
-    # 4. AS VINTE E UMA LINHAS DIZEM AO PYTHON QUE ELA ESTÁ MEXENDO — decisão
+    # 3-bis. A LISTA DA TELA É A DO PRODUTO — e esta conferência FALTAVA.
+    #
+    #    ACHADO EM 06/09/2026, mordendo a §4-P3 da ONDA5-06-02: a sprint dizia
+    #    que tirar uma entrada de `BOTOES` faria a conferência abaixo reprovar
+    #    *"nomeando quantas linhas achou contra quantas o produto declara"*.
+    #    **Não fazia.** A conferência de baixo conta `data-gesto` contra
+    #    `len(BOTOES)` — as duas pontas saem da MESMA lista deste arquivo —,
+    #    então tirar uma entrada diminui os dois lados e o gerador sai `OK`,
+    #    com a tela mostrando uma linha a menos que o produto atende.
+    #
+    #    Medido: sem a entrada do PS o gerador imprimia `21 botões do mapa` e
+    #    rc=0. Quem pegava era a suíte (as réguas que comparam a página com
+    #    `core.acoes_de_botao.BOTOES`), nunca o gerador — e o gerador é quem
+    #    roda ANTES, na mão de quem mexe no desenho.
+    #
+    #    O DONO DA LISTA É O PRODUTO. Aqui moram a ORDEM e os GLIFOS, que são
+    #    desenho; QUAIS botões existem é fato, e fato tem um dono só.
+    _do_produto = set(_BOTOES_DO_PRODUTO)
+    _do_desenho = {i for _b, i in BOTOES}
+    exigir(_do_desenho == _do_produto,
+           f"a tela e o produto não listam os mesmos botões — a mais no "
+           f"desenho: {sorted(_do_desenho - _do_produto)}; a menos: "
+           f"{sorted(_do_produto - _do_desenho)}. Uma linha que só existe de um "
+           f"lado é escolha que o Guardar descarta em silêncio, ou botão que o "
+           f"produto atende e a tela não oferece")
+
+    # 4. AS LINHAS DIZEM AO PYTHON QUE ELA ESTÁ MEXENDO — decisão
     #    dela, 02/09/2026. O `data-gesto` é o ÚNICO atributo destes `<select>`
     #    que o ouvinte do piloto reconhece (`hefesto_vivo.py:367`); sem ele o
     #    `change` morre no navegador, o tique reescreve a escolha por cima em

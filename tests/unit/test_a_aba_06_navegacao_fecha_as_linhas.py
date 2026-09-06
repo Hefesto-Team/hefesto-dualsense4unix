@@ -216,24 +216,40 @@ def test_a_marca_nao_encosta_em_linha_que_dispara():
 
 
 # ---------------------------------------------------------------------------
-# [03] O BOTÃO PS — fica fora, e a razão vira dica
+# [03] O BOTÃO PS — ENTRA, e a dica diz o que ele faz
 # ---------------------------------------------------------------------------
 def test_a_dica_da_tela_de_botoes_diz_por_que_o_ps_fica_fora():
-    """A tabela para de parecer incompleta sem custar uma linha de tela.
+    """O `?` da tela de Definições diz O QUE O PS FAZ — não por que ele falta.
 
-    O `ps` CONTINUA FORA — é a decisão —, e quem confere isso é a lista do
-    produto: `acoes_de_botao.BOTOES`. A régua não digita "ps não está lá"; ela
-    pergunta ao dono.
+    **ESTE CASO MEDIA O MUNDO DE ONTEM, e foi reescrito em 06/09/2026.** Ele
+    afirmava `"ps" not in acoes.BOTOES` e cobrava que a dica dissesse *por que o
+    PS fica fora* — a decisão do PO de 04/09 (§2 `06[03]`). **A palavra dela a
+    reverteu** na 06-Q3: *"O PS ganha a mesma lista das outras 21 linhas; se
+    você der uma tecla a ele, ele passa a digitar SEM parar de abrir a Steam."*
+
+    O NOME DA FUNÇÃO FICOU, e é decisão declarada, não descuido: ele é citado em
+    `core/acoes_de_botao.py` (arquivo de outra posse), em duas sprints e em dois
+    relatórios de agente. Renomear aqui deixaria um ponteiro apontando para nada
+    num arquivo que esta frente não pode editar — um defeito calado em troca de
+    um nome bonito. **O que a régua PERGUNTA é o que importa, e mudou inteiro.**
+    Está no relato da ONDA5-06-02 para quem costurar decidir os dois lados de
+    uma vez.
+
+    AS TRÊS PERGUNTAS DE HOJE, e nenhuma digita a lista:
+
+      1. o produto tem o PS na lista das linhas (pergunta a `acoes.BOTOES`);
+      2. a dica **não** volta a dizer que ele fica de fora;
+      3. a dica nomeia as DUAS coisas — a tecla escolhida e a saída de
+         emergência —, que é o que ela precisa saber para usar a linha.
 
     A MORDIDA: tire o parágrafo do PS de `D_DEFINICOES` — este caso reprova
-    dizendo que a razão sumiu.
+    dizendo que a dica deixou de contar as duas metades.
     """
     from hefesto_dualsense4unix.core import acoes_de_botao as acoes
 
-    assert "ps" not in acoes.BOTOES, (
-        "o `ps` entrou na lista das linhas: a decisão do PO é que ele fica "
-        "FORA, porque dar-lhe uma tecla o faria digitar sem parar de abrir a "
-        "Steam.")
+    assert "ps" in acoes.BOTOES, (
+        "o `ps` saiu da lista das linhas: a decisão dela na 06-Q3 é que ele "
+        "ENTRA, com a mesma lista das outras 21.")
     doc = _bancada()
     dica = re.search(
         r'<span class="tn-tit">Definições Controle e Mouse</span>\s*'
@@ -241,8 +257,16 @@ def test_a_dica_da_tela_de_botoes_diz_por_que_o_ps_fica_fora():
         doc, re.S)
     assert dica is not None, "não achei a dica da tela de Definições na bancada"
     texto = dica.group(1)
-    assert "botão PS" in texto and "Steam" in texto, (
-        f"a dica não diz por que o PS fica fora: {texto!r}")
+    assert "não entra" not in texto, (
+        f"a dica voltou a dizer que o PS fica de fora, e ele está na lista do "
+        f"produto: {texto!r}")
+    # AS DUAS METADES, cada uma pelo pedaço que a nomeia. Cobrar a frase inteira
+    # travaria a redação; cobrar só "PS" passaria com o parágrafo antigo.
+    faltam = [p for p in ("PS", "saída de emergência", "modo jogo", "junto")
+              if p not in texto]
+    assert not faltam, (
+        f"a dica não conta as duas coisas que o PS faz — falta {faltam} em: "
+        f"{texto!r}")
 
 
 # ---------------------------------------------------------------------------
@@ -283,6 +307,65 @@ def test_o_aviso_nomeia_o_que_o_guardar_vai_substituir(aba, monkeypatch):
         assert "substitui o conjunto inteiro" not in aviso, (
             "nada se perde e a tela continua ameaçando — a cura de "
             "`resolver()` chegou e esta frase ficou para trás.")
+
+
+def test_a_tira_nomeia_as_duas_coisas_que_o_ps_faz(aba, monkeypatch):
+    """A quinta frase da tira, e ela fecha a última oração da decisão dela.
+
+    06-Q3, 06/09/2026: *"O PS ganha a mesma lista das outras 21 linhas; se você
+    der uma tecla a ele, ele passa a digitar SEM parar de abrir a Steam, **e a
+    tabela não avisa isso**."* A tabela mostra UMA coluna por botão, e o PS é o
+    único cujo toque dispara **duas** coisas. Esta é a linha que faz a última
+    oração deixar de ser verdade.
+
+    ELA NASCE SÓ QUANDO HÁ O QUE DIZER, e os três casos abaixo são o contrato
+    inteiro: com `— Nada —` as duas metades calam (é o espelho exato do
+    `"none"` da máquina), sem escolha o PS é o que sempre foi, e com uma tecla
+    a tira nomeia as duas.
+
+    **O FATO É LIDO, NUNCA DIGITADO**: o nome do botão sai de
+    `input_actions.humanize_button` e o rótulo da tecla sai de
+    `acoes_de_botao.rotulo`. Uma frase cravada aqui envelheceria no dia em que
+    a precedência do PS mudasse do outro lado, e a tela contaria a versão de
+    ontem com o motor fazendo outra coisa.
+
+    A MORDIDA: crave o texto em `_o_que_o_ps_faz` (troque `acoes.rotulo(escolha)`
+    por `"Enter"`) — este caso reprova quando a régua pede outro token. E
+    arranque o `if not escolha or escolha == acoes.TOKEN_NADA: return ""`: a
+    tira passa a falar sempre, e o primeiro caso a nomeia.
+    """
+    from hefesto_dualsense4unix.app.actions.input_actions import humanize_button
+    from hefesto_dualsense4unix.core import acoes_de_botao as acoes
+
+    nome = humanize_button(acoes.BOTAO_PS)
+
+    # 1. `— Nada —` cala as duas metades: não há duas coisas acontecendo.
+    calado = _carga(aba, NO_DESKTOP, {"button_actions": {acoes.BOTAO_PS: acoes.TOKEN_NADA}},
+                    monkeypatch)["aviso-da-tabela"]
+    assert "duas coisas" not in calado, (
+        f"com o PS em “{acoes.rotulo(acoes.TOKEN_NADA)}” a tira ainda promete "
+        f"duas coisas:\n{calado!r}")
+
+    # 2. sem escolha nenhuma, o PS é o que sempre foi — e a tira não fala dele.
+    quieto = _carga(aba, NO_DESKTOP, {}, monkeypatch)["aviso-da-tabela"]
+    assert nome not in quieto, (
+        f"a tira fala do PS num perfil que não opinou sobre ele:\n{quieto!r}")
+
+    # 3. com uma TECLA, ela nomeia as duas — e o rótulo vem do produto.
+    #
+    # DUAS TECLAS, E NÃO UMA: com uma só, cravar o texto (`rotulo = "Enter"`)
+    # passava — medido em 06/09/2026, mordendo esta própria régua. Uma régua que
+    # sobrevive à sua mordida não mede nada; com duas, o valor cravado aparece
+    # na segunda, nomeado.
+    for tecla in ("KEY_ENTER", "KEY_F11"):
+        dito = _carga(aba, NO_DESKTOP, {"button_actions": {acoes.BOTAO_PS: tecla}},
+                      monkeypatch)["aviso-da-tabela"]
+        assert nome in dito and acoes.rotulo(tecla) in dito, (
+            f"a tira não nomeia o botão ({nome!r}) e a tecla "
+            f"({acoes.rotulo(tecla)!r}) que ele passou a digitar:\n{dito!r}")
+        assert "saída de emergência" in dito, (
+            f"a tira diz que o PS digita e cala a METADE que continua "
+            f"acontecendo — é a tabela contando meia verdade de novo:\n{dito!r}")
 
 
 def test_o_que_o_nada_nao_cala_e_dito_e_o_produto_e_quem_decide(aba, monkeypatch):
