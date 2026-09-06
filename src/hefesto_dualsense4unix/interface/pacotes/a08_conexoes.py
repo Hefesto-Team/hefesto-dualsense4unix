@@ -1986,11 +1986,25 @@ def _html_dos_externos(ctx: Contexto) -> str:
     (`nintendo_bt_warning`), e ela nasce só quando as duas condições valem — VID
     Nintendo E rádio. Nos outros aparelhos a linha não existe.
 
-    **A LISTA NÃO ENTRA NO ACORDEÃO `.gc`**, e a razão é a mesma da aba 01: cada
-    `.gc-item` tem `data-controle="pN"`, um rádio de alvo de saída e um corpo que
-    se abre. Um externo não tem assento, não é alvo de saída de nada e não tem o
-    que abrir — pô-lo ali daria à tela um sexto rádio apontando para um aparelho
-    em que o daemon não escreve.
+    **A LISTA MORA DENTRO DA MOLDURA `.gc` — escolha DELA, 06/09/2026.** A
+    EXTERNOS-01 a pôs numa ressalva embaixo do acordeão e PERGUNTOU: à parte, ou
+    no mesmo frame, como a janela GTK fazia? A resposta foi o mesmo frame. Quem
+    faz a linha virar item da moldura é o CSS da bancada (`aba08.py`,
+    `.gc .ext-vaga{display:contents}`); este pacote continua devolvendo só as
+    linhas, e não sabe onde elas caem.
+
+    **MAS ELA NÃO VIRA UM `.gc-item`, e a razão da EXTERNOS-01 não caducou:**
+    cada `.gc-item` tem `data-controle="pN"`, um rádio de alvo de saída e um
+    corpo que se abre. Um externo não tem assento, não é alvo de saída de nada e
+    não tem o que abrir — pô-lo ali daria à tela um sexto rádio apontando para
+    um aparelho em que o daemon não escreve. **Estar na mesma moldura é uma
+    escolha de DESENHO; ser um assento é uma afirmação sobre o aparelho**, e
+    esta função não faz a segunda.
+
+    **QUEM A DISTINGUE É A MARCA**, e é o que a janela GTK fazia: o assento diz
+    o nome do controle, o externo diz *"Controle 4 — Nintendo"*. A palavra vem
+    de ``external_controllers.brand_of`` por dentro de
+    ``_format_external_title``; nenhuma marca se digita aqui.
     """
     if not ctx.externos:
         return ""
@@ -2019,10 +2033,16 @@ def _html_dos_externos(ctx: Contexto) -> str:
         aviso = nintendo_bt_warning(entrada)
         linha_do_aviso = (f'<span class="ext-aviso">{_e(aviso)}</span>'
                           if aviso else "")
+        # AS TRÊS COLUNAS SÃO AS DO `.gc-cabeca`, e não um arranjo novo: o nome
+        # numa coluna de largura fixa (`--larg-nome`, o mesmo número das quatro
+        # linhas de cima), o resto esticando. O `_PONTO` que separava o nome do
+        # transporte SAIU com ele — dentro da moldura quem separa as colunas é o
+        # vão, como já separa nas linhas dos assentos, e um bullet no meio de
+        # uma coluna alinhada lê como um item de lista solto.
         fora.append(
             '<div class="ext-linha">'
-            f'<b>{_e(_format_external_title(entrada))}</b>'
-            f'{_PONTO}{_e(_format_external_subtitle(entrada))}'
+            f'<span class="ext-nome">{_e(_format_external_title(entrada))}</span>'
+            f'<span class="ext-via">{_e(_format_external_subtitle(entrada))}</span>'
             f'{linha_do_aviso}</div>')
     return "".join(fora)
 

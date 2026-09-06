@@ -1146,17 +1146,50 @@
      vizinho de nome igual que esta aba já pagou três vezes. */
   .ressalva .mais{font-style:italic}
 
-  /* OS CONTROLES QUE O HEFESTO SÓ VÊ — EXTERNOS-01, 06/09/2026, linha 305 do
-     CSV da paridade. A caixa é a MESMA `monta.ressalva` das duas linhas acima,
-     e por isso não há regra de estado vazio aqui: `.ressalva:empty` e
-     `.ressalva:has(.nada)` já vêm do esqueleto. Em repouso a seção mede ZERO.
+  /* OS CONTROLES QUE O HEFESTO SÓ VÊ — EXTERNOS-01 (06/09/2026, linha 305 do
+     CSV da paridade) e a escolha DELA no mesmo dia: **no mesmo frame dos
+     assentos**, como a janela GTK fazia. A EXTERNOS-01 os pôs numa ressalva
+     debaixo do acordeão e PERGUNTOU; aqui eles são LINHAS do próprio `.gc`.
+
+     A VAGA É `display:contents` pela mesma razão da aba 01: o piloto precisa de
+     UM elemento de pé para reescrever (`data-hef-alvo="html"`), e uma caixa
+     de verdade dentro de um `flex-direction:column` viraria UM item — todas as
+     linhas empilhadas dentro de uma célula, com a moldura do `.gc` cortando o
+     desenho ao meio. O marcador de vazio sai por `display:none`, e não pelo
+     `:empty` da `.ressalva`, porque sob `display:contents` um `<i>` vazio ainda
+     seria um item de flex e abriria uma linha de altura zero.
+
+     A LINHA NÃO É UM `.gc-item`, e continua não sendo: cada `.gc-item` tem
+     `data-controle="pN"`, um rádio de alvo de saída e um corpo que abre. Um
+     externo não tem assento, não é alvo de saída de nada e não tem o que abrir
+     — pô-lo ali daria à tela um sexto rádio apontando para um aparelho em que o
+     daemon não escreve. O que se copia é a CAIXA (o fio de 1px que separa as
+     linhas, os 12px de recuo, a coluna do nome), e nunca a classe.
+
+     A ARESTA ESQUERDA É TRACEJADA, e é o segundo sinal depois da marca: os
+     `.gc-item` levam ali 3px sólidos, que é onde a `.gc-cor` pinta a cor LIDA
+     do plástico. Um externo não tem cor lida — a folha das 28 é dos DualSense —
+     e o tracejado é o vocabulário desta casa para *"isto não é um ajuste seu"*
+     (`.renomeia`, `.degrau.sem-dono` da aba 01). Nada de `opacity`.
+
+     QUEM O DISTINGUE É A MARCA, como na janela GTK: o assento diz o nome do
+     controle, o externo diz *"Controle 4 — Nintendo"*, com a palavra vinda de
+     `external_controllers.brand_of`.
 
      O AVISO DO `hid-nintendo` VAI EM LARANJA, que é a cor que esta casa reserva
      para o que pede atenção — e ele não acusa o Hefesto: a morte é do driver
      do kernel, e a saída estável é o cabo. */
-  .ressalva .ext-linha{color:var(--texto-mudo);margin-top:2px}
-  .ressalva .ext-linha b{color:var(--fg)}
-  .ressalva .ext-aviso{color:var(--orange);display:block}
+  .gc .ext-vaga{display:contents}
+  .gc .ext-vaga > .nada{display:none}
+  .gc .ext-linha{display:flex;align-items:center;gap:11px;
+                 min-height:30px;padding:4px 12px;
+                 font-size:12px;color:var(--texto-mudo);
+                 border-top:1px solid var(--border-sutil);
+                 border-left:3px dashed var(--border-forte)}
+  .gc .ext-nome{color:var(--fg);font-weight:600;white-space:nowrap;
+                flex:0 0 var(--larg-nome)}
+  .gc .ext-via{flex:1;font-size:11.5px}
+  .gc .ext-aviso{color:var(--orange);font-size:11.5px;text-align:right}
 
   /* ---- botões: todo grupo divide a largura do bloco em partes IGUAIS ----
      A régua dela é estrita: 273/273/273/273 na Jogar, 260 nos 38 da Gatilhos,
@@ -1686,7 +1719,8 @@
   .btn.foco{outline:2px solid var(--purple);outline-offset:2px}
   .ce-relogios{font-size:10.5px;color:var(--texto-mudo);line-height:1.55;margin-top:13px}
 
-  .gc-cabeca{--larg-nome:220px}
+  .gc-cabeca,
+  .gc .ext-linha{--larg-nome:220px}
 
   /* o destaque estático da fita perde para o do acordeão: `.fita .chip.on`
      tem especificidade maior que o `.chip.on` do esqueleto, e é ele que
@@ -3167,20 +3201,26 @@
               <span class="gc-nome" title="Nenhum controle neste lugar.">Player 4 <span class="pt">•</span> Desconectado</span>
             </div>
           </div>
+          <!-- OS CONTROLES QUE O HEFESTO SÓ VÊ — EXTERNOS-01, 06/09/2026, e é a
+               linha 305 do `docs/data/paridade-gtk-html.csv`: *"uma aba chamada
+               Conexões que não lista metade dos controles conectados"*.
+
+               DENTRO DO `.gc`, POR ESCOLHA DELA — 06/09/2026, olhando as duas
+               maquetes: *no mesmo frame dos assentos*, como a janela GTK fazia.
+               A EXTERNOS-01 entregou a ressalva embaixo do acordeão e
+               perguntou; esta é a resposta.
+
+               A LINHA NÃO VIRA UM `.gc-item` POR ISSO, e a razão da EXTERNOS-01
+               continua de pé: cada `.gc-item` tem `data-controle="pN"`, um
+               rádio de alvo de saída do daemon e um corpo que abre. Um externo
+               não tem assento, não é alvo de saída de nada e não tem o que
+               abrir. Estar na mesma moldura é DESENHO; ser um assento é uma
+               afirmação sobre o aparelho, e a tela não a faz.
+
+               ELE NASCE VAZIO pela mesma razão da tabela dos adaptadores e do
+               mapa do gabinete: quantos existem é o que a máquina responde. -->
+          <div class="ext-vaga" data-campo="externos-lista" data-hef-alvo="html"><i class="nada"></i></div>
         </div>
-        <!-- OS CONTROLES QUE O HEFESTO SÓ VÊ — EXTERNOS-01, 06/09/2026, e é a
-             linha 305 do `docs/data/paridade-gtk-html.csv`: *"uma aba chamada
-             Conexões que não lista metade dos controles conectados"*.
-
-             FORA DO ACORDEÃO `.gc`, DE PROPÓSITO: cada `.gc-item` tem
-             `data-controle="pN"`, um rádio de alvo de saída do daemon e um
-             corpo que abre. Um externo não tem assento, não é alvo de saída de
-             nada e não tem o que abrir — pô-lo ali daria à tela um sexto rádio
-             apontando para um aparelho em que o daemon não escreve.
-
-             ELE NASCE VAZIO pela mesma razão da tabela dos adaptadores e do
-             mapa do gabinete: quantos existem é o que a máquina responde. -->
-        <div class="ressalva" data-campo="externos-lista" data-hef-alvo="html"><i class="nada"></i></div>
       </div>
     </div>
 

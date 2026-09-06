@@ -64,8 +64,11 @@ import monta  # noqa: E402
 # cartão, que era identidade cravada e foi removido (ver `cartao`). O rótulo
 # VISÍVEL continua montado à mão aqui, campo a campo, porque cada pedaço dele
 # tem `data-campo` próprio — que é o que `rotulo()` não sabe fazer.
-from monta import (MASCARAS, MESA, glifo, monta as montar,  # noqa: E402
-                   ressalva as monta_ressalva, svg)
+# `ressalva` SAIU DAQUI em 06/09/2026: o único uso era o bloco dos externos, e a
+# escolha dela mandou o bloco para dentro da grade dos assentos, onde a caixa é
+# a `.ext-vaga` e não a `.ressalva` (ver o CSS: `display:contents`, que a
+# `.ressalva` não pode ter sem brigar com o `:has(.nada)` do esqueleto).
+from monta import MASCARAS, MESA, glifo, monta as montar, svg  # noqa: E402
 
 # QUANTAS LINHAS A COLUNA ATENÇÃO PUBLICA — e o dono do número é o PACOTE, não
 # este arquivo. A direção do import é essa e não a inversa: o produto pinta sem
@@ -469,23 +472,58 @@ CSS = """
      cartões mediam 228.8 e 225.2 px — a largura vinha do nome do plástico. */
   .pecas{display:grid;grid-template-columns:repeat(4,1fr);gap:7px}
 
-  /* OS CONTROLES QUE O HEFESTO SÓ VÊ — EXTERNOS-01, 06/09/2026.
-     A CAIXA É A `.ressalva` DO ESQUELETO, e por isso não há aqui uma regra
-     para o estado vazio: `monta.py` já traz `.ressalva:empty{display:none}` e
-     `.ressalva:has(.nada){display:none}` (D-02 dela). Em repouso — que é o
-     estado desta bancada, e o desta máquina hoje — a seção mede ZERO, e a cena
-     que ela aprovou não muda um pixel.
+  /* OS CONTROLES QUE O HEFESTO SÓ VÊ — EXTERNOS-01 (06/09/2026) e a escolha
+     DELA no mesmo dia, olhando as duas maquetes: **no mesmo frame dos
+     assentos**, como a janela GTK fazia, e não numa faixa à parte embaixo. A
+     EXTERNOS-01 desenhou a faixa e PERGUNTOU; este bloco é a resposta.
 
-     O CARTÃO É OUTRO DE PROPÓSITO, e não o `.cartao` dos quatro assentos: um
-     externo não tem `data-controle`, não entra em `apagar_os_lugares_sem_dono`
-     e não recebe o alvo de edição da fita. Ele NÃO tem borda de plástico — a
-     folha das 28 cores é dos DualSense, e um 8BitDo não tem linha nela. */
-  .ressalva .ext-rot{color:var(--texto-suave);font-weight:600;margin-bottom:4px}
-  .ressalva .ext-cartao{border:1px solid var(--border);border-radius:6px;
-    padding:5px 8px;margin-bottom:4px}
-  .ressalva .ext-nome{color:var(--fg);font-weight:600}
-  .ressalva .ext-via{color:var(--texto-mudo)}
-  .ressalva .ext-aviso{color:var(--orange)}
+     COMO ELES ENTRAM NA GRADE SEM UM SEGUNDO ENDEREÇO. O elemento que o piloto
+     reescreve (`data-hef-alvo="html"`) tem de ser UM e tem de ficar de pé entre
+     os tiques — é a `.ext-vaga`. Ela é `display:contents`: some da caixa e
+     entrega os cartões de dentro como itens da MESMA grade `.pecas`. Sem isso
+     os externos todos caberiam numa célula só, empilhados na quinta coluna de
+     uma grade que tem quatro.
+
+     E O MARCADOR DE VAZIO SAI DA CONTA POR `display:none`, e não pelo
+     `:empty`/`:has(.nada)` da `.ressalva`: sob `display:contents` um
+     `<i class="nada">` vazio ainda seria UM item da grade, e abriria uma
+     segunda fileira de altura zero com os 7px de vão. Em repouso — que é o
+     estado desta bancada — a grade continua com os quatro itens de sempre, e a
+     cena que ela aprovou não muda um pixel.
+
+     O CARTÃO CONTINUA NÃO SENDO `.cartao`, e a razão da EXTERNOS-01 não
+     caducou: `.cartao` tem `data-controle`, entra em
+     `apagar_os_lugares_sem_dono` e recebe o alvo de edição da fita. O que a
+     decisão dela mudou é o LUGAR, não a natureza — aqui se copia a CAIXA, e
+     nunca a classe.
+
+     QUEM O DISTINGUE É A MARCA, e é o que a janela GTK fazia: o cartão do
+     assento diz `Sony • Player 1`, o do externo diz `Controle 3 — 8BitDo`, e a
+     palavra da marca tem dono (`external_controllers.brand_of`, o único que
+     sabe desmentir o VID que um clone mente). A BORDA TRACEJADA é o segundo
+     sinal, e é o vocabulário que esta página já usa para *"isto não é um ajuste
+     seu"* (`.degrau.sem-dono`) — nada de `opacity`, pela razão medida trinta
+     linhas acima.
+
+     ELE NÃO TEM COR DE PLÁSTICO NEM FILEIRA DE MÁSCARAS. A folha das 28 cores é
+     dos DualSense, e máscara é escolha que o Hefesto escreve num aparelho que
+     ele ADOTOU. Campo sem informação não mostra nada, que é regra dela.
+
+     A ALTURA É A DA FILEIRA, e isso é de graça: item de grade estica. É a mesma
+     lei que o card da janela GTK pagava à mão (`app/widgets/external_card.py`,
+     §1: *"Todos os cards têm a MESMA altura"*). */
+  .pecas .ext-vaga{display:contents}
+  .pecas .ext-vaga > .nada{display:none}
+  .pecas .ext-cartao{
+    display:flex;flex-direction:column;justify-content:center;gap:3px;
+    padding:5px 8px 6px;
+    border:2px dashed var(--border-forte);border-radius:7px;
+    background:var(--app-bg);
+    font-size:11.5px;line-height:15px;color:var(--texto-mudo);
+  }
+  .pecas .ext-nome{color:var(--fg);font-weight:500}
+  .pecas .ext-via{color:var(--texto-mudo)}
+  .pecas .ext-aviso{color:var(--orange)}
 
   /* O CARTÃO VIROU COLUNA em 28/08, e o motivo é a decisão dela: a máscara
      passou a ser POR CONTROLE, e o seletor dela mora aqui dentro. Em cima a
@@ -1427,20 +1465,28 @@ MIOLO = f'''
             </div>
             <div class="pecas" data-lista="cartoes">
 {CARTOES}
-            </div>
-            <!-- OS CONTROLES QUE O HEFESTO SÓ VÊ — EXTERNOS-01, 06/09/2026, e
-                 é a linha 16 do `docs/data/paridade-gtk-html.csv`: *"com dois
-                 DualSense e um 8BitDo na mesa a aba dizia '2 controles' ao lado
-                 de três cards noutra tela"*. A janela antiga fechou isso em
-                 25/08 (a `I5`); a tela nova nasceu com o defeito de volta.
+              <!-- OS CONTROLES QUE O HEFESTO SÓ VÊ — EXTERNOS-01, 06/09/2026, e
+                   é a linha 16 do `docs/data/paridade-gtk-html.csv`: *"com dois
+                   DualSense e um 8BitDo na mesa a aba dizia '2 controles' ao
+                   lado de três cards noutra tela"*. A janela antiga fechou isso
+                   em 25/08 (a `I5`); a tela nova nasceu com o defeito de volta.
 
-                 ELE NASCE VAZIO, E ISSO É O DESENHO. Quantos externos existem é
-                 o que a MÁQUINA responde, e não há endereço para um cartão que
-                 ainda não nasceu — a mesma razão do mapa do gabinete e da régua
-                 do rádio na aba 08. A peça é a `monta.ressalva`, que em repouso
-                 mede ZERO: nenhum aparelho de exemplo entra aqui, e a cena que
-                 ela aprovou continua igual até um externo ser ligado. -->
-            {monta_ressalva("externos")}
+                   E ELE MORA DENTRO DA GRADE DOS ASSENTOS — escolha DELA,
+                   06/09/2026, entre duas maquetes: *no mesmo frame*, como a
+                   janela GTK fazia. A EXTERNOS-01 entregou a faixa à parte e
+                   perguntou; esta é a resposta, e ela move o endereço para
+                   dentro da `.pecas` sem criar um segundo (ver `.ext-vaga` no
+                   CSS, que é `display:contents`).
+
+                   ELE NASCE VAZIO, E ISSO É O DESENHO. Quantos externos existem
+                   é o que a MÁQUINA responde, e não há endereço para um cartão
+                   que ainda não nasceu — a mesma razão do mapa do gabinete e da
+                   régua do rádio na aba 08. Em repouso a grade continua com os
+                   quatro assentos e mais nada: nenhum aparelho de exemplo entra
+                   aqui, e a cena que ela aprovou continua igual até um externo
+                   ser ligado. -->
+              <div class="ext-vaga" data-campo="externos" data-hef-alvo="html"><i class="nada"></i></div>
+            </div>
           </div>
 
         <div class="col-atencao" data-lista="avisos">
@@ -1700,6 +1746,40 @@ LEGENDA = f'''<div class="nota">
 </body>
 </html>
 '''
+
+
+def _dentro_da_grade_dos_assentos(corpo: str) -> str:
+    """O `<div class="pecas">…</div>` INTEIRO, contado por `div` aberto e fechado.
+
+    ELA EXISTE POR CAUSA DA ESCOLHA DELA de 06/09/2026 — *os externos no mesmo
+    frame dos assentos* —, e a régua que a guarda precisa saber onde a grade
+    ACABA. Um `split` no primeiro `</div>` pararia dentro do primeiro cartão
+    (cada `.cartao` tem três `<div>` dentro), e um `split` por recuo casaria com
+    qualquer linha que alguém reindentasse.
+
+    Devolve `""` quando a grade não abre — e aí a régua que a chama reprova, que
+    é o comportamento certo: sem grade não há frame para o externo estar dentro.
+    """
+    marca = '<div class="pecas"'
+    inicio = corpo.find(marca)
+    if inicio < 0:
+        return ""
+    profundidade = 0
+    i = inicio
+    while i < len(corpo):
+        abre = corpo.find("<div", i)
+        fecha = corpo.find("</div>", i)
+        if fecha < 0:
+            return corpo[inicio:]
+        if 0 <= abre < fecha:
+            profundidade += 1
+            i = abre + 4
+            continue
+        profundidade -= 1
+        if profundidade == 0:
+            return corpo[inicio:fecha + 6]
+        i = fecha + 6
+    return corpo[inicio:]
 
 
 def _conferir(doc):
@@ -2069,6 +2149,30 @@ def _conferir(doc):
            "o bloco dos controles que o Hefesto só vê ficou sem endereço — "
            "sem ele o pacote emite e o `querySelector` devolve `null`, que é "
            "zero escrito e zero erro")
+    #     E O ENDEREÇO MORA DENTRO DA GRADE DOS ASSENTOS — escolha dela,
+    #     06/09/2026: *no mesmo frame*, e não numa faixa à parte embaixo. A
+    #     régua casa o PEDAÇO DE DOCUMENTO entre a abertura da `.pecas` e o
+    #     `</div>` que a fecha, porque a diferença entre as duas maquetes é
+    #     exatamente essa fronteira: com a faixa de volta, o endereço continua
+    #     na página e some daqui — e uma régua que só procurasse o endereço no
+    #     `corpo` inteiro ficaria VERDE sobre a maquete que ela recusou.
+    #
+    #     A FRONTEIRA SE CONTA, e não se adivinha por recuo: `{CARTOES}` traz
+    #     quatro `<div>` aninhados cada um, e um `split` no primeiro `</div>`
+    #     pararia dentro do primeiro cartão — a régua ficaria VERMELHA sobre a
+    #     maquete certa, que é o pior dos dois erros.
+    exigir('data-campo="externos" data-hef-alvo="html"'
+           in _dentro_da_grade_dos_assentos(corpo),
+           "o bloco dos externos saiu de dentro da grade dos assentos — ela "
+           "escolheu o MESMO frame em 06/09/2026, e uma faixa à parte é a "
+           "maquete que ela recusou")
+    #     E A VAGA É `display:contents`, senão os externos todos caem numa
+    #     célula só — a quinta coluna de uma grade que tem quatro. A régua olha
+    #     o documento INTEIRO, e não o miolo, porque é uma regra de CSS.
+    exigir(".pecas .ext-vaga{display:contents}" in doc,
+           "a vaga dos externos deixou de ser `display:contents` — sem ela os "
+           "cartões voltam a empilhar dentro de uma célula, que é a faixa à "
+           "parte com outro nome")
     #     E NENHUM APARELHO DE EXEMPLO NASCE DENTRO DELE. Um card cravado aqui
     #     afirmaria um 8BitDo na mesa dela que ninguém mediu — que é o defeito
     #     que esta aba já pagou com a fita e com os lugares vazios.

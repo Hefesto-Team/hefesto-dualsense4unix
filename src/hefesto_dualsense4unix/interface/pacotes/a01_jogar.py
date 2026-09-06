@@ -1161,13 +1161,18 @@ def _frase_da_mesa(ctx: Contexto) -> str:
     return ""
 
 
-#: O TÍTULO DA SEÇÃO DOS EXTERNOS. **Não é palavra nova**: é a mesma linha que a
-#: janela antiga já põe no card de cada um (`home_actions._format_external_subtitle`
-#: escreve *"o Hefesto só vê"*), promovida a cabeçalho porque aqui os cards vêm
-#: em bloco e o rótulo não cabe repetido em cada um.
-#:
-#: PROVISÓRIO — texto de tela é palavra dela (PROVA-DE-TELA-01).
-EXTERNOS_TITULO = "Ligados, e o Hefesto só vê"
+# O TÍTULO DA SEÇÃO DOS EXTERNOS SAIU EM 06/09/2026, e não é palavra apagada
+# por gosto: ele existia porque os cards vinham num BLOCO à parte, e o bloco
+# acabou. Escolha dela, no mesmo dia, entre as duas maquetes — *no mesmo frame
+# dos assentos*, como a janela GTK fazia. Um cabeçalho dentro de uma grade de
+# quatro colunas ou vira um quinto item (uma coluna de texto ao lado dos
+# cartões) ou uma faixa de largura inteira — que é a faixa à parte de volta,
+# com outro nome.
+#
+# NADA DE INFORMAÇÃO SE PERDEU: a frase que ele promovia a cabeçalho é a que
+# `home_actions._format_external_subtitle` já escreve em CADA cartão — *"o
+# Hefesto só vê"* —, e ela continua lá, uma vez por aparelho. O cabeçalho era a
+# cópia; o dono ficou.
 
 
 def _html_dos_externos(ctx: Contexto) -> str:
@@ -1207,11 +1212,28 @@ def _html_dos_externos(ctx: Contexto) -> str:
     canais) e o daemon não lê a carga dele. Campo sem informação não mostra
     nada, que é regra dela.
 
-    **NÃO É UM CARTÃO `.cartao`**, e a classe é outra de propósito: `.cartao` é
-    dos quatro assentos, tem `data-controle="pN"`, entra na conta de
-    `apagar_os_lugares_sem_dono` e recebe o alvo de edição da fita. Um externo
-    não tem assento — dar-lhe a mesma classe faria as duas coisas brigarem no
-    mesmo pixel, que é o erro que o `marcador-principal` já pagou uma vez.
+    **ELE NASCE DENTRO DA GRADE DOS QUATRO ASSENTOS — escolha DELA, 06/09/2026.**
+    A EXTERNOS-01 entregou os cartões numa faixa à parte, embaixo, e PERGUNTOU:
+    faixa à parte, ou o mesmo frame, como a janela GTK fazia? A resposta foi o
+    mesmo frame. O que muda deste lado é só o cabeçalho da seção, que morreu com
+    a seção; o cartão em si já tinha a forma certa. Quem faz o cartão virar item
+    da grade é o CSS da bancada (`aba01.py`, `.pecas .ext-vaga{display:contents}`)
+    — este pacote continua devolvendo só os cartões, e não sabe onde eles caem.
+
+    **NÃO É UM CARTÃO `.cartao`, e entrar na grade não mudou isso.** A classe é
+    outra de propósito: `.cartao` é dos quatro assentos, tem
+    `data-controle="pN"`, entra na conta de `apagar_os_lugares_sem_dono` e
+    recebe o alvo de edição da fita. Um externo não tem assento — dar-lhe a
+    mesma classe faria as duas coisas brigarem no mesmo pixel, que é o erro que
+    o `marcador-principal` já pagou uma vez. **Estar no mesmo frame é uma
+    escolha de DESENHO; ser um assento é uma afirmação sobre o aparelho**, e
+    esta função não faz a segunda.
+
+    **QUEM O DISTINGUE É A MARCA**, e é o que a janela GTK fazia
+    (`app/widgets/external_card.py`, o título): o assento diz *"Sony · Player
+    1"*, o externo diz *"Controle 3 — 8BitDo"*. A palavra da marca vem de
+    ``external_controllers.brand_of`` por dentro de ``_format_external_title`` —
+    nenhuma marca se digita aqui.
     """
     if not ctx.externos:
         return ""
@@ -1235,7 +1257,7 @@ def _html_dos_externos(ctx: Contexto) -> str:
         """
         return html.escape(str(x), quote=True)
 
-    fora = [f'<div class="ext-rot">{_e(EXTERNOS_TITULO)}</div>']
+    fora = []
     for entrada in ctx.externos:
         aviso = nintendo_bt_warning(entrada)
         linha_do_aviso = (f'<div class="ext-aviso">{_e(aviso)}</div>'
