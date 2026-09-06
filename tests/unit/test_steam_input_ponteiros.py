@@ -9,9 +9,24 @@ interface — não só pelo toast onde ela morava.
 
 Entrega 9: dois rótulos apontavam para lugar que não existe. Os testes daqui
 NÃO comparam strings com uma constante: eles conferem que o alvo citado EXISTE
-de fato (o botão é um ``GtkButton`` do ``gui/main.glade``, a aba é a aba em que
+de fato (o botão está numa das dez páginas publicadas, a aba é a aba em que
 esse botão mora, o arquivo citado está na árvore). Assim a próxima renomeação
 de rótulo também reprova, em vez de passar calada.
+
+**A TELA QUE ESTA RÉGUA LÊ MUDOU EM 06/09/2026, e a razão é um defeito vivo.**
+Até aqui ela lia os ``GtkButton`` do ``gui/main.glade``. A frase do
+``storm_doctor`` mandava clicar em *'Consertar problemas conhecidos'*, que é o
+rótulo da janela — e na interface que ela usa aquele botão se chama **'Refazer
+os consertos automáticos'** (``paginas/09-sistema.html``). A régua dava VERDE
+sobre a frase falsa porque media a tela ERRADA: a que está saindo.
+
+Achado pela ``GTK-2`` e pela ``SISTEMA-STEAM-01``, no mesmo dia e por dois
+caminhos. A cura é um PAR — a frase e a régua —, e sem a segunda metade a
+primeira reprova.
+
+**O NOME DA ABA SAI DA PRÓPRIA PÁGINA**, do ``<a class="aba">`` da barra que
+as dez compartilham, e não de uma tabela aqui: uma aba renomeada tem de mudar
+esta régua junto, e não passar calada.
 """
 from __future__ import annotations
 
@@ -43,85 +58,103 @@ _ABA_CITADA = re.compile(r"aba \*{0,2}([A-ZÁÉÍÓÚÃÕÂÊÔÇ][a-záéíóú
 # ---------------------------------------------------------------------------
 # Leitura estrutural da janela
 # ---------------------------------------------------------------------------
-def _paginas() -> list[tuple[str, ET.Element]]:
-    """[(rótulo da aba, XML da página)] do ``main_notebook``, na ordem."""
-    raiz = ET.parse(_GLADE).getroot()
-    notebook = next(
-        (
-            obj
-            for obj in raiz.iter("object")
-            if obj.get("class") == "GtkNotebook" and obj.get("id") == "main_notebook"
-        ),
-        None,
-    )
-    assert notebook is not None, "main_notebook sumiu do glade"
-    saida: list[tuple[str, ET.Element]] = []
-    pendente: ET.Element | None = None
-    for filho in notebook.findall("child"):
-        if filho.get("type") != "tab":
-            pendente = filho
-            continue
-        rotulo = next(
-            (
-                prop.text
-                for prop in filho.iter("property")
-                if prop.get("name") == "label"
-            ),
-            None,
-        )
-        if rotulo and pendente is not None:
-            saida.append((rotulo, pendente))
-        pendente = None
+#: O BOTÃO NO HTML: `<button …>Texto</button>`, e o texto pode trazer filhos
+#: (um `<span>` da dica vem logo DEPOIS do fecho, nunca dentro). O grupo é
+#: preguiçoso para parar no primeiro `</button>`.
+_BOTAO = re.compile(r"<button\b[^>]*>(.*?)</button>", re.S)
+#: A BARRA DAS DEZ: `<a class="aba" href="NN-nome.html">Nome</a>`.
+_ABA_NA_BARRA = re.compile(r'<a[^>]*class="aba"[^>]*href="([^"]+)"[^>]*>([^<]+)')
+#: Marcação interna que sobra dentro do rótulo de um botão.
+_TAGS = re.compile(r"<[^>]+>")
+
+
+def _publicadas() -> list[Path]:
+    """As dez páginas que o produto renderiza, na ordem do nome."""
+    return sorted((_PACOTE / "interface" / "paginas").glob("[0-9][0-9]-*.html"))
+
+
+def _nome_das_abas() -> dict[str, str]:
+    """{arquivo: nome da aba}, lido da BARRA que as dez compartilham."""
+    for arq in _publicadas():
+        achados = _ABA_NA_BARRA.findall(arq.read_text(encoding="utf-8"))
+        if achados:
+            return {href: nome.strip() for href, nome in achados}
+    raise AssertionError("nenhuma página publicada tem a barra das abas")
+
+
+def _paginas() -> list[tuple[str, str]]:
+    """[(nome da aba, HTML da página)] das dez publicadas."""
+    nomes = _nome_das_abas()
+    saida = []
+    for arq in _publicadas():
+        nome = nomes.get(arq.name)
+        if nome:
+            saida.append((nome, arq.read_text(encoding="utf-8")))
+    assert saida, "as páginas publicadas sumiram da árvore"
     return saida
 
 
-def _rotulo_do_botao(obj: Any) -> str | None:
-    """O texto que a pessoa LÊ no botão — direto, ou no `GtkLabel` filho.
+def _rotulo_do_botao(bruto: str) -> str | None:
+    """O texto que a pessoa LÊ no botão, sem a marcação de dentro.
 
-    **26/08/2026:** um `GtkButton` tem o rótulo como propriedade própria até o
-    dia em que ele precisa QUEBRAR LINHA — aí o rótulo vira um `<child>` com um
-    `GtkLabel` que carrega `wrap`. Foi o que aconteceu com o
-    `btn_storm_fix_safe`: a linha "Avançado" tem cinco botões e um `GtkBox`
-    horizontal pede a SOMA dos mínimos; com o rótulo novo ela foi a 1230px
-    contra os 1180px da janela, sem barra horizontal para onde fugir.
-
-    A régua lia só a propriedade direta e o botão SUMIU do universo dela —
-    passando a acusar como inexistente um botão que está na tela. Quem vê a
-    tela vê o mesmo texto nos dois casos, então a régua tem de ver os dois.
+    **26/08/2026, e a razão sobrevive à troca de tela:** um botão tem o rótulo
+    direto até o dia em que ele precisa de um `<span>` dentro. Quem vê a tela vê
+    o mesmo texto nos dois casos, então a régua tem de ver os dois.
     """
-    for prop in obj.findall("property"):
-        if prop.get("name") == "label" and prop.text:
-            return prop.text
-    for filho in obj.findall("child"):
-        for interno in filho.findall("object"):
-            if interno.get("class") != "GtkLabel":
-                continue
-            for prop in interno.findall("property"):
-                if prop.get("name") == "label" and prop.text:
-                    return prop.text
-    return None
+    texto = _TAGS.sub("", bruto).strip()
+    return texto or None
 
 
 def _aba_do_botao(rotulo: str) -> str | None:
-    """Nome da aba onde mora o ``GtkButton`` de rótulo ``rotulo``, ou None."""
-    for aba, pagina in _paginas():
-        for obj in pagina.iter("object"):
-            if obj.get("class") != "GtkButton":
-                continue
-            if _rotulo_do_botao(obj) == rotulo:
+    """Nome da aba onde mora o botão de rótulo ``rotulo``, ou None."""
+    for aba, html in _paginas():
+        for bruto in _BOTAO.findall(html):
+            if _rotulo_do_botao(bruto) == rotulo:
                 return aba
-    return None
+    return _rotulos_do_cartao().get(rotulo)
+
+
+#: OS BOTÕES QUE O PRODUTO CONSTRÓI NA HORA, e por isso não estão em página
+#: nenhuma: o cartão da Steam da aba Lançadores só os oferece depois de ler a
+#: biblioteca, e `cartoes(None)` — a primeira meia volta — não leu disco nenhum.
+#: Um HTML estático não pode tê-los, e eles estão na tela dela do mesmo jeito.
+#: O dono é `interface/desenho_dos_lancadores.py`, e o nome da aba sai da barra
+#: das dez como o de qualquer outra.
+_ROTULOS_QUE_NASCEM_NO_CARTAO = (
+    "COPIAR_ROTULO", "DESLIGAR_STEAM_INPUT_ROTULO",
+    "JOGO_NAO_FUNCIONA_ROTULO", "TUDO_PRONTO_ROTULO",
+)
+
+
+def _rotulos_do_cartao() -> dict[str, str]:
+    """{rótulo: nome da aba} dos botões que o cartão da Steam monta na hora."""
+    from hefesto_dualsense4unix.interface import desenho_dos_lancadores as dl
+
+    aba = _nome_das_abas().get("07-lancadores.html", "Lançadores")
+    return {getattr(dl, n): aba for n in _ROTULOS_QUE_NASCEM_NO_CARTAO
+            if isinstance(getattr(dl, n, None), str)}
 
 
 def _rotulos_de_botao() -> set[str]:
-    """Todo rótulo de ``GtkButton`` da janela — o universo dos alvos válidos."""
-    raiz = ET.parse(_GLADE).getroot()
-    achados = (
-        _rotulo_do_botao(obj)
-        for obj in raiz.iter("object")
-        if obj.get("class") == "GtkButton"
-    )
-    return {r for r in achados if r}
+    """O universo dos alvos válidos: a tela que o LANÇADOR abre, e só ela.
+
+    **A JANELA ESTÁVEL FICOU DE FORA, e a exclusão é medida — 06/09/2026.** A
+    primeira versão desta cura punha os `GtkButton` do glade no universo, com o
+    argumento de que a janela ainda existe. Com ela dentro, **a régua parou de
+    morder**: devolvi a frase do `storm_doctor` ao rótulo velho
+    (*'Consertar problemas conhecidos'*) e os dez testes passaram verdes — sobre
+    exatamente o defeito que este arquivo existe para pegar.
+
+    A razão é simples e vale como regra: quem lê a frase é quem abriu a tela que
+    o lançador abre. Um rótulo que só existe na janela que está saindo é um
+    rótulo que ela não vai encontrar.
+    """
+    achados = {
+        _rotulo_do_botao(bruto)
+        for _aba, html in _paginas()
+        for bruto in _BOTAO.findall(html)
+    }
+    return {r for r in achados if r} | set(_rotulos_do_cartao())
 
 
 def _corpo_de_funcao(caminho: Path, nome: str) -> str:

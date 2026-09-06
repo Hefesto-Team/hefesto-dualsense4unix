@@ -48,7 +48,9 @@ títulos têm suporte a DualSense de verdade, mas ele só funciona com o **Steam
 Input daquele jogo LIGADO**.
 
 **Você não precisa marcar nada para isso.** O botão **"Este jogo não funciona"**
-(aba **Sistema**) e a caixinha **"Esconder os controles físicos neste jogo"**
+(aba **Lançadores** — ele era da Sistema até 06/09/2026, quando ela dividiu o
+assunto: Steam Input e a lista de exceções ficam na Lançadores, e "Consertar",
+"Restaurar de fábrica" e "Aplicar aos jogos" ficam na Sistema) e a caixinha **"Esconder os controles físicos neste jogo"**
 (aba **Perfis**) continuam existindo, e escrevem no mesmo arquivo — mas o que
 elas garantiam já vale em **todo** jogo desde **09/08/2026**: o Hefesto esconde
 o controle físico sozinho, e o jogo enxerga um dispositivo por jogador. O que a
