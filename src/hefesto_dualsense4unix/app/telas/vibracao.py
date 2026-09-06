@@ -128,6 +128,52 @@ def degraus_da_forca() -> tuple[str, ...]:
     ))
 
 
+# ---------------------------------------------------------------------------
+# AS DUAS FRASES DE TELA QUE A ABA 05 REPETE DA JANELA ESTÁVEL — e o dono
+# delas é ESTE módulo desde 06/09/2026 (GTK-2, `D-0609-GTK-LEVA-INTEIRA`).
+#
+# ELAS MORAVAM NO XML DA JANELA GTK e a aba nova as LIA de lá, por
+# ``interface/aba05._do_glade`` (03/09/2026). A razão daquele dia continua
+# valendo palavra por palavra — *"o que tem dono não se digita; uma segunda
+# cópia de um texto de tela diverge na primeira edição"*, e a conta dela é o
+# botão "Devolver ao jogo" que não existia (``rumble_actions.
+# BTN_GIVE_BACK_TO_GAME``, RUM-01). **O que muda é só o DONO**, e a razão é
+# medida: a janela GTK está sendo aposentada por decisão dela, e um arquivo
+# que vai ser apagado não é dono de texto nenhum. Este módulo já é a fonte da
+# linha de estado desta mesma aba; passa a ser também a das duas frases.
+#
+# ERAM TRÊS ATÉ 05/09/2026, e a terceira nunca precisou mudar de casa: era
+# *"Espera 5 segundos antes de trocar de faixa"*, que explicava o Modo Auto —
+# o Auto saiu desta tela por decisão dela (*"segue os três modos sempre"*), e
+# ``test_a_frase_do_auto_nao_volta_a_aba`` existe para ela NÃO voltar.
+#
+# ENQUANTO O GLADE EXISTIR as duas telas têm de dizer o MESMO, e quem garante
+# é ``tests/unit/test_os_leitores_do_glade_tem_dono.py``, que compara estas
+# constantes com as âncoras do XML. No dia em que a `GTK-3` apagar o arquivo
+# aquele caso se cala sozinho (e diz que se calou), e estas constantes ficam
+# sendo a única fonte — que é o estado pretendido, não um acidente.
+# ---------------------------------------------------------------------------
+
+#: O TETO DA MESA — a oração que os QUATRO tooltips de degrau repetem na janela
+#: estável (RUM-7, 25/08/2026). A linha que avisa quando o teto MORDE já existe
+#: nas duas telas: é a mesma função, :func:`texto_do_teto_do_orcamento`. O que
+#: esta frase faz e aquela não é o ENSINO PREVENTIVO — a outra só aparece
+#: quando o teto já cortou, e por isso nunca ensinou que o teto existe.
+DICA_DO_TETO_DA_MESA = (
+    "O Perfil de Bateria pode impor um teto: esta escolha continua valendo, "
+    "só não passa dele."
+)
+
+#: A ÚNICA FRASE QUE LIGA OS DOIS CARDS: explica por que um "Testar" com 220
+#: pode sair fraco (o degrau em Economia corta para 30%). Na aba nova os dois
+#: blocos estão na MESMA tabela, mais perto ainda, e a relação entre eles não
+#: estava dita em lugar nenhum antes de 03/09/2026.
+DICA_DOS_VALORES_QUE_PASSAM = (
+    "Os valores acima ainda passam pela intensidade escolhida ali em cima "
+    "antes de chegar ao controle."
+)
+
+
 #: O QUE A TELA MOSTRA E O PRODUTO NÃO SABE RESPONDER. Cada linha diz onde o
 #: caminho se perde e o que o fecha — é dívida com endereço, não lápide calada.
 SEM_FONTE: dict[str, str] = {
