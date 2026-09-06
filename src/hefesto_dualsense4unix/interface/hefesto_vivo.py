@@ -333,7 +333,22 @@ BOOTSTRAP = r"""
     // pacote: ele registra que o valor emitido CHEGOU a um elemento desta
     // página — que é exatamente o degrau que faltava entre o `declarado` e o
     // `vivo`. Endereço morto continua sem selo, e continua acusado.
-    el.dataset.hefVisto = '1';
+    //
+    // E ELE SÓ ESCREVE UMA VEZ — A-TELA-SAMBA-01, 06/09/2026, e é a MAIOR
+    // parcela do samba que ela relatou. `el.dataset.hefVisto = '1'` num
+    // elemento que já traz `'1'` **é uma mutação de DOM**: a especificação manda
+    // enfileirar um `MutationRecord` em toda troca de atributo, e não só quando
+    // o valor difere. Medido com `--conta-mutacoes 100`, mesa parada:
+    //
+    //     01-jogar     7.100 mutações em 100 tiques — 6.700 são este selo
+    //     03-gatilhos  6.400 mutações em 100 tiques — 4.700 são este selo
+    //
+    // O SELO NÃO PERDE NADA COM ISSO, e é o que separa esta cura de uma
+    // regressão: o valor dele nunca muda — é `'1'` ou é ausência. A visita SEM
+    // mudança continua deixando rastro, porque o rastro é o atributo ESTAR lá,
+    // não o ato de reescrevê-lo. Quem nasce sem selo (um nó recriado por uma
+    // troca de bloco) ganha o dele no tique seguinte, como sempre ganhou.
+    if(el.dataset.hefVisto !== '1'){ el.dataset.hefVisto = '1'; }
     if(alvo === 'largura'){
       if(el.style.width !== t + '%'){ el.style.width = t + '%'; return 1; }
       return 0;
@@ -445,7 +460,23 @@ BOOTSTRAP = r"""
     // POR QUE NÃO O `blocos:` QUE JÁ EXISTE: aquele troca UM elemento por
     // `document.querySelector`, e o `?` do teto é um POR CONTROLE. É o mesmo
     // degrau, um tamanho menor — o endereço é `data-campo`, distribuído.
-    if(alvo === 'html'){ if(el.innerHTML !== t){ el.innerHTML = t; return 1; } return 0; }
+    //
+    // E ELE LEMBRA O QUE ESCREVEU — A-TELA-SAMBA-01, 06/09/2026, pela MESMA
+    // razão dos blocos (ver o laço `p.blocos` mais abaixo) e com o mesmo
+    // mecanismo dos alvos `cor` e `plastico`. `innerHTML` de volta é a
+    // SERIALIZAÇÃO do navegador, não o texto que entrou: a indentação some, o
+    // atributo é reescrito com aspas duplas, a entidade vira caractere. Onde
+    // uma dessas diferenças existir, `el.innerHTML !== t` é verdade para
+    // sempre — e o miolo é recriado dez vezes por segundo com o mesmo desenho.
+    // Medido com `--conta-mutacoes 40`, mesa parada: `luz` e `players` na
+    // `04-iluminacao` (24 nós por tique) e `adaptadores-tabela` na
+    // `08-conexoes`.
+    if(alvo === 'html'){
+      if(el.__hefHtml === t) return 0;
+      if(el.innerHTML !== t){ el.innerHTML = t; el.__hefHtml = t; return 1; }
+      el.__hefHtml = t;
+      return 0;
+    }
     // O ALVO `classe` — o ESTADO, que na tela dela é uma classe e não uma
     // palavra. Ele destrava cinco coisas que a página já desenha e o produto
     // não alcançava: qual dos quatro degraus da Vibração está aceso, o rótulo
@@ -541,6 +572,24 @@ BOOTSTRAP = r"""
     // VAZIO APAGA a cor de linha, devolvendo o elemento à folha de estilo. É o
     // que o piloto velho fazia com `''`, e é o que faz um analógico solto
     // voltar à cor de sempre em vez de ficar aceso para sempre.
+    //
+    // E ESCREVER O MESMO VALOR AQUI NÃO É MUTAÇÃO — MEDIDO em 06/09/2026, na
+    // A-TELA-SAMBA-01, e o resultado DERRUBOU a hipótese da sprint.
+    //
+    // Ela dizia que este ramo era um dos três culpados do samba, por escrever
+    // antes de comparar. Escrever antes de comparar ele escreve; o que não
+    // acontece é a mutação: o CSSOM só reescreve o atributo `style` quando a
+    // DECLARAÇÃO muda, e atribuir a mesma cor não muda declaração nenhuma.
+    // Com o observador ligado por 100 tiques e a mesa parada, este ramo não
+    // produziu **uma** mutação em nenhuma das dez abas — o que a tabela acusava
+    // nos elementos de cor era o SELO da visita, que é outro ramo e foi curado.
+    //
+    // Por isso a forma FICA como estava. Uma memória de elemento aqui — a que
+    // os alvos `html` e os blocos ganharam, onde ela cura de verdade — passaria
+    // por cura e não curaria nada, e a régua que a guardasse ficaria verde com
+    // ela arrancada. `test_a_cor_e_o_plastico_repetidos_nao_mutam` guarda o
+    // CONTRATO (o dia em que alguém trocar o CSSOM por um `setAttribute`
+    // direto no `style`, ela reprova), e o docstring dela diz isso.
     if(alvo === 'cor'){
       const antes = el.style.color;
       el.style.color = vazio ? '' : t;
@@ -569,6 +618,11 @@ BOOTSTRAP = r"""
     // ESCREVE E DEPOIS COMPARA, como o `cor`: uma propriedade personalizada
     // aceita qualquer texto, então só a releitura diz se algo mudou — e é isso
     // que impede o contador de somar uma pintura que não aconteceu.
+    //
+    // E ELE TAMBÉM NÃO MUTA AO REPETIR — ver a nota do alvo `cor` logo acima,
+    // que é a mesma medição de 06/09/2026 e a mesma hipótese derrubada:
+    // `setProperty` com o mesmo valor e `removeProperty` do que já não está lá
+    // não reescrevem o atributo `style`, e o observador não conta nada.
     if(alvo === 'plastico'){
       const antes = el.style.getPropertyValue('--plastico');
       if(vazio || t === '—'){ el.style.removeProperty('--plastico'); }
@@ -626,8 +680,35 @@ BOOTSTRAP = r"""
       // certo para um `data-hef-atributo` mal escrito.
       if(!atributo_escrevivel(nome)) return 0;
       const antes = el.getAttribute(nome);
-      if(vazio || t === '—'){ el.removeAttribute(nome); }
-      else { el.setAttribute(nome, t); }
+      // COMPARA ANTES DE ESCREVER — A-TELA-SAMBA-01, 06/09/2026, e é a cura do
+      // *"algo ativa o tooltip mas ele se desativa"* que ela escreveu com o
+      // produto aberto.
+      //
+      // O RAMO ESCREVIA E DEPOIS RELIA, e o comentário acima explica por quê:
+      // um atributo aceita qualquer texto, então só a releitura diria se algo
+      // mudou. **A premissa é falsa para um atributo comum**: `setAttribute`
+      // não normaliza nada, e `getAttribute` devolve exatamente a string que
+      // entrou — logo comparar ANTES dá a mesma resposta sem tocar no DOM.
+      //
+      // E TOCAR NO DOM ERA O DEFEITO INTEIRO. `setAttribute` com o mesmo valor
+      // enfileira um `MutationRecord` na mesma medida que um valor novo, e a
+      // DICA NATIVA do WebKit fecha quando o `title` do elemento sob o cursor
+      // muda. As dicas vivas desta casa — os `dica-modo-*` da `03-gatilhos`, o
+      // `title` do Salvar e do Exportar em todas as dez — passavam por aqui
+      // DEZ VEZES POR SEGUNDO: a dica abria e morria antes de ela conseguir
+      // ler. Medido com `--conta-mutacoes 100`, mesa parada, na `03-gatilhos`:
+      // 1.200 trocas de `title` em 100 tiques, com o texto sempre igual.
+      //
+      // O `null` DO `getAttribute` É O VAZIO DESTE RAMO, e por isso a
+      // comparação do apagamento é contra ele: apagar o que já não existe volta
+      // 0 e não escreve, como antes.
+      if(vazio || t === '—'){
+        if(antes === null) return 0;
+        el.removeAttribute(nome);
+        return 1;
+      }
+      if(antes === t) return 0;
+      el.setAttribute(nome, t);
       return el.getAttribute(nome) === antes ? 0 : 1;
     }
     if(el.textContent !== t){
@@ -918,9 +999,23 @@ BOOTSTRAP = r"""
         // sempre que UM controle não tinha cor — e pelo rádio nenhum tem —,
         // então o ramo quase nunca corria na mesa dela. Curar a guarda acordou
         // o contador.
+        // E NUNCA COM UM CHIP EM VOO DENTRO — A-TELA-SAMBA-01, 06/09/2026, e é
+        // o mesmo cuidado do laço de blocos lá embaixo, aqui no caso mais
+        // extremo dele: a fita não troca o MIOLO, ela troca o próprio nó
+        // (`outerHTML`), então TUDO o que está dentro dela morre junto. Os
+        // chips da fita são clicáveis — são eles que escolhem o alvo —, e um
+        // chip clicado veste `hef-em-voo` até o gesto responder. Sem esta
+        // guarda, um chip em voo desaparece no primeiro tique, com o clique
+        // dela no meio do caminho.
         const desejado = String(p.fita).trim();
         const agora = f.outerHTML.split(' data-hef-visto="1"').join('');
-        if(agora !== desejado){ f.outerHTML = desejado; n += 1; }
+        if(agora !== desejado){
+          if(f.querySelector('.hef-em-voo') || f.closest('.hef-em-voo')){
+            window.__hef.blocosAdiados = (window.__hef.blocosAdiados || 0) + 1;
+          } else {
+            f.outerHTML = desejado; n += 1;
+          }
+        }
         // O SELO DA VISITA NOS CHIPS, e sem ele o endereço deles pareceria
         // MORTO. Os chips ganharam `data-campo` em 03/09/2026 (`monta.fita`)
         // para que a régua da identidade saiba que ali não há desenho
@@ -928,8 +1023,10 @@ BOOTSTRAP = r"""
         // de campos: sem o selo, a régua do mockup os contaria como endereço
         // que ninguém pinta. Ele é escrito a cada tique, mesmo quando o HTML
         // não mudou, porque é a visita SEM mudança que não deixa rastro.
+        // UMA VEZ SÓ, pela mesma razão do selo em `escrever()`: reescrever `'1'`
+        // sobre `'1'` é uma mutação de DOM, e o chip da fita é clicável.
         for(const c of document.querySelectorAll('.fita [data-campo]')){
-          c.dataset.hefVisto = '1';
+          if(c.dataset.hefVisto !== '1'){ c.dataset.hefVisto = '1'; }
         }
       }
     }
@@ -946,9 +1043,65 @@ BOOTSTRAP = r"""
     //
     // TROCA O MIOLO, e não o próprio nó: `outerHTML` no container mataria o
     // elemento que o seletor achou, e a próxima pintura não teria onde pousar.
+    //
+    // E NUNCA COM UM BOTÃO EM VOO DENTRO — A-TELA-SAMBA-01, 06/09/2026, e é a
+    // cura de *"botões não funcionam"* e *"cliques não aplicam ou atrasam"*.
+    //
+    // O DEFEITO É DE TEMPO, e por isso régua nenhuma o via numa foto: um bloco
+    // cujo HTML carregue um valor que muda a cada tique (uma contagem, uma
+    // bateria, uma hora) é reconstruído DEZ VEZES POR SEGUNDO, e `innerHTML =`
+    // destrói todos os descendentes. Quem clicou fica com o `mousedown` num nó
+    // que já não existe — o `click` nunca completa — e o `hef-em-voo`, que é a
+    // única coisa na tela dizendo *"estou trabalhando"*, some com o nó que o
+    // vestia. Um gesto lento desta casa leva 9,5 s (`daemon.reload`): são 95
+    // chances de o botão ser arrancado debaixo do dedo dela.
+    //
+    // ADIAR É A RESPOSTA CERTA, e não "trocar só o pedaço que mudou": o HTML do
+    // bloco vem pronto do pacote, e casar filho a filho aqui seria escrever um
+    // segundo motor de reconciliação no piloto. O voo dura o gesto; assim que
+    // ele pousa, o tique seguinte aplica o bloco inteiro. O que se perde é
+    // atualização de UM bloco por alguns tiques; o que se ganha é o clique.
+    //
+    // O CONTADOR SAI NA TABELA do `--conta-mutacoes`: um bloco que fica adiado
+    // para sempre é defeito, e sem contá-lo ele seria invisível.
+    // E A COMPARAÇÃO É COM O QUE ESTE LAÇO ESCREVEU, não com o `innerHTML` de
+    // agora — A-TELA-SAMBA-01, 06/09/2026, e é o que fazia CINCO abas
+    // reconstruírem bloco a dez vezes por segundo com a mesa parada.
+    //
+    // O DEFEITO É UM CICLO, e ele se fecha DENTRO do mesmo tique: o bloco entra
+    // com os endereços que o pacote desenhou; o laço de campos, três passos
+    // abaixo, escreve nesses endereços e carimba `data-hef-visto` em cada um;
+    // o `innerHTML` do bloco passa a trazer o selo, o texto que o Python emitiu
+    // nunca o traz — e a igualdade nunca mais casa. No tique seguinte o bloco é
+    // reconstruído inteiro, os selos somem com os nós, e recomeça.
+    //
+    // **É O MESMO DEFEITO QUE A FITA JÁ TINHA MEDIDO** três dias antes (ver o
+    // `split(' data-hef-visto="1"')` logo acima) — e a cura de lá nunca foi
+    // trazida para cá. Medido com `--conta-mutacoes 40`, mesa parada:
+    //
+    //     10-perfis    4.000 mutações em 40 tiques — a lista dos 33 perfis
+    //                  inteira, 132 nós por tique, dez vezes por segundo
+    //     04-iluminacao  a barra de luz e os players, 24 nós por tique
+    //     08-conexoes    a tabela de adaptadores
+    //
+    // POR QUE A MEMÓRIA E NÃO O `split` DA FITA: o selo é UM dos jeitos de o
+    // DOM divergir do texto emitido, e não o único — o CSSOM normaliza cor, um
+    // `style` esvaziado deixa `style=""` na tag, e o próximo alvo que nascer
+    // trará a sua. Guardar o que ESTE laço escreveu compara duas strings da
+    // MESMA língua e fica imune a todas elas de uma vez. É a mesma memória de
+    // elemento dos alvos `cor` e `plastico`, e morre com o nó pelo mesmo
+    // motivo.
     for(const [seletor, html] of Object.entries(p.blocos || {})){
       const alvo = document.querySelector(seletor);
-      if(alvo && alvo.innerHTML !== html){ alvo.innerHTML = html; n += 1; }
+      if(!alvo) continue;
+      if(alvo.__hefBloco === html || alvo.innerHTML === html) continue;
+      if(alvo.querySelector('.hef-em-voo') || alvo.closest('.hef-em-voo')){
+        window.__hef.blocosAdiados = (window.__hef.blocosAdiados || 0) + 1;
+        continue;
+      }
+      alvo.innerHTML = html;
+      alvo.__hefBloco = html;
+      n += 1;
     }
     // 1. OS CAMPOS DA MESA — soltos no documento, valem para a página toda.
     for(const [k, v] of Object.entries(p.mesa || {})){
@@ -975,7 +1128,12 @@ BOOTSTRAP = r"""
           el.dataset.conectado = 'nao'; n += 1;  // (noqa-acento) idem
         }
         if(!el.classList.contains('off')){ el.classList.add('off'); }
-        el.classList.remove('alvo');
+        // O `remove` TAMBÉM PERGUNTA ANTES — A-TELA-SAMBA-01, 06/09/2026.
+        // `classList.remove` de uma classe AUSENTE reserializa o atributo
+        // `class` do mesmo jeito, e cada reserialização é uma mutação: 400 por
+        // 100 tiques na `01-jogar`, com a mesa parada e nenhum lugar mudando de
+        // dono. O `add` acima já perguntava; faltava o irmão.
+        if(el.classList.contains('alvo')){ el.classList.remove('alvo'); }
       }
     }
     // 1c. E OS LUGARES QUE TÊM DONO REABREM — o simétrico do passo acima, e
@@ -994,7 +1152,11 @@ BOOTSTRAP = r"""
         if(el.dataset.conectado !== 'sim'){
           el.dataset.conectado = 'sim'; n += 1;
         }
-        el.classList.remove('off');
+        // PERGUNTA ANTES — ver a nota do `alvo` no passo `1b` logo acima. Este
+        // é o pior dos dois, porque roda para todo lugar OCUPADO: numa mesa de
+        // dois controles são dois `class` reserializados por tique, para
+        // sempre, sem que um lugar tenha mudado de dono.
+        if(el.classList.contains('off')){ el.classList.remove('off'); }
       }
     }
     // 2. OS CAMPOS POR CONTROLE — dentro do bloco daquele `data-controle`.
@@ -1561,6 +1723,105 @@ LER_CAMPOS = r"""
 })()
 """
 
+#: QUANTOS TIQUES A PINTURA CORRE ANTES DE O OBSERVADOR LIGAR.
+#:
+#: A primeira pintura de uma página MUDA a tela de propósito — ela troca o
+#: desenho cravado no arquivo pelo dado do daemon, e cada valor escrito é uma
+#: mutação legítima. Contar a partir do tique zero mediria a CHEGADA, não o
+#: samba. Dois segundos é o que a `--prova-de-mockup` já usa como assentamento
+#: (`--voltas-por-aba`, oito voltas por aba mais a cor do plástico que volta em
+#: thread); aqui o dobro, porque a mesa demora a chegar inteira e uma cor que
+#: pousa no tique 15 contaria como inquietude.
+VOLTAS_ATE_ASSENTAR = 20
+
+#: O OBSERVADOR DE MUTAÇÕES — o instrumento da A-TELA-SAMBA-01.
+#:
+#: POR QUE ELE PRECISOU EXISTIR, e a razão é de MEDIÇÃO: duas fotos da tela dela
+#: com um minuto de intervalo saem IDÊNTICAS enquanto ela relata *"a interface
+#: inteira tá sambando"*. O sintoma não está no layout parado — está no
+#: MOVIMENTO entre dois tiques, e foto nenhuma o alcança. O contador de pinturas
+#: que já existe (`window.__hef.pintar` devolve quantos valores escreveu) também
+#: não: ele conta o que o piloto ACHA que escreveu, e o defeito é justamente a
+#: escrita que o piloto não conta — um `setAttribute` com o valor igual, um
+#: `classList.add` de uma classe que já está lá.
+#:
+#: **UM `setAttribute` COM O MESMO VALOR É UMA MUTAÇÃO DE DOM.** A especificação
+#: manda enfileirar um `MutationRecord` em toda troca de atributo, e não só
+#: quando o valor difere — por isso o observador vê o que o contador de pinturas
+#: não vê, e por isso ele é a régua certa para este defeito.
+#:
+#: O ENDEREÇO DE CADA MUTAÇÃO é o `data-campo`/`data-papel`/`data-hef` mais
+#: próximo subindo a árvore — o mesmo vocabulário do `achar()`. Sem isso a
+#: tabela diria "houve 800 mutações" e ninguém saberia em quem.
+OBSERVAR_MUTACOES = r"""
+(function(){
+  window.__hef = window.__hef || {};
+  if(window.__hef.observador){ window.__hef.observador.disconnect(); }
+  const linhas = {};
+  window.__hef.mutacoes = linhas;
+  window.__hef.mutacoesTotal = 0;
+  function endereco(no){
+    let el = (no && no.nodeType === 1) ? no : (no ? no.parentElement : null);
+    while(el && el.getAttribute){
+      const c = el.getAttribute('data-campo') || el.getAttribute('data-papel')
+                || el.getAttribute('data-hef');
+      if(c) return c;
+      if(el.classList && el.classList.contains('fita')) return '(a fita)';
+      el = el.parentElement;
+    }
+    return '(sem endereco)';
+  }
+  function somar(campo, tipo, detalhe, nos){
+    const k = campo + '|' + tipo + '|' + detalhe;
+    let l = linhas[k];
+    if(!l){ l = linhas[k] = {campo: campo, tipo: tipo, detalhe: detalhe,
+                             n: 0, nos: 0}; }
+    l.n += 1;
+    l.nos += (nos || 0);
+    window.__hef.mutacoesTotal += 1;
+  }
+  const obs = new MutationObserver(function(regs){
+    for(const r of regs){
+      const onde = endereco(r.target);
+      if(r.type === 'attributes'){
+        somar(onde, 'attributes', r.attributeName || '?', 0);
+      } else if(r.type === 'childList'){
+        somar(onde, 'childList', '(filhos)',
+              r.addedNodes.length + r.removedNodes.length);
+      } else {
+        somar(onde, 'characterData', '(texto)', 0);
+      }
+    }
+  });
+  obs.observe(document.documentElement, {
+    attributes: true, childList: true, characterData: true, subtree: true});
+  window.__hef.observador = obs;
+  window.__hef.mutacoesDesde = Date.now();
+  return 'observando';
+})()
+"""
+
+#: A LEITURA DA TABELA. Devolve as linhas já ordenadas pela contagem, para que
+#: quem lê veja o culpado na primeira linha.
+LER_MUTACOES = r"""
+(function(){
+  const h = window.__hef || {};
+  const linhas = [];
+  for(const k of Object.keys(h.mutacoes || {})) linhas.push(h.mutacoes[k]);
+  linhas.sort(function(a, b){ return b.n - a.n; });
+  return JSON.stringify({
+    total: h.mutacoesTotal || 0,
+    ms: Date.now() - (h.mutacoesDesde || Date.now()),
+    // OS BLOCOS ADIADOS SAEM NA MESMA LEITURA: um bloco que o piloto NÃO
+    // trocou porque havia um botão em voo dentro dele é um fato do mesmo
+    // fenômeno, e sem ele a tabela diria só o que aconteceu, nunca o que foi
+    // evitado.
+    blocos_adiados: h.blocosAdiados || 0,
+    linhas: linhas
+  });
+})()
+"""
+
 #: O MÉTODO LENTO DE CADA GESTO, para a prova esperar o tempo dele. Só os que
 #: passam do padrão precisam de linha aqui.
 _METODO_DO_GESTO = {
@@ -2008,6 +2269,32 @@ class Piloto:
         self._carga_de_agora: dict[str, Any] = {}
         self._mesa_de_agora: list[dict[str, Any]] = []
         self._ctx_de_agora = pacotes.Contexto(state={})
+        #: O CONTADOR DE MUTAÇÕES (`--conta-mutacoes`): quantos tiques correram
+        #: desde que a página ficou de pé, e se a tabela já foi lida.
+        #: `getattr` porque quem monta o `Namespace` à mão — as réguas que abrem
+        #: um `Piloto` sem passar pelo `argparse` — não conhece a bandeira nova,
+        #: e um `AttributeError` ali seria esta sprint quebrando a régua da
+        #: vizinha por causa de um contador que ela não usa.
+        self._voltas_do_contador = 0
+        self._mutacoes_lidas = False
+        #: A TABELA QUE O OBSERVADOR DEVOLVEU, para quem mede de dentro. Sem
+        #: ela a régua teria de reler a saída impressa — que é a forma de
+        #: instrumento que esta casa já pagou caro (*a régua lê o texto, não o
+        #: fato*).
+        self.mutacoes: dict[str, Any] = {}
+        #: OS TIQUES QUE NÃO CORRERAM, e por quê. Um tique pulado é o piloto
+        #: RECUSANDO enfileirar — e sem contá-los "o tique é rápido" e "o tique
+        #: nunca rodou" sairiam iguais no relato.
+        self._pulados_por_voo = 0
+        self._pulados_por_custo = 0
+        #: Há uma pintura no ar sem resposta? Enquanto houver, o tique seguinte
+        #: não manda outra.
+        self._pintura_no_ar = False
+        #: Quantos tiques ainda pular por causa do custo do último.
+        self._pular = 0
+        #: O custo das DUAS VIAGENS de IPC, separado do custo total do tique. É
+        #: o que responde "quem come o orçamento" sem adivinhação.
+        self.custo_do_ipc: list[float] = []
         self.leitor = mesa_viva.LeitorDeCor(ligado=not args.sem_cor)
         #: Os `uniq` já perguntados ao leitor de cor. Sem esta trava, cada tique
         #: abriria uma thread nova para o mesmo controle — 2 por segundo.
@@ -2457,6 +2744,12 @@ class Piloto:
         NO PRODUTO ISTO NÃO ACONTECE: sem `--prova-de-mockup` o `if` é falso e a
         instalação segue exatamente como antes, sem um IPC a mais.
         """
+        # O CONTADOR DE MUTAÇÕES VOLTA A ZERO A CADA CARGA, e não é zelo: o
+        # observador vive em `window.__hef`, que MORRE com o documento. Sem
+        # isto, `--abre 03` ligaria o observador na `01-jogar` (a página em que
+        # a janela nasce), navegaria, e leria uma tabela vazia — o vazio mais
+        # convincente que existe, porque é indistinguível de "nada se mexeu".
+        self._voltas_do_contador = 0
         if self.args.prova_de_mockup and self.pagina not in self.pristino:
             pagina = self.pagina
 
@@ -2522,6 +2815,32 @@ class Piloto:
     def _tique(self) -> bool:
         if not self.pronto:
             return True
+        # O TIQUE NÃO ENFILEIRA — A-TELA-SAMBA-01, e é a cura de *"trava por
+        # instantes"*.
+        #
+        # O DEFEITO É DE FORMA, não de velocidade: `GLib.timeout_add` não deixa
+        # duas execuções do mesmo `source` se sobreporem, mas as DUAS VIAGENS de
+        # IPC do começo deste método são SÍNCRONAS — elas seguram o laço do GTK
+        # inteiro. Um `profile.list` que custe 250 ms come dois tiques e meio; o
+        # laço só volta a rodar quando ele responde, e a próxima batida do timer
+        # já está vencida. O resultado é a janela andando aos solavancos, que é
+        # exatamente a palavra dela.
+        #
+        # E A PINTURA É ASSÍNCRONA, o que é a segunda metade: `perguntar` volta
+        # na hora e a resposta chega depois. Sem esta guarda, dez tiques podem
+        # ter dez `run_javascript` no ar ao mesmo tempo, cada um mandando uma
+        # carga inteira — e o WebKit os executa em ordem, todos com dado velho.
+        #
+        # PULAR É MELHOR QUE ATRASAR. Um tique pulado custa 100 ms de dado
+        # velho; um tique enfileirado custa a fila inteira, e ela não encolhe
+        # sozinha. Os dois contadores saem no relato.
+        if self._pintura_no_ar:
+            self._pulados_por_voo += 1
+            return True
+        if self._pular > 0:
+            self._pular -= 1
+            self._pulados_por_custo += 1
+            return True
         if self.args.prova_de_mockup:
             if self.pagina not in self.pristino:
                 # O RETRATO DO VIRGEM AINDA NÃO VOLTOU. Pintar antes dele
@@ -2554,6 +2873,12 @@ class Piloto:
         except Exception as e:
             print(f"[mesa] não montou: {e}", file=sys.stderr)
             return True
+        # AS DUAS VIAGENS DE IPC MEDIDAS À PARTE do custo do tique. `estado()`
+        # e o `pacote_da_pagina()` logo abaixo são o que pode passar do
+        # orçamento — a pintura não, porque ela é assíncrona. Sem esta marca o
+        # relato dizia só "o tique custou X" e ninguém sabia se X era o daemon,
+        # a mesa ou o JS.
+        t_ipc = (time.perf_counter() - t0) * 1000
         # A MESA DE AGORA fica guardada para o gesto: um clique chega entre dois
         # tiques, e sem ela resolver o `uniq` custaria um IPC a mais por clique.
         self._mesa_de_agora, self._ctx_de_agora = ctx.mesa, ctx
@@ -2649,6 +2974,11 @@ class Piloto:
         carga["recados"] = self._recados_para_a_tela()
 
         def contou(valor: Any, erro: Any) -> None:
+            # A PINTURA POUSOU — e é aqui, e só aqui, que o tique seguinte fica
+            # livre para mandar outra. Antes do `return` de erro de propósito:
+            # uma pintura que FALHOU também desocupou o ar, e não desmarcar
+            # deixaria a janela muda para sempre depois do primeiro erro de JS.
+            self._pintura_no_ar = False
             if erro is not None:
                 print(f"[{self.pagina}] a pintura falhou: {erro}", file=sys.stderr)
                 return
@@ -2669,6 +2999,7 @@ class Piloto:
             if n > 0:
                 self.pinturas.setdefault(self.pagina, []).append(n)
 
+        self._pintura_no_ar = True
         self.ponte.perguntar(PEDIR_A_PINTURA.replace("CARGA", _json(carga)),
                              contou)
         # A CARGA DESTE TIQUE fica guardada: é ela — e não o código-fonte do
@@ -2677,8 +3008,77 @@ class Piloto:
         # nome do campo aparecia em algum lugar do arquivo .py.
         self._carga_de_agora = carga
         self.voltas += 1
-        self.custos.append((time.perf_counter() - t0) * 1000)
+        custo = (time.perf_counter() - t0) * 1000
+        self.custos.append(custo)
+        self.custo_do_ipc.append(t_ipc)
+        # O TETO É O PRÓPRIO TIQUE, e quem passou dele DIZ e cede a vez. Um
+        # tique que custa mais que `TIQUE_MS` já entregou dado atrasado; mandar
+        # o seguinte na hora só empilha atraso sobre atraso.
+        if custo > TIQUE_MS:
+            self._pular += 1
+            print(f"[tique lento] {self.pagina}: {custo:.0f} ms "
+                  f"(IPC {t_ipc:.0f} ms) — teto {TIQUE_MS} ms, pulando o "
+                  f"próximo", file=sys.stderr)
+        self._contar_mutacoes()
         return True
+
+    # -- o contador de mutações (A-TELA-SAMBA-01) --------------------------
+    def _contar_mutacoes(self) -> None:
+        """Um passo do `--conta-mutacoes`, por tique. Fora dele, é um `if` falso.
+
+        O ROTEIRO: deixa a pintura assentar `VOLTAS_ATE_ASSENTAR` tiques, LIGA o
+        observador, conta N tiques, lê a tabela e sai. Com a mesa parada, tudo o
+        que ele contar é a tela se mexendo sem que nada tenha mudado de valor.
+        """
+        quantos = int(getattr(self.args, "conta_mutacoes", 0) or 0)
+        if quantos <= 0 or self._mutacoes_lidas:
+            return
+        self._voltas_do_contador += 1
+        if self._voltas_do_contador == VOLTAS_ATE_ASSENTAR:
+            self.ponte.rodar(OBSERVAR_MUTACOES)
+            print(f"[mutações] observando {self.pagina} por {quantos} tiques "
+                  f"(~{quantos * TIQUE_MS / 1000:.0f} s), com a mesa parada")
+        if self._voltas_do_contador >= VOLTAS_ATE_ASSENTAR + quantos:
+            self._mutacoes_lidas = True
+            self.ponte.perguntar(LER_MUTACOES, self._leu_mutacoes)
+
+    def _leu_mutacoes(self, valor: Any, erro: Any) -> None:
+        """Imprime a tabela do observador — e SAI, porque a medição acabou."""
+        import json
+
+        if erro is not None:
+            print(f"REPROVA: o observador não respondeu — {erro}",
+                  file=sys.stderr)
+            Gtk.main_quit()
+            return
+        try:
+            fora = json.loads(str(valor))
+        except ValueError as e:
+            print(f"REPROVA: a tabela não veio em JSON — {e}", file=sys.stderr)
+            Gtk.main_quit()
+            return
+        self.mutacoes = fora
+        tiques = int(getattr(self.args, "conta_mutacoes", 0) or 0)
+        print(f"\nMUTAÇÕES DE DOM em {tiques} tiques "
+              f"({fora.get('ms', 0) / 1000:.1f} s) na {self.pagina}, "
+              f"com a mesa parada")
+        print(f"{'endereço':34s} {'tipo':14s} {'o quê':22s} {'n':>6s} {'nós':>6s}")
+        for linha in fora.get("linhas", []):
+            print(f"{str(linha['campo'])[:34]:34s} {linha['tipo']:14s} "
+                  f"{str(linha['detalhe'])[:22]:22s} {linha['n']:6d} "
+                  f"{linha['nos']:6d}")
+        total = int(fora.get("total", 0))
+        print(f"TOTAL: {total} mutações · {total / max(tiques, 1):.1f} por tique")
+        if fora.get("blocos_adiados"):
+            print(f"blocos ADIADOS por haver um `hef-em-voo` dentro: "
+                  f"{fora['blocos_adiados']}")
+        # O `SystemExit` DAS ABAS MUDAS NÃO PASSA DAQUI, e é de propósito: ele
+        # nasce dentro de um callback do laço do GTK, onde o PyGObject o imprime
+        # e engole — a janela ficaria aberta para sempre, sem `main_quit`. O
+        # veredito desta régua é a TABELA; aba muda é o veredito da outra.
+        with contextlib.suppress(SystemExit):
+            self._relatar()
+        Gtk.main_quit()
 
     # -- o roteiro e o relato ---------------------------------------------
     def _agendar(self) -> None:
@@ -3240,7 +3640,17 @@ class Piloto:
         if self.custos:
             ordenado = sorted(self.custos)
             print(f"custo do tique: mediana {ordenado[len(ordenado)//2]:.2f} ms · "
-                  f"max {ordenado[-1]:.2f} ms")
+                  f"max {ordenado[-1]:.2f} ms · teto {TIQUE_MS} ms")
+        if self.custo_do_ipc:
+            # AS DUAS VIAGENS À PARTE, e é o número que decide se o teto é do
+            # piloto ou do daemon: um `estado()` que custa mais que o tique é
+            # dívida do outro lado do socket, e esta linha é a que a nomeia.
+            ipc = sorted(self.custo_do_ipc)
+            print(f"custo do IPC:   mediana {ipc[len(ipc)//2]:.2f} ms · "
+                  f"max {ipc[-1]:.2f} ms")
+        if self._pulados_por_voo or self._pulados_por_custo:
+            print(f"tiques pulados: {self._pulados_por_voo} com pintura no ar · "
+                  f"{self._pulados_por_custo} pelo custo do anterior")
         if mudas:
             # ZERO É ERRO, NÃO SILÊNCIO. Uma aba que foi visitada, tem pacote e
             # escreveu zero valores é endereço que não casou — e essa é a forma
@@ -3342,7 +3752,18 @@ def main() -> None:
                    help="MORDIDA: arranca o selo da visita. Os campos que "
                         "coincidem com o desenho voltam a ser INDECIDÍVEIS — e "
                         "se o número não voltar, o selo não estava decidindo nada")
+    p.add_argument("--conta-mutacoes", type=int, default=0, metavar="N",
+                   help="conta as mutações de DOM em N tiques COM A MESA "
+                        "PARADA, por endereço e por tipo, e sai. O número certo "
+                        "é ZERO para tudo o que não mudou de valor — o que "
+                        "sobrar é a tela sambando")
     args = p.parse_args()
+
+    if args.conta_mutacoes and not args.oculta:
+        # MESMA RAZÃO DO `--prova-de-mockup` LOGO ABAIXO: ela tem UMA tela, e
+        # esta régua fica minutos com a janela aberta medindo o que não muda.
+        print("[conta-mutações] ligando `--oculta`: ela tem UMA tela.")
+        args.oculta = True
 
     if args.prova_de_mockup and not args.oculta:
         # ELA TEM UMA TELA. Uma régua que passeia por dez abas piscando na
