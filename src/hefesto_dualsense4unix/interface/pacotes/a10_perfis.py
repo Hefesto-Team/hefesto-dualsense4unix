@@ -255,7 +255,7 @@ SEGUNDOS_PARA_CONFIRMAR = 8.0
 #:
 #: POR QUE ELE PRECISOU EXISTIR, e é defeito de PARIDADE, não de desenho: na
 #: janela GTK **todo** gesto desta aba termina num `_toast_profile`
-#: (`profiles_actions.py:4588`) — "Perfil removido: X", "Lista recarregada",
+#: (`profiles_actions.py:4615`) — "Perfil removido: X", "Lista recarregada",
 #: `mensagem_do_salvar`, `mensagem_de_ativacao`. Aqui só a RECUSA falava:
 #: `RuntimeError` vira tarja (`hefesto_vivo._recusou_dizendo`) e o SUCESSO era
 #: SILÊNCIO — o piloto anota `("aplicou", "")` e não escreve uma letra na tela.
@@ -831,7 +831,7 @@ def _mesa_com_rotulo(mesa: list[dict[str, Any]]) -> list[dict[str, Any]]:
     FATO ERRADO, SUBSTITUÍDO — 02/09/2026. A docstring de
     `perfis_web.pacote_da_aba` afirma que a mesa vem *"no formato que
     ``mesa_viva.mesa_do_estado`` devolve mais ``rotulo`` e ``plastico``"*, e o
-    `_linhas_da_guarda` lê `controle.get("rotulo")` (`perfis_web.py:468`).
+    `_linhas_da_guarda` lê `controle.get("rotulo")` (`perfis_web.py:545`).
     **`mesa_do_estado` não devolve nenhum dos dois** — os campos dela são
     `pref`, `uniq`, `jogador`, `cor`, `nome`, `via`, `transporte`, `alvo`,
     `mascara` (`mesa_viva.py:320-332`). Medido: `guarda.nome` saía `["", ""]`
@@ -843,7 +843,7 @@ def _mesa_com_rotulo(mesa: list[dict[str, Any]]) -> list[dict[str, Any]]:
     caminho do produto.
 
     O `plastico` ENTROU EM 03/09/2026, e o fato acima valia para ele também:
-    `_linhas_da_guarda` lê `controle.get("plastico")` (`perfis_web.py:468`) e
+    `_linhas_da_guarda` lê `controle.get("plastico")` (`perfis_web.py:517`) e
     recebia `""` para todo controle, porque ninguém o punha aqui. Ver `_plastico`.
     """
     return [{**c, "rotulo": _rotulo_curto(c), "plastico": _plastico(c)}
@@ -1159,14 +1159,14 @@ def _rotulo_do_remover(alvo: str) -> str:
 
     A dica no desenho diz *"Apaga do disco. Pergunta antes."* — e esta janela
     não tem diálogo. O `on_profile_remove` da janela estável abre um
-    `gui_dialogs.confirm_delete_profile` (`profiles_actions.py:3171`), que é
+    `gui_dialogs.confirm_delete_profile` (`profiles_actions.py:3198`), que é
     GTK e MODAL; daqui não dá para abri-lo, porque **os gestos rodam em
     thread** (`hefesto_vivo.py:2117`) e GTK só aceita diálogo no laço principal.
 
     **FATO CADUCO, SUBSTITUÍDO — 02/09/2026.** Aqui estava escrito que *"a
     recusa do piloto não serve de pergunta: ela sai em `stderr`, no terminal,
     onde a dona não está olhando"*. **Não sai mais.** O piloto ganhou
-    `_recusou_dizendo` (`hefesto_vivo.py:2236`): todo `RuntimeError` de gesto
+    `_recusou_dizendo` (`hefesto_vivo.py:2523`): todo `RuntimeError` de gesto
     vira TARJA na tela — no cartão do controle quando a página tem um, e no
     `document.body` quando não tem, que é o caso desta aba. Ela some sozinha em
     `SEGUNDOS_DO_RECADO = 30.0`.
@@ -1283,7 +1283,7 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
         ativo = _valendo(ctx, todos)
         # O `editado` FALTAVA, e o editor mostrava o perfil ERRADO — corrigido
         # em 01/09/2026, ao ligar os campos. Sem ele `pacote_da_aba` cai no
-        # ativo (`perfis_web.py:496`), então clicar numa linha mudava o alvo dos
+        # ativo (`perfis_web.py:545`), então clicar numa linha mudava o alvo dos
         # botões e o editor ao lado continuava pintando OUTRO perfil. Enquanto
         # nenhum campo tinha gesto isso era só uma tela desalinhada; com o Nome
         # e o Nome do Jogo ligados, seria ela renomear um perfil olhando para o
@@ -1577,7 +1577,7 @@ def selecionar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     ELE NÃO FALA COM O DAEMON, e é o único desta aba que não fala — de
     propósito. Escolher uma linha não muda nada no aparelho; muda o ALVO dos
     botões ao lado, que é o que a janela estável faz no
-    `on_profile_selection_changed` (`profiles_actions.py:2993`). Ligar isto ao
+    `on_profile_selection_changed` (`profiles_actions.py:3020`). Ligar isto ao
     `profile.switch` faria passar o mouse pela lista trocar o perfil que está
     valendo — o oposto da coluna ter um botão "Ativar".
 
@@ -1662,7 +1662,7 @@ def ativar(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
     # daemon montou com cuidado: a diferença entre "ativado" e "ativado, menos o
     # que o lock manual descartou" (ATIVAR-NAO-MENTE-01). A janela estável lê
     # esse corpo desde sempre — `mensagem_de_ativacao(name, result)`
-    # (`profiles_actions.py:862`) —, e aqui ele estava sendo descartado: ela
+    # (`profiles_actions.py:889`) —, e aqui ele estava sendo descartado: ela
     # trocava de perfil e não ficava sabendo que metade não entrou.
     #
     # `ponte.resultado` é o degrau que entrega o corpo, com o MESMO teto de 3 s
@@ -2404,7 +2404,7 @@ def editor_jogo(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | No
     resultado no tique seguinte.
 
     O PRODUTO JÁ FAZ ISSO, e não é invenção desta tela: o
-    `_aplicar_nascimento_com_jogo` (`profiles_actions.py:3097`) chama
+    `_aplicar_nascimento_com_jogo` (`profiles_actions.py:3124`) chama
     `_select_radio("steam_game")` **e** preenche o campo, no mesmo gesto.
 
     QUAL DAS DUAS ELE ESCOLHE: `normalize_appid` decide — só dígitos (ou um
@@ -2582,7 +2582,7 @@ def novo(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
     arquivo nasce e a lista o mostra no tique seguinte, já aberto no editor.
 
     A REGRA DO JOGO EM FOCO É A MESMA DO PRODUTO, e a guarda também: o
-    `_aplicar_nascimento_com_jogo` (`profiles_actions.py:3097`) só age quando há
+    `_aplicar_nascimento_com_jogo` (`profiles_actions.py:3124`) só age quando há
     **appid da Steam**, e devolve `False` calado no resto. É o que este gesto
     faz — com jogo da Steam em foco nasce mirando aquele jogo, sem ele nasce
     catch-all, "que é o certo para um perfil de desktop" (palavras de lá).
@@ -2590,7 +2590,7 @@ def novo(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
     **A PRIORIDADE DEIXOU DE NASCER EM ZERO** — 03/09/2026,
     PERFIL-NASCE-CERTO-01. Aqui estava escrito que a conta *"mora num mixin GTK
     que depende de widget"*. **Não depende.** O corpo de
-    `_prioridade_acima_dos_catch_all` (`profiles_actions.py:4181`) lê UM
+    `_prioridade_acima_dos_catch_all` (`profiles_actions.py:4208`) lê UM
     atributo — `self._profiles_cache`, a lista de perfis — e mais nada: sem
     `Gtk`, sem `self._get`, sem widget. O que faltava era alguém lhe entregar a
     lista, e esta aba já a tem na mão.
@@ -2779,7 +2779,7 @@ def remover(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
     # fica rançoso se ninguém avisar (DEDUP-04, `profiles_actions.py:3199`).
     p.chamar("launch_env.refresh")
     # A FRASE É A DA JANELA ESTÁVEL, palavra por palavra: `_toast_profile(
-    # f"Perfil removido: {name}")` (`profiles_actions.py:3197`).
+    # f"Perfil removido: {name}")` (`profiles_actions.py:3233`).
     #
     # `_dizer` E NÃO `_anotar` — 03/09/2026. Os dois guardam a frase; só o
     # primeiro a DEVOLVE para o `_deu_certo` pintar no ato. Com o `_anotar` a
@@ -2808,7 +2808,7 @@ def recarregar(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
     feito"*. A premissa está certa e a conclusão não segue — a janela estável
     tem o MESMO botão, sobre uma lista que ela também mantém em cache
     (`on_profile_reload` → `_reload_profiles_store` + toast "Lista recarregada",
-    `profiles_actions.py:3328`). O trabalho que ele faz não é a leitura: é
+    `profiles_actions.py:3355`). O trabalho que ele faz não é a leitura: é
     **dizer que leu**. Um botão cuja promessa é tranquilizar não fica mudo
     porque o produto já estava certo.
 
@@ -2823,7 +2823,7 @@ def recarregar(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
     segundo gesto desta aba sem chamada de ponte — o outro é o `selecionar`.
 
     A FRASE É A DA JANELA ESTÁVEL, palavra por palavra: `"Lista recarregada"`
-    (`profiles_actions.py:3321`). O número de perfis vai junto porque é o que
+    (`profiles_actions.py:3357`). O número de perfis vai junto porque é o que
     faz o clique VALER: ela relê para conferir que o perfil novo apareceu.
     """
     carga = pacote(ctx)
