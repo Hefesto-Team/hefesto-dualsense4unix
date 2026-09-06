@@ -2942,7 +2942,7 @@ class PyDualSenseController(IController):
         # stale, fazendo a CLI/GUI mostrarem o transporte errado por horas.
         # Custo: 1 getattr + 1 string check por tick (~60Hz) — desprezível.
         self._transport = self._detect_transport(ds)
-        battery = self._read_battery_raw(ds)
+        battery, carga = self._read_battery_raw(ds), self._read_battery_state_opt(ds)
         # HOTFIX-2: evdev é fonte primária de input quando disponível.
         if self._evdev.is_available():
             snap = self._evdev.snapshot()
@@ -2958,7 +2958,7 @@ class PyDualSenseController(IController):
                 logger.debug("ds_state_mic_btn_indisponivel_evdev_path", exc_info=True)
             buttons_pressed = frozenset(buttons)
             return ControllerState(
-                battery_pct=battery,
+                battery_pct=battery, battery_state=carga,
                 l2_raw=snap.l2_raw,
                 r2_raw=snap.r2_raw,
                 connected=self.is_connected(),
@@ -2986,7 +2986,7 @@ class PyDualSenseController(IController):
         # em 0 — reconverter para cru 0-255. L2/R2 NÃO passam por aqui: já são
         # crus 0-255 na lib (não somar 128 neles).
         return ControllerState(
-            battery_pct=battery,
+            battery_pct=battery, battery_state=carga,
             l2_raw=l2_raw,
             r2_raw=r2_raw,
             connected=self.is_connected(),
@@ -5414,7 +5414,7 @@ class PyDualSenseController(IController):
         """Descreve cada controle conectado (observabilidade — IPC `controller.list`).
 
         Uma entrada por handle aberto:
-        `{index, connected, transport, is_primary, uniq, battery_pct}`.
+        `{index, connected, transport, is_primary, uniq, battery_pct, battery_state}`.
         O `index` (FEAT-DSX-CONTROLLER-SELECTOR-01) é a POSIÇÃO em
         `list(self._handles)` (0 = primário) — o mesmo número que o seletor de
         controle usa em `set_output_target`.
@@ -5442,7 +5442,7 @@ class PyDualSenseController(IController):
                     "transport": self._detect_transport(handle) if connected else None,
                     "is_primary": key == primary,
                     "uniq": self._key_to_uniq(key),
-                    "battery_pct": self._read_battery_opt(handle) if connected else None,
+                    **self._carga(handle, connected),  # battery_pct + battery_state
                 }
             )
         return out
@@ -5463,6 +5463,26 @@ class PyDualSenseController(IController):
         if normalized is None or len(normalized) != 12:
             return None
         return normalized
+
+    def _carga(self, handle: pydualsense, connected: bool) -> dict[str, object]:
+        """As DUAS metades da bateria de um handle, num par que não se separa.
+
+        BATERIA-PARADA-01 (B1). `battery_pct` é o número e `battery_state` é o
+        estado de carga — e eles vêm do MESMO byte (`states[53]`: nibble baixo
+        = nível, nibble alto = carga). Nasceram numa função só justamente
+        porque a queixa dela era a metade que faltava: *"o percentual nunca é
+        atualizado"* descrevia um 100% mudo, que é indistinguível de uma barra
+        travada quando ninguém diz "no cabo".
+
+        Desconectado devolve os dois `None`: leitura fantasma de handle fechado
+        é pior que ausência.
+        """
+        if not connected:
+            return {"battery_pct": None, "battery_state": None}
+        return {
+            "battery_pct": self._read_battery_opt(handle),
+            "battery_state": self._read_battery_state_opt(handle),
+        }
 
     def reassert_resolved_outputs(self, *, verify: bool = False) -> None:
         """Re-aplica o desired RESOLVIDO por-controle (3 camadas) via sysfs.
@@ -5696,6 +5716,45 @@ class PyDualSenseController(IController):
         return max(0, min(100, value))
 
     @staticmethod
+    def _read_battery_state_opt(ds: pydualsense) -> str | None:
+        """Estado de carga de UM handle (:data:`ESTADO_DE_CARGA`), ou None.
+
+        BATERIA-PARADA-01 (B1) — o defeito que isto fecha, medido em
+        26/08/2026 com os dois controles dela no cabo: três leituras do daemon
+        com sete segundos entre elas devolveram `bat=100 status=None` nas três,
+        enquanto o nó do kernel dizia `Full` num controle e `Charging` no
+        outro. **O produto lia o NÚMERO e jogava fora o ESTADO** — e é isso que
+        faz a barra parecer congelada: 100% parado, sem contar que está no cabo.
+
+        O dado já vinha no MESMO byte que o percentual e ninguém o lia: o
+        `report_thread` da pydualsense escreve `battery.State` e `battery.Level`
+        do `states[53]` na mesma linha. Mesma leitura barata do
+        `_read_battery_opt` — só getattrs, sem HID I/O, segura fora do
+        `_io_lock`.
+
+        **Level 0 é "ninguém reportou ainda", e o discriminador é exato:** um
+        report de verdade dá `nibble*10+5`, cujo mínimo é 5.
+        `DSBattery.__init__` nasce com `Level = 0` e `State = 0`, e `0` é
+        DESCARREGANDO na tabela do kernel — sem esta guarda um controle
+        recém-plugado anunciaria "descarregando" antes do primeiro report, que
+        é inventar leitura.
+        """
+        battery = getattr(ds, "battery", None)
+        if battery is None:
+            return None
+        level = getattr(battery, "Level", None)
+        estado = getattr(battery, "State", None)
+        if level is None or estado is None:
+            return None
+        try:
+            if int(level) <= 0:  # ainda sem report: `State` é o zero do __init__
+                return None
+            nibble = int(estado)
+        except (TypeError, ValueError):
+            return None
+        return ESTADO_DE_CARGA.get(nibble & 0x0F)
+
+    @staticmethod
     def _read_battery_raw(ds: pydualsense) -> int:
         # Contrato legado do read_state/get_battery: bateria SEMPRE int
         # (0 quando indisponível). Delega a leitura ao `_read_battery_opt`.
@@ -5712,4 +5771,43 @@ class PyDualSenseController(IController):
             return mode
 
 
-__all__ = ["PyDualSenseController"]
+#: O nibble ALTO do byte de bateria (`status[0]`), traduzido — BATERIA-PARADA-01.
+#:
+#: **MORA AQUI, no fim do módulo, e não ao lado das outras constantes**: as
+#: citações `arquivo:linha` do `docs/data/mapa-controles.csv` e da referência
+#: canônica apontam para onze símbolos deste arquivo, e uma constante nova lá em
+#: cima empurraria as onze. `docs/data/` está no `nao_toca` desta sprint, e
+#: `scripts/validar-citacoes-de-linha.py` é portão.
+#:
+#: **É a mesma razão de duas formas estranhas lá em cima**, e elas não são
+#: descuido: os dois kwargs numa linha só no `read_state`
+#: (`battery_pct=..., battery_state=...`) e o `**self._carga(...)` no
+#: `describe_controllers`. As três edições que tinham de acontecer ACIMA da
+#: última citação por linha deste arquivo (`:5451`, `_key_to_uniq`) são
+#: NET-ZERO em linhas, de propósito. Quem reformatar sem saber disso apodrece
+#: onze endereços do mapa de canais de uma vez.
+#:
+#: A tabela é a do `dualsense_parse_report` do kernel, registrada em
+#: `docs/protocol/driver-hid-playstation.md` (§"A tradução de bateria") e já
+#: aplicada em `core/physical_report_reader.py` (`decodificar_bateria`): mesma
+#: fonte, mesmos cinco casos, para as duas rotas dizerem a mesma palavra sobre o
+#: mesmo byte.
+#:
+#: **ONDE A BIBLIOTECA E O DRIVER DISCORDAM, VALE O DRIVER.** A `BatteryState`
+#: da pydualsense chama `0xB` de `POWER_SUPPLY_STATUS_NOT_CHARGING`, e o
+#: `hid-playstation` diz tensão/temperatura fora de faixa em `0xa` E `0xb`. A
+#: ordem de precedência desta casa é o aparelho antes da biblioteca, então o
+#: nome que sai daqui é o do driver. Nada além do VALOR inteiro do enum é usado.
+#:
+#: `0x0` é DESCARREGANDO e também é o zero de `DSBattery.__init__` — a guarda
+#: que separa os dois é o `Level`, em `_read_battery_state_opt`.
+ESTADO_DE_CARGA: dict[int, str] = {
+    0x0: "descarregando",
+    0x1: "carregando",
+    0x2: "cheio",
+    0xA: "fora_de_faixa",
+    0xB: "fora_de_faixa",
+    0xF: "erro",
+}
+
+__all__ = ["ESTADO_DE_CARGA", "PyDualSenseController"]

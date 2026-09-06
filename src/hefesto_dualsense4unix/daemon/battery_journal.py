@@ -93,6 +93,35 @@ RAIZ_POWER_SUPPLY = Path("/sys/class/power_supply")
 #: Prefixo do nó de UM controle PlayStation. O sufixo é o endereço com ``:``.
 PREFIXO_NO_KERNEL = "ps-controller-battery-"
 
+#: Prefixo do MAC FORJADO dos nossos gamepads virtuais, sem separador.
+#:
+#: BATERIA-PARADA-01 (B2). **NÃO É BATERIA, E O NÚMERO DELE NUNCA MUDA.**
+#: Medido em 26/08/2026 e reconferido em 06/09/2026 na bancada dela: o sysfs
+#: tinha QUATRO nós de ``ps-controller-battery-*`` para DOIS controles, e dois
+#: eram nossos — os vpads do ``integrations/uhid_gamepad.player_mac()``, cujo
+#: nó diz ``Charging`` para sempre porque é valor de inicialização do uhid, não
+#: medição de aparelho nenhum. Quem casar pelo nó errado lê um número que
+#: **nunca muda** e conclui que a bateria congelou.
+#:
+#: O valor é ESPELHADO de propósito, como o ``VPAD_UNIQ_PREFIX`` do
+#: ``broker/hidraw_broker.py`` e o ``_VPAD_UNIQ_PREFIX`` do
+#: ``core/backend_pydualsense.py`` — este módulo é leve por contrato (stdlib +
+#: logger) e roda no tique lento do daemon. **O que impede o espelho de
+#: divergir em silêncio é o portão**
+#: ``tests/unit/test_a_bateria_nao_le_o_no_do_vpad.py``, que confronta as três
+#: cópias com o ``player_mac(1)`` que as forja: no dia em que o prefixo mudar,
+#: ele NOMEIA em vez de a varredura voltar a ler o nó errado calada.
+#:
+#: A VARREDURA DESTA CASA É :meth:`DiarioDaBateria.observar` + :func:`ler_no_do_kernel`,
+#: e é onde a exclusão mora. Uma função pública que ENUMERASSE
+#: ``/sys/class/power_supply`` chegou a existir aqui em 06/09 e foi apagada
+#: antes do commit: nada em produção a chamava, e o
+#: ``portao_a_casa_sabe_e_o_produto_nao_faz`` a acusou pelo nome. Ela tem lugar
+#: no dia em que alguém fechar `controles_sem_driver` — um controle cuja probe
+#: abortou não tem handle e some da lista, mas o nó de bateria dele fica —,
+#: e nesse dia ela nasce COM o chamador.
+PREFIXO_DO_VPAD = "02fe"
+
 #: Intervalo entre sondas (segundos). Duas leituras de sysfs por sonda.
 INTERVALO_SONDA_S = 30.0
 
@@ -154,6 +183,32 @@ def _endereco_com_dois_pontos(uniq: str) -> str | None:
     return ":".join(digitos[i : i + 2] for i in range(0, 12, 2))
 
 
+def e_no_do_vpad(valor: str | None) -> bool:
+    """True se este endereço é de um gamepad VIRTUAL nosso (:data:`PREFIXO_DO_VPAD`).
+
+    BATERIA-PARADA-01 (B2). Aceita as duas grafias que circulam — a colada
+    (``02fe00000001``) e a com separador (``02:fe:00:00:00:01``) — e também o
+    nome inteiro do nó (``ps-controller-battery-02:fe:…``), porque a varredura
+    do sysfs entrega o nome e o journal entrega o ``uniq``.
+
+    Endereço irreconhecível devolve ``False``: a dúvida aqui erra para *"pode
+    ser controle de verdade"*, e uma leitura a mais custa dois ``read`` de
+    sysfs; o erro contrário — chamar controle dela de vpad — o apagaria da
+    curva da bateria sem deixar rastro.
+    """
+    if not valor:
+        return False
+    digitos = "".join(ch for ch in valor.lower() if ch in "0123456789abcdef")
+    # A comparação é pelos ÚLTIMOS 12 dígitos, e isso não é zelo: o nome do nó
+    # é `ps-controller-battery-<mac>`, e o próprio prefixo tem letras a-f
+    # ("controller" dá `c`,`e`; "battery" dá `b`,`a`,`e`). Filtrar hex do nome
+    # inteiro e olhar o COMEÇO leria "cebae…" e nunca casaria; o endereço mora
+    # no fim.
+    if len(digitos) < 12:
+        return False
+    return digitos[-12:].startswith(PREFIXO_DO_VPAD)
+
+
 def ler_no_do_kernel(
     uniq: str, *, raiz: Path = RAIZ_POWER_SUPPLY
 ) -> tuple[int | None, str | None]:
@@ -165,7 +220,12 @@ def ler_no_do_kernel(
     também a grafia em maiúsculas porque o formato do nome é do driver, não
     nosso. Nunca levanta: leitura de sysfs falha por corrida (o nó some entre o
     ``exists`` e o ``read``) e isso não pode derrubar o poll loop.
+
+    **E ``(None, None)`` também para o nosso vpad** (B2): o nó dele existe e
+    responde, e é justamente por isso que ele engana — ver :func:`e_no_do_vpad`.
     """
+    if e_no_do_vpad(uniq):
+        return (None, None)
     endereco = _endereco_com_dois_pontos(uniq)
     if endereco is None:
         return (None, None)
@@ -209,6 +269,9 @@ class _Leitura:
     vista_em: float
     #: Instante da última LINHA escrita para este controle.
     logada_em: float
+    #: O estado de carga que o HANDLE leu (`backend_pydualsense.ESTADO_DE_CARGA`),
+    #: a régua irmã do ``status`` do kernel. BATERIA-PARADA-01.
+    estado_handle: str | None = None
 
 
 class DiarioDaBateria:
@@ -263,8 +326,15 @@ class DiarioDaBateria:
                 # Sem endereço não há nó do kernel nem identidade estável entre
                 # sondas — uma linha aqui não seria atribuível a controle nenhum.
                 continue
+            if e_no_do_vpad(uniq):
+                # B2: o gamepad VIRTUAL não tem bateria. Se um dia ele entrar
+                # nesta lista, a curva dele seria uma reta em 100% `Charging` —
+                # e a reta se lê como "o instrumento parou de olhar".
+                continue
             vistos.add(uniq)
-            linhas += self._observar_um(uniq, info.get("battery_pct"), agora)
+            linhas += self._observar_um(
+                uniq, info.get("battery_pct"), info.get("battery_state"), agora
+            )
 
         # Um controle que some do backend com outros ainda de pé NÃO gera
         # `probe_offline` (o `is_connected()` é um any() sobre os handles) —
@@ -307,6 +377,7 @@ class DiarioDaBateria:
                 pct_kernel=None,
                 pct_handle=None,
                 status=None,
+                estado_handle=None,
                 faixa=None,
                 idade_s=None,
                 motivo=motivo,
@@ -322,8 +393,15 @@ class DiarioDaBateria:
 
     # -- internos ------------------------------------------------------
 
-    def _observar_um(self, uniq: str, bruto_handle: object, agora: float) -> int:
+    def _observar_um(
+        self,
+        uniq: str,
+        bruto_handle: object,
+        estado_handle: object,
+        agora: float,
+    ) -> int:
         pct_handle = _como_pct(bruto_handle)
+        estado = estado_handle if isinstance(estado_handle, str) and estado_handle else None
         pct_kernel, status = ler_no_do_kernel(uniq, raiz=self._raiz)
         if pct_kernel is None and pct_handle is None:
             # Nada medido por nenhuma das duas réguas: não há o que afirmar.
@@ -342,6 +420,7 @@ class DiarioDaBateria:
             fonte=fonte,
             vista_em=agora,
             logada_em=anterior.logada_em if anterior is not None else agora,
+            estado_handle=estado,
         )
         if motivo is None:
             self._ultimas[uniq] = leitura
@@ -354,6 +433,13 @@ class DiarioDaBateria:
             pct_kernel=pct_kernel,
             pct_handle=pct_handle,
             status=status,
+            # BATERIA-PARADA-01: o estado de carga tem DUAS réguas, como o
+            # percentual — `status` é o do kernel (`Charging`/`Full`/…) e
+            # `estado_handle` é o do byte que o handle leu
+            # (`backend_pydualsense.ESTADO_DE_CARGA`). As duas vão juntas, pela
+            # mesma disciplina que já vale para `pct_kernel`/`pct_handle`: se
+            # discordarem, o resultado é sobre o instrumento, não sobre a carga.
+            estado_handle=estado,
             faixa=faixa,
             fonte=fonte,
             motivo=motivo,
@@ -384,6 +470,7 @@ class DiarioDaBateria:
             pct_kernel=pct_kernel,
             pct_handle=pct_handle,
             status=status,
+            estado_handle=leitura.estado_handle,
             faixa=faixa,
             fonte=fonte,
             idade_s=idade,
@@ -462,11 +549,13 @@ __all__ = [
     "INTERVALO_ANCORA_S",
     "INTERVALO_SONDA_S",
     "JANELA_DEDUP_QUEDA_S",
+    "PREFIXO_DO_VPAD",
     "PREFIXO_NO_KERNEL",
     "RAIZ_POWER_SUPPLY",
     "SEM_ENDERECO",
     "DiarioDaBateria",
     "diario_da_bateria",
+    "e_no_do_vpad",
     "faixa_de",
     "ler_no_do_kernel",
     "mascarar_endereco",

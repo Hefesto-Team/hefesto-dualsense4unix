@@ -340,6 +340,10 @@ class TestDescribeControllers:
                 "is_primary": True,
                 "uniq": "aabbcc000003",
                 "battery_pct": 87,
+                # BATERIA-PARADA-01 (B1): o estado de carga viaja ao lado do
+                # percentual. Este handle tem `Level` e NÃO tem `State`, que é
+                # o caso de "a biblioteca não disse" -> None.
+                "battery_state": None,
             },
             {
                 "index": 1,
@@ -350,6 +354,7 @@ class TestDescribeControllers:
                 # _FakeHandle sem atributo battery -> firmware ainda não
                 # reportou -> None (não 0% falso).
                 "battery_pct": None,
+                "battery_state": None,
             },
         ]
 

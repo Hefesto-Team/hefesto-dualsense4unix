@@ -111,6 +111,15 @@ class ControllerState:
       seguem o vocabulário de `EvdevReader.BUTTON_MAP`; o botão Mic usa o nome
       ``"mic_btn"`` pois não tem keycode evdev estável — vem por HID-raw via
       `ds.state.micBtn` (byte misc2, bit 0x04). Ver `PyDualSenseController.read_state`.
+
+    - `battery_state`: o ESTADO DE CARGA ao lado do percentual — uma das
+      palavras de `backend_pydualsense.ESTADO_DE_CARGA` (``"descarregando"``,
+      ``"carregando"``, ``"cheio"``, ``"fora_de_faixa"``, ``"erro"``) ou
+      ``None`` = *"ninguém reportou ainda"*. BATERIA-PARADA-01 (B1): o
+      percentual sozinho não distingue *"a barra congelou"* de *"está cheia
+      porque está no cabo"*, e era essa ausência que a queixa dela de 26/08
+      nomeava. Campo NOVO com default, para não quebrar quem constrói o
+      snapshot com os cinco obrigatórios de sempre.
     """
 
     battery_pct: int
@@ -124,6 +133,10 @@ class ControllerState:
     raw_rx: int = 128
     raw_ry: int = 128
     buttons_pressed: frozenset[str] = field(default_factory=frozenset)
+    # Campo NOVO no FIM da lista de propósito: um campo intercalado no meio
+    # trocaria o significado de todo `ControllerState(...)` construído por
+    # POSIÇÃO, e a casa tem dezenas deles em `tests/`. No fim, ninguém se move.
+    battery_state: str | None = None
 
     def __post_init__(self) -> None:
         if not (0 <= self.battery_pct <= 100):
