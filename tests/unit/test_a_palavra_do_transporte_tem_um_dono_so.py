@@ -137,7 +137,7 @@ def test_a_contagem_do_cabecalho_separa_os_dois_transportes() -> None:
     assert mesa_viva.texto_da_contagem(so_radio)[1] == "0 USB · 2 BT"
 
 
-def test_a_mesa_do_DESENHO_tambem_publica_a_chave_crua() -> None:
+def test_a_mesa_do_desenho_tambem_publica_a_chave_crua() -> None:
     """A conta lê `transporte`, e a mesa do DESENHO tem de publicá-la também.
 
     **O DEFEITO QUE ESTA RÉGUA NASCEU MEDINDO, e ele foi vivo — 06/09/2026.**
