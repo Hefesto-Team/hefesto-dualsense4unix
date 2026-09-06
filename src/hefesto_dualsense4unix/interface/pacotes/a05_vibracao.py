@@ -849,12 +849,12 @@ def _sem_marcacao(texto: str) -> str:
 # endereço desta aba, estaria mentindo. Por isso `_mirar()` vem antes.
 #
 # A política é a exceção, e não é descuido meu: ela é DA MESA e o produto sabe
-# disso — `app/actions/rumble_actions.py:911` escreve *"não há IPC de política
+# disso — `app/actions/rumble_actions.py:978` escreve *"não há IPC de política
 # por unidade, e inventar um seria mecanismo novo"*.
 from . import gesto  # noqa: E402
 
 #: O PAR DO TESTE quando ninguém pediu vibração ainda. É o mesmo da janela
-#: estável (`app/actions/rumble_actions.py:1012`, `weak = 160` / `strong =
+#: estável (`app/actions/rumble_actions.py:1078`, `weak = 160` / `strong =
 #: 220`), e ele **não tem dono em lugar nenhum** — lá é literal dentro do
 #: método, e aqui é literal dentro do módulo. São duas cópias, e a segunda
 #: nasce declarada para que a próxima pessoa as ache com um `grep`.
@@ -871,7 +871,7 @@ SEGUNDOS_DO_TESTE = 0.5
 #: O TESTE EM CURSO, para que o seguinte o CANCELE — 03/09/2026.
 #:
 #: A janela estável tem isto e a aba nova não tinha: `_cancel_rumble_test_timer`
-#: (`app/actions/rumble_actions.py:999-1008`) remove a fonte GLib pendente e é
+#: (`app/actions/rumble_actions.py:1041-1046`) remove a fonte GLib pendente e é
 #: chamado no começo do "Testar", do "Aplicar", do "Parar" e do "Devolver" —
 #: *"senão o `_rumble_test_stop` pendente desfaria a ação seguinte"*, que é o
 #: defeito M6, nomeado lá.
@@ -1734,12 +1734,12 @@ def testar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
 
     1. `controller.target.set` — sem ele o par iria para os quatro (`_mirar`);
     2. `rumble_set_checked` — a mesma função do `on_rumble_test_500ms`
-       (`app/actions/rumble_actions.py:1032`). A CHECADA, e não a crua: a
+       (`app/actions/rumble_actions.py:1073`). A CHECADA, e não a crua: a
        recusa do Modo Nativo vem no CORPO da resposta, não como erro JSON-RPC
        (`app/ipc_bridge.py:597`), e foi por não a ler que a aba anunciou
        "vibração travada" com o motor parado — NATIVO-RUMBLE-01;
     3. `rumble_stop` e 4. `rumble_passthrough(True)` — os dois passos exatos do
-       `_rumble_test_stop` (`rumble_actions.py:1226-1227`). Parar sozinho fixa
+       `_rumble_test_stop` (`rumble_actions.py:1279-1280`). Parar sozinho fixa
        `(0, 0)` e o laço do daemon re-afirma o silêncio: o jogo ficaria mudo
        depois de um teste, que é a queixa "testei os motores e o jogo não vibra
        mais" (SPRINT-GAME-RUMBLE-01). O passthrough é a segunda metade.
@@ -1788,7 +1788,14 @@ def parar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     mão ao jogo"*. Na janela estável são DOIS botões: o "Parar"
     (`rumble_stop_checked`, que FIXA `(0, 0)` e manda o laço re-afirmar o
     silêncio) e o "Devolver ao jogo" (`rumble_passthrough(True)`,
-    `rumble_actions.py:1111`).
+    `rumble_actions.py:1157`).
+
+    O NOME DO MÉTODO DO DONO **NÃO** SE ESCREVE AQUI, e não é descuido: ele é o
+    `sinal` da linha 177 do `docs/data/paridade-gtk-html.csv`, e
+    `scripts/check_paridade_gtk_html.py` reprova quando um sinal declarado
+    AUSENTE no lado HTML aparece num arquivo de `interface/`. Escrevê-lo em
+    prosa faria a régua anunciar dívida fechada por causa de um comentário —
+    medido em 06/09/2026, com o portão vermelho na mão.
 
     O SEGUNDO PASSO NÃO É ENFEITE: esta aba não tem o botão de devolver, e sem
     ele o "Parar" deixaria o controle num estado MORTO — mudo para o jogo, sem
@@ -1802,7 +1809,7 @@ def parar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     ele ainda não existe, e está no relato.
     """
     # O "PARAR" TAMBÉM TOMA A VEZ — é o equivalente da chamada que a janela
-    # estável faz em `on_rumble_stop` (`rumble_actions.py:1091`). Sem ela, um
+    # estável faz em `on_rumble_stop` (`rumble_actions.py:1129`). Sem ela, um
     # "Testar" ainda dormindo acordaria depois deste "Parar" e mandaria
     # `rumble.stop` no alvo de agora: parar o P1 apagaria a vibração do P2.
     _minha_vez()

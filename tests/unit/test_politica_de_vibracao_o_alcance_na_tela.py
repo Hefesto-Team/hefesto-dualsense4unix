@@ -231,7 +231,22 @@ def test_sem_gamepad_virtual_a_tela_diz_que_a_intensidade_nao_alcanca() -> None:
         "não pode ser silêncio: a tela seguia oferecendo os quatro botões"
     )
     assert "não está chegando" in texto
-    assert "Jogar pelo Hefesto" in texto, "a frase tem de dizer o gesto que cura"
+    # O GESTO QUE CURA MUDOU DE NOME — 06/09/2026, VIBRACAO-O-QUE-SOBROU-01.
+    # A frase dizia *"Ligue “Jogar pelo Hefesto” na aba Início"* e esta linha
+    # exigia esse texto. As duas coisas que ela mandava procurar não existem:
+    # não há aba "Início" (são Jogar · Controles · Gatilhos · Iluminação ·
+    # Vibração · Navegação · Lançadores · Conexões · Sistema · Perfis) e
+    # "Jogar pelo Hefesto" não é rótulo clicável em página nenhuma — medido
+    # varrendo o texto de todo `<button>`/`<label>`/`<option>`/`<a>` das dez
+    # publicadas. A régua exigia a frase impossível, que é o padrão desta casa
+    # de *"a régua media o mundo de ontem"*.  # (noqa-acento: verbo medir, imperfeito)
+    #
+    # O QUE ELA MEDE AGORA é o mesmo REQUISITO — a frase diz o gesto que cura —
+    # sem digitar o rótulo: quem confere que o rótulo existe de verdade é
+    # `tests/unit/test_a_vibracao_nao_manda_num_botao_que_nao_existe.py`, que
+    # pergunta às páginas em vez de decorar.
+    assert "aba Jogar" in texto, "a frase tem de dizer ONDE fica o gesto que cura"
+    assert "Ligado" in texto, "a frase tem de dizer QUAL gesto cura"
     # `.lower()` desde 02/09/2026: a frase encurtou (decisão dela — ver
     # `texto_do_alcance_da_intensidade`) e "Aqui embaixo" passou a ABRIR a
     # última oração, com maiúscula. A régua mede a INFORMAÇÃO, não a caixa da
@@ -245,7 +260,7 @@ def test_sem_gamepad_virtual_a_tela_diz_que_a_intensidade_nao_alcanca() -> None:
 def test_no_nativo_a_frase_e_outra() -> None:
     """Ali não há defeito nenhum: é o modo funcionando como deve.
 
-    Mandá-la mexer na aba Início seria mandá-la consertar o que está certo.
+    Mandá-la ligar o Hefesto seria mandá-la consertar o que está certo.
     """
     texto = rumble_actions.texto_do_alcance_da_intensidade(
         {"rumble_ff": {"vpads": 0}, "native_mode": True}

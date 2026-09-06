@@ -100,13 +100,39 @@ _POLICY_LABEL: dict[str, str] = {
 ROTULOS_DO_ORCAMENTO: dict[str, str] = dict(_POLICY_LABEL)
 
 #: RUM-01: o texto dos toasts/estado mandava clicar "Devolver ao jogo" — botão
-#: que NÃO existe. O botão real (main.glade) tem este rótulo; um único dono aqui
-#: impede a dessincronia de voltar. Ao mexer no rótulo do glade, mexa aqui.
+#: que NÃO existe. Um único dono aqui impede a dessincronia de voltar.
 #: Rótulo do botão que devolve a vibração ao jogo. Público porque o banner
 #: (status_actions) manda clicar nele — as duas telas não podem divergir no
 #: nome do botão.
-BTN_GIVE_BACK_TO_GAME = "Deixar o jogo controlar a vibração"
-_BTN_GIVE_BACK_TO_GAME = BTN_GIVE_BACK_TO_GAME
+#:
+#: **O VALOR MUDOU EM 06/09/2026, e é o RUM-01 acontecendo pela segunda vez.**
+#: Ele era ``"Deixar o jogo controlar a vibração"``, o rótulo do botão do
+#: ``gui/main.glade``. O glade foi apagado na `GTK-3`
+#: (``D-0609-GTK-LEVA-INTEIRA``) e a interface nova **nunca teve** esse botão:
+#: na aba Vibração são dois por coluna — "Testar" e "Parar" —, e o "Parar"
+#: faz os DOIS atos num clique (``a05_vibracao.parar``: ``rumble_stop_checked``
+#: e em seguida ``rumble_passthrough(True)``), exatamente porque o botão de
+#: devolver não existe. Medido em 06/09/2026 varrendo o texto de todo
+#: ``<button>`` das dez páginas publicadas: ``"Parar"`` está lá; ``"Deixar o
+#: jogo controlar a vibração"``, em nenhuma.
+#:
+#: O nome da constante FICA — três arquivos a citam pelo nome em prosa
+#: (``interface/aba05.py:272``, ``app/telas/vibracao.py:140``,
+#: ``tests/unit/portao_a_casa_sabe_e_o_produto_nao_faz.py``), e trocá-lo
+#: quebraria citações sem curar defeito nenhum. O que estava errado era o
+#: VALOR: um rótulo é a promessa de um botão, e este apontava para um botão
+#: que ninguém pode clicar.
+BTN_GIVE_BACK_TO_GAME = "Parar"
+
+#: ONDE ESSE BOTÃO FICA — e o rótulo sozinho não bastava. "Parar" é uma palavra
+#: curta que aparece em mais de uma tela; a frase que manda clicar tem de dizer
+#: a aba, senão manda procurar. A aba se chama **Vibração** (o glossário, §1:
+#: a palavra da tela é *vibração*, nunca *rumble*), e é o nome do arquivo
+#: publicado ``interface/paginas/05-vibracao.html``.
+#:
+#: Frase pronta e não pedaço, para que os quatro pontos que a usam não montem
+#: quatro ordens de palavras diferentes para a mesma instrução.
+COMO_DEVOLVER_AO_JOGO = f"clique “{BTN_GIVE_BACK_TO_GAME}” na aba Vibração"
 
 #: JARG-01/LB-02: "daemon offline?" vaza jargão + palpite. O resto do app já
 #: fala "ligue na aba Sistema" — a fronteira da GUI traduz aqui também.
@@ -360,20 +386,36 @@ def texto_do_alcance_da_intensidade(state: dict[str, Any]) -> str | None:
     # tela só tem quantos gamepads virtuais existem. Ele pergunta "há algum?".
     backends = ("vpad",) * max(0, vpads)
     if sem_dono_do_rumble(native=native, backends=backends):
-        # "NA ABA INÍCIO" MANDA A UM LUGAR QUE A INTERFACE NOVA NÃO TEM — achado
-        # em 03/09/2026, na foto da aba Vibração do produto. As abas de lá são
-        # Jogar · Controles · Gatilhos · Iluminação · Vibração · Navegação ·
-        # Lançadores · Conexões · Sistema · Perfis: não existe "Início", e o
-        # interruptor que a frase pede chama-se "Status" na aba **Jogar**.
-        # A frase está CERTA na janela GTK, que tem a aba Início — é UMA string
-        # com DUAS telas, e o dia em que a segunda renomeou a aba, ela ficou meio
-        # verdadeira. Não a reescrevi: texto de tela é decisão dela, e o conserto
-        # certo (uma frase que sirva às duas, ou o nome vindo de quem desenha a
-        # aba) é escolha, não digitação.
+        # "NA ABA INÍCIO" MANDAVA A UM LUGAR QUE NÃO EXISTE — achado em
+        # 03/09/2026, na foto da aba Vibração do produto, e CURADO em 06/09
+        # (VIBRACAO-O-QUE-SOBROU-01). As abas são Jogar · Controles · Gatilhos ·
+        # Iluminação · Vibração · Navegação · Lançadores · Conexões · Sistema ·
+        # Perfis: "Início" não é uma delas, e "Jogar pelo Hefesto" não é rótulo
+        # de coisa nenhuma que se clique.
+        #
+        # O QUE ADIOU A CURA CADUCOU. O comentário de 03/09 dizia que a frase
+        # "está CERTA na janela GTK, que tem a aba Início" — é UMA string com
+        # DUAS telas — e por isso não a reescreveu. A janela GTK saiu inteira em
+        # 06/09 (`D-0609-GTK-LEVA-INTEIRA`, o `main.glade` não está mais no
+        # disco): a segunda tela não existe, e o que sobrava era uma frase VIVA
+        # na aba Vibração (`app/telas/vibracao.textos_do_estado` →
+        # `a05_vibracao.pacote`, o bloco `#vib-estado`) mandando a pessoa
+        # procurar duas coisas inexistentes.
+        #
+        # O DESTINO NOVO É MEDIDO, não lembrado: `interface/paginas/01-jogar.html`
+        # tem a linha `Status` com as duas posições `Ligado` / `Desligado`
+        # (`data-gesto="hefesto"`, `data-modo="gamepad"` no `Ligado`) — e é
+        # `gamepad` que cria o gamepad virtual cuja falta esta frase denuncia.
+        # O glossário escreve o mesmo par: *"Status: Ligado / Desligado"*.
+        #
+        # O TAMANHO FOI CONFERIDO, porque ele já custou uma aba rolando: a frase
+        # nova tem 161 caracteres contra os 162 da anterior, e quem mede de
+        # verdade é `tests/unit/test_o_aviso_da_vibracao_cabe_na_aba.py`, no
+        # navegador — contar caractere é proxy, e proxy fica verde na hora errada.
         return (
             "A intensidade não está chegando a jogo nenhum: falta o gamepad "
-            "virtual, por onde ela passa. Ligue “Jogar pelo Hefesto” na aba "
-            "Início. Aqui embaixo ela ainda vale."
+            "virtual, por onde ela passa. Ponha o Status em “Ligado” na aba "
+            "Jogar. Aqui embaixo ela ainda vale."
         )
     if vpads == 0 and native:
         # NATIVO-RUMBLE-01 (19/08/2026): a oração final desta frase dizia "Ela
@@ -1023,8 +1065,7 @@ class RumbleActionsMixin(WidgetAccessMixin):
         else:
             self._toast_rumble(
                 f"Vibração travada (fraca={weak}, forte={strong}) — enquanto travada o "
-                f"jogo NÃO controla a vibração; clique “{_BTN_GIVE_BACK_TO_GAME}” "
-                "para jogar"
+                f"jogo NÃO controla a vibração; {COMO_DEVOLVER_AO_JOGO} para jogar"
                 if ok
                 else f"Vibração {_MSG_HEFESTO_OFF}"
             )
@@ -1108,8 +1149,8 @@ class RumbleActionsMixin(WidgetAccessMixin):
         self._toast_rumble(
             motivo
             or (
-                f"Vibração parada (travada em silêncio) — clique "
-                f"“{_BTN_GIVE_BACK_TO_GAME}” para o jogo voltar a controlar a vibração"
+                f"Vibração parada (travada em silêncio) — {COMO_DEVOLVER_AO_JOGO} "
+                "para o jogo voltar a controlar a vibração"
             )
         )
 
@@ -1294,12 +1335,12 @@ class RumbleActionsMixin(WidgetAccessMixin):
             if active == [0, 0]:
                 estado = (
                     '<span foreground="#ffb86c">travada em silêncio '
-                    f'(clique “{_BTN_GIVE_BACK_TO_GAME}”)</span>'
+                    f'({COMO_DEVOLVER_AO_JOGO})</span>'
                 )
             else:
                 estado = (
                     f'<span foreground="#ffb86c">travada em fraca={active[0]}, '
-                    f'forte={active[1]} (clique “{_BTN_GIVE_BACK_TO_GAME}” '
+                    f'forte={active[1]} ({COMO_DEVOLVER_AO_JOGO} '
                     "para jogar)</span>"
                 )
         else:

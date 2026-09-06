@@ -55,7 +55,7 @@ from hefesto_dualsense4unix.app.actions.home_actions import (
     vpad_degradation_text,
 )
 from hefesto_dualsense4unix.app.actions.rumble_actions import (
-    BTN_GIVE_BACK_TO_GAME,
+    COMO_DEVOLVER_AO_JOGO,
 )
 from hefesto_dualsense4unix.app.alvo_de_edicao import (
     MOTIVO_DAEMON_DESLIGADO,
@@ -2243,11 +2243,26 @@ class StatusActionsMixin(WidgetAccessMixin):
         self._modo_nativo_ligado = bool(state.get("native_mode"))
 
     def _update_rumble_badge(self, state: dict[str, Any]) -> None:
-        """Denuncia no banner que a vibração está travada pela GUI.
+        """Denuncia no banner que a vibração está travada.
 
-        Só (0,0) — o silêncio do botão "Parar" — e valores fixos não-zero
-        merecem aviso: nos dois o FF do jogo é ignorado. Em passthrough
+        Só (0,0) — o silêncio deliberado — e valores fixos não-zero merecem
+        aviso: nos dois o FF do jogo é ignorado. Em passthrough
         (`rumble_active is None`, o normal para jogar) o badge some.
+
+        **A DICA MUDOU EM 06/09/2026 (VIBRACAO-O-QUE-SOBROU-01, linha 177 do
+        CSV da paridade), e as DUAS metades dela estavam erradas:**
+
+        * *"travada pela aba Rumble"* — não há aba com esse nome, e MEDIDO nos
+          dois gestos da aba Vibração (`interface/pacotes/a05_vibracao`), essa
+          aba **não consegue travar**: `testar` e `parar` os dois terminam em
+          `rumble_passthrough(True)`. Quem trava é outra superfície, e afirmar
+          a culpada manda caçar no lugar errado — então a frase deixou de
+          afirmar quem travou;
+        * *"aba Rumble → “Deixar o jogo controlar a vibração”"* — o botão de
+          devolver saiu com a janela GTK e a interface nova nunca o teve. A
+          frase agora vem inteira do dono
+          (`rumble_actions.COMO_DEVOLVER_AO_JOGO`) e nomeia o "Parar" da aba
+          Vibração, que é o botão que existe e que devolve a mão ao jogo.
         """
         badge = getattr(self, "_rumble_badge", None)
         if badge is None:
@@ -2264,9 +2279,8 @@ class StatusActionsMixin(WidgetAccessMixin):
             f'<span foreground="#ffb86c">{texto}</span>'
         )
         badge.set_tooltip_text(
-            "A vibração está travada pela aba Rumble e o jogo não consegue "
-            "mexer nela. Para devolver ao jogo: aba Rumble → "
-            f"“{BTN_GIVE_BACK_TO_GAME}”."
+            "A vibração está travada e o jogo não consegue mexer nela. Para "
+            f"devolver ao jogo, {COMO_DEVOLVER_AO_JOGO}."
         )
         badge.show()
 
@@ -2596,7 +2610,16 @@ class StatusActionsMixin(WidgetAccessMixin):
         UI-STATUS-OFFLINE-FALLBACK-01: o default do Glade é "Consultando..."
         em todos os labels. Se o daemon nunca subiu, os 3 timers continuam
         rodando mas o usuário fica olhando "Consultando..." sem entender que
-        precisa abrir a aba Sistema e ligar o Hefesto.
+        precisa abrir a aba Sistema e pôr o serviço de pé.
+
+        **O BOTÃO NOMEADO MUDOU EM 06/09/2026, e pelo mesmo defeito do badge
+        de vibração logo acima:** a frase mandava clicar em *"Ligar o
+        Hefesto"*, que não é botão de tela nenhuma. Medido varrendo o texto de
+        todo `<button>` das dez páginas publicadas: a aba Sistema oferece
+        "Reiniciar o serviço", "Parar o serviço" e "Retomar"; *"Ligar o
+        Hefesto"* não aparece em nenhuma. "Reiniciar o serviço" é o que
+        responde ao caso desta função — o serviço não respondeu — e é o botão
+        que a pessoa acha quando abre a aba.
         """
         if self._first_poll_succeeded:
             return False  # one-shot, não reagendar
@@ -2607,7 +2630,8 @@ class StatusActionsMixin(WidgetAccessMixin):
             # a entidade `&#9675;`.
             header.set_markup(
                 '<span foreground="#ff5555">'
-                "&#9675; Desconectado — abra a aba Sistema e clique em \"Ligar o Hefesto\""
+                "&#9675; Desconectado — abra a aba Sistema e clique em "
+                "\"Reiniciar o serviço\""
                 "</span>"
             )
         self._set_estado_global("status_daemon", "Sem resposta (ligue na aba Sistema)")
@@ -2776,12 +2800,20 @@ class StatusActionsMixin(WidgetAccessMixin):
         self._set_estado_global("status_daemon", "Reconectando")
 
     def _render_offline(self) -> None:
+        """O banner do serviço fora do ar.
+
+        **O BOTÃO NOMEADO MUDOU EM 06/09/2026** — mesma cura, mesma medição e
+        mesma frase do `_check_initial_poll_fallback`: *"Ligar o Hefesto"* não
+        é rótulo de botão de tela nenhuma. Os dois pontos foram trocados
+        juntos de propósito: curar um só deixaria as duas versões vivas, que é
+        o defeito que a regra do fato-errado existe para matar.
+        """
         header = self._get("header_connection")
         if header is not None:
             header.set_markup(
                 '<span foreground="#ff5555">'
                 "&#9675; Hefesto desligado — abra a aba Sistema e clique em "
-                "\"Ligar o Hefesto\""
+                "\"Reiniciar o serviço\""
                 "</span>"
             )
         self._set_estado_global("status_daemon", "Desligado")
