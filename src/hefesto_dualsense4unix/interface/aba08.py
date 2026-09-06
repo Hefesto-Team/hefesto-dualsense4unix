@@ -965,17 +965,50 @@ CSS = CSS_GLIFO + CSS_POPUP + """
      vizinho de nome igual que esta aba já pagou três vezes. */
   .ressalva .mais{font-style:italic}
 
-  /* OS CONTROLES QUE O HEFESTO SÓ VÊ — EXTERNOS-01, 06/09/2026, linha 305 do
-     CSV da paridade. A caixa é a MESMA `monta.ressalva` das duas linhas acima,
-     e por isso não há regra de estado vazio aqui: `.ressalva:empty` e
-     `.ressalva:has(.nada)` já vêm do esqueleto. Em repouso a seção mede ZERO.
+  /* OS CONTROLES QUE O HEFESTO SÓ VÊ — EXTERNOS-01 (06/09/2026, linha 305 do
+     CSV da paridade) e a escolha DELA no mesmo dia: **no mesmo frame dos
+     assentos**, como a janela GTK fazia. A EXTERNOS-01 os pôs numa ressalva
+     debaixo do acordeão e PERGUNTOU; aqui eles são LINHAS do próprio `.gc`.
+
+     A VAGA É `display:contents` pela mesma razão da aba 01: o piloto precisa de
+     UM elemento de pé para reescrever (`data-hef-alvo="html"`), e uma caixa
+     de verdade dentro de um `flex-direction:column` viraria UM item — todas as
+     linhas empilhadas dentro de uma célula, com a moldura do `.gc` cortando o
+     desenho ao meio. O marcador de vazio sai por `display:none`, e não pelo
+     `:empty` da `.ressalva`, porque sob `display:contents` um `<i>` vazio ainda
+     seria um item de flex e abriria uma linha de altura zero.
+
+     A LINHA NÃO É UM `.gc-item`, e continua não sendo: cada `.gc-item` tem
+     `data-controle="pN"`, um rádio de alvo de saída e um corpo que abre. Um
+     externo não tem assento, não é alvo de saída de nada e não tem o que abrir
+     — pô-lo ali daria à tela um sexto rádio apontando para um aparelho em que o
+     daemon não escreve. O que se copia é a CAIXA (o fio de 1px que separa as
+     linhas, os 12px de recuo, a coluna do nome), e nunca a classe.
+
+     A ARESTA ESQUERDA É TRACEJADA, e é o segundo sinal depois da marca: os
+     `.gc-item` levam ali 3px sólidos, que é onde a `.gc-cor` pinta a cor LIDA
+     do plástico. Um externo não tem cor lida — a folha das 28 é dos DualSense —
+     e o tracejado é o vocabulário desta casa para *"isto não é um ajuste seu"*
+     (`.renomeia`, `.degrau.sem-dono` da aba 01). Nada de `opacity`.
+
+     QUEM O DISTINGUE É A MARCA, como na janela GTK: o assento diz o nome do
+     controle, o externo diz *"Controle 4 — Nintendo"*, com a palavra vinda de
+     `external_controllers.brand_of`.
 
      O AVISO DO `hid-nintendo` VAI EM LARANJA, que é a cor que esta casa reserva
      para o que pede atenção — e ele não acusa o Hefesto: a morte é do driver
      do kernel, e a saída estável é o cabo. */
-  .ressalva .ext-linha{color:var(--texto-mudo);margin-top:2px}
-  .ressalva .ext-linha b{color:var(--fg)}
-  .ressalva .ext-aviso{color:var(--orange);display:block}
+  .gc .ext-vaga{display:contents}
+  .gc .ext-vaga > .nada{display:none}
+  .gc .ext-linha{display:flex;align-items:center;gap:11px;
+                 min-height:30px;padding:4px 12px;
+                 font-size:12px;color:var(--texto-mudo);
+                 border-top:1px solid var(--border-sutil);
+                 border-left:3px dashed var(--border-forte)}
+  .gc .ext-nome{color:var(--fg);font-weight:600;white-space:nowrap;
+                flex:0 0 var(--larg-nome)}
+  .gc .ext-via{flex:1;font-size:11.5px}
+  .gc .ext-aviso{color:var(--orange);font-size:11.5px;text-align:right}
 
   /* ---- botões: todo grupo divide a largura do bloco em partes IGUAIS ----
      A régua dela é estrita: 273/273/273/273 na Jogar, 260 nos 38 da Gatilhos,
@@ -1512,7 +1545,12 @@ CSS = CSS_GLIFO + CSS_POPUP + """
 #: 214,3px. 220 dá 5,7 de folga — uma palavra maior nessa linha estoura, e aí é
 #: este número que sobe, num lugar só.
 LARG_NOME = 220
-CSS += f"\n  .gc-cabeca{{--larg-nome:{LARG_NOME}px}}\n"
+#: A LINHA DO EXTERNO BEBE DA MESMA VARIÁVEL — 06/09/2026, com a escolha dela de
+#: pôr os externos no mesmo frame. A coluna do nome tem de cair no MESMO x das
+#: quatro linhas de cima, senão a fileira de baixo lê como outra tabela; e um
+#: segundo número aqui seria a segunda grafia da mesma medida.
+CSS += (f"\n  .gc-cabeca,\n"
+        f"  .gc .ext-linha{{--larg-nome:{LARG_NOME}px}}\n")
 
 # ---------------------------------------------------------------------------
 # AS REGRAS QUE O ACORDEÃO GERA — uma por estado, e o estado é a MESA.
@@ -3394,20 +3432,26 @@ MIOLO = f'''
         {monta_ressalva("radio-fragil")}
         <div class="gc">
 {chr(10).join(linha_do_controle(c) for c in MESA)}
+          <!-- OS CONTROLES QUE O HEFESTO SÓ VÊ — EXTERNOS-01, 06/09/2026, e é a
+               linha 305 do `docs/data/paridade-gtk-html.csv`: *"uma aba chamada
+               Conexões que não lista metade dos controles conectados"*.
+
+               DENTRO DO `.gc`, POR ESCOLHA DELA — 06/09/2026, olhando as duas
+               maquetes: *no mesmo frame dos assentos*, como a janela GTK fazia.
+               A EXTERNOS-01 entregou a ressalva embaixo do acordeão e
+               perguntou; esta é a resposta.
+
+               A LINHA NÃO VIRA UM `.gc-item` POR ISSO, e a razão da EXTERNOS-01
+               continua de pé: cada `.gc-item` tem `data-controle="pN"`, um
+               rádio de alvo de saída do daemon e um corpo que abre. Um externo
+               não tem assento, não é alvo de saída de nada e não tem o que
+               abrir. Estar na mesma moldura é DESENHO; ser um assento é uma
+               afirmação sobre o aparelho, e a tela não a faz.
+
+               ELE NASCE VAZIO pela mesma razão da tabela dos adaptadores e do
+               mapa do gabinete: quantos existem é o que a máquina responde. -->
+          <div class="ext-vaga" data-campo="externos-lista" data-hef-alvo="html"><i class="nada"></i></div>
         </div>
-        <!-- OS CONTROLES QUE O HEFESTO SÓ VÊ — EXTERNOS-01, 06/09/2026, e é a
-             linha 305 do `docs/data/paridade-gtk-html.csv`: *"uma aba chamada
-             Conexões que não lista metade dos controles conectados"*.
-
-             FORA DO ACORDEÃO `.gc`, DE PROPÓSITO: cada `.gc-item` tem
-             `data-controle="pN"`, um rádio de alvo de saída do daemon e um
-             corpo que abre. Um externo não tem assento, não é alvo de saída de
-             nada e não tem o que abrir — pô-lo ali daria à tela um sexto rádio
-             apontando para um aparelho em que o daemon não escreve.
-
-             ELE NASCE VAZIO pela mesma razão da tabela dos adaptadores e do
-             mapa do gabinete: quantos existem é o que a máquina responde. -->
-        {monta_ressalva("externos-lista")}
       </div>
     </div>
 
@@ -3736,6 +3780,40 @@ if __name__ == "__main__":
             _falhas.append(queixa)
 
 
+    def _dentro_do_acordeao(doc: str) -> str:
+        """O `<div class="gc">…</div>` INTEIRO, contado por `div` aberto e fechado.
+
+        Ela existe por causa da escolha dela de 06/09/2026 — *os externos no
+        mesmo frame dos assentos* —, e a régua que a guarda precisa saber onde a
+        moldura ACABA. Um `split` no primeiro `</div>` pararia dentro da
+        primeira linha de controle, e a régua ficaria vermelha sobre a maquete
+        CERTA, que é o pior dos dois erros.
+
+        Devolve `""` quando a moldura não abre — e aí quem chama reprova, que é
+        o comportamento certo: sem acordeão não há frame em que estar dentro.
+        """
+        marca = '<div class="gc">'
+        inicio = doc.find(marca)
+        if inicio < 0:
+            return ""
+        profundidade = 0
+        i = inicio
+        while i < len(doc):
+            abre = doc.find("<div", i)
+            fecha = doc.find("</div>", i)
+            if fecha < 0:
+                return doc[inicio:]
+            if 0 <= abre < fecha:
+                profundidade += 1
+                i = abre + 4
+                continue
+            profundidade -= 1
+            if profundidade == 0:
+                return doc[inicio:fecha + 6]
+            i = fecha + 6
+        return doc[inicio:]
+
+
     # 1. ABRIR UMA MINIMIZA AS OUTRAS. Três rádios com o MESMO `name` — com
     #    `checkbox` as três abriam juntas e a página passava 248px do miolo.
     _ABRE = re.findall(r'<input class="abre" type="(\w+)"(?: name="([^"]*)")?', _HTML)
@@ -3782,15 +3860,35 @@ if __name__ == "__main__":
     #     produto e muda quando ele mudar; o que não pode sumir é o lugar onde
     #     ela cabe. Endereço que some é campo que o piloto não acha e escreve
     #     zero — calado, que é a forma em que os quatro viviam até hoje.
-    #     `externos-lista` ENTROU EM 06/09/2026 (EXTERNOS-01), e é a linha 305 do
-    #     CSV: a mesma doença dos quatro acima — o dono da frase existe no
-    #     produto (`home_actions._format_external_title` e as duas irmãs) e a
-    #     tela não tinha onde escrevê-la.
     for _campo in ("sem-driver", "radio-fragil", "hub-em-comum",
-                   "gabinete-contagens", "externos-lista"):
+                   "gabinete-contagens"):
         _exigir(_HTML.count(f'class="ressalva" data-campo="{_campo}"') == 1,
                 f"a linha de ressalva `{_campo}` não está na página — o dono da "
                 f"frase existe no produto e a tela volta a não ter onde escrevê-la")
+
+    # 1e. OS CONTROLES QUE O HEFESTO SÓ VÊ — EXTERNOS-01 (06/09/2026, linha 305
+    #     do CSV) com a escolha DELA do mesmo dia por cima: *no mesmo frame dos
+    #     assentos*. O endereço saiu da `.ressalva` de baixo e entrou no `.gc`,
+    #     e a régua cobra as DUAS metades — sozinha, cada uma fica verde sobre
+    #     a maquete que ela recusou.
+    _exigir(_HTML.count('data-campo="externos-lista" data-hef-alvo="html"') == 1,
+            "os controles que o Hefesto só vê ficaram sem endereço — o dono da "
+            "frase existe no produto (`home_actions._format_external_title` e as "
+            "duas irmãs) e a tela volta a não ter onde escrevê-la")
+    #     A SEGUNDA METADE: o endereço está DENTRO da moldura do acordeão. A
+    #     conta é por `div` aberto e fechado a partir do `<div class="gc">`,
+    #     porque cada linha de controle traz meia dúzia de `<div>` dentro — um
+    #     `split` no primeiro `</div>` pararia dentro do primeiro cartão.
+    _exigir('data-campo="externos-lista"' in _dentro_do_acordeao(_HTML),
+            "o bloco dos externos saiu de dentro do acordeão dos controles — "
+            "ela escolheu o MESMO frame em 06/09/2026, e a ressalva à parte é "
+            "a maquete que ela recusou")
+    #     E A VAGA É `display:contents`: sem ela as linhas todas caem num item
+    #     só do `flex-direction:column`, empilhadas dentro de uma célula — que é
+    #     a faixa à parte de volta, com outro nome.
+    _exigir(".gc .ext-vaga{display:contents}" in _HTML,
+            "a vaga dos externos deixou de ser `display:contents` — as linhas "
+            "voltam a empilhar dentro de um item só do acordeão")
 
     #     E NENHUM APARELHO DE EXEMPLO NASCE DENTRO DELA: uma linha cravada aqui
     #     afirmaria um 8BitDo ligado que ninguém mediu, que é o defeito exato que
