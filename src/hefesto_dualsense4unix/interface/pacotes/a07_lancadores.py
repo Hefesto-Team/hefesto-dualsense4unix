@@ -637,20 +637,21 @@ def aviso_do_jogo_aberto(
     O TEXTO É O DELA, VERBATIM (`home_actions.WRAPPER_MISSING_TEXT`), e sai da
     própria função — nada é redigitado aqui.
 
-    **A FRASE AINDA MANDA A UM BOTÃO QUE NÃO EXISTE, e a decisão já caiu.** Ela
-    termina em *"Copie as opções na aba Sistema."*; a aba Sistema da interface
-    nova tem doze botões e **nenhum copia coisa alguma** — quem copia é esta
-    aba, desde hoje (:func:`copiar_a_linha`). O PO decidiu em 04/09/2026
-    (`07[02]`): **a frase para de nomear lugar** e passa a dizer só o fato —
-    *"O jogo está rodando sem o hefesto-launch — controles podem duplicar."* —,
-    porque quem diz o que fazer é o botão ao lado, em cada tela. É a única
-    redação que fica certa nas DUAS janelas.
+    **A FRASE MUDOU EM 06/09/2026 (ONDA5-07-03), e a palavra é dela.** Ela
+    terminava em *"Copie as opções na aba Sistema."*, e a aba Sistema da
+    interface nova tem doze botões e nenhum copia coisa alguma. A decisão
+    `07-Q2` dela, em 05/09, recusou as TRÊS opções oferecidas — só o fato,
+    apontar o Consertar, duas frases — e respondeu com uma quarta: *"O produto
+    aplica ela"*. A frase passou a dizer o fato **mais** a promessa que o
+    produto cumpre, sem nomear lugar nenhum:
+    *"O jogo está rodando sem o atalho de inicialização — controles podem
+    duplicar. Reponho o atalho no próximo Aplicar ou Salvar Perfil, com a Steam
+    fechada."*
 
-    **A LINHA A MUDAR NÃO É DESTA POSSE**, e por isso ela não mudou aqui: o
-    texto tem UM dono para as duas telas, `app/actions/home_actions.py:559-562`
-    (com a régua em `tests/unit/test_wrapper_banner.py:84`, que ainda exige o
-    literal *"aba Sistema"*). Reescrevê-lo aqui criaria a segunda frase que a
-    decisão existe para impedir. **Está relatado, com as duas linhas exatas.**
+    O DONO CONTINUA SENDO UM SÓ (`app/actions/home_actions.WRAPPER_MISSING_TEXT`)
+    e esta aba continua sem redigitar uma palavra. A condição *"com a Steam
+    fechada"* está na frase porque a carona não tem relógio próprio: quem repõe
+    é `carona_do_wrapper.passada`, de carona nos gestos de perfil.
 
     AS DUAS RECUSAS CALAM — PO, 04/09/2026, `07[03]`. Até hoje só a dispensa
     (*"Não perguntar para este jogo"*) calava; o *"Não usar neste jogo"* — o
