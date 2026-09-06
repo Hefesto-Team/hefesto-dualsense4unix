@@ -109,18 +109,27 @@ def test_a_frase_nomeia_quem_a_sonda_sabe_reconhecer() -> None:
     para quem não usa Steam — e este caso é o alarme que obriga a trocar as
     duas coisas na mesma leva, nunca uma sem a outra.
     """
-    import inspect
-    import re
-
     from hefesto_dualsense4unix.core import escritor_cru
 
     rotulo, _base = rotulo_lightbar(dict(ENTRY_DISPUTADA), {})
     assert rotulo is not None and "steam" in rotulo.lower()
 
-    fonte = inspect.getsource(escritor_cru.pids_da_steam)
-    padroes = re.findall(r'"pgrep",\s*"-[fx]",\s*"([^"]+)"', fonte)
-    assert padroes, "não achei padrão de `pgrep` nenhum — a régua ficou cega"
-    assert all("steam" in p.lower() for p in padroes), (
-        f"a sonda passou a reconhecer escritor fora da Steam ({padroes}) e a "
+    # A RÉGUA LÊ OS CRITÉRIOS, NÃO O TEXTO DO FONTE (06/09/2026,
+    # DAEMON-ACORDADO-01/E2). Até aqui ela fazia `inspect.getsource` e um
+    # `re.findall` atrás de `"pgrep", "-f", ...` — olhava a PALAVRA no lugar do
+    # ATO, que é a forma de defeito que esta casa já nomeou onze vezes. No dia
+    # em que o `pgrep` saiu (a varredura nativa de `/proc` que a
+    # PERF-PROC-SCAN-01 já usava), ela reprovou a MELHORA e não o defeito.
+    #
+    # Ela se salvou pelo desenho: o velho `assert` dizia "a régua ficou
+    # cega" em vez de passar em silêncio, e foi essa linha que apareceu no
+    # vermelho. Régua que sabe anunciar a própria cegueira é o que se pede.
+    criterios = [
+        escritor_cru._AGULHA_DA_STEAM_NA_CMDLINE,
+        escritor_cru._COMM_EXATO_DA_STEAM,
+    ]
+    assert all(criterios), "a sonda ficou sem critério — a régua ficou cega"
+    assert all("steam" in c.lower() for c in criterios), (
+        f"a sonda passou a reconhecer escritor fora da Steam ({criterios}) e a "
         f"frase do card continua nomeando a Steam: {rotulo!r}"
     )

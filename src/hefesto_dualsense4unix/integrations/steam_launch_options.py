@@ -975,17 +975,32 @@ def invalidar_varredura_de_proc() -> None:
     _ultima_varredura = None
 
 
-def _cmdline_of(pid: str | int) -> str:
+def cmdline_de_pid(pid: str | int) -> str:
     """Cmdline de um pid, com os NUL virando espaço. `""` se não der para ler.
 
     Nunca levanta: pid que morreu entre o `listdir` e o `open` é o caso comum,
     não a exceção, e um processo de outro usuário devolve EACCES.
+
+    **É PÚBLICA desde a DAEMON-ACORDADO-01/E2 (06/09/2026)**, e o nome novo é
+    a razão: o `core/escritor_cru.pids_da_steam` era a última cópia de `pgrep`
+    que a PERF-PROC-SCAN-01 (12/08/2026) não alcançou, e a saída dela é
+    **usar a varredura que já existe aqui** em vez de escrever uma segunda.
+    Duas varreduras de `/proc` no mesmo daemon seriam duas verdades sobre o
+    mesmo `/proc` — o defeito que a casa acabou de pagar com o `pgrep`.
+
+    `_cmdline_of` continua sendo o nome que este módulo usa por dentro: o
+    `_ProcContado` da suíte o monkeypatcha, e a busca do nome é global, então
+    o dublê continua alcançando as quatro camadas de `_steam_launch_cmdline`.
     """
     try:
         with open(f"/proc/{pid}/cmdline", "rb") as fh:
             return fh.read().decode("utf-8", "replace").replace("\0", " ")
     except OSError:
         return ""
+
+
+#: Nome interno da varredura, preservado para o dublê da suíte (ver acima).
+_cmdline_of = cmdline_de_pid
 
 
 def _steam_launch_cmdline(*, agora: float | None = None) -> str | None:
