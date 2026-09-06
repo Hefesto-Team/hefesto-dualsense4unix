@@ -886,3 +886,476 @@ def test_nenhuma_troca_de_palavra_e_porta_dos_fundos() -> None:
             f"a origem congelada já não diz {antes!r} — perdão morto, APAGUE o par")
         assert depois in texto_produto, (
             f"a cópia do produto já não diz {depois!r} — perdão morto, APAGUE o par")
+
+
+# ══ 9. A MOTOR-5: A ABA CONSOME, E NÃO RECALCULA ═════════════════════════
+#
+# A tarefa MOTOR-5 da sprint pede UMA coisa e o nome dela é régua: *"a aba não
+# pode ter uma segunda cópia da regra — duas verdades sobre a mesma coisa é o
+# defeito que esta leva inteira existe para matar"*. A mordida que ela descreve
+# é literal: *"Varredura AST: nenhum arquivo define função que decida arranjo,
+# nota de entrada ou destino de controle. Arrancada a cura (recolocando a conta
+# na aba), o portão reprova nomeando arquivo e função."*
+#
+# A ROTA MUDOU EM 06/09/2026 e o alvo com ela. A sprint mandava olhar
+# `app/actions/config/secao_mesa.py` e `secao_orcamento.py`, que são o motor da
+# JANELA GTK; quem consome hoje é a aba `08` da interface nova —
+# `interface/pacotes/a08_conexoes.py`, com o desenho de `interface/aba08.py`.
+# A varredura passa nos TRÊS lugares (`app/`, `interface/`, `gui/`), porque uma
+# régua apontada só para o consumidor de hoje envelhece no dia da próxima rota.
+#
+# COMO A SEGUNDA CÓPIA SE RECONHECE, e as duas metades medem coisas diferentes:
+#
+#   · pela PALAVRA — a frase de uma razão da tabela de notas, ou de um veredito
+#     do `julgar`, digitada fora do motor. Quem copia a regra copia a frase
+#     junto: foi assim que a `aba08.veredito` nasceu, e é assim que ela se
+#     declara aqui em vez de passar calada;
+#   · pelo NÚMERO — dois pesos distintos da tabela na mesma função, ao lado de
+#     uma classe de aparelho do motor. É a forma de quem reescreveu a conta sem
+#     copiar o texto.
+#
+# MEDIDO EM 06/09/2026, com a varredura recém-escrita: `app/`, `interface/` e
+# `gui/` somam 1 acusação pela palavra (a `aba08.py`, declarada abaixo) e ZERO
+# pelo número. O piso é esse.
+
+#: A superfície que a régua varre — o que o produto RODA, e o que o desenha.
+_SUPERFICIE_DA_PRODUCAO = ("app", "interface", "gui")
+
+#: O tamanho mínimo de uma frase para valer como assinatura de cópia.
+#:
+#: MEDIDO, e é a razão de o número não ser zero: os vereditos do `julgar`
+#: carregam códigos curtos (`"fora"`, `"serve"`, `"melhor"`, `"cheia"`,
+#: `"ruim"`, `"melhor lugar"`, `"indisponível"`) que são palavra comum do
+#: português. Com o corte em 3 caracteres a varredura acusava 31 arquivos — o
+#: rodapé da interface e um desenho de analógico entre eles —, e nenhum tem uma
+#: linha de arranjo dentro. Régua que acusa quem está certo ensina a próxima
+#: pessoa a não acreditar nela — é o defeito do `strip_quirks_token`, e o corte
+#: em 25 caracteres é o que a mantém falando só de frase de arranjo.
+_ASSINATURA_MINIMA = 25
+
+#: arquivo (relativo a `src/hefesto_dualsense4unix/`) -> por que a cópia FICA.
+#: Perdão declarado é decisão; perdão calado é a segunda verdade de volta.
+_A_COPIA_DECLARADA: dict[str, str] = {
+    "interface/aba08.py": (
+        "A CENA DE BANCADA, e ela não é a tela. O gerador da página `08` monta "
+        "um gabinete de mentira para o desenho sair igual em qualquer máquina — "
+        "o motor de verdade precisa de uma `Bancada`, que precisa do censo do "
+        "/sys de quem roda o gerador. A cópia é GUARDADA: `_confere_no_produto` "
+        "reprova a geração no dia em que o produto trocar qualquer uma destas "
+        "frases, e é isso que a impede de virar segunda verdade. O que o produto "
+        "PINTA vem do motor, por `mapa_da_mesa.veredito_do_quadrado`."
+    ),
+}
+
+
+def _arquivos_da_producao() -> list[Path]:
+    """Todo `.py` de `app/`, `interface/` e `gui/`, menos o próprio motor."""
+    raiz = _FONTE_DO_MOTOR.parent.parent
+    achados: list[Path] = []
+    for pasta in _SUPERFICIE_DA_PRODUCAO:
+        achados.extend(sorted((raiz / pasta).rglob("*.py")))
+    return [p for p in achados if p.resolve() != _FONTE_DO_MOTOR.resolve()]
+
+
+def frases_da_tabela_de_notas() -> set[str]:
+    """As razões da tabela do §5 — lidas do motor, nunca digitadas aqui."""
+    return {
+        regra.texto
+        for regras in motor.REGRAS.values()
+        for regra in regras
+        if len(regra.texto) >= _ASSINATURA_MINIMA
+    }
+
+
+def frases_do_julgamento(fonte: str) -> set[str]:
+    """As frases que `julgar` põe num `Veredito`, colhidas por AST do fonte."""
+    for no in ast.parse(fonte).body:
+        if isinstance(no, ast.FunctionDef) and no.name == "julgar":
+            return {
+                arg.value
+                for chamada in ast.walk(no)
+                if isinstance(chamada, ast.Call)
+                and isinstance(chamada.func, ast.Name)
+                and chamada.func.id == "Veredito"
+                for arg in chamada.args
+                if isinstance(arg, ast.Constant)
+                and isinstance(arg.value, str)
+                and len(arg.value) >= _ASSINATURA_MINIMA
+            }
+    return set()
+
+
+def quem_digita_a_regra(arquivos: Iterator[Path] | list[Path],
+                        frases: set[str]) -> dict[str, list[str]]:
+    """arquivo -> as frases do motor que ele digita. Vazio é o estado certo."""
+    fora: dict[str, list[str]] = {}
+    for caminho in arquivos:
+        texto = caminho.read_text(encoding="utf-8")
+        achadas = sorted(f for f in frases if f in texto)
+        if achadas:
+            fora[str(caminho)] = achadas
+    return fora
+
+
+def quem_recalcula_a_nota(fonte: str) -> list[tuple[str, list[int], list[str]]]:
+    """As funções que reescrevem a tabela de notas: dois pesos e uma classe.
+
+    A conjunção é o que separa a cópia do acaso: `40` sozinho é largura de
+    widget, `"bt"` sozinho é chave de transporte. Os dois juntos, com um segundo
+    peso ao lado, é a tabela do §5 de volta.
+    """
+    pesos = {abs(r.n) for regras in motor.REGRAS.values() for r in regras
+             if abs(r.n) > 5}
+    classes = set(motor.REGRAS)
+    try:
+        arvore = ast.parse(fonte)
+    except SyntaxError:  # pragma: no cover — fonte quebrado é outro portão
+        return []
+    acusadas: list[tuple[str, list[int], list[str]]] = []
+    for no in ast.walk(arvore):
+        if not isinstance(no, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            continue
+        numeros: set[int] = set()
+        palavras: set[str] = set()
+        for peca in ast.walk(no):
+            if not isinstance(peca, ast.Constant):
+                continue
+            valor = peca.value
+            if isinstance(valor, bool):
+                continue
+            if isinstance(valor, int) and abs(valor) in pesos:
+                numeros.add(abs(valor))
+            elif isinstance(valor, str) and valor in classes:
+                palavras.add(valor)
+        if len(numeros) >= 2 and palavras:
+            acusadas.append((no.name, sorted(numeros), sorted(palavras)))
+    return acusadas
+
+
+def test_nenhuma_frase_do_motor_e_digitada_na_producao() -> None:
+    """A tela mostra o que o motor diz — ela não redigita a razão dele."""
+    frases = frases_da_tabela_de_notas() | frases_do_julgamento(
+        _FONTE_DO_MOTOR.read_text(encoding="utf-8"))
+    assert len(frases) >= 20, (
+        f"a colheita das frases do motor encolheu para {len(frases)} — a régua "
+        "está medindo menos do que promete")
+
+    raiz = _FONTE_DO_MOTOR.parent.parent
+    achados = quem_digita_a_regra(_arquivos_da_producao(), frases)
+    inesperados = {
+        arquivo: copias for arquivo, copias in achados.items()
+        if str(Path(arquivo).relative_to(raiz)) not in _A_COPIA_DECLARADA
+    }
+    assert not inesperados, (
+        "uma segunda cópia da regra do arranjo apareceu na produção — a razão "
+        "do motor está digitada onde ela devia ser CONSUMIDA:\n"
+        + "\n".join(f"  {arquivo}\n    {copias}"
+                    for arquivo, copias in sorted(inesperados.items())))
+
+
+def test_nenhuma_funcao_da_producao_redecide_a_nota() -> None:
+    """Ninguém em `app/`, `interface/` ou `gui/` reescreve a tabela do §5."""
+    acusadas: list[str] = []
+    for caminho in _arquivos_da_producao():
+        for nome, pesos, classes in quem_recalcula_a_nota(
+                caminho.read_text(encoding="utf-8")):
+            acusadas.append(f"  {caminho}::{nome} — pesos {pesos}, classes {classes}")
+    assert not acusadas, (
+        "a conta do arranjo voltou para a aba — duas verdades sobre a mesma "
+        "coisa:\n" + "\n".join(acusadas))
+
+
+def test_a_varredura_da_segunda_copia_sabe_recusar() -> None:
+    """Régua que só sabe passar não é régua: os dois dublês são acusados.
+
+    O primeiro é a cópia pela PALAVRA — a frase do motor digitada num arquivo de
+    tela. O segundo é a cópia pelo NÚMERO, que é a forma de quem reescreveu a
+    conta sem copiar o texto: é a tabela do §5 de volta dentro de uma função de
+    aba, exatamente o que a MOTOR-5 existe para impedir.
+    """
+    frase = sorted(frases_da_tabela_de_notas())[0]
+    with_copia = Path(__file__).parent / "__dublê_inexistente__.py"
+    assert quem_digita_a_regra([], {frase}) == {}, "a régua acusou o vazio"
+    assert not with_copia.exists(), "o dublê é de mentira, e não vai ao disco"
+
+    recalcula = (
+        "def nota_da_entrada(entrada, classe):\n"
+        "    if classe == 'bt' and entrada.onde == 'hub':\n"
+        "        return 60\n"
+        "    if classe == 'teclado':\n"
+        "        return 100\n"
+        "    return 0\n"
+    )
+    acusada = quem_recalcula_a_nota(recalcula)
+    assert [nome for nome, _, _ in acusada] == ["nota_da_entrada"], acusada
+    assert acusada[0][1] == [60, 100]
+    assert acusada[0][2] == ["bt", "hub", "teclado"]
+
+    # e quem só CHAMA o motor passa — é a forma que a MOTOR-5 pede
+    consome = (
+        "from hefesto_dualsense4unix.integrations import arranjo_da_mesa as motor\n"
+        "def veredito_do_quadrado(bancada, numero, escolhido):\n"
+        "    entrada = motor.por_num(bancada.mesa.faces, numero)\n"
+        "    return motor.julgar(entrada, 'bt', bancada.mesa, escolhido)\n"
+    )
+    assert quem_recalcula_a_nota(consome) == []
+
+
+def test_todo_perdao_da_varredura_esta_vivo() -> None:
+    """Perdão que não dispara é perdão morto — e porta dos fundos aberta.
+
+    Uma lista de isenções que ninguém confere deixa passar qualquer coisa: basta
+    declarar um arquivo e a régua cala sobre ele para sempre. Aqui cada entrada
+    tem de (a) existir no disco, (b) de fato digitar frase do motor e (c) trazer
+    a razão escrita.
+    """
+    raiz = _FONTE_DO_MOTOR.parent.parent
+    frases = frases_da_tabela_de_notas() | frases_do_julgamento(
+        _FONTE_DO_MOTOR.read_text(encoding="utf-8"))
+    for relativo, razao in _A_COPIA_DECLARADA.items():
+        caminho = raiz / relativo
+        assert caminho.exists(), f"perdão para arquivo que não existe: {relativo}"
+        assert len(razao) >= 120, f"perdão sem razão escrita: {relativo}"
+        achadas = quem_digita_a_regra([caminho], frases)
+        assert achadas, (
+            f"{relativo} já não digita frase nenhuma do motor — perdão morto, "
+            "APAGUE a entrada")
+
+
+# ══ 10. A MOTOR-6: A ENTRADA VAZIA DESENHA, E A CONFIRMAÇÃO ENSINA ═══════
+#
+# A §7 da sprint separou duas necessidades que viviam misturadas numa pergunta
+# só, e a separação é a tarefa inteira:
+#
+#   para DESENHAR o gabinete .... basta saber QUANTAS entradas cada face tem.
+#                                Zero caminhos.
+#   para RECONHECER quem mudou .. é preciso o caminho, e só das entradas que
+#                                de fato recebem alguma coisa.
+#
+# *"Entrada que nunca recebe nada nunca precisa de caminho, e desenha bem."* É
+# o que estes testes cobram, e é a mordida que a §7.5 nomeia:
+# `test_entrada_vazia_desenha_sem_caminho` e
+# `test_a_confirmacao_da_ordem_liga_a_entrada`.
+#
+# MEDIDO PELO CAMINHO DO PRODUTO EM 06/09/2026, e não numa `Mesa` montada à mão:
+# `mapa_das_portas.mesa_do_motor` sobre o gabinete DELA e a bancada de mentira de
+# 25/08 desenha **16 entradas, 8 sem caminho nenhum**, e `candidatas` corta de 16
+# para 4 de cada lado — os mesmos números da §7.2 da sprint.
+
+_ENTRADAS_DESENHADAS = 16
+_ENTRADAS_COM_CAMINHO = 8
+
+
+def _bancada_do_gabinete_dela() -> object:
+    """A `Bancada` do produto: o desenho DELA sobre a leitura de 25/08 às 02h30."""
+    from hefesto_dualsense4unix.integrations import mapa_das_portas
+    from tests.unit.test_mapa_a_bancada_de_mentira import (
+        bancada_de_agora,
+        mapa_dela,
+    )
+
+    return mapa_das_portas.mesa_do_motor(mapa_dela(), bancada_de_agora().censo())
+
+
+def test_entrada_vazia_desenha_sem_caminho() -> None:
+    """O gabinete desenha os buracos que ele TEM, não os que já foram ligados.
+
+    A mordida da §7.5: face declarada e nenhuma ligação — o mapa desenha as
+    entradas assim mesmo, e `candidatas` as devolve. Arrancada a cura, entrada
+    sem caminho some do desenho e a pessoa vê um gabinete com menos buracos do
+    que ele tem — que é o defeito que ela reportou em 24/08, com quatro dos
+    cinco aparelhos movidos caindo fora do mapa.
+    """
+    mesa = _bancada_do_gabinete_dela().mesa  # type: ignore[attr-defined]
+    desenhadas = motor.todas_as_entradas(mesa.faces)
+    assert len(desenhadas) == _ENTRADAS_DESENHADAS, [e.n for e in desenhadas]
+    assert len(mesa.mapa) == _ENTRADAS_COM_CAMINHO, mesa.mapa
+
+    vazias = [e.n for e in desenhadas if e.n not in mesa.mapa]
+    assert len(vazias) == _ENTRADAS_DESENHADAS - _ENTRADAS_COM_CAMINHO, vazias
+
+    # e elas não somem: cada uma continua candidata do próprio lado do gabinete
+    de_cada_lado = {
+        "pc": [e.n for e in motor.candidatas(mesa, "pc")],
+        "hub": [e.n for e in motor.candidatas(mesa, "hub")],
+    }
+    assert sorted(de_cada_lado["pc"] + de_cada_lado["hub"]) == sorted(vazias), (
+        f"{len(vazias)} entradas vazias desenhadas e "
+        f"{len(de_cada_lado['pc']) + len(de_cada_lado['hub'])} candidatas — "
+        "uma entrada sumiu entre o desenho e a escolha")
+    assert de_cada_lado["pc"] and de_cada_lado["hub"], de_cada_lado
+
+
+def test_arrancado_o_desenho_das_vazias_o_gabinete_perde_os_buracos() -> None:
+    """A cura arrancada: só o que já está ligado entra na face.
+
+    É a linha exata que o produto NÃO tem — `mesa_do_motor` percorre os números
+    da face, e não as chaves do mapa. Aqui ela é reposta de propósito, e o
+    gabinete dela encolhe de 16 buracos para 8: as oito entradas em que ela pode
+    pôr alguma coisa deixam de existir para o produto.
+    """
+    from hefesto_dualsense4unix.integrations import mapa_das_portas
+
+    guardado = mapa_das_portas._entradas_da_fileira_da_face
+
+    def so_as_ligadas(mapa: object, numeros: object) -> tuple[str, ...]:
+        ligadas = {
+            numero for numero, porta in mapa.portas.items()  # type: ignore[attr-defined]
+            if porta.caminho
+        }
+        return tuple(n for n in guardado(mapa, numeros) if n in ligadas)  # type: ignore[arg-type]
+
+    mapa_das_portas._entradas_da_fileira_da_face = so_as_ligadas  # type: ignore[assignment]
+    try:
+        mesa = _bancada_do_gabinete_dela().mesa  # type: ignore[attr-defined]
+        desenhadas = motor.todas_as_entradas(mesa.faces)
+        assert len(desenhadas) < _ENTRADAS_DESENHADAS, (
+            "a régua passou com a cura arrancada — ela não mede o desenho")
+        assert not motor.candidatas(mesa, "pc"), (
+            "com o desenho podado ainda sobraram candidatas — a régua está "
+            "medindo outra coisa")
+    finally:
+        mapa_das_portas._entradas_da_fileira_da_face = guardado  # type: ignore[assignment]
+
+
+def test_a_contagem_da_face_nao_depende_da_ligacao_por_caminho() -> None:
+    """§7.5: a CONTAGEM por face e a LIGAÇÃO por caminho são dois donos.
+
+    Apagar todas as ligações não pode encolher o gabinete: o metal continua com
+    os mesmos buracos. É a invariante que separa *"quantas entradas esta face
+    tem"* de *"o que está em cada uma"*, e é ela que permite ao produto
+    desenhar antes de saber qualquer caminho.
+    """
+    mesa = _bancada_do_gabinete_dela().mesa  # type: ignore[attr-defined]
+    com = [e.n for e in motor.todas_as_entradas(mesa.faces)]
+
+    sem_ligacao = motor.Mesa(
+        aparelhos=mesa.aparelhos, faces=mesa.faces, mapa={}, leitura=mesa.leitura)
+    assert [e.n for e in motor.todas_as_entradas(sem_ligacao.faces)] == com
+    assert len(motor.candidatas(sem_ligacao, "pc")) + len(
+        motor.candidatas(sem_ligacao, "hub")) == _ENTRADAS_DESENHADAS
+
+
+# -- A confirmação da ordem, que É o gesto de ensinar (§7.3) ---------------
+#
+# O produto mandou *"mova o Wi-Fi para a entrada 3"*. Ela move e confirma. O
+# gesto que ela escolheu (`D-GESTO-DO-MAPA`, clique-em-clique) é o mesmo ato:
+# `LogicaDoMapa.colocar` grava `entrada -> caminho` **do que ela apontou**, e
+# nunca do que o produto sugeriu.
+#
+# POR QUE PERGUNTAR EM VEZ DE PRESUMIR, e é o ponto inteiro: o produto não vê o
+# soquete. Se ela puser noutra entrada e ele presumir a que sugeriu, o mapa
+# aprende uma mentira — e mapa que mente é pior que mapa vazio.
+
+#: A entrada que a ordem de serviço sugeriu. Vazia no mapa dela, na traseira.
+_ENTRADA_SUGERIDA = "3"
+#: A entrada em que ela REALMENTE pôs o aparelho. Também vazia, também traseira.
+_ENTRADA_ONDE_ELA_POS = "7"
+#: O caminho novo do Wi-Fi na leitura de 22h50 — nenhuma entrada o declara.
+_CAMINHO_NOVO_DO_WIFI = "4-2"
+
+
+def _mapa_declarado_do_mockup() -> object:
+    """O gabinete do mockup na forma do `maquina.json` — 8 de 16 declaradas."""
+    from hefesto_dualsense4unix.utils.maquina import MapaDaMesa
+
+    faces = [
+        {"nome": face.nome,
+         "portas": [e.n for e in face.entradas],
+         "perto": face.perto, "alto": face.alto}
+        for face in mock.FACES
+    ]
+    portas: dict[str, dict[str, object]] = {
+        entrada.n: {} for face in mock.FACES for entrada in face.entradas
+    }
+    portas["15a"] = {"filha_de": "15"}
+    for numero, caminho in mock.MAPA.items():
+        portas.setdefault(numero, {})["caminho"] = caminho
+    return MapaDaMesa(faces=faces, portas=portas)
+
+
+def _confirmar(entrada: str) -> dict[str, str]:
+    """O 'Já movi' dela, pelo gesto do produto — devolve `entrada -> caminho`.
+
+    É `LogicaDoMapa`, a camada sem GTK que os seis botões do mapa acionam.
+    Nenhum widget é criado: o `gi` deste módulo é carregado dentro da janela, e
+    a janela não entra aqui.
+    """
+    from hefesto_dualsense4unix.app.widgets.mapa_da_mesa import LogicaDoMapa
+
+    logica = LogicaDoMapa(_mapa_declarado_do_mockup())  # type: ignore[arg-type]
+    logica.escolhido = _CAMINHO_NOVO_DO_WIFI
+    assert logica.colocar(entrada), f"o produto recusou a entrada {entrada}"
+    return {
+        numero: str(valor["caminho"])
+        for numero, valor in logica.portas.items()
+        if valor.get("caminho")
+    }
+
+
+def test_a_confirmacao_da_ordem_liga_a_entrada() -> None:
+    """O mapa ganha `N -> caminho novo` só quando ela diz que foi para o N.
+
+    O cenário é o MEDIDO da §3: entre 20h15 e 22h50 de 24/08 o Wi-Fi saiu de
+    `4-1.1.2` (entrada 11, declarada) para `4-2`, que entrada nenhuma declara.
+    """
+    mesa_agora = mock.mesa(leitura=mock.LEITURA_AGORA)
+    mudou = {m.aparelho.id: m for m in motor.reexame(
+        mesa_agora, mock.LEITURA_ANTES, mock.LEITURA_AGORA)}
+    assert "wifi" in mudou, sorted(mudou)
+    assert mudou["wifi"].agora == _CAMINHO_NOVO_DO_WIFI
+    assert mudou["wifi"].entrada_agora is None, (
+        "o motor deu uma entrada a um caminho que ninguém declarou — "
+        "isso é presumir")
+
+    # SEM RESPOSTA: nada se grava, e o produto tem o que perguntar
+    perdidos = {s.aparelho.id: s for s in motor.sem_entrada(mesa_agora)}
+    assert "wifi" in perdidos and perdidos["wifi"].regiao == "pc"
+    livres = [e.n for e in motor.candidatas(mesa_agora, "pc")]
+    assert _ENTRADA_SUGERIDA in livres and _ENTRADA_ONDE_ELA_POS in livres, livres
+    assert len(livres) < len(motor.todas_as_entradas(mesa_agora.faces)), (
+        "a dedução não cortou candidata nenhuma")
+
+    # "SIM, na que você sugeriu"
+    depois_do_sim = _confirmar(_ENTRADA_SUGERIDA)
+    assert depois_do_sim[_ENTRADA_SUGERIDA] == _CAMINHO_NOVO_DO_WIFI
+    assert _ENTRADA_ONDE_ELA_POS not in depois_do_sim
+    aprendida = mock.mesa(mapa=depois_do_sim, leitura=mock.LEITURA_AGORA)
+    assert motor.alocacao(aprendida.mapa, aprendida.leitura)[
+        _ENTRADA_SUGERIDA] == "wifi"
+    assert "wifi" not in {s.aparelho.id for s in motor.sem_entrada(aprendida)}
+
+    # "NÃO, na 7" — o mapa aprende o que ELA disse, e a sugerida fica vazia
+    depois_do_nao = _confirmar(_ENTRADA_ONDE_ELA_POS)
+    novas = sorted(n for n in depois_do_nao if n not in mock.MAPA)
+    assert depois_do_nao.get(_ENTRADA_ONDE_ELA_POS) == _CAMINHO_NOVO_DO_WIFI, (
+        f"ela apontou a entrada {_ENTRADA_ONDE_ELA_POS} e o mapa aprendeu "
+        f"{novas} — o produto presumiu em vez de gravar o que ela disse")
+    assert _ENTRADA_SUGERIDA not in depois_do_nao, (
+        f"o mapa gravou a entrada {_ENTRADA_SUGERIDA}, que o produto sugeriu, "
+        "e ela disse outra — mapa que mente é pior que mapa vazio")
+
+
+def test_presumir_a_entrada_sugerida_faz_o_mapa_mentir() -> None:
+    """A mordida: gravar a sugerida sem perguntar, e ela ter posto noutra.
+
+    É a cura arrancada da §7.3. O produto presume a `3`, ela pôs na `7`, e a
+    partir daí o mapa responde a entrada ERRADA para o Wi-Fi — com a mesma cara
+    de quem sabe. Nenhuma leitura futura o corrige: `4-2` passa a ser, para
+    sempre, o caminho da entrada 3.
+    """
+    presumido = dict(mock.MAPA)
+    presumido[_ENTRADA_SUGERIDA] = _CAMINHO_NOVO_DO_WIFI
+    mentindo = mock.mesa(mapa=presumido, leitura=mock.LEITURA_AGORA)
+
+    onde_o_mapa_diz = motor.entrada_de_em(
+        motor.alocacao(mentindo.mapa, mentindo.leitura), "wifi")
+    assert onde_o_mapa_diz == _ENTRADA_SUGERIDA
+    assert onde_o_mapa_diz != _ENTRADA_ONDE_ELA_POS, (
+        "o dublê não reproduziu a mentira — a régua não estaria medindo nada")
+
+    # e o produto perde o único sinal de que não sabia: ele para de perguntar
+    assert "wifi" not in {s.aparelho.id for s in motor.sem_entrada(mentindo)}
+    assert _ENTRADA_SUGERIDA not in [
+        e.n for e in motor.candidatas(mentindo, "pc")], (
+        "a entrada presumida continuou candidata — a mentira nem sequer pegou")
