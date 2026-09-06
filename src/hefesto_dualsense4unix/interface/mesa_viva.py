@@ -168,38 +168,33 @@ def aciona(chave: str, transporte: str) -> str:
 
 
 def _via_do_transporte(transporte: object) -> str:
-    """A SIGLA DE MÁQUINA do transporte — do dono da sigla, nunca redigitada.
+    """A PALAVRA DA TELA para o transporte — da dona da frase, nunca redigitada.
 
-    Ausência devolve "" (a tela mostra travessão), jamais uma das duas siglas:
-    afirmar "BT" sobre um campo vazio é a tela inventando o que não leu.
+    **ELA PASSOU A SER A PALAVRA — costura da ONDA B, 06/09/2026, e é o degrau
+    que a ONDA4-S10 desenhou e não pôde executar.** A decisão dela (D-05) é
+    *"cabo / rádio, pela função que já existe"*, e a dona da frase mora em
+    `app/actions/home_actions.py:1431`.
 
-    **ELA NÃO É MAIS A PALAVRA DA TELA — ONDA4-S10, 06/09/2026.** A decisão
-    dela (D-05) é *"cabo / rádio, pela função que já existe"*, e a função é a
-    dona da frase longa, em `app/actions/home_actions.py:1407`. Quem escreve na
-    tela pergunta a ELA, com o `transporte` cru que `mesa_do_estado` publica; o
-    que esta função alimenta é a chave `via`, que hoje ainda é COMPARADA por
-    `interface/monta.py:877` e por quatro linhas de
-    `interface/pacotes/a08_conexoes.py` — nenhum dos dois é da posse desta
-    sprint. A razão inteira está no dicionário `pacotes.VIA_DO_TRANSPORTE`.
+    **FATO SUBSTITUÍDO.** Aqui estava escrito que esta função devolvia a SIGLA
+    DE MÁQUINA, porque a chave `via` que ela alimenta era COMPARADA em cinco
+    pontos — `interface/monta.py`, quatro linhas de
+    `interface/pacotes/a08_conexoes.py`. Os cinco passaram a ler o `transporte`
+    cru (`_e_radio` na 08, a contagem do topo em `monta`), e a chave ficou livre
+    para dizer o que a tela lê. Nenhum ponto compara `via` hoje; quem comparar
+    de novo quebra a decisão dela, e o `_e_radio` é o caminho.
 
     O NOME DA DONA NÃO SE SOLETRA NESTE ARQUIVO, e não é preciosismo: o portão
     da paridade (`docs/data/paridade-gtk-html.csv:18`) vigia a AUSÊNCIA desse
     símbolo aqui, e em 05/09/2026 um comentário que o soletrou já foi lido como
     uso. A forma desta casa é citar o ENDEREÇO.
 
-    UMA DIFERENÇA QUE SOBRA, declarada: a dona da PALAVRA devolve um transporte
-    desconhecido **cru**, com a razão escrita — *"um transporte novo tem de
-    aparecer na tela para alguém o ver, em vez de ser escondido atrás de uma
-    frase genérica"*. Aqui um valor fora do dicionário vira travessão, porque a
-    sigla é para o Python comparar e não para a tela mostrar.
+    A AUSÊNCIA CONTINUA DEVOLVENDO "" — a tela mostra travessão —, e um
+    transporte desconhecido volta **cru**, com a razão da dona: *"um transporte
+    novo tem de aparecer na tela para alguém o ver, em vez de ser escondido
+    atrás de uma frase genérica"*.
     """
-    from hefesto_dualsense4unix.interface.pacotes import VIA_DO_TRANSPORTE
-
-    # A PALAVRA DA TELA ENTRA AQUI — costura da ONDA B, 06/09/2026, e é a última
-    # linha que a ONDA4-S10 desenhou e não pôde executar. Os cinco pontos que
-    # COMPARAVAM esta chave passaram a ler o `transporte` cru (`_e_radio` na 08,
-    # a contagem do topo em `monta.py`), então ela ficou livre para dizer o que
-    # a tela lê. A dona da frase é `home_actions.palavra_do_transporte`.
+    # IMPORT TARDIO de propósito: `home_actions` puxa o motor inteiro, e
+    # `mesa_viva` é importado pelo piloto no arranque da janela.
     from hefesto_dualsense4unix.app.actions.home_actions import (
         palavra_do_transporte,
     )

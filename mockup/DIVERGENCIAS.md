@@ -107,6 +107,23 @@ seção daqui**: a aba deixou de estar em trabalho.
 
 ---
 
+## 04-iluminacao.html
+
+- **06/09/2026 — LUZES-01.** A célula LEDs ganhou a botoeira das cinco luzes de
+  jogador (clicáveis, uma a uma) e seis teclas de desenho — `P1`..`P4`, todas e
+  nenhuma —, o indicador virou o botão de reenvio, e a faixa do título ganhou o
+  "Todos no automático". **Esta sprint NÃO publica**: o `--publicar 04` continua
+  sendo ato dela, e a leva inteira publica de uma vez, no fecho (decisão dela,
+  06/09). Enquanto isso, o pacote emite o indicador de LEITURA que o publicado
+  sabe desenhar — a guarda é `a04_iluminacao.a_folha_alcanca_a_botoeira()`, e
+  ela responde `False` até a folha chegar à página publicada.
+
+  **A densidade é o ponto de olho dela:** a botoeira ocupa 216 dos 220 px da
+  célula. Se ela recusar, a saída medida é a faixa nova da grade, e ela custa
+  uma rolagem ou a redução do desenho do controle.
+
+  **O que fecha:** o `--publicar 04` depois do OK dela na aba inteira.
+
 ## 05-vibracao.html
 
 - **06/09/2026** — **A NOTA DO TESTAR VOLTOU PARA O `?`** (`ONDA5-05-01`, a
@@ -129,6 +146,30 @@ seção daqui**: a aba deixou de estar em trabalho.
   esquerda da janela. **O corte é do produto publicado, não desta mudança**:
   medido em `interface/paginas/05-vibracao.html`, a mesma sangria de 224 px já
   existia com as duas orações.
+
+  **O que fecha:** o `--publicar 05` depois do OK dela na aba inteira.
+
+- **06/09/2026** — **A CONFIRMAÇÃO SAIU DO CARTÃO E FOI PARA A FAIXA**
+  (`ONDA5-05-03`, a 05-Q4 dela: *"Linha embaixo da grade (…) nomeando a coluna
+  (`P2 · voltou ao ajuste geral`) e some logo depois; nada se mexe dentro das
+  colunas"*). O `#vib-estado` passou a declarar `data-hef-recados="sucesso"` e
+  `data-hef-recado-classe="est recibo"`, e a folha ganhou o quarto tom, o
+  `recibo`, em `--green`. As três frases do clique encolheram para caber numa
+  linha (331 → 134, 267 → 162) e ganharam o `P{n} ·` na frente; o mecanismo do
+  `Auto` foi para o `?` do "Força da vibração", que passou de 190 para 262 px de
+  altura com sangria zero nos quatro lados.
+
+  **A METADE DO PILOTO ENTROU NA COSTURA** — `pintar_recados` conhece agora o
+  TERCEIRO lugar, a faixa que a página declara. Medido pelo coordenador contra a
+  bancada da 05, com o sucesso entrando pelo `_depositar`: o recado pousa em
+  `#vib-estado` com a classe `hef-recado est recibo`, 16 px de uma linha, e o
+  desenho do P1 fica parado em 230 px. Com o terceiro lugar arrancado ele volta
+  para DENTRO da coluna, em `y=228` sobre um desenho que começa em 230.
+
+  **O que ela vê HOJE, até publicar:** a aba Vibração de ontem — o aviso do
+  clique nascendo dentro da coluna, tarja verde cobrindo o topo do desenho do
+  controle por 6 s. Nenhuma das dez páginas publicadas declara
+  `data-hef-recados`, então o piloto se comporta hoje como ontem.
 
   **O que fecha:** o `--publicar 05` depois do OK dela na aba inteira.
 ## 06-navegacao.html — **JÁ PUBLICADA, e ela precisa saber disso**
