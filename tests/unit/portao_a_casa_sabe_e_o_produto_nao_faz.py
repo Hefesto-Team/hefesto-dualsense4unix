@@ -1339,6 +1339,40 @@ _SEM_CAMINHO_HOJE: dict[str, str] = {
         "aba Jogar são escritas no gesto. Fecha quando o gesto perguntar a ela. "
         "MEDIDO em 01/09/2026."
     ),
+    # AS TRÊS DO ALTO-FALANTE VIRTUAL (O-ALTO-FALANTE-VIRTUAL-01, 06/09/2026).
+    # Elas nascem declaradas de propósito, e a dívida tem ENDEREÇO: a sprint
+    # entrega a SUPERFÍCIE (o nome do nó, o id, a rota e o plano de comandos) e
+    # o `nao_toca:` dela cobre o motor; quem executa o plano é a SOM-QUE-SAI-01,
+    # que declara `depois_de: [O-ALTO-FALANTE-VIRTUAL-01]` e cujo `nao_toca:` é
+    # justamente `app/audio_saida.py`. As duas se encontram sem que nenhuma abra
+    # o arquivo da outra — e é por isso que a promessa existe antes do caminho.
+    "app/audio_saida.py::no_do_controle": (
+        "O alto-falante virtual de UMA entrada de `state_full.controllers` — o nó "
+        "`Alto-falante · P1`…`P4`, com nome e id que não sabem do transporte "
+        "(app/audio_saida.py:1548). É a porta da seção: `plano_de_publicacao` só "
+        "recebe o que sai daqui. ONDE O CAMINHO SE PERDE: nenhuma aba monta a "
+        "lista de saída por controle ainda — a aba 02 acende os botões da rota "
+        "(`mandar_o_som_do_pc`), que é a camada 1 do sink do sistema, e não o nó "
+        "virtual. FECHA quando a SOM-QUE-SAI-01 montar o subsistema do "
+        "alto-falante e perguntar por controle, em worker. MEDIDO em 06/09/2026."
+    ),
+    "app/audio_saida.py::plano_de_publicacao": (
+        "Os comandos `pactl` que põem o nó de pé, ou `argv=()` com a frase de por "
+        "que não há rota (app/audio_saida.py:1713). Ela NÃO executa nada de "
+        "propósito: carregar `module-null-sink` põe um nó na lista de saída dela, "
+        "na sessão viva, e o aceite pela orelha é o ensaio 1 da MESA-DE-QUATRO-01. "
+        "ONDE O CAMINHO SE PERDE: falta o dono do ciclo de vida — quem decide "
+        "quando o nó nasce, quando morre e onde se guarda o índice do módulo "
+        "carregado. FECHA na SOM-QUE-SAI-01, que cria "
+        "`daemon/subsystems/alto_falante.py` para isso. MEDIDO em 06/09/2026."
+    ),
+    "app/audio_saida.py::argv_para_retirar_o_no": (
+        "O `pactl unload-module` que tira da lista de saída um módulo que nós "
+        "publicamos (app/audio_saida.py:1690). Ela é a metade do desfazer, e cai "
+        "junto com `plano_de_publicacao` pelo mesmo motivo: sem alguém guardando o "
+        "índice do módulo não há o que retirar. FECHA com ela, na mesma sprint e "
+        "no mesmo dono. MEDIDO em 06/09/2026."
+    ),
     "app/audio_saida.py::estado_do_sono": (
         "A leitura completa numa frase só, e ela BLOQUEIA — o docstring manda rodar "
         "em worker (app/audio_saida.py:1077). O sono da placa de áudio é a causa "
