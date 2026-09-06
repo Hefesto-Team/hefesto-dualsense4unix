@@ -62,24 +62,6 @@ def _lista(nomes):
     return nomes[0] if len(nomes) == 1 else f"{', '.join(nomes[:-1])} e {nomes[-1]}"
 
 
-#: OS NOMES LONGOS, ENCURTADOS SÓ PARA A TELA — 01/09/2026, pedido dela.
-#:
-#: MEDIDO: a frase inteira tem 303px e a linha dela ocupa TUDO, do rótulo à
-#: borda direita do bloco, enquanto as outras três do mesmo quadro ("Nada é
-#: limitado", "Os 2 controles", "Vibração") sobram espaço. Ela lê como se
-#: estivesse vazando, e é o que ela viu.
-#:
-#: O DADO NÃO MUDA: o dono continua sendo `ORC["LINHAS_DO_TETO"]`, do produto, e
-#: a frase INTEIRA continua no `title` do valor — a cura de 31/08 que pôs as
-#: reticências também pôs o `title`, e é ele que segura a informação. O que
-#: encurta é a etiqueta, e só onde ela não cabe.
-#:
-#: Nenhum apelido é inventado: cada um é o nome do produto sem o qualificador
-#: que a linha vizinha já dá.
-APELIDO_NA_TELA = {
-    "Barra de luz": "luz",
-    "Microfone por rádio": "microfone",
-}
 
 
 def _frase(nomes, curto=True):
@@ -188,6 +170,27 @@ _CONTRATO = _constantes(R / "src/hefesto_dualsense4unix/gui/aba_sistema.py",
 ENDERECOS = _CONTRATO["ENDERECOS"]
 GESTOS = _CONTRATO["GESTOS"]
 
+#: OS NOMES LONGOS, ENCURTADOS SÓ PARA A TELA — 01/09/2026, pedido dela.
+#:
+#: **O DONO MUDOU DE CASA EM 06/09/2026** e é `pacotes/a09_sistema.py`, lido
+#: aqui sem importar nada. A razão é que as duas linhas do Perfil de Bateria
+#: passaram a ser VIVAS: quem escreve o valor a cada tique é o pacote, e quem
+#: escreve o desenho é este arquivo. Digitado nos dois, o apelido se afastaria
+#: no dia em que um mudasse — que é como a fita viva morreu calada em 27/08.
+#:
+#: MEDIDO: a frase inteira tem 303px e a linha dela ocupa TUDO, do rótulo à
+#: borda direita do bloco, enquanto as outras três do mesmo quadro ("Nada é
+#: limitado", "Os 2 controles", "Vibração") sobram espaço. Ela lê como se
+#: estivesse vazando, e é o que ela viu.
+#:
+#: O DADO NÃO MUDA: o dono da LISTA continua sendo `ORC["LINHAS_DO_TETO"]`, do
+#: produto, e a frase INTEIRA continua no `title` do valor — a cura de 31/08 que
+#: pôs as reticências também pôs o `title`, e é ele que segura a informação. O
+#: que encurta é a etiqueta, e só onde ela não cabe.
+APELIDO_NA_TELA = _constantes(
+    R / "src/hefesto_dualsense4unix/interface/pacotes/a09_sistema.py",
+    {"APELIDO_NA_TELA"})["APELIDO_NA_TELA"]
+
 
 def _id(nome):
     """O endereço de um valor — e ele TEM de estar no contrato do produto."""
@@ -229,6 +232,24 @@ SUFIXO_DA_RAZAO = "-razao"
 def _razao(nome):
     """O `data-campo` onde a razão do cinza daquele gesto é escrita."""
     return f"{_gesto(nome)}{SUFIXO_DA_RAZAO}"
+
+
+#: OS DOIS ENDEREÇOS DAS LINHAS DO TETO — 06/09/2026, e o dono é o PACOTE.
+#:
+#: As duas linhas do Perfil de Bateria eram derivadas na hora da GERAÇÃO e
+#: ficavam cravadas no HTML: no dia em que os "Gatilhos" ganharem ponto de
+#: aplicação no daemon, a tela dela continuaria dizendo que o teto não os
+#: alcança. Agora quem as escreve é `pacotes/a09_sistema.frases_do_teto()`, a
+#: cada tique, e este arquivo só põe onde.
+#:
+#: O PRIMEIRO JÁ ESTAVA NO CONTRATO e a página nunca o usou
+#: (`aba_sistema.ENDERECOS["bateria-frase"]`, declarado como
+#: `secao_orcamento.LINHAS_DO_TETO`). O segundo DERIVA dele, pela mesma regra do
+#: `-razao` e do `-g`: as duas leem o MESMO dono, e o sufixo diz qual metade.
+_A09 = _constantes(R / "src/hefesto_dualsense4unix/interface/pacotes/a09_sistema.py",
+                   {"CAMPO_DO_ALCANCE"})
+CAMPO_DO_ALCANCE = _id(_A09["CAMPO_DO_ALCANCE"])
+CAMPO_DOS_PENDENTES = f"{CAMPO_DO_ALCANCE}-pendentes"
 MULT = _constantes(R / "src/hefesto_dualsense4unix/daemon/subsystems/rumble.py",
                    {"RUMBLE_POLICY_MULT"})["RUMBLE_POLICY_MULT"]
 #: A ÚNICA chave de disco que impõe teto. `balanceado`, `max`, `auto` e o
@@ -338,6 +359,7 @@ CSS = """
      As três faixas levam a cura, não só a de cima: é a mesma armadilha, e a
      próxima linha longa cairia na primeira que ficasse sem. */
   .par2{display:grid;grid-template-columns:minmax(0,1fr) 1px minmax(0,1fr);gap:0 20px;align-items:stretch}
+
   .exame{display:grid;grid-template-columns:minmax(0,1fr) 1px 246px;gap:0 20px;align-items:stretch}
   .avancado{display:grid;grid-template-columns:246px 1px minmax(0,1fr);gap:0 20px;align-items:stretch}
   .risco{background:var(--border-sutil)}
@@ -1074,8 +1096,8 @@ MIOLO = f'''
             <div class="seg bat-perfis" data-id="{_id("bateria-perfil")}">{_botoes_bateria()}</div>
 {est("O que ele impõe", impoe(PERFIL_DA_MESA), "info", "◆", dica="O que este perfil limita hoje, em todos os controles. O degrau vem de RUMBLE_POLICY_MULT, no daemon — nenhum número escrito nesta tela.", ident=_id("bateria-impoe"))}
 {est("Vale para", f"Os {N} controles", "info", "◆", dica="É o teto geral. Cada controle pode sobrepô-lo na linha dele, e o campo de lá diz qual dos dois está valendo.", ident=_id("bateria-vale-para"))}
-{est("O teto alcança", _frase(ALCANCA), "info", "◆", dica="Onde o teto do perfil age de verdade hoje. Sai de LINHAS_DO_TETO, no produto — nenhum nome escrito nesta tela.")}
-{est("Ainda sem teto", _frase(PENDENTES), "info", "◆", inteiro=_frase(PENDENTES, curto=False), dica="O perfil ainda não tem por onde limitar estes. Cada um entra quando ganhar ponto de aplicação no daemon, e some daqui sozinho.")}
+{est("O teto alcança", _frase(ALCANCA), "info", "◆", ident=CAMPO_DO_ALCANCE, dica="Onde o teto do perfil age de verdade hoje. Sai de LINHAS_DO_TETO, no produto — nenhum nome escrito nesta tela.")}
+{est("Ainda sem teto", _frase(PENDENTES), "info", "◆", ident=CAMPO_DOS_PENDENTES, inteiro=_frase(PENDENTES, curto=False), dica="O perfil ainda não tem por onde limitar estes. Cada um entra quando ganhar ponto de aplicação no daemon, e some daqui sozinho.")}
             <!-- O VÃO DE 58px, E POR QUE ELE ERA O DEFEITO — 31/08/2026.
                  Palavra dela: *"aqui em perfil da bateria essa seção tá muito feia
                  e distoante do resto da página, tá destacando negativamente"*.
@@ -1701,74 +1723,93 @@ if "Não muda nada" in _ATRS:
         "`_handle_daemon_reload`, `:5431-5473`). Uma dica que nega o trabalho "
         "caro é a tela afirmando o contrário do que o produto faz.")
 
-n = monta("09-sistema", "Sistema", MIOLO, CSS, legenda=LEGENDA)
-
-# ---------------------------------------------------------------------------
-# O ENDEREÇO DA FITA, POSTO NA SAÍDA — 03/09/2026, a lei dela:
-#
-#     "se no topo tá mostrando controle white player 1, então cada aba vai usar
-#      os controles lá de cima. Não mistura com a info dos mockups."
-#
-# A fita inteira sai de `monta.fita()`, que é o dono dela nas DEZ páginas e não
-# é território desta aba. É a mesma situação que a `aba06.py` já resolve assim
-# desde 28/08 — *"trocado na saída, porque o texto mora no esqueleto (topo.html)
-# e esta aba só pode mexer no arquivo dela"*.
-#
-# O QUE ISTO NÃO É: maquiagem. `data-campo` sem escritor zera a régua da
-# identidade e deixa a tela mentindo igual — trocaria um congelado por um vazio.
-# Quem escreve neste endereço é `pacotes/a09_sistema.py`, e o par de nomes tem
-# régua: `test_aba09_a_fita_vem_de_cima.py` reprova se os dois arquivos
-# divergirem.
-#
-# NENHUM PIXEL MUDA. `data-campo` e `data-hef-alvo` estão nos INVISIVEIS do
-# `check_o_desenho_aprovado.py`, que compara o que se VÊ — decisão dela em
-# 01/09: *"ok, pode comparar então o que se vê."*
-# ---------------------------------------------------------------------------
 CAMPO_DA_FITA = "fita-chips"
 CAMPO_DO_CHIP = "fita-chip"
 
-p = onde.pagina("09-sistema.html")
-s = p.read_text()
 
-# A ÂNCORA EXIGE A CLASSE INTEIRA. `'<div class="fita'` cru casa PRIMEIRO com
-# `<div class="fita-linha">`, o invólucro que também guarda o Perfil ativo — e
-# endereçar o invólucro com alvo `html` mandaria o produto reescrever o miolo
-# dele a cada tique, apagando o `data-campo="perfil"` do cabeçalho, que é das
-# dez abas. Aconteceu na primeira execução deste bloco, em 03/09/2026.
-_ABRE = re.search(r'<div class="fita[ "][^>]*>', s)
-if not _ABRE:
-    raise SystemExit("ERRO: a `.fita` sumiu do esqueleto — o endereço da fita "
-                     "ficou sem onde pousar, e a aba volta a mostrar o desenho.")
-_FIM = s.index("</div>", _ABRE.start()) + len("</div>")
-_BLOCO = s[_ABRE.start():_FIM]
+def escrever_a_bancada():
+    """Monta a página e a GRAVA em `mockup/09-sistema.html`. Só do `__main__`.
 
-_NOVO = _BLOCO.replace(
-    _ABRE.group(0),
-    f'{_ABRE.group(0)[:-1]} data-campo="{CAMPO_DA_FITA}" data-hef-alvo="html">',
-    1)
-# O ENDEREÇO DO CHIP É DO `monta.fita()`, E ESTE BLOCO SÓ CONFERE — 03/09/2026.
-#
-# ELE ESCREVIA O `data-campo` DO CHIP, E O ESQUELETO PASSOU A ESCREVÊ-LO
-# TAMBÉM (`interface/monta.py:582`). Como este arquivo não foi rodado depois
-# daquela mudança, o defeito ficou latente: a primeira regeração da aba saiu com
-# `data-campo="fita-chip" data-campo="fita-chip"` nos dois chips — atributo
-# repetido, que o navegador aceita calado ignorando o segundo. Medido aqui, na
-# primeira execução do gerador nesta frente.
-#
-# O CHIP `Todos` CONTINUA DE FORA, e agora é o `monta` quem o deixa de fora: ele
-# não é aparelho nenhum, não traz cor nem nome de plástico, e endereço morto é o
-# defeito que esta leva existe para não repetir.
-#
-# A CONTA FICA. Ela é a régua da forma da fita: se o esqueleto deixar de
-# endereçar os chips, ou passar a endereçar o `Todos`, o número deixa de casar
-# com a mesa e o gerador reprova em voz alta em vez de gravar uma fita muda.
-_QUANTOS = _NOVO.count(f'data-campo="{CAMPO_DO_CHIP}"')
-if len(CONECTADOS) != _QUANTOS:
-    raise SystemExit(f"ERRO: o esqueleto endereçou {_QUANTOS} chips e a mesa tem "
-                     f"{len(CONECTADOS)} conectados — a forma da fita mudou. "
-                     f"O dono do `data-campo=\"{CAMPO_DO_CHIP}\"` é "
-                     "`interface/monta.fita()`; esta aba só confere.")
-onde.gravar("09-sistema.html", s[:_ABRE.start()] + _NOVO + s[_FIM:])
+    ELA ESTAVA SOLTA NO MÓDULO ATÉ 06/09/2026, e o preço era de EFEITO: um
+    `import aba09` — o do teste que só quer uma constante, o da coleta do
+    pytest — reescrevia a bancada DELA no disco, com o estado vivo da mesa
+    dentro. Medido na costura desta leva com a irmã `aba05`: bastou COLETAR um
+    teste que a importava no topo para `mockup/05-vibracao.html` mudar no disco.
+    Oito dos dez geradores estavam assim; a forma certa é a da `aba01.py`.
 
-print(f"09-sistema: OK, {n} divs · a faixa do serviço: "
-      + " · ".join(f"{t.strip()!r}" for t in _ROTULOS.values()))
+    AS RÉGUAS 1 A 9 CONTINUAM NO IMPORT, e é de propósito: elas leem `MIOLO`,
+    que é memória, e são o que faz `import aba09` reprovar um desenho quebrado
+    sem tocar em disco nenhum. O que desce para cá é só quem ESCREVE.
+    """
+    n = monta("09-sistema", "Sistema", MIOLO, CSS, legenda=LEGENDA)
+
+    # ---------------------------------------------------------------------------
+    # O ENDEREÇO DA FITA, POSTO NA SAÍDA — 03/09/2026, a lei dela:
+    #
+    #     "se no topo tá mostrando controle white player 1, então cada aba vai usar
+    #      os controles lá de cima. Não mistura com a info dos mockups."
+    #
+    # A fita inteira sai de `monta.fita()`, que é o dono dela nas DEZ páginas e não
+    # é território desta aba. É a mesma situação que a `aba06.py` já resolve assim
+    # desde 28/08 — *"trocado na saída, porque o texto mora no esqueleto (topo.html)
+    # e esta aba só pode mexer no arquivo dela"*.
+    #
+    # O QUE ISTO NÃO É: maquiagem. `data-campo` sem escritor zera a régua da
+    # identidade e deixa a tela mentindo igual — trocaria um congelado por um vazio.
+    # Quem escreve neste endereço é `pacotes/a09_sistema.py`, e o par de nomes tem
+    # régua: `test_aba09_a_fita_vem_de_cima.py` reprova se os dois arquivos
+    # divergirem.
+    #
+    # NENHUM PIXEL MUDA. `data-campo` e `data-hef-alvo` estão nos INVISIVEIS do
+    # `check_o_desenho_aprovado.py`, que compara o que se VÊ — decisão dela em
+    # 01/09: *"ok, pode comparar então o que se vê."*
+    # ---------------------------------------------------------------------------
+    p = onde.pagina("09-sistema.html")
+    s = p.read_text()
+
+    # A ÂNCORA EXIGE A CLASSE INTEIRA. `'<div class="fita'` cru casa PRIMEIRO com
+    # `<div class="fita-linha">`, o invólucro que também guarda o Perfil ativo — e
+    # endereçar o invólucro com alvo `html` mandaria o produto reescrever o miolo
+    # dele a cada tique, apagando o `data-campo="perfil"` do cabeçalho, que é das
+    # dez abas. Aconteceu na primeira execução deste bloco, em 03/09/2026.
+    _ABRE = re.search(r'<div class="fita[ "][^>]*>', s)
+    if not _ABRE:
+        raise SystemExit("ERRO: a `.fita` sumiu do esqueleto — o endereço da fita "
+                         "ficou sem onde pousar, e a aba volta a mostrar o desenho.")
+    _FIM = s.index("</div>", _ABRE.start()) + len("</div>")
+    _BLOCO = s[_ABRE.start():_FIM]
+
+    _NOVO = _BLOCO.replace(
+        _ABRE.group(0),
+        f'{_ABRE.group(0)[:-1]} data-campo="{CAMPO_DA_FITA}" data-hef-alvo="html">',
+        1)
+    # O ENDEREÇO DO CHIP É DO `monta.fita()`, E ESTE BLOCO SÓ CONFERE — 03/09/2026.
+    #
+    # ELE ESCREVIA O `data-campo` DO CHIP, E O ESQUELETO PASSOU A ESCREVÊ-LO
+    # TAMBÉM (`interface/monta.py:582`). Como este arquivo não foi rodado depois
+    # daquela mudança, o defeito ficou latente: a primeira regeração da aba saiu com
+    # `data-campo="fita-chip" data-campo="fita-chip"` nos dois chips — atributo
+    # repetido, que o navegador aceita calado ignorando o segundo. Medido aqui, na
+    # primeira execução do gerador nesta frente.
+    #
+    # O CHIP `Todos` CONTINUA DE FORA, e agora é o `monta` quem o deixa de fora: ele
+    # não é aparelho nenhum, não traz cor nem nome de plástico, e endereço morto é o
+    # defeito que esta leva existe para não repetir.
+    #
+    # A CONTA FICA. Ela é a régua da forma da fita: se o esqueleto deixar de
+    # endereçar os chips, ou passar a endereçar o `Todos`, o número deixa de casar
+    # com a mesa e o gerador reprova em voz alta em vez de gravar uma fita muda.
+    _QUANTOS = _NOVO.count(f'data-campo="{CAMPO_DO_CHIP}"')
+    if len(CONECTADOS) != _QUANTOS:
+        raise SystemExit(f"ERRO: o esqueleto endereçou {_QUANTOS} chips e a mesa tem "
+                         f"{len(CONECTADOS)} conectados — a forma da fita mudou. "
+                         f"O dono do `data-campo=\"{CAMPO_DO_CHIP}\"` é "
+                         "`interface/monta.fita()`; esta aba só confere.")
+    onde.gravar("09-sistema.html", s[:_ABRE.start()] + _NOVO + s[_FIM:])
+
+    print(f"09-sistema: OK, {n} divs · a faixa do serviço: "
+          + " · ".join(f"{t.strip()!r}" for t in _ROTULOS.values()))
+
+
+if __name__ == "__main__":
+    escrever_a_bancada()

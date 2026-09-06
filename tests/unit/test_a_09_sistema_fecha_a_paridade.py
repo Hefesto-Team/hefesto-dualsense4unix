@@ -87,6 +87,21 @@ class JanelaDeMentira:
     def _systemctl_status_text(self, unit: str) -> str:
         return self.texto
 
+    def _find_repo_file(self, relpath: str):
+        """O localizador REAL, e não um dublê — 06/09/2026.
+
+        Ele é PURO (`encontrar_arquivo_do_repo` com as bases de instalação): não
+        roda nada, não escreve nada, só procura no disco. Dublá-lo devolvendo um
+        caminho inventado deixaria a régua verde sobre um `CONSERTOS` com nome
+        de script errado — que é a BUG-GUI-REPO-ROOT-OFFBYONE-01, o botão que
+        diz "Correções aplicadas" sem ter rodado nada.
+        """
+        from hefesto_dualsense4unix.app.actions.daemon_actions import (
+            DaemonActionsMixin,
+        )
+
+        return DaemonActionsMixin._find_repo_file(self, relpath)
+
     def _invoke_systemctl(self, args, capture=False, check=False):
         self.comandos.append(list(args))
 
@@ -559,3 +574,342 @@ def test_o_atualizar_recarrega_antes_de_zerar(a09, ctx):
 
     a09.atualizar(ctx, {}, Espia())
     assert ordem == ["daemon.reload · cache=cheio"], ordem
+
+
+# ---------------------------------------------------------------------------
+# 6. OS DOIS CLIQUES QUE ERAM MORTOS — 06/09/2026, a `SISTEMA-STEAM-01`
+#
+# O CSV registrava a mesma frase para os dois: *"Botão presente, sem dono.
+# Clique morto."* As réguas abaixo CLICAM — nenhuma delas lê o texto do fonte,
+# e é de propósito: seis instrumentos falsos caíram nesta casa em 05/09 por
+# medirem o próprio arquivo em vez do produto.
+# ---------------------------------------------------------------------------
+def _clicar(gesto, ctx, texto: str = ""):
+    """Um clique de verdade, com o que o DOM tinha no botão.
+
+    O `texto` é o que o piloto manda em `o["texto"]` (`hefesto_vivo.BOOTSTRAP`,
+    o ouvinte -> `alvo.textContent`), e é ele que carrega o consentimento: o
+    segundo clique só vale trazendo a palavra que só existe no botão já armado.
+    """
+    return gesto(ctx, {"texto": texto}, PonteDeMentira())
+
+
+def test_o_primeiro_clique_do_consertos_mede_e_nao_mexe(a09, ctx, monkeypatch):
+    """Clique 1 de "Refazer os consertos automáticos": mede, mostra, não age.
+
+    ERA UM CLIQUE MORTO — o botão está desenhado desde que a aba nasceu e o
+    clique não chegava a lugar nenhum.
+
+    O QUE ESTA RÉGUA COBRA é a D-33 do produto virando desenho de tela: o
+    número de jogos com Steam Input só existe ANTES de desligá-lo, e um recibo
+    que contasse o DEPOIS mentiria. Então o clique 1 MEDE e o clique 2 usa o
+    que o 1 mediu.
+
+    MORDIDA: pus o `subprocess.run` no clique 1 (isto é, tirei o
+    `_confirmado`). Reprovou nas duas metades — o painel saiu com o recibo do
+    `format_fix_safe_result` em vez do "clique de novo", e `rodou` encheu.
+    """
+    rodou: list[list[str]] = []
+    monkeypatch.setattr(a09, "_matriz", lambda: a09._JANELA_ANTIGA[0])
+    monkeypatch.setattr(a09._daemon, "medir_jogos_com_steam_input",
+                        lambda: ["Pragmata", "Mullet Mad Jack"])
+    import subprocess
+    monkeypatch.setattr(subprocess, "run",
+                        lambda *a, **k: rodou.append(list(a[0])) or _RC0())
+
+    carga = _clicar(a09.refazer_consertos, ctx)
+
+    assert not rodou, ("o primeiro clique RODOU os scripts. Ele tem de MEDIR e "
+                       "perguntar — é o consentimento em dois cliques que ela "
+                       "escolheu em 03/09/2026.")
+    painel = carga["mesa"][a09.REGISTRO]
+    assert "Pragmata" in painel and "Mullet Mad Jack" in painel, (
+        "o painel não nomeia os jogos que vão ser tocados. *Nomeia, nunca só "
+        "conta* — é a regra do WRAPPER-EM-TODOS-01, e *'3 jogos com pendência'* "
+        "é o texto que deixou o Pragmata quebrado a noite inteira.")
+    assert "Clique de novo" in painel, painel
+
+
+def test_o_segundo_clique_do_consertos_roda_os_dois_scripts(a09, ctx, monkeypatch):
+    """Clique 2: os dois scripts do produto, e o recibo é do DONO.
+
+    MORDIDA: troquei `CONSERTOS` por uma tupla vazia. Reprovou dizendo que
+    nenhum script rodou — e o `format_fix_safe_result` respondeu *"Não encontrei
+    os scripts de correção nesta instalação"*, que é a frase certa para essa
+    máquina e a errada para esta.
+    """
+    rodou: list[list[str]] = []
+    monkeypatch.setattr(a09, "_matriz", lambda: a09._JANELA_ANTIGA[0])
+    monkeypatch.setattr(a09._daemon, "medir_jogos_com_steam_input", lambda: [])
+    import subprocess
+    monkeypatch.setattr(subprocess, "run",
+                        lambda *a, **k: rodou.append(list(a[0])) or _RC0())
+
+    _clicar(a09.refazer_consertos, ctx)                 # arma
+    carga = _clicar(a09.refazer_consertos, ctx, a09.CONFIRMA)   # confirma
+
+    assert len(rodou) == len(a09.CONSERTOS), rodou
+    for (relpath, args), comando in zip(a09.CONSERTOS, rodou):
+        assert comando[0] == "bash" and comando[1].endswith(relpath.split("/")[-1])
+        assert comando[2:] == args, comando
+    # O RECIBO É O DO PRODUTO, e não uma frase desta régua nem do gesto.
+    assert carga["mesa"][a09.REGISTRO] == a09._daemon.format_fix_safe_result(
+        {"ran": 2, "missing": 0, "steam_input": (0, ""), "steam_input_jogos": []})
+    assert not a09._LENTO, (
+        "a faixa lenta sobreviveu ao conserto: o exame do cartão ao lado acabou "
+        "de mudar de valor, e mostrar o de até 2 s atrás ao lado do recibo é a "
+        "tela dizendo 'pronto' sobre números que ninguém releu.")
+
+
+def test_o_conserto_procura_os_scripts_pelo_localizador_do_produto(a09):
+    """Os dois scripts de :data:`CONSERTOS` EXISTEM nesta instalação.
+
+    Não é zelo: contar a raiz do checkout à mão já pagou a
+    BUG-GUI-REPO-ROOT-OFFBYONE-01 nesta casa — os botões do cartão anti-storm
+    viraram no-op SILENCIOSO, com toast de sucesso e nada executado. Um nome de
+    script errado aqui reproduziria exatamente isso.
+
+    MORDIDA: troquei um dos nomes por `scripts/nao_existe.sh`. Reprovou
+    nomeando-o.
+    """
+    a09._JANELA_ANTIGA.clear()          # o localizador REAL, não o dublê
+    achados = {str(c) for c, _ in a09._consertos_no_disco()}
+    assert len(achados) == len(a09.CONSERTOS), (
+        f"o localizador do produto achou {len(achados)} dos {len(a09.CONSERTOS)} "
+        f"scripts de `CONSERTOS`: {sorted(achados)}. Um nome errado aqui é um "
+        "botão que diz 'Correções aplicadas' sem ter rodado nada.")
+
+
+def test_o_primeiro_clique_das_camadas_mostra_o_censo_e_nao_tira(a09, ctx, monkeypatch):
+    """Clique 1 de "Tirar a sobreposição Vulkan": o TEMPO DO MEIO existe.
+
+    O `title` promete TRÊS tempos — *"Mostra, jogo por jogo, a sobreposição
+    Vulkan pendurada por dentro, e só então tira"* —, e o que segurava este
+    botão era a falta de onde MOSTRAR. O painel de registro desta mesma faixa é
+    onde esta aba já põe o que os botões respondem.
+
+    MORDIDA: fiz o clique 1 chamar `curar_todos` direto. Reprovou: `tirou`
+    encheu, e o painel saiu com a frase do resultado em vez da do censo.
+    """
+    from hefesto_dualsense4unix.integrations import camadas_vulkan as cv
+
+    tirou: list[bool] = []
+    monkeypatch.setattr(cv, "censo", lambda *a, **k: ["um-prefixo"])
+    monkeypatch.setattr(cv, "pastas_compatdata", lambda *a, **k: ["/uma/pasta"])
+    monkeypatch.setattr(cv, "curar_todos",
+                        lambda *a, **k: tirou.append(True) or [])
+    monkeypatch.setattr(a09._emulacao, "frase_do_censo",
+                        lambda p, bibliotecas=1: ("achei uma camada", True, False))
+
+    carga = _clicar(a09.procurar_camadas, ctx)
+
+    assert not tirou, "o primeiro clique TIROU. Ele tem de olhar e perguntar."
+    painel = carga["mesa"][a09.REGISTRO]
+    assert painel.startswith("achei uma camada"), painel
+    assert "TIRAR" in painel, (
+        "o painel não diz o que o segundo clique vai fazer. Os botões seguem o "
+        "que EXISTE, e quem diz qual dos dois atos está na mesa é esta linha.")
+
+
+def test_sem_nada_a_fazer_as_camadas_nao_armam_o_segundo_tempo(a09, ctx, monkeypatch):
+    """Nada a tirar e nada a devolver: mostra o achado e NÃO arma.
+
+    É a regra do desenho da janela antiga, dita com todas as letras em
+    `_build_camadas_dialog`: *"Botão que aparece e não faz nada ensina que a
+    tela é enfeite"*. Aqui o botão é um só, e quem segue o que existe é o
+    ARMAR — deixar "Confirma?" na tela sobre um segundo tempo que não existe é
+    o mesmo enfeite.
+
+    MORDIDA: tirei o ramo do `if not (tem_tirar or tem_devolver)`. Reprovou: o
+    botão ficou armado com o censo vazio.
+    """
+    from hefesto_dualsense4unix.integrations import camadas_vulkan as cv
+
+    monkeypatch.setattr(cv, "censo", lambda *a, **k: [])
+    monkeypatch.setattr(cv, "pastas_compatdata", lambda *a, **k: ["/uma/pasta"])
+    monkeypatch.setattr(a09._emulacao, "frase_do_censo",
+                        lambda p, bibliotecas=1: ("nada pendurado", False, False))
+
+    carga = _clicar(a09.procurar_camadas, ctx)
+
+    assert a09._armado_agora() != "procurar-camadas", (
+        "o botão ficou armado sem ter o que fazer no segundo clique.")
+    assert carga["mesa"][a09.REGISTRO] == "nada pendurado"
+
+
+def test_o_segundo_clique_das_camadas_segue_o_que_o_censo_achou(a09, ctx, monkeypatch):
+    """Só o que EXISTE: com camada ligada TIRA; com camada tirada DEVOLVE.
+
+    MORDIDA: cravei `religar=False`. Reprovou no caso da devolução — o gesto
+    tirava de novo o que já estava tirado, e a frase do recibo saiu com o verbo
+    trocado.
+    """
+    from hefesto_dualsense4unix.integrations import camadas_vulkan as cv
+
+    for tem_tirar, tem_devolver, esperado in ((True, False, False),
+                                              (False, True, True)):
+        pedidos: list[bool] = []
+        monkeypatch.setattr(cv, "censo", lambda *a, **k: ["um-prefixo"])
+        monkeypatch.setattr(cv, "pastas_compatdata", lambda *a, **k: ["/uma/pasta"])
+        monkeypatch.setattr(
+            cv, "curar_todos",
+            lambda *a, religar=False, **k: pedidos.append(religar) or [])
+        monkeypatch.setattr(
+            a09._emulacao, "frase_do_censo",
+            lambda p, bibliotecas=1, _t=tem_tirar, _d=tem_devolver: ("o censo", _t, _d))
+        from hefesto_dualsense4unix.integrations import steam_launch_options as slo
+        monkeypatch.setattr(slo, "steam_game_running", lambda *a, **k: False)
+
+        _clicar(a09.procurar_camadas, ctx)
+        _clicar(a09.procurar_camadas, ctx, a09.CONFIRMA)
+        assert pedidos == [esperado], (tem_tirar, tem_devolver, pedidos)
+
+
+def test_as_camadas_recusam_com_jogo_aberto(a09, ctx, monkeypatch):
+    """Jogo da Steam vivo: recusa DIZENDO, e não mexe.
+
+    A razão é do produto: o Wine mantém o registro do prefixo em MEMÓRIA e o
+    regrava ao sair, então escrever agora seria trabalho perdido — e perdido em
+    silêncio, que é pior que recusar.
+
+    MORDIDA: tirei o portão. Reprovou — `curar_todos` foi chamado com o jogo
+    aberto.
+    """
+    from hefesto_dualsense4unix.integrations import camadas_vulkan as cv
+    from hefesto_dualsense4unix.integrations import steam_launch_options as slo
+
+    tirou: list[bool] = []
+    monkeypatch.setattr(cv, "censo", lambda *a, **k: ["um-prefixo"])
+    monkeypatch.setattr(cv, "pastas_compatdata", lambda *a, **k: ["/uma/pasta"])
+    monkeypatch.setattr(cv, "curar_todos", lambda *a, **k: tirou.append(True) or [])
+    monkeypatch.setattr(a09._emulacao, "frase_do_censo",
+                        lambda p, bibliotecas=1: ("o censo", True, False))
+    monkeypatch.setattr(slo, "steam_game_running", lambda *a, **k: True)
+
+    _clicar(a09.procurar_camadas, ctx)
+    with pytest.raises(RuntimeError) as erro:
+        _clicar(a09.procurar_camadas, ctx, a09.CONFIRMA)
+
+    assert not tirou
+    assert "jogo aberto" in str(erro.value).lower(), erro.value
+
+
+def test_nenhum_dos_cinco_destrutivos_ficou_sem_dono(a09):
+    """`SEM_MOTOR` encolheu, e o que sobra tem razão de MECANISMO.
+
+    Eram três em 04/09; hoje é UM — o `restaurar-de-fabrica`, que não espera
+    motor: espera a linha em `hefesto_vivo.PERIGOSOS`, e esse arquivo é de
+    outra posse. Sem ela a régua de clique restaura o perfil DELA para provar
+    que sabe clicar.
+
+    Esta régua cobra os dois sentidos: quem está em `SEM_MOTOR` não pode ter
+    gesto registrado, e quem NÃO está tem de ter.
+    """
+    import pacotes
+
+    registrados = {n for (p, n) in pacotes.GESTOS if p == "09-sistema.html"}
+    for nome in a09.DESTRUTIVOS:
+        if nome in a09.SEM_MOTOR:
+            assert nome not in registrados, (
+                f"{nome!r} está declarado em `SEM_MOTOR` E tem gesto. Se ele "
+                "ganhou dono, TIRE a declaração — declaração que envelhece "
+                "calada vira paisagem.")
+        else:
+            assert nome in registrados, (
+                f"{nome!r} não está em `SEM_MOTOR` e não tem dono: é um botão "
+                "desenhado, prometendo trabalho, com o clique morto. *Um botão "
+                "que não faz nada é pior que um botão que não existe.*")
+
+
+class _RC0:
+    """O que `subprocess.run` devolve quando o script correu bem."""
+
+    returncode = 0
+    stdout = "resultado=aplicado\n"
+    stderr = ""
+
+
+# ---------------------------------------------------------------------------
+# 7. O PERFIL DE BATERIA DEIXOU DE SER LITERAL — 06/09/2026
+# ---------------------------------------------------------------------------
+def test_as_duas_linhas_do_teto_mudam_quando_o_dono_muda(a09, ctx, monkeypatch):
+    """O valor VEIO DO DONO — e não do instante em que a página foi gerada.
+
+    O defeito: as duas linhas do Perfil de Bateria ("O teto alcança" e "Ainda
+    sem teto") eram derivadas de `LINHAS_DO_TETO` na hora da GERAÇÃO e ficavam
+    cravadas no HTML. No dia em que os "Gatilhos" ganharem ponto de aplicação
+    no daemon, a tela dela continuaria dizendo que o teto não os alcança.
+
+    **UMA RÉGUA QUE SÓ CONTASSE LINHAS PASSARIA COM A TELA ESTÁTICA DE HOJE.**
+    Esta MOVE o dono: dá aos "Gatilhos" um ponto de aplicação e exige que as
+    duas metades andem — a linha entra numa e sai da outra.
+
+    MORDIDA: cravei o valor (`return ("Vibração", "Gatilhos, luz…")`). Reprovou
+    nas duas metades.
+
+    A COMPARAÇÃO É SEM CAIXA, e a primeira escrita desta régua REPROVOU A CURA
+    por causa disso: a frase do produto é em CAIXA DE FRASE (regra dela, 30/08:
+    *"a maiúscula a regra é sobre a primeira letra a ser capitalizada"*), então
+    o valor certo é `'Vibração e gatilhos'` — com `g` minúsculo. Uma régua que
+    exigisse `"Gatilhos"` estaria cobrando a caixa que ela mandou tirar.
+    """
+    from hefesto_dualsense4unix.app.actions.config import secao_orcamento as orc
+
+    antes = [t.lower() for t in a09.frases_do_teto()]
+    assert "vibração" in antes[0] and "gatilhos" in antes[1], antes
+
+    com_gatilho = tuple(
+        orc.LinhaDoTeto(linha.nome, linha.vem_de,
+                        "hefesto_dualsense4unix.core.rumble:_effective_mult"
+                        if linha.nome == "Gatilhos" else linha.ponto_de_aplicacao)
+        for linha in orc.LINHAS_DO_TETO)
+    monkeypatch.setattr(orc, "LINHAS_DO_TETO", com_gatilho)
+
+    depois = [t.lower() for t in a09.frases_do_teto()]
+    assert "gatilhos" in depois[0], (
+        "os 'Gatilhos' ganharam ponto de aplicação no produto e a linha 'O "
+        f"teto alcança' continuou dizendo {depois[0]!r}. O valor não veio do "
+        "dono — veio do instante em que alguém rodou o gerador.")
+    assert "gatilhos" not in depois[1], (
+        f"a linha 'Ainda sem teto' continuou listando os Gatilhos: {depois[1]!r}. "
+        "As duas metades leem o MESMO dono e têm de andar juntas.")
+
+
+def test_o_tique_escreve_as_duas_linhas_do_teto(a09, ctx):
+    """Elas viajam no pacote — sem isso o valor vivo não chega ao pixel.
+
+    Um `data-campo` na página e nenhum escritor é o buraco por onde o literal
+    do mockup volta a aparecer. E o glifo vai junto: uma linha que se contradiz
+    dentro de si mesma (valor pintado ao lado de símbolo congelado) é o pior
+    defeito desta aba, e já foi fotografado em 03/09.
+
+    MORDIDA: tirei as quatro linhas do `pacote()`. Reprovou nomeando cada uma.
+    """
+    from hefesto_dualsense4unix.interface.pacotes import normalizar
+
+    mesa = normalizar(dict(a09.pacote(ctx)))["mesa"]
+    for campo in (a09.CAMPO_DO_ALCANCE, f"{a09.CAMPO_DO_ALCANCE}-g",
+                  a09.CAMPO_DOS_PENDENTES, f"{a09.CAMPO_DOS_PENDENTES}-g"):
+        assert campo in mesa, (
+            f"o pacote não escreve em {campo!r}. O endereço está na bancada e "
+            "ninguém o preenche — a linha volta a mostrar o literal do desenho.")
+    assert mesa[a09.CAMPO_DO_ALCANCE] == a09.frases_do_teto()[0]
+    assert mesa[a09.CAMPO_DOS_PENDENTES] == a09.frases_do_teto()[1]
+
+
+def test_o_apelido_da_tela_tem_um_dono_so(a09):
+    """O gerador LÊ o apelido daqui — não o digita.
+
+    Ele vivia em `interface/aba09.py` e passou a ter DOIS leitores em
+    06/09/2026: o gerador (que escreve o desenho) e o pacote (que escreve o
+    valor vivo). Digitado nos dois, os dois se afastariam no dia em que um
+    mudasse — que é como a fita viva morreu calada em 27/08.
+
+    MORDIDA: troquei o valor de `"Barra de luz"` no pacote. O gerador saiu com
+    a palavra nova, e é isso que prova que ele lê daqui.
+    """
+    import aba09
+
+    assert aba09.APELIDO_NA_TELA == a09.APELIDO_NA_TELA, (
+        "o apelido da tela divergiu entre o gerador e o pacote. O dono é o "
+        "pacote, e `aba09._constantes` o lê de lá sem importar nada.")
