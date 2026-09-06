@@ -36,10 +36,19 @@ MSG_STEAM_APPID_INVALIDO = (
     "O número do jogo na Steam é só dígitos (ex.: 1599660). Cole o endereço "
     "da página do jogo na loja e o número sai dele sozinho."
 )
+#: A IRMÃ DO `MSG_JOGO_SEM_NOME`, e ela nasceu com a sexta forma (ONDA5-10-01,
+#: 06/09/2026). O "janela" tem UM campo obrigatório — a classe da janela do
+#: jogo —, e vazio ele degradaria em `MatchCriteria(window_class=[""])`, que é
+#: um critério que nunca casa e não diz por quê. É o mesmo R-12 item 2.
+MSG_JANELA_SEM_CLASSE = (
+    "Diga a janela do jogo (ex.: GrimFandango) ou escolha outro contexto em "
+    "\"Funciona em\". Com o jogo em foco, o botão Detectar preenche sozinho."
+)
 
 #: Frases que a GUI pode mostrar CRUAS para a usuária (ver `_humanize_profile_error`).
 MENSAGENS_DE_GENTE: frozenset[str] = frozenset(
-    {MSG_JOGO_SEM_NOME, MSG_STEAM_SEM_APPID, MSG_STEAM_APPID_INVALIDO}
+    {MSG_JOGO_SEM_NOME, MSG_STEAM_SEM_APPID, MSG_STEAM_APPID_INVALIDO,
+     MSG_JANELA_SEM_CLASSE}
 )
 
 # --- Os três botões de programa, e por que a lista cresceu ------------------
@@ -219,8 +228,22 @@ def from_simple_choice(
     - "steam_game" sem appid  → ValueError (frase de gente)
     - "game" + custom_name    → MatchCriteria(process_name=[custom_name])
     - "game" sem custom_name  → ValueError (frase de gente)
+    - "janela" + custom_name  → MatchCriteria(window_class=[custom_name])
+    - "janela" sem custom_name → ValueError (frase de gente)
     - qualquer outra chave de SIMPLE_MATCH_PRESETS → preset correspondente
     - chave desconhecida               → MatchAny()
+
+    A SEXTA FORMA — "janela", ONDA5-10-01 (06/09/2026). O detector de janela do
+    daemon entrega uma ``wm_class`` (``window_detect_last_class``), e até aqui o
+    produto só sabia guardá-la quando ela era um ``steam_app_<id>``. Para jogo
+    de fora da Steam o botão "Detectar" RECUSAVA — e mandava a pessoa para a
+    linha de comando, que é o defeito que esta sprint fechou. **Se gravar a
+    regra empurra o perfil para fora da tela, o conserto é a tela aprender a
+    regra, não o botão desistir.**
+
+    POR QUE O NOME É "janela": é o que o dado É. "app"/"programa" colidiria com
+    o ``"game"``, que é OUTRO campo do esquema (``process_name``, o basename de
+    ``/proc/PID/exe``) — e confundir os dois faz o perfil casar por acaso.
 
     R-12 item 3: o nome do programa é gravado **como ela digitou**. Antes vinha
     um ``.lower()`` aqui, e o casamento do outro lado
@@ -245,6 +268,14 @@ def from_simple_choice(
         if custom_name and custom_name.strip():
             return MatchCriteria(process_name=[custom_name.strip()])
         raise ValueError(MSG_JOGO_SEM_NOME)
+    if choice == "janela":
+        # A CLASSE VAI COMO ELA VEIO, sem `.lower()`, pela MESMA razão do
+        # "game" (R-12 item 3): `MatchCriteria.matches` compara com a
+        # `wm_class` crua do detector, e `GrimFandango` não é `grimfandango`.
+        # O matcher do esquema é que compara sem caixa — não este helper.
+        if custom_name and custom_name.strip():
+            return MatchCriteria(window_class=[custom_name.strip()])
+        raise ValueError(MSG_JANELA_SEM_CLASSE)
     return SIMPLE_MATCH_PRESETS.get(choice, MatchAny())
 
 
@@ -299,15 +330,37 @@ def detect_simple_preset(
         and not match.window_title_regex
     ):
         return "game"
+    # A SEXTA FORMA — "janela", ONDA5-10-01 (06/09/2026). O ESPELHO do "game"
+    # logo acima: uma classe de janela SÓ, sem nome de programa e sem título.
+    #
+    # ELA VEM DEPOIS DE TUDO, e a ordem é o contrato:
+    #   * `_detect_steam_appid` já correu lá em cima — um `steam_app_<id>` é um
+    #     `window_class` de UM elemento, e tem de continuar saindo como
+    #     "steam_game" ou o round-trip do R-12 quebra;
+    #   * os presets fixos e os `_PRESETS_HISTORICOS` também já correram — um
+    #     "Terminal" de julho com uma classe só continuaria sendo "Terminal".
+    #     (Hoje nenhum deles tem lista de um elemento; a ordem é que garante.)
+    if (
+        isinstance(match, MatchCriteria)
+        and len(match.window_class) == 1
+        and not match.process_name
+        and not match.window_title_regex
+    ):
+        return "janela"
     return None
 
 
 def simple_extra(match: Match) -> str:
     """Texto que acompanha o preset detectado no campo livre do editor.
 
-    "game" → o nome do programa; "steam_game" → o appid; o resto → "".
+    "game" → o nome do programa; "steam_game" → o appid; "janela" → a classe
+    da janela; o resto → "".
     Existe para o `_populate_editor` não repetir a lógica de extração (e não
     voltar a mostrar ``steam_app_1599660`` num campo que pede o número).
+
+    A ORDEM É A DE `detect_simple_preset`, e tem de continuar sendo: o appid
+    primeiro (um `steam_app_<id>` é `window_class` de um elemento), o
+    `process_name` depois, a classe por último.
     """
     appid = _detect_steam_appid(match)
     if appid is not None:
@@ -319,6 +372,13 @@ def simple_extra(match: Match) -> str:
         and not match.window_title_regex
     ):
         return match.process_name[0]
+    if (
+        isinstance(match, MatchCriteria)
+        and len(match.window_class) == 1
+        and not match.process_name
+        and not match.window_title_regex
+    ):
+        return match.window_class[0]
     return ""
 
 
