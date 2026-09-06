@@ -769,10 +769,13 @@ def folha_do_plastico(mesa: list[dict[str, Any]]) -> str:
 #: esta linha como a dívida que ele veio pagar. Guardar a frase antiga ao lado
 #: da certa obrigaria a próxima pessoa a escolher entre duas afirmações.
 #:
-#: O QUE FALTA AGORA NÃO É O ALVO, É A PALAVRA DELA: trocar `[L3]` por uma
-#: mudança de cor é mudar o que a tela DIZ, e texto de tela é decisão dela. O
-#: caminho está aberto e custa duas linhas — o `data-hef-alvo="cor"` no
-#: `.rotl` do gerador e a cor emitida aqui.
+#: **A PALAVRA VEIO, E É PARA NÃO MEXER — 02-Q10, 05/09/2026:** *"Continua com
+#: colchetes"*. Aqui estava escrito que faltava a decisão dela para trocar o
+#: `[L3]` por uma mudança de cor. Não falta mais, e a resposta foi manter o que
+#: já está de pé e publicado (`:1956-1963` e `paginas/02-controles.html:1965`).
+#: **Zero linha de código muda** — o que mudou foi esta nota, que registra a
+#: decisão datada em vez de guardar uma pergunta já respondida. Pergunta viva
+#: num arquivo é como a próxima pessoa refaz um trabalho que ninguém pediu.
 ROTULO_DO_CLIQUE = {"l": "L3", "r": "R3"}
 CLICADO = "[%s]"
 
@@ -2910,6 +2913,31 @@ def rota(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
 #: Digitar 255 aqui seria a segunda escala.
 VOLUME_MIN, VOLUME_MAX = 0, 100
 
+#: A RECUSA DO `sem_fonte`, e ela nasceu porque o caso ficou FREQUENTE
+#: (ONDA5-02-01, 06/09/2026).
+#:
+#: Até 06/09 o `mic.volume.set` caía na rota global quando o endereço não
+#: resolvia, e `sem_fonte` só acontecia quando a máquina inteira não tinha
+#: fonte de DualSense nenhuma. **Com a queda fechada ele passa a ser a resposta
+#: normal** do controle no rádio sem o canal de microfone de pé.
+#:
+#: A FRASE DE ANTES MANDAVA PROCURAR NOS DOIS LUGARES ERRADOS: *"ou o Hefesto
+#: está parado, ou este controle saiu"*. Nem uma coisa nem outra — o serviço
+#: respondeu, o controle está aqui, e o que falta é o microfone existir no
+#: sistema. **É o mesmo defeito que o 🎙 já pagou uma vez** (a frase do mudo
+#: listava duas causas e nenhuma era a verdadeira, `:2734`), e é a razão de ele
+#: não se pagar duas.
+#:
+#: O QUE ELA NÃO DIZ, e é escolha: nenhum comando, nenhum nome de nó, nenhuma
+#: janela para procurar. São três das proibições da língua desta casa, e a
+#: quarta é a palavra que descreveria o conjunto dos controles — que sai da
+#: tela por decisão dela.
+TEXTO_MIC_SEM_FONTE = (
+    "O sistema não publica um microfone para este controle: no rádio, é o "
+    "canal do microfone que ainda não está de pé; no cabo, é a placa de som "
+    "que não apareceu. Nada foi mudado."
+)
+
 #: O ESTADO DE CADA INTERRUPTOR DE SENSOR, na língua da TELA.
 #:
 #: `LIGADO` é o default dela (`D-AUDIO-E-GIRO-NASCEM-LIGADOS`, 25/08/2026) e não
@@ -3092,6 +3120,11 @@ def volume(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
         # O CAMPO EXISTE DESDE 20/08 (`por_uniq`, `ipc_handlers.py:5536`) e a
         # janela ANTIGA já o lê (`controller_card:4443`). Quem não lia era esta.
         corpo = _corpo(p.mic_volume_set_detalhado(pedido, uniq=uniq))
+        # `sem_fonte` TEM FRASE PRÓPRIA, e SÓ ele: os outros `status` continuam
+        # com a de sempre. Uma frase nova para cada resposta que o daemon não
+        # deu seria inventar recado sobre estado que ninguém mediu.
+        if corpo is not None and corpo.get("status") == "sem_fonte":
+            raise RuntimeError(TEXTO_MIC_SEM_FONTE)
         if corpo is None or corpo.get("status") != "ok":
             raise RuntimeError(
                 "o daemon não confirmou o volume do microfone — ou o Hefesto "

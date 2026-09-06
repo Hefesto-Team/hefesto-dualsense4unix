@@ -386,6 +386,27 @@ class _Leitor(html.parser.HTMLParser):
             # ausente é `""` nos dois lados, que é como o produto deixa um SVG
             # cujo aparelho não disse a cor.
             valor = d.get((d.get("data-hef-atributo") or "").strip().lower(), "")
+        elif alvo == "marcado":
+            # O ALVO `marcado` FALTAVA DESTE LADO, e a régua acusava a si mesma
+            # por isso (ONDA5-02-01, 06/09/2026). O leitor de tela responde
+            # `el.checked ? 'sim' : ''` e este parser caía no ramo do TEXTO —
+            # que num `<input>` é sempre vazio. Medido no arquivo publicado:
+            #
+            #     p1·card-aberto  arquivo ''   página virgem 'sim'
+            #
+            # e a guarda do DOM virgem (`hefesto_vivo._olhar_a_pagina`) reprovava
+            # a `--prova-de-mockup` inteira com *"o parser e o leitor de tela
+            # discordam neste alvo"*. Ela estava CERTA: as duas leituras têm de
+            # casar endereço a endereço, e uma delas não conhecia o alvo.
+            #
+            # `checked` É ATRIBUTO BOOLEANO — o `html.parser` o entrega como
+            # chave sem valor, então a pergunta é de PRESENÇA, igual ao
+            # `selected` que este mesmo leitor já usa nos `<option>`. E a
+            # palavra é `sim`, a mesma do `escrever` e a mesma do leitor de
+            # tela: devolver `True`/`checked` faria os dois lados compararem
+            # línguas diferentes, que é o defeito de forma que o alvo `cor` já
+            # custou uma medição a esta casa.
+            valor = "sim" if "checked" in d else ""
         elif alvo == "classe":
             classe = d.get("data-hef-classe") or "on"
             quando = d.get("data-hef-quando") or ""
