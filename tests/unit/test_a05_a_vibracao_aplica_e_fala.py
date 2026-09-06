@@ -529,7 +529,7 @@ def test_a_forca_que_vira_escala_chega_ao_motor_e_nao_fala(
         f"ao motor na próxima troca de perfil")
 
 
-def test_o_auto_diz_que_a_coluna_volta_ao_ajuste_geral(pac, disco) -> None:
+def test_o_auto_diz_que_a_coluna_volta_ao_ajuste_geral(pac, a05, disco) -> None:
     """"Auto" apaga o override, e a frase que conta isso tem dono no produto.
 
     O DESFECHO É O MESMO DA JANELA ESTÁVEL, e a frase também:
@@ -538,7 +538,22 @@ def test_o_auto_diz_que_a_coluna_volta_ao_ajuste_geral(pac, disco) -> None:
     na primeira edição, e esta casa já pagou por isso.
 
     A FRASE DIZ TAMBÉM O QUE VAI FICAR ACESO, e isso é a metade prática: sem
-    ela, ela ficaria olhando quatro botões para descobrir qual.
+    ela, ela ficaria olhando três botões para descobrir qual.
+
+    **E ELA PASSOU A DIZER SÓ A METADE DO FATO — 05-Q4 dela, 06/09/2026:**
+    *"a frase entra na faixa que já existe sob a grade, nomeando a coluna
+    (`P2 · voltou ao ajuste geral`) e some logo depois"*. A faixa reserva UMA
+    linha (medido: 181 caracteres é o último que cabe, `a05_vibracao.
+    TETO_DA_LINHA_DA_FAIXA`), e a oração inteira do produto tem 143 — que com
+    o resto da frase e o `P1 ·` na frente sairia CORTADA na segunda linha.
+
+    O QUE NÃO MUDOU, e é a razão de esta régua continuar importando o produto:
+    a metade do FATO não é redigitada aqui. Ela é `FATO_DO_AJUSTE_GERAL`, e
+    tem de continuar DENTRO da oração do produto — o dia em que a janela
+    estável renomear o "ajuste geral", esta régua reprova em vez de as duas
+    telas passarem a dizer coisas diferentes sobre o mesmo fato. O MECANISMO
+    que saiu (*"o Auto escala pela bateria…"*) mudou de casa e não morreu: está
+    no `?` do rótulo "Força da vibração" (`aba05.py`).
 
     **E ELA DEIXOU DE SER UMA RECUSA — 04/09/2026, decisão [04] dela (D-01).**
     O gesto DEVOLVE `{"recado": …}` em vez de levantar: a gravação aconteceu, e
@@ -567,7 +582,12 @@ def test_o_auto_diz_que_a_coluna_volta_ao_ajuste_geral(pac, disco) -> None:
         f"da D-01 é `{{'recado': …}}`, e sem ele o Auto volta a apagar o "
         f"ajuste da peça em silêncio")
     frase = str(volta["recado"])
-    assert TEXTO_A_PECA_VOLTOU_AO_AJUSTE_GERAL.strip(" —") in frase, (
+    fato = a05.FATO_DO_AJUSTE_GERAL
+    assert fato in TEXTO_A_PECA_VOLTOU_AO_AJUSTE_GERAL, (
+        f"a linha da faixa diz {fato!r} e a oração do produto passou a dizer "
+        f"{TEXTO_A_PECA_VOLTOU_AO_AJUSTE_GERAL!r} — as duas telas deixaram de "
+        f"contar o mesmo fato com as mesmas palavras")
+    assert fato in frase, (
         f"o Auto voltou a apagar o ajuste da peça em silêncio: {frase}")
     assert "Máximo" in frase, (
         f"a frase não diz qual degrau vai ficar aceso: {frase}. A coluna sem "

@@ -302,9 +302,15 @@ def _ressalva_da_mesa(perfil: dict[str, Any], mesa: list[dict[str, Any]]) -> str
     # (:data:`FRASE_DA_MESA_EM_AUTO`), que mora numa caixa que CRESCE. Esta
     # linha diz o fato e o conserto, que é o que serve para quem só passa o
     # olho; o porquê fica onde há espaço para ele.
-    return (f"a força da mesa está em Auto, e por isso a força própria de "
-            f"{quantos} controle(s) fica guardada sem chegar ao motor. Tire a "
-            f"mesa do Auto e as escolhas voltam a valer.")
+    # A PALAVRA "MESA" SAIU DA TELA — decisão dela, 06/09/2026: *"O termo sai e
+    # coloca-se termos simples pro user comum"* (`docs/A-LINGUA-DESTA-CASA`).
+    # Ela sai DESTA linha junto com as três do recado porque as duas metades
+    # moram na MESMA faixa desde a 05-Q4: uma dizendo "força da mesa" ao lado de
+    # outra dizendo "força geral" seriam dois nomes para o mesmo botão, um
+    # embaixo do outro. Na casa continua sendo a mesa (`ctx.mesa`).
+    return (f"a força geral está em Auto, e por isso a força própria de "
+            f"{quantos} controle(s) fica guardada sem chegar ao motor. Tire o "
+            f"Auto e as escolhas voltam a valer.")
 
 
 def _barras_dos_motores(state: dict[str, Any], uniq: str) -> dict[str, int]:
@@ -1067,45 +1073,119 @@ def _mirar(ctx: Contexto, o: dict[str, Any], p: Any) -> str:
     return uniq
 
 
+#: O TETO DE UMA LINHA DA FAIXA, EM CARACTERES — MEDIDO no navegador, não
+#: escolhido. A faixa `#vib-estado` reserva UMA linha por frase, e a segunda
+#: sai CORTADA: foi o que a foto de 04/09/2026 mostrou com a primeira versão da
+#: :func:`_ressalva_da_mesa`, de 285 caracteres.
+#:
+#: A MEDIÇÃO, no Chrome a 1920x1080, na bancada `mockup/05-vibracao.html`, com
+#: a mesma receita do `interface/olhar.py`: o `.est` mede **1104 px** dentro de
+#: uma janela de 1180, a altura de UMA linha é **17 px**, e a busca binária
+#: pergunta pela ALTURA — duas linhas dão 34.
+#:
+#: **O TETO EM CARACTERES NÃO É UM NÚMERO SÓ, e por isso ele é medido três
+#: vezes.** Quantas letras cabem depende de QUAIS letras são, então a régua
+#: mediu com três vocabulários e o teto guardado fica abaixo do MENOR:
+#:
+#: ==========================  ====================
+#: vocabulário                 o último que cabe
+#: ==========================  ====================
+#: palavras longas da aba      **181**
+#: as palavras da própria faixa  189
+#: palavras muito curtas         187
+#: ==========================  ====================
+#:
+#: O NÚMERO É 180 E NÃO 181 de propósito: o caractere de folga é o que absorve
+#: um `P10` no lugar de um `P2`. Um teto colado no limite medido passa por um
+#: pixel — e a segunda linha sai CORTADA, que foi o que a foto de 04/09/2026
+#: mostrou com a primeira versão da :func:`_ressalva_da_mesa`, de 285.
+TETO_DA_LINHA_DA_FAIXA = 180
+
+#: O SEPARADOR DA FAIXA, e ele é a palavra DELA na `05-Q4`, 05/09/2026:
+#: *"a frase entra na faixa que já existe sob a grade, nomeando a coluna
+#: (`P2 · voltou ao ajuste geral`) e some logo depois; nada se mexe dentro das
+#: colunas"*.
+#:
+#: POR QUE O RÓTULO PRECISOU ENTRAR NA FRASE: dentro do cartão o endereço era a
+#: própria coluna em que o aviso pousava. Fora dela, uma linha embaixo da grade
+#: fala de quatro colunas ao mesmo tempo, e sem o `P2` ninguém sabe de qual.
+SEPARADOR_DA_FAIXA = " · "
+
+#: O TOM DA LINHA QUE É RECIBO — o quarto, ao lado dos três de
+#: `app/telas/vibracao` (:data:`DIZ`, :data:`ALERTA`, :data:`INFO`).
+#:
+#: VERDE É A COR QUE ESTA CASA JÁ USA PARA O QUE DEU CERTO —
+#: `hefesto_vivo.COR_DO_SUCESSO` lê o mesmo `--green` da paleta. Uma quinta cor
+#: para o mesmo fato seria a segunda tradução da mesma coisa. E não pode ser o
+#: `ALERTA`: laranja sobre um clique que GRAVOU ensina que o botão falha, que é
+#: o defeito que a D-01 fechou em 04/09/2026.
+#:
+#: ELE MORA AQUI, e não em `app/telas/vibracao`: é o único tom que a janela
+#: estável não tem — lá o recibo é um toast, não uma linha de card.
+TOM_DO_RECIBO = "recibo"
+
+#: O FATO DO AJUSTE GERAL, e são as palavras DELA na `05-Q4`.
+#:
+#: ELE NÃO É REDIGITADO DO PRODUTO — é a metade do FATO da oração que a janela
+#: estável diz no mesmo caso desde 25/08
+#: (`rumble_actions.TEXTO_A_PECA_VOLTOU_AO_AJUSTE_GERAL`), sem a metade do
+#: MECANISMO, que não cabe numa linha (ver :data:`TETO_DA_LINHA_DA_FAIXA`) e
+#: mora no `?` do rótulo "Força da vibração".
+#:
+#: E A RÉGUA PERGUNTA AO DONO: `test_a_frase_da_faixa_diz_o_que_o_produto_diz`
+#: exige que esta oração continue DENTRO da do produto. No dia em que o produto
+#: renomear o "ajuste geral", a régua reprova em vez de as duas telas passarem a
+#: dizer coisas diferentes sobre o mesmo fato.
+FATO_DO_AJUSTE_GERAL = "voltou ao ajuste geral"
+
 #: A FRASE DO CASO EM QUE A ESCOLHA FICA GRAVADA E NÃO CHEGA AO MOTOR —
 #: 04/09/2026, e ela fecha o :data:`SEM_DONO`\\ ``["forca:global-em-auto"]``, que
 #: dizia com todas as letras *"o que falta é a tela AVISAR"*.
 #:
 #: O MECANISMO, e ele é do produto, não desta aba:
 #: `profiles/manager._controllers_to_rumble_scales` PULA a peça — com log
-#: `escala_de_vibracao_pulada_base_movel` — quando a força da MESA (a do próprio
+#: `escala_de_vibracao_pulada_base_movel` — quando a força GERAL (a do próprio
 #: perfil) está em `auto`, porque o denominador muda com a bateria a cada tique
 #: e um fator sobre denominador móvel faria a peça vibrar de forma
 #: imprevisível. A escolha fica no disco e volta a valer sozinha assim que a
-#: mesa sair do `Auto`.
+#: força geral sair do `Auto`.
+#:
+#: **ELA ENCOLHEU PARA CABER NUMA LINHA — 05-Q4 dela, 06/09/2026.** Tinha 331
+#: caracteres, escritos para o CARTÃO, que é uma caixa que CRESCE; a faixa
+#: reserva uma linha e corta o resto. O que saiu foi o MECANISMO (*"o Auto muda
+#: com a bateria a cada instante…"*), que passou para o `?` do rótulo "Força da
+#: vibração"; o que ficou é o FATO e o CONSERTO, a mesma disciplina que a
+#: :func:`_ressalva_da_mesa` já seguia.
+#:
+#: E A PALAVRA "MESA" SAIU DA TELA — decisão dela, 06/09/2026:
+#: *"O termo sai e coloca-se termos simples pro user comum"*
+#: (`docs/A-LINGUA-DESTA-CASA`). Na tela é **força geral**; na casa continua
+#: sendo a mesa.
 #:
 #: POR QUE ELA NASCE AQUI E NÃO EM `app/telas/vibracao`: este é o único caminho
 #: do produto que grava força POR CONTROLE (a janela estável manda
 #: `rumble.policy_set`, que é da mesa e não passa por esta conta). Uma frase
 #: sobre uma condição que só existe aqui, escrita lá, seria texto sem chamador —
-#: e é o que o `casa-sabe` conta como promessa sem caminho. No dia em que a
-#: janela estável ganhar força por unidade, ela desce um andar e as duas telas
-#: a leem do mesmo lugar.
+#: e é o que o `casa-sabe` conta como promessa sem caminho.
 FRASE_DA_MESA_EM_AUTO = (
-    "Guardei esta força no perfil, mas ela NÃO chega ao motor enquanto a "
-    "vibração geral estiver no modo Auto: o Auto muda com a bateria a cada "
-    "instante, e uma força por controle contra um número que se move faria "
-    "este controle vibrar de um jeito imprevisível. O Auto não se escolhe mais "
-    "aqui — se ele está ligado, veio de um perfil antigo ou da janela do "
-    "Hefesto, e é lá que sai."
+    "guardei esta força no perfil, mas ela não chega ao motor enquanto a força "
+    "geral estiver em Auto. Tire o Auto e ela volta a valer."
 )
 
-#: A FRASE DO CASO EM QUE A TELA VAI MOSTRAR OUTRA COISA — 04/09/2026.
+#: A FRASE DO CASO EM QUE A TELA VAI MOSTRAR OUTRA COISA — 04/09/2026, e ela
+#: encolheu de 267 para caber numa linha da faixa (05-Q4 dela, 06/09/2026).
 #:
 #: O `%s` é o degrau que a coluna VAI acender, lido do disco depois da gravação.
 #: Não é enfeite: sem ele a frase diria *"não ficou o que você pediu"* e deixaria
-#: para ela descobrir o quê, olhando quatro botões.
+#: para ela descobrir o quê, olhando três botões.
 FRASE_DO_QUE_A_COLUNA_MOSTRA = (
-    "Sua escolha foi para o perfil, mas esta coluna vai continuar mostrando "
-    "%s — o produto guarda por controle só o que DIVERGE da força da mesa, e "
-    "esta escolha não diverge. O controle vibra igual; o que muda é de onde a "
-    "coluna lê o número."
+    "esta coluna vai continuar mostrando %s: a sua escolha é igual à força "
+    "geral, e só o que difere dela fica guardado no controle."
 )
+
+#: A FRASE DO `Auto` QUE DEVOLVE A COLUNA AO AJUSTE GERAL. O `%s` é o degrau que
+#: a coluna vai acender.
+FRASE_DO_AJUSTE_GERAL = FATO_DO_AJUSTE_GERAL + ", e esta coluna vai mostrar %s."
 
 
 def _fator_no_motor(global_do_perfil: Any, policy: str | None,
@@ -1166,10 +1246,30 @@ def _aplicar_a_forca(ctx: Contexto, p: Any, uniq: str,
     DUAS FRASES PARA O MESMO DESFECHO, e a diferença é a CAUSA. Quando o degrau
     clicado foi o `Auto`, a razão de a coluna mostrar outra coisa tem dono e
     nome no produto — `rumble_actions.TEXTO_A_PECA_VOLTOU_AO_AJUSTE_GERAL`, a
-    oração RUM-3 que a janela estável diz desde 25/08 no MESMO caso. Escrever
-    uma segunda aqui seria a divergência que a regra das duas cópias existe para
-    matar. Para os outros três degraus a causa é outra — a escolha não DIVERGE
-    da força da mesa —, e essa frase nasce aqui porque só este caminho a produz.
+    oração RUM-3 que a janela estável diz desde 25/08 no MESMO caso. O que a
+    faixa mostra é a metade do FATO dela (:data:`FATO_DO_AJUSTE_GERAL`, as
+    palavras dela na `05-Q4`), e a régua exige que essa metade continue DENTRO
+    da oração do produto — o dia em que ele renomear o "ajuste geral", ela
+    reprova. Para os outros degraus a causa é outra — a escolha não DIVERGE da
+    força geral —, e essa frase nasce aqui porque só este caminho a produz.
+
+    **O RAMO DO `Auto` NÃO É ALCANÇÁVEL PELO CLIQUE DELA — medido em
+    06/09/2026, e a data importa.** O botão `Auto` saiu da tela em 05/09
+    (`aba05.FORCA` tem três, e `RUMBLE_POLICY_MULT` também), então
+    `policy == "auto"` não chega aqui pelo gesto :func:`forca`. Ele FICA, pela
+    mesma razão do `raise` de :func:`_indice`: um perfil antigo, a janela
+    estável ou qualquer chamador que não seja a tela ainda produzem o caso, e
+    devolver a coluna ao ajuste geral calado é o silêncio que esta função
+    existe para curar. Inalcançável pelo piloto não é o mesmo que enfeite.
+
+    **A FRASE SAIU DO CARTÃO E FOI PARA A FAIXA — 05-Q4 dela, 06/09/2026:**
+    *"Linha embaixo da grade (…) nomeando a coluna (`P2 · voltou ao ajuste
+    geral`) e some logo depois; nada se mexe dentro das colunas"*. Fora do
+    cartão a frase perde o endereço — uma linha embaixo da grade fala das
+    quatro colunas ao mesmo tempo —, e por isso as três passam por
+    :func:`_na_faixa`, que põe o `P{jogador}` na frente. O prefixo é de UM
+    lugar só: escrevê-lo nos três ramos deixaria o quarto ramo sem ele no dia
+    em que alguém acrescentasse um.
 
     **OS TRÊS AVISOS DEIXARAM DE SER `RuntimeError` — 04/09/2026, decisão [04]
     dela (D-01), e é uma correção de SIGNIFICADO, não de forma.** Até esta manhã
@@ -1188,10 +1288,6 @@ def _aplicar_a_forca(ctx: Contexto, p: Any, uniq: str,
     `("recusou dizendo", …)` — o desfecho que a régua lê deixa de contradizer o
     disco.
     """
-    from hefesto_dualsense4unix.app.actions.rumble_actions import (
-        TEXTO_A_PECA_VOLTOU_AO_AJUSTE_GERAL,
-    )
-
     global_do_perfil, depois = _gravar_a_forca(ctx, p, uniq, policy, custom)
     # A COLUNA DE DEPOIS, lida PELA MESMA FUNÇÃO QUE PINTA. É o ponto inteiro:
     # se o que sai daqui não bate com o que ela pediu, é literalmente o que a
@@ -1205,15 +1301,48 @@ def _aplicar_a_forca(ctx: Contexto, p: Any, uniq: str,
     # `source_controllers` do rascunho É o que foi para o arquivo.
     mostra, _ = _forca_da_coluna(depois, uniq, ctx.state)
     if mostra != policy:
-        if policy == "auto":
-            return {"recado": (
-                f"Anotado{TEXTO_A_PECA_VOLTOU_AO_AJUSTE_GERAL} Esta coluna "
-                f"volta a seguir a mesa, e vai mostrar "
-                f"{_nome_do_degrau(mostra)}.")}
-        return {"recado": FRASE_DO_QUE_A_COLUNA_MOSTRA % _nome_do_degrau(mostra)}
+        modelo = (FRASE_DO_AJUSTE_GERAL if policy == "auto"
+                  else FRASE_DO_QUE_A_COLUNA_MOSTRA)
+        return {"recado": _na_faixa(ctx, uniq,
+                                    modelo % _nome_do_degrau(mostra))}
     if _fator_no_motor(global_do_perfil, policy, custom) is None:
-        return {"recado": FRASE_DA_MESA_EM_AUTO}
+        return {"recado": _na_faixa(ctx, uniq, FRASE_DA_MESA_EM_AUTO)}
     return None
+
+
+def _na_faixa(ctx: Contexto, uniq: str, frase: str) -> str:
+    """A frase pronta para a FAIXA: `P2 · …`, com a coluna nomeada.
+
+    **05-Q4 dela, 05/09/2026** — *"a frase entra na faixa que já existe sob a
+    grade, nomeando a coluna (`P2 · voltou ao ajuste geral`) e some logo depois;
+    nada se mexe dentro das colunas"*.
+
+    O NÚMERO NÃO SE DIGITA: ele é o `jogador` do item de mesa, o MESMO que a
+    coluna já mostra no rótulo dela (`aba05`, `P{c["jogador"]}`). Contar a
+    posição na lista aqui produziria um segundo número para a mesma coluna, e
+    os dois divergem no dia em que um controle cair — que é o defeito de
+    identidade que o `_recados_para_a_tela` do piloto já paga.
+
+    SEM COLUNA, SEM PREFIXO. Um `uniq` que a mesa deste tique não conhece não
+    tem coluna na tela, e escrever `P?` seria a tela afirmando um endereço que
+    ela não sabe. Não acontece pelo caminho dela — :func:`_uniq` recusa antes,
+    com :data:`FRASE_DO_CONTROLE_QUE_SAIU` —, e o `""` é a resposta honesta
+    para quem chegar por outro.
+
+    A GRAFIA DO `uniq` NÃO SE ASSUME: o clique traz a que o piloto resolveu
+    contra a mesa, e um perfil editado à mão traz `aa:bb:…` onde o disco guarda
+    doze hexa. A comparação é pelas DUAS, como :func:`_forca_da_coluna`.
+    """
+    chave = _chave_no_perfil(uniq)
+    for c in ctx.mesa:
+        dele = str(c.get("uniq") or "")
+        if dele != uniq and _chave_no_perfil(dele) != chave:
+            continue
+        jogador = c.get("jogador")
+        if isinstance(jogador, int) and not isinstance(jogador, bool):
+            return f"P{jogador}{SEPARADOR_DA_FAIXA}{frase}"
+        break
+    return frase
 
 
 def _nome_do_degrau(chave: str) -> str:
@@ -1241,7 +1370,11 @@ def _nome_do_degrau(chave: str) -> str:
 
     if chave == "custom":
         return "o que a barra Personalizado marca"
-    return ROTULOS_DO_ORCAMENTO.get(chave) or "o degrau da mesa"
+    # "MESA" SAIU DA TELA — 06/09/2026 (`docs/A-LINGUA-DESTA-CASA`). Este é o
+    # recurso para uma chave que o produto tenha e os rótulos não conheçam, e
+    # ele entra na MESMA frase da faixa que as outras: dois nomes para o mesmo
+    # botão na mesma linha é o que a decisão dela existe para matar.
+    return ROTULOS_DO_ORCAMENTO.get(chave) or "o degrau da força geral"
 
 
 def _degraus_que_a_tela_oferece() -> str:
