@@ -31,7 +31,7 @@ ABA_CONFIG = "tab_config_box"
 #: desqualifica de propósito porque o que se declara aqui vale para a mesa
 #: inteira, não por esquecimento de ligar um leitor.
 MOTIVO_ALVO_NAO_SE_APLICA = (
-    "Aqui os ajustes valem para a mesa inteira — não há controle a escolher."
+    "Aqui os ajustes valem para todos os controles — não há um a escolher."
 )
 
 

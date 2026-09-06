@@ -204,7 +204,14 @@ def test_a_tela_para_de_esconder_que_o_clique_vai_para_todos(
     host.on_player_leds_preset_p2(None)
 
     assert host._toasts
-    assert "os 2 controles da mesa" in host._toasts[-1], (
+    # A FRASE VEM DO DONO, e não se digita aqui — 06/09/2026. Esta linha
+    # trazia *"os 2 controles da mesa"* letra por letra, e a palavra "mesa" saiu
+    # da tela por decisão dela (`A-PALAVRA-MESA-SAI-01`): a régua reprovaria a
+    # cura, que é o defeito de forma que esta casa nomeia — *a régua confunde a
+    # PALAVRA com o ATO*. O que ela mede é o ATO: o toast CONTOU quantos
+    # receberam.
+    esperada = lightbar_actions._AVISO_MESMO_DESENHO_NOS_QUATRO.format(n=2)
+    assert esperada in host._toasts[-1], (
         "o clique pegou em dois controles e o toast não contou"
     )
 
@@ -224,7 +231,9 @@ def test_com_um_controle_so_a_frase_do_para_todos_nao_aparece(
     host.on_player_leds_preset_p2(None)
 
     assert host._toasts
-    assert "controles da mesa" not in host._toasts[-1]
+    # Idem: o pedaço invariante da frase do dono, sem o número.
+    assert (lightbar_actions._AVISO_MESMO_DESENHO_NOS_QUATRO.split("{n}")[-1]
+            not in host._toasts[-1])
 
 
 def test_os_dois_atalhos_para_todos_ficam_fora_da_pergunta(

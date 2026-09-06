@@ -83,7 +83,7 @@ ATRIBUTO_LEGADO_LABEL = "_edit_target_label"
 # mundo — a mesma razão pela qual o módulo do vocabulário do "guardado" guarda
 # três motivos em vez de um.
 MOTIVO_SEM_ESTADO = "a janela ainda não leu o estado do Hefesto"
-MOTIVO_MESA_VAZIA = "não há controle na mesa"
+MOTIVO_MESA_VAZIA = "não há controle ligado"
 MOTIVO_DAEMON_DESLIGADO = "o Hefesto está desligado"
 
 

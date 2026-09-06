@@ -248,7 +248,7 @@ def frase_de_guardado(
         motivos.append(_MOTIVO_NATIVO)
         liberacoes.append(_LIBERA_NATIVO)
     if alvo_ausente:
-        motivos.append(f"{com_artigo(alvo_ausente)} não está na mesa")
+        motivos.append(f"{com_artigo(alvo_ausente)} não está ligado")
         liberacoes.append(f"{com_artigo(alvo_ausente)} voltar")
     if not liberacoes:
         return None
@@ -291,7 +291,7 @@ def frase_de_guardado(
 #: uma resposta, e disfarçá-la de diagnóstico é o defeito de forma que esta
 #: função inteira existe para matar.
 NADA_ACONTECEU = "nenhum controle recebeu"
-NADA_ACONTECEU_MESA_VAZIA = "nenhum controle recebeu — não há controle na mesa"
+NADA_ACONTECEU_MESA_VAZIA = "nenhum controle recebeu — não há controle ligado"
 NADA_ACONTECEU_NATIVO = f"nenhum controle recebeu — {_MOTIVO_NATIVO}"
 
 

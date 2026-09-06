@@ -1153,25 +1153,21 @@ _NAO_E_PROMESSA: dict[str, str] = {
 #: No dia em que o caminho nascer, a entrada deixa de bater com a árvore e
 #: ``test_a_lista_de_lacunas_nao_envelhece_calada`` cobra que ela seja apagada.
 _SEM_CAMINHO_HOJE: dict[str, str] = {
-    "interface/frases_que_ela_baniu.py::primeiro_trecho_banido": (
-        "06/09/2026, A-PALAVRA-MESA-SAI-01 — É PROMESSA, e o caminho se perde "
-        "num lugar medido. Ela é a consulta às DUAS listas (frase e palavra) "
-        "que a sprint pediu, e o chamador natural é o funil de execução "
-        "`interface/hefesto_vivo.py::_json`, por onde todo valor passa a "
-        "caminho do WebView. Ele NÃO pode adotá-la hoje, e não é esquecimento: "
-        "o `_json` LEVANTA, e duas coisas o fariam quebrar a janela dela — a "
-        "chave `\"mesa\"` que sete pacotes emitem por tique (essa a régua já "
-        "isenta) e as DEZESSEIS frases de `app/` que ainda dizem a palavra "
-        "(`app/actions/config/mixin.py:34`, `secao_controles.py:126`, "
-        "`secao_mesa.py:1779` e `:1788`, `jogar/painel.py:377` e `:384`, "
-        "`lightbar_actions.py:103` e `:128`, `perfis_web.py:329`, "
-        "`rumble_actions.py:478`, `alvo_de_edicao.py:86`, "
-        "`ipc_bridge.py:760`, `:807` e `:847`, `textos_de_aplicacao.py:251` e "
-        "`:294`). `app/` não era posse daquela sprint. O QUE FECHA: curar as "
-        "dezesseis no dono e trocar, no `_json`, `frase_banida_em` por esta — "
-        "uma linha. A lista está no relatório "
-        "`docs/process/agentes/2026-09-06/A-PALAVRA-MESA-SAI-01.md`."
-    ),
+    # A LÁPIDE DE `primeiro_trecho_banido` SAIU EM 06/09/2026, na costura da
+    # ONDA E, e ela previu o próprio fim com o endereço de cada passo: dizia que
+    # o chamador natural era o funil `interface/hefesto_vivo.py::_json`, que ele
+    # não podia adotá-la enquanto DEZESSEIS frases de `app/` dissessem a palavra
+    # banida, e que o que fecharia era "curar as dezesseis no dono e trocar, no
+    # `_json`, `frase_banida_em` por esta — uma linha".
+    #
+    # Foi exatamente isso. As dezesseis foram curadas no dono — as três de
+    # `ipc_bridge.py` e as duas de `textos_de_aplicacao.py` inclusive, que são
+    # as que a tela lê —, e o `_json` passou a consultar as DUAS listas. A
+    # `app/` não era posse da `A-PALAVRA-MESA-SAI-01`, e é por isso que a dívida
+    # nasceu declarada em vez de nascer esquecida.
+    #
+    # **Uma dívida que se anuncia com endereço é uma dívida que alguém paga.**
+
     # `integrations/canal_do_microfone.py::sufixo_do_canal` MOROU AQUI e a
     # entrada SAIU em 06/09/2026, no Passo 3 da mesma sprint: a função DESCEU
     # para `integrations/fontes_de_captura.py::sufixo_do_canal_do_mic`, porque

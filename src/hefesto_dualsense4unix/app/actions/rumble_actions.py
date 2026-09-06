@@ -476,7 +476,7 @@ TEXTO_ONDE_GRAVA_E_ONDE_MANDA = (
 #: Começa com " — " porque é sufixo do toast, e o toast é uma linha só.
 TEXTO_A_PECA_VOLTOU_AO_AJUSTE_GERAL = (
     " — e este controle voltou ao ajuste geral: o Auto escala pela bateria do "
-    "controle principal, então ele vale para a mesa toda, nunca para um só."
+    "controle principal, então ele vale para todos, nunca para um só."
 )
 
 

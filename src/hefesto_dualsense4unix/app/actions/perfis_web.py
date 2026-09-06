@@ -327,8 +327,8 @@ GUARDA_SEM_MESA = (
 #: nada, e dizer "nenhum controle" seria afirmar o que não se mediu.
 GUARDA_SEM_DAEMON = (
     "Hefesto desligado — abra a aba Sistema e clique em “Ligar o Hefesto”. "
-    "Enquanto ele estiver parado, esta tela não sabe quais controles estão na "
-    "mesa; o que o perfil guarda para cada peça continua no disco, intacto."
+    "Enquanto ele estiver parado, esta tela não sabe quais controles estão "
+    "ligados; o que o perfil guarda para cada peça continua no disco, intacto."
 )
 
 #: As seções que o perfil guarda por controle, na ordem do desenho. Não é
