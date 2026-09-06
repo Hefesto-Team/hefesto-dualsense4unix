@@ -1488,7 +1488,7 @@
 
   /* ---- a lista de aparelhos.
      NO PRODUTO ELA É A COLUNA DA ESQUERDA e as faces ficam à direita
-     (`mapa_da_mesa.py:515-523`). Aqui ela é a fileira de CIMA, e a razão é
+     (`mapa_da_mesa._Janela.__init__`). Aqui ela é a fileira de CIMA, e a razão é
      aritmética: o quadrado do produto tem 84px de largura e a fileira tem SETE
      colunas fixas — 7×84 + 6 de vão pedem 618px, e a `.tn-cx` oferece 624 por
      dentro. Lado a lado com uma coluna de lista, o quadrado cairia para ~56px e
@@ -1510,7 +1510,7 @@
   .mm-face-cab{display:flex;align-items:center;gap:9px;margin-bottom:6px}
   .mm-face-nome{font-size:11.5px;font-weight:600;color:var(--texto-suave)}
   /* o nome é um `Gtk.Label`, NÃO um campo: depois de criada, a face não tem
-     como ser renomeada nem apagada pela interface (`mapa_da_mesa.py:645`). */
+     como ser renomeada nem apagada pela interface (`mapa_da_mesa._Janela._desenhar_faces`). */
   .tn-cx .mm-face-cab .btn{height:23px;font-size:10px;padding:0 8px}
   /* SETE COLUNAS, para toda face, e o produto escreve a razão: "sete é a fileira
      do hub dela, que é a maior face desta casa" (`_COLUNAS = 7`). O `minmax` deixa
