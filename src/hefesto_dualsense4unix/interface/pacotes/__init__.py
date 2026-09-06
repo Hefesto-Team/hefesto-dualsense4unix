@@ -78,13 +78,41 @@ class Contexto:
     * `conectados` — só os que estão de fato aqui. **Toda frase que promete
       alcance conta ESTES**, e não a mesa: o defeito de nomear um controle que
       não está apareceu quatro vezes em 31/08;
-    * `estados` — o estado vivo por `uniq` (sticks, botões, sensores).
+    * `estados` — o estado vivo por `uniq` (sticks, botões, sensores);
+    * `externos` — os controles que o Hefesto VÊ e NÃO adota (Nintendo Pro,
+      8BitDo, Xbox). **Campo próprio, e nunca dentro de `conectados`** — ver a
+      nota do campo.
     """
 
     state: dict[str, Any]
     mesa: list[dict[str, Any]] = field(default_factory=list)
     conectados: list[dict[str, Any]] = field(default_factory=list)
     estados: dict[str, Any] = field(default_factory=dict)
+    #: OS CONTROLES QUE O HEFESTO SÓ VÊ — EXTERNOS-01, 06/09/2026, e ele fecha
+    #: as linhas 16 e 305 de `docs/data/paridade-gtk-html.csv`.
+    #:
+    #: **CAMPO PRÓPRIO, E A ROTA DA SPRINT DIZ POR QUÊ:** *"nunca dentro de
+    #: `controllers`"*. Os três campos acima são os ASSENTOS — quem tem `pref`
+    #: (`p1`..`p4`), quem o co-op numerou, quem a fita escolhe como alvo de
+    #: edição. Um externo não tem nada disso: o Hefesto não o adota, não lhe
+    #: monta vpad e não escreve nele. Somá-lo a `conectados` faria o cabeçalho
+    #: contar jogadores que não existem, a fita oferecer um alvo que nenhum
+    #: gesto alcança e `apagar_os_lugares_sem_dono` disputar um cartão que não é
+    #: dele — três defeitos por uma lista só.
+    #:
+    #: **DE ONDE ELE VEM, e não é o `state_full`:** o daemon publica esta lista
+    #: SÓ em `controller.list {"external": true}` (`daemon/ipc_handlers.py:4600`),
+    #: sob opt-in e fora do caminho quente, porque a enumeração de `/dev/input`
+    #: mais a sonda de holders custa 10-40 ms e um subprocess. Quem pergunta é o
+    #: piloto, no tique LENTO e com teto próprio (`hefesto_vivo._talvez_ler_os_externos`)
+    #: — a mesma escolha que a janela antiga já fazia
+    #: (`home_actions._maybe_fetch_externos`, `EXTERNOS_THROTTLE_S = 4.0`).
+    #:
+    #: **LISTA VAZIA É DUAS COISAS** — *"não há"* e *"ainda não perguntei"* — e
+    #: quem lê trata as duas igual: não desenha card nenhum. A diferença só
+    #: importaria para ACUSAR ausência, e nenhuma das duas abas acusa. É a
+    #: mesma decisão escrita em `home_actions.externos_na_mesa`, que é o dono.
+    externos: list[dict[str, Any]] = field(default_factory=list)
 
     def por_uniq(self, uniq: str) -> dict[str, Any]:
         """A entrada do daemon daquele controle, ou `{}` — nunca levanta.

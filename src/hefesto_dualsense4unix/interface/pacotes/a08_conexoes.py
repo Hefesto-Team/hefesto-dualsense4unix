@@ -25,6 +25,7 @@ from __future__ import annotations
 
 import contextlib
 import dataclasses as _dataclasses
+import html
 import re
 import time
 from typing import TYPE_CHECKING, Any
@@ -1962,6 +1963,70 @@ def _html_dos_aparelhos() -> str:
     return "\n".join(fora)
 
 
+def _html_dos_externos(ctx: Contexto) -> str:
+    """Uma linha por controle que o Hefesto VÊ e NÃO adota — ``""`` sem nenhum.
+
+    **A LINHA 305 DO CSV DA PARIDADE**, e a acusação dela é curta: *"uma aba
+    chamada Conexões que não lista metade dos controles conectados"*. O `porque`
+    daquela linha era um grep — *"por `controller.list` em `interface/pacotes/`
+    não acha uma chamada"* —, e desde esta sprint acha: quem pergunta é o piloto,
+    no tique lento (`hefesto_vivo._talvez_ler_os_externos`), e a resposta chega
+    aqui por `ctx.externos`, que é campo PRÓPRIO do contexto.
+
+    **O CONTEÚDO É O MESMO DA ABA 01, E ISSO É DELIBERADO.** As três frases têm
+    UM dono cada (`_format_external_title`, `_format_external_subtitle`,
+    `external_controllers.nintendo_bt_warning`), e é por elas passarem pelo mesmo
+    dono que as duas abas não podem discordar sobre o mesmo aparelho — que é o
+    defeito que esta casa nomeia *"a tela afirmando o que não é"*, visto quatro
+    vezes num dia só de 31/08.
+
+    **O AVISO DO `hid-nintendo` É O SINAL DESTA LINHA DO CSV**, e ele não acusa o
+    Hefesto nem promete cura: a morte é do driver do kernel com firmware clone
+    em modo Switch, e a saída estável é o cabo. O dono da frase mediu isso
+    (`nintendo_bt_warning`), e ela nasce só quando as duas condições valem — VID
+    Nintendo E rádio. Nos outros aparelhos a linha não existe.
+
+    **A LISTA NÃO ENTRA NO ACORDEÃO `.gc`**, e a razão é a mesma da aba 01: cada
+    `.gc-item` tem `data-controle="pN"`, um rádio de alvo de saída e um corpo que
+    se abre. Um externo não tem assento, não é alvo de saída de nada e não tem o
+    que abrir — pô-lo ali daria à tela um sexto rádio apontando para um aparelho
+    em que o daemon não escreve.
+    """
+    if not ctx.externos:
+        return ""
+    from hefesto_dualsense4unix.app.actions.external_controllers import (
+        nintendo_bt_warning,
+    )
+    from hefesto_dualsense4unix.app.actions.home_actions import (
+        _format_external_subtitle,
+        _format_external_title,
+    )
+    def _e(x: object) -> str:
+        """Escapa para HTML — pelo `html.escape` da biblioteca, e não pelo `_e`
+        da janela GTK.
+
+        `gui.aba_conexoes._e` é exatamente esta linha, e importá-lo seria uma
+        citação NOVA para uma janela que está saindo (`D-0609-GTK-LEVA-INTEIRA`):
+        o portão `nada-aponta-para-a-janela` reprovou a primeira volta desta
+        sprint por isso, e a regra é que aquela lista só diminui. **O que se
+        reusa da janela é o MOTOR** — as frases, que vêm de `app/actions/` —,
+        nunca a janela. É a mesma escolha que `a09_sistema.py` já faz.
+        """
+        return html.escape(str(x), quote=True)
+
+    fora = []
+    for entrada in ctx.externos:
+        aviso = nintendo_bt_warning(entrada)
+        linha_do_aviso = (f'<span class="ext-aviso">{_e(aviso)}</span>'
+                          if aviso else "")
+        fora.append(
+            '<div class="ext-linha">'
+            f'<b>{_e(_format_external_title(entrada))}</b>'
+            f'{_PONTO}{_e(_format_external_subtitle(entrada))}'
+            f'{linha_do_aviso}</div>')
+    return "".join(fora)
+
+
 #: A PALAVRA DA COLUNA "Nome" QUANDO ELA NÃO DEU NOME, e ela tem UM dono: é a
 #: mesma que `gui.aba_conexoes.html_dos_adaptadores` escreve. O gerador a lia da
 #: própria cópia até 04/09/2026 — duas grafias da mesma célula, e a tabela
@@ -3594,6 +3659,9 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
         # existem é o que a máquina dela responde, e não há endereço para uma
         # `<tr>` que ainda não nasceu.
         "adaptadores-tabela": _html_dos_adaptadores(),
+        # OS CONTROLES QUE O HEFESTO SÓ VÊ — EXTERNOS-01, 06/09/2026, linha 305
+        # de `docs/data/paridade-gtk-html.csv`. Ver :func:`_html_dos_externos`.
+        "externos-lista": _html_dos_externos(ctx),
         # O QUE O BOTÃO FÍSICO DO MICROFONE CALA — **D-12**, e é a resposta que
         # substitui o `<select>` morto de `mic-escopo`. Um valor por MÁQUINA num
         # endereço por máquina; era um por controle num campo que o produto não
