@@ -139,8 +139,22 @@ def registrar(pagina: str) -> Callable[[Pintura], Pintura]:
 #: `a04_iluminacao.py`, e não há merge a resolver.
 GESTOS: dict[tuple[str, str], Gesto] = {}
 
+#: O QUE CADA GESTO DECLARA QUE MUDA NA MÁQUINA DELA — `(página, nome) → o que`.
+#: Só entram os que passaram `grava=`; o silêncio é "não mexe em nada dela".
+#:
+#: ELE É A FONTE DE `hefesto_vivo.PERIGOSOS`, e é por isso que existe. Até
+#: 06/09/2026 aquela lista era DIGITADA num arquivo que os pacotes têm no
+#: `nao_toca`, e chegou atrasada QUATRO vezes em três dias — `01-jogar·cadeado`,
+#: `08-conexoes·renomear-adaptador`, os dois da Vibração e os dois da tela de
+#: teclas. A forma do defeito é sempre a mesma: quem escreve o gesto não pode
+#: fechar o próprio contrato, porque as duas linhas moram longe dele.
+#:
+#: Aqui a declaração mora NO GESTO, e a lista é derivada. Ver `perigosos()`.
+GESTOS_QUE_MEXEM: dict[tuple[str, str], str] = {}
 
-def gesto(pagina: str, nome: str) -> Callable[[Gesto], Gesto]:
+
+def gesto(pagina: str, nome: str, *,
+          grava: str = "") -> Callable[[Gesto], Gesto]:
     """Decorador: `@gesto("04-iluminacao.html", "cor")` liga um botão.
 
     A função recebe `(ctx, o, ipc)`:
@@ -154,7 +168,31 @@ def gesto(pagina: str, nome: str) -> Callable[[Gesto], Gesto]:
     um `ipc` de mentira e cobra QUAL método foi chamado e com quais parâmetros —
     que é a única forma de provar que o botão faz o que promete, em vez de
     provar que ele existe.
+
+    `grava=` — O QUE ESTE GESTO MUDA NA MÁQUINA DELA, e quem o declara é quem o
+    escreve. Duas formas, e a diferença decide quem confere:
+
+    * **o nome da porta**, quando existe uma chamada que a árvore enxerga —
+      `grava="save_profile"`, `grava="gravar_e_reaplicar"`,
+      `grava="marcar_jogo_sem_wrapper"`. `test_todo_gesto_que_grava_esta_
+      protegido` LÊ a árvore do gesto e cobra que a porta declarada esteja lá:
+      declaração errada ou envelhecida reprova nomeando;
+    * **uma frase**, quando o perigo não é uma chamada — `grava="para o serviço
+      e ela fica sem controle"`. Aí a árvore não tem o que confirmar, e quem
+      assembla é a régua, no `FORA_DA_ARVORE` dela, com a medição do lado.
+
+    NÃO É "grava no disco", é **"muda algo dela que ela não mandou mudar"** — a
+    área de transferência da 07 e o cursor da 06 estão aqui pela mesma razão que
+    o `save_profile`. O que sai daqui é `hefesto_vivo.PERIGOSOS`, a lista do que
+    a prova botão a botão NÃO clica sozinha.
     """
+    limpo = grava.strip()
+    if grava and not limpo:
+        raise SystemExit(
+            f"ERRO: o gesto {nome!r} de {pagina} declarou `grava=` em branco. "
+            f"Declaração vazia é pior que nenhuma: ela some da lista derivada "
+            f"sem ninguém notar. Diga a porta ou diga a frase.")
+
     def dentro(fn: Gesto) -> Gesto:
         chave = (pagina, nome)
         if chave in GESTOS:
@@ -163,8 +201,34 @@ def gesto(pagina: str, nome: str) -> Callable[[Gesto], Gesto]:
                 f"({GESTOS[chave].__module__}). Dois donos para o mesmo botão é "
                 f"o defeito que este despachante existe para impedir.")
         GESTOS[chave] = fn
+        if limpo:
+            GESTOS_QUE_MEXEM[chave] = limpo
         return fn
     return dentro
+
+
+def perigosos() -> set[tuple[str, str]]:
+    """Os gestos que mexem na máquina dela — DERIVADOS, nunca digitados.
+
+    É o que `hefesto_vivo.PERIGOSOS` passou a ser em 06/09/2026, e a diferença
+    não é de estilo. A lista digitada tinha DOIS defeitos que a derivação torna
+    impossíveis, e os dois foram medidos nesta casa:
+
+    1. **entrada que não casa gesto nenhum.** `("09-sistema.html",
+       "restaurar-de-fabrica")` ficou anos protegendo NADA — o gesto sempre se
+       chamou `refazer-proton`. Uma lista lida só para PULAR nunca acusa o
+       próprio erro de digitação. Aqui a chave SAI do registro: um fantasma não
+       tem como nascer;
+    2. **a linha que chega no commit seguinte.** Quatro vezes em três dias um
+       gesto aprendeu a gravar e a lista ficou para trás — e a janela entre as
+       duas é a janela em que a prova botão a botão escreve no disco dela.
+
+    O QUE A DERIVAÇÃO **NÃO** RESOLVE, e por isso a régua de AST continua: quem
+    esquece a linha também pode esquecer o `grava=`. São duas fontes
+    independentes de propósito — a declaração diz o que o autor quis, a árvore
+    diz o que o código faz, e a régua cobra as duas direções.
+    """
+    return set(GESTOS_QUE_MEXEM)
 
 
 def gesto_da_pagina(pagina: str, nome: str) -> Gesto | None:

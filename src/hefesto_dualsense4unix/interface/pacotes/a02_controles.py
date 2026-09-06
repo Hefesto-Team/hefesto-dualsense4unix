@@ -2704,7 +2704,7 @@ def _lembrar_do_som(
     loader.save_profile(adiante, origem="interface-nova")
 
 
-@gesto("02-controles.html", "mudo")
+@gesto("02-controles.html", "mudo", grava="save_profile")
 def mudo(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     """O 🎙 e o ♪ — os dois botões de calar, e eles ALTERNAM o que a tela mostra.
 
@@ -2874,7 +2874,7 @@ def mudo(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
                      f"ou 'alto-falante'")
 
 
-@gesto("02-controles.html", "rota")
+@gesto("02-controles.html", "rota", grava="save_profile")
 def rota(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     """Onde o som do controle sai. **"Sons do jogo" tem dono; "Todo o som do PC" não.**
 
@@ -3113,7 +3113,7 @@ def sensor(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
         raise RuntimeError(frase)
 
 
-@gesto("02-controles.html", "volume")
+@gesto("02-controles.html", "volume", grava="save_profile")
 def volume(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     """Os DOIS deslizantes — o do microfone e o do alto-falante (D-08).
 

@@ -1948,7 +1948,7 @@ def _systemctl(verbo: str) -> None:
     _LENTO.clear()
 
 
-@gesto("09-sistema.html", "autostart")
+@gesto("09-sistema.html", "autostart", grava="_systemctl")
 def autostart(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     """O interruptor "Ligar junto com o computador". `systemctl --user enable|disable`.
 
@@ -1982,7 +1982,7 @@ def autostart(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     _systemctl("disable" if ligado else "enable")
 
 
-@gesto("09-sistema.html", "reiniciar")
+@gesto("09-sistema.html", "reiniciar", grava="_systemctl")
 def reiniciar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     """"Reiniciar o serviço". `systemctl --user restart`, com o `reset-failed`.
 
@@ -2108,20 +2108,26 @@ SEM_MOTOR: dict[str, str] = {
     # velhas (que esta interface não tem).
     #
     # **O QUE SEGURA O BOTÃO NÃO É MAIS O MOTOR: é a rede de segurança.** Um
-    # gesto que chame `save_profile` precisa da linha
-    # `("09-sistema.html", "restaurar-de-fabrica")` em `hefesto_vivo.PERIGOSOS`
-    # NO MESMO COMMIT — sem ela, a prova botão a botão desta casa restaura o
-    # `meu_perfil` DELA para provar que sabe clicar
-    # (`test_todo_gesto_que_grava_esta_protegido` reprova, e com razão).
-    # `hefesto_vivo.py` está no `nao_toca` desta frente; a linha está RELATADA
-    # em `docs/process/agentes/2026-09-04/ONDA2-09.md`.
+    # gesto que chame `save_profile` restaura o `meu_perfil` DELA quando a prova
+    # botão a botão o aciona — e a prova aciona todo `data-gesto`.
+    #
+    # A REDE DEIXOU DE SER DE OUTRA POSSE — 06/09/2026. Até esta data a linha
+    # `("09-sistema.html", "restaurar-de-fabrica")` tinha de ser escrita em
+    # `hefesto_vivo.PERIGOSOS`, que estava no `nao_toca` desta frente, e por isso
+    # a dívida ficava aberta esperando outro dono. Com a
+    # `ONDA3-GESTO-DECLARA-01` a proteção mora no decorador: quem escrever este
+    # gesto põe `grava="save_profile"` no `@gesto(...)` dele, no mesmo commit, e
+    # `PERIGOSOS` o recebe derivado. **A entrada velha nunca protegeu nada** —
+    # ela ficou meses em `PERIGOSOS` enquanto o gesto se chamava
+    # `refazer-proton`, e com a chave saindo do registro esse fantasma não tem
+    # mais como nascer.
     "restaurar-de-fabrica": "o CAMINHO existe e está medido (asset + "
                             "`save_profile` + `profile_switch` + "
                             "`launch_env.refresh`, os três tempos do "
-                            "`perfil.gravar_e_reaplicar`); o que falta é a linha "
-                            "em `hefesto_vivo.PERIGOSOS`, e esse arquivo é de "
-                            "outra posse. Sem ela a régua de clique restaura o "
-                            "perfil dela para provar que sabe clicar.",
+                            "`perfil.gravar_e_reaplicar`); falta o DONO. Quem "
+                            "o escrever declara `grava=\"save_profile\"` no "
+                            "próprio decorador — sem isso a régua de clique "
+                            "restaura o perfil dela para provar que sabe clicar.",
 }
 
 
@@ -2265,7 +2271,7 @@ def _confirmado(o: dict[str, Any], gesto_: str) -> bool:
     return False
 
 
-@gesto("09-sistema.html", DESLIGAR)
+@gesto("09-sistema.html", DESLIGAR, grava="_systemctl")
 def desligar(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
     """O PAR que ela pediu, num botão só: **Parar o serviço** e **Ativar o serviço**.
 
@@ -2374,7 +2380,8 @@ def ativar_o_servico() -> bool:
     return True
 
 
-@gesto("09-sistema.html", "refazer-proton")
+@gesto("09-sistema.html", "refazer-proton",
+       grava="trava o Proton de TODOS os jogos dela, e a Steam regrava o arquivo")
 def refazer_proton(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
     """"Refazer a fixação do Proton" — dois cliques, e o motor é o da GTK.
 
@@ -2403,18 +2410,18 @@ def refazer_proton(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
 
     **FATO ERRADO, SUBSTITUÍDO — 06/09/2026.** Esta linha dizia *"NÃO É CLICADO
     POR RÉGUA NENHUMA: `("09-sistema.html", "refazer-proton")` já está em
-    `hefesto_vivo.PERIGOSOS` desde antes de ele ter dono"*. **Ele não está**, e
-    a medição é de um `print(sorted(hefesto_vivo.PERIGOSOS))`: a entrada foi
-    APAGADA de lá — o comentário que sobrou no arquivo conta a história, e a
-    linha que ele deixa comentada é justamente `("09-sistema.html",
-    "refazer-proton")`. A `--prova-gesto` clica cada gesto UMA vez por
-    execução, então os dois cliques o protegem numa volta; DUAS execuções
-    dentro de :func:`segundos_para_confirmar` o disparam de verdade, com o
-    `config.vdf` dela do outro lado.
+    `hefesto_vivo.PERIGOSOS` desde antes de ele ter dono"*, e ele NÃO estava —
+    a entrada tinha sido apagada de lá. A `--prova-gesto` clica cada gesto UMA
+    vez por execução, então os dois cliques o protegem numa volta; DUAS
+    execuções dentro de :func:`segundos_para_confirmar` o disparam de verdade,
+    com o `config.vdf` dela do outro lado.
 
-    A cura é uma linha em `hefesto_vivo.PERIGOSOS`, e esse arquivo está no
-    `nao_toca` desta frente — **está RELATADA**, junto com as duas irmãs que
-    esta sprint acrescentou (`refazer-consertos` e `procurar-camadas`).
+    **AGORA ELE ESTÁ, e a cura não é mais "uma linha noutro arquivo":** o
+    decorador deste gesto declara `grava=`, e `PERIGOSOS` é derivada da
+    declaração (`ONDA3-GESTO-DECLARA-01`). A declaração é por FRASE e não pelo
+    nome de uma porta porque a escrita chega por `travar()`, que é um
+    `getattr(pin, "lock_proton_for_all_games")` — a árvore não vê o nome. A
+    assinatura fica em `FORA_DA_ARVORE`, na régua.
     """
     if not _confirmado(o, "refazer-proton"):
         return {"blocos": blocos_dos_botoes(_de_pe(ctx))}
@@ -2547,7 +2554,8 @@ def _frase_do_que_vai_mudar(jogos: list[str] | None) -> str:
     return "\n".join(linhas)
 
 
-@gesto("09-sistema.html", "refazer-consertos")
+@gesto("09-sistema.html", "refazer-consertos",
+       grava="roda os scripts de conserto do sistema na máquina dela")
 def refazer_consertos(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
     """"Refazer os consertos automáticos" — mede, mostra, e só então mexe.
 
@@ -2624,7 +2632,7 @@ def refazer_consertos(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any
 _CAMADAS: dict[str, Any] = {}
 
 
-@gesto("09-sistema.html", "procurar-camadas")
+@gesto("09-sistema.html", "procurar-camadas", grava="curar_todos")
 def procurar_camadas(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
     """"Tirar a sobreposição Vulkan" — os TRÊS tempos que o rótulo promete.
 

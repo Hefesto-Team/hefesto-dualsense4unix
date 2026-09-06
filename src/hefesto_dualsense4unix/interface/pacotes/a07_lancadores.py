@@ -1453,7 +1453,7 @@ def procurar(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
     return _resposta(VIGIA.ler(), ctx.state)
 
 
-@gesto("07-lancadores.html", "consertar")
+@gesto("07-lancadores.html", "consertar", grava="reparar_ou_adiar")
 def consertar(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
     """"Consertar": repõe o atalho de inicialização onde ele falta.
 
@@ -1642,7 +1642,7 @@ def _appid_do_clique(o: dict[str, Any], nome: str) -> str:
     return appid
 
 
-@gesto("07-lancadores.html", "tirar-daqui")
+@gesto("07-lancadores.html", "tirar-daqui", grava="marcar_jogo_sem_wrapper")
 def tirar_daqui(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
     """"Não usar neste jogo": põe o appid no `jogos_sem_wrapper.txt`.
 
@@ -1658,7 +1658,7 @@ def tirar_daqui(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
     return _resposta(VIGIA.ler(), ctx.state)
 
 
-@gesto("07-lancadores.html", "voltar-a-usar")
+@gesto("07-lancadores.html", "voltar-a-usar", grava="desmarcar_jogo_sem_wrapper")
 def voltar_a_usar(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
     """"Voltar a usar": tira o appid do `jogos_sem_wrapper.txt`.
 
@@ -1673,7 +1673,7 @@ def voltar_a_usar(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
     return _resposta(VIGIA.ler(), ctx.state)
 
 
-@gesto("07-lancadores.html", "voltar-a-perguntar")
+@gesto("07-lancadores.html", "voltar-a-perguntar", grava="remove_dismissed_appid")
 def voltar_a_perguntar(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
     """"Voltar a perguntar": tira o appid do `launch_dialog_dismissed.json`.
 
@@ -1700,7 +1700,7 @@ def voltar_a_perguntar(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, An
     return _resposta(VIGIA.ler(), ctx.state)
 
 
-@gesto("07-lancadores.html", "nao-perguntar")
+@gesto("07-lancadores.html", "nao-perguntar", grava="add_dismissed_appid")
 def nao_perguntar(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
     """"Não perguntar para este jogo": põe o appid no `launch_dialog_dismissed.json`.
 
@@ -1737,7 +1737,7 @@ def nao_perguntar(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
     return _resposta(VIGIA.ler(), ctx.state)
 
 
-@gesto("07-lancadores.html", FECHAR)
+@gesto("07-lancadores.html", FECHAR, grava="with_steam_closed")
 def fechar_a_steam_e_repor(ctx: Contexto, o: dict[str, Any],
                            p: Any) -> dict[str, Any]:
     """A parede que a GTK derrubou, e que o HTML tinha reerguido.
@@ -1802,7 +1802,8 @@ def fechar_a_steam_e_repor(ctx: Contexto, o: dict[str, Any],
     return _resposta(VIGIA.ler(), ctx.state)
 
 
-@gesto("07-lancadores.html", desenho.ABRIR)
+@gesto("07-lancadores.html", desenho.ABRIR,
+       grava="abre a janela da Steam por cima do que ela está fazendo")
 def abrir_lancador(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     """"Abrir o lançador": abre a Steam. Nos outros cinco, RECUSA dizendo.
 
@@ -1978,7 +1979,7 @@ def para_a_area_de_transferencia(texto: str) -> bool:
     return bool(lido) and lido[0] == texto
 
 
-@gesto("07-lancadores.html", desenho.COPIAR)
+@gesto("07-lancadores.html", desenho.COPIAR, grava="set_text")
 def copiar_a_linha(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
     """"Copiar a linha": a linha de inicialização do Hefesto na área de transferência.
 
@@ -2096,7 +2097,7 @@ def _rodar_o_script(script: Any) -> tuple[int, str]:
     return proc.returncode, (proc.stdout or "") + (proc.stderr or "")
 
 
-@gesto("07-lancadores.html", desenho.DESLIGAR_STEAM_INPUT)
+@gesto("07-lancadores.html", desenho.DESLIGAR_STEAM_INPUT, grava="with_steam_closed")
 def desligar_o_steam_input(ctx: Contexto, o: dict[str, Any],
                            p: Any) -> dict[str, Any]:
     """"Desligar o Steam Input": tira a Steam do meio entre o controle e o jogo.
@@ -2157,7 +2158,7 @@ def desligar_o_steam_input(ctx: Contexto, o: dict[str, Any],
     return {**_resposta(VIGIA.ler(), ctx.state), "recado": frase}
 
 
-@gesto("07-lancadores.html", desenho.JOGO_NAO_FUNCIONA)
+@gesto("07-lancadores.html", desenho.JOGO_NAO_FUNCIONA, grava="add_appid_to_steam_input_allowlist")
 def este_jogo_nao_funciona(ctx: Contexto, o: dict[str, Any],
                            p: Any) -> dict[str, Any]:
     """"Este jogo não funciona": põe o jogo na lista de exceções do Steam Input.
@@ -2199,7 +2200,12 @@ def este_jogo_nao_funciona(ctx: Contexto, o: dict[str, Any],
     return {**_resposta(VIGIA.ler(), ctx.state), "recado": frase}
 
 
-@gesto("07-lancadores.html", desenho.TUDO_PRONTO)
+# `grava="with_steam_closed"` E NÃO `apply_wrapper_to_all_games`, que é
+# quem de fato reescreve a linha de TODOS os jogos: ele chega aqui por
+# `getattr(slo, …)` e a árvore não o enxerga. A direção B da régua
+# reprovou a primeira declaração deste gesto por isso, no dia em que ela
+# nasceu — e a porta declarada tem de ser a que a árvore confirma.
+@gesto("07-lancadores.html", desenho.TUDO_PRONTO, grava="with_steam_closed")
 def deixar_tudo_pronto(ctx: Contexto, o: dict[str, Any],
                        p: Any) -> dict[str, Any]:
     """"Deixar tudo pronto": os DOIS trabalhos, com UM consentimento só.

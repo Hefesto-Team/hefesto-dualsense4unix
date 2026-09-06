@@ -1847,375 +1847,45 @@ _METODO_DO_GESTO = {
 }
 
 #: OS GESTOS QUE MEXEM NA MÁQUINA DELA, e que a prova botão a botão NÃO clica
-#: sozinha. Não é timidez: `desligar` para o daemon e ela fica sem controle no
-#: meio do trabalho; `restaurar-de-fabrica` apaga configuração; `reiniciar`
-#: derruba a sessão do daemon. Uma régua não mexe na máquina de alguém para
-#: provar que sabe clicar.
+#: sozinha. Não é timidez: `desligar` para o serviço e ela fica sem controle no
+#: meio do trabalho; `refazer-proton` apaga configuração; `reiniciar` derruba a
+#: sessão do serviço. Uma régua não mexe na máquina de alguém para provar que
+#: sabe clicar. Para incluí-los, `--incluir-perigosos` — e aí é escolha de quem
+#: roda.
 #:
-#: Para incluí-los, `--incluir-perigosos` — e aí é escolha de quem roda.
-#: A chave é `(página, gesto)`, e a qualificação NÃO é preciosismo: `detectar`
-#: nos Perfis grava no perfil DELA, e o mesmo `detectar` na Lançadores só
-#: procura o jogo e não escreve nada. Uma lista por nome cru trataria os dois
-#: igual, e a escolha seria entre não provar o seguro ou estragar o trabalho
-#: dela.
+#: **ELA É DERIVADA DESDE 06/09/2026, e deixou de ser digitada** (sprint
+#: `ONDA3-GESTO-DECLARA-01`). Cada gesto declara no PRÓPRIO decorador o que ele
+#: muda — `@gesto("05-vibracao.html", "motor", grava="rumble_motores_set")` — e
+#: esta linha é só a soma: `pacotes.perigosos()`. A razão de cada entrada mora
+#: no `grava=` dela, ao lado da função, e não mais aqui.
 #:
-#: FATO SUBSTITUÍDO — 05/09/2026. Este parágrafo usava `modo` na Navegação
-#: contra `modo` nos Gatilhos, chamando o segundo de *"inócuo"*. Deixou de ser:
-#: pela decisão D2 o `modo` dos Gatilhos grava no perfil a cada clique, e está
-#: isento aqui embaixo. Guardar a frase velha ao lado da lista que a desmente
-#: obrigaria a próxima pessoa a escolher entre duas afirmações.
-PERIGOSOS = {
-    ("09-sistema.html", "desligar"), ("09-sistema.html", "reiniciar"),
-    # `restaurar-de-fabrica` NÃO EXISTE — o gesto desta página chama-se
-    # `refazer-proton` desde que a aba nasceu, e a entrada velha protegia NADA.
-    # Achado pela guarda `test_a_lista_nao_protege_gesto_que_nao_existe`, que
-    # existe porque uma lista lida só para PULAR nunca acusa o próprio erro de
-    # digitação.
-    #
-    # OS TRÊS DA ABA 09 QUE ENTRARAM EM 06/09/2026 (SISTEMA-STEAM-01). O
-    # `refazer-proton` **já se dizia protegido desde 03/09 e não estava**: a
-    # entrada tinha sido comentada porque o gesto ainda não existia, e o
-    # docstring dele continuou afirmando que estava na lista. Os outros dois
-    # ganharam dono nesta leva. Os três pedem dois cliques, o que os protege
-    # numa volta da prova — mas duas execuções dentro dos segundos do
-    # consentimento disparam o segundo clique de verdade.
-    ("09-sistema.html", "refazer-proton"),
-    ("09-sistema.html", "refazer-consertos"),
-    ("09-sistema.html", "procurar-camadas"),
-    ("09-sistema.html", "autostart"),
-    ("10-perfis.html", "remover"), ("10-perfis.html", "novo"),
-    ("10-perfis.html", "voltar-a-de-ontem"), ("10-perfis.html", "duplicar"),
-    # OS DOIS QUE A LEVA DE 03/09 ENSINOU A ESCREVER — e ficaram de fora dela.
-    # Achado por um CONFERENTE ADVERSÁRIO, que rodou a régua contra a lista real
-    # e imprimiu o que ela faria:
-    #
-    #     SERÃO CLICADOS (8): … editor.estilo … editor.prioridade
-    #     PULADOS        (9): novo remover editor.nome … salvar
-    #
-    # O seletor do clique sintético cobre `[data-hef-gesto]`, então a régua ACHA
-    # e CLICA os dois — e os dois passaram a gravar no perfil DELA nesta mesma
-    # leva. Uma régua que prova saber clicar não pode escolher o estilo de jogo
-    # dela nem mudar a prioridade de um perfil pelo caminho.
-    #
-    # É a MESMA razão do `("*", "salvar")` acima, e a terceira vez que a lista
-    # fica para trás de uma cura: quem ensinar um gesto a escrever no disco
-    # acrescenta a linha aqui NO MESMO COMMIT.
-    ("10-perfis.html", "editor.prioridade"),
-    ("10-perfis.html", "editor.estilo"),
-    # E MAIS QUATRO, que a régua nova achou — inclusive um que EU escrevi hoje.
-    # `test_todo_gesto_que_grava_esta_protegido` lê a ÁRVORE de cada gesto e
-    # pergunta se ele chama uma porta de escrita. Os quatro abaixo gravam VALOR
-    # NOVO, e por isso entram:
-    #
-    #   01-jogar·mascara            grava a máscara DAQUELE aparelho no
-    #                               `external_mask` — e trocar a máscara
-    #                               DERRUBA E RECRIA o gamepad virtual, o que
-    #                               num jogo aberto reordena os jogadores
-    #   06-navegacao·guardar-…      `gravar_e_reaplicar`: grava o perfil E o
-    #   06-navegacao·padrao-…       manda inteiro ao daemon — o preço medido em
-    #   08-conexoes·teto-da-vibracao 03/09 é a barra de luz que ela DESLIGOU
-    #                               acender de novo
-    ("01-jogar.html", "mascara"),
-    ("06-navegacao.html", "guardar-definicoes"),
-    ("06-navegacao.html", "padrao-definicoes"),
-    ("08-conexoes.html", "teto-da-vibracao"),
-    # E MAIS DOIS, DA LEVA DE 04/09 — e o fato que importa é COMO apareceram:
-    # DUAS frentes independentes (aba 01 e aba 04) toparam com o mesmo buraco,
-    # e NENHUMA das duas podia curá-lo, porque este arquivo está no `nao_toca`
-    # das duas. É a forma exata do defeito que esta casa já viu em 02/09 —
-    # *o defeito que quatro frentes acharam e nenhuma podia curar* — e quem
-    # fecha é quem integra, no mesmo ato em que integra.
-    #
-    #   01-jogar·cadeado       `autoswitch_lock_set` — grava no disco DELA a
-    #                          preferência de não trocar de perfil sozinho. A
-    #                          régua de clique mudaria uma escolha dela para
-    #                          provar que sabe clicar.
-    #   04-iluminacao·auto-cores  `gravar_e_reaplicar` — DESLIGA o automático
-    #                          no perfil dela, pelo mesmo motivo.
-    #
-    # A DIFERENÇA ENTRE OS DOIS, e ela vale registro: o da 04 foi ACUSADO por
-    # `test_todo_gesto_que_grava_esta_protegido`; o da 01 NÃO, porque a régua
-    # não conhecia `autoswitch_lock_set` nem `autoswitch.lock` entre as portas
-    # de escrita. Régua com lista de portas incompleta é régua que protege o
-    # que já foi lembrado — ver a cura no próprio teste, no mesmo commit.
-    ("01-jogar.html", "cadeado"),
-    ("04-iluminacao.html", "auto-cores"),
-    # E OS DOIS DA TELA DE TECLAS — NAVEGACAO-TECLAS-01, 06/09/2026. A aba 06
-    # ganhou uma tela nova (qual tecla cada botão digita) e com ela DOIS gestos
-    # que gravam, irmãos dos que já estavam aqui:
-    #
-    #   06-navegacao·guardar-teclas   `gravar_e_reaplicar` — escreve
-    #   06-navegacao·padrao-da-tecla   `Profile.key_bindings` no perfil dela e
-    #                                  manda o perfil inteiro ao serviço
-    #
-    # QUARTA VEZ que a lista fica para trás de uma cura, e desta vez sem sequer
-    # mudar de forma: os nomes `guardar-definicoes` e `padrao-definicoes` já
-    # estavam protegidos, e os gêmeos da tela nova nasceram com nome próprio e
-    # fora da lista. A régua os pegou porque lê a ÁRVORE do gesto, não o nome.
-    ("06-navegacao.html", "guardar-teclas"),
-    ("06-navegacao.html", "padrao-da-tecla"),
-    # E MAIS TRÊS DA MESMA ABA — LUZES-01, 06/09/2026, e desta vez a linha
-    # ENTRA NO MESMO COMMIT que ensinou os gestos a gravar, que é o que o
-    # próprio teste manda fazer e o que as três levas anteriores não fizeram.
-    #
-    #   04-iluminacao·luzes       `save_profile` — grava o desenho das cinco
-    #                             luzes no override daquele controle
-    #   04-iluminacao·desenho-de  idem, e o ramo `nenhuma` ainda chama
-    #                             `gravar_e_reaplicar` (tira o override e manda
-    #                             o daemon reaplicar o perfil INTEIRO)
-    #   04-iluminacao·auto-todos  `gravar_e_reaplicar` — apaga a cor própria de
-    #                             TODOS os controles e religa o automático. É o
-    #                             gesto mais pesado que a aba tem: uma régua
-    #                             que o clicasse para provar que sabe clicar
-    #                             desfaria, de uma vez, toda cor que ela
-    #                             escolheu controle a controle.
-    #
-    # ESTE ARQUIVO ESTÁ NO `nao_toca` DA LUZES-01, e a edição é deliberada e
-    # relatada: sem estas três linhas a `--prova-gesto` ESCREVE no perfil dela
-    # na próxima volta, e o dano é da máquina dela, não da régua. É a mesma
-    # conclusão que o bloco de 04/09 acima registra — *o defeito que várias
-    # frentes acham e nenhuma pode curar* —, com a diferença de que aqui o
-    # conserto é acrescentar três pares a um conjunto, e não mexer em lógica.
-    ("04-iluminacao.html", "luzes"),
-    ("04-iluminacao.html", "desenho-de"),
-    ("04-iluminacao.html", "auto-todos"),
-    # E O TERCEIRO, da mesma leva e pela mesma razão de posse: o apelido do
-    # adaptador grava no BlueZ (`renomear_o_dongle`), que é estado da MÁQUINA
-    # dela e não do perfil. Hoje o gesto recusa nome igual e portanto é
-    # idempotente — mas isso é propriedade DO GESTO, não da lista, e uma lista
-    # que depende da boa vontade do gesto protege até o dia em que alguém
-    # mudar o gesto.
-    ("08-conexoes.html", "renomear-adaptador"),
-    # E MAIS SEIS DA ABA 08, que ninguém tinha visto porque a régua lia SÓ o
-    # corpo do gesto — e os seis chamam `machine_declare` por um AJUDANTE do
-    # mesmo arquivo. A régua aprendeu a descer um nível em 04/09/2026 e os
-    # revelou de uma vez.
-    #
-    # OS SEIS ENTRAM SEM MEDIÇÃO, E ISSO É DELIBERADO. A volta de 03/09 mediu
-    # três gestos por nome e achou-os idempotentes; estes seis NÃO foram
-    # medidos, e três deles dizem no nome que mudam a declaração dela
-    # (`nova-entrada`, `nova-face`, `tirar-daqui`). O preço de proteger um
-    # gesto inócuo é COBERTURA — a régua deixa de provar que aquele botão
-    # responde. O preço de expor um que grava é a DECLARAÇÃO DELA mudando para
-    # a régua provar que sabe clicar. Os dois preços não se comparam.
-    #
-    # PARA QUEM FOR MEDIR: clique cada um e compare o `maquina.json` antes e
-    # depois. O que sair idempotente sobe para o `ISENTOS` da régua, COM a
-    # medição do lado — nunca pela porta, sempre pelo par.
-    ("08-conexoes.html", "escolher-entrada"),
-    ("08-conexoes.html", "nova-entrada"),
-    ("08-conexoes.html", "nova-extensao"),
-    ("08-conexoes.html", "nova-face"),
-    ("08-conexoes.html", "tirar-daqui"),
-    ("08-conexoes.html", "vizinho-o-que-e"),
-    # E OS DOIS DA VIBRAÇÃO, da mesma leva. O segundo é o mais caro da lista:
-    #   05-vibracao·motor       grava a barra daquele motor no perfil dela
-    #   05-vibracao·forca-mesa  muda o degrau de vibração de TODOS os controles,
-    #                           ao vivo — a régua de clique arrastaria a barra
-    #                           da mesa inteira para provar que sabe clicar
-    ("05-vibracao.html", "motor"),
-    # E O DA ABA 07, que não grava em disco e mesmo assim entra: ele SUBSTITUI
-    # a área de transferência dela, e a `--prova-gesto` clica todo `data-gesto`.
-    # O que ela tinha copiado sumiria para a régua provar que sabe clicar.
-    ("07-lancadores.html", "copiar-a-linha"),
-    # E OS DOIS DO STEAM INPUT — STEAM-INPUT-01, 06/09/2026, e a linha entra NO
-    # MESMO COMMIT que ensinou os gestos a escrever, que é o que esta lista pede
-    # e o que quatro levas anteriores não fizeram.
-    #
-    #   07·desligar-steam-input    com a Steam FECHADA ele age no PRIMEIRO
-    #                              clique — roda o `disable_steam_input.sh`, que
-    #                              REESCREVE os arquivos de configuração da Steam
-    #                              dela. Só o caminho da Steam ABERTA passa pelos
-    #                              dois cliques; uma régua que o clicasse com a
-    #                              Steam fechada mudaria a configuração dela para
-    #                              provar que sabe clicar
-    #   07·este-jogo-nao-funciona  não pede confirmação DE PROPÓSITO (é
-    #                              reversível e não fecha nada), e por isso age
-    #                              no primeiro clique: escreve o appid na lista
-    #                              de exceções do Steam Input. A régua marcaria
-    #                              um jogo dela — e a marca muda quem entrega o
-    #                              controle àquele jogo
-    #
-    # O `deixar-tudo-pronto` FICA DE FORA, e é a mesma razão do
-    # `consertar-fechando-a-steam`, que também não está aqui: ele SEMPRE passa
-    # pelos dois cliques, e o segundo exige um `data-v` que só existe no cartão
-    # já armado (`a07_lancadores._este_clique_confirma`). Uma régua que clica
-    # uma vez por volta só o ARMA.
-    #
-    # ESTE ARQUIVO NÃO É DA POSSE DA `STEAM-INPUT-01`, e a edição é deliberada e
-    # relatada — o mesmo que a `LUZES-01` registrou acima, e pelo mesmo motivo:
-    # sem estas duas linhas a régua de clique mexe na máquina DELA, e o dano é
-    # dela, não da régua.
-    ("07-lancadores.html", "desligar-steam-input"),
-    ("07-lancadores.html", "este-jogo-nao-funciona"),
-    # OS CAMPOS DO EDITOR GRAVAM NO DISCO DELA, e o `editor.nome` RENOMEIA o
-    # perfil escolhido. Uma régua que os clicasse com o valor que estivesse na
-    # tela renomearia um perfil dela para provar que sabe digitar — e o `nome` é
-    # a identidade do arquivo, não um campo qualquer.
-    ("10-perfis.html", "editor.nome"), ("10-perfis.html", "editor.jogo"),
-    ("10-perfis.html", "editor.ambiente"), ("10-perfis.html", "detectar"),
-    # O SOM É DELA, e estes dois entraram em 04/09/2026 NO MESMO COMMIT em que os
-    # gestos aprenderam a escrever — que é a regra que esta lista pede três
-    # parágrafos acima e que já ficou para trás três vezes.
-    #
-    #   02-controles·rota    "Todo o som do PC" agora tem dono: ele chama
-    #                        `audio_saida.mandar_o_som_do_pc`, que faz
-    #                        `pactl set-default-sink` — MOVE A SAÍDA DE ÁUDIO DA
-    #                        MÁQUINA DELA para o alto-falante do controle. Uma
-    #                        régua que o clicasse mudaria o som do que ela está
-    #                        ouvindo, no meio do trabalho, para provar que sabe
-    #                        clicar.
-    #   02-controles·volume  os dois deslizantes novos GRAVAM VALOR: o do
-    #                        microfone manda `mic.volume.set` e o do alto-falante
-    #                        `speaker_set`. A régua clicaria com o valor que
-    #                        estivesse na tela.
-    #   02-controles·mudo    O MUDO PASSOU A GRAVAR — 05/09/2026, e a entrada
-    #                        faltou no commit que o ensinou. Ele já mexia no
-    #                        firmware do controle dela (`mic.canal.set` elege o
-    #                        canal de captura no PipeWire, `speaker_set` cala o
-    #                        alto-falante); agora escreve TAMBÉM no perfil ativo
-    #                        por `save_profile`. Sem esta linha, a próxima volta
-    #                        da `--prova-clique` mudaria o mudo dela no disco,
-    #                        com backup novo em `.historico/`, para provar que
-    #                        sabe clicar.
-    ("02-controles.html", "mudo"),
-    ("02-controles.html", "rota"),
-    ("02-controles.html", "volume"),
-    # O CURSOR É DELA. Ligar a emulação de mouse move o ponteiro na tela em que
-    # ela está trabalhando — é o mesmo motivo de toda janela desta casa nascer
-    # com `--oculta`.
-    ("06-navegacao.html", "modo"),
-    # E AS DUAS BARRAS E A LISTA DO TECLADO, em 05/09/2026 NO MESMO COMMIT em
-    # que aprenderam a escrever — que é a regra desta lista, e a sexta vez que
-    # ela é cobrada. Os três passaram a gravar no perfil ATIVO no clique
-    # (decisão D2: *"persistência no clique em toda parte"*), porque o Salvar
-    # do rodapé não alcançava o `teclado_emulado` e nada alcançava quem fechasse
-    # a janela sem clicar:
-    #
-    #   06-navegacao·vel-cursor   grava `mouse.speed` no perfil dela — a régua
-    #   06-navegacao·vel-rolagem  arrastaria a barra para o valor que estivesse
-    #                             na tela e o número ficaria no disco
-    #   06-navegacao·teclado      grava `teclado_emulado`, e desligá-lo tira
-    #                             junto o teclado na tela do L3/R3 e as três
-    #                             regiões do touchpad — para sempre, não só
-    #                             durante a prova
-    #
-    # O `modo` logo acima já estava aqui pelo CURSOR; agora ele também grava, e
-    # a razão de estar na lista passou a ser dupla.
-    ("06-navegacao.html", "vel-cursor"),
-    ("06-navegacao.html", "vel-rolagem"),
-    ("06-navegacao.html", "teclado"),
-    # E A MESMA COISA PELA OUTRA PORTA, achada em 03/09/2026 pelo juiz da leva:
-    # o chip "Navegação" da aba Jogar chama `mouse.emulation.restore` (o
-    # terceiro dos três IPCs de `a01_jogar.modo_navegacao`), que LIGA o mouse
-    # conforme a preferência persistida. Só o `("06-navegacao.html", "modo")`
-    # estava isento, e o cursor é o mesmo cursor.
-    ("01-jogar.html", "modo-navegacao"),
-    # A TELA É DELA, E A STEAM ABRE EM CIMA. `abrir-lancador` chama
-    # `steam_launch_options.reopen_steam`, que abre a janela da Steam
-    # DESANEXADA — ela não nasce oculta, não obedece ao `--oculta` desta casa e
-    # não some quando a prova termina. Uma régua que a clicasse encheria a tela
-    # dela de Steam a cada volta.
-    # ELA ESCOLHEU ESTA COMBINAÇÃO — decisão 17 dela, 03/09/2026: o botão LIGA
-    # *e* o gesto entra aqui, para que a prova automática nunca o clique. As
-    # duas metades são uma decisão só: ligar sem o isento seria ligar contra
-    # ela.
-    ("07-lancadores.html", "abrir-lancador"),
-    # O SALVAR GRAVA NO PERFIL DELA, SEM PERGUNTAR. O rodapé o registra como
-    # `@gesto("*", "salvar")`, então ele vive nas DEZ abas — e a prova botão a
-    # botão, rodando aba por aba, escrevia dez vezes no disco dela por volta.
-    # MEDIDO EM 03/09/2026: dez gravações em `meu_perfil.json` entre 07:14 e
-    # 07:47, uma por aba provada. Nada dela se perdeu desta vez — as dez foram
-    # re-salvamentos do mesmo conteúdo —, mas o caminho para perder existe e
-    # está nomeado: desligar a barra de luz e salvar copia a cor apagada por
-    # cima da que ela escolheu, e isso não se desfaz.
-    #
-    # A CHAVE É CORINGA de propósito: o gesto é um só nas dez páginas, e
-    # `_alvos_a_clicar` casa `("*", nome)` além de `(página, nome)`.
-    ("*", "salvar"),
-    # E O `salvar` NÃO ERA O ÚNICO QUE ESCREVE — medido em 03/09/2026, rodando
-    # o `--prova-no-aparelho` na aba Gatilhos com o produto instalado. O
-    # `rodape.salvar` diz na docstring *"é o único gesto desta leva que
-    # escreve"*, e a lista acima foi montada sobre essa frase. Ela é FALSA:
-    # `a03_gatilhos.guardar` também grava em `meu_perfil.json`. A prova é o log
-    # da própria régua, que anunciou `pulados por mexerem na máquina dela:
-    # salvar` e mesmo assim deixou para trás
-    # `profile_salvo arquivo=meu_perfil.json origem=interface-nova`, com backup
-    # novo em `.historico/` e um bloco `triggers` a mais no perfil dela.
-    #
-    # O GESTO É LEGÍTIMO — "Guardar esse efeito" existe para gravar, e gravar é
-    # o que ela pediu dele. O que não é legítimo é uma RÉGUA escrever no perfil
-    # dela para provar que sabe clicar; é a mesma razão do `salvar` acima.
-    ("03-gatilhos.html", "guardar"),
-    # E OS TRÊS IRMÃOS DELE — 05/09/2026, no MESMO COMMIT que os ensinou a
-    # gravar, que é a regra que esta lista pede e que já ficou para trás quatro
-    # vezes. A decisão D2 (`docs/process/2026-09-05-AS-TRES-DECISOES-DO-PERFIL-
-    # medidas-e-decididas.md`) pôs a persistência NO CLIQUE: escolher um modo,
-    # um efeito pronto ou arrastar uma barra agora grava
-    # `controllers[uniq].triggers` no perfil ATIVO, com backup novo em
-    # `.historico/`.
-    #
-    # O QUE A RÉGUA FARIA SEM ESTAS TRÊS LINHAS: `_alvos_a_clicar` aciona os
-    # dois `<select>` e as barras com o valor que estiver na tela — e o gesto
-    # copiaria por cima do gatilho que ela escolheu, no perfil dela. Pior que o
-    # `salvar`, que ao menos regrava o que já estava lá.
-    #
-    # `reenviar` FICA DE FORA de propósito: ele passa `guardar=False` e não
-    # escreve byte nenhum (medido em `test_reenviar_nao_grava`). Protegê-lo
-    # custaria cobertura sem comprar nada.
-    ("03-gatilhos.html", "modo"),
-    ("03-gatilhos.html", "pronto"),
-    ("03-gatilhos.html", "ajuste"),
-    # E O TRILHO DE BRILHO PASSOU A GRAVAR — 03/09/2026, decisão dela:
-    # perguntada se mexer no brilho grava o perfil na hora ou espera o "Salvar
-    # Perfil", ela respondeu *"Grava na hora"*. O gesto entra aqui na MESMA
-    # decisão que o liga, como o `abrir-lancador` da Lançadores: ligar sem o
-    # isento seria ligar contra ela.
-    #
-    # O QUE A RÉGUA FARIA SEM ESTA LINHA: `_alvos_a_clicar` acha o
-    # `<input type="range">` pelo `data-gesto` e o aciona com o valor que
-    # estiver na tela — e o gesto grava `lightbar_brightness` no override do
-    # controle, no perfil ATIVO, com backup novo em `.historico/`. Pior que o
-    # `salvar`, que ao menos regrava o que já estava lá: um arraste da régua
-    # copia por cima do brilho que ela escolheu, e isso não se desfaz.
-    ("04-iluminacao.html", "brilho"),
-    # O ⊘ DA CONEXÕES DISPENSA UMA ORDEM DE SERVIÇO DELA, E NÃO VOLTA SOZINHO.
-    #
-    # MEDIDO EM 03/09/2026, com o journal dos dois lados. Às 16:11:53, ANTES da
-    # prova, o daemon tinha `MesaDeclarada(… ordens_dispensadas={})`; depois da
-    # volta, o `maquina.json` dela trazia
-    # `ordens_dispensadas={'dongle_atras_de_hub': {'arranjo': '3-1.2 3-1.4',
-    # 'quando': '2026-09-03'}}` — e o Check-up dela tinha perdido a linha
-    # *"2 de 3 adaptadores Bluetooth chegam ao computador por dentro de um
-    # hub"*, uma das DUAS únicas que acusam nesta máquina.
-    #
-    # POR QUE SÓ ESTE, e não os outros onze gestos desta aba que também chamam
-    # `machine.declare`: os outros clicam o valor que a PÁGINA mostra, e a
-    # página mostra o que a declaração já dizia — re-declarar é idempotente. Foi
-    # o que a medição do mesmo dia mostrou: `sala-altura`, `sala-visada` e
-    # `mic-existe` gravaram exatamente o que já estava lá, e o ÚNICO campo que
-    # mudou no arquivo foi `ordens_dispensadas`. O ⊘ é diferente porque o que
-    # ele grava não vem da declaração: vem do EXAME.
-    #
-    # DISPENSAR NÃO É RECUPERÁVEL PELA TELA: `ordens_da_mesa.ordens_novas`
-    # compara o arranjo guardado com o de agora, e enquanto os cabos não
-    # mudarem a linha fica calada. Uma régua não cala um achado da máquina dela
-    # para provar que sabe clicar.
-    ("08-conexoes.html", "ignorar"),
-    # A FORÇA DA VIBRAÇÃO PASSOU A ESCREVER NO PERFIL DELA — 03/09/2026, e é
-    # consequência direta da decisão dela de construir a política POR CONTROLE.
-    # Até ontem o clique num degrau ia por IPC (`rumble.policy_set`), que não
-    # deixa rastro em disco; hoje ele grava `controllers[uniq].rumble` no perfil
-    # ATIVO e dispara `profile.switch`, exatamente como o `teto-da-vibracao` da
-    # Conexões — que já está isento acima, pelo mesmo motivo.
-    #
-    # SÃO OS DOIS, e o segundo não é o mesmo botão: `forca` são os quatro
-    # degraus, `intensidade` é a barra arrastável. Uma prova botão a botão que
-    # clicasse os dois deixaria, por volta e por aba, uma escolha de vibração
-    # que ela não fez em cada controle da mesa — e a régua não tem como saber
-    # qual era a de antes.
-    ("05-vibracao.html", "forca"), ("05-vibracao.html", "intensidade"),
-}
+#: POR QUE A LISTA DIGITADA TINHA DE MORRER, e os dois defeitos são medidos:
+#:
+#: * **ela chegava atrasada.** QUATRO vezes em três dias um gesto aprendeu a
+#:   gravar e a linha veio no commit seguinte — `01-jogar·cadeado`,
+#:   `08-conexoes·renomear-adaptador`, os dois da Vibração, os dois da tela de
+#:   teclas. A janela entre as duas é a janela em que a `--prova-gesto` escreve
+#:   no disco DELA: medido em 03/09/2026, dez gravações em `meu_perfil.json`
+#:   entre 07:14 e 07:47, uma por aba provada;
+#: * **ela protegia fantasma.** `("09-sistema.html", "restaurar-de-fabrica")`
+#:   passou meses aqui protegendo NADA — o gesto sempre se chamou
+#:   `refazer-proton`. Uma lista lida só para PULAR não acusa o próprio erro de
+#:   digitação. Com a chave saindo do registro, um fantasma não tem como nascer.
+#:
+#: A QUALIFICAÇÃO POR PÁGINA NÃO É PRECIOSISMO: `detectar` nos Perfis grava no
+#: perfil DELA, e o mesmo `detectar` na Lançadores só procura o jogo. `tirar-daqui`
+#: existe nas abas 07 e 08, e escreve em arquivos diferentes. Uma lista por nome
+#: cru trataria os dois igual, e a escolha seria entre não provar o seguro ou
+#: estragar o trabalho dela. O coringa `("*", nome)` é para o rodapé, que é um
+#: gesto só nas dez páginas — `_alvos_a_clicar` casa as duas formas.
+#:
+#: E A DERIVAÇÃO NÃO DISPENSA A RÉGUA: `test_todo_gesto_que_grava_esta_protegido`
+#: continua LENDO a árvore de cada gesto, e cobra as duas direções — quem grava
+#: e não declarou, e quem declarou uma porta que a árvore não acha. Quem esquece
+#: a linha também esquece o `grava=`; duas fontes independentes é o que fecha.
+#: O laudo completo, com as medições que cada entrada carregava, está em
+#: `docs/process/agentes/2026-09-06/ONDA3-GESTO-DECLARA-01.md`.
+PERIGOSOS = pacotes.perigosos()
 
 
 def _achatar(o: Any, prefixo: str = "") -> dict[str, Any]:

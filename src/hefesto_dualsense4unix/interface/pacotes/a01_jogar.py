@@ -1615,7 +1615,7 @@ def modo_xbox(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     _lembrar_do_chip("xbox", o)
 
 
-@gesto("01-jogar.html", "mascara")
+@gesto("01-jogar.html", "mascara", grava="gamepad.mask.set")
 def mascara_do_controle(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     """A máscara de UM aparelho — os chips dentro do cartão de cada controle.
 
@@ -1697,7 +1697,8 @@ def mascara_do_controle(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     p.chamar("gamepad.mask.set", uniq=uniq, flavor=flavor)
 
 
-@gesto("01-jogar.html", "modo-navegacao")
+@gesto("01-jogar.html", "modo-navegacao",
+       grava="liga o mouse emulado e o ponteiro anda na tela dela")
 def modo_navegacao(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     """"Navegação": o controle vira teclado e mouse do computador.
 
@@ -1721,7 +1722,7 @@ def modo_navegacao(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     _lembrar_do_chip("navegacao", o)
 
 
-@gesto("01-jogar.html", "cadeado")
+@gesto("01-jogar.html", "cadeado", grava="autoswitch_lock_set")
 def cadeado(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     """A caixa "Não trocar de perfil sozinho ao abrir um jogo".
 
@@ -1765,13 +1766,12 @@ def cadeado(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     a cada tique a partir de `autoswitch_locked`. Se a escrita não pegar, a
     caixa **volta sozinha** — que é o oposto de uma tela que finge ter guardado.
 
-    RELATO — `hefesto_vivo.PERIGOSOS` NÃO É DESTA POSSE, e este gesto pertence
-    lá: ele grava em disco (`utils/session.save_autoswitch_locked`), logo a
-    régua de clique (`--prova-gesto`) mudaria uma preferência DELA para provar
-    que sabe clicar. O `test_todo_gesto_que_grava_esta_protegido` não o pega
-    porque `ESCREVEM`/`METODOS_QUE_ESCREVEM` não conhecem esta porta — e os dois
-    arquivos são de outro dono. Enquanto isso não fechar, a mordida é o desenho:
-    a caixa vive só no `mockup/`, e o piloto abre o PUBLICADO.
+    RELATO FECHADO — 06/09/2026, pela `ONDA3-GESTO-DECLARA-01`. Aqui estava
+    escrito que este gesto pertencia a `hefesto_vivo.PERIGOSOS` e que a linha
+    não podia ser escrita *"porque os dois arquivos são de outro dono"*. Esse
+    é exatamente o defeito que a sprint matou: a declaração passou a morar no
+    PRÓPRIO decorador (`grava="autoswitch_lock_set"`), e `PERIGOSOS` é derivada
+    dela. Quem escreve o gesto fecha o próprio contrato.
     """
     if str(o.get("evento") or "change") != "change":
         return

@@ -1531,7 +1531,7 @@ def _gravar_a_forca(ctx: Contexto, p: Any, uniq: str, policy: str | None,
     return draft.rumble, _como_a_tela_le(novo.source_controllers)
 
 
-@gesto("05-vibracao.html", "forca")
+@gesto("05-vibracao.html", "forca", grava="_gravar_a_forca")
 def forca(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
     """Um dos quatro degraus, **daquele controle** — decisão dela, 03/09/2026.
 
@@ -1582,7 +1582,7 @@ def forca(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
     return _aplicar_a_forca(ctx, p, uniq, degrau)
 
 
-@gesto("05-vibracao.html", "intensidade")
+@gesto("05-vibracao.html", "intensidade", grava="_gravar_a_forca")
 def intensidade(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
     """A barra "Personalizado", arrastada: **0 a 200%, e grava na hora.**
 
@@ -1631,7 +1631,7 @@ def intensidade(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | No
     return _aplicar_a_forca(ctx, p, uniq, "custom", custom=pontos / 100)
 
 
-@gesto("05-vibracao.html", "motor")
+@gesto("05-vibracao.html", "motor", grava="rumble_motores_set")
 def motor(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     """A barra de UM motor daquele controle: **0 a 100, e ela MULTIPLICA o degrau.**
 
