@@ -1530,18 +1530,54 @@ def _exame() -> list[dict[str, Any]]:
     return [_linha(i) for i in _itens_da_tela()]
 
 
-def _adaptadores(conectados: Any) -> dict[str, Any]:
+def _adaptadores(conectados: Any, state: Any = None) -> dict[str, Any]:
     """Quem está em qual adaptador de rádio.
 
     O MAC NÃO SAI DAQUI CRU para lugar nenhum que se grave: este pacote devolve
     para a tela em memória, e a máscara da casa (octetos 4 e 5 zerados) é o que
     vai para qualquer relato. São dois portões nesta árvore e eles não perdoam.
+
+    ESTA PONTE NUNCA PASSOU TRÁFEGO — consertado em 05/09/2026
+    ---------------------------------------------------------
+    Até hoje a chamada era ``ocupacao_por_adaptador([c.get("uniq") for c in
+    conectados])`` — uma lista de **strings**. O dono
+    (`integrations/radio_da_mesa.py:323`) declara `Iterable[Mapping]` e faz
+    ``controle.get("transport")``, então a chamada levantava
+    ``AttributeError: 'str' object has no attribute 'get'`` **sempre**, e o
+    ``except Exception`` abaixo engolia.
+
+    Medido em 05/09/2026 com o python desta árvore::
+
+        ocupacao_por_adaptador(['aabbcc000011'])          -> AttributeError
+        ocupacao_por_adaptador([{'uniq': …, 'transport': 'bt'}])
+            -> {'': Ocupacao(slots_input=260.4, …)}
+
+    Resultado: a chave ``adaptadores`` deste pacote era **sempre ``{}``**, em
+    toda máquina, desde que a linha foi escrita. O sintoma era a AUSÊNCIA de
+    dado, que não quebra tela nenhuma — a assinatura de defeito mais cara desta
+    casa. E é por isso que `html_da_regua_do_radio` recalcula a ocupação por
+    conta própria em 353 linhas, em vez de ler o dono.
+
+    A SEGUNDA METADE: `com_ponte_de_mic`. A GTK passa o conjunto
+    (`app/actions/config/secao_mesa.py:1335`), e sem ele a conta ignora o custo
+    do microfone no rádio — 260,4 onde a GTK conta 276,7 para um controle com a
+    ponte de pé. A fonte é ``state["bt_mic"]["uniqs"]``, e a ausência da chave
+    vira conjunto vazio pela mesma razão escrita lá: um daemon mais velho que a
+    janela não a manda, e cair seria pior que contar sem o microfone.
     """
     try:
         perfil._com_o_src()
         from hefesto_dualsense4unix.integrations import radio_da_mesa
 
-        ocup = radio_da_mesa.ocupacao_por_adaptador([c.get("uniq") for c in conectados])
+        bloco = (state or {}).get("bt_mic") if isinstance(state, dict) else None
+        uniqs = bloco.get("uniqs") if isinstance(bloco, dict) else None
+        com_mic = (
+            frozenset(u for u in uniqs if isinstance(u, str))
+            if isinstance(uniqs, list)
+            else frozenset()
+        )
+
+        ocup = radio_da_mesa.ocupacao_por_adaptador(conectados, com_ponte_de_mic=com_mic)
         return {str(k): v for k, v in (ocup or {}).items()}
     except Exception:
         return {}
@@ -2799,7 +2835,7 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
     # nem os vizinhos têm um "+N" no desenho dela. Fica escrito para quem
     # desenhar o próximo.
 
-    adap = _adaptadores(ctx.conectados)
+    adap = _adaptadores(ctx.conectados, ctx.state)
     declaracao = _declaracao()
 
     # OS VIZINHOS SÃO OS DELA, e não os quatro do desenho. Enquanto eram os do

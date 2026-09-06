@@ -14,7 +14,7 @@ acender a linha da tabela, que é o que faz o mapa ser mapa e não planilha.
 
 O GRÃO É (chave, controle)
 --------------------------
-Desde a migração v2 (scripts/migrar-mapa-v2.py), uma feature de um controle é
+Desde a migração de 11/08/2026, uma feature de um controle é
 UMA linha, com o cabo e o rádio lado a lado. Ordenado por `chave`, cada feature
 é um bloco de três linhas adjacentes, uma por controle — e a tabela desenha esse
 bloco, para a comparação entre os três aparelhos ser de olhar, não de procurar.
@@ -1087,8 +1087,7 @@ def monta() -> str:
        o que deixou o produto menor. Um culpado isolado diz por onde acionar; os
        inocentados dizem <em>o que dá para parar de fazer</em>.</p>
     <p class="selo">gerado em {agora} a partir de docs/data/mapa-controles.csv ·
-       {len(linhas)} linhas · o v1 por transporte está guardado em
-       docs/data/mapa-controles-v1.csv · os três desenhos são assets/control-svg/</p>
+       {len(linhas)} linhas · os três desenhos são assets/control-svg/</p>
   </footer>
 
   <footer>
