@@ -916,6 +916,26 @@ CSS = """
      hexadecimal, já declarado no `topo.html`. */
   .vib-estado .est.info{color:var(--cyan)}
   .vib-estado .est.info .sinal{color:var(--cyan)}
+  /* O QUARTO TOM — o RECIBO, e ele nasce com a 05-Q4 dela (06/09/2026):
+     *"Linha embaixo da grade (…) nomeando a coluna (`P2 · voltou ao ajuste
+     geral`) e some logo depois; nada se mexe dentro das colunas"*.
+
+     VERDE É A COR QUE ESTA CASA JÁ USA PARA O QUE DEU CERTO, e não uma quinta
+     invenção: `hefesto_vivo.COR_DO_SUCESSO` lê o MESMO `--green` da paleta
+     para a tarja de sucesso das dez abas, e o `--green` já está declarado no
+     `topo.html`. E não pode ser o `alerta`: laranja sobre um clique que GRAVOU
+     ensina que o botão falha, que é o defeito que a D-01 fechou em 04/09.
+
+     ELE VESTE UM NÓ QUE O PILOTO CRIA, e não uma linha do `html_do_estado`:
+     quem escreve o recado é `hefesto_vivo.pintar_recados`, e o
+     `data-hef-recados` do `#vib-estado` (logo abaixo, no miolo) é o endereço
+     que diz a ele onde pousar. Enquanto o piloto não ler esse atributo — a
+     metade que NÃO é desta posse, relatada com a forma exata em
+     `docs/process/agentes/2026-09-06/ONDA5-05-03.md` — esta regra veste um
+     elemento que a página ainda não recebe. Está declarado aqui de propósito:
+     as duas metades nascem juntas ou a primeira a chegar fica sem par. */
+  .vib-estado .est.recibo{color:var(--green)}
+  .vib-estado .est.recibo .sinal{color:var(--green)}
 
   /* AS QUATRO REGRAS DA `.vib .ressalva` SAÍRAM em 05/09/2026, com a faixa que
      era a única a usá-las. Elas vestiam a `monta.ressalva` que ficava dentro da
@@ -1705,7 +1725,18 @@ MIOLO = f'''
                 Quanto da vibração que o jogo pede chega ao controle.<br><br>
                 <b>Economia</b> 30% · <b>Balanceado</b> 100%, como o jogo pediu ·
                 <b>Máximo</b> 150%, mais forte do que ele pediu.<br><br>
-                {DICA_DO_TETO_DA_MESA}
+                {DICA_DO_TETO_DA_MESA}<br><br>
+                <!-- O MECANISMO DO AUTO MUDOU DE CASA — 05-Q4 dela, 06/09/2026.
+                     Ele era a segunda metade de `a05_vibracao.FRASE_DA_MESA_EM_AUTO`,
+                     de 331 caracteres, escrita para o CARTÃO — uma caixa que
+                     CRESCE. A faixa embaixo da grade reserva UMA linha e corta o
+                     resto (medido: 189 caracteres é o último que cabe), então a
+                     frase ficou com o FATO e o CONSERTO e o porquê veio para cá,
+                     que é onde há espaço para ele. -->
+                Com a <b>força geral</b> em Auto, a força escolhida numa coluna fica
+                guardada e não chega ao motor: o Auto muda com a bateria a cada
+                instante, e uma força por controle contra um número que se move faria
+                esse controle vibrar de um jeito imprevisível.
               </span></span></span></div>
             <div><span class="sec-rot">Personalizado</span></div>
             <div><span class="sec-rot">{ESQ["rot"]}
@@ -1780,7 +1811,38 @@ MIOLO = f'''
              `p.blocos` (`hefesto_vivo.py:213`), porque o NÚMERO de linhas muda
              com o estado e não há endereço para uma linha que ainda não existe.
              Campo a campo, a linha que não se aplica viraria `—`. -->
-        <div class="vib-estado" id="vib-estado">{html_do_estado(textos_do_estado(CENA_DO_ESTADO))}</div>
+        <!-- O `data-hef-recados` É O TERCEIRO LUGAR DO RECADO — 05-Q4 dela,
+             06/09/2026: *"a frase entra na faixa que já existe sob a grade (…)
+             nada se mexe dentro das colunas"*.
+
+             O PILOTO CONHECE DOIS LUGARES HOJE — o cartão do controle e a
+             tarja de rodapé (`hefesto_vivo.pintar_recados`) —, e os dois
+             ficaram: a RECUSA continua no cartão, em laranja, por 30 s. O que
+             este atributo declara é para onde vai o SUCESSO **desta página**,
+             e por isso ele carrega o tom em vez de um booleano: um endereço
+             que engolisse os dois mudaria a recusa junto, que a 05-Q4 não pede.
+
+             POR QUE A DECLARAÇÃO É DA PÁGINA e não do piloto: a faixa só existe
+             aqui. Cravar `#vib-estado` dentro do piloto seria o piloto único
+             sabendo o nome de um elemento de uma aba — a mesma dívida que o
+             `.fita` de dois donos já cobra em `07-lancadores`.
+
+             O CUSTO QUE ELE REMOVE FOI MEDIDO E ESTÁ NO PILOTO
+             (`hefesto_vivo.py`, o comentário do `ESTILO_NA_GRADE`): um recado
+             dentro de um `[data-controle]` de linhas fixas empurrava o desenho
+             do controle 65 px para baixo, e a cura foi tirá-lo do fluxo — ele
+             parou de empurrar e passou a COBRIR o topo do desenho por 6 s a
+             cada clique. Fora da coluna, não faz nem uma coisa nem outra.
+
+             SÃO DOIS ATRIBUTOS, e é o par que o alvo `classe` do piloto já usa
+             (`data-hef-classe` / `data-hef-quando`): um diz QUAL tom pousa
+             aqui, o outro diz COM QUE CLASSES. Assim o piloto não precisa
+             conhecer a palavra `recibo` nem o desenho da linha de estado — a
+             página, que é dona dos dois, declara os dois. Um alvo composto num
+             atributo só seria a terceira maneira desta casa dizer a mesma
+             coisa, e é o argumento que o `data-hef-atributo` já registrou. -->
+        <div class="vib-estado" id="vib-estado"
+             data-hef-recados="sucesso" data-hef-recado-classe="est recibo">{html_do_estado(textos_do_estado(CENA_DO_ESTADO))}</div>
       </div>
     </div>
 '''
@@ -2123,6 +2185,37 @@ def _conferir(doc):
                f"o degrau {chave!r} vale {degrau}% e a barra não para nele "
                f"(passo {PASSO}, teto {TETO}) — clicar o botão e arrastar a "
                f"barra deixariam de poder dizer o mesmo número")
+
+    # 17. A FAIXA RECEBE O RECIBO, E ELE É VERDE — 05-Q4 dela, 06/09/2026:
+    #     *"Linha embaixo da grade (…) nomeando a coluna (`P2 · voltou ao
+    #     ajuste geral`) e some logo depois; nada se mexe dentro das colunas"*.
+    #
+    #     AS DUAS METADES DESTA POSSE, e as duas têm de existir juntas: o
+    #     ENDEREÇO (o par de atributos que diz ao piloto onde o recado de
+    #     sucesso pousa nesta página, e com que classes) e a COR (a regra de
+    #     CSS que veste a linha). Sem o endereço, a regra é CSS para um
+    #     elemento que a página não recebe — dado morto. Sem a regra, o recado
+    #     pousa na faixa sem cor nenhuma e some no meio das outras linhas.
+    #
+    #     E O RECIBO NÃO PODE SER LARANJA: `--orange` é o `alerta`, e alerta
+    #     sobre um clique que GRAVOU ensina que o botão falha — o defeito que a
+    #     D-01 fechou em 04/09/2026.
+    _faixa = corpo.split('class="vib-estado"', 1)[-1].split(">", 1)[0]
+    exigir('data-hef-recados="sucesso"' in _faixa,
+           "a faixa deixou de declarar que recebe o recado de sucesso — sem "
+           "isso ele volta a pousar DENTRO da coluna, cobrindo o desenho do "
+           "controle por 6 s a cada clique")
+    exigir('data-hef-recado-classe="est recibo"' in _faixa,
+           "a faixa deixou de dizer com que classes o recado se veste — a "
+           "linha entra sem tom e some no meio das outras")
+    exigir(".vib-estado .est.recibo{color:var(--green)}" in doc
+           and ".vib-estado .est.recibo .sinal{color:var(--green)}" in doc,
+           "o tom `recibo` da faixa não é verde — e verde é a cor que esta "
+           "casa usa para o que deu certo em todas as dez abas")
+    exigir("--orange" not in doc.split(".vib-estado .est.recibo", 1)[-1]
+           .split("}", 2)[0],
+           "o recibo da faixa ficou laranja — laranja é o `alerta`, e alerta "
+           "sobre um clique que gravou ensina que o botão falha")
 
     if falhas:
         raise SystemExit("ERRO em 05-vibracao — decisão dela desfeita:\n  "
