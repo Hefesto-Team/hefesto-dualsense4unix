@@ -441,14 +441,27 @@ class TestProviderDoDaemon:
         assert provider("") is None
 
     def test_replug_mantem_a_cor_do_slot(self) -> None:
-        """Reserva de sessão (D2): o replug do controle 1 segue azul."""
+        """Reserva de sessão (D2): o replug do controle 1 segue azul.
+
+        QUATRO-NA-MESA-01 §1 (06/09/2026) trocou QUEM readmite: quem põe de
+        volta na mesa é o TIQUE (``sync_connected``), nunca a leitura de cor.
+        Enquanto o tique não passa, o provider responde ``None`` — *sem
+        opinião*, que é o contrato que o ``numero_da_lampada`` já publicava
+        desde 27/08 e que a autoadmissão do ``slot_for`` tornava inalcançável.
+        A promessa D2 não mudou: quando o tique passa, ele volta AZUL.
+        """
         registry = ControllerIdentityRegistry()
         provider = make_auto_output_provider(registry)
         assert (p1 := provider(UNIQ_1)) is not None and p1.led == player_slot_color(1)
         assert (p2 := provider(UNIQ_2)) is not None and p2.led == player_slot_color(2)
         registry.mark_disconnected(UNIQ_1)
-        registry.sync_connected({UNIQ_2})
-        out = provider(UNIQ_1)  # replugou
+        registry.sync_connected([UNIQ_2])
+        # Replugou: o handle voltou, o tique ainda não viu. A leitura de cor
+        # NÃO readmite — é o defeito 1 desta sprint.
+        assert provider(UNIQ_1) is None
+        assert registry.snapshot_connected() == {UNIQ_2}
+        registry.sync_connected([UNIQ_1, UNIQ_2])  # o tique viu
+        out = provider(UNIQ_1)
         assert out is not None
         assert out.led == player_slot_color(1)  # continua azul, não virou 3
 

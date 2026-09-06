@@ -36,6 +36,19 @@ algo acontece.
    (``PyDualSenseController._assentar_mesa_locked``). É a causa raiz: a mesa
    deixa de se mexer no meio, e todos do lote leem a mesma tabela.
    — mordida em :class:`TestOLoteNaoNumeraComAMesaPelaMetade`.
+
+   **SUBSTITUÍDO em 06/09/2026 (QUATRO-NA-MESA-01 §1).** A frase acima dizia
+   que *"o provider de identidade não é uma leitura pura: ele ADMITE na mesa o
+   controle que pergunta"* — e isso deixou de ser verdade, de propósito. Era
+   essa autoadmissão o SEGUNDO escritor de ``_connected``: o tique de 2 s
+   tirava da mesa quem piscou no rádio, a leitura de cor a 10 Hz devolvia, e o
+   número dos outros três ia e voltava sem parar. Hoje o provider chama
+   ``numero_da_lampada(autoridade_de_presenca=False)`` e quem readmite é só o
+   tique. A mesa não pode mais se mexer no meio de um lote — não porque foi
+   assentada antes, mas porque uma leitura não a move. O ``_assentar_mesa_locked``
+   deixou de ter efeito sobre a presença e sobrevive só como apresentação de
+   ESTREANTES (D1: um controle que nunca teve lugar na fila ganha o dele na
+   primeira consulta).
 2. **Quem o registro tem como AUSENTE não acende número de jogador**
    (``ControllerIdentityRegistry.numero_da_lampada``). O lugar GRAVADO do
    ausente responde *"que número ele teria se estivesse na mesa"* — é a
@@ -150,6 +163,17 @@ def o_link_caiu_e_voltou(
     inst._handles[KEYS[0]] = voltou
 
 
+def o_tique_viu_todos(reg: ControllerIdentityRegistry) -> None:
+    """O batimento seguinte do `lifecycle`, com os quatro de volta na mesa.
+
+    QUATRO-NA-MESA-01 §1 (06/09/2026): readmitir passou a ser ato do TIQUE.
+    A leitura de cor não readmite mais ninguém — era ela o segundo escritor
+    de `_connected`, e é ela que fazia o número dos OUTROS piscar 10x por
+    segundo enquanto um controle bouncava no rádio.
+    """
+    reg.sync_connected(list(UNIQS))
+
+
 def padroes_do_lote(
     inst: PyDualSenseController,
 ) -> dict[str, tuple[bool, bool, bool, bool, bool] | None]:
@@ -164,7 +188,23 @@ def padroes_do_lote(
 
 
 class TestOLoteNaoNumeraComAMesaPelaMetade:
-    """A causa raiz: a mesa não pode se mexer entre o 1º e o 4º do lote."""
+    """A causa raiz: a mesa não pode se mexer entre o 1º e o 4º do lote.
+
+    **QUATRO-NA-MESA-01 §1, 06/09/2026 — o dono da READMISSÃO mudou, e as
+    asserções daqui foram remedidas por isso.** Até esta data quem punha o
+    controle de volta na mesa era a própria LEITURA de cor (o
+    ``slot_for(assign=True)`` de dentro do provider), e era ela que fechava o
+    buraco do "ninguém no 4" dentro do próprio lote. Só que essa mesma
+    autoadmissão é o defeito 1 desta sprint: o tique de 2 s tirava, a leitura
+    a 10 Hz devolvia, e o número dos OUTROS ia e voltava sem parar — *"quando
+    um controle pisca, os outros trocam de cor e de número sozinhos"*.
+
+    O que a cura preserva, e é a queixa dela inteira: **nenhum número se
+    repete, em instante nenhum.** O que ela troca é o preenchimento do
+    buraco: quem voltou fica **sem opinião** (``None`` — o contrato que o
+    ``numero_da_lampada`` já publicava desde 27/08) até o TIQUE vê-lo, e aí
+    a mesa fecha 1..4. Um buraco de ≤2 s no lugar de um pisca-pisca contínuo.
+    """
 
     def test_quatro_controles_quatro_numeros(
         self, config_isolado: Path
@@ -178,12 +218,18 @@ class TestOLoteNaoNumeraComAMesaPelaMetade:
         padroes = padroes_do_lote(inst)
 
         # A queixa dela, em uma linha: nenhum número pode se repetir.
-        assert len(set(padroes.values())) == 4, (
+        numerados = [v for v in padroes.values() if v is not None]
+        assert len(set(numerados)) == len(numerados), (
             "dois controles no mesmo jogador: "
             f"{ {k: v for k, v in padroes.items()} }"
         )
-        # E o conjunto é 1..4 — sem buraco. "Faltava o 4" era a outra metade
-        # da queixa, e ela cai junto: o buraco e a colisão são o mesmo defeito.
+        # E quem voltou não inventa número enquanto o tique não o vê: sem
+        # opinião é o que impede o número dele de colidir com o de um presente.
+        assert padroes[KEYS[0]] is None
+
+        # O tique passa (≤2 s) e a mesa fecha 1..4 — sem buraco e sem colisão.
+        o_tique_viu_todos(reg)
+        padroes = padroes_do_lote(inst)
         assert set(padroes.values()) == {player_led_pattern(n) for n in (1, 2, 3, 4)}
 
     def test_quem_voltou_recupera_o_numero_que_era_dele(
@@ -201,6 +247,7 @@ class TestOLoteNaoNumeraComAMesaPelaMetade:
         inst.set_auto_output_provider(make_auto_output_provider(reg))
 
         o_link_caiu_e_voltou(reg, inst)
+        o_tique_viu_todos(reg)
         padroes = padroes_do_lote(inst)
 
         assert padroes[KEYS[0]] == player_led_pattern(1)
@@ -223,6 +270,15 @@ class TestOLoteNaoNumeraComAMesaPelaMetade:
         o_link_caiu_e_voltou(reg, inst)
         cores = [inst._merged_desired_for_key(key).led for key in inst._handles]
 
+        # Na janela, quem voltou não tem cor automática (None = sem opinião);
+        # os TRÊS que o tique viu têm três cores distintas. Contar o `None`
+        # como uma quarta cor faria este teste passar sem medir nada.
+        pintadas = [c for c in cores if c is not None]
+        assert len(pintadas) == 3
+        assert len(set(pintadas)) == 3, f"duas lightbars da mesma cor: {cores}"
+
+        o_tique_viu_todos(reg)
+        cores = [inst._merged_desired_for_key(key).led for key in inst._handles]
         assert len(set(cores)) == 4, f"duas lightbars da mesma cor: {cores}"
 
 
