@@ -189,6 +189,16 @@ def test_o_historico_nao_engole_perfil_com_campo_invisivel() -> None:
 
 
 def test_o_que_nao_e_preset_nenhum_continua_sendo_none() -> None:
-    """A guarda que impede o histórico de virar um `any` disfarçado."""
-    assert detect_simple_preset(MatchCriteria(window_class=["obs"])) is None
+    """A guarda que impede o histórico de virar um `any` disfarçado.
+
+    O EXEMPLO MUDOU EM 06/09/2026, e a régua não afrouxou. `window_class=["obs"]`
+    era *preset nenhum* até a `ONDA5-10-01` criar a SEXTA forma — "janela", uma
+    classe de janela SÓ, espelho do "game" —, e passou a ter nome. Um exemplo
+    que envelhece assim é o caso BOM: alguém trabalhou. O que esta régua mede é
+    a guarda, então o exemplo passa a ser um critério que NENHUMA das seis
+    formas cobre: dois campos preenchidos ao mesmo tempo, que não é "janela"
+    (classe só) nem "game" (programa só) nem preset fixo nenhum.
+    """
+    assert detect_simple_preset(
+        MatchCriteria(window_class=["obs"], process_name=["obs-studio"])) is None
     assert detect_simple_preset(MatchAny()) == "any"

@@ -99,7 +99,7 @@ import aba01  # noqa: E402  isort:skip
 #: bancada imprimia *"ERRO DE CARGA: carregou OUTRA página"*, ficava em
 #: ``voltas: 0`` e **saía com rc=0** — verde sobre nada, que é a família de
 #: instrumento falso que esta casa mais paga. Três das cinco abas vivas foram
-#: corrigidas em 05/09 e duas ficaram para trás; a outra é `perfis_vivos.py:79`,
+#: corrigidas em 05/09 e duas ficaram para trás; a outra é `perfis_vivos.py:78`,
 #: com o mesmo defeito e fora desta posse.
 PAGINA = onde.PUBLICADO / "01-jogar.html"
 TITULO_ESPERADO = "Hefesto — aba JOGAR"

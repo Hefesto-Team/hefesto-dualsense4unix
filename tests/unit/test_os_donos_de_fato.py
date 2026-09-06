@@ -109,6 +109,21 @@ def test_a_ordem_das_chaves_e_a_mesma_da_gtk() -> None:
 # ---------------------------------------------------------------------------
 # RÉGUAS 1 e 2 — a identidade não olha a posição, e `None` vira travessão
 # ---------------------------------------------------------------------------
+def _palavra_do_transporte(chave: str) -> str:
+    """A palavra da TELA, LIDA do dono — nunca digitada aqui.
+
+    Estas réguas digitavam `USB` e `BT`; desde a `ONDA4-S10-O-TRANSPORTE-01`
+    (06/09/2026) o último degrau de `identidade_de` devolve a palavra do
+    glossário. O que elas medem não é a palavra — é que o degrau seja o
+    transporte, e nunca o nome de outro aparelho.
+    """
+    from hefesto_dualsense4unix.app.actions.home_actions import (
+        palavra_do_transporte,
+    )
+
+    return palavra_do_transporte(chave)
+
+
 class TestIdentidadeDe:
     def test_o_nome_acompanha_o_uniq_e_nao_o_indice(self) -> None:
         """RÉGUA 1: dois controles em ordem TROCADA, e o nome não troca.
@@ -145,7 +160,7 @@ class TestIdentidadeDe:
         )
 
         dito = pacotes.identidade_de(_controle(AZUL, modelo=None, transport="bt"))
-        assert dito == "BT"
+        assert dito == _palavra_do_transporte("bt")
         assert dito not in set(NOMES_DE_FABRICA.values())
 
     def test_sem_nada_e_travessao(self) -> None:
@@ -162,10 +177,10 @@ class TestIdentidadeDe:
         )
 
     def test_o_nao_sei_da_mesa_nao_vira_nome(self) -> None:
-        """"Não sei" é ausência de leitura. "Não sei · USB" seria pior que "USB"."""
+        """"Não sei" é ausência de leitura, e some — sobra a palavra do transporte."""
         assert (
             pacotes.identidade_de(_controle(AZUL), [{"uniq": AZUL, "nome": "Não sei"}])
-            == "USB"
+            == _palavra_do_transporte("usb")
         )
 
     def test_a_mesa_do_vizinho_nao_respinga(self) -> None:
@@ -173,7 +188,7 @@ class TestIdentidadeDe:
             pacotes.identidade_de(
                 _controle(AZUL), [{"uniq": VERMELHO, "nome": "Cosmic Red"}]
             )
-            == "USB"
+            == _palavra_do_transporte("usb")
         )
 
 

@@ -478,11 +478,20 @@ def test_a_bancada_perdeu_a_dica_congelada_da_celula_de_leds():
     import monta
     from pacotes import a04_iluminacao as pac
 
+    #: AS TRÊS PEÇAS CONTINUAM TRÊS, e a do meio diz uma coisa a mais — a
+    #: botoeira da `LUZES-01` (06/09/2026) deu CLIQUE ao `.pad`, e a dica dele
+    #: passou a dizer também o que o clique faz. A frase composta sai do MESMO
+    #: dono (`DICA_DO_REENVIO_DO_DESENHO`), nunca digitada aqui, e a conferência
+    #: é por IGUALDADE: `in` deixaria a dica velha passar como prefixo da nova.
     for c in monta.CONECTADOS:
         esperada = pac.dica_da_luz(c["nome"], c["via"], "")
-        assert bancada.count(f'title="{esperada}"') == 3, (
-            f"as três peças da coluna de {c['nome']} perderam a dica viva "
+        assert bancada.count(f'title="{esperada}"') == 2, (
+            f"as duas tiras da coluna de {c['nome']} perderam a dica viva "
             f"({esperada!r}).")
+        do_pad = f"{esperada} · {pac.DICA_DO_REENVIO_DO_DESENHO}"
+        assert bancada.count(f'title="{do_pad}"') == 1, (
+            f"o indicador da coluna de {c['nome']} perdeu a dica viva, ou "
+            f"deixou de dizer o que o clique faz ({do_pad!r}).")
     assert "Desenho que mandamos" not in bancada, (
         "a afirmação sobre o desenho das 5 luzes voltou ao desenho: este pacote "
         "não vê o override por-uniq que decide qual desenho está em vigor.")

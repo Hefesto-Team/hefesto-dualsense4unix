@@ -42,6 +42,21 @@ sys.path.insert(0, str(RAIZ / "src/hefesto_dualsense4unix/interface"))
 BANCADA = RAIZ / "mockup/02-controles.html"
 
 #: MACs da faixa sintética da casa — há dois portões de anonimato nesta árvore.
+def _palavra_do_transporte(chave: str) -> str:
+    """A palavra da TELA, LIDA do dono — nunca digitada aqui.
+
+    Em 06/09/2026 esta régua reprovou a melhora: ela digitava `USB` e `BT`, e o
+    cabeçalho do card passou a dizer **cabo** e **rádio** (o glossário desta
+    casa, `ONDA4-S10-O-TRANSPORTE-01`). A sigla continua certa num lugar só — a
+    contagem do topo —, e por isso `fita-via` abaixo segue com ela.
+    """
+    from hefesto_dualsense4unix.app.actions.home_actions import (
+        palavra_do_transporte,
+    )
+
+    return palavra_do_transporte(chave)
+
+
 UNIQ_CABO = "aa:bb:cc:00:00:01"
 UNIQ_RADIO = "aa:bb:cc:00:00:02"
 
@@ -146,19 +161,19 @@ def test_o_pacote_escreve_o_nome_do_aparelho_no_cabecalho(a02, ctx):
     """`White`, que é o que a fita diz — nunca `Cosmic Red`, que é o desenho."""
     p = a02.pacote(ctx)
     assert p["cards"][UNIQ_CABO]["peca"] == "White"
-    assert p["cards"][UNIQ_CABO]["via"] == "USB"
+    assert p["cards"][UNIQ_CABO]["via"] == _palavra_do_transporte("usb")
 
 
 def test_o_controle_sem_cor_lida_nao_ganha_nome_inventado(a02, ctx):
     """Regra dela: campo sem informação não mostra nada.
 
     `identidade_de` cai no TRANSPORTE quando não sobrou nome, e o desenho já
-    mostra o transporte ao lado — o cabeçalho leria `BT • BT`. Vazio é o que o
-    piloto transforma em travessão: `P2 • — • BT`.
+    mostra o transporte ao lado — o cabeçalho leria a palavra duas vezes.
+    Vazio é o que o piloto transforma em travessão.
     """
     p = a02.pacote(ctx)
     assert p["cards"][UNIQ_RADIO]["peca"] == ""
-    assert p["cards"][UNIQ_RADIO]["via"] == "BT"
+    assert p["cards"][UNIQ_RADIO]["via"] == _palavra_do_transporte("bt")
 
 
 def test_o_pacote_escreve_a_cor_do_plastico_como_folha(a02, ctx):

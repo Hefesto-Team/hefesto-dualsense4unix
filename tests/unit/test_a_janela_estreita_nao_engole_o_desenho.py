@@ -234,12 +234,27 @@ MEDIDA = r"""
       if (n.nodeType === 3) s += n.nodeValue;
     return txt(s);
   }
+  // O `title` QUE O MOUSE ALCANÇA, e não só o do próprio elemento: o
+  // navegador sobe a árvore para achar o tooltip, e um `title` no pai atende o
+  // filho recortado. Medido em 06/09/2026 — a linha do giroscópio da aba 02 põe
+  // a frase no `<span class="no-jogo">` de fora (é lá que mora o alvo
+  // `atributo` do piloto) e recorta no `.no-jogo-t` de dentro; lendo só o
+  // próprio elemento, a régua acusava sumiço sobre uma frase que o hover
+  // devolve. A subida para no `.janela`: acima dela é a página, não o desenho.
+  function tituloAlcancavel(el){
+    for (var p = el; p; p = p.parentElement){
+      var v = p.getAttribute('title');
+      if (v) return v;
+      if (p.classList && p.classList.contains('janela')) return null;
+    }
+    return null;
+  }
   function retrato(el){
     var e = getComputedStyle(el);
     return {tag: el.tagName.toLowerCase(),
             cls: (el.getAttribute('class')||'').slice(0,48),
             id: el.id || '',
-            titulo: el.getAttribute('title'),
+            titulo: tituloAlcancavel(el),
             rotulo: el.getAttribute('aria-label'),
             reticencias: e.textOverflow,
             texto: txt(el.textContent).slice(0,90)};
