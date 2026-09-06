@@ -7,10 +7,25 @@ O daemon marca um controle como primário, e a tela já dizia isso à mão: o
 enquanto o P1 estiver na frente. Agora sai do daemon.
 
 O QUE NÃO TEM: os cinco gestos (PS+Options, PS+↑…). Eles NÃO são configuráveis —
-`daemon/subsystems/hotkey.py` monta um callback por combo, em código, e o único
-pedaço ajustável é o `ps_button_action` da config, que método de IPC nenhum
-escreve. A tabela da tela oferece trocar o que cada combo faz; o produto não tem
-onde guardar essa troca.
+`daemon/subsystems/hotkey.py` monta um callback por combo, em código. A tabela da
+tela oferece trocar o que cada combo faz; o produto não tem onde guardar essa
+troca.
+
+FATO SUBSTITUÍDO (06/09/2026): esta linha dizia que o `ps_button_action` da
+config é *"o único pedaço ajustável"* e que *"método de IPC nenhum escreve"*.
+As duas metades caíram. **Escreve** — `daemon.reload` aceita `config_overrides`
+com qualquer campo do `DaemonConfig` (`ipc_handlers.py:5450`, a leitura dos
+overrides) e aplica com `replace(config, **overrides)` + `reload_config`
+(`:5462-5463`); o que ele NÃO faz é gravar em disco, então a escolha morre no
+próximo start do daemon. E **deixou de ser o único ajustável**: desde a
+ONDA5-06-01 o toque solo no PS tem dono no PERFIL
+(`Profile.button_actions["ps"]`), que VENCE o degrau da máquina — a precedência
+está em tabela em `hotkey._a_metade_da_maquina`. Os números antigos (`:4556` /
+`:4567`) apontavam para o cache de órfãos HID quando foram remedidos.
+
+O QUE O ESTADO AINDA NÃO TRAZ: o `ps_button_action`. Ele viaja só na resposta de
+`daemon.reload` (`_config_que_viaja`), nunca no estado do tique — e é por isso
+que a tira desta aba não NOMEIA o ato da máquina. Ver `_o_que_o_ps_faz`.
 
 FATO SUBSTITUÍDO (01/09/2026, segunda leva): esta linha dizia que os cinco
 gestos "moram no PERFIL". Não moram — o perfil guarda `key_bindings`, que são
@@ -64,7 +79,7 @@ tem, sem tocar arquivo de fora.
 FATO SUBSTITUÍDO — 02/09/2026, corretivo. Aqui estava escrito que **a frase de
 recusa NÃO CHEGA À TELA DELA**, e que toda frase deste arquivo era escrita para
 um dia futuro. **Isso caducou no mesmo dia:** o piloto ganhou
-`_recusou_dizendo` (`hefesto_vivo.py:2236`), e o `except` de `trabalhar()` põe a
+`_recusou_dizendo` (`hefesto_vivo.py:2523`), e o `except` de `trabalhar()` põe a
 frase no cartão pelo `idle_add`, na hora do clique e não no tique seguinte.
 
 O QUE CONTINUA VALENDO, e é o que separa os dois erros: **só o `RuntimeError`
@@ -99,7 +114,7 @@ mesmo tempo, medidas contra a página que o produto renderiza:
 
 * das TRÊS opções que a tela dela oferece, DUAS viraram clique morto — e uma
   delas era a única forma de desligar o teclado por esta aba. Morto **e mudo,
-  por contrato**: `_recusou_dizendo` (`hefesto_vivo.py:2236`) leva à tela a
+  por contrato**: `_recusou_dizendo` (`hefesto_vivo.py:2523`) leva à tela a
   frase do `RuntimeError` e NÃO a do `ValueError`, porque clique-inválido fala
   com quem programa. Transformar uma opção de verdade em clique-inválido é
   justamente pedir esse silêncio para o clique dela;
@@ -615,7 +630,7 @@ def _nome_do_botao(botao: str) -> str:
         _nome_do_botao('r3_direcao')          → 'r3_direcao'
         _nome_do_botao('l3_direcao')          → 'l3_direcao'
 
-    São 21 botões em `acoes.BOTOES` e 20 nomes em `_BUTTON_LABELS`, e os dois
+    São 22 botões em `acoes.BOTOES` e 20 nomes em `_BUTTON_LABELS`, e os dois
     que faltam são a DIREÇÃO dos analógicos. A cura mora no MOTOR
     (`app/actions/input_actions.py:129`), não aqui — copiar duas linhas para
     dentro deste arquivo criaria a segunda tabela que o
@@ -1196,12 +1211,95 @@ def atalhos_que_param_de_valer(p: dict[str, Any]) -> list[tuple[str, str]]:
     return fora
 
 
+def _o_ps_digita(token: str | None) -> bool | None:
+    """O token escolhido é coisa que o PS sabe entregar? — PERGUNTADO AO DONO.
+
+    `None` quer dizer *"não deu para perguntar"*, e é diferente de `False`: sem
+    o dono, a tira NÃO INVENTA a resposta e não escreve linha nenhuma. É a regra
+    dela de 30/08 — *"se não tá mostrando agora, não tem info pra mostrar"*.
+
+    O DONO É `daemon/subsystems/hotkey._o_ps_digita`, e é ele que o toque no PS
+    consulta de verdade (`_a_metade_da_maquina`). Copiar a regra para cá criaria
+    a segunda tabela que esta casa persegue: no dia em que o PS aprender a
+    disparar um programa, a tira continuaria dizendo que ele não sabe.
+
+    O IMPORT É TARDIO pela mesma razão de `_nome_do_botao` e
+    `_atalho_em_palavras`: os pacotes são puros de propósito — importáveis sem
+    janela e sem daemon. Medido nesta árvore: 158 ms no primeiro tique, e o
+    módulo NÃO arrasta `gi`.
+    """
+    try:
+        from hefesto_dualsense4unix.daemon.subsystems.hotkey import (
+            _o_ps_digita as do_dono,
+        )
+    except Exception:
+        return None
+    return bool(do_dono(token))
+
+
+def _o_que_o_ps_faz(p: dict[str, Any]) -> str:
+    """A quinta frase da tira: as DUAS coisas que o botão PS faz ao mesmo tempo.
+
+    DECISÃO DELA, 06/09/2026 (06-Q3): *"O PS ganha a mesma lista das outras 21
+    linhas; se você der uma tecla a ele, ele passa a digitar SEM parar de abrir
+    a Steam, **e a tabela não avisa isso**."* Esta função é a última oração —
+    ela existe para fazê-la deixar de ser verdade.
+
+    ELA NASCE SÓ QUANDO HÁ O QUE DIZER, como as outras quatro. Sem escolha no
+    perfil o PS é só o que sempre foi, e uma tira que fala sempre é uma tira que
+    ninguém lê. Com `— Nada —` também não há duas coisas: o `__NADA__` é o
+    espelho exato do `"none"` da máquina e cala as duas metades — está na tabela
+    de precedência de `hotkey._a_metade_da_maquina`.
+
+    A TIRA NÃO NOMEIA O ATO DA MÁQUINA, e a razão é medida: o estado que o
+    daemon publica à tela **não traz `ps_button_action`** (`ipc_handlers` só o
+    devolve na resposta de `daemon.reload`). Escrever "continua abrindo a
+    Steam" seria afirmar o degrau de fábrica sobre uma máquina que ninguém
+    perguntou — e ele é ajustável (`steam` · `none` · `custom`). O que a frase
+    afirma é o que vale nos três casos: o PS **continua sendo a saída de
+    emergência**, porque os gestos e o segurar-para-alternar não passam por
+    aquele campo. RELATO: publicar `ps_button_action` no estado é o que deixa a
+    tira nomear as duas metades, e é de quem for dono do IPC.
+
+    O SEGUNDO RAMO É O SILÊNCIO QUE A 06-01 DEIXOU DECLARADO: o `resolver()`
+    tira o PS das três sacolas, então uma escolha que ninguém atende (um
+    `BTN_*`, um papel de eixo, "Abrir um programa") **não entra em `sem_dono`**
+    e não aparece na frase "Não acendem nada hoje". O daemon a registra no
+    journal como `ps_solo_escolha_sem_atendente`; sem esta linha, a tela seria o
+    único lugar calado.
+
+    :returns: a frase, ou `""` quando não há o que dizer.
+    """
+    escolha = acoes.acao_do_ps((p or {}).get("button_actions"))
+    if not escolha or escolha == acoes.TOKEN_NADA:
+        return ""
+    digita = _o_ps_digita(escolha)
+    if digita is None:
+        return ""
+    nome = _nome_do_botao(acoes.BOTAO_PS)
+    rotulo = acoes.rotulo(escolha)
+    if digita:
+        return (f"<b>{nome}: duas coisas ao mesmo tempo.</b> Ele digita "
+                f"“{rotulo}” <b>e</b> continua sendo a saída de emergência — os "
+                "gestos desta aba saem dele, e segurá-lo alterna o modo jogo. "
+                "Dentro de um jogo ele não faz nenhuma das duas.")
+    if escolha == acoes.TOKEN_STEAM:
+        return ""
+    return (f"<b>O {nome} ainda não faz “{rotulo}”:</b> hoje ele só sabe digitar "
+            "teclas e abrir o teclado na tela. A escolha fica guardada no "
+            "perfil — é feature que falta, não erro seu.")
+
+
 def _aviso_da_tabela(p: dict[str, Any]) -> str:
     """A tira sob a tabela de botões — vazia quando não há o que perder.
 
-    TRÊS FRASES, e nenhuma nasce se o fato dela não existir. A tira só ocupa
+    CINCO FRASES, e nenhuma nasce se o fato dela não existir. A tira só ocupa
     espaço nos perfis em que há mesmo algo a dizer, que é o que a decisão do PO
     pede: *"a tira se esconde vazia, como a de estados já faz"*.
+
+    A QUINTA É O BOTÃO PS — 06/09/2026, decisão dela na 06-Q3. Ela vem por
+    último de propósito: as quatro primeiras falam da tabela inteira, e esta
+    fala de UMA linha. Ver `_o_que_o_ps_faz`.
     """
     partes: list[str] = []
     donos = _dois_donos()
@@ -1236,6 +1334,9 @@ def _aviso_da_tabela(p: dict[str, Any]) -> str:
             "Guardar aqui substitui o conjunto inteiro de atalhos pelo que a "
             "tabela mostra, e esses param de valer assim que o mouse virtual "
             "estiver de pé.")
+    do_ps = _o_que_o_ps_faz(p)
+    if do_ps:
+        partes.append(do_ps)
     if not partes:
         return NADA_A_DIZER
     return "".join(f"<div>{x}</div>" for x in partes)
@@ -2531,7 +2632,8 @@ def guardar_definicoes(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     # o segundo clique era o botão que responde calado — o defeito que esta casa
     # mais persegue.
     if prof.button_actions == novo:
-        guardadas = ("nenhuma escolha sua: as 21 linhas estão no de fábrica"
+        guardadas = (f"nenhuma escolha sua: as {len(acoes.BOTOES)} linhas estão "
+                     "no de fábrica"
                      if not novo else
                      f"{len(novo)} escolha(s) sua(s)")
         # NADA PENDENTE: a tela e o disco dizem a mesma coisa, logo não há
@@ -2698,8 +2800,8 @@ def padrao_definicoes(ctx: Contexto, o: dict[str, Any],
         _largar_o_que_ela_mexeu()
         raise RuntimeError(
             f"não havia o que voltar — o perfil “{nome}” já está no de fábrica "
-            "nas 21 linhas de o que cada botão faz. Não gravei nada e não "
-            "incomodei o daemon.")
+            f"nas {len(acoes.BOTOES)} linhas de o que cada botão faz. Não gravei "
+            "nada e não incomodei o daemon.")
     # O QUE ELE APAGA, contado ANTES de apagar: os atalhos que ela escreveu à
     # mão continuam sendo os do perfil até esta linha.
     atalhos = getattr(prof, "key_bindings", None) or {}
@@ -2775,10 +2877,15 @@ SEM_GESTO = {
     # FATO AFINADO (terceira leva, 01/09/2026): esta entrada dizia que "método
     # de IPC nenhum escreve" o `ps_button_action`. Escreve — `daemon.reload`
     # aceita `config_overrides` com qualquer campo do `DaemonConfig`
-    # (`ipc_handlers.py:4556`). O que ele NÃO faz é gravar: o handler roda
-    # `replace(config, **overrides)` e `reload_config(...)` e para aí (`:4567`),
-    # então a escolha morre no próximo start do daemon. E o `ps_button_action` é
-    # do PS SOLO, não dos combos — a tabela desta tela é dos cinco COMBOS.
+    # (`ipc_handlers.py:5450`). O que ele NÃO faz é gravar: o handler roda
+    # `replace(config, **overrides)` e `reload_config(...)` e para aí
+    # (`:5462-5463`), então a escolha morre no próximo start do daemon. E o
+    # `ps_button_action` é do PS SOLO, não dos combos — a tabela desta tela é dos
+    # cinco COMBOS.
+    #
+    # ENDEREÇOS REMEDIDOS EM 06/09/2026: eram `:4556` e `:4567`, que hoje são o
+    # cache de órfãos HID. Medidos com `grep -n` no HEAD desta árvore, nunca
+    # copiados de relatório.
     "acao-do-gesto": "os cinco combos são callbacks montados em código "
                      "(`daemon/subsystems/hotkey.py:86,414`), não dado. O "
                      "vizinho deles, o `config.ps_button_action` do PS solo, "
@@ -2786,7 +2893,7 @@ SEM_GESTO = {
                      "e nenhum que grave em disco — e ele nem é o que esta "
                      "tabela oferece trocar",
     "padrao-da-aba": "a frase do botão promete a aba INTEIRA — as opções de "
-                     "ativação, os 5 gestos e as 21 linhas das duas telas. Só as "
+                     "ativação, os 5 gestos e as 22 linhas das duas telas. Só as "
                      "duas velocidades têm rota (`mouse.emulation.set` "
                      "speed-only); as outras três promessas não têm nenhuma, e "
                      "um 'Voltar ao padrão' que devolve dois números de cinco "

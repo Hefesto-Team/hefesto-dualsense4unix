@@ -371,11 +371,20 @@ def test_todo_valor_do_duble_existe_como_opcao(monkeypatch, publicado):
             "em silêncio, e o que ficaria na tela é a `<option selected>` que o "
             "desenho crava. O campo não para: ele passa a AFIRMAR o contrário.")
         conferidos += 1
-    assert conferidos == 24, (
-        f"conferi {conferidos} linhas na página {onde_estou} e a aba tem 24 (as "
-        "21 linhas de botão, a 'Função do teclado' e as DUAS barras de "
-        "velocidade) — se o número caiu, uma linha perdeu o endereço e saiu da "
-        "conferência sem reprovar nada.")
+    # O NÚMERO DEIXOU DE SER DIGITADO — 06/09/2026. Estava `== 24`, com a conta
+    # escrita ao lado ("as 21 linhas de botão, a 'Função do teclado' e as DUAS
+    # barras"). Quando o botão PS entrou na lista do produto (ONDA5-06-01/02) a
+    # conta virou 25 e a régua reprovou a MELHORA, que é a forma exata do
+    # defeito que esta casa já pagou onze vezes em 26/08. Agora ela PERGUNTA ao
+    # dono da lista e soma os três campos que não são linha de botão.
+    from hefesto_dualsense4unix.core.acoes_de_botao import BOTOES
+
+    esperados = len(BOTOES) + 3
+    assert conferidos == esperados, (
+        f"conferi {conferidos} linhas na página {onde_estou} e a aba tem "
+        f"{esperados} (as {len(BOTOES)} linhas de botão, a 'Função do teclado' "
+        "e as DUAS barras de velocidade) — se o número caiu, uma linha perdeu o "
+        "endereço e saiu da conferência sem reprovar nada.")
 
 
 def test_os_sete_campos_de_texto_dizem_o_que_o_duble_diz(sob_o_duble):
