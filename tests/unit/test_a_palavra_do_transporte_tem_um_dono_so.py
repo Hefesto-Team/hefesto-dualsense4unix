@@ -111,7 +111,15 @@ def test_a_contagem_do_cabecalho_nao_se_mexe_quando_a_palavra_muda(monkeypatch) 
     _, mesa = _mesa("usb", "usb")
     assert mesa_viva.texto_da_contagem(mesa) == ("● 2 controles: ", "2 USB · 0 BT")
 
-    monkeypatch.setitem(_pacotes.VIA_DO_TRANSPORTE, "usb", SENTINELA)
+    # O PONTO DE INJEÇÃO MUDOU NA COSTURA DA ONDA B (06/09/2026), e a PERGUNTA
+    # não. A `via` deixou de vir da tabela `VIA_DO_TRANSPORTE` e passou a vir da
+    # dona da frase — `home_actions.palavra_do_transporte` —, que é o que a
+    # própria ONDA4-S10 desenhou e não pôde executar (os cinco pontos que
+    # COMPARAVAM a chave não eram da posse dela). Com a injeção no lugar velho
+    # esta régua parava de morder, e foi ELA quem acusou: a asserção do meio,
+    # *"a troca não chegou à mesa"*, reprovou primeiro.
+    monkeypatch.setattr(
+        mesa_viva, "_via_do_transporte", lambda _t: SENTINELA)
     _, mesa_depois = _mesa("usb", "usb")
     assert [c["via"] for c in mesa_depois] == [SENTINELA, SENTINELA], (
         "a troca não chegou à mesa — a mordida não estaria mordendo nada")

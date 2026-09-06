@@ -2631,6 +2631,21 @@ def _endereco_do_adaptador(interface: str) -> str:
     return ""
 
 
+def _e_radio(c: dict[str, object]) -> bool:
+    """Este controle fala por rádio? Lê a chave CRUA, nunca a palavra da tela.
+
+    `transporte` é `"usb"`/`"bt"` e vem de `mesa_viva.py:385`; `via` carrega a
+    PALAVRA da tela ("cabo"/"rádio"), que muda com o glossário. Comparar a palavra
+    faria esta aba perder os controles do rádio na primeira vez que alguém
+    traduzisse a tela — calado, sem log e sem régua vermelha.
+
+    A `ONDA4-S10-O-TRANSPORTE-01` mediu os cinco pontos e escreveu o caminho; ela
+    não podia executá-lo porque este arquivo não era da posse dela. Quem fechou
+    foi a costura da ONDA B, 06/09/2026.
+    """
+    return str(c.get("transporte") or "").strip().lower() == "bt"
+
+
 def _regua_do_radio(ctx: Contexto) -> str:
     """A régua de Desempenho com a mesa DELA — pistas, eixo e legenda.
 
@@ -2675,8 +2690,14 @@ def _regua_do_radio(ctx: Contexto) -> str:
     com_mic = {c for c in (norm_mac(str(u)) for u in
                            ((ctx.state.get("bt_mic") or {}).get("uniqs") or [])) if c}
     todos = [_da_mesa_para_a_regua(m, com_mic) for m in ctx.mesa]
-    no_radio = [c for c in todos if c["via"] == "BT"]
-    no_cabo = [c for c in todos if c["via"] != "BT"]
+    # A COMPARAÇÃO LÊ A CHAVE CRUA, NÃO A PALAVRA — costura da ONDA B, 06/09/2026.
+    # A `via` passou a carregar a palavra da tela ("cabo"/"rádio"); quem agrupa por
+    # adaptador compara `transporte` ("usb"/"bt"), que o item da mesa publica ao lado
+    # (`mesa_viva.py:385`). Sem esta troca, esta aba mostraria ZERO controles no rádio
+    # com os dois no rádio — calado, sem log e sem régua vermelha. A S-10 mediu e
+    # escreveu o caminho; ela não podia executá-lo porque este arquivo não era dela.
+    no_radio = [c for c in todos if _e_radio(c)]
+    no_cabo = [c for c in todos if not _e_radio(c)]
 
     onde: dict[str, str] = {}
     if no_radio:
@@ -2690,7 +2711,7 @@ def _regua_do_radio(ctx: Contexto) -> str:
     # à parte, sem nome — e não uma fatia enfiada na pista de outro.
     grupos: dict[str, list[dict[str, Any]]] = {}
     for m, c in zip(ctx.mesa, todos, strict=True):
-        if c["via"] != "BT":
+        if not _e_radio(c):
             continue
         grupos.setdefault(onde.get(str(m.get("uniq") or ""), ""), []).append(c)
 

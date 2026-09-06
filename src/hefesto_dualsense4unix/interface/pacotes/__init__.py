@@ -964,7 +964,14 @@ def identidade_de(
             return nome.strip()
         break
 
-    via = VIA_DO_TRANSPORTE.get(str(c.get("transport") or "").lower(), "")
+    # A PALAVRA VEM DO DONO — costura da ONDA B, 06/09/2026. `VIA_DO_TRANSPORTE`
+    # era a sigla de máquina; quem a comparava passou a ler o `transporte` cru,
+    # então o que sobra aqui é texto de tela, e texto de tela vem do dono.
+    from hefesto_dualsense4unix.app.actions.home_actions import (
+        palavra_do_transporte,
+    )
+
+    via = palavra_do_transporte(c.get("transport"))
     return via or "—"
 
 

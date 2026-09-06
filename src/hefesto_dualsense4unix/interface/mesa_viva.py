@@ -195,7 +195,16 @@ def _via_do_transporte(transporte: object) -> str:
     """
     from hefesto_dualsense4unix.interface.pacotes import VIA_DO_TRANSPORTE
 
-    return VIA_DO_TRANSPORTE.get(str(transporte or "").lower(), "")
+    # A PALAVRA DA TELA ENTRA AQUI — costura da ONDA B, 06/09/2026, e é a última
+    # linha que a ONDA4-S10 desenhou e não pôde executar. Os cinco pontos que
+    # COMPARAVAM esta chave passaram a ler o `transporte` cru (`_e_radio` na 08,
+    # a contagem do topo em `monta.py`), então ela ficou livre para dizer o que
+    # a tela lê. A dona da frase é `home_actions.palavra_do_transporte`.
+    from hefesto_dualsense4unix.app.actions.home_actions import (
+        palavra_do_transporte,
+    )
+
+    return palavra_do_transporte(transporte)
 
 
 # ---------------------------------------------------------------------------
