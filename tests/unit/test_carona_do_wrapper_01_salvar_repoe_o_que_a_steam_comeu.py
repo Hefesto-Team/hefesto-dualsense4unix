@@ -749,28 +749,38 @@ GESTOS_DA_INTERFACE_NOVA = {
         "salvar",  # grava o perfil ativo no disco dela
         "importar",  # um perfil novo entra na pasta e passa a valer
     },
-    # E o "dentro da guia", que já pegava desde 03/09.
-    "interface/pacotes/a10_perfis.py": {"ativar"},
+    # E o "dentro da guia", que já pegava desde 03/09 — mais os DOIS funis que
+    # a PERFIL-MODO-01 fechou em 06/09 (ver o bloco abaixo).
+    "interface/pacotes/a10_perfis.py": {"ativar", "_gravar",
+                                        "voltar_a_de_ontem"},
 }
 
-# O QUE FALTA, MEDIDO E COM ENDEREÇO — 06/09/2026, e não está aqui em cima
-# porque portão vermelho de propósito é portão que ninguém lê.
+# OS NOVE QUE FALTAVAM — MEDIDOS EM 06/09/2026 pela `ONDA5-07-02`, FECHADOS no
+# mesmo dia pela `PERFIL-MODO-01`.
 #
 # O censo dos treze gestos da aba Perfis (`ast`, contra `save_profile`,
 # `delete_profile`, `restaurar_do_historico`, `profile_switch` e o funil
-# `_gravar`) devolveu NOVE que gravam o perfil INTEIRO e não pegam carona:
+# `_gravar`) devolveu NOVE que gravavam o perfil INTEIRO sem repor o atalho de
+# inicialização que a Steam come:
 #
 #     voltar-a-de-ontem   restaurar_do_historico + switch + launch_env.refresh
 #                         — é o «Restaurar Padrão» da janela velha, que PEGA
 #                           carona pelo `profile_writer`
 #     editor.nome · editor.prioridade · editor.ambiente · editor.estilo ·
 #     editor.jogo · detectar · novo · duplicar
-#                         — os OITO que passam pelo funil `a10_perfis._gravar`
+#                         — os que passam pelo funil `a10_perfis._gravar`
 #                           (o `detectar` entra: ele grava o jogo achado no
-#                           perfil, pelo mesmo funil)
+#                           perfil, pelo mesmo funil). O `editor.modo`, que
+#                           nasceu em 06/09, entra pela MESMA porta — e é por
+#                           isso que o portão cobra o FUNIL e não os gestos um a
+#                           um: um gesto novo que grave perfil nasce coberto.
 #
-# A cura são DUAS linhas em `a10_perfis.py`, que é posse de outra frente. Fica
-# relatado em `docs/process/agentes/2026-09-06/ONDA5-07-02.md`.
+# **POR QUE O NOME DO FUNIL E NÃO OS OITO NOMES:** este portão anda a árvore de
+# sintaxe e nomeia a FUNÇÃO que perdeu o fio. Listar `editor_nome`,
+# `editor_estilo`… exigiria uma chamada de carona DENTRO de cada um — oito
+# cópias da mesma linha, e a nona é a que alguém esquece. `_gravar` é o
+# estrangulamento por onde os nove passam, e é lá que a carona mora; arrancá-la
+# reprova nomeando `_gravar`, que é exatamente o endereço da cura.
 #
 # E os que ficam de fora com razão: `remover` (apagar um perfil não põe perfil
 # nenhum em vigor — a janela velha também não o cobre), `selecionar` e

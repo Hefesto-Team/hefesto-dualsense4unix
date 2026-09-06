@@ -23,6 +23,72 @@ seção daqui**: a aba deixou de estar em trabalho.
 
 ## 10-perfis.html
 
+- **06/09/2026** — **UMA FILEIRA NOVA no editor: o quadro «Modo»**, com os
+  QUATRO botões que a janela GTK tem desde sempre (`profiles_actions.
+  _install_mode_section`) e que esta tela nunca teve — *Não mexer no modo* ·
+  *Controlar o PC* · *Jogar pelo Hefesto* · *Conexão Nativa (Sony)*. Os rótulos
+  são dela, de 06/08 (UX-MODE-TERMS-02), e o desenho os LÊ de
+  `_MODE_KIND_ITEMS` em vez de digitá-los.
+
+  **Por que não publiquei:** publicar é ato dela, e aqui a mudança é a MAIOR
+  desta aba — nasce uma sexta linha em "Definições", com quatro `<button>` onde
+  não havia nada. Nem a régua do que-se-vê a absolveria, e não deveria.
+
+  **O que ela vê HOJE, até publicar:** a aba Perfis de ontem — cinco campos e
+  nenhum Modo. `editor.modo` sai do pacote a cada tique e cai no vazio na página
+  publicada (declarado em `a10_perfis.ESPERANDO_A_PUBLICACAO`), e o gesto
+  `editor.modo` não tem botão de onde nascer. **Nada regride enquanto ela
+  espera.** Medido no WebKit, com o mesmo perfil no disco, por
+  `scripts/ensaios/o_quadro_do_modo_grava_pelo_webkit.py`:
+
+  | | botões do Modo | o campo do jogo consulta a lista? |
+  | --- | --- | --- |
+  | **bancada** | 4, e o clique grava nos quatro | **sim** |
+  | **publicado** | **0** | **não** |
+
+  **DUAS COISAS DE DESENHO VIERAM JUNTO, e as duas são MEDIDAS — quem for
+  aprovar precisa saber o que elas compraram:**
+
+  1. **o rótulo do botão quebra em DUAS linhas dentro dele** (`white-space:
+     normal`, `flex:1 1 0`, 11,5px). Os quatro rótulos numa fileira normal somam
+     **563px** e o `.val` desta coluna tem **412px** — em duas fileiras eles
+     custam 82px, e a coluna tinha **41** de folga. Uma varredura de 180
+     combinações de altura, padding e margem não achou nenhuma que coubesse. Com
+     o rótulo quebrando dentro do botão, a fileira fica com os mesmos 36px de um
+     `<select>` desta aba, e nada mais na coluna precisou encolher;
+  2. **a tabela «Ajuste próprio» ganhou barra de rolagem** (`overflow-y:auto`,
+     no lugar de `overflow:hidden`). Ela é `flex:1` e absorve o que sobra; a
+     tira do desfecho (10-Q5) come 37px quando acende, e com a fileira do Modo a
+     conta virava negativa — **as linhas do P3 e do P4 sumiam por 30 segundos a
+     cada gesto**, sem barra e sem aviso. A barra nasce só quando há o que
+     rolar: no tamanho do desenho, sem tira, ela não aparece. É o mesmo
+     argumento que o `.rolo` da lista de perfis já tinha escrito.
+
+  **O que NÃO nasceu, por decisão dela (10-Q6, via `ONDA5-10-03`):** as duas
+  frases do modo. Nem a linha condicional do rádio frágil no Nativo, nem a dica
+  com o custo da máscara Xbox. Há régua cobrando a ausência
+  (`test_o_quadro_do_modo_nao_descreve_o_que_perde`), e ela LÊ as constantes de
+  `home_actions` em vez de digitá-las.
+
+  **O que fecha:** `scripts/check_o_desenho_aprovado.py --publicar 10`, no OK
+  dela da aba.
+
+- **06/09/2026** — **A LISTA SUSPENSA COM OS JOGOS DESTA MÁQUINA**, no campo
+  "Nome do Jogo". Um `<datalist>` vazio no desenho, que o pacote enche com o
+  catálogo do disco (`integrations/jogos_locais.catalogo_de_jogos`) — o mesmo
+  que alimenta o `Gtk.EntryCompletion` da janela GTK.
+
+  **`<datalist>` e não `<select>`**, e a razão é o enunciado dela: *"uma lista
+  que recusa o que ela sabe que existe é pior que campo livre"*. O campo
+  continua aceitando qualquer texto, inclusive o appid de um jogo que ela ainda
+  vai comprar.
+
+  **Por que não publiquei:** o `<input>` ganha um `list=` e o documento ganha um
+  elemento. Medido no WebKit vivo: na bancada `input.list` resolve para o
+  `<datalist>` e as opções chegam; no publicado não há para onde apontar.
+  **Ela não vê pixel nenhum a mais** — o `<datalist>` é invisível até ela
+  digitar —, mas o elemento é novo e o `--publicar-enderecos` o recusa.
+
 - **06/09/2026** — **UMA OPÇÃO A MAIS no seletor "Funciona em": "Jogo (pela
   janela)"**, a sexta forma que a ONDA5-10-01 (decisão 10-Q2 dela) fez o produto
   saber guardar. É a regra que o botão "Detectar" passa a gravar quando o jogo

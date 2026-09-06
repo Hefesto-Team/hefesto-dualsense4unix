@@ -363,6 +363,16 @@ def _dizer(frase: str, **campos: Any) -> dict[str, Any]:
     O `pacote()` chega ao JS com esse embrulho porque `pacotes.normalizar` o
     põe; um gesto não passa por lá, e põe o seu.
     """
+    global _CARONA_PENDENTE
+    # A NOTÍCIA DA CARONA, quando o funil `_gravar` acabou de repor o atalho —
+    # 06/09/2026. Ela vem GRUDADA na frase do gesto, com o `·` no meio, que é o
+    # registro de chamada que `perfil.com_a_carona` documenta para quem já tem
+    # desfecho. O `ativar` NÃO passa por aqui com pendência: ele chama
+    # `_com_a_carona(frase)` direto e este campo continua vazio — dois `·` para
+    # a mesma notícia seria a tira dizendo duas vezes.
+    if _CARONA_PENDENTE:
+        frase = f"{frase} · {_CARONA_PENDENTE}" if frase else _CARONA_PENDENTE
+        _CARONA_PENDENTE = ""
     _anotar(frase)
     return {"mesa": {"perfis.desfecho": frase, **campos}}
 
@@ -627,6 +637,13 @@ SEM_ENDERECO = {
 #: DESENHO, e `--publicar-enderecos` o recusa dizendo — que é exatamente o
 #: certo. Enquanto ela não publicar, os dois valores saem e caem no vazio na
 #: página que o produto renderiza; o que ela vê hoje não muda.
+#: **E ELE VOLTOU A TER TRÊS — 06/09/2026, PERFIL-MODO-01.** O quadro "Modo"
+#: é a MAIOR mudança de pixel que esta aba já esperou: uma fileira nova de
+#: quatro botões dentro de "Definições", com o rótulo à esquerda como os cinco
+#: campos irmãos. Isso é DESENHO — `--publicar-enderecos` o recusa dizendo, que
+#: é exatamente o certo. Enquanto ela não publicar, `editor.modo` sai a cada
+#: tique e cai no vazio na página que o produto renderiza; o que ela vê hoje não
+#: muda, e o gesto `editor.modo` não tem botão para nascer dele.
 ESPERANDO_A_PUBLICACAO: dict[str, str] = {
     "editor.jogo.rotulo": "o rótulo ao lado do campo (10-Q4) nasceu na bancada "
                           "em 06/09 e muda pixel — três `<span>` novos dentro "
@@ -634,6 +651,9 @@ ESPERANDO_A_PUBLICACAO: dict[str, str] = {
     "editor.jogo.alerta": "a tinta do mesmo rótulo, que separa «não está nesta "
                           "máquina» (rotina) de «não reconheci este endereço» "
                           "(erro) — nasce e publica junto com ele",
+    "editor.modo": "o quadro «Modo» (PERFIL-MODO-01) nasceu na bancada em "
+                   "06/09: uma fileira NOVA de quatro botões no editor. É a "
+                   "maior mudança de pixel da aba, e publicar é ato dela",
 }
 
 
@@ -882,6 +902,28 @@ def _mesa_com_rotulo(mesa: list[dict[str, Any]]) -> list[dict[str, Any]]:
 #: `for(const [seletor, html] of Object.entries(p.blocos || {}))`).
 SELETOR_DA_LISTA = 'tbody[data-hef="perfis.lista"]'
 
+#: A LISTA SUSPENSA DOS JOGOS DESTA MÁQUINA — PERFIL-MODO-01, Passo 3.
+#:
+#: É o `<datalist>` que o campo "Nome do Jogo" consulta (`list=`, no
+#: `aba10.py`). Ele entra pelo `blocos` — o mesmo caminho da lista de perfis, e
+#: pela mesma razão escrita em `_html_da_lista`: **um bloco cujo número de
+#: filhos muda com o dado não tem endereço para o filho que ainda não existe.**
+#: A biblioteca dela tem 33 jogos hoje e pode ter 300 amanhã.
+SELETOR_DOS_JOGOS = 'datalist[data-hef="editor.jogo.lista"]'
+
+#: QUANTOS JOGOS A LISTA OFERECE, no máximo. **É teto de SEGURANÇA, não de
+#: gosto**, e a razão é medida noutro lugar desta mesma aba: a tira do desfecho
+#: estourou porque `lista_de_jogos` não tinha teto (ver a linha 359 do CSV da
+#: paridade). Aqui o custo de não ter teto é outro e pior — o `blocos` reescreve
+#: o `<datalist>` quando o `innerHTML` diverge, e um catálogo de milhares de
+#: linhas passaria por essa comparação a cada tique.
+#:
+#: 500 É FOLGA MEDIDA e não um palpite: o catálogo desta máquina em 06/09/2026
+#: tem 33 `.acf` mais 150 `.desktop`, e o teto é quase três vezes isso. Quem
+#: tiver mais que 500 jogos continua com o campo LIVRE, que é o que ele sempre
+#: foi — a lista OFERECE, nunca RECUSA.
+TETO_DA_LISTA_DE_JOGOS = 500
+
 #: A INDENTAÇÃO DA LINHA no desenho: dezesseis espaços, os mesmos que
 #: `aba10.linha_do_perfil` emite. Ela não muda nada na tela — HTML come espaço
 #: em branco entre linhas de tabela —, e existe para que a régua de forma possa
@@ -1073,6 +1115,52 @@ def _html_da_lista(lista: list[dict[str, Any]], vazia: str,
                         escolhido=bool(escolhido)
                         and str(x.get("nome") or "") == escolhido)
         for x in lista)
+
+
+def _html_dos_jogos() -> str:
+    """As `<option>` do `<datalist>` — os jogos DESTA máquina, do disco dela.
+
+    PERFIL-MODO-01, Passo 3 (06/09/2026). A linha 378 do CSV da paridade dizia
+    do lado HTML: *"NADA. O `<input>` é texto livre"* — e a nota explicava o
+    custo: *"criar um perfil de jogo pelo HTML exige ela saber o appid de cor ou
+    ir buscá-lo na loja"*. O botão "Detectar" cobre metade (só com o jogo em
+    foco); a lista cobre o resto, inclusive jogo FECHADO.
+
+    O CATÁLOGO É O DO PRODUTO, não uma segunda leitura: `_nomes_dos_jogos()` já
+    existe nesta aba desde a 10-Q4 e é memoizado pela ASSINATURA da biblioteca
+    (`jogos_locais.assinatura_da_biblioteca`) — então dez tiques por segundo não
+    abrem 33 `.acf` dez vezes por segundo. Chamar `catalogo_de_jogos()` direto
+    aqui seria a segunda leitura do mesmo disco, sem o cache.
+
+    O `value` É O APPID E O `label` É O NOME, e a ordem não é livre: num
+    `<datalist>` o navegador escreve o `value` NO CAMPO quando ela escolhe, e o
+    campo grava um appid (`from_simple_choice("steam_game", …)` quer o número).
+    É a MESMA divisão que a janela GTK faz com as duas colunas do
+    `Gtk.EntryCompletion` — *"Coluna 0 = o rótulo que ela lê, Coluna 1 = o
+    appid, que é o que o campo grava"* — e o comentário de lá diz o preço de
+    trocar: um perfil nasceria com `steam_app_Sea of Stars`, que nunca casa com
+    janela nenhuma.
+
+    ESCAPAR É OBRIGATÓRIO E É O `_atr`, não o `html.escape`: os nomes vêm dos
+    `.acf` e dos `.desktop` DELA — `DON'T SCREAM` está no catálogo desta casa —,
+    e escapar o que o serializador do navegador não escapa faria o `blocos`
+    reescrever o bloco a cada 500 ms para sempre. A medição está na docstring de
+    `_atr`.
+
+    NUNCA LEVANTA, pela mesma razão de `_jogo_reconhecido`: isto é PINTURA, a
+    duas vezes por segundo, sobre a biblioteca dela. Uma exceção lendo um
+    `.desktop` estragado derrubaria a aba inteira por causa de uma sugestão.
+    """
+    try:
+        nomes = _nomes_dos_jogos()
+    except Exception:
+        return ""
+    linhas = [
+        f'<option value="{_atr(appid)}" label="{_atr(nome)} (appid {_atr(appid)})">'
+        f'</option>'
+        for appid, nome in sorted(nomes.items(), key=lambda par: par[1].lower())
+    ]
+    return "".join(linhas[:TETO_DA_LISTA_DE_JOGOS])
 
 
 def _valendo(ctx: Contexto, todos: list[Any] | None = None) -> str:
@@ -1606,8 +1694,15 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
     # alto desta função), e é isso que a marca promete a ela: a linha marcada é
     # a que os campos da direita e os nove botões vão mexer.
     escolhido_na_lista = str(getattr(alvo, "name", "") or escolhido)
-    fora["blocos"] = {SELETOR_DA_LISTA: _html_da_lista(
-        lista, str(bruto.get("lista_vazia") or ""), escolhido_na_lista)}
+    fora["blocos"] = {
+        SELETOR_DA_LISTA: _html_da_lista(
+            lista, str(bruto.get("lista_vazia") or ""), escolhido_na_lista),
+        # A LISTA DOS JOGOS DESTA MÁQUINA — PERFIL-MODO-01, Passo 3. Ela sai
+        # SEMPRE, inclusive vazia: uma biblioteca que encolheu (jogo
+        # desinstalado) tem de apagar a sugestão que já não existe, e um
+        # `if nomes:` deixaria o `<datalist>` com o catálogo de ontem.
+        SELETOR_DOS_JOGOS: _html_dos_jogos(),
+    }
     fora["cobertura"] = {"pintados": len(fora) + len(lista) * 3, "sem_dono": 0}
     return fora
 
@@ -1806,7 +1901,13 @@ def voltar_a_de_ontem(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any
     if ativo and mesmo_slug(ativo, nome):
         p.profile_switch(nome)
     p.chamar("launch_env.refresh")
-    return _dizer(f"Perfil restaurado: {nome} · versão {versao.stem}")
+    # A CARONA — 06/09/2026, o nono dos que a `ONDA5-07-02` mediu sem ela. Este
+    # gesto é o «Restaurar Padrão» da janela velha, e lá ele PEGA a carona pelo
+    # `profile_writer`. Ele não passa pelo funil `_gravar` (o histórico se
+    # restaura por `restaurar_do_historico`), então a chamada é própria — e a
+    # notícia vai grudada na frase, que é o registro de quem já tem desfecho.
+    return _dizer(_com_a_carona(
+        f"Perfil restaurado: {nome} · versão {versao.stem}"))
 
 
 # ---------------------------------------------------------------------------
@@ -1855,6 +1956,11 @@ def _perfil_do_editor(ctx: Contexto) -> str:
 PRESET_DO_ROTULO = {v: k for k, v in _tela.AMBIENTE_DO_PRESET.items()}
 
 
+#: A NOTÍCIA DA CARONA QUE O PRÓXIMO `_dizer` VAI CARREGAR — 06/09/2026.
+#: Vazia é o caso comum, e quer dizer *não diga nada*.
+_CARONA_PENDENTE: str = ""
+
+
 def _gravar(prof: Any, ctx: Contexto, p: Any, *, era: str = "") -> None:
     """Os três tempos: disco, reaplicar se for o ativo, avisar a antecipação.
 
@@ -1864,8 +1970,31 @@ def _gravar(prof: Any, ctx: Contexto, p: Any, *, era: str = "") -> None:
     `launch_env.refresh` no dia em que alguém mexer numa só — então o corpo foi
     para `pacotes/perfil.py`, que é o módulo que as abas já compartilham, e este
     nome fica como a porta desta aba.
+
+    E A CARONA ENTROU AQUI — 06/09/2026, o que a `ONDA5-07-02` mediu e deixou no
+    colo desta frente. O censo por árvore de sintaxe daquela sprint achou NOVE
+    gestos desta aba que gravam o perfil INTEIRO sem repor o atalho de
+    inicialização que a Steam come: os OITO que passam por este funil
+    (`editor.nome`, `editor.prioridade`, `editor.ambiente`, `editor.estilo`,
+    `editor.jogo`, `detectar`, `novo`, `duplicar` — e agora o `editor.modo`,
+    que são NOVE) mais o `voltar-a-de-ontem`, que tem funil próprio.
+
+    **AQUI E NÃO EM `perfil.gravar_e_reaplicar`**, e a razão é medida e está
+    escrita lá: aquela função tem SEIS chamadores em CINCO abas, e a interface
+    nova é de ação imediata — clicar num tom ou num degrau de vibração já grava.
+    Pendurar a carona lá seria uma varredura do `localconfig.vdf` **por
+    clique**, que é a opção que o dono da carona pesou e RECUSOU. Este funil é o
+    único cujos gestos são o perfil INTEIRO, e não um campo.
+
+    A NOTÍCIA NÃO SE PERDE, e é a diferença entre pegar a carona e pegá-la em
+    silêncio: `_com_a_carona("")` devolve só a notícia (vazia quando não há
+    nada a repor), ela fica em `_CARONA_PENDENTE`, e o `_dizer` do gesto a
+    junta ao desfecho dele. Sem isto, o reparo aconteceria e a tira diria só
+    "renomeado" — o mesmo silêncio que o desfecho inteiro existe para curar.
     """
+    global _CARONA_PENDENTE
     perfil.gravar_e_reaplicar(prof, ctx, p, era=era)
+    _CARONA_PENDENTE = _com_a_carona("")
 
 
 def _nome_livre(base: str, todos: Any) -> str:
@@ -2307,6 +2436,82 @@ def editor_ambiente(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] 
                                     regra_do_disco=prof.match)
     _gravar(prof, ctx, p)
     return _dizer(f"“{prof.name}” agora vale em: {rotulo}")
+
+
+@gesto("10-perfis.html", "editor.modo")
+def editor_modo(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
+    """"Modo": o que ATIVAR este perfil liga. `ProfileModeConfig`.
+
+    PERFIL-MODO-01, Passo 1 (06/09/2026). Era a linha 384 do CSV da paridade, e
+    o veredito do lado HTML era o mais duro da aba: *"NÃO EXISTE — nem na
+    página, nem no pacote. Grep de `ProfileModeConfig`, `with_mode`, `mode_kind`
+    em `interface/` dá zero"*. Um perfil criado ou editado por esta tela não
+    tinha como dizer *"quando eu entrar, ligue o modo jogo"* — o campo não era
+    alcançável, e o valor do disco sobrevivia só por herança.
+
+    O CLIQUE JÁ APLICA E JÁ GRAVA — D1/D2, e vale aqui como nas outras nove
+    abas. Não há "Salvar este perfil" ao lado: um botão de salvar sobre um gesto
+    que já gravou ensina o contrário do que o produto faz.
+
+    O `kind` VEM DO `data-modo`, e não do texto do botão. O ouvinte do piloto
+    manda o dataset inteiro e nomeia `modo` explicitamente
+    (`hefesto_vivo.py`, `modo: d.modo || ''`); ler o TEXTO faria o gesto
+    depender da palavra que ela pode mandar mudar amanhã — e ela já mandou uma
+    vez, em 06/08 ("Jogar direto (Sony)" virou "Conexão Nativa (Sony)").
+
+    "none" REMOVE A SEÇÃO, e isso não é um atalho: é o que
+    `profiles_actions._mode_section_from_editor` faz, com todas as letras —
+    *""none" (sem opinião) → `None`: a seção é REMOVIDA do perfil salvo"*. Um
+    perfil sem `mode` não mexe no modo do sistema quando entra, que é
+    exatamente o que o rótulo dela promete.
+
+    A MÁSCARA DO DISCO É PRESERVADA, e é a cicatriz de ESCOLHA-DELA-VENCE-01/E1:
+    havia um `or "xbox"` no Salvar da janela estável, e bastava salvar um perfil
+    para ele passar a EXIGIR Xbox. Este quadro não tem a linha da máscara (fora
+    de escopo por decisão desta sprint), então ele nunca escreve `gamepad_flavor`
+    — só carrega adiante o que já estava no `.json`. Fora do `gamepad` o campo é
+    zerado, pela mesma regra que `manager.alinhar_o_modo_com_a_ponte` aplica:
+    máscara só faz sentido com o gamepad virtual de pé.
+
+    O `ProfileModeConfig` É RECONSTRUÍDO e não `model_copy`ado, pelo motivo
+    escrito em `manager.py:1854`: `model_copy` do pydantic v2 não revalida, e um
+    `kind` fora da faixa viraria um arquivo que o próximo `load` recusa — o
+    perfil dela deixando de abrir por causa de um clique.
+    """
+    from hefesto_dualsense4unix.profiles.loader import load_profile
+    from hefesto_dualsense4unix.profiles.schema import ProfileModeConfig
+
+    kind = str(o.get("modo") or "").strip()
+    if kind not in _tela.MODO_DO_PERFIL:
+        raise RuntimeError(
+            f"“{kind or '—'}” não é um modo que o perfil saiba guardar. O "
+            f"produto conhece {', '.join(_tela.MODO_DO_PERFIL)}.")
+    prof = load_profile(_perfil_do_editor(ctx))
+    atual = getattr(prof, "mode", None)
+    if kind == _tela.MODO_SEM_OPINIAO:
+        # JÁ ESTAVA SEM SEÇÃO: recusar dizendo, em vez de gravar o mesmo arquivo
+        # e anunciar "aplicado". É a mesma disciplina do `ativar` sobre o perfil
+        # que já está valendo — *"reativar o mesmo não muda nada, e dizer
+        # 'aplicado' seria mentira"*.
+        if atual is None:
+            raise RuntimeError(
+                f"“{prof.name}” já não mexe no modo. Escolha outro dos quatro "
+                f"— este perfil entra e deixa o modo como estiver.")
+        prof.mode = None
+    else:
+        if getattr(atual, "kind", None) == kind:
+            raise RuntimeError(
+                f"“{prof.name}” já liga «{_tela.MODO_DO_PERFIL[kind]}» ao "
+                f"entrar. Escolha outro dos quatro.")
+        campos: dict[str, Any] = {} if atual is None else atual.model_dump()
+        campos["kind"] = kind
+        if kind != "gamepad":
+            campos["gamepad_flavor"] = None
+        prof.mode = ProfileModeConfig(**campos)
+    _gravar(prof, ctx, p)
+    return _dizer(
+        f"“{prof.name}” ao entrar: {_tela.MODO_DO_PERFIL[kind].lower()}",
+        **{"editor.modo": kind})
 
 
 # O `_sem_a_sprint` MORREU AQUI — 03/09/2026, e a morte é a entrega. Ele
@@ -3031,7 +3236,9 @@ PAGINA = "10-perfis.html"
 #: 12 → 13 EM 03/09/2026: nasceu o `editor.prioridade`, o slider que ela pediu.
 #: O piso SÓ SOBE — um gesto que sumisse não apareceria na tela, e é essa queda
 #: silenciosa que este número existe para pegar.
-PISO_DA_ABA = 13
+#: 13 → 14 EM 06/09/2026: nasceu o `editor.modo` (PERFIL-MODO-01), o quadro que
+#: diz o que ATIVAR este perfil liga — a maior ausência isolada da aba.
+PISO_DA_ABA = 14
 #: SÓ UMA PROVA DECLARADA PARA ONZE GESTOS, e a razão é estrutural, não
 #: preguiça: nove dos outros dez agem sobre o perfil ESCOLHIDO, e o `ctx` desta
 #: régua é fixo — `active_profile="regua"`, sem `_ESCOLHIDO` (um gesto que
@@ -3082,7 +3289,11 @@ PROVAS: list[dict[str, Any]] = [
 #: `—`). Agora ele grava, e grava no DISCO — que é a mesma razão dos outros
 #: onze. Deixá-lo de fora depois do motor faria a régua acusar de mudo um gesto
 #: que fez três coisas no aparelho dela.
+#: `editor.modo` ENTROU EM 06/09/2026 e entra pela MESMA razão dos outros doze:
+#: ele grava no DISCO. O modo do perfil só vira estado do daemon quando aquele
+#: perfil ENTRA — e quem o faz entrar é o `ativar`, que é o único desta aba com
+#: eco.
 SEM_ECO = ("selecionar", "editor.nome", "editor.ambiente", "editor.jogo",
-           "editor.prioridade", "editor.estilo",
+           "editor.prioridade", "editor.estilo", "editor.modo",
            "detectar", "novo", "duplicar", "remover", "voltar-a-de-ontem",
            "recarregar")

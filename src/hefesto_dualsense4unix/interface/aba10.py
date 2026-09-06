@@ -34,6 +34,50 @@ from hefesto_dualsense4unix.profiles.schema import (  # noqa: E402
 )
 
 # ---------------------------------------------------------------------------
+# OS QUATRO RÓTULOS DO MODO — perguntados ao dono, LIDOS e não importados.
+#
+# O dono é `app/actions/profiles_actions._MODE_KIND_ITEMS`: a mesma lista que a
+# janela GTK põe no `SegmentedSelector` do editor de perfil, e cujos rótulos ela
+# escolheu em 06/08/2026 (UX-MODE-TERMS-02). Digitar as quatro palavras aqui
+# seria a quinta superfície a envelhecer sozinha — é o que o
+# `test_vocabulario_das_quatro_superficies.py` já guarda para as outras quatro.
+#
+# **POR QUE LER E NÃO `import`, e o motivo é medido, não estilo:**
+# `profiles_actions.py` faz `import gi` / `gi.require_version("Gtk", "3.0")` no
+# TOPO do módulo. Este arquivo é um GERADOR — quatro fixtures de teste o
+# importam (`test_a_lista_de_perfis_cabe_inteira`, `test_a10_a_linha_escolhida_
+# tem_marca`, `test_a_coluna_do_ajuste_proprio_acende_pela_classe`,
+# `test_a_aba10_nao_reserva_banda_morta_no_titulo`) e o CI tem um job sem
+# PyGObject. Um `from …profiles_actions import _MODE_KIND_ITEMS` aqui derrubaria
+# a geração da tela num ambiente que hoje a gera sem GTK nenhum.
+#
+# O leitor é o do `aba09.py` encolhido ao que este caso precisa: uma lista de
+# tuplas de literais, num `AnnAssign` de módulo. Ele REPROVA EM VOZ ALTA quando
+# o nome some — uma constante renomeada no produto tem de derrubar a geração,
+# não sumir da tela em silêncio.
+import ast  # noqa: E402
+
+# O `R` É A PASTA `interface/`, DENTRO do pacote — logo o `app/` é irmão dela, e
+# o caminho vale igual numa árvore de repositório e num `pip install`.
+_DONO_DO_MODO = R.parent / "app/actions/profiles_actions.py"
+
+
+def _lista_de_pares(caminho, nome):
+    """Os pares `(id, rótulo)` daquela constante de módulo, sem importar nada."""
+    for no in ast.parse(caminho.read_text(encoding="utf-8")).body:
+        alvo = (no.targets[0] if isinstance(no, ast.Assign) and len(no.targets) == 1
+                else no.target if isinstance(no, ast.AnnAssign) else None)
+        if isinstance(alvo, ast.Name) and alvo.id == nome and no.value is not None:
+            return [tuple(par) for par in ast.literal_eval(no.value)]
+    raise SystemExit(
+        f"ERRO: {caminho} não tem mais `{nome}` — o quadro Modo da aba 10 "
+        f"depende dele, e digitar os rótulos aqui seria a segunda verdade.")
+
+
+#: `[("none", "Não mexer no modo"), ("desktop", "Controlar o PC"), …]`
+MODOS = _lista_de_pares(_DONO_DO_MODO, "_MODE_KIND_ITEMS")
+
+# ---------------------------------------------------------------------------
 # O QUE O PERFIL GUARDA DE CADA CONTROLE — e isto NÃO é escolha de desenho.
 #
 # `Profile.controllers` é um mapa `{ID da peça: ControllerOverrides}`
@@ -437,6 +481,55 @@ CSS = CSS_GLIFO + """
     border:2px solid var(--app-bg);margin-top:1px}
   .campo .n{flex:0 0 40px;text-align:right;font-family:'JetBrains Mono',monospace;color:var(--fg)}
   .campo .btn{flex:0 0 auto;white-space:nowrap}
+  /* ---------- O QUADRO "MODO" — o que ATIVAR este perfil liga ----------
+     PERFIL-MODO-01 (06/09/2026). Era a maior ausência isolada desta aba: a
+     janela GTK tem um frame com QUATRO escolhas (`profiles_actions.
+     _install_mode_section`) e aqui não havia nem campo nem endereço — o valor
+     do disco sobrevivia só por herança, porque ninguém escrevia nele.
+
+     `.seg` É O DA CASA e não uma fileira nova: o `topo.html` já o define para
+     as dez páginas, e é o mesmo componente que a aba Jogar usa nos modos. O que
+     esta linha acrescenta é só o que a LARGURA obriga.
+
+     A LINHA TEM DE CABER EM **UMA** FILEIRA, E O NÚMERO É MEDIDO, não escolhido.
+     Medido no Chrome em 06/09/2026, na página inteira, a 1212x809 (o tamanho
+     do desenho):
+
+       o `.val` desta coluna    412px
+       os quatro `.seg button`  563px na fileira de sempre (12,5px, padding 10)
+       a folga da coluna        41px  — o `.guarda` é `flex:1` e ABSORVE o que
+                                       sobra, e ele tinha exatamente 41px
+
+     Ou seja: **os quatro botões em DUAS fileiras custam 82px e a coluna tem
+     41.** A varredura de 180 combinações de altura, padding, margem e
+     espaçamento não achou UMA que coubesse com folga — a segunda fileira
+     empurra a tabela "Ajuste próprio" para fora do quadro, e ela é `overflow:
+     hidden`: as linhas do P3 e do P4 saem CORTADAS. É a régua
+     `test_a_janela_estreita_nao_engole_o_desenho` que o pega, e ela está certa.
+
+     A SAÍDA É O RÓTULO EM DUAS LINHAS DENTRO DO BOTÃO, e ela custa ZERO:
+     `flex:1 1 0` reparte os 412px em quatro de 99px, `white-space:normal` deixa
+     "Conexão Nativa / (Sony)" quebrar dentro do próprio botão, e a fileira
+     inteira fica com os mesmos 36px de um `<select>` desta aba. Medido: nenhum
+     dos quatro corta (`scrollWidth`/`scrollHeight` iguais aos `client*`), e o
+     `.guarda` volta a caber inteiro.
+
+     `flex-wrap:nowrap` É O QUE SEGURA ISSO: o `.seg` da casa é `wrap`, e sem
+     esta linha o quarto botão desce para a segunda fileira no primeiro pixel
+     que faltar — de volta ao defeito, e sem sintoma até alguém medir.
+
+     E OS 11,5px SÃO DA JANELA ESTREITA, não desta: a 1212px o rótulo cabe em
+     duas linhas com os 12,5px de sempre; a **940px** (a janela dela de 04/09,
+     que a régua mede) o `.val` cai para 93px por botão e "Conexão Nativa
+     (Sony)" passa a TRÊS linhas — 49px de fileira, 12px fora do quadro. Medido
+     nos três tamanhos da régua; a 11,5px os quatro ficam em duas linhas nos
+     três. */
+  .campo.modo{height:auto;min-height:var(--h-escolha)}
+  .campo.modo .seg{flex-wrap:nowrap;gap:5px}
+  .campo.modo .seg button{
+    flex:1 1 0;min-width:0;height:auto;min-height:var(--h-escolha);
+    padding:3px 6px;font-size:11.5px;line-height:1.15;
+    white-space:normal;text-align:center}
   /* A COLUNA DO RÓTULO É JUSTA — remedida no Chrome em 31/08/2026, DEPOIS que ela
      pediu os dois pontos e a maiúscula — com a preposição minúscula, que foi a
      segunda palavra dela: `Nome:` 36px · `Prioridade:` 63 · `Funciona em:` 77 ·
@@ -610,8 +703,32 @@ CSS = CSS_GLIFO + """
      Fica no MESMO quadro, embaixo dos campos, separado por uma linha — e não num
      quadro novo: não é outra tela, é o resto DESTE perfil. E é LEITURA: quem
      escolhe o alvo de um ajuste é a fita, que aqui continua esmaecida. */
-  .guarda{flex:1;min-height:0;display:flex;flex-direction:column;overflow:hidden;
+  /* A BARRA DE VERDADE, PELA MESMA RAZÃO DO `.rolo` — 06/09/2026, e ela é a
+     cura de um CORTE EM SILÊNCIO que o quadro Modo revelou.
+
+     O que estava aqui era `overflow:hidden`, e o `.guarda` é `flex:1` — ele
+     ABSORVE o que sobra da coluna. Medido a 1212x809: a folga era de 41px, e a
+     tira do desfecho (`.desfecho.on`, decisão 10-Q5 dela) come **37** quando
+     acende. Com a fileira do Modo (36px) a conta virou negativa, e as linhas do
+     P3 e do P4 sumiam por 30 segundos a cada gesto — sem barra, sem reticência,
+     sem nada que dissesse que faltava algo.
+
+     **A DOUTRINA É DA PRÓPRIA RÉGUA** (`test_a_janela_estreita_nao_engole_o_
+     desenho`): *"Rolar é aceitável; reticências com `title` também. Cortar em
+     silêncio não: quem olha não vê que falta nada, e não há gesto que devolva o
+     que foi cortado."*
+
+     E O ARGUMENTO É O QUE O `.rolo` já escreveu logo acima: *"barra de verdade
+     porque ela nasce só quando há o que rolar (…) os estados em que a lista
+     cabe não pagam nada por ela"*. No tamanho do desenho, sem tira, ela não
+     nasce — as quatro linhas cabem inteiras. */
+  .guarda{flex:1;min-height:0;display:flex;flex-direction:column;
+          overflow-y:auto;overflow-x:hidden;
           margin-top:7px;padding-top:7px;border-top:1px solid var(--linha)}
+  .guarda::-webkit-scrollbar{width:10px}
+  .guarda::-webkit-scrollbar-track{background:transparent}
+  .guarda::-webkit-scrollbar-thumb{background:var(--border-forte);border-radius:5px}
+  .guarda::-webkit-scrollbar-thumb:hover{background:var(--comment)}
   /* `height:100%` na tabela e as quatro linhas dividem a altura que sobra — a
      cura do vão é na ALTURA, nunca `space-between`, que ela reprovou com todas
      as letras. Aqui o vão nem chega a nascer: se sobrar espaço, ele vira altura
@@ -763,6 +880,40 @@ CADEADO = ('<svg viewBox="0 0 12 12" width="11" height="11" aria-hidden="true">'
            'stroke="currentColor" stroke-width="1.2"/>'
            '<rect x="2.3" y="5.2" width="7.4" height="5.4" rx="1.1" '
            'fill="currentColor"/></svg>')
+
+
+def botoes_do_modo() -> str:
+    """Os quatro botões do quadro "Modo", na ordem e com as palavras DELA.
+
+    OS RÓTULOS NÃO ESTÃO AQUI: eles vêm de `MODOS`, lido do
+    `profiles_actions._MODE_KIND_ITEMS` — ver o comentário do leitor, no alto
+    deste arquivo, e a razão de ser leitura e não `import`.
+
+    CADA BOTÃO CARREGA TRÊS COISAS, e nenhuma é redundante:
+
+    * `data-hef="editor.modo"` + `data-hef-alvo="classe"` + `data-hef-quando` —
+      o ESTADO. O pacote manda UM valor (`"gamepad"`) e o alvo `classe` do
+      piloto acende o botão cujo `data-hef-quando` casa, apagando os outros
+      três. É o mesmo mecanismo dos quatro degraus da aba Jogar
+      (`hefesto_vivo.escrever`, ramo `classe`);
+    * `data-hef-gesto="editor.modo"` — o CLIQUE. Um gesto só para os quatro;
+    * `data-modo` — QUAL dos quatro. O ouvinte do piloto manda o dataset inteiro
+      e nomeia `modo` explicitamente (`hefesto_vivo.py`, `modo: d.modo || ''`),
+      então o gesto lê o id sem precisar adivinhar pelo texto do botão — que é
+      justamente a palavra que ela pode mandar mudar amanhã.
+
+    O `title` DE CADA BOTÃO É O RÓTULO, e nada mais. **As duas frases que
+    explicavam o preço NÃO nascem** — decisão 10-Q6 dela, executada pela
+    `ONDA5-10-03`: nem a linha condicional do rádio frágil no Nativo, nem a
+    dica com o custo da máscara Xbox. O quadro entrega os quatro botões e o
+    mecanismo; o aviso pertence ao canal de recado, e a aba onde a escolha
+    acontece é a Jogar (relatado para a `JOGAR-O-QUE-FALTA-01`).
+    """
+    return "".join(
+        f'<button data-hef="editor.modo" data-hef-alvo="classe"'
+        f' data-hef-quando="{ident}" data-hef-gesto="editor.modo"'
+        f' data-modo="{ident}">{palavra}</button>'
+        for ident, palavra in MODOS)
 
 
 def marca_com_dica(classe: str, campo_estado: str, campo_frase: str,
@@ -1285,9 +1436,33 @@ MIOLO = f'''
               <div class="campo">
                 <span>Nome do Jogo:</span>
                 <span class="val">
+                  <!-- A LISTA DOS JOGOS DESTA MÁQUINA — PERFIL-MODO-01, Passo 3
+                       (06/09/2026). A janela GTK tem `Gtk.EntryCompletion` sobre
+                       este mesmo campo (`profiles_actions._instalar_lista_de_
+                       jogos_do_pc`), alimentada por `integrations/jogos_locais.
+                       catalogo_de_jogos()`; aqui o campo era texto LIVRE, e
+                       criar um perfil de jogo exigia saber o appid de cor.
+
+                       `<datalist>` E NÃO UM `<select>`, e a escolha é a do
+                       enunciado dela: *"uma lista que recusa o que ela sabe que
+                       existe é pior que campo livre"*. O `<datalist>` OFERECE
+                       sem fechar — o `<input>` continua aceitando qualquer
+                       texto, inclusive o appid de um jogo que ela ainda vai
+                       comprar (`MSG_FORA_DA_MAQUINA` existe para esse caso).
+
+                       ELE NASCE VAZIO NO DESENHO, e é a mesma disciplina do
+                       `title=""` da linha da lista e da `.dica` do cadeado: o
+                       conteúdo é a biblioteca DELA, e um exemplo cravado aqui
+                       seria a tela afirmando que ela tem um jogo que talvez não
+                       tenha. Quem o enche é `a10_perfis`, pelo `blocos` — o
+                       mesmo caminho da lista de perfis, e pelo mesmo motivo: um
+                       bloco cujo número de filhos muda com o dado não tem
+                       endereço para o filho que ainda não existe. -->
                   <input type="text" data-hef="editor.jogo" data-hef-gesto="editor.jogo"
-                         data-hef-alvo="valor" value="Mortal Kombat 1">{marca_com_dica(
+                         data-hef-alvo="valor" list="jogos-desta-maquina"
+                         value="Mortal Kombat 1">{marca_com_dica(
                            "exige", "editor.jogo.exige", "editor.jogo.exigencia")}
+                  <datalist id="jogos-desta-maquina" data-hef="editor.jogo.lista"></datalist>
                   {rotulo_do_jogo()}
                   <button class="btn roxo" data-hef-gesto="detectar" title="Pega o jogo que está rodando atrás desta janela e monta a regra — funciona com jogo de qualquer lugar, não só da Steam.">Detectar</button>
                 </span>
@@ -1297,6 +1472,30 @@ MIOLO = f'''
                 <span class="val"><select class="destaque" data-hef="editor.estilo" data-hef-gesto="editor.estilo" data-hef-alvo="valor">
 {opts(ESTILOS, "", vazio=True)}
                 </select></span>
+              </div>
+              <!-- O QUADRO "MODO" — PERFIL-MODO-01, 06/09/2026.
+                   O que ATIVAR este perfil liga. É a linha 384 do CSV da
+                   paridade, e o veredito era `FALTA_NO_HTML` com a nota mais
+                   dura da aba: *"NÃO EXISTE — nem na página, nem no pacote"*.
+
+                   A POSIÇÃO É PROVISÓRIA — decisão dela. Os quatro campos de
+                   cima dizem QUEM o perfil é e QUANDO ele entra (nome,
+                   prioridade, funciona em, nome do jogo); os dois de baixo
+                   dizem O QUE ele faz ao entrar — o Estilo de Jogo pré-aplica
+                   gatilho/vibração/luz, e o Modo diz o que ligar. Agrupá-los é
+                   coerente, mas ORDEM DE SEÇÃO é dela: se ela quiser o Modo em
+                   cima, é uma linha.
+
+                   NÃO HÁ LINHA DA MÁSCARA aqui, e a janela GTK tem uma ("O jogo
+                   vê o controle como:", que abre com "Jogar pelo Hefesto"). Ela
+                   fica de fora por decisão de escopo desta sprint — *"o quadro
+                   entrega os quatro botões e nada mais"* — e o `gamepad_flavor`
+                   do disco é PRESERVADO pelo gesto, nunca zerado: é a mesma
+                   cicatriz do `or "xbox"` que fazia salvar um perfil passar a
+                   exigir Xbox (ESCOLHA-DELA-VENCE-01/E1). -->
+              <div class="campo modo">
+                <span title="O que ATIVAR este perfil liga. “Não mexer no modo” é o perfil sem opinião: ele entra e deixa o modo como estiver.">Modo:</span>
+                <span class="val"><span class="seg">{botoes_do_modo()}</span></span>
               </div>
 
               <div class="guarda">
@@ -1717,6 +1916,74 @@ def _conferir(html: str) -> None:
            "a fileira do campo voltou a `1fr` — uma pista de grade cresce com o "
            "MIN-CONTENT, e o rótulo do jogo é texto: a segunda coluna estoura a "
            "página e leva o `Detectar` junto")
+
+    # O QUADRO DO MODO — PERFIL-MODO-01, 06/09/2026. As quatro coisas que o
+    # fazem funcionar, e todas somem caladas.
+    exigir('<div class="campo modo">' in html,
+           "o quadro Modo sumiu do editor — o perfil volta a não poder dizer o "
+           "que ativar ele liga, e o valor do disco sobrevive só por herança")
+    for ident, palavra in MODOS:
+        botao = re.search(rf'<button[^>]*data-hef-quando="{ident}"[^>]*>([^<]*)</button>',
+                          html)
+        exigir(botao is not None,
+               f"o botão do modo `{ident}` sumiu do quadro — os quatro rótulos "
+               f"são dela (`_MODE_KIND_ITEMS`, 06/08) e o conjunto é fechado")
+        if botao:
+            exigir(botao.group(1) == palavra,
+                   f"o botão `{ident}` diz {botao.group(1)!r} e o dono diz "
+                   f"{palavra!r} — o desenho passou a digitar a palavra dela")
+            exigir(f'data-modo="{ident}"' in botao.group(0),
+                   f"o botão `{ident}` perdeu o `data-modo` — o gesto passaria "
+                   f"a adivinhar o modo pelo TEXTO do botão, que é a palavra "
+                   f"que ela pode mandar mudar amanhã")
+    exigir(html.count('data-hef="editor.modo"') == len(MODOS),
+           f"o quadro Modo não tem {len(MODOS)} endereços `editor.modo` — o "
+           f"alvo `classe` acende por grupo, e um botão sem endereço fica "
+           f"apagado para sempre")
+    # A LINHA DO MODO NÃO PODE TER A ALTURA FIXA DOS OUTROS CINCO: os quatro
+    # botões não cabem numa fileira, e `height:var(--h-escolha)` cortaria a
+    # segunda ao meio.
+    regra_modo = re.search(r"\.campo\.modo\{[^}]*\}", html)
+    exigir(regra_modo is not None, "a regra `.campo.modo` sumiu do CSS")
+    if regra_modo:
+        exigir("height:auto" in regra_modo.group(0),
+               "a linha do Modo voltou à altura fixa — o rótulo de duas linhas "
+               "dentro do botão sai cortado, e botão cortado é botão que ela "
+               "não clica")
+    regra_seg = re.search(r"\.campo\.modo \.seg\{[^}]*\}", html)
+    exigir(regra_seg is not None and "flex-wrap:nowrap" in regra_seg.group(0),
+           "a fileira do Modo perdeu o `flex-wrap:nowrap` — o quarto botão "
+           "desce para uma segunda fileira, que custa 82px numa coluna que tem "
+           "41, e a tabela «Ajuste próprio» sai cortada no P3 e no P4")
+
+    # AS DUAS FRASES DO MODO NÃO NASCEM — decisão 10-Q6 dela, executada pela
+    # ONDA5-10-03. A régua completa (que LÊ as constantes de `home_actions`, em
+    # vez de digitá-las) é
+    # `tests/unit/test_o_quadro_do_modo_nao_descreve_o_que_perde.py`; aqui fica
+    # a metade barata, que reprova na própria geração.
+    for proibida in ("rádio", "Xbox 360 não", "giroscópio"):
+        exigir(proibida not in html.split('<div class="campo modo">')[-1]
+               .split("</div>")[0],
+               f"o quadro Modo passou a descrever o que se perde ({proibida!r})"
+               f" — as duas frases saíram por decisão dela (10-Q6), e o aviso "
+               f"pertence ao canal de recado")
+
+    # A LISTA DOS JOGOS DESTA MÁQUINA — PERFIL-MODO-01, Passo 3. As duas metades
+    # e cada uma sozinha não faz nada: o `<datalist>` sem o `list=` no campo é um
+    # elemento invisível que ninguém consulta, e o `list=` sem o `<datalist>` é
+    # um atributo que aponta para um id que não existe.
+    exigir('<datalist id="jogos-desta-maquina" data-hef="editor.jogo.lista">'
+           '</datalist>' in html,
+           "a lista dos jogos desta máquina sumiu, ou deixou de nascer VAZIA — "
+           "um exemplo cravado aqui é a tela afirmando um jogo que ela talvez "
+           "não tenha")
+    campo_do_jogo = re.search(r'<input[^>]*data-hef="editor\.jogo"[^>]*>', html)
+    exigir(campo_do_jogo is not None, "o campo do jogo sumiu do editor")
+    if campo_do_jogo:
+        exigir('list="jogos-desta-maquina"' in campo_do_jogo.group(0),
+               "o campo do jogo perdeu o `list=` — a lista continua no HTML e "
+               "nenhum campo a consulta, que é o silêncio que esta casa lê "
+               "como sucesso")
 
     # A FRASE DA PRIORIDADE, E A ORDEM DAS DUAS — decisão [03] do PO. A dela
     # PRIMEIRO: é a que ela aprovou, e a do Universal responde a pergunta que a
