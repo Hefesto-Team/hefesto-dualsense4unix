@@ -364,7 +364,7 @@ def _dominio_do_teclado() -> frozenset[str]:
 DOMINIO_DO_TECLADO: frozenset[str] = _dominio_do_teclado()
 
 
-def _tabela_efetiva(
+def tabela_efetiva(
     escolhas: dict[str, str] | None,
     key_bindings: dict[str, list[str]] | None = None,
 ) -> dict[str, str]:
@@ -438,7 +438,7 @@ def botoes_calados(
     `docs/process/agentes/2026-09-06/ONDA3-MOTOR-01.md`. Curá-lo aqui de
     carona seria a segunda cura escondida dentro da primeira.
     """
-    tabela = _tabela_efetiva(escolhas, key_bindings)
+    tabela = tabela_efetiva(escolhas, key_bindings)
     return frozenset(b for b, token in tabela.items() if token == TOKEN_NADA)
 
 
@@ -469,7 +469,7 @@ def resolver(
     virtual com o que sai daqui, DEPOIS de o `apply_keyboard` ter escrito o que
     ela digitou na janela antiga: sem herdar, todo atalho dela morria na
     ativação seguinte de qualquer perfil que tivesse `button_actions`. As regras
-    e a razão de o `r3` ficar fora estão em :func:`_tabela_efetiva` e em
+    e a razão de o `r3` ficar fora estão em :func:`tabela_efetiva` e em
     :data:`DOMINIO_DO_TECLADO`. Omitir o parâmetro é o contrato de antes, byte
     a byte — os três chamadores que não o passam não mudam de resposta.
 
@@ -482,7 +482,7 @@ def resolver(
     que a tela oferece e o produto só pode atender POR TABELA — e dizer isso na
     terceira sacola é melhor que guardar a escolha e não acender nada.
     """
-    tabela = _tabela_efetiva(escolhas, key_bindings)
+    tabela = tabela_efetiva(escolhas, key_bindings)
 
     do_mouse: dict[str, str] = {}
     do_teclado: dict[str, tuple[str, ...]] = {}
@@ -543,6 +543,16 @@ def rotulo(token: str) -> str:
     return par[1] if par else token
 
 
+#: O NOME PRIVADO CONTINUA RESPONDENDO — 06/09/2026, e o alias é a metade
+#: barata de uma renomeação. `tabela_efetiva` deixou de ser privada porque tinha
+#: chamador de fora havia semanas: `interface/pacotes/a06_navegacao.py:1049` a
+#: chama para montar as linhas dos botões, e a alternativa — remontar as três
+#: camadas dentro da aba — é a SEGUNDA VERDADE que esta casa persegue. Um
+#: privado com chamador de fora não é encapsulamento, é um contrato não
+#: declarado. O alias fica enquanto houver prosa e teste citando o nome velho, e
+#: sai quando a última citação sair.
+_tabela_efetiva = tabela_efetiva
+
 __all__ = [
     "ACAO_DA_MAQUINA_PARA_TOKEN",
     "ACOES",
@@ -570,6 +580,7 @@ __all__ = [
     "por_grupo",
     "resolver",
     "rotulo",
+    "tabela_efetiva",
     "token_do_ps_da_maquina",
     "token_do_rotulo",
 ]

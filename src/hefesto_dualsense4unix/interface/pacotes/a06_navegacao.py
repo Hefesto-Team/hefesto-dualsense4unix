@@ -1030,7 +1030,7 @@ def _linhas_dos_botoes(p: dict[str, Any]) -> dict[str, str]:
     mesmo desfecho, um degrau adiante. Um perfil em que ela escreveu
     `Super` no Options pela janela antiga fazia a tabela mostrar o de fábrica,
     sobre um botão que digitava outra coisa. Agora quem responde é
-    `acoes._tabela_efetiva`, pelo `resolver()` — a MESMA chamada que alimenta o
+    `acoes.tabela_efetiva`, pelo `resolver()` — a MESMA chamada que alimenta o
     device —, e as três camadas são o de fábrica, os atalhos da janela antiga e
     a escolha desta tela, nessa ordem.
 
@@ -1046,7 +1046,7 @@ def _linhas_dos_botoes(p: dict[str, Any]) -> dict[str, str]:
     # a mesma função. Ela é privada do motor, e usá-la daqui é declarado: a
     # alternativa seria montar as três camadas de novo aqui, que é a segunda
     # verdade que esta casa persegue. Ver o relato desta frente.
-    tabela = acoes._tabela_efetiva(
+    tabela = acoes.tabela_efetiva(
         perfil_.get("button_actions") or None,
         perfil_.get("key_bindings") or None)
     return {
@@ -1310,47 +1310,32 @@ def _traduzir(texto: str) -> str:
 
 
 def _desfazer_o_humanize(cru: str) -> str:
-    """O que sobrou do `dehumanize_binding` e é o `humanize_binding` ao contrário.
+    """O `humanize_binding` ao contrário — hoje uma DELEGAÇÃO, não uma tabela.
 
-    **UM DEFEITO DE ROUND-TRIP NO DONO, medido em 06/09/2026, e ele é da JANELA
-    ANTIGA também.** `humanize_binding` tem um ramo de FALLBACK — um `KEY_*` que
-    não está em `_KEY_LABELS` vira `tok[4:]`, então `KEY_F5` aparece na tela
-    como `F5`. `dehumanize_binding` **não desfaz esse ramo**: ele só converte
-    caractere ÚNICO (`W` → `KEY_W`), e `F5` volta como `F5`, que o
-    `parse_binding` recusa.
+    **ERA UM CONTORNO, E VIROU CURA NO DONO — 06/09/2026.** Aqui morava o ramo
+    de fallback do `humanize_binding` escrito do lado de cá: `humanize` faz
+    `tok[4:]` para todo `KEY_*` fora de `_KEY_LABELS`, então a coluna "Tecla do
+    teclado" mostrava `F5`, e `dehumanize_binding("F5")` devolvia `F5`, que o
+    `parse_binding` recusa. Alcançava F1..F12, Home, End, Insert, PageUp,
+    PageDown, Comma, Dot e as três de volume.
 
-    Medido, com as duas funções do dono:
+    O contorno funcionava e era um SEGUNDO DONO do mesmo fato — a janela antiga
+    continuava com o buraco vivo, mostrando `F5` e recusando `F5` digitado de
+    volta. A cura foi para `input_actions.dehumanize_binding`, onde quem decide
+    é o vocabulário do `evdev`, e fecha os dois lados de uma vez. Esta função
+    fica como PORTA: o nome é citado em prosa desta aba e a delegação diz para
+    onde a pergunta foi.
 
-        humanize_binding("KEY_F5")     -> "F5"
-        dehumanize_binding("F5")       -> "F5"        (não volta a ser tecla)
-        parse_binding("F5")            -> ValueError
-
-    Alcança **F1..F12, Home, End, Insert, PageUp, PageDown, Comma, Dot e as três
-    de volume** — tudo o que o teclado virtual declara e o `_KEY_LABELS` não
-    nomeia. Sem esta linha, a tela mostraria `F5` numa linha e RECUSARIA o
-    "Guardar" da mesma tela, sem ela ter tocado em nada.
-
-    ISTO NÃO É UMA SEGUNDA TABELA — é o ramo de fallback do dono, aplicado ao
-    contrário, e **quem decide é o device**: só vira `KEY_<X>` o que
-    `uinput_keyboard.SUPPORTED_KEYS` declara. O que não estiver lá segue como
-    veio e cai na recusa da etapa seguinte, com a frase do dono.
-
-    A CURA DE VERDADE É NO DONO (`input_actions.dehumanize_binding`), e está
-    relatada: a janela antiga tem o mesmo buraco — ela mostra `F5` na coluna
-    "Tecla do teclado" e recusa `F5` quando alguém o digita de volta.
+    A recusa de CAPACIDADE não se perdeu com a mudança de dono: ela nunca foi
+    daqui. `tokens_da_tecla` a pede a `uinput_keyboard.SUPPORTED_KEYS`, logo
+    abaixo, e uma tecla que o `evdev` conhece e o device virtual não declara cai
+    lá, com a frase do dono.
     """
-    sabe = _teclas_que_o_device_sabe()
-    fora = []
-    for tok in cru.split("+"):
-        tok = tok.strip()
-        if not tok:
-            continue
-        if not tok.startswith("KEY_") and not tok.startswith("__"):
-            candidato = f"KEY_{tok.upper()}"
-            if candidato in sabe:
-                tok = candidato
-        fora.append(tok)
-    return "+".join(fora)
+    from hefesto_dualsense4unix.app.actions.input_actions import (
+        dehumanize_binding,
+    )
+
+    return dehumanize_binding(cru)
 
 
 def _teclas_que_o_device_sabe() -> frozenset[str]:
@@ -2828,7 +2813,7 @@ def guardar_teclas(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] |
     perfil (`_atalhos_de_hoje`), e só as oito chaves são reescritas.
 
     CAMPO EM BRANCO É `— Nada —`, e não "sem opinião": a chave sai do
-    dicionário, e `_tabela_efetiva` lê a ausência dentro do domínio como
+    dicionário, e `tabela_efetiva` lê a ausência dentro do domínio como
     silêncio, que é o que `resolve_key_bindings` entrega ao device. É a mesma
     palavra que a lista ao lado usa, dita pelo campo vazio.
 
@@ -2893,7 +2878,7 @@ def guardar_teclas(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] |
             "coisa, escreva outra tecla e clique aqui de novo.")
     # A LISTA AO LADO PODE ESTAR MASCARANDO O QUE ELA ACABOU DE ESCREVER, e a
     # tela DIZ em vez de gravar por cima: `button_actions` é a camada de cima
-    # (`acoes._tabela_efetiva`), então uma linha escolhida na tabela vence a
+    # (`acoes.tabela_efetiva`), então uma linha escolhida na tabela vence a
     # tecla escrita aqui. Apagar a escolha da tabela de carona seria desfazer,
     # em silêncio, um clique que ela deu na outra tela.
     escolhas = getattr(prof, "button_actions", None) or {}
@@ -2929,7 +2914,7 @@ def padrao_da_tecla(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] 
     `DEFAULT_BUTTON_BINDINGS` diz. **ESCREVER É O CERTO, e APAGAR seria o
     errado** — e a diferença é medida: dentro de um `key_bindings` que já é
     dicionário, uma chave AUSENTE não é "de fábrica", é `— Nada —`
-    (`acoes._tabela_efetiva`, e `resolve_key_bindings` não mescla com os
+    (`acoes.tabela_efetiva`, e `resolve_key_bindings` não mescla com os
     defaults). Apagar a chave devolveria a linha ao SILÊNCIO com o botão
     dizendo "padrão".
 

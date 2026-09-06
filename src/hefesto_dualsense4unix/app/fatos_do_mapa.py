@@ -544,7 +544,7 @@ FATOS: Final[dict[str, dict[str, object]]] = {
         'radio': {
             'aceita': 'sim',
             'aciona': 'parcial',
-            'ate_onde_foi': '',
+            'ate_onde_foi': 'MONTOU',
             'canal': 'hidraw',
             'de_onde_sei': 'medido',
             'por_que_nao_aciona': 'divida',

@@ -203,6 +203,27 @@ def humanize_binding(serialized: str) -> str:
     return " + ".join(saida)
 
 
+def _e_nome_de_tecla(tok: str) -> bool:
+    """`True` quando `KEY_<TOK>` existe no vocabulário do `evdev`.
+
+    É a mesma pergunta que o loader de perfil faz — `keyboard_mappings` a
+    delega a ele por escrito —, e não uma segunda tabela: aqui não há lista de
+    teclas nenhuma, só a consulta.
+
+    Sem `evdev` (a máquina sem o pacote, o CI de documentação) devolve `False`,
+    que é o comportamento de antes desta função existir: o token segue cru e a
+    recusa vem do `parse_binding`. Nunca devolve `True` por otimismo — inventar
+    uma tecla que o device não tem seria a tela prometendo o que ninguém emite.
+    """
+    if not tok or not tok.replace("_", "").isalnum():
+        return False
+    try:
+        from evdev import ecodes
+    except Exception:
+        return False
+    return f"KEY_{tok.upper()}" in getattr(ecodes, "ecodes", {})
+
+
 def dehumanize_binding(friendly: str) -> str:
     """Inverso de `humanize_binding` — 'Alt + Tab' → 'KEY_LEFTALT+KEY_TAB'.
 
@@ -219,6 +240,28 @@ def dehumanize_binding(friendly: str) -> str:
         elif tok.startswith("KEY_") or tok.startswith("__"):
             saida.append(tok)
         elif len(tok) == 1 and tok.isalnum():
+            saida.append(f"KEY_{tok.upper()}")
+        elif _e_nome_de_tecla(tok):
+            # O RAMO DE FALLBACK DO `humanize_binding`, DESFEITO — 06/09/2026.
+            #
+            # As duas não eram inversas, e o buraco era grande: `humanize` faz
+            # `tok[4:]` para todo `KEY_*` fora de `_KEY_LABELS`, então a coluna
+            # "Tecla do teclado" mostrava `F5`; aqui, `F5` só voltava como `F5`,
+            # e o `parse_binding` o recusava. Alcançava **F1..F12, Home, End,
+            # Insert, PageUp, PageDown, Comma, Dot e as três de volume** — tudo
+            # o que o teclado virtual declara e o `_KEY_LABELS` não nomeia.
+            #
+            # NA JANELA ANTIGA ISSO ERA DEFEITO VIVO: ela mostrava `F5` e
+            # recusava `F5` digitado de volta, com um toast, sem ninguém ter
+            # mudado nada. Na aba nova havia um contorno declarado
+            # (`a06_navegacao._desfazer_o_humanize`), que é este mesmo ramo
+            # escrito do lado de lá — segundo dono do mesmo fato. Curado AQUI,
+            # os dois lados fecham de uma vez.
+            #
+            # QUEM DECIDE É O VOCABULÁRIO, e não este arquivo: só vira `KEY_<X>`
+            # o nome que o `evdev` conhece. Um `banana` digitado segue como veio
+            # e cai na recusa do `parse_binding`, com o nome dela na frase —
+            # que é o que acontecia antes desta linha, e continua acontecendo.
             saida.append(f"KEY_{tok.upper()}")
         else:
             saida.append(tok)
