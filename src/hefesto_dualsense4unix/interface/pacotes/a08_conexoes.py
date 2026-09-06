@@ -31,7 +31,7 @@ from typing import TYPE_CHECKING, Any
 
 from hefesto_dualsense4unix.core.sysfs_leds import norm_mac
 
-from . import Contexto, perfil, registrar
+from . import TODOS_OS_LUGARES, Contexto, perfil, registrar
 
 if TYPE_CHECKING:
     # SÓ PARA O MYPY, e por isso não é uma exceção à regra do import tardio: em
@@ -2569,7 +2569,20 @@ def _da_mesa_para_a_regua(m: dict[str, Any], com_mic: set[str]) -> dict[str, Any
     return {
         "jogador": m.get("jogador"),
         "nome": "" if nome == _cor_desconhecida() else nome,
+        # AS DUAS CHAVES VIAJAM JUNTAS, e a que faltava aqui apagou a régua
+        # inteira — 06/09/2026, `CONEXOES-LIGAR-TUDO-01`.
+        #
+        # `via` é a PALAVRA que a régua escreve num `title` (*"hoje no cabo"*);
+        # `transporte` é a chave CRUA que :func:`_e_radio` compara. A costura da
+        # ONDA B trocou o `c["via"] == "BT"` de `_regua_do_radio` por
+        # `_e_radio(c)` — e `c` ali é o dicionário que ESTA função devolve, que
+        # nunca carregou `transporte`. Resultado medido: `no_radio` ficava
+        # SEMPRE vazio, e a régua de Desempenho mostrava zero controle no rádio
+        # com o controle no rádio. **É exatamente o sintoma que o comentário da
+        # troca dizia estar prevenindo** — calado, sem log; quem o revelou foram
+        # as duas réguas de identidade que a costura deixou vermelhas.
         "via": str(m.get("via") or ""),
+        "transporte": str(m.get("transporte") or ""),
         "plastico": _hex_do_plastico(str(m.get("cor") or "")),
         # A PONTE QUE SUBIU, e não a que se pediu. É a mesma fonte que o
         # `radio_da_mesa.ocupacao_por_adaptador` usa (`bt_mic.uniqs`), com a
@@ -2642,6 +2655,14 @@ def _e_radio(c: dict[str, object]) -> bool:
     A `ONDA4-S10-O-TRANSPORTE-01` mediu os cinco pontos e escreveu o caminho; ela
     não podia executá-lo porque este arquivo não era da posse dela. Quem fechou
     foi a costura da ONDA B, 06/09/2026.
+
+    **QUEM CHAMAR ISTO TEM DE PASSAR UM DICIONÁRIO QUE CARREGUE `transporte`**, e
+    a advertência custou um defeito vivo no mesmo dia
+    (`CONEXOES-LIGAR-TUDO-01`): a troca da ONDA B aplicou esta função ao
+    dicionário de :func:`_da_mesa_para_a_regua`, que só carregava a PALAVRA — e a
+    régua de Desempenho passou a mostrar ZERO controle no rádio com o controle no
+    rádio, que é o sintoma exato que a troca dizia estar prevenindo. Um dicionário
+    sem a chave crua responde `False` sobre TUDO, calado.
     """
     return str(c.get("transporte") or "").strip().lower() == "bt"
 
@@ -2702,8 +2723,13 @@ def _regua_do_radio(ctx: Contexto) -> str:
     onde: dict[str, str] = {}
     if no_radio:
         with contextlib.suppress(Exception):
+            # A SEXTA COMPARAÇÃO DE `via`, e ela sobreviveu à costura da ONDA B
+            # — 06/09/2026. Com a `via` carregando "rádio", esta lista nascia
+            # VAZIA e `adaptador_por_uniq` recebia nada: todos os controles do
+            # rádio caíam no grupo SEM_ADAPTADOR, numa pista sem nome, e as
+            # pistas dos três adaptadores dela ficavam vazias ao lado.
             onde = rm.adaptador_por_uniq(
-                [str(m.get("uniq") or "") for m in ctx.mesa if m.get("via") == "BT"])
+                [str(m.get("uniq") or "") for m in ctx.mesa if _e_radio(m)])
 
     # UM GRUPO POR ADAPTADOR, e o SEM_ADAPTADOR por último. `adaptador_por_uniq`
     # devolve `""` para quem o sysfs não soube dizer, e a regra de honestidade é
@@ -3006,6 +3032,297 @@ def _teto_do_controle(
             f"Escolher uma das três seria a tela afirmar um estado que o disco "
             f"contradiz — o `?` ao lado diz o que há, e a caixa fica parada.")
     return campo, frase
+
+
+# ---------------------------------------------------------------------------
+# O ALVO DE SAÍDA, LIDO DE VOLTA — 06/09/2026, `CONEXOES-LIGAR-TUDO-01`.
+#
+# O GESTO ESCREVIA E A TELA NUNCA CONFERIA. `alvo` chama
+# `controller.target.set`, o daemon obedece, e no tique seguinte a tela
+# continuava apontando o P1 — o `checked` do desenho, cravado no HTML. Ela
+# clicava "só este" no P2, o rádio do acordeão não se mexia, e a fita do topo
+# junto com ele: as regras `body:has(#gc-pN:checked) .fita .chip:nth-child(n)`
+# do gerador fazem o destaque da fita seguir o acordeão, então **os dois
+# lados da queixa eram o mesmo elemento**.
+#
+# O DOCSTRING DO GESTO DIZIA QUE ISTO ERA DO PILOTO — *"a fita do topo não se
+# move […] quem mudar isso é o piloto, não este pacote"* —, e a metade que
+# importa está errada: o piloto monta a fita sem `alvo`, sim, mas o DESTAQUE
+# não vem do `.on` que ele escreve; vem do `:checked` do acordeão, que é desta
+# aba. Substituído no lugar, e não guardado ao lado.
+#
+# ELE SÓ PÔDE NASCER AGORA porque o alvo `marcado` é de 04/09
+# (`PINTOR-MARCADO-01`, decisão dela: *"décimo alvo `marcado`"*) — antes dele
+# nenhum dos nove alvos tocava `el.checked`, e o `valor` num `<input
+# type=radio>` escreve a string `"on"`, não o estado.
+# ---------------------------------------------------------------------------
+#: O RÓTULO DO "TODOS" NA LISTA DO ACORDEÃO. É o primeiro `<input>` do desenho
+#: (`#gc-todos`), e no daemon ele é `index: null` — o broadcast
+#: (`ipc_handlers.py:4134`: *"`index` null volta ao broadcast (padrão)"*).
+TODOS_NA_TELA = "todos"
+
+
+def _pref_do_alvo(ctx: Contexto) -> str:
+    """Qual lugar da mesa a saída está mirando — `p1`..`p4`, ou `todos`.
+
+    **A CONVERSÃO É O PONTO INTEIRO, e ela tem duas ordens diferentes.** O
+    daemon guarda `output_target_index`, que é a POSIÇÃO em `controllers`
+    ("0 = primário", `ipc_handlers.py:4299`); o desenho endereça por `pref`, que
+    é a posição na mesa ORDENADA POR NÚMERO DE IDENTIDADE
+    (`mesa_viva.mesa_do_estado:373`). As duas coincidem na mesa de um controle e
+    divergem na primeira em que o primário não for o de menor número — é a mesma
+    armadilha que `_indice` documenta do lado do gesto, e a ponte entre as duas
+    é o `uniq`.
+
+    `None` NO DAEMON É "TODOS", e não "não sei": o campo nasce nulo e é isso que
+    o broadcast significa. Um alvo que o `state` não sabe traduzir (índice fora
+    da lista, entrada sem `uniq`, controle que saiu da mesa entre um tique e
+    outro) devolve `""` — **e o vazio não marca nada**, que é diferente de
+    marcar "todos": desmarcar os cinco deixa a tela sem afirmar nada, e marcar o
+    "todos" afirmaria um broadcast que o daemon não disse.
+    """
+    st = ctx.state
+    if "output_target_index" not in st:
+        return ""
+    indice = st.get("output_target_index")
+    if indice is None:
+        return TODOS_NA_TELA
+    if not isinstance(indice, int) or isinstance(indice, bool):
+        return ""
+    lista = st.get("controllers") or []
+    uniq = ""
+    for posicao, c in enumerate(lista):
+        if not isinstance(c, dict):
+            continue
+        dele = c.get("index")
+        seu = dele if isinstance(dele, int) and not isinstance(dele, bool) else posicao
+        if seu == indice:
+            uniq = str(c.get("uniq") or "")
+            break
+    if not uniq:
+        return ""
+    for m in ctx.mesa:
+        if str(m.get("uniq") or "") == uniq:
+            return str(m.get("pref") or "")
+    return ""
+
+
+def _alvo_de_saida(ctx: Contexto) -> list[str]:
+    """`sim`/`""` para os CINCO rádios do acordeão, na ordem em que eles nascem.
+
+    A ORDEM É A DO DOM, e é o contrato da lista: o piloto distribui uma lista
+    pelos elementos de mesmo `data-campo` na ordem em que os acha
+    (`hefesto_vivo.pintar`, passo 1). O gerador escreve `#gc-todos` primeiro e
+    depois um por lugar da mesa, então esta lista é `[todos, p1, p2, p3, p4]`.
+
+    **VAI EM TODO TIQUE, INCLUSIVE TODA VAZIA** — a mesma regra do botão cinza
+    da ONDA0-F e das duas listas do ⊘: a chave que só aparece quando há o que
+    dizer deixa na tela a marca do tique anterior, e um acordeão que abrisse
+    sozinho num lugar sem dono seria a tela afirmando o que não é.
+    """
+    onde = _pref_do_alvo(ctx)
+    lugares = [TODOS_NA_TELA, *sorted(TODOS_OS_LUGARES)]
+    return ["sim" if onde and lugar == onde else "" for lugar in lugares]
+
+
+# ---------------------------------------------------------------------------
+# OS QUATRO AVISOS QUE A CASA SABIA E A TELA NÃO DIZIA — 06/09/2026.
+#
+# Os quatro são a mesma forma: **o dono existe no produto, com a frase pronta,
+# e o HTML não tinha onde escrever**. Nenhum deles inventa texto — os dois
+# primeiros vêm do `state_full` pelos donos de `app/actions/`, e os dois
+# últimos da leitura do barramento pelos donos de `secao_mesa`.
+#
+# TODOS SÃO LINHA DE RESSALVA (`monta.ressalva`, a D-02 dela): em repouso não
+# ocupam um pixel (`.ressalva:has(.nada){display:none}`), e no estado estranho
+# nascem ao lado do valor. É por isso que os quatro podem entrar juntos sem que
+# a "Nada se perdeu" desta aba pague altura nenhuma.
+# ---------------------------------------------------------------------------
+def _sem_valor() -> str:
+    """`monta.NADA_A_DIZER` — o marcador que faz a `.ressalva` SUMIR.
+
+    **NUNCA `""`**, e a razão é do piloto: `escrever()` troca vazio por
+    travessão antes de olhar o alvo, então uma ressalva vazia viraria uma linha
+    com um `—` — que ocupa altura para não dizer nada. É a mesma cura que o
+    `+N` do exame já pagou em 06/09.
+    """
+    return str(_monta().NADA_A_DIZER)
+
+
+def _frase_do_sem_driver(st: dict[str, Any]) -> str:
+    """*"Um controle está ligado, mas o sistema não conseguiu entregá-lo…"*.
+
+    O DONO É `status_actions.texto_de_controle_nao_adotado`, e ele já devolve
+    `""` para todos os casos em que não há o que dizer — daemon sem resposta,
+    payload torto, daemon antigo sem a chave, quantidade zero. A tela não
+    repete nenhuma dessas guardas: repeti-las seria a segunda grafia da mesma
+    regra, e a primeira coisa que uma segunda grafia perde é a revisão dela.
+
+    **O QUE ISTO SUBSTITUI ERA EMISSÃO MORTA EM DOIS NÍVEIS**, medido em
+    04/09: o pacote emitia `"sem_driver": st.get("controles_sem_driver")`, que
+    é um `dict` — e `pacotes.normalizar` descarta dicionário antes da tela —,
+    para um endereço que página nenhuma tinha. O defeito que este aviso cura
+    (dois DualSense ligados, a janela mostrando um, e nenhuma pista do porquê)
+    voltava inteiro no HTML.
+    """
+    with contextlib.suppress(Exception):
+        perfil._com_o_src()
+        from hefesto_dualsense4unix.app.actions.status_actions import (
+            texto_de_controle_nao_adotado,
+        )
+
+        return texto_de_controle_nao_adotado(st) or _sem_valor()
+    return _sem_valor()
+
+
+def _frase_do_radio_fragil(st: dict[str, Any]) -> str:
+    """O aviso do Bluetooth nativo frágil, **com os números** dos controles.
+
+    DOIS DONOS, E É O DESENHO DELES: `home_actions.controles_bt_frageis` lê a
+    lista publicada e `texto_native_bt_fragil` a vira frase — e a regra que
+    separa os dois está escrita lá: *"lista vazia não quer dizer 'nenhum
+    frágil' — quer dizer 'não sei quais'"*, e por isso quem chama olha TAMBÉM o
+    booleano `native_bt_fragil`. O aviso acende sem nomes nesse caso, em vez de
+    calar.
+
+    O PACOTE JÁ EMITIA `fragil` POR CONTROLE, e continuava sem endereço: um
+    booleano por cartão diria QUAL, e não O QUE FAZER. A frase do dono diz as
+    duas coisas — quem é e qual é a saída (o cabo, ou voltar à emulação) —, e é
+    ela que a aba Início acende.
+    """
+    with contextlib.suppress(Exception):
+        perfil._com_o_src()
+        from hefesto_dualsense4unix.app.actions.home_actions import (
+            controles_bt_frageis,
+            texto_native_bt_fragil,
+        )
+
+        if not st.get("native_bt_fragil"):
+            return _sem_valor()
+        return texto_native_bt_fragil(controles_bt_frageis(st)) or _sem_valor()
+    return _sem_valor()
+
+
+#: AS DUAS LEITURAS DO GABINETE, na mesma regra do `_MESA_DO_RADIO`: varredura
+#: de barramento e leitura de disco entram UMA VEZ e são renovadas pelo
+#: **Examinar Portas**, nunca por tique. Medido nesta bancada em 06/09/2026:
+#: `listar_entradas()` custa **6,3 ms** e devolve 38 nós; `ler_do_disco()` custa
+#: **0,11 ms**. Os 6 ms caberiam no tique de 500 ms — e é exatamente o
+#: raciocínio que o bloco "O QUE SE LÊ DA MÁQUINA" proíbe: pendurar uma
+#: varredura de `/sys` num tique é gastar CPU para reler o que não muda.
+#:
+#: `None` = ainda não lido, e é diferente de tupla/dicionário vazios: "não
+#: perguntei" não pode virar "o seu gabinete não tem entradas".
+_ENTRADAS: Any = None
+_GABINETE: Any = None
+
+
+def _entradas(recarregar: bool = False) -> Any:
+    """Os nós de entrada do gabinete, **inclusive os vazios** — ou `()`.
+
+    É a TERCEIRA varredura de `/sys` desta aba, e ela responde o que as outras
+    duas não sabem: **uma entrada vazia não tem aparelho**, logo não aparece nem
+    em `ler_a_mesa` nem em `ler_o_barramento`. É ela que sustenta o *"há entrada
+    livre em outro caminho"* do conselho do hub — sem entradas, o conselho não
+    nasce, que é o desenho certo: um conselho que não sabe para onde mandar não
+    é conselho.
+    """
+    global _ENTRADAS
+    if _ENTRADAS is None or recarregar:
+        try:
+            perfil._com_o_src()
+            from hefesto_dualsense4unix.integrations.entradas_do_gabinete import (
+                listar_entradas,
+            )
+
+            _ENTRADAS = tuple(listar_entradas())
+        except Exception:
+            return ()
+    return _ENTRADAS
+
+
+def _gabinete(recarregar: bool = False) -> Any:
+    """O `gabinete.json` que o install gravou — `{}` quando não há.
+
+    ELE É A ÚNICA FONTE DA TABELA SMBIOS TIPO 8, e o motivo é de permissão: o
+    arquivo do DMI é `400 root`, esta janela é sudo-zero, e quem o leu foi o
+    install, uma vez, como root. Aqui só se abre o que ele deixou —
+    `ler_do_disco` já engole arquivo ausente, truncado e de formato futuro.
+    """
+    global _GABINETE
+    if _GABINETE is None or recarregar:
+        try:
+            perfil._com_o_src()
+            from hefesto_dualsense4unix.integrations.censo_do_gabinete import (
+                ler_do_disco,
+            )
+
+            _GABINETE = ler_do_disco()
+        except Exception:
+            return {}
+    return _GABINETE
+
+
+def _frase_do_hub() -> str:
+    """O hub que está acima de TODOS os adaptadores — fato, por quê e conselho.
+
+    O DONO É `secao_mesa._frase_do_hub_em_comum`, e ele responde com as TRÊS
+    frases ou com o silêncio das três. A regra que ele guarda é a que a coluna
+    "Onde está" não consegue guardar: aquela escreve *"Em hub"* linha a linha e
+    **nunca compara as linhas entre si**; quem compara é
+    `censo_do_barramento.hub_em_comum`, que sobe a cadeia em vez de olhar o pai.
+
+    **O CONSELHO É A METADE OPCIONAL**, e ele só nasce quando há para onde
+    mandar — buraco livre, alcançável com a mão, numa controladora DIFERENTE.
+    Três adaptadores no mesmo hub é o arranjo que o próprio guia de rádio manda
+    comprar: o fato sozinho não é queixa.
+
+    MEDIDO NESTA BANCADA EM 06/09/2026: os três adaptadores dela estão em
+    `usb1/1-4`, `usb3/3-1/3-1.2` e `usb3/3-1/3-1.4` — **não há hub acima dos
+    três**, e a linha CALA. É o estado certo, e é o que a foto mostra.
+    """
+    with contextlib.suppress(Exception):
+        perfil._com_o_src()
+        from hefesto_dualsense4unix.app.actions.config.secao_mesa import (
+            _frase_do_hub_em_comum,
+        )
+
+        mesa, censo = _mesa_do_radio(), _censo()
+        if mesa is None or censo is None:
+            return _sem_valor()
+        frases = [f for f in _frase_do_hub_em_comum(mesa, censo, _entradas()) if f]
+        if frases:
+            return "<br>".join(frases)
+    return _sem_valor()
+
+
+def _frases_do_gabinete() -> str:
+    """As contagens de entrada LADO A LADO, mais a pergunta — nunca uma escolha.
+
+    O DONO É `secao_mesa._linhas_do_gabinete`, e a regra inteira é dele: o que o
+    firmware conta e o que o kernel conta vão os DOIS, e o produto **não
+    escolhe** entre eles. Escolher desenharia um gabinete que ninguém tem, e a
+    pessoa procuraria na traseira buracos que o mapa não mostra.
+
+    SEM `gabinete.json` — primeira instalação, ou install anterior a 25/08 — a
+    resposta é o silêncio, e a seção fala como falava antes. Firmware é FONTE,
+    nunca premissa.
+
+    MEDIDO NESTA BANCADA EM 06/09/2026: a BIOS conta **5** entradas USB e o
+    barramento conta **15** buracos; as duas discordam, e a terceira linha é a
+    pergunta que só ela pode responder. Sem esta linha, o mapa do gabinete
+    desenhava a traseira dela sem dizer quantos buracos ela deveria ter.
+    """
+    with contextlib.suppress(Exception):
+        perfil._com_o_src()
+        from hefesto_dualsense4unix.app.actions.config.secao_mesa import (
+            _linhas_do_gabinete,
+        )
+
+        linhas = [f for f in _linhas_do_gabinete(_gabinete()) if f]
+        if linhas:
+            return "<br>".join(linhas)
+    return _sem_valor()
 
 
 @registrar("08-conexoes.html")
@@ -3387,7 +3704,26 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
         "achados": len(itens),
         "graves": sum(1 for i in itens if i["grave"]),
         "adaptadores": adap,
-        "sem_driver": st.get("controles_sem_driver") or [],
+        # QUAL CONTROLE A SAÍDA ESTÁ MIRANDO — ver :func:`_alvo_de_saida`. Ela
+        # marca o rádio do acordeão, e com ele o chip da fita: as regras
+        # `body:has(#gc-pN:checked) .fita .chip:nth-child(n)` do gerador fazem
+        # o destaque do topo seguir o acordeão. Um endereço, as duas metades.
+        "alvo-aberto": _alvo_de_saida(ctx),
+        # OS QUATRO AVISOS, TODOS EM LINHA DE RESSALVA (D-02). Eles vão em TODO
+        # tique — vazio é `monta.NADA_A_DIZER`, que faz a linha sumir — porque a
+        # chave que só aparece quando há o que dizer deixa na tela a tinta do
+        # tique anterior. Um aviso que não sabe apagar é pior que o silêncio.
+        #
+        # **O `sem_driver` DE ANTES ERA EMISSÃO MORTA EM DOIS NÍVEIS**, e foi
+        # SUBSTITUÍDO, não guardado ao lado: ele mandava
+        # `st.get("controles_sem_driver")`, um `dict` que `pacotes.normalizar`
+        # descarta antes da tela, para um endereço que página nenhuma tinha. O
+        # dado é o mesmo; quem o vira frase é o dono
+        # (`status_actions.texto_de_controle_nao_adotado`).
+        "sem-driver": _frase_do_sem_driver(st),
+        "radio-fragil": _frase_do_radio_fragil(st),
+        "hub-em-comum": _frase_do_hub(),
+        "gabinete-contagens": _frases_do_gabinete(),
         # SÓ O QUE ESTE TIQUE ACHOU SEM DONO — hoje só uma coisa entra aqui: uma
         # política de vibração guardada no perfil que o `<select>` da tela não
         # sabe mostrar. Declarar é o oposto de pintar a opção errada.
@@ -3422,7 +3758,12 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
         # dicionário vem vazio quando o produto não pôde responder, e contar um
         # `+ 5` cravado contaria pintura que não aconteceu. O
         # `len(vizinho_nome) * 3` virou `* 5`: o "onde" e a dica dele.
-        "cobertura": {"pintados": 4 + 2 + len(confissao) + len(veredito)
+        # O `+ 4 + 5` DE 06/09/2026: as QUATRO linhas de ressalva (`sem-driver`,
+        # `radio-fragil`, `hub-em-comum`, `gabinete-contagens`) e os CINCO
+        # rádios do acordeão que o `alvo-aberto` marca. As quatro contam mesmo
+        # caladas — `monta.NADA_A_DIZER` é uma escrita, e é ela que APAGA a
+        # linha do tique anterior.
+        "cobertura": {"pintados": 4 + 2 + 4 + 5 + len(confissao) + len(veredito)
                       + len(itens) * 4 + 1 + len(adap)
                       + len(vizinho_nome) * 5
                       + sum(len(v) for v in colunas.values()),
@@ -4244,6 +4585,14 @@ def _correr_o_exame_completo() -> None:
     # renova. Sem esta linha, renomear um adaptador na tela deixaria a tabela e
     # a régua com o nome de antes até a próxima sessão.
     _dongles(recarregar=True)
+    # E AS DUAS LEITURAS DO GABINETE JUNTO — 06/09/2026. Elas obedecem à mesma
+    # regra do `ler_a_mesa` (varredura de `/sys` e leitura de disco, nunca em
+    # tique), logo é este botão quem as renova. Sem estas duas linhas, espetar
+    # um adaptador noutra entrada deixaria a linha do hub e as contagens do
+    # gabinete com a leitura da abertura da janela — e a tela responderia sobre
+    # o arranjo de antes com o carimbo "Examinado agora mesmo" ao lado.
+    _entradas(recarregar=True)
+    _gabinete(recarregar=True)
 
     mesa = _mesa_declarada(declaracao)
     itens = exame_da_mesa.exame(
