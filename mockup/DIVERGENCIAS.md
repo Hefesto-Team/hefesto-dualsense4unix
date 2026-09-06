@@ -43,3 +43,40 @@ seção daqui**: a aba deixou de estar em trabalho.
 
   **O que fecha:** o `--publicar 02` da próxima vez que ela aprovar a aba. Nada
   espera por isto — nenhuma sprint depende desta linha.
+
+## 09-sistema.html
+
+- **06/09/2026** — **UMA LINHA, e os dois pixels que ela mudam são PALAVRA
+  DELA** (`ONDA5-09-01`, a 09-Q1 e a 09-Q3). O botão do `daemon.reload` volta a
+  se chamar **"Atualizar"** e a espera a dizer **"Atualizando…"**; a dica dele
+  passa a nomear o que foi MEDIDO do outro lado do clique, e não o que se
+  supunha.
+
+  ```
+  linha 1245 · bancada  Atualizar          · data-hef-em-voo="Atualizando…"
+  linha 1245 · produto  Reaplicar ajustes  · data-hef-em-voo="Reaplicando…"
+  ```
+
+  **É uma REVERSÃO, e a reversão é dela.** Em 04/09 o PO decidiu rebatizar o
+  botão pela metade cara; em 05/09 ela leu a mesma pergunta e escolheu o
+  contrário: *"Segue fazendo os dois. Com mesmo nome"*. O que estava no produto
+  desde `a45b7799` é a recomendação que perdeu.
+
+  **A dica mudou de metade, e por medição:** ela prometia *"reaplicar a
+  configuração"*, e com `config_overrides` vazio isso **não acontece** —
+  `daemon/lifecycle.py:1353` e `:1361` comparam `old` com `new` e nunca
+  disparam. O que acontece são duas coisas: o serviço religa o leitor dos
+  atalhos do controle (`lifecycle.py:1351-1352`) e reescreve os arquivos de
+  ambiente da Steam (`ipc_handlers.py:5472`). A dica passou a dizer essas duas.
+
+  **Por que não publiquei:** publicar é ato dela, e aqui a mudança é VISÍVEL —
+  duas palavras que ela lê no botão. A `PROVA-DE-TELA-01` é a regra mais velha
+  desta casa, e ela vale exatamente para o caso em que a mudança é a palavra
+  dela: quem confere que a palavra chegou certa é ela, olhando.
+
+  **O que ela vê HOJE, até publicar:** a aba Sistema de ontem, com o botão
+  ainda dizendo "Reaplicar ajustes". Nada quebra — os quatro botões da coluna,
+  os três cinzas e o `data-hef-em-voo` continuam inteiros nos dois lados.
+
+  **O que fecha:** `scripts/check_o_desenho_aprovado.py --publicar 09`, depois
+  do olho dela.

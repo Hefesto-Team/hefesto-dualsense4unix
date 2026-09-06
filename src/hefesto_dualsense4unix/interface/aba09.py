@@ -971,19 +971,18 @@ D_AVANCADO = ('<span class="ajuda">?<span class="dica">'
               '</span></span>')
 
 # ---------------------------------------------------------------------------
-# O BOTÃO QUE MENTIA O NOME — decisões [01] e [03] do PO, 04/09/2026.
+# O BOTÃO SE CHAMA "ATUALIZAR", E O NOME É PALAVRA DELA — 05/09/2026, a 09-Q1:
+# *"Segue fazendo os dois. Com mesmo nome"*.
 #
-# ELE FAZIA DOIS TRABALHOS COM UM NOME SÓ, e a dica NEGAVA o caro: dizia
-# *"Relê tudo o que esta aba mostra. Não muda nada."* — e a segunda frase era
-# falsa. O clique manda o IPC `daemon.reload`, que faz o serviço reaplicar a
-# configuração e rematerializar os arquivos de ambiente que a Steam usa para
-# lançar jogo (`daemon/ipc_handlers.py:4823-4832`).
+# A RECOMENDAÇÃO DE 04/09 PROPUNHA O CONTRÁRIO — rebatizá-lo de "Reaplicar
+# ajustes", nomeando-o pela metade cara — e PERDEU quando ela leu a mesma
+# pergunta. O que faz o nome parar de mentir não é o rótulo: é a DICA, que diz
+# os dois trabalhos na ordem em que acontecem.
 #
-# A METADE BARATA JÁ ACONTECE SOZINHA: a releitura da aba custa 4 ms e o
-# `LENTO_S = 2.0` do pacote a refaz a cada dois segundos, sem ninguém clicar.
-# Nomear o botão pela metade que só ele faz é a única forma que para de mentir
-# **sem gastar linha de tela** — 17 letras contra as 19 de "Reiniciar o
-# serviço", na mesma coluna de 184px.
+# A METADE BARATA JÁ ACONTECE SOZINHA, e é ela que deixa o nome caber num botão
+# que faz os dois: a releitura da aba custa 4 ms e o `LENTO_S = 2.0`
+# (`interface/pacotes/a09_sistema.py:172`) a refaz a cada dois segundos, sem
+# ninguém clicar. Este botão nunca foi a única forma de reler a aba.
 #
 # E ELE FICAVA NOVE SEGUNDOS E MEIO CALADO (medido no daemon dela em 01/09):
 # o gesto corre em thread para a janela não congelar, e até 04/09 NENHUMA das
@@ -991,20 +990,27 @@ D_AVANCADO = ('<span class="ajuda">?<span class="dica">'
 # primeiro. O `data-hef-em-voo` é o rótulo da espera, e o piloto o põe no lugar
 # exato do clique e devolve o original nos três desfechos.
 #
-# A PALAVRA NÃO É INVENÇÃO DE FORMA: `Reaplicando…` é o gerúndio do rótulo, na
-# mesma gramática que a janela antiga já usa nos recibos dela
-# (*"Reiniciando o Hefesto…"*, `daemon_actions.py:2293`).
-ROTULO_REAPLICAR = "Reaplicar ajustes"
-EM_VOO_REAPLICAR = "Reaplicando…"
-#: A DICA DIZ OS DOIS TRABALHOS, na ordem em que eles acontecem. **Nenhum
-#: número aqui**: os 9,5 s foram medidos no daemon DELA, e uma tela que crava
-#: um tempo de máquina alheia é a mesma espécie de afirmação que esta casa
-#: derruba desde 28/08 (a dica que dizia 60% sobre um teto de 30%). "Alguns
-#: segundos" é o que a medição sustenta em qualquer máquina.
-DICA_REAPLICAR = ("Manda o serviço reaplicar a configuração e reescrever os "
-                  "arquivos de ambiente que a Steam usa para lançar os jogos; "
-                  "no fim, relê o que esta aba mostra. Leva alguns segundos, e "
-                  "o botão avisa enquanto trabalha.")
+# A PALAVRA NÃO É INVENÇÃO DE FORMA: `Atualizando…` é o gerúndio do rótulo — e
+# é literal dela, na 09-Q3 —, na mesma gramática que os recibos do motor já
+# usam (*"Reiniciando o Hefesto…"*, `app/actions/daemon_actions.py:2306`).
+ROTULO_ATUALIZAR = "Atualizar"
+EM_VOO_ATUALIZAR = "Atualizando…"
+#: A DICA DIZ O QUE FOI MEDIDO, e não o que se supõe. O clique manda
+#: `daemon.reload` **sem `config_overrides`**, e do outro lado acontecem DUAS
+#: coisas: `daemon/lifecycle.py:1351-1352` derruba e sobe o leitor dos atalhos
+#: do controle, e `daemon/ipc_handlers.py:5472` reescreve os arquivos de
+#: ambiente da Steam. Os ramos que reaplicariam mouse e teclado comparam `old`
+#: com `new` (`lifecycle.py:1353` e `:1361`) e **nunca disparam** — por isso a
+#: dica parou de prometer "reaplicar a configuração".
+#:
+#: **Nenhum número aqui**: os 9,5 s foram medidos no daemon DELA, e uma tela
+#: que crava um tempo de máquina alheia é a mesma espécie de afirmação que esta
+#: casa derruba desde 28/08 (a dica que dizia 60% sobre um teto de 30%).
+#: "Alguns segundos" é o que a medição sustenta em qualquer máquina.
+DICA_ATUALIZAR = ("Manda o serviço reler os atalhos do controle e reescrever "
+                  "os arquivos de ambiente que a Steam usa para lançar os "
+                  "jogos; no fim, relê o que esta aba mostra. Leva alguns "
+                  "segundos, e o botão avisa enquanto trabalha.")
 
 MIOLO = f'''
     <div class="quadro">
@@ -1039,7 +1045,7 @@ MIOLO = f'''
             <div class="col-acao">
 {item_cinza("Retomar", "Tira o serviço da pausa agora. Só acende com a pausa ativa — e ela sobrevive a desligar o computador.", "retomar", cls="verde")}
 {item_cinza("Reiniciar o serviço", "Para e liga de novo. Resolve a maioria dos travamentos e não perde nenhum ajuste seu.", "reiniciar")}
-{item(ROTULO_REAPLICAR, DICA_REAPLICAR, gesto=_gesto("atualizar"), em_voo=EM_VOO_REAPLICAR)}
+{item(ROTULO_ATUALIZAR, DICA_ATUALIZAR, gesto=_gesto("atualizar"), em_voo=EM_VOO_ATUALIZAR)}
 {item("Parar o serviço", f"O Hefesto deixa de rodar e os {N} viram gamepads comuns do Linux. Não é o interruptor Hefesto da aba Jogar, que só o tira do meio do jogo. Pergunta antes, dizendo o que se perde.", "btn vermelho", gesto=_gesto("desligar"))}
             </div>
           </div>
@@ -1647,42 +1653,43 @@ if len(_CINZAS) != _PORQUES or _PORQUES_NA_CAIXA != _PORQUES:
         "colunas irmãs desta faixa param de acabar no mesmo y — que é o vão de "
         "58px que ela apontou em 31/08.")
 
-# 9. O BOTÃO DO `daemon.reload` NÃO SE CHAMA MAIS PELA METADE BARATA, e a dica
-#    não NEGA a cara — decisões [01] e [03], 04/09/2026.
+# 9. O BOTÃO DO `daemon.reload` SE CHAMA "ATUALIZAR" PORQUE ELA MANDOU, e a
+#    dica não NEGA o trabalho caro — a 09-Q1 e a 09-Q3, 05/09/2026.
 #
 #    A régua lê o botão do gesto `atualizar` no HTML montado: o rótulo, o
 #    `title` e o rótulo da espera. **A frase proibida é literal**, e é a que
-#    estava lá: *"Não muda nada."* sobre um clique que manda o serviço reaplicar
-#    a configuração e reescrever os arquivos de ambiente da Steam.
+#    estava lá: *"Não muda nada."* sobre um clique que manda o serviço religar o
+#    leitor dos atalhos e reescrever os arquivos de ambiente da Steam.
 _RELOAD = re.search(r'<button class="btn"([^>]*)>([^<]*)</button>', "".join(
     linha for linha in _ACOES_DO_SERVICO.splitlines()
     if 'data-gesto="atualizar"' in linha))
 if not _RELOAD:
     raise SystemExit("ERRO: o botão do `atualizar` sumiu da coluna do serviço — "
-                     "a régua das decisões [01] e [03] ficou cega, e seletor "
-                     "que casa ZERO é erro, não silêncio.")
+                     "a régua da 09-Q1 e da 09-Q3 ficou cega, e seletor que "
+                     "casa ZERO é erro, não silêncio.")
 _ATRS, _ROT_RELOAD = _RELOAD.group(1), _RELOAD.group(2)
-if _ROT_RELOAD != ROTULO_REAPLICAR:
+if _ROT_RELOAD != ROTULO_ATUALIZAR:
     raise SystemExit(
-        f"ERRO: o botão do `daemon.reload` diz {_ROT_RELOAD!r} e o PO decidiu "
-        f"{ROTULO_REAPLICAR!r} (decisão [01], 04/09/2026). Ele faz DOIS "
-        "trabalhos, e a metade barata — reler a aba — já acontece sozinha a "
-        "cada 2 s (`a09_sistema.LENTO_S`). Nomeá-lo pela metade que a aba já "
-        "faz sem ninguém clicar é o nome mentindo.")
-if f'data-hef-em-voo="{EM_VOO_REAPLICAR}"' not in _ATRS:
+        f"ERRO: o botão do `daemon.reload` diz {_ROT_RELOAD!r} e ela mandou "
+        f"manter {ROTULO_ATUALIZAR!r} (09-Q1, 05/09/2026: *\"Segue fazendo os "
+        "dois. Com mesmo nome\"*). A recomendação de 04/09 propunha rebatizá-lo "
+        "pela metade cara e PERDEU: quem para de mentir aqui é a DICA, que diz "
+        "os dois trabalhos, não o rótulo.")
+if f'data-hef-em-voo="{EM_VOO_ATUALIZAR}"' not in _ATRS:
     raise SystemExit(
-        f"ERRO: o botão {ROTULO_REAPLICAR!r} perdeu o `data-hef-em-voo`. Sem "
+        f"ERRO: o botão {ROTULO_ATUALIZAR!r} perdeu o `data-hef-em-voo`. Sem "
         "ele o clique some por nove segundos e meio sem uma letra na tela, e o "
-        "segundo clique parece o primeiro — é a decisão [03], e ela pede que a "
-        "tela fale DURANTE a espera, no lugar exato do clique.")
+        "segundo clique parece o primeiro — é a 09-Q3, e ela pede que a tela "
+        "fale DURANTE a espera, no lugar exato do clique.")
 if "Não muda nada" in _ATRS:
     raise SystemExit(
         "ERRO: a dica do botão do `daemon.reload` voltou a dizer 'Não muda "
-        "nada'. É FALSO e está medido: o clique manda o IPC `daemon.reload`, "
-        "que faz o serviço reaplicar a configuração e rematerializar os "
-        "arquivos de ambiente da Steam (`daemon/ipc_handlers.py:4823-4832`). "
-        "Uma dica que nega o trabalho caro é a tela afirmando o contrário do "
-        "que o produto faz.")
+        "nada'. É FALSO e está medido: o clique manda o IPC `daemon.reload`, e "
+        "do outro lado o serviço derruba e sobe o leitor dos atalhos do "
+        "controle (`daemon/lifecycle.py:1351-1352`) e reescreve os arquivos de "
+        "ambiente da Steam (`daemon/ipc_handlers.py:5472`, dentro de "
+        "`_handle_daemon_reload`, `:5431-5473`). Uma dica que nega o trabalho "
+        "caro é a tela afirmando o contrário do que o produto faz.")
 
 n = monta("09-sistema", "Sistema", MIOLO, CSS, legenda=LEGENDA)
 
