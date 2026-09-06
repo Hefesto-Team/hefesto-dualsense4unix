@@ -131,6 +131,25 @@ seção daqui**: a aba deixou de estar em trabalho.
   existia com as duas orações.
 
   **O que fecha:** o `--publicar 05` depois do OK dela na aba inteira.
+## 08-conexoes.html
+
+- **06/09/2026** — a 08-Q5 e a 08-Q7 (`ONDA5-08-01`). O desenho ganhou a linha
+  do exame que fica **em cinza** quando ela manda ignorar, o `title` do ⊘ que
+  troca de verbo, e as duas linhas de `+N` (exame e rádios vizinhos).
+
+  **O que ela vê HOJE, enquanto não publicar:** a aba Conexões de ontem, com uma
+  diferença medida — o ⊘ grava e desfaz no disco, e a LINHA não muda de cor,
+  porque a página publicada não tem o endereço `exame-calada`. O veredito do
+  topo continua respondendo.
+
+  **O que fecha:** `--publicar 08`, que é ato dela — e nesta leva isso acontece
+  numa volta só, no FECHO (decisão dela, 06/09).
+
+  **Escrito pelo coordenador**, na costura da ONDA A: este arquivo é posse do
+  coordenador desde 06/09, e a sprint que produziu a divergência não podia
+  declará-la. O texto é o que o agente da `ONDA5-08-01` deixou pronto no
+  relatório dele.
+
 ## 09-sistema.html
 
 - **06/09/2026** — **UMA LINHA, e os dois pixels que ela mudam são PALAVRA
