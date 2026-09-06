@@ -810,6 +810,21 @@ _SEM_MAO_HOJE: dict[str, str] = {
 #: Não é dívida: é classificação. A razão CITA a evidência que a sustenta,
 #: porque "confie em mim" não é razão.
 _NAO_E_PROMESSA: dict[str, str] = {
+    "interface/frases_que_ela_baniu.py::texto_visivel_no_produto": (
+        "06/09/2026, A-REGUA-DA-PALAVRA-VE-O-PRODUTO-01 — é a irmã de "
+        "`texto_visivel` e não é promessa pela MESMA razão: o produto não lê a "
+        "própria página, ele a ESCREVE. A diferença entre as duas é o que a "
+        "folha do piloto esconde (`.nota{display:none !important}`), e ela "
+        "existe porque a régua acusava 34 ocorrências de `mesa` \"em o "
+        "produto\" sobre uma tela que não mostrava nenhuma. Quem chama são o "
+        "portão `tests/unit/test_a_palavra_mesa_nao_chega_a_tela.py` "
+        "(`test_a_palavra_nao_e_lida_em_nenhuma_das_dez_paginas_do_produto`) e "
+        "o instrumento `interface/olhar.py --palavra --publicado` — os dois "
+        "mundos que este portão não conta, e com razão. Evidência: "
+        "`tests/unit/test_a_regua_da_palavra_ve_o_produto.py`, que a morde nos "
+        "dois sentidos — arrancar a folha devolve as 34, e apagar a tela "
+        "inteira reprova em `test_a_leitura_do_produto_nao_apaga_a_tela`."
+    ),
     "interface/frases_que_ela_baniu.py::texto_visivel": (
         "06/09/2026, A-PALAVRA-MESA-SAI-01 — é a LEITURA de uma régua, e o "
         "produto nunca lê a própria página: ele a ESCREVE. Quem chama são o "

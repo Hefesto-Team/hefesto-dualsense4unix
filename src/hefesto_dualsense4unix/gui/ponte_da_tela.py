@@ -90,6 +90,7 @@ gi.require_version("WebKit2", "4.1")
 from gi.repository import GLib, Gtk, WebKit2  # noqa: E402
 
 from hefesto_dualsense4unix.app import theme as tema  # noqa: E402
+from hefesto_dualsense4unix.interface.folha_da_casa import FOLHA_DA_CASA  # noqa: E402
 
 #: As quatro armadilhas, em código. Cada uma custou uma sessão desta casa, e a
 #: forma de não as redescobrir é elas viajarem com o módulo que as paga — não
@@ -109,72 +110,18 @@ AS_QUATRO_ARMADILHAS: tuple[str, ...] = (
     "6.0 leva dois. Escrever a forma da 6.0 aqui faz o gesto sumir calado",
 )
 
-#: A folha de usuário da casa, e ela é do MÓDULO — não de uma aba.
+#: A FOLHA DE USUÁRIO DA CASA — reexportada, e o dono dela mora ao lado.
 #:
-#: ``.nota{display:none}`` tira os bilhetes de projeto que o mockup carrega para
-#: quem o lê no navegador; eles não são produto.
+#: Ela saiu deste módulo em 06/09/2026 e foi para
+#: :mod:`hefesto_dualsense4unix.interface.folha_da_casa`, que não importa `gi`: a régua
+#: da palavra precisa saber o que o produto ESCONDE (`.nota{display:none}`) e
+#: uma régua sem tela não pode exigir PyGObject para perguntar. O porquê inteiro,
+#: com o número que o instrumento errava, está no docstring de lá.
 #:
-#: ``select{appearance:none}`` é a cura sem a qual o WebKitGTK ignora as cores
-#: do autor e desenha a caixa BRANCA do tema do sistema. São **117** ``<select>``
-#: nas dez abas, e a aba Controles não tem nenhum: aqui a cura não se prova pelo
-#: olho, ela viaja no módulo para as outras nove.
-#: ``.hef-em-voo`` é o BOTÃO QUE ESTÁ TRABALHANDO — decisão dela, `09` [03],
-#: 04/09/2026: *"o botão diz que está trabalhando"*, e fala **durante** a espera,
-#: no lugar exato do clique. Há um gesto desta casa que leva 9,5 s
-#: (``daemon.reload``, medido em 01/09) e nenhuma das dez abas tinha estado "em
-#: voo": o clique sumia por nove segundos e meio e o segundo clique parecia o
-#: primeiro.
-#:
-#: A REGRA MORA AQUI, NA FOLHA DO MÓDULO, e não no CSS das dez páginas: o piloto
-#: é um só para as dez, e a classe tem de valer em todas sem que ninguém
-#: republique desenho. ``cursor:progress`` é o que o ponteiro dela já diz em
-#: qualquer aplicativo; a opacidade é o sinal que não depende de texto — quem
-#: publicar um ``data-hef-em-voo`` ganha o rótulo por cima, quem não publicar
-#: ganha o sinal mesmo assim.
-#:
-#: O ``!important`` NÃO É EXAGERO, e o número é medido (04/09/2026, foto
-#: ``--oculta`` da aba 02): sem ele o ``cursor`` saiu **``pointer``**, e não
-#: ``progress``. A razão é do cascade: uma folha de USUÁRIO **perde** para o
-#: autor em declaração normal — só o ``!important`` do usuário vence. As dez
-#: páginas declaram ``cursor:pointer`` nos botões, então a metade do sinal que
-#: mora no ponteiro dela estava morta. É a mesma razão pela qual o ``.nota``
-#: acima o carrega desde sempre.
-#:
-#: E O RÓTULO NÃO CABE EM BOTÃO DE ÍCONE — medido na mesma foto: publicado num
-#: 🎙 de 20 px, o ``"Calando…"`` transborda. **Quem publica o
-#: ``data-hef-em-voo`` é quem responde por caber**; num botão de ícone a
-#: resposta certa é NÃO publicar e deixar o sinal da classe falar. A decisão
-#: dela (`09` [03]) é sobre o "Atualizar", que tem 184 px de coluna.
-#: E A PISCADA DO "DEU CERTO" MORA AQUI PELA MESMA RAZÃO — 05/09/2026, decisão
-#: dela na `03-Q4`: *"O campo que você acabou de mexer ganha uma borda verde por
-#: cerca de um segundo e meio e volta ao normal sozinho; nada muda de lugar e
-#: nenhuma palavra nova entra na tela."*
-#:
-#: `outline` E NÃO BORDA MAIS GROSSA, e é metade da decisão: `outline` não ocupa
-#: espaço na caixa, então o vizinho não anda. Uma `border-width` maior empurraria
-#: a linha inteira, e "nada muda de lugar" é o que ela pediu junto com a cor.
-#:
-#: O `!important` pela MESMA razão medida do `cursor` acima: as dez páginas
-#: declaram `border-color` nos campos — `.mudo-i.on` pede `var(--red)`
-#: (`paginas/02-controles.html:1420`) e `select.modo` pede `var(--purple)`
-#: (`paginas/03-gatilhos.html:1050`) —, e folha de usuário perde para o autor em
-#: declaração normal. Sem ele o campo pisca nos elementos SEM cor declarada e
-#: fica mudo justamente nos que têm.
-#:
-#: E A RÉGUA NÃO ALCANÇA ESTE PONTO, declarado em vez de esquecido:
-#: `test_o_sucesso_calado_pisca_e_nao_fala` clica um `.mudo-i` APAGADO, que não
-#: declara cor — arrancar o `!important` deixa aquela régua verde. Quem quiser
-#: fechar o buraco mede um dos dois seletores acima.
-#:
-#: A COR TEM DONO e não se digita uma segunda: `--green:#50fa7b`
-#: (`interface/topo.html:34`), com o mesmo fallback que o canal de sucesso já usa.
-FOLHA_DA_CASA = (
-    ".nota{display:none !important}"
-    "select{appearance:none;-webkit-appearance:none}"
-    ".hef-em-voo{opacity:.6 !important;cursor:progress !important}"
-    ".hef-deu-certo{border-color:var(--green,#50fa7b) !important;"
-    "outline:1px solid var(--green,#50fa7b) !important}"
-)
+#: O NOME FICA AQUI porque `docs/` e
+#: `tests/unit/test_a_janela_estreita_nao_engole_o_desenho.py` citam
+#: `ponte_da_tela.FOLHA_DA_CASA`, e mudar o endereço de um valor do produto por
+#: causa de uma régua seria a régua mandando no produto.
 
 #: QUANTO O PILOTO ESPERA ANTES DE RECARREGAR a página cujo processo web morreu.
 #:

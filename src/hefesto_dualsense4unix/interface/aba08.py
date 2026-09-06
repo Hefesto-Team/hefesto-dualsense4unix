@@ -3033,13 +3033,13 @@ EM_PE_TOTAL = VAGAS_NO_DESENHO + CONECTORES_QUE_NINGUEM_ALCANCA
 #:
 #: **ELA É ESPECIFICAÇÃO, E DEPENDE DA `ONDA-CONEXOES-10`**: hoje a peneira
 #: `botoes_para_o_jogo` está escrita e NÃO TEM CHAMADOR — é lápide viva do
-#: `portao_a_casa_sabe_e_o_produto_nao_faz.py:1162`. A frase já está no `title`
+#: `portao_a_casa_sabe_e_o_produto_nao_faz.py:1883`. A frase já está no `title`
 #: do botão desta aba desde 28/08; aqui ela ganha o lugar certo e o contorno
 #: certo. Nenhum glifo de X/O/D-pad acompanha: `ao_payload_do_controle` também
 #: não tem chamador, então hoje o botão não anda na tela E chega ao jogo.
 #: **A FRASE SAIU DA TELA EM 29/08/2026, E ISSO É A REGRA DA CASA.** O mockup
 #: mostra o AGORA; a peneira NÃO EXISTE hoje — `botoes_para_o_jogo` está escrita
-#: e sem chamador, e a lápide do `portao_a_casa_sabe_e_o_produto_nao_faz.py:1162`
+#: e sem chamador, e a lápide do `portao_a_casa_sabe_e_o_produto_nao_faz.py:1883`
 #: diz o contrário com todas as letras: *"confirmar uma entrada com o cabo na mão
 #: dispara um pulo ou um tiro no jogo aberto atrás da janela"*.
 #:
