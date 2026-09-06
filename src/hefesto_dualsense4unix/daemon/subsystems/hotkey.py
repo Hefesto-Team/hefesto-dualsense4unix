@@ -42,16 +42,177 @@ logger = get_logger(__name__)
 MIC_SOSSEGO_S = 1.0
 
 
+#: ONDA5-06-01 — ONDE MORA A ESCOLHA DO PS ENQUANTO O DAEMON VIVE.
+#:
+#: O PS tem DOIS donos, e a precedência é escrita: `Profile.button_actions["ps"]`
+#: vence, e `DaemonConfig.ps_button_action` é o degrau da máquina, que vale para
+#: o perfil que não diz nada. Este atributo é o primeiro dos dois, EM MEMÓRIA —
+#: `profiles/manager.apply_button_actions` o escreve a cada ativação, pelo
+#: `ps_action_sink` que `gerente_do_daemon` injeta.
+#:
+#: EM MEMÓRIA, E NÃO POR LEITURA DE DISCO: o `_on_ps_solo` roda inline no poll
+#: loop, e um `pgrep` ali já travou input, IPC e co-op por até 2 s
+#: (REVIEW-M5-PGREP-BLOCK-01). `daemon.store.active_profile` devolve só o NOME —
+#: carregar o perfil daqui seria disco dentro do laço.
+_ATRIBUTO_DA_ACAO_DO_PS = "_acao_do_ps_do_perfil"
+
+#: OS TOKENS VIRTUAIS QUE O TECLADO VIRTUAL SABE ENTREGAR. São os três do
+#: teclado na tela, e só eles: `_delegate_virtual_tokens`
+#: (`integrations/uinput_keyboard.py`) os manda ao `_OSKController`. Os outros
+#: `__*__` do vocabulário da tela (`__STEAM__`, `__SAIR_DO_JOGO__`,
+#: `__PROGRAMA__`, `__CURSOR__`, `__ROLAGEM__`) NÃO são tecla, e mandá-los ao
+#: device viraria um `keyboard_key_unknown` calado por toque.
+_TOKENS_QUE_O_TECLADO_ENTREGA: Final[frozenset[str]] = frozenset({
+    "__OPEN_OSK__", "__CLOSE_OSK__", "__TOGGLE_OSK__",
+})
+
+
+def definir_acao_do_ps(daemon: Any, token: str | None) -> None:
+    """Guarda o que o PERFIL ATIVO deu ao botão PS. `None` = o perfil não opinou.
+
+    Chamado por `profiles/manager.ProfileManager._empurrar_o_ps` a cada
+    ativação, inclusive com `None` — e o `None` é metade do contrato: sem ele a
+    escolha do perfil de ontem continuaria digitando no perfil de hoje.
+    """
+    setattr(daemon, _ATRIBUTO_DA_ACAO_DO_PS, token)
+
+
+def acao_do_ps_do_perfil(daemon: Any) -> str | None:
+    """O token que o perfil ativo deu ao PS, ou `None` — leitura de memória."""
+    token = getattr(daemon, _ATRIBUTO_DA_ACAO_DO_PS, None)
+    return str(token) if token else None
+
+
+def _o_ps_digita(token: str | None) -> bool:
+    """O token escolhido é coisa que o teclado virtual sabe entregar?
+
+    `KEY_*` (inclusive combos colados com `+`) e os três tokens do teclado na
+    tela. Tudo o mais é escolha SEM ATENDENTE para o PS hoje — e quem a nomeia
+    é o journal, não o silêncio.
+    """
+    if not token:
+        return False
+    partes = token.split("+")
+    return all(
+        p.startswith("KEY_") or p in _TOKENS_QUE_O_TECLADO_ENTREGA for p in partes
+    )
+
+
+def _digitar_o_ps(daemon: Any, token: str) -> bool:
+    """Emite, UMA vez, a tecla que o perfil deu ao PS. Devolve se emitiu.
+
+    PELO TECLADO VIRTUAL QUE JÁ EXISTE, e não por um device novo: é o mesmo
+    `UinputKeyboardDevice` que atende as outras linhas da tabela, então um combo
+    (`KEY_LEFTALT+KEY_TAB`) e os tokens do teclado na tela saem daqui do mesmo
+    jeito que sairiam de qualquer outro botão.
+
+    POR QUE `_emit_sequence_*` E NÃO `dispatch()`, e a razão é medida no código
+    do device: `dispatch()` é SNAPSHOT — ele faz
+    `newly_released = self._pressed_buttons - now_mapped`. Chamá-lo com
+    `{"ps"}` soltaria toda tecla que estivesse segurada no instante do toque, e
+    o tique seguinte a pressionaria de novo: um caractere dobrado no meio do que
+    ela estivesse digitando. O par `_emit_sequence_press`/`_release` é o único
+    emissor que não mexe no rastreador de bordas.
+
+    O `bindings` VOLTA AO QUE ERA no `finally`, e isso não é zelo: deixar `"ps"`
+    no mapa do device faria o `dispatch()` do poll loop emitir a tecla uma
+    SEGUNDA vez no dia em que o latch do combo
+    (`integrations/hotkey_daemon.combo_buttons_active`) deixar o PS passar para
+    `emu_buttons`. Hoje ele não deixa — e o produto não pode depender disso para
+    não digitar duas vezes.
+
+    RELATO (arquivo de outra posse): a cura de verdade é um método público de
+    TOQUE no `UinputKeyboardDevice` — `integrations/uinput_keyboard.py` — e
+    enquanto ele não existir este é o caminho que não estraga o que já funciona.
+    """
+    teclado = getattr(daemon, "_keyboard_device", None)
+    if teclado is None:
+        # SEM TECLADO VIRTUAL NÃO É "APLICOU" NEM "FALHOU": é a escolha estar no
+        # perfil e não ter onde pousar, que é a mesma frase do
+        # `ignorado_sem_device` do `apply_keyboard`.
+        logger.info("ps_digita_sem_teclado", token=token)
+        return False
+    if not getattr(teclado, "is_active", lambda: True)():
+        logger.info("ps_digita_teclado_parado", token=token)
+        return False
+    antes = dict(getattr(teclado, "bindings", None) or {})
+    seq = tuple(token.split("+"))
+    try:
+        teclado.bindings = {**antes, "ps": seq}
+        teclado._emit_sequence_press("ps")
+        teclado._emit_sequence_release("ps")
+    except Exception as exc:
+        logger.warning("ps_digita_falhou", token=token, err=str(exc))
+        return False
+    finally:
+        teclado.bindings = antes
+    logger.info("ps_digitou", token=token, teclas=list(seq))
+    return True
+
+
+def _a_metade_da_maquina(cfg: Any, escolha: str | None) -> str:
+    """Qual dos três atos da máquina o toque no PS dispara: steam·none·custom.
+
+    A PRECEDÊNCIA DA CASA, em uma tabela — e ela vem ANTES do antigo
+    `if cfg.ps_button_action == "none": return`, que era a primeira porta. Se o
+    `"none"` continuasse sendo a primeira porta, um perfil que escolheu `Enter`
+    para o PS ficaria mudo por causa de uma config de máquina que ela nunca viu.
+
+        escolha do perfil        o que a máquina faz
+        ---------------------    -------------------------------------------
+        None (perfil calado)     `cfg.ps_button_action`, intocado
+        tecla / teclado na tela  `cfg.ps_button_action` — *"digita SEM parar
+                                 de abrir a Steam"*, a palavra dela na 06-Q3
+        `__NADA__`               nada. É ela dizendo que este botão não faz
+                                 nada, e é o espelho exato do `"none"`
+        `__STEAM__`              abre a Steam, mesmo com a máquina em `"none"`
+        qualquer outro token     `cfg.ps_button_action` + linha no journal:
+                                 escolha que o PS ainda não atende
+
+    `__PROGRAMA__` FICA NA TERCEIRA LINHA DE PROPÓSITO, e é dívida declarada: o
+    caminho do programa existe (`DaemonConfig.ps_button_command`), mas mora na
+    MÁQUINA e não no perfil. Fazê-lo disparar aqui daria à escolha do perfil o
+    comando de outro dono — um fato com dois donos, que é a família que esta
+    casa persegue. Fechar isso é dar campo de CAMINHO ao perfil, e é sprint
+    própria.
+    """
+    da_maquina = str(getattr(cfg, "ps_button_action", "steam"))
+    if escolha is None:
+        return da_maquina
+    if escolha == "__NADA__":
+        return "none"
+    if escolha == "__STEAM__":
+        return "steam"
+    if not _o_ps_digita(escolha):
+        logger.info("ps_solo_escolha_sem_atendente", token=escolha)
+    return da_maquina
+
+
 def build_ps_solo_callback(daemon: DaemonProtocol) -> Any:
     """Cria o callback on_ps_solo que lê self.config em runtime (REFACTOR-DAEMON-RELOAD-01).
 
     Leitura em runtime — não em closure — para que reload_config funcione sem
     recriar closures manualmente.
+
+    ONDA5-06-01: E ELE FAZ AS DUAS COISAS, NESTA ORDEM — digita o que o perfil
+    deu ao PS e **continua** fazendo o que a máquina manda. A ordem é a decisão:
+    `open_or_focus_steam()` muda o foco da janela, e uma tecla emitida depois
+    disso chegaria à Steam em vez de chegar ao que estava na frente dela.
+
+    AS TRÊS GUARDAS DE HOJE FICAM INTEIRAS, e agora valem para as DUAS metades:
+    modo nativo e modo jogo pulam o solo (com o controle dedicado a um jogo,
+    digitar seria pior que abrir a Steam), e o teto do toque curto
+    (PS-TOQUE-CURTO-01) é anterior a tudo — ele mora em `hotkey_daemon.py` e
+    decide antes de este callback existir, então segurar o PS para religar o
+    controle no rádio continua não digitando.
     """
 
     def _on_ps_solo() -> None:
         cfg = daemon.config
-        if cfg.ps_button_action == "none":
+        escolha = acao_do_ps_do_perfil(daemon)
+        digita = _o_ps_digita(escolha)
+        da_maquina = _a_metade_da_maquina(cfg, escolha)
+        if da_maquina == "none" and not digita:
             return
         # FEAT-PARITY-REVIEW-01 + M5: com o controle dedicado a um JOGO, o PS já
         # vai cru como BTN_MODE (guide/overlay) e disparar TAMBÉM a ação de sistema
@@ -70,11 +231,15 @@ def build_ps_solo_callback(daemon: DaemonProtocol) -> Any:
         if getattr(daemon, "_emulation_suppressed", False):
             logger.info("hotkey_ps_solo_skip_modo_jogo")
             return
-        if cfg.ps_button_action == "steam":
+        # A TECLA PRIMEIRO — ver o docstring: a Steam rouba o foco, e o que vier
+        # depois dela chega à Steam.
+        if digita and escolha is not None:
+            _digitar_o_ps(daemon, escolha)
+        if da_maquina == "steam":
             from hefesto_dualsense4unix.integrations.steam_launcher import open_or_focus_steam
 
             open_or_focus_steam()
-        elif cfg.ps_button_action == "custom":
+        elif da_maquina == "custom":
             command = cfg.ps_button_command
             if not command:
                 logger.warning("hotkey_ps_solo_custom_sem_comando")
@@ -1858,6 +2023,7 @@ __all__ = [
     "AtoDoMicrofone",
     "HotkeySubsystem",
     "MetadeDoAto",
+    "acao_do_ps_do_perfil",  # (noqa-acento) nome de função
     "avisar_troca_de_modo",
     "build_next_bridge_callback",
     "build_profile_cycle_callback",
@@ -1865,6 +2031,7 @@ __all__ = [
     "build_ps_solo_callback",
     "canal_do_microfone",
     "canal_do_microfone_loop",
+    "definir_acao_do_ps",  # (noqa-acento) nome de função
     "devolver_a_luz_ao_kernel",
     "ligar_o_microfone",
     "mic_button_loop",

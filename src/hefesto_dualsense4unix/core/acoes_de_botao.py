@@ -54,15 +54,34 @@ from hefesto_dualsense4unix.integrations.uinput_mouse import (
 EIXO_ESQUERDO = "l3_direcao"
 EIXO_DIREITO = "r3_direcao"
 
-#: AS VINTE E UMA LINHAS, na ordem em que a tela as mostra. A ordem é dela
+#: O BOTÃO PS, e ele é o único desta lista cujo ATENDENTE não é device nenhum:
+#: quem o serve é o callback do `ps_solo`
+#: (`daemon/subsystems/hotkey.build_ps_solo_callback`). O nome que a tela mostra
+#: para ele é "Botão PS", e ele vem do dono
+#: (`app/actions/input_actions._BUTTON_LABELS`), não de uma digitação daqui.
+BOTAO_PS = "ps"
+
+#: AS VINTE E DUAS LINHAS, na ordem em que a tela as mostra. A ordem é dela
 #: (27/08/2026, *"cada linha seria um dos botões do controle"*), e é a mesma nas
 #: duas telas de botões da aba Navegação.
+#:
+#: O PS ENTROU EM 06/09/2026 (ONDA5-06-01), por decisão dela na 06-Q3: *"O PS
+#: ganha a mesma lista das outras 21 linhas; se você der uma tecla a ele, ele
+#: passa a digitar SEM parar de abrir a Steam"*. Ele fica **depois do `create` e
+#: antes das três regiões do touchpad**, que é a ordem do aparelho.
+#:
+#: ISTO REVERTE a decisão de 04/09 (*"fica fora, e a razão vira dica"*), e a
+#: reversão é dela. A régua que guardava a decisão anterior
+#: (`tests/unit/test_a_aba_06_navegacao_fecha_as_linhas.py`,
+#: `test_a_dica_da_tela_de_botoes_diz_por_que_o_ps_fica_fora`) mede o mundo de
+#: ontem a partir deste commit; quem a aposenta é a frente da TELA (ONDA5-06-02),
+#: junto com o parágrafo do `?` que ela guarda.
 BOTOES: tuple[str, ...] = (
     "cross", "circle", "square", "triangle",
     "l1", "r1", "l2", "r2",
     "l3", EIXO_ESQUERDO, "r3", EIXO_DIREITO,
     "dpad_up", "dpad_down", "dpad_left", "dpad_right",
-    "options", "create",
+    "options", "create", BOTAO_PS,
     "touchpad_left_press", "touchpad_middle_press", "touchpad_right_press",
 )
 
@@ -75,6 +94,31 @@ TOKEN_STEAM = "__STEAM__"
 TOKEN_SAIR_DO_JOGO = "__SAIR_DO_JOGO__"
 TOKEN_PROGRAMA = "__PROGRAMA__"
 TOKEN_NADA = "__NADA__"
+
+#: O DEGRAU DA MÁQUINA DO BOTÃO PS, traduzido para o vocabulário da tela.
+#:
+#: O PS tem DOIS donos, e a precedência entre eles é escrita: o perfil
+#: (`Profile.button_actions["ps"]`) vence, e o `DaemonConfig.ps_button_action`
+#: é o que vale para o perfil que não diz nada. Este mapa é a tradução de um
+#: para o outro — sem ele, a linha do PS na tela mostraria `— Nada —` sobre um
+#: botão que abre a Steam há meses.
+ACAO_DA_MAQUINA_PARA_TOKEN: dict[str, str] = {
+    "steam": TOKEN_STEAM,
+    "none": TOKEN_NADA,
+    "custom": TOKEN_PROGRAMA,
+}
+
+#: O QUE A MÁQUINA FAZ COM O PS QUANDO NINGUÉM MEXEU — o valor de fábrica de
+#: `DaemonConfig.ps_button_action` (`daemon/lifecycle.py`).
+#:
+#: ELE É CÓPIA, E A CÓPIA TEM RÉGUA. Este módulo é importável **sem daemon** por
+#: contrato (o docstring do topo o diz, e é o que o mantém no `core/`), então
+#: perguntar ao dono aqui dentro arrastaria `daemon/lifecycle.py` para dentro do
+#: gerador da tela. Quem pergunta ao dono é a RÉGUA —
+#: `tests/unit/test_o_ps_digita_e_continua_sendo_a_saida.py` compara este valor
+#: com o default do campo em `DaemonConfig` e reprova a divergência. É a regra
+#: da casa: quando um valor tem dono, a régua PERGUNTA ao dono.
+PS_DA_MAQUINA_DE_FABRICA = "steam"
 
 #: OS GRUPOS SÃO AS PALAVRAS DELA, da fala de 27/08/2026: *"no lado direito
 #: teríamos Função do teclado, Executar Comando, Mouse"*. A tela os usa como
@@ -201,8 +245,52 @@ def _do_teclado(botao: str) -> str | None:
     return "+".join(ligacao)
 
 
-def padrao() -> dict[str, str]:
-    """O que cada um dos 21 botões faz DE FÁBRICA, lido dos mapas do produto.
+def token_do_ps_da_maquina(ps_button_action: str | None = None) -> str:
+    """O que o degrau da MÁQUINA manda o PS fazer, no vocabulário da tela.
+
+    `None` quer dizer "ninguém informou", e aí vale o de fábrica do dono
+    (:data:`PS_DA_MAQUINA_DE_FABRICA`). Um valor que o dono não conhece cai no
+    mesmo lugar em vez de virar `KeyError`: a tela mostrando o de fábrica é
+    melhor que a aba inteira não gerando.
+    """
+    escolha = str(ps_button_action or PS_DA_MAQUINA_DE_FABRICA)
+    return ACAO_DA_MAQUINA_PARA_TOKEN.get(
+        escolha, ACAO_DA_MAQUINA_PARA_TOKEN[PS_DA_MAQUINA_DE_FABRICA])
+
+
+def acao_do_ps(escolhas: dict[str, str] | None) -> str | None:
+    """O token que o PERFIL deu ao botão PS — `None` quando ele não disse nada.
+
+    A QUARTA SAÍDA, e ela é porta PRÓPRIA e não uma quarta posição na tupla do
+    :func:`resolver`. A razão é medida: três chamadores desempacotam três
+    sacolas (`profiles/manager.py` e duas vezes
+    `interface/pacotes/a06_navegacao.py`), e devolver quatro valores viraria
+    `ValueError: too many values to unpack` na aba que ela abre — o produto
+    quebrado hoje para servir a frente da tela que roda depois. Uma porta nova
+    não quebra ninguém e diz a mesma coisa.
+
+    E O DESTINO É OUTRO, que é o que justifica a porta: as três sacolas do
+    `resolver()` vão para DEVICES (`UinputMouseDevice`, `UinputKeyboardDevice`);
+    o PS não tem device — quem o atende é o callback do `ps_solo`, e o PS nunca
+    chega à emulação (`integrations/hotkey_daemon.py`, o latch do combo, subtrai
+    o PS de `emu_buttons` enquanto ele estiver pressionado).
+
+    `None` NÃO é `__NADA__`: `None` é "o perfil não opinou, vale o degrau da
+    máquina"; `__NADA__` é ela dizendo que este botão não faz nada.
+    """
+    if not escolhas:
+        return None
+    token = escolhas.get(BOTAO_PS)
+    return str(token) if token else None
+
+
+def padrao(ps_button_action: str | None = None) -> dict[str, str]:
+    """O que cada um dos 22 botões faz DE FÁBRICA, lido dos mapas do produto.
+
+    `ps_button_action` É O DEGRAU DA MÁQUINA, e ele é parâmetro porque o PS é o
+    único botão cujo de fábrica NÃO sai dos quatro mapas: ele sai de
+    `DaemonConfig.ps_button_action`. Quem tem a config passa; quem não tem
+    recebe o de fábrica do dono (:data:`PS_DA_MAQUINA_DE_FABRICA`).
 
     A ORDEM DE PRECEDÊNCIA É A DO PRODUTO, e não uma escolha deste módulo: o
     `UinputMouseDevice` só age quando a emulação de mouse está ligada, e é ele
@@ -238,6 +326,12 @@ def padrao() -> dict[str, str]:
     # rola. Está em `dispatch()` — `_emit_move(lx, ly)` e `_emit_scroll(rx, ry)`.
     fora[EIXO_ESQUERDO] = TOKEN_CURSOR
     fora[EIXO_DIREITO] = TOKEN_ROLAGEM
+    # O PS NÃO ESTÁ EM NENHUM DOS QUATRO MAPAS — medido: nem `BUTTON_TO_UINPUT`,
+    # nem `DPAD_TO_KEY`, nem `EDGE_KEY_MAP`, nem `DEFAULT_BUTTON_BINDINGS`. O
+    # laço acima o deixaria em `__NADA__`, e a tela diria que o botão que abre a
+    # Steam há meses não faz nada. O de fábrica dele é o que ele FAZ, e quem
+    # responde é o dono.
+    fora[BOTAO_PS] = token_do_ps_da_maquina(ps_button_action)
     return fora
 
 
@@ -252,6 +346,9 @@ def resolver(
         do_teclado  botão -> tupla de `KEY_*`/`__OSK__`, para o teclado virtual
         sem_dono    os botões cuja escolha ninguém atende HOJE
 
+    O PS NÃO ESTÁ EM NENHUMA DAS TRÊS, e tem porta própria: :func:`acao_do_ps`.
+    O atendente dele não é device — é o callback do `ps_solo`.
+
     `escolhas=None` devolve o de fábrica — é o mesmo contrato de
     `Profile.key_bindings`, e vale a mesma frase do esquema: `None` HERDA, `{}`
     seria "nada em botão nenhum", que é outra coisa.
@@ -261,7 +358,7 @@ def resolver(
     `_emit_buttons` procurar um `BTN___CURSOR__` que não existe.
 
     E OS DOIS GATILHOS TAMBÉM, pelo motivo escrito no corpo: eles são espelho do
-    `cross` e do `triangle`, não linha própria. É a única das vinte e uma linhas
+    `cross` e do `triangle`, não linha própria. É a única das vinte e duas linhas
     que a tela oferece e o produto só pode atender POR TABELA — e dizer isso na
     terceira sacola é melhor que guardar a escolha e não acender nada.
     """
@@ -287,6 +384,17 @@ def resolver(
         if tabela.get(gatilho) != tabela.get(espelho):
             sem_dono.append(gatilho)
         tabela.pop(gatilho, None)
+
+    # O PS SAI DAS TRÊS SACOLAS, e não por falta de dono — por ter um dono que
+    # não é device (ONDA5-06-01). Sem esta linha o de fábrica dele (`__STEAM__`,
+    # que está em `SEM_ATENDENTE`) o jogaria na TERCEIRA sacola, e a tira da aba
+    # escreveria na tela dela que o botão que abre a Steam "não acende nada
+    # hoje" — enquanto `profiles/manager.py` registraria o mesmo no journal como
+    # `button_actions_sem_atendente`.
+    #
+    # `SEM_ATENDENTE` CONTINUA VALENDO PARA OS OUTROS VINTE E UM. Para eles nada
+    # mudou, e mudar seria a segunda cura escondida dentro da primeira.
+    tabela.pop(BOTAO_PS, None)
 
     for botao, token in tabela.items():
         if botao in (EIXO_ESQUERDO, EIXO_DIREITO):
@@ -318,7 +426,9 @@ def rotulo(token: str) -> str:
 
 
 __all__ = [
+    "ACAO_DA_MAQUINA_PARA_TOKEN",
     "ACOES",
+    "BOTAO_PS",
     "BOTOES",
     "EIXO_DIREITO",
     "EIXO_ESQUERDO",
@@ -327,6 +437,7 @@ __all__ = [
     "GRUPO_NENHUM",
     "GRUPO_TECLADO",
     "ORDEM_DOS_GRUPOS",
+    "PS_DA_MAQUINA_DE_FABRICA",
     "SEM_ATENDENTE",
     "TOKEN_CURSOR",
     "TOKEN_NADA",
@@ -334,9 +445,11 @@ __all__ = [
     "TOKEN_ROLAGEM",
     "TOKEN_SAIR_DO_JOGO",
     "TOKEN_STEAM",
+    "acao_do_ps",  # (noqa-acento) nome de função
     "padrao",  # (noqa-acento) nome de função
     "por_grupo",
     "resolver",
     "rotulo",
+    "token_do_ps_da_maquina",
     "token_do_rotulo",
 ]
