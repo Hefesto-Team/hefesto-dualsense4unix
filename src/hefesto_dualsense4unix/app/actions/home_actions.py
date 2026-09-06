@@ -586,6 +586,75 @@ def wrapper_banner_text(state: dict[str, Any] | None) -> str | None:
     return None
 
 
+def appid_do_jogo_em_foco(state: dict[str, Any] | None) -> str:
+    """O appid da Steam do jogo que está na frente, ou "" — função pura.
+
+    A mesma derivação que a aba Lançadores faz (`a07_lancadores._appid_em_foco`)
+    e que o diálogo da janela estável usa (`launch_wrapper_dialog.py:81`): a
+    classe da janela vira appid por `steam_appid_from_wm_class`.
+    """
+    if not isinstance(state, dict):
+        return ""
+    from hefesto_dualsense4unix.app.actions import launch_wrapper_dialog as _lwd
+
+    classe = state.get("window_detect_current_class") or state.get(
+        "window_detect_last_class"
+    )
+    return _lwd.extract_steam_appid(classe) or ""
+
+
+def ela_ja_respondeu_sobre(appid: str) -> bool:
+    """Ela já disse "eu sei, deixa assim" sobre este jogo? — as DUAS recusas.
+
+    São duas listas e as duas contam, porque as duas são ela dizendo a mesma
+    coisa: `launch_dialog_dismissed.json` ("Não perguntar para este jogo") e
+    `jogos_sem_wrapper.txt` ("Tirar daqui").
+
+    Best-effort de propósito: qualquer falha de disco devolve ``False`` — na
+    dúvida, o aviso aparece. Esconder um aviso por causa de um erro de leitura
+    é pior que mostrá-lo duas vezes.
+    """
+    if not appid:
+        return False
+    from hefesto_dualsense4unix.app.actions import launch_wrapper_dialog as _lwd
+    from hefesto_dualsense4unix.integrations import steam_launch_options as _slo
+
+    alvo = str(appid)
+    with contextlib.suppress(Exception):
+        if alvo in {str(a) for a in _lwd.load_dismissed_appids()}:
+            return True
+    with contextlib.suppress(Exception):
+        if alvo in {str(a) for a in _slo.ler_jogos_sem_wrapper()}:
+            return True
+    return False
+
+
+def aviso_do_wrapper(state: dict[str, Any] | None) -> str | None:
+    """O banner "jogo sem wrapper", CALADO quando ela já respondeu. **UM dono.**
+
+    Nasceu em 05/09/2026, e a razão é um defeito medido: ela dispensava o aviso
+    na aba Lançadores e **três outras telas continuavam acusando** — a Início, a
+    Status e a coluna Atenção da aba Jogar
+    (`app/actions/jogar/painel.py:649`), porque as três chamavam
+    `wrapper_banner_text` direto, sem consultar lista nenhuma.
+
+    A decisão dela, 05/09/2026 (pergunta `07-Q3`): *"as duas recusas calam
+    tudo"*. E a `a07_lancadores.calados` já dizia, por escrito, que a conta
+    precisava de um dono para a outra metade não a redigitar.
+
+    `wrapper_banner_text` continua puro e continua existindo: ele responde
+    *"há jogo sem wrapper agora?"*. Esta função responde a pergunta que as telas
+    de fato fazem — *"há algo a dizer a ela sobre isso?"* — e é ela que as
+    telas chamam.
+    """
+    texto = wrapper_banner_text(state)
+    if texto is None:
+        return None
+    if ela_ja_respondeu_sobre(appid_do_jogo_em_foco(state)):
+        return None
+    return texto
+
+
 def texto_do_radio_fragil(state: dict[str, Any] | None) -> str | None:
     """O aviso de rádio frágil no Modo Nativo, ou ``None``. **UM dono.**
 
@@ -2685,7 +2754,7 @@ class HomeActionsMixin(WidgetAccessMixin):
 
             # GUI-05 item 3: banner "jogo sem wrapper" — só o False LITERAL de
             # `gamepad_emulation.wrapper_used` acende (função pura decide).
-            aviso_wrapper = wrapper_banner_text(state)
+            aviso_wrapper = aviso_do_wrapper(state)  # cala o que ela já dispensou
             if aviso_wrapper:
                 self._home_wrapper_banner.set_text(aviso_wrapper)
             self._home_wrapper_banner.set_visible(bool(aviso_wrapper))
@@ -3294,9 +3363,12 @@ __all__ = [
     "VPAD_DEGRADED_TEXT",
     "WRAPPER_MISSING_TEXT",
     "HomeActionsMixin",
+    "appid_do_jogo_em_foco",
+    "aviso_do_wrapper",
     "controles_bt_frageis",
     "controles_na_mesa",
     "desfecho_da_troca",
+    "ela_ja_respondeu_sobre",
     "externos_na_mesa",
     "id_da_pagina",
     "id_da_pagina_corrente",

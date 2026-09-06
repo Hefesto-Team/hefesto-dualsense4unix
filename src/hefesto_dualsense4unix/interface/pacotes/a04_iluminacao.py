@@ -2439,10 +2439,36 @@ def brilho(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
     if novo is not None:
         loader.save_profile(novo, origem="interface-nova")
 
-    if recado is not None or not pedida:
-        porque = recado or "o produto não sabe de que cor ela está"
-        return {"recado": f"Guardei {pct}%. A barra não mudou agora: {porque}."}
-    _escrever_a_cor(ctx, p, uniq, tuple(pedida)[:3], brilho=_fracao_do_disco(pct))
+    # O BRILHO APLICA, NÃO JUSTIFICA A FALHA — 05/09/2026, decisão dela:
+    #
+    #     "O Hefesto não pode ter essa falha. Isso tem que APLICAR, não
+    #      justificar a falha"  (pergunta 04-Q4)
+    #
+    # Até hoje esta linha era `if recado is not None or not pedida: return
+    # {"recado": …}`: com o motor sem afirmar a cor — Modo Nativo, a Steam com o
+    # `fd`, ou cor desconhecida, que é o estado de PARTIDA de toda sessão antes
+    # de o produto escrever a primeira cor — o trilho gravava o percentual no
+    # disco e devolvia a desculpa. O trilho virava o botão que aceita o toque e
+    # não age, que é a família de defeito que este gesto nasceu para curar.
+    #
+    # E a resposta já estava escrita NESTE arquivo, no vizinho `_a_cor_de_agora`
+    # (logo abaixo), que trata o MESMO "não sei a cor" e responde o contrário,
+    # com a razão por extenso: *"A QUEDA É A COR DO SLOT, e ela é a resposta
+    # CERTA e não um remendo: nos quatro estados em que o motor não afirma cor
+    # o que o automático estava dando àquele controle era exatamente
+    # `player_slot_color(numero)`"*. Duas funções do mesmo arquivo, o mesmo
+    # fato, duas respostas — e a errada era a que ela via.
+    #
+    # A janela estável nunca teve este buraco: `lightbar_actions.py:830` escreve
+    # SEMPRE, com a cor do perfil (`_current_rgb`, semeado de
+    # `draft.effective_leds_for`). Aqui a escada é a mesma, um degrau mais
+    # funda: cor pedida -> cor do perfil -> cor do slot do jogador.
+    alvo = tuple(pedida)[:3] if pedida else _a_cor_de_agora(ctx, perfil.ativo(nome), dele)
+    _escrever_a_cor(ctx, p, uniq, alvo, brilho=_fracao_do_disco(pct))
+    if recado is not None:
+        # A ressalva NÃO some: ela diz que o motor não afirma a cor, e isso
+        # continua verdade. O que mudou é que a barra acendeu.
+        return {"recado": f"Brilho em {pct}%. {recado}."}
     return None
 
 

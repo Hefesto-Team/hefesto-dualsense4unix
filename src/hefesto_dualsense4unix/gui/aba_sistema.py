@@ -571,11 +571,34 @@ def exame(achados: list[tuple[str, str]] | None) -> dict[str, Any]:
 # ---------------------------------------------------------------------------
 # As travas
 # ---------------------------------------------------------------------------
-#: Os estados em que o serviço está DE PÉ. É a mesma matriz de
-#: ``daemon_actions._ESTADOS_COM_DAEMON_DE_PE``, e a razão de ela existir aqui é
-#: que o botão cinza precisa dela ANTES de haver widget: a tela nova não tem
+def _de_pe_do_dono() -> tuple[str, ...]:
+    """Os estados em que o serviço está DE PÉ — LIDOS do dono, não digitados.
+
+    Até 05/09/2026 esta lista era digitada aqui como
+    ``("online_systemd", "online_avulso")`` e o comentário AFIRMAVA ser "a mesma
+    matriz de ``daemon_actions._ESTADOS_COM_DAEMON_DE_PE``". Não era: faltava
+    ``iniciando``, e o dono guarda a razão de ele estar lá — *"a unidade já está
+    `active` e um 'Ligar' ali é o clique que não faz nada"*.
+
+    O que a falta produzia na tela dela, medido: com a unit subindo, a linha
+    dizia **"Ligando…"** enquanto o botão trocava para **"Ativar o serviço"**, a
+    dica do Reiniciar dizia *"O serviço está desligado — não há o que
+    reiniciar"*, e o clique caía em ``ativar_o_servico``, que via
+    ``_is_service_active() == "active"`` e levantava *"o systemd nem chegou a
+    ser chamado"* — três frases falsas sobre o mesmo instante.
+
+    Ler resolve a classe inteira: um quarto estado que o dono venha a
+    considerar de pé chega aqui sozinho.
+    """
+    from hefesto_dualsense4unix.app.actions.daemon_actions import DaemonActionsMixin
+
+    return tuple(sorted(DaemonActionsMixin._ESTADOS_COM_DAEMON_DE_PE))
+
+
+#: Os estados em que o serviço está DE PÉ. A razão de existir aqui é que o botão
+#: cinza precisa dela ANTES de haver widget: a tela nova não tem
 #: `set_sensitive`, tem `disabled` na página.
-DE_PE = ("online_systemd", "online_avulso")
+DE_PE = _de_pe_do_dono()
 
 
 def travas(leitura: Leitura) -> dict[str, str]:

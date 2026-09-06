@@ -440,32 +440,36 @@ def test_sem_perfil_ativo_recusa_dizendo_e_nao_escreve(pac):
     assert not p.chamadas, "recusou e mesmo assim escreveu no aparelho"
 
 
-def test_sem_cor_conhecida_guarda_e_diz(pac):
-    """Nos estados de ressalva do motor não há cor a reescalar — e mandar preto APAGA.
+def test_sem_cor_conhecida_o_brilho_aplica_e_a_ressalva_fica(pac):
+    """Nos estados de ressalva do motor o brilho ACENDE — a cor cai para o slot.
 
-    O NÚMERO VAI PARA O DISCO, que é o que ela pediu, e o cartão diz que a barra
-    não mudou agora. Entre a frase no cartão e o silêncio, o silêncio é a
-    mentira: sem ela, ela arrasta o trilho sob o Modo Nativo, vê o número mudar,
-    e conclui que a barra escureceu.
+    **ESTA RÉGUA FOI INVERTIDA EM 05/09/2026, e a razão é palavra dela.** Ela
+    se chamava `test_sem_cor_conhecida_guarda_e_diz` e exigia o contrário: que o
+    gesto guardasse o número no disco, NÃO escrevesse no aparelho, e devolvesse
+    *"Guardei 30%. A barra não mudou agora: …"*. A decisão dela, na pergunta
+    `04-Q4`, derrubou a premissa inteira:
 
-    **O CANAL MUDOU EM 04/09/2026, e a frase encolheu — decisão [04] dela.**
-    Este caso exigia `RuntimeError` com *"guardei o brilho em 30% no perfil
-    deste controle…"*, e as duas coisas caducaram no mesmo dia:
+        "O Hefesto não pode ter essa falha. Isso tem que APLICAR, não
+         justificar a falha"
 
-    * a frase é a CURTA (*"Guardei 30%. A barra não mudou agora: …"*) — ela
-      escolheu entre três opções, e a longa *"repete com palavras o que a tira
-      tracejada já diz com desenho"*;
-    * e ela deixou de sair pelo canal da RECUSA. O `RuntimeError` do piloto é
-      cartão laranja de 30 s, a cara de *"o produto não fez"* — e o produto FEZ:
-      o brilho está no disco, que é a promessa inteira do gesto. Com o canal de
-      SUCESSO da D-01 entregue pela ONDA0-P, um `{"recado": …}` pousa no MESMO
-      cartão, em verde e por 6 s.
+    Ela recusou as TRÊS opções que eu ofereci — todas eram redações da desculpa
+    — e a resposta dela é a regra dela de 01/09: *"clicar na cor já deveria
+    aplicar a cor no controle"*.
 
-    **O QUE ESTE CASO MEDE NÃO MUDOU**, e é o que importa: o disco recebeu, o
-    aparelho não recebeu, e a tela DIZ. Só o canal e o tamanho da frase mudaram.
+    O QUE A MEDIÇÃO ACHOU, e é o que torna a inversão barata: a resposta já
+    estava escrita no mesmo arquivo. `_a_cor_de_agora` trata o MESMO "o motor
+    não afirma a cor" e responde o contrário, com a razão por extenso — *"A
+    QUEDA É A COR DO SLOT, e ela é a resposta CERTA e não um remendo"*. E a
+    janela estável nunca teve o buraco: `lightbar_actions.py:830` escreve
+    SEMPRE, com a cor do perfil.
 
-    A MORDIDA: mande a cor mesmo assim e a barra dela APAGA por um gesto de
-    brilho; devolva `None` no lugar do recado e o teste reprova por não avisar.
+    O QUE NÃO MUDOU: a ressalva continua saindo. Ela diz que o motor não afirma
+    a cor, e isso continua sendo verdade — o que mudou é que a barra acendeu.
+    Por isso o recado agora começa em *"Brilho em 30%"* e não em *"Guardei"*.
+
+    A MORDIDA: faça o gesto voltar a recusar e este teste reprova por não
+    acender; apague a ressalva e ele reprova por calar sobre o que o motor não
+    sabe.
     """
     arquivo = _semear("regua")
     p = PonteDeMentira()
@@ -473,11 +477,15 @@ def test_sem_cor_conhecida_guarda_e_diz(pac):
     saiu = fn(_ctx(pac, state={"native_mode": True}),
               {"uniq": UNIQ, "valor": "30", "evento": "change"}, p)
 
-    assert isinstance(saiu, dict) and "Guardei 30%" in saiu.get("recado", ""), (
-        f"o gesto não avisou que guardou sem acender: {saiu!r}")
-    assert not p.chamadas, "escreveu no aparelho sem cor a reacender"
+    assert p.chamadas, (
+        "o brilho não chegou ao aparelho. Se o gesto voltou a recusar quando o "
+        "motor não afirma a cor, ele voltou a ser o botão que aceita o toque e "
+        "não age — ver o cabeçalho desta régua."
+    )
+    assert isinstance(saiu, dict) and "Brilho em 30%" in saiu.get("recado", ""), (
+        f"acendeu e não disse por que a cor é a do slot: {saiu!r}")
     assert _do_disco(arquivo)["controllers"][CHAVE]["leds"][
-        "lightbar_brightness"] == pytest.approx(0.3), "avisou e NÃO guardou"
+        "lightbar_brightness"] == pytest.approx(0.3), "acendeu e NÃO guardou"
 
 
 def test_controle_fora_da_mesa_recusa_dizendo(pac):

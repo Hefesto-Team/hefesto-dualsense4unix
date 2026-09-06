@@ -174,12 +174,38 @@ def gravar_e_reaplicar(prof: Any, ctx: Any, p: Any, *, era: str = "") -> None:
     O CABEÇALHO DESTE MÓDULO DIZIA *"nada aqui escreve"*. Deixou de valer hoje,
     e a linha foi corrigida em vez de contornada: o que continua verdadeiro é
     que **quem lê** não escreve — as funções de leitura acima seguem puras.
+
+    QUEM ESTÁ VALENDO SE PERGUNTA AO DONO — corrigido em 05/09/2026
+    ---------------------------------------------------------------
+    Até hoje esta função lia ``ctx.state["active_profile"]`` **cru**. O dono da
+    pergunta é `app/actions/profiles_actions.perfil_que_esta_valendo:574`, e a
+    docstring dele diz por que o campo cru não serve::
+
+        "Sobrevive ao daemon responder ``active_profile: null``, que é o estado
+         da máquina dela hoje"
+
+    Com ``null``, ``ativo_agora`` ficava vazio, o ``if`` era falso e o
+    ``profile.switch`` **nunca saía**. O `.json` mudava no disco e o controle
+    continuava com o perfil anterior — enquanto a MESMA aba realçava a linha do
+    perfil, porque o realce (`a10_perfis._valendo:1043`) já usava o dono certo.
+
+    É o sintoma que ela leu como *"não está salvando"*, e a segunda linha desta
+    docstring já o anunciava: *"Gravar sem reaplicar deixa a tela dizendo uma
+    coisa e o aparelho fazendo outra"*.
+
+    O dono resolve em duas pernas — o daemon primeiro, o disco declarado depois
+    (`session.json` + `active_profile.txt`, pelo mesmo caminho que o daemon usa
+    no boot). Perguntar a ele é o que faz o realce e o reaplicar responderem
+    sobre o MESMO perfil.
     """
     loader = _com_o_src()
+    from hefesto_dualsense4unix.app.actions.profiles_actions import (
+        perfil_que_esta_valendo,
+    )
     from hefesto_dualsense4unix.profiles.slug import mesmo_slug
 
     loader.save_profile(prof, origem="interface-nova")
-    ativo_agora = str((getattr(ctx, "state", None) or {}).get("active_profile") or "")
+    ativo_agora = perfil_que_esta_valendo(getattr(ctx, "state", None)).nome or ""
     if ativo_agora and mesmo_slug(ativo_agora, era or prof.name):
         p.profile_switch(prof.name)
     # A ANTECIPAÇÃO DE LANÇAMENTO relê o que os jogos vão receber. Sem ela, o

@@ -49,10 +49,10 @@ from hefesto_dualsense4unix.app.actions.external_controllers import (
     transport_label,
 )
 from hefesto_dualsense4unix.app.actions.home_actions import (
+    aviso_do_wrapper,
     id_da_pagina,
     id_da_pagina_corrente,
     vpad_degradation_text,
-    wrapper_banner_text,
 )
 from hefesto_dualsense4unix.app.actions.rumble_actions import (
     BTN_GIVE_BACK_TO_GAME,
@@ -3073,7 +3073,8 @@ class StatusActionsMixin(WidgetAccessMixin):
         banner = self._get("status_wrapper_banner")
         if banner is None:
             return
-        aviso = wrapper_banner_text(state)
+        # `aviso_do_wrapper` cala o jogo que ela já dispensou — 05/09/2026.
+        aviso = aviso_do_wrapper(state)
         if aviso:
             banner.set_text(aviso)
         banner.set_visible(bool(aviso))
