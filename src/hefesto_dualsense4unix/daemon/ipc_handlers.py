@@ -5952,9 +5952,39 @@ class IpcHandlersMixin:
         cada card já casava certo; só este controle deslizante não casava, e o
         gesto ia para a primeira placa da lista — o microfone de outra pessoa.
 
-        Quando o alvo não se resolve (um controle só, sysfs ilegível, rádio sem
-        ponte) a rota global continua valendo, e o campo `por_uniq` da resposta
-        diz qual das duas foi usada, para a tela não precisar adivinhar.
+        **E A QUEDA PARA A ROTA GLOBAL ACABOU — ONDA5-02-01, 06/09/2026.** Aqui
+        estava escrito que *"quando o alvo não se resolve a rota global continua
+        valendo, e o campo `por_uniq` diz qual das duas foi usada, para a tela
+        não precisar adivinhar"*. **Ela adivinhava certo e o gesto continuava
+        errado.** A palavra dela, sobre este caminho:
+
+            *"Esse erro não deveria acontecer. Deveria ser só pro controle em
+            questao. Parece um bug"* — 02-Q8
+
+        Com endereço, agora não há rota global: se a fonte daquele controle não
+        se resolve, a resposta é ``sem_fonte`` e ninguém escreve em placa
+        nenhuma. **O `por_uniq` FICA na resposta** — ele deixa de poder disparar
+        contra ESTE daemon e continua sendo a última trava contra um daemon
+        INSTALADO mais velho que a janela, que é o caso que aconteceu de verdade
+        em 04/09 com o `mic.canal.set`.
+
+        A REGRA JÁ ESTAVA ESCRITA UM ARQUIVO AO LADO: `lifecycle.py`, na
+        aplicação de perfil, recusa cair para a primeira da lista desde 03/09.
+        Duas réguas sobre a mesma pergunta com dois vereditos é como esta casa
+        fabrica divergência silenciosa — e a porta que ficara aberta era
+        justamente a que ela CLICA.
+
+        **SEM A MESA ISTO SERIA REGRESSÃO**, e é por isso que os dois passos são
+        um só: a mesa de UM controle com `pactl list sources` ilegível resolvia
+        pela rota global (certa por acaso) e passaria a responder ``sem_fonte``.
+        A mesa entra por `recado_do_microfone.mesa_de_agora`, a única leitura de
+        "tem card na tela", e com ela a regra 4 do `escolher_fonte` (um-para-um)
+        responde o mesmo caso — certo por REGRA. `None` dali é "não perguntei", e
+        mantém o comportamento de antes.
+
+        Sem `uniq` (quem tem um controle só e não manda endereço) a rota global
+        continua valendo, que é o que ela sempre foi: a conveniência de uma mesa
+        de um.
         """
         if "volume" not in params:
             raise ValueError("mic.volume.set: 'volume' é obrigatório (0-100)")
@@ -5976,13 +6006,37 @@ class IpcHandlersMixin:
 
         # MIC-DA-MESA-CHEIA-01 (20/08/2026): o `uniq` deixou de ser decorativo.
         # Com dois DualSense no cabo há DUAS placas de som, e a rota global
-        # devolve a PRIMEIRA — o microfone de outra pessoa. Quando o alvo se
-        # resolve, é ele que manda; quando não se resolve, a rota global continua
-        # valendo, porque com UM controle ela está certa e é mais barata.
-        fonte = fonte_de_captura_do_uniq(uniq) if uniq else None
-        por_uniq = fonte is not None
-        if fonte is None:
+        # devolve a PRIMEIRA — o microfone de outra pessoa.
+        #
+        # ONDA5-02-01 (06/09/2026): **e quando o alvo NÃO se resolve, ninguém
+        # escreve.** O `if fonte is None: fonte = fonte_de_captura_do_controle()`
+        # que estava aqui era a queda que ela chamou de bug — o consolo de um
+        # endereço que não resolveu, entregue à primeira placa da lista.
+        #
+        # A MESA É O QUE IMPEDE QUE ISTO SEJA REGRESSÃO: sem ela, a mesa de um
+        # controle com o `pactl` ilegível perderia a resposta que a rota global
+        # dava por acaso; com ela, a regra 4 do `escolher_fonte` (um-para-um) a
+        # dá por regra. `mesa_de_agora` é a ÚNICA leitura de "tem card na tela"
+        # desta casa, e o `None` dela ("não perguntei", backend que não sabe
+        # listar) mantém o comportamento de antes desta data.
+        if uniq:
+            fonte = fonte_de_captura_do_uniq(
+                uniq, mesa=recado_do_microfone.mesa_de_agora(self.daemon))
+            if not fonte:
+                # `por_uniq: True` é a VERDADE aqui, e não um consolo: o pedido
+                # foi tratado como endereçado do começo ao fim — nada foi
+                # escrito na placa de ninguém. Devolver `False` faria a tela
+                # confessar "mexi no microfone de outra pessoa" sobre um gesto
+                # que não mexeu em microfone nenhum.
+                return {"status": "sem_fonte", "fonte": None, "volume": None,
+                        "por_uniq": True}
+            por_uniq = True
+        else:
+            # A ROTA GLOBAL, INTEIRA, para quem não manda endereço. Ela nunca
+            # foi o defeito; o defeito era ela ser o consolo de um endereço que
+            # não resolveu.
             fonte = fonte_de_captura_do_controle()
+            por_uniq = False
         if not fonte:
             return {"status": "sem_fonte", "fonte": None, "volume": None}
         ok = definir_volume_da_captura(volume, fonte=fonte)
