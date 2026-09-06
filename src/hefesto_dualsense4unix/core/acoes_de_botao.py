@@ -335,8 +335,116 @@ def padrao(ps_button_action: str | None = None) -> dict[str, str]:
     return fora
 
 
+def _dominio_do_teclado() -> frozenset[str]:
+    """Os botões cujo DE FÁBRICA sai de `DEFAULT_BUTTON_BINDINGS`.
+
+    É o domínio de `Profile.key_bindings` — o conjunto de botões sobre os quais
+    o teclado virtual é quem manda, e portanto os únicos que a camada de
+    atalhos pode trocar sem contradizer a precedência escrita na função que
+    monta o de fábrica.  # (noqa-acento) nome de função
+
+    ELE É DERIVADO, e a derivação é o ponto: perguntar ao de fábrica em vez de
+    digitar a lista é o que faz o `r3` ficar de FORA sozinho. O `r3` está nos
+    dois lados (`BUTTON_TO_UINPUT` diz `BTN_MIDDLE`, `DEFAULT_BUTTON_BINDINGS`
+    diz "fechar o teclado na tela") e o produto faz **os dois** — é a colisão
+    que `keyboard_mappings.py:56-62` registra. Digitar a lista aqui faria a
+    camada de atalhos apagar o Botão do meio dele, que é regressão em botão que
+    ela usa.
+    """
+    base = padrao()
+    return frozenset(
+        botao for botao in BOTOES
+        if (do_teclado := _do_teclado(botao)) is not None
+        and base.get(botao) == do_teclado)
+
+
+#: O domínio de `key_bindings`, montado UMA vez. Hoje ele é
+#: `{options, create, l1, r1, l3, touchpad_left_press, touchpad_middle_press,
+#: touchpad_right_press}` — oito dos vinte e dois botões.
+DOMINIO_DO_TECLADO: frozenset[str] = _dominio_do_teclado()
+
+
+def _tabela_efetiva(
+    escolhas: dict[str, str] | None,
+    key_bindings: dict[str, list[str]] | None = None,
+) -> dict[str, str]:
+    """Botão -> token que VALE, com as três camadas na ordem do produto.
+
+    São três, e a ordem é a da precedência:
+
+        1. o de fábrica        derivado dos quatro mapas do produto
+        2. `key_bindings`      o que ela escreveu na janela ANTIGA
+        3. `button_actions`    o que ela escolheu na tela NOVA
+
+    A CAMADA DO MEIO NASCEU EM 06/09/2026 (ONDA3-MOTOR-01) e ela cura uma perda
+    silenciosa de escolha dela: `apply_button_actions` roda DEPOIS do
+    `apply_keyboard` e reescreve o conjunto INTEIRO do teclado virtual com o que
+    sai daqui. Sem esta camada, um perfil com `button_actions` preenchido
+    apagava, a cada ativação, todo atalho que ela tivesse escrito à mão — sem
+    uma palavra, e com os dois campos continuando a aparecer no arquivo.
+
+    O `None` É "NÃO OPINOU" E O `{}` É "ESVAZIEI", e a diferença é a mesma do
+    esquema (`profiles/schema.py:1324-1326`) e a mesma que
+    `profiles/manager.resolve_key_bindings` aplica ao device: `None` herda
+    `DEFAULT_BUTTON_BINDINGS` inteiro — que é exatamente o que o de fábrica já
+    deriva, logo não há nada a fazer —, e um dict, mesmo vazio, é a lista
+    COMPLETA dela: botão do domínio que não está lá foi REMOVIDO, e vira
+    `— Nada —`.
+
+    ELA NÃO MESCLA COM O DE FÁBRICA, e isso é medido, não escolhido:
+    `resolve_key_bindings` (`profiles/manager.py:1878`) devolve só as chaves do
+    dict, e é ele quem alimenta o device no `apply_keyboard`. Mesclar aqui faria
+    esta tabela discordar do device que ela mesma vai reescrever um método
+    depois — que é o defeito que esta camada existe para fechar.
+    """
+    tabela = padrao()
+    if key_bindings is not None:
+        for botao in DOMINIO_DO_TECLADO:
+            ligacao = key_bindings.get(botao)
+            tabela[botao] = "+".join(ligacao) if ligacao else TOKEN_NADA
+    if escolhas:
+        tabela.update({b: a for b, a in escolhas.items() if b in tabela})
+    return tabela
+
+
+def botoes_calados(
+    escolhas: dict[str, str] | None,
+    key_bindings: dict[str, list[str]] | None = None,
+) -> frozenset[str]:
+    """Os botões que ela mandou CALAR — a quinta porta, e ela existe por medida.
+
+    `do_mouse` NÃO DISTINGUE "não é do mouse" de "foi calado", e é dessa
+    indistinção que saía o defeito medido pela frente da aba 06 em 04/09/2026:
+    `UinputMouseDevice.set_button_actions` reconstruía `_mapa_dpad` e
+    `_mapa_tap` do DE FÁBRICA menos `do_mouse`, e um botão em `— Nada —` nunca
+    entra em `do_mouse` — o `resolver()` o pula de propósito. Logo ele não era
+    subtraído, e continuava emitindo o que emitia.
+
+    Escapavam SEIS dos vinte e dois: as quatro direções do d-pad
+    (`DPAD_TO_KEY`), o Círculo e o Quadrado (`EDGE_KEY_MAP`). Os outros calavam
+    porque os dois mapas que os atendem — `_mapa_botoes` e o `set_bindings` do
+    teclado virtual — são SUBSTITUÍDOS inteiros, e o que não está na sacola
+    simplesmente não está no device.
+
+    PORTA PRÓPRIA, e não uma quarta posição na tupla do :func:`resolver`, pela
+    mesma razão medida da :func:`acao_do_ps`: três chamadores desempacotam três
+    sacolas, e devolver quatro viraria `ValueError: too many values to unpack`
+    na aba que ela abre hoje.
+
+    `__NADA__` E SÓ ELE. Um botão do d-pad posto em "Abrir a Steam" cai em
+    `SEM_ATENDENTE`, vai para a terceira sacola do `resolver()` e **continua
+    emitindo o de fábrica** — é o gêmeo deste defeito, com a mesma linha de
+    código como causa, e está RELATADO em
+    `docs/process/agentes/2026-09-06/ONDA3-MOTOR-01.md`. Curá-lo aqui de
+    carona seria a segunda cura escondida dentro da primeira.
+    """
+    tabela = _tabela_efetiva(escolhas, key_bindings)
+    return frozenset(b for b, token in tabela.items() if token == TOKEN_NADA)
+
+
 def resolver(
     escolhas: dict[str, str] | None,
+    key_bindings: dict[str, list[str]] | None = None,
 ) -> tuple[dict[str, str], dict[str, tuple[str, ...]], list[str]]:
     """As escolhas do perfil, separadas por QUEM as atende.
 
@@ -347,11 +455,23 @@ def resolver(
         sem_dono    os botões cuja escolha ninguém atende HOJE
 
     O PS NÃO ESTÁ EM NENHUMA DAS TRÊS, e tem porta própria: :func:`acao_do_ps`.
-    O atendente dele não é device — é o callback do `ps_solo`.
+    O atendente dele não é device — é o callback do `ps_solo`. E os botões
+    CALADOS também não estão em nenhuma: quem os nomeia é :func:`botoes_calados`,
+    porque o device de mouse precisa saber quais foram calados de propósito para
+    tirá-los dos mapas do d-pad e do tap.
 
     `escolhas=None` devolve o de fábrica — é o mesmo contrato de
     `Profile.key_bindings`, e vale a mesma frase do esquema: `None` HERDA, `{}`
     seria "nada em botão nenhum", que é outra coisa.
+
+    `key_bindings` É A CAMADA DO MEIO — 06/09/2026, ONDA3-MOTOR-01. Ela existe
+    porque o `apply_button_actions` reescreve o conjunto INTEIRO do teclado
+    virtual com o que sai daqui, DEPOIS de o `apply_keyboard` ter escrito o que
+    ela digitou na janela antiga: sem herdar, todo atalho dela morria na
+    ativação seguinte de qualquer perfil que tivesse `button_actions`. As regras
+    e a razão de o `r3` ficar fora estão em :func:`_tabela_efetiva` e em
+    :data:`DOMINIO_DO_TECLADO`. Omitir o parâmetro é o contrato de antes, byte
+    a byte — os três chamadores que não o passam não mudam de resposta.
 
     OS EIXOS FICAM DE FORA das duas primeiras sacolas: mover o cursor e rolar
     não são evento de botão, e empurrá-los para o device como se fossem faria o
@@ -362,9 +482,7 @@ def resolver(
     que a tela oferece e o produto só pode atender POR TABELA — e dizer isso na
     terceira sacola é melhor que guardar a escolha e não acender nada.
     """
-    tabela = padrao()
-    if escolhas:
-        tabela.update({b: a for b, a in escolhas.items() if b in tabela})
+    tabela = _tabela_efetiva(escolhas, key_bindings)
 
     do_mouse: dict[str, str] = {}
     do_teclado: dict[str, tuple[str, ...]] = {}
@@ -372,7 +490,7 @@ def resolver(
 
     # OS DOIS GATILHOS SÃO ESPELHO, e não linha própria — descoberto pela régua
     # em 01/09/2026, no dia em que este módulo nasceu. `_resolve_emulated_set`
-    # (`uinput_mouse.py:355`) troca L2 por `cross` e R2 por `triangle` ANTES de
+    # (`uinput_mouse.py:377`) troca L2 por `cross` e R2 por `triangle` ANTES de
     # qualquer mapa ser consultado: quando o dedo aperta o L2, o que chega ao
     # `_emit_buttons` já se chama `cross`.
     #
@@ -430,6 +548,7 @@ __all__ = [
     "ACOES",
     "BOTAO_PS",
     "BOTOES",
+    "DOMINIO_DO_TECLADO",
     "EIXO_DIREITO",
     "EIXO_ESQUERDO",
     "GRUPO_COMANDO",
@@ -446,6 +565,7 @@ __all__ = [
     "TOKEN_SAIR_DO_JOGO",
     "TOKEN_STEAM",
     "acao_do_ps",  # (noqa-acento) nome de função
+    "botoes_calados",  # (noqa-acento) nome de função
     "padrao",  # (noqa-acento) nome de função
     "por_grupo",
     "resolver",

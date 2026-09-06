@@ -647,6 +647,22 @@ class ProfileManager:
         `ps_solo`), e um perfil que NÃO opina sobre o PS precisa apagar o que o
         perfil anterior opinou — senão a escolha do perfil de ontem continua
         digitando no perfil de hoje.
+
+        ELE HERDA `key_bindings`, E ESSA É A CURA DE UMA PERDA SILENCIOSA —
+        06/09/2026, ONDA3-MOTOR-01. Este método roda DEPOIS do `apply_keyboard`
+        e reescreve o conjunto INTEIRO do teclado virtual com o que o
+        `resolver()` deriva. Enquanto o `resolver()` não consultava
+        `profile.key_bindings`, todo atalho que ela escreveu na janela antiga
+        morria na ativação seguinte de qualquer perfil que tivesse
+        `button_actions` — sem uma palavra, e com os dois campos continuando a
+        aparecer no arquivo dela. Passar o campo é o elo; as três camadas e a
+        precedência estão em `core/acoes_de_botao._tabela_efetiva`.
+
+        E ELE DIZ AO DEVICE O QUE FOI CALADO, pela mesma data e pelo mesmo
+        motivo: `do_mouse` não distingue "não é do mouse" de "foi calado", e o
+        `set_button_actions` reconstruía o d-pad e o tap do de fábrica — seis
+        botões em `— Nada —` voltavam a emitir. Quem monta a sacola é
+        `core/acoes_de_botao.botoes_calados`.
         """
         self._empurrar_o_ps(profile)
         if profile.button_actions is None:
@@ -654,9 +670,14 @@ class ProfileManager:
                 relatorio["button_actions"] = "de_fabrica"
             return
 
-        from hefesto_dualsense4unix.core.acoes_de_botao import resolver
+        from hefesto_dualsense4unix.core.acoes_de_botao import (
+            botoes_calados,
+            resolver,
+        )
 
-        do_mouse, do_teclado, sem_dono = resolver(profile.button_actions)
+        do_mouse, do_teclado, sem_dono = resolver(
+            profile.button_actions, profile.key_bindings)
+        calados = botoes_calados(profile.button_actions, profile.key_bindings)
         if sem_dono:
             # A TELA OFERECE O QUE O PRODUTO AINDA NÃO ATENDE — "Abrir a Steam",
             # "Sair do modo jogo", "Escolher um programa…" e os dois papéis de
@@ -675,7 +696,8 @@ class ProfileManager:
                 relatorio["button_actions"] = "ignorado_sem_device"
             return
         try:
-            device.set_button_actions(do_mouse)  # type: ignore[attr-defined]
+            device.set_button_actions(  # type: ignore[attr-defined]
+                do_mouse, calados)
             teclado_provider = self.keyboard_device_provider
             teclado = (teclado_provider() if teclado_provider is not None
                        else self.keyboard_device)
