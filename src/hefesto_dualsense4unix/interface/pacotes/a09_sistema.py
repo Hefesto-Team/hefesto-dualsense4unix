@@ -224,6 +224,27 @@ REGISTRO = "registro-texto"
 CAMPO_DA_FITA = "fita-chips"
 CAMPO_DO_CHIP = "fita-chip"
 
+#: O ENDEREÇO DO BOTÃO QUE SÓ EXISTE NO MODO IMPROVISADO — 06/09/2026, a L315.
+#:
+#: ELE VAI EM TODO TIQUE, INCLUSIVE VAZIO, e é a mesma lei de
+#: :func:`razoes_do_cinza` e da linha de ressalva (D-02): emitir só quando há
+#: motivo deixaria o botão na tela para sempre depois do primeiro modo
+#: improvisado — o serviço volta ao systemd e o desenho continuaria oferecendo
+#: um conserto que já aconteceu. **O vazio é uma RESPOSTA**, não a ausência de
+#: uma.
+#:
+#: O ALVO É `classe`, e o gerador o casa com `so-avulso`: a página nasce com
+#: `.so-avulso:not(.mostra){display:none}` — zero pixel na cena que ela
+#: aprovou —, e o piloto acende `mostra` quando este campo traz texto. É o
+#: mesmo mecanismo da coluna Atenção da `01-jogar`
+#: (`.aviso-item:not(.mostra)`), e não um segundo.
+CAMPO_DO_MODO_AVULSO = "corrigir-modo-quando"
+
+#: O QUE ESTE CAMPO DIZ QUANDO HÁ MODO A CORRIGIR. Não é texto de tela — o
+#: `ligado()` do piloto só olha se o valor é "aceso"; a palavra existe para
+#: quem lê o pacote num relato entender o que ela responde.
+MODO_A_CORRIGIR = "sim"
+
 #: O TÍTULO DO CHIP SEM COR LIDA. Ele não nomeia tom nenhum — é a regra dela:
 #: *campo sem informação não mostra nada*.
 #:
@@ -361,7 +382,7 @@ def _achados(state: dict[str, Any] | None,
     no singular ou no plural.
 
     OS DOIS QUE FALTAVAM — 03/09/2026, e por isso o exame desta tela era 6/8 do
-    exame da GTK. `_refresh_storm_diag` (`daemon_actions.py:1136` e `:1145`)
+    exame da GTK. `_refresh_storm_diag` (`daemon_actions.py:1175` e `:1185`)
     acrescenta ao `storm_report` mais dois achados, e os dois só FALAM QUANDO HÁ
     PROBLEMA (devolvem `None` quando está tudo bem — decisão dela de 22/08/2026
     para o vigia do Steam Input):
@@ -1291,8 +1312,17 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
         # É o mesmo argumento do `blocos:` acima, escrito uma linha antes, e a
         # lição é a de sempre: **o caminho de erro é um caminho, e ele tem de
         # dizer o mesmo que o de sucesso.**
+        # E O BOTÃO DO MODO IMPROVISADO SAI DAQUI TAMBÉM, pelo mesmo argumento
+        # dos dois de cima: este ramo corre quando a camada do produto levanta,
+        # e nele o estado do serviço é justamente o que ninguém sabe. Emitir o
+        # vazio é dizer "não há modo a corrigir que eu tenha visto" — deixar de
+        # emitir deixaria o botão ACESO da volta anterior, oferecendo um
+        # conserto sobre um estado que ninguém leu.
         return {"sem_dono": {"tela": {"sem_dono": True, "oque": str(erro)}},
                 "blocos": blocos_dos_botoes(_de_pe(ctx)),
+                CAMPO_DO_MODO_AVULSO: (
+                    MODO_A_CORRIGIR
+                    if _status_do_daemon(ctx.state) == "online_avulso" else ""),
                 **razoes_do_cinza(ctx),
                 "cobertura": {"pintados": 0, "sem_dono": 1}}
 
@@ -1385,6 +1415,11 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
     # DEPOIS DA COBERTURA, e não antes: `pintados` conta ENDEREÇO de valor, e
     # `blocos` é chave de contrato — somá-la inflaria em um o instrumento com
     # que esta casa prova que um endereço existe.
+    # O BOTÃO DO MODO IMPROVISADO, em TODO tique — ver `CAMPO_DO_MODO_AVULSO`.
+    # `estado` é o da matriz de três fontes, já lido pela faixa lenta acima:
+    # não há segunda pergunta ao systemd por causa desta linha.
+    fora[CAMPO_DO_MODO_AVULSO] = (
+        MODO_A_CORRIGIR if estado == "online_avulso" else "")
     fora["blocos"] = blocos_dos_botoes(estado in _tela.DE_PE)
     return fora
 
@@ -1570,6 +1605,13 @@ ESPERA_A_PUBLICACAO: dict[str, str] = {
     "bateria-frase-pendentes": "a linha 'Ainda sem teto', viva na bancada desde "
                                "06/09/2026, derivada do mesmo dono.",
     "bateria-frase-pendentes-g": "o glifo da linha acima, pelo mesmo motivo.",
+    CAMPO_DO_MODO_AVULSO: "o botão 'Corrigir modo de execução', que nasce "
+                          "ESCONDIDO na bancada e só acende quando o serviço "
+                          "está de pé por fora do systemd (a L315). Até ela "
+                          "publicar, o campo cai no vazio na página do produto "
+                          "e NADA regride: quem cai no modo improvisado "
+                          "continua vendo o aviso que a aba já dá desde 03/09, "
+                          "só não ganha ainda o botão que o conserta.",
 }
 
 
@@ -2060,8 +2102,14 @@ DESLIGAR = "desligar"
 #: até 03/09/2026, e que agora tem quem lhe dê o consentimento. Dois deles
 #: ganharam motor neste commit; os três que sobram estão em :data:`SEM_MOTOR`,
 #: e o que os segura NÃO é mais a falta de confirmação.
+#:
+#: E VIRARAM SEIS EM 06/09/2026, com o "Aplicar aos jogos da Steam"
+#: (`D-0609-STEAM-DIVIDIDO` põe este botão nesta aba). Ele reescreve a linha de
+#: lançamento de TODOS os jogos dela e FECHA a Steam por uns 20 segundos — é o
+#: mesmo consentimento que a `07-lancadores` já pede pelo mesmo motor, e a
+#: janela do consentimento sai do mesmo dono (:func:`segundos_para_confirmar`).
 DESTRUTIVOS = ("desligar", "restaurar-de-fabrica", "refazer-consertos",
-               "refazer-proton", "procurar-camadas")
+               "refazer-proton", "procurar-camadas", "aplicar-aos-jogos")
 
 #: O QUE AINDA SEGURA **UM** DOS CINCO — e eram três até 06/09/2026.
 #:
@@ -2094,40 +2142,20 @@ DESTRUTIVOS = ("desligar", "restaurar-de-fabrica", "refazer-consertos",
 #: `ver-detalhes`, `refazer-proton`). O primeiro clique escreve o censo lá e o
 #: segundo age — três tempos, zero pixel novo, nenhuma decisão de desenho dela.
 SEM_MOTOR: dict[str, str] = {
-    # FATO CORRIGIDO EM 04/09/2026, e a correção MUDA a natureza da dívida.
+    # VAZIA DESDE 06/09/2026, e o número foi 5 -> 3 -> 1 -> 0 em quatro dias.
     #
-    # Esta linha dizia que o ato *"mora em `footer_actions.on_restore_default`,
-    # que lê `self._get('main_window')`"* — e isso descreve o HANDLER, não o
-    # ato. Medido lendo o fonte: o miolo dele são TRÊS passos que já têm dono
-    # fora da janela, e são os mesmos três que `pacotes/perfil.gravar_e_reaplicar`
-    # usa: o localizador do preset `meu_perfil.json` do
-    # `footer_actions` (função de MÓDULO, sem `self`),
-    # `Profile.model_validate` do JSON, e `loader.save_profile` +
-    # `p.profile_switch` + `p.chamar("launch_env.refresh")`. O que é da janela é
-    # o diálogo (que a D-03 já substituiu por dois cliques) e o refresh das abas
-    # velhas (que esta interface não tem).
+    # O ÚLTIMO A CAIR foi o `restaurar-de-fabrica`, e a razão escrita aqui já
+    # não era o motor: era a REDE DE SEGURANÇA — *"um gesto que chame
+    # `save_profile` restaura o `meu_perfil` DELA quando a régua de clique o
+    # acionar"*. Com a `ONDA3-GESTO-DECLARA-01` a rede passou a morar no
+    # decorador, e quem escreve o gesto fecha o próprio contrato no mesmo
+    # commit: :func:`restaurar_de_fabrica` declara
+    # `grava="gravar_e_reaplicar"`, `pacotes.perigosos()` o recebe derivado, e
+    # a prova botão a botão nunca o clica.
     #
-    # **O QUE SEGURA O BOTÃO NÃO É MAIS O MOTOR: é a rede de segurança.** Um
-    # gesto que chame `save_profile` restaura o `meu_perfil` DELA quando a prova
-    # botão a botão o aciona — e a prova aciona todo `data-gesto`.
-    #
-    # A REDE DEIXOU DE SER DE OUTRA POSSE — 06/09/2026. Até esta data a linha
-    # `("09-sistema.html", "restaurar-de-fabrica")` tinha de ser escrita em
-    # `hefesto_vivo.PERIGOSOS`, que estava no `nao_toca` desta frente, e por isso
-    # a dívida ficava aberta esperando outro dono. Com a
-    # `ONDA3-GESTO-DECLARA-01` a proteção mora no decorador: quem escrever este
-    # gesto põe `grava="save_profile"` no `@gesto(...)` dele, no mesmo commit, e
-    # `PERIGOSOS` o recebe derivado. **A entrada velha nunca protegeu nada** —
-    # ela ficou meses em `PERIGOSOS` enquanto o gesto se chamava
-    # `refazer-proton`, e com a chave saindo do registro esse fantasma não tem
-    # mais como nascer.
-    "restaurar-de-fabrica": "o CAMINHO existe e está medido (asset + "
-                            "`save_profile` + `profile_switch` + "
-                            "`launch_env.refresh`, os três tempos do "
-                            "`perfil.gravar_e_reaplicar`); falta o DONO. Quem "
-                            "o escrever declara `grava=\"save_profile\"` no "
-                            "próprio decorador — sem isso a régua de clique "
-                            "restaura o perfil dela para provar que sabe clicar.",
+    # A LISTA FICA (vazia) porque a régua a lê nos DOIS sentidos: quem estiver
+    # aqui não pode ter dono, e todo `DESTRUTIVOS` que NÃO estiver aqui TEM de
+    # ter. Apagar o nome da lista é o que faz a segunda metade cobrar.
 }
 
 
@@ -2151,15 +2179,31 @@ def _rotulo_do_desenho(gesto: str) -> str:
     em 31/08 ("encerrar" -> "parar").
 
     Devolve `""` quando não achou: quem chama trata como "não sei" e não escreve.
+
+    A BANCADA ENTRA COMO SEGUNDA FONTE — 06/09/2026, e não é preferência: um
+    botão que NASCE nesta leva (o "Aplicar aos jogos da Steam") só existe no
+    desenho de hoje, porque **publicar é ato dela**. Sem a segunda fonte o
+    rótulo sairia vazio, `blocos_dos_botoes` pularia o botão, o "Confirma?"
+    nunca chegaria à tela — e o segundo clique não teria como trazer o rótulo
+    que **só existe no botão armado**. O consentimento em dois cliques ficaria
+    impossível de dar justamente no botão mais destrutivo da leva.
+
+    A ORDEM É PUBLICADO PRIMEIRO, e ela importa: onde os dois têm o botão, quem
+    manda é o que o produto RENDERIZA — comparar contra a bancada faria o guarda
+    esperar uma palavra que a tela dela não mostra.
     """
     if not _ROTULOS:
-        try:
-            doc = _onde.pagina(PAGINA, publicado=True).read_text(encoding="utf-8")
-        except Exception:  # pragma: no cover - página fora do disco
-            doc = ""
-        for achado in re.finditer(
-                r'data-gesto="([^"]+)"[^>]*>([^<]*)</button>', doc):
-            _ROTULOS[achado.group(1)] = html.unescape(achado.group(2)).strip()
+        for publicado in (True, False):
+            try:
+                doc = _onde.pagina(PAGINA, publicado=publicado).read_text(
+                    encoding="utf-8")
+            except Exception:  # pragma: no cover - página fora do disco
+                continue
+            for achado in re.finditer(
+                    r'data-gesto="([^"]+)"[^>]*>([^<]*)</button>', doc):
+                _ROTULOS.setdefault(
+                    achado.group(1),
+                    html.unescape(achado.group(2)).strip())
     return _ROTULOS.get(gesto, "")
 
 
@@ -2378,6 +2422,225 @@ def ativar_o_servico() -> bool:
     janela._user_stopped_daemon = False
     _systemctl("start")
     return True
+
+
+#: QUANTO TEMPO SE ESPERA O DAEMON AVULSO SAIR depois do SIGTERM, em segundos.
+#:
+#: O NÚMERO NÃO É CHUTE: o `single_instance` do produto dá saída graciosa, e o
+#: portão 3 do :func:`ativar_o_servico` (`_daemon_pid_alive`) RECUSA subir a
+#: unit enquanto o processo velho estiver vivo — subir aí criaria um segundo
+#: Hefesto disputando o mesmo `hidraw`, que é a BUG-MULTI-INSTANCE-01. Sem a
+#: espera, o botão pediria a saída e desistiria no mesmo instante, com a frase
+#: de recusa sobre um daemon que morreria meio segundo depois.
+SEGUNDOS_ATE_O_AVULSO_SAIR = 5.0
+
+
+def _o_avulso_saiu(pid: int) -> bool:
+    """Pede ao daemon avulso que saia e ESPERA. `True` quando ele já não vive.
+
+    QUEM SABE SE UM PID ESTÁ VIVO É O PRODUTO (`utils.single_instance.is_alive`)
+    — o mesmo que a janela antiga consulta em `on_daemon_migrate_to_systemd` e o
+    mesmo que `_daemon_pid_alive` usa para recusar o start. Escrever um
+    `os.kill(pid, 0)` aqui seria a segunda resposta para a mesma pergunta.
+
+    ELE NÃO ESCALA PARA `SIGKILL`, e é decisão: um daemon que ignora o SIGTERM
+    está no meio de alguma coisa, e matá-lo à força deixaria os aparelhos dela
+    num estado que ninguém arrumou. O botão recusa DIZENDO, e ela decide.
+    """
+    import os
+    import signal
+
+    from hefesto_dualsense4unix.utils.single_instance import is_alive
+
+    if not is_alive(pid):
+        return True
+    try:
+        os.kill(pid, signal.SIGTERM)
+    except (ProcessLookupError, PermissionError):
+        # SUMIU ENTRE A LEITURA E O TIRO, ou não é nosso. O primeiro caso é
+        # sucesso; o segundo é `is_alive` respondendo por um PID reciclado — e
+        # nos dois a pergunta que importa é a de baixo, não esta exceção.
+        return not is_alive(pid)
+    limite = time.monotonic() + SEGUNDOS_ATE_O_AVULSO_SAIR
+    while time.monotonic() < limite:
+        if not is_alive(pid):
+            return True
+        time.sleep(0.1)
+    return not is_alive(pid)
+
+
+@gesto("09-sistema.html", "corrigir-modo", grava="_systemctl")
+def corrigir_modo(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
+    """"Corrigir modo de execução" — a saída de quem caiu no modo improvisado.
+
+    A LINHA **L315** DO CSV, e ela era a metade que faltava de um par. O HTML já
+    RECONHECE `online_avulso` desde 03/09 — a linha "O serviço está" escreve
+    *"Ligado, em modo improvisado"* em laranja —, e não oferecia saída nenhuma:
+    **quem caía nesse estado era avisado e não tinha botão de conserto.** A
+    janela antiga tinha (`daemon_actions.on_daemon_migrate_to_systemd`).
+
+    O QUE É O MODO IMPROVISADO, medido pela matriz de três fontes do produto
+    (`_daemon_status`): o processo está VIVO e a unit do systemd está parada.
+    Funciona, e é frágil — ninguém o religa quando ele cai, e ele não volta com
+    o computador.
+
+    OS TRÊS TEMPOS SÃO OS DA JANELA ANTIGA, na ordem dela: ler o pid, pedir ao
+    processo avulso que saia, subir a unit. **Nenhum deles é escrito aqui de
+    novo:** o pid vem de `_read_daemon_pid`, a saída passa por
+    :func:`_o_avulso_saiu` (que consulta o `is_alive` do produto) e quem sobe a
+    unit é :func:`ativar_o_servico` — o dono único do ato de ligar, com os três
+    portões do produto e o `_user_stopped_daemon` desarmado.
+
+    A ORDEM IMPORTA E É A RAZÃO DE `_o_avulso_saiu` ESPERAR: o terceiro portão
+    de `ativar_o_servico` recusa subir a unit enquanto o avulso vive
+    (BUG-MULTI-INSTANCE-01). Chamar os dois sem a espera no meio devolveria
+    "não liguei" sobre um daemon que estava saindo.
+
+    ELE RECUSA FORA DO ESTADO, e não é zelo: em `online_systemd` não há modo a
+    corrigir, e em `offline` este botão MATARIA nada e subiria a unit — que é o
+    trabalho do "Ativar o serviço", ao lado. Um botão que faz o trabalho do
+    vizinho é o segundo dono de um ato.
+
+    SEM CONFIRMAÇÃO, e pelo mesmo argumento do "Ativar o serviço": pedir dois
+    cliques para CONSERTAR é uma parede na saída de emergência. O botão só
+    aparece no estado em que ele é a única coisa a fazer.
+
+    A PROVA AUTOMÁTICA NUNCA O CLICA: `grava="_systemctl"` o põe em
+    `pacotes.perigosos()` pelo decorador, no mesmo commit que o ensinou a mexer
+    no serviço dela.
+
+    AS DUAS FRASES SÃO DO DONO, palavra por palavra
+    (`daemon_actions.MIGRAR_DEU_CERTO` e `MIGRAR_NAO_DEU`) — elas saíram de
+    dentro do `_on_migrate_done` hoje justamente para este gesto não redigitar
+    o que a janela antiga já dizia.
+    """
+    if _status_do_daemon(ctx.state) != "online_avulso":
+        raise RuntimeError(
+            "O serviço não está em modo improvisado — não há modo a corrigir "
+            "agora.")
+    pid = _matriz()._read_daemon_pid()
+    if pid is not None and not _o_avulso_saiu(pid):
+        raise RuntimeError(
+            f"{_daemon.MIGRAR_NAO_DEU} O Hefesto improvisado não saiu quando "
+            "pedi — ele pode estar no meio de alguma coisa.")
+    if not ativar_o_servico():
+        raise RuntimeError(_daemon.MIGRAR_NAO_DEU)
+    _LENTO.clear()
+    return {"blocos": blocos_dos_botoes(_de_pe(ctx)),
+            "recado": _daemon.MIGRAR_DEU_CERTO}
+
+
+@gesto("09-sistema.html", "aplicar-aos-jogos", grava="with_steam_closed")
+def aplicar_aos_jogos(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
+    """"Aplicar aos jogos da Steam" — a metade que APLICA o atalho de inicialização.
+
+    A LINHA **L340** DO CSV, e ela nunca teve caminho na interface nova: o
+    "Copiar a linha" da `07-lancadores` só entrega o texto na área de
+    transferência, e sem este botão não havia por onde o atalho chegar aos
+    jogos sem ela colar um a um. `D-0609-STEAM-DIVIDIDO` decidiu o endereço:
+    **"Aplicar aos jogos" fica na 09.**
+
+    O MOTOR É O MESMO DA JANELA ANTIGA, e o mesmo do "Deixar tudo pronto" da
+    aba 07: `steam_launch_options.apply_wrapper_to_all_games` DENTRO de uma
+    janela de `with_steam_closed`. Nada aqui reescreve o ato — nem o `getattr`
+    defensivo, que é o contrato PATH-06: uma instalação antiga sem a aplicação
+    em massa recusa DIZENDO, com a frase do dono
+    (`daemon_actions.frase_sem_aplicacao_em_massa`).
+
+    O CONSENTIMENTO É EXIGÊNCIA DO MOTOR, e não desenho meu: `with_steam_closed`
+    FECHA a Steam dela por uns 20 segundos. A pergunta é a mesma que o diálogo
+    da janela antiga fazia — `DaemonActionsMixin._STEAM_APPLY_CORPO`, palavra
+    por palavra —, e ela sai de lá hoje justamente para não haver duas.
+
+    AS QUEBRAS DE PARÁGRAFO VIRAM ESPAÇO porque um recado é uma linha, não uma
+    caixa. É a mesma conversão que `a07_lancadores.deixar_tudo_pronto` faz com
+    o `_STEAM_READY_CORPO`, e nenhuma palavra dela muda no caminho.
+
+    OS TRÊS DESFECHOS DO MOTOR ESTÃO COBERTOS, e nenhuma frase é minha: a
+    recusa da janela (`format_steam_janela_recusa` — jogo aberto, a Steam não
+    fechou, resposta inesperada) e o resultado (`format_apply_wrapper_result` —
+    quantos jogos mudaram, quantos ficaram, quantos falharam).
+    """
+    from hefesto_dualsense4unix.integrations import steam_launch_options as slo
+
+    aplicar = getattr(slo, "apply_wrapper_to_all_games", None)
+    if aplicar is None:
+        raise RuntimeError(_daemon.frase_sem_aplicacao_em_massa())
+    if not _confirmado(o, "aplicar-aos-jogos"):
+        return {"blocos": blocos_dos_botoes(_de_pe(ctx)),
+                "recado": " ".join(_daemon.DaemonActionsMixin._STEAM_APPLY_CORPO.split())}
+    janela, resultado = slo.with_steam_closed(aplicar)
+    recusa = _daemon.format_steam_janela_recusa(janela)
+    if recusa is not None:
+        raise RuntimeError(recusa)
+    return {"blocos": blocos_dos_botoes(_de_pe(ctx)),
+            "recado": _daemon.format_apply_wrapper_result(resultado)}
+
+
+@gesto("09-sistema.html", "restaurar-de-fabrica", grava="gravar_e_reaplicar")
+def restaurar_de_fabrica(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
+    """"Restaurar de fábrica" — o último dos cinco sem motor, e o mais destrutivo.
+
+    A LINHA **L343** DO CSV. O botão estava na página desde que ela nasceu,
+    vermelho, prometendo *"Pergunta antes"* — e o clique caía em
+    `gesto_da_pagina() -> None`, imprimindo `[gesto sem dono]` no terminal de
+    quem lançou a janela. Ela não tinha como saber que não pegou.
+
+    O QUE O SEGURAVA NÃO ERA O MOTOR, e isso estava medido desde 04/09: os três
+    passos do ato têm dono FORA da janela — o localizador do preset
+    (`footer_actions._meu_perfil_asset`, função de MÓDULO), o
+    `Profile.model_validate` do JSON e os três tempos de
+    `pacotes.perfil.gravar_e_reaplicar` (disco, reaplicar, `launch_env.refresh`).
+    O que era da janela é o diálogo — e a D-03 dela já o substituiu por dois
+    cliques — e o refresh das abas velhas, que esta interface não tem.
+
+    O QUE O SEGURAVA ERA A REDE DE SEGURANÇA: um gesto que grava restauraria o
+    perfil DELA quando a prova botão a botão o acionasse. A rede mora no
+    decorador desde a `ONDA3-GESTO-DECLARA-01`, e este gesto a declara no mesmo
+    commit em que nasce — `pacotes.perigosos()` o recebe derivado, e o
+    `--prova-gesto` nunca o clica.
+
+    A IDENTIDADE É DECIDIDA AQUI, e não pelo arquivo achado — é a
+    PERFIL-PADRAO-PERSONALIZADO-01, e a razão está no dono: o asset pode ser o
+    de hoje (`personalizado.json`) ou o de uma versão anterior ainda no
+    `/usr/share` (`meu_perfil.json`), e o segundo faria o botão gravar de volta
+    o nome que ela mandou aposentar, num arquivo à parte.
+
+    O `era=` É O QUE FAZ ELE ADOTAR COMO ATIVO, e não um detalhe:
+    `gravar_e_reaplicar` só manda `profile.switch` quando o perfil gravado é o
+    que está valendo. A janela antiga faz isso com `adotar_como_ativo=True`;
+    aqui, passar o nome que está valendo AGORA faz a comparação casar e o
+    `switch` sair — que é a mesma coisa dita no vocabulário deste lado. Sem
+    ele, o `.json` mudaria no disco e o controle continuaria com o perfil
+    anterior, que é o sintoma que ela leu como *"não está salvando"*.
+
+    AS DUAS FRASES SÃO DO DONO (`footer_actions.frase_do_preset_ausente` e
+    `frase_do_restauro`), e as duas nasceram hoje: a primeira era dev-fala num
+    toast (*"Asset 'personalizado.json' não encontrado"*) e a régua da palavra
+    a carregava como dívida declarada desde 23/08. Trocá-la no dono pagou a
+    dívida dos DOIS chamadores de uma vez.
+    """
+    import json
+
+    from hefesto_dualsense4unix.app.actions import footer_actions as _rodape
+    from hefesto_dualsense4unix.app.actions.profiles_actions import (
+        perfil_que_esta_valendo,
+    )
+    from hefesto_dualsense4unix.profiles.loader import NOME_DO_PADRAO
+    from hefesto_dualsense4unix.profiles.schema import Profile
+
+    asset = _rodape._meu_perfil_asset()
+    if asset is None:
+        raise RuntimeError(_rodape.frase_do_preset_ausente())
+    if not _confirmado(o, "restaurar-de-fabrica"):
+        return {"blocos": blocos_dos_botoes(_de_pe(ctx))}
+    cru = json.loads(asset.read_text(encoding="utf-8"))
+    cru["name"] = NOME_DO_PADRAO
+    prof = Profile.model_validate(cru)
+    era = perfil_que_esta_valendo(getattr(ctx, "state", None)).nome or ""
+    perfil.gravar_e_reaplicar(prof, ctx, p, era=era)
+    return {"blocos": blocos_dos_botoes(_de_pe(ctx)),
+            "recado": _rodape.frase_do_restauro()}
 
 
 @gesto("09-sistema.html", "refazer-proton",
@@ -2820,9 +3083,15 @@ def ver_detalhes(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
 #: OS CINCO QUE FICAM TÊM O MOTIVO EM `SEM_CONFIRMACAO`, e ele não é de
 #: mecanismo: os cinco PROMETEM perguntar antes, e não há primitiva de
 #: confirmação nesta interface.
-PONTE = {"chamar", "chamar_detalhado", "machine_declare", "resultado"}
-METODOS = {"daemon.resume", "daemon.reload", "machine.declare",
-           "plugin.reload", "plugin.list"}
+#: `profile_switch` e `launch_env.refresh` ENTRARAM EM 06/09/2026, com o
+#: `restaurar-de-fabrica`: ele não os chama à mão — quem os chama é
+#: `pacotes.perfil.gravar_e_reaplicar`, o dono dos três tempos —, e por isso
+#: eles estão aqui: esta lista é o que a ABA faz chegar à ponte, não o que o
+#: arquivo digita.
+PONTE = {"chamar", "chamar_detalhado", "machine_declare", "profile_switch",
+         "resultado"}
+METODOS = {"daemon.resume", "daemon.reload", "launch_env.refresh",
+           "machine.declare", "plugin.reload", "plugin.list"}
 
 
 PAGINA = "09-sistema.html"
@@ -2845,7 +3114,15 @@ PAGINA = "09-sistema.html"
 #: Nenhum dos dois entra em `PROVAS`, pela mesma razão dos dois de cima e com um
 #: agravante: um clique de régua no `desligar` pararia o daemon de quem roda a
 #: suíte. Os dois já estão em `hefesto_vivo.PERIGOSOS` desde antes de terem dono.
-PISO_DA_ABA = 9
+#: E VIRARAM DOZE EM 06/09/2026, com os TRÊS que faltavam desta aba —
+#: `corrigir-modo` (L315), `aplicar-aos-jogos` (L340) e `restaurar-de-fabrica`
+#: (L343). Nenhum dos três entra em `PROVAS`, e os três pela razão dos de cima
+#: com o agravante de sempre: um clique de régua no `corrigir-modo` mataria o
+#: daemon de quem roda a suíte, um no `aplicar-aos-jogos` FECHARIA a Steam dela
+#: e reescreveria a linha de lançamento de todos os jogos, e um no
+#: `restaurar-de-fabrica` apagaria o perfil dela. Os três declaram `grava=` no
+#: próprio decorador, e `pacotes.perigosos()` os recebe derivados.
+PISO_DA_ABA = 12
 PROVAS = [
     {"pagina": PAGINA, "gesto": "retomar", "clique": {},  # (noqa-acento) chave do contrato
      "chama": [("chamar", ["daemon.resume"], {})]},

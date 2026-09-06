@@ -795,7 +795,11 @@
   .sr-avancado{grid-template-columns:246px 1px 1fr}
   /* o respiro entre uma faixa e o rótulo da seguinte. `margin-top` na faixa e
      não `justify-content` no corpo: a cura de um vão é na altura. */
-  .sec-alta{margin-top:10px}
+  /* 10px -> 8px em 06/09/2026, e são os 4px que faltavam para o quarto botão
+     dos gestos raros caber sem a página rolar. O corte é no vão ENTRE as
+     faixas — nenhum bloco encolhe, nenhum texto muda de tamanho —, e ele é
+     reversível numa linha: devolva o 10px e a página volta a rolar 4px. */
+  .sec-alta{margin-top:8px}
 
   /* ---------------------------------------------------------------------
      ESTADO À ESQUERDA, BARRA DE 1px, AÇÃO À DIREITA — nas três faixas.
@@ -821,6 +825,30 @@
      antes eram três larguras (138,2 / 141,3 / 80,7) numa fileira que deixava
      157,8px de sobra. */
   .col-acao .btn{width:100%;justify-content:center;padding:0 8px}
+  /* O BOTÃO QUE SÓ NASCE NUM ESTADO (a L315). Fora dele, ele sai do FLUXO —
+     `display:none` e não `visibility:hidden`, senão reservaria 30px de coluna
+     no estado em que ele não tem nada a fazer, que é quase sempre. Quem acende
+     `mostra` é o piloto, pelo `data-campo` que o pacote escreve todo tique. */
+  .so-avulso:not(.mostra){display:none}
+  /* E ELE ENTRA NO LUGAR DO VIZINHO, não ao lado dele — 06/09/2026, e a razão
+     é de ALTURA e de VERDADE ao mesmo tempo.
+
+     DE ALTURA: com cinco botões a coluna do serviço mede 194px contra 156 do
+     Perfil de Bateria, e a aba passa a ROLAR 38px por dentro — medido no
+     WebKit, com o botão à mostra. Esta faixa promete que as duas colunas irmãs
+     acabam no mesmo y, e a página inteira cabe em 530px sem rolar.
+
+     DE VERDADE: no modo improvisado o «Reiniciar o serviço» é justamente o
+     clique que NÃO funciona. `systemctl restart` sobe a unit, a unit encontra
+     o Hefesto avulso segurando a instância única e não sobe — é o terceiro
+     portão de `ativar_o_servico` (BUG-MULTI-INSTANCE-01), e `travas()` não o
+     tranca nesse estado. Trocar um pelo outro é pôr no lugar do clique que
+     falha o clique que conserta.
+
+     É o irmão CSS do que o botão «Parar o serviço»/«Ativar o serviço» já faz
+     com duas caras (decisão dela, 03/09) — e aqui sai de graça, porque o
+     `+` alcança o vizinho seguinte e o `.acao` do Reiniciar é exatamente ele. */
+  .so-avulso.mostra + .acao{display:none}
 
   /* A CAIXA DO BOTÃO QUE PODE FICAR CINZA (D-03, decisão [02] do PO).
      Ela é de ALTURA, não de enfeite: `.col-acao` e `.lista` são colunas de
@@ -1019,7 +1047,13 @@
   .exame .col-acao{gap:0}
 
   /* a fileira que não cabia vira LISTA: cinco botões somavam 1230px numa janela de 1180 */
-  .lista{display:flex;flex-direction:column;gap:4px}
+  /* O VÃO ENTRE OS BOTÕES DESTA COLUNA SUMIU EM 06/09/2026, e ele é o preço do
+     quarto botão (o "Aplicar aos jogos da Steam", a L340). A gramática não é
+     nova nesta página: `.exame .col-acao` já empilha os seus três sem vão desde
+     que a aba nasceu. Com quatro botões e vão de 4px a coluna mediria 148px;
+     sem vão ela mede 136, e são 12px que a página não tem — o miolo passaria a
+     ROLAR POR DENTRO, que é como esta aba escondeu 93px em 28/08. */
+  .lista{display:flex;flex-direction:column;gap:0}
   .lista .btn{width:100%;justify-content:flex-start;padding:0 13px}
   .chave{margin-left:auto;width:36px;height:20px;border-radius:10px;background:var(--border-forte);
          position:relative;cursor:pointer;flex:0 0 36px}
@@ -1242,6 +1276,7 @@
             <div class="risco"></div>
             <div class="col-acao">
             <div class="acao"><button class="btn verde" data-campo="retomar-razao" data-hef-alvo="classe" data-hef-classe="apagado" data-hef-atributo="aria-disabled" data-gesto="retomar" title="Tira o serviço da pausa agora. Só acende com a pausa ativa — e ela sobrevive a desligar o computador.">Retomar</button><span class="ajuda porque">?<span class="dica" data-campo="retomar-razao" data-hef-alvo="html"><i class="nada"></i></span></span></div>
+            <button class="btn so-avulso" title="Aparece no lugar do «Reiniciar o serviço» quando o serviço está de pé por fora do sistema: ali reiniciar não funciona, porque quem está rodando não é o do sistema. Este botão pede que ele saia e sobe o jeito certo — nada do que você ajustou se perde." data-gesto="corrigir-modo" data-campo="corrigir-modo-quando" data-hef-alvo="classe" data-hef-classe="mostra">Corrigir modo de execução</button>
             <div class="acao"><button class="btn" data-campo="reiniciar-razao" data-hef-alvo="classe" data-hef-classe="apagado" data-hef-atributo="aria-disabled" data-gesto="reiniciar" title="Para e liga de novo. Resolve a maioria dos travamentos e não perde nenhum ajuste seu.">Reiniciar o serviço</button><span class="ajuda porque">?<span class="dica" data-campo="reiniciar-razao" data-hef-alvo="html"><i class="nada"></i></span></span></div>
             <button class="btn" title="Manda o serviço reler os atalhos do controle e reescrever os arquivos de ambiente que a Steam usa para lançar os jogos; no fim, relê o que esta aba mostra. Leva alguns segundos, e o botão avisa enquanto trabalha." data-gesto="atualizar" data-hef-em-voo="Atualizando…">Atualizar</button>
             <button class="btn vermelho" title="O Hefesto deixa de rodar e os 2 viram gamepads comuns do Linux. Não é o interruptor Hefesto da aba Jogar, que só o tira do meio do jogo. Pergunta antes, dizendo o que se perde." data-gesto="desligar">Parar o serviço</button>
@@ -1385,12 +1420,13 @@
 
         <!-- ---------- AVANÇADO + DETALHES ---------- -->
         <div class="sec-rot sr-avancado sec-alta">
-          <span>Avançado <span class="ajuda">?<span class="dica">Gestos raros. <b>Restaurar de fábrica</b> devolve o perfil de fábrica e pergunta antes — os seus perfis salvos continuam onde estão.<br><br>O painel ao lado é a saída crua do Hefesto: é daqui que você copia quando for relatar um problema.</span></span></span><span></span>
+          <span>Avançado <span class="ajuda">?<span class="dica">Gestos raros. <b>Restaurar de fábrica</b> devolve o perfil de fábrica e pergunta antes — os seus perfis salvos continuam onde estão.<br><br><b>Aplicar aos jogos da Steam</b> põe a linha de inicialização do Hefesto em todos os jogos instalados de uma vez. Pergunta antes, porque precisa fechar a Steam por uns 20 segundos — e com um jogo aberto ele não mexe em nada.<br><br>O painel ao lado é a saída crua do Hefesto: é daqui que você copia quando for relatar um problema.</span></span></span><span></span>
           <span>Detalhes técnicos</span>
         </div>
         <div class="avancado">
           <div class="lista">
             <button class="btn vermelho" title="Devolve o perfil de fábrica. Pergunta antes, e os seus perfis salvos continuam onde estão." data-gesto="restaurar-de-fabrica">Restaurar de fábrica</button>
+            <button class="btn" title="Põe a linha de inicialização do Hefesto em TODOS os jogos instalados, preservando as opções que você já tem e deixando cópia de segurança ao lado de cada arquivo. Pergunta antes, e precisa fechar a Steam por uns 20 segundos." data-gesto="aplicar-aos-jogos">Aplicar aos jogos da Steam</button>
             <div class="acao"><button class="btn" data-campo="ver-plugins-razao" data-hef-alvo="classe" data-hef-classe="apagado" data-hef-atributo="aria-disabled" data-gesto="ver-plugins" title="Lista os plugins do daemon e relê. Hoje só o terminal alcança isso.">Ver os plugins carregados</button><span class="ajuda porque">?<span class="dica" data-campo="ver-plugins-razao" data-hef-alvo="html"><i class="nada"></i></span></span></div>
             <button class="btn" title="Joga as últimas 80 linhas do registro técnico no painel ao lado." data-gesto="ver-detalhes">Ver detalhes</button>
           </div>
@@ -1499,10 +1535,10 @@
     <li><b>O que a foto mostrava.</b> O miolo rolava <b>93px por dentro</b>: o segundo botão do
       "Avançado" saía <b>fatiado ao meio</b> e o painel de registro mostrava <b>uma</b> das quatro
       linhas. Nada na tela dizia que havia mais.</li>
-    <li><b>A conta que explica.</b> O miolo tem 544px, dos quais 508 de conteúdo. Cada quadro
+    <li><b>A conta que explica.</b> O miolo tem 564px, dos quais 508 de conteúdo. Cada quadro
       custa <b>54px só de moldura</b> (28 do topo, 24 do padding do corpo, 2 de borda), mais 14px
       de vão entre fileiras. <b>Quatro quadros em três fileiras = 190px de moldura</b> para 411px
-      de conteúdo: 411 + 190 + 34 = <b>635</b>, numa janela de 544.</li>
+      de conteúdo: 411 + 190 + 34 = <b>635</b>, numa janela de 564.</li>
     <li><b>Espremer não fechava a conta.</b> Com toda linha no mínimo — botão colado em botão,
       rótulo sem respiro — as três fileiras ainda somavam ~550. O que sobrava era a
       <b>moldura repetida</b>, e foi ela que saiu.</li>
@@ -1510,8 +1546,8 @@
       nome da aba no título e as seções por dentro (<code>sec-rot</code>, como a Navegação e a
       Vibração). As duas que fugiam disso eram exatamente as duas que escondiam conteúdo: esta e a
       Conexões. As seções viraram <b>faixas rotuladas</b> dentro de um quadro:
-      <b>54px de moldura no lugar de 190</b>. Hoje o conteúdo mede <b>542px</b> em
-      544 — <b>nada rola, nada é fatiado</b>.</li>
+      <b>54px de moldura no lugar de 190</b>. Hoje o conteúdo mede <b>530px</b> em
+      564 — <b>nada rola, nada é fatiado</b>.</li>
     <li><b>Nenhuma linha foi cortada por falta de espaço.</b> Os 10 botões, os 8 achados e as
       4 linhas do registro continuam todos na tela — o que saiu depois saiu por decisão dela, não
       por caber. O painel de registro <b>ganhou</b> altura (89 → 110px), para acabar no mesmo y da
@@ -1535,7 +1571,7 @@
     <li><b>O bloco herdou a medida do irmão, e está medido:</b> <b>535,5 × 156px</b>, o mesmo
       <i>x</i>, <i>y</i>, largura e altura do bloco "O Hefesto" — que é o que ela pediu em 27/08
       (<i>"Altura e largura dos blocos O Hefesto e Gamepad virtual são iguais"</i>). O miolo
-      continua em <b>544px sem rolar nada</b>.</li>
+      continua em <b>564px sem rolar nada</b>.</li>
     <li><b>Nenhum rótulo e nenhum número foram digitados.</b> Os três perfis
       (<b>Tudo ligado</b>, <b>Bateria longa</b> e <b>Eu escolho</b>), a tradução perfil→disco e o degrau do teto são <b>lidos do
       produto por AST</b> — <code>ROTULOS_DOS_PERFIS</code>, <code>TETO_POR_PERFIL</code>,

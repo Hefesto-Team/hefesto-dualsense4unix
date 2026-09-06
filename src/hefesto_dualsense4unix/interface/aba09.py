@@ -54,7 +54,18 @@ NOS = 2 * N + N
 #: número de FOTO: mexeu no miolo, meça de novo antes de repetir a frase.
 #: O miolo desta janela tem `MIOLO_H` de altura útil; o conteúdo da aba mede
 #: `ALTURA`. Enquanto `ALTURA <= MIOLO_H`, nada rola por dentro e nada é fatiado.
-MIOLO_H, ALTURA = 544, 542
+#: REMEDIDOS EM 06/09/2026, e os dois estavam ERRADOS — não caducos, errados.
+#: O par dizia `544, 542`; medido de novo no Chrome, pelo mesmo caminho de
+#: sempre, o miolo tem **564** e o conteúdo tinha **508**. A folga real era de
+#: 22px, e não de 2 — e o `.quadro` não a preenche, porque o miolo ainda gasta
+#: 34px de recuo (16 em cima, 18 embaixo) que o número velho contava dentro.
+#:
+#: O NÚMERO ERRADO CUSTA, e custou aqui: com ele, o quarto botão dos gestos
+#: raros parecia impossível antes de alguém abrir o navegador. A conta de hoje,
+#: medida: `.avancado` foi de 110 para 136 (o botão novo, sem vão entre eles) e
+#: o vão entre faixas caiu 2px em cada `sec-alta` — a página fecha em **530 de
+#: conteúdo para 530 de espaço útil**, e o miolo não rola um pixel.
+MIOLO_H, ALTURA = 564, 530
 
 
 def _lista(nomes):
@@ -187,9 +198,16 @@ GESTOS = _CONTRATO["GESTOS"]
 #: produto, e a frase INTEIRA continua no `title` do valor — a cura de 31/08 que
 #: pôs as reticências também pôs o `title`, e é ele que segura a informação. O
 #: que encurta é a etiqueta, e só onde ela não cabe.
-APELIDO_NA_TELA = _constantes(
+#: O ENDEREÇO DO BOTÃO DO MODO IMPROVISADO É LIDO DO PACOTE, nunca digitado —
+#: 06/09/2026. O par gerador/pacote já mordeu esta casa uma vez: os dois
+#: endereços da fita foram escritos duas vezes, se afastaram, e a fita viva
+#: morreu em silêncio em 27/08. Aqui a segunda cópia nem chega a nascer: quem
+#: escreve NO campo é `pacotes/a09_sistema.py`, e é de lá que o nome vem.
+_DO_PACOTE = _constantes(
     R / "src/hefesto_dualsense4unix/interface/pacotes/a09_sistema.py",
-    {"APELIDO_NA_TELA"})["APELIDO_NA_TELA"]
+    {"APELIDO_NA_TELA", "CAMPO_DO_MODO_AVULSO"})
+APELIDO_NA_TELA = _DO_PACOTE["APELIDO_NA_TELA"]
+CAMPO_DO_MODO_AVULSO = _DO_PACOTE["CAMPO_DO_MODO_AVULSO"]
 
 
 def _id(nome):
@@ -383,7 +401,11 @@ CSS = """
   .sr-avancado{grid-template-columns:246px 1px 1fr}
   /* o respiro entre uma faixa e o rótulo da seguinte. `margin-top` na faixa e
      não `justify-content` no corpo: a cura de um vão é na altura. */
-  .sec-alta{margin-top:10px}
+  /* 10px -> 8px em 06/09/2026, e são os 4px que faltavam para o quarto botão
+     dos gestos raros caber sem a página rolar. O corte é no vão ENTRE as
+     faixas — nenhum bloco encolhe, nenhum texto muda de tamanho —, e ele é
+     reversível numa linha: devolva o 10px e a página volta a rolar 4px. */
+  .sec-alta{margin-top:8px}
 
   /* ---------------------------------------------------------------------
      ESTADO À ESQUERDA, BARRA DE 1px, AÇÃO À DIREITA — nas três faixas.
@@ -409,6 +431,30 @@ CSS = """
      antes eram três larguras (138,2 / 141,3 / 80,7) numa fileira que deixava
      157,8px de sobra. */
   .col-acao .btn{width:100%;justify-content:center;padding:0 8px}
+  /* O BOTÃO QUE SÓ NASCE NUM ESTADO (a L315). Fora dele, ele sai do FLUXO —
+     `display:none` e não `visibility:hidden`, senão reservaria 30px de coluna
+     no estado em que ele não tem nada a fazer, que é quase sempre. Quem acende
+     `mostra` é o piloto, pelo `data-campo` que o pacote escreve todo tique. */
+  .so-avulso:not(.mostra){display:none}
+  /* E ELE ENTRA NO LUGAR DO VIZINHO, não ao lado dele — 06/09/2026, e a razão
+     é de ALTURA e de VERDADE ao mesmo tempo.
+
+     DE ALTURA: com cinco botões a coluna do serviço mede 194px contra 156 do
+     Perfil de Bateria, e a aba passa a ROLAR 38px por dentro — medido no
+     WebKit, com o botão à mostra. Esta faixa promete que as duas colunas irmãs
+     acabam no mesmo y, e a página inteira cabe em 530px sem rolar.
+
+     DE VERDADE: no modo improvisado o «Reiniciar o serviço» é justamente o
+     clique que NÃO funciona. `systemctl restart` sobe a unit, a unit encontra
+     o Hefesto avulso segurando a instância única e não sobe — é o terceiro
+     portão de `ativar_o_servico` (BUG-MULTI-INSTANCE-01), e `travas()` não o
+     tranca nesse estado. Trocar um pelo outro é pôr no lugar do clique que
+     falha o clique que conserta.
+
+     É o irmão CSS do que o botão «Parar o serviço»/«Ativar o serviço» já faz
+     com duas caras (decisão dela, 03/09) — e aqui sai de graça, porque o
+     `+` alcança o vizinho seguinte e o `.acao` do Reiniciar é exatamente ele. */
+  .so-avulso.mostra + .acao{display:none}
 
   /* A CAIXA DO BOTÃO QUE PODE FICAR CINZA (D-03, decisão [02] do PO).
      Ela é de ALTURA, não de enfeite: `.col-acao` e `.lista` são colunas de
@@ -607,7 +653,13 @@ CSS = """
   .exame .col-acao{gap:0}
 
   /* a fileira que não cabia vira LISTA: cinco botões somavam 1230px numa janela de 1180 */
-  .lista{display:flex;flex-direction:column;gap:4px}
+  /* O VÃO ENTRE OS BOTÕES DESTA COLUNA SUMIU EM 06/09/2026, e ele é o preço do
+     quarto botão (o "Aplicar aos jogos da Steam", a L340). A gramática não é
+     nova nesta página: `.exame .col-acao` já empilha os seus três sem vão desde
+     que a aba nasceu. Com quatro botões e vão de 4px a coluna mediria 148px;
+     sem vão ela mede 136, e são 12px que a página não tem — o miolo passaria a
+     ROLAR POR DENTRO, que é como esta aba escondeu 93px em 28/08. */
+  .lista{display:flex;flex-direction:column;gap:0}
   .lista .btn{width:100%;justify-content:flex-start;padding:0 13px}
   .chave{margin-left:auto;width:36px;height:20px;border-radius:10px;background:var(--border-forte);
          position:relative;cursor:pointer;flex:0 0 36px}
@@ -774,6 +826,44 @@ def item(rotulo, diz, cls="btn", gesto="", em_voo=""):
 # `.btn:not(.apagado) + .ajuda.porque{display:none}` da folha comum esconde os
 # três `?`. O que muda de verdade só aparece na tela viva.
 # ---------------------------------------------------------------------------
+# ---------------------------------------------------------------------------
+# O BOTÃO QUE SÓ NASCE NUM ESTADO — 06/09/2026, a L315 do CSV da paridade.
+#
+# A JANELA ANTIGA TINHA UM ASSIM: o "Corrigir modo de execução" aparecia SÓ com
+# o daemon em `online_avulso` e sumia no resto. A interface nova não tinha o
+# mecanismo — e um botão que nasce e some é DESENHO, logo é decisão dela.
+#
+# A DECISÃO, tomada como PO por delegação (`D-0609-BOTAO-QUE-SO-NASCE-NO-MODO`,
+# registrada em `docs/data/decisoes-dela.csv`) e REVERSÍVEL NUMA FRASE — apague
+# a regra de `display:none` e o botão passa a estar sempre à vista:
+#
+#     ele nasce ESCONDIDO no desenho, e quem o acende é o produto.
+#
+# E ISSO É O QUE FAZ A CENA QUE ELA APROVOU NÃO MUDAR UM PIXEL: na cena do
+# desenho o serviço está `Ligado` pelo systemd, o campo sai vazio e a regra
+# `.so-avulso:not(.mostra){display:none}` o tira do fluxo — a coluna continua
+# com os quatro botões que ela viu, e as duas colunas irmãs continuam acabando
+# no mesmo `y`.
+#
+# O MECANISMO NÃO NASCE AQUI: é o mesmo `data-hef-alvo="classe"` que a coluna
+# Atenção da `01-jogar` usa (`.aviso-item:not(.mostra)`), e o mesmo que os três
+# botões cinzas desta página já usam. Nenhum vocabulário novo.
+#
+# `display:none` E NÃO `visibility:hidden`, e a diferença é de ALTURA: escondido
+# por visibilidade, o botão continuaria reservando 30px na coluna — o vão que
+# ela apontou em 31/08, num estado que quase nunca acontece.
+def item_escondido(rotulo, diz, gesto, campo, cls="btn"):
+    """Um botão que o desenho tem e a tela só mostra quando o produto manda.
+
+    O `campo` é o `data-campo` que o pacote escreve a cada tique — e ele escreve
+    SEMPRE, inclusive vazio, que é o que faz o botão SUMIR de volta quando o
+    estado passa. Ver `pacotes/a09_sistema.CAMPO_DO_MODO_AVULSO`.
+    """
+    return (f'            <button class="{cls} so-avulso" title="{diz}"'
+            f' data-gesto="{_gesto(gesto)}" data-campo="{campo}"'
+            f' data-hef-alvo="classe" data-hef-classe="mostra">{rotulo}</button>')
+
+
 def item_cinza(rotulo, diz, gesto, cls=""):
     """Um botão da coluna de ações que sabe ficar cinza, com a razão no `?`.
 
@@ -988,6 +1078,9 @@ D_EXAME = ('<span class="ajuda">?<span class="dica">'
 D_AVANCADO = ('<span class="ajuda">?<span class="dica">'
               'Gestos raros. <b>Restaurar de fábrica</b> devolve o perfil de fábrica e pergunta '
               'antes — os seus perfis salvos continuam onde estão.<br><br>'
+              '<b>Aplicar aos jogos da Steam</b> põe a linha de inicialização do Hefesto em '
+              'todos os jogos instalados de uma vez. Pergunta antes, porque precisa fechar a '
+              'Steam por uns 20 segundos — e com um jogo aberto ele não mexe em nada.<br><br>'
               'O painel ao lado é a saída crua do Hefesto: é daqui que você copia quando for '
               'relatar um problema.'
               '</span></span>')
@@ -1066,6 +1159,7 @@ MIOLO = f'''
             <div class="risco"></div>
             <div class="col-acao">
 {item_cinza("Retomar", "Tira o serviço da pausa agora. Só acende com a pausa ativa — e ela sobrevive a desligar o computador.", "retomar", cls="verde")}
+{item_escondido("Corrigir modo de execução", "Aparece no lugar do «Reiniciar o serviço» quando o serviço está de pé por fora do sistema: ali reiniciar não funciona, porque quem está rodando não é o do sistema. Este botão pede que ele saia e sobe o jeito certo — nada do que você ajustou se perde.", "corrigir-modo", CAMPO_DO_MODO_AVULSO)}
 {item_cinza("Reiniciar o serviço", "Para e liga de novo. Resolve a maioria dos travamentos e não perde nenhum ajuste seu.", "reiniciar")}
 {item(ROTULO_ATUALIZAR, DICA_ATUALIZAR, gesto=_gesto("atualizar"), em_voo=EM_VOO_ATUALIZAR)}
 {item("Parar o serviço", f"O Hefesto deixa de rodar e os {N} viram gamepads comuns do Linux. Não é o interruptor Hefesto da aba Jogar, que só o tira do meio do jogo. Pergunta antes, dizendo o que se perde.", "btn vermelho", gesto=_gesto("desligar"))}
@@ -1159,6 +1253,7 @@ MIOLO = f'''
         <div class="avancado">
           <div class="lista">
 {item("Restaurar de fábrica", "Devolve o perfil de fábrica. Pergunta antes, e os seus perfis salvos continuam onde estão.", "btn vermelho", gesto=_gesto("restaurar-de-fabrica"))}
+{item("Aplicar aos jogos da Steam", "Põe a linha de inicialização do Hefesto em TODOS os jogos instalados, preservando as opções que você já tem e deixando cópia de segurança ao lado de cada arquivo. Pergunta antes, e precisa fechar a Steam por uns 20 segundos.", gesto=_gesto("aplicar-aos-jogos"))}
 {item_cinza("Ver os plugins carregados", "Lista os plugins do daemon e relê. Hoje só o terminal alcança isso.", "ver-plugins")}
 {item("Ver detalhes", "Joga as últimas 80 linhas do registro técnico no painel ao lado.", gesto=_gesto("ver-detalhes"))}
           </div>
@@ -1421,6 +1516,29 @@ _N_EST = _conta(MIOLO, '<div class="col-est">', '<div class="risco">', 'class="e
 # `<div class="risco">` é o marco que a régua irmã (`_N_EST`) já usa, e ele é o
 # fecho do bloco inteiro — não de um invólucro que alguém acrescente amanhã.
 _N_BTN = _conta(MIOLO, '<div class="col-acao">', '<div class="risco">', "<button")
+
+# E O QUE ESTÁ FORA DO FLUXO NÃO CONTA — 06/09/2026, com o botão do modo
+# improvisado (a L315). Esta régua mede ALTURA, e um botão com `display:none`
+# mede ZERO: contá-lo faria a régua reprovar 38px de vão que a tela não tem em
+# nenhum dos dois estados — na cena dela o botão nem existe, e no modo
+# improvisado a coluna cresce por um botão que TEM o que fazer.
+#
+# A EXCLUSÃO É AMARRADA À REGRA DE CSS, e não à classe: sem
+# `.so-avulso:not(.mostra){display:none}` na folha desta aba, o botão volta a
+# ocupar linha e volta a contar. Sem esta amarra, `so-avulso` viraria a palavra
+# mágica com que qualquer botão escaparia do portão dos dois blocos.
+_ESCONDE_O_AVULSO = ".so-avulso:not(.mostra){display:none}" in CSS
+_N_FORA_DO_FLUXO = _conta(MIOLO, '<div class="col-acao">', '<div class="risco">',
+                          "so-avulso")
+if _ESCONDE_O_AVULSO:
+    _N_BTN -= _N_FORA_DO_FLUXO
+elif _N_FORA_DO_FLUXO:
+    raise SystemExit(
+        f"ERRO: há {_N_FORA_DO_FLUXO} botão(ões) `so-avulso` na coluna do "
+        "serviço e a folha desta aba não os esconde mais. Ou a regra "
+        "`.so-avulso:not(.mostra){display:none}` volta, ou o botão passa a "
+        "ocupar linha na cena que ela aprovou — e aí são 30px de coluna a mais "
+        "num bloco cuja altura é a promessa desta faixa.")
 
 #: A fileira de escolha mede `--h-escolha`; cada linha do bloco mede uma linha
 #: de estado. O irmão é o mais alto entre a coluna de estados e a de botões.

@@ -433,7 +433,7 @@ def _fileira_do_autostart(host: Any) -> Any:
 
     O estado acompanha o original por `notify::active`, e não por uma segunda
     consulta ao sistema: a aba Sistema já pergunta em thread e reconcilia o
-    interruptor sob `_daemon_autostart_guard` (`daemon_actions.py:1955-1961`).
+    interruptor sob `_daemon_autostart_guard` (`daemon_actions.py:1998-2004`).
     Perguntar de novo aqui criaria uma segunda resposta para a mesma pergunta —
     e duas respostas divergem no dia em que uma das duas atrasar.
     """
