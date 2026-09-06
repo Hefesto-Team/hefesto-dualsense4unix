@@ -32,6 +32,14 @@ abaixo percorre uma TRAJETÓRIA de instantes e afirma a curva inteira: quando a
 trava tem de estar firme, quando tem de soltar, e que o gesto continua vencendo
 o relógio.
 
+`led` GANHOU O PAR EM 06/09/2026 (A-TRAVA-DO-LED-NÃO-SOLTA-01): o botão
+"Automático" da aba Iluminação chama `led.auto_release`. A tabela acima fica
+como está — é o censo de 29/08, e é o que motivou o teto. O que muda é o
+alcance desta suíte: **para `led` o teto virou rede, e para `audio` continua
+sendo a única porta.** As duas camadas se somam, e o teto continua valendo para
+todo caminho que arma `led` sem passar por aquele botão — a janela GTK, o
+`led.player_set`, a CLI.
+
 A MORDIDA (executada em 29/08, números no relatório da sprint): apague as
 chamadas de `_purgar_overrides_vencidos()` nas três leituras de
 `daemon/state_store.py` e esta suíte fica VERMELHA — a trava volta a ser eterna.
@@ -132,9 +140,11 @@ def test_a_trava_sem_par_solta_sozinha_e_a_curva_inteira_confere(
 ) -> None:
     """O caso dela: mexeu no volume (ou na cor), e o relógio devolve a troca.
 
-    `audio` e `led` são as duas categorias SEM chamador de
-    `clear_manual_trigger_active` em `src/` — para elas, este teto é a única
-    porta de saída que não depende de ela adivinhar um gesto.
+    `audio` é a categoria SEM chamador de `clear_manual_trigger_active` em
+    `src/` — para ela, este teto é a única porta de saída. `led` tem gesto
+    desde 06/09/2026, e continua aqui porque o gesto é UM botão: todo caminho
+    que arma a luz sem passar por ele (a janela GTK, o `led.player_set`, a CLI)
+    ainda depende do relógio.
 
     A curva afirmada, e não um instante dela: firme no começo, firme na véspera
     do teto, solta depois. O ponto em `TETO - MINUTO` é o que separa este teste
@@ -384,11 +394,20 @@ def test_categoria_desconhecida_continua_recusada(relogio: _Relogio) -> None:
 def test_o_par_de_cada_categoria_esta_declarado() -> None:
     """O censo que originou a sprint, virado régua — e ele LÊ o `src/`.
 
-    Não afirma que `led`/`audio` têm clear (não têm, e é o defeito). Afirma o
-    que está MEDIDO: as duas com gesto têm par, as duas sem gesto não têm, e é
-    por isso que o teto existe. No dia em que a aba Iluminação ligar o "Voltar
-    ao automático" ao daemon, este teste reprova e alguém vem aqui apagar a
-    linha — que é o jeito desta casa de uma dívida não envelhecer calada.
+    O ARMADILHA-RELÓGIO DESTA RÉGUA DISPAROU EM 06/09/2026, e é o que ele
+    existia para fazer. Ele dizia *"no dia em que a aba Iluminação ligar o
+    'Voltar ao automático' ao daemon, este teste reprova e alguém vem aqui
+    apagar a linha"*. Foi o que aconteceu: a A-TRAVA-DO-LED-NÃO-SOLTA-01 deu
+    a `led` o par que lhe faltava (`led.auto_release`), esta régua reprovou
+    nomeando `led`, e a linha foi apagada.
+
+    O QUE ELA AFIRMA HOJE: `audio` continua sem par — é a E1 da
+    ÁUDIO-QUE-TRANCA-01, e enquanto ela não fechar o teto de ociosidade é a
+    ÚNICA porta daquela categoria, que é a razão de este arquivo existir.
+    Quem vigia o par das outras é
+    `tests/unit/test_toda_categoria_de_trava_tem_par.py`, que percorre
+    `MANUAL_OVERRIDE_CATEGORIES` inteira e traz a lápide viva de `audio` como
+    `xfail(strict=True)`.
     """
     import ast
     from pathlib import Path as _Path
@@ -421,15 +440,16 @@ def test_o_par_de_cada_categoria_esta_declarado() -> None:
     assert {"trigger", "led", "rumble", "audio"} <= marcadas, (
         f"alguma categoria deixou de ser armada em src/: {sorted(marcadas)}"
     )
-    assert {"trigger", "rumble"} <= limpas, (
-        "`trigger` ou `rumble` perdeu o gesto que a solta — o teto passaria a "
-        f"ser a única porta delas também: {sorted(limpas)}"
+    assert {"trigger", "rumble", "led"} <= limpas, (
+        "alguma categoria perdeu o gesto que a solta — o teto passaria a ser a "
+        f"única porta dela também: {sorted(limpas)}"
     )
-    sem_par = {"led", "audio"} - limpas
-    assert sem_par == {"led", "audio"}, (
-        f"{sorted({'led', 'audio'} - sem_par)} ganhou um `clear` em src/. "
-        "Ótimo — agora confira se ele dispara no gesto CERTO (não no rascunho "
-        "da aba, que roda antes de a cor sair do hardware) e atualize esta "
-        "régua e o texto de `MANUAL_OVERRIDE_STALE_AFTER_SEC`."
+    assert "audio" not in limpas, (
+        "`audio` ganhou um `clear` em src/. Ótimo — é a E1 da "
+        "ÁUDIO-QUE-TRANCA-01 fechando. Agora confira se ele dispara no gesto "
+        "CERTO (o `speaker.set` arma inclusive no `release`), apague a lápide "
+        "viva de `tests/unit/test_toda_categoria_de_trava_tem_par.py`, e "
+        "atualize o texto de `MANUAL_OVERRIDE_STALE_AFTER_SEC` — que a partir "
+        "daí deixa de ser a única porta de qualquer categoria."
     )
 

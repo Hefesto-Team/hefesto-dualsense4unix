@@ -1796,7 +1796,7 @@ def parar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
 
     A CHECADA, e não a crua: dentro do Modo Nativo o `rumble.stop` não trava
     silêncio, ele SOLTA o par e diz que não alcança o motor que o jogo toca
-    pelo hidraw (`ipc_handlers.py:4380`). Anunciar "parada" ali seria prometer
+    pelo hidraw (`ipc_handlers.py:4421`). Anunciar "parada" ali seria prometer
     o que não aconteceu — NATIVO-RUMBLE-01, segunda metade. O motivo sobe como
     erro porque é o único canal que esta aba tem hoje; um recado de tela para
     ele ainda não existe, e está no relato.

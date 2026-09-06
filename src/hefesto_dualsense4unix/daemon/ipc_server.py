@@ -123,6 +123,15 @@ class IpcServer(IpcHandlersMixin):
             "trigger.set": self._handle_trigger_set,
             "trigger.reset": self._handle_trigger_reset,
             "led.set": self._handle_led_set,
+            # A-TRAVA-DO-LED-NÃO-SOLTA-01 (06/09/2026): o PAR do `led.set`.
+            # `led.set` e `led.player_set` armam a trava manual da categoria
+            # "led" e, até esta linha, NADA em `src/` a soltava — enquanto ela
+            # está armada o `AutoSwitcher` não reaplica perfil por troca de
+            # janela. `trigger` tinha o `trigger.reset`, `rumble` tinha o
+            # `rumble.passthrough`; a luz não tinha porta de volta. Quem chama
+            # é o botão "Automático" da aba Iluminação, no fim do gesto —
+            # depois da escrita da cor do slot, que é quem re-armaria.
+            "led.auto_release": self._handle_led_auto_release,
             "rumble.set": self._handle_rumble_set,
             "rumble.stop": self._handle_rumble_stop,
             "rumble.passthrough": self._handle_rumble_passthrough,

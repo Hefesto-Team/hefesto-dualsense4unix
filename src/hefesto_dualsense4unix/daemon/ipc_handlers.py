@@ -1531,6 +1531,47 @@ class IpcHandlersMixin:
             "guardado_em": guardado_em,
         }
 
+    async def _handle_led_auto_release(
+        self, params: dict[str, Any]
+    ) -> dict[str, Any]:
+        """Devolve a luz ao automático: solta a trava manual de `"led"` — e SÓ ela.
+
+        A-TRAVA-DO-LED-NÃO-SOLTA-01 (06/09/2026). O PAR QUE FALTAVA. Até aqui
+        `led.set` e `led.player_set` ARMAVAM a trava (`:1468` e `:1524`) e
+        nenhuma linha de `src/` a soltava: a única saída era ela trocar de
+        perfil na mão — um gesto que a pessoa não tem como saber que precisa
+        fazer. `trigger` tinha o `trigger.reset` e `rumble` tinha o
+        `rumble.passthrough`; a luz não tinha nada.
+
+        SÓ `"led"`, e o `clear` sem argumento seria a regressão do ABAS-05:
+        soltar as quatro apagaria um gatilho ou uma vibração deliberada de
+        outra aba. É a razão escrita da assinatura por categoria em
+        `state_store.clear_manual_trigger_active`, e ela vale aqui em dobro —
+        este método é chamado por UM botão de UMA aba.
+
+        POR QUE UMA ROTA PRÓPRIA, e não um parâmetro no `led.set`: é ORDEM. O
+        gesto "Automático" da aba Iluminação (`interface/pacotes/a04_iluminacao`)
+        faz duas coisas, nesta ordem medida em 02/09 — larga o claim da barra
+        (`lightbar.reset`) e SÓ ENTÃO pinta a cor do slot, para a barra não
+        ficar preta. Essa segunda escrita é um `led.set`, que ARMA. Pendurar o
+        clear em qualquer das duas o deixaria antes da escrita que o desfaz;
+        pendurado aqui, ele é o ÚLTIMO ato do gesto e nada o re-arma.
+
+        ELE NÃO ESCREVE BYTE NENHUM no controle, e é por isso que não tem
+        `uniq`: a trava é do `StateStore` e não tem dono por controle
+        (`_manual_override_categories` é um dicionário categoria → carimbo,
+        um por daemon). Aceitar um `uniq` e ignorá-lo seria o "sucesso
+        mentiroso" que a APLICAR-VERDADE-01 nomeia. `escopo` diz isso na
+        resposta, em vez de deixar quem chama supor.
+
+        Soltar a trava não pinta nada: só devolve ao `AutoSwitcher` o direito
+        de decidir no próximo tique de troca de janela — que é exatamente o que
+        "voltar ao automático" promete por escrito na tela.
+        """
+        self.store.clear_manual_trigger_active("led")
+        logger.info("led_auto_release", categoria="led")
+        return {"status": "ok", "categoria": "led", "escopo": "o daemon inteiro"}
+
     # --- identidade (numeração) -------------------------------------------
 
     async def _handle_identity_renumber(self, params: dict[str, Any]) -> dict[str, Any]:
