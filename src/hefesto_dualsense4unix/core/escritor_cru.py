@@ -58,7 +58,7 @@ O QUE ELE NÃO VÊ, dito antes que alguém descubra do jeito caro
   a mesa dela mediu;
 - **Não sabe QUANDO ela escreveu**, só que ela pode. Daí a rate-limit não vir
   daqui: quem decide a frequência é o gatilho;
-- **Degrada em silêncio.** Sem ``pgrep``, sem permissão, orçamento estourado —
+- **Degrada em silêncio.** Sem ``/proc``, sem permissão, orçamento estourado —
   devolve o que juntou. Ausência de veredito é "não sondado", **nunca**
   "ninguém segura".
 """
@@ -66,25 +66,49 @@ from __future__ import annotations
 
 import contextlib
 import os
-import subprocess
 import time
 from collections.abc import Callable, Iterable, Mapping
 from dataclasses import dataclass, field
 
+from hefesto_dualsense4unix.integrations.steam_launch_options import cmdline_de_pid
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 
 logger = get_logger(__name__)
 
-#: Orçamentos da sonda. O ``pgrep`` tem timeout curto e a varredura de
-#: ``/proc/<pid>/fd`` tem teto de tempo — o estudo do broker mediu ~6 ms para
-#: ~4600 fds, então 0,5 s é folga patológica. Nunca roda no event loop.
-PGREP_TIMEOUT_S: float = 1.0
+#: Orçamentos da sonda. A varredura de ``/proc`` que acha os PIDs da Steam e a
+#: varredura de ``/proc/<pid>/fd`` têm, cada uma, teto de tempo — o estudo do
+#: broker mediu ~6 ms para ~4600 fds, então 0,5 s é folga patológica. Nunca
+#: rodam no event loop.
+ORCAMENTO_DA_VARREDURA_DE_PIDS_S: float = 1.0
 ORCAMENTO_DA_VARREDURA_S: float = 0.5
 MAX_PIDS_DA_STEAM: int = 8
 
+#: **NOME VELHO, e ele mente desde 06/09/2026: não há mais ``pgrep`` aqui.**
+#: DAEMON-ACORDADO-01/E2 trocou o par de ``pgrep`` de :func:`pids_da_steam` por
+#: uma varredura nativa de ``/proc``, e o número (1,0 s) sobreviveu inteiro —
+#: virou o teto da varredura. O alias fica porque
+#: ``daemon/ipc_handlers.py:664`` (``_HOLDERS_PGREP_TIMEOUT_SEC``) o importa, e
+#: aquele arquivo **não é posse desta sprint**: R1 desta casa manda RELATAR em
+#: vez de editar arquivo alheio. Quem tiver o ``ipc_handlers`` na posse aposenta
+#: os dois nomes de uma vez — está escrito na entrega desta sprint.
+PGREP_TIMEOUT_S: float = ORCAMENTO_DA_VARREDURA_DE_PIDS_S
+
+#: Agulha do ``pgrep -f steamrt64/steam`` que a varredura substituiu: casa o
+#: runtime da Steam pelo PATH. **Nunca ``steam`` solto** — é o falso-positivo
+#: histórico do earlyoom, e a razão de o ``steam_running`` canônico nunca ter
+#: usado ``-f steam``.
+_AGULHA_DA_STEAM_NA_CMDLINE = "steamrt64/steam"
+
+#: Nome EXATO de processo do ``pgrep -x steam``, para instalações fora do
+#: runtime. ``-x`` compara com o ``comm`` do processo, não com a cmdline — daí
+#: a varredura ler ``/proc/<pid>/comm``, e não deduzir o nome do ``argv[0]``:
+#: ``comm`` é definível por ``prctl`` e truncado em 15 bytes, então deduzir
+#: seria uma regra DIFERENTE com cara de igual.
+_COMM_EXATO_DA_STEAM = "steam"
+
 #: Quanto um veredito vale antes de a sonda poder rodar de novo. Existe para
 #: que uma rajada de escritas nossas (arrastar o seletor de cor da GUI) não
-#: vire uma rajada de ``pgrep``: a rajada inteira lê o MESMO veredito.
+#: vire uma rajada de varreduras: a rajada inteira lê o MESMO veredito.
 #:
 #: **DAEMON-ACORDADO-01/BG-03 (25/08/2026): agora ela cobre também a
 #: VARREDURA, e não só o veredito.** O número existia desde a ESCRITOR-CRU-01
@@ -98,13 +122,13 @@ VALIDADE_DO_VEREDITO_S: float = 5.0
 #: A última lista de PIDs e QUANDO ela foi colhida — ``None`` = nunca.
 #: Escrita numa tupla só de propósito: a atribuição é atômica sob a GIL, e a
 #: sonda roda em thread (``asyncio.to_thread`` do inventário) enquanto o vigia
-#: da lightbar pode ler. Duas gravações concorrentes custam um ``pgrep`` a
+#: da lightbar pode ler. Duas gravações concorrentes custam uma varredura a
 #: mais, nunca uma foto meio velha e meio nova.
 _ultima_foto_de_pids: tuple[float, tuple[int, ...]] | None = None
 
 
 def invalidar_pids_da_steam() -> None:
-    """Joga fora a foto de PIDs: a próxima chamada forka de verdade.
+    """Joga fora a foto de PIDs: a próxima chamada varre `/proc` de verdade.
 
     Existe para o ``forcar=True`` de :meth:`SentinelaDeEscritorCru.sondar`
     continuar valendo o que a docstring dele promete — sem isto, um cache
@@ -114,26 +138,87 @@ def invalidar_pids_da_steam() -> None:
     _ultima_foto_de_pids = None
 
 
+def _comm_de_pid(pid: str | int) -> str:
+    """``comm`` de um pid — o nome de processo que o ``pgrep -x`` compara.
+
+    Nunca levanta, pela mesma razão de :func:`cmdline_de_pid`: pid que morreu
+    entre o ``listdir`` e o ``open`` é o caso comum, não a exceção.
+    """
+    try:
+        with open(f"/proc/{pid}/comm", "rb") as fh:
+            return fh.read().decode("utf-8", "replace").strip()
+    except OSError:
+        return ""
+
+
 def pids_da_steam(*, agora: float | None = None, forcar: bool = False) -> list[int]:
-    """PIDs do processo Steam via ``pgrep`` — padrões do ``steam_running``.
+    """PIDs do processo Steam por varredura de ``/proc`` — sem forkar nada.
 
-    Mesmos matches de ``integrations/steam_launch_options.steam_running``
-    (``-f steamrt64/steam`` pega o runtime pelo PATH; nunca ``-f steam``
-    solto — o falso-positivo histórico do earlyoom), mais ``-x steam`` para
-    instalações fora do runtime. Best-effort: qualquer falha devolve o que
-    juntou.
+    Mesmos matches de ``integrations/steam_launch_options.steam_running``, e o
+    contrato é **idêntico** ao do par de ``pgrep`` que estava aqui até
+    06/09/2026: ``steamrt64/steam`` na cmdline (o runtime pelo PATH; nunca
+    ``steam`` solto — o falso-positivo histórico do earlyoom) e ``comm``
+    exatamente ``steam`` (instalações fora do runtime). Best-effort: qualquer
+    falha devolve o que juntou.
 
-    **O resultado vale ``VALIDADE_DO_VEREDITO_S`` (BG-03, 25/08/2026).** O que
-    o cache paga, medido em 25/08 com a janela do Hefesto ABERTA e um DualSense
-    no cabo: o par de ``pgrep`` daqui saía a cada 3,3 s (o ritmo do
-    ``controller.list``), e **um** ``pgrep`` custa 2.533 ``read()`` e 724 KB de
-    ``rchar`` nesta máquina — 61 % das leituras e 84 % dos bytes do daemon não
-    eram do controle. Cada leitura de ``/proc/<pid>/cmdline`` que o ``pgrep``
-    faz toma o ``mmap_read_lock`` do processo alvo, **inclusive o do jogo**.
+    A LEITURA DA CMDLINE É A DA PERF-PROC-SCAN-01
+    =============================================
+    DAEMON-ACORDADO-01/E2 (06/09/2026). A PERF-PROC-SCAN-01 já tinha trocado um
+    ``pgrep -f`` por varredura nativa em ``integrations/steam_launch_options``
+    (12/08/2026), medindo este mesmo defeito e escrevendo esta mesma conta —
+    **e esta função era a cópia que ficou de fora daquela troca.** Por isso ela
+    não ganha varredura própria: importa :func:`cmdline_de_pid` de lá. Duas
+    varreduras de ``/proc`` no mesmo daemon seriam duas verdades sobre o mesmo
+    ``/proc``, que é a família de defeito que a casa acabou de pagar.
 
+    O QUE O FORK CUSTAVA, medido em 25/08/2026 na máquina dela
+    ==========================================================
+    Janela do Hefesto ABERTA e um DualSense no cabo: o par de ``pgrep`` daqui
+    saía a cada 3,3 s (o ritmo do ``controller.list``), e **um** ``pgrep``
+    custa 2.533 ``read()`` e 724 KB de ``rchar`` nesta máquina — 61 % das
+    leituras e 84 % dos bytes do daemon não eram do controle. O ``pgrep`` lê
+    CINCO arquivos por processo (``status``, ``stat``, ``cmdline``, ``cgroup``,
+    ``ctty``) e paga ``fork`` + ``execve``, com o ``PATH`` errando cinco vezes
+    antes de achar o binário.
+
+    A varredura lê **no máximo DOIS** arquivos por pid (``comm``, e ``cmdline``
+    só quando o ``comm`` não resolveu), sem ``fork`` e sem ``execve``. O
+    ``comm`` vem primeiro porque é o que pode dispensar o segundo ``open``.
+
+    **O NÚMERO É MEDIDO, e ele NÃO é "custo zero".** Nesta máquina, 430
+    processos vivos, as duas formas rodadas cinco vezes cada e contadas pelo
+    delta de ``syscr`` de ``/proc/self/io`` — a régua do "buraco" que a
+    DAEMON-ACORDADO-01 inventou porque ``ptrace_scope=1`` proíbe ``strace``, e
+    que serve aqui porque ``/proc/<pid>/io`` **soma o que o filho colhido
+    gastou**, que é justamente o custo do ``pgrep``:
+
+      ==================  ================  ==============
+      forma               ``read()``/chamada  tempo/chamada
+      ==================  ================  ==============
+      varredura nativa            1.465          3,8 ms
+      par de ``pgrep``            3.859         20,8 ms
+      ==================  ================  ==============
+
+    **2,6x menos ``read()`` e 5,5x menos tempo de parede**, mais os dois
+    ``fork``/``execve`` que deixam de existir. Uma versão anterior desta
+    docstring anunciava "~5x menos", por analogia com a PERF-PROC-SCAN-01 e
+    sem medir: nos ``read()`` são 2,6x, e o 5x só aparece no relógio. Quem
+    quiser o custo em zero depende do cache abaixo, não desta varredura.
+
+    **A equivalência também é medida**, e com uma agulha que ACHA processos —
+    uma régua que só sabe devolver lista vazia (a Steam fechada) não mede nada.
+    Três agulhas, cada uma comparada contra o ``pgrep`` de verdade: a da Steam,
+    ``/usr/lib/systemd``/``systemd`` (7 pids) e ``zsh``/``zsh`` (6 pids). Os
+    três conjuntos saíram IGUAIS, inclusive sobre a isca — o processo que casa
+    porque a agulha está na cmdline DELE, que o ``_STEAM_LAUNCH_RE`` já
+    documenta como risco residual e que as duas formas enxergam igual.
+
+    O CACHE, e o que ele paga
+    =========================
+    **O resultado vale ``VALIDADE_DO_VEREDITO_S`` (BG-03, 25/08/2026).**
     ``agora`` é injetável pelo mesmo motivo do ``GatilhoDeFimDeSequencia``:
-    exercitar cinco segundos de validade em microssegundos de teste. ``forcar``
-    ignora a foto.
+    exercitar cinco segundos de validade em microssegundos de teste.
+    ``forcar`` ignora a foto.
 
     **O preço, dito antes que alguém descubra do jeito caro:** a lista de PIDs
     pode estar até ``VALIDADE_DO_VEREDITO_S`` atrasada. A Steam que ABRIU há
@@ -141,6 +226,16 @@ def pids_da_steam(*, agora: float | None = None, forcar: bool = False) -> list[i
     segurando". É o mesmo atraso que o veredito do sentinela já tinha; a
     varredura de ``/proc/<pid>/fd`` continua fresca a cada chamada — só a lista
     de pids é que envelhece.
+
+    **A VARREDURA QUE NÃO TERMINOU NÃO CARIMBA A FOTO**, e isto é uma correção
+    de comportamento, não um efeito colateral: o ``pgrep`` que estourava o
+    ``timeout`` carimbava mesmo assim, transformando uma leitura que não
+    aconteceu em cinco segundos de "a Steam não está aberta". É a mentira que
+    a casa proíbe (ausência ≠ negativo) e que o ``_steam_launch_cmdline`` já
+    recusava na camada 4. O preço da correção: numa máquina onde varrer
+    ``/proc`` passe de ``ORCAMENTO_DA_VARREDURA_DE_PIDS_S``, cada chamada paga
+    o orçamento inteiro. O teto é 1,0 s contra os 4,2 ms que a varredura de
+    ``/proc`` mediu — ~200x de folga —, então chegar lá já é patológico.
     """
     global _ultima_foto_de_pids
     agora = time.monotonic() if agora is None else float(agora)
@@ -148,23 +243,26 @@ def pids_da_steam(*, agora: float | None = None, forcar: bool = False) -> list[i
         foto = _ultima_foto_de_pids
         if foto is not None and (agora - foto[0]) < VALIDADE_DO_VEREDITO_S:
             return list(foto[1])
+    try:
+        entradas = os.listdir("/proc")
+    except OSError:
+        # Sem `/proc` não houve varredura: NÃO carimba a foto (ver docstring).
+        return []
+    deadline = time.monotonic() + ORCAMENTO_DA_VARREDURA_DE_PIDS_S
     pids: set[int] = set()
-    for args in (["pgrep", "-f", "steamrt64/steam"], ["pgrep", "-x", "steam"]):
-        try:
-            proc = subprocess.run(
-                args,
-                capture_output=True,
-                timeout=PGREP_TIMEOUT_S,
-                check=False,
-                text=True,
-            )
-        except (OSError, subprocess.SubprocessError):
+    for entrada in entradas:
+        if not entrada.isdigit():
             continue
-        if proc.returncode != 0:
-            continue
-        for token in proc.stdout.split():
+        if time.monotonic() > deadline:
+            # Varredura truncada: devolve o que juntou e não carimba.
+            return sorted(pids)[:MAX_PIDS_DA_STEAM]
+        if _comm_de_pid(entrada) == _COMM_EXATO_DA_STEAM:
             with contextlib.suppress(ValueError):
-                pids.add(int(token))
+                pids.add(int(entrada))
+            continue
+        if _AGULHA_DA_STEAM_NA_CMDLINE in cmdline_de_pid(entrada):
+            with contextlib.suppress(ValueError):
+                pids.add(int(entrada))
     achados = sorted(pids)[:MAX_PIDS_DA_STEAM]
     _ultima_foto_de_pids = (agora, tuple(achados))
     return achados
@@ -262,8 +360,8 @@ class SentinelaDeEscritorCru:
 
     Duas responsabilidades, e nenhuma delas é escrever no aparelho:
 
-    - **cachear** — a sonda faz ``pgrep`` + ``readlink``; sem cache, cada
-      escrita de cor da GUI pagaria um subprocesso. ``VALIDADE_DO_VEREDITO_S``
+    - **cachear** — a sonda varre ``/proc`` + ``readlink``; sem cache, cada
+      escrita de cor da GUI pagaria a varredura. ``VALIDADE_DO_VEREDITO_S``
       é o teto: dentro dela, ``sondar`` devolve a foto que já tem;
     - **achar a BORDA** — o que interessa não é "a Steam está aberta" (estado
       normal, o dia inteiro), é *"este nó, que estava livre, acabou de ser
@@ -308,7 +406,7 @@ class SentinelaDeEscritorCru:
         não o dia inteiro.
 
         ``forcar`` ignora a validade (o tique de 30 s do ``reconnect_loop``,
-        que é quem tem orçamento para o ``pgrep``). Sem ele, uma sonda dentro
+        que é quem tem orçamento para a varredura). Sem ele, uma sonda dentro
         da validade é no-op e devolve a foto que já existe, com borda vazia —
         e isso é resposta, não falha.
 
@@ -318,7 +416,7 @@ class SentinelaDeEscritorCru:
         ``forcar=True`` da chegada de um controle (``connection.py``) veria
         pids de até cinco segundos atrás.
 
-        Falha da sonda **preserva a foto anterior**: um ``pgrep`` que morreu
+        Falha da sonda **preserva a foto anterior**: uma varredura que morreu
         não é prova de que a Steam fechou, e apagar o veredito por causa dele
         faria a aba Status mentir para o outro lado.
         """
@@ -354,6 +452,7 @@ class SentinelaDeEscritorCru:
 
 __all__ = [
     "MAX_PIDS_DA_STEAM",
+    "ORCAMENTO_DA_VARREDURA_DE_PIDS_S",
     "ORCAMENTO_DA_VARREDURA_S",
     "PGREP_TIMEOUT_S",
     "VALIDADE_DO_VEREDITO_S",

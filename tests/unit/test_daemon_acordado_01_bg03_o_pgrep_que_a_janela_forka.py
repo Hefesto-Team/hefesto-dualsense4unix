@@ -24,19 +24,35 @@ POR QUE A RÉGUA CONTA CHAMADAS, E NÃO SEGUNDOS
 Relógio não é asserção. Um teste que meça `time.monotonic()` antes e depois
 mede a MÁQUINA (carga, escalonador, cache do `/proc`), não o produto — e esta
 casa já pagou por instrumento assim. O que a cura promete é aritmético e
-exato: **N tiques dentro da validade disparam UM fork; sem cache, N**. Os
-dublês daqui contam invocação.
+exato: **N tiques dentro da validade disparam UMA varredura; sem cache, N**.
+Os dublês daqui contam invocação.
 
 E cada dublê sabe RECUSAR: os testes `..._a_regua_sabe_recusar` zeram a
 validade e exigem que o MESMO contador veja o mundo ruim. Régua que só sabe
 passar não é régua.
+
+O QUE MUDOU EM 06/09/2026 — DAEMON-ACORDADO-01/E2
+=================================================
+**A metade 1 contava `fork`, e não há mais `fork` que contar.** O
+`pids_da_steam` deixou de rodar o par de `pgrep` e passou a varrer `/proc`
+nativamente, como a PERF-PROC-SCAN-01 já fazia do outro lado deste arquivo —
+o custo medido caiu de 3.859 para 1.465 `read()` por chamada, e de 20,8 para
+3,8 ms, nesta máquina com 430 processos.
+
+Um dublê de `subprocess` sobre um produto que não chama `subprocess` conta
+ZERO para sempre e passa em tudo: seria a régua que mede o mundo de ontem, o
+defeito que esta casa nomeou em 05/09. Então a metade 1 conta agora o que a
+metade 2 sempre contou — **varreduras de `/proc`** — e as duas metades passam
+a falar a mesma língua.
+
+E a régua ganhou uma asserção que o dublê de `subprocess` não podia fazer:
+**quais arquivos o produto abre por pid**. É ela que prova que o `-x steam` do
+`pgrep` continua sendo comparado com o `comm`, e não deduzido do `argv[0]`.
 """
 
 from __future__ import annotations
 
-import subprocess
 import sys
-from types import SimpleNamespace
 
 import pytest
 
@@ -44,36 +60,97 @@ from hefesto_dualsense4unix.core import escritor_cru
 from hefesto_dualsense4unix.integrations import steam_launch_options as slo
 
 # ---------------------------------------------------------------------------
-# Metade 1 — o `pgrep` do `core/escritor_cru.py`
+# Metade 1 — a varredura de `/proc` do `core/escritor_cru.py`
 # ---------------------------------------------------------------------------
 
-#: A saída de um `pgrep` que achou a Steam. Dois pids, como na mesa dela.
-_SAIDA_PGREP = "4242\n4243\n"
+#: O `/proc` sintético da mesa dela: a Steam pelo runtime (o antigo
+#: `pgrep -f steamrt64/steam`), a Steam fora do runtime (o antigo `pgrep -x
+#: steam`, que compara o `comm`) e três vizinhos que não podem casar.
+_PROC_COM_A_STEAM: dict[str, tuple[str, str]] = {
+    # pid: (comm, cmdline)
+    "100": ("cosmic-comp", "/usr/bin/cosmic-comp"),
+    "4242": (
+        "steam",
+        "/home/vitoriamaria/.local/share/Steam/ubuntu12_32/steam",
+    ),
+    "4243": (
+        "srt-bwrap",
+        "/home/vitoriamaria/.steam/root/ubuntu12_64/steamrt64/steam-runtime "
+        "-- /usr/bin/steam",
+    ),
+    "9000": ("pipewire", "/usr/bin/pipewire"),
+    # A ISCA, e ela é real: um script que PROCURA a Steam carrega a agulha na
+    # própria cmdline. O `pgrep` só se excluía a si mesmo, nunca ao vizinho —
+    # então ele casava esta linha, e a varredura casa igual. Contrato idêntico
+    # é o que esta sprint promete; virar o comportamento aqui em silêncio
+    # seria trocar de contrato dizendo que só se trocou de mecanismo.
+    "9100": ("bash", "/bin/bash -c pgrep -f steamrt64/steam"),
+}
+
+#: Quem o produto tem de achar no `/proc` acima — os dois da Steam e a isca.
+_PIDS_ESPERADOS = [4242, 4243, 9100]
 
 
-class _SubprocessContado:
-    """Dublê de `subprocess` que CONTA cada fork — e sabe recusar.
+class _ProcDaSteamContado:
+    """`/proc` sintético que CONTA varreduras e ARQUIVOS abertos — e recusa.
 
-    Expõe `SubprocessError` porque o `except` do produto o nomeia: um dublê
-    que não sabe ser exceção não consegue exercitar a degradação.
+    Conta duas coisas diferentes de propósito:
+
+    * `varreduras` — quantas vezes o produto chamou `os.listdir("/proc")`. É o
+      que o cache promete zerar, e é o que o dublê de `subprocess` contava
+      antes com o nome de `forks`;
+    * `abertos` — a lista de `(pid, arquivo)` que o produto leu. É a asserção
+      que o dublê velho não conseguia fazer: ela prova que o `comm` é LIDO, e
+      não deduzido do `argv[0]`.
+
+    `erro` faz o `listdir` levantar: é o `/proc` ilegível, e é como este dublê
+    sabe RECUSAR.
     """
 
-    SubprocessError = subprocess.SubprocessError
-
-    def __init__(self, *, saida: str = _SAIDA_PGREP, erro: BaseException | None = None):
-        self.chamadas: list[list[str]] = []
-        self._saida = saida
+    def __init__(
+        self,
+        mapa: dict[str, tuple[str, str]] | None = None,
+        *,
+        erro: BaseException | None = None,
+    ) -> None:
+        self.mapa = dict(_PROC_COM_A_STEAM if mapa is None else mapa)
+        self.varreduras = 0
+        self.abertos: list[tuple[str, str]] = []
         self._erro = erro
 
-    def run(self, args, **_kwargs):
-        self.chamadas.append(list(args))
+    def listdir(self, path):
+        if str(path) != "/proc":
+            return _LISTDIR_REAL(path)
+        self.varreduras += 1
         if self._erro is not None:
             raise self._erro
-        return SimpleNamespace(returncode=0, stdout=self._saida)
+        return [*self.mapa, "self", "cpuinfo", "uptime"]
 
-    @property
-    def forks(self) -> int:
-        return len(self.chamadas)
+    def comm_de_pid(self, pid) -> str:
+        self.abertos.append((str(pid), "comm"))
+        return self.mapa.get(str(pid), ("", ""))[0]
+
+    def cmdline_de_pid(self, pid) -> str:
+        self.abertos.append((str(pid), "cmdline"))
+        return self.mapa.get(str(pid), ("", ""))[1]
+
+
+@pytest.fixture
+def proc_da_steam(monkeypatch):
+    """Instala o `/proc` sintético em `escritor_cru`. Devolve o contador."""
+
+    def _instalar(
+        mapa: dict[str, tuple[str, str]] | None = None,
+        *,
+        erro: BaseException | None = None,
+    ) -> _ProcDaSteamContado:
+        contador = _ProcDaSteamContado(mapa, erro=erro)
+        monkeypatch.setattr(escritor_cru.os, "listdir", contador.listdir)
+        monkeypatch.setattr(escritor_cru, "_comm_de_pid", contador.comm_de_pid)
+        monkeypatch.setattr(escritor_cru, "cmdline_de_pid", contador.cmdline_de_pid)
+        return contador
+
+    return _instalar
 
 
 class _RelogioFalso:
@@ -96,93 +173,141 @@ def _sem_foto_herdada():
     slo.invalidar_varredura_de_proc()
 
 
-def test_cinco_tiques_dentro_da_validade_forkam_um_par_so(monkeypatch) -> None:
-    """A cura, em uma linha: cinco perguntas, um par de `pgrep`."""
-    dubles = _SubprocessContado()
-    monkeypatch.setattr(escritor_cru, "subprocess", dubles)
+def test_a_varredura_acha_a_steam_pelos_dois_criterios(proc_da_steam) -> None:
+    """Antes de contar barato, provar que acha — nos DOIS critérios do `pgrep`.
 
-    for tique in range(5):  # 0, 1, 2, 3, 4 s — todos dentro dos 5 s de validade
-        assert escritor_cru.pids_da_steam(agora=float(tique)) == [4242, 4243]
+    Uma varredura que devolvesse `[]` passaria em todos os testes de cache
+    abaixo, e é o defeito que esta casa nomeou seis vezes: a régua que dá verde
+    sobre nada.
+    """
+    proc_da_steam()
 
-    assert dubles.forks == 2, (
-        "a janela aberta continua forkando por tique: esperava UM par de "
-        f"`pgrep` para cinco perguntas, contei {dubles.forks} forks "
-        f"({dubles.chamadas})"
+    assert escritor_cru.pids_da_steam(agora=0.0) == _PIDS_ESPERADOS
+
+
+def test_o_comm_e_lido_e_nao_deduzido_do_argv(proc_da_steam) -> None:
+    """`pgrep -x steam` compara o `comm`, e o produto tem de ler o `comm`.
+
+    O pid 4242 tem `comm == "steam"` e uma cmdline que NÃO contém
+    `steamrt64/steam`: só é achado por quem lê `/proc/<pid>/comm`. Deduzir o
+    nome do `argv[0]` seria uma regra diferente com cara de igual — `comm` é
+    definível por `prctl` e truncado em 15 bytes.
+    """
+    contador = proc_da_steam()
+    escritor_cru.pids_da_steam(agora=0.0)
+
+    assert ("4242", "comm") in contador.abertos, (
+        "o produto não leu `/proc/4242/comm` — se ele achou a Steam sem isso, "
+        f"achou por outra regra. Abriu: {contador.abertos}"
+    )
+    assert "steamrt64/steam" not in _PROC_COM_A_STEAM["4242"][1], (
+        "o dublê deixou de morder: o pid 4242 só prova a regra do `comm` "
+        "enquanto a cmdline dele NÃO casar a agulha da outra regra"
     )
 
 
-def test_a_regua_sabe_recusar(monkeypatch) -> None:
+def test_a_cmdline_so_e_lida_quando_o_comm_nao_resolveu(proc_da_steam) -> None:
+    """Dois arquivos por pid é o teto, e o `comm` que casa dispensa o segundo.
+
+    É metade da cura: o `pgrep` lia CINCO arquivos por processo.
+    """
+    contador = proc_da_steam()
+    escritor_cru.pids_da_steam(agora=0.0)
+
+    assert ("4242", "cmdline") not in contador.abertos, (
+        "o `comm` casou e o produto foi ler a cmdline assim mesmo — é um "
+        f"`open` a mais por processo da Steam. Abriu: {contador.abertos}"
+    )
+    por_pid = [p for p, _ in contador.abertos]
+    assert max(por_pid.count(p) for p in set(por_pid)) <= 2, (
+        f"algum pid custou mais de dois arquivos: {contador.abertos}"
+    )
+
+
+def test_cinco_tiques_dentro_da_validade_varrem_uma_vez(proc_da_steam) -> None:
+    """A cura, em uma linha: cinco perguntas, uma varredura."""
+    contador = proc_da_steam()
+
+    for tique in range(5):  # 0, 1, 2, 3, 4 s — todos dentro dos 5 s de validade
+        assert escritor_cru.pids_da_steam(agora=float(tique)) == _PIDS_ESPERADOS
+
+    assert contador.varreduras == 1, (
+        "a janela aberta continua varrendo `/proc` por tique: esperava UMA "
+        f"varredura para cinco perguntas, contei {contador.varreduras}"
+    )
+
+
+def test_a_regua_sabe_recusar(proc_da_steam, monkeypatch) -> None:
     """O MESMO contador, com a validade zerada, tem de ver o mundo ruim.
 
     Sem este caso o teste acima passaria com um dublê cego (um que contasse
-    sempre 2, ou nunca fosse chamado).
+    sempre 1, ou nunca fosse chamado).
     """
-    dubles = _SubprocessContado()
-    monkeypatch.setattr(escritor_cru, "subprocess", dubles)
+    contador = proc_da_steam()
     monkeypatch.setattr(escritor_cru, "VALIDADE_DO_VEREDITO_S", 0.0)
 
     for tique in range(5):
         escritor_cru.pids_da_steam(agora=float(tique))
 
-    assert dubles.forks == 10, (
-        "a régua não enxerga fork: com a validade em zero os cinco tiques "
-        f"tinham de custar dez `pgrep`, e contei {dubles.forks}"
+    assert contador.varreduras == 5, (
+        "a régua não enxerga varredura: com a validade em zero os cinco "
+        f"tiques tinham de custar cinco varreduras, e contei {contador.varreduras}"
     )
 
 
-def test_a_foto_vence_a_validade_e_o_pgrep_volta(monkeypatch) -> None:
-    """Cache não é congelamento: passados os 5 s, a próxima pergunta forka."""
-    dubles = _SubprocessContado()
-    monkeypatch.setattr(escritor_cru, "subprocess", dubles)
+def test_a_foto_vence_a_validade_e_a_varredura_volta(proc_da_steam) -> None:
+    """Cache não é congelamento: passados os 5 s, a próxima pergunta varre."""
+    contador = proc_da_steam()
 
     escritor_cru.pids_da_steam(agora=0.0)
     escritor_cru.pids_da_steam(agora=4.999)
-    assert dubles.forks == 2
+    assert contador.varreduras == 1
     escritor_cru.pids_da_steam(agora=5.0)
-    assert dubles.forks == 4, "a foto venceu e o produto não foi olhar de novo"
+    assert contador.varreduras == 2, (
+        "a foto venceu e o produto não foi olhar de novo"
+    )
 
 
-def test_forcar_ignora_a_foto(monkeypatch) -> None:
+def test_forcar_ignora_a_foto(proc_da_steam) -> None:
     """`forcar=True` é o contrato do vigia: pergunta de verdade, sempre."""
-    dubles = _SubprocessContado()
-    monkeypatch.setattr(escritor_cru, "subprocess", dubles)
+    contador = proc_da_steam()
 
     escritor_cru.pids_da_steam(agora=0.0)
     escritor_cru.pids_da_steam(agora=0.5, forcar=True)
-    assert dubles.forks == 4
+    assert contador.varreduras == 2
 
 
-def test_o_caminho_da_janela_inteiro_paga_um_par_so(monkeypatch) -> None:
+def test_o_caminho_da_janela_inteiro_paga_uma_varredura_so(
+    proc_da_steam, monkeypatch
+) -> None:
     """O caminho REAL: `controller.list` → `holders_de_hidraw` → `pids_da_steam`.
 
     É este que a medição de 25/08 pegou forkando a cada 3,3 s, e nenhum teste
     daqui podia afirmar a cura sem exercitá-lo de ponta a ponta.
     """
-    dubles = _SubprocessContado()
+    contador = proc_da_steam()
     relogio = _RelogioFalso()
-    monkeypatch.setattr(escritor_cru, "subprocess", dubles)
     monkeypatch.setattr(escritor_cru, "time", relogio)
 
     for tique in range(5):
         relogio.agora = tique * 1.0
         escritor_cru.holders_de_hidraw()
 
-    assert dubles.forks == 2, (
-        f"o caminho da janela ainda forka por tique: {dubles.forks} forks"
+    assert contador.varreduras == 1, (
+        f"o caminho da janela ainda varre por tique: {contador.varreduras}"
     )
 
 
-def test_o_sentinela_forcado_joga_a_foto_fora(monkeypatch) -> None:
+def test_o_sentinela_forcado_joga_a_foto_fora(proc_da_steam) -> None:
     """`sondar(forcar=True)` tem de valer para o cache NOVO também.
 
     Sem isto, "ignora a validade" passaria a ignorar só metade dela: a chegada
     de um controle (`connection.py`, `forcar=True`) veria pids de 5 s atrás.
     """
-    dubles = _SubprocessContado()
-    monkeypatch.setattr(escritor_cru, "subprocess", dubles)
+    contador = proc_da_steam()
 
     escritor_cru.pids_da_steam(agora=0.0)
-    assert dubles.forks == 2
+    assert contador.varreduras == 1
 
     sentinela = escritor_cru.SentinelaDeEscritorCru(sonda=lambda nos: {})
     sentinela.sondar(["/dev/hidraw0"], 0.1, forcar=True)
@@ -193,13 +318,39 @@ def test_o_sentinela_forcado_joga_a_foto_fora(monkeypatch) -> None:
     )
 
 
-def test_sem_pgrep_no_sistema_degrada_e_nao_levanta(monkeypatch) -> None:
-    """O dublê recusando de outro jeito: `pgrep` que nem existe."""
-    dubles = _SubprocessContado(erro=OSError("sem pgrep"))
-    monkeypatch.setattr(escritor_cru, "subprocess", dubles)
+def test_proc_ilegivel_degrada_e_nao_levanta(proc_da_steam) -> None:
+    """O dublê recusando de outro jeito: `/proc` que não se lê."""
+    contador = proc_da_steam(erro=OSError("sem /proc"))
 
     assert escritor_cru.pids_da_steam(agora=0.0) == []
-    assert dubles.forks == 2  # tentou os dois padrões antes de desistir
+    assert contador.varreduras == 1
+
+
+def test_o_proc_ilegivel_do_escritor_cru_nao_vira_negativo_carimbado(
+    proc_da_steam,
+) -> None:
+    """Ausência de leitura não é "a Steam não está aberta".
+
+    O `pgrep` que estourava o `timeout` carimbava a foto assim mesmo, e cinco
+    segundos de "ninguém segura o hidraw" licenciam repintura da barra por
+    cima da Steam. A varredura que não terminou não carimba.
+
+    **O NOME É LONGO DE PROPÓSITO.** A primeira versão deste teste se chamava
+    `test_proc_ilegivel_nao_vira_cinco_segundos_de_negativo` — o nome EXATO de
+    um teste da metade 2, sobre o outro produto. Python guarda a última
+    definição, então este nunca rodou: a mordida (carimbar a foto no `except`)
+    passou verde, e só apareceu porque a mordida foi conferida uma a uma. É a
+    régua que não mede nada, achada dentro da régua que existe para achá-las.
+    """
+    contador = proc_da_steam(erro=OSError("sem /proc"))
+
+    escritor_cru.pids_da_steam(agora=0.0)
+    escritor_cru.pids_da_steam(agora=1.0)
+
+    assert contador.varreduras == 2, (
+        "um `/proc` ilegível virou negativo carimbado: o produto parou de "
+        "tentar por cinco segundos com base numa leitura que nunca aconteceu"
+    )
 
 
 # ---------------------------------------------------------------------------
