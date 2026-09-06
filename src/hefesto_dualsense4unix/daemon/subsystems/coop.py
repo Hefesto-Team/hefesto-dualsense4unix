@@ -1941,6 +1941,87 @@ class CoopManager:
     stop_all = disable
 
 
+def _numeros_sem_vpad(
+    daemon: DaemonProtocol, controllers: Sequence[Mapping[str, object]]
+) -> list[int | None]:
+    """O número de cada controle quando NÃO há gamepad virtual de pé.
+
+    COOP-NA-CONEXAO-NATIVA-01 (06/09/2026), Caminho B. Sem vpad há DOIS estados
+    diferentes, e até hoje os dois devolviam ``None``:
+
+    - **Controlar o PC** (desktop): o controle mexe no PC, não há jogo do outro
+      lado e não há jogador nenhum — ``None`` continua sendo a resposta certa;
+    - **Conexão Nativa (Sony)**: o jogo abre o controle FÍSICO e fala direto com
+      ele. Não há intermediário, mas há controle na mão de alguém, e o número
+      dele **já está calculado** — o ``identity_registry`` é chaveado pelo MAC e
+      não consulta modo nenhum (``daemon/lifecycle.py:4506-4508`` roda o
+      ``_sync_identity_registry`` antes do gate de conexão, a cada 2 s). Era
+      dado pronto que a tela não publicava.
+
+    **A PREMISSA QUE CAIU, e ela estava escrita:** o docstring de
+    :func:`resolve_player_numbers` dizia *"sem gamepad virtual (modo
+    desktop/nativo): não existe jogador"*. Isso é verdade do desktop e falso da
+    Conexão Nativa — o modo mais fiel ao aparelho era o único em que a tela
+    dizia que ninguém era jogador.
+
+    **LEITURA PURA, e o ``assign=False`` é o que a mantém assim:** perguntar o
+    número não pode dar lugar na fila a ninguém. É o mesmo contrato do
+    ``ipc_handlers._player_slot_for``, e é por ele que o ``player`` e o
+    ``player_slot`` do payload passam a concordar neste modo, em vez de
+    discordarem sem que a tela saiba por quê.
+
+    **O ``is not True`` é literal de propósito:** com o daemon dublado por
+    ``MagicMock``, ``is_native_mode()`` devolve um mock TRUTHY, e um ``if`` solto
+    numeraria a mesa inteira num teste que nunca falou de modo nenhum. Mesma
+    blindagem do ``isinstance(number, int)`` do irmão abaixo.
+
+    **E O GATE DO CO-OP CONTINUA FECHADO NESTE MODO — §9 da sprint, e é decisão,
+    não a metade que faltou.** Se você veio até aqui para *"ligar o co-op na
+    Conexão Nativa"* abrindo o :meth:`CoopManager.should_be_active`, esse
+    caminho não existe: o mecanismo do co-op desta casa é *grab do físico + um
+    vpad por jogador* (``_spawn_player``), e pôr-se no meio é exatamente o que a
+    Conexão Nativa dispensa — abrir aquele gate **desfaria o modo que ela
+    pediu**, pela mesma razão que já mantém a exceção de
+    ``lifecycle.py:1873-1874``. Ou o jogo conta os dois físicos sozinho, ou
+    alguém tem de estar no meio (o Caminho D, que é oferta e continua sem a
+    palavra dela). A régua que trava isto é
+    ``tests/unit/test_o_coop_vive_na_conexao_nativa.py``.
+
+    **POR QUE ESTE PARÁGRAFO MORA AQUI e não lá em cima**, que é onde ele
+    seria lido primeiro: ``docs/data/mapa-controles.csv`` cita
+    ``coop.py:792-802``, ``:804`` e ``:819`` por FAIXA, e uma linha
+    acrescentada antes delas apodrece as seis citações no portão
+    ``citacoes-de-linha``. O mapa é da SPECS-A-PROCEDENCIA-01 e não se edita
+    daqui — logo o topo deste arquivo está congelado para quem não o possui.
+    Medido nesta leva, com o portão vermelho na mão.
+    """
+    vazio: list[int | None] = [None] * len(controllers)
+    nativo = getattr(daemon, "is_native_mode", None)
+    if not callable(nativo):
+        return vazio
+    ligado: Any = None
+    with contextlib.suppress(Exception):
+        ligado = nativo()
+    if ligado is not True:
+        return vazio
+    registro = getattr(daemon, "identity_registry", None)
+    slot_for = getattr(registro, "slot_for", None) if registro is not None else None
+    if not callable(slot_for):
+        return vazio
+    fora: list[int | None] = []
+    for ctrl in controllers:
+        uniq = ctrl.get("uniq")
+        if not bool(ctrl.get("connected")) or not isinstance(uniq, str):
+            fora.append(None)
+            continue
+        bruto: Any = None
+        with contextlib.suppress(Exception):
+            bruto = slot_for(uniq, assign=False)
+        certo = isinstance(bruto, int) and not isinstance(bruto, bool) and bruto > 0
+        fora.append(bruto if certo else None)
+    return fora
+
+
 def resolve_player_numbers(
     daemon: DaemonProtocol, controllers: Sequence[Mapping[str, object]]
 ) -> list[int | None]:
@@ -1950,18 +2031,25 @@ def resolve_player_numbers(
     significa "este controle não é um jogador agora" e a UI simplesmente não
     mostra número — melhor calar que mentir. Acontece em três casos:
 
-    - sem gamepad virtual (modo desktop/nativo): não existe jogador — o controle
-      mexe no PC ou fala direto com o jogo;
+    - **Controlar o PC** (sem gamepad virtual e sem Modo Nativo): não existe
+      jogador — o controle mexe no PC;
     - controle desconectado;
     - co-op ligado mas o jogador ainda não foi promovido (aguardando o grab), ou
       controle sem MAC para casar.
+
+    **A CONEXÃO NATIVA SAIU DESSA LISTA em 06/09/2026** (COOP-NA-CONEXAO-NATIVA-01,
+    Caminho B): ali não há vpad e há jogador — quem numera é o
+    ``identity_registry``, e o porquê está em :func:`_numeros_sem_vpad`. A frase
+    que estava aqui — *"sem gamepad virtual (modo desktop/nativo): não existe
+    jogador"* — era uma premissa escrita, não um descuido, e o que a derrubou
+    foi a decisão dela de materializar o co-op na Conexão Nativa.
 
     Com o gamepad ligado e o co-op DESLIGADO todos os controles conectados são o
     jogador 1 — é literalmente o que o jogo vê (um vpad só, alimentado pelo
     primário). Função de leitura pura: não toca no estado do co-op.
     """
     if getattr(daemon, "_gamepad_device", None) is None:
-        return [None] * len(controllers)
+        return _numeros_sem_vpad(daemon, controllers)
     connected = [bool(c.get("connected")) for c in controllers]
     coop_on = bool(getattr(getattr(daemon, "config", None), "coop_enabled", False))
     manager = getattr(daemon, "_coop_manager", None)
