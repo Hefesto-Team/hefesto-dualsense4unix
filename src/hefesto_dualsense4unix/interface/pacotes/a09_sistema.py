@@ -1525,7 +1525,7 @@ def retomar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
 #: `chamar_detalhado` só traz `motivo` quando o daemon RESPONDEU e recusou por
 #: parâmetro inválido; falha de transporte — serviço parado, socket ausente,
 #: timeout — volta `(False, None)`, e está escrito com todas as letras em
-#: `app/ipc_bridge.py:382-387`. **Na mesa dela, com o serviço parado, o motivo
+#: `app/ipc_bridge.py:387`. **Na mesa dela, com o serviço parado, o motivo
 #: é `None`** — então esta frase não é o caso raro: é o caso.
 #:
 #: ELA NÃO PODE DIZER *"nada foi reaplicado"*, e isso não é cautela de redação.

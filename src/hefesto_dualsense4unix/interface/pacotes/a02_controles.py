@@ -40,7 +40,7 @@ que saíram daqui e voltaram para o motor.
 primeira redação desta linha errava.** O `alto-estado` é
 `<span class="mudo" data-campo="alto-estado" hidden>` na página publicada
 (`paginas/02-controles.html:1678` e `:2009`), e o `hidden` é LITERAL no gerador
-(`aba02.py:1170`), sem condição; o `escrever` do piloto não toca o atributo
+(`aba02.py:1691`), sem condição; o `escrever` do piloto não toca o atributo
 `hidden` em nenhum dos seus alvos. O "102%" ia para um vão invisível.
 
 **O QUE ELA VÊ NO BLOCO DO ALTO-FALANTE JÁ TEM ENDEREÇO — 02/09/2026, decisão
