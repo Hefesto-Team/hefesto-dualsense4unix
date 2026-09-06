@@ -276,6 +276,18 @@ PONTO = " • "
 #: `core/acoes_de_botao.BOTOES` — a lista é do produto, e não se digita aqui.
 PREFIXO_DA_ACAO = "acao-"  # (noqa-acento) prefixo de endereço, não é prosa
 
+#: O PREFIXO DAS LINHAS DA TELA "Teclas do teclado" — 06/09/2026,
+#: NAVEGACAO-TECLAS-01. Um por botão de `acoes.DOMINIO_DO_TECLADO`, e a lista
+#: também é do produto.
+#:
+#: ELE É OUTRO PREFIXO DE PROPÓSITO, e a razão é medida: a `forma` que o piloto
+#: recolhe usa `data-linha || data-campo` como chave
+#: (`hefesto_vivo.py`, o bloco `forma:`), e as vinte e duas listas de *o que
+#: cada botão faz* já ocupam a chave `<botão>` pelo `data-linha`. Um campo de
+#: texto que reusasse aquela chave APAGARIA a escolha da lista dentro da mesma
+#: forma, sem uma palavra — o "Guardar" leria o texto onde esperava um rótulo.
+PREFIXO_DA_TECLA = "tecla-"  # (noqa-acento) prefixo de endereço, não é prosa
+
 #: O `<select>` da "Função do teclado" e as suas `<option>`, lidos do HTML.
 #: Duas expressões e não uma: recortar o bloco primeiro é o que impede casar
 #: com as `<option>` das outras 21 listas da mesma página.
@@ -1011,12 +1023,34 @@ def _linhas_dos_botoes(p: dict[str, Any]) -> dict[str, str]:
     O PERFIL VENCE O DE FÁBRICA linha a linha, e não em bloco: `button_actions`
     guarda DIFERENÇA (`None` quer dizer "herda"), então uma linha ausente não é
     "nada" — é o de fábrica.
+
+    SÃO TRÊS CAMADAS DESDE 06/09/2026, e não duas: esta função montava o de
+    fábrica com `button_actions` por cima e **nunca olhava `key_bindings`** —
+    a mesma cegueira que o `resolver()` tinha antes da ONDA3-MOTOR-01, e com o
+    mesmo desfecho, um degrau adiante. Um perfil em que ela escreveu
+    `Super` no Options pela janela antiga fazia a tabela mostrar o de fábrica,
+    sobre um botão que digitava outra coisa. Agora quem responde é
+    `acoes._tabela_efetiva`, pelo `resolver()` — a MESMA chamada que alimenta o
+    device —, e as três camadas são o de fábrica, os atalhos da janela antiga e
+    a escolha desta tela, nessa ordem.
+
+    O QUE ELA NÃO TEM COMO DIZER continua sem ser dito AQUI, e é de propósito:
+    uma combinação livre não é `<option>` de lista nenhuma, `acoes.rotulo()`
+    devolve o token cru e o `escrever()` do piloto o recusa em silêncio. Quem
+    nomeia essas linhas é a TIRA (`linhas_que_a_lista_nao_sabe_dizer`), porque
+    o lugar de dizer o que a tabela não alcança é o texto ao lado dela, e não
+    uma opção nova por tecla que ela invente.
     """
-    escolhas = (p.get("button_actions") or {}) if p else {}
-    de_fabrica = acoes.padrao()
+    perfil_ = p or {}
+    # A MESMA TABELA QUE O DEVICE RECEBE — `resolver()` e este chamador leem
+    # a mesma função. Ela é privada do motor, e usá-la daqui é declarado: a
+    # alternativa seria montar as três camadas de novo aqui, que é a segunda
+    # verdade que esta casa persegue. Ver o relato desta frente.
+    tabela = acoes._tabela_efetiva(
+        perfil_.get("button_actions") or None,
+        perfil_.get("key_bindings") or None)
     return {
-        f"{PREFIXO_DA_ACAO}{botao}": acoes.rotulo(
-            str(escolhas.get(botao) or de_fabrica.get(botao) or ""))
+        f"{PREFIXO_DA_ACAO}{botao}": acoes.rotulo(str(tabela.get(botao) or ""))
         for botao in acoes.BOTOES
     }
 
@@ -1191,16 +1225,25 @@ def atalhos_que_param_de_valer(p: dict[str, Any]) -> list[tuple[str, str]]:
     isso a tira diz *"quando o mouse virtual estiver de pé"* em vez de prometer
     o desastre em todo caso.
 
-    ELA MORRE SOZINHA no dia em que `resolver()` passar a herdar
-    `key_bindings`: a lista fica vazia e a tira some, sem ninguém apagar nada
-    daqui.
+    ELA NÃO MORREU SOZINHA, e o fato estava errado AQUI — 06/09/2026. Esta
+    linha dizia *"ela morre sozinha no dia em que `resolver()` passar a herdar
+    `key_bindings`"*. O `resolver()` herdou (ONDA3-MOTOR-01) **e a função não
+    morreu**: quem precisava passar o campo era o CHAMADOR, e ele continuava
+    chamando `resolver(button_actions)` com um argumento só — a assinatura de
+    antes, byte a byte, que é o contrato que aquela frente preservou de
+    propósito. Com o campo passado, a lista deixa de nomear os oito botões do
+    `DOMINIO_DO_TECLADO` (que agora sobrevivem) e passa a nomear **só os que
+    ainda se perdem de verdade**: os que ela escreveu na janela antiga FORA
+    daquele domínio — o `cross`, o `triangle`, o `r3` —, para os quais o
+    `apply_button_actions` reescreve o teclado inteiro sem consultá-los.
 
     :returns: `[(botão, o binding colado), …]`, em ordem de botão.
     """
     atalhos = (p.get("key_bindings") or {}) if p else {}
     if not atalhos:
         return []
-    _do_mouse, do_teclado, _sem = acoes.resolver((p or {}).get("button_actions"))
+    _do_mouse, do_teclado, _sem = acoes.resolver(
+        (p or {}).get("button_actions"), atalhos)
     fora: list[tuple[str, str]] = []
     for botao, ligacao in sorted(atalhos.items()):
         agora = (tuple(ligacao) if isinstance(ligacao, (list, tuple))
@@ -1208,6 +1251,221 @@ def atalhos_que_param_de_valer(p: dict[str, Any]) -> list[tuple[str, str]]:
         if do_teclado.get(botao) == agora:
             continue
         fora.append((botao, _colado(agora)))
+    return fora
+
+
+# ---------------------------------------------------------------------------
+# A TELA "Teclas do teclado" — 06/09/2026, NAVEGACAO-TECLAS-01.
+#
+# O QUE ELA FECHA: a linha `FALTA_NO_HTML` de *Editar QUAL TECLA cada botão
+# digita* (`docs/data/paridade-gtk-html.csv:208`). A janela antiga tem uma
+# coluna EDITÁVEL EM TEXTO — ela digita `Alt + Tab`, `Ctrl + Shift + F`,
+# `Super`, e `dehumanize_binding` traduz —, e a tela nova só oferecia uma LISTA
+# FECHADA de 26 ações. Tudo o que estivesse fora dela — um F5, um Ctrl + W,
+# qualquer combinação que ela invente — a GTK escrevia e o HTML não tinha como
+# escrever, por nenhuma aba.
+#
+# NENHUMA TABELA DE NOMES DE TECLA NASCE AQUI, e é a exigência da sprint com
+# todas as letras: *"uma segunda tabela de nomes de tecla é a segunda verdade
+# mais previsível deste repositório"*. São TRÊS donos, cada um respondendo o que
+# só ele sabe, e o import dos dois primeiros é TARDIO porque `input_actions`
+# puxa GTK no topo e os pacotes são puros de propósito:
+#
+#   `input_actions.humanize_binding`   token cru  -> o que ela lê
+#   `input_actions.dehumanize_binding` o que ela digita -> token cru
+#   `keyboard_mappings.parse_binding`  a FORMA (`KEY_*` ou `__…__`), e recusa
+#   `uinput_keyboard.SUPPORTED_KEYS`   o que o device virtual SABE EMITIR
+#
+# O QUARTO É O QUE FALTAVA, e sem ele a tela aceitaria calada. `parse_binding`
+# só confere o PREFIXO — `KEY_BANANA` passa por ele —, e o device
+# (`uinput_keyboard._emit_sequence_press`) faz `getattr(u, key_name, None)` e
+# **pula em silêncio** o que o módulo não conhece. Uma tecla inventada seria
+# gravada no perfil, apareceria na tela e não digitaria nada: o botão que
+# responde calado, com o dado dela no disco.
+#
+# O DOMÍNIO É DE OITO BOTÕES, E ELE É PERGUNTADO — `acoes.DOMINIO_DO_TECLADO`,
+# que o motor DERIVA dos quatro mapas do produto (hoje: `create`, `l1`, `l3`,
+# `options`, `r1` e as três regiões do touchpad). São os botões sobre os quais
+# `key_bindings` manda; nos outros catorze o que vale é o mapa fixo do
+# `UinputMouseDevice`, e escrever `key_bindings` neles seria gravar no disco uma
+# escolha que o `resolver()` não lê — a ausência de dado, que se lê como "a
+# mudança não pegou". Ver `_tabela_efetiva` em `core/acoes_de_botao.py`.
+# ---------------------------------------------------------------------------
+
+
+def _traduzir(texto: str) -> str:
+    """`"Ctrl + W"` → `"KEY_LEFTCTRL+KEY_W"`, PELO DONO DA JANELA ANTIGA.
+
+    Sem GTK no ambiente o `input_actions` não importa, e aí o texto volta como
+    veio: quem valida é a etapa seguinte, e ela recusa dizendo. Inventar uma
+    tradução aqui seria a segunda tabela que este bloco existe para não ter.
+    """
+    try:
+        from hefesto_dualsense4unix.app.actions.input_actions import (
+            dehumanize_binding,
+        )
+    except Exception:
+        return texto.strip()
+    return str(dehumanize_binding(texto.strip()))
+
+
+def _desfazer_o_humanize(cru: str) -> str:
+    """O que sobrou do `dehumanize_binding` e é o `humanize_binding` ao contrário.
+
+    **UM DEFEITO DE ROUND-TRIP NO DONO, medido em 06/09/2026, e ele é da JANELA
+    ANTIGA também.** `humanize_binding` tem um ramo de FALLBACK — um `KEY_*` que
+    não está em `_KEY_LABELS` vira `tok[4:]`, então `KEY_F5` aparece na tela
+    como `F5`. `dehumanize_binding` **não desfaz esse ramo**: ele só converte
+    caractere ÚNICO (`W` → `KEY_W`), e `F5` volta como `F5`, que o
+    `parse_binding` recusa.
+
+    Medido, com as duas funções do dono:
+
+        humanize_binding("KEY_F5")     -> "F5"
+        dehumanize_binding("F5")       -> "F5"        (não volta a ser tecla)
+        parse_binding("F5")            -> ValueError
+
+    Alcança **F1..F12, Home, End, Insert, PageUp, PageDown, Comma, Dot e as três
+    de volume** — tudo o que o teclado virtual declara e o `_KEY_LABELS` não
+    nomeia. Sem esta linha, a tela mostraria `F5` numa linha e RECUSARIA o
+    "Guardar" da mesma tela, sem ela ter tocado em nada.
+
+    ISTO NÃO É UMA SEGUNDA TABELA — é o ramo de fallback do dono, aplicado ao
+    contrário, e **quem decide é o device**: só vira `KEY_<X>` o que
+    `uinput_keyboard.SUPPORTED_KEYS` declara. O que não estiver lá segue como
+    veio e cai na recusa da etapa seguinte, com a frase do dono.
+
+    A CURA DE VERDADE É NO DONO (`input_actions.dehumanize_binding`), e está
+    relatada: a janela antiga tem o mesmo buraco — ela mostra `F5` na coluna
+    "Tecla do teclado" e recusa `F5` quando alguém o digita de volta.
+    """
+    sabe = _teclas_que_o_device_sabe()
+    fora = []
+    for tok in cru.split("+"):
+        tok = tok.strip()
+        if not tok:
+            continue
+        if not tok.startswith("KEY_") and not tok.startswith("__"):
+            candidato = f"KEY_{tok.upper()}"
+            if candidato in sabe:
+                tok = candidato
+        fora.append(tok)
+    return "+".join(fora)
+
+
+def _teclas_que_o_device_sabe() -> frozenset[str]:
+    """O que o teclado virtual SABE EMITIR — perguntado ao dono.
+
+    `uinput_keyboard.SUPPORTED_KEYS` é a lista de capacidades que o device
+    declara ao `uinput` no `start()`. Uma tecla fora dela não é emitida: o
+    `_emit_sequence_press` faz `getattr(u, key_name, None)` e segue em frente.
+    """
+    from hefesto_dualsense4unix.integrations.uinput_keyboard import SUPPORTED_KEYS
+
+    return frozenset(SUPPORTED_KEYS)
+
+
+def tokens_da_tecla(texto: str) -> tuple[str, ...]:
+    """O que ela digitou, virado tokens do produto — ou `ValueError` DIZENDO.
+
+    Vazio devolve `()`, e isso quer dizer **este botão não digita nada**: é o
+    mesmo `— Nada —` da lista ao lado, dito pelo campo em branco. Não é erro, e
+    tratá-lo como erro faria a tela recusar o gesto mais natural de todos —
+    apagar o que está escrito.
+
+    AS TRÊS RECUSAS SÃO DOS DONOS, e nenhuma frase de tecla é redigida aqui:
+
+    1. a FORMA, de `keyboard_mappings.parse_binding` — ele levanta `ValueError`
+       com o token que não entendeu;
+    2. a CAPACIDADE, de `uinput_keyboard.SUPPORTED_KEYS` — a tecla existe no
+       vocabulário e o device virtual não a declara;
+    3. a MISTURA, de `uinput_keyboard._delegate_virtual_tokens` — um
+       `__OPEN_OSK__` junto com um `KEY_*` é rejeitado LÁ com um `warning` e
+       sem emitir nada. Recusar aqui é dizer na tela o que o daemon diria no
+       journal.
+    """
+    cru = _desfazer_o_humanize(_traduzir(texto))
+    if not cru:
+        return ()
+    from hefesto_dualsense4unix.core.keyboard_mappings import (
+        is_virtual_token,
+        parse_binding,
+    )
+
+    tokens = parse_binding(cru)  # ValueError com a frase do dono
+    virtuais = [t for t in tokens if is_virtual_token(t)]
+    if virtuais and len(virtuais) != len(tokens):
+        raise ValueError(
+            f"{texto.strip()!r} mistura um comando (“{virtuais[0]}”) com teclas "
+            "comuns, e o teclado do Hefesto recusa a mistura sem digitar nada. "
+            "Escolha um ou outro.")
+    if not virtuais:
+        sabe = _teclas_que_o_device_sabe()
+        faltam = [t for t in tokens if t not in sabe]
+        if faltam:
+            raise ValueError(
+                "o teclado do Hefesto não sabe digitar "
+                + ", ".join(f"“{_atalho_em_palavras(t)}”" for t in faltam)
+                + f" (de {texto.strip()!r}). Ele só emite as teclas que declara "
+                  "ao sistema quando nasce, e essa não está entre elas.")
+    return tokens
+
+
+def _o_que_cada_botao_digita(p: dict[str, Any]) -> dict[str, tuple[str, ...]]:
+    """Botão -> as teclas que ele digita AGORA, perguntado ao motor.
+
+    É a segunda sacola do `resolver()`, com as TRÊS camadas já aplicadas na
+    ordem do produto (de fábrica, `key_bindings`, `button_actions`) — a mesma
+    chamada que `profiles/manager.apply_button_actions` faz para alimentar o
+    device. Ler daqui é o que impede esta tela de mostrar uma coisa e o
+    aparelho digitar outra.
+    """
+    perfil_ = p or {}
+    _do_mouse, do_teclado, _sem = acoes.resolver(
+        perfil_.get("button_actions") or None,
+        perfil_.get("key_bindings") or None)
+    return do_teclado
+
+
+def teclas_dos_botoes(p: dict[str, Any]) -> dict[str, str]:
+    """Os oito campos da tela "Teclas do teclado", com o texto que ela lê.
+
+    Vazio quando o botão não digita nada — é a regra dela para toda a casa
+    (*campo sem informação não mostra nada*), e é o que faz o campo em branco
+    querer dizer a mesma coisa na leitura e na escrita.
+    """
+    digita = _o_que_cada_botao_digita(p)
+    return {
+        f"{PREFIXO_DA_TECLA}{botao}": _atalho_em_palavras(
+            "+".join(digita.get(botao) or ()))
+        for botao in sorted(acoes.DOMINIO_DO_TECLADO)
+    }
+
+
+def linhas_que_a_lista_nao_sabe_dizer(p: dict[str, Any]) -> list[tuple[str, str]]:
+    """As linhas cuja tecla o `<select>` das 22 NÃO tem como mostrar.
+
+    O DEFEITO QUE ELA NOMEIA, e ele é o preço de aceitar combinação livre: a
+    lista da tabela oferece 26 ações, e uma combinação que ela escreveu não
+    está entre elas. `acoes.rotulo()` devolve o token CRU nesse caso, o
+    `escrever()` do piloto recusa em silêncio o texto que não casa com nenhuma
+    `<option>` (`hefesto_vivo.py`, `if(!tem) return 0;`) — e o que fica na tela
+    é o rótulo que o **desenho** cravou. A linha passa a AFIRMAR uma ação que o
+    botão não faz.
+
+    ELA É DITA NA TIRA, e não curada na lista: pôr a combinação como opção nova
+    faria a lista crescer a cada tecla que ela inventasse, que é exatamente o
+    que a tela de texto existe para não fazer.
+
+    :returns: `[(botão, o que ele digita, em palavras), …]`.
+    """
+    digita = _o_que_cada_botao_digita(p)
+    fora: list[tuple[str, str]] = []
+    for botao in acoes.BOTOES:
+        colado = "+".join(digita.get(botao) or ())
+        if not colado or colado in acoes.ACOES:
+            continue
+        fora.append((botao, _atalho_em_palavras(colado)))
     return fora
 
 
@@ -1334,6 +1592,18 @@ def _aviso_da_tabela(p: dict[str, Any]) -> str:
             "Guardar aqui substitui o conjunto inteiro de atalhos pelo que a "
             "tabela mostra, e esses param de valer assim que o mouse virtual "
             "estiver de pé.")
+    # A SEXTA FRASE — 06/09/2026, NAVEGACAO-TECLAS-01. Ela nasce com a tela de
+    # texto, e sem ela a tela de texto CRIARIA um defeito: uma combinação livre
+    # não tem `<option>` na lista de 26, o `escrever()` recusa em silêncio, e a
+    # linha fica AFIRMANDO o rótulo que o desenho cravou. Ver
+    # `linhas_que_a_lista_nao_sabe_dizer`.
+    mudas = linhas_que_a_lista_nao_sabe_dizer(p)
+    if mudas:
+        partes.append(
+            "<b>A lista não sabe mostrar a tecla destas linhas:</b> "
+            + ", ".join(f"{_nome_do_botao(b)} digita {t}" for b, t in mudas)
+            + ". Elas valem assim mesmo; o que a lista mostra nelas não é o que "
+              "o botão faz. Use <b>Teclas do teclado</b> para ver e trocar.")
     do_ps = _o_que_o_ps_faz(p)
     if do_ps:
         partes.append(do_ps)
@@ -1418,6 +1688,13 @@ def _o_que_a_tabela_mostra(p: dict[str, Any]) -> dict[str, str]:
         _largar_o_que_ela_mexeu()
     _ULTIMA_PINTURA = agora
     linhas = _linhas_dos_botoes(p)
+    # OS OITO CAMPOS DE TEXTO ENTRAM NA MESMA TRAVA, e é a exigência da sprint:
+    # *"um campo de texto sendo editado não pode ser reconstruído sob os dedos
+    # dela"*. Sem isto o tique de 100 ms escreveria o valor do perfil por cima
+    # da primeira letra que ela digitasse — o `escrever()` com alvo `valor` faz
+    # `el.value = t` assim que os dois diferem, e um campo em edição SEMPRE
+    # difere. O gesto `tecla-escrita` é quem anota; aqui a pintura CONCORDA.
+    linhas.update(teclas_dos_botoes(p))
     # SÓ AS QUE AINDA DIFEREM. Se o perfil já passou a dizer o que ela escolheu
     # (o "Guardar" gravou, ou outro caminho mudou o perfil), a linha sai da
     # trava sozinha — e a trava se esvazia sem ninguém precisar lembrar.
@@ -2425,6 +2702,288 @@ def fechar_definicoes(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any
     _largar_o_que_ela_mexeu()
     return {"mesa": _linhas_dos_botoes(
         perfil.ativo((ctx.state or {}).get("active_profile")))}
+
+
+@gesto("06-navegacao.html", "tecla-escrita")
+def tecla_escrita(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
+    """Ela mexeu num dos oito campos de *Teclas do teclado*. NÃO grava nada.
+
+    É O IRMÃO DO `linha-de-botao`, e existe pela mesma decisão dela de
+    02/09/2026 — *"não vira gravação automática: ela quer escolher várias,
+    conferir e aplicar de uma vez"*. Quem grava é o "Guardar" da tela.
+
+    ELE TEM DE ATENDER O **CLIQUE**, e não só o `change`, e isso é o que faz o
+    campo de texto ser editável de verdade. Medido no motor: o `escrever()` do
+    piloto escreve `el.value = t` sempre que os dois diferem, e um campo em
+    edição difere já na primeira letra — o tique de 100 ms apagaria o que ela
+    está digitando. O `change` de um `<input>` só chega quando o campo PERDE o
+    foco, tarde demais. O clique dentro do campo chega na hora
+    (`hefesto_vivo`, o ouvinte de `click` no documento), e é ele que abre a
+    trava; o `change` que vem depois a atualiza com o texto final.
+
+    A RECUSA É `RuntimeError`, e não `ValueError`, de propósito: o
+    `_recusou_dizendo` do piloto (`hefesto_vivo.py:2563`) leva à tela a frase do
+    `RuntimeError` e cala a do `ValueError`, que é a linguagem de quem programa.
+    Uma combinação que ela digitou e o produto não sabe digitar é conversa com
+    ELA — tem de aparecer no cartão, em laranja.
+
+    E A ANTERIOR SOBREVIVE À RECUSA, sem ninguém a devolver: este gesto não
+    escreve em disco, e ao recusar ele LARGA a trava daquele campo — no tique
+    seguinte (100 ms) a pintura devolve o que o perfil guarda, por cima do texto
+    inválido. Segurar a trava faria a tela ficar mostrando o erro dela para
+    sempre, e o "Guardar" recusaria a cada clique por causa dele.
+    """
+    campo = str(o.get("campo") or "")
+    botao = campo.removeprefix(PREFIXO_DA_TECLA)
+    if not campo.startswith(PREFIXO_DA_TECLA) or botao not in acoes.DOMINIO_DO_TECLADO:
+        raise ValueError(
+            f"tecla-escrita: o clique não disse qual botão (veio {campo!r}). O "
+            f"`data-campo` de cada campo é `{PREFIXO_DA_TECLA}<botão>`, e ele "
+            "vem do gerador.")
+    # O TEXTO NÃO É APARADO AQUI, e a diferença é de um espaço que ELA está
+    # digitando: com `Ctrl + ` no campo, guardar `Ctrl +` na trava faz a pintura
+    # do tique seguinte reescrever o campo — e o cursor SALTA para antes do
+    # espaço, no meio da combinação. Quem apara é `tokens_da_tecla`, na
+    # tradução, que é onde aparar não mexe no que ela vê.
+    texto = str(o.get("valor") or "")
+    try:
+        tokens = tokens_da_tecla(texto)
+    except ValueError as erro:
+        _MEXENDO.pop(campo, None)
+        raise RuntimeError(
+            f"{_nome_do_botao(botao)}: {erro} O que estava guardado continua "
+            "valendo — nada foi gravado.") from erro
+    # O TEXTO QUE FICA NA TRAVA É O **DELA**, e não a volta do round-trip: ela
+    # pode escrever `ctrl+w` ou `KEY_LEFTCTRL+KEY_W`, e reescrever o campo com a
+    # forma canônica no meio da digitação seria mexer no que ela está fazendo.
+    # A canônica aparece no tique seguinte ao "Guardar", que é quando o perfil
+    # passou a dizê-la.
+    _MEXENDO[campo] = texto
+    return {"mesa": {campo: texto}} if tokens or not texto else None
+
+
+@gesto("06-navegacao.html", "fechar-teclas")
+def fechar_teclas(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
+    """O fechar e o "Cancelar" da tela de teclas: LARGAM o que ela não guardou.
+
+    Mesmo papel do `fechar-definicoes`, e o mesmo motivo: sem ele a trava dos
+    oito campos ficaria presa depois de ela desistir, e a tela continuaria
+    mostrando um texto que ninguém vai gravar.
+    """
+    _largar_o_que_ela_mexeu()
+    return {"mesa": teclas_dos_botoes(
+        perfil.ativo((ctx.state or {}).get("active_profile")))}
+
+
+def _atalhos_de_hoje(prof: Any) -> dict[str, list[str]]:
+    """`Profile.key_bindings` MATERIALIZADO, com o mesmo alcance de hoje.
+
+    `None` quer dizer *"herda `DEFAULT_BUTTON_BINDINGS` inteiro"*, e o produto o
+    resolve assim (`profiles/manager.resolve_key_bindings`). Para trocar UMA
+    linha é preciso um dicionário, e o dicionário que **não muda nada** é a
+    cópia do de fábrica — medido, e não escolhido: `resolve_key_bindings(None)`
+    devolve `dict(DEFAULT_BUTTON_BINDINGS)`, exatamente o mesmo objeto que
+    `resolve_key_bindings(dict(DEFAULT_BUTTON_BINDINGS))` devolve.
+
+    O CAMINHO DE VOLTA EXISTE: quando o dicionário terminar igual ao de fábrica,
+    quem grava devolve `None` — senão o perfil dela congelaria o padrão de HOJE
+    e deixaria de acompanhar uma troca no produto. É a mesma disciplina do
+    `button_actions`, e a razão está escrita em `guardar_definicoes`.
+    """
+    from hefesto_dualsense4unix.core.keyboard_mappings import DEFAULT_BUTTON_BINDINGS
+
+    atual = getattr(prof, "key_bindings", None)
+    if atual is None:
+        return {b: list(t) for b, t in DEFAULT_BUTTON_BINDINGS.items()}
+    return {b: list(t) for b, t in atual.items()}
+
+
+def _de_fabrica_vira_none(atalhos: dict[str, list[str]]) -> dict[str, list[str]] | None:
+    """`None` quando o dicionário é o de fábrica — ver `_atalhos_de_hoje`."""
+    from hefesto_dualsense4unix.core.keyboard_mappings import DEFAULT_BUTTON_BINDINGS
+
+    de_fabrica = {b: list(t) for b, t in DEFAULT_BUTTON_BINDINGS.items()}
+    return None if atalhos == de_fabrica else atalhos
+
+
+@gesto("06-navegacao.html", "guardar-teclas")
+def guardar_teclas(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
+    """"Guardar" da tela *Teclas do teclado*. `Profile.key_bindings`.
+
+    **É A METADE QUE FALTAVA DA PARIDADE** — `paridade-gtk-html.csv:208`. A
+    janela antiga deixa ela digitar qualquer combinação de `KEY_*` na coluna
+    "Tecla do teclado"; a tela nova só tinha a lista fechada de 26 ações, e
+    `key_bindings` só era tocado **para ser zerado**.
+
+    O QUE ELE GRAVA, e o alcance é o do produto: os oito botões de
+    `acoes.DOMINIO_DO_TECLADO`. Os outros catorze não estão aqui porque
+    `key_bindings` não manda neles — o que vale ali é o mapa fixo do
+    `UinputMouseDevice`, e gravar seria pôr no disco uma escolha que o
+    `resolver()` não lê.
+
+    O QUE ELE **NÃO** APAGA, e é o Passo 2 da sprint: as chaves de
+    `key_bindings` que estão FORA desses oito. Ela pode ter escrito `Ctrl + W`
+    no Cross pela janela antiga, e nada nesta tela alcança essa linha — logo
+    nada nesta tela tem o direito de apagá-la. O dicionário de partida é o do
+    perfil (`_atalhos_de_hoje`), e só as oito chaves são reescritas.
+
+    CAMPO EM BRANCO É `— Nada —`, e não "sem opinião": a chave sai do
+    dicionário, e `_tabela_efetiva` lê a ausência dentro do domínio como
+    silêncio, que é o que `resolve_key_bindings` entrega ao device. É a mesma
+    palavra que a lista ao lado usa, dita pelo campo vazio.
+
+    ELE RECUSA DIZENDO, uma linha por vez, e nada é gravado quando alguma
+    recusa: gravar sete de oito e calar sobre a oitava é o botão que responde
+    calado.
+    """
+    nome = _perfil_ativo_ou_recusa(ctx)
+    forma = o.get("forma")
+    if not isinstance(forma, dict) or not forma:
+        raise RuntimeError(
+            "não consegui ler os campos da tela. O botão precisa do "
+            "`data-hef-forma` para o piloto recolher o que você escreveu — se "
+            "ele sumiu do desenho, o Guardar não tem o que gravar.")
+
+    escritos: dict[str, tuple[str, ...]] = {}
+    recusas: list[str] = []
+    for chave, texto in forma.items():
+        if not str(chave).startswith(PREFIXO_DA_TECLA):
+            continue
+        botao = str(chave)[len(PREFIXO_DA_TECLA):]
+        if botao not in acoes.DOMINIO_DO_TECLADO:
+            continue
+        try:
+            escritos[botao] = tokens_da_tecla(str(texto))
+        except ValueError as erro:
+            recusas.append(f"{_nome_do_botao(botao)}: {erro}")
+    if recusas:
+        raise RuntimeError(
+            "não gravei nada — " + " ".join(recusas)
+            + " O que estava guardado continua valendo.")
+    if not escritos:
+        raise RuntimeError(
+            "não achei nenhum campo de tecla na tela. Os oito campos vêm do "
+            "gerador com `data-campo=\"tecla-<botão>\"`; sem eles não há o que "
+            "gravar.")
+
+    loader = perfil._com_o_src()
+    prof = loader.load_profile(nome)
+    atalhos = _atalhos_de_hoje(prof)
+    for botao, tokens in escritos.items():
+        if tokens:
+            atalhos[botao] = list(tokens)
+        else:
+            atalhos.pop(botao, None)
+    novo = _de_fabrica_vira_none(atalhos)
+    # A COMPARAÇÃO É DIRETA, e é o Python que já separa os três estados: `None`
+    # (herda), `{}` (ela esvaziou tudo) e um dicionário. `None == {}` é falso, e
+    # é o que impede este ramo de confundir "herda" com "vazio" — a mesma
+    # distinção do esquema e a mesma que `resolve_key_bindings` aplica.
+    #
+    # NADA A GRAVAR **É UM DESFECHO, E ELE FALA**, pela mesma correção de
+    # 02/09/2026 que o `guardar_definicoes` carrega: um `return` seco aqui seria
+    # o botão que responde calado. E gravar o idêntico não é de graça — trocaria
+    # a data do arquivo e faria o daemon reaplicar um perfil igual, o que um
+    # `profile.switch` no meio de uma partida cobra.
+    if getattr(prof, "key_bindings", None) == novo:
+        _largar_o_que_ela_mexeu()
+        raise RuntimeError(
+            f"não havia o que guardar — o perfil “{nome}” já digita exatamente "
+            "o que estes campos mostram. Está guardado. Para mudar alguma "
+            "coisa, escreva outra tecla e clique aqui de novo.")
+    # A LISTA AO LADO PODE ESTAR MASCARANDO O QUE ELA ACABOU DE ESCREVER, e a
+    # tela DIZ em vez de gravar por cima: `button_actions` é a camada de cima
+    # (`acoes._tabela_efetiva`), então uma linha escolhida na tabela vence a
+    # tecla escrita aqui. Apagar a escolha da tabela de carona seria desfazer,
+    # em silêncio, um clique que ela deu na outra tela.
+    escolhas = getattr(prof, "button_actions", None) or {}
+    mascarados = sorted(b for b, t in escritos.items()
+                        if b in escolhas and "+".join(t) != str(escolhas[b]))
+    perfil.gravar_e_reaplicar(prof.model_copy(update={"key_bindings": novo}), ctx, p)
+    _largar_o_que_ela_mexeu()
+    if mascarados:
+        raise RuntimeError(
+            "guardei as teclas, e estas linhas continuam fazendo o que a lista "
+            "de <b>Definições Controle e Mouse</b> diz, que vence: "
+            + ", ".join(f"{_nome_do_botao(b)} = "
+                        f"{acoes.rotulo(str(escolhas[b]))}" for b in mascarados)
+            + ". Para a tecla que você escreveu valer, ponha essas linhas de "
+              "volta no de fábrica lá.")
+    return {"mesa": teclas_dos_botoes(
+        perfil.ativo((ctx.state or {}).get("active_profile")))}
+
+
+@gesto("06-navegacao.html", "padrao-da-tecla")
+def padrao_da_tecla(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
+    """"Voltar ao padrão" de **UMA** linha — o Passo 2 da sprint.
+
+    A REGRA DELA, e é a razão de este gesto existir: *"'Voltar ao padrão'
+    devolve a LINHA ao padrão; ele não é um apagador de tudo o que ela escreveu
+    na janela antiga."* O botão da tela inteira continua existindo e continua
+    zerando os dois campos — ele DIZ o que apaga, na confirmação e no recibo —,
+    mas até hoje era o ÚNICO caminho: trocar uma linha de volta custava perder
+    todas as outras.
+
+    O QUE É "O PADRÃO DESTA LINHA", perguntado ao dono: `acoes.padrao()[botão]`,
+    que dentro do `DOMINIO_DO_TECLADO` é por construção o que
+    `DEFAULT_BUTTON_BINDINGS` diz. **ESCREVER É O CERTO, e APAGAR seria o
+    errado** — e a diferença é medida: dentro de um `key_bindings` que já é
+    dicionário, uma chave AUSENTE não é "de fábrica", é `— Nada —`
+    (`acoes._tabela_efetiva`, e `resolve_key_bindings` não mescla com os
+    defaults). Apagar a chave devolveria a linha ao SILÊNCIO com o botão
+    dizendo "padrão".
+
+    ELE TIRA A LINHA DAS DUAS CAMADAS, e tem de tirar: `button_actions` vence
+    `key_bindings`, então devolver só a de baixo deixaria o botão fazendo o que
+    a lista escolheu, com este gesto dizendo que voltou ao de fábrica.
+    """
+    botao = str(o.get("tecla") or o.get("linha") or "")
+    if botao not in acoes.DOMINIO_DO_TECLADO:
+        raise ValueError(
+            f"padrao-da-tecla: o clique não disse qual linha (veio {botao!r}). "
+            "O `data-tecla` de cada botão é o id do botão, e ele vem do gerador.")
+    nome = _perfil_ativo_ou_recusa(ctx)
+    loader = perfil._com_o_src()
+    prof = loader.load_profile(nome)
+
+    de_fabrica = acoes.padrao()[botao].split("+")
+    atalhos = _atalhos_de_hoje(prof)
+    antes = list(atalhos.get(botao) or ())
+    atalhos[botao] = list(de_fabrica)
+    novas_teclas = _de_fabrica_vira_none(atalhos)
+
+    escolhas = dict(getattr(prof, "button_actions", None) or {})
+    tirado = escolhas.pop(botao, None)
+    novas_escolhas = escolhas or None
+
+    mudou_tecla = (prof.key_bindings is None) != (novas_teclas is None) or (
+        (prof.key_bindings or {}) != (novas_teclas or {}))
+    if not mudou_tecla and tirado is None:
+        # NADA A FAZER **É UM DESFECHO, E ELE FALA** — a mesma correção de
+        # 02/09/2026 que o `padrao_definicoes` carrega: um `return` seco aqui
+        # seria indistinguível de um botão que mentiu.
+        _MEXENDO.pop(f"{PREFIXO_DA_TECLA}{botao}", None)
+        raise RuntimeError(
+            f"não havia o que voltar — {_nome_do_botao(botao)} já está no de "
+            f"fábrica neste perfil (“{nome}”). Não gravei nada e não incomodei "
+            "o serviço.")
+    perfil.gravar_e_reaplicar(
+        prof.model_copy(update={"key_bindings": novas_teclas,
+                                "button_actions": novas_escolhas}), ctx, p)
+    _MEXENDO.pop(f"{PREFIXO_DA_TECLA}{botao}", None)
+    _MEXENDO.pop(f"{PREFIXO_DA_ACAO}{botao}", None)
+    saiu = []
+    if antes and antes != de_fabrica:
+        saiu.append(f"a tecla “{_atalho_em_palavras('+'.join(antes))}”")
+    if tirado is not None:
+        saiu.append(f"a escolha “{acoes.rotulo(str(tirado))}” da lista")
+    recado = (f"{_nome_do_botao(botao)} voltou ao de fábrica "
+              f"(“{acoes.rotulo(acoes.padrao()[botao])}”)"
+              + (", e com ele saiu " + " e ".join(saiu) if saiu else "")
+              + ". As outras linhas não foram tocadas.")
+    return {"recado": recado,
+            "mesa": teclas_dos_botoes(
+                perfil.ativo((ctx.state or {}).get("active_profile")))}
 
 
 def _o_desenho_congelado(diferentes: dict[str, str]) -> dict[str, tuple[str, str]]:

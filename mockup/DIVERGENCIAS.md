@@ -293,6 +293,75 @@ seção daqui**: a aba deixou de estar em trabalho.
   `data-hef-recados`, então o piloto se comporta hoje como ontem.
 
   **O que fecha:** o `--publicar 05` depois do OK dela na aba inteira.
+## 06-navegacao.html
+
+> **ATENÇÃO — esta aba JÁ FOI PUBLICADA UMA VEZ hoje, e ela precisa saber
+> disso.** O título desta seção é o nome do arquivo E NADA MAIS: o
+> `check_o_desenho_aprovado.declaradas()` casa `^##\s+(\S+\.html)\s*$`, e
+> o adorno que estava aqui fazia a seção NÃO contar como declaração — o
+> portão não acusou enquanto a bancada e o publicado eram iguais, e
+> acusou no primeiro dia em que deixaram de ser (06/09/2026).
+
+- **06/09/2026** — a `ONDA5-06-02` **publicou** `interface/paginas/06-navegacao.html`.
+  A aba passou a ter **22 linhas**: o **Botão PS** é a 19ª, e abre em *"Abrir a
+  Steam"*, que é o `padrao()["ps"]` do motor.
+
+  **Publicar é ato dela, e esta é a exceção do dia — declarada, não escondida.**
+  A decisão de manter foi do coordenador, na costura da ONDA B, com três razões:
+
+  1. **A sprint declarava a posse.** `interface/paginas/06-navegacao.html` está
+     em `posse:` da `ONDA5-06-02`, enquanto as irmãs da mesma leva (`ONDA5-05-01`,
+     `ONDA5-02-02`) a põem em `nao_toca:`. A diferença é do desenho da fila, não
+     escolha do agente.
+  2. **Desfazer criaria perda SILENCIOSA de trabalho dela**, que é o defeito que
+     esta casa mais persegue: a tela ficaria com 21 linhas sobre um produto de
+     22, e o «Guardar» **descartaria a escolha do PS sem dizer uma palavra**,
+     porque a varredura não a traria.
+  3. **O piloto renderiza o PUBLICADO.** Sem publicar não existe prova de tela —
+     e ela é obrigatória —, e duas das sete réguas que a `ONDA5-06-01` deixou
+     vermelhas leem a página publicada.
+
+  **O que isso muda para ela, no FECHO:** a volta única de publicação continua
+  acontecendo, e a aba 06 entra nela — só que **já publicada**. Se ela olhar a
+  linha do PS e disser que não, o desfazer é um comando:
+  `git checkout <commit> -- src/hefesto_dualsense4unix/interface/paginas/06-navegacao.html`.
+
+- **06/09/2026 — E ELA VOLTOU A ESTAR ATRÁS, por desenho:** a
+  `NAVEGACAO-TECLAS-01` acrescentou a tela **"Teclas do teclado"** à bancada e
+  **não publicou** — `interface/paginas/06-navegacao.html` está no `nao_toca:`
+  daquela sprint, e a leva publica de uma vez no fecho, com a palavra dela.
+
+  **O que é a tela nova:** oito linhas com um **campo de texto** onde ela
+  escreve a tecla que o botão digita — `Alt + Tab`, `Ctrl + Shift + F`, `F5`,
+  **qualquer combinação**, e não uma opção nova na lista de 26. É a linha
+  `FALTA_NO_HTML` de *Editar QUAL TECLA cada botão digita*
+  (`docs/data/paridade-gtk-html.csv:208`), que era a maior perda de alcance
+  desta aba na migração. Cada linha tem um **↺** que devolve **só ela** ao de
+  fábrica — até hoje voltar uma linha custava o "Voltar ao padrão" da tela
+  inteira, que zera `key_bindings` e `button_actions` de uma vez.
+
+  **São oito e não vinte e duas porque o domínio é do produto:**
+  `acoes_de_botao.DOMINIO_DO_TECLADO` (`create`, `l1`, `l3`, `options`, `r1` e
+  as três regiões do touchpad). Nos outros catorze o que manda é o mapa fixo do
+  `UinputMouseDevice`, e oferecer campo ali gravaria no disco uma escolha que o
+  `resolver()` não lê.
+
+  **O que ela vê HOJE, até publicar:** a aba Navegação sem o botão
+  *"Teclas do teclado"* no rodapé da tela de Definições, e portanto **sem
+  nenhum caminho** para escrever uma tecla livre — o mesmo estado de ontem. O
+  **custo da espera é o da linha do CSV**: o que ela escreveu na janela antiga
+  continua sem ter como ser reescrito pela tela nova.
+
+  **O que NÃO espera pela publicação, e já vale no produto de hoje:** o
+  `guardar-definicoes` deixou de apagar `key_bindings` fora do alcance dele, a
+  tabela das 22 linhas passou a mostrar as TRÊS camadas (antes ignorava
+  `key_bindings`, e mostrava o de fábrica sobre um botão que digitava outra
+  coisa), e a tira sob a tabela deixou de nomear como perdidos os oito atalhos
+  que a `ONDA3-MOTOR-01` fez sobreviver.
+
+  **O que fecha:** `scripts/check_o_desenho_aprovado.py --publicar 06`, no OK
+  dela da aba.
+
 ## 08-conexoes.html
 
 - **06/09/2026** — a 08-Q5 e a 08-Q7 (`ONDA5-08-01`). O desenho ganhou a linha

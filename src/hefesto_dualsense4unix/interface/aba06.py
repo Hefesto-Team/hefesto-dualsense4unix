@@ -23,6 +23,14 @@ from hefesto_dualsense4unix.core.acoes_de_botao import (  # noqa: E402
 from hefesto_dualsense4unix.core.acoes_de_botao import (  # noqa: E402
     BOTOES as _BOTOES_DO_PRODUTO,
 )
+#: OS BOTÕES SOBRE OS QUAIS `Profile.key_bindings` MANDA — o domínio da tela
+#: "Teclas do teclado", DERIVADO pelo motor dos quatro mapas do produto
+#: (`core/acoes_de_botao._dominio_do_teclado`). Digitar a lista aqui faria o
+#: desenho oferecer campo de tecla em botão que o `resolver()` não lê — e a
+#: escolha iria para o disco sem nunca chegar ao aparelho.
+from hefesto_dualsense4unix.core.acoes_de_botao import (  # noqa: E402
+    DOMINIO_DO_TECLADO as _DOMINIO_DO_TECLADO,
+)
 from hefesto_dualsense4unix.integrations.uinput_mouse import (  # noqa: E402
     DEFAULT_MOUSE_SPEED,
     DEFAULT_SCROLL_SPEED,
@@ -570,6 +578,29 @@ CSS = CSS_GLIFO + """
     color:var(--fg);cursor:pointer}
   .campo-linha:hover{border-color:var(--purple)}
   .disputa .campo-linha{border-color:var(--orange);color:var(--orange)}
+
+  /* ---- O CAMPO DE TEXTO DA TELA "Teclas do teclado" ----
+     Ele herda a forma do `.campo-linha` (a mesma altura, a mesma borda, o mesmo
+     raio) porque é a mesma linha de tabela — o que muda é o CURSOR: `text`, e
+     não `pointer`. Um campo que se pode digitar com o cursor de clique parece
+     um botão, e ela clicaria esperando uma lista.
+     A FONTE É A DA CASA e não a monoespaçada: o que se escreve aqui é
+     `Alt + Tab`, não `KEY_LEFTALT+KEY_TAB` — o token cru é do produto, e quem
+     traduz é `input_actions`. */
+  .tecla{width:100%;height:var(--h-escolha);border-radius:6px;font-size:11.5px;
+    font-family:inherit;padding:0 8px;border:1px solid var(--border-forte);
+    background:var(--panel);color:var(--fg);cursor:text}
+  .tecla:hover{border-color:var(--purple)}
+  .tecla:focus{outline:none;border-color:var(--purple);background:var(--sel-bg)}
+  .tecla::placeholder{color:var(--comment)}
+  /* A TERCEIRA COLUNA É SÓ O ↺, e ela tem largura fixa para o campo de texto
+     ficar com o resto. Sem isto o `table-layout:fixed` divide as três em três
+     partes iguais e o ↺ ganha 200px de coluna vazia. */
+  .tab-teclas td.re,.tab-teclas th:last-child{width:34px;padding-right:0}
+  .re-tecla{display:inline-flex;align-items:center;justify-content:center;
+    width:26px;height:26px;border-radius:6px;text-decoration:none;font-size:14px;
+    color:var(--texto-suave);border:1px solid transparent}
+  .re-tecla:hover{color:var(--fg);border-color:var(--purple);background:var(--sel-bg)}
   .nm{font-family:'JetBrains Mono',monospace;font-size:10.5px;color:var(--texto-suave);margin-left:3px}
   .rot-gl{font-size:10.5px;color:var(--comment);margin-left:3px}
 
@@ -1942,7 +1973,7 @@ PONTO_MAPA = [
 # única e comum às duas tabelas, não podia dizer.
 # ---------------------------------------------------------------------------
 def tela_de_botoes(ident, titulo, dica, coluna, linhas, confirma, guardar, padrao,
-                   fechar="", aviso=""):
+                   fechar="", aviso="", extra=""):
     """Uma das duas telas de botões.
 
     Os NOMES dos gestos vêm por argumento, e desde 02/09/2026 são TRÊS: o de
@@ -1970,6 +2001,15 @@ def tela_de_botoes(ident, titulo, dica, coluna, linhas, confirma, guardar, padra
     "Guardar" DESTA tela substitui, e o "Guardar" da outra não tem dono no
     produto. Uma tira que avisasse sobre um botão que não grava nada seria a
     tela inventando um risco.
+
+    O `extra` É UM BOTÃO A MAIS NO RODAPÉ — 06/09/2026, NAVEGACAO-TECLAS-01. Só
+    a tela de Definições o recebe, e ele leva à tela "Teclas do teclado". Ele
+    NÃO foi para a `FILEIRA` da aba, e a razão é medida: aquela fileira já tem
+    quatro botões e a classe `quatro` divide a largura por eles (261,8px cada,
+    medido em 28/08) — um quinto quebraria o rótulo de todos em duas linhas
+    dentro de uma caixa de 34px de altura fixa. E o lugar é este mesmo: quem
+    quer trocar a TECLA de um botão está olhando a tabela de o que cada botão
+    faz.
     """
     x = f' data-gesto="{fechar}"' if fechar else ""
     return f'''
@@ -1996,6 +2036,7 @@ def tela_de_botoes(ident, titulo, dica, coluna, linhas, confirma, guardar, padra
     </div>
     <div class="tn-rod grupo-padrao">
       <a class="btn" href="#"{x}>Cancelar</a>
+{extra}
       <a class="btn btn-padrao btn-padrao-tela" href="#">Voltar ao padrão</a>
       <a class="btn roxo" href="#" data-gesto="{guardar}" data-hef-forma="{ident}">Guardar</a>
       <div class="confirma">
@@ -2052,12 +2093,20 @@ TELA_DEFINICOES = tela_de_botoes(
     # ZERAR OS DOIS CONTINUA SENDO O CERTO — zerar só um deixaria a tabela
     # metade de fábrica, com o botão dizendo o contrário. O que estava errado
     # era a pergunta, não o ato.
+    #
+    # E ELA APONTA A SAÍDA MENOR — 06/09/2026, NAVEGACAO-TECLAS-01. Este botão
+    # continua sendo o "tudo ao de fábrica", e agora existe o de UMA linha
+    # (o ↺ de cada linha de "Teclas do teclado"). Uma pergunta que apaga tudo
+    # sem dizer que há um caminho de uma linha é a tela escondendo a opção
+    # barata.
     f"Devolver ao de fábrica as {len(BOTOES)} linhas de <b>o que cada botão faz</b>? "
     "Isto apaga também os <b>atalhos de teclado</b> que este perfil guarda — "
     "inclusive os que você escreveu na janela antiga e esta lista não sabe "
-    "mostrar. O <b>Remapeamento dos botões</b> não é tocado.",
+    "mostrar. Para voltar <b>uma linha só</b>, use o ↺ dela em "
+    "<b>Teclas do teclado</b>. O <b>Remapeamento dos botões</b> não é tocado.",
     guardar="guardar-definicoes", padrao="padrao-definicoes",
-    fechar="fechar-definicoes", aviso=AVISO_DA_TABELA)
+    fechar="fechar-definicoes", aviso=AVISO_DA_TABELA,
+    extra='      <a class="btn" href="#teclas-do-teclado">Teclas do teclado</a>')
 
 TELA_REMAPEAMENTO = tela_de_botoes(
     "remapeamento", "Remapeamento dos botões", D_REMAPEAMENTO,
@@ -2067,6 +2116,122 @@ TELA_REMAPEAMENTO = tela_de_botoes(
     f"Devolver as {len(BOTOES)} linhas ao <b>{SEM_TROCA}</b>? "
     "As <b>Definições Controle e Mouse</b> não são tocadas.",
     guardar="guardar-remapeamento", padrao="padrao-remapeamento")
+
+# ---------------------------------------------------------------------------
+# A TELA "Teclas do teclado" — 06/09/2026, NAVEGACAO-TECLAS-01.
+#
+# O QUE ELA FECHA: a linha `FALTA_NO_HTML` de *Editar QUAL TECLA cada botão
+# digita* (`docs/data/paridade-gtk-html.csv:208`). A janela antiga tem coluna
+# EDITÁVEL EM TEXTO; a tela nova só tinha a lista fechada de 26 ações, e tudo o
+# que estivesse fora dela a GTK escrevia e o HTML não tinha como escrever.
+#
+# **NÃO É UMA VIGÉSIMA SÉTIMA OPÇÃO NA LISTA**, e é a exigência da sprint: uma
+# opção por combinação que ela invente faria a lista crescer para sempre. É um
+# campo de TEXTO, e quem traduz é o dono (`input_actions.dehumanize_binding`),
+# o mesmo da janela antiga.
+#
+# AS OITO LINHAS SÃO O DOMÍNIO DO PRODUTO, perguntado e não digitado:
+# `acoes_de_botao.DOMINIO_DO_TECLADO`. Oferecer campo nas outras catorze faria
+# a tela aceitar uma escolha que o `resolver()` não lê — gravada no disco,
+# visível na tela e sem nunca chegar ao aparelho.
+#
+# O ↺ DE CADA LINHA é o Passo 2 da sprint, e é o único caminho não destrutivo
+# que existia: até hoje voltar UMA linha ao de fábrica custava o
+# "Voltar ao padrão" da tela inteira, que zera `key_bindings` e
+# `button_actions` de uma vez.
+#
+# NÃO HÁ "Voltar ao padrão" DE TELA AQUI, e a ausência é decisão: o desta tela
+# seria um terceiro botão a zerar `key_bindings` inteiro, ao lado dos dois que
+# já fazem isso (o da tela de Definições e o da aba). O que faltava era o de UMA
+# linha, e ele está em cada linha.
+# ---------------------------------------------------------------------------
+
+#: OS EXEMPLOS DA DICA SAEM DO DONO, e não de uma digitação. `humanize_binding`
+#: é a mesma função que escreve o valor dos campos, então o que a dica ensina a
+#: escrever é, por construção, o que a tela devolve — e o dia em que um rótulo
+#: mudar lá, ele muda aqui junto.
+#:
+#: POR QUE ISTO IMPORTA, medido em 06/09/2026: `dehumanize_binding` casa pelo
+#: rótulo INTEIRO (`_REV_KEY` é `{rótulo.lower(): token}`), então escrever
+#: `Super` é RECUSADO e `Super (tecla Windows)` é aceito. A dica que ensinasse
+#: "Super" mandaria a pessoa na direção da recusa.
+def _exemplo_de_tecla(token):
+    try:
+        from hefesto_dualsense4unix.app.actions.input_actions import humanize_binding
+    except Exception:  # pragma: no cover — sem GTK no ambiente do gerador
+        return token
+    return str(humanize_binding(token))
+
+
+D_TECLAS = ajuda(
+    "Escreva a tecla que o botão deve digitar. Vale <b>qualquer combinação</b> "
+    "— não só as da lista de <b>Definições Controle e Mouse</b>.<br><br>"
+    f"Exemplos: <b>{_exemplo_de_tecla('KEY_LEFTALT+KEY_TAB')}</b>, "
+    f"<b>{_exemplo_de_tecla('KEY_LEFTCTRL+KEY_LEFTSHIFT+KEY_F')}</b>, "
+    f"<b>{_exemplo_de_tecla('KEY_LEFTMETA')}</b>, "
+    f"<b>{_exemplo_de_tecla('KEY_F5')}</b>.<br><br>"
+    "<b>Campo em branco</b> quer dizer que o botão não digita nada.<br><br>"
+    f"Só estes {len(_DOMINIO_DO_TECLADO)} botões aparecem aqui porque são os "
+    "únicos em que o Hefesto guarda uma tecla escrita; nos outros o que vale é "
+    "o que a lista de <b>Definições Controle e Mouse</b> escolhe.<br><br>"
+    "O <b>↺</b> devolve <b>só aquela linha</b> ao de fábrica.")
+
+#: A LINHA DA TELA DE TECLAS. O `data-campo` é `tecla-<botão>` e **não há
+#: `data-linha`**: a `forma` que o piloto recolhe usa `data-linha || data-campo`
+#: como chave, e as vinte e duas listas da outra tela já ocupam a chave
+#: `<botão>` — um campo com `data-linha` apagaria a escolha delas dentro da
+#: mesma forma.
+#:
+#: O `data-gesto` VIVE NO `<input>` pelo mesmo motivo do trilho: o ouvinte do
+#: piloto sobe pelo `closest`, e sem ele o clique dentro do campo não chega ao
+#: Python — a trava não abre e o tique de 100 ms apaga o que ela está digitando.
+#:
+#: O ↺ NÃO LEVA `data-campo` NEM `data-linha`, e é a mesma armadilha vista do
+#: outro lado: ele não tem `value`, então a `forma` gravaria o `textContent`
+#: dele ("↺") na chave do botão, e o "Guardar" leria isso como um rótulo de
+#: ação. Ele diz quem é por `data-tecla`, que o ouvinte carrega inteiro
+#: (`Object.assign({}, d)`).
+def linha_de_tecla(rotulo, botao):
+    return (f'          <tr><td class="b">{rotulo}</td>'
+            f'<td><input type="text" class="tecla" data-campo="tecla-{botao}"'
+            f' data-hef-alvo="valor" data-gesto="tecla-escrita"'
+            f' placeholder="não digita nada"'
+            f' title="Escreva a tecla que este botão digita."></td>'
+            f'<td class="re"><a href="#" class="re-tecla" data-gesto="padrao-da-tecla"'
+            f' data-tecla="{botao}"'
+            f' title="Voltar só esta linha ao de fábrica.">↺</a></td></tr>')
+
+
+TELA_TECLAS = f'''
+<div class="tela-nova" id="teclas-do-teclado">
+  <div class="tn-cx">
+    <div class="tn-topo">
+      <span class="tn-tit">Teclas do teclado</span>
+      {D_TECLAS}
+      <a class="tn-x" href="#" title="Fechar" data-gesto="fechar-teclas">×</a>
+    </div>
+    <div class="tn-corpo">
+      <div class="moldura">
+        <table class="tab tab-teclas">
+          <tr><th>Botão do controle</th><th>Tecla que ele digita</th><th></th></tr>
+{chr(10).join(linha_de_tecla(b, i) for b, i in BOTOES if i in _DOMINIO_DO_TECLADO)}
+        </table>
+      </div>
+    </div>
+    <div class="tn-rod grupo-padrao">
+      <a class="btn" href="#" data-gesto="fechar-teclas">Cancelar</a>
+      <!-- O CAMINHO DE VOLTA À OUTRA TELA MORA NO `?`, e não num terceiro
+           botão: medido no WebKit em 06/09/2026, com os três no rodapé o rótulo
+           "Definições Controle e Mouse" QUEBRA EM DUAS LINHAS dentro de uma
+           caixa de altura fixa — o mesmo defeito que encurtou o terceiro botão
+           da fileira da aba em 28/08. Cancelar fecha, e a fileira da aba está a
+           um clique. -->
+      <a class="btn roxo" href="#" data-gesto="guardar-teclas"
+         data-hef-forma="teclas-do-teclado">Guardar</a>
+    </div>
+  </div>
+</div>
+'''
 
 TELA_PONTO = f'''
 <div class="tela-nova" id="point-and-click">
@@ -2485,7 +2650,8 @@ s = FITA.sub(
 MARCA = "<!-- ================= LEGENDA DO MOCKUP ================= -->"
 if MARCA not in s:
     raise SystemExit("ERRO: a marca da legenda mudou no fim.html")
-TELAS = "\n".join(t.strip() for t in (TELA_DEFINICOES, TELA_REMAPEAMENTO, TELA_PONTO))
+TELAS = "\n".join(t.strip() for t in (TELA_DEFINICOES, TELA_TECLAS,
+                                      TELA_REMAPEAMENTO, TELA_PONTO))
 s = s.replace(MARCA, TELAS + "\n\n" + MARCA, 1)
 onde.gravar("06-navegacao.html", s)
 
@@ -2662,6 +2828,53 @@ def _conferir(doc):
            "o `×` e o `Cancelar` da tela de definições perderam o "
            "`data-gesto=\"fechar-definicoes\"` — a trava das 21 linhas ficaria "
            "presa depois de ela desistir")
+
+    # 4-ter. A TELA "Teclas do teclado" — 06/09/2026, NAVEGACAO-TECLAS-01.
+    #    As cinco conferências são a mesma cura vista de cinco lados, e cada uma
+    #    sozinha a desfaz.
+    _dominio = sorted(_DOMINIO_DO_TECLADO)
+    exigir(corpo.count('data-campo="tecla-') == len(_dominio),
+           f"a tela de teclas não tem os {len(_dominio)} campos de texto — o "
+           f"domínio de `key_bindings` é do produto "
+           f"(`acoes_de_botao.DOMINIO_DO_TECLADO`) e a tela tem de oferecer "
+           f"exatamente ele")
+    for _b in _dominio:
+        exigir(f'data-campo="tecla-{_b}"' in corpo,
+               f"o campo de tecla do {_b} sumiu — o produto guarda "
+               f"`key_bindings[{_b!r}]` e a tela deixou de oferecer onde escrever")
+        exigir(f'data-tecla="{_b}"' in corpo,
+               f"o ↺ do {_b} sumiu — voltar UMA linha ao de fábrica volta a "
+               f"custar o 'Voltar ao padrão' da tela inteira")
+    #    O CAMPO DE TEXTO NÃO PODE LEVAR `data-linha`: a `forma` que o piloto
+    #    recolhe usa `data-linha || data-campo` como chave, e as 22 listas da
+    #    outra tela já ocupam a chave `<botão>` pelo `data-linha`. Um campo com
+    #    ele apagaria a escolha da lista DENTRO da mesma forma.
+    _tela_teclas = corpo.split('id="teclas-do-teclado"', 1)[-1].split(
+        'class="tela-nova"', 1)[0]
+    exigir("data-linha=" not in _tela_teclas,
+           "voltou um `data-linha` à tela de teclas — a `forma` do piloto usa "
+           "`data-linha || data-campo` como chave, e ele faria o campo de texto "
+           "ocupar a chave da lista de 'o que cada botão faz'")
+    #    E O ↺ NÃO PODE LEVAR `data-campo` NEM `data-linha` pelo mesmo motivo,
+    #    visto do outro lado: sem `value`, a `forma` gravaria o `textContent`
+    #    dele ("↺") e o Guardar leria isso como rótulo de ação.
+    exigir(_tela_teclas.count('data-campo="tecla-') == len(_dominio),
+           "a tela de teclas tem `data-campo` fora dos campos de texto — o ↺ e "
+           "os botões do rodapé não podem ter, senão entram na `forma`")
+    #    O `change` de um `<input>` só chega no BLUR. Sem o `data-gesto` no
+    #    próprio campo, o clique dentro dele não chega ao Python, a trava não
+    #    abre e o tique de 100 ms apaga o que ela está digitando.
+    exigir(_tela_teclas.count('data-gesto="tecla-escrita"') == len(_dominio),
+           "os campos de tecla perderam o `data-gesto=\"tecla-escrita\"` — sem "
+           "ele a trava não abre e a pintura apaga a digitação dela na primeira "
+           "letra")
+    exigir(_tela_teclas.count('data-gesto="fechar-teclas"') == 2,
+           "o `×` e o `Cancelar` da tela de teclas perderam o "
+           "`data-gesto=\"fechar-teclas\"` — a trava ficaria presa depois de "
+           "ela desistir")
+    exigir('href="#teclas-do-teclado"' in corpo,
+           "não há como CHEGAR à tela de teclas — ela é `:target`, e sem um "
+           "link para o `id` dela a tela existe no HTML e não abre nunca")
     # 5. A LISTA DO TECLADO NASCE NA OPÇÃO QUE ELA ESCOLHEU COMO PADRÃO, e ela
     #    é a única das três com dono no produto. Nascer marcada na primeira
     #    ("Só dentro do jogo") faria a tela prometer, nos 100 ms anteriores ao
