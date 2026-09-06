@@ -19,6 +19,8 @@ alcança as dez abas, e o casamento sem a lista não isenta ninguém.
 
 from __future__ import annotations
 
+import types
+
 import pytest
 
 from hefesto_dualsense4unix.interface import hefesto_vivo, regua_do_mockup
@@ -116,3 +118,53 @@ def test_incluir_perigosos_continua_alcancando_o_salvar() -> None:
     vistos, pulados = regua_do_mockup._alvos_a_clicar(
         [_Gesto("salvar")], {"salvar"}, "10-perfis.html", set())
     assert vistos == ["salvar"] and pulados == []
+
+
+# ---------------------------------------------------------------------------
+# A SEGUNDA PORTA, e ela ficou aberta um mês — 06/09/2026
+# ---------------------------------------------------------------------------
+#: O DEFEITO, achado pela `ONDA5-03-02` MEDINDO o próprio estrago: `PERIGOSOS`
+#: era consultada por UM caminho só (`--prova-no-aparelho`), e o
+#: `--prova-clique` clicava o que a bandeira nomeasse. O clique daquele agente
+#: **gravou no perfil real da dona** — a gravação foi no-op (o valor já era o
+#: mesmo desde as 02:46, e nenhum arquivo nasceu no `.historico/`), mas a porta
+#: estava aberta e nenhum agente da leva sabia.
+#:
+#: A REGRA QUE ISSO DEIXA é a de 04/09 outra vez: *quando a cura conhece a
+#: causa, ela cobre TODOS os chamadores.* Cobrir um deixa a próxima pessoa
+#: remedindo o mesmo defeito — e aqui deixou, por um mês.
+class _PilotoDeMentira:
+    """O mínimo que `_provar_cliques` toca: a bandeira e a página de agora."""
+
+    def __init__(self, pagina: str, gestos: str, incluir: bool = False) -> None:
+        self.pagina = pagina
+        self.pronto = False
+        self.args = types.SimpleNamespace(
+            prova_clique=gestos, incluir_perigosos=incluir)
+
+
+def test_a_prova_clique_recusa_o_que_mexe_na_maquina_dela() -> None:
+    """A MORDIDA: tire a guarda do `_provar_cliques` e este teste passa a clicar."""
+    piloto = _PilotoDeMentira("10-perfis.html", "remover")
+    with pytest.raises(SystemExit) as caiu:
+        hefesto_vivo.Piloto._provar_cliques(piloto)
+    assert caiu.value.code == 1
+
+
+def test_a_prova_clique_recusa_mesmo_quando_o_perigoso_vem_no_meio() -> None:
+    """Um gesto inócuo na frente não pode comprar passagem para o perigoso."""
+    piloto = _PilotoDeMentira("09-sistema.html", "atualizar,desligar")
+    with pytest.raises(SystemExit):
+        hefesto_vivo.Piloto._provar_cliques(piloto)
+
+
+def test_a_prova_clique_deixa_passar_o_inocuo() -> None:
+    """E a recusa não pode virar uma porta fechada: o inócuo continua clicável."""
+    piloto = _PilotoDeMentira("09-sistema.html", "atualizar")
+    assert hefesto_vivo.Piloto._provar_cliques(piloto) is False
+
+
+def test_a_prova_clique_abre_com_incluir_perigosos() -> None:
+    """A escolha continua sendo de quem roda, e ela é explícita."""
+    piloto = _PilotoDeMentira("10-perfis.html", "remover", incluir=True)
+    assert hefesto_vivo.Piloto._provar_cliques(piloto) is False

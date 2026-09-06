@@ -3368,7 +3368,28 @@ class Piloto:
         `daemon.reload` e `retomar` é `daemon.resume` num daemon que não está
         pausado. `desligar`, `restaurar-de-fabrica` e `refazer-proton` NÃO
         entram — uma régua não mexe na máquina dela para provar que sabe clicar.
+
+        **E ATÉ 06/09/2026 ESSA FRASE ERA SÓ UMA FRASE.** Este caminho clicava o
+        que a bandeira nomeasse, sem consultar `PERIGOSOS` uma única vez — só o
+        `--prova-no-aparelho` a consultava. Achado pela `ONDA5-03-02`, que
+        mediu o próprio estrago: o clique dela **gravou no perfil real** da dona
+        (a gravação foi no-op — o valor já era o mesmo desde as 02:46, e nenhum
+        arquivo nasceu no `.historico/` — mas a porta estava aberta e nenhum
+        agente sabia). É a terceira vez em quatro dias que o comentário que
+        AVISA do risco fica ao lado do código que o comete.
+
+        A recusa é BARULHENTA e não um pulo em silêncio: uma régua que pula
+        calado ensina quem a roda que ela cobriu o botão. `--incluir-perigosos`
+        continua sendo a porta, e aí é escolha de quem roda.
         """
+        proibidos = sorted(
+            g for g in dict.fromkeys(self.args.prova_clique.split(","))
+            if (self.pagina, g.strip()) in PERIGOSOS)
+        if proibidos and not self.args.incluir_perigosos:
+            print(f"[prova] RECUSA: {', '.join(proibidos)} mexe(m) na máquina "
+                  f"dela em {self.pagina}. Use --incluir-perigosos se for "
+                  "mesmo isso que você quer.", file=sys.stderr)
+            raise SystemExit(1)
         # O PRIMEIRO CLIQUE ESPERAVA UM RELÓGIO, e o relógio estava errado.
         # Medido em 01/09/2026: com `--prova-clique "ver-plugins,ver-detalhes"`
         # só o SEGUNDO saía no relato; sozinho, cada um saía. Aos 600 ms o
