@@ -2438,7 +2438,7 @@ def editor_ambiente(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] 
     return _dizer(f"“{prof.name}” agora vale em: {rotulo}")
 
 
-@gesto("10-perfis.html", "editor.modo")
+@gesto("10-perfis.html", "editor.modo", grava="_gravar")
 def editor_modo(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
     """"Modo": o que ATIVAR este perfil liga. `ProfileModeConfig`.
 

@@ -826,7 +826,17 @@ def topo(ctx: Contexto) -> dict[str, Any]:
     from hefesto_dualsense4unix.interface import mesa_viva
 
     conta, conta_b = mesa_viva.texto_da_contagem(ctx.mesa)
-    ativo = str(ctx.state.get("active_profile") or "")
+    # O CHIP "PERFIL ATIVO" É DAS DEZ ABAS, e por isso ele pergunta ao dono —
+    # costura da ONDA D, 06/09/2026. Aqui estava `ctx.state.get("active_profile")`
+    # cru, que só tem a PRIMEIRA das duas pernas: o daemon. Com ele respondendo
+    # `active_profile: null` — o estado da máquina dela, descrito em
+    # `profiles_actions.perfil_que_esta_valendo` — as dez abas escreviam o
+    # travessão sobre um perfil que ESTAVA valendo, e a `PERFIL-MODO-01` mediu.
+    # `perfil.nome_do_ativo` resolve as duas pernas (daemon, depois o marcador em
+    # disco) e é o mesmo dono que a aba 05 e a 10 passaram a ler.
+    from hefesto_dualsense4unix.interface.pacotes import perfil as _perfil
+
+    ativo = _perfil.nome_do_ativo(ctx.state)
     return {
         # O `●` é do desenho e já está na página; o texto começa depois dele.
         "conta": conta.replace("● ", "").strip(),
