@@ -205,7 +205,14 @@ def make_virtual_pad(
     e nenhuma janela entre a decisão da factory e a do backend em que o registro
     possa mudar e os dois discordarem sobre quem é este controle
     (`mascara_efetiva` é idempotente — de uma máscara já efetiva devolve ela
-    mesma —, então não passar `identity` adiante não perde nada).
+    mesma).
+
+    **E `identity` PASSA adiante desde COOP-QUE-NÃO-DESMONTA-01/E3
+    (06/09/2026).** O parágrafo acima terminava dizendo que não passá-la não
+    perdia nada, e era verdade enquanto ela só decidia máscara. Deixou de ser:
+    o MAC do vpad uhid agora é ancorado nela (`uhid_gamepad.vpad_mac`), para o
+    controle físico não trocar de MAC quando o número do jogador é reciclado.
+    Sem o repasse, a cura parava aqui — na factory — e não chegava ao produto.
     """
     from hefesto_dualsense4unix.daemon.subsystems.external_mask import mascara_efetiva
     from hefesto_dualsense4unix.integrations.uinput_gamepad import UinputGamepad
@@ -221,6 +228,7 @@ def make_virtual_pad(
             player_led_sink=player_led_sink,
             session_end_sink=session_end_sink,
             player=player,
+            identity=identity,
             calibration_0x05=calibration_0x05,
         )
         if uhid is not None:
@@ -249,6 +257,7 @@ def _try_uhid(
     | None = None,
     session_end_sink: Callable[[], None] | None = None,
     player: int,
+    identity: str | None = None,
     calibration_0x05: bytes | None = None,
 ) -> tuple[VirtualPad | None, str | None]:
     """Tenta o backend uhid; ``(None, motivo)`` = "use o uinput".
@@ -256,6 +265,10 @@ def _try_uhid(
     O motivo vai ao log (como sempre foi) E volta ao chamador (VPAD-05): a
     factory o pendura no vpad uinput degradado para o `state_full` expor.
     ``(None, None)`` só no flavor xbox — uinput por design, não degradação.
+
+    `identity` (E3) chega já resolvida em máscara pelo chamador, então aqui ela
+    tem UM papel só: ancorar o MAC do vpad no controle físico. `None` = o
+    chamador não sabe de quem é o vpad, e o MAC cai no número do jogador.
     """
     from hefesto_dualsense4unix.integrations.uhid_blueprint import canonical_blueprint
     from hefesto_dualsense4unix.integrations.uhid_gamepad import (
@@ -284,6 +297,15 @@ def _try_uhid(
     )
     if pad is None:  # pragma: no cover - o gate de flavor acima já garante
         return None, "uhid_indisponivel"
+    # E3 — A IDENTIDADE ENTRA AQUI, E NÃO PELO `for_flavor`, DE PROPÓSITO.
+    # `for_flavor(identity=...)` faz uma SEGUNDA leitura do registro de
+    # máscaras, e o `make_virtual_pad` acima já resolveu a máscara efetiva
+    # justamente para não existir janela em que os dois discordem sobre quem é
+    # este controle (a armadilha que `external_mask.py:59-68` descreveu). O que
+    # o MAC do vpad precisa da identidade não é o veredito da máscara — é a
+    # âncora, e ela é o mesmo dado nas duas leituras. Atribuir antes do
+    # `start()` é o que importa: é lá que o MAC vai para o feature 0x09.
+    pad.identity = identity
     if not pad.start():
         logger.warning("vpad_uhid_start_falhou_usando_uinput", player=player)
         return None, "uhid_start_falhou"
