@@ -1866,11 +1866,22 @@ _METODO_DO_GESTO = {
 #: obrigaria a próxima pessoa a escolher entre duas afirmações.
 PERIGOSOS = {
     ("09-sistema.html", "desligar"), ("09-sistema.html", "reiniciar"),
-    # `restaurar-de-fabrica` NÃO EXISTE MAIS — o gesto desta página chama-se
+    # `restaurar-de-fabrica` NÃO EXISTE — o gesto desta página chama-se
     # `refazer-proton` desde que a aba nasceu, e a entrada velha protegia NADA.
     # Achado pela guarda `test_a_lista_nao_protege_gesto_que_nao_existe`, que
     # existe porque uma lista lida só para PULAR nunca acusa o próprio erro de
-    # digitação. ("09-sistema.html", "refazer-proton"),
+    # digitação.
+    #
+    # OS TRÊS DA ABA 09 QUE ENTRARAM EM 06/09/2026 (SISTEMA-STEAM-01). O
+    # `refazer-proton` **já se dizia protegido desde 03/09 e não estava**: a
+    # entrada tinha sido comentada porque o gesto ainda não existia, e o
+    # docstring dele continuou afirmando que estava na lista. Os outros dois
+    # ganharam dono nesta leva. Os três pedem dois cliques, o que os protege
+    # numa volta da prova — mas duas execuções dentro dos segundos do
+    # consentimento disparam o segundo clique de verdade.
+    ("09-sistema.html", "refazer-proton"),
+    ("09-sistema.html", "refazer-consertos"),
+    ("09-sistema.html", "procurar-camadas"),
     ("09-sistema.html", "autostart"),
     ("10-perfis.html", "remover"), ("10-perfis.html", "novo"),
     ("10-perfis.html", "voltar-a-de-ontem"), ("10-perfis.html", "duplicar"),
