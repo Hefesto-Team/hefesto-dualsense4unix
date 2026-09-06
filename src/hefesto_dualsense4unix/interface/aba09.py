@@ -1772,16 +1772,16 @@ def escrever_a_bancada():
     # endereçar o invólucro com alvo `html` mandaria o produto reescrever o miolo
     # dele a cada tique, apagando o `data-campo="perfil"` do cabeçalho, que é das
     # dez abas. Aconteceu na primeira execução deste bloco, em 03/09/2026.
-    _ABRE = re.search(r'<div class="fita[ "][^>]*>', s)
-    if not _ABRE:
+    abre = re.search(r'<div class="fita[ "][^>]*>', s)
+    if not abre:
         raise SystemExit("ERRO: a `.fita` sumiu do esqueleto — o endereço da fita "
                          "ficou sem onde pousar, e a aba volta a mostrar o desenho.")
-    _FIM = s.index("</div>", _ABRE.start()) + len("</div>")
-    _BLOCO = s[_ABRE.start():_FIM]
+    fim = s.index("</div>", abre.start()) + len("</div>")
+    bloco = s[abre.start():fim]
 
-    _NOVO = _BLOCO.replace(
-        _ABRE.group(0),
-        f'{_ABRE.group(0)[:-1]} data-campo="{CAMPO_DA_FITA}" data-hef-alvo="html">',
+    novo = bloco.replace(
+        abre.group(0),
+        f'{abre.group(0)[:-1]} data-campo="{CAMPO_DA_FITA}" data-hef-alvo="html">',
         1)
     # O ENDEREÇO DO CHIP É DO `monta.fita()`, E ESTE BLOCO SÓ CONFERE — 03/09/2026.
     #
@@ -1799,13 +1799,13 @@ def escrever_a_bancada():
     # A CONTA FICA. Ela é a régua da forma da fita: se o esqueleto deixar de
     # endereçar os chips, ou passar a endereçar o `Todos`, o número deixa de casar
     # com a mesa e o gerador reprova em voz alta em vez de gravar uma fita muda.
-    _QUANTOS = _NOVO.count(f'data-campo="{CAMPO_DO_CHIP}"')
-    if len(CONECTADOS) != _QUANTOS:
-        raise SystemExit(f"ERRO: o esqueleto endereçou {_QUANTOS} chips e a mesa tem "
+    quantos = novo.count(f'data-campo="{CAMPO_DO_CHIP}"')
+    if len(CONECTADOS) != quantos:
+        raise SystemExit(f"ERRO: o esqueleto endereçou {quantos} chips e a mesa tem "
                          f"{len(CONECTADOS)} conectados — a forma da fita mudou. "
                          f"O dono do `data-campo=\"{CAMPO_DO_CHIP}\"` é "
                          "`interface/monta.fita()`; esta aba só confere.")
-    onde.gravar("09-sistema.html", s[:_ABRE.start()] + _NOVO + s[_FIM:])
+    onde.gravar("09-sistema.html", s[:abre.start()] + novo + s[fim:])
 
     print(f"09-sistema: OK, {n} divs · a faixa do serviço: "
           + " · ".join(f"{t.strip()!r}" for t in _ROTULOS.values()))

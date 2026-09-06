@@ -649,7 +649,7 @@ def test_o_segundo_clique_do_consertos_roda_os_dois_scripts(a09, ctx, monkeypatc
     carga = _clicar(a09.refazer_consertos, ctx, a09.CONFIRMA)   # confirma
 
     assert len(rodou) == len(a09.CONSERTOS), rodou
-    for (relpath, args), comando in zip(a09.CONSERTOS, rodou):
+    for (relpath, args), comando in zip(a09.CONSERTOS, rodou, strict=True):
         assert comando[0] == "bash" and comando[1].endswith(relpath.split("/")[-1])
         assert comando[2:] == args, comando
     # O RECIBO É O DO PRODUTO, e não uma frase desta régua nem do gesto.
@@ -753,7 +753,7 @@ def test_o_segundo_clique_das_camadas_segue_o_que_o_censo_achou(a09, ctx, monkey
         monkeypatch.setattr(cv, "pastas_compatdata", lambda *a, **k: ["/uma/pasta"])
         monkeypatch.setattr(
             cv, "curar_todos",
-            lambda *a, religar=False, **k: pedidos.append(religar) or [])
+            lambda *a, religar=False, _p=pedidos, **k: _p.append(religar) or [])
         monkeypatch.setattr(
             a09._emulacao, "frase_do_censo",
             lambda p, bibliotecas=1, _t=tem_tirar, _d=tem_devolver: ("o censo", _t, _d))
