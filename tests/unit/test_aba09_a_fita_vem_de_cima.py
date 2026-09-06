@@ -210,13 +210,21 @@ def test_o_chip_sem_leitura_nao_diz_nao_sei_nem_travessao() -> None:
     """`Não sei` é a AUSÊNCIA de leitura, não um nome — e `—` também não.
 
     E o nome que só repete o transporte sai: o chip TERMINA no transporte, e
-    `P2 • BT • BT` afirma o mesmo fato duas vezes.
+    `P2 • rádio • rádio` afirma o mesmo fato duas vezes.
+
+    A PALAVRA É PERGUNTADA À DONA — ONDA4-S10, 06/09/2026. Esta linha contava
+    `"BT"`, a sigla de máquina, e por isso reprovou a decisão dela (D-05) em vez
+    do defeito: o dia em que a fita passou a dizer `rádio`, a contagem de `"BT"`
+    virou ZERO e a régua leu isso como "o transporte sumiu do chip".
     """
+    from hefesto_dualsense4unix.app.actions.home_actions import palavra_do_transporte
+
     saida = a09_sistema._html_da_fita(MESA_DELA)
     segundo = saida[saida.rindex("<label class=\"chip"):]
     assert "Não sei" not in segundo
     assert "—" not in segundo
-    assert segundo.count("BT") == 1, f"o transporte saiu duas vezes: {segundo}"
+    palavra = palavra_do_transporte("bt")
+    assert segundo.count(palavra) == 1, f"o transporte saiu duas vezes: {segundo}"
 
 
 def test_mesa_vazia_nao_apaga_a_fita() -> None:
