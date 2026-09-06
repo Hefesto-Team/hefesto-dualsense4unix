@@ -53,6 +53,11 @@ for _caminho in (str(RAIZ / "src"), str(INTERFACE)):
         sys.path.insert(0, _caminho)
 
 import mesa_viva
+
+# O GERADOR, e não uma cópia do texto dele: as duas dicas e o nome do atributo
+# do ♪ são LIDOS daqui. Importar `aba02` roda o módulo (que monta o MIOLO e o
+# CSS em memória) e NÃO escreve nada — a gravação mora no `__main__`.
+import aba02 as a02_gerador
 from hefesto_dualsense4unix.app import audio_saida
 from hefesto_dualsense4unix.app.widgets.controller_card import (
     TEXTO_MIC_ALVO_NAO_HONRADO,
@@ -791,3 +796,312 @@ def test_o_nada_a_dizer_nao_divergiu_do_da_folha() -> None:
     import monta
 
     assert a02.NADA_A_DIZER == monta.NADA_A_DIZER
+
+
+# ===========================================================================
+# 10. O ♪ EM DUAS CORES, E AS DUAS DICAS COM SAÍDA — 02-Q9 e 02-Q6 (06/09/2026)
+# ===========================================================================
+# ELA MARCOU *"O botão de som acende"* e digitou por cima *"Com cor
+# diferente"*; na segunda volta fechou o que isso quer dizer: **borda VERDE se
+# ligado, ÂMBAR se desligado**. São DOIS estados pintados, e o que havia era um
+# e meio — MUDO pintava `--red` (a cor da FALHA nesta casa) e ATIVO ficava com
+# a mesma cara de "não sei".
+#
+# **AS CORES NÃO SE DIGITAM.** Uma régua com `#50fa7b` escrito dentro mede o
+# próprio teste, não o produto — é a lição das onze réguas de 26/08 que
+# *digitavam o que deviam LER*. O par de sonda abaixo pergunta as duas cores à
+# MESMA página, pelo MESMO motor que pinta o botão, e já as recebe
+# normalizadas em `rgb(...)`: comparar hexadecimal com `borderTopColor`
+# computado é comparar duas grafias e chamar isso de medição.
+#
+# **E QUEM PINTA É O PILOTO DE VERDADE.** A régua injeta o
+# `hefesto_vivo.BOOTSTRAP` — o mesmo texto que a janela dela executa — e chama
+# `window.__hef.pintar`, que é o caminho do tique. Uma régua que pusesse o
+# `data-som` com a própria mão passaria intacta se o alvo `atributo` recusasse
+# o nome, se o `data-hef-atributo` sumisse do botão, ou se o piloto escrevesse
+# a palavra como TEXTO dentro do glifo. Só o carteiro é dublê (este motor é o
+# Chrome, e `window.webkit` não existe nele).
+#
+# **E ELA VIVE NO TEMPO.** Uma régua que pinta um valor mede um INSTANTE: a
+# sequência abaixo é a de um controle que entra sem leitura, recebe volume e é
+# calado — `—`, `ATIVO`, `MUDO`, `ATIVO`, `—` em tiques seguidos.
+O_SOM_EM_TRES_ESTADOS = r"""
+(() => {
+  const card = document.querySelector('[data-controle="p1"]');
+  const bloco = card.querySelector('[data-bloco="alto-falante"]');
+  const botao = bloco.querySelector('.mudo-i[data-mudo="alto-falante"]');
+  const linha = bloco.querySelector('.vol');
+  // A SONDA: um elemento que a própria página pinta com a variável, para o
+  // motor devolver `rgb(...)` em vez do hexadecimal escrito na folha.
+  const cor_de = variavel => {
+    const p = document.createElement('span');
+    p.style.color = 'var(' + variavel + ')';
+    document.body.appendChild(p);
+    const c = getComputedStyle(p).color;
+    p.remove();
+    return c;
+  };
+  const borda = () => getComputedStyle(botao).borderTopColor;
+  const tique = v => {
+    window.__hef.pintar({colunas: {p1: {'alto-mudo': v}}});
+    return {valor: v, som: botao.getAttribute('data-som'), borda: borda()};
+  };
+
+  const por_tique = ['—', 'ATIVO', 'MUDO', 'ATIVO', '—'].map(tique);
+
+  // O CINZA DA RAZÃO CONTRA O VERDE DO ATIVO: o produto escreve as duas coisas
+  // pelos seus caminhos — o `data-porque` da LINHA e o `data-som` do botão —,
+  // e um botão que o produto vai recusar não pode aparecer verde.
+  window.__hef.pintar({colunas: {p1: {'alto-mudo': 'ATIVO',
+                                      'alto-porque': 'razão de prova'}}});
+  const cinza_com_ativo = borda();
+  window.__hef.pintar({colunas: {p1: {'alto-porque': '—'}}});
+  const sem_razao_com_ativo = borda();
+
+  // O CLIQUE, e ele passa pelo ouvinte do piloto: o que sai é o gesto de
+  // verdade, com o dono e o campo.
+  window.__cartas.length = 0;
+  botao.click();
+
+  // O 🎙 DOS DOIS CARDS: nenhuma cor congelada, e nenhum endereço — quem diz o
+  // estado do microfone é o selo ao lado, que é vivo.
+  const mics = [...document.querySelectorAll('.mudo-i[data-mudo="microfone"]')]
+    .map(m => ({classe: m.className, campo: m.dataset.campo || '',
+                borda: getComputedStyle(m).borderTopColor}));
+
+  return {
+    verde: cor_de('--green'), ambar: cor_de('--orange'), vermelho: cor_de('--red'),
+    por_tique: por_tique,
+    cinza_com_ativo: cinza_com_ativo,
+    sem_razao_com_ativo: sem_razao_com_ativo,
+    alvo_do_som: botao.dataset.hefAlvo || '',
+    atributo_do_som: botao.dataset.hefAtributo || '',
+    texto_do_botao: botao.textContent.trim(),
+    cartas: window.__cartas.map(c => ({gesto: c.gesto, mudo: c.mudo,
+                                       controle: c.controle, campo: c.campo})),
+    mics: mics,
+    // A REGRA ÓRFÃ: `.mudo-i.on` perdeu os dois escritores e saiu da folha.
+    on_na_folha: [...document.styleSheets].some(f => {
+      try { return [...f.cssRules].some(r => (r.selectorText || '') === '.mudo-i.on'); }
+      catch (e) { return false; }
+    }),
+  };
+})()
+"""
+
+
+@pytest.fixture(scope="module")
+def som() -> dict[str, Any]:
+    """A bancada aberta no Chrome, com o piloto de verdade pintando dentro."""
+    if not CHROME.exists():
+        pytest.skip("sem o Chrome do sistema — a régua não tem motor")
+    from playwright.sync_api import sync_playwright
+
+    from hefesto_dualsense4unix.interface import hefesto_vivo
+
+    alvo = onde.pagina("02-controles.html")
+    with sync_playwright() as pw:
+        navegador = pw.chromium.launch(executable_path=str(CHROME),
+                                       args=["--no-sandbox"])
+        try:
+            pg = navegador.new_page(viewport={"width": 1180, "height": 900})
+            pg.goto(alvo.as_uri())
+            # O CARTEIRO É O ÚNICO DUBLÊ, e ele é do MOTOR e não do produto: no
+            # WebKit da janela dela `window.webkit` existe; no Chrome, não.
+            pg.evaluate("window.__cartas = [];"
+                        "window.webkit = {messageHandlers: {hefesto: {"
+                        "postMessage: s => window.__cartas.push(JSON.parse(s))}}};")
+            pg.evaluate(hefesto_vivo.BOOTSTRAP)
+            saida = pg.evaluate(O_SOM_EM_TRES_ESTADOS)
+        finally:
+            navegador.close()
+    return dict(saida)
+
+
+def test_o_som_do_alto_falante_pinta_os_dois_estados_e_o_neutro(
+        som: dict[str, Any]) -> None:
+    """02-Q9 — *"borda VERDE se ligado, ÂMBAR se desligado"*, e o cinza de "não sei".
+
+    MORDE: troque o `--orange` da regra do MUDO por `--green` no gerador,
+    regere a bancada, e a segunda asserção reprova dizendo que os dois estados
+    do ♪ pintam a mesma cor.
+    """
+    por_valor = {t["valor"]: t for t in som["por_tique"]}
+    assert por_valor["ATIVO"]["borda"] == som["verde"], (
+        f"o ♪ ATIVO não pintou o `--green` da própria página "
+        f"({por_valor['ATIVO']['borda']} ≠ {som['verde']})")
+    assert por_valor["MUDO"]["borda"] == som["ambar"], (
+        f"o ♪ MUDO não pintou o `--orange` da própria página "
+        f"({por_valor['MUDO']['borda']} ≠ {som['ambar']})")
+    assert por_valor["ATIVO"]["borda"] != por_valor["MUDO"]["borda"], (
+        "os dois estados do ♪ pintam a MESMA cor — a tela voltou a não "
+        "distinguir o alto-falante que toca do que está calado")
+    # O TERCEIRO ESTADO NÃO SE DESENHA: o travessão APAGA o atributo, e o botão
+    # cai no `.mudo-i` de base. É a resposta certa para "ninguém leu o
+    # alto-falante deste controle".
+    assert por_valor["—"]["som"] is None, (
+        "o travessão não apagou o `data-som` — um controle sem leitura ficaria "
+        "afirmando um estado que ninguém mediu")
+    assert por_valor["—"]["borda"] not in (som["verde"], som["ambar"]), (
+        "o ♪ sem leitura pintou uma das duas cores de estado")
+    # E O `--red` SAIU: um alto-falante calado por escolha dela não é falha.
+    assert som["vermelho"] not in (por_valor["ATIVO"]["borda"],
+                                   por_valor["MUDO"]["borda"],
+                                   por_valor["—"]["borda"]), (
+        "o ♪ voltou a pintar a cor da falha sobre um estado que ela escolheu")
+    assert not som["on_na_folha"], (
+        "`.mudo-i.on` continua na folha sem nenhum escritor — CSS de elemento "
+        "que ninguém mais escreve é promessa esperando alguém tropeçar nela")
+
+
+def test_o_cinza_da_razao_vence_o_verde_do_ativo(som: dict[str, Any]) -> None:
+    """Um botão que o produto VAI RECUSAR não pode aparecer verde.
+
+    A vitória é por ESPECIFICIDADE e não por ordem — `.vol[data-porque]
+    .mudo-i` é (0,3,0) contra os (0,2,0) das duas regras novas —, e por isso
+    ela se confere na FOTO e não na conta.
+
+    MORDE: troque `.vol[data-porque] .mudo-i` por `.mudo-i[data-porque]` no
+    gerador (que casa o atributo no botão, e o `data-porque` mora na linha) e a
+    primeira asserção reprova: o botão que o daemon recusa fica verde.
+    """
+    assert som["cinza_com_ativo"] != som["verde"], (
+        "o ♪ apagado pela razão pintou o verde do ATIVO — a tela oferece "
+        "em cor cheia um botão que o produto vai recusar")
+    assert som["sem_razao_com_ativo"] == som["verde"], (
+        "tirar a razão não devolveu o verde — o cinza virou permanente, e o "
+        "botão deixou de dizer que voltou a funcionar")
+
+
+def test_o_clique_no_som_sai_com_dono_e_a_cor_segue_o_tique(
+        som: dict[str, Any]) -> None:
+    """O CLIQUE e a RESPOSTA, e a resposta é a do tique seguinte.
+
+    A decisão desta frente, registrada: **o ♪ não recebe a piscada da 03-Q4.**
+    A mudança da borda de âmbar para verde É o recibo — ela acontece no tique
+    seguinte, é permanente, e um pisca por cima seria um segundo sinal para o
+    mesmo fato. Quem construir o pisca precisa saber disto: se ele nascer
+    aplicado a todo `data-campo` de gesto, ele cai no ♪ sozinho.
+
+    MORDE: tire o `data-gesto="mudo"` do ♪ no gerador e a primeira asserção
+    reprova — o clique chega ao despachante chamando-se `clique`, disputando
+    nome com os interruptores de sensor da mesma aba.
+    """
+    assert len(som["cartas"]) == 1, (
+        f"o clique no ♪ não saiu UMA vez: {som['cartas']}")
+    carta = som["cartas"][0]
+    assert carta["gesto"] == "mudo"
+    assert carta["mudo"] == "alto-falante"
+    assert carta["controle"] == "p1", (
+        "o clique saiu sem dizer em QUAL controle — sem alvo o gesto não sabe "
+        "qual alto-falante calar")
+    # A SEQUÊNCIA INTEIRA, e ela é a de um controle que entra sem leitura,
+    # recebe volume e é calado. Uma régua que pintasse um valor só mediria um
+    # instante.
+    bordas = [t["borda"] for t in som["por_tique"]]
+    assert bordas[1] == bordas[3], (
+        "o ♪ não voltou ao verde depois de passar pelo âmbar — a cor ficou "
+        "presa no estado anterior")
+    assert bordas[0] == bordas[4], (
+        "o ♪ não voltou ao neutro quando a leitura sumiu de novo")
+    # E A PALAVRA NÃO ENTRA NO BOTÃO: o alvo `atributo` existe para isso.
+    assert som["texto_do_botao"] == "♪", (
+        f"o piloto escreveu {som['texto_do_botao']!r} dentro do botão, no "
+        f"lugar do glifo — o alvo deixou de ser `atributo`")
+    assert som["alvo_do_som"] == "atributo"
+    assert som["atributo_do_som"] == a02_gerador.ATRIBUTO_DO_SOM
+
+
+def test_o_microfone_nao_tem_mais_cor_congelada(som: dict[str, Any]) -> None:
+    """A mentira vermelha do 🎙 saiu — e a cura é TIRAR o sinal, não somar um.
+
+    O 🎙 não tem `data-campo`: o piloto nunca o visita, logo a cor que o
+    gerador escrevia uma vez valia para sempre. Na tela viva dela, o microfone
+    do segundo card ficava aceso de vermelho independentemente do aparelho.
+    Quem diz o estado do microfone é o selo ao lado, que é vivo e composto das
+    quatro faces; uma borda viva no 🎙 seria um SEGUNDO sinal para o mesmo
+    fato.
+
+    MORDE: devolva o `mic_on` ao gerador, regere a bancada, e a régua reprova
+    achando um 🎙 pintado num card cujo selo diz outra coisa.
+    """
+    assert som["mics"], "a régua não achou 🎙 nenhum — ela mediria o vazio"
+    for i, m in enumerate(som["mics"], start=1):
+        assert m["classe"].strip() == "mudo-i", (
+            f"o 🎙 do card {i} nasceu com a classe {m['classe']!r} — é a cor "
+            f"que o GERADOR escreveu, e ela vale para sempre")
+        assert m["borda"] != som["vermelho"], (
+            f"o 🎙 do card {i} continua vermelho sobre um aparelho que ninguém "
+            f"leu")
+        assert not m["campo"], (
+            f"o 🎙 do card {i} ganhou `data-campo` — uma borda viva aqui é um "
+            f"SEGUNDO sinal para o que o selo ao lado já diz")
+    assert len({m["borda"] for m in som["mics"]}) == 1, (
+        "os 🎙 dos dois cards pintam bordas diferentes sem o produto ter dito "
+        "nada sobre nenhum dos dois")
+
+
+# ---------------------------------------------------------------------------
+# 02-Q6 — o aviso aponta para uma saída QUE EXISTE
+# ---------------------------------------------------------------------------
+def test_a_dica_do_som_nao_manda_para_janela_nenhuma() -> None:
+    """As duas dicas mandavam para uma janela sem lançador desde 01/09/2026.
+
+    A janela do aplicativo completo perdeu o lançador por decisão dela, e o
+    botão "Soltar" continua no código sem que nada o abra. A língua desta casa
+    proíbe em texto de tela *"qualquer frase que mande a pessoa procurar um
+    botão ou uma janela que não existe"*.
+
+    **OS VERBOS SÃO LIDOS, NUNCA DIGITADOS.** Uma régua que escrevesse
+    `"speaker release"` dentro de si daria verde no dia em que a porta trocasse
+    de verbo — mediria o próprio texto, que é a assinatura dos seis
+    instrumentos falsos de 05/09.
+
+    MORDE: devolva o texto velho (`"a volta é pela janela do aplicativo"`) e a
+    primeira asserção reprova achando a palavra `janela` na dica; troque a
+    saída por um verbo que a porta não aceita e a segunda reprova.
+    """
+    from hefesto_dualsense4unix.cli.cmd_mic import _ACOES_FIRMWARE
+    from hefesto_dualsense4unix.cli.cmd_speaker import _ACOES
+
+    for nome, dica in (("🎙", a02_gerador.DICA_MIC_MUDO),
+                       ("♪", a02_gerador.DICA_ALTO_MUDO)):
+        assert "janela" not in dica.lower(), (
+            f"a dica do {nome} continua mandando para uma janela: {dica!r}")
+
+    # E A SAÍDA NOMEADA TEM DE EXISTIR na porta que a nomeia.
+    assert "release" in _ACOES, (
+        "`speaker release` saiu da porta — a régua mediria um verbo morto")
+    assert "release" in _ACOES_FIRMWARE, (
+        "`mic release` saiu da porta — a régua mediria um verbo morto")
+    assert "speaker release" in a02_gerador.DICA_ALTO_MUDO, (
+        "a dica do ♪ voltou a terminar em beco: a devolução existe "
+        "(`speaker.set {release: true}` no IPC) e a dica não a nomeia")
+    assert "mic release" in a02_gerador.DICA_MIC_MUDO, (
+        "a dica do 🎙 não nomeia a única saída que existe fora desta tela")
+    # O PREÇO CONTINUA ESCRITO — a decisão 02-Q6 dela é *"fica fora, com
+    # aviso"*, e o aviso é esta dica. `speaker release` devolve o CONTROLE, não
+    # o valor, e isso vai dito porque é o que separa "largar" de "desfazer".
+    assert "não o valor" in a02_gerador.DICA_ALTO_MUDO, (
+        "a dica do ♪ deixou de dizer que a devolução não traz o volume de "
+        "volta — quem lesse esperaria o número de antes")
+
+
+def test_nenhum_botao_de_som_promete_botao_nesta_tela() -> None:
+    """A decisão 02-Q6 dela não muda: **sem botão novo no cartão.**
+
+    O que mudou é para ONDE o aviso aponta. Esta régua é a que impede a leitura
+    fácil — *"então põe um Devolver"* — de entrar pela porta dos fundos, e ela
+    é a mesma que segurou o "Liberar" em 31/08.
+
+    **ELA OLHA O MIOLO, NÃO A PÁGINA**, e a diferença foi medida ao escrevê-la:
+    a LEGENDA tem uma lápide que NOMEIA o "Liberar" para dizer que ele saiu
+    (`.nota li.foi`), e essa é a única licença desta aba para citar um termo que
+    o desenho não escreve. Uma régua sobre a página inteira reprovaria o
+    registro do que foi removido — que é o contrário do que ela existe para
+    proteger.
+    """
+    for proibido in (">Soltar<", ">Liberar<", ">Devolver<"):
+        assert proibido not in a02_gerador.MIOLO, (
+            f"um botão {proibido} nasceu no cartão — ela decidiu que ele fica "
+            f"fora, com aviso")
