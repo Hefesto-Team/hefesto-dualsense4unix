@@ -42,9 +42,15 @@ O QUE ESTES CASOS NÃO COBREM, de propósito: o número do jogador. `P1`…`P4` 
 POSIÇÃO na mesa, não a identidade do aparelho — *"O p1 ou p2 reflete o player do
 jogador."*
 
-O QUE FICA DE FORA DESTA ABA, e está relatado: `hefesto_vivo._fita` e
-`monta.fita` são das DEZ páginas, e a desistência descrita acima continua lá.
-Esta aba não pode consertá-la sem tocar arquivo de todo mundo.
+A SEGUNDA METADE FOI EMBORA EM 06/09/2026 (ONDA5-07-01), e a razão é que a
+PRIMEIRA premissa caiu antes dela: a desistência do `hefesto_vivo._fita`
+descrita acima — *"devolve `""` quando QUALQUER controle está sem cor"* — foi
+curada em 03/09, e desde então o piloto repinta a fita viva em toda mesa que
+tenha alguém. Com as duas metades vivas ficaram **dois donos** no mesmo
+endereço: 120 mutações em 40 tiques, e a fita que ganhava era a desta aba —
+sem `data-campo`, sem cor de plástico e com um `Todos` que a fita viva não tem
+com um controle só. Hoje a aba só escreve a fita quando o piloto se cala, que é
+a mesa VAZIA.
 """
 from __future__ import annotations
 
@@ -221,11 +227,26 @@ def test_a_fita_nunca_volta_vazia(a07) -> None:
         f"quem nomear:\n{saiu}")
 
 
-def test_o_pacote_escreve_a_fita(a07, ctx, monkeypatch) -> None:
-    """A metade que separa o conserto da maquiagem: alguém ESCREVE.
+def test_a_fita_tem_um_dono_so_com_alguem_na_mesa(a07, ctx, monkeypatch) -> None:
+    """ERA `test_o_pacote_escreve_a_fita`, e ele exigia o SEGUNDO dono.
 
-    Um endereço (ou, aqui, um bloco) que ninguém escreve zera a régua e deixa a
-    tela igualmente mentindo — seria trocar um congelado por um vazio.
+    O QUE MUDOU, e foi medido — ONDA5-07-01, 06/09/2026. Este caso nasceu em
+    03/09 porque `hefesto_vivo._fita` desistia da fita inteira quando um
+    controle estivesse sem cor, e "deixar a fita como está" era deixar a do
+    MOCKUP. **Aquela desistência caiu no mesmo 03/09** — e ninguém veio
+    desligar esta metade. Ficaram DOIS donos escrevendo `.fita` no mesmo tique:
+
+        07-lancadores.html · 120 mutações em 40 tiques · 3,0 por tique
+        — a ÚNICA das dez abas que não zerou na cura do samba
+
+    E QUEM GANHAVA ERA O PACOTE, porque o `blocos` corre por último. A prova
+    está na foto de 06/09: a fita da 07 mostrava `Todos` com UM controle na
+    mesa, e `monta.escolha_da_fita` não emite `Todos` com um só
+    (`cabe_o_todos`: `> 1`). O chip que ela via era o desta aba — sem
+    `data-campo="fita-chip"`, sem cor de plástico e sem a dica do `title`.
+
+    A MORDIDA: devolva o `blocos[SELETOR_DA_FITA]` incondicional em
+    `a07_lancadores.pacote` e este caso reprova nomeando o segundo dono.
 
     A VIGIA VAI DUBLADA: sem isso `pacote()` dispara a thread que lê o disco
     dela, e uma régua que acorda o disco de outra é ruído (medido em 02/09/2026
@@ -233,17 +254,47 @@ def test_o_pacote_escreve_a_fita(a07, ctx, monkeypatch) -> None:
     """
     monkeypatch.setattr(a07.VIGIA, "agora", lambda: None)
 
-    # 1. o seletor tem de EXISTIR na página, senão o bloco é escrito no nada
+    # 1. o seletor tem de EXISTIR na página, senão o bloco cairia no nada
     assert 'class="fita' in _bancada(), (
         f"a página não tem `{a07.SELETOR_DA_FITA}` — o `blocos` cairia no chão, "
         f"e `querySelector` devolve `null` sem uma linha de erro")
 
-    fita = (a07.pacote(ctx).get("blocos") or {}).get(a07.SELETOR_DA_FITA)
+    # 2. com alguém na mesa, quem escreve é o PILOTO — e esta aba se cala
+    blocos = a07.pacote(ctx).get("blocos") or {}
+    assert a07.SELETOR_DA_FITA not in blocos, (
+        f"a aba 07 voltou a publicar um bloco em {a07.SELETOR_DA_FITA!r} com "
+        f"alguém na mesa. `.fita` é endereço do PILOTO (`hefesto_vivo._fita` "
+        f"→ `monta.fita`): dois donos no mesmo tique é a tela sambando, e quem "
+        f"ganha é o bloco — a fita MENOS informada das duas.")
+
+
+def test_a_fita_da_mesa_vazia_ainda_sai_daqui(a07, monkeypatch) -> None:
+    """A metade que separa o conserto da maquiagem: com a mesa VAZIA alguém
+    ESCREVE, e é esta aba.
+
+    `hefesto_vivo._fita` devolve `""` sem ninguém na mesa, e o JS só troca o
+    bloco `if(p.fita)` — "deixar a fita como está" ali é deixar os DOIS chips do
+    desenho (`P1 · Cosmic Red · USB`, `P2 · Starlight Blue · BT`) na tela dela.
+    É o único caso em que esta aba ainda tem o que dizer.
+
+    A MORDIDA: apague o `if not ctx.mesa:` de `pacote` e este caso reprova.
+    """
+    import pacotes
+
+    monkeypatch.setattr(a07.VIGIA, "agora", lambda: None)
+    vazia = pacotes.Contexto(state={"active_profile": "regua"},
+                             mesa=[], conectados=[], estados={})
+
+    fita = (a07.pacote(vazia).get("blocos") or {}).get(a07.SELETOR_DA_FITA)
     assert fita, (
-        "o pacote não manda a fita. Sem ela a tira do topo desta aba fica com o "
-        "que o gerador deixou, e o gerador não sabe quais controles estão aqui.")
-    assert "White" in fita, (
-        f"a fita que o pacote manda não traz o controle da mesa:\n{fita}")
+        "com a mesa VAZIA ninguém escreve a fita — nem o piloto (que se cala) "
+        "nem esta aba. A tela fica com os dois controles do mockup.")
+    assert "Selecionar:" in fita and "Todos" in fita, (
+        f"a fita da mesa vazia perdeu a estrutura:\n{fita}")
+    for nome in _colorways():
+        assert nome not in fita, (
+            f"a fita da mesa VAZIA nomeia {nome!r} — o desenho voltou a mandar "
+            f"na tela do produto:\n{fita}")
 
 
 # ---------------------------------------------------------------------------

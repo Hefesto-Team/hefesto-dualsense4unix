@@ -905,13 +905,34 @@ def com_o_que_o_daemon_diz(
 # fita logo abaixo dizia `P1 · Cosmic Red · USB` e `P2 · Starlight Blue · BT` —
 # os dois do DESENHO, e ela não tem nenhum dos dois.
 #
-# POR QUE A FITA CHEGOU AQUI, sendo ela de todas as abas: `hefesto_vivo._fita`
-# desiste da fita INTEIRA quando UM controle estiver sem cor
-# (`any(not c.get("cor") for c in mesa)` → `return ""`), e o JS só troca o bloco
-# `if(p.fita)`. Nesta máquina o `LeitorDeCor` não conhece o controle de rádio,
-# então a fita NUNCA era repintada — e "deixar a fita como está" é deixar a
-# fita do MOCKUP. Está relatado como trabalho de fora desta aba; o que esta aba
-# pode fazer sozinha é escrever a SUA.
+# POR QUE A FITA CHEGOU AQUI, e por que ela quase toda foi embora — 06/09/2026
+#
+# ELA CHEGOU porque `hefesto_vivo._fita` desistia da fita INTEIRA quando UM
+# controle estivesse sem cor (`any(not c.get("cor") for c in mesa)` → `""`), e o
+# JS só troca o bloco `if(p.fita)`. Nesta máquina o `LeitorDeCor` não conhece o
+# controle de rádio, então a fita NUNCA era repintada — e "deixar a fita como
+# está" é deixar a fita do MOCKUP.
+#
+# ESSA GUARDA CAIU EM 03/09/2026, e o `_fita` passou a devolver a fita viva em
+# TODA mesa que tenha alguém. **Ninguém veio desligar esta.** Resultado medido
+# em 06/09/2026 pela `A-TELA-SAMBA-01`, com um controle no cabo e a mesa parada:
+#
+#     07-lancadores.html · 120 mutações em 40 tiques · 3,0 por tique
+#     — dois donos escrevendo `.fita` no MESMO tique. O piloto troca o nó
+#       inteiro (`f.outerHTML = desejado`) e três passos depois o `blocos` desta
+#       aba o troca de volta. A aba 07 foi a ÚNICA das dez que não zerou.
+#
+# E QUEM GANHAVA ERA ESTA, porque o `blocos` corre por último. Prova sem
+# ambiguidade, na foto de 06/09: a fita da aba 07 mostrava `Todos` com UM
+# controle na mesa, e `monta.escolha_da_fita` **não emite `Todos` com um só**
+# (`cabe_o_todos`: `> 1`). O chip que ela via era o desta função — sem
+# `data-campo="fita-chip"`, sem a cor do plástico e sem o `title` que diz por
+# que a cor não foi lida.
+#
+# A CURA É A FORMA QUE ESTA CASA JÁ ESCOLHEU PARA AS OUTRAS NOVE: **a fita tem
+# UM dono, e é o piloto.** Esta aba só escreve quando o piloto NÃO escreve — a
+# mesa vazia, onde `_fita` devolve `""` e deixar a fita "como está" seria deixar
+# os dois chips do mockup na tela. Ver a condição em :func:`pacote`.
 #
 # POR QUE `blocos` E NÃO `data-campo`: o número de chips muda com a mesa, e não
 # há endereço para um chip que ainda não existe — é a mesma razão pela qual a
@@ -1113,7 +1134,19 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
     # :func:`quantos_da_mesa`.
     valores[desenho.QUANTOS] = quantos_da_mesa(ctx.mesa)
     fora: dict[str, Any] = dict(valores)
-    fora["blocos"] = {**carga["blocos"], SELETOR_DA_FITA: fita_html(ctx.mesa)}
+    fora["blocos"] = dict(carga["blocos"])
+    # A FITA SÓ SAI DAQUI QUANDO O PILOTO NÃO A ESCREVE — 06/09/2026. Com
+    # alguém na mesa quem manda é `hefesto_vivo._fita`, que emite a fita
+    # canônica das dez abas (`monta.fita`), com endereço, cor e dica. Escrever
+    # por cima dela era o segundo dono que fazia esta aba sambar 120 vezes em 40
+    # tiques — e a fita que ganhava era a MENOS informada das duas.
+    #
+    # COM A MESA VAZIA O PILOTO SE CALA (`_fita` devolve `""`), e "deixar a fita
+    # como está" é deixar os dois chips do DESENHO na tela dela. É o único caso
+    # em que esta aba ainda tem o que dizer, e `fita_html` diz o mínimo honesto:
+    # o rótulo e o `Todos`, sem nomear controle nenhum.
+    if not ctx.mesa:
+        fora["blocos"][SELETOR_DA_FITA] = fita_html(ctx.mesa)
     fora["sem_dono"] = {k: {"sem_dono": True, "oque": v} for k, v in SEM_DONO.items()}
     fora["cobertura"] = {"pintados": len(valores), "sem_dono": len(SEM_DONO)}
     return fora
