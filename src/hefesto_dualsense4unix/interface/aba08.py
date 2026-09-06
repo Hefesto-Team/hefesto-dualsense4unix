@@ -1241,7 +1241,7 @@ CSS = CSS_GLIFO + CSS_POPUP + """
 
   /* ---- a lista de aparelhos.
      NO PRODUTO ELA É A COLUNA DA ESQUERDA e as faces ficam à direita
-     (`mapa_da_mesa.py:515-523`). Aqui ela é a fileira de CIMA, e a razão é
+     (`mapa_da_mesa._Janela.__init__`). Aqui ela é a fileira de CIMA, e a razão é
      aritmética: o quadrado do produto tem 84px de largura e a fileira tem SETE
      colunas fixas — 7×84 + 6 de vão pedem 618px, e a `.tn-cx` oferece 624 por
      dentro. Lado a lado com uma coluna de lista, o quadrado cairia para ~56px e
@@ -1263,7 +1263,7 @@ CSS = CSS_GLIFO + CSS_POPUP + """
   .mm-face-cab{display:flex;align-items:center;gap:9px;margin-bottom:6px}
   .mm-face-nome{font-size:11.5px;font-weight:600;color:var(--texto-suave)}
   /* o nome é um `Gtk.Label`, NÃO um campo: depois de criada, a face não tem
-     como ser renomeada nem apagada pela interface (`mapa_da_mesa.py:645`). */
+     como ser renomeada nem apagada pela interface (`mapa_da_mesa._Janela._desenhar_faces`). */
   .tn-cx .mm-face-cab .btn{height:23px;font-size:10px;padding:0 8px}
   /* SETE COLUNAS, para toda face, e o produto escreve a razão: "sete é a fileira
      do hub dela, que é a maior face desta casa" (`_COLUNAS = 7`). O `minmax` deixa
@@ -1542,26 +1542,28 @@ VER_IGNORADAS = "Ver as ordens ignoradas"
 #: endereço que faltava (`exame-calada`, alvo `classe`) nasceu nesta sprint.
 ORDEM_IGNORADA_VOLTA = _pacote08.ORDEM_IGNORADA_VOLTA
 
-#: O RODAPÉ DA JANELINHA DO MAPA — decisão [08] do PO, 04/09/2026:
-#: **"Trocar pela verdade."**
-#:
-#: **O QUE ESTAVA AQUI MENTIA, e a contradição era com um clique DELA.** A linha
-#: dizia *"O desenho vale quando você clicar em Aplicar, na barra de baixo da
-#: janela."* — e ela decidiu em 01/09 que **clicar já aplica**: os seis gestos
-#: do mapa gravam no ato (`a08_conexoes._gravar_o_mapa`). Pior: o "Aplicar" do
-#: rodapé faz OUTRA coisa, e a dica dele diz isso — *"Vale agora: envia a
-#: configuração aos controles na hora. NÃO grava"*. A frase mandava apertar um
-#: botão que não tem nada a ver com o desenho que o clique dela já gravou.
-#:
-#: **POR QUE A FRASE NÃO VEM DO DONO, e isto é dívida declarada:** a de antes
-#: era `mapa_da_mesa.ESPERA_O_APLICAR`, e ela continua VERDADEIRA lá — o widget
-#: GTK que a exibe (`mapa_da_mesa.py:559`) É uma janela que espera o Aplicar.
-#: São duas interfaces com dois comportamentos, e trocar a constante do dono
-#: poria a mentira na janela dela. O dono precisa de uma segunda frase, para
-#: quem grava no clique; `mapa_da_mesa.py` não é desta sprint, e o pedido está
-#: no relatório desta frente.
-MAPA_JA_GRAVOU = ("Cada mudança aqui já foi gravada, no clique. "
-                  "Não há nada a aplicar depois.")
+# O RODAPÉ DA JANELINHA DO MAPA — decisão [08] do PO, 04/09/2026:
+# **"Trocar pela verdade."**
+#
+# **O QUE ESTAVA AQUI MENTIA, e a contradição era com um clique DELA.** A linha
+# dizia *"O desenho vale quando você clicar em Aplicar, na barra de baixo da
+# janela."* — e ela decidiu em 01/09 que **clicar já aplica**: os seis gestos
+# do mapa gravam no ato (`a08_conexoes._gravar_o_mapa`). Pior: o "Aplicar" do
+# rodapé faz OUTRA coisa, e a dica dele diz isso — *"Vale agora: envia a
+# configuração aos controles na hora. NÃO grava"*. A frase mandava apertar um
+# botão que não tem nada a ver com o desenho que o clique dela já gravou.
+#
+# **HÁ DUAS FRASES, E ELAS FICAM DUAS.** A de antes é
+# `mapa_da_mesa.ESPERA_O_APLICAR`, e continua VERDADEIRA lá — o `Gtk.Label` que
+# a exibe está numa janela que espera mesmo o "Aplicar". São duas telas com
+# dois comportamentos, e a decisão de 01/09 é o que as reparte: unificá-las
+# poria a mentira numa das duas.
+#
+# **A DÍVIDA QUE ESTE BLOCO DECLARAVA FECHOU EM 06/09/2026, `ONDA5-08-02`.** O
+# texto era digitado aqui, num `MAPA_JA_GRAVOU` que não existe mais: o dono
+# ganhou a frase irmã (`mapa_da_mesa.GRAVA_NO_CLIQUE`) e esta tela passou a
+# LÊ-LA, como já fazia com os quatro rótulos da mesma janelinha. O que sobra
+# aqui é a razão de haver duas — que é decisão medida e fica, com a data.
 
 #: AS DUAS JANELAS DA MESA — `D-MAPEAR-ENTRADAS-E-NAO-PORTAS` (28/08).
 #:
@@ -2333,7 +2335,7 @@ MAPA = _constantes(
     {"EXPLICACAO", "ROTULO_APARELHOS", "ROTULO_TIRAR", "ROTULO_EXTENSAO",
      "ROTULO_NOVA_ENTRADA", "ROTULO_NOVA_FACE", "ROTULO_FECHAR", "ROTULO_VAZIA",
      "ROTULO_POR_EXTENSAO", "NOME_DA_FACE_EM_BRANCO", "ESPERA_O_APLICAR",
-     "CONFISSAO_ABERTURA", "CONFISSAO", "_COLUNAS"})
+     "GRAVA_NO_CLIQUE", "CONFISSAO_ABERTURA", "CONFISSAO", "_COLUNAS"})
 
 CALIB = _constantes(
     R / "src/hefesto_dualsense4unix/app/widgets/calibrar_entradas.py",
@@ -2430,7 +2432,7 @@ def ajuda(txt, largura=""):
 # são o enunciado. A cena é o que TEM de ser verdade para as duas valerem.
 #
 # O RÓTULO DE UM APARELHO É `espécie · nome do kernel`, e o caminho fica à
-# vista de propósito — `mapa_da_mesa.py:434-442`: os dois adaptadores desta
+# vista de propósito — `mapa_da_mesa.rotulo_do_aparelho`: os dois adaptadores desta
 # bancada são o mesmo 2357:0604, e a espécie sozinha ofereceria dois itens
 # idênticos. A cena repete a lição com DOIS teclados (`3-4` e `1-4`).
 #
@@ -2478,7 +2480,7 @@ FACES = [
 
 #: A entrada por extensão: `10` ganhou uma filha `10a`, vazia. A existência do
 #: extensor é DECLARAÇÃO dela — cabo passivo não tem descritor USB e nenhuma
-#: leitura de `/sys` o distingue (`mapa_da_mesa.py:691-697`).
+#: leitura de `/sys` o distingue (`mapa_da_mesa._Janela._quadrado`).
 EXTENSAO = {"10": "10a"}
 
 ONDE_ESTA = {no: em for _, no, em, _ in CENSO if em}
@@ -2705,7 +2707,7 @@ def celula(n):
     de ter colunas — medi **8 colunas distintas** numa grade de 7.
 
     A regra que ela protegia continua de pé: a traseira segue com as OITO
-    entradas do metal (`mapa_da_mesa.py:667-675`). O hub não entrou na fileira
+    entradas do metal (`mapa_da_mesa._Janela._desenhar_uma_face`). O hub não entrou na fileira
     dela — ganhou face própria, e lá ele pode dizer o que aqui não cabia: em que
     entrada está ligado.
     """
@@ -2797,8 +2799,11 @@ def pergunta_da_sala(texto, dica, respostas, marcada, gesto):
 
     O QUE **NÃO** VEIO ANEXADO: o produto gruda a `moldura.QUANDO_VALE` no fim
     desta dica, porque a seção dele não tem onde mais dizê-la. Aqui a frase já
-    está na tela, por extenso, três linhas abaixo (`ESPERA_O_APLICAR`) — repeti-la
-    no hover seria a mesma frase duas vezes na mesma caixa.
+    está na tela, por extenso, no rodapé desta janelinha (`GRAVA_NO_CLIQUE`, e
+    é `.mm-aplicar` no desenho) — repeti-la no hover seria a mesma frase duas
+    vezes na mesma caixa. **NÃO É `ESPERA_O_APLICAR`**, que este docstring
+    nomeava até 06/09/2026: aquela é a irmã dela, a da janela GTK que espera o
+    "Aplicar", e esta tela grava no clique desde 01/09.
 
     O ENDEREÇO DA PINTURA CHEGOU EM 03/09/2026 (`MIGRA-08-01`), e ele cura uma
     tela que MENTIA: o `maquina.json` desta bancada diz
@@ -2884,7 +2889,7 @@ TELA_MAPEAR = f'''
         <span class="mm-nova"><input class="mm-campo" placeholder="{MAPA["NOME_DA_FACE_EM_BRANCO"]}" maxlength="16">
           <button class="btn" data-gesto="nova-face" title="Cria uma face com o nome que você escreveu, sem entrada nenhuma. Sem nome, não cria.">{MAPA["ROTULO_NOVA_FACE"]}</button></span>
       </div>
-      <div class="tn-frase mm-aplicar">{MAPA_JA_GRAVOU}</div>
+      <div class="tn-frase mm-aplicar">{MAPA["GRAVA_NO_CLIQUE"]}</div>
     </div>
     <div class="tn-rod mm-rod">
       <a class="btn" href="#">{MAPA["ROTULO_FECHAR"]}</a>
