@@ -1432,9 +1432,16 @@ def test_o_quantos_do_ajuda_sai_da_mesa_viva_e_nao_do_mockup(a07, desenho):
                                     mesa=mesa, conectados=[], estados={})
         return a07.pacote(contexto)[desenho.QUANTOS]
 
-    um_no_cabo = [{"pref": "p1", "jogador": 1, "via": "USB"}]
-    dois = [{"pref": "p1", "jogador": 1, "via": "USB"},
-            {"pref": "p2", "jogador": 2, "via": "BT"}]
+    # A MESA VIVA TRAZ `transporte`, E A CONTA LÊ ELE — ONDA4-S10, 06/09/2026.
+    # Estas mesas de mentira tinham só `via`, a palavra que a TELA escreve, e a
+    # conta somava por ela: bastava a palavra mudar (a decisão D-05 dela) para a
+    # frase do "?" dizer *"0 no cabo, 2 no rádio"* com os dois no cabo — calado.
+    # `mesa_viva.mesa_do_estado` publica as duas chaves lado a lado; a de
+    # mentira aqui passa a ter as duas também, senão ela mede uma mesa que o
+    # produto não produz.
+    um_no_cabo = [{"pref": "p1", "jogador": 1, "via": "USB", "transporte": "usb"}]
+    dois = [{"pref": "p1", "jogador": 1, "via": "USB", "transporte": "usb"},
+            {"pref": "p2", "jogador": 2, "via": "BT", "transporte": "bt"}]
 
     assert frase(um_no_cabo) == "o <b>1</b> (1 no cabo, 0 no rádio)", (
         f"com UM controle no cabo o '?' diz {frase(um_no_cabo)!r} — e o "

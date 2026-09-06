@@ -347,15 +347,30 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
     # entra como último recurso, quando a mesa chega sem a chave — uma régua com
     # mesa de mentira, ou um daemon velho, anterior ao `por_aparelho`.
     da_sessao = _rotulo_da_mascara(_mascara_da_sessao(ctx.state))
+    # A PALAVRA DO TRANSPORTE VEM DA FUNÇÃO DONA — ONDA4-S10, 06/09/2026, e a
+    # decisão é dela (D-05): *"cabo / rádio, pela função que já existe."* O
+    # import é TARDIO pela rota das dez abas (ver `:685`, `:875`, `:922`,
+    # `:1092`): `pacotes/__init__.py` declara por escrito que importar GTK no
+    # topo deste módulo é o que se evita aqui.
+    from hefesto_dualsense4unix.app.actions.home_actions import palavra_do_transporte
+
     cartoes = {}
     for c in ctx.conectados:
         uniq = str(c.get("uniq") or "")
-        # A IDENTIDADE É `nome · via`, como o desenho a escreve ("Cosmic Red
-        # · USB") — e não a máscara. Sai da MESA, que é quem já leu a cor do
-        # plástico; o `conectados` cru não tem o nome do modelo.
+        # A IDENTIDADE É `nome · transporte`, como o desenho a escreve
+        # ("Cosmic Red · cabo") — e não a máscara. Sai da MESA, que é quem já
+        # leu a cor do plástico; o `conectados` cru não tem o nome do modelo.
         casa = next((m for m in ctx.mesa if str(m.get("uniq") or "") == uniq), {})
         nome = casa.get("nome") or "—"
-        via = casa.get("via") or (c.get("transport") or "").upper()
+        # O TERCEIRO DIALETO MORREU AQUI — ONDA4-S10, 06/09/2026. Esta linha
+        # era `casa.get("via") or (c.get("transport") or "").upper()`: o degrau
+        # de reserva GRITAVA o valor cru em maiúsculas quando a mesa não trazia
+        # `via`, e devolvia `""` quando o daemon não publicava o transporte —
+        # um `·` seguido de nada no cartão dela. A dona tem resposta melhor
+        # para os dois casos: a palavra do mapa de canais, e
+        # `"não sei por onde"` para a AUSÊNCIA. Ler a `via` da mesa aqui seria
+        # a sigla de máquina (`USB`/`BT`) na frase de quem joga.
+        via = palavra_do_transporte(casa.get("transporte") or c.get("transport"))
         cartoes[uniq] = {
             # A COR DO PLÁSTICO — 03/09/2026, IDENTIDADE-VEM-DE-CIMA-01. Ela é a
             # borda do cartão, e até hoje vinha cravada do desenho: com o

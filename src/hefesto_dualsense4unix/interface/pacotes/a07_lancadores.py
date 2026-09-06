@@ -937,8 +937,8 @@ def _chip(controle: dict[str, Any]) -> str:
 
     O QUE ENTRA: o número do jogador e o transporte, sempre (os dois vêm do
     daemon, nunca faltam), e o nome do modelo **só quando o plástico foi lido**.
-    Um controle sem cor lida sai `P2 • BT`, e não `P2 • Não sei • BT` nem — muito
-    pior — o nome do controle do desenho.
+    Um controle sem cor lida sai `P2 • rádio`, e não `P2 • Não sei • rádio` nem
+    — muito pior — o nome do controle do desenho.
 
     O QUE NÃO ENTRA, E É DECISÃO DESTA ABA: o `--plastico` e o `title` do chip.
     A fita daqui nasce ESMAECIDA (fora de `monta.ABAS_QUE_ESCOLHEM`, decisão dela de 28/08:
@@ -949,13 +949,21 @@ def _chip(controle: dict[str, Any]) -> str:
     borda é a cor do plástico"*, uma frase que nesta aba é falsa. Quem explica a
     fita apagada aqui é o `title` da `<div class="fita inerte">`, que o
     `blocos` não toca.
+
+    A PALAVRA DO TRANSPORTE É DA FUNÇÃO DONA — ONDA4-S10, 06/09/2026, decisão
+    dela (D-05). O chip lia a `via` da mesa, que é a **sigla de máquina**
+    (`USB`/`BT`); quem joga tem um cabo e tem um controle sem fio, e é isso que
+    o chip passa a dizer. O import é TARDIO porque `pacotes/__init__.py:889`
+    declara por escrito que GTK no topo deste módulo é o que se evita aqui.
     """
+    from hefesto_dualsense4unix.app.actions.home_actions import palavra_do_transporte
+
     nome = str(controle.get("nome") or "")
     lido = bool(controle.get("cor")) and nome and nome != SEM_LEITURA_DE_COR
     partes = [f"P{controle.get('jogador') or '?'}"]
     if lido:
         partes.append(_texto(nome))
-    partes.append(_texto(controle.get("via") or ""))
+    partes.append(_texto(palavra_do_transporte(controle.get("transporte"))))
     # `<label>` E NÃO `<span>` — 05/09/2026. As outras nove abas emitem
     # `LABEL` nos chips da fita (medido no DOM vivo), e a 07 era o único desvio
     # de forma que sobrou. Ela é aba de LEITURA e não perde clique nenhum por
@@ -986,12 +994,20 @@ def quantos_da_mesa(mesa: list[dict[str, Any]]) -> str:
     os dois números viviam no mesmo quadro dizendo coisas diferentes.
 
     O `BT` SAI POR SUBTRAÇÃO, e não por uma segunda contagem: `n - usb` não pode
-    somar diferente do total, e uma via nova (ou um `via` vazio) cai no lado do
-    rádio em vez de sumir da conta. Duas somas independentes é como a tela ganha
-    um "2 controles: 1 USB · 0 BT" que não fecha.
+    somar diferente do total, e um transporte novo (ou um `transporte` vazio)
+    cai no lado do rádio em vez de sumir da conta. Duas somas independentes é
+    como a tela ganha um "2 controles: 1 USB · 0 BT" que não fecha.
+
+    **QUEM CONTA LÊ O TRANSPORTE, NUNCA A PALAVRA** — ONDA4-S10, 06/09/2026, e
+    é a mesma cura de `mesa_viva.texto_da_contagem`. Esta soma comparava
+    `c["via"] == "USB"`; a `via` é o que a TELA escreve, e a partir de D-05 ela
+    pode dizer `cabo`. Contar pela palavra é como a frase do "?" passaria a
+    dizer *"os 2 (0 no cabo, 2 no rádio)"* com os dois no cabo — errado, calado,
+    e sem uma régua vermelha. `transporte` é a chave crua que
+    `mesa_viva.mesa_do_estado` publica ao lado da palavra.
     """
     n = len(mesa)
-    usb = sum(1 for c in mesa if str(c.get("via") or "").strip().upper() == "USB")
+    usb = sum(1 for c in mesa if str(c.get("transporte") or "").strip().lower() == "usb")
     return desenho.quantos_html(n, usb, n - usb)
 
 

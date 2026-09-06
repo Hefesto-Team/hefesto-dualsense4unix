@@ -60,13 +60,20 @@ from typing import Any
 from hefesto_dualsense4unix.app.actions import ambiente_na_tela as _ambiente
 from hefesto_dualsense4unix.app.actions import daemon_actions as _daemon
 from hefesto_dualsense4unix.app.actions.config import secao_orcamento as _orcamento
+
+# A PALAVRA DO TRANSPORTE, DA FUNÇÃO DONA — ONDA4-S10, 06/09/2026. Decisão dela
+# (D-05): *"cabo / rádio, pela função que já existe."* Esta aba tinha a sua
+# PRÓPRIA versão certa (`"cabo" if transport == "usb" else "rádio"`, na linha de
+# identidade) ao lado da sigla de máquina na fita — o mesmo fato, na mesma tela,
+# em duas línguas, fotografado no comentário de `_linha_de_identidade`. O import
+# no topo não custa nada aqui: este módulo já traz `gui.aba_sistema` logo abaixo.
+from hefesto_dualsense4unix.app.actions.home_actions import palavra_do_transporte
 from hefesto_dualsense4unix.gui import aba_sistema as _tela
 from hefesto_dualsense4unix.integrations import storm_doctor as _exame
 from hefesto_dualsense4unix.interface import onde as _onde
 
 from . import (
     TRAVESSAO,
-    VIA_DO_TRANSPORTE,
     Contexto,
     identidade_de,
     jogador_de,
@@ -481,14 +488,6 @@ ROTULO_DA_IDENTIDADE = "Identidade de fábrica"
 SEM_SERIAL_LIDO = "o serial só é lido no cabo"
 
 
-#: OS DOIS ÚLTIMOS DEGRAUS DE `identidade_de`, que aqui NÃO servem como nome.
-#: Ele nunca devolve vazio: sem nome nenhum cai no transporte (`"USB"`/`"BT"`) e,
-#: sem nem isso, no travessão. Nesta linha o transporte já está escrito ao lado,
-#: em palavra — `P2 · BT · rádio` afirmaria a mesma coisa duas vezes, e o
-#: travessão leria como defeito onde o que há é ausência de leitura.
-_NAO_E_NOME = frozenset({TRAVESSAO, *VIA_DO_TRANSPORTE.values()})
-
-
 def _nome_do_plastico(c: dict[str, Any], mesa: list[dict[str, Any]]) -> str:
     """O nome DESTE controle, pelo dono compartilhado — ou `""`.
 
@@ -497,9 +496,27 @@ def _nome_do_plastico(c: dict[str, Any], mesa: list[dict[str, Any]]) -> str:
     só*), já descarta o `"Não sei"` da mesa e já casa por `uniq` em vez de por
     posição. Escrever aqui uma quinta leitura seria a segunda verdade que a lei
     dela de 03/09 proíbe — e as abas 02 e 06 já o chamam com `ctx.mesa`.
+
+    OS DOIS ÚLTIMOS DEGRAUS DE `identidade_de` NÃO SERVEM COMO NOME. Ele nunca
+    devolve vazio: sem nome nenhum cai no transporte e, sem nem isso, no
+    travessão. Nesta aba o transporte já está escrito ao lado — `P2 · BT · BT`
+    afirmaria a mesma coisa duas vezes, e o travessão leria como defeito onde o
+    que há é ausência de leitura.
+
+    **O DESCARTE PASSOU A PERGUNTAR AO DONO — ONDA4-S10, 06/09/2026.** Ele era
+    um conjunto CONGELADO no import (`{TRAVESSAO, *VIA_DO_TRANSPORTE.values()}`),
+    montado sobre a tabela da sigla. Um conjunto de palavras é uma cópia da
+    tradução: no dia em que o último degrau de `identidade_de` mudar de língua,
+    o conjunto descarta a palavra de ontem e deixa passar a de hoje — e a linha
+    volta a dizer `P2 · rádio · rádio`, sem erro, sem log e sem régua vermelha.
+
+    AGORA A PERGUNTA É AO PRÓPRIO `identidade_de`, com um controle que só tem o
+    transporte: o que ele devolve aí **é** o último degrau, para ESTE
+    transporte, na língua que ele fale hoje. Não há palavra escrita aqui.
     """
     nome = str(identidade_de(c, mesa) or "").strip()
-    return "" if nome in _NAO_E_NOME else nome
+    ultimo_degrau = str(identidade_de({"transport": c.get("transport")}) or "").strip()
+    return "" if nome in (TRAVESSAO, ultimo_degrau) else nome
 
 
 def _linha_de_identidade(c: dict[str, Any], mesa: list[dict[str, Any]]) -> str:
@@ -552,10 +569,21 @@ def _linha_de_identidade(c: dict[str, Any], mesa: list[dict[str, Any]]) -> str:
     NADA AQUI É INVENTADO: sem nome lido a linha não escreve nome nenhum, e sem
     serial ela diz :data:`SEM_SERIAL_LIDO` em vez de um travessão que leria como
     defeito. É a regra dela — *campo sem informação não mostra nada*.
+
+    A PALAVRA DO TRANSPORTE SAIU DAQUI — ONDA4-S10, 06/09/2026. Esta linha era
+    `"cabo" if transport == "usb" else "rádio"`, e ela **já estava certa** — o
+    que é exatamente o problema: era a QUARTA cópia de uma tradução que tem
+    dona, e a única que dizia a palavra dela. Duas coisas ela não tinha, e a
+    dona tem: o transporte que o mapa não conhece volta CRU, para alguém o ver,
+    e o transporte AUSENTE diz *"não sei por onde"* em vez de afirmar rádio
+    sobre um campo que ninguém leu — que é o que o `else` fazia.
+
+    **Este passo não muda um pixel na mesa dela**, e é o que impede a próxima
+    pessoa de concluir que "a 09 já estava certa" e deixar a cópia viva.
     """
     numero = jogador_de(c)
     serial = str(c.get("serial") or "")
-    via = "cabo" if str(c.get("transport") or "") == "usb" else "rádio"
+    via = palavra_do_transporte(c.get("transport"))
     quem = " · ".join(p for p in (f"P{numero}" if numero else "",
                                  _nome_do_plastico(c, mesa), via) if p)
     return f"{quem} · {serial or SEM_SERIAL_LIDO}"
@@ -913,10 +941,17 @@ def _um_chip(c: dict[str, Any], escolhido: str = "") -> str:
 
     `escolhido` É O `pref` DE QUEM ACENDE, e o padrão `""` não acende ninguém —
     que é o certo enquanto o `Todos` está na fita, porque quem acende é ele.
+
+    **A FITA E A LINHA DE IDENTIDADE FALAM A MESMA LÍNGUA — ONDA4-S10,
+    06/09/2026.** A foto de 03/09 transcrita em `_linha_de_identidade` pegou as
+    duas na MESMA tela em dialetos diferentes: a fita dizia a sigla de máquina e
+    o painel logo abaixo dizia a palavra dela. O chip lia `via` da mesa, que é a
+    sigla; agora ele pergunta ao dono, com o `transporte` cru que a mesa publica
+    ao lado. Nenhuma palavra é escrita aqui.
     """
     nome = str(c.get("nome") or "")
     cor = str(c.get("cor") or "")
-    via = html.escape(str(c.get("via") or ""))
+    via = html.escape(palavra_do_transporte(c.get("transporte")))
     jogador = html.escape(str(c.get("jogador") or ""))
     ponto = ' <span class="pt">•</span> '
     aceso = " on" if escolhido and str(c.get("pref") or "") == escolhido else ""
