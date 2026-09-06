@@ -69,8 +69,29 @@ NO_GLADE = {
 }
 
 #: O id do botão que as frases do doctor mandam clicar, e a reserva dele.
+#:
+#: **A RESERVA MUDOU DE PALAVRA EM 06/09/2026 (`SISTEMA-STEAM-01`)**, e a razão
+#: é um defeito que estava VIVO na tela dela: a frase mandava clicar em
+#: *"Consertar problemas conhecidos"* **na aba Sistema**, e na aba Sistema que
+#: ela usa o botão se chama *"Refazer os consertos automáticos"*. O
+#: `rotulo_do_botao` passou a perguntar primeiro à PÁGINA que o produto
+#: renderiza, e só depois ao glade — a reserva acompanha o que a tela viva diz.
 BOTAO = "btn_storm_fix_safe"
-RESERVA_DO_BOTAO = "Consertar problemas conhecidos"
+RESERVA_DO_BOTAO = "Refazer os consertos automáticos"
+
+
+def _sem_fonte_nenhuma(doutor, monkeypatch, tmp_path) -> None:
+    """Tira as DUAS fontes do alcance — a página e o glade.
+
+    ERAM UMA SÓ ATÉ 06/09/2026, e por isso bastava mover o `__file__`. Com a
+    página respondendo primeiro, mover só o `__file__` deixa o rótulo ser LIDO
+    e a reserva nunca sai: o caso passaria a medir o caminho feliz enquanto o
+    docstring dele diz que mede a ausência — que é a forma de instrumento falso
+    que este arquivo inteiro existe para pegar.
+    """
+    monkeypatch.setattr(doutor, "_NA_TELA_VIVA", {})
+    monkeypatch.setattr(
+        doutor, "__file__", str(tmp_path / "sem_gui" / "storm_doctor.py"))
 
 
 # ===========================================================================
@@ -197,15 +218,22 @@ def doutor(monkeypatch: pytest.MonkeyPatch):
 def test_a_reserva_fica_vazia_quando_a_leitura_acerta(doutor) -> None:
     """Com a fonte ao alcance, NADA é declarado reserva.
 
-    **É AQUI QUE O INSTRUMENTO PODE MENTIR, e o caso existe por isso:** hoje o
-    rótulo do `btn_storm_fix_safe` no glade é palavra por palavra o `se_faltar`
-    desta casa. Uma implementação que comparasse as duas strings acusaria
-    reserva sobre uma leitura que deu certo — régua respondendo sobre outra
-    coisa que não o produto.
+    **É AQUI QUE O INSTRUMENTO PODE MENTIR, e o caso existe por isso:** o
+    rótulo lido é palavra por palavra o `se_faltar` desta casa. Uma
+    implementação que comparasse as duas strings acusaria reserva sobre uma
+    leitura que deu certo — régua respondendo sobre outra coisa que não o
+    produto.
+
+    **A FONTE MUDOU DE ORDEM EM 06/09/2026:** quem responde primeiro é a PÁGINA
+    que o produto renderiza, e o glade só depois. O `skipif` do glade fica: no
+    dia em que ele sair, este caso continua valendo pela página, e é ela que
+    tem de responder.
     """
     lido = doutor.rotulo_do_botao(BOTAO, RESERVA_DO_BOTAO)
     assert lido == RESERVA_DO_BOTAO, (
-        "o rótulo lido do glade mudou; a reserva desta casa tem de acompanhar")
+        f"o rótulo lido da tela viva é {lido!r} e a reserva desta casa diz "
+        f"{RESERVA_DO_BOTAO!r}. A reserva tem de acompanhar a tela: ela é o "
+        "que a frase publica no dia em que fonte nenhuma responder.")
     assert doutor.rotulos_de_reserva() == {}, (
         "o produto declarou RESERVA sobre um rótulo que ele acabou de LER — a "
         "bandeira `lido_da_fonte` virou uma comparação de strings")
@@ -221,8 +249,7 @@ def test_sem_a_fonte_a_frase_fica_de_pe_e_o_produto_sabe(
     2. **o produto SABE que ela é a de reserva** — e é esta metade que era o
        defeito: sem ela o `se_faltar` virava permanente e nada acusava.
     """
-    monkeypatch.setattr(
-        doutor, "__file__", str(tmp_path / "sem_gui" / "storm_doctor.py"))
+    _sem_fonte_nenhuma(doutor, monkeypatch, tmp_path)
 
     with warnings.catch_warnings(record=True) as avisos:
         warnings.simplefilter("always")
@@ -299,8 +326,7 @@ def test_o_laudo_diz_quando_o_nome_do_botao_veio_da_reserva(
     `portao_a_casa_sabe_e_o_produto_nao_faz` reprova exatamente isso, e reprovou
     a primeira versão desta sprint.
     """
-    monkeypatch.setattr(
-        doutor, "__file__", str(tmp_path / "sem_gui" / "storm_doctor.py"))
+    _sem_fonte_nenhuma(doutor, monkeypatch, tmp_path)
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
         linhas = _laudo(doutor, tmp_path, monkeypatch)

@@ -913,3 +913,62 @@ def test_o_apelido_da_tela_tem_um_dono_so(a09):
     assert aba09.APELIDO_NA_TELA == a09.APELIDO_NA_TELA, (
         "o apelido da tela divergiu entre o gerador e o pacote. O dono é o "
         "pacote, e `aba09._constantes` o lê de lá sem importar nada.")
+
+
+# ---------------------------------------------------------------------------
+# 8. A FRASE DO EXAME NOMEIA O BOTÃO QUE ESTÁ NA TELA — 06/09/2026
+# ---------------------------------------------------------------------------
+def test_a_frase_do_exame_nomeia_o_botao_que_esta_na_tela(a09):
+    """O `storm_doctor` manda clicar num botão que EXISTE nesta página.
+
+    ERA UM DEFEITO VIVO, achado pela `GTK-2`: a frase dizia *"clique 'Consertar
+    problemas conhecidos' na aba Sistema"* e nesta aba o botão se chama
+    *"Refazer os consertos automáticos"*. A frase chega a esta tela — o exame é
+    pintado por `_achados()` — e mandava procurar um botão que não está lá, que
+    é a forma exata que o glossário proíbe.
+
+    **E TROCAR O `se_faltar` NÃO CURAVA.** Medido antes: com o glade no disco,
+    `rotulo_do_botao` o lê PRIMEIRO e devolve o nome velho; a reserva nem
+    chegava a ser usada (`rotulos_de_reserva() == {}`). A cura foi a ORDEM das
+    fontes — a página que o produto renderiza responde primeiro.
+
+    MORDIDA: esvaziei `storm_doctor._NA_TELA_VIVA` e o glade voltou a vencer.
+    Reprovou nomeando as duas palavras.
+    """
+    from hefesto_dualsense4unix.integrations import storm_doctor as sd
+
+    sd._ROTULOS_EM_CACHE.clear()
+    sd._ROTULOS_DE_RESERVA.clear()
+    dito = sd.rotulo_do_botao("btn_storm_fix_safe", "?")
+    assert f">{dito}</button>" in _pagina(), (
+        f"o exame manda clicar em {dito!r} e a página que o produto renderiza "
+        "não tem botão nenhum com esse nome. É a forma que o glossário proíbe: "
+        "*'qualquer frase que mande a pessoa procurar um botão que não "
+        "existe'*.")
+    assert not sd.rotulos_de_reserva(), (
+        "o rótulo saiu da RESERVA: nenhuma tela respondeu, e a frase está "
+        f"publicando um nome que ninguém conferiu — {sd.rotulos_de_reserva()}.")
+
+
+def test_os_dois_leitores_do_rotulo_nao_divergem(a09):
+    """O gêmeo declarado: o `storm_doctor` e o pacote leem o MESMO botão.
+
+    Os dois não podem ser um só sem um ciclo de import — `a09_sistema` importa
+    `storm_doctor`. O que segura o par é esta régua, e ela é a mesma disciplina
+    do `test_aba09_a_fita_vem_de_cima`: escritos duas vezes sem régua, os dois
+    se afastam no dia em que alguém mudar um.
+
+    MORDIDA: troquei o `data-gesto` de `storm_doctor._NA_TELA_VIVA` por
+    `refazer-proton`. Reprovou dizendo os dois rótulos, lado a lado.
+    """
+    from hefesto_dualsense4unix.integrations import storm_doctor as sd
+
+    sd._ROTULOS_EM_CACHE.clear()
+    do_doutor = sd._rotulo_na_tela_viva("btn_storm_fix_safe")
+    a09._ROTULOS.clear()
+    do_pacote = a09._rotulo_do_desenho("refazer-consertos")
+    assert do_doutor == do_pacote, (
+        f"os dois leitores do mesmo botão discordam: o `storm_doctor` lê "
+        f"{do_doutor!r} e o pacote lê {do_pacote!r}. Eles apontam para o mesmo "
+        "`data-gesto` na mesma página — se discordam, um dos dois mudou de "
+        "endereço sozinho.")

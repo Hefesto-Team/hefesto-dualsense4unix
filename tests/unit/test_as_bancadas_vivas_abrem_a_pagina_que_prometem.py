@@ -52,8 +52,12 @@ def _caminho_da_pagina(fonte: str) -> pathlib.Path | None:
     """Resolve o `PAGINA = …` do fonte, sem importar o módulo.
 
     As quatro formas que existem hoje, e todas terminam no mesmo lugar:
-    `onde.PUBLICADO / "NN.html"`, `RAIZ / "src" / … / "paginas" / "NN.html"`,
-    a mesma com `RAIZ_DEV`, e a forma morta `AQUI.parent / "NN.html"`.
+    `onde.PUBLICADO / "NN.html"`, a pasta do produto, a mesma com `RAIZ_DEV`, e
+    a forma morta `AQUI.parent / "NN.html"`.
+
+    O nome da pasta aparece sem acento porque ele é o NOME NO DISCO, e não
+    prosa: pela regra da casa, caminho mantém a forma de fábrica. Acentuá-lo
+    quebraria as duas comparações abaixo, que casam com o texto do fonte.
     """
     m = re.search(r"^PAGINA = (.+)$", fonte, re.M)
     if m is None:
@@ -62,8 +66,8 @@ def _caminho_da_pagina(fonte: str) -> pathlib.Path | None:
     nome = re.search(r'"([\w.-]+\.html)"', expr)
     if nome is None:
         return None
-    if "onde.PUBLICADO" in expr or '"paginas"' in expr:
-        return INTERFACE / "paginas" / nome.group(1)
+    if "onde.PUBLICADO" in expr or '"paginas"' in expr:  # (noqa-acento) pasta
+        return INTERFACE / "paginas" / nome.group(1)  # (noqa-acento) pasta
     # `AQUI.parent` é `src/hefesto_dualsense4unix/` — a forma morta.
     return INTERFACE.parent / nome.group(1)
 

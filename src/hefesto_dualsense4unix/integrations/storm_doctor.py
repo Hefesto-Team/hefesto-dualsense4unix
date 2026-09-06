@@ -79,16 +79,105 @@ def rotulos_de_reserva() -> dict[str, str]:
     return dict(_ROTULOS_DE_RESERVA)
 
 
-def rotulo_do_botao(widget_id: str, se_faltar: str) -> str:
-    """O rótulo VIVO de um botão do `main.glade`, pelo id dele.
+#: A TELA VIVA DE CADA BOTÃO QUE ESTE MÓDULO CITA — 06/09/2026,
+#: `SISTEMA-STEAM-01`. `{id no glade: (página, `data-gesto`)}`.
+#:
+#: **ELE NASCEU DE UM DEFEITO VIVO**, achado pela `GTK-2` e medido aqui: a
+#: frase deste módulo manda clicar em *"Consertar problemas conhecidos"* **na
+#: aba Sistema**, e na aba Sistema que ela usa o botão se chama *"Refazer os
+#: consertos automáticos"*. A frase nomeia um botão que não está lá — a forma
+#: exata que o glossário proíbe (*"qualquer frase que mande a pessoa procurar um
+#: botão que não existe"*).
+#:
+#: **E TROCAR O `se_faltar` NÃO CURAVA**, o que é o achado que importa. Medido
+#: em 06/09/2026, com o glade ainda no disco:
+#:
+#:     rotulo_do_botao('btn_storm_fix_safe', 'Refazer os consertos automáticos')
+#:       -> 'Consertar problemas conhecidos'          ← o glade venceu
+#:       rotulos_de_reserva() == {}                    ← a reserva nem foi usada
+#:
+#: A leitura do glade acontece PRIMEIRO e dá certo, então a reserva nunca sai.
+#: Uma cura que só vale no dia em que a `GTK-3` apagar o XML não é cura para a
+#: tela que ela tem hoje.
+#:
+#: **QUAL LADO CEDEU, E POR QUÊ.** O rótulo não se moveu, e a frase sim, por
+#: três medições:
+#:
+#: 1. esta função é um LEITOR, não um dono — ela existe exatamente para a frase
+#:    não virar o segundo dono do rótulo. O defeito não é o que ela diz: é a
+#:    tela a quem ela pergunta;
+#: 2. o rótulo da tela nova é do MOCKUP e está sob dúvida declarada desde
+#:    29/08 (`MIGRA-SISTEMA-07`, *"O que é dela decidir"*: as três opções para o
+#:    rótulo quando não houve conserto). Mover uma palavra que espera a decisão
+#:    dela, para agradar a uma frase de uma janela que está saindo, é o avesso;
+#: 3. a janela GTK sai inteira (`D-0609-GTK-LEVA-INTEIRA`). Alinhar a tela viva
+#:    à que morre seria trabalho para desfazer no mesmo mês.
+_NA_TELA_VIVA: dict[str, tuple[str, str]] = {
+    "btn_storm_fix_safe": ("09-sistema.html", "refazer-consertos"),
+}
 
-    `se_faltar` é o que sai quando o glade não está ao alcance (empacotamento
+
+def _rotulo_na_tela_viva(widget_id: str) -> str | None:
+    """O rótulo daquele botão NA PÁGINA QUE O PRODUTO RENDERIZA, ou `None`.
+
+    Lê a página publicada — nunca a bancada: uma frase de tela que citasse o
+    rótulo do `mockup/` mandaria clicar num nome que ela só vai ver depois de
+    publicar, e publicar é ato dela.
+
+    **TEM GÊMEO, e ele é declarado:** `interface/pacotes/a09_sistema.py`
+    (`_rotulo_do_desenho`) lê o mesmo `<button>` pelo mesmo `data-gesto`, para
+    repor o rótulo dos botões que confirmam em dois cliques. Os dois não podem
+    ser um só sem um ciclo de import — aquele módulo importa ESTE. O que segura
+    o par é a régua `test_a_frase_do_exame_nomeia_o_botao_que_esta_na_tela`, em
+    `tests/unit/test_a_09_sistema_fecha_a_paridade.py`, que compara as duas
+    leituras e reprova na divergência.
+    """
+    alvo = _NA_TELA_VIVA.get(widget_id)
+    if alvo is None:
+        return None
+    pagina, gesto = alvo
+    try:
+        import re as _re
+
+        from hefesto_dualsense4unix.interface import onde as _onde
+
+        doc = _onde.pagina(pagina, publicado=True).read_text(encoding="utf-8")
+    except Exception:  # pragma: no cover — empacotamento sem a interface nova
+        return None
+    achado = _re.search(
+        rf'data-gesto="{_re.escape(gesto)}"[^>]*>([^<]*)</button>', doc)
+    if not achado:
+        return None
+    import html as _html
+
+    return _html.unescape(achado.group(1)).strip() or None
+
+
+def rotulo_do_botao(widget_id: str, se_faltar: str) -> str:
+    """O rótulo VIVO daquele botão — na TELA QUE ELA USA, pelo id dele.
+
+    TRÊS FONTES, e a ordem é o ponto:
+
+    1. **a página que o produto renderiza** (:data:`_NA_TELA_VIVA`) — é a tela
+       que ela tem na frente quando lê esta frase;
+    2. **o `gui/main.glade`**, enquanto a janela GTK existir. Ela some inteira
+       na `D-0609-GTK-LEVA-INTEIRA`, e por isso não pode ser a primeira;
+    3. **`se_faltar`**, quando nenhuma das duas responde.
+
+    ATÉ 06/09/2026 A ORDEM ERA SÓ A 2 E A 3, e o preço estava na tela dela:
+    ver :data:`_NA_TELA_VIVA`.
+
+    `se_faltar` é o que sai quando nenhuma fonte está ao alcance (empacotamento
     parcial, teste sem recurso). Uma frase que some é pior que uma frase com um
-    nome velho, então isto nunca levanta — **mas não é mais calado**: o id vai
+    nome velho, então isto nunca levanta — **mas não é calado**: o id vai
     para :data:`_ROTULOS_DE_RESERVA` e sai um `warnings.warn` na primeira vez.
     """
     if widget_id in _ROTULOS_EM_CACHE:
         return _ROTULOS_EM_CACHE[widget_id]
+    da_tela = _rotulo_na_tela_viva(widget_id)
+    if da_tela:
+        _ROTULOS_EM_CACHE[widget_id] = da_tela
+        return da_tela
     alvo = se_faltar
     # A BANDEIRA É O INSTRUMENTO, e comparar as duas strings NÃO seria: hoje o
     # rótulo do `btn_storm_fix_safe` no glade é palavra por palavra o
@@ -524,7 +613,7 @@ def check_steam_input(home: Path | None = None) -> tuple[str, str]:
             partes.append(
                 "Steam Input LIGADO no ajuste GLOBAL da Steam (vale para todo "
                 f"jogo, não é escolha por jogo). {PREFIXO_DA_CURA}clique "
-                f"'{rotulo_do_botao('btn_storm_fix_safe', 'Consertar problemas conhecidos')}' "
+                f"'{rotulo_do_botao('btn_storm_fix_safe', 'Refazer os consertos automáticos')}' "
                 "na aba Sistema para desligar."
             )
         return WARN, " ".join(partes)
@@ -662,7 +751,7 @@ def check_snd_quirk(
         f"cura do travamento do USB AUSENTE — sem ela os controles podem "
         f"desconectar no meio do jogo. {PREFIXO_DA_CURA}{gesto_de_atualizar()} "
         f"e reconecte os controles (o botão "
-        f"'{rotulo_do_botao('btn_storm_fix_safe', 'Consertar problemas conhecidos')}' "
+        f"'{rotulo_do_botao('btn_storm_fix_safe', 'Refazer os consertos automáticos')}' "
         "não instala esta cura).",
     )
 
