@@ -260,7 +260,10 @@ def test_o_controle_que_saiu_da_mesa_fala_sem_dizer_o_endereco(pac) -> None:
         _gesto(pac, "parar")(ctx, fora, PonteDeMentira())
 
     frase = str(recusa.value)
-    assert "saiu da mesa" in frase, f"a frase não diz o que houve: {frase}"
+    # A PALAVRA MUDOU EM 06/09/2026 (A-PALAVRA-MESA-SAI-01): a frase dizia
+    # *"este controle saiu da mesa entre o clique e agora"*, e a palavra saiu
+    # da tela por ordem dela. O FATO medido é o mesmo, e é ele que se cobra.
+    assert "se desligou" in frase, f"a frase não diz o que houve: {frase}"
     assert "aa:bb:cc" not in frase and "aabbcc" not in frase, (
         f"a recusa publicou o endereço de rádio do aparelho: {frase}")
 
@@ -302,7 +305,7 @@ def test_os_cinco_gestos_dizem_a_causa_certa(pac, nome) -> None:
         _gesto(pac, nome)(_ctx(pac), clique, p)
 
     frase = str(recusa.value)
-    assert "saiu da mesa" in frase, (
+    assert "se desligou" in frase, (
         f"{nome} recusou com {frase!r} — e o fato é que o controle daquela "
         f"coluna caiu entre o clique e agora")
     assert "não disse em qual controle" not in frase, (
@@ -335,7 +338,7 @@ def test_o_clique_sem_coluna_continua_dizendo_que_nao_tem_alvo(pac, nome) -> Non
     frase = str(recusa.value)
     assert "não disse em qual controle" in frase, (
         f"{nome} perdeu a frase do clique solto: {frase!r}")
-    assert "saiu da mesa" not in frase, (
+    assert "se desligou" not in frase, (
         f"{nome} diz que um controle caiu, e o clique não nomeou nenhum: "
         f"{frase!r}")
     assert p.chamadas == [], (
@@ -360,7 +363,7 @@ def test_mirar_lugar_vazio_nunca_vira_broadcast(pac, a05) -> None:
     """
     p = PonteDeMentira()
     # UM `uniq` QUE O PILOTO NÃO PRODUZ — a mesa deste `ctx` só tem o UNIQ.
-    with pytest.raises(RuntimeError, match="saiu da mesa"):
+    with pytest.raises(RuntimeError, match="se desligou"):
         a05._mirar(_ctx(pac), {"uniq": "aa:bb:cc:00:00:09", "controle": "p9"}, p)
 
     assert p.chamadas == [], (

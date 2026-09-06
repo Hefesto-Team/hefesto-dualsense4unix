@@ -1553,7 +1553,7 @@ MIOLO = f'''
 # um comentário HTML manteria a palavra viva no mockup e faria o `grep` do
 # mockup continuar acusando o que já saiu.
 LEGENDA = f'''<div class="nota">
-  <h2>O que mudou com quatro controles na mesa</h2>
+  <h2>O que mudou com quatro controles ligados</h2>
   <ul>
     <li><b>O editor mostrava cinco campos e gravava vinte.</b> A tabela de baixo mostra o
       resto: <span class="marca">"cada controle guarda a sua configuração aqui dentro, pelo
@@ -1583,9 +1583,9 @@ LEGENDA = f'''<div class="nota">
       <code>assets/glyphs/</code> das outras abas.</li>
     <li><b>A barra e o rótulo dizem o controle DELA, não o do desenho.</b> A barra virou um
       elemento endereçado (<code>guarda.plastico</code>) e quem escreve a cor é
-      <code>a10_perfis</code>, com o que leu da mesa — a mesma leitura da fita do topo.
+      <code>a10_perfis</code>, com o que leu dos controles — a mesma leitura da fita do topo.
       Sem cor lida, a barra <b>some</b>: campo sem informação não mostra nada.</li>
-    <li><b>O cabeçalho conta a mesa</b>: {len(PERFIS)} perfis e
+    <li><b>O cabeçalho conta os controles</b>: {len(PERFIS)} perfis e
       {COM_AJUSTE} de {len(MESA)} controles com ajuste próprio neste perfil.</li>
     <li><b>A linha diz DUAS coisas, e elas não são a mesma.</b> A <b>cor verde e a barra
       verde</b> dizem <b>está valendo agora</b>; o <b>fundo roxo e a barra roxa</b> dizem

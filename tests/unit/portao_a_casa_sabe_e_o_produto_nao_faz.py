@@ -810,6 +810,19 @@ _SEM_MAO_HOJE: dict[str, str] = {
 #: Não é dívida: é classificação. A razão CITA a evidência que a sustenta,
 #: porque "confie em mim" não é razão.
 _NAO_E_PROMESSA: dict[str, str] = {
+    "interface/frases_que_ela_baniu.py::texto_visivel": (
+        "06/09/2026, A-PALAVRA-MESA-SAI-01 — é a LEITURA de uma régua, e o "
+        "produto nunca lê a própria página: ele a ESCREVE. Quem chama são o "
+        "portão `tests/unit/test_a_palavra_mesa_nao_chega_a_tela.py` e o "
+        "instrumento `interface/olhar.py --palavra`, que são os dois mundos "
+        "que esta régua não conta, e com razão. Ela vive no módulo da lista "
+        "porque a decisão que ela aplica é a MESMA — o que está dentro de "
+        "`<code>` é nome interno e não é palavra de tela —, e duas cópias "
+        "dessa decisão divergiriam no dia em que a lista ganhasse a segunda "
+        "palavra. Evidência: o docstring dela cita a conferência contra o "
+        "`innerText` do Chrome, e o `test_o_stripper_nao_engole_a_dica_nem_"
+        "inventa_tamanho` a morde."
+    ),
     "utils/tela_de_mentira.py::garantir_tela_de_mentira": (
         "04/09/2026 — INSTRUMENTO, e o docstring do módulo diz isso na "
         "primeira linha: `A janela de instrumento não nasce na tela dela`. "
@@ -1140,6 +1153,25 @@ _NAO_E_PROMESSA: dict[str, str] = {
 #: No dia em que o caminho nascer, a entrada deixa de bater com a árvore e
 #: ``test_a_lista_de_lacunas_nao_envelhece_calada`` cobra que ela seja apagada.
 _SEM_CAMINHO_HOJE: dict[str, str] = {
+    "interface/frases_que_ela_baniu.py::primeiro_trecho_banido": (
+        "06/09/2026, A-PALAVRA-MESA-SAI-01 — É PROMESSA, e o caminho se perde "
+        "num lugar medido. Ela é a consulta às DUAS listas (frase e palavra) "
+        "que a sprint pediu, e o chamador natural é o funil de execução "
+        "`interface/hefesto_vivo.py::_json`, por onde todo valor passa a "
+        "caminho do WebView. Ele NÃO pode adotá-la hoje, e não é esquecimento: "
+        "o `_json` LEVANTA, e duas coisas o fariam quebrar a janela dela — a "
+        "chave `\"mesa\"` que sete pacotes emitem por tique (essa a régua já "
+        "isenta) e as DEZESSEIS frases de `app/` que ainda dizem a palavra "
+        "(`app/actions/config/mixin.py:34`, `secao_controles.py:126`, "
+        "`secao_mesa.py:1779` e `:1788`, `jogar/painel.py:377` e `:384`, "
+        "`lightbar_actions.py:103` e `:128`, `perfis_web.py:329`, "
+        "`rumble_actions.py:478`, `alvo_de_edicao.py:86`, "
+        "`ipc_bridge.py:760`, `:807` e `:847`, `textos_de_aplicacao.py:251` e "
+        "`:294`). `app/` não era posse daquela sprint. O QUE FECHA: curar as "
+        "dezesseis no dono e trocar, no `_json`, `frase_banida_em` por esta — "
+        "uma linha. A lista está no relatório "
+        "`docs/process/agentes/2026-09-06/A-PALAVRA-MESA-SAI-01.md`."
+    ),
     # `integrations/canal_do_microfone.py::sufixo_do_canal` MOROU AQUI e a
     # entrada SAIU em 06/09/2026, no Passo 3 da mesma sprint: a função DESCEU
     # para `integrations/fontes_de_captura.py::sufixo_do_canal_do_mic`, porque

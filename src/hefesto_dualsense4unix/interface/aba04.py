@@ -1494,10 +1494,10 @@ LEGENDA = f'''<div class="nota">
 
   <h2>Ainda aberto</h2>
   <ul>
-    <li><b>Um número fora da mesa.</b> A fileira oferece os
+    <li><b>Um número que ninguém está usando.</b> A fileira oferece os
         {len(NUMEROS)} números ocupados, porque troca só existe entre dois. O produto cobre 1 a 8
         (<code>core/led_control.py</code>) — se um dia for preciso pôr um DualSense no 5 com
-        a mesa em 4, isso é <i>mover</i>, não trocar, e é outra decisão sua.</li>
+        quatro ligados, isso é <i>mover</i>, não trocar, e é outra decisão sua.</li>
     <li><b>O "Desligar" guarda a cor ou grava preto?</b> A dica de hoje promete uma coisa e o
         código faz a outra (<code>lightbar_actions.py:1023</code>).</li>
     <li><b>Ajustar os quatro de uma vez?</b> Não há mais alvo único nesta aba, então um

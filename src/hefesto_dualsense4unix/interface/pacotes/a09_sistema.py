@@ -1897,7 +1897,7 @@ def perfil_da_mesa(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
             f"estão em `secao_orcamento.PERFIS`.") from None
     ok, motivo = _ok_e_motivo(p.machine_declare({"orcamento": {"teto": teto}}))
     if not ok:
-        raise RuntimeError(motivo or "não consegui gravar o perfil da mesa")
+        raise RuntimeError(motivo or "não consegui gravar o Perfil de Bateria")
 
 
 # ---------------------------------------------------------------------------

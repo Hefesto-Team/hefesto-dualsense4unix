@@ -4129,8 +4129,8 @@ def _slot(o: dict[str, Any], quantos: int, quem: str) -> int:
     posicao = int(bruto)
     if not 0 <= posicao < quantos:
         raise RuntimeError(
-            f"{quem}: esta linha está vazia — a tela tem o lugar e a sua mesa "
-            f"tem {quantos} item(ns) aqui agora")
+            f"{quem}: esta linha está vazia — a tela tem o lugar e há "
+            f"{quantos} item(ns) aqui agora")
     return posicao
 
 
@@ -4454,7 +4454,7 @@ def renomear_adaptador(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     endereco, agora = _endereco_e_nome_do_adaptador(caminho)
     if not endereco:
         raise RuntimeError(
-            "renomear-adaptador: este adaptador não está mais na mesa, ou o "
+            "renomear-adaptador: este adaptador não está mais ligado, ou o "
             "Bluetooth do sistema não respondeu por ele agora")
     if novo == agora:
         return
@@ -4916,7 +4916,7 @@ def luz_nao_acende(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     if not uniq:
         raise ValueError(
             "o clique não disse em qual controle — a luz é de um aparelho, não "
-            "da mesa.")
+            "de todos.")
     dele = ctx.por_uniq(uniq)
     transporte = str(dele.get("transport") or "").lower()
     if transporte and transporte != "bt":
