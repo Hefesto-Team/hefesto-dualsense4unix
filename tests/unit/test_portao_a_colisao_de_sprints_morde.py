@@ -220,6 +220,58 @@ def test_frontmatter_que_nunca_fecha_e_recusado() -> None:
 
 
 # ---------------------------------------------------------------------------
+# `estado:` — só o que está aberta disputa posse e se despacha (06/09/2026)
+# ---------------------------------------------------------------------------
+
+
+def _com_estado(texto: str, estado: str) -> str:
+    return texto.replace("sprint: ", f"estado: {estado}\nsprint: ", 1)
+
+
+def test_estado_desconhecido_e_recusado() -> None:
+    with pytest.raises(colisao.FormatoInvalido) as exc:
+        colisao.le_frontmatter(_com_estado(_sprint("X"), "pronta"), "x.md")
+    assert "pronta" in str(exc.value) and "aberta" in str(exc.value)
+
+
+def test_sem_estado_e_aberta_por_padrao() -> None:
+    dados = colisao.le_frontmatter(_sprint("X"), "x.md")
+    assert dados is not None and dados["estado"] == "aberta" and colisao.aberta(dados)
+
+
+def test_sprint_feita_nao_disputa_posse() -> None:
+    """Duas sprints no mesmo arquivo: com as duas abertas o portão grita; com
+    uma delas `feita`, cala — trabalho que já aconteceu não colide."""
+    abertas = _confere(
+        a=_sprint("A-01", posse={"A": ["src/x.py"]}),
+        b=_sprint("B-01", posse={"B": ["src/x.py"]}),
+    )
+    assert abertas, "a mordida: com as duas abertas tem de gritar"
+    uma_feita = _confere(
+        a=_com_estado(_sprint("A-01", posse={"A": ["src/x.py"]}), "feita"),
+        b=_sprint("B-01", posse={"B": ["src/x.py"]}),
+    )
+    assert uma_feita == []
+
+
+def test_exigir_recusa_sprint_que_nao_esta_aberta(tmp_path) -> None:
+    (tmp_path / "2026-09-06-FEITA-01.md").write_text(
+        _com_estado(_sprint("FEITA-01", posse={"A": ["src/x.py"]}), "feita"),
+        encoding="utf-8",
+    )
+    (tmp_path / "2026-09-06-VIVA-01.md").write_text(
+        _sprint("VIVA-01", posse={"A": ["src/y.py"]}), encoding="utf-8"
+    )
+    base = [sys.executable, str(SCRIPT), "--pasta", str(tmp_path)]
+    r = subprocess.run([*base, "--exigir", "FEITA-01"], capture_output=True, text=True)
+    assert r.returncode == 1 and "estado: feita" in r.stderr
+    r = subprocess.run([*base, "--exigir", "VIVA-01"], capture_output=True, text=True)
+    assert r.returncode == 0, r.stderr
+    r = subprocess.run([*base, "--abertas"], capture_output=True, text=True)
+    assert "VIVA-01" in r.stdout and "FEITA-01" not in r.stdout
+
+
+# ---------------------------------------------------------------------------
 # Contra a árvore de verdade
 # ---------------------------------------------------------------------------
 
@@ -235,13 +287,27 @@ def test_nasce_reprovando_zero_na_arvore_de_verdade() -> None:
     assert "DÍVIDA" in r.stdout, "a lista de dívida sumiu da saída:\n" + r.stdout
 
 
-def test_exigir_recusa_sprint_sem_frontmatter_e_aceita_a_que_tem() -> None:
-    """É o que o despachante chama para não deixar agente nascer sem posse."""
-    r = subprocess.run(
-        [sys.executable, str(SCRIPT), "--exigir", "INFRA-DE-EXECUCAO-01"],
-        cwd=RAIZ, capture_output=True, text=True,
+def test_exigir_recusa_sprint_sem_frontmatter_e_aceita_a_que_tem(tmp_path) -> None:
+    """É o que o despachante chama para não deixar agente nascer sem posse.
+
+    Numa pasta própria: a árvore de verdade muda de estado (a sprint que este
+    teste citava, INFRA-DE-EXECUCAO-01, virou `estado: feita` em 06/09/2026, e
+    feita não se despacha).
+    """
+    (tmp_path / "2026-09-06-COM-POSSE-01.md").write_text(
+        _sprint("COM-POSSE-01", posse={"A": ["src/x.py"]}), encoding="utf-8"
     )
+    (tmp_path / "2026-09-06-SEM-FRONTMATTER-01.md").write_text(
+        "# uma sprint sem posse\n", encoding="utf-8"
+    )
+    base = [sys.executable, str(SCRIPT), "--pasta", str(tmp_path)]
+    r = subprocess.run([*base, "--exigir", "COM-POSSE-01"], capture_output=True, text=True)
     assert r.returncode == 0, r.stdout + r.stderr
+
+    r = subprocess.run(
+        [*base, "--exigir", "SEM-FRONTMATTER-01"], capture_output=True, text=True
+    )
+    assert r.returncode == 1 and "SEM-FRONTMATTER-01" in r.stderr
 
     r = subprocess.run(
         [sys.executable, str(SCRIPT), "--exigir", "SPRINT-QUE-NAO-EXISTE"],
