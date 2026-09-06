@@ -668,6 +668,22 @@ CSS = """
   .chave-auto input:checked:focus-visible + .chave-trilho,
   .chave-auto input:focus-visible + .chave-trilho{outline:1px solid var(--cyan);outline-offset:1px}
   .quadro-topo .ajuda.esq .dica{left:auto;right:22px}
+  /* O ESCOPO GLOBAL DA ABA — LUZES-01, e ele mora na MESMA faixa do
+     interruptor, pela mesma razão medida: a faixa do título tem 17px de altura
+     e mais de mil de largura vaga, e a grade das colunas está a 6px do teto.
+     E o lugar diz o alcance: um botão que mexe em TODOS os controles dentro de
+     UMA coluna mentiria sobre quem ele atinge. */
+  /* A ALTURA É A DA FAIXA, e ela foi MEDIDA: com `padding:5px` o botão tinha
+     23px, a faixa do título ia de 17 para 34 e o quadro passava do teto do
+     `.miolo` — a aba rolava por dentro, que é conteúdo que ninguém sabe que
+     existe. Com 15px de caixa ele cabe ao lado do interruptor (cujo trilho tem
+     15px) e a faixa não cresce um pixel. */
+  .btn-todos{
+    font-size:10px;line-height:13px;padding:0 8px;height:15px;border-radius:5px;
+    border:1px solid var(--border-forte);background:var(--app-bg);
+    color:var(--texto-mudo);cursor:pointer;white-space:nowrap;
+  }
+  .btn-todos:hover{border-color:var(--purple);color:var(--fg)}
 
   /* ---------- COR: a guia dos oito tons do produto, por controle ---------- */
   .guia{display:flex;gap:4px;align-items:center}
@@ -852,10 +868,20 @@ CSS = """
      receberia como um `—` solto debaixo de uma tira apagada — dado com cara de
      ressalva num lugar onde não há aparelho que ressalvar. */
   .luz-grade .ctrl.off .ressalva{display:none}
+  /* O VÃO DE 16px VIROU DUAS COISAS — LUZES-01, 06/09/2026, e a mudança é
+     MEDIDA: com a botoeira e as seis teclas dentro, o conteúdo da `.aceso` pede
+     212px dos 220 da coluna, e três vãos de 16 (48) faziam os DOIS lados
+     transbordarem — as tiras de luz, que não tinham `flex-shrink:0`, iam a
+     ZERO px e sumiam da tela. Agora a barra de luz é um grupo com vão próprio,
+     as teclas são outro, e o `space-between` reparte o que sobra. */
   .aceso{border-radius:8px;background:var(--app-bg);
-         display:flex;align-items:center;justify-content:center;gap:16px;
+         display:flex;align-items:center;justify-content:space-between;gap:4px;
          flex:0 0 34px}
-  .tira-luz{width:6px;height:20px;border-radius:3px}
+  .aceso .barra{display:flex;align-items:center;gap:8px}
+  /* `flex:0 0 6px` E NÃO `width` SOZINHO: dentro de um flex apertado a largura
+     é um PEDIDO, e o `flex-shrink` padrão (1) o atende encolhendo até zero —
+     foi assim que as duas tiras sumiram na primeira medição desta entrega. */
+  .tira-luz{flex:0 0 6px;width:6px;height:20px;border-radius:3px}
   .tira-luz.esq{box-shadow:-3px 0 12px 1px currentColor}
   .tira-luz.dir{box-shadow:3px 0 12px 1px currentColor}
   /* A TIRA DO "NÃO SEI" — decisão 9 dela, 03/09/2026:
@@ -892,9 +918,60 @@ CSS = """
      o estilo de linha já as põe, e regra que não morde é regra que mente sobre
      quem manda. */
   .tira-luz.incerta{border:1px dashed var(--comment)}
-  .pad{width:56px;height:20px;border-radius:5px;border:1px solid var(--linha);
-       background:var(--panel);display:flex;align-items:flex-end;justify-content:center;
-       padding-bottom:3px}
+  /* ---------- O INDICADOR VIROU A BOTOEIRA (LUZES-01, 06/09/2026) ----------
+     DOZE ALVOS EM 220px, E A CONTA FOI MEDIDA ANTES DE VIRAR FOLHA. A primeira
+     escrita desta entrega punha as teclas numa FAIXA NOVA da grade; o Chrome
+     reprovou na hora: com a `.nota` escondida o `.miolo` oferece 564px e o
+     `scrollHeight` já era 564 com o quadro em 526 — os 38px de diferença são o
+     rodapé, não folga. **A aba está no teto exato, e uma faixa nova a faz rolar
+     por dentro**, que é conteúdo que ninguém sabe que existe.
+
+     ONDE COUBE: dentro da própria `.aceso`, que mede 220x34 e usava 68 (as duas
+     tiras de 6 e o indicador de 56). Os 152px vagos são a única superfície
+     livre desta coluna, e ela é a certa por significado — é a célula LEDs.
+
+     A CONTA FECHADA: tiras 2x6 + botoeira 5x13 + seis desenhos 6x18 + os vãos
+     dão 216 contra 220. É denso, e a densidade é o preço do teto — a
+     alternativa era escrever "Todas"/"Nenhuma" por extenso, que pedia 236.
+     A palavra mora no `title`, que é onde esta aba põe explicação desde 28/08.
+
+     AS DUAS CORES VÊM DO DONO: `--led-apagado` e `--led-aceso` são declaradas
+     em `.luz-grade` por `CSS_DA_LUZ_NO_DESENHO` (`a04_iluminacao.tokens_da_luz`),
+     que as LÊ de `monta.CSS_LUZINHAS`. Um terceiro par digitado aqui daria três
+     brancos na mesma coluna. */
+  .pad{border-radius:5px;border:1px solid var(--linha);
+       background:var(--panel);display:flex;align-items:center;
+       justify-content:center;gap:1px;padding:2px 3px;height:20px}
+  /* O INDICADOR É O BOTÃO DE REENVIO — a decisão [03] dela aplicada às luzes:
+     *"A caixa do hexadecimal vira o botão."* O clique numa lâmpada é da
+     lâmpada (o ouvinte resolve pelo `closest`, e o `<button>` vem primeiro); o
+     clique na MOLDURA reenvia o desenho inteiro. */
+  .pad.reenvia{cursor:pointer}
+  .pad.reenvia:hover{border-color:var(--roxo)}
+  .pad{gap:2px}
+  .pad .lamp{width:12px;height:14px;padding:0;border-radius:3px;
+             border:1px solid transparent;background:var(--led-apagado);
+             cursor:pointer;display:block}
+  .pad .lamp.on{background:var(--led-aceso);
+                box-shadow:0 0 6px rgba(255,255,255,.85)}
+  .pad .lamp:hover{border-color:var(--roxo)}
+  .desenhos{display:flex;align-items:center;gap:1px}
+  /* `flex:0 0 17px` E `min-width:0` — a mesma lição que as tiras de luz
+     acabaram de pagar, do outro lado: num flex o `min-width:auto` impede o item
+     de encolher abaixo do CONTEÚDO, e as quatro teclas com `P1`..`P4` escrito
+     dentro cresceram de 17 para 32px cada. Medido: a célula ia a 299px numa
+     coluna de 220. */
+  .desenhos .dz{flex:0 0 17px;min-width:0;width:17px;height:20px;padding:0;border-radius:4px;
+                border:1px solid var(--linha);background:var(--app-bg);
+                cursor:pointer;display:flex;align-items:center;
+                justify-content:center;gap:1px}
+  .desenhos .dz.num{font-family:'JetBrains Mono',monospace;font-size:9px;
+                    line-height:1;color:var(--texto-mudo)}
+  .desenhos .dz.num:hover{color:var(--fg)}
+  .desenhos .dz:hover{border-color:var(--roxo)}
+  .desenhos .dz i{width:2px;height:2px;border-radius:1px;display:block;
+                  background:var(--led-apagado)}
+  .desenhos .dz i.on{background:var(--led-aceso)}
 """ + CSS_LUZINHAS.lstrip("\n") + """
   /* ---------- OPÇÕES ---------- */
   .cel-acoes{display:flex;flex-direction:column;align-items:stretch;gap:4px;
@@ -1120,7 +1197,7 @@ def coluna(c):
           </div>
           <div class="cel-leds">
             <div class="aceso" data-campo="luz" data-hef-alvo="html">
-{_pacote04.desenho_da_luz(tinta, b / 100, j, dica=_pacote04.dica_da_luz(c["nome"], c["via"], ""), recuo="              ")}
+{_pacote04.desenho_da_luz(tinta, b / 100, j, dica=_pacote04.dica_da_luz(c["nome"], c["via"], ""), recuo="              ", bits=_pacote04.desenho_de_agora(None, "", j))}
             </div>
             <!-- A RAZÃO DO TRACEJADO, EM UMA LINHA — 04/09/2026, D-02 e a
                  pergunta [01] desta aba. O desenho da tira já diz que algo
@@ -1199,6 +1276,19 @@ MIOLO = f'''
           Isto é do <b>perfil</b>. O botão <b>Automático</b> de cada coluna é outra coisa:
           ele larga a barra <i>daquele</i> controle para o jogo escolher.
         </span></span>
+        <!-- O ÚNICO DESFAZER DE UMA VEZ QUE ELA TEM — LUZES-01, 06/09/2026, e
+             o gêmeo é `lightbar_actions.on_lightbar_auto_reset_all`. O CSV da
+             paridade mediu o perfil dela e achou DOIS `uniq` com
+             `leds.lightbar` gravado: sem este botão, cada cor própria teria de
+             ser desfeita uma a uma, e a interface nova não tinha um só gesto de
+             escopo global nesta aba.
+
+             O RÓTULO NÃO É "Voltar ao automático": essa é a frase LONGA que ela
+             mandou encurtar em 31/08, e o curto ("Automático") já é o botão POR
+             CONTROLE de cada coluna. Duas coisas diferentes na mesma tela não
+             podem ter o mesmo nome. -->
+        <button class="btn-todos" data-gesto="{_pacote04.GESTO_DO_AUTOMATICO_DE_TODOS}"
+                title="Tira a cor própria de TODOS os controles e religa as cores automáticas. O desenho das luzes de jogador e os gatilhos ficam como estão.">Todos no automático</button>
       </div>
       <div class="quadro-corpo">
 
@@ -1670,6 +1760,61 @@ def _conferir(doc):
         exigir("data-hex=" not in caixa,
                "a caixa do hexadecimal ganhou `data-hex` — o gesto passaria a "
                "reenviar a cor CRAVADA no desenho, e não a que está na tela")
+
+    # 12. AS CINCO LUZES DE JOGADOR SEM TROCAR O NÚMERO — LUZES-01, 06/09/2026,
+    #     e é a linha que a sprint inteira fecha. Três metades, e a terceira é a
+    #     que morde.
+    #
+    #     A PRIMEIRA: as doze teclas existem em TODA coluna conectada — cinco
+    #     lâmpadas, seis desenhos e a moldura do reenvio. Uma coluna sem elas é
+    #     um controle cujas luzes só se mexem por renumeração, que é o defeito.
+    for bloco in re.findall(
+            r'<div class="cel-leds">(.*?)<div class="cel-acoes">', colunas, re.S):
+        exigir(bloco.count(f'data-gesto="{_pacote04.GESTO_DA_LAMPADA}"') == 5,
+               "uma coluna não tem as CINCO luzes de jogador clicáveis — as "
+               "lâmpadas voltaram a ser desenho de leitura")
+        exigir(bloco.count(f'data-gesto="{_pacote04.GESTO_DO_DESENHO_DE}"') == 6,
+               "uma coluna não tem as SEIS teclas de desenho (P1..P4, todas e "
+               "nenhuma) — sem a `nenhuma` não há caminho de volta ao automático")
+        exigir(f'data-gesto="{_pacote04.GESTO_DO_REENVIO_DO_DESENHO}"' in bloco,
+               "o indicador das cinco lâmpadas deixou de ser o botão de reenvio")
+    #     A SEGUNDA: as quatro teclas de número dizem `P1`..`P4`, e NÃO repetem
+    #     o rótulo da fileira de Jogador. Os dois grupos parecem a mesma coisa e
+    #     são opostos — um DÁ o número, o outro dá o desenho dele — e o único
+    #     jeito de a tela dizer isso é escrevendo diferente. A palavra vem do
+    #     glossário (`docs/A-LINGUA-DESTA-CASA`).
+    for n in NUMEROS:
+        exigir(f'data-desenho="{n}" title=' in colunas,
+               f"a tecla do desenho do P{n} sumiu")
+        exigir(f'>P{n}</button>' in colunas,
+               f"a tecla do desenho do P{n} perdeu o rótulo `P{n}` — sem ele "
+               f"ela fica idêntica ao botão `{n}` da linha Jogador, que faz o "
+               f"CONTRÁRIO dela")
+    #     A TERCEIRA, E É A QUE MORDE: nenhuma dica de desenho pode PROMETER o
+    #     que ela não faz. A janela estável diz isso no próprio `title` desde
+    #     sempre, e a frase foi lida de lá — se ela sumir, a tela volta a
+    #     oferecer duas fileiras iguais sem dizer que uma não mexe no número.
+    exigir(colunas.count("NÃO muda o número dele")
+           == len(NUMEROS) * len(monta_.CONECTADOS),
+           "a dica das teclas de desenho parou de dizer, em alguma delas, que "
+           "elas NÃO mudam o número do controle — sem essa frase a tela oferece "
+           "duas fileiras que parecem iguais e fazem o contrário uma da outra")
+
+    # 13. O ESCOPO GLOBAL — "Todos no automático", e ele mora na MESMA faixa do
+    #     interruptor, pela mesma razão medida da §9: a grade das colunas está
+    #     no teto do `.miolo` (medido no Chrome: 526px de quadro para 564 de
+    #     caixa, e os 38 restantes são o rodapé). Fora da faixa ele custaria
+    #     linha, e dentro de uma coluna mentiria sobre o alcance.
+    exigir(f'data-gesto="{_pacote04.GESTO_DO_AUTOMATICO_DE_TODOS}"' in topo,
+           "o `Todos no automático` saiu da faixa do título — é o único "
+           "desfazer de uma vez que ela tem, e dentro de uma coluna ele "
+           "afirmaria mexer só naquele controle")
+    #     E O NOME NÃO COLIDE: `Automático` é o botão POR CONTROLE de cada
+    #     coluna desde 31/08 (ordem dela, encurtando "Voltar ao automático").
+    #     Duas coisas diferentes na mesma tela não podem ter o mesmo nome.
+    exigir(">Todos no automático</button>" in topo,
+           "o botão de escopo global perdeu o rótulo que o separa do "
+           "`Automático` de cada coluna")
 
     if falhas:
         raise SystemExit("ERRO em 04-iluminacao — decisão dela desfeita:\n  "
