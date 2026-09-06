@@ -434,7 +434,7 @@ def test_mesa_vazia_ainda_ajusta_gatilho_e_vibracao(disco: dict[str, Any]) -> No
     assert prof.rumble.policy == estilos_de_jogo.POR_ROTULO["Corrida"].vibracao
     assert not (prof.controllers or {})
     assert resposta is not None
-    assert "nenhum controle na mesa" in resposta["mesa"]["perfis.desfecho"]
+    assert "nenhum controle ligado" in resposta["mesa"]["perfis.desfecho"]
 
 
 def test_o_estilo_saiu_da_lista_de_travados() -> None:

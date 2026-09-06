@@ -2480,7 +2480,7 @@ LEGENDA = f'''<div class="nota">
 
   <h2>A rodada dos quatro controles</h2>
   <ul>
-    <li><b>A coluna do desenho virou a mesa.</b> Onde havia <b>um</b> DualSense
+    <li><b>A coluna do desenho passou a mostrar todos.</b> Onde havia <b>um</b> DualSense
     há agora os <b>{len(MESA)}</b> da <code>MESA</code> do
     <code>monta.py</code>, cada um com a
     borda e o casco na cor do seu plástico e a barra de luz na cor automática do
@@ -2496,7 +2496,7 @@ LEGENDA = f'''<div class="nota">
     <code>pacotes.identidade_de</code>, quem diz o número é
     <code>pacotes.jogador_de</code>, e a cor da borda é
     <code>style.color</code> escrito pelo pacote. O que sobra aqui é a
-    <b>forma</b> do cartão; o <b>aparelho</b> é sempre o que está na mesa.</li>
+    <b>forma</b> do cartão; o <b>aparelho</b> é sempre o que está ligado.</li>
     <li><b>O <code>#ff2d6f</code> saiu — e ele nunca tinha pintado nada.</b> O
     <code>luz=</code> desta aba escrevia uma variável CSS que <b>nenhuma regra
     lia</b>: a barra de luz ficava cinza nas dez abas. Agora a regra existe
@@ -2536,10 +2536,10 @@ LEGENDA = f'''<div class="nota">
     confirmação funcionando.</li>
   </ul>
 
-  <h2>O que a mesa de quatro revelou, e está na tela</h2>
+  <h2>O que os quatro controles revelaram, e está na tela</h2>
   <ul>
     <li><b>Mouse, teclado e os cinco gestos saem de UM controle só.</b> Com um
-    controle na mesa ninguém podia ver isso. O poll loop lê o estado do controle
+    controle ligado ninguém podia ver isso. O poll loop lê o estado do controle
     <b>primário</b> (<code>daemon/lifecycle.py:4541</code>) e é esse estado que vai
     para o mouse (<code>:4744</code>), para o teclado (<code>:4754</code>) e para o
     <code>hotkey_manager.observe</code> (<code>:4757</code>); os secundários do
@@ -2587,7 +2587,7 @@ LEGENDA = f'''<div class="nota">
 
   <h2>Onde eu li a sua fala de um jeito, e pode ser o outro</h2>
   <ul>
-    <li><b>"Quem navega" na coluna do desenho.</b> Pus a mesa no lugar do desenho
+    <li><b>"Quem navega" na coluna do desenho.</b> Pus os quatro no lugar do desenho
     único porque é lá que ela responde a pergunta da aba sem custar altura. Se você
     quiser os quatro <b>maiores</b>, eles cabem numa fileira própria — mas aí a aba
     passa da dobra, e as tabelas de baixo já estão em telas à parte por isso.</li>

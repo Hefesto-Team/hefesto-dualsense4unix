@@ -2613,7 +2613,7 @@ def _com_o_estilo(prof: Any, estilo: Any, mesa: list[dict[str, Any]]) -> tuple[A
             continue
         if jogador in lugares and lugares[jogador] != uniq:
             raise RuntimeError(
-                f"dois controles estão no lugar P{jogador} da mesa, e o estilo "
+                f"dois controles estão no lugar P{jogador}, e o estilo "
                 f"daria a MESMA cor aos dois — a regra é que nenhum controle "
                 f"repete a cor de outro. Nada foi salvo.")
         lugares[jogador] = uniq
@@ -2708,7 +2708,7 @@ def editor_estilo(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | 
     # a mesa vazia o gatilho e a vibração entram do mesmo jeito — e prometer cor
     # a zero controles seria a tela afirmando o que não fez.
     luz = (f"e a luz de {pintados} controle{'s' if pintados != 1 else ''}"
-           if pintados else "e nenhum controle na mesa para acender")
+           if pintados else "e nenhum controle ligado para acender")
     return _dizer(
         f"“{estilo.rotulo}” aplicado em “{prof.name}”: gatilho, vibração {luz}.")
 

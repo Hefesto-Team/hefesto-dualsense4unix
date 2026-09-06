@@ -911,9 +911,9 @@ def _minha_vez() -> int:
 #: desta casa existem para que um MAC não saia numa frase de tela — e a frase
 #: que ela substituiu (`o controle d4:2f:… não está na mesa agora`) o citava.
 FRASE_DO_CONTROLE_QUE_SAIU = (
-    "este controle saiu da mesa entre o clique e agora. Sem o lugar dele na "
-    "lista do Hefesto não há como mirar só nele — e mandar assim faria a mesa "
-    "inteira tremer. Espere ele voltar e clique de novo.")
+    "este controle se desligou entre o clique e agora. Sem o lugar dele na "
+    "lista do Hefesto não há como mirar só nele — e mandar assim faria "
+    "todos tremerem. Espere ele voltar e clique de novo.")
 
 
 def _uniq(o: dict[str, Any]) -> str:
@@ -1074,13 +1074,13 @@ def _mirar(ctx: Contexto, o: dict[str, Any], p: Any) -> str:
     uniq = _uniq(o)
     if not uniq:
         raise RuntimeError(
-            "o clique não disse em qual controle — e sem alvo a mesa inteira "
-            "tremeria. Clique o botão dentro da coluna do controle que você "
+            "o clique não disse em qual controle — e sem alvo todos "
+            "tremeriam. Clique o botão dentro da coluna do controle que você "
             "quer sentir.")
     if not p.chamar("controller.target.set", index=_indice(ctx, uniq)):
         raise RuntimeError(
             "o Hefesto não aceitou mirar este controle, e sem mira a vibração "
-            "iria para a mesa inteira — então nada foi mandado. Veja se ele "
+            "iria para todos — então nada foi mandado. Veja se ele "
             "está rodando, na aba Sistema, e tente de novo.")
     return uniq
 
@@ -1505,7 +1505,7 @@ def _gravar_a_forca(ctx: Contexto, p: Any, uniq: str, policy: str | None,
     if not nome:
         raise RuntimeError(
             "não há perfil ativo agora, e a força da vibração de um controle é "
-            "do PERFIL — não da mesa. Escolha um perfil na aba Perfis e tente "
+            "do PERFIL — não de todos. Escolha um perfil na aba Perfis e tente "
             "de novo.")
     chave = _chave_no_perfil(uniq)
     if not chave:

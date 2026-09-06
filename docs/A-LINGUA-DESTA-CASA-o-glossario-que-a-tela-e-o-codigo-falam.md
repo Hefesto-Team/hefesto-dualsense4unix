@@ -79,5 +79,12 @@ existe, e qualquer alarme sem medição (`frases_que_ela_baniu.py`).
 * termo novo na tela → linha aqui antes, com o dono;
 * termo que ela recusou → some da tela em TODOS os lugares no mesmo dia
   (`scripts/check_regua_de_tela.py` e `frases_que_ela_baniu.py` são os portões
-  que já existem; a palavra "mesa" entra na lista de banidas nesta leva);
+  que já existem). **A palavra "mesa" ENTROU em 06/09/2026**
+  (A-PALAVRA-MESA-SAI-01): ela mora em `frases_que_ela_baniu.PALAVRAS_BANIDAS`,
+  numa tupla à parte porque palavra se casa por BORDA — `"mesa" in texto` casa
+  com *remessa* e com todo nome que a carrega. A régua é
+  `tests/unit/test_a_palavra_mesa_nao_chega_a_tela.py`, e o instrumento para
+  procurar a próxima é `interface/olhar.py --palavra <palavra>`. **O nome
+  interno não se toca** — a borda ignora o que está colado a `-`, `_` ou `.`, e
+  o que está dentro de `<code>` é identificador, não palavra de tela;
 * o portão `acentuacao` vale aqui como em todo lugar.

@@ -32,6 +32,18 @@ fotografar HTML. Este arquivo já era o dono do Chrome e da receita da foto.
     interface/olhar.py --todas --publicado --doc   # as dez do produto,
                                                    # para docs/usage/assets/
 
+ELE TAMBÉM PROCURA PALAVRA — 06/09/2026, A-PALAVRA-MESA-SAI-01
+
+`--palavra mesa` lista, página por página, cada ocorrência que uma pessoa LÊ,
+com o contexto e o ARQUIVO:LINHA de onde ela vem. Ele não abre navegador: a
+leitura é a do `frases_que_ela_baniu.texto_visivel`, que é a mesma que a régua
+usa — instrumento e portão têm de responder o mesmo número, senão um dos dois
+mente. O `--palavra` é o "antes" da sprint, e um `--palavra mesa` vazio é o
+"depois".
+
+    interface/olhar.py --palavra mesa               # a bancada
+    interface/olhar.py --palavra mesa --publicado   # o que o produto renderiza
+
 Uso:  olhar.py 05-vibracao.html [--publicado]
 """
 from __future__ import annotations
@@ -178,6 +190,75 @@ def _todas(publicado: bool, para_a_doc: bool) -> int:
     return 0
 
 
+#: ONDE UMA FRASE DE TELA PODE TER NASCIDO: os dez geradores (o desenho e a
+#: legenda) e os dez pacotes (o que o piloto escreve por tique). `app/` fica de
+#: fora porque não é posse desta sprint — e quando a origem não está aqui, o
+#: instrumento diz "não achei", que é a resposta honesta.
+def _fontes() -> list[pathlib.Path]:
+    aqui = pathlib.Path(__file__).resolve().parent
+    return sorted(aqui.glob("aba??.py")) + sorted((aqui / "pacotes").glob("a??_*.py"))
+
+
+def _de_onde(trecho: str) -> str:
+    """O arquivo:linha do gerador que escreveu ``trecho``, ou por que não achei.
+
+    DUAS COISAS SEPARAM O FONTE DA PÁGINA, e ignorar qualquer uma devolve "não
+    achei" sobre um arquivo que está logo ali:
+
+    * **a quebra de linha** — a mesma frase mora numa linha do HTML e em duas do
+      fonte, com o recuo no meio. Por isso a busca é por regex com `\\s+` no
+      lugar de todo espaço, e não por `str.find`;
+    * **o tamanho** — a legenda é escrita em literais que o Python junta, e um
+      pedaço de 60 letras pode cair bem no ponto da emenda. Ele tenta 60, 40,
+      24 e 14, e para na primeira medida que casa.
+    """
+    for tamanho in (60, 40, 24, 14):
+        alvo = trecho[:tamanho].strip()
+        if len(alvo) < 8:
+            continue
+        # o último pedaço pode ter sido cortado no meio de uma palavra; o `\s+`
+        # não ajuda aí, então a busca é do começo até o último espaço inteiro.
+        agulha = re.compile(r"\s+".join(re.escape(p) for p in alvo.split()))
+        achados = []
+        for fonte in _fontes():
+            texto = fonte.read_text(encoding="utf-8")
+            m = agulha.search(texto)
+            if m is not None:
+                achados.append(f"{fonte.name}:{texto.count(chr(10), 0, m.start()) + 1}")
+        if achados:
+            return " · ".join(achados[:3])
+    return "não achei no fonte (pode vir de `app/`, que não é desta posse)"
+
+
+def _palavra(alvo: str, publicado: bool) -> int:
+    """A palavra que uma pessoa LÊ, página por página, com origem e contexto."""
+    from hefesto_dualsense4unix.interface.frases_que_ela_baniu import (
+        _borda,
+        texto_visivel,
+    )
+
+    paginas = [p for p in onde.paginas(publicado=publicado) if E_ABA.match(p.name)]
+    if len(paginas) < 10:
+        sys.exit(f"achei {len(paginas)} abas — o caminho mudou?")
+
+    total = 0
+    for p in paginas:
+        cru = p.read_text(encoding="utf-8")
+        visivel = texto_visivel(cru)
+        achados = list(_borda(alvo).finditer(visivel))
+        total += len(achados)
+        print(f"\n{p.name}  —  {len(achados)} ocorrência(s) visível(eis)")
+        for m in achados:
+            linha = visivel.count("\n", 0, m.start()) + 1
+            a, b = max(0, m.start() - 55), m.end() + 55
+            contexto = " ".join(visivel[a:b].split())
+            print(f"  linha {linha}: …{contexto}…")
+            print(f"      vem de: {_de_onde(' '.join(cru[m.start():b].split()))}")
+    print(f"\n{alvo!r}: {total} ocorrência(s) visível(eis) em "
+          f"{'o produto' if publicado else 'a bancada'}")
+    return 1 if total else 0
+
+
 def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser(description="fotografa a interface nova")
     p.add_argument("pagina", nargs="?",  # (noqa-acento)  (nome do argumento)
@@ -185,7 +266,11 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--publicado", action="store_true", help="o que o produto renderiza")
     p.add_argument("--todas", action="store_true", help="as dez abas de uma vez")
     p.add_argument("--doc", action="store_true", help="grava em docs/usage/assets/")
+    p.add_argument("--palavra", metavar="PALAVRA",
+                   help="lista onde esta palavra é LIDA nas dez abas, com a origem")
     a = p.parse_args(argv)
+    if a.palavra:
+        return _palavra(a.palavra, a.publicado)
     if a.todas:
         return _todas(a.publicado, a.doc)
     if not a.pagina:  # (noqa-acento)  (nome do argumento)

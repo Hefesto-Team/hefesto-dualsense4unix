@@ -1651,7 +1651,7 @@ def secao_da_troca(mesa: list[dict[str, Any]], recuo: str = "  ") -> str:
     if len(ordenada) < 2:
         quantos = "nenhum controle" if not ordenada else "um controle só"
         return (f"{cabeca}\n"
-                f"{r}<p>A troca acontece entre <b>dois</b> controles, e a mesa tem "
+                f"{r}<p>A troca acontece entre <b>dois</b> controles, e há "
                 f"{quantos} agora. Com dois ligados, esta seção mostra o antes e "
                 f"o depois com eles.</p>")
 
@@ -1693,7 +1693,7 @@ def secao_da_troca(mesa: list[dict[str, Any]], recuo: str = "  ") -> str:
         f"{r}  <li><b>Os dois trocam, os outros não se mexem.</b> É uma permutação: "
         f"ninguém repete\n{r}      número e ninguém fica sem. Por isso a fileira "
         f'oferece\n{r}      <span class="marca">{numeros}</span> — os números que'
-        f"\n{r}      existem na mesa. Um número livre não teria com quem trocar, e "
+        f"\n{r}      existem agora. Um número livre não teria com quem trocar, e "
         f"dá-lo deixaria um\n{r}      controle sem número.</li>",
         f"{r}  <li><b>As luzinhas seguem o número</b>, no padrão do produto: 1 é a "
         f"do <b>meio</b>,\n{r}      2 são as duas de dentro, 3 são as pontas e o "
@@ -2455,7 +2455,7 @@ def reenviar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     if not escrito or not escrito.startswith("#"):
         raise ValueError(
             f"reenviar: a caixa do hexadecimal não tem uma cor a reenviar "
-            f"({escrito!r}) — este lugar da mesa está sem controle.")
+            f"({escrito!r}) — este lugar está sem controle.")
     _escrever_a_cor(ctx, p, uniq, hex_to_rgb(escrito))
 
 
@@ -2719,7 +2719,7 @@ def brilho(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
     dele = next((c for c in ctx.conectados if str(c.get("uniq") or "") == uniq), None)
     if dele is None:
         raise RuntimeError(
-            "este controle não está na mesa agora — não há barra em que "
+            "este controle não está ligado agora — não há barra em que "
             "aplicar o brilho.")
     velho = brilho_do_controle(perfil.ativo(nome), uniq)
     recado, _base = rotulo_lightbar(dele, ctx.state)
@@ -3069,7 +3069,7 @@ def _acender_o_numero(ctx: Contexto, p: Any, uniq: str, n: int) -> None:
                 f"o número deste controle mudou para {n}, mas as cinco "
                 f"lâmpadas não acompanharam: com o co-op ligado quem as "
                 f"acende é ele, e o Hefesto não respondeu ao pedido de "
-                f"reconciliar a mesa. {sem_resposta_do_daemon()}")
+                f"reconciliar os controles. {sem_resposta_do_daemon()}")
         return
 
     for alvo, numero in _pares_da_troca(ctx, uniq, n):

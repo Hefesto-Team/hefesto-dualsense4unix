@@ -863,7 +863,7 @@ def _avisos(ctx: Contexto) -> list[dict[str, str]]:
                  for i in _do_exame() if i.get("grave")]
     except Exception as erro:
         fora.append({"selo": "ERRO",
-                     "texto": f"o exame da mesa não respondeu ({type(erro).__name__}).",
+                     "texto": f"o exame dos controles não respondeu ({type(erro).__name__}).",
                      "fonte": "a08_conexoes._exame"})
     return fora
 
@@ -1122,7 +1122,7 @@ def _frase_da_mesa(ctx: Contexto) -> str:
         return MESA_VAZIA
     lugares = lugares_da_mesa()
     if quantos > lugares:
-        return (f"Há {quantos} controles na mesa e esta tela mostra "
+        return (f"Há {quantos} controles ligados e esta tela mostra "
                 f"{lugares}: o cabeçalho conta todos.")
     return ""
 
@@ -2118,7 +2118,7 @@ OS_DOIS_DA_LISTA_DOS_DEZESSEIS: dict[str, str] = {
         "`gamepad_emulation.enabled true`). Os dois IPCs são idempotentes."
     ),
     "reconectar": (
-        "aplicou e não havia o que mudar: `coop.sync` reconcilia uma mesa já "
+        "aplicou e não havia o que mudar: `coop.sync` reconcilia uma lista já "
         "reconciliada e `identity.renumber` compacta uma numeração já compacta. "
         "Os dois ecoam em `coop` e em `controllers[].player` quando há o que fazer."
     ),

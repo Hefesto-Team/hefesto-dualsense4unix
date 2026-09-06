@@ -489,11 +489,16 @@ def test_sem_cor_conhecida_o_brilho_aplica_e_a_ressalva_fica(pac):
 
 
 def test_controle_fora_da_mesa_recusa_dizendo(pac):
-    """Sem aparelho na mesa não há barra em que aplicar — e não se grava às cegas."""
+    """Sem aparelho ligado não há barra em que aplicar — e não se grava às cegas.
+
+    A FRASE MUDOU EM 06/09/2026 (A-PALAVRA-MESA-SAI-01), e o `match` foi junto:
+    o recado dizia *"este controle não está na mesa agora"*, e a palavra saiu da
+    tela por ordem dela. O nome deste teste fica: `mesa` é a palavra da casa.
+    """
     _semear("regua")
     p = PonteDeMentira()
     fn = pac.gesto_da_pagina(PAGINA, "brilho")
-    with pytest.raises(RuntimeError, match="não está na mesa"):
+    with pytest.raises(RuntimeError, match="não está ligado agora"):
         fn(_ctx(pac), {"uniq": OUTRO, "valor": "40", "evento": "change"}, p)
     assert not p.chamadas
 

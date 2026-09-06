@@ -2794,7 +2794,7 @@ def mudo(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
             # acontece manda a pessoa procurar o defeito no lugar errado.
             raise RuntimeError(
                 "o daemon não confirmou o mudo do microfone — ou o Hefesto "
-                "está parado, ou este controle saiu da mesa, ou o Hefesto "
+                "está parado, ou este controle se desligou, ou o Hefesto "
                 "instalado é mais velho que esta janela e ainda não sabe "
                 "ligar o microfone e o canal dele num ato só")
         # QUAL METADE FALTOU, na frase do dono. `frase_do_ato_do_microfone`
@@ -2956,7 +2956,7 @@ def rota(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
                          **_volume_conhecido(ctx.por_uniq(uniq))):
         raise RuntimeError(
             "o daemon não confirmou a rota do alto-falante — ou o Hefesto está "
-            "parado, ou este controle saiu da mesa")
+            "parado, ou este controle se desligou")
     # O PERFIL LEMBRA A ROTA — e ela é a CAMADA 2, o byte do firmware. A camada
     # 1 (a saída padrão do PipeWire) é um fato GLOBAL do sistema e não cabe num
     # perfil por controle: quem a guarda é a memória do próprio
@@ -3105,7 +3105,7 @@ def sensor(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     if corpo is None:
         raise RuntimeError(
             "o daemon não confirmou o interruptor do sensor — ou o Hefesto "
-            "está parado, ou este controle saiu da mesa, ou o Hefesto "
+            "está parado, ou este controle se desligou, ou o Hefesto "
             "instalado é mais velho que esta janela e ainda não conhece "
             "`sensor.set`")
     frase = frase_do_interruptor_de_sensor(corpo)
@@ -3186,7 +3186,7 @@ def volume(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
         if corpo is None or corpo.get("status") != "ok":
             raise RuntimeError(
                 "o daemon não confirmou o volume do microfone — ou o Hefesto "
-                "está parado, ou este controle saiu da mesa")
+                "está parado, ou este controle se desligou")
         # A CONFISSÃO, NA FRASE DO PRODUTO. `frase_do_alvo_do_mic` é a dona dos
         # três estados e devolve `""` para `True` e para `None` — *"não sei"
         # não é "não honrei", e inventar a confissão por ausência de notícia
@@ -3214,7 +3214,7 @@ def volume(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
         if not p.speaker_set(volume=registrador, uniq=uniq):
             raise RuntimeError(
                 "o daemon não confirmou o volume do alto-falante — ou o Hefesto "
-                "está parado, ou este controle saiu da mesa")
+                "está parado, ou este controle se desligou")
         # O PERFIL LEMBRA O NÚMERO DO PROTOCOLO, e não o da tela: quem guarda
         # 0-255 é `ProfileSpeakerConfig.volume`, e é o mesmo número que acabou
         # de chegar ao aparelho. Converter de novo aqui seria a segunda escala.
