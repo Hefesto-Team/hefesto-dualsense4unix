@@ -311,6 +311,15 @@ jobs:
       # endereço morto, cura descosturada, SO-GTK já migrado, e dívida que cresce.
       - name: Cada comportamento tem um dono só
         run: python3 scripts/check_donos_de_comportamento.py
+      # NADA NOVO APONTA PARA A JANELA (06/09/2026, sprint GTK-1). Decisão dela
+      # (D-0609-GTK-LEVA-INTEIRA): *"a ideia sempre foi reaproveitar o que fiz no
+      # gtk e não apontar nada mais pra lá mas pro html"*. A janela GTK sai em
+      # três sprints; enquanto ela sai, a lista de quem ainda aponta para lá
+      # (`docs/data/o-que-ainda-aponta-para-a-janela.csv`, 255 pares · 522
+      # citações) SÓ DIMINUI. Citação nova reprova nomeando arquivo e linha;
+      # linha nova no CSV sem veredito reprova.
+      - name: Nada novo aponta para a janela GTK
+        run: python3 scripts/check_nada_aponta_para_a_janela.py
 
   shellcheck:
     name: Shellcheck (severidade error)
