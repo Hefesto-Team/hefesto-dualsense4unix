@@ -315,15 +315,53 @@ def test_o_detectar_que_recusa_continua_recusando_dizendo(
 ) -> None:
     """A metade que já falava não pode ter sido trocada pela nova.
 
-    Sem jogo da Steam em foco o gesto levanta ``RuntimeError`` — que o piloto
+    Sem NENHUMA janela em foco o gesto levanta ``RuntimeError`` — que o piloto
     vira TARJA. Um desfecho no lugar da recusa seria a tela dizendo que gravou.
+
+    **ESTA RÉGUA MEDIA O MUNDO DE ONTEM — reescrita em 06/09/2026,
+    ONDA5-10-01.** Ela dava ``classe="firefox"`` e cobrava a recusa: até 05/09
+    o ``detectar`` recusava TODO jogo de fora da Steam e mandava a pessoa para a
+    linha de comando, e a decisão 10-Q2 dela sobre isso foi *"Isso é erro do
+    produto"*. Agora aquela classe GRAVA (ver o teste logo abaixo), e a recusa
+    que sobra é a única honesta: o detector não viu janela nenhuma.
+
+    O caso ``"unknown"`` vai junto porque é o valor que o detector publica
+    quando está vivo e sem resposta — recusar só no vazio deixaria o gesto
+    gravar a regra ``window_class=["unknown"]``, que nunca casa com nada.
     """
     _o_disco_tem(monkeypatch, "Pragmata")
     _o_marcador_diz(monkeypatch, "Pragmata")
-    ctx, ponte = _ctx(classe="firefox"), PonteDeMentira()
 
-    with pytest.raises(RuntimeError, match="não achei jogo da Steam"):
-        a10_perfis.detectar(ctx, {}, ponte)
+    for classe in ("", "unknown"):
+        ctx, ponte = _ctx(classe=classe), PonteDeMentira()
+        with pytest.raises(RuntimeError, match="não achei janela de jogo"):
+            a10_perfis.detectar(ctx, {}, ponte)
+
+
+def test_o_detectar_grava_a_janela_do_jogo_de_fora_da_steam(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A outra metade do ``title`` do botão, e ela nasceu em 06/09/2026.
+
+    MORDIDA: devolva o ``raise`` ao ramo do ``appid is None`` e este teste
+    reprova — a classe volta a virar recusa em vez de regra.
+    """
+    from hefesto_dualsense4unix.profiles.simple_match import detect_simple_preset
+
+    todos = _o_disco_tem(monkeypatch, "Grim")
+    _o_marcador_diz(monkeypatch, "Grim")
+    ctx, ponte = _ctx(classe="GrimFandango"), PonteDeMentira()
+
+    fora = a10_perfis.detectar(ctx, {}, ponte)
+
+    assert list(todos[0].match.window_class) == ["GrimFandango"], (
+        f"o Detectar não gravou a classe da janela: {todos[0].match!r}")
+    assert detect_simple_preset(todos[0].match) == "janela", (
+        "a regra gravada não volta como a forma que a tela sabe mostrar — o "
+        "perfil abriria travado, que é o estrago que a recusa antiga previa")
+    assert _frase(fora), "o Detectar gravou a classe e ficou mudo"
+    assert "Grim" in _frase(fora), (
+        "o desfecho não nomeia o perfil que mudou")
 
 
 # --------------------------------------------------------------------------

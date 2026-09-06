@@ -644,11 +644,19 @@ ESPERANDO_A_PUBLICACAO: dict[str, str] = {}
 #: `exigencia_invisivel` é um matcher de `profiles/`, e nomear ali uma peça de
 #: interface é o que obriga esta remenda. A frase factual devia sair de lá e o
 #: caminho, de cada tela.
+#
+# **E O FIM PAROU NO FATO — 06/09/2026, ONDA5-10-01, decisão 10-Q2.** Ele
+# terminava em *"para vê-los e mudá-los, use `hefesto-dualsense4unix profile` na
+# linha de comando"*, e a palavra dela sobre esse desfecho foi **"Isso é erro do
+# produto."** O que sobra é o fato: esta tela não mostra esses campos. A poda é
+# do FIM, e só dele — `test_a_exigencia_do_pragmata_chega_a_esta_tela` continua
+# cobrando que a frase NOMEIE o que o perfil exige.
+#
+# O `FIM_DA_EXIGENCIA_NA_GTK` NÃO SE TOCA, e a razão é a de sempre: a frase
+# *"Ligue o Modo avançado…"* é VERDADE na janela GTK (`main.glade:2275` tem o
+# interruptor). Podar lá seria trocar um defeito por outro.
 FIM_DA_EXIGENCIA_NA_GTK = "Ligue o Modo avançado para ver e mudar."
-FIM_DA_EXIGENCIA_AQUI = (
-    "Esta tela não mostra esses campos; para vê-los e mudá-los, use "
-    "`hefesto-dualsense4unix profile` na linha de comando."
-)
+FIM_DA_EXIGENCIA_AQUI = "Esta tela não mostra esses campos."
 
 
 def _exigencia_para_esta_tela(match: Any) -> str:
@@ -2402,9 +2410,10 @@ def editor_jogo(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | No
     QUAL DAS DUAS ELE ESCOLHE: `normalize_appid` decide — só dígitos (ou um
     endereço da loja, que ele sabe ler) é "Jogo da Steam"; qualquer outra coisa
     é "Jogo", com o nome do programa. E ele SÓ decide quando o seletor não
-    estava numa das duas: com "Jogo" ou "Jogo da Steam" já escolhido por ela,
-    a escolha dela manda — digitar "1245620" num perfil que ela pôs em "Jogo"
-    não pode virar um perfil da Steam pelas costas dela.
+    estava numa das TRÊS que têm campo livre: com "Jogo", "Jogo da Steam" ou
+    "Jogo (pela janela)" já escolhido por ela, a escolha dela manda — digitar
+    "1245620" num perfil que ela pôs em "Jogo" não pode virar um perfil da
+    Steam pelas costas dela. (A terceira entrou em 06/09/2026, ONDA5-10-01.)
 
     R-12: o nome do programa vai **como ela digitar**, sem `.lower()` — o
     matcher compara com o basename cru de `/proc/PID/exe`, e
@@ -2451,8 +2460,13 @@ def editor_jogo(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | No
     editor = _editor_de(prof)
     if editor.get("ambiente_travado"):
         raise RuntimeError(str(editor.get("ambiente_recado") or ""))
+    # AS TRÊS FORMAS COM CAMPO LIVRE, e a terceira entrou em 06/09/2026: com o
+    # seletor já em "Jogo (pela janela)", a escolha DELA manda — sem a "janela"
+    # nesta tupla, editar o campo de um perfil de janela o reescreveria como
+    # `process_name`, que é outro dado e casa por acaso. É o mesmo argumento do
+    # parágrafo "E ele SÓ decide quando o seletor não estava numa das duas".
     chave = PRESET_DO_ROTULO.get(str(editor.get("ambiente") or ""))
-    if chave not in ("game", "steam_game"):
+    if chave not in ("game", "steam_game", "janela"):
         chave = "steam_game" if normalize_appid(texto) is not None else "game"
     prof.match = from_simple_choice(chave, texto, regra_do_disco=prof.match)
     _gravar(prof, ctx, p)
@@ -2483,14 +2497,26 @@ def detectar(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
     * **jogo da Steam** — a classe vem como `steam_app_<id>` e o appid sai dela
       pela fonte única do produto (`profiles/steam_app.steam_appid_from_wm_class`,
       UNIFICA-PREDICADO-01). A regra vira "Jogo da Steam" com aquele número.
-    * **jogo de fora da Steam** — RECUSA DIZENDO a classe que viu. A dica dela
-      promete *"funciona com jogo de qualquer lugar"* e esta metade não tem
-      dono: o detector entrega uma **wm_class**, e o produto só sabe guardá-la
-      como `MatchCriteria(window_class=…)`, que é uma regra que este editor não
-      sabe MOSTRAR — o perfil abriria travado, com a frase de usar a linha de
-      comando. Gravar isso a partir de um botão seria empurrar o perfil dela
-      para fora da tela. Escrevê-la como `process_name` seria pior: é outro
-      dado (o basename de `/proc/PID/exe`), e casaria por acaso.
+    * **jogo de fora da Steam** — GRAVA A CLASSE, desde 06/09/2026
+      (ONDA5-10-01). A regra vira "Jogo (pela janela)" com aquela `wm_class`.
+
+      **AQUI ESTAVA ESCRITA UMA RECUSA, e o raciocínio dela estava certo e a
+      conclusão não seguia.** Ele dizia: *"o detector entrega uma wm_class, e o
+      produto só sabe guardá-la como `MatchCriteria(window_class=…)`, que é uma
+      regra que este editor não sabe MOSTRAR — o perfil abriria travado, com a
+      frase de usar a linha de comando. Gravar isso a partir de um botão seria
+      empurrar o perfil dela para fora da tela."* Se gravar a regra empurra o
+      perfil para fora da tela, **o conserto é a tela aprender a regra**, e foi
+      o que a sprint fez: `simple_match` ganhou o preset `"janela"`, e os TRÊS
+      seletores ganharam o rótulo antes de este botão gravar um byte.
+
+      O que continua valendo daquele bloco é a outra metade, e ela é o motivo
+      de o preset novo NÃO ser `process_name`: é outro dado (o basename de
+      `/proc/PID/exe`), e casaria por acaso.
+
+    * **nenhuma janela em foco** — RECUSA, e é a única recusa honesta que
+      sobrou: `classe` vazia ou `"unknown"` é o caso em que o detector não viu
+      nada. Ela continua nomeando o que viu.
 
     `last_class` ANTES de `current_class`: a primeira é a última classe ÚTIL
     vista (`launch_wrapper_dialog.py:81`) e sobrevive ao foco ir para a janela
@@ -2513,24 +2539,37 @@ def detectar(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
     nome = _perfil_do_editor(ctx)
     classe = str(ctx.state.get("window_detect_last_class")
                  or ctx.state.get("window_detect_current_class") or "")
-    appid = steam_appid_from_wm_class(classe) if classe else None
-    if appid is None:
-        visto = f"“{classe}”" if classe and classe != "unknown" else "nenhuma janela"
+    if not classe or classe == "unknown":
+        # A ÚNICA RECUSA QUE SOBRA, e ela é a honesta: o detector não viu nada.
+        # Nada a gravar, e nenhum lugar para mandá-la — o que ela faz é abrir o
+        # jogo e clicar de novo, que é o que a frase diz.
         raise RuntimeError(
-            f"não achei jogo da Steam em foco — o detector está vendo {visto}. "
-            f"Abra o jogo, deixe-o em foco por um instante e clique de novo; "
-            f"para jogo de fora da Steam, a regra ainda se escreve pela linha "
-            f"de comando (`hefesto-dualsense4unix profile`).")
+            "não achei janela de jogo em foco — o detector não está vendo "
+            "nenhuma. Abra o jogo, deixe-o em foco por um instante e clique "
+            "de novo.")
     prof = load_profile(nome)
-    prof.match = from_simple_choice("steam_game", str(appid),
-                                    regra_do_disco=prof.match)
+    appid = steam_appid_from_wm_class(classe)
+    if appid is not None:
+        prof.match = from_simple_choice("steam_game", str(appid),
+                                        regra_do_disco=prof.match)
+        # O CAMPO SE CORRIGE AQUI TAMBÉM, e este é o caso mais forte dos dois: o
+        # número que passa a valer ela NÃO digitou — veio de uma janela que ela
+        # nem está mais olhando. Sem isto, o "Nome do Jogo" continua mostrando o
+        # que havia antes do clique, sobre uma regra que já é outra. Ver
+        # `editor_jogo`.
+        _gravar(prof, ctx, p)
+        return _dizer(_agora_vale_em(prof, str(appid)),
+                      **{"editor.jogo": simple_extra(prof.match) or str(appid)})
+    # JOGO DE FORA DA STEAM — a metade que o `title` do botão promete há
+    # semanas e que o produto recusava (ONDA5-10-01, 06/09/2026).
+    prof.match = from_simple_choice("janela", classe)
     _gravar(prof, ctx, p)
-    # O CAMPO SE CORRIGE AQUI TAMBÉM, e este é o caso mais forte dos dois: o
-    # número que passa a valer ela NÃO digitou — veio de uma janela que ela nem
-    # está mais olhando. Sem isto, o "Nome do Jogo" continua mostrando o que
-    # havia antes do clique, sobre uma regra que já é outra. Ver `editor_jogo`.
-    return _dizer(_agora_vale_em(prof, str(appid)),
-                  **{"editor.jogo": simple_extra(prof.match) or str(appid)})
+    # O DESFECHO VAI SEM `texto`, e é escolha: `_agora_vale_em` usa o texto só
+    # para traduzir um NÚMERO DA STEAM em nome de jogo (`_jogo_reconhecido`).
+    # Uma `wm_class` não é isso — passá-la faria a tela ou calar (o comum) ou
+    # dizer "não reconheci este endereço" sobre uma regra que gravou certo.
+    return _dizer(_agora_vale_em(prof),
+                  **{"editor.jogo": simple_extra(prof.match) or classe})
 
 
 @gesto("10-perfis.html", "novo")

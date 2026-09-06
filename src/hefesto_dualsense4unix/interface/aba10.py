@@ -747,7 +747,18 @@ FRASE_DO_UNIVERSAL = (
     "controle sem nada.")
 DICA_DA_PRIORIDADE = f"{FRASE_DA_PRIORIDADE_DELA} {FRASE_DO_UNIVERSAL}"
 
-AMBIENTES = ["Todos","Steam","Estilo de Jogo","Jogo","Jogo da Steam"]
+#: AS OPÇÕES DO "Funciona em". Todas menos "Estilo de Jogo" têm preset atrás em
+#: `perfis_web.AMBIENTE_DO_PRESET` — e a régua
+#: `test_toda_forma_que_o_produto_escreve_tem_rotulo_nas_duas_telas` cobra os
+#: dois sentidos, para nenhuma forma nova nascer órfã de rótulo.
+#:
+#: **A SEXTA NASCEU EM 06/09/2026** — "Jogo (pela janela)", a ONDA5-10-01. Ela é
+#: o que o botão "Detectar" produz quando o jogo NÃO é da Steam: uma classe de
+#: janela só. Sem esta linha, gravar a forma nova abriria o perfil com o seletor
+#: travado — a tela ganhando uma regra que não sabe mostrar, que é o estrago que
+#: a própria recusa do "Detectar" previa.
+AMBIENTES = ["Todos","Steam","Estilo de Jogo","Jogo","Jogo da Steam",
+             "Jogo (pela janela)"]
 #: OS RÓTULOS SAEM DO MOTOR — ver o comentário do import, no alto. Eram quinze
 #: palavras digitadas aqui, e a coincidência com o motor não era construção.
 ESTILOS = [e.rotulo for e in ESTILOS_DO_MOTOR]

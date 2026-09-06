@@ -432,6 +432,16 @@ def test_o_modo_avancado_nao_chega_a_esta_tela() -> None:
     interruptor com esse nome). Aqui ela seria a tela mandando a um lugar que
     não existe — decisão [02] do PO: *"Isso é fato errado e se substitui."*
 
+    **O ARGUMENTO DESTA DOCSTRING CADUCOU EM 06/09/2026 — ONDA5-10-01, decisão
+    10-Q2 dela.** Ele dizia que a frase *"precisa de um fim que esta tela
+    alcança"*, e o fim que ela alcançava era mandar usar
+    ``hefesto-dualsense4unix profile`` na linha de comando. A palavra dela sobre
+    isso foi ***"Isso é erro do produto."*** — **o fim agora é o FATO**, e para
+    aí. A régua não mudou uma linha: ela sempre comparou contra a CONSTANTE, e
+    é por isso que continua verde com um fim novo. Quem cobra que o fim não
+    volte a mandar ninguém para fora é
+    ``test_a_tela_nao_manda_ela_para_fora_do_produto``.
+
     MORDIDA: devolva `exigencia_invisivel(match)` cru em
     `_exigencia_para_esta_tela` e esta régua reprova citando a frase.
     """
@@ -486,8 +496,18 @@ def test_o_matcher_nao_nomeia_botao_de_tela_nenhuma() -> None:
     assert "Modo avançado" not in do_produto, (
         "o matcher voltou a nomear uma peça da janela GTK")
 
-    # E O CAMINHO DESTA TELA CONTINUA SENDO SOMADO — sem isto o aviso vira
-    # beco sem saída: ela lê que falta um campo e não lê onde mexer.
+    # E O FIM DESTA TELA CONTINUA SENDO SOMADO — 06/09/2026, ONDA5-10-01.
+    #
+    # AQUI ESTAVA ESCRITO *"sem isto o aviso vira beco sem saída: ela lê que
+    # falta um campo e não lê onde mexer"*, e essa é exatamente a frase que a
+    # decisão 10-Q2 substituiu: o "onde mexer" era a linha de comando, e a
+    # palavra dela foi *"Isso é erro do produto"*. O aviso PARA no fato de
+    # propósito — o beco sem saída é o produto, não a frase, e o conserto de um
+    # beco é abrir a saída (foi o que o Passo 3 fez com o "Detectar"), nunca
+    # pintar uma placa apontando para fora.
+    #
+    # O que esta asserção guarda continua valendo e é outra coisa: que a aba
+    # some o fim DELA ao fato do produto, em vez de reescrever o fato.
     daqui = a10_perfis._exigencia_para_esta_tela(match)
     assert daqui.startswith(do_produto), (
         f"esta aba deixou de partir do fato do produto: {daqui!r}")
@@ -699,6 +719,267 @@ def test_a_altura_reservada_e_a_conta_das_linhas_que_a_tira_mostra() -> None:
         f"a tira acesa reserva {numero['height']}px para "
         f"{numero['-webkit-line-clamp']} linha(s) de {numero['line-height']}px "
         f"— ou ela corta o aviso, ou sobra espaço morto sobre a lista")
+
+
+# ---------------------------------------------------------------------------
+# ONDA5-10-01 · o Hefesto não manda ninguém para o terminal (decisão 10-Q2)
+# ---------------------------------------------------------------------------
+#: AS FORMAS QUE `from_simple_choice` SABE ESCREVER e que NÃO são chave de
+#: ``SIMPLE_MATCH_PRESETS``: elas moram em ``if``s do corpo da função, e por
+#: isso nenhuma varredura de dicionário as alcança. Quem escrever a sétima vem
+#: aqui — e apagar um nome desta tupla é um ato que se vê no diff, ao contrário
+#: de esquecer um rótulo.
+FORMAS_FORA_DO_DICIONARIO = ("game", "steam_game", "janela")
+
+
+def test_a_classe_de_uma_janela_fecha_o_round_trip() -> None:
+    """Escreve "janela", relê, e tem de voltar "janela" — com a classe junto.
+
+    É o Passo 1 da ONDA5-10-01, e o round-trip é a prova inteira: uma forma que
+    o produto ESCREVE e não RECONHECE abre o perfil travado, com o seletor
+    rebaixado e sem ninguém ter mexido em nada. É o defeito R-12.
+
+    A SEGUNDA METADE PROTEGE A ORDEM: um ``steam_app_<id>`` **também** é um
+    ``window_class`` de um elemento. Se a detecção da forma nova correr antes de
+    ``_detect_steam_appid``, todo perfil de jogo da Steam passa a abrir como
+    "Jogo (pela janela)" — e a caixinha do Steam Input, que só nasce com "Jogo
+    da Steam" escolhido, some da tela dela.
+
+    MORDIDA: apague o ramo do ``"janela"`` em ``detect_simple_preset`` e a
+    primeira asserção reprova com ``None`` — que é o perfil travado de volta.
+    Mova o ramo para ANTES do ``_detect_steam_appid`` e reprova a segunda.
+    """
+    from hefesto_dualsense4unix.profiles.simple_match import (
+        MSG_JANELA_SEM_CLASSE,
+        detect_simple_preset,
+        from_simple_choice,
+        simple_extra,
+    )
+
+    escrito = from_simple_choice("janela", "GrimFandango")
+    assert list(escrito.window_class) == ["GrimFandango"], (
+        f"a escrita não guardou a classe como ela veio: {escrito!r}")
+    assert detect_simple_preset(escrito) == "janela", (
+        f"a leitura não reconhece o que a escrita gravou: "
+        f"{detect_simple_preset(escrito)!r} — o perfil abriria travado")
+    assert simple_extra(escrito) == "GrimFandango", (
+        f"o campo livre volta {simple_extra(escrito)!r} em vez da classe — a "
+        f"tela abriria VAZIA sobre um perfil que tem regra no disco")
+
+    da_steam = from_simple_choice("steam_game", "1599660")
+    assert detect_simple_preset(da_steam) == "steam_game", (
+        "um `steam_app_<id>` deixou de sair como jogo da Steam — a forma nova "
+        "roubou o round-trip que o R-12 existe para proteger")
+    assert simple_extra(da_steam) == "1599660"
+
+    # E A RECUSA FALANTE, irmã do `MSG_JOGO_SEM_NOME`: campo obrigatório em
+    # branco não degrada em silêncio para uma regra que nunca casa.
+    with pytest.raises(ValueError, match="Diga a janela do jogo"):
+        from_simple_choice("janela", "   ")
+    from hefesto_dualsense4unix.profiles.simple_match import MENSAGENS_DE_GENTE
+    assert MSG_JANELA_SEM_CLASSE in MENSAGENS_DE_GENTE, (
+        "a frase nova não está declarada como frase de gente — a janela a "
+        "trocaria pelo genérico “Revise os campos do perfil”")
+
+
+def test_toda_forma_que_o_produto_escreve_tem_rotulo_nas_duas_telas() -> None:
+    """Nenhuma forma nasce órfã de rótulo — e a que não tem, se DECLARA.
+
+    ELA REPROVAVA ANTES DO PASSO 2, e de propósito: ``browser``, ``terminal`` e
+    ``editor`` existem no produto e não no desenho dela. Eles não passaram a ter
+    rótulo — passaram a estar DECLARADOS em ``perfis_web.FORA_DO_DESENHO``, que
+    é a diferença entre dívida e esquecimento.
+
+    A SEGUNDA ASSERÇÃO é a do campo livre: toda forma cujo ``simple_extra``
+    devolve alguma coisa tem de estar em ``_IDS_COM_CAMPO_LIVRE``. Sem isso o
+    ``_populate_editor`` escreve ``""`` no campo e a tela abre VAZIA sobre um
+    perfil que tem regra no disco — o defeito que o R-12 já cobrou do
+    ``steam_game``.
+
+    MORDIDA: tire ``("janela", …)`` de ``_APLICA_A_ITEMS`` e a primeira reprova
+    nomeando a forma órfã. Tire só ``"janela"`` de ``_IDS_COM_CAMPO_LIVRE`` e
+    reprova a segunda.
+    """
+    from hefesto_dualsense4unix.app.actions import profiles_actions as pa
+    from hefesto_dualsense4unix.profiles.schema import MatchCriteria
+    from hefesto_dualsense4unix.profiles.simple_match import (
+        SIMPLE_MATCH_PRESETS,
+        simple_extra,
+    )
+
+    formas = tuple(SIMPLE_MATCH_PRESETS) + FORMAS_FORA_DO_DICIONARIO
+    na_gtk = dict(pa._APLICA_A_ITEMS)
+    orfas = [f for f in formas
+             if f not in na_gtk
+             or (f not in perfis_web.AMBIENTE_DO_PRESET
+                 and f not in perfis_web.FORA_DO_DESENHO)]
+    assert not orfas, (
+        f"as formas {orfas} o produto sabe ESCREVER e alguma tela não sabe "
+        f"MOSTRAR, sem declaração nenhuma. Um perfil gravado assim abre com o "
+        f"seletor travado — e ninguém fica sabendo por quê. Dê rótulo em "
+        f"`AMBIENTE_DO_PRESET` e em `_APLICA_A_ITEMS`, ou declare a ausência "
+        f"em `FORA_DO_DESENHO`, com a razão.")
+    assert not (set(perfis_web.AMBIENTE_DO_PRESET)
+                & set(perfis_web.FORA_DO_DESENHO)), (
+        "uma forma está nas duas tabelas — com rótulo E declarada ausente")
+
+    # O CAMPO LIVRE, forma a forma: a régua PERGUNTA ao `simple_extra` em vez
+    # de digitar a lista das que têm campo.
+    exemplos = {
+        "game": MatchCriteria(process_name=["eldenring"]),
+        "steam_game": MatchCriteria(window_class=["steam_app_1599660"]),
+        "janela": MatchCriteria(window_class=["GrimFandango"]),
+    }
+    for chave, match in exemplos.items():
+        if simple_extra(match):
+            assert chave in pa._IDS_COM_CAMPO_LIVRE, (
+                f"a forma {chave!r} guarda um valor que `simple_extra` devolve "
+                f"({simple_extra(match)!r}) e o editor não abre o campo livre "
+                f"para ela — a tela mostraria vazio sobre a regra do disco")
+        assert chave in pa._RADIO_IDS, (
+            f"a forma {chave!r} não está em `_RADIO_IDS`: `_select_radio` cai "
+            f"em “any” e o perfil abre dizendo “Qualquer”, que é o "
+            f"rebaixamento que o R-12 existe para impedir")
+
+
+def test_o_detectar_cumpre_o_que_o_title_promete(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """O botão promete "qualquer lugar" no ``title``, e agora entrega.
+
+    A RÉGUA LÊ A PROMESSA, não a digita: ela recorta o ``title`` do
+    ``data-hef-gesto="detectar"`` da página e confere que ele continua dizendo
+    *"qualquer lugar"*. Se alguém apagar a promessa, esta metade cai — e aí a
+    régua diz que a promessa sumiu, em vez de cobrar uma frase que ninguém faz
+    mais.
+
+    O DUBLÊ USA UMA CLASSE QUE NÃO É DA STEAM, e isso é o teste inteiro: um
+    ``steam_app_123`` mediria o ramo velho e daria verde sobre o Passo 3
+    completo. ``GrimFandango`` é a classe de um perfil de fábrica de verdade
+    (``assets/profiles_default/point_and_click.json``).
+
+    MORDIDA: devolva o ``raise`` ao ramo do ``appid is None`` em ``detectar`` e
+    esta régua reprova — o gesto levanta em vez de gravar.
+    """
+    from hefesto_dualsense4unix.profiles import loader
+    from hefesto_dualsense4unix.profiles.schema import MatchAny, Profile
+    from hefesto_dualsense4unix.profiles.simple_match import detect_simple_preset
+
+    html = _pagina(publicado=False)
+    botao = re.search(r'<button[^>]*data-hef-gesto="detectar"[^>]*>', html)
+    assert botao is not None, "o botão Detectar sumiu do desenho"
+    titulo = re.search(r'title="([^"]*)"', botao.group(0))
+    assert titulo is not None, "o Detectar perdeu a dica que explica o que ele faz"
+    assert "qualquer lugar" in titulo.group(1), (
+        f"o `title` deixou de prometer jogo de qualquer lugar: "
+        f"{titulo.group(1)!r} — se a promessa saiu, revise a decisão 10-Q2 "
+        f"antes de mexer nesta régua")
+
+    prof = Profile(name="Grim", match=MatchAny())
+    monkeypatch.setattr(loader, "load_all_profiles", lambda *a, **k: [prof])
+    monkeypatch.setattr(loader, "load_profile", lambda *a, **k: prof)
+    monkeypatch.setattr(loader, "save_profile", lambda *a, **k: None)
+    monkeypatch.setattr(a10_perfis, "_ESCOLHIDO", "Grim", raising=False)
+
+    class _PonteMuda:
+        def profile_switch(self, nome: str) -> bool:
+            return True
+
+        def chamar(self, metodo: str, *a: Any, **kw: Any) -> bool:
+            return True
+
+    ctx = Contexto(state={"active_profile": None,
+                          "window_detect_last_class": "GrimFandango"},
+                   mesa=list(MESA), conectados=list(MESA), estados={})
+    fora = a10_perfis.detectar(ctx, {}, _PonteMuda())
+
+    assert list(prof.match.window_class) == ["GrimFandango"], (
+        f"o Detectar não gravou a classe que o detector viu: {prof.match!r}")
+    assert detect_simple_preset(prof.match) == "janela", (
+        "a regra que o botão gravou não volta como forma que a tela mostra")
+    assert isinstance(fora, dict) and fora.get("mesa"), (
+        "o Detectar gravou a regra e não devolveu notícia nenhuma")
+    assert fora["mesa"].get("editor.jogo") == "GrimFandango", (
+        f"o campo “Nome do Jogo” não recebeu a classe que passou a valer: "
+        f"{fora['mesa'].get('editor.jogo')!r} — ele continuaria mostrando o "
+        f"que havia antes do clique, sobre uma regra que já é outra")
+
+
+def test_a_tela_nao_manda_ela_para_fora_do_produto() -> None:
+    """Nenhum texto desta aba manda a pessoa para o terminal. Decisão 10-Q2.
+
+    ***"Isso é erro do produto."*** — ela, 05/09/2026, sobre a frase que
+    terminava mandando usar ``hefesto-dualsense4unix profile`` na linha de
+    comando. E o glossário da casa
+    (``docs/A-LINGUA-DESTA-CASA-…``) proíbe em texto de tela *"linha de
+    comando"* e qualquer frase que mande a pessoa procurar um botão ou uma
+    janela que não existe.
+
+    A VARREDURA É POR CONSTANTE, e não por arquivo: são os textos de tela desta
+    aba que têm dono declarado. O corpo do ``detectar`` entra pelas STRINGS
+    LITERAIS dele, que é onde a terceira boca vivia — a recusa mora num
+    ``raise``, não numa constante.
+
+    **E ELA LÊ AS STRINGS, NUNCA O FONTE CRU — a armadilha é de 05/09/2026 e
+    esta régua caiu nela na primeira execução.** Um ``inspect.getsource`` pega
+    a DOCSTRING junto, e a docstring do ``detectar`` CITA a recusa antiga para
+    explicar por que ela saiu: o comentário que avisa vira a primeira ocorrência
+    do arquivo, e a régua reprova a explicação em vez do defeito. Prosa não
+    chega à tela dela; ``ast`` separa uma coisa da outra.
+
+    MORDIDA: devolva o fim antigo a ``FIM_DA_EXIGENCIA_AQUI`` (ou a
+    ``AMBIENTE_QUE_A_TELA_NAO_MOSTRA``, ou o ``raise`` velho do ``detectar``) e
+    esta régua reprova nomeando a constante e o trecho proibido.
+    """
+    import ast
+    import inspect
+    import textwrap
+
+    proibidos = ("linha de comando", "hefesto-dualsense4unix profile",
+                 "Modo avançado")
+    textos: dict[str, str] = {
+        "perfis_web.AMBIENTE_QUE_A_TELA_NAO_MOSTRA":
+            perfis_web.AMBIENTE_QUE_A_TELA_NAO_MOSTRA,
+        "a10_perfis.FIM_DA_EXIGENCIA_AQUI": a10_perfis.FIM_DA_EXIGENCIA_AQUI,
+        "perfis_web.LISTA_VAZIA": perfis_web.LISTA_VAZIA,
+        "perfis_web.GUARDA_SEM_MESA": perfis_web.GUARDA_SEM_MESA,
+        "perfis_web.GUARDA_SEM_DAEMON": perfis_web.GUARDA_SEM_DAEMON,
+        "perfis_web.ESTILO_APLICA_E_SAI": perfis_web.ESTILO_APLICA_E_SAI,
+    }
+    textos.update({f"perfis_web.GESTOS_SEM_MOTOR[{k!r}]": v
+                   for k, v in perfis_web.GESTOS_SEM_MOTOR.items()})
+    # A RECUSA DO `detectar` é texto de tela e mora num `raise`. A régua junta
+    # as STRINGS do gesto — a docstring de fora, porque ela cita a recusa velha
+    # para explicar por que ela saiu (ver a nota da armadilha, acima).
+    fn = ast.parse(textwrap.dedent(inspect.getsource(a10_perfis.detectar))).body[0]
+    assert isinstance(fn, ast.FunctionDef)
+    # O PRIMEIRO `Expr` É A DOCSTRING, e a exclusão é por POSIÇÃO e não por
+    # texto: `ast.get_docstring` devolve o valor LIMPO (dedentado), que nunca é
+    # igual ao literal cru — comparar os dois deixava a docstring passar.
+    sem_doc = fn.body[1:] if (fn.body and isinstance(fn.body[0], ast.Expr)
+                              and isinstance(getattr(fn.body[0], "value", None),
+                                             ast.Constant)) else fn.body
+    textos["a10_perfis.detectar (as frases)"] = " ".join(
+        n.value for corpo in sem_doc for n in ast.walk(corpo)
+        if isinstance(n, ast.Constant) and isinstance(n.value, str))
+
+    achados = [f"{onde_}: “{p}”" for onde_, t in textos.items()
+               for p in proibidos if p in t]
+    assert not achados, (
+        "esta tela voltou a mandar a pessoa para fora do produto:\n  "
+        + "\n  ".join(achados)
+        + "\nO Hefesto não explica a própria falha — ele a conserta. Se a "
+          "regra não cabe na tela, a frase diz o que a regra É e para.")
+
+    # E O FATO CONTINUA SENDO DITO: podar o fim não pode ter emudecido a frase.
+    assert "não sabe mostrar" in perfis_web.AMBIENTE_QUE_A_TELA_NAO_MOSTRA
+    assert "não mostra esses campos" in a10_perfis.FIM_DA_EXIGENCIA_AQUI
+    # O CAMINHO DA JANELA GTK NÃO SE TOCA: lá o "Modo avançado" existe.
+    from hefesto_dualsense4unix.profiles.simple_match import CAMINHO_DA_JANELA_GTK
+
+    assert "Modo avançado" in CAMINHO_DA_JANELA_GTK, (
+        "a poda alcançou o caminho da janela GTK, onde a frase é VERDADE — "
+        "seria trocar um defeito por outro")
 
 
 @pytest.fixture()
