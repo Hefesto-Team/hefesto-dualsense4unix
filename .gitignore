@@ -27,6 +27,15 @@ dist/
 .flatpak-builder/
 flatpak-build-dir/
 flatpak-repo/
+# E o BUNDLE cai na RAIZ, não em dist/: `scripts/build_flatpak.sh --bundle`
+# escreve `${REPO_ROOT}/${APP_ID}.flatpak` (linha 107). Sem esta linha, quem
+# roda a flag documentada fica com um arquivo não rastreado na raiz.
+*.flatpak
+
+# `nix build` deixa o symlink `result` na raiz, e o `packaging/nix/README.md`
+# (linha 39) manda o usuario rodar exatamente isso: `./result/bin/...`.
+/result
+/result-*
 
 # Testing
 .pytest_cache/

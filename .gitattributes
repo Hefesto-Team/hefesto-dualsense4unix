@@ -19,3 +19,13 @@
 *.png   binary
 *.jpg   binary
 *.svg   text eol=lf
+
+# Catálogo compilado do gettext (`scripts/i18n_compile.sh`). Mesmo motivo do
+# `.btsnoop` acima: sem a linha, o arquivo cai em `* text=auto` e depende da
+# heurística do byte NUL. Medido em 25/08/2026 — os quatro `.mo` versionados
+# davam `binary: unspecified`, enquanto `.bin`, `.png` e `.btsnoop` davam
+# `binary: set`. Um `.mo` reescrito por conversão de fim de linha deixa de ser
+# catálogo, e a GUI cai para o texto sem tradução sem dizer por quê.
+*.mo    binary
+# Dados de ensaio comprimidos (docs/process/estudos/dados/*.csv.gz). Idem.
+*.gz    binary
