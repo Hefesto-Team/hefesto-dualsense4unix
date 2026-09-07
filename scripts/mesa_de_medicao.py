@@ -589,6 +589,72 @@ def como_do_mapa() -> dict[str, list[tuple[str, str]]]:
                              lambda m: m.group(1))
 
 
+# A BANCADA ANTES DE COMEÇAR — o que se faz UMA VEZ, não 199.
+#
+# Medido em 07/09/2026: os 199 testes somavam 3.129 passos, e 299 deles eram
+# a mesma cerimônia repetida — "Abra o Hefesto", "Feche o jogo", "Ligue o P1 e
+# o P2 pelo cabo". Ela leu isso como *"milhares de etapas manuais"*, e estava
+# certa: eram milhares, e um décimo delas era o mesmo gesto pedido de novo.
+#
+# A REGRA: se um passo descreve o ESTADO DA BANCADA — e não um ato deste
+# teste —, ele sai do teste e sobe para o topo da página, onde é conferido uma
+# vez. O que não estiver escrito aqui FICA no teste; a lista é fechada de
+# propósito, para nunca comer um ato de verdade.
+PREPARO_DA_BANCADA: tuple[tuple[str, str], ...] = (
+    (r"^Ligue o P1 e o P2 pelo cabo e o P3 e o P4 pelo rádio\.?$",
+     "P1 e P2 no cabo · P3 e P4 no rádio"),
+    (r"^Feche o jogo(, se houver algum aberto)?\.?$",
+     "nenhum jogo aberto"),
+    (r"^Feche a Steam( por inteiro)?( antes de começar)?\.?$",
+     "a Steam fechada por inteiro"),
+    (r"^Abra (?:o Hefesto|a janela do Hefesto)\.?$",
+     "a janela do Hefesto aberta"),
+)
+
+# A ABA NÃO É UM PASSO — é ONDE o teste acontece. Ela abria o mesmo "Clique na
+# aba Controles" em 82 testes seguidos. Vira uma etiqueta ao lado do título.
+_A_ABA_DO_PASSO = (r"^(?:Abra (?:o Hefesto e clique n)?a|Clique na"
+                   r"|Vá para a|Volte à) aba (\w+)\.?$")
+
+# O ROTULO da etiqueta, para quem lê o HTML e para o teste que a mede.
+ROTULO_DA_ABA = "a aba"
+
+
+def enxuga_os_passos(
+        campos: list[tuple[str, str]]) -> list[tuple[str, str]]:
+    """Tira do teste o que é da bancada, e a aba vira etiqueta.
+
+    Entra a lista de campos como o arquivo a escreveu; sai a mesma lista com
+    `os passos` sem a cerimônia e, quando o teste disser em que aba mora, um
+    campo `a aba` a mais. Nada é inventado aqui: o que sai tem de casar com
+    `PREPARO_DA_BANCADA` ou com `_A_ABA_DO_PASSO`, palavra por palavra.
+    """
+    fora: list[tuple[str, str]] = []
+    aba = ""
+    for rotulo, corpo in campos:
+        if rotulo != "os passos":
+            fora.append((rotulo, corpo))
+            continue
+        sobra = []
+        for passo in (p.strip() for p in corpo.split("\n")):
+            if not passo:
+                continue
+            if any(re.match(r, passo) for r, _ in PREPARO_DA_BANCADA):
+                continue
+            achou = re.match(_A_ABA_DO_PASSO, passo)
+            if achou:
+                # a PRIMEIRA aba citada é onde o teste mora; se ele volta a
+                # outra no meio, esse passo continua sendo um ato e fica
+                if not aba:
+                    aba = achou.group(1)
+                    continue
+            sobra.append(passo)
+        fora.append((rotulo, "\n".join(sobra)))
+    if aba:
+        fora.insert(0, (ROTULO_DA_ABA, aba))
+    return fora
+
+
 def _gesto_do_arquivo(relativo: str, marca: str,
                       ident: Any) -> dict[str, list[tuple[str, str]]]:
     """O motor dos dois: mesma forma de seção, chaves diferentes."""
@@ -611,8 +677,9 @@ def _gesto_do_arquivo(relativo: str, marca: str,
     def fecha() -> None:
         if not atual:
             return
-        fora[atual] = [(r, " ".join(v).strip())
-                       for r, v in campos.items() if " ".join(v).strip()]
+        pronto = [(r, " ".join(v).strip())
+                  for r, v in campos.items() if " ".join(v).strip()]
+        fora[atual] = enxuga_os_passos(pronto)
 
     ultimo = ""
     for linha in alvo.read_text(encoding="utf-8").splitlines():
@@ -638,9 +705,14 @@ def _gesto_do_arquivo(relativo: str, marca: str,
             ultimo = ""
             continue
         if ultimo and linha.strip():
-            # os passos e os controles viram uma frase só, com o marcador
-            # trocado por um separador que a tela sabe quebrar
-            campos[ultimo].append(re.sub(r"^\s*(?:\d+\.|\*)\s*", "· ", linha)
+            # OS PASSOS VIRAM UMA FRASE SÓ, e o separador é `\n` — NUNCA `·`.
+            # Medido em 07/09/2026: o produto tem um rótulo cujo TEXTO é
+            # `· acordado`, e o passo «confirme que ele traz "· acordado" ou
+            # "· dormindo"» chegava na tela dela partido em três — um deles
+            # lia `acordado" ou "`, sozinho, numa bolinha de lista. Um
+            # separador que também é conteúdo não separa nada. O `\n` não
+            # aparece em passo nenhum porque a leitura é linha a linha.
+            campos[ultimo].append(re.sub(r"^\s*(?:\d+\.|\*)\s*", "\n", linha)
                                   .replace("**", ""))
     fecha()
     return fora
@@ -788,10 +860,14 @@ def testes_do_mapa(vocab: dict[str, set[str]]) -> list[Teste]:
                 id=f'mapa-{r["chave"]}-{lado}',
                 secao=f'O mapa de canais — {r["familia"]}',
                 titulo=f'{r["rotulo"]} · {palavra}',
+                # SEM `**` AQUI: a frase vai para um `<p>` de HTML, não para
+                # um leitor de markdown, e os asteriscos apareciam crus na
+                # tela dela. O rótulo também sai — ele já é o TÍTULO do
+                # cartão, uma linha acima.
                 vai_acontecer=(
-                    f'Exercite **{r["rotulo"]}** por {palavra} e diga o que cada '
-                    f'controle fez. O produto {"afirma" if r[f"{lado}_aciona"] == "sim" else "afirma em parte"} '
-                    f'que aciona isto.'),
+                    f'O produto '
+                    f'{"afirma" if r[f"{lado}_aciona"] == "sim" else "afirma em parte"} '
+                    f'acionar isto por {palavra}. Diga o que cada controle fez.'),
                 passa_quando=(
                     r[f"{lado}_ressalva"].strip()
                     or r[f"{lado}_detalhe"].strip()
@@ -1702,6 +1778,44 @@ svg[data-colorway]:has([id$="-feat-bateria"].marcada) [id$="-lightbar"]
 .gesto .campo-a-armadilha b{color:var(--color-yellow, #f1fa8c)}
 .gesto .campo-onde-olhar{border-left-color:var(--color-pink)}
 .gesto .campo-onde-olhar b{color:var(--color-pink)}
+/* A GAVETA DO RESTO tem NOME, e o nome é a diferença entre esta e a de manhã:
+   *"a célula que isto fecha, e o COMO que o arquivo já publica"* não dizia que
+   o que fazer estava lá dentro. Esta diz. */
+.gesto details.mais{margin-top:var(--space-2xs);border-left:2px solid var(--color-rule);
+  padding-left:var(--space-2xs)}
+.gesto details.mais > summary{cursor:pointer;color:var(--color-ink-muted);
+  font-size:var(--text-xs);letter-spacing:.03em;padding:2px 0}
+.gesto details.mais[open] > summary{margin-bottom:var(--space-3xs)}
+.gesto details.mais .campo{border-left:0;padding-left:0;margin-top:var(--space-3xs)}
+/* E O CAMPO DOS PASSOS RESPIRA: ele é o que ela lê de pé, com o controle na
+   mão, e vinha com a mesma pena do resto. */
+#caixa-do-gesto > summary{cursor:pointer;font-weight:600;padding:var(--space-3xs) 0}
+#caixa-do-gesto[open] > summary{margin-bottom:var(--space-3xs)}
+#caixa-do-gesto textarea{width:100%}
+/* O ATO TEM NÚMERO; A CONFERÊNCIA, NÃO. Ver `E_CONFERENCIA` no JS: dos 3.129
+   passos, 653 começam por "Confira" ou "Veja" — são olho, não mão. Numerar os
+   dois juntos era o que fazia «quatro coisas a fazer» virar «quinze etapas».
+   A conferência fica presa ao ato acima dela, recuada e mais fraca. */
+.gesto ol.passos{list-style:none;margin:var(--space-3xs) 0 0;padding:0}
+.gesto ol.passos li{display:flex;gap:.6em;margin:.35em 0;align-items:baseline}
+.gesto ol.passos li.ato > b{flex:0 0 1.5em;text-align:right;font-variant-numeric:
+  tabular-nums;color:var(--color-accent);font-size:var(--text-xs)}
+.gesto ol.passos li.olho{margin:.1em 0 .35em 2.1em;color:var(--color-ink-muted);
+  font-size:var(--text-xs);border-left:2px solid var(--color-rule);
+  padding-left:.6em}
+/* A ETIQUETA DA ABA — ONDE o teste mora, dito uma vez em cima e não como o
+   primeiro passo de 82 testes. Ver `enxuga_os_passos`. */
+.etiqueta-da-aba{margin-left:auto;color:var(--color-ink-muted);
+  font-size:var(--text-xs)}
+.etiqueta-da-aba b{color:var(--color-ink)}
+/* A BANCADA ANTES DE COMEÇAR — uma faixa fina no topo, aberta na primeira
+   visita e fechada por ela quando a mesa estiver pronta. */
+#preparo{margin:0 var(--space-s);padding:var(--space-3xs) var(--space-2xs);
+  border:1px solid var(--color-rule);border-radius:var(--radius-s);
+  font-size:var(--text-xs)}
+#preparo > summary{cursor:pointer;color:var(--color-ink-muted)}
+#preparo ul{margin:var(--space-3xs) 0 0;padding-left:1.3em}
+#preparo li{margin:.2em 0}
 
 /* O RELÓGIO DA ESPERA LONGA ENCOLHE. Ele deixa de ser a coisa que ela olha e
    vira o que é: uma referência ao lado do recado que importa. */
@@ -1931,6 +2045,15 @@ function esconderLaudo() {
    critério e a armadilha estão na tela, acima, abertos. O campo guarda o que
    só ela sabe — o que a mão dela fez de verdade, que é o que se perdia quando
    a sessão morria. */
+/* O SEPARADOR DOS PASSOS TEM UM DONO SÓ, e é esta função. Ele já foi `·` e
+   isso custou: o produto tem um rótulo cujo texto É "· acordado", e o passo
+   que mandava conferi-lo chegava partido em três pedaços na tela dela — um
+   deles lia `acordado" ou "`, sozinho. Quem escreve o separador é
+   `enxuga_os_passos`, do lado do Python; quem o lê é isto. */
+function quebraEmPassos(v) {
+  return (v || '').split('\n').map((x) => x.trim()).filter(Boolean);
+}
+
 function comoDoArquivo(t) {
   if (!t.como || !t.como.length) {
     return 'o arquivo não publica gesto para esta linha — descreva aqui o que '
@@ -1938,10 +2061,10 @@ function comoDoArquivo(t) {
   }
   const passos = (t.como.find(([k]) => k === 'os passos') || [])[1];
   if (passos) {
-    return passos.split('·').map((x) => x.trim()).filter(Boolean)
-      .map((x, i) => `${i + 1}. ${x}`).join('\n');
+    return quebraEmPassos(passos).map((x, i) => `${i + 1}. ${x}`).join('\n');
   }
-  return t.como.map(([k, v]) => `${k}: ${v}`).join('\n');
+  return t.como.filter(([k]) => k !== 'a aba')
+    .map(([k, v]) => `${k}: ${v}`).join('\n');
 }
 
 async function desenhar() {
@@ -2124,21 +2247,72 @@ function pintar() {
     $('#pecas').innerHTML = t.pecas.length
       ? t.pecas.map(([id, palavra]) => `<code>${esc(id)}</code> <span class="cinza">(pela palavra “${esc(palavra)}”)</span>`).join(' · ')
       : '<span class="cinza">esta linha não nomeia peça nenhuma nos arquivos — os quatro desenhos ficam neutros, e isso é dito em vez de inventado.</span>';
-    /* CADA CAMPO DO GESTO TEM UMA FORMA, e a forma é o que faz ler rápido:
-       os passos e o por-controle vêm do arquivo com `· ` na frente de cada
-       item, e viram LISTA; o resto é parágrafo. Uma parede de texto com sete
-       rótulos em negrito é o que ela tinha antes, e não deu para executar. */
-    const LISTA = ['os passos', 'por controle'];
-    $('#como-do-arquivo').innerHTML = t.como.length
-      ? t.como.map(([k, v]) => {
-          const corpo = LISTA.includes(k)
-            ? '<ul>' + v.split('·').map((x) => x.trim()).filter(Boolean)
-                .map((x) => `<li>${esc(x)}</li>`).join('') + '</ul>'
-            : `<p>${esc(v)}</p>`;
-          return `<div class="campo campo-${k.replace(/ /g, '-')}">`
-               + `<b>${esc(k)}</b>${corpo}</div>`;
-        }).join('')
-      : '<span class="cinza">o arquivo não publica gesto para esta linha — o campo do “como” é a única fonte.</span>';
+    /* DUAS COISAS NA CARA, O RESTO A UM CLIQUE — 07/09/2026, e é a segunda
+       vez que este bloco se conserta pelo mesmo eixo.
+       -------------------------------------------------------------------
+       De manhã o gesto estava ESCONDIDO numa gaveta e ela não o achou. À
+       noite eu o pus inteiro na tela — os sete campos, sete parágrafos — e
+       ela escreveu: *"mds quanto texto não entendi nada dos testes (…)
+       extremamente complexos, cheios de texto, milhares de etapas manuais
+       (…) tá impossível ler ou fazer algo aqui"*.
+
+       Os dois são o mesmo erro medido pelos dois lados: **quem executa lê
+       uma coisa de cada vez**. Uma parede de texto não é mais informação
+       que uma gaveta — é a mesma ausência, com mais rolagem.
+
+       O QUE FICA VISÍVEL são os PASSOS, e só eles: são o que a mão dela faz.
+       O que isto prova, onde olhar, por controle, a espera e a armadilha
+       viram uma gaveta ABERTA POR NOME — o rótulo diz o que tem dentro, que
+       era justamente o que faltava na gaveta de manhã. */
+    const NA_CARA = ['os passos'];
+    /* O QUE SE FAZ × O QUE SE CONFERE. Dos 3.129 passos, 653 começam por
+       "Confira", "Veja", "Compare" — não são ato, são olho. Numerá-los junto
+       com os atos é o que transforma «quatro coisas a fazer» em «quinze
+       etapas» na cabeça de quem lê. Aqui o número fica só no ato; a
+       conferência vira uma linha discreta, sem número, presa ao ato que ela
+       confere. Nada some — muda o peso. */
+    const E_CONFERENCIA =
+      /^(Confira|Veja|Compare|Repare|Note que|Meça|Conte|Leia (?!a fita))/;
+    const NOME_DA_GAVETA = 'antes de fazer: onde olhar, o que esperar de cada '
+                         + 'um, e a armadilha deste teste';
+    const emPassos = (v) => {
+      let n = 0;
+      return '<ol class="passos">' + quebraEmPassos(v).map((x) => {
+        if (E_CONFERENCIA.test(x)) {
+          return `<li class="olho"><span>${esc(x)}</span></li>`;
+        }
+        n += 1;
+        return `<li class="ato"><b>${n}</b><span>${esc(x)}</span></li>`;
+      }).join('') + '</ol>';
+    };
+    const bloco = ([k, v]) => {
+      const corpo = (k === 'os passos' || k === 'por controle')
+        ? emPassos(v)
+        : `<p>${esc(v)}</p>`;
+      return `<div class="campo campo-${k.replace(/ /g, '-')}">`
+           + `<b>${esc(k)}</b>${corpo}</div>`;
+    };
+    // A ABA É ETIQUETA, NÃO CAMPO: ela diz ONDE, e o onde vale para o teste
+    // inteiro. Ver `enxuga_os_passos` — 82 testes abriam com o mesmo
+    // "Clique na aba Controles".
+    const daAba = (t.como.find(([k]) => k === 'a aba') || [])[1];
+    $('#a-aba-do-teste').innerHTML = daAba
+      ? `na aba <b>${esc(daAba)}</b>` : '';
+    $('#a-aba-do-teste').hidden = !daAba;
+    const visiveis = t.como.filter(([k]) => k !== 'a aba');
+    if (!visiveis.length) {
+      $('#como-do-arquivo').innerHTML = '<span class="cinza">o arquivo não '
+        + 'publica gesto para esta linha — o campo do “como” é a única fonte.</span>';
+    } else {
+      const frente = visiveis.filter(([k]) => NA_CARA.includes(k));
+      const dentro = visiveis.filter(([k]) => !NA_CARA.includes(k));
+      $('#como-do-arquivo').innerHTML =
+        frente.map(bloco).join('')
+        + (dentro.length
+            ? `<details class="mais"><summary>${esc(NOME_DA_GAVETA)}</summary>`
+              + dentro.map(bloco).join('') + '</details>'
+            : '');
+    }
     $('#segundos-alvo').textContent = t.segundos;
   }
   // O DESENHO SEGUE O TESTE, NÃO O TEMPO. Buscar de novo a cada tempo do
@@ -2477,6 +2651,12 @@ def pagina(testes: list[Teste], gravado: dict[str, Any]) -> str:
     # A REGRA DO VERIFICAR VIAJA COMO DADO, gerada por `confere()`. O JS a
     # consulta e não a reimplementa — duas cópias divergiriam.
     confere_json = json.dumps(tabela_de_conferencia(), ensure_ascii=False)
+    # A LISTA DO PREPARO SAI DA MESMA CONSTANTE QUE CORTA O PASSO. Uma segunda
+    # cópia aqui seria a divergência de sempre: o dia em que alguém tirasse um
+    # padrão de `PREPARO_DA_BANCADA`, o passo voltaria ao teste E continuaria
+    # anunciado no topo, e ninguém veria.
+    preparo = "".join(f"<li>{_e(rotulo)}</li>"
+                      for _, rotulo in PREPARO_DA_BANCADA)
     return f"""<!doctype html>
 <html lang="pt-BR"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
@@ -2512,6 +2692,17 @@ def pagina(testes: list[Teste], gravado: dict[str, Any]) -> str:
   <span class="cinza" id="daemon">lendo o daemon…</span>
   <span class="cinza">o registro vai para {_e(pasta_do_registro())}</span>
 </header>
+<!-- A BANCADA ANTES DE COMEÇAR — quatro linhas conferidas UMA VEZ.
+     07/09/2026: *"milhares de etapas manuais"*. Eram 3.129 passos em 199
+     testes, e 299 deles eram esta mesma cerimônia pedida de novo a cada
+     teste. Ver `PREPARO_DA_BANCADA`, que é quem decide o que sobe para cá —
+     lista fechada, comparada palavra por palavra, para nunca comer um ato de
+     verdade. A gaveta nasce ABERTA e ela a fecha quando a bancada estiver
+     pronta; o estado fica no navegador dela, não no registro. -->
+<details id="preparo" open>
+  <summary>a bancada antes de começar — confira uma vez e feche</summary>
+  <ul id="preparo-lista">{preparo}</ul>
+</details>
 <main>
   <div class="cartao">
 
@@ -2528,6 +2719,7 @@ def pagina(testes: list[Teste], gravado: dict[str, Any]) -> str:
         <span>·</span>
         <span id="contador-capa"></span>
         <span class="selo vazio" id="selo">&#10003; <span id="selo-txt"></span></span>
+        <span class="etiqueta-da-aba" id="a-aba-do-teste" hidden></span>
       </div>
       <h2 id="titulo"></h2>
       <p class="frase" id="vai-acontecer"></p>
@@ -2602,10 +2794,21 @@ def pagina(testes: list[Teste], gravado: dict[str, Any]) -> str:
            respostas somadas SÃO o conjunto —, e cobrar de novo em prosa é
            trabalho dobrado. O que ela escreve fica no campo de cada controle,
            que é a quinta opção da lista de lá. -->
-      <h3>O COMO — de onde este teste sai, e como se aplica</h3>
-      <p class="cinza">Vem pronto dos arquivos: as colunas da própria célula do
-        mapa. <b>Não é para você digitar.</b> Corrija só se estiver errado.</p>
-      <textarea id="gesto" rows="3"></textarea>
+      <!-- O CAMPO DO GESTO FECHA, e é porque ele REPETE. Ele nasce com os
+           mesmos passos que estão na cara do teste, logo acima — e mostrá-los
+           duas vezes na mesma tela foi metade da parede de texto que ela viu
+           em 07/09/2026: *"cheios de texto, milhares de etapas manuais"*.
+
+           Ele continua existindo, e continua obrigatório, porque é o que se
+           perdia quando a sessão morria: o que a MÃO dela fez, que às vezes
+           não é o que o arquivo mandou fazer. Só que quem não mudou nada não
+           precisa nem abri-lo — e essa é a maioria das vezes. -->
+      <details id="caixa-do-gesto">
+        <summary>o que eu fiz de verdade
+          <span class="cinza">— já vem com os passos preenchidos; abra só se
+            você fez diferente</span></summary>
+        <textarea id="gesto" rows="6"></textarea>
+      </details>
       <p class="aviso" id="aviso"></p>
       <div class="rodape">
         <span class="esquerda cinza" id="resumo-do-laudo"></span>

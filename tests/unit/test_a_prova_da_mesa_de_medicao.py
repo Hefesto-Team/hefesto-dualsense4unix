@@ -115,6 +115,20 @@ class _Servidor:
         self.morrer()
 
 
+def _abre_o_como(pg) -> None:
+    """Abre a gaveta do campo do COMO, CLICANDO — nunca pelo `.open`.
+
+    O campo `#gesto` deixou de nascer na tela em 07/09/2026: ele repetia, em
+    prosa, os mesmos passos que já estavam na cara do teste, e ela escreveu
+    *"quanto texto (…) tá impossível ler ou fazer algo aqui"*. Agora ele mora
+    numa gaveta com nome. Três réguas quebraram no `fill` — e a quebra estava
+    CERTA: o campo está escondido para ela também. Abrir aqui pelo clique é o
+    gesto dela; abrir pelo `.open` mediria um caminho que a mão não tem.
+    """
+    if not pg.evaluate("() => !!document.querySelector('#caixa-do-gesto')?.open"):
+        pg.click("#caixa-do-gesto > summary")
+    pg.wait_for_selector("#gesto", state="visible")
+
 def _mentira_dos_quatro(alvo: pathlib.Path) -> pathlib.Path:
     """Quatro modelos DIFERENTES, pela porta declarada da régua.
 
@@ -371,6 +385,7 @@ def test_a_resposta_sobrevive_ao_servidor_morrer_e_o_endereco_sai_mascarado(
         # uma 5 deveria ser um campo pra eu descrever por controle o que
         # ocorreu"*. O que ela escreve mora no campo DO CONTROLE.
         pg.fill('textarea[name="n-P3"]', "so o P3 endureceu")
+        _abre_o_como(pg)
         pg.fill("#gesto", gesto)
         pg.click("#so-salvar")
         pg.wait_for_timeout(600)
@@ -622,6 +637,7 @@ def test_cada_controle_tem_as_opcoes_e_um_campo_so_dele(pw, lar, mentira) -> Non
         pg.check('input[name="r-P1"][value="obedeceu"]')
         pg.fill('textarea[name="n-P1"]', "só o motor esquerdo")
         pg.fill('textarea[name="n-P3"]', "nada no direito")
+        _abre_o_como(pg)
         pg.fill("#gesto", "hefesto test rumble --player 1")
         pg.click("#so-salvar")
         pg.wait_for_timeout(600)
@@ -805,6 +821,7 @@ def test_o_como_vem_pronto_e_nao_e_cobrado_dela(pw, lar, mentira) -> None:
         pg.click("#pular-timer")
         pg.wait_for_selector(".ctl .resp")
 
+        _abre_o_como(pg)
         gesto = pg.input_value("#gesto")
         assert gesto.strip(), "o COMO chegou vazio — ela teria de digitar"
         # O CAMPO NASCE COM OS PASSOS, não com o primeiro campo do gesto —
@@ -813,7 +830,7 @@ def test_o_como_vem_pronto_e_nao_e_cobrado_dela(pw, lar, mentira) -> None:
         # "o que isto prova" — que não é gesto nenhum, é o porquê. O que ela
         # aplicou são os passos, e é isso que o campo tem de trazer.
         passos = dict(alvo["como"]).get("os passos", "")
-        primeiro = next((x.strip() for x in passos.split("·") if x.strip()), "")
+        primeiro = next((x.strip() for x in passos.split("\n") if x.strip()), "")
         assert primeiro, f"o teste {alvo['id']} não publica passos"
         assert primeiro[:30] in gesto, (gesto[:160], primeiro[:60])
 
@@ -1271,8 +1288,14 @@ def test_as_21_trazem_o_gesto_e_ele_vem_do_arquivo_dono() -> None:
     # marcador que a tela vira lista, e sem ele a tela mostra uma parede.
     for teste in das_21:
         passos = dict(teste.como)["os passos"]
-        assert passos.count("·") >= 3, (
-            f"{teste.id} tem {passos.count('·')} passos — um teste de bancada "
+        # O SEPARADOR É `\n`, NÃO `·` — e esta régua mediu o mundo de ontem
+        # por uma volta: o produto tem um rótulo cujo texto É "· acordado", e
+        # com `·` de separador o passo que mandava conferi-lo chegava partido
+        # em três na tela dela. Trocado o separador, o `count` caiu a zero e
+        # a régua reprovou a CURA. Ver `enxuga_os_passos`.
+        quantos = len([x for x in passos.split("\n") if x.strip()])
+        assert quantos >= 3, (
+            f"{teste.id} tem {quantos} passos — um teste de bancada "
             f"com menos de três passos é um título, não um gesto")
 
     # O DONO É O ARQUIVO. A régua arranca a leitura e exige que a queda seja
