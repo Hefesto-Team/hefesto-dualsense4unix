@@ -897,7 +897,7 @@ def _apagar_os_lugares_sem_dono(
     aqui.
 
     O `!important` NÃO É ZELO: a `--luz` chega como `style="--luz:#ff0000"` no
-    próprio elemento (`monta.py:1532`), e estilo de linha vence qualquer regra
+    próprio elemento (`monta.py:1648`), e estilo de linha vence qualquer regra
     de folha que não o traga.
     """
     if not identidade:

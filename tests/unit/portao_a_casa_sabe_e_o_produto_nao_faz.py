@@ -1168,6 +1168,7 @@ _NAO_E_PROMESSA: dict[str, str] = {
 #: No dia em que o caminho nascer, a entrada deixa de bater com a árvore e
 #: ``test_a_lista_de_lacunas_nao_envelhece_calada`` cobra que ela seja apagada.
 _SEM_CAMINHO_HOJE: dict[str, str] = {
+<<<<<<< HEAD
     # AS DEZOITO DA SOM-QUE-SAI-01 (06/09/2026) — o motor do alto-falante
     # virtual nasceu INTEIRO e ÓRFÃO, e as duas coisas são de propósito.
     #
@@ -1406,6 +1407,45 @@ _SEM_CAMINHO_HOJE: dict[str, str] = {
         "registrar o subsystem nos DOIS lugares — o próprio "
         "`subsystems/__init__.py` avisa que acrescentar à lista NÃO liga nada, e "
         "foi assim que o `BtMicSubsystem` nasceu órfão em 25/07/2026. 06/09/2026."
+=======
+    # AS DUAS DA MESA DE MEDIÇÃO — 06/09/2026, A-VALIDACAO-DOS-QUATRO-01. Elas
+    # nascem declaradas em vez de nascerem esquecidas, e a lápide diz onde o
+    # caminho se perde E o que o fecha, que é o contrato desta lista.
+    #
+    # ONDE O CAMINHO SE PERDE: quem as chamaria é o pacote de cada aba, e hoje
+    # nenhuma aba publica a folha inteira — `monta.svg` PODA a folha das cores
+    # para o modelo pedido (`_so_o_colorway`), e é exatamente essa poda que
+    # `scripts/check_a_cor_vem_do_aparelho.py` conta como dívida da família
+    # `zona` (ver `_fechar_folha` lá: uma folha com os 28 É a tabela dela; uma
+    # folha podada é uma escolha cravada). Hoje quem as chama é o instrumento
+    # `scripts/mesa_de_medicao.py`, e `scripts/` não conta aqui, com razão.
+    #
+    # O QUE FECHA: a aba publicar `folha_das_cores()` UMA vez na página e trocar
+    # os quatro `svg(...)` dela para `folha=False`, com o `data-colorway` de
+    # cada desenho tendo endereço e `data-hef-alvo="atributo"`. São as duas
+    # metades da mesma cura, e o portão da cor as cobra juntas: sem a folha
+    # inteira o alvo de atributo escreve um colorway que nenhuma regra casa e o
+    # desenho cai nos `fill` crus (medido: `rgb(58, 63, 75)`).
+    "interface/monta.py::folha_das_cores": (
+        "A-VALIDACAO-DOS-QUATRO-01, 06/09/2026 — a folha dos 28 modelos, para "
+        "quem põe mais de um desenho na página. ONDE O CAMINHO SE PERDE: "
+        "nenhuma aba publica a folha inteira hoje; todas usam a podada de "
+        "`_so_o_colorway`. O QUE FECHA: a aba publicar esta folha uma vez e "
+        "chamar `svg(..., folha=False)` nos desenhos — é a cura da família "
+        "`zona` de `scripts/check_a_cor_vem_do_aparelho.py`, hoje em 358 no "
+        "publicado, e ela é ATO DELA (`--publicar`)."
+    ),
+    "interface/monta.py::folha_de_realce": (
+        "A-VALIDACAO-DOS-QUATRO-01, 06/09/2026 — a regra CSS que faltava para o "
+        "`apertados=` de `svg()`, órfão desde que nasceu: ele escrevia "
+        "`class=\"marcada\"` e não havia regra `.marcada` em folha nenhuma das "
+        "dez abas. ONDE O CAMINHO SE PERDE: nenhuma aba chama `apertados=` "
+        "ainda — quem o chama é a mesa de medição, em `scripts/`. O QUE FECHA: "
+        "a primeira aba que precisar apontar UMA peça do desenho (a 03 dos "
+        "gatilhos e a 06 da navegação são as candidatas) publicar esta folha e "
+        "passar `apertados=`; a partir daí o realce por peça deixa de ser só do "
+        "instrumento."
+>>>>>>> 00201c16 (feat(mesa): a mesa de medição dos quatro — 148 testes que saem dos arquivos, e o COMO que se gravava)
     ),
     # A LÁPIDE DE `primeiro_trecho_banido` SAIU EM 06/09/2026, na costura da
     # ONDA E, e ela previu o próprio fim com o endereço de cada passo: dizia que
