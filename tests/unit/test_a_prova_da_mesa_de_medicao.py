@@ -807,7 +807,15 @@ def test_o_como_vem_pronto_e_nao_e_cobrado_dela(pw, lar, mentira) -> None:
 
         gesto = pg.input_value("#gesto")
         assert gesto.strip(), "o COMO chegou vazio — ela teria de digitar"
-        assert alvo["como"][0][1][:20] in gesto, (gesto, alvo["como"][0])
+        # O CAMPO NASCE COM OS PASSOS, não com o primeiro campo do gesto —
+        # mudou em 07/09/2026. Esta linha cravava `como[0]`, que era o gesto
+        # inteiro quando ele tinha um campo só; hoje são sete, e o primeiro é
+        # "o que isto prova" — que não é gesto nenhum, é o porquê. O que ela
+        # aplicou são os passos, e é isso que o campo tem de trazer.
+        passos = dict(alvo["como"]).get("os passos", "")
+        primeiro = next((x.strip() for x in passos.split("·") if x.strip()), "")
+        assert primeiro, f"o teste {alvo['id']} não publica passos"
+        assert primeiro[:30] in gesto, (gesto[:160], primeiro[:60])
 
         # E SALVA SEM ELA TOCAR NO CAMPO: era exatamente isto que a recusa
         # impedia, e é o que a fez dizer que a página a quebrava.
@@ -1229,5 +1237,104 @@ def test_a_espera_longa_nao_prende_ela_na_tela(pw, lar, mentira) -> None:
             f"o relógio da espera longa continua grande ({longa['relogio']}px "
             f"contra {curta['relogio']}px) — ele volta a ser a coisa que ela "
             f"olha por vinte minutos")
+        pg.close()
+
+
+def test_as_21_trazem_o_gesto_e_ele_vem_do_arquivo_dono() -> None:
+    """*"O COMO é obrigatório: escreva o gesto exato que foi aplicado. isso aqui
+    me quebra. isso eu espero que seja descrito."* (a frase dela nomeia
+    quem descreve; o nome fica no arquivo do gesto, que é `docs/`.)
+
+    E o defeito que ela apontou olhando a linha 10: *"sinceramente não entendi
+    o que diabos é pra fazer aqui"*. O COMO saía como `linha do roteiro: 10`
+    mais `passa quando: mudaram` — o roteiro repetido, não o gesto. Um roteiro
+    escrito em telegrama serve a quem o escreveu e a mais ninguém.
+
+    A RÉGUA COBRA AS TRÊS COISAS: que as 21 tenham gesto, que ele venha do
+    ARQUIVO e não da página, e que ele diga o mínimo para executar — onde
+    olhar e os passos. Um gesto sem "onde olhar" manda ela fazer o movimento
+    certo olhando para o lugar errado.
+    """
+    das_21 = [t for t in med.todos_os_testes() if t.id.startswith("roteiro-")]
+    assert len(das_21) == 21, len(das_21)
+    obrigatorios = {"o que isto prova", "onde olhar", "os passos",
+                    "como saber que passou", "por controle"}
+    sem_gesto = []
+    for teste in das_21:
+        rotulos = {r for r, _ in teste.como}
+        if not obrigatorios <= rotulos:
+            sem_gesto.append((teste.id, sorted(obrigatorios - rotulos)))
+    assert not sem_gesto, (
+        f"{len(sem_gesto)} das 21 não trazem o gesto inteiro: {sem_gesto}")
+
+    # E OS PASSOS SÃO PASSOS, não um parágrafo picado: o arquivo os traz com o
+    # marcador que a tela vira lista, e sem ele a tela mostra uma parede.
+    for teste in das_21:
+        passos = dict(teste.como)["os passos"]
+        assert passos.count("·") >= 3, (
+            f"{teste.id} tem {passos.count('·')} passos — um teste de bancada "
+            f"com menos de três passos é um título, não um gesto")
+
+    # O DONO É O ARQUIVO. A régua arranca a leitura e exige que a queda seja
+    # DECLARADA: um COMO vazio some da tela e ela fica sem saber se ninguém
+    # escreveu ou se a leitura quebrou.
+    fonte = pathlib.Path(med.__file__).read_text(encoding="utf-8")
+    assert "como_das_21()" in fonte, "a mesa deixou de ler o dono do gesto"
+    assert med._O_COMO_DAS_21.endswith(".md")
+    assert (med.RAIZ / med._O_COMO_DAS_21).exists(), (
+        f"o arquivo do gesto sumiu: {med._O_COMO_DAS_21}")
+
+
+def test_o_gesto_e_o_corpo_do_teste_e_nao_uma_gaveta(pw, lar, mentira) -> None:
+    """O gesto vivia dentro de um `details` FECHADO.
+
+    O rótulo era *"a célula que isto fecha, e o COMO que o arquivo já
+    publica"* — e nada ali dizia que o que fazer estava lá dentro. Ela abriu a
+    linha 10, não entendeu, e a resposta estava na tela, dobrada.
+
+    A régua cobra as duas coisas que curam: o gesto VISÍVEL sem clique, e ANTES
+    dos quatro desenhos — a instrução precede o ato, que é a mesma razão pela
+    qual os desenhos saíram de dentro do tempo 3.
+    """
+    with _Servidor(lar, mentira) as s:
+        pg = pw.new_page(viewport={"width": 1500, "height": 1200})
+        pg.goto(s.url)
+        pg.wait_for_selector(".ctl svg")
+        pg.wait_for_timeout(700)
+        i = pg.evaluate("() => TESTES.findIndex(t => t.id === 'roteiro-10')")
+        assert i >= 0, "a linha 10 sumiu da fatia aberta"
+        pg.evaluate("(i) => ir(i, 1)", i)
+        pg.wait_for_timeout(700)
+        visto = pg.evaluate("""() => {
+          const g = document.querySelector('#como-do-arquivo');
+          if (!g) return null;
+          const d = document.querySelector('#desenhos');
+          return {
+            visivel: g.offsetParent !== null,
+            dentro_de_gaveta: !!g.closest('details'),
+            antes_dos_desenhos: !!(d && (g.compareDocumentPosition(d)
+                                   & Node.DOCUMENT_POSITION_FOLLOWING)),
+            rotulos: [...g.querySelectorAll('b')].map((e) => e.textContent),
+            itens_de_lista: g.querySelectorAll('li').length,
+            texto: g.textContent.length,
+          };
+        }""")
+        assert visto, "o bloco do gesto sumiu da página"
+        assert visto["visivel"], "o gesto voltou a nascer escondido"
+        assert not visto["dentro_de_gaveta"], (
+            "o gesto voltou para dentro de um `details` — o que ela precisa "
+            "para executar não pode custar um clique")
+        assert visto["antes_dos_desenhos"], (
+            "o gesto ficou DEPOIS dos desenhos; a instrução precede o ato")
+        assert "onde olhar" in visto["rotulos"], visto["rotulos"]
+        assert visto["itens_de_lista"] >= 5, (
+            f"os passos não viraram lista ({visto['itens_de_lista']} itens) — "
+            f"uma parede de texto é o que ela não conseguiu executar")
+        assert visto["texto"] > 500, (
+            f"o gesto tem {visto['texto']} caracteres; a linha 10 sozinha tem "
+            f"mais que isso no arquivo — a leitura não chegou à tela")
+        # E O SEPARADOR DO MARKDOWN NÃO É TEXTO
+        assert "---" not in pg.inner_text("#como-do-arquivo"), (
+            "o `---` que divide as seções do arquivo vazou para a tela")
         pg.close()
 

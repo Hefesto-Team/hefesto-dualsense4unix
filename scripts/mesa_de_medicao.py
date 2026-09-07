@@ -545,6 +545,81 @@ def papel_da_condicao(frase: str, posto: str, nomeados: set[str] | list[str]) ->
     return PAPEL_OBSERVA
 
 
+#: O ARQUIVO QUE É DONO DO GESTO. O roteiro dela diz O QUE se testa, em uma
+#: linha por teste; o gesto de fazer não cabe numa linha, e ela pediu que fosse
+#: meu, por pedido dela: *"isso eu espero que seja descrito"* — a frase
+#: inteira, com o nome que ela usou, está no cabeçalho do arquivo do gesto.
+_O_COMO_DAS_21 = ("docs/process/sprints/"
+                  "2026-09-07-O-COMO-DAS-21-o-gesto-exato-de-cada-linha.md")
+
+
+def como_das_21() -> dict[str, list[tuple[str, str]]]:
+    """`{id do teste: [(rótulo, texto)]}` — o gesto exato, lido do dono.
+
+    *"sinceramente não entendi o que diabos é pra fazer aqui"* — 07/09/2026,
+    ela olhando a linha 10. O COMO saía como `linha do roteiro: 10` mais
+    `passa quando: mudaram`: o roteiro repetido, não o gesto. Um roteiro
+    escrito em telegrama serve a quem o escreveu e a mais ninguém.
+
+    A ORDEM DOS RÓTULOS É A ORDEM DE FAZER, e não é gosto: primeiro o que se
+    prova (senão ela executa sem saber o que está medindo), depois onde olhar
+    (senão ela faz o gesto olhando para o lugar errado), depois os passos. A
+    armadilha vem por último de propósito — lida antes, contamina a leitura.
+    """
+    alvo = RAIZ / _O_COMO_DAS_21
+    if not alvo.exists():
+        return {}
+    fora: dict[str, list[tuple[str, str]]] = {}
+    atual = ""
+    campos: dict[str, list[str]] = {}
+    rotulos = {
+        "O que isto prova.": "o que isto prova",
+        "Onde olhar.": "onde olhar",
+        "Os passos.": "os passos",
+        "Passa quando.": "como saber que passou",
+        "Por controle.": "por controle",
+        "A espera.": "a espera",
+        "A armadilha.": "a armadilha",
+    }
+
+    def fecha() -> None:
+        if not atual:
+            return
+        fora[atual] = [(r, " ".join(v).strip())
+                       for r, v in campos.items() if " ".join(v).strip()]
+
+    ultimo = ""
+    for linha in alvo.read_text(encoding="utf-8").splitlines():
+        m = re.match(r"##\s+Linha\s+(\d+)\s+—", linha)
+        if m:
+            fecha()
+            atual = f"roteiro-{int(m.group(1)):02d}"
+            campos = {r: [] for r in rotulos.values()}
+            ultimo = ""
+            continue
+        if not atual:
+            continue
+        achou = re.match(r"\*\*([^*]+)\*\*\s*(.*)", linha)
+        if achou and achou.group(1) in rotulos:
+            ultimo = rotulos[achou.group(1)]
+            if achou.group(2).strip():
+                campos[ultimo].append(achou.group(2).strip())
+            continue
+        # O SEPARADOR DO MARKDOWN NÃO É TEXTO. Sem esta linha o `---` que
+        # divide as seções entrava no fim do último campo, e ela lia "…parado
+        # por horas. ---" na tela.
+        if linha.strip() in ("---", "***", "___"):
+            ultimo = ""
+            continue
+        if ultimo and linha.strip():
+            # os passos e os controles viram uma frase só, com o marcador
+            # trocado por um separador que a tela sabe quebrar
+            campos[ultimo].append(re.sub(r"^\s*(?:\d+\.|\*)\s*", "· ", linha)
+                                  .replace("**", ""))
+    fecha()
+    return fora
+
+
 def secoes_do_roteiro() -> dict[str, str]:
     """`{"6": "Uma feature por controle"}` — a seção de cada linha das 21.
 
@@ -584,6 +659,8 @@ def testes_do_roteiro(vocab: dict[str, set[str]]) -> list[Teste]:
     fora = []
     fonte = f"{arquivo_do_roteiro().relative_to(RAIZ)} §2"
     secoes = secoes_do_roteiro()
+    # UMA LEITURA PARA AS 21, não uma por linha: o arquivo do gesto tem 79 KB.
+    gestos = como_das_21()
     for numero, gesto, cond, passa, sprints in linhas_do_roteiro():
         limpo = re.sub(r"[*`]", " ", f"{gesto} {cond} {passa}")
         nomeados = postos_citados(limpo)
@@ -616,7 +693,15 @@ def testes_do_roteiro(vocab: dict[str, set[str]]) -> list[Teste]:
             pecas=pecas_citadas(limpo, vocab),
             celula=f"linha {numero} do roteiro",
             hoje=f"quem já descreveu isto: {re.sub(r'[*`]', '', sprints)}",
-            como=[("linha do roteiro", numero), ("passa quando", re.sub(r"[*`]", "", passa))],
+            # O GESTO VEM DO DONO. Sem ele, a linha do roteiro e o critério —
+            # que é o que ela viu na tela e não conseguiu executar. A queda é
+            # declarada em vez de silenciosa: um COMO vazio some da tela e ela
+            # fica sem saber se ninguém escreveu ou se a leitura quebrou.
+            como=(gestos.get(f"roteiro-{int(numero):02d}")
+                  or [("linha do roteiro", numero),
+                      ("passa quando", re.sub(r"[*`]", "", passa)),
+                      ("o gesto", "esta linha ainda não tem gesto escrito em "
+                                  + _O_COMO_DAS_21)]),
             segundos=min(segundos_do_texto(limpo), SEGUNDOS_LONGO * 20),
             fonte=fonte,
             condicoes=condicoes,
@@ -1558,6 +1643,26 @@ svg[data-colorway]:has([id$="-feat-bateria"].marcada) [id$="-lightbar"]
 
    O TETO SOBE JUNTO (190 → 250 px): com o traço resolvido, o que segurava o
    desenho pequeno deixou de existir, e o que ela precisa é ENXERGAR. */
+/* O GESTO — O QUE ELA LÊ PARA FAZER.
+   -----------------------------------------------------------------------
+   Sete campos, e a ordem deles é a ordem de fazer: o que se prova, onde
+   olhar, os passos, o critério, o que muda em cada um, a espera, e por
+   último a armadilha (lida antes, ela contamina a leitura).
+
+   A ARMADILHA É A ÚNICA COM COR PRÓPRIA. Ela não é um passo — é o que faz o
+   teste dar verde sem ter provado nada, e é o que se lê DEPOIS de errar. */
+.gesto{margin:var(--space-xs) 0;display:grid;gap:var(--space-2xs)}
+.gesto .campo{border-left:2px solid var(--color-rule);padding-left:var(--space-2xs)}
+.gesto .campo b{display:block;font-size:var(--text-xs);text-transform:uppercase;
+  letter-spacing:.07em;color:var(--color-accent);margin-bottom:2px}
+.gesto p{margin:0}
+.gesto ul{margin:0;padding-left:1.1em}
+.gesto li{margin:.15em 0}
+.gesto .campo-a-armadilha{border-left-color:var(--color-yellow, #f1fa8c)}
+.gesto .campo-a-armadilha b{color:var(--color-yellow, #f1fa8c)}
+.gesto .campo-onde-olhar{border-left-color:var(--color-pink)}
+.gesto .campo-onde-olhar b{color:var(--color-pink)}
+
 /* O RELÓGIO DA ESPERA LONGA ENCOLHE. Ele deixa de ser a coisa que ela olha e
    vira o que é: uma referência ao lado do recado que importa. */
 .timer.discreto{font-size:var(--text-lg);opacity:.55;letter-spacing:.04em}
@@ -1777,10 +1882,24 @@ function esconderLaudo() {
    isto: `t.como` são os pares que `_como_da_celula()` tirou das colunas
    `canal`, `report_id`, `offset`, `comando`, `codigo_ref` e `teste_que_morde`
    da própria célula do mapa. Se um dia o mapa mudar, o texto muda junto. */
+/* O CAMPO DO GESTO É O REGISTRO DO QUE ELA FEZ, e por isso ele nasce com OS
+   PASSOS — não com o gesto inteiro. Os sete campos juntos passam de cinco mil
+   caracteres: encher com eles um campo onde ela escreve o que aplicou é pedir
+   que ela apague uma página antes de escrever uma linha.
+
+   O RESTO NÃO SE PERDE, e é essa a diferença: o que isto prova, onde olhar, o
+   critério e a armadilha estão na tela, acima, abertos. O campo guarda o que
+   só ela sabe — o que a mão dela fez de verdade, que é o que se perdia quando
+   a sessão morria. */
 function comoDoArquivo(t) {
   if (!t.como || !t.como.length) {
     return 'o arquivo não publica gesto para esta linha — descreva aqui o que '
          + 'foi aplicado, ou escreva "não apliquei".';
+  }
+  const passos = (t.como.find(([k]) => k === 'os passos') || [])[1];
+  if (passos) {
+    return passos.split('·').map((x) => x.trim()).filter(Boolean)
+      .map((x, i) => `${i + 1}. ${x}`).join('\n');
   }
   return t.como.map(([k, v]) => `${k}: ${v}`).join('\n');
 }
@@ -1848,6 +1967,11 @@ async function desenhar() {
   for (const [p, txt] of Object.entries(t.condicoes || {})) {
     const el = $(`input[name="c-${p}"]`);
     if (el && !el.value.trim()) el.value = txt;
+    // O CAMPO É ESTREITO E A FRASE É LONGA: quatro colunas repartem a tela em
+    // 250 px, e "cabo, anota o número agora e aos 20 min" chega cortado em
+    // "…agora e ac". O `title` devolve a frase inteira ao parar o mouse, sem
+    // obrigar ela a clicar dentro do campo para descobrir o resto.
+    if (el) el.title = txt;
   }
   // E A VEZ SE REPÕE AQUI. Os cartões chegam por `fetch`, e o `pintarAVez` que
   // rodou antes deles não achou `.ctl` nenhum: no TEMPO 1 os quatro ficavam
@@ -1960,8 +2084,20 @@ function pintar() {
     $('#pecas').innerHTML = t.pecas.length
       ? t.pecas.map(([id, palavra]) => `<code>${esc(id)}</code> <span class="cinza">(pela palavra “${esc(palavra)}”)</span>`).join(' · ')
       : '<span class="cinza">esta linha não nomeia peça nenhuma nos arquivos — os quatro desenhos ficam neutros, e isso é dito em vez de inventado.</span>';
+    /* CADA CAMPO DO GESTO TEM UMA FORMA, e a forma é o que faz ler rápido:
+       os passos e o por-controle vêm do arquivo com `· ` na frente de cada
+       item, e viram LISTA; o resto é parágrafo. Uma parede de texto com sete
+       rótulos em negrito é o que ela tinha antes, e não deu para executar. */
+    const LISTA = ['os passos', 'por controle'];
     $('#como-do-arquivo').innerHTML = t.como.length
-      ? t.como.map(([k, v]) => `<b>${esc(k)}:</b> ${esc(v)}`).join('\n')
+      ? t.como.map(([k, v]) => {
+          const corpo = LISTA.includes(k)
+            ? '<ul>' + v.split('·').map((x) => x.trim()).filter(Boolean)
+                .map((x) => `<li>${esc(x)}</li>`).join('') + '</ul>'
+            : `<p>${esc(v)}</p>`;
+          return `<div class="campo campo-${k.replace(/ /g, '-')}">`
+               + `<b>${esc(k)}</b>${corpo}</div>`;
+        }).join('')
       : '<span class="cinza">o arquivo não publica gesto para esta linha — o campo do “como” é a única fonte.</span>';
     $('#segundos-alvo').textContent = t.segundos;
   }
@@ -2370,9 +2506,27 @@ def pagina(testes: list[Teste], gravado: dict[str, Any]) -> str:
          apertava INICIAR e ia mexer no aparelho SEM NUNCA TER VISTO onde
          olhar. O desenho é a instrução, não o recibo — por isso ele está no
          ar nos três tempos, com a mesma peça acesa do começo ao fim. -->
+    <!-- A ORDEM É A ORDEM DE FAZER: ela LÊ o gesto, DEPOIS olha os quatro
+         desenhos para saber onde olhar, e só então responde. Na primeira volta
+         o gesto ficou depois dos cartões, e ali ele chega tarde pelo mesmo
+         motivo que os desenhos chegavam tarde quando nasceram dentro do tempo
+         3 — a instrução tem de preceder o ato. -->
+    <div class="gesto" id="como-do-arquivo"></div>
+
     <div id="desenhos"></div>
 
     <section id="antes" hidden>
+      <!-- O GESTO É O CORPO DO TESTE, NÃO UM ANEXO — 07/09/2026. Ele vivia
+           dentro de um `details` FECHADO, sob o rótulo "a célula que isto
+           fecha, e o COMO que o arquivo já publica": o que ela precisa para
+           executar estava a um clique de distância, atrás de uma frase que não
+           dizia que ali estava o que fazer. Ela abriu a linha 10 e escreveu
+           *"sinceramente não entendi o que diabos é pra fazer aqui"* — e a
+           resposta estava na tela, dobrada.
+
+           O que fica na gaveta agora é a PROCEDÊNCIA: a célula que a linha
+           fecha e quem já a descreveu. Isso ela consulta quando duvida; o
+           gesto ela lê para agir. -->
       <div class="rodape">
         <span class="esquerda cinza" id="pecas"></span>
         <button id="anterior">&larr; anterior</button>
@@ -2380,9 +2534,8 @@ def pagina(testes: list[Teste], gravado: dict[str, Any]) -> str:
           (<span id="segundos-alvo"></span>s)</button>
       </div>
       <details>
-        <summary class="cinza">a célula que isto fecha, e o COMO que o arquivo já publica</summary>
+        <summary class="cinza">de onde esta linha vem, e que célula ela fecha</summary>
         <p><code id="celula"></code><br><span class="cinza" id="hoje"></span></p>
-        <div class="como" id="como-do-arquivo"></div>
       </details>
     </section>
 
