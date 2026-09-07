@@ -1435,9 +1435,14 @@ body[data-tempo="3"] .condicao, body[data-tempo="3"] .condicao-rot{
    mas só o da vez recebe clique. Esconder os outros tiraria a única coisa que
    diz onde ela está na sequência.
    --------------------------------------------------------------------- */
-body[data-um-por-vez="1"] .ctl{opacity:.32;filter:saturate(.35)}
-body[data-um-por-vez="1"] .ctl[data-vez="1"]{opacity:1;filter:none;
-  outline:2px solid var(--color-accent);outline-offset:2px}
+/* O ESMAECIMENTO NÃO COME A COR DO PLÁSTICO — medido em 07/09/2026, com
+   `opacity:.32` e `saturate(.35)` os quatro viravam cinza e a única coisa que
+   ela usa para casar o cartão com o controle na mão sumia da tela. Agora o que
+   sai é o CONTRASTE do cartão, e a cor fica. */
+body[data-um-por-vez="1"] .ctl{opacity:.62}
+body[data-um-por-vez="1"] .ctl[data-vez="1"]{opacity:1;
+  outline:2px solid var(--color-accent);outline-offset:2px;
+  background:var(--color-paper)}
 body[data-um-por-vez="1"] .ctl:not([data-vez="1"]) .resp{pointer-events:none}
 body[data-um-por-vez="1"] .ctl.respondido{opacity:.6;filter:none}
 body[data-um-por-vez="1"] .ctl.respondido::after{content:"✓ respondido";
@@ -1582,6 +1587,17 @@ async function desenhar() {
     const el = $(`input[name="c-${p}"]`);
     if (el) el.value = txt;
   }
+  // A CONDIÇÃO DO ROTEIRO entra nos campos que ela ainda não escreveu. Nas 21
+  // linhas ela veio da coluna da §2; nas 127 células do mapa não existe, e o
+  // campo fica vazio para ela escrever.
+  for (const [p, txt] of Object.entries(t.condicoes || {})) {
+    const el = $(`input[name="c-${p}"]`);
+    if (el && !el.value.trim()) el.value = txt;
+  }
+  // E A VEZ SE REPÕE AQUI. Os cartões chegam por `fetch`, e o `pintarAVez` que
+  // rodou antes deles não achou `.ctl` nenhum: no TEMPO 1 os quatro ficavam
+  // esmaecidos, inclusive o da vez, e a página não mostrava de quem era a vez.
+  pintarAVez(t);
   // O SELETOR DE COR guarda na hora, por endereço — ela diz uma vez e a mesa
   // lembra em todos os 148.
   for (const sel of document.querySelectorAll('select.cor')) {
