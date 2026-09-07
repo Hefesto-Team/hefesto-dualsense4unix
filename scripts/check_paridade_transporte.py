@@ -183,6 +183,33 @@ FALHA (as duas mais novas)
                           `SUFIXOS_DE_CONTEUDO`) e o `*_de_onde_sei` daquele
                           lado VAZIO. Nasceu em 31/08/2026, da cegueira medida
                           logo abaixo.
+ 20. `causa-sem-negativa` — AVISO. `*_por_que_nao_aciona` preenchida num lado
+                          cujo `aciona` NÃO é `não`. É a 16 invertida, e nasceu
+                          em 06/09/2026 pedida pela A-RECUSA-QUE-CITOU-O-MAPA-01
+                          (§4.5). Ela não acusa a célula: acusa a LEITURA que a
+                          célula convida. Hoje há UMA no mapa
+                          (`movimento.acelerometro@dualsense`, `sim` +
+                          `so-ela-decide`), ela está CERTA e a ressalva diz que
+                          é de propósito — e é justamente por isso que a regra é
+                          AVISO. No mesmo dia, ler uma coluna de causa como veto
+                          fez o coordenador mandar um agente PARAR um passo que
+                          funciona.
+
+A pergunta que passou a ter DONO — a procedência (06/09/2026)
+--------------------------------------------------------------
+*De onde se sabe esta célula?* é respondida por `procedencia_da_celula()`, neste
+arquivo, e por mais ninguém. Ela devolve os PONTEIROS que se pode seguir — o
+carimbo (`provado_em` + `provado_por`), a mordida (`teste_que_morde`), o
+endereço (`*_codigo_ref`), a fonte de fora (`fonte_externa`), a evidência com
+endereço e o ensaio do caderno —, e quem a cobra é
+`tests/unit/test_a_procedencia_da_linha_nao_e_vazia.py`.
+
+A `scripts/mesa_de_medicao.py` monta o **COMO** de cada célula com metade dessas
+colunas (`_como_da_celula`). São perguntas irmãs sobre as mesmas colunas, e a
+régua da procedência guarda as duas contra a divergência: no dia em que uma
+coluna mudar de nome, as duas leituras respondem coisas diferentes CALADAS, e
+uma delas passa a mentir. É o defeito que esta casa já pagou duas vezes —
+*a régua estava medindo o mundo de ontem*.
 
 A cegueira que a regra 19 fecha — e a metade que ela NÃO fecha (31/08/2026)
 --------------------------------------------------------------------------
@@ -1243,6 +1270,124 @@ def pares_de_transporte(cabecalho: list[str]) -> dict[str, tuple[str, str]]:
     return pares
 
 
+#: ─────────────────────────────────────────────────────────────────────────
+#: A PROCEDÊNCIA — *de onde se sabe esta linha* (SPECS-A-PROCEDENCIA-01)
+#: ─────────────────────────────────────────────────────────────────────────
+#: ESTA É A ÚNICA RESPOSTA DA CASA À PERGUNTA "de onde se sabe esta célula", e
+#: ela é função pública de propósito. A `scripts/mesa_de_medicao.py` já monta o
+#: **COMO** de cada célula (`_como_da_celula`, o gesto: canal, report, offset,
+#: comando, código, mordida) e o `tests/unit/test_a_procedencia_da_linha_nao_e_vazia.py`
+#: cobra o **DE ONDE SEI**. São perguntas irmãs sobre as mesmas colunas, e a
+#: regra desta casa é que pergunta com dono se PERGUNTA ao dono: duas leituras
+#: independentes das mesmas colunas divergem calado no dia em que o mapa muda de
+#: forma — foi assim que a régua da palavra vigiou UMA palavra enquanto o portão
+#: vigiava ONZE.
+#:
+#: Ela mora AQUI, e não num módulo novo, porque este arquivo já é o dono das
+#: réguas do mapa: é ele que tem `DOMINIO_POR_SUFIXO`, `SUFIXOS_DE_CONTEUDO` e o
+#: casamento com o caderno de ensaios. Um módulo à parte seria a segunda cópia
+#: das mesmas constantes.
+
+#: Palavra que OCUPA a coluna do ponteiro sem apontar para lugar nenhum. `idem`
+#: quer dizer "o mesmo do lado do cabo" e é legível por gente — mas não por
+#: régua, e não por quem abre só a metade do rádio: a citação não se segue, o
+#: `validar-citacoes-de-linha.py` não a confere, e o `specs.html` publica a
+#: palavra no lugar do endereço. Medido em 06/09/2026: SETE células de
+#: `radio_codigo_ref` diziam `idem`.
+#:
+#: `—` e `não-localizado` NÃO entram aqui, e a diferença é o ponto: essas duas
+#: dizem *"não há endereço"*, que é uma resposta; `idem` diz *"o endereço está
+#: noutro lugar"* sem dizer onde.
+PONTEIRO_QUE_NAO_SE_SEGUE = frozenset({"idem", "idem.", "o mesmo", "mesmo", "ditto"})
+
+#: O que conta como ENDEREÇO seguível numa célula de procedência: `arquivo.ext`
+#: com extensão de código, documento ou planilha. É a mesma forma que o
+#: `scripts/validar-citacoes-de-linha.py` confere quando vem acompanhada de
+#: `:linha`; aqui basta o arquivo, porque uma célula pode apontar um arquivo
+#: inteiro com honestidade (`assets/…rules`, um `.md` de protocolo).
+_ENDERECO = re.compile(
+    r"[\w./+-]+\.(?:py|c|h|sh|kt|cpp|md|csv|html|json|xml|glade|rs|toml|rules)\b"
+)
+
+
+@dataclass(frozen=True)
+class Procedencia:
+    """De onde se sabe UMA célula — a linha do mapa vista por um transporte.
+
+    `ponteiros` é a lista de `(rótulo, valor)` que se pode SEGUIR: o carimbo da
+    medição, a régua que morde, o endereço no código, a fonte de fora e o ensaio
+    do caderno. Vazia quer dizer que a célula afirma de onde sabe e não diz onde
+    isso está escrito — que é o defeito inteiro desta sprint.
+    """
+
+    id: str
+    lado: str
+    de_onde_sei: str
+    ate_onde_foi: str
+    ponteiros: tuple[tuple[str, str], ...]
+
+    @property
+    def tem_ponteiro(self) -> bool:
+        return bool(self.ponteiros)
+
+    def rotulos(self) -> tuple[str, ...]:
+        return tuple(rotulo for rotulo, _ in self.ponteiros)
+
+
+def _limpo(linha: dict[str, str], coluna: str) -> str:
+    return (linha.get(coluna) or "").strip()
+
+
+def procedencia_da_celula(
+    linha: dict[str, str],
+    lado: str,
+    ensaios_por_lado: dict[tuple[str, str], list[dict]] | None = None,
+) -> Procedencia:
+    """A procedência de `(linha, lado)`, com os ponteiros que se pode seguir.
+
+    `ensaios_por_lado` é o índice de `caderno_de_ensaios()`. Quando vem `None` o
+    caderno simplesmente não entra na conta — o mesmo desligamento em voz alta
+    que a regra 6 já faz —, nunca um `KeyError`.
+    """
+    ponteiros: list[tuple[str, str]] = []
+
+    carimbo_em = _limpo(linha, "provado_em")
+    carimbo_por = _limpo(linha, "provado_por")
+    if carimbo_em and carimbo_por:
+        ponteiros.append(("carimbo", f"{carimbo_em} · {carimbo_por}"))
+
+    mordida = _limpo(linha, "teste_que_morde")
+    if mordida:
+        ponteiros.append(("mordida", mordida))
+
+    codigo = _limpo(linha, f"{lado}_codigo_ref")
+    if codigo and codigo.lower() not in PONTEIRO_QUE_NAO_SE_SEGUE:
+        ponteiros.append(("código", codigo))
+
+    externa = _limpo(linha, "fonte_externa")
+    if externa:
+        ponteiros.append(("fonte externa", externa))
+
+    evidencia = _limpo(linha, f"{lado}_evidencia")
+    if _ENDERECO.search(evidencia):
+        ponteiros.append(("evidência com endereço", evidencia))
+
+    if ensaios_por_lado is not None:
+        do_caderno = ensaios_por_lado.get((linha.get("id", ""), lado)) or []
+        if do_caderno:
+            ponteiros.append(
+                ("ensaio", "; ".join(e.get("id", "") for e in do_caderno))
+            )
+
+    return Procedencia(
+        id=linha.get("id", ""),
+        lado=lado,
+        de_onde_sei=_limpo(linha, f"{lado}_de_onde_sei"),
+        ate_onde_foi=_limpo(linha, f"{lado}_ate_onde_foi"),
+        ponteiros=tuple(ponteiros),
+    )
+
+
 def ids_publicados(specs: Path) -> str | None:
     """O texto do `specs.html`, ou None quando não há o que conferir.
 
@@ -1762,6 +1907,47 @@ def censo(
                         "`nao-medido`, e ela NÃO autoriza dizer que o aparelho "
                         "não faz. Preencha com uma das causas do domínio "
                         f"({sorted(DOMINIO_POR_SUFIXO['por_que_nao_aciona'] - {''})})",
+                    )
+                )
+
+            # Regra 20 (06/09/2026, SPECS-A-PROCEDENCIA-01): a causa preenchida
+            # num lado que NÃO diz `não`. É a irmã invertida da 16, e ela é
+            # AVISO de propósito: hoje o mapa tem UMA célula assim, e ela é
+            # legítima — `movimento.acelerometro@dualsense` afirma `aciona = sim`
+            # com `so-ela-decide` na coluna do porquê, e a ressalva diz que é
+            # DE PROPÓSITO.
+            #
+            # O defeito que ela pega não é a célula: é a LEITURA dela. Em
+            # 06/09/2026 o coordenador leu uma coluna de causa como veto e
+            # mandou um agente PARAR um passo que funciona (é o mesmo dia e a
+            # mesma origem da palavra `nao-medido`, no bloco da regra 16). Uma
+            # causa ao lado de um `sim` é a forma mais fácil de repetir aquela
+            # leitura, e hoje NENHUMA régua a nomeia — quem for ler a linha
+            # amanhã não tem como saber que ali a causa não é veto.
+            #
+            # AVISO, e não FALHA, porque a célula que ela acha está CERTA: a
+            # regra pede que a decisão apareça no relatório, não que ela saia
+            # do mapa. Promover isto a FALHA seria reprovar a decisão dela.
+            if (
+                "por_que_nao_aciona" in pares
+                and por_que_nao_aciona
+                and aciona
+                and aciona != ACIONA_NAO
+            ):
+                achados.append(
+                    Achado(
+                        AVISO,
+                        "causa-sem-negativa",
+                        numero,
+                        ident,
+                        lado,
+                        f"`{lado}_aciona = {aciona}` (não é `{ACIONA_NAO}`) e "
+                        f"`{lado}_por_que_nao_aciona = {por_que_nao_aciona}`: a "
+                        "coluna da causa está preenchida ao lado de uma célula "
+                        "que ACIONA. Se é de propósito, a `ressalva` deste lado "
+                        "tem de dizer por quê — quem ler só as duas colunas vai "
+                        "ler VETO onde há decisão, e foi assim que um passo que "
+                        "funciona foi mandado parar em 06/09/2026",
                     )
                 )
 

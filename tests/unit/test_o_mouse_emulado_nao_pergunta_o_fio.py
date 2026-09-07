@@ -53,9 +53,25 @@ DualSense na mesa e ele estava no CABO (`/sys/bus/hid/devices` listava apenas
      cursor tão medidos já viu"
 
 Medido com ela na bancada, nos DOIS transportes. E o código já dizia o mesmo
-pela outra ponta: `core/mouse_emulation.py` recebe o eixo já normalizado pelo
-daemon e escreve no uinput — não há uma linha que pergunte o barramento, que é
-justamente o que o teste `test_o_caminho_do_mouse_nao_le_transporte` prova aqui.
+pela outra ponta: `daemon/subsystems/mouse.py` e `integrations/uinput_mouse.py`
+recebem o eixo já normalizado pelo daemon e escrevem no uinput — não há uma
+linha que pergunte o barramento, que é justamente o que o teste
+`test_o_caminho_do_mouse_emulado_nao_decide_por_transporte` prova aqui.
+
+DOIS ENDEREÇOS MORTOS, CORRIGIDOS EM 06/09/2026 (SPECS-A-PROCEDENCIA-01)
+------------------------------------------------------------------------
+Este parágrafo citava `core/mouse_emulation.py`, que **não existe nesta
+árvore**, e um teste — `test_o_caminho_do_mouse_nao_le_transporte` — que **não
+existe neste arquivo**. Os donos reais são os dois módulos varridos por
+`ESCOPOS`, logo abaixo, e o teste real é o de nome inteiro acima. O mesmo
+endereço morto estava na `radio_evidencia` das duas linhas do mapa
+(`entrada.emulacao_mouse.gatilhos@dualsense` e `.analogico@dualsense`), na
+evidência mais NOVA que elas tinham — achado da A-RECUSA-QUE-CITOU-O-MAPA-01
+§4.6, e as duas foram reapontadas no mesmo gesto que esta.
+
+*A régua sabia o caminho certo em `ESCOPOS` e a prosa dela apontava para outro
+lugar* — que é a forma exata do defeito que a
+`tests/unit/test_a_procedencia_da_linha_nao_e_vazia.py` passou a cobrar do mapa.
 
 Então as células passaram de `desconhecido`/`incerto` para `sim`/`medido`, e
 esta régua acompanhou. **Ela não foi afrouxada — foi invertida**: continua
