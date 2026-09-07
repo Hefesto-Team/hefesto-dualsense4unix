@@ -1204,10 +1204,20 @@ def quem_esta_na_mesa() -> dict[str, Any]:
         """
         dela = cores_que_ela_disse()
         vistos = pelo_sysfs()
-        # A LÂMPADA DECIDE O POSTO, e só ela: é o número que o plástico mostra
-        # na mão dela. Quando duas lâmpadas coincidem (dois controles no LED 1,
-        # medido nesta bancada com o daemon parado) o desempate é a ordem do
-        # nó, e o cartão DIZ que empatou em vez de fingir certeza.
+        # A LÂMPADA SÓ É O POSTO ENQUANTO ALGUÉM A ESCREVE, e quem escreve é o
+        # daemon. Com ele parado o LED é RESTO da sessão passada: o kernel não
+        # o apaga quando o daemon morre, nem o reatribui quando o controle
+        # volta. Medido em 07/09/2026, com ela seguindo o roteiro — plugou UM
+        # controle, que pelo roteiro é o P1, e a página o pôs no P3 porque o
+        # LED 3 tinha sido escrito horas antes. Palavra dela: *"nem o controle
+        # é reconhecido corretamente, nem o player ali é (…) tá usando valores
+        # hardcoded"*. Não era hardcoded — era um valor real medindo o mundo de
+        # ontem, que dá no mesmo para quem lê.
+        #
+        # A LÂMPADA CONTINUA DECIDINDO quando o daemon está vivo: ali ela é o
+        # número que ele acabou de escrever, e é o que o plástico mostra na mão
+        # dela. Quando duas coincidem, o desempate é a ordem do nó e o cartão
+        # DIZ que empatou em vez de fingir certeza.
         por_posto: dict[str, dict[str, Any]] = {}
         sobra = []
         for v in vistos:
@@ -1237,6 +1247,24 @@ def quem_esta_na_mesa() -> dict[str, Any]:
                 "empatou": bool(sobra) and v in sobra,
             })
         quantos = len(por_posto)
+        # A TRAVA. Sem daemon não há produto para medir: todo teste desta
+        # página começa por "abra o Hefesto", e o Hefesto sem daemon é uma
+        # janela que não fala com aparelho nenhum. Até 07/09/2026 a página
+        # servia os testes assim mesmo, com os cartões afirmando posto,
+        # transporte e bateria — e ela passou a bancada inteira medindo nada.
+        # A casa já tem a regra: instrumento que sabe do próprio risco
+        # RESOLVE, não avisa. O aviso estava lá, em cinza, no cabeçalho.
+        if quantos:
+            fora["bloqueio"] = {
+                "titulo": "o daemon está parado — nada aqui é medição",
+                "porque":
+                    "Todo teste desta página começa por abrir o Hefesto, e o "
+                    "Hefesto sem daemon não fala com controle nenhum. O posto "
+                    "de cada cartão abaixo saiu da LÂMPADA do controle, e a "
+                    "lâmpada só vale enquanto o daemon a escreve: parada, ela "
+                    "é o número da sessão passada.",
+                "comando": "systemctl --user start hefesto-dualsense4unix.service",
+            }
         fora["daemon"] = (
             f"{motivo} · lendo direto do kernel: {quantos} DualSense na mesa. "
             f"Transporte, bateria, carga, lâmpada e barra vêm do `sysfs`. "
@@ -1783,7 +1811,7 @@ svg[data-colorway]:has([id$="-feat-bateria"].marcada) [id$="-lightbar"]
    o que fazer estava lá dentro. Esta diz. */
 .gesto details.mais{margin-top:var(--space-2xs);border-left:2px solid var(--color-rule);
   padding-left:var(--space-2xs)}
-.gesto details.mais > summary{cursor:pointer;color:var(--color-ink-muted);
+.gesto details.mais > summary{cursor:pointer;color:var(--color-ink-quiet);
   font-size:var(--text-xs);letter-spacing:.03em;padding:2px 0}
 .gesto details.mais[open] > summary{margin-bottom:var(--space-3xs)}
 .gesto details.mais .campo{border-left:0;padding-left:0;margin-top:var(--space-3xs)}
@@ -1800,20 +1828,31 @@ svg[data-colorway]:has([id$="-feat-bateria"].marcada) [id$="-lightbar"]
 .gesto ol.passos li{display:flex;gap:.6em;margin:.35em 0;align-items:baseline}
 .gesto ol.passos li.ato > b{flex:0 0 1.5em;text-align:right;font-variant-numeric:
   tabular-nums;color:var(--color-accent);font-size:var(--text-xs)}
-.gesto ol.passos li.olho{margin:.1em 0 .35em 2.1em;color:var(--color-ink-muted);
+.gesto ol.passos li.olho{margin:.1em 0 .35em 2.1em;color:var(--color-ink-quiet);
   font-size:var(--text-xs);border-left:2px solid var(--color-rule);
   padding-left:.6em}
 /* A ETIQUETA DA ABA — ONDE o teste mora, dito uma vez em cima e não como o
    primeiro passo de 82 testes. Ver `enxuga_os_passos`. */
-.etiqueta-da-aba{margin-left:auto;color:var(--color-ink-muted);
+.etiqueta-da-aba{margin-left:auto;color:var(--color-ink-quiet);
   font-size:var(--text-xs)}
 .etiqueta-da-aba b{color:var(--color-ink)}
+/* A TRAVA. Ela é a única coisa vermelha desta página de propósito: quando
+   aparece, nada abaixo dela é medição. */
+#trava{margin:var(--space-2xs) var(--space-sm);padding:var(--space-2xs)
+  var(--space-sm);border:2px solid var(--color-alerta);
+  border-radius:var(--radius-sm);background:var(--color-paper-2)}
+#trava b{color:var(--color-alerta);font-size:var(--text-base)}
+#trava p{margin:var(--space-3xs) 0;max-width:78ch}
+#trava code{display:inline-block;padding:2px 6px;border-radius:var(--radius-sm);
+  background:var(--color-paper-2);border:1px solid var(--color-rule);
+  user-select:all}
+#iniciar:disabled{opacity:.4;cursor:not-allowed}
 /* A BANCADA ANTES DE COMEÇAR — uma faixa fina no topo, aberta na primeira
    visita e fechada por ela quando a mesa estiver pronta. */
-#preparo{margin:0 var(--space-s);padding:var(--space-3xs) var(--space-2xs);
-  border:1px solid var(--color-rule);border-radius:var(--radius-s);
+#preparo{margin:0 var(--space-sm);padding:var(--space-3xs) var(--space-2xs);
+  border:1px solid var(--color-rule);border-radius:var(--radius-sm);
   font-size:var(--text-xs)}
-#preparo > summary{cursor:pointer;color:var(--color-ink-muted)}
+#preparo > summary{cursor:pointer;color:var(--color-ink-quiet)}
 #preparo ul{margin:var(--space-3xs) 0 0;padding-left:1.3em}
 #preparo li{margin:.2em 0}
 
@@ -2484,6 +2523,20 @@ async function mesaViva() {
   try {
     const m = await (await fetch('/mesa')).json();
     $('#daemon').textContent = m.daemon;
+    /* A TRAVA NA TELA. Ver o `fora["bloqueio"]` do lado do Python: sem daemon
+       não há produto para medir, e a página passou a bancada inteira servindo
+       testes sobre nada — com o aviso em cinza no cabeçalho, que é onde um
+       aviso morre. O INICIAR desliga junto: um botão que continua clicável
+       convida a medir, e nenhum recado vence um botão aceso. */
+    const b = m.bloqueio;
+    $('#trava').hidden = !b;
+    if (b) {
+      $('#trava-titulo').textContent = b.titulo;
+      $('#trava-porque').textContent = b.porque;
+      $('#trava-comando').textContent = b.comando;
+    }
+    $('#iniciar').disabled = !!b;
+    $('#iniciar').title = b ? b.titulo : '';
   } catch (e) { $('#daemon').textContent = 'a página perdeu o servidor'; }
 }
 
@@ -2699,6 +2752,14 @@ def pagina(testes: list[Teste], gravado: dict[str, Any]) -> str:
      lista fechada, comparada palavra por palavra, para nunca comer um ato de
      verdade. A gaveta nasce ABERTA e ela a fecha quando a bancada estiver
      pronta; o estado fica no navegador dela, não no registro. -->
+<!-- A TRAVA — ver `fora["bloqueio"]`. Ela nasce escondida e o `mesaViva` a
+     acende; assim a página nunca pisca um alarme antes de ter medido nada. -->
+<div id="trava" hidden>
+  <b id="trava-titulo"></b>
+  <p id="trava-porque"></p>
+  <p>Rode isto e recarregue a página:</p>
+  <code id="trava-comando"></code>
+</div>
 <details id="preparo" open>
   <summary>a bancada antes de começar — confira uma vez e feche</summary>
   <ul id="preparo-lista">{preparo}</ul>
@@ -2886,6 +2947,13 @@ def cartoes(teste: Teste, mesa: dict[str, Any]) -> str:
             f"{bateria}%" if isinstance(bateria, (int, float)) else "bateria —",
             carga,
             f'lâmpada {vivo["lampada"]}' if vivo.get("lampada") else "lâmpada —",
+            # DE ONDE SAIU O POSTO, e ele só se declara quando é FRACO. Com o
+            # daemon vivo o posto é o que ele acabou de escrever e não há o que
+            # ressalvar; com ele parado o posto saiu de um LED que ninguém
+            # atualiza há horas, e o cartão tem de dizer isso na mesma linha em
+            # que afirma o número — não num cinza no alto da página.
+            "posto pela lâmpada, que o daemon parado não atualiza"
+            if vivo.get("de_onde") == "kernel" else "",
         ) if x)
         atual = str(vivo.get("colorway") or "")
         opcoes = "".join(

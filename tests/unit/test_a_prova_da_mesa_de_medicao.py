@@ -1405,3 +1405,29 @@ def test_o_acervo_do_mapa_tambem_tem_gesto() -> None:
         assert lado in corpo or outro not in corpo, (
             f"{x.id} fala só do {outro} — o gesto caiu na célula errada")
 
+
+
+def test_todo_token_de_cor_sem_reserva_esta_definido() -> None:
+    """`var(--x)` sem reserva tem de existir — senão a regra some calada.
+
+    07/09/2026: escrevi `color:var(--color-ink-muted)` em quatro lugares e
+    `--color-danger` na trava. Nenhum dos dois existe nesta folha. O navegador
+    não reclama de `var()` que não resolve: a propriedade inteira é
+    DESCARTADA, e o texto herda a cor de cima. Passou por um commit e por 45
+    portões verdes, porque o que se vê é uma tela plausível — a conferência
+    ficava com a cor do ato, que é exatamente o contraste que a cura existia
+    para criar.
+
+    A RÉGUA SÓ COBRA QUEM NÃO TEM RESERVA. `var(--cor-do-modelo,
+    var(--color-rule))` é legítimo: a cor vem do atributo `style` de cada
+    cartão, e a reserva é o que a folha promete quando ela não vier. Quem
+    escreve `var(--x)` seco está afirmando que `--x` existe aqui.
+    """
+    css = med._CSS
+    definidos = set(re.findall(r"(--[\w-]+)\s*:", css))
+    # `var(--x)` seguido de `)` — sem vírgula, logo sem reserva
+    secos = set(re.findall(r"var\(\s*(--[\w-]+)\s*\)", css))
+    orfaos = sorted(secos - definidos)
+    assert not orfaos, (
+        f"{len(orfaos)} token(s) usados sem reserva e sem definição: {orfaos}. "
+        f"O navegador descarta a propriedade inteira e ninguém vê.")
