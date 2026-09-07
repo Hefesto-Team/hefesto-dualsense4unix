@@ -1168,7 +1168,6 @@ _NAO_E_PROMESSA: dict[str, str] = {
 #: No dia em que o caminho nascer, a entrada deixa de bater com a árvore e
 #: ``test_a_lista_de_lacunas_nao_envelhece_calada`` cobra que ela seja apagada.
 _SEM_CAMINHO_HOJE: dict[str, str] = {
-<<<<<<< HEAD
     # AS DEZOITO DA SOM-QUE-SAI-01 (06/09/2026) — o motor do alto-falante
     # virtual nasceu INTEIRO e ÓRFÃO, e as duas coisas são de propósito.
     #
@@ -1407,7 +1406,7 @@ _SEM_CAMINHO_HOJE: dict[str, str] = {
         "registrar o subsystem nos DOIS lugares — o próprio "
         "`subsystems/__init__.py` avisa que acrescentar à lista NÃO liga nada, e "
         "foi assim que o `BtMicSubsystem` nasceu órfão em 25/07/2026. 06/09/2026."
-=======
+    ),
     # AS DUAS DA MESA DE MEDIÇÃO — 06/09/2026, A-VALIDACAO-DOS-QUATRO-01. Elas
     # nascem declaradas em vez de nascerem esquecidas, e a lápide diz onde o
     # caminho se perde E o que o fecha, que é o contrato desta lista.
@@ -1445,7 +1444,6 @@ _SEM_CAMINHO_HOJE: dict[str, str] = {
         "gatilhos e a 06 da navegação são as candidatas) publicar esta folha e "
         "passar `apertados=`; a partir daí o realce por peça deixa de ser só do "
         "instrumento."
->>>>>>> 00201c16 (feat(mesa): a mesa de medição dos quatro — 148 testes que saem dos arquivos, e o COMO que se gravava)
     ),
     # A LÁPIDE DE `primeiro_trecho_banido` SAIU EM 06/09/2026, na costura da
     # ONDA E, e ela previu o próprio fim com o endereço de cada passo: dizia que
