@@ -1361,6 +1361,21 @@
      em 28/08 — `D-O-SEM-TETO-SAI-DOS-DOIS-LUGARES`. A regra sai junto: CSS de
      elemento que não existe mais é a segunda versão viva de uma decisão. */
   .gc-corpo .btn{margin-left:auto;white-space:nowrap;flex:0 0 auto}
+  /* A PONTA DIREITA DA LINHA vira uma caixa só — 06/09/2026, a espera pelo PS.
+     A trava, a linha da espera e o botão andam juntos, e é a caixa que carrega
+     o `margin-left:auto`: com o `auto` em dois filhos o espaço livre se DIVIDE
+     entre eles, e a frase da espera flutuaria no meio da linha com um vão até o
+     botão. Aqui há um `auto` só, e ele é o da caixa.
+
+     A TRAVA CONTINUA DENTRO, e não é arrumação: `.ltrava.on ~ .btn` é irmandade,
+     e tirá-la da caixa apagaria a regra que pinta o botão do cabo. */
+  .gc-corpo .gc-luz{display:flex;align-items:center;gap:8px;margin-left:auto;
+                    flex:0 1 auto;min-width:0}
+  /* A LINHA DA ESPERA DENTRO DA LINHA DO CONTROLE. O `margin-top` da `.ressalva`
+     do esqueleto é para quem a usa EMBAIXO de um valor; aqui ela é irmã na
+     mesma linha, e 5px a empurrariam para fora do eixo dos 40px do corpo. */
+  .gc-luz .ressalva{margin-top:0;white-space:nowrap;overflow:hidden;
+                    text-overflow:ellipsis;min-width:0}
   /* REGRA DELA, escrita em `secao_controles.py:150`: *"sempre visível mas só
      acionável quando tiver no rádio"* — na linha do cabo o botão VAI, apagado,
      com a dica dizendo por quê. Botão que SOME ensina que a tela é instável. */
@@ -2854,7 +2869,7 @@
                   <span class="ajuda">?<span class="dica" data-campo="teto-explica" data-hef-alvo="html">O teto da vibração <b>deste controle</b>. O global manda e o do controle sobrepõe: hoje este controle <b>segue o global</b>, e o motor recebe <b>100% da força</b>. Quem muda o global é o <b>Perfil de Bateria</b>, na aba <b>Sistema</b> — ele decide o que custa bateria, e esta aba mede o rádio. O degrau vem de <code>RUMBLE_POLICY_MULT</code>, que é o dono dele — a vibração é o único recurso com teto real hoje.</span></span></span>
                 <select class="pronto" title="O teto da vibração deste controle. O global manda e o do controle sobrepõe — o “?” ao lado diz qual dos dois está valendo agora." data-gesto="teto-da-vibracao" data-campo="teto-da-vibracao" data-hef-alvo="valor"><option selected>Segue o global</option><option>Sem teto</option><option>30% da força</option></select>
               </span>
-              <i class="ltrava on" data-campo="luz-trava" data-hef-alvo="classe" data-hef-quando="cabo"></i><button class="btn apagado" data-gesto="luz-nao-acende" data-campo="luz-dica" data-hef-alvo="atributo" data-hef-atributo="title" title="Só funciona com o controle no rádio: a cura é derrubar a conexão Bluetooth para você apertar PS. Este controle está no cabo, onde a barra de luz não depende de reconexão nenhuma.">A luz não acende</button>
+              <span class="gc-luz"><div class="ressalva" data-campo="luz-espera" data-hef-alvo="html"><i class="nada"></i></div><i class="ltrava on" data-campo="luz-trava" data-hef-alvo="classe" data-hef-quando="cabo"></i><button class="btn" data-gesto="luz-nao-acende" data-campo="luz-dica" data-hef-alvo="atributo" data-hef-atributo="title" title="Só funciona com o controle no rádio: a cura é derrubar a conexão Bluetooth para você apertar PS. Este controle está no cabo, onde a barra de luz não depende de reconexão nenhuma."><span data-campo="luz-texto">A luz não acende</span></button></span>
             </div>
           </div>
           <div class="gc-item gc-p2" data-controle="p2">
@@ -3188,7 +3203,7 @@
                   <span class="ajuda">?<span class="dica" data-campo="teto-explica" data-hef-alvo="html">O teto da vibração <b>deste controle</b>. O global manda e o do controle sobrepõe: hoje este controle <b>segue o global</b>, e o motor recebe <b>100% da força</b>. Quem muda o global é o <b>Perfil de Bateria</b>, na aba <b>Sistema</b> — ele decide o que custa bateria, e esta aba mede o rádio. O degrau vem de <code>RUMBLE_POLICY_MULT</code>, que é o dono dele — a vibração é o único recurso com teto real hoje.</span></span></span>
                 <select class="pronto" title="O teto da vibração deste controle. O global manda e o do controle sobrepõe — o “?” ao lado diz qual dos dois está valendo agora." data-gesto="teto-da-vibracao" data-campo="teto-da-vibracao" data-hef-alvo="valor"><option selected>Segue o global</option><option>Sem teto</option><option>30% da força</option></select>
               </span>
-              <i class="ltrava" data-campo="luz-trava" data-hef-alvo="classe" data-hef-quando="cabo"></i><button class="btn" data-gesto="luz-nao-acende" data-campo="luz-dica" data-hef-alvo="atributo" data-hef-atributo="title" title="Derruba este controle do rádio para você apertar PS e a barra de luz voltar a obedecer. Enquanto ele espera o PS, o mesmo botão vira “Cancelar”.">A luz não acende</button>
+              <span class="gc-luz"><div class="ressalva" data-campo="luz-espera" data-hef-alvo="html"><i class="nada"></i></div><i class="ltrava" data-campo="luz-trava" data-hef-alvo="classe" data-hef-quando="cabo"></i><button class="btn" data-gesto="luz-nao-acende" data-campo="luz-dica" data-hef-alvo="atributo" data-hef-atributo="title" title="Derruba este controle do rádio para você apertar PS e a barra de luz voltar a obedecer. Enquanto ele espera o PS, o mesmo botão vira “Cancelar”."><span data-campo="luz-texto">A luz não acende</span></button></span>
             </div>
           </div>
           <div class="gc-item gc-p3 fora" data-controle="p3">
@@ -3384,6 +3399,17 @@
             <span><i class="vaga"></i>Cada controle do cabo, se viesse — +276,7</span>
           </div>
         </div>
+        <!-- A CONTA DE SLOTS POR ADAPTADOR — 06/09/2026, a linha 330 do CSV da
+             paridade. A régua acima mostra o que ESTÁ; esta linha responde o que
+             CABE, que é outra pergunta e não se lê de uma barra: olhar uma fatia
+             de 260,4 em 1.600 não diz se o PRÓXIMO controle entra.
+
+             ELA NASCE MUDA NO DESENHO, e isso é a regra da `.ressalva`: a
+             bancada não tem a mesa dela dentro, e uma conta cravada aqui seria a
+             terceira cena de exemplo desta aba a passar por medição. Quem a
+             escreve é `a08_conexoes._conta_de_slots`, que lê o dono
+             (`integrations/plano_de_radio`) e não redige uma palavra. -->
+        <div class="ressalva" data-campo="conta-de-slots" data-hef-alvo="html"><i class="nada"></i></div>
         </div>
       </div>
     </div>
