@@ -6,6 +6,11 @@ A fonte é `docs/process/2026-09-04-O-PO-DECIDE-as-54-e-os-sete-conflitos.md`,
 `2026-09-04-ONDA2-04-ILUMINACAO-01-o-interruptor-de-verdade-e-a-cor-que-se-grava-ao-desligar`:
 
     [01] a razão do tracejado    uma linha só quando há ressalva          (D-02)
+         ↑ CADUCOU EM 07/09/2026, por ordem dela: *"o que eu não quero é frase
+           da steam ou outras"*. A linha saiu da célula `LEDs`, e as cinco
+           réguas que a mediam saíram com ela — ver
+           `test_a_04_as_lampadas_espelham_o_numero`, que guarda a AUSÊNCIA.
+           A razão do tracejado continua no `title` das duas tiras.
     [02] o automático do perfil  interruptor DE VERDADE na aba            (D-13)
     [03] reenviar uma cor        a caixa do hexadecimal vira o botão
     [04] o brilho guardado       uma frase curta
@@ -31,8 +36,10 @@ O QUE ESTE ARQUIVO MEDE, com a mordida escrita em cada caso:
 5. o reenvio lê o TEXTO da caixa, e **ignora o `data-hex`** — que é a metade
    que morde: o `data-hex` é escrito pelo gerador e fica congelado no que o
    mockup sabia;
-6. a linha de ressalva carrega a frase do MOTOR, some quando não há o que
-   dizer, e **não cobra pixel no repouso** — medido no Chrome, na página;
+6. a faixa dos LEDs mantém a tira CENTRADA e a aba não rola por dentro —
+   medido no Chrome, na página. (Esta linha olhava a ressalva até 07/09/2026;
+   com a linha fora, o que sobra a medir é o pixel da faixa, que é o que a
+   asserção sempre olhou de verdade — ver `_medida`.);
 7. a frase do brilho guardado é curta e **não é uma recusa**.
 
 O LAR É DE MENTIRA. O `conftest` desvia `HOME` e os quatro `XDG_*`; os casos que
@@ -489,96 +496,6 @@ def test_o_travessao_de_um_lugar_vazio_nao_reenvia(pac, a04):
 
 
 # ---------------------------------------------------------------------------
-# [01] A LINHA DE RESSALVA — a D-02 aplicada a esta aba
-# ---------------------------------------------------------------------------
-def test_a_ressalva_carrega_a_frase_do_motor(pac, a04):
-    """A frase é de `controller_card.rotulo_lightbar`, e não se escreve aqui.
-
-    A RÉGUA PERGUNTA AO DONO em vez de digitar a frase: a casa pagou onze vezes
-    em 26/08 por réguas que digitavam o que deviam ler — elas reprovam a melhora
-    em vez do defeito.
-
-    A MORDIDA: troque o `recado` por uma frase escrita no `pacote()` e esta
-    linha reprova, porque o motor diz outra coisa.
-    """
-    from hefesto_dualsense4unix.app.widgets.controller_card import rotulo_lightbar
-
-    _semear()
-    disputado = dict(P1, lightbar_disputada=True)
-    ctx = _ctx(pac, conectados=[disputado])
-    esperado, _ = rotulo_lightbar(disputado, ctx.state)
-
-    coluna = a04.pacote(ctx)["colunas"][UM]
-    assert coluna[a04.ENDERECO_DA_RESSALVA] == esperado, (
-        f"a linha diz {coluna[a04.ENDERECO_DA_RESSALVA]!r} e o motor diz "
-        f"{esperado!r}")
-
-
-def test_sem_ressalva_a_linha_recebe_o_marcador(pac, a04):
-    """E a chave vai em TODO tique — é o que faz a linha sumir.
-
-    Omiti-la quando não há nada a dizer deixaria a frase anterior na tela para
-    sempre; mandar `""` a trocaria por um travessão solto, porque `escrever()`
-    faz isso de propósito.
-
-    A MORDIDA: emita `""` em vez do marcador e a tela passa a mostrar um `—`
-    debaixo de uma tira que está perfeitamente acesa.
-    """
-    _semear()
-    coluna = a04.pacote(_ctx(pac))["colunas"][UM]
-    assert coluna[a04.ENDERECO_DA_RESSALVA] == a04.NADA_A_DIZER
-
-
-def test_o_marcador_e_o_mesmo_do_monta(a04):
-    """As duas cópias do literal não podem divergir caladas.
-
-    É a mesma guarda que `test_a_linha_de_ressalva_so_nasce_quando_ha` faz para
-    a `a06_navegacao`: a folha das dez esconde a linha por
-    `:has(.nada)`, e um marcador diferente aqui deixaria a linha VISÍVEL, vazia,
-    cobrando a altura da fonte nas quatro colunas.
-    """
-    import monta
-
-    assert a04.NADA_A_DIZER == monta.NADA_A_DIZER, (
-        f"o marcador divergiu: `monta` diz {monta.NADA_A_DIZER!r} e "
-        f"`a04_iluminacao` diz {a04.NADA_A_DIZER!r}")
-
-
-def test_a_pagina_tem_a_linha_em_todo_lugar_da_mesa():
-    """Uma ressalva que nasça em três de quatro colunas é a quarta calada.
-
-    E SÃO OS QUATRO LUGARES, não os dois conectados — 07/09/2026. Esta régua
-    contava `len(monta.CONECTADOS)`, e assim **media o defeito**: o lugar que  (noqa-acento)
-    nascia vazio não tinha a linha, e o P3 que chegasse depois não teria onde
-    acender a razão de a barra ter apagado — voltaria a escondê-la no `title`,
-    que é exatamente o que a D-02 fechou.
-
-    NO REPOUSO ELA NÃO CUSTA PIXEL, e é por isso que pôr as quatro é de graça:
-    a folha das dez a tira do fluxo por `:has(.nada)`, e a desta aba a esconde
-    enquanto `data-conectado="nao"`. Quem mede esse pixel é
-    `test_no_repouso_a_linha_nao_cobra_pixel_e_a_aba_nao_rola`, logo acima.
-
-    A MORDIDA: devolva `len(monta.CONECTADOS)` ao `exigir` da §10 do `aba04.py`
-    e regere — o gerador para antes de escrever, e esta régua reprova com 2.
-    """
-    import monta
-    from hefesto_dualsense4unix.interface import onde
-    from pacotes import a04_iluminacao as a04
-
-    texto = onde.pagina(PAGINA).read_text(encoding="utf-8")
-    grade = texto.split('<div class="luz-grade">', 1)[-1]
-    quantas = grade.count(
-        f'class="ressalva" data-campo="{a04.ENDERECO_DA_RESSALVA}"')
-    assert quantas == len(monta.MESA), (
-        f"a linha de ressalva está em {quantas} coluna(s) e a mesa do desenho "
-        f"tem {len(monta.MESA)} lugar(es) — o lugar sem ela fica mudo no dia "
-        f"em que ganhar um controle")
-    assert monta.NADA_A_DIZER in grade, (
-        "a linha nasceu com frase cravada — o desenho passaria a afirmar uma "
-        "causa que só o produto vivo conhece")
-
-
-# ---------------------------------------------------------------------------
 # A LINHA NA TELA — lida no Chrome, porque pixel não se deduz
 # ---------------------------------------------------------------------------
 CHROME = pathlib.Path("/usr/bin/google-chrome")
@@ -613,20 +530,23 @@ def pagina_no_chrome():
 def _medida(pg) -> dict:
     """O que a tela mostra — e o VÃO DO PAI, que é onde o pixel se paga.
 
-    **A ALTURA DA LINHA NÃO RESPONDE À PERGUNTA, e isto está medido nesta
-    bancada, em 04/09/2026.** Com as duas metades do `.ressalva` arrancadas de
-    `monta.CSS_FOLHA`, o Chrome continua devolvendo **0 px** para a linha vazia:
-    um bloco cujo único filho é um inline VAZIO não gera caixa de linha. Uma
-    régua que olhasse só a altura daria VERDE com a cura fora — foi o que
-    aconteceu na primeira redação deste arquivo, e é a mesma armadilha que
-    `test_a_linha_de_ressalva_so_nasce_quando_ha` já documenta para a peça
-    genérica.
+    **O QUE ELE MEDE CONTINUA VALENDO DEPOIS DE 07/09/2026**, e por isso a
+    função fica: o VÃO ACIMA e o VÃO ABAIXO da tira dentro da `.cel-leds`. Com a
+    tira centrada na faixa os dois são iguais; qualquer coisa posta na célula
+    que entre no fluxo desequilibra o par, e é isso que a asserção pega.
 
-    QUEM PAGA O PIXEL É O PAI: dentro de um flex o `margin-top:5px` da linha
-    **não colapsa**, então a linha escondida-mas-presente empurra a tira 2,5 px
-    para cima dentro da faixa. Por isso o que se mede aqui é o VÃO ACIMA e o VÃO
-    ABAIXO da tira na célula dela: com a peça, os dois são iguais; sem ela,
-    diferem pela metade do `margin-top`.
+    **A HISTÓRIA, porque ela explica a forma:** entre 04/09 e 07/09 esta célula
+    teve uma linha de ressalva debaixo da tira, e a pergunta era se a linha
+    VAZIA cobrava pixel. A altura dela não respondia — medido nesta bancada em
+    04/09/2026, com as duas metades do `.ressalva` arrancadas de
+    `monta.CSS_FOLHA` o Chrome devolvia **0 px** para a linha vazia, porque um
+    bloco cujo único filho é um inline vazio não gera caixa de linha. Uma régua
+    que olhasse a altura daria VERDE com a cura fora. Quem pagava o pixel era o
+    PAI: dentro de um flex o `margin-top:5px` da linha **não colapsa**.
+
+    A LINHA SAIU, e a lição não: medir o VÃO em vez da ALTURA é o que faz esta
+    régua continuar respondendo sobre a faixa, e não sobre a peça que já não
+    está lá.
     """
     return pg.evaluate("""() => {
       const m = document.querySelector('.miolo');
@@ -654,14 +574,15 @@ def test_no_repouso_a_linha_nao_cobra_pixel_e_a_aba_nao_rola(pagina_no_chrome):
     * **a linha vazia não empurra a tira** — a folha das dez a tira do fluxo por
       `:has(.nada)`, e sem isso o `margin-top:5px` dela desequilibra a célula.
       Ver `_medida`: a altura da linha NÃO serve para medir isto;
-    * o quadro CABE. A coluna cresceu 12px com a faixa da ressalva, e o teto
-      desta aba é medido: passar dele faz o miolo rolar por dentro, e quadro que
-      rola por dentro é conteúdo que ninguém sabe que existe.
+    * o quadro CABE. O teto desta aba é medido: passar dele faz o miolo rolar
+      por dentro, e quadro que rola por dentro é conteúdo que ninguém sabe que
+      existe.
 
     AS DUAS MORDIDAS, e as duas foram feitas:
 
-    * comente `.ressalva:empty` e `.ressalva:has(.nada)` em `monta.CSS_FOLHA` —
-      os vãos passam a `8.5 / 13.5` e a primeira asserção reprova;
+    * ponha qualquer coisa no fluxo da `.cel-leds` debaixo da tira — um
+      `<div>` de 10px basta — e os vãos deixam de bater: a primeira asserção
+      reprova. Foi assim que a linha de ressalva era medida até 07/09/2026;
     * suba `--r-leds` sem tirar de outra linha (80px) — a segunda reprova, e o
       quadro vai a 550 contra os 530 que a caixa do miolo oferece.
     """
@@ -670,92 +591,10 @@ def test_no_repouso_a_linha_nao_cobra_pixel_e_a_aba_nao_rola(pagina_no_chrome):
     for acima, abaixo in m["vaos"]:
         assert abs(acima - abaixo) <= 0.6, (
             f"a tira ficou descentrada na faixa dos LEDs ({acima} acima, "
-            f"{abaixo} abaixo) — a linha de ressalva vazia está no fluxo e "
-            f"cobra o `margin-top` dela em toda tela")
+            f"{abaixo} abaixo) — alguma coisa entrou no fluxo da célula "
+            f"debaixo da tira e cobra pixel em toda tela")
     assert not m["rola"], (
         f"a aba passou a rolar por dentro — o quadro mede {m['quadro']}px")
-
-
-def test_com_a_frase_a_linha_aparece_e_a_aba_continua_cabendo(pagina_no_chrome):
-    """E o outro lado: com ressalva ela nasce, e o orçamento aguenta.
-
-    A frase é escrita como o PILOTO a escreve — `innerHTML` no `data-campo`, que
-    é o alvo `html` — e não com um `display:block` de mentira: medir o mecanismo
-    em vez do caminho real deixaria passar uma linha que o produto nunca
-    consegue acender.
-
-    E O LUGAR SEM DONO ENTROU NA CONTA — 07/09/2026, com a função única do
-    `aba04.py`: a linha de ressalva passou a nascer nos QUATRO lugares, e não
-    só nos dois conectados. Até aqui esta régua escrevia a frase em TODAS as
-    linhas e cobrava altura de todas, porque só havia duas e as duas tinham
-    dono. Agora há quatro, e escrever ressalva num lugar vazio é um estado que
-    o produto **não produz**: `pacotes.apagar_os_lugares_sem_dono` escreve
-    TRAVESSÃO em todo campo de um lugar sem dono, e a chave da ressalva só é
-    montada para quem tem dono (`a04_iluminacao`, `ENDERECO_DA_RESSALVA`).
-
-    ENTÃO A RÉGUA PASSA A SIMULAR O PRODUTO, em duas metades — e a segunda é a
-    que morde, porque ela é nova:
-
-    * **com dono, a frase acende.** É a D-02 de sempre.
-    * **um lugar que GANHA dono acende a dele.** O piloto vira
-      `data-conectado` nos dois sentidos (passos `1b` e `1c`), e é só isso que
-      ele vira: a classe `.vazia` é fato de NASCIMENTO e ninguém a tira nunca.
-      Uma folha que esconda a ressalva por `.vazia` — em vez de por
-      `[data-conectado="nao"]` — deixa o P3 mudo para sempre, inclusive depois
-      de ele chegar. Foi essa a escolha que esta metade guarda.
-
-    A MORDIDA: tire a `.cel-leds` do gerador e ponha a ressalva como oitava
-    faixa da grade; a penúltima asserção reprova, porque a faixa nova cobra o
-    `--r-passo` inteiro e o quadro passa do teto. Para a metade nova, troque
-    `[data-conectado="nao"]` por `.vazia` na regra da ressalva do `aba04.py`.
-    """
-    pg = pagina_no_chrome
-    antes = _medida(pg)
-    # Como o produto faz: a ressalva vai para quem TEM dono.
-    acesas = pg.evaluate("""() => {
-      let n = 0;
-      for (const raiz of document.querySelectorAll('.ctrl[data-conectado="sim"]'))
-        for (const el of raiz.querySelectorAll('[data-campo="luz-ressalva"]')) {
-          el.innerHTML = 'A Steam tem este controle aberto'; n += 1;
-        }
-      return n;
-    }""")
-    pg.wait_for_timeout(120)
-    depois = _medida(pg)
-
-    assert acesas, "nenhuma coluna conectada tem linha de ressalva"
-    with_dono = pg.evaluate("""() => Array.from(
-      document.querySelectorAll('.ctrl[data-conectado="sim"] .ressalva'))
-      .map(e => Math.round(e.getBoundingClientRect().height))""")
-    assert min(with_dono) > 0, (
-        "a frase entrou e a linha continuou com altura zero — a folha a esconde "
-        "por engano, e a razão do tracejado volta a viver só no `title`")
-    assert depois["colunas"] == antes["colunas"], (
-        f"a coluna mudou de altura com a frase ({antes['colunas']} → "
-        f"{depois['colunas']}) — as divisórias das cinco colunas deixam de "
-        f"cair no mesmo y, que é o que ela mandou arrumar em 30/08")
-    assert not depois["rola"], "com a ressalva na tela a aba passou a rolar"
-
-    # E A METADE QUE MORDE: o lugar vazio ganha dono, como no passo `1c`.
-    ganhou = pg.evaluate("""() => {
-      const raiz = document.querySelector('.ctrl[data-conectado="nao"]');
-      if (!raiz) return null;
-      raiz.dataset.conectado = 'sim';
-      raiz.classList.remove('off');
-      for (const el of raiz.querySelectorAll('[data-campo="luz-ressalva"]'))
-        el.innerHTML = 'A Steam tem este controle aberto';
-      return raiz.getAttribute('data-controle');
-    }""")
-    assert ganhou, "a mesa do desenho não tem nenhum lugar vazio para reabrir"
-    pg.wait_for_timeout(120)
-    alt = pg.evaluate("""(pref) => Math.round(document.querySelector(
-      '[data-controle="' + pref + '"] .ressalva').getBoundingClientRect().height)""",
-                      ganhou)
-    assert alt > 0, (
-        f"o lugar {ganhou} ganhou um controle e a razão do tracejado dele "
-        f"continuou invisível — a folha o esconde por uma marca que o piloto "
-        f"não tira. `.vazia` é fato de nascimento; quem vira nos dois sentidos "
-        f"é `data-conectado`")
 
 
 # ---------------------------------------------------------------------------
