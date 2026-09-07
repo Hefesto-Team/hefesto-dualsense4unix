@@ -229,9 +229,9 @@ def _prosa_do_python(texto: str) -> dict[int, list[tuple[int, int]]]:
     faixas: dict[int, list[tuple[int, int]]] = defaultdict(list)
     try:
         for ficha in tokenize.generate_tokens(io.StringIO(texto).readline):
-            if ficha.type == tokenize.STRING and not ficha.string.lstrip("rbfuRBFU")[
-                :3
-            ] in ('"""', "'''"):
+            if (ficha.type == tokenize.STRING
+                    and ficha.string.lstrip("rbfuRBFU")[:3]
+                    not in ('"""', "'''")):
                 continue
             if ficha.type not in (tokenize.COMMENT, tokenize.STRING):
                 continue

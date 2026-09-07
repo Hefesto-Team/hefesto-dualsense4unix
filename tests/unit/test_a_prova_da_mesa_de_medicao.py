@@ -1171,3 +1171,63 @@ def test_as_21_da_bancada_se_escolhem_num_corte_so(pw, lar, mentira) -> None:
             "a página não diz que agora são as do roteiro")
         pg.close()
 
+
+def test_a_espera_longa_nao_prende_ela_na_tela(pw, lar, mentira) -> None:
+    """*"sinceramente não entendi o que diabos é pra fazer aqui"* — 07/09/2026,
+    ela olhando a linha 10 da bancada.
+
+    A tela mostrava **19:55 correndo em 52 px** e, logo acima, a ordem *"tire os
+    olhos da tela e ponha nos controles"*. Vinte minutos parada diante de um
+    cronômetro que ela não deve olhar — a instrução contradizia o próprio
+    instrumento que a dava.
+
+    SÃO DUAS ESPERAS, e a régua cobra que a tela as trate como duas: a curta é
+    o gesto acontecendo, e ela fica de pé com o controle na mão; a longa é ela
+    sair e voltar. A régua não digita o limiar — pergunta ao módulo.
+    """
+    with _Servidor(lar, mentira) as s:
+        pg = pw.new_page(viewport={"width": 1400, "height": 1050})
+        pg.goto(s.url)
+        pg.wait_for_selector(".ctl svg")
+        pg.wait_for_timeout(500)
+        limiar = pg.evaluate("() => ESPERA_LONGA")
+        assert limiar > 0, "o limiar da espera longa sumiu do módulo"
+
+        def espera(qual: str) -> dict[str, object]:
+            i = pg.evaluate(
+                "(l) => TESTES.findIndex(t => l === 'longa'"
+                "        ? t.segundos >= ESPERA_LONGA : t.segundos < ESPERA_LONGA)",
+                qual)
+            assert i >= 0, f"nenhum teste com espera {qual}"
+            pg.evaluate("(i) => ir(i, 1)", i)
+            pg.wait_for_timeout(400)
+            pg.evaluate("() => iniciar()")
+            pg.wait_for_timeout(700)
+            return pg.evaluate("""() => ({
+              titulo: document.querySelector('#titulo-da-espera').textContent,
+              recado_escondido: document.querySelector('#recado-da-espera').hidden,
+              relogio: parseFloat(getComputedStyle(
+                  document.querySelector('#relogio')).fontSize),
+              segundos: TESTES[atual].segundos,
+            })""")
+
+        longa, curta = espera("longa"), espera("curta")
+
+        # A LONGA MANDA SAIR, e diz quantos minutos
+        assert "volte" in longa["titulo"].lower(), longa
+        assert str(round(longa["segundos"] / 60)) in longa["titulo"], longa
+        assert not longa["recado_escondido"], (
+            "a espera longa não explica que ela pode sair — e é justamente o "
+            "que ela precisa saber")
+        # A CURTA MANDA OLHAR O APARELHO
+        assert "olhos" in curta["titulo"].lower(), curta
+        assert curta["recado_escondido"], (
+            "a espera curta ganhou o recado da longa — mandar sair da tela por "
+            "dez segundos é perder o gesto")
+        # E O RELÓGIO ENCOLHE quando deixa de ser o que ela olha
+        assert longa["relogio"] < curta["relogio"] / 2, (
+            f"o relógio da espera longa continua grande ({longa['relogio']}px "
+            f"contra {curta['relogio']}px) — ele volta a ser a coisa que ela "
+            f"olha por vinte minutos")
+        pg.close()
+

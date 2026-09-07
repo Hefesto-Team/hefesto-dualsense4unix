@@ -1558,6 +1558,10 @@ svg[data-colorway]:has([id$="-feat-bateria"].marcada) [id$="-lightbar"]
 
    O TETO SOBE JUNTO (190 → 250 px): com o traço resolvido, o que segurava o
    desenho pequeno deixou de existir, e o que ela precisa é ENXERGAR. */
+/* O RELÓGIO DA ESPERA LONGA ENCOLHE. Ele deixa de ser a coisa que ela olha e
+   vira o que é: uma referência ao lado do recado que importa. */
+.timer.discreto{font-size:var(--text-lg);opacity:.55;letter-spacing:.04em}
+#recado-da-espera{max-width:56ch;margin:var(--space-2xs) auto 0;text-align:center}
 .ctl svg{width:100%;max-width:250px;height:auto;display:block;margin:0 auto}
 /* O `!important` NÃO É PREGUIÇA, é a única saída: a folha que vem do mapa
    endereça o casco por ID (`#p1-corpo .peca`), e um id vence qualquer soma de
@@ -1972,8 +1976,28 @@ function pintar() {
    começa, e de novo a cada troca de controle nos testes de um por vez. Com o
    relógio preso dentro do `iniciar()`, o segundo controle começaria sem timer,
    e o timer é justamente o que dá a ela o tempo de tirar os olhos da tela. */
+/* ACIMA DE DOIS MINUTOS A ESPERA É OUTRA COISA, e a tela tem de dizer outra
+   coisa. Dois minutos é o limiar porque abaixo dele ela fica de pé com o
+   controle na mão — é o gesto acontecendo — e acima ela vai fazer outra coisa
+   da vida. O teste da bateria pede vinte. */
+const ESPERA_LONGA = 120;
+
 function contar(segundos) {
   if (tique) { clearInterval(tique); tique = null; }
+  const longa = segundos >= ESPERA_LONGA;
+  const min = Math.round(segundos / 60);
+  $('#titulo-da-espera').textContent = longa
+    ? `Anote agora, e volte aqui em ${min} minutos`
+    : 'Tire os olhos da tela e ponha nos controles';
+  const recado = $('#recado-da-espera');
+  recado.hidden = !longa;
+  if (longa) {
+    recado.textContent = 'Pode sair desta tela e fazer outra coisa — nada se '
+      + 'perde: o que você já escreveu está gravado. Quando voltar, clique em '
+      + '“já passou”. O relógio abaixo é só uma referência, não é preciso '
+      + 'olhá-lo.';
+  }
+  $('#relogio').classList.toggle('discreto', longa);
   let resta = segundos;
   const mostra = () => {
     const m = Math.floor(resta / 60), s = resta % 60;
@@ -2362,9 +2386,17 @@ def pagina(testes: list[Teste], gravado: dict[str, Any]) -> str:
       </details>
     </section>
 
+    <!-- DUAS ESPERAS, E ELAS NÃO SÃO A MESMA COISA — 07/09/2026, ela olhando
+         a linha 10: *"sinceramente não entendi o que diabos é pra fazer
+         aqui"*. A tela mostrava 19:55 correndo e mandava "tirar os olhos da
+         tela": vinte minutos parada diante de um cronômetro. O curto é para
+         ela OLHAR o aparelho enquanto o gesto acontece; o longo é para ela
+         SAIR e voltar. Um relógio gigante serve ao primeiro e insulta o
+         segundo. -->
     <section id="contagem" hidden>
-      <h3>Tire os olhos da tela e ponha nos controles</h3>
+      <h3 id="titulo-da-espera">Tire os olhos da tela e ponha nos controles</h3>
       <div class="timer" id="relogio">&mdash;</div>
+      <p id="recado-da-espera" class="cinza" hidden></p>
       <div class="rodape"><button id="pular-timer">já passou &rarr;</button></div>
     </section>
 
