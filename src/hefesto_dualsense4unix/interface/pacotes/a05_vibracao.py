@@ -23,7 +23,7 @@ existência dele, e a tela a carrega no `title`.
 """
 from __future__ import annotations
 
-import time
+import contextlib
 from typing import Any
 
 # O IMPORT É DE MÓDULO, e não de dentro da função — 01/09/2026. O
@@ -843,9 +843,9 @@ def _sem_marcacao(texto: str) -> str:
 #     rumble.passthrough  ('enabled',)            ← nenhum endereço
 #
 # Quem escolhe o controle é o ALVO DE OUTPUT do daemon, e o handler o congela
-# junto do par: `daemon/ipc_handlers.py:4795` grava `rumble_active_uniq =
+# junto do par: `daemon/ipc_handlers.py:4913` grava `rumble_active_uniq =
 # uniq_do_alvo_de_output(self.controller)`. Sem alvo escolhido o padrão é
-# BROADCAST (`ipc_handlers.py:4368`) — os quatro tremeriam, e a coluna, que é o
+# BROADCAST (`ipc_handlers.py:4486`) — os quatro tremeriam, e a coluna, que é o
 # endereço desta aba, estaria mentindo. Por isso `_mirar()` vem antes.
 #
 # A política é a exceção, e não é descuido meu: ela é DA MESA e o produto sabe
@@ -860,13 +860,17 @@ from . import gesto  # noqa: E402
 #: nasce declarada para que a próxima pessoa as ache com um `grep`.
 PAR_DE_TESTE = (160, 220)
 
-#: MEIO SEGUNDO, e a decisão dela de 30/08 preservou o comportamento e mudou só
-#: o rótulo: *"ali vai ser só Testar; se o user quiser parar vai clicar em
-#: Parar"* — e o gerador registra na mesma linha que *"o meio segundo continua
-#: sendo o que o gesto manda ao daemon; o que sai é a PROMESSA na tela"*
-#: (`aba05.py:582`). A dica publicada diz o mesmo: *"faz aquele controle tremer
-#: meio segundo"*.
-SEGUNDOS_DO_TESTE = 0.5
+#: O MEIO SEGUNDO SAIU EM 07/09/2026, com o pulso que ele contava.
+#:
+#: Ele era `SEGUNDOS_DO_TESTE = 0.5`, e a decisão dela de 30/08 tinha preservado
+#: o comportamento e mudado só o rótulo. Em 07/09 ela mudou o COMPORTAMENTO:
+#: *"o botão Testar tem que ficar em estado de ligado e ir refletindo os slicers
+#: ao vivo comigo. E se eu clicar em Parar ele para de testar"*. Sem pulso não
+#: há duração a declarar — quem termina o teste é o "Parar".
+#:
+#: A DICA DA TELA AINDA PROMETE MEIO SEGUNDO (`aba05.py`), e isso é dívida
+#: desta mesma leva: a frase publicada tem de deixar de falar em duração.
+_O_PULSO_SAIU = "07/09/2026 — o Testar virou estado; ver `_EM_TESTE`"
 
 #: O TESTE EM CURSO, para que o seguinte o CANCELE — 03/09/2026.
 #:
@@ -893,6 +897,86 @@ SEGUNDOS_DO_TESTE = 0.5
 #: também toma a vez (por isso ele conta). O último a falar sempre devolve a
 #: vibração ao jogo, que é a regra desta aba.
 _VEZ = [0]
+
+#: QUEM ESTÁ EM TESTE AGORA — o `uniq`, ou `""` quando ninguém está.
+#:
+#: O "TESTAR" VIROU ESTADO — pedido dela, 07/09/2026: *"o botão Testar tem que
+#: ficar em estado de ligado e ir refletindo os slicers ao vivo comigo. E se eu
+#: clicar em Parar ele para de testar"*.
+#:
+#: ATÉ AQUI ELE ERA UM PULSO de :data:`SEGUNDOS_DO_TESTE`: tremia meio segundo e
+#: devolvia a mão ao jogo sozinho. Meio segundo serve para responder *"o motor
+#: vive?"*; não serve para o que ela está fazendo, que é **ajustar** — arrastar
+#: a barra e sentir o que mudou, na mão, sem reclicar a cada arraste.
+#:
+#: UM SÓ, e não um por controle: `rumble.stop` não leva endereço (cai no alvo de
+#: output DE AGORA), então dois testes vivos ao mesmo tempo seriam dois donos
+#: para um silêncio só. Começar um teste no P2 encerra o do P1 — que é o que a
+#: mão dela faz de qualquer jeito, porque ela tem um par de mãos.
+_EM_TESTE = [""]
+
+
+def em_teste() -> str:
+    """O `uniq` em teste agora, ou `""`. Leitura pura, para a tela e a régua."""
+    return _EM_TESTE[0]
+
+
+def parar_o_teste() -> None:
+    """Apaga a marca do teste. O ÚNICO jeito de zerá-la de fora.
+
+    DUAS PORTAS PRECISAM DISTO, e as duas são risco de verdade:
+
+    * a suíte, que roda os gestos no MESMO processo — um "Testar" de um caso
+      deixava a marca ligada e o arraste de barra do caso seguinte mandava
+      vibração que ninguém pediu (medido em 07/09/2026, e a régua da barra
+      pegou: *"o gesto chamou ['rumble_motores_set', 'rumble_set_checked']"*);
+    * o controle que SAI da mesa com o teste ligado. Sem apagar a marca, o
+      próximo arraste de barra tentaria vibrar um aparelho que não está aqui —
+      e, pior, `rumble.stop` não leva endereço: o silêncio cairia em quem
+      estivesse mirado.
+    """
+    _EM_TESTE[0] = ""
+
+
+def _par_das_barras(ctx: Contexto, uniq: str) -> tuple[int, int]:
+    """`(weak, strong)` das barras DAQUELE controle, com o par de teste no zero.
+
+    A conta não é daqui: `last_strong` é o motor da ESQUERDA e `last_weak` o da
+    direita, e a inversão é a armadilha deste assunto
+    (`core/backend_pydualsense.py:3840`: `setLeftMotor(eff_strong)`). Extraída
+    para um lugar só porque agora TRÊS gestos a fazem — o "Testar" e os dois
+    que refrescam o teste vivo quando ela arrasta.
+    """
+    v = _do_vpad(ctx.state.get("rumble_ff") or {}, ctx.por_uniq(uniq).get("player"))
+    strong = int(v.get("last_strong") or 0)
+    weak = int(v.get("last_weak") or 0)
+    if not weak and not strong:
+        weak, strong = PAR_DE_TESTE
+    return weak, strong
+
+
+def _refrescar_o_teste(ctx: Contexto, p: Any, uniq: str) -> None:
+    """Reenvia o par ao controle em teste — é o "ao vivo" que ela pediu.
+
+    SÓ FALA SE O TESTE FOR DAQUELE CONTROLE. Arrastar a barra do P2 enquanto o
+    P1 é que treme não pode sacudir o P1 com o número do P2 — e também não pode
+    ligar o P2, porque ela não mandou testar o P2.
+
+    E É MUDO NO ERRO: quem arrasta a barra está gravando o perfil, e essa
+    gravação já respondeu. Uma recusa do reenvio (Modo Nativo, controle que
+    caiu) não pode transformar um "gravado" em erro na tela — o que ela perde é
+    o tremor, não o dado.
+    """
+    if not uniq or _EM_TESTE[0] != uniq:
+        return
+    # E O CONTROLE TEM DE ESTAR AQUI. Um teste ligado num controle que saiu da
+    # mesa mandaria o par para o alvo de output DE AGORA, que é outro aparelho.
+    if not any(str(c.get("uniq") or "") == uniq for c in ctx.mesa):
+        parar_o_teste()
+        return
+    weak, strong = _par_das_barras(ctx, uniq)
+    with contextlib.suppress(Exception):
+        p.rumble_set_checked(weak, strong)
 
 
 def _minha_vez() -> int:
@@ -961,7 +1045,7 @@ def _indice(ctx: Contexto, uniq: str) -> int:
     """A POSIÇÃO daquele controle na lista do daemon — o que o alvo espera.
 
     `controller.target.set` recebe `index` (0 = primário), **não** `uniq`:
-    `daemon/ipc_handlers.py:4137`. O número sai do próprio bloco `controllers`
+    `daemon/ipc_handlers.py:4196`. O número sai do próprio bloco `controllers`
     (`core/backend_pydualsense.py:5107`, `"index": idx`), que é a posição em
     `list(self._handles)` — o MESMO que cada linha do seletor da janela estável
     carrega (`app/actions/status_actions.py:1585`).
@@ -1034,7 +1118,7 @@ def _mirar(ctx: Contexto, o: dict[str, Any], p: Any) -> str:
     ISTO NÃO É ENFEITE: é a única forma de o botão da coluna falar com AQUELE
     controle, porque `rumble.set` e `rumble.stop` não têm parâmetro de endereço
     (ver o bloco no topo desta seção). O `rumble.stop` mira no mesmo lugar —
-    `ipc_handlers.py:4367` lê `uniq_do_alvo_de_output` antes de zerar.
+    `ipc_handlers.py:4485` lê `uniq_do_alvo_de_output` antes de zerar.
 
     É o MESMO par de passos da janela estável, só que sem seletor: lá o chip
     manda `controller.target.set` (`app/actions/status_actions.py:2452`) e a
@@ -1050,7 +1134,7 @@ def _mirar(ctx: Contexto, o: dict[str, Any], p: Any) -> str:
     esta função guardava.** O `chamar()` devolve `bool` e o retorno era jogado
     fora: com o daemon mudo — ou só lento além dos 250 ms do `_safe_call` —, a
     mira FALHAVA e o gesto seguia adiante para o `rumble.set`, **que sem alvo
-    escolhido é BROADCAST** (`ipc_handlers.py:4368`). O "Testar" da coluna do
+    escolhido é BROADCAST** (`ipc_handlers.py:4486`). O "Testar" da coluna do
     P2 sacudia os quatro controles, e a tela não dizia uma palavra. É o
     contrário do que o desenho promete — *"Testar faz aquele controle tremer
     meio segundo"* — e é pior que não fazer nada: faz na mesa inteira.
@@ -1301,6 +1385,10 @@ def _aplicar_a_forca(ctx: Contexto, p: Any, uniq: str,
     disco.
     """
     global_do_perfil, depois = _gravar_a_forca(ctx, p, uniq, policy, custom)
+    # E O TESTE VIVO SEGUE O DEGRAU. A força e a intensidade multiplicam as
+    # barras (`efetivo = degrau x barra`), então mudá-las com o teste ligado
+    # tem de chegar à mão dela igual ao arraste da barra — é o mesmo "ao vivo".
+    _refrescar_o_teste(ctx, p, uniq)
     # A COLUNA DE DEPOIS, lida PELA MESMA FUNÇÃO QUE PINTA. É o ponto inteiro:
     # se o que sai daqui não bate com o que ela pediu, é literalmente o que a
     # coluna vai mostrar no tique seguinte — não uma segunda cópia das regras do
@@ -1550,7 +1638,7 @@ def forca(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
     **FATO SUBSTITUÍDO, e era o parágrafo final deste docstring:** *"a política
     é da MESA, não da coluna … clicar 'Economia' na coluna do P2 muda os
     quatro"*. Era verdade enquanto o gesto chamava `rumble.policy_set`, que não
-    aceita `uniq` (`daemon/ipc_handlers.py:4953`). Ela decidiu **construir por
+    aceita `uniq` (`daemon/ipc_handlers.py:5071`). Ela decidiu **construir por
     controle**, e o caminho já existia inteiro pelo PERFIL — ver
     :func:`_gravar_a_forca`. O clique da coluna deixou de mexer nos vizinhos.
 
@@ -1723,60 +1811,58 @@ def motor(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
         raise RuntimeError(
             str(resposta.get("motivo")
                 or "o Hefesto não aceitou gravar esta barra, e não disse por quê"))
+    # E O TESTE VIVO SEGUE O ARRASTE — o "ao vivo" que ela pediu. Depois da
+    # gravação, nunca antes: o que ela sente tem de ser o que ficou gravado.
+    _refrescar_o_teste(ctx, p, uniq)
 
 
 @gesto("05-vibracao.html", "testar")
 def testar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
-    """"Testar": AQUELE controle treme meio segundo e a mão volta para o jogo.
+    """"Testar": AQUELE controle começa a tremer e FICA tremendo até ela parar.
 
-    QUATRO CHAMADAS, e a ordem é a da janela estável mais o alvo que esta aba
-    precisa:
+    PEDIDO DELA, 07/09/2026, com os quatro na bancada: *"o botão Testar tem que
+    ficar em estado de ligado e ir refletindo os slicers ao vivo comigo. E se eu
+    clicar em Parar ele para de testar"*.
+
+    ERA UM PULSO DE MEIO SEGUNDO, e o pulso responde a outra pergunta. *"O motor
+    vive?"* se responde com meio segundo; *"quanto é 40%?"* não — para isso a
+    mão precisa estar no controle enquanto a outra arrasta a barra. Com o pulso,
+    cada arraste custava um reclique e o que ela sentia era sempre o valor
+    ANTERIOR ao que estava vendo.
+
+    DUAS CHAMADAS, e o que sumiu é o terceiro e o quarto passo:
 
     1. `controller.target.set` — sem ele o par iria para os quatro (`_mirar`);
     2. `rumble_set_checked` — a mesma função do `on_rumble_test_500ms`
        (`app/actions/rumble_actions.py:1073`). A CHECADA, e não a crua: a
        recusa do Modo Nativo vem no CORPO da resposta, não como erro JSON-RPC
        (`app/ipc_bridge.py:597`), e foi por não a ler que a aba anunciou
-       "vibração travada" com o motor parado — NATIVO-RUMBLE-01;
-    3. `rumble_stop` e 4. `rumble_passthrough(True)` — os dois passos exatos do
-       `_rumble_test_stop` (`rumble_actions.py:1279-1280`). Parar sozinho fixa
-       `(0, 0)` e o laço do daemon re-afirma o silêncio: o jogo ficaria mudo
-       depois de um teste, que é a queixa "testei os motores e o jogo não vibra
-       mais" (SPRINT-GAME-RUMBLE-01). O passthrough é a segunda metade.
+       "vibração travada" com o motor parado — NATIVO-RUMBLE-01.
 
-    OS VALORES SÃO OS DAS BARRAS DAQUELA COLUNA, que é o que a tela promete:
-    *"Testar faz aquele controle tremer meio segundo com os valores das barras
-    daquela coluna"*. As barras saem de `_do_vpad` — `last_strong` é o motor da
-    ESQUERDA e `last_weak` o da direita, e a inversão é a armadilha deste
-    assunto (`core/backend_pydualsense.py:3791`: `setLeftMotor(eff_strong)`).
-    Com as duas em zero — ninguém pediu vibração ainda — vale o
-    :data:`PAR_DE_TESTE`, exatamente como a janela estável faz.
+    O `rumble_stop` E O `rumble_passthrough(True)` NÃO SUMIRAM DO PRODUTO —
+    mudaram de dono. Eles são o "Parar", e continuam sendo os dois passos
+    exatos do `_rumble_test_stop` (`rumble_actions.py:1279-1280`): parar sozinho
+    fixa `(0, 0)` e o laço do daemon re-afirma o silêncio, e o jogo ficaria mudo
+    depois de um teste (SPRINT-GAME-RUMBLE-01). **A mão só volta ao jogo quando
+    ela clicar em Parar** — que é exatamente o que ela pediu, e é o preço
+    honesto de um teste que fica ligado.
 
-    O MEIO SEGUNDO BLOQUEIA, e pode: o piloto roda todo gesto em thread
-    própria, de propósito (`hefesto_vivo.py:388`, medido com o `daemon.reload`
-    de 9,5 s). A janela estável usa `GLib.timeout_add` porque lá o gesto roda
-    no laço do GTK.
+    OS VALORES SÃO OS DAS BARRAS DAQUELA COLUNA, e agora eles seguem o arraste:
+    `_refrescar_o_teste` reenvia o par a cada mudança de barra, de intensidade e
+    de força, enquanto o teste for DESTE controle. Ver `_par_das_barras` para a
+    inversão `weak`/`strong`, que é a armadilha deste assunto.
     """
-    vez = _minha_vez()
+    _minha_vez()
     uniq = _mirar(ctx, o, p)
-    v = _do_vpad(ctx.state.get("rumble_ff") or {}, ctx.por_uniq(uniq).get("player"))
-    strong = int(v.get("last_strong") or 0)
-    weak = int(v.get("last_weak") or 0)
-    if not weak and not strong:
-        weak, strong = PAR_DE_TESTE
+    weak, strong = _par_das_barras(ctx, uniq)
     ok, motivo = _resposta(p.rumble_set_checked(weak, strong))
     if not ok:
         raise RuntimeError(motivo or "o Hefesto não está rodando — ligue na aba Sistema")
-    time.sleep(SEGUNDOS_DO_TESTE)
-    # QUEM PERDEU A VEZ NÃO FALA — ver :data:`_VEZ`. Sem esta linha, a thread
-    # deste teste manda `rumble.stop` no alvo de output DE AGORA, que já é o do
-    # clique seguinte: o segundo "Testar" morre antes da hora, e o culpado é o
-    # primeiro. Quem tomou a vez para e devolve o passthrough no fim do seu meio
-    # segundo, então a mão volta ao jogo de todo jeito.
-    if vez != _VEZ[0]:
-        return
-    p.rumble_stop()
-    p.rumble_passthrough(True)
+    # ELE FICA LIGADO — ver :data:`_EM_TESTE`. Não há `sleep` nem parada
+    # automática: quem para é ela, no "Parar". O meio segundo servia para
+    # responder "o motor vive?"; ela está AJUSTANDO, e ajustar pede o tremor
+    # ligado enquanto a mão arrasta a barra.
+    _EM_TESTE[0] = uniq
 
 
 @gesto("05-vibracao.html", "parar")
@@ -1803,7 +1889,7 @@ def parar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
 
     A CHECADA, e não a crua: dentro do Modo Nativo o `rumble.stop` não trava
     silêncio, ele SOLTA o par e diz que não alcança o motor que o jogo toca
-    pelo hidraw (`ipc_handlers.py:4421`). Anunciar "parada" ali seria prometer
+    pelo hidraw (`ipc_handlers.py:4480`). Anunciar "parada" ali seria prometer
     o que não aconteceu — NATIVO-RUMBLE-01, segunda metade. O motivo sobe como
     erro porque é o único canal que esta aba tem hoje; um recado de tela para
     ele ainda não existe, e está no relato.
@@ -1824,6 +1910,11 @@ def parar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
         # fazia o certo, com o mesmo `or`: o palpite é o RECURSO, não a resposta.
         raise RuntimeError(motivo or "o Hefesto não está rodando — ligue na aba Sistema")
     p.rumble_passthrough(True)
+    # O TESTE DESLIGA AQUI — ver `parar_o_teste`. Antes do `raise` de
+    # propósito: mesmo que o passthrough reclame, o teste ACABOU (o
+    # `rumble_stop` já fixou o silêncio), e deixar a marca ligada faria o
+    # próximo arraste de barra ressuscitar o tremor de um teste que ela parou.
+    parar_o_teste()
     if motivo:
         raise RuntimeError(motivo)
 
@@ -1883,13 +1974,16 @@ PISO_DA_ABA = 5
 #: A prova dele é um dublê FIEL — que devolve o par e o corpo com `status` —, e
 #: está em `tests/unit/test_a_aba_05_vibracao_fecha_as_linhas.py`.
 PROVAS = [
-    # QUATRO chamadas, e a ordem é o gesto inteiro: mirar, vibrar, calar,
-    # devolver. Invertidas, o passthrough soltaria antes de o silêncio ir.
+    # DUAS chamadas — mirar e vibrar —, e as duas que saíram viraram o "Parar".
+    # 07/09/2026: o "Testar" deixou de ser um pulso de meio segundo e virou
+    # ESTADO (`_EM_TESTE`), a pedido dela: *"o botão Testar tem que ficar em
+    # estado de ligado e ir refletindo os slicers ao vivo comigo. E se eu
+    # clicar em Parar ele para de testar"*. Um gesto que se desliga sozinho
+    # não pode ficar ligado — o `rumble_stop` e o `rumble_passthrough` mudaram
+    # de dono, não sumiram do produto.
     {"pagina": PAGINA, "gesto": "testar", "clique": {},  # (noqa-acento) chave do contrato
      "chama": [("chamar", ["controller.target.set"], {"index": 0}),
-               ("rumble_set_checked", [160, 220], {}),
-               ("rumble_stop", [], {}),
-               ("rumble_passthrough", [True], {})]},
+               ("rumble_set_checked", [160, 220], {})]},
     {"pagina": PAGINA, "gesto": "parar", "clique": {},  # (noqa-acento) chave do contrato
      "chama": [("chamar", ["controller.target.set"], {"index": 0}),
                ("rumble_stop_checked", [], {}),

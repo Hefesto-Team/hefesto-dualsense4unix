@@ -56,7 +56,7 @@ from typing import Any, NamedTuple
 #: que o produto não congela.
 ENDERECOS: dict[str, str] = {
     "hefesto-estado": "a matriz de três fontes de `daemon_actions._daemon_status`",
-    "hefesto-pausa": '`state_full["paused"]` (daemon/ipc_handlers.py:2081)',
+    "hefesto-pausa": '`state_full["paused"]` (daemon/ipc_handlers.py:2140)',
     "hefesto-troca-de-perfil": "`daemon_actions.descrever_deteccao_de_janela:123`",
     "hefesto-ambiente": "`app/actions/ambiente_na_tela.descrever_display_grafico:76`",
     "hefesto-autostart": "`systemctl --user is-enabled` da unidade normal",
@@ -73,7 +73,7 @@ ENDERECOS: dict[str, str] = {
 #: ``DONOS_DOS_GESTOS`` do piloto da aba Controles: o gesto chega ao Python, e
 #: quem o aplica está escrito aqui — inclusive quando a resposta é "ninguém".
 GESTOS: dict[str, str] = {
-    "retomar": "IPC `daemon.resume` (daemon/ipc_server.py:121 → ipc_handlers.py:2374). "
+    "retomar": "IPC `daemon.resume` (daemon/ipc_server.py:121 → ipc_handlers.py:2433). "
     "O ÚNICO chamador em src/ é `cli/app.py:421` — o terminal. A pausa fica "
     "gravada em disco e sobrevive a desligar o computador; até hoje só o "
     "terminal saía dela.",
@@ -305,7 +305,7 @@ def linha_da_pausa(state: object) -> Linha:
     """A pausa, que CHEGA À TELA PELA PRIMEIRA VEZ.
 
     ``state_full["paused"]`` é publicado desde sempre
-    (``daemon/ipc_handlers.py:2081``) e os dois únicos leitores em ``app/`` são
+    (``daemon/ipc_handlers.py:2140``) e os dois únicos leitores em ``app/`` são
     a aba inicial e a Emulação — **esta aba nunca o leu**.
 
     E o texto diz **o que a pausa é**: ela fica gravada em disco e sobrevive a

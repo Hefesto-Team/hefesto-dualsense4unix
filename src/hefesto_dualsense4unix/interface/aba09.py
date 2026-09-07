@@ -1113,7 +1113,7 @@ EM_VOO_ATUALIZAR = "Atualizando…"
 #: A DICA DIZ O QUE FOI MEDIDO, e não o que se supõe. O clique manda
 #: `daemon.reload` **sem `config_overrides`**, e do outro lado acontecem DUAS
 #: coisas: `daemon/lifecycle.py:1351-1352` derruba e sobe o leitor dos atalhos
-#: do controle, e `daemon/ipc_handlers.py:5472` reescreve os arquivos de
+#: do controle, e `daemon/ipc_handlers.py:5531` reescreve os arquivos de
 #: ambiente da Steam. Os ramos que reaplicariam mouse e teclado comparam `old`
 #: com `new` (`lifecycle.py:1353` e `:1361`) e **nunca disparam** — por isso a
 #: dica parou de prometer "reaplicar a configuração".
@@ -1837,7 +1837,7 @@ if "Não muda nada" in _ATRS:
         "nada'. É FALSO e está medido: o clique manda o IPC `daemon.reload`, e "
         "do outro lado o serviço derruba e sobe o leitor dos atalhos do "
         "controle (`daemon/lifecycle.py:1351-1352`) e reescreve os arquivos de "
-        "ambiente da Steam (`daemon/ipc_handlers.py:5472`, dentro de "
+        "ambiente da Steam (`daemon/ipc_handlers.py:5531`, dentro de "
         "`_handle_daemon_reload`, `:5431-5473`). Uma dica que nega o trabalho "
         "caro é a tela afirmando o contrário do que o produto faz.")
 
