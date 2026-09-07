@@ -41,6 +41,19 @@ sys.path.insert(0, str(RAIZ / "src/hefesto_dualsense4unix/interface"))
 
 BANCADA = RAIZ / "mockup/02-controles.html"
 
+#: QUANTOS LUGARES A BANCADA DESENHA — e o número vem do DONO da mesa do
+#: desenho (`monta.MESA`), nunca digitado. O `MESA` deste arquivo é outra coisa:
+#: é a mesa VIVA dela, com dois controles. Confundir os dois é o que faria esta
+#: régua cobrar quatro chips de uma fita que só desenha os conectados.
+def _do_desenho() -> tuple[int, int]:
+    import monta
+
+    return len(monta.MESA), len(monta.CONECTADOS)
+
+
+LUGARES, CHIPS = _do_desenho()
+
+
 #: MACs da faixa sintética da casa — há dois portões de anonimato nesta árvore.
 def _palavra_do_transporte(chave: str) -> str:
     """A palavra da TELA, LIDA do dono — nunca digitada aqui.
@@ -115,11 +128,29 @@ def ctx(a02):
 # 1. O DESENHO TEM ONDE O PRODUTO ESCREVER
 # ---------------------------------------------------------------------------
 def test_a_bancada_tem_os_quatro_enderecos_da_identidade():
-    """Sem eles o pacote não tem onde pousar, e a pintura escreve zero, calada."""
+    """Sem eles o pacote não tem onde pousar, e a pintura escreve zero, calada.
+
+    A CONTA DO CARD PASSOU DE 2 PARA 4 — 07/09/2026,
+    CONTROLES-O-LUGAR-VAZIO-TEM-ENDERECO-01, e ela não afrouxou: ficou maior.
+
+    Até 07/09 o lugar vazio era um cartão à parte, sem UM `data-campo` por
+    dentro — e `== 2` era o número que o DEFEITO produzia. Com os quatro
+    DualSense dela na mesa, o daemon publicava quatro e a tela mostrava dois:
+    o `peca` e o `via` do p3 e do p4 não existiam para o piloto pousar. Uma
+    régua que confere com a metade errada da mesa dá verde sobre ela.
+
+    O CHIP CONTINUA EM DOIS, e é a outra metade da correção: `monta.fita()` só
+    desenha chip de quem ESTÁ na mesa. Cobrar quatro ali faria a régua reprovar
+    no dia em que ela desligar um controle — o defeito irmão deste.
+    """
     doc = BANCADA.read_text(encoding="utf-8")
-    for campo in ("peca", "via", "fita-peca", "fita-via"):
-        assert doc.count(f'data-campo="{campo}"') == 2, (
-            f"`{campo}` não está nos DOIS controles conectados da bancada")
+    for campo in ("peca", "via"):
+        assert doc.count(f'data-campo="{campo}"') == LUGARES, (
+            f"`{campo}` não está nos {LUGARES} LUGARES da bancada — um lugar "
+            f"vazio sem endereço é dado dela chegando e não tendo onde pousar")
+    for campo in ("fita-peca", "fita-via"):
+        assert doc.count(f'data-campo="{campo}"') == CHIPS, (
+            f"`{campo}` não está nos {CHIPS} chips da fita do desenho")
 
 
 def test_a_bancada_nao_traz_cor_de_plastico_no_estilo_de_linha():

@@ -38,6 +38,19 @@ sys.path.insert(0, str(RAIZ / "src/hefesto_dualsense4unix/interface"))
 
 BANCADA = RAIZ / "mockup/02-controles.html"
 
+#: QUANTOS LUGARES A BANCADA DESENHA — e o número vem do DONO da mesa do
+#: desenho (`monta.MESA`), nunca digitado. O `MESA` deste arquivo é outra coisa:
+#: é a mesa VIVA dela, com dois controles. Confundir os dois é o que faria esta
+#: régua cobrar quatro chips de uma fita que só desenha os conectados.
+def _lugares_da_bancada() -> int:
+    import monta
+
+    return len(monta.MESA)
+
+
+LUGARES = _lugares_da_bancada()
+
+
 #: MACs da faixa sintética da casa — há dois portões de anonimato nesta árvore.
 UNIQ_CABO = "aa:bb:cc:00:00:01"
 UNIQ_RADIO = "aa:bb:cc:00:00:02"
@@ -120,10 +133,19 @@ def ctx(a02):
 # 1. O DESENHO TEM ONDE O PRODUTO ESCREVER
 # ---------------------------------------------------------------------------
 def test_a_bancada_tem_os_quarenta_e_seis_enderecos_da_leitura_viva():
-    """Sem eles a pintura escreve zero, calada — e foi o estado até hoje."""
+    """Sem eles a pintura escreve zero, calada — e foi o estado até hoje.
+
+    A CONTA PASSOU DE 2 PARA 4 — 07/09/2026,
+    CONTROLES-O-LUGAR-VAZIO-TEM-ENDERECO-01. Os quatro lugares são o MESMO
+    cartão desde hoje; até aqui o vazio não tinha endereço nenhum, e `!= 2` era
+    exatamente o número que o defeito produzia. Ela não afrouxou: passou a
+    cobrar os 46 nos QUATRO assentos, que é onde o dado dela pode chegar.
+    """
     doc = BANCADA.read_text(encoding="utf-8")
-    faltam = [c for c in DA_LEITURA_VIVA if doc.count(f'data-campo="{c}"') != 2]
-    assert not faltam, f"{len(faltam)} endereço(s) não estão nos DOIS cards: {faltam[:8]}"
+    faltam = [c for c in DA_LEITURA_VIVA
+              if doc.count(f'data-campo="{c}"') != LUGARES]
+    assert not faltam, (
+        f"{len(faltam)} endereço(s) não estão nos {LUGARES} lugares: {faltam[:8]}")
 
 
 def test_o_glifo_e_a_barra_declaram_o_alvo_que_o_piloto_precisa():
