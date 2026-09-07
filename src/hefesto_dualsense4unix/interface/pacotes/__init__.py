@@ -101,7 +101,7 @@ class Contexto:
     #: dele — três defeitos por uma lista só.
     #:
     #: **DE ONDE ELE VEM, e não é o `state_full`:** o daemon publica esta lista
-    #: SÓ em `controller.list {"external": true}` (`daemon/ipc_handlers.py:4600`),
+    #: SÓ em `controller.list {"external": true}` (`daemon/ipc_handlers.py:4659`),
     #: sob opt-in e fora do caminho quente, porque a enumeração de `/dev/input`
     #: mais a sonda de holders custa 10-40 ms e um subprocess. Quem pergunta é o
     #: piloto, no tique LENTO e com teto próprio (`hefesto_vivo._talvez_ler_os_externos`)

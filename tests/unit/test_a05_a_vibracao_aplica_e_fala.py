@@ -209,15 +209,25 @@ def test_a_mira_aceita_leva_o_par_ao_motor(pac) -> None:
     passthrough soltaria antes de o silêncio ir, e o jogo ficaria mudo depois
     de um teste (SPRINT-GAME-RUMBLE-01).
 
-    MORDIDA: apague o `p.rumble_passthrough(True)` do fim de
-    `a05_vibracao.testar` — este caso reprova, e o defeito que ele descreve é a
-    queixa "testei os motores e o jogo não vibra mais".
+    O "PARAR" GANHOU DUAS CHAMADAS EM 07/09/2026, e este caso as perdeu. O
+    `rumble_stop` e o `rumble_passthrough` eram o fim do PULSO de meio segundo;
+    o pulso saiu a pedido dela — *"o botão Testar tem que ficar em estado de
+    ligado (…) e se eu clicar em Parar ele para de testar"* — e os dois passos
+    mudaram de dono, não sumiram do produto. A queixa de origem (*"testei os
+    motores e o jogo não vibra mais"*) continua coberta: quem devolve a mão ao
+    jogo é o "Parar", e é o `test_o_testar_fica_ligado_e_so_o_parar_desliga`
+    que o cobra.
+
+    MORDIDA: apague o `_EM_TESTE[0] = uniq` do fim de `a05_vibracao.testar` — o
+    último `assert` reprova, e o botão volta a ser um pulso mudo.
     """
+    from pacotes import a05_vibracao as a05
+
+    a05.parar_o_teste()
     p = PonteDeMentira()
     _gesto(pac, "testar")(_ctx(pac), {"uniq": UNIQ, "controle": "p1"}, p)
 
-    assert p.nomes == ["chamar", "rumble_set_checked", "rumble_stop",
-                       "rumble_passthrough"], f"a ordem saiu {p.nomes}"
+    assert p.nomes == ["chamar", "rumble_set_checked"], f"a ordem saiu {p.nomes}"
     _, args, _kw = p.chamadas[1]
     assert args == (160, 220), (
         f"o par que foi ao motor é {args}, e o par de teste da casa é o mesmo "
@@ -225,6 +235,8 @@ def test_a_mira_aceita_leva_o_par_ao_motor(pac) -> None:
     assert p.chamadas[0][2] == {"index": 0}, (
         f"a mira foi para {p.chamadas[0][2]} — `controller.target.set` recebe "
         f"`index`, e o 0 é a posição deste controle na lista do daemon")
+    assert a05.em_teste() == UNIQ, "o Testar não ficou ligado neste controle"
+    a05.parar_o_teste()
 
 
 def test_o_controle_que_saiu_da_mesa_fala_sem_dizer_o_endereco(pac) -> None:

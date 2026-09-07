@@ -2505,7 +2505,7 @@ def automatico(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     automático nesse caso é deixar o jogo escolher."* Não é devolver a cor do
     número do jogador — é o Hefesto soltar o claim da barra.
 
-    `lightbar.reset` é exatamente isso, e o `ipc_handlers.py:4655` diz com
+    `lightbar.reset` é exatamente isso, e o `ipc_handlers.py:4714` diz com
     todas as letras: *"o 0x08 devolve o claim da lightbar ao host"*. O nome do
     método engana — o docstring dele começa chamando-o de INSTRUMENTO de
     medição — e foi por isso que eu quase o troquei por outra coisa. **O nome do

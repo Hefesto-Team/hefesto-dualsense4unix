@@ -1845,7 +1845,7 @@ DICA_MIC_MUDO = ("Calar no firmware do controle — apaga a luz vermelha do plá
 #
 # QUAL É O PREÇO, medido no protocolo e não suposto: o DualSense **não devolve**
 # o registrador de volume, então a primeira escrita faz o Hefesto assumir a
-# posse (`ipc_handlers.py:4600` — o daemon só publica `speaker` depois dela) e
+# posse (`ipc_handlers.py:4659` — o daemon só publica `speaker` depois dela) e
 # não há caminho de volta por esta tela. É menor que o do microfone porque nada
 # aqui tira o comando das mãos de quem está com o controle: não há botão de
 # alto-falante no plástico.
@@ -2244,7 +2244,7 @@ def bloco(c, *, bat, carga=None, glifos_on, l2, r2, touch, sticks,
                  sentido o liberar ali"*.
 
                  EU TINHA MEDIDO O CONTRÁRIO e ela me corrigiu num plano acima. O
-                 `mic.set {{muted: null}}` EXISTE (`ipc_handlers.py:4779`) e devolve a
+                 `mic.set {{muted: null}}` EXISTE (`ipc_handlers.py:4838`) e devolve a
                  posse ao `hid-playstation` — a minha objeção era que o botão tinha
                  dono. Mas ter dono não é ter SENTIDO: se o botão físico do controle
                  nunca deixa de comandar a interface, não há posse a devolver, e um

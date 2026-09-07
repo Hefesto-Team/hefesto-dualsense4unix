@@ -310,7 +310,7 @@ def lugares_da_mesa() -> int:
 #: *"independente do modo a mascara deve funcionar ali sempre."*
 #:
 #: O QUE FOI MEDIDO, e decide a forma desta cura: `gamepad.mask.set` grava
-#: SEMPRE (`ipc_handlers.py:6180`, sem gate de modo), `set_mask` persiste em
+#: SEMPRE (`ipc_handlers.py:6239`, sem gate de modo), `set_mask` persiste em
 #: `controller_masks.json` e `mascara_efetiva` é consultada na criação de todo
 #: gamepad virtual (`gamepad.py:2162`, `uinput_gamepad.py:419`). **Logo a
 #: escolha dela JÁ vale sempre que pode valer** — o que faltava não era motor,
@@ -1569,7 +1569,7 @@ def _rotulo_da_mascara(mascara: str | None) -> str:
     (`monta.MASCARAS`), que é tela — e tela é dela.
 
     **"Nintendo Pro" não tem entrada, e nunca terá enquanto o daemon recusar em
-    voz alta tudo o que não for `dualsense`/`xbox`** (`ipc_handlers.py:5090`).
+    voz alta tudo o que não for `dualsense`/`xbox`** (`ipc_handlers.py:5149`).
     O chip continua no cartão por ordem dela; apagado é a verdade sobre ele — e
     era exatamente o chip **Xbox 360** aceso no cartão do P2, com o daemon em
     `flavor=dualsense`, que esta função existe para apagar.
@@ -1854,7 +1854,7 @@ BOTOES_SEM_DONO: dict[str, str] = {
 #: uma por controle: `gamepad.emulation.set` recebe `flavor` e não recebe
 #: `uniq`"*. **As duas metades caíram no mesmo dia em que foram escritas**, e o
 #: próprio arquivo já dizia o contrário trinta linhas adiante: `gamepad.mask.set`
-#: nasceu em 03/09 recebendo `uniq` (`ipc_handlers.py:6180`), o registro
+#: nasceu em 03/09 recebendo `uniq` (`ipc_handlers.py:6239`), o registro
 #: `external_mask` guarda a escolha por APARELHO desde 15/08, e o gesto
 #: `mascara_do_controle` existe e é `@gesto`. Um botão listado como SEM DONO com
 #: o dono declarado no mesmo arquivo manda a próxima pessoa construir o que já
@@ -2360,7 +2360,7 @@ def reconectar(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
     o jogador cujo grab foi recusado ou cujo vpad morreu sem que `/dev/input`
     mudasse: o ciclo normal do poll loop só reenumera quando `/dev/input` muda,
     e um vpad morto pode esperar o próximo hotplug para sempre
-    (`ipc_handlers.py:5190`).
+    (`ipc_handlers.py:5249`).
 
     PASSO 2 — `identity.renumber`: compacta a numeração preservando a ordem
     relativa. **A ORDEM É A ENTREGA** e está escrita no botão antigo

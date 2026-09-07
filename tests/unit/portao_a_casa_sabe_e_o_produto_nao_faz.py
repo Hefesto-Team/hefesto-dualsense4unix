@@ -1168,6 +1168,31 @@ _NAO_E_PROMESSA: dict[str, str] = {
 #: No dia em que o caminho nascer, a entrada deixa de bater com a árvore e
 #: ``test_a_lista_de_lacunas_nao_envelhece_calada`` cobra que ela seja apagada.
 _SEM_CAMINHO_HOJE: dict[str, str] = {
+    # O TESTAR VIROU ESTADO E A TELA AINDA NÃO O LÊ — 07/09/2026.
+    #
+    # Pedido dela, com os quatro na bancada: *"o botão Testar tem que ficar em
+    # estado de ligado e ir refletindo os slicers ao vivo comigo"*. As DUAS
+    # metades entraram: o gesto fica ligado (`_EM_TESTE`) e as barras
+    # refrescam o tremor. A que falta é a TERCEIRA — o botão ACESO na tela.
+    #
+    # ONDE O CAMINHO SE PERDE: quem desenha o botão é `interface/aba05.py`, e
+    # quem publica campo por controle é `pacotes/__init__.py:normalizar`.
+    # Nenhum dos dois conhece o teste em curso, porque até hoje não havia
+    # "curso" nenhum — o gesto era um pulso de meio segundo. Fechar isto é
+    # acrescentar o campo ao pacote e o alvo `classe` ao botão, e é trabalho
+    # de tela: pede o navegador aberto, que é a regra desta casa.
+    #
+    # `parar_o_teste` NÃO ESTÁ AQUI de propósito: o gesto `parar` a chama, e
+    # ela tem caminho de produção. Só a LEITURA está órfã.
+    "interface/pacotes/a05_vibracao.py::em_teste":
+        "07/09/2026 — o botão 'Testar' aceso ainda não é publicado à tela. O "
+        "caminho se perde em dois pontos medidos: "
+        "`interface/pacotes/__init__.py:439` (a carga marca lugar VAZIO e "
+        "OCUPADO, e não tem campo para 'em teste') e "
+        "`interface/aba05.py:582` (o botão sai sem alvo `classe`, então nem "
+        "havendo campo a folha teria como vesti-lo). Fecha-se acrescentando o "
+        "campo à carga e o alvo ao gerador — trabalho de tela, com o navegador "
+        "aberto, que é a regra desta casa.",
     # AS DEZOITO DA SOM-QUE-SAI-01 (06/09/2026) — o motor do alto-falante
     # virtual nasceu INTEIRO e ÓRFÃO, e as duas coisas são de propósito.
     #

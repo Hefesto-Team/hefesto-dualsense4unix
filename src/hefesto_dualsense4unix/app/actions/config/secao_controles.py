@@ -13,7 +13,7 @@ DE ONDE VEM CADA COISA NA TELA
 -------------------------------
 
 * **os controles adotados** — `daemon.state_full`, que é o único lugar onde o
-  `player_slot` de um DualSense existe (`ipc_handlers.py:3058`); o
+  `player_slot` de um DualSense existe (`ipc_handlers.py:3117`); o
   `controller.list` devolve a lista sem ele;
 * **os que o Hefesto só vê** — `controller.list {external: true}`, que já traz o
   `player_slot` deles resolvido pelo registro do daemon;
@@ -32,7 +32,7 @@ DUAS CHAMADAS, E NUNCA NUM TIQUE
 
 Os tiques desta casa são de 100 ms, 500 ms e 2 s. Enumerar o `/dev/input`
 inteiro e sondar quem segura cada `hidraw` custa de 10 a 40 ms mais um
-subprocesso (`ipc_handlers.py:3679`), e nada disso muda entre dois quadros. A
+subprocesso (`ipc_handlers.py:3738`), e nada disso muda entre dois quadros. A
 leitura roda ao ENTRAR na aba, e só.
 """
 from __future__ import annotations

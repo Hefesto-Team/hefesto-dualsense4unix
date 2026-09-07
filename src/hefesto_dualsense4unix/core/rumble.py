@@ -146,7 +146,7 @@ def forca_do_global(
       não sabe o suficiente para afirmar nada.
 
     QUEM PERGUNTA PELA TELA TEM DE PASSAR A POLÍTICA **VIVA** — o
-    ``rumble_policy`` do ``state_full`` (`daemon/ipc_handlers.py:2864`), que é
+    ``rumble_policy`` do ``state_full`` (`daemon/ipc_handlers.py:2923`), que é
     o ``DaemonConfig.rumble_policy`` lido logo abaixo. A política do PERFIL não
     serve: `daemon/lifecycle.apply_profile_rumble_policy` deixa a política de
     origem MANUAL intocada quando o perfil não tem opinião, e aí as duas

@@ -1714,9 +1714,67 @@ class IpcHandlersMixin:
         if not renumbered:
             return {"ok": True, "renumbered": {}}
 
-        self._repintar_apos_renumeracao()
+        # DESPACHA E RESPONDE — ver `_despachar_repintura`. Segurar a resposta
+        # até o fim da repintura estourava os 250 ms do cliente e fazia a tela
+        # negar uma troca que aconteceu.
+        self._despachar_repintura("identity.renumber")
 
         return {"ok": True, "renumbered": renumbered}
+
+    def _despachar_repintura(self, de_onde: str) -> None:
+        """Manda repintar SEM segurar a resposta — RESPOSTA-QUE-CHEGA-TARDE-01.
+
+        Ela clicou em "Player 1" no Cosmic Red, a tela disse *"não consegui
+        trocar o número"* — e o controle trocou. Palavra dela, 07/09/2026:
+        *"não conseguiu trocar de numero mas trocou na vida real, esse aviso é
+        mentiroso"*.
+
+        A CONTA QUE EXPLICA: o cliente espera **250 ms**
+        (`app/ipc_bridge.py:88`), e até aqui o handler repintava ANTES de
+        responder — `coop.sync(force=True)`, o reassert dos quatro e o tique
+        dos externos, com três dos quatro por Bluetooth. Não cabe. O daemon
+        fazia o trabalho inteiro, certo, e a resposta chegava depois de a tela
+        parar de ouvir; o `_safe_call` devolvia `(False, None)` e a frase
+        genérica saía por cima de um sucesso.
+
+        A REGRA QUE ISSO DEIXA: *a resposta é sobre o que foi PEDIDO, não sobre
+        as consequências dele.* O número já trocou quando esta função é
+        chamada — `_set_number_locked` devolveu, sob lock, e é isso que o `ok`
+        afirma. A repintura é consequência: ela acontece, e o tique de 10 Hz da
+        tela a mostra chegando. Segurá-la dentro da resposta transformava um
+        efeito colateral lento em veredito.
+
+        BEST-EFFORT E COM LOG: uma repintura que falhe não pode derrubar o
+        handler nem desmentir o `ok` — o número trocou de qualquer jeito. Sem
+        laço de eventos (chamada síncrona, dublês da suíte), roda EM LINHA,
+        que é o comportamento anterior a esta cura.
+        """
+        try:
+            laco = asyncio.get_running_loop()
+        except RuntimeError:
+            self._repintar_apos_renumeracao()
+            return
+
+        def _no_fio() -> None:
+            try:
+                self._repintar_apos_renumeracao()
+            except Exception as exc:
+                logger.warning("repintura_apos_renumeracao_falhou",
+                               de_onde=de_onde, err=str(exc))
+
+        tarefa = laco.create_task(asyncio.to_thread(_no_fio))
+        # A REFERÊNCIA TEM DE SOBREVIVER: uma task só referenciada pelo laço
+        # pode ser coletada no meio (documentado no `asyncio`), e a repintura
+        # sumiria em silêncio — que é a mesma família do defeito que esta
+        # função cura. O conjunto nasce sob demanda porque isto é um MIXIN:
+        # ele não tem `__init__` próprio e cravar um aqui obrigaria toda classe
+        # que o usa a chamá-lo.
+        em_voo = getattr(self, "_repinturas_em_voo", None)
+        if em_voo is None:
+            em_voo = set()
+            self._repinturas_em_voo = em_voo
+        em_voo.add(tarefa)
+        tarefa.add_done_callback(em_voo.discard)
 
     def _repintar_apos_renumeracao(self) -> None:
         """As TRÊS repinturas de quem mexeu na fila de números. Nesta ordem.
@@ -1914,8 +1972,9 @@ class IpcHandlersMixin:
         if changed:
             # As MESMAS três repinturas do renumber, e o `coop.sync(force=True)`
             # que faltava nas duas — ver `_repintar_apos_renumeracao` para a
-            # medição no `/sys/class/leds` que provou a ordem.
-            self._repintar_apos_renumeracao()
+            # medição no `/sys/class/leds` que provou a ordem. DESPACHADAS, e
+            # não esperadas: ver `_despachar_repintura`.
+            self._despachar_repintura("identity.number.set")
 
         return {"ok": True, "number": numero, "changed": changed}
 

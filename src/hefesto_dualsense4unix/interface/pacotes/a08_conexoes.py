@@ -2454,7 +2454,7 @@ def dica_da_luz(via: str, nascimento: Any = None, mesa_suja: bool | None = None)
        que o daemon põe na conexão (`SINAL-NO-NASCIMENTO-01`). Só a condenação
        fala: ausência, `limpa` e `nao_sei` calam, cada um por um motivo medido
        no dono. O `nascimento` chega por controle no `state_full`
-       (`ipc_handlers.py:3526`) e pacote nenhum o lia.
+       (`ipc_handlers.py:3585`) e pacote nenhum o lia.
 
     **NENHUMA FRASE NASCE AQUI.** O que este arquivo faz é a junção — a mesma
     que `secao_controles._card_do_controle` faz do lado da janela estável — e a
@@ -3447,7 +3447,7 @@ def _pref_do_alvo(ctx: Contexto) -> str:
 
     **A CONVERSÃO É O PONTO INTEIRO, e ela tem duas ordens diferentes.** O
     daemon guarda `output_target_index`, que é a POSIÇÃO em `controllers`
-    ("0 = primário", `ipc_handlers.py:4340`); o desenho endereça por `pref`, que
+    ("0 = primário", `ipc_handlers.py:4399`); o desenho endereça por `pref`, que
     é a posição na mesa ORDENADA POR NÚMERO DE IDENTIDADE
     (`mesa_viva.mesa_do_estado:373`). As duas coincidem na mesa de um controle e
     divergem na primeira em que o primário não for o de menor número — é a mesma
@@ -3797,7 +3797,7 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
     #   perfil.rumble.policy   o DENOMINADOR do fator por peça
     #                          (`profiles/manager.py:1857`)
     #   state['rumble_policy'] o que MULTIPLICA no funil do motor
-    #                          (`daemon/ipc_handlers.py:2864` → `_effective_mult`)
+    #                          (`daemon/ipc_handlers.py:2923` → `_effective_mult`)
     #   maquina.json           o teto por CIMA da viva, com `min`
     #
     # As três são lidas UMA vez para as quatro linhas — ler dentro do laço
@@ -4310,7 +4310,7 @@ def _indice(ctx: Contexto, uniq: str) -> int | None:
     """A posição daquele controle em `controllers` — o que o daemon numera.
 
     **NÃO é o número do jogador.** `controller.target.set` pede `index`, "posição
-    em `controllers`, 0 = primário" (`ipc_handlers.py:4340`), e o próprio produto
+    em `controllers`, 0 = primário" (`ipc_handlers.py:4399`), e o próprio produto
     já separa as duas coisas: `status_actions._controller_target_rows:1579` ORDENA
     a lista pelo número de identidade e CARREGA em cada linha o `index` da
     enumeração, com o comentário dizendo por quê — *"a usuária clicaria no chip do
@@ -4381,7 +4381,7 @@ def alvo(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     fita do topo passa a apontar para ele."*
 
     `controller.target.set` é exatamente isso, e o handler diz com todas as
-    letras (`daemon/ipc_handlers.py:4441`): *"Com o alvo setado,
+    letras (`daemon/ipc_handlers.py:4500`): *"Com o alvo setado,
     lightbar/gatilhos/player-LED/rumble/mic-LED passam a mirar SÓ aquele
     controle"*. É o mesmo método que o seletor da GUI estável chama
     (`app/actions/status_actions.py:2453`).
@@ -4554,7 +4554,7 @@ def mic_existe(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     QUEM CONSOME, e é por isso que o clique vale AGORA: o
     `_handle_machine_declare` relê o disco, rebinda `daemon._maquina` e SOBE OU
     DESCE o subsystem `bt_mic` no mesmo pedido — a nota está no próprio handler
-    (`ipc_handlers.py:6476`, QUATRO-MICROFONES-01): *"o 'Aplicar' tem de VALER
+    (`ipc_handlers.py:6535`, QUATRO-MICROFONES-01): *"o 'Aplicar' tem de VALER
     agora"*. Sem essa parte, a escolha dela só valeria no próximo início do
     daemon.
 
@@ -5127,7 +5127,7 @@ def ignorar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
 # OS CINCO QUE GRAVAM SÃO **SEM ECO**, e isso foi MEDIDO em 02/09/2026, não
 # deduzido: as chaves de topo do `state_full` do daemon vivo são 47, e nenhuma
 # delas é `mapa` nem `maquina`. O caminho é `machine_declare` →
-# `_handle_machine_declare` (`daemon/ipc_handlers.py:6476`) → `maquina.json`, e
+# `_handle_machine_declare` (`daemon/ipc_handlers.py:6535`) → `maquina.json`, e
 # ali ele PARA. Nada volta pelo estado. Ver a nota do `SEM_ECO`, no fim deste
 # arquivo, para o que isso significa para quem lê a régua do piloto.
 

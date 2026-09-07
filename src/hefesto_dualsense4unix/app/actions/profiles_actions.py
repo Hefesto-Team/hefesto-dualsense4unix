@@ -958,7 +958,7 @@ def mensagem_do_salvar(
 
 # --- P2: o carimbo de ponte aparece NESTA aba ------------------------------
 # PERFIS-ABRE-O-QUE-GUARDA-01/§2.2/1 (24/08/2026). O daemon PUBLICA
-# `pontes_confirmadas` desde 19/08 (`daemon/ipc_handlers.py:1999`), com o
+# `pontes_confirmadas` desde 19/08 (`daemon/ipc_handlers.py:2058`), com o
 # comentário dizendo a intenção em letra: *"para a janela dizer 'este jogo já
 # sabe por onde entra'"*. Medido:
 #
@@ -2735,7 +2735,7 @@ class ProfilesActionsMixin(CaronaDoWrapperMixin):
 
         **Por que `daemon.status` e não o `state_full` que a janela já lê a cada
         tique:** o `state_full` TAMBÉM publica `pontes_confirmadas` desde a
-        BG-02 (`daemon/ipc_handlers.py:2524`, dentro de
+        BG-02 (`daemon/ipc_handlers.py:2583`, dentro de
         `_handle_daemon_state_full`), mas **atrás de um cache de 5 s**
         (`_PONTES_CONFIRMADAS_TTL_SEC`, `:189`) — porque a leitura crua abre
         CADA perfil do disco sob `FileLock` e o tique roda a 10-20 Hz. Quem

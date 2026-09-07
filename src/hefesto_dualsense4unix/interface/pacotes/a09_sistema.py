@@ -1775,7 +1775,7 @@ def retomar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
 #:
 #: E MANDAR CLICAR DE NOVO É SEGURO, medido: sem `config_overrides` o handler
 #: faz `replace(self.daemon.config)`, uma cópia de valor igual
-#: (`ipc_handlers.py:5462`). O segundo clique custa o mesmo que o primeiro e não
+#: (`ipc_handlers.py:5521`). O segundo clique custa o mesmo que o primeiro e não
 #: desfaz nada do que o primeiro possa ter feito.
 #:
 #: CONSTANTE, e não digitada dentro do gesto: a régua a LÊ daqui. Texto de tela
@@ -1792,12 +1792,12 @@ def atualizar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     O QUE ELE FAZ DE VERDADE, medido no fonte do daemon em 05/09/2026, e é
     MENOS do que "recarregar a configuração" dá a entender: o clique manda
     `daemon.reload` **sem `config_overrides`**, então `overrides` chega `{}`
-    (`daemon/ipc_handlers.py:5450`) e `new_cfg = replace(self.daemon.config)` é
+    (`daemon/ipc_handlers.py:5509`) e `new_cfg = replace(self.daemon.config)` é
     uma cópia de valor igual (`:5462`). Os dois ramos que reaplicariam mouse e
     teclado comparam `old` com `new` (`daemon/lifecycle.py:1353` e `:1361`) e
     **nunca disparam** — o registro sai com `keys_changed=[]` (`:1366-1370`).
     Duas coisas acontecem, e são estas: `lifecycle.py:1351-1352` derruba e sobe
-    o leitor dos atalhos do controle, e `ipc_handlers.py:5472` reescreve os
+    o leitor dos atalhos do controle, e `ipc_handlers.py:5531` reescreve os
     arquivos de ambiente que a Steam usa. **A dica da aba diz essas duas**
     (`interface/aba09.py`, da `ONDA5-09-01`), e esta é a medição que a sustenta.
 
@@ -1915,7 +1915,7 @@ def perfil_da_mesa(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     `ipc_bridge`. Não é uma segunda porta para o disco.
 
     E ELE PEGA NA HORA, sem reiniciar nada: o `_handle_machine_declare`
-    (`daemon/ipc_handlers.py:6476`) relê o `maquina.json` e **rebinda**
+    (`daemon/ipc_handlers.py:6535`) relê o `maquina.json` e **rebinda**
     `daemon._maquina`; o `_orcamento_declarado` (`core/rumble.py:167`) lê a
     fonte a cada pedido de vibração, e não uma cópia do boot. Está escrito lá
     com todas as letras: *"uma cópia feita no boot ficaria velha exatamente no

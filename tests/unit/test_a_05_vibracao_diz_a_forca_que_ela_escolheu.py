@@ -383,67 +383,109 @@ class _PonteDeMentira:
         self.chamadas.append("rumble.passthrough")
         return True
 
+    # OS DOIS QUE O "PARAR" E A BARRA PRECISAM — 07/09/2026, com o Testar
+    # virando estado. O dublê responde como a ponte real: a `_checked` devolve
+    # `(ok, motivo)` e a de barra devolve `(ok, corpo)` com `status`. Um dublê
+    # mais frouxo que a ponte é o defeito que esta casa mediu duas vezes.
+    def rumble_stop_checked(self, *_a, **_kw):
+        self.chamadas.append("rumble.stop")
+        return (True, None)
 
-def test_um_segundo_testar_cancela_o_primeiro(monkeypatch) -> None:
-    """Dois "Testar" seguidos: o primeiro CALA, e quem para é o segundo.
+    def rumble_motores_set(self, *_a, **_kw):
+        self.chamadas.append("rumble.motores.set")
+        return (True, {"status": "ok"})
 
-    O DEFEITO QUE ISTO FECHA é de endereço, não de contagem. ``rumble.stop``
-    não leva parâmetro de controle — ele cai no alvo de output DE AGORA
-    (``daemon/ipc_handlers.py``, ``uniq_do_alvo_de_output``). Sem a guarda, a
-    thread do primeiro teste acorda depois de o segundo já ter mirado a OUTRA
-    coluna, e o "Testar" do P2 morre meio segundo antes da hora — apagado pelo
-    clique do P1. É o M6 da janela estável (``_cancel_rumble_test_timer``),
-    que aqui não existia.
 
-    O ``sleep`` é substituído por um portão: o teste do meio-tempo acontece
-    DENTRO do meio segundo do primeiro, que é a única janela em que o defeito
-    existe. Sem isso a régua mediria dois gestos em sequência, que nunca se
-    atropelam.
+def test_o_testar_fica_ligado_e_so_o_parar_desliga() -> None:
+    """O "Testar" é ESTADO, não pulso — e quem o encerra é ela.
+
+    PEDIDO DELA, 07/09/2026: *"o botão Testar tem que ficar em estado de ligado
+    e ir refletindo os slicers ao vivo comigo. E se eu clicar em Parar ele para
+    de testar"*.
+
+    ESTA RÉGUA SUBSTITUI DUAS que mediam o mundo de ontem — o pulso de meio
+    segundo e o atropelo entre dois pulsos. As duas remendavam o `time.sleep`
+    do gesto, e o `sleep` saiu com o pulso: sem duração não há thread a
+    atropelar, e o `_VEZ` deixa de ser sobre quem acorda primeiro.
+
+    O QUE NÃO PODE ACONTECER, e é a metade que impede a cura de virar defeito:
+    o teste ligado para sempre. Um "Testar" que não solta o passthrough deixa o
+    jogo mudo — a queixa de origem desta aba (*"testei os motores e aí o jogo
+    não vibra mais"*, SPRINT-GAME-RUMBLE-01). Agora quem solta é o "Parar", e
+    esta régua cobra que ele solte.
+
+    MORDIDA: tire o `parar_o_teste()` do gesto `parar` — o último `assert`
+    reprova, e a marca fica ligada depois de ela mandar parar.
     """
     import pacotes
     from pacotes import a05_vibracao as a05
 
+    a05.parar_o_teste()
+    ctx, clique = _ctx(), {"uniq": UNIQS[0]}
+
+    p1 = _PonteDeMentira()
+    pacotes.gesto_da_pagina(PAGINA, "testar")(ctx, clique, p1)
+    assert p1.chamadas == ["controller.target.set", "rumble.set"], (
+        f"o Testar não pode parar sozinho: {p1.chamadas}")
+    assert a05.em_teste() == UNIQS[0], "o Testar não ficou ligado"
+
+    # UM SEGUNDO "TESTAR" NOUTRA COLUNA MUDA O DONO, e não deixa dois ligados:
+    # `rumble.stop` não leva endereço, então dois testes vivos seriam dois
+    # donos para um silêncio só.
+    p2 = _PonteDeMentira()
+    pacotes.gesto_da_pagina(PAGINA, "testar")(ctx, {"uniq": UNIQS[1]}, p2)
+    assert a05.em_teste() == UNIQS[1], "o segundo Testar não tomou o lugar"
+
+    # E O "PARAR" DESLIGA — o silêncio e a mão de volta ao jogo.
+    p3 = _PonteDeMentira()
+    pacotes.gesto_da_pagina(PAGINA, "parar")(ctx, {"uniq": UNIQS[1]}, p3)
+    assert p3.chamadas == ["controller.target.set", "rumble.stop",
+                           "rumble.passthrough"], p3.chamadas
+    assert a05.em_teste() == "", (
+        "o Parar não apagou a marca — o próximo arraste de barra "
+        "ressuscitaria o tremor de um teste que ela encerrou")
+
+
+def test_a_barra_so_refresca_o_controle_que_esta_em_teste() -> None:
+    """O "ao vivo": arrastar a barra reenvia o par — e só a quem está testando.
+
+    A OUTRA METADE do pedido dela: *"ir refletindo os slicers ao vivo comigo"*.
+    Antes, cada arraste custava um reclique no Testar, e o que ela sentia era
+    sempre o valor ANTERIOR ao que estava vendo.
+
+    E O REFRESCO É MIRADO: arrastar a barra do P2 enquanto o P1 é que treme não
+    pode sacudir o P1 com o número do P2, nem LIGAR o P2 — ela não mandou
+    testar o P2.
+    """
+    import pacotes
+    from pacotes import a05_vibracao as a05
+
+    a05.parar_o_teste()
     ctx = _ctx()
-    clique = {"uniq": UNIQS[0], "controle": "p1"}
-    primeira = _PonteDeMentira()
-    segunda = _PonteDeMentira()
 
-    # UMA VEZ SÓ: o segundo gesto também dorme, e sem esta trava ele chamaria o
-    # substituto de novo, sem fim. O que a régua mede é o ATROPELO, e um basta.
-    entrou: list[int] = []
-
-    def dorme_e_deixa_o_outro_passar(_s):
-        entrou.append(1)
-        if len(entrou) == 1:
-            # O SEGUNDO CLIQUE, no instante exato em que o primeiro dorme.
-            pacotes.gesto_da_pagina(PAGINA, "testar")(ctx, clique, segunda)
-
-    monkeypatch.setattr(a05.time, "sleep", dorme_e_deixa_o_outro_passar)
-    pacotes.gesto_da_pagina(PAGINA, "testar")(ctx, clique, primeira)
-
-    assert "rumble.stop" not in primeira.chamadas, (
-        f"o primeiro teste parou a vibração do segundo: {primeira.chamadas}")
-    assert primeira.chamadas.count("rumble.set") == 1, (
-        f"o primeiro teste não chegou a vibrar: {primeira.chamadas}")
-    assert segunda.chamadas[-2:] == ["rumble.stop", "rumble.passthrough"], (
-        f"quem tomou a vez não devolveu a mão ao jogo: {segunda.chamadas}")
-
-
-def test_um_testar_sozinho_para_e_devolve_ao_jogo(monkeypatch) -> None:
-    """A guarda NÃO pode deixar estado morto: sem atropelo, o teste fecha inteiro.
-
-    É a metade que impede a cura de virar defeito — um "Testar" que não solta o
-    passthrough deixa o jogo mudo, que é a queixa de origem desta aba
-    (*"testei os motores e aí o jogo não vibra mais"*, SPRINT-GAME-RUMBLE-01).
-    """
-    import pacotes
-    from pacotes import a05_vibracao as a05
-
-    monkeypatch.setattr(a05.time, "sleep", lambda _s: None)
+    # SEM TESTE LIGADO: a barra só grava.
     p = _PonteDeMentira()
-    pacotes.gesto_da_pagina(PAGINA, "testar")(_ctx(), {"uniq": UNIQS[0]}, p)
-    assert p.chamadas == ["controller.target.set", "rumble.set",
-                          "rumble.stop", "rumble.passthrough"], p.chamadas
+    pacotes.gesto_da_pagina(PAGINA, "motor")(
+        ctx, {"uniq": UNIQS[0], "lado": "e", "valor": "50"}, p)
+    assert "rumble.set" not in p.chamadas, (
+        f"a barra vibrou sem teste ligado: {p.chamadas}")
+
+    # COM O TESTE LIGADO NAQUELE CONTROLE: grava E reenvia.
+    pacotes.gesto_da_pagina(PAGINA, "testar")(ctx, {"uniq": UNIQS[0]},
+                                              _PonteDeMentira())
+    p = _PonteDeMentira()
+    pacotes.gesto_da_pagina(PAGINA, "motor")(
+        ctx, {"uniq": UNIQS[0], "lado": "e", "valor": "70"}, p)
+    assert "rumble.set" in p.chamadas, (
+        f"a barra não refrescou o teste vivo: {p.chamadas}")
+
+    # E A BARRA DO OUTRO não fala com o que está em teste.
+    p = _PonteDeMentira()
+    pacotes.gesto_da_pagina(PAGINA, "motor")(
+        ctx, {"uniq": UNIQS[1], "lado": "e", "valor": "70"}, p)
+    assert "rumble.set" not in p.chamadas, (
+        f"a barra do P2 mexeu no teste do P1: {p.chamadas}")
+    a05.parar_o_teste()
 
 
 # --------------------------------------------------------------------------

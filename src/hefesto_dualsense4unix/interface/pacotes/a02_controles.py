@@ -1070,7 +1070,7 @@ def rota_na_tela(entry: Any) -> str:
     valor vazio, e no alvo `classe` com `data-hef-quando` nenhum dos dois casa
     com `—`: os dois botões ficam apagados, que é o que a tela pode afirmar
     quando o daemon nunca publicou `speaker` para este controle — o estado real
-    de quem nunca recebeu um `speaker.set` (`ipc_handlers.py:4600`).
+    de quem nunca recebeu um `speaker.set` (`ipc_handlers.py:4659`).
 
     ELE TAMBÉM APAGA OS DOIS NAS ROTAS 0 E 1 (tudo no fone, mono no fone), e
     isso é de propósito: são rotas legítimas do protocolo que estes dois botões
@@ -2114,7 +2114,7 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
         # vazio, e daí em diante "não sei" é indistinguível de "solto".
         # Medido em 02/09/2026, com os dois controles dela ligados: só o
         # `is_primary` traz `inputs`; o outro vem `None`
-        # (`daemon/ipc_handlers.py:3513-3516`).
+        # (`daemon/ipc_handlers.py:3572-3516`).
         tem_leitor = isinstance(c.get("inputs"), dict)
         e = c.get("inputs") or {}
         a = c.get("audio") or {}
@@ -2132,7 +2132,7 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
         #
         # `None` = o daemon nunca publicou `speaker` para este controle, que é o
         # estado real de quem nunca recebeu um `speaker.set` — o registrador não
-        # se lê, só se escreve (`ipc_handlers.py:4600`).
+        # se lê, só se escreve (`ipc_handlers.py:4659`).
         sp_lido = speaker_do_entry(c)
         # A COR DA BARRA DE LUZ, pelo dono das CINCO situações. **Os DOIS
         # valores são usados**: o rótulo é o discriminador e a base é a cor.
@@ -2345,7 +2345,7 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
             # DOIS DEFEITOS, e os dois medidos na mesa dela em 02/09/2026, 16h:
             #
             #   1. `speaker.volume` é **0-255**, o registrador do protocolo
-            #      (`ipc_handlers.py:3664`, `:4799`). Com o valor vivo de hoje —
+            #      (`ipc_handlers.py:3723`, `:4799`). Com o valor vivo de hoje —
             #      **102** — este pacote emitia **"102%"** (para o vão
             #      `hidden`, ver o cabeçalho: não chegou aos olhos dela). Uma
             #      porcentagem acima de cem, e ela subiria a "255%" no talo, no
@@ -2361,7 +2361,7 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
             #      comando): `texto_volume(102, False)` = **"100 %"**;
             #   2. `sp.get('volume', 0)` transformava AUSÊNCIA em **zero**. O
             #      daemon só publica `speaker` depois do primeiro `speaker.set`
-            #      (`ipc_handlers.py:4600`) — antes dele a tela afirmava "0%"
+            #      (`ipc_handlers.py:4659`) — antes dele a tela afirmava "0%"
             #      sobre um alto-falante que ninguém mediu, que é o gêmeo exato
             #      do "Sem toque" logo abaixo. `speaker_do_entry` devolve `None`
             #      nesse caso, e `None` é o travessão.
@@ -2727,8 +2727,8 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
 #
 # O QUE TEM DONO, medido nos 39 métodos do `ipc_server` em 01/09/2026:
 #
-#   🎙  data-mudo="microfone"      `mic.set`      (ipc_handlers.py:4755)
-#   ♪   data-mudo="alto-falante"   `speaker.set`  (ipc_handlers.py:4589)
+#   🎙  data-mudo="microfone"      `mic.set`      (ipc_handlers.py:4814)
+#   ♪   data-mudo="alto-falante"   `speaker.set`  (ipc_handlers.py:4648)
 #   Sons do jogo  data-rota="jogo" `speaker.set`  com `rota`, o mesmo :4589
 #   Virtual / Nativo  data-mic-modo  `machine.declare` (ipc_handlers.py:5258)
 #
@@ -2898,7 +2898,7 @@ def _volume_conhecido(dele: dict[str, Any]) -> dict[str, Any]:
 
     ELE NÃO SE INVENTA, e a razão é do aparelho: o DualSense **não devolve** o
     registrador de volume, então `daemon.state_full` só publica a chave
-    `speaker` depois do primeiro `speaker.set` (`ipc_handlers.py:4600`). Mandar
+    `speaker` depois do primeiro `speaker.set` (`ipc_handlers.py:4659`). Mandar
     um número de palpite tomaria a posse com o valor errado.
 
     E MANDÁ-LO QUANDO SE SABE É O QUE A GUI ESTÁVEL FAZ, pela cura de
@@ -3301,10 +3301,10 @@ def mudo(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     o desenho não tem.
 
     **São métodos diferentes, e não é detalhe.** O `mic.set` é o MUDO NO
-    FIRMWARE (camada 3, `ipc_handlers.py:4755`): é o único que apaga a luz
+    FIRMWARE (camada 3, `ipc_handlers.py:4814`): é o único que apaga a luz
     vermelha do plástico, e a partir dele o botão físico do controle deixa de
     valer — é o que o `title` do desenho já promete. O `speaker.set` manda ZERO
-    ao alto-falante guardando o volume preferido (`ipc_handlers.py:4589`).
+    ao alto-falante guardando o volume preferido (`ipc_handlers.py:4648`).
     Trocar um pelo outro calaria a coisa errada.
 
     ALTERNAR EXIGE LER O ESTADO, e ele vem do daemon, nunca de memória nossa:
@@ -3413,7 +3413,7 @@ def mudo(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
         #
         # O QUE O DAEMON DESTA ÁRVORE RESPONDE, medido em 06/09/2026: o corpo
         # de `mic.canal.set` NÃO traz `por_uniq` — quem o traz é o
-        # `mic.volume.set` (`daemon/ipc_handlers.py:6058`). O ato do microfone
+        # `mic.volume.set` (`daemon/ipc_handlers.py:6117`). O ato do microfone
         # monta a resposta em `AtoDoMicrofone.como_corpo`
         # (`daemon/subsystems/hotkey.py:1385`), e lá o campo não existe. Então
         # `alvo_honrado` devolve `None` aqui, esta linha fica CALADA contra o
@@ -3466,7 +3466,7 @@ def mudo(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
         #
         # ISTO ERA DELEGADO AO DAEMON, e delegar não é travar: a linha abaixo
         # mandava `muted=True` sem volume e contava com a recusa do
-        # `ipc_handlers.py:5588` para não estragar nada. Recusa de longe é
+        # `ipc_handlers.py:5647` para não estragar nada. Recusa de longe é
         # recusa que depende do outro lado continuar recusando.
         #
         # A FRASE NÃO É A DO MOTOR, e a diferença está medida: `DICA_SPEAKER_
@@ -3490,7 +3490,7 @@ def mudo(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
         lido = speaker_do_entry(dele)
         # O VOLUME VAI JUNTO QUANDO SE SABE, e a razão é uma recusa do daemon,
         # não zelo: `speaker.set {muted}` sem volume conhecido é ERRO
-        # (`ipc_handlers.py:5588`), porque mudo como primeira escrita tranca o
+        # (`ipc_handlers.py:5647`), porque mudo como primeira escrita tranca o
         # alto-falante em zero e o próprio mudo não o solta. O desenho já apaga
         # o botão nesse estado (`alto_pode` do `aba02.py`); esta linha é a
         # segunda trava, para o clique que chegar mesmo assim.
@@ -3522,7 +3522,7 @@ def rota(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     *"o speaker do controle faz os barulhos da espada do Link enquanto na tela
     tem o som normal do jogo"*. É o `OUTPUT_PATH_SEL` = 2: canal esquerdo para o
     fone/TV, direito para o alto-falante do controle. O `speaker.set` leva a
-    `rota` (`ipc_handlers.py:5532`) e a GUI estável manda exatamente isto
+    `rota` (`ipc_handlers.py:5591`) e a GUI estável manda exatamente isto
     (`controller_card.py:4273`).
 
     "TODO O SOM DO PC" SÃO DUAS CAMADAS, E A SEGUNDA NÃO É IPC. O
@@ -3768,7 +3768,7 @@ def volume(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
 
     **E A FALTA DELES TRANCAVA O ♪.** O DualSense não devolve o volume do
     alto-falante, então o daemon só publica a chave `speaker` **depois** de
-    alguém ESCREVER um (`ipc_handlers.py:4600`); sem escritor nesta tela, o ♪
+    alguém ESCREVER um (`ipc_handlers.py:4659`); sem escritor nesta tela, o ♪
     recusava para sempre num controle cujo volume nunca foi ajustado por outro
     caminho — e a frase de recusa original mandava *"use o controle deslizante
     primeiro"*, sobre um deslizante que não existia. Este gesto é o escritor que
@@ -3820,7 +3820,7 @@ def volume(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
         # colapsa isso no mesmo `True` de um pedido honrado, e a tela pintava
         # o selo do card certo sobre um número que aquele controle nunca teve.
         #
-        # O CAMPO EXISTE DESDE 20/08 (`por_uniq`, `ipc_handlers.py:5536`) e a
+        # O CAMPO EXISTE DESDE 20/08 (`por_uniq`, `ipc_handlers.py:5595`) e a
         # janela ANTIGA já o lê (`controller_card:4443`). Quem não lia era esta.
         corpo = _corpo(p.mic_volume_set_detalhado(pedido, uniq=uniq))
         # `sem_fonte` TEM FRASE PRÓPRIA, e SÓ ele: os outros `status` continuam
@@ -3909,7 +3909,7 @@ def _como_o_produto_ve(ctx: Contexto, uniq: str) -> Any:
       mesma chave;
     * `adotado` — `True`, e é afirmação medida: o `state_full["controllers"]`
       sai do `describe_controllers` do controlador de DualSense
-      (`ipc_handlers.py:2567`), e cada entrada traz `lightbar_rgb`,
+      (`ipc_handlers.py:2626`), e cada entrada traz `lightbar_rgb`,
       `player_slot` e `vpad_backend`. Controle externo (8BitDo, Pro) não entra
       por essa porta — ele vem por `controller.list`, que esta aba não lê.
     """
@@ -4054,7 +4054,7 @@ METODOS: set[str] = set()
 #: sozinha que o gesto pegou.
 #:
 #: O `machine.declare` está **fora do `daemon.state_full` de propósito**, e o
-#: handler diz a razão (`ipc_handlers.py:5529`): *"aquilo é o tique de 20 Hz, e
+#: handler diz a razão (`ipc_handlers.py:5588`): *"aquilo é o tique de 20 Hz, e
 #: a declaração muda por gesto dela, não por quadro"*. Ele grava em disco
 #: (`maquina.json`), e a única confirmação é o `(ok, motivo)` da chamada — que é
 #: exatamente por que o gesto levanta com o motivo em vez de voltar calado.

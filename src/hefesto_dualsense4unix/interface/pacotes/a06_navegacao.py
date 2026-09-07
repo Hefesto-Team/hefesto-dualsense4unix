@@ -14,7 +14,7 @@ troca.
 FATO SUBSTITUÍDO (06/09/2026): esta linha dizia que o `ps_button_action` da
 config é *"o único pedaço ajustável"* e que *"método de IPC nenhum escreve"*.
 As duas metades caíram. **Escreve** — `daemon.reload` aceita `config_overrides`
-com qualquer campo do `DaemonConfig` (`ipc_handlers.py:5450`, a leitura dos
+com qualquer campo do `DaemonConfig` (`ipc_handlers.py:5509`, a leitura dos
 overrides) e aplica com `replace(config, **overrides)` + `reload_config`
 (`:5462-5463`); o que ele NÃO faz é gravar em disco, então a escolha morre no
 próximo start do daemon. E **deixou de ser o único ajustável**: desde a
@@ -2109,7 +2109,7 @@ def _recusa_do_teclado(resposta: Any) -> str:
 
     `keyboard.emulation.set` responde com o bloco `keyboard_emulation` inteiro —
     *"para a janela não precisar de uma segunda chamada só para saber se o
-    device subiu"* (`daemon/ipc_handlers.py:5279`). Quem o traduz é
+    device subiu"* (`daemon/ipc_handlers.py:5338`). Quem o traduz é
     `emulation_actions.descrever_teclado_emulado`, o mesmo dono da linha de
     estado desta aba.
 
@@ -2241,7 +2241,7 @@ def _velocidade(p: Any, o: dict[str, Any], campo: str,
 
     SEM `enabled` DE PROPÓSITO, e é a rota que o produto criou para isto: o
     handler manda o pedido sem `enabled` para `set_mouse_speed`
-    (`daemon/ipc_handlers.py:4970`), que atualiza a config e o device vivo **sem
+    (`daemon/ipc_handlers.py:5029`), que atualiza a config e o device vivo **sem
     start/stop e sem gravar o flag**. É o que impede um ajuste de velocidade de
     RELIGAR a emulação e matar o gamepad virtual — a regressão que o
     BUG-MOUSE-GUI-SYNC-01 (A4) fechou. O `_send_mouse_param_async` da GUI
@@ -2443,7 +2443,7 @@ def teclado(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
     da casa, não uma falha desta ligação:
 
     * "Só fora do jogo" → `enabled=True`; "Desativado" → `enabled=False`. O
-      handler (`daemon/ipc_handlers.py:5038`) só lê `enabled`, e ele é bool.
+      handler (`daemon/ipc_handlers.py:5097`) só lê `enabled`, e ele é bool.
     * "Só dentro do jogo" **não existe do outro lado**, e nem poderia: ele é o
       INVERSO de tudo o que o produto faz hoje.
 
@@ -3421,7 +3421,7 @@ SEM_GESTO = {
     # FATO AFINADO (terceira leva, 01/09/2026): esta entrada dizia que "método
     # de IPC nenhum escreve" o `ps_button_action`. Escreve — `daemon.reload`
     # aceita `config_overrides` com qualquer campo do `DaemonConfig`
-    # (`ipc_handlers.py:5450`). O que ele NÃO faz é gravar: o handler roda
+    # (`ipc_handlers.py:5509`). O que ele NÃO faz é gravar: o handler roda
     # `replace(config, **overrides)` e `reload_config(...)` e para aí
     # (`:5462-5463`), então a escolha morre no próximo start do daemon. E o
     # `ps_button_action` é do PS SOLO, não dos combos — a tabela desta tela é dos
