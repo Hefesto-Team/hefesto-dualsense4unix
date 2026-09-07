@@ -3269,6 +3269,55 @@ class PyDualSenseController(IController):
                 invalidar()
         return resultado
 
+    def repintar_o_cabo_por_sysfs(self) -> dict[str, bool]:
+        """Repinta a barra dos DualSense do CABO, ignorando o cache.
+
+        LIGHTBAR-O-CABO-FICOU-DE-FORA-01, achado por ela na bancada de
+        07/09/2026 com os quatro na mesa: *"o lightbar azul tá nos dois
+        controles. p1 e p2. cada controle deve ter um lightbar da sua cor
+        apenas"*.
+
+        O IRMÃO DESTE MÉTODO SÓ CONHECE O RÁDIO. `reescrever_lightbar_por_hidraw`
+        filtra por `_detect_transport(handle) == "bt"` — e está certo em
+        filtrar: o report cru do 0x31 é a única via que pinta por Bluetooth. O
+        do cabo é pintado pela CLASSE LED do kernel, e ninguém o repintava
+        depois que a mesa se renumerava. Medido: o Cosmic Red foi adotado
+        sozinho, ganhou o azul do lugar 1, e ficou azul depois de virar o
+        lugar 2 — ao lado do Galactic Purple, que é o lugar 1 de verdade.
+
+        E O CACHE É INVALIDADO ANTES, sempre. O `SysfsLeds` pula a escrita
+        idêntica à última desta instância (GUERRA-01 item 3), e é uma boa
+        regra — o reassert periódico deixa de martelar o firmware. Mas ela
+        mede a COR, não o NÚMERO: quando a mesa se renumera, a cor que este
+        controle deve ter mudou sem que a cor que ele TEM mudasse, e o cache
+        acerta a pergunta errada. O journal dela mostrou exatamente isso:
+        `lightbar_reassert_skip_cache rgb=(0, 0, 255)`.
+
+        Devolve ``{key: repintado?}``. Vazio = nenhum DualSense no cabo, ou
+        Modo Nativo — resposta, não erro.
+        """
+        with self._io_lock:
+            if self._output_mute:
+                logger.info("repintar_o_cabo_no_op_modo_nativo")
+                return {}
+            do_cabo = [
+                key for key, handle in self._handles.items()
+                if self._detect_transport(handle) != "bt"
+            ]
+            for key in do_cabo:
+                no = self._sysfs.get(key) if isinstance(self._sysfs, dict) else None
+                invalidar = getattr(no, "invalidate_cache", None)
+                if callable(invalidar):
+                    invalidar()
+        if not do_cabo:
+            return {}
+        # O REASSERT É O MESMO de sempre, e é de propósito: ele resolve o
+        # merge de cinco camadas e escreve pela classe LED. Uma escrita
+        # própria aqui seria a segunda verdade sobre a cor que o produto quer.
+        self.reassert_resolved_outputs()
+        logger.info("repintar_o_cabo_feito", quantos=len(do_cabo), keys=do_cabo)
+        return dict.fromkeys(do_cabo, True)
+
     def consumir_conexoes_bt_novas(self) -> int:
         """Quantas conexões novas pelo RÁDIO desde a última leitura, e zera.
 
