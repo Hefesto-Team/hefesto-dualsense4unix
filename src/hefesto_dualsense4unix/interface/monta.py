@@ -1481,7 +1481,19 @@ def folha_de_realce(var: str = "--realce", padrao: str = REALCE_PADRAO) -> str:
         f"{{fill:var({var},{padrao}) !important;"
         f"stroke:var({var},{padrao}) !important}}\n"
         f"svg[data-colorway] g.marcada.marcada"
-        f"{{color:var({var},{padrao}) !important}}"
+        f"{{color:var({var},{padrao}) !important}}\n"
+        # E O QUE NÃO TEM TINTA CONTINUA SEM TINTA, mesmo aceso. A `sem-tinta`
+        # é uma decisão dela de 27/08/2026 — *"Remove o circulo e Deixa só o
+        # Glifo do PS pra ser o Botão"* —, e o realce a atropelava: com o PS
+        # marcado nascia de volta o círculo que ela mandou tirar. Quem acende
+        # ali é o GLIFO, pelo `color` da linha acima, e ele continua acendendo.
+        #
+        # A conta da especificidade é apertada de novo: a regra de cima soma
+        # (0,3,3) e esta (0,4,2) — ganha por uma classe. Os dois `!important`
+        # empatam, então é a especificidade que decide, e por isso a
+        # `sem-tinta` precisa do `.marcada.marcada` repetido também.
+        f"svg[data-colorway] g.marcada.marcada .sem-tinta"
+        f"{{fill:none !important;stroke:none !important}}"
     )
 
 

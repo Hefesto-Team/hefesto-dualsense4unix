@@ -861,3 +861,262 @@ def test_a_pagina_abre_no_que_falta_e_o_medido_vem_pre_marcado(
             "confundiria o que o arquivo afirma com o que viu")
         pg.close()
 
+
+def _so_o_codigo(fonte: str) -> str:
+    """O fonte sem comentários e sem literais de texto.
+
+    Uma régua que varre o arquivo cru não distingue o que o código FAZ do que
+    o comentário DESCREVE — e nesta casa os comentários descrevem exatamente o
+    que não se pode fazer. `tokenize` faz a separação que a `str` não faz.
+    """
+    import io
+    import tokenize as _tk
+
+    fora = []
+    for tok in _tk.generate_tokens(io.StringIO(fonte).readline):
+        if tok.type in (_tk.COMMENT, _tk.STRING):
+            continue
+        fora.append(tok.string)
+    return " ".join(fora)
+
+
+def test_as_21_estao_nas_seis_secoes_do_roteiro() -> None:
+    """*"cadê as seções das 21?"* — 07/09/2026, ela olhando o seletor.
+
+    A especificação da mesa trazia seis seções desde 06/09 (§4) e a página as
+    ignorava: jogava as 21 numa gaveta só. A tabela mora no ROTEIRO, e a régua
+    cobra que ela seja lida de lá — não seis nomes digitados nesta página.
+    """
+    secoes = med.secoes_do_roteiro()
+    assert len(secoes) == 21, secoes
+    assert len(set(secoes.values())) == 6, sorted(set(secoes.values()))
+    das_21 = [t for t in med.todos_os_testes() if t.id.startswith("roteiro-")]
+    assert len({t.secao for t in das_21}) == 6, {t.secao for t in das_21}
+    assert all(t.secao.startswith("O roteiro ·") for t in das_21), (
+        [t.secao for t in das_21 if not t.secao.startswith("O roteiro ·")])
+    # E CADA UMA DAS SEIS TEM LINHA: uma seção vazia no seletor é uma gaveta
+    # que ela abre para nada.
+    for nome in set(secoes.values()):
+        assert any(nome in t.secao for t in das_21), nome
+
+
+def test_a_cor_se_le_do_aparelho_sob_o_comando_dela() -> None:
+    """*"A cor exige escrita mesmo. Mas ler uma vez, sob seu comando, é o que o
+    daemon faz. então por favor faz isso. é o que eu venho pedindo."*
+
+    A leitura é a ÚNICA escrita que esta página faz, e ela não se monta aqui:
+    `integrations.cor_do_plastico` é o dono, com uma função sem parâmetro para
+    o payload e outra que o confere byte a byte antes de sair — porque `0x80` é
+    a família em que `[1, 1]` RESETA o controle.
+
+    A RÉGUA NÃO ESCREVE NO APARELHO: ela prova que a página PERGUNTA AO DONO em
+    vez de montar o pedido, e que a leitura não roda sozinha.
+    """
+    fonte = pathlib.Path(med.__file__).read_text(encoding="utf-8")
+    assert "cor_do_plastico.ler_pelo_cabo" in fonte, (
+        "a mesa deixou de perguntar ao dono da leitura")
+    # A RÉGUA LÊ O CÓDIGO, NÃO A PROSA — e esta linha é a cicatriz de 07/09:
+    # a primeira versão varria o arquivo inteiro e reprovou no COMENTÁRIO que
+    # avisa para não montar o pedido, porque ele cita o byte que descreve. É a
+    # mesma armadilha do `BOOTSTRAP` de 05/09, e ela não é de digitação: um
+    # aviso escrito bem é indistinguível do defeito para quem varre texto cru.
+    codigo = _so_o_codigo(fonte)
+    for proibido in ("montar_pedido", "0x80", "SET_FEATURE", "ioctl",
+                     "HIDIOCSFEATURE"):
+        assert proibido not in codigo, (
+            f"a mesa passou a montar o pedido ela mesma (`{proibido}`) — a "
+            f"trava do byte tem UM dono, e não é esta página")
+    # E NÃO RODA SOZINHA: a única chamada está atrás da rota do POST.
+    corpo = fonte.split("def ler_a_cor_no_aparelho", 1)[1]
+    chamadas = corpo.count("ler_a_cor_no_aparelho()")
+    assert chamadas == 1, (
+        f"`ler_a_cor_no_aparelho` é chamada {chamadas} vezes — ela escreve no "
+        f"aparelho, e escrever tem de ser ato dela, uma vez por clique")
+    assert 'caminho == "/ler-cor"' in fonte
+
+
+def test_a_borda_do_cartao_e_a_cor_do_plastico(pw, lar, mentira) -> None:
+    """*"a borda de cada controle deve ter a borda na cor do model"*.
+
+    E o PAPEL não pode cobri-la: a primeira volta pôs um `outline` roxo em quem
+    devia reagir, e os quatro cartões ficavam roxos — a cor do plástico, que é
+    o que ela usa para casar a tela com o controle na mão, sumia da moldura.
+    """
+    with _Servidor(lar, mentira) as s:
+        pg = pw.new_page(viewport={"width": 1280, "height": 1000})
+        alvo = next(t for t in _testes_da_pagina(s.url)
+                    if med.PAPEL_REAGE in t["papeis"].values())
+        pg.goto(s.url + "#" + alvo["id"])
+        pg.wait_for_selector(".ctl svg")
+        pg.wait_for_timeout(400)
+        bordas = pg.eval_on_selector_all(
+            ".ctl", "es=>es.map(e=>getComputedStyle(e).borderColor)")
+        assert len(set(bordas)) == 4, (
+            f"os quatro cartões têm a mesma borda: {bordas} — a cor do "
+            f"plástico não chegou à moldura")
+        # e ela é a COR DA CASCA daquele modelo, perguntada ao dono
+        import monta
+        cores = pg.eval_on_selector_all(
+            ".ctl svg", "es=>es.map(e=>e.getAttribute('data-colorway'))")
+        for borda, colorway in zip(bordas, cores, strict=True):
+            esperado = monta.cor_da_zona(colorway, "casca-solida")
+            r, g, b = (int(x, 16) for x in
+                       (esperado[1:3], esperado[3:5], esperado[5:7]))
+            assert borda == f"rgb({r}, {g}, {b})", (colorway, borda, esperado)
+        pg.close()
+
+
+def test_a_peca_em_foco_acende_como_no_mapa_do_controle(pw, lar, mentira) -> None:
+    """*"as bordas ou coisas a serem observadas ficam com o foco o mesmo que
+    temos no mapa dos controles (…) touchpad lightbar e afins tudo isso também,
+    fora motor e gatilhos tal como é no mapa"*.
+
+    O mapa acende a peça em foco em `--pink`, e é o rosa que ela já associa a
+    "olhe aqui" em toda a casa. A régua vai a peça por peça — incluindo as
+    OCULTAS (motores, sensores, bateria), que são as que somem quando alguém
+    mexe na folha de realce sem saber que elas existem.
+    """
+    with _Servidor(lar, mentira) as s:
+        pg = pw.new_page(viewport={"width": 1280, "height": 1000})
+        pg.goto(s.url)
+        pg.wait_for_selector("#desenhos svg")
+        rosa = pg.evaluate(
+            "() => { const s = document.createElement('span');"
+            " s.style.color = 'var(--color-pink)'; document.body.appendChild(s);"
+            " const c = getComputedStyle(s).color; s.remove(); return c; }")
+        for peca in ("touchpad", "lightbar", "l2", "feat-rumble-esquerdo",
+                     "feat-giroscopio", "mic", "alto-falante"):
+            i = pg.evaluate(
+                "(p) => TESTES.findIndex(t => t.pecas.some(x => x[0] === p))", peca)
+            assert i >= 0, f"nenhum teste acende `{peca}`"
+            pg.evaluate("(i) => ir(i, 1)", i)
+            pg.wait_for_timeout(700)
+            medido = pg.evaluate("""(p) => {
+              const g = document.querySelector(`#p1-${p}`);
+              if (!g) return null;
+              const f = g.querySelector('path,circle,rect,ellipse,polygon');
+              return {op: getComputedStyle(g).opacity,
+                      fill: f ? getComputedStyle(f).fill : null};
+            }""", peca)
+            assert medido, f"`{peca}` não está no desenho"
+            assert medido["fill"] == rosa, (peca, medido)
+            assert float(medido["op"]) == 1.0, (
+                f"`{peca}` acende meio transparente ({medido['op']}) — meia "
+                f"instrução")
+        pg.close()
+
+
+def test_a_folha_do_desenho_vem_do_mapa_do_controle() -> None:
+    """*"e cara o contorno não tá pintado (…) abra o playwright e mude o tipo
+    de controle no mapa dos controles e veja a diferença"* — 07/09/2026.
+
+    Ela estava certa duas vezes. O desenho é DE LINHA, e quem dá cor à linha é
+    o `stroke` — a folha dos 28 pinta as ZONAS, e o contorno vivia numa segunda
+    folha que só existia dentro do `mapa-do-controle.html`. A mesa emitia o
+    mesmo SVG e não pintava nada.
+
+    A CURA NÃO É COPIAR, é LER: `folha_do_desenho` vai à página que é dona das
+    regras e reescreve só o endereço. A régua cobra as duas metades — que as
+    regras venham de lá, e que as VARIÁVEIS venham junto (a primeira volta
+    trouxe `fill:var(--led-apagado)` sem o `--led-apagado`, e os cinco LEDs de
+    jogador ficaram pretos).
+    """
+    folha = med.folha_do_desenho(["p1", "p2"])
+    assert "stroke:var(--z-casca-solida)" in folha, (
+        "a folha do desenho perdeu o contorno na cor do plástico")
+    # AS DUAS QUEIXAS DELA, cada uma com a regra que a responde
+    assert ".sem-tinta{fill:none !important" in folha.replace(" ", " "), (
+        "sem a `sem-tinta` o círculo do PS volta — *\"o do PS não tem esse "
+        "círculo no meio\"*")
+    # AS VARIÁVEIS VIAJAM JUNTO
+    for var in ("--led-apagado", "--led-aceso", "--luz-apagada"):
+        assert f"{var}:" in folha, (
+            f"`{var}` é usada e não é declarada — um valor que não resolve não "
+            f"herda o de trás, cai no preto")
+    # E O ENDEREÇO É O DESTA PÁGINA, não o do mapa: quatro desenhos na mesma
+    # página só não colidem porque cada um leva o prefixo do seu posto.
+    assert "#p1-corpo" in folha and "#p2-corpo" in folha, folha[:400]
+    assert "mp-" not in folha, "sobrou endereço do mapa na folha da mesa"
+    # O QUE NÃO PODE VIR: o realce de LÁ, cujo gatilho é o mouse. Aqui quem
+    # manda acender é o roteiro.
+    assert ":hover" not in folha, "veio o realce do mapa, e ele é do ponteiro"
+
+
+def test_o_desenho_da_mesa_pinta_o_contorno_como_o_mapa(pw, lar, mentira) -> None:
+    """O contorno, medido: cor do plástico e ESPESSURA que se enxerga.
+
+    A cor sozinha não bastava, e a foto provou: o `stroke-width:.42` vem em
+    unidades do `viewBox` (116,68 de largura). O mapa desenha o SVG com 1160 px
+    e o traço sai com 4,2 px de tela; a mesa desenhava com 190 e o traço dava
+    **0,68 px**. Abaixo de um pixel o navegador não desenha linha, desenha um
+    cinza fraco — e a borda de cima do touchpad sumia inteira.
+
+    Por isso a régua mede as DUAS coisas, e a espessura em pixels de TELA.
+    """
+    import monta
+
+    with _Servidor(lar, mentira) as s:
+        pg = pw.new_page(viewport={"width": 1600, "height": 1100})
+        pg.goto(s.url)
+        pg.wait_for_selector(".ctl svg")
+        pg.wait_for_timeout(600)
+        medido = pg.evaluate("""() => [...document.querySelectorAll('.ctl')]
+          .map(c => {
+            const svg = c.querySelector('svg');
+            const g = svg.querySelector('[id$="-corpo"]');
+            const alvo = g && g.querySelector('.corpo,.peca');
+            const s = alvo ? getComputedStyle(alvo) : null;
+            return {colorway: svg.getAttribute('data-colorway'),
+                    largura: Math.round(svg.getBoundingClientRect().width),
+                    stroke: s && s.stroke, w: s && s.strokeWidth,
+                    efeito: s && s.getPropertyValue('vector-effect')};
+          })""")
+        assert len(medido) == 4, medido
+        for c in medido:
+            if not c["colorway"]:
+                continue
+            esperado = monta.cor_da_zona(c["colorway"], "casca-solida")
+            r, g, b = (int(esperado[i:i + 2], 16) for i in (1, 3, 5))
+            assert c["stroke"] == f"rgb({r}, {g}, {b})", (
+                f"o contorno de {c['colorway']} não é a cor do plástico: {c}")
+            # A ESPESSURA É DE TELA, e não some quando o cartão encolhe
+            assert c["efeito"] == "non-scaling-stroke", (
+                f"o traço voltou a escalar com o desenho: {c}")
+            assert float(c["w"].rstrip("px")) >= 1.4, (
+                f"o contorno é fino demais para se ver: {c}")
+        pg.close()
+
+
+def test_o_ps_nao_acende_o_circulo_que_ela_mandou_tirar(pw, lar, mentira) -> None:
+    """*"o do PS não tem esse círculo no meio"* — 07/09/2026.
+
+    Decisão dela de 27/08: *"Remove o circulo e Deixa só o Glifo do PS pra ser
+    o Botão"*. O desenho obedece com a classe `sem-tinta`, e o REALCE a
+    atropelava: com o PS marcado nascia de volta o círculo que ela mandou
+    tirar. Quem acende ali é o glifo, pelo `color`.
+
+    A cura foi no DONO (`monta.folha_de_realce`), não nesta página — o produto
+    inteiro usa `apertados=` e sofria do mesmo.
+    """
+    with _Servidor(lar, mentira) as s:
+        pg = pw.new_page(viewport={"width": 1440, "height": 1000})
+        pg.goto(s.url)
+        pg.wait_for_selector(".ctl svg")
+        pg.wait_for_timeout(600)
+        medido = pg.evaluate("""() => {
+          const g = document.querySelector('#p1-ps');
+          if (!g) return null;
+          g.classList.add('marcada');
+          const f = g.querySelector('path,circle,rect,ellipse,polygon');
+          const s = getComputedStyle(f);
+          const fora = {fill: s.fill, stroke: s.stroke,
+                        cor_do_grupo: getComputedStyle(g).color};
+          g.classList.remove('marcada');
+          return fora;
+        }""")
+        assert medido, "o PS sumiu do desenho"
+        assert medido["fill"] == "none" and medido["stroke"] == "none", (
+            f"o círculo do PS acendeu: {medido} — ela mandou tirá-lo em 27/08")
+        # E O GLIFO CONTINUA ACENDENDO: tirar o círculo não pode apagar o botão
+        assert medido["cor_do_grupo"] != "none", medido
+
