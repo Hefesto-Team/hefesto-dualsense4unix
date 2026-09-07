@@ -246,7 +246,19 @@ def test_os_quatro_botoes_dizem_quem_sao_no_desenho(a02, onde):
     `data-hef-quando` o alvo vira booleano e os DOIS acenderiam ao mesmo tempo.
     """
     doc = onde.read_text(encoding="utf-8")
-    cards = doc.count('class="ctl card"')
+    # A CONTA DE CARTÕES PASSOU A ACEITAR O `off` — 07/09/2026,
+    # CONTROLES-O-LUGAR-VAZIO-TEM-ENDERECO-01. Aqui estava
+    # `doc.count('class="ctl card"')`, casamento EXATO, e desde hoje o lugar
+    # vazio é o MESMO cartão com uma classe a mais (`ctl card off`). O
+    # casamento exato daria 2 numa página de 4 cartões e a régua passaria
+    # medindo METADE da mesa — que é a forma exata do defeito que a mudança
+    # veio curar: com os quatro DualSense dela ligados, dois assentos ficavam
+    # sem endereço nenhum e nenhuma régua desta casa via.
+    #
+    # NA PÁGINA PUBLICADA ELE CONTINUA DANDO 2, porque lá o lugar vazio ainda é
+    # `class="ctl off"` (sem `card`) — publicar é ato dela. Os dois casos deste
+    # parâmetro medem, cada um, a mesa que a sua página tem.
+    cards = len(re.findall(r'class="ctl card[^"]*"', doc))
     assert cards >= 2, "o desenho precisa de mais de um card para esta régua morder"
     for campo, valores in _pares(a02).items():
         for valor in valores:
@@ -255,7 +267,7 @@ def test_os_quatro_botoes_dizem_quem_sao_no_desenho(a02, onde):
                 doc)
             assert len(achados) == cards, (
                 f'{onde.name}: `{campo}`/`{valor}` aparece {len(achados)} vez(es) '
-                f"e há {cards} cards — todo card precisa dos dois botões")
+                f"e há {cards} cartões — todo lugar da mesa precisa dos dois botões")
 
 
 def test_o_endereco_do_aceso_nao_mora_no_container(a02):

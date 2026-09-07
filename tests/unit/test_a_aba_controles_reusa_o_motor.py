@@ -964,6 +964,12 @@ O_QUE_O_NAVEGADOR_DESENHA = r"""
     if (!aceso_na_cena) el.classList.remove('on');
     saida.push({
       cartao: cartao ? (cartao.dataset.controle || cartao.dataset.uniq || '?') : '?',
+      // QUEM ESTÁ NA MESA E QUEM É ASSENTO VAZIO — 07/09/2026. Desde
+      // CONTROLES-O-LUGAR-VAZIO-TEM-ENDERECO-01 o lugar vazio é o MESMO cartão
+      // do cheio, e por isso ELE TAMBÉM TEM `touch-ponto`. Sem esta chave a
+      // régua abaixo não teria como separar os dois — e a separação é o ponto:
+      // um assento sem controle não tem dedo NEM palavra sobre o dedo.
+      conectado: cartao ? (cartao.dataset.conectado || '') : '',
       estado: rotulo ? (rotulo.textContent || '').trim() : '',
       aceso_na_cena: aceso_na_cena,
       sem_a_classe: sem_a_classe,
@@ -1023,9 +1029,15 @@ def test_o_ponto_do_touchpad_obedece_a_classe_na_tela(arquivo: pathlib.Path):
         finally:
             navegador.close()
 
-    assert len(medido) >= 2, (
-        f"achei {len(medido)} ponto(s) em {arquivo.name} — a página tem dois "
-        f"cards conectados, e medir um só é medir metade")
+    # OS DOIS GRUPOS, e a separação é de 07/09/2026: o assento SEM controle
+    # passou a ter `touch-ponto` como todo mundo (o cartão é um só), e a
+    # pergunta que se faz a ele é OUTRA.
+    cheios = [d for d in medido if d["conectado"] != "nao"]
+    vazios = [d for d in medido if d["conectado"] == "nao"]
+
+    assert len(cheios) >= 2, (
+        f"achei {len(cheios)} ponto(s) de controle conectado em {arquivo.name} — "
+        f"a página tem dois cards conectados, e medir um só é medir metade")
 
     mudos = [d for d in medido if d["sem_a_classe"] != "0"]
     assert not mudos, (
@@ -1041,8 +1053,33 @@ def test_o_ponto_do_touchpad_obedece_a_classe_na_tela(arquivo: pathlib.Path):
 
     # A CENA FIXA NÃO PODE SE CONTRADIZER: era o defeito de 02/09 na página
     # publicada, onde `touch-estado` dizia "Sem toque" com o ponto aceso.
-    discordam = [d for d in medido
+    #
+    # SÓ NOS CONECTADOS, E POR UMA RAZÃO DE CONTRATO — 07/09/2026. Esta linha
+    # conhecia DOIS estados (há dedo · não há dedo) e a mesa tem TRÊS desde que
+    # o lugar vazio virou o mesmo cartão: *não sei*, que é o travessão. Com
+    # `estado == "—"` a conta lia *"a palavra não é 'Sem toque', logo o ponto
+    # devia estar aceso"* e reprovava um assento que estava CERTO — a régua
+    # medindo o mundo de ontem. O terceiro estado ganhou a asserção própria
+    # logo abaixo, que é mais dura, não mais frouxa.
+    discordam = [d for d in cheios
                  if (d["estado"] == sem_toque) == d["aceso_na_cena"]]
     assert not discordam, (
         f"em {arquivo.name} o desenho contradiz a palavra do card ao lado: "
         f"{discordam}. O ponto marca ONDE o dedo está; sem toque não há ponto")
+
+    # E O ASSENTO VAZIO NÃO AFIRMA DEDO NENHUM — nem o ponto, nem a palavra.
+    # O travessão vem do DONO (`monta.TRAVESSAO`), nunca digitado aqui: é o
+    # mesmo caractere que `pacotes.apagar_os_lugares_sem_dono` escreve na tela
+    # viva, e uma régua que o redigitasse passaria a medir a si mesma.
+    #
+    # MORDE: tire o `_so_o_travessao` do `bloco()` no `aba02.py` e rode o
+    # gerador — o assento vazio volta com "1 toque" e o pontinho do mockup em
+    # cima do touchpad, e esta linha reprova nomeando o cartão.
+    import monta
+
+    afirmam = [d for d in vazios
+               if d["aceso_na_cena"] or d["estado"] != monta.TRAVESSAO]
+    assert not afirmam, (
+        f"em {arquivo.name} um assento SEM controle afirma toque: {afirmam}. "
+        f"O ponto marca onde o dedo está, e num lugar vazio não há dedo — a "
+        f"palavra é `{monta.TRAVESSAO}` e o ponto fica apagado")
