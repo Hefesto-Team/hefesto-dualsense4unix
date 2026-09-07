@@ -131,6 +131,53 @@ lugar ESTÁVEL na fila, keyed pelo MAC normalizado (12 hex — o mesmo
   persistido é pior que nada, porque devolve a configuração de um aparelho a
   outro. O que falta não é gravar o path: é uma chave estável para quem não tem
   MAC, e é isso que a sprint procura;
+
+- **O SEGUNDO CONDUÍTE (O-CONTROLE-SEM-MAC-01, 06/09/2026).** A key deixou de
+  cair DIRETO no volátil: quando o serial falta, o registro pergunta ao
+  ``cracha_provider`` (:meth:`ControllerIdentityRegistry.set_cracha_provider`),
+  e só desiste depois dele — e a desistência passou a ser ANUNCIADA
+  (:data:`FRASE_SEM_CRACHA`, :meth:`avisos_sem_cracha`).
+
+  **A FORMA DA CHAVE NOVA É A FORMA DA CHAVE VELHA: 12 hex canônicos**, e isso
+  não é economia de código, é o requisito. O que o crachá devolve é o MESMO
+  endereço que o serial devolveria — outra estrada para o mesmo valor —, então
+  o perfil, o ``sysfs_leds``, o co-op e o disco não aprendem forma nenhuma.
+  Quem vem depois (``QUEM-E-QUEM-04``) abre a porta do perfil para uma forma
+  que já existe.
+
+  **QUAL crachá, e por que não os cinco.** O ensaio de 15/08 achou cinco
+  candidatos que saem nos dois transportes e são estáveis byte a byte
+  (``0x05``, ``0x09``, ``0x0b``, ``0x20``, ``0x22``); a MESMA linha do mapa
+  (``docs/data/mapa-controles.csv``, ``identidade.cracha_nos_dois_transportes``,
+  célula ``cabo_detalhe``) já dizia que quatro deles **só pareciam servir**: o
+  ``0x20`` agrupa por REVISÃO DE PLACA (a data de compilação colide em PARES
+  nos quatro controles desta casa), o ``0x05`` é calibração de IMU e é
+  REESCRIVÍVEL pela família ``0x80``, e o ``0x22`` só distingue porque EMBUTE o
+  endereço (``buf[17..22]``). Sobra o ``0x09`` — ``buf[1..6]``, o endereço
+  invertido —, que é de onde o próprio ``hid_playstation`` tira o ``HID_UNIQ``.
+  Por isso o provider devolve **um endereço**, não "um crachá": as duas
+  estradas honestas (``0x09`` e o ``0x22`` que o embute) chegam ao mesmo valor,
+  e as outras duas não são identidade de unidade.
+
+  **Este módulo não fala com o aparelho, e não vai passar a falar.** Ler
+  ``0x09`` é I/O de hidraw, e a docstring da classe promete um ``slot_for`` sem
+  I/O (ele roda sob o ``_io_lock`` do backend). O provider é seam: quem sabe
+  ler o aparelho é o backend; aqui só se guarda o que ele respondeu. A pergunta
+  acontece no TICK LENTO (``sync_connected``, ~2 s, fora do lock) e o caminho
+  quente lê só o cache;
+
+- **o crachá NUNCA vence o serial.** Se a key já é um MAC 12-hex, o provider
+  não é nem consultado — trocar a chave de quem já é lembrado apagaria a
+  memória de toda mesa que hoje funciona, que é exatamente o estrago que esta
+  frente existe para evitar;
+
+- **o cache do crachá é esquecido na saída.** Ele é indexado pelo ``uniq``
+  CRU (o path), e um path volta a circular: ``/dev/hidraw3`` liberado pode ser
+  reocupado por OUTRO aparelho na mesma sessão. Guardar o crachá do primeiro
+  não interromperia a identificação — CORROMPERIA, que é pior, e é o único
+  desfecho que a ressalva do mapa exclui (*"trocar de braço, cair o rádio ou
+  desligar o controle INTERROMPEM a identificação — não a corrompem"*). Então
+  quem sai da mesa perde o cache, e volta perguntando de novo;
 - DualSense-only (D10) é garantido pelo CHAMADOR por construção: os uniqs
   que chegam aqui vêm dos handles físicos do backend (a enumeração filtra
   por VID/PID da Sony e descarta hidraw virtual). O registro não conhece
@@ -331,6 +378,23 @@ _MAC_RE = re.compile(
 #: Prefixo (canônico, 12-hex) dos MACs forjados dos vpads uhid — D9.
 _VPAD_MAC_PREFIX = "02fe"
 
+#: O-CONTROLE-SEM-MAC-01: a frase da DESISTÊNCIA, quando nem o serial nem o
+#: crachá dão uma identidade estável. Decidida por delegação em 06/09/2026
+#: (``D-0609-A-FRASE-DO-CONTROLE-SEM-CRACHA``, ``docs/data/decisoes-dela.csv``)
+#: e reversível numa frase.
+#:
+#: O defeito que ela cura é o SILÊNCIO, não o slot volátil: sem crachá o slot
+#: já era volátil hoje, e o que faltava era o produto DIZER. Perder
+#: configuração calado é o defeito; perder avisando é limitação declarada.
+#:
+#: Ela obedece ao glossário da tela para o dia em que for exibida
+#: (``docs/A-LINGUA-DESTA-CASA-…``): nada de ``MAC``, ``uniq`` nem ``hidraw``.
+#: **Quem a exibe é outra sprint** — aqui ela é dado, não tela.
+FRASE_SEM_CRACHA = (
+    "Este controle não tem identificação estável: o Hefesto não vai "
+    "lembrar dele no próximo jogo."
+)
+
 #: Lock de MÓDULO (NUMA-04, sprint 2026-07-19): protege TODO acesso
 #: read→``os.replace`` ao ``controllers.json`` COMPARTILHADO pelos dois
 #: registros independentes — este (entradas ``kind`` :data:`KIND_DUALSENSE`
@@ -527,6 +591,20 @@ class ControllerIdentityRegistry:
         self._loaded = False
         #: vpads já logados (evita spam — o provider consulta a cada reassert).
         self._vpad_logged: set[str] = set()
+        #: O-CONTROLE-SEM-MAC-01: provider OPCIONAL do CRACHÁ — recebe o
+        #: ``uniq`` cru de um controle SEM serial e devolve o endereço que o
+        #: aparelho respondeu (feature ``0x09``), ou None. Ele faz I/O de
+        #: hidraw, então é chamado SÓ no tick lento e SÓ fora do ``_lock``.
+        #: None (não fiado / FakeController) = comportamento histórico: sem
+        #: serial, slot volátil — só que agora anunciado.
+        self._cracha_provider: Callable[[str], str | None] | None = None
+        #: ``uniq`` cru (o path) → key 12-hex que o crachá devolveu. É CACHE
+        #: de sessão, e é esquecido quando o controle sai da mesa: um path
+        #: reocupado por outro aparelho devolveria a identidade ERRADA.
+        self._cracha: dict[str, str] = {}
+        #: ``uniq`` crus que já anunciaram a desistência (uma vez cada — o
+        #: tick lento repassa por eles a cada ~2 s).
+        self._sem_cracha: set[str] = set()
         #: provider OPCIONAL dos lugares já ocupados pelos EXTERNOS (EXT-04):
         #: a fila é ÚNICA entre DualSense e externos, então a atribuição une
         #: esses lugares ao ``ocupados`` — um DualSense que entra DEPOIS de um
@@ -629,6 +707,156 @@ class ControllerIdentityRegistry:
             return value.lower().replace(":", "").replace("-", ""), True
         return value, False
 
+    def _chave(self, uniq: str) -> tuple[str, bool]:
+        """``_canonical`` mais o CRACHÁ já resolvido (O-CONTROLE-SEM-MAC-01).
+
+        É o funil de key de todo caminho VIVO — ``slot_for``,
+        ``posicao_na_mesa``, ``mark_disconnected``, ``sync_connected``. O
+        ``load`` NÃO passa por aqui de propósito: o que vem do disco já é
+        canônico por invariante do save, e consultar um cache de sessão para
+        decidir o que o disco quis dizer seria deixar a sessão reescrever o
+        passado.
+
+        Barato por construção: **não chama o provider**, só lê o que o tick
+        lento já guardou (:meth:`resolver_crachas`). É o que mantém a promessa
+        de ``slot_for`` sem I/O.
+
+        Não toca em quem já tem serial: MAC 12-hex entra e sai igual, sem o
+        cache ser sequer consultado (o crachá jamais vence o serial).
+        """
+        key, persistable = self._canonical(uniq)
+        if persistable or not key:
+            return key, persistable
+        with self._lock:
+            do_cracha = self._cracha.get(uniq)
+        if do_cracha:
+            return do_cracha, True
+        return key, False
+
+    def resolver_crachas(self, uniqs: Iterable[str]) -> None:
+        """Pergunta o CRACHÁ de quem não tem serial — TICK LENTO, fora do lock.
+
+        O-CONTROLE-SEM-MAC-01. Para cada ``uniq`` que ``_canonical`` recusou
+        como MAC e que ainda não está no cache, chama o
+        ``cracha_provider``. O que ele devolver só vira key se passar pelas
+        MESMAS guardas do serial — 12 hex canônicos e não-vpad —, porque o
+        contrato é "outra estrada para o mesmo valor", não "uma segunda forma
+        de chave".
+
+        Quando não há crachá, ANUNCIA a desistência uma vez por ``uniq``
+        (:data:`FRASE_SEM_CRACHA`) e o controle segue volátil, como sempre foi.
+        O silêncio é que era o defeito.
+
+        Chamado por ``sync_connected`` ANTES de tomar o ``_lock``: o provider
+        conversa com o aparelho, e conversar com o aparelho segurando o lock
+        que o provider de cor disputa é o caminho para o daemon travar num
+        controle mudo.
+        """
+        with self._lock:
+            provider = self._cracha_provider
+            ja_sabidos = set(self._cracha)
+        pendentes: list[str] = []
+        for uniq in uniqs:
+            if not uniq or not isinstance(uniq, str):
+                continue
+            _, persistable = self._canonical(uniq)
+            if persistable or uniq in ja_sabidos or uniq in pendentes:
+                continue
+            pendentes.append(uniq)
+        for uniq in pendentes:
+            achado: str | None = None
+            if provider is not None:
+                try:
+                    achado = provider(uniq)
+                except Exception as exc:  # aparelho mudo não derruba o tick
+                    logger.info("identity_cracha_falhou", uniq=uniq, err=str(exc))
+                    achado = None
+            key: str | None = None
+            if achado and isinstance(achado, str):
+                candidata, ok = self._canonical(achado)
+                if ok and not candidata.startswith(_VPAD_MAC_PREFIX):
+                    key = candidata
+                elif achado:
+                    logger.warning(
+                        "identity_cracha_recusado — o crachá não é um "
+                        "endereço de 12 hex de controle real",
+                        uniq=uniq,
+                    )
+            if key is not None:
+                with self._lock:
+                    self._cracha[uniq] = key
+                    self._sem_cracha.discard(uniq)
+                logger.info("identity_cracha_resolvido", uniq=uniq, key=key)
+                continue
+            with self._lock:
+                novo = uniq not in self._sem_cracha
+                self._sem_cracha.add(uniq)
+            if novo:
+                logger.warning(
+                    "identity_sem_cracha_nao_sera_lembrado",
+                    uniq=uniq,
+                    frase=FRASE_SEM_CRACHA,
+                )
+
+    def _esquecer_cracha_locked(self, uniqs_vivos: set[str]) -> None:
+        """Solta o crachá de quem saiu da mesa (já sob ``self._lock``).
+
+        O cache é indexado pelo ``uniq`` CRU, que é um path, e paths voltam a
+        circular dentro da MESMA sessão: ``/dev/hidraw3`` liberado pode ser
+        reocupado por outro aparelho. Manter o crachá do primeiro daria ao
+        segundo a identidade do primeiro — a única forma de estrago que a
+        ressalva do mapa exclui, porque ela CORROMPE em vez de interromper.
+        """
+        for uniq in list(self._cracha):
+            if uniq not in uniqs_vivos:
+                del self._cracha[uniq]
+        self._sem_cracha &= uniqs_vivos
+
+    def avisos_sem_cracha(self) -> list[dict[str, str]]:
+        """Os controles que a casa DESISTIU de lembrar, com a frase (leitura).
+
+        O-CONTROLE-SEM-MAC-01, entrega 2. Um item por controle presente sem
+        serial e sem crachá: ``{"uniq": <a key volátil>, "frase":
+        FRASE_SEM_CRACHA}``. Lista vazia é o caso normal desta casa — os
+        controles daqui todos têm serial, e é por isso que o defeito era
+        invisível daqui.
+
+        Quem LEVA isto à tela é outra sprint: o ``uniq`` é vocabulário de
+        casa e não sobe para o texto de tela (glossário: ``uniq`` e ``MAC``
+        são proibidos lá). O que sobe é a ``frase``.
+        """
+        with self._lock:
+            return [
+                {"uniq": uniq, "frase": FRASE_SEM_CRACHA}
+                for uniq in sorted(self._sem_cracha)
+            ]
+
+    def set_cracha_provider(
+        self, provider: Callable[[str], str | None] | None
+    ) -> None:
+        """Injeta o SEGUNDO CONDUÍTE da identidade (O-CONTROLE-SEM-MAC-01).
+
+        ``provider(uniq_cru)`` recebe o ``uniq`` de um controle cujo firmware
+        NÃO expôs serial — a key que hoje cai direto no volátil — e devolve o
+        endereço que o aparelho respondeu (o feature ``0x09``: ``buf[1..6]``,
+        o endereço invertido; é de onde o ``hid_playstation`` tira o
+        ``HID_UNIQ``), em qualquer grafia que ``_canonical`` aceite. Devolve
+        ``None`` quando o aparelho não responde, e é isso que faz a
+        desistência ser ANUNCIADA em vez de calada.
+
+        **Ele custa I/O de hidraw, e por isso só é chamado no TICK LENTO**
+        (``sync_connected``, ~2 s) e FORA do ``_lock``. O caminho quente
+        (``slot_for``, sob o ``_io_lock`` do backend) lê só o cache — a
+        promessa "sem I/O de disco nem de aparelho" da docstring da classe
+        continua inteira. Se o provider levantar, o controle segue volátil:
+        nenhum caminho de identidade morre porque o aparelho não respondeu.
+
+        Sem fiação (``None``) o registro se comporta como sempre — o segundo
+        conduíte é ADITIVO, nunca uma troca de regra.
+        """
+        with self._lock:
+            self._cracha_provider = provider
+
     def set_external_reserve_provider(
         self, provider: Callable[[], set[int]] | None
     ) -> None:
@@ -705,7 +933,7 @@ class ControllerIdentityRegistry:
         """
         if not uniq or not isinstance(uniq, str):
             return None
-        key, persistable = self._canonical(uniq)
+        key, persistable = self._chave(uniq)
         if not key:
             return None
         if key.startswith(_VPAD_MAC_PREFIX) and persistable:
@@ -988,7 +1216,7 @@ class ControllerIdentityRegistry:
             self.slot_for(uniq, autoridade_de_presenca=autoridade_de_presenca)
         if not uniq or not isinstance(uniq, str):
             return None
-        key, persistable = self._canonical(uniq)
+        key, persistable = self._chave(uniq)
         if not key or (persistable and key.startswith(_VPAD_MAC_PREFIX)):
             return None
         with self._lock:
@@ -1056,7 +1284,7 @@ class ControllerIdentityRegistry:
         """
         if not uniq or not isinstance(uniq, str):
             return
-        key, _ = self._canonical(uniq)
+        key, _ = self._chave(uniq)
         with self._lock:
             # D-30: avaliar ANTES de tirar da mesa. Se a mesa já estava
             # estável há tempo, a foto é tirada com este controle ainda nela —
@@ -1116,12 +1344,24 @@ class ControllerIdentityRegistry:
         reiniciar o daemon com quatro controles já ligados (todos vistos na
         mesma primeira olhada) não embaralha nada — R-23 continua de pé.
         """
+        # O-CONTROLE-SEM-MAC-01: materializado ANTES de qualquer coisa porque
+        # a lista é percorrida duas vezes daqui para baixo (o crachá e a
+        # reconciliação) — e o lifecycle entrega em ORDEM, que um gerador
+        # consumido na primeira volta apagaria.
+        na_mesa = [u for u in uniqs if u and isinstance(u, str)]
+        # O SEGUNDO CONDUÍTE, e ele mora aqui de propósito: este é o tick
+        # lento (~2 s) e estamos FORA do ``_lock``. É a única janela em que
+        # falar com o aparelho é barato o bastante.
+        self.resolver_crachas(na_mesa)
         vivos: list[tuple[str, bool]] = []
         vistos: set[str] = set()
-        for uniq in uniqs:
-            if not uniq or not isinstance(uniq, str):
-                continue
-            key, persistable = self._canonical(uniq)
+        # Quem AINDA está na mesa, na grafia CRUA — é por ela que o cache do
+        # crachá é indexado. Não é ``vistos``: duas interfaces do mesmo
+        # aparelho colapsam numa key só, e a segunda perderia o cache à toa,
+        # reperguntando ao aparelho a cada tick.
+        crus_vivos = set(na_mesa)
+        for uniq in na_mesa:
+            key, persistable = self._chave(uniq)
             if not key or key in vistos:
                 continue
             if persistable and key.startswith(_VPAD_MAC_PREFIX):
@@ -1129,6 +1369,10 @@ class ControllerIdentityRegistry:
             vistos.add(key)
             vivos.append((key, persistable))
         with self._lock:
+            # Quem saiu da mesa devolve o crachá: o cache é indexado pelo
+            # path, e path reocupado por outro aparelho daria a ele a
+            # identidade do anterior.
+            self._esquecer_cracha_locked(crus_vivos)
             # D-30: a foto da mesa ANTERIOR primeiro (pelo mesmo motivo do
             # ``mark_disconnected``: se ela estava estável, o que se grava é
             # a mesa que estava estável, não a que este tick acabou de mudar).
