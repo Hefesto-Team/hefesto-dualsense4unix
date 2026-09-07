@@ -1463,6 +1463,27 @@ class PyDualSenseController(IController):
         # números duplicados que ela vê. Publicada aqui, a mesma reafirmação
         # passa a reafirmar o valor DO CO-OP.
         self._desired_coop_by_uniq: dict[str, _DesiredOutput] = {}
+        # MIC-BT-DONO-01 (06/09/2026): a POSSE do mudo de microfone do firmware,
+        # por controle. Ela vive AQUI, no controlador, e não mais só no handle —
+        # que é o defeito de raiz que esta sprint cura: `_mic_mute_desejado` é
+        # atributo de instância do `_PinnedPyDualSense`, e o handle é RECRIADO a
+        # cada reconexão. Um `mic unmute` dela evaporava no próximo handle novo,
+        # em silêncio, e o firmware — que retém o mudo — voltava a mudo. Como
+        # reconexão é rotina no rádio, o defeito é muito mais visível por BT
+        # (`docs/data/mapa-controles.csv`, `audio.microfone.mudo@dualsense`,
+        # `radio_ressalva`).
+        #
+        # Ausência de chave = `None` = NÃO somos donos, e o dono é o kernel
+        # (`hid-playstation`, que alterna `ds->mic_muted` na borda do botão
+        # físico). Isso é ORDEM, não "herda" — e é exatamente por isso que o
+        # mudo fica FORA do `_DesiredOutput`, onde `None` significa "herda da
+        # camada de baixo" (`_merge_desired`). O precedente de desenho é o
+        # co-op logo acima: mapa próprio, por-uniq, ao lado do merge.
+        #
+        # Chaveado pelo MAC 12-hex normalizado do `_key_to_uniq` — a MESMA
+        # guarda de 12 dígitos que impede um pseudo-MAC de key por path
+        # (`/dev/hidrawN` → "deda4") levar a posse ao controle errado.
+        self._mic_mute_by_uniq: dict[str, bool] = {}
         # R-20 item 2: escala de brilho POR CONTROLE, aplicada DEPOIS do merge.
         # Um override que só mexia no brilho materializava a cor GLOBAL no
         # slot por-uniq (`_controllers_to_specs` resolvia `lightbar` do global
@@ -3648,6 +3669,12 @@ class PyDualSenseController(IController):
         REPLICA-03: reconexão NO MEIO de uma sessão de jogo (wake BT) — o
         merge já traz a camada game (LED/player) e os blocos crus de trigger
         do jogo são re-pendurados no handle novo, para a posse sobreviver.
+
+        MIC-BT-DONO-01: e o MUDO DO MICROFONE re-pendura no mesmo lugar, pelo
+        mesmo motivo — ele é atributo do handle, e handle novo nasce sem dono.
+        Vai FORA do `_write_partial_output` de propósito: aquele é o aplicador
+        do `_DesiredOutput`, onde `None` quer dizer "herda de baixo"; aqui
+        `None` quer dizer "devolvo ao kernel", que é ordem oposta.
         """
         with self._io_lock:
             node = self._sysfs.get(key)
@@ -3659,10 +3686,27 @@ class PyDualSenseController(IController):
                 if uniq is not None
                 else {}
             )
+            mic_mudo = self._mic_mute_by_uniq.get(uniq) if uniq is not None else None
         for side, block in game_triggers.items():
             attr = "_raw_trigger_left" if side == "left" else "_raw_trigger_right"
             with contextlib.suppress(Exception):
                 setattr(handle, attr, block)
+        # ANTES do `_write_partial_output`, para que o primeiro report montado
+        # neste handle já saia com o bit de autorização ligado e o valor dela
+        # dentro — e não um tique depois.
+        if mic_mudo is not None:
+            tomar = getattr(handle, "set_microphone_mute", None)
+            if callable(tomar):
+                try:
+                    tomar(mic_mudo)
+                except Exception as exc:
+                    logger.warning(
+                        "mic_posse_no_hotplug_falhou", key=key, err=str(exc)
+                    )
+                else:
+                    logger.info("mic_posse_rependurada", key=key, mudo=mic_mudo)
+            else:
+                logger.debug("mic_posse_handle_sem_api", key=key)
         self._write_partial_output(
             handle, node, muted, desired, what="reapply_perfil_no_hotplug"
         )
@@ -4402,8 +4446,42 @@ class PyDualSenseController(IController):
                 logger.warning(
                     "output_handle_failed", op="set_microphone_mute", err=str(exc)
                 )
+        # MIC-BT-DONO-01: a posse só é REGISTRADA quando a escrita no handle deu
+        # certo — registrar antes faria o produto afirmar posse de uma ordem que
+        # levantou `OSError` no meio (controle sumindo no replug), que é o mesmo
+        # engano que o retorno booleano do MIC-USB-01 existe para desfazer.
+        if ok:
+            self._registrar_posse_do_mudo(uniq, muted)
         logger.info("microphone_mute_set", muted=muted, uniq=uniq, ok=ok)
         return ok
+
+    def _registrar_posse_do_mudo(
+        self, uniq: str | None, muted: bool | None
+    ) -> str | None:
+        """Grava (ou solta) a posse do mudo no mapa por-uniq. MIC-BT-DONO-01.
+
+        `muted=None` é a ORDEM *"devolvo a posse ao kernel"*, e por isso APAGA
+        a chave — deixar `None` guardado seria indistinguível de "nunca
+        pediram", que é justamente a distinção cara do AUDIO-OWNER-01.
+
+        Devolve o `uniq` normalizado que recebeu a posse, ou `None` quando não
+        há endereço confiável para reivindicar. **Sem MAC de 12 hex não se
+        reivindica nada, e se loga** — o custo é honesto (naquele controle o
+        mudo continua sendo do kernel), e a alternativa é pior: um pseudo-MAC
+        de key por path leva a posse ao controle ERRADO na próxima reconexão.
+        """
+        from hefesto_dualsense4unix.core.sysfs_leds import norm_mac
+
+        alvo = (norm_mac(uniq) if uniq else self.primary_uniq) or None
+        if alvo is None or len(alvo) != 12:
+            logger.debug("mic_posse_sem_endereco", uniq=uniq, muted=muted)
+            return None
+        with self._io_lock:
+            if muted is None:
+                self._mic_mute_by_uniq.pop(alvo, None)
+            else:
+                self._mic_mute_by_uniq[alvo] = bool(muted)
+        return alvo
 
     def set_microphone_led(
         self, aceso: bool | int | None, *, uniq: str | None = None
@@ -4593,7 +4671,20 @@ class PyDualSenseController(IController):
         não o que está valendo.
 
         Sem handle para o `uniq` pedido, devolve None (ausência é resposta).
+
+        MIC-BT-DONO-01: a fonte de verdade passou a ser o MAPA por-uniq, e o
+        atributo do handle é só o eco. O motivo é a janela: entre o handle novo
+        nascer e o `_reapply_desired` correr, o atributo é `None` e esta função
+        respondia *"o kernel é o dono"* sobre um controle de que somos donos —
+        e é ela que alimenta o `state_full` e o rótulo da tela.
         """
+        from hefesto_dualsense4unix.core.sysfs_leds import norm_mac
+
+        alvo = (norm_mac(uniq) if uniq else self.primary_uniq) or None
+        if alvo is not None and len(alvo) == 12:
+            with self._io_lock:
+                if alvo in self._mic_mute_by_uniq:
+                    return self._mic_mute_by_uniq[alvo]
         handle = self._handle_for(uniq)
         if handle is None:
             return None
