@@ -686,16 +686,37 @@ def veredito(respostas: dict[str, str]) -> str:
     olhou o aparelho. Uma resposta `obedeceu` num controle que deveria ficar
     calado é um ACHADO, e transformá-la em "falhou" automaticamente esconderia
     exatamente a linha que interessa.
+
+    DEFEITO MEDIDO E CURADO EM 06/09/2026, PELA PROVA — e ele era um verde
+    sobre nada, que é a família que esta casa caça:
+
+    * `{P1..P4: "nada"}` — **os quatro disseram que NÃO ACONTECEU NADA** —
+      devolvia `obedeceu`. A regra era `all(v in ("obedeceu", "nada"))`, e um
+      conjunto só de `nada` a satisfaz. O índice é o instrumento que ela lê
+      para saber o que ainda falta medir: pintar de verde a linha em que o
+      gesto não produziu efeito em controle NENHUM é a leitura errada que uma
+      mesa de medição não pode produzir;
+    * e `falhou` era **INALCANÇÁVEL**. Esta docstring nomeia quatro estados, o
+      CSS tem a classe `.e-falhou` e o JS tem o ramo que a escolhe — e nenhum
+      caminho desta função jamais o devolvia. Uma paleta com quatro cores para
+      três estados é o instrumento afirmando uma medida que ele não faz.
+
+    A REGRA AGORA, e ela continua sem julgar papel: `obedeceu` exige que **ao
+    menos um** controle tenha obedecido. Nenhum obedeceu e ninguém viu coisa
+    estranha = o gesto não pegou em lugar nenhum = `falhou`.
     """
     valores = [v for v in respostas.values() if v]
-    if not valores:
+    if not valores or all(v == "nao-vi" for v in valores):
         return "não feito"
     if any(v == "outra-coisa" for v in valores):
         return "parcial"
+    if not any(v == "obedeceu" for v in valores):
+        # Só `nada` (e talvez algum `nao-vi`): o gesto não produziu efeito em
+        # controle nenhum. Isto é o `falhou` do índice, e é o que ela precisa
+        # ver para voltar à linha.
+        return "falhou"
     if all(v in ("obedeceu", "nada") for v in valores):
         return "obedeceu"
-    if all(v == "nao-vi" for v in valores):
-        return "não feito"
     return "parcial"
 
 
