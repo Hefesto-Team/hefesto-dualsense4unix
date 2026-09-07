@@ -752,7 +752,19 @@ def test_a_pagina_dirigida_pelo_navegador(mesa_no_ar, mentira, monkeypatch) -> N
                 "o COMO do teste anterior ficou na tela — ela salvaria o COMO "
                 "errado sem perceber")
             do_novo = next(x for x in med.todos_os_testes() if x.id == seguinte)
-            assert do_novo.passa_quando in agora, (agora, do_novo.passa_quando)
+            # O CAMPO NASCE COM OS PASSOS, e não com o gesto inteiro — mudou em
+            # 07/09/2026, quando o COMO deixou de ser o roteiro repetido e
+            # passou a ter sete campos vindos do arquivo dono. Esta linha
+            # cravava o `passa quando` do roteiro dentro do campo; cobrá-lo de
+            # volta hoje seria reprovar a cura. O que ela tem de provar é o
+            # mesmo de sempre: que o texto é o DESTE teste.
+            passos = dict(do_novo.como).get("os passos", "")
+            primeiro = next((x.strip() for x in passos.split("·") if x.strip()), "")
+            assert primeiro and primeiro[:40] in agora, (
+                f"o campo do gesto não trouxe os passos deste teste. "
+                f"esperado começar por {primeiro[:40]!r}, veio {agora[:120]!r}")
+            assert agora.lstrip().startswith("1."), (
+                f"os passos chegaram sem numeração: {agora[:60]!r}")
             pg.click("#anterior")
             assert pg.evaluate("location.hash") == "#" + alvo.id, "voltar não anda"
 
