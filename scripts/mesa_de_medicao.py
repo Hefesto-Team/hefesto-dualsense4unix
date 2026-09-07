@@ -65,6 +65,7 @@ import threading
 import unicodedata
 from dataclasses import asdict, dataclass, field
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from collections.abc import Sequence
 from typing import Any
 
 RAIZ = pathlib.Path(__file__).resolve().parents[1]
@@ -544,6 +545,36 @@ def papel_da_condicao(frase: str, posto: str, nomeados: set[str] | list[str]) ->
     return PAPEL_OBSERVA
 
 
+def secoes_do_roteiro() -> dict[str, str]:
+    """`{"6": "Uma feature por controle"}` — a seção de cada linha das 21.
+
+    AS 21 NÃO SÃO UMA FILA PLANA, e ela viu isso antes de mim: abriu o seletor
+    de seções e perguntou *"cadê as seções das 21?"*. A especificação da mesa
+    já as trazia desde 06/09/2026 (§4, seis seções) e a página as ignorava —
+    jogava as 21 numa gaveta só chamada "O roteiro". Com seis, ela fecha uma e
+    passa à seguinte, que é como a hora dela anda de verdade.
+
+    A TABELA MORA NO ROTEIRO, não aqui: `### As seis seções das 21`, na §2 da
+    sprint. Uma cópia neste arquivo seria a segunda verdade sobre o mesmo
+    agrupamento, e no dia em que ela mexesse numa a outra mentiria.
+    """
+    texto = arquivo_do_roteiro().read_text(encoding="utf-8")
+    marca = "### As seis seções das 21"
+    if marca not in texto:
+        return {}
+    corpo = texto.split(marca, 1)[1].split("\n#", 1)[0]
+    fora: dict[str, str] = {}
+    for linha in corpo.splitlines():
+        if not linha.startswith("| ") or linha.startswith("| ---"):
+            continue
+        celulas = [c.strip() for c in linha.strip().strip("|").split("|")]
+        if len(celulas) != 2 or celulas[0] == "seção":
+            continue
+        for numero in re.findall(r"\d+", celulas[1]):
+            fora[numero] = celulas[0]
+    return fora
+
+
 def testes_do_roteiro(vocab: dict[str, set[str]]) -> list[Teste]:
     """As 21 linhas da aceitação, uma por teste.
 
@@ -552,6 +583,7 @@ def testes_do_roteiro(vocab: dict[str, set[str]]) -> list[Teste]:
     """
     fora = []
     fonte = f"{arquivo_do_roteiro().relative_to(RAIZ)} §2"
+    secoes = secoes_do_roteiro()
     for numero, gesto, cond, passa, sprints in linhas_do_roteiro():
         limpo = re.sub(r"[*`]", " ", f"{gesto} {cond} {passa}")
         nomeados = postos_citados(limpo)
@@ -573,7 +605,10 @@ def testes_do_roteiro(vocab: dict[str, set[str]]) -> list[Teste]:
                   for p in POSTOS}
         fora.append(Teste(
             id=f"roteiro-{int(numero):02d}",
-            secao="O roteiro — a aceitação do produto",
+            # A SEÇÃO SAI DA TABELA DAS SEIS. Sem ela, cai no rótulo
+            # antigo — uma gaveta só para as 21, que é o que ela apanhou.
+            secao=(f"O roteiro · {secoes[numero]}" if numero in secoes
+                   else "O roteiro — a aceitação do produto"),
             titulo=re.sub(r"[*`]", "", gesto),
             vai_acontecer=re.sub(r"[*`]", "", gesto),
             passa_quando=re.sub(r"[*`]", "", passa),
@@ -822,6 +857,66 @@ def guardar_cor_dela(endereco: str, colorway: str) -> dict[str, str]:
     return tudo
 
 
+def ler_a_cor_no_aparelho() -> dict[str, Any]:
+    """PERGUNTA A COR AOS CONTROLES, e é ATO DELA — nunca automático.
+
+    A PÁGINA NÃO ESCREVE NO APARELHO por decisão, e esta função é a única
+    exceção, aberta por ela em 07/09/2026 depois de ver os quatro cartões
+    dizendo *"cor não lida"*: *"A cor exige escrita mesmo. Mas ler uma vez, sob
+    seu comando, é o que o daemon faz. então por favor faz isso. é o que eu
+    venho pedindo."*
+
+    O QUE ISTO ESCREVE, e por que é seguro: um `SET_FEATURE 0x80` com o payload
+    `[1, 19]`, que PEDE o serial de fábrica — o mesmo que o daemon manda uma
+    vez por controle por sessão, e o mesmo que o `dualshock-tools` manda. A cor
+    está nos caracteres 5-6 desse serial.
+
+    QUEM MONTA E CONFERE O PEDIDO NÃO É ESTA FUNÇÃO: é
+    `integrations.cor_do_plastico`, que tem uma função sem parâmetro para o
+    payload e outra que o confere byte a byte antes de sair. A razão está
+    escrita lá e vale repetir aqui: `0x80` é a família em que `[1, 1]` RESETA o
+    controle e `[12, 1, …]` grava calibração na memória não-volátil. Não há
+    desfazer, e ela tem quatro controles sem reposição. Uma segunda montagem
+    nesta página seria uma segunda chance de escrever o byte errado.
+
+    NÃO É AUTOMÁTICO, e é o outro lado da mesma trava: só roda quando ela
+    aperta o botão. Uma leitura por tique seria uma escrita por tique.
+    """
+    from hefesto_dualsense4unix.integrations import cor_do_plastico
+
+    fora: dict[str, Any] = {"lidos": {}, "erros": {}}
+    slugs = colorway_por_nome()
+    for visto in pelo_sysfs():
+        endereco = visto["uniq"]
+        try:
+            cor = cor_do_plastico.ler_pelo_cabo(visto["uniq_cru"])
+        except Exception as erro:  # o aparelho recusou, ou o nó sumiu
+            fora["erros"][endereco] = f"{type(erro).__name__}: {erro}"
+            continue
+        if cor is None:
+            fora["erros"][endereco] = "o controle não devolveu o serial"
+            continue
+        # O NOME VIRA SLUG PELO CSV DELA, que é o dono do par nome/desenho. O
+        # `cor_do_plastico` devolve o nome de fábrica; o desenho escolhe por
+        # `data-colorway`, e a junta é o mesmo CSV das 28 cores.
+        slug = slugs.get(_dobra(cor.nome), "")
+        if not slug:
+            fora["erros"][endereco] = (
+                f"o aparelho disse «{cor.nome}» e esse nome não está em "
+                f"{CORES.name} — a cor foi lida, o desenho é que não a conhece")
+            continue
+        guardar_cor_dela(endereco, slug)
+        fora["lidos"][endereco] = {
+            "nome": cor.nome, "colorway": slug,
+            # A CHAVE ABAIXO É O NOME DO CAMPO que `cor_do_plastico`
+            # publica. Acentuá-la a faria divergir do atributo do dono, e a
+            # página passaria a falar um nome que o dono não responde. (E este
+            # comentário não pode ESCREVER a chave: escrevê-la o tornaria a
+            # própria violação que ele explica — aconteceu, nesta linha.)
+            "codigo": cor.codigo}  # noqa-acento: campo publicado pelo dono
+    return fora
+
+
 def _pergunta_ao_daemon(metodo: str, prazo: float = 1.5) -> Any:
     """Uma chamada JSON-RPC pelo socket unix, com a biblioteca padrão.
 
@@ -944,9 +1039,14 @@ def quem_esta_na_mesa() -> dict[str, Any]:
         fora["daemon"] = (
             f"{motivo} · lendo direto do kernel: {quantos} DualSense na mesa. "
             f"Transporte, bateria, carga, lâmpada e barra vêm do `sysfs`. "
-            f"A COR do plástico não: ela só sai por escrita no aparelho, e "
-            f"esta página não escreve — diga qual é cada um no seletor e a "
-            f"mesa lembra pelo endereço."
+            # A COR TEM DOIS CAMINHOS desde 07/09/2026, e o texto diz os
+            # dois: o botão pergunta ao aparelho (uma escrita, sob o comando
+            # dela), e o seletor continua valendo para quando ela preferir
+            # dizer. Antes esta frase afirmava que a página não lia — e a
+            # afirmação envelheceu no mesmo dia em que o botão nasceu.
+            f"A COR do plástico sai por leitura no aparelho: clique em `ler a "
+            f"cor nos controles` e a mesa lembra pelo endereço. Ou diga qual é "
+            f"cada um no seletor de cada cartão."
             if quantos else
             f"{motivo} · e o kernel também não vê DualSense nenhum agora.")
         return fora
@@ -1171,6 +1271,97 @@ def veredito(respostas: dict[str, str]) -> str:
     return "parcial"
 
 
+#: A PÁGINA QUE É DONA DO DESENHO. O mapa do controle pinta o contorno com a
+#: cor do plástico desde 27/08/2026, e é dele que esta mesa lê a regra — não
+#: uma segunda cópia. Mordida: mude o `stroke-width` lá e a mesa muda junto.
+_A_PAGINA_DO_MAPA = ("src/hefesto_dualsense4unix/interface/paginas/"
+                     "mapa-do-controle.html")
+
+
+def _regras_de_estilo(texto: str) -> list[tuple[str, str]]:
+    """As regras `seletor {corpo}` dos blocos de estilo, sem os comentários."""
+    fora: list[tuple[str, str]] = []
+    for bloco in re.findall(r"<style[^>]*>(.*?)</style>", texto, re.S):
+        limpo = re.sub(r"/\*.*?\*/", "", bloco, flags=re.S)
+        for m in re.finditer(r"([^{}]+)\{([^{}]*)\}", limpo):
+            fora.append((" ".join(m.group(1).split()), m.group(2).strip()))
+    return fora
+
+
+def folha_do_desenho(prefixos: Sequence[str]) -> str:
+    """As regras que PINTAM O DESENHO — perguntadas à página que as escreve.
+
+    *"e cara o contorno não tá pintado"* — 07/09/2026, ela comparando com o
+    mapa. E estava certa: o desenho é DE LINHA, e quem dá cor à linha é o
+    `stroke`. A folha dos 28 (`monta.folha_das_cores()`) pinta as ZONAS; o
+    contorno do casco, os furos e as juntas vivem numa segunda folha, que até
+    hoje só existia dentro do `mapa-do-controle.html`.
+
+    Copiá-la aqui seria a segunda cópia que diverge sem ninguém ver — o defeito
+    que aposentou a pasta do mockup. Então esta função LÊ o mapa e reescreve
+    só o endereço: `.ds` vira o desenho desta página, e `mp-` vira o prefixo de
+    cada um dos quatro postos (sem prefixo os ids colidem e o `url(#…)` do
+    segundo desenho aponta para o gradiente do primeiro).
+    """
+    texto = (RAIZ / _A_PAGINA_DO_MAPA).read_text(encoding="utf-8")
+    # A FOLHA DO DESENHO SÃO AS REGRAS `.ds ` — o desenho, não a página. Ficam
+    # de fora duas famílias, e as duas por razão medida:
+    #
+    # * `.ds{width:100%…}`, que é o TAMANHO no mapa. A mesa põe quatro lado a
+    #   lado e tem teto próprio; herdar o de lá esticaria cada um a 74vh.
+    # * as `.mapa:has(.item-X:hover)`, que são o realce DE LÁ. O gatilho delas
+    #   mora na lista da direita, que aqui não existe: quem acende na mesa é
+    #   `monta.folha_de_realce()`, pela classe `marcada` que `monta.svg` põe no
+    #   próprio grupo. Trazer as de lá seria acender no hover do mouse — e o
+    #   que manda acender aqui é o roteiro, não o ponteiro.
+    #
+    # O QUE ENTRA, e cada uma responde por uma queixa dela: o `fill` do grupo,
+    # o `stroke` do casco (*"o contorno não tá pintado"*), o `sem-tinta` que
+    # apaga o círculo do PS (*"o do PS não tem esse círculo no meio"*), a luz
+    # do lightbar, os LEDs de jogador e as peças ocultas.
+    regras = _regras_de_estilo(texto)
+    # E OS GLIFOS ENTRAM JUNTO (`.sobre`): eles são a segunda vista da mesma
+    # peça — o R do analógico, o triângulo, o losango do Options. Sem as regras
+    # deles os vinte glifos caíam no preto padrão do SVG, que sobre o casco
+    # escuro é peça invisível. Medido em 07/09/2026: mapa cinza-claro, mesa
+    # `rgb(0,0,0)`.
+    do_desenho = [(sel, corpo) for sel, corpo in regras
+                  if (sel.startswith(".ds ") or sel.startswith(".sobre"))
+                  and ":hover" not in sel]
+    if not any("var(--z-casca-solida)" in corpo for _, corpo in do_desenho):
+        raise RuntimeError(
+            f"o desenho perdeu a folha do traço em {_A_PAGINA_DO_MAPA} — a mesa "
+            f"lê de lá e não tem cópia própria")
+    # AS VARIÁVEIS VIAJAM COM AS REGRAS, e esta linha é uma cicatriz: a
+    # primeira volta trouxe `fill:var(--led-apagado)` sem trazer o
+    # `--led-apagado`, e os cinco LEDs de jogador ficaram PRETOS — um valor que
+    # não resolve não herda o de trás, cai no padrão. O mapa as declara no
+    # `:root` dele; aqui elas moram no desenho, para não disputarem com a
+    # paleta da casa.
+    usadas = {m for _, corpo in do_desenho
+              for m in re.findall(r"var\((--[\w-]+)", corpo)}
+    da_casa = {"--z-casca-solida", "--luz", "--realce"}
+    declara = {}
+    for sel, corpo in regras:
+        if sel not in (":root", "html", ":root,html"):
+            continue
+        for nome, valor in re.findall(r"(--[\w-]+)\s*:\s*([^;]+)", corpo):
+            declara[nome] = valor.strip()
+    faltam = {n: declara[n] for n in sorted(usadas - da_casa) if n in declara}
+    linhas = []
+    if faltam:
+        linhas.append("svg[data-colorway]{"
+                      + ";".join(f"{n}:{v}" for n, v in faltam.items()) + "}")
+    for sel, corpo in do_desenho:
+        for pref in prefixos:
+            alvo = ", ".join(
+                parte.strip().replace(".ds ", "svg[data-colorway] ")
+                .replace("mp-", f"{pref}-")
+                for parte in sel.split(","))
+            linhas.append(f"{alvo}{{{corpo}}}")
+    return "\n".join(linhas)
+
+
 # ---------------------------------------------------------------------------
 # Os quatro desenhos
 # ---------------------------------------------------------------------------
@@ -1235,6 +1426,10 @@ _TEMA_DA_MESA = """
   --bate:var(--color-ok);
   --nao-bate:var(--color-alerta);
   --sem-julgar:var(--color-ink-faint);
+  /* O ROSA DO FOCO, o mesmo `--pink` do mapa do controle e das dez abas. Ele
+     não está em `paleta_da_casa.TOKENS` porque lá o papel dele é `--color-accent`
+     (roxo); aqui ele é o "olhe para cá", e é o que ela reconhece. */
+  --color-pink:#ff79c6;
 }
 """
 
@@ -1254,6 +1449,8 @@ header b{font-size:var(--text-lg);letter-spacing:-.01em}
   padding:2px var(--space-2xs);border-radius:2px;color:var(--color-ink-quiet)}
 .filtro button.ligado{background:var(--color-accent);color:var(--color-paper-2);
   font-weight:600}
+#ler-cor{font-size:var(--text-xs);padding:2px var(--space-2xs)}
+#ler-cor:disabled{opacity:.5}
 #secao-filtro{font:var(--text-xs)/1.4 var(--font-corpo);
   padding:2px var(--space-2xs);border-radius:var(--radius-sm);
   border:var(--rule-hair) solid var(--color-rule);
@@ -1304,17 +1501,71 @@ p{margin:0 0 var(--space-2xs)}
   border-radius:var(--radius-md);padding:var(--space-2xs);
   background:var(--color-paper-2);display:flex;flex-direction:column;
   gap:var(--space-3xs)}
-.ctl.papel-reage{--realce:var(--reage);border-color:var(--reage)}
-.ctl.papel-calado{--realce:var(--calado)}
-.ctl.papel-observa{--realce:var(--observa)}
-/* O DESENHO TEM TETO DE LARGURA, e é medição, não gosto: as cores das dez
-   zonas saem IDÊNTICAS às do produto (medido zona a zona no Chrome, mockup ×
-   mesa: `z-casca` rgb(174,51,90) nos dois), mas o produto o desenha com 62 px
-   e a mesa o esticava para 263. O desenho é DE LINHA — a mesma casca de 1 px
-   que fecha a silhueta num cartão de 62 px fica rala esticada 4x, e sobre o
-   fundo escuro ela quase some. O teto devolve a densidade que o produto tem,
-   e sobra coluna para as opções, que é onde ela quer que elas fiquem. */
-.ctl svg{width:100%;max-width:190px;height:auto;display:block;margin:0 auto}
+/* A BORDA DO CARTÃO É A COR DO PLÁSTICO DAQUELE CONTROLE — dela, 07/09/2026:
+   *"a borda de cada controle deve ter a borda na cor do model"*. É o que casa
+   a coluna da tela com o aparelho na mão dela sem ler uma palavra. Cai na
+   régua neutra quando a cor ainda não foi lida. */
+.ctl{border-color:var(--cor-do-modelo, var(--color-rule))}
+.ctl[style*="--cor-do-modelo"]{border-width:4px}
+
+/* A PEÇA EM FOCO FICA OPACA, sempre. Medido em 07/09/2026: o `mic` acendia com
+   `opacity:.63` — o valor que ele traz do desenho —, e uma peça que a página
+   manda olhar meio transparente é meio instrução. O mapa faz o mesmo com as
+   ocultas (`.oculta.acesa{opacity:.95}`). */
+svg[data-colorway] g.marcada{opacity:1 !important}
+
+/* E A BATERIA ACENDE A BARRA DE LUZ, como no mapa do controle — decisão dela de
+   27/08/2026: *"bateria pode ser usando as barras da lightbar com 100% e a
+   barra cheia e 0% ela apagada"*. Apontar a bateria sem acender as duas tiras é
+   apontar um medidor que não está na tela. */
+svg[data-colorway]:has([id$="-feat-bateria"].marcada) [id$="-lightbar"]
+  :is(path,rect,circle,ellipse,polygon){
+  fill:var(--realce,var(--color-pink)) !important;
+  stroke:var(--realce,var(--color-pink)) !important}
+
+/* O FOCO É O DO MAPA DO CONTROLE — dela: *"as bordas ou coisas a serem
+   observadas ficam com o foco o mesmo que temos no mapa dos controles"*. Lá a
+   peça em foco acende em `--pink`, e o rosa é o que ela já associa a "olhe
+   aqui" em toda a casa. A mesa usava três cores por papel, e o papel já é dito
+   pela moldura, pelo rótulo e pelo texto do que observar — a peça acesa só
+   precisa GRITAR, e três cores diferentes de grito é uma a mais que zero. */
+.ctl{--realce:var(--color-pink)}
+/* A BORDA É DO MODELO E O PAPEL É O HALO — os dois sinais convivem porque
+   dizem coisas diferentes: a borda diz QUAL CONTROLE é (e ela casa isso com o
+   plástico na mão), o halo diz o que se espera dele NESTE teste. A primeira
+   volta pôs um `outline` roxo no papel, e ele cobria a borda do modelo: os
+   quatro cartões ficavam roxos e a cor do plástico sumia da moldura. */
+.ctl.papel-reage{box-shadow:0 0 0 2px color-mix(in srgb,var(--reage) 55%,transparent)}
+.ctl.papel-calado{opacity:.8}
+/* O DESENHO É DE LINHA, E A LINHA NÃO PODE ENCOLHER COM ELE.
+   -----------------------------------------------------------------------
+   *"e cara o contorno não tá pintado (…) falta a parte superior do
+   touchpad"* — 07/09/2026. E o contorno ESTAVA pintado: medido, `stroke`
+   `rgb(228,224,216)` nos quatro, a mesma cor do mapa. O que faltava era
+   ESPESSURA.
+
+   A conta, medida no Chrome: o `stroke-width:.42` vem em unidades do
+   `viewBox`, que tem 116,68 de largura. O mapa desenha o SVG com 1160 px —
+   escala de 9,9 — e o traço sai com 4,2 px de tela. A mesa desenhava com 190
+   px: escala 1,6, traço de **0,68 px**. Abaixo de um pixel o navegador não
+   desenha uma linha, desenha um cinza fraco — e as linhas mais finas, como a
+   borda de cima do touchpad, somem inteiras no antialiasing.
+
+   A cura tem nome no SVG: `non-scaling-stroke` tira o traço da escala do
+   desenho e o mede em pixels de TELA. Assim o contorno tem a mesma presença
+   nos quatro cartões, no cartão largo e no estreito, e não depende de quantos
+   controles cabem na linha.
+
+   O TETO SOBE JUNTO (190 → 250 px): com o traço resolvido, o que segurava o
+   desenho pequeno deixou de existir, e o que ela precisa é ENXERGAR. */
+.ctl svg{width:100%;max-width:250px;height:auto;display:block;margin:0 auto}
+/* O `!important` NÃO É PREGUIÇA, é a única saída: a folha que vem do mapa
+   endereça o casco por ID (`#p1-corpo .peca`), e um id vence qualquer soma de
+   classes. Sem ele esta regra é escrita e ignorada — foi o que aconteceu na
+   primeira volta, e a foto saiu idêntica à anterior. */
+.ctl svg :is(.peca,.corpo){vector-effect:non-scaling-stroke !important}
+.ctl svg [id$="-corpo"] :is(.peca,.corpo){stroke-width:1.6px !important}
+.ctl svg .oculta .peca{stroke-width:1.2px !important}
 .ctl .rotulo-papel{font-size:var(--text-xs);font-weight:600;letter-spacing:.07em;
   text-transform:uppercase}
 .t-reage{color:var(--reage)} .t-calado{color:var(--calado)} .t-observa{color:var(--observa)}
@@ -1915,6 +2166,30 @@ window.addEventListener('DOMContentLoaded', () => {
   $('#f-medido').onclick = () => filtrar('medido');
   $('#f-tudo').onclick = () => filtrar('tudo');
   $('#secao-filtro').onchange = (e) => filtrar(filtro, e.target.value);
+  /* LER A COR NOS CONTROLES. É a única coisa que esta página escreve no
+     aparelho, e por isso é um clique dela e não um tique: um `SET_FEATURE
+     0x80` pedindo o serial de fábrica, o mesmo que o daemon manda uma vez por
+     sessão. O botão se desabilita enquanto lê — quatro pedidos seguidos ao
+     mesmo aparelho por um duplo clique é o que ele não precisa receber. */
+  $('#ler-cor').onclick = async () => {
+    const b = $('#ler-cor'), r = $('#recado-da-cor');
+    b.disabled = true;
+    r.textContent = 'perguntando aos controles…';
+    try {
+      const resp = await fetch('/ler-cor', {method: 'POST'});
+      const d = await resp.json();
+      const lidos = Object.values(d.lidos || {});
+      const erros = Object.entries(d.erros || {});
+      r.textContent = lidos.length
+        ? `${lidos.length} lido(s): ` + lidos.map((c) => c.nome).join(' · ')
+          + (erros.length ? ` — ${erros.length} não respondeu` : '')
+        : (erros.length ? `nenhum respondeu: ${erros[0][1]}`
+                        : 'nenhum DualSense na mesa agora');
+      if (lidos.length) { desenhado = null; await desenhar(); pintar(); }
+    } catch (e) {
+      r.textContent = 'não deu para ler: ' + e;
+    } finally { b.disabled = false; }
+  };
   montarSecoes();
   $('#iniciar').onclick = iniciar;
   $('#pular-timer').onclick = () => {
@@ -1973,6 +2248,8 @@ def pagina(testes: list[Teste], gravado: dict[str, Any]) -> str:
 <style>{_CSS}</style>
 {monta.folha_das_cores()}
 <style>{monta.folha_de_realce()}</style>
+<!-- O CONTORNO DO DESENHO, na cor do plástico, lido do mapa do controle. -->
+<style>{folha_do_desenho([x.lower() for x in POSTOS])}</style>
 </head><body>
 <header>
   <b>A mesa de medição</b>
@@ -1989,6 +2266,12 @@ def pagina(testes: list[Teste], gravado: dict[str, Any]) -> str:
        vem primeiro na lista porque é a ACEITAÇÃO do produto, não uma seção
        qualquer do mapa. -->
   <select id="secao-filtro" title="a fila de uma seção por vez"></select>
+  <!-- A ÚNICA ESCRITA NO APARELHO, e ela é ATO DELA — nunca automática. Ver a
+       docstring de `ler_a_cor_no_aparelho`. -->
+  <button id="ler-cor" title="pergunta o serial de fábrica a cada controle e
+    tira a cor dele; é a única coisa que esta página escreve no aparelho">
+    ler a cor nos controles</button>
+  <span class="cinza" id="recado-da-cor"></span>
   <span class="cinza" id="contador"></span>
   <span class="cinza" id="daemon">lendo o daemon…</span>
   <span class="cinza">o registro vai para {_e(pasta_do_registro())}</span>
@@ -2163,8 +2446,15 @@ def cartoes(teste: Teste, mesa: dict[str, Any]) -> str:
             f'<label><input type="radio" name="r-{posto}" value="{v}">'
             f'<span>{_e(rot)}</span></label>'
             for v, rot in RESPOSTAS)
+        # A BORDA DO CARTÃO É A COR DO PLÁSTICO — pedido dela, 07/09/2026:
+        # *"a borda de cada controle deve ter a borda na cor do model"*. O hex
+        # se PERGUNTA a `monta.cor_da_zona`, que é o dono do par colorway/zona
+        # e lê o CSV dela; digitá-lo aqui seria a segunda tabela das 28 cores.
+        # Sem cor lida, a borda fica na régua neutra e o cartão diz por quê.
+        casca = monta.cor_da_zona(atual, "casca-solida") if atual else ""
+        estilo = f' style="--cor-do-modelo:{casca}"' if casca else ""
         blocos.append(
-            f'<div class="ctl papel-{papel}" data-posto="{posto}">'
+            f'<div class="ctl papel-{papel}" data-posto="{posto}"{estilo}>'
             f'{svgs[posto]}'
             f'<div class="quem">'
             f'<b class="posto">{_e(posto)}</b>'
@@ -2252,16 +2542,30 @@ class _Atendente(BaseHTTPRequestHandler):
 
     def do_POST(self) -> None:
         caminho = self.path.split("?", 1)[0]
-        if caminho not in ("/registro", "/cor"):
+        if caminho not in ("/registro", "/cor", "/ler-cor"):
             self._responder("não existe".encode(),
                             "text/plain; charset=utf-8", 404)
             return
         tamanho = int(self.headers.get("Content-Length") or 0)
+        cru = self.rfile.read(tamanho).decode("utf-8") if tamanho else ""
+        # CORPO VAZIO É VÁLIDO, e `/ler-cor` é justamente assim: ele não leva
+        # dado nenhum, só a ordem dela. `json.loads("")` levanta, e o erro saía
+        # como texto puro num canal que o navegador lê como JSON — o recado que
+        # chegava à tela era `Unexpected token 'E'`, que não diz nada a
+        # ninguém. Medido clicando o botão, em 07/09/2026.
         try:
-            item = json.loads(self.rfile.read(tamanho).decode("utf-8"))
+            item = json.loads(cru) if cru.strip() else {}
         except ValueError as erro:
-            self._responder(str(erro).encode("utf-8"),
-                            "text/plain; charset=utf-8", 400)
+            self._responder(
+                json.dumps({"erro": str(erro)}, ensure_ascii=False).encode(),
+                "application/json; charset=utf-8", 400)
+            return
+        if caminho == "/ler-cor":
+            # A ÚNICA ESCRITA NO APARELHO QUE ESTA PÁGINA FAZ, e ela chega por
+            # um POST porque é ATO DELA: um GET seria disparado por um F5.
+            self._responder(
+                json.dumps(ler_a_cor_no_aparelho(), ensure_ascii=False).encode(),
+                "application/json; charset=utf-8")
             return
         if caminho == "/cor":
             # A COR QUE ELA DISSE, por endereço. É a única coisa que esta

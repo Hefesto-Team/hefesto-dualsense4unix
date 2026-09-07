@@ -679,14 +679,43 @@ def test_a_pagina_dirigida_pelo_navegador(mesa_no_ar, mentira, monkeypatch) -> N
                     " const c = getComputedStyle(s).color; s.remove(); return c; }",
                     nome)
 
+            # O FOCO É UM SÓ, E O PAPEL É A MOLDURA — mudou em 07/09/2026,
+            # por decisão dela: *"as bordas ou coisas a serem observadas ficam
+            # com o foco o mesmo que temos no mapa dos controles"*. Lá a peça
+            # em foco acende em `--pink`, e o rosa é o que ela já associa a
+            # "olhe aqui" em toda a casa.
+            #
+            # ESTA RÉGUA COBRAVA TRÊS CORES DE REALCE, uma por papel, e por
+            # isso reprovou a DECISÃO em vez do defeito — a segunda vez que
+            # acontece com estas mesmas linhas. O que ela tem de cobrar é que
+            # a tela SEPARE os papéis; ela só não pode dizer POR ONDE, porque
+            # isso é escolha de desenho e a escolha mudou.
             reage, calado = tinta("#p3-l2"), tinta("#p1-l2")
-            assert reage != calado, (
-                "os quatro brilham igual — um teste assim não diz nada")
-            assert reage == token("--reage"), f"{reage} != token --reage"
-            assert calado == token("--calado"), f"{calado} != token --calado"
-            assert token("--reage") != token("--calado"), (
-                "os dois papéis apontam para a MESMA cor no tema — a régua "
-                "acima passaria sem que a tela distinguisse coisa nenhuma")
+            assert reage == calado == token("--color-pink"), (
+                f"a peça em foco não acende no rosa do mapa: {reage} {calado}")
+
+            def moldura(posto: str) -> dict[str, str]:
+                return pg.eval_on_selector(
+                    f'.ctl[data-posto="{posto}"]',
+                    "e=>{const s=getComputedStyle(e);"
+                    " return {halo: s.boxShadow, opacidade: s.opacity,"
+                    "         borda: s.borderTopColor};}")
+
+            # OS PAPÉIS SE SEPARAM NA MOLDURA, e a régua vai atrás do que a
+            # tela usa hoje: o halo de quem deve reagir, e o recuo de quem tem
+            # de ficar calado.
+            m3, m1 = moldura("P3"), moldura("P1")
+            assert m3 != m1, (
+                "os quatro cartões estão idênticos — quem deve reagir e quem "
+                "tem de ficar calado não se distinguem em nada")
+            assert m3["halo"] != "none", (
+                "quem deve reagir perdeu o halo — sobrou só o texto")
+            # E A BORDA CONTINUA SENDO A COR DO PLÁSTICO, não a do papel: os
+            # dois sinais convivem porque dizem coisas diferentes. A primeira
+            # volta pôs um `outline` do papel e ele cobria a cor do modelo.
+            assert m3["borda"] != m1["borda"], (
+                "os dois cartões têm a mesma borda — a cor do plástico sumiu "
+                "da moldura")
             # e a peça que NÃO é do teste continua com a cor do plástico dela
             assert tinta("#p3-r1") != reage
             assert tinta("#p3-r1") != tinta("#p1-r1"), (
@@ -747,7 +776,25 @@ def test_a_pagina_dirigida_pelo_navegador(mesa_no_ar, mentira, monkeypatch) -> N
             indice = pg.inner_text("#indice-corpo").lower()
             assert "o roteiro" in indice and "o mapa de canais" in indice
             assert "obedeceu" in indice, "o índice não mostra o estado gravado"
-            assert "1 de 21" in indice, "o índice não conta o que foi feito"
+            # A CONTAGEM É POR SEÇÃO desde 07/09/2026 — *"cadê as seções das
+            # 21?"*. Antes o índice trazia um total só ("1 de 21"), e esta
+            # linha o cravava; com as seis seções do roteiro cada uma conta a
+            # sua, e a régua passa a cobrar o que interessa: que ALGUMA seção
+            # registre o que acabou de ser respondido.
+            contagens = re.findall(r"— (\d+) de (\d+)", indice)
+            assert contagens, f"o índice não conta nada: {indice[:200]}"
+            assert any(int(f) > 0 for f, _ in contagens), (
+                "o índice não conta o que foi feito — nenhuma seção registrou "
+                "a resposta que acabou de ser gravada")
+            # E AS SEÇÕES SOMAM A FATIA QUE ESTÁ NA TELA, não o acervo: o
+            # filtro abre em *"o que falta"* por pedido dela, e um índice que
+            # contasse os 199 enquanto a página mostra 148 mandaria procurar
+            # teste que não está ali.
+            na_tela = pg.evaluate("() => TESTES.length")
+            assert sum(int(quantos) for _, quantos in contagens) == na_tela, (
+                f"o índice perdeu testes pelo caminho: as seções somam "
+                f"{sum(int(q) for _, q in contagens)} e a página mostra "
+                f"{na_tela}")
             pg.click('#indice-corpo a[data-ir="0"]')
             assert pg.evaluate("location.hash") == "#roteiro-01", (
                 "o número do índice não leva ao teste")
