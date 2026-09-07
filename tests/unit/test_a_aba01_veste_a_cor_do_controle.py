@@ -147,21 +147,38 @@ def test_a_prosa_da_legenda_nao_nomeia_um_colorway() -> None:
 # ---------------------------------------------------------------------------
 # 2. A pele existe, e está no lugar certo
 # ---------------------------------------------------------------------------
-def test_cada_cartao_conectado_tem_a_pele_enderecada() -> None:
-    """Um por controle da mesa que está na mesa, e nenhuma no lugar vazio."""
+def test_cada_lugar_da_mesa_tem_a_pele_enderecada() -> None:
+    """Uma por LUGAR da mesa — os quatro, e não só os conectados.
+
+    ERA `len(monta.CONECTADOS)` E O LUGAR VAZIO ERA PROIBIDO DE TER PELE, até
+    07/09/2026 (QUATRO-NA-MESA-01). A régua era a do mundo de ontem, e a
+    proibição era o próprio defeito escrito como requisito: no produto a página
+    é ESTÁTICA, e quando um terceiro controle chega o cartão do P3 REABRE (passo
+    `1c` do piloto, que tira a classe `off`). Sem `data-campo="plastico"` lá
+    dentro, o `achar(raiz, 'plastico')` do piloto devolvia lista vazia e a borda
+    do P3 ficava na cor neutra para sempre — com a cor certa chegando do daemon
+    a cada tique e caindo no vazio.
+
+    O LUGAR VAZIO CONTINUA SEM PELE NA TELA, e é isso que esta régua ainda
+    protege — só que por CSS e não por ausência de HTML: `.cartao.off > .pele`
+    é `display:none`, e a regra já existia desde 03/09 exatamente para o cartão
+    que vira `off` em tempo de execução. A cena que ela aprovou não muda um
+    pixel; o que muda é haver onde a cor pousar.
+    """
     fileira = fileira_de_cartoes()
     peles = re.findall(
         r'<i class="pele" data-campo="plastico" data-hef-alvo="cor"', fileira)
-    assert len(peles) == len(monta.CONECTADOS), (
-        f"são {len(peles)} peles para {len(monta.CONECTADOS)} controles na "
-        f"mesa — sem a pele, a borda do cartão volta a ser a do desenho"
+    assert len(peles) == len(monta.MESA), (
+        f"são {len(peles)} peles para {len(monta.MESA)} LUGARES na mesa — sem a "
+        f"pele, o cartão que reabre fica com a borda do desenho"
     )
-    vazios = fileira.split('class="cartao off"')[1:]
-    for pedaco in vazios:
-        assert 'class="pele"' not in pedaco.split("</div>\n              </div>")[0], (
-            "um LUGAR VAZIO ganhou pele. Sem controle não há plástico a "
-            "mostrar, e a borda dele é a do `.cartao.off`"
-        )
+    # E ELA SOME PELO ESCURO, não pela ausência. Sem esta regra a unificação
+    # acenderia a borda do lugar vazio na cor do plástico do mockup.
+    folha = bancada()
+    assert ".cartao.off > .pele{display:none}" in folha, (
+        "a regra que esconde a pele do lugar vazio saiu da folha — o cartão "
+        "apagado voltaria a mostrar a cor de um controle que não está lá"
+    )
 
 
 def test_a_pele_nao_e_o_cartao() -> None:

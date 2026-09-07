@@ -35,6 +35,7 @@ for _caminho in (str(RAIZ / "src"), str(INTERFACE)):
     if _caminho not in sys.path:
         sys.path.insert(0, _caminho)
 
+import monta
 from hefesto_dualsense4unix.interface import onde
 from pacotes import Contexto
 from pacotes import a01_jogar as aba
@@ -149,19 +150,39 @@ def test_a_pagina_tem_os_dois_elementos_do_esmaecido() -> None:
     armadilha medida do piloto da Controles. Por isso o `<b>` leva a CLASSE
     (`jogador-espera`, alvo `classe`) e o `<span>` de dentro leva o TEXTO.
 
+    NOS QUATRO LUGARES DESDE 07/09/2026 (QUATRO-NA-MESA-01). A conta era DOIS,
+    e dois era o defeito: o lugar vazio saía sem endereço nenhum, e o "Player 3"
+    que o daemon publicava quando o terceiro controle chegava não tinha onde
+    pousar. O travessão continua sendo o texto de repouso — o que muda é a
+    ESTRUTURA que o gerador emite, nunca a `monta.MESA`.
+
     A MORDIDA: ponha os dois `data-campo` no mesmo `<b>` e o gerador REPROVA
     antes desta régua — `aba01._conferir` §10 mede as duas coisas.
     """
     doc = _pagina()
+    lugares = len(monta.MESA)
 
     assert doc.count('data-campo="jogador-espera" data-hef-alvo="classe"'
-                     ' data-hef-classe="espera"') == 2, (
-        "os dois cartões conectados não têm o endereço do esmaecido")
-    assert doc.count('<span data-campo="jogador">') == 2, (
+                     ' data-hef-classe="espera"') == lugares, (
+        f"os {lugares} lugares da mesa não têm o endereço do esmaecido")
+    assert doc.count('<span data-campo="jogador">') == lugares, (
         "o número do jogador deixou de ser folha — a pintura apagaria os filhos")
     assert 'class="espera"' not in doc, (
         "um cartão nasce esmaecido: a cena que ela aprovou tem os dois "
         "controles recebidos pelo jogo")
+    # E O LUGAR VAZIO CONTINUA MOSTRANDO SÓ O TRAVESSÃO. O endereço entrou; o
+    # texto não. Sem esta linha a régua acima passaria com o desenho dizendo
+    # "Player 3" num lugar onde não há controle nenhum.
+    vazios = doc.split('class="cartao off"')[1:]
+    assert len(vazios) == lugares - len(monta.CONECTADOS), (
+        "a cena que ela aprovou deixou de ter dois lugares vazios")
+    for pedaco in vazios:
+        cartao = pedaco.split("</div>\n              </div>")[0]
+        assert '<span data-campo="jogador">—</span>' in cartao, (
+            "um lugar vazio deixou de mostrar o travessão no número do jogador"
+        )
+        assert '<span data-campo="identidade">—</span>' in cartao, (
+            "um lugar vazio deixou de mostrar o travessão na identidade")
 
 
 # ---------------------------------------------------------------------------

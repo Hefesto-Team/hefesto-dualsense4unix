@@ -141,6 +141,24 @@ def bancada() -> str:
     return arq.read_text(encoding="utf-8")
 
 
+def _bloco_do_lugar(html: str, pref: str) -> str:
+    """O HTML de UM lugar da mesa, do `<div class="ctrl…">` até o próximo.
+
+    ELE SUBSTITUIU O `split('class="ctrl vazia"')` EM 07/09/2026, e a troca é
+    obrigatória: com a fusão dos dois ramos de coluna a classe `vazia` morreu, e
+    um `split` por ela devolveria lista VAZIA — a régua ficaria verde por
+    vacuidade, que é o pior desfecho possível para uma guarda.
+    """
+    import re
+
+    ate_a_faixa = html.split('class="vib-estado"', 1)[0]
+    for pedaco in ate_a_faixa.split('<div class="ctrl')[1:]:
+        achado = re.search(r'data-controle="(p\d+)"', pedaco.split(">", 1)[0])
+        if achado and achado.group(1) == pref:
+            return pedaco
+    raise AssertionError(f"a bancada não tem o lugar {pref!r}")
+
+
 # --------------------------------------------------------------------------
 # 1. o número é o PEDIDO, e não o campo preso
 # --------------------------------------------------------------------------
@@ -253,23 +271,49 @@ def test_o_desenho_tem_endereco_para_os_dois_punhos(bancada) -> None:
     compartilhado, e não esta aba: o alvo ``classe`` do pintor usa ``on`` por
     omissão, e sem o atributo ele acenderia uma classe que o CSS não conhece —
     pintura contada, tela igual.
+
+    A CONTA É POR LUGAR DESDE 07/09/2026, e era por "coluna viva". A troca é
+    cura de defeito medido com os quatro DualSense dela na mesa: o lugar VAZIO
+    era um cartão à parte, sem um único ``data-campo``, e o ``treme-e``/
+    ``treme-d`` que o pacote emite para os QUATRO lugares chegava sem ter onde
+    pousar. Contar ``colunas vivas`` era medir o desenho, não a mesa dela.
     """
-    vivas = bancada.count('<div class="ctrl" data-controle=')
-    assert vivas >= 1, "a bancada não tem coluna viva — não há o que medir"
+    from hefesto_dualsense4unix.interface import aba05
+    lugares = len(aba05.MESA)
+    assert bancada.count("data-controle=\"p") == lugares, (
+        f"a bancada não tem os {lugares} lugares — não há o que medir")
     for sigla in ("e", "d"):
         alvo = (f'data-campo="treme-{sigla}" data-hef-alvo="classe"'
                 f' data-hef-classe="acesa"')
-        assert bancada.count(alvo) == vivas, (
-            f"o punho {sigla!r} não tem endereço em cada uma das {vivas} "
-            f"colunas vivas")
+        assert bancada.count(alvo) == lugares, (
+            f"o punho {sigla!r} não tem endereço em cada um dos {lugares} "
+            f"lugares da mesa")
 
 
 def test_o_lugar_vazio_nao_afirma_tremor(bancada) -> None:
-    """Um lugar sem controle não acende punho nenhum, nem por engano."""
-    for pedaco in bancada.split('class="ctrl vazia"')[1:]:
-        bloco = pedaco.split('<div class="ctrl', 1)[0]
-        assert 'data-campo="treme-' not in bloco, (
-            "um lugar vazio ganhou endereço de tremor")
+    """Um lugar sem controle não acende punho nenhum, nem por engano.
+
+    ESTA RÉGUA INVERTEU EM 07/09/2026, e o que a inverteu foi o defeito que ela
+    ajudava a manter. Ela pedia que o bloco vazio NÃO tivesse ``data-campo=
+    "treme-"`` — e era essa ausência que deixava o P3 e o P4 mudos com os
+    aparelhos ligados. O ENDEREÇO vai nos quatro; o que um lugar sem controle
+    não pode ter é a CLASSE ``acesa`` cravada no HTML de nascença, que seria a
+    tela afirmando um tremor que ninguém mediu.
+
+    A MORDIDA: troque ``acesos=acesos`` por ``acesos=(ESQ["id"],)`` em
+    ``aba05._coluna`` e este teste reprova.
+    """
+    from hefesto_dualsense4unix.interface import aba05
+    vazios = [c["pref"] for c in aba05.MESA if not c.get("conectado", True)]
+    assert vazios, "a mesa do desenho não tem lugar vazio — não há o que medir"
+    for pref in vazios:
+        bloco = _bloco_do_lugar(bancada, pref)
+        assert 'data-campo="treme-' in bloco, (
+            f"o lugar vazio {pref} perdeu o endereço do tremor — o pacote emite "
+            f"`treme-e`/`treme-d` para os quatro lugares, e sem endereço o dado "
+            f"do controle que chegar ali não tem onde pousar")
+        assert " acesa" not in bloco, (
+            f"o lugar vazio {pref} nasceu com um punho ACESO")
 
 
 def test_o_pacote_emite_o_tremor_que_o_produto_calculou() -> None:

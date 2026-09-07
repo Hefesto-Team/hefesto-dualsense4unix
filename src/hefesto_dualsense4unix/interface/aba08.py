@@ -11,8 +11,9 @@ import sys
 
 sys.path.insert(0, str(pathlib.Path(__file__).parent))
 import onde  # noqa: E402
-from monta import (DS, MESA, CONECTADOS, CSS_GLIFO, CSS_POPUP, cor_da_zona,  # noqa: E402
-                   glifo, monta, player_slot_color, ressalva as monta_ressalva, svg)
+from monta import (DS, MESA, CONECTADOS, CSS_GLIFO, CSS_POPUP, TRAVESSAO,  # noqa: E402
+                   cor_da_zona, glifo, monta, player_slot_color,
+                   ressalva as monta_ressalva, svg)
 
 # A RAIZ SAI DE `__file__`, NUNCA CRAVADA. Medido em 28/08/2026: oito
 # arquivos desta casa cravavam o caminho absoluto da árvore DELA, e por isso
@@ -695,9 +696,41 @@ CSS = CSS_GLIFO + CSS_POPUP + """
   /* O LUGAR SEM CONTROLE na Gestão. A cor é a do `.vazio` da Gatilhos, que é a
      página que ela mandou copiar; o contraste está medido na prova de tela. A
      borda do plástico não vem — ela identifica a peça que está ali, e não há
-     peça a identificar. */
-  .gc-item.fora .gc-nome{color:var(--comment)}
-  .gc-item.fora{cursor:default}
+     peça a identificar.
+
+     A CLASSE ERA `fora` E PASSOU A SER `off` — 07/09/2026, e a troca é o que
+     faz o lugar vazio VOLTAR quando o controle chega. `off` é a marca que o
+     piloto conhece: ele a escreve no passo `1b` (lugar sem dono) e a TIRA no
+     passo `1c` (lugar que ganhou dono). `fora` era palavra só desta aba, e
+     nenhum passo do piloto a tirava — então um P3 que chegasse encontrava o
+     cartão cinza, sem cursor e sem resumo, para sempre. Medido com os quatro
+     DualSense dela na mesa em 07/09: o daemon publicava quatro, a carga
+     chegava com os quatro em `ocupados`, e a tela mostrava dois.
+
+     AS TRÊS REGRAS ABAIXO SÃO O QUE ELA DECIDIU EM 31/08 — *"o espaço fica,
+     mas o nome do canto muda"* — dito agora em CSS em vez de em estrutura. O
+     cartão vazio carrega os MESMOS endereços do cheio (ver
+     `linha_do_controle`), e o que ela vê continua sendo só o nome:
+
+       · o RESUMO some. Máscara, microfone e bateria são leituras do aparelho,
+         e não há aparelho; três travessões em fila diriam que a leitura
+         FALHOU, e a ausência diz que o controle não está — que é a frase que
+         estava escrita no ramo vazio antes de ele morrer.
+       · as SETAS somem, porque não há corpo a abrir.
+       · o `<label>` que envolve o nome perde o clique. Ele TEM de existir no
+         HTML: o piloto escreve valores, não marcação, e um cartão que nasce
+         sem gatilho não tem como ganhar um quando o controle chega. O
+         comentário antigo dizia *"um lugar sem gatilho não tem como abrir"* e
+         estava certo enquanto o cartão nunca seria preenchido; a partir do
+         momento em que ele se enche, a garantia de estrutura vira o defeito.
+         `pointer-events:none` é a mesma promessa, e ela se desfaz sozinha no
+         tique em que o piloto tira o `off`. */
+  .gc-item.off .gc-nome{color:var(--comment)}
+  .gc-item.off{cursor:default}
+  .gc-item.off .gc-resumo,
+  .gc-item.off .gc-seta{display:none}
+  .gc-item.off .gc-abre,
+  .gc-item.off .gc-seta{pointer-events:none}
 
   /* ================= Conexões =================
      Três assuntos, três quadros, agrupados por PERGUNTA:
@@ -1597,11 +1630,19 @@ _regras = [
     "border-color:var(--border-forte)}",
     "  .fita .chip.plastico.on{border-color:var(--plastico,var(--border-forte))}",
     "  /* o corpo do controle que a fita aponta */",
-    "  .quadro-corpo:has(#gc-todos:checked) .gc-corpo{height:40px;padding:2px 12px}",
+    "  /* O `:not(.off)` É DE 07/09/2026, e ele acompanha o cartão vazio que",
+    "     passou a carregar os mesmos endereços do cheio. As duas regras deste",
+    "     bloco alcançam TODO `.gc-corpo` e TODA `.gc-seta` do acordeão — sem o",
+    "     recorte, clicar em “Todos” abriria também os lugares sem dono e a",
+    "     faixa de 40px nasceria vazia, com a palavra “só este” ao lado. E o",
+    "     recorte se desfaz sozinho: quem tira o `off` é o piloto, no tique em",
+    "     que o controle chega. */",
+    "  .quadro-corpo:has(#gc-todos:checked) .gc-item:not(.off) .gc-corpo"
+    "{height:40px;padding:2px 12px}",
     "  /* NO ESTADO “Todos” AS QUATRO JÁ ESTÃO ABERTAS: a seta de abrir sai, e no",
     "     lugar dela entra a palavra do gesto que ali existe — estreitar para um. */",
     "  .quadro-corpo:has(#gc-todos:checked) .gc-seta.abre{display:none}",
-    "  .quadro-corpo:has(#gc-todos:checked) .gc-seta.so{display:flex}",
+    "  .quadro-corpo:has(#gc-todos:checked) .gc-item:not(.off) .gc-seta.so{display:flex}",
 ]
 for i, estado in enumerate(ESTADOS):
     n = 2 + i  # o chip deste estado, na fita
@@ -2160,41 +2201,66 @@ def desenho_do_controle(c, luz):
     return limpo
 
 
+#: O NOME DO LUGAR QUE NÃO TEM DONO — 31/08/2026, regra dela para toda página:
+#: *"o espaço fica, mas o nome do canto muda: agora o p3 e o p4 será P3 bolinha
+#: Desconectado, igual página gatilhos"*.
+#:
+#: ELE É O TEXTO INICIAL DO CAMPO `nome`, e não um ramo à parte: o mesmo
+#: `<span data-campo="nome" data-hef-alvo="html">` que no lugar cheio traz o
+#: `rotulo(c)`. Assim o piloto tem por onde escrever a identidade quando o
+#: controle chegar, e até lá a tela diz o que ela mandou dizer.
+def nome_do_lugar_vazio(c):
+    return (f'Player {c["jogador"]} <span class="pt">•</span> Desconectado')
+
+
 def linha_do_controle(c):
     """Um controle do acordeão: a linha fechada e o corpo que ela abre.
 
     Nada aqui é digitado por controle: a cor da borda sai do desenho, a cor da
     luz sai do produto, o rótulo sai da ordem dela, a máscara e a bateria saem
     da aba Controles, e o transporte decide o que a linha pode prometer.
+
+    UMA FUNÇÃO SÓ PARA OS QUATRO LUGARES — 07/09/2026, e os dois ramos que
+    havia aqui eram o defeito. O lugar VAZIO tinha marcação própria, sem um
+    `data-campo` por dentro; `conectado` agora decide DUAS coisas, e só elas:
+
+      a) a classe e o atributo do cartão (`off` + `data-conectado="nao"`);
+      b) o TEXTO INICIAL de cada campo — o travessão no lugar do valor.
+
+    A ESTRUTURA É A MESMA NOS QUATRO, e é isso que cura o defeito. Medido em
+    07/09/2026 com os quatro DualSense dela na mesa: o daemon publicava quatro,
+    a carga chegava com `colunas = ['p1','p2','p3','p4']` e os quatro em
+    `ocupados`, e a tela mostrava DOIS. O passo 2 do piloto
+    (`hefesto_vivo.pintar`) procura `data-campo="k"` DENTRO do bloco
+    `[data-controle="pN"]`; sem endereço, o dado dela chega e não tem onde
+    pousar. O `data-controle` do lugar vazio nasceu em 03/09 — decisão dela,
+    *"tem que aparecer desligado enquanto não tem nenhum controle; a partir do
+    momento que tiver, ele aparece o controle devidamente conectado"* — e essa
+    cura ficou pela metade: o endereço do BLOCO chegou, o dos CAMPOS não.
+
+    E DOIS RAMOS QUE DUPLICAM ESTRUTURA ENVELHECEM SEPARADOS. Este par
+    envelheceu: entre 03/09 e 06/09 o lugar cheio ganhou `luz-trava`,
+    `luz-dica`, `luz-texto`, `luz-espera` e o endereço do desenho — cinco
+    endereços novos, nenhum deles no ramo de baixo, e ninguém percebeu porque
+    não havia como perceber.
+
+    O QUE `conectado` NÃO DECIDE MAIS: se o cartão ABRE. Isso agora é CSS
+    (`.gc-item.off`), e a razão está escrita lá — o piloto escreve valores, não
+    marcação, e um cartão que nasce sem `<label>` não ganha um quando o
+    controle chega.
     """
-    # O LUGAR DE QUEM NÃO ESTÁ NA MESA — 31/08/2026, regra dela para toda página:
-    # *"o espaço fica, mas o nome do canto muda: agora o p3 e o p4 será
-    # P3 bolinha Desconectado, igual página gatilhos"*.
-    #
-    # ELE NÃO ABRE, E ISSO É ESTRUTURA, NÃO REGRA: a linha nasce sem `<label
-    # for=...>`, e sem label não há o que marque o rádio que o CSS expande. Uma
-    # regra que PROÍBA abrir alguém desfaz sem perceber; um lugar sem gatilho não
-    # tem como abrir. É a mesma escolha da aba Controles, no ponto 2.5 da lista.
-    #
-    # E NADA DO RESUMO SOBRA: máscara, microfone e bateria são leituras do
-    # aparelho, e não há aparelho. Um travessão em cada uma diria que a leitura
-    # falhou; a ausência diz que o controle não está.
-    # O `data-controle` FICA AQUI TAMBÉM — decisão dela, 03/09/2026: *"tem que
-    # aparecer desligado enquanto não tem nenhum controle. A partir do momento
-    # que tiver, ele aparece o controle devidamente conectado. Se isso não
-    # ocorre com os 4 controles em cada aba, então temos que construir isso e
-    # garantir isso."*
-    #
-    # SEM O ENDEREÇO, O LUGAR VAZIO É VAZIO SÓ PORQUE O DESENHO O DESENHOU
-    # VAZIO. Medido no DOM vivo em 03/09: `[data-controle="p3"]` devolvia ZERO
-    # elementos nesta aba, e o produto não tinha por onde escrever no cartão
-    # quando o terceiro controle chegasse.
-    if not c.get("conectado", True):
-        return f'''          <div class="gc-item gc-{c["pref"]} fora" data-controle="{c["pref"]}">
-            <div class="gc-cabeca">
-              <span class="gc-nome" title="Nenhum controle neste lugar.">Player {c["jogador"]} <span class="pt">•</span> Desconectado</span>
-            </div>
-          </div>'''
+    conectado = c.get("conectado", True)
+
+    def vale(cheio, vazio=TRAVESSAO):
+        """O texto inicial deste campo: o valor lido, ou o travessão.
+
+        O travessão é a resposta honesta de um lugar sem aparelho — *"isto eu
+        não sei"* —, e é o MESMO que `pacotes.__init__` manda a cada tique para
+        as colunas sem dono (`dict.fromkeys(chaves, TRAVESSAO)`). A tela em
+        repouso e a tela pintada dizem a mesma coisa, que é o que impede o
+        cartão de piscar um valor do desenho antes da primeira carga.
+        """
+        return cheio if conectado else vazio
 
     no_radio = e_radio(c)
     luz = "#%02x%02x%02x" % player_slot_color(c["jogador"])
@@ -2202,7 +2268,10 @@ def linha_do_controle(c):
     # A TINTA DA BARRA, e ela é do ELEMENTO — ver o comentário do `.gc-cor` no
     # CSS. Quem não foi lido nasce sem tinta nenhuma, e é a barra que o pacote
     # apaga com `transparent` quando a leitura não vier.
-    tinta = "" if no_radio else f' style="color:{cor_da_zona(c["cor"])}"'
+    # E O LUGAR SEM DONO ENTRA POR AQUI, não por um `if` a mais: sem aparelho
+    # não há cor lida, que é a mesma situação de quem está no rádio.
+    tinta = ("" if (no_radio or not conectado)
+             else f' style="color:{cor_da_zona(c["cor"])}"')
     barra = f'<i class="gc-cor" data-campo="plastico" data-hef-alvo="cor"{tinta}></i>'
     da_controles = DA_CONTROLES[c["pref"]]
     # só o CAMPO sai daqui: o "Vale …, do global" que ficava ao lado saiu da tela
@@ -2212,6 +2281,15 @@ def linha_do_controle(c):
     # Montá-la aqui pela terceira vez é o que fazia a borda do gesto conferir o
     # clique contra literais em vez de contra a lista que a tela desenhou.
     opcoes_teto = list(_aba_conexoes.opcoes_do_teto())
+    # O LUGAR SEM DONO SEGUE O GLOBAL, e isso não é um valor escolhido: um
+    # `<select>` marca sempre alguma opção, e "sobrepõe o global em 30%" seria a
+    # tela afirmando um ajuste POR CONTROLE de um controle que não está aqui.
+    # `opcoes_do_teto()[0]` é a primeira da lista do produto — a que diz *"não
+    # há sobreposição"* —, e ela é lida de lá em vez de digitada porque a lista
+    # tem dono. O piloto reescreve o campo no primeiro tique com dono; até lá o
+    # travessão que ele manda é no-op num `<select>` sem opção `—`, e por isso a
+    # opção honesta precisa estar marcada desde o nascimento.
+    campo_teto = vale(campo_teto, opcoes_teto[0])
     mic_dica = _pacote08.dica_do_microfone("BT" if no_radio else "USB")
     # O RESUMO DO MICROFONE GANHOU ENDEREÇO — 03/09/2026, e as duas metades
     # dele estavam mentindo na mesa dela ao mesmo tempo:
@@ -2244,7 +2322,10 @@ def linha_do_controle(c):
     # agora, a cura não pega) e a RAZÃO do carimbo de nascimento — os dois com
     # dono no produto e zero leitor no HTML até hoje. Ver
     # `a08_conexoes.dica_da_luz`.
-    trava = (f'<i class="ltrava{"" if no_radio else " on"}" data-campo="luz-trava" '
+    # SEM APARELHO A TRAVA NASCE SOLTA, como a de quem está no rádio: a trava é
+    # do transporte, e um lugar vazio não tem transporte que a acenda.
+    trava = (f'<i class="ltrava{"" if (no_radio or not conectado) else " on"}" '
+             f'data-campo="luz-trava" '
              f'data-hef-alvo="classe" '
              f'data-hef-quando="{_pacote08.LUZ_TRAVADA}"></i>')
     dica_luz = ('data-campo="luz-dica" data-hef-alvo="atributo" '
@@ -2258,7 +2339,8 @@ def linha_do_controle(c):
     # É ELE QUE CUMPRE A PROMESSA DO `title`. O desenho diz, desde que nasceu,
     # *"Enquanto ele espera o PS, o mesmo botão vira 'Cancelar'"* — e até hoje o
     # produto não tinha por onde escrever a segunda palavra.
-    rotulo_luz = (f'<span data-campo="luz-texto">{_pacote08.texto_do_botao_da_luz()}</span>')
+    rotulo_luz = (f'<span data-campo="luz-texto">'
+                  f'{vale(_pacote08.texto_do_botao_da_luz())}</span>')
     # A CLASSE `apagado` SAIU DO BOTÃO — 06/09/2026, e ela era a metade que
     # faltava da cura de 03/09. MEDIDO no DOM, com um controle no RÁDIO no lugar
     # do P1: `luz-trava` chegava certo (o `<i>` ficava `ltrava`, sem o `on`) e o
@@ -2272,7 +2354,7 @@ def linha_do_controle(c):
     # já está no HTML estático da linha do cabo. O que muda é que agora existe UM
     # dono da aparência, e ele segue o transporte.
     botao = (f'<button class="btn" data-gesto="luz-nao-acende" {dica_luz} '
-             f'title="{LUZ_NO_RADIO if no_radio else LUZ_NO_CABO}">'
+             f'title="{vale(LUZ_NO_RADIO if no_radio else LUZ_NO_CABO)}">'
              f'{rotulo_luz}</button>')
     # A LINHA DA ESPERA, E ELA NASCE SEM OCUPAR NADA. `monta.ressalva` já sabe
     # sumir em repouso (`.ressalva:has(.nada)`), e é a mesma peça que o exame, os
@@ -2297,16 +2379,51 @@ def linha_do_controle(c):
     # pixel: `.ltrava` é `display:none`.
     bloco_da_luz = (f'<span class="gc-luz">{monta_ressalva("luz-espera")}'
                     f'{trava}{botao}</span>')
-    return f'''          <div class="gc-item gc-{c["pref"]}" data-controle="{c["pref"]}">
+    # A CLASSE E O ATRIBUTO SÃO AS DUAS ÚNICAS COISAS DE FORMA QUE `conectado`
+    # decide, e as duas têm dono no piloto: `off` é o que o passo `1b` escreve e
+    # o `1c` tira; `data-conectado` é o que a folha do `monta.py` lê para apagar
+    # widget de lugar sem aparelho (regra S-04). O desenho nasce dizendo o mesmo
+    # que o produto vai dizer — sem isso o cartão pisca o estado errado até a
+    # primeira carga chegar.
+    marca = "" if conectado else ' off'
+    diz = "" if conectado else ' data-conectado="nao"'
+    # O ÚNICO PIXEL QUE ESTA CURA MUDA, e ele é a bancada alcançando o produto.
+    # Medido em 07/09/2026 com o Chrome, a Gestão aberta, as duas fotos
+    # comparadas linha a linha: 2 linhas de 3.883 diferem, e as duas são a borda
+    # de cima dos cartões do P3 e do P4 — `--border-sutil` (#343746) virou
+    # `--border-forte` (#44475A). Quem a pinta é a regra S-04 do `monta.py`,
+    # `[data-controle][data-conectado="nao"]:not(.vazia){border-color:…}`, e ela
+    # já valia NA TELA DELA: o passo `1b` do piloto escreve esse atributo nos
+    # lugares sem dono a cada tique. O desenho é que mostrava uma borda que o
+    # produto nunca desenha. Nada mais mudou — nem largura, nem altura, nem uma
+    # letra.
+
+    # O `title` DA LINHA: com aparelho ele explica o gesto de mirar; sem
+    # aparelho não há o que mirar, e a frase é a que o ramo vazio já dizia.
+    dica_linha = (f"{SO_ESTE_DICA} A fita do topo passa a apontar para ele."
+                  if conectado else "Nenhum controle neste lugar.")
+    # O ÚNICO CAMPO QUE NÃO RECEBE O TRAVESSÃO É O `<select>` DO MICROFONE, e a
+    # razão é do widget, não da decisão: as opções são `Ligado`/`Desligado`, um
+    # `<select>` marca sempre uma, e não há terceira que diga *"não sei"*.
+    # Inventar uma opção `—` mudaria a lista que o gesto confere e faria a borda
+    # do `mic-existe` aceitar um valor que o produto nunca emite.
+    #
+    # O `<b>` IRMÃO, ESSE RECEBE — os dois dividem o `data-campo="mic-existe"` de
+    # propósito (um fato, um endereço), e o piloto veste cada um como sabe:
+    # `texto` no `<b>`, `valor` no `<select>`. O que ela LÊ sem clicar é o `<b>`,
+    # e ele diz travessão. O `<select>` está dentro do corpo fechado e, num lugar
+    # sem aparelho, a regra S-04 do `monta.py` o apaga.
+
+    return f'''          <div class="gc-item gc-{c["pref"]}{marca}" data-controle="{c["pref"]}"{diz}>
             {barra}
             <div class="gc-cabeca">
               <label class="gc-abre" for="gc-{c["pref"]}" data-gesto="alvo"
-                     title="{SO_ESTE_DICA} A fita do topo passa a apontar para ele.">
-              <span class="gc-nome" data-campo="nome" data-hef-alvo="html">{rotulo(c)}</span>
+                     title="{dica_linha}">
+              <span class="gc-nome" data-campo="nome" data-hef-alvo="html">{vale(rotulo(c), nome_do_lugar_vazio(c))}</span>
               <span class="gc-resumo">
-                <span title="{"A borda deste controle é a cor lida do aparelho." if not no_radio else "A cor deste controle não foi lida — a borda fica neutra."}">Vê como <b>{c["mascara"]}</b></span>
-                <span data-campo="mic-dica" data-hef-alvo="atributo" data-hef-atributo="title" title="{mic_dica}">Microfone <b data-campo="mic-existe">Ligado</b>, <span data-campo="mic-caminho" data-hef-alvo="html">{caminho_do_mic(c)}</span></span>
-                <span title="A bateria vem da aba Controles, que é quem a lê do aparelho.">Bateria <b data-campo="bateria">{da_controles["bat"]}%</b></span>
+                <span title="{"A borda deste controle é a cor lida do aparelho." if (conectado and not no_radio) else "A cor deste controle não foi lida — a borda fica neutra."}">Vê como <b>{vale(c["mascara"])}</b></span>
+                <span data-campo="mic-dica" data-hef-alvo="atributo" data-hef-atributo="title" title="{vale(mic_dica)}">Microfone <b data-campo="mic-existe">{vale("Ligado")}</b>, <span data-campo="mic-caminho" data-hef-alvo="html">{vale(caminho_do_mic(c))}</span></span>
+                <span title="A bateria vem da aba Controles, que é quem a lê do aparelho.">Bateria <b data-campo="bateria">{vale(f'{da_controles["bat"]}%')}</b></span>
               </span>
               </label>
               <label class="gc-seta abre" for="gc-{c["pref"]}" data-gesto="alvo"
@@ -2322,11 +2439,11 @@ def linha_do_controle(c):
                 <span class="rot">{glifo("mic", ativo=True, tam=16)} Microfone e botões
                   <span class="ajuda">?<span class="dica">{MIC_LIGADO_DICA}<br><br>{BOTAO_DICA}</span></span></span>
                 {sel(["Ligado", "Desligado"], "Ligado", gesto="mic-existe", campo="mic-existe", dica="Se o microfone deste controle existe. Desligado, nenhum programa o enxerga — nem o jogo, nem a chamada de voz.")}
-                <span class="leitura" data-campo="mic-escopo" title="{BOTAO_DICA_CURTA}">{BOTAO_DO_MIC}</span>
+                <span class="leitura" data-campo="mic-escopo" title="{BOTAO_DICA_CURTA}">{vale(BOTAO_DO_MIC)}</span>
               </span>
               <span class="gc-bloco barra">
                 <span class="rot">{glifo("rumble_esquerdo", ativo=True, tam=16)} Teto da vibração
-                  <span class="ajuda">?<span class="dica" data-campo="teto-explica" data-hef-alvo="html">{teto_dica(c)}</span></span></span>
+                  <span class="ajuda">?<span class="dica" data-campo="teto-explica" data-hef-alvo="html">{vale(teto_dica(c))}</span></span></span>
                 {sel(opcoes_teto, campo_teto, gesto="teto-da-vibracao", campo="teto-da-vibracao", dica="O teto da vibração deste controle. O global manda e o do controle sobrepõe — o “?” ao lado diz qual dos dois está valendo agora.")}
               </span>
               {bloco_da_luz}
@@ -3981,12 +4098,97 @@ if __name__ == "__main__":
     # 3. O LUGAR DE QUEM NÃO ESTÁ NA MESA. As duas metades: o nome novo presente, e
     #    o rótulo de mesa daquele controle AUSENTE — tirar só uma delas foi como uma
     #    cura desta casa passou pela metade em 31/08.
+    #
+    #    ELAS CONTINUAM CERTAS DEPOIS DA CURA DE 07/09, e é bom dizer por quê: o
+    #    lugar vazio ganhou os endereços do cheio, e não o TEXTO dele. O `nome`
+    #    nasce com `nome_do_lugar_vazio` — que termina em `Desconectado</span>` —
+    #    e o `rotulo(c)` continua fora da página. Duas metades que mediriam o
+    #    mundo de ontem seriam estas; medidas, as duas seguem verdes sem tocar
+    #    numa letra. O que NÃO existia era régua sobre os endereços, e ela é a 3b.
     _FORA = [c for c in MESA if not c.get("conectado", True)]
     _exigir(_HTML.count("Desconectado</span>") == len(_FORA),
             f"não são {len(_FORA)} lugares 'Desconectado' na Gestão de Controles")
     for _c in _FORA:
         _exigir(rotulo(_c) not in _HTML,
                 f"o rótulo de mesa do Player {_c['jogador']} continua na tela — ele não está na mesa")
+
+    # 3b. OS QUATRO LUGARES TÊM O MESMO CONJUNTO DE ENDEREÇOS — 07/09/2026, e
+    #     esta é a régua que faltava no dia em que o defeito nasceu.
+    #
+    #     O DEFEITO, MEDIDO COM OS QUATRO DUALSENSE DELA NA MESA: o daemon
+    #     publicava quatro, a carga chegava com os quatro em `colunas` e em
+    #     `ocupados`, e a tela mostrava DOIS. O passo 2 do piloto procura
+    #     `data-campo="k"` DENTRO de `[data-controle="pN"]`; o lugar vazio tinha
+    #     o endereço do BLOCO (cura de 03/09) e nenhum endereço de CAMPO, então o
+    #     dado dela chegava e não tinha onde pousar.
+    #
+    #     A RÉGUA COMPARA CONJUNTOS, e não conta ocorrências: `mic-existe`
+    #     aparece DUAS vezes no mesmo cartão de propósito (o `<b>` do resumo e o
+    #     `<select>` do corpo — um fato, um endereço, dois vestidos), e uma régua
+    #     por contagem obrigaria a repetir essa escolha em toda mudança futura.
+    #     O que não pode divergir é QUAIS campos existem.
+    #
+    #     E ELA LÊ O HTML GRAVADO, não a função que o produziu. Escrita como
+    #     `linha_do_controle(p1) tem os mesmos campos que linha_do_controle(p3)`
+    #     ela passaria na mordida que devolvesse os dois ramos duplicados — é o
+    #     defeito nomeado na régua 4 logo abaixo, *"uma régua que compara o
+    #     produto com a variável que o produziu mede a si mesma"*.
+    _CAMPO = re.compile(r'data-campo="([^"]*)"')
+
+
+    def _campos_do_lugar(pref: str) -> set[str]:
+        """Os `data-campo` DENTRO do cartão daquele lugar, por `div` balanceado.
+
+        O balanceamento é o mesmo do `_dentro_do_acordeao`, e pela mesma razão:
+        cada cartão traz meia dúzia de `<div>` por dentro (o cabeçalho, o corpo,
+        a ressalva da espera), e parar no primeiro `</div>` leria só a barra da
+        cor. Uma régua que lê MENOS do que o cartão daria verde sobre a metade
+        que ela não visitou.
+        """
+        marca = f'data-controle="{pref}"'
+        achado = _HTML.find(marca)
+        if achado < 0:
+            return set()
+        inicio = _HTML.rfind("<div", 0, achado)
+        profundidade, i = 0, inicio
+        while i < len(_HTML):
+            abre, fecha = _HTML.find("<div", i), _HTML.find("</div>", i)
+            if fecha < 0:
+                break
+            if 0 <= abre < fecha:
+                profundidade += 1
+                i = abre + 4
+                continue
+            profundidade -= 1
+            if profundidade == 0:
+                return set(_CAMPO.findall(_HTML[inicio:fecha + 6]))
+            i = fecha + 6
+        return set()
+
+
+    _LUGARES = [c["pref"] for c in MESA]
+    _CAMPOS_POR_LUGAR = {p: _campos_do_lugar(p) for p in _LUGARES}
+    #     SELETOR CEGO É ERRO, NÃO SILÊNCIO: um cartão que a régua não achar
+    #     devolve conjunto vazio, e comparar vazio com vazio passaria calado no
+    #     dia em que os quatro sumissem.
+    for _p, _campos in _CAMPOS_POR_LUGAR.items():
+        _exigir(bool(_campos),
+                f"o cartão do {_p} não tem `data-campo` nenhum — ou ele sumiu da "
+                "página, ou o `data-controle` dele saiu do `<div>` que a régua "
+                "abre. Nos dois casos o produto não tem por onde escrever nele")
+    _REFERENCIA = _CAMPOS_POR_LUGAR[_LUGARES[0]]
+    for _p in _LUGARES[1:]:
+        _falta = sorted(_REFERENCIA - _CAMPOS_POR_LUGAR[_p])
+        _sobra = sorted(_CAMPOS_POR_LUGAR[_p] - _REFERENCIA)
+        _exigir(not _falta,
+                f"o cartão do {_p} não tem os campos {', '.join(_falta)} que o "
+                f"{_LUGARES[0]} tem. Quando esse controle chegar, o piloto vai "
+                "escrever no vazio — foi o que ela viu em 07/09 com quatro "
+                "DualSense na mesa e dois na tela")
+        _exigir(not _sobra,
+                f"o cartão do {_p} tem os campos {', '.join(_sobra)} que o "
+                f"{_LUGARES[0]} não tem. O conjunto é IGUAL, não maior: um campo "
+                "só num lugar é a segunda grafia do mesmo fato")
 
     # 4. QUEM CONTA CONTROLE CONTA QUEM ESTÁ NA MESA. A aba contava quatro em
     #    silêncio: o Check-up prometia energia para "os 2 controles no cabo" contando

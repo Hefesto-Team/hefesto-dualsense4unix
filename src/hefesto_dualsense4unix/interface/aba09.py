@@ -595,7 +595,7 @@ CSS = """
   .est.escolhe{height:var(--h-escolha)}
   /* A ROUPA DO `<select>` é de cada aba, não do esqueleto: o `topo.html` só lhe
      dá a ALTURA (`--h-escolha`, 36px, para não haver quatro alturas de campo na
-     mesma janela). Estas seis linhas são as MESMAS do `aba08.py:477` — o
+     mesma janela). Estas seis linhas são as MESMAS do `aba08.py:1053` — o
      dropdown que se mudou para cá não podia mudar de roupa no caminho. Sem
      elas ele volta a ser o `<select>` cru do Chrome: fundo claro e do tamanho
      que o sistema quiser, que foi o que a primeira foto desta rodada mostrou.

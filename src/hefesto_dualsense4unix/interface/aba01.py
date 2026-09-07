@@ -53,6 +53,7 @@ o preço de ele ser escrito à mão.
 
 Uso:  aba01.py
 """
+import collections
 import pathlib
 import re
 import sys
@@ -754,6 +755,35 @@ CSS = """
      Não há texto a ler num lugar onde não há controle. */
   .cartao.off .rotulo,
   .cartao.off .bat{color:var(--linha)}
+  /* ---------- O QUE O ESCURO APAGA AGORA QUE A ESTRUTURA É UMA SÓ ----------
+     07/09/2026. O lugar vazio deixou de ser um segundo HTML e passou a ser o
+     MESMO cartão com o texto de cada campo em travessão (ver `cartao`). Estas
+     duas regras são o que faz essa unificação não mover um pixel do desenho que
+     ela aprovou — e as duas mordem pela classe `off`, que é a mesma que o
+     piloto tira no passo `1c` quando um controle ocupa o lugar. Logo elas
+     desligam sozinhas, sem ninguém repintar nada.
+
+     1. O "Sony •" SOME. Ele é texto ESTÁTICO em volta do campo `jogador` — não
+        é o campo, e por isso não vira travessão sozinho. Sem esta regra o lugar
+        vazio diria "Sony • —", que é afirmar o fabricante de um controle que
+        não está lá: a mesma falta que tirou o nome do plástico do `title` em
+        03/09. Escondê-lo pelo `off` é melhor que não escrevê-lo, porque quando
+        o P3 conectar o cartão dele tem de ficar IGUAL ao do P1 — e era essa
+        diferença que o ramo separado produzia.
+        A CLASSE É `.fabricante`, E A PRIMEIRA VOLTA ESCREVEU `.marca`: o
+        `topo.html:482` já tem `.marca{color:var(--orange)}` — uma classe do
+        ESQUELETO, das dez abas. A foto pegou: a palavra "Sony" saiu LARANJA nos
+        dois cartões cheios, 353 pixels de diferença numa mudança que se
+        prometia de zero. É a mesma armadilha que a `.pecas` e a `.cartao` já
+        cobraram desta aba — nome de classe compartilhado quer dizer duas coisas
+        em dois arquivos —, e quem a revelou foi comparar as duas fotos, não
+        ler o CSS.
+     2. O NÚMERO DO JOGADOR NÃO ACENDE. `.cartao .rotulo b` pinta o `<b>` de
+        `--fg` mirando o elemento, e a regra do rótulo acima só alcança o pai
+        por herança — o travessão do lugar vazio sairia CLARO e semi-negrito
+        dentro de um cartão apagado. O peso volta a 400, que é o do rótulo. */
+  .cartao.off .fabricante{display:none}
+  .cartao.off .rotulo b{color:var(--linha);font-weight:400}
   /* O DESENHO CINZA PRECISA DE `!important` porque a cor da peça é `style=`
      INLINE dentro do SVG (o gerador de cores a escreve lá, para o arquivo abrir
      colorido sozinho). Regra externa não vence atributo inline sem isto — e o
@@ -1151,6 +1181,48 @@ def cartao(c, bateria=None):
        sussurrava "Cosmic Red" sob o cursor com o White na mão) e um endereço
        que não pinta nada — e a segunda é pior, porque zera a régua deixando a
        tela igualmente errada.
+
+    UMA FUNÇÃO SÓ PARA OS QUATRO LUGARES (07/09/2026, QUATRO-NA-MESA-01)
+    -------------------------------------------------------------------
+    **O DEFEITO, medido com os QUATRO DualSense dela na mesa:** o daemon
+    publicava quatro controles, a carga da aba chegava com
+    ``colunas = {p1, p2, p3, p4}`` e ``ocupados`` com os quatro — e a tela
+    mostrava DOIS. O P3 e o P4 continuavam dizendo travessão em tudo.
+
+    **A CAUSA era esta função ter DOIS RAMOS.** O ramo do lugar vazio devolvia
+    um cartão **sem nenhum ``data-campo`` por dentro**, e o passo 2 do piloto
+    (`hefesto_vivo.py`) só sabe escrever onde há endereço::
+
+        for(const raiz of document.querySelectorAll('[data-controle="'+pref+'"]'))
+          for(const el of achar(raiz, k)) escrever(el, v);
+
+    ``achar(raiz, k)`` procura ``data-campo="k"`` DENTRO do bloco. Sem endereço
+    o dado dela chegava e não tinha onde pousar — zero escrito e zero erro, que
+    é o modo de falhar que esta casa persegue. Medido no publicado de hoje:
+    **9 endereços no P1 e no P2, 4 no P3 e no P4** — e os 4 eram o desenho e os
+    três chips de máscara, os únicos dois que já tinham sido curados um a um
+    (03/09) *pelo mesmo motivo, sem que ninguém curasse os outros sete*.
+
+    **POR QUE UMA FUNÇÃO SÓ, e não dois ramos consertados:** dois ramos que
+    duplicam estrutura foi exatamente o que produziu isto — um envelheceu e o
+    outro não, sete vezes seguidas. A ``pele``, o ``jogador-espera``, o
+    ``jogador``, a ``identidade``, o ``degradou-cartao``, o
+    ``marcador-principal`` e a ``bateria`` nasceram no ramo de cima e nenhum
+    desceu. Agora ``conectado`` decide **só duas coisas** — a classe/atributo e
+    o TEXTO inicial de cada campo —, e a estrutura é literalmente a mesma
+    cadeia de caracteres para os quatro.
+
+    **E A CENA QUE ELA APROVOU NÃO MUDA UM PIXEL.** O que entra no lugar vazio
+    ou nasce escondido pelo próprio CSS do ``off`` (a ``pele``, a marca
+    "Sony •"), ou já é ``display:none`` em repouso nos quatro cartões (o
+    ``degradou``, sem ``title``; o ``e-primario``, sem a classe ``ha``), ou é um
+    ``<span>`` inline sem estilo em volta do mesmo travessão. As duas regras que
+    seguram isso estão no CSS, junto de ``.cartao.off``.
+
+    **QUEM TIRA O ``off`` É O PILOTO**, no passo ``1c``, quando o controle
+    chega — e é aí que o cartão do P3 fica idêntico ao do P1, marca e número
+    inclusive. O gerador não decide nada disso: ele só garante que há onde
+    escrever.
     """
     # O LUGAR VAZIO — decisão dela, 31/08/2026: *"Vamos deixar os outros dois
     # controles desconectados, só colocamos algo como `-` nos campos que deveriam
@@ -1162,32 +1234,44 @@ def cartao(c, bateria=None):
     #
     # NENHUMA MÁSCARA FICA `on`: máscara é escolha por controle, e sem controle
     # não há escolha. Marcar uma seria desenhar um ajuste que não existe.
-    if not c.get("conectado", True):
-        return f'''              <div class="cartao off"
-                   data-controle="{c["pref"]}" data-conectado="nao"
-                   title="Lugar vazio: nenhum controle conectado aqui.">
-                <div class="peca-topo">
-                {_desenho(c)}
-                <span class="rotulo">{_VAZIO}<br>{_VAZIO}<br><span class="bat">{_BATERIA_GLIFO} <span>{_VAZIO}</span></span></span>
-                </div>
-                <div class="mascara">
-{_chips_de_mascara(None)}
-                </div>
-              </div>'''
+    conectado = c.get("conectado", True)
+
+    # AS DUAS COISAS QUE `conectado` DECIDE — e são SÓ estas duas.
+    #
+    # (a) A CLASSE E O ATRIBUTO. `off` e `alvo` não convivem: quem não tem dono
+    #     não é alvo de edição das outras abas, e é exatamente o que o piloto
+    #     faz no passo `1b` (`classList.remove('alvo')` em todo lugar vazio).
+    #     Escrever os dois aqui seria o gerador afirmando um estado que o
+    #     produto desfaz no primeiro tique.
+    classe = ("cartao off" if not conectado
+              else "cartao alvo" if c["alvo"] else "cartao")
+    #     O VALOR DO `data-conectado` É DA TELA, e não prosa: é ele que o
+    #     piloto compara nos passos `1b` e `1c` (`el.dataset.conectado`).
+    marca_de_conexao = "sim" if conectado else "nao"  # (noqa-acento) valores
+    dica_do_lugar = "" if conectado else (
+        '\n                   title="Lugar vazio: nenhum controle conectado aqui."')
+    # (b) O TEXTO INICIAL DE CADA CAMPO. O `%` e o `•` moram DENTRO do campo de
+    #     propósito — quem escreve o valor escreve a unidade junto, senão o
+    #     lugar vazio sairia com um "—%" pendurado.
+    jogador = f'Player {c["jogador"]}' if conectado else _VAZIO
+    identidade = (f'{c["nome"]} <span class="pt">•</span> {c["via"]}'
+                  if conectado else _VAZIO)
+    carga = (f'{bateria if bateria is not None else BATERIA.get(c["pref"], "— ")}%'
+             if conectado else _VAZIO)
 
     # OS TRÊS CHIPS SÃO OS MESMOS NOS QUATRO CARTÕES — ver `_chips_de_mascara`,
     # que é o dono da forma desde 03/09/2026. Aqui o único argumento é a máscara
     # DAQUELE aparelho, que a mesa viva já traz por controle
     # (`mesa_viva.mesa_do_estado`, lendo `gamepad_emulation.por_aparelho`).
-    return f'''              <div class="cartao{" alvo" if c["alvo"] else ""}"
-                   data-controle="{c.get("uniq") or c["pref"]}" data-conectado="sim">
+    return f'''              <div class="{classe}"
+                   data-controle="{c.get("uniq") or c["pref"]}" data-conectado="{marca_de_conexao}"{dica_do_lugar}>
                 <i class="pele" data-campo="plastico" data-hef-alvo="cor" style="color:{monta.cor_da_zona(c["cor"])}"></i>
                 <div class="peca-topo">
                 {_desenho(c)}
-                <span class="rotulo">Sony <span class="pt">•</span> <b data-campo="jogador-espera" data-hef-alvo="classe" data-hef-classe="espera" title="{ESPERA_DICA}"><span data-campo="jogador">Player {c["jogador"]}</span></b><br><span data-campo="identidade">{c["nome"]} <span class="pt">•</span> {c["via"]}</span><sup class="degradou" data-campo="degradou-cartao" data-hef-alvo="atributo" data-hef-atributo="title">*</sup><span class="e-primario" data-campo="marcador-principal" data-hef-alvo="classe" data-hef-classe="ha" title="{PRIMARIO_DICA}"> <span class="pt">•</span> {MARCA_DO_PRIMARIO}</span><br><span class="bat">{_BATERIA_GLIFO} <span data-campo="bateria">{bateria if bateria is not None else BATERIA.get(c["pref"], "— ")}%</span></span></span>
+                <span class="rotulo"><span class="fabricante">Sony <span class="pt">•</span> </span><b data-campo="jogador-espera" data-hef-alvo="classe" data-hef-classe="espera" title="{ESPERA_DICA}"><span data-campo="jogador">{jogador}</span></b><br><span data-campo="identidade">{identidade}</span><sup class="degradou" data-campo="degradou-cartao" data-hef-alvo="atributo" data-hef-atributo="title">*</sup><span class="e-primario" data-campo="marcador-principal" data-hef-alvo="classe" data-hef-classe="ha" title="{PRIMARIO_DICA}"> <span class="pt">•</span> {MARCA_DO_PRIMARIO}</span><br><span class="bat">{_BATERIA_GLIFO} <span data-campo="bateria">{carga}</span></span></span>
                 </div>
                 <div class="mascara">
-{_chips_de_mascara(c["mascara"])}
+{_chips_de_mascara(c["mascara"] if conectado else None)}
                 </div>
               </div>'''
 
@@ -1825,6 +1909,50 @@ def _dentro_da_grade_dos_assentos(corpo: str) -> str:
     return corpo[inicio:]
 
 
+def _campos_por_lugar(fileira: str) -> dict[str, list[str]]:
+    """Os `data-campo` de DENTRO de cada cartão, por `data-controle`.
+
+    Ela existe para a régua §15, que é a que impede o defeito de 07/09 de
+    voltar: o lugar vazio ter menos endereço que o lugar cheio.
+
+    A FRONTEIRA SE CONTA, e não se adivinha por recuo — a mesma disciplina do
+    `_dentro_da_grade_dos_assentos` acima, e pela mesma razão: cada `.cartao`
+    tem três `<div>` dentro, então um `split` no primeiro `</div>` pararia no
+    `.peca-topo` e a régua leria três endereços onde há nove. Um `split` por
+    recuo casaria com qualquer linha que alguém reindentasse.
+
+    Devolve a LISTA, e não o conjunto: `mascara-cartao` aparece três vezes por
+    cartão, e um lugar que perdesse dois dos três chips passaria por uma régua
+    que só comparasse conjuntos.
+    """
+    fora: dict[str, list[str]] = {}
+    marca = '<div class="cartao'
+    i = fileira.find(marca)
+    while i >= 0:
+        profundidade = 0
+        j = i
+        while j < len(fileira):
+            abre = fileira.find("<div", j)
+            fecha = fileira.find("</div>", j)
+            if fecha < 0:
+                j = len(fileira)
+                break
+            if 0 <= abre < fecha:
+                profundidade += 1
+                j = abre + 4
+                continue
+            profundidade -= 1
+            j = fecha + 6
+            if profundidade == 0:
+                break
+        bloco = fileira[i:j]
+        dono = re.search(r'data-controle="([^"]*)"', bloco)
+        if dono:
+            fora[dono.group(1)] = re.findall(r'data-campo="([^"]*)"', bloco)
+        i = fileira.find(marca, j)
+    return fora
+
+
 def _conferir(doc):
     """As decisões dela de 31/08, conferidas NA SAÍDA. O gerador para se caírem.
 
@@ -1916,9 +2044,15 @@ def _conferir(doc):
     fileira = corpo.split('data-lista="cartoes"', 1)[-1].split('class="col-atencao"', 1)[0]
     exigir(len(fileira) > 2000, "a régua não achou a fileira de cartões")
     exigir("--plastico" not in fileira, "o cartão voltou a cravar a cor do plástico")
+    #    ERA `len(monta.CONECTADOS)` ATÉ 07/09/2026, pelo mesmo motivo dos
+    #    chips de máscara em 03/09: a conta trancava o defeito em vez do
+    #    contrato. A pele só existia no ramo do lugar cheio, e quando o P3
+    #    conectava — o cartão REABRE, passo `1c` do piloto — a borda dele ficava
+    #    na cor neutra para sempre, porque não havia onde a cor pousar.
     exigir(fileira.count('data-campo="plastico" data-hef-alvo="cor"')
-           == len(monta.CONECTADOS),
-           "não há uma pele endereçada por controle na mesa")
+           == len(MESA),
+           "não há uma pele endereçada por LUGAR da mesa — os quatro, e não só "
+           "os conectados: quem chega depois entra num cartão que já existe")
     #    O NOME DO PLÁSTICO NO RÓTULO CONTINUA, e tem de continuar: ele mora em
     #    `<span data-campo="identidade">`, e o pacote o reescreve todo tique —
     #    fotografado em 03/09 dizendo `White · USB` com o controle no cabo. O que
@@ -2079,15 +2213,21 @@ def _conferir(doc):
     #    apaga os filhos e força layout: é a armadilha medida do piloto da
     #    Controles, e é por isso que o `<b>` leva a CLASSE e o `<span>` de dentro
     #    leva o TEXTO.
+    #
+    #    E SÃO OS QUATRO LUGARES desde 07/09/2026 — era `len(monta.CONECTADOS)`,
+    #    e a conta era a do mundo de ontem: o P3 que conectava depois recebia
+    #    "Player 3" numa folha que não existia, e o cartão dele ficava com o
+    #    travessão enquanto a fita do topo já o contava.
     esmaece = corpo.count('data-campo="jogador-espera" data-hef-alvo="classe"'
                           ' data-hef-classe="espera"')
-    exigir(esmaece == len(monta.CONECTADOS),
-           f"esperava {len(monta.CONECTADOS)} números de jogador endereçados "
+    exigir(esmaece == len(MESA),
+           f"esperava {len(MESA)} números de jogador endereçados "
            f"para o esmaecido (`jogador-espera` com alvo `classe`), achei "
            f"{esmaece}")
-    exigir(corpo.count('<span data-campo="jogador">') == len(monta.CONECTADOS),
-           "o número do jogador deixou de ser FOLHA: com `data-campo=\"jogador\"` "
-           "num elemento que tem filho, a pintura apaga os filhos")
+    exigir(corpo.count('<span data-campo="jogador">') == len(MESA),
+           "o número do jogador deixou de ser FOLHA em algum dos quatro "
+           "lugares: com `data-campo=\"jogador\"` num elemento que tem filho, a "
+           "pintura apaga os filhos")
     #    E NENHUM NASCE ESMAECIDO: a cena que ela aprovou tem os dois controles
     #    numerados PELO JOGO. Um cartão que nascesse com a classe mudaria o
     #    desenho aprovado — e diria, no desenho, que o jogo não recebeu um
@@ -2145,8 +2285,11 @@ def _conferir(doc):
     #     EXCLUSIVO dela: nenhuma outra frente pode acendê-lo.
     principais = corpo.count('data-campo="marcador-principal" '
                              'data-hef-alvo="classe" data-hef-classe="ha"')
-    exigir(principais == len(monta.CONECTADOS),
-           f"esperava {len(monta.CONECTADOS)} marcadores de primário endereçados "
+    #     E SÃO OS QUATRO LUGARES desde 07/09/2026 (era `monta.CONECTADOS`): o
+    #     primário ANDA — quem chega no P3 pode virar primário no tique
+    #     seguinte, e um cartão sem o endereço nunca acenderia a palavra.
+    exigir(principais == len(MESA),
+           f"esperava {len(MESA)} marcadores de primário endereçados "
            f"(`marcador-principal` com alvo `classe`), achei {principais}")
     #     A PALAVRA É A DA JANELA ANTIGA e a dica está do lado. Sem a dica, um
     #     rótulo de uma palavra numa linha secundária não diz o que ele decide.
@@ -2175,8 +2318,11 @@ def _conferir(doc):
     #     `title` quando há motivo e o remove quando não há.
     degradou = corpo.count('data-campo="degradou-cartao" '
                            'data-hef-alvo="atributo" data-hef-atributo="title"')
-    exigir(degradou == len(monta.CONECTADOS),
-           f"esperava {len(monta.CONECTADOS)} marcas de emulação degradada "
+    #     E SÃO OS QUATRO LUGARES desde 07/09/2026 (era `monta.CONECTADOS`):
+    #     degradação é estado do aparelho, e o aparelho que entra no P3 pode
+    #     degradar tanto quanto o do P1.
+    exigir(degradou == len(MESA),
+           f"esperava {len(MESA)} marcas de emulação degradada "
            f"endereçadas, achei {degradou}")
     #     E NENHUMA NASCE COM `title`: a marca só existe quando há motivo, e um
     #     `title` cravado no desenho acenderia um alarme sobre um controle que
@@ -2225,6 +2371,44 @@ def _conferir(doc):
     exigir('class="ext-cartao"' not in corpo,
            "um cartão de controle externo nasceu no desenho — a tela estaria "
            "afirmando um aparelho que ninguém mediu")
+
+    # 15. OS QUATRO LUGARES CARREGAM OS MESMOS ENDEREÇOS — 07/09/2026,
+    #     QUATRO-NA-MESA-01, e é esta régua que impede o defeito de voltar.
+    #
+    #     O QUE ELA MEDE, e por que ela é diferente das catorze acima: cada uma
+    #     daquelas cobra UM endereço pelo nome, e foi assim que sete deles
+    #     entraram no cartão cheio sem que ninguém percebesse que o cartão vazio
+    #     ficara para trás — a régua nasce junto com o endereço e conta só
+    #     aquele. Esta não nomeia nenhum: ela compara os quatro lugares ENTRE
+    #     SI, então o endereço número quinze é coberto no dia em que for
+    #     escrito, sem que alguém se lembre de vir aqui.
+    #
+    #     PELA LISTA E NÃO PELO CONJUNTO: `mascara-cartao` são três por cartão,
+    #     e um lugar que perdesse dois dos três chips passaria por uma régua de
+    #     conjuntos. E o modelo é o PRIMEIRO lugar da mesa, não uma lista
+    #     digitada aqui — digitá-la seria a décima primeira lista que esta casa
+    #     derruba por divergir do que ela mede.
+    lugares = _campos_por_lugar(fileira)
+    esperados = [c.get("uniq") or c["pref"] for c in MESA]
+    exigir(sorted(lugares) == sorted(esperados),
+           f"a fileira não tem um cartão por lugar da mesa: esperava "
+           f"{sorted(esperados)}, achei {sorted(lugares)}")
+    modelo = collections.Counter(lugares.get(esperados[0], []))
+    #     E A RÉGUA MORDE ANTES DE COMPARAR: dois lugares vazios são IGUAIS
+    #     entre si, e uma comparação de listas vazias fica verde sobre um cartão
+    #     que perdeu todos os endereços — que é exatamente o defeito de hoje,
+    #     com o sinal trocado.
+    exigir(sum(modelo.values()) > 0,
+           f"o lugar {esperados[0]} não tem endereço nenhum — uma régua que "
+           f"compara listas vazias passa com qualquer desenho")
+    for pref in esperados[1:]:
+        achei = collections.Counter(lugares.get(pref, []))
+        exigir(achei == modelo,
+               f"o lugar {pref} não carrega os mesmos `data-campo` do "
+               f"{esperados[0]} — faltam {sorted((modelo - achei).elements())} "
+               f"e sobram {sorted((achei - modelo).elements())}. Sem endereço, "
+               f"o dado que o daemon publica para este lugar chega e não tem "
+               f"onde pousar: zero escrito e zero erro")
 
     if falhas:
         raise SystemExit("ERRO em 01-jogar — decisão dela desfeita:\n  "

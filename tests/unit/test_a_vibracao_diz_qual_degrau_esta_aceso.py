@@ -81,6 +81,21 @@ def bancada() -> str:
     return arq.read_text(encoding="utf-8")
 
 
+def _bloco_do_lugar(html: str, pref: str) -> str:
+    """O HTML de UM lugar da mesa, do `<div class="ctrl…">` até o próximo.
+
+    ELE SUBSTITUIU O `split('class="ctrl vazia"')` EM 07/09/2026: a classe
+    `vazia` morreu com a fusão dos dois ramos de coluna, e um `split` por ela
+    devolveria lista VAZIA — a régua ficaria verde por vacuidade.
+    """
+    ate_a_faixa = html.split('class="vib-estado"', 1)[0]
+    for pedaco in ate_a_faixa.split('<div class="ctrl')[1:]:
+        achado = re.search(r'data-controle="(p\d+)"', pedaco.split(">", 1)[0])
+        if achado and achado.group(1) == pref:
+            return pedaco
+    raise AssertionError(f"a bancada não tem o lugar {pref!r}")
+
+
 def _ctx(policy: str = "balanceado"):
     """Um tique de mentira com dois controles — o pacote não toca o aparelho."""
     import pacotes
@@ -128,15 +143,25 @@ def test_cada_degrau_diz_quem_ele_e(bancada) -> None:
         assert alvo in bancada, f"o degrau {chave!r} não tem endereço de classe"
 
     quandos = re.findall(r'data-hef-quando="([^"]+)"', bancada)
-    colunas_vivas = bancada.count('<div class="ctrl" data-controle=')
+    lugares = bancada.count('data-controle="p')
     # A LINHA DE MESA SAIU EM 05/09/2026 — decisão dela. Os degraus vivem só
-    # dentro das colunas agora, e a conta é `degraus x colunas vivas`.
+    # dentro das colunas agora, e a conta é `degraus x LUGARES`.
+    #
+    # `lugares` E NÃO `colunas vivas` — 07/09/2026. A conta era
+    # `bancada.count('<div class="ctrl" data-controle=')`, que só casa a coluna
+    # CHEIA: a régua respondia sobre o mundo do DESENHO, e não sobre a mesa
+    # dela. Com quatro DualSense ligados o pacote manda quatro colunas e duas
+    # não tinham um `data-campo` para receber. Os quatro lugares saem do mesmo
+    # molde agora (`aba05._coluna`).
     assert 'class="vib-mesa"' not in bancada, (
         "a linha de mesa voltou ao desenho da aba 05")
-    esperado = len(_aba05.FORCA) * colunas_vivas
+    assert lugares == len(_aba05.MESA), (
+        f"a bancada tem {lugares} lugares e a mesa do desenho tem "
+        f"{len(_aba05.MESA)}")
+    esperado = len(_aba05.FORCA) * lugares
     assert len(quandos) == esperado, (
-        f"são {len(_aba05.FORCA)} degraus em {colunas_vivas} "
-        f"colunas conectadas = {esperado}, e achei "
+        f"são {len(_aba05.FORCA)} degraus em {lugares} "
+        f"lugares = {esperado}, e achei "
         f"{len(quandos)}")
     assert set(quandos) == {c for _, c in _aba05.FORCA}, (
         f"os degraus endereçados não são os do produto: {sorted(set(quandos))}")
@@ -153,17 +178,36 @@ def test_o_degrau_nunca_e_nome_de_clique(bancada) -> None:
     assert 'data-campo="forca"' not in bancada
 
 
-def test_o_lugar_vazio_nao_tem_degrau(bancada) -> None:
-    """Uma coluna sem controle não acende degrau nenhum.
+def test_o_lugar_vazio_nao_acende_degrau_mas_tem_onde_receber(bancada) -> None:
+    """Uma coluna sem controle não ACENDE degrau nenhum — e tem os três.
 
-    Ela não tem política para mostrar, e acender um seria a mesma mentira em
-    outro lugar. O gerador já não põe ajuste vivo num lugar vazio; esta régua
-    guarda que o endereço novo não abriu a exceção.
+    ESTA RÉGUA INVERTEU EM 07/09/2026. Ela pedia que o bloco vazio não tivesse
+    `data-campo="degrau"`, e era essa ausência o defeito: medido com os quatro
+    DualSense dela na mesa, o daemon publicava os quatro, o pacote mandava as
+    quatro colunas e o P3 e o P4 continuavam no travessão — o dado chegava e não
+    tinha onde pousar (`hefesto_vivo._pintar` procura `data-campo` DENTRO do
+    bloco daquele `data-controle`).
+
+    O QUE CONTINUA PROIBIDO é a classe `on` cravada no HTML de nascença: um
+    lugar sem controle não tem política para mostrar, e acender um degrau ali
+    seria a mesma mentira noutro lugar. Quem some com o botão é a folha
+    (`.ctrl[data-conectado="nao"] .seg > *{display:none}`), e `display:none` não
+    recebe clique.
+
+    A MORDIDA: tire o `conectado` do `if` que escolhe o estado em
+    `aba05._coluna` (para o lugar vazio herdar `ESTADO[pref]`, que tem
+    `propria=True` no p3) e a segunda asserção reprova.
     """
-    for pedaco in bancada.split('class="ctrl vazia"')[1:]:
-        bloco = pedaco.split('<div class="ctrl', 1)[0]
-        assert 'data-campo="degrau"' not in bloco, (
-            "um lugar vazio ganhou degrau endereçado")
+    vazios = [c["pref"] for c in _aba05.MESA if not c.get("conectado", True)]
+    assert vazios, "a mesa do desenho não tem lugar vazio — não há o que medir"
+    for pref in vazios:
+        bloco = _bloco_do_lugar(bancada, pref)
+        assert bloco.count('data-campo="degrau"') == len(_aba05.FORCA), (
+            f"o lugar vazio {pref} não tem os {len(_aba05.FORCA)} degraus "
+            f"endereçados — sem eles o degrau do controle que chegar ali não "
+            f"tem onde pousar")
+        assert '<button class="on"' not in bloco, (
+            f"o lugar vazio {pref} nasceu com um degrau ACESO")
 
 
 # --------------------------------------------------------------------------
@@ -245,10 +289,12 @@ def test_a_regua_ve_os_oito_degraus_com_alvo_classe(bancada) -> None:
     Se os dois lerem coisas diferentes, a medição da aba passa a falar de uma
     página que não existe — é a cegueira que o `--prova-de-mockup` reprova.
     """
+    # A CONTA É POR LUGAR desde 07/09/2026 — ver
+    # `test_o_lugar_vazio_nao_acende_degrau_mas_tem_onde_receber`.
+    esperado = len(_aba05.FORCA) * len(_aba05.MESA)
     degraus = _campos(bancada, "degrau")
-    assert len(degraus) == len(_aba05.FORCA) * 2, (
-        f"a régua achou {len(degraus)} degraus, e são "
-        f"{len(_aba05.FORCA) * 2}")
+    assert len(degraus) == esperado, (
+        f"a régua achou {len(degraus)} degraus, e são {esperado}")
     assert {c.alvo for c in degraus} == {"classe"}
     assert {c.quando for c in degraus} == {c for _, c in _aba05.FORCA}
     # O CRAVADO de um alvo `classe` é o `quando` de quem tem a classe `on`, e

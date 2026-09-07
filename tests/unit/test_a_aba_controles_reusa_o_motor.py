@@ -1032,8 +1032,8 @@ def test_o_ponto_do_touchpad_obedece_a_classe_na_tela(arquivo: pathlib.Path):
     # OS DOIS GRUPOS, e a separação é de 07/09/2026: o assento SEM controle
     # passou a ter `touch-ponto` como todo mundo (o cartão é um só), e a
     # pergunta que se faz a ele é OUTRA.
-    cheios = [d for d in medido if d["conectado"] != "nao"]
-    vazios = [d for d in medido if d["conectado"] == "nao"]
+    cheios = [d for d in medido if d["conectado"] != "nao"]  # noqa-acento: `nao` é o VALOR do atributo
+    vazios = [d for d in medido if d["conectado"] == "nao"]  # noqa-acento: `nao` é o VALOR do atributo
 
     assert len(cheios) >= 2, (
         f"achei {len(cheios)} ponto(s) de controle conectado em {arquivo.name} — "

@@ -23,6 +23,53 @@ seção daqui**: a aba deixou de estar em trabalho.
 
 ## 01-jogar.html
 
+- **07/09/2026** — **OS QUATRO LUGARES PASSARAM A CARREGAR OS MESMOS
+  ENDEREÇOS** (QUATRO-NA-MESA-01). O cartão do lugar VAZIO era um segundo HTML,
+  emitido por um ramo próprio de `aba01.cartao`, e ele saía **sem nenhum
+  `data-campo` por dentro**. Medido no publicado de hoje, com os quatro
+  DualSense dela na mesa e o daemon publicando os quatro:
+
+  | | P1 | P2 | P3 | P4 |
+  | --- | --- | --- | --- | --- |
+  | `data-campo` no publicado | 9 | 9 | **4** | **4** |
+  | `data-campo` na bancada de agora | 11 | 11 | **11** | **11** |
+
+  Os 4 que o lugar vazio já tinha eram o `desenho` e os três chips de
+  `mascara-cartao` — os dois únicos que alguém já tinha curado um a um (03/09),
+  *pelo mesmo motivo, sem que ninguém curasse os outros sete*. Sem endereço, o
+  passo 2 do piloto (`achar(raiz, k)`, que procura `data-campo` DENTRO do bloco
+  daquele `data-controle`) não tem onde escrever: o dado dela chega e cai no
+  vazio — zero escrito e zero erro.
+
+  **Os dois ramos viraram UMA função.** `conectado` decide só duas coisas: a
+  classe/atributo (`off`, `data-conectado`, a dica do lugar vazio) e o TEXTO
+  inicial de cada campo (travessão). A `monta.MESA` **não mudou** — continua
+  `True, True, False, False`, que é o desenho que ela aprovou.
+
+  **A CENA NÃO MUDA UM PIXEL, e foi medido e não deduzido:** as duas fotos da
+  bancada, no mesmo Chrome e no mesmo viewport, saem **byte a byte idênticas**
+  (`compare -metric AE` = 0). O que entra no lugar vazio ou é escondido pelo
+  próprio CSS do `off` (a `pele`, o "Sony •"), ou já é `display:none` em repouso
+  nos quatro cartões (a marca da degradação, sem `title`; o marcador de
+  primário, sem a classe `ha`), ou é um `<span>` inline em volta do mesmo
+  travessão.
+
+  **O QUE A PRIMEIRA VOLTA ERROU, e a foto pegou:** o "Sony •" foi embrulhado
+  numa `<span class="marca">`, e `.marca{color:var(--orange)}` já existe no
+  `topo.html` — classe do ESQUELETO, das dez abas. A palavra "Sony" saiu
+  LARANJA nos dois cartões cheios, 353 pixels de diferença. A classe passou a
+  ser `.fabricante`.
+
+  **Por que não publiquei:** publicar é ato dela. E aqui há uma razão a mais
+  para o olho dela — quando um controle ocupar o P3, o cartão passa a acender
+  coisas que ele nunca acendeu (o número do jogador, a identidade, a bateria, a
+  borda na cor do plástico). É o comportamento que ela mandou construir em
+  03/09 (*"se isso não ocorre com os 4 controles em cada aba, então temos que
+  construir isso e garantir isso"*), e é a primeira vez que ele vai aparecer.
+
+  **O que fecha:** `scripts/check_o_desenho_aprovado.py --publicar 01`, depois
+  do olho dela.
+
 - **06/09/2026** — **DOIS ENDEREÇOS NOVOS DENTRO DE CADA CARTÃO**, os dois
   invisíveis na página parada e acesos só pelo produto:
 

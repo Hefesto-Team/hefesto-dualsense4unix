@@ -450,18 +450,15 @@ CSS = """
      os glifos L/R/PS e os traços dos botões, e só aparecem em desenho GRANDE.
      Medido na Iluminação no mesmo dia: copiar a regra da aba Jogar não bastava,
      porque lá o desenho tem 62px e aqui tem 124. */
-  /* ---------- A COLUNA QUE PERDEU O DONO AO VIVO — 05/09/2026 ----------
-     QUEIXA DELA: *"temos que entender se só tem um controle conectado só
-     aparece config daquele. aba cinco tá errada."*
+  /* ---------- O LUGAR SEM CONTROLE, E SÃO OS QUATRO PELA MESMA REGRA ----------
+     QUEIXA DELA, 05/09/2026: *"temos que entender se só tem um controle
+     conectado só aparece config daquele. aba cinco tá errada."*
 
      E ESTAVA. Medido na tela viva com UM controle ligado: a segunda coluna
      mostrava `—` no Modelo e, logo abaixo, os TRÊS degraus, os três trilhos e
      os dois interruptores de motor — um deles ACESO em laranja. Controles
-     vivos, clicáveis, para um aparelho que não está aqui. É o mesmo defeito
-     que `_coluna_vazia` nomeia — *"testar a vibração de um lugar vazio não é
-     um botão fraco: é um botão que mente"* — só que num lugar onde o DESENHO
-     não podia prevê-lo: o mockup assa duas colunas ligadas, e quem descobre
-     que só há uma é o produto, ao vivo.
+     vivos, clicáveis, para um aparelho que não está aqui. *Testar a vibração de
+     um lugar vazio não é um botão fraco: é um botão que mente.*
 
      O MECANISMO JÁ EXISTIA E NINGUÉM O HONRAVA. O pacote calcula `vazios`
      (`pacotes/__init__.py`: os lugares para os quais a aba não emitiu coluna) e
@@ -472,20 +469,29 @@ CSS = """
 
      A CURA É CSS, e por isso vale para a coluna que esvazia DEPOIS de a aba
      estar aberta — sem regerar nada, no tique seguinte. Os filhos saem e o
-     `::after` põe o travessão no lugar deles, que é a MESMA língua das colunas
-     que nascem vazias.
+     `::after` põe o travessão no lugar deles.
 
-     `:not(.vazia)` NÃO É DETALHE: o piloto marca `data-conectado="nao"` também
-     nas duas que já nascem vazias, e essas já trazem o `<span class="nada">`
-     por dentro. Sem a exclusão, o `> *` esconderia o próprio travessão delas e
-     a coluna ficaria em branco — a régua trocada por outra pior. */
-  .vib .ctrl[data-conectado="nao"]:not(.vazia){border-color:var(--border-forte)}
-  .vib .ctrl[data-conectado="nao"]:not(.vazia) .seg > *,
-  .vib .ctrl[data-conectado="nao"]:not(.vazia) .motor > *,
-  .vib .ctrl[data-conectado="nao"]:not(.vazia) .acoes-col > *{display:none}
-  .vib .ctrl[data-conectado="nao"]:not(.vazia) .seg::after,
-  .vib .ctrl[data-conectado="nao"]:not(.vazia) .motor::after,
-  .vib .ctrl[data-conectado="nao"]:not(.vazia) .acoes-col::after{
+     O `:not(.vazia)` MORREU EM 07/09/2026, e com ele a classe. Ele existia
+     porque as duas colunas que NASCEM vazias eram outro HTML — um cartão sem um
+     único `data-campo`, com `<span class="nada">—</span>` no lugar dos widgets
+     — e o `> *` teria escondido o próprio travessão delas. Esse cartão era o
+     defeito: o daemon publicava quatro controles, o pacote mandava as quatro
+     colunas e **o dado do P3 e do P4 não tinha onde pousar** (ver `_coluna`).
+     Fundidos os dois ramos, o lugar que nasce vazio é byte a byte o que o
+     piloto produz quando um lugar esvazia — mesma marca, mesma folha, mesmo
+     travessão —, e a exclusão passou a ser a única coisa capaz de separá-los.
+
+     E A CLASSE TINHA DE MORRER, não só a exclusão: **o piloto tira a `off` e o
+     `data-conectado`, e não conhece a `vazia`** (`_pintar`, passo 1c). Um
+     cartão que nascesse com ela ficaria cinza para sempre — agora com o dado
+     dela chegando por baixo, invisível. */
+  .vib .ctrl[data-conectado="nao"]{border-color:var(--border-forte)}
+  .vib .ctrl[data-conectado="nao"] .seg > *,
+  .vib .ctrl[data-conectado="nao"] .motor > *,
+  .vib .ctrl[data-conectado="nao"] .acoes-col > *{display:none}
+  .vib .ctrl[data-conectado="nao"] .seg::after,
+  .vib .ctrl[data-conectado="nao"] .motor::after,
+  .vib .ctrl[data-conectado="nao"] .acoes-col::after{
     /* O TRAVESSÃO É O CARACTERE, NÃO O ESCAPE — medido em 05/09/2026.
        Escrito `content:"\\2014"`, o CSS lê `\201` como o escape (que são
        até seis dígitos hex) e sobra o `4` como texto: a tela mostrava um
@@ -499,50 +505,32 @@ CSS = """
        travessão nasce encostado à esquerda, a 36px da borda, enquanto o
        das colunas que já nascem vazias fica no meio. Duas caras para o
        mesmo estado na mesma tela é o que esta regra existe para evitar. */
+    /* `height:100%` NÃO É ENFEITE — é a régua de alinhamento falando. A coluna
+       vazia tem a MESMA altura da viva (452px) e as mesmas sete linhas; o que
+       acabava 26px antes era o CONTEÚDO da última célula: dois botões
+       empilhados preenchem os 74px de `--r-acoes`, um travessão centrado para
+       no meio. A régua leu isso como "o conteúdo das colunas acaba em y
+       diferentes", e leu certo. */
     content:"—";color:var(--linha);display:flex;align-items:center;
     justify-content:center;grid-column:1/-1;width:100%;height:100%}
-  /* A MOLDURA E O NOME acompanham, pelas mesmas regras das que nascem vazias —
-     senão o desenho do controle fica colorido em cima de uma coluna apagada. */
-  .vib .ctrl[data-conectado="nao"]:not(.vazia) .moldura{border-color:var(--border-forte)}
-  .vib .ctrl[data-conectado="nao"]:not(.vazia) .ds-svg .peca,
-  .vib .ctrl[data-conectado="nao"]:not(.vazia) .ds-svg .corpo,
-  .vib .ctrl[data-conectado="nao"]:not(.vazia) .ds-svg .miolo *{fill:var(--linha) !important}
-  .vib .ctrl[data-conectado="nao"]:not(.vazia) .rot-ctrl{color:var(--linha)}
+  /* A MOLDURA E O NOME acompanham — senão o desenho do controle fica colorido
+     em cima de uma coluna apagada. */
+  .vib .ctrl[data-conectado="nao"] .moldura{border-color:var(--border-forte)}
+  .vib .ctrl[data-conectado="nao"] .rot-ctrl{color:var(--linha)}
+  /* O DESENHO DO LUGAR VAZIO NÃO SE PINTA AQUI — 07/09/2026, e a razão é que
+     ele tem DONO. Havia catorze linhas nesta folha pintando o `<svg>` de
+     `var(--linha)` (`.ctrl.vazia .ds-svg rect`, `circle`, `polygon`, `ellipse`,
+     `text`, `line`, `path`…), e elas existiam porque o `.vazia` ficava DE FORA
+     da regra compartilhada. Com a classe morta, quem responde é
+     `monta.py` — `[data-controle][data-conectado="nao"]:not(.vazia) .ds-svg
+     {visibility:hidden}`, a S-04 de 05/09/2026, palavra dela: *"os svgs não
+     deveriam aparecer prós demais controles desconectados"*.
 
-  .vib .ctrl.vazia{border-color:var(--border-forte)}
-  /* O TRAVESSÃO PREENCHE A CÉLULA, e isto é a régua de alinhamento falando.
-     A coluna vazia tem a MESMA altura da viva (452px) e as mesmas sete linhas —
-     medido. O que acabava 26px antes era o CONTEÚDO da última célula: dois
-     botões empilhados preenchem os 74px de `--r-acoes`; um travessão centrado
-     para no meio. A régua leu isso como "o conteúdo das colunas acaba em y
-     diferentes", e leu certo.
-     `height:100%` no marcador resolve sem mexer em altura nenhuma: ele passa a
-     ocupar a célula e o texto continua centrado dentro dele. */
-  .vib .ctrl.vazia .nada{display:flex;align-items:center;justify-content:center;height:100%;width:100%}
-  .vib .ctrl.vazia .rot-ctrl,
-  .vib .ctrl.vazia .nada{color:var(--linha)}
-  .vib .ctrl.vazia .moldura{border-color:var(--border-forte)}
-  .vib .ctrl.vazia .ds-svg .peca,
-  .vib .ctrl.vazia .ds-svg .corpo,
-  .vib .ctrl.vazia .ds-svg .miolo *{fill:var(--linha) !important}
-  .vib .ctrl.vazia .ds-svg .corpo{stroke:var(--border-forte) !important}
-  .vib .ctrl.vazia .ds-svg text{fill:var(--linha) !important}
-  .vib .ctrl.vazia .ds-svg line{stroke:var(--linha) !important}
-  .vib .ctrl.vazia .ds-svg path:not(.peca):not(.corpo){fill:var(--linha) !important;
-                                                       stroke:var(--linha) !important}
-  .vib .ctrl.vazia .ds-svg rect:not([fill="none"]),
-  .vib .ctrl.vazia .ds-svg circle:not([fill="none"]),
-  .vib .ctrl.vazia .ds-svg polygon:not([fill="none"]),
-  .vib .ctrl.vazia .ds-svg ellipse:not([fill="none"]){fill:var(--linha) !important}
-  .vib .ctrl.vazia .ds-svg rect,
-  .vib .ctrl.vazia .ds-svg circle,
-  .vib .ctrl.vazia .ds-svg polygon,
-  .vib .ctrl.vazia .ds-svg ellipse{stroke:var(--border-forte) !important}
-  /* O travessão fica ONDE o conteúdo ficaria — centrado na célula, para as sete
-     linhas continuarem legíveis como linhas. */
-  .vib .ctrl.vazia .seg,
-  .vib .ctrl.vazia .nada-lin,
-  .vib .ctrl.vazia .acoes-col{display:flex;align-items:center;justify-content:center}
+     MANTÊ-LAS SERIA O SEGUNDO DONO do mesmo fato, e o pior tipo: um desenho
+     cinza por baixo de um `visibility:hidden !important` é código que ninguém
+     vê falhar. Se ela quiser o desenho cinza DE VOLTA no lugar vazio, o lugar
+     de dizer isso é a folha compartilhada — e vale para as quatro abas de uma
+     vez, que é a razão de aquela regra morar lá. */
   /* o respiro entre colunas é do CONTEÚDO, não da célula: padding na coluna
      recua os filhos e a borda deles para 16px antes da divisa, e a linha
      volta a quebrar. Aqui a célula vai até o fim e quem se afasta é o texto. */
@@ -1111,8 +1099,16 @@ def _trilho(valor, teto, passo, campo, papel, titulo, extra=""):
 
 
 def _barra(valor, teto, sufixo, ligado=True, botao="", papel="forca", lado="",
-           campo_num="", sufixo_html="", arrasta=False, campo_trilho=""):
+           campo_num="", sufixo_html="", arrasta=False, campo_trilho="",
+           vazio=False):
     """Uma linha de barra: interruptor · trilho · número · sufixo.
+
+    `vazio` TROCA SÓ O TEXTO DO NÚMERO pelo travessão — 07/09/2026, com a fusão
+    dos dois ramos de coluna (ver :func:`_coluna`). A ESTRUTURA e os ENDEREÇOS
+    são os mesmos nos quatro lugares; o que um lugar sem controle não pode ter é
+    um número afirmado. `0` ali seria a tela dizendo *"este motor está em zero"*
+    sobre um aparelho que não está na mesa — e o travessão é a palavra que esta
+    casa usa para *"isto eu não sei"*.
 
     `arrasta` troca o trilho de LEITURA pelo `<input type=range>` da decisão
     dela de 03/09 — ver :func:`_trilho_arrastavel`. Aqui só a linha do
@@ -1193,17 +1189,24 @@ def _barra(valor, teto, sufixo, ligado=True, botao="", papel="forca", lado="",
               f'<span class="trilho"><span class="cheio"'
               f' data-campo="{campo_trilho or f"{campo}-pct"}"'
               f' data-hef-alvo="largura" style="width:{pct}%"></span></span>')
+    texto_do_num = VAZIO if vazio else f'{valor}{"%" if teto == TETO else ""}'
     return (f'<div class="motor{" mult" if arrasta else ""}'
             f'{"" if ligado else " off"}"{endereco}>'
             f'{botao or "<span></span>"}'
             f'{trilho}'
             f'<span class="num" data-campo="{campo_num or campo}">'
-            f'{valor}{"%" if teto == TETO else ""}</span>'
+            f'{texto_do_num}</span>'
             f'{cauda}</div>')
 
 
-def _barra_de_motor(valor, sigla, m, ligado, botao):
+def _barra_de_motor(valor, sigla, m, ligado, botao, vazio=False):
     """A linha de UM motor: interruptor · barra que arrasta · número · `%`.
+
+    `vazio` é o lugar SEM CONTROLE, e ele troca só o TEXTO do número pelo
+    travessão — a mesma regra do irmão :func:`_barra`, e a razão inteira está
+    lá. O `<input>` continua com `value="0"` porque um `type=range` não guarda
+    travessão; ele é `display:none` num lugar vazio, e o que a tela mostra é o
+    `—` que a folha põe por cima (`.ctrl[data-conectado="nao"] .motor::after`).
 
     **É A METADE DE DESENHO QUE A ONDA1-D2 DEIXOU COM ENDEREÇO**, e a decisão é
     dela, de 04/09/2026, dita fora das três opções que eu ofereci:
@@ -1264,7 +1267,8 @@ def _barra_de_motor(valor, sigla, m, ligado, botao):
             f' data-campo="motor-{sigla}-pedido" data-hef-alvo="atributo"'
             f' data-hef-atributo="title">'
             f'{botao}{trilho}'
-            f'<span class="num" data-campo="{campo}-pct">{valor}</span>'
+            f'<span class="num" data-campo="{campo}-pct">'
+            f'{VAZIO if vazio else valor}</span>'
             f'<span class="teto">%</span></div>')
 
 
@@ -1452,7 +1456,7 @@ def _endereca_a_cor(desenho, pref, cor, com_dono=True):
     mostra nada. Um lugar sem controle não tem modelo, e afirmar "Galactic
     Purple" ali seria o desenho falando por um aparelho que não existe. Sem o
     atributo, nenhuma regra da folha casa e o desenho cai no cinza neutro, que é
-    o que o `.ctrl.vazia` já pinta por cima com `var(--linha)` — a tela não muda
+    o que o `.ctrl[data-conectado="nao"]` já pinta por cima com `var(--linha)` — a tela não muda
     um pixel, e o arquivo deixa de afirmar o que não sabe.
 
     O ENDEREÇO FICA NOS QUATRO, inclusive nos vazios: no dia em que um terceiro
@@ -1477,49 +1481,80 @@ def _endereca_a_cor(desenho, pref, cor, com_dono=True):
     return _FOLHA_PODADA.sub("", desenho, count=1)
 
 
-def _coluna_vazia(c):
-    """O LUGAR de um controle que não está na mesa — ordem dela, 31/08/2026:
-
-        "Todas as abas tem que ter só dois controles conectados no momento, o
-         resto fica off." · "Deixa os outros espaços dos 4 controles a mostra
-         ainda mas cinza igual vc fez na aba jogar."
-
-    A COLUNA CONTINUA NA TELA, com as sete linhas na mesma altura — é isso que
-    mantém as divisórias atravessando as cinco colunas no mesmo y. O que sai é o
-    ESTADO: a força, os dois motores e as ações, porque nenhum deles tem controle
-    para valer. Testar a vibração de um lugar vazio não é um botão fraco: é um
-    botão que mente.
-
-    O NOME DIZ A POSIÇÃO E O ESTADO, nunca o do plástico — a mesma decisão que
-    ela tomou na Gatilhos e na Iluminação no mesmo dia.
-    """
-    j = c["jogador"]
-    # O `data-controle` TAMBÉM AQUI, e pela mesma razão que na coluna viva: é
-    # por ele que `hefesto_vivo.py:229` acha o lugar e o marca `conectado="nao"`.
-    # Sem ele, o lugar vazio só é vazio porque o DESENHO o desenhou vazio.
-    return f'''
-          <div class="ctrl vazia" data-controle="{c["pref"]}" data-conectado="nao"
-               title="Nenhum controle neste lugar.">
-            <div class="moldura" data-hef="desenho">{_endereca_a_cor(svg(f'vb-{c["pref"]}', c["cor"], lampadas=False), f'vb-{c["pref"]}', c["cor"], com_dono=False)}</div>
-            <div class="rot-ctrl">P{j} <span class="pt">•</span> Desconectado</div>
-            <div class="seg"><span class="nada">{VAZIO}</span></div>
-            <div class="nada-lin"><span class="nada">{VAZIO}</span></div>
-            <div class="nada-lin"><span class="nada">{VAZIO}</span></div>
-            <div class="nada-lin"><span class="nada">{VAZIO}</span></div>
-            <div class="acoes-col"><span class="nada">{VAZIO}</span></div>
-          </div>'''
+#: O ESTADO DE UM LUGAR SEM CONTROLE, escrito na língua de cada campo —
+#: 07/09/2026. Ele NÃO é uma cena: é o "não sei" no valor INICIAL de cada
+#: endereço, para o desenho nascer sem afirmar nada sobre um aparelho que não
+#: está aqui. Nenhum degrau aceso (`propria=False`), o multiplicador no fundo da
+#: escala e os dois punhos apagados — e o que a tela MOSTRA continua sendo o
+#: travessão, posto pela folha (`.ctrl[data-conectado="nao"] … ::after`).
+#:
+#: O `forca` FICA FORA DAS TRÊS CHAVES de propósito: com `propria=False` nenhum
+#: botão acende de qualquer jeito, e uma chave real aqui seria o desenho
+#: escolhendo uma política para quem não tem nenhuma.
+ESTADO_DO_LUGAR_VAZIO = {"forca": "", "pct": 0, "propria": False,  # (noqa-acento) chave
+                         "esq": (False, 0), "dir": (False, 0)}
 
 
-def _coluna(c, e=None):
+def _coluna(c, e=None, conectado=None):
     """Uma coluna da mesa: o desenho, o nome, a força, os dois motores, as ações.
 
     `e` é o estado daquela coluna. Sem ele vale a CENA do mockup
-    (:data:`ESTADO`, chaveada pelo `pref`); com ele a coluna é montada com o que
-    o daemon respondeu — que é como o piloto `vibracao_viva.py` a usa. O
-    parâmetro existe para que a tela viva saia do MESMO gerador que a tela
-    aprovada: um segundo emissor de HTML seria o segundo dono do desenho.
+    (:data:`ESTADO`, chaveada pelo `pref`) para quem está na mesa, e o
+    :data:`ESTADO_DO_LUGAR_VAZIO` para quem não está; com ele a coluna é montada
+    com o que o daemon respondeu. O parâmetro existe para que a tela viva saia do
+    MESMO gerador que a tela aprovada: um segundo emissor de HTML seria o segundo
+    dono do desenho.
+
+    **UMA FUNÇÃO SÓ PARA OS QUATRO LUGARES — 07/09/2026, e é cura de defeito
+    MEDIDO com os quatro DualSense dela na mesa.** Havia um `_coluna_vazia()` à
+    parte que devolvia um cartão **sem um único `data-campo` por dentro**:
+
+        <div class="ctrl vazia" …><div class="seg"><span class="nada">—</span></div>…
+
+    O daemon publicava os quatro controles, o pacote mandava as quatro colunas
+    (`a05_vibracao` emite para os QUATRO lugares de propósito) e o piloto fazia
+    `raiz.querySelectorAll('[data-campo="…"]')` dentro do bloco daquele
+    `data-controle` (`hefesto_vivo._pintar`, passo 2). **Sem endereço, o dado
+    dela chegava e não tinha onde pousar**: o P3 e o P4 continuavam dizendo
+    `P3 • Desconectado` com travessão em tudo, com os aparelhos ligados.
+
+    Medido na página publicada de 06/09, contando `data-campo` por
+    `[data-controle="pN"]`: **P1 e P2 com 14 endereços distintos, P3 e P4 com
+    UM** (o `colorway` do `<svg>`, que só existia por acidente do
+    `_endereca_a_cor`).
+
+    **A CAUSA DE FUNDO ERAM OS DOIS RAMOS**, e é por isso que a cura é fundi-los:
+    o lugar cheio ganhou o degrau endereçado (03/09), o punho que treme (03/09),
+    a cor do plástico (03/09) e as duas barras de motor (04/09) — e nenhuma
+    dessas quatro passou pelo lugar vazio, porque ele era outro texto. **Um dos
+    dois ramos envelheceu sem o outro**, quatro vezes em dois dias, sem uma
+    linha de erro.
+
+    `conectado` DECIDE DUAS COISAS, e só elas:
+
+    a) **a marca do cartão** — `class="ctrl off"`, `data-conectado="nao"` e o
+       `title`. São as MESMAS marcas que o piloto põe num lugar que esvazia ao
+       vivo (`_pintar`, passo 1b) e TIRA quando o controle chega (passo 1c). É o
+       que faz o lugar reabrir sozinho, sem regerar nada. A classe `vazia`
+       morreu com esta fusão justamente por isso: **o piloto não a conhece**, e
+       um cartão que nascesse com ela ficaria cinza para sempre, agora com o
+       dado dela chegando por baixo.
+    b) **o valor INICIAL de cada campo** — o travessão nos números, nenhum
+       degrau aceso, nenhum punho tremendo e nenhum `data-colorway`. Quem some
+       da tela são os WIDGETS, e quem os some é a folha
+       (`.ctrl[data-conectado="nao"] .seg > *{{display:none}}` e os irmãos), que
+       é a mesma cura de 05/09 para a coluna que perde o dono ao vivo. Nada de
+       clicável sobrevive num lugar vazio: `display:none` não recebe clique.
+
+    A ordem dela de 31/08/2026 continua inteira — *"Deixa os outros espaços dos
+    4 controles a mostra ainda mas cinza igual vc fez na aba jogar."* A coluna
+    continua na tela, com as sete linhas na mesma altura, o nome dizendo a
+    POSIÇÃO e o ESTADO (nunca o do plástico) e o travessão no lugar do ajuste.
+    O que mudou é que agora ela tem ONDE receber o controle que chega.
     """
-    e = e or ESTADO[c["pref"]]
+    if conectado is None:
+        conectado = c.get("conectado", True)
+    e = e or (ESTADO[c["pref"]] if conectado else ESTADO_DO_LUGAR_VAZIO)
     plastico = cor_da_zona(c["cor"])
     acesos = tuple(m["id"] for m, k in ((ESQ, "esq"), (DIR, "dir")) if e[k][0])
     # `lampadas=False`: o grupo das cinco sai do desenho (ver o bloco das
@@ -1533,7 +1568,11 @@ def _coluna(c, e=None):
         _endereca_o_tremor(
             svg(f'vb-{c["pref"]}', c["cor"], acesos=acesos, lampadas=False),
             f'vb-{c["pref"]}'),
-        f'vb-{c["pref"]}', c["cor"])
+        # `com_dono=False` NO LUGAR VAZIO — o ENDEREÇO da cor entra nos quatro,
+        # o VALOR só em quem tem aparelho. Ver `_endereca_a_cor`: sem
+        # `data-colorway` nenhuma regra da folha casa e o desenho cai no cinza
+        # neutro, que é a regra dela — campo sem informação não mostra nada.
+        f'vb-{c["pref"]}', c["cor"], com_dono=conectado)
 
     # QUAL DEGRAU ESTÁ ACESO É DADO, e o endereço é o `classe` — 03/09/2026.
     # Até hoje os quatro botões só tinham `data-papel="forca"`, que é o endereço
@@ -1586,7 +1625,8 @@ def _coluna(c, e=None):
                  f'data-hef-rotulo="o nome do motor" '
                  f'title="{m["nome"]} — {m["nota"]}">'
                  f'{glifo(m["glifo"], ativo=ligado, tam=18)}</button>')
-        linhas.append(_barra_de_motor(valor, sigla, m, ligado, botao))
+        linhas.append(_barra_de_motor(valor, sigla, m, ligado, botao,
+                                      vazio=not conectado))
 
     # `data-uniq` VAZIO NA CENA ESTÁTICA, e não é descuido: o mockup não tem MAC
     # de verdade e não pode ter — `AA:BB:CC:DD:EE:FF` num arquivo é o que os dois
@@ -1630,16 +1670,39 @@ def _coluna(c, e=None):
     # moldura e o halo do lado que treme (`.vib .ds-svg .oculta.acesa`).
     # Descer a variável não muda um pixel do desenho e a põe num elemento que o
     # pintor alcança.
+    #
+    # O `style="--plastico:…"` SÓ VAI EM QUEM TEM APARELHO, e o par de
+    # endereços vai nos QUATRO — 07/09/2026. É a mesma divisão do
+    # `com_dono` da cor: um lugar sem controle não tem plástico, e escrever
+    # aqui o do desenho deixaria a moldura do P3 com a cor do mockup no
+    # instante em que um controle de outro modelo entrasse. Sem a variável, a
+    # folha cai no `var(--plastico, …)` de sempre — e o alvo `plastico` do
+    # piloto sabe apagar (`removeProperty`) tão bem quanto escrever.
+    classe = "ctrl" if conectado else "ctrl off"
+    marca = ("" if conectado else
+             ' data-conectado="nao" title="Nenhum controle neste lugar."')
+    tinta = f' style="--plastico:{plastico}"' if conectado else ""
+    # O `</div>` MORA DENTRO DOS DOIS RAMOS de propósito: a régua cruzada
+    # `test_o_lugar_vazio_diz_que_esta_vazio.test_a_frase_e_a_mesma_do_desenho`
+    # casa `</span> Desconectado</div>` NO FONTE deste gerador, para garantir
+    # que a palavra do desenho e a que `pacotes.apagar_os_lugares_sem_dono`
+    # escreve são a MESMA. Quebrar o literal em duas partes deixaria as duas
+    # frases livres para divergirem, que é o que ela existe para impedir.
+    if conectado:
+        rotulo = (f'P{c["jogador"]} <span class="pt">•</span> {c["nome"]}\n'
+                  f'              <span class="pt">•</span> {c["via"]}</div>')
+    else:
+        rotulo = f'P{c["jogador"]} <span class="pt">•</span> Desconectado</div>'
     return f'''
-          <div class="ctrl" data-controle="{c["pref"]}" data-uniq="{c.get("uniq", "")}">
+          <div class="{classe}" data-controle="{c["pref"]}" data-uniq="{c.get("uniq", "")}"{marca}>
             <div class="moldura" data-hef="desenho" data-campo="plastico"
-                 data-hef-alvo="plastico" style="--plastico:{plastico}">{desenho}</div>
-            <div class="rot-ctrl" data-hef="identidade">P{c["jogador"]} <span class="pt">•</span> {c["nome"]}
-              <span class="pt">•</span> {c["via"]}</div>
+                 data-hef-alvo="plastico"{tinta}>{desenho}</div>
+            <div class="rot-ctrl" data-hef="identidade">{rotulo}
             <div class="seg">{degraus}</div>
             {_barra(e["pct"], TETO, "", papel="", campo_num="mult",
                     arrasta=True, campo_trilho="mult-pos",
-                    sufixo_html=_teto_do_multiplicador(e["pct"] == TETO))}
+                    sufixo_html=_teto_do_multiplicador(e["pct"] == TETO),
+                    vazio=not conectado)}
             {linhas[0]}
             {linhas[1]}
             <div class="acoes-col">
@@ -1769,7 +1832,7 @@ MIOLO = f'''
                  *"Esta aba não trava — quem trava é a janela do Hefesto ou a
                  linha de comando"*, e era a medição inteira em uma frase. -->
           </div>
-{"".join(_coluna(c) if c.get("conectado", True) else _coluna_vazia(c) for c in MESA)}
+{"".join(_coluna(c) for c in MESA)}
 
         </div>
         <!-- A NOTA DO TESTAR SAIU DA TELA e voltou para o `?` do "Testar agora"
@@ -1880,6 +1943,31 @@ CSS_DAS_MEDIDAS = f"""
   }}
 """
 
+def _colunas_do_corpo(corpo):
+    """O HTML de cada `[data-controle="pN"]`, na língua em que o PILOTO o lê.
+
+    Ele faz `document.querySelectorAll('[data-controle="pN"]')` e, dentro de
+    cada raiz, `raiz.querySelectorAll('[data-campo="…"]')` — logo TODO
+    descendente conta, inclusive o que está dentro do `<svg>`, que traz um
+    `data-controle="dualsense"` do desenho compartilhado e nunca casa com um
+    `pref`.
+
+    O CORTE DA ÚLTIMA COLUNA É A FAIXA DE ESTADO, e ele não é zelo: sem ele o
+    pedaço do P4 varre o resto do miolo e a régua atribuiria a ele tudo que
+    vier depois — que é exatamente o defeito que a régua 3 pagou em 04/09,
+    acusando o inocente por ler o pedaço errado.
+    """
+    import re as _re
+    ate_a_faixa = corpo.split('class="vib-estado"', 1)[0]
+    achados = {}
+    for pedaco in ate_a_faixa.split('<div class="ctrl')[1:]:
+        abre = pedaco.split(">", 1)[0]
+        quem = _re.search(r'data-controle="(p\d+)"', abre)
+        if quem:
+            achados[quem.group(1)] = pedaco
+    return achados
+
+
 def _conferir(doc):
     """As decisões dela nesta aba, conferidas NA SAÍDA. Só o miolo, sem
     comentário HTML e sem o `<style>` — as três armadilhas que fizeram as réguas
@@ -1897,43 +1985,76 @@ def _conferir(doc):
             falhas.append(oque)
 
     vazios = [c for c in MESA if not c.get("conectado", True)]
-    # 1. A MESA — dois conectados, dois lugares vazios.
-    exigir(corpo.count('class="ctrl vazia"') == len(vazios),
-           f"as colunas vazias não são {len(vazios)}")
+    blocos = _colunas_do_corpo(corpo)
+    # 1. A MESA — dois conectados, dois lugares vazios, e a marca do lugar vazio
+    #    é a MESMA que o piloto põe e TIRA (`class="ctrl off"` +
+    #    `data-conectado="nao"`). A classe `vazia` morreu em 07/09/2026: o
+    #    piloto não a conhece, então um cartão que nascesse com ela ficaria
+    #    cinza para sempre depois que o controle chegasse. Ver :func:`_coluna`.
+    exigir(corpo.count('class="ctrl off"') == len(vazios),
+           f"os lugares vazios marcados `ctrl off` não são {len(vazios)}")
+    exigir(corpo.count('data-conectado="nao"') == len(vazios),
+           f"os lugares vazios marcados `data-conectado=\"nao\"` não são "  # (noqa-acento) valor do atributo
+           f"{len(vazios)}")
+    exigir("ctrl vazia" not in corpo,
+           "a classe `vazia` voltou ao cartão — o piloto tira a `off` e o "
+           "`data-conectado`, e não conhece a `vazia`: o lugar ficaria cinza "
+           "para sempre com o dado dela chegando por baixo")
+    exigir(len(blocos) == len(MESA),
+           f"a régua não achou as {len(MESA)} colunas: {sorted(blocos)}")
     # 2. O LUGAR VAZIO DIZ A POSIÇÃO E O ESTADO, nunca o nome do plástico.
+    #
+    #    O `data-colorway` E O `--plastico` ENTRARAM NESTA RÉGUA EM 07/09/2026,
+    #    e é a metade que a fusão dos dois ramos deixou exposta: com os quatro
+    #    lugares saindo do mesmo molde, o ENDEREÇO da cor passou a existir nos
+    #    quatro — e um `com_dono=True` distraído no lugar vazio faria o desenho
+    #    afirmar "Galactic Purple" sobre um lugar sem aparelho. É a regra dela:
+    #    campo sem informação não mostra nada. A régua irmã que mede isso na
+    #    tela é `test_o_lugar_vazio_nao_afirma_modelo_nenhum`; esta é a que
+    #    reprova ANTES de o arquivo chegar à bancada.
     for c in vazios:
         exigir(f'P{c["jogador"]} <span class="pt">•</span> Desconectado' in corpo,
                f"a coluna do P{c['jogador']} não diz Desconectado")
         exigir(c["nome"] not in corpo,
                f"o nome do plástico {c['nome']!r} voltou a uma coluna vazia")
-    # 3. NENHUM AJUSTE VIVO NUM LUGAR VAZIO. Testar a vibração de um lugar vazio
-    #    não é botão fraco: é botão que mente.
-    for pedaco in corpo.split('class="ctrl vazia"')[1:]:
-        # O BLOCO ACABA NA PRÓXIMA COLUNA. Em 04/09 ele acabava TAMBÉM na
-        # linha de mesa, porque sem esse segundo corte o pedaço da última coluna
-        # vazia varria o resto do corpo e engolia aquela linha — a régua acusava
-        # o `forca-mesa` de "ajuste vivo num lugar vazio", e o ajuste estava
-        # fora de coluna nenhuma. A linha de mesa saiu em 05/09 e o segundo
-        # corte saiu com ela: guarda sem o que guardar é guarda que engana quem
-        # lê. A lição fica escrita porque ela é geral — régua que lê o pedaço
-        # errado acusa o inocente.
-        bloco = pedaco.split('<div class="ctrl', 1)[0]
-        # OS DOIS ATRIBUTOS, e não só o `data-papel` — 03/09/2026. `lado` e
-        # `motor` deixaram de ser `data-papel` (ver :data:`PAPEIS_QUE_SAO_GESTO`)
-        # e uma régua que só olhasse o atributo antigo passaria a dar verde por
-        # VACUIDADE: o ajuste podia voltar ao lugar vazio sob o nome novo e ela
-        # não veria. É o mesmo defeito que ela existe para pegar.
-        # `barra-e`/`barra-d` ENTRARAM EM 04/09/2026 com a barra de motor: o
-        # `data-papel="motor"` passou a viver no `<input>`, e uma régua que só
-        # olhasse o papel não veria uma barra de ajuste plantada num lugar
-        # vazio se alguém a escrevesse sem o papel. Os dois endereços, sempre.
-        for proibido in ('data-papel="forca"', 'data-papel="testar"',
-                         'data-papel="intensidade"',
-                         'data-papel="lado"', 'data-papel="motor"',
-                         'data-hef="lado"', 'data-hef="motor"',
-                         'data-campo="barra-e"', 'data-campo="barra-d"',
-                         'class="trilho arrasta"'):
-            exigir(proibido not in bloco, f"um lugar vazio tem ajuste vivo: {proibido!r}")
+        bloco = blocos.get(c["pref"], "")
+        exigir("data-colorway=" not in bloco,
+               f"o lugar vazio {c['pref']} afirma um modelo de controle — o "
+               f"ENDEREÇO da cor vai nos quatro, o VALOR só em quem tem "
+               f"aparelho")
+        exigir("--plastico:" not in bloco,
+               f"o lugar vazio {c['pref']} afirma uma cor de plástico — mesma "
+               f"regra do `data-colorway` logo acima")
+    # 3. NENHUM AJUSTE VIVO NUM LUGAR VAZIO — E QUEM O SOME É A FOLHA.
+    #
+    #    ESTA RÉGUA INVERTEU EM 07/09/2026, e o que a inverteu foi um defeito
+    #    medido com os quatro DualSense dela na mesa. Até aqui ela proibia os
+    #    endereços de ajuste DENTRO do bloco vazio — e proibia bem, enquanto o
+    #    lugar vazio fosse um cartão à parte. Só que era esse cartão sem
+    #    endereço nenhum que fazia o dado do P3 e do P4 chegar e não ter onde
+    #    pousar (ver :func:`_coluna`): **a régua estava guardando o defeito**.
+    #
+    #    O QUE ELA GUARDA AGORA é a mesma decisão pela porta certa: os widgets
+    #    de um lugar sem controle não aparecem porque a FOLHA os esconde, e
+    #    `display:none` não recebe clique. A régua pergunta à folha, que é onde
+    #    a resposta mora — e sem o `:not(...)` que separava as duas caras do
+    #    mesmo estado, senão a regra volta a valer só para metade dos lugares.
+    for alvo in (".seg > *", ".motor > *", ".acoes-col > *"):
+        exigir(f'.vib .ctrl[data-conectado="nao"] {alvo}' in doc,
+               f"a folha deixou de esconder `{alvo}` num lugar sem controle — "
+               f"os degraus, os trilhos e o `Testar` voltam a ficar clicáveis "
+               f"para um aparelho que não está na mesa")
+    #    A PERGUNTA É SOBRE A FOLHA DESTA ABA (`.vib .ctrl…`), e não sobre o
+    #    documento inteiro: `monta.py` guarda o `:not(.vazia)` na regra
+    #    COMPARTILHADA porque as outras abas ainda emitem a classe, e cobrar
+    #    aquele arquivo daqui seria uma aba legislando sobre as dez.
+    exigir('.vib .ctrl[data-conectado="nao"]:not(' not in doc,
+           "voltou uma exceção ao `[data-conectado=\"nao\"]` na folha desta "  # (noqa-acento) valor do atributo
+           "aba — ela separa o lugar que NASCE vazio do que esvazia ao vivo, e "
+           "duas caras para o mesmo estado na mesma tela é o que esta aba mais "
+           "persegue")
+    exigir(corpo.count('class="trilho arrasta"') == len(MESA) * (1 + len(LADOS)),
+           "os trilhos arrastáveis não são os mesmos nos quatro lugares")
     # 4. O RESPIRO — a divisória no meio do vão, e o passo como o dobro do ar.
     exigir("--r-passo:calc(var(--r-ar) * 2)" in doc, "o passo deixou de ser o dobro do ar")
     exigir("top:calc(var(--r-ar) * -1)" in doc or "top:-var(--r-ar)" in doc
@@ -1980,15 +2101,25 @@ def _conferir(doc):
     #    página publicada nasce com o motor direito do P1 e o esquerdo do P2
     #    tremendo, com a mesa parada. É o mesmo defeito do degrau, um andar
     #    abaixo — a tela AFIRMANDO um tremor que ninguém mediu.
+    #
+    #    A CONTA PASSOU DE `CONECTADOS` PARA `MESA` EM 07/09/2026, e o
+    #    complemento desta régua INVERTEU. Ela terminava exigindo que *"um lugar
+    #    vazio"* não tivesse endereço de tremor — e era essa exigência que
+    #    deixava o P3 e o P4 sem onde receber o `treme-e`/`treme-d` que o pacote
+    #    já emitia para os quatro lugares. O ENDEREÇO vai nos quatro; o que um
+    #    lugar vazio não pode ter é a classe `acesa` no HTML de nascença, e é
+    #    isso que a linha seguinte guarda.
     for sigla, _m, _k in LADOS:
-        exigir(corpo.count(f'data-campo="treme-{sigla}"') == len(CONECTADOS),
-               f"o motor {sigla!r} não tem endereço em cada coluna viva")
-    exigir(corpo.count('data-hef-classe="acesa"') == len(LADOS) * len(CONECTADOS),
+        exigir(corpo.count(f'data-campo="treme-{sigla}"') == len(MESA),
+               f"o motor {sigla!r} não tem endereço em cada uma das "
+               f"{len(MESA)} colunas — sem ele o tremor do controle que chegar "
+               f"naquele lugar não tem onde pousar")
+    exigir(corpo.count('data-hef-classe="acesa"') == len(LADOS) * len(MESA),
            "a classe do tremor não é a `acesa` do desenho compartilhado")
-    for pedaco in corpo.split('class="ctrl vazia"')[1:]:
-        bloco = pedaco.split('<div class="ctrl', 1)[0]
-        exigir("data-campo=\"treme-" not in bloco,
-               "um lugar vazio ganhou endereço de tremor")
+    for c in vazios:
+        exigir(' acesa' not in blocos.get(c["pref"], ""),
+               f"o lugar vazio {c['pref']} nasceu com um punho ACESO — o "
+               f"endereço vai nos quatro, a classe só em quem tremeu de verdade")
     # 10. AS TRÊS FRASES DA JANELA ESTÁVEL ESTÃO NA TELA — 03/09/2026, e a
     #     comparação é com o que o glade diz AGORA (elas são lidas de lá, não
     #     redigitadas). Uma dica que perde a frase volta a deixar a usuária
@@ -2046,10 +2177,14 @@ def _conferir(doc):
     for tag in arrastaveis:
         achado = _re.search(r'data-papel="([^"]+)"', tag)
         por_papel.setdefault(achado.group(1) if achado else "", []).append(tag)
-    exigir(len(por_papel.get("intensidade", [])) == len(CONECTADOS),
-           f"as barras 'Personalizado' arrastáveis não são {len(CONECTADOS)} "
-           f"(achei {len(por_papel.get('intensidade', []))}) — a de cada coluna "
-           f"viva tem de ser um `<input type=range>`, senão o clique dela chega "
+    # A CONTA É POR LUGAR DESDE 07/09/2026, e não por coluna viva: os quatro
+    # lugares saem do MESMO molde (ver :func:`_coluna`), e num lugar vazio a
+    # barra é `display:none` — não recebe clique, e passa a existir no instante
+    # em que o controle chega, sem regerar HTML nenhum.
+    exigir(len(por_papel.get("intensidade", [])) == len(MESA),
+           f"as barras 'Personalizado' arrastáveis não são {len(MESA)} "
+           f"(achei {len(por_papel.get('intensidade', []))}) — a de cada lugar "
+           f"tem de ser um `<input type=range>`, senão o clique dela chega "
            f"ao pacote sem número")
     for tag in por_papel.get("intensidade", []):
         exigir(f'max="{TETO}"' in tag,
@@ -2076,15 +2211,16 @@ def _conferir(doc):
     #        jogo pediu — faria o produto escrever um multiplicador dentro de
     #        uma barra de outra escala.
     de_motor = por_papel.get("motor", [])
-    exigir(len(de_motor) == len(LADOS) * len(CONECTADOS),
-           f"as barras de motor arrastáveis não são {len(LADOS) * len(CONECTADOS)} "
-           f"(achei {len(de_motor)}) — cada coluna viva tem UMA por punho, e é "
+    exigir(len(de_motor) == len(LADOS) * len(MESA),
+           f"as barras de motor arrastáveis não são {len(LADOS) * len(MESA)} "
+           f"(achei {len(de_motor)}) — cada LUGAR tem UMA por punho, e é "
            f"o que fecha a `SEM_DONO['barra:motor']`")
     for sigla, _m, _k in LADOS:
         do_lado = [t for t in de_motor if f'data-lado="{sigla}"' in t]
-        exigir(len(do_lado) == len(CONECTADOS),
-               f"a barra do motor {sigla!r} não tem `data-lado` em cada coluna "
-               f"viva — sem ele o gesto não sabe qual das duas foi arrastada")
+        exigir(len(do_lado) == len(MESA),
+               f"a barra do motor {sigla!r} não tem `data-lado` em cada um dos "
+               f"{len(MESA)} lugares — sem ele o gesto não sabe qual das duas "
+               f"foi arrastada")
         for tag in do_lado:
             exigir(f'data-campo="barra-{sigla}"' in tag,
                    f"a barra do motor {sigla!r} não usa o endereço novo "
@@ -2199,6 +2335,60 @@ def _conferir(doc):
            "o recibo da faixa ficou laranja — laranja é o `alerta`, e alerta "
            "sobre um clique que gravou ensina que o botão falha")
 
+    # 18. OS QUATRO LUGARES TÊM O MESMO CONJUNTO DE ENDEREÇOS — 07/09/2026, e é
+    #     a régua que impede este defeito de voltar.
+    #
+    #     MEDIDO com os quatro DualSense dela na mesa: o daemon publicava os
+    #     quatro, a carga chegava com `colunas = ['p1','p2','p3','p4']` e a tela
+    #     mostrava DOIS. Contando `data-campo` por `[data-controle="pN"]` na
+    #     página publicada de 06/09: **P1 e P2 com 14 endereços distintos, P3 e
+    #     P4 com UM**. O piloto procura `data-campo` DENTRO do bloco daquele
+    #     controle (`hefesto_vivo._pintar`, passo 2) — sem endereço, o dado dela
+    #     chega e não tem onde pousar. Nenhuma régua desta aba via isso, porque
+    #     todas contavam `len(CONECTADOS)`: elas mediam o mundo do desenho, não
+    #     o da mesa dela.
+    #
+    #     O CONJUNTO TEM DE SER IGUAL, NÃO MAIOR. Um campo a mais num lugar é um
+    #     endereço que o pacote não emite — pintura que nunca acontece, e a
+    #     régua do mockup a conta como dívida. A comparação é de CONJUNTOS, e
+    #     não de contagem: `mult` uma vez e `degrau` três não é assimetria, é a
+    #     forma do desenho.
+    #
+    #     E ELA MEDE AS MARCAS JUNTO (`data-hef-alvo`, `-classe`, `-quando`,
+    #     `-atributo`), porque o endereço sozinho não pinta: um `treme-e` sem
+    #     `data-hef-classe="acesa"` acenderia uma classe que o CSS não conhece —
+    #     pintura contada, tela igual. Foi como o `degrau` nasceu certo e o
+    #     `mult-teto` quase nasceu errado.
+    _marcas = _re.compile(
+        r'data-campo="([^"]+)"'
+        r'|data-hef-alvo="([^"]+)"'
+        r'|data-hef-classe="([^"]+)"'
+        r'|data-hef-quando="([^"]+)"'
+        r'|data-hef-atributo="([^"]+)"')
+
+    def _enderecos(html):
+        achados = set()
+        for grupo in _marcas.findall(html):
+            achados.add(next(x for x in grupo if x))
+        return achados
+
+    if len(blocos) == len(MESA):
+        _por_lugar = {pref: _enderecos(html) for pref, html in blocos.items()}
+        _padrao = _por_lugar[MESA[0]["pref"]]
+        for c in MESA[1:]:
+            _dele = _por_lugar[c["pref"]]
+            exigir(_dele == _padrao,
+                   f"o lugar {c['pref']} não tem os mesmos endereços do "
+                   f"{MESA[0]['pref']} — faltam {sorted(_padrao - _dele)} e "
+                   f"sobram {sorted(_dele - _padrao)}. O piloto pinta dentro do "
+                   f"bloco daquele `data-controle`: um endereço a menos é dado "
+                   f"dela chegando sem ter onde pousar; um a mais é pintura que "
+                   f"nunca acontece")
+        exigir(len(_padrao) >= 14,
+               f"a régua dos quatro lugares mede {len(_padrao)} endereços e "
+               f"eram 14 em 06/09 — ela ficou verde por VACUIDADE, que é o "
+               f"jeito de esta guarda deixar de guardar")
+
     if falhas:
         raise SystemExit("ERRO em 05-vibracao — decisão dela desfeita:\n  "
                          + "\n  ".join(f"- {f}" for f in falhas))
@@ -2207,9 +2397,12 @@ def _conferir(doc):
 # A FOLHA DOS 28 VAI POR ÚLTIMO, e a ordem é medida, não gosto: enquanto ela
 # morava dentro de cada `<svg>` (no corpo), as regras dela vinham DEPOIS das
 # desta aba na cascata. Mantê-la no fim do `<style>` preserva essa ordem, e o
-# que decide de fato continua sendo a especificidade — `.vib .ctrl.vazia
-# .ds-svg rect` (0,5,1) ganha de `svg[data-colorway] .z-casca :is(…)` (0,2,2)
-# nos dois arranjos, que é o que mantém o lugar vazio cinza.
+# que decide de fato continua sendo a especificidade — `.vib
+# .ctrl[data-conectado="nao"] .ds-svg rect:not([fill="none"])` (0,5,1) ganha de
+# `svg[data-colorway] .z-casca :is(…)` (0,2,2) nos dois arranjos, que é o que
+# mantém o lugar vazio cinza. A conta NÃO MUDOU com a fusão de 07/09/2026: o
+# `.vazia` que saiu valia uma classe e o `[data-conectado="nao"]` que entrou
+# vale um atributo, e os dois pesam igual na coluna do meio.
 
 # A ESCRITA MORA DEBAIXO DO `__main__`, e isto é cura de defeito MEDIDO em
 # 06/09/2026: `import aba05` REESCREVIA a bancada dela como efeito de um

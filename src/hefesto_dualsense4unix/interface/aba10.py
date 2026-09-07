@@ -1,6 +1,7 @@
 # A PASTA, não /tmp: o `monta` e o `topo.html` vivem aqui, e é daqui que esta
 # aba os lê. Ver o cabeçalho do aba09.py para o defeito que isso curou.
 import sys, pathlib; sys.path.insert(0, str(pathlib.Path(__file__).parent))
+import collections
 import re
 import onde
 from monta import monta, glifo, cor_da_zona, rotulo, CSS_GLIFO, MESA, SEPARADOR, R
@@ -1751,6 +1752,58 @@ def _conferir(html: str) -> None:
     exigir(not fora_sem_dica,
            f"o lugar vazio {fora_sem_dica} perdeu a dica que explica por que ele "
            f"continua na tabela — ela não fala de aparelho nenhum")
+
+    # OS QUATRO LUGARES TÊM O MESMO CONJUNTO DE ENDEREÇOS — 07/09/2026, e esta
+    # régua nasce de um defeito MEDIDO em outras abas, não nesta.
+    #
+    # O QUE ACONTECEU LÁ, com os quatro DualSense dela na mesa: o daemon publica
+    # quatro controles, a carga chega com os quatro em `colunas`/`mesa`, e a tela
+    # mostra DOIS. A causa é sempre a mesma forma — o gerador tem um ramo
+    # SEPARADO para o lugar vazio, que devolve um cartão sem nenhum endereço por
+    # dentro. O dado dela chega e não tem onde pousar: o pintor procura o
+    # endereço DENTRO do bloco daquele controle (`hefesto_vivo.achar`), e um
+    # bloco sem endereço come a carga em silêncio. Dois ramos que duplicam
+    # estrutura envelhecem separados, e foi um deles que envelheceu.
+    #
+    # AQUI O DEFEITO NÃO EXISTE, e a razão é de construção: `linha_do_controle`
+    # é UMA função só, com UM `return`, e `na_mesa` decide apenas o TEXTO
+    # (`nome`), a cor (`plastico`), a dica e a classe `fora` — nunca a
+    # estrutura. Os quatro lugares saem com os mesmos dez endereços.
+    #
+    # ENTÃO POR QUE A RÉGUA: porque nada segurava isso. A ausência do defeito
+    # era um efeito colateral de a função ter um `return` só, e o primeiro `if
+    # na_mesa:` que alguém escrevesse em volta do miolo o traria de volta sem
+    # reprovar nada — as réguas acima contam `Desconectado`, `class="fora"`,
+    # `guarda.plastico` e `guarda.secao`, e TODAS continuariam verdes com o
+    # `guarda.nome` e o `guarda.id` do lugar vazio arrancados. É a lei desta
+    # casa: quando a cura conhece a causa, ela vira régua, senão volta.
+    #
+    # ELA COBRA A CONTAGEM, E NÃO SÓ O CONJUNTO. `guarda.secao` aparece seis
+    # vezes por linha, uma por seção, e o pintor distribui a lista pela ordem do
+    # documento (`hefesto_vivo.py`, `alvos.forEach`): um lugar com cinco células
+    # em vez de seis não perde um endereço — ele DESLOCA todas as células
+    # seguintes de todos os lugares seguintes, e a tela passa a acender a seção
+    # errada no controle errado. Um conjunto igual com contagens diferentes é o
+    # pior dos dois defeitos, porque não deixa buraco: deixa mentira.
+    blocos_por_lugar = {
+        m.group(1): re.findall(r'data-(?:campo|papel|hef)="([^"]+)"', m.group(0))
+        for m in re.finditer(r'<tr data-hef-uniq="(p\d)".*?</tr>', html, re.S)
+    }
+    exigir(len(blocos_por_lugar) == len(MESA),
+           f"não são {len(MESA)} lugares endereçados na tabela por controle, "
+           f"e sim {len(blocos_por_lugar)}")
+    if len(blocos_por_lugar) == len(MESA):
+        assinaturas = {pref: tuple(sorted(collections.Counter(campos).items()))
+                       for pref, campos in blocos_por_lugar.items()}
+        modelo = assinaturas[MESA[0]["pref"]]
+        divergentes = sorted(p for p, a in assinaturas.items() if a != modelo)
+        exigir(not divergentes,
+               f"os lugares {divergentes} não têm os MESMOS endereços do "
+               f"{MESA[0]['pref']} — um lugar com endereço a menos come a carga "
+               f"dela em silêncio, e um com contagem diferente desloca as "
+               f"células de `guarda.secao` de todos os lugares seguintes. "
+               f"Endereços por lugar: "
+               f"{ {p: sum(c for _k, c in a) for p, a in assinaturas.items()} }")
 
     # A DIVISÓRIA HORIZONTAL, que ela mandou remover DESTE trecho.
     exigir(".campos > .campo::after" not in html,
