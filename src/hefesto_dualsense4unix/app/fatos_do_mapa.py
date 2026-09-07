@@ -202,7 +202,7 @@ FATOS: Final[dict[str, dict[str, object]]] = {
         'radio': {
             'aceita': 'sim',
             'aciona': 'não',
-            'ate_onde_foi': '',
+            'ate_onde_foi': 'MONTOU',
             'canal': 'hidraw',
             'de_onde_sei': 'inferido-do-codigo',
             'por_que_nao_aciona': 'divida',
@@ -430,7 +430,7 @@ FATOS: Final[dict[str, dict[str, object]]] = {
         'radio': {
             'aceita': 'sim',
             'aciona': 'parcial',
-            'ate_onde_foi': '',
+            'ate_onde_foi': 'MONTOU',
             'canal': 'hidraw',
             'de_onde_sei': 'medido',
             'por_que_nao_aciona': 'divida',
@@ -482,7 +482,7 @@ FATOS: Final[dict[str, dict[str, object]]] = {
             'ate_onde_foi': '',
             'canal': 'hidraw',
             'de_onde_sei': 'inferido-do-codigo',
-            'por_que_nao_aciona': 'divida',
+            'por_que_nao_aciona': 'decisao-tomada',
         },
         'radio': {
             'aceita': 'sim',
@@ -490,7 +490,7 @@ FATOS: Final[dict[str, dict[str, object]]] = {
             'ate_onde_foi': '',
             'canal': 'hidraw',
             'de_onde_sei': 'inferido-do-codigo',
-            'por_que_nao_aciona': 'divida',
+            'por_que_nao_aciona': 'decisao-tomada',
         },
     },
     'audio.microfone.volume@pro': {
@@ -612,7 +612,7 @@ FATOS: Final[dict[str, dict[str, object]]] = {
         'cabo': {
             'aceita': 'sim',
             'aciona': 'parcial',
-            'ate_onde_foi': '',
+            'ate_onde_foi': 'MONTOU',
             'canal': 'alsa-pipewire',
             'de_onde_sei': 'medido',
             'por_que_nao_aciona': '',
@@ -1068,7 +1068,7 @@ FATOS: Final[dict[str, dict[str, object]]] = {
         'cabo': {
             'aceita': '',
             'aciona': 'parcial',
-            'ate_onde_foi': '',
+            'ate_onde_foi': 'MONTOU',
             'canal': 'hidraw',
             'de_onde_sei': 'medido',
             'por_que_nao_aciona': '',
@@ -1076,7 +1076,7 @@ FATOS: Final[dict[str, dict[str, object]]] = {
         'radio': {
             'aceita': '',
             'aciona': '',
-            'ate_onde_foi': '',
+            'ate_onde_foi': 'MONTOU',
             'canal': 'hidraw',
             'de_onde_sei': 'inferido-do-codigo',
             'por_que_nao_aciona': '',
@@ -1296,7 +1296,7 @@ FATOS: Final[dict[str, dict[str, object]]] = {
         'cabo': {
             'aceita': 'sim',
             'aciona': 'sim',
-            'ate_onde_foi': '',
+            'ate_onde_foi': 'MONTOU',
             'canal': 'hidraw',
             'de_onde_sei': 'medido',
             'por_que_nao_aciona': '',
@@ -1304,7 +1304,7 @@ FATOS: Final[dict[str, dict[str, object]]] = {
         'radio': {
             'aceita': 'sim',
             'aciona': 'sim',
-            'ate_onde_foi': '',
+            'ate_onde_foi': 'MONTOU',
             'canal': 'hidraw',
             'de_onde_sei': 'medido',
             'por_que_nao_aciona': '',
@@ -3177,7 +3177,7 @@ FATOS: Final[dict[str, dict[str, object]]] = {
         'cabo': {
             'aceita': 'sim',
             'aciona': 'não',
-            'ate_onde_foi': '',
+            'ate_onde_foi': 'MONTOU',
             'canal': 'hidraw',
             'de_onde_sei': 'medido',
             'por_que_nao_aciona': 'decisao-tomada',
@@ -3185,7 +3185,7 @@ FATOS: Final[dict[str, dict[str, object]]] = {
         'radio': {
             'aceita': 'sim',
             'aciona': 'parcial',
-            'ate_onde_foi': '',
+            'ate_onde_foi': 'MONTOU',
             'canal': 'hidraw',
             'de_onde_sei': 'medido',
             'por_que_nao_aciona': '',
@@ -4792,7 +4792,7 @@ FATOS: Final[dict[str, dict[str, object]]] = {
         'cabo': {
             'aceita': 'sim',
             'aciona': 'sim',
-            'ate_onde_foi': '',
+            'ate_onde_foi': 'MONTOU',
             'canal': 'outro',
             'de_onde_sei': 'inferido-do-codigo',
             'por_que_nao_aciona': '',
@@ -4800,7 +4800,7 @@ FATOS: Final[dict[str, dict[str, object]]] = {
         'radio': {
             'aceita': 'sim',
             'aciona': 'sim',
-            'ate_onde_foi': '',
+            'ate_onde_foi': 'MONTOU',
             'canal': 'outro',
             'de_onde_sei': 'inferido-do-codigo',
             'por_que_nao_aciona': '',
