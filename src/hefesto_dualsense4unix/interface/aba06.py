@@ -54,6 +54,13 @@ from pacotes.a06_navegacao import (  # noqa: E402
     chips_da_fita,
     rotulo_de_quem_navega,
 )
+#: A PALAVRA DO LUGAR VAZIO, do dono dela — 07/09/2026,
+#: O-LUGAR-VAZIO-TEM-ENDERECO. Agora que o rótulo do lugar vazio tem endereço,
+#: o PRODUTO escreve nele (`pacotes.apagar_os_lugares_sem_dono`, chave
+#: `IDENTIDADE_DO_LUGAR`). Digitar "Desconectado" aqui deixaria duas grafias da
+#: mesma palavra — o desenho dizendo uma e o tique escrevendo outra por cima,
+#: que é exatamente como o desenho e o produto divergem calados.
+from pacotes import SEM_NINGUEM_AQUI  # noqa: E402
 
 #: OS CONTROLES QUE A FITA MOSTRA. Só quem está na mesa — 31/08/2026, decisão
 #: dela: um controle desconectado não se escolhe, e pôr o chip dele ali seria
@@ -1391,56 +1398,55 @@ def desenho(c, **kw):
 VAZIO = "—"
 
 
-def controle_vazio(c):
-    """O LUGAR de um controle que não está na mesa — ordem dela, 31/08/2026:
-    *"todas as abas tem que ter só dois controles conectados no momento, o resto
-    fica off"* e *"colocar algo como Desconectado e não os controles mockados"*.
-
-    O CARD CONTINUA NA FILEIRA, e é o ponto: quem olha precisa saber que a mesa
-    tem quatro lugares e dois vazios, não que ela tem dois. O que sai é o estado
-    — a cor do plástico, o transporte e o "Só a janela", porque nenhum deles tem
-    aparelho para valer.
-
-    O DESENHO DAQUI TAMBÉM É ENDEREÇADO, e não é enfeite: o piloto distribui uma
-    LISTA pelos elementos de mesmo `data-campo`, NA ORDEM do HTML
-    (`hefesto_vivo`, `alvos.forEach(…, i)`). Um lugar vazio sem endereço tiraria
-    uma casa da fila e o P4 receberia a cor do P3. O valor que ele recebe é `""`,
-    que APAGA o `data-colorway` — e o desenho cai no neutro que as regras
-    `.nav-ctl.vazia .ds-svg` já pintam.
-
-    O `data-controle` FICA AQUI TAMBÉM — decisão dela, 03/09/2026, e ela a
-    enunciou assim: *"tem que aparecer desligado enquanto não tem nenhum
-    controle. A partir do momento que tiver, ele aparece o controle devidamente
-    conectado. Se isso não ocorre com os 4 controles em cada aba, então temos
-    que construir isso e garantir isso."*
-
-    SEM O ENDEREÇO O LUGAR VAZIO É VAZIO SÓ PORQUE O DESENHO O DESENHOU VAZIO.
-    Medido no DOM vivo desta aba em 03/09, antes desta linha:
-    ``[data-controle="p3"]`` devolvia **zero elementos** — a coluna estava na
-    tela, com o desenho e o rótulo "P3 · Desconectado", e o produto não tinha
-    por onde escrever nela quando o terceiro controle chegasse.
-
-    A ``05-vibracao`` já fazia certo, e o comentário dela dizia a mesma coisa.
-    Esta linha é a cópia daquela decisão para as abas que ficaram para trás.
-    """
-    n = c["jogador"]
-    return (
-        f'              <div class="nav-ctl vazia" data-controle="{c["pref"]}"'
-        f' data-conectado="nao"'
-        f' data-campo="plastico" data-hef-alvo="cor"'
-        f' title="Nenhum controle neste lugar.">\n'
-        f'                {desenho(c)}\n'
-        f'                <div class="nav-rot">P{n} <span class="pt">•</span> Desconectado</div>\n'
-        f'                <div class="nav-est">{VAZIO}</div>\n'
-        f'              </div>')
-
-
 def controle(c):
-    """Um dos quatro da mesa: o desenho na cor do plástico, o rótulo na ordem
-    dela (player • plástico • transporte) e o que ele navega agora.
+    """UM lugar da mesa — cheio ou vazio, pela MESMA função e com os MESMOS
+    endereços. O `conectado` decide só duas coisas: (a) a classe e os atributos
+    de estado da casca, e (b) o TEXTO INICIAL de cada campo.
+
+    POR QUE ELA É UMA SÓ — 07/09/2026, O-LUGAR-VAZIO-TEM-ENDERECO. Até hoje
+    havia `controle()` e `controle_vazio()`, duas funções que desenhavam a mesma
+    caixa, e **uma envelheceu sem a outra**: a cheia ganhou
+    `data-campo="identidade"` e `data-campo="navega"` em 03/09, a vazia não.
+
+    O QUE ISSO CUSTOU, medido nesta aba com os QUATRO DualSense dela na mesa:
+    o daemon publicava quatro controles, a carga chegava com
+    `colunas = {p1, p2, p3, p4}` e `ocupados` com os quatro — e a tela mostrava
+    DOIS. O passo 2 do piloto faz `achar(raiz, k)`, que procura `data-campo="k"`
+    **dentro** do bloco `[data-controle]`; sem endereço, o dado dela chegava e
+    não tinha onde pousar. O P3 e o P4 seguiam dizendo `P3 • Desconectado` com
+    travessão em tudo, com o aparelho ligado na mão dela.
+
+    ``p1: 3 campos · p2: 3 · p3: 1 · p4: 1`` era a medida da página publicada.
+
+    O ESTADO INICIAL CONTINUA SENDO O DESENHO DELA: o lugar vazio nasce com
+    `class="nav-ctl vazia"`, `data-conectado="nao"` e o travessão. **Quem os
+    tira é o piloto**, no passo `1c`, quando o controle chega — e agora ele tem
+    onde escrever o que o controle diz. A `monta.MESA` não muda: ela é o desenho
+    aprovado (dois cheios, dois vazios); o que mudou é a ESTRUTURA que o gerador
+    emite para o lugar vazio.
+
+    ---- o que o estado decide, e é só isto ----
+
+    (a) A CASCA. `class="nav-ctl vazia"` contra `nav-ctl [navega]`; o
+        `style="color:…"` do plástico, que o lugar vazio não tem (a regra
+        `.nav-ctl.vazia{border:1px solid var(--border-forte)}` é quem lhe dá
+        caixa — uma `var(--plastico)` indefinida invalidaria a declaração
+        inteira); o `data-conectado`; e o `title` que diz que ali não há
+        ninguém.
+
+    (b) O TEXTO INICIAL. O nome do plástico contra `Desconectado`, e a linha do
+        transporte contra o travessão. Nada mais.
+
+    ---- o que NÃO muda com o estado, e é o ponto desta função ----
+
+    Os cinco endereços saem iguais nos quatro lugares:
+    `data-campo="plastico" data-hef-alvo="cor"` na casca,
+    `ENDERECO_DO_DESENHO` no `<svg>` (ver `desenho`),
+    `data-campo="identidade"` no rótulo e `data-campo="navega"` na linha de
+    estado. `_conferir` mede isso na SAÍDA, lugar a lugar.
 
     A IDENTIDADE DESTE CARTÃO VEM DE CIMA — 03/09/2026, IDENTIDADE-VEM-DE-CIMA.
-    Três coisas mudaram aqui, e as três eram o desenho mandando na tela:
+    Três coisas mudaram então, e as três eram o desenho mandando na tela:
 
     * a cor do plástico saiu do `style="--plastico:#hex"` e virou
       `style="color:#hex"` com `data-campo="plastico" data-hef-alvo="cor"`. É o
@@ -1449,7 +1455,9 @@ def controle(c):
       `currentColor`. Sem leitura, a cor volta ao neutro do CSS;
     * o `title` que dizia `Player 1 • Cosmic Red • USB` SAIU. Ele repetia o que
       o cartão já mostra em texto, e um `title` não tem alvo de pintura: ficaria
-      nomeando o controle do mockup para sempre, por cima do rótulo já vivo;
+      nomeando o controle do mockup para sempre, por cima do rótulo já vivo.
+      (O `title` do lugar VAZIO fica: ele não nomeia aparelho nenhum, diz que
+      não há aparelho.);
     * o nome do plástico virou `<span data-campo="identidade">`, que o pacote
       escreve com `pacotes.identidade_de` — o dono do nome desde a ROTA-A. O
       `P{n}` fica FORA do span de propósito: o número do jogador é ESTRUTURA
@@ -1468,20 +1476,52 @@ def controle(c):
     mockup tinha ficado**. Ligar o atributo — que é o que a lei dela pede —
     teria apagado a cor em vez de acertá-la, e é por isso que a página passou a
     publicar os 28 modelos no mesmo movimento.
+
+    O DESENHO DO LUGAR VAZIO TAMBÉM É ENDEREÇADO, e não é enfeite: o piloto
+    distribui uma LISTA pelos elementos de mesmo `data-campo`, NA ORDEM do HTML
+    (`hefesto_vivo`, `alvos.forEach(…, i)`). Um lugar vazio sem endereço tiraria
+    uma casa da fila e o P4 receberia a cor do P3. O valor que ele recebe é `""`,
+    que APAGA o `data-colorway` — e o desenho cai no neutro que as regras
+    `.nav-ctl.vazia .ds-svg` já pintam.
+
+    O `data-controle` do lugar vazio é decisão dela, 03/09/2026, e ela a
+    enunciou assim: *"tem que aparecer desligado enquanto não tem nenhum
+    controle. A partir do momento que tiver, ele aparece o controle devidamente
+    conectado. Se isso não ocorre com os 4 controles em cada aba, então temos
+    que construir isso e garantir isso."* — o `data-controle` chegou naquele
+    dia; os campos DE DENTRO chegam hoje, e sem eles a segunda metade da frase
+    dela não acontecia.
     """
     n = c["jogador"]
-    navega = n == NAVEGA
+    conectado = bool(c.get("conectado", True))
+    # UM LUGAR VAZIO NUNCA NAVEGA O PC. O `NAVEGA` já sai de `CONECTADOS`, mas a
+    # conjunção é o que impede a próxima pessoa de trocar aquela fonte e ganhar
+    # um cartão desconectado com a bolinha verde de "Navega o PC".
+    navega = conectado and n == NAVEGA
     ponto = '<span class="bolinha"></span>' if navega else ""
+    # (a) A CASCA — o que o estado decide na moldura.
+    classe = f'nav-ctl{" navega" if navega else ""}' if conectado else "nav-ctl vazia"
+    tinta = f' style="color:{cor_da_zona(c["cor"])}"' if conectado else ""
+    dica = "" if conectado else ' title="Nenhum controle neste lugar."'
+    # A LUZ DO JOGADOR só acende onde há jogador — `desenho()` a repassa ao
+    # `monta.svg()`, e um lugar vazio com barra de luz acesa seria o desenho
+    # afirmando um aparelho que não está na mesa.
+    luz = {"luz": _hex(player_slot_color(n))} if conectado else {}
+    # (b) O TEXTO INICIAL de cada campo — e SÓ o texto.
+    identidade = c["nome"] if conectado else SEM_NINGUEM_AQUI
+    estado = (
+        f'{ponto}{c["via"]} <span class="pt">•</span> '
+        f'{"Navega o PC" if navega else "Só a janela"}'
+    ) if conectado else VAZIO
     return (
-        f'              <div class="nav-ctl{" navega" if navega else ""}"'
-        f' style="color:{cor_da_zona(c["cor"])}"'
-        f' data-controle="{c.get("uniq") or c["pref"]}" data-conectado="sim"'
-        f' data-campo="plastico" data-hef-alvo="cor">\n'
-        f'                {desenho(c, luz=_hex(player_slot_color(n)))}\n'
+        f'              <div class="{classe}"{tinta}'
+        f' data-controle="{c.get("uniq") or c["pref"]}"'
+        f' data-conectado="{"sim" if conectado else "nao"}"'  # (noqa-acento) valor do atributo
+        f' data-campo="plastico" data-hef-alvo="cor"{dica}>\n'
+        f'                {desenho(c, **luz)}\n'
         f'                <div class="nav-rot">P{n} <span class="pt">•</span> '
-        f'<span data-campo="identidade">{c["nome"]}</span></div>\n'
-        f'                <div class="nav-est" data-campo="navega">{ponto}{c["via"]} <span class="pt">•</span> '
-        f'{"Navega o PC" if navega else "Só a janela"}</div>\n'
+        f'<span data-campo="identidade">{identidade}</span></div>\n'
+        f'                <div class="nav-est" data-campo="navega">{estado}</div>\n'
         f'              </div>')
 
 
@@ -2348,7 +2388,7 @@ MIOLO = f'''
                  desenho, e quem manda na tela é a leitura. -->
             <style id="plastico-vivo"></style>
             <div class="nav-mesa">
-{chr(10).join(controle(c) if c.get('conectado', True) else controle_vazio(c) for c in MESA)}
+{chr(10).join(controle(c) for c in MESA)}
             </div>
           </div>
           <div class="combos">
@@ -2628,9 +2668,20 @@ def _conferir(doc):
     exigir(corpo.count('class="nav-ctl') == len(MESA),
            f"a fileira não tem os {len(MESA)} lugares")
     # 2. O LUGAR VAZIO DIZ A POSIÇÃO E O ESTADO, nunca o nome do plástico.
+    #
+    #    A FORMA MUDOU EM 07/09/2026, O-LUGAR-VAZIO-TEM-ENDERECO, e esta régua
+    #    veio junto: a palavra `Desconectado` passou a morar DENTRO do
+    #    `<span data-campo="identidade">`, que é o que faz o produto ter onde
+    #    escrever quando o terceiro controle chega. A régua antiga procurava
+    #    `P3 <span class="pt">•</span> Desconectado` cru e reprovaria a cura —
+    #    ela mediu a estrutura de ontem, não a decisão dela. **O que ela
+    #    protege continua igual**: o lugar vazio diz a posição e o estado.
     for c in vazios:
-        exigir(f'P{c["jogador"]} <span class="pt">•</span> Desconectado' in corpo,
-               f"o lugar do P{c['jogador']} não diz Desconectado")
+        exigir(f'P{c["jogador"]} <span class="pt">•</span> '
+               f'<span data-campo="identidade">{SEM_NINGUEM_AQUI}</span>' in corpo,
+               f"o lugar do P{c['jogador']} não diz {SEM_NINGUEM_AQUI} no rótulo "
+               f"endereçado — ou a palavra mudou, ou o endereço caiu e o produto "
+               f"volta a não ter onde escrever quando o controle chegar")
         exigir(c["nome"] not in corpo,
                f"o nome do plástico {c['nome']!r} voltou a um lugar vazio")
     # A ORDEM SE MEDE COM `find`, E O RECORTE COM `[1:]` — nunca com `[1]`.
@@ -2643,6 +2694,57 @@ def _conferir(doc):
         bloco = pedaco.split('class="nav-ctl', 1)[0]
         exigir("Só a janela" not in bloco and "Navega o PC" not in bloco,
                "um lugar vazio diz o que ele navega — e ele não navega nada")
+
+    # 1-bis. OS QUATRO LUGARES TÊM O MESMO CONJUNTO DE `data-campo` — a régua
+    #    que faltava, e é ela que impede este defeito de voltar (07/09/2026,
+    #    O-LUGAR-VAZIO-TEM-ENDERECO).
+    #
+    #    O DEFEITO QUE ELA MEDE, com os QUATRO DualSense dela na mesa: o daemon
+    #    publicava quatro controles, a carga chegava com `colunas` dos quatro e
+    #    `ocupados` com os quatro — e a tela mostrava DOIS. O passo 2 do piloto
+    #    é `for(const el of achar(raiz, k))`, e `achar` procura `data-campo`
+    #    DENTRO do bloco `[data-controle]`. Um lugar sem endereço recebe o dado
+    #    dela e não tem onde pousá-lo. A medida da página publicada era
+    #    `p1: 3 · p2: 3 · p3: 1 · p4: 1`.
+    #
+    #    POR QUE CONJUNTO, e não contagem: contar dá o mesmo número para dois
+    #    lugares que endereçam campos DIFERENTES, e é exatamente o erro que dois
+    #    ramos separados produzem quando um deles envelhece. A régua compara
+    #    endereço por endereço e NOMEIA o que falta em qual lugar.
+    #
+    #    ELA MEDE A SAÍDA, e não a função: uma régua que chamasse `controle()`
+    #    duas vezes e comparasse os dois retornos passaria mesmo que o MIOLO
+    #    deixasse de usá-la. O recorte é a fileira `.nav-mesa` inteira.
+    _fileira = corpo.split('<div class="nav-mesa">', 1)
+    if len(_fileira) != 2 or '<div class="combos">' not in _fileira[1]:
+        # RÉGUA QUE NÃO ACHA O QUE MEDE NÃO É RÉGUA VERDE — ela PARA. Um
+        # `exigir` aqui viraria uma falha entre outras; o que aconteceu foi que
+        # a fileira mudou de marca e esta conferência deixou de ter alvo.
+        raise SystemExit(
+            "ERRO em 06-navegacao: a régua não achou a fileira `.nav-mesa` "
+            "entre o começo dela e o `.combos` — refaça o recorte antes de "
+            "confiar na conferência dos endereços por lugar")
+    _fileira = _fileira[1].split('<div class="combos">', 1)[0]
+    _lugares = _fileira.split('<div class="nav-ctl')[1:]
+    exigir(len(_lugares) == len(MESA),
+           f"a régua dos endereços achou {len(_lugares)} lugares na fileira, e "
+           f"a mesa tem {len(MESA)}")
+    _campos = {}
+    for c, _bloco in zip(MESA, _lugares):
+        _campos[c["pref"]] = set(_re.findall(r'data-campo="([^"]+)"', _bloco))
+    if len(_campos) == len(MESA):
+        _base = _campos[MESA[0]["pref"]]
+        exigir(bool(_base), "o primeiro lugar da fileira não tem um "
+                            "`data-campo` sequer — não há contra o que comparar")
+        for c in MESA[1:]:
+            _pref = c["pref"]
+            exigir(_campos[_pref] == _base,
+                   f"o lugar {_pref} não tem os mesmos endereços do "
+                   f"{MESA[0]['pref']} — faltam {sorted(_base - _campos[_pref])}, "
+                   f"sobram {sorted(_campos[_pref] - _base)}. O piloto escreve "
+                   f"por `data-campo` DENTRO do bloco do controle: sem o "
+                   f"endereço, o dado dela chega e não tem onde pousar, e o "
+                   f"lugar fica dizendo 'Desconectado' com o aparelho ligado")
 
     # 2-bis. A BORDA DO LUGAR VAZIO SE DECLARA INTEIRA, e não só a cor.
     #    `.nav-ctl` diz `border:1px solid var(--plastico)`, e o lugar vazio NÃO
@@ -2669,10 +2771,17 @@ def _conferir(doc):
     #    desenho na tela dela, e a régua da onda o acusa de novo — mas ela roda
     #    sobre a bancada INTEIRA, e esta roda sobre a saída deste gerador.
     conectados = [c for c in MESA if c.get("conectado", True)]
-    exigir(corpo.count('data-campo="identidade"') == len(conectados),
-           f"os {len(conectados)} cartões conectados perderam o "
-           f'`data-campo="identidade"` — o nome do plástico volta a ser o do '
-           f"mockup, e nada o reescreve")
+    #    A CONTA PASSOU DE `len(conectados)` A `len(MESA)` — 07/09/2026,
+    #    O-LUGAR-VAZIO-TEM-ENDERECO. Ela dizia DOIS porque o gerador tinha dois
+    #    ramos e só o cheio ganhara endereço em 03/09; a régua mediu o mundo de
+    #    ontem e teria dado verde sobre o defeito para sempre. O contrato de
+    #    hoje é `len(MESA)`: os QUATRO lugares dizem a identidade, e os dois
+    #    vazios a dizem como `Desconectado` até o controle chegar.
+    exigir(corpo.count('data-campo="identidade"') == len(MESA),
+           f"os {len(MESA)} lugares da mesa não têm um "
+           f'`data-campo="identidade"` cada — o nome do plástico volta a ser o '
+           f"do mockup no lugar cheio, e no vazio o controle que chegar não tem "
+           f"onde se nomear")
     exigir(corpo.count('data-campo="plastico" data-hef-alvo="cor"') == len(MESA),
            f"os {len(MESA)} lugares perderam o `data-campo=\"plastico\"` — a "
            f"borda volta a ser a cor cravada do desenho")
