@@ -131,16 +131,33 @@ def carga(monkeypatch):
 # 1. O ENDEREÇO EXISTE — em cada lugar onde a aba diz identidade
 # ---------------------------------------------------------------------------
 def test_os_cartoes_enderecam_o_nome_e_a_cor(miolo):
-    """Os quatro lugares têm endereço de cor; os conectados, de nome também."""
+    """Os QUATRO lugares têm endereço de cor E de nome.
+
+    A CONTA DO NOME ERA `len(conectados)` — DOIS — e ela mediu o mundo de
+    ontem (07/09/2026, O-LUGAR-VAZIO-TEM-ENDERECO). O gerador tinha dois ramos
+    para a mesma caixa, e só o CHEIO ganhou `data-campo="identidade"` em 03/09;
+    esta régua congelou a metade que existia e teria dado verde sobre o defeito
+    para sempre.
+
+    O DEFEITO QUE ELA DEIXAVA PASSAR, medido com os QUATRO DualSense dela na
+    mesa: o daemon publicava quatro, a carga chegava com `colunas` dos quatro,
+    e a tela mostrava DOIS — o P3 e o P4 diziam "P3 · Desconectado" com o
+    aparelho ligado na mão dela, porque `hefesto_vivo.achar(raiz, k)` procura
+    `data-campo` DENTRO do bloco e ali não havia nenhum.
+
+    O CONTRATO DE HOJE é `len(MESA)` nos dois: quatro lugares, quatro endereços
+    de cor, quatro de nome. O lugar vazio nasce dizendo `Desconectado` e o
+    piloto reescreve quando o controle chega.
+    """
     import monta
 
-    conectados = [c for c in monta.MESA if c.get("conectado", True)]
     assert miolo.count('data-campo="plastico" data-hef-alvo="cor"') == len(monta.MESA), (
         "um lugar da mesa perdeu o endereço da cor — a borda dele volta a ser a "
         "cor cravada do desenho, e nada a reescreve")
-    assert miolo.count('data-campo="identidade"') == len(conectados), (
-        "um cartão conectado perdeu o `data-campo=\"identidade\"` — o nome do "
-        "plástico volta a ser o do mockup")
+    assert miolo.count('data-campo="identidade"') == len(monta.MESA), (
+        "um lugar da mesa perdeu o `data-campo=\"identidade\"` — no lugar cheio "
+        "o nome do plástico volta a ser o do mockup; no vazio, o controle que "
+        "chegar não tem onde se nomear e o lugar segue dizendo 'Desconectado'")
 
 
 def test_o_miolo_nao_tem_plastico_cravado(miolo):
