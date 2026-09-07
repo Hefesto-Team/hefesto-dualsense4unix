@@ -19,15 +19,25 @@
 # olhar os quatro controles e clicar. As réguas automáticas — o Playwright que
 # prova esta página — essas sim rodam headless, e é o `--sem-abrir` que as serve.
 #
-# ELE NÃO TOCA NO DAEMON. Não instala, não reinicia, não escreve byte nenhum no
-# aparelho: só LÊ o que o daemon já publicou pelo socket. Se o daemon estiver
-# parado a página sobe assim mesmo e diz, no cabeçalho, que está parado — ficar
-# sem os quatro cartões é melhor do que reiniciar o daemon dela por causa de uma
-# página.
+# ELE LIGA O DAEMON SE ELE ESTIVER PARADO — e NUNCA o reinicia. Pedido dela,
+# 07/09/2026: *"quando rodar o validar ele tem que acionar isso
+# automaticamente"*, depois de atravessar meia bancada com o daemon morto. Sem
+# daemon a página lê o kernel e o kernel devolve a LÂMPADA da sessão passada:
+# ela plugou o controle que o roteiro chama de P1 e a página o pôs no P3.
+#
+# A DIFERENÇA ENTRE `start` E `restart` É A SESSÃO DELA. `start` num serviço já
+# ativo não faz nada; `restart` derruba o daemon vivo, com os controles na mão
+# dela, no meio de uma medição. Por isso aqui só se pergunta `is-active` e só
+# se chama `start` — e se ele já estiver de pé, o script não toca em nada.
+#
+# A RÉGUA NÃO LIGA NADA: com `--sem-abrir` (que é o que o Playwright usa) o
+# daemon não é acionado. Uma suíte que sobe serviço na máquina dela é uma
+# suíte que mexe na mesa dela sem ela pedir.
 #
 # Uso:
-#   ./validar.sh                 sobe e abre na tela dela
+#   ./validar.sh                 liga o daemon se preciso, sobe e abre na tela dela
 #   ./validar.sh --sem-abrir     sobe e só imprime o endereço (é o que a régua usa)
+#   ./validar.sh --sem-daemon    não liga o daemon, mesmo parado
 #   ./validar.sh --porta 8765    escolhe a porta (0 = a primeira livre)
 #   ./validar.sh --censo         o retrato dos testes, sem servir nada
 set -uo pipefail
@@ -36,10 +46,13 @@ RAIZ="$(cd "$(dirname "$(readlink -f "$0")")" && pwd)"
 ABRIR=1
 PORTA=0
 CENSO=0
+LIGAR_DAEMON=1
+UNIT="hefesto-dualsense4unix.service"
 
 while [ $# -gt 0 ]; do
   case "$1" in
-    --sem-abrir) ABRIR=0 ;;
+    --sem-abrir) ABRIR=0; LIGAR_DAEMON=0 ;;
+    --sem-daemon) LIGAR_DAEMON=0 ;;
     --censo)     CENSO=1 ;;
     --porta)     PORTA="${2:-0}"; shift ;;
     -h|--help)   sed -n '2,30p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
@@ -92,6 +105,37 @@ printf 'pacote:  %s\n' "$RESOLVIDO"
 
 if [ "$CENSO" = 1 ]; then
   exec "$PY" "$RAIZ/scripts/mesa_de_medicao.py" --censo
+fi
+
+# ---------------------------------------------------------------------------
+# O DAEMON — `start` se estiver parado, e nada se estiver de pé. Ver o
+# cabeçalho: `restart` derrubaria o daemon vivo com os controles na mão dela.
+# ---------------------------------------------------------------------------
+if [ "$LIGAR_DAEMON" = 1 ] && command -v systemctl >/dev/null 2>&1; then
+  ESTADO="$(systemctl --user is-active "$UNIT" 2>/dev/null || true)"
+  if [ "$ESTADO" = "active" ]; then
+    printf 'daemon:  já de pé\n'
+  elif systemctl --user cat "$UNIT" >/dev/null 2>&1; then
+    printf 'daemon:  %s — ligando (%s)\n' "${ESTADO:-desconhecido}" "$UNIT"
+    if systemctl --user start "$UNIT" 2>/dev/null; then
+      # ELE NÃO NASCE PRONTO: o socket aparece depois do processo. Sem esta
+      # espera a página sobe, pergunta cedo demais, cai no kernel e mostra a
+      # LÂMPADA velha — que é exatamente o defeito que ligar o daemon cura.
+      for _ in $(seq 1 40); do
+        [ "$(systemctl --user is-active "$UNIT" 2>/dev/null || true)" = "active" ] && break
+        sleep 0.25
+      done
+      printf 'daemon:  %s\n' "$(systemctl --user is-active "$UNIT" 2>/dev/null || echo '?')"
+    else
+      printf 'daemon:  NÃO subiu. A página vai ler o kernel e dizer isso.\n' >&2
+    fi
+  else
+    # A MENSAGEM NÃO NOMEIA O INSTALADOR de propósito: há régua que proíbe o
+    # nome dele neste arquivo, e a razão é boa — ele reescreve os lançadores
+    # dela e a unit, e um lançador que o CITA é um passo de virar um que o
+    # chama.
+    printf 'daemon:  a unit %s não existe nesta máquina — o produto não está instalado\n' "$UNIT" >&2
+  fi
 fi
 
 # ---------------------------------------------------------------------------

@@ -925,12 +925,27 @@ def _mascarar(endereco: str) -> str:
     ANTES de o endereço sair deste processo — o registro em disco pode ser lido
     e colado num documento versionado, e um MAC real ali é o defeito que os dois
     portões existem para pegar.
+
+    AS DUAS FORMAS, e a segunda quase custou o vazamento: o `sysfs` publica o
+    endereço com dois-pontos (`aa:bb:cc:00:00:ff`) e **o daemon o publica
+    COLADO**, doze dígitos sem separador. Esta função só conhecia a primeira e
+    devolvia a segunda INTACTA — com o daemon vivo o endereço real atravessava
+    a página inteira e ia para o registro em disco. Achado em 07/09/2026, ao
+    ligar o daemon dela; nada tinha ido ao disco ainda porque a bancada rodara
+    o dia todo com o daemon parado, no caminho do `sysfs`, que usa a outra
+    forma.
+
+    *Uma máscara que não reconhece a forma não devolve erro: devolve o
+    original.* É a mesma assinatura das réguas que dão verde sobre nada.
     """
     partes = endereco.split(":")
-    if len(partes) != 6:
-        return endereco
-    partes[3] = partes[4] = "00"
-    return ":".join(partes)
+    if len(partes) == 6:
+        partes[3] = partes[4] = "00"
+        return ":".join(partes)
+    # A FORMA COLADA, doze dígitos: os octetos 4 e 5 são os caracteres 6..9.
+    if re.fullmatch(r"[0-9A-Fa-f]{12}", endereco):
+        return endereco[:6] + "0000" + endereco[10:]
+    return endereco
 
 
 #: O DualSense por dentro do `hid_playstation`, no VID/PID que o driver casa.
@@ -1287,6 +1302,14 @@ def quem_esta_na_mesa() -> dict[str, Any]:
     except Exception as erro:  # o canal caiu; a página continua servindo
         return _pelo_kernel(f"daemon não respondeu ({erro})")
 
+    # A CARGA SÓ EXISTE NO KERNEL. O daemon publica `battery_pct` e não publica
+    # se está carregando; o `power_supply/*/status` do `sysfs` publica. Com o
+    # daemon vivo o cartão dizia "100%" e mais nada — e "100% na bateria" e
+    # "100% carregando" são estados diferentes na bancada dela. Ler os dois não
+    # é redundância: é cada dado vindo de quem o tem.
+    carga_do_kernel = {
+        re.sub(r"[^0-9a-f]", "", v["uniq_cru"].lower()): v["estado_da_bateria"]
+        for v in pelo_sysfs()}
     controles = (estado or {}).get("controllers") or (estado or {}).get("controles") or []
     if isinstance(controles, dict):
         controles = list(controles.values())
@@ -1302,7 +1325,15 @@ def quem_esta_na_mesa() -> dict[str, Any]:
             continue
         modelo = str(c.get("modelo") or "").strip()
         declarado = str(c.get("nome_declarado") or "").strip()
-        transporte = str(c.get("transporte") or "").strip()
+        # O DAEMON CHAMA O CAMPO DE `transport`, EM INGLÊS, e diz `usb`/`bt`.
+        # A página lia só `transporte` e caía no vazio: com o daemon PARADO o
+        # cartão dizia "cabo", e com ele VIVO dizia "sem transporte" — o
+        # caminho principal mais pobre que o de emergência. Medido em
+        # 07/09/2026, ligando o daemon dela. A tradução usa as mesmas duas
+        # palavras do `_BUS`, que é quem já nomeia os dois transportes aqui.
+        transporte = str(c.get("transporte") or c.get("transport") or "").strip()
+        transporte = {"usb": "cabo", "bt": "rádio",
+                      "bluetooth": "rádio"}.get(transporte.lower(), transporte)
         postos[posto].update({
             "presente": bool(c.get("connected", True)),
             "nome": declarado or modelo or transporte or "—",
@@ -1310,7 +1341,11 @@ def quem_esta_na_mesa() -> dict[str, Any]:
             "colorway": slugs.get(_dobra(modelo), "") if modelo else "",
             "transporte": transporte,
             "bateria": c.get("battery_pct"),
-            "estado_da_bateria": str(c.get("battery_state") or ""),
+            "estado_da_bateria": str(
+                c.get("battery_state")
+                or carga_do_kernel.get(
+                    re.sub(r"[^0-9a-f]", "", str(c.get("uniq") or "").lower()), "")
+                or ""),
             "uniq": _mascarar(str(c.get("uniq") or "")),
             "lampada": slot if isinstance(slot, int) else None,
             "barra": str(c.get("lightbar_rgb") or ""),

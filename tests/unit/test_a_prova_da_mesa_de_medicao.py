@@ -750,15 +750,42 @@ def test_os_quatro_aparecem_sem_daemon_lidos_do_kernel() -> None:
     # metade a mordida não mordia: arrancar a leitura fazia `pelo_sysfs()`
     # devolver vazio, e a régua PULAVA em vez de reprovar — verde sobre uma
     # cura arrancada, que é a família que esta casa caça.
-    nos = [n for n in pathlib.Path("/sys/class/hidraw").glob("hidraw*")
-           if "DualSense" in (n / "device" / "uevent").read_text(
-               encoding="utf-8", errors="replace")]
+    # O NOME NÃO SERVE PARA CONTAR, e isto custou um vermelho: com o daemon
+    # VIVO existe um segundo nó chamado "DualSense Wireless Controller
+    # (Hefesto P1)" — o controle VIRTUAL que o próprio daemon publica, com PID
+    # 0x0DF2 e endereço de mentira. Contar por nome somava o emulado ao de
+    # plástico e acusava a leitura de estar cega, quando ela estava certa: ela
+    # filtra pelo par VID/PID do aparelho real. A régua conta pelo mesmo par.
+    def _e_dualsense(no: pathlib.Path) -> bool:
+        texto = (no / "device" / "uevent").read_text(
+            encoding="utf-8", errors="replace")
+        vid, pid = med._VID_PID_DUALSENSE
+        alvos = {f"HID_ID=0003:{vid}:{pid}", f"HID_ID=0005:{vid}:{pid}"}
+        return any(linha.strip() in alvos for linha in texto.splitlines())
+
+    todos = sorted(pathlib.Path("/sys/class/hidraw").glob("hidraw*"))
+    nos = [n for n in todos if _e_dualsense(n)]
     if not nos:
         pytest.skip("nenhum DualSense nesta máquina agora")
     vistos = med.pelo_sysfs()
     assert len(vistos) == len(nos), (
         f"o kernel mostra {len(nos)} DualSense e a leitura devolveu "
         f"{len(vistos)} — a segunda fonte não está lendo")
+    # E O EMULADO NÃO ENTRA NA MESA. Ele existe sempre que o daemon está de pé,
+    # e um cartão a mais na bancada seria ela medindo o próprio produto contra
+    # um controle que não está na mesa.
+    emulados = [n for n in todos
+                if "Hefesto" in (n / "device" / "uevent").read_text(
+                    encoding="utf-8", errors="replace")]
+    enderecos = {v["uniq_cru"] for v in vistos}
+    for e in emulados:
+        cru = (e / "device" / "uevent").read_text(
+            encoding="utf-8", errors="replace")
+        campos = dict(linha.split("=", 1) for linha in cru.splitlines()
+                      if "=" in linha)
+        assert campos.get("HID_UNIQ", "?") not in enderecos, (
+            "o controle virtual do daemon entrou na mesa como se fosse "
+            "plástico")
     for v in vistos:
         assert v["transporte"] in ("cabo", "rádio"), v
         assert v["uniq"], "sem endereço"
@@ -1431,3 +1458,64 @@ def test_todo_token_de_cor_sem_reserva_esta_definido() -> None:
     assert not orfaos, (
         f"{len(orfaos)} token(s) usados sem reserva e sem definição: {orfaos}. "
         f"O navegador descarta a propriedade inteira e ninguém vê.")
+
+
+def test_a_mascara_pega_as_duas_formas_de_endereco() -> None:
+    """Com dois-pontos e COLADO — o daemon publica a segunda.
+
+    07/09/2026: `_mascarar` fazia `split(":")` e, sem os seis pedaços,
+    devolvia o argumento INTACTO. O `sysfs` usa dois-pontos e o daemon usa a
+    forma colada, então a página passou o dia inteiro mascarando certo — no
+    caminho de emergência — e teria vazado o endereço real no caminho
+    principal, para a tela e para o registro em disco, assim que o daemon
+    subisse.
+
+    A ASSINATURA É A DE SEMPRE: uma régua que não reconhece a entrada não
+    reclama, devolve o original. Quem lê vê um endereço e supõe mascarado.
+    """
+    assert med._mascarar("aa:bb:cc:dd:ee:ff") == "aa:bb:cc:00:00:ff"
+    assert med._mascarar("aabbccddeeff") == "aabbcc0000ff"
+    assert med._mascarar("AABBCCDDEEFF") == "AABBCC0000FF"
+    # o que não é endereço atravessa sem invenção
+    assert med._mascarar("") == ""
+    assert med._mascarar("sem endereço") == "sem endereço"
+
+
+def test_o_daemon_vivo_nao_e_mais_pobre_que_o_kernel(monkeypatch) -> None:
+    """Transporte e carga têm de sobreviver aos DOIS caminhos.
+
+    07/09/2026, ligando o daemon dela: o cartão passou de "cabo · 100% ·
+    cheia" (kernel) para "sem transporte · 100%" (daemon). O daemon chama o
+    campo de `transport` e diz `usb`; a página lia `transporte`. E a carga o
+    daemon não publica — ela mora no `power_supply/*/status` do kernel.
+
+    *O caminho principal ficou mais pobre que o de emergência*, e ninguém viu
+    porque a bancada rodou o dia com o daemon parado.
+
+    A RÉGUA MEDE A SAÍDA, não o texto do fonte. A primeira versão desta
+    procurava `c.get("transport")` no código e reprovou a própria cura — o
+    `_so_o_codigo` arranca as cadeias justamente para que ninguém meça prosa.
+    Aqui entra um daemon de mentira com o formato REAL que ele publica, medido
+    no socket dela, e sai o cartão.
+    """
+    daemon = {"controllers": [{
+        "index": 0, "connected": True, "transport": "usb", "player_slot": 1,
+        "uniq": "aabbccddeeff", "battery_pct": 100, "modelo": "Galactic Purple",
+    }]}
+    monkeypatch.setattr(med, "_pergunta_ao_daemon", lambda *a, **k: daemon)
+    monkeypatch.setattr(med, "pelo_sysfs", lambda: [{
+        "uniq": "aa:bb:cc:00:00:ff", "uniq_cru": "aa:bb:cc:dd:ee:ff",
+        "transporte": "cabo", "bateria": 100, "estado_da_bateria": "full",
+        "lampada": 1, "barra": "", "no": "hidraw0", "nome_do_driver": "",
+    }])
+    p1 = med.quem_esta_na_mesa()["postos"]["P1"]
+    assert p1["transporte"] == "cabo", (
+        f"o daemon disse `usb` e o cartão mostrou {p1['transporte']!r}")
+    assert p1["estado_da_bateria"] == "full", (
+        "a carga sumiu — o daemon não a publica e o kernel publica")
+    assert p1["uniq"] == "aabbcc0000ff", (
+        f"o endereço saiu sem máscara: {p1['uniq']!r}")
+
+    # E O RÁDIO, que é a outra metade da bancada dela.
+    daemon["controllers"][0]["transport"] = "bt"
+    assert med.quem_esta_na_mesa()["postos"]["P1"]["transporte"] == "rádio"
