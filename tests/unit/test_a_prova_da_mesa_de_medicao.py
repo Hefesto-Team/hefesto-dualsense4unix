@@ -231,13 +231,27 @@ def test_a_pagina_tem_conteudo_real_e_a_regua_morde_a_pagina_vazia(
 # ---------------------------------------------------------------------------
 def test_nada_acontece_antes_do_iniciar_nem_na_tela_nem_na_rede_nem_no_disco(
         pw, lar, mentira) -> None:
-    """A inércia do TEMPO 1, e ela não é só visual.
+    """A inércia do TEMPO 1 — e o que ela alcança NÃO é o desenho.
 
-    O construtor conferia a TELA. Uma página que já tivesse pedido os desenhos
-    ao servidor, ou pior, já tivesse gravado uma linha em disco, passaria nisso
-    — e o registro dela nasceria com uma resposta que ela nunca deu. Aqui se
-    conferem as três camadas: o que está na tela, o que saiu pela rede e o que
-    encostou no disco.
+    O construtor conferia a TELA. Uma página que já tivesse gravado uma linha em
+    disco passaria numa régua mais frouxa — e o registro dela nasceria com uma
+    resposta que ela nunca deu. Aqui se conferem as três camadas: o que está na
+    tela, o que saiu pela rede e o que encostou no disco.
+
+    O QUE ESTA RÉGUA COBRAVA A MAIS, E DEIXOU DE COBRAR — 06/09/2026: ela exigia
+    ZERO desenho antes do INICIAR, lendo *"botão de INICIAR antes de qualquer
+    coisa acontecer"* como se alcançasse a ilustração. Não alcança, e a mesma
+    encomenda diz o contrário duas frases depois: *"O botão mostra o que vai
+    acontecer E O QUE OBSERVAR"*, e *"Faça os svgs brilharem mostrando o que
+    observar de cada controle em cada rodada"*. O desenho com a peça acesa É o
+    "o que observar" — ele é a INSTRUÇÃO, não o recibo. Com ele preso ao TEMPO 3
+    ela lia o texto, apertava INICIAR e ia mexer no aparelho SEM NUNCA TER VISTO
+    onde olhar; o desenho só chegava depois, quando a hora de observar já tinha
+    passado. Agora o teste cobra o oposto: os quatro ESTÃO na tela no TEMPO 1.
+
+    O que "nada acontece" alcança de verdade continua cobrado abaixo, inteiro: o
+    timer não corre sozinho, as respostas por controle não aparecem antes de ela
+    ter o que responder, e NADA encosta no disco.
     """
     with _Servidor(lar, mentira) as s:
         pg = pw.new_page(viewport={"width": 1280, "height": 1000})
@@ -251,10 +265,18 @@ def test_nada_acontece_antes_do_iniciar_nem_na_tela_nem_na_rede_nem_no_disco(
         assert pg.is_visible("#antes")
         assert not pg.is_visible("#contagem"), "o timer correu sem ela clicar"
         assert not pg.is_visible("#depois"), "o TEMPO 3 apareceu sozinho"
-        assert pg.eval_on_selector_all(".ctl svg", "e=>e.length") == 0
-        assert pg.eval_on_selector_all("input[type=radio]", "e=>e.length") == 0, (
-            "as respostas por controle apareceram antes do INICIAR")
-        assert [p for p in pedidos if "/desenhos" in p] == []
+        pg.wait_for_selector(".ctl svg")
+        assert pg.eval_on_selector_all(".ctl svg", "e=>e.length") == 4, (
+            "os quatro desenhos NÃO estão na tela antes do INICIAR — ela vai "
+            "mexer no aparelho sem ter visto onde olhar")
+        assert pg.eval_on_selector_all(".ctl g.marcada", "e=>e.length") > 0, (
+            "nenhuma peça acesa no TEMPO 1: o desenho está lá e não diz nada")
+        # A RESPOSTA fica escondida no TEMPO 1, e o desenho não: as duas moram
+        # no mesmo cartão, e o corte é por tempo (`body[data-tempo]`). Marcar
+        # "obedeceu" antes de aplicar é gravar uma resposta sobre nada.
+        assert pg.eval_on_selector_all(
+            "input[type=radio]", "e=>e.filter(x=>x.offsetParent!==null).length") == 0, (
+            "as respostas por controle estão CLICÁVEIS antes do INICIAR")
         assert [p for p in pedidos if "/registro" in p] == []
         assert not s.registro.exists() or not list(s.registro.iterdir()), (
             "a página encostou no disco antes de ela clicar em INICIAR")
@@ -299,9 +321,12 @@ def test_o_timer_desce_e_nada_e_aplicado_enquanto_ele_corre(
         assert primeiro - segundo >= 2, (
             f"o relógio não desceu: {primeiro} -> {segundo} em 2,4 s")
         assert [p for p in pedidos if "/desenhos" in p] == [], (
-            "os desenhos foram montados DURANTE a contagem — o timer tem de "
-            "estar antes de aplicar, não ao lado")
-        assert pg.eval_on_selector_all(".ctl svg", "e=>e.length") == 0
+            "os desenhos foram REMONTADOS durante a contagem — a peça acesa "
+            "pisca na cara dela no pior momento, que é justamente quando ela "
+            "está olhando os controles. Eles já estavam na tela desde o TEMPO 1")
+        assert pg.eval_on_selector_all(".ctl svg", "e=>e.length") == 4, (
+            "os desenhos SUMIRAM quando o timer começou — é durante a contagem "
+            "que ela mais precisa deles")
         pg.close()
 
 

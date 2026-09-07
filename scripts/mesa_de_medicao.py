@@ -75,7 +75,7 @@ RAIZ = pathlib.Path(__file__).resolve().parents[1]
 # atalho meu.
 sys.path.insert(0, str(RAIZ / "src/hefesto_dualsense4unix/interface"))
 sys.path.insert(0, str(RAIZ / "src"))
-import monta  # noqa: E402
+import monta
 
 MAPA = RAIZ / "docs/data/mapa-controles.csv"
 PECAS = RAIZ / "docs/data/pecas-do-dualsense.csv"
@@ -827,6 +827,13 @@ button:disabled{opacity:.45;cursor:not-allowed}
   background:var(--fundo);border:1px solid var(--regua);border-radius:6px;
   padding:.5rem .6rem;white-space:pre-wrap;word-break:break-word}
 .como b{color:var(--fraca);font-weight:600}
+/* O DESENHO CHEGA NO TEMPO 1; A RESPOSTA, SÓ NO 3. As duas coisas moram no
+   mesmo cartão que `/desenhos` devolve, e a encomenda dela separa as duas: o
+   desenho é *"o que observar"* e tem de estar na tela ANTES (é a instrução);
+   a resposta é sobre o que já aconteceu, e marcá-la antes de aplicar é gravar
+   uma resposta sobre nada. Por isso o corte é aqui, por tempo, e não no que o
+   servidor manda — o cartão é UM só, e montá-lo duas vezes seria dois donos. */
+body[data-tempo="1"] .resp, body[data-tempo="2"] .resp{display:none}
 table.indice{width:100%;border-collapse:collapse;font-size:.85rem}
 table.indice td,table.indice th{border-bottom:1px solid var(--regua);
   padding:.3rem .45rem;text-align:left;vertical-align:top}
@@ -842,6 +849,7 @@ a{color:inherit}
 _JS = r"""
 const TESTES = window.__TESTES__;
 let atual = 0, tempo = 1, tique = null, gravado = window.__GRAVADO__ || {};
+let desenhado = null;  // o id do teste cujos quatro desenhos estão no ar
 
 const $ = (s, r) => (r || document).querySelector(s);
 const esc = (t) => { const d = document.createElement('div'); d.textContent = t == null ? '' : t; return d.innerHTML; };
@@ -890,6 +898,7 @@ async function desenhar() {
 
 function pintar() {
   const t = TESTES[atual];
+  document.body.dataset.tempo = String(tempo);
   $('#contador').textContent = `teste ${atual + 1} de ${TESTES.length}`;
   $('#secao').textContent = t.secao;
   $('#titulo').textContent = t.titulo;
@@ -915,7 +924,10 @@ function pintar() {
       : '<span class="cinza">o arquivo não publica gesto para esta linha — o campo do “como” é a única fonte.</span>';
     $('#segundos-alvo').textContent = t.segundos;
   }
-  if (tempo === 3) desenhar();
+  // O DESENHO SEGUE O TESTE, NÃO O TEMPO. Buscar de novo a cada tempo do
+  // MESMO teste custaria ~200 KB por transição e faria a peça acesa PISCAR no
+  // meio da leitura dela; `desenhado` é o que impede as duas coisas.
+  if (desenhado !== t.id) { desenhado = t.id; desenhar(); }
   indice();
 }
 
@@ -1038,6 +1050,16 @@ def pagina(testes: list[Teste], gravado: dict[str, Any]) -> str:
     <div class="cinza" id="secao"></div>
     <h2 id="titulo"></h2>
 
+    <!-- OS QUATRO DESENHOS FICAM FORA DAS TRÊS SEÇÕES, e é o pedido dela:
+         *"em cada controle eu devo observar algo. Faça os svgs brilharem
+         mostrando o que observar de cada controle em cada rodada"*. Eles
+         nasceram dentro do TEMPO 3, e ali chegavam TARDE: ela lia o que fazer,
+         apertava INICIAR e ia mexer no aparelho SEM NUNCA TER VISTO onde
+         olhar. O desenho é a instrução, não o recibo — por isso ele está no
+         ar nos três tempos, com a mesma peça acesa do começo ao fim. -->
+    <h3 id="titulo-dos-quatro">Os quatro, e a peça que acende é a que se olha</h3>
+    <div id="desenhos"></div>
+
     <section id="antes" hidden>
       <h3>O que vai acontecer</h3>
       <p id="vai-acontecer"></p>
@@ -1065,8 +1087,6 @@ def pagina(testes: list[Teste], gravado: dict[str, Any]) -> str:
     </section>
 
     <section id="depois" hidden>
-      <h3>Os quatro, agora</h3>
-      <div id="desenhos"></div>
       <h3>O que eu vi</h3>
       <textarea id="o-que-eu-vi" rows="2"
         placeholder="acendeu na hora, cor certa…"></textarea>
@@ -1168,7 +1188,7 @@ class _Atendente(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(corpo)
 
-    def do_GET(self) -> None:  # noqa: N802 (a forma é da biblioteca padrão)
+    def do_GET(self) -> None:
         caminho = self.path.split("?", 1)[0]
         if caminho == "/":
             corpo = pagina(self.mesa.testes, self.mesa.registro.ler())
@@ -1195,12 +1215,12 @@ class _Atendente(BaseHTTPRequestHandler):
                 json.dumps(self.mesa.registro.ler(), ensure_ascii=False).encode("utf-8"),
                 "application/json; charset=utf-8")
         else:
-            self._responder("não existe".encode("utf-8"),
+            self._responder("não existe".encode(),
                             "text/plain; charset=utf-8", 404)
 
-    def do_POST(self) -> None:  # noqa: N802
+    def do_POST(self) -> None:
         if self.path.split("?", 1)[0] != "/registro":
-            self._responder("não existe".encode("utf-8"),
+            self._responder("não existe".encode(),
                             "text/plain; charset=utf-8", 404)
             return
         tamanho = int(self.headers.get("Content-Length") or 0)

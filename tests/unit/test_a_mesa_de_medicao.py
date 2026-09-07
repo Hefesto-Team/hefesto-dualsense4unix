@@ -532,8 +532,14 @@ def test_a_pagina_dirigida_pelo_navegador(mesa_no_ar, mentira, monkeypatch) -> N
             # §7.2 — o botão de iniciar existe, e NADA acontece antes dele.
             assert pg.is_visible("#antes")
             assert not pg.is_visible("#depois")
-            assert pg.eval_on_selector_all(".ctl svg", "e=>e.length") == 0, (
-                "os desenhos apareceram ANTES do INICIAR")
+            # OS DESENHOS ESTÃO NA TELA NO TEMPO 1, e é o pedido dela: o
+            # botão "mostra o que vai acontecer E O QUE OBSERVAR". A peça
+            # acesa é o que observar. Esta linha cobrava zero desenho até
+            # 06/09/2026 — ver a razão inteira em
+            # `test_nada_acontece_antes_do_iniciar_...` do arquivo irmão.
+            pg.wait_for_selector(".ctl svg")
+            assert pg.eval_on_selector_all(".ctl svg", "e=>e.length") == 4, (
+                "os quatro desenhos não chegaram ao TEMPO 1")
             assert "DEVE REAGIR" in pg.inner_text("#observar")
             assert "não pode reagir" in pg.inner_text("#observar")
 
