@@ -659,6 +659,11 @@ ESTADO_COM_OUVINTE = "RUNNING"
 #: com ouvinte e sem.
 _COLUNA_DO_ESTADO = 4
 
+#: A terceira coluna de ``pactl list modules short`` — ``id \t nome \t args``.
+#: Os argumentos vêm inteiros nela, com os espaços do `source_properties`
+#: dentro; ver `SourceVirtualPipeWire._modulos_do_servidor_com_este_nome`.
+_COLUNA_DOS_ARGS = 2
+
 #: `fcntl.F_SETPIPE_SZ` não é exposto em toda build do CPython; o número é
 #: estável no Linux desde o 2.6.35.
 _F_SETPIPE_SZ = getattr(fcntl, "F_SETPIPE_SZ", 1031)
@@ -739,17 +744,69 @@ class SourceVirtualPipeWire:
 
     # -- ciclo de vida ----------------------------------------------------
 
+    def _modulos_do_servidor_com_este_nome(self) -> list[str]:
+        """Os `module-pipe-source` que o SERVIDOR já tem com este `source_name`.
+
+        Casa por TOKEN (`source_name=<nome>` inteiro, entre espaços), nunca por
+        substring: o argumento traz `source_properties="…"` com espaços dentro,
+        e um `in` cru faria `hefesto_mic_c311f0` casar com um
+        `hefesto_mic_c311f01` que não é dele.
+        """
+        saida = self.runner(["pactl", "list", "modules", "short"])
+        achados: list[str] = []
+        alvo = f"source_name={self.nome}"
+        for linha in (saida or "").splitlines():
+            campos = linha.split("\t")
+            if len(campos) < _COLUNA_DOS_ARGS + 1:
+                continue
+            if campos[1].strip() != _MODULO_PIPE_SOURCE:
+                continue
+            if alvo in campos[_COLUNA_DOS_ARGS].split():
+                achados.append(campos[0].strip())
+        return achados
+
     def iniciar(self) -> bool:
         """Carrega o módulo e abre o fifo. False = não deu (e nada ficou de pé).
 
         Ordem obrigatória: o módulo PRIMEIRO. É ele quem cria o fifo e mantém a
         ponta de leitura aberta; abrir a ponta de escrita antes daria ENXIO.
+
+        E ANTES DE TUDO, O ÓRFÃO SAI (MIC-RADIO-ORFAO-01, 07/09/2026)
+        -------------------------------------------------------------
+        `canal_do_microfone._DE_PE` já impedia pedir duas vezes o mesmo canal —
+        mas ele é um dicionário DE PROCESSO, e por isso é cego para o módulo que
+        ficou no SERVIDOR quando o processo anterior morreu (ou quando quem
+        subiu foi outro: o daemon e o `mic bt` do CLI publicam o mesmo nome).
+
+        **Medido na máquina dela em 07/09/2026, com um DualSense no rádio**, e o
+        modo de falha é o pior que existe — silêncio sem uma linha de log::
+
+            módulo órfão de pé  →  escritas ok: 8 · descartes: 1342 · 100,00% de zeros
+            servidor limpo      →  escritas ok: 988 · descartes: 0 · -34,8 dBFS
+
+        A mecânica das duas metades é uma só. `iniciar()` apaga o fifo e carrega
+        um SEGUNDO `module-pipe-source` com o mesmo `source_name`: o novo módulo
+        cria outro inode no mesmo caminho e lê dele, mas quem continua **dono do
+        nome** no grafo é o órfão, preso ao inode antigo que ninguém mais
+        enche. Então quem grava por nome (`parec --device=…`, a eleição, o
+        jogo) chupa o nó morto — zeros perfeitos — enquanto a ponte enche o
+        inode novo até os 8 KB do pipe (**8 quadros**) e descarta todo o resto.
+
+        Por isso a autoridade aqui é o SERVIDOR, não a tabela: perguntar a ele
+        quem já tem este `source_name` e **derrubar** o que achar. Órfão é nosso
+        por definição — o prefixo do nome é desta casa —, e um nó publicado que
+        não pode carregar um byte é pior que nó nenhum.
         """
         if self._module_id is not None:
             return True
         if shutil.which("pactl") is None:
             logger.info("bt_mic_sem_pactl")
             return False
+        for orfao in self._modulos_do_servidor_com_este_nome():
+            self.runner(["pactl", "unload-module", orfao])
+            logger.warning(
+                "bt_mic_source_orfa_removida", source=self.nome, module_id=orfao
+            )
         self._fifo = self._caminho_do_fifo()
         with contextlib.suppress(OSError):
             os.unlink(self._fifo)

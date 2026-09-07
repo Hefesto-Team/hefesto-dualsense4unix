@@ -477,15 +477,30 @@ def test_descartes_vem_da_source_e_nao_sao_somados(par) -> None:  # type: ignore
 
 
 class _RunnerFalso:
-    def __init__(self, saida: str | None = "42\n") -> None:
+    # (noqa-acento) `modulos` é o NOME do parâmetro de `__init__`, logo abaixo:
+    # acentuá-lo faria a documentação nomear um argumento que não existe.
+    """`pactl` de mentira: `modulos` é a saída de `list modules short`."""  # (noqa-acento)
+
+    def __init__(self, saida: str | None = "42\n", modulos: str = "") -> None:
         self.chamadas: list[list[str]] = []
         self.saida = saida
+        self.modulos = modulos
 
     def __call__(self, argv: list[str]) -> str | None:
         self.chamadas.append(argv)
         if argv[:2] == ["pactl", "load-module"]:
             return self.saida
+        if argv == ["pactl", "list", "modules", "short"]:
+            return self.modulos
         return ""
+
+
+def _primeiro(runner: _RunnerFalso, verbo: str) -> list[str]:
+    """A primeira chamada de `pactl <verbo>`; falha o teste se não houve."""
+    for argv in runner.chamadas:
+        if len(argv) > 1 and argv[1] == verbo:
+            return argv
+    raise AssertionError(f"nenhum `pactl {verbo}` em {runner.chamadas}")
 
 
 def test_source_carrega_module_pipe_source_com_o_formato_do_mic(monkeypatch, tmp_path) -> None:  # type: ignore[no-untyped-def]
@@ -495,7 +510,7 @@ def test_source_carrega_module_pipe_source_com_o_formato_do_mic(monkeypatch, tmp
     src = bt.SourceVirtualPipeWire(nome="hef_teste", descricao="Teste", runner=runner)
     # `_abrir_fifo` falha (não há PipeWire de verdade): o start recua inteiro.
     assert src.iniciar() is False
-    argv = runner.chamadas[0]
+    argv = _primeiro(runner, "load-module")
     assert argv[:3] == ["pactl", "load-module", "module-pipe-source"]
     assert "source_name=hef_teste" in argv
     assert "format=s16le" in argv
@@ -503,6 +518,61 @@ def test_source_carrega_module_pipe_source_com_o_formato_do_mic(monkeypatch, tmp
     assert f"channels={bt.MIC_CANAIS}" in argv
     # Recuou de verdade: o módulo carregado foi descarregado.
     assert ["pactl", "unload-module", "42"] in runner.chamadas
+
+
+#: `pactl list modules short` de mentira — `id \t nome \t args`, TABs de
+#: verdade, com o `source_properties` cheio de espaços como na máquina dela.
+_MODULOS_COM_ORFAO = (
+    "536870912\tmodule-null-sink\tsink_name=hefesto_som_c311f0\t\n"
+    "536870919\tmodule-pipe-source\tsource_name=hefesto_mic_c311f0"
+    " file=/run/user/1000/hefesto-hefesto_mic_c311f0.fifo format=s16le"
+    " rate=48000 channels=1 source_properties=\"device.description='Microfone"
+    " DualSense BT' priority.session=1500\"\t\n"
+    "536870920\tmodule-pipe-source\tsource_name=hefesto_mic_c311f01"
+    " file=/tmp/outro.fifo format=s16le rate=48000 channels=1\t\n"
+)
+
+
+def test_o_modulo_orfao_com_o_mesmo_nome_e_derrubado_antes_do_load(monkeypatch, tmp_path) -> None:  # type: ignore[no-untyped-def]
+    """MIC-RADIO-ORFAO-01: o servidor é a autoridade, não a tabela do processo.
+
+    Medido em 07/09/2026: com o órfão de pé entram **8 quadros** no fifo e o
+    app grava 100,00% de zeros; sem ele, 988 quadros e -34,8 dBFS. E a única
+    diferença entre os dois mundos é este `unload-module`.
+    """
+    monkeypatch.setenv("XDG_RUNTIME_DIR", str(tmp_path))
+    monkeypatch.setattr(bt.shutil, "which", lambda _n: "/usr/bin/pactl")
+    runner = _RunnerFalso(modulos=_MODULOS_COM_ORFAO)
+    src = bt.SourceVirtualPipeWire(
+        nome="hefesto_mic_c311f0", descricao="Teste", runner=runner
+    )
+    src.iniciar()
+
+    verbos = [c[1] for c in runner.chamadas if len(c) > 1]
+    assert "unload-module" in verbos, "o órfão ficou de pé"
+    # A ORDEM É O TESTE: derrubar DEPOIS do load deixaria o órfão dono do nome
+    # durante a subida, que é exatamente o silêncio que isto existe para matar.
+    assert verbos.index("unload-module") < verbos.index("load-module")
+    assert ["pactl", "unload-module", "536870919"] in runner.chamadas
+    # E SÓ O DELE: o `536870920` é `hefesto_mic_c311f01`, outro controle.
+    assert ["pactl", "unload-module", "536870920"] not in runner.chamadas
+    # O `module-null-sink` do alto-falante não é `module-pipe-source`.
+    assert ["pactl", "unload-module", "536870912"] not in runner.chamadas
+
+
+def test_sem_orfao_no_servidor_nada_e_derrubado(monkeypatch, tmp_path) -> None:  # type: ignore[no-untyped-def]
+    """A mordida ao contrário: servidor limpo não perde módulo nenhum."""
+    monkeypatch.setenv("XDG_RUNTIME_DIR", str(tmp_path))
+    monkeypatch.setattr(bt.shutil, "which", lambda _n: "/usr/bin/pactl")
+    runner = _RunnerFalso(modulos=_MODULOS_COM_ORFAO)
+    src = bt.SourceVirtualPipeWire(
+        nome="hefesto_mic_4846d8", descricao="Teste", runner=runner
+    )
+    src.iniciar()
+    antes_do_load = [
+        c for c in runner.chamadas[: [x[1] for x in runner.chamadas].index("load-module")]
+    ]
+    assert all(c[1] != "unload-module" for c in antes_do_load)
 
 
 def test_source_nao_publica_quando_o_load_module_falha(monkeypatch, tmp_path) -> None:  # type: ignore[no-untyped-def]
