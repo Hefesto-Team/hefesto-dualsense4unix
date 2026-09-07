@@ -1338,3 +1338,47 @@ def test_o_gesto_e_o_corpo_do_teste_e_nao_uma_gaveta(pw, lar, mentira) -> None:
             "o `---` que divide as seções do arquivo vazou para a tela")
         pg.close()
 
+
+def test_o_acervo_do_mapa_tambem_tem_gesto() -> None:
+    """*"depois de melhorar os 21. quero que aí sim vc use o novo modelo pra
+    remodelar os demais testes via agentes."* — 07/09/2026.
+
+    As 21 da bancada ganharam gesto primeiro porque são a hora dela. As 178
+    células do mapa vêm no MESMO molde, de um segundo arquivo dono — dois, e
+    não um só, porque os donos são outros: as 21 são a aceitação que ela
+    escreveu; as 178 são o acervo.
+
+    A RÉGUA NÃO DIGITA 178: pergunta ao arquivo quantas ele publica, e cobra
+    que a página não perca nenhuma pelo caminho.
+    """
+    do_arquivo = med.como_do_mapa()
+    assert len(do_arquivo) > 150, (
+        f"o arquivo do gesto do mapa publica {len(do_arquivo)} células — "
+        f"alguém o encolheu, ou a leitura quebrou")
+    do_mapa = [x for x in med.todos_os_testes()
+               if not x.id.startswith("roteiro-")]
+    sem = [x.id for x in do_mapa
+           if not any(r == "os passos" for r, _ in x.como)]
+    assert not sem, (
+        f"{len(sem)} células do mapa chegaram sem gesto: {sem[:5]} — e sem ele "
+        f"o COMO volta a ser a procedência repetida, que é o defeito que ela "
+        f"apontou na linha 10 do roteiro")
+
+    # OS DOIS ARQUIVOS SÃO DOIS, e a régua cobra que continuem sendo: fundi-los
+    # faria a aceitação dela e o acervo mudarem juntos, e eles não mudam pelas
+    # mesmas razões.
+    assert med._O_COMO_DAS_21 != med._O_COMO_DO_MAPA
+    for caminho in (med._O_COMO_DAS_21, med._O_COMO_DO_MAPA):
+        assert (med.RAIZ / caminho).exists(), caminho
+
+    # E NENHUM GESTO DO MAPA CAI NA CÉLULA DE OUTRA: o endereço é a chave mais
+    # o lado, e trocar um por outro mandaria ela testar o cabo lendo o rádio.
+    for x in do_mapa[:40]:
+        onde = dict(x.como).get("onde olhar", "")
+        assert onde, x.id
+        lado = "cabo" if x.id.endswith("-cabo") else "rádio"
+        outro = "rádio" if lado == "cabo" else "cabo"
+        corpo = " ".join(v for _, v in x.como).lower()
+        assert lado in corpo or outro not in corpo, (
+            f"{x.id} fala só do {outro} — o gesto caiu na célula errada")
+

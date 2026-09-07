@@ -273,8 +273,19 @@ def test_o_como_do_arquivo_vem_do_mapa() -> None:
     com_como = [t for t in med.todos_os_testes()
                 if t.id.startswith("mapa-") and t.como]
     assert len(com_como) > 20, len(com_como)
+    # O CANAL E O COMANDO MUDARAM DE LUGAR EM 07/09/2026, e a régua vai atrás
+    # deles onde eles estão. Eles nunca foram GESTO — são de onde a casa sabe —,
+    # e ocupavam o campo do "como" enquanto ninguém tinha escrito o gesto de
+    # verdade. Hoje o gesto vem do arquivo dono e a procedência desceu para a
+    # gaveta, junto do `aciona` e do degrau. O que a régua não pode deixar
+    # acontecer é ela SUMIR: sem o comando e o canal, quem for conferir a
+    # medição amanhã não sabe por onde a casa falou com o aparelho.
+    onde_vive = " ".join(t.hoje for t in com_como)
+    assert "canal=" in onde_vive and "comando=" in onde_vive, (
+        "o canal e o comando sumiram da procedência das células")
     chaves = {k for t in com_como for k, _ in t.como}
-    assert {"canal", "comando"} & chaves, chaves
+    assert "os passos" in chaves, (
+        f"as células do mapa perderam o gesto: {sorted(chaves)}")
 
 
 def test_mordida_gravar_sem_o_como_e_recusado(tmp_path) -> None:

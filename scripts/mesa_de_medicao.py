@@ -552,6 +552,13 @@ def papel_da_condicao(frase: str, posto: str, nomeados: set[str] | list[str]) ->
 _O_COMO_DAS_21 = ("docs/process/sprints/"
                   "2026-09-07-O-COMO-DAS-21-o-gesto-exato-de-cada-linha.md")
 
+#: E O DO MAPA, escrito depois, no mesmo molde — ordem dela: *"depois de
+#: melhorar os 21. quero que aí sim vc use o novo modelo pra remodelar os demais
+#: testes via agentes."* São DOIS arquivos e não um só porque os donos são
+#: outros: as 21 são a aceitação que ela escreveu, as 178 são o acervo do mapa.
+_O_COMO_DO_MAPA = ("docs/process/sprints/"
+                   "2026-09-07-O-COMO-DO-MAPA-o-gesto-das-178-celulas.md")
+
 
 def como_das_21() -> dict[str, list[tuple[str, str]]]:
     """`{id do teste: [(rótulo, texto)]}` — o gesto exato, lido do dono.
@@ -566,7 +573,26 @@ def como_das_21() -> dict[str, list[tuple[str, str]]]:
     (senão ela faz o gesto olhando para o lugar errado), depois os passos. A
     armadilha vem por último de propósito — lida antes, contamina a leitura.
     """
-    alvo = RAIZ / _O_COMO_DAS_21
+    return _gesto_do_arquivo(_O_COMO_DAS_21, r"##\s+Linha\s+(\d+)\s+—",
+                             lambda m: f"roteiro-{int(m.group(1)):02d}")
+
+
+def como_do_mapa() -> dict[str, list[tuple[str, str]]]:
+    """O gesto das 178 células, lido do arquivo que é dono delas.
+
+    O CABEÇALHO DA SEÇÃO É O PRÓPRIO ID (`## mapa-luz.lightbar.cor-radio`), e
+    não um número: as células não têm ordem no roteiro, têm endereço. Trocar o
+    número pelo id também tira uma tradução do caminho — o que o arquivo diz é
+    a chave que a página usa.
+    """
+    return _gesto_do_arquivo(_O_COMO_DO_MAPA, r"##\s+(mapa-\S+)\s+—",
+                             lambda m: m.group(1))
+
+
+def _gesto_do_arquivo(relativo: str, marca: str,
+                      ident: Any) -> dict[str, list[tuple[str, str]]]:
+    """O motor dos dois: mesma forma de seção, chaves diferentes."""
+    alvo = RAIZ / relativo
     if not alvo.exists():
         return {}
     fora: dict[str, list[tuple[str, str]]] = {}
@@ -590,10 +616,10 @@ def como_das_21() -> dict[str, list[tuple[str, str]]]:
 
     ultimo = ""
     for linha in alvo.read_text(encoding="utf-8").splitlines():
-        m = re.match(r"##\s+Linha\s+(\d+)\s+—", linha)
+        m = re.match(marca, linha)
         if m:
             fecha()
-            atual = f"roteiro-{int(m.group(1)):02d}"
+            atual = ident(m)
             campos = {r: [] for r in rotulos.values()}
             ultimo = ""
             continue
@@ -727,6 +753,8 @@ def testes_do_mapa(vocab: dict[str, set[str]]) -> list[Teste]:
     tem a peça, e pôr isso na fila dela seria fazê-la conferir uma ausência.
     """
     fora = []
+    # UMA LEITURA PARA AS 178, não uma por célula: o arquivo do gesto tem 720 KB.
+    gestos_do_mapa = como_do_mapa()
     for r in linhas_do_mapa():
         if r["existe"] == "nao-tem":
             continue
@@ -772,12 +800,24 @@ def testes_do_mapa(vocab: dict[str, set[str]]) -> list[Teste]:
                 papeis={p: PAPEL_OBSERVA for p in POSTOS},
                 pecas=achadas,
                 celula=f'{r["chave"]} @ {palavra}',
+                # A PROCEDÊNCIA TÉCNICA VAI JUNTO, e ela mudou de lugar sem
+                # sumir: o canal, o report, o offset, o comando e o teste que
+                # morde eram o "como" desta célula até 07/09/2026 — e não são
+                # gesto nenhum, são de onde a casa sabe. Agora o gesto vem do
+                # arquivo dono e isto desce para a gaveta da procedência, ao
+                # lado do `aciona` e do degrau. Some da frente, não do arquivo.
                 hoje=(
                     f'aciona={r[f"{lado}_aciona"] or "-"} · '
                     f'de_onde_sei={r[f"{lado}_de_onde_sei"] or "-"} · '
                     f'ate_onde_foi={r[f"{lado}_ate_onde_foi"] or "(vazio)"}'
-                    + (f' · {NAO_MEDIDO}' if nao_medido else "")),
-                como=_como_da_celula(r, lado),
+                    + (f' · {NAO_MEDIDO}' if nao_medido else "")
+                    + "".join(f' · {k}={v}'
+                              for k, v in _como_da_celula(r, lado))),
+                # O GESTO DAS 178, do arquivo dono. Sem ele, cai no que a
+                # célula publica — que é a procedência, não o gesto: é o mesmo
+                # defeito que ela apontou na linha 10 do roteiro.
+                como=(gestos_do_mapa.get(f"mapa-{r['chave']}-{lado}")
+                      or _como_da_celula(r, lado)),
                 segundos=SEGUNDOS_PADRAO,
                 fonte=f'docs/data/mapa-controles.csv · {r["id"]} [{lado}]',
                 ja_medido=ja,
