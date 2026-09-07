@@ -91,13 +91,24 @@ def modelos_do_mapa() -> set[str]:
     }
 
 
+#: O VALOR DO `data-conectado` NUM LUGAR SEM CONTROLE. Ele é chave de
+#: máquina, e por isso não leva acento.
+SEM_CONTROLE = "nao"  # (noqa-acento) valor de atributo
+
+#: O TOKEN QUE ESTA RÉGUA USA PARA DIZER "estou dentro de um lugar sem
+#: controle". Ele NÃO é uma classe do HTML: a `vazia` morreu em 07/09/2026 com a
+#: fusão dos dois ramos de coluna (`aba05._coluna`), e a marca verdadeira é o
+#: `data-conectado="nao"` — a mesma que o piloto põe e tira.
+MARCA_DO_LUGAR_VAZIO = "lugar-sem-controle"
+
+
 class _Pagina(HTMLParser):
     """Os elementos com a PILHA de ancestrais, e o texto de cada `<style>`.
 
     A pilha é o que responde *este `<svg>` está dentro de um lugar vazio?* — a
     pergunta que separa o controle que a mesa tem do lugar que ela não tem. Uma
-    régua que olhasse só a tag à esquerda erraria: entre o `<div class="ctrl
-    vazia">` e o `<svg>` há a moldura.
+    régua que olhasse só a tag à esquerda erraria: entre o
+    `<div class="ctrl off" data-conectado="nao">` e o `<svg>` há a moldura.
     """
 
     VAZIAS = frozenset([
@@ -117,6 +128,13 @@ class _Pagina(HTMLParser):
         d = {k: (v or "") for k, v in attrs}
         heranca = [c for pai in self.pilha
                    for c in (pai.get("class") or "").split()]
+        # A MARCA DO LUGAR VAZIO ENTRA NA HERANÇA — 07/09/2026. Ela não é uma
+        # classe: é o `data-conectado="nao"`, que é o que o piloto escreve e
+        # apaga. Traduzi-la para um token aqui deixa o resto desta régua
+        # perguntando "estou dentro de um lugar vazio?" na mesma língua de
+        # sempre, sem que a resposta dependa de uma classe que morreu.
+        heranca += [MARCA_DO_LUGAR_VAZIO for pai in self.pilha
+                    if (pai.get("data-conectado") or "") == SEM_CONTROLE]
         self.elementos.append((tag, d, heranca))
         if tag == "style":
             self._folha = []
@@ -147,9 +165,20 @@ def _pagina(html: str) -> _Pagina:
 
 
 def _desenhos(html: str) -> list[tuple[dict[str, str], bool]]:
-    """Os `<svg class="ds-svg">` da página, e se cada um está num lugar vazio."""
+    """Os `<svg class="ds-svg">` da página, e se cada um está num lugar vazio.
+
+    A MARCA DO LUGAR VAZIO MUDOU EM 07/09/2026: era a classe `vazia`, e passou a
+    ser a dupla `class="ctrl off"` + `data-conectado="nao"` — as MESMAS marcas
+    que o piloto põe e TIRA (`hefesto_vivo._pintar`, passos 1b e 1c). A `vazia`
+    morreu porque o piloto não a conhece: um cartão que nascesse com ela ficaria
+    cinza para sempre depois que o controle chegasse.
+
+    E A LEITURA TEM DE SEGUIR A MARCA. Procurar `"vazia" in heranca` aqui
+    devolveria SEMPRE lista vazia, e a régua daria verde por vacuidade — que é
+    o pior desfecho de uma guarda que existe para comparar os dois estados.
+    """
     return [
-        (attrs, "vazia" in heranca)
+        (attrs, MARCA_DO_LUGAR_VAZIO in heranca)
         for tag, attrs, heranca in _pagina(html).elementos
         if tag == "svg" and "ds-svg" in (attrs.get("class") or "").split()
     ]
@@ -220,9 +249,12 @@ def test_o_lugar_vazio_nao_afirma_modelo_nenhum() -> None:
     falando por um controle que não existe.
 
     E NÃO MUDA UM PIXEL, o que foi medido no Chrome antes de ser escrito: o
-    `.ctrl.vazia` já pinta as formas com `var(--linha)` e `!important`, e a
-    especificidade dele (0,5,1) ganha da regra de zona (0,2,2). Com e sem o
-    atributo, a casca dos dois lugares vazios computa `rgb(83, 87, 111)`.
+    lugar sem controle não mostra desenho nenhum — quem responde por isso é a
+    folha COMPARTILHADA (`monta.py`, a S-04 de 05/09/2026, palavra dela: *"os
+    svgs não deveriam aparecer prós demais controles desconectados"*), com
+    `[data-controle][data-conectado="nao"] .ds-svg{visibility:hidden}`. Medido
+    em 07/09/2026 com a fusão dos dois ramos de coluna: o PNG da aba saiu
+    **byte a byte idêntico** ao de antes.
 
     O ENDEREÇO FICA, e isso é o par desta função: o dia em que um terceiro
     controle entrar na mesa, o pintor tem onde escrever o modelo dele.

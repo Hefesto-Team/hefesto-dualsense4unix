@@ -191,8 +191,12 @@ def test_o_degrau_cai_nos_quatro_botoes_pelo_alvo_classe(arvore, emitidos):
     assert "degrau" in chaves, "o pacote parou de emitir `degrau`"
     botoes = [n for n in _achar(arvore, "degrau") if n["tag"] == "button"]
     from hefesto_dualsense4unix.interface import aba05
-    assert len(botoes) == len(aba05.FORCA) * 2, (
-        f"são {len(aba05.FORCA)} degraus em duas colunas vivas, e achei "
+    # POR LUGAR, E NÃO POR COLUNA VIVA — 07/09/2026. O lugar vazio deixou de ser
+    # um cartão sem `data-campo` (ver `aba05._coluna`), e uma régua que
+    # continuasse contando `* 2` daria verde sobre a metade da mesa que não
+    # recebe pintura nenhuma — que era exatamente o defeito.
+    assert len(botoes) == len(aba05.FORCA) * len(aba05.MESA), (
+        f"são {len(aba05.FORCA)} degraus em {len(aba05.MESA)} lugares, e achei "
         f"{len(botoes)}")
     for n in botoes:
         assert n["attrs"].get("data-hef-alvo") == "classe", n["attrs"]
@@ -285,10 +289,20 @@ def test_testar_e_parar_sabem_de_quem_foi_o_clique(arvore):
     `a05_vibracao._mirar` levanta *"o clique não disse em qual controle — e sem
     alvo a mesa inteira treme"*, e a recusa é correta: `rumble.set` sem alvo faz
     BROADCAST. O defeito não era a recusa; era a página não dizer de quem foi.
+
+    SÃO DOIS BOTÕES POR LUGAR desde 07/09/2026 — os quatro lugares saem do mesmo
+    molde (`aba05._coluna`). Num lugar vazio eles são `display:none` pela folha
+    (`.ctrl[data-conectado="nao"] .acoes-col > *`), e `display:none` não recebe
+    clique: o par existe para o instante em que o controle chega, sem regerar
+    HTML nenhum. O que esta régua guarda continua sendo o DONO — um botão que
+    chegue ao pacote sem controle recusa sempre.
     """
+    from hefesto_dualsense4unix.interface import aba05
+    esperado = 2 * len(aba05.MESA)
     mudos = [(n["attrs"]["data-papel"], _dono(n)) for n in _todos(arvore)
              if n["attrs"].get("data-papel") in ("testar", "parar")]
-    assert len(mudos) == 4, f"são dois botões em duas colunas, e achei {len(mudos)}"
+    assert len(mudos) == esperado, (
+        f"são dois botões em {len(aba05.MESA)} lugares, e achei {len(mudos)}")
     assert all(dono for _, dono in mudos), (
         f"clique sem dono, e o gesto vai recusar: {mudos}")
 

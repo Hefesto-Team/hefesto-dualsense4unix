@@ -544,8 +544,23 @@ def test_o_marcador_e_o_mesmo_do_monta(a04):
         f"`a04_iluminacao` diz {a04.NADA_A_DIZER!r}")
 
 
-def test_a_pagina_tem_a_linha_em_toda_coluna_conectada():
-    """Uma ressalva que nasça em três de quatro colunas é a quarta calada."""
+def test_a_pagina_tem_a_linha_em_todo_lugar_da_mesa():
+    """Uma ressalva que nasça em três de quatro colunas é a quarta calada.
+
+    E SÃO OS QUATRO LUGARES, não os dois conectados — 07/09/2026. Esta régua
+    contava `len(monta.CONECTADOS)`, e assim **media o defeito**: o lugar que  (noqa-acento)
+    nascia vazio não tinha a linha, e o P3 que chegasse depois não teria onde
+    acender a razão de a barra ter apagado — voltaria a escondê-la no `title`,
+    que é exatamente o que a D-02 fechou.
+
+    NO REPOUSO ELA NÃO CUSTA PIXEL, e é por isso que pôr as quatro é de graça:
+    a folha das dez a tira do fluxo por `:has(.nada)`, e a desta aba a esconde
+    enquanto `data-conectado="nao"`. Quem mede esse pixel é
+    `test_no_repouso_a_linha_nao_cobra_pixel_e_a_aba_nao_rola`, logo acima.
+
+    A MORDIDA: devolva `len(monta.CONECTADOS)` ao `exigir` da §10 do `aba04.py`
+    e regere — o gerador para antes de escrever, e esta régua reprova com 2.
+    """
     import monta
     from hefesto_dualsense4unix.interface import onde
     from pacotes import a04_iluminacao as a04
@@ -554,9 +569,10 @@ def test_a_pagina_tem_a_linha_em_toda_coluna_conectada():
     grade = texto.split('<div class="luz-grade">', 1)[-1]
     quantas = grade.count(
         f'class="ressalva" data-campo="{a04.ENDERECO_DA_RESSALVA}"')
-    assert quantas == len(monta.CONECTADOS), (
+    assert quantas == len(monta.MESA), (
         f"a linha de ressalva está em {quantas} coluna(s) e a mesa do desenho "
-        f"tem {len(monta.CONECTADOS)} conectada(s)")
+        f"tem {len(monta.MESA)} lugar(es) — o lugar sem ela fica mudo no dia "
+        f"em que ganhar um controle")
     assert monta.NADA_A_DIZER in grade, (
         "a linha nasceu com frase cravada — o desenho passaria a afirmar uma "
         "causa que só o produto vivo conhece")
@@ -668,20 +684,50 @@ def test_com_a_frase_a_linha_aparece_e_a_aba_continua_cabendo(pagina_no_chrome):
     em vez do caminho real deixaria passar uma linha que o produto nunca
     consegue acender.
 
+    E O LUGAR SEM DONO ENTROU NA CONTA — 07/09/2026, com a função única do
+    `aba04.py`: a linha de ressalva passou a nascer nos QUATRO lugares, e não
+    só nos dois conectados. Até aqui esta régua escrevia a frase em TODAS as
+    linhas e cobrava altura de todas, porque só havia duas e as duas tinham
+    dono. Agora há quatro, e escrever ressalva num lugar vazio é um estado que
+    o produto **não produz**: `pacotes.apagar_os_lugares_sem_dono` escreve
+    TRAVESSÃO em todo campo de um lugar sem dono, e a chave da ressalva só é
+    montada para quem tem dono (`a04_iluminacao`, `ENDERECO_DA_RESSALVA`).
+
+    ENTÃO A RÉGUA PASSA A SIMULAR O PRODUTO, em duas metades — e a segunda é a
+    que morde, porque ela é nova:
+
+    * **com dono, a frase acende.** É a D-02 de sempre.
+    * **um lugar que GANHA dono acende a dele.** O piloto vira
+      `data-conectado` nos dois sentidos (passos `1b` e `1c`), e é só isso que
+      ele vira: a classe `.vazia` é fato de NASCIMENTO e ninguém a tira nunca.
+      Uma folha que esconda a ressalva por `.vazia` — em vez de por
+      `[data-conectado="nao"]` — deixa o P3 mudo para sempre, inclusive depois
+      de ele chegar. Foi essa a escolha que esta metade guarda.
+
     A MORDIDA: tire a `.cel-leds` do gerador e ponha a ressalva como oitava
-    faixa da grade; a última asserção reprova, porque a faixa nova cobra o
-    `--r-passo` inteiro e o quadro passa do teto.
+    faixa da grade; a penúltima asserção reprova, porque a faixa nova cobra o
+    `--r-passo` inteiro e o quadro passa do teto. Para a metade nova, troque
+    `[data-conectado="nao"]` por `.vazia` na regra da ressalva do `aba04.py`.
     """
     pg = pagina_no_chrome
     antes = _medida(pg)
-    pg.evaluate("""() => {
-      for (const el of document.querySelectorAll('[data-campo="luz-ressalva"]'))
-        el.innerHTML = 'A Steam tem este controle aberto';
+    # Como o produto faz: a ressalva vai para quem TEM dono.
+    acesas = pg.evaluate("""() => {
+      let n = 0;
+      for (const raiz of document.querySelectorAll('.ctrl[data-conectado="sim"]'))
+        for (const el of raiz.querySelectorAll('[data-campo="luz-ressalva"]')) {
+          el.innerHTML = 'A Steam tem este controle aberto'; n += 1;
+        }
+      return n;
     }""")
     pg.wait_for_timeout(120)
     depois = _medida(pg)
 
-    assert min(depois["ressalvas"]) > 0, (
+    assert acesas, "nenhuma coluna conectada tem linha de ressalva"
+    with_dono = pg.evaluate("""() => Array.from(
+      document.querySelectorAll('.ctrl[data-conectado="sim"] .ressalva'))
+      .map(e => Math.round(e.getBoundingClientRect().height))""")
+    assert min(with_dono) > 0, (
         "a frase entrou e a linha continuou com altura zero — a folha a esconde "
         "por engano, e a razão do tracejado volta a viver só no `title`")
     assert depois["colunas"] == antes["colunas"], (
@@ -689,6 +735,27 @@ def test_com_a_frase_a_linha_aparece_e_a_aba_continua_cabendo(pagina_no_chrome):
         f"{depois['colunas']}) — as divisórias das cinco colunas deixam de "
         f"cair no mesmo y, que é o que ela mandou arrumar em 30/08")
     assert not depois["rola"], "com a ressalva na tela a aba passou a rolar"
+
+    # E A METADE QUE MORDE: o lugar vazio ganha dono, como no passo `1c`.
+    ganhou = pg.evaluate("""() => {
+      const raiz = document.querySelector('.ctrl[data-conectado="nao"]');
+      if (!raiz) return null;
+      raiz.dataset.conectado = 'sim';
+      raiz.classList.remove('off');
+      for (const el of raiz.querySelectorAll('[data-campo="luz-ressalva"]'))
+        el.innerHTML = 'A Steam tem este controle aberto';
+      return raiz.getAttribute('data-controle');
+    }""")
+    assert ganhou, "a mesa do desenho não tem nenhum lugar vazio para reabrir"
+    pg.wait_for_timeout(120)
+    alt = pg.evaluate("""(pref) => Math.round(document.querySelector(
+      '[data-controle="' + pref + '"] .ressalva').getBoundingClientRect().height)""",
+                      ganhou)
+    assert alt > 0, (
+        f"o lugar {ganhou} ganhou um controle e a razão do tracejado dele "
+        f"continuou invisível — a folha o esconde por uma marca que o piloto "
+        f"não tira. `.vazia` é fato de nascimento; quem vira nos dois sentidos "
+        f"é `data-conectado`")
 
 
 # ---------------------------------------------------------------------------

@@ -876,9 +876,41 @@
   /* O LUGAR SEM CONTROLE na Gestão. A cor é a do `.vazio` da Gatilhos, que é a
      página que ela mandou copiar; o contraste está medido na prova de tela. A
      borda do plástico não vem — ela identifica a peça que está ali, e não há
-     peça a identificar. */
-  .gc-item.fora .gc-nome{color:var(--comment)}
-  .gc-item.fora{cursor:default}
+     peça a identificar.
+
+     A CLASSE ERA `fora` E PASSOU A SER `off` — 07/09/2026, e a troca é o que
+     faz o lugar vazio VOLTAR quando o controle chega. `off` é a marca que o
+     piloto conhece: ele a escreve no passo `1b` (lugar sem dono) e a TIRA no
+     passo `1c` (lugar que ganhou dono). `fora` era palavra só desta aba, e
+     nenhum passo do piloto a tirava — então um P3 que chegasse encontrava o
+     cartão cinza, sem cursor e sem resumo, para sempre. Medido com os quatro
+     DualSense dela na mesa em 07/09: o daemon publicava quatro, a carga
+     chegava com os quatro em `ocupados`, e a tela mostrava dois.
+
+     AS TRÊS REGRAS ABAIXO SÃO O QUE ELA DECIDIU EM 31/08 — *"o espaço fica,
+     mas o nome do canto muda"* — dito agora em CSS em vez de em estrutura. O
+     cartão vazio carrega os MESMOS endereços do cheio (ver
+     `linha_do_controle`), e o que ela vê continua sendo só o nome:
+
+       · o RESUMO some. Máscara, microfone e bateria são leituras do aparelho,
+         e não há aparelho; três travessões em fila diriam que a leitura
+         FALHOU, e a ausência diz que o controle não está — que é a frase que
+         estava escrita no ramo vazio antes de ele morrer.
+       · as SETAS somem, porque não há corpo a abrir.
+       · o `<label>` que envolve o nome perde o clique. Ele TEM de existir no
+         HTML: o piloto escreve valores, não marcação, e um cartão que nasce
+         sem gatilho não tem como ganhar um quando o controle chega. O
+         comentário antigo dizia *"um lugar sem gatilho não tem como abrir"* e
+         estava certo enquanto o cartão nunca seria preenchido; a partir do
+         momento em que ele se enche, a garantia de estrutura vira o defeito.
+         `pointer-events:none` é a mesma promessa, e ela se desfaz sozinha no
+         tique em que o piloto tira o `off`. */
+  .gc-item.off .gc-nome{color:var(--comment)}
+  .gc-item.off{cursor:default}
+  .gc-item.off .gc-resumo,
+  .gc-item.off .gc-seta{display:none}
+  .gc-item.off .gc-abre,
+  .gc-item.off .gc-seta{pointer-events:none}
 
   /* ================= Conexões =================
      Três assuntos, três quadros, agrupados por PERGUNTA:
@@ -1743,11 +1775,18 @@
   .fita .chip.on{background:var(--app-bg);color:var(--texto-mudo);font-weight:400;border-color:var(--border-forte)}
   .fita .chip.plastico.on{border-color:var(--plastico,var(--border-forte))}
   /* o corpo do controle que a fita aponta */
-  .quadro-corpo:has(#gc-todos:checked) .gc-corpo{height:40px;padding:2px 12px}
+  /* O `:not(.off)` É DE 07/09/2026, e ele acompanha o cartão vazio que
+     passou a carregar os mesmos endereços do cheio. As duas regras deste
+     bloco alcançam TODO `.gc-corpo` e TODA `.gc-seta` do acordeão — sem o
+     recorte, clicar em “Todos” abriria também os lugares sem dono e a
+     faixa de 40px nasceria vazia, com a palavra “só este” ao lado. E o
+     recorte se desfaz sozinho: quem tira o `off` é o piloto, no tique em
+     que o controle chega. */
+  .quadro-corpo:has(#gc-todos:checked) .gc-item:not(.off) .gc-corpo{height:40px;padding:2px 12px}
   /* NO ESTADO “Todos” AS QUATRO JÁ ESTÃO ABERTAS: a seta de abrir sai, e no
      lugar dela entra a palavra do gesto que ali existe — estreitar para um. */
   .quadro-corpo:has(#gc-todos:checked) .gc-seta.abre{display:none}
-  .quadro-corpo:has(#gc-todos:checked) .gc-seta.so{display:flex}
+  .quadro-corpo:has(#gc-todos:checked) .gc-item:not(.off) .gc-seta.so{display:flex}
   body:has(#gc-todos:checked) .fita .chip:nth-child(2){background:var(--sel-bg);color:var(--fg);font-weight:600;border-color:var(--purple)}
   body:has(#gc-todos:checked) .fita .chip.plastico:nth-child(2){border-color:var(--plastico,var(--border-forte))}
   body:has(#gc-p1:checked) .fita .chip:nth-child(3){background:var(--sel-bg);color:var(--fg);font-weight:600;border-color:var(--purple)}
@@ -3206,14 +3245,672 @@
               <span class="gc-luz"><div class="ressalva" data-campo="luz-espera" data-hef-alvo="html"><i class="nada"></i></div><i class="ltrava" data-campo="luz-trava" data-hef-alvo="classe" data-hef-quando="cabo"></i><button class="btn" data-gesto="luz-nao-acende" data-campo="luz-dica" data-hef-alvo="atributo" data-hef-atributo="title" title="Derruba este controle do rádio para você apertar PS e a barra de luz voltar a obedecer. Enquanto ele espera o PS, o mesmo botão vira “Cancelar”."><span data-campo="luz-texto">A luz não acende</span></button></span>
             </div>
           </div>
-          <div class="gc-item gc-p3 fora" data-controle="p3">
+          <div class="gc-item gc-p3 off" data-controle="p3" data-conectado="nao">
+            <i class="gc-cor" data-campo="plastico" data-hef-alvo="cor"></i>
             <div class="gc-cabeca">
-              <span class="gc-nome" title="Nenhum controle neste lugar.">Player 3 <span class="pt">•</span> Desconectado</span>
+              <label class="gc-abre" for="gc-p3" data-gesto="alvo"
+                     title="Nenhum controle neste lugar.">
+              <span class="gc-nome" data-campo="nome" data-hef-alvo="html">Player 3 <span class="pt">•</span> Desconectado</span>
+              <span class="gc-resumo">
+                <span title="A cor deste controle não foi lida — a borda fica neutra.">Vê como <b>—</b></span>
+                <span data-campo="mic-dica" data-hef-alvo="atributo" data-hef-atributo="title" title="—">Microfone <b data-campo="mic-existe">—</b>, <span data-campo="mic-caminho" data-hef-alvo="html">—</span></span>
+                <span title="A bateria vem da aba Controles, que é quem a lê do aparelho.">Bateria <b data-campo="bateria">—</b></span>
+              </span>
+              </label>
+              <label class="gc-seta abre" for="gc-p3" data-gesto="alvo"
+                     title="Deixa só este controle aberto — os outros fecham.">▾</label>
+              <label class="gc-seta so" for="gc-p3" data-gesto="alvo"
+                     title="Deixa só este controle aberto — os outros fecham.">só este</label>
+              <label class="gc-seta fecha" for="gc-todos" data-gesto="todos"
+                     title="Fecha — a fita volta para “Todos”, e os 2 controles abrem juntos.">▴</label>
+            </div>
+            <div class="gc-corpo">
+              <?xml version="1.0" encoding="utf-8"?>
+<svg data-campo="desenho" data-hef-alvo="atributo" data-hef-atributo="data-colorway" data-colorway="galactic-purple" class="ds-svg ds-mini"  xmlns="http://www.w3.org/2000/svg" viewBox="6.399 22.990 116.684 80.472" width="1160" height="800" data-controle="dualsense" data-modelo="Sony DualSense" xmlns:bx="https://boxy-svg.com">
+  <defs>
+    <filter id="p3-outline-filter-0" bx:preset="outline 1 0.2 #fff6" color-interpolation-filters="sRGB" x="-50%" y="-50%" width="200%" height="200%">
+      <feMorphology in="SourceAlpha" result="dilated" operator="dilate" radius="0.2"/>
+      <feFlood flood-color="#fff6" result="flood"/>
+      <feComposite in="flood" in2="dilated" operator="in" result="outline"/>
+      <feMerge>
+        <feMergeNode in="outline"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    <filter id="p3-outline-filter-1" bx:preset="outline 1 0.3 #b11f54" color-interpolation-filters="sRGB" x="-50%" y="-50%" width="200%" height="200%">
+      <feMorphology in="SourceAlpha" result="dilated" operator="dilate" radius="0.3"/>
+      <feFlood flood-color="#b11f54" result="flood"/>
+      <feComposite in="flood" in2="dilated" operator="in" result="outline"/>
+      <feMerge>
+        <feMergeNode in="outline"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    <filter id="p3-outline-filter-2" bx:preset="outline 1 0.1 #cdc5da11" color-interpolation-filters="sRGB" x="-50%" y="-50%" width="200%" height="200%">
+      <feMorphology in="SourceAlpha" result="dilated" operator="dilate" radius="0.1"/>
+      <feFlood flood-color="#cdc5da11" result="flood"/>
+      <feComposite in="flood" in2="dilated" operator="in" result="outline"/>
+      <feMerge>
+        <feMergeNode in="outline"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    <bx:export>
+      <bx:file format="png" path="DualSense — mapa de peças, para editar.png"/>
+    </bx:export>
+  </defs>
+  <title>DualSense — mapa de peças, para editar</title>
+  <g id="p3-share" class="z-painel" data-entrada="share"><title>Share (Create)</title><rect class="peca" x="37.043" y="26.122" width="1.796" height="3.685" style="fill: #b11f54; stroke: rgb(0, 0, 0); stroke-width: 0px; stroke-miterlimit: 1; transform-box: fill-box; transform-origin: 50% 50%;" rx="1" ry="1" transform="matrix(0.984808, -0.173648, 0.173648, 0.984808, 0.740345, 7.866827)"/></g>
+  <g id="p3-grupo-chassi">
+    <title>CHASSI</title>
+
+  </g>
+  <g id="p3-grupo-face">
+    <title>BOTÕES DA FACE</title>
+    <g id="p3-triangle" class="z-botoes_face" data-entrada="triangle">
+      <title>Triângulo</title>
+      <path class="peca" fill="#3a3f4b" fill-rule="evenodd" d="M 99 37.463 C 97.075 37.463 95.873 39.546 96.835 41.213 C 97.282 41.987 98.107 42.463 99 42.463 C 100.925 42.463 102.127 40.38 101.165 38.713 C 100.718 37.939 99.893 37.463 99 37.463 M 95.5 39.963 C 95.5 37.269 98.417 35.585 100.75 36.932 C 101.833 37.557 102.5 38.713 102.5 39.963 C 102.5 42.657 99.583 44.341 97.25 42.994 C 96.167 42.369 95.5 41.213 95.5 39.963"/>
+    </g>
+    <g id="p3-circle" class="z-botoes_face" data-entrada="circle">
+      <title>Círculo</title>
+      <path class="peca" fill="#3a3f4b" fill-rule="evenodd" d="M 107 45.463 a 2.5 2.5 0 1 0 0 5 a 2.5 2.5 0 0 0 0 -5 M 103.5 47.963 a 3.5 3.5 0 1 1 7 0 a 3.5 3.5 0 0 1 -7 0"/>
+    </g>
+    <g id="p3-square" class="z-botoes_face" data-entrada="square">
+      <title>Quadrado</title>
+      <path class="peca" fill="#3a3f4b" fill-rule="evenodd" d="M 91 45.463 a 2.5 2.5 0 1 0 0 5 a 2.5 2.5 0 0 0 0 -5 M 87.5 47.963 a 3.5 3.5 0 1 1 7 0 a 3.5 3.5 0 0 1 -7 0"/>
+    </g>
+    <g id="p3-cross" class="z-botoes_face" data-entrada="cross">
+      <title>Cruz</title>
+      <path class="peca" fill="#3a3f4b" fill-rule="evenodd" d="M 99 53.463 a 2.5 2.5 0 1 0 0 5 a 2.5 2.5 0 0 0 0 -5 M 95.5 55.963 a 3.5 3.5 0 1 1 7 0 a 3.5 3.5 0 0 1 -7 0"/>
+    </g>
+  </g>
+  <g id="p3-grupo-direcional">
+    <title>DIRECIONAL</title>
+    <g id="p3-dpad_up" class="z-dpad" data-entrada="dpad_up">
+      <title>D-pad Cima</title>
+      <path class="peca" fill="#3a3f4b" fill-rule="evenodd" d="M 28.635 45.843 C 28.833 46.054 29.167 46.054 29.365 45.843 L 31.365 43.71 C 31.452 43.617 31.5 43.495 31.5 43.368 L 31.5 39.963 C 31.5 39.687 31.276 39.463 31 39.463 L 27 39.463 C 26.724 39.463 26.5 39.687 26.5 39.963 L 26.5 43.368 C 26.5 43.495 26.548 43.617 26.635 43.71 L 28.635 45.843 Z M 30.095 46.527 C 29.502 47.16 28.498 47.16 27.905 46.527 L 25.905 44.394 C 25.645 44.116 25.5 43.749 25.5 43.368 L 25.5 39.963 C 25.5 39.135 26.172 38.463 27 38.463 L 31 38.463 C 31.828 38.463 32.5 39.135 32.5 39.963 L 32.5 43.368 C 32.5 43.749 32.355 44.116 32.094 44.394 L 30.095 46.527 Z"/>
+    </g>
+    <g id="p3-dpad_right" class="z-dpad" data-entrada="dpad_right">
+      <title>D-pad Direita</title>
+      <path class="peca" fill="#3a3f4b" fill-rule="evenodd" d="M 32.12 48.598 a 0.5 0.5 0 0 0 0 0.73 l 2.134 2 a 0.5 0.5 0 0 0 0.342 0.135 H 38 a 0.5 0.5 0 0 0 0.5 -0.5 v -4 a 0.5 0.5 0 0 0 -0.5 -0.5 h -3.404 a 0.5 0.5 0 0 0 -0.342 0.135 Z M 31.436 50.058 a 1.5 1.5 0 0 1 0 -2.19 l 2.133 -2 a 1.5 1.5 0 0 1 1.026 -0.405 H 38 a 1.5 1.5 0 0 1 1.5 1.5 v 4 a 1.5 1.5 0 0 1 -1.5 1.5 h -3.404 a 1.5 1.5 0 0 1 -1.026 -0.406 Z"/>
+    </g>
+    <g id="p3-dpad_down" class="z-dpad" data-entrada="dpad_down">
+      <title>D-pad Baixo</title>
+      <path class="peca" fill="#3a3f4b" fill-rule="evenodd" d="M 29.365 52.083 a 0.5 0.5 0 0 0 -0.73 0 l -2 2.134 a 0.5 0.5 0 0 0 -0.135 0.342 v 3.404 a 0.5 0.5 0 0 0 0.5 0.5 h 4 a 0.5 0.5 0 0 0 0.5 -0.5 V 54.56 a 0.5 0.5 0 0 0 -0.135 -0.342 Z M 27.905 51.399 a 1.5 1.5 0 0 1 2.19 0 l 2 2.134 a 1.5 1.5 0 0 1 0.405 1.026 v 3.404 a 1.5 1.5 0 0 1 -1.5 1.5 h -4 a 1.5 1.5 0 0 1 -1.5 -1.5 V 54.56 a 1.5 1.5 0 0 1 0.406 -1.026 Z"/>
+    </g>
+    <g id="p3-dpad_left" class="z-dpad" data-entrada="dpad_left">
+      <title>D-pad Esquerda</title>
+      <path class="peca" fill="#3a3f4b" fill-rule="evenodd" d="M 25.88 49.328 C 26.091 49.13 26.091 48.796 25.88 48.598 L 23.747 46.598 C 23.654 46.511 23.531 46.463 23.404 46.463 L 20 46.463 C 19.724 46.463 19.5 46.687 19.5 46.963 L 19.5 50.963 C 19.5 51.239 19.724 51.463 20 51.463 L 23.404 51.463 C 23.531 51.463 23.654 51.415 23.747 51.328 L 25.88 49.328 Z M 26.564 47.868 C 27.197 48.461 27.197 49.465 26.564 50.058 L 24.43 52.058 C 24.152 52.318 23.785 52.463 23.404 52.463 L 20 52.463 C 19.172 52.463 18.5 51.791 18.5 50.963 L 18.5 46.963 C 18.5 46.135 19.172 45.463 20 45.463 L 23.404 45.463 C 23.785 45.463 24.152 45.608 24.43 45.869 L 26.564 47.868 Z"/>
+    </g>
+  </g>
+  <g id="p3-grupo-ombros">
+    <title>OMBROS E GATILHOS</title>
+    <g id="p3-r1" class="z-gatilhos" data-entrada="r1" transform="translate(0 25.6200) scale(1 0.96813) translate(0 -25.6200)">
+      <title>R1</title>
+      <path class="peca" fill="#3a3f4b" fill-rule="evenodd" d="M 94.013 26.506 L 98.913 26.506 C 100.322 26.506 101.463 27.494 101.463 28.712 C 101.463 29.93 100.322 30.918 98.913 30.918 L 92.792 31.331 C 91.514 31.353 91.463 29.93 91.463 28.712 C 91.463 27.494 92.605 26.506 94.013 26.506 Z M 94.013 27.198 L 98.913 27.198 C 99.88 27.198 100.663 27.876 100.663 28.712 C 100.663 29.548 99.825 29.869 98.858 29.869 L 94.013 30.226 C 93.047 30.226 92.263 29.548 92.263 28.712 C 92.263 27.876 93.047 27.198 94.013 27.198 Z" style="transform-box: fill-box; transform-origin: 50% 50%;" transform="matrix(0.982871, 0.184294, -0.184294, 0.982871, -0.038083, -0.003536)"/>
+    </g>
+    <g id="p3-r2" class="z-gatilhos" data-entrada="r2" data-feature="gatilho-adaptativo-direito">
+      <title>R2 — gatilho adaptativo</title>
+      <path class="peca" fill="#3a3f4b" fill-rule="evenodd" d="M 101.323 29.18 L 106.723 29.18 C 107.662 29.18 108.217 30.669 108.252 30.894 C 108.287 31.119 108.63 32.476 107.73 32.54 L 101.047 32.503 C 100.108 32.503 100.447 31.702 100.447 30.763 C 100.447 29.824 100.384 29.18 101.323 29.18 Z M 101.41 29.718 L 106.647 29.685 C 107.144 29.685 107.549 30.379 107.692 30.859 C 107.834 31.335 107.438 31.504 107.438 31.504 L 106.545 31.432 L 104.226 31.421 L 101.125 31.575 C 100.946 31.542 100.972 31.43 100.971 31.413 C 100.97 31.39 100.999 31.071 101.01 30.834 C 101.031 30.392 100.96 29.753 101.41 29.718 Z" style="stroke-miterlimit: 1; stroke-width: 0px; transform-box: fill-box; transform-origin: 50% 50%;" transform="matrix(0.958223, 0.286023, -0.286023, 0.958223, 0, -0.000001)"/>
+    </g>
+    <g id="p3-l1" class="z-gatilhos" transform="translate(0 25.6400) scale(1 0.96657) translate(0 -25.6400) matrix(-1, 0, 0, 1, 128.089752, 0.014236)" style="" data-entrada="l1">
+      <title>L1</title>
+      <path class="peca" fill="#3a3f4b" fill-rule="evenodd" d="M 94.013 26.506 L 98.913 26.506 C 100.322 26.506 101.463 27.494 101.463 28.712 C 101.463 29.93 100.322 30.918 98.913 30.918 L 92.792 31.331 C 91.514 31.353 91.463 29.93 91.463 28.712 C 91.463 27.494 92.605 26.506 94.013 26.506 Z M 94.013 27.198 L 98.913 27.198 C 99.88 27.198 100.663 27.876 100.663 28.712 C 100.663 29.548 99.825 29.869 98.858 29.869 L 94.013 30.226 C 93.047 30.226 92.263 29.548 92.263 28.712 C 92.263 27.876 93.047 27.198 94.013 27.198 Z" style="transform-box: fill-box; transform-origin: 50% 50%;" transform="matrix(0.982871, 0.184294, -0.184294, 0.982871, -0.038083, -0.003536)"/>
+    </g>
+    <g id="p3-l2" class="z-gatilhos" transform="matrix(-1, 0, 0, 1, 128.089752, 0.014236)" style="" data-entrada="l2" data-feature="gatilho-adaptativo-esquerdo">
+      <title>L2 — gatilho adaptativo</title>
+      <path class="peca" fill="#3a3f4b" fill-rule="evenodd" d="M 101.323 29.18 L 106.723 29.18 C 107.662 29.18 108.217 30.669 108.252 30.894 C 108.287 31.119 108.63 32.476 107.73 32.54 L 101.047 32.503 C 100.108 32.503 100.447 31.702 100.447 30.763 C 100.447 29.824 100.384 29.18 101.323 29.18 Z M 101.41 29.718 L 106.647 29.685 C 107.144 29.685 107.549 30.379 107.692 30.859 C 107.834 31.335 107.438 31.504 107.438 31.504 L 106.545 31.432 L 104.226 31.421 L 101.125 31.575 C 100.946 31.542 100.972 31.43 100.971 31.413 C 100.97 31.39 100.999 31.071 101.01 30.834 C 101.031 30.392 100.96 29.753 101.41 29.718 Z" style="stroke-miterlimit: 1; stroke-width: 0px; transform-box: fill-box; transform-origin: 50% 50%;" transform="matrix(0.958223, 0.286023, -0.286023, 0.958223, 0, -0.000001)"/>
+    </g>
+  <g id="p3-corpo" class="z-casca" data-feature="chassi">
+      <title>Corpo</title>
+      <path class="corpo" fill="#3a3f4b" fill-rule="evenodd" d="M 31.988 29.976 c 4.338 -0.492 8.454 -0.567 10.927 -0.484 a 0.5 0.5 0 0 1 0.105 0.985 c -0.486 0.122 -0.833 0.633 -1.017 1.493 c -0.175 0.817 -0.157 1.758 -0.081 2.38 c 0.33 1.664 1.178 6.225 1.96 11.341 c 0.81 5.291 -1.34 9.03 -2.59 10.287 v 0.001 c -1.67 1.68 -3.4 3.42 -5.826 6.837 c -2.47 3.479 -6.002 11.309 -9.178 18.944 c -2.387 5.736 -4.554 11.315 -5.9 14.777 c -0.44 1.135 -0.793 2.042 -1.036 2.653 l -0.017 0.038 l -0.076 0.158 c -0.088 0.188 -0.199 0.42 -0.347 0.655 l 3.12 0.422 c 0.543 -0.004 0.956 -0.109 1.301 -0.3 c 0.356 -0.196 0.676 -0.501 1 -0.956 c 0.56 -0.786 1.07 -1.92 1.78 -3.493 l 0.432 -0.958 c 1.208 -2.657 2.445 -5.838 3.515 -8.588 l 0.093 -0.239 a 190 190 0 0 1 1.468 -3.702 c 0.418 -1.006 0.784 -1.813 1.06 -2.23 c 0.7 -1.058 1.729 -2.597 3.492 -3.677 c 1.774 -1.086 4.236 -1.676 7.754 -0.983 h 40.07 c 2.805 -0.695 5.28 -0.355 7.32 0.81 c 2.049 1.17 3.613 3.143 4.645 5.624 c 1.189 2.86 1.943 4.997 2.648 7.039 l 0.2 0.578 c 0.632 1.836 1.254 3.639 2.154 5.89 q 0.14 0.35 0.274 0.696 c 0.463 1.19 0.9 2.31 1.572 3.161 c 0.389 0.493 0.845 0.874 1.413 1.11 c 0.566 0.234 1.279 0.338 2.204 0.223 l 2.647 -0.449 c -0.141 -0.228 -0.247 -0.452 -0.333 -0.633 l -0.077 -0.158 l -0.016 -0.038 c -0.243 -0.61 -0.596 -1.518 -1.037 -2.653 c -1.345 -3.462 -3.512 -9.04 -5.899 -14.777 c -3.176 -7.635 -6.708 -15.465 -9.178 -18.944 c -2.426 -3.417 -4.157 -5.158 -5.825 -6.837 h -0.002 c -1.25 -1.258 -3.398 -4.997 -2.59 -10.288 c 0.783 -5.116 1.63 -9.677 1.961 -11.342 c 0.075 -0.621 0.094 -1.562 -0.08 -2.379 c -0.185 -0.86 -0.532 -1.37 -1.018 -1.493 a 0.5 0.5 0 0 1 0.105 -0.985 c 2.473 -0.083 6.589 -0.008 10.927 0.484 c 4.328 0.49 8.927 1.402 12.334 3.015 a 0.5 0.5 0 0 1 0.228 0.218 c 2.635 4.97 8.471 18.727 10.833 34.172 c 1.475 9.65 1.358 17.23 0.24 22.728 c -1.112 5.468 -3.24 8.991 -5.9 10.329 c -1.724 0.867 -2.9 0.956 -3.742 0.504 l -0.09 -0.052 l -3.331 0.566 l -0.022 0.003 c -1.069 0.134 -1.964 0.023 -2.722 -0.291 c -0.757 -0.313 -1.343 -0.816 -1.814 -1.413 c -0.775 -0.98 -1.276 -2.27 -1.736 -3.457 q -0.128 -0.331 -0.254 -0.65 c -0.91 -2.274 -1.539 -4.098 -2.171 -5.933 l -0.2 -0.579 c -0.703 -2.034 -1.449 -4.148 -2.627 -6.98 c -0.968 -2.33 -2.404 -4.106 -4.216 -5.14 c -1.805 -1.031 -4.03 -1.354 -6.642 -0.695 a 0.5 0.5 0 0 1 -0.122 0.016 h -40.18 a 0.5 0.5 0 0 1 -0.098 -0.01 c -3.334 -0.666 -5.547 -0.096 -7.084 0.846 c -1.557 0.953 -2.48 2.318 -3.181 3.376 c -0.214 0.323 -0.544 1.035 -0.97 2.062 c -0.42 1.01 -0.915 2.28 -1.46 3.68 l -0.097 0.25 c -1.067 2.743 -2.313 5.946 -3.533 8.63 l -0.42 0.929 c -0.704 1.568 -1.265 2.814 -1.888 3.688 c -0.38 0.534 -0.806 0.961 -1.331 1.251 c -0.529 0.291 -1.124 0.424 -1.816 0.424 l -0.067 -0.004 l -3.916 -0.53 l -0.022 0.013 c -0.842 0.452 -2.018 0.363 -3.742 -0.504 c -2.66 -1.338 -4.788 -4.86 -5.9 -10.33 c -1.118 -5.497 -1.235 -13.077 0.24 -22.727 c 2.363 -15.445 8.198 -29.203 10.833 -34.172 a 0.5 0.5 0 0 1 0.228 -0.218 c 3.407 -1.613 8.006 -2.524 12.334 -3.015 M 17.638 99.989 l -0.024 0.017 q -0.044 0.029 -0.093 0.055 c -0.401 0.216 -1.185 0.305 -2.818 -0.516 c -2.24 -1.127 -4.277 -4.26 -5.37 -9.636 c -1.088 -5.347 -1.215 -12.802 0.249 -22.377 c 2.319 -15.164 8.021 -28.696 10.65 -33.708 c 3.243 -1.498 7.639 -2.375 11.869 -2.854 a 81 81 0 0 1 9.418 -0.505 c -0.248 0.396 -0.4 0.86 -0.494 1.296 c -0.207 0.966 -0.18 2.036 -0.093 2.73 l 0.005 0.035 a 293 293 0 0 1 1.957 11.316 c 0.759 4.962 -1.274 8.388 -2.31 9.431 c -1.685 1.694 -3.46 3.48 -5.934 6.964 c -2.548 3.59 -6.121 11.534 -9.285 19.139 c -2.392 5.75 -4.57 11.353 -5.914 14.813 c -0.434 1.116 -0.78 2.01 -1.02 2.613 l -0.079 0.16 c -0.211 0.433 -0.39 0.8 -0.713 1.027 M 110.346 99.977 q 0.063 0.046 0.134 0.084 c 0.401 0.216 1.185 0.305 2.819 -0.516 c 2.24 -1.127 4.276 -4.26 5.369 -9.636 c 1.088 -5.347 1.215 -12.802 -0.249 -22.377 c -2.319 -15.164 -8.021 -28.696 -10.65 -33.708 c -3.243 -1.498 -7.639 -2.375 -11.869 -2.854 a 81 81 0 0 0 -9.418 -0.505 c 0.248 0.396 0.4 0.86 0.494 1.296 c 0.207 0.966 0.18 2.036 0.093 2.73 l -0.005 0.035 a 293 293 0 0 0 -1.957 11.316 c -0.758 4.962 1.274 8.388 2.31 9.431 c 1.685 1.694 3.46 3.48 5.934 6.964 c 2.548 3.59 6.122 11.534 9.285 19.139 c 2.392 5.75 4.569 11.353 5.914 14.813 c 0.434 1.116 0.781 2.01 1.02 2.613 l 0.079 0.16 c 0.2 0.41 0.372 0.762 0.664 0.99 Z"/>
+    </g>
+  </g>
+  <g id="p3-grupo-analogicos" transform="matrix(1, 0, 0, 1, 2.116542, -0.779778)">
+    <title>ANALÓGICOS</title>
+    <g id="p3-stick_l" class="z-analogicos" data-entrada="stick_l" data-clique="l3">
+      <title>Analógico Esquerdo (L3)</title>
+      <path class="peca" fill="#3a3f4b" fill-rule="evenodd" d="M 37.500 64.463 a 8.000 8.000 0 1 0 16.000 0 a 8.000 8.000 0 1 0 -16.000 0 Z M 38.500 64.463 a 7.000 7.000 0 1 1 14.000 0 a 7.000 7.000 0 1 1 -14.000 0 Z"/>
+    <g class="miolo"><title>Analógico esquerdo — bola do polegar</title><ellipse style="stroke-width: 0px; stroke: rgb(54, 17, 17); " cx="45.5" cy="64.463" rx="4.645" ry="4.645" fill="#b11f54"/></g></g>
+    <g id="p3-stick_r" class="z-analogicos" data-entrada="stick_r" data-clique="r3"><title>Analógico Direito (R3)</title><path class="peca" fill="#3a3f4b" fill-rule="evenodd" d="M 70.5 64.463 C 70.5 70.621 77.167 74.47 82.5 71.391 C 84.975 69.962 86.5 67.321 86.5 64.463 C 86.5 58.305 79.833 54.456 74.5 57.535 C 72.025 58.964 70.5 61.605 70.5 64.463 Z M 71.5 64.463 C 71.5 59.074 77.333 55.707 82 58.401 C 84.166 59.651 85.5 61.962 85.5 64.463 C 85.5 69.852 79.667 73.219 75 70.525 C 72.834 69.275 71.5 66.964 71.5 64.463 Z" style="stroke-width: 1;"/><g class="miolo"><title>Analógico direito — bola do polegar</title><ellipse style="stroke-width: 0; stroke: rgb(54, 17, 17); " cx="78.5" cy="64.463" rx="4.645" ry="4.645" fill="#b11f54"/></g></g>
+
+
+  </g>
+  <g id="p3-grupo-centro" transform="matrix(1.036309, 0, 0, 0.991123, -2.292725, 0.09071)" style="">
+    <title>CENTRO</title>
+    <g id="p3-touchpad" class="z-touch" data-entrada="touchpad" data-feature="touchpad" style="filter: url(&quot;#outline-filter-1&quot;);" transform="matrix(1.001104, 0, 0, 1, -0.095276, 0)">
+      <title>Touchpad</title>
+      <path class="peca" fill="#3a3f4b" fill-rule="evenodd" d="M 46.88 28.593 C 51.286 27.585 60.03 27.088 64.869 27.088 C 69.922 27.088 76.626 27.388 81.892 28.593 C 84.132 29.105 85.332 29.955 85.883 31.041 C 86.42 32.1 86.264 33.255 86.142 34.131 C 85.658 37.616 84.982 41.794 84.21 46.56 L 84.208 46.574 C 83.804 49.063 82.786 50.798 81.445 51.908 C 80.109 53.014 78.493 53.463 76.951 53.463 L 50.855 53.463 C 48.838 53.463 47.274 52.944 46.141 52.053 C 45.007 51.16 44.347 49.927 44.085 48.58 C 43.58 45.984 42.85 41.844 42.029 37.195 L 41.667 35.145 C 41.253 32.806 41.617 31.292 42.687 30.292 C 43.201 29.812 43.843 29.484 44.549 29.23 C 45.252 28.975 46.048 28.783 46.88 28.593 M 64.869 28.103 C 60.045 28.103 51.391 28.6 47.098 29.583 C 46.263 29.773 45.521 29.954 44.88 30.185 C 44.241 30.416 43.736 30.687 43.358 31.039 C 42.647 31.705 42.262 32.792 42.646 34.965 L 43.008 37.015 C 43.829 41.666 44.558 45.796 45.061 48.382 C 45.282 49.521 45.83 50.525 46.749 51.25 C 47.67 51.974 49.006 52.449 50.855 52.449 L 59.826 52.449 L 76.951 52.449 C 78.308 52.449 79.69 52.053 80.818 51.12 C 81.942 50.19 82.856 48.693 83.225 46.409 L 83.227 46.405 C 84 41.631 84.675 37.462 85.157 33.988 C 85.284 33.072 85.371 32.238 85 31.508 C 84.643 30.804 83.784 30.064 81.675 29.583 C 76.52 28.404 69.905 28.103 64.869 28.103" style="stroke-width: 1.97183px;"/>
+    </g>
+    <g id="p3-ps" class="z-painel" data-entrada="ps" transform="matrix(1, 0, 0, 1, 0, -1)">
+      <title>PS</title>
+      <circle class="peca sem-tinta" fill="none" stroke="none" cx="64.03" cy="64.4" r="3.4"/>
+    </g>
+    <g id="p3-mic" class="z-painel" data-entrada="mic" data-feature="microfone-mudo" transform="matrix(0.839587, 0, 0, 0.839587, 10.326056, 10.035711)" style="opacity: 0.63;">
+      <title>Microfone (mudo)</title>
+      <rect x="61.763" y="69.697" width="5.228" height="0.896" style="fill: rgb(216, 216, 216); stroke: rgb(0, 0, 0); stroke-width: 0px;" rx="0.235" ry="0.235"/>
+    </g>
+  </g>
+  <g id="p3-grupo-audio" transform="matrix(1, 0, 0, 1, 0.420661, 0)">
+    <title>ÁUDIO</title>
+    <g id="p3-alto-falante" class="z-painel" data-feature="alto-falante">
+      <title>Alto-falante</title>
+      <circle class="peca" fill="#3a3f4b" cx="60.20" cy="55.9" r="0.52">
+        <title>Alto-falante — furo 1 da linha de cima</title>
+      </circle>
+      <circle class="peca" fill="#3a3f4b" cx="62.10" cy="55.9" r="0.52">
+        <title>Alto-falante — furo 2 da linha de cima</title>
+      </circle>
+      <circle class="peca" fill="#3a3f4b" cx="64.00" cy="55.9" r="0.52">
+        <title>Alto-falante — furo 3 da linha de cima</title>
+      </circle>
+      <circle class="peca" fill="#3a3f4b" cx="65.90" cy="55.9" r="0.52">
+        <title>Alto-falante — furo 4 da linha de cima</title>
+      </circle>
+      <circle class="peca" fill="#3a3f4b" cx="67.80" cy="55.9" r="0.52">
+        <title>Alto-falante — furo 5 da linha de cima</title>
+      </circle>
+      <circle class="peca" fill="#3a3f4b" cx="61.15" cy="57.7" r="0.52">
+        <title>Alto-falante — furo 1 da linha de baixo</title>
+      </circle>
+      <circle class="peca" fill="#3a3f4b" cx="63.05" cy="57.7" r="0.52">
+        <title>Alto-falante — furo 2 da linha de baixo</title>
+      </circle>
+      <circle class="peca" fill="#3a3f4b" cx="64.95" cy="57.7" r="0.52">
+        <title>Alto-falante — furo 3 da linha de baixo</title>
+      </circle>
+      <circle class="peca" fill="#3a3f4b" cx="66.85" cy="57.7" r="0.52">
+        <title>Alto-falante — furo 4 da linha de baixo</title>
+      </circle>
+    </g>
+  </g>
+  <g id="p3-grupo-invisiveis">
+    <title>SENSORES E MOTORES (não aparecem no mapa)</title>
+    <g id="p3-feat-giroscopio" class="oculta" data-feature="giroscopio">
+      <title>Giroscópio — mede a rotação do controle INTEIRO</title>
+      <path class="peca" fill="#3a3f4b" fill-rule="evenodd" d="M 31.988 29.976 c 4.338 -0.492 8.454 -0.567 10.927 -0.484 a 0.5 0.5 0 0 1 0.105 0.985 c -0.486 0.122 -0.833 0.633 -1.017 1.493 c -0.175 0.817 -0.157 1.758 -0.081 2.38 c 0.33 1.664 1.178 6.225 1.96 11.341 c 0.81 5.291 -1.34 9.03 -2.59 10.287 v 0.001 c -1.67 1.68 -3.4 3.42 -5.826 6.837 c -2.47 3.479 -6.002 11.309 -9.178 18.944 c -2.387 5.736 -4.554 11.315 -5.9 14.777 c -0.44 1.135 -0.793 2.042 -1.036 2.653 l -0.017 0.038 l -0.076 0.158 c -0.088 0.188 -0.199 0.42 -0.347 0.655 l 3.12 0.422 c 0.543 -0.004 0.956 -0.109 1.301 -0.3 c 0.356 -0.196 0.676 -0.501 1 -0.956 c 0.56 -0.786 1.07 -1.92 1.78 -3.493 l 0.432 -0.958 c 1.208 -2.657 2.445 -5.838 3.515 -8.588 l 0.093 -0.239 a 190 190 0 0 1 1.468 -3.702 c 0.418 -1.006 0.784 -1.813 1.06 -2.23 c 0.7 -1.058 1.729 -2.597 3.492 -3.677 c 1.774 -1.086 4.236 -1.676 7.754 -0.983 h 40.07 c 2.805 -0.695 5.28 -0.355 7.32 0.81 c 2.049 1.17 3.613 3.143 4.645 5.624 c 1.189 2.86 1.943 4.997 2.648 7.039 l 0.2 0.578 c 0.632 1.836 1.254 3.639 2.154 5.89 q 0.14 0.35 0.274 0.696 c 0.463 1.19 0.9 2.31 1.572 3.161 c 0.389 0.493 0.845 0.874 1.413 1.11 c 0.566 0.234 1.279 0.338 2.204 0.223 l 2.647 -0.449 c -0.141 -0.228 -0.247 -0.452 -0.333 -0.633 l -0.077 -0.158 l -0.016 -0.038 c -0.243 -0.61 -0.596 -1.518 -1.037 -2.653 c -1.345 -3.462 -3.512 -9.04 -5.899 -14.777 c -3.176 -7.635 -6.708 -15.465 -9.178 -18.944 c -2.426 -3.417 -4.157 -5.158 -5.825 -6.837 h -0.002 c -1.25 -1.258 -3.398 -4.997 -2.59 -10.288 c 0.783 -5.116 1.63 -9.677 1.961 -11.342 c 0.075 -0.621 0.094 -1.562 -0.08 -2.379 c -0.185 -0.86 -0.532 -1.37 -1.018 -1.493 a 0.5 0.5 0 0 1 0.105 -0.985 c 2.473 -0.083 6.589 -0.008 10.927 0.484 c 4.328 0.49 8.927 1.402 12.334 3.015 a 0.5 0.5 0 0 1 0.228 0.218 c 2.635 4.97 8.471 18.727 10.833 34.172 c 1.475 9.65 1.358 17.23 0.24 22.728 c -1.112 5.468 -3.24 8.991 -5.9 10.329 c -1.724 0.867 -2.9 0.956 -3.742 0.504 l -0.09 -0.052 l -3.331 0.566 l -0.022 0.003 c -1.069 0.134 -1.964 0.023 -2.722 -0.291 c -0.757 -0.313 -1.343 -0.816 -1.814 -1.413 c -0.775 -0.98 -1.276 -2.27 -1.736 -3.457 q -0.128 -0.331 -0.254 -0.65 c -0.91 -2.274 -1.539 -4.098 -2.171 -5.933 l -0.2 -0.579 c -0.703 -2.034 -1.449 -4.148 -2.627 -6.98 c -0.968 -2.33 -2.404 -4.106 -4.216 -5.14 c -1.805 -1.031 -4.03 -1.354 -6.642 -0.695 a 0.5 0.5 0 0 1 -0.122 0.016 h -40.18 a 0.5 0.5 0 0 1 -0.098 -0.01 c -3.334 -0.666 -5.547 -0.096 -7.084 0.846 c -1.557 0.953 -2.48 2.318 -3.181 3.376 c -0.214 0.323 -0.544 1.035 -0.97 2.062 c -0.42 1.01 -0.915 2.28 -1.46 3.68 l -0.097 0.25 c -1.067 2.743 -2.313 5.946 -3.533 8.63 l -0.42 0.929 c -0.704 1.568 -1.265 2.814 -1.888 3.688 c -0.38 0.534 -0.806 0.961 -1.331 1.251 c -0.529 0.291 -1.124 0.424 -1.816 0.424 l -0.067 -0.004 l -3.916 -0.53 l -0.022 0.013 c -0.842 0.452 -2.018 0.363 -3.742 -0.504 c -2.66 -1.338 -4.788 -4.86 -5.9 -10.33 c -1.118 -5.497 -1.235 -13.077 0.24 -22.727 c 2.363 -15.445 8.198 -29.203 10.833 -34.172 a 0.5 0.5 0 0 1 0.228 -0.218 c 3.407 -1.613 8.006 -2.524 12.334 -3.015 M 17.638 99.989 l -0.024 0.017 q -0.044 0.029 -0.093 0.055 c -0.401 0.216 -1.185 0.305 -2.818 -0.516 c -2.24 -1.127 -4.277 -4.26 -5.37 -9.636 c -1.088 -5.347 -1.215 -12.802 0.249 -22.377 c 2.319 -15.164 8.021 -28.696 10.65 -33.708 c 3.243 -1.498 7.639 -2.375 11.869 -2.854 a 81 81 0 0 1 9.418 -0.505 c -0.248 0.396 -0.4 0.86 -0.494 1.296 c -0.207 0.966 -0.18 2.036 -0.093 2.73 l 0.005 0.035 a 293 293 0 0 1 1.957 11.316 c 0.759 4.962 -1.274 8.388 -2.31 9.431 c -1.685 1.694 -3.46 3.48 -5.934 6.964 c -2.548 3.59 -6.121 11.534 -9.285 19.139 c -2.392 5.75 -4.57 11.353 -5.914 14.813 c -0.434 1.116 -0.78 2.01 -1.02 2.613 l -0.079 0.16 c -0.211 0.433 -0.39 0.8 -0.713 1.027 M 110.346 99.977 q 0.063 0.046 0.134 0.084 c 0.401 0.216 1.185 0.305 2.819 -0.516 c 2.24 -1.127 4.276 -4.26 5.369 -9.636 c 1.088 -5.347 1.215 -12.802 -0.249 -22.377 c -2.319 -15.164 -8.021 -28.696 -10.65 -33.708 c -3.243 -1.498 -7.639 -2.375 -11.869 -2.854 a 81 81 0 0 0 -9.418 -0.505 c 0.248 0.396 0.4 0.86 0.494 1.296 c 0.207 0.966 0.18 2.036 0.093 2.73 l -0.005 0.035 a 293 293 0 0 0 -1.957 11.316 c -0.758 4.962 1.274 8.388 2.31 9.431 c 1.685 1.694 3.46 3.48 5.934 6.964 c 2.548 3.59 6.122 11.534 9.285 19.139 c 2.392 5.75 4.569 11.353 5.914 14.813 c 0.434 1.116 0.781 2.01 1.02 2.613 l 0.079 0.16 c 0.2 0.41 0.372 0.762 0.664 0.99 Z"/>
+    </g>
+    <g id="p3-feat-acelerometro" class="oculta" data-feature="acelerometro">
+      <title>Acelerômetro — mede a aceleração do controle INTEIRO</title>
+      <path class="peca" fill="#3a3f4b" fill-rule="evenodd" d="M 31.988 29.976 c 4.338 -0.492 8.454 -0.567 10.927 -0.484 a 0.5 0.5 0 0 1 0.105 0.985 c -0.486 0.122 -0.833 0.633 -1.017 1.493 c -0.175 0.817 -0.157 1.758 -0.081 2.38 c 0.33 1.664 1.178 6.225 1.96 11.341 c 0.81 5.291 -1.34 9.03 -2.59 10.287 v 0.001 c -1.67 1.68 -3.4 3.42 -5.826 6.837 c -2.47 3.479 -6.002 11.309 -9.178 18.944 c -2.387 5.736 -4.554 11.315 -5.9 14.777 c -0.44 1.135 -0.793 2.042 -1.036 2.653 l -0.017 0.038 l -0.076 0.158 c -0.088 0.188 -0.199 0.42 -0.347 0.655 l 3.12 0.422 c 0.543 -0.004 0.956 -0.109 1.301 -0.3 c 0.356 -0.196 0.676 -0.501 1 -0.956 c 0.56 -0.786 1.07 -1.92 1.78 -3.493 l 0.432 -0.958 c 1.208 -2.657 2.445 -5.838 3.515 -8.588 l 0.093 -0.239 a 190 190 0 0 1 1.468 -3.702 c 0.418 -1.006 0.784 -1.813 1.06 -2.23 c 0.7 -1.058 1.729 -2.597 3.492 -3.677 c 1.774 -1.086 4.236 -1.676 7.754 -0.983 h 40.07 c 2.805 -0.695 5.28 -0.355 7.32 0.81 c 2.049 1.17 3.613 3.143 4.645 5.624 c 1.189 2.86 1.943 4.997 2.648 7.039 l 0.2 0.578 c 0.632 1.836 1.254 3.639 2.154 5.89 q 0.14 0.35 0.274 0.696 c 0.463 1.19 0.9 2.31 1.572 3.161 c 0.389 0.493 0.845 0.874 1.413 1.11 c 0.566 0.234 1.279 0.338 2.204 0.223 l 2.647 -0.449 c -0.141 -0.228 -0.247 -0.452 -0.333 -0.633 l -0.077 -0.158 l -0.016 -0.038 c -0.243 -0.61 -0.596 -1.518 -1.037 -2.653 c -1.345 -3.462 -3.512 -9.04 -5.899 -14.777 c -3.176 -7.635 -6.708 -15.465 -9.178 -18.944 c -2.426 -3.417 -4.157 -5.158 -5.825 -6.837 h -0.002 c -1.25 -1.258 -3.398 -4.997 -2.59 -10.288 c 0.783 -5.116 1.63 -9.677 1.961 -11.342 c 0.075 -0.621 0.094 -1.562 -0.08 -2.379 c -0.185 -0.86 -0.532 -1.37 -1.018 -1.493 a 0.5 0.5 0 0 1 0.105 -0.985 c 2.473 -0.083 6.589 -0.008 10.927 0.484 c 4.328 0.49 8.927 1.402 12.334 3.015 a 0.5 0.5 0 0 1 0.228 0.218 c 2.635 4.97 8.471 18.727 10.833 34.172 c 1.475 9.65 1.358 17.23 0.24 22.728 c -1.112 5.468 -3.24 8.991 -5.9 10.329 c -1.724 0.867 -2.9 0.956 -3.742 0.504 l -0.09 -0.052 l -3.331 0.566 l -0.022 0.003 c -1.069 0.134 -1.964 0.023 -2.722 -0.291 c -0.757 -0.313 -1.343 -0.816 -1.814 -1.413 c -0.775 -0.98 -1.276 -2.27 -1.736 -3.457 q -0.128 -0.331 -0.254 -0.65 c -0.91 -2.274 -1.539 -4.098 -2.171 -5.933 l -0.2 -0.579 c -0.703 -2.034 -1.449 -4.148 -2.627 -6.98 c -0.968 -2.33 -2.404 -4.106 -4.216 -5.14 c -1.805 -1.031 -4.03 -1.354 -6.642 -0.695 a 0.5 0.5 0 0 1 -0.122 0.016 h -40.18 a 0.5 0.5 0 0 1 -0.098 -0.01 c -3.334 -0.666 -5.547 -0.096 -7.084 0.846 c -1.557 0.953 -2.48 2.318 -3.181 3.376 c -0.214 0.323 -0.544 1.035 -0.97 2.062 c -0.42 1.01 -0.915 2.28 -1.46 3.68 l -0.097 0.25 c -1.067 2.743 -2.313 5.946 -3.533 8.63 l -0.42 0.929 c -0.704 1.568 -1.265 2.814 -1.888 3.688 c -0.38 0.534 -0.806 0.961 -1.331 1.251 c -0.529 0.291 -1.124 0.424 -1.816 0.424 l -0.067 -0.004 l -3.916 -0.53 l -0.022 0.013 c -0.842 0.452 -2.018 0.363 -3.742 -0.504 c -2.66 -1.338 -4.788 -4.86 -5.9 -10.33 c -1.118 -5.497 -1.235 -13.077 0.24 -22.727 c 2.363 -15.445 8.198 -29.203 10.833 -34.172 a 0.5 0.5 0 0 1 0.228 -0.218 c 3.407 -1.613 8.006 -2.524 12.334 -3.015 M 17.638 99.989 l -0.024 0.017 q -0.044 0.029 -0.093 0.055 c -0.401 0.216 -1.185 0.305 -2.818 -0.516 c -2.24 -1.127 -4.277 -4.26 -5.37 -9.636 c -1.088 -5.347 -1.215 -12.802 0.249 -22.377 c 2.319 -15.164 8.021 -28.696 10.65 -33.708 c 3.243 -1.498 7.639 -2.375 11.869 -2.854 a 81 81 0 0 1 9.418 -0.505 c -0.248 0.396 -0.4 0.86 -0.494 1.296 c -0.207 0.966 -0.18 2.036 -0.093 2.73 l 0.005 0.035 a 293 293 0 0 1 1.957 11.316 c 0.759 4.962 -1.274 8.388 -2.31 9.431 c -1.685 1.694 -3.46 3.48 -5.934 6.964 c -2.548 3.59 -6.121 11.534 -9.285 19.139 c -2.392 5.75 -4.57 11.353 -5.914 14.813 c -0.434 1.116 -0.78 2.01 -1.02 2.613 l -0.079 0.16 c -0.211 0.433 -0.39 0.8 -0.713 1.027 M 110.346 99.977 q 0.063 0.046 0.134 0.084 c 0.401 0.216 1.185 0.305 2.819 -0.516 c 2.24 -1.127 4.276 -4.26 5.369 -9.636 c 1.088 -5.347 1.215 -12.802 -0.249 -22.377 c -2.319 -15.164 -8.021 -28.696 -10.65 -33.708 c -3.243 -1.498 -7.639 -2.375 -11.869 -2.854 a 81 81 0 0 0 -9.418 -0.505 c 0.248 0.396 0.4 0.86 0.494 1.296 c 0.207 0.966 0.18 2.036 0.093 2.73 l -0.005 0.035 a 293 293 0 0 0 -1.957 11.316 c -0.758 4.962 1.274 8.388 2.31 9.431 c 1.685 1.694 3.46 3.48 5.934 6.964 c 2.548 3.59 6.122 11.534 9.285 19.139 c 2.392 5.75 4.569 11.353 5.914 14.813 c 0.434 1.116 0.781 2.01 1.02 2.613 l 0.079 0.16 c 0.2 0.41 0.372 0.762 0.664 0.99 Z"/>
+    </g>
+    <g id="p3-feat-bateria" class="oculta" data-feature="bateria" style="" transform="matrix(1, 0, 0, 0.961503, 0, 1.189472)">
+      <title>Bateria — as duas tiras do lightbar são o medidor: cheias em 100%, apagadas em 0%, piscando vermelho quando acaba</title>
+      <path class="peca" fill="#3a3f4b" fill-rule="evenodd" d="M 41.445 31.184 L 41.021 32.184 L 40.873 33.184 L 40.861 34.184 L 40.922 35.184 L 41.072 36.184 L 41.253 37.184 L 41.423 38.184 L 41.604 39.184 L 41.784 40.184 L 41.954 41.184 L 42.136 42.184 L 42.318 43.184 L 42.49 44.184 L 42.675 45.184 L 42.86 46.184 L 43.037 47.184 L 43.228 48.184 L 43.423 49.184 L 43.784 50.145 L 44.255 51.184 L 45.371 51.184 L 44.888 50.184 L 44.602 49.184 L 44.407 48.184 L 44.216 47.184 L 44.039 46.184 L 43.853 45.184 L 43.669 44.184 L 43.497 43.184 L 43.315 42.184 L 43.133 41.184 L 42.963 40.184 L 42.783 39.184 L 42.602 38.184 L 42.432 37.184 L 42.251 36.184 L 42.101 35.184 L 42.04 34.184 L 42.052 33.184 L 42.2 32.184 L 42.623 31.184 L 41.445 31.184 Z" style="">
+        <title>Bateria — peça 1</title>
+      </path>
+      <path class="peca" fill="#3a3f4b" fill-rule="evenodd" d="M 86.873 31.041 L 87.209 32.038 L 87.276 33.037 L 87.245 34.034 L 87.12 35.033 L 86.971 36.03 L 86.826 37.029 L 86.669 38.026 L 86.509 39.024 L 86.356 40.022 L 86.192 41.02 L 86.036 42.018 L 85.869 43.016 L 85.701 44.014 L 85.542 45.012 L 85.373 46.01 L 85.214 47.008 L 85.003 48.005 L 84.696 49.004 L 84.253 50.001 L 83.644 51 L 82.444 51 L 83.053 50.001 L 83.496 49.004 L 83.803 48.005 L 84.014 47.008 L 84.173 46.01 L 84.342 45.012 L 84.501 44.014 L 84.669 43.016 L 84.836 42.018 L 84.992 41.02 L 85.156 40.022 L 85.309 39.024 L 85.469 38.026 L 85.626 37.029 L 85.771 36.03 L 85.92 35.033 L 86.045 34.034 L 86.076 33.037 L 86.009 32.038 L 85.673 31.041 L 86.873 31.041 Z" style="">
+        <title>Bateria — peça 2</title>
+      </path>
+    </g>
+    <g id="p3-feat-rumble-esquerdo" class="oculta" data-feature="rumble-esquerdo" style="" transform="matrix(0.992202, 0, 0, 1, 0.180438, 0)">
+      <title>Motor de vibração esquerdo (contrapeso maior — soa grosso)</title>
+      <path class="peca" fill="none" stroke="#2f333c" stroke-width="0.35" d="M 32.051 29.975 C 36.433 29.484 40.591 29.409 43.089 29.492 C 43.473 29.506 43.698 29.936 43.493 30.265 C 43.425 30.376 43.317 30.456 43.191 30.487 C 42.694 30.611 42.346 31.123 42.16 31.977 C 41.985 32.791 42.004 33.729 42.08 34.348 C 42.413 36.014 43.269 40.57 44.06 45.684 C 44.879 50.977 42.705 54.717 41.441 55.974 L 41.441 55.975 C 39.755 57.653 38.007 59.393 35.555 62.808 C 33.06 66.283 29.492 74.107 26.283 81.737 C 23.872 87.47 21.683 93.044 20.323 96.504 C 19.971 97.402 19.617 98.299 19.259 99.195 L 19.182 99.353 C 18.964 99.807 18.618 100.528 17.904 100.908 C 17.061 101.357 15.88 101.271 14.138 100.404 C 11.453 99.068 9.301 95.547 8.177 90.078 C 7.047 84.581 6.929 77.004 8.42 67.36 C 10.807 51.922 16.703 38.172 19.366 33.205 C 19.417 33.109 19.497 33.033 19.595 32.987 C 23.035 31.376 27.678 30.466 32.051 29.975 M 20.164 33.834 C 17.509 38.843 11.748 52.364 9.406 67.515 C 7.927 77.083 8.055 84.531 9.154 89.873 C 10.257 95.241 12.313 98.371 14.579 99.498 C 16.229 100.319 17.028 100.234 17.44 100.013 C 17.844 99.799 18.043 99.397 18.281 98.916 L 18.361 98.756 C 18.602 98.154 18.953 97.261 19.39 96.146 C 20.749 92.688 22.948 87.087 25.365 81.341 C 28.562 73.742 32.172 65.801 34.748 62.214 C 37.247 58.732 39.04 56.947 40.742 55.255 C 41.79 54.211 43.84 50.792 43.074 45.839 C 42.489 42.044 41.828 38.262 41.092 34.494 C 41.005 33.8 40.976 32.729 41.186 31.761 C 41.281 31.326 41.433 30.869 41.679 30.475 C 39.209 30.457 35.761 30.576 32.161 30.98 C 27.886 31.459 23.442 32.335 20.164 33.834" style=""/>
+    </g>
+    <g id="p3-feat-rumble-direito" class="oculta" data-feature="rumble-direito" style="opacity: 0.55;" transform="matrix(0.987771, 0, 0, 0.998314, 1.473548, 0.129608)">
+      <title>Motor de vibração direito (contrapeso menor — soa fino)</title>
+      <path class="peca" fill="none" stroke="#2f333c" stroke-width="0.35" d="M 95.741 29.895 C 91.356 29.402 87.194 29.327 84.693 29.41 C 84.309 29.424 84.083 29.855 84.287 30.185 C 84.356 30.296 84.465 30.376 84.591 30.408 C 85.089 30.532 85.437 31.046 85.622 31.902 C 85.799 32.718 85.779 33.659 85.703 34.28 C 84.968 38.054 84.307 41.843 83.722 45.645 C 82.903 50.953 85.078 54.702 86.343 55.962 L 86.343 55.963 C 88.031 57.646 89.781 59.39 92.234 62.814 C 94.731 66.299 98.302 74.144 101.514 81.794 C 103.928 87.543 106.119 93.131 107.48 96.6 C 107.832 97.501 108.187 98.4 108.546 99.298 L 108.622 99.457 C 108.84 99.913 109.187 100.637 109.9 101.016 C 110.745 101.466 111.928 101.38 113.671 100.511 C 116.358 99.171 118.512 95.641 119.637 90.158 C 120.768 84.646 120.887 77.05 119.394 67.378 C 117.005 51.9 111.103 38.113 108.439 33.133 C 108.388 33.037 108.307 32.96 108.209 32.914 C 104.765 31.299 100.117 30.386 95.741 29.895 M 107.64 33.763 C 110.298 38.786 116.063 52.343 118.407 67.535 C 119.888 77.129 119.759 84.596 118.659 89.952 C 117.554 95.334 115.498 98.473 113.229 99.603 C 111.577 100.426 110.778 100.34 110.365 100.119 C 109.961 99.905 109.762 99.502 109.524 99.02 L 109.446 98.858 C 109.203 98.255 108.852 97.36 108.414 96.242 C 107.054 92.775 104.853 87.159 102.433 81.397 C 99.234 73.778 95.62 65.817 93.043 62.22 C 90.541 58.729 88.746 56.939 87.043 55.242 C 85.994 54.195 83.941 50.766 84.708 45.801 C 85.294 41.996 85.956 38.203 86.692 34.426 C 86.78 33.729 86.808 32.656 86.598 31.685 C 86.503 31.249 86.351 30.791 86.105 30.396 C 88.577 30.377 92.028 30.497 95.631 30.902 C 99.91 31.382 104.358 32.261 107.64 33.763" style=""/>
+    </g>
+  </g>
+  <g id="p3-grupo-glifos">
+    <title>GLIFOS (o símbolo de cada peça)</title>
+    <g id="p3-glifo-triangle" class="z-simbolos" style="--lado: 4.200;" transform="matrix(0.188008, 0, 0, 0.153608, 95.97036, 36.720016)">
+      <title>Glifo — Triângulo</title>
+      <polygon points="16 8.516 24.917 27.556 7.084 27.556" fill="none" stroke="currentColor" stroke-linejoin="round" style="stroke-width: 3px;"/>
+    </g>
+    <g id="p3-glifo-circle" class="z-simbolos" style="--lado:4.200" transform="translate(107.000 47.960) scale(0.13125) translate(-16.000 -16.000)">
+      <title>Glifo — Círculo</title>
+      <circle cx="15.94" cy="15.675" r="11.765" fill="none" stroke="currentColor" style="stroke-width: 3.80952px;"/>
+    </g>
+    <g id="p3-glifo-square" class="z-simbolos" style="--lado:4.200" transform="translate(91.000 47.960) scale(0.13125) translate(-16.000 -16.000)">
+      <title>Glifo — Quadrado</title>
+      <rect x="7" y="7" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
+    </g>
+    <g id="p3-glifo-cross" class="z-simbolos" style="--lado:4.200" transform="translate(99.000 55.960) scale(0.13125) translate(-16.000 -16.000)">
+      <title>Glifo — Cruz</title>
+      <line x1="8" y1="8" x2="24" y2="24" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+      <line x1="24" y1="8" x2="8" y2="24" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+    </g>
+    <g id="p3-glifo-dpad_up" style="--lado: 4.400; transform-origin: 67.4445px 60.9015px;" transform="matrix(0, 0.1375, -0.1375, 0, -38.275467, -21.807503)">
+      <title>Glifo — D-pad Cima</title>
+      <path d="M 151.833 350.924 L 158.938 360.102 L 144.727 360.102 L 151.833 350.924 Z" bx:shape="triangle 144.727 350.924 14.211 9.178 0.5 0 1@f1e95a2c" style="fill: rgb(216, 216, 216); stroke: rgb(0, 0, 0); stroke-width: 0px; transform-box: fill-box; transform-origin: 50% 50%;" transform="matrix(0, -1, 1, 0, -69.842484, -293.381805)"/>
+    </g>
+    <g id="p3-glifo-dpad_right" style="--lado: 4.400; transform-origin: -52.4882px 19.437px;" transform="matrix(0, -0.1375, 0.1375, 0, 90.97998, 30.745468)">
+      <title>Glifo — D-pad Direita</title>
+      <path d="M 41.312 -12.224 L 48.417 -3.046 L 34.206 -3.046 L 41.312 -12.224 Z" bx:shape="triangle 34.206 -12.224 14.211 9.178 0.5 0 1@a0fe0643" style="fill: rgb(216, 216, 216); stroke: rgb(0, 0, 0); stroke-width: 0px; transform-box: fill-box; transform-origin: 50% 50%;" transform="matrix(-1, 0, 0, -1, -82.623001, 15.27)"/>
+    </g>
+    <g id="p3-glifo-dpad_down" style="--lado: 4.400; transform-origin: 46.109px -25.7827px;" transform="matrix(0, -0.1375, 0.1375, 0, -17.013714, 82.614662)">
+      <title>Glifo — D-pad Baixo</title>
+      <path d="M 151.833 350.924 L 158.938 360.102 L 144.727 360.102 L 151.833 350.924 Z" bx:shape="triangle 144.727 350.924 14.211 9.178 0.5 0 1@f1e95a2c" style="fill: rgb(216, 216, 216); stroke: rgb(0, 0, 0); stroke-width: 0px; transform-box: fill-box; transform-origin: 50% 50%;" transform="matrix(0, -1, 1, 0, -105.723465, -381.295654)"/>
+    </g>
+    <g id="p3-glifo-dpad_left" style="--lado:4.400" transform="matrix(0.1375, 0, 0, 0.1375, 21.094742, 46.772293)">
+      <title>Glifo — D-pad Esquerda</title>
+      <path d="M 151.833 350.924 L 158.938 360.102 L 144.727 360.102 L 151.833 350.924 Z" bx:shape="triangle 144.727 350.924 14.211 9.178 0.5 0 1@f1e95a2c" style="fill: rgb(216, 216, 216); stroke: rgb(0, 0, 0); stroke-width: 0px; transform-box: fill-box; transform-origin: 50% 50%;" transform="matrix(0, -1, 1, 0, -151.568924, -340.16214)"/>
+    </g>
+    <g id="p3-glifo-l1" style="--lado: 6.311; transform-origin: 16px 16px;" transform="matrix(0.195302, -0.027448, 0.027448, 0.195302, 15.730036, 12.819365)">
+      <title>Glifo — L1</title>
+      <text style="dominant-baseline: central; fill: rgb(200, 204, 218); font-family: Zrnic; font-size: 11px; font-weight: 700; text-anchor: middle; white-space: pre; transform-box: fill-box; transform-origin: 50% 50%;" x="16" y="16" transform="matrix(0.999391, 0.034899, -0.034899, 0.999391, 0.000011, -0.000007)">L1</text>
+    </g>
+    <g id="p3-glifo-r1" style="--lado: 6.311; transform-origin: 16px 16px;" transform="matrix(0.194224, 0.034247, -0.034247, 0.194224, 80.452019, 12.810075)">
+      <title>Glifo — R1</title>
+      <text style="dominant-baseline: central; fill: rgb(200, 204, 218); font-family: Zrnic; font-size: 11px; font-weight: 700; text-anchor: middle; white-space: pre;" x="16" y="16">R1</text>
+    </g>
+    <g id="p3-glifo-l2" style="--lado: 5.318; transform-origin: 16px 16px;" transform="matrix(0.160508, -0.043008, 0.043008, 0.160508, 7.661914, 14.483895)">
+      <title>Glifo — L2</title>
+      <text style="dominant-baseline: central; fill: rgb(200, 204, 218); font-family: Zrnic; font-size: 9.80923px; font-weight: 700; text-anchor: middle; white-space: pre;" x="16" y="16">L2</text>
+    </g>
+    <g id="p3-glifo-r2" style="--lado: 5.318; transform-origin: 16px 16px;" transform="matrix(0.160508, 0.043008, -0.043008, 0.160508, 88.303864, 14.558837)">
+      <title>Glifo — R2</title>
+      <text style="dominant-baseline: central; fill: rgb(200, 204, 218); font-family: Zrnic; font-size: 9.80923px; font-weight: 700; text-anchor: middle; white-space: pre;" x="16" y="16">R2</text>
+    </g>
+    <g id="p3-glifo-stick_l" style="--lado:14.000" transform="matrix(0.4375, 0, 0, 0.4375, 40.616543, 56.234634)">
+      <title>Glifo — Analógico Esquerdo</title>
+      <text style="dominant-baseline: central; fill: rgb(200, 204, 218); font-family: Zrnic; font-size: 11px; font-weight: 700; text-anchor: middle; white-space: pre;" x="15.971" y="17.025">L</text>
+    </g>
+    <text style="dominant-baseline: central; fill: rgb(200, 204, 218); font-family: Zrnic; font-size: 4.8px; font-weight: 700; text-anchor: middle; white-space: pre; stroke-width: 0.438; --lado: 14.000;" x="80.617" y="63.683">R</text>
+    <g id="p3-glifo-share" style="--lado:3.400" transform="matrix(0.103076, -0.025776, 0.025776, 0.103076, 35.989918, 31.661192)">
+      <title>Glifo — Share</title>
+      <line x1="16" y1="7" x2="16" y2="20" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/>
+      <line x1="8" y1="11" x2="12.5" y2="21" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/>
+      <line x1="24" y1="11" x2="19.5" y2="21" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/>
+    </g>
+    <g id="p3-glifo-options" style="--lado:3.400" transform="matrix(0.103076, 0.025776, -0.025776, 0.103076, 88.451256, 30.707508)">
+      <title>Glifo — Options</title>
+      <line x1="7" y1="10" x2="25" y2="10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+      <line x1="7" y1="16" x2="25" y2="16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+      <line x1="7" y1="22" x2="25" y2="22" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+    </g>
+    <g id="p3-glifo-ps" style="--lado: 8.600;" transform="matrix(0.351567, 0, 0, 0.351567, 59.971592, 56.378807)">
+      <title>Glifo — PS</title>
+      <g transform="translate(16 16) scale(0.99425) translate(-16.0925 -16.0)">
+        <path fill="currentColor" d="M 2.265 23.706 C 1.447 24.279 1.598 25.266 3.466 25.884 C 5.333 26.501 7.504 26.629 9.414 26.286 C 9.359 26.286 9.523 26.286 9.414 26.286 L 9.414 24.336 L 7.558 24.967 C 6.849 25.195 6.139 25.253 5.43 25.082 C 4.884 24.909 4.993 24.565 5.648 24.279 L 9.414 22.902 L 9.414 20.782 L 4.175 22.674 C 3.52 22.902 2.864 23.247 2.265 23.706 Z M 14.925 15.107 L 14.925 20.668 C 17.162 21.814 18.909 20.668 18.909 17.686 C 18.909 14.648 17.872 13.272 14.871 12.184 C 13.288 11.61 11.651 11.094 10.014 10.75 L 10.014 27.317 L 13.834 28.521 L 13.834 14.591 C 13.834 13.961 13.834 13.502 14.271 13.673 C 14.871 13.846 14.925 14.477 14.925 15.107 Z M 22.019 22.387 C 20.437 21.814 18.746 21.584 17.108 21.756 C 16.199 21.816 15.346 22.087 14.489 22.387 L 14.489 24.623 L 18.036 23.247 C 18.746 23.017 19.455 22.96 20.164 23.132 C 20.71 23.305 20.601 23.648 19.946 23.935 L 14.489 26.056 L 14.489 28.234 L 22.019 25.31 C 22.566 25.082 23.056 24.794 23.493 24.336 C 23.875 23.763 23.711 22.96 22.019 22.387 Z" style=""/>
+      </g>
+    </g>
+    <g id="p3-glifo-mic" style="--lado: 3.000;" transform="matrix(0.0682, 0, 0, 0.0682, 62.941559, 69.658447)">
+      <title>Glifo — Microfone</title>
+      <rect x="16.67" y="5.588" width="10" height="15" rx="5" ry="5" fill="none" stroke="currentColor" stroke-width="2"/>
+      <path d="M 12.688 17 C 12.688 22.333 15.688 25 21.688 25 C 27.688 25 30.688 22.333 30.688 17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+      <line x1="21.67" y1="26.588" x2="21.67" y2="29.367" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+      <line x1="16.688" y1="30" x2="26.688" y2="30" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+    </g>
+  </g>
+  <g id="p3-grupo-luzes" style="filter: none;" transform="matrix(1.001104, 0, 0, 0.93262, 0.350011, 3.648825)">
+    <title>LUZES</title>
+    <g id="p3-lightbar" style="--luz:#00ff00" data-feature="lightbar" data-posicao="ladeia-o-touchpad" style="" transform="matrix(1, 0, 0, 1.035127, 0, -1.02738)">
+      <title>Lightbar (duas tiras, uma de cada lado do touchpad)</title>
+      <path class="peca" fill-rule="evenodd" d="M 41.266 29.248 L 40.882 30.248 L 40.748 31.248 L 40.738 32.248 L 40.793 33.248 L 40.929 34.248 L 41.093 35.248 L 41.247 36.248 L 41.41 37.248 L 41.574 38.248 L 41.728 39.248 L 41.892 40.248 L 42.057 41.248 L 42.213 42.248 L 42.38 43.248 L 42.548 44.248 L 42.709 45.248 L 42.881 46.248 L 43.058 47.248 L 43.317 48.248 L 43.755 49.248 L 44.822 49.248 L 44.385 48.248 L 44.126 47.248 L 43.948 46.248 L 43.776 45.248 L 43.615 44.248 L 43.448 43.248 L 43.28 42.248 L 43.124 41.248 L 42.96 40.248 L 42.795 39.248 L 42.641 38.248 L 42.478 37.248 L 42.314 36.248 L 42.16 35.248 L 41.997 34.248 L 41.86 33.248 L 41.806 32.248 L 41.815 31.248 L 41.95 30.248 L 42.335 29.248 L 41.266 29.248 Z" style="stroke-width: 2.03409px; filter: url(&quot;#outline-filter-2&quot;);" fill="#3a3f4b">
+        <title>Lightbar — tira esquerda</title>
+      </path>
+      <path class="peca" fill-rule="evenodd" d="M 86.239 29.327 L 86.562 30.327 L 86.627 31.327 L 86.597 32.327 L 86.477 33.327 L 86.333 34.327 L 86.193 35.327 L 86.042 36.327 L 85.888 37.327 L 85.741 38.327 L 85.583 39.327 L 85.432 40.327 L 85.271 41.327 L 85.11 42.327 L 84.956 43.327 L 84.794 44.327 L 84.64 45.327 L 84.437 46.327 L 84.141 47.327 L 83.715 48.327 L 83.128 49.327 L 81.972 49.327 L 82.559 48.327 L 82.985 47.327 L 83.281 46.327 L 83.484 45.327 L 83.638 44.327 L 83.8 43.327 L 83.954 42.327 L 84.115 41.327 L 84.276 40.327 L 84.427 39.327 L 84.585 38.327 L 84.732 37.327 L 84.886 36.327 L 85.037 35.327 L 85.177 34.327 L 85.321 33.327 L 85.441 32.327 L 85.471 31.327 L 85.406 30.327 L 85.083 29.327 L 86.239 29.327 Z" style="stroke-width: 2.03409px; filter: url(&quot;#outline-filter-2&quot;);" fill="#3a3f4b">
+        <title>Lightbar — tira direita</title>
+      </path>
+    </g>
+
+  </g>
+  <g id="p3-options" class="z-painel" data-entrada="options"><title>Options</title><rect class="peca" x="-37.043" y="-26.122" width="1.796" height="3.685" style="fill: #b11f54; stroke: rgb(0, 0, 0); stroke-width: 0; stroke-miterlimit: 1; transform-origin: -36.145px -24.279px;" rx="1" ry="1" transform="matrix(-0.984808, -0.173648, -0.173648, 0.984808, 125.210805, 60.11082)"/></g>
+  <g id="p3-glifo-stick_r" style="--lado:14.000" transform="matrix(0.4375, 0, 0, 0.4375, 73.616543, 56.234634)">
+      <title>Glifo — Analógico Direito</title>
+      <text style="dominant-baseline: central; fill: rgb(200, 204, 218); font-family: Zrnic; font-size: 11px; font-weight: 700; text-anchor: middle; white-space: pre;" x="15.971" y="17.025">R</text>
+    </g>
+</svg>
+              <span class="gc-bloco">
+                <span class="rot"><svg class="gl" width="16" height="16" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Microfone</title>
+
+  <rect x="11" y="4" width="10" height="15" rx="5" ry="5" fill="none" stroke="currentColor" stroke-width="2"/>
+  <path d="M7,17 Q7,25 16,25 Q25,25 25,17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+  <line x1="16" y1="25" x2="16" y2="30" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+  <line x1="11" y1="30" x2="21" y2="30" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+</svg> Microfone e botões
+                  <span class="ajuda">?<span class="dica">Se o microfone deste controle existe. Desligado, nenhum programa o enxerga — nem o jogo, nem a chamada de voz. <b>Por onde</b> ele chega não é escolha: quem decide é o transporte, e a linha ao lado diz qual é.<br><br>O botão físico do microfone faz o mesmo que o desta tela: liga o microfone <b>e</b> o canal dele. O que ele cala é <b>um ajuste da máquina</b>, não deste controle — a linha ao lado diz qual está valendo.</span></span></span>
+                <select class="pronto" title="Se o microfone deste controle existe. Desligado, nenhum programa o enxerga — nem o jogo, nem a chamada de voz." data-gesto="mic-existe" data-campo="mic-existe" data-hef-alvo="valor"><option selected>Ligado</option><option>Desligado</option></select>
+                <span class="leitura" data-campo="mic-escopo" title="O que o botão físico do microfone cala. É um ajuste da MÁQUINA, um só para todos os controles — o Hefesto o lê do serviço a cada tique.">—</span>
+              </span>
+              <span class="gc-bloco barra">
+                <span class="rot"><svg class="gl" width="16" height="16" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Motor de vibração esquerdo</title>
+
+  <path d="M20,4 h-6 q-3,0 -4,3 l-3,10 q-2,7 2,11 q4,4 8,1 q3,-2 3,-7 z"
+        fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
+  <path d="M25,9 q4,7 0,14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+  <path d="M29,5 q6,11 0,22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+</svg> Teto da vibração
+                  <span class="ajuda">?<span class="dica" data-campo="teto-explica" data-hef-alvo="html">—</span></span></span>
+                <select class="pronto" title="O teto da vibração deste controle. O global manda e o do controle sobrepõe — o “?” ao lado diz qual dos dois está valendo agora." data-gesto="teto-da-vibracao" data-campo="teto-da-vibracao" data-hef-alvo="valor"><option selected>Segue o global</option><option>Sem teto</option><option>30% da força</option></select>
+              </span>
+              <span class="gc-luz"><div class="ressalva" data-campo="luz-espera" data-hef-alvo="html"><i class="nada"></i></div><i class="ltrava" data-campo="luz-trava" data-hef-alvo="classe" data-hef-quando="cabo"></i><button class="btn" data-gesto="luz-nao-acende" data-campo="luz-dica" data-hef-alvo="atributo" data-hef-atributo="title" title="—"><span data-campo="luz-texto">—</span></button></span>
             </div>
           </div>
-          <div class="gc-item gc-p4 fora" data-controle="p4">
+          <div class="gc-item gc-p4 off" data-controle="p4" data-conectado="nao">
+            <i class="gc-cor" data-campo="plastico" data-hef-alvo="cor"></i>
             <div class="gc-cabeca">
-              <span class="gc-nome" title="Nenhum controle neste lugar.">Player 4 <span class="pt">•</span> Desconectado</span>
+              <label class="gc-abre" for="gc-p4" data-gesto="alvo"
+                     title="Nenhum controle neste lugar.">
+              <span class="gc-nome" data-campo="nome" data-hef-alvo="html">Player 4 <span class="pt">•</span> Desconectado</span>
+              <span class="gc-resumo">
+                <span title="A cor deste controle não foi lida — a borda fica neutra.">Vê como <b>—</b></span>
+                <span data-campo="mic-dica" data-hef-alvo="atributo" data-hef-atributo="title" title="—">Microfone <b data-campo="mic-existe">—</b>, <span data-campo="mic-caminho" data-hef-alvo="html">—</span></span>
+                <span title="A bateria vem da aba Controles, que é quem a lê do aparelho.">Bateria <b data-campo="bateria">—</b></span>
+              </span>
+              </label>
+              <label class="gc-seta abre" for="gc-p4" data-gesto="alvo"
+                     title="Deixa só este controle aberto — os outros fecham.">▾</label>
+              <label class="gc-seta so" for="gc-p4" data-gesto="alvo"
+                     title="Deixa só este controle aberto — os outros fecham.">só este</label>
+              <label class="gc-seta fecha" for="gc-todos" data-gesto="todos"
+                     title="Fecha — a fita volta para “Todos”, e os 2 controles abrem juntos.">▴</label>
+            </div>
+            <div class="gc-corpo">
+              <?xml version="1.0" encoding="utf-8"?>
+<svg data-campo="desenho" data-hef-alvo="atributo" data-hef-atributo="data-colorway" data-colorway="white" class="ds-svg ds-mini"  xmlns="http://www.w3.org/2000/svg" viewBox="6.399 22.990 116.684 80.472" width="1160" height="800" data-controle="dualsense" data-modelo="Sony DualSense" xmlns:bx="https://boxy-svg.com">
+  <defs>
+    <filter id="p4-outline-filter-0" bx:preset="outline 1 0.2 #fff6" color-interpolation-filters="sRGB" x="-50%" y="-50%" width="200%" height="200%">
+      <feMorphology in="SourceAlpha" result="dilated" operator="dilate" radius="0.2"/>
+      <feFlood flood-color="#fff6" result="flood"/>
+      <feComposite in="flood" in2="dilated" operator="in" result="outline"/>
+      <feMerge>
+        <feMergeNode in="outline"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    <filter id="p4-outline-filter-1" bx:preset="outline 1 0.3 #b11f54" color-interpolation-filters="sRGB" x="-50%" y="-50%" width="200%" height="200%">
+      <feMorphology in="SourceAlpha" result="dilated" operator="dilate" radius="0.3"/>
+      <feFlood flood-color="#b11f54" result="flood"/>
+      <feComposite in="flood" in2="dilated" operator="in" result="outline"/>
+      <feMerge>
+        <feMergeNode in="outline"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    <filter id="p4-outline-filter-2" bx:preset="outline 1 0.1 #cdc5da11" color-interpolation-filters="sRGB" x="-50%" y="-50%" width="200%" height="200%">
+      <feMorphology in="SourceAlpha" result="dilated" operator="dilate" radius="0.1"/>
+      <feFlood flood-color="#cdc5da11" result="flood"/>
+      <feComposite in="flood" in2="dilated" operator="in" result="outline"/>
+      <feMerge>
+        <feMergeNode in="outline"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    <bx:export>
+      <bx:file format="png" path="DualSense — mapa de peças, para editar.png"/>
+    </bx:export>
+  </defs>
+  <title>DualSense — mapa de peças, para editar</title>
+  <g id="p4-share" class="z-painel" data-entrada="share"><title>Share (Create)</title><rect class="peca" x="37.043" y="26.122" width="1.796" height="3.685" style="fill: #b11f54; stroke: rgb(0, 0, 0); stroke-width: 0px; stroke-miterlimit: 1; transform-box: fill-box; transform-origin: 50% 50%;" rx="1" ry="1" transform="matrix(0.984808, -0.173648, 0.173648, 0.984808, 0.740345, 7.866827)"/></g>
+  <g id="p4-grupo-chassi">
+    <title>CHASSI</title>
+
+  </g>
+  <g id="p4-grupo-face">
+    <title>BOTÕES DA FACE</title>
+    <g id="p4-triangle" class="z-botoes_face" data-entrada="triangle">
+      <title>Triângulo</title>
+      <path class="peca" fill="#3a3f4b" fill-rule="evenodd" d="M 99 37.463 C 97.075 37.463 95.873 39.546 96.835 41.213 C 97.282 41.987 98.107 42.463 99 42.463 C 100.925 42.463 102.127 40.38 101.165 38.713 C 100.718 37.939 99.893 37.463 99 37.463 M 95.5 39.963 C 95.5 37.269 98.417 35.585 100.75 36.932 C 101.833 37.557 102.5 38.713 102.5 39.963 C 102.5 42.657 99.583 44.341 97.25 42.994 C 96.167 42.369 95.5 41.213 95.5 39.963"/>
+    </g>
+    <g id="p4-circle" class="z-botoes_face" data-entrada="circle">
+      <title>Círculo</title>
+      <path class="peca" fill="#3a3f4b" fill-rule="evenodd" d="M 107 45.463 a 2.5 2.5 0 1 0 0 5 a 2.5 2.5 0 0 0 0 -5 M 103.5 47.963 a 3.5 3.5 0 1 1 7 0 a 3.5 3.5 0 0 1 -7 0"/>
+    </g>
+    <g id="p4-square" class="z-botoes_face" data-entrada="square">
+      <title>Quadrado</title>
+      <path class="peca" fill="#3a3f4b" fill-rule="evenodd" d="M 91 45.463 a 2.5 2.5 0 1 0 0 5 a 2.5 2.5 0 0 0 0 -5 M 87.5 47.963 a 3.5 3.5 0 1 1 7 0 a 3.5 3.5 0 0 1 -7 0"/>
+    </g>
+    <g id="p4-cross" class="z-botoes_face" data-entrada="cross">
+      <title>Cruz</title>
+      <path class="peca" fill="#3a3f4b" fill-rule="evenodd" d="M 99 53.463 a 2.5 2.5 0 1 0 0 5 a 2.5 2.5 0 0 0 0 -5 M 95.5 55.963 a 3.5 3.5 0 1 1 7 0 a 3.5 3.5 0 0 1 -7 0"/>
+    </g>
+  </g>
+  <g id="p4-grupo-direcional">
+    <title>DIRECIONAL</title>
+    <g id="p4-dpad_up" class="z-dpad" data-entrada="dpad_up">
+      <title>D-pad Cima</title>
+      <path class="peca" fill="#3a3f4b" fill-rule="evenodd" d="M 28.635 45.843 C 28.833 46.054 29.167 46.054 29.365 45.843 L 31.365 43.71 C 31.452 43.617 31.5 43.495 31.5 43.368 L 31.5 39.963 C 31.5 39.687 31.276 39.463 31 39.463 L 27 39.463 C 26.724 39.463 26.5 39.687 26.5 39.963 L 26.5 43.368 C 26.5 43.495 26.548 43.617 26.635 43.71 L 28.635 45.843 Z M 30.095 46.527 C 29.502 47.16 28.498 47.16 27.905 46.527 L 25.905 44.394 C 25.645 44.116 25.5 43.749 25.5 43.368 L 25.5 39.963 C 25.5 39.135 26.172 38.463 27 38.463 L 31 38.463 C 31.828 38.463 32.5 39.135 32.5 39.963 L 32.5 43.368 C 32.5 43.749 32.355 44.116 32.094 44.394 L 30.095 46.527 Z"/>
+    </g>
+    <g id="p4-dpad_right" class="z-dpad" data-entrada="dpad_right">
+      <title>D-pad Direita</title>
+      <path class="peca" fill="#3a3f4b" fill-rule="evenodd" d="M 32.12 48.598 a 0.5 0.5 0 0 0 0 0.73 l 2.134 2 a 0.5 0.5 0 0 0 0.342 0.135 H 38 a 0.5 0.5 0 0 0 0.5 -0.5 v -4 a 0.5 0.5 0 0 0 -0.5 -0.5 h -3.404 a 0.5 0.5 0 0 0 -0.342 0.135 Z M 31.436 50.058 a 1.5 1.5 0 0 1 0 -2.19 l 2.133 -2 a 1.5 1.5 0 0 1 1.026 -0.405 H 38 a 1.5 1.5 0 0 1 1.5 1.5 v 4 a 1.5 1.5 0 0 1 -1.5 1.5 h -3.404 a 1.5 1.5 0 0 1 -1.026 -0.406 Z"/>
+    </g>
+    <g id="p4-dpad_down" class="z-dpad" data-entrada="dpad_down">
+      <title>D-pad Baixo</title>
+      <path class="peca" fill="#3a3f4b" fill-rule="evenodd" d="M 29.365 52.083 a 0.5 0.5 0 0 0 -0.73 0 l -2 2.134 a 0.5 0.5 0 0 0 -0.135 0.342 v 3.404 a 0.5 0.5 0 0 0 0.5 0.5 h 4 a 0.5 0.5 0 0 0 0.5 -0.5 V 54.56 a 0.5 0.5 0 0 0 -0.135 -0.342 Z M 27.905 51.399 a 1.5 1.5 0 0 1 2.19 0 l 2 2.134 a 1.5 1.5 0 0 1 0.405 1.026 v 3.404 a 1.5 1.5 0 0 1 -1.5 1.5 h -4 a 1.5 1.5 0 0 1 -1.5 -1.5 V 54.56 a 1.5 1.5 0 0 1 0.406 -1.026 Z"/>
+    </g>
+    <g id="p4-dpad_left" class="z-dpad" data-entrada="dpad_left">
+      <title>D-pad Esquerda</title>
+      <path class="peca" fill="#3a3f4b" fill-rule="evenodd" d="M 25.88 49.328 C 26.091 49.13 26.091 48.796 25.88 48.598 L 23.747 46.598 C 23.654 46.511 23.531 46.463 23.404 46.463 L 20 46.463 C 19.724 46.463 19.5 46.687 19.5 46.963 L 19.5 50.963 C 19.5 51.239 19.724 51.463 20 51.463 L 23.404 51.463 C 23.531 51.463 23.654 51.415 23.747 51.328 L 25.88 49.328 Z M 26.564 47.868 C 27.197 48.461 27.197 49.465 26.564 50.058 L 24.43 52.058 C 24.152 52.318 23.785 52.463 23.404 52.463 L 20 52.463 C 19.172 52.463 18.5 51.791 18.5 50.963 L 18.5 46.963 C 18.5 46.135 19.172 45.463 20 45.463 L 23.404 45.463 C 23.785 45.463 24.152 45.608 24.43 45.869 L 26.564 47.868 Z"/>
+    </g>
+  </g>
+  <g id="p4-grupo-ombros">
+    <title>OMBROS E GATILHOS</title>
+    <g id="p4-r1" class="z-gatilhos" data-entrada="r1" transform="translate(0 25.6200) scale(1 0.96813) translate(0 -25.6200)">
+      <title>R1</title>
+      <path class="peca" fill="#3a3f4b" fill-rule="evenodd" d="M 94.013 26.506 L 98.913 26.506 C 100.322 26.506 101.463 27.494 101.463 28.712 C 101.463 29.93 100.322 30.918 98.913 30.918 L 92.792 31.331 C 91.514 31.353 91.463 29.93 91.463 28.712 C 91.463 27.494 92.605 26.506 94.013 26.506 Z M 94.013 27.198 L 98.913 27.198 C 99.88 27.198 100.663 27.876 100.663 28.712 C 100.663 29.548 99.825 29.869 98.858 29.869 L 94.013 30.226 C 93.047 30.226 92.263 29.548 92.263 28.712 C 92.263 27.876 93.047 27.198 94.013 27.198 Z" style="transform-box: fill-box; transform-origin: 50% 50%;" transform="matrix(0.982871, 0.184294, -0.184294, 0.982871, -0.038083, -0.003536)"/>
+    </g>
+    <g id="p4-r2" class="z-gatilhos" data-entrada="r2" data-feature="gatilho-adaptativo-direito">
+      <title>R2 — gatilho adaptativo</title>
+      <path class="peca" fill="#3a3f4b" fill-rule="evenodd" d="M 101.323 29.18 L 106.723 29.18 C 107.662 29.18 108.217 30.669 108.252 30.894 C 108.287 31.119 108.63 32.476 107.73 32.54 L 101.047 32.503 C 100.108 32.503 100.447 31.702 100.447 30.763 C 100.447 29.824 100.384 29.18 101.323 29.18 Z M 101.41 29.718 L 106.647 29.685 C 107.144 29.685 107.549 30.379 107.692 30.859 C 107.834 31.335 107.438 31.504 107.438 31.504 L 106.545 31.432 L 104.226 31.421 L 101.125 31.575 C 100.946 31.542 100.972 31.43 100.971 31.413 C 100.97 31.39 100.999 31.071 101.01 30.834 C 101.031 30.392 100.96 29.753 101.41 29.718 Z" style="stroke-miterlimit: 1; stroke-width: 0px; transform-box: fill-box; transform-origin: 50% 50%;" transform="matrix(0.958223, 0.286023, -0.286023, 0.958223, 0, -0.000001)"/>
+    </g>
+    <g id="p4-l1" class="z-gatilhos" transform="translate(0 25.6400) scale(1 0.96657) translate(0 -25.6400) matrix(-1, 0, 0, 1, 128.089752, 0.014236)" style="" data-entrada="l1">
+      <title>L1</title>
+      <path class="peca" fill="#3a3f4b" fill-rule="evenodd" d="M 94.013 26.506 L 98.913 26.506 C 100.322 26.506 101.463 27.494 101.463 28.712 C 101.463 29.93 100.322 30.918 98.913 30.918 L 92.792 31.331 C 91.514 31.353 91.463 29.93 91.463 28.712 C 91.463 27.494 92.605 26.506 94.013 26.506 Z M 94.013 27.198 L 98.913 27.198 C 99.88 27.198 100.663 27.876 100.663 28.712 C 100.663 29.548 99.825 29.869 98.858 29.869 L 94.013 30.226 C 93.047 30.226 92.263 29.548 92.263 28.712 C 92.263 27.876 93.047 27.198 94.013 27.198 Z" style="transform-box: fill-box; transform-origin: 50% 50%;" transform="matrix(0.982871, 0.184294, -0.184294, 0.982871, -0.038083, -0.003536)"/>
+    </g>
+    <g id="p4-l2" class="z-gatilhos" transform="matrix(-1, 0, 0, 1, 128.089752, 0.014236)" style="" data-entrada="l2" data-feature="gatilho-adaptativo-esquerdo">
+      <title>L2 — gatilho adaptativo</title>
+      <path class="peca" fill="#3a3f4b" fill-rule="evenodd" d="M 101.323 29.18 L 106.723 29.18 C 107.662 29.18 108.217 30.669 108.252 30.894 C 108.287 31.119 108.63 32.476 107.73 32.54 L 101.047 32.503 C 100.108 32.503 100.447 31.702 100.447 30.763 C 100.447 29.824 100.384 29.18 101.323 29.18 Z M 101.41 29.718 L 106.647 29.685 C 107.144 29.685 107.549 30.379 107.692 30.859 C 107.834 31.335 107.438 31.504 107.438 31.504 L 106.545 31.432 L 104.226 31.421 L 101.125 31.575 C 100.946 31.542 100.972 31.43 100.971 31.413 C 100.97 31.39 100.999 31.071 101.01 30.834 C 101.031 30.392 100.96 29.753 101.41 29.718 Z" style="stroke-miterlimit: 1; stroke-width: 0px; transform-box: fill-box; transform-origin: 50% 50%;" transform="matrix(0.958223, 0.286023, -0.286023, 0.958223, 0, -0.000001)"/>
+    </g>
+  <g id="p4-corpo" class="z-casca" data-feature="chassi">
+      <title>Corpo</title>
+      <path class="corpo" fill="#3a3f4b" fill-rule="evenodd" d="M 31.988 29.976 c 4.338 -0.492 8.454 -0.567 10.927 -0.484 a 0.5 0.5 0 0 1 0.105 0.985 c -0.486 0.122 -0.833 0.633 -1.017 1.493 c -0.175 0.817 -0.157 1.758 -0.081 2.38 c 0.33 1.664 1.178 6.225 1.96 11.341 c 0.81 5.291 -1.34 9.03 -2.59 10.287 v 0.001 c -1.67 1.68 -3.4 3.42 -5.826 6.837 c -2.47 3.479 -6.002 11.309 -9.178 18.944 c -2.387 5.736 -4.554 11.315 -5.9 14.777 c -0.44 1.135 -0.793 2.042 -1.036 2.653 l -0.017 0.038 l -0.076 0.158 c -0.088 0.188 -0.199 0.42 -0.347 0.655 l 3.12 0.422 c 0.543 -0.004 0.956 -0.109 1.301 -0.3 c 0.356 -0.196 0.676 -0.501 1 -0.956 c 0.56 -0.786 1.07 -1.92 1.78 -3.493 l 0.432 -0.958 c 1.208 -2.657 2.445 -5.838 3.515 -8.588 l 0.093 -0.239 a 190 190 0 0 1 1.468 -3.702 c 0.418 -1.006 0.784 -1.813 1.06 -2.23 c 0.7 -1.058 1.729 -2.597 3.492 -3.677 c 1.774 -1.086 4.236 -1.676 7.754 -0.983 h 40.07 c 2.805 -0.695 5.28 -0.355 7.32 0.81 c 2.049 1.17 3.613 3.143 4.645 5.624 c 1.189 2.86 1.943 4.997 2.648 7.039 l 0.2 0.578 c 0.632 1.836 1.254 3.639 2.154 5.89 q 0.14 0.35 0.274 0.696 c 0.463 1.19 0.9 2.31 1.572 3.161 c 0.389 0.493 0.845 0.874 1.413 1.11 c 0.566 0.234 1.279 0.338 2.204 0.223 l 2.647 -0.449 c -0.141 -0.228 -0.247 -0.452 -0.333 -0.633 l -0.077 -0.158 l -0.016 -0.038 c -0.243 -0.61 -0.596 -1.518 -1.037 -2.653 c -1.345 -3.462 -3.512 -9.04 -5.899 -14.777 c -3.176 -7.635 -6.708 -15.465 -9.178 -18.944 c -2.426 -3.417 -4.157 -5.158 -5.825 -6.837 h -0.002 c -1.25 -1.258 -3.398 -4.997 -2.59 -10.288 c 0.783 -5.116 1.63 -9.677 1.961 -11.342 c 0.075 -0.621 0.094 -1.562 -0.08 -2.379 c -0.185 -0.86 -0.532 -1.37 -1.018 -1.493 a 0.5 0.5 0 0 1 0.105 -0.985 c 2.473 -0.083 6.589 -0.008 10.927 0.484 c 4.328 0.49 8.927 1.402 12.334 3.015 a 0.5 0.5 0 0 1 0.228 0.218 c 2.635 4.97 8.471 18.727 10.833 34.172 c 1.475 9.65 1.358 17.23 0.24 22.728 c -1.112 5.468 -3.24 8.991 -5.9 10.329 c -1.724 0.867 -2.9 0.956 -3.742 0.504 l -0.09 -0.052 l -3.331 0.566 l -0.022 0.003 c -1.069 0.134 -1.964 0.023 -2.722 -0.291 c -0.757 -0.313 -1.343 -0.816 -1.814 -1.413 c -0.775 -0.98 -1.276 -2.27 -1.736 -3.457 q -0.128 -0.331 -0.254 -0.65 c -0.91 -2.274 -1.539 -4.098 -2.171 -5.933 l -0.2 -0.579 c -0.703 -2.034 -1.449 -4.148 -2.627 -6.98 c -0.968 -2.33 -2.404 -4.106 -4.216 -5.14 c -1.805 -1.031 -4.03 -1.354 -6.642 -0.695 a 0.5 0.5 0 0 1 -0.122 0.016 h -40.18 a 0.5 0.5 0 0 1 -0.098 -0.01 c -3.334 -0.666 -5.547 -0.096 -7.084 0.846 c -1.557 0.953 -2.48 2.318 -3.181 3.376 c -0.214 0.323 -0.544 1.035 -0.97 2.062 c -0.42 1.01 -0.915 2.28 -1.46 3.68 l -0.097 0.25 c -1.067 2.743 -2.313 5.946 -3.533 8.63 l -0.42 0.929 c -0.704 1.568 -1.265 2.814 -1.888 3.688 c -0.38 0.534 -0.806 0.961 -1.331 1.251 c -0.529 0.291 -1.124 0.424 -1.816 0.424 l -0.067 -0.004 l -3.916 -0.53 l -0.022 0.013 c -0.842 0.452 -2.018 0.363 -3.742 -0.504 c -2.66 -1.338 -4.788 -4.86 -5.9 -10.33 c -1.118 -5.497 -1.235 -13.077 0.24 -22.727 c 2.363 -15.445 8.198 -29.203 10.833 -34.172 a 0.5 0.5 0 0 1 0.228 -0.218 c 3.407 -1.613 8.006 -2.524 12.334 -3.015 M 17.638 99.989 l -0.024 0.017 q -0.044 0.029 -0.093 0.055 c -0.401 0.216 -1.185 0.305 -2.818 -0.516 c -2.24 -1.127 -4.277 -4.26 -5.37 -9.636 c -1.088 -5.347 -1.215 -12.802 0.249 -22.377 c 2.319 -15.164 8.021 -28.696 10.65 -33.708 c 3.243 -1.498 7.639 -2.375 11.869 -2.854 a 81 81 0 0 1 9.418 -0.505 c -0.248 0.396 -0.4 0.86 -0.494 1.296 c -0.207 0.966 -0.18 2.036 -0.093 2.73 l 0.005 0.035 a 293 293 0 0 1 1.957 11.316 c 0.759 4.962 -1.274 8.388 -2.31 9.431 c -1.685 1.694 -3.46 3.48 -5.934 6.964 c -2.548 3.59 -6.121 11.534 -9.285 19.139 c -2.392 5.75 -4.57 11.353 -5.914 14.813 c -0.434 1.116 -0.78 2.01 -1.02 2.613 l -0.079 0.16 c -0.211 0.433 -0.39 0.8 -0.713 1.027 M 110.346 99.977 q 0.063 0.046 0.134 0.084 c 0.401 0.216 1.185 0.305 2.819 -0.516 c 2.24 -1.127 4.276 -4.26 5.369 -9.636 c 1.088 -5.347 1.215 -12.802 -0.249 -22.377 c -2.319 -15.164 -8.021 -28.696 -10.65 -33.708 c -3.243 -1.498 -7.639 -2.375 -11.869 -2.854 a 81 81 0 0 0 -9.418 -0.505 c 0.248 0.396 0.4 0.86 0.494 1.296 c 0.207 0.966 0.18 2.036 0.093 2.73 l -0.005 0.035 a 293 293 0 0 0 -1.957 11.316 c -0.758 4.962 1.274 8.388 2.31 9.431 c 1.685 1.694 3.46 3.48 5.934 6.964 c 2.548 3.59 6.122 11.534 9.285 19.139 c 2.392 5.75 4.569 11.353 5.914 14.813 c 0.434 1.116 0.781 2.01 1.02 2.613 l 0.079 0.16 c 0.2 0.41 0.372 0.762 0.664 0.99 Z"/>
+    </g>
+  </g>
+  <g id="p4-grupo-analogicos" transform="matrix(1, 0, 0, 1, 2.116542, -0.779778)">
+    <title>ANALÓGICOS</title>
+    <g id="p4-stick_l" class="z-analogicos" data-entrada="stick_l" data-clique="l3">
+      <title>Analógico Esquerdo (L3)</title>
+      <path class="peca" fill="#3a3f4b" fill-rule="evenodd" d="M 37.500 64.463 a 8.000 8.000 0 1 0 16.000 0 a 8.000 8.000 0 1 0 -16.000 0 Z M 38.500 64.463 a 7.000 7.000 0 1 1 14.000 0 a 7.000 7.000 0 1 1 -14.000 0 Z"/>
+    <g class="miolo"><title>Analógico esquerdo — bola do polegar</title><ellipse style="stroke-width: 0px; stroke: rgb(54, 17, 17); " cx="45.5" cy="64.463" rx="4.645" ry="4.645" fill="#b11f54"/></g></g>
+    <g id="p4-stick_r" class="z-analogicos" data-entrada="stick_r" data-clique="r3"><title>Analógico Direito (R3)</title><path class="peca" fill="#3a3f4b" fill-rule="evenodd" d="M 70.5 64.463 C 70.5 70.621 77.167 74.47 82.5 71.391 C 84.975 69.962 86.5 67.321 86.5 64.463 C 86.5 58.305 79.833 54.456 74.5 57.535 C 72.025 58.964 70.5 61.605 70.5 64.463 Z M 71.5 64.463 C 71.5 59.074 77.333 55.707 82 58.401 C 84.166 59.651 85.5 61.962 85.5 64.463 C 85.5 69.852 79.667 73.219 75 70.525 C 72.834 69.275 71.5 66.964 71.5 64.463 Z" style="stroke-width: 1;"/><g class="miolo"><title>Analógico direito — bola do polegar</title><ellipse style="stroke-width: 0; stroke: rgb(54, 17, 17); " cx="78.5" cy="64.463" rx="4.645" ry="4.645" fill="#b11f54"/></g></g>
+
+
+  </g>
+  <g id="p4-grupo-centro" transform="matrix(1.036309, 0, 0, 0.991123, -2.292725, 0.09071)" style="">
+    <title>CENTRO</title>
+    <g id="p4-touchpad" class="z-touch" data-entrada="touchpad" data-feature="touchpad" style="filter: url(&quot;#outline-filter-1&quot;);" transform="matrix(1.001104, 0, 0, 1, -0.095276, 0)">
+      <title>Touchpad</title>
+      <path class="peca" fill="#3a3f4b" fill-rule="evenodd" d="M 46.88 28.593 C 51.286 27.585 60.03 27.088 64.869 27.088 C 69.922 27.088 76.626 27.388 81.892 28.593 C 84.132 29.105 85.332 29.955 85.883 31.041 C 86.42 32.1 86.264 33.255 86.142 34.131 C 85.658 37.616 84.982 41.794 84.21 46.56 L 84.208 46.574 C 83.804 49.063 82.786 50.798 81.445 51.908 C 80.109 53.014 78.493 53.463 76.951 53.463 L 50.855 53.463 C 48.838 53.463 47.274 52.944 46.141 52.053 C 45.007 51.16 44.347 49.927 44.085 48.58 C 43.58 45.984 42.85 41.844 42.029 37.195 L 41.667 35.145 C 41.253 32.806 41.617 31.292 42.687 30.292 C 43.201 29.812 43.843 29.484 44.549 29.23 C 45.252 28.975 46.048 28.783 46.88 28.593 M 64.869 28.103 C 60.045 28.103 51.391 28.6 47.098 29.583 C 46.263 29.773 45.521 29.954 44.88 30.185 C 44.241 30.416 43.736 30.687 43.358 31.039 C 42.647 31.705 42.262 32.792 42.646 34.965 L 43.008 37.015 C 43.829 41.666 44.558 45.796 45.061 48.382 C 45.282 49.521 45.83 50.525 46.749 51.25 C 47.67 51.974 49.006 52.449 50.855 52.449 L 59.826 52.449 L 76.951 52.449 C 78.308 52.449 79.69 52.053 80.818 51.12 C 81.942 50.19 82.856 48.693 83.225 46.409 L 83.227 46.405 C 84 41.631 84.675 37.462 85.157 33.988 C 85.284 33.072 85.371 32.238 85 31.508 C 84.643 30.804 83.784 30.064 81.675 29.583 C 76.52 28.404 69.905 28.103 64.869 28.103" style="stroke-width: 1.97183px;"/>
+    </g>
+    <g id="p4-ps" class="z-painel" data-entrada="ps" transform="matrix(1, 0, 0, 1, 0, -1)">
+      <title>PS</title>
+      <circle class="peca sem-tinta" fill="none" stroke="none" cx="64.03" cy="64.4" r="3.4"/>
+    </g>
+    <g id="p4-mic" class="z-painel" data-entrada="mic" data-feature="microfone-mudo" transform="matrix(0.839587, 0, 0, 0.839587, 10.326056, 10.035711)" style="opacity: 0.63;">
+      <title>Microfone (mudo)</title>
+      <rect x="61.763" y="69.697" width="5.228" height="0.896" style="fill: rgb(216, 216, 216); stroke: rgb(0, 0, 0); stroke-width: 0px;" rx="0.235" ry="0.235"/>
+    </g>
+  </g>
+  <g id="p4-grupo-audio" transform="matrix(1, 0, 0, 1, 0.420661, 0)">
+    <title>ÁUDIO</title>
+    <g id="p4-alto-falante" class="z-painel" data-feature="alto-falante">
+      <title>Alto-falante</title>
+      <circle class="peca" fill="#3a3f4b" cx="60.20" cy="55.9" r="0.52">
+        <title>Alto-falante — furo 1 da linha de cima</title>
+      </circle>
+      <circle class="peca" fill="#3a3f4b" cx="62.10" cy="55.9" r="0.52">
+        <title>Alto-falante — furo 2 da linha de cima</title>
+      </circle>
+      <circle class="peca" fill="#3a3f4b" cx="64.00" cy="55.9" r="0.52">
+        <title>Alto-falante — furo 3 da linha de cima</title>
+      </circle>
+      <circle class="peca" fill="#3a3f4b" cx="65.90" cy="55.9" r="0.52">
+        <title>Alto-falante — furo 4 da linha de cima</title>
+      </circle>
+      <circle class="peca" fill="#3a3f4b" cx="67.80" cy="55.9" r="0.52">
+        <title>Alto-falante — furo 5 da linha de cima</title>
+      </circle>
+      <circle class="peca" fill="#3a3f4b" cx="61.15" cy="57.7" r="0.52">
+        <title>Alto-falante — furo 1 da linha de baixo</title>
+      </circle>
+      <circle class="peca" fill="#3a3f4b" cx="63.05" cy="57.7" r="0.52">
+        <title>Alto-falante — furo 2 da linha de baixo</title>
+      </circle>
+      <circle class="peca" fill="#3a3f4b" cx="64.95" cy="57.7" r="0.52">
+        <title>Alto-falante — furo 3 da linha de baixo</title>
+      </circle>
+      <circle class="peca" fill="#3a3f4b" cx="66.85" cy="57.7" r="0.52">
+        <title>Alto-falante — furo 4 da linha de baixo</title>
+      </circle>
+    </g>
+  </g>
+  <g id="p4-grupo-invisiveis">
+    <title>SENSORES E MOTORES (não aparecem no mapa)</title>
+    <g id="p4-feat-giroscopio" class="oculta" data-feature="giroscopio">
+      <title>Giroscópio — mede a rotação do controle INTEIRO</title>
+      <path class="peca" fill="#3a3f4b" fill-rule="evenodd" d="M 31.988 29.976 c 4.338 -0.492 8.454 -0.567 10.927 -0.484 a 0.5 0.5 0 0 1 0.105 0.985 c -0.486 0.122 -0.833 0.633 -1.017 1.493 c -0.175 0.817 -0.157 1.758 -0.081 2.38 c 0.33 1.664 1.178 6.225 1.96 11.341 c 0.81 5.291 -1.34 9.03 -2.59 10.287 v 0.001 c -1.67 1.68 -3.4 3.42 -5.826 6.837 c -2.47 3.479 -6.002 11.309 -9.178 18.944 c -2.387 5.736 -4.554 11.315 -5.9 14.777 c -0.44 1.135 -0.793 2.042 -1.036 2.653 l -0.017 0.038 l -0.076 0.158 c -0.088 0.188 -0.199 0.42 -0.347 0.655 l 3.12 0.422 c 0.543 -0.004 0.956 -0.109 1.301 -0.3 c 0.356 -0.196 0.676 -0.501 1 -0.956 c 0.56 -0.786 1.07 -1.92 1.78 -3.493 l 0.432 -0.958 c 1.208 -2.657 2.445 -5.838 3.515 -8.588 l 0.093 -0.239 a 190 190 0 0 1 1.468 -3.702 c 0.418 -1.006 0.784 -1.813 1.06 -2.23 c 0.7 -1.058 1.729 -2.597 3.492 -3.677 c 1.774 -1.086 4.236 -1.676 7.754 -0.983 h 40.07 c 2.805 -0.695 5.28 -0.355 7.32 0.81 c 2.049 1.17 3.613 3.143 4.645 5.624 c 1.189 2.86 1.943 4.997 2.648 7.039 l 0.2 0.578 c 0.632 1.836 1.254 3.639 2.154 5.89 q 0.14 0.35 0.274 0.696 c 0.463 1.19 0.9 2.31 1.572 3.161 c 0.389 0.493 0.845 0.874 1.413 1.11 c 0.566 0.234 1.279 0.338 2.204 0.223 l 2.647 -0.449 c -0.141 -0.228 -0.247 -0.452 -0.333 -0.633 l -0.077 -0.158 l -0.016 -0.038 c -0.243 -0.61 -0.596 -1.518 -1.037 -2.653 c -1.345 -3.462 -3.512 -9.04 -5.899 -14.777 c -3.176 -7.635 -6.708 -15.465 -9.178 -18.944 c -2.426 -3.417 -4.157 -5.158 -5.825 -6.837 h -0.002 c -1.25 -1.258 -3.398 -4.997 -2.59 -10.288 c 0.783 -5.116 1.63 -9.677 1.961 -11.342 c 0.075 -0.621 0.094 -1.562 -0.08 -2.379 c -0.185 -0.86 -0.532 -1.37 -1.018 -1.493 a 0.5 0.5 0 0 1 0.105 -0.985 c 2.473 -0.083 6.589 -0.008 10.927 0.484 c 4.328 0.49 8.927 1.402 12.334 3.015 a 0.5 0.5 0 0 1 0.228 0.218 c 2.635 4.97 8.471 18.727 10.833 34.172 c 1.475 9.65 1.358 17.23 0.24 22.728 c -1.112 5.468 -3.24 8.991 -5.9 10.329 c -1.724 0.867 -2.9 0.956 -3.742 0.504 l -0.09 -0.052 l -3.331 0.566 l -0.022 0.003 c -1.069 0.134 -1.964 0.023 -2.722 -0.291 c -0.757 -0.313 -1.343 -0.816 -1.814 -1.413 c -0.775 -0.98 -1.276 -2.27 -1.736 -3.457 q -0.128 -0.331 -0.254 -0.65 c -0.91 -2.274 -1.539 -4.098 -2.171 -5.933 l -0.2 -0.579 c -0.703 -2.034 -1.449 -4.148 -2.627 -6.98 c -0.968 -2.33 -2.404 -4.106 -4.216 -5.14 c -1.805 -1.031 -4.03 -1.354 -6.642 -0.695 a 0.5 0.5 0 0 1 -0.122 0.016 h -40.18 a 0.5 0.5 0 0 1 -0.098 -0.01 c -3.334 -0.666 -5.547 -0.096 -7.084 0.846 c -1.557 0.953 -2.48 2.318 -3.181 3.376 c -0.214 0.323 -0.544 1.035 -0.97 2.062 c -0.42 1.01 -0.915 2.28 -1.46 3.68 l -0.097 0.25 c -1.067 2.743 -2.313 5.946 -3.533 8.63 l -0.42 0.929 c -0.704 1.568 -1.265 2.814 -1.888 3.688 c -0.38 0.534 -0.806 0.961 -1.331 1.251 c -0.529 0.291 -1.124 0.424 -1.816 0.424 l -0.067 -0.004 l -3.916 -0.53 l -0.022 0.013 c -0.842 0.452 -2.018 0.363 -3.742 -0.504 c -2.66 -1.338 -4.788 -4.86 -5.9 -10.33 c -1.118 -5.497 -1.235 -13.077 0.24 -22.727 c 2.363 -15.445 8.198 -29.203 10.833 -34.172 a 0.5 0.5 0 0 1 0.228 -0.218 c 3.407 -1.613 8.006 -2.524 12.334 -3.015 M 17.638 99.989 l -0.024 0.017 q -0.044 0.029 -0.093 0.055 c -0.401 0.216 -1.185 0.305 -2.818 -0.516 c -2.24 -1.127 -4.277 -4.26 -5.37 -9.636 c -1.088 -5.347 -1.215 -12.802 0.249 -22.377 c 2.319 -15.164 8.021 -28.696 10.65 -33.708 c 3.243 -1.498 7.639 -2.375 11.869 -2.854 a 81 81 0 0 1 9.418 -0.505 c -0.248 0.396 -0.4 0.86 -0.494 1.296 c -0.207 0.966 -0.18 2.036 -0.093 2.73 l 0.005 0.035 a 293 293 0 0 1 1.957 11.316 c 0.759 4.962 -1.274 8.388 -2.31 9.431 c -1.685 1.694 -3.46 3.48 -5.934 6.964 c -2.548 3.59 -6.121 11.534 -9.285 19.139 c -2.392 5.75 -4.57 11.353 -5.914 14.813 c -0.434 1.116 -0.78 2.01 -1.02 2.613 l -0.079 0.16 c -0.211 0.433 -0.39 0.8 -0.713 1.027 M 110.346 99.977 q 0.063 0.046 0.134 0.084 c 0.401 0.216 1.185 0.305 2.819 -0.516 c 2.24 -1.127 4.276 -4.26 5.369 -9.636 c 1.088 -5.347 1.215 -12.802 -0.249 -22.377 c -2.319 -15.164 -8.021 -28.696 -10.65 -33.708 c -3.243 -1.498 -7.639 -2.375 -11.869 -2.854 a 81 81 0 0 0 -9.418 -0.505 c 0.248 0.396 0.4 0.86 0.494 1.296 c 0.207 0.966 0.18 2.036 0.093 2.73 l -0.005 0.035 a 293 293 0 0 0 -1.957 11.316 c -0.758 4.962 1.274 8.388 2.31 9.431 c 1.685 1.694 3.46 3.48 5.934 6.964 c 2.548 3.59 6.122 11.534 9.285 19.139 c 2.392 5.75 4.569 11.353 5.914 14.813 c 0.434 1.116 0.781 2.01 1.02 2.613 l 0.079 0.16 c 0.2 0.41 0.372 0.762 0.664 0.99 Z"/>
+    </g>
+    <g id="p4-feat-acelerometro" class="oculta" data-feature="acelerometro">
+      <title>Acelerômetro — mede a aceleração do controle INTEIRO</title>
+      <path class="peca" fill="#3a3f4b" fill-rule="evenodd" d="M 31.988 29.976 c 4.338 -0.492 8.454 -0.567 10.927 -0.484 a 0.5 0.5 0 0 1 0.105 0.985 c -0.486 0.122 -0.833 0.633 -1.017 1.493 c -0.175 0.817 -0.157 1.758 -0.081 2.38 c 0.33 1.664 1.178 6.225 1.96 11.341 c 0.81 5.291 -1.34 9.03 -2.59 10.287 v 0.001 c -1.67 1.68 -3.4 3.42 -5.826 6.837 c -2.47 3.479 -6.002 11.309 -9.178 18.944 c -2.387 5.736 -4.554 11.315 -5.9 14.777 c -0.44 1.135 -0.793 2.042 -1.036 2.653 l -0.017 0.038 l -0.076 0.158 c -0.088 0.188 -0.199 0.42 -0.347 0.655 l 3.12 0.422 c 0.543 -0.004 0.956 -0.109 1.301 -0.3 c 0.356 -0.196 0.676 -0.501 1 -0.956 c 0.56 -0.786 1.07 -1.92 1.78 -3.493 l 0.432 -0.958 c 1.208 -2.657 2.445 -5.838 3.515 -8.588 l 0.093 -0.239 a 190 190 0 0 1 1.468 -3.702 c 0.418 -1.006 0.784 -1.813 1.06 -2.23 c 0.7 -1.058 1.729 -2.597 3.492 -3.677 c 1.774 -1.086 4.236 -1.676 7.754 -0.983 h 40.07 c 2.805 -0.695 5.28 -0.355 7.32 0.81 c 2.049 1.17 3.613 3.143 4.645 5.624 c 1.189 2.86 1.943 4.997 2.648 7.039 l 0.2 0.578 c 0.632 1.836 1.254 3.639 2.154 5.89 q 0.14 0.35 0.274 0.696 c 0.463 1.19 0.9 2.31 1.572 3.161 c 0.389 0.493 0.845 0.874 1.413 1.11 c 0.566 0.234 1.279 0.338 2.204 0.223 l 2.647 -0.449 c -0.141 -0.228 -0.247 -0.452 -0.333 -0.633 l -0.077 -0.158 l -0.016 -0.038 c -0.243 -0.61 -0.596 -1.518 -1.037 -2.653 c -1.345 -3.462 -3.512 -9.04 -5.899 -14.777 c -3.176 -7.635 -6.708 -15.465 -9.178 -18.944 c -2.426 -3.417 -4.157 -5.158 -5.825 -6.837 h -0.002 c -1.25 -1.258 -3.398 -4.997 -2.59 -10.288 c 0.783 -5.116 1.63 -9.677 1.961 -11.342 c 0.075 -0.621 0.094 -1.562 -0.08 -2.379 c -0.185 -0.86 -0.532 -1.37 -1.018 -1.493 a 0.5 0.5 0 0 1 0.105 -0.985 c 2.473 -0.083 6.589 -0.008 10.927 0.484 c 4.328 0.49 8.927 1.402 12.334 3.015 a 0.5 0.5 0 0 1 0.228 0.218 c 2.635 4.97 8.471 18.727 10.833 34.172 c 1.475 9.65 1.358 17.23 0.24 22.728 c -1.112 5.468 -3.24 8.991 -5.9 10.329 c -1.724 0.867 -2.9 0.956 -3.742 0.504 l -0.09 -0.052 l -3.331 0.566 l -0.022 0.003 c -1.069 0.134 -1.964 0.023 -2.722 -0.291 c -0.757 -0.313 -1.343 -0.816 -1.814 -1.413 c -0.775 -0.98 -1.276 -2.27 -1.736 -3.457 q -0.128 -0.331 -0.254 -0.65 c -0.91 -2.274 -1.539 -4.098 -2.171 -5.933 l -0.2 -0.579 c -0.703 -2.034 -1.449 -4.148 -2.627 -6.98 c -0.968 -2.33 -2.404 -4.106 -4.216 -5.14 c -1.805 -1.031 -4.03 -1.354 -6.642 -0.695 a 0.5 0.5 0 0 1 -0.122 0.016 h -40.18 a 0.5 0.5 0 0 1 -0.098 -0.01 c -3.334 -0.666 -5.547 -0.096 -7.084 0.846 c -1.557 0.953 -2.48 2.318 -3.181 3.376 c -0.214 0.323 -0.544 1.035 -0.97 2.062 c -0.42 1.01 -0.915 2.28 -1.46 3.68 l -0.097 0.25 c -1.067 2.743 -2.313 5.946 -3.533 8.63 l -0.42 0.929 c -0.704 1.568 -1.265 2.814 -1.888 3.688 c -0.38 0.534 -0.806 0.961 -1.331 1.251 c -0.529 0.291 -1.124 0.424 -1.816 0.424 l -0.067 -0.004 l -3.916 -0.53 l -0.022 0.013 c -0.842 0.452 -2.018 0.363 -3.742 -0.504 c -2.66 -1.338 -4.788 -4.86 -5.9 -10.33 c -1.118 -5.497 -1.235 -13.077 0.24 -22.727 c 2.363 -15.445 8.198 -29.203 10.833 -34.172 a 0.5 0.5 0 0 1 0.228 -0.218 c 3.407 -1.613 8.006 -2.524 12.334 -3.015 M 17.638 99.989 l -0.024 0.017 q -0.044 0.029 -0.093 0.055 c -0.401 0.216 -1.185 0.305 -2.818 -0.516 c -2.24 -1.127 -4.277 -4.26 -5.37 -9.636 c -1.088 -5.347 -1.215 -12.802 0.249 -22.377 c 2.319 -15.164 8.021 -28.696 10.65 -33.708 c 3.243 -1.498 7.639 -2.375 11.869 -2.854 a 81 81 0 0 1 9.418 -0.505 c -0.248 0.396 -0.4 0.86 -0.494 1.296 c -0.207 0.966 -0.18 2.036 -0.093 2.73 l 0.005 0.035 a 293 293 0 0 1 1.957 11.316 c 0.759 4.962 -1.274 8.388 -2.31 9.431 c -1.685 1.694 -3.46 3.48 -5.934 6.964 c -2.548 3.59 -6.121 11.534 -9.285 19.139 c -2.392 5.75 -4.57 11.353 -5.914 14.813 c -0.434 1.116 -0.78 2.01 -1.02 2.613 l -0.079 0.16 c -0.211 0.433 -0.39 0.8 -0.713 1.027 M 110.346 99.977 q 0.063 0.046 0.134 0.084 c 0.401 0.216 1.185 0.305 2.819 -0.516 c 2.24 -1.127 4.276 -4.26 5.369 -9.636 c 1.088 -5.347 1.215 -12.802 -0.249 -22.377 c -2.319 -15.164 -8.021 -28.696 -10.65 -33.708 c -3.243 -1.498 -7.639 -2.375 -11.869 -2.854 a 81 81 0 0 0 -9.418 -0.505 c 0.248 0.396 0.4 0.86 0.494 1.296 c 0.207 0.966 0.18 2.036 0.093 2.73 l -0.005 0.035 a 293 293 0 0 0 -1.957 11.316 c -0.758 4.962 1.274 8.388 2.31 9.431 c 1.685 1.694 3.46 3.48 5.934 6.964 c 2.548 3.59 6.122 11.534 9.285 19.139 c 2.392 5.75 4.569 11.353 5.914 14.813 c 0.434 1.116 0.781 2.01 1.02 2.613 l 0.079 0.16 c 0.2 0.41 0.372 0.762 0.664 0.99 Z"/>
+    </g>
+    <g id="p4-feat-bateria" class="oculta" data-feature="bateria" style="" transform="matrix(1, 0, 0, 0.961503, 0, 1.189472)">
+      <title>Bateria — as duas tiras do lightbar são o medidor: cheias em 100%, apagadas em 0%, piscando vermelho quando acaba</title>
+      <path class="peca" fill="#3a3f4b" fill-rule="evenodd" d="M 41.445 31.184 L 41.021 32.184 L 40.873 33.184 L 40.861 34.184 L 40.922 35.184 L 41.072 36.184 L 41.253 37.184 L 41.423 38.184 L 41.604 39.184 L 41.784 40.184 L 41.954 41.184 L 42.136 42.184 L 42.318 43.184 L 42.49 44.184 L 42.675 45.184 L 42.86 46.184 L 43.037 47.184 L 43.228 48.184 L 43.423 49.184 L 43.784 50.145 L 44.255 51.184 L 45.371 51.184 L 44.888 50.184 L 44.602 49.184 L 44.407 48.184 L 44.216 47.184 L 44.039 46.184 L 43.853 45.184 L 43.669 44.184 L 43.497 43.184 L 43.315 42.184 L 43.133 41.184 L 42.963 40.184 L 42.783 39.184 L 42.602 38.184 L 42.432 37.184 L 42.251 36.184 L 42.101 35.184 L 42.04 34.184 L 42.052 33.184 L 42.2 32.184 L 42.623 31.184 L 41.445 31.184 Z" style="">
+        <title>Bateria — peça 1</title>
+      </path>
+      <path class="peca" fill="#3a3f4b" fill-rule="evenodd" d="M 86.873 31.041 L 87.209 32.038 L 87.276 33.037 L 87.245 34.034 L 87.12 35.033 L 86.971 36.03 L 86.826 37.029 L 86.669 38.026 L 86.509 39.024 L 86.356 40.022 L 86.192 41.02 L 86.036 42.018 L 85.869 43.016 L 85.701 44.014 L 85.542 45.012 L 85.373 46.01 L 85.214 47.008 L 85.003 48.005 L 84.696 49.004 L 84.253 50.001 L 83.644 51 L 82.444 51 L 83.053 50.001 L 83.496 49.004 L 83.803 48.005 L 84.014 47.008 L 84.173 46.01 L 84.342 45.012 L 84.501 44.014 L 84.669 43.016 L 84.836 42.018 L 84.992 41.02 L 85.156 40.022 L 85.309 39.024 L 85.469 38.026 L 85.626 37.029 L 85.771 36.03 L 85.92 35.033 L 86.045 34.034 L 86.076 33.037 L 86.009 32.038 L 85.673 31.041 L 86.873 31.041 Z" style="">
+        <title>Bateria — peça 2</title>
+      </path>
+    </g>
+    <g id="p4-feat-rumble-esquerdo" class="oculta" data-feature="rumble-esquerdo" style="" transform="matrix(0.992202, 0, 0, 1, 0.180438, 0)">
+      <title>Motor de vibração esquerdo (contrapeso maior — soa grosso)</title>
+      <path class="peca" fill="none" stroke="#2f333c" stroke-width="0.35" d="M 32.051 29.975 C 36.433 29.484 40.591 29.409 43.089 29.492 C 43.473 29.506 43.698 29.936 43.493 30.265 C 43.425 30.376 43.317 30.456 43.191 30.487 C 42.694 30.611 42.346 31.123 42.16 31.977 C 41.985 32.791 42.004 33.729 42.08 34.348 C 42.413 36.014 43.269 40.57 44.06 45.684 C 44.879 50.977 42.705 54.717 41.441 55.974 L 41.441 55.975 C 39.755 57.653 38.007 59.393 35.555 62.808 C 33.06 66.283 29.492 74.107 26.283 81.737 C 23.872 87.47 21.683 93.044 20.323 96.504 C 19.971 97.402 19.617 98.299 19.259 99.195 L 19.182 99.353 C 18.964 99.807 18.618 100.528 17.904 100.908 C 17.061 101.357 15.88 101.271 14.138 100.404 C 11.453 99.068 9.301 95.547 8.177 90.078 C 7.047 84.581 6.929 77.004 8.42 67.36 C 10.807 51.922 16.703 38.172 19.366 33.205 C 19.417 33.109 19.497 33.033 19.595 32.987 C 23.035 31.376 27.678 30.466 32.051 29.975 M 20.164 33.834 C 17.509 38.843 11.748 52.364 9.406 67.515 C 7.927 77.083 8.055 84.531 9.154 89.873 C 10.257 95.241 12.313 98.371 14.579 99.498 C 16.229 100.319 17.028 100.234 17.44 100.013 C 17.844 99.799 18.043 99.397 18.281 98.916 L 18.361 98.756 C 18.602 98.154 18.953 97.261 19.39 96.146 C 20.749 92.688 22.948 87.087 25.365 81.341 C 28.562 73.742 32.172 65.801 34.748 62.214 C 37.247 58.732 39.04 56.947 40.742 55.255 C 41.79 54.211 43.84 50.792 43.074 45.839 C 42.489 42.044 41.828 38.262 41.092 34.494 C 41.005 33.8 40.976 32.729 41.186 31.761 C 41.281 31.326 41.433 30.869 41.679 30.475 C 39.209 30.457 35.761 30.576 32.161 30.98 C 27.886 31.459 23.442 32.335 20.164 33.834" style=""/>
+    </g>
+    <g id="p4-feat-rumble-direito" class="oculta" data-feature="rumble-direito" style="opacity: 0.55;" transform="matrix(0.987771, 0, 0, 0.998314, 1.473548, 0.129608)">
+      <title>Motor de vibração direito (contrapeso menor — soa fino)</title>
+      <path class="peca" fill="none" stroke="#2f333c" stroke-width="0.35" d="M 95.741 29.895 C 91.356 29.402 87.194 29.327 84.693 29.41 C 84.309 29.424 84.083 29.855 84.287 30.185 C 84.356 30.296 84.465 30.376 84.591 30.408 C 85.089 30.532 85.437 31.046 85.622 31.902 C 85.799 32.718 85.779 33.659 85.703 34.28 C 84.968 38.054 84.307 41.843 83.722 45.645 C 82.903 50.953 85.078 54.702 86.343 55.962 L 86.343 55.963 C 88.031 57.646 89.781 59.39 92.234 62.814 C 94.731 66.299 98.302 74.144 101.514 81.794 C 103.928 87.543 106.119 93.131 107.48 96.6 C 107.832 97.501 108.187 98.4 108.546 99.298 L 108.622 99.457 C 108.84 99.913 109.187 100.637 109.9 101.016 C 110.745 101.466 111.928 101.38 113.671 100.511 C 116.358 99.171 118.512 95.641 119.637 90.158 C 120.768 84.646 120.887 77.05 119.394 67.378 C 117.005 51.9 111.103 38.113 108.439 33.133 C 108.388 33.037 108.307 32.96 108.209 32.914 C 104.765 31.299 100.117 30.386 95.741 29.895 M 107.64 33.763 C 110.298 38.786 116.063 52.343 118.407 67.535 C 119.888 77.129 119.759 84.596 118.659 89.952 C 117.554 95.334 115.498 98.473 113.229 99.603 C 111.577 100.426 110.778 100.34 110.365 100.119 C 109.961 99.905 109.762 99.502 109.524 99.02 L 109.446 98.858 C 109.203 98.255 108.852 97.36 108.414 96.242 C 107.054 92.775 104.853 87.159 102.433 81.397 C 99.234 73.778 95.62 65.817 93.043 62.22 C 90.541 58.729 88.746 56.939 87.043 55.242 C 85.994 54.195 83.941 50.766 84.708 45.801 C 85.294 41.996 85.956 38.203 86.692 34.426 C 86.78 33.729 86.808 32.656 86.598 31.685 C 86.503 31.249 86.351 30.791 86.105 30.396 C 88.577 30.377 92.028 30.497 95.631 30.902 C 99.91 31.382 104.358 32.261 107.64 33.763" style=""/>
+    </g>
+  </g>
+  <g id="p4-grupo-glifos">
+    <title>GLIFOS (o símbolo de cada peça)</title>
+    <g id="p4-glifo-triangle" class="z-simbolos" style="--lado: 4.200;" transform="matrix(0.188008, 0, 0, 0.153608, 95.97036, 36.720016)">
+      <title>Glifo — Triângulo</title>
+      <polygon points="16 8.516 24.917 27.556 7.084 27.556" fill="none" stroke="currentColor" stroke-linejoin="round" style="stroke-width: 3px;"/>
+    </g>
+    <g id="p4-glifo-circle" class="z-simbolos" style="--lado:4.200" transform="translate(107.000 47.960) scale(0.13125) translate(-16.000 -16.000)">
+      <title>Glifo — Círculo</title>
+      <circle cx="15.94" cy="15.675" r="11.765" fill="none" stroke="currentColor" style="stroke-width: 3.80952px;"/>
+    </g>
+    <g id="p4-glifo-square" class="z-simbolos" style="--lado:4.200" transform="translate(91.000 47.960) scale(0.13125) translate(-16.000 -16.000)">
+      <title>Glifo — Quadrado</title>
+      <rect x="7" y="7" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
+    </g>
+    <g id="p4-glifo-cross" class="z-simbolos" style="--lado:4.200" transform="translate(99.000 55.960) scale(0.13125) translate(-16.000 -16.000)">
+      <title>Glifo — Cruz</title>
+      <line x1="8" y1="8" x2="24" y2="24" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+      <line x1="24" y1="8" x2="8" y2="24" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+    </g>
+    <g id="p4-glifo-dpad_up" style="--lado: 4.400; transform-origin: 67.4445px 60.9015px;" transform="matrix(0, 0.1375, -0.1375, 0, -38.275467, -21.807503)">
+      <title>Glifo — D-pad Cima</title>
+      <path d="M 151.833 350.924 L 158.938 360.102 L 144.727 360.102 L 151.833 350.924 Z" bx:shape="triangle 144.727 350.924 14.211 9.178 0.5 0 1@f1e95a2c" style="fill: rgb(216, 216, 216); stroke: rgb(0, 0, 0); stroke-width: 0px; transform-box: fill-box; transform-origin: 50% 50%;" transform="matrix(0, -1, 1, 0, -69.842484, -293.381805)"/>
+    </g>
+    <g id="p4-glifo-dpad_right" style="--lado: 4.400; transform-origin: -52.4882px 19.437px;" transform="matrix(0, -0.1375, 0.1375, 0, 90.97998, 30.745468)">
+      <title>Glifo — D-pad Direita</title>
+      <path d="M 41.312 -12.224 L 48.417 -3.046 L 34.206 -3.046 L 41.312 -12.224 Z" bx:shape="triangle 34.206 -12.224 14.211 9.178 0.5 0 1@a0fe0643" style="fill: rgb(216, 216, 216); stroke: rgb(0, 0, 0); stroke-width: 0px; transform-box: fill-box; transform-origin: 50% 50%;" transform="matrix(-1, 0, 0, -1, -82.623001, 15.27)"/>
+    </g>
+    <g id="p4-glifo-dpad_down" style="--lado: 4.400; transform-origin: 46.109px -25.7827px;" transform="matrix(0, -0.1375, 0.1375, 0, -17.013714, 82.614662)">
+      <title>Glifo — D-pad Baixo</title>
+      <path d="M 151.833 350.924 L 158.938 360.102 L 144.727 360.102 L 151.833 350.924 Z" bx:shape="triangle 144.727 350.924 14.211 9.178 0.5 0 1@f1e95a2c" style="fill: rgb(216, 216, 216); stroke: rgb(0, 0, 0); stroke-width: 0px; transform-box: fill-box; transform-origin: 50% 50%;" transform="matrix(0, -1, 1, 0, -105.723465, -381.295654)"/>
+    </g>
+    <g id="p4-glifo-dpad_left" style="--lado:4.400" transform="matrix(0.1375, 0, 0, 0.1375, 21.094742, 46.772293)">
+      <title>Glifo — D-pad Esquerda</title>
+      <path d="M 151.833 350.924 L 158.938 360.102 L 144.727 360.102 L 151.833 350.924 Z" bx:shape="triangle 144.727 350.924 14.211 9.178 0.5 0 1@f1e95a2c" style="fill: rgb(216, 216, 216); stroke: rgb(0, 0, 0); stroke-width: 0px; transform-box: fill-box; transform-origin: 50% 50%;" transform="matrix(0, -1, 1, 0, -151.568924, -340.16214)"/>
+    </g>
+    <g id="p4-glifo-l1" style="--lado: 6.311; transform-origin: 16px 16px;" transform="matrix(0.195302, -0.027448, 0.027448, 0.195302, 15.730036, 12.819365)">
+      <title>Glifo — L1</title>
+      <text style="dominant-baseline: central; fill: rgb(200, 204, 218); font-family: Zrnic; font-size: 11px; font-weight: 700; text-anchor: middle; white-space: pre; transform-box: fill-box; transform-origin: 50% 50%;" x="16" y="16" transform="matrix(0.999391, 0.034899, -0.034899, 0.999391, 0.000011, -0.000007)">L1</text>
+    </g>
+    <g id="p4-glifo-r1" style="--lado: 6.311; transform-origin: 16px 16px;" transform="matrix(0.194224, 0.034247, -0.034247, 0.194224, 80.452019, 12.810075)">
+      <title>Glifo — R1</title>
+      <text style="dominant-baseline: central; fill: rgb(200, 204, 218); font-family: Zrnic; font-size: 11px; font-weight: 700; text-anchor: middle; white-space: pre;" x="16" y="16">R1</text>
+    </g>
+    <g id="p4-glifo-l2" style="--lado: 5.318; transform-origin: 16px 16px;" transform="matrix(0.160508, -0.043008, 0.043008, 0.160508, 7.661914, 14.483895)">
+      <title>Glifo — L2</title>
+      <text style="dominant-baseline: central; fill: rgb(200, 204, 218); font-family: Zrnic; font-size: 9.80923px; font-weight: 700; text-anchor: middle; white-space: pre;" x="16" y="16">L2</text>
+    </g>
+    <g id="p4-glifo-r2" style="--lado: 5.318; transform-origin: 16px 16px;" transform="matrix(0.160508, 0.043008, -0.043008, 0.160508, 88.303864, 14.558837)">
+      <title>Glifo — R2</title>
+      <text style="dominant-baseline: central; fill: rgb(200, 204, 218); font-family: Zrnic; font-size: 9.80923px; font-weight: 700; text-anchor: middle; white-space: pre;" x="16" y="16">R2</text>
+    </g>
+    <g id="p4-glifo-stick_l" style="--lado:14.000" transform="matrix(0.4375, 0, 0, 0.4375, 40.616543, 56.234634)">
+      <title>Glifo — Analógico Esquerdo</title>
+      <text style="dominant-baseline: central; fill: rgb(200, 204, 218); font-family: Zrnic; font-size: 11px; font-weight: 700; text-anchor: middle; white-space: pre;" x="15.971" y="17.025">L</text>
+    </g>
+    <text style="dominant-baseline: central; fill: rgb(200, 204, 218); font-family: Zrnic; font-size: 4.8px; font-weight: 700; text-anchor: middle; white-space: pre; stroke-width: 0.438; --lado: 14.000;" x="80.617" y="63.683">R</text>
+    <g id="p4-glifo-share" style="--lado:3.400" transform="matrix(0.103076, -0.025776, 0.025776, 0.103076, 35.989918, 31.661192)">
+      <title>Glifo — Share</title>
+      <line x1="16" y1="7" x2="16" y2="20" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/>
+      <line x1="8" y1="11" x2="12.5" y2="21" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/>
+      <line x1="24" y1="11" x2="19.5" y2="21" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/>
+    </g>
+    <g id="p4-glifo-options" style="--lado:3.400" transform="matrix(0.103076, 0.025776, -0.025776, 0.103076, 88.451256, 30.707508)">
+      <title>Glifo — Options</title>
+      <line x1="7" y1="10" x2="25" y2="10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+      <line x1="7" y1="16" x2="25" y2="16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+      <line x1="7" y1="22" x2="25" y2="22" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+    </g>
+    <g id="p4-glifo-ps" style="--lado: 8.600;" transform="matrix(0.351567, 0, 0, 0.351567, 59.971592, 56.378807)">
+      <title>Glifo — PS</title>
+      <g transform="translate(16 16) scale(0.99425) translate(-16.0925 -16.0)">
+        <path fill="currentColor" d="M 2.265 23.706 C 1.447 24.279 1.598 25.266 3.466 25.884 C 5.333 26.501 7.504 26.629 9.414 26.286 C 9.359 26.286 9.523 26.286 9.414 26.286 L 9.414 24.336 L 7.558 24.967 C 6.849 25.195 6.139 25.253 5.43 25.082 C 4.884 24.909 4.993 24.565 5.648 24.279 L 9.414 22.902 L 9.414 20.782 L 4.175 22.674 C 3.52 22.902 2.864 23.247 2.265 23.706 Z M 14.925 15.107 L 14.925 20.668 C 17.162 21.814 18.909 20.668 18.909 17.686 C 18.909 14.648 17.872 13.272 14.871 12.184 C 13.288 11.61 11.651 11.094 10.014 10.75 L 10.014 27.317 L 13.834 28.521 L 13.834 14.591 C 13.834 13.961 13.834 13.502 14.271 13.673 C 14.871 13.846 14.925 14.477 14.925 15.107 Z M 22.019 22.387 C 20.437 21.814 18.746 21.584 17.108 21.756 C 16.199 21.816 15.346 22.087 14.489 22.387 L 14.489 24.623 L 18.036 23.247 C 18.746 23.017 19.455 22.96 20.164 23.132 C 20.71 23.305 20.601 23.648 19.946 23.935 L 14.489 26.056 L 14.489 28.234 L 22.019 25.31 C 22.566 25.082 23.056 24.794 23.493 24.336 C 23.875 23.763 23.711 22.96 22.019 22.387 Z" style=""/>
+      </g>
+    </g>
+    <g id="p4-glifo-mic" style="--lado: 3.000;" transform="matrix(0.0682, 0, 0, 0.0682, 62.941559, 69.658447)">
+      <title>Glifo — Microfone</title>
+      <rect x="16.67" y="5.588" width="10" height="15" rx="5" ry="5" fill="none" stroke="currentColor" stroke-width="2"/>
+      <path d="M 12.688 17 C 12.688 22.333 15.688 25 21.688 25 C 27.688 25 30.688 22.333 30.688 17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+      <line x1="21.67" y1="26.588" x2="21.67" y2="29.367" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+      <line x1="16.688" y1="30" x2="26.688" y2="30" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+    </g>
+  </g>
+  <g id="p4-grupo-luzes" style="filter: none;" transform="matrix(1.001104, 0, 0, 0.93262, 0.350011, 3.648825)">
+    <title>LUZES</title>
+    <g id="p4-lightbar" style="--luz:#ff0080" data-feature="lightbar" data-posicao="ladeia-o-touchpad" style="" transform="matrix(1, 0, 0, 1.035127, 0, -1.02738)">
+      <title>Lightbar (duas tiras, uma de cada lado do touchpad)</title>
+      <path class="peca" fill-rule="evenodd" d="M 41.266 29.248 L 40.882 30.248 L 40.748 31.248 L 40.738 32.248 L 40.793 33.248 L 40.929 34.248 L 41.093 35.248 L 41.247 36.248 L 41.41 37.248 L 41.574 38.248 L 41.728 39.248 L 41.892 40.248 L 42.057 41.248 L 42.213 42.248 L 42.38 43.248 L 42.548 44.248 L 42.709 45.248 L 42.881 46.248 L 43.058 47.248 L 43.317 48.248 L 43.755 49.248 L 44.822 49.248 L 44.385 48.248 L 44.126 47.248 L 43.948 46.248 L 43.776 45.248 L 43.615 44.248 L 43.448 43.248 L 43.28 42.248 L 43.124 41.248 L 42.96 40.248 L 42.795 39.248 L 42.641 38.248 L 42.478 37.248 L 42.314 36.248 L 42.16 35.248 L 41.997 34.248 L 41.86 33.248 L 41.806 32.248 L 41.815 31.248 L 41.95 30.248 L 42.335 29.248 L 41.266 29.248 Z" style="stroke-width: 2.03409px; filter: url(&quot;#outline-filter-2&quot;);" fill="#3a3f4b">
+        <title>Lightbar — tira esquerda</title>
+      </path>
+      <path class="peca" fill-rule="evenodd" d="M 86.239 29.327 L 86.562 30.327 L 86.627 31.327 L 86.597 32.327 L 86.477 33.327 L 86.333 34.327 L 86.193 35.327 L 86.042 36.327 L 85.888 37.327 L 85.741 38.327 L 85.583 39.327 L 85.432 40.327 L 85.271 41.327 L 85.11 42.327 L 84.956 43.327 L 84.794 44.327 L 84.64 45.327 L 84.437 46.327 L 84.141 47.327 L 83.715 48.327 L 83.128 49.327 L 81.972 49.327 L 82.559 48.327 L 82.985 47.327 L 83.281 46.327 L 83.484 45.327 L 83.638 44.327 L 83.8 43.327 L 83.954 42.327 L 84.115 41.327 L 84.276 40.327 L 84.427 39.327 L 84.585 38.327 L 84.732 37.327 L 84.886 36.327 L 85.037 35.327 L 85.177 34.327 L 85.321 33.327 L 85.441 32.327 L 85.471 31.327 L 85.406 30.327 L 85.083 29.327 L 86.239 29.327 Z" style="stroke-width: 2.03409px; filter: url(&quot;#outline-filter-2&quot;);" fill="#3a3f4b">
+        <title>Lightbar — tira direita</title>
+      </path>
+    </g>
+
+  </g>
+  <g id="p4-options" class="z-painel" data-entrada="options"><title>Options</title><rect class="peca" x="-37.043" y="-26.122" width="1.796" height="3.685" style="fill: #b11f54; stroke: rgb(0, 0, 0); stroke-width: 0; stroke-miterlimit: 1; transform-origin: -36.145px -24.279px;" rx="1" ry="1" transform="matrix(-0.984808, -0.173648, -0.173648, 0.984808, 125.210805, 60.11082)"/></g>
+  <g id="p4-glifo-stick_r" style="--lado:14.000" transform="matrix(0.4375, 0, 0, 0.4375, 73.616543, 56.234634)">
+      <title>Glifo — Analógico Direito</title>
+      <text style="dominant-baseline: central; fill: rgb(200, 204, 218); font-family: Zrnic; font-size: 11px; font-weight: 700; text-anchor: middle; white-space: pre;" x="15.971" y="17.025">R</text>
+    </g>
+</svg>
+              <span class="gc-bloco">
+                <span class="rot"><svg class="gl" width="16" height="16" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Microfone</title>
+
+  <rect x="11" y="4" width="10" height="15" rx="5" ry="5" fill="none" stroke="currentColor" stroke-width="2"/>
+  <path d="M7,17 Q7,25 16,25 Q25,25 25,17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+  <line x1="16" y1="25" x2="16" y2="30" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+  <line x1="11" y1="30" x2="21" y2="30" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+</svg> Microfone e botões
+                  <span class="ajuda">?<span class="dica">Se o microfone deste controle existe. Desligado, nenhum programa o enxerga — nem o jogo, nem a chamada de voz. <b>Por onde</b> ele chega não é escolha: quem decide é o transporte, e a linha ao lado diz qual é.<br><br>O botão físico do microfone faz o mesmo que o desta tela: liga o microfone <b>e</b> o canal dele. O que ele cala é <b>um ajuste da máquina</b>, não deste controle — a linha ao lado diz qual está valendo.</span></span></span>
+                <select class="pronto" title="Se o microfone deste controle existe. Desligado, nenhum programa o enxerga — nem o jogo, nem a chamada de voz." data-gesto="mic-existe" data-campo="mic-existe" data-hef-alvo="valor"><option selected>Ligado</option><option>Desligado</option></select>
+                <span class="leitura" data-campo="mic-escopo" title="O que o botão físico do microfone cala. É um ajuste da MÁQUINA, um só para todos os controles — o Hefesto o lê do serviço a cada tique.">—</span>
+              </span>
+              <span class="gc-bloco barra">
+                <span class="rot"><svg class="gl" width="16" height="16" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Motor de vibração esquerdo</title>
+
+  <path d="M20,4 h-6 q-3,0 -4,3 l-3,10 q-2,7 2,11 q4,4 8,1 q3,-2 3,-7 z"
+        fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
+  <path d="M25,9 q4,7 0,14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+  <path d="M29,5 q6,11 0,22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+</svg> Teto da vibração
+                  <span class="ajuda">?<span class="dica" data-campo="teto-explica" data-hef-alvo="html">—</span></span></span>
+                <select class="pronto" title="O teto da vibração deste controle. O global manda e o do controle sobrepõe — o “?” ao lado diz qual dos dois está valendo agora." data-gesto="teto-da-vibracao" data-campo="teto-da-vibracao" data-hef-alvo="valor"><option selected>Segue o global</option><option>Sem teto</option><option>30% da força</option></select>
+              </span>
+              <span class="gc-luz"><div class="ressalva" data-campo="luz-espera" data-hef-alvo="html"><i class="nada"></i></div><i class="ltrava" data-campo="luz-trava" data-hef-alvo="classe" data-hef-quando="cabo"></i><button class="btn" data-gesto="luz-nao-acende" data-campo="luz-dica" data-hef-alvo="atributo" data-hef-atributo="title" title="—"><span data-campo="luz-texto">—</span></button></span>
             </div>
           </div>
           <!-- OS CONTROLES QUE O HEFESTO SÓ VÊ — EXTERNOS-01, 06/09/2026, e é a

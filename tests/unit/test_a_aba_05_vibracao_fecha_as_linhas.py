@@ -360,7 +360,7 @@ def test_a_chave_do_mapa_casa_nas_duas_grafias(a05) -> None:
 # 3. A BARRA DE MOTOR — o desenho
 # --------------------------------------------------------------------------
 def test_o_desenho_tem_as_duas_barras_de_motor(bancada: str) -> None:
-    """Duas por coluna VIVA, com o lado, o teto do esquema e passo 1.
+    """Duas por LUGAR da mesa, com o lado, o teto do esquema e passo 1.
 
     QUATRO COISAS, e cada uma é um jeito de a linha voltar a mentir: sem
     `<input>` o clique chega sem número; sem `data-lado` o gesto grava a barra
@@ -368,20 +368,30 @@ def test_o_desenho_tem_as_duas_barras_de_motor(bancada: str) -> None:
     para o mesmo estouro; e com `step` maior que 1 a barra esconde valores que a
     borda aceita sem reclamar.
 
+    A CONTA ERA "POR COLUNA VIVA" ATÉ 07/09/2026, e a troca é cura de defeito
+    medido com os quatro DualSense dela na mesa: o lugar vazio era um cartão à
+    parte, sem um único `data-campo`, e as duas barras do P3 e do P4 não
+    existiam — o `barra-e`/`barra-d` que o pacote emite para os quatro lugares
+    chegava sem ter onde pousar. Num lugar vazio a barra é `display:none` pela
+    folha, então ela não recebe clique; ela existe para o instante em que o
+    controle chega, sem regerar HTML nenhum.
+
     MORDIDA: em `aba05._coluna`, troque `_barra_de_motor(...)` pelo `_barra(...)`
     de leitura e regere — este caso reprova por zero `<input>` de motor.
     """
-    vivas = bancada.count('<div class="ctrl" data-controle=')
-    assert vivas >= 1, "a bancada não tem coluna viva — a régua viraria vácuo"
+    from hefesto_dualsense4unix.interface import aba05
+    lugares = len(aba05.MESA)
+    assert bancada.count('data-controle="p') == lugares, (
+        f"a bancada não tem os {lugares} lugares — a régua viraria vácuo")
     barras = [t for t in re.findall(r'<input class="trilho arrasta"[^>]*>', bancada)
               if 'data-papel="motor"' in t]
-    assert len(barras) == 2 * vivas, (
-        f"as barras de motor são {len(barras)} e as colunas vivas são {vivas} — "
-        f"cada coluna tem UMA por punho")
+    assert len(barras) == 2 * lugares, (
+        f"as barras de motor são {len(barras)} e os lugares são {lugares} — "
+        f"cada lugar tem UMA por punho")
     for sigla in ("e", "d"):
         do_lado = [t for t in barras if f'data-lado="{sigla}"' in t]
-        assert len(do_lado) == vivas, (
-            f"a barra do motor {sigla!r} não tem `data-lado` em cada coluna")
+        assert len(do_lado) == lugares, (
+            f"a barra do motor {sigla!r} não tem `data-lado` em cada lugar")
         for tag in do_lado:
             assert f'data-campo="barra-{sigla}"' in tag, (
                 f"o endereço de pintura não é o novo: {tag}")

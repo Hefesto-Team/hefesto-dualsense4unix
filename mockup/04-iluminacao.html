@@ -856,14 +856,33 @@
      diferentes", e leu certo.
      `height:100%` no marcador resolve sem mexer em altura nenhuma: ele passa a
      ocupar a célula e o texto continua centrado dentro dele. */
-  .luz-grade .ctrl.vazia .nada{display:flex;align-items:center;justify-content:center;height:100%;width:100%}
-  .luz-grade .ctrl.vazia .ctrl-rot,
-  .luz-grade .ctrl.vazia .nada{color:var(--linha)}
-  .luz-grade .ctrl.vazia .moldura{border-color:var(--border-forte)}
-  .luz-grade .ctrl.vazia .ds-svg .peca,
-  .luz-grade .ctrl.vazia .ds-svg .corpo,
-  .luz-grade .ctrl.vazia .ds-svg .miolo *{fill:var(--linha) !important}
-  .luz-grade .ctrl.vazia .ds-svg .corpo{stroke:var(--border-forte) !important}
+  /* A MARCA ENTROU EM 07/09/2026, e é ela que faz este bloco se DESFAZER.
+     Tudo daqui para baixo é a cara do lugar sem controle — o cinza, o desenho
+     apagado, o travessão preenchendo a célula. Estava preso a `.vazia`, e
+     `.vazia` é fato de NASCIMENTO: o gerador a escreve e ninguém a tira nunca,
+     nem o piloto. Enquanto o lugar vazio não tinha `data-campo` nenhum isso não
+     aparecia — não havia dado a mostrar. Com os endereços no lugar, aparece:
+     medido nesta bancada, simulando os passos `1c` e `2` do piloto sobre o P3,
+     os dez campos POUSAM (identidade, cor, brilho, tira, ressalva, colorway) e
+     o cartão inteiro continuava pintado de cinza, com o desenho em
+     `var(--linha) !important` por cima do plástico que acabara de chegar.
+     O dado certo, vestido de desconectado.
+
+     `data-conectado` É A MARCA QUE VIRA NOS DOIS SENTIDOS — o gerador a
+     escreve, o piloto a fecha no passo `1b` e a REABRE no `1c`. É a mesma
+     escolha que a folha das dez faz para o desenho (`topo.html`:
+     `[data-conectado="nao"] .ds-svg{display:none}`), e o comentário de lá
+     explica por quê. Na página parada nada muda: todo `.vazia` nasce com
+     `data-conectado="nao"`, e o retrato antes/depois desta cura tem ZERO pixel
+     de diferença nas duas colunas conectadas. */
+  .luz-grade .ctrl.vazia[data-conectado="nao"] .nada{display:flex;align-items:center;justify-content:center;height:100%;width:100%}
+  .luz-grade .ctrl.vazia[data-conectado="nao"] .ctrl-rot,
+  .luz-grade .ctrl.vazia[data-conectado="nao"] .nada{color:var(--linha)}
+  .luz-grade .ctrl.vazia[data-conectado="nao"] .moldura{border-color:var(--border-forte)}
+  .luz-grade .ctrl.vazia[data-conectado="nao"] .ds-svg .peca,
+  .luz-grade .ctrl.vazia[data-conectado="nao"] .ds-svg .corpo,
+  .luz-grade .ctrl.vazia[data-conectado="nao"] .ds-svg .miolo *{fill:var(--linha) !important}
+  .luz-grade .ctrl.vazia[data-conectado="nao"] .ds-svg .corpo{stroke:var(--border-forte) !important}
   /* OS DETALHES CLAROS TAMBÉM CAEM, e eles só aparecem AQUI. Na aba Jogar o
      desenho tem 62px e estes elementos somem sozinhos; nesta aba ele tem 146 e
      eles ficam à mostra — medido no DOM do lugar vazio: 8 `line` em branco
@@ -871,9 +890,9 @@
      glifos L/R/PS e os traços dos botões.
      Copiar a regra da Jogar não bastava: o que muda com o TAMANHO do desenho
      tem de ser medido no tamanho em que ele é desenhado. */
-  .luz-grade .ctrl.vazia .ds-svg text{fill:var(--linha) !important}
-  .luz-grade .ctrl.vazia .ds-svg line{stroke:var(--linha) !important}
-  .luz-grade .ctrl.vazia .ds-svg path:not(.peca):not(.corpo){fill:var(--linha) !important;
+  .luz-grade .ctrl.vazia[data-conectado="nao"] .ds-svg text{fill:var(--linha) !important}
+  .luz-grade .ctrl.vazia[data-conectado="nao"] .ds-svg line{stroke:var(--linha) !important}
+  .luz-grade .ctrl.vazia[data-conectado="nao"] .ds-svg path:not(.peca):not(.corpo){fill:var(--linha) !important;
                                                             stroke:var(--linha) !important}
   /* O TOUCHPAD E OS BOTÕES SÃO `rect`, `circle` e `polygon`, e a ampliação foi
      quem os achou: com `path`, `line` e `text` já apagados, o touchpad continuou
@@ -881,18 +900,18 @@
      `fill` NÃO leva `none` como valor aqui, e é de propósito: pintar um contorno
      vazado apagaria a forma em vez de escurecê-la. Quem tem `fill:none` no
      arquivo continua sem, porque `var(--linha)` só substitui uma cor que existe. */
-  .luz-grade .ctrl.vazia .ds-svg rect:not([fill="none"]),
-  .luz-grade .ctrl.vazia .ds-svg circle:not([fill="none"]),
-  .luz-grade .ctrl.vazia .ds-svg polygon:not([fill="none"]),
-  .luz-grade .ctrl.vazia .ds-svg ellipse:not([fill="none"]){fill:var(--linha) !important}
-  .luz-grade .ctrl.vazia .ds-svg rect,
-  .luz-grade .ctrl.vazia .ds-svg circle,
-  .luz-grade .ctrl.vazia .ds-svg polygon,
-  .luz-grade .ctrl.vazia .ds-svg ellipse{stroke:var(--border-forte) !important}
+  .luz-grade .ctrl.vazia[data-conectado="nao"] .ds-svg rect:not([fill="none"]),
+  .luz-grade .ctrl.vazia[data-conectado="nao"] .ds-svg circle:not([fill="none"]),
+  .luz-grade .ctrl.vazia[data-conectado="nao"] .ds-svg polygon:not([fill="none"]),
+  .luz-grade .ctrl.vazia[data-conectado="nao"] .ds-svg ellipse:not([fill="none"]){fill:var(--linha) !important}
+  .luz-grade .ctrl.vazia[data-conectado="nao"] .ds-svg rect,
+  .luz-grade .ctrl.vazia[data-conectado="nao"] .ds-svg circle,
+  .luz-grade .ctrl.vazia[data-conectado="nao"] .ds-svg polygon,
+  .luz-grade .ctrl.vazia[data-conectado="nao"] .ds-svg ellipse{stroke:var(--border-forte) !important}
   /* O TRAVESSÃO FICA ONDE O CONTEÚDO FICARIA — centrado na célula, para as sete
      linhas continuarem legíveis como linhas. */
-  .luz-grade .ctrl.vazia > *{display:flex;align-items:center;justify-content:center}
-  .luz-grade .ctrl.vazia .moldura{display:block}
+  .luz-grade .ctrl.vazia[data-conectado="nao"] > *{display:flex;align-items:center;justify-content:center}
+  .luz-grade .ctrl.vazia[data-conectado="nao"] .moldura{display:block}
 
   /* ---------- O LUGAR QUE ESVAZIA NA FRENTE DELA ---------- */
   /* `.vazia` é o lugar que NASCE sem controle; `.off` é o mesmo lugar depois que
@@ -946,6 +965,12 @@
   .luz-grade .ctrl.off .guia,
   .luz-grade .ctrl.off .trilho,
   .luz-grade .ctrl.off .cel-acoes .btn{display:none}
+  /* E O TRILHO DO LUGAR QUE NASCE VAZIO SAI PELA MESMA RAZÃO — 07/09/2026. Ele
+     passou a existir ali porque é onde mora o `data-campo="brilho-pct"`: sem
+     o `.cheio`, o brilho do controle que chega não tem onde pousar. Ele nasce
+     sem `style="width"` — largura cravada num lugar sem dono seria o brilho do
+     MOCKUP — e some, para a célula continuar lendo o travessão do `.num`. */
+  .luz-grade .ctrl[data-conectado="nao"] .trilho{display:none}
   /* A SÉTIMA CÉLULA É A ÚNICA QUE PRECISA DO TRAVESSÃO DE VOLTA — ver o
      `<span class="nada">` que o gerador emite em `cel-acoes`. Ele nasce
      escondido na coluna viva, para não pôr um traço debaixo de dois botões.
@@ -969,9 +994,19 @@
      O `flex`/`text-align` do `.num` também caem: com o trilho escondido, um
      traço encostado à direita de uma caixa de 38px não fica onde os outros
      dois ficam. */
-  .luz-grade .ctrl.off .cel-cor .hex,
-  .luz-grade .ctrl.off .cel-brilho .num{font-family:inherit;color:var(--linha);
-                                        flex:1;text-align:center}
+  /* E OS DOIS LUGARES SEM DONO LEEM IGUAL desde 07/09/2026. A coluna que NASCE
+     vazia escrevia o traço num `<span class="nada">` sem endereço; agora ela
+     escreve nos MESMOS `.hex` e `.num` da coluna viva, que é o que dá ao
+     produto onde pousar a cor e o brilho quando o controle chega. Sem esta
+     linha os dois voltariam à fonte e à cor do DADO — que é o defeito que esta
+     regra nasceu para matar, agora do outro lado. */
+  .luz-grade .ctrl[data-conectado="nao"] .cel-cor .hex,
+  .luz-grade .ctrl[data-conectado="nao"] .cel-brilho .num{
+                                        font-family:inherit;color:var(--linha);
+                                        font-size:inherit;
+                                        flex:1;text-align:center;
+                                        display:flex;align-items:center;
+                                        justify-content:center}
   /* o respiro entre colunas é do CONTEÚDO, não da célula: padding na coluna
      recua os filhos e a borda deles para 16px antes da divisa, e a linha
      volta a quebrar. Aqui a célula vai até o fim e quem se afasta é o texto. */
@@ -1394,16 +1429,38 @@
   .cel-leds{display:flex;flex-direction:column;align-items:stretch;
             justify-content:center;min-width:0}
   .cel-leds .ressalva{text-align:center;overflow:hidden}
-  /* E A TIRA DO LUGAR VAZIO ACOMPANHA. Lá o `.aceso` continua sendo o item da
-     grade — não há ressalva a acomodar num lugar sem aparelho —, e um item de
-     grade ESTICA por default: ele encheria os 56px enquanto a tira viva ao lado
-     mede 34, e as duas caixas da mesma linha ficariam de tamanhos diferentes. */
-  .luz-grade .ctrl.vazia .aceso{align-self:center;height:34px}
-  /* E ELA SOME NO LUGAR QUE ESVAZIA. O molde do lugar sem dono escreve o
-     travessão em todo `data-campo` da coluna, e o alvo `html` desta linha o
+  /* E A TIRA DO LUGAR VAZIO MORA NA MESMA CÉLULA — 07/09/2026. Até aqui o
+     `.aceso` do lugar sem dono era ele próprio o item da grade, e esta linha
+     dizia `align-self:center;height:34px` para ele não esticar pelos 56px da
+     faixa. Com a função única, os QUATRO lugares emitem a `.cel-leds`, e quem
+     é item de grade é ela nos quatro — a tira volta a medir 34 sozinha, pelo
+     `flex:0 0 34px` que já tinha.
+     O QUE SOBRA É DEVOLVER O `align-items`: a regra genérica
+     `.ctrl.vazia > *` (0,3,0) escreve `center` em todo filho direto, e num
+     flex de coluna `center` faz a tira encolher para a largura do conteúdo —
+     medido: 212px viravam a largura de um travessão. Esta linha vem DEPOIS
+     dela, com a mesma especificidade, e é a que vale. */
+  .luz-grade .ctrl.vazia .cel-leds{align-items:stretch}
+  /* E ELA SOME ENQUANTO O LUGAR NÃO TEM DONO. O molde do lugar sem dono escreve
+     o travessão em todo `data-campo` da coluna, e o alvo `html` desta linha o
      receberia como um `—` solto debaixo de uma tira apagada — dado com cara de
-     ressalva num lugar onde não há aparelho que ressalvar. */
-  .luz-grade .ctrl.off .ressalva{display:none}
+     ressalva num lugar onde não há aparelho que ressalvar.
+
+     A MARCA É `data-conectado`, E NÃO A CLASSE — 07/09/2026, e a diferença é a
+     que decide. Esta regra dizia `.off`, e `.off` só existe na coluna que
+     ESVAZIA: o piloto a acrescenta no passo `1b` e a tira no `1c`. A coluna que
+     NASCE vazia carrega `.vazia`, que é um fato de NASCIMENTO — ninguém a tira
+     nunca. Escrever `.vazia` aqui esconderia a ressalva do P3 para sempre,
+     inclusive depois de ele chegar, que é o oposto da D-02.
+     `data-conectado` é a marca que o gerador escreve E que o piloto vira nos
+     DOIS sentidos (`hefesto_vivo`, passos `1b` e `1c`), e é exatamente por isso
+     que a folha das dez a usa para o desenho: `[data-conectado="nao"]
+     .ds-svg{display:none}`, em `topo.html`. Uma regra escrita nela vale nos
+     quatro lugares e se desfaz sozinha quando o controle chega.
+     No repouso a linha já é invisível pelo `.ressalva:has(.nada)` de
+     `monta.CSS_FOLHA`; esta regra é para o primeiro tique, quando o travessão
+     do molde entra no lugar do `.nada`. */
+  .luz-grade .ctrl[data-conectado="nao"] .ressalva{display:none}
   /* O VÃO DE 16px VIROU DUAS COISAS — LUZES-01, 06/09/2026, e a mudança é
      MEDIDA: com a botoeira e as seis teclas dentro, o conteúdo da `.aceso` pede
      212px dos 220 da coluna, e três vãos de 16 (48) faziam os DOIS lados
@@ -2556,20 +2613,25 @@
                  seria a oitava aparição da identidade congelada desta aba. Quem
                  a escreve é o pacote, a cada tique, com o primeiro retorno de
                  `controller_card.rotulo_lightbar` — o mesmo motor dos cards da
-                 janela GTK. -->
+                 janela GTK.
+
+                 E ELA NASCE NOS QUATRO LUGARES desde 07/09/2026, não só nos
+                 dois conectados: um lugar que ganha controle e não tem onde
+                 acender a ressalva volta a esconder no `title` a razão de a
+                 barra ter apagado. No lugar vazio ela é invisível de graça —
+                 `monta.CSS_FOLHA` tem `.ressalva:has(.nada){display:none}`. -->
             <div class="ressalva" data-campo="luz-ressalva" data-hef-alvo="html"><i class="nada"></i></div>
           </div>
           <div class="cel-acoes">
             <button class="btn roxo" data-gesto="auto" title="Tira a cor escolhida à mão e devolve a automática — a do número deste controle.">Automático</button>
             <button class="btn vermelho" data-gesto="apagar" title="Apaga a barra de luz deste controle.">Desligar</button>
-            <!-- O TRAVESSÃO DESTA CÉLULA NASCE AQUI, escondido, e é o único das
-                 sete que precisava nascer: as outras seis têm `data-campo`, e o
-                 molde do lugar sem dono já escreve o traço nelas. Esta não tem —
-                 dois botões não são um valor —, então sem este `<span>` a
-                 coluna que ESVAZIA na frente dela ficaria com a linha "Opções"
-                 em branco, quando a coluna que nasce vazia mostra "—".
-                 É o MESMO `<span class="nada">` da `coluna_vazia`, e o mesmo
-                 caractere: um lugar sem controle tem uma leitura só. -->
+            <!-- O TRAVESSÃO DESTA CÉLULA NASCE AQUI, escondido na coluna viva, e
+                 é o único das sete que precisava nascer: as outras seis têm
+                 `data-campo`, e o molde do lugar sem dono já escreve o traço
+                 nelas. Esta não tem — dois botões não são um valor —, então sem
+                 este `<span>` a coluna que ESVAZIA na frente dela ficaria com a
+                 linha "Opções" em branco, quando a coluna que nasce vazia
+                 mostra "—". Um lugar sem controle tem uma leitura só. -->
             <span class="nada">—</span>
           </div>
         </div>
@@ -2934,28 +2996,33 @@
                  seria a oitava aparição da identidade congelada desta aba. Quem
                  a escreve é o pacote, a cada tique, com o primeiro retorno de
                  `controller_card.rotulo_lightbar` — o mesmo motor dos cards da
-                 janela GTK. -->
+                 janela GTK.
+
+                 E ELA NASCE NOS QUATRO LUGARES desde 07/09/2026, não só nos
+                 dois conectados: um lugar que ganha controle e não tem onde
+                 acender a ressalva volta a esconder no `title` a razão de a
+                 barra ter apagado. No lugar vazio ela é invisível de graça —
+                 `monta.CSS_FOLHA` tem `.ressalva:has(.nada){display:none}`. -->
             <div class="ressalva" data-campo="luz-ressalva" data-hef-alvo="html"><i class="nada"></i></div>
           </div>
           <div class="cel-acoes">
             <button class="btn roxo" data-gesto="auto" title="Tira a cor escolhida à mão e devolve a automática — a do número deste controle.">Automático</button>
             <button class="btn vermelho" data-gesto="apagar" title="Apaga a barra de luz deste controle.">Desligar</button>
-            <!-- O TRAVESSÃO DESTA CÉLULA NASCE AQUI, escondido, e é o único das
-                 sete que precisava nascer: as outras seis têm `data-campo`, e o
-                 molde do lugar sem dono já escreve o traço nelas. Esta não tem —
-                 dois botões não são um valor —, então sem este `<span>` a
-                 coluna que ESVAZIA na frente dela ficaria com a linha "Opções"
-                 em branco, quando a coluna que nasce vazia mostra "—".
-                 É o MESMO `<span class="nada">` da `coluna_vazia`, e o mesmo
-                 caractere: um lugar sem controle tem uma leitura só. -->
+            <!-- O TRAVESSÃO DESTA CÉLULA NASCE AQUI, escondido na coluna viva, e
+                 é o único das sete que precisava nascer: as outras seis têm
+                 `data-campo`, e o molde do lugar sem dono já escreve o traço
+                 nelas. Esta não tem — dois botões não são um valor —, então sem
+                 este `<span>` a coluna que ESVAZIA na frente dela ficaria com a
+                 linha "Opções" em branco, quando a coluna que nasce vazia
+                 mostra "—". Um lugar sem controle tem uma leitura só. -->
             <span class="nada">—</span>
           </div>
         </div>
         <div class="ctrl vazia" data-controle="p3" data-conectado="nao"
              title="Nenhum controle neste lugar.">
-          <div class="moldura">
+          <div class="moldura" data-campo="plastico" data-hef-alvo="cor">
             <?xml version="1.0" encoding="utf-8"?>
-<svg class="ds-svg"  xmlns="http://www.w3.org/2000/svg" viewBox="6.399 22.990 116.684 80.472" width="1160" height="800" data-controle="dualsense" data-modelo="Sony DualSense" xmlns:bx="https://boxy-svg.com">
+<svg class="ds-svg" data-campo="desenho" data-hef-alvo="atributo" data-hef-atributo="data-colorway"  xmlns="http://www.w3.org/2000/svg" viewBox="6.399 22.990 116.684 80.472" width="1160" height="800" data-controle="dualsense" data-modelo="Sony DualSense" xmlns:bx="https://boxy-svg.com">
   <defs>
     <filter id="il-p3-outline-filter-0" bx:preset="outline 1 0.2 #fff6" color-interpolation-filters="sRGB" x="-50%" y="-50%" width="200%" height="200%">
       <feMorphology in="SourceAlpha" result="dilated" operator="dilate" radius="0.2"/>
@@ -3243,18 +3310,63 @@
     </g>
 </svg>
           </div>
-          <div class="ctrl-rot">P3 <span class="pt">•</span> Desconectado</div>
-          <div class="cel-cor"><span class="nada">—</span></div>
-          <div class="cel-brilho"><span class="nada">—</span></div>
-          <div class="players"><span class="nada">—</span></div>
-          <div class="aceso"><span class="nada">—</span></div>
-          <div class="cel-acoes"><span class="nada">—</span></div>
+          <div class="ctrl-rot" data-campo="identidade">P3 <span class="pt">•</span> Desconectado</div>
+          <div class="cel-cor">
+            <!-- E ELA REENVIA — 04/09/2026, decisão [03] dela. O `data-gesto`
+                 vai NESTA caixa e não num botão novo, e o valor que ele leva é
+                 o TEXTO dela: `data-hex` seria a cor do gerador, congelada, e
+                 mandaria ao aparelho a cor do mockup em vez da que está
+                 gravada. O `texto` do clique é o que o piloto lê do
+                 `textContent`, e o `textContent` é o que o pacote reescreve a
+                 cada tique pelo `data-campo="hex"`. -->
+            <span class="hex" data-campo="hex">—</span>
+          </div>
+          <div class="cel-brilho">
+            <span class="trilho"><span class="cheio" data-campo="brilho-pct" data-hef-alvo="largura"></span></span>
+            <span class="num" data-campo="brilho">—</span>
+          </div>
+          <div class="players" data-campo="players" data-hef-alvo="html">
+            <span class="nada">—</span>
+          </div>
+          <div class="cel-leds">
+            <div class="aceso" data-campo="luz" data-hef-alvo="html">
+              <span class="nada">—</span>
+            </div>
+            <!-- A RAZÃO DO TRACEJADO, EM UMA LINHA — 04/09/2026, D-02 e a
+                 pergunta [01] desta aba. O desenho da tira já diz que algo
+                 mudou; esta linha responde a pergunta seguinte — QUAL das
+                 três causas — sem exigir que o rato passe por cima.
+
+                 A PEÇA É A DAS DEZ (`monta.ressalva`), e ela NASCE VAZIA aqui:
+                 no desenho não há aparelho a ressalvar, e uma frase cravada
+                 seria a oitava aparição da identidade congelada desta aba. Quem
+                 a escreve é o pacote, a cada tique, com o primeiro retorno de
+                 `controller_card.rotulo_lightbar` — o mesmo motor dos cards da
+                 janela GTK.
+
+                 E ELA NASCE NOS QUATRO LUGARES desde 07/09/2026, não só nos
+                 dois conectados: um lugar que ganha controle e não tem onde
+                 acender a ressalva volta a esconder no `title` a razão de a
+                 barra ter apagado. No lugar vazio ela é invisível de graça —
+                 `monta.CSS_FOLHA` tem `.ressalva:has(.nada){display:none}`. -->
+            <div class="ressalva" data-campo="luz-ressalva" data-hef-alvo="html"><i class="nada"></i></div>
+          </div>
+          <div class="cel-acoes">
+            <!-- O TRAVESSÃO DESTA CÉLULA NASCE AQUI, escondido na coluna viva, e
+                 é o único das sete que precisava nascer: as outras seis têm
+                 `data-campo`, e o molde do lugar sem dono já escreve o traço
+                 nelas. Esta não tem — dois botões não são um valor —, então sem
+                 este `<span>` a coluna que ESVAZIA na frente dela ficaria com a
+                 linha "Opções" em branco, quando a coluna que nasce vazia
+                 mostra "—". Um lugar sem controle tem uma leitura só. -->
+            <span class="nada">—</span>
+          </div>
         </div>
         <div class="ctrl vazia" data-controle="p4" data-conectado="nao"
              title="Nenhum controle neste lugar.">
-          <div class="moldura">
+          <div class="moldura" data-campo="plastico" data-hef-alvo="cor">
             <?xml version="1.0" encoding="utf-8"?>
-<svg class="ds-svg"  xmlns="http://www.w3.org/2000/svg" viewBox="6.399 22.990 116.684 80.472" width="1160" height="800" data-controle="dualsense" data-modelo="Sony DualSense" xmlns:bx="https://boxy-svg.com">
+<svg class="ds-svg" data-campo="desenho" data-hef-alvo="atributo" data-hef-atributo="data-colorway"  xmlns="http://www.w3.org/2000/svg" viewBox="6.399 22.990 116.684 80.472" width="1160" height="800" data-controle="dualsense" data-modelo="Sony DualSense" xmlns:bx="https://boxy-svg.com">
   <defs>
     <filter id="il-p4-outline-filter-0" bx:preset="outline 1 0.2 #fff6" color-interpolation-filters="sRGB" x="-50%" y="-50%" width="200%" height="200%">
       <feMorphology in="SourceAlpha" result="dilated" operator="dilate" radius="0.2"/>
@@ -3542,12 +3654,57 @@
     </g>
 </svg>
           </div>
-          <div class="ctrl-rot">P4 <span class="pt">•</span> Desconectado</div>
-          <div class="cel-cor"><span class="nada">—</span></div>
-          <div class="cel-brilho"><span class="nada">—</span></div>
-          <div class="players"><span class="nada">—</span></div>
-          <div class="aceso"><span class="nada">—</span></div>
-          <div class="cel-acoes"><span class="nada">—</span></div>
+          <div class="ctrl-rot" data-campo="identidade">P4 <span class="pt">•</span> Desconectado</div>
+          <div class="cel-cor">
+            <!-- E ELA REENVIA — 04/09/2026, decisão [03] dela. O `data-gesto`
+                 vai NESTA caixa e não num botão novo, e o valor que ele leva é
+                 o TEXTO dela: `data-hex` seria a cor do gerador, congelada, e
+                 mandaria ao aparelho a cor do mockup em vez da que está
+                 gravada. O `texto` do clique é o que o piloto lê do
+                 `textContent`, e o `textContent` é o que o pacote reescreve a
+                 cada tique pelo `data-campo="hex"`. -->
+            <span class="hex" data-campo="hex">—</span>
+          </div>
+          <div class="cel-brilho">
+            <span class="trilho"><span class="cheio" data-campo="brilho-pct" data-hef-alvo="largura"></span></span>
+            <span class="num" data-campo="brilho">—</span>
+          </div>
+          <div class="players" data-campo="players" data-hef-alvo="html">
+            <span class="nada">—</span>
+          </div>
+          <div class="cel-leds">
+            <div class="aceso" data-campo="luz" data-hef-alvo="html">
+              <span class="nada">—</span>
+            </div>
+            <!-- A RAZÃO DO TRACEJADO, EM UMA LINHA — 04/09/2026, D-02 e a
+                 pergunta [01] desta aba. O desenho da tira já diz que algo
+                 mudou; esta linha responde a pergunta seguinte — QUAL das
+                 três causas — sem exigir que o rato passe por cima.
+
+                 A PEÇA É A DAS DEZ (`monta.ressalva`), e ela NASCE VAZIA aqui:
+                 no desenho não há aparelho a ressalvar, e uma frase cravada
+                 seria a oitava aparição da identidade congelada desta aba. Quem
+                 a escreve é o pacote, a cada tique, com o primeiro retorno de
+                 `controller_card.rotulo_lightbar` — o mesmo motor dos cards da
+                 janela GTK.
+
+                 E ELA NASCE NOS QUATRO LUGARES desde 07/09/2026, não só nos
+                 dois conectados: um lugar que ganha controle e não tem onde
+                 acender a ressalva volta a esconder no `title` a razão de a
+                 barra ter apagado. No lugar vazio ela é invisível de graça —
+                 `monta.CSS_FOLHA` tem `.ressalva:has(.nada){display:none}`. -->
+            <div class="ressalva" data-campo="luz-ressalva" data-hef-alvo="html"><i class="nada"></i></div>
+          </div>
+          <div class="cel-acoes">
+            <!-- O TRAVESSÃO DESTA CÉLULA NASCE AQUI, escondido na coluna viva, e
+                 é o único das sete que precisava nascer: as outras seis têm
+                 `data-campo`, e o molde do lugar sem dono já escreve o traço
+                 nelas. Esta não tem — dois botões não são um valor —, então sem
+                 este `<span>` a coluna que ESVAZIA na frente dela ficaria com a
+                 linha "Opções" em branco, quando a coluna que nasce vazia
+                 mostra "—". Um lugar sem controle tem uma leitura só. -->
+            <span class="nada">—</span>
+          </div>
         </div>
 
         </div>

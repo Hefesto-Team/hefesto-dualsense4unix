@@ -164,6 +164,14 @@ completo|a-frase-banida|pytest|tests/unit/test_a_frase_que_ela_baniu_nao_chega_a
 completo|src-desta-arvore|pytest|tests/unit/test_a_suite_mede_esta_arvore.py
 completo|o-piloto-e-a-arvore|pytest|tests/unit/test_o_piloto_aponta_para_a_propria_arvore.py
 rapido|desenho-aprovado|py|scripts/check_o_desenho_aprovado.py
+# 07/09/2026 — ELA MEDIU O DEFEITO NA MESA: *"4 controles conectados mas as
+# infos dos dos outros 2 ultimos não aparecem (…) isso em todas as abas."* O  # noqa-acento: citação literal dela
+# dado chegava inteiro; o que faltava era ONDE POUSAR — o ramo do lugar vazio
+# emitia cartão sem um único `data-campo`, e o piloto procura o endereço DENTRO
+# do bloco `[data-controle="pN"]`. Sete das dez abas tinham o mesmo defeito, e
+# é por isso que a régua é UMA e atravessa as dez: cada `abaNN.py` ganhou a
+# sua, mas nenhuma delas vê uma aba NOVA nascendo com o ramo separado.
+rapido|os-quatro-lugares|py|scripts/check_os_quatro_lugares.py
 rapido|identidade-de-cima|py|scripts/check_identidade_vem_de_cima.py
 # 03/09/2026, a lei dela: *"cada pessoa tem um dualsense diferente (…) nada
 # hardcoded, trazer tudo que eu já mapeei"*. O irmão acima acha cor congelada

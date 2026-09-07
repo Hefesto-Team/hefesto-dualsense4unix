@@ -332,21 +332,50 @@ def test_o_html_publicado_e_a_bancada_concordam_sobre_o_endereco():
     publicação do commit `70b58116` levou `data-campo="players"` e o alvo
     `largura` ao produto. Medido: `grep -c` no HTML publicado dá `2`, `2` e `0`.
     Uma régua que olha um lado só não podia ver isso.
+
+    E OS DOIS LADOS ANDAM EM GERAÇÕES DIFERENTES — 07/09/2026, e é por isso que
+    a conta deixou de ser `== 2`. O gerador escreve a BANCADA (`mockup/`); o
+    PUBLICADO só muda quando ela aprova
+    (`scripts/check_o_desenho_aprovado.py --aprovar`), que é a direção que ela
+    fixou em 31/08: *"nunca terminamos o mockup, por isso não era pra ser feito
+    no layout final"*. Um número cravado aqui obriga os dois lados a mudarem no
+    mesmo instante — e como só um deles é meu para mudar, ele reprovaria a
+    melhora em vez do defeito, que é a forma de régua falsa que esta casa mais
+    encontrou.
+
+    O QUE VALE NOS DOIS LADOS, e não envelhece: o endereço existe em toda
+    coluna CONECTADA (o piso), e nunca em mais lugares do que a mesa tem (o
+    teto). A bancada de hoje bate o teto — os quatro —, porque desde 07/09 o
+    lugar que nasce vazio também carrega o endereço; o publicado bate o piso
+    até ela aprovar. As duas leituras são certas, e a régua diz qual é qual.
     """
+    import monta
     import onde
 
     bancada = onde.pagina("04-iluminacao.html").read_text(encoding="utf-8")
     publicado = onde.pagina("04-iluminacao.html", publicado=True).read_text(
         encoding="utf-8")
+    piso, teto = len(monta.CONECTADOS), len(monta.MESA)
     for lado, texto in (("bancada", bancada), ("publicado", publicado)):
-        assert texto.count('data-campo="players" data-hef-alvo="html"') == 2, lado
+        for quem, agulha in (
+                ("a fileira de jogador", 'data-campo="players" data-hef-alvo="html"'),
+                ("a barra de brilho", 'data-campo="brilho-pct" data-hef-alvo="largura"')):
+            n = texto.count(agulha)
+            assert piso <= n <= teto, (
+                f"o {lado} tem {quem} endereçada em {n} lugar(es); a mesa tem "
+                f"{piso} conectado(s) e {teto} lugares. Abaixo do piso, o dado "
+                f"dela chega e não tem onde pousar; acima do teto, há endereço "
+                f"repetido.")
         assert 'data-campo="player-1"' not in texto, (
             f"o {lado} ficou com os dois endereços: o da fileira e os dos "
             f"botões. Dois donos para o mesmo lugar é o que este projeto "
             f"persegue.")
-        assert texto.count('data-campo="brilho-pct" data-hef-alvo="largura"') == 2, (
-            f"sem o alvo `largura` o `100` é impresso DENTRO do trilho — é a "
-            f"outra metade do D7 de 02/09/2026 ({lado}).")
+    # E A BANCADA — que é o que ESTE gerador escreve — bate o teto: os quatro
+    # lugares têm os mesmos endereços. É a metade que morde, e a que teria
+    # pego o defeito de 07/09/2026 (p3 e p4 com ZERO `data-campo` por dentro).
+    assert bancada.count('data-campo="brilho-pct" data-hef-alvo="largura"') == teto, (
+        "a bancada deixou de endereçar a barra de brilho nos quatro lugares — "
+        "o lugar que ganha um controle volta a não ter onde pousar o brilho")
 
 
 # ---------------------------------------------------------------------------
@@ -395,16 +424,25 @@ def test_o_endereco_da_luz_esta_nas_duas_paginas():
 
     A MORDIDA: devolva `data-campo="aceso"` ao `coluna()` do `aba04.py`, rode
     o gerador, e a primeira asserção reprova.
+
+    E A CONTA DEIXOU DE SER `== 2` EM 07/09/2026, pela mesma razão de
+    `test_o_html_publicado_e_a_bancada_concordam_sobre_o_endereco`: a bancada e
+    o publicado andam em gerações diferentes, e desde a função única do
+    `aba04.py` o lugar que nasce vazio também carrega o endereço da luz. O que
+    vale nos dois lados é o piso (toda coluna conectada) e o teto (a mesa).
     """
+    import monta
     import onde
 
+    piso, teto = len(monta.CONECTADOS), len(monta.MESA)
     for onde_esta, doc in (
             ("a bancada", onde.pagina("04-iluminacao.html").read_text(encoding="utf-8")),
             ("o publicado", onde.pagina("04-iluminacao.html", publicado=True)
              .read_text(encoding="utf-8"))):
-        assert doc.count('data-campo="luz" data-hef-alvo="html"') == 2, (
-            f"{onde_esta} não tem o endereço da luz nas duas colunas "
-            f"conectadas.")
+        n = doc.count('data-campo="luz" data-hef-alvo="html"')
+        assert piso <= n <= teto, (
+            f"{onde_esta} endereça a luz em {n} lugar(es), e a mesa tem {piso} "
+            f"conectado(s) de {teto}.")
         assert 'data-campo="aceso"' not in doc, (
             f"{onde_esta} voltou ao nome velho — e nele todo valor emitido "
             f"vira `textContent` e APAGA as duas tiras e as cinco lâmpadas.")

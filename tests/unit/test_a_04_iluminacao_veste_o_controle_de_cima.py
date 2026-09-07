@@ -120,14 +120,25 @@ def test_a_moldura_tem_endereco_e_nao_tem_cor_cravada(bancada):
     reescrevia: nenhum alvo do pintor escreve variável CSS. A cura é a folha ler
     `currentColor` e o pacote mandar a cor pelo alvo `cor`.
 
+    E SÃO AS QUATRO MOLDURAS desde 07/09/2026, não as duas conectadas. Esta
+    conta dizia `== 2`, e assim **media o defeito**: o lugar que nascia vazio  (noqa-acento)
+    saía sem endereço nenhum, e a moldura do P3 que chegasse depois ficaria no
+    cinza para sempre — o dado dela chegando sem onde pousar. O `style` com a
+    cor CRAVADA continua só nos conectados, e é a segunda asserção que o cobra:
+    endereço nos quatro, valor só em quem tem aparelho.
+
     A MORDIDA: devolva `style="--plastico:{cor_da_zona(...)}"` ao `coluna()` do
     `aba04.py`, rode o gerador, e as duas asserções reprovam — a primeira porque
     o endereço some, a segunda porque a cor cravada volta.
     """
+    import monta
+
     corpo = _miolo(bancada)
-    assert corpo.count('class="moldura" data-campo="plastico" data-hef-alvo="cor"') == 2, (
-        "a moldura das duas colunas conectadas perdeu o endereço da cor do "
-        "plástico — sem ele a borda fica na cor que o gerador cravou.")
+    endereco = 'class="moldura" data-campo="plastico" data-hef-alvo="cor"'
+    assert corpo.count(endereco) == len(monta.MESA), (
+        "alguma moldura da grade perdeu o endereço da cor do plástico — sem "
+        "ele a borda fica na cor que o gerador cravou, e o lugar que ganha um "
+        "controle fica no cinza.")
     molduras = re.findall(r'<div class="moldura"[^>]*>', corpo)
     cravadas = [m for m in molduras if "--plastico" in m]
     assert not cravadas, (

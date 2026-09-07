@@ -1283,6 +1283,69 @@ LEGENDA = f'''<div class="nota">
 </html>
 '''
 
+#: O COMEÇO DE UMA COLUNA, e ela se acha PELO `data-controle` — nunca pela
+#: classe. É o que o piloto faz:
+#: `document.querySelectorAll('[data-controle="' + pref + '"]')`, sem olhar
+#: classe nenhuma. Casar por `class="ctrl"` foi a primeira versão desta linha, e
+#: a MORDIDA de 07/09/2026 a derrubou: o ramo do lugar vazio nasce
+#: `class="ctrl off"` (é assim na `aba01`), a régua achava DUAS colunas em vez
+#: de quatro e reprovava pelo recorte — não pelos endereços que faltavam. Uma
+#: régua tem de procurar o que o produto procura, senão ela reprova pelo motivo
+#: errado no dia em que morder de verdade.
+_INICIO_DA_COLUNA = re.compile(r'<div\b[^>]*?\bdata-controle="(p\d+)"')
+
+#: QUALQUER TAG COM ENDEREÇO DE PINTURA. A régua 10 lê o `data-campo` e, junto,
+#: o ALVO — porque endereço sem alvo é meia cura, e é o defeito que a régua
+#: 5-ter já nomeia num campo só.
+_TAG = re.compile(r"<[a-z]+\b[^>]*>")
+_ATRIBUTO = re.compile(r'([a-z-]+)="([^"]*)"')
+
+
+def _fim_da_coluna(corpo, ini):
+    """Onde fecha a coluna que começa em `ini`.
+
+    A CONTA É DE PROFUNDIDADE, e as duas alternativas fáceis estão erradas —
+    medido em 07/09/2026, escrevendo esta função:
+
+    * cortar no primeiro `</div>` devolve um pedaço: a coluna aninha oito divs
+      (os dois embrulhos de dica, as duas caixas de ajuste, o vão do L2/R2 e a
+      faixa de guardar);
+    * cortar no começo da PRÓXIMA coluna deixa a ÚLTIMA engolir o rodapé, que
+      traz `rodape.salvar` e `rodape.exportar` — e a régua acusaria o P4 por
+      dois endereços que não são dele. Foi o que a primeira medição desta
+      frente marcou: P4 com 12 campos onde ele tem 10.
+    """
+    fundo = 0
+    for m in re.finditer(r"<div\b|</div>", corpo[ini:]):
+        fundo += -1 if m.group(0) == "</div>" else 1
+        if fundo == 0:
+            return ini + m.end()
+    raise SystemExit("ERRO: uma coluna da aba 03 não fecha — o HTML saiu torto.")
+
+
+def _enderecos_de_cada_coluna(corpo):
+    """`pref` → {`data-campo`: o alvo, o atributo e a classe dele}.
+
+    LIDO DO DOCUMENTO, e não montado chamando `coluna()` outra vez: uma régua
+    que digita o que devia ler mede a si mesma, e é a forma dos instrumentos
+    falsos que esta casa já derrubou onze vezes. Lendo, ela alcança qualquer
+    pós-processamento que o `monta()` faça depois da f-string.
+    """
+    saida = {}
+    for m in _INICIO_DA_COLUNA.finditer(corpo):
+        trecho = corpo[m.start():_fim_da_coluna(corpo, m.start())]
+        campos = {}
+        for tag in _TAG.finditer(trecho):
+            atr = dict(_ATRIBUTO.findall(tag.group(0)))
+            if "data-campo" not in atr:
+                continue
+            campos[atr["data-campo"]] = (atr.get("data-hef-alvo", ""),
+                                         atr.get("data-hef-atributo", ""),
+                                         atr.get("data-hef-classe", ""))
+        saida[m.group(1)] = campos
+    return saida
+
+
 def _conferir(doc):
     """As decisões dela de 31/08 nesta aba, conferidas NA SAÍDA.
 
@@ -1544,6 +1607,74 @@ def _conferir(doc):
     exigir('.ctrl[data-conectado="nao"] select' in doc,  # (noqa-acento) valor
            "a trava do lugar vazio sumiu do CSS — as colunas sem controle "
            "voltam a aceitar clique que só pode terminar em recusa")
+
+    # 10. OS QUATRO LUGARES CARREGAM O MESMO ENDEREÇO — 07/09/2026.
+    #
+    #    O DEFEITO QUE ESTA RÉGUA IMPEDE foi medido HOJE, com os quatro
+    #    DualSense dela na mesa: o daemon publica quatro, a carga da aba chega
+    #    com `colunas` para `p1..p4` e `ocupados` com os quatro — e a tela
+    #    mostra DOIS. Os outros dois seguem dizendo "Desconectado", com
+    #    travessão em tudo.
+    #
+    #    A CAUSA É ESTRUTURAL, e vive nas abas que têm um RAMO À PARTE para o
+    #    lugar vazio: ele devolve um cartão SEM NENHUM `data-campo` por dentro.
+    #    O piloto pinta por endereço — `achar(raiz, k)` procura
+    #    `data-campo="k"` DENTRO do bloco daquele controle (`hefesto_vivo.py`,
+    #    passo 2) —, então o dado dela chega e não tem onde pousar. É o defeito
+    #    que esta casa já nomeou muitas vezes — *a tela afirmando o que não é* —
+    #    e aqui ela afirma AUSÊNCIA: dois controles na mesa e a coluna dizendo
+    #    que não há aparelho.
+    #
+    #    ESTA ABA NÃO TEM O RAMO — `coluna()` é UMA, e `conectado` decide só a
+    #    classe, o atributo e o TEXTO inicial de cada campo. Medido antes desta
+    #    régua nascer: os quatro lugares já traziam os mesmos dez endereços de
+    #    coluna. A régua existe para que continue assim — ela reprova no dia em
+    #    que alguém escrever um segundo caminho para o lugar vazio, que é
+    #    exatamente como o defeito nasceu nas outras: um dos dois ramos
+    #    envelheceu sem o outro.
+    #
+    #    OS `aj-*` FICAM FORA DA CONTA, e a razão é medida, não conveniência:
+    #    eles NÃO são pintados por `colunas`. A caixa de ajustes é um BLOCO que
+    #    o produto troca INTEIRO a cada tique (o `blocos:` do pacote, emitido
+    #    para cada lugar de `_todos_os_lugares_da_pagina()` — cheio ou vazio),
+    #    e o número de barras é do MODO, não do lugar: nesta cena o P1 desenha
+    #    seis e o P2 cinco. São dois lugares CHEIOS com conjuntos diferentes,
+    #    logo exigi-los iguais obrigaria a inventar no P2 um `aj-*-e-3` que ele
+    #    não tem — e mudaria as alturas de linha que a CENA calcula em `N_ESQ`
+    #    e `N_DIR`. Quem cobra as barras é a régua 8-bis, pela contagem.
+    #
+    #    A CONTA É PELA UNIÃO, e não contra uma coluna escolhida como base: com
+    #    base fixa, o dia em que a PRIMEIRA coluna perder um endereço a régua
+    #    passa a medir o buraco como se fosse o contrato.
+    _por_coluna = _enderecos_de_cada_coluna(corpo)
+    exigir(len(_por_coluna) == len(MESA),
+           f"a régua achou {len(_por_coluna)} colunas e a `MESA` tem "
+           f"{len(MESA)} — o recorte da coluna ficou velho e o resto desta "
+           f"régua mede outra coisa")
+    _de_coluna = {pref: {k: v for k, v in campos.items()
+                         if not k.startswith("aj-")}
+                  for pref, campos in _por_coluna.items()}
+    _todos = set().union(*_de_coluna.values()) if _de_coluna else set()
+    exigir(_todos, "nenhuma coluna desta aba tem endereço de pintura — a carga "
+                   "do daemon chega e não tem onde pousar")
+    for _pref in sorted(_de_coluna):
+        _faltam = sorted(_todos - set(_de_coluna[_pref]))
+        exigir(not _faltam,
+               f"o lugar {_pref.upper()} não tem onde receber {_faltam} — os "
+               f"outros lugares têm. Um controle que chegar nele fica com o "
+               f"texto do desenho para sempre: o piloto procura o "
+               f"`data-campo` DENTRO da coluna e não acha")
+    #    E O ALVO VAI JUNTO, pela mesma união: endereço com alvo diferente de
+    #    coluna para coluna é o mesmo dado pousando de dois jeitos. A régua 7 já
+    #    cobra o `valor` dos campos de escolha e a 5-ter o `atributo` das dicas;
+    #    esta alcança QUALQUER endereço, inclusive os que ainda não nasceram.
+    for _campo in sorted(_todos):
+        _assinaturas = {c[_campo] for c in _de_coluna.values() if _campo in c}
+        exigir(len(_assinaturas) == 1,
+               f"o endereço {_campo!r} tem {len(_assinaturas)} alvos "
+               f"diferentes entre as colunas ({sorted(_assinaturas)}) — o "
+               f"mesmo dado pousaria de um jeito num lugar e de outro no "
+               f"vizinho")
 
     if falhas:
         raise SystemExit("ERRO em 03-gatilhos — decisão dela desfeita:\n  "

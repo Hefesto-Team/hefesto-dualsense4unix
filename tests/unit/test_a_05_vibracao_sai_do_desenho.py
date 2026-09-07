@@ -179,19 +179,40 @@ def _por_chave(vereditos, chave):
 # 1. os oito degraus são DADO, e saem do produto
 # --------------------------------------------------------------------------
 def test_os_oito_degraus_saem_do_produto(regua, vereditos):
-    """Os quatro botões das duas colunas vivas deixaram de mostrar o desenho.
+    """Os botões de TODOS os lugares deixaram de mostrar o desenho.
 
-    Antes desta cura os oito eram `MOCKUP` — o pacote não emitia nada e a classe
+    Antes desta cura eles eram `MOCKUP` — o pacote não emitia nada e a classe
     `on` saía da cena do mockup. Hoje o pacote emite `degrau` e o alvo `classe`
-    acende quem casa, o que faz os oito virarem `PRODUTO`.
+    acende quem casa, o que faz todos virarem `PRODUTO`.
+
+    A CONTA PASSOU DE "DUAS COLUNAS VIVAS" PARA A MESA INTEIRA — 07/09/2026.
+    Até aqui o lugar VAZIO era um cartão à parte, sem um único `data-campo`
+    dentro, e por isso os degraus dele não existiam. Medido com os quatro
+    DualSense dela na mesa: o daemon publicava os quatro, o pacote mandava as
+    quatro colunas e o P3 e o P4 continuavam no travessão — **o dado chegava e
+    não tinha onde pousar**. Os quatro lugares saem do mesmo molde agora
+    (`aba05._coluna`), e uma régua que continuasse contando `* 2` daria verde
+    sobre a metade da mesa que não recebe nada.
     """
     degraus = _por_chave(vereditos, "degrau")
     from hefesto_dualsense4unix.interface import aba05
-    assert len(degraus) == len(aba05.FORCA) * 2, (
-        f"são {len(aba05.FORCA)} degraus em duas colunas vivas, e a régua achou "
-        f"{len(degraus)} — o endereço `degrau` sumiu do desenho")
+    assert len(degraus) == len(aba05.FORCA) * len(aba05.MESA), (
+        f"são {len(aba05.FORCA)} degraus em {len(aba05.MESA)} lugares, e a "
+        f"régua achou {len(degraus)} — o endereço `degrau` sumiu do desenho")
+    # O VEREDITO É COBRADO DE QUEM TEM CONTROLE NESTE TIQUE, e o corte não é
+    # indulgência — 07/09/2026. Este tique de mentira põe controle em `UNIQS`
+    # (p1 e p2) e deixa os outros lugares vazios; num lugar vazio o pacote manda
+    # o travessão e o desenho já nasce com o degrau apagado, então os dois lados
+    # dizem a MESMA coisa e a régua não tem como separá-los — ela chama isso de
+    # MOCKUP por construção, não por defeito. Cobrar PRODUTO ali seria exigir
+    # que a tela afirmasse uma política para um aparelho que não está na mesa.
+    #
+    # O QUE A RÉGUA GUARDA CONTINUA INTEIRO: a asserção de cima cobra o
+    # ENDEREÇO nos quatro lugares (é o que faltava, e era o defeito), e esta
+    # cobra o VEREDITO onde há dado para comparar.
+    vivos = {u for u in UNIQS}
     presos = [(v.campo.dono, v.campo.quando, v.classe) for v in degraus
-              if v.classe != regua.PRODUTO]
+              if v.campo.dono in vivos and v.classe != regua.PRODUTO]
     assert not presos, (
         f"degrau ainda mostrando o desenho: {presos}. O pacote emite "
         f"`degrau={POLITICA!r}` e a tela tem de mover a classe `on`.")
@@ -251,11 +272,20 @@ ROTULOS = {
 
 
 def test_os_oito_rotulos_estao_declarados(regua, vereditos):
-    """Rótulo declarado sai da conta — e a marca é EXIGIDA, nunca inferida."""
+    """Rótulo declarado sai da conta — e a marca é EXIGIDA, nunca inferida.
+
+    A CONTA É POR LUGAR desde 07/09/2026, e não por coluna viva: com a fusão dos
+    dois ramos de coluna (`aba05._coluna`) os quatro lugares trazem os mesmos
+    elementos, e são QUATRO marcas em cada um — os dois punhos (`lado`) mais o
+    par `Testar`/`Parar`.
+    """
+    from hefesto_dualsense4unix.interface import aba05
+    esperado = (len(aba05.LADOS) + 2) * len(aba05.MESA)
     marcados = [v for v in vereditos if v.classe == regua.ROTULO]
-    assert len(marcados) == 8, (
-        f"os rótulos desta aba são oito (4 lado + 2 testar + 2 parar), e a "
-        f"régua contou {len(marcados)}: "
+    assert len(marcados) == esperado, (
+        f"os rótulos desta aba são {esperado} ({len(aba05.LADOS)} lado + "
+        f"testar + parar, em {len(aba05.MESA)} lugares), e a régua contou "
+        f"{len(marcados)}: "
         f"{sorted((v.campo.dono, v.campo.chave) for v in marcados)}")
     assert {v.campo.chave for v in marcados} == set(ROTULOS)
 
@@ -292,21 +322,28 @@ def test_a_marca_de_rotulo_nao_alcanca_dado(regua, cravados):
 def test_o_max_e_estado_e_o_espaco_fica_reservado(regua, cravados):
     """*"esconder RESERVANDO o espaço (`visibility:hidden`)"* — decisão dela.
 
-    Duas metades, e as duas têm de valer: a palavra está SEMPRE no HTML das
-    duas colunas vivas (senão não há o que esconder), e o CSS a esconde por
+    Duas metades, e as duas têm de valer: a palavra está SEMPRE no HTML de
+    TODOS os lugares (senão não há o que esconder), e o CSS a esconde por
     `visibility`, nunca por `display:none` — que tiraria o elemento do fluxo e
     faria o número ao lado pular a cada mudança de degrau.
+
+    "TODOS OS LUGARES" E NÃO "AS DUAS COLUNAS VIVAS" — 07/09/2026, com a fusão
+    dos dois ramos de coluna (`aba05._coluna`). O lugar vazio nasce com o `Máx`
+    apagado e com o endereço posto: no instante em que o controle chega, o
+    piloto acende ou não pelo alvo `classe`, sem regerar HTML nenhum.
     """
     import onde
 
+    from hefesto_dualsense4unix.interface import aba05
     doc = onde.pagina(PAGINA).read_text(encoding="utf-8")
     tetos = [c for c in cravados if c.chave == "mult-teto"]
-    assert len(tetos) == 2, (
-        f"o `Máx` é um por coluna viva, e a régua achou {len(tetos)}")
+    assert len(tetos) == len(aba05.MESA), (
+        f"o `Máx` é um por lugar da mesa ({len(aba05.MESA)}), e a régua achou "
+        f"{len(tetos)}")
     assert all(c.alvo == "classe" for c in tetos), (
         "o `Máx` voltou a ser texto — o pintor poria `—` onde o desenho não põe "
         "nada, afirmando 'não sei' onde a resposta é 'não está no teto'")
-    assert doc.count('data-campo="mult-teto" data-hef-alvo="classe">Máx<') == 2, (
+    assert doc.count('data-campo="mult-teto" data-hef-alvo="classe">Máx<') == len(aba05.MESA), (
         "a palavra `Máx` deixou de estar sempre no HTML")
     assert ".motor .teto.mx{visibility:hidden}" in doc, (
         "o `Máx` deixou de esconder RESERVANDO o espaço")
@@ -339,11 +376,20 @@ def test_o_teto_do_multiplicador_sai_do_produto():
 def test_as_quatro_molduras_continuam_cobradas(regua, vereditos):
     """As quatro molduras do SVG não viraram rótulo — e não podiam virar.
 
-    Duas delas o produto PINTA (o alvo `plastico`), e a régua as chama de
-    ENDEREÇO MORTO porque não sabe LER esse alvo; as outras duas são o lugar
-    VAZIO, onde não há controle e não há o que escrever. Nenhuma das duas
-    coisas é rótulo, e esta régua existe para que o número continue subindo
-    quando a régua do mockup aprender o alvo que falta.
+    O produto PINTA as quatro (o alvo `plastico`), e a régua as chama de
+    ENDEREÇO MORTO porque não sabe LER esse alvo. Isso não é rótulo, e esta
+    régua existe para que o número continue subindo quando a régua do mockup
+    aprender o alvo que falta.
+
+    AS QUATRO DIZEM `plastico` DESDE 07/09/2026, e duas delas diziam `desenho`.
+    A diferença não era desenho: o lugar VAZIO era um cartão à parte, com
+    `data-hef="desenho"` e NENHUM `data-campo` — então a régua o lia pelo nome
+    do container. Com os dois ramos fundidos (`aba05._coluna`), a moldura do
+    lugar vazio carrega o MESMO par `data-campo="plastico"` /
+    `data-hef-alvo="plastico"` que a viva, e o valor é que fica de fora: sem
+    `style="--plastico:…"`, porque um lugar sem controle não tem plástico. O
+    endereço existe para o dia — que é hoje, com quatro DualSense na mesa — em
+    que o controle chega e a cor dele tem onde pousar.
 
     A CONTA É DAS QUATRO MOLDURAS, e não da aba inteira: a fita do topo é de
     todas as dez (quem a emite é o `topo()` do piloto) e as duas linhas-mãe das
@@ -352,10 +398,10 @@ def test_as_quatro_molduras_continuam_cobradas(regua, vereditos):
     O `--prova-de-mockup` de verdade mede as duas, e mediu: as quatro que
     sobram na `05-vibracao` são exatamente estas.
     """
+    from hefesto_dualsense4unix.interface import aba05
     molduras = {(v.campo.dono, v.campo.chave): v.classe for v in vereditos
                 if v.campo.chave in ("plastico", "desenho")}
-    assert set(molduras) == {("p1", "plastico"), ("p2", "plastico"),
-                             ("p3", "desenho"), ("p4", "desenho")}, (
+    assert set(molduras) == {(c["pref"], "plastico") for c in aba05.MESA}, (
         f"as molduras desta aba mudaram de endereço: {sorted(molduras)}")
     assert set(molduras.values()) == {regua.MOCKUP}, (
         f"uma moldura saiu da conta sem que a régua aprendesse a LER o alvo "

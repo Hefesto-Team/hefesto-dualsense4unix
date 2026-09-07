@@ -453,9 +453,26 @@ def test_o_pacote_liga_os_cinco_enderecos() -> None:
 # 5. O DESENHO TEM ONDE ESCREVER — sem endereço, o pacote pinta zero, calado
 # ---------------------------------------------------------------------------
 def test_o_desenho_tem_endereco_para_os_cinco() -> None:
+    """O `bateria` VALE 4 DESDE 07/09/2026, e o número não é digitado.
+
+    Ele era `2` — um por controle CONECTADO da `monta.MESA`, que traz dois
+    ligados e dois vazios. A conta estava certa para o mundo em que o cartão
+    vazio nascia sem um `data-campo` por dentro, e esse mundo era o defeito:
+    com os quatro DualSense dela na mesa, o daemon publicava quatro, a carga
+    chegava com os quatro e a tela mostrava DOIS, porque o passo 2 do piloto
+    procura `data-campo` DENTRO de `[data-controle="pN"]` e nos dois lugares
+    vazios não havia nenhum.
+
+    AGORA SÃO OS QUATRO LUGARES, e a régua LÊ o tamanho da mesa em vez de o
+    cravar: no dia em que a bancada mudar de tamanho, o número que ela cobra
+    muda junto. Um literal aqui é a mesma dívida que o `2` era — uma régua que
+    mede o mundo do dia em que foi escrita.
+    """
+    from monta import MESA
+
     html = BANCADA.read_text(encoding="utf-8")
     esperado = {"ordem": 1, "conta-gestao": 1, "sala-altura": 3,
-                "sala-visada": 3, "bateria": 2}
+                "sala-visada": 3, "bateria": len(MESA)}
     for campo, quantos in esperado.items():
         achados = html.count(f'data-campo="{campo}"')
         assert achados == quantos, (

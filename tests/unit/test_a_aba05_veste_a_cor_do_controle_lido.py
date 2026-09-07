@@ -66,6 +66,10 @@ PILOTO = RAIZ / "src/hefesto_dualsense4unix/interface/hefesto_vivo.py"
 LIDO = "white"
 SEM_LEITURA = ""
 
+#: O valor do `data-conectado` num lugar sem controle — chave de máquina,
+#: e por isso sem acento.
+SEM_CONTROLE = "nao"  # (noqa-acento) valor de atributo
+
 
 class _Elementos(HTMLParser):
     """Os elementos da página com os atributos de cada um, em ordem."""
@@ -139,33 +143,47 @@ def test_a_cor_do_plastico_mora_onde_o_pintor_alcanca() -> None:
 
 
 def test_a_moldura_pede_o_alvo_da_cor_uma_vez_por_coluna_conectada() -> None:
-    """As molduras das colunas conectadas pedem `data-hef-alvo="plastico"`.
+    """TODAS as molduras pedem `data-hef-alvo="plastico"` — e só as vivas trazem cor.
 
-    A CONTA SAI DA PÁGINA, e não de um número digitado: as colunas conectadas
-    são as `.ctrl` que NÃO são `.ctrl.vazia` — o desenho publica quatro lugares
-    e dois nascem sem controle, por decisão dela de 31/08/2026 —, e cada uma tem
-    UMA moldura. Assim, no dia em que a mesa do desenho mudar de tamanho, esta
-    régua acompanha em vez de reprovar a mudança.
+    A CONTA SAI DA PÁGINA, e não de um número digitado: cada `.ctrl` tem UMA
+    moldura. Assim, no dia em que a mesa do desenho mudar de tamanho, esta régua
+    acompanha em vez de reprovar a mudança.
 
-    O LUGAR VAZIO NÃO GANHA O ENDEREÇO, e é certo que não ganhe: ele não desenha
-    controle nenhum, logo não tem plástico que vestir.
+    **INVERTEU EM 07/09/2026, E É O PONTO INTEIRO DA CURA.** Esta régua dizia
+    *"o lugar vazio NÃO ganha o endereço… ele não desenha controle nenhum, logo
+    não tem plástico que vestir"* — e essa ausência era o defeito, medido com os
+    quatro DualSense dela na mesa: o daemon publicava os quatro, o pacote
+    mandava as quatro colunas e o P3 e o P4 ficavam no travessão, porque o
+    piloto pinta procurando `data-campo` DENTRO do bloco daquele
+    `data-controle`. Sem endereço, o dado dela chega e não tem onde pousar.
+
+    O QUE SEPARA OS DOIS ESTADOS PASSOU A SER O VALOR, e não o endereço: o
+    `style="--plastico:…"` só nasce em quem tem aparelho. Um lugar vazio não tem
+    plástico para AFIRMAR — mas tem, agora, onde receber o do controle que
+    chegar. É a mesma divisão que o `data-colorway` do `<svg>` já fazia.
     """
     elementos = _elementos(BANCADA)
     colunas = [
         a for _t, a in elementos
         if "ctrl" in (a.get("class") or "").split()
-        and "vazia" not in (a.get("class") or "").split()
     ]
-    vestem = [
+    vivas = [a for a in colunas if a.get("data-conectado") != SEM_CONTROLE]
+    enderecadas = [
         a for t, a in elementos
         if a.get("data-campo") == "plastico"
         and a.get("data-hef-alvo") == "plastico"
-        and "--plastico" in a.get("style", "")
     ]
+    vestem = [a for a in enderecadas if "--plastico" in a.get("style", "")]
     assert colunas, "a bancada da 05 não tem uma coluna de controle sequer"
-    assert len(vestem) == len(colunas), (
-        f"{len(colunas)} colunas conectadas e {len(vestem)} molduras com o "
-        "endereço da cor — o desenho e a pintura deixaram de casar")
+    assert vivas and len(vivas) < len(colunas), (
+        f"a mesa do desenho deixou de ter lugar vivo E lugar vazio "
+        f"({len(vivas)} de {len(colunas)}) — esta régua compara os dois")
+    assert len(enderecadas) == len(colunas), (
+        f"{len(colunas)} lugares e {len(enderecadas)} molduras com o endereço "
+        "da cor — um lugar sem endereço é dado dela chegando sem onde pousar")
+    assert len(vestem) == len(vivas), (
+        f"{len(vivas)} colunas conectadas e {len(vestem)} molduras com a cor "
+        "cravada — o lugar vazio não pode AFIRMAR um plástico que não tem")
 
 
 # ---------------------------------------------------------------------------

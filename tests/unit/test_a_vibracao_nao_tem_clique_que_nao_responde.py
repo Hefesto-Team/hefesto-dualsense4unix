@@ -191,9 +191,33 @@ def test_os_quatro_enderecos_continuam_existindo(bancada: str) -> None:
     "data-hef")`` — os três valem para a pintura e para a régua do mockup. Se um
     dos quatro sumisse, a régua passaria a contar menos campos nesta aba e o
     número melhoraria por CEGUEIRA.
+
+    **O `desenho` SAIU DA CONTA EM 07/09/2026, E NÃO É CEGUEIRA — é o contrário,
+    e por isso ele fica na lista com a isenção escrita.** A régua nomeia cada
+    elemento pelo PRIMEIRO dos três atributos, e `data-campo` vem antes de
+    `data-hef`: as molduras das colunas VIVAS já se chamavam `plastico` desde
+    03/09, e quem ainda respondia `desenho` eram as duas do lugar VAZIO — que
+    não tinham `data-campo` NENHUM. Essa ausência era o defeito, medido com os
+    quatro DualSense dela na mesa: o pacote mandava as quatro colunas e o P3 e o
+    P4 não tinham onde receber. Hoje as quatro molduras carregam o par
+    `data-campo="plastico"` / `data-hef-alvo="plastico"`, e a régua conta um
+    endereço VIVO onde contava um morto.
+
+    O ATRIBUTO `data-hef="desenho"` CONTINUA NO HTML, e quem o guarda é
+    :func:`test_o_atributo_que_sobrou_e_o_que_nao_dispara_clique` logo abaixo —
+    ele é o que mantém a moldura fora do ouvinte de clique.
     """
+    #: O `desenho` é o único da lista que a régua NÃO conta mais como campo, e a
+    #: razão está no docstring. Os outros dois continuam cobrados.
+    sombreados = {"desenho"}
     campos = {c.chave for c in _regua._campos_cravados(bancada)}
+    assert "plastico" in campos, (
+        "a moldura perdeu o `data-campo=\"plastico\"` — sem ele a cor do "
+        "aparelho volta a não ter onde pousar, e o `desenho` volta a ser o "
+        "nome de um endereço morto")
     for nome in ENDERECOS_QUE_SO_PINTAM:
+        if nome in sombreados:
+            continue
         assert nome in campos, (
             f"o endereço `{nome}` sumiu do desenho — a régua do mockup deixou "
             f"de contá-lo, e um campo a menos não é um defeito a menos")

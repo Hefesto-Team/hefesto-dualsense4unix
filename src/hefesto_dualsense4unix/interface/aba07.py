@@ -4,6 +4,7 @@
 # no topo.html desta pasta as alcançava. Achado em 27/08.
 import sys, pathlib; sys.path.insert(0, str(pathlib.Path(__file__).parent))
 import csv
+import dataclasses
 import re
 
 import onde
@@ -492,6 +493,69 @@ if _FALTAM:
         f"miolo: {_FALTAM}. Um valor escrito num endereço que a página não tem "
         "é pintura perdida — `querySelector` devolve `null`, a pintura conta "
         "zero, e zero passa por 'nada mudou'.")
+
+# ---------------------------------------------------------------------------
+# O ENDEREÇO NÃO DEPENDE DO ESTADO — 07/09/2026.
+#
+# ESTA ABA NÃO TEM LUGAR VAZIO, e por isso esta régua não é a das irmãs. Nas
+# abas 01-06 e 08 o cartão é POR CONTROLE, e o defeito medido hoje com os
+# quatro DualSense dela na mesa foi esse: o lugar vazio saía por um ramo
+# separado, SEM `data-campo` nenhum, e o dado dos dois controles que chegaram
+# depois não tinha onde pousar — a tela mostrava dois de quatro. Aqui o cartão
+# é por LANÇADOR (`data-lancador`, seis), não por controle: `grep data-controle`
+# neste gerador e na página publicada dá ZERO, e a razão está no comentário do
+# topo — nenhuma função de `prontuario_dos_jogos` recebe controle.
+#
+# MAS O DEFEITO TEM O MESMO EIXO, e ele existe aqui: *um cartão num estado
+# carrega endereço que o mesmo cartão noutro estado não tem.* Lá o eixo é
+# conectado/vazio; aqui é o `selo` — `ok`, `warn`, `off`, `nao_sei`.
+#
+# E A RÉGUA DE CIMA NÃO ALCANÇA ISSO, medido: o `_FALTAM` lê o `MIOLO`, e o
+# `MIOLO` sai de `cartoes(None)`, que é o estado de PARTIDA — os seis cartões
+# nascem `nao_sei`, e a página publicada tem `class="lanc ausente"` SEIS vezes
+# e nenhuma outra. Um ramo que largasse um endereço no estado `ok` passaria
+# verde por aqui e quebraria exatamente na máquina dela, que é onde os
+# lançadores são ACHADOS. A régua que só vê um estado mede um instante.
+#
+# O CONTRATO: os quatro `SUFIXOS` estão em todo cartão em TODO estado, e o
+# quinto (`-fora`, só onde há lista) não pode variar com o `selo` — ele
+# responde a `tem_lista`, que é fato do lançador, não do estado.
+# ---------------------------------------------------------------------------
+_ESTADOS = tuple(dl.MOLDURA)
+_POR_ESTADO: dict[str, dict[str, set[str]]] = {}
+for _lanc in QUADRO.lancadores:
+    _POR_ESTADO[_lanc.chave] = {
+        _selo: set(re.findall(
+            r'data-campo="([^"]+)"',
+            dl.um_cartao(dataclasses.replace(_lanc, selo=_selo))))
+        for _selo in _ESTADOS
+    }
+
+_INSTAVEIS = [
+    f"{_k}: {_selo} tem {sorted(_c)} e {_ESTADOS[0]} tem {sorted(_ref)}"
+    for _k, _mapa in _POR_ESTADO.items()
+    for _ref in [_mapa[_ESTADOS[0]]]
+    for _selo, _c in _mapa.items() if _c != _ref
+]
+if _INSTAVEIS:
+    raise SystemExit(
+        f"ERRO: {len(_INSTAVEIS)} cartão(ões) mudam de ENDEREÇO conforme o "
+        f"estado: {_INSTAVEIS}. O `selo` decide a classe e o TEXTO, nunca o "
+        "conjunto de `data-campo` — um endereço que só existe num estado é "
+        "pintura perdida no outro, que é o defeito medido nas abas por "
+        "controle em 07/09/2026.")
+
+_SEM_OBRIGATORIOS = [
+    f"{_k} ({_selo}): falta {sorted(set(_k + _s for _s in dl.SUFIXOS) - _c)}"
+    for _k, _mapa in _POR_ESTADO.items()
+    for _selo, _c in _mapa.items()
+    if not set(_k + _s for _s in dl.SUFIXOS) <= _c
+]
+if _SEM_OBRIGATORIOS:
+    raise SystemExit(
+        f"ERRO: {len(_SEM_OBRIGATORIOS)} cartão(ões) sem os {len(dl.SUFIXOS)} "
+        f"endereços que o pacote pinta: {_SEM_OBRIGATORIOS}. Os seis cartões "
+        "carregam o MESMO conjunto — o que muda entre eles é o texto.")
 
 # ---------------------------------------------------------------------------
 # O GERADOR SÓ ESCREVE QUANDO ALGUÉM O RODA — 06/09/2026.
