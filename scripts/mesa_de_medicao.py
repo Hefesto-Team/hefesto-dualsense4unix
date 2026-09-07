@@ -2119,6 +2119,11 @@ async function mesaViva() {
 /* AS SEÇÕES, contadas no ESTADO ATUAL do filtro. Uma lista que diz "áudio 16"
    quando o filtro já é "só o que falta" e sobram 3 mandaria ela abrir uma
    gaveta quase vazia. */
+/* O CORTE QUE VALE POR SEIS. Não é uma seção — é o pedido dela de ver as 21
+   juntas, e por isso mora numa constante e não numa string solta em três
+   lugares. */
+const ROTEIRO_INTEIRO = '--o-roteiro-inteiro';
+
 function montarSecoes() {
   const base = filtro === 'tudo' ? TODOS
              : filtro === 'medido' ? TODOS.filter((t) => t.ja_medido)
@@ -2132,9 +2137,37 @@ function montarSecoes() {
     const r = (s) => (s.startsWith('O roteiro') ? 0 : 1);
     return r(a) - r(b) || a.localeCompare(b, 'pt-BR');
   });
-  sel.innerHTML = `<option value="">todas as seções (${base.length})</option>`
-    + ordem.map((s) => `<option value="${esc(s)}"${s === secaoAtiva ? ' selected' : ''}>`
-        + `${esc(s)} (${conta.get(s)})</option>`).join('');
+  /* AS 21 NÃO PODEM SUMIR NO MEIO DAS OUTRAS — 07/09/2026, ela olhando esta
+     lista: *"quais desses são os mais importantes? não fez separação dos 21
+     mais?"*. A separação existia (as seis seções do roteiro vinham primeiro),
+     mas uma lista de dezessete linhas com as seis no topo não DIZ que aquelas
+     seis são a bancada e as outras onze são o acervo.
+
+     Duas coisas resolvem, e as duas são de leitura, não de dado: os `optgroup`
+     nomeiam os dois blocos, e a segunda linha do seletor fecha as 21 num corte
+     só — que é o que ela pediu quando disse *"o prioritários são os 16 eu acho
+     que vc falou. faço eles e na sequência vou fazendo os demais"*. */
+  const doRoteiro = ordem.filter((s) => s.startsWith('O roteiro'));
+  const doMapa = ordem.filter((s) => !s.startsWith('O roteiro'));
+  const quantasNoRoteiro = doRoteiro.reduce((n, s) => n + conta.get(s), 0);
+  const umaLinha = (s) => `<option value="${esc(s)}"`
+      + `${s === secaoAtiva ? ' selected' : ''}>`
+      + `${esc(s.replace(/^O (roteiro|mapa de canais) · ?— ?/, '')
+                .replace(/^O (roteiro|mapa de canais) [·—] /, ''))}`
+      + ` (${conta.get(s)})</option>`;
+  const grupo = (rotulo, quais) => quais.length
+      ? `<optgroup label="${esc(rotulo)}">${quais.map(umaLinha).join('')}</optgroup>`
+      : '';
+  sel.innerHTML =
+      `<option value="">tudo o que está na tela (${base.length})</option>`
+    + (quantasNoRoteiro
+        ? `<option value="${ROTEIRO_INTEIRO}"`
+          + `${secaoAtiva === ROTEIRO_INTEIRO ? ' selected' : ''}>`
+          + `AS ${quantasNoRoteiro} DA BANCADA — o roteiro inteiro</option>`
+        : '')
+    + grupo(`A BANCADA — as ${quantasNoRoteiro} que ela vai fazer com os quatro`,
+            doRoteiro)
+    + grupo('O ACERVO — as células do mapa de canais', doMapa);
 }
 
 function filtrar(qual, secao) {
@@ -2144,7 +2177,10 @@ function filtrar(qual, secao) {
   TESTES = (qual === 'tudo' ? TODOS
          : qual === 'medido' ? TODOS.filter((t) => t.ja_medido)
          : TODOS.filter((t) => !t.ja_medido))
-         .filter((t) => !secaoAtiva || t.secao === secaoAtiva);
+         .filter((t) => !secaoAtiva
+                     || (secaoAtiva === ROTEIRO_INTEIRO
+                         ? t.secao.startsWith('O roteiro')
+                         : t.secao === secaoAtiva));
   if (!TESTES.length) {
     // NUNCA UMA FILA VAZIA: um corte que não sobra nada tira a página do ar
     // sem dizer por quê. Solta a seção primeiro, depois o estado.
