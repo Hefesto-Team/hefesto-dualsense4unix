@@ -1180,6 +1180,21 @@ CSS = CSS_GLIFO + CSS_POPUP + """
      em 28/08 — `D-O-SEM-TETO-SAI-DOS-DOIS-LUGARES`. A regra sai junto: CSS de
      elemento que não existe mais é a segunda versão viva de uma decisão. */
   .gc-corpo .btn{margin-left:auto;white-space:nowrap;flex:0 0 auto}
+  /* A PONTA DIREITA DA LINHA vira uma caixa só — 06/09/2026, a espera pelo PS.
+     A trava, a linha da espera e o botão andam juntos, e é a caixa que carrega
+     o `margin-left:auto`: com o `auto` em dois filhos o espaço livre se DIVIDE
+     entre eles, e a frase da espera flutuaria no meio da linha com um vão até o
+     botão. Aqui há um `auto` só, e ele é o da caixa.
+
+     A TRAVA CONTINUA DENTRO, e não é arrumação: `.ltrava.on ~ .btn` é irmandade,
+     e tirá-la da caixa apagaria a regra que pinta o botão do cabo. */
+  .gc-corpo .gc-luz{display:flex;align-items:center;gap:8px;margin-left:auto;
+                    flex:0 1 auto;min-width:0}
+  /* A LINHA DA ESPERA DENTRO DA LINHA DO CONTROLE. O `margin-top` da `.ressalva`
+     do esqueleto é para quem a usa EMBAIXO de um valor; aqui ela é irmã na
+     mesma linha, e 5px a empurrariam para fora do eixo dos 40px do corpo. */
+  .gc-luz .ressalva{margin-top:0;white-space:nowrap;overflow:hidden;
+                    text-overflow:ellipsis;min-width:0}
   /* REGRA DELA, escrita em `secao_controles.py:150`: *"sempre visível mas só
      acionável quando tiver no rádio"* — na linha do cabo o botão VAI, apagado,
      com a dica dizendo por quê. Botão que SOME ensina que a tela é instável. */
@@ -2234,10 +2249,54 @@ def linha_do_controle(c):
              f'data-hef-quando="{_pacote08.LUZ_TRAVADA}"></i>')
     dica_luz = ('data-campo="luz-dica" data-hef-alvo="atributo" '
                 'data-hef-atributo="title"')
-    botao = (f'{trava}<button class="btn" data-gesto="luz-nao-acende" {dica_luz} '
-             f'title="{LUZ_NO_RADIO}">A luz não acende</button>' if no_radio
-             else f'{trava}<button class="btn apagado" data-gesto="luz-nao-acende" '
-                  f'{dica_luz} title="{LUZ_NO_CABO}">A luz não acende</button>')
+    # O RÓTULO DO BOTÃO GANHOU ENDEREÇO PRÓPRIO — 06/09/2026, e ele é um `<span>`
+    # DENTRO do botão por uma razão de vocabulário: **um `data-campo` por nó**, e
+    # o do botão já está gasto no `title` (`luz-dica`). O clique não muda de dono
+    # — o ouvinte do piloto sobe por `closest('[data-gesto]')`, então clicar no
+    # texto continua chegando ao mesmo gesto.
+    #
+    # É ELE QUE CUMPRE A PROMESSA DO `title`. O desenho diz, desde que nasceu,
+    # *"Enquanto ele espera o PS, o mesmo botão vira 'Cancelar'"* — e até hoje o
+    # produto não tinha por onde escrever a segunda palavra.
+    rotulo_luz = (f'<span data-campo="luz-texto">{_pacote08.texto_do_botao_da_luz()}</span>')
+    # A CLASSE `apagado` SAIU DO BOTÃO — 06/09/2026, e ela era a metade que
+    # faltava da cura de 03/09. MEDIDO no DOM, com um controle no RÁDIO no lugar
+    # do P1: `luz-trava` chegava certo (o `<i>` ficava `ltrava`, sem o `on`) e o
+    # botão continuava com `class="btn apagado"`, opacidade 0,55 e cursor
+    # `help` — a classe do MOCKUP, que o pintor não tem como apagar porque o
+    # `data-campo` do botão está gasto no `title`. Quem herdasse o lugar do P1
+    # pelo rádio veria para sempre um botão com cara de desligado.
+    #
+    # E TIRÁ-LA NÃO MUDA UM PIXEL DO DESENHO: `.gc-corpo .ltrava.on ~ .btn` tem
+    # as MESMAS quatro declarações de `.btn.apagado`, e o `<i class="ltrava on">`
+    # já está no HTML estático da linha do cabo. O que muda é que agora existe UM
+    # dono da aparência, e ele segue o transporte.
+    botao = (f'<button class="btn" data-gesto="luz-nao-acende" {dica_luz} '
+             f'title="{LUZ_NO_RADIO if no_radio else LUZ_NO_CABO}">'
+             f'{rotulo_luz}</button>')
+    # A LINHA DA ESPERA, E ELA NASCE SEM OCUPAR NADA. `monta.ressalva` já sabe
+    # sumir em repouso (`.ressalva:has(.nada)`), e é a mesma peça que o exame, os
+    # dois avisos da Gestão e o gabinete usam nesta aba. No desenho ela não
+    # aparece: nenhuma cena de bancada tem uma espera dela dentro.
+    #
+    # OS TRÊS FICAM NUMA CAIXA SÓ (`.gc-luz`) porque agora são três coisas que
+    # andam juntas na ponta direita da linha — e porque a trava precisa continuar
+    # IRMÃ do botão: é por `~` que ela o apaga.
+    # O NOME NÃO É `luz`, E A RAZÃO É UMA CICATRIZ DE MINUTOS ATRÁS: `luz` já é
+    # a COR do jogador nesta função (`player_slot_color`), e ela entra no
+    # `desenho_do_controle` logo abaixo. Reusar o nome fez o `<g id="p1-lightbar"
+    # style="--luz:` receber o bloco HTML inteiro dentro de um atributo CSS — e o
+    # gerador saiu `rc=0`, sem uma palavra. Só a leitura do HTML gerado mostrou.
+    # A ORDEM É `ressalva · <i> · <button>`, E ELA NÃO É ESTÉTICA. Duas réguas
+    # desta casa exigem o `<i class="ltrava">` COLADO no botão
+    # (`></i><button`), e a razão está escrita nas duas: *"o `~` do CSS só
+    # alcança irmãos POSTERIORES, então o `<i>` colado antes do botão é a única
+    # forma que faz o apagado acender"*. Pôr a linha da espera no meio dos dois
+    # reprovou as duas — medido, e as duas estão certas em cobrar a POSIÇÃO.
+    # Com a ressalva na frente o `<i>` continua colado, e a tela não muda um
+    # pixel: `.ltrava` é `display:none`.
+    bloco_da_luz = (f'<span class="gc-luz">{monta_ressalva("luz-espera")}'
+                    f'{trava}{botao}</span>')
     return f'''          <div class="gc-item gc-{c["pref"]}" data-controle="{c["pref"]}">
             {barra}
             <div class="gc-cabeca">
@@ -2270,7 +2329,7 @@ def linha_do_controle(c):
                   <span class="ajuda">?<span class="dica" data-campo="teto-explica" data-hef-alvo="html">{teto_dica(c)}</span></span></span>
                 {sel(opcoes_teto, campo_teto, gesto="teto-da-vibracao", campo="teto-da-vibracao", dica="O teto da vibração deste controle. O global manda e o do controle sobrepõe — o “?” ao lado diz qual dos dois está valendo agora.")}
               </span>
-              {botao}
+              {bloco_da_luz}
             </div>
           </div>'''
 
@@ -3588,6 +3647,17 @@ MIOLO = f'''
         <div class="regua-do-radio" data-campo="regua-do-radio" data-hef-alvo="html">
 {regua_do_radio()}
         </div>
+        <!-- A CONTA DE SLOTS POR ADAPTADOR — 06/09/2026, a linha 330 do CSV da
+             paridade. A régua acima mostra o que ESTÁ; esta linha responde o que
+             CABE, que é outra pergunta e não se lê de uma barra: olhar uma fatia
+             de 260,4 em 1.600 não diz se o PRÓXIMO controle entra.
+
+             ELA NASCE MUDA NO DESENHO, e isso é a regra da `.ressalva`: a
+             bancada não tem a mesa dela dentro, e uma conta cravada aqui seria a
+             terceira cena de exemplo desta aba a passar por medição. Quem a
+             escreve é `a08_conexoes._conta_de_slots`, que lê o dono
+             (`integrations/plano_de_radio`) e não redige uma palavra. -->
+        {monta_ressalva("conta-de-slots")}
         </div>
       </div>
     </div>

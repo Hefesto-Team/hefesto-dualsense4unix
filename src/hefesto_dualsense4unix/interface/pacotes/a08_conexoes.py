@@ -2482,6 +2482,191 @@ def dica_da_luz(via: str, nascimento: Any = None, mesa_suja: bool | None = None)
     return f"{dica} {razao}" if razao else dica
 
 
+# ---------------------------------------------------------------------------
+# A ESPERA PELO PS — a contagem, o Cancelar e o recado que sobrevive
+# ---------------------------------------------------------------------------
+#
+# O DESENHO PROMETIA E O PRODUTO NÃO ENTREGAVA. O `title` do botão diz, com
+# todas as letras: *"Enquanto ele espera o PS, o mesmo botão vira 'Cancelar'"*.
+# Até 06/09/2026 o gesto derrubava o controle e voltava — sem contagem, sem
+# Cancelar e sem recado. Ela clicava, o controle caía, e a tela não dizia uma
+# palavra sobre o que fazer nem por quanto tempo esperar.
+#
+# NADA AQUI É MÁQUINA NOVA. Quem sabe esperar é `secao_controles.EsperaPeloPS`,
+# o dono na janela estável: dois marcos (VER SUMIR, e só depois ver voltar), os
+# quatro desfechos, e as frases do fim. Ele foi escrito sem GTK, sem IPC e sem
+# relógio de propósito — *"quem chama dá o tique"* —, e é exatamente por isso
+# que a interface nova pôde reusá-lo inteiro em vez de reescrever a espera.
+#
+# O QUE ESTE ARQUIVO ACRESCENTA É O RELÓGIO, e ele não pode ser o tique do
+# piloto: o tique é de 100 ms (`hefesto_vivo.TIQUE_MS`) e a espera conta
+# SEGUNDOS. Chamar `tique()` uma vez por pintura faria os 60 segundos do dono
+# virarem seis — a contagem correria dez vezes mais rápido que o relógio dela.
+# Por isso o avanço é medido em tempo MONOTÔNICO, e o `EsperaPeloPS` recebe um
+# `tique()` por segundo inteiro decorrido, nem mais nem menos.
+#
+# E O RELÓGIO É MONOTÔNICO PELA MESMA RAZÃO DO CANAL DE RECADO: um acerto de
+# hora do sistema no meio da espera não pode fazer a contagem pular nem voltar.
+
+#: As esperas VIVAS, por `uniq` normalizado. Estado de módulo pela mesma razão
+#: escrita no cabeçalho deste arquivo: o `Contexto` é remontado a cada tique e
+#: não tem onde guardar nada entre um tique e o seguinte. Quem escreve é o gesto
+#: (numa thread) e quem lê é a pintura — e as duas operações são atribuições de
+#: chave, então nenhuma das duas vê metade de nada.
+_ESPERAS: dict[str, _EsperaNaTela] = {}
+
+
+class _EsperaNaTela:
+    """Uma espera pelo PS, com o relógio por fora e o recado por dentro.
+
+    `espera` é o dono (:class:`secao_controles.EsperaPeloPS`); `recado` é a
+    frase do fim, que **sobrevive** ao fim da espera de propósito — sem ela
+    "não voltou" viraria silêncio, que é o defeito que o ELO-MUDO-01 nomeou.
+    """
+
+    def __init__(self, espera: Any, agora: float) -> None:
+        self.espera = espera
+        #: O instante do último segundo já contado.
+        self.desde = float(agora)
+        self.recado = ""
+
+    @property
+    def contando(self) -> bool:
+        return not bool(self.espera.acabou)
+
+    def correr(self, agora: float) -> None:
+        """Entrega ao dono um `tique()` por segundo inteiro decorrido."""
+        if self.espera.acabou:
+            return
+        passou = int(float(agora) - self.desde)
+        if passou <= 0:
+            return
+        self.desde += passou
+        for _ in range(passou):
+            self.espera.tique()
+            if self.espera.acabou:
+                break
+        if self.espera.acabou:
+            self.recado = str(self.espera.porque or "")
+
+
+def _agora() -> float:
+    """O relógio da espera. MONOTÔNICO — ver o cabeçalho desta seção."""
+    return time.monotonic()
+
+
+def comecar_a_espera(uniq: str, *, agora: float | None = None,
+                     sonda: Any = None) -> Any:
+    """O controle caiu do rádio; a tela entra no estado 2 do desenho.
+
+    `sonda` é o ponto de injeção da régua, e ele existe pela mesma razão que no
+    dono: a sonda de verdade lê o `/sys` de quem roda o teste, e uma régua que
+    dependesse dela mediria a bancada de quem a executa em vez do código.
+    """
+    perfil._com_o_src()
+    from hefesto_dualsense4unix.app.actions.config.secao_controles import (
+        EsperaPeloPS,
+    )
+
+    dele = _EsperaNaTela(
+        EsperaPeloPS(uniq) if sonda is None else EsperaPeloPS(uniq, sonda=sonda),
+        _agora() if agora is None else agora)
+    _ESPERAS[norm_mac(uniq) or ""] = dele
+    return dele
+
+
+def cancelar_a_espera(uniq: str) -> bool:
+    """Ela desistiu. `True` quando havia espera a cancelar.
+
+    **NÃO RECONECTA**, e a regra é do dono: *"o botão PS é dela"*. Cancelar
+    devolve o cartão ao estado 1 e mais nada — o controle continua fora do
+    rádio, pareado, esperando o PS quando ela quiser.
+    """
+    dele = _ESPERAS.get(norm_mac(uniq) or "")
+    if dele is None or not dele.contando:
+        return False
+    dele.espera.cancelar()
+    dele.recado = ""
+    return True
+
+
+def esperando(uniq: str) -> bool:
+    """Este controle está no estado 2 do desenho AGORA?"""
+    dele = _ESPERAS.get(norm_mac(uniq) or "")
+    return dele is not None and dele.contando
+
+
+def _correr_as_esperas(presentes: set[str], agora: float | None = None) -> None:
+    """Um passo do relógio, UMA vez por tique, para todas as esperas vivas.
+
+    `presentes` são os `uniq` que o daemon está publicando AGORA, e eles servem
+    para UMA coisa: **apagar o recado de quem voltou**. "Não voltou em 60s" é
+    verdade no instante em que é escrita e vira mentira assim que o controle
+    reaparece — e um recado que envelhece na tela é a mesma família do desenho
+    que promete o que o produto não faz. Os outros dois desfechos que falam
+    (`nao_caiu`) continuam verdadeiros, e ficam até o próximo clique.
+    """
+    perfil._com_o_src()
+    from hefesto_dualsense4unix.app.actions.config.secao_controles import (
+        ESPERA_NAO_VOLTOU,
+    )
+
+    quando = _agora() if agora is None else agora
+    for chave, dele in list(_ESPERAS.items()):
+        dele.correr(quando)
+        if (not dele.contando and dele.recado and chave in presentes
+                and dele.espera.estado == ESPERA_NAO_VOLTOU):
+            dele.recado = ""
+
+
+def texto_do_botao_da_luz(uniq: str = "") -> str:
+    """O rótulo do botão: `"A luz não acende"`, ou `"Cancelar"` na espera.
+
+    **As duas palavras são do dono** (`secao_controles.TEXTO_DO_BOTAO` e
+    `TEXTO_CANCELAR`), e é essa a metade que faz o `title` do desenho deixar de
+    ser promessa: ele já dizia *"o mesmo botão vira 'Cancelar'"*, e agora vira.
+
+    SEM `uniq` DEVOLVE O RÓTULO DE REPOUSO, e é assim que o GERADOR o chama: o
+    desenho da bancada não tem espera de ninguém dentro, e a palavra que ele
+    escreve tem de ser a MESMA do dono — foi por ela estar digitada no gerador
+    que o `title` pôde prometer um estado por dias sem ninguém notar.
+    """
+    perfil._com_o_src()
+    from hefesto_dualsense4unix.app.actions.config.secao_controles import (
+        TEXTO_CANCELAR,
+        TEXTO_DO_BOTAO,
+    )
+
+    return TEXTO_CANCELAR if esperando(uniq) else TEXTO_DO_BOTAO
+
+
+def linha_da_espera(uniq: str) -> str:
+    """A linha de ressalva do cartão: o pedido do PS com a contagem, ou o recado.
+
+    **NENHUMA FRASE NASCE AQUI**, e é a mesma junção que :func:`dica_da_luz`
+    faz um pouco acima: `FRASE_APERTE_PS` é o aviso do dono (o mesmo que a
+    janela estável mostra como *"▲ aperte PS"*) e `frase_da_procura` é a
+    contagem dele, palavra por palavra. O que este arquivo escolhe é a ORDEM e
+    o separador — o pedido primeiro, o relógio depois.
+
+    Fora da espera devolve o recado do fim, e sem recado devolve
+    :func:`_sem_valor`, que faz a `.ressalva` SUMIR em vez de virar um `—`.
+    """
+    dele = _ESPERAS.get(norm_mac(uniq) or "")
+    if dele is None:
+        return _sem_valor()
+    if dele.contando:
+        perfil._com_o_src()
+        from hefesto_dualsense4unix.app.actions.config.secao_controles import (
+            FRASE_APERTE_PS,
+            frase_da_procura,
+        )
+
+        return (f"▲ {html.escape(FRASE_APERTE_PS)} · "
+                f"{html.escape(frase_da_procura(dele.espera.restantes))}")
+    return html.escape(dele.recado) if dele.recado else _sem_valor()
+
+
 #: COMO A TELA LÊ O `mic_button_toggles_system` — **D-12, 04/09/2026**, e ela
 #: transforma a única escolha desta aba que o produto não sabia guardar numa
 #: LEITURA.
@@ -2711,6 +2896,116 @@ def _nomes_dos_adaptadores() -> tuple[dict[str, str], dict[str, str]]:
         if interface:
             por_interface[interface] = nome
     return por_endereco, por_interface
+
+
+# ---------------------------------------------------------------------------
+# A CONTA DE SLOTS POR ADAPTADOR — "cabe o que eu quero fazer?"
+# ---------------------------------------------------------------------------
+#
+# A RÉGUA DE CIMA MOSTRA O QUE ESTÁ; ESTA RESPONDE O QUE CABE. São perguntas
+# diferentes, e a segunda não se lê de uma barra: olhar uma fatia de 260,4 em
+# 1.600 não diz se o PRÓXIMO controle entra — e é essa a pergunta de quem tem
+# um controle no cabo e quer trazê-lo para o rádio.
+#
+# O DONO É `integrations/plano_de_radio.py`, e ele já escreve TODAS as frases:
+# `linha_do_cabe_mais_um` (a resposta com o "ficaria em N de M"),
+# `linha_do_declarado_que_nao_subiu` (o microfone que ela marcou e que não está
+# de pé) e as duas respostas honestas de `secao_orcamento` para os dois estados
+# em que não há conta a fazer. **Nenhuma nasce aqui.**
+#
+# OS DOIS ESTADOS QUE NÃO SÃO CONTA são a metade que a régua de cima não tem, e
+# a cicatriz é do dono: *"**Nunca 'Folgada'**: a cura da B1, medida em
+# 23/08/2026 — com o Hefesto parado as três barras diziam 'Folgada', em verde,
+# '0/1600', byte a byte a tela de um rádio vazio."* Não saber e estar vazio são
+# coisas diferentes, e a diferença é a informação inteira.
+#
+# ESTA CONTA NÃO PERGUNTA NADA A NINGUÉM. A janela estável faz um `state_full`
+# próprio por `call_async` (e o dono declara isso como dívida: *"este é o
+# SEGUNDO `state_full` por entrada na aba"*). Aqui o `ctx.state` do tique já é o
+# `state_full`, então o segundo pedido não existe — a dívida do dono não
+# atravessa para cá.
+
+
+def _conta_de_slots(ctx: Contexto) -> str:
+    """As linhas do "cabe mais um?" por adaptador, ou a resposta honesta.
+
+    A ORDEM DAS LINHAS É A DO DONO (`secao_orcamento._ContaDeSlots.falas`): por
+    adaptador, o pendente antes do "cabe mais um" — o que está errado agora vem
+    antes do que se pode planejar.
+
+    **O `linha_do_plano` FICA DE FORA, e é decisão medida.** Ele diz quem está
+    em qual adaptador e quanto isso custa — que é exatamente o que a régua
+    logo acima desenha, com a cor do plástico de cada um. Repeti-lo em texto
+    seria a segunda grafia do mesmo fato na MESMA seção, e a primeira coisa que
+    uma segunda grafia perde é a revisão dela.
+    """
+    perfil._com_o_src()
+    from hefesto_dualsense4unix.app.actions.config.secao_orcamento import (
+        NINGUEM_NO_RADIO,
+        SEM_RESPOSTA_DO_DAEMON,
+    )
+    from hefesto_dualsense4unix.integrations import plano_de_radio
+
+    st = ctx.state
+    # SEM RESPOSTA NÃO É RÁDIO VAZIO. `state` vazio quer dizer que o serviço não
+    # falou; uma lista `controllers` vazia quer dizer que ele falou e não há
+    # ninguém. Confundir os dois é o defeito da B1 acima.
+    if not st:
+        return html.escape(SEM_RESPOSTA_DO_DAEMON)
+
+    planos: dict[str, Any] = {}
+    with contextlib.suppress(Exception):
+        bt_mic = st.get("bt_mic")
+        planos = plano_de_radio.plano_por_adaptador(
+            [c for c in (st.get("controllers") or []) if isinstance(c, dict)],
+            com_ponte_de_mic=((bt_mic.get("uniqs") or [])
+                              if isinstance(bt_mic, dict) else ()),
+            mic_declarado=_mics_declarados(),
+            apelidos=_apelidos_por_endereco(),
+        )
+    if not planos:
+        return html.escape(NINGUEM_NO_RADIO)
+
+    linhas: list[str] = []
+    for _endereco, plano in sorted(planos.items()):
+        pendente = plano_de_radio.linha_do_declarado_que_nao_subiu(plano)
+        if pendente:
+            linhas.append(html.escape(pendente))
+        linhas.append(html.escape(plano_de_radio.linha_do_cabe_mais_um(plano)))
+    return "<br>".join(linhas)
+
+
+def _mics_declarados() -> tuple[str, ...]:
+    """Os `uniq` cujo microfone ELA marcou no `maquina.json`.
+
+    É a metade que separa as duas contas do dono (`plano_de_radio`, regra 1): o
+    que SUBIU vem do daemon (`bt_mic.uniqs`), o que ela QUER vem do disco. Sem
+    esta lista a tela mostraria "está tudo certo" sobre uma ponte no chão — o
+    padrão que a queixa do Sackboy revelou.
+    """
+    declarada = _declaracao()
+    if declarada is None:
+        return ()
+    with contextlib.suppress(Exception):
+        return tuple(
+            chave
+            for chave, valor in (getattr(declarada, "controles", {}) or {}).items()
+            if getattr(valor, "microfone", None)
+        )
+    return ()
+
+
+def _apelidos_por_endereco() -> dict[str, str]:
+    """`{endereço de rádio: o nome que ELA deu}` — a primeira metade de
+    :func:`_nomes_dos_adaptadores`.
+
+    O nome vai para a frase do "cabe mais um" pelo `plano.nome_na_tela`, e o
+    `hciN` NUNCA vai: a decisão M1 o proíbe porque o índice é a vaga, não o
+    aparelho, e ele inverte entre boots. Sem apelido o dono escreve **Adaptador
+    sem nome**, que é palavra dele.
+    """
+    por_endereco, _por_interface = _nomes_dos_adaptadores()
+    return por_endereco
 
 
 def _endereco_do_adaptador(interface: str) -> str:
@@ -3534,6 +3829,18 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
     # por cartão para receber a mesma resposta.
     mesa_suja = _mesa_suja()
 
+    # UM PASSO DO RELÓGIO DA ESPERA, UMA VEZ POR TIQUE — ver a seção "A ESPERA
+    # PELO PS". Ele vem antes do laço porque a espera é do RELÓGIO, não do
+    # cartão: chamá-lo por controle entregaria N tiques por segundo ao dono numa
+    # mesa de N, e a contagem correria mais rápido quanto mais cheia a mesa.
+    #
+    # A LISTA VAI JUNTO por uma razão só, e ela está no docstring: quem VOLTOU
+    # perde o recado de "não voltou". Sem isto a frase envelheceria na tela — e
+    # uma tela que afirma o que já não é verdade é o mesmo defeito que esta
+    # sprint veio fechar, do outro lado.
+    _correr_as_esperas({norm_mac(str(c.get("uniq") or "")) or ""
+                        for c in ctx.conectados})
+
     colunas = {}
     for c in ctx.conectados:
         uniq = str(c.get("uniq") or "")
@@ -3600,6 +3907,13 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
             # dono no produto e zero leitor no HTML até hoje.
             "luz-dica": dica_da_luz(str(c.get("transport") or ""),
                                     c.get("nascimento"), mesa_suja),
+            # O RÓTULO DO BOTÃO, e é ele que cumpre a promessa do `title`: na
+            # espera o mesmo botão diz "Cancelar". Ver :func:`texto_do_botao_da_luz`.
+            "luz-texto": texto_do_botao_da_luz(uniq),
+            # A LINHA DA ESPERA — o pedido do PS com a contagem enquanto ela
+            # corre, e o recado do fim depois. Em repouso ela não ocupa nada
+            # (`monta.ressalva`). Ver :func:`linha_da_espera`.
+            "luz-espera": linha_da_espera(uniq),
             # O `title` DA LINHA DO MICROFONE — ver :func:`dica_do_microfone`. O
             # `+16,3 turnos` era digitado no desenho; agora é derivado das
             # constantes do medidor, que é de onde a barra de Desempenho já
@@ -3672,6 +3986,10 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
         # `html_da_regua_do_radio`: o `title` de cada fatia nomeia o plástico, e
         # `title` não tem alvo no piloto — o bloco tem de nascer do produto.
         "regua-do-radio": _regua_do_radio(ctx),
+        # A CONTA DE SLOTS POR ADAPTADOR — 06/09/2026. A régua acima mostra o
+        # que ESTÁ; esta linha responde o que CABE, que é a pergunta de quem
+        # tem um controle no cabo e quer trazê-lo. Ver :func:`_conta_de_slots`.
+        "conta-de-slots": _conta_de_slots(ctx),
         # A TABELA DOS ADAPTADORES — 04/09/2026. Ela era HTML fixo do mockup
         # ("Sala / TP-Link UB500 / Entrada 3 · traseira" e "Sem nome / Intel
         # AX211 / Interno · M.2") sobre uma bancada com TRÊS adaptadores. É
@@ -5005,6 +5323,15 @@ def luz_nao_acende(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
         raise ValueError(
             "o clique não disse em qual controle — a luz é de um aparelho, não "
             "de todos.")
+    # O MESMO BOTÃO É O CANCELAR — 06/09/2026, e o desenho já o prometia: o
+    # `title` diz *"Enquanto ele espera o PS, o mesmo botão vira 'Cancelar'"*.
+    # O RAMO VEM ANTES DE TUDO, e antes da guarda do transporte: durante a
+    # espera o controle está FORA do rádio, então `ctx.por_uniq` não o encontra,
+    # o transporte chega vazio e a guarda do cabo recusaria o próprio Cancelar
+    # com a frase errada. Cancelar não fala com o BlueZ — não existe reconexão
+    # neste produto, o botão PS é dela.
+    if cancelar_a_espera(uniq):
+        return
     dele = ctx.por_uniq(uniq)
     transporte = str(dele.get("transport") or "").lower()
     if transporte and transporte != "bt":
@@ -5016,6 +5343,12 @@ def luz_nao_acende(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     resultado = radio.desconectar(uniq)
     if not resultado.caiu:
         raise RuntimeError(resultado.porque)
+    # O CONTROLE CAIU — E É SÓ AQUI QUE A CONTAGEM COMEÇA. A condição é a do
+    # dono (`_BlocoDaLuz._chegou_o_gesto`): `caiu` é falso tanto para "não achei
+    # o controle no Bluetooth" quanto para "não consegui falar com o
+    # `bluetoothd`", e nos dois casos mandar a pessoa apertar PS seria gastar o
+    # gesto dela por uma coisa que não aconteceu.
+    comecar_a_espera(uniq)
 
 
 PONTE = {"chamar", "machine_declare"}
