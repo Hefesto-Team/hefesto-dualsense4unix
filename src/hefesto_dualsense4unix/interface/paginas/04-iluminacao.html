@@ -962,23 +962,49 @@
      escrito pelo molde; o que sobrava ao lado dele era o widget da coluna VIVA.
      Sem a guia e sem o trilho, `.cel-cor` e `.cel-brilho` passam a ler o que a
      coluna vazia lê: um traço, e nada mais. */
-  .luz-grade .ctrl.off .guia,
-  .luz-grade .ctrl.off .trilho,
-  .luz-grade .ctrl.off .cel-acoes .btn{display:none}
-  /* E O TRILHO DO LUGAR QUE NASCE VAZIO SAI PELA MESMA RAZÃO — 07/09/2026. Ele
-     passou a existir ali porque é onde mora o `data-campo="brilho-pct"`: sem
-     o `.cheio`, o brilho do controle que chega não tem onde pousar. Ele nasce
-     sem `style="width"` — largura cravada num lugar sem dono seria o brilho do
-     MOCKUP — e some, para a célula continuar lendo o travessão do `.num`. */
-  .luz-grade .ctrl[data-conectado="nao"] .trilho{display:none}
+  /* E A CHAVE DESTE BLOCO PASSOU DE `.off` PARA `[data-conectado="nao"]` —
+     07/09/2026, e é o que sustenta a cura desta leva. `.off` só alcança o
+     lugar que ESVAZIA na frente dela; o lugar que NASCE vazio carrega `.vazia`
+     e nunca ganha `.off` (`hefesto_vivo`, passo `1b`). Enquanto os widgets de
+     gesto não nasciam nas colunas sem dono isso bastava — agora eles nascem
+     nas quatro, e quem cumpre a decisão dela (*um lugar sem aparelho não
+     oferece gesto nenhum*, 31/08/2026) é ESTA regra.
+
+     A MARCA É A CERTA porque é a que o piloto VIRA nos dois sentidos: o passo
+     `1b` escreve `nao` e o `1c` escreve `sim`. O widget some quando o  (noqa-acento: valores de atributo)
+     controle
+     sai e aparece quando ele chega, no mesmo tique, sem que ninguém injete
+     HTML — que é justamente o que o piloto não sabe fazer, e a razão de o P3
+     e o P4 ficarem sem guia de cores desde que esta aba existe.
+
+     `:not(.vazia)` NÃO ENTRA AQUI, e a diferença é a razão do `:not` lá
+     embaixo: aquela regra apaga um `<span class="nada">` (o travessão que o
+     lugar vazio já tinha, e que ele precisa manter); esta esconde `button` e
+     `input`, que o lugar vazio nunca deve oferecer — nascido vazio ou
+     esvaziado. É a mesma leitura que `monta.CSS_FOLHA` faz para as dez abas.
+
+     O TRILHO ESTAVA NESTA LISTA E SAIU PARA A LINHA DE BAIXO em 07/09/2026,
+     quando ele passou a nascer no lugar vazio para dar casa ao
+     `data-campo="brilho-pct"`; agora as duas leituras voltam a ser uma só. */
+  .luz-grade .ctrl[data-conectado="nao"] .guia,
+  .luz-grade .ctrl[data-conectado="nao"] .trilho,
+  .luz-grade .ctrl[data-conectado="nao"] .cel-acoes .btn{display:none}
   /* A SÉTIMA CÉLULA É A ÚNICA QUE PRECISA DO TRAVESSÃO DE VOLTA — ver o
      `<span class="nada">` que o gerador emite em `cel-acoes`. Ele nasce
      escondido na coluna viva, para não pôr um traço debaixo de dois botões.
      `:not(.vazia)` NÃO É ZELO: sem ele esta regra apaga o travessão que a
      coluna NASCIDA vazia já tinha, e o P3/P4 perdem a linha "Opções". Foi o
      que a primeira foto desta cura mostrou — a régua sou eu olhando, e ela
-     pegou a regressão que eu mesmo tinha acabado de escrever. */
-  .luz-grade .ctrl:not(.vazia):not(.off) .cel-acoes .nada{display:none}
+     pegou a regressão que eu mesmo tinha acabado de escrever.
+
+     E O SELETOR VIROU `[data-conectado="sim"]` EM 07/09/2026, porque
+     `:not(.vazia):not(.off)` media o NASCIMENTO e o que decide é o AGORA.  (noqa-acento: verbo medir, imperfeito)
+     Medido: com os dois botões nascendo nos quatro lugares, o P3 que ganha um
+     controle sai de `.vazia` + `conectado="sim"` — nenhum dos dois `:not`
+     falha, o travessão continuava visível, e a célula Opções mostrava "—" ao
+     lado de `Automático` e `Desligar`. A marca do piloto responde pelos dois
+     estados; a classe de nascimento só responde por um. */
+  .luz-grade .ctrl[data-conectado="sim"] .cel-acoes .nada{display:none}
   .luz-grade .ctrl.off .cel-acoes .nada{display:flex;align-items:center;
                                         justify-content:center;color:var(--linha)}
   .luz-grade .ctrl.off .cel-cor,
@@ -1309,7 +1335,15 @@
      qual controle` — que o cartão do piloto não leva à tela (só `RuntimeError`
      chega lá). É a MESMA cura que a folha do `.off` já faz com a guia, o
      trilho e os dois botões, três seções acima. */
-  .luz-grade .ctrl.off .cel-cor .hex.reenvia{pointer-events:none;border-color:transparent}
+  /* E VALE PARA O LUGAR QUE NASCE VAZIO DESDE 07/09/2026, pela chave
+     `[data-conectado="nao"]`. A caixa passou a levar `data-gesto="reenviar"`
+     nos quatro lugares — sem isso o P3 que chega fica com a única maneira de
+     reenviar a cor congelada em nunca. Aqui ela não pode SUMIR como a guia
+     some: este `<span>` É o travessão da célula, o mesmo elemento que mostra
+     `#0000FF` na coluna viva. O que se apaga é o CLIQUE e a borda de botão,
+     não o elemento. */
+  .luz-grade .ctrl[data-conectado="nao"] .cel-cor .hex.reenvia{pointer-events:none;
+                                                               border-color:transparent}
 
   /* ---------- BRILHO ---------- */
   .cel-brilho{display:flex;align-items:center;gap:9px}
@@ -1408,27 +1442,27 @@
      separava nada: a faixa já está delimitada pela divisória de cima, pela de
      baixo e pela barra vertical da coluna. Quem tem de ter contorno é o
      touchpad, porque o contorno É o desenho dele. */
-  /* A CÉLULA DOS LEDs TEM DOIS ANDARES DESDE 04/09/2026 — a tira em cima e a
-     RESSALVA embaixo (D-02, pergunta [01] desta aba). Ela é quem ocupa a faixa
-     `--r-leds`; a tira deixou de ser o item da grade e virou o primeiro filho.
+  /* A CÉLULA DOS LEDs VOLTOU A TER UM ANDAR SÓ — 07/09/2026. Ela teve DOIS
+     entre 04/09 e hoje: a tira em cima e a RESSALVA embaixo (D-02, pergunta
+     [01] desta aba). A linha de ressalva saiu por ordem dela — *"o que eu não
+     quero é frase da steam ou outras"* —, e com ela saíram as duas regras que a
+     vestiam (`.cel-leds .ressalva` e a que a escondia no lugar sem dono).
 
-     `flex:0 0 34px` NA TIRA, e não `height:100%`: com a ressalva presente o
-     `100%` esticaria a tira e o halo das duas barras junto. Trinta e quatro é
-     a altura que a tira sempre teve, e ela não muda quando a frase aparece.
+     A COLUNA DE FLEX FICA, e não é sobra: é ela que dá à célula o
+     `justify-content:center` que mantém a tira no eixo do rótulo "LEDs" da
+     primeira coluna e do travessão das colunas vazias. Com um filho só,
+     centrar a coluna é o que põe a tira no meio dos 56px da faixa — era esse o
+     comportamento de antes dos dois andares, e é o que a foto confirma.
 
-     A FRASE FICA CENTRADA como o resto da coluna, e o `min-width:0` é o que
-     deixa uma frase longa QUEBRAR em vez de alargar a coluna — as cinco
-     colunas dividem 1112px em partes iguais, e um item de flex não encolhe
-     abaixo do conteúdo sem isto. */
-  /* `justify-content:center` E NÃO `flex-start`, e a diferença aparece no dia
-     NORMAL: com a ressalva escondida a tira ficaria encostada no topo da faixa
-     de 56px, com 22px de vão embaixo — fora do eixo do rótulo "LEDs" da
-     primeira coluna e do travessão das colunas vazias. Centrado, o par se
-     acomoda como um bloco só: sozinha, a tira fica onde sempre esteve; com a
-     frase, as duas dividem a faixa. */
+     `flex:0 0 34px` NA TIRA, e não `height:100%`: o `100%` a esticaria pelos
+     56px da faixa e levaria o halo das duas barras junto. Trinta e quatro é a
+     altura que a tira sempre teve.
+
+     `min-width:0` FICA pela razão de sempre num flex: sem ele um item não
+     encolhe abaixo do conteúdo, e as cinco colunas dividem 1112px em partes
+     iguais. */
   .cel-leds{display:flex;flex-direction:column;align-items:stretch;
             justify-content:center;min-width:0}
-  .cel-leds .ressalva{text-align:center;overflow:hidden}
   /* E A TIRA DO LUGAR VAZIO MORA NA MESMA CÉLULA — 07/09/2026. Até aqui o
      `.aceso` do lugar sem dono era ele próprio o item da grade, e esta linha
      dizia `align-self:center;height:34px` para ele não esticar pelos 56px da
@@ -1441,39 +1475,20 @@
      medido: 212px viravam a largura de um travessão. Esta linha vem DEPOIS
      dela, com a mesma especificidade, e é a que vale. */
   .luz-grade .ctrl.vazia .cel-leds{align-items:stretch}
-  /* E ELA SOME ENQUANTO O LUGAR NÃO TEM DONO. O molde do lugar sem dono escreve
-     o travessão em todo `data-campo` da coluna, e o alvo `html` desta linha o
-     receberia como um `—` solto debaixo de uma tira apagada — dado com cara de
-     ressalva num lugar onde não há aparelho que ressalvar.
-
-     A MARCA É `data-conectado`, E NÃO A CLASSE — 07/09/2026, e a diferença é a
-     que decide. Esta regra dizia `.off`, e `.off` só existe na coluna que
-     ESVAZIA: o piloto a acrescenta no passo `1b` e a tira no `1c`. A coluna que
-     NASCE vazia carrega `.vazia`, que é um fato de NASCIMENTO — ninguém a tira
-     nunca. Escrever `.vazia` aqui esconderia a ressalva do P3 para sempre,
-     inclusive depois de ele chegar, que é o oposto da D-02.
-     `data-conectado` é a marca que o gerador escreve E que o piloto vira nos
-     DOIS sentidos (`hefesto_vivo`, passos `1b` e `1c`), e é exatamente por isso
-     que a folha das dez a usa para o desenho: `[data-conectado="nao"]
-     .ds-svg{display:none}`, em `topo.html`. Uma regra escrita nela vale nos
-     quatro lugares e se desfaz sozinha quando o controle chega.
-     No repouso a linha já é invisível pelo `.ressalva:has(.nada)` de
-     `monta.CSS_FOLHA`; esta regra é para o primeiro tique, quando o travessão
-     do molde entra no lugar do `.nada`. */
-  .luz-grade .ctrl[data-conectado="nao"] .ressalva{display:none}
-  /* O VÃO DE 16px VIROU DUAS COISAS — LUZES-01, 06/09/2026, e a mudança é
-     MEDIDA: com a botoeira e as seis teclas dentro, o conteúdo da `.aceso` pede
-     212px dos 220 da coluna, e três vãos de 16 (48) faziam os DOIS lados
-     transbordarem — as tiras de luz, que não tinham `flex-shrink:0`, iam a
-     ZERO px e sumiam da tela. Agora a barra de luz é um grupo com vão próprio,
-     as teclas são outro, e o `space-between` reparte o que sobra. */
+  /* O VÃO VOLTOU A SER 16px E UM SÓ — 07/09/2026, com a botoeira fora. A
+     LUZES-01 o partira em dois grupos (`space-between` + `gap:4px`) porque as
+     seis teclas de desenho pediam 212 dos 220px da coluna e não sobrava vão;
+     sem elas, a `.aceso` volta a ter três filhos — tira, indicador, tira — e o
+     `center` com 16 de respiro é o desenho original, que é o que ela mandou
+     manter: *"os leds. barra de luz ficam. é o desenho original."* */
   .aceso{border-radius:8px;background:var(--app-bg);
-         display:flex;align-items:center;justify-content:space-between;gap:4px;
+         display:flex;align-items:center;justify-content:center;gap:16px;
          flex:0 0 34px}
-  .aceso .barra{display:flex;align-items:center;gap:8px}
-  /* `flex:0 0 6px` E NÃO `width` SOZINHO: dentro de um flex apertado a largura
-     é um PEDIDO, e o `flex-shrink` padrão (1) o atende encolhendo até zero —
-     foi assim que as duas tiras sumiram na primeira medição desta entrega. */
+  /* `flex:0 0 6px` FICA, mesmo com o aperto embora — e não é sobra da botoeira.
+     Sem ele a largura da tira é um PEDIDO, e o `flex-shrink` padrão (1) o
+     atende encolhendo até zero: foi assim que as duas tiras sumiram quando o
+     conteúdo apertou. Elas cabem hoje; a trava é o que garante que o próximo
+     item posto nesta faixa não as apague de novo, calado. */
   .tira-luz{flex:0 0 6px;width:6px;height:20px;border-radius:3px}
   .tira-luz.esq{box-shadow:-3px 0 12px 1px currentColor}
   .tira-luz.dir{box-shadow:3px 0 12px 1px currentColor}
@@ -1511,60 +1526,40 @@
      o estilo de linha já as põe, e regra que não morde é regra que mente sobre
      quem manda. */
   .tira-luz.incerta{border:1px dashed var(--comment)}
-  /* ---------- O INDICADOR VIROU A BOTOEIRA (LUZES-01, 06/09/2026) ----------
-     DOZE ALVOS EM 220px, E A CONTA FOI MEDIDA ANTES DE VIRAR FOLHA. A primeira
-     escrita desta entrega punha as teclas numa FAIXA NOVA da grade; o Chrome
-     reprovou na hora: com a `.nota` escondida o `.miolo` oferece 564px e o
-     `scrollHeight` já era 564 com o quadro em 526 — os 38px de diferença são o
-     rodapé, não folga. **A aba está no teto exato, e uma faixa nova a faz rolar
-     por dentro**, que é conteúdo que ninguém sabe que existe.
+  /* ---------- O INDICADOR VOLTOU A SER INDICADOR (07/09/2026) ----------
+     A BOTOEIRA DA LUZES-01 SAIU INTEIRA, por ordem dela: *"só olhar a linha de
+     cima da seleção de player e replicar o que tem lá."* Saíram com ela as
+     cinco `.pad .lamp`, que eram botões de gesto, mais as seis `.desenhos .dz`
+     e o `.pad.reenvia`.
 
-     ONDE COUBE: dentro da própria `.aceso`, que mede 220x34 e usava 68 (as duas
-     tiras de 6 e o indicador de 56). Os 152px vagos são a única superfície
-     livre desta coluna, e ela é a certa por significado — é a célula LEDs.
+     OS TRÊS NOMES DE GESTO NÃO ESTÃO ESCRITOS AQUI, e a omissão é cura de um
+     defeito MEDIDO nesta mesma leva: a primeira redação deste comentário citava
+     um deles por extenso, com o atributo e as aspas. O CSS do gerador entra
+     INTEIRO na página, e o portão `paridade-gtk-html` procura o sinal de cada
+     linha do CSV como TEXTO no HTML — então o comentário que EXPLICAVA a
+     remoção virou a prova de que a peça continuava lá, e a linha 140 do CSV
+     ficou verde sobre um botão que não existe mais. As outras duas, que ninguém
+     tinha citado, reprovaram certo.
 
-     A CONTA FECHADA: tiras 2x6 + botoeira 5x13 + seis desenhos 6x18 + os vãos
-     dão 216 contra 220. É denso, e a densidade é o preço do teto — a
-     alternativa era escrever "Todas"/"Nenhuma" por extenso, que pedia 236.
-     A palavra mora no `title`, que é onde esta aba põe explicação desde 28/08.
+     É a armadilha que o `CLAUDE.md` desta casa nomeia três vezes em três dias:
+     *um comentário que descreve o padrão proibido VIRA a primeira ocorrência
+     dele*. Quem for escrever aqui o nome de um `data-gesto` que saiu, escreva-o
+     sem o atributo — ou não escreva. Os nomes estão em
+     `pacotes/a04_iluminacao.GESTO_DO_AUTOMATICO_DE_TODOS`, na nota datada. */
+  /* (continua) O que sobra desta faixa: */
 
-     AS DUAS CORES VÊM DO DONO: `--led-apagado` e `--led-aceso` são declaradas
-     em `.luz-grade` por `CSS_DA_LUZ_NO_DESENHO` (`a04_iluminacao.tokens_da_luz`),
-     que as LÊ de `monta.CSS_LUZINHAS`. Um terceiro par digitado aqui daria três
-     brancos na mesma coluna. */
-  .pad{border-radius:5px;border:1px solid var(--linha);
-       background:var(--panel);display:flex;align-items:center;
-       justify-content:center;gap:1px;padding:2px 3px;height:20px}
-  /* O INDICADOR É O BOTÃO DE REENVIO — a decisão [03] dela aplicada às luzes:
-     *"A caixa do hexadecimal vira o botão."* O clique numa lâmpada é da
-     lâmpada (o ouvinte resolve pelo `closest`, e o `<button>` vem primeiro); o
-     clique na MOLDURA reenvia o desenho inteiro. */
-  .pad.reenvia{cursor:pointer}
-  .pad.reenvia:hover{border-color:var(--roxo)}
-  .pad{gap:2px}
-  .pad .lamp{width:12px;height:14px;padding:0;border-radius:3px;
-             border:1px solid transparent;background:var(--led-apagado);
-             cursor:pointer;display:block}
-  .pad .lamp.on{background:var(--led-aceso);
-                box-shadow:0 0 6px rgba(255,255,255,.85)}
-  .pad .lamp:hover{border-color:var(--roxo)}
-  .desenhos{display:flex;align-items:center;gap:1px}
-  /* `flex:0 0 17px` E `min-width:0` — a mesma lição que as tiras de luz
-     acabaram de pagar, do outro lado: num flex o `min-width:auto` impede o item
-     de encolher abaixo do CONTEÚDO, e as quatro teclas com `P1`..`P4` escrito
-     dentro cresceram de 17 para 32px cada. Medido: a célula ia a 299px numa
-     coluna de 220. */
-  .desenhos .dz{flex:0 0 17px;min-width:0;width:17px;height:20px;padding:0;border-radius:4px;
-                border:1px solid var(--linha);background:var(--app-bg);
-                cursor:pointer;display:flex;align-items:center;
-                justify-content:center;gap:1px}
-  .desenhos .dz.num{font-family:'JetBrains Mono',monospace;font-size:9px;
-                    line-height:1;color:var(--texto-mudo)}
-  .desenhos .dz.num:hover{color:var(--fg)}
-  .desenhos .dz:hover{border-color:var(--roxo)}
-  .desenhos .dz i{width:2px;height:2px;border-radius:1px;display:block;
-                  background:var(--led-apagado)}
-  .desenhos .dz i.on{background:var(--led-aceso)}
+     O QUE SOBRA É A MOLDURA DE LEITURA, e ela é a de antes da LUZES-01, com as
+     medidas de então: 56x20, que é o que as cinco lâmpadas de `monta.luzinhas`
+     pedem — 5 de 6px, dois vãos de 4 e o `padding-bottom:3px` que centra o
+     desenho na moldura do touchpad. As cinco lâmpadas em si são pintadas por
+     `CSS_LUZINHAS`, logo abaixo, que é o dono das duas cores.
+
+     E NÃO SOBRA CURSOR NENHUM: sem `cursor:pointer` e sem `:hover`, a célula
+     LEDs não convida a um clique que não existe mais. Uma moldura que ainda
+     acendesse a borda no rato prometeria um gesto que o pacote já não tem —
+     que é a metade visual do órfão calado. */
+  .pad{width:56px;height:20px;border-radius:5px;border:1px solid var(--linha);
+       padding-bottom:3px}
   /* AS DUAS CORES VIAJAM COM AS LÂMPADAS, e antes não viajavam: elas eram
      declaradas em `.luzes,.troca`, dentro do CSS da Iluminação. A Controles
      escreveu a mesma classe em 29/08 e as cinco lâmpadas saíram SEM COR — o
@@ -2596,31 +2591,39 @@
           </div>
           <div class="cel-leds">
             <div class="aceso" data-campo="luz" data-hef-alvo="html">
-              <span class="barra">
-                <span class="tira-luz esq" style="background:#7EB8D4;color:#7EB8D4;opacity:0.82" data-campo="luz-incerta" data-hef-alvo="classe" data-hef-classe="incerta" title="Cosmic Red (USB)"></span>
-                <span class="pad reenvia" data-gesto="reenviar-desenho" title="Cosmic Red (USB) · Manda este desenho ao controle de novo — o mesmo que está aceso aqui."><button class="lamp" data-gesto="luzes" data-lampada="1" aria-pressed="false" title="Acende ou apaga a luz 1 deste controle, sem mudar o número dele."></button><button class="lamp" data-gesto="luzes" data-lampada="2" aria-pressed="false" title="Acende ou apaga a luz 2 deste controle, sem mudar o número dele."></button><button class="lamp on" data-gesto="luzes" data-lampada="3" aria-pressed="true" title="Acende ou apaga a luz 3 deste controle, sem mudar o número dele."></button><button class="lamp" data-gesto="luzes" data-lampada="4" aria-pressed="false" title="Acende ou apaga a luz 4 deste controle, sem mudar o número dele."></button><button class="lamp" data-gesto="luzes" data-lampada="5" aria-pressed="false" title="Acende ou apaga a luz 5 deste controle, sem mudar o número dele."></button></span>
-                <span class="tira-luz dir" style="background:#7EB8D4;color:#7EB8D4;opacity:0.82" data-campo="luz-incerta" data-hef-alvo="classe" data-hef-classe="incerta" title="Cosmic Red (USB)"></span>
-              </span>
-              <span class="desenhos"><button class="dz num" data-gesto="desenho-de" data-desenho="1" title="Dá a este controle o desenho de luzes do Player 1 — e NÃO muda o número dele.">P1</button><button class="dz num" data-gesto="desenho-de" data-desenho="2" title="Dá a este controle o desenho de luzes do Player 2 — e NÃO muda o número dele.">P2</button><button class="dz num" data-gesto="desenho-de" data-desenho="3" title="Dá a este controle o desenho de luzes do Player 3 — e NÃO muda o número dele.">P3</button><button class="dz num" data-gesto="desenho-de" data-desenho="4" title="Dá a este controle o desenho de luzes do Player 4 — e NÃO muda o número dele.">P4</button><button class="dz" data-gesto="desenho-de" data-desenho="todas" title="Acende as cinco luzes de jogador deste controle."><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i></button><button class="dz" data-gesto="desenho-de" data-desenho="nenhuma" title="Apaga as cinco e devolve as luzes de jogador ao automático — o número volta a mandar nelas."><i></i><i></i><i></i><i></i><i></i></button></span>
+              <span class="tira-luz esq" style="background:#7EB8D4;color:#7EB8D4;opacity:0.82" data-campo="luz-incerta" data-hef-alvo="classe" data-hef-classe="incerta" title="Cosmic Red (USB)"></span>
+              <span class="pad" title="Cosmic Red (USB)"><span class="luzinhas"><i></i><span class="vao"></span><i></i><i class="on"></i><i></i><span class="vao"></span><i></i></span></span>
+              <span class="tira-luz dir" style="background:#7EB8D4;color:#7EB8D4;opacity:0.82" data-campo="luz-incerta" data-hef-alvo="classe" data-hef-classe="incerta" title="Cosmic Red (USB)"></span>
             </div>
-            <!-- A RAZÃO DO TRACEJADO, EM UMA LINHA — 04/09/2026, D-02 e a
-                 pergunta [01] desta aba. O desenho da tira já diz que algo
-                 mudou; esta linha responde a pergunta seguinte — QUAL das
-                 três causas — sem exigir que o rato passe por cima.
+            <!-- A LINHA DE RESSALVA SAIU DAQUI — 07/09/2026, ordem dela: *"o
+                 que eu não quero é frase da steam ou outras e p1,P2…"*. Ela
+                 nasceu em 04/09 (D-02) para responder QUAL das três causas
+                 apagou a barra sem exigir o rato; o que ela mostrava era, entre
+                 outras, a frase da Steam, e é exatamente essa que ela mandou
+                 tirar.
 
-                 A PEÇA É A DAS DEZ (`monta.ressalva`), e ela NASCE VAZIA aqui:
-                 no desenho não há aparelho a ressalvar, e uma frase cravada
-                 seria a oitava aparição da identidade congelada desta aba. Quem
-                 a escreve é o pacote, a cada tique, com o primeiro retorno de
-                 `controller_card.rotulo_lightbar` — o mesmo motor dos cards da
-                 janela GTK.
+                 O FATO NÃO SE PERDEU, e é o que faz esta remoção não ser perda:
+                 a razão continua no `title` das DUAS tiras, escrita pela
+                 `dica_da_luz` a cada tique — o mesmo motor
+                 (`controller_card.rotulo_lightbar`), pelo alvo `html` do `luz`.
+                 O que saiu foi a LINHA de texto, não o dado.
 
-                 E ELA NASCE NOS QUATRO LUGARES desde 07/09/2026, não só nos
-                 dois conectados: um lugar que ganha controle e não tem onde
-                 acender a ressalva volta a esconder no `title` a razão de a
-                 barra ter apagado. No lugar vazio ela é invisível de graça —
-                 `monta.CSS_FOLHA` tem `.ressalva:has(.nada){display:none}`. -->
-            <div class="ressalva" data-campo="luz-ressalva" data-hef-alvo="html"><i class="nada"></i></div>
+                 E O CAMPO SAIU DOS DOIS LADOS NO MESMO COMMIT: o pacote parou
+                 de emitir o endereço desta linha junto com este widget. Um
+                 campo que o pacote manda e a página não tem vira ÓRFÃO calado
+                 no piloto, tique após tique — medido a zero nesta leva, com os
+                 quatro DualSense na mesa.
+
+                 O NOME DO CAMPO NÃO ESTÁ ESCRITO AQUI, e a omissão é cura de um
+                 defeito medido nesta mesma leva, do outro lado do arquivo: um
+                 comentário da folha citou um `data-gesto` removido com o
+                 atributo e as aspas, o CSS entrou inteiro na página, e o portão
+                 `paridade-gtk-html` — que procura o sinal como TEXTO no HTML —
+                 deu VERDE sobre um botão que não existe mais. *Um comentário
+                 que descreve o padrão proibido vira a primeira ocorrência
+                 dele.* Quem precisar do nome: ele está no
+                 `test_a_04_as_lampadas_espelham_o_numero`, que cobra a
+                 ausência. -->
           </div>
           <div class="cel-acoes">
             <button class="btn roxo" data-gesto="auto" title="Tira a cor escolhida à mão e devolve a automática — a do número deste controle.">Automático</button>
@@ -2979,31 +2982,39 @@
           </div>
           <div class="cel-leds">
             <div class="aceso" data-campo="luz" data-hef-alvo="html">
-              <span class="barra">
-                <span class="tira-luz esq" style="background:#FF5555;color:#FF5555;opacity:1.0" data-campo="luz-incerta" data-hef-alvo="classe" data-hef-classe="incerta" title="Starlight Blue (BT)"></span>
-                <span class="pad reenvia" data-gesto="reenviar-desenho" title="Starlight Blue (BT) · Manda este desenho ao controle de novo — o mesmo que está aceso aqui."><button class="lamp" data-gesto="luzes" data-lampada="1" aria-pressed="false" title="Acende ou apaga a luz 1 deste controle, sem mudar o número dele."></button><button class="lamp on" data-gesto="luzes" data-lampada="2" aria-pressed="true" title="Acende ou apaga a luz 2 deste controle, sem mudar o número dele."></button><button class="lamp" data-gesto="luzes" data-lampada="3" aria-pressed="false" title="Acende ou apaga a luz 3 deste controle, sem mudar o número dele."></button><button class="lamp on" data-gesto="luzes" data-lampada="4" aria-pressed="true" title="Acende ou apaga a luz 4 deste controle, sem mudar o número dele."></button><button class="lamp" data-gesto="luzes" data-lampada="5" aria-pressed="false" title="Acende ou apaga a luz 5 deste controle, sem mudar o número dele."></button></span>
-                <span class="tira-luz dir" style="background:#FF5555;color:#FF5555;opacity:1.0" data-campo="luz-incerta" data-hef-alvo="classe" data-hef-classe="incerta" title="Starlight Blue (BT)"></span>
-              </span>
-              <span class="desenhos"><button class="dz num" data-gesto="desenho-de" data-desenho="1" title="Dá a este controle o desenho de luzes do Player 1 — e NÃO muda o número dele.">P1</button><button class="dz num" data-gesto="desenho-de" data-desenho="2" title="Dá a este controle o desenho de luzes do Player 2 — e NÃO muda o número dele.">P2</button><button class="dz num" data-gesto="desenho-de" data-desenho="3" title="Dá a este controle o desenho de luzes do Player 3 — e NÃO muda o número dele.">P3</button><button class="dz num" data-gesto="desenho-de" data-desenho="4" title="Dá a este controle o desenho de luzes do Player 4 — e NÃO muda o número dele.">P4</button><button class="dz" data-gesto="desenho-de" data-desenho="todas" title="Acende as cinco luzes de jogador deste controle."><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i></button><button class="dz" data-gesto="desenho-de" data-desenho="nenhuma" title="Apaga as cinco e devolve as luzes de jogador ao automático — o número volta a mandar nelas."><i></i><i></i><i></i><i></i><i></i></button></span>
+              <span class="tira-luz esq" style="background:#FF5555;color:#FF5555;opacity:1.0" data-campo="luz-incerta" data-hef-alvo="classe" data-hef-classe="incerta" title="Starlight Blue (BT)"></span>
+              <span class="pad" title="Starlight Blue (BT)"><span class="luzinhas"><i></i><span class="vao"></span><i class="on"></i><i></i><i class="on"></i><span class="vao"></span><i></i></span></span>
+              <span class="tira-luz dir" style="background:#FF5555;color:#FF5555;opacity:1.0" data-campo="luz-incerta" data-hef-alvo="classe" data-hef-classe="incerta" title="Starlight Blue (BT)"></span>
             </div>
-            <!-- A RAZÃO DO TRACEJADO, EM UMA LINHA — 04/09/2026, D-02 e a
-                 pergunta [01] desta aba. O desenho da tira já diz que algo
-                 mudou; esta linha responde a pergunta seguinte — QUAL das
-                 três causas — sem exigir que o rato passe por cima.
+            <!-- A LINHA DE RESSALVA SAIU DAQUI — 07/09/2026, ordem dela: *"o
+                 que eu não quero é frase da steam ou outras e p1,P2…"*. Ela
+                 nasceu em 04/09 (D-02) para responder QUAL das três causas
+                 apagou a barra sem exigir o rato; o que ela mostrava era, entre
+                 outras, a frase da Steam, e é exatamente essa que ela mandou
+                 tirar.
 
-                 A PEÇA É A DAS DEZ (`monta.ressalva`), e ela NASCE VAZIA aqui:
-                 no desenho não há aparelho a ressalvar, e uma frase cravada
-                 seria a oitava aparição da identidade congelada desta aba. Quem
-                 a escreve é o pacote, a cada tique, com o primeiro retorno de
-                 `controller_card.rotulo_lightbar` — o mesmo motor dos cards da
-                 janela GTK.
+                 O FATO NÃO SE PERDEU, e é o que faz esta remoção não ser perda:
+                 a razão continua no `title` das DUAS tiras, escrita pela
+                 `dica_da_luz` a cada tique — o mesmo motor
+                 (`controller_card.rotulo_lightbar`), pelo alvo `html` do `luz`.
+                 O que saiu foi a LINHA de texto, não o dado.
 
-                 E ELA NASCE NOS QUATRO LUGARES desde 07/09/2026, não só nos
-                 dois conectados: um lugar que ganha controle e não tem onde
-                 acender a ressalva volta a esconder no `title` a razão de a
-                 barra ter apagado. No lugar vazio ela é invisível de graça —
-                 `monta.CSS_FOLHA` tem `.ressalva:has(.nada){display:none}`. -->
-            <div class="ressalva" data-campo="luz-ressalva" data-hef-alvo="html"><i class="nada"></i></div>
+                 E O CAMPO SAIU DOS DOIS LADOS NO MESMO COMMIT: o pacote parou
+                 de emitir o endereço desta linha junto com este widget. Um
+                 campo que o pacote manda e a página não tem vira ÓRFÃO calado
+                 no piloto, tique após tique — medido a zero nesta leva, com os
+                 quatro DualSense na mesa.
+
+                 O NOME DO CAMPO NÃO ESTÁ ESCRITO AQUI, e a omissão é cura de um
+                 defeito medido nesta mesma leva, do outro lado do arquivo: um
+                 comentário da folha citou um `data-gesto` removido com o
+                 atributo e as aspas, o CSS entrou inteiro na página, e o portão
+                 `paridade-gtk-html` — que procura o sinal como TEXTO no HTML —
+                 deu VERDE sobre um botão que não existe mais. *Um comentário
+                 que descreve o padrão proibido vira a primeira ocorrência
+                 dele.* Quem precisar do nome: ele está no
+                 `test_a_04_as_lampadas_espelham_o_numero`, que cobra a
+                 ausência. -->
           </div>
           <div class="cel-acoes">
             <button class="btn roxo" data-gesto="auto" title="Tira a cor escolhida à mão e devolve a automática — a do número deste controle.">Automático</button>
@@ -3312,6 +3323,18 @@
           </div>
           <div class="ctrl-rot" data-campo="identidade">P3 <span class="pt">•</span> Desconectado</div>
           <div class="cel-cor">
+            <span class="guia">
+            <button class="tom" style="background:#7EB8D4" data-campo="hex" data-hef-alvo="classe" data-hef-quando="#0000FF" data-gesto="cor" data-hex="#0000FF" title="Cor automática do Player 1 — usar aqui pinta a barra deste controle, e não muda o número dele."></button>
+            <button class="tom" style="background:#FF5555" data-campo="hex" data-hef-alvo="classe" data-hef-quando="#FF0000" data-gesto="cor" data-hex="#FF0000" title="Cor automática do Player 2 — usar aqui pinta a barra deste controle, e não muda o número dele."></button>
+            <button class="tom" style="background:#50FA7B" data-campo="hex" data-hef-alvo="classe" data-hef-quando="#00FF00" data-gesto="cor" data-hex="#00FF00" title="Cor automática do Player 3 — usar aqui pinta a barra deste controle, e não muda o número dele."></button>
+            <button class="tom" style="background:#FF79C6" data-campo="hex" data-hef-alvo="classe" data-hef-quando="#FF0080" data-gesto="cor" data-hex="#FF0080" title="Cor automática do Player 4 — usar aqui pinta a barra deste controle, e não muda o número dele."></button>
+            <button class="tom" style="background:#F1FA8C" data-campo="hex" data-hef-alvo="classe" data-hef-quando="#FFFF00" data-gesto="cor" data-hex="#FFFF00" title="Cor automática do Player 5 — usar aqui pinta a barra deste controle, e não muda o número dele."></button>
+            <button class="tom" style="background:#8BE9FD" data-campo="hex" data-hef-alvo="classe" data-hef-quando="#00FFFF" data-gesto="cor" data-hex="#00FFFF" title="Cor automática do Player 6 — usar aqui pinta a barra deste controle, e não muda o número dele."></button>
+            <button class="tom" style="background:#FFB86C" data-campo="hex" data-hef-alvo="classe" data-hef-quando="#FF8000" data-gesto="cor" data-hex="#FF8000" title="Cor automática do Player 7 — usar aqui pinta a barra deste controle, e não muda o número dele."></button>
+            <button class="tom" style="background:#BD93F9" data-campo="hex" data-hef-alvo="classe" data-hef-quando="#8000FF" data-gesto="cor" data-hex="#8000FF" title="Cor automática do Player 8 — usar aqui pinta a barra deste controle, e não muda o número dele."></button>
+              <input type="color" class="livre" value="#000000" data-gesto="cor"
+                     title="Livre — abre o seletor para uma cor que não está na guia.">
+            </span>
             <!-- E ELA REENVIA — 04/09/2026, decisão [03] dela. O `data-gesto`
                  vai NESTA caixa e não num botão novo, e o valor que ele leva é
                  o TEXTO dela: `data-hex` seria a cor do gerador, congelada, e
@@ -3319,10 +3342,11 @@
                  gravada. O `texto` do clique é o que o piloto lê do
                  `textContent`, e o `textContent` é o que o pacote reescreve a
                  cada tique pelo `data-campo="hex"`. -->
-            <span class="hex" data-campo="hex">—</span>
+            <span class="hex reenvia" data-campo="hex" data-gesto="reenviar"
+                  title="Manda esta cor ao controle de novo — a mesma que já está escrita aqui.">—</span>
           </div>
           <div class="cel-brilho">
-            <span class="trilho"><span class="cheio" data-campo="brilho-pct" data-hef-alvo="largura"></span></span>
+            <span class="trilho"><span class="cheio" data-campo="brilho-pct" data-hef-alvo="largura"></span><input class="puxador" type="range" min="0" max="100" step="1" value="0" data-gesto="brilho" data-campo="brilho-pct" data-hef-alvo="valor" aria-label="Brilho da barra de luz deste controle" title="Arraste para mudar o brilho da barra deste controle. Ao soltar, a barra acende no brilho novo e o valor é gravado no perfil ativo — não espera o Salvar Perfil."></span>
             <span class="num" data-campo="brilho">—</span>
           </div>
           <div class="players" data-campo="players" data-hef-alvo="html">
@@ -3332,26 +3356,39 @@
             <div class="aceso" data-campo="luz" data-hef-alvo="html">
               <span class="nada">—</span>
             </div>
-            <!-- A RAZÃO DO TRACEJADO, EM UMA LINHA — 04/09/2026, D-02 e a
-                 pergunta [01] desta aba. O desenho da tira já diz que algo
-                 mudou; esta linha responde a pergunta seguinte — QUAL das
-                 três causas — sem exigir que o rato passe por cima.
+            <!-- A LINHA DE RESSALVA SAIU DAQUI — 07/09/2026, ordem dela: *"o
+                 que eu não quero é frase da steam ou outras e p1,P2…"*. Ela
+                 nasceu em 04/09 (D-02) para responder QUAL das três causas
+                 apagou a barra sem exigir o rato; o que ela mostrava era, entre
+                 outras, a frase da Steam, e é exatamente essa que ela mandou
+                 tirar.
 
-                 A PEÇA É A DAS DEZ (`monta.ressalva`), e ela NASCE VAZIA aqui:
-                 no desenho não há aparelho a ressalvar, e uma frase cravada
-                 seria a oitava aparição da identidade congelada desta aba. Quem
-                 a escreve é o pacote, a cada tique, com o primeiro retorno de
-                 `controller_card.rotulo_lightbar` — o mesmo motor dos cards da
-                 janela GTK.
+                 O FATO NÃO SE PERDEU, e é o que faz esta remoção não ser perda:
+                 a razão continua no `title` das DUAS tiras, escrita pela
+                 `dica_da_luz` a cada tique — o mesmo motor
+                 (`controller_card.rotulo_lightbar`), pelo alvo `html` do `luz`.
+                 O que saiu foi a LINHA de texto, não o dado.
 
-                 E ELA NASCE NOS QUATRO LUGARES desde 07/09/2026, não só nos
-                 dois conectados: um lugar que ganha controle e não tem onde
-                 acender a ressalva volta a esconder no `title` a razão de a
-                 barra ter apagado. No lugar vazio ela é invisível de graça —
-                 `monta.CSS_FOLHA` tem `.ressalva:has(.nada){display:none}`. -->
-            <div class="ressalva" data-campo="luz-ressalva" data-hef-alvo="html"><i class="nada"></i></div>
+                 E O CAMPO SAIU DOS DOIS LADOS NO MESMO COMMIT: o pacote parou
+                 de emitir o endereço desta linha junto com este widget. Um
+                 campo que o pacote manda e a página não tem vira ÓRFÃO calado
+                 no piloto, tique após tique — medido a zero nesta leva, com os
+                 quatro DualSense na mesa.
+
+                 O NOME DO CAMPO NÃO ESTÁ ESCRITO AQUI, e a omissão é cura de um
+                 defeito medido nesta mesma leva, do outro lado do arquivo: um
+                 comentário da folha citou um `data-gesto` removido com o
+                 atributo e as aspas, o CSS entrou inteiro na página, e o portão
+                 `paridade-gtk-html` — que procura o sinal como TEXTO no HTML —
+                 deu VERDE sobre um botão que não existe mais. *Um comentário
+                 que descreve o padrão proibido vira a primeira ocorrência
+                 dele.* Quem precisar do nome: ele está no
+                 `test_a_04_as_lampadas_espelham_o_numero`, que cobra a
+                 ausência. -->
           </div>
           <div class="cel-acoes">
+            <button class="btn roxo" data-gesto="auto" title="Tira a cor escolhida à mão e devolve a automática — a do número deste controle.">Automático</button>
+            <button class="btn vermelho" data-gesto="apagar" title="Apaga a barra de luz deste controle.">Desligar</button>
             <!-- O TRAVESSÃO DESTA CÉLULA NASCE AQUI, escondido na coluna viva, e
                  é o único das sete que precisava nascer: as outras seis têm
                  `data-campo`, e o molde do lugar sem dono já escreve o traço
@@ -3656,6 +3693,18 @@
           </div>
           <div class="ctrl-rot" data-campo="identidade">P4 <span class="pt">•</span> Desconectado</div>
           <div class="cel-cor">
+            <span class="guia">
+            <button class="tom" style="background:#7EB8D4" data-campo="hex" data-hef-alvo="classe" data-hef-quando="#0000FF" data-gesto="cor" data-hex="#0000FF" title="Cor automática do Player 1 — usar aqui pinta a barra deste controle, e não muda o número dele."></button>
+            <button class="tom" style="background:#FF5555" data-campo="hex" data-hef-alvo="classe" data-hef-quando="#FF0000" data-gesto="cor" data-hex="#FF0000" title="Cor automática do Player 2 — usar aqui pinta a barra deste controle, e não muda o número dele."></button>
+            <button class="tom" style="background:#50FA7B" data-campo="hex" data-hef-alvo="classe" data-hef-quando="#00FF00" data-gesto="cor" data-hex="#00FF00" title="Cor automática do Player 3 — usar aqui pinta a barra deste controle, e não muda o número dele."></button>
+            <button class="tom" style="background:#FF79C6" data-campo="hex" data-hef-alvo="classe" data-hef-quando="#FF0080" data-gesto="cor" data-hex="#FF0080" title="Cor automática do Player 4 — usar aqui pinta a barra deste controle, e não muda o número dele."></button>
+            <button class="tom" style="background:#F1FA8C" data-campo="hex" data-hef-alvo="classe" data-hef-quando="#FFFF00" data-gesto="cor" data-hex="#FFFF00" title="Cor automática do Player 5 — usar aqui pinta a barra deste controle, e não muda o número dele."></button>
+            <button class="tom" style="background:#8BE9FD" data-campo="hex" data-hef-alvo="classe" data-hef-quando="#00FFFF" data-gesto="cor" data-hex="#00FFFF" title="Cor automática do Player 6 — usar aqui pinta a barra deste controle, e não muda o número dele."></button>
+            <button class="tom" style="background:#FFB86C" data-campo="hex" data-hef-alvo="classe" data-hef-quando="#FF8000" data-gesto="cor" data-hex="#FF8000" title="Cor automática do Player 7 — usar aqui pinta a barra deste controle, e não muda o número dele."></button>
+            <button class="tom" style="background:#BD93F9" data-campo="hex" data-hef-alvo="classe" data-hef-quando="#8000FF" data-gesto="cor" data-hex="#8000FF" title="Cor automática do Player 8 — usar aqui pinta a barra deste controle, e não muda o número dele."></button>
+              <input type="color" class="livre" value="#000000" data-gesto="cor"
+                     title="Livre — abre o seletor para uma cor que não está na guia.">
+            </span>
             <!-- E ELA REENVIA — 04/09/2026, decisão [03] dela. O `data-gesto`
                  vai NESTA caixa e não num botão novo, e o valor que ele leva é
                  o TEXTO dela: `data-hex` seria a cor do gerador, congelada, e
@@ -3663,10 +3712,11 @@
                  gravada. O `texto` do clique é o que o piloto lê do
                  `textContent`, e o `textContent` é o que o pacote reescreve a
                  cada tique pelo `data-campo="hex"`. -->
-            <span class="hex" data-campo="hex">—</span>
+            <span class="hex reenvia" data-campo="hex" data-gesto="reenviar"
+                  title="Manda esta cor ao controle de novo — a mesma que já está escrita aqui.">—</span>
           </div>
           <div class="cel-brilho">
-            <span class="trilho"><span class="cheio" data-campo="brilho-pct" data-hef-alvo="largura"></span></span>
+            <span class="trilho"><span class="cheio" data-campo="brilho-pct" data-hef-alvo="largura"></span><input class="puxador" type="range" min="0" max="100" step="1" value="0" data-gesto="brilho" data-campo="brilho-pct" data-hef-alvo="valor" aria-label="Brilho da barra de luz deste controle" title="Arraste para mudar o brilho da barra deste controle. Ao soltar, a barra acende no brilho novo e o valor é gravado no perfil ativo — não espera o Salvar Perfil."></span>
             <span class="num" data-campo="brilho">—</span>
           </div>
           <div class="players" data-campo="players" data-hef-alvo="html">
@@ -3676,26 +3726,39 @@
             <div class="aceso" data-campo="luz" data-hef-alvo="html">
               <span class="nada">—</span>
             </div>
-            <!-- A RAZÃO DO TRACEJADO, EM UMA LINHA — 04/09/2026, D-02 e a
-                 pergunta [01] desta aba. O desenho da tira já diz que algo
-                 mudou; esta linha responde a pergunta seguinte — QUAL das
-                 três causas — sem exigir que o rato passe por cima.
+            <!-- A LINHA DE RESSALVA SAIU DAQUI — 07/09/2026, ordem dela: *"o
+                 que eu não quero é frase da steam ou outras e p1,P2…"*. Ela
+                 nasceu em 04/09 (D-02) para responder QUAL das três causas
+                 apagou a barra sem exigir o rato; o que ela mostrava era, entre
+                 outras, a frase da Steam, e é exatamente essa que ela mandou
+                 tirar.
 
-                 A PEÇA É A DAS DEZ (`monta.ressalva`), e ela NASCE VAZIA aqui:
-                 no desenho não há aparelho a ressalvar, e uma frase cravada
-                 seria a oitava aparição da identidade congelada desta aba. Quem
-                 a escreve é o pacote, a cada tique, com o primeiro retorno de
-                 `controller_card.rotulo_lightbar` — o mesmo motor dos cards da
-                 janela GTK.
+                 O FATO NÃO SE PERDEU, e é o que faz esta remoção não ser perda:
+                 a razão continua no `title` das DUAS tiras, escrita pela
+                 `dica_da_luz` a cada tique — o mesmo motor
+                 (`controller_card.rotulo_lightbar`), pelo alvo `html` do `luz`.
+                 O que saiu foi a LINHA de texto, não o dado.
 
-                 E ELA NASCE NOS QUATRO LUGARES desde 07/09/2026, não só nos
-                 dois conectados: um lugar que ganha controle e não tem onde
-                 acender a ressalva volta a esconder no `title` a razão de a
-                 barra ter apagado. No lugar vazio ela é invisível de graça —
-                 `monta.CSS_FOLHA` tem `.ressalva:has(.nada){display:none}`. -->
-            <div class="ressalva" data-campo="luz-ressalva" data-hef-alvo="html"><i class="nada"></i></div>
+                 E O CAMPO SAIU DOS DOIS LADOS NO MESMO COMMIT: o pacote parou
+                 de emitir o endereço desta linha junto com este widget. Um
+                 campo que o pacote manda e a página não tem vira ÓRFÃO calado
+                 no piloto, tique após tique — medido a zero nesta leva, com os
+                 quatro DualSense na mesa.
+
+                 O NOME DO CAMPO NÃO ESTÁ ESCRITO AQUI, e a omissão é cura de um
+                 defeito medido nesta mesma leva, do outro lado do arquivo: um
+                 comentário da folha citou um `data-gesto` removido com o
+                 atributo e as aspas, o CSS entrou inteiro na página, e o portão
+                 `paridade-gtk-html` — que procura o sinal como TEXTO no HTML —
+                 deu VERDE sobre um botão que não existe mais. *Um comentário
+                 que descreve o padrão proibido vira a primeira ocorrência
+                 dele.* Quem precisar do nome: ele está no
+                 `test_a_04_as_lampadas_espelham_o_numero`, que cobra a
+                 ausência. -->
           </div>
           <div class="cel-acoes">
+            <button class="btn roxo" data-gesto="auto" title="Tira a cor escolhida à mão e devolve a automática — a do número deste controle.">Automático</button>
+            <button class="btn vermelho" data-gesto="apagar" title="Apaga a barra de luz deste controle.">Desligar</button>
             <!-- O TRAVESSÃO DESTA CÉLULA NASCE AQUI, escondido na coluna viva, e
                  é o único das sete que precisava nascer: as outras seis têm
                  `data-campo`, e o molde do lugar sem dono já escreve o traço
@@ -3854,10 +3917,14 @@
         aquele larga a barra <i>daquele</i> controle para o jogo. <b>Desligar grava a cor
         de cada controle no ato</b>, para nenhuma se perder e nenhuma se repetir. Ele não
         custou linha nenhuma: mora na faixa do título, que estava vazia à direita.</li>
-    <li><b>Debaixo da tira nasce uma linha quando há o que ressalvar.</b> A tira tracejada
-        avisa que a luz não é nossa; a linha diz <i>qual</i> das três causas — o jogo em
-        Modo Nativo, a Steam com o controle aberto, ou a cor desconhecida. Nos dias em que
-        está tudo bem ela não existe.</li>
+    <li><b>A célula LEDs voltou a ser só o desenho.</b> Saíram as teclas
+        <span class="marca">P1 P2 P3 P4</span> e os dois atalhos, o clique nas cinco
+        lâmpadas e a linha de texto que dizia por que a barra apagou — pedido seu:
+        <i>"só olhar a linha de cima da seleção de player e replicar o que tem lá."</i>
+        Ficaram as duas tiras da barra de luz, que são o desenho original, e as cinco
+        lâmpadas, que agora <b>espelham o número</b> escolhido na linha
+        <span class="marca">Jogador</span> logo acima — sem escolha própria. A razão de
+        uma barra tracejada continua a um rato de distância, na dica das tiras.</li>
     <li><b>O hexadecimal virou botão.</b> Clicar em <span class="marca">#0000FF</span> manda
         aquela cor ao controle de novo. Antes, uma cor escolhida à mão era a única sem
         caminho de volta: os oito tons reenviam ao serem clicados, e o seletor livre só

@@ -38,6 +38,7 @@ AS RÉGUAS DAQUI, e cada uma nasceu de uma coisa que a tela fazia:
 from __future__ import annotations
 
 import pathlib
+import re
 import sys
 
 import pytest
@@ -470,9 +471,24 @@ def test_o_anel_da_cor_escolhida_tem_endereco_e_e_o_mesmo_do_hex():
     from pacotes import a04_iluminacao as pac
 
     bancada = onde.pagina("04-iluminacao.html").read_text(encoding="utf-8")
-    #: OITO TONS nos DOIS controles conectados da bancada.
-    assert bancada.count('data-campo="hex" data-hef-alvo="classe"') == 16, (
-        "os botões da guia de cores voltaram a não ter endereço de estado.")
+    #: OITO TONS nos QUATRO LUGARES da bancada — e eram DEZESSEIS até
+    #: 07/09/2026, porque a guia só nascia nos dois conectados.
+    #:
+    #: O NÚMERO MUDOU PORQUE O MUNDO MUDOU, e não porque a régua afrouxou: a
+    #: guia passou a nascer nos quatro lugares para que o P3 que ganha um
+    #: controle a encontre pronta (o piloto vira marca e escreve campo, não
+    #: materializa HTML — só recarregar a página desfazia). Um `16` mantido
+    #: aqui mediria o mundo de ontem, que é o defeito que esta casa nomeia:
+    #: *a régua media o mundo de ontem*.  (noqa-acento: verbo medir, imperfeito)
+    #:
+    #: E O ENDEREÇO CONTINUA VALENDO NOS QUATRO, que é o ponto: `hex` +
+    #: `data-hef-alvo="classe"` é o que faz o anel acender no tom certo quando
+    #: o controle chega. Sem ele nos lugares vazios, o P3 mostraria a guia e
+    #: nenhuma cor marcada.
+    assert bancada.count('data-campo="hex" data-hef-alvo="classe"') == 32, (
+        "os botões da guia de cores voltaram a não ter endereço de estado — ou "
+        "a guia deixou de nascer nos QUATRO lugares, e o P3 que ganha um "
+        "controle volta a ficar sem onde trocar a cor.")
 
     #: O `data-hef-quando` LEVA O HEX DO PRODUTO, que é o que o pacote emite —
     #: e não o tom da casa, que é só o que a tela desenha. Foi essa mesma
@@ -516,20 +532,23 @@ def test_a_bancada_perdeu_a_dica_congelada_da_celula_de_leds():
     import monta
     from pacotes import a04_iluminacao as pac
 
-    #: AS TRÊS PEÇAS CONTINUAM TRÊS, e a do meio diz uma coisa a mais — a
-    #: botoeira da `LUZES-01` (06/09/2026) deu CLIQUE ao `.pad`, e a dica dele
-    #: passou a dizer também o que o clique faz. A frase composta sai do MESMO
-    #: dono (`DICA_DO_REENVIO_DO_DESENHO`), nunca digitada aqui, e a conferência
-    #: é por IGUALDADE: `in` deixaria a dica velha passar como prefixo da nova.
+    #: AS TRÊS PEÇAS DIZEM A MESMA FRASE — e voltaram a dizer em 07/09/2026.
+    #: Entre 06/09 e essa data a do meio dizia uma coisa a mais: a botoeira da
+    #: `LUZES-01` deu CLIQUE ao `.pad`, e a dica dele passou a anunciar também o
+    #: que o clique fazia. A botoeira saiu por ordem dela (*"só olhar a linha de
+    #: cima da seleção de player e replicar o que tem lá"*), o `.pad` voltou a
+    #: ser desenho de leitura, e uma dica que ainda prometesse um reenvio seria
+    #: a tela oferecendo um gesto que o pacote já não tem.
+    #:
+    #: A CONFERÊNCIA É POR IGUALDADE E A CONTA É TRÊS: `in` deixaria a dica
+    #: composta passar, porque a viva é PREFIXO dela — era exatamente assim que
+    #: esta régua deixaria a botoeira voltar sem dizer nada.
     for c in monta.CONECTADOS:
         esperada = pac.dica_da_luz(c["nome"], c["via"], "")
-        assert bancada.count(f'title="{esperada}"') == 2, (
-            f"as duas tiras da coluna de {c['nome']} perderam a dica viva "
-            f"({esperada!r}).")
-        do_pad = f"{esperada} · {pac.DICA_DO_REENVIO_DO_DESENHO}"
-        assert bancada.count(f'title="{do_pad}"') == 1, (
-            f"o indicador da coluna de {c['nome']} perdeu a dica viva, ou "
-            f"deixou de dizer o que o clique faz ({do_pad!r}).")
+        assert bancada.count(f'title="{esperada}"') == 3, (
+            f"as três peças da coluna de {c['nome']} — as duas tiras e o "
+            f"indicador — deviam dizer a MESMA dica viva ({esperada!r}); a do "
+            f"meio dizendo outra coisa é a botoeira de volta.")
     assert "Desenho que mandamos" not in bancada, (
         "a afirmação sobre o desenho das 5 luzes voltou ao desenho: este pacote "
         "não vê o override por-uniq que decide qual desenho está em vigor.")
@@ -1253,12 +1272,42 @@ def test_a_coluna_que_esvazia_le_como_a_que_nasce_vazia():
         "sem `!important` a regra não vence o `style=` INLINE do gerador, e a "
         "coluna vazia continua com a cor de um controle que não está lá.")
     # O QUE NÃO PODE ACEITAR CLIQUE: guia, trilho e os dois botões.
-    for peca in (".luz-grade .ctrl.off .guia",
-                 ".luz-grade .ctrl.off .trilho",
-                 ".luz-grade .ctrl.off .cel-acoes .btn"):
+    #
+    # A CHAVE PASSOU DE `.off` PARA `[data-conectado="nao"]` EM 07/09/2026, e a
+    # régua ficou MAIS forte, não mais frouxa: `.off` só alcança o lugar que
+    # ESVAZIA, e desde hoje os widgets de gesto nascem também nos dois lugares
+    # que nascem VAZIOS — eles precisavam nascer, porque o piloto vira marca e
+    # escreve campo, e não materializa HTML: o P3 que ganhava um controle
+    # ficava sem guia de cores até alguém recarregar a página. `[data-conectado
+    # ="nao"]` é a marca que o piloto vira nos DOIS sentidos (passos `1b` e
+    # `1c`), então ela cobre o lugar esvaziado E o lugar nascido vazio, e
+    # devolve o widget no instante em que o controle chega.
+    for peca in ('.luz-grade .ctrl[data-conectado="nao"] .guia',
+                 '.luz-grade .ctrl[data-conectado="nao"] .trilho',
+                 '.luz-grade .ctrl[data-conectado="nao"] .cel-acoes .btn'):
         assert peca in doc, (
-            f"{peca} voltou à tela num lugar sem controle: dez botões que "
+            f"{peca} voltou à tela num lugar sem controle: botões que "
             f"engolem o toque sem uma letra.")
+    # E A CAIXA DO HEXADECIMAL, que não pode SUMIR porque é o travessão da
+    # célula `Cor` — nela o que se apaga é o CLIQUE.
+    assert ('.luz-grade .ctrl[data-conectado="nao"] .cel-cor .hex.reenvia'
+            "{pointer-events:none" in doc), (
+        "a caixa do hexadecimal voltou a aceitar clique num lugar sem "
+        "controle — ela leva `data-gesto=\"reenviar\"` nos quatro lugares "
+        "desde 07/09/2026, e sem esta regra o clique levanta `o clique não "
+        "disse em qual controle`, que o cartão do piloto não leva à tela.")
+    # E OS WIDGETS EXISTEM MESMO NA COLUNA QUE NASCE VAZIA — a outra metade da
+    # cura, e sem ela as três regras acima esconderiam o que não existe.
+    grade = doc.split('<div class="luz-grade">', 1)[-1].split('<div class="rodape"', 1)[0]
+    for coluna in re.findall(
+            r'<div class="ctrl vazia"(.*?)(?=<div class="ctrl[" ]|\Z)', grade, re.S):
+        for peca in ('<span class="guia">', 'class="puxador"',
+                     'data-gesto="auto"', 'data-gesto="apagar"',
+                     'data-gesto="reenviar"'):
+            assert peca in coluna, (
+                f"o lugar que NASCE vazio perdeu {peca!r} — o controle que "
+                f"chegar ali fica sem esse gesto na tela, e só recarregar a "
+                f"página desfaz.")
     # O TRAVESSÃO DA SÉTIMA CÉLULA — a única sem `data-campo`, logo a única que
     # o molde do lugar sem dono não alcança.
     assert doc.count('<span class="nada">—</span>\n          </div>') >= 2, (
@@ -1267,6 +1316,18 @@ def test_a_coluna_que_esvazia_le_como_a_que_nasce_vazia():
     # E A COLUNA QUE NASCE VAZIA NÃO PODE PERDER O DELA. Foi a regressão que a
     # primeira foto desta cura pegou: `.ctrl .cel-acoes .nada{display:none}`
     # apagava o travessão do P3 e do P4 junto.
-    assert ".luz-grade .ctrl:not(.vazia):not(.off) .cel-acoes .nada{display:none}" in doc, (
-        "a regra que esconde o travessão da coluna VIVA perdeu a ressalva e "
-        "apagou o do P3/P4 — regressão medida em 03/09/2026.")
+    #
+    # E O SELETOR VIROU `[data-conectado="sim"]` EM 07/09/2026: o
+    # `:not(.vazia):not(.off)` media o NASCIMENTO, e o que  (noqa-acento) medir
+    # decide é o AGORA.
+    # Com os dois botões nascendo nos quatro lugares, o P3 que ganha um
+    # controle sai de `.vazia` + `conectado="sim"` — nenhum dos dois `:not`
+    # falha —, e a célula Opções mostrava "—" AO LADO de `Automático` e
+    # `Desligar`. A marca do piloto responde pelos dois estados; a classe de
+    # nascimento só responde por um.
+    assert '.luz-grade .ctrl[data-conectado="sim"] .cel-acoes .nada{display:none}' in doc, (
+        "a regra que esconde o travessão da coluna VIVA sumiu, ou voltou a "
+        "medir o NASCIMENTO: sem ela o lugar que ganha um controle mostra o "
+        "travessão ao lado dos dois botões, e sem a ressalva ela apaga o "
+        "travessão do P3/P4 parados — as duas regressões, medidas em 03/09 e "
+        "em 07/09/2026.")

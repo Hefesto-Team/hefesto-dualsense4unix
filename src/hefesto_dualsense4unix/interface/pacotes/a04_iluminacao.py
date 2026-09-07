@@ -413,133 +413,17 @@ def automatico_do_perfil(p: dict[str, Any] | None) -> bool:
     return bool(leds.get("auto_player_colors"))
 
 
-#: OS QUATRO GESTOS QUE NASCEM COM ELAS. Os nomes são o vocabulário do clique
-#: (`data-gesto`), e ficam aqui em vez de digitados no gerador E no pacote: era
+#: O GESTO QUE SOBRA NESTA FAIXA. O nome é o vocabulário do clique
+#: (`data-gesto`), e fica aqui em vez de digitado no gerador E no pacote: era
 #: assim que o `ENDERECO_DO_AUTOMATICO` já vivia, e pela mesma razão.
-GESTO_DA_LAMPADA = "luzes"
-GESTO_DO_DESENHO_DE = "desenho-de"
-GESTO_DO_REENVIO_DO_DESENHO = "reenviar-desenho"
+#:
+#: ERAM QUATRO ATÉ 07/09/2026. `GESTO_DA_LAMPADA` (`luzes`),
+#: `GESTO_DO_DESENHO_DE` (`desenho-de`) e `GESTO_DO_REENVIO_DO_DESENHO`
+#: (`reenviar-desenho`) saíram com a botoeira, por ordem dela — ver
+#: `desenho_da_luz`. Eles não foram declarados em `_SEM_CAMINHO_HOJE`: um gesto
+#: sem widget não é promessa por cumprir, é código morto, e a regra desta casa
+#: manda que a poda acompanhe a peça. O widget e o gesto saíram no mesmo commit.
 GESTO_DO_AUTOMATICO_DE_TODOS = "auto-todos"
-
-#: OS DOIS ATALHOS DO `desenho-de` QUE NÃO SÃO NÚMERO. "Todas apagadas" tem
-#: significado no motor — desenho vazio quer dizer *"quem manda é o automático"*
-#: —, e por isso ele não é enfeite do par (`lightbar_actions.py:1329`, `:1346`).
-TODAS, NENHUMA = "todas", "nenhuma"
-
-
-def desenho_gravado(p: dict[str, Any] | None, uniq: str) -> tuple[bool, ...] | None:
-    """O `player_leds` que o perfil guarda para ESTE controle, ou `None`.
-
-    **SÓ O OVERRIDE POR CONTROLE, e o global fica de fora de propósito.**
-    `profiles/schema.LedsConfig` declara `player_leds: list[bool] =
-    default_factory=lambda: [False] * 5` — todo perfil desta casa tem o campo
-    global preenchido com cinco falsos **sem ninguém ter escolhido isso**. Lê-lo
-    como escolha faria a tela afirmar *"as cinco apagadas"* em trinta e três
-    perfis dela, e o gesto do reenvio mandaria o preto ao aparelho. O override
-    por-`uniq`, ao contrário, é serializado com `exclude_unset`
-    (`_com_o_desenho_gravado` diz onde), então a PRESENÇA da chave é a prova de
-    que alguém escreveu.
-
-    **É A ÚNICA FONTE VIVA QUE ESTA TELA TEM**, e isso está medido e escrito no
-    vizinho `dica_da_luz`: o `state_full` publica, por controle, exatamente as
-    chaves de `daemon/ipc_handlers._enrich_controllers_per_controller` —
-    `lightbar_rgb`, `lightbar_on`, `player_slot`, `inputs`… — e **nenhum campo
-    do desejado**. `aba02.py:1071` já dizia isso com todas as letras (*"publica
-    o ``player_slot`` e NÃO publica ``player_leds``"*). Por isso o gesto das
-    lâmpadas GRAVA no perfil além de escrever no fio: sem a gravação, o tique
-    seguinte repintaria o padrão do número por cima da escolha dela, e o clique
-    pareceria não ter funcionado.
-
-    A CHAVE PASSA PELO DONO nos dois lados (`chave_do_override`) — a mesma cura
-    que `brilho_do_controle` documenta, e pela mesma razão: as chaves vêm do
-    JSON e um perfil editado à mão guarda `aa:bb:cc:…`.
-    """
-    if not isinstance(p, dict) or not uniq:
-        return None
-    alvo = chave_do_override(uniq)
-    meu = next((v for k, v in (p.get("controllers") or {}).items()
-                if chave_do_override(str(k)) == alvo), None)
-    seus = (meu.get("leds") or {}) if isinstance(meu, dict) else {}
-    bits = seus.get("player_leds") if isinstance(seus, dict) else None
-    if not isinstance(bits, (list, tuple)) or len(bits) != 5:
-        return None
-    return tuple(bool(x) for x in bits)
-
-
-#: A FOLHA QUE A BOTOEIRA PRECISA PARA NÃO SAIR NUA — LUZES-01, 06/09/2026.
-#:
-#: O QUE ESTA GUARDA IMPEDE, e ela nasceu de um risco MEDIDO, não previsto: o
-#: bloco das cinco lâmpadas viaja pelo alvo `html` do campo `luz`, e esse
-#: endereço **já está PUBLICADO**. Sem a guarda, o primeiro tique do produto
-#: injetaria as doze teclas na página de ontem — que não tem uma linha de
-#: `.pad .lamp` nem de `.desenhos` — e ela veria botões sem forma nenhuma na
-#: célula LEDs, antes de aprovar o desenho. É o mesmo tempo descompassado que
-#: `a_pintura_alcanca_o_desenho` já resolve para o colorway, e a resposta é a
-#: mesma: **enquanto a página publicada não souber pintar, não emita.**
-#:
-#: A PERGUNTA É PELA FOLHA, e não pelo endereço: aqui não há `data-campo` novo a
-#: procurar — o bloco entra por um endereço que já existe. O que separa o
-#: publicado do que a bancada tem é a FOLHA, então é ela que se pergunta.
-#: FALHA FECHADA, como a irmã: qualquer coisa que não se reconheça vira
-#: "não emita".
-_PEDE_A_BOTOEIRA = (".pad .lamp{", ".desenhos .dz{")
-
-_PINTA_A_BOTOEIRA: bool | None = None
-
-
-def a_folha_alcanca_a_botoeira() -> bool:
-    """A página PUBLICADA sabe desenhar as doze teclas das luzes de jogador?
-
-    Ver `_PEDE_A_BOTOEIRA`. `publicado=True` é deliberado e é o mesmo da irmã: o
-    piloto abre SEMPRE o publicado, e é lá que a folha tem de estar.
-    """
-    global _PINTA_A_BOTOEIRA
-    if _PINTA_A_BOTOEIRA is None:
-        from hefesto_dualsense4unix.interface import onde
-
-        try:
-            pagina = onde.pagina(PAGINA, publicado=True).read_text(encoding="utf-8")
-        except OSError:
-            pagina = ""
-        _PINTA_A_BOTOEIRA = all(p in pagina for p in _PEDE_A_BOTOEIRA)
-    return _PINTA_A_BOTOEIRA
-
-
-def desenho_de_agora(cru: dict[str, Any] | None, uniq: str,
-                     numero: int) -> tuple[bool, ...]:
-    """O desenho que ESTE controle está exibindo — na ordem do merge, até onde a tela vê.
-
-    A ordem inteira é do backend (`core/backend_pydualsense._merged_desired_for_key`)::
-
-        default global  <  camada AUTOMÁTICA  <  override por-uniq  <  co-op  <  jogo
-
-    **DESTA TELA SÓ SE VEEM DUAS**, e a função diz exatamente essas duas:
-    o override por-`uniq` do perfil (`desenho_gravado`), e — na falta dele — a
-    camada automática, que é `core/led_control.player_led_pattern(numero)`, a
-    MESMA tabela que o daemon acende e a mesma que `monta.luzinhas` desenha.
-
-    O CO-OP E O JOGO FICAM DE FORA, e a ausência é declarada: com o co-op ligado
-    quem escreve as cinco luzes é a camada dele, e `o_coop_manda` já é quem diz
-    isso — é por isso que o banco nasce APAGADO nesse caso (ver `banco_de_luzes`),
-    em vez de afirmar um desenho que não é o que está no plástico. É a mesma
-    regra dela que `dica_da_luz` cita: *"se não tá mostrando agora, não tem info
-    pra mostrar no produto"*.
-
-    NADA DE TABELA DIGITADA: o padrão sai do dono. Uma segunda cópia dela é a
-    espécie de segunda verdade que esta casa persegue desde 27/08 — e ela já
-    custou, uma vez, quatro botões da GTK pintando o desenho antigo sem um único
-    teste vermelho (`aplicar_desenho_do_jogador`, L9).
-    """
-    from hefesto_dualsense4unix.core.led_control import player_led_pattern
-
-    gravado = desenho_gravado(cru, uniq)
-    if gravado is not None:
-        return gravado
-    try:
-        return tuple(bool(x) for x in player_led_pattern(int(numero)))
-    except (TypeError, ValueError):
-        return (False,) * 5
-
 
 #: O NOME DO TRILHO PARA QUEM NÃO VÊ A TELA. O `aria-label` é a única coisa que
 #: um leitor de tela anuncia num `<input type="range">` sem rótulo próprio — a
@@ -692,39 +576,6 @@ ENDERECO_DA_INCERTA = "luz-incerta"
 #: (`aba04.CSS`, `.tira-luz.incerta`); aqui mora só o nome, para que o gerador e
 #: o pintor não o escrevam em dois lugares.
 CLASSE_DA_INCERTA = "incerta"
-
-#: O ENDEREÇO DA LINHA QUE DIZ **POR QUÊ** — D-02, e a decisão [01] desta aba em
-#: 04/09/2026: *"Uma linha só quando há ressalva."*
-#:
-#: O TRACEJADO AVISA QUE ALGO MUDOU E NÃO DIZ O QUÊ. As três causas — o jogo é
-#: dono do LED em Modo Nativo, a Steam está com o `fd` deste controle, ou a cor
-#: é desconhecida — saem do MESMO motor que o `ENDERECO_DA_INCERTA` já consulta
-#: (`controller_card.rotulo_lightbar`), e até hoje viajavam só no `title` das
-#: tiras: some para quem não passa o rato. Aqui elas ganham linha.
-#:
-#: ELE É SEPARADO DO `luz` de propósito, e a razão é a mesma que criou o
-#: `ENDERECO_DA_INCERTA`: o `luz` é alvo `html` e troca o miolo do `.aceso`
-#: inteiro a cada tique. Uma frase escrita lá dentro seria destruída e recriada
-#: com o desenho, e nenhuma régua a leria — os alvos `html` são lidos pelo TEXTO
-#: visível, e o que se lê ali é o desenho, que não tem texto.
-ENDERECO_DA_RESSALVA = "luz-ressalva"
-
-#: "NÃO HÁ O QUE DIZER", dito de um jeito que a tela sabe APAGAR — o mesmo
-#: marcador de `monta.NADA_A_DIZER`, e o mesmo motivo: `escrever()` troca valor
-#: vazio por travessão, de propósito, e numa linha de ressalva isso vira um `—`
-#: solto, que é ruído com cara de dado.
-#:
-#: A CHAVE CONTINUA SENDO EMITIDA em todo tique: é o que faz a linha SUMIR
-#: quando a ressalva acaba. Omiti-la deixaria a frase velha na tela para sempre.
-#:
-#: DUAS CÓPIAS DO MESMO LITERAL, e é assim de propósito: importar `monta` de
-#: dentro de um pacote puxaria o desenho inteiro (a mesa do mockup, o SVG, o
-#: CSV das cores) para dentro de um módulo que tem de importar sem janela e sem
-#: bancada. A `a06_navegacao` já convive com a mesma cópia, e a régua
-#: `test_a_linha_de_ressalva_so_nasce_quando_ha` compara as duas para que não
-#: divirjam caladas; a desta aba é comparada em
-#: `test_a_aba_04_iluminacao_fecha_as_linhas`.
-NADA_A_DIZER = '<i class="nada"></i>'
 
 
 def estado_da_tira(recado: str | None) -> str:
@@ -1066,132 +917,8 @@ def fileira_de_players(nome: str, meu: int, donos: dict[int, dict[str, Any]],
                      for n in NUMEROS)
 
 
-#: O QUE CADA UMA DAS SEIS TECLAS DE DESENHO FAZ, na língua da tela.
-#:
-#: A PALAVRA "número" APARECE EM TODAS, e é o ponto inteiro desta sprint: os
-#: botões `1 2 3 4` da linha Jogador e as teclas `P1..P4` desta linha **parecem a
-#: mesma coisa e são opostos**. A janela GTK já dizia isso no próprio `title`
-#: (*"Não muda o número deste controle"*), e a frase vem daí — não de mim.
-#:
-#: NENHUMA NOMEIA UM CONTROLE, e a razão é o canal: `title` é ATRIBUTO, e o
-#: pintor não tem alvo para atributo (`hefesto_vivo.escrever`). Uma frase com o
-#: nome do plástico ficaria congelada no que o gerador soube — é a armadilha que
-#: tirou a dica da célula `LEDs` do desenho em 02/09, e que os oito botões de
-#: `tom` já pagaram.
-_DICA_DO_DESENHO_DE = ("Dá a este controle o desenho de luzes do Player {n} — "
-                       "e NÃO muda o número dele.")
-_DICA_DE_TODAS = "Acende as cinco luzes de jogador deste controle."
-#: A SEGUNDA METADE NÃO É ENFEITE — `lightbar_actions.py:1346`, e o motor a
-#: declara: desenho vazio quer dizer *"quem manda é o automático"*. É o ÚNICO
-#: caminho de volta que esta tela tem, porque um override por-`uniq` PRENDE as
-#: cinco lâmpadas acima da camada automática no merge do backend (a medição está
-#: em `_acender_o_numero`).
-_DICA_DE_NENHUMA = ("Apaga as cinco e devolve as luzes de jogador ao "
-                    "automático — o número volta a mandar nelas.")
-#: A DICA DA LÂMPADA. Ela diz o que o clique FAZ e o que ele NÃO faz, porque a
-#: segunda metade é a queixa que abriu a sprint: até hoje toda escrita de lâmpada
-#: vinha de carona numa renumeração.
-_DICA_DA_LAMPADA = ("Acende ou apaga a luz {n} deste controle, sem mudar o "
-                    "número dele.")
-#: E A DO REENVIO — o gêmeo da caixa `#RRGGBB`, que é botão desde a decisão [03]
-#: dela: *"A caixa do hexadecimal vira o botão."* O mesmo desenho que está na
-#: tela volta ao aparelho, e serve depois de reconectar o controle ou trocar de
-#: perfil (`lightbar_actions.on_player_leds_apply`).
-DICA_DO_REENVIO_DO_DESENHO = ("Manda este desenho ao controle de novo — o "
-                              "mesmo que está aceso aqui.")
-
-
-def _lampada(n: int, acesa: bool) -> str:
-    """Uma das cinco luzes de jogador, CLICÁVEL.
-
-    `aria-pressed` E NÃO `checked`: é um `<button>` de dois estados, e é isso que
-    um leitor de tela precisa ouvir. O olho lê a classe `on`, que é a MESMA que
-    `monta.CSS_LUZINHAS` já usa para a lâmpada acesa do indicador — um par de
-    cores, um dono (ver `token_das_luzinhas`).
-    """
-    marca = ' class="lamp on"' if acesa else ' class="lamp"'
-    return (f'<button{marca} data-gesto="{GESTO_DA_LAMPADA}" data-lampada="{n}"'
-            f' aria-pressed="{"true" if acesa else "false"}"'
-            f' title="{_DICA_DA_LAMPADA.format(n=n)}"></button>')
-
-
-def _tecla_de_desenho(qual: str, bits: tuple[bool, ...], dica: str,
-                      rotulo: str = "") -> str:
-    """Uma tecla de desenho: os quatro números, "todas" e "nenhuma".
-
-    **OS QUATRO NÚMEROS DIZEM `P1`..`P4` E OS DOIS ATALHOS MOSTRAM O DESENHO**, e
-    a divisão é medida, não de gosto. A coluna tem 220px e as doze teclas desta
-    célula cabem em 212 com rótulos de 17px; escrever "Todas" e "Nenhuma" por
-    extenso pedia 236 e estourava a coluna — mas `P1`..`P4` cabem, e são a
-    palavra que o glossário desta casa manda usar. Os dois atalhos, que não têm
-    palavra curta, mostram o que vão acender: cinco pontinhos cheios e cinco
-    vazios. O `title` diz tudo por extenso nos seis, que é onde esta aba põe
-    explicação desde 28/08.
-
-    O DESENHO NÃO SE DIGITA — quem o produz é `player_led_pattern` do lado de
-    quem chama, e aqui ele só vira pontinhos.
-    """
-    dentro = rotulo or "".join('<i class="on"></i>' if b else "<i></i>"
-                               for b in bits)
-    marca = ' class="dz num"' if rotulo else ' class="dz"'
-    return (f'<button{marca} data-gesto="{GESTO_DO_DESENHO_DE}"'
-            f' data-desenho="{qual}" title="{dica}">{dentro}</button>')
-
-
-def banco_de_luzes(bits: tuple[bool, ...], coop_manda: bool = False) -> tuple[str, str]:
-    """As cinco luzes de jogador e as seis teclas de desenho de UMA coluna.
-
-    **UM DONO, DOIS CHAMADORES** — a mesma disciplina de `fileira_de_players` e
-    `desenho_da_luz`: o gerador `aba04.py` desenha a bancada com esta função e o
-    pacote pinta o produto com ela a cada tique. Enquanto fossem duas escritas, o
-    desenho e o produto poderiam divergir sem ninguém ver.
-
-    **É UM BLOCO DE ALVO `html`, e não onze endereços**, pela razão que
-    `fileira_de_players` já mediu: o que muda com o dado é QUAL lâmpada está
-    acesa — uma CLASSE — e o pintor só sabe escrever classe onde há endereço
-    próprio. Trocar o bloco inteiro é o degrau que a fita, o mapa do gabinete e a
-    fileira de números já usam, e o ouvinte de clique é delegado no documento
-    (`hefesto_vivo.manda_do_alvo`), então trocar o HTML não desliga botão nenhum.
-
-    **NENHUM `data-controle` NASCE AQUI, e a omissão é medida.** O clique resolve
-    o dono por `alvo.closest('[data-controle],[data-uniq]')`, e o `<svg>` do
-    desenho grande carrega `data-controle="dualsense"` — o MODELO, não o assento.
-    Um alvo clicável posto dentro do SVG chegaria ao Python dizendo que o
-    controle se chama `dualsense`. Este bloco mora na célula `.cel-luzes`, irmã
-    do `.moldura`, e o `closest` sobe direto ao `.ctrl[data-controle="p1"]`.
-
-    **COM O CO-OP LIGADO O BANCO NASCE APAGADO E A TECLA `on` NÃO ACENDE**, e é a
-    mesma honestidade de `dica_da_luz`: quem escreve as cinco luzes nesse caso é
-    a camada do co-op, que está ACIMA do override no merge — o que esta tela
-    guarda não é o que está no plástico. Afirmar um desenho aqui seria a tela
-    dizendo o contrário do fio, que é o defeito que a MESA-CHEIA-09 mediu.
-
-    :param bits: o desenho de agora, de `desenho_de_agora` — cinco booleanos.
-    :param coop_manda: `o_coop_manda(ctx.state)`. Ver acima por que ele muda o
-        que se AFIRMA, e não o que se oferece: as teclas continuam clicáveis, e
-        quem recusa dizendo é o gesto.
-    :return: o par `(lâmpadas, teclas)` — as cinco vão DENTRO do `.pad`, que é a
-        moldura do reenvio, e as seis ao lado dele. `desenho_da_luz` é quem os
-        monta na `.aceso`; devolver os dois separados é o que permite ao `.pad`
-        continuar sendo UM alvo clicável com cinco alvos dentro.
-    """
-    from hefesto_dualsense4unix.core.led_control import player_led_pattern
-
-    mostra = (False,) * 5 if coop_manda else tuple(bits)[:5]
-    lampadas = "".join(_lampada(n, mostra[n - 1]) for n in (1, 2, 3, 4, 5))
-    teclas = "".join(
-        _tecla_de_desenho(str(n), tuple(player_led_pattern(n)),
-                          _DICA_DO_DESENHO_DE.format(n=n), rotulo=f"P{n}")
-        for n in NUMEROS)
-    teclas += _tecla_de_desenho(TODAS, (True,) * 5, _DICA_DE_TODAS)
-    teclas += _tecla_de_desenho(NENHUMA, (False,) * 5, _DICA_DE_NENHUMA)
-    return lampadas, f'<span class="desenhos">{teclas}</span>'
-
-
 def desenho_da_luz(tinta: str, brilho: float, jogador: int, dica: str = "",
-                   recuo: str = "", estado: str = "",
-                   bits: tuple[bool, ...] | None = None,
-                   coop_manda: bool = False) -> str:
+                   recuo: str = "", estado: str = "") -> str:
     """O miolo do `.aceso`: as duas tiras e as cinco lâmpadas, VIVAS.
 
     O DEFEITO QUE ESTA FUNÇÃO MATA está fotografado na tela dela em
@@ -1240,7 +967,10 @@ def desenho_da_luz(tinta: str, brilho: float, jogador: int, dica: str = "",
         `estado=INCERTA` a tinta não é olhada: quem não sabe não pinta.
     :param brilho: de 0.0 a 1.0, a opacidade das duas tiras ACESAS. A apagada
         não tem brilho: uma barra desligada a 30% seria 30% de nada.
-    :param jogador: o número deste controle, para o padrão das lâmpadas.
+    :param jogador: o número deste controle — e ele é a ÚNICA fonte das cinco
+        lâmpadas desde 07/09/2026. Elas espelham a linha `Jogador`; não há
+        segundo caminho que as acenda, e por isso não há como a célula `LEDs`
+        divergir do número que a célula de cima mostra.
     :param dica: a frase de `dica_da_luz`, ou `""`. Sem ela as peças saem sem
         `title`, que é o que o desenho fazia antes de haver frase viva.
     :param estado: `ACESA`, `APAGADA` ou `INCERTA` — o que `estado_da_tira`
@@ -1282,29 +1012,23 @@ def desenho_da_luz(tinta: str, brilho: float, jogador: int, dica: str = "",
     aviso = f" {CLASSE_DA_INCERTA}" if incerta else ""
     diz = f' title="{dica}"' if dica else ""
     tira = f'<span class="tira-luz %s{aviso}"{veste}{marca}{diz}></span>'
-    #: A BOTOEIRA SUBSTITUIU O INDICADOR — LUZES-01, 06/09/2026. As cinco
-    #: lâmpadas continuam MOSTRANDO o desenho e passaram a poder MUDÁ-LO; e a
-    #: `KeyError` de `monta.luzinhas` foi embora junto, porque
-    #: `desenho_de_agora` pergunta a `core/led_control.player_led_pattern`, que
-    #: responde a qualquer número (o `monta.PADRAO_JOGADOR` só precomputa 1..8).
-    #: A cura de fundo continua relatada e continua sendo de `monta.py`.
-    if bits is not None:
-        lampadas, teclas = banco_de_luzes(tuple(bits), coop_manda=coop_manda)
-        frase = " · ".join(x for x in (dica, DICA_DO_REENVIO_DO_DESENHO) if x)
-        #: A BARRA É UM GRUPO, e as teclas são outro — ver a folha (`aba04.CSS`,
-        #: `.aceso .barra`). Sem o grupo, os três vãos de 16px da `.aceso`
-        #: somavam 48 e as duas tiras de luz encolhiam a ZERO: elas não tinham
-        #: `flex-shrink:0`, e num flex apertado a largura é um pedido.
-        return "\n".join(recuo + linha for linha in (
-            '<span class="barra">',
-            "  " + tira % "esq",
-            f'  <span class="pad reenvia"'
-            f' data-gesto="{GESTO_DO_REENVIO_DO_DESENHO}" title="{frase}"'
-            f'>{lampadas}</span>',
-            "  " + tira % "dir",
-            "</span>",
-            teclas,
-        ))
+    #: A BOTOEIRA SAIU E O INDICADOR VOLTOU — ordem dela, 07/09/2026, olhando a
+    #: aba com os quatro DualSense na mesa: *"pq tá surgindo os leds no lado da
+    #: iluminação se acima já tem o canto dos players? pode remover?"*, e depois
+    #: a forma final, que é o contrato desta função: *"só olhar a linha de cima
+    #: da seleção de player e replicar o que tem lá."*
+    #:
+    #: O QUE SAIU, e o que ficou: saíram as seis teclas `P1..P4 · ··· · ·`
+    #: (`desenho-de`), o clique das cinco lâmpadas (`luzes`) e a moldura de
+    #: reenvio (`reenviar-desenho`). Ficaram as DUAS tiras — *"os leds. barra de
+    #: luz ficam. é o desenho original"* — e as cinco lâmpadas, agora como
+    #: ESPELHO do número, sem escolha própria.
+    #:
+    #: E A CONTA FOI DITA A ELA: some o controle manual do desenho. As cinco
+    #: lâmpadas passam a seguir `jogador`, que é o caminho automático — o mesmo
+    #: que o merge do backend usa quando não há override gravado. O campo
+    #: `player_leds` do perfil fica sem quem o escreva por esta tela; ele NÃO
+    #: foi tocado, e o fato está relatado em vez de curado à revelia dela.
     try:
         lampadas = monta.luzinhas(jogador)
     except KeyError:
@@ -1324,10 +1048,9 @@ def desenho_da_luz(tinta: str, brilho: float, jogador: int, dica: str = "",
         # deste arquivo: `luzinhas` deve chamar `player_led_pattern` em vez de
         # indexar o dicionário. RELATADO.
         lampadas = ""
-    #: O RAMO SEM `bits` É O DA BANCADA VELHA e o das outras chamadas que ainda
-    #: não sabem o desenho: indicador de leitura, sem gesto nenhum. Ele fica
-    #: porque um lugar sem desenho conhecido não pode oferecer um clique que
-    #: mandaria ao aparelho o padrão de um número que talvez não seja o dele.
+    #: INDICADOR DE LEITURA, SEM GESTO NENHUM — e agora é o único ramo. As cinco
+    #: lâmpadas MOSTRAM o número e não o mudam; quem muda o número é a linha
+    #: `Jogador`, uma célula acima, que é exatamente o que ela mandou replicar.
     return "\n".join(recuo + linha for linha in (
         tira % "esq",
         f'<span class="pad"{diz}>{lampadas}</span>',
@@ -1885,23 +1608,17 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
             #: escurecia de novo. Com a pedida, a tira volta ao modelo da GTK:
             #: tom da casa vezes o brilho, que é o que `_on_lightbar_preview_draw`
             #: desenha (o `rgb` do rascunho vezes o brilho).
-            #: E ELE LEVA O DESENHO DE AGORA desde a LUZES-01 — com `bits`, o
-            #: indicador das cinco lâmpadas vira a BOTOEIRA: mostra o desenho e
-            #: deixa mudá-lo, sem tocar no número. O valor sai do dado
-            #: (`desenho_de_agora`: o override do perfil e, na falta dele, o
-            #: padrão do número), nunca de memória do gerador.
+            #: E O NÚMERO É A ÚNICA FONTE DAS CINCO LÂMPADAS desde 07/09/2026 —
+            #: o `n` deste tique, que é o MESMO que a linha `Jogador` acende uma
+            #: célula acima. É a ordem dela: *"só olhar a linha de cima da
+            #: seleção de player e replicar o que tem lá."* A botoeira e o
+            #: `bits` saíram juntos; sem segundo caminho, as duas células não
+            #: têm como divergir.
             "luz": desenho_da_luz(_tinta(cor_escolhida(acesa, b)),
                                   1.0 if b is None else float(b), n,
                                   dica_da_luz(nome, via, recado or "",
                                               o_coop_manda(ctx.state)),
-                                  estado=estado,
-                                  #: E SÓ COM A FOLHA NO LUGAR — ver
-                                  #: `a_folha_alcanca_a_botoeira`. Sem ela o
-                                  #: `bits=None` mantém o indicador de leitura
-                                  #: que o publicado de hoje sabe desenhar.
-                                  bits=(desenho_de_agora(p, uniq, n)
-                                        if a_folha_alcanca_a_botoeira() else None),
-                                  coop_manda=o_coop_manda(ctx.state)),
+                                  estado=estado),
             #: O TRACEJADO, COM ENDEREÇO PRÓPRIO — e ele vem DEPOIS do `luz` de
             #: propósito. O `luz` troca o miolo do `.aceso` inteiro (alvo
             #: `html`) e recria as duas tiras; o pintor percorre os campos na
@@ -1919,19 +1636,17 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
             #: escreveria `"true"`; as duas réguas desta casa que traduzem o
             #: declarado dizem, por escrito, que erram nesse par.
             ENDERECO_DA_INCERTA: "sim" if estado == INCERTA else "",
-            #: A RAZÃO DO TRACEJADO, EM UMA LINHA — D-02, decisão [01] de
-            #: 04/09/2026. Ela é o PRIMEIRO retorno de `rotulo_lightbar`, o
-            #: mesmo que decide `acesa` e `estado` acima: uma leitura só, três
-            #: consequências. Uma frase escrita aqui a partir do `estado` seria
-            #: a segunda verdade sobre o mesmo fato — e a que perderia a
-            #: distinção entre "a Steam está com ele" e "em Nativo o jogo é
-            #: dono", que é justamente a pergunta que esta linha responde.
+            #: A LINHA DE RESSALVA SAIU DA CÉLULA `LEDs` — 07/09/2026, ordem
+            #: dela: *"o que eu não quero é frase da steam ou outras e p1,P2…"*
+            #: O `ENDERECO_DA_RESSALVA` deixou de ser emitido AQUI porque o
+            #: widget deixou de nascer no gerador, e as duas metades têm de
+            #: andar juntas: um campo que o pacote manda para uma página que não
+            #: o tem vira ÓRFÃO calado no piloto, tique após tique.
             #:
-            #: SEM RESSALVA, O MARCADOR — e a chave vai em TODO tique. Omiti-la
-            #: quando não há nada a dizer deixaria a frase do estado anterior na
-            #: tela para sempre; mandar `""` a trocaria por um travessão solto,
-            #: porque `escrever()` faz isso de propósito. Ver `NADA_A_DIZER`.
-            ENDERECO_DA_RESSALVA: recado or NADA_A_DIZER,
+            #: E O `recado` NÃO SE PERDEU: ele continua entrando na `dica_da_luz`
+            #: logo acima, que viaja no `title` das duas tiras pelo alvo `html`.
+            #: A razão do tracejado continua a um rato de distância — o que saiu
+            #: foi a LINHA de texto, não o fato.
             #: O RÓTULO INTEIRO, e não só o número. O desenho escreve
             #: `P1 • Cosmic Red • USB`; emitir só o `P1` fazia o primeiro tique
             #: APAGAR o nome do controle e o transporte da tela dela — a
@@ -3326,19 +3041,30 @@ def player(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
 
 
 # ---------------------------------------------------------------------------
-# AS CINCO LUZES DE JOGADOR — LUZES-01, 06/09/2026
+# AS CINCO LUZES DE JOGADOR — a LUZES-01 nasceu em 06/09/2026 e SAIU em 07/09
 #
-# A QUEIXA QUE ABRIU A SPRINT, e ela é do CSV da paridade: *"SEMPRE junto com a
+# A QUEIXA QUE ABRIU A SPRINT era do CSV da paridade: *"SEMPRE junto com a
 # renumeração, nunca sozinhos"*. Dar a este controle o desenho do P3 mantendo o
-# número dele era impossível pelo HTML — toda escrita de lâmpada vinha de carona
-# num `identity.number.set`. Os quatro gestos abaixo são o caminho SEM o número.
+# número dele era impossível pelo HTML, e a LUZES-01 abriu esse caminho com
+# quatro gestos novos.
 #
-# NADA DE GUARDA ANTI-RAJADA AQUI, e a ausência é DECLARADA. A da janela GTK
-# (`lightbar_actions.on_player_led_toggled`, o `_player_leds_batch_guard`) existe
-# porque lá um preset MEXE NOS CINCO CHECKBOXES, e cada `toggled` dispararia um
-# IPC — cinco pedidos para um clique. Aqui a forma é outra: um clique é um
-# bitmask e um `player_leds_set_detalhado`, e o preset é UM clique. A guarda não
-# tem o que guardar; escrevê-la seria copiar a forma sem o defeito.
+# ELA DISPENSOU O CAMINHO no dia seguinte, olhando a aba com os quatro DualSense
+# na mesa: *"pq tá surgindo os leds no lado da iluminação se acima já tem o
+# canto dos players? pode remover?"*, e depois *"só olhar a linha de cima da
+# seleção de player e replicar o que tem lá."* Três dos quatro gestos saíram com
+# a botoeira; o que sobra nesta faixa é o `auto-todos`, mais abaixo.
+#
+# O QUE FICA NO LUGAR: as cinco lâmpadas espelham o NÚMERO, e quem escreve o
+# número é o `player`, logo acima. Escrever desenho de carona na renumeração
+# voltou a ser o único caminho — e agora por ESCOLHA dela, não por dívida. As
+# quatro linhas do CSV da paridade foram reabertas dizendo isso, com a data.
+#
+# E NENHUM SÍMBOLO DA JANELA GTK É CITADO NESTA FAIXA, de propósito: as linhas
+# `FALTA_NO_HTML` do CSV afirmam que o símbolo da GTK **não aparece** do lado
+# HTML, e o portão as verifica lendo este arquivo como TEXTO. Uma citação em
+# prosa aqui — mesmo dentro de um comentário que explica a ausência — seria lida
+# como dívida FECHADA, e o portão acusaria uma paridade que não existe. É a
+# mesma armadilha que a folha da `aba04.py` acabou de pagar nesta leva.
 # ---------------------------------------------------------------------------
 
 
@@ -3353,9 +3079,20 @@ def _leds_sem(antes: Any, campos: set[str]) -> Any:
     único jeito de o campo voltar a ser *"sem opinião"* — que é o que faz a
     camada AUTOMÁTICA voltar a vencer no merge por campo do backend.
 
-    E É POR AQUI QUE O OVERRIDE **SAI**, não zera: `LedsConfig(player_leds=[False]*5)`
+    E É POR AQUI QUE UM OVERRIDE **SAI**, não zera: `LedsConfig(player_leds=[False]*5)`
     é uma escolha explícita de deixar as cinco apagadas, e o backend a respeita
-    como qualquer outra. Ver `devolver_o_desenho_ao_automatico`.
+    como qualquer outra.
+
+    O CHAMADOR QUE ESTA NOTA CITAVA MORREU — `devolver_o_desenho_ao_automatico`
+    saiu em 07/09/2026 com a botoeira, e com ele o único caminho desta tela para
+    TIRAR um `player_leds` gravado. Quem chama esta função hoje é o
+    `automatico_de_todos`, para os campos de COR (`lightbar`,
+    `lightbar_brightness`); o `player_leds` ele preserva de propósito, que é o
+    que o gêmeo da janela estável fazia. **RELATADO, e a medição está no
+    relatório desta leva:** dos 50 perfis do disco dela, ZERO têm override
+    por-controle de `player_leds`, então não há dado preso — mas a tela deixou
+    de ter escrita E de ter apagamento para esse campo, e isso é fato a contar,
+    não arquivo a mexer sem a palavra dela.
     """
     from hefesto_dualsense4unix.profiles.schema import LedsConfig
 
@@ -3363,49 +3100,6 @@ def _leds_sem(antes: Any, campos: set[str]) -> Any:
                                if antes is not None else {}).items()
              if k not in campos}
     return LedsConfig(**dados)
-
-
-def _com_o_desenho_gravado(prof: Any, uniq: str,
-                           bits: tuple[bool, ...] | None) -> Any:
-    """O perfil com o desenho DESTE controle escrito no override dele.
-
-    É O TERCEIRO IRMÃO de `_com_o_brilho_gravado` e `_com_a_cor_gravada`, e a
-    razão de ser um terceiro é a que os dois já documentam: **a fusão é POR
-    CAMPO**. Um override do disco dela hoje é `{"lightbar": [255, 0, 0]}` e nada
-    mais; trocar a seção inteira por uma que só fale de desenho apagaria a cor e
-    o brilho que ela escolheu para aquele controle.
-
-    POR QUE GRAVAR, se o desenho já foi ao aparelho: porque **esta tela não vê o
-    que foi ao aparelho**. O `state_full` não publica `player_leds` (a medição
-    está em `desenho_gravado`), então sem a gravação o tique seguinte repintaria
-    o padrão do número por cima da escolha dela — o clique acenderia a lâmpada e
-    a tela a apagaria um décimo de segundo depois.
-
-    :param bits: os cinco booleanos, ou `None` para **tirar** o campo do
-        override — que é o caminho de volta ao automático, e não o mesmo que
-        gravar cinco falsos.
-    """
-    from hefesto_dualsense4unix.profiles.schema import ControllerOverrides, LedsConfig
-
-    chave = chave_do_override(uniq)
-    atuais = dict(prof.controllers or {})
-    dele = atuais.get(chave) or ControllerOverrides()
-    antes = dele.leds
-    if bits is None:
-        novos = _leds_sem(antes, {"player_leds"})
-    else:
-        lista = [bool(b) for b in bits]
-        novos = (LedsConfig(player_leds=lista) if antes is None
-                 else antes.model_copy(update={"player_leds": lista},
-                                       deep=False))
-        if antes is not None:
-            #: `model_copy` NÃO MARCA O CAMPO como escrito, e sem a marca o
-            #: `_controllers_to_specs` o ignora e o `save_profile` o omite —
-            #: a gravação sairia silenciosamente vazia. É a mesma pegadinha que
-            #: `_leds_sem` explora do lado inverso.
-            novos.model_fields_set.add("player_leds")
-    atuais[chave] = dele.model_copy(update={"leds": novos})
-    return prof.model_copy(update={"controllers": atuais})
 
 
 def _perfil_ativo_ou_recusa(ctx: Contexto, oque: str) -> str:
@@ -3437,204 +3131,6 @@ def _o_coop_recusa(ctx: Contexto) -> None:
             "um jogo em co-op está mandando nas cinco luzes deste controle — "
             "enquanto ele estiver, o desenho vem do jogo e não daqui. Para "
             "mudar quem é quem agora, use os números da linha Jogador.")
-
-
-def _escrever_o_desenho(ctx: Contexto, p: Any, uniq: str,
-                        bits: tuple[bool, ...]) -> str:
-    """O CAMINHO ÚNICO de escrita das cinco luzes — disco e aparelho, nesta ordem.
-
-    UM SÓ, pela mesma razão que `_escrever_a_cor` é um só para as quatro portas
-    de cor: quatro rotas paralelas divergiriam no primeiro ajuste, e a primeira
-    coisa a se perder seria a leitura do desfecho.
-
-    A ORDEM É DISCO E DEPOIS APARELHO, e é a do gesto `brilho`. Ela decide o que
-    acontece quando o fio falha: a escolha dela fica na tela e no perfil, o
-    cartão diz que o aparelho não recebeu, e o "Aplicar o desenho" (o clique no
-    próprio indicador) é a tentativa seguinte. O contrário — mandar primeiro e
-    gravar depois — perderia a escolha exatamente no caso em que ela precisa ser
-    guardada.
-
-    A FRASE DO DESFECHO É A DA GTK, perguntada ao dono: `_cobrar_a_frase_do_desenho`
-    compara o que `lightbar_actions._msg_do_desenho` diria no caminho feliz com
-    o que ele diz para o corpo real. Nenhuma sílaba de texto nasce deste lado.
-    """
-    _o_coop_recusa(ctx)
-    nome = _perfil_ativo_ou_recusa(ctx, "o desenho das luzes de jogador")
-    loader = perfil._com_o_src()
-    loader.save_profile(_com_o_desenho_gravado(loader.load_profile(nome),
-                                               uniq, tuple(bits)),
-                        origem="interface-nova")
-    corpo = p.player_leds_set_detalhado(tuple(bits), uniq=uniq)
-    if corpo is None:
-        raise RuntimeError(sem_resposta_do_daemon())
-    return _cobrar_a_frase_do_desenho(ctx, uniq, tuple(bits), corpo)
-
-
-#: O QUE O CARTÃO DIZ QUANDO O DESENHO VOLTA AO AUTOMÁTICO. Ela conta as duas
-#: metades porque as duas aconteceram no mesmo clique — o override saiu, e quem
-#: passa a mandar é o número.
-_RECADO_DO_DESENHO_AUTOMATICO = (
-    "Luzes de jogador no automático. O desenho próprio deste controle saiu do "
-    "perfil, e o número dele volta a mandar nas cinco.")
-
-
-def devolver_o_desenho_ao_automatico(ctx: Contexto, p: Any, uniq: str) -> None:
-    """"Todas apagadas": o override **SAI**, e não fica zerado.
-
-    **ESTE É O CAMINHO DE VOLTA, e até hoje ele não existia no HTML.** Com o
-    co-op fora, toda escrita de lâmpada grava um override por-`uniq` que fica
-    ACIMA da camada automática no merge do backend — as cinco lâmpadas ficam
-    PRESAS, e um controle que saia da mesa não faz mais os outros reacenderem
-    sozinhos. O preço está escrito em `_acender_o_numero`; o que faltava era a
-    porta de saída.
-
-    **GRAVAR `[False] * 5` NÃO É O CAMINHO DE VOLTA — é o oposto**, e foi medido
-    no motor antes de virar código: `manager._controllers_to_specs` monta o
-    `OutputSpec` a partir de `model_fields_set`, então cinco falsos EXPLÍCITOS
-    são uma escolha que o backend respeita, e as lâmpadas ficariam presas
-    apagadas. O que solta é o campo deixar de existir (`_leds_sem`).
-
-    **E O DAEMON PRECISA OUVIR, senão só o disco muda.** A cadeia inteira é a do
-    `profile.switch`, e ela solta as DUAS camadas:
-
-    * `ProfileManager.apply(origin="manual")` chama `clear_user_output_overrides()`
-      — é o único caminho que solta a camada da USUÁRIA, onde o
-      `player_leds_set_detalhado` escreveu (`manager.py:425`, R-20);
-    * `reset_profile_overrides(overrides)` republica a camada do PERFIL sem o
-      campo, e `reassert_resolved_outputs()` repinta o resolvido — que agora é a
-      camada automática, isto é, o padrão do número deste controle.
-
-    `perfil.gravar_e_reaplicar` é o dono dos três tempos (disco, `profile.switch`,
-    `launch_env.refresh`) e já tinha seis chamadores. Não se refaz aqui.
-
-    E NADA VAI AO FIO POR ESTE CAMINHO: mandar `player_leds_set_detalhado((False,)*5)`
-    antes do switch reescreveria a camada da usuária que a linha seguinte existe
-    para soltar — o override sairia e voltaria no mesmo clique.
-    """
-    _o_coop_recusa(ctx)
-    nome = _perfil_ativo_ou_recusa(ctx, "o desenho das luzes de jogador")
-    loader = perfil._com_o_src()
-    prof = _com_o_desenho_gravado(loader.load_profile(nome), uniq, None)
-    perfil.gravar_e_reaplicar(prof, ctx, p)
-
-
-@gesto("04-iluminacao.html", GESTO_DA_LAMPADA, grava="save_profile")
-def luzes(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
-    """Uma das cinco luzes de jogador acende ou apaga — **sem tocar no número**.
-
-    É A LINHA `Marcar/desmarcar cada uma das 5 luzes de jogador` do CSV da
-    paridade, e o gêmeo dela na janela estável é `on_player_led_toggled`.
-
-    O ESTADO DE PARTIDA VEM DO DADO, e não de memória do gerador nem do clique:
-    `desenho_de_agora` lê o override do perfil e, na falta dele, o padrão do
-    número — a mesma escada que a tela pinta a cada tique. Ler o `aria-pressed`
-    do botão daria a resposta da TELA, que é a mesma coisa só enquanto ninguém
-    mexer no perfil por outro caminho.
-
-    E O NÚMERO NÃO ENTRA: nenhum `identity_number_set` sai daqui. É a diferença
-    inteira entre este gesto e o `player`, e é o que a régua desta sprint morde.
-
-    :return: `{"recado": …}` quando o desenho pegou em N > 1 controles
-        (ILUMINACAO-O-AVISO-DOS-N-01); `None` no clique de um controle só.
-    """
-    uniq = _uniq(o)
-    if not uniq:
-        raise ValueError("luzes: o clique não disse em qual controle")
-    try:
-        n = int(str(o.get("lampada") or "0"))
-    except ValueError:
-        n = 0
-    if not 1 <= n <= 5:
-        raise ValueError(
-            f"luzes: preciso saber qual das cinco luzes (veio {n})")
-    nome = _perfil_ativo_ou_recusa(ctx, "o desenho das luzes de jogador")
-    dele = ctx.por_uniq(uniq) or {"uniq": uniq}
-    bits = list(desenho_de_agora(perfil.ativo(nome), uniq, _numero(ctx, dele)))
-    bits[n - 1] = not bits[n - 1]
-    return _o_recado(_escrever_o_desenho(ctx, p, uniq, tuple(bits)))
-
-
-@gesto("04-iluminacao.html", GESTO_DO_DESENHO_DE, grava="save_profile")
-def desenho_de(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
-    """As seis teclas de desenho: os quatro números, "todas" e "nenhuma".
-
-    **O NOME ENGANA, e o CSV avisa de propósito:** os botões `1 2 3 4` da linha
-    Jogador e as teclas `P1..P4` desta linha *parecem a mesma coisa e são
-    opostos*. Aquele DÁ o número (e as lâmpadas vão junto); esta dá o DESENHO do
-    número e não mexe no número nenhum. A janela estável diz isso no próprio
-    `title` desde sempre — *"Não muda o número deste controle"* — e a frase foi
-    lida de lá, não inventada aqui.
-
-    A TABELA É DO DAEMON: `core/led_control.player_led_pattern`, a mesma que o
-    daemon acende, que cobre 1..8 e que `monta.luzinhas` desenha. Uma segunda
-    cópia dela já custou a esta casa quatro botões da GTK pintando o desenho
-    antigo sem um único teste vermelho (L9, `aplicar_desenho_do_jogador`).
-
-    :return: `{"recado": …}` no ramo "nenhuma", que é o único cujo efeito não
-        se vê no próprio botão — o cartão conta que o override saiu —, e no
-        clique que pegou em N controles (`_o_aviso_dos_n`). `None` no resto,
-        que é onde a piscada de 1,5 s responde sozinha.
-    """
-    from hefesto_dualsense4unix.core.led_control import player_led_pattern
-
-    uniq = _uniq(o)
-    if not uniq:
-        raise ValueError("desenho-de: o clique não disse em qual controle")
-    qual = str(o.get("desenho") or "").strip().lower()
-    if qual == NENHUMA:
-        devolver_o_desenho_ao_automatico(ctx, p, uniq)
-        return {"recado": _RECADO_DO_DESENHO_AUTOMATICO}
-    if qual == TODAS:
-        return _o_recado(_escrever_o_desenho(ctx, p, uniq, (True,) * 5))
-    try:
-        n = int(qual)
-    except ValueError:
-        n = 0
-    if not 1 <= n <= 8:
-        raise ValueError(
-            f"desenho-de: preciso do desenho de um jogador de 1 a 8, de "
-            f"{TODAS!r} ou de {NENHUMA!r} (veio {qual!r})")
-    return _o_recado(_escrever_o_desenho(ctx, p, uniq,
-                                        tuple(player_led_pattern(n))))
-
-
-@gesto("04-iluminacao.html", GESTO_DO_REENVIO_DO_DESENHO)
-def reenviar_desenho(ctx: Contexto, o: dict[str, Any],
-                     p: Any) -> dict[str, Any] | None:
-    """O indicador das cinco lâmpadas é o botão: o desenho vai ao controle de novo.
-
-    O GÊMEO DA CAIXA `#RRGGBB`, e a decisão é a mesma dela ([03], 04/09/2026):
-    *"A caixa do hexadecimal vira o botão."* Na janela estável isto é o botão
-    "Aplicar LEDs" (`on_player_leds_apply`), e serve para o mesmo: depois de
-    reconectar o controle ou trocar de perfil, reemitir o bitmask sem mudar
-    nada.
-
-    **ELE NÃO GRAVA, e a ausência é a escolha.** Reenviar não é uma escolha
-    nova — é repetir a que já está na tela. Gravar aqui criaria um override para
-    um controle que talvez não tivesse nenhum: quem só está exibindo o padrão
-    automático do número passaria a tê-lo PRESO por um clique cujo texto promete
-    "de novo". A camada da usuária que o `player_leds_set_detalhado` escreve no
-    daemon é solta pelo próximo `profile.switch`, e o valor dela é, nesse caso,
-    exatamente o que o automático daria.
-
-    O TRAVESSÃO É RECUSA, como no `reenviar` da cor: numa coluna sem controle o
-    molde do lugar sem dono não emite este bloco, e esta guarda é a segunda
-    trava — a que vale se alguém alcançar o gesto por outro caminho.
-
-    :return: `{"recado": …}` quando o desenho pegou em N > 1 controles
-        (ILUMINACAO-O-AVISO-DOS-N-01); `None` no clique de um controle só.
-    """
-    uniq = _uniq(o)
-    if not uniq:
-        raise ValueError("reenviar-desenho: o clique não disse em qual controle")
-    _o_coop_recusa(ctx)
-    nome = _perfil_ativo_ou_recusa(ctx, "o desenho das luzes de jogador")
-    dele = ctx.por_uniq(uniq) or {"uniq": uniq}
-    bits = desenho_de_agora(perfil.ativo(nome), uniq, _numero(ctx, dele))
-    corpo = p.player_leds_set_detalhado(bits, uniq=uniq)
-    if corpo is None:
-        raise RuntimeError(sem_resposta_do_daemon())
-    return _o_recado(_cobrar_a_frase_do_desenho(ctx, uniq, bits, corpo))
 
 
 #: O QUE O CARTÃO DIZ DEPOIS DO "Todos no automático". A frase é do PRODUTO e
@@ -3723,7 +3219,26 @@ PAGINA = "04-iluminacao.html"
 #: o indicador virou o botão de reenvio (`reenviar-desenho`) e a faixa do título
 #: ganhou o escopo global (`auto-todos`). São as cinco linhas `FALTA_NO_HTML`
 #: que o CSV da paridade cobrava desta aba.
-PISO_DA_ABA = 11
+#:
+#: 11 → 8 EM 07/09/2026, E ESTA É A ÚNICA VEZ EM QUE O PISO DESCE. A regra
+#: ("o piso só sobe") existe porque uma QUEDA não aparece na tela: o clique
+#: simplesmente deixa de fazer alguma coisa, calado. Aqui não há queda calada —
+#: há uma ORDEM dela, medida e datada: *"pq tá surgindo os leds no lado da
+#: iluminação se acima já tem o canto dos players? pode remover?"*, e a forma
+#: final, *"só olhar a linha de cima da seleção de player e replicar o que tem
+#: lá."* Os TRÊS que saem são exatamente os três que a LUZES-01 trouxe —
+#: `luzes`, `desenho-de` e `reenviar-desenho` —, e saíram com o widget que os
+#: oferecia, no mesmo commit. O `auto-todos`, que veio na mesma sprint, FICA.
+#:
+#: O QUE ISSO CUSTA, e ela foi avisada antes: some o controle manual do desenho
+#: das cinco luzes. Elas passam a seguir o NÚMERO, que é o caminho automático
+#: do merge do backend. As três linhas de paridade que a LUZES-01 fechou
+#: reabrem como DECISÃO DELA, não como dívida — o produto não as perdeu por
+#: descuido, ela as dispensou.
+#:
+#: E O PISO NÃO PODE VOLTAR A 11 SEM ELA: subi-lo de novo seria repor a
+#: botoeira que ela mandou tirar. Quem for mexer aqui lê primeiro esta nota.
+PISO_DA_ABA = 8
 PROVAS = [
     {"pagina": PAGINA, "gesto": "cor", "clique": {"hex": "#FF8000"},  # (noqa-acento) id
      "chama": [("led_set_detalhado", [(255, 128, 0)],
@@ -3760,25 +3275,18 @@ PROVAS = [
      "chama": [("identity_number_set", ["aa:bb:cc:00:00:01", 2], {}),
                ("player_leds_set_detalhado", [(False, True, False, True, False)],
                 {"uniq": "aa:bb:cc:00:00:01"})]},
-    # O REENVIO DO DESENHO É O ÚNICO DOS QUATRO NOVOS QUE CABE AQUI, e a razão
-    # é a mesma que tira os outros três: ele NÃO grava no disco. Ele lê o
-    # desenho de agora — sem override no perfil de quem roda a régua, o padrão
-    # do número — e o remanda. A mesa da régua tem UM controle no P1, então o
-    # bitmask é `player_led_pattern(1)`, escrito aqui de propósito: se alguém
-    # trocar a tabela do daemon, a régua reprova em vez de a lâmpada acender o
-    # desenho de outro jogador. É o mesmo cuidado da prova do `player`.
-    {"pagina": PAGINA, "gesto": GESTO_DO_REENVIO_DO_DESENHO,  # (noqa-acento) id
-     "clique": {},
-     "chama": [("player_leds_set_detalhado",
-                [(False, False, True, False, False)],
-                {"uniq": "aa:bb:cc:00:00:01"})]},
-    # `luzes`, `desenho-de` e `auto-todos` NÃO ESTÃO AQUI pela MESMA razão que
-    # tira o `brilho` e o `auto-cores`, e ela vale em dobro para eles: os três
-    # ESCREVEM NO DISCO (`loader.save_profile`), e dois ainda chamam
+    # O REENVIO DO DESENHO SAIU DAQUI COM A BOTOEIRA — 07/09/2026, ordem dela:
+    # *"só olhar a linha de cima da seleção de player e replicar o que tem lá."*
+    # Ele provava o `reenviar-desenho`, que era o clique na moldura das cinco
+    # lâmpadas; sem a moldura não há gesto a provar. O que restou desta célula
+    # é DESENHO DE LEITURA, e desenho não tem prova de chamada porque não chama
+    # ninguém — quem escreve as cinco luzes agora é só o `player`, uma linha
+    # acima, e a prova dele continua logo aqui em cima.
+    #
+    # `auto-todos` NÃO ESTÁ AQUI pela MESMA razão que tira o `brilho` e o
+    # `auto-cores`: ele ESCREVE NO DISCO (`loader.save_profile`) e chama
     # `profile.switch` — numa régua que roda com o perfil ATIVO da máquina, uma
-    # prova deles trocaria o desenho das luzes de quem rodou o teste.
-    # Quem os morde é `tests/unit/test_a_04_as_cinco_lampadas_sem_o_numero.py`,
-    # com a pasta de perfis desviada para um lar de mentira.
+    # prova dele trocaria o perfil de quem rodou o teste.
     #
     # `brilho` E `auto-cores` NÃO ESTÃO AQUI, e a ausência é declarada: os dois
     # ESCREVEM NO DISCO (`loader.save_profile`), e esta régua roda com o perfil

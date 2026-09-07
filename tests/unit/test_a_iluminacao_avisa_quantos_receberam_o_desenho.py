@@ -335,26 +335,31 @@ def test_se_o_dono_parar_de_colar_o_aviso_o_pacote_recusa(monkeypatch, a04, pac,
 
 
 # ---------------------------------------------------------------------------
-# 4. OS QUATRO GESTOS PÕEM A FRASE NO CANAL VERDE — todos, não um
+# 4. O GESTO QUE ESCREVE DESENHO PÕE A FRASE NO CANAL VERDE
 # ---------------------------------------------------------------------------
-def _os_quatro(a04, pac):
-    """Os quatro caminhos de escrita de desenho desta aba, com o clique de cada.
+def _os_que_escrevem_desenho(a04, pac):
+    """Os caminhos de escrita de desenho desta aba, com o clique de cada.
 
-    **SÃO QUATRO E NÃO UM**, e a razão é a regra desta casa de 05/09: *quando a
-    cura conhece a causa, ela cobre TODOS os chamadores*. Cobrir um deixa a
-    próxima pessoa remedindo o mesmo defeito no gesto vizinho.
+    **ERAM CINCO E HOJE É UM** — 07/09/2026. `luzes`, `desenho-de` (nos dois
+    ramos) e `reenviar-desenho` saíram com a botoeira, por ordem dela: *"só
+    olhar a linha de cima da seleção de player e replicar o que tem lá."* O que
+    sobra é o `player`, que escreve o desenho de CARONA na renumeração — e era
+    justamente essa carona que a LUZES-01 existia para tornar dispensável.
+
+    **A LISTA CONTINUA SENDO LISTA, e o `parametrize` continua sendo
+    `parametrize`.** A razão da regra desta casa de 05/09 não mudou — *quando a
+    cura conhece a causa, ela cobre TODOS os chamadores* —, e um dia em que esta
+    aba ganhe um segundo caminho de escrita, ele entra aqui e a régua o cobre
+    sozinha. Trocar a lista por uma chamada solta pouparia três linhas e
+    devolveria à próxima pessoa o trabalho de descobrir que a régua existia.
     """
     clique = {"controle": "p1", "uniq": UM}
     return [
-        ("luzes", a04.luzes, {**clique, "lampada": "1"}),
-        ("desenho-de", a04.desenho_de, {**clique, "desenho": "3"}),
-        ("desenho-de/todas", a04.desenho_de, {**clique, "desenho": a04.TODAS}),
-        ("reenviar-desenho", a04.reenviar_desenho, dict(clique)),
         ("player", a04.player, {**clique, "player": "2"}),
     ]
 
 
-@pytest.mark.parametrize("indice", range(5))
+@pytest.mark.parametrize("indice", range(1))
 def test_o_gesto_poe_a_frase_do_dono_no_canal_de_recado(monkeypatch, a04, pac,
                                                         dono, indice):
     """O clique que pegou em N controles volta com `{"recado": …}`.
@@ -364,12 +369,13 @@ def test_o_gesto_poe_a_frase_do_dono_no_canal_de_recado(monkeypatch, a04, pac,
     (`hefesto_vivo._deu_certo_dizendo` → `_depositar(..., "sucesso")`), e a
     chave é `recado` — ver `test_o_canal_e_o_verde_de_seis_segundos`.
 
-    **A MORDIDA:** tire o `_o_recado(...)` de qualquer um dos cinco e só aquele
-    caso cai. Foi para isso que ele é `parametrize` e não um `for`.
+    **A MORDIDA:** tire o `_o_recado(...)` do gesto e o caso cai. Ele continua
+    `parametrize` e não um `for` para que, no dia em que a lista voltar a ter
+    mais de um, só o caso quebrado apareça no relatório.
     """
     _semear()
     _abrir_o_todos(monkeypatch, a04, pac)
-    nome, gesto, clique = _os_quatro(a04, pac)[indice]
+    nome, gesto, clique = _os_que_escrevem_desenho(a04, pac)[indice]
     resposta = gesto(_ctx(pac), clique, PonteDeMentira())
     assert isinstance(resposta, dict), (
         f"o gesto {nome} não devolveu recado nenhum: {resposta!r}")
@@ -378,7 +384,7 @@ def test_o_gesto_poe_a_frase_do_dono_no_canal_de_recado(monkeypatch, a04, pac,
         f"o recado do gesto {nome} não carrega o aviso dos N: {resposta!r}")
 
 
-@pytest.mark.parametrize("indice", range(5))
+@pytest.mark.parametrize("indice", range(1))
 def test_sem_o_aviso_o_gesto_continua_calado(a04, pac, indice):
     """Um controle só: nada de recado, e a piscada do piloto responde.
 
@@ -387,24 +393,9 @@ def test_sem_o_aviso_o_gesto_continua_calado(a04, pac, indice):
     repete o que ela acabou de fazer, a tela pisca"*).
     """
     _semear()
-    nome, gesto, clique = _os_quatro(a04, pac)[indice]
+    nome, gesto, clique = _os_que_escrevem_desenho(a04, pac)[indice]
     assert gesto(_ctx(pac), clique, PonteDeMentira()) is None, (
         f"o gesto {nome} falou num clique que pegou em um controle só")
-
-
-def test_o_ramo_nenhuma_continua_com_o_recado_dele(a04, pac):
-    """"Todas apagadas" não perdeu a frase que já tinha.
-
-    O `desenho-de` tinha UM recado antes desta sprint — o do override que saiu —
-    e a plumbing nova passa pelo mesmo `return`. Uma cura que trocasse um recado
-    por outro seria uma regressão de tela invisível para todo o resto.
-    """
-    _semear()
-    resposta = a04.desenho_de(_ctx(pac),
-                              {"controle": "p1", "uniq": UM,
-                               "desenho": a04.NENHUMA},
-                              PonteDeMentira())
-    assert resposta == {"recado": a04._RECADO_DO_DESENHO_AUTOMATICO}
 
 
 # ---------------------------------------------------------------------------

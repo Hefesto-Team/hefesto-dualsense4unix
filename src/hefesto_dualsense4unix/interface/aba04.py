@@ -437,23 +437,49 @@ CSS = """
      escrito pelo molde; o que sobrava ao lado dele era o widget da coluna VIVA.
      Sem a guia e sem o trilho, `.cel-cor` e `.cel-brilho` passam a ler o que a
      coluna vazia lê: um traço, e nada mais. */
-  .luz-grade .ctrl.off .guia,
-  .luz-grade .ctrl.off .trilho,
-  .luz-grade .ctrl.off .cel-acoes .btn{display:none}
-  /* E O TRILHO DO LUGAR QUE NASCE VAZIO SAI PELA MESMA RAZÃO — 07/09/2026. Ele
-     passou a existir ali porque é onde mora o `data-campo="brilho-pct"`: sem
-     o `.cheio`, o brilho do controle que chega não tem onde pousar. Ele nasce
-     sem `style="width"` — largura cravada num lugar sem dono seria o brilho do
-     MOCKUP — e some, para a célula continuar lendo o travessão do `.num`. */
-  .luz-grade .ctrl[data-conectado="nao"] .trilho{display:none}
+  /* E A CHAVE DESTE BLOCO PASSOU DE `.off` PARA `[data-conectado="nao"]` —
+     07/09/2026, e é o que sustenta a cura desta leva. `.off` só alcança o
+     lugar que ESVAZIA na frente dela; o lugar que NASCE vazio carrega `.vazia`
+     e nunca ganha `.off` (`hefesto_vivo`, passo `1b`). Enquanto os widgets de
+     gesto não nasciam nas colunas sem dono isso bastava — agora eles nascem
+     nas quatro, e quem cumpre a decisão dela (*um lugar sem aparelho não
+     oferece gesto nenhum*, 31/08/2026) é ESTA regra.
+
+     A MARCA É A CERTA porque é a que o piloto VIRA nos dois sentidos: o passo
+     `1b` escreve `nao` e o `1c` escreve `sim`. O widget some quando o  (noqa-acento: valores de atributo)
+     controle
+     sai e aparece quando ele chega, no mesmo tique, sem que ninguém injete
+     HTML — que é justamente o que o piloto não sabe fazer, e a razão de o P3
+     e o P4 ficarem sem guia de cores desde que esta aba existe.
+
+     `:not(.vazia)` NÃO ENTRA AQUI, e a diferença é a razão do `:not` lá
+     embaixo: aquela regra apaga um `<span class="nada">` (o travessão que o
+     lugar vazio já tinha, e que ele precisa manter); esta esconde `button` e
+     `input`, que o lugar vazio nunca deve oferecer — nascido vazio ou
+     esvaziado. É a mesma leitura que `monta.CSS_FOLHA` faz para as dez abas.
+
+     O TRILHO ESTAVA NESTA LISTA E SAIU PARA A LINHA DE BAIXO em 07/09/2026,
+     quando ele passou a nascer no lugar vazio para dar casa ao
+     `data-campo="brilho-pct"`; agora as duas leituras voltam a ser uma só. */
+  .luz-grade .ctrl[data-conectado="nao"] .guia,
+  .luz-grade .ctrl[data-conectado="nao"] .trilho,
+  .luz-grade .ctrl[data-conectado="nao"] .cel-acoes .btn{display:none}
   /* A SÉTIMA CÉLULA É A ÚNICA QUE PRECISA DO TRAVESSÃO DE VOLTA — ver o
      `<span class="nada">` que o gerador emite em `cel-acoes`. Ele nasce
      escondido na coluna viva, para não pôr um traço debaixo de dois botões.
      `:not(.vazia)` NÃO É ZELO: sem ele esta regra apaga o travessão que a
      coluna NASCIDA vazia já tinha, e o P3/P4 perdem a linha "Opções". Foi o
      que a primeira foto desta cura mostrou — a régua sou eu olhando, e ela
-     pegou a regressão que eu mesmo tinha acabado de escrever. */
-  .luz-grade .ctrl:not(.vazia):not(.off) .cel-acoes .nada{display:none}
+     pegou a regressão que eu mesmo tinha acabado de escrever.
+
+     E O SELETOR VIROU `[data-conectado="sim"]` EM 07/09/2026, porque
+     `:not(.vazia):not(.off)` media o NASCIMENTO e o que decide é o AGORA.  (noqa-acento: verbo medir, imperfeito)
+     Medido: com os dois botões nascendo nos quatro lugares, o P3 que ganha um
+     controle sai de `.vazia` + `conectado="sim"` — nenhum dos dois `:not`
+     falha, o travessão continuava visível, e a célula Opções mostrava "—" ao
+     lado de `Automático` e `Desligar`. A marca do piloto responde pelos dois
+     estados; a classe de nascimento só responde por um. */
+  .luz-grade .ctrl[data-conectado="sim"] .cel-acoes .nada{display:none}
   .luz-grade .ctrl.off .cel-acoes .nada{display:flex;align-items:center;
                                         justify-content:center;color:var(--linha)}
   .luz-grade .ctrl.off .cel-cor,
@@ -784,7 +810,15 @@ CSS = """
      qual controle` — que o cartão do piloto não leva à tela (só `RuntimeError`
      chega lá). É a MESMA cura que a folha do `.off` já faz com a guia, o
      trilho e os dois botões, três seções acima. */
-  .luz-grade .ctrl.off .cel-cor .hex.reenvia{pointer-events:none;border-color:transparent}
+  /* E VALE PARA O LUGAR QUE NASCE VAZIO DESDE 07/09/2026, pela chave
+     `[data-conectado="nao"]`. A caixa passou a levar `data-gesto="reenviar"`
+     nos quatro lugares — sem isso o P3 que chega fica com a única maneira de
+     reenviar a cor congelada em nunca. Aqui ela não pode SUMIR como a guia
+     some: este `<span>` É o travessão da célula, o mesmo elemento que mostra
+     `#0000FF` na coluna viva. O que se apaga é o CLIQUE e a borda de botão,
+     não o elemento. */
+  .luz-grade .ctrl[data-conectado="nao"] .cel-cor .hex.reenvia{pointer-events:none;
+                                                               border-color:transparent}
 
   /* ---------- BRILHO ---------- */
   .cel-brilho{display:flex;align-items:center;gap:9px}
@@ -883,27 +917,27 @@ CSS = """
      separava nada: a faixa já está delimitada pela divisória de cima, pela de
      baixo e pela barra vertical da coluna. Quem tem de ter contorno é o
      touchpad, porque o contorno É o desenho dele. */
-  /* A CÉLULA DOS LEDs TEM DOIS ANDARES DESDE 04/09/2026 — a tira em cima e a
-     RESSALVA embaixo (D-02, pergunta [01] desta aba). Ela é quem ocupa a faixa
-     `--r-leds`; a tira deixou de ser o item da grade e virou o primeiro filho.
+  /* A CÉLULA DOS LEDs VOLTOU A TER UM ANDAR SÓ — 07/09/2026. Ela teve DOIS
+     entre 04/09 e hoje: a tira em cima e a RESSALVA embaixo (D-02, pergunta
+     [01] desta aba). A linha de ressalva saiu por ordem dela — *"o que eu não
+     quero é frase da steam ou outras"* —, e com ela saíram as duas regras que a
+     vestiam (`.cel-leds .ressalva` e a que a escondia no lugar sem dono).
 
-     `flex:0 0 34px` NA TIRA, e não `height:100%`: com a ressalva presente o
-     `100%` esticaria a tira e o halo das duas barras junto. Trinta e quatro é
-     a altura que a tira sempre teve, e ela não muda quando a frase aparece.
+     A COLUNA DE FLEX FICA, e não é sobra: é ela que dá à célula o
+     `justify-content:center` que mantém a tira no eixo do rótulo "LEDs" da
+     primeira coluna e do travessão das colunas vazias. Com um filho só,
+     centrar a coluna é o que põe a tira no meio dos 56px da faixa — era esse o
+     comportamento de antes dos dois andares, e é o que a foto confirma.
 
-     A FRASE FICA CENTRADA como o resto da coluna, e o `min-width:0` é o que
-     deixa uma frase longa QUEBRAR em vez de alargar a coluna — as cinco
-     colunas dividem 1112px em partes iguais, e um item de flex não encolhe
-     abaixo do conteúdo sem isto. */
-  /* `justify-content:center` E NÃO `flex-start`, e a diferença aparece no dia
-     NORMAL: com a ressalva escondida a tira ficaria encostada no topo da faixa
-     de 56px, com 22px de vão embaixo — fora do eixo do rótulo "LEDs" da
-     primeira coluna e do travessão das colunas vazias. Centrado, o par se
-     acomoda como um bloco só: sozinha, a tira fica onde sempre esteve; com a
-     frase, as duas dividem a faixa. */
+     `flex:0 0 34px` NA TIRA, e não `height:100%`: o `100%` a esticaria pelos
+     56px da faixa e levaria o halo das duas barras junto. Trinta e quatro é a
+     altura que a tira sempre teve.
+
+     `min-width:0` FICA pela razão de sempre num flex: sem ele um item não
+     encolhe abaixo do conteúdo, e as cinco colunas dividem 1112px em partes
+     iguais. */
   .cel-leds{display:flex;flex-direction:column;align-items:stretch;
             justify-content:center;min-width:0}
-  .cel-leds .ressalva{text-align:center;overflow:hidden}
   /* E A TIRA DO LUGAR VAZIO MORA NA MESMA CÉLULA — 07/09/2026. Até aqui o
      `.aceso` do lugar sem dono era ele próprio o item da grade, e esta linha
      dizia `align-self:center;height:34px` para ele não esticar pelos 56px da
@@ -916,39 +950,20 @@ CSS = """
      medido: 212px viravam a largura de um travessão. Esta linha vem DEPOIS
      dela, com a mesma especificidade, e é a que vale. */
   .luz-grade .ctrl.vazia .cel-leds{align-items:stretch}
-  /* E ELA SOME ENQUANTO O LUGAR NÃO TEM DONO. O molde do lugar sem dono escreve
-     o travessão em todo `data-campo` da coluna, e o alvo `html` desta linha o
-     receberia como um `—` solto debaixo de uma tira apagada — dado com cara de
-     ressalva num lugar onde não há aparelho que ressalvar.
-
-     A MARCA É `data-conectado`, E NÃO A CLASSE — 07/09/2026, e a diferença é a
-     que decide. Esta regra dizia `.off`, e `.off` só existe na coluna que
-     ESVAZIA: o piloto a acrescenta no passo `1b` e a tira no `1c`. A coluna que
-     NASCE vazia carrega `.vazia`, que é um fato de NASCIMENTO — ninguém a tira
-     nunca. Escrever `.vazia` aqui esconderia a ressalva do P3 para sempre,
-     inclusive depois de ele chegar, que é o oposto da D-02.
-     `data-conectado` é a marca que o gerador escreve E que o piloto vira nos
-     DOIS sentidos (`hefesto_vivo`, passos `1b` e `1c`), e é exatamente por isso
-     que a folha das dez a usa para o desenho: `[data-conectado="nao"]
-     .ds-svg{display:none}`, em `topo.html`. Uma regra escrita nela vale nos
-     quatro lugares e se desfaz sozinha quando o controle chega.
-     No repouso a linha já é invisível pelo `.ressalva:has(.nada)` de
-     `monta.CSS_FOLHA`; esta regra é para o primeiro tique, quando o travessão
-     do molde entra no lugar do `.nada`. */
-  .luz-grade .ctrl[data-conectado="nao"] .ressalva{display:none}
-  /* O VÃO DE 16px VIROU DUAS COISAS — LUZES-01, 06/09/2026, e a mudança é
-     MEDIDA: com a botoeira e as seis teclas dentro, o conteúdo da `.aceso` pede
-     212px dos 220 da coluna, e três vãos de 16 (48) faziam os DOIS lados
-     transbordarem — as tiras de luz, que não tinham `flex-shrink:0`, iam a
-     ZERO px e sumiam da tela. Agora a barra de luz é um grupo com vão próprio,
-     as teclas são outro, e o `space-between` reparte o que sobra. */
+  /* O VÃO VOLTOU A SER 16px E UM SÓ — 07/09/2026, com a botoeira fora. A
+     LUZES-01 o partira em dois grupos (`space-between` + `gap:4px`) porque as
+     seis teclas de desenho pediam 212 dos 220px da coluna e não sobrava vão;
+     sem elas, a `.aceso` volta a ter três filhos — tira, indicador, tira — e o
+     `center` com 16 de respiro é o desenho original, que é o que ela mandou
+     manter: *"os leds. barra de luz ficam. é o desenho original."* */
   .aceso{border-radius:8px;background:var(--app-bg);
-         display:flex;align-items:center;justify-content:space-between;gap:4px;
+         display:flex;align-items:center;justify-content:center;gap:16px;
          flex:0 0 34px}
-  .aceso .barra{display:flex;align-items:center;gap:8px}
-  /* `flex:0 0 6px` E NÃO `width` SOZINHO: dentro de um flex apertado a largura
-     é um PEDIDO, e o `flex-shrink` padrão (1) o atende encolhendo até zero —
-     foi assim que as duas tiras sumiram na primeira medição desta entrega. */
+  /* `flex:0 0 6px` FICA, mesmo com o aperto embora — e não é sobra da botoeira.
+     Sem ele a largura da tira é um PEDIDO, e o `flex-shrink` padrão (1) o
+     atende encolhendo até zero: foi assim que as duas tiras sumiram quando o
+     conteúdo apertou. Elas cabem hoje; a trava é o que garante que o próximo
+     item posto nesta faixa não as apague de novo, calado. */
   .tira-luz{flex:0 0 6px;width:6px;height:20px;border-radius:3px}
   .tira-luz.esq{box-shadow:-3px 0 12px 1px currentColor}
   .tira-luz.dir{box-shadow:3px 0 12px 1px currentColor}
@@ -986,60 +1001,40 @@ CSS = """
      o estilo de linha já as põe, e regra que não morde é regra que mente sobre
      quem manda. */
   .tira-luz.incerta{border:1px dashed var(--comment)}
-  /* ---------- O INDICADOR VIROU A BOTOEIRA (LUZES-01, 06/09/2026) ----------
-     DOZE ALVOS EM 220px, E A CONTA FOI MEDIDA ANTES DE VIRAR FOLHA. A primeira
-     escrita desta entrega punha as teclas numa FAIXA NOVA da grade; o Chrome
-     reprovou na hora: com a `.nota` escondida o `.miolo` oferece 564px e o
-     `scrollHeight` já era 564 com o quadro em 526 — os 38px de diferença são o
-     rodapé, não folga. **A aba está no teto exato, e uma faixa nova a faz rolar
-     por dentro**, que é conteúdo que ninguém sabe que existe.
+  /* ---------- O INDICADOR VOLTOU A SER INDICADOR (07/09/2026) ----------
+     A BOTOEIRA DA LUZES-01 SAIU INTEIRA, por ordem dela: *"só olhar a linha de
+     cima da seleção de player e replicar o que tem lá."* Saíram com ela as
+     cinco `.pad .lamp`, que eram botões de gesto, mais as seis `.desenhos .dz`
+     e o `.pad.reenvia`.
 
-     ONDE COUBE: dentro da própria `.aceso`, que mede 220x34 e usava 68 (as duas
-     tiras de 6 e o indicador de 56). Os 152px vagos são a única superfície
-     livre desta coluna, e ela é a certa por significado — é a célula LEDs.
+     OS TRÊS NOMES DE GESTO NÃO ESTÃO ESCRITOS AQUI, e a omissão é cura de um
+     defeito MEDIDO nesta mesma leva: a primeira redação deste comentário citava
+     um deles por extenso, com o atributo e as aspas. O CSS do gerador entra
+     INTEIRO na página, e o portão `paridade-gtk-html` procura o sinal de cada
+     linha do CSV como TEXTO no HTML — então o comentário que EXPLICAVA a
+     remoção virou a prova de que a peça continuava lá, e a linha 140 do CSV
+     ficou verde sobre um botão que não existe mais. As outras duas, que ninguém
+     tinha citado, reprovaram certo.
 
-     A CONTA FECHADA: tiras 2x6 + botoeira 5x13 + seis desenhos 6x18 + os vãos
-     dão 216 contra 220. É denso, e a densidade é o preço do teto — a
-     alternativa era escrever "Todas"/"Nenhuma" por extenso, que pedia 236.
-     A palavra mora no `title`, que é onde esta aba põe explicação desde 28/08.
+     É a armadilha que o `CLAUDE.md` desta casa nomeia três vezes em três dias:
+     *um comentário que descreve o padrão proibido VIRA a primeira ocorrência
+     dele*. Quem for escrever aqui o nome de um `data-gesto` que saiu, escreva-o
+     sem o atributo — ou não escreva. Os nomes estão em
+     `pacotes/a04_iluminacao.GESTO_DO_AUTOMATICO_DE_TODOS`, na nota datada. */
+  /* (continua) O que sobra desta faixa: */
 
-     AS DUAS CORES VÊM DO DONO: `--led-apagado` e `--led-aceso` são declaradas
-     em `.luz-grade` por `CSS_DA_LUZ_NO_DESENHO` (`a04_iluminacao.tokens_da_luz`),
-     que as LÊ de `monta.CSS_LUZINHAS`. Um terceiro par digitado aqui daria três
-     brancos na mesma coluna. */
-  .pad{border-radius:5px;border:1px solid var(--linha);
-       background:var(--panel);display:flex;align-items:center;
-       justify-content:center;gap:1px;padding:2px 3px;height:20px}
-  /* O INDICADOR É O BOTÃO DE REENVIO — a decisão [03] dela aplicada às luzes:
-     *"A caixa do hexadecimal vira o botão."* O clique numa lâmpada é da
-     lâmpada (o ouvinte resolve pelo `closest`, e o `<button>` vem primeiro); o
-     clique na MOLDURA reenvia o desenho inteiro. */
-  .pad.reenvia{cursor:pointer}
-  .pad.reenvia:hover{border-color:var(--roxo)}
-  .pad{gap:2px}
-  .pad .lamp{width:12px;height:14px;padding:0;border-radius:3px;
-             border:1px solid transparent;background:var(--led-apagado);
-             cursor:pointer;display:block}
-  .pad .lamp.on{background:var(--led-aceso);
-                box-shadow:0 0 6px rgba(255,255,255,.85)}
-  .pad .lamp:hover{border-color:var(--roxo)}
-  .desenhos{display:flex;align-items:center;gap:1px}
-  /* `flex:0 0 17px` E `min-width:0` — a mesma lição que as tiras de luz
-     acabaram de pagar, do outro lado: num flex o `min-width:auto` impede o item
-     de encolher abaixo do CONTEÚDO, e as quatro teclas com `P1`..`P4` escrito
-     dentro cresceram de 17 para 32px cada. Medido: a célula ia a 299px numa
-     coluna de 220. */
-  .desenhos .dz{flex:0 0 17px;min-width:0;width:17px;height:20px;padding:0;border-radius:4px;
-                border:1px solid var(--linha);background:var(--app-bg);
-                cursor:pointer;display:flex;align-items:center;
-                justify-content:center;gap:1px}
-  .desenhos .dz.num{font-family:'JetBrains Mono',monospace;font-size:9px;
-                    line-height:1;color:var(--texto-mudo)}
-  .desenhos .dz.num:hover{color:var(--fg)}
-  .desenhos .dz:hover{border-color:var(--roxo)}
-  .desenhos .dz i{width:2px;height:2px;border-radius:1px;display:block;
-                  background:var(--led-apagado)}
-  .desenhos .dz i.on{background:var(--led-aceso)}
+     O QUE SOBRA É A MOLDURA DE LEITURA, e ela é a de antes da LUZES-01, com as
+     medidas de então: 56x20, que é o que as cinco lâmpadas de `monta.luzinhas`
+     pedem — 5 de 6px, dois vãos de 4 e o `padding-bottom:3px` que centra o
+     desenho na moldura do touchpad. As cinco lâmpadas em si são pintadas por
+     `CSS_LUZINHAS`, logo abaixo, que é o dono das duas cores.
+
+     E NÃO SOBRA CURSOR NENHUM: sem `cursor:pointer` e sem `:hover`, a célula
+     LEDs não convida a um clique que não existe mais. Uma moldura que ainda
+     acendesse a borda no rato prometeria um gesto que o pacote já não tem —
+     que é a metade visual do órfão calado. */
+  .pad{width:56px;height:20px;border-radius:5px;border:1px solid var(--linha);
+       padding-bottom:3px}
 """ + CSS_LUZINHAS.lstrip("\n") + """
   /* ---------- OPÇÕES ---------- */
   .cel-acoes{display:flex;flex-direction:column;align-items:stretch;gap:4px;
@@ -1237,7 +1232,12 @@ def coluna(c):
         # divergir. O `data-hef-quando` leva `luz(i)`, o hex do PRODUTO, porque
         # é ele que o pacote emite; o `style` continua no tom da casa, que é o
         # que ela vê.
-        f'            <button class="tom{" on" if t == tom_da_casa(cor) else ""}" style="background:{t}"'
+        # E O `on` PEDE `ligado` DESDE 07/09/2026, junto com a guia que passou a
+        # nascer nos quatro lugares: `cor` é `luz(j)`, a cor AUTOMÁTICA do
+        # número daquele lugar, e num lugar sem aparelho ela não é escolha de
+        # ninguém — é o desenho. Marcar o anel ali seria afirmar uma cor
+        # escolhida onde não há controle que a tenha escolhido.
+        f'            <button class="tom{" on" if ligado and t == tom_da_casa(cor) else ""}" style="background:{t}"'
         f' data-campo="hex" data-hef-alvo="classe" data-hef-quando="{luz(i)}"'
         f' data-gesto="cor" data-hex="{luz(i)}"'
         # E O `title` NÃO NOMEIA CONTROLE — 03/09/2026. Ele dizia *"pinta a
@@ -1250,7 +1250,7 @@ def coluna(c):
         # no rótulo vivo logo acima.
         f' title="Cor automática do Player {i} — usar aqui pinta a barra deste'
         f' controle, e não muda o número dele."></button>'
-        for i, t in enumerate(TONS, 1)) if ligado else ""
+        for i, t in enumerate(TONS, 1))
 
     # ---- O QUE O `conectado` DECIDE, peça por peça ----
     # Cada nome abaixo é UM pedaço do molde único lá embaixo. O endereço
@@ -1275,22 +1275,55 @@ def coluna(c):
     rotulo = (f'P{j} <span class="pt">•</span> {c["nome"]}'
               f' <span class="pt">•</span> {c["via"]}' if ligado else
               f'P{j} <span class="pt">•</span> {SEM_NINGUEM_AQUI}')
-    # A GUIA DAS OITO CORES é widget de GESTO — ver o item 3 da docstring.
-    guia = (f'''<span class="guia">
+    # OS QUATRO WIDGETS DE GESTO NASCEM NOS QUATRO LUGARES — 07/09/2026, e é a
+    # cura desta leva. Até hoje a `guia`, o `puxador`, o `reenvio` e as
+    # `opcoes` eram `... if ligado else ""`, e o preço foi MEDIDO nas  (noqa-acento: nome de variável)
+    # páginas
+    # publicadas: `data-gesto` por lugar dava `p1=9 · p2=9 · p3=0 · p4=0`
+    # nesta aba, contra `p1=p2=p3=p4` em todas as outras. Com os QUATRO
+    # DualSense dela na mesa e o daemon de pé, a foto ao vivo mostrava o P3 e o
+    # P4 com nome, cor (#00FF00, #FF0000), brilho 100% e o número de jogador
+    # aceso — e SEM a fileira de amostras de cor, SEM o puxador do brilho e com
+    # a célula Opções em travessão. **Ela não conseguia trocar a cor do P3 pela
+    # tela**, e há dois testes da bancada que mandam fazer exatamente isso (a
+    # Linha 8, "uma cor diferente em cada um", e a Linha 21, "uma cor no P4").
+    #
+    # A CAUSA É QUE O PILOTO NÃO MATERIALIZA WIDGET: ele vira a marca
+    # `data-conectado` e escreve campo (`hefesto_vivo`, passos 1c e 2). O que
+    # não nasceu no HTML não aparece quando o controle chega — só recarregar a
+    # página desfazia, e a página é ela quem abre. Era a limitação que a
+    # docstring desta função já dava por escrito ("o que esta cura NÃO
+    # alcança"); esta leva a fecha.
+    #
+    # A DECISÃO DELA CONTINUA DE PÉ — *um lugar sem aparelho não oferece gesto
+    # nenhum* (31/08/2026) — e quem a cumpre agora é o CSS, não a ausência: o
+    # bloco `[data-conectado="nao"]` desta folha esconde a guia, o trilho e os
+    # dois botões, e neutraliza o clique da caixa do hexadecimal. É a MESMA
+    # marca que o piloto já virava nos dois sentidos, então o widget aparece no
+    # instante do passo `1c` e some no `1b`, sem ninguém injetar HTML.
+    #
+    # E A ESTRUTURA VEM SEM O VALOR, que é a outra metade: um lugar sem dono
+    # não carrega a cor nem o brilho do MOCKUP (a lei da `check_a_cor_vem_do_
+    # aparelho.py`, e a razão do item 2 da docstring). O `value` do seletor
+    # livre nasce preto e o do puxador nasce zero — nenhum dos dois é
+    # identidade de aparelho nenhum —, e o `.cheio` continua sem `style=
+    # "width"`. Quem escreve os valores é o pintor, pelo `data-campo`.
+    cor_de_partida = cor.lower() if ligado else "#000000"
+    guia = f'''<span class="guia">
 {tons}
-              <input type="color" class="livre" value="{cor.lower()}" data-gesto="cor"
+              <input type="color" class="livre" value="{cor_de_partida}" data-gesto="cor"
                      title="Livre — abre o seletor para uma cor que não está na guia.">
             </span>
-            ''' if ligado else "")
-    reenvio = ' data-gesto="reenviar"' if ligado else ""
+            '''
+    reenvio = ' data-gesto="reenviar"'
     dica_do_hex = ('\n                  title="Manda esta cor ao controle de novo'
-                   ' — a mesma que já está escrita aqui."' if ligado else "")
+                   ' — a mesma que já está escrita aqui."')
     largura_de_partida = f' style="width:{b}%"' if ligado else ""
     puxador = (f'<input class="puxador" type="range" min="0" max="100" step="1"'
-               f' value="{b}" data-gesto="brilho" data-campo="brilho-pct"'
+               f' value="{b if ligado else 0}" data-gesto="brilho" data-campo="brilho-pct"'
                f' data-hef-alvo="valor"'
                f' aria-label="{_pacote04.ROTULO_DO_BRILHO}"'
-               f' title="{_pacote04.DICA_DO_BRILHO}">' if ligado else "")
+               f' title="{_pacote04.DICA_DO_BRILHO}">')
     fileira = (_pacote04.fileira_de_players(
         c["nome"], c["jogador"], DONOS_NA_MESA, "            ",
         quantos=len(monta_.CONECTADOS)) if ligado else
@@ -1312,19 +1345,23 @@ def coluna(c):
     # passa nem o número: `dica_da_luz` não precisa mais dele.
     miolo_da_luz = (_pacote04.desenho_da_luz(
         tinta, b / 100, j, dica=_pacote04.dica_da_luz(c["nome"], c["via"], ""),
-        recuo="              ",
-        bits=_pacote04.desenho_de_agora(None, "", j)) if ligado else
+        recuo="              ") if ligado else
         f'              <span class="nada">{VAZIO}</span>')
     # O DESENHO DO LUGAR VAZIO NÃO ACENDE LÂMPADA NENHUMA — não há número de
     # jogador a mostrar. O do lugar cheio acende o padrão do número dele.
     resto_do_desenho = ({"jogador": j, "luz": tinta} if ligado
                         else {"lampadas": False})
     brilho_escrito = f"{b}%" if ligado else VAZIO
-    opcoes = ('''<button class="btn roxo" data-gesto="auto" title="Tira a cor escolhida à mão e devolve a automática — a do número deste controle.">Automático</button>
+    opcoes = '''<button class="btn roxo" data-gesto="auto" title="Tira a cor escolhida à mão e devolve a automática — a do número deste controle.">Automático</button>
             <button class="btn vermelho" data-gesto="apagar" title="Apaga a barra de luz deste controle.">Desligar</button>
-            ''' if ligado else "")
+            '''
 
-    return f'''        <div class="ctrl{"" if ligado else " vazia"}" data-controle="{c.get("uniq") or p}" data-conectado="{"sim" if ligado else "nao"}"{titulo_do_lugar}>  # noqa-acento: `sim`/`nao` são valores de atributo
+    # O VALOR DO ATRIBUTO SAI DA f-STRING, e não é asseio: a marca que isenta
+    # `nao` da régua de acentuação é um `#`, e dentro de uma f-string de  (noqa-acento: o próprio valor que a nota explica)
+    # HTML o
+    # `#` não comenta nada — ele SAI NA PÁGINA. Aqui em cima ela comenta.
+    conectado = "sim" if ligado else "nao"  # noqa-acento: valor de atributo
+    return f'''        <div class="ctrl{"" if ligado else " vazia"}" data-controle="{c.get("uniq") or p}" data-conectado="{conectado}"{titulo_do_lugar}>
           <div class="moldura" data-campo="plastico" data-hef-alvo="cor"{plastico_de_partida}{dica_da_moldura}>
             {desenho(f"il-{p}", c["cor"], ligado, **resto_do_desenho)}
           </div>
@@ -1337,7 +1374,7 @@ def coluna(c):
                  gravada. O `texto` do clique é o que o piloto lê do
                  `textContent`, e o `textContent` é o que o pacote reescreve a
                  cada tique pelo `data-campo="hex"`. -->
-            <span class="hex{" reenvia" if ligado else ""}" data-campo="hex"{reenvio}{dica_do_hex}>{cor if ligado else VAZIO}</span>
+            <span class="hex reenvia" data-campo="hex"{reenvio}{dica_do_hex}>{cor if ligado else VAZIO}</span>
           </div>
           <div class="cel-brilho">
             <span class="trilho"><span class="cheio" data-campo="brilho-pct" data-hef-alvo="largura"{largura_de_partida}></span>{puxador}</span>
@@ -1350,24 +1387,35 @@ def coluna(c):
             <div class="aceso" data-campo="luz" data-hef-alvo="html">
 {miolo_da_luz}
             </div>
-            <!-- A RAZÃO DO TRACEJADO, EM UMA LINHA — 04/09/2026, D-02 e a
-                 pergunta [01] desta aba. O desenho da tira já diz que algo
-                 mudou; esta linha responde a pergunta seguinte — QUAL das
-                 três causas — sem exigir que o rato passe por cima.
+            <!-- A LINHA DE RESSALVA SAIU DAQUI — 07/09/2026, ordem dela: *"o
+                 que eu não quero é frase da steam ou outras e p1,P2…"*. Ela
+                 nasceu em 04/09 (D-02) para responder QUAL das três causas
+                 apagou a barra sem exigir o rato; o que ela mostrava era, entre
+                 outras, a frase da Steam, e é exatamente essa que ela mandou
+                 tirar.
 
-                 A PEÇA É A DAS DEZ (`monta.ressalva`), e ela NASCE VAZIA aqui:
-                 no desenho não há aparelho a ressalvar, e uma frase cravada
-                 seria a oitava aparição da identidade congelada desta aba. Quem
-                 a escreve é o pacote, a cada tique, com o primeiro retorno de
-                 `controller_card.rotulo_lightbar` — o mesmo motor dos cards da
-                 janela GTK.
+                 O FATO NÃO SE PERDEU, e é o que faz esta remoção não ser perda:
+                 a razão continua no `title` das DUAS tiras, escrita pela
+                 `dica_da_luz` a cada tique — o mesmo motor
+                 (`controller_card.rotulo_lightbar`), pelo alvo `html` do `luz`.
+                 O que saiu foi a LINHA de texto, não o dado.
 
-                 E ELA NASCE NOS QUATRO LUGARES desde 07/09/2026, não só nos
-                 dois conectados: um lugar que ganha controle e não tem onde
-                 acender a ressalva volta a esconder no `title` a razão de a
-                 barra ter apagado. No lugar vazio ela é invisível de graça —
-                 `monta.CSS_FOLHA` tem `.ressalva:has(.nada){{display:none}}`. -->
-            {monta_.ressalva(_pacote04.ENDERECO_DA_RESSALVA)}
+                 E O CAMPO SAIU DOS DOIS LADOS NO MESMO COMMIT: o pacote parou
+                 de emitir o endereço desta linha junto com este widget. Um
+                 campo que o pacote manda e a página não tem vira ÓRFÃO calado
+                 no piloto, tique após tique — medido a zero nesta leva, com os
+                 quatro DualSense na mesa.
+
+                 O NOME DO CAMPO NÃO ESTÁ ESCRITO AQUI, e a omissão é cura de um
+                 defeito medido nesta mesma leva, do outro lado do arquivo: um
+                 comentário da folha citou um `data-gesto` removido com o
+                 atributo e as aspas, o CSS entrou inteiro na página, e o portão
+                 `paridade-gtk-html` — que procura o sinal como TEXTO no HTML —
+                 deu VERDE sobre um botão que não existe mais. *Um comentário
+                 que descreve o padrão proibido vira a primeira ocorrência
+                 dele.* Quem precisar do nome: ele está no
+                 `test_a_04_as_lampadas_espelham_o_numero`, que cobra a
+                 ausência. -->
           </div>
           <div class="cel-acoes">
             {opcoes}<!-- O TRAVESSÃO DESTA CÉLULA NASCE AQUI, escondido na coluna viva, e
@@ -1585,10 +1633,14 @@ LEGENDA = f'''<div class="nota">
         aquele larga a barra <i>daquele</i> controle para o jogo. <b>Desligar grava a cor
         de cada controle no ato</b>, para nenhuma se perder e nenhuma se repetir. Ele não
         custou linha nenhuma: mora na faixa do título, que estava vazia à direita.</li>
-    <li><b>Debaixo da tira nasce uma linha quando há o que ressalvar.</b> A tira tracejada
-        avisa que a luz não é nossa; a linha diz <i>qual</i> das três causas — o jogo em
-        Modo Nativo, a Steam com o controle aberto, ou a cor desconhecida. Nos dias em que
-        está tudo bem ela não existe.</li>
+    <li><b>A célula LEDs voltou a ser só o desenho.</b> Saíram as teclas
+        <span class="marca">P1 P2 P3 P4</span> e os dois atalhos, o clique nas cinco
+        lâmpadas e a linha de texto que dizia por que a barra apagou — pedido seu:
+        <i>"só olhar a linha de cima da seleção de player e replicar o que tem lá."</i>
+        Ficaram as duas tiras da barra de luz, que são o desenho original, e as cinco
+        lâmpadas, que agora <b>espelham o número</b> escolhido na linha
+        <span class="marca">Jogador</span> logo acima — sem escolha própria. A razão de
+        uma barra tracejada continua a um rato de distância, na dica das tiras.</li>
     <li><b>O hexadecimal virou botão.</b> Clicar em <span class="marca">#0000FF</span> manda
         aquela cor ao controle de novo. Antes, uma cor escolhida à mão era a única sem
         caminho de volta: os oito tons reenviam ao serem clicados, e o seletor livre só
@@ -1679,6 +1731,33 @@ _MIOLO_DO_ALVO_HTML = re.compile(
     r'(<div class="(?:players|aceso)"[^>]*data-hef-alvo="html"[^>]*>).*?</div>', re.S)
 
 
+#: O QUE ESCONDE CADA WIDGET DE GESTO ENQUANTO O LUGAR NÃO TEM DONO — a
+#: segunda metade da §4, e ela existe porque a cura de 07/09/2026 trocou o
+#: mecanismo da decisão dela. Até 06/09 *"um lugar sem aparelho não oferece
+#: gesto nenhum"* era cumprido pela AUSÊNCIA do widget; a partir de hoje é
+#: cumprido por ESTA folha, e o widget nasce nos quatro lugares para que o
+#: controle que chega o encontre pronto.
+#:
+#: A CHAVE É A CLASSE DO PRÓPRIO ELEMENTO, e o valor é o pedaço de seletor que
+#: tem de estar na folha. A régua lê as classes do HTML emitido e cobra que ao
+#: menos uma esteja aqui: um widget novo, com classe que ninguém escondeu,
+#: reprova sem que ninguém se lembre de acrescentá-lo a lista nenhuma.
+#:
+#: `hex` NÃO SOME, e é a única exceção: aquele `<span>` É o travessão da célula
+#: `Cor` — o mesmo elemento que mostra `#0000FF` na coluna viva. O que se apaga
+#: nele é o CLIQUE.
+_COBERTURA_SEM_DONO = {
+    "tom": '.luz-grade .ctrl[data-conectado="nao"] .guia',
+    "livre": '.luz-grade .ctrl[data-conectado="nao"] .guia',
+    "puxador": '.luz-grade .ctrl[data-conectado="nao"] .trilho',
+    "btn": '.luz-grade .ctrl[data-conectado="nao"] .cel-acoes .btn',
+    "hex": '.luz-grade .ctrl[data-conectado="nao"] .cel-cor .hex.reenvia{pointer-events:none',
+}
+
+#: O `class=` QUE NÃO EXISTE, para a §4 não precisar de um `if` no meio do laço.
+_SEM_CLASSE = re.compile(r"()").match("")
+
+
 def _cada_coluna(colunas):
     """As colunas da grade, separadas em (vazias, conectadas).
 
@@ -1740,79 +1819,119 @@ def _conferir(doc):
         exigir(c["nome"] not in corpo,
                f"o nome do plástico {c['nome']!r} voltou a uma coluna vazia")
 
-    # 4. NENHUM AJUSTE VIVO NUM LUGAR VAZIO. Sem controle não há cor, brilho nem
-    #    número de player — desenhar um é oferecer um ajuste que não existe.
+    # 4. OS GESTOS NASCEM NOS QUATRO LUGARES, E O LUGAR SEM DONO NÃO OFERECE
+    #    NENHUM — 07/09/2026, e esta régua foi REESCRITA neste dia.
     #
-    #    ESTA RÉGUA DAVA VERDE SOBRE NADA, e foi medido em 03/09/2026 ao
-    #    tentar MORDÊ-LA: emiti um `<input type="range">` dentro da
-    #    `coluna_vazia`, regerei a página, e ela passou. O delimitador de coluna
-    #    era `'<div class="ctrl'` — e `<div class="ctrl-rot">`, o rótulo que vem
-    #    logo depois do desenho, COMEÇA COM ESSE PREFIXO. O bloco inspecionado
-    #    terminava no `</div>` da moldura: 46.798 caracteres de SVG e nenhuma
-    #    das quatro células que a régua existe para vigiar (`cel-cor`,
-    #    `cel-brilho`, `players`, `cel-acoes` — medido: `"cel-brilho" in bloco`
-    #    era `False` nas duas colunas vazias).
+    #    O QUE ELA MEDIA ATÉ ONTEM: que a coluna vazia não tinha `data-gesto`,
+    #    nem `<input`, nem `<button`. Estava certa sobre a DECISÃO dela (*um
+    #    lugar sem aparelho não oferece gesto nenhum*, 31/08/2026) e errada
+    #    sobre o MUNDO: ela cobrava a ausência do widget, quando o que a decisão
+    #    pede é a ausência do GESTO. Enquanto o widget não nascia, o P3 que
+    #    ganhava um controle ficava sem guia de cores, sem puxador de brilho e
+    #    sem os dois botões de Opções — o piloto vira marca e escreve campo, não
+    #    materializa HTML —, e só recarregar a página desfazia. Medido nas
+    #    páginas publicadas em 07/09/2026: `data-gesto` por lugar dava
+    #    `p1=9 · p2=9 · p3=0 · p4=0` nesta aba, contra os quatro iguais em todas
+    #    as outras. Com os quatro DualSense dela na mesa, ela não conseguia
+    #    trocar a cor do P3 pela tela.
     #
-    #    O RECORTE PASSA A SER POR REGEX, e a classe de coluna é `ctrl` seguido
-    #    de `"` (a viva) ou de espaço (`ctrl vazia`). `ctrl-rot` tem um `-` na
-    #    terceira posição e deixa de casar. É a armadilha que o
-    #    `COMO-OLHAR-A-TELA.md` nomeia: casar um token por PREFIXO, em vez do
-    #    campo que ele significa.
+    #    O QUE ELA COBRA AGORA, e são três metades. Afrouxá-la seria apagar as
+    #    três — uma régua que só some não mede nada.
+    #
+    #    A PRIMEIRA: o conjunto de `data-gesto` é o MESMO nos quatro lugares.
+    #    É o irmão da §14 (que faz isso com `data-campo`) e é a linha que morde
+    #    a cura: devolver um `if ligado else ""` a qualquer dos widgets faz esta
+    #    régua nomear o lugar e o gesto que sumiram.
+    #
     #    E O RECORTE É DENTRO DA GRADE, e não do miolo inteiro: a ÚLTIMA coluna
-    #    vazia termina onde a grade termina, e um `\Z` a fazia engolir o RODAPÉ
-    #    — os quatro botões `Aplicar`/`Salvar`/`Exportar`/`Importar`, que são do
+    #    termina onde a grade termina, e um `\Z` a fazia engolir o RODAPÉ — os
+    #    quatro botões `Aplicar`/`Salvar`/`Exportar`/`Importar`, que são do
     #    esqueleto das dez páginas e não pertencem a coluna nenhuma. Medido em
     #    03/09/2026: com o `\Z`, o segundo bloco tinha 48.131 caracteres e a
-    #    régua acusava `<button` num lugar vazio que não tem botão nenhum. É a
-    #    MESMA família do prefixo `ctrl-rot`, do outro lado do recorte.
+    #    régua acusava `<button` num lugar vazio que não tem botão nenhum.
     grade = corpo.split('<div class="luz-grade">', 1)[-1].split('<div class="rodape"', 1)[0]
-    for bloco in _cada_coluna(grade)[0]:
-        exigir("cel-brilho" in bloco,
+    #
+    #    E ELA DESCONTA OS BLOCOS DE ALVO `html` DOS DOIS LADOS, pela mesma
+    #    razão da §14 e com o mesmo recorte: `players` e `aceso` são buracos que
+    #    o pacote preenche com HTML inteiro a cada tique, e o que mora lá dentro
+    #    é contrato DELE. Quatro dos nove gestos desta aba são de lá — `player`,
+    #    `luzes`, `desenho-de` e `reenviar-desenho` —, e eles JÁ chegavam aos
+    #    quatro lugares antes desta cura, porque nascem com o bloco que os
+    #    carrega. Cravá-los no lugar vazio só para o conjunto fechar seria régua
+    #    medindo a própria saída, que é a armadilha nomeada no `ONDE PARAMOS` de
+    #    07/09/2026. Os CINCO que faltavam de verdade — `cor`, `brilho`, `auto`,
+    #    `apagar` e `reenviar` — são os do cartão, e são estes que a régua conta.
+    gestos_por_lugar = {}
+    vazias, cheias = _cada_coluna(grade)
+    for coluna_html in vazias + cheias:
+        pref = re.search(r'data-controle="([^"]+)"', coluna_html)
+        if pref:
+            gestos_por_lugar[pref.group(1)] = sorted(set(re.findall(
+                r'data-gesto="([^"]+)"',
+                _MIOLO_DO_ALVO_HTML.sub(r"\1</div>", coluna_html))))
+    exigir(len(gestos_por_lugar) == len(MESA),
+           f"a grade tem {len(gestos_por_lugar)} lugares e a mesa tem {len(MESA)}")
+    de_referencia = gestos_por_lugar.get(MESA[0]["pref"], [])
+    for pref, gestos in sorted(gestos_por_lugar.items()):
+        faltam = sorted(set(de_referencia) - set(gestos))
+        sobram = sorted(set(gestos) - set(de_referencia))
+        exigir(not faltam,
+               f"o lugar {pref} não oferece {faltam} — o controle que chegar "
+               f"ali não terá esse gesto na tela, porque o piloto vira marca e "
+               f"escreve campo, e não materializa widget: só recarregar a "
+               f"página desfaz")
+        exigir(not sobram,
+               f"o lugar {pref} oferece {sobram}, que o lugar cheio não tem — "
+               f"o conjunto tem de ser IGUAL, não maior")
+
+    #    A SEGUNDA: cada widget de gesto que o lugar vazio carrega está COBERTO
+    #    por uma regra desta folha que o esconde enquanto `data-conectado="nao"`
+    #    — a marca que o piloto vira nos dois sentidos (`hefesto_vivo`, passos
+    #    `1b` e `1c`), e não a classe de NASCIMENTO `.vazia`, que só responde
+    #    por um dos dois estados.
+    #
+    #    A COBERTURA É LIDA DO HTML, e não digitada: a régua acha as tags com
+    #    `data-gesto` dentro da coluna vazia, tira as classes DELAS, e cobra que
+    #    alguma esteja no mapa `_COBERTURA_SEM_DONO`. Um widget novo, com classe
+    #    que ninguém escondeu, reprova sozinho — que é o contrário da lista
+    #    escrita à mão, cuja falha é silenciosa (o esquecimento não avisa).
+    for coluna_html in _cada_coluna(grade)[0]:
+        exigir("cel-brilho" in coluna_html,
                "a régua do lugar vazio não alcança as células da coluna — ela "
                "voltou a dar verde sobre o desenho, que é onde nunca houve "
                "ajuste nenhum")
-        #    A REGRA GERAL VEM PRIMEIRO, e ela não envelhece: um lugar sem
-        #    aparelho não oferece GESTO NENHUM. `data-gesto` é o endereço que o
-        #    ouvinte único do piloto procura (`hefesto_vivo`, `manda_do_alvo`),
-        #    então esta linha alcança todo botão futuro desta coluna sem que
-        #    ninguém se lembre de acrescentá-lo à lista abaixo. Uma lista escrita
-        #    à mão só cresce quando alguém lembra, e o esquecimento é silencioso.
-        exigir("data-gesto" not in bloco,
-               "um lugar vazio oferece gesto — os dez endereços dessa coluna "
-               "levantam `o clique não disse em qual controle`, e o cartão do "
-               "piloto só leva `RuntimeError`: botão que engole o toque")
-        #    E OS ELEMENTOS NOMEADOS FICAM, porque dizem QUAL ajuste apareceu —
-        #    a frase de erro vira acionável em vez de genérica.
-        #
-        #    `class="pl` SAIU EM 03/09/2026, e ele era um proibido MORTO: os
-        #    botões de jogador da coluna viva não têm classe nenhuma que comece
-        #    por `pl` (eles se endereçam por `data-gesto="player"` e
-        #    `data-player="N"`), e a única coisa que ele casava era o
-        #    `<div class="players">` — o CONTÊINER da célula vazia, que carrega
-        #    o travessão e nada mais. Enquanto o recorte estava cego isso nunca
-        #    apareceu; com o recorte certo, ele reprovava a página LIMPA. Um
-        #    proibido por PREFIXO de classe é a mesma armadilha que cegou o
-        #    recorte, do outro lado.
-        #
-        #    `type="range"` ENTROU no mesmo dia, com o trilho que grava. Ele é
-        #    o ajuste mais perigoso desta coluna — arrastá-lo ESCREVE no perfil
-        #    dela —, e num lugar vazio não teria em qual controle escrever.
-        #    `class="cheio"` SAIU DA LISTA EM 07/09/2026, e no lugar dele entrou
-        #    `<input` — a lista ficou mais forte, não mais frouxa. O `.cheio` é
-        #    a parte PINTADA do trilho: ele não recebe clique, não tem
-        #    `data-gesto` e não escreve em perfil nenhum. Ele é o READ-OUT do
-        #    brilho, e é onde mora o `data-campo="brilho-pct"` — com a função
-        #    única, o lugar vazio passa a carregá-lo de propósito, porque sem
-        #    ele o brilho do controle que chega não tem onde pousar. Proibir um
-        #    read-out era proibir o endereço.
-        #    `<input` cobre `type="range"` E `type="color"` de uma vez, e mais
-        #    todo campo de entrada que alguém acrescente sem lembrar da lista —
-        #    é a mesma família da regra geral do `data-gesto` logo acima.
-        for proibido in ('class="tom', 'type="color"', 'type="range"',
-                         "<input", "<button"):
-            exigir(proibido not in bloco,
-                   f"um lugar vazio tem ajuste vivo: {proibido!r}")
+        for tag in re.findall(r"<[a-z]+[^>]*data-gesto=[^>]*>", coluna_html):
+            classes = set(re.findall(
+                r"[\w-]+", (re.search(r'class="([^"]*)"', tag) or _SEM_CLASSE).group(1)))
+            cobre = sorted(classes & set(_COBERTURA_SEM_DONO))
+            exigir(cobre,
+                   f"um lugar vazio ganhou um gesto que nenhuma regra esconde: "
+                   f"{tag[:90]!r} — sem cobertura ele aceita o clique, e os "
+                   f"endereços dessa coluna levantam `o clique não disse em "
+                   f"qual controle`, que o cartão do piloto não leva à tela "
+                   f"(só `RuntimeError` chega lá): botão que engole o toque")
+            for classe in cobre:
+                exigir(_COBERTURA_SEM_DONO[classe] in doc,
+                       f"a regra que esconde `.{classe}` no lugar sem dono "
+                       f"sumiu da folha: {_COBERTURA_SEM_DONO[classe]!r}")
 
+    #    A TERCEIRA: a ESTRUTURA vem, o VALOR não. Um lugar sem dono não carrega
+    #    a cor nem o brilho do MOCKUP — é a lei da
+    #    `scripts/check_a_cor_vem_do_aparelho.py` e o item 2 da docstring de
+    #    `coluna()`. Os quatro valores cravados desta coluna, um a um.
+    for coluna_html in _cada_coluna(grade)[0]:
+        exigir("class=\"tom on\"" not in coluna_html,
+               "um lugar vazio marca uma cor escolhida — `luz(j)` é a cor "
+               "AUTOMÁTICA daquele número, e ali não há controle que a tenha "
+               "escolhido")
+        exigir('value="#000000"' in coluna_html,
+               "o seletor livre do lugar vazio deixou de nascer neutro — o "
+               "`value` passa a ser a cor que o DESENHO deu àquele número")
+        exigir('class="puxador"' in coluna_html and 'value="0"' in coluna_html,
+               "o puxador do lugar vazio não nasce em zero — brilho cravado "
+               "num lugar sem dono é o brilho do MOCKUP na tela dela")
+        exigir("style=\"width:" not in coluna_html,
+               "a barra de brilho do lugar vazio nasceu com largura")
     # 5. OS TRÊS RÓTULOS QUE ELA ENCURTOU — 31/08/2026: *"aonde tem Voltar ao
     #    automático deixa só Automático; onde tem Disposição dos LEDs coloca só
     #    LEDs; Selecione o player coloca só Jogador — vai ficar subentendido."*
@@ -1915,37 +2034,40 @@ def _conferir(doc):
            "a dica do interruptor voltou a abrir para a direita — ela tem "
            "330px e o `?` está encostado na borda do quadro")
 
-    # 10. A LINHA DE RESSALVA — D-02, decisão [01] dela, e as duas metades.
+    # 10. A CÉLULA `LEDs` É SÓ O DESENHO — 07/09/2026, ordem dela: *"só olhar a
+    #     linha de cima da seleção de player e replicar o que tem lá."*
     #
-    #     A PRIMEIRA: ela existe, com o endereço, em TODA coluna conectada. Uma
-    #     ressalva que nasça em três de quatro colunas é a quarta calada.
-    #     E SÃO OS QUATRO desde 07/09/2026, pela mesma razão do endereço do
-    #     desenho: cobrar a ressalva só nas conectadas deixava o lugar que
-    #     GANHA um controle sem onde acendê-la. No repouso ela não custa pixel
-    #     — `.ressalva:has(.nada)` de `monta.CSS_FOLHA` a apaga, e a folha
-    #     desta aba a apaga de novo enquanto o lugar não tem dono.
-    exigir(colunas.count(
-        f'class="ressalva" data-campo="{_pacote04.ENDERECO_DA_RESSALVA}"')
-        == len(MESA),
-        "a linha de ressalva não está em todas as colunas — a coluna sem ela "
-        "volta a esconder no `title` a razão de a barra ter apagado")
-    #     A SEGUNDA: ela nasce VAZIA. Uma frase cravada aqui seria identidade
-    #     congelada — o gerador só sabe o mockup, e a razão de a barra ter
-    #     apagado é do aparelho DELA, agora. É o mesmo defeito que tirou a dica
-    #     da célula `LEDs` do desenho em 02/09.
-    exigir(monta_.NADA_A_DIZER in colunas,
-           "a linha de ressalva nasceu com frase — o desenho passou a afirmar "
-           "uma causa que só o produto vivo conhece")
-    #     E ELA FICA DEBAIXO DA TIRA, dentro da MESMA faixa da grade. Fora da
-    #     `.cel-leds` ela seria uma oitava faixa, e uma faixa a mais cobra o
-    #     `--r-passo` inteiro em toda tela — inclusive nas que não têm nada a
-    #     ressalvar, que é o pixel que a régua da D-02 mede.
+    #     ESTA RÉGUA MEDE UMA AUSÊNCIA, e por isso ela tem de nomear o que não
+    #     pode voltar. Entre 04/09 e hoje esta faixa teve uma linha de ressalva
+    #     (D-02) e, desde 06/09, doze teclas de desenho; as duas saíram por
+    #     ordem dela, e as duas voltariam calado — a de ressalva por um `luz-
+    #     ressalva` reposto no pacote, as teclas por um `bits=` devolvido à
+    #     `desenho_da_luz`. Um endereço que o pacote emite e a página não tem é
+    #     ÓRFÃO no piloto: escreve-se em nada, tique após tique, sem erro.
+    exigir('data-campo="luz-ressalva"' not in colunas,
+           "a linha de ressalva voltou à célula dos LEDs — ela saiu por ordem "
+           "dela em 07/09/2026 (*'o que eu não quero é frase da steam ou "
+           "outras'*), e a razão da barra apagada continua no `title` das duas "
+           "tiras, escrita pela `dica_da_luz` a cada tique")
+    #     E NENHUM GESTO MORA AQUI. As cinco lâmpadas são ESPELHO do número —
+    #     quem escolhe o número é a linha `Jogador`, uma célula acima. Um
+    #     `data-gesto` nesta faixa é o desenho voltando a oferecer uma segunda
+    #     maneira de mexer nas mesmas luzes, que é exatamente o que ela mandou
+    #     tirar: *"pq tá surgindo os leds no lado da iluminação se acima já tem
+    #     o canto dos players?"*
     for bloco in re.findall(
-            r'<div class="cel-leds">(.*?)<div class="cel-acoes">', colunas, re.S):
-        exigir('class="aceso"' in bloco and 'class="ressalva"' in bloco,
-               "a tira e a ressalva deixaram de dividir a célula dos LEDs — "
-               "separadas, a linha vira uma faixa nova e cobra 10px de passo "
-               "em toda tela")
+            r'<div class="cel-leds">(.*?)</div>\s*</div>',
+            "\n".join(_cada_coluna(grade)[1]), re.S):
+        exigir("data-gesto=" not in bloco,
+               "um gesto voltou à célula dos LEDs — ela é desenho de leitura "
+               "desde 07/09/2026, e as cinco lâmpadas espelham o número sem "
+               "escolha própria")
+        exigir('class="luzinhas"' in bloco,
+               "as cinco lâmpadas do indicador sumiram da célula dos LEDs — "
+               "sem elas a coluna deixa de replicar a linha `Jogador`")
+        exigir(bloco.count('class="tira-luz') == 2,
+               "a barra de luz deixou de ter as DUAS tiras — elas são o "
+               "desenho original, e ela mandou que ficassem")
 
     # 11. A CAIXA DO HEXADECIMAL É O BOTÃO — decisão [03] dela.
     #
@@ -1955,10 +2077,17 @@ def _conferir(doc):
     #     produto reescreve a cada tique. As duas metades vão juntas porque a
     #     segunda é a que morde: só a primeira daria verde sobre um botão que
     #     reenvia a cor errada.
+    #
+    #     E SÃO OS QUATRO desde 07/09/2026, pela mesma razão do endereço do
+    #     desenho e da linha de ressalva: cobrar a caixa só nas conectadas
+    #     deixava o P3 que GANHA um controle com a única maneira de reenviar a
+    #     cor congelada em nunca — o piloto não materializa widget. No repouso
+    #     ela não aceita o clique: a folha desta aba apaga o `pointer-events` e
+    #     a borda de botão enquanto `data-conectado="nao"`, e é a §4 que cobra
+    #     essa cobertura.
     caixas = re.findall(r'<span class="hex reenvia"[^>]*>', colunas)
-    exigir(len(caixas) == len(monta_.CONECTADOS),
-           "a caixa do hexadecimal não virou botão em todas as colunas "
-           "conectadas")
+    exigir(len(caixas) == len(MESA),
+           "a caixa do hexadecimal não virou botão em todas as colunas")
     for caixa in caixas:
         exigir('data-gesto="reenviar"' in caixa,
                "a caixa do hexadecimal perdeu o gesto de reenvio")
@@ -1966,52 +2095,37 @@ def _conferir(doc):
                "a caixa do hexadecimal ganhou `data-hex` — o gesto passaria a "
                "reenviar a cor CRAVADA no desenho, e não a que está na tela")
 
-    # 12. AS CINCO LUZES DE JOGADOR SEM TROCAR O NÚMERO — LUZES-01, 06/09/2026,
-    #     e é a linha que a sprint inteira fecha. Três metades, e a terceira é a
-    #     que morde.
+    # 12. AS CINCO LÂMPADAS ESPELHAM O NÚMERO — 07/09/2026, e é a linha que
+    #     esta leva fecha. Ela SUBSTITUI a régua da LUZES-01, que cobrava aqui
+    #     as doze teclas da botoeira (cinco lâmpadas clicáveis, seis desenhos e
+    #     a moldura do reenvio). A ordem dela desfez a botoeira inteira, e uma
+    #     régua que continuasse a cobrá-la reprovaria a decisão em vez do
+    #     defeito — que é o erro que esta casa já pagou onze vezes num dia.
     #
-    #     A PRIMEIRA: as doze teclas existem em TODA coluna conectada — cinco
-    #     lâmpadas, seis desenhos e a moldura do reenvio. Uma coluna sem elas é
-    #     um controle cujas luzes só se mexem por renumeração, que é o defeito.
-    #     E O RECORTE PASSA PELA COLUNA — 07/09/2026. Até aqui ele achava
-    #     `<div class="cel-leds">` no miolo inteiro e dava DOIS blocos, porque
-    #     o lugar vazio não tinha essa célula. Com a função única ele daria
-    #     QUATRO, e as duas colunas sem dono não têm tecla nenhuma — nem podem
-    #     ter, pela §4. Recortar a coluna primeiro é o que faz esta régua
-    #     continuar dizendo o que ela sempre disse: as doze teclas existem em
-    #     toda coluna CONECTADA.
-    for bloco in re.findall(
-            r'<div class="cel-leds">(.*?)<div class="cel-acoes">',
-            "\n".join(_cada_coluna(grade)[1]), re.S):
-        exigir(bloco.count(f'data-gesto="{_pacote04.GESTO_DA_LAMPADA}"') == 5,
-               "uma coluna não tem as CINCO luzes de jogador clicáveis — as "
-               "lâmpadas voltaram a ser desenho de leitura")
-        exigir(bloco.count(f'data-gesto="{_pacote04.GESTO_DO_DESENHO_DE}"') == 6,
-               "uma coluna não tem as SEIS teclas de desenho (P1..P4, todas e "
-               "nenhuma) — sem a `nenhuma` não há caminho de volta ao automático")
-        exigir(f'data-gesto="{_pacote04.GESTO_DO_REENVIO_DO_DESENHO}"' in bloco,
-               "o indicador das cinco lâmpadas deixou de ser o botão de reenvio")
-    #     A SEGUNDA: as quatro teclas de número dizem `P1`..`P4`, e NÃO repetem
-    #     o rótulo da fileira de Jogador. Os dois grupos parecem a mesma coisa e
-    #     são opostos — um DÁ o número, o outro dá o desenho dele — e o único
-    #     jeito de a tela dizer isso é escrevendo diferente. A palavra vem do
-    #     glossário (`docs/A-LINGUA-DESTA-CASA`).
-    for n in NUMEROS:
-        exigir(f'data-desenho="{n}" title=' in colunas,
-               f"a tecla do desenho do P{n} sumiu")
-        exigir(f'>P{n}</button>' in colunas,
-               f"a tecla do desenho do P{n} perdeu o rótulo `P{n}` — sem ele "
-               f"ela fica idêntica ao botão `{n}` da linha Jogador, que faz o "
-               f"CONTRÁRIO dela")
-    #     A TERCEIRA, E É A QUE MORDE: nenhuma dica de desenho pode PROMETER o
-    #     que ela não faz. A janela estável diz isso no próprio `title` desde
-    #     sempre, e a frase foi lida de lá — se ela sumir, a tela volta a
-    #     oferecer duas fileiras iguais sem dizer que uma não mexe no número.
-    exigir(colunas.count("NÃO muda o número dele")
-           == len(NUMEROS) * len(monta_.CONECTADOS),
-           "a dica das teclas de desenho parou de dizer, em alguma delas, que "
-           "elas NÃO mudam o número do controle — sem essa frase a tela oferece "
-           "duas fileiras que parecem iguais e fazem o contrário uma da outra")
+    #     O QUE ELA MEDE AGORA: o padrão aceso na célula `LEDs` é o do número
+    #     daquela coluna, e não de outro. É a réplica que ela pediu — *"só
+    #     olhar a linha de cima da seleção de player e replicar o que tem lá."*
+    #
+    #     O PADRÃO NÃO SE DIGITA: ele é perguntado a `monta.luzinhas`, que sai
+    #     de `core/led_control.player_led_pattern` — o MESMO que o daemon
+    #     acende. Escrever aqui `<i class="on">` na posição que eu achasse certa
+    #     seria a régua medindo a minha memória, e não o produto.
+    for coluna_html in _cada_coluna(grade)[1]:
+        jogador = re.search(r'data-campo="identidade">P(\d)', coluna_html)
+        exigir(bool(jogador), "uma coluna conectada perdeu o número no rótulo")
+        if not jogador:
+            continue
+        n = int(jogador.group(1))
+        leds = re.search(r'<div class="cel-leds">(.*?)</div>\s*</div>',
+                         coluna_html, re.S)
+        exigir(bool(leds), f"o P{n} perdeu a célula dos LEDs")
+        if not leds:
+            continue
+        esperado = monta_.luzinhas(n)
+        exigir(esperado in leds.group(1),
+               f"as cinco lâmpadas do P{n} não desenham o padrão do número {n} "
+               f"— a célula LEDs deixou de replicar a linha `Jogador`, que é o "
+               f"que ela mandou em 07/09/2026")
 
     # 13. O ESCOPO GLOBAL — "Todos no automático", e ele mora na MESMA faixa do
     #     interruptor, pela mesma razão medida da §9: a grade das colunas está
