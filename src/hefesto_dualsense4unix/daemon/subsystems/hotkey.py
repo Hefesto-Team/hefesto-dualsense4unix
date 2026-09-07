@@ -1704,7 +1704,7 @@ async def _eleger_ou_devolver(
             # `connected`** — a lista dele vai para a ELEIÇÃO, e lá a pergunta
             # é outra. O backend real devolve uma entrada POR HANDLE e mantém
             # o `uniq` preenchido com `connected: False`
-            # (`core/backend_pydualsense.py:5298`), então o controle que saiu
+            # (`core/backend_pydualsense.py:5389`), então o controle que saiu
             # DE VERDADE continuava na lista e o dono não caía.
             #
             # Medido com o laço deste arquivo e um backend que faz o que o real

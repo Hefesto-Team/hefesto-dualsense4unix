@@ -57,12 +57,12 @@ ANCORAS: tuple[tuple[str, str], ...] = (
     (":1259-1260", "VALID_FLAG1_MIC_MUTE_LED_CONTROL_ENABLE"),
     (":1294-1300", "common[8] = int(mic_led) & 0xFF"),
     (":1095-1122", "def set_microphone_led"),
-    (":3956", "def set_mic_led"),
-    (":3962-3963", "report[11] no rádio"),
-    (":3965-3969", "CORRIGIDO em 15/08/2026"),
+    (":4000", "def set_mic_led"),
+    (":4006-4007", "report[11] no rádio"),
+    (":4009-4013", "CORRIGIDO em 15/08/2026"),
     (":1359-1360", "build_bt_report"),
     (":1415-1422", "self.device.write"),
-    (":2475-2488", "should_reclaim_on_wake"),
+    (":2496-2509", "should_reclaim_on_wake"),
     (":361-374", "def _escrever_led_do_mic"),
     (":751", "_audio_status"),
 )
@@ -88,6 +88,11 @@ APOSENTADOS = (
     ":1287-1288",
     ":1343-1350",
     ":2403-2416",
+    #: MIC-BT-DONO-01 (06/09/2026): +21 até `_reapply_desired`, +44 depois dele.
+    ":2475-2488",
+    ":3956",
+    ":3962-3963",
+    ":3965-3969",
 )
 
 
