@@ -116,17 +116,36 @@ def test_mordida_mude_o_mapa_e_a_mesa_muda(tmp_path, monkeypatch) -> None:
         d = dict(zip(cabecalho, campos, strict=False))
         d["cabo_ate_onde_foi"] = d["radio_ate_onde_foi"] = "O APARELHO OBEDECEU"
         d["cabo_por_que_nao_aciona"] = d["radio_por_que_nao_aciona"] = ""
+        # E A PROCEDÊNCIA JUNTO: desde 07/09/2026 é `de_onde_sei` que decide o
+        # selo, não o degrau — `ate_onde_foi` está vazio em 115 das 195 células
+        # desta árvore, inclusive em muitas que dizem `medido`.
+        d["cabo_de_onde_sei"] = d["radio_de_onde_sei"] = "medido"
         saida = __import__("io").StringIO()
         __import__("csv").writer(saida, lineterminator="\n").writerow(
             [d[c] for c in cabecalho])
         return saida.getvalue()
 
     monkeypatch.setattr(med, "MAPA", _mapa_de_mentira(tmp_path, promove))
-    depois = {t.id for t in med.todos_os_testes()}
-    assert antes != depois, (
-        "promovi uma célula a grau forte no mapa e a mesa não mudou — a lista "
-        "de testes não está saindo do arquivo.")
-    assert alvo.id not in depois, f"{alvo.id} sobreviveu à promoção"
+    novos = med.todos_os_testes()
+    depois = {t.id for t in novos}
+    falta_depois = {t.id for t in novos if not t.ja_medido}
+    assert antes != falta_depois, (
+        "promovi uma célula a medida no mapa e a fila do que falta não mudou — "
+        "a lista de testes não está saindo do arquivo.")
+    # ELA SAI DA FILA E ENTRA NA OUTRA FAMÍLIA — 07/09/2026. Até aqui a régua
+    # cobrava que a célula promovida SUMISSE, e sumir era o comportamento: a
+    # mesa só listava o que faltava. Ela pediu o contrário — *"a grande maioria
+    # ali já foi validada uns 80%"* —, e agora a célula medida continua na
+    # página, com selo e com a resposta do mapa pré-marcada, para ela confirmar
+    # de relance em vez de refazer.
+    assert alvo.id not in falta_depois, (
+        f"{alvo.id} continua na fila do que falta depois de ser promovido")
+    assert alvo.id in depois, (
+        f"{alvo.id} sumiu da página inteira — o promovido deve migrar de "
+        f"família, não desaparecer")
+    promovido = next(t for t in novos if t.id == alvo.id)
+    assert promovido.ja_medido, "o promovido veio sem selo"
+    assert "medido" in promovido.ja_medido
 
 
 def test_mordida_troque_a_peca_e_o_realce_muda_de_lugar(tmp_path, monkeypatch) -> None:
@@ -181,13 +200,61 @@ def test_o_vocabulario_das_pecas_vem_do_csv_e_nao_e_generico() -> None:
     assert not demais, demais
 
 
-def test_os_papeis_sao_distintos_quando_a_linha_nomeia_um_posto() -> None:
-    """*Um teste em que os quatro brilham igual não diz nada.*"""
-    t = next(t for t in med.todos_os_testes() if t.id == "roteiro-07")
-    assert t.papeis["P3"] == med.PAPEL_REAGE, t.papeis
-    assert {t.papeis[p] for p in ("P1", "P2", "P4")} == {med.PAPEL_CALADO}, t.papeis
-    livre = next(t for t in med.todos_os_testes() if t.id == "roteiro-06")
-    assert set(livre.papeis.values()) == {med.PAPEL_OBSERVA}, livre.papeis
+def test_os_papeis_saem_da_condicao_que_ela_escreveu() -> None:
+    """*Um teste em que os quatro brilham igual não diz nada.*
+
+    E DESDE 07/09/2026 O PAPEL SAI DA CONDIÇÃO, não da citação do posto no
+    enunciado — dela: *"cada controle sirva para testarmos variações daquilo e
+    o esperado (…) Controle A, não liga, o b cor azul"*. A régua antes exigia
+    que a linha 6 (a vibração) tivesse os QUATRO em `observa`, porque o
+    enunciado não citava posto nenhum; hoje a coluna diz *"P1: é ESTE que deve
+    tremer · P2: não pode tremer …"*, e os quatro deixaram de brilhar igual —
+    que é o que a própria docstring pedia.
+    """
+    sete = next(t for t in med.todos_os_testes() if t.id == "roteiro-07")
+    assert sete.papeis["P3"] == med.PAPEL_REAGE, sete.papeis
+    assert {sete.papeis[p] for p in ("P1", "P2", "P4")} == {med.PAPEL_CALADO}
+
+    seis = next(t for t in med.todos_os_testes() if t.id == "roteiro-06")
+    assert seis.papeis["P1"] == med.PAPEL_REAGE, seis.papeis
+    assert {seis.papeis[p] for p in ("P2", "P3", "P4")} == {med.PAPEL_CALADO}
+
+    # NENHUMA DAS 21 SAI COM OS QUATRO IGUAIS SEM QUE A COLUNA MANDE: um teste
+    # assim não separa nada, e é o defeito que esta régua existe para pegar.
+    # O QUE TEM DE SER DISTINTO É A CONDIÇÃO, NÃO O PAPEL — e a primeira volta
+    # desta régua errou nisso. A linha 1 diz *"P1: liga PRIMEIRO · P2: liga
+    # SEGUNDO · P3: liga TERCEIRO · P4: liga POR ÚLTIMO"*: quatro condições
+    # diferentes, e os quatro DEVEM reagir, porque os quatro têm de aparecer.
+    # Exigir papéis diferentes ali seria pedir que um dos controles falhasse.
+    for teste in med.todos_os_testes():
+        if not teste.id.startswith("roteiro-"):
+            continue
+        assert len(teste.condicoes) == 4, f"{teste.id}: {teste.condicoes}"
+        assert len(set(teste.condicoes.values())) > 1 or teste.um_por_vez, (
+            f"{teste.id} manda os quatro fazerem exatamente a mesma coisa e "
+            f"não é um-por-vez — não há variação a medir: {teste.condicoes}")
+
+
+def test_a_condicao_de_cada_controle_vem_da_coluna_do_roteiro() -> None:
+    """A coluna *"o que cada controle faz"* chega inteira aos quatro postos.
+
+    MORDIDA JUNTO: uma tabela sem a coluna (as quatro colunas de antes de
+    07/09/2026) continua sendo lida, com a condição vazia — uma régua que
+    exigisse cinco derrubaria a mesa no dia em que alguém editasse a tabela sem
+    saber da coluna nova.
+    """
+    das_21 = [t for t in med.todos_os_testes() if t.id.startswith("roteiro-")]
+    assert len(das_21) == 21, len(das_21)
+    assert all(len(t.condicoes) == 4 for t in das_21), (
+        [t.id for t in das_21 if len(t.condicoes) != 4])
+    oito = next(t for t in das_21 if t.id == "roteiro-08")
+    assert "VERMELHO" in oito.condicoes["P1"], oito.condicoes
+    assert "AZUL" in oito.condicoes["P2"], oito.condicoes
+    assert oito.condicoes["P1"] != oito.condicoes["P2"] != oito.condicoes["P3"]
+
+    de_quatro = med.linhas_do_roteiro.__doc__ or ""
+    assert "duas larguras" in de_quatro, (
+        "a leitura deixou de declarar que aceita a tabela de quatro colunas")
 
 
 def test_o_timer_conta_o_que_a_linha_nomeia() -> None:
@@ -218,7 +285,11 @@ def test_mordida_gravar_sem_o_como_e_recusado(tmp_path) -> None:
     exatamente o que se perdia quando a sessão morria.
     """
     r = med.Registro(tmp_path)
-    with pytest.raises(ValueError, match="sem o COMO"):
+    # A RÉGUA LÊ O QUE IMPORTA, não a frase inteira: o motivo mudou em
+    # 07/09/2026 — o COMO deixou de ser cobrado DELA e passa a vir do
+    # arquivo —, e a recusa continua de pé para a linha que chega sem COMO
+    # NENHUM. Cravar o texto fazia a régua reprovar a correção, não o defeito.
+    with pytest.raises(ValueError, match="COMO"):
         r.gravar({"teste": "x", "respostas": {"P1": "obedeceu"}})
     with pytest.raises(ValueError):
         r.gravar({"teste": "x", "gesto": "   ", "respostas": {}})
@@ -518,9 +589,18 @@ def test_a_pagina_dirigida_pelo_navegador(mesa_no_ar, mentira, monkeypatch) -> N
     ).sync_playwright
     monkeypatch.setenv(med.PORTA_DA_REGUA, str(mentira))
 
+    # O ALVO É ESCOLHIDO PELO QUE A RÉGUA PRECISA MEDIR: uma peça a acender
+    # (`l2`) E os dois papéis na mesma linha, para o "brilham igual não diz
+    # nada" ter o que comparar. Antes bastava a peça, e a régua dependia de o
+    # primeiro achado ter papéis distintos — o que deixou de ser verdade quando
+    # as condições entraram, em 07/09/2026.
     alvo = next(t for t in med.todos_os_testes()
-                if t.id.startswith("roteiro-") and any(p == "l2" for p, _ in t.pecas))
-    assert alvo.papeis["P3"] == med.PAPEL_REAGE
+                if t.id.startswith("roteiro-")
+                and any(p == "l2" for p, _ in t.pecas)
+                and len(set(t.papeis.values())) > 1
+                and not t.um_por_vez)
+    assert med.PAPEL_REAGE in alvo.papeis.values(), alvo.papeis
+    assert med.PAPEL_CALADO in alvo.papeis.values(), alvo.papeis
 
     with sync_playwright() as pw:
         navegador = pw.chromium.launch(executable_path=CHROME)
@@ -540,8 +620,12 @@ def test_a_pagina_dirigida_pelo_navegador(mesa_no_ar, mentira, monkeypatch) -> N
             pg.wait_for_selector(".ctl svg")
             assert pg.eval_on_selector_all(".ctl svg", "e=>e.length") == 4, (
                 "os quatro desenhos não chegaram ao TEMPO 1")
-            assert "DEVE REAGIR" in pg.inner_text("#observar")
-            assert "não pode reagir" in pg.inner_text("#observar")
+            # O TESTE ESCOLHIDO tem de ter os dois papéis — e a régua o
+            # escolhe, em vez de crer que o primeiro da fila os terá. O
+            # `roteiro-02` (mover cada controle) tem os quatro reagindo desde
+            # que as condições entraram, e é correto: os quatro se movem.
+            obs = pg.inner_text("#observar")
+            assert "DEVE REAGIR" in obs or "não pode reagir" in obs, obs
 
             # §7.3 — o timer conta antes de aplicar.
             pg.click("#iniciar")
@@ -556,9 +640,13 @@ def test_a_pagina_dirigida_pelo_navegador(mesa_no_ar, mentira, monkeypatch) -> N
                 ".ctl svg", "es=>es.map(e=>e.getAttribute('data-colorway'))")
             assert cores == ["cosmic-red", "starlight-blue", "nova-pink",
                              "midnight-black"], cores
+            # OS PAPÉIS SE PERGUNTAM AO DONO, não se cravam: eles saem da
+            # coluna do roteiro desde 07/09/2026, e uma lista escrita à mão
+            # aqui reprovaria toda vez que ela editasse a tabela — a régua
+            # medindo o mundo de ontem, que é a família que esta casa caça.
             papeis = pg.eval_on_selector_all(".ctl", "es=>es.map(e=>e.className)")
-            assert papeis == ["ctl papel-calado", "ctl papel-calado",
-                              "ctl papel-reage", "ctl papel-calado"], papeis
+            esperado = [f"ctl papel-{alvo.papeis[p]}" for p in med.POSTOS]
+            assert papeis == esperado, (papeis, esperado)
             # cinco lâmpadas por controle, uma acesa por posto -> P1..P4 acendem
             assert pg.eval_on_selector_all(".ctl svg .led-on", "e=>e.length") > 0
             texto = pg.inner_text(".quatro")
@@ -574,11 +662,31 @@ def test_a_pagina_dirigida_pelo_navegador(mesa_no_ar, mentira, monkeypatch) -> N
                 }""")
 
             # §7.7 — a peça acende, na peça certa, e com papéis distintos.
+            #
+            # A COR SE LÊ DO TOKEN, NÃO SE DIGITA — curado em 06/09/2026. Estas
+            # duas linhas cravavam `rgb(255, 121, 198)` e `rgb(124, 133, 152)`,
+            # os hex que a mesa tinha quando nasceu com paleta PRÓPRIA. Ela
+            # mandou usar o tema da casa (`paleta_da_casa.TOKENS`), a paleta
+            # mudou por decisão, e a régua reprovou a DECISÃO em vez do
+            # defeito. É a família que esta casa mais encontra: *a régua digita
+            # o que devia ler*. Agora ela pergunta ao token, e continua
+            # cobrando o que importa — que os papéis sejam DISTINTOS e que cada
+            # peça use o realce do SEU papel.
+            def token(nome: str) -> str:
+                return pg.evaluate(
+                    "(n) => { const s = document.createElement('span');"
+                    " s.style.color = `var(${n})`; document.body.appendChild(s);"
+                    " const c = getComputedStyle(s).color; s.remove(); return c; }",
+                    nome)
+
             reage, calado = tinta("#p3-l2"), tinta("#p1-l2")
             assert reage != calado, (
                 "os quatro brilham igual — um teste assim não diz nada")
-            assert reage == "rgb(255, 121, 198)", reage
-            assert calado == "rgb(124, 133, 152)", calado
+            assert reage == token("--reage"), f"{reage} != token --reage"
+            assert calado == token("--calado"), f"{calado} != token --calado"
+            assert token("--reage") != token("--calado"), (
+                "os dois papéis apontam para a MESMA cor no tema — a régua "
+                "acima passaria sem que a tela distinguisse coisa nenhuma")
             # e a peça que NÃO é do teste continua com a cor do plástico dela
             assert tinta("#p3-r1") != reage
             assert tinta("#p3-r1") != tinta("#p1-r1"), (
@@ -593,16 +701,29 @@ def test_a_pagina_dirigida_pelo_navegador(mesa_no_ar, mentira, monkeypatch) -> N
             pg.check('.ctl[data-posto="P3"] input[value="obedeceu"]')
             pg.check('.ctl[data-posto="P1"] input[value="nada"]')
             pg.fill("#gesto", "aba 03 > efeito Arma no P3 · report 0x02")
-            pg.fill("#o-que-eu-vi", "só o P3 endureceu")
+            # o campo geral saiu; o que ela escreve é por CONTROLE
+            pg.fill('textarea[name="n-P3"]', "só o P3 endureceu")
             pg.click("#salvar")
             pg.wait_for_timeout(500)
 
             # §7.4 — avançar andou, e o campo do COMO NÃO herda o do anterior.
             assert pg.evaluate("location.hash") != "#" + alvo.id, (
                 "salvar não avançou para o teste seguinte")
-            assert pg.input_value("#gesto") == "", (
-                "o gesto do teste anterior ficou na tela — ela salvaria o COMO "
+            # O CAMPO NÃO FICA VAZIO — ele vem com o COMO DO TESTE NOVO.
+            # Até 07/09/2026 esta linha cobrava vazio, porque o COMO era
+            # cobrado DELA; ela leu a cobrança e disse *"isso aqui me quebra.
+            # isso eu espero que a página descreva"*. Agora o campo chega
+            # pronto do arquivo, e o que a régua tem de provar é o que ela
+            # temia de verdade: que o texto seja o DESTE teste, nunca o do
+            # anterior. É a mesma armadilha, cobrada pelo lado certo.
+            agora = pg.input_value("#gesto")
+            seguinte = pg.evaluate("() => TESTES[atual].id")
+            assert agora, "o COMO chegou vazio — ela teria de digitar de novo"
+            assert alvo.passa_quando not in agora, (
+                "o COMO do teste anterior ficou na tela — ela salvaria o COMO "
                 "errado sem perceber")
+            do_novo = next(x for x in med.todos_os_testes() if x.id == seguinte)
+            assert do_novo.passa_quando in agora, (agora, do_novo.passa_quando)
             pg.click("#anterior")
             assert pg.evaluate("location.hash") == "#" + alvo.id, "voltar não anda"
 
