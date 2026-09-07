@@ -366,7 +366,11 @@ def test_a_resposta_sobrevive_ao_servidor_morrer_e_o_endereco_sai_mascarado(
         pg.click("#pular-timer")
         pg.wait_for_selector(".ctl svg")
         pg.check(f'.ctl[data-posto="{reage}"] input[value="obedeceu"]')
-        pg.fill("#o-que-eu-vi", "so o P3 endureceu")
+        # O CAMPO GERAL SAIU em 07/09/2026 — palavra dela: *"O que eu vi no
+        # conjunto não deve existir assim, demos 4 opções pra cada controle
+        # uma 5 deveria ser um campo pra eu descrever por controle o que
+        # ocorreu"*. O que ela escreve mora no campo DO CONTROLE.
+        pg.fill('textarea[name="n-P3"]', "so o P3 endureceu")
         pg.fill("#gesto", gesto)
         pg.click("#so-salvar")
         pg.wait_for_timeout(600)
@@ -530,3 +534,330 @@ def test_a_recusa_do_como_nao_deixa_rastro_no_disco(lar) -> None:
         assert "COMO" in erro.value.read().decode("utf-8")
     assert not s.registro.exists() or not list(s.registro.glob("registro-*.jsonl")), (
         "a recusa deixou rastro em disco")
+
+
+# ---------------------------------------------------------------------------
+# O QUE ELA PEDIU EM 06/09/2026, olhando a primeira versão da página:
+#
+#   *"tá péssimo o layout e usabilidade da página de testes. mantém o mesmo
+#   tema que vemos aplicando. coloca em baixo de cada controle as opções do que
+#   selecionar e um campo extra. após responder e clicar em verificar ele mostra
+#   se deu certo ou errado pra cada controle. deixa mais clean o layout e começa
+#   na parte superior explicando o que está sendo testado e afins."*
+#
+# Cada régua abaixo cobra UMA dessas frases, no navegador.
+# ---------------------------------------------------------------------------
+def test_o_tema_e_o_da_casa_e_nao_uma_paleta_desta_pagina(pw, lar, mentira) -> None:
+    """*"mantém o mesmo tema que vemos aplicando"*.
+
+    A mesa nasceu com nove hex CLAROS digitados nela — a quinta cópia da mesma
+    decisão de paleta, e a única fora de dia. A régua não compara hex: ela cobra
+    que o texto do CSS venha do DONO (`paleta_da_casa.TOKENS`, o mesmo de que o
+    `specs.html`, o `painel.html`, o `frases-de-tela.html` e o `index.html`
+    leem) e que a página renderize ESCURO de verdade.
+    """
+    assert med.paleta_da_casa.TOKENS in med._CSS, (
+        "o CSS da mesa não contém os tokens da casa — alguém voltou a digitar "
+        "a paleta aqui")
+    with _Servidor(lar, mentira) as s:
+        pg = pw.new_page(viewport={"width": 1280, "height": 900})
+        pg.goto(s.url)
+        pg.wait_for_selector("#desenhos svg")
+        fundo = pg.eval_on_selector("body", "e=>getComputedStyle(e).backgroundColor")
+        tinta = pg.eval_on_selector("body", "e=>getComputedStyle(e).color")
+        def luz(cor: str) -> float:
+            r, g, b = (int(x) for x in re.findall(r"\d+", cor)[:3])
+            return (r * 299 + g * 587 + b * 114) / 1000
+        assert luz(fundo) < 60, f"o fundo não é escuro: {fundo}"
+        assert luz(tinta) > 190, f"a tinta não é clara: {tinta}"
+        pg.close()
+
+
+def test_cada_controle_tem_as_opcoes_e_um_campo_so_dele(pw, lar, mentira) -> None:
+    """*"coloca em baixo de cada controle as opções do que selecionar e um campo
+    extra"*.
+
+    O campo geral continua existindo e é sobre o conjunto; este é sobre ESTE
+    controle. A régua cobra os dois: quatro campos próprios, e o que ela digita
+    em cada um chegando ao DISCO com o nome do controle — um campo que a tela
+    mostra e o registro não guarda é pior que campo nenhum.
+    """
+    with _Servidor(lar, mentira) as s:
+        pg = pw.new_page(viewport={"width": 1280, "height": 1100})
+        alvo = next(t for t in _testes_da_pagina(s.url) if t["pecas"])
+        pg.goto(s.url + "#" + alvo["id"])
+        pg.wait_for_selector("#iniciar")
+        pg.click("#iniciar")
+        pg.click("#pular-timer")
+        pg.wait_for_selector(".ctl .extra")
+
+        for posto in ("P1", "P2", "P3", "P4"):
+            cartao = pg.query_selector(f'.ctl[data-posto="{posto}"]')
+            assert cartao, f"sem cartão do {posto}"
+            assert len(cartao.query_selector_all("input[type=radio]")) == len(med.RESPOSTAS)
+            assert cartao.query_selector("textarea.extra"), (
+                f"o {posto} não tem campo próprio")
+            # E EMBAIXO, não em cima: a caixa das opções começa depois do
+            # desenho terminar. Um cartão que empilhasse ao contrário passaria
+            # numa régua que só conta elementos.
+            svg = cartao.query_selector("svg").bounding_box()
+            resp = cartao.query_selector(".resp").bounding_box()
+            extra = cartao.query_selector("textarea.extra").bounding_box()
+            assert resp["y"] >= svg["y"] + svg["height"] - 2, (
+                f"as opções do {posto} não estão abaixo do desenho")
+            # O CAMPO É A QUINTA OPÇÃO, e por isso mora DENTRO da lista das
+            # quatro — dela: *"demos 4 opções pra cada controle uma 5 deveria
+            # ser um campo pra eu descrever por controle o que ocorreu"*. A
+            # régua cobrava o contrário (o campo DEPOIS da caixa) e passaria
+            # com ele solto no fim do cartão, que é onde ele NÃO deve estar.
+            quatro = cartao.query_selector_all(".resp input[type=radio]")
+            ultimo = quatro[-1].bounding_box()
+            assert cartao.query_selector(".resp textarea.extra"), (
+                f"o campo do {posto} não está dentro da lista das opções")
+            assert extra["y"] >= ultimo["y"] - 2, (
+                f"o campo do {posto} não vem depois da quarta opção")
+            assert extra["y"] <= resp["y"] + resp["height"] + 2, (
+                f"o campo do {posto} caiu fora da caixa das opções")
+
+        pg.check('input[name="r-P1"][value="obedeceu"]')
+        pg.fill('textarea[name="n-P1"]', "só o motor esquerdo")
+        pg.fill('textarea[name="n-P3"]', "nada no direito")
+        pg.fill("#gesto", "hefesto test rumble --player 1")
+        pg.click("#so-salvar")
+        pg.wait_for_timeout(600)
+
+        fita = [json.loads(x) for x in
+                (s.registro / f"registro-{med._agora()[:10]}.jsonl")
+                .read_text(encoding="utf-8").splitlines()]
+        assert fita[-1]["notas"] == {"P1": "só o motor esquerdo",
+                                     "P3": "nada no direito"}, fita[-1]["notas"]
+        pg.close()
+
+
+def test_o_verificar_diz_certo_ou_errado_por_controle(pw, lar, mentira) -> None:
+    """*"após responder e clicar em verificar ele mostra se deu certo ou errado
+    pra cada controle"*.
+
+    E o veredito NÃO PODE aparecer antes do clique: um laudo na tela antes de
+    ela responder é um laudo sobre nada. A régua vai aos dois lados — o que
+    não se vê antes, e o que se vê depois, por controle.
+    """
+    with _Servidor(lar, mentira) as s:
+        pg = pw.new_page(viewport={"width": 1280, "height": 1100})
+        # um teste com papéis DISTINTOS: sem isso o "certo ou errado" não se
+        # distingue, e a régua passaria medindo quatro vereditos iguais.
+        alvo = next(t for t in _testes_da_pagina(s.url)
+                    if med.PAPEL_REAGE in t["papeis"].values()
+                    and med.PAPEL_CALADO in t["papeis"].values())
+        pg.goto(s.url + "#" + alvo["id"])
+        pg.wait_for_selector("#iniciar")
+        pg.click("#iniciar")
+        pg.click("#pular-timer")
+        pg.wait_for_selector(".ctl .resp")
+
+        assert pg.eval_on_selector_all(
+            ".laudo", "e=>e.filter(x=>x.offsetParent!==null).length") == 0, (
+            "o laudo apareceu antes de ela clicar em verificar")
+
+        # Responde ERRADO em quem devia reagir e CERTO em quem devia calar.
+        reage = next(p for p, v in alvo["papeis"].items() if v == med.PAPEL_REAGE)
+        calado = next(p for p, v in alvo["papeis"].items() if v == med.PAPEL_CALADO)
+        pg.check(f'input[name="r-{reage}"][value="nada"]')
+        pg.check(f'input[name="r-{calado}"][value="nada"]')
+        pg.click("#verificar")
+        pg.wait_for_timeout(300)
+
+        def classe(p: str) -> str:
+            return pg.eval_on_selector(f"#laudo-{p}", "e=>e.className")
+
+        assert "v-nao-bate" in classe(reage), (
+            f"{reage} devia reagir, respondeu 'nada', e o laudo não acusou")
+        assert "v-bate" in classe(calado), (
+            f"{calado} devia ficar calado, ficou, e o laudo não confirmou")
+        assert pg.eval_on_selector_all(
+            ".laudo", "e=>e.filter(x=>x.offsetParent!==null).length") == 4, (
+            "o laudo não apareceu nos quatro")
+        assert "NÃO bate" in pg.inner_text("#resumo-do-laudo")
+        pg.close()
+
+
+def test_a_capa_explica_o_teste_e_ela_sobrevive_aos_tres_tempos(
+        pw, lar, mentira) -> None:
+    """*"começa na parte superior explicando o que está sendo testado e afins"*.
+
+    E ela fica. O defeito que isto cura tinha DUAS metades: a explicação vinha
+    DEPOIS dos quatro desenhos (ela via os controles antes de saber para quê) e
+    era pintada só no TEMPO 1 — some justamente no TEMPO 3, que é a hora de
+    julgar o que aconteceu.
+    """
+    with _Servidor(lar, mentira) as s:
+        pg = pw.new_page(viewport={"width": 1280, "height": 1100})
+        alvo = next(t for t in _testes_da_pagina(s.url)
+                    if t["pecas"] and t["passa_quando"])
+        pg.goto(s.url + "#" + alvo["id"])
+        pg.wait_for_selector("#desenhos svg")
+
+        capa = pg.query_selector(".capa").bounding_box()
+        desenhos = pg.query_selector("#desenhos").bounding_box()
+        assert capa["y"] + capa["height"] <= desenhos["y"] + 2, (
+            "a capa não vem antes dos quatro desenhos")
+
+        for tempo, ir_ate in ((1, None), (3, "#iniciar")):
+            if ir_ate:
+                pg.click("#iniciar")
+                pg.click("#pular-timer")
+                pg.wait_for_selector(".ctl .resp")
+            texto = pg.inner_text(".capa")
+            assert alvo["titulo"][:24] in texto, f"sem o título no tempo {tempo}"
+            assert alvo["passa_quando"][:24] in texto, (
+                f"o 'passa quando' sumiu no tempo {tempo} — e o {tempo} é a "
+                f"hora de julgar contra ele")
+        pg.close()
+
+
+# ---------------------------------------------------------------------------
+# O QUE ELA PEDIU EM 07/09/2026, com quatro DualSense na mesa e o daemon parado
+# ---------------------------------------------------------------------------
+def test_os_quatro_aparecem_sem_daemon_lidos_do_kernel() -> None:
+    """*"não estamos usando o nosso mapa? pq até agora ele não entendeu qual
+    player deveria aparecer, nem qual controle (…) nem o modo de conexão (qual
+    é bt e qual é cabo) se tá ou não carregando"*.
+
+    A página só sabia perguntar ao daemon, e com ele parado punha travessão em
+    tudo — como se não houvesse controle nenhum, tendo QUATRO. Tudo isto o
+    `hid_playstation` publica de graça no `sysfs`, sem escrever um byte.
+
+    A RÉGUA RODA NA MÁQUINA REAL e pula quando não há DualSense — ela mede o
+    que o kernel publica, e um dublê de `sysfs` mediria o dublê.
+    """
+    # A RÉGUA CONTA OS NÓS PRIMEIRO, e só pula se não houver nenhum. Sem esta
+    # metade a mordida não mordia: arrancar a leitura fazia `pelo_sysfs()`
+    # devolver vazio, e a régua PULAVA em vez de reprovar — verde sobre uma
+    # cura arrancada, que é a família que esta casa caça.
+    nos = [n for n in pathlib.Path("/sys/class/hidraw").glob("hidraw*")
+           if "DualSense" in (n / "device" / "uevent").read_text(
+               encoding="utf-8", errors="replace")]
+    if not nos:
+        pytest.skip("nenhum DualSense nesta máquina agora")
+    vistos = med.pelo_sysfs()
+    assert len(vistos) == len(nos), (
+        f"o kernel mostra {len(nos)} DualSense e a leitura devolveu "
+        f"{len(vistos)} — a segunda fonte não está lendo")
+    for v in vistos:
+        assert v["transporte"] in ("cabo", "rádio"), v
+        assert v["uniq"], "sem endereço"
+        assert v["uniq"].split(":")[3] == "00", f"MAC sem máscara: {v['uniq']}"
+        assert v["uniq"].split(":")[4] == "00", f"MAC sem máscara: {v['uniq']}"
+    # E A COR NÃO VEM DAQUI, de propósito: ela exige escrita no aparelho.
+    assert all("colorway" not in v for v in vistos)
+
+
+def test_a_cor_que_ela_disse_fica_guardada_pelo_endereco(lar, monkeypatch) -> None:
+    """A cor do plástico não se lê sem escrever no controle, e esta página não
+    escreve. Então ELA diz qual é, uma vez, e a mesa lembra pelo endereço."""
+    monkeypatch.setenv("XDG_STATE_HOME", str(lar))
+    monkeypatch.setattr(med, "pasta_do_registro",
+                        lambda: lar / "mesa-de-medicao")
+    assert med.cores_que_ela_disse() == {}
+    med.guardar_cor_dela("aa:bb:cc:00:00:01", "nova-pink")
+    assert med.cores_que_ela_disse() == {"aa:bb:cc:00:00:01": "nova-pink"}
+    assert med.nome_do_colorway("nova-pink") == "Nova Pink"
+    med.guardar_cor_dela("aa:bb:cc:00:00:01", "")
+    assert med.cores_que_ela_disse() == {}
+
+
+def test_um_controle_de_cada_vez_quando_e_de_maos_e_ouvidos() -> None:
+    """*"coisas que eu precisa fazer todos separados um por vez (…) afinal
+    podemos ter 4 controles mas só tenho um par de mãos"*.
+
+    Vibração se sente com a MÃO e som se ouve com a ORELHA: medir quatro ao
+    mesmo tempo ali não é difícil, é impossível. Luz e bateria não entram,
+    porque se leem com os olhos e os olhos pegam os quatro de uma vez.
+    """
+    ts = med.todos_os_testes()
+    por_id = {t.id: t for t in ts}
+    assert por_id["roteiro-06"].um_por_vez, "a vibração tem de ser um por vez"
+    assert por_id["roteiro-09"].um_por_vez, "o microfone tem de ser um por vez"
+    audio = [t for t in ts if "audio" in t.secao]
+    assert audio and all(t.um_por_vez for t in audio), (
+        [t.id for t in audio if not t.um_por_vez])
+    luz = [t for t in ts if "luz" in t.secao]
+    assert luz and not any(t.um_por_vez for t in luz), (
+        "a luz virou um-por-vez, e ela se lê com os olhos nos quatro de uma vez")
+
+
+def test_o_como_vem_pronto_e_nao_e_cobrado_dela(pw, lar, mentira) -> None:
+    """*"O COMO é obrigatório (…) isso aqui me quebra. isso eu espero que a
+    página descreva"*.
+
+    O COMO já existe nos arquivos — as colunas da própria célula do mapa —, e
+    cobrar dela que o digitasse era pedir que redigitasse o que o repositório
+    publica. A régua cobra que o campo chegue PREENCHIDO, e que salvar funcione
+    sem ela tocar nele.
+    """
+    with _Servidor(lar, mentira) as s:
+        pg = pw.new_page(viewport={"width": 1280, "height": 1100})
+        alvo = next(t for t in _testes_da_pagina(s.url)
+                    if t["como"] and not t["um_por_vez"])
+        pg.goto(s.url + "#" + alvo["id"])
+        pg.wait_for_selector("#iniciar")
+        pg.click("#iniciar")
+        pg.click("#pular-timer")
+        pg.wait_for_selector(".ctl .resp")
+
+        gesto = pg.input_value("#gesto")
+        assert gesto.strip(), "o COMO chegou vazio — ela teria de digitar"
+        assert alvo["como"][0][1][:20] in gesto, (gesto, alvo["como"][0])
+
+        # E SALVA SEM ELA TOCAR NO CAMPO: era exatamente isto que a recusa
+        # impedia, e é o que a fez dizer que a página a quebrava.
+        pg.check('input[name="r-P1"][value="obedeceu"]')
+        pg.click("#so-salvar")
+        pg.wait_for_timeout(700)
+        assert not pg.inner_text("#aviso").strip(), pg.inner_text("#aviso")
+        fita = (s.registro / f"registro-{med._agora()[:10]}.jsonl")
+        assert fita.exists(), "não gravou sem ela digitar o COMO"
+        pg.close()
+
+
+def test_a_pagina_abre_no_que_falta_e_o_medido_vem_pre_marcado(
+        pw, lar, mentira) -> None:
+    """*"a ideia é ficar fácil pra validarmos as teses, a grande maioria ali já
+    foi validada uns 80%"*.
+
+    A mesa listava só o que FALTAVA, então ela não tinha como CONFIRMAR nada.
+    Agora as duas famílias estão na página: abre no que falta, e o já medido
+    vem com o selo e a resposta do mapa pré-marcada.
+    """
+    with _Servidor(lar, mentira) as s:
+        pg = pw.new_page(viewport={"width": 1280, "height": 1100})
+        pg.goto(s.url)
+        pg.wait_for_selector("#desenhos svg")
+
+        assert pg.eval_on_selector("#f-falta", "e=>e.classList.contains('ligado')")
+        assert pg.evaluate("() => TESTES.every(t => !t.ja_medido)"), (
+            "a página abriu mostrando testes já medidos")
+        assert pg.evaluate("() => TODOS.some(t => t.ja_medido)"), (
+            "nenhum teste tem selo de medido — o filtro não teria o que mostrar")
+
+        pg.click("#f-medido")
+        pg.wait_for_timeout(500)
+        assert pg.evaluate("() => TESTES.every(t => t.ja_medido)")
+        assert pg.is_visible("#selo"), "o selo do que já foi medido não aparece"
+        # o CSS o põe em maiúsculas; a régua lê sem caso, senão mede a folha
+        assert "medido" in pg.inner_text("#selo").lower()
+
+        # A RESPOSTA DO MAPA VEM MARCADA, e marcada como VINDA DO MAPA.
+        i = pg.evaluate("() => TESTES.findIndex(t => t.resposta_do_mapa)")
+        assert i >= 0, "nenhum medido traz a resposta que o mapa implica"
+        pg.evaluate("(i) => ir(i, 3)", i)
+        pg.wait_for_selector(".ctl .resp")
+        pg.wait_for_timeout(400)
+        assert pg.eval_on_selector_all(
+            "input[type=radio]:checked", "e=>e.length") == 4, (
+            "a resposta do mapa não foi pré-marcada nos quatro")
+        assert pg.eval_on_selector_all(".vindo-do-mapa", "e=>e.length") == 4, (
+            "a pré-marca não está declarada como vinda do mapa — ela "
+            "confundiria o que o arquivo afirma com o que viu")
+        pg.close()
+
