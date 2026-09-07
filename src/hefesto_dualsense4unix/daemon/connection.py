@@ -596,6 +596,10 @@ async def reconnect_loop(
         # acontece justamente quando um SEGUNDO controle chega com o primeiro
         # já online, e ali não há transição nenhuma para pendurar o gancho.
         armar_gatilho_da_cor(daemon)
+        # E O NÚMERO, que é o sinal mais tardio e o mais certo: a conexão diz
+        # que a mesa vai mudar, a numeração diz que ela MUDOU. Ver
+        # `armar_gatilho_da_cor_por_numeracao`.
+        armar_gatilho_da_cor_por_numeracao(daemon)
         # ESCRITOR-CRU-01: e no mesmo tique, a pergunta que a classe LED não
         # sabe responder — "quem mais segura estes controles?". `forcar=True`
         # porque este é o único ponto do produto com orçamento para o `pgrep`
@@ -848,10 +852,23 @@ def registrar_gatilho_da_lightbar(daemon: DaemonProtocol) -> None:
     """
 
     def _reafirmar() -> object:
+        # OS DOIS TRANSPORTES, e são DOIS escritores por necessidade: o rádio
+        # só aceita o report cru do 0x31, o cabo é pintado pela classe LED do
+        # kernel. Até 07/09/2026 o gatilho chamava só o primeiro, e o do cabo
+        # ficava com a cor que ganhou na adoção — ela viu dois azuis na mesa,
+        # o P1 e o P2. Ver `repintar_o_cabo_por_sysfs`.
+        fora: dict[str, object] = {}
         escrever = getattr(daemon.controller, "reescrever_lightbar_por_hidraw", None)
-        if not callable(escrever):
-            return None
-        return escrever()
+        if callable(escrever):
+            fora["radio"] = escrever()
+        cabo = getattr(daemon.controller, "repintar_o_cabo_por_sysfs", None)
+        if callable(cabo):
+            # Best-effort e SEPARADO: o rádio falhar não pode calar o cabo, e
+            # vice-versa. Um controller enxuto (dublês da suíte) sem um dos
+            # dois simplesmente não repinta aquele lado.
+            with contextlib.suppress(Exception):
+                fora["cabo"] = cabo()
+        return fora or None
 
     registrar_gatilho(
         daemon,
@@ -904,6 +921,56 @@ def armar_gatilho_da_cor(daemon: DaemonProtocol) -> int:
         daemon, NOME_DO_GATILHO_DA_LIGHTBAR, evento="conexao_bt_nova", quantos=novas
     )
     return novas
+
+
+#: Onde a última numeração vista fica guardada, no próprio daemon.
+_ATRIBUTO_DA_NUMERACAO = "_ultima_numeracao_da_mesa"
+
+
+def armar_gatilho_da_cor_por_numeracao(daemon: DaemonProtocol) -> bool:
+    """Arma o gatilho quando o NÚMERO de alguém muda. Devolve se armou.
+
+    LIGHTBAR-O-CABO-FICOU-DE-FORA-01, a metade que o `armar_gatilho_da_cor`
+    não cobre. Aquele arma por CONEXÃO NOVA, e a conexão é cedo demais: o
+    controle que chega entra numa mesa que ainda está se montando, e a cor é
+    resolvida com uma numeração que muda um segundo depois. Medido na bancada
+    dela em 07/09/2026 — a pintura saiu com o Starlight Blue no lugar 2 (o
+    vermelho), e quando a mesa assentou ele era o lugar 4 (o rosa).
+
+    O SINAL CERTO É O RESULTADO, não a causa: não "alguém chegou", e sim "o
+    número de alguém é outro". Chegada que não muda número (um controle que
+    cai e volta no mesmo lugar) não repinta nada, e mudança sem chegada — o
+    `renumber` pela interface — repinta.
+
+    Best-effort: daemon sem registro de identidade nunca arma, e o laço segue
+    idêntico ao de antes.
+    """
+    registro = getattr(daemon, "identity_registry", None)
+    ler = getattr(registro, "numeros_da_mesa", None)
+    if not callable(ler):
+        return False
+    try:
+        agora = dict(ler() or {})
+    except Exception as exc:
+        logger.debug("gatilho_da_cor_numeracao_falhou", err=str(exc))
+        return False
+    antes = getattr(daemon, _ATRIBUTO_DA_NUMERACAO, None)
+    with contextlib.suppress(Exception):
+        setattr(daemon, _ATRIBUTO_DA_NUMERACAO, agora)
+    # A PRIMEIRA VOLTA NÃO ARMA. Sem numeração anterior não há mudança a
+    # afirmar, e armar aqui faria toda partida do daemon repintar por nada —
+    # a adoção já pinta.
+    if antes is None or antes == agora:
+        return False
+    registrar_gatilho_da_lightbar(daemon)
+    armar_gatilho(
+        daemon,
+        NOME_DO_GATILHO_DA_LIGHTBAR,
+        evento="numeracao_da_mesa_mudou",
+        quantos=len(agora),
+    )
+    logger.info("gatilho_da_cor_por_numeracao", antes=antes, agora=agora)
+    return True
 
 
 def sentinela_de_escritor_cru_de(daemon: DaemonProtocol) -> SentinelaDeEscritorCru:
@@ -1437,6 +1504,7 @@ __all__ = [
     "armar_gatilho",
     "armar_gatilho_da_cor",
     "armar_gatilho_da_cor_por_evento",
+    "armar_gatilho_da_cor_por_numeracao",
     "connect_with_retry",
     "disparar_gatilhos_devidos",
     "reapply_speaker_after_connect",
