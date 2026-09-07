@@ -1168,6 +1168,245 @@ _NAO_E_PROMESSA: dict[str, str] = {
 #: No dia em que o caminho nascer, a entrada deixa de bater com a árvore e
 #: ``test_a_lista_de_lacunas_nao_envelhece_calada`` cobra que ela seja apagada.
 _SEM_CAMINHO_HOJE: dict[str, str] = {
+    # AS DEZOITO DA SOM-QUE-SAI-01 (06/09/2026) — o motor do alto-falante
+    # virtual nasceu INTEIRO e ÓRFÃO, e as duas coisas são de propósito.
+    #
+    # O frontmatter da sprint dá TRÊS arquivos de posse, e ligar um
+    # subsystem exige outros dois: a lista de `daemon/subsystems/__init__.py`
+    # e o `_safe_start` de `daemon/lifecycle.py`. O próprio `__init__.py`
+    # avisa que a lista sozinha NÃO liga nada — foi assim que o
+    # `BtMicSubsystem` nasceu órfão em 25/07/2026, e ninguém soube.
+    #
+    # **A diferença é que estas dezoito nascem DECLARADAS.** Uma dívida que
+    # se anuncia com endereço é uma dívida que alguém paga; a de 25/07 não
+    # se anunciou, e custou um mês.
+    #
+    # DUAS NÃO ENTRARAM NESTA LISTA, e a razão é a mesma dos quatro
+    # caminhos que este portão oferece: `so_hex` já tinha DONO em
+    # `integrations/fontes_de_captura.py` e virou import em vez de cópia; e
+    # `silencio_de_um_quadro` nasceu sem chamador nenhum e foi APAGADA.
+    # Resto não se declara.
+    'daemon/subsystems/alto_falante.py::AltoFalanteSubsystem': (
+        "SOM-QUE-SAI-01, 06/09/2026 — a BOCA do motor do alto-falante virtual: "
+        "mantém um nó de som por DualSense presente, em qualquer transporte. É "
+        "por ela que os outros dezessete símbolos desta leva seriam alcançados. "
+        "ONDE O CAMINHO SE PERDE: o `AltoFalanteSubsystem` não está no `run()` de "
+        "`daemon/lifecycle.py` nem na lista de `daemon/subsystems/__init__.py`, e "
+        "os dois estão FORA da posse desta sprint (o frontmatter dá três "
+        "arquivos). O QUE FECHA: registrar o subsystem nos DOIS lugares — o "
+        "próprio `subsystems/__init__.py` avisa que acrescentar à lista NÃO liga "
+        "nada, e foi assim que o `BtMicSubsystem` nasceu órfão em 25/07/2026. "
+        "06/09/2026."
+    ),
+    'daemon/subsystems/alto_falante.py::GerenciadorDeNosDeSom': (
+        "SOM-QUE-SAI-01, 06/09/2026 — sobe e derruba um nó por controle, e é ele "
+        "que faz a decisão dela `D-0609-O-NO-DE-SOM-VIVE-COM-O-CONTROLE` (o nó "
+        "vive só enquanto há controle). Alcançado por "
+        "`AltoFalanteSubsystem.start`. ONDE O CAMINHO SE PERDE: o "
+        "`AltoFalanteSubsystem` não está no `run()` de `daemon/lifecycle.py` nem "
+        "na lista de `daemon/subsystems/__init__.py`, e os dois estão FORA da "
+        "posse desta sprint (o frontmatter dá três arquivos). O QUE FECHA: "
+        "registrar o subsystem nos DOIS lugares — o próprio "
+        "`subsystems/__init__.py` avisa que acrescentar à lista NÃO liga nada, e "
+        "foi assim que o `BtMicSubsystem` nasceu órfão em 25/07/2026. 06/09/2026."
+    ),
+    'daemon/subsystems/alto_falante.py::ControleNaLista': (
+        "SOM-QUE-SAI-01, 06/09/2026 — o DualSense visto pelo sysfs, com o "
+        "transporte AO LADO e nunca DENTRO da identidade. Devolvido por "
+        "`controles_na_lista`, que só o subsystem chama. ONDE O CAMINHO SE PERDE: "
+        "o `AltoFalanteSubsystem` não está no `run()` de `daemon/lifecycle.py` "
+        "nem na lista de `daemon/subsystems/__init__.py`, e os dois estão FORA da "
+        "posse desta sprint (o frontmatter dá três arquivos). O QUE FECHA: "
+        "registrar o subsystem nos DOIS lugares — o próprio "
+        "`subsystems/__init__.py` avisa que acrescentar à lista NÃO liga nada, e "
+        "foi assim que o `BtMicSubsystem` nasceu órfão em 25/07/2026. 06/09/2026."
+    ),
+    'daemon/subsystems/alto_falante.py::controles_na_lista': (
+        "SOM-QUE-SAI-01, 06/09/2026 — a varredura de sysfs que vê os DOIS "
+        "transportes (a metade de entrada só precisa do rádio) e exclui o nosso "
+        "próprio vpad pelo `HID_PHYS`. Chamada pelo laço do subsystem. ONDE O "
+        "CAMINHO SE PERDE: o `AltoFalanteSubsystem` não está no `run()` de "
+        "`daemon/lifecycle.py` nem na lista de `daemon/subsystems/__init__.py`, e "
+        "os dois estão FORA da posse desta sprint (o frontmatter dá três "
+        "arquivos). O QUE FECHA: registrar o subsystem nos DOIS lugares — o "
+        "próprio `subsystems/__init__.py` avisa que acrescentar à lista NÃO liga "
+        "nada, e foi assim que o `BtMicSubsystem` nasceu órfão em 25/07/2026. "
+        "06/09/2026."
+    ),
+    'integrations/alto_falante_bt.py::SinkVirtualPipeWire': (
+        "SOM-QUE-SAI-01, 06/09/2026 — o `module-null-sink` de UM controle, com o "
+        "nome derivado do `uniq` e nunca do transporte. MEDIDO na máquina dela no "
+        "mesmo dia: carrega, a `priority.session` chega ao nó e ele não vira a "
+        "saída padrão. Construído por `GerenciadorDeNosDeSom`. ONDE O CAMINHO SE "
+        "PERDE: o `AltoFalanteSubsystem` não está no `run()` de "
+        "`daemon/lifecycle.py` nem na lista de `daemon/subsystems/__init__.py`, e "
+        "os dois estão FORA da posse desta sprint (o frontmatter dá três "
+        "arquivos). O QUE FECHA: registrar o subsystem nos DOIS lugares — o "
+        "próprio `subsystems/__init__.py` avisa que acrescentar à lista NÃO liga "
+        "nada, e foi assim que o `BtMicSubsystem` nasceu órfão em 25/07/2026. "
+        "06/09/2026."
+    ),
+    'integrations/alto_falante_bt.py::CodificadorOpus': (
+        "SOM-QUE-SAI-01, 06/09/2026 — o ENCODER que faltava, nomeado pelo mapa em "
+        "`audio.alto_falante@dualsense`.radio_codigo_ref (`opus_encoder_create` e "
+        "`opus_encode` não existiam em `src/`). MEDIDO: CBR 160 kbps fecha 200 "
+        "bytes por quadro, o `len` que as duas fontes declaram. O chamador "
+        "natural é a ponte de saída, que só se escreve DEPOIS do ensaio 1 da "
+        "MESA-DE-QUATRO-01 escolher o arranjo. ONDE O CAMINHO SE PERDE: o "
+        "`AltoFalanteSubsystem` não está no `run()` de `daemon/lifecycle.py` nem "
+        "na lista de `daemon/subsystems/__init__.py`, e os dois estão FORA da "
+        "posse desta sprint (o frontmatter dá três arquivos). O QUE FECHA: "
+        "registrar o subsystem nos DOIS lugares — o próprio "
+        "`subsystems/__init__.py` avisa que acrescentar à lista NÃO liga nada, e "
+        "foi assim que o `BtMicSubsystem` nasceu órfão em 25/07/2026. 06/09/2026."
+    ),
+    'integrations/alto_falante_bt.py::Arranjo': (
+        "SOM-QUE-SAI-01, 06/09/2026 — um dos DOIS candidatos ao corpo do `0x39`, "
+        "com a procedência colada. O mapa registra os dois sem escolher e é o "
+        "ensaio que escolhe; até lá ninguém em produção pode montar um. ONDE O "
+        "CAMINHO SE PERDE: o `AltoFalanteSubsystem` não está no `run()` de "
+        "`daemon/lifecycle.py` nem na lista de `daemon/subsystems/__init__.py`, e "
+        "os dois estão FORA da posse desta sprint (o frontmatter dá três "
+        "arquivos). O QUE FECHA: registrar o subsystem nos DOIS lugares — o "
+        "próprio `subsystems/__init__.py` avisa que acrescentar à lista NÃO liga "
+        "nada, e foi assim que o `BtMicSubsystem` nasceu órfão em 25/07/2026. "
+        "06/09/2026."
+    ),
+    'integrations/alto_falante_bt.py::montar_pelos_dois_arranjos': (
+        "SOM-QUE-SAI-01, 06/09/2026 — manda o MESMO PCM pelos DOIS arranjos, que "
+        "é o que a rota corrigida da sprint pede. O chamador em produção só "
+        "existe depois de a orelha dela escolher um (ensaio 1 da "
+        "MESA-DE-QUATRO-01). ONDE O CAMINHO SE PERDE: o `AltoFalanteSubsystem` "
+        "não está no `run()` de `daemon/lifecycle.py` nem na lista de "
+        "`daemon/subsystems/__init__.py`, e os dois estão FORA da posse desta "
+        "sprint (o frontmatter dá três arquivos). O QUE FECHA: registrar o "
+        "subsystem nos DOIS lugares — o próprio `subsystems/__init__.py` avisa "
+        "que acrescentar à lista NÃO liga nada, e foi assim que o "
+        "`BtMicSubsystem` nasceu órfão em 25/07/2026. 06/09/2026."
+    ),
+    'integrations/alto_falante_bt.py::tag_tlv': (
+        "SOM-QUE-SAI-01, 06/09/2026 — o byte de tag da cadeia TLV (`tag | "
+        "presente [| duplo]`), conferido contra o `0xD2` que o mapa registra do "
+        "Senshi. Alcançado por `Arranjo.montar`. ONDE O CAMINHO SE PERDE: o "
+        "`AltoFalanteSubsystem` não está no `run()` de `daemon/lifecycle.py` nem "
+        "na lista de `daemon/subsystems/__init__.py`, e os dois estão FORA da "
+        "posse desta sprint (o frontmatter dá três arquivos). O QUE FECHA: "
+        "registrar o subsystem nos DOIS lugares — o próprio "
+        "`subsystems/__init__.py` avisa que acrescentar à lista NÃO liga nada, e "
+        "foi assim que o `BtMicSubsystem` nasceu órfão em 25/07/2026. 06/09/2026."
+    ),
+    'integrations/alto_falante_bt.py::degrau_para_payload': (
+        "SOM-QUE-SAI-01, 06/09/2026 — o MENOR degrau da escada cujo orçamento "
+        "comporta o payload, lido de TABELA e nunca de aritmética (a fórmula `78 "
+        "+ 64 * (id - 0x31)` dá 590 no `0x39` contra 547). Quem o chamaria é o "
+        "empacotador do D5, que só se escreve depois do D4. ONDE O CAMINHO SE "
+        "PERDE: o `AltoFalanteSubsystem` não está no `run()` de "
+        "`daemon/lifecycle.py` nem na lista de `daemon/subsystems/__init__.py`, e "
+        "os dois estão FORA da posse desta sprint (o frontmatter dá três "
+        "arquivos). O QUE FECHA: registrar o subsystem nos DOIS lugares — o "
+        "próprio `subsystems/__init__.py` avisa que acrescentar à lista NÃO liga "
+        "nada, e foi assim que o `BtMicSubsystem` nasceu órfão em 25/07/2026. "
+        "06/09/2026."
+    ),
+    'integrations/alto_falante_bt.py::orcamento_do_degrau': (
+        "SOM-QUE-SAI-01, 06/09/2026 — quantos bytes cabem num degrau depois do "
+        "`common` de 47 B. Derivado da tabela, e alcançado por "
+        "`degrau_para_payload`. ONDE O CAMINHO SE PERDE: o `AltoFalanteSubsystem` "
+        "não está no `run()` de `daemon/lifecycle.py` nem na lista de "
+        "`daemon/subsystems/__init__.py`, e os dois estão FORA da posse desta "
+        "sprint (o frontmatter dá três arquivos). O QUE FECHA: registrar o "
+        "subsystem nos DOIS lugares — o próprio `subsystems/__init__.py` avisa "
+        "que acrescentar à lista NÃO liga nada, e foi assim que o "
+        "`BtMicSubsystem` nasceu órfão em 25/07/2026. 06/09/2026."
+    ),
+    'integrations/alto_falante_bt.py::nome_do_sink': (
+        "SOM-QUE-SAI-01, 06/09/2026 — `hefesto_som_<hex6>` a partir do `uniq`, e "
+        "a identidade vem do CONTROLE, nunca do transporte. Chamado por "
+        "`SinkVirtualPipeWire.__init__` e por `AltoFalanteSubsystem.alvos`. ONDE "
+        "O CAMINHO SE PERDE: o `AltoFalanteSubsystem` não está no `run()` de "
+        "`daemon/lifecycle.py` nem na lista de `daemon/subsystems/__init__.py`, e "
+        "os dois estão FORA da posse desta sprint (o frontmatter dá três "
+        "arquivos). O QUE FECHA: registrar o subsystem nos DOIS lugares — o "
+        "próprio `subsystems/__init__.py` avisa que acrescentar à lista NÃO liga "
+        "nada, e foi assim que o `BtMicSubsystem` nasceu órfão em 25/07/2026. "
+        "06/09/2026."
+    ),
+    'integrations/alto_falante_bt.py::sufixo_do_sink_do_som': (
+        "SOM-QUE-SAI-01, 06/09/2026 — o lado LEITOR do nome do nó. O caminho dele "
+        "se perde num segundo lugar, além do subsystem: "
+        "`integrations/fontes_de_captura.py::sinks_dualsense` casa por "
+        "`MARCADORES_DUALSENSE` e nunca devolve `hefesto_som_<hex6>`, e a regra 0 "
+        "de `escolher_fonte` conhece só o prefixo do microfone. O QUE FECHA: o "
+        "leitor aprender o nó de saída, e então o dono do prefixo descer para "
+        "`fontes_de_captura.py` (a regra da casa: o nome mora com quem o LÊ). "
+        "Aquele arquivo está fora da posse desta sprint. ONDE O CAMINHO SE PERDE: "
+        "o `AltoFalanteSubsystem` não está no `run()` de `daemon/lifecycle.py` "
+        "nem na lista de `daemon/subsystems/__init__.py`, e os dois estão FORA da "
+        "posse desta sprint (o frontmatter dá três arquivos). O QUE FECHA: "
+        "registrar o subsystem nos DOIS lugares — o próprio "
+        "`subsystems/__init__.py` avisa que acrescentar à lista NÃO liga nada, e "
+        "foi assim que o `BtMicSubsystem` nasceu órfão em 25/07/2026. 06/09/2026."
+    ),
+    'integrations/alto_falante_bt.py::propriedades_do_sink': (
+        "SOM-QUE-SAI-01, 06/09/2026 — o `sink_properties=` ENTRE ASPAS DUPLAS, "
+        "que é a cura paga do lado da entrada no mesmo dia: sem as aspas o "
+        "`pipewire-pulse` corta no primeiro espaço e a prioridade nunca chega ao "
+        "nó. Alcançado por `SinkVirtualPipeWire.iniciar`. ONDE O CAMINHO SE "
+        "PERDE: o `AltoFalanteSubsystem` não está no `run()` de "
+        "`daemon/lifecycle.py` nem na lista de `daemon/subsystems/__init__.py`, e "
+        "os dois estão FORA da posse desta sprint (o frontmatter dá três "
+        "arquivos). O QUE FECHA: registrar o subsystem nos DOIS lugares — o "
+        "próprio `subsystems/__init__.py` avisa que acrescentar à lista NÃO liga "
+        "nada, e foi assim que o `BtMicSubsystem` nasceu órfão em 25/07/2026. "
+        "06/09/2026."
+    ),
+    'integrations/alto_falante_bt.py::rodar_pactl': (
+        "SOM-QUE-SAI-01, 06/09/2026 — a porta pública que deixa o ensaio "
+        "PERGUNTAR ao servidor (`pactl list sinks`, `get-default-sink`) em vez de "
+        "montar o próprio `subprocess` com outra política de idioma e de timeout. "
+        "Hoje só `scripts/ensaios/o_som_que_sai.py` a chama, e `scripts/` não "
+        "conta para esta régua. ONDE O CAMINHO SE PERDE: o `AltoFalanteSubsystem` "
+        "não está no `run()` de `daemon/lifecycle.py` nem na lista de "
+        "`daemon/subsystems/__init__.py`, e os dois estão FORA da posse desta "
+        "sprint (o frontmatter dá três arquivos). O QUE FECHA: registrar o "
+        "subsystem nos DOIS lugares — o próprio `subsystems/__init__.py` avisa "
+        "que acrescentar à lista NÃO liga nada, e foi assim que o "
+        "`BtMicSubsystem` nasceu órfão em 25/07/2026. 06/09/2026."
+    ),
+    'integrations/alto_falante_bt.py::Diagnostico': (
+        "SOM-QUE-SAI-01, 06/09/2026 — por que o nó sobe, ou por que não sobe, um "
+        "fato por linha: o molde do *ausência é resposta* da metade de entrada. "
+        "Devolvido por `diagnosticar`. ONDE O CAMINHO SE PERDE: o "
+        "`AltoFalanteSubsystem` não está no `run()` de `daemon/lifecycle.py` nem "
+        "na lista de `daemon/subsystems/__init__.py`, e os dois estão FORA da "
+        "posse desta sprint (o frontmatter dá três arquivos). O QUE FECHA: "
+        "registrar o subsystem nos DOIS lugares — o próprio "
+        "`subsystems/__init__.py` avisa que acrescentar à lista NÃO liga nada, e "
+        "foi assim que o `BtMicSubsystem` nasceu órfão em 25/07/2026. 06/09/2026."
+    ),
+    'integrations/alto_falante_bt.py::diagnosticar': (
+        "SOM-QUE-SAI-01, 06/09/2026 — fotografa as pré-condições do nó sem mexer "
+        "em nada (só leitura). O chamador natural é o `doctor` e a tela de "
+        "estado, e nenhum dos dois está na posse desta sprint. ONDE O CAMINHO SE "
+        "PERDE: o `AltoFalanteSubsystem` não está no `run()` de "
+        "`daemon/lifecycle.py` nem na lista de `daemon/subsystems/__init__.py`, e "
+        "os dois estão FORA da posse desta sprint (o frontmatter dá três "
+        "arquivos). O QUE FECHA: registrar o subsystem nos DOIS lugares — o "
+        "próprio `subsystems/__init__.py` avisa que acrescentar à lista NÃO liga "
+        "nada, e foi assim que o `BtMicSubsystem` nasceu órfão em 25/07/2026. "
+        "06/09/2026."
+    ),
+    'integrations/alto_falante_bt.py::versao_libopus': (
+        "SOM-QUE-SAI-01, 06/09/2026 — a versão da libopus vista pelo handle do "
+        "ENCODER (o irmão de entrada tem a sua, pelo handle do decodificador). "
+        "Alcançado por `diagnosticar`. ONDE O CAMINHO SE PERDE: o "
+        "`AltoFalanteSubsystem` não está no `run()` de `daemon/lifecycle.py` nem "
+        "na lista de `daemon/subsystems/__init__.py`, e os dois estão FORA da "
+        "posse desta sprint (o frontmatter dá três arquivos). O QUE FECHA: "
+        "registrar o subsystem nos DOIS lugares — o próprio "
+        "`subsystems/__init__.py` avisa que acrescentar à lista NÃO liga nada, e "
+        "foi assim que o `BtMicSubsystem` nasceu órfão em 25/07/2026. 06/09/2026."
+    ),
     # A LÁPIDE DE `primeiro_trecho_banido` SAIU EM 06/09/2026, na costura da
     # ONDA E, e ela previu o próprio fim com o endereço de cada passo: dizia que
     # o chamador natural era o funil `interface/hefesto_vivo.py::_json`, que ele
