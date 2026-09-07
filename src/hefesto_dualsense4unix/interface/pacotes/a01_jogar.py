@@ -840,6 +840,11 @@ def _avisos(ctx: Contexto) -> list[dict[str, str]]:
        dela ela está QUENTE agora;
     3. **a ponte com o jogo** (:func:`_aviso_da_ponte`), e só quando ela é má
        notícia;
+    3-bis. **a divergência de máscara**
+       (:func:`_aviso_da_divergencia_de_mascara`), o ALARME que o daemon publica
+       desde a MASCARA-01. Ela mora AQUI e não em `AVISOS_DA_TELA` porque volta
+       em markup do Pango, como a ponte — o docstring dela diz por quê, e é
+       portão;
     4. **a cura do travamento do USB**
        (:func:`_aviso_da_cura_do_travamento`) — a fonte que nasceu em
        06/09/2026, ONDA5-01-01. Ela não é função de `state`: lê o disco, como
@@ -888,6 +893,21 @@ def _avisos(ctx: Contexto) -> list[dict[str, str]]:
     ponte = _aviso_da_ponte(ctx.state)
     if ponte:
         fora.append(ponte)
+
+    # A DIVERGÊNCIA DE MÁSCARA — JOGAR-OS-SEIS-AVISOS-01, 06/09/2026, e ela vem
+    # logo depois da ponte porque é a irmã dela: as duas voltam em markup do
+    # Pango e passam por `_sem_markup`. Sob `try` PRÓPRIO, que é a política
+    # deste arquivo — uma fonte que levanta vira selo `ERRO`, nunca uma coluna
+    # que some.
+    try:
+        divergencia = _aviso_da_divergencia_de_mascara(ctx.state)
+        if divergencia:
+            fora.append(divergencia)
+    except Exception as erro:
+        fora.append({"selo": "ERRO",
+                     "texto": f"a divergência de máscara não respondeu "
+                              f"({type(erro).__name__}).",
+                     "fonte": "home_actions.mascara_divergente_do_daemon"})
 
     # A CURA DO TRAVAMENTO DO USB — sob `try` PRÓPRIO, que é a política deste
     # arquivo: uma fonte que levanta não derruba a coluna, ela vira selo
@@ -1004,7 +1024,6 @@ def _aviso_da_ponte(state: dict[str, Any]) -> dict[str, str] | None:
     if not state:
         return None
     from hefesto_dualsense4unix.app.actions import home_actions
-    from hefesto_dualsense4unix.gui.aba_sistema import sem_markup
 
     ruim = str(getattr(home_actions, "_COR_AVISO", "") or "")
     if not ruim:
@@ -1012,7 +1031,7 @@ def _aviso_da_ponte(state: dict[str, Any]) -> dict[str, str] | None:
     frase = home_actions.texto_da_ponte(state)
     if ruim not in frase:
         return None
-    texto = sem_markup(frase)
+    texto = _sem_markup(frase)
     # O PREFIXO SAI porque o SELO É ELE. Deixar os dois escreveria
     # "PONTE  Ponte com o jogo: nenhuma —…" na mesma linha, que é a repetição
     # que esta casa tira do `<title>` do glifo e do `title` do cartão.
@@ -1020,6 +1039,86 @@ def _aviso_da_ponte(state: dict[str, Any]) -> dict[str, str] | None:
         texto = texto[len(home_actions.PONTE_PREFIXO):]
     return {"selo": SELO_DA_PONTE, "texto": texto,
             "fonte": "home_actions.texto_da_ponte"}
+
+
+def _sem_markup(frase: str) -> str:
+    """O texto de uma frase do produto, sem o markup do Pango. UMA porta só.
+
+    **ELA EXISTE PARA A CITAÇÃO SER UMA, e isso é portão** — 06/09/2026,
+    JOGAR-OS-SEIS-AVISOS-01. Duas fontes desta coluna voltam em markup (a ponte
+    e a divergência de máscara), e quem sabe tirá-lo mora na janela que está
+    saindo. `scripts/check_nada_aponta_para_a_janela.py` congela o inventário e
+    reprova tanto uma citação NOVA quanto um par declarado cuja **contagem
+    cresce** — este arquivo tem uma linha declarada, e ela tem de continuar
+    sendo uma. Um segundo `import` ao lado do outro aviso reprovaria o portão
+    sem acrescentar uma linha de valor.
+
+    **E NÃO SE REESCREVE A REGEX AQUI.** `sem_markup` é o dono, e a expressão
+    dele desescapa a entidade HTML além de tirar a tag — um `re.sub` local
+    deixaria `&quot;` na tela. Quando o motor mudar de casa
+    (`MOTOR-MUDA-DE-CASA`, a razão declarada no inventário), é esta linha que
+    troca de endereço, e uma só.
+    """
+    from hefesto_dualsense4unix.gui.aba_sistema import sem_markup
+
+    return sem_markup(frase)
+
+
+def _aviso_da_divergencia_de_mascara(state: dict[str, Any]) -> dict[str, str] | None:
+    """A escolha de máscara que não chegou ao aparelho; ``None`` quando chegou.
+
+    **O DAEMON PUBLICA ISTO DESDE A MASCARA-01 e a interface nova nunca leu** —
+    é o mesmo defeito que a I3 nomeou na janela antiga (*"o ALARME que ele já
+    publicava e que esta janela nunca leu"*), reintroduzido na migração.
+    JOGAR-OS-SEIS-AVISOS-01, 06/09/2026.
+
+    **POR QUE AQUI E NÃO EM `painel.AVISOS_DA_TELA`, que é onde moram as outras
+    onze.** Ela é a irmã do `_aviso_da_ponte` logo acima em UMA coisa que decide
+    o endereço: as duas voltam em **markup do Pango**, e tirá-lo custa uma
+    citação a `gui/`. De `app/actions/` aquela citação seria NOVA, e o portão
+    `nada-aponta-para-a-janela` reprova — a janela está saindo
+    (`D-0609-GTK-LEVA-INTEIRA`) e o inventário só encolhe. Aqui ela é a
+    declarada, e passa por `_sem_markup`, que é a porta única.
+
+    DUAS FUNÇÕES DO DONO, e nenhuma regra escrita aqui:
+
+    * `home_actions.mascara_divergente_do_daemon` escolhe **o alarme**, e não a
+      lista irmã: ``mascara_divergencias`` é antecipação de jogo FECHADO, e
+      mostrar divergência de jogo que não está em cena seria aviso sobre coisa
+      que não está em uso;
+    * `home_actions.texto_da_divergencia` escreve a frase, e escolhe entre as
+      QUATRO que ela tem — jogo aberto ou não, gesto dela ou perfil.
+
+    **A FONTE É O PERFIL, e não o dedo dela, porque é o que o alarme sabe.** O
+    payload traz ``profile`` e ``mascara_perfil``: quem pediu aquela máscara foi
+    o perfil, que entra sozinho pelo autoswitch. Dizer *"você escolheu"* sobre
+    ele é a acusação que a I3 tirou da tela — e aqui não há sequer de onde
+    inventar o gesto, porque o ``_home_flavor_pedido`` era um atributo de janela
+    e a janela saiu.
+
+    O SELO É ``GAMEPAD``, o mesmo do vpad degradado e do grab dobrado: os três
+    respondem à mesma pergunta — **como o jogo vê os controles**. Um selo novo
+    aqui ficaria fora de `ORDEM_DA_GRAVIDADE` e a máquina cheia o esconderia
+    atrás do ``+N``.
+    """
+    if not state:
+        return None
+    from hefesto_dualsense4unix.app.actions import home_actions
+
+    alarme = home_actions.mascara_divergente_do_daemon(state)
+    if alarme is None:
+        return None
+    frase = home_actions.texto_da_divergencia(
+        alarme.get("mascara_perfil"),
+        alarme.get("mascara_viva"),
+        jogo_aberto=home_actions.jogo_com_autoridade(state),
+        fonte=home_actions.FONTE_PERFIL,
+        perfil=alarme.get("profile"),
+    )
+    if not frase:
+        return None
+    return {"selo": "GAMEPAD", "texto": _sem_markup(frase),
+            "fonte": "home_actions.mascara_divergente_do_daemon"}
 
 
 def _aviso_da_cura_do_travamento() -> dict[str, str] | None:
@@ -2241,7 +2340,7 @@ def cadeado(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
 
 
 @gesto("01-jogar.html", "reconectar")
-def reconectar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
+def reconectar(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
     """"Reconectar Controles": os jogadores voltam, e a numeração se ajeita.
 
     O NOME DA TELA É DELA E É NOVO; o gesto não é. A legenda desta aba registra
@@ -2272,10 +2371,47 @@ def reconectar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     renumerar (repintar o LED do controle em uso no meio da partida é o defeito
     que a NUMA-03 fechou), e os jogadores já voltaram no passo 1. Tratar isso
     como falha seria a interface mentindo — é a mesma regra do
-    `reported_step_index`. Por isso os dois passos vão sem levantar.
+    `reported_step_index`. Por isso o segundo passo vai sem levantar.
+
+    **O BOTÃO DEIXA DE RESPONDER CALADO — JOGAR-OS-SEIS-AVISOS-01, 06/09/2026.**
+    Até aqui as duas linhas eram `p.chamar(…)`, e `chamar` devolve um `bool` que
+    ninguém lia: clicar com o serviço fora do ar e clicar com ele vivo
+    produziam **exatamente a mesma tela**. A janela antiga tem QUATRO desfechos
+    nomeados neste mesmo gesto (`home_actions._on_home_reconciliar_clicked`), e
+    nenhum deles chegava aqui.
+
+    `resultado` E NÃO `chamar_detalhado`, e a razão é o passo 1: o recibo
+    precisa de QUANTOS jogadores voltaram, e isso está no CORPO da resposta
+    (``coop.sync {} -> {status, players, active}``). `chamar_detalhado` devolve
+    ``(ok, motivo)`` e joga o corpo fora — ele serviria para dizer que não deu,
+    e não para dizer o que foi feito. O passo 2 usa a mesma função pelo mesmo
+    motivo: ``{ok, renumbered}`` é o que separa *"compactei N controles"* de
+    *"já estava compacta"*.
+
+    **A FALHA DO PASSO 1 LEVANTA; A DO PASSO 2, NÃO.** É o encadeamento da
+    janela antiga, linha por linha: o `coop.sync` é quem responde *"meus
+    jogadores voltaram?"*, e sem ele não há gesto — vira `RuntimeError`, que é
+    o canal da recusa laranja. O `identity.renumber` é acabamento: se ele não
+    responder, o recibo diz que a numeração não foi conferida
+    (`reconciliar_toast` com ``None``) e os jogadores continuam de pé.
+
+    O `except Exception` LARGO nos dois é de propósito e tem endereço: `ponte.
+    resultado` levanta `RuntimeError` quando o daemon não atende, mas o
+    `_safe_call` por baixo dela **propaga** `ValueError`/`TypeError` de bug
+    interno de propósito (`app/ipc_bridge.py:92-96`). Deixá-los subir daqui
+    mataria o gesto sem uma palavra na tela, que é o defeito que este passo
+    cura.
     """
-    p.chamar("coop.sync")
-    p.chamar("identity.renumber")
+    try:
+        sync = p.resultado("coop.sync")
+    except Exception as erro:
+        raise RuntimeError(_painel().RECONECTAR_SEM_SERVICO) from erro
+    jogadores = sync.get("players") if isinstance(sync, dict) else None
+    try:
+        renumerou = p.resultado("identity.renumber")
+    except Exception:
+        renumerou = None
+    return {"recado": _painel().recibo_do_reconectar(jogadores, renumerou)}
 
 
 #: OS DOIS DESTA ABA NA LISTA DOS DEZESSEIS, classificados um a um — 02/09/2026.
@@ -2338,7 +2474,13 @@ OS_DOIS_DA_LISTA_DOS_DEZESSEIS: dict[str, str] = {
 #: não tem função em lugar nenhum. Chamá-lo por `chamar("autoswitch.lock", …)`
 #: seria a segunda rota para um ato que já tem uma, e a de cá não saberia ler o
 #: `autoswitch_locked` que o handler devolve.
-PONTE = {"chamar", "autoswitch_lock_set"}
+#: `resultado` É DEGRAU 3 TAMBÉM, e entrou em 06/09/2026 com o recibo do
+#: "Reconectar Controles". Ela é o `chamar` que **não joga o corpo fora**: os
+#: dois métodos do botão respondem `{status, players, active}` e
+#: `{ok, renumbered}`, e é desse corpo que sai a frase do recibo. Um `chamar`
+#: ali devolveria `bool` — o botão que responde calado, que é o defeito que a
+#: JOGAR-OS-SEIS-AVISOS-01 fecha.
+PONTE = {"chamar", "autoswitch_lock_set", "resultado"}
 #: OS MÉTODOS CRUS. A régua confere um a um contra o `ipc_server.py`, e um nome
 #: inventado reprova AQUI, não na mão de quem clica.
 #: OS CINCO DA TROCA DE MODO — os que `ponte.TETOS` cobre com os 2,0 s do
@@ -2428,9 +2570,15 @@ PROVAS = [
                ("chamar", ["mouse.emulation.restore"], {})]},
     # RECONCILIAR ANTES DE RENUMERAR: renumerar primeiro compactaria uma mesa
     # que ainda não está completa (`home_actions.py:3122`).
+    #
+    # `resultado`, E NÃO `chamar` — 06/09/2026. A prova mudou junto com o gesto,
+    # e a troca é a entrega: `chamar` devolve `bool` e o botão respondia calado;
+    # `resultado` traz o corpo, que é de onde sai quantos jogadores voltaram e
+    # se a numeração compactou. Se alguém devolver o `chamar` para cá, esta
+    # linha reprova — que é exatamente a notícia que se quer ter.
     {"pagina": PAGINA, "gesto": "reconectar", "clique": {},  # (noqa-acento) chave do contrato
-     "chama": [("chamar", ["coop.sync"], {}),
-               ("chamar", ["identity.renumber"], {})]},
+     "chama": [("resultado", ["coop.sync"], {}),
+               ("resultado", ["identity.renumber"], {})]},
     # A MÁSCARA DE UM APARELHO — a prova que FALTAVA, e a falta custou o gesto
     # inteiro. Ela é a única desta lista que mede os PARÂMETROS POR NOME, e é
     # exatamente o que o defeito de 03/09 escondia: o dicionário ia posicional,
