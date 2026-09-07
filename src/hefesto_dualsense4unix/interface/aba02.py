@@ -1361,6 +1361,15 @@ DE_ONDE_VEM_A_MASCARA = ("O que o jogo vê deste controle. A escolha é por cont
 ABRE_O_CARD = ("Clique para abrir o card deste controle — os outros fecham. "
                "É o mesmo gesto de escolhê-lo na fita lá em cima.")
 
+#: A dica do assento SEM controle, e ela é a mesma frase que o `lugar_vazio()`
+#: carregava antes de 07/09/2026 — palavra por palavra. O cartão do lugar vazio
+#: passou a ser o MESMO cartão do cheio (ver `bloco`), e com ele veio o `<label>`
+#: que diz *"Clique para abrir o card deste controle"*. Num assento onde não há
+#: controle isso é uma promessa que a folha (`_fechado_de_vez`) recusa — e uma
+#: dica que promete o que a tela nega é a família de defeito que esta aba já
+#: pagou duas vezes. A frase antiga volta ao lugar dela.
+LUGAR_VAZIO_AQUI = "Lugar vazio: nenhum controle conectado aqui."
+
 
 def sensores_da_peca(c):
     """OS DOIS INTERRUPTORES DE SENSOR, UM PAR POR CONTROLE.
@@ -2062,7 +2071,7 @@ def bloco(c, *, bat, carga=None, glifos_on, l2, r2, touch, sticks,
           # ainda o monta; tirá-lo daqui quebraria a chamada sem ganhar nada.
           giro, mic_v, mic_mudo, mic_vol, alto_v, rota_pc, estado_alto,
           alto_mudo=False, alto_pode=True, mic_posse=False, tocando=True,
-          mic_modo="virtual", accel=None):
+          mic_modo="virtual", accel=None, conectado=True):
     """Uma caixa de controle, a partir do ITEM DA MESA — nunca de um nome digitado.
 
     É UMA função para as duas formas, porque agora é uma caixa só: o rádio diz
@@ -2070,10 +2079,69 @@ def bloco(c, *, bat, carga=None, glifos_on, l2, r2, touch, sticks,
     saem a identidade inteira: o plástico (`cor_da_zona`, lido do desenho), o
     número do jogador, o transporte e o rótulo. O que entra por argumento é só o
     ESTADO — o que este controle está fazendo agora.
+
+    E ELA É UMA SÓ PARA O LUGAR CHEIO E PARA O VAZIO — 07/09/2026,
+    CONTROLES-O-LUGAR-VAZIO-TEM-ENDERECO-01.
+
+    O QUE ELA VEIO CURAR, medido na mesa dela com os QUATRO DualSense ligados:
+    o daemon publicava quatro controles, a carga chegava com
+    `colunas = ['p1','p2','p3','p4']` e a tela mostrava DOIS. Os outros dois
+    diziam `P3 · Desconectado` com travessão em tudo, para sempre. A causa era
+    estrutural: havia um `lugar_vazio()` à parte que emitia um cartão **sem um
+    único `data-campo` por dentro**, e o passo 2 do piloto
+    (`hefesto_vivo.py`) procura `data-campo` DENTRO do bloco daquele
+    `data-controle` — sem endereço, o dado dela chegava e não tinha onde pousar.
+    O passo `1c` tirava o `off` do lugar que ganhava dono, e o que aparecia
+    embaixo era um cartão oco.
+
+    DOIS RAMOS QUE DUPLICAM ESTRUTURA FOI O QUE PRODUZIU O DEFEITO: o cheio
+    ganhou 101 endereços em quinze levas e o vazio ficou com zero — um
+    envelheceu sem o outro, calado. Agora é UMA função, e `conectado` decide
+    **só duas coisas**:
+
+      (a) a CLASSE e o ATRIBUTO — `off` e `data-conectado="nao"`, que são as
+          MESMAS marcas que o piloto escreve e tira (passos `1b` e `1c`);
+      (b) o TEXTO inicial de cada campo, que vira travessão por
+          `_so_o_travessao` — a mesma conta que
+          `pacotes.apagar_os_lugares_sem_dono` aplica na tela viva.
+
+    A ESTRUTURA É IDÊNTICA NOS QUATRO. É isso que faz o cartão vazio virar um
+    cartão de verdade no instante em que o controle chega, sem recarregar a
+    página — e é o que a auto-checagem nova (`_conferir`, item 5) passou a
+    exigir dos quatro lugares.
+
+    O QUE O LUGAR VAZIO NÃO LEVA são as duas coisas que ele não TEM: a cor do
+    plástico lida do aparelho e a posição do dedo. Sem elas o `--plastico` e o
+    `left`/`top` caem nos dois PISOS que a folha já traz
+    (`PISO_DO_PLASTICO`, `PISO_DAS_POSICOES`), e as âncoras de
+    `cor_do_plastico_por_regra` e `posicao_por_regra` continuam contando
+    exatamente os conectados — nenhuma delas mudou.
     """
     plastico = cor_da_zona(c["cor"])            # a cor da casca, lida do SVG gerado
     luz = luz_do_jogador(c)
     rid = f'c-{c["pref"]}'
+    # AS DUAS MARCAS DO LUGAR SEM DONO, e são as MESMAS que o piloto escreve e
+    # tira (`hefesto_vivo.py`, passos `1b` e `1c`). Usar as marcas dele — em vez
+    # de inventar um terceiro estado só para o desenho — é o que faz a página
+    # parada e a página viva serem a MESMA página.
+    #
+    # A CLASSE `card` FICA NOS QUATRO, e é de propósito: `CARD_DA_MESA` e
+    # `CAIXA_COM_COR` ancoram em `class="ctl card"` seguido do que vem depois, e
+    # `class="ctl card off"` não casa nenhuma das duas — é assim que as duas
+    # âncoras continuam contando só os CONECTADOS, sem uma linha de mudança.
+    marca = "" if conectado else ' data-conectado="nao"'
+    classe = "ctl card" if conectado else "ctl card off"
+    # A COR DO PLÁSTICO E A POSIÇÃO DO DEDO SÓ EXISTEM ONDE HÁ APARELHO. Sem
+    # elas, `--plastico` e `left`/`top` caem nos dois PISOS da folha
+    # (`PISO_DO_PLASTICO` e `PISO_DAS_POSICOES`) — que é a resposta certa para
+    # um assento vazio, e a mesma que o produto dá quando a mesa viva não nomeia
+    # o lugar. Cravá-las aqui seria o desenho afirmando a cor de um plástico que
+    # ninguém leu, que é exatamente a lei dela de 03/09.
+    casca = f' style="--plastico:{plastico}"' if conectado else ""
+
+    def onde_esta(x, y, quebra=""):
+        """O `left`/`top` de um pontinho — nada, no lugar sem controle."""
+        return f'{quebra} style="left:{x}%;top:{y}%"' if conectado else ""
     # O SELO INTEIRO, montado pelo dono único (`selo_do_microfone`): são três
     # elementos com o mesmo endereço e três alvos de pintura, e escrevê-los à
     # mão nos dois lugares era como a cor congelou. O `mic_selo`/`mic_off` que
@@ -2144,10 +2212,10 @@ def bloco(c, *, bat, carga=None, glifos_on, l2, r2, touch, sticks,
     # ESCALA: 1 g é o repouso, então a barra tem de mostrar 0,976 sem
     # estourar. Ver o comentário do bloco, abaixo.
     accel_html = chr(10).join(gx("accel", e, v, cor) for e, v, cor in (accel or []))
-    fx = f'''      <label class="faixa" for="{rid}" title="{ABRE_O_CARD}">
+    fx = f'''      <label class="faixa" for="{rid}" title="{ABRE_O_CARD if conectado else LUGAR_VAZIO_AQUI}">
 {identidade(c, bat=bat, carga=carga, meio=resumo_fechado(mic_mudo))}
       </label>'''
-    return f'''    <div class="ctl card" style="--plastico:{plastico}" data-controle="{c.get("uniq") or c["pref"]}">
+    corpo_do_card = f'''    <div class="{classe}"{casca} data-controle="{c.get("uniq") or c["pref"]}"{marca}>
       <!-- O ACORDEÃO GANHOU O DÉCIMO ALVO — T-07, 04/09/2026. A ONDA0-P
            construiu o `marcado` no piloto (o único que escreve `el.checked`) e
            pediu o ENDEREÇO a esta aba.
@@ -2173,8 +2241,7 @@ def bloco(c, *, bat, carga=None, glifos_on, l2, r2, touch, sticks,
             <div class="rot rot-linha">Touchpad
               <span class="de-quem" data-campo="touch-estado" title="{DICA_TOQUE}">{toque_txt}</span></div>
             <div class="touch">
-              <span class="ponto{ponto_on}" data-campo="touch-ponto" data-hef-alvo="classe"
-                style="left:{touch[0]}%;top:{touch[1]}%"></span></div>
+              <span class="ponto{ponto_on}" data-campo="touch-ponto" data-hef-alvo="classe"{onde_esta(touch[0], touch[1], chr(10) + " " * 16)}></span></div>
           </div>
           <!-- O TRAVESSÃO VIROU PALAVRA — decisão dela, 04/09/2026 [02]:
                *"palavra curta no lugar do travessão, frase inteira no hover"*,
@@ -2214,14 +2281,14 @@ def bloco(c, *, bat, carga=None, glifos_on, l2, r2, touch, sticks,
                 <div class="stick-rot">Analógico<br>esquerdo</div>
                 <div class="stick" data-stick="l">
                   <span class="rotl" data-campo="l3">{ROTULO_DO_CLIQUE["l"]}</span>
-                  <span class="p" style="left:{pos(sticks[0])}%;top:{pos(sticks[1])}%"></span></div>
+                  <span class="p"{onde_esta(pos(sticks[0]), pos(sticks[1]))}></span></div>
                 <div class="xy" data-xy="l" data-campo="xy-l" data-hef-alvo="html">{_texto_do_xy(sticks[0], sticks[1])}</div>
               </div>
               <div>
                 <div class="stick-rot">Analógico<br>direito</div>
                 <div class="stick" data-stick="r">
                   <span class="rotl" data-campo="r3">{ROTULO_DO_CLIQUE["r"]}</span>
-                  <span class="p" style="left:{pos(sticks[2])}%;top:{pos(sticks[3])}%"></span></div>
+                  <span class="p"{onde_esta(pos(sticks[2]), pos(sticks[3]))}></span></div>
                 <div class="xy" data-xy="r" data-campo="xy-r" data-hef-alvo="html">{_texto_do_xy(sticks[2], sticks[3])}</div>
               </div>
             </div>
@@ -2403,6 +2470,109 @@ def bloco(c, *, bat, carga=None, glifos_on, l2, r2, touch, sticks,
       </div>
       </div>
     </div>'''
+    return corpo_do_card if conectado else _so_o_travessao(corpo_do_card)
+
+
+#: TODA TAG QUE CARREGA UM ENDEREÇO, com o que ela abraça até o próprio fecho.
+#: `[^<]*` é o que garante que só a FOLHA case: um endereço com filho de
+#: elemento não entra aqui, e é a auto-checagem de `_so_o_travessao` que
+#: transforma esse silêncio em erro, em vez de deixá-lo passar calado.
+_CAMPO_DE_TEXTO = re.compile(
+    r"<(?P<tag>[a-z]+)(?P<atributos>[^>]*\sdata-campo=\"[^\"]*\"[^>]*)>"
+    r"(?P<dentro>[^<]*)</(?P=tag)>")
+
+#: A mesma tag, sem o fecho — para CONTAR quantos endereços de texto há.
+_TAG_COM_CAMPO = re.compile(r"<[a-z]+[^>]*\sdata-campo=\"[^\"]*\"[^>]*>")
+
+#: Toda tag que pinta um ATRIBUTO, e o nome do atributo que ela pinta.
+_TAG_QUE_PINTA_ATRIBUTO = re.compile(
+    r"<[a-z]+[^>]*\sdata-hef-alvo=\"atributo\"[^>]*>")
+_NOME_DO_ATRIBUTO = re.compile(r"\sdata-hef-atributo=\"([^\"]+)\"")
+
+#: Toda tag que ACENDE por classe, e a classe que ela acende — `on` por padrão,
+#: que é o mesmo default do `escrever()` do piloto (`el.dataset.hefClasse || 'on'`).
+_TAG_QUE_PINTA_CLASSE = re.compile(
+    r"<[a-z]+[^>]*\sdata-hef-alvo=\"classe\"[^>]*>")
+_NOME_DA_CLASSE = re.compile(r"\sdata-hef-classe=\"([^\"]+)\"")
+_O_CLASS = re.compile(r"\sclass=\"([^\"]*)\"")
+
+
+def _so_o_travessao(html_do_card: str) -> str:
+    """Troca por travessão o TEXTO de todo endereço do cartão de um lugar vazio.
+
+    É A MESMA CONTA QUE O PRODUTO FAZ, e não uma segunda:
+    `pacotes.apagar_os_lugares_sem_dono` escreve `TRAVESSAO` em toda chave de um
+    lugar sem dono, e o `escrever()` do piloto leva isso ao texto de cada
+    elemento. Aqui ela roda uma vez, no gerador, para que a página PARADA nasça
+    dizendo o mesmo que a página viva diz no primeiro tique — que é a diferença
+    entre o desenho e o produto se conferirem ou divergirem calados.
+
+    SÃO TRÊS ALVOS, e são os três em que o travessão MUDA alguma coisa —
+    lidos um a um no `escrever()` do `hefesto_vivo.py`, nunca supostos:
+
+      · `texto` — o padrão, sem `data-hef-alvo`. Vira `—`.
+      · `atributo` — o ramo `if(vazio || t === '—')` REMOVE o atributo. Aqui ele
+        sai do desenho pelo mesmo motivo: um
+        `title="Giroscópio: fluindo para o jogo (~250 Hz)"` num assento sem
+        controle é o desenho AFIRMANDO o que não existe, e é a mesma família da
+        barra de bateria a 64% que a folha veio matar em 03/09. É por ele, e não
+        por CSS, que o ♪ de um lugar vazio perde o `data-som` e cai no cinza de
+        "ninguém leu este alto-falante".
+      · `classe` — `aceso = (quando ? t === quando : ligado(t))`, e `—` não é
+        nenhum dos dois: o piloto APAGA a classe. Sem isto o assento vazio
+        nasceria com o `on` do mockup — o botão Círculo apertado, o selo
+        `ATIVO` verde do microfone, o `Sons do jogo` aceso —, que é *meio
+        aceso*, e meio aceso é pior que aceso: quem olha lê a cor antes de ler o
+        campo. Era a razão da folha de 03/09, aplicada às classes.
+
+    OS SEIS RESTANTES NÃO SÃO TOCADOS, e o critério é o do dono
+    (`pacotes.ALVOS_QUE_O_TRAVESSAO_NAO_ATENDE`): largura, altura, cor, valor,
+    html e plástico não aceitam travessão — escrevê-lo ali produziria
+    `style.width = '—%'`, que o CSSOM descarta CALADO e deixa o pixel do mockup
+    de pé. Quem apaga esses é a folha, pelas regras
+    `.ctl[data-conectado="nao"]` que já existem desde 03/09/2026.
+
+    A AUTO-CHECAGEM É O QUE FAZ ISTO NÃO ENVELHECER: `[^<]*` casa só a folha, e
+    um endereço de texto que ganhasse um filho de elemento sairia da conta SEM
+    UM AVISO — a família de defeito que este arquivo inteiro veio curar. Por
+    isso os dois números são comparados, e a divergência é erro.
+    """
+    trocados = 0
+
+    def trocar(m: "re.Match[str]") -> str:
+        nonlocal trocados
+        if "data-hef-alvo=" in m["atributos"]:
+            return m.group(0)
+        trocados += 1
+        return f'<{m["tag"]}{m["atributos"]}>{_VAZIO}</{m["tag"]}>'
+
+    saida = _CAMPO_DE_TEXTO.sub(trocar, html_do_card)
+    de_texto = [t for t in _TAG_COM_CAMPO.findall(html_do_card)
+                if "data-hef-alvo=" not in t]
+    if trocados != len(de_texto):
+        raise SystemExit(
+            f"ERRO no lugar vazio: {len(de_texto)} endereço(s) de texto no "
+            f"cartão e só {trocados} viraram travessão. Um deles deixou de ser "
+            f"folha — o lugar vazio nasceria mostrando o número do mockup.")
+
+    def apagar_atributo(m: "re.Match[str]") -> str:
+        tag = m.group(0)
+        nome = _NOME_DO_ATRIBUTO.search(tag)
+        if not nome:
+            return tag
+        return re.sub(rf'\s{re.escape(nome.group(1))}="[^"]*"', "", tag, count=1)
+
+    def apagar_o_aceso(m: "re.Match[str]") -> str:
+        tag = m.group(0)
+        nome = _NOME_DA_CLASSE.search(tag)
+        acesa = nome.group(1) if nome else "on"
+        return _O_CLASS.sub(
+            lambda c: ' class="{}"'.format(
+                " ".join(k for k in c.group(1).split() if k != acesa)),
+            tag, count=1)
+
+    return _TAG_QUE_PINTA_CLASSE.sub(
+        apagar_o_aceso, _TAG_QUE_PINTA_ATRIBUTO.sub(apagar_atributo, saida))
 
 
 # O ESTADO DE CADA UM, por `pref` da MESA — e SÓ o estado: quem é o controle,
@@ -2515,39 +2685,36 @@ ESTADO = {
 # ERA UM LAÇO POR FORMA (um para os cards, outro para as tiras); agora é UM, e é
 # assim que se sabe que a caixa é uma só. "Quatro" continua sem estar escrito em
 # lugar nenhum: no dia em que a mesa tiver três ou cinco, esta linha não muda.
-def lugar_vazio(c):
-    """O lugar de um controle que não está na mesa — decisão dela, 31/08/2026:
-
-        "Deixa os outros espaços dos 4 controles a mostra ainda mas cinza igual
-         vc fez na aba jogar."
-
-    ELE NÃO ABRE, e é pedido dela no mesmo turno: *"tiramos o modo p3. p4
-    (seções expandidas não aparecem)"*. Por isso não há `<input type=radio>`
-    aqui — sem rádio o CSS não tem como expandi-lo, e a impossibilidade fica na
-    ESTRUTURA, não numa regra que alguém desfaz sem perceber.
-
-    E ELE É MAIS BAIXO QUE UMA LINHA FECHADA, de propósito: um lugar vazio não
-    tem giroscópio para ligar, nem microfone para resumir, nem bateria para
-    medir. O que sobra é o número do lugar e travessões. Medido: 24px contra os
-    34 da linha fechada — e esses 10px por lugar são o que faz os dois botões
-    novos caberem sem o quadro rolar.
-    """
-    return f'''    <div class="ctl off" data-controle="{c["pref"]}" data-conectado="nao"
-         title="Lugar vazio: nenhum controle conectado aqui.">
-      <div class="faixa">
-        <span class="card-nome">P{c["jogador"]}</span>
-        <span class="div">·</span>
-        <span class="leia">{_VAZIO}</span>
-        <span class="bat">{_VAZIO}</span>
-      </div>
-    </div>'''
-
-
-#: O marcador de campo vazio, o mesmo travessão da aba Jogar.
-_VAZIO = "—"
+# O LUGAR VAZIO DEIXOU DE SER UMA FUNÇÃO À PARTE — 07/09/2026,
+# CONTROLES-O-LUGAR-VAZIO-TEM-ENDERECO-01.
+#
+# Aqui morava `lugar_vazio(c)`, que devolvia um cartão de quatro `<span>` SEM UM
+# ÚNICO `data-campo` por dentro. Ele guardava três decisões dela, e as três
+# continuam de pé — mudou só ONDE cada uma está escrita:
+#
+#   · *"Deixa os outros espaços dos 4 controles a mostra ainda mas cinza igual
+#     vc fez na aba jogar"* (31/08) → a classe `off` e o `data-conectado="nao"`,
+#     que `bloco()` escreve pelo `conectado`, e as regras
+#     `.ctl.off` / `.ctl[data-conectado="nao"]` da folha, intactas.
+#   · *"tiramos o modo p3. p4 (seções expandidas não aparecem)"* (31/08) → agora
+#     é o `_fechado_de_vez()` do CSS, e ele vale MAIS do que a ausência de
+#     rádio valia: a ausência só impedia o clique NAQUELE cartão, e o `Todos`
+#     (`body:has(#c-todos:checked) .ctl`) abria o lugar vazio assim mesmo — no
+#     produto, onde o cartão do assento que esvaziou TEM rádio. A regra fecha os
+#     dois caminhos, no desenho e na tela viva.
+#   · a ALTURA de 24px continua sendo do `.ctl.off`, e o `ALTURA_VAZIA` abaixo
+#     continua contando com ela — o corpo do cartão nasce dentro do
+#     `.corpo-cx`, que é `height:0;overflow:hidden;visibility:hidden` enquanto
+#     ninguém abre.
+#
+# POR QUE A FUNÇÃO TINHA DE MORRER, e não ganhar os endereços: duas funções que
+# desenham o mesmo cartão envelhecem separadas. Foi o que aconteceu — o cheio
+# ganhou 101 endereços e o vazio ficou com ZERO, e ninguém viu até ela pôr os
+# quatro DualSense na mesa e a tela mostrar dois.
+_VAZIO = "—"          #: O marcador de campo vazio, o mesmo travessão da aba Jogar.
 
 BLOCOS = "\n".join(
-    bloco(c, **ESTADO[c["pref"]]) if c.get("conectado", True) else lugar_vazio(c)
+    bloco(c, conectado=c.get("conectado", True), **ESTADO[c["pref"]])
     for c in MESA)
 
 # OS NÚMEROS DA APERTADA, medidos no Chrome em 27/08 e usados na legenda. Ficam
@@ -2651,6 +2818,35 @@ def _aberto(sufixo=""):
             f"  body:has(#c-todos:checked) .ctl{sufixo}")
 
 
+# ---------------------------------------------------------------------------
+# E O LUGAR VAZIO NÃO ABRE — 07/09/2026, e é a decisão dela de 31/08 mudando de
+# lugar, não caducando: *"tiramos o modo p3. p4 (seções expandidas não
+# aparecem)"*.
+#
+# ELA MORAVA NA AUSÊNCIA DO RÁDIO, e a ausência guardava só metade. O cartão do
+# lugar vazio passou a ser o MESMO cartão do cheio (ver `bloco`), porque sem os
+# endereços por dentro o dado dela chegava e não tinha onde pousar — e com o
+# cartão inteiro vem o `<input>`, que TEM de vir: é ele que abre o cartão no
+# instante em que o controle chega, sem recarregar a página.
+#
+# A OUTRA METADE JÁ ESTAVA ABERTA ANTES DESTA LEVA, e no produto: com um
+# controle na mesa, o assento que esvaziou continua sendo um cartão de verdade —
+# rádio e tudo — e o `Todos` (`body:has(#c-todos:checked) .ctl`) o abria em 304
+# px de travessões. A ausência do rádio no desenho nunca alcançou isso.
+#
+# A ESPECIFICIDADE FECHA OS QUATRO CRUZAMENTOS, e a conta é esta:
+#   · `.ctl.off:has(> input:checked)` = (0,3,1) contra os (0,2,1) do `_aberto`;
+#   · `body:has(#c-todos:checked) .ctl.off` = (1,2,1) contra os (1,1,1) do
+#     `_aberto` com o `Todos` — e (1,2,1) também vence o (0,3,1) do primeiro,
+#     que é o caso de o `Todos` estar ligado E o rádio do vazio marcado.
+# Nenhum `!important` no caminho, e é de propósito: `!important` numa folha que
+# o produto pode TROCAR inteira é o que faz uma regra sobreviver ao conserto.
+# ---------------------------------------------------------------------------
+def _fechado_de_vez(sufixo=""):
+    return (f".ctl.off:has(> input:checked){sufixo},\n"
+            f"  body:has(#c-todos:checked) .ctl.off{sufixo}")
+
+
 # O CHIP ESCOLHIDO SE ACENDE PELO RÁDIO, não por uma classe que o gerador
 # escreveu. `monta.fita()` marca o chip do alvo com `on`; aqui esse `on` sai (é
 # `fita_clicavel` quem o tira) e quem acende é o estado vivo — senão o P1
@@ -2695,6 +2891,19 @@ CSS += f"""
      a frase presa na linha fechada, que não tem largura para ela. */
   {_aberto(" .faixa .no-jogo[title]")}{{display:block;flex:1 1 0;min-width:0;
     color:var(--texto-mudo);font-weight:400;cursor:help}}
+  /* O LUGAR VAZIO NÃO ABRE, POR REGRA — ver o bloco de `_fechado_de_vez`. As
+     quatro regras desfazem, uma a uma, o que as quatro do `_aberto` fariam: a
+     altura do cartão, a moldura da faixa, o corpo que apareceria e o número do
+     jogador que sumiria da tira. Faltar UMA delas deixa o assento vazio meio
+     aberto, que é pior que aberto — quem olha lê a moldura antes do campo. */
+  {_fechado_de_vez()}{{height:{ALTURA_VAZIA}px;flex:0 0 auto;padding-bottom:0;
+    background:transparent}}
+  {_fechado_de_vez(" > .faixa")}{{flex:1;margin:0;padding:0 26px;
+    border:0;border-radius:0;background:transparent;
+    flex-wrap:nowrap;white-space:nowrap}}
+  {_fechado_de_vez(" > .corpo-cx")}{{flex:0 0 0;height:0;overflow:hidden;
+    visibility:hidden;display:block}}
+  {_fechado_de_vez(" .so-fechado")}{{display:inline}}
   {CHIP_ACESO}{{background:var(--sel-bg);color:var(--fg);font-weight:600}}
   .fita label.chip{{cursor:pointer}}
   /* A LÁPIDE DA LEGENDA. Um item que fala do que SAIU não pode ter a mesma cara
@@ -3296,6 +3505,44 @@ def posicao_por_regra(doc):
 # meio da execução do produto — reescrevendo, calada, a especificação aprovada
 # por ela.
 
+#: A abertura de um cartão da mesa — `card` OU `card off`, que é o ponto: desde
+#: 07/09 os quatro lugares são o mesmo cartão, e uma âncora que só casasse o
+#: cheio voltaria a medir metade da mesa.
+_ABRE_O_CARTAO = re.compile(r'<div class="ctl card[^"]*"[^>]*data-controle="([^"]+)"')
+_UMA_DIV = re.compile(r"<div\b|</div>")
+
+
+def campos_de_cada_lugar(corpo: str) -> dict[str, set[str]]:
+    """Os `data-campo` que cada `[data-controle]` carrega, lidos por ESTRUTURA.
+
+    POR CONTAGEM DE `<div>`, E NÃO POR `split` DE TEXTO: a pergunta é *"que
+    endereços estão DENTRO deste cartão"*, e isso é estrutura — é a mesma razão
+    que fez `pacotes._OlhoNaPagina` nascer parser em vez de expressão regular.
+    Um `split` daria a resposta certa hoje e erraria calado no dia em que um
+    cartão ganhasse um irmão.
+
+    ELA EXISTE PARA UMA AUTO-CHECAGEM SÓ, e é a que impede o defeito de 07/09 de
+    voltar: os quatro lugares têm de ter o MESMO conjunto de endereços. Enquanto
+    o lugar vazio era um ramo à parte, ele tinha ZERO e os cheios tinham 101 — e
+    nenhuma régua desta casa via a diferença.
+    """
+    achados: dict[str, set[str]] = {}
+    for m in _ABRE_O_CARTAO.finditer(corpo):
+        prof, j = 0, m.start()
+        while True:
+            t = _UMA_DIV.search(corpo, j)
+            if t is None:
+                raise SystemExit(
+                    f"ERRO na leitura dos lugares: o cartão `{m.group(1)}` não "
+                    f"fecha — a forma do cartão mudou e a régua mede metade.")
+            prof += -1 if t.group(0) == "</div>" else 1
+            j = t.end()
+            if prof == 0:
+                break
+        achados[m.group(1)] = set(re.findall(r'data-campo="([^"]+)"', corpo[m.start():j]))
+    return achados
+
+
 def _conferir(doc):
     """As decisões dela de 31/08 nesta aba, conferidas NA SAÍDA.
 
@@ -3325,6 +3572,40 @@ def _conferir(doc):
         if not cond:
             falhas.append(oque)
 
+    # ---------------------------------------------------------------------
+    # 0'. OS QUATRO LUGARES TÊM OS MESMOS ENDEREÇOS — 07/09/2026,
+    #     CONTROLES-O-LUGAR-VAZIO-TEM-ENDERECO-01. É A RÉGUA QUE FALTAVA.
+    #
+    #     O DEFEITO QUE ELA PEGA, medido na mesa dela com os QUATRO DualSense
+    #     ligados: o daemon publicava quatro, a carga chegava com
+    #     `colunas = ['p1','p2','p3','p4']`, e a tela mostrava DOIS. Os cartões
+    #     do p3 e do p4 vinham de um ramo à parte (`lugar_vazio`) que emitia
+    #     **zero `data-campo`** — e o passo 2 do piloto procura o endereço
+    #     DENTRO do bloco daquele `data-controle`. O dado dela chegava e não
+    #     tinha onde pousar.
+    #
+    #     NENHUMA RÉGUA DESTA CASA VIA ISSO, e a razão é a forma de todas as
+    #     outras: elas contam ocorrência no documento (`corpo.count(...)`) e
+    #     comparam com `len(CONECTADOS)` — que é exatamente o número que o
+    #     defeito produzia. Uma conta que confere com a metade errada da mesa dá
+    #     verde sobre ela. Esta pergunta é outra: *os quatro lugares são o mesmo
+    #     cartão?* — e ela não tem como passar com um lugar oco.
+    #
+    #     A MORDIDA: tire o `else _so_o_travessao(...)` do `bloco` e devolva o
+    #     ramo do lugar vazio; esta linha reprova nomeando o que falta em cada.
+    lugares = campos_de_cada_lugar(corpo)
+    exigir(sorted(lugares) == sorted(c["pref"] for c in MESA),
+           f"os cartões da mesa são {sorted(lugares)} e a mesa é "
+           f"{sorted(c['pref'] for c in MESA)} — um lugar sumiu do desenho")
+    if lugares:
+        uniao = set().union(*lugares.values())
+        for pref, campos in sorted(lugares.items()):
+            faltando = sorted(uniao - campos)
+            exigir(not faltando,
+                   f"o lugar `{pref}` não carrega {len(faltando)} endereço(s) "
+                   f"que os outros carregam: {faltando[:6]}{'…' if len(faltando) > 6 else ''} "
+                   f"— o dado dela chega e não tem onde pousar")
+
     # 0. O LUGAR VAZIO NÃO PODE MOSTRAR O DESENHO. As três regras que apagam a
     #    bateria, a luz e os sensores de um assento sem controle. Sem elas a
     #    linha do P2 volta a exibir 64% de bateria e dois chips VERDES com o
@@ -3347,15 +3628,31 @@ def _conferir(doc):
     # 2. O "Desativado" do microfone saiu. *"remove o desligado (fica desligado
     #    com slicer no zero)"* — o slider em 0 é o que desliga.
     exigir('data-mic-modo="desativado"' not in corpo, "o Desativado do microfone voltou")
-    exigir(corpo.count('data-mic-modo="') == 2 * len(CONECTADOS),
-           "os modos do microfone não são 2 por controle conectado")
+    # ---------------------------------------------------------------------
+    # A CONTA PASSOU DE `CONECTADOS` PARA `MESA` — 07/09/2026, e em TODA régua
+    # que conta ENDEREÇO. Ela não afrouxou: ficou maior.
+    #
+    # Até aqui o lugar vazio não tinha endereço nenhum, então `len(CONECTADOS)`
+    # era o número certo por acidente — e era o número que o DEFEITO produzia.
+    # Uma régua que confere com a metade errada da mesa dá verde sobre ela: foi
+    # assim que 101 endereços faltaram no p3 e no p4 por quinze levas, com estas
+    # vinte e três linhas VERDES o tempo todo.
+    #
+    # O QUE CONTINUA EM `CONECTADOS` são as duas coisas que a mesa só tem para
+    # quem está nela: os chips da FITA (`monta.fita()` só desenha o conectado) e
+    # a PALAVRA do desenho — a cena que ela aprovou, com dois cheios e dois
+    # vazios. Contar chip por `MESA` faria o gerador parar no dia em que ela
+    # desligar um controle, que é o defeito irmão deste.
+    # ---------------------------------------------------------------------
+    exigir(corpo.count('data-mic-modo="') == 2 * len(MESA),
+           f"os modos do microfone não são 2 por lugar da mesa ({2 * len(MESA)})")
     # 2b. OS DOIS MODOS TÊM QUEM OS ATENDA, e o container NÃO é endereço de
     #     pintura. As duas metades da cura de 01/09/2026, e as duas mordem:
     #     sem `data-gesto` os botões chegam ao despachante chamando-se `clique`
     #     e o gesto recusa; com `data-campo` no `<span>` que os envolve, o
     #     primeiro tique da pintura os troca por um travessão — medido, 4
     #     botões antes e 0 depois.
-    exigir(corpo.count('data-gesto="mic-modo"') == 2 * len(CONECTADOS),
+    exigir(corpo.count('data-gesto="mic-modo"') == 2 * len(MESA),
            "os modos do microfone perderam o `data-gesto` — chegam como 'clique'")
     exigir('data-campo="mic-modo"' not in corpo,
            "o `data-campo` voltou ao container dos modos do microfone: a "
@@ -3367,7 +3664,7 @@ def _conferir(doc):
     #     A régua mora AQUI e não no piso do casamento porque lá ela não morde:
     #     a aba casa 10 endereços contra um piso de 9, então perder UM passa.
     for campo in ("bateria", "bateria-barra"):
-        exigir(corpo.count(f'data-campo="{campo}"') == len(CONECTADOS),
+        exigir(corpo.count(f'data-campo="{campo}"') == len(MESA),
                f"a bateria perdeu o endereço `{campo}` — o número volta a ser "
                f"o do desenho")
 
@@ -3381,7 +3678,7 @@ def _conferir(doc):
     #        ícone do desenho sobre qualquer carga que o aparelho tivesse;
     #      · sem o `title` no card do rádio, o ícone perde o nome acessível e
     #        quem não reconhece o desenho fica sem o dado.
-    exigir(corpo.count('data-campo="bateria-carga"') == 2 * len(CONECTADOS),
+    exigir(corpo.count('data-campo="bateria-carga"') == 2 * len(MESA),
            "o estado de carga perdeu o endereço `bateria-carga` — o ícone "
            "volta a ser o que este gerador desenhou")
     for atributo in ("title", "data-carga"):
@@ -3433,11 +3730,11 @@ def _conferir(doc):
                          ("alto-barra", ("largura", "valor")),
                          ("luz-cor", ("cor", "cor")), ("touch-ponto", ("classe",))):
         tags = re.findall(r'<[^>]*data-campo="' + re.escape(campo) + r'"[^>]*>', corpo)
-        exigir(len(tags) == len(CONECTADOS) * len(alvos),
-               f"o endereço `{campo}` não está nos {len(CONECTADOS)} cards "
+        exigir(len(tags) == len(MESA) * len(alvos),
+               f"o endereço `{campo}` não está nos {len(MESA)} lugares "
                f"com os {len(alvos)} alvo(s) que ele tem")
         for alvo in set(alvos):
-            quantos = len(CONECTADOS) * alvos.count(alvo)
+            quantos = len(MESA) * alvos.count(alvo)
             certos = [t for t in tags if f'data-hef-alvo="{alvo}"' in t]
             exigir(len(certos) == quantos,
                    f"`{campo}` perdeu o `data-hef-alvo={alvo}` em "
@@ -3449,19 +3746,19 @@ def _conferir(doc):
     #     Sem `data-gesto` o ouvinte monta o nome como `clique`, aba nenhuma o
     #     registra, e a recusa sai no stderr que ela nunca lê. MORDE: tire o
     #     `data-gesto="sensor"` de `sensores_da_peca` e esta linha reprova.
-    exigir(corpo.count('data-gesto="sensor"') == 2 * len(CONECTADOS),
-           f"os {2 * len(CONECTADOS)} interruptores de sensor não têm "
+    exigir(corpo.count('data-gesto="sensor"') == 2 * len(MESA),
+           f"os {2 * len(MESA)} interruptores de sensor não têm "
            f"`data-gesto` — o clique volta a morrer no stderr")
 
     # 2f. OS DOIS DESLIZANTES (D-08 dela). Um por bloco, dois por card, e cada
     #     um diz de QUAL volume fala — sem o `data-volume` o gesto não sabe se
     #     mexe no microfone ou no alto-falante.
-    exigir(corpo.count('type="range"') == 2 * len(CONECTADOS),
-           f"os {2 * len(CONECTADOS)} deslizantes de volume sumiram — os dois "
+    exigir(corpo.count('type="range"') == 2 * len(MESA),
+           f"os {2 * len(MESA)} deslizantes de volume sumiram — os dois "
            f"volumes voltam a ser pintura, e o ♪ volta a travar para sempre")
     for qual in ("microfone", "alto-falante"):
-        exigir(corpo.count(f'data-volume="{qual}"') == len(CONECTADOS),
-               f"o deslizante de {qual} não está nos {len(CONECTADOS)} cards")
+        exigir(corpo.count(f'data-volume="{qual}"') == len(MESA),
+               f"o deslizante de {qual} não está nos {len(MESA)} lugares")
 
     # 2g. O ♪ PINTA POR LEITURA — decisão [09] (04/09) e 02-Q9 (06/09). O
     #     `alto-estado` era escrito a cada tique dentro de um `<span hidden>`;
@@ -3471,7 +3768,7 @@ def _conferir(doc):
            "o `alto-estado` voltou ao desenho — ele era um valor vivo num vão "
            "invisível, e é o ♪ que mostra o mudo agora")
     alvos_do_mudo = re.findall(r'<[^>]*data-campo="alto-mudo"[^>]*>', corpo)
-    exigir(len(alvos_do_mudo) == len(CONECTADOS),
+    exigir(len(alvos_do_mudo) == len(MESA),
            "o ♪ perdeu o endereço `alto-mudo` — ele volta a pintar pelo que o "
            "gerador escreveu, nunca pelo que o aparelho diz")
     # A GUARDA TROCOU DE ALVO E NÃO AFROUXOU — 06/09/2026, decisão 02-Q9. Ela
@@ -3491,8 +3788,23 @@ def _conferir(doc):
            f"congelado na cor que o gerador escreveu")
     # E A PALAVRA DO DESENHO TEM DE SER UMA DAS DUAS QUE O DONO DEVOLVE, senão
     # o CSS não casa e a cor não sai do neutro em card nenhum.
+    #
+    # SÓ NOS CONECTADOS, E O LUGAR VAZIO NÃO PODE TER A PALAVRA — 07/09/2026.
+    # Com o cartão do lugar vazio virando o mesmo cartão do cheio, o ♪ dele
+    # existe; o que ele NÃO tem é leitura. `_so_o_travessao` remove o atributo,
+    # que é o que o piloto faz ao receber `—` (o ramo `vazio || t === '—'` do
+    # alvo `atributo`) — e sem `data-som` o botão fica com o `.mudo-i` de base,
+    # o cinza de *"ninguém leu este alto-falante"*. Escrever `ATIVO` ali seria a
+    # tela afirmando que um alto-falante que não existe está no ar, que é a
+    # mesma família dos 64% de bateria que a folha veio matar em 03/09.
+    com_palavra = [t for t in alvos_do_mudo
+                   if re.search(rf"\s{re.escape(ATRIBUTO_DO_SOM)}=", t)]
+    exigir(len(com_palavra) == len(CONECTADOS),
+           f"o `{ATRIBUTO_DO_SOM}` está em {len(com_palavra)} ♪ e a mesa tem "
+           f"{len(CONECTADOS)} conectado(s) — ou um cheio perdeu a palavra, ou "
+           f"um lugar VAZIO ganhou uma que ninguém leu")
     exigir(all(re.search(rf'\s{re.escape(ATRIBUTO_DO_SOM)}="(?:{SELO_ATIVO}'
-                         rf'|{SELO_MUDO})"', t) for t in alvos_do_mudo),
+                         rf'|{SELO_MUDO})"', t) for t in com_palavra),
            f"o `{ATRIBUTO_DO_SOM}` do desenho não é `{SELO_ATIVO}` nem "
            f"`{SELO_MUDO}` — a palavra deixou de vir de "
            f"`mesa_viva.selo_do_mic` e o CSS parou de casar, sem barulho")
@@ -3509,12 +3821,43 @@ def _conferir(doc):
         exigir(u not in corpo, f"uma unidade voltou ao rótulo do sensor: {u!r}")
 
     # 5. A mesa: os conectados abrem, os vazios não. *"tiramos o modo p3. p4
-    #    (seções expandidas não aparecem)"* — sem `<input>` não há o que expandir.
+    #    (seções expandidas não aparecem)"*.
+    #
+    #    A RÉGUA FOI REESCRITA EM 07/09/2026, E ELA MEDIA O DEFEITO. Aqui estava:
+    #
+    #        for pedaco in corpo.split('class="ctl off"')[1:]:
+    #            exigir("<input" not in pedaco.split("</div>")[0],
+    #                   "um lugar vazio ganhou rádio — ele abriria")
+    #
+    #    Ela cobrava a AUSÊNCIA DO RÁDIO, e a ausência do rádio era o que
+    #    obrigava o lugar vazio a ser um cartão à parte — sem rádio, sem corpo, e
+    #    sem um único `data-campo` por dentro. Era ela que cimentava o defeito
+    #    que ela mandou curar: com os quatro DualSense na mesa, dois lugares
+    #    diziam `Desconectado` com o dado dela chegando e não tendo onde pousar.
+    #
+    #    E ELA NUNCA GUARDOU O QUE PROMETIA. No PRODUTO o assento que esvazia é
+    #    um cartão de verdade — rádio e tudo —, e o `Todos`
+    #    (`body:has(#c-todos:checked) .ctl`) o abria em 304 px de travessões. A
+    #    ausência no desenho só falava do desenho.
+    #
+    #    O QUE ENTRA NO LUGAR é a decisão dela escrita onde ela alcança os dois:
+    #    as quatro regras de `_fechado_de_vez`. NÃO É AFROUXAR — é medir na folha
+    #    o que a estrutura não conseguia dizer. MORDE: apague qualquer uma das
+    #    quatro e esta linha reprova nomeando o seletor.
     exigir(corpo.count('data-conectado="nao"') == VAZIOS,
            f"os lugares vazios não são {VAZIOS}")
-    for pedaco in corpo.split('class="ctl off"')[1:]:
-        exigir("<input" not in pedaco.split("</div>")[0],
-               "um lugar vazio ganhou rádio — ele abriria")
+    exigir(corpo.count(f'title="{LUGAR_VAZIO_AQUI}"') == VAZIOS,
+           f"a tira do lugar vazio não diz que é lugar vazio em {VAZIOS} assento(s) "
+           f"— ela voltou a prometer que abre o card, e a folha recusa")
+    exigir(corpo.count(f'title="{ABRE_O_CARD}"') == len(CONECTADOS),
+           f"a promessa de abrir o card não está nos {len(CONECTADOS)} conectados")
+    for sufixo, oque in ((" ", "a altura do cartão"), (" > .faixa", "a moldura da faixa"),
+                         (" > .corpo-cx", "o corpo que apareceria"),
+                         (" .so-fechado", "o número do jogador na tira")):
+        regra = _fechado_de_vez("" if sufixo == " " else sufixo)
+        exigir(regra in folha,
+               f"o lugar vazio voltou a poder abrir: sumiu a regra que fecha "
+               f"{oque} (`{regra.splitlines()[0]}`)")
 
     # 6. OS DOIS BOTÕES, e eles apontam para páginas que EXISTEM. Um botão que
     #    abre o nada é pior que nenhum botão.
@@ -3553,7 +3896,7 @@ def _conferir(doc):
     # 8. O TEXTO "vê como" SAIU E A MÁSCARA FICOU. As duas metades, porque a
     #    primeira volta tirou o span inteiro e levou o dado junto.
     exigir("vê como" not in corpo, "o texto 'vê como' voltou")
-    exigir(corpo.count('data-campo="mascara"') == len(CONECTADOS),
+    exigir(corpo.count('data-campo="mascara"') == len(MESA),
            "a máscara sumiu com o texto — ela FICA, e é o dado")
 
     # 9. A IDENTIDADE VEM DA FITA, E NÃO DO MOCKUP — 03/09/2026, lei dela.
@@ -3561,7 +3904,7 @@ def _conferir(doc):
     #    mandar na tela: o nome e o transporte do cabeçalho, os mesmos dois no
     #    chip, e a cor de linha que folha de estilo nenhuma consegue vencer.
     for campo in ("peca", "via"):
-        exigir(corpo.count(f'data-campo="{campo}"') == len(CONECTADOS),
+        exigir(corpo.count(f'data-campo="{campo}"') == len(MESA),
                f"o `{campo}` do cabeçalho do card perdeu o endereço — "
                "a tela volta a mostrar o controle do desenho")
     # O CHIP MORA NO CABEÇALHO, ACIMA DO MIOLO — então ele se confere no `doc`,
