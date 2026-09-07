@@ -697,15 +697,178 @@ def aviso_do_modo_nativo(state: dict[str, Any] | None) -> str | None:
     return FRASE_DO_MODO_NATIVO.format(quantos=quantos)
 
 
-#: AS SETE FONTES DE AVISO. Seis são função PURA de ``home_actions`` que devolve
+# ---------------------------------------------------------------------------
+# AS CINCO QUE A COLUNA NÃO LIA — JOGAR-OS-SEIS-AVISOS-01 (06/09/2026)
+# ---------------------------------------------------------------------------
+# TODAS TÊM A MESMA FORMA, e é a forma que o enunciado da sprint nomeia: **o
+# daemon publica a chave, ou `home_actions` já tem a função pura, e o pacote da
+# aba não lê.** Nada de regra nova: o que nasce aqui é o LEITOR — uma função de
+# ``state`` que devolve texto ou ``None``, que é o contrato de :class:`Aviso`.
+#
+# POR QUE ELAS MORAM AQUI, E NÃO EM ``interface/pacotes/a01_jogar.py``: a sprint
+# diz com todas as letras que *"os avisos entram na coluna Atenção por
+# `painel.AVISOS_DA_TELA` e `ORDEM_DA_GRAVIDADE` — não invente um segundo
+# lugar"*. É a mesma razão que pôs :func:`aviso_do_modo_nativo` aqui em 06/09: o
+# pacote da aba PINTA, e quem responde pelo assunto é o motor.
+def aviso_do_grab_dobrado(state: dict[str, Any] | None) -> str | None:
+    """O jogo pode estar recebendo cada botão duas vezes; ``None`` quando não.
+
+    **A CONDIÇÃO NÃO SE REESCREVE:** ela é de `home_actions.aviso_de_grab`, que
+    a I9 já tirou do meio do montador de widgets exatamente para ser chamada de
+    fora da GTK — ``is_primary and gamepad_on and grab_state == "failed"``. O
+    que esta função faz é o que faltava: **ler do ``state`` os três termos** que
+    a janela antiga lia dos widgets dela (`home_actions.py:2943` passa
+    ``state.get("primary_grab_state")`` e o ``is_primary`` de cada cartão).
+
+    ``aviso_de_grab`` devolve ``(linha, porquê)`` — a linha era o rótulo e o
+    porquê o ``tooltip``. **A coluna Atenção tem um campo de texto por aviso**,
+    não um `hover` por linha (`a01_jogar.POR_PAGINA`), então as duas viajam
+    juntas numa frase só. Cortar o porquê deixaria na tela o alarme mais
+    confuso desta aba sem o que fazer a respeito, que é o defeito que o próprio
+    ``AVISO_DE_GRAB_PORQUE`` nasceu para curar.
+
+    **SÓ O PRIMÁRIO CONECTADO CONTA.** ``describe_controllers`` devolve UMA
+    entrada com ``connected=False`` quando a mesa está vazia (HARM-CARD-
+    FANTASMA-01), e sem o filtro um controle que já saiu da sala acenderia o
+    aviso de duplicação de um jogo que ninguém está jogando.
+    """
+    if not isinstance(state, dict):
+        return None
+    gamepad = state.get("gamepad_emulation")
+    gamepad_on = bool(gamepad.get("enabled")) if isinstance(gamepad, dict) else False
+    entradas = state.get("controllers")
+    if not isinstance(entradas, list):
+        return None
+    primario = any(
+        isinstance(e, dict) and e.get("connected") is True and bool(e.get("is_primary"))
+        for e in entradas
+    )
+    aviso = home_actions.aviso_de_grab(
+        state.get("primary_grab_state"), is_primary=primario, gamepad_on=gamepad_on
+    )
+    if aviso is None:
+        return None
+    linha, porque = aviso
+    return f"{linha}. {porque}"
+
+
+#: A FRASE DA LINHA DE ORIGEM — **PROVISÓRIO, decisão dela** (PROVA-DE-TELA-01).
+#:
+#: Ela responde a UMA pergunta, e a sprint a escreve assim: *"por que o modo
+#: mudou sem eu mexer"*. A janela antiga respondia com ``"Nativo ligado pelo
+#: perfil ativo"`` / ``"Gamepad ligado pelo perfil ativo"``
+#: (`home_actions.py:2884-2888`), duas frases montadas dentro do render e
+#: juntadas por ``" · "``.
+#:
+#: **O QUE MUDA AQUI É O NOME DO MODO, e é o glossário que manda.** ``Nativo`` e
+#: ``Gamepad`` são palavras da casa; na tela os modos chamam-se *Conexão Nativa
+#: (Sony)* e *Jogar pelo Hefesto* (`docs/A-LINGUA-DESTA-CASA`, §2), e os rótulos
+#: saem de :data:`_ROTULO_DO_MODO`, que é `home_actions._MODE_ITEMS` — o léxico
+#: que as quatro superfícies desta casa compartilham. Digitá-los seria a segunda
+#: cópia da palavra dela.
+#:
+#: **A REGÊNCIA É "QUEM LIGOU … FOI", e não "… foi ligado", por causa do
+#: GÊNERO.** Os dois rótulos que entram aqui têm gêneros diferentes — *a*
+#: Conexão Nativa e *o* Jogar pelo Hefesto —, e um particípio concordaria com um
+#: e erraria o outro em toda tela que mostrasse o primeiro. Uma frase que exige
+#: um `if` de gênero para não sair errada é uma frase mal escolhida; esta não
+#: flexiona nada.
+FRASE_DA_ORIGEM_DO_MODO = "Quem ligou {modo} foi o perfil ativo, e não um gesto seu."
+
+#: O QUE SEPARA AS DUAS ORIGENS quando as duas falam. É o mesmo ``" · "`` da
+#: janela antiga (`home_actions.py:2892`), e não um "e": as duas são fatos
+#: independentes, não uma frase composta.
+SEPARADOR_DA_ORIGEM = " · "
+
+
+def aviso_da_origem_do_modo(state: dict[str, Any] | None) -> str | None:
+    """O modo em vigor foi ligado pelo PERFIL, e não por ela; ``None`` se não.
+
+    **É A SEGUNDA DAS SETE QUE NÃO MORA EM ``home_actions``, e pela mesma razão
+    da primeira** (:func:`aviso_do_modo_nativo`): lá ela nunca foi função. A
+    regra vivia SOLTA dentro de ``HomeActionsMixin._render_home``, montando uma
+    lista de pedaços entre dois `set_text` — não havia o que importar. A janela
+    GTK saiu inteira em 06/09 (``D-0609-GTK-LEVA-INTEIRA``), então pôr isto lá
+    criaria um dono novo num arquivo que está de saída.
+
+    AS DUAS CHAVES SÃO DO DAEMON, e cada uma tem escritor próprio:
+    ``native_mode_origin`` (`daemon/state_store.py:734`) e ``mode_from_profile``
+    (`daemon/lifecycle.py:2490`). O ``native_mode`` entra na conta junto com a
+    origem porque a origem SOBREVIVE ao modo no store — sem ele a tela diria
+    que o perfil ligou um Nativo que já não está de pé.
+
+    ``== "profile"`` e ``== "gamepad"`` LITERAIS, e não "qualquer coisa que não
+    seja vazio": os dois campos têm outros valores (origem manual, e o
+    ``native`` do ``mode_from_profile``, que o ramo de cima já cobre), e um
+    ``truthy`` transformaria *"você mesma ligou"* em *"o perfil ligou"*.
+    """
+    if not isinstance(state, dict):
+        return None
+    partes: list[str] = []
+    if state.get("native_mode") and state.get("native_mode_origin") == "profile":
+        partes.append(FRASE_DA_ORIGEM_DO_MODO.format(modo=_ROTULO_DO_MODO[MODE_NATIVE]))
+    if state.get("mode_from_profile") == "gamepad":
+        partes.append(FRASE_DA_ORIGEM_DO_MODO.format(modo=_ROTULO_DO_MODO[MODE_GAMEPAD]))
+    return SEPARADOR_DA_ORIGEM.join(partes) if partes else None
+
+
+#: O QUE O "Reconectar Controles" DIZ QUANDO NEM O PRIMEIRO PASSO SAIU.
+#:
+#: PROVISÓRIO — texto de tela é palavra dela (PROVA-DE-TELA-01). A janela antiga
+#: dizia *"Não consegui reconciliar — o Hefesto pode estar desligado."*, um
+#: literal solto dentro do ``_sync_fail`` do handler
+#: (`home_actions.py:3319-3322`) — sem constante, e portanto sem como ser
+#: importado por quem não é aquela janela.
+#:
+#: **O VERBO MUDOU PORQUE O BOTÃO MUDOU.** A legenda desta aba registra a troca:
+#: *"'Reconciliar jogadores' virou 'Reconectar Controles'"* (`aba01.py:1673`).
+#: Uma recusa que usa o verbo de um botão que não existe mais manda a pessoa
+#: procurar o que não está lá, que é o que o glossário proíbe.
+#:
+#: E ELA NÃO AFIRMA QUE NADA ACONTECEU: ``chamar``/``resultado`` devolvem falha
+#: também no timeout, e o daemon pode ter feito o trabalho sem a resposta
+#: chegar — é a mesma cicatriz que a `a09_sistema.SEM_RESPOSTA_DO_SERVICO`
+#: escreve por extenso. O que ela afirma é o que se sabe: não deu para falar.
+RECONECTAR_SEM_SERVICO = (
+    "Não consegui falar com o serviço para reconectar os controles — o Hefesto "
+    "pode estar desligado."
+)
+
+
+def recibo_do_reconectar(jogadores: object, resultado: object) -> str:
+    """A frase única do "Reconectar Controles" — quem escreve é `home_actions`.
+
+    **NADA SE MONTA AQUI.** `home_actions.reconciliar_toast` é a dona das quatro
+    desfechos que o gesto tem, e ela já os separa: quantos jogadores voltaram; a
+    numeração compactada em N controles; a numeração que já estava compacta; e a
+    recusa por jogo aberto, que **não é falha** — com os jogadores de pé, um
+    recado de erro seria a interface mentindo.
+
+    Esta função existe por UM motivo, e ele é de posição: `reconciliar_toast`
+    vive em `home_actions`, que é a camada da janela antiga, e o gesto da aba
+    vive em `interface/pacotes/`. Um `import` direto de lá para cá poria o nome
+    do dono dentro do lado HTML — e é este módulo, e não o pacote da aba, que a
+    casa elegeu como a ponte entre os dois (é o que `AVISOS_DA_TELA` já faz com
+    as outras sete).
+    """
+    return home_actions.reconciliar_toast(jogadores, resultado)
+
+
+#: AS DOZE FONTES DE AVISO. Dez são função PURA de ``home_actions`` que devolve
 #: o texto ou nada (``None`` ou ``""``, conforme a que estava lá antes; os dois
-#: contam como "sem aviso"); a sétima é :func:`aviso_do_modo_nativo`, que nasceu
-#: aqui em 06/09/2026 e diz por quê no próprio docstring.
+#: contam como "sem aviso"); as outras duas — :func:`aviso_do_modo_nativo` e
+#: :func:`aviso_da_origem_do_modo` — nasceram aqui, e cada uma diz por quê no
+#: próprio docstring.
+#:
+#: **NÃO CONTE ESTA LISTA NUM NÚMERO ESCRITO EM OUTRO LUGAR.** A docstring de
+#: `a01_jogar._avisos` já errou o próprio três vezes em três dias; o que fica
+#: escrito é a LISTA, que se conta sozinha. Quem acrescentar uma fonte
+#: acrescenta uma linha aqui — e nada mais.
 #:
 #: O aviso do mockup — *"Dois rádios da bancada estão em portas vizinhas"* — é
 #: **cena**, e a legenda dele já o declarava (``aba01.AVISOS``): a frase é da
 #: aba Conexões, e o ``state_full`` não publica contagem nem texto de aviso.
-#: A coluna viva a substitui pelas seis abaixo.
+#: A coluna viva a substitui pelas de baixo.
 AVISOS_DA_TELA: tuple[Aviso, ...] = (
     Aviso("PAUSA", home_actions.texto_da_pausa, "home_actions.texto_da_pausa"),
     Aviso("GAMEPAD", home_actions.vpad_degradation_text, "home_actions.vpad_degradation_text"),
@@ -728,6 +891,62 @@ AVISOS_DA_TELA: tuple[Aviso, ...] = (
     # único que não dizia quantos jogadores existem nele. Entra por ÚLTIMO na
     # declaração e por ORDEM na tela — quem ordena é `ORDEM_DA_GRAVIDADE`.
     Aviso(SELO_DO_MODO, aviso_do_modo_nativo, "painel.aviso_do_modo_nativo"),
+    # --- JOGAR-OS-SEIS-AVISOS-01, 06/09/2026: as cinco que faltavam ---------
+    #
+    # NENHUM SELO NOVO, e é escolha medida. `a01_jogar.ORDEM_DA_GRAVIDADE` diz
+    # que o que não está na tupla dela cai DEPOIS DE TUDO — e com a coluna
+    # mostrando três de cada vez (`AVISOS_NA_COLUNA`), um selo fora da escada é
+    # um selo que a máquina cheia esconde atrás do `+N`. As cinco entram nos
+    # degraus que já existem, pelo assunto de cada uma.
+    #
+    # `MODO` — a tela promete "Controlar o PC" e o controle não move o cursor.
+    # É o MODO-QUE-NAO-CONTROLA-01, medido com ela ao vivo (*"cliquei em
+    # aplicar e nada"*), e é a MESMA pergunta do `aviso_do_modo_nativo` vizinho:
+    # o modo em vigor faz o que o nome dele promete? Os dois nunca disputam a
+    # linha — um só fala no Nativo, o outro só no desktop.
+    #
+    # **O TERCEIRO ARGUMENTO DELA NÃO SE PASSA AQUI, e o custo está medido no
+    # relato:** `texto_do_desktop_sem_emulacao` aceita `modo_mudou_agora=` para
+    # não julgar a emulação no mesmo tique em que o modo mudou (o
+    # `mouse.emulation.restore` é o ÚLTIMO dos três IPCs). Uma fonte desta
+    # coluna é função PURA de `state`, e o tique da interface nova não tem
+    # memória do tique anterior — então o aviso pode piscar durante a transição
+    # para o desktop. `modo_exibido=` também fica de fora, e por medição: nesta
+    # interface o clique aplica na hora, então exibido e vigente são o mesmo
+    # valor e o argumento não muda desfecho nenhum.
+    Aviso("MODO", home_actions.texto_do_desktop_sem_emulacao,
+          "home_actions.texto_do_desktop_sem_emulacao"),
+    # `GAMEPAD` — os dois falam de como o JOGO vê os controles, que é o critério
+    # que o degrau declara. O vpad degradado é o jogo recebendo MENOS do que ela
+    # pediu; o grab dobrado é o jogo recebendo DUAS VEZES o mesmo botão.
+    #
+    # A TERCEIRA FORMA DESSE MESMO ASSUNTO — a divergência de máscara — **não
+    # entra nesta tupla**, e a razão é de ENDEREÇO, não de conteúdo:
+    # `home_actions.texto_da_divergencia` devolve markup do Pango, e quem sabe
+    # tirá-lo é uma função da JANELA GTK. Apontar deste arquivo para lá seria
+    # uma citação NOVA para a janela que está saindo (`D-0609-GTK-LEVA-INTEIRA`),
+    # e há portão que reprova — `scripts/check_nada_aponta_para_a_janela.py`,
+    # que reprovou a primeira versão desta cura em 06/09/2026 nomeando arquivo e
+    # linha. Ela mora em `a01_jogar._aviso_da_divergencia_de_mascara`, ao lado
+    # do `_aviso_da_ponte`, que é a outra fonte desta coluna que volta em markup
+    # e que já tem a única citação DECLARADA daquele arquivo.
+    #
+    # E O NOME DAQUELA FUNÇÃO NÃO SE ESCREVE AQUI, nem em prosa: o portão varre
+    # o texto do arquivo, não os imports — um comentário que a soletrasse seria
+    # a citação que ele proíbe. É a mesma lição do `BOOTSTRAP` em 05/09, quando
+    # um aviso citou literalmente o padrão que descrevia e virou o defeito.
+    Aviso("GAMEPAD", aviso_do_grab_dobrado, "painel.aviso_do_grab_dobrado"),
+    # `JOGO` — o degrau é "há jogo aberto", e é exatamente o que esta linha diz:
+    # com a partida de pé o "Reconectar Controles" traz os jogadores de volta e
+    # a numeração espera. A FRASE É DO DONO, sem prefixo nosso: pôr o nome do
+    # botão na frente seria a segunda cópia de um rótulo cujo dono é o gerador
+    # da página.
+    Aviso("JOGO", home_actions._reconciliar_gate_text,
+          "home_actions._reconciliar_gate_text"),
+    # `PERFIL` — o mesmo degrau do cadeado da troca automática e do detector
+    # cego, e o mesmo assunto: o perfil agindo sozinho. Esta é a resposta a "por
+    # que o modo mudou sem eu mexer".
+    Aviso("PERFIL", aviso_da_origem_do_modo, "painel.aviso_da_origem_do_modo"),
 )
 
 
@@ -789,18 +1008,23 @@ __all__ = [
     "CHIPS_DA_ESCADA",
     "DEGRAUS_DA_TELA",
     "ESCRITOR_DOS_MODOS",
+    "FRASE_DA_ORIGEM_DO_MODO",
     "FRASE_DO_MODO_NATIVO",
     "MODOS_DA_TELA",
     "MODOS_LIGADOS",
     "MODO_DESLIGADO",
     "PONTES_DO_INTERRUPTOR",
+    "RECONECTAR_SEM_SERVICO",
     "SELO_DO_MODO",
     "SEM_ALGARISMO",
     "SEM_LEITOR",
+    "SEPARADOR_DA_ORIGEM",
     "Aviso",
     "Chip",
     "Lembranca",
     "Modo",
+    "aviso_da_origem_do_modo",
+    "aviso_do_grab_dobrado",
     "aviso_do_modo_nativo",
     "avisos_do_estado",
     "chips_sem_degrau",
@@ -816,5 +1040,6 @@ __all__ = [
     "nome_do_perfil",
     "plano_do_modo",
     "porque_nao_aplica",
+    "recibo_do_reconectar",
     "texto_da_conta",
 ]
