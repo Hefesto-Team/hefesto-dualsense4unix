@@ -861,18 +861,15 @@
      os glifos L/R/PS e os traços dos botões, e só aparecem em desenho GRANDE.
      Medido na Iluminação no mesmo dia: copiar a regra da aba Jogar não bastava,
      porque lá o desenho tem 62px e aqui tem 124. */
-  /* ---------- A COLUNA QUE PERDEU O DONO AO VIVO — 05/09/2026 ----------
-     QUEIXA DELA: *"temos que entender se só tem um controle conectado só
-     aparece config daquele. aba cinco tá errada."*
+  /* ---------- O LUGAR SEM CONTROLE, E SÃO OS QUATRO PELA MESMA REGRA ----------
+     QUEIXA DELA, 05/09/2026: *"temos que entender se só tem um controle
+     conectado só aparece config daquele. aba cinco tá errada."*
 
      E ESTAVA. Medido na tela viva com UM controle ligado: a segunda coluna
      mostrava `—` no Modelo e, logo abaixo, os TRÊS degraus, os três trilhos e
      os dois interruptores de motor — um deles ACESO em laranja. Controles
-     vivos, clicáveis, para um aparelho que não está aqui. É o mesmo defeito
-     que `_coluna_vazia` nomeia — *"testar a vibração de um lugar vazio não é
-     um botão fraco: é um botão que mente"* — só que num lugar onde o DESENHO
-     não podia prevê-lo: o mockup assa duas colunas ligadas, e quem descobre
-     que só há uma é o produto, ao vivo.
+     vivos, clicáveis, para um aparelho que não está aqui. *Testar a vibração de
+     um lugar vazio não é um botão fraco: é um botão que mente.*
 
      O MECANISMO JÁ EXISTIA E NINGUÉM O HONRAVA. O pacote calcula `vazios`
      (`pacotes/__init__.py`: os lugares para os quais a aba não emitiu coluna) e
@@ -883,20 +880,29 @@
 
      A CURA É CSS, e por isso vale para a coluna que esvazia DEPOIS de a aba
      estar aberta — sem regerar nada, no tique seguinte. Os filhos saem e o
-     `::after` põe o travessão no lugar deles, que é a MESMA língua das colunas
-     que nascem vazias.
+     `::after` põe o travessão no lugar deles.
 
-     `:not(.vazia)` NÃO É DETALHE: o piloto marca `data-conectado="nao"` também
-     nas duas que já nascem vazias, e essas já trazem o `<span class="nada">`
-     por dentro. Sem a exclusão, o `> *` esconderia o próprio travessão delas e
-     a coluna ficaria em branco — a régua trocada por outra pior. */
-  .vib .ctrl[data-conectado="nao"]:not(.vazia){border-color:var(--border-forte)}
-  .vib .ctrl[data-conectado="nao"]:not(.vazia) .seg > *,
-  .vib .ctrl[data-conectado="nao"]:not(.vazia) .motor > *,
-  .vib .ctrl[data-conectado="nao"]:not(.vazia) .acoes-col > *{display:none}
-  .vib .ctrl[data-conectado="nao"]:not(.vazia) .seg::after,
-  .vib .ctrl[data-conectado="nao"]:not(.vazia) .motor::after,
-  .vib .ctrl[data-conectado="nao"]:not(.vazia) .acoes-col::after{
+     O `:not(.vazia)` MORREU EM 07/09/2026, e com ele a classe. Ele existia
+     porque as duas colunas que NASCEM vazias eram outro HTML — um cartão sem um
+     único `data-campo`, com `<span class="nada">—</span>` no lugar dos widgets
+     — e o `> *` teria escondido o próprio travessão delas. Esse cartão era o
+     defeito: o daemon publicava quatro controles, o pacote mandava as quatro
+     colunas e **o dado do P3 e do P4 não tinha onde pousar** (ver `_coluna`).
+     Fundidos os dois ramos, o lugar que nasce vazio é byte a byte o que o
+     piloto produz quando um lugar esvazia — mesma marca, mesma folha, mesmo
+     travessão —, e a exclusão passou a ser a única coisa capaz de separá-los.
+
+     E A CLASSE TINHA DE MORRER, não só a exclusão: **o piloto tira a `off` e o
+     `data-conectado`, e não conhece a `vazia`** (`_pintar`, passo 1c). Um
+     cartão que nascesse com ela ficaria cinza para sempre — agora com o dado
+     dela chegando por baixo, invisível. */
+  .vib .ctrl[data-conectado="nao"]{border-color:var(--border-forte)}
+  .vib .ctrl[data-conectado="nao"] .seg > *,
+  .vib .ctrl[data-conectado="nao"] .motor > *,
+  .vib .ctrl[data-conectado="nao"] .acoes-col > *{display:none}
+  .vib .ctrl[data-conectado="nao"] .seg::after,
+  .vib .ctrl[data-conectado="nao"] .motor::after,
+  .vib .ctrl[data-conectado="nao"] .acoes-col::after{
     /* O TRAVESSÃO É O CARACTERE, NÃO O ESCAPE — medido em 05/09/2026.
        Escrito `content:"\2014"`, o CSS lê `` como o escape (que são
        até seis dígitos hex) e sobra o `4` como texto: a tela mostrava um
@@ -910,50 +916,32 @@
        travessão nasce encostado à esquerda, a 36px da borda, enquanto o
        das colunas que já nascem vazias fica no meio. Duas caras para o
        mesmo estado na mesma tela é o que esta regra existe para evitar. */
+    /* `height:100%` NÃO É ENFEITE — é a régua de alinhamento falando. A coluna
+       vazia tem a MESMA altura da viva (452px) e as mesmas sete linhas; o que
+       acabava 26px antes era o CONTEÚDO da última célula: dois botões
+       empilhados preenchem os 74px de `--r-acoes`, um travessão centrado para
+       no meio. A régua leu isso como "o conteúdo das colunas acaba em y
+       diferentes", e leu certo. */
     content:"—";color:var(--linha);display:flex;align-items:center;
     justify-content:center;grid-column:1/-1;width:100%;height:100%}
-  /* A MOLDURA E O NOME acompanham, pelas mesmas regras das que nascem vazias —
-     senão o desenho do controle fica colorido em cima de uma coluna apagada. */
-  .vib .ctrl[data-conectado="nao"]:not(.vazia) .moldura{border-color:var(--border-forte)}
-  .vib .ctrl[data-conectado="nao"]:not(.vazia) .ds-svg .peca,
-  .vib .ctrl[data-conectado="nao"]:not(.vazia) .ds-svg .corpo,
-  .vib .ctrl[data-conectado="nao"]:not(.vazia) .ds-svg .miolo *{fill:var(--linha) !important}
-  .vib .ctrl[data-conectado="nao"]:not(.vazia) .rot-ctrl{color:var(--linha)}
+  /* A MOLDURA E O NOME acompanham — senão o desenho do controle fica colorido
+     em cima de uma coluna apagada. */
+  .vib .ctrl[data-conectado="nao"] .moldura{border-color:var(--border-forte)}
+  .vib .ctrl[data-conectado="nao"] .rot-ctrl{color:var(--linha)}
+  /* O DESENHO DO LUGAR VAZIO NÃO SE PINTA AQUI — 07/09/2026, e a razão é que
+     ele tem DONO. Havia catorze linhas nesta folha pintando o `<svg>` de
+     `var(--linha)` (`.ctrl.vazia .ds-svg rect`, `circle`, `polygon`, `ellipse`,
+     `text`, `line`, `path`…), e elas existiam porque o `.vazia` ficava DE FORA
+     da regra compartilhada. Com a classe morta, quem responde é
+     `monta.py` — `[data-controle][data-conectado="nao"]:not(.vazia) .ds-svg
+     {visibility:hidden}`, a S-04 de 05/09/2026, palavra dela: *"os svgs não
+     deveriam aparecer prós demais controles desconectados"*.
 
-  .vib .ctrl.vazia{border-color:var(--border-forte)}
-  /* O TRAVESSÃO PREENCHE A CÉLULA, e isto é a régua de alinhamento falando.
-     A coluna vazia tem a MESMA altura da viva (452px) e as mesmas sete linhas —
-     medido. O que acabava 26px antes era o CONTEÚDO da última célula: dois
-     botões empilhados preenchem os 74px de `--r-acoes`; um travessão centrado
-     para no meio. A régua leu isso como "o conteúdo das colunas acaba em y
-     diferentes", e leu certo.
-     `height:100%` no marcador resolve sem mexer em altura nenhuma: ele passa a
-     ocupar a célula e o texto continua centrado dentro dele. */
-  .vib .ctrl.vazia .nada{display:flex;align-items:center;justify-content:center;height:100%;width:100%}
-  .vib .ctrl.vazia .rot-ctrl,
-  .vib .ctrl.vazia .nada{color:var(--linha)}
-  .vib .ctrl.vazia .moldura{border-color:var(--border-forte)}
-  .vib .ctrl.vazia .ds-svg .peca,
-  .vib .ctrl.vazia .ds-svg .corpo,
-  .vib .ctrl.vazia .ds-svg .miolo *{fill:var(--linha) !important}
-  .vib .ctrl.vazia .ds-svg .corpo{stroke:var(--border-forte) !important}
-  .vib .ctrl.vazia .ds-svg text{fill:var(--linha) !important}
-  .vib .ctrl.vazia .ds-svg line{stroke:var(--linha) !important}
-  .vib .ctrl.vazia .ds-svg path:not(.peca):not(.corpo){fill:var(--linha) !important;
-                                                       stroke:var(--linha) !important}
-  .vib .ctrl.vazia .ds-svg rect:not([fill="none"]),
-  .vib .ctrl.vazia .ds-svg circle:not([fill="none"]),
-  .vib .ctrl.vazia .ds-svg polygon:not([fill="none"]),
-  .vib .ctrl.vazia .ds-svg ellipse:not([fill="none"]){fill:var(--linha) !important}
-  .vib .ctrl.vazia .ds-svg rect,
-  .vib .ctrl.vazia .ds-svg circle,
-  .vib .ctrl.vazia .ds-svg polygon,
-  .vib .ctrl.vazia .ds-svg ellipse{stroke:var(--border-forte) !important}
-  /* O travessão fica ONDE o conteúdo ficaria — centrado na célula, para as sete
-     linhas continuarem legíveis como linhas. */
-  .vib .ctrl.vazia .seg,
-  .vib .ctrl.vazia .nada-lin,
-  .vib .ctrl.vazia .acoes-col{display:flex;align-items:center;justify-content:center}
+     MANTÊ-LAS SERIA O SEGUNDO DONO do mesmo fato, e o pior tipo: um desenho
+     cinza por baixo de um `visibility:hidden !important` é código que ninguém
+     vê falhar. Se ela quiser o desenho cinza DE VOLTA no lugar vazio, o lugar
+     de dizer isso é a folha compartilhada — e vale para as quatro abas de uma
+     vez, que é a razão de aquela regra morar lá. */
   /* o respiro entre colunas é do CONTEÚDO, não da célula: padding na coluna
      recua os filhos e a borda deles para 16px antes da divisa, e a linha
      volta a quebrar. Aqui a célula vai até o fim e quem se afasta é o texto. */
@@ -1309,6 +1297,26 @@
      hexadecimal, já declarado no `topo.html`. */
   .vib-estado .est.info{color:var(--cyan)}
   .vib-estado .est.info .sinal{color:var(--cyan)}
+  /* O QUARTO TOM — o RECIBO, e ele nasce com a 05-Q4 dela (06/09/2026):
+     *"Linha embaixo da grade (…) nomeando a coluna (`P2 · voltou ao ajuste
+     geral`) e some logo depois; nada se mexe dentro das colunas"*.
+
+     VERDE É A COR QUE ESTA CASA JÁ USA PARA O QUE DEU CERTO, e não uma quinta
+     invenção: `hefesto_vivo.COR_DO_SUCESSO` lê o MESMO `--green` da paleta
+     para a tarja de sucesso das dez abas, e o `--green` já está declarado no
+     `topo.html`. E não pode ser o `alerta`: laranja sobre um clique que GRAVOU
+     ensina que o botão falha, que é o defeito que a D-01 fechou em 04/09.
+
+     ELE VESTE UM NÓ QUE O PILOTO CRIA, e não uma linha do `html_do_estado`:
+     quem escreve o recado é `hefesto_vivo.pintar_recados`, e o
+     `data-hef-recados` do `#vib-estado` (logo abaixo, no miolo) é o endereço
+     que diz a ele onde pousar. Enquanto o piloto não ler esse atributo — a
+     metade que NÃO é desta posse, relatada com a forma exata em
+     `docs/process/agentes/2026-09-06/ONDA5-05-03.md` — esta regra veste um
+     elemento que a página ainda não recebe. Está declarado aqui de propósito:
+     as duas metades nascem juntas ou a primeira a chegar fica sem par. */
+  .vib-estado .est.recibo{color:var(--green)}
+  .vib-estado .est.recibo .sinal{color:var(--green)}
 
   /* AS QUATRO REGRAS DA `.vib .ressalva` SAÍRAM em 05/09/2026, com a faixa que
      era a única a usá-las. Elas vestiam a `monta.ressalva` que ficava dentro da
@@ -1317,20 +1325,33 @@
      comum segue na folha das dez (`monta.CSS_FOLHA`), intacta para as outras
      abas. */
 
-  /* ---------- A NOTA DO TESTAR — decisão [02] dela, 04/09/2026 ----------
-     *"Só a nota do Testar sobe para a tela. A do Auto fica no `?`."*
+  /* ---------- A `.vib-nota` SAIU — 05-Q2 dela, 05/09/2026 ----------
+     *"As duas na dica."*
 
-     ELA É A ÚNICA FRASE DESTA ABA QUE EXPLICA UM RESULTADO QUE A PRÓPRIA TELA
-     PRODUZ: por que um "Testar" com 220 sai fraco quando o degrau está em
-     Economia. Na janela estável ela é um rótulo em itálico, permanente, no
-     rodapé do card de testar (`rumble_info`, no `gui/main.glade`) — e é DE LÁ
-     que ela é lida, nunca redigitada (:data:`DICA_DOS_VALORES_QUE_PASSAM`).
+     A REGRA DA NOTA MORREU JUNTO COM A LINHA QUE ELA VESTIA. O que ela
+     pintava — a frase :data:`DICA_DOS_VALORES_QUE_PASSAM` como linha
+     permanente embaixo da grade — voltou para o `?` do "Testar agora".
 
-     O ITÁLICO E O TOM APAGADO SÃO OS DA JANELA ESTÁVEL, onde ela é
-     `<i>…</i>` em cor de comentário. Atravessa as cinco colunas porque é sobre
-     a tabela inteira, não sobre uma delas. */
-  .vib-nota{font-size:11.5px;line-height:1.5;color:var(--comment);
-            font-style:italic;margin:4px 4px 0}
+     AS DUAS METADES DA RAZÃO DE 04/09, e só uma caducou:
+
+     · **"a frase é LIDA do glade e nunca redigitada"** — VALE, e vale para
+       sempre. É ela que evitou a segunda cópia de um texto de tela, e o
+       endereço da leitura continua em :data:`DICA_DOS_VALORES_QUE_PASSAM`.
+     · **"ela sobe para a tela"** — CADUCOU em 05/09/2026, decisão dela na
+       05-Q2. A atribuição *"decisão [02] dela, 04/09/2026"* que esta aba
+       carregava em quatro lugares era do PO, não dela: a fonte real é a
+       `ONDA2-05-VIBRACAO-01`, que decidiu no lugar dela a partir do
+       `2026-09-04-O-PO-DECIDE-as-54-e-os-sete-conflitos.md`. Hoje ela
+       respondeu a pergunta, e **a palavra dela vence a atribuição**.
+
+     O CUSTO QUE ELA ACEITOU, e estava escrito na opção que ela escolheu: quem
+     testar em Economia com as barras em 220 não descobre NA TELA por que o
+     tremor saiu fraco — descobre passando o rato no `?`. Ela leu isso e
+     escolheu assim mesmo.
+
+     NÃO SOBRA CSS: a regra `.vib-nota` era a única a usar esta classe, e folha
+     para elemento que a página não tem é a segunda cara de um dado morto — a
+     mesma lição das quatro regras da `.vib .ressalva`, logo acima. */
 
   .vib{
     --larg-rot:138px;
@@ -1878,7 +1899,18 @@
                 Quanto da vibração que o jogo pede chega ao controle.<br><br>
                 <b>Economia</b> 30% · <b>Balanceado</b> 100%, como o jogo pediu ·
                 <b>Máximo</b> 150%, mais forte do que ele pediu.<br><br>
-                O Perfil de Bateria pode impor um teto: esta escolha continua valendo, só não passa dele.
+                O Perfil de Bateria pode impor um teto: esta escolha continua valendo, só não passa dele.<br><br>
+                <!-- O MECANISMO DO AUTO MUDOU DE CASA — 05-Q4 dela, 06/09/2026.
+                     Ele era a segunda metade de `a05_vibracao.FRASE_DA_MESA_EM_AUTO`,
+                     de 331 caracteres, escrita para o CARTÃO — uma caixa que
+                     CRESCE. A faixa embaixo da grade reserva UMA linha e corta o
+                     resto (medido: 189 caracteres é o último que cabe), então a
+                     frase ficou com o FATO e o CONSERTO e o porquê veio para cá,
+                     que é onde há espaço para ele. -->
+                Com a <b>força geral</b> em Auto, a força escolhida numa coluna fica
+                guardada e não chega ao motor: o Auto muda com a bateria a cada
+                instante, e uma força por controle contra um número que se move faria
+                esse controle vibrar de um jeito imprevisível.
               </span></span></span></div>
             <div><span class="sec-rot">Personalizado</span></div>
             <div><span class="sec-rot">Motor esquerdo
@@ -1893,15 +1925,36 @@
               <span class="ajuda">?<span class="dica">
                 <b>Motor de vibração direito</b> (motor leve). Contrapeso menor — soa fino. No código do produto é `weak`.
               </span></span></span></div>
+            <!-- A DICA DESTE `?` ABRE PARA A DIREITA, e o número é medido — 06/09/2026.
+                 Ela carregava `style="left:auto;right:22px"`, que é o arranjo das
+                 dicas que moram do lado DIREITO da página (`.at-col:last-child` na
+                 06, `.col-acao` na 09). Este `?` mora na PRIMEIRA coluna da grade,
+                 a dos rótulos: com `right:22px` a caixa de 330 px nascia em x=146
+                 numa janela que começa em x=370 — **224 px, dois terços dela,
+                 fora da janela**, medidos no Chrome a 1920x1080.
+                 Estava assim antes desta sprint e a página publicada ainda está:
+                 com as duas orações do par a caixa tinha 72 px de altura e o corte
+                 já comia o texto. A 05-Q2 dela põe a terceira frase aqui dentro,
+                 e uma dica que não se lê não cumpre *"as duas na dica"*.
+                 O padrão da casa (`.dica`, com `left:22px` no `topo.html`) abre para a
+                 direita e cabe: x=505, fim em 835, dentro de 370..1550. -->
             <div><span class="sec-rot">Testar agora
-              <span class="ajuda" style="display:inline-block;vertical-align:-3px">?<span class="dica" style="left:auto;right:22px">
+              <span class="ajuda" style="display:inline-block;vertical-align:-3px">?<span class="dica">
                 <b>Testar</b> faz aquele controle tremer meio segundo com os valores das
                 barras daquela coluna; <b>Parar</b> corta a vibração dele agora e devolve
-                a mão ao jogo.
-                <!-- A NOTA DOS VALORES QUE PASSAM SAIU DAQUI e virou linha de
-                     tela — decisão [02] dela, 04/09/2026. Mantê-la nos dois
-                     lugares seria a mesma frase duas vezes na MESMA tela, que é
-                     a forma mais barata de as duas divergirem. Ver `.vib-nota`. -->
+                a mão ao jogo.<br><br>
+                <!-- A NOTA DOS VALORES QUE PASSAM VOLTOU PARA CÁ — 05-Q2 dela,
+                     05/09/2026: *"As duas na dica."* Ela é a única frase desta
+                     aba que explica um resultado que a PRÓPRIA TELA produz (por
+                     que um "Testar" com 220 sai fraco quando o degrau está em
+                     Economia), e por isso mora no `?` do "Testar agora", ao
+                     lado das duas orações do par.
+
+                     E ELA CONTINUA LIDA DO `gui/main.glade`, nunca redigitada
+                     (`DICA_DOS_VALORES_QUE_PASSAM`) — essa metade da razão de
+                     04/09 não caducou. Uma vez só na página: a régua 16 do
+                     gerador conta. -->
+                Os valores acima ainda passam pela intensidade escolhida ali em cima antes de chegar ao controle.
               </span></span></span></div>
             <!-- O RÓTULO "Estado" SAIU EM 05/09/2026, com a faixa inteira —
                  ver `SEM_A_FAIXA_DE_ESTADO`. O `?` dele terminava confessando
@@ -2591,9 +2644,9 @@
                       data-hef-rotulo="o texto do botão">Parar</button>
             </div>
           </div>
-          <div class="ctrl vazia" data-controle="p3" data-conectado="nao"
-               title="Nenhum controle neste lugar.">
-            <div class="moldura" data-hef="desenho"><?xml version="1.0" encoding="utf-8"?>
+          <div class="ctrl off" data-controle="p3" data-uniq="" data-conectado="nao" title="Nenhum controle neste lugar.">
+            <div class="moldura" data-hef="desenho" data-campo="plastico"
+                 data-hef-alvo="plastico"><?xml version="1.0" encoding="utf-8"?>
 <svg data-campo="colorway" data-hef-alvo="atributo" data-hef-atributo="data-colorway" class="ds-svg"  xmlns="http://www.w3.org/2000/svg" viewBox="6.399 22.990 116.684 80.472" width="1160" height="800" data-controle="dualsense" data-modelo="Sony DualSense" xmlns:bx="https://boxy-svg.com">
   <defs>
     <filter id="vb-p3-outline-filter-0" bx:preset="outline 1 0.2 #fff6" color-interpolation-filters="sRGB" x="-50%" y="-50%" width="200%" height="200%">
@@ -2786,11 +2839,11 @@
         <title>Bateria — peça 2</title>
       </path>
     </g>
-    <g id="vb-p3-feat-rumble-esquerdo" class="oculta" data-feature="rumble-esquerdo" style="" transform="matrix(0.992202, 0, 0, 1, 0.180438, 0)">
+    <g id="vb-p3-feat-rumble-esquerdo" data-campo="treme-e" data-hef-alvo="classe" data-hef-classe="acesa" class="oculta" data-feature="rumble-esquerdo" style="" transform="matrix(0.992202, 0, 0, 1, 0.180438, 0)">
       <title>Motor de vibração esquerdo (contrapeso maior — soa grosso)</title>
       <path class="peca" fill="none" stroke="#2f333c" stroke-width="0.35" d="M 32.051 29.975 C 36.433 29.484 40.591 29.409 43.089 29.492 C 43.473 29.506 43.698 29.936 43.493 30.265 C 43.425 30.376 43.317 30.456 43.191 30.487 C 42.694 30.611 42.346 31.123 42.16 31.977 C 41.985 32.791 42.004 33.729 42.08 34.348 C 42.413 36.014 43.269 40.57 44.06 45.684 C 44.879 50.977 42.705 54.717 41.441 55.974 L 41.441 55.975 C 39.755 57.653 38.007 59.393 35.555 62.808 C 33.06 66.283 29.492 74.107 26.283 81.737 C 23.872 87.47 21.683 93.044 20.323 96.504 C 19.971 97.402 19.617 98.299 19.259 99.195 L 19.182 99.353 C 18.964 99.807 18.618 100.528 17.904 100.908 C 17.061 101.357 15.88 101.271 14.138 100.404 C 11.453 99.068 9.301 95.547 8.177 90.078 C 7.047 84.581 6.929 77.004 8.42 67.36 C 10.807 51.922 16.703 38.172 19.366 33.205 C 19.417 33.109 19.497 33.033 19.595 32.987 C 23.035 31.376 27.678 30.466 32.051 29.975 M 20.164 33.834 C 17.509 38.843 11.748 52.364 9.406 67.515 C 7.927 77.083 8.055 84.531 9.154 89.873 C 10.257 95.241 12.313 98.371 14.579 99.498 C 16.229 100.319 17.028 100.234 17.44 100.013 C 17.844 99.799 18.043 99.397 18.281 98.916 L 18.361 98.756 C 18.602 98.154 18.953 97.261 19.39 96.146 C 20.749 92.688 22.948 87.087 25.365 81.341 C 28.562 73.742 32.172 65.801 34.748 62.214 C 37.247 58.732 39.04 56.947 40.742 55.255 C 41.79 54.211 43.84 50.792 43.074 45.839 C 42.489 42.044 41.828 38.262 41.092 34.494 C 41.005 33.8 40.976 32.729 41.186 31.761 C 41.281 31.326 41.433 30.869 41.679 30.475 C 39.209 30.457 35.761 30.576 32.161 30.98 C 27.886 31.459 23.442 32.335 20.164 33.834" style=""/>
     </g>
-    <g id="vb-p3-feat-rumble-direito" class="oculta" data-feature="rumble-direito" style="opacity: 0.55;" transform="matrix(0.987771, 0, 0, 0.998314, 1.473548, 0.129608)">
+    <g id="vb-p3-feat-rumble-direito" data-campo="treme-d" data-hef-alvo="classe" data-hef-classe="acesa" class="oculta" data-feature="rumble-direito" style="opacity: 0.55;" transform="matrix(0.987771, 0, 0, 0.998314, 1.473548, 0.129608)">
       <title>Motor de vibração direito (contrapeso menor — soa fino)</title>
       <path class="peca" fill="none" stroke="#2f333c" stroke-width="0.35" d="M 95.741 29.895 C 91.356 29.402 87.194 29.327 84.693 29.41 C 84.309 29.424 84.083 29.855 84.287 30.185 C 84.356 30.296 84.465 30.376 84.591 30.408 C 85.089 30.532 85.437 31.046 85.622 31.902 C 85.799 32.718 85.779 33.659 85.703 34.28 C 84.968 38.054 84.307 41.843 83.722 45.645 C 82.903 50.953 85.078 54.702 86.343 55.962 L 86.343 55.963 C 88.031 57.646 89.781 59.39 92.234 62.814 C 94.731 66.299 98.302 74.144 101.514 81.794 C 103.928 87.543 106.119 93.131 107.48 96.6 C 107.832 97.501 108.187 98.4 108.546 99.298 L 108.622 99.457 C 108.84 99.913 109.187 100.637 109.9 101.016 C 110.745 101.466 111.928 101.38 113.671 100.511 C 116.358 99.171 118.512 95.641 119.637 90.158 C 120.768 84.646 120.887 77.05 119.394 67.378 C 117.005 51.9 111.103 38.113 108.439 33.133 C 108.388 33.037 108.307 32.96 108.209 32.914 C 104.765 31.299 100.117 30.386 95.741 29.895 M 107.64 33.763 C 110.298 38.786 116.063 52.343 118.407 67.535 C 119.888 77.129 119.759 84.596 118.659 89.952 C 117.554 95.334 115.498 98.473 113.229 99.603 C 111.577 100.426 110.778 100.34 110.365 100.119 C 109.961 99.905 109.762 99.502 109.524 99.02 L 109.446 98.858 C 109.203 98.255 108.852 97.36 108.414 96.242 C 107.054 92.775 104.853 87.159 102.433 81.397 C 99.234 73.778 95.62 65.817 93.043 62.22 C 90.541 58.729 88.746 56.939 87.043 55.242 C 85.994 54.195 83.941 50.766 84.708 45.801 C 85.294 41.996 85.956 38.203 86.692 34.426 C 86.78 33.729 86.808 32.656 86.598 31.685 C 86.503 31.249 86.351 30.791 86.105 30.396 C 88.577 30.377 92.028 30.497 95.631 30.902 C 99.91 31.382 104.358 32.261 107.64 33.763" style=""/>
     </g>
@@ -2896,16 +2949,44 @@
       <text style="dominant-baseline: central; fill: rgb(200, 204, 218); font-family: Zrnic; font-size: 11px; font-weight: 700; text-anchor: middle; white-space: pre;" x="15.971" y="17.025">R</text>
     </g>
 </svg></div>
-            <div class="rot-ctrl">P3 <span class="pt">•</span> Desconectado</div>
-            <div class="seg"><span class="nada">—</span></div>
-            <div class="nada-lin"><span class="nada">—</span></div>
-            <div class="nada-lin"><span class="nada">—</span></div>
-            <div class="nada-lin"><span class="nada">—</span></div>
-            <div class="acoes-col"><span class="nada">—</span></div>
+            <div class="rot-ctrl" data-hef="identidade">P3 <span class="pt">•</span> Desconectado</div>
+            <div class="seg"><button class="" data-campo="degrau" data-hef-alvo="classe" data-hef-quando="economia" data-papel="forca" data-forca="economia">Economia</button><button class="" data-campo="degrau" data-hef-alvo="classe" data-hef-quando="balanceado" data-papel="forca" data-forca="balanceado">Balanceado</button><button class="" data-campo="degrau" data-hef-alvo="classe" data-hef-quando="max" data-papel="forca" data-forca="max">Máximo</button></div>
+            <div class="motor mult"><span></span><input class="trilho arrasta" type="range" min="0" max="200" step="10" value="0" data-papel="intensidade" data-campo="mult-pos" data-hef-alvo="valor" title="Arraste para escolher quanto da vibração que o jogo pede chega a este controle — de 0 a 200%. Grava na hora, no perfil ativo, só para ele."><span class="num" data-campo="mult">—</span><span class="teto mx" data-campo="mult-teto" data-hef-alvo="classe">Máx</span></div>
+            <div class="motor mult off" data-campo="motor-e-pedido" data-hef-alvo="atributo" data-hef-atributo="title"><button class="lado" data-hef="lado" data-lado="e" data-hef-rotulo="o nome do motor" title="Motor de vibração esquerdo — Contrapeso maior — soa grosso. No código do produto é `strong`."><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Motor de vibração esquerdo</title>
+
+  <path d="M20,4 h-6 q-3,0 -4,3 l-3,10 q-2,7 2,11 q4,4 8,1 q3,-2 3,-7 z"
+        fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
+  <path d="M25,9 q4,7 0,14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+  <path d="M29,5 q6,11 0,22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+</svg></button><input class="trilho arrasta" type="range" min="0" max="100" step="1" value="0" data-papel="motor" data-campo="barra-e" data-hef-alvo="valor" data-lado="e" title="Arraste para escolher quanto da vibração que o jogo pede chega a motor de vibração esquerdo — de 0 a 100%. Ela MULTIPLICA o degrau da coluna: 100% deixa como o degrau pediu, 0 deixa este motor mudo neste perfil. Grava na hora, no perfil ativo, só para este controle."><span class="num" data-campo="barra-e-pct">—</span><span class="teto">%</span></div>
+            <div class="motor mult off" data-campo="motor-d-pedido" data-hef-alvo="atributo" data-hef-atributo="title"><button class="lado" data-hef="lado" data-lado="d" data-hef-rotulo="o nome do motor" title="Motor de vibração direito — Contrapeso menor — soa fino. No código do produto é `weak`."><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Motor de vibração direito</title>
+
+  <path d="M12,4 h6 q3,0 4,3 l3,10 q2,7 -2,11 q-4,4 -8,1 q-3,-2 -3,-7 z"
+        fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
+  <path d="M7,10 q-3,6 0,12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+  <path d="M3,7 q-4,9 0,18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+</svg></button><input class="trilho arrasta" type="range" min="0" max="100" step="1" value="0" data-papel="motor" data-campo="barra-d" data-hef-alvo="valor" data-lado="d" title="Arraste para escolher quanto da vibração que o jogo pede chega a motor de vibração direito — de 0 a 100%. Ela MULTIPLICA o degrau da coluna: 100% deixa como o degrau pediu, 0 deixa este motor mudo neste perfil. Grava na hora, no perfil ativo, só para este controle."><span class="num" data-campo="barra-d-pct">—</span><span class="teto">%</span></div>
+            <div class="acoes-col">
+              <!-- "Testar", não "Testar por 500 ms" — decisão dela, 30/08:
+                   *"ali vai ser só Testar; se o user quiser parar vai clicar em Parar"*.
+                   O par Testar/Parar já diz a duração pelo próprio par: quem começa
+                   escolhe quando termina. O meio segundo continua sendo o que o
+                   gesto manda ao daemon; o que sai é a PROMESSA na tela. -->
+              <!-- `data-hef-rotulo` NOS DOIS: o texto de um botão é RÓTULO
+                   (categoria dela, 03/09/2026), e este par foi decidido por ela
+                   justamente para NÃO mudar — quem começa escolhe quando termina.
+                   O que estes botões fazem é gesto, e o gesto tem dono escrito
+                   (`app/telas/vibracao.DONOS_DOS_GESTOS`), com desfecho relatado
+                   pelo piloto. Nada de dado passa pelo texto deles. -->
+              <button class="btn" data-papel="testar"
+                      data-hef-rotulo="o texto do botão">Testar</button>
+              <button class="btn vermelho" data-papel="parar"
+                      data-hef-rotulo="o texto do botão">Parar</button>
+            </div>
           </div>
-          <div class="ctrl vazia" data-controle="p4" data-conectado="nao"
-               title="Nenhum controle neste lugar.">
-            <div class="moldura" data-hef="desenho"><?xml version="1.0" encoding="utf-8"?>
+          <div class="ctrl off" data-controle="p4" data-uniq="" data-conectado="nao" title="Nenhum controle neste lugar.">
+            <div class="moldura" data-hef="desenho" data-campo="plastico"
+                 data-hef-alvo="plastico"><?xml version="1.0" encoding="utf-8"?>
 <svg data-campo="colorway" data-hef-alvo="atributo" data-hef-atributo="data-colorway" class="ds-svg"  xmlns="http://www.w3.org/2000/svg" viewBox="6.399 22.990 116.684 80.472" width="1160" height="800" data-controle="dualsense" data-modelo="Sony DualSense" xmlns:bx="https://boxy-svg.com">
   <defs>
     <filter id="vb-p4-outline-filter-0" bx:preset="outline 1 0.2 #fff6" color-interpolation-filters="sRGB" x="-50%" y="-50%" width="200%" height="200%">
@@ -3098,11 +3179,11 @@
         <title>Bateria — peça 2</title>
       </path>
     </g>
-    <g id="vb-p4-feat-rumble-esquerdo" class="oculta" data-feature="rumble-esquerdo" style="" transform="matrix(0.992202, 0, 0, 1, 0.180438, 0)">
+    <g id="vb-p4-feat-rumble-esquerdo" data-campo="treme-e" data-hef-alvo="classe" data-hef-classe="acesa" class="oculta" data-feature="rumble-esquerdo" style="" transform="matrix(0.992202, 0, 0, 1, 0.180438, 0)">
       <title>Motor de vibração esquerdo (contrapeso maior — soa grosso)</title>
       <path class="peca" fill="none" stroke="#2f333c" stroke-width="0.35" d="M 32.051 29.975 C 36.433 29.484 40.591 29.409 43.089 29.492 C 43.473 29.506 43.698 29.936 43.493 30.265 C 43.425 30.376 43.317 30.456 43.191 30.487 C 42.694 30.611 42.346 31.123 42.16 31.977 C 41.985 32.791 42.004 33.729 42.08 34.348 C 42.413 36.014 43.269 40.57 44.06 45.684 C 44.879 50.977 42.705 54.717 41.441 55.974 L 41.441 55.975 C 39.755 57.653 38.007 59.393 35.555 62.808 C 33.06 66.283 29.492 74.107 26.283 81.737 C 23.872 87.47 21.683 93.044 20.323 96.504 C 19.971 97.402 19.617 98.299 19.259 99.195 L 19.182 99.353 C 18.964 99.807 18.618 100.528 17.904 100.908 C 17.061 101.357 15.88 101.271 14.138 100.404 C 11.453 99.068 9.301 95.547 8.177 90.078 C 7.047 84.581 6.929 77.004 8.42 67.36 C 10.807 51.922 16.703 38.172 19.366 33.205 C 19.417 33.109 19.497 33.033 19.595 32.987 C 23.035 31.376 27.678 30.466 32.051 29.975 M 20.164 33.834 C 17.509 38.843 11.748 52.364 9.406 67.515 C 7.927 77.083 8.055 84.531 9.154 89.873 C 10.257 95.241 12.313 98.371 14.579 99.498 C 16.229 100.319 17.028 100.234 17.44 100.013 C 17.844 99.799 18.043 99.397 18.281 98.916 L 18.361 98.756 C 18.602 98.154 18.953 97.261 19.39 96.146 C 20.749 92.688 22.948 87.087 25.365 81.341 C 28.562 73.742 32.172 65.801 34.748 62.214 C 37.247 58.732 39.04 56.947 40.742 55.255 C 41.79 54.211 43.84 50.792 43.074 45.839 C 42.489 42.044 41.828 38.262 41.092 34.494 C 41.005 33.8 40.976 32.729 41.186 31.761 C 41.281 31.326 41.433 30.869 41.679 30.475 C 39.209 30.457 35.761 30.576 32.161 30.98 C 27.886 31.459 23.442 32.335 20.164 33.834" style=""/>
     </g>
-    <g id="vb-p4-feat-rumble-direito" class="oculta" data-feature="rumble-direito" style="opacity: 0.55;" transform="matrix(0.987771, 0, 0, 0.998314, 1.473548, 0.129608)">
+    <g id="vb-p4-feat-rumble-direito" data-campo="treme-d" data-hef-alvo="classe" data-hef-classe="acesa" class="oculta" data-feature="rumble-direito" style="opacity: 0.55;" transform="matrix(0.987771, 0, 0, 0.998314, 1.473548, 0.129608)">
       <title>Motor de vibração direito (contrapeso menor — soa fino)</title>
       <path class="peca" fill="none" stroke="#2f333c" stroke-width="0.35" d="M 95.741 29.895 C 91.356 29.402 87.194 29.327 84.693 29.41 C 84.309 29.424 84.083 29.855 84.287 30.185 C 84.356 30.296 84.465 30.376 84.591 30.408 C 85.089 30.532 85.437 31.046 85.622 31.902 C 85.799 32.718 85.779 33.659 85.703 34.28 C 84.968 38.054 84.307 41.843 83.722 45.645 C 82.903 50.953 85.078 54.702 86.343 55.962 L 86.343 55.963 C 88.031 57.646 89.781 59.39 92.234 62.814 C 94.731 66.299 98.302 74.144 101.514 81.794 C 103.928 87.543 106.119 93.131 107.48 96.6 C 107.832 97.501 108.187 98.4 108.546 99.298 L 108.622 99.457 C 108.84 99.913 109.187 100.637 109.9 101.016 C 110.745 101.466 111.928 101.38 113.671 100.511 C 116.358 99.171 118.512 95.641 119.637 90.158 C 120.768 84.646 120.887 77.05 119.394 67.378 C 117.005 51.9 111.103 38.113 108.439 33.133 C 108.388 33.037 108.307 32.96 108.209 32.914 C 104.765 31.299 100.117 30.386 95.741 29.895 M 107.64 33.763 C 110.298 38.786 116.063 52.343 118.407 67.535 C 119.888 77.129 119.759 84.596 118.659 89.952 C 117.554 95.334 115.498 98.473 113.229 99.603 C 111.577 100.426 110.778 100.34 110.365 100.119 C 109.961 99.905 109.762 99.502 109.524 99.02 L 109.446 98.858 C 109.203 98.255 108.852 97.36 108.414 96.242 C 107.054 92.775 104.853 87.159 102.433 81.397 C 99.234 73.778 95.62 65.817 93.043 62.22 C 90.541 58.729 88.746 56.939 87.043 55.242 C 85.994 54.195 83.941 50.766 84.708 45.801 C 85.294 41.996 85.956 38.203 86.692 34.426 C 86.78 33.729 86.808 32.656 86.598 31.685 C 86.503 31.249 86.351 30.791 86.105 30.396 C 88.577 30.377 92.028 30.497 95.631 30.902 C 99.91 31.382 104.358 32.261 107.64 33.763" style=""/>
     </g>
@@ -3208,19 +3289,49 @@
       <text style="dominant-baseline: central; fill: rgb(200, 204, 218); font-family: Zrnic; font-size: 11px; font-weight: 700; text-anchor: middle; white-space: pre;" x="15.971" y="17.025">R</text>
     </g>
 </svg></div>
-            <div class="rot-ctrl">P4 <span class="pt">•</span> Desconectado</div>
-            <div class="seg"><span class="nada">—</span></div>
-            <div class="nada-lin"><span class="nada">—</span></div>
-            <div class="nada-lin"><span class="nada">—</span></div>
-            <div class="nada-lin"><span class="nada">—</span></div>
-            <div class="acoes-col"><span class="nada">—</span></div>
+            <div class="rot-ctrl" data-hef="identidade">P4 <span class="pt">•</span> Desconectado</div>
+            <div class="seg"><button class="" data-campo="degrau" data-hef-alvo="classe" data-hef-quando="economia" data-papel="forca" data-forca="economia">Economia</button><button class="" data-campo="degrau" data-hef-alvo="classe" data-hef-quando="balanceado" data-papel="forca" data-forca="balanceado">Balanceado</button><button class="" data-campo="degrau" data-hef-alvo="classe" data-hef-quando="max" data-papel="forca" data-forca="max">Máximo</button></div>
+            <div class="motor mult"><span></span><input class="trilho arrasta" type="range" min="0" max="200" step="10" value="0" data-papel="intensidade" data-campo="mult-pos" data-hef-alvo="valor" title="Arraste para escolher quanto da vibração que o jogo pede chega a este controle — de 0 a 200%. Grava na hora, no perfil ativo, só para ele."><span class="num" data-campo="mult">—</span><span class="teto mx" data-campo="mult-teto" data-hef-alvo="classe">Máx</span></div>
+            <div class="motor mult off" data-campo="motor-e-pedido" data-hef-alvo="atributo" data-hef-atributo="title"><button class="lado" data-hef="lado" data-lado="e" data-hef-rotulo="o nome do motor" title="Motor de vibração esquerdo — Contrapeso maior — soa grosso. No código do produto é `strong`."><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Motor de vibração esquerdo</title>
+
+  <path d="M20,4 h-6 q-3,0 -4,3 l-3,10 q-2,7 2,11 q4,4 8,1 q3,-2 3,-7 z"
+        fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
+  <path d="M25,9 q4,7 0,14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+  <path d="M29,5 q6,11 0,22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+</svg></button><input class="trilho arrasta" type="range" min="0" max="100" step="1" value="0" data-papel="motor" data-campo="barra-e" data-hef-alvo="valor" data-lado="e" title="Arraste para escolher quanto da vibração que o jogo pede chega a motor de vibração esquerdo — de 0 a 100%. Ela MULTIPLICA o degrau da coluna: 100% deixa como o degrau pediu, 0 deixa este motor mudo neste perfil. Grava na hora, no perfil ativo, só para este controle."><span class="num" data-campo="barra-e-pct">—</span><span class="teto">%</span></div>
+            <div class="motor mult off" data-campo="motor-d-pedido" data-hef-alvo="atributo" data-hef-atributo="title"><button class="lado" data-hef="lado" data-lado="d" data-hef-rotulo="o nome do motor" title="Motor de vibração direito — Contrapeso menor — soa fino. No código do produto é `weak`."><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Motor de vibração direito</title>
+
+  <path d="M12,4 h6 q3,0 4,3 l3,10 q2,7 -2,11 q-4,4 -8,1 q-3,-2 -3,-7 z"
+        fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
+  <path d="M7,10 q-3,6 0,12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+  <path d="M3,7 q-4,9 0,18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+</svg></button><input class="trilho arrasta" type="range" min="0" max="100" step="1" value="0" data-papel="motor" data-campo="barra-d" data-hef-alvo="valor" data-lado="d" title="Arraste para escolher quanto da vibração que o jogo pede chega a motor de vibração direito — de 0 a 100%. Ela MULTIPLICA o degrau da coluna: 100% deixa como o degrau pediu, 0 deixa este motor mudo neste perfil. Grava na hora, no perfil ativo, só para este controle."><span class="num" data-campo="barra-d-pct">—</span><span class="teto">%</span></div>
+            <div class="acoes-col">
+              <!-- "Testar", não "Testar por 500 ms" — decisão dela, 30/08:
+                   *"ali vai ser só Testar; se o user quiser parar vai clicar em Parar"*.
+                   O par Testar/Parar já diz a duração pelo próprio par: quem começa
+                   escolhe quando termina. O meio segundo continua sendo o que o
+                   gesto manda ao daemon; o que sai é a PROMESSA na tela. -->
+              <!-- `data-hef-rotulo` NOS DOIS: o texto de um botão é RÓTULO
+                   (categoria dela, 03/09/2026), e este par foi decidido por ela
+                   justamente para NÃO mudar — quem começa escolhe quando termina.
+                   O que estes botões fazem é gesto, e o gesto tem dono escrito
+                   (`app/telas/vibracao.DONOS_DOS_GESTOS`), com desfecho relatado
+                   pelo piloto. Nada de dado passa pelo texto deles. -->
+              <button class="btn" data-papel="testar"
+                      data-hef-rotulo="o texto do botão">Testar</button>
+              <button class="btn vermelho" data-papel="parar"
+                      data-hef-rotulo="o texto do botão">Parar</button>
+            </div>
           </div>
 
         </div>
-        <!-- A NOTA DO TESTAR, na tela — decisão [02] dela, 04/09/2026. A frase é
-             lida do `gui/main.glade` (ver `DICA_DOS_VALORES_QUE_PASSAM`), e é a
-             mesma que a janela estável mostra em itálico no rodapé do card. -->
-        <div class="vib-nota">Os valores acima ainda passam pela intensidade escolhida ali em cima antes de chegar ao controle.</div>
+        <!-- A NOTA DO TESTAR SAIU DA TELA e voltou para o `?` do "Testar agora"
+             — 05-Q2 dela, 05/09/2026: *"As duas na dica."* A linha permanente
+             que morava aqui era decisão do PO atribuída a ela em 04/09; hoje
+             ela respondeu a pergunta. A frase continua LIDA do
+             `gui/main.glade`, que é a metade da razão que não caducou. A regra
+             `.vib-nota` morreu junto, no `<style>` desta aba. -->
         <!-- A LINHA DO ESTADO — 02/09/2026. Ela existe na janela estável desde
              sempre e NÃO existia aqui: a tela nova tinha os dois motores, os
              quatro degraus e o "Testar", e nenhuma palavra sobre o que acontece
@@ -3236,7 +3347,38 @@
              `p.blocos` (`hefesto_vivo.py:213`), porque o NÚMERO de linhas muda
              com o estado e não há endereço para uma linha que ainda não existe.
              Campo a campo, a linha que não se aplica viraria `—`. -->
-        <div class="vib-estado" id="vib-estado"><div class="est diz"><span class="sinal">●</span><span>o jogo ainda não pediu vibração nenhuma</span></div></div>
+        <!-- O `data-hef-recados` É O TERCEIRO LUGAR DO RECADO — 05-Q4 dela,
+             06/09/2026: *"a frase entra na faixa que já existe sob a grade (…)
+             nada se mexe dentro das colunas"*.
+
+             O PILOTO CONHECE DOIS LUGARES HOJE — o cartão do controle e a
+             tarja de rodapé (`hefesto_vivo.pintar_recados`) —, e os dois
+             ficaram: a RECUSA continua no cartão, em laranja, por 30 s. O que
+             este atributo declara é para onde vai o SUCESSO **desta página**,
+             e por isso ele carrega o tom em vez de um booleano: um endereço
+             que engolisse os dois mudaria a recusa junto, que a 05-Q4 não pede.
+
+             POR QUE A DECLARAÇÃO É DA PÁGINA e não do piloto: a faixa só existe
+             aqui. Cravar `#vib-estado` dentro do piloto seria o piloto único
+             sabendo o nome de um elemento de uma aba — a mesma dívida que o
+             `.fita` de dois donos já cobra em `07-lancadores`.
+
+             O CUSTO QUE ELE REMOVE FOI MEDIDO E ESTÁ NO PILOTO
+             (`hefesto_vivo.py`, o comentário do `ESTILO_NA_GRADE`): um recado
+             dentro de um `[data-controle]` de linhas fixas empurrava o desenho
+             do controle 65 px para baixo, e a cura foi tirá-lo do fluxo — ele
+             parou de empurrar e passou a COBRIR o topo do desenho por 6 s a
+             cada clique. Fora da coluna, não faz nem uma coisa nem outra.
+
+             SÃO DOIS ATRIBUTOS, e é o par que o alvo `classe` do piloto já usa
+             (`data-hef-classe` / `data-hef-quando`): um diz QUAL tom pousa
+             aqui, o outro diz COM QUE CLASSES. Assim o piloto não precisa
+             conhecer a palavra `recibo` nem o desenho da linha de estado — a
+             página, que é dona dos dois, declara os dois. Um alvo composto num
+             atributo só seria a terceira maneira desta casa dizer a mesma
+             coisa, e é o argumento que o `data-hef-atributo` já registrou. -->
+        <div class="vib-estado" id="vib-estado"
+             data-hef-recados="sucesso" data-hef-recado-classe="est recibo"><div class="est diz"><span class="sinal">●</span><span>o jogo ainda não pediu vibração nenhuma</span></div></div>
       </div>
     </div>
 
@@ -3303,7 +3445,7 @@
 <div class="nota">
   <h2>O que você pediu, e está aqui</h2>
   <ul>
-    <li><b>Os quatro controles da mesa, um por coluna, sempre à vista</b> — na mesma ordem da fita do topo, cada um com a sua cor de plástico na borda do desenho.</li>
+    <li><b>Os quatro controles, um por coluna, sempre à vista</b> — na mesma ordem da fita do topo, cada um com a sua cor de plástico na borda do desenho.</li>
     <li><b>A força tem endereço, e o endereço é a coluna</b> — cada uma tem os seus quatro degraus e a sua barra. Como os quatro estão à vista, <b>a fita do topo não escolhe nada aqui</b> e nasce esmaecida (28/08). Também saiu o destaque que a coluna do P1 tinha: com a fita inerte, ele afirmaria na tela uma coisa que a fita já não faz.</li>
     <li><b>As cinco lâmpadas do jogador saíram do desenho</b> (28/08). Medidas neste navegador, nesta aba: <b>2,79 × 0,93 px</b> cada uma. Não é pouco contraste, é pouco pixel — menos de um pixel de altura não diz nada, aceso ou apagado. Quem diz o jogador aqui é o rótulo embaixo da coluna, que se lê. Elas continuam desenhadas na <b>Iluminação</b>, onde o controle é grande.</li>
     <li><b>Um bloco só</b> — as duas áreas viraram uma tabela do mesmo quadro.</li>
@@ -3313,7 +3455,7 @@
 
   <h2>O que passou a vir do mapa, e deixou de ser digitado</h2>
   <ul>
-    <li><b>Os quatro controles</b> saem de <code>monta.MESA</code> — nome, jogador, plástico e transporte. A aba não sabe contar até quatro: ela percorre a mesa.</li>
+    <li><b>Os quatro controles</b> saem de <code>monta.MESA</code> — nome, jogador, plástico e transporte. A aba não sabe contar até quatro: ela percorre a lista.</li>
     <li><b>As cores</b> saem de <code>cor_da_zona()</code>, que lê o <code>&lt;style&gt;</code> gerado por <code>gerar_cores_do_dualsense.py</code> a partir de <code>docs/data/cores-do-dualsense.csv</code>. Não há um hexadecimal de plástico escrito nesta aba.</li>
     <li><b>Os dois motores</b> saem de <code>docs/data/pecas-do-dualsense.csv</code>: o id no desenho (<code>feat-rumble-esquerdo</code> e <code>feat-rumble-direito</code>), o glifo de cada um, o nome e a nota que vira dica.</li>
     <li><b>O padrão das lâmpadas</b> continua vindo do produto (<code>core/led_control.py</code>): P1 é a do meio e o P3 é <code>135</code> — não <code>234</code>, que era o que estava digitado no mockup. Ele não é desenhado nesta aba (elas saíram, por tamanho), e segue desenhado na Iluminação.</li>

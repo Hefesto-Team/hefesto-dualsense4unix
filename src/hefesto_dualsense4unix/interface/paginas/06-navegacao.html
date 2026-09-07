@@ -1232,6 +1232,29 @@
     color:var(--fg);cursor:pointer}
   .campo-linha:hover{border-color:var(--purple)}
   .disputa .campo-linha{border-color:var(--orange);color:var(--orange)}
+
+  /* ---- O CAMPO DE TEXTO DA TELA "Teclas do teclado" ----
+     Ele herda a forma do `.campo-linha` (a mesma altura, a mesma borda, o mesmo
+     raio) porque é a mesma linha de tabela — o que muda é o CURSOR: `text`, e
+     não `pointer`. Um campo que se pode digitar com o cursor de clique parece
+     um botão, e ela clicaria esperando uma lista.
+     A FONTE É A DA CASA e não a monoespaçada: o que se escreve aqui é
+     `Alt + Tab`, não `KEY_LEFTALT+KEY_TAB` — o token cru é do produto, e quem
+     traduz é `input_actions`. */
+  .tecla{width:100%;height:var(--h-escolha);border-radius:6px;font-size:11.5px;
+    font-family:inherit;padding:0 8px;border:1px solid var(--border-forte);
+    background:var(--panel);color:var(--fg);cursor:text}
+  .tecla:hover{border-color:var(--purple)}
+  .tecla:focus{outline:none;border-color:var(--purple);background:var(--sel-bg)}
+  .tecla::placeholder{color:var(--comment)}
+  /* A TERCEIRA COLUNA É SÓ O ↺, e ela tem largura fixa para o campo de texto
+     ficar com o resto. Sem isto o `table-layout:fixed` divide as três em três
+     partes iguais e o ↺ ganha 200px de coluna vazia. */
+  .tab-teclas td.re,.tab-teclas th:last-child{width:34px;padding-right:0}
+  .re-tecla{display:inline-flex;align-items:center;justify-content:center;
+    width:26px;height:26px;border-radius:6px;text-decoration:none;font-size:14px;
+    color:var(--texto-suave);border:1px solid transparent}
+  .re-tecla:hover{color:var(--fg);border-color:var(--purple);background:var(--sel-bg)}
   .nm{font-family:'JetBrains Mono',monospace;font-size:10.5px;color:var(--texto-suave);margin-left:3px}
   .rot-gl{font-size:10.5px;color:var(--comment);margin-left:3px}
 
@@ -2919,8 +2942,8 @@
       <text style="dominant-baseline: central; fill: rgb(200, 204, 218); font-family: Zrnic; font-size: 11px; font-weight: 700; text-anchor: middle; white-space: pre;" x="15.971" y="17.025">R</text>
     </g>
 </svg>
-                <div class="nav-rot">P3 <span class="pt">•</span> Desconectado</div>
-                <div class="nav-est">—</div>
+                <div class="nav-rot">P3 <span class="pt">•</span> <span data-campo="identidade">Desconectado</span></div>
+                <div class="nav-est" data-campo="navega">—</div>
               </div>
               <div class="nav-ctl vazia" data-controle="p4" data-conectado="nao" data-campo="plastico" data-hef-alvo="cor" title="Nenhum controle neste lugar.">
                 <?xml version="1.0" encoding="utf-8"?>
@@ -3227,8 +3250,8 @@
       <text style="dominant-baseline: central; fill: rgb(200, 204, 218); font-family: Zrnic; font-size: 11px; font-weight: 700; text-anchor: middle; white-space: pre;" x="15.971" y="17.025">R</text>
     </g>
 </svg>
-                <div class="nav-rot">P4 <span class="pt">•</span> Desconectado</div>
-                <div class="nav-est">—</div>
+                <div class="nav-rot">P4 <span class="pt">•</span> <span data-campo="identidade">Desconectado</span></div>
+                <div class="nav-est" data-campo="navega">—</div>
               </div>
             </div>
           </div>
@@ -3606,13 +3629,90 @@
     </div>
     <div class="tn-rod grupo-padrao">
       <a class="btn" href="#" data-gesto="fechar-definicoes">Cancelar</a>
+      <a class="btn" href="#teclas-do-teclado">Teclas do teclado</a>
       <a class="btn btn-padrao btn-padrao-tela" href="#">Voltar ao padrão</a>
       <a class="btn roxo" href="#" data-gesto="guardar-definicoes" data-hef-forma="definicoes-mouse">Guardar</a>
       <div class="confirma">
-        <span>Devolver ao de fábrica as 22 linhas de <b>o que cada botão faz</b>? Isto apaga também os <b>atalhos de teclado</b> que este perfil guarda — inclusive os que você escreveu na janela antiga e esta lista não sabe mostrar. O <b>Remapeamento dos botões</b> não é tocado.</span>
+        <span>Devolver ao de fábrica as 22 linhas de <b>o que cada botão faz</b>? Isto apaga também os <b>atalhos de teclado</b> que este perfil guarda — inclusive os que você escreveu na janela antiga e esta lista não sabe mostrar. Para voltar <b>uma linha só</b>, use o ↺ dela em <b>Teclas do teclado</b>. O <b>Remapeamento dos botões</b> não é tocado.</span>
         <button class="btn-conf vermelho" data-gesto="padrao-definicoes">Confirmar</button>
         <button class="btn-conf">Cancelar</button>
       </div>
+    </div>
+  </div>
+</div>
+<div class="tela-nova" id="teclas-do-teclado">
+  <div class="tn-cx">
+    <div class="tn-topo">
+      <span class="tn-tit">Teclas do teclado</span>
+      <span class="ajuda">?<span class="dica">Escreva a tecla que o botão deve digitar. Vale <b>qualquer combinação</b> — não só as da lista de <b>Definições Controle e Mouse</b>.<br><br>Exemplos: <b>Alt + Tab</b>, <b>Ctrl + Shift + F</b>, <b>Super (tecla Windows)</b>, <b>F5</b>.<br><br><b>Campo em branco</b> quer dizer que o botão não digita nada.<br><br>Só estes 8 botões aparecem aqui porque são os únicos em que o Hefesto guarda uma tecla escrita; nos outros o que vale é o que a lista de <b>Definições Controle e Mouse</b> escolhe.<br><br>O <b>↺</b> devolve <b>só aquela linha</b> ao de fábrica.</span></span>
+      <a class="tn-x" href="#" title="Fechar" data-gesto="fechar-teclas">×</a>
+    </div>
+    <div class="tn-corpo">
+      <div class="moldura">
+        <table class="tab tab-teclas">
+          <tr><th>Botão do controle</th><th>Tecla que ele digita</th><th></th></tr>
+          <tr><td class="b"><span class="gls"><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>L1</title>
+
+  <rect x="4" y="10" width="24" height="14" rx="3" ry="3" fill="none" stroke="currentColor" stroke-width="2"/>
+  <text x="10" y="21" font-family="monospace" font-size="9" font-weight="bold" fill="currentColor">L1</text>
+</svg><span class="nm">L1</span></span></td><td><input type="text" class="tecla" data-campo="tecla-l1" data-hef-alvo="valor" data-gesto="tecla-escrita" placeholder="não digita nada" title="Escreva a tecla que este botão digita."></td><td class="re"><a href="#" class="re-tecla" data-gesto="padrao-da-tecla" data-tecla="l1" title="Voltar só esta linha ao de fábrica.">↺</a></td></tr>
+          <tr><td class="b"><span class="gls"><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>R1</title>
+
+  <rect x="4" y="10" width="24" height="14" rx="3" ry="3" fill="none" stroke="currentColor" stroke-width="2"/>
+  <text x="9" y="21" font-family="monospace" font-size="9" font-weight="bold" fill="currentColor">R1</text>
+</svg><span class="nm">R1</span></span></td><td><input type="text" class="tecla" data-campo="tecla-r1" data-hef-alvo="valor" data-gesto="tecla-escrita" placeholder="não digita nada" title="Escreva a tecla que este botão digita."></td><td class="re"><a href="#" class="re-tecla" data-gesto="padrao-da-tecla" data-tecla="r1" title="Voltar só esta linha ao de fábrica.">↺</a></td></tr>
+          <tr><td class="b"><span class="gls"><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Analógico Esquerdo</title>
+
+  <circle cx="16" cy="16" r="13" fill="none" stroke="currentColor" stroke-width="2"/>
+  <circle cx="16" cy="16" r="6" fill="none" stroke="currentColor" stroke-width="1.5"/>
+  <text x="13" y="19" font-family="monospace" font-size="7" font-weight="bold" fill="currentColor">L</text>
+</svg><span class="nm">L3</span><span class="rot-gl">Clique</span></span></td><td><input type="text" class="tecla" data-campo="tecla-l3" data-hef-alvo="valor" data-gesto="tecla-escrita" placeholder="não digita nada" title="Escreva a tecla que este botão digita."></td><td class="re"><a href="#" class="re-tecla" data-gesto="padrao-da-tecla" data-tecla="l3" title="Voltar só esta linha ao de fábrica.">↺</a></td></tr>
+          <tr><td class="b"><span class="gls"><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Options</title>
+
+  <line x1="7" y1="10" x2="25" y2="10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+  <line x1="7" y1="16" x2="25" y2="16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+  <line x1="7" y1="22" x2="25" y2="22" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+</svg><span class="nm">Options</span></span></td><td><input type="text" class="tecla" data-campo="tecla-options" data-hef-alvo="valor" data-gesto="tecla-escrita" placeholder="não digita nada" title="Escreva a tecla que este botão digita."></td><td class="re"><a href="#" class="re-tecla" data-gesto="padrao-da-tecla" data-tecla="options" title="Voltar só esta linha ao de fábrica.">↺</a></td></tr>
+          <tr><td class="b"><span class="gls"><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Share</title>
+
+  <line x1="16" y1="7" x2="16" y2="20" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/>
+  <line x1="8"  y1="11" x2="12.5" y2="21" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/>
+  <line x1="24" y1="11" x2="19.5" y2="21" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/>
+</svg><span class="nm">Share</span></span></td><td><input type="text" class="tecla" data-campo="tecla-create" data-hef-alvo="valor" data-gesto="tecla-escrita" placeholder="não digita nada" title="Escreva a tecla que este botão digita."></td><td class="re"><a href="#" class="re-tecla" data-gesto="padrao-da-tecla" data-tecla="create" title="Voltar só esta linha ao de fábrica.">↺</a></td></tr>
+          <tr><td class="b"><span class="gls"><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Touchpad</title>
+
+  <rect x="3" y="8" width="26" height="16" rx="4" ry="4" fill="none" stroke="currentColor" stroke-width="2"/>
+  <circle cx="11" cy="16" r="1.5" fill="currentColor"/>
+  <circle cx="16" cy="16" r="1.5" fill="currentColor"/>
+  <circle cx="21" cy="16" r="1.5" fill="currentColor"/>
+</svg><span class="nm">Touchpad</span><span class="rot-gl">Clique esquerdo</span></span><span class="marca-nao-dispara" title="O touchpad do controle continua sendo o mouse do computador nesta máquina, e enquanto for assim o Hefesto não transforma o clique dele em tecla. A escolha fica guardada no perfil e volta a valer no dia em que o touchpad deixar de ser o ponteiro.">não dispara</span></td><td><input type="text" class="tecla" data-campo="tecla-touchpad_left_press" data-hef-alvo="valor" data-gesto="tecla-escrita" placeholder="não digita nada" title="Escreva a tecla que este botão digita."></td><td class="re"><a href="#" class="re-tecla" data-gesto="padrao-da-tecla" data-tecla="touchpad_left_press" title="Voltar só esta linha ao de fábrica.">↺</a></td></tr>
+          <tr><td class="b"><span class="gls"><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Touchpad</title>
+
+  <rect x="3" y="8" width="26" height="16" rx="4" ry="4" fill="none" stroke="currentColor" stroke-width="2"/>
+  <circle cx="11" cy="16" r="1.5" fill="currentColor"/>
+  <circle cx="16" cy="16" r="1.5" fill="currentColor"/>
+  <circle cx="21" cy="16" r="1.5" fill="currentColor"/>
+</svg><span class="nm">Touchpad</span><span class="rot-gl">Clique direito</span></span><span class="marca-nao-dispara" title="O touchpad do controle continua sendo o mouse do computador nesta máquina, e enquanto for assim o Hefesto não transforma o clique dele em tecla. A escolha fica guardada no perfil e volta a valer no dia em que o touchpad deixar de ser o ponteiro.">não dispara</span></td><td><input type="text" class="tecla" data-campo="tecla-touchpad_right_press" data-hef-alvo="valor" data-gesto="tecla-escrita" placeholder="não digita nada" title="Escreva a tecla que este botão digita."></td><td class="re"><a href="#" class="re-tecla" data-gesto="padrao-da-tecla" data-tecla="touchpad_right_press" title="Voltar só esta linha ao de fábrica.">↺</a></td></tr>
+          <tr><td class="b"><span class="gls"><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Touchpad</title>
+
+  <rect x="3" y="8" width="26" height="16" rx="4" ry="4" fill="none" stroke="currentColor" stroke-width="2"/>
+  <circle cx="11" cy="16" r="1.5" fill="currentColor"/>
+  <circle cx="16" cy="16" r="1.5" fill="currentColor"/>
+  <circle cx="21" cy="16" r="1.5" fill="currentColor"/>
+</svg><span class="nm">Touchpad</span><span class="rot-gl">Clique central</span></span><span class="marca-nao-dispara" title="O touchpad do controle continua sendo o mouse do computador nesta máquina, e enquanto for assim o Hefesto não transforma o clique dele em tecla. A escolha fica guardada no perfil e volta a valer no dia em que o touchpad deixar de ser o ponteiro.">não dispara</span></td><td><input type="text" class="tecla" data-campo="tecla-touchpad_middle_press" data-hef-alvo="valor" data-gesto="tecla-escrita" placeholder="não digita nada" title="Escreva a tecla que este botão digita."></td><td class="re"><a href="#" class="re-tecla" data-gesto="padrao-da-tecla" data-tecla="touchpad_middle_press" title="Voltar só esta linha ao de fábrica.">↺</a></td></tr>
+        </table>
+      </div>
+    </div>
+    <div class="tn-rod grupo-padrao">
+      <a class="btn" href="#" data-gesto="fechar-teclas">Cancelar</a>
+      <!-- O CAMINHO DE VOLTA À OUTRA TELA MORA NO `?`, e não num terceiro
+           botão: medido no WebKit em 06/09/2026, com os três no rodapé o rótulo
+           "Definições Controle e Mouse" QUEBRA EM DUAS LINHAS dentro de uma
+           caixa de altura fixa — o mesmo defeito que encurtou o terceiro botão
+           da fileira da aba em 28/08. Cancelar fecha, e a fileira da aba está a
+           um clique. -->
+      <a class="btn roxo" href="#" data-gesto="guardar-teclas"
+         data-hef-forma="teclas-do-teclado">Guardar</a>
     </div>
   </div>
 </div>
@@ -3758,6 +3858,7 @@
     </div>
     <div class="tn-rod grupo-padrao">
       <a class="btn" href="#">Cancelar</a>
+
       <a class="btn btn-padrao btn-padrao-tela" href="#">Voltar ao padrão</a>
       <a class="btn roxo" href="#" data-gesto="guardar-remapeamento" data-hef-forma="remapeamento">Guardar</a>
       <div class="confirma">
@@ -3903,7 +4004,7 @@
 
   <h2>A rodada dos quatro controles</h2>
   <ul>
-    <li><b>A coluna do desenho virou a mesa.</b> Onde havia <b>um</b> DualSense
+    <li><b>A coluna do desenho passou a mostrar todos.</b> Onde havia <b>um</b> DualSense
     há agora os <b>4</b> da <code>MESA</code> do
     <code>monta.py</code>, cada um com a
     borda e o casco na cor do seu plástico e a barra de luz na cor automática do
@@ -3919,7 +4020,7 @@
     <code>pacotes.identidade_de</code>, quem diz o número é
     <code>pacotes.jogador_de</code>, e a cor da borda é
     <code>style.color</code> escrito pelo pacote. O que sobra aqui é a
-    <b>forma</b> do cartão; o <b>aparelho</b> é sempre o que está na mesa.</li>
+    <b>forma</b> do cartão; o <b>aparelho</b> é sempre o que está ligado.</li>
     <li><b>O <code>#ff2d6f</code> saiu — e ele nunca tinha pintado nada.</b> O
     <code>luz=</code> desta aba escrevia uma variável CSS que <b>nenhuma regra
     lia</b>: a barra de luz ficava cinza nas dez abas. Agora a regra existe
@@ -3959,10 +4060,10 @@
     confirmação funcionando.</li>
   </ul>
 
-  <h2>O que a mesa de quatro revelou, e está na tela</h2>
+  <h2>O que os quatro controles revelaram, e está na tela</h2>
   <ul>
     <li><b>Mouse, teclado e os cinco gestos saem de UM controle só.</b> Com um
-    controle na mesa ninguém podia ver isso. O poll loop lê o estado do controle
+    controle ligado ninguém podia ver isso. O poll loop lê o estado do controle
     <b>primário</b> (<code>daemon/lifecycle.py:4541</code>) e é esse estado que vai
     para o mouse (<code>:4744</code>), para o teclado (<code>:4754</code>) e para o
     <code>hotkey_manager.observe</code> (<code>:4757</code>); os secundários do
@@ -4010,7 +4111,7 @@
 
   <h2>Onde eu li a sua fala de um jeito, e pode ser o outro</h2>
   <ul>
-    <li><b>"Quem navega" na coluna do desenho.</b> Pus a mesa no lugar do desenho
+    <li><b>"Quem navega" na coluna do desenho.</b> Pus os quatro no lugar do desenho
     único porque é lá que ela responde a pergunta da aba sem custar altura. Se você
     quiser os quatro <b>maiores</b>, eles cabem numa fileira própria — mas aí a aba
     passa da dobra, e as tabelas de baixo já estão em telas à parte por isso.</li>

@@ -908,6 +908,59 @@
      cartões mediam 228.8 e 225.2 px — a largura vinha do nome do plástico. */
   .pecas{display:grid;grid-template-columns:repeat(4,1fr);gap:7px}
 
+  /* OS CONTROLES QUE O HEFESTO SÓ VÊ — EXTERNOS-01 (06/09/2026) e a escolha
+     DELA no mesmo dia, olhando as duas maquetes: **no mesmo frame dos
+     assentos**, como a janela GTK fazia, e não numa faixa à parte embaixo. A
+     EXTERNOS-01 desenhou a faixa e PERGUNTOU; este bloco é a resposta.
+
+     COMO ELES ENTRAM NA GRADE SEM UM SEGUNDO ENDEREÇO. O elemento que o piloto
+     reescreve (`data-hef-alvo="html"`) tem de ser UM e tem de ficar de pé entre
+     os tiques — é a `.ext-vaga`. Ela é `display:contents`: some da caixa e
+     entrega os cartões de dentro como itens da MESMA grade `.pecas`. Sem isso
+     os externos todos caberiam numa célula só, empilhados na quinta coluna de
+     uma grade que tem quatro.
+
+     E O MARCADOR DE VAZIO SAI DA CONTA POR `display:none`, e não pelo
+     `:empty`/`:has(.nada)` da `.ressalva`: sob `display:contents` um
+     `<i class="nada">` vazio ainda seria UM item da grade, e abriria uma
+     segunda fileira de altura zero com os 7px de vão. Em repouso — que é o
+     estado desta bancada — a grade continua com os quatro itens de sempre, e a
+     cena que ela aprovou não muda um pixel.
+
+     O CARTÃO CONTINUA NÃO SENDO `.cartao`, e a razão da EXTERNOS-01 não
+     caducou: `.cartao` tem `data-controle`, entra em
+     `apagar_os_lugares_sem_dono` e recebe o alvo de edição da fita. O que a
+     decisão dela mudou é o LUGAR, não a natureza — aqui se copia a CAIXA, e
+     nunca a classe.
+
+     QUEM O DISTINGUE É A MARCA, e é o que a janela GTK fazia: o cartão do
+     assento diz `Sony • Player 1`, o do externo diz `Controle 3 — 8BitDo`, e a
+     palavra da marca tem dono (`external_controllers.brand_of`, o único que
+     sabe desmentir o VID que um clone mente). A BORDA TRACEJADA é o segundo
+     sinal, e é o vocabulário que esta página já usa para *"isto não é um ajuste
+     seu"* (`.degrau.sem-dono`) — nada de `opacity`, pela razão medida trinta
+     linhas acima.
+
+     ELE NÃO TEM COR DE PLÁSTICO NEM FILEIRA DE MÁSCARAS. A folha das 28 cores é
+     dos DualSense, e máscara é escolha que o Hefesto escreve num aparelho que
+     ele ADOTOU. Campo sem informação não mostra nada, que é regra dela.
+
+     A ALTURA É A DA FILEIRA, e isso é de graça: item de grade estica. É a mesma
+     lei que o card da janela GTK pagava à mão (`app/widgets/external_card.py`,
+     §1: *"Todos os cards têm a MESMA altura"*). */
+  .pecas .ext-vaga{display:contents}
+  .pecas .ext-vaga > .nada{display:none}
+  .pecas .ext-cartao{
+    display:flex;flex-direction:column;justify-content:center;gap:3px;
+    padding:5px 8px 6px;
+    border:2px dashed var(--border-forte);border-radius:7px;
+    background:var(--app-bg);
+    font-size:11.5px;line-height:15px;color:var(--texto-mudo);
+  }
+  .pecas .ext-nome{color:var(--fg);font-weight:500}
+  .pecas .ext-via{color:var(--texto-mudo)}
+  .pecas .ext-aviso{color:var(--orange)}
+
   /* O CARTÃO VIROU COLUNA em 28/08, e o motivo é a decisão dela: a máscara
      passou a ser POR CONTROLE, e o seletor dela mora aqui dentro. Em cima a
      peça (desenho + rótulo), embaixo as três máscaras.
@@ -1094,6 +1147,35 @@
      Não há texto a ler num lugar onde não há controle. */
   .cartao.off .rotulo,
   .cartao.off .bat{color:var(--linha)}
+  /* ---------- O QUE O ESCURO APAGA AGORA QUE A ESTRUTURA É UMA SÓ ----------
+     07/09/2026. O lugar vazio deixou de ser um segundo HTML e passou a ser o
+     MESMO cartão com o texto de cada campo em travessão (ver `cartao`). Estas
+     duas regras são o que faz essa unificação não mover um pixel do desenho que
+     ela aprovou — e as duas mordem pela classe `off`, que é a mesma que o
+     piloto tira no passo `1c` quando um controle ocupa o lugar. Logo elas
+     desligam sozinhas, sem ninguém repintar nada.
+
+     1. O "Sony •" SOME. Ele é texto ESTÁTICO em volta do campo `jogador` — não
+        é o campo, e por isso não vira travessão sozinho. Sem esta regra o lugar
+        vazio diria "Sony • —", que é afirmar o fabricante de um controle que
+        não está lá: a mesma falta que tirou o nome do plástico do `title` em
+        03/09. Escondê-lo pelo `off` é melhor que não escrevê-lo, porque quando
+        o P3 conectar o cartão dele tem de ficar IGUAL ao do P1 — e era essa
+        diferença que o ramo separado produzia.
+        A CLASSE É `.fabricante`, E A PRIMEIRA VOLTA ESCREVEU `.marca`: o
+        `topo.html:482` já tem `.marca{color:var(--orange)}` — uma classe do
+        ESQUELETO, das dez abas. A foto pegou: a palavra "Sony" saiu LARANJA nos
+        dois cartões cheios, 353 pixels de diferença numa mudança que se
+        prometia de zero. É a mesma armadilha que a `.pecas` e a `.cartao` já
+        cobraram desta aba — nome de classe compartilhado quer dizer duas coisas
+        em dois arquivos —, e quem a revelou foi comparar as duas fotos, não
+        ler o CSS.
+     2. O NÚMERO DO JOGADOR NÃO ACENDE. `.cartao .rotulo b` pinta o `<b>` de
+        `--fg` mirando o elemento, e a regra do rótulo acima só alcança o pai
+        por herança — o travessão do lugar vazio sairia CLARO e semi-negrito
+        dentro de um cartão apagado. O peso volta a 400, que é o do rótulo. */
+  .cartao.off .fabricante{display:none}
+  .cartao.off .rotulo b{color:var(--linha);font-weight:400}
   /* O DESENHO CINZA PRECISA DE `!important` porque a cor da peça é `style=`
      INLINE dentro do SVG (o gerador de cores a escreve lá, para o arquivo abrir
      colorido sozinho). Regra externa não vence atributo inline sem isto — e o
@@ -1210,6 +1292,37 @@
      `cursor:not-allowed` é o que diz isso antes do clique, e o `title` do
      gerador é a razão. Nenhuma das duas coisas move um pixel. */
   .cartao .chip.inerte{opacity:.42;cursor:not-allowed}
+  /* ---------- O MARCADOR "primário" — 06/09/2026, JOGAR-O-QUE-FALTA-01 ----------
+     Linha 18 do CSV da paridade: a GTK põe a palavra na linha secundária do
+     card (`home_actions._format_controller_subtitle`) e esta tela não tinha
+     onde.
+
+     ELE NÃO É A CLASSE `.cartao.alvo`, e a sprint avisa por quê: aquela existe
+     e responde a OUTRA pergunta — qual controle os ajustes das outras abas vão
+     tocar. Os dois podem ser aparelhos DIFERENTES (o primário é fato do
+     serviço, o alvo é escolha dela), e reusar a classe faria os dois
+     significados brigarem no mesmo pixel. A regra abaixo é de um seletor
+     próprio, e não toca em `.alvo`.
+
+     A PALAVRA FICA NO ARQUIVO e o produto só decide se ela aparece — mesma
+     gramática do `jogador-espera` acima: o `data-hef-alvo="classe"` é BOOLEANO,
+     e o travessão que o piloto escreve num valor vazio conta como desligado.
+     Uma palavra que viesse do produto sumiria da página parada, e o desenho
+     dela deixaria de mostrar o que ela aprovou. */
+  .cartao .e-primario{display:none;color:var(--texto-mudo);cursor:help}
+  .cartao .e-primario.ha{display:inline}
+  /* ---------- A MARCA DA EMULAÇÃO DEGRADADA — a mesma da aba 02 ----------
+     Decisão dela, 04/09/2026: *"uma marca na palavra e o motivo no hover"*. O
+     bloco é o gêmeo de `aba02.py`, e a cópia é do ESTILO, não do dado: o texto
+     inteiro vem de `pacotes.degradacao_de`, que delega ao dono da regra na GTK.
+
+     UM CAMPO SÓ FAZ AS DUAS COISAS, e é por isso que o alvo é `atributo`: sem
+     motivo o piloto REMOVE o `title` e esta regra apaga a marca junto. Com uma
+     classe para a marca e um segundo campo para o motivo, daria para pintar
+     marca sem explicação — ruído com cara de dado. */
+  .cartao .degradou{display:none;margin-left:1px;font-size:9px;line-height:1;
+                    color:var(--orange);cursor:help;vertical-align:2px}
+  .cartao .degradou[title]{display:inline-block}
   /* A FAIXA SEM PENDÊNCIA SOME, E O ESPAÇO FICA. `visibility` e não `display`:
      "muda tudo ao clicar" é queixa dela, e a legenda desta aba promete que o
      espaço é reservado para a tela não pular. Sem esta regra a caixa tracejada
@@ -1752,10 +1865,10 @@
                title="O Hefesto fica no meio: ele acende as luzes, faz o controle vibrar, dá um jogador para cada controle e escolhe como o jogo vê o aparelho."><span class="pino"></span>Ligado</label>
         <label class="hef-pos desligado" for="hef-desligado" data-gesto="hefesto" data-modo="native"
                data-campo="hef-posicao" data-hef-alvo="classe" data-hef-quando="desligado"
-               title="Modo Nativo: o Hefesto sai do meio e o jogo fala direto com o controle."><span class="pino"></span>Desligado</label>
+               title="Modo Nativo: o Hefesto sai do meio e o jogo fala direto com o controle. Aqui ele não cria um controle para cada pessoa — quem conta os jogadores é o jogo, pelos controles que ele enxerga."><span class="pino"></span>Desligado</label>
         <span class="ajuda">?<span class="dica">
           <b>Ligado</b> — o Hefesto fica no meio: luz, vibração, gatilho e o número do jogador são por conta dele.<br><br>
-          <b>Desligado</b> — o Hefesto sai do meio e o jogo fala direto com o controle.<br><br>
+          <b>Desligado</b> — o Hefesto sai do meio e o jogo fala direto com o controle. Aqui ele não cria um controle para cada pessoa — quem conta os jogadores é o jogo, pelos controles que ele enxerga.<br><br>
           Isto não encerra o serviço. Para isso, a aba <b>Sistema</b>.
         </span></span>
       </div>
@@ -2185,7 +2298,7 @@
       <text style="dominant-baseline: central; fill: rgb(200, 204, 218); font-family: Zrnic; font-size: 11px; font-weight: 700; text-anchor: middle; white-space: pre;" x="15.971" y="17.025">R</text>
     </g>
 </svg>
-                <span class="rotulo">Sony <span class="pt">•</span> <b data-campo="jogador-espera" data-hef-alvo="classe" data-hef-classe="espera" title="O lugar está reservado e o jogo ainda não recebeu este controle. O número fica forte quando ele entrar na partida."><span data-campo="jogador">Player 1</span></b><br><span data-campo="identidade">Cosmic Red <span class="pt">•</span> USB</span><br><span class="bat"><svg class="gl" width="13" height="13" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+                <span class="rotulo"><span class="fabricante">Sony <span class="pt">•</span> </span><b data-campo="jogador-espera" data-hef-alvo="classe" data-hef-classe="espera" title="O lugar está reservado e o jogo ainda não recebeu este controle. O número fica forte quando ele entrar na partida."><span data-campo="jogador">Player 1</span></b><br><span data-campo="identidade">Cosmic Red <span class="pt">•</span> USB</span><sup class="degradou" data-campo="degradou-cartao" data-hef-alvo="atributo" data-hef-atributo="title">*</sup><span class="e-primario" data-campo="marcador-principal" data-hef-alvo="classe" data-hef-classe="ha" title="É este controle que o Hefesto ouve para navegar o computador, e é dele que ele lê os botões. Quem é o primário quem decide é o serviço."> <span class="pt">•</span> primário</span><br><span class="bat"><svg class="gl" width="13" height="13" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
 
   <rect x="3" y="10" width="22" height="12" rx="2" fill="none" stroke="currentColor" stroke-width="2"/>
   <path d="M27,14 v4" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>
@@ -2492,7 +2605,7 @@
       <text style="dominant-baseline: central; fill: rgb(200, 204, 218); font-family: Zrnic; font-size: 11px; font-weight: 700; text-anchor: middle; white-space: pre;" x="15.971" y="17.025">R</text>
     </g>
 </svg>
-                <span class="rotulo">Sony <span class="pt">•</span> <b data-campo="jogador-espera" data-hef-alvo="classe" data-hef-classe="espera" title="O lugar está reservado e o jogo ainda não recebeu este controle. O número fica forte quando ele entrar na partida."><span data-campo="jogador">Player 2</span></b><br><span data-campo="identidade">Starlight Blue <span class="pt">•</span> BT</span><br><span class="bat"><svg class="gl" width="13" height="13" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+                <span class="rotulo"><span class="fabricante">Sony <span class="pt">•</span> </span><b data-campo="jogador-espera" data-hef-alvo="classe" data-hef-classe="espera" title="O lugar está reservado e o jogo ainda não recebeu este controle. O número fica forte quando ele entrar na partida."><span data-campo="jogador">Player 2</span></b><br><span data-campo="identidade">Starlight Blue <span class="pt">•</span> BT</span><sup class="degradou" data-campo="degradou-cartao" data-hef-alvo="atributo" data-hef-atributo="title">*</sup><span class="e-primario" data-campo="marcador-principal" data-hef-alvo="classe" data-hef-classe="ha" title="É este controle que o Hefesto ouve para navegar o computador, e é dele que ele lê os botões. Quem é o primário quem decide é o serviço."> <span class="pt">•</span> primário</span><br><span class="bat"><svg class="gl" width="13" height="13" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
 
   <rect x="3" y="10" width="22" height="12" rx="2" fill="none" stroke="currentColor" stroke-width="2"/>
   <path d="M27,14 v4" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>
@@ -2510,6 +2623,7 @@
               <div class="cartao off"
                    data-controle="p3" data-conectado="nao"
                    title="Lugar vazio: nenhum controle conectado aqui.">
+                <i class="pele" data-campo="plastico" data-hef-alvo="cor" style="color:#74588e"></i>
                 <div class="peca-topo">
                 <svg data-campo="desenho" data-hef-alvo="atributo" data-hef-atributo="data-colorway" data-colorway="galactic-purple" class="ds-svg"  xmlns="http://www.w3.org/2000/svg" viewBox="6.399 22.990 116.684 80.472" width="1160" height="800" data-modelo="Sony DualSense" xmlns:bx="https://boxy-svg.com">
   <defs>
@@ -2799,14 +2913,14 @@
       <text style="dominant-baseline: central; fill: rgb(200, 204, 218); font-family: Zrnic; font-size: 11px; font-weight: 700; text-anchor: middle; white-space: pre;" x="15.971" y="17.025">R</text>
     </g>
 </svg>
-                <span class="rotulo">—<br>—<br><span class="bat"><svg class="gl" width="13" height="13" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+                <span class="rotulo"><span class="fabricante">Sony <span class="pt">•</span> </span><b data-campo="jogador-espera" data-hef-alvo="classe" data-hef-classe="espera" title="O lugar está reservado e o jogo ainda não recebeu este controle. O número fica forte quando ele entrar na partida."><span data-campo="jogador">—</span></b><br><span data-campo="identidade">—</span><sup class="degradou" data-campo="degradou-cartao" data-hef-alvo="atributo" data-hef-atributo="title">*</sup><span class="e-primario" data-campo="marcador-principal" data-hef-alvo="classe" data-hef-classe="ha" title="É este controle que o Hefesto ouve para navegar o computador, e é dele que ele lê os botões. Quem é o primário quem decide é o serviço."> <span class="pt">•</span> primário</span><br><span class="bat"><svg class="gl" width="13" height="13" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
 
   <rect x="3" y="10" width="22" height="12" rx="2" fill="none" stroke="currentColor" stroke-width="2"/>
   <path d="M27,14 v4" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>
   <line x1="7"  y1="14" x2="7"  y2="18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
   <line x1="12" y1="14" x2="12" y2="18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
   <line x1="17" y1="14" x2="17" y2="18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-</svg> <span>—</span></span></span>
+</svg> <span data-campo="bateria">—</span></span></span>
                 </div>
                 <div class="mascara">
                   <span class="chip" data-gesto="mascara" data-mascara="DualSense" data-campo="mascara-cartao" data-hef-alvo="classe" data-hef-quando="DualSense">DualSense</span>
@@ -2817,6 +2931,7 @@
               <div class="cartao off"
                    data-controle="p4" data-conectado="nao"
                    title="Lugar vazio: nenhum controle conectado aqui.">
+                <i class="pele" data-campo="plastico" data-hef-alvo="cor" style="color:#e4e0d8"></i>
                 <div class="peca-topo">
                 <svg data-campo="desenho" data-hef-alvo="atributo" data-hef-atributo="data-colorway" data-colorway="white" class="ds-svg"  xmlns="http://www.w3.org/2000/svg" viewBox="6.399 22.990 116.684 80.472" width="1160" height="800" data-modelo="Sony DualSense" xmlns:bx="https://boxy-svg.com">
   <defs>
@@ -3106,14 +3221,14 @@
       <text style="dominant-baseline: central; fill: rgb(200, 204, 218); font-family: Zrnic; font-size: 11px; font-weight: 700; text-anchor: middle; white-space: pre;" x="15.971" y="17.025">R</text>
     </g>
 </svg>
-                <span class="rotulo">—<br>—<br><span class="bat"><svg class="gl" width="13" height="13" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+                <span class="rotulo"><span class="fabricante">Sony <span class="pt">•</span> </span><b data-campo="jogador-espera" data-hef-alvo="classe" data-hef-classe="espera" title="O lugar está reservado e o jogo ainda não recebeu este controle. O número fica forte quando ele entrar na partida."><span data-campo="jogador">—</span></b><br><span data-campo="identidade">—</span><sup class="degradou" data-campo="degradou-cartao" data-hef-alvo="atributo" data-hef-atributo="title">*</sup><span class="e-primario" data-campo="marcador-principal" data-hef-alvo="classe" data-hef-classe="ha" title="É este controle que o Hefesto ouve para navegar o computador, e é dele que ele lê os botões. Quem é o primário quem decide é o serviço."> <span class="pt">•</span> primário</span><br><span class="bat"><svg class="gl" width="13" height="13" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
 
   <rect x="3" y="10" width="22" height="12" rx="2" fill="none" stroke="currentColor" stroke-width="2"/>
   <path d="M27,14 v4" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>
   <line x1="7"  y1="14" x2="7"  y2="18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
   <line x1="12" y1="14" x2="12" y2="18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
   <line x1="17" y1="14" x2="17" y2="18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-</svg> <span>—</span></span></span>
+</svg> <span data-campo="bateria">—</span></span></span>
                 </div>
                 <div class="mascara">
                   <span class="chip" data-gesto="mascara" data-mascara="DualSense" data-campo="mascara-cartao" data-hef-alvo="classe" data-hef-quando="DualSense">DualSense</span>
@@ -3121,6 +3236,27 @@
                   <span class="chip inerte" title="O Hefesto não sabe montar esta máscara. As que existem: DualSense, Xbox 360." data-gesto="mascara" data-mascara="Nintendo Pro" data-campo="mascara-cartao" data-hef-alvo="classe" data-hef-quando="Nintendo Pro">Nintendo Pro</span>
                 </div>
               </div>
+              <!-- OS CONTROLES QUE O HEFESTO SÓ VÊ — EXTERNOS-01, 06/09/2026, e
+                   é a linha 16 do `docs/data/paridade-gtk-html.csv`: *"com dois
+                   DualSense e um 8BitDo na mesa a aba dizia '2 controles' ao
+                   lado de três cards noutra tela"*. A janela antiga fechou isso
+                   em 25/08 (a `I5`); a tela nova nasceu com o defeito de volta.
+
+                   E ELE MORA DENTRO DA GRADE DOS ASSENTOS — escolha DELA,
+                   06/09/2026, entre duas maquetes: *no mesmo frame*, como a
+                   janela GTK fazia. A EXTERNOS-01 entregou a faixa à parte e
+                   perguntou; esta é a resposta, e ela move o endereço para
+                   dentro da `.pecas` sem criar um segundo (ver `.ext-vaga` no
+                   CSS, que é `display:contents`).
+
+                   ELE NASCE VAZIO, E ISSO É O DESENHO. Quantos externos existem
+                   é o que a MÁQUINA responde, e não há endereço para um cartão
+                   que ainda não nasceu — a mesma razão do mapa do gabinete e da
+                   régua do rádio na aba 08. Em repouso a grade continua com os
+                   quatro assentos e mais nada: nenhum aparelho de exemplo entra
+                   aqui, e a cena que ela aprovou continua igual até um externo
+                   ser ligado. -->
+              <div class="ext-vaga" data-campo="externos" data-hef-alvo="html"><i class="nada"></i></div>
             </div>
           </div>
 
@@ -3336,7 +3472,7 @@
       (<code>apply_mode('desktop')</code>, o antigo "Controlar o PC"). O que ainda não existe é
       o <b>PS + R3</b> parar nela — a Navegação não é degrau. Por isso ela leva traço no
       dica que diz o que falta, mas <b>não</b> a borda tracejada.</li>
-    <li><b>Quatro controles na mesa, um cartão cada</b> — a lista é a <code>MESA</code> do <code>monta.py</code>: não há "quatro" escrito num laço, e o número do jogador é campo, não a posição na fila. Continua sendo só a peça, com o <b>SVG pequeno na cor do plástico</b> — o card completo é da aba Controles.</li>
+    <li><b>Quatro controles ligados, um cartão cada</b> — a lista é a <code>MESA</code> do <code>monta.py</code>: não há "quatro" escrito num laço, e o número do jogador é campo, não a posição na fila. Continua sendo só a peça, com o <b>SVG pequeno na cor do plástico</b> — o card completo é da aba Controles.</li>
     <li><b>A borda e a cor vêm do mapa</b> — a cor do plástico sai do <code>cores-do-dualsense.csv</code> pela folha que o gerador escreveu dentro do desenho. Não está digitada aqui.</li>
     <li><b>As cinco lâmpadas do jogador ficam apagadas neste cartão</b> — medido de novo hoje,
       no 1× da sua tela: cada lâmpada mede <b>1,06 × 0,36 px</b> no desenho de 62px, e acender
@@ -3362,9 +3498,9 @@
     <li><b>Empilhadas, e não lado a lado</b> — o cartão tem 208px e só "Nintendo Pro" pede
       ~104px; três na horizontal precisariam de ~326px. A saída seria dois cartões por
       fileira (423px cada), e o preço disso é desfazer <b>os quatro numa fileira só</b>, que é
-      o que deixa a mesa inteira num relance. Se você preferir a horizontal, é esse o troco.</li>
-    <li><b>As máscaras que aparecem escolhidas</b> — o P1 em DualSense e o P2 em Xbox 360. É para você <b>ver</b> que a escolha é por controle; a sua mesa hoje
-      é DualSense nos quatro.</li>
+      o que deixa todos os controles num relance. Se você preferir a horizontal, é esse o troco.</li>
+    <li><b>As máscaras que aparecem escolhidas</b> — o P1 em DualSense e o P2 em Xbox 360. É para você <b>ver</b> que a escolha é por controle; os seus quatro
+      hoje são DualSense.</li>
     <li><b>Clicar num cartão leva a fita para ele</b> — é a mesma gramática que você fixou hoje
       para o acordeão da Controles ("clicar num card muda a fita").</li>
     <li><b>A ordem dos cinco modos não é a ordem em que você os listou</b>, e é a única coisa
@@ -3437,7 +3573,7 @@
       desde 15/08) — o registro por MAC e a herança existem. O que falta é <b>passar a
       identidade</b> em três lugares: <code>virtual_pad.make_virtual_pad</code>,
       <code>coop.py</code> e <code>gamepad.py</code>. Hoje ninguém a passa, e por isso a
-      máscara viva é uma só para a mesa toda — que é exatamente o que esta tela deixa de
+      máscara viva é uma só para todos os controles — que é exatamente o que esta tela deixa de
       mostrar.</li>
     <li><b>Um fato do specs, para a sprint não prometer o que o aparelho não tem:</b> o
       Pro Controller <b>não tem</b> microfone, alto-falante, touchpad, lightbar RGB, gatilho
