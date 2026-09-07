@@ -543,15 +543,39 @@ def test_o_servidor_so_atende_o_proprio_computador() -> None:
 
 
 def test_o_validar_sh_existe_e_tem_o_sem_abrir() -> None:
-    """A janela é DELA; a régua usa `--sem-abrir`."""
+    """A janela é DELA; a régua usa `--sem-abrir`.
+
+    E O LANÇADOR PODE LIGAR O DAEMON — `start`, nunca `restart` nem `stop`.
+    Pedido dela em 07/09/2026: *"quando rodar o validar ele tem que acionar
+    isso automaticamente"*, depois de atravessar meia bancada com o daemon
+    morto e a página mostrando o posto da LÂMPADA da sessão passada.
+
+    ATÉ ALI ESTA RÉGUA PROIBIA `systemctl` INTEIRO, e a proibição estava
+    certa pelo motivo errado: o perigo nunca foi a palavra, foi DERRUBAR o
+    daemon vivo com os controles na mão dela. `start` num serviço já ativo não
+    faz nada; `restart` corta uma medição em curso. Então a régua deixa de
+    caçar a palavra e passa a caçar o VERBO — que é o que morde.
+    """
     sh = RAIZ / "validar.sh"
     assert sh.exists() and os.access(sh, os.X_OK)
     fonte = sh.read_text(encoding="utf-8")
     assert "--sem-abrir" in fonte
-    for proibido in ("install.sh", "systemctl", "pkill"):
-        assert proibido not in fonte.replace(
-            "`pkill -f` já derrubou o", ""), (
+    # O `install.sh` continua fora: ele reescreve os lançadores dela e a unit.
+    # O `pkill` também — `pkill -f` já derrubou o compositor dela.
+    codigo = "\n".join(linha for linha in fonte.splitlines()
+                       if not linha.lstrip().startswith("#"))
+    for proibido in ("install.sh", "pkill"):
+        assert proibido not in codigo, (
             f"o lançador da mesa não pode tocar em {proibido}")
+    for verbo in ("restart", "stop", "kill-unit", "disable"):
+        assert f"systemctl --user {verbo}" not in codigo, (
+            f"o lançador não pode `systemctl --user {verbo}` — isso derruba o "
+            f"daemon vivo no meio de uma medição dela")
+    assert "systemctl --user start" in codigo, (
+        "o lançador deixou de ligar o daemon; ela pediu que ligasse sozinho")
+    assert "is-active" in codigo, (
+        "o lançador tem de perguntar antes de ligar — chamar `start` cego "
+        "esconde da tela se o daemon já estava de pé")
 
 
 @pytest.mark.skipif(not shutil.which("shellcheck"), reason="sem shellcheck")
