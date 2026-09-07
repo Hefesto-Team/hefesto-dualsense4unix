@@ -587,6 +587,23 @@ def mentira(tmp_path):
     return arq
 
 
+
+
+def _abre_o_como(pg) -> None:
+    """Abre a gaveta do campo do COMO, CLICANDO — nunca pelo `.open`.
+
+    O `#gesto` saiu da cara do teste em 07/09/2026: ele repetia em prosa os
+    passos que já estavam logo acima, e ela escreveu *"quanto texto (…) tá
+    impossível ler ou fazer algo aqui"*. Ele mora numa gaveta com nome, e o
+    `fill` desta régua estourou por isso — a quebra estava CERTA. Abrir pelo
+    clique é o gesto dela; pelo `.open` seria medir um caminho que a mão dela
+    não tem.
+    """
+    if not pg.evaluate("() => !!document.querySelector('#caixa-do-gesto')?.open"):
+        pg.click("#caixa-do-gesto > summary")
+    pg.wait_for_selector("#gesto", state="visible")
+
+
 @pytest.mark.skipif(not pathlib.Path(CHROME).exists(), reason="sem Chrome")
 def test_a_pagina_dirigida_pelo_navegador(mesa_no_ar, mentira, monkeypatch) -> None:
     """Os três tempos, clicados — e o realce medido no `getComputedStyle`.
@@ -740,6 +757,7 @@ def test_a_pagina_dirigida_pelo_navegador(mesa_no_ar, mentira, monkeypatch) -> N
             # §7.5 — uma resposta gravada sobrevive a recarregar, e está em disco.
             pg.check('.ctl[data-posto="P3"] input[value="obedeceu"]')
             pg.check('.ctl[data-posto="P1"] input[value="nada"]')
+            _abre_o_como(pg)
             pg.fill("#gesto", "aba 03 > efeito Arma no P3 · report 0x02")
             # o campo geral saiu; o que ela escreve é por CONTROLE
             pg.fill('textarea[name="n-P3"]', "só o P3 endureceu")
@@ -770,7 +788,7 @@ def test_a_pagina_dirigida_pelo_navegador(mesa_no_ar, mentira, monkeypatch) -> N
             # volta hoje seria reprovar a cura. O que ela tem de provar é o
             # mesmo de sempre: que o texto é o DESTE teste.
             passos = dict(do_novo.como).get("os passos", "")
-            primeiro = next((x.strip() for x in passos.split("·") if x.strip()), "")
+            primeiro = next((x.strip() for x in passos.split("\n") if x.strip()), "")
             assert primeiro and primeiro[:40] in agora, (
                 f"o campo do gesto não trouxe os passos deste teste. "
                 f"esperado começar por {primeiro[:40]!r}, veio {agora[:120]!r}")
