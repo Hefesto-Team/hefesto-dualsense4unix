@@ -196,7 +196,32 @@ DOMINIO = _DOMINIO_DO_PORTAO["por_que_nao_aciona"]
 #: para a frente ele só desce. Quem pagar uma delas baixa o teto no mesmo
 #: commit; quem quiser subi-lo de novo escreve, como está escrito aqui, por que
 #: a casa passou a dever mais — ou por que a medição passou a dizer mais.
-TETO_DA_DIVIDA = 23
+#:
+#: ─────────────────────────────────────────────────────────────────────────
+#: SUBIU PARA 25 EM 06/09/2026, e de novo a casa NÃO passou a dever mais.
+#: ─────────────────────────────────────────────────────────────────────────
+#: As duas células novas são `vibracao.rumble.ff@pro`, cabo e rádio, e vêm da
+#: leva que levantou na FONTE as 38 células `nao-medido` do Nintendo Pro.
+#:
+#: **É A MESMA FALTA que já estava confessada**, e é isso que precisa ficar
+#: escrito para ninguém a ler como dívida nova: as quatro células de
+#: `vibracao.rumble.direito@pro` e `vibracao.rumble.esquerdo@pro` já diziam
+#: `divida` desde 03/09, com a razão «o Hefesto simplesmente não tem escritor
+#: de force feedback para controle externo» — e as duas linhas filhas DECLARAM,
+#: no próprio `detalhe`, que não repetem o levantamento e apontam para
+#: `vibracao.rumble.ff@pro`. A linha DONA do levantamento é que estava muda.
+#:
+#: Ficar em `nao-medido` seria dizer «ninguém olhou para o aparelho», e
+#: olharam: o caminho (`EV_FF`/`FF_RUMBLE` no nó de gamepad) está lido no
+#: driver e a ausência do escritor está medida por `grep` na árvore. A escolha
+#: era entre um número honesto e uma célula que mente calada.
+#:
+#: **O LEVE QUE ISSO DEIXA, e ele baixa QUATRO de uma vez:** um escritor de
+#: force feedback para externo fecha as SEIS células juntas (`ff`, `direito`,
+#: `esquerdo`, nos dois lados) e este teto cai para 19. Quem, em vez disso,
+#: decidir que as filhas não devem recontar o que a mãe já conta, colapsa as
+#: quatro delas e baixa o teto para 21 sem escrever uma linha de produto.
+TETO_DA_DIVIDA = 25
 
 
 def _linhas(caminho: Path | str) -> list[dict[str, str]]:
