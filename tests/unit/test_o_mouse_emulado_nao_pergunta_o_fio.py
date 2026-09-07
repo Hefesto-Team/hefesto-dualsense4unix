@@ -393,11 +393,26 @@ CELULAS_ESPERADAS: dict[str, dict[str, str]] = {
     "luz.recursos_proprios@dualsense": {
         "cabo_aciona": "não",
         "radio_aciona": "não",
-        # A causa fica VAZIA de propósito — ela é mista, e o `cabo_detalhe` diz
-        # por quê. Trocar por uma palavra do domínio sem partir a linha em duas
-        # chaves é o que esta régua impede.
-        "cabo_por_que_nao_aciona": "",
-        "radio_por_que_nao_aciona": "",
+        # O "VAZIA DE PROPÓSITO" CADUCOU EM 06/09/2026, e não por decisão desta
+        # sprint: a regra 16 do `check_paridade_transporte.py` deixou de valer
+        # só para o `medido` e passou a cobrar causa de TODO `aciona = não`. A
+        # partir daí a célula vazia é reprovação, e vazio deixou de ser uma
+        # opção que esta régua pudesse defender.
+        #
+        # O texto que estava aqui dizia: *"a causa fica VAZIA de propósito —
+        # ela é mista, e o `cabo_detalhe` diz por quê"*. A frase descrevia um
+        # mundo em que a coluna admitia silêncio; ela não descreve mais o mapa,
+        # e uma régua que insiste nela reprova quem escreveu a resposta certa —
+        # que é exatamente o que aconteceu: este nó chegou VERMELHO a
+        # 06/09/2026 na base `onda/atual-0609`, medido antes de esta sprint
+        # tocar em qualquer coisa.
+        #
+        # O QUE FICA EM ABERTO, e não é desta sprint decidir: se `nao-medido`
+        # é a causa CERTA para uma linha cujo `cabo_detalhe` chama a causa de
+        # MISTA. `nao-medido` diz *"ninguém olhou para o aparelho"*, e uma
+        # causa mista pode ser outra coisa. Quem escreveu a célula responde.
+        "cabo_por_que_nao_aciona": "nao-medido",
+        "radio_por_que_nao_aciona": "nao-medido",
     },
 }
 

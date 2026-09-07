@@ -221,7 +221,30 @@ DOMINIO = _DOMINIO_DO_PORTAO["por_que_nao_aciona"]
 #: `esquerdo`, nos dois lados) e este teto cai para 19. Quem, em vez disso,
 #: decidir que as filhas não devem recontar o que a mãe já conta, colapsa as
 #: quatro delas e baixa o teto para 21 sem escrever uma linha de produto.
-TETO_DA_DIVIDA = 25
+#:
+#: ─────────────────────────────────────────────────────────────────────────
+#: DESCEU PARA 23 EM 06/09/2026 (SPECS-A-PROCEDENCIA-01), e desceu pelo MOTIVO
+#: CERTO — que é para isso que este número está aqui.
+#: ─────────────────────────────────────────────────────────────────────────
+#: As duas células que saíram são `audio.microfone.volume@dualsense`, cabo e
+#: rádio. Elas diziam `divida`, e não era: a decisão está DATADA no código —
+#: `core/backend_pydualsense.py`, SOM-SEMPRE-01, deixa o volume do microfone
+#: FORA da chamada de propósito, porque o dono do microfone no Linux é o kernel
+#: (AUDIO-OWNER-01). As duas passaram a `decisao-tomada`.
+#:
+#: **NENHUMA dívida foi paga com código nesta descida**, e é isso que precisa
+#: ficar escrito para ninguém a ler como trabalho feito: o que mudou é a
+#: CLASSIFICAÇÃO, não o produto. A diferença importa porque `divida` chama
+#: alguém para trabalhar e `decisao-tomada` não — as duas células estavam na
+#: fila de quem procura o que fazer, e não havia nada a fazer nelas. O achado é
+#: da A-RECUSA-QUE-CITOU-O-MAPA-01 §4.4.
+#:
+#: ESTE ARQUIVO NÃO ESTAVA NA `posse:` DA SPECS-A-PROCEDENCIA-01. Ele foi
+#: tocado porque a mudança do mapa move este número por construção — o
+#: `test_o_teto_e_um_numero_deste_arquivo_e_nao_do_csv` exige que o teto seja
+#: exatamente a conta de hoje —, e deixá-lo velho entregaria a suíte vermelha a
+#: quem costura. Está declarado na entrega daquela sprint.
+TETO_DA_DIVIDA = 23
 
 
 def _linhas(caminho: Path | str) -> list[dict[str, str]]:
