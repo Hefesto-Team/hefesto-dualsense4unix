@@ -1540,6 +1540,26 @@ class Profile(BaseModel):
           entre unidades) e broadcast ``ff:ff:ff:ff:ff:ff``;
         - duas chaves que canonizam para o mesmo MAC (colisão silenciosa:
           um dos overrides venceria por ordem de inserção, sem aviso).
+
+        A FORMA DA CHAVE É UMA SÓ, e isso passou a ser MEDIDO em 06/09/2026
+        (QUEM-E-QUEM-04, depois da O-CONTROLE-SEM-MAC-01). O plano era este
+        validador aprender uma SEGUNDA gramática, "com prefixo explícito",
+        para o controle cujo firmware não expõe serial. Ela não existe: dos
+        cinco crachás candidatos sobrou o feature ``0x09``, e o que ele
+        devolve é **o endereço de rádio** — é de onde o próprio
+        ``hid_playstation`` tira o ``HID_UNIQ``. O crachá é *outra estrada
+        para o mesmo valor*, e ``identity.resolver_crachas`` só o aceita
+        depois das MESMAS guardas do serial (12 hex canônicos, não-vpad).
+
+        **Consequência para quem vier alargar isto:** a porta já está aberta,
+        e uma segunda forma seria uma segunda identidade para a mesma peça de
+        plástico. Se um dia ela precisar existir, as três rejeições acima têm
+        de vir junto — alargar a chave sem preservá-las troca "não lembra, em
+        silêncio" por dois controles dividindo a MESMA memória, que é pior.
+        A régua nomeada é
+        ``tests/unit/test_quem_e_quem_04_a_chave_atravessa_o_transporte.py``,
+        e ela morde nas duas pontas (este validador e o
+        ``describe_controllers`` do backend).
         """
         if value is None:
             return value
