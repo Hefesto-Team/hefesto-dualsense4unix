@@ -3,8 +3,9 @@
 O DEFEITO QUE ESTE ARQUIVO EXISTE PARA NÃO DEIXAR VOLTAR
 --------------------------------------------------------
 Medido em 22/08/2026, rodando o contador deste arquivo contra
-`docs/data/mapa-controles.csv`: **41 células dizem que a casa MEDIU e o produto
-NÃO ACIONA** — 20 no cabo, 21 no rádio, 13 linhas com as duas assim. (Foram
+`docs/data/mapa-controles.csv`: **41 células diziam que a casa MEDIU e o produto
+NÃO ACIONA** — 20 no cabo, 21 no rádio, 13 linhas com as duas assim. (São
+**43 em 07/09/2026** — a recontagem está no fim deste bloco.) (Foram
 **39 entre 29/08 e 02/09/2026**, e as duas que saíram saíram PELO MOTIVO CERTO:
 o acelerômetro do DualSense passou a ser lido nos dois transportes —
 ONDA-CONTROLES-04. O número desce quando a dívida é paga; é para isso que ele
@@ -14,7 +15,24 @@ dívida:** os dois lados de `movimento.imu.ligar@dualsense` subiram de
 para eles desde 15/08 — a casa passou a admitir que MEDIU, e o `aciona = não`
 não mudou. As duas células entraram com `nada-a-acionar`, que é DECISÃO: não há
 o que acionar porque não existe comando de ligar a IMU e o sensor emite sempre.
-O contador de dívida deste arquivo não se moveu.) O
+O contador de dívida deste arquivo não se moveu.)
+
+**RECONTADO EM 07/09/2026: são 43** — 22 no cabo, 21 no rádio.
+E o saldo é o que este número existe para mostrar: **três SAÍRAM porque a
+dívida foi paga** — `identidade.cor_do_aparelho@dualsense` no rádio e o
+`movimento.acelerometro@dualsense` nos dois transportes passaram a ser
+acionados pelo produto — e **cinco entraram**, quatro delas por HONESTIDADE, não
+por dívida nova: `movimento.imu.ligar@dualsense` nos dois lados,
+`identidade.pareamento@dualsense` e `plataforma.crc32@dualsense` no cabo subiram
+para `medido` porque a casa passou a admitir que mediu, e o `aciona = não` já
+estava lá. A quinta é `plataforma.udev_autosuspend@sn30` no rádio.
+
+*A recontagem esperou:* o agente da SPECS-A-PROCEDENCIA-01 viu o vermelho, o
+declarou no relatório dele e NÃO recontou — *"recontar é reescrever a prosa do
+arquivo, e ela é de quem a escreveu"*. Estava certo: um número que se conserta
+sozinho para o teste passar é um número que ninguém leu.
+
+O
 `scripts/gerar-mapa.py` já as pintava de laranja (`--color-lacuna`, "a casa sabe
 e o produto não faz") e já as contava no cartão de cada controle (`placar`,
 chave `lacuna`).
@@ -421,10 +439,11 @@ def test_a_populacao_nao_depende_da_coluna_que_ela_confere() -> None:
         "que ela é derivada da própria coluna, e o portão ficaria verde "
         "justamente quando alguém esquecesse de responder"
     )
-    assert len(antes) == 41, (
-        f"o recorte de 02/09/2026 tinha 41 células medidas e não acionadas, e "
-        f"agora tem {len(antes)}. Não é reprovação de defeito: é aviso de que o "
-        "retrato deste arquivo envelheceu e o texto precisa ser recontado"
+    assert len(antes) == 43, (
+        f"o recorte de 07/09/2026 tinha 43 células medidas e não "
+        f"acionadas, e agora tem {len(antes)}. Não é reprovação de defeito: é "
+        "aviso de que o retrato deste arquivo envelheceu e o texto precisa ser "
+        "recontado — leia o cabeçalho deste arquivo, que diz como"
     )
 
 
