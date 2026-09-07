@@ -1407,6 +1407,84 @@ def ressalva(campo: str, texto: str = "") -> str:
             f'{texto or NADA_A_DIZER}</div>')
 
 
+#: O `<style>` que o gerador das cores escreve dentro do `ds_limpo.svg`.
+_FOLHA = re.compile(r'<style id="cores-do-dualsense-folha">(.*?)</style>', re.S)
+
+
+def folha_das_cores() -> str:
+    """A folha dos **28 modelos inteira**, para quem põe mais de um desenho na
+    página e precisa trocar de modelo por `data-colorway`.
+
+    POR QUE ELA EXISTE, e a razão está no portão. `_so_o_colorway` PODA a folha
+    para o modelo pedido, e isso é certo numa aba que embute quatro cópias do
+    desenho — mas uma folha podada **é uma escolha cravada**: o SVG não tem como
+    virar outro modelo, e `check_a_cor_vem_do_aparelho.py` a conta como dívida
+    (`_fechar_folha`, que compara os modelos declarados com os do CSV dela).
+
+    Quem publica ESTA folha uma vez na página, e chama `svg(..., folha=False)`
+    nos desenhos, paga a tabela dela uma vez só e ganha a troca por atributo —
+    que é o mecanismo que a lei dela pede.
+    """
+    m = _FOLHA.search(DS)
+    if not m:
+        raise SystemExit(
+            "ERRO em folha_das_cores(): o `<style id=\"cores-do-dualsense-folha\">` "
+            "sumiu do ds_limpo.svg — rode scripts/gerar_cores_do_dualsense.py")
+    return str(m.group(0))
+
+
+#: A tinta do realce. É uma VARIÁVEL, e não um hexa, porque quem acende decide o
+#: papel: o controle que DEVE reagir e o que NÃO PODE reagir têm de brilhar
+#: diferente, senão um teste em que os quatro brilham igual não diz nada.
+REALCE_PADRAO = "#ff79c6"
+
+
+def folha_de_realce(var: str = "--realce", padrao: str = REALCE_PADRAO) -> str:
+    """A regra CSS que faltava para `apertados=` — a peça inteira acesa.
+
+    O `apertados=` de :func:`svg` escreve `class="marcada"` no `<g>` da peça
+    desde que nasceu, **e nenhuma folha desta casa jamais teve regra para essa
+    classe**: o parâmetro montava o HTML certo e não acendia nada. A única
+    `.marcada` do repositório vivia em `scripts/gerar-mapa.py`, e valia só para
+    o `html/specs.html`.
+
+    A REGRA É UMA SÓ, e não uma por peça. O `mapa.py` precisa de uma regra por
+    peça porque o gatilho dele mora FORA do desenho (`:has(.item-N:hover)`, a
+    lista da direita); aqui a classe está no próprio grupo, então basta descer
+    dele para os filhos.
+
+    DUAS COISAS DECIDEM ESTA REGRA, e as duas foram MEDIDAS no Chrome em
+    06/09/2026 — a primeira derrubando a versão anterior desta função:
+
+    * **a especificidade tem de vencer a folha das zonas, e a conta é apertada.**
+      A folha escreve
+      ``svg[data-colorway="x"] .z-gatilhos :is(path,…):not([fill="none"])`` —
+      duas classes de seletor mais o ``:not([…])``, que também conta como
+      classe: **(0,3,2)**. Um ``svg[data-colorway] g.marcada :is(…)`` dá
+      **(0,2,3)** e PERDE. Escrevi assim primeiro e medi: com um Nova Pink na
+      mesa, o R1 marcado continuou `rgb(227,91,140)`, a cor da zona — o realce
+      simplesmente não aparecia nas peças pintadas, que são quase todas. O
+      ``.marcada.marcada`` repetido sobe para **(0,3,3)** e ganha por um ponto.
+      Ele parece um erro de digitação e não é: é a única forma de subir um
+      degrau de classe sem inventar um id nem pôr um seletor a mais no desenho;
+    * **`!important` é obrigatório**, e não é preferência: o desenho dela traz
+      `fill` no `style` inline de várias peças, e style inline vence folha. É a
+      mesma cicatriz que `mapa.py` já carrega no comentário do ``alvo_css``.
+
+    E `color`, além de `fill`/`stroke`, porque os quatro glifos da face são
+    traço puro (`fill="none" stroke="currentColor"`): sem ele o triângulo e o
+    círculo ficariam apagados no meio de um botão aceso.
+    """
+    alvo = ":is(path,rect,circle,ellipse,polygon,line,polyline)"
+    return (
+        f"svg[data-colorway] g.marcada.marcada {alvo}"
+        f"{{fill:var({var},{padrao}) !important;"
+        f"stroke:var({var},{padrao}) !important}}\n"
+        f"svg[data-colorway] g.marcada.marcada"
+        f"{{color:var({var},{padrao}) !important}}"
+    )
+
+
 def _so_o_colorway(x: str, colorway: str) -> str:
     """Do `<style>` gerado, guarda só as regras DESTE modelo.
 
@@ -1456,10 +1534,15 @@ def _tira_grupo(x: str, gid: str, quem: str) -> str:
 def svg(pref: str, colorway: str, classes: str = "ds-svg",
         acesos: tuple[str, ...] = (), jogador: int | None = None,
         luz: str | None = None, apertados: tuple[str, ...] = (),
-        lampadas: bool = True) -> str:
+        lampadas: bool = True, folha: bool = True) -> str:
     """O DualSense, na cor pedida.
 
     `lampadas=False` arranca as cinco lâmpadas do jogador do desenho.
+
+    `folha=False` arranca o `<style>` das cores do desenho, e é para quem já
+    publicou :func:`folha_das_cores` uma vez na página — ver a docstring de lá.
+    O `data-colorway` continua sendo escrito, que é o que faz a folha de cima
+    alcançar este desenho.
 
     POR QUE ISSO É UM PARÂMETRO, e não uma regra de CSS. Decisão dela, 28/08:
     **as lâmpadas do jogador SOMEM dos desenhos pequenos; ficam só nos grandes,
@@ -1482,7 +1565,7 @@ def svg(pref: str, colorway: str, classes: str = "ds-svg",
     if jogador and not lampadas:
         raise SystemExit(f"ERRO em svg({pref!r}): jogador={jogador} acende as "
                          f"lâmpadas e lampadas=False as arranca — escolha um.")
-    x = _so_o_colorway(DS, colorway)
+    x = _FOLHA.sub("", DS, count=1) if not folha else _so_o_colorway(DS, colorway)
     for i in sorted(set(re.findall(r'id="([^"]+)"', x)), key=len, reverse=True):
         x = x.replace(f'id="{i}"', f'id="{pref}-{i}"').replace(f'url(#{i})', f'url(#{pref}-{i})').replace(f'#{i} ', f'#{pref}-{i} ')
     # O `data-colorway` JÁ VEM do arquivo (o gerador de cores o escreve, para o
@@ -1527,7 +1610,40 @@ def svg(pref: str, colorway: str, classes: str = "ds-svg",
                     if m else tag.replace(alvo, f'{alvo} class="led-on"', 1))
             x = x[:ini] + nova + x[fim:]
     for a in apertados:
-        x = x.replace(f'<g id="{pref}-{a}"', f'<g class="marcada" id="{pref}-{a}"', 1)
+        # DOIS DEFEITOS CURADOS AQUI EM 06/09/2026, e os dois estavam vivos
+        # desde que este parâmetro nasceu — sem ninguém ver, porque **nenhuma
+        # aba jamais o chamou** e não havia regra `.marcada` em folha nenhuma.
+        #
+        # 1. A ÂNCORA AUSENTE PASSAVA EM SILÊNCIO. Era uma `str.replace` nua, e
+        #    `str.replace` que não casa devolve o texto intacto **sem avisar** —
+        #    a cicatriz da fita que morreu em silêncio, e a mesma forma que fez
+        #    `jogador=` nunca acender uma lâmpada em aba nenhuma por um mês.
+        #    Aqui o risco é maior do que parece: quem chama passa o `id` de uma
+        #    peça vinda da coluna `peca` do mapa de canais, que é escrita à mão.
+        #    Um `alto_falante` com sublinhado onde o desenho tem `alto-falante`
+        #    e o desenho sairia sem realce nenhum, igual nos quatro controles —
+        #    que é justamente a leitura errada que uma mesa de medição não pode
+        #    produzir. A ausência PARA a geração.
+        #
+        # 2. A CLASSE ENTRAVA COMO UM SEGUNDO ATRIBUTO `class`, e o navegador
+        #    IGNORA o segundo, sem erro e sem aviso. O grupo saía
+        #    `<g class="marcada" id="…" class="z-gatilhos" …>` e **perdia a
+        #    zona de plástico**: a peça marcada deixava de receber a cor do
+        #    modelo. MEDIDO no Chrome em 06/09/2026 — com um Nova Pink na mesa,
+        #    o R1 pintava `rgb(227,91,140)` e o L2 marcado caía no `#3a3f4b`
+        #    cru do desenho. É a MESMA lição que a cura do `jogador=` já
+        #    carrega vinte linhas acima; ela não tinha sido aplicada aqui.
+        alvo = f'id="{pref}-{a}"'
+        i = x.find(alvo)
+        if i < 0 or not x[x.rindex("<", 0, i):i].startswith("<g "):
+            raise SystemExit(f"ERRO em svg({pref!r}): a peça {a!r} não é um "
+                             f"<g> deste desenho — âncora <g {alvo}")
+        ini, fim = x.rindex("<", 0, i), x.index(">", i)
+        tag = x[ini:fim]
+        m = re.search(r'\sclass="([^"]*)"', tag)
+        nova = (tag.replace(m.group(0), f' class="{m.group(1)} marcada"', 1)
+                if m else tag.replace(alvo, f'{alvo} class="marcada"', 1))
+        x = x[:ini] + nova + x[fim:]
     if luz:
         x = x.replace(f'<g id="{pref}-lightbar"', f'<g id="{pref}-lightbar" style="--luz:{luz}"', 1)
     return x
