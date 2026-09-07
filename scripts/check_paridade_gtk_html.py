@@ -123,6 +123,9 @@ import unicodedata
 from collections import Counter
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import prosa_do_codigo  # o irmão nesta pasta
+
 RAIZ = Path(__file__).resolve().parents[1]
 CSV = RAIZ / "docs" / "data" / "paridade-gtk-html.csv"
 DOC = RAIZ / "docs" / "process" / "2026-09-03-O-TERCEIRO-NUMERO-a-paridade-com-a-gtk.md"
@@ -424,8 +427,50 @@ class Arvore:
         return self._linhas[p]
 
     def ocorre(self, alvo: str, arquivos: list[Path]) -> Path | None:
+        """O símbolo APARECE, prosa incluída — e aqui isso é de propósito.
+
+        NÃO CONFUNDIR COM :meth:`usa`. **Muitos sinais deste CSV são citações
+        por desenho**: a linha 19 vigia ``test_os_donos_de_fato.py`` (um nome de
+        arquivo de teste) e a linha 2 vigia
+        ``app/actions/mode_transition.plan_mode_transition`` (um caminho de
+        módulo) — os dois só podem viver num comentário, e é assim que aquelas
+        linhas mordem. Exigir USO aqui derruba 82 linhas legítimas (medido).
+
+        A borda de palavra, essa sim, é ganho puro, e revelou um defeito: a
+        linha 66 vigiava ``player_slot``, que não existe sozinho na página — só
+        dentro de ``player_slot_color``. Aquela linha nunca mordeu.
+        """
         for p in arquivos:
-            if alvo in self.texto(p):
+            if prosa_do_codigo.agulha(alvo).search(self.texto(p)):
+                return p
+        return None
+
+    def usa(self, alvo: str, arquivos: list[Path]) -> Path | None:
+        """O símbolo é USADO — citá-lo na prosa não conta.
+
+        SÓ A REGRA ``divida-fechada`` CHAMA ESTA, e a razão é a assimetria:
+        ``PRESENTE`` pergunta *"isto ainda está aqui?"* e uma citação basta;
+        ``AUSENTE`` afirma *"o lado HTML NÃO faz isto"*, e citar a função alheia
+        num comentário não é fazer.
+
+        O DEFEITO QUE ELA MATA MORDEU TRÊS VEZES. Em 03/09/2026 as linhas 315 e
+        343 foram promovidas a ``DIFERENTE`` porque o símbolo "apareceu" no lado
+        HTML — era um COMENTÁRIO citando a função da GTK — e foram devolvidas no
+        mesmo dia. Em 06/09/2026 a mesma linha 315 caiu de novo, agora por uma
+        DOCSTRING que explicava o que a janela antiga fazia. E o mesmo defeito,
+        no mesmo dia, mordeu ``check_donos_de_comportamento.py``.
+
+        A separação tem dono único (``scripts/prosa_do_codigo.py``): a regra
+        desta casa é que a cura cobre TODOS os chamadores. O portão dos donos
+        resolve a mesma pergunta por outro caminho — ele coleta os NOMES que o
+        ``ast`` aponta —, e é o certo lá: naquele CSV o dono é sempre um
+        símbolo. Aqui não dá: **o sinal pode ser uma cadeia**
+        (``"restaurar-de-fabrica"`` é o nome de um gesto), e coletar só nomes
+        derrubaria essas linhas. Duas perguntas parecidas, dois instrumentos, a
+        mesma decisão declarada nos dois lugares.
+        """
+        for p in arquivos:
+            if prosa_do_codigo.usa(p, alvo):
                 return p
         return None
 
@@ -566,7 +611,7 @@ def conferir(linhas: list[dict[str, str]], arvore: Arvore) -> list[str]:
                     f"    O CSV diz {l['veredito']}: ou a feature saiu do HTML, ou o sinal mudou de nome.\n"
                     "    Confira a feature e atualize a linha — não troque o sinal por outro que só passe.")
         else:
-            achado = arvore.ocorre(sinal, arvore.html)
+            achado = arvore.usa(sinal, arvore.html)
             if achado is not None:
                 falhas.append(
                     f"divida-fechada: {onde}\n"
