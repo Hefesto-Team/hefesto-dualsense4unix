@@ -1120,3 +1120,54 @@ def test_o_ps_nao_acende_o_circulo_que_ela_mandou_tirar(pw, lar, mentira) -> Non
         # E O GLIFO CONTINUA ACENDENDO: tirar o círculo não pode apagar o botão
         assert medido["cor_do_grupo"] != "none", medido
 
+
+def test_as_21_da_bancada_se_escolhem_num_corte_so(pw, lar, mentira) -> None:
+    """*"quais desses são os mais importantes? não fez separação dos 21 mais?"*
+    — 07/09/2026, ela olhando o seletor aberto.
+
+    A separação EXISTIA: as seis seções do roteiro já vinham antes das onze do
+    mapa. Mas dezessete linhas seguidas não DIZEM qual bloco é a bancada e qual
+    é o acervo — a ordem é uma informação que só quem a escreveu enxerga.
+
+    Duas coisas curam, e as duas são de leitura: os `optgroup` nomeiam os
+    blocos, e uma linha fecha as 21 num corte só — *"o prioritários são os 16
+    (…) faço eles e na sequência vou fazendo os demais"*.
+
+    A RÉGUA NÃO DIGITA 21: ela pergunta ao roteiro quantas são. No dia em que
+    uma linha for acrescentada à sprint, a página muda junto e esta régua não
+    reprova a mudança.
+    """
+    quantas = len(med.secoes_do_roteiro())
+    with _Servidor(lar, mentira) as s:
+        pg = pw.new_page(viewport={"width": 1600, "height": 1100})
+        pg.goto(s.url)
+        pg.wait_for_selector(".ctl svg")
+        pg.wait_for_timeout(500)
+        visto = pg.evaluate("""() => {
+          const sel = document.querySelector('#secao-filtro');
+          return {grupos: [...sel.querySelectorAll('optgroup')].map(g => g.label),
+                  primeiras: [...sel.options].slice(0, 2).map(o => o.text),
+                  valor_do_corte: sel.options[1] && sel.options[1].value};
+        }""")
+        assert len(visto["grupos"]) == 2, (
+            f"o seletor não separa a bancada do acervo: {visto}")
+        assert any("BANCADA" in g for g in visto["grupos"]), visto["grupos"]
+        assert any("ACERVO" in g for g in visto["grupos"]), visto["grupos"]
+        assert str(quantas) in visto["primeiras"][1], (
+            f"a linha do roteiro inteiro não diz quantas são: {visto}")
+
+        # E O CORTE CORTA: escolher a linha deixa exatamente as do roteiro.
+        pg.select_option("#secao-filtro", visto["valor_do_corte"])
+        pg.wait_for_timeout(500)
+        depois = pg.evaluate(
+            "() => ({n: TESTES.length,"
+            "        so_roteiro: TESTES.every(t => t.secao.startsWith('O roteiro'))})")
+        assert depois["n"] == quantas, (
+            f"o corte das {quantas} deixou {depois['n']} na tela")
+        assert depois["so_roteiro"], "entrou célula do acervo no corte da bancada"
+        # E O CABEÇALHO CONTA O QUE SOBROU, senão ela procura teste que não está
+        assert f"1 de {quantas}" in pg.inner_text("header, main").replace(
+            "\n", " ") or f"1 DE {quantas}" in pg.inner_text("body").upper(), (
+            "a página não diz que agora são as do roteiro")
+        pg.close()
+
