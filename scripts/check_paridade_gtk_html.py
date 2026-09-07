@@ -90,6 +90,12 @@ E O QUE NÃO É REGRA, e é decisão dela: ``AVISO``. Todo lado restrito cuja ca
 (``D-0609-O-MAPA-INFORMA-NUNCA-VETA``): a célula está ATRASADA, não fechada, e
 quem a remede é a bancada. O mapa INFORMA, nunca VETA.
 
+**E A ORDEM DA SAÍDA É PARTE DO CONTRATO:** a FALHA fala primeiro e declara ser
+o ``rc=1``; o AVISO fala por último e declara não ser. Impresso na ordem
+inversa — como estava até 06/09/2026 — um portão honesto se LÊ como um portão
+que reprova pelo próprio aviso, e foi assim que ele foi diagnosticado. Aviso
+avisa, reprovação reprova, e nenhum dos dois se lê pelo lugar do outro.
+
 A MORDIDA (arranque a cura, veja reprovar, devolva)
 ---------------------------------------------------
   - apague o ``html_onde`` de uma linha ``IGUAL``:  ``sem-endereco``;
@@ -788,17 +794,25 @@ def main() -> int:
         do_cruzamento, avisos = cruzar_com_o_mapa(linhas, mapa)
         falhas += do_cruzamento
 
-    if avisos:
-        print(f"AVISO: {len(avisos)} célula(s) do mapa que a tela AFIRMA e a "
-              "bancada ainda não mediu.")
-        print("       O mapa INFORMA, nunca VETA (D-0609-O-MAPA-INFORMA-NUNCA-VETA): "
-              "isto NÃO é rc=1.\n")
-        for a in avisos:
-            print("  " + a)
-        print()
-
+    # A REPROVAÇÃO VEM PRIMEIRO, e a ordem é a cura de um defeito medido —
+    # 06/09/2026, A-CURA-DOS-DOIS-PORTOES-01.
+    #
+    # Até aqui o AVISO era impresso ANTES da FALHA, e a segunda linha dele diz
+    # *"isto NÃO é rc=1"*. Num dia em que as duas coisas aconteceram juntas, o
+    # `portoes.sh` mostrou `paridade-gtk-html VERMELHO rc=1` seguido, na linha
+    # de baixo, do aviso que se declara inofensivo — e a FALHA que de fato
+    # reprovava ficava vinte e cinco linhas abaixo. A leitura óbvia, e a que foi
+    # feita e escrita, é que *o portão reprova pelo próprio aviso que ele diz
+    # não ser reprovação*. O código nunca fez isso: `avisos` nunca tocou o `rc`.
+    # Era a ORDEM DA SAÍDA mentindo sobre o código.
+    #
+    # Então: quem reprova fala primeiro, quem informa fala por último, e cada
+    # bloco declara o que faz com o rc. Aviso avisa, reprovação reprova, e a
+    # linha final diz de onde o rc veio — sem isso a próxima pessoa remede o
+    # mesmo defeito, que é o que esta casa mais paga.
     if falhas:
-        print(f"FALHA: {len(falhas)} achado(s) em {CSV.relative_to(RAIZ)}.\n")
+        print(f"FALHA: {len(falhas)} achado(s) em {CSV.relative_to(RAIZ)}.")
+        print("       ISTO é o rc=1 deste portão.\n")
         for f in falhas[:30]:
             print("  " + f)
         if len(falhas) > 30:
@@ -806,6 +820,21 @@ def main() -> int:
         print("\nO CSV é o DONO do fato; este script é a régua. Quem consertar uma")
         print("divergência mexe na linha do CSV, com o endereço novo lido no código —")
         print("nunca afrouxando a regra aqui.")
+
+    if avisos:
+        if falhas:
+            print()
+        print(f"AVISO: {len(avisos)} célula(s) do mapa que a tela AFIRMA e a "
+              "bancada ainda não mediu.")
+        print("       O mapa INFORMA, nunca VETA (D-0609-O-MAPA-INFORMA-NUNCA-VETA): "
+              "isto NÃO é rc=1.")
+        print("       Nenhuma linha abaixo entra no rc deste portão.\n")
+        for a in avisos:
+            print("  " + a)
+
+    if falhas:
+        print(f"\nrc=1 por {len(falhas)} FALHA(s)"
+              + (f"; os {len(avisos)} AVISO(s) acima não contam." if avisos else "."))
         return 1
 
     c = Counter(l["veredito"] for l in linhas)
