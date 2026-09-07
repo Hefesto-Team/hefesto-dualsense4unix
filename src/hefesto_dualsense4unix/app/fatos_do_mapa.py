@@ -1223,7 +1223,7 @@ FATOS: Final[dict[str, dict[str, object]]] = {
             'ate_onde_foi': '',
             'canal': 'sysfs',
             'de_onde_sei': 'inferido-do-codigo',
-            'por_que_nao_aciona': 'nao-medido',
+            'por_que_nao_aciona': 'decisao-tomada',
         },
         'radio': {
             'aceita': 'sim',
@@ -1231,7 +1231,7 @@ FATOS: Final[dict[str, dict[str, object]]] = {
             'ate_onde_foi': '',
             'canal': 'sysfs',
             'de_onde_sei': 'inferido-do-codigo',
-            'por_que_nao_aciona': 'nao-medido',
+            'por_que_nao_aciona': 'decisao-tomada',
         },
     },
     'energia.bateria.jogo@dualsense': {
@@ -1337,7 +1337,7 @@ FATOS: Final[dict[str, dict[str, object]]] = {
             'ate_onde_foi': '',
             'canal': 'sysfs',
             'de_onde_sei': 'inferido-do-codigo',
-            'por_que_nao_aciona': 'nao-medido',
+            'por_que_nao_aciona': 'decisao-tomada',
         },
         'radio': {
             'aceita': 'sim',
@@ -1345,7 +1345,7 @@ FATOS: Final[dict[str, dict[str, object]]] = {
             'ate_onde_foi': '',
             'canal': 'sysfs',
             'de_onde_sei': 'inferido-do-codigo',
-            'por_que_nao_aciona': 'nao-medido',
+            'por_que_nao_aciona': 'decisao-tomada',
         },
     },
     'energia.bateria.percentual@dualsense': {
@@ -1565,7 +1565,7 @@ FATOS: Final[dict[str, dict[str, object]]] = {
             'ate_onde_foi': '',
             'canal': '',
             'de_onde_sei': 'inferido-do-codigo',
-            'por_que_nao_aciona': 'nao-medido',
+            'por_que_nao_aciona': 'so-ela-decide',
         },
         'radio': {
             'aceita': '',
@@ -1573,7 +1573,7 @@ FATOS: Final[dict[str, dict[str, object]]] = {
             'ate_onde_foi': '',
             'canal': '',
             'de_onde_sei': 'inferido-do-codigo',
-            'por_que_nao_aciona': 'nao-medido',
+            'por_que_nao_aciona': 'so-ela-decide',
         },
     },
     'entrada.combo.ponte@dualsense': {
@@ -1622,7 +1622,7 @@ FATOS: Final[dict[str, dict[str, object]]] = {
             'ate_onde_foi': '',
             'canal': '',
             'de_onde_sei': 'inferido-do-codigo',
-            'por_que_nao_aciona': 'nao-medido',
+            'por_que_nao_aciona': 'so-ela-decide',
         },
         'radio': {
             'aceita': '',
@@ -1630,7 +1630,7 @@ FATOS: Final[dict[str, dict[str, object]]] = {
             'ate_onde_foi': '',
             'canal': '',
             'de_onde_sei': 'inferido-do-codigo',
-            'por_que_nao_aciona': 'nao-medido',
+            'por_que_nao_aciona': 'so-ela-decide',
         },
     },
     'entrada.emulacao_mouse.analogico@dualsense': {
@@ -1725,7 +1725,7 @@ FATOS: Final[dict[str, dict[str, object]]] = {
             'ate_onde_foi': '',
             'canal': 'hidraw',
             'de_onde_sei': 'inferido-do-codigo',
-            'por_que_nao_aciona': 'nao-medido',
+            'por_que_nao_aciona': 'nada-a-acionar',
         },
     },
     'entrada.stick@dualsense': {
@@ -1774,7 +1774,7 @@ FATOS: Final[dict[str, dict[str, object]]] = {
             'ate_onde_foi': '',
             'canal': 'evdev',
             'de_onde_sei': 'inferido-do-codigo',
-            'por_que_nao_aciona': 'nao-medido',
+            'por_que_nao_aciona': 'so-ela-decide',
         },
         'radio': {
             'aceita': 'parcial',
@@ -1782,7 +1782,7 @@ FATOS: Final[dict[str, dict[str, object]]] = {
             'ate_onde_foi': '',
             'canal': 'evdev',
             'de_onde_sei': 'inferido-do-codigo',
-            'por_que_nao_aciona': 'nao-medido',
+            'por_que_nao_aciona': 'so-ela-decide',
         },
     },
     'gatilho.adaptativo@dualsense': {
@@ -2059,7 +2059,7 @@ FATOS: Final[dict[str, dict[str, object]]] = {
             'ate_onde_foi': '',
             'canal': '',
             'de_onde_sei': 'inferido-do-codigo',
-            'por_que_nao_aciona': 'nao-medido',
+            'por_que_nao_aciona': 'nada-a-acionar',
         },
         'radio': {
             'aceita': '',
@@ -2067,7 +2067,7 @@ FATOS: Final[dict[str, dict[str, object]]] = {
             'ate_onde_foi': '',
             'canal': '',
             'de_onde_sei': 'inferido-do-codigo',
-            'por_que_nao_aciona': 'nao-medido',
+            'por_que_nao_aciona': 'nada-a-acionar',
         },
     },
     'gatilho.modos_firmware@dualsense': {
@@ -2211,7 +2211,7 @@ FATOS: Final[dict[str, dict[str, object]]] = {
             'ate_onde_foi': '',
             'canal': 'hidraw',
             'de_onde_sei': 'inferido-do-codigo',
-            'por_que_nao_aciona': 'nao-medido',
+            'por_que_nao_aciona': 'decisao-tomada',
         },
         'radio': {
             'aceita': 'desconhecido',
@@ -2219,7 +2219,7 @@ FATOS: Final[dict[str, dict[str, object]]] = {
             'ate_onde_foi': '',
             'canal': 'hidraw',
             'de_onde_sei': 'inferido-do-codigo',
-            'por_que_nao_aciona': 'nao-medido',
+            'por_que_nao_aciona': 'decisao-tomada',
         },
     },
     'identidade.leitura_de_feature@dualsense': {
@@ -2477,7 +2477,7 @@ FATOS: Final[dict[str, dict[str, object]]] = {
             'ate_onde_foi': '',
             'canal': 'sysfs',
             'de_onde_sei': 'inferido-do-codigo',
-            'por_que_nao_aciona': 'nao-medido',
+            'por_que_nao_aciona': 'decisao-tomada',
         },
         'radio': {
             'aceita': 'desconhecido',
@@ -2485,7 +2485,7 @@ FATOS: Final[dict[str, dict[str, object]]] = {
             'ate_onde_foi': '',
             'canal': 'sysfs',
             'de_onde_sei': 'inferido-do-codigo',
-            'por_que_nao_aciona': 'nao-medido',
+            'por_que_nao_aciona': 'decisao-tomada',
         },
     },
     'luz.led_jogador.escrita_hefesto@dualsense': {
@@ -2591,7 +2591,7 @@ FATOS: Final[dict[str, dict[str, object]]] = {
             'ate_onde_foi': '',
             'canal': '',
             'de_onde_sei': 'inferido-do-codigo',
-            'por_que_nao_aciona': 'nao-medido',
+            'por_que_nao_aciona': 'nada-a-acionar',
         },
         'radio': {
             'aceita': '',
@@ -2599,7 +2599,7 @@ FATOS: Final[dict[str, dict[str, object]]] = {
             'ate_onde_foi': '',
             'canal': '',
             'de_onde_sei': 'inferido-do-codigo',
-            'por_que_nao_aciona': 'nao-medido',
+            'por_que_nao_aciona': 'nada-a-acionar',
         },
     },
     'luz.led_jogador.padrao_driver@dualsense': {
@@ -2648,7 +2648,7 @@ FATOS: Final[dict[str, dict[str, object]]] = {
             'ate_onde_foi': '',
             'canal': 'sysfs',
             'de_onde_sei': 'inferido-do-codigo',
-            'por_que_nao_aciona': 'nao-medido',
+            'por_que_nao_aciona': 'nada-a-acionar',
         },
         'radio': {
             'aceita': 'sim',
@@ -2656,7 +2656,7 @@ FATOS: Final[dict[str, dict[str, object]]] = {
             'ate_onde_foi': '',
             'canal': 'sysfs',
             'de_onde_sei': 'inferido-do-codigo',
-            'por_que_nao_aciona': 'nao-medido',
+            'por_que_nao_aciona': 'nada-a-acionar',
         },
     },
     'luz.led_jogador.pisca@dualsense': {
@@ -2705,7 +2705,7 @@ FATOS: Final[dict[str, dict[str, object]]] = {
             'ate_onde_foi': '',
             'canal': 'hidraw',
             'de_onde_sei': 'inferido-do-codigo',
-            'por_que_nao_aciona': 'nao-medido',
+            'por_que_nao_aciona': 'nada-a-acionar',
         },
         'radio': {
             'aceita': 'sim',
@@ -2713,7 +2713,7 @@ FATOS: Final[dict[str, dict[str, object]]] = {
             'ate_onde_foi': '',
             'canal': 'hidraw',
             'de_onde_sei': 'inferido-do-codigo',
-            'por_que_nao_aciona': 'nao-medido',
+            'por_que_nao_aciona': 'nada-a-acionar',
         },
     },
     'luz.led_jogador.quinto@dualsense': {
@@ -3446,7 +3446,7 @@ FATOS: Final[dict[str, dict[str, object]]] = {
             'ate_onde_foi': '',
             'canal': 'evdev',
             'de_onde_sei': 'inferido-do-codigo',
-            'por_que_nao_aciona': 'nao-medido',
+            'por_que_nao_aciona': 'so-ela-decide',
         },
         'radio': {
             'aceita': 'sim',
@@ -3454,7 +3454,7 @@ FATOS: Final[dict[str, dict[str, object]]] = {
             'ate_onde_foi': '',
             'canal': 'evdev',
             'de_onde_sei': 'inferido-do-codigo',
-            'por_que_nao_aciona': 'nao-medido',
+            'por_que_nao_aciona': 'so-ela-decide',
         },
     },
     'movimento.giroscopio.jogo@dualsense': {
@@ -3560,7 +3560,7 @@ FATOS: Final[dict[str, dict[str, object]]] = {
             'ate_onde_foi': '',
             'canal': '',
             'de_onde_sei': 'inferido-do-codigo',
-            'por_que_nao_aciona': 'nao-medido',
+            'por_que_nao_aciona': 'nada-a-acionar',
         },
         'radio': {
             'aceita': '',
@@ -3568,7 +3568,7 @@ FATOS: Final[dict[str, dict[str, object]]] = {
             'ate_onde_foi': '',
             'canal': '',
             'de_onde_sei': 'inferido-do-codigo',
-            'por_que_nao_aciona': 'nao-medido',
+            'por_que_nao_aciona': 'nada-a-acionar',
         },
     },
     'movimento.giroscopio@dualsense': {
@@ -3617,7 +3617,7 @@ FATOS: Final[dict[str, dict[str, object]]] = {
             'ate_onde_foi': '',
             'canal': 'evdev',
             'de_onde_sei': 'inferido-do-codigo',
-            'por_que_nao_aciona': 'nao-medido',
+            'por_que_nao_aciona': 'so-ela-decide',
         },
         'radio': {
             'aceita': 'sim',
@@ -3625,7 +3625,7 @@ FATOS: Final[dict[str, dict[str, object]]] = {
             'ate_onde_foi': '',
             'canal': 'evdev',
             'de_onde_sei': 'inferido-do-codigo',
-            'por_que_nao_aciona': 'nao-medido',
+            'por_que_nao_aciona': 'so-ela-decide',
         },
     },
     'movimento.imu.calibracao@dualsense': {
@@ -3682,7 +3682,7 @@ FATOS: Final[dict[str, dict[str, object]]] = {
             'ate_onde_foi': '',
             'canal': 'hidraw',
             'de_onde_sei': 'afirmado-no-doc',
-            'por_que_nao_aciona': 'nao-medido',
+            'por_que_nao_aciona': 'nada-a-acionar',
         },
     },
     'movimento.imu.ligar@dualsense': {
@@ -3731,7 +3731,7 @@ FATOS: Final[dict[str, dict[str, object]]] = {
             'ate_onde_foi': '',
             'canal': 'hidraw',
             'de_onde_sei': 'inferido-do-codigo',
-            'por_que_nao_aciona': 'nao-medido',
+            'por_que_nao_aciona': 'nada-a-acionar',
         },
         'radio': {
             'aceita': 'sim',
@@ -3739,7 +3739,7 @@ FATOS: Final[dict[str, dict[str, object]]] = {
             'ate_onde_foi': '',
             'canal': 'hidraw',
             'de_onde_sei': 'inferido-do-codigo',
-            'por_que_nao_aciona': 'nao-medido',
+            'por_que_nao_aciona': 'nada-a-acionar',
         },
     },
     'movimento.imu.perda@dualsense': {
@@ -3845,7 +3845,7 @@ FATOS: Final[dict[str, dict[str, object]]] = {
             'ate_onde_foi': '',
             'canal': 'uhid',
             'de_onde_sei': 'inferido-do-codigo',
-            'por_que_nao_aciona': 'nao-medido',
+            'por_que_nao_aciona': 'so-ela-decide',
         },
         'radio': {
             'aceita': 'sim',
@@ -3853,7 +3853,7 @@ FATOS: Final[dict[str, dict[str, object]]] = {
             'ate_onde_foi': '',
             'canal': 'uhid',
             'de_onde_sei': 'inferido-do-codigo',
-            'por_que_nao_aciona': 'nao-medido',
+            'por_que_nao_aciona': 'so-ela-decide',
         },
     },
     'plataforma.camera_ir@dualsense': {
@@ -4187,7 +4187,7 @@ FATOS: Final[dict[str, dict[str, object]]] = {
             'ate_onde_foi': '',
             'canal': 'hidraw',
             'de_onde_sei': 'inferido-do-codigo',
-            'por_que_nao_aciona': 'nao-medido',
+            'por_que_nao_aciona': 'decisao-tomada',
         },
         'radio': {
             'aceita': 'sim',
@@ -4195,7 +4195,7 @@ FATOS: Final[dict[str, dict[str, object]]] = {
             'ate_onde_foi': '',
             'canal': 'hidraw',
             'de_onde_sei': 'inferido-do-codigo',
-            'por_que_nao_aciona': 'nao-medido',
+            'por_que_nao_aciona': 'decisao-tomada',
         },
     },
     'plataforma.feature_f6@dualsense': {
@@ -4442,7 +4442,7 @@ FATOS: Final[dict[str, dict[str, object]]] = {
             'ate_onde_foi': '',
             'canal': 'outro',
             'de_onde_sei': 'incerto',
-            'por_que_nao_aciona': 'nao-medido',
+            'por_que_nao_aciona': 'so-ela-decide',
         },
     },
     'plataforma.mapeamento_posicao@dualsense': {
@@ -4548,7 +4548,7 @@ FATOS: Final[dict[str, dict[str, object]]] = {
             'ate_onde_foi': '',
             'canal': 'hidraw',
             'de_onde_sei': 'inferido-do-codigo',
-            'por_que_nao_aciona': 'nao-medido',
+            'por_que_nao_aciona': 'nada-a-acionar',
         },
         'radio': {
             'aceita': 'parcial',
@@ -4556,7 +4556,7 @@ FATOS: Final[dict[str, dict[str, object]]] = {
             'ate_onde_foi': '',
             'canal': 'hidraw',
             'de_onde_sei': 'inferido-do-codigo',
-            'por_que_nao_aciona': 'nao-medido',
+            'por_que_nao_aciona': 'nada-a-acionar',
         },
     },
     'plataforma.nfc@dualsense': {
@@ -4605,7 +4605,7 @@ FATOS: Final[dict[str, dict[str, object]]] = {
             'ate_onde_foi': '',
             'canal': 'hidraw',
             'de_onde_sei': 'inferido-do-codigo',
-            'por_que_nao_aciona': 'nao-medido',
+            'por_que_nao_aciona': 'nada-a-acionar',
         },
         'radio': {
             'aceita': 'desconhecido',
@@ -4613,7 +4613,7 @@ FATOS: Final[dict[str, dict[str, object]]] = {
             'ate_onde_foi': '',
             'canal': 'hidraw',
             'de_onde_sei': 'inferido-do-codigo',
-            'por_que_nao_aciona': 'nao-medido',
+            'por_que_nao_aciona': 'nada-a-acionar',
         },
     },
     'plataforma.probe.retry@dualsense': {
@@ -5688,7 +5688,7 @@ FATOS: Final[dict[str, dict[str, object]]] = {
             'ate_onde_foi': '',
             'canal': 'evdev',
             'de_onde_sei': 'inferido-do-codigo',
-            'por_que_nao_aciona': 'nao-medido',
+            'por_que_nao_aciona': 'so-ela-decide',
         },
         'radio': {
             'aceita': 'parcial',
@@ -5696,7 +5696,7 @@ FATOS: Final[dict[str, dict[str, object]]] = {
             'ate_onde_foi': '',
             'canal': 'evdev',
             'de_onde_sei': 'inferido-do-codigo',
-            'por_que_nao_aciona': 'nao-medido',
+            'por_que_nao_aciona': 'so-ela-decide',
         },
     },
     'vibracao.rumble.frequencia@dualsense': {
@@ -5745,7 +5745,7 @@ FATOS: Final[dict[str, dict[str, object]]] = {
             'ate_onde_foi': '',
             'canal': 'hidraw',
             'de_onde_sei': 'inferido-do-codigo',
-            'por_que_nao_aciona': 'nao-medido',
+            'por_que_nao_aciona': 'nada-a-acionar',
         },
         'radio': {
             'aceita': 'sim',
@@ -5753,7 +5753,7 @@ FATOS: Final[dict[str, dict[str, object]]] = {
             'ate_onde_foi': '',
             'canal': 'hidraw',
             'de_onde_sei': 'inferido-do-codigo',
-            'por_que_nao_aciona': 'nao-medido',
+            'por_que_nao_aciona': 'nada-a-acionar',
         },
     },
     'vibracao.rumble.habilitar@dualsense': {
@@ -5802,7 +5802,7 @@ FATOS: Final[dict[str, dict[str, object]]] = {
             'ate_onde_foi': '',
             'canal': '',
             'de_onde_sei': 'inferido-do-codigo',
-            'por_que_nao_aciona': 'nao-medido',
+            'por_que_nao_aciona': 'nada-a-acionar',
         },
         'radio': {
             'aceita': '',
@@ -5810,7 +5810,7 @@ FATOS: Final[dict[str, dict[str, object]]] = {
             'ate_onde_foi': '',
             'canal': '',
             'de_onde_sei': 'inferido-do-codigo',
-            'por_que_nao_aciona': 'nao-medido',
+            'por_que_nao_aciona': 'nada-a-acionar',
         },
     },
     'vibracao.rumble.passthrough@dualsense': {
@@ -5859,7 +5859,7 @@ FATOS: Final[dict[str, dict[str, object]]] = {
             'ate_onde_foi': '',
             'canal': 'evdev',
             'de_onde_sei': 'inferido-do-codigo',
-            'por_que_nao_aciona': 'nao-medido',
+            'por_que_nao_aciona': 'so-ela-decide',
         },
         'radio': {
             'aceita': 'sim',
@@ -5867,7 +5867,7 @@ FATOS: Final[dict[str, dict[str, object]]] = {
             'ate_onde_foi': '',
             'canal': 'evdev',
             'de_onde_sei': 'inferido-do-codigo',
-            'por_que_nao_aciona': 'nao-medido',
+            'por_que_nao_aciona': 'so-ela-decide',
         },
     },
 }
