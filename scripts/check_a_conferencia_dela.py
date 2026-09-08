@@ -115,21 +115,98 @@ def frases_que_confessam() -> tuple[bool, str]:
 
 
 def mascara_nintendo_pro() -> tuple[bool, str]:
-    """A máscara do Pro Controller existe no FLAVORS do uinput."""
-    fonte = (RAIZ / "src/hefesto_dualsense4unix/integrations/uinput_gamepad.py").read_text(encoding="utf-8")
-    tem = bool(re.search(r"nintendo[_-]?pro|pro[_-]?controller", fonte, re.I))
-    quantas = len(re.findall(r'^\s{4}"[a-z0-9_]+":', fonte, re.M))
-    return tem, f"FLAVORS com máscara do Pro: {'sim' if tem else 'NÃO'} ({quantas} entradas indentadas)"
+    """A máscara do Pro Controller existe no FLAVORS do uinput. PERGUNTA AO DONO.
+
+    ESTA RÉGUA DEU VERDE FALSO ATÉ 08/09/2026, e o advogado do diabo a pegou.
+    Ela lia o arquivo como TEXTO e procurava `nintendo.pro` — que casa no
+    comentário da linha 89 e no `__all__` da 1144. Pior: ela imprimia
+    *"(42 entradas indentadas)"*, contando toda linha `"chave":` indentada do
+    arquivo, inclusive as DE DENTRO de cada máscara. O `FLAVORS` tem **três**
+    entradas. *A régua respondia sobre o próprio texto do código, não sobre o
+    produto* — a assinatura dos seis instrumentos falsos de 05/09, escrita duas
+    vezes neste mesmo arquivo e repetida aqui mesmo assim.
+
+    Agora ela IMPORTA o dicionário e confere a entrada pelos números do
+    aparelho: o Pro Controller da Nintendo é `057e:2009`, e é isso que o jogo
+    lê. Comentário nenhum satisfaz esta pergunta.
+    """
+    import sys as _sys
+    _sys.path.insert(0, str(RAIZ / "src"))
+    try:
+        from hefesto_dualsense4unix.integrations.uinput_gamepad import FLAVORS
+    except Exception as erro:
+        return False, f"não consegui importar o FLAVORS ({erro!r}) — e 'não sei' não é 'está bom'"
+    entrada = FLAVORS.get("nintendo")
+    if not isinstance(entrada, dict):
+        return False, f"o FLAVORS tem {sorted(FLAVORS)} — nenhuma máscara `nintendo`"
+    vendor, product = entrada.get("vendor"), entrada.get("product")
+    if (vendor, product) != (0x057E, 0x2009):
+        return False, (f"a máscara `nintendo` existe mas anuncia {vendor:#06x}:{product:#06x} — "
+                       "o Pro Controller é 0x057e:0x2009, e é esse par que o jogo lê")
+    return True, (f"FLAVORS = {sorted(FLAVORS)}; a `nintendo` anuncia "
+                  f"{vendor:#06x}:{product:#06x} — o Pro Controller")
 
 
 def o_virtual_liga_o_microfone() -> tuple[bool, str]:
-    """O ato dela conta como ouvinte na ponte do rádio."""
-    ponte = (RAIZ / "src/hefesto_dualsense4unix/integrations/dualsense_bt_audio.py").read_text(encoding="utf-8")
-    # a marca da cura: a ponte tem de conhecer um pedido EXPLÍCITO dela, e não
-    # só o estado da source. Sem um nome para isso, a cura não aconteceu.
-    tem = bool(re.search(r"pedido_dela|ato_dela|eleicao_dela|dono_pediu|forcado_por_ela", ponte))
-    return tem, "a ponte do rádio conhece o ato explícito dela" if tem else \
-        "a ponte só segue a source do PipeWire — o ato dela não liga o microfone"
+    """O ato dela conta como ouvinte na ponte do rádio. EXERCITA A PONTE REAL.
+
+    ESTA RÉGUA DEU VERDE FALSO ATÉ 08/09/2026, e o advogado do diabo a pegou
+    com a prova na mão: ela lia o arquivo como TEXTO e procurava
+    `pedido_dela|ato_dela|…`. Das NOVE ocorrências que a faziam fechar, **três
+    eram comentário e docstring** — apagar o corpo de `dizer_o_pedido_dela` e
+    deixar a docstring mantinha a linha verde sobre um microfone que não liga.
+
+    Agora ela monta a `PonteMicBluetooth` de verdade, com uma source que diz
+    `SUSPENDED` (isto é: NINGUÉM gravando), diz a palavra dela, e cobra que o
+    `0x32` seja PEDIDO assim mesmo. É a pergunta inteira em três linhas:
+    *sem ouvinte, o ato dela liga o microfone?*
+
+    O NEGATIVO VEM JUNTO e é o que separa medir de torcer: com a palavra dela
+    em `False`, o pedido tem de cair mesmo com a source em `RUNNING` — o mudo
+    dela vence um aplicativo gravando. Uma régua que só sabe dizer sim não
+    distingue a cura de um `return True`.
+    """
+    import sys as _sys
+    _sys.path.insert(0, str(RAIZ / "src"))
+    try:
+        from hefesto_dualsense4unix.integrations import dualsense_bt_audio as bt
+    except Exception as erro:
+        return False, f"não consegui importar a ponte ({erro!r}) — e 'não sei' não é 'está bom'"
+
+    class _SourceQueDiz:
+        """Uma source do PipeWire que responde o estado que eu mandar."""
+
+        def __init__(self, estado: str) -> None:
+            self._estado = estado
+
+        def estado(self) -> str:
+            return self._estado
+
+    def pedido(estado: str, palavra: bool | None) -> bool | None:
+        no = bt.NoDualSenseBT(caminho="/dev/hidraw-conferencia", uniq="aabbcc000001",
+                              produto=0x0CE6)
+        ponte = bt.PonteMicBluetooth(no, source=_SourceQueDiz(estado))
+        ponte.dizer_o_pedido_dela(palavra)
+        return ponte._talvez_seguir_a_source()
+
+    try:
+        sem_ouvinte_com_a_palavra = pedido("SUSPENDED", True)
+        mudo_dela_contra_o_gravador = pedido("RUNNING", False)
+        sem_palavra_o_ouvinte_manda = pedido("SUSPENDED", None)
+    except Exception as erro:
+        return False, f"a ponte não pôde ser exercitada: {erro!r}"
+
+    if sem_ouvinte_com_a_palavra is not True:
+        return False, ("SUSPENDED + a palavra dela LIGADA e o microfone NÃO subiu "
+                       f"(pedido={sem_ouvinte_com_a_palavra!r}) — o ato dela não liga nada")
+    if mudo_dela_contra_o_gravador is not False:
+        return False, ("RUNNING + a palavra dela DESLIGADA e o microfone ficou no ar "
+                       f"(pedido={mudo_dela_contra_o_gravador!r}) — o mudo dela não vence o gravador")
+    if sem_palavra_o_ouvinte_manda is not False:
+        return False, ("sem palavra dela e sem ouvinte o microfone subiu "
+                       f"(pedido={sem_palavra_o_ouvinte_manda!r}) — a economia do link caiu junto")
+    return True, ("a ponte foi exercitada: sem ouvinte, o ato dela LIGA; o mudo dela "
+                  "vence um gravador; e sem a palavra dela quem manda é o ouvinte")
 
 
 def cor_unica() -> tuple[bool, str]:

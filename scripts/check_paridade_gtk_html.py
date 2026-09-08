@@ -527,6 +527,20 @@ def conferir_a_lista_de_aposentados() -> list[str]:
     falhas: list[str] = []
     for caminho, razao in APOSENTADOS.items():
         alvo = RAIZ / caminho
+        # A CASCA VAZIA NÃO É A COISA DE VOLTA — medido em 08/09/2026, na
+        # árvore DELA, depois do install. O commit `f5311616` apagou os
+        # arquivos de `scripts/gui-captura/` corretamente; o que sobrou foi o
+        # DIRETÓRIO, vazio. Git não rastreia diretório vazio, então
+        # `git status` fica limpo, o CI fica verde e uma worktree de agente
+        # nunca reproduz — e a árvore dela carregava o único vermelho dos 49,
+        # mandando a próxima pessoa caçar uma remoção desfeita que não
+        # aconteceu.
+        #
+        # A pergunta desta regra é *"o que a decisão dela mandou apagar voltou?"*
+        # Uma pasta sem nada dentro não é a coisa de volta. Um diretório só
+        # reprova se tiver CONTEÚDO; arquivo reprova sempre.
+        if alvo.is_dir() and not any(alvo.iterdir()):
+            continue
         if alvo.exists():
             falhas.append(
                 f"aposentado-vivo: {caminho} está declarado em `APOSENTADOS`\n"
