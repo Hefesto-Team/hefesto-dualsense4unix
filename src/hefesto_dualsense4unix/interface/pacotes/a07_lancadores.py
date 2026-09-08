@@ -389,7 +389,7 @@ def _onde_estao_os_lancadores(
     **mais** o que ela declarou.
 
     UM PROCURADOR SÓ, E É ESTE — 08/09/2026. O lançador que ela acrescenta pelo
-    botão «Adicionar Launcher» não ganha busca própria: ele entra na MESMA lista,
+    botão de registro não ganha busca própria: ele entra na MESMA lista,
     com os MESMOS três campos, e é achado pelas MESMAS duas buscas. Um segundo
     caminho seria a assimetria que produz duas respostas para a mesma pergunta —
     e a segunda envelhece calada, porque só a máquina dela a exercita.
@@ -2491,7 +2491,7 @@ def _o_que_ela_digitou(o: dict[str, Any]) -> tuple[str, str]:
 
 @gesto("07-lancadores.html", desenho.ADICIONAR, grava="machine_declare")
 def adicionar_lancador(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
-    """«Adicionar Launcher» — ela diz ONDE o lançador está, e o cartão acende.
+    """«Localizar este Lançador» — ela diz ONDE ele está, e o cartão acende.
 
     ELE NÃO INSTALA NADA, e o cartão já explicava por quê antes de este gesto
     existir: *"Instalado de outro jeito (um AppImage solto, por exemplo) ele não
@@ -2550,8 +2550,17 @@ def adicionar_lancador(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, An
             "Diga como ele se chama. O nome é o que aparece no topo do cartão, "
             "e é dele que sai o endereço interno do cartão.")
     if not para_quem and chave in de_fabrica:
+        # A FRASE NÃO LEVA ARTIGO ANTES DO NOME, e é a mesma medição de
+        # `desenho.NOVO_PARA_O_CARTAO`: os nomes de cartão têm gêneros
+        # diferentes ("a Steam", "o Lutris") e esta casa escreve **a** Steam em
+        # toda a aba. Com o cartão da Steam ganhando o botão de localizar, esta
+        # recusa passou a ser alcançável com o nome dela no meio.
+        #
+        # E O RÓTULO DO BOTÃO É LIDO, nunca digitado: esta frase manda clicar
+        # num botão, e um texto digitado aqui envelheceria calado no dia em que
+        # ela trocasse a palavra — que é o dia de hoje.
         raise RuntimeError(
-            f"O {de_fabrica[chave]} já tem cartão nesta aba. Se ele está aqui e "
+            f"{de_fabrica[chave]} já tem cartão nesta aba. Se ele está aqui e "
             f"o Hefesto não achou, use o «{desenho.ADICIONAR_ROTULO}» do cartão "
             f"dele — assim o que você me disser entra na busca daquele cartão, "
             f"em vez de criar um segundo com o mesmo nome.")
@@ -2683,7 +2692,8 @@ PAGINA = "07-lancadores.html"
 #: `D-0609-STEAM-DIVIDIDO`): "Desligar o Steam Input", "Este jogo não funciona"
 #: e "Deixar tudo pronto".
 #: e de 14 PARA 16 em 08/09/2026, com o registro do lançador que o Hefesto não
-#: conhece (pedido dela): «Adicionar Launcher» e «Tirar daqui».
+#: conhece (pedido dela): o de LOCALIZAR (:data:`desenho.ADICIONAR`) e o de
+#: TIRAR (:data:`desenho.REMOVER`).
 PISO_DA_ABA = 16
 
 #: SEM `PROVAS`, e a razão é o contrato da régua dos botões: ela injeta uma

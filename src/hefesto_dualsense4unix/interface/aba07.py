@@ -370,7 +370,7 @@ CSS = """
     background:var(--elevated);border:1px solid var(--border-sutil)}
   .linha-do-wrapper code{font-family:'JetBrains Mono',monospace;font-size:10px;
     line-height:1.5;color:var(--texto-suave);word-break:break-all}
-  /* A TELA DE REGISTRO — 08/09/2026, o «Adicionar Launcher» dela.
+  /* A TELA DE REGISTRO — 08/09/2026, o registro de lançador que ela pediu.
      A CAIXA, o topo, o corpo e o rodapé vêm do `monta.CSS_POPUP`, que é o dono
      da `.tela-nova` desde 29/08 e existe justamente para a segunda aba com
      pop-up não copiar as 49 linhas da primeira. O que é DESTA tela — e só
@@ -400,7 +400,7 @@ CSS = """
      âncora abre a `.tela-nova` pelo `:target` (ver `desenho_dos_lancadores.
      Acao.href`); o `.btn` do esqueleto não desliga o sublinhado, que é
      `text-decoration` padrão de `<a>`. Resultado medido na primeira foto: o
-     «Adicionar lançador ou emulador» e o «Adicionar Launcher» saíam
+     botão global e o do cartão que não localizou saíam
      SUBLINHADOS ao lado de irmãos idênticos que não saíam — a mesma quebra de
      "mesma família, mesma largura" que fez o `.lanc .btn` cair em 02/09.
      O `.tn-rod .btn` do `monta.CSS_POPUP` já resolve isto DENTRO da pop-up, e
@@ -474,12 +474,12 @@ LEGENDA = f'''<div class="nota">
     <li><b>A contagem do quadro continua derivada</b> — hoje <b>{QUADRO.achados}</b> —, e agora dos mesmos cartões que o produto monta.</li>
   </ul>
 
-  <h2>08/09/2026 — as quatro que ela pediu olhando a aba</h2>
+  <h2>08/09/2026 — o que ela decidiu olhando a aba</h2>
   <ul>
     <li><b>O selo diz <code>NÃO LOCALIZADO</code></b>, e não mais <code>NÃO ACHEI</code> — palavra dela. O valor mudou num lugar só (<code>desenho_dos_lancadores.SELOS</code>); as dezenas de menções em comentário ficaram, porque contam o que aconteceu num dia. E as réguas que digitavam a palavra passaram a <b>ler</b> o selo.</li>
-    <li><b>No cartão que não localizou, o botão virou <code>Adicionar Launcher</code></b> — palavra dela. Ele não instala nada: ele abre a tela onde <b>você diz onde o lançador está</b>, que é o que faltava para o cartão acender. No cartão que <i>achou</i>, o botão continua sendo <code>Abrir o lançador</code>: são dois estados, dois botões.</li>
-    <li><b>A Epic Games ganhou cartão</b>, e ele procura os três clientes que entregam jogo da Epic no Linux: o <code>Rare</code>, o <code>legendary</code> e o <b>Heroic</b>. O Heroic entra na busca de propósito — sem ele, esta máquina veria o cartão da Epic dizendo <code>NÃO LOCALIZADO</code> com o cartão do Heroic ao lado dizendo que achou.</li>
-    <li><b>E há um botão para acrescentar o que o Hefesto não conhece</b> — <code>Adicionar lançador ou emulador</code>, pedido dela <i>"pra devs mais experimentais"</i>. O que você declara mora no <code>maquina.json</code> e passa pelo <b>mesmo procurador</b> dos de fábrica; o que não está no disco <b>não é guardado</b>, e o recado diz o que foi procurado. O que se acrescenta se tira, pelo <code>Tirar daqui</code>.</li>
+    <li><b>Todo cartão que não localizou oferece <code>{dl.ADICIONAR_ROTULO}</code></b> — os seis, a Steam inclusive. Ele não instala nada: ele abre a tela onde <b>você diz onde o lançador está</b>, que é o que faz o cartão acender. No cartão que <i>achou</i>, o botão continua sendo <code>Abrir o lançador</code>: são dois estados, dois botões.</li>
+    <li><b>E há um botão para acrescentar o que o Hefesto não conhece</b> — <code>{dl.ADICIONAR_NOVO_ROTULO}</code>, pedido dela <i>"pra devs mais experimentais"</i>. Ele é o outro ato, e por isso a outra palavra: <i>localizar</i> é para o cartão que já está na tela, <i>adicionar novo</i> é para o que não tem cartão nenhum. O que você declara mora no <code>maquina.json</code> e passa pelo <b>mesmo procurador</b> dos de fábrica; o que não está no disco <b>não é guardado</b>, e o recado diz o que foi procurado. O que se acrescenta se tira, pelo <code>{dl.REMOVER_ROTULO}</code>.</li>
+    <li><b>A Epic e a GOG ficam dentro do Heroic</b> — palavra dela, e o rótulo daquele cartão já dizia <code>Heroic (Epic · GOG)</code> desde que ele nasceu. É por ali que o jogo das duas lojas entra nesta máquina.</li>
   </ul>
 
   <h2>O que estava no código e nunca teve tela — agora tem</h2>
@@ -535,8 +535,9 @@ if _PROMESSAS:
         "controle, MAC, device ou transporte. Um número aqui é uma promessa que "
         "o produto não tem como conferir.")
 
-# A CONTA SUBIU DE SEIS PARA SETE em 08/09/2026, com a Epic — pedido dela:
-# *"Seria interessante termos o da Epic Games Aqui também não?"*
+# A CONTA SUBIU PARA SETE E VOLTOU PARA SEIS no mesmo dia — 08/09/2026. A Epic
+# ganhou cartão a pedido dela e o perdeu por decisão dela; a razão inteira está
+# em `desenho_dos_lancadores.SEM_FONTE`, e o que sobra aqui é a conta.
 #
 # ELA CONTINUA CRAVADA, e o número cravado é o ponto: esta régua lê a página
 # ESTÁTICA, que é o desenho de referência. Um cartão que apareça ou suma daqui
@@ -545,9 +546,9 @@ if _PROMESSAS:
 # máquina de quem os declarou, e chegam pela troca da grade inteira
 # (`a07_lancadores._pintura`), nunca pelo HTML publicado.
 _ESPERADOS = [x.chave for x in QUADRO.lancadores]
-if len(_ESPERADOS) != 7:
+if len(_ESPERADOS) != 6:
     raise SystemExit(f"ERRO: {len(_ESPERADOS)} cartões, e o desenho dela tem "
-                     "SETE. Se um lançador ganhou fonte, ele sai do `SEM_FONTE` "
+                     "SEIS. Se um lançador ganhou fonte, ele sai do `SEM_FONTE` "
                      "e entra com cartão próprio — a conta continua fechando.")
 _FALTAM = [f"{k}{s}" for k in _ESPERADOS for s in dl.SUFIXOS
            if f'data-campo="{k}{s}"' not in MIOLO]
@@ -698,9 +699,10 @@ if __name__ == "__main__":
     if _MARCA not in _DOC:
         raise SystemExit(
             "ERRO: a marca da legenda mudou no `fim.html` e a tela de registro "
-            "não tem onde entrar. Sem ela o botão «Adicionar Launcher» abre "
-            "NADA — o `href=\"#novo-lancador\"` aponta para um `id` que não "
-            "existe, e o clique some sem uma palavra.")
+            f"não tem onde entrar. Sem ela os botões «{dl.ADICIONAR_ROTULO}» e "
+            f"«{dl.ADICIONAR_NOVO_ROTULO}» abrem NADA — o "
+            f"`href=\"#{dl.TELA_DO_NOVO}\"` aponta para um `id` que não existe, "
+            "e o clique some sem uma palavra.")
     _DOC = _DOC.replace(
         _MARCA, dl.tela_do_registro_html().strip() + "\n\n" + _MARCA, 1)
     onde.gravar("07-lancadores.html", _DOC)

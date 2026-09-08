@@ -3342,7 +3342,7 @@ def mudo(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
         #
         # A FRASE É DO PRODUTO, e nenhuma nasce aqui: `frase_do_alvo_do_mic`
         # (`app/widgets/controller_card.py:2191`) é a dona dos três estados, e
-        # `alvo_honrado` (`app/ipc_bridge.py:1098`) é quem os lê do corpo. Os
+        # `alvo_honrado` (`app/ipc_bridge.py:1115`) é quem os lê do corpo. Os
         # dois devolvem "nada a dizer" para `True` e para `None` de propósito —
         # *"não sei" não é "não honrei"*, e inventar a confissão por ausência de
         # notícia acusaria o produto de um erro que ninguém mediu.
