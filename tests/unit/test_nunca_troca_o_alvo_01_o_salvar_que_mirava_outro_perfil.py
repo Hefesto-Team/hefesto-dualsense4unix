@@ -223,12 +223,22 @@ class _Janela(pa.ProfilesActionsMixin, FooterActionsMixin):  # type: ignore[misc
         # A linha exata de `install_profiles_tab` — o que liga seleção a editor.
         tree.get_selection().connect("changed", self.on_profile_selection_changed)
 
-    # R-08: o "há edição pendente" é o do HefestoApp REAL — é ele que decide se
-    # a repintura do editor pode passar por cima do que ela não salvou.
+    # R-08: o "há edição pendente" é o rascunho em memória divergindo do que
+    # veio do disco. A regra morava em `HefestoApp._tem_edicao_pendente`, e a
+    # janela GTK saiu INTEIRA em `f5311616` (06/09/2026, decisão
+    # `D-0609-GTK-LEVA-INTEIRA`). O import continuou apontando para o módulo
+    # apagado e passou a estourar `ModuleNotFoundError` DENTRO da guarda — que
+    # fecha no escuro por desenho, respondendo "sim, há trabalho a proteger".
+    # Resultado medido em 08/09/2026: `_populate_editor` nunca era chamado e os
+    # DOZE testes deste arquivo reprovavam com o editor vazio, sobre um produto
+    # que estava certo. A régua mediu o mundo de ontem.
+    # A regra é COPIADA do original (duas linhas, `git show f5311616^:...`), não
+    # afrouxada: um dublê mais frouxo que o código real mede o dublê. Os três
+    # testes de `TestNaoSeiEHaTrabalhoAProteger` continuam quebrando esta
+    # pergunta de propósito, por `monkeypatch` — é isso que eles medem.
     def _tem_edicao_pendente(self) -> bool:
-        from hefesto_dualsense4unix.app.app import HefestoApp
-
-        return bool(HefestoApp._tem_edicao_pendente(self))  # type: ignore[arg-type]
+        baseline = self._draft_baseline
+        return bool(baseline is not None and self.draft != baseline)
 
     def _get(self, wid: str) -> Any:
         return self._widgets.get(wid)
