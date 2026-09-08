@@ -1223,7 +1223,7 @@ from . import (  # noqa: E402
     # A 07 FALTAVA AQUI, e a falta era exatamente o que este bloco existe para
     # impedir. A casa diz em dois lugares que ela é a aba SEM pacote
     # (`hefesto_vivo.SEM_PACOTE` e o comentário do `_tique`) — mas
-    # `a07_lancadores.py:1390` traz `@registrar("07-lancadores.html")` desde que
+    # `a07_lancadores.py:1491` traz `@registrar("07-lancadores.html")` desde que
     # foi ligada, e `pacote_da_pagina` devolve 26 chaves para ela. Achado em
     # 02/09/2026 por um teste que assumiu a frase da casa e reprovou.
     a07_lancadores,  # noqa: F401

@@ -106,8 +106,15 @@ def test_os_seis_cartoes_mandam_o_gesto_e_dizem_qual_lancador(desenho):
     E o texto é o mesmo nos seis — é a razão de o `Acao.v` existir, e a mesma
     pela qual `Consertar` já o carregava.
     """
+    # A CONTA SAI DA LISTA DE FÁBRICA, e não do teclado — 08/09/2026, quando a
+    # Epic entrou e esta linha reprovou a inclusão por estar CERTA. Ela era
+    # `== 6`, digitado. O que a régua precisa é de UM cartão por lançador de
+    # fábrica; quantos são é decisão dela, e muda sem que nada aqui mude.
     cartoes = desenho.cartoes(None)
-    assert len(cartoes) == 6, "a aba tem SEIS cartões; a régua mediria outra tela"
+    assert [c.chave for c in cartoes] == [x.chave for x in desenho.EMBUTIDOS], (
+        f"a grade de partida não é a lista de fábrica: "
+        f"{[c.chave for c in cartoes]} contra "
+        f"{[x.chave for x in desenho.EMBUTIDOS]} — a régua mediria outra tela")
     for cartao in cartoes:
         html = desenho.acoes_html(cartao)
         assert f'data-gesto="{desenho.ABRIR}"' in html, (
@@ -194,7 +201,11 @@ def test_os_cinco_sem_funcao_recusam_nomeando_o_lancador(a07, ctx, espia,
     o Heroic, o Lutris, o RetroArch, o Dolphin ou o mGBA, e o Flatpak não é
     aplicativo. A recusa nomeia o lançador para ela saber de qual cartão veio.
     """
-    assert len(desenho.SEM_FONTE) == 5, "a lista dos sem censo mudou de tamanho"
+    # LÊ A LISTA, NÃO O NÚMERO. Ela era `len(...) == 5` e a Epic a fez reprovar
+    # por estar certa em 08/09/2026 — a mesma forma das onze réguas de 26/08.
+    # O que importa é que TODOS os sem-censo recusem nomeando; um a mais na
+    # lista é um a mais a cobrar, nunca um motivo para o vermelho.
+    assert desenho.SEM_FONTE, "a lista dos sem censo esvaziou — a régua mediria zero"
     for item in desenho.SEM_FONTE:
         with pytest.raises(RuntimeError) as erro:
             a07.abrir_lancador(ctx, {"gesto": desenho.ABRIR, "v": item.chave}, None)

@@ -19,7 +19,16 @@ import onde
 # `cor_da_zona` entrou em 03/09/2026 e serve à RÉGUA, não ao desenho: é ele que
 # transforma a isenção das cinco variáveis do esqueleto numa MEDIÇÃO. Ver
 # `identidade_congelada`.
-from monta import CONECTADOS, cor_da_zona, monta
+# `CSS_POPUP` ENTROU EM 08/09/2026, com a tela de registro — e a AUSÊNCIA dele
+# era um defeito que régua nenhuma via e a FOTO viu na primeira olhada: sem as
+# regras `.tela-nova{display:none}` / `:target{display:flex}`, a caixa de
+# registro renderiza SEMPRE, embaixo da janela, aberta e sem moldura. A página
+# publicada saiu assim, com os 49 portões verdes e 60 testes passando.
+#
+# O DONO É O `monta.py` desde 29/08, e é justamente o caso que ele existe para
+# cobrir: a segunda aba com pop-up não copia as 49 linhas da primeira — ela
+# IMPORTA. A `aba06` já fazia; esta faltava.
+from monta import CONECTADOS, CSS_POPUP, cor_da_zona, monta
 
 # O DESENHO DOS CARTÕES TEM UM DONO SÓ, e ele é o mesmo que o pacote
 # `pacotes/a07_lancadores.py` usa em tempo de execução. Enquanto os cartões
@@ -361,7 +370,44 @@ CSS = """
     background:var(--elevated);border:1px solid var(--border-sutil)}
   .linha-do-wrapper code{font-family:'JetBrains Mono',monospace;font-size:10px;
     line-height:1.5;color:var(--texto-suave);word-break:break-all}
-"""
+  /* A TELA DE REGISTRO — 08/09/2026, o «Adicionar Launcher» dela.
+     A CAIXA, o topo, o corpo e o rodapé vêm do `monta.CSS_POPUP`, que é o dono
+     da `.tela-nova` desde 29/08 e existe justamente para a segunda aba com
+     pop-up não copiar as 49 linhas da primeira. O que é DESTA tela — e só
+     dela — são as três regras abaixo, pela mesma razão que deixou a `.tn-vel`
+     no `aba06.py`: CSS de uma tela só num arquivo comum é a mesma doença pelo
+     avesso.
+     A LINHA DE CIMA É A QUE RESPONDE «PARA QUAL?», e por isso ela é a única com
+     endereço: quem abre a tela pelo botão de um cartão precisa ver de que
+     cartão se trata antes de digitar. */
+  .lanc-novo-para{font-size:11.5px;color:var(--texto-mudo);margin-bottom:12px}
+  /* `flex-direction:column` e não uma linha: com o rótulo à esquerda os dois
+     campos ficariam com larguras diferentes (os textos têm tamanhos
+     diferentes), e dois campos de texto desalinhados numa caixa de 660px é o
+     que faz a tela parecer montada por pessoas diferentes. */
+  .lanc-novo-campo{display:flex;flex-direction:column;gap:5px;margin-bottom:12px}
+  .lanc-novo-campo > span{font-size:11px;color:var(--texto-suave)}
+  /* A ALTURA É A DO `--h-acao` do esqueleto, que é a dos botões do rodapé desta
+     mesma caixa — um campo mais baixo que o botão que o guarda é a costura à
+     vista. `font-family` monoespaçada porque o que se digita aqui é caminho e
+     comando, e num `l` contra um `1` a diferença decide se o Hefesto acha. */
+  .lanc-novo-campo input{height:var(--h-acao);border-radius:7px;padding:0 10px;
+    background:var(--app-bg);border:1px solid var(--border-forte);color:var(--fg);
+    font-family:'JetBrains Mono',monospace;font-size:11.5px}
+  .lanc-novo-campo input:focus{outline:none;border-color:var(--purple)}
+  /* O BOTÃO QUE É ÂNCORA TEM DE PARECER BOTÃO — 08/09/2026, e foi a FOTO que
+     mostrou. Dois dos botões desta aba são `<a class="btn">` porque só uma
+     âncora abre a `.tela-nova` pelo `:target` (ver `desenho_dos_lancadores.
+     Acao.href`); o `.btn` do esqueleto não desliga o sublinhado, que é
+     `text-decoration` padrão de `<a>`. Resultado medido na primeira foto: o
+     «Adicionar lançador ou emulador» e o «Adicionar Launcher» saíam
+     SUBLINHADOS ao lado de irmãos idênticos que não saíam — a mesma quebra de
+     "mesma família, mesma largura" que fez o `.lanc .btn` cair em 02/09.
+     O `.tn-rod .btn` do `monta.CSS_POPUP` já resolve isto DENTRO da pop-up, e
+     pela mesma razão; esta regra é a mesma lição, na fileira da aba. */
+  .acoes a.btn,.lanc a.btn{text-decoration:none;display:inline-flex;
+    align-items:center;justify-content:center}
+""" + CSS_POPUP
 
 # OS CARTÕES SAEM DO DESENHO, e a lista deixou de ser digitada. Ela era seis
 # dicionários com os selos e as contagens escritos à mão; agora é o que
@@ -399,6 +445,7 @@ MIOLO = f'''
         <div class="acoes" style="margin-top:0;margin-bottom:12px">
           <button class="btn roxo" data-gesto="detectar">Detectar o jogo que está aberto</button>
           <button class="btn" data-gesto="procurar">Procurar de novo</button>
+          <a class="btn" href="#{dl.TELA_DO_NOVO}" data-gesto="{dl.ADICIONAR}">{dl.ADICIONAR_NOVO_ROTULO}</a>
         </div>
 
         <div class="{dl.CLASSE_DA_GRADE}">
@@ -425,6 +472,14 @@ LEGENDA = f'''<div class="nota">
     <li><b>Nasceu o selo <code>NÃO SEI</code>, e ele é a cura disso.</b> Heroic, Lutris, Flatpak, RetroArch e Dolphin·mGBA passam a dizer que o produto ainda não sabe olhá-los — <code>CHEGAM</code> e <code>NÃO CHEGAM</code> seriam as duas afirmações que ele não pode fazer. Há régua que reprova no dia em que um deles ganhar fonte e continuar com o <code>NÃO SEI</code>.</li>
     <li><b>O cartão da Steam ganhou a lista dos jogos que perderam o atalho</b>, com o nome de cada um e o botão de tirar/devolver. Ela <b>nasce vazia</b> e não ocupa um pixel quando não há o que dizer — a mesma regra do carimbo.</li>
     <li><b>A contagem do quadro continua derivada</b> — hoje <b>{QUADRO.achados}</b> —, e agora dos mesmos cartões que o produto monta.</li>
+  </ul>
+
+  <h2>08/09/2026 — as quatro que ela pediu olhando a aba</h2>
+  <ul>
+    <li><b>O selo diz <code>NÃO LOCALIZADO</code></b>, e não mais <code>NÃO ACHEI</code> — palavra dela. O valor mudou num lugar só (<code>desenho_dos_lancadores.SELOS</code>); as dezenas de menções em comentário ficaram, porque contam o que aconteceu num dia. E as réguas que digitavam a palavra passaram a <b>ler</b> o selo.</li>
+    <li><b>No cartão que não localizou, o botão virou <code>Adicionar Launcher</code></b> — palavra dela. Ele não instala nada: ele abre a tela onde <b>você diz onde o lançador está</b>, que é o que faltava para o cartão acender. No cartão que <i>achou</i>, o botão continua sendo <code>Abrir o lançador</code>: são dois estados, dois botões.</li>
+    <li><b>A Epic Games ganhou cartão</b>, e ele procura os três clientes que entregam jogo da Epic no Linux: o <code>Rare</code>, o <code>legendary</code> e o <b>Heroic</b>. O Heroic entra na busca de propósito — sem ele, esta máquina veria o cartão da Epic dizendo <code>NÃO LOCALIZADO</code> com o cartão do Heroic ao lado dizendo que achou.</li>
+    <li><b>E há um botão para acrescentar o que o Hefesto não conhece</b> — <code>Adicionar lançador ou emulador</code>, pedido dela <i>"pra devs mais experimentais"</i>. O que você declara mora no <code>maquina.json</code> e passa pelo <b>mesmo procurador</b> dos de fábrica; o que não está no disco <b>não é guardado</b>, e o recado diz o que foi procurado. O que se acrescenta se tira, pelo <code>Tirar daqui</code>.</li>
   </ul>
 
   <h2>O que estava no código e nunca teve tela — agora tem</h2>
@@ -480,11 +535,20 @@ if _PROMESSAS:
         "controle, MAC, device ou transporte. Um número aqui é uma promessa que "
         "o produto não tem como conferir.")
 
+# A CONTA SUBIU DE SEIS PARA SETE em 08/09/2026, com a Epic — pedido dela:
+# *"Seria interessante termos o da Epic Games Aqui também não?"*
+#
+# ELA CONTINUA CRAVADA, e o número cravado é o ponto: esta régua lê a página
+# ESTÁTICA, que é o desenho de referência. Um cartão que apareça ou suma daqui
+# sem alguém mexer neste número é um cartão que ninguém decidiu — e o desenho
+# desta aba é dela. O que ela NÃO conta são os declarados: aqueles só existem na
+# máquina de quem os declarou, e chegam pela troca da grade inteira
+# (`a07_lancadores._pintura`), nunca pelo HTML publicado.
 _ESPERADOS = [x.chave for x in QUADRO.lancadores]
-if len(_ESPERADOS) != 6:
-    raise SystemExit(f"ERRO: {len(_ESPERADOS)} cartões, e o desenho dela tem SEIS. "
-                     "Se um lançador ganhou fonte, ele sai do `SEM_FONTE` e "
-                     "entra com cartão próprio — a conta continua fechando.")
+if len(_ESPERADOS) != 7:
+    raise SystemExit(f"ERRO: {len(_ESPERADOS)} cartões, e o desenho dela tem "
+                     "SETE. Se um lançador ganhou fonte, ele sai do `SEM_FONTE` "
+                     "e entra com cartão próprio — a conta continua fechando.")
 _FALTAM = [f"{k}{s}" for k in _ESPERADOS for s in dl.SUFIXOS
            if f'data-campo="{k}{s}"' not in MIOLO]
 if _FALTAM:
@@ -616,9 +680,33 @@ if __name__ == "__main__":
     # três abas que escolhem controle. Nesta, que não escolhe, ele nasce sem
     # `data-gesto` e sai daqui inteiro — mas a ÂNCORA tinha de acompanhar: com
     # `<span>` ela deixaria de casar e este bloco ficaria verde sem apagar nada.
-    _CHIP_DE_CONTROLE = re.compile(r'^[ \t]*<label class="chip plastico"[^\n]*\n', re.M)
+    # ---------------------------------------------------------------------------
+    # A TELA DE REGISTRO ENTRA IRMÃ DA JANELA, FORA DO MIOLO — 08/09/2026.
+    #
+    # É a mesma injeção que o `aba06.py` faz com as quatro pop-ups dele, e a
+    # razão é a mesma: a `.tela-nova` é `position:fixed` e não pertence ao
+    # `.miolo` que as réguas varrem. Pôr o bloco dentro do `MIOLO` faria a régua
+    # de estados contar dois campos de texto vazios como conteúdo da aba.
+    #
+    # A MARCA É CONFERIDA ANTES, e a recusa é dura: um `replace` que não casa
+    # não levanta — ele devolve o texto igual, e a página sairia SEM a tela com
+    # o gerador imprimindo sucesso. É o silêncio que esta casa já nomeou.
+    # ---------------------------------------------------------------------------
+    _MARCA = "<!-- ================= LEGENDA DO MOCKUP ================= -->"
     _PAG = onde.pagina("07-lancadores.html")
     _DOC = _PAG.read_text()
+    if _MARCA not in _DOC:
+        raise SystemExit(
+            "ERRO: a marca da legenda mudou no `fim.html` e a tela de registro "
+            "não tem onde entrar. Sem ela o botão «Adicionar Launcher» abre "
+            "NADA — o `href=\"#novo-lancador\"` aponta para um `id` que não "
+            "existe, e o clique some sem uma palavra.")
+    _DOC = _DOC.replace(
+        _MARCA, dl.tela_do_registro_html().strip() + "\n\n" + _MARCA, 1)
+    onde.gravar("07-lancadores.html", _DOC)
+
+    _CHIP_DE_CONTROLE = re.compile(r'^[ \t]*<label class="chip plastico"[^\n]*\n', re.M)
+    _DOC = onde.pagina("07-lancadores.html").read_text()
     _CONGELADOS = _CHIP_DE_CONTROLE.findall(_DOC)
     if not _CONGELADOS:
         raise SystemExit(

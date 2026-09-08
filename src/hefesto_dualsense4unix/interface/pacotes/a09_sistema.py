@@ -1853,7 +1853,7 @@ def _teto_do_perfil(escolha: str) -> str | None:
     `eu_escolho` grava `None` — a AUSÊNCIA de teto de mesa.
 
     **O `None` não é "não mandar a chave", e a diferença decide o botão.** O
-    `fundir_declaracao` (`utils/maquina.py:650`) documenta as duas: *"`None`
+    `fundir_declaracao` (`utils/maquina.py:803`) documenta as duas: *"`None`
     presente na declaração é uma escolha e SOBRESCREVE. Só a AUSÊNCIA da chave
     preserva o que havia."* Omitir a chave no "Eu escolho" deixaria o teto
     antigo em disco com o botão aceso dizendo que não há teto.
