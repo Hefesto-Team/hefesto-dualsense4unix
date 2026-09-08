@@ -262,7 +262,36 @@ DOMINIO = _DOMINIO_DO_PORTAO["por_que_nao_aciona"]
 #: `test_o_teto_e_um_numero_deste_arquivo_e_nao_do_csv` exige que o teto seja
 #: exatamente a conta de hoje —, e deixá-lo velho entregaria a suíte vermelha a
 #: quem costura. Está declarado na entrega daquela sprint.
-TETO_DA_DIVIDA = 23
+#:
+#: ─────────────────────────────────────────────────────────────────────────
+#: SUBIU PARA 24 EM 08/09/2026, e subir é DIZER QUE A CASA PASSOU A DEVER MAIS
+#: ─────────────────────────────────────────────────────────────────────────
+#: **O número já era 24 desde 07/09 e ninguém viu.** O teto ficou em 23 e a
+#: suíte carregou esta vermelha por um dia inteiro — a leva de 08/09 encontrou
+#: a régua já reprovando na BASE (medido: base 24, branch 24, ZERO células
+#: entraram com o merge). Não é dívida nova de hoje; é um teto que parou de
+#: bater com a realidade e uma reprova que virou paisagem.
+#:
+#: QUANDO CRUZOU, e o commit é nomeado: `ef61c628` (07/09, *"as 53 células
+#: mudas do Pro e do 8BitDo respondidas no fonte do driver"*). O saldo dele
+#: foi +2 −1:
+#:
+#:   ENTRARAM  `combinacao.rumble_simultaneo@pro`, cabo E rádio
+#:   SAIU      `audio.saida_dedicada.payload_do_degrau@dualsense`, rádio
+#:
+#: E AS DUAS QUE ENTRARAM SÃO DÍVIDA DE VERDADE, não erro de classificação —
+#: é a diferença que importa aqui. Aquele commit foi LER o fonte do
+#: `hid-nintendo` e responder o que estava mudo; o que ele descobriu foi que o
+#: rumble simultâneo no Pro é coisa que o driver permite e o Hefesto não faz.
+#: Uma célula muda virou uma célula que CHAMA alguém para trabalhar. É
+#: exatamente o que este número existe para tornar visível, e por isso ele
+#: sobe em vez de a régua ser afrouxada.
+#:
+#: A REGRA NÃO MUDA: pagar baixa o teto no mesmo commit. O que muda é que o
+#: teto volta a ser a conta de hoje, que é o que o
+#: `test_o_teto_e_um_numero_deste_arquivo_e_nao_do_csv` cobra — e um teto que
+#: não bate transforma a régua inteira em ruído que se aprende a ignorar.
+TETO_DA_DIVIDA = 24
 
 
 def _linhas(caminho: Path | str) -> list[dict[str, str]]:
