@@ -80,6 +80,27 @@ _CAMADAS = ("rapido|", "completo|", "suite|")
 #: dívida envelhecer calada. No dia em que o chamador nascer, a entrada REPROVA
 #: e tem de ser apagada (`test_nenhuma_divida_sobreviveu_a_propria_cura`).
 _SEM_CHAMADOR_HOJE: dict[str, str] = {
+    "scripts/check_a_conferencia_dela.py": (
+        "MEDIDO em 08/09/2026, e ele fica fora das duas listas POR DESENHO, não "
+        "por esquecimento. Ele é a tabela que ELA escreveu — a coluna «✓ na "
+        "árvore» contra a coluna «falta» — com a ordem dela junto: *\"se alguma "
+        "[ficar n]a direita, ela não passa para o dev\"*. Logo ele é o portão do "
+        "MERGE, e quem o roda é quem mergeia, na árvore dela, antes do `git "
+        "merge`.\n"
+        "POR QUE NÃO PENDURAR NO `portoes.sh`: a linha da cor única PERGUNTA AO "
+        "DONO — ela abre o socket do daemon vivo e lê o `lightbar_rgb` de cada "
+        "controle da mesa, porque foi assim que ela viu o defeito (dois azuis "
+        "lado a lado) e é a única leitura que não mente sobre o plástico. Nem o "
+        "CI nem uma worktree de agente têm quatro DualSense conectados; "
+        "pendurá-lo ali daria um vermelho que ninguém pode fechar, e a casa já "
+        "mediu o que isso custa — agente caçando régua quebrada em vez de "
+        "defeito.\n"
+        "A LINHA QUE O LIGARIA, se um dia a bancada virar CI: "
+        "`rapido|conferencia-dela|py|scripts/check_a_conferencia_dela.py` em "
+        "`scripts/portoes.sh`, mais o passo gêmeo em `.github/workflows/ci.yml`. "
+        "Ele fecha quando as três linhas da direita fecharem E existir bancada "
+        "automatizada — a segunda condição é que não existe hoje."
+    ),
     "scripts/check_bancada_de_bt.py": (
         "MEDIDO em 01/09/2026, e ele NASCEU sem chamador de propósito. A escada "
         "de releases (`docs/process/2026-08-24-A-ESCADA-DE-RELEASES.md`, degrau "

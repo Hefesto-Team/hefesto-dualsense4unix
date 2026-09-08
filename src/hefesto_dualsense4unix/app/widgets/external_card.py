@@ -115,7 +115,7 @@ DICA_DA_COR_NO_RADIO = Fala(
     chave="identidade.cor_do_aparelho@dualsense",
     lado="radio",
     aba="Configurações",
-    texto="O Hefesto ainda não lê a cor por rádio. Escolha na lista.",
+    texto="Pelo rádio a cor do plástico vem da lista. Escolha a sua.",
     afirma=AFIRMA_NADA,
     porque=(
         "o aparelho responde por rádio — medido em 27/08/2026 com a semente "

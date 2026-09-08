@@ -567,24 +567,30 @@ A_STEAM = SemCenso("steam", "Steam",
 PROCURADOS: tuple[SemCenso, ...] = (A_STEAM, *SEM_FONTE)
 
 #: A frase de quem AINDA NÃO PROCUROU — a primeira meia volta, antes de a
-#: leitura de disco voltar. Ela diz as TRÊS coisas que quem lê precisa: que o
-#: produto não olhou, que o perfil casa por processo e janela (logo um jogo
-#: aberto de lá pode funcionar), e o que falta para o cartão virar medição.
+#: leitura de disco voltar.
+#:
+#: ELA DIZIA O QUE FALTA, e agora diz o que FUNCIONA. Ordem dela, 07/09/2026:
+#: *"O app tem que funcionar e não mostrar na tela que o app não presta. (…) o
+#: layout não informa os nossos defeitos."* A frase antiga abria com *"Ainda
+#: não sei olhar este lançador"* e fechava com *"nenhuma linha dele olha para
+#: cá hoje"* — duas confissões em volta do único fato que serve a quem lê.
+#:
+#: O FATO SOBREVIVEU INTEIRO, e é o do meio: o perfil casa por processo e por
+#: janela, então um jogo aberto de lá entra pelo mesmo caminho de qualquer
+#: outro. Quem precisa da dívida a encontra no mapa de canais, que é onde ela
+#: mora.
 DIZ_SEM_FONTE = (
-    "<b>Ainda não sei olhar este lançador.</b> O Hefesto casa o perfil pelo "
-    "nome do processo e pela janela, então um jogo aberto por aqui pode "
-    "funcionar — o que falta é o produto <i>medir</i>, e nenhuma linha dele "
-    "olha para cá hoje."
+    "<b>O perfil casa pelo nome do processo e pela janela.</b> Um jogo aberto "
+    "por aqui entra pelo mesmo caminho de qualquer outro."
 )
 
 #: A frase de quem PROCUROU E ACHOU. O `{onde}` é o atalho ou o comando que
 #: denunciou o lançador — dizer ONDE é o que separa esta frase de um palpite,
 #: e é o que deixa ela conferir a resposta sem acreditar em mim.
 DIZ_ACHEI = (
-    "<b>Achei este lançador aqui</b> (<code>{onde}</code>), mas ainda não sei "
-    "olhar <i>dentro</i> dele: o produto não lê a biblioteca deste lançador. "
-    "O Hefesto casa o perfil pelo nome do processo e pela janela, então um "
-    "jogo aberto por aqui pode funcionar."
+    "<b>Achei este lançador aqui</b> (<code>{onde}</code>). O perfil casa pelo "
+    "nome do processo e pela janela, então um jogo aberto por aqui entra pelo "
+    "mesmo caminho de qualquer outro."
 )
 
 #: A frase de quem PROCUROU E NÃO ACHOU. Ela nomeia as duas buscas, porque uma
