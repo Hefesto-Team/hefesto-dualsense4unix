@@ -144,12 +144,20 @@ def identidade_do_vpad(vpad: Any) -> dict[str, Any]:
       sai no `HID_UNIQ` do sysfs. É o único "nó" que um vpad uhid tem: ele
       nasce por `/dev/uhid` e não guarda ponteiro para /dev nem para /sys.
       ``None`` no uinput, que é evdev puro e não tem `uniq`.
-    - ``vpad_indice`` é o inteiro que está DENTRO do nome e do `uniq` — o
-      `player_index` de ALOCAÇÃO, congelado quando aquele vpad nasceu. Ele
-      existe aqui por um motivo só, e é o da §1.b da sprint: desde a
-      MESA-CHEIA-12 o número PUBLICADO é a fila de chegada, e os dois podem
-      divergir. Sem este campo, quem casasse `player == N` com `Hefesto P{N}`
-      leria o dispositivo de OUTRO jogador.
+    - ``vpad_indice`` é o inteiro que está DENTRO do nome do vpad, congelado
+      quando aquele vpad nasceu.
+
+      **FATO SUBSTITUÍDO — A-MESMA-LINGUA-01, 07/09/2026.** Esta linha dizia
+      que ele era *"o `player_index` de ALOCAÇÃO"*, e era verdade até hoje: o
+      nome nascia do índice do co-op enquanto o número publicado saía da fila
+      de chegada, e os dois divergiam em 4 de 4 na bancada dela. Agora o nome
+      nasce da MESMA fila (:meth:`CoopManager.numero_para_o_nome`), então este
+      campo é *o número da carta no instante do nascimento do vpad*.
+
+      Ele continua existindo, e por um motivo que a cura não apaga: o nome não
+      se corrige vivo (não há renomear em uhid nem em uinput), então a fila
+      pode andar depois. Sem este campo, quem casasse `player == N` com
+      `Hefesto P{N}` leria o dispositivo de OUTRO jogador.
     """
     return {
         "vpad_backend": _texto_ou_none(getattr(vpad, "backend", None)),
@@ -236,13 +244,24 @@ class _SecondaryPlayer:
     "pending"; `_promote_pending` cria o vpad SÓ quando `grab_state == "held"`.
     Nunca existe vpad sem grab confirmado — sem janela de input dobrado.
 
-    FEAT-COOP-PLAYER-LED-01 / R-24: `player_index` é o número do jogador para
-    o JOGO (2..N), fixado na criação (menor índice livre, REUSADO quando
-    alguém sai — é ele que vira o MAC do vpad uhid `02:fe:00:00:00:0N`, e o
-    jogo quer P1..PN contíguos). NÃO é o número EXIBIDO: a barra de player e
-    os rótulos usam o slot do `identity_registry` (espaço de numeração único,
-    via `CoopManager._numero_exibido`). Acender este índice na lâmpada é o
-    que fazia "os dois controles aparecem como player 1".
+    `player_index` é o índice de ALOCAÇÃO deste jogador (2..N), fixado na
+    criação: menor livre, REUSADO quando alguém sai, para o co-op manter
+    P1..PN contíguos. **Hoje ele não aparece em lugar nenhum que a usuária
+    veja, e as duas coisas que ele carimbava saíram uma por uma:**
+
+    - o MAC do vpad uhid saiu na COOP-QUE-NÃO-DESMONTA-01/E3 (06/09/2026) —
+      quem responde é `uhid_gamepad.vpad_mac`, ancorado no APARELHO; reusar o
+      índice trocava o MAC do Jogador 2 de dono no meio da mesa;
+    - o NOME do vpad saiu na A-MESMA-LINGUA-01 (07/09/2026) — quem responde
+      é `CoopManager.numero_para_o_nome`, a fila de chegada. Antes disso o
+      nome dizia um número e a carta dizia outro, em 4 de 4 na bancada dela.
+
+    Ele segue sendo o `fallback` dos dois quando não há de quem perguntar
+    (FakeController, backend legado, dublê de teste), e o poço de reúso que
+    garante a contiguidade. NÃO é, e nunca foi, o número EXIBIDO: a barra de
+    player e os rótulos usam a fila (`CoopManager._numero_exibido`). Acender
+    este índice na lâmpada é o que fazia "os dois controles aparecem como
+    player 1".
     """
 
     identity: str
@@ -432,12 +451,24 @@ class CoopManager:
           EVIOCGRAB confirmar (BUG-COOP-GRAB-PENDING-VPAD-01). Sai na lista de
           propósito: o físico já está na mesa, e o desequilíbrio é o fato.
         - ``nome_divergente`` — a **E3**: `True` quando o ``player`` publicado
-          e o ``vpad_indice`` que está DENTRO do nome/`uniq` do vpad diferem.
-          Desde a MESA-CHEIA-12 eles podem divergir, e recriar o vpad para
-          renomeá-lo ficou de fora por decisão registrada (o jogo enxergaria um
-          gamepad desconectando). O que NÃO pode ficar de fora é o aviso: sem
-          ele, casar ``player == N`` com ``Hefesto P{N}`` lê o dispositivo de
-          outro jogador — medição confiante e errada, a armadilha nº 1 daqui.
+          e o ``vpad_indice`` que está DENTRO do nome do vpad diferem.
+
+          **O QUE ELE SIGNIFICA MUDOU EM 07/09/2026 (A-MESMA-LINGUA-01), e a
+          diferença é o ponto inteiro.** Até hoje ele dizia *"estes dois
+          inteiros vêm de espaços de numeração diferentes"* — e por isso ficava
+          `True` para sempre, nos quatro controles da mesa dela, sem que nada
+          jamais o apagasse. Agora o nome NASCE do número da carta
+          (:meth:`CoopManager.numero_para_o_nome`), então o normal é `False` e
+          o alarme passa a dizer uma coisa só, verificável e temporária: *a
+          fila andou depois que este vpad nasceu.*
+
+          O aviso continua sendo obrigatório porque a cura não alcança o
+          depois: o nome vai no `UHID_CREATE2`/`UI_DEV_SETUP` e o kernel não
+          tem operação de renomear — corrigi-lo ao vivo seria derrubar e
+          recriar o nó, e o jogo veria um gamepad desconectando no meio da
+          partida. Sem o aviso, casar ``player == N`` com ``Hefesto P{N}``
+          leria o dispositivo de outro jogador — medição confiante e errada, a
+          armadilha nº 1 daqui.
 
         PRIVACIDADE — o MAC do físico vai INTEIRO, e o porquê está escrito
         aqui para não ser reaberto. (1) Não é exposição nova: o mesmo endereço
@@ -801,6 +832,111 @@ class CoopManager:
             index += 1
         return index
 
+    def numero_para_o_nome(self, identity: str, fallback: int) -> int:
+        """O número que vai DENTRO do nome do vpad deste controle.
+
+        A-MESMA-LINGUA-01 (07/09/2026). Decisão dela, em cinco palavras:
+        *"precisamos que falem a mesma língua."*
+
+        **A pergunta é feita ao DONO, e o dono é um só.** O número que a carta
+        mostra sai de :meth:`numeros_de_jogador` — a fila de chegada
+        (`identity_registry`), a MESMA função que escolhe o desenho aceso na
+        barra de player e o rótulo do card desde a MESA-CHEIA-12. O nome do
+        vpad passa a sair dela também, em vez de guardar cópia do
+        `player_index`. É a regra desta casa: *quando um valor tem dono, a
+        régua PERGUNTA ao dono.*
+
+        O QUE ESTAVA ERRADO, medido na bancada dela em 07/09/2026 com os
+        QUATRO na mesa — e era **4 de 4**, nenhum acerto por sorte:
+
+        | aparelho                | carta | nome do vpad |
+        |-------------------------|-------|--------------|
+        | Cosmic Red (cabo, P1)   | 2     | `Hefesto P1` |
+        | Starlight Blue (rádio)  | 4     | `Hefesto P3` |
+        | Galactic Purple (rádio) | 1     | `Hefesto P4` |
+        | White (cabo)            | 3     | `Hefesto P2` |
+
+        O `state_full` publicava `nome_divergente: true` nos quatro itens da
+        mesa desde a QUEM-É-QUEM-01/E3 — a casa SABIA e o produto não fazia,
+        o defeito mais caro daqui, na sua forma mais barata de curar.
+
+        `fallback` é o `player_index` (índice de ALOCAÇÃO do vpad). Ele
+        continua sendo a resposta quando não há registro de identidade
+        (FakeController, backend legado, dublê de teste): sem fila, o
+        histórico segue intacto.
+
+        **O NOME SÓ PODE NASCER CERTO — ele não se corrige vivo.** O nó uhid
+        recebe o nome em `UHID_CREATE2` e o ABI do kernel não tem operação de
+        renomear (`/usr/include/linux/uhid.h`: `CREATE2`, `DESTROY`, `START`,
+        `STOP`, `OPEN`, `CLOSE`, `OUTPUT`, `GET_REPORT*`, `SET_REPORT*`,
+        `INPUT2` — e nada mais); o uinput é igual, o nome vai no `UI_DEV_SETUP`
+        antes do `UI_DEV_CREATE`. Renomear é DERRUBAR e RECRIAR.
+
+        **O PREÇO DE RECRIAR, medido no journal da bancada dela, 07/09/2026**
+        (um replug real do controle branco, `uhid_device_created` →
+        `vpad_uhid_ativo` → sinks de volta → `launch_env` reassentado):
+
+        | marco                       | atraso desde o `CREATE2` |
+        |-----------------------------|--------------------------|
+        | `uhid_bind_ok`              | 10,1 ms                  |
+        | `vpad_uhid_ativo`           | 60,6 ms                  |
+        | motion reader de volta      | 561 ms                   |
+        | réplicas (lightbar/LED)     | 658 ms                   |
+        | `launch_env` reassentado    | 3,1 s                    |
+
+        E o custo que os milissegundos não contam: o jogo recebe um
+        `REMOVED`+`ADDED` de gamepad — controle arrancado da mão no meio da
+        partida (é a mesma R-04 que o `start_gamepad_emulation` já se recusa a
+        pagar quando o jogo está com a autoridade).
+
+        **E O PIOR NÃO É O PREÇO UNITÁRIO, É QUANTOS PAGAM.** O número da
+        carta é uma COLOCAÇÃO entre os PRESENTES (`identity_registry.slot_for`:
+        *"um controle cujo lugar na fila é o terceiro exibe 1 quando é o único
+        ligado"*). Uma bateria que acaba no jogador 1 muda o número de TODOS os
+        que vêm atrás — renomear ao vivo derrubaria os outros três vpads por
+        causa de um controle que nem era deles.
+
+        Por isso esta função é chamada na PROMOÇÃO, e o `nome_divergente` de
+        :func:`_item_da_mesa` passa a significar exatamente *"a fila andou
+        depois que este vpad nasceu"* — que é a única coisa que ele pode
+        significar de honesto.
+
+        **ATÉ ONDE ESTE NÚMERO CHEGA — medido em 07/09/2026, e a fronteira é
+        real.** Ele chega ao nome do nó evdev, ao `/proc/bus/input/devices` e
+        à API **Joystick** da SDL (`SDL_JoystickNameForIndex` devolve o nome
+        certo de cada um dos quatro). Ele **NÃO chega** à API
+        **GameController**, que é a que a maioria dos jogos usa:
+
+            idx  SDL_JoystickNameForIndex   SDL_GameControllerNameForIndex
+             1   ...(Hefesto P1)            ...(Hefesto P1)
+             3   ...(Hefesto P2)            ...(Hefesto P1)
+             5   ...(Hefesto P3)            ...(Hefesto P1)
+             7   ...(Hefesto P4)            ...(Hefesto P1)
+
+        A CAUSA, medida e não deduzida: os bytes 2-3 do GUID da SDL são o
+        CRC16 do NOME, então os quatro vpads têm GUIDs diferentes; a busca de
+        mapping cai de volta para o GUID com o CRC zerado, os quatro colapsam
+        em `030000004c050000f20d000000810000`, e UM mapping só — o primeiro
+        registrado, que carrega o nome do P1 — responde pelos quatro. O
+        `SDL_GameControllerName` devolve o nome do MAPPING, não o do nó. Ver
+        a medição inteira em `integrations.uinput_gamepad.NINTENDO_PROCON_NAME`.
+
+        E `SDL_JoystickGetDevicePlayerIndex` não é saída: ele devolve a ordem
+        de ENUMERAÇÃO (0..7 nesta bancada), nunca a carta.
+
+        **O QUE ISSO NÃO DERRUBA:** a cura continua certa e continua valendo.
+        O defeito que ela fechou era a casa falar duas línguas sobre si mesma
+        — a carta dizendo 2 e o nó dizendo `Hefesto P1`, em 4 de 4. O que a
+        medição acrescenta é que fazer o JOGO ler esse número é outro
+        trabalho, e não se ganha trocando o nome: pede mapping por GUID
+        (`SDL_GAMECONTROLLERCONFIG`) ou o `player_index` da própria SDL.
+        """
+        numeros = self.numeros_de_jogador()
+        numero = numeros.get(identity)
+        if isinstance(numero, int) and not isinstance(numero, bool) and numero >= 1:
+            return numero
+        return fallback
+
     def _spawn_player(self, identity: str, path: str) -> None:
         """Cria um jogador secundário para o controle `identity` no node `path`.
 
@@ -989,7 +1125,14 @@ class CoopManager:
             # `rumble_sink` da linha de baixo.
             identity=player.identity,
             rumble_sink=self._make_player_rumble_sink(player.identity),
-            player=player.player_index,
+            # A-MESMA-LINGUA-01: o número que vai DENTRO do nome é o da CARTA,
+            # perguntado ao dono (`numeros_de_jogador`), nunca o `player_index`
+            # cru — ver :meth:`numero_para_o_nome`. O `player_index` segue
+            # inteiro no `_SecondaryPlayer` (contiguidade P1..PN e o poço de
+            # reúso), e o MAC do vpad não se move: `vpad_mac` está ancorado na
+            # `identity` desde a COOP-QUE-NÃO-DESMONTA-01/E3, então trocar este
+            # inteiro troca o NOME e mais nada.
+            player=self.numero_para_o_nome(player.identity, player.player_index),
             allow_uhid=controller_allows_uhid(self._daemon),
             # GYRO-01: 0x05 do físico DESTE jogador calibra o motion espelhado
             # (None para externos/sem MAC → canônico, fail-safe).
@@ -2078,12 +2221,59 @@ def get_coop_manager(daemon: DaemonProtocol) -> CoopManager:
     return manager
 
 
+def numero_do_nome_do_primario(daemon: Any, fallback: int = 1) -> int:
+    """O número que vai DENTRO do nome do vpad do P1. A-MESMA-LINGUA-01.
+
+    O irmão de :meth:`CoopManager.numero_para_o_nome` para o único jogador que
+    o `CoopManager` não promove: o primário nasce em
+    `subsystems/gamepad.start_gamepad_emulation`, e o número dele estava
+    **cravado em 1** desde sempre.
+
+    **CRAVAR 1 ERA UM FATO ERRADO, e foi ele que a bancada dela pegou em
+    07/09/2026:** o primário era o Cosmic Red, no cabo, e a carta dele dizia
+    **2** — o primeiro da fila era o Galactic Purple, no rádio. Ser o controle
+    que alimenta o P1 é uma função da SESSÃO ("de quem o daemon lê o input"),
+    não um lugar na fila; confundir as duas fazia o vpad do primário mentir
+    100% das vezes em que ele não era o primeiro a chegar.
+
+    A regra mora aqui, e não em `gamepad.py`, por uma razão só: a fila tem UM
+    dono, e reimplementar a consulta do outro lado criaria a segunda cópia que
+    esta casa persegue. O ``fallback`` (1) responde quando não há mesa de quem
+    perguntar — daemon sem `_coop_manager` ainda, ou primário sem MAC.
+
+    **O MAC DO VPAD NÃO SE MOVE COM ISTO, e o encaixe é o que torna a cura
+    segura.** `uhid_gamepad.vpad_mac` só deriva do número quando NÃO há
+    identidade de aparelho — e é exatamente nesse caso que
+    `numeros_de_jogador()` não tem resposta (`_alvos_de_numeracao` descarta
+    `path:`) e este fallback devolve 1, o valor de hoje. Com identidade, o MAC
+    sai do aparelho e o número só pinta o nome.
+
+    **NÃO cria o manager.** `getattr`, nunca `get_coop_manager`: subir um
+    `CoopManager` do lado de dentro da partida do vpad inverteria a ordem de
+    construção do daemon por causa de um rótulo.
+    """
+    manager = getattr(daemon, "_coop_manager", None)
+    if not isinstance(manager, CoopManager):
+        return fallback
+    try:
+        identity = manager._primary_identity()
+        if identity is None or identity.startswith("path:"):
+            return fallback
+        return manager.numero_para_o_nome(identity, fallback)
+    except Exception as exc:  # rótulo nunca derruba a partida do vpad
+        logger.debug("numero_do_nome_do_primario_falhou", err=str(exc))
+        return fallback
+
+
 __all__ = [
     "CoopManager",
     # R-22: público de propósito — o caminho do P1 (`gamepad`) compartilha o
     # MESMO cache por MAC, para que trocar de primário não repague a leitura.
     "calibration_cache",
     "get_coop_manager",
+    # A-MESMA-LINGUA-01: o caminho do P1 (`gamepad`) pergunta o número do nome
+    # AQUI, para que a fila continue com um dono só.
+    "numero_do_nome_do_primario",
     "player_led_pattern",
     "resolve_player_numbers",
     # AVISO-FALSO-DO-COOP-01: a regra do aviso é pura e mora aqui, longe do

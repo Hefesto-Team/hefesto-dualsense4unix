@@ -471,7 +471,8 @@ _GAMEPAD_DISABLED_FLAG_FILE = "gamepad_disabled.flag"
 def save_gamepad_emulation(enabled: bool, flavor: str | None = None) -> None:
     """Persiste o estado do gamepad virtual (FEAT-DSX-GAMEPAD-FLAVOR-01).
 
-    Flag-file em config_dir cujo conteúdo é o flavor (`dualsense`/`xbox`) quando
+    Flag-file em config_dir cujo conteúdo é o flavor (`dualsense`/`xbox`/
+    `nintendo`) quando
     ligado; o arquivo é removido quando desligado. Assim o daemon restaura tanto
     o liga/desliga quanto a máscara após restart/reboot. Best-effort.
 

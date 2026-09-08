@@ -384,7 +384,7 @@ def tabela_efetiva(
     uma palavra, e com os dois campos continuando a aparecer no arquivo.
 
     O `None` É "NÃO OPINOU" E O `{}` É "ESVAZIEI", e a diferença é a mesma do
-    esquema (`profiles/schema.py:1324-1326`) e a mesma que
+    esquema (`profiles/schema.py:1338-1340`) e a mesma que
     `profiles/manager.resolve_key_bindings` aplica ao device: `None` herda
     `DEFAULT_BUTTON_BINDINGS` inteiro — que é exatamente o que o de fábrica já
     deriva, logo não há nada a fazer —, e um dict, mesmo vazio, é a lista

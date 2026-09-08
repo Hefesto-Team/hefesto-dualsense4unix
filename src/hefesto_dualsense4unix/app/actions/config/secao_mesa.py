@@ -1286,7 +1286,7 @@ class _PainelDaMesa:
         horizontal para cima: sem isto a coluna come a largura da tabela
         inteira, que é o defeito que a seção "A janela" pagou em 22/08 (757px
         de vão). Curar dentro do widget quebraria a aba Início, que DEPENDE
-        dessa expansão (`home_actions.py:2106`).
+        dessa expansão (`home_actions.py:2251`).
         """
         from gi.repository import Gtk
 

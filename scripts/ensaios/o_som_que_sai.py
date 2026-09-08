@@ -64,10 +64,13 @@ errada produz alarme convincente e falso"* já aconteceu três vezes aqui.
 from __future__ import annotations
 
 import argparse
+import itertools
 import math
 import os
 import struct
+import subprocess
 import sys
+from collections.abc import Callable
 
 _AQUI = os.path.dirname(os.path.abspath(__file__))
 _SCRIPTS = os.path.dirname(_AQUI)
@@ -106,6 +109,56 @@ def pcm_de_referencia(quadros: int = 2) -> list[bytes]:
             fase += 1
         saida.append(struct.pack(f"<{len(amostras)}h", *amostras))
     return saida
+
+
+#: O TIMBRE do ensaio de bancada, e ele é escolhido para o RELATO DELA, não
+#: para o osciloscópio: 1300 Hz PULSADO a 2 Hz — o *"bep bep bep"* que ela já
+#: descreveu por três vezes em ensaio cego (`sfx-cabo-com-posse`,
+#: `sfx-canal1-e-o-alto-falante`, `som-no-radio-observado-não-replicado`).
+#:
+#: **POR QUE PULSADO, E NÃO O TOM CONTÍNUO DE 440 Hz** que este arquivo já
+#: gera para medir o encoder: um tom contínuo tem UM relato possível ("ouvi") e
+#: nenhuma forma de distinguir *o nosso som* de *qualquer outra coisa que a
+#: máquina esteja tocando*. O pulsado carrega a resposta dentro do relato dela
+#: — e é exatamente o timbre da observação em aberto, o que faz deste ensaio,
+#: se ele um dia soar, a réplica daquela noite.
+BANCADA_HZ = 1300.0
+BANCADA_PULSOS_HZ = 2.0
+
+
+def pcm_pulsado() -> Callable[[int], bytes]:
+    """Uma fonte de PCM infinita com o timbre da bancada. `s16le` estéreo 48k.
+
+    Fonte SINTÉTICA de propósito: ela não passa pelo servidor de som, não
+    depende de nó publicado e não pode ser confundida com som que já estava
+    tocando na máquina dela. O caminho pelo monitor do nó
+    (:func:`alto_falante_bt.argv_do_gravador`) é o de REGIME; para decidir o
+    arranjo, o que se quer é o menor número de coisas entre o timbre e o fio.
+    """
+    fase = itertools.count()
+
+    def _ler(quantos: int) -> bytes:
+        amostras: list[int] = []
+        for _ in range(quantos // 4):
+            f = next(fase)
+            t = f / af.TAXA_DO_ENCODER
+            porta = 1.0 if math.sin(2 * math.pi * BANCADA_PULSOS_HZ * t) >= 0 else 0.0
+            valor = int(AMPLITUDE * porta * math.sin(2 * math.pi * BANCADA_HZ * t))
+            amostras.extend((valor, valor))
+        return struct.pack(f"<{len(amostras)}h", *amostras)
+
+    return _ler
+
+
+def _exigir_bancada() -> tuple[bool, str]:
+    """`scripts/bancada.sh exigir` — rc≠0 é ESPERAR, nunca contornar."""
+    proc = subprocess.run(
+        ["bash", os.path.join(_RAIZ, "scripts", "bancada.sh"), "exigir"],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    return proc.returncode == 0, (proc.stdout + proc.stderr).strip()
 
 
 def cabecalho() -> None:
@@ -274,13 +327,45 @@ def _propriedade(bloco: str, chave: str) -> str:
     return "(não veio)"
 
 
+#: Teto do ensaio, em segundos. **É uma trava, não um padrão**: ela está na
+#: bancada com quatro aparelhos e um som que não para é um som que atrapalha o
+#: ensaio seguinte. Quinze segundos é mais que o dobro dos ~6 s que ela ouviu
+#: na observação em aberto, que é o comprimento que este ensaio quer replicar.
+TETO_DE_SEGUNDOS = 15.0
+
+#: Quanto o ensaio toca por omissão. Curto de propósito: o relato dela sobre
+#: 4 s de um pulsado é tão bom quanto sobre 40, e o preço de errar é menor.
+SEGUNDOS_PADRAO = 4.0
+
+
 def escrever_no_aparelho(argumentos: argparse.Namespace) -> int:
     """A porta do ensaio de bancada — e ela recusa muito mais do que aceita.
 
     **Este caminho é o ensaio 1 da MESA-DE-QUATRO-01**, não deste script
-    sozinho. Ele existe aqui para que o instrumento esteja pronto quando a
-    bancada e a orelha dela estiverem; rodá-lo sem as duas mediria o kernel
-    aceitando uma entrega, que não é medição nenhuma.
+    sozinho. Até 07/09/2026 ele parava ANTES de escrever, com rc=3, e a razão
+    estava escrita: *"ele existe aqui para que o instrumento esteja pronto
+    quando a bancada e a orelha dela estiverem"*. As duas chegaram — ela está
+    na bancada com os quatro DualSense —, e o que faltava do nosso lado era o
+    laço entre o encoder e o fio, que agora existe
+    (:class:`alto_falante_bt.BombaDeSomPeloRadio`).
+
+    **O QUE NÃO MUDOU, E É O PONTO:** ele continua parando em rc=3 sem
+    ``--eu-estou-ouvindo``. O ensaio não é *escrever*; o ensaio é *escrever com
+    a orelha dela do outro lado*, e um instrumento que escreve sem isso mede o
+    kernel aceitando uma entrega — que não é medição nenhuma. As seis recusas,
+    na ordem em que caem:
+
+    1. sem ``--exigir-mac`` conferido — para não escrever no controle errado;
+    2. endereço que não está na lista;
+    3. aparelho no CABO (a escada só existe no rádio);
+    4. arranjo não escolhido (as duas fontes divergem, e a escolha é dela);
+    5. degrau fora da escada ``0x31``-``0x39``;
+    6. **sem a declaração de que ela está ouvindo**, e sem a bancada reservada.
+
+    E O RETORNO DO ``os.write()`` CONTINUA NÃO SENDO A MEDIÇÃO. O kernel aceita
+    a entrega; o firmware descarta calado. Quem mede é a orelha dela, e o
+    veredito vai para ``docs/data/ensaios.csv`` com o relato dela, nunca com o
+    número deste script.
     """
     from hefesto_dualsense4unix.daemon.subsystems.alto_falante import controles_na_lista
 
@@ -306,17 +391,86 @@ def escrever_no_aparelho(argumentos: argparse.Namespace) -> int:
     if arranjo.degrau not in af.TAMANHO_DO_DEGRAU:
         print("RECUSADO: degrau fora da escada 0x31-0x39.")
         return 2
+    segundos = min(max(0.0, float(argumentos.segundos)), TETO_DE_SEGUNDOS)
+    if not argumentos.eu_estou_ouvindo:
+        print(
+            "PARADO ANTES DE ESCREVER, e de propósito.\n"
+            f"  alvo        {controle.caminho} ({controle.transporte})\n"
+            f"  arranjo     {arranjo.nome} — {arranjo.fonte}\n"
+            f"  degrau      0x{arranjo.degrau:02x} ({arranjo.tamanho} B)\n"
+            "  A escrita é o ensaio 1 da MESA-DE-QUATRO-01: ela precisa da bancada\n"
+            "  reservada (scripts/bancada.sh exigir) e da orelha dela do outro lado.\n"
+            "  Acrescente --eu-estou-ouvindo quando as duas coisas forem verdade.\n"
+            "  O retorno do os.write() NÃO é a medição — o kernel aceita entrega que\n"
+            "  o firmware descarta calado."
+        )
+        return 3
+    reservada, recado = _exigir_bancada()
+    if recado:
+        print(f"  bancada ..... {recado}")
+    if not reservada:
+        print("RECUSADO: a bancada não está reservada. Esperar é a resposta.")
+        return 2
+
+    # O QUE VAI SAIR, DITO ANTES — regra da casa para qualquer som no aparelho
+    # dela. Ela está na bancada; um timbre que aparece sem aviso estraga o
+    # ensaio dela tanto quanto estragaria o nosso.
     print(
-        "PARADO ANTES DE ESCREVER, e de propósito.\n"
+        "\nO QUE VAI SAIR, E POR QUANTO TEMPO (leia antes de confirmar)\n"
         f"  alvo        {controle.caminho} ({controle.transporte})\n"
+        f"  timbre      {BANCADA_HZ:.0f} Hz PULSADO a {BANCADA_PULSOS_HZ:.0f} Hz "
+        '— o "bep bep bep"\n'
+        f"  duração     {segundos:.1f} s\n"
         f"  arranjo     {arranjo.nome} — {arranjo.fonte}\n"
         f"  degrau      0x{arranjo.degrau:02x} ({arranjo.tamanho} B)\n"
-        "  A escrita é o ensaio 1 da MESA-DE-QUATRO-01: ela precisa da bancada\n"
-        "  reservada (scripts/bancada.sh exigir) e da orelha dela do outro lado.\n"
-        "  O retorno do os.write() NÃO é a medição — o kernel aceita entrega que\n"
-        "  o firmware descarta calado."
+        f"  tag do bloco 0x{argumentos.tag:02x}"
+        f"  ({'alto-falante interno' if argumentos.tag == af.BLOCO_SPEAKER else 'fone'})\n"
     )
-    return 3
+
+    from hefesto_dualsense4unix.integrations.dualsense_bt_audio import abrir_hidraw_rw
+
+    try:
+        fd = abrir_hidraw_rw(controle.caminho)
+    except OSError as erro:
+        print(f"RECUSADO: não deu para abrir {controle.caminho} — {erro}")
+        return 2
+    try:
+        # O RITMO É OBRIGATÓRIO AQUI, e a razão está em `af.fonte_com_ritmo`:
+        # o timbre é sintético e não bloqueia, então sem ele a bomba escreveria
+        # 2.660 reports/s num degrau que pede 50/s — 53 vezes o necessário, num
+        # rádio que carrega os outros três controles dela. Isso não é ensaio, é
+        # inundação, e ela mediria a fila do kernel.
+        molde = af.BombaDeSomPeloRadio(arranjo=arranjo, fonte=pcm_pulsado())
+        bomba = af.BombaDeSomPeloRadio(
+            arranjo=arranjo,
+            fonte=af.fonte_com_ritmo(
+                pcm_pulsado(), ms_por_report=molde.ms_por_report
+            ),
+            escritor=af.escritor_de_hidraw(fd),
+            tag_audio=argumentos.tag,
+            seco=False,
+        )
+        print(f"  PCM por report {bomba.bytes_de_pcm_por_report} B / {bomba.ms_por_report} ms")
+        print(f"  cadência       {1000 / bomba.ms_por_report:.0f} reports/s")
+        contagem = bomba.rodar(segundos=segundos)
+    finally:
+        os.close(fd)
+
+    print("\nO QUE A BOMBA CONTOU")
+    for linha in contagem.linhas():
+        print(linha)
+    print(
+        "\nO VEREDITO NÃO ESTÁ AQUI.\n"
+        "  Nada acima é medição de som. O que este ensaio produziu foi um canal\n"
+        "  exercitado com um conteúdo candidato — e o mapa proíbe, com todas as\n"
+        "  letras, concluir daí que a ponte funciona (FALÁCIA DO CANAL QUE\n"
+        "  RESPONDE). O veredito é UMA frase dela, e ela vai para\n"
+        "  docs/data/ensaios.csv com o relato dela, não com estes números.\n"
+        "  Se ela não ouviu nada: rode de novo com o OUTRO arranjo antes de\n"
+        "  concluir qualquer coisa — os dois são candidatos, e medir um e\n"
+        "  concluir sobre o outro é o erro que montar os dois existe para matar."
+    )
+    return 0
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -326,6 +480,12 @@ def main(argv: list[str] | None = None) -> int:
     analisador.add_argument("--escrever", action="store_true", help="a porta do ensaio de bancada")
     analisador.add_argument("--exigir-mac", default="", help="endereço conferido do alvo")
     analisador.add_argument("--arranjo", default="", help="ds5dongle | senshi")
+    analisador.add_argument("--eu-estou-ouvindo", action="store_true",
+                            help="a orelha dela está do outro lado — sem isto, rc=3")
+    analisador.add_argument("--segundos", type=float, default=SEGUNDOS_PADRAO,
+                            help=f"duração do timbre (teto {TETO_DE_SEGUNDOS:.0f}s)")
+    analisador.add_argument("--tag", type=lambda s: int(s, 0), default=af.BLOCO_SPEAKER,
+                            help="tag do bloco de áudio: 0x13 alto-falante, 0x16 fone")
     argumentos = analisador.parse_args(argv)
     cabecalho()
     if argumentos.escrever:

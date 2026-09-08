@@ -121,7 +121,7 @@ SEM_FONTE: tuple[tuple[str, str, str], ...] = (
     (
         "controle.*.vibracao.sem-teto",
         "'Sem teto' é a única das TRÊS opções sem representação possível: "
-        "`ControllerRumbleOverride` (`profiles/schema.py:817`) só diz QUAL "
+        "`ControllerRumbleOverride` (`profiles/schema.py:831`) só diz QUAL "
         "política a peça usa, nunca 'esta peça ignora o teto do orçamento'; e o "
         "`min` que imporia um teto de verdade vive em "
         "`core.rumble._effective_mult`, que não conhece `uniq` e roda antes de a "

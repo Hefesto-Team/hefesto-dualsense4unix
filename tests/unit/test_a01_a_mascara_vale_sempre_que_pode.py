@@ -177,13 +177,25 @@ def test_o_produto_diz_quais_mascaras_ele_monta() -> None:
 
     assert aba.mascaras_montaveis() == {
         NOME_DA_MASCARA[f] for f in mascaras_validas() if f in NOME_DA_MASCARA}
-    assert "Nintendo Pro" not in aba.mascaras_montaveis(), (
-        "o produto passou a montar o Nintendo Pro — então o chip dele tem de "
-        "sair do cinza, e este é o aviso de que isso aconteceu")
+    # NOTA DATADA — 07/09/2026. Aqui havia o inverso desta linha, com a
+    # mensagem *"o produto passou a montar o Nintendo Pro — então o chip dele
+    # tem de sair do cinza, e este é o aviso de que isso aconteceu"*. **O aviso
+    # disparou**: a máscara nasceu por ordem dela, e o `mascaras_montaveis`
+    # acendeu o chip SEM uma linha de edição nesta aba, que era exatamente o
+    # que a docstring acima prometia. A régua fica, virada para o outro lado.
+    assert "Nintendo Pro" in aba.mascaras_montaveis(), (
+        "o Nintendo Pro saiu do catálogo do vpad, ou a tela perdeu o rótulo "
+        "dele — nos dois casos o chip volta a nascer cinza")
 
 
 def test_o_chip_sem_motor_nasce_cinza_com_a_razao_nos_quatro_lugares() -> None:
     """D-03 dela: *"cinza antes, com a razão na dica."*
+
+    NOTA DATADA — 07/09/2026: com a máscara Nintendo Pro no catálogo, `sem_motor`
+    ficou VAZIA e a conta passou a exigir ZERO chip cinza — que é o que a
+    bancada tem. A régua continua a mesma e não precisou de exceção nenhuma:
+    ela sempre mediu a RELAÇÃO entre o desenho e o catálogo, nunca o número 4.
+    Ela volta a morder no dia em que um quarto rótulo for desenhado sem motor.
 
     QUATRO LUGARES e não dois: no produto a página é ESTÁTICA, e o cartão do P3
     reabre quando um terceiro controle chega. Um chip que só ficasse cinza nos
@@ -218,15 +230,25 @@ def test_o_chip_cinza_continua_clicavel_e_recusa_dizendo() -> None:
             self.chamadas.append((metodo, a or k))
             return True
 
+    # NOTA DATADA — 07/09/2026: este bloco pedia que "Nintendo Pro" fosse
+    # RECUSADO, porque era rótulo sem motor. Ele tem motor desde hoje, e agora
+    # o que se exige é o contrário — que o clique CHEGUE ao daemon. A recusa
+    # continua sendo testada logo abaixo, com um rótulo que de fato não existe.
     p = _Ponte()
+    aba.mascara_do_controle(
+        _ctx(VIVO_GAMEPAD),
+        {"uniq": "aa:bb:cc:00:00:01", "mascara": "Nintendo Pro"}, p)
+    assert p.chamadas, "o chip com motor não chamou o daemon"
+
+    q = _Ponte()
     with pytest.raises(RuntimeError) as erro:
         aba.mascara_do_controle(
             _ctx(VIVO_GAMEPAD),
-            {"uniq": "aa:bb:cc:00:00:01", "mascara": "Nintendo Pro"}, p)
-    assert "Nintendo Pro" in str(erro.value)
+            {"uniq": "aa:bb:cc:00:00:01", "mascara": "Wiimote"}, q)
+    assert "Wiimote" in str(erro.value)
     assert "DualSense" in str(erro.value), (
         "a recusa não diz quais máscaras existem")
-    assert p.chamadas == [], "a recusa gravou alguma coisa no daemon"
+    assert q.chamadas == [], "a recusa gravou alguma coisa no daemon"
 
 
 def test_a_mascara_que_o_produto_monta_e_gravada_em_qualquer_modo() -> None:

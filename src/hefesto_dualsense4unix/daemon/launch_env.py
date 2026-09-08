@@ -139,6 +139,17 @@ PAR_DUALSENSE_FISICO = (0x054C, 0x0CE6)
 #: `app/actions/external_controllers.py`). O `11ff` é só o espelho virtual.
 PAR_STEAM_INPUT_VIRTUAL = (0x28DE, 0x11FF)
 
+#: Máscaras que sobem SEMPRE em uinput (evdev puro, sem hidraw) e por isso
+#: pedem o mesmo tratamento no `compose_env`: largar o HIDAPI do SDL, esconder
+#: o físico e desligar o hidraw do winebus.
+#:
+#: Não é uma lista digitada de fora: é o complemento exato do gate do
+#: `integrations.virtual_pad._try_uhid`, que recusa toda máscara que não seja
+#: `dualsense`. Um sabor novo no `uinput_gamepad.FLAVORS` entra aqui — e o
+#: portão `tests/unit/test_a_mascara_nintendo_pro_atravessa_a_casa.py` reprova
+#: quem esquecer.
+_MASCARAS_SO_EVDEV = frozenset({"xbox", "nintendo"})
+
 
 def _par_vidpid(par: Any) -> tuple[int, int] | None:
     """`(vid, pid)` quando o par cabe em 16 bits cada; `None` quando não cabe.
@@ -1483,9 +1494,17 @@ def compose_env(
     - Modo Nativo: NENHUMA env de hidraw — a whitelist default do winebus já
       expõe o físico Sony (Protons 10/11); esconder o físico aqui é
       exatamente o "zero controles" relatado ao vivo.
-    - Xbox: `SDL_JOYSTICK_HIDAPI=0` (SDL lê o evdev, que o daemon graba) +
-      IGNORE + DISABLE do físico (o vazamento winebus vale para qualquer
-      máscara). O vpad é 045e — nunca colide com o 0ce6.
+    - Xbox **e Nintendo Pro**: `SDL_JOYSTICK_HIDAPI=0` (SDL lê o evdev, que o
+      daemon graba) + IGNORE + DISABLE do físico (o vazamento winebus vale
+      para qualquer máscara). O vpad é 045e ou 057e — nunca colide com o 0ce6.
+
+      A máscara nintendo entrou neste ramo em 07/09/2026, e o ramo é o mesmo
+      por medida, não por parecença: as duas sobem SEMPRE em uinput (o
+      `_try_uhid` veta tudo o que não é `dualsense`), as duas são evdev puro
+      sem hidraw, e as duas precisam que o SDL largue o HIDAPI para ler o nó
+      que o daemon oferece. Antes disso o `nintendo` caía FORA dos dois `if` e
+      saía sem IGNORE nenhum: o jogo veria o DualSense físico E o vpad, e o
+      sintoma seria "controle dobrado" com a máscara nova no meio.
     - DualSense com TODOS os vpads em uhid (Edge 0df2 com hidraw real):
       DISABLE do físico + IGNORE — dedup no layout PS; o vpad segue com
       hidraw pleno pela whitelist default (NUNCA 0x0DF2 no DISABLE).
@@ -1527,7 +1546,7 @@ def compose_env(
     tem_cobertura = cobertura_total(backends=backends, fisicos=fisicos)
     # Modo Nativo: expõe o físico — sem DISABLE, sem IGNORE (whitelist default).
     if not native_mode and emulation_enabled and backends:
-        if flavor == "xbox":
+        if flavor in _MASCARAS_SO_EVDEV:
             env["SDL_JOYSTICK_HIDAPI"] = "0"
             env["PROTON_DISABLE_HIDRAW"] = _DISABLE_HIDRAW_VALUE
             if tem_cobertura:

@@ -21,6 +21,20 @@ from pydantic import (
 
 from hefesto_dualsense4unix.profiles.steam_app import steam_appid_from_wm_class
 
+#: A máscara do gamepad virtual, na forma FECHADA que o esquema de perfil
+#: aceita. É a única lista de máscaras digitada nesta casa, e ela é digitada
+#: porque tem de ser: `Literal` é resolvido pelo verificador de tipos, e um
+#: `frozenset` calculado do `uinput_gamepad.FLAVORS` não vira anotação.
+#:
+#: Por ser digitada, ela DIVERGE calada — e já divergiu: de 07/09/2026 até
+#: esta linha o esquema só conhecia `dualsense` e `xbox`, e um perfil que
+#: pedisse a máscara nova era recusado pelo pydantic com a máscara já viva no
+#: catálogo. Quem acrescentar um sabor ao `FLAVORS` acrescenta AQUI, e o portão
+#: `tests/unit/test_a_mascara_nintendo_pro_atravessa_a_casa.py` compara os
+#: `get_args` deste alias com o `external_mask.mascaras_validas()` — nos DOIS
+#: sentidos, para que sobrar aqui também reprove.
+MascaraDeGamepad = Literal["dualsense", "xbox", "nintendo"]
+
 #: Teto do multiplicador de rumble da política "custom". Acima de 1.0 AMPLIFICA o
 #: que o jogo pediu — é a razão de existir da faixa (BUG-RUMBLE-CUSTOM-MULT-CAP-01).
 #:
@@ -590,7 +604,7 @@ class ProfileModeConfig(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     kind: Literal["desktop", "gamepad", "native"]
-    gamepad_flavor: Literal["dualsense", "xbox"] | None = None
+    gamepad_flavor: MascaraDeGamepad | None = None
 
 
 #: PONTE-CONFIRMADA-01 (19/08/2026) — COMO a ponte foi confirmada.
@@ -683,7 +697,7 @@ class PonteConfirmada(BaseModel):
     #: ``mode`` do próprio perfil, e nome igual é o que torna a comparação
     #: campo a campo (``mesma_ponte``) legível em vez de uma tradução.
     kind: Literal["desktop", "gamepad", "native"]
-    gamepad_flavor: Literal["dualsense", "xbox"] | None = None
+    gamepad_flavor: MascaraDeGamepad | None = None
     #: O terceiro termo: o jogo estava na allowlist do Steam Input
     #: (``steam_input_apps.txt``) quando a ponte foi confirmada.
     steam_input: bool = False
@@ -1675,7 +1689,7 @@ def perfil_e_regra_de_jogo(profile: Profile | None, window_info: dict[str, Any])
     return _casa_sem_caixa(wm_class, match.window_class)
 
 
-def normalizar_gamepad_flavor(valor: object) -> Literal["dualsense", "xbox"] | None:
+def normalizar_gamepad_flavor(valor: object) -> MascaraDeGamepad | None:
     """Converte uma máscara CRUA na forma fechada que `ProfileModeConfig` aceita.
 
     MODO-01. A máscara viaja como `str` solto por todo o daemon
@@ -1693,6 +1707,8 @@ def normalizar_gamepad_flavor(valor: object) -> Literal["dualsense", "xbox"] | N
         return "dualsense"
     if valor == "xbox":
         return "xbox"
+    if valor == "nintendo":
+        return "nintendo"
     return None
 
 

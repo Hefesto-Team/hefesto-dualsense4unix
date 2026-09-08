@@ -176,10 +176,50 @@ def test_payload_desconhecido_nao_vira_afirmacao_sobre_giroscopio() -> None:
 
     Mesma família do `or "xbox"` que esta aba já teve: um valor estranho
     virando afirmação sobre o que o jogo recebe.
+
+    A RÉGUA DIGITAVA O QUE DEVIA LER — corrigido em 07/09/2026. Esta lista
+    tinha `"nintendo"` escrito à mão entre `0`, `[]` e `{}`, de quando não
+    havia máscara de Switch no catálogo. A máscara nasceu nesta leva, e a lista
+    não foi junto: o teste passou a EXIGIR que uma máscara legítima fosse
+    tratada como lixo, e com isso guardou um defeito vivo — com Nintendo Pro
+    marcada a tela negava a escolha dela em voz alta (*"Sem marcar nenhuma
+    delas…"*). Agora o lixo é só lixo, e quem diz o que é máscara é o catálogo.
     """
-    for estranho in ("", "desconhecido", 0, [], {}, "nintendo"):
+    for estranho in ("", "desconhecido", 0, [], {}, "switch-pro", None):
         assert texto_do_preco_da_mascara(estranho) == TEXTO_MASCARA_SEM_ESCOLHA, (
             f"{estranho!r} virou preço: a janela afirmou o que não sabe"
+        )
+
+
+def test_nenhuma_mascara_do_catalogo_cai_no_sem_escolha() -> None:
+    """Toda máscara que o produto aceita tem uma linha própria embaixo dos botões.
+
+    O DEFEITO QUE ESTE PORTÃO EXISTE PARA IMPEDIR, medido em 07/09/2026 e VIVO
+    na tela até então: `texto_do_preco_da_mascara` tinha `xbox` e `dualsense`
+    digitados, e a Nintendo Pro — recém-entrada no catálogo — caía no ramo do
+    desconhecido. A linha não ficava vazia, que já seria ruim; ela AFIRMAVA o
+    contrário do que estava marcado, e escondia as cinco perdas da máscara nova.
+
+    A régua pergunta ao catálogo (`mascaras_validas`) em vez de listar nomes,
+    porque foi listar nomes que criou o defeito. Uma quarta máscara reprova
+    aqui no dia em que entrar sem linha.
+
+    Mordida: devolver `if flavor == "xbox"` ao lugar do
+    `texto_do_custo_da_mascara(flavor)` reprova este teste em `nintendo`.
+    """
+    from hefesto_dualsense4unix.daemon.subsystems.external_mask import (
+        mascaras_validas,
+    )
+
+    catalogo = mascaras_validas()
+    assert catalogo, "catálogo vazio: a régua mediria o nada e passaria"
+
+    for mascara in sorted(catalogo):
+        linha = texto_do_preco_da_mascara(mascara)
+        assert linha, f"{mascara!r} está no catálogo e não tem linha nenhuma"
+        assert linha != TEXTO_MASCARA_SEM_ESCOLHA, (
+            f"{mascara!r} é uma escolha do catálogo e a tela diz que nada foi "
+            "escolhido — a linha nega o gesto dela em vez de dizer o preço"
         )
 
 

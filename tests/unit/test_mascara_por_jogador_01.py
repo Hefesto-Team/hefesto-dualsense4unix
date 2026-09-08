@@ -131,8 +131,14 @@ def test_a_mascara_do_externo_volatil_vale_na_sessao() -> None:
 
 
 def test_a_escolha_invalida_nao_vira_mascara_e_o_jogador_segue_herdando() -> None:
-    """Lixo não escolhe máscara por ninguém (ESCOLHA-DELA-VENCE-01)."""
-    assert registro_de_mascaras().set_mask(MAC_P2, "nintendo") is False
+    """Lixo não escolhe máscara por ninguém (ESCOLHA-DELA-VENCE-01).
+
+    NOTA DATADA — 07/09/2026: o lixo desta régua era `"nintendo"`, e ele virou
+    máscara de verdade. Trocado por um nome que continua não existindo; a
+    regra medida é a mesma. A metade nova — que `"nintendo"` agora é ACEITO —
+    está no `test_a_mascara_nintendo_pro_atravessa_a_casa`.
+    """
+    assert registro_de_mascaras().set_mask(MAC_P2, "wiimote") is False
     assert mascara_efetiva(MAC_P2, "xbox") == "xbox"
 
 

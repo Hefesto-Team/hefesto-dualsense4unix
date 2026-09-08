@@ -769,15 +769,21 @@ def test_o_servico_calado_diz_e_para_de_afirmar() -> None:
     A MORDIDA: troque `_aviso_do_servico_calado` por `return None` e esta régua
     reprova nas duas primeiras afirmações.
     """
-    fora = aba.pacote(Contexto(state={}, mesa=[], conectados=[], estados={}))
+    ctx = Contexto(state={}, mesa=[], conectados=[], estados={})
+    # DUAS LEITURAS, E AS DUAS SÃO DA MESMA CURA — 07/09/2026. A coluna Atenção
+    # saiu da Jogar por ordem dela, então o canal deixou de viajar no `pacote()`
+    # e passou a ter porta própria (`coluna_de_atencao`). O que a régua mede não
+    # mudou: a coluna DIZ, e a página para de afirmar.
+    coluna = aba.coluna_de_atencao(ctx)
+    fora = aba.pacote(ctx)
 
-    assert aba.SELO_DO_SERVICO in fora["aviso-selo"], (
+    assert aba.SELO_DO_SERVICO in coluna["aviso-selo"], (
         "a coluna Atenção ficou calada com o serviço calado — e a conta ao lado "
         "diz 'nenhum aviso', que é a tela afirmando sobre um estado que ninguém "
         "leu")
-    i = list(fora["aviso-selo"]).index(aba.SELO_DO_SERVICO)
-    assert fora["aviso-texto"][i] == aba.SERVICO_CALADO
-    assert fora["atencao-conta"] != _painel_do_produto().texto_da_conta(0), (
+    i = list(coluna["aviso-selo"]).index(aba.SELO_DO_SERVICO)
+    assert coluna["aviso-texto"][i] == aba.SERVICO_CALADO
+    assert coluna["atencao-conta"] != _painel_do_produto().texto_da_conta(0), (
         "a conta continuou dizendo 'nenhum aviso' com a linha do serviço acesa")
 
     # E NADA MAIS É AFIRMADO: as outras respostas da aba continuam mudas.
@@ -802,7 +808,7 @@ def test_com_o_servico_vivo_a_linha_do_servico_nao_existe() -> None:
     """
     c1 = {"uniq": P1, "connected": True, "player_slot": 1, "player": 1,
           "is_primary": True, "transport": "usb"}
-    fora = aba.pacote(_ctx([c1]))
+    fora = aba.coluna_de_atencao(_ctx([c1]))
     assert aba.SELO_DO_SERVICO not in fora["aviso-selo"], (
         "a linha do serviço calado continuou na coluna com o daemon vivo")
 

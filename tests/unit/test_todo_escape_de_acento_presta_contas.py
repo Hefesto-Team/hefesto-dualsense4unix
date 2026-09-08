@@ -97,7 +97,6 @@ SEM_RAZAO_PINADOS: dict[str, int] = {
     "scripts/gerar-mapa.py": 2,
     "scripts/generate_glyph_active.py": 1,
     "scripts/install_osk.sh": 2,
-    "src/hefesto_dualsense4unix/app/app.py": 1,
     "src/hefesto_dualsense4unix/broker/hidraw_broker.py": 3,
     "src/hefesto_dualsense4unix/cli/cmd_profile.py": 2,
     "src/hefesto_dualsense4unix/integrations/ordens_da_mesa.py": 2,

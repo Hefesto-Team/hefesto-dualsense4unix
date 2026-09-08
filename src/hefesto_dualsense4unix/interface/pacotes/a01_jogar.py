@@ -22,26 +22,54 @@ from typing import Any
 
 from . import Contexto, degradacao_de, jogador_de, registrar
 
+#: O ENDEREÇO DA RESSALVA DO CADEADO — 07/09/2026, achado pela conferência desta
+#: leva.
+#:
+#: Ele existe como CONSTANTE, e não como string solta, pela mesma razão que o
+#: `ENDERECO_DA_RESSALVA` da aba 06: são TRÊS lugares que precisam concordar —
+#: o desenho (`aba01.py`, que emite a `monta.ressalva`), a promessa
+#: (:data:`DA_PAGINA`) e o emissor (:func:`pacote`). Um endereço digitado três
+#: vezes é um typo à espera de virar linha que nunca pinta, calada.
+CADEADO_CEGO = "cadeado-cego"
+
 #: OS ENDEREÇOS DA PÁGINA que esta aba promete pintar — os que valem para a tela
 #: inteira. Eles existem como TUPLA, e não soltos no `return`, porque o
 #: `cobertura` é a promessa que a régua confere: uma chave nova que não entre
 #: aqui vira um contador que mente, e ele é O instrumento com que esta casa
 #: prova que um endereço existe.
 DA_PAGINA: tuple[str, ...] = (
-    "atencao-conta",
-    "aviso-selo",
-    "aviso-texto",
-    "aviso-vivo",
+    # OS QUATRO ENDEREÇOS DA COLUNA ATENÇÃO SAÍRAM DAQUI — 07/09/2026, ordem
+    # dela: *"em jogar remover essa seção do atenção, nenhum aviso esse —
+    # deixar só o reconectar controles."* Eram `atencao-conta`, `aviso-selo`,
+    # `aviso-texto` e `aviso-vivo`.
+    #
+    # ELES SAEM PORQUE A PÁGINA SAIU, e não por escolha: um endereço emitido sem
+    # elemento onde pousar é ÓRFÃO, e o `casamento.py` o acusa. Foi assim que o
+    # `recado` da aba 04 foi pego em 02/09 — a régua do mockup não o via, porque
+    # ela varre os endereços do ARQUIVO e um campo sem lugar não sai em arquivo
+    # nenhum.
+    #
+    # `_avisos` CONTINUA DE PÉ, com as onze fontes, e o docstring dele diz para
+    # onde elas vão. O que morreu foi o POUSO, não o canal.
     # O CADEADO DA TROCA AUTOMÁTICA — 04/09/2026, decisão [03] do PO sobre esta
     # aba: *"Volta para a Jogar, embaixo de Modo."*
     #
     # O PEDIDO É DELA E É DE 23/07. A caixa saiu do desenho por escolha minha,
     # declarada na legenda desta página — *"A caixa saiu — o perfil ativo já diz
-    # isso"* —, e o que mudou desde então é que a coluna **Atenção** passou a ler
-    # `painel.AVISOS_DA_TELA`: `autoswitch_lock_text` e `texto_do_cadeado_cego`
-    # são duas das seis fontes. Logo esta tela EXPLICA o cadeado hoje e não
-    # oferece onde ligá-lo — em nenhuma das dez abas.
+    # isso"* —, e a razão de ela ter voltado era a coluna **Atenção**, que lia
+    # `autoswitch_lock_text` e `texto_do_cadeado_cego`.
+    #
+    # A COLUNA SAIU EM 07/09 E A CAIXA FICOU, o que deixava esta tela OFERECENDO
+    # onde ligar o cadeado sem explicar por que ele importa.
+    #
+    # **CURADO NO MESMO DIA, pela conferência da leva** — e a cura é UMA linha,
+    # não a coluna de volta. `CADEADO_CEGO` é a ressalva da D-02 dela (*"linha
+    # fixa só quando HÁ ressalva"*) colada embaixo da caixa: ela nasce vazia,
+    # não ocupa pixel enquanto o detector enxerga, e só aparece na máquina em
+    # que o cadeado não tem sobre o que agir. A `CADEADO_DICA` no `title`
+    # explica o que a caixa FAZ; esta linha diz quando ela não faz nada.
     "cadeado",
+    CADEADO_CEGO,
     "hef-posicao",
     # A RESSALVA DA MÁSCARA e a FRASE DA MESA — 04/09/2026. As duas são
     # `data-campo` de UM valor pintado em DOIS elementos: o de fora com
@@ -507,8 +535,14 @@ def mascaras_montaveis() -> frozenset[str]:
     """Os rótulos de máscara que o produto SABE MONTAR — para o desenho perguntar.
 
     O gerador (`aba01._chips_de_mascara`) apaga o chip que não estiver aqui e
-    põe a razão na dica: é a D-03 dela (*"cinza antes, com a razão na dica"*)
-    aplicada ao único chip que recusa em TODO modo, o **Nintendo Pro**.
+    põe a razão na dica: é a D-03 dela (*"cinza antes, com a razão na dica"*).
+
+    NOTA DATADA — 07/09/2026: até hoje havia UM chip que recusava em todo modo, o
+    **Nintendo Pro**, e esta docstring o nomeava. A máscara nasceu (ordem dela),
+    e o chip acendeu **sem uma linha de edição em lugar nenhum desta aba** —
+    que é exatamente o que o parágrafo abaixo prometia, agora medido:
+    `mascaras_montaveis()` devolve os três rótulos. Nenhum chip recusa em todo
+    modo hoje.
 
     **NADA SE DIGITA.** `external_mask.mascaras_validas()` é o catálogo do vpad
     (ele próprio derivado de `uinput_gamepad.FLAVORS`) e `mesa_viva.
@@ -629,11 +663,10 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
             "degradou-cartao": degradacao_de(c),
         }
 
-    # A COLUNA ATENÇÃO — as fontes do PRODUTO, não uma segunda leitura. Ver
-    # `_avisos`: todas já estavam escritas fora daqui (`app/actions/`, e desde
-    # 06/09 também `integrations/storm_doctor`) e nenhuma frase nasce aqui.
-    avisos = _avisos(ctx)
-    selos, textos = _coluna_de_avisos(avisos)
+    # A COLUNA ATENÇÃO NÃO É MAIS PINTADA NESTA ABA — 07/09/2026, ordem dela. As
+    # onze fontes continuam vivas em `_avisos`, que continua sendo chamado por
+    # quem quiser mostrá-las; esta função parou de emitir os quatro endereços
+    # porque a página parou de ter onde pousá-los.
 
     # A FAIXA LARANJA. Os dois endereços saem daqui SEMPRE — inclusive vazios —
     # porque o que estava cravado na página é uma frase, e uma frase só se apaga
@@ -641,38 +674,19 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
     frase, alvo = _faixa_do_pendente(ctx.state)
 
     fora: dict[str, Any] = {
-        # A CONTA É DO PRODUTO — `painel.texto_da_conta`, o mesmo que a bancada
-        # já chamava. Ela sabe dizer "nenhum aviso", que o desenho não tem
-        # (o mockup crava "1 aviso") e que é o estado normal de uma máquina
-        # saudável.
-        #
-        # ELA CONTAVA ERRADO ATÉ 03/09/2026: era `len(achados)` do exame da
-        # mesa INTEIRO, incluindo os `certo` — a tela dizia "3 avisos" sob o
-        # cabeçalho laranja **Atenção** com três linhas em que duas eram boas
-        # notícias. Agora conta o que a coluna mostra.
-        "atencao-conta": _painel().texto_da_conta(len(avisos)),
-        "aviso-selo": selos,
-        "aviso-texto": textos,
-        # O ACENDEDOR DAS LINHAS. Um `aviso-item` sem aviso não pode ficar com o
-        # travessão à mostra: a coluna teria seis linhas de `— —` numa máquina
-        # sem nada a dizer. O alvo `classe` sem `data-hef-quando` é BOOLEANO
-        # (`hefesto_vivo.escrever`), e o travessão que o piloto escreve num
-        # valor vazio conta como desligado — então a lista de `"1"` acende
-        # exatamente as que têm texto.
-        # O ACENDEDOR ACOMPANHA AS SEIS, e não só as acesas — ver a nota do
-        # `_coluna_de_avisos`. Uma lista curta some inteira quando fica vazia, e
-        # é justamente a coluna VAZIA que precisa apagar o aviso do desenho.
-        "aviso-vivo": ["1" if s else "" for s in selos],
         # A FRASE DA MESA e a RESSALVA DA MÁSCARA — as duas saem SEMPRE,
         # inclusive vazias, pela mesma razão da faixa laranja: o que se apaga é
         # o que se escreve por cima. O `""` vira travessão no piloto, e o alvo
         # `classe` do elemento de fora lê travessão como desligado.
         "mesa-frase": _frase_da_mesa(ctx),
         "mascara-ressalva": _ressalva_da_mascara(ctx.state),
-        # O CADEADO — decisão [03], 04/09/2026. A coluna Atenção já EXPLICA o
-        # cadeado desde 03/09 (`autoswitch_lock_text` é uma das seis fontes); o
-        # que faltava, em todas as dez abas, era onde ligá-lo. Ver `_cadeado`.
+        # O CADEADO — decisão [03], 04/09/2026. Ver `_cadeado`.
         "cadeado": _cadeado(ctx.state),
+        # E A RESSALVA DELE — 07/09/2026. Emitida em TODO tique, vazia
+        # inclusive, pela mesma razão das duas acima: chave ausente deixaria a
+        # frase velha na tela depois de o detector voltar a enxergar, e a linha
+        # passaria a ressalvar um estado que acabou. Ver `_cadeado_cego`.
+        CADEADO_CEGO: _cadeado_cego(ctx.state),
         "cartoes": cartoes,
         # O INTERRUPTOR E A FILEIRA, VIVOS — 03/09/2026. Ver `_estado_da_tela`.
         **_estado_da_tela(ctx.state),
@@ -811,7 +825,40 @@ def _do_exame() -> list[dict[str, Any]]:
 
 
 def _avisos(ctx: Contexto) -> list[dict[str, str]]:
-    """A coluna **Atenção**: ``[{"selo", "texto", "fonte"}, …]``, das fontes do produto.
+    """As onze fontes de aviso do produto: ``[{"selo", "texto", "fonte"}, …]``.
+
+    **ELE PERDEU A TELA EM 07/09/2026, E NÃO PERDEU AS FONTES.** Ordem dela:
+    *"em jogar remover essa seção do atenção, nenhum aviso esse — deixar só o
+    reconectar controles."* A coluna **Atenção** da aba Jogar era o ÚNICO lugar
+    publicado onde estas linhas pousavam, e ela saiu — os quatro endereços
+    (`atencao-conta`, `aviso-selo`, `aviso-texto`, `aviso-vivo`) saíram de
+    :data:`DA_PAGINA` junto, porque endereço sem elemento é órfão.
+
+    **MEDIDO ANTES DE APAGAR, e é o número que decide:** das onze fontes abaixo,
+    **só a 5** (o exame da mesa, `a08_conexoes._exame`) tem uma segunda casa
+    publicada — a aba **Conexões**, de onde ela vem. As outras dez chegavam à
+    tela SÓ por aqui. Na máquina dela, no instante da medição, a coluna mostrava
+    UMA linha viva: `home_actions.texto_do_cadeado_cego`, *"O Hefesto não está
+    conseguindo ver qual programa está na frente…"*.
+
+    **PARA ONDE ELAS VÃO — a aba 09, Sistema**, e a proposta não é minha: é o
+    que a própria frase viva já manda, com estas palavras, **A aba Sistema diz
+    por quê**. A 09 é a página cujo trabalho inteiro é a máquina se explicar;
+    ela já publica uma lista de achados com selo, glifo e frase
+    (`exame-lista` / `exame-contagem`, de `a09_sistema`) e já recebe uma das
+    onze — a cura do travamento do USB. As dez órfãs cabem na MESMA lista, sem
+    peça de tela nova.
+
+    **ISTO É PROPOSTA, NÃO ENTREGA.** `aba09.py` e `a09_sistema.py` são de outra
+    frente, e escrever nelas no mesmo dia é a colisão que esta casa evita por
+    posse de arquivo. Enquanto a 09 não os recebe, **as dez estão caladas no
+    produto** — está RELATADO, e é o preço declarado da ordem dela, não um
+    esquecimento.
+
+    **NÃO APAGUE ESTA FUNÇÃO POR ESTAR SEM CHAMADOR NA TELA.** Ela é o único
+    ponto do produto novo que reúne as onze; apagá-la faria a frente da 09
+    reescrever de zero as onze chamadas, com os quatro `try` próprios e a ordem
+    de gravidade que já estão medidos aqui.
 
     **NADA SE ESCREVE AQUI.** As fontes já existiam, e todas fora deste
     arquivo — o que faltava era o produto novo CHAMÁ-LAS. Medido em
@@ -1241,6 +1288,53 @@ def _coluna_de_avisos(avisos: list[dict[str, str]]) -> tuple[list[str], list[str
     return (selos + vazias)[:AVISOS_VIVOS], (textos + vazias)[:AVISOS_VIVOS]
 
 
+def coluna_de_atencao(ctx: Contexto) -> dict[str, Any]:
+    """Os quatro valores que a coluna Atenção pintava — **hoje sem tela**.
+
+    NASCEU EM 07/09/2026, NO DIA EM QUE A COLUNA SAIU DA JOGAR, e é a metade que
+    a ordem dela não podia levar junto: *"em jogar remover essa seção do
+    atenção, nenhum aviso esse — deixar só o reconectar controles."* A seção
+    saiu; as onze fontes de :func:`_avisos` não têm por que sair com ela.
+
+    **É PÚBLICA DE PROPÓSITO, e é o handoff.** A frente que der casa a estas
+    linhas — a aba 09, Sistema, pela razão que :func:`_avisos` mede — chama ESTA
+    função e recebe pronto o que a 01 pintava: a conta do produto, os selos, os
+    textos e o acendedor, já ordenados pela gravidade e já cortados em
+    :data:`AVISOS_NA_COLUNA` com o ``+N``. Sem ela, a próxima frente reescreveria
+    de zero quatro linhas que já custaram três medições.
+
+    **`pacote()` NÃO A CHAMA**, e isso é o ponto: os quatro endereços saíram de
+    :data:`DA_PAGINA` porque a página não os tem mais, e emitir um endereço sem
+    elemento onde pousar é o órfão que o `casamento.py` acusa.
+
+    **AS CHAVES SÃO OS `data-campo` de então**, e não nomes novos: quem receber o
+    canal recebe também o vocabulário com que ele já foi medido, e as onze
+    réguas que o cobram não precisam aprender uma segunda língua.
+    """
+    avisos = _avisos(ctx)
+    selos, textos = _coluna_de_avisos(avisos)
+    return {
+        # A CONTA É DO PRODUTO — `painel.texto_da_conta`, o mesmo que a bancada
+        # já chamava. Ela sabe dizer "nenhum aviso", que o desenho não tinha (o
+        # mockup cravava "1 aviso") e que é o estado normal de uma máquina
+        # saudável. Ela CONTA OS AVISOS, não as linhas: uma coluna que mostrasse
+        # três e escrevesse "3 avisos" com cinco na máquina esconderia dois.
+        "atencao-conta": _painel().texto_da_conta(len(avisos)),
+        "aviso-selo": selos,
+        "aviso-texto": textos,
+        # O ACENDEDOR DAS LINHAS. Uma linha sem aviso não pode ficar com o
+        # travessão à mostra: seriam seis linhas de `— —` numa máquina sem nada
+        # a dizer. O alvo `classe` sem `data-hef-quando` é BOOLEANO
+        # (`hefesto_vivo.escrever`), e o travessão que o piloto escreve num valor
+        # vazio conta como desligado — então a lista de `"1"` acende exatamente
+        # as que têm texto.
+        # ELE ACOMPANHA AS SEIS, e não só as acesas — ver a nota do
+        # `_coluna_de_avisos`. Uma lista curta some inteira quando fica vazia, e
+        # é justamente a coluna VAZIA que precisa apagar o aviso do desenho.
+        "aviso-vivo": ["1" if s else "" for s in selos],
+    }
+
+
 def _frase_da_mesa(ctx: Contexto) -> str:
     """A linha por cima dos lugares apagados — ``""`` quando a mesa cabe na tela.
 
@@ -1353,8 +1447,32 @@ def _html_dos_externos(ctx: Contexto) -> str:
     ``external_controllers.brand_of`` por dentro de ``_format_external_title`` —
     nenhuma marca se digita aqui.
     """
+    # SEM EXTERNO, O MARCADOR — E NÃO `""` — 07/09/2026, e é o travessão solto
+    # que ela viu logo abaixo dos quatro cartões, na mesma ordem em que mandou a
+    # coluna Atenção sair. **ESTE `return` É O CAMINHO QUE A MÁQUINA DELA
+    # PERCORRE**: sem externo na mesa o resto da função nem roda.
+    #
+    # A CAUSA MEDIDA: `escrever()` troca valor vazio por `—` de propósito
+    # (`hefesto_vivo.py`), porque um lugar vazio da mesa tem de APAGAR o que
+    # estava lá. O `.ext-vaga` é `display:contents`, então esse travessão vira um
+    # item anônimo da grade `.pecas` — o quinto assento, na linha de baixo,
+    # encostado à esquerda. O `<i class="nada">` que a página traz de nascença
+    # sobrevive só até a PRIMEIRA pintura: o alvo `html` troca o miolo inteiro.
+    #
+    # `monta.NADA_A_DIZER` É A PEÇA DA CASA PARA EXATAMENTE ISTO, e o docstring
+    # dela já nomeava o defeito — *"numa linha de ressalva isso vira um `—`
+    # solto, que é ruído com cara de dado"*. O bloco dos externos nasceu em
+    # 06/09 sem ela, e por isso pagou o preço que ela existe para não pagar.
+    #
+    # A CHAVE CONTINUA SAINDO EM TODO TIQUE, inclusive vazia: é o que apaga o
+    # cartão do externo que foi desligado. Omiti-la deixaria o cartão velho na
+    # tela para sempre — o defeito oposto, e pior.
+    #
+    # A GÊMEA DA ABA 08 TEM O MESMO DEFEITO (`a08_conexoes._html_dos_externos`
+    # devolve `""` para o mesmo `.ext-vaga`, `aba08.py:1034`). **RELATADO** —
+    # aquele arquivo é de outra frente.
     if not ctx.externos:
-        return ""
+        return str(_monta().NADA_A_DIZER)
     from hefesto_dualsense4unix.app.actions.external_controllers import (
         nintendo_bt_warning,
     )
@@ -1385,7 +1503,49 @@ def _html_dos_externos(ctx: Contexto) -> str:
             f'<div class="ext-nome">{_e(_format_external_title(entrada))}</div>'
             f'<div class="ext-via">{_e(_format_external_subtitle(entrada))}</div>'
             f'{linha_do_aviso}</div>')
+    # SEM `or NADA_A_DIZER` AQUI, e isso foi MEDIDO — 07/09/2026. A primeira
+    # volta desta cura pôs o marcador nos DOIS `return`, e a mordida mostrou que
+    # o de baixo não é alcançável: `fora` ganha uma entrada não-vazia por externo,
+    # então `"".join(fora)` só é `""` quando `ctx.externos` é vazio — e esse
+    # caminho já saiu pela guarda lá em cima. Uma cura que nenhuma mordida
+    # derruba é uma cura que não está curando nada.
     return "".join(fora)
+
+
+def _cadeado_cego(state: dict[str, Any]) -> str:
+    """A ressalva do cadeado: o detector está cego? — marcador quando não.
+
+    **POR QUE ELA EXISTE, e é de 07/09/2026.** A caixa *"Não trocar de perfil
+    sozinho ao abrir um jogo"* governa a troca automática POR JANELA. Quando o
+    detector de janela está cego, essa troca **não acontece de jeito nenhum** —
+    e a caixa passa a oferecer o congelamento de algo que já está parado.
+
+    Até 07/09 quem dizia isso era a coluna **Atenção**, que saiu da aba por
+    ordem dela. A frase era a única linha acesa da coluna na máquina dela, no
+    instante em que a leva foi medida, e sem ela a tela oferece um controle sem
+    dizer que ele não tem sobre o que agir.
+
+    **A FONTE É A DA JANELA ANTIGA, e não uma frase nova**:
+    `home_actions.texto_do_cadeado_cego`, palavra por palavra. Texto de tela é
+    decisão dela; texto que ela já leu, não — a mesma regra que trouxe
+    `CADEADO_ROTULO` e `CADEADO_DICA` para cá.
+
+    **A AUSÊNCIA DA CHAVE CONTA COMO "NÃO SEI"**, e o dono já garante isso: um
+    daemon mais velho não publica `window_detect_seeing`, e a função devolve
+    `""` em vez de acender um aviso sobre um detector que ninguém leu. É a
+    disciplina que os outros avisos desta aba seguem de propósito.
+
+    **O MARCADOR NO LUGAR DO VAZIO** é `monta.NADA_A_DIZER`, pela razão que o
+    bloco dos externos pagou em 06/09: `escrever()` troca valor vazio por `—`,
+    e numa linha de ressalva isso vira um travessão solto — ruído com cara de
+    dado. A `monta.ressalva` já nasce com esse marcador no desenho; a chave tem
+    de devolvê-lo também, senão a PRIMEIRA pintura o substitui por um traço.
+    """
+    from hefesto_dualsense4unix.app.actions.home_actions import (
+        texto_do_cadeado_cego,
+    )
+
+    return texto_do_cadeado_cego(state) or str(_monta().NADA_A_DIZER)
 
 
 def _ressalva_da_mascara(state: dict[str, Any]) -> str:
@@ -1529,10 +1689,14 @@ def _mascara_do_cartao(casa: dict[str, Any], da_sessao: str) -> str:
     dia em que a herança mudasse.
 
     O FILTRO É `NOME_DA_MASCARA`, e não uma lista digitada: só passa o que a
-    tela sabe nomear. É o que mantém o **Nintendo Pro** apagado — ele está
-    desenhado e o produto não sabe montá-lo — e o que impede o travessão da mesa
-    vazia de virar um rótulo. Sem correspondência a resposta é ``""``, e o alvo
-    `classe` apaga os três chips: campo sem informação não mostra nada.
+    tela sabe nomear, e é o que impede o travessão da mesa vazia de virar um
+    rótulo. NOTA DATADA — 07/09/2026: este parágrafo dizia que o filtro *"mantém o
+    Nintendo Pro apagado, porque o produto não sabe montá-lo"*. O produto sabe
+    desde hoje; o filtro continua igual e agora deixa o rótulo passar, que é o
+    comportamento que ele sempre teve para máscara que existe.
+
+    Sem correspondência a resposta é ``""``, e o alvo `classe` apaga os três
+    chips: campo sem informação não mostra nada.
     """
     from hefesto_dualsense4unix.interface.mesa_viva import NOME_DA_MASCARA
 
@@ -1551,9 +1715,14 @@ def _MASCARAS_DESENHADAS() -> set[str]:  # noqa: N802  (é uma constante lida ta
     """Os rótulos que o DESENHO tem, do dono deles (`monta.MASCARAS`).
 
     Existe para separar duas ausências que se pareciam: um rótulo que ESTÁ na
-    tela e o produto não sabe montar (o **Nintendo Pro** — resposta ``""``, o
-    chip fica apagado e isso é a verdade) de uma mesa que simplesmente não falou
-    de máscara (resposta: a da sessão, que é o que valia antes).
+    tela e o produto não sabe montar (resposta ``""``, o chip fica apagado e
+    isso é a verdade) de uma mesa que simplesmente não falou de máscara
+    (resposta: a da sessão, que é o que valia antes).
+
+    NOTA DATADA — 07/09/2026: o exemplo do primeiro caso era o **Nintendo Pro**, e ele
+    deixou de servir de exemplo — a máscara existe. A separação continua
+    valendo; o que falta é um rótulo que a ilustre, e não haver nenhum hoje é
+    um estado do catálogo, não um defeito desta função.
     """
     import monta  # o `pacotes/__init__` põe `interface/` no `sys.path`
 
@@ -1568,11 +1737,12 @@ def _rotulo_da_mascara(mascara: str | None) -> str:
     verdades vivas. Os VALORES são os rótulos dos chips do cartão
     (`monta.MASCARAS`), que é tela — e tela é dela.
 
-    **"Nintendo Pro" não tem entrada, e nunca terá enquanto o daemon recusar em
-    voz alta tudo o que não for `dualsense`/`xbox`** (`ipc_handlers.py:5149`).
-    O chip continua no cartão por ordem dela; apagado é a verdade sobre ele — e
-    era exatamente o chip **Xbox 360** aceso no cartão do P2, com o daemon em
-    `flavor=dualsense`, que esta função existe para apagar.
+    NOTA DATADA — 07/09/2026: aqui estava escrito que *"'Nintendo Pro' não tem entrada,
+    e nunca terá enquanto o daemon recusar tudo o que não for dualsense/xbox"*.
+    O "nunca" durou até hoje: o daemon aceita `nintendo`, e a entrada existe. O
+    que a função faz não mudou — era exatamente o chip **Xbox 360** aceso no
+    cartão do P2, com o daemon em `flavor=dualsense`, que ela existe para
+    apagar.
     """
     from hefesto_dualsense4unix.integrations import ponte_escada
 
@@ -1860,14 +2030,14 @@ BOTOES_SEM_DONO: dict[str, str] = {
 #: o dono declarado no mesmo arquivo manda a próxima pessoa construir o que já
 #: está construído — e é como a régua `chips_sem_dono` acusaria falso.
 #:
-#: O QUE ERA VERDADE E MUDOU DE LUGAR: o 'Nintendo Pro' continua não sendo
-#: máscara do produto. Isso deixou de ser "botão sem dono" e virou **botão
-#: cinza com a razão na dica**, que é a D-03 dela — ver
-#: :func:`mascaras_montaveis` e `aba01._chips_de_mascara`.
+#: NOTA DATADA — 07/09/2026: este texto dizia que *"o 'Nintendo Pro' continua não
+#: sendo máscara do produto"* e que ele ficava cinza com a razão na dica. A
+#: máscara nasceu hoje, por ordem dela, e o chip acende como os outros dois —
+#: o resto do achado (o `uniq` e o dono do gesto) segue valendo.
 _MASCARA_SAIU_DOS_SEM_DONO = (
     "gamepad.mask.set recebe `uniq` e o gesto `mascara` tem dono desde "
-    "03/09/2026; o que sobrou do achado antigo é o Nintendo Pro, que agora "
-    "fica cinza com a razão na dica em vez de constar como sem dono."
+    "03/09/2026; e o Nintendo Pro, que era o que sobrava do achado antigo, "
+    "virou máscara de verdade em 07/09/2026 — o chip acende como os outros dois."
 )
 
 
@@ -2150,10 +2320,13 @@ def mascara_do_controle(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     próprio módulo nomeava: *"quem grava a escolha dela é a rota IPC, que ainda
     só conhece a máscara da sessão."* Ela nasceu hoje: `gamepad.mask.set`.
 
-    DUAS MÁSCARAS EXISTEM, E TRÊS CHIPS ESTÃO DESENHADOS. `mascaras_validas()`
-    devolve `{dualsense, xbox}` — o "Nintendo Pro" é desenho sem motor, e aqui
-    ele RECUSA DIZENDO em vez de gravar um valor que o daemon não sabe montar.
-    Escolher o silêncio seria repetir o defeito que este gesto veio curar.
+    AS TRÊS MÁSCARAS EXISTEM, E OS TRÊS CHIPS TÊM MOTOR (desde 07/09/2026).
+    `mascaras_validas()` devolve `{dualsense, xbox, nintendo}`, e é dele que a
+    recusa sai — nunca de uma lista digitada aqui. Um rótulo fora do catálogo
+    continua RECUSANDO DIZENDO em vez de gravar um valor que o daemon não sabe
+    montar; escolher o silêncio seria repetir o defeito que este gesto veio
+    curar. O que mudou é que o "Nintendo Pro" saiu do lado errado dessa
+    fronteira.
 
     O ALCANCE É O CARTÃO. Sem `uniq` não há a quem aplicar, e "todos" seria a
     máscara da sessão — que é outro botão, o de cima. A recusa separa os dois

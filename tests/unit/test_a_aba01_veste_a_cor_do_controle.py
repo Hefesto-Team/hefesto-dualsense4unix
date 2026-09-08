@@ -65,7 +65,15 @@ PLASTICO_CRAVADO = re.compile(r"--plastico\s*:\s*#[0-9a-fA-F]{3,8}")
 #: página inteira misturaria o cartão com a FITA, que é do `monta.py` e não
 #: desta aba — e faria esta régua acusar quem não pode consertar.
 INICIO_DA_FILEIRA = '<div class="pecas" data-lista="cartoes">'
-FIM_DA_FILEIRA = '<div class="col-atencao"'
+#: ERA `<div class="col-atencao"` ATÉ 07/09/2026, quando a coluna Atenção saiu
+#: da Jogar por ordem dela. A faixa do botão é o que ficou logo abaixo dos
+#: cartões, e é o novo fim.
+#:
+#: E O `doc.index` ABAIXO É O QUE FAZ ISTO SER SEGURO: com o delimitador
+#: ausente ele LEVANTA, e as quatro réguas deste arquivo reprovaram na hora. Um
+#: `split()` teria devolvido o resto da página em silêncio, e elas continuariam
+#: verdes medindo cartão mais faixa mais legenda como se fosse a fileira.
+FIM_DA_FILEIRA = '<div class="faixa-final'
 
 
 def bancada() -> str:

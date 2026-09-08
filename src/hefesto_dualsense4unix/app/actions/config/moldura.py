@@ -4,7 +4,7 @@ Por que existe um módulo só para isto: em 22/08/2026 a aba Configurações foi
 posta lado a lado com as outras dez, e foi a única que leu como quebrada. As
 dez seguem a mesma gramática visual desde sempre — cada seção é um
 ``Gtk.Frame`` com o título no canto, borda fina e conteúdo recuado
-(``home_actions.py:1500``, ``:1712``, ``:1756``). A Configurações tinha cinco
+(``home_actions.py:2228``, ``:2440``, ``:2484``). A Configurações tinha cinco
 ``Gtk.Label`` soltos, colados na borda esquerda, sem moldura nenhuma.
 
 O defeito não era de gosto: sem a moldura não há onde o conteúdo morar, e cada

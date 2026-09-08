@@ -9,7 +9,7 @@ Política:
   - **Mutuamente exclusivo com a emulação de mouse**: ligar o gamepad desliga o
     mouse (jogar = o controle vai pro jogo, não pro cursor do desktop). O poll
     loop, quando o gamepad está ativo, NÃO despacha mouse/teclado.
-  - **Máscara (flavor)**: `dualsense` (prompts PlayStation) ou `xbox` (fallback
+  - **Máscara (flavor)**: `dualsense`, `nintendo` (Switch Pro, 07/09/2026) ou `xbox` (fallback
     p/ jogos XInput-only). Quem escolhe o BACKEND por trás da máscara (uhid ou
     uinput) é `integrations/virtual_pad.make_virtual_pad`, com o fallback e o
     motivo logado num lugar só — este subsystem não sabe em qual está.
@@ -2143,6 +2143,9 @@ def start_gamepad_emulation_desfecho(
     do contrário a suspensão herdada sobreviveria até ela lembrar de clicar no
     botão. Por isso a origem foi para dentro do log.
     """
+    from hefesto_dualsense4unix.daemon.subsystems.coop import (
+        numero_do_nome_do_primario,
+    )
     from hefesto_dualsense4unix.daemon.subsystems.external_mask import mascara_efetiva
     from hefesto_dualsense4unix.integrations.uinput_gamepad import normalize_flavor
     from hefesto_dualsense4unix.integrations.virtual_pad import make_virtual_pad
@@ -2255,7 +2258,15 @@ def start_gamepad_emulation_desfecho(
         # acima, e por isso a idempotência fecha.
         identity=identity,
         rumble_sink=make_primary_rumble_sink(daemon),
-        player=1,
+        # A-MESMA-LINGUA-01 (07/09/2026): o número que vai DENTRO do nome do
+        # vpad é o da CARTA, perguntado ao dono da fila. Estava cravado em 1, e
+        # na bancada dela o primário era o SEGUNDO da fila — o nó nascia
+        # `Hefesto P1` para um controle que a interface inteira chama de 2.
+        # Sem mesa de quem perguntar (boot antes do connect, primário sem MAC)
+        # a resposta é 1, o valor de sempre — e é justamente aí que o MAC do
+        # vpad ainda deriva do número, então ele não se move. Ver
+        # `coop.numero_do_nome_do_primario`.
+        player=numero_do_nome_do_primario(daemon),
         allow_uhid=controller_allows_uhid(daemon),
         calibration_0x05=read_primary_calibration(daemon),
         **make_primary_replica_sinks(daemon),

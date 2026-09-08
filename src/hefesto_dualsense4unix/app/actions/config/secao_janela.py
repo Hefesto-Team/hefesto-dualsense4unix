@@ -215,7 +215,7 @@ def _fileira_do_tamanho(host: Any) -> Any:
     # então o `Gtk.Box` da fileira lhe entrega toda a folga da linha mesmo com
     # `pack_start(..., False, False)`. Curar no widget quebraria a aba Início,
     # que depende dessa expansão para os três botões ocuparem a largura
-    # (`home_actions.py:2106`, empacotado com `False, False` e assim mesmo
+    # (`home_actions.py:2251`, empacotado com `False, False` e assim mesmo
     # cheio). Aqui o desenho pede o contrário: rótulo e opções lado a lado.
     seletor.set_hexpand(False)
     seletor.connect("changed", lambda sel: _ao_trocar_o_tamanho(host, sel))

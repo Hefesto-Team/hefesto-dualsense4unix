@@ -69,7 +69,12 @@ class VirtualPad(Protocol):
 
     @property
     def flavor(self) -> str:
-        """Máscara que o jogo vê: "dualsense" ou "xbox"."""
+        """Máscara que o jogo vê: "dualsense", "xbox" ou "nintendo".
+
+        A terceira entrou em 07/09/2026 e NÃO pediu linha nova aqui nem na
+        factory: o gate do `_try_uhid` é *"não é dualsense, logo não é meu"*,
+        então ela cai no uinput por si, como o xbox sempre caiu.
+        """
         ...
 
     @property

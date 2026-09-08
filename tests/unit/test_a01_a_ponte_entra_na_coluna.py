@@ -111,7 +111,7 @@ def test_a_ponte_chega_a_COLUNA_e_nao_so_a_funcao() -> None:  # noqa: N802
     de cima continua verde. É por isso que as duas existem.
     """
     ctx = Contexto(state=SEM_PONTE, mesa=[], conectados=[], estados={})
-    fora = aba.pacote(ctx)
+    fora = aba.coluna_de_atencao(ctx)
     assert aba.SELO_DA_PONTE in fora["aviso-selo"], (
         f"a ponte não chegou à coluna Atenção: {fora['aviso-selo']!r}")
     i = fora["aviso-selo"].index(aba.SELO_DA_PONTE)

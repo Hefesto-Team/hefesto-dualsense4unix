@@ -2601,9 +2601,17 @@ def _so_o_travessao(html_do_card: str) -> str:
 #
 # As TRÊS aparecem na tela ao mesmo tempo — DualSense (P1 e P3), Xbox 360 (P2) e
 # Nintendo Pro (P4) —, e é assim que se aprende que a linha muda de controle para
-# controle. A Nintendo Pro ainda não existe no catálogo do produto
-# (`uinput_gamepad.FLAVORS` tem `dualsense` e `xbox`): nasce como sprint, e está
-# dito na legenda.
+# controle.
+#
+# FATO SUBSTITUÍDO — 07/09/2026. Estas linhas diziam que a Nintendo Pro "ainda
+# não existe no catálogo do produto" e que ela "nasce como sprint". A máscara
+# ENTROU nesta leva: `uinput_gamepad.FLAVORS` tem `dualsense`, `xbox` e
+# `nintendo`, e `external_mask.mascaras_validas()` devolve os três. A legenda
+# desta aba carregava a mesma frase mais um PID que a medição derrubou (ela
+# proibia o 0x2009, que é justamente o único que faz a SDL responder Switch
+# Pro) — as duas metades foram trocadas pela medida, e a razão está inteira em
+# `integrations/uinput_gamepad.py`, no bloco da constante
+# `NINTENDO_PROCON_PRODUCT`.
 PARADO = [("X", "  +0.0", "left:50%;width:1%;background:var(--border-forte)"),
           ("Y", "  +0.0", "left:50%;width:1%;background:var(--border-forte)"),
           ("Z", "  +0.0", "left:50%;width:1%;background:var(--border-forte)")]
@@ -3048,7 +3056,7 @@ LEGENDA = f'''<div class="nota">
     <li><b>O aviso de máscara saiu.</b> Ele estava no P2 e dizia que sob Xbox 360 "o giroscópio, o acelerômetro e o touchpad <b>não chegam</b> ao jogo". Você decidiu: <b>nenhum aviso, em máscara nenhuma</b> — e a decisão está certa por um motivo mais forte do que o que eu tinha escrito: a máscara limita o que o <b>jogo</b> recebe, não o que o <b>controle</b> faz. O Hefesto continua acendendo a barra de luz, lendo o giro e capturando o microfone deste DualSense em qualquer máscara.</li>
     <li><b>E o microfone não se perde em máscara nenhuma</b> — é o estado <b>Emulado</b> da ONDA-CONEXOES-06: o Hefesto publica uma fonte de captura virtual, e o jogo a enxerga independentemente da máscara. No rádio isso já existe hoje com outro nome (o DualSense não fala A2DP; o áudio vem dentro do HID e o Hefesto publica a fonte). Nada aqui promete o que não há: esta aba só <b>lê</b> o microfone.</li>
     <li><b>A linha da máscara ganhou o endereço de onde ela se muda</b> — passe o ponteiro: <span class="marca">a escolha é por controle e mora na aba Jogar</span>. Era a única coisa que faltava a quem chegava aqui procurando o seletor.</li>
-    <li><b>As três máscaras estão na tela ao mesmo tempo</b>, uma por controle: <b>DualSense</b> (P1 e P3), <b>Xbox 360</b> (P2) e <b>Nintendo Pro</b> (P4). É assim que se aprende que a linha muda de controle para controle. <b>A Nintendo Pro nasce como sprint</b>: o catálogo do produto (<code>uinput_gamepad.FLAVORS</code>) tem hoje <code>dualsense</code> e <code>xbox</code>, e um invariante duro para essa sprint já está medido — o PID forjado <b>não pode ser 0x2009</b>, senão a launch option da Steam esconde o controle físico e o virtual juntos.</li>
+    <li><b>As três máscaras estão na tela ao mesmo tempo</b>, uma por controle: <b>DualSense</b> (P1 e P3), <b>Xbox 360</b> (P2) e <b>Nintendo Pro</b> (P4). É assim que se aprende que a linha muda de controle para controle. <b>A Nintendo Pro deixou de ser sprint em 07/09/2026</b>: o catálogo do produto (<code>uinput_gamepad.FLAVORS</code>) tem <code>dualsense</code>, <code>xbox</code> e <code>nintendo</code>. E o PID forjado <b>é 0x2009 porque tem de ser</b> — esta legenda dizia o contrário, e a medição derrubou: dirigindo a SDL desta máquina, <code>057e:2009</code> é o único par que devolve <code>NINTENDO_SWITCH_PRO</code>; qualquer PID "seguro" entrega uma máscara que não mostra prompt de Nintendo nenhum, que é a máscara inteira. O que aquela ressalva acertava fica declarado no código: se um Pro de verdade estiver ligado <b>e</b> a lista de exclusão da Steam citar <code>057e/2009</code>, o jogo perde os dois juntos — mas essa lista o produto nunca escreve.</li>
     <li><b>Máscara Nintendo Pro não é adotar um Pro.</b> São duas coisas, e confundi-las é o erro clássico daqui: a máscara faz o <i>seu DualSense</i> aparecer como Pro para o jogo. O <b>aparelho</b> Nintendo e o 8BitDo estão <b>fora de escopo agora</b>, por decisão sua — viram sprint própria, e é por isso que nada nesta aba fala de controle externo.</li>
     <li><b>O hexadecimal voltou.</b> Eu o tinha tirado em 27/08 ("cru é para quem programa"); você decidiu que ele <b>fica nas duas</b>, aqui e na Iluminação. Ele está ao lado da barra de luz e <b>não é digitado</b>: sai de <code>core/led_control.py::player_slot_color</code>, a mesma tabela que acende as cinco lâmpadas. O que sobrou da minha razão está no ponteiro: o número é a cor do <b>jogador</b>, não a do plástico.</li>
   </ul>

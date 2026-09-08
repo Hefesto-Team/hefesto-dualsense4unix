@@ -87,6 +87,26 @@ def _pagina() -> str:
     return BANCADA.read_text(encoding="utf-8")
 
 
+def _fileira_de_cartoes(doc: str) -> str:
+    """Só a fileira dos quatro cartões — dono único do corte, nas duas réguas.
+
+    O FIM ERA `class="col-atencao"` ATÉ 07/09/2026, quando a coluna Atenção saiu
+    da Jogar por ordem dela; agora é a `.faixa-final`, que é o que ficou logo
+    abaixo dos cartões.
+
+    E O CORTE PASSOU A LEVANTAR, em vez de devolver o resto da página. Com
+    `split()` um delimitador que some devolve TUDO o que vem depois, calado — as
+    duas réguas deste arquivo procuram por AUSÊNCIA (`data-controle="dualsense"`
+    e a folha podada), e uma fileira que engordasse para a legenda inteira só
+    poderia ficar mais verde. O `index` reprova na hora, que é o que uma delas
+    espera de um delimitador.
+    """
+    i = doc.index('data-lista="cartoes"')
+    fileira = doc[i:doc.index('<div class="faixa-final', i)]
+    assert len(fileira) > 2000, "a régua não achou a fileira de cartões"
+    return fileira
+
+
 def _colorways_da_folha(css: str) -> set[str]:
     """Os modelos que uma folha declara. A mesma leitura dos dois lados."""
     return set(re.findall(r'svg\[data-colorway="([^"]+)"\]', css))
@@ -120,8 +140,7 @@ def test_o_desenho_nao_diz_ser_o_dono_da_coluna() -> None:
     nasceria morto na régua, com o atributo presente e a tela igualmente errada.
     """
     doc = _pagina()
-    fileira = doc.split('data-lista="cartoes"', 1)[-1].split('class="col-atencao"', 1)[0]
-    assert len(fileira) > 2000, "a régua não achou a fileira de cartões"
+    fileira = _fileira_de_cartoes(doc)
     assert 'data-controle="dualsense"' not in fileira
 
 
@@ -143,7 +162,7 @@ def test_a_folha_das_cores_e_publicada_uma_vez_com_os_vinte_e_oito() -> None:
 
 def test_nenhum_desenho_carrega_a_propria_folha_podada() -> None:
     doc = _pagina()
-    fileira = doc.split('data-lista="cartoes"', 1)[-1].split('class="col-atencao"', 1)[0]
+    fileira = _fileira_de_cartoes(doc)
     assert "cores-do-dualsense-folha" not in fileira, (
         "um desenho voltou a carregar a folha podada — com ela, escrever "
         "outro colorway não casa regra nenhuma e o chassi cai no cinza cru")

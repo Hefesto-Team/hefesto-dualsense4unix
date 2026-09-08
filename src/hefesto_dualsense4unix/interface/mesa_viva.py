@@ -310,9 +310,17 @@ class LeitorDeCor:
 # ---------------------------------------------------------------------------
 # A MESA
 # ---------------------------------------------------------------------------
-#: O catálogo do produto tem DUAS máscaras, não três
-#: (`integrations/uinput_gamepad.FLAVORS`). "Nintendo Pro" não existe.
-NOME_DA_MASCARA = {"dualsense": "DualSense", "xbox": "Xbox 360"}
+#: flavor -> o rótulo que a tela mostra. NOTA DATADA — 07/09/2026: estas duas
+#: linhas diziam *"o catálogo do produto tem DUAS máscaras, não três"* e
+#: *"'Nintendo Pro' não existe"*. **Existe desde 07/09/2026**, por ordem dela, e
+#: as duas frases mediam o mundo de ontem. O `uinput_gamepad.FLAVORS` tem TRÊS,
+#: e a `gui/aba_conexoes.NOME_DA_MASCARA` já nomeava as três antes de haver a
+#: terceira — era esta tabela que estava atrás, não aquela.
+NOME_DA_MASCARA = {
+    "dualsense": "DualSense",
+    "xbox": "Xbox 360",
+    "nintendo": "Nintendo Pro",
+}
 
 
 def _por_numero_de_identidade(conectados: list[dict[str, Any]]) -> list[dict[str, Any]]:
@@ -383,7 +391,7 @@ def mesa_do_estado(
                 # respondia certo na aba 02 — e o comentário DELE já afirmava
                 # (errado) que as duas traduções eram a mesma. Agora são.
                 # A razão está escrita no dono da frase longa
-                # (`app/actions/home_actions.py:1333`): *"'?' não é resposta —
+                # (`app/actions/home_actions.py:1548`): *"'?' não é resposta —
                 # é a tela encolhendo os ombros"*.
                 "via": _via_do_transporte(transporte),
                 "transporte": transporte,

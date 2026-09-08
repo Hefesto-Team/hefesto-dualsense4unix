@@ -195,7 +195,7 @@ GUARDA = {
 }
 
 # O ID DA PEÇA é o endereço de rádio normalizado — a MESMA chave que o
-# `_validate_controllers_keys` aceita e canoniza (`profiles/schema.py:1527`), e
+# `_validate_controllers_keys` aceita e canoniza (`profiles/schema.py:1541`), e
 # a mesma que a dica do "Perfil ativo" promete no esqueleto: *"pelo ID da peça —
 # amanhã, em outra porta ou no rádio, ele traz de volta o que você deixou hoje"*.
 # A promessa é verdadeira porque o endereço é ESTÁVEL entre USB e BT no
@@ -545,7 +545,7 @@ CSS = CSS_GLIFO + """
 
   /* ---------- A TIRA DO DESFECHO — o toast que esta janela não tinha ----------
      PARIDADE COM A JANELA ESTÁVEL, 03/09/2026. Lá, TODO gesto desta aba termina
-     num `_toast_profile` no rodapé (`profiles_actions.py:4615`): "Perfil
+     num `_toast_profile` no rodapé (`profiles_actions.py:4648`): "Perfil
      removido: X", "Lista recarregada", `mensagem_de_ativacao`. Aqui só a
      RECUSA falava — `RuntimeError` vira tarja no piloto — e o SUCESSO era
      silêncio. Para os NOVE gestos desta aba que ESCREVEM NO DISCO DELA,

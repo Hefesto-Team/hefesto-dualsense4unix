@@ -139,19 +139,30 @@ def test_a_linha_do_portao_so_nasce_quando_ha_portao(aba, monkeypatch):
 
 
 def test_a_folha_apaga_o_interruptor_pela_propria_linha():
-    """O cinza do interruptor sai da linha da tira — UM endereço, zero divergência.
+    """O cinza do interruptor sai do ENDEREÇO da razão — um só, zero divergência.
 
     A régua lê o CSS gerado, e não o Python: é a folha que decide, e é ela que
     tem de mencionar as duas pontas na mesma regra.
 
-    A MORDIDA: tire a regra `.quadro-corpo:has(.estado.portao .laranja)` do CSS
-    da aba e rode — este caso reprova nomeando o que sumiu. (A prova de que a
-    regra PINTA está no relatório da frente, medida no WebKit: `cursor` vai de
-    `pointer` a `not-allowed` e a borda de `--border-forte` a `--border-sutil`.)
+    A ÂNCORA MUDOU EM 07/09/2026, e a mudança é a lição. A regra partia de
+    `.quadro-corpo:has(.estado.portao .laranja)` — duas classes que só existiam
+    porque a razão morava na tira de `.estados`. Ela saiu da tira por ordem dela
+    (*"navegacao tem essas 3 frases aqui na parte de baixo que quebram o
+    layout"*) e foi para o `?` do "Status do Modo"; ancorada na classe, a regra
+    teria parado de apagar o interruptor **em silêncio** — a razão continuaria
+    chegando e o interruptor voltaria a parecer clicável, sem uma régua
+    reprovando. O `data-campo` é o que não muda de lugar.
+
+    A MORDIDA: tire a regra `.quadro-corpo:has([data-campo="modo-portao"]
+    .laranja)` do CSS da aba e rode — este caso reprova nomeando o que sumiu. (A
+    prova de que a regra PINTA está no relatório da frente, medida no WebKit:
+    `cursor` vai de `pointer` a `not-allowed` e a borda de `--border-forte` a
+    `--border-sutil`.)
     """
     doc = _bancada()
     regra = re.search(
-        r"\.quadro-corpo:has\(\.estado\.portao \.laranja\)[^{]*\{([^}]*)\}", doc)
+        r'\.quadro-corpo:has\(\[data-campo="modo-portao"\] \.laranja\)'
+        r"[^{]*\{([^}]*)\}", doc)
     assert regra is not None, (
         "a folha da aba perdeu a regra que apaga o interruptor a partir da "
         "linha do portão — sem ela a razão aparece e o interruptor continua "
@@ -309,7 +320,16 @@ def test_a_dica_da_tela_de_botoes_diz_por_que_o_ps_fica_fora():
     doc = _bancada()
     dica = re.search(
         r'<span class="tn-tit">Definições Controle e Mouse</span>\s*'
-        r'<span class="ajuda">\?<span class="dica"[^>]*>(.*?)</span></span>',
+        # O `?` GANHOU ATRIBUTOS EM 07/09/2026 (`tabindex="0"`, e a classe
+        # `tem-viva` quando ele carrega frase do produto), e esta régua DIGITAVA
+        # a marcação inteira — `class="ajuda">`, sem espaço para mais nada. Ela
+        # reprovou a cura que torna o `?` alcançável pelo controle, que é o
+        # oposto do que existe para medir.
+        #
+        # O QUE ELA PERGUNTA CONTINUA IGUAL: é a dica daquela tela, e o texto
+        # dela. O que ela deixa de cravar é a lista de atributos do ícone, que
+        # nunca foi assunto deste teste.
+        r'<span class="ajuda[^"]*"[^>]*>\?<span class="dica"[^>]*>(.*?)</span></span>',
         doc, re.S)
     assert dica is not None, "não achei a dica da tela de Definições na bancada"
     texto = dica.group(1)

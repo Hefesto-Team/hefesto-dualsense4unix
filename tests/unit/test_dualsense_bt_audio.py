@@ -479,7 +479,7 @@ def test_descartes_vem_da_source_e_nao_sao_somados(par) -> None:  # type: ignore
 class _RunnerFalso:
     # (noqa-acento) `modulos` é o NOME do parâmetro de `__init__`, logo abaixo:
     # acentuá-lo faria a documentação nomear um argumento que não existe.
-    """`pactl` de mentira: `modulos` é a saída de `list modules short`."""  # (noqa-acento)
+    """`pactl` falso: `modulos` é a saída de `list modules`."""  # (noqa-acento) nome do parâmetro
 
     def __init__(self, saida: str | None = "42\n", modulos: str = "") -> None:
         self.chamadas: list[list[str]] = []

@@ -216,15 +216,26 @@ def test_o_chip_sem_controle_recusa_dizendo() -> None:
         _clicar(mascara="Xbox 360")
 
 
-def test_o_nintendo_pro_recusa_dizendo_o_que_existe() -> None:
-    """TRÊS CHIPS DESENHADOS, DUAS MÁSCARAS DE VERDADE.
+def test_o_rotulo_sem_motor_recusa_dizendo_o_que_existe() -> None:
+    """TRÊS CHIPS DESENHADOS, TRÊS MÁSCARAS DE VERDADE (desde 07/09/2026).
 
-    `mascaras_validas()` devolve `{dualsense, xbox}` — o "Nintendo Pro" está na
-    tela e o Hefesto não sabe montá-lo. Gravar um valor que o daemon não
-    entende, ou calar, seria repetir o defeito que este gesto veio curar.
+    NOTA DATADA: esta régua se chamava `test_o_nintendo_pro_recusa_dizendo_o_
+    que_existe` e usava o "Nintendo Pro" como o rótulo sem motor. Ele ganhou
+    motor por ordem dela, e o exemplo mudou — a REGRA não: gravar um valor que
+    o daemon não entende, ou calar, seria repetir o defeito que este gesto veio
+    curar.
     """
-    with pytest.raises(RuntimeError, match=r"Nintendo Pro.*não sabe montar"):
-        _clicar(uniq=UNIQ_A, mascara="Nintendo Pro")
+    with pytest.raises(RuntimeError, match=r"Wiimote.*não sabe montar"):
+        _clicar(uniq=UNIQ_A, mascara="Wiimote")
+
+
+def test_o_nintendo_pro_deixou_de_ser_recusado_e_chega_ao_daemon() -> None:
+    """O outro lado do dia: o chip que era cinza agora escreve.
+
+    Se esta régua reprovar, o produto voltou a não montar a máscara — e o chip
+    do cartão volta a mentir aceso.
+    """
+    _clicar(uniq=UNIQ_A, mascara="Nintendo Pro")
 
 
 def test_a_lista_do_que_existe_e_perguntada() -> None:
@@ -238,7 +249,7 @@ def test_a_lista_do_que_existe_e_perguntada() -> None:
     from hefesto_dualsense4unix.interface.mesa_viva import NOME_DA_MASCARA
 
     with pytest.raises(RuntimeError) as e:
-        _clicar(uniq=UNIQ_A, mascara="Nintendo Pro")
+        _clicar(uniq=UNIQ_A, mascara="Wiimote")
     for flavor in mascaras_validas():
         if flavor in NOME_DA_MASCARA:
             assert NOME_DA_MASCARA[flavor] in str(e.value)

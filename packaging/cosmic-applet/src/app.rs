@@ -716,9 +716,14 @@ impl HefestoApplet {
                 .unwrap_or(DEFAULT_FLAVOR);
             // Paridade com a aba Início: com o vpad uhid as DUAS máscaras vibram,
             // então o "(sem vibrar)" virou mentira (SPRINT-UHID-VPAD-01).
+            // A TERCEIRA entrou em 07/09/2026 (ordem dela). As três superfícies
+            // — esta, a aba Início e o editor de Perfis — são comparadas pelo
+            // portão `tests/unit/test_vocabulario_das_quatro_superficies.py`:
+            // rótulo e ORDEM. Quem acrescentar uma máscara acrescenta nas três.
             let flavors = [
                 ("dualsense", "DualSense (botões PlayStation)"),
                 ("xbox", "Xbox 360"),
+                ("nintendo", "Nintendo Pro (botões da Nintendo)"),
             ];
             for (id, label) in flavors {
                 let is_active = flavor == id;

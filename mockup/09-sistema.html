@@ -278,6 +278,34 @@
   }
   .ajuda:hover{border-color:var(--cyan);color:var(--cyan)}
   .ajuda:hover .dica{display:block}
+  /* ---------- O `?` ABRE NO FOCO, E NÃO SÓ SOB O PONTEIRO — 07/09/2026 ----------
+     ACHADO POR CONFERÊNCIA, medido na aba Navegação: `.ajuda` é um `<span>` sem
+     `tabindex`, e o ÚNICO caminho de revelação era `:hover`. Medido pelo caminho
+     exato que o controle usa (`hefesto_vivo`, `el.click()`):
+
+         APÓS el.click():  display da dica = 'none' · rect = 0 · foco = BODY
+
+     Isto acontecia na aba cujo próprio `?` diz *"Navegar a janela do Hefesto com
+     o controle"* — a tela que ensina a navegar sem rato era a que exigia um.
+
+     A REGRA MORA AQUI, NA FOLHA DA CASA, e não na aba onde foi achado: são 99
+     `?` em dez abas, e uma cura numa aba só deixaria as outras nove ensinando
+     que o `?` não responde ao controle. É a regra de 05/09 — *quando a cura
+     conhece a causa, ela cobre TODOS os chamadores*.
+
+     `:focus-within` E `:focus` OS DOIS, e não é redundância: o `:focus` pega o
+     próprio `?` recebendo o foco, e o `:focus-within` mantém a dica aberta se o
+     foco cair em algo DENTRO dela (um `<b>`, um `<tt>`, ou o que a frase viva
+     do produto trouxer). Sem o segundo, abrir e ler já fechava.
+
+     O `tabindex` É DO EMISSOR, não desta folha — uma regra de estilo não torna
+     um `<span>` focável. Quem já o emite é `aba06.ajuda()`; as outras nove abas
+     estão declaradas como dívida medida no relatório desta leva. Esta regra
+     nasce pronta para elas: no dia em que o atributo chegar, o `?` daquela aba
+     passa a abrir no foco sem tocar nesta folha de novo. */
+  .ajuda:focus{border-color:var(--cyan);color:var(--cyan);outline:none}
+  .ajuda:focus .dica,
+  .ajuda:focus-within .dica{display:block}
   .dica{
     display:none;position:absolute;left:22px;top:-4px;width:330px;z-index:40;
     background:var(--elevated);border:1px solid var(--linha);border-radius:7px;
@@ -989,7 +1017,7 @@
   .est.escolhe{height:var(--h-escolha)}
   /* A ROUPA DO `<select>` é de cada aba, não do esqueleto: o `topo.html` só lhe
      dá a ALTURA (`--h-escolha`, 36px, para não haver quatro alturas de campo na
-     mesma janela). Estas seis linhas são as MESMAS do `aba08.py:477` — o
+     mesma janela). Estas seis linhas são as MESMAS do `aba08.py:1053` — o
      dropdown que se mudou para cá não podia mudar de roupa no caminho. Sem
      elas ele volta a ser o `<select>` cru do Chrome: fundo claro e do tamanho
      que o sistema quiser, que foi o que a primeira foto desta rodada mostrou.
@@ -1219,7 +1247,10 @@
     <div class="perfil-ativo">
       <span class="pa-rot">Perfil ativo</span>
       <span class="pa-nome" data-campo="perfil">Mortal Kombat</span>
-      <span class="ajuda">?<span class="dica" style="left:auto;right:22px">
+      <!-- `tabindex` de 07/09/2026: este `?` está no CABEÇALHO, logo nas dez
+           abas, e explica onde o "Salvar Perfil" grava. Sem ele o `<span>` não
+           recebe foco e o `el.click()` do controle não o abria em aba nenhuma. -->
+      <span class="ajuda" tabindex="0">?<span class="dica" style="left:auto;right:22px">
         Tudo o que você mudar em qualquer aba cai <b>neste</b> perfil quando clicar em
         <b>Salvar Perfil</b>.<br><br>
         Cada controle guarda a <b>sua</b> configuração aqui dentro, pelo ID da peça — amanhã,
@@ -1275,9 +1306,9 @@
             </div>
             <div class="risco"></div>
             <div class="col-acao">
-            <div class="acao"><button class="btn verde" data-campo="retomar-razao" data-hef-alvo="classe" data-hef-classe="apagado" data-hef-atributo="aria-disabled" data-gesto="retomar" title="Tira o serviço da pausa agora. Só acende com a pausa ativa — e ela sobrevive a desligar o computador.">Retomar</button><span class="ajuda porque">?<span class="dica" data-campo="retomar-razao" data-hef-alvo="html"><i class="nada"></i></span></span></div>
+            <div class="acao"><button class="btn verde" data-campo="retomar-razao" data-hef-alvo="classe" data-hef-classe="apagado" data-hef-atributo="aria-disabled" data-gesto="retomar" title="Tira o serviço da pausa agora. Só acende com a pausa ativa — e ela sobrevive a desligar o computador.">Retomar</button><span class="ajuda porque" tabindex="0">?<span class="dica" data-campo="retomar-razao" data-hef-alvo="html"><i class="nada"></i></span></span></div>
             <button class="btn so-avulso" title="Aparece no lugar do «Reiniciar o serviço» quando o serviço está de pé por fora do sistema: ali reiniciar não funciona, porque quem está rodando não é o do sistema. Este botão pede que ele saia e sobe o jeito certo — nada do que você ajustou se perde." data-gesto="corrigir-modo" data-campo="corrigir-modo-quando" data-hef-alvo="classe" data-hef-classe="mostra">Corrigir modo de execução</button>
-            <div class="acao"><button class="btn" data-campo="reiniciar-razao" data-hef-alvo="classe" data-hef-classe="apagado" data-hef-atributo="aria-disabled" data-gesto="reiniciar" title="Para e liga de novo. Resolve a maioria dos travamentos e não perde nenhum ajuste seu.">Reiniciar o serviço</button><span class="ajuda porque">?<span class="dica" data-campo="reiniciar-razao" data-hef-alvo="html"><i class="nada"></i></span></span></div>
+            <div class="acao"><button class="btn" data-campo="reiniciar-razao" data-hef-alvo="classe" data-hef-classe="apagado" data-hef-atributo="aria-disabled" data-gesto="reiniciar" title="Para e liga de novo. Resolve a maioria dos travamentos e não perde nenhum ajuste seu.">Reiniciar o serviço</button><span class="ajuda porque" tabindex="0">?<span class="dica" data-campo="reiniciar-razao" data-hef-alvo="html"><i class="nada"></i></span></span></div>
             <button class="btn" title="Manda o serviço reler os atalhos do controle e reescrever os arquivos de ambiente que a Steam usa para lançar os jogos; no fim, relê o que esta aba mostra. Leva alguns segundos, e o botão avisa enquanto trabalha." data-gesto="atualizar" data-hef-em-voo="Atualizando…">Atualizar</button>
             <button class="btn vermelho" title="O Hefesto deixa de rodar e os 2 viram gamepads comuns do Linux. Não é o interruptor Hefesto da aba Jogar, que só o tira do meio do jogo. Pergunta antes, dizendo o que se perde." data-gesto="desligar">Parar o serviço</button>
             </div>
@@ -1427,7 +1458,7 @@
           <div class="lista">
             <button class="btn vermelho" title="Devolve o perfil de fábrica. Pergunta antes, e os seus perfis salvos continuam onde estão." data-gesto="restaurar-de-fabrica">Restaurar de fábrica</button>
             <button class="btn" title="Põe a linha de inicialização do Hefesto em TODOS os jogos instalados, preservando as opções que você já tem e deixando cópia de segurança ao lado de cada arquivo. Pergunta antes, e precisa fechar a Steam por uns 20 segundos." data-gesto="aplicar-aos-jogos">Aplicar aos jogos da Steam</button>
-            <div class="acao"><button class="btn" data-campo="ver-plugins-razao" data-hef-alvo="classe" data-hef-classe="apagado" data-hef-atributo="aria-disabled" data-gesto="ver-plugins" title="Lista os plugins do daemon e relê. Hoje só o terminal alcança isso.">Ver os plugins carregados</button><span class="ajuda porque">?<span class="dica" data-campo="ver-plugins-razao" data-hef-alvo="html"><i class="nada"></i></span></span></div>
+            <div class="acao"><button class="btn" data-campo="ver-plugins-razao" data-hef-alvo="classe" data-hef-classe="apagado" data-hef-atributo="aria-disabled" data-gesto="ver-plugins" title="Lista os plugins do daemon e relê. Hoje só o terminal alcança isso.">Ver os plugins carregados</button><span class="ajuda porque" tabindex="0">?<span class="dica" data-campo="ver-plugins-razao" data-hef-alvo="html"><i class="nada"></i></span></span></div>
             <button class="btn" title="Joga as últimas 80 linhas do registro técnico no painel ao lado." data-gesto="ver-detalhes">Ver detalhes</button>
           </div>
           <div class="risco"></div>
