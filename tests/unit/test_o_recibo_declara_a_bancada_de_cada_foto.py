@@ -56,10 +56,12 @@ Aplicadas em 08/09/2026, as três, e as três reprovaram:
   `_gravar_prova_da_foto` com `modo="--todas --doc"` (a bancada) e o teste
   reprova, porque o recibo deixaria de dizer que a foto é do produto. É a
   mordida literal do aceite: o dublê sabe RECUSAR, não só aprovar.
-* `test_o_recibo_nomeia_quem_o_escreveu_sem_digitar_o_nome` — troque
-  `_meu_endereco()` por um literal com o nome de outro programa e ele reprova.
-  Sem esta régua o recibo volta a poder nomear um retratista apagado, que é
-  exatamente o estado em que ele foi encontrado hoje.
+* `test_o_recibo_nomeia_quem_o_escreveu_sem_digitar_o_nome` — ponha o literal
+  `scripts/gui-captura/retratar_abas.py` no lugar do autor e ele reprova.
+  **ESTA LINHA JÁ FOI FALSA:** até 08/09/2026 a régua dava VERDE nessa mordida
+  — a única forma que o defeito de fato teve —, porque conferia
+  `_meu_endereco()` isolada em vez de ler o recibo gravado. O docstring dela
+  tem as quatro medições e a causa.
 * `test_o_modo_doc_grava_recibo` — arranque o `if para_a_doc:` que chama
   `_gravar_prova_da_foto` e ele reprova. Sem ela as duas de cima poderiam estar
   certas sobre uma função que ninguém chama — foi assim que
@@ -70,6 +72,7 @@ from __future__ import annotations
 
 import ast
 import importlib.util
+import re
 import sys
 from pathlib import Path
 from typing import Any
@@ -167,21 +170,71 @@ def test_o_recibo_conta_so_as_fotos_deste_retratista(tmp_path: Path) -> None:
     )
 
 
-def test_o_recibo_nomeia_quem_o_escreveu_sem_digitar_o_nome() -> None:
-    """O nome do autor sai de `__file__`, e é a lição que este dia deixou.
+def test_o_recibo_nomeia_quem_o_escreveu_sem_digitar_o_nome(tmp_path: Path) -> None:
+    """O autor NOMEADO NO RECIBO GRAVADO é o programa que de fato o escreveu.
 
-    O recibo encontrado hoje dizia *"gerado por
-    scripts/gui-captura/retratar_abas.py"* — um programa apagado em 06/09.
-    Ficou dois dias afirmando isso porque o nome era um LITERAL. Um endereço
-    derivado do próprio arquivo não pode envelhecer sem que o arquivo se mova
-    junto.
+    ESTA RÉGUA JÁ FOI FALSA, e a correção é de 08/09/2026. Ela nasceu como
+    troféu do laudo que a escreveu — *"é a mordida do defeito que ACHEI"* — e
+    não mordia onde dizia morder. Quatro medições, com o recibo do disco lido
+    depois de cada uma:
+
+    | o que se punha no lugar do autor | a régua velha dizia |
+    | --- | --- |
+    | `scripts/gui-captura/retratar_abas.py` — O DEFEITO HISTÓRICO | VERDE |
+    | `scripts/retratar_tudo.py` | VERDE |
+    | `src/hefesto_dualsense4unix/interface/olhar.py` | reprovava |
+    | a linha do autor ARRANCADA INTEIRA | VERDE |
+
+    **A CAUSA, e são duas metades que nunca se tocavam:** a primeira chamava
+    `_meu_endereco()` ISOLADA e conferia que ela terminava em `olhar.py`, sem
+    nunca perguntar se o recibo a usava; a segunda varria literais do fonte e só
+    pegava os que casavam `endswith(".py") and "olhar" in s`. Junto, isso pega o
+    autor que se nomeia CERTO e deixa passar exatamente o autor que nomeia um
+    programa apagado — a única forma que o defeito de fato teve. E deixava
+    `_meu_endereco` escrita e nunca ligada, que é o destino contra o qual o
+    `test_o_modo_doc_grava_recibo` logo abaixo foi escrito.
+
+    **A cura:** medir o RECIBO QUE FOI ESCRITO, não a função isolada. Grava-se
+    um recibo de verdade, lê-se o texto do disco, e cobra-se que o autor
+    nomeado exista nesta árvore E seja este mesmo arquivo. A segunda metade
+    fica, porque é ela que impede o endereço CERTO de ser digitado — e um nome
+    certo digitado é só um nome errado esperando o arquivo se mover.
+
+    As quatro mordidas acima reprovam agora, e uma quinta cobre a segunda
+    cobrança sozinha: pôr um programa que EXISTE mas é outro
+    (`interface/onde.py`) passa pelo `is_file()` e morre no `resolve()`, com
+    *"credita 'src/…/onde.py', mas quem o escreveu foi 'src/…/olhar.py'"*.
     """
     retrato = _retrato()
+    saida = _bancada_com_fotos(tmp_path, retrato)
 
-    endereco = retrato._meu_endereco()
-    assert endereco.endswith("olhar.py"), (
-        f"o recibo diria ter sido gerado por {endereco!r}, que não é este "
-        "arquivo"
+    retrato._gravar_prova_da_foto(
+        saida,
+        modo="--todas --publicado --doc",
+        origem="src/hefesto_dualsense4unix/interface/paginas",
+    )
+    texto = (saida / retrato.NOME_DA_PROVA).read_text(encoding="utf-8")
+
+    nomeados = re.findall(r"gerado por (\S+)", texto)
+    assert len(nomeados) == 1, (
+        "o recibo GRAVADO não nomeia exatamente um autor — encontrados: "
+        f"{nomeados}. Sem a linha do autor ninguém sabe que programa refaz "
+        "estas fotos, e arrancá-la inteira era o que deixava esta régua verde "
+        f"sobre nada. Texto gravado:\n{texto}"
+    )
+    autor = nomeados[0]
+
+    assert (RAIZ / autor).is_file(), (
+        f"o recibo GRAVADO diz ter sido gerado por {autor!r}, que não existe "
+        "nesta árvore. É exatamente o estado em que ele foi encontrado em "
+        "08/09/2026 — dois dias creditando um retratista que a leva `GTK-3` "
+        "apagou junto com a janela, em 06/09."
+    )
+    assert (RAIZ / autor).resolve() == SCRIPT.resolve(), (
+        f"o recibo GRAVADO credita {autor!r}, mas quem o escreveu foi "
+        f"{SCRIPT.relative_to(RAIZ)}. Um recibo que credita outro programa "
+        "manda a próxima pessoa rodar a ferramenta errada para refazer as "
+        "fotos."
     )
 
     # E o nome não pode estar digitado em lugar nenhum do fonte.
