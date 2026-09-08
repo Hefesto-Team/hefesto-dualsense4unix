@@ -71,16 +71,16 @@ import monta  # noqa: E402
 # `.ressalva` não pode ter sem brigar com o `:has(.nada)` do esqueleto).
 from monta import MASCARAS, MESA, glifo, monta as montar, svg  # noqa: E402
 
-# QUANTAS LINHAS A COLUNA ATENÇÃO PUBLICA — e o dono do número é o PACOTE, não
-# este arquivo. A direção do import é essa e não a inversa: o produto pinta sem
-# gerador nenhum, e o gerador roda uma vez por mudança de desenho. Digitar o
-# número aqui abriria a porta para a página ter seis linhas e o pacote emitir
-# oito — que é a divergência silenciosa que este projeto persegue.
+# O `AVISOS_VIVOS` SAIU DAQUI — 07/09/2026, ordem dela: *"em jogar remover essa
+# seção do atenção, nenhum aviso esse — deixar só o reconectar controles."* A
+# constante continua viva no pacote (é ela que diz quantas linhas o canal
+# publica), e a página desta aba deixou de ser o lugar onde elas pousam. O
+# destino novo do canal está declarado em `pacotes/a01_jogar._avisos`.
 from hefesto_dualsense4unix.interface.frases_que_ela_baniu import (  # noqa: E402
     FRASES_BANIDAS,
 )
 from hefesto_dualsense4unix.interface.pacotes.a01_jogar import (  # noqa: E402
-    AVISOS_VIVOS,
+    CADEADO_CEGO,
     CADEADO_DICA,
     CADEADO_ROTULO,
     ESPERA_DICA,
@@ -100,11 +100,12 @@ from hefesto_dualsense4unix.interface.pacotes.a01_jogar import (  # noqa: E402
 #: do plástico). Na mesa viva dela agora há DOIS controles, com 85% e 95%.
 BATERIA = {"p1": 100, "p2": 64, "p3": 41, "p4": 87}
 
-#: O aviso da coluna Atenção. Também cena, e também declarado na legenda: o
-#: `state_full` não publica contagem nem texto de aviso, e a frase
-#: *"Dois rádios da bancada estão em portas vizinhas"* é da aba Conexões
-#: (`aba08.py`), não do produto.
-AVISOS = [("RÁDIO", "Dois rádios da bancada estão em portas vizinhas.")]
+#: A CENA DO AVISO MORREU COM A SEÇÃO — 07/09/2026. Aqui morava
+#: ``AVISOS = [("RÁDIO", "Dois rádios da bancada estão em portas vizinhas.")]``,
+#: o único aviso que a cena aprovada mostrava. Ele era DESENHO, e ia embora com
+#: a faixa; o que NÃO foi embora são as onze fontes vivas que escreviam nela —
+#: ver `pacotes/a01_jogar._avisos`, que continua de pé e declara para onde elas
+#: vão.
 
 #: O QUE O MODO NATIVO DIZ SOBRE JOGADORES — **PROVISÓRIO, decisão dela**
 #: (PROVA-DE-TELA-01), COOP-NA-CONEXAO-NATIVA-01 / Caminho A, 06/09/2026.
@@ -798,11 +799,66 @@ CSS = """
   .cartao.off .ds-svg .corpo,
   .cartao.off .ds-svg .miolo *{fill:var(--linha) !important}
   .cartao.off .ds-svg .corpo{stroke:var(--border-forte) !important}
-  /* Os chips do lugar vazio não se clicam: não há controle para receber a
-     máscara. Sem `on` em nenhum, e sem `:hover`. */
-  .cartao.off .mascara .chip{border-color:var(--border-sutil);color:var(--linha);
-                             background:transparent;cursor:default}
-  .cartao.off .mascara .chip:hover{border-color:var(--border-sutil);color:var(--linha)}
+  /* ---- O LUGAR SEM APARELHO NÃO OFERECE GESTO — 07/09/2026 ----
+     A DECISÃO É DELA, 31/08/2026, e é a mesma que a S-04 da folha das dez abas
+     cumpre em `monta.py`: *um lugar sem aparelho não oferece gesto nenhum*. Um
+     chip clicável numa coluna sem controle ou não faz nada — e mente — ou faz
+     alguma coisa no controle errado, que é pior.
+
+     O QUE ESTAVA AQUI ERA MEIA CURA, e ela é de 30/08: tirava o `cursor` e o
+     `:hover` dos chips do lugar vazio e chamava isso de "não se clicam". TINTA,
+     e não ATO — o chip continuava com caixa, continuava recebendo o clique e
+     continuava com o endereço do gesto de máscara pendurado. É a mesma doença
+     que a `.btn.apagado` da folha declara em voz alta ("aqui a classe é só
+     tinta") e que ali é decisão; aqui era descuido.
+
+     E O ENDEREÇO NÃO SE ESCREVE NESTE COMENTÁRIO, e a razão é de hoje: a régua
+     que conta os doze chips lê o DOCUMENTO, e um comentário que cita o padrão
+     vira a primeira ocorrência dele. A contagem deu 13 na primeira volta desta
+     cura — a prosa entrou na conta. É a armadilha de 05/09, repetida aqui.
+
+     MEDIDO EM CHROME, na página PUBLICADA, em 07/09/2026 —
+     `elementFromPoint` no centro de cada `[data-gesto]` de cada
+     `[data-controle="pN"]`:
+
+         p1 (cheio)  3 gestos · 3 com caixa > 0 · 3 CLICÁVEIS
+         p2 (cheio)  3 gestos · 3 com caixa > 0 · 3 CLICÁVEIS
+         p3 (vazio)  3 gestos · 3 com caixa > 0 · 3 CLICÁVEIS  ← os três mentiam
+         p4 (vazio)  3 gestos · 3 com caixa > 0 · 3 CLICÁVEIS  ← idem
+
+     (cheio/vazio é o `data-conectado` do lugar. A palavra do atributo não se
+     escreve aqui: este comentário VIAJA PARA A PÁGINA dentro da folha de
+     estilo, e o valor sem acento precisaria de uma marca de isenção que
+     viajaria junto — marca de régua não é coisa que se publica.)
+
+     POR QUE A REDE DA CASA NÃO OS PEGA, e isto não é falha dela: a S-04 mira
+     `button, input, select, textarea, [contenteditable]` (`monta.py:1225`), e o
+     chip desta aba é um `<span>` — nenhum dos cinco. O comentário da S-04 diz
+     por que ela some com o WIDGET em vez de o apagar, e a razão vale letra por
+     letra para o chip: *"um botão cinza num lugar vazio ainda promete que ali
+     cabe uma escolha."* Esta regra é a MESMA rede, esticada até o elemento que
+     esta aba escolheu para o seletor por controle. Ela mora aqui, e não na
+     folha, porque o `<span class="chip">` clicável é invenção desta aba.
+
+     A MARCA É `data-conectado`, E NÃO A CLASSE `off`, e a escolha decide se a
+     cura vale AO VIVO: é o atributo que o piloto compara e vira nos passos `1b`
+     e `1c` (`hefesto_vivo.py:1235` e `:1260`), e é a mesma chave da S-04. Com
+     os quatro DualSense dela na mesa, o P3 chega, o passo `1c` escreve
+     `conectado="sim"`, e os três chips voltam a existir no mesmo tique — sem
+     recarregar a página, porque quem os escondia era o seletor e não um nó
+     removido. O piloto vira marca e escreve campo; ele NÃO materializa widget,
+     e é por isso que o chip tem de continuar no HTML.
+
+     `:not(.vazia)` VEM JUNTO pela mesma razão da S-04: a coluna que já NASCE
+     vazia traz o `<span class="nada">` por dentro, e a exclusão a protege. Esta
+     aba não tem nenhuma hoje — a regra é para a que vier.
+
+     `display:none` E NÃO `visibility:hidden`: o cartão é `flex` em coluna com
+     `gap:7px`, e um chip invisível guardaria o vão de 28px de uma escolha que
+     não existe. A ALTURA DA FILEIRA NÃO CAI: `.pecas` é grade e os quatro
+     cartões esticam para a linha, que continua medida pelos cheios. */
+  [data-controle][data-conectado="nao"]:not(.vazia) .mascara .chip{
+    display:none !important}
 
   /* O CABEÇALHO DAS DUAS COLUNAS TEM UMA ALTURA SÓ. O da esquerda ganhou o
      ícone de ajuda (17px) e o da direita é só texto (14,4px): sem isto a
@@ -839,41 +895,14 @@ CSS = """
      Medido: a barra vai de 853 para 940px e o botão de x=1271..1431 para
      x=1356..1516. */
   .faixa-final{border-top:1px solid var(--rot-linha);padding-top:6px;margin-top:8px}
-  /* A ATENÇÃO DESCEU — 30/08/2026, pedido dela: *"esse atenção desce"*.
-     Ela era a segunda coluna da `.dupla`, ao lado dos cartões, com a barra
-     vertical à esquerda. Media 129px de VAZIO — 70% da própria coluna —, porque  # (noqa-acento)  (`media` é o verbo medir)
-     a altura dela vinha do irmão (`align-self:stretch`) e o conteúdo era um
-     aviso de uma linha.
-
-     Deitada, ela é uma faixa de largura inteira entre os cartões e a faixa
-     final, e a divisória troca de eixo: a barra vertical vira linha horizontal,
-     que é a mesma gramática das outras nove abas.
-     O RESERVADO DO P8 continua existindo — ele agora é o espaço que a faixa
-     ganha ao receber o segundo aviso, e cresce para baixo em vez de ficar
-     esperando em branco. */
-  /* OS RESPIROS SÃO 8/6 E NÃO 12/10, e o motivo é o orçamento: com 12/10 o miolo
-     pedia 556 de 542 e nascia barra de rolagem por dentro. Aqui cada pixel é
-     disputado — ver o comentário do `--alt-janela` no `topo.html`. */
-  .col-atencao{border-top:1px solid var(--rot-linha);margin-top:8px;padding-top:6px;
-               display:flex;align-items:center;gap:12px;flex-wrap:wrap}
-  .col-atencao .cab-col{margin-bottom:0;flex:0 0 auto}
-  .col-atencao .aviso-item{flex:1;min-width:0}
-  .col-atencao .conta-avisos{margin-left:auto;flex:0 0 auto}
-  /* A COLUNA DE ZERO A N — 03/09/2026. A página publica
-     `pacotes.a01_jogar.AVISOS_VIVOS` linhas e o produto acende as que tiver; as
-     apagadas saem do fluxo com `display:none`, e por isso a cena de UM aviso
-     que ela aprovou fica idêntica. O `flex-wrap` acima e a regra do irmão
-     abaixo são o que faz a segunda linha CRESCER PARA BAIXO em vez de espremer
-     a primeira — é o que o comentário do P8 já prometia ("o espaço que a faixa
-     ganha ao receber o segundo aviso"), e o `display:flex` sozinho fazia o
-     contrário.
-     A CONTA DESCE PARA A ÚLTIMA LINHA, alinhada à direita — fotografado em
-     03/09/2026 com dois avisos na máquina dela. Ela é o último item do `flex`,
-     então a quebra a leva junto; o `margin-left:auto` continua encostando-a na
-     borda. Com UM aviso (a cena dela) nada quebra e a linha é a mesma de
-     sempre. */
-  .col-atencao .aviso-item:not(.mostra){display:none}
-  .col-atencao .aviso-item.mostra ~ .aviso-item.mostra{flex:1 1 100%}
+  /* A ATENÇÃO SAIU — 07/09/2026, ordem dela: *"em jogar remover essa seção do
+     atenção, nenhum aviso esse — deixar só o reconectar controles."*
+     Aqui moravam as seis regras da `.col-atencao`: a faixa deitada de 30/08
+     (*"esse atenção desce"*) e a coluna de zero a N de 03/09. As duas saíram
+     inteiras com o bloco, e o que ficou entre os cartões e o botão é UMA
+     divisória só — a da `.faixa-final` logo acima.
+     O RESERVADO DO P8 morreu junto: ele era o espaço que a faixa ganhava ao
+     receber o segundo aviso, e sem faixa não há espaço a reservar. */
   /* ---------- AS DUAS LINHAS POR CIMA DOS LUGARES — 04/09/2026 ----------
      A frase da mesa (D-07 dela: *"uma frase por cima dos lugares apagados"*) e
      a ressalva da máscara (a queixa 1 dela).
@@ -1110,8 +1139,20 @@ def _chips_de_mascara(escolhida):
     e as máscaras que existem, e tirar o endereço faria o clique sumir calado —
     o defeito que o cinza veio curar, repetido do outro lado.
     """
+    # A RAZÃO DEIXOU DE CONFESSAR — 07/09/2026, ordem dela sobre a tela inteira:
+    # *"o layout não informa os nossos defeitos."* O texto que estava aqui dizia
+    # que o Hefesto NÃO SABE montar a máscara — a ignorância do produto,
+    # declarada por ele mesmo, sobre uma capacidade que devemos. O que ficou diz
+    # o ESTADO PRESENTE (o que está disponível agora), que é o que ela permite.
+    #
+    # E ELA JÁ NÃO APARECIA, medido hoje: `mascaras_montaveis()` devolve as TRÊS
+    # (`DualSense`, `Nintendo Pro`, `Xbox 360`) desde que a Nintendo Pro foi
+    # construída, então nenhum dos três chips nasce inerte e este `title` não
+    # chega à página. **Ele fica assim mesmo**, e não sai: no dia em que um
+    # quarto chip entrar no desenho dela antes de o catálogo aprender a montá-lo,
+    # é este texto que aparece — e é aí que a ordem dela vale.
     montaveis = mascaras_montaveis()
-    razao = ("O Hefesto não sabe montar esta máscara. As que existem: "
+    razao = ("Esta máscara não está disponível. As que estão: "
              + ", ".join(sorted(montaveis)) + ".")
     fora = []
     for m in MASCARAS:
@@ -1397,41 +1438,20 @@ def _chip_do_modo(m):
 _MODOS = "\n".join(_chip_do_modo(m) for m in MODOS)
 
 
-def aviso(selo, texto, mostra=True):
-    """Uma linha da coluna Atenção.
-
-    Ela vira FUNÇÃO em 29/08/2026 porque a coluna viva monta de zero a N: no
-    mockup a cena tem um aviso, e na máquina dela o número muda a cada tique.
-    O piloto chama esta mesma função, e por isso não há um segundo HTML de
-    aviso escrito à mão em lugar nenhum.
-
-    O `mostra` É DE 03/09/2026, e resolve o "de zero a N" sem trocar bloco:
-    a página publica :data:`pacotes.a01_jogar.AVISOS_VIVOS` linhas e o produto
-    acende as que tiver. O piloto DISTRIBUI uma lista pelos elementos de mesmo
-    `data-campo`, na ordem (`hefesto_vivo.pintar`, o ramo `Array.isArray`) —
-    então três avisos escrevem nas três primeiras e as outras recebem vazio.
-    O `aviso-vivo` é o que apaga essas: alvo `classe` **sem**
-    `data-hef-quando` é booleano, e o travessão que o piloto escreve num valor
-    vazio conta como desligado.
-
-    NO DESENHO SÓ A PRIMEIRA NASCE ACESA, e por isso a cena continua a mesma
-    que ela aprovou: um aviso na coluna. As outras cinco são endereço, e
-    endereço não move pixel.
-    """
-    return f'''            <div class="aviso-item{" mostra" if mostra else ""}" data-aviso
-                 data-campo="aviso-vivo" data-hef-alvo="classe" data-hef-classe="mostra">
-              <span class="selo alerta" data-campo="aviso-selo">{selo}</span>
-              <span data-campo="aviso-texto">{texto}</span>
-            </div>'''
-
-
-#: AS LINHAS DA COLUNA. As da cena (`AVISOS`) nascem acesas; as que faltam para
-#: chegar a `AVISOS_VIVOS` nascem apagadas e existem só para o produto ter onde
-#: escrever quando a máquina dela tiver mais de um aviso.
-_AVISOS = "\n".join(
-    [aviso(selo, texto) for selo, texto in AVISOS]
-    + [aviso("", "", mostra=False) for _ in range(AVISOS_VIVOS - len(AVISOS))])
-_CONTA = f"{len(AVISOS)} aviso" + ("s" if len(AVISOS) != 1 else "")
+# A COLUNA ATENÇÃO SAIU DESTA PÁGINA — 07/09/2026, ordem dela: *"em jogar
+# remover essa seção do atenção, nenhum aviso esse — deixar só o reconectar
+# controles."*
+#
+# AQUI MORAVAM `aviso()`, `_AVISOS` e `_CONTA`: a função que montava uma linha
+# da coluna, as `AVISOS_VIVOS` linhas que a página publicava (uma acesa, as
+# outras endereço) e a conta ao lado. As três eram DESENHO, e desenho vai
+# embora com a seção.
+#
+# O QUE NÃO FOI EMBORA SÃO AS ONZE FONTES VIVAS. `pacotes/a01_jogar._avisos`
+# continua de pé, com as onze, e o docstring dele diz para onde elas vão. NÃO
+# APAGUE `_avisos` achando que é resto desta seção: apagá-lo fecha o único
+# caminho por que o serviço calado, o cadeado cego, a ponte com o jogo e a
+# divergência de máscara já souberam chegar a uma tela.
 
 
 MIOLO = f'''
@@ -1540,6 +1560,38 @@ MIOLO = f'''
                  data-campo="cadeado" data-hef-alvo="marcado">
           <span>{CADEADO_ROTULO}</span>
         </label>
+        <!-- ---------- O DETECTOR CEGO, EMBAIXO DO CADEADO — 07/09/2026 -------
+             ACHADO POR CONFERÊNCIA, e é o buraco que a saída da coluna Atenção
+             abriu. O comentário logo acima diz, com todas as letras, por que a
+             caixa voltou para esta aba em 04/09: *"Esta é a única posição em que
+             a frase que explica e o botão que resolve ficam na mesma tela."* A
+             coluna saiu em 07/09 por ordem dela, e levou a frase — o botão ficou
+             sozinho, e a justificativa dele foi embora junto.
+
+             O QUE SE PERDEU, medido: `home_actions.texto_do_cadeado_cego`,
+             *"O Hefesto não está conseguindo ver qual programa está na frente,
+             então o perfil não vai trocar sozinho de qualquer jeito — isto não
+             é escolha sua."* Ela estava VIVA na tela dela no instante da
+             medição, e era a única linha acesa da coluna.
+
+             POR QUE ISTO NÃO É DESFAZER A ORDEM DELA: ela mandou tirar a SEÇÃO
+             Atenção — uma faixa fixa, com título e contagem, embaixo dos cartões
+             (*"nenhum aviso esse"*). Isto aqui não é aquela faixa: é a
+             `monta.ressalva` da D-02 dela, *"linha fixa só quando HÁ ressalva"*,
+             que NASCE VAZIA e não ocupa um pixel enquanto o detector enxergar.
+             Ela só aparece na máquina em que o cadeado não tem sobre o que agir.
+
+             E É A MESMA GRAMÁTICA DO BOTÃO CINZA: a razão de um controle não
+             valer agora mora COLADA nele, e não numa lista longe. Sem ela a tela
+             oferece trancar uma troca automática que já está morta, sem uma
+             palavra dizendo isso — que é a tela prometendo um ato que não
+             acontece, o defeito que esta casa mais persegue.
+
+             AS OUTRAS DEZ FONTES DE `_avisos` CONTINUAM CALADAS, e isso segue
+             RELATADO no docstring de `pacotes/a01_jogar._avisos`: o destino
+             delas é a aba 09, que é de outra frente. O que esta linha devolve é
+             UMA — a que fala do botão que está logo acima dela. -->
+        {monta.ressalva(CADEADO_CEGO)}
 
       </div>
     </div>
@@ -1616,13 +1668,16 @@ MIOLO = f'''
             </div>
           </div>
 
-        <div class="col-atencao" data-lista="avisos">
-          <div class="linha-rot cab-col">
-            <b style="color:var(--orange)">Atenção</b>
-          </div>
-{_AVISOS}
-          <span class="conta-avisos" data-campo="atencao-conta">{_CONTA}</span>
-        </div>
+        <!-- A COLUNA ATENÇÃO SAIU DAQUI — 07/09/2026, ordem dela: *"em jogar
+             remover essa seção do atenção, nenhum aviso esse — deixar só o
+             reconectar controles."* Era a `.col-atencao`: o cabeçalho laranja,
+             as `AVISOS_VIVOS` linhas de `aviso-vivo`/`aviso-selo`/`aviso-texto`
+             e a conta `atencao-conta`.
+
+             OS QUATRO ENDEREÇOS SAÍRAM DO PACOTE JUNTO, e isso é obrigatório:
+             endereço emitido sem elemento onde pousar é órfão, e o
+             `casamento.py` o acusa — foi assim que o `recado` da aba 04 foi
+             pego em 02/09. Ver `pacotes/a01_jogar.DA_PAGINA`. -->
 
         <!-- O `pendente-ha` MORA AQUI, e não na `.pendente` — 03/09/2026. A
              caixa da pendência já tem `data-campo="pendente"` (a frase), e um
@@ -2041,7 +2096,11 @@ def _conferir(doc):
     #    A RÉGUA OLHA SÓ A FILEIRA DE CARTÕES, e não o `corpo`: a FITA também
     #    traz `--plastico`, e ela é do `monta.py` — das dez abas. Acusá-la aqui
     #    mandaria consertar o que esta aba não pode.
-    fileira = corpo.split('data-lista="cartoes"', 1)[-1].split('class="col-atencao"', 1)[0]
+    #    O CORTE DE BAIXO ERA `class="col-atencao"` ATÉ 07/09/2026, e mudou
+    #    para a `.faixa-final` porque a coluna Atenção saiu. Um delimitador que
+    #    some faz o `split` devolver o RESTO DA PÁGINA: a régua continuaria
+    #    verde, medindo cartão mais faixa mais legenda como se fosse a fileira.
+    fileira = corpo.split('data-lista="cartoes"', 1)[-1].split('class="faixa-final', 1)[0]
     exigir(len(fileira) > 2000, "a régua não achou a fileira de cartões")
     exigir("--plastico" not in fileira, "o cartão voltou a cravar a cor do plástico")
     #    ERA `len(monta.CONECTADOS)` ATÉ 07/09/2026, pelo mesmo motivo dos
@@ -2149,14 +2208,25 @@ def _conferir(doc):
     exigir(cliques == len(MASCARAS) * len(MESA),
            f"o clique da máscara não alcança os quatro lugares: esperava "
            f"{len(MASCARAS) * len(MESA)} `data-gesto=\"mascara\"`, achei {cliques}")
-    #    E A COLUNA ATENÇÃO PUBLICA AS SEIS LINHAS, com uma só acesa: a cena que
-    #    ela aprovou tem UM aviso, e as outras cinco são endereço para quando a
-    #    máquina dela tiver mais. Cobrar as duas coisas juntas é o que impede
-    #    tanto a coluna de encolher quanto o desenho de crescer sozinho.
-    exigir(corpo.count('class="aviso-item mostra"') == len(AVISOS),
-           f"a cena da coluna Atenção deixou de ter {len(AVISOS)} aviso aceso")
-    exigir(corpo.count('data-campo="aviso-vivo"') == AVISOS_VIVOS,
-           f"a coluna Atenção não publica as {AVISOS_VIVOS} linhas que o pacote promete")
+    #    E A COLUNA ATENÇÃO NÃO VOLTA — 07/09/2026, ordem dela: *"em jogar
+    #    remover essa seção do atenção, nenhum aviso esse — deixar só o
+    #    reconectar controles."* A régua trocou de sinal: até hoje ela cobrava
+    #    que a coluna publicasse as `AVISOS_VIVOS` linhas; agora ela cobra que
+    #    nenhuma delas exista.
+    #
+    #    OS QUATRO ENDEREÇOS, E NÃO SÓ A CLASSE: a `.col-atencao` é o CSS e some
+    #    com ele, mas um endereço que sobrasse num elemento qualquer faria o
+    #    piloto continuar pintando aviso numa tela que não tem coluna — e a
+    #    frase apareceria solta, sem o cabeçalho que a explicava.
+    for morto in ("col-atencao", 'data-campo="aviso-vivo"',
+                  'data-campo="aviso-selo"', 'data-campo="aviso-texto"',
+                  'data-campo="atencao-conta"', 'data-lista="avisos"'):
+        exigir(morto not in corpo, f"a coluna Atenção voltou à Jogar: {morto!r}")
+    #    E O QUE ELA MANDOU FICAR, FICA. Uma régua que só proíbe passa com a
+    #    seção inteira apagada — inclusive o botão que era a razão do pedido.
+    exigir(corpo.count('data-gesto="reconectar"') == 1,
+           "o botão Reconectar Controles sumiu junto com a coluna Atenção — ele "
+           "é justamente o que ela mandou deixar")
     #    E A FAIXA LARANJA TEM O INTERRUPTOR DE EXISTÊNCIA. Sem ele, a caixa
     #    tracejada fica com um travessão solto quando não há pendência.
     exigir(corpo.count('data-campo="pendente-ha" data-hef-alvo="classe"') == 1,

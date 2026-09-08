@@ -80,12 +80,6 @@ from hefesto_dualsense4unix.app.actions.home_actions import (
     mascara_viva,
     palavra_do_transporte,
 )
-from hefesto_dualsense4unix.app.fala_do_mapa import (
-    AFIRMA_NADA,
-    Fala,
-    frase_de_exibicao,
-)
-from hefesto_dualsense4unix.app.fatos_do_mapa import FATOS
 from hefesto_dualsense4unix.app.ipc_bridge import (
     alvo_honrado,
     frase_do_ato_do_microfone,
@@ -1667,15 +1661,18 @@ def porques_do_som(entry: Any) -> dict[str, str]:
 
 
 # ---------------------------------------------------------------------------
-# OS TRÊS SELOS DO SOM — linhas 57, 89 e 90 da paridade, e o QUARTO
+# OS TRÊS SELOS DO SOM — linhas 57, 89 e 90 da paridade
 # ---------------------------------------------------------------------------
 # Todos LIDOS de estado que já existe, e nenhum reescreve a regra do dono:
 #
 #   `selo_do_som`         a prioridade de `_aplicar_selo_do_som` na GTK
 #   `sufixo_do_canal`     o sufixo de `_titulo_do_speaker`
 #   `dica_do_canal`       as frases de `_frases_do_canal`
-#   `ressalva_do_transporte`  o QUARTO, e ele lê o MAPA, não a cabeça de quem
-#                             escreve (a T6 da STATUS-DIZ-O-QUE-VE-01)
+#
+# HOUVE UM QUARTO, e ele saiu da tela em 07/09/2026 — ver o bloco "O QUARTO
+# SELO SAIU DA TELA", algumas telas abaixo. Os três que ficam falam de ESTADO
+# (a saída muda, o canal dormindo, a rota em desacordo); o que saiu falava de
+# uma capacidade que ainda devemos, e é a linha que ela traçou.
 
 
 def selo_do_som(saida_muda: bool | None, sono: str) -> str:
@@ -1737,103 +1734,40 @@ def dica_do_canal(sono: str, regra: bool | None) -> str:
 
 
 # ---------------------------------------------------------------------------
-# O QUARTO SELO — a SEGUNDA pergunta da guarda do som: o TRANSPORTE
+# O QUARTO SELO SAIU DA TELA — 07/09/2026, e a dívida FICOU no mapa
 # ---------------------------------------------------------------------------
-# É a T6 da STATUS-DIZ-O-QUE-VE-01, viva desde 25/08 e nunca executada. A guarda
-# do bloco de som perguntava UMA coisa (há endereço?) e o bloco tem DUAS: o
-# alto-falante deste controle **sai por este transporte**?
+# ORDEM DELA, e ela vale para a tela inteira, não só para este selo:
 #
-# A RESPOSTA VEM DO MAPA, NUNCA DA CABEÇA DE QUEM ESCREVE. A célula
-# `audio.alto_falante@dualsense` diz, no lado do rádio, `aciona=não` com causa
-# `divida` — e `divida` é NOSSA. Com ela, a única `Fala` legal é `AFIRMA_NADA`
-# com `porque=` (`app/fala_do_mapa.CAUSA_DE_FORA` admite só `nada-a-acionar` e
-# `o-aparelho-recusa`), e a frase honesta é **"o Hefesto ainda não faz"**, nunca
-# "o controle não faz". O portão `validar-fala-de-tela.py` recusa a segunda.
+#     *"O app tem que funcionar e não mostrar na tela que o app não presta. Se
+#      não tem como, ok. Testamos e criamos o canal. até lá tudo bem, o layout
+#      não informa os nossos defeitos."*
 #
-# E OS GESTOS NÃO APAGAM. `audio.alto_falante.rota@dualsense` é `aciona=sim` nos
-# dois lados, e o mudo do microfone é `parcial` — apagar quatro gestos por uma
-# dívida NOSSA é empurrá-la para a mão dela. O que a tela faz é DIZER.
+# O QUE MORAVA AQUI: uma `Fala` declarada sobre a célula do alto-falante do
+# DualSense, lado do rádio, e a função que a lia do mapa e a devolvia ao campo
+# `alto-ressalva` do cartão. A frase dizia, na tela dela, que pelo rádio o
+# Hefesto ainda não faz o som sair naquele alto-falante — uma CAPACIDADE que
+# devemos, confessada no cartão de um controle que funciona.
 #
-# QUANDO A CÉLULA VIRAR, O SELO MUDA SOZINHO: `ressalva_do_transporte` LÊ
-# `FATOS`, e a régua desta sprint troca a célula num dublê e vê a frase sumir.
-# É o fluxo inteiro da PAREAMENTO-01 — a medição nova chega sozinha na tela.
-
-#: O `id` do mapa de que este selo fala. `chave@controle`, nunca a chave só.
-CHAVE_DO_ALTO_FALANTE = "audio.alto_falante@dualsense"
-
-#: A frase, e ela é uma `Fala`: declara de que célula fala, de que lado, e o que
-#: afirma. `AFIRMA_NADA` porque a causa é nossa; o `porque=` é o que impede a
-#: tela de ficar muda sem dizer de quem é a dívida.
-RESSALVA_DO_ALTO_NO_RADIO = Fala(
-    # O `id` VAI LITERAL, e não pela constante logo acima: o portão
-    # `validar-fala-de-tela.py` lê esta declaração por AST, sem importar o
-    # módulo, e um NOME em vez de um literal ele recusa — com razão, porque
-    # aí a chave passaria a depender de código que ele não executa.
-    chave="audio.alto_falante@dualsense",
-    lado="radio",
-    aba="Controles",
-    texto="Pelo rádio o Hefesto ainda não faz o som sair neste alto-falante.",
-    afirma=AFIRMA_NADA,
-    porque=(
-        "a célula do mapa diz `radio_aciona=não` com causa `divida` — a dívida é "
-        "NOSSA, não do aparelho: o alto-falante existe e ela já o ouviu (rota 3 "
-        "medida com a orelha dela em 02/08/2026). O que falta é o Hefesto montar "
-        "o caminho por rádio, e é a SOM-QUE-SAI-01 que o fecha"
-    ),
-)
-
-
-def lado_do_mapa(transporte: object) -> str:
-    """`"cabo"`, `"radio"` ou `""` — o lado do MAPA para este transporte.
-
-    QUEM CLASSIFICA É O DONO (`home_actions.palavra_do_transporte`), e o que se
-    faz aqui é só tirar o acento: a tela diz **rádio** e a coluna do mapa se
-    chama `radio`. Um segundo dicionário `{"bt": "radio", "usb": "cabo"}` aqui
-    seria a sétima gramática da mesma janela — e divergiria no dia em que o
-    daemon publicasse um transporte novo.
-
-    `""` é "não sei por onde", e com ele não se afirma nada sobre transporte.
-    """
-    palavra = palavra_do_transporte(transporte)
-    if palavra == "cabo":
-        return "cabo"
-    if palavra == "rádio":
-        return "radio"
-    return ""
-
-
-def ressalva_do_transporte(transporte: object,
-                           fatos: dict[str, Any] | None = None) -> str:
-    """A ressalva do bloco do alto-falante, LIDA da célula do mapa.
-
-    `fatos` existe para a régua trocar a célula e ver a frase trocar — é o ponto
-    de injeção, e sem ele este selo seria uma frase digitada com cara de leitura.
-
-    TRÊS CAMINHOS PARA O SILÊNCIO, e os três são o certo:
-
-    * o transporte não se sabe (`""`) — não há lado a consultar;
-    * a célula daquele lado diz `aciona=sim` — a dívida fechou, e a frase some
-      **sem ninguém tocar em código**;
-    * o `id` sumiu do mapa — a tela cala em vez de afirmar sobre uma célula que
-      não existe mais.
-    """
-    lado = lado_do_mapa(transporte)
-    if not lado:
-        return ""
-    tabela = FATOS if fatos is None else fatos
-    entrada = tabela.get(CHAVE_DO_ALTO_FALANTE)
-    if not isinstance(entrada, dict):
-        return ""
-    celula = entrada.get(lado)
-    if not isinstance(celula, dict) or celula.get("aciona") == "sim":
-        return ""
-    # SÓ O LADO DO RÁDIO TEM FRASE HOJE, e a assimetria é a do mapa: no cabo a
-    # célula diz `parcial` e o som SAI — a `A-CONFISSAO-NO-BOTAO-01` mediu o
-    # sink e o `paplay` ali. Declarar uma segunda `Fala` para o cabo seria a
-    # tela ressalvando o que ela mesma acabou de provar que funciona.
-    if lado != RESSALVA_DO_ALTO_NO_RADIO.lado:
-        return ""
-    return frase_de_exibicao(RESSALVA_DO_ALTO_NO_RADIO)
+# **A CÉLULA NÃO FOI VIRADA, e virá-la seria mentir ao contrário.** O canal
+# continua fechado: `audio.alto_falante@dualsense` segue com `radio_aciona=não`
+# e causa `divida`, e é ali que a dívida mora — no mapa, que é de quem
+# desenvolve, e não na tela, que é de quem joga. Quem fechar a
+# `SOM-QUE-SAI-01` vira a célula; nada aqui precisa mudar junto, porque não há
+# mais nada aqui.
+#
+# O QUE SE PERDE, dito por inteiro: o selo era o exemplo vivo de *"quando a
+# célula virar, a tela muda sozinha"* — a leitura do mapa chegando à tela sem
+# ninguém tocar em código. O mecanismo continua de pé nos outros três selos
+# deste arquivo; o que saiu foi o único que apontava para uma dívida NOSSA, e
+# é exatamente essa a linha que ela traçou.
+#
+# E O QUE FICA NO CAMPO: `recado_da_rota`, que fala do DESACORDO das duas
+# camadas de som — um fato de AGORA, que ela desfaz trocando a saída do
+# sistema. Estado presente é o que a tela pode dizer; capacidade por entregar,
+# não.
+#
+# O portão que guarda os dois casos é `scripts/check_a_tela_nao_confessa.py`.
+# ---------------------------------------------------------------------------
 
 
 #: A DECLARAÇÃO DELA, do `maquina.json`, lida UMA VEZ e renovada pelo gesto que
@@ -2573,9 +2507,11 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
                 # nenhum clique dela resolve. Dizer as duas na mesma linha
                 # trocaria o alarme por dois avisos — a mesma regra do
                 # `selo_do_som`.
-                "alto-ressalva": (recado_da_rota(uniq)
-                                  or ressalva_do_transporte(c.get("transport"))
-                                  or NADA_A_DIZER),
+                # UM INFORMANTE SÓ, DESDE 07/09/2026 — ver o bloco "O QUARTO
+                # SELO SAIU DA TELA". Eram dois: o desacordo das camadas de som
+                # (que fica, porque é um fato de AGORA que ela desfaz) e a
+                # ressalva do transporte (que saiu, porque era dívida NOSSA).
+                "alto-ressalva": recado_da_rota(uniq) or NADA_A_DIZER,
                 "mic-modo-aceso": modo_do_mic(norm_mac(uniq) or ""),
                 # A DEGRADAÇÃO DA MÁSCARA — decisão [07], 04/09/2026: *"uma
                 # marca na palavra e o motivo no hover"*.
@@ -3413,7 +3349,7 @@ def mudo(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
         #
         # O QUE O DAEMON DESTA ÁRVORE RESPONDE, medido em 06/09/2026: o corpo
         # de `mic.canal.set` NÃO traz `por_uniq` — quem o traz é o
-        # `mic.volume.set` (`daemon/ipc_handlers.py:6117`). O ato do microfone
+        # `mic.volume.set` (`daemon/ipc_handlers.py:6164`). O ato do microfone
         # monta a resposta em `AtoDoMicrofone.como_corpo`
         # (`daemon/subsystems/hotkey.py:1385`), e lá o campo não existe. Então
         # `alvo_honrado` devolve `None` aqui, esta linha fica CALADA contra o

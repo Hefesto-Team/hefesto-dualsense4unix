@@ -172,6 +172,33 @@ rapido|desenho-aprovado|py|scripts/check_o_desenho_aprovado.py
 # é por isso que a régua é UMA e atravessa as dez: cada `abaNN.py` ganhou a
 # sua, mas nenhuma delas vê uma aba NOVA nascendo com o ramo separado.
 rapido|os-quatro-lugares|py|scripts/check_os_quatro_lugares.py
+# 07/09/2026 — O IRMÃO DO DE CIMA, PELO OUTRO LADO. Aquele cobra que os quatro
+# lugares tenham os mesmos ENDEREÇOS; este cobra que o lugar sem aparelho não
+# OFEREÇA gesto nenhum, que é a decisão dela de 31/08/2026. Os dois são
+# necessários e nenhum vê o buraco do outro: a 01-jogar tinha os doze endereços
+# certos E três chips clicáveis em cada uma das duas colunas sem controle.
+# POR QUE A REDE DA CASA NÃO BASTAVA: a S-04 da folha (`monta.py:1225`) mira
+# `button, input, select, textarea, [contenteditable]`, e o chip de máscara da
+# 01 é um `<span>` — nenhum dos cinco.
+# ELE É `pytest` E NÃO UM SCRIPT DE `scripts/`, e a razão é o motor: a régua
+# abre a página no Chrome headless e pergunta ao MOTOR quem recebe o clique
+# (`elementFromPoint`). Custa 1,8 s, e por isso fica na camada rápida.
+# A auto-checagem da própria `aba01.py` NÃO substitui esta: ela só roda com
+# `python aba01.py`, e uma régua que espera alguém a chamar não protege
+# ninguém — foi o que a conferência de 07/09 derrubou na aba 04.
+rapido|gesto-em-lugar-vazio|pytest|tests/unit/test_a_01_jogar_nao_oferece_gesto_em_lugar_vazio.py
+# O IRMÃO DA 04, e ele nasceu do MESMO conferente, no mesmo dia — 07/09/2026.
+# Se o de cima pegou o gesto que SOBRAVA num lugar vazio, este pega o que
+# FALTA num lugar cheio: a conferência escondeu `Automático` e `Desligar` das
+# duas colunas CONECTADAS com uma linha de CSS e a suíte inteira não mudou —
+# 13 falhas antes, 13 depois, lista idêntica. A cobertura desta aba só existia
+# na direção "escondido no vazio", e esconder DEMAIS satisfaz essa metade.
+# ELE MEDE OS DOIS SENTIDOS, no Chrome, com `elementFromPoint`: nada oferecido
+# no vazio, TUDO oferecido no cheio, e os dois passos do piloto (`1b`/`1c`) que
+# viram a marca sem recarregar. Custa 2,1 s.
+# A §4 DA `aba04._conferir` NÃO SUBSTITUI ESTE: ela só roda com
+# `python aba04.py`, e foi exatamente essa a folga que a conferência mostrou.
+rapido|gesto-onde-deve-04|pytest|tests/unit/test_a_04_iluminacao_o_gesto_esta_onde_deve.py
 rapido|identidade-de-cima|py|scripts/check_identidade_vem_de_cima.py
 # 03/09/2026, a lei dela: *"cada pessoa tem um dualsense diferente (…) nada
 # hardcoded, trazer tudo que eu já mapeei"*. O irmão acima acha cor congelada
@@ -204,6 +231,13 @@ rapido|pecas-do-dualsense|py|scripts/check_pecas_do_dualsense.py
 # Cosmic Red era #b11f54 e a amostragem devolveu #A51C48. 3,5 s.
 rapido|cores-do-dualsense|py|scripts/check_cores_do_dualsense.py
 rapido|regua-de-tela|py|scripts/check_regua_de_tela.py
+# A ORDEM DELA, 07/09/2026: *"o layout não informa os nossos defeitos."* Este
+# portão lê as dez páginas dos DOIS lados (bancada e publicado) e todo `Fala`
+# de `src/`, e obriga a DECLARAR toda frase com forma de confissão: de quem é o
+# sujeito, e desde quando. Ele não decide sozinho de propósito — nenhuma
+# expressão regular separa *"o jogo ainda não recebeu"* de *"o Hefesto ainda não
+# faz"*, e as duas estavam na tela no dia em que ele nasceu.
+rapido|tela-nao-confessa|py|scripts/check_a_tela_nao_confessa.py
 rapido|ruff|bin|ruff check src/ tests/
 completo|shellcheck|bin|shellcheck -S error scripts/*.sh scripts/ci/*.sh install.sh uninstall.sh
 completo|referencias-docs|py|scripts/validar-referencias-docs.py --all

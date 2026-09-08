@@ -41,7 +41,7 @@ from hefesto_dualsense4unix.integrations.uinput_mouse import (  # noqa: E402
 )
 from monta import (monta, svg, glifo, CSS_GLIFO, CSS_POPUP, DADOS_DO_REPO, MESA, CONECTADOS,
                    cor_da_zona, player_slot_color, DS)
-from monta import ressalva as _ressalva  # noqa: E402
+from monta import NADA_A_DIZER  # noqa: E402
 from monta import TITULOS_DA_FITA  # noqa: E402
 
 # O DESENHO E O PRODUTO ESCREVEM A IDENTIDADE PELA MESMA FUNÇÃO — 03/09/2026,
@@ -150,7 +150,7 @@ TOUCH_REGIOES = [f"clique {x.strip()}" for x in
 # é esse estado, e só ele, que vai para o mouse (`_dispatch_mouse_emulation`,
 # :4744), para o teclado (:4754) e para o `hotkey_manager.observe` (:4757). Os
 # secundários do co-op têm UM caminho só, o do gamepad virtual
-# (`daemon/subsystems/coop.py:1871` — `forward_analog`/`forward_buttons`).
+# (`daemon/subsystems/coop.py:2057` — `forward_analog`/`forward_buttons`).
 # Logo: com quatro na mesa, mouse, teclado e os cinco gestos saem de um
 # controle só, o do jogador 1. A aba diz isso na cara em vez de esconder.
 # QUEM NAVEGA SAI DOS CONECTADOS, não da MESA — 31/08/2026, quando a mesa passou
@@ -392,7 +392,39 @@ CSS = CSS_GLIFO + """
      as duas pontas do corpo dele. Nenhuma linha de escolha encolhe — elas
      continuam nos 36px de `--h-escolha`, que é o alvo de clique. */
   .miolo > .quadro + .quadro > .quadro-topo{padding:6px 14px 0}
-  .miolo > .quadro + .quadro > .quadro-corpo{padding:4px 14px 6px}
+  /* O PÉ DO SEGUNDO QUADRO FOI DE 6px A 2px EM 07/09/2026, e os 4px pagam a
+     TIRA DE ESTADOS — a que ficou, não a que saiu.
+
+     O QUE A CONFERÊNCIA MEDIU, e derruba a premissa da cura de hoje: a queixa
+     dela (*"essas 3 frases aqui na parte de baixo que quebram o layout"*) foi
+     lida como sendo das TRÊS frases, e não era. A tira nunca coube — **UMA
+     linha sozinha já transbordava**, e a linha que sobra é a mais comum da
+     máquina dela. Medido em Chrome (1200x777), na página publicada e no `HEAD`,
+     `scrollHeight - clientHeight` do `.miolo`:
+
+         tira vazia .............. 0px    0px  (HEAD)
+         só `rato-estado` ........ 4px    4px  (HEAD)   ← e ninguém a tirou
+         + `modo-portao` ........ 44px   44px  (HEAD)
+
+     Os números do `HEAD` são a prova de que isto é HERDADO e não desta leva: o
+     transbordo é o MESMO com as cinco linhas de ontem e com as três de hoje.
+     Tirar três frases reduziu a chance de acontecer e não curou o defeito —
+     `rato-estado` (*"Pronto para usar como mouse"*) acende sozinha e a barra de
+     rolagem nascia por dentro do miolo do mesmo jeito.
+
+     4px É O NÚMERO EXATO, e não uma folga escolhida a esmo: é o que falta para
+     a tira de UMA linha caber (25px de tira contra 21px de sobra). Medido
+     depois: 0px de transbordo com a tira em uma linha, nas duas árvores.
+
+     O QUE ELE NÃO COMPRA, e fica dito: com DUAS linhas o miolo volta a
+     transbordar 40px, porque `modo-portao` sozinha ocupa duas. Ela é uma das
+     que SAÍRAM do pé por ordem dela — e esta medida é a segunda razão, medida,
+     para que continue fora: aquele pé não cabe a frase, com trim nenhum.
+
+     O RESPIRO SAI DE ONDE É FOLGA E NÃO LEITURA, que é a mesma regra da linha
+     de cima: o pé do corpo, e não a altura das linhas de escolha, que continuam
+     nos 36px de `--h-escolha` porque são o alvo de clique. */
+  .miolo > .quadro + .quadro > .quadro-corpo{padding:4px 14px 2px}
   .miolo > .quadro:first-child > .quadro-corpo{padding-bottom:6px}
 
   /* A LINHA HORIZONTAL QUE SEPARA UM CAMPO DO OUTRO — pedido dela, 30/08:
@@ -461,6 +493,26 @@ CSS = CSS_GLIFO + """
   /* na coluna da direita a dica abre para a esquerda: 22px + 330px de largura
      a partir de x=1154 passava da borda da janela de 1180px */
   .at-col:last-child .dica{left:auto;right:22px}
+  /* E AS DICAS DAS OPÇÕES DE ATIVAÇÃO ABREM PARA CIMA — 07/09/2026, e é a
+     mesma medida daquela linha acima, no outro eixo.
+
+     O painel é o ÚLTIMO quadro da aba: o `?` da "Função do teclado" fica a
+     541,5px do topo da janela de 777px, e a `.dica` do desenho abre para BAIXO
+     (`top:-4px`). Sobravam 235px. Com as frases do produto dentro — que é o que
+     as três que ela mandou tirar do pé passaram a fazer — aquela dica vai a
+     267px com o teclado na tela instalado e a **319px sem** (a frase longa é a
+     que manda instalar `wvkbd-mobintl` ou `onboard` pelo nome), e o
+     `overflow-y` do `.miolo` cortava o último parágrafo. A frase que mudou de
+     lugar para não sumir sumia de novo, por outro caminho.
+
+     ANCORADA EMBAIXO ela cresce para onde há espaço: são 545px do `?` até o
+     topo do miolo, contra 235 para baixo. Nenhuma outra dica desta aba muda —
+     a regra é do painel, e as duas velocidades da pop-up "Estilo
+     Point-and-click" moram fora dele.
+
+     A RÉGUA É `test_a_06_as_tres_frases_do_pe_couberam_no_ponto_de_interrogacao`,
+     e ela mede as duas frases do teclado na tela, não só a curta. */
+  .ativacao .dica{top:auto;bottom:-4px}
   .escolha-at{width:100%;height:var(--h-escolha);border-radius:7px;font-size:12px;
     font-family:inherit;padding:0 10px;border:1px solid var(--border-forte);
     background:var(--app-bg);color:var(--fg);cursor:pointer}
@@ -695,6 +747,80 @@ CSS = CSS_GLIFO + """
      página usa para código — não uma segunda escolha inventada aqui. */
   .estado tt{font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11px}
 
+  /* ---------- A FRASE DO PRODUTO DENTRO DO `?` ----------
+     07/09/2026, ordem dela: *"navegacao tem essas 3 frases aqui na parte de
+     baixo que quebram o layout"*. As três desceram para o `?` do campo de que
+     falam (`ajuda(..., vivas=…)`), e continuam sendo escritas pelo pacote a
+     cada tique — o que muda é o LUGAR, nunca o dono.
+
+     OS DOIS MARCADORES DE APAGAR SÃO OS MESMOS da tira, e pela mesma razão: o
+     `:empty` cobre o bloco que nasce vazio e nunca é pintado, e o `.nada` cobre
+     o que o piloto pinta a cada tique com "não há o que dizer" — sem ele o
+     `escrever()` troca vazio por `—` e a dica ganha um travessão solto, com o
+     traço de cima em volta de nada. Faltando um dos dois, o traço volta por um
+     dos dois caminhos, calado.
+
+     O TRAÇO SEPARA DUAS VOZES, e é por isso que ele existe: o que está acima é
+     o texto FIXO do desenho, o que está abaixo é o que a máquina dela diz
+     AGORA. Sem a separação, uma frase que muda com o estado se lê como parte da
+     explicação que nunca muda. */
+  .dica .viva{display:block;margin-top:10px;padding-top:9px;
+       border-top:1px solid var(--border-sutil)}
+  .dica .viva:empty{display:none}
+  .dica .viva:has(.nada){display:none}
+
+  /* ---------- O `?` QUE TEM ALGO A DIZER SE ACENDE — 07/09/2026 ----------
+     A razão inteira está no comentário de `ajuda()`, e a curta é a palavra dela
+     de 05/09: *"ninguém passa o rato onde não sabe que há algo"*.
+
+     O SELETOR LÊ O CONTEÚDO VIVO, e é isso que o impede de mentir. Ele não
+     acende porque o `?` foi MARCADO no desenho — acende porque existe, ali
+     dentro, uma `.viva` que não está vazia e não traz o `<i class="nada">` com
+     que o pacote diz *não há o que dizer*. São os MESMOS dois marcadores de
+     apagar da regra logo acima, e de propósito: se um dia um terceiro jeito de
+     "nada a dizer" aparecer, ele apaga a frase e apaga o ponto no mesmo tique,
+     em vez de deixar um ponto aceso sobre um travessão.
+
+     A MORDIDA: apague o `:has()` e o ponto acende em todo `?` marcado, com a
+     máquina em silêncio — que é a promessa falsa que esta casa persegue. A
+     régua está em `_conferir` (a 6c) e no
+     `test_a_06_as_tres_frases_do_pe_couberam_no_ponto_de_interrogacao`.
+
+     É UM PONTO, E NÃO UMA COR NOVA: o `--cyan` já é a cor com que o próprio `?`
+     responde ao ponteiro nesta casa (`topo.html`), então o aceso e o hover
+     falam a mesma língua. O ponto fica FORA do círculo, no canto de cima, para
+     não disputar os 17px com o "?" desenhado dentro dele.
+
+     ---- POR QUE `> :not(.nada)` E NÃO `:not(:has(.nada))` ----
+
+     A PRIMEIRA VOLTA DESTA REGRA ESTAVA MORTA, e passou verde. Ela era
+     `:has(.viva:not(:empty):not(:has(.nada)))` — um `:has()` DENTRO de um
+     `:has()`, que a especificação proíbe. O navegador não avisa: descarta a
+     regra inteira, calado. Medido com `el.matches()` em Chrome:
+
+         .ajuda.tem-viva:has(.viva:not(:empty):not(:has(.nada)))  → SyntaxError
+         .ajuda.tem-viva:has(.viva > :not(.nada))                 → funciona
+
+     E A RÉGUA QUE EU TINHA ESCRITO PARA ELA DAVA VERDE, porque procurava o
+     texto do seletor no documento — e o texto estava lá. *A régua respondia
+     sobre o próprio texto do código, não sobre o produto*, que é a assinatura
+     das seis de 05/09. Quem revelou foi ABRIR e olhar a cor.
+
+     O QUE O SELETOR VÁLIDO EXIGE, e está declarado porque é um contrato: a
+     frase viva tem de trazer ao menos UM elemento. As três trazem —
+     `_a_razao_do_portao` embrulha em `<span class="laranja">`, e as outras duas
+     começam em `<b>` (`frase_do_teclado_na_tela`, `RESSALVA_DOS_GLOBAIS`). Uma
+     frase pelada acenderia a dica e não acenderia o ponto. Isso NÃO fica ao
+     acaso: a régua 6d do `_conferir` chama as três funções e reprova a que
+     voltar sem marcação. */
+  .ajuda.tem-viva:has(.viva > :not(.nada)){
+       border-color:var(--cyan);color:var(--cyan)}
+  .ajuda.tem-viva:has(.viva > :not(.nada))::after{
+       content:"";position:absolute;top:-2px;right:-2px;width:6px;height:6px;
+       border-radius:50%;background:var(--cyan)}
+  .dica .viva .verde{color:var(--green)} .dica .viva .laranja{color:var(--orange)}
+  .dica .viva tt{font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11px}
+
   /* ---- O STATUS DO MODO (27/08, ela: "Status do Modo: ao clicar no botão
           Ligado. Ao clicar nele de novo desligado.") — o dono do que os dois
           botões suspensos faziam embaixo.
@@ -728,9 +854,15 @@ CSS = CSS_GLIFO + """
      tela aceitava o clique e recusava depois, e ela gastava o clique para
      descobrir.
 
-     UM CAMPO SÓ, E NENHUM SEGUNDO ENDEREÇO: a razão é escrita numa linha só
-     (`data-campo="modo-portao"`, na tira de estados), e o cinza do interruptor
-     SAI DELA por `:has()`. Com dois campos seria possível pintar um interruptor
+     A TIRA DE ESTADOS SAIU DAQUI EM 07/09/2026, e a metade que ela pedia
+     ficou: a frase *"escreve ao lado, na tira de estados"* caducou por ordem
+     dela (*"essas 3 frases … quebram o layout"*) — a razão foi para o `?` do
+     "Status do Modo", que é a linha deste interruptor. O *"apaga o
+     interruptor"* continua letra por letra, e é o que estas três regras fazem.
+
+     UM CAMPO SÓ, E NENHUM SEGUNDO ENDEREÇO: a razão é escrita num endereço só
+     (`data-campo="modo-portao"`), e o cinza do interruptor SAI DELE por
+     `:has()`. Com dois campos seria possível pintar um interruptor
      apagado sem razão, ou uma razão sem interruptor apagado — que é exatamente
      o que a peça `monta.botao_cinza` evita do outro lado, e pela mesma regra.
      Aqui não dá para usar aquela peça: ela emite um `.btn`, e o "Status do
@@ -779,12 +911,25 @@ CSS = CSS_GLIFO + """
      dentro de um `<span class="laranja">`, como as outras linhas de estado
      fazem, e manda `<i class="nada"></i>` quando não há bloqueio — que é o
      mesmo marcador que apaga a linha. Sem bloqueio não há `.laranja` naquela
-     linha, e o interruptor fica como sempre foi. ---------- */
-  .quadro-corpo:has(.estado.portao .laranja) .at-linha:has(.tog[data-gesto="modo"]){
-       cursor:not-allowed}
-  .quadro-corpo:has(.estado.portao .laranja) .tog[data-gesto="modo"]{
+     linha, e o interruptor fica como sempre foi.
+
+     A REGRA PARTE DO ENDEREÇO, E NÃO MAIS DA CLASSE — 07/09/2026. Ela dizia
+     `.quadro-corpo:has(.estado.portao .laranja)`, e as duas classes só existiam
+     porque a razão morava na tira de `.estados`. A frase desceu para o `?` do
+     "Status do Modo" por ordem dela (*"essas 3 frases … quebram o layout"*), e
+     uma regra ancorada em `.estado.portao` teria parado de apagar o interruptor
+     **em silêncio**: a razão continuaria chegando, o interruptor voltaria a
+     parecer clicável, e nada reprovaria. O `data-campo` é o que não muda de
+     lugar — é o endereço pelo qual o pacote escreve.
+
+     ISTO É O CINZA, E ELE FICA NA TELA SEM HOVER NENHUM. O que foi para o `?`
+     é a RAZÃO, em palavras; o sinal de *não dá para mexer* continua sendo o
+     próprio interruptor apagado, como a 06-Q1 pediu. ---------- */
+  .quadro-corpo:has([data-campo="modo-portao"] .laranja)
+       .at-linha:has(.tog[data-gesto="modo"]){cursor:not-allowed}
+  .quadro-corpo:has([data-campo="modo-portao"] .laranja) .tog[data-gesto="modo"]{
        border-color:var(--border-sutil);color:var(--texto-mudo);pointer-events:none}
-  .quadro-corpo:has(.estado.portao .laranja) .tog[data-gesto="modo"]:hover{
+  .quadro-corpo:has([data-campo="modo-portao"] .laranja) .tog[data-gesto="modo"]:hover{
        border-color:var(--border-sutil)}
 
   /* ---------- A TIRA DE AVISO SOB A TABELA DE BOTÕES ----------
@@ -1100,9 +1245,75 @@ def trilho(valor, minimo, maximo, gesto, campo, titulo):
             f'<span class="num" data-campo="{campo}">{valor}</span></div>')
 
 
-def ajuda(txt, largura=""):
+#: O `?` PASSA A CARREGAR FRASE VIVA — 07/09/2026, ordem dela olhando a aba com
+#: os quatro controles na mesa:
+#:
+#:     *"navegacao tem essas 3 frases aqui na parte de baixo que quebram o
+#:     layout"*
+#:
+#: Eram três, e as três estavam MEDIDAS: com elas pintadas, o quadro "As opções
+#: de ativação" ia de 215px a 300,25px e o miolo passava 66px da janela — a
+#: fileira dos quatro botões terminava 41,25px ABAIXO do fim, fora da tela.
+#:
+#: NADA SE PERDEU, e é o ponto: cada frase foi para o `?` do CAMPO de que ela
+#: fala, que é a regra desta casa desde 30/08 (Vibração e Iluminação) — *"o
+#: parágrafo que nomeia um campo vai para o `?` daquele campo"*.
+#:
+#: E ELAS CONTINUAM VIVAS. `vivas` não é texto: é uma lista de ENDEREÇOS, e cada
+#: um vira um `<span>` vazio com `data-hef-alvo="html"` dentro da `.dica`. Quem
+#: escreve continua sendo o pacote, a cada tique, pelas mesmas funções — copiar
+#: a frase para dentro do desenho a congelaria, que é o defeito que
+#: `monta.ressalva` existe para impedir (*"ressalva congelada é a que já mentiu
+#: na aba 08"*).
+#:
+#: A PEÇA JÁ EXISTIA, e não é invenção desta frente: `monta.botao_cinza` põe a
+#: razão do produto numa `.dica` com `data-campo` desde 04/09, com os mesmos
+#: dois marcadores de apagar (`:empty` e `.nada`).
+#:
+#: O MESMO ENDEREÇO PODE APARECER EM MAIS DE UMA DICA, e é de propósito: uma
+#: frase que fala de três campos vai para os três `?`. O piloto escreve um
+#: escalar em TODOS os elementos de mesmo `data-campo` (`hefesto_vivo.pintar`),
+#: como o par barra+número de `trilho()` já fazia nesta aba.
+#: O `tabindex` E O `.tem-viva` SÃO DE 07/09/2026, e os dois nasceram da mesma
+#: conferência — a que mediu o `?` depois de as três frases descerem para ele.
+#:
+#: O QUE ELA ACHOU, e as duas metades são defeitos diferentes:
+#:
+#:   · **NINGUÉM SABE QUE HÁ ALGO ALI.** Um `?` com frase viva dentro é, na
+#:     tela, idêntico a um `?` de ajuda fixa. A decisão dela de 05/09
+#:     (`D-06N-TIRA-DE-AVISO`) já tinha nomeado exatamente isto, com estas
+#:     palavras: *"O que está prestes a ser apagado não pode morar num hover,
+#:     porque **ninguém passa o rato onde não sabe que há algo**."* A frase que
+#:     ela mandou tirar do pé em 07/09 tinha de sair do pé — mas sair do pé para
+#:     um lugar sem aviso é trocar "quebra o layout" por "não existe";
+#:   · **O CONTROLE NÃO ALCANÇA O `?`.** `.ajuda` é um `<span>`, e sem
+#:     `tabindex` o `el.click()` do piloto não lhe dá foco nenhum — medido:
+#:     `display da dica = 'none'`, `foco = BODY`. Na aba da NAVEGAÇÃO.
+#:
+#: A CURA DE CADA UMA:
+#:
+#:   · `tabindex="0"` em TODO `?` desta aba (não só nos que levam frase viva):
+#:     um `?` que abre no foco e outro que não seria uma tela que responde ao
+#:     controle em metade dos lugares, e a metade muda pelo estado da máquina.
+#:     A regra de estilo que o faz abrir é da FOLHA DA CASA (`topo.html`), pelo
+#:     mesmo motivo — ela vale para as dez abas;
+#:   · `.tem-viva` marca o `?` que PODE receber frase viva, e o CSS desta aba o
+#:     acende **só quando há frase de verdade lá dentro** (`:has`, lendo o
+#:     conteúdo que o piloto escreve). Um `?` marcado no desenho e apagado na
+#:     tela não promete nada; um `?` aceso com a tira vazia seria a promessa
+#:     falsa de sempre.
+#:
+#: A MARCA É DO DESENHO E O ACENDER É DO PRODUTO — a mesma divisão de toda esta
+#: casa. Nada aqui afirma que há o que dizer: quem decide continua sendo o
+#: pacote, a cada tique.
+def ajuda(txt, largura="", vivas=()):
     st = f' style="width:{largura}"' if largura else ""
-    return f'<span class="ajuda">?<span class="dica"{st}>{txt}</span></span>'
+    corpo = txt + "".join(
+        f'<span class="viva" data-campo="{c}" data-hef-alvo="html">'
+        f'{NADA_A_DIZER}</span>' for c in vivas)
+    cls = "ajuda tem-viva" if vivas else "ajuda"
+    return (f'<span class="{cls}" tabindex="0">?'
+            f'<span class="dica"{st}>{corpo}</span></span>')
 
 # ---------------------------------------------------------------------------
 # OS CINCO COMBOS: a linha da tabela e o desenho do Player 1 usam o MESMO
@@ -1635,13 +1846,39 @@ SEM_TROCA = REMAP[-1][1][0]
 # ---------------------------------------------------------------------------
 # AS OPÇÕES DE ATIVAÇÃO — cada rótulo é a palavra dela na fala [11].
 # ---------------------------------------------------------------------------
+#: AS QUATRO DICAS QUE RECEBERAM AS FRASES DO PÉ — 07/09/2026. O que cada uma
+#: recebeu, e por quê (a frase nomeia o campo; o `?` daquele campo a recebe):
+#:
+#:   · `modo-portao` — *"O mouse e o teclado só se ligam fora do jogo…"*. Vai
+#:     para o `?` do **Status do Modo**, e só. O CINZA DO INTERRUPTOR NÃO SE
+#:     PERDE: a regra `:has()` da folha continua partindo desta chave — o que
+#:     mudou é o lugar do elemento, não o dono.
+#:
+#:     ELA ESTEVE NO `?` DA "Função do teclado" TAMBÉM, e foi MEDIDO que não
+#:     cabia: com os três blocos, a dica daquele campo ia a **356px** e o
+#:     `overflow-y` do `.miolo` cortava o último parágrafo — a frase que se
+#:     mudou de lugar para não sumir sumia de novo, por outro caminho. E ela era
+#:     a dispensável das três: aquele campo já tem linha própria para o jogo que
+#:     assume (`teclado-bloqueio`, *"Ligado, em pausa agora: …"*), que diz a
+#:     mesma coisa sobre o teclado com o dado do momento;
+#:   · `teclado-osk` — *"Neste computador: o teclado na tela está instalado…"*.
+#:     Vai para o `?` da **Função do teclado**, o campo que liga o teclado na
+#:     tela e a quem a dica já mandava abri-lo com o L3 sem nunca dizer se há um
+#:     instalado;
+#:   · `ativacao-ressalva` — *"O cursor, a rolagem e o teclado são um só para o
+#:     computador inteiro…"*. Vai para os `?` dos TRÊS campos que ela nomeia:
+#:     **Velocidade de cursor**, **Velocidade da rolagem** e **Função do
+#:     teclado**. É a armadilha que a D3 nomeou — a fita de cima oferece um
+#:     controle, e estes três valem para a máquina.
 D_QUANDO = ajuda(
     "Vale para <b>este perfil</b>. Enquanto estiver em <b>Nunca</b>, o controle "
-    "é só gamepad e nada desta aba chega ao PC.")
+    "é só gamepad e nada desta aba chega ao PC.",
+    vivas=("modo-portao",))
 D_TECLADO = ajuda(
     "Liga o que o controle <b>digita</b>: os atalhos da tabela à direita, o teclado "
     "na tela e as três regiões do touchpad.<br><br>"
-    "Passou a viajar no <b>perfil</b>, como o mouse vizinho já viajava.")
+    "Passou a viajar no <b>perfil</b>, como o mouse vizinho já viajava.",
+    vivas=("teclado-osk", ENDERECO_DA_RESSALVA))
 D_MOUSE = ajuda(
     "Os <b>mapeamentos pré-prontos</b> de mouse. Trocar aqui reescreve as linhas "
     "da tabela <b>O controle como mouse</b>; qualquer linha continua "
@@ -1649,16 +1886,46 @@ D_MOUSE = ajuda(
 #: AS DUAS DICAS SÃO LIDAS DO PRODUTO, e antes eram digitadas — as duas diziam
 #: *"De 1 a 10"*, e as duas estavam erradas: o cursor vai a 12 e a rolagem a 5
 #: (`integrations/uinput_mouse.py`, que desde 01/09/2026 é o dono da faixa).
-D_VEL = ajuda(
+#:
+#: O TEXTO E A DICA SÃO COISAS DIFERENTES desde 07/09/2026, e a separação
+#: nasceu de um defeito medido nesta mesma frente: as duas velocidades aparecem
+#: em DOIS lugares — no painel das opções de ativação (as barras vivas do
+#: daemon) e dentro da pop-up "Estilo Point-and-click" (dois `−`/`+` que são a
+#: velocidade DO ESTILO, e que ficam sem endereço de propósito). Pendurar a
+#: ressalva da D3 na dica COMPARTILHADA levou a frase para dentro da pop-up
+#: também, e ali ela é falsa: aqueles dois números não são o ajuste global de
+#: ninguém. São cinco cópias do endereço onde deviam ser três — e as duas de
+#: sobra ficariam ao lado dos únicos dois campos desta aba que não escrevem.
+D_VEL_TXT = (
     f"Uma velocidade só, porque é um número só no Hefesto: o <b>analógico "
     f"esquerdo</b> e o <b>touch</b> do touchpad andam pelo mesmo ajuste.<br><br>"
     f"De {MOUSE_SPEED_MIN} a {MOUSE_SPEED_MAX}. O padrão do Hefesto é "
     f"{DEFAULT_MOUSE_SPEED}.")
-D_ROL = ajuda(
-    f"Rola com o <b>analógico direito</b>. Rolar com dois dedos no touchpad é "
-    f"outra coisa, e o Hefesto ainda não faz.<br><br>"
+#: A SEGUNDA FRASE SAIU — 07/09/2026, e é ordem dela sobre a tela inteira:
+#:
+#:     *"O app tem que funcionar e não mostrar na tela que o app não presta. Se
+#:      não tem como, ok. Testamos e criamos o canal. até lá tudo bem, o layout
+#:      não informa os nossos defeitos."*
+#:
+#: O que estava aqui dizia que o Hefesto ainda não rola com dois dedos no
+#: touchpad — uma CAPACIDADE que devemos, confessada na dica de um trilho que
+#: funciona. A dívida não some por isso: ela é de quem desenvolve, e continua
+#: onde sempre esteve. O que muda é que a tela cala.
+#:
+#: A LINHA QUE SEPARA, e ela é a parte difícil: a tela PODE dizer fato do
+#: mundo, limite do aparelho e estado presente — a frase de baixo, sobre o
+#: touchpad ser o mouse do computador, FICA por isso. O que não pode é
+#: capacidade nossa por entregar. O portão que guarda os dois casos é
+#: `scripts/check_a_tela_nao_confessa.py`.
+D_ROL_TXT = (
+    f"Rola com o <b>analógico direito</b>.<br><br>"
     f"De {SCROLL_SPEED_MIN} a {SCROLL_SPEED_MAX}. O padrão do Hefesto é "
     f"{DEFAULT_SCROLL_SPEED}.")
+D_VEL = ajuda(D_VEL_TXT, vivas=(ENDERECO_DA_RESSALVA,))
+D_ROL = ajuda(D_ROL_TXT, vivas=(ENDERECO_DA_RESSALVA,))
+#: AS MESMAS DUAS FRASES, SEM A RESSALVA — para a pop-up do Point-and-click.
+D_VEL_ESTILO = ajuda(D_VEL_TXT)
+D_ROL_ESTILO = ajuda(D_ROL_TXT)
 D_INTERNA = ajuda(
     "Navegar <b>a janela do Hefesto</b> com o controle — abas, botões e listas.<br><br>"
     f"Com os {len(MESA)} controles ligados, cada jogador anda no seu próprio card "
@@ -1938,15 +2205,42 @@ ATIVACAO_DIR = [
 #:                     *"por que o L3 parou de abrir o teclado?"* chega dias
 #:                     depois, e nesse dia esta linha ainda está aqui.
 #:
-#: A ORDEM É A DA LEITURA: primeiro o que impede (o portão), depois o mouse,
-#: depois o teclado. As cinco continuam se apagando sozinhas.
+#: A ORDEM É A DA LEITURA: primeiro o mouse, depois o teclado. As duas
+#: continuam se apagando sozinhas.
+#:
+#: DUAS DAS CINCO SAÍRAM DAQUI EM 07/09/2026, e a ordem é dela, olhando a aba
+#: com os quatro controles na mesa: *"navegacao tem essas 3 frases aqui na parte
+#: de baixo que quebram o layout"*. `modo-portao` e `teclado-osk` eram duas das
+#: três (a terceira era a ressalva, dentro da moldura).
+#:
+#: O QUE ISSO CADUCA, e é preciso dizer com todas as letras: a decisão do PO de
+#: 04/09 (§2 `06[01]`) pedia a razão do portão *"ao lado, na tira de estados"*,
+#: e a razão de `teclado-custo` recusar o `?` — *"a dica some com o ponteiro; a
+#: pergunta chega dias depois"* — valia igualmente para estas duas. A MEDIÇÃO
+#: DELA VENCEU O ARGUMENTO: com as três pintadas, o quadro das opções ia de
+#: 215px a 300,25px, o miolo passava 66px da janela e **a fileira dos quatro
+#: botões terminava 41,25px fora da tela**. Uma frase que empurra um botão para
+#: fora da janela não é uma frase permanente: é uma frase que apaga um botão.
+#:
+#: O QUE NÃO SE PERDEU:
+#:
+#:   · o SINAL de `modo-portao` continua na tela sem hover nenhum — o
+#:     interruptor do "Status do Modo" continua apagado e não clicável, pela
+#:     mesma regra `:has()` desta folha, que agora parte do ENDEREÇO;
+#:   · a RAZÃO das duas foi para o `?` do campo de que cada uma fala, viva,
+#:     escrita pelo mesmo pacote a cada tique (ver `ajuda(..., vivas=…)`).
+#:
+#: `teclado-custo` FICA, e a distinção é medida: ela nasce com a "Função do
+#: teclado" em "Desativado", que é escolha rara e deliberada, e é UMA linha
+#: curta — a tira com ela sozinha não passou de 17px em nenhuma cena. As duas
+#: que saíram nasciam com a máquina em jogo (`modo-portao`) e com o teclado na
+#: tela instalado (`teclado-osk`), que é o estado NORMAL desta máquina: as duas
+#: estavam na tela dela o tempo todo.
 ESTADOS = '''
         <div class="estados">
-          <div class="estado portao" data-campo="modo-portao" data-hef-alvo="html"></div>
           <div class="estado" data-campo="rato-estado" data-hef-alvo="html"></div>
           <div class="estado" data-campo="teclado-bloqueio" data-hef-alvo="html"></div>
           <div class="estado" data-campo="teclado-custo" data-hef-alvo="html"></div>
-          <div class="estado" data-campo="teclado-osk" data-hef-alvo="html"></div>
         </div>'''
 
 # A FILEIRA AO PÉ DO BLOCO: os QUATRO botões com a mesma largura, ocupando-o inteiro.
@@ -2299,10 +2593,15 @@ TELA_PONTO = f'''
 {chr(10).join(f'          <tr><td class="b">{b}</td><td>{drop(ACOES_UNI, f)}</td></tr>' for b, f in PONTO_MAPA)}
         </table>
       </div>
+      <!-- AS DICAS AQUI SÃO AS `_ESTILO`, e a diferença é uma só: elas NÃO
+           levam a ressalva da D3. Ela diz que o ajuste vale para todos os
+           controles ligados, e é verdade sobre as barras do painel — não sobre
+           estes dois números, que são a velocidade DO ESTILO e não escrevem em
+           lugar nenhum (ver o comentário dos `bignum` logo abaixo). -->
       <div class="tn-vel">
-        <div class="at-linha"><span class="at-rot">Velocidade de cursor{D_VEL}</span>
+        <div class="at-linha"><span class="at-rot">Velocidade de cursor{D_VEL_ESTILO}</span>
           {bignum(("", 8))}</div>
-        <div class="at-linha"><span class="at-rot">Velocidade da rolagem{D_ROL}</span>
+        <div class="at-linha"><span class="at-rot">Velocidade da rolagem{D_ROL_ESTILO}</span>
           {bignum(("", 4))}</div>
       </div>
     </div>
@@ -2428,28 +2727,32 @@ MIOLO = f'''
 {chr(10).join(at_linha(*x) for x in ATIVACAO_DIR)}
             </div>
           </div>
-          <!-- ---------- A RESSALVA DA D3: o ajuste é de todos ----------
-               05/09/2026, decisão D3 de `2026-09-05-AS-TRES-DECISOES-DO-PERFIL`:
-               `mouse`, `key_bindings`, `button_actions`, `teclado_emulado` e
-               `suppress_desktop_emulation` ficam GLOBAIS enquanto o caminho de
-               ENTRADA por unidade não existir — o `Daemon` tem UM
-               `_mouse_device` e UM `_keyboard_device`, e o input vem sempre do
-               primário. A decisão pede a tela junto: *"onde a aba oferece um
-               destes cinco, a linha de ressalva diz que o ajuste vale para a
-               mesa inteira, não só para o controle selecionado."*
+          <!-- ---------- A RESSALVA DA D3 SAIU DA MOLDURA ----------
+               07/09/2026, ordem dela: *"navegacao tem essas 3 frases aqui na
+               parte de baixo que quebram o layout"* — e ela era a primeira das
+               três, 17,25px logo abaixo da grade das sete linhas.
 
-               A PEÇA É A DAS DEZ (`monta.ressalva`, D-02), e ela NASCE VAZIA:
-               quem decide se há o que ressalvar é o pacote, ao vivo, contando
-               os CONECTADOS — com um controle ligado não há promessa quebrada.
-               Uma frase cravada aqui a afirmaria também na tela de quem tem um
-               controle só, que é a ressalva mentindo pelo desenho.
+               A DECISÃO D3 CONTINUA CUMPRIDA, e é o que importa: `mouse`,
+               `key_bindings`, `button_actions`, `teclado_emulado` e
+               `suppress_desktop_emulation` seguem GLOBAIS, e a tela continua
+               dizendo isso — *"onde a aba oferece um destes cinco, a linha de
+               ressalva diz que o ajuste vale para a mesa inteira, não só para o
+               controle selecionado"*. O que mudou é ONDE: em vez de uma linha
+               sob a grade inteira, a mesma frase VIVA está no `?` dos TRÊS
+               campos que ela nomeia — "Velocidade de cursor", "Velocidade da
+               rolagem" e "Função do teclado" (ver `ajuda(..., vivas=…)`).
 
-               DENTRO DA `.moldura` E DEPOIS DA GRADE, e não na tira de
-               `.estados` logo abaixo: aquelas cinco linhas falam do que está
-               ACONTECENDO agora (o portão, o bloqueio, o custo); esta fala do
-               ALCANCE das sete linhas acima dela, e é delas que ela precisa
-               estar perto. -->
-          {_ressalva(ENDERECO_DA_RESSALVA)}
+               O QUE ISSO GANHA, além dos 17px: a ressalva deixa de ressalvar as
+               SETE linhas em bloco e passa a estar no campo de que fala. Ela
+               nunca valeu para as sete — "Navegação Interna" é por controle
+               (cada jogador anda no seu card) e "Modo Steam" já diz na própria
+               dica que vale para a máquina.
+
+               E ELA CONTINUA NASCENDO VAZIA, pelo mesmo motivo de sempre: quem
+               decide se há o que ressalvar é o pacote, ao vivo, contando os
+               CONECTADOS. Com UM controle ligado não há promessa quebrada, e
+               uma frase cravada no desenho a afirmaria assim mesmo — que é a
+               ressalva mentindo pelo desenho, o defeito da aba 08. -->
         </div>
 {ESTADOS}
 
@@ -2584,7 +2887,7 @@ LEGENDA = f'''<div class="nota">
     para o mouse (<code>:4744</code>), para o teclado (<code>:4754</code>) e para o
     <code>hotkey_manager.observe</code> (<code>:4757</code>); os secundários do
     co-op têm um caminho só, o do gamepad virtual
-    (<code>daemon/subsystems/coop.py:1871</code>). Por isso o cartão do
+    (<code>daemon/subsystems/coop.py:2057</code>). Por isso o cartão do
     <b>Player {NAVEGA}</b> diz <i>Navega o PC</i> e os outros dizem <i>Só a
     janela</i>, e por isso o desenho que acende no combo é o dele. A
     <b>Navegação Interna</b> é a outra metade: com ela ligada, cada jogador anda
@@ -3004,18 +3307,192 @@ def _conferir(doc):
     exigir('class="passo"' not in painel,
            "voltou um `−`/`+` ao painel das opções de ativação — ela mandou "
            "barra, e um par de botões ao lado dela é a meia-cura")
-    # 6. A RESSALVA DA D3 — 05/09/2026. Ela tem de estar NO PAINEL (é o alcance
-    #    das sete linhas dele que ela ressalva) e tem de nascer VAZIA: a frase
-    #    quem escreve é o pacote, contando os controles ligados. Uma ressalva
-    #    cravada no desenho é a que já mentiu na aba 08.
-    exigir(f'class="ressalva" data-campo="{ENDERECO_DA_RESSALVA}"' in painel,
-           "a linha de ressalva da D3 saiu do painel das opções de ativação — "
-           "sem ela a aba promete por-controle e entrega global, que é o mesmo "
-           "defeito por outro caminho")
-    exigir(f'data-campo="{ENDERECO_DA_RESSALVA}" data-hef-alvo="html">'
-           '<i class="nada"></i></div>' in painel,
-           "a ressalva da D3 nasceu com frase no desenho — quem decide se há o "
-           "que ressalvar é o pacote, ao vivo, e com UM controle ligado não há")
+    # 6. AS TRÊS FRASES DO PÉ FORAM PARA O `?` DO CAMPO DELAS — 07/09/2026,
+    #    ordem dela: *"navegacao tem essas 3 frases aqui na parte de baixo que
+    #    quebram o layout"*.
+    #
+    #    A régua cobra as DUAS METADES, porque só a primeira é fácil de acertar
+    #    por acidente: elas SAÍRAM do pé (nenhuma na tira nem solta na moldura)
+    #    e CHEGARAM ao `?` do campo de que cada uma fala — vivas, nascendo
+    #    vazias. Cobrar só a saída deixaria passar a cura que apaga as frases; e
+    #    cobrar só a chegada deixaria passar a cura que as duplica.
+    exigir('class="ressalva"' not in painel,
+           "voltou uma linha de ressalva solta ao painel das opções de "
+           "ativação — ela quebra o layout, e a frase da D3 mora no `?` dos "
+           "três campos de que fala desde 07/09")
+    for campo in ("modo-portao", "teclado-osk", ENDERECO_DA_RESSALVA):
+        exigir(f'<div class="estado" data-campo="{campo}"' not in corpo,
+               f"`{campo}` voltou para a tira de `.estados`. Medido em "
+               f"07/09: com as três lá, o quadro das opções ia de 215px a "
+               f"300,25px e a fileira dos quatro botões terminava 41,25px "
+               f"FORA da janela")
+    #    O `?` de cada campo, pelo endereço da frase, e o que ela ganhou:
+    #      · `modo-portao`      → "Status do Modo";
+    #      · `teclado-osk`      → "Função do teclado";
+    #      · a ressalva da D3   → "Velocidade de cursor", "Velocidade da
+    #                             rolagem" e "Função do teclado".
+    for campo, quantas in (("modo-portao", 1), ("teclado-osk", 1),
+                           (ENDERECO_DA_RESSALVA, 3)):
+        alvo = (f'<span class="viva" data-campo="{campo}"'
+                f' data-hef-alvo="html"><i class="nada"></i></span>')
+        exigir(painel.count(alvo) == quantas,
+               f"`{campo}` devia aparecer em {quantas} `?` do painel, viva e "
+               f"vazia, e aparece em {painel.count(alvo)} — a frase que saiu do "
+               f"pé só não se perde se chegar ao campo de que fala")
+        #  E NA PÁGINA INTEIRA NÃO PODE HAVER MAIS DO QUE ISSO. A conta é do
+        #  `doc` e não do painel porque foi ASSIM que a primeira volta desta
+        #  frente errou: `D_VEL` e `D_ROL` são as MESMAS dicas usadas pela
+        #  pop-up "Estilo Point-and-click", e pendurar a ressalva nelas levou a
+        #  frase para dentro de uma tela onde ela é FALSA — os dois `−`/`+` de
+        #  lá são a velocidade do ESTILO e não escrevem em lugar nenhum. Cinco
+        #  cópias onde deviam ser três, e o painel não via nenhuma das duas.
+        exigir(doc.count(alvo) == quantas,
+               f"`{campo}` aparece {doc.count(alvo)} vezes na página e devia "
+               f"aparecer {quantas} — a dica de uma velocidade é COMPARTILHADA "
+               f"com a pop-up do Point-and-click, e a frase não vale lá")
+    #    O CINZA DO INTERRUPTOR ANDOU JUNTO. A regra `:has()` partia de
+    #    `.estado.portao`, classe que só existia na tira; com a frase no `?`,
+    #    ela teria parado de apagar o interruptor EM SILÊNCIO.
+    #    A PERGUNTA VAI AO `doc`, NUNCA AO `corpo`: o `corpo` desta régua tira o
+    #    `<style>` de propósito (é uma das três armadilhas do cabeçalho), e uma
+    #    regra de CSS procurada nele NUNCA seria achada — a régua reprovaria a
+    #    cura certa, que foi o que ela fez na primeira volta desta frente.
+    exigir('.quadro-corpo:has([data-campo="modo-portao"] .laranja)' in doc,
+           "a regra que apaga o interruptor do modo deixou de partir do "
+           "endereço `modo-portao` — sem ela a razão chega e o interruptor "
+           "continua com cara de clicável")
+    # 6c. O `?` QUE RECEBEU A FRASE TEM DE SE ANUNCIAR E DE SER ALCANÇÁVEL —
+    #     07/09/2026, e as duas metades vêm da conferência desta leva.
+    #
+    #     A PRIMEIRA É PALAVRA DELA, de 05/09 (`D-06N-TIRA-DE-AVISO`): *"o que
+    #     está prestes a ser apagado não pode morar num hover, porque ninguém
+    #     passa o rato onde não sabe que há algo"*. Mandar a frase para o `?`
+    #     cumpre a ordem de 07/09 (tirar do pé) e só NÃO a perde se o `?` disser
+    #     que ela está lá.
+    #
+    #     A SEGUNDA FOI MEDIDA pelo caminho exato do controle (`el.click()` do
+    #     piloto): `display da dica = 'none'`, `foco = BODY`, `tabindex = None`.
+    #     Nesta aba, que é a da NAVEGAÇÃO COM O CONTROLE.
+    #
+    #     TODO `?` DESTA ABA É FOCÁVEL, e não só os três que levam frase: um
+    #     `?` que responde ao controle e outro que não seria uma tela que
+    #     obedece pela metade, com a metade decidida pelo estado da máquina.
+    #
+    #     A RÉGUA LÊ ELEMENTO, E NÃO TEXTO — e esta linha é a terceira vez que
+    #     esta casa paga o mesmo preço. A primeira volta contava
+    #     `doc.count('<span class="ajuda')` e acusava 17 `?` para 16 focáveis: o
+    #     décimo sétimo era **prosa**, a LEGENDA desta página explicando a
+    #     marcação do ícone. *Um texto que descreve o padrão vira uma ocorrência
+    #     dele* — a armadilha de 05/09 e de 07/09, aqui de novo, na régua escrita
+    #     para fechar a leva.
+    #
+    #     O QUE SEPARA OS DOIS é a forma completa: um `?` de verdade tem o
+    #     `?` colado à `.dica` que ele abre. A prosa escreve `?…`, e cai fora
+    #     sozinha — sem lista de isenção e sem contar linha de comentário.
+    reais = re.findall(r'<span class="ajuda[^"]*"([^>]*)>\?<span class="dica', doc)
+    sem_foco = [a for a in reais if 'tabindex="0"' not in a]
+    exigir(not sem_foco,
+           f"há `?` sem `tabindex` nesta aba ({len(sem_foco)} de "
+           f"{len(reais)}) — sem ele o `el.click()` do controle não abre a "
+           f"dica, e esta é a aba da navegação com o controle")
+    #     O ACENDER LÊ O CONTEÚDO VIVO, e é o que separa esta marca de uma
+    #     promessa: um `?` marcado no desenho e apagado na tela não afirma nada.
+    #     Sem o `:has()` o ponto acende em todo `?` marcado, com a máquina
+    #     calada — a promessa falsa de sempre.
+    #     AS DUAS METADES SÃO COBRADAS SEPARADAS, e a razão é uma mordida que
+    #     NÃO reprovou: a primeira volta desta régua procurava o seletor UMA vez,
+    #     e ele aparece em duas regras — a da cor e a do ponto. Arrancar a cor
+    #     deixava a régua verde, porque o `::after` ainda carregava o seletor.
+    #     Régua que passa com metade da cura arrancada mede metade.
+    _acende = '.ajuda.tem-viva:has(.viva > :not(.nada))'
+    exigir(f'{_acende}{{' in doc,
+           "sumiu a regra que dá COR ao `?` com frase viva dentro — sem ela a "
+           "frase que ela mandou tirar do pé fica num hover que não se anuncia, "
+           "e a decisão dela de 05/09 diz que ninguém passa o rato onde não "
+           "sabe que há algo")
+    exigir(f'{_acende}::after{{' in doc,
+           "sumiu o PONTO que anuncia o `?` com frase viva — a cor sozinha "
+           "muda um `?` cinza para ciano, que é a mesma coisa que o hover já "
+           "faz; o ponto é o que se vê sem chegar perto")
+    #     E TODA FRASE VIVA TEM DE ESTAR DENTRO DE UM `?` MARCADO. A conta NÃO
+    #     é `tem-viva` contra `.viva` — os números são 4 e 5 de propósito, porque
+    #     o `?` da "Função do teclado" leva DUAS frases. O que se mede é a
+    #     relação: nenhuma `.viva` órfã, isto é, nenhuma pendurada num `?` que
+    #     não se acende. Uma frase que chega sem nada avisar é o defeito inteiro
+    #     de volta pela porta dos fundos.
+    #
+    #     O CORTE É NO PRÓPRIO MARCADOR: cada pedaço começa logo depois de
+    #     `<span class="ajuda`, e as dicas desta casa não aninham `?` dentro de
+    #     `?` — então as `.viva` que caem num pedaço são as daquele `?`.
+    orfas = [a for a, corpo in
+             re.findall(r'<span class="ajuda([^"]*)"[^>]*>\?<span class="dica'
+                        r'(.*?)</span></span>', doc, re.S)
+             if '<span class="viva"' in corpo and 'tem-viva' not in a]
+    exigir(not orfas,
+           f"há frase viva pendurada em `?` sem a marca `tem-viva`: {orfas} — "
+           f"o ponto que a anuncia sai da marca, e sem ele a frase volta a "
+           f"morar num hover que ninguém sabe que existe")
+    # 6d. NENHUM `:has()` DENTRO DE OUTRO `:has()` — 07/09/2026, e esta régua
+    #     nasceu de uma regra MORTA que passou verde nesta mesma leva.
+    #
+    #     A especificação proíbe aninhar `:has()`; o navegador descarta a regra
+    #     inteira sem um aviso. A cura ficou na página, a régua que a procurava
+    #     por TEXTO deu verde, e o `?` não acendia — o instrumento respondia
+    #     sobre o próprio código em vez de sobre o produto.
+    #     E ELA LÊ O CSS SEM OS COMENTÁRIOS, porque a primeira volta reprovou
+    #     ESTE arquivo por causa da própria prosa que explica a armadilha. É a
+    #     terceira vez em três dias: *um comentário que descreve o padrão
+    #     proibido vira a primeira ocorrência dele*.
+    #
+    #     O QUE ELA MEDE É ANINHAMENTO DE VERDADE, e não dois `:has()` na mesma
+    #     regra. A primeira volta contava as ocorrências e reprovou uma regra
+    #     LEGÍTIMA desta aba —
+    #     `.quadro-corpo:has(…) .at-linha:has(…)`, que é a que apaga o
+    #     interruptor do modo. Dois `:has()` em compostos DIFERENTES de uma
+    #     cadeia são válidos; o que a especificação proíbe é um dentro dos
+    #     parênteses do outro. Então a conta é feita casando o parêntese.
+    _css_nu = re.sub(r'/\*.*?\*/', '', doc, flags=re.S)
+    _aninhados = []
+    for m in re.finditer(r':has\(', _css_nu):
+        prof, i = 1, m.end()
+        while prof and i < len(_css_nu):
+            if _css_nu[i] == "(":
+                prof += 1
+            elif _css_nu[i] == ")":
+                prof -= 1
+            i += 1
+        if ":has(" in _css_nu[m.end():i]:
+            _aninhados.append(_css_nu[m.start():i][:120])
+    exigir(not _aninhados,
+           f"há `:has()` dentro de `:has()` — o navegador descarta a regra "
+           f"inteira, calado, e a régua que a procurar por texto vai continuar "
+           f"verde sobre nada: {_aninhados}")
+    # 6e. E A FRASE VIVA TEM DE TRAZER MARCAÇÃO — é o contrato de que o seletor
+    #     `> :not(.nada)` depende. Uma frase pelada abriria a dica e deixaria o
+    #     ponto apagado: a tela teria o que dizer e nada anunciaria.
+    #     A PERGUNTA VAI ÀS FUNÇÕES DO PRODUTO, e não ao desenho — é o que
+    #     impede a régua de medir a própria saída.
+    from hefesto_dualsense4unix.app.actions.input_actions import (
+        frase_do_teclado_na_tela,
+    )
+    from hefesto_dualsense4unix.interface.pacotes.a06_navegacao import (
+        RESSALVA_DOS_GLOBAIS,
+        _a_razao_do_portao,
+    )
+    for nome, frase in (
+            # O ESTADO É O DE QUEM ESTÁ JOGANDO — é quando o portão fecha e a
+            # razão tem o que dizer. A forma sai de `mode_of_state`, que lê
+            # `gamepad_emulation.enabled`, e não uma chave `mode` inventada.
+            ("modo-portao",
+             _a_razao_do_portao({"gamepad_emulation": {"enabled": True}})),
+            ("teclado-osk", frase_do_teclado_na_tela(True)),
+            ("teclado-osk (sem teclado)", frase_do_teclado_na_tela(False)),
+            (ENDERECO_DA_RESSALVA, RESSALVA_DOS_GLOBAIS)):
+        exigir("<" in frase and NADA_A_DIZER not in frase,
+               f"a frase viva de `{nome}` voltou sem marcação nenhuma "
+               f"({frase[:60]!r}) — o `?` abriria a dica com ela dentro e o "
+               f"ponto ficaria APAGADO, que é a tela tendo o que dizer e não "
+               f"avisando")
 
     if falhas:
         raise SystemExit("ERRO em 06-navegacao — decisão dela desfeita:\n  "
