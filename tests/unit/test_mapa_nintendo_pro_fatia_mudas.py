@@ -448,10 +448,34 @@ class TestCelulasDoMapaNaoRegridemNemDivergem:
         assert len(respondidas) == 13
         assert len(deixadas_de_proposito) == 2
 
+        # AS DUAS FORAM RESPONDIDAS DEPOIS — 07/09/2026, e este teste pedia
+        # com todas as letras que a lista fosse atualizada em vez de reprovar
+        # às cegas. A premissa de 05/09 era *"sem código que resolva a pergunta
+        # sem medição nova"*, e a varredura do passado (`126e9603`) a
+        # FALSIFICOU citando linha: `movimento.giroscopio.taxa` fecha a metade
+        # declarada em `hid-nintendo.c:1651` (15 ms por USB), e
+        # `entrada.combo.ponte` em `joycon_set_report_mode`
+        # (`hid-nintendo.c:1543-1554`). Achar o código que resolve é
+        # exatamente o que derruba um "deixada muda por falta de fonte".
+        #
+        # O QUE ESTA RÉGUA PASSA A COBRAR — e continua mordendo, porque o
+        # perigo nunca foi a célula ser respondida, foi ela ser respondida
+        # FORTE DEMAIS: a resposta tem de vir com procedência declarada, e não
+        # pode ter subido para `medido` sem bancada. Nenhum Pro esteve na mesa.
         for chave in deixadas_de_proposito:
             row = _linha_pro(chave)
-            assert row["cabo_aciona"] == "" and row["radio_aciona"] == "", (
-                f"{chave}@pro: esta leva deixou a célula muda de propósito "
-                "— se alguém a respondeu depois, atualize esta lista em vez "
-                "de deixar o teste reprovar às cegas"
+            for lado in ("cabo", "radio"):
+                assert row[f"{lado}_de_onde_sei"].strip(), (
+                    f"{chave}@pro: `{lado}_aciona` foi respondido e "
+                    f"`{lado}_de_onde_sei` está vazio — resposta sem "
+                    "procedência é pior que célula muda"
+                )
+                assert row[f"{lado}_de_onde_sei"].strip() != "medido", (
+                    f"{chave}@pro: `{lado}_de_onde_sei` virou `medido` sem Pro "
+                    "na mesa. O teto do que se afirma lendo fonte é "
+                    "`inferido-do-codigo`."
+                )
+            assert row["cabo_ressalva"].strip(), (
+                f"{chave}@pro: respondida por leitura de fonte e sem ressalva "
+                "— é a ressalva que diz o que o aparelho ainda deve"
             )

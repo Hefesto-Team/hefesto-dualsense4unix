@@ -76,11 +76,32 @@ FRASES_DO_ESPELHO = (
 )
 
 #: PISO da colheita, e ele é piso e não igualdade: três frases da seção do
-#: arranjo leem o DMI da placa e somem sob o `HOME` de mentira do `conftest`
-#: (196 sob a suíte, 199 num processo solto). Piso baixo o bastante para não
-#: medir a bancada, alto o bastante para acusar uma seção que sumiu inteira —
-#: a menor delas custa 16 textos.
-PISO_DA_COLHEITA = 190
+#: arranjo leem o DMI da placa e somem sob o `HOME` de mentira do `conftest`.
+#:
+#: **O PISO MEDIA A BANCADA, que é o que este comentário jurava não fazer —
+#: corrigido em 08/09/2026.** Ele valia 190, calibrado sobre "196 sob a suíte,
+#: 199 num processo solto"; a colheita de hoje dá **186 sob a suíte e 189
+#: solto** — os mesmos 3 de diferença entre os dois ambientes, e 10 a menos dos
+#: dois lados.
+#:
+#: A CAUSA, MEDIDA: os 10 saíram da seção "Os controles", e ela é a ÚNICA
+#: dinâmica das cinco — monta um card por controle que o daemon reporta
+#: (`_BlocoDoMic.encaixar`, `_aplicar`). Os números de 06/09 foram tomados numa
+#: máquina com controle na mesa; nesta leva não havia nenhum, e a seção colheu
+#: 8 textos em vez dos ~18. Nada sumiu do produto: as cinco molduras estão de
+#: pé e as `FRASES_DO_ESPELHO` foram todas colhidas.
+#:
+#: O PISO NOVO É O DA MESA VAZIA, que é o mínimo verdadeiro — controle ligado
+#: só ACRESCENTA texto. E o trabalho de "acusar uma seção que sumiu inteira"
+#: passou para `PISO_POR_SECAO`, que é mais forte que um total: uma seção que
+#: monta VAZIA (o modo de falha real do berço) não mexe na contagem das outras
+#: quatro e escaparia de qualquer total generoso o bastante para não mentir.
+PISO_DA_COLHEITA = 175
+
+#: Piso POR MOLDURA. A menor com a mesa vazia é "Os controles", com 8; abaixo
+#: disto a seção montou oca, que é o defeito que o berço pode causar sem
+#: levantar exceção nenhuma.
+PISO_POR_SECAO = 6
 
 
 class BercoDaAbaConfig:

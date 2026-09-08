@@ -863,7 +863,10 @@ def test_preset_sem_destinatario_recusa_em_vez_de_gravar_abaixo_do_automatico(
     assert enviados == [], "mandou um pedido sem destinatário"
     assert host.toasts
     assert "sem destinatário" in host.toasts[-1]
-    assert "Ainda não sei quais controles estão na mesa" in host.toasts[-1]
+    # A RÉGUA PERGUNTA AO DONO (08/09/2026): "mesa" é palavra banida na tela
+    # (decisão dela, 06/09) e o produto passou a dizer "estão ligados" — a
+    # frase digitada aqui reprovava a melhora.
+    assert la._AVISO_SEM_DESTINATARIO in host.toasts[-1]
 
 
 def test_aplicar_sem_destinatario_tambem_recusa(
@@ -886,7 +889,10 @@ def test_aplicar_sem_destinatario_tambem_recusa(
     host.on_player_leds_apply(None)
 
     assert enviados == []
-    assert "Ainda não sei quais controles estão na mesa" in host.toasts[-1]
+    # A RÉGUA PERGUNTA AO DONO (08/09/2026): "mesa" é palavra banida na tela
+    # (decisão dela, 06/09) e o produto passou a dizer "estão ligados" — a
+    # frase digitada aqui reprovava a melhora.
+    assert la._AVISO_SEM_DESTINATARIO in host.toasts[-1]
 
 
 def test_com_alvo_escolhido_o_pedido_vai_por_mac(

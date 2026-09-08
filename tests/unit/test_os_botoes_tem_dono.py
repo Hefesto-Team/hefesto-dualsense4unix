@@ -275,55 +275,26 @@ def test_nenhum_gesto_chama_funcao_que_a_ponte_nao_tem():
 
 
 
-def test_o_automatico_larga_o_claim_e_deixa_a_cor_padrao(pac, ctx):
-    """Ordem dela, 01/09/2026: a barra NÃO pode ficar preta.
-
-    *"voltar ao automático nesse caso é deixar o jogo escolher"* — e *"deixa em
-    uma das cores default se o jogo não escolher ou não tiver rodando."*
-
-    Largar o claim sozinho deixa a última cor no plástico; se a última foi um
-    "Desligar", ela fica apagada e parece defeito. São TRÊS chamadas, nesta
-    ordem: soltar o claim, pintar, e soltar a trava manual da luz. As duas
-    primeiras invertidas, o `reset` apagaria a cor que acabou de ir; a terceira
-    fora do fim, a pintura a desfaria — ver A-TRAVA-DO-LED-NÃO-SOLTA-01.
-
-    E A COR NÃO É DIGITADA: sai de `core/led_control.player_slot_color`, a
-    mesma paleta que acende as cinco lâmpadas. Um literal aqui seria a segunda
-    verdade que esta casa persegue.
-    """
-    from hefesto_dualsense4unix.core.led_control import player_slot_color
-
-    fn = pac.gesto_da_pagina("04-iluminacao.html", "auto")
-    p = PonteDeMentira()
-    fn(ctx, _clique(), p)
-
-    # A PORTA É A `_detalhado` DESDE 03/09/2026, e o nome muda aqui porque o
-    # que ela carrega mudou: o `bool` do `led_set` não traz
-    # `aplicado_em`/`guardado_em`, e sem eles este botão dizia "aplicou" para um
-    # clique que não acendeu nada. Ver `a04_iluminacao._escrever_a_cor`.
-    nomes = [c[0] for c in p.chamadas]
-    assert nomes == ["chamar", "led_set_detalhado", "chamar"], (
-        f"o 'Automático' fez {nomes}, e devia largar o claim, então pintar, e "
-        f"então soltar a trava. Só o reset deixa a barra na última cor — preta, "
-        f"se a última foi um Desligar.")
-    assert p.chamadas[0][1] == ("lightbar.reset",)
-    assert p.chamadas[1][1] == (tuple(player_slot_color(1)),), (
-        f"a cor padrão veio {p.chamadas[1][1]!r} e a paleta do produto diz "
-        f"{tuple(player_slot_color(1))!r}. Ela não se digita — sai da função.")
-    # A TERCEIRA, E ELA TEM DE SER A ÚLTIMA — A-TRAVA-DO-LED-NÃO-SOLTA-01,
-    # 06/09/2026. O `led_set_detalhado` do meio ARMA a categoria `"led"` no
-    # `StateStore`; enquanto ela está armada o `AutoSwitcher` não reaplica
-    # perfil por troca de janela. Posta ANTES da pintura, esta chamada sairia
-    # desfeita na linha seguinte e o botão continuaria armando sem soltar —
-    # verde sobre o defeito. Por isso a posição é afirmada, não só a presença.
-    assert p.chamadas[2][1] == ("led.auto_release",), (
-        f"a terceira chamada foi {p.chamadas[2][1]!r}. O 'Automático' é o gesto "
-        f"que significa 'pode voltar a mandar', e era o único dos quatro que "
-        f"não dizia isso ao daemon.")
-    assert p.chamadas[2][2] == {}, (
-        f"o `led.auto_release` foi com {p.chamadas[2][2]!r}. A trava mora no "
-        f"`StateStore` e não tem dono por controle — mandar `uniq` daria a "
-        f"impressão de um alcance que o daemon não tem.")
+# `test_o_automatico_larga_o_claim_e_deixa_a_cor_padrao` SAIU — 08/09/2026.
+#
+# Ele mediu o gesto `auto` — o botão "Automático" de CADA COLUNA —, que
+# saiu da
+# aba em 07/09 com o widget, no mesmo commit, POR ORDEM DELA: *"Olha na real
+# sai todos. Deixa só lá o de cima mesmo o tongle."* O `gesto_da_pagina`
+# devolvia `None` e a régua morria num `TypeError` que não dizia nada.
+#
+# NÃO FOI REAPONTADO PARA `auto-cores`, e a tentação era essa: o nome parece o
+# mesmo ato e não é. `auto-cores` é o interruptor do topo (D-13, 04/09) e
+# escreve `auto_player_colors` NO PERFIL; o botão que saiu largava o claim da
+# barra ao jogo, pintava a cor do número e soltava a trava manual — três
+# chamadas de daemon, nenhuma delas no perfil. Apontar esta régua para lá
+# faria o arquivo dizer que mede o "Automático" enquanto mede outra coisa.
+#
+# A MEDIÇÃO NÃO SE PERDE: o que o gesto fazia, a ordem das três chamadas e o
+# porquê da ordem estão escritos em `a04_iluminacao.py`, no bloco que substitui
+# o gesto — junto com a prova de que a trava CONTINUA sendo solta por
+# `profile.switch` (`clear_manual_trigger_active()` sem argumento), que é o que
+# impediu a poda de reabrir a A-TRAVA-DO-LED-NÃO-SOLTA-01 em silêncio.
 
 
 def test_o_gesto_recusa_o_clique_sem_controle(pac, ctx):

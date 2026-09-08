@@ -392,13 +392,32 @@ class TestDialogoDeConfirmacaoPorFonte:
         assert 'add_class("hefesto-dualsense4unix-window")' in compacto
         assert 'connect("response"' in compacto  # nunca run() (imkillable)
         assert ".run()" not in src
-        assert "preservadas" in src  # promessa do PATH-06 no texto
+
+        # A RÉGUA PERGUNTA AO DONO — 08/09/2026. As três promessas abaixo eram
+        # procuradas no FONTE DO MÉTODO, e o corpo da pergunta saiu de lá em
+        # 06/09: virou o `_STEAM_APPLY_CORPO`, porque a interface nova faz a
+        # mesma pergunta e uma frase digitada duas vezes se afasta no primeiro
+        # dia. O texto continuava correto e a régua ficou vermelha sobre a
+        # MELHORA — o defeito clássico de medir o texto do código em vez do
+        # valor.
+        #
+        # E o alvo novo é mais forte que o antigo: o método só é honesto se o
+        # que ele EXIBE promete isso, e é exatamente a constante que ele passa
+        # ao `format_secondary_text`. A ligação entre as duas pontas é a linha
+        # afirmada logo abaixo — sem ela, a constante poderia estar certa e o
+        # diálogo mostrar outra coisa.
+        assert "format_secondary_text(self._STEAM_APPLY_CORPO)" in compacto, (
+            "o diálogo deixou de exibir o `_STEAM_APPLY_CORPO` — as promessas "
+            "podem estar na constante e não chegar à tela dela"
+        )
+        corpo = DaemonActionsMixin._STEAM_APPLY_CORPO
+        assert "preservadas" in corpo  # promessa do PATH-06 no texto
         # HONESTIDADE-STEAM-01: o texto dizia "A Steam precisa estar
         # FECHADA — se estiver aberta, eu aviso e não mexo em nada". O
         # botão passou a saber fechá-la COM consentimento, então o que o
         # diálogo tem de prometer agora é a PERMISSÃO, não a parede.
-        assert "permissão" in src
-        assert "20 segundos" in src
+        assert "permissão" in corpo
+        assert "20 segundos" in corpo
 
     def test_worker_importa_lazy_dentro_do_handler(self) -> None:
         src = inspect.getsource(DaemonActionsMixin._steam_apply_launch_worker)

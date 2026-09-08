@@ -51,6 +51,7 @@ from gi.repository import Gtk
 from tests.unit.aba_config_sem_a_janela import (
     FRASES_DO_ESPELHO,
     PISO_DA_COLHEITA,
+    PISO_POR_SECAO,
     SECOES_NO_GLADE,
     aba_config_montada,
     textos_da_arvore,
@@ -83,8 +84,14 @@ def _aba_montada() -> Any:
     o XML apagado, o berço é `tests/unit/aba_config_sem_a_janela.py`, e ele
     entrega os DOIS widgets que as seções pedem — a caixa e o
     `daemon_autostart_switch`. A colheita foi conferida contra o glade
-    restaurado do git: **199 textos dos dois lados**, e
+    restaurado do git — os dois lados deram o mesmo número —, e
     `test_o_berco_nao_e_mais_frouxo_que_o_glade` reprova se ela encolher.
+
+    O NÚMERO SAIU DAQUI EM 08/09/2026: era "199 textos dos dois lados", e ele
+    só vale com a MESA VAZIA. A seção "Os controles" monta um card por controle
+    que o daemon reporta, então a colheita cresce com o que está na mesa —
+    cravar o número aqui é medir a bancada. O piso e a razão estão em
+    `aba_config_sem_a_janela.PISO_DA_COLHEITA`.
     """
     return aba_config_montada()
 
@@ -132,10 +139,13 @@ def test_o_berco_nao_e_mais_frouxo_que_o_glade() -> None:
     Três frases a menos, em silêncio, numa régua de REDAÇÃO: ela passaria com a
     frase errada dentro.
 
-    A régua cobra as FRASES e um PISO, e não a igualdade: a mesma aba colhe 199
-    textos num processo solto e 196 sob a suíte, porque três frases da seção do
-    arranjo leem o DMI da placa e o `conftest` desvia o `HOME`. Um número
-    cravado aqui mediria a bancada.
+    A régua cobra as FRASES e um PISO, e não a igualdade: a mesma aba colhe
+    três textos a MENOS sob a suíte do que num processo solto, porque três
+    frases da seção do arranjo leem o DMI da placa e o `conftest` desvia o
+    `HOME`. Um número cravado aqui mediria a bancada — e foi o que aconteceu:
+    o piso de 190 vinha de uma medição com controle na mesa, e reprovou esta
+    aba inteira em 08/09 sem que nada tivesse sumido dela. Ver
+    `aba_config_sem_a_janela.PISO_DA_COLHEITA`.
     """
     caixa = _aba_montada()
     assert len(caixa.get_children()) == SECOES_NO_GLADE, (
@@ -155,6 +165,19 @@ def test_o_berco_nao_e_mais_frouxo_que_o_glade() -> None:
         f"{PISO_DA_COLHEITA}: uma seção inteira sumiu. Dê ao "
         "`BercoDaAbaConfig` o widget que ela pede."
     )
+
+    # E CADA MOLDURA DE PÉ TEM DE TER CONTEÚDO — 08/09/2026. O total sozinho
+    # não pega o modo de falha real do berço: uma seção que monta OCA deixa as
+    # outras quatro intactas, e o total continua acima de qualquer piso que não
+    # minta sobre a bancada. Ver `PISO_DA_COLHEITA`, que foi calibrado
+    # com a mesa cheia.
+    for moldura in caixa.get_children():
+        rotulo = getattr(moldura, "get_label", lambda: None)() or "?"
+        quantos = len(textos_da_arvore(moldura))
+        assert quantos >= PISO_POR_SECAO, (
+            f"a seção {rotulo!r} montou com {quantos} textos — ela subiu oca, "
+            "e o total das outras quatro esconderia isso"
+        )
 
 
 def test_todo_rotulo_da_aba_comeca_em_maiuscula() -> None:

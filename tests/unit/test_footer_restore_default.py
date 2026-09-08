@@ -267,9 +267,20 @@ class TestRestoreDefaultCasosDeBorda:
 
         stub_mixin.on_restore_default()
 
-        assert any(
-            "indisponível" in msg or "ausente" in msg or "não encontrado" in msg
-            for msg in stub_mixin._toasted
+        # A RÉGUA PERGUNTA AO DONO — 08/09/2026. Aqui estavam digitadas três
+        # palavras — "indisponível", "ausente", "não encontrado" —, e elas são
+        # exatamente o VOCABULÁRIO QUE SAIU: em 06/09 a frase deixou de ser
+        # dev-fala (*"Asset 'personalizado.json' não encontrado — Restaurar
+        # Default indisponível."*) e passou a falar a língua dela. A régua
+        # reprovava a melhora, que é a forma mais cara de vermelho desta casa.
+        #
+        # O dono é `frase_do_preset_ausente`, e ele é UM para os dois
+        # chamadores (o motor da janela e o gesto `restaurar-de-fabrica` da
+        # interface nova) — perguntar a ele é o que impede esta régua de
+        # envelhecer de novo na próxima vez que o texto melhorar.
+        assert footer_actions.frase_do_preset_ausente() in stub_mixin._toasted, (
+            "o botão não disse a recusa do preset ausente: "
+            f"{stub_mixin._toasted!r}"
         )
 
     def test_toast_cancelamento(

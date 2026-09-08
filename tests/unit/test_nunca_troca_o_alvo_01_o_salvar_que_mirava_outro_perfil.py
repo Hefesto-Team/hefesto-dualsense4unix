@@ -223,22 +223,30 @@ class _Janela(pa.ProfilesActionsMixin, FooterActionsMixin):  # type: ignore[misc
         # A linha exata de `install_profiles_tab` — o que liga seleção a editor.
         tree.get_selection().connect("changed", self.on_profile_selection_changed)
 
-    # R-08: o "há edição pendente" é o rascunho em memória divergindo do que
-    # veio do disco. A regra morava em `HefestoApp._tem_edicao_pendente`, e a
-    # janela GTK saiu INTEIRA em `f5311616` (06/09/2026, decisão
-    # `D-0609-GTK-LEVA-INTEIRA`). O import continuou apontando para o módulo
-    # apagado e passou a estourar `ModuleNotFoundError` DENTRO da guarda — que
-    # fecha no escuro por desenho, respondendo "sim, há trabalho a proteger".
-    # Resultado medido em 08/09/2026: `_populate_editor` nunca era chamado e os
-    # DOZE testes deste arquivo reprovavam com o editor vazio, sobre um produto
-    # que estava certo. A régua mediu o mundo de ontem.
-    # A regra é COPIADA do original (duas linhas, `git show f5311616^:...`), não
-    # afrouxada: um dublê mais frouxo que o código real mede o dublê. Os três
-    # testes de `TestNaoSeiEHaTrabalhoAProteger` continuam quebrando esta
-    # pergunta de propósito, por `monkeypatch` — é isso que eles medem.
-    def _tem_edicao_pendente(self) -> bool:
-        baseline = self._draft_baseline
-        return bool(baseline is not None and self.draft != baseline)
+    # R-08: o "há edição pendente" NÃO é redublado aqui — vem por herança do
+    # `ProfilesActionsMixin`, que é quem o produto consulta. Este dublê chegou a
+    # tê-lo à mão, delegando para `HefestoApp._tem_edicao_pendente`; a janela
+    # saiu do disco em 06/09 e a delegação passou a estourar
+    # `ModuleNotFoundError`, que o `except` de `_ha_trabalho_no_editor` engolia
+    # como "não sei" — 12 testes vermelhos apontando para uma guarda sem dono.
+    # Herdar em vez de redublar é o que faz este arquivo medir o produto: se a
+    # guarda cair de novo, ela cai AQUI.
+    #
+    # DUAS FRENTES CURARAM ISTO NO MESMO DIA, com desenhos OPOSTOS, e a escolha
+    # é registrada porque a outra é defensável — 08/09/2026. A frente do
+    # ANONIMATO redublou a regra no dublê, copiada do original; esta pôs a regra
+    # em `ProfilesActionsMixin` (`profiles_actions.py:4651`) e deixou o dublê
+    # herdar. **Ficou esta**, e quem decidiu foi o conferente da OUTRA: ele
+    # escreveu que, com a regra só no dublê, *"quando a aba web for ligada ao
+    # `_ha_trabalho_no_editor`, este teste NÃO vai acusar a falta do
+    # `_tem_edicao_pendente` no host novo, porque o dublê fornece o seu — é a
+    # forma exata de verde sobre nada"*.
+    #
+    # E A RESSALVA DO CONFERENTE DESTA FICA ESCRITA, porque é verdadeira:
+    # NENHUMA classe de `src/` compõe o mixin hoje (a janela que o compunha saiu
+    # em `f5311616`), então isto é MOTOR REPOSTO ANTES DO COMPOSITOR. Não é
+    # defeito que chega à tela dela hoje; é o lugar certo para a regra estar no
+    # dia em que a aba Perfis web consultar a guarda.
 
     def _get(self, wid: str) -> Any:
         return self._widgets.get(wid)
@@ -594,7 +602,33 @@ class TestRecarregarAListaNaoPulaParaOPrimeiro:
 
 
 class TestORodapeNaoPropoeNomeQueElaNaoEscolheu:
-    """Morde `_perfil_que_as_abas_editam` e o anúncio da reconciliação."""
+    """Morde `_perfil_que_as_abas_editam`.
+
+    **O TERCEIRO TESTE DESTA CLASSE SAIU — 08/09/2026.** Era o
+    `test_a_janela_anuncia_quando_ela_mesma_troca_o_alvo`, e ele mediu o
+    `HefestoApp._reconciliar_draft_com_perfil_ativo`: o tique de 2 Hz que
+    recarregava o rascunho quando o autoswitch trocava o perfil ativo por fora
+    da GUI, avisando-a de que o alvo do Salvar tinha se mexido.
+
+    Esse método saiu do disco com a janela GTK (``D-0609-GTK-LEVA-INTEIRA``,
+    ``f5311616``), que já apagou "oito testes que só existiam para a janela" —
+    este passou pela peneira e ficou reprovando com `ModuleNotFoundError`.
+    MEDIDO antes de tirar, e é o que autoriza tirar em vez de repontar: o tique
+    inteiro se foi junto (`_bootstrap_draft_async`, `_draft_reload_for`,
+    `_draft_reload_inflight`, `DRAFT_RELOAD_INFLIGHT_TIMEOUT_S` não existem em
+    `src/`), e a frase do aviso — *"o perfil ativo virou …"* — não aparece em
+    nenhum arquivo de `src/`. **Não há para onde apontar a régua**: a interface
+    nova não reconcilia rascunho com perfil ativo.
+
+    O que ficou de PÉ é o resto da MORDIDA 3, que é o que sobrevive à janela:
+    o rodapé propõe o perfil que as ABAS editam, nunca o do daemon.
+
+    A medição que originou o teste retirado não se perde — ela está no corpo do
+    NUNCA-TROCA-O-ALVO-01 (docstring do módulo, item 3) e na sprint
+    `docs/process/sprints/2026-08-06-NUNCA-TROCA-O-ALVO-01-*.md`. Se a
+    interface nova ganhar reconciliação de rascunho, **o aviso volta a ser
+    requisito** e a régua nasce apontada para ela.
+    """
 
     def test_o_prefill_vem_do_rascunho_e_nao_do_perfil_ativo(
         self, disco: Path, monkeypatch: pytest.MonkeyPatch
@@ -629,44 +663,6 @@ class TestORodapeNaoPropoeNomeQueElaNaoEscolheu:
         """Boot sem daemon: rascunho em defaults, sem `source_name`."""
         janela = _Janela(DraftConfig.default(), ativo="sackboy_nativo")
         assert janela._perfil_que_as_abas_editam() == "sackboy_nativo"
-
-    def test_a_janela_anuncia_quando_ela_mesma_troca_o_alvo(self) -> None:
-        """O tique de 2 Hz troca o rascunho quando não há nada a perder.
-
-        A troca é legítima — mas movia o alvo dos DOIS botões de salvar sem
-        gesto dela, e em silêncio. Era o silêncio que fazia o diálogo do rodapé
-        parecer que tinha inventado um nome.
-        """
-        from hefesto_dualsense4unix.app.app import HefestoApp
-
-        class _Falsa:
-            def __init__(self) -> None:
-                base = DraftConfig.default()
-                self.draft = base
-                self._draft_baseline: Any = base
-                self._active_profile_name = "vitoria"
-                self._draft_reload_for: str | None = None
-                self._draft_reload_inflight = False
-                self._draft_reload_inflight_since = 0.0
-                self.toasts: list[tuple[str, str]] = []
-
-            _tem_edicao_pendente = HefestoApp._tem_edicao_pendente
-
-            def _status_toast(self, contexto: str, msg: str) -> None:
-                self.toasts.append((contexto, msg))
-
-            def _bootstrap_draft_async(self) -> None: ...
-
-        falsa = _Falsa()
-        HefestoApp._reconciliar_draft_com_perfil_ativo(
-            falsa, {"active_profile": "sackboy_nativo"}
-        )
-
-        assert falsa.toasts, "a janela trocou o alvo do Salvar sem dizer nada"
-        contexto, msg = falsa.toasts[0]
-        assert contexto == "draft-reload"
-        assert "sackboy_nativo" in msg
-        assert "Salvar" in msg
 
 
 # ===========================================================================

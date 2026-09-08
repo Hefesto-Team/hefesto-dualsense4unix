@@ -155,10 +155,20 @@ def test_os_dois_motivos_falam_a_lingua_da_tela() -> None:
     léxico que já está na tela ("Ajustes vão para:", "mesa", "controle").
     Esta régua trava o vocabulário interno de voltar por descuido.
     """
-    from hefesto_dualsense4unix.app.app import HefestoApp
-
+    # O SEGUNDO MOTIVO SAIU — 08/09/2026. Esta régua percorria DOIS textos:
+    # este e o `HefestoApp._MOTIVO_ALVO_AINDA_NAO_LIGADO`, um `ClassVar` que
+    # existia para as abas da JANELA (era o default do `_ALVO_POR_ABA`, o mapa
+    # de aba-do-Glade para motivo). A janela saiu do disco por decisão dela
+    # (`D-0609-GTK-LEVA-INTEIRA`, `f5311616`) e levou o mapa e o texto; o
+    # inventário já os julgava SAI-COM-A-JANELA
+    # (`docs/data/o-que-ainda-aponta-para-a-janela.csv:262`, linha 158).
+    #
+    # A REGRA NÃO AFROUXOU — ela só perdeu um sujeito que não existe.
+    # `MOTIVO_ALVO_NAO_SE_APLICA` é motor (`app/actions/config/mixin.py`), é o
+    # que a interface nova usa, e continua proibido de voltar a falar a língua
+    # de quem escreve o código.
     proibidas = ("alvo de edição", "seletor de controle", "_ALVO_POR_ABA", "leitor")
-    for texto in (MOTIVO_ALVO_NAO_SE_APLICA, HefestoApp._MOTIVO_ALVO_AINDA_NAO_LIGADO):
+    for texto in (MOTIVO_ALVO_NAO_SE_APLICA,):
         assert texto, "motivo vazio — `set_alvo_inativo(True)` recusaria"
         assert texto[0].isupper(), f"frase de tela começa com maiúscula: {texto!r}"
         assert texto.rstrip().endswith("."), f"frase de tela termina com ponto: {texto!r}"

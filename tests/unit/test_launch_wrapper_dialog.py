@@ -799,37 +799,21 @@ def _gdkpixbuf_ok() -> bool:
         return False
 
 
-@pytest.mark.skipif(
-    not _gdkpixbuf_ok(), reason="GdkPixbuf ausente (CI headless): a App real precisa dele"
-)
-class TestFiacaoNoApp:
-    def test_app_compoe_o_mixin(self) -> None:
-        from hefesto_dualsense4unix.app import app as app_mod
+# `TestFiacaoNoApp` SAIU — 08/09/2026.
+#
+# Os dois testes perguntavam ao `HefestoApp`: um que ele compõe o
+# `LaunchWrapperDialogMixin` na MRO, outro que o `_render_slow_state` do tique
+# de 2 Hz chama o render da aba Status ANTES do lembrete. A janela GTK saiu do
+# disco por decisão dela (`D-0609-GTK-LEVA-INTEIRA`, `f5311616`) e os dois
+# passaram a estourar no import — o `skipif` de GdkPixbuf que os cercava não
+# alcança um `ImportError` de módulo que não existe mais. Veredito já escrito
+# em `docs/data/o-que-ainda-aponta-para-a-janela.csv:237`: SAI-COM-A-JANELA,
+# linhas 807;817.
+#
+# O MIXIN FICA E CONTINUA MEDIDO: `launch_wrapper_dialog.py` é motor, e o resto
+# deste arquivo exercita `_maybe_prompt_wrapper_dialog` direto — que é onde a
+# decisão de mostrar o lembrete de fato mora. O que saiu foi só a pergunta
+# sobre a COMPOSIÇÃO e sobre a ORDEM dentro do tique da janela; hoje o mixin
+# não tem composidor vivo em `src/`, então não há MRO nova a cobrar.
 
-        assert LaunchWrapperDialogMixin in app_mod.HefestoApp.__mro__
 
-    def test_render_slow_state_chama_o_super_e_depois_o_lembrete(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        """Zero timers novos: o gancho é o `_render_slow_state` do tick de
-        2 Hz — o render da aba Status roda como sempre e SÓ DEPOIS o lembrete
-        avalia o estado (ordem verificada)."""
-        from hefesto_dualsense4unix.app import app as app_mod
-
-        chamadas: list[tuple[str, Any]] = []
-        monkeypatch.setattr(
-            app_mod.StatusActionsMixin,
-            "_render_slow_state",
-            lambda self, state: chamadas.append(("status", state)),
-        )
-        monkeypatch.setattr(
-            app_mod.LaunchWrapperDialogMixin,
-            "_maybe_prompt_wrapper_dialog",
-            lambda self, state: chamadas.append(("lembrete", state)),
-        )
-
-        app = object.__new__(app_mod.HefestoApp)
-        estado = _state()
-        app._render_slow_state(estado)
-
-        assert chamadas == [("status", estado), ("lembrete", estado)]

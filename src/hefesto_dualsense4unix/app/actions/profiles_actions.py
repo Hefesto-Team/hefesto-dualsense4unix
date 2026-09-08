@@ -4647,3 +4647,38 @@ class ProfilesActionsMixin(CaronaDoWrapperMixin):
 
     def _toast_profile(self, msg: str) -> None:
         self._status_toast("profiles", msg)
+
+    def _tem_edicao_pendente(self) -> bool:
+        """As OUTRAS abas têm alteração por salvar? (R-08)
+
+        Delega para :func:`profile_writer.tem_edicao_pendente`, que é onde a
+        pergunta ficou quando a janela GTK saiu — a docstring de lá tem a
+        medição de por que ela ficou sem dono.
+
+        Aqui ela existe como MÉTODO porque é assim que os dois consumidores a
+        procuram (``_ha_trabalho_no_editor`` e ``_refazer_as_abas_apos_ativar``,
+        ambos por ``getattr(self, …)``), e porque um dublê de teste precisa
+        poder trocá-la por uma que estoura para provar que a guarda fecha no
+        escuro.
+
+        **POR QUE NO FIM DO ARQUIVO, E COM IMPORT LOCAL** — 08/09/2026, e é
+        cura de um defeito que eu mesmo criei e medi. A primeira versão punha o
+        import no topo e o método no meio da classe: **16 linhas a mais**, e
+        tudo abaixo andou junto. OITO citações `profiles_actions.py:NNNN` em
+        `interface/aba10.py` e `interface/pacotes/a10_perfis.py` passaram a
+        apontar para outra coisa, e o portão `citacoes-no-codigo` as pegou.
+        Reapontá-las parecia o conserto — e não era: **uma delas vive dentro do
+        `CSS` que `aba10.py` EMBUTE na página**, então mexer nela obriga a
+        regerar `mockup/10-perfis.html` e a publicar, que é gesto DELA e não
+        meu. O teste `test_os_dez_geradores_rodam` foi quem disse isso, e só
+        apareceu na regressão dos doze lotes — portão nenhum o alcança.
+
+        Entrando depois de `_toast_profile`, que é o último método do arquivo,
+        nada se move: as oito citações continuam válidas e a bancada dela fica
+        byte a byte onde estava.
+        """
+        from hefesto_dualsense4unix.app.actions.profile_writer import (
+            tem_edicao_pendente,
+        )
+
+        return tem_edicao_pendente(self)

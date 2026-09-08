@@ -165,22 +165,41 @@ def test_o_desenho_de_cada_coluna_conectada_pede_o_alvo_do_atributo() -> None:
         a for tag, a in elementos
         if tag == "svg" and "ds-svg" in (a.get("class") or "").split()
     ]
+    declarados = [a for a in desenhos if a.get("data-campo") == "desenho"]
     vestidos = [
-        a for a in desenhos
-        if a.get("data-campo") == "desenho"
-        and a.get("data-hef-alvo") == a04_iluminacao.ALVO_DO_DESENHO
+        a for a in declarados
+        if a.get("data-hef-alvo") == a04_iluminacao.ALVO_DO_DESENHO
         and a.get("data-hef-atributo") == "data-colorway"
     ]
 
     assert conectadas, "a bancada da 04 não tem uma coluna de controle sequer"
-    assert len(vestidos) == len(conectadas), (
-        f"{len(conectadas)} colunas conectadas e {len(vestidos)} desenhos com o "
-        f"endereço da cor — o desenho e a pintura deixaram de casar")
 
+    # A RÉGUA MEDIA O MUNDO DE ONTEM — 08/09/2026. Aqui estava
+    # `len(vestidos) == len(conectadas)`, e ela dizia "4 == 2": a bancada passou
+    # a desenhar as QUATRO colunas (o foco dela são quatro DualSense), com as
+    # duas vazias já endereçadas para o dia em que o controle chegar.
+    #
+    # A cobrança estava invertida em relação ao perigo que a docstring nomeia.
+    # O que apaga o desenho é `data-campo="desenho"` SEM `data-hef-alvo` — o
+    # pintor cai no ramo padrão e escreve `textContent` dentro do `<svg>`. Uma
+    # coluna vazia COM o endereço completo é segura; a que a régua antiga
+    # exigia (vazia sem endereço, mas ainda com `data-campo`) é justamente a
+    # perigosa. Então o que se cobra é a COMPLETUDE do endereço, em todo
+    # desenho declarado, conectado ou não.
+    assert declarados, "nenhum `<svg>` da bancada declara `data-campo=desenho`"
+    assert len(vestidos) == len(declarados), (
+        f"{len(declarados)} desenhos declarados e só {len(vestidos)} com o "
+        "endereço COMPLETO — um `data-campo=desenho` sem `data-hef-alvo` faz o "
+        "pintor escrever texto dentro do `<svg>` e apagar o desenho")
+    assert len(conectadas) <= len(declarados), (
+        "há coluna conectada sem desenho declarado")
+
+    # E O LUGAR VAZIO CONTINUA SEM COLORWAY: o endereço é para o futuro, o
+    # VALOR é identidade de aparelho e só existe onde há aparelho.
     com_colorway = [a for a in desenhos if a.get("data-colorway")]
     assert len(com_colorway) == len(conectadas), (
-        "há `data-colorway` num desenho sem endereço — identidade do mockup "
-        f"parada num lugar sem aparelho: {len(com_colorway)} de {len(desenhos)}")
+        "há `data-colorway` num desenho sem aparelho — identidade do mockup "
+        f"parada num lugar vazio: {len(com_colorway)} de {len(declarados)}")
 
 
 # ---------------------------------------------------------------------------

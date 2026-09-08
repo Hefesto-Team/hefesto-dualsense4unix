@@ -73,9 +73,24 @@ LADOS_RESPONDIDOS: dict[str, tuple[str, ...]] = {
 #: A linha em que o lado do CABO ficou mudo de propósito, e a palavra que a
 #: `cabo_ressalva` dela tem de continuar carregando. Sem essa palavra, o vazio
 #: volta a ser indistinguível de "ninguém olhou".
-MUDA_COM_RAZAO = {
-    "combinacao.slot_jogador.estabilidade@pro": "DEIXADA MUDA DE PROPÓSITO",
-}
+#: A ÚNICA ENTRADA DAQUI SAIU EM 08/09/2026, e a razão é que a célula deixou de
+#: ser muda. `combinacao.slot_jogador.estabilidade@pro` carregava a marca
+#: «DEIXADA MUDA DE PROPÓSITO»; a varredura do passado (07/09, `126e9603`) a
+#: RESPONDEU citando linha — `external_identity.py:537-553` (`_posicao_locked`)
+#: e o docstring de `slot_for` (:558-568) —, e de quebra registrou na própria
+#: ressalva uma contradição que fica para o dono da linha: o que se mantém é o
+#: LUGAR NA FILA, não o número exibido, e a metade `radio_*` ainda afirma o
+#: contrário. Exigir a marca de mudez numa célula respondida seria cobrar que
+#: ela desaprendesse.
+#:
+#: O dicionário fica de pé, vazio, porque o MECANISMO continua valendo: a
+#: próxima célula que alguém deixar muda de propósito entra aqui e volta a ser
+#: cobrada. O que substitui a cobrança daquela linha é
+#: `test_a_celula_respondida_em_07_09_nao_regrediu_para_o_vazio`, logo abaixo.
+MUDA_COM_RAZAO: dict[str, str] = {}
+
+#: A célula que saiu de `MUDA_COM_RAZAO`, e o que se cobra dela agora.
+RESPONDIDA_NA_VARREDURA = "combinacao.slot_jogador.estabilidade@pro"
 
 #: Gate do fonte que cada linha afirma. A string TEM de continuar no arquivo;
 #: some ela, e a célula do mapa deixou de descrever esta árvore.
@@ -251,6 +266,28 @@ class TestOVereditoEstaEscrito:
             "que está escrito ali é a medição de uma linha só que resolve a "
             "pergunta."
         )
+
+    def test_a_celula_respondida_em_07_09_nao_regrediu_para_o_vazio(
+        self, mapa: dict[str, dict[str, str]]
+    ) -> None:
+        """O que era mudez declarada virou resposta — e resposta não some.
+
+        Substitui a cobrança da marca «DEIXADA MUDA DE PROPÓSITO» nesta linha
+        (ver `MUDA_COM_RAZAO`). O perigo mudou de lado: antes era o vazio
+        virar descuido indistinguível, agora é a resposta evaporar num merge e
+        a linha voltar a ficar calada sem ninguém decidir isso.
+        """
+        linha = mapa[RESPONDIDA_NA_VARREDURA]
+        assert linha["cabo_ressalva"].strip(), (
+            f"{RESPONDIDA_NA_VARREDURA}: a `cabo_ressalva` esvaziou — a "
+            "medição de 07/09 sumiu e a célula voltou a ser um vazio mudo"
+        )
+        for lado in ("cabo", "radio"):
+            assert linha[f"{lado}_de_onde_sei"].strip() != "medido", (
+                f"{RESPONDIDA_NA_VARREDURA}: `{lado}_de_onde_sei` virou "
+                "`medido` sem ensaio @pro no caderno — a resposta veio de "
+                "leitura de fonte e o teto dela é `inferido-do-codigo`"
+            )
 
     @pytest.mark.parametrize("identificador", sorted(CELULAS_DESCOLADAS))
     def test_o_teste_que_morde_nao_voltou_a_ser_colado_pelo_merge(
