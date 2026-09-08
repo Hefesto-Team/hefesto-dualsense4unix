@@ -591,70 +591,34 @@ SEM_ENDERECO = {
 #: isto é decisão dela"*, que é exatamente o certo. Ela está declarada em
 #: `mockup/DIVERGENCIAS.md` com o que ela vê enquanto espera: nada muda, e os
 #: nove gestos que gravam no disco continuam mudos no sucesso.
-#: VAZIA DESDE 03/09/2026 — ela mandou publicar as dez, e a `perfis.desfecho`
-#: chegou à página que o produto renderiza. A régua
-#: `test_o_que_espera_publicacao_sai_da_lista_quando_ela_publicar` é quem
-#: cobrou: um nome que já está no publicado e continua declarado como à espera
-#: vira ponto cego, porque a lista deixa de ser lida como fila e passa a ser
-#: lida como decoração.
 #:
-#: O DICIONÁRIO FICA, e vazio: ele é o lugar combinado de quem escrever um
-#: endereço novo na bancada antes de ela aprovar. Apagá-lo obrigaria a próxima
-#: pessoa a reinventá-lo.
+#: O DICIONÁRIO FICA, E FICA VAZIO. Ele é o lugar combinado de quem escrever um
+#: endereço novo na bancada antes de ela aprovar; apagá-lo obrigaria a próxima
+#: pessoa a reinventá-lo. As duas réguas o cobram nos DOIS sentidos — entrada
+#: aqui exige endereço FALTANDO no publicado, e endereço faltando exige entrada
+#: aqui.
 #:
-#: **E ELE VOLTOU A TER UM NOME — 03/09/2026**, o `editor.prioridade.escolha`, o
-#: punho do `<input type=range>` que ela pediu. **E O NOME SAIU EM 04/09/2026**:
-#: a publicação das dez de `2a7d6583` levou o punho para
-#: `interface/paginas/10-perfis.html`, onde o endereço aparece duas vezes. A
-#: régua `test_o_que_espera_publicacao_sai_da_lista_quando_ela_publicar` acusou
-#: no mesmo dia, e a instrução dela é a que se seguiu: *"Tire da lista no mesmo
-#: commit."* Um nome publicado que continua declarado como à espera vira ponto
-#: cego — a lista deixa de ser lida como fila e passa a ser lida como decoração.
+#: **ELE JÁ ENCHEU E ESVAZIOU SEIS VEZES**, e as seis pelo mesmo ciclo: um
+#: endereço novo MUDA PIXEL, `--publicar-enderecos` o recusa dizendo — que é o
+#: certo, porque desenho é decisão dela —, ele espera aqui, ela publica, e a
+#: régua `test_o_que_espera_publicacao_sai_da_lista_quando_ela_publicar` cobra a
+#: baixa. As datas: `perfis.desfecho` (03/09) · `editor.prioridade.escolha`
+#: (04/09) · o cadeado do "Funciona em" e o alerta do "Nome do Jogo" (04→05/09,
+#: decisões [01] e [02] do PO) · `editor.jogo.rotulo` e `editor.jogo.alerta`
+#: (06/09, decisão 10-Q4) · `editor.modo`, o quadro "Modo" (06/09,
+#: PERFIL-MODO-01).
 #:
-#: **E ELE VOLTOU A TER QUATRO — 04/09/2026, decisão [01] do PO.** O cadeado do
-#: "Funciona em" e o ponto de alerta do "Nome do Jogo" MUDAM PIXEL: nascem
-#: elementos que não existiam, ao lado de dois campos. Isso é DESENHO, e
-#: `--publicar-enderecos` o recusa dizendo — que é exatamente o certo. Enquanto
-#: ela não publicar, os quatro valores continuam saindo e caindo no vazio na
-#: página que o produto renderiza; o que ela vê hoje não muda.
+#: **A SEXTA BAIXA É DE 08/09/2026.** Os três últimos chegaram à página que o
+#: produto renderiza em `44c2327e` — *"o publicado recebe as dez abas"* — e esta
+#: lista ficou para trás, com a régua VERMELHA e portão nenhum a alcançando.
+#: Nenhum dos 49 roda este arquivo, então o vermelho atravessou a integração
+#: calado; foi a leva de controle de qualidade quem viu.
 #:
-#: **PAGA — 05/09/2026, e a régua foi quem cobrou.** Os quatro endereços (o
-#: cadeado do "Funciona em" e o ponto de alerta do "Nome do Jogo", decisões [01]
-#: e [02] do PO) chegaram a `interface/paginas/` na publicação de 05/09, e esta
-#: lista ficou para trás — com
-#: `test_o_que_espera_publicacao_sai_da_lista_quando_ela_publicar` VERMELHO no
-#: `dev`. É exatamente o que ela nasceu para fazer: uma declaração que
-#: envelheceu é a régua se desligando sem ninguém decidir isso.
-#:
-#: A LISTA FICA VAZIA E NÃO SOME: ela é o lugar onde a próxima dívida desta
-#: espécie se declara, e as duas réguas que a cobram nos DOIS sentidos continuam
-#: valendo — entrada aqui exige endereço FALTANDO no publicado, e endereço
-#: faltando exige entrada aqui.
-#:
-#: **E ELE VOLTOU A TER DOIS — 06/09/2026, decisão 10-Q4 dela.** O rótulo ao
-#: lado do "Nome do Jogo" MUDA PIXEL: nascem três `<span>` que não existiam,
-#: dentro do `.val` de um campo, e o `<input>` encolhe para caber. Isso é
-#: DESENHO, e `--publicar-enderecos` o recusa dizendo — que é exatamente o
-#: certo. Enquanto ela não publicar, os dois valores saem e caem no vazio na
-#: página que o produto renderiza; o que ela vê hoje não muda.
-#: **E ELE VOLTOU A TER TRÊS — 06/09/2026, PERFIL-MODO-01.** O quadro "Modo"
-#: é a MAIOR mudança de pixel que esta aba já esperou: uma fileira nova de
-#: quatro botões dentro de "Definições", com o rótulo à esquerda como os cinco
-#: campos irmãos. Isso é DESENHO — `--publicar-enderecos` o recusa dizendo, que
-#: é exatamente o certo. Enquanto ela não publicar, `editor.modo` sai a cada
-#: tique e cai no vazio na página que o produto renderiza; o que ela vê hoje não
-#: muda, e o gesto `editor.modo` não tem botão para nascer dele.
-ESPERANDO_A_PUBLICACAO: dict[str, str] = {
-    "editor.jogo.rotulo": "o rótulo ao lado do campo (10-Q4) nasceu na bancada "
-                          "em 06/09 e muda pixel — três `<span>` novos dentro "
-                          "do `.val`; publicar é ato dela",
-    "editor.jogo.alerta": "a tinta do mesmo rótulo, que separa «não está nesta "
-                          "máquina» (rotina) de «não reconheci este endereço» "
-                          "(erro) — nasce e publica junto com ele",
-    "editor.modo": "o quadro «Modo» (PERFIL-MODO-01) nasceu na bancada em "
-                   "06/09: uma fileira NOVA de quatro botões no editor. É a "
-                   "maior mudança de pixel da aba, e publicar é ato dela",
-}
+#: A LIÇÃO QUE O CICLO DEIXA, e ela vale para toda lista de espera desta casa:
+#: **quem publica dá a baixa no mesmo commit.** Uma declaração que envelheceu é
+#: a régua se desligando sem ninguém decidir isso — a lista deixa de ser lida
+#: como fila e passa a ser lida como decoração.
+ESPERANDO_A_PUBLICACAO: dict[str, str] = {}
 
 
 #: O FIM DA FRASE DA EXIGÊNCIA ESCONDIDA — decisão [02] do PO, 04/09/2026:

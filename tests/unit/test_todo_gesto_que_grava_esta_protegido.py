@@ -169,16 +169,6 @@ ISENTOS: dict[tuple[str, str], str] = {
         "idem — o segundo dos três daquela volta",
     ("09-sistema.html", "perfil-da-mesa"):
         "idem: o clique manda o valor que a tela já exibe",
-    # O REENVIAR CHEGA À PORTA PELA ÁRVORE E NÃO PASSA POR ELA — 05/09/2026.
-    # Ele chama o mesmo `_aplicar` dos irmãos, e o `_aplicar` grava; mas o
-    # reenviar passa `guardar=False`, e uma régua de ÁRVORE não enxerga o valor
-    # de um argumento. MEDIDO, e não afirmado:
-    # `test_o_gatilho_aplicado_vai_para_o_perfil.py::test_reenviar_nao_grava`
-    # roda o gesto com um disco de mentira e conta ZERO gravações — a mesma
-    # montagem que conta UMA para o `modo`.
-    ("03-gatilhos.html", "reenviar"):
-        "passa `guardar=False` ao `_aplicar`; medido em 05/09/2026 com disco de "
-        "mentira: zero gravações — ver `test_reenviar_nao_grava`",
 }
 
 

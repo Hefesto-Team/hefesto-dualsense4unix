@@ -532,9 +532,28 @@ def test_os_sete_campos_de_texto_dizem_o_que_o_duble_diz(sob_o_duble):
             f"{endereco}: o dublê pôs neste lugar um controle no {via} que "
             f"{papel.lower()}, e a linha do cartão diz {linha!r}")
         conferidos += 1
-    assert conferidos == 2, (
-        f"conferi {conferidos} cartões e o desenho tem 2 — se o número caiu, um "
-        "cartão perdeu o endereço e saiu da conferência sem reprovar nada.")
+
+    # ESTA CONTAGEM TAMBÉM DEIXOU DE SER UM LITERAL — 08/09/2026, e é a MESMA
+    # cura que a de 03/09 sessenta linhas acima, no mesmo arquivo, que ninguém
+    # estendeu até aqui. Ela dizia `== 2` porque o desenho tinha dois cartões; a
+    # leva dos QUATRO NA MESA levou a `06-navegacao` publicada a quatro, e a
+    # régua reprovou por haver MAIS tela endereçada — o contrário do que ela
+    # existe para pegar. Portão nenhum dos 49 roda este arquivo, então o
+    # vermelho atravessou a integração calado até a leva de controle de
+    # qualidade de 08/09 abri-lo.
+    #
+    # O NÚMERO AGORA SAI DO DONO: quantos cartões o DESENHO endereça. O `piso`
+    # é a trava contra o outro defeito — uma varredura quebrada que não acha
+    # endereço nenhum daria `0 == 0` e passaria calada.
+    enderecados = sorted(e for e in valor if str(e).endswith("·navega"))
+    assert conferidos == len(enderecados), (
+        f"o desenho endereça {len(enderecados)} cartões ({enderecados}) e "
+        f"conferi {conferidos} — um lugar da mesa perdeu o endereço e saiu da "
+        "conferência sem reprovar nada.")
+    assert conferidos >= 2, (
+        f"conferi {conferidos} cartões: a varredura quebrou. O desenho teve "
+        "dois desde que nasceu e quatro desde a leva dos quatro na mesa; zero "
+        "ou um é a régua não achando endereço, não a tela encolhendo.")
 
     # -----------------------------------------------------------------------
     # OS SETE QUE A ONDA IDENTIDADE-VEM-DE-CIMA TROUXE

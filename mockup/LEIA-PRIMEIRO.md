@@ -14,11 +14,19 @@ mudança de produto apagava, em silêncio, o desenho contra o qual comparar.
 
 | | o que é | quem escreve |
 |---|---|---|
-| **`mockup/`** | o desenho **aprovado por ela**. Congelado até ela aprovar outro. | só ela, pelo `--aprovar` |
-| **`layout/`** | o que o produto **renderiza**. Muda por razão de produto. | os geradores `_ferramentas/abaNN.py` |
+| **`mockup/`** | a bancada: o desenho que se constrói e que ela olha. | os geradores `src/hefesto_dualsense4unix/interface/abaNN.py` |
+| **`src/hefesto_dualsense4unix/interface/paginas/`** | o **publicado**: o que o produto renderiza. | só o `--publicar NN`, e só depois do OK dela |
 
-**Aqui não há gerador.** Estes HTML são uma fotografia: o que ela olhou e disse
-que estava bom. Editar um arquivo daqui à mão é falsificar a fotografia.
+**A DIREÇÃO É `mockup/` → PUBLICADO, NUNCA O CONTRÁRIO** — e o sentido inverso
+foi o defeito original, o que ela nomeou lá em cima. Rodar `abaNN.py` muda a
+BANCADA e não toca no que ela vê; sem `--publicar` a tela dela fica igual.
+
+**ENDEREÇOS QUE MUDARAM, e o comando velho não existe mais:**
+
+* `layout/` foi aposentada em 31/08/2026 — era cópia velha que já tinha
+  divergido 25 KB sem ninguém ver. Quem renderiza hoje é `interface/paginas/`.
+* Os geradores saíram de `_ferramentas/` para dentro do pacote, em
+  `src/hefesto_dualsense4unix/interface/`.
 
 ## O portão
 
@@ -28,10 +36,21 @@ cópias sem régua foi medido em 31/08/2026: `layout/` e `novo-layout/` divergir
 **25 KB** sem ninguém ver, o lançador passou a abrir a errada, e os glifos L2 e
 R2 sumiram da aba Gatilhos por dois dias.
 
-**Quando o produto mudar e a divergência for legítima**, declare em
-`mockup/DIVERGENCIAS.md` com data e motivo. **Quando ela aprovar o desenho
-novo**, rode `scripts/check_o_desenho_aprovado.py --aprovar` — a fotografia é
-refeita e as declarações antigas são apagadas.
+**Quando a bancada andar na frente e a divergência for legítima**, declare em
+`mockup/DIVERGENCIAS.md` com data e motivo — é o que ela vê enquanto espera.
+
+**QUANDO ELA APROVAR, o comando é `--publicar`, e `--aprovar` MORREU:**
+
+```
+scripts/check_o_desenho_aprovado.py --publicar 07     ela aprovou a aba 07
+scripts/check_o_desenho_aprovado.py --publicar        ela aprovou as dez
+```
+
+O `--aprovar` copiava o PRODUTO para o DESENHO — a direção que apaga a
+referência — e hoje o script o RECUSA dizendo, apontando o `--publicar`. Há um
+terceiro, o `--publicar-enderecos NN`, que leva só `data-campo`/`data-gesto`
+novos em elementos que já existiam: isso não muda um pixel, então não precisa
+de aprovação. Ele RECUSA sozinho quando o desenho mudou.
 
 **Nunca** conserte o portão editando `mockup/` à mão para calar o vermelho: o
 vermelho é a informação.
