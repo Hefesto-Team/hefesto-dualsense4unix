@@ -3008,6 +3008,36 @@ def _apelidos_por_endereco() -> dict[str, str]:
     return por_endereco
 
 
+def _chave_de_radio(endereco: str) -> str:
+    """O endereço de rádio na forma que os DOIS lados podem comparar.
+
+    **O DEFEITO QUE ISTO FECHA foi achado por ELA em 08/09/2026**, olhando a aba
+    com os quatro DualSense na mesa: a régua desenhava CINCO pistas para TRÊS
+    adaptadores, as três com nome apareciam vazias, e os dois controles do rádio
+    caíam em duas pistas "Sem nome".
+
+    A CAUSA É A CAIXA, e nada além dela. Medido na máquina dela:
+
+        BlueZ  ->  'AC:A7:F1:00:00:CE'   (`org.bluez.Adapter1.Address`)
+        sysfs  ->  'ac:a7:f1:00:00:ce'   (`HID_PHYS`)
+
+    É o MESMO adaptador. O `grupos.pop(endereco)` nunca casava, então todo grupo
+    sobrevivia até o ramo do "sobrou" e virava pista sem nome — ao lado das
+    pistas nomeadas e vazias.
+
+    O comentário logo abaixo AFIRMAVA a premissa falsa, palavra por palavra:
+    *"o `endereco` de cada adaptador vem do BlueZ, e é a MESMA chave que o
+    `adaptador_por_uniq` devolve"*. Era a mesma chave semanticamente e duas
+    chaves diferentes para um `dict`.
+
+    **E O SINTOMA JÁ TINHA APARECIDO**, por outra causa, em 06/09 — está escrito
+    na função que monta os grupos. Duas causas diferentes, o mesmo desenho
+    errado na tela dela: é o preço de casar por string sem uma forma canônica.
+    Agora há uma, e ela é obrigatória nos dois lados.
+    """
+    return endereco.strip().lower()
+
+
 def _endereco_do_adaptador(interface: str) -> str:
     """O endereço de rádio daquele `hciN`, pelo BlueZ. `""` = não perguntei.
 
@@ -3020,7 +3050,7 @@ def _endereco_do_adaptador(interface: str) -> str:
         return ""
     for d in (_dongles() or ()):
         if str(getattr(d, "objeto", "") or "").rsplit("/", 1)[-1] == interface:
-            return str(getattr(d, "endereco", "") or "")
+            return _chave_de_radio(str(getattr(d, "endereco", "") or ""))
     return ""
 
 
@@ -3119,7 +3149,8 @@ def _regua_do_radio(ctx: Contexto) -> str:
     for m, c in zip(ctx.mesa, todos, strict=True):
         if not _e_radio(c):
             continue
-        grupos.setdefault(onde.get(str(m.get("uniq") or ""), ""), []).append(c)
+        grupos.setdefault(
+            _chave_de_radio(onde.get(str(m.get("uniq") or ""), "")), []).append(c)
 
     nome_por_endereco, nome_por_interface = _nomes_dos_adaptadores()
     pistas: list[dict[str, Any]] = []
@@ -3128,8 +3159,10 @@ def _regua_do_radio(ctx: Contexto) -> str:
     # já traz (o `if not dentro` de :func:`html_da_regua_do_radio` escreve
     # "Nenhum controle neste rádio · 0 de 1.600").
     #
-    # O `endereco` de cada adaptador vem do BlueZ, e é a MESMA chave que o
-    # `adaptador_por_uniq` devolve. Um adaptador que o BlueZ não listou não tem
+    # O `endereco` de cada adaptador vem do BlueZ e o do grupo vem do sysfs, e os
+    # dois passam por `_chave_de_radio` — que existe porque eles NÃO eram a mesma
+    # chave: o BlueZ escreve em maiúsculas e o sysfs em minúsculas. Um adaptador
+    # que o BlueZ não listou não tem
     # como casar com o grupo, e por isso ele aparece com o que sabe de si (o
     # `hciN` → nome) e sem fatia — nunca com a fatia de outro.
     mesa = _mesa_do_radio()
