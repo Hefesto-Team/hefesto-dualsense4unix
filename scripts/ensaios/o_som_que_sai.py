@@ -479,7 +479,14 @@ def main(argv: list[str] | None = None) -> int:
     analisador.add_argument("--sink", action="store_true", help="carrega e LÊ o nó no PipeWire")
     analisador.add_argument("--escrever", action="store_true", help="a porta do ensaio de bancada")
     analisador.add_argument("--exigir-mac", default="", help="endereço conferido do alvo")
-    analisador.add_argument("--arranjo", default="", help="ds5dongle | senshi")
+    analisador.add_argument(
+        "--arranjo", default="",
+        # O TERCEIRO É A METADE *COM* DO PAR COM/SEM: `common-preservado`
+        # mantém o `[2] = 0x10` e o `common` em [3..49], que é o único
+        # envelope que esta bancada mediu o firmware aceitar por rádio. As
+        # seis passadas de 07/09 variaram a TAG e o ARRANJO e NÃO variaram
+        # este byte — os dois candidatos externos escrevem 0x91 nele.
+        help="ds5dongle | senshi | common-preservado")
     analisador.add_argument("--eu-estou-ouvindo", action="store_true",
                             help="a orelha dela está do outro lado — sem isto, rc=3")
     analisador.add_argument("--segundos", type=float, default=SEGUNDOS_PADRAO,

@@ -22,6 +22,8 @@ from hefesto_dualsense4unix.integrations import ponte_tentativa
 from hefesto_dualsense4unix.integrations.eleicao_de_microfone import (
     EleitorDeMicrofone,
     ResultadoDaEleicao,
+    dizer_no_ar,
+    esquecer_a_palavra,
     recusa_de_quem_nao_elegeu,
 )
 from hefesto_dualsense4unix.utils.logging_config import get_logger
@@ -1448,7 +1450,33 @@ async def _metade_do_canal(
     conferida e do recado que vai para o cartão. Chamá-lo daqui é o oposto de
     reescrevê-lo — a segunda régua sobre o mesmo estado é o defeito que esta
     casa já pagou onze vezes.
+
+    **E A PALAVRA DELA VAI ANTES — 08/09/2026.** Por Bluetooth o canal só
+    existe enquanto a ponte de microfone estiver de pé, e o `0x32` que põe o
+    microfone do controle no ar seguia só o estado da source. Como o ato ELEGE
+    o canal como fonte padrão, e eleger não põe nó nenhum em ``RUNNING``, a
+    source ficava ``SUSPENDED`` e o `0x32` saía DESLIGADO: medido no journal
+    dela em 07/09/2026, quase três minutos de botão apertado com a ponte em
+    `bt_mic_pedido ligar=False`. O ato respondia `feito=True` sobre um
+    microfone mudo no ar.
+
+    **AQUI, E NÃO EM `_handle_mic_canal_set`.** Este é o ponto por onde passam
+    os DOIS chamadores de `ligar_o_microfone` — o 🎙 da tela e a borda do botão
+    do plástico. Costurar isto no `ipc_handlers` deixaria o plástico de fora,
+    com a suíte verde, e a regra dela é explícita:
+    *"o botão fisico do mic se ligado no microfone ele fica ligado tambem.  # (noqa-acento) dela
+    indepente se nativo ou virtual"*.
+
+    **ANTES da eleição** porque ligar pode PRECISAR da ponte subir: com a
+    palavra já guardada, a ponte que `_canal_no_ar` faz nascer já recebe o
+    pedido dela na primeira varredura, em vez de esperar o toque seguinte.
+
+    **E NO CABO ISTO NÃO FAZ NADA**, que é o desfecho certo: quem atende só
+    conhece nós de Bluetooth (`nos_dualsense_bluetooth`), e no fio a placa USB
+    publica o canal sozinha. Uma regra só no ato, em vez de um `if` de
+    transporte no caminho dela.
     """
+    dizer_no_ar(uniq, ligado)
     resultado = await _eleger_ou_devolver(daemon, uniq, not ligado)
     if resultado is None:
         return (
@@ -1859,6 +1887,15 @@ async def _apagar_a_luz_de_quem_perdeu_o_canal(
     ela perde o canal num gesto de outra pessoa é texto novo, e texto de tela é
     decisão dela — está no relato desta frente. O LED, não: ele já tem
     contrato escrito, e obedecê-lo é o trabalho.
+
+    **E O MICROFONE SAI DO AR COM A LUZ — 08/09/2026.** Desde que o `0x32` do
+    rádio passou a ter um segundo dono (a palavra dela, ver
+    `_metade_do_canal`), apagar só o LED abriria a mesma mentira pelo lado de
+    dentro: o plástico dizendo *"saí do ar"* com o microfone ainda
+    transmitindo. Quem perde o canal por gesto alheio deixa de ter dito
+    qualquer coisa — a decisão volta ao ouvinte da source, que é o
+    comportamento de 06/09. Não é `dizer_no_ar(False)`: ela não pediu para ser
+    calada, ela só deixou de ser a dona do canal.
     """
     if dono_antes is None or dono_antes == quem_tocou:
         return
@@ -1870,6 +1907,7 @@ async def _apagar_a_luz_de_quem_perdeu_o_canal(
         por=quem_tocou,
         eleito_agora=eleitor.eleito,
     )
+    esquecer_a_palavra(dono_antes)
     await daemon._run_blocking(_acender, acender, False, dono_antes)
 
 

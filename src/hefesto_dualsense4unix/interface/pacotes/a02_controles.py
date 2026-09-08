@@ -3351,7 +3351,7 @@ def mudo(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
         # de `mic.canal.set` NÃO traz `por_uniq` — quem o traz é o
         # `mic.volume.set` (`daemon/ipc_handlers.py:6164`). O ato do microfone
         # monta a resposta em `AtoDoMicrofone.como_corpo`
-        # (`daemon/subsystems/hotkey.py:1385`), e lá o campo não existe. Então
+        # (`daemon/subsystems/hotkey.py:1387`), e lá o campo não existe. Então
         # `alvo_honrado` devolve `None` aqui, esta linha fica CALADA contra o
         # daemon de hoje, e o silêncio é o certo: quem cobre o alvo errado
         # neste caminho é a metade do CANAL, que recusa dizendo quando a
@@ -3912,9 +3912,18 @@ def mic_modo(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
 
     * o CSV desta casa diz o CONTRÁRIO da frase — `audio.microfone` é
       `cabo_aciona=sim` / `radio_aciona=parcial`. Quem é parcial é o rádio;
-    * a **mesma tela** já promete a simetria que este gesto recusava: o `title`
-      do próprio botão "Virtual" diz *"É o que faz o mic soar igual no cabo e no
-      rádio"*.
+    * ~~a **mesma tela** já promete a simetria que este gesto recusava: o
+      `title` do próprio botão "Virtual"~~ — **ESTE ARGUMENTO CAIU em
+      08/09/2026, e a razão é a armadilha da prosa numa forma nova: A FRASE DA
+      TELA VIROU O ARGUMENTO.** Um `title` que ninguém tinha medido foi usado
+      como PROVA para mudar comportamento. Medido agora, ele promete três
+      coisas e duas não se sustentam — a de simetria é contradita pela linha
+      `audio.microfone.mudo@dualsense` do mapa de specs, que tem
+      `radio_aciona=parcial` com a assimetria declarada desde 03/08/2026
+      (MIC-BT-DONO-01). Cabo e rádio **não** soam igual, e isso está medido.
+      A CONCLUSÃO DO GESTO NÃO DEPENDIA DISTO e fica de pé pelos dois motivos
+      abaixo, que são sobre o que o código FAZ. Texto de tela é dela: a frase
+      não foi mexida aqui, e o buraco está escrito no mapa, não na página.
 
     O paralelo com o gesto `rota` também não se sustentava: lá o botão promete
     MOVER SOM AGORA e só metade do caminho existe; aqui a declaração é DURÁVEL,
