@@ -843,8 +843,25 @@ _SECAO_DO_CAMPO: dict[str, str] = {
 #: nomeia o que se PERDE, que é o desenho do gabinete, e não a seção de onde ele
 #: é aberto: dizer "A mesa" aqui faria a frase do rodapé acusar a perda de outra
 #: coisa.
+#: O `lancadores` NÃO TEM SEÇÃO NA ABA CONFIGURAÇÕES, e nunca vai ter: ele é
+#: escrito da aba Lançadores, pelos botões de localizar e de tirar
+#: (`interface/pacotes/a07_lancadores.py`). Mora no mesmo `maquina.json` porque
+#: aquele arquivo tem UM escritor — `machine.declare` —, e é por isso que ele
+#: cai nesta frase quando o documento em disco traz o campo corrompido.
+#:
+#: O RÓTULO NOMEIA O QUE SE PERDE, e não de onde ele é escrito: o que se perde é
+#: **onde cada lançador está**, que é a única coisa que ela digita naquela tela.
+#: Dizer "Lançadores" aqui faria a frase acusar a perda da aba inteira.
+#:
+#: ELE NASCEU DE UMA REGRESSÃO MEDIDA — 08/09/2026. O campo entrou no
+#: `MaquinaConfig` sem passar por aqui, e
+#: `test_todo_campo_do_schema_tem_rotulo_de_tela` ficou VERMELHO enquanto os
+#: portões inteiros ficavam verdes: aquele teste não está no `portoes.sh` nem no
+#: `ci.yml`. Sem o rótulo, `_rotulos_dos_descartados` cai no `rotulos.get(campo,
+#: campo)` e a barra de status dela mostraria a palavra crua `lancadores`.
 _ROTULOS_SEM_SECAO: dict[str, str] = {
     "mapa": "O desenho das entradas",
+    "lancadores": "Onde estão os seus lançadores",
 }
 
 

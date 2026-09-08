@@ -573,16 +573,15 @@ def test_o_produto_procura_os_cinco_pelas_pastas_do_motor(a07, desenho, monkeypa
     # `SEM_FONTE` (os CINCO cujo interior o produto não lê), o cartão da Steam
     # era o único cuja PRESENÇA ninguém mediu — e nascia `presente=True`
     # cravado. Ver `test_a_steam_ausente_nao_afirma_que_os_controles_chegam`.
-    # A `epic` ENTROU EM 08/09/2026, a pedido dela. A régua LÊ a lista de
-    # fábrica em vez de repetir os sete nomes: digitá-los aqui faria toda
-    # inclusão futura reprovar por estar CERTA, que é o defeito que esta casa
-    # nomeou onze vezes em 26/08. O que ela cobra é que a busca percorra TODOS
-    # os de fábrica — um lançador pulado volta ao `NÃO SEI` de constante.
+    # A RÉGUA LÊ A LISTA DE FÁBRICA em vez de repetir os nomes: digitá-los aqui
+    # faria toda inclusão futura reprovar por estar CERTA, que é o defeito que
+    # esta casa nomeou onze vezes em 26/08. O que ela cobra é que a busca
+    # percorra TODOS os de fábrica — um lançador pulado volta ao `NÃO SEI` de
+    # constante. (A Epic entrou nesta lista em 08/09/2026 e saiu no mesmo dia,
+    # por decisão dela; a régua não notou, e é exatamente por LER.)
     assert set(onde) == {x.chave for x in desenho.EMBUTIDOS}, (
         "a busca pulou um lançador — o cartão dele voltaria ao `NÃO SEI` de "
         "constante sem ninguém ver")
-    assert "epic" in onde, (
-        "a Epic saiu da busca. Ela é cartão desde 08/09/2026, a pedido dela.")
 
     # E O CAMINHO DA PINTURA TAMBÉM, e esta parte NASCEU DA MORDIDA: arrancar a
     # cura no CHAMADOR (`onde_estao = ()` dentro do `_ler_do_disco`) deixava a
@@ -639,55 +638,97 @@ def test_o_cartao_achado_e_o_nao_achado_dizem_coisas_diferentes(desenho):
         "conferir a resposta sem acreditar em mim")
 
 
-def test_o_botao_de_abrir_fica_nos_cinco_cartoes_nos_tres_estados(desenho):
-    """OS TRÊS ESTADOS TÊM BOTÃO, e o do não-localizado é OUTRO — decisão dela.
+def test_todo_cartao_tem_botao_nos_tres_estados_e_o_do_ausente_e_outro(desenho):
+    """OS SEIS CARTÕES, e o nome desta régua já foi «os cinco».
 
-    02/09/2026: a tarde daquele dia tirou o "Abrir o lançador" do cartão que não
-    achou, pelo argumento (bom) de que abrir um lançador ausente é botão que
-    finge. **O argumento não era o ponto** — o desenho que ela aprovou tinha o
-    botão nos cinco, e uma frente não tira um botão da tela dela por conta
-    própria. Ele voltou, e a pergunta ficou para ela.
+    **ERA ESSE O DEFEITO.** Enquanto ela olhava `cartao_sem_censo` com UM item,
+    o que ela provava era a função dos CINCO — e o sexto cartão, a Steam, tem
+    função própria (`cartao_da_steam`). O botão que ela cobra nasceu num lugar
+    só, o outro ficou com o velho, e **régua nenhuma da casa olhou para lá**:
+    numa máquina sem Steam o cartão dela saía com o selo `NÃO LOCALIZADO` e um
+    «Abrir o lançador» que só sabe abrir a Steam que não está lá.
 
-    08/09/2026: **ela respondeu, e a resposta era um terceiro caminho** — nem
-    tirar, nem manter: *"o Botão Abrir o Lançador deveria ser o Adicionar
-    Launcher"*. O botão fica, e passa a fazer a coisa que faz sentido num cartão
-    que não achou nada: registrar onde o lançador está. O cartão que ACHOU
-    continua com "Abrir o lançador", e é isso que separa os dois estados.
+    **E O BURACO FECHAVA POR CIMA**, que é o que fazia dele um beco: a outra
+    porta é o botão global, e ele recusa um nome que já tem cartão de fábrica
+    mandando usar o botão do cartão — que naquele cartão não existia. A tela
+    mandava clicar onde não havia nada.
 
-    A MORDIDA TEM DUAS METADES, e as duas nomeiam o estado: pôr `acoes=()` em
-    qualquer ramo de `cartao_sem_censo` reprova; e dar o MESMO rótulo aos dois
-    estados reprova também — que é o erro fácil de quem trocar o rótulo no lugar
-    errado e deixar o cartão aceso oferecendo um registro que já existe.
+    ENTÃO A RÉGUA PASSOU A PERCORRER OS CARTÕES QUE O PRODUTO MONTA, e não uma
+    função. É a única forma que alcança os dois desenhos, e é a que alcançaria o
+    próximo cartão com desenho próprio.
+
+    02/09/2026 — O BOTÃO FICA NOS TRÊS ESTADOS, decisão dela, e ela DESFAZ uma
+    mudança que ninguém tinha submetido a ela: o estado `off` nasceu com
+    `acoes=()`, pelo argumento (bom) de que abrir um lançador ausente é botão
+    que finge. O desenho que ela aprovou tem botão nos cinco, e uma frente não
+    tira um botão da tela dela por conta própria.
+
+    08/09/2026 — ELA RESPONDEU, E A RESPOSTA ERA UM TERCEIRO CAMINHO: nem tirar,
+    nem manter. *"o Botão Abrir o Lançador deveria ser o Adicionar Launcher"*.
+    O botão fica, e passa a fazer a coisa que faz sentido num cartão que não
+    achou nada: dizer onde o lançador está.
+
+    A MORDIDA TEM TRÊS METADES, e cada uma nomeia um estado: pôr `acoes=()` em
+    qualquer ramo reprova; dar o MESMO rótulo aos dois estados reprova (é o erro
+    de quem troca o rótulo no lugar errado e deixa o cartão aceso oferecendo um
+    registro que já existe); e **devolver o «Abrir o lançador» ao ramo `off` de
+    UM cartão só reprova nomeando aquele cartão** — que é o defeito que esta
+    régua não via.
     """
-    item = next(x for x in desenho.SEM_FONTE if x.chave == "retroarch")
-    esperado = {"ainda não procurei": "Abrir o lançador",
-                "procurei e não achei": desenho.ADICIONAR_ROTULO,
-                "achei aqui": "Abrir o lançador"}
-    for estado, onde in (("ainda não procurei", None),
-                         ("procurei e não achei", ""),
-                         ("achei aqui", "/usr/bin/retroarch")):
-        cartao = desenho.cartao_sem_censo(item, onde)
-        html = desenho.acoes_html(cartao)
-        assert esperado[estado] in html, (
-            f"o cartão em '{estado}' perdeu o botão que o desenho dela tem — "
-            f"ela não decidiu isso. A fileira é: {html!r}")
-        assert 'data-gesto="' in html, (
-            f"o botão do cartão em '{estado}' ficou sem endereço: um clique sem "
-            f"`data-gesto` não chega ao Python, e quem clica conclui que "
-            f"funcionou")
+    # OS TRÊS ESTADOS DE TODOS OS CARTÕES, montados pelo produto. `onde_estao`
+    # com local vazio é "procurei e não achei"; a chave ausente é "não procurei".
+    de_fabrica = [x.chave for x in desenho.EMBUTIDOS]
+    achei = desenho.Leitura(
+        com_wrapper=("1",), instalados=1,
+        onde_estao=tuple((k, f"/usr/bin/{k}") for k in de_fabrica))
+    nao_achei = desenho.Leitura(onde_estao=tuple((k, "") for k in de_fabrica))
+    estados = {"ainda não procurei": desenho.cartoes(None),
+               "procurei e não achei": desenho.cartoes(nao_achei),
+               "achei aqui": desenho.cartoes(achei)}
 
-    nao_achei = desenho.acoes_html(desenho.cartao_sem_censo(item, ""))
-    achei = desenho.acoes_html(desenho.cartao_sem_censo(item, "/usr/bin/retroarch"))
-    assert "Abrir o lançador" not in nao_achei, (
-        "o cartão que NÃO localizou voltou a oferecer «Abrir o lançador» — o "
-        "produto não sabe abrir o que não achou, e ela pediu o contrário")
-    assert desenho.ADICIONAR_ROTULO not in achei, (
-        f"o cartão que ACHOU passou a oferecer «{desenho.ADICIONAR_ROTULO}» — "
-        f"são dois estados e dois botões, e trocar o rótulo dos dois faz o "
-        f"cartão aceso pedir um registro que já existe")
+    for estado, cartoes in estados.items():
+        assert {c.chave for c in cartoes} == set(de_fabrica), (
+            f"o estado {estado!r} não montou os mesmos cartões: "
+            f"{sorted(c.chave for c in cartoes)}")
+        for cartao in cartoes:
+            html = desenho.acoes_html(cartao)
+            esperado = (desenho.ADICIONAR_ROTULO if cartao.selo == "off"
+                        else "Abrir o lançador")
+            assert esperado in html, (
+                f"o cartão {cartao.chave!r} em {estado!r} (selo {cartao.selo!r}) "
+                f"não oferece «{esperado}» — ela não decidiu isso. A fileira é: "
+                f"{html!r}")
+            assert 'data-gesto="' in html, (
+                f"o botão do cartão {cartao.chave!r} em {estado!r} ficou sem "
+                f"endereço: um clique sem `data-gesto` não chega ao Python, e "
+                f"quem clica conclui que funcionou")
+            if cartao.selo == "off":
+                assert "Abrir o lançador" not in html, (
+                    f"o cartão {cartao.chave!r} que NÃO localizou oferece «Abrir "
+                    f"o lançador» — o produto não sabe abrir o que não achou, e "
+                    f"ela pediu o contrário")
+            else:
+                assert desenho.ADICIONAR_ROTULO not in html, (
+                    f"o cartão {cartao.chave!r} em {estado!r} oferece "
+                    f"«{desenho.ADICIONAR_ROTULO}» — são dois estados e dois "
+                    f"botões, e trocar o rótulo dos dois faz o cartão aceso "
+                    f"pedir um registro que já existe")
+
+    # E O DA STEAM, NOMEADO. A régua acima já o cobre por percorrer os cartões;
+    # esta linha existe para a MENSAGEM: foi a Steam que ficou de fora, e uma
+    # falha genérica não diria isso a quem a ler daqui a um mês.
+    steam = next(c for c in estados["procurei e não achei"]
+                 if c.chave == desenho.STEAM)
+    assert steam.selo == "off", (
+        f"a Steam não chegou ao estado NÃO LOCALIZADO nesta leitura "
+        f"({steam.selo!r}) — a régua estaria medindo outro estado")
+    assert desenho.ADICIONAR_ROTULO in desenho.acoes_html(steam), (
+        "o cartão da STEAM que não localizou voltou a ficar sem porta: o "
+        "produto não sabe abrir a Steam que não achou, e o botão global recusa "
+        "mandando usar o botão DESTE cartão")
 
 
-def test_adicionar_launcher_abre_a_tela_de_registro(desenho):
+def test_localizar_este_lancador_abre_a_tela_de_registro(desenho):
     """O botão do cartão tem de ABRIR a pop-up, e isso é mecânico.
 
     A `.tela-nova` desta casa aparece por `:target` (`monta.CSS_POPUP`), e **só
@@ -695,20 +736,126 @@ def test_adicionar_launcher_abre_a_tela_de_registro(desenho):
     e não abre nada. O botão sairia da tela dela como um clique que grava a
     intenção e não mostra onde digitar.
 
-    A MORDIDA: tire o `href` do botão «Adicionar Launcher» (ou troque a tag de
-    volta para `<button>` em `acao_html`) e esta régua reprova nas duas linhas —
-    a tag e o destino.
+    ELE É COBRADO NOS SEIS, e não num: foi por ser escrito duas vezes que ele
+    faltou na Steam. Hoje ele sai de :func:`desenho.acao_de_localizar`, que é o
+    único lugar onde a tag e o destino existem.
+
+    A MORDIDA: tire o `href` de `acao_de_localizar` (ou troque a tag de volta
+    para `<button>` em `acao_html`) e esta régua reprova nas duas linhas — a tag
+    e o destino — em todos os cartões.
     """
-    item = next(x for x in desenho.SEM_FONTE if x.chave == "retroarch")
-    html = desenho.acoes_html(desenho.cartao_sem_censo(item, ""))
-    assert f'<a class="btn" href="#{desenho.TELA_DO_NOVO}"' in html, (
-        f"o «{desenho.ADICIONAR_ROTULO}» não é uma âncora para "
-        f"#{desenho.TELA_DO_NOVO}: a tela de registro abre por `:target`, e um "
-        f"`<button>` não muda o fragmento — o clique gravaria a intenção e não "
-        f"mostraria onde digitar. A fileira é: {html!r}")
-    assert f'data-gesto="{desenho.ADICIONAR}"' in html and 'data-v="retroarch"' in html, (
-        "a âncora abre a tela e não diz PARA QUAL cartão — a tela nasceria "
-        "apontando para o alvo anterior")
+    lida = desenho.Leitura(
+        onde_estao=tuple((x.chave, "") for x in desenho.EMBUTIDOS))
+    for cartao in desenho.cartoes(lida):
+        html = desenho.acoes_html(cartao)
+        assert f'<a class="btn" href="#{desenho.TELA_DO_NOVO}"' in html, (
+            f"o «{desenho.ADICIONAR_ROTULO}» do cartão {cartao.chave!r} não é "
+            f"uma âncora para #{desenho.TELA_DO_NOVO}: a tela de registro abre "
+            f"por `:target`, e um `<button>` não muda o fragmento — o clique "
+            f"gravaria a intenção e não mostraria onde digitar. A fileira é: "
+            f"{html!r}")
+        assert f'data-gesto="{desenho.ADICIONAR}"' in html, (
+            f"o botão do cartão {cartao.chave!r} não tem endereço")
+        assert f'data-v="{cartao.chave}"' in html, (
+            f"a âncora do cartão {cartao.chave!r} abre a tela e não diz PARA "
+            f"QUAL cartão — a tela nasceria apontando para o alvo anterior")
+
+
+def test_os_dois_botoes_do_registro_dizem_coisas_diferentes(desenho):
+    """A PALAVRA É DELA — 08/09/2026: *"Adicionar novo Lançador? Seria legal um
+    sinônimo né?"*.
+
+    TRÊS PEDIDOS NUMA FRASE, e esta régua é dona dos três: **português**,
+    **«novo» no que é novo**, e **os dois botões falando palavras diferentes**.
+    O rótulo do cartão nasceu em inglês e igual ao do botão global, e os dois
+    problemas eram o mesmo problema — dois botões com a mesma frase na mesma
+    tela fazem quem lê procurar a diferença que a tela não mostra.
+
+    O SINÔNIMO SE ESCREVE SOZINHO, e é por isso que a régua cobra o selo: o
+    cartão que não localizou diz `NÃO LOCALIZADO`, então o botão dele diz
+    «Localizar». Selo e botão passam a falar a mesma palavra.
+
+    **POR QUE ESTA RÉGUA PODE DIGITAR as duas frases:** ela é a DONA da decisão
+    — o lugar onde a palavra dela fica registrada, para que trocá-la exija
+    passar por ela. Toda régua que apenas PRECISA do rótulo lê a constante.
+
+    A MORDIDA: dê o mesmo texto aos dois rótulos e a primeira linha reprova;
+    devolva «Launcher» a qualquer um deles e a segunda reprova.
+    """
+    do_cartao = desenho.ADICIONAR_ROTULO
+    global_ = desenho.ADICIONAR_NOVO_ROTULO
+    assert do_cartao != global_, (
+        f"os dois botões voltaram a dizer a mesma coisa ({do_cartao!r}): um é "
+        f"«ele está aqui, te mostro onde» e o outro é «tem um que você não "
+        f"conhece». Ela pediu um sinônimo justamente para separá-los.")
+    assert do_cartao == "Localizar este Lançador", (
+        f"o rótulo do botão do cartão é {do_cartao!r}, e a decisão dela é "
+        f"'Localizar este Lançador' — a palavra do SELO daquele cartão")
+    assert global_ == "Adicionar novo Lançador", (
+        f"o rótulo do botão global é {global_!r}, e a decisão dela é "
+        f"'Adicionar novo Lançador' — com o «novo», que é o que o separa do "
+        f"outro")
+
+    # A LÍNGUA. O projeto é em português e há portão que reprova inglês na tela;
+    # aqui a régua alcança o rótulo ANTES de ele chegar à página publicada.
+    for rotulo in (do_cartao, global_, desenho.TELA_DO_NOVO_TITULO,
+                   desenho.REMOVER_ROTULO):
+        assert "launcher" not in rotulo.lower(), (
+            f"{rotulo!r} voltou ao inglês. A tela desta casa fala português.")
+
+    # E O SELO E O BOTÃO FALAM A MESMA PALAVRA — é o que faz o rótulo do cartão
+    # se explicar sozinho para quem lê de cima para baixo.
+    assert "LOCALIZ" in desenho.SELOS["off"].upper(), (
+        f"o selo do estado ausente é {desenho.SELOS['off']!r} e o botão dele diz "
+        f"{do_cartao!r} — os dois deixaram de falar a mesma palavra, que era a "
+        f"razão de o sinônimo ter esta forma e não outra")
+
+
+def test_o_titulo_da_tela_de_registro_nao_contradiz_o_botao_que_a_abriu(desenho):
+    """A CAIXA É UMA E OS CAMINHOS SÃO DOIS — e o título não pode ser de um só.
+
+    Enquanto os dois botões diziam a mesma frase, titular a caixa com o rótulo
+    do botão global era inofensivo. Com a palavra dela separando os atos, deixou
+    de ser: aberta pelo botão do cartão do RetroArch, a caixa mostraria
+    *«…novo…»* em cima da linha que diz que o RetroArch já tem cartão. **Duas
+    células da mesma tela dizendo o contrário uma da outra.**
+
+    O TÍTULO NEUTRO NÃO É EVASIVA — é o que o gesto FAZ nos dois caminhos: ele
+    procura em disco e **recusa o que não acha** (ver
+    `test_o_registro_nao_grava_o_que_nao_esta_no_disco`). Nada entra ali sem ser
+    localizado, venha de onde vier.
+
+    A MORDIDA: faça `TELA_DO_NOVO_TITULO = ADICIONAR_NOVO_ROTULO` e esta régua
+    reprova; a linha de baixo continua dizendo o nome do cartão, e a tela volta
+    a se contradizer.
+    """
+    titulo = desenho.TELA_DO_NOVO_TITULO
+    assert titulo not in (desenho.ADICIONAR_ROTULO, desenho.ADICIONAR_NOVO_ROTULO), (
+        f"o título da caixa é o rótulo de um dos dois botões ({titulo!r}). A "
+        f"caixa é UMA e chega-se a ela por dois caminhos — metade das aberturas "
+        f"mostraria um título que contradiz a linha logo abaixo.")
+    assert titulo in desenho.tela_do_registro_html(), (
+        "o título não chegou à marcação da tela de registro")
+
+    # E A LINHA DE BAIXO É QUEM DIZ DE QUAL DOS DOIS SE TRATA.
+    do_cartao = desenho.tela_do_registro_html(
+        desenho.NOVO_PARA_O_CARTAO.format(nome="RetroArch"))
+    assert "RetroArch" in do_cartao, (
+        "a tela aberta pelo botão de um cartão não diz de qual cartão")
+    assert desenho.NOVO_SEM_ALVO in desenho.tela_do_registro_html(), (
+        "a tela aberta pelo botão global perdeu a linha que diz o que ela é")
+
+    # O ARTIGO SAIU DA FRASE, e foi a foto que mostrou: com o cartão da Steam
+    # ganhando o botão, «Onde está O Steam» chegou à tela — e esta casa escreve
+    # «a Steam» em toda a aba. A frase sem artigo vale para todo nome, inclusive
+    # os que ela ainda vai inventar no cartão novo.
+    for nome in ("Steam", "RetroArch", "Dolphin · mGBA"):
+        linha = desenho.NOVO_PARA_O_CARTAO.format(nome=nome)
+        assert not linha.lower().startswith(("o ", "a ")), linha
+        assert f" o {nome}" not in linha and f" a {nome}" not in linha, (
+            f"a linha voltou a pôr artigo antes do nome do cartão: {linha!r}. "
+            f"Os nomes têm gêneros diferentes e um deles vem do teclado dela — "
+            f"adivinhar o artigo é palpite na tela.")
 
 
 def test_a_contagem_do_topo_conta_presenca_e_nao_selo(desenho):
@@ -1616,7 +1763,7 @@ def test_a_palavra_do_selo_chega_a_pagina_publicada(desenho):
 
     A MORDIDA: tire `.lanc-selo.off` do CSS do `aba07.py`, regere e publique;
     esta régua reprova. E ela NÃO procura a palavra no HTML de propósito: o
-    estado de partida é `nao_sei` nos sete cartões, e afirmar "não localizei"
+    estado de partida é `nao_sei` nos seis cartões, e afirmar "não localizei"
     antes de procurar é o desenho fingindo ser produto.
     """
     doc = _publicada()
@@ -1629,59 +1776,48 @@ def test_a_palavra_do_selo_chega_a_pagina_publicada(desenho):
         f"procurar é o desenho fingindo ser produto")
 
 
-def test_a_epic_tem_cartao_e_procura_os_tres_clientes(desenho):
-    """A EPIC ENTROU — pedido dela, e o cartão respeita um fato do Linux.
+def test_nao_ha_cartao_da_epic_e_o_heroic_e_a_porta_das_duas_lojas(desenho):
+    """A DECISÃO É DELA, E É A SEGUNDA — 08/09/2026, e ela desfaz a primeira.
 
-    *"Seria interessante termos o da Epic Games Aqui também não?"*
+    Ela pediu o cartão de manhã (*"Seria interessante termos o da Epic Games
+    Aqui também não?"*), ele foi feito, e ela o viu e o tirou:
+    *"melhor deixar só heróic e tirar epic games não?"*, *"Epic e gog ficam
+    dentro do heróic. Melhor mesmo seu ponto"*.  # noqa-acento: grafia dela
 
-    NÃO EXISTE EPIC GAMES LAUNCHER NATIVO aqui: quem entrega o jogo da Epic é o
-    `legendary`, o `Rare` ou o Heroic. O cartão procura os três, e a frase os
-    NOMEIA — em vez de afirmar que achou "a Epic", que seria dizer que achou o
-    que não está lá.
+    **A RÉGUA GUARDA AS DUAS METADES, e as duas são necessárias.** Só cobrar
+    que o cartão não exista deixaria alguém tirar o «(Epic · GOG)» do rótulo do
+    Heroic num dia de faxina — e aí a Epic sumiria da tela inteira, que é o
+    contrário do que ela decidiu. Com o cartão fora, aquele rótulo é o ÚNICO
+    lugar onde a Epic aparece, e ele passou a carregar a decisão.
 
-    A MORDIDA: tire `legendary` (ou `rare`) da busca do cartão e esta régua
-    reprova nomeando o cliente que sumiu.
+    A MORDIDA TEM DUAS: acrescente um `SemCenso("epic", …)` ao `SEM_FONTE` e a
+    primeira metade reprova; tire o «Epic» do rótulo do Heroic e a segunda
+    reprova nomeando a loja que sumiu da tela.
     """
-    epic = next(x for x in desenho.EMBUTIDOS if x.chave == "epic")
-    agulhas = set(epic.atalhos) | set(epic.comandos)
-    for cliente in ("legendary", "rare", "io.github.dummerle.rare"):
-        assert cliente in agulhas, (
-            f"o cartão da Epic não procura o {cliente!r}. Quem entrega jogo da "
-            f"Epic no Linux é o legendary, o Rare ou o Heroic — deixar um de "
-            f"fora faz o cartão dizer NÃO LOCALIZADO numa máquina onde os jogos "
-            f"da Epic abrem")
-    diz = epic.diz_nao_achei
-    for cliente in ("Heroic", "Rare", "legendary"):
-        assert cliente in diz, (
-            f"a frase do cartão da Epic não nomeia o {cliente!r}: sem os nomes "
-            f"ela vira uma negativa sem saída, e quem lê não sabe o que ter")
-    assert "não tem cliente" not in diz.lower(), (
-        "a frase afirma que a Epic não tem cliente no Linux — além de confissão, "
-        "é falso: o Rare e o legendary existem e ela pode ter os dois")
+    chaves = [x.chave for x in desenho.EMBUTIDOS]
+    assert "epic" not in chaves, (
+        f"a Epic voltou a ter cartão: {chaves}. Ela decidiu o contrário depois "
+        f"de ver o cartão pronto — e o argumento dela é medido: quem entrega o "
+        f"jogo da Epic aqui é o Heroic, então os dois cartões procurariam o "
+        f"MESMO programa em disco e o segundo só repetiria a resposta do "
+        f"primeiro.")
 
+    heroic = next(x for x in desenho.SEM_FONTE if x.chave == "heroic")
+    for loja in ("Epic", "GOG"):
+        assert loja in heroic.nome, (
+            f"o rótulo do Heroic é {heroic.nome!r} e não nomeia a {loja}. Com o "
+            f"cartão da Epic fora por decisão dela, este rótulo é o ÚNICO lugar "
+            f"da tela onde aquela loja aparece — tirá-lo daqui apaga a loja da "
+            f"interface inteira, que é o oposto do que ela pediu.")
 
-def test_a_epic_nao_contradiz_o_cartao_do_heroic(desenho, a07, monkeypatch,
-                                                 tmp_path):
-    """DUAS CÉLULAS DA MESMA TELA NÃO PODEM DIZER O CONTRÁRIO UMA DA OUTRA.
-
-    É A RAZÃO DE O HEROIC ENTRAR NA BUSCA DA EPIC, e ela é medida: numa máquina
-    onde só o Heroic está instalado, um cartão da Epic que procurasse apenas
-    `rare`/`legendary` diria NÃO LOCALIZADO — com o cartão do Heroic a dois
-    centímetros dizendo que achou, e o rótulo dele dizendo "Epic · GOG". É o
-    defeito que esta aba inteira existe para matar, voltando pela porta da
-    frente.
-
-    A MORDIDA: tire `com.heroicgameslauncher.hgl` e `heroic` da busca da Epic e
-    esta régua reprova mostrando as duas respostas contraditórias.
-    """
-    _pastas_falsas(monkeypatch, tmp_path, "com.heroicgameslauncher.hgl")
-    onde = dict(a07._onde_estao_os_lancadores(()))
-    assert onde["heroic"], (
-        "o dublê não pôs o Heroic no disco — a régua mediria o vazio")
-    assert onde["epic"], (
-        f"o Heroic está instalado e o cartão da Epic diz que não achou nada: "
-        f"heroic={onde['heroic']!r} epic={onde['epic']!r}. Os dois cartões "
-        f"ficam na MESMA tela, e o rótulo do Heroic já diz 'Epic · GOG'.")
+    # E NENHUMA FRASE DE TELA FALA DE EPIC POR CONTA PRÓPRIA: as três frases dos
+    # cartões são as gerais, e uma quarta redação só para uma loja voltaria a
+    # ser um segundo dono do mesmo assunto.
+    for frase in (desenho.DIZ_ACHEI, desenho.DIZ_NAO_ACHEI, desenho.DIZ_SEM_FONTE):
+        assert "Epic" not in frase, (
+            f"uma frase geral de cartão passou a nomear a Epic: {frase!r}. O "
+            f"lugar da Epic é o rótulo do Heroic, e um segundo lugar envelhece "
+            f"separado.")
 
 
 def test_o_lancador_declarado_entra_no_cartao(desenho, a07, monkeypatch,
@@ -1924,3 +2060,88 @@ def _lancadores_do_disco() -> dict:
     from hefesto_dualsense4unix.utils.maquina import carregar_maquina
 
     return dict(carregar_maquina().lancadores)
+
+
+def test_a_recusa_do_botao_global_manda_clicar_num_botao_que_existe(a07, ctx,
+                                                                    desenho):
+    """A TELA NÃO MANDA CLICAR ONDE NÃO HÁ NADA — e mandava, num cartão.
+
+    O botão global recusa um nome que já tem cartão de fábrica, e a recusa
+    manda usar o botão DAQUELE cartão. Enquanto o cartão da Steam não tinha o
+    botão, essa frase fechava um beco: as duas únicas portas para dizer onde a
+    Steam está eram o botão que não existia e o botão que apontava para ele.
+
+    A RÉGUA COBRA OS DOIS LADOS AO MESMO TEMPO — o texto da recusa e a fileira
+    do cartão que ela nomeia —, e é o único jeito de o beco não voltar: cada
+    metade sozinha continuaria verde enquanto a outra some.
+
+    A MORDIDA TEM DUAS: tire o `acao_de_localizar` do ramo `off` de
+    `cartao_da_steam` e a segunda asserção reprova nomeando a Steam; troque o
+    `desenho.ADICIONAR_ROTULO` da recusa por um texto digitado e a primeira
+    reprova no dia em que o rótulo mudar.
+    """
+    lida = desenho.Leitura(
+        onde_estao=tuple((x.chave, "") for x in desenho.EMBUTIDOS))
+    fileiras = {c.chave: desenho.acoes_html(c) for c in desenho.cartoes(lida)}
+
+    p = _PonteQueAnota()
+    for item in desenho.EMBUTIDOS:
+        # O QUE SE DIGITA É A CHAVE, e não o rótulo do cartão: quem decide a
+        # colisão é `chave_do_rotulo`, e dois dos seis rótulos não derivam para
+        # a própria chave ("Heroic (Epic · GOG)" vira `heroic-epic-gog`). Usar o
+        # rótulo aqui faria a régua medir o caminho do cartão NOVO em dois dos
+        # seis casos — e dar verde sobre o ramo que ela existe para cobrar.
+        assert a07.chave_do_rotulo(item.chave) == item.chave, (
+            f"a chave {item.chave!r} não sobrevive à derivação — a régua não "
+            f"chegaria ao ramo da recusa")
+        # O botão GLOBAL: `v` vazio, e o nome digitado cai sobre um de fábrica.
+        a07.adicionar_lancador(ctx, {"gesto": desenho.ADICIONAR, "v": ""}, p)
+        with pytest.raises(RuntimeError) as caiu:
+            a07.adicionar_lancador(ctx, {"gesto": desenho.ADICIONAR, "forma": {
+                desenho.NOVO_ROTULO: item.chave,
+                desenho.NOVO_ALVO: "/bin/sh"}}, p)
+        recusa = str(caiu.value)
+        assert desenho.ADICIONAR_ROTULO in recusa, (
+            f"a recusa do {item.chave!r} não nomeia o botão do cartão: "
+            f"{recusa!r} — sem o nome, quem lê não sabe para onde ir")
+        assert desenho.ADICIONAR_ROTULO in fileiras[item.chave], (
+            f"a recusa manda usar «{desenho.ADICIONAR_ROTULO}» do cartão "
+            f"{item.chave!r}, e AQUELE CARTÃO NÃO TEM ESSE BOTÃO. A fileira "
+            f"dele é: {fileiras[item.chave]!r}. É um beco: as duas portas para "
+            f"dizer onde este lançador está apontam uma para a outra.")
+    assert p.chamadas == [], (
+        f"a recusa gravou alguma coisa: {p.chamadas}")
+
+
+def test_o_campo_que_esta_aba_criou_tem_rotulo_de_tela():
+    """O `lancadores` do `maquina.json` NASCEU AQUI — e o rótulo dele é daqui.
+
+    ESTA RÉGUA NASCEU DE UMA REGRESSÃO MEDIDA — 08/09/2026. O campo entrou no
+    `MaquinaConfig` com o botão de registro e **não ganhou rótulo de tela** em
+    `app/ipc_bridge.py`. Sem ele, `_rotulos_dos_descartados` cai no
+    `rotulos.get(campo, campo)` e a barra de status dela mostra a palavra crua
+    `lancadores` no dia em que o documento em disco trouxer o campo corrompido.
+
+    **E OS PORTÕES FICARAM VERDES**: quem cobrava isso era
+    `test_descartados_chegam_ao_rodape.py`, que não está no `portoes.sh` nem no
+    `ci.yml`. A régua irmã continua sendo a autoritativa — ela cobre o schema
+    INTEIRO, campo a campo, e reprova rótulo sobrando. Esta cobre o campo que a
+    ABA criou, e mora aqui pela razão de sempre: quem acrescenta o campo paga o
+    rótulo, e paga na régua que ele já roda.
+
+    A MORDIDA: tire `"lancadores"` do `_ROTULOS_SEM_SECAO` e esta régua reprova.
+    """
+    from hefesto_dualsense4unix.app import ipc_bridge
+    from hefesto_dualsense4unix.utils.maquina import MaquinaConfig
+
+    assert "lancadores" in MaquinaConfig.model_fields, (
+        "o campo saiu do schema — a régua estaria medindo o vazio")
+    rotulo = ipc_bridge._rotulos_dos_descartados({"descartados": ["lancadores"]})
+    assert rotulo and rotulo[0] != "lancadores", (
+        f"o campo que esta aba criou chega à barra de status dela como a "
+        f"palavra CRUA do JSON: {rotulo!r}. O rótulo mora em "
+        f"`ipc_bridge._ROTULOS_SEM_SECAO`.")
+    assert "ançador" in rotulo[0], (
+        f"o rótulo do `lancadores` é {rotulo[0]!r} e não nomeia o que se perde. "
+        f"A frase do rodapé diz «isto o Hefesto não entendeu e descartou: …», e "
+        f"quem lê precisa saber que perdeu onde os lançadores dela estão.")

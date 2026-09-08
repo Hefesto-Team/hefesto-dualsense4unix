@@ -108,7 +108,9 @@ def test_os_seis_cartoes_mandam_o_gesto_e_dizem_qual_lancador(desenho):
     """
     # A CONTA SAI DA LISTA DE FÁBRICA, e não do teclado — 08/09/2026, quando a
     # Epic entrou e esta linha reprovou a inclusão por estar CERTA. Ela era
-    # `== 6`, digitado. O que a régua precisa é de UM cartão por lançador de
+    # `== 6`, digitado. **A Epic saiu no mesmo dia, por decisão dela, e esta
+    # régua não notou nenhuma das duas vezes** — que é a prova de que ler a
+    # lista era o certo. O que a régua precisa é de UM cartão por lançador de
     # fábrica; quantos são é decisão dela, e muda sem que nada aqui mude.
     cartoes = desenho.cartoes(None)
     assert [c.chave for c in cartoes] == [x.chave for x in desenho.EMBUTIDOS], (
@@ -203,6 +205,7 @@ def test_os_cinco_sem_funcao_recusam_nomeando_o_lancador(a07, ctx, espia,
     """
     # LÊ A LISTA, NÃO O NÚMERO. Ela era `len(...) == 5` e a Epic a fez reprovar
     # por estar certa em 08/09/2026 — a mesma forma das onze réguas de 26/08.
+    # (A Epic entrou e saiu no mesmo dia; esta régua atravessou as duas.)
     # O que importa é que TODOS os sem-censo recusem nomeando; um a mais na
     # lista é um a mais a cobrar, nunca um motivo para o vermelho.
     assert desenho.SEM_FONTE, "a lista dos sem censo esvaziou — a régua mediria zero"
