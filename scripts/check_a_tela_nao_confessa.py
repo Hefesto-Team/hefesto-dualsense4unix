@@ -194,20 +194,28 @@ FATOS: dict[str, str] = {
 #: todas no mesmo commit passaria por arquivos de quatro frentes ao mesmo
 #: tempo. **Acrescentar uma linha aqui é dívida nova na tela, e a revisão tem
 #: de perguntar por quê.**
-A_DIVIDA: dict[str, str] = {
-    "Ainda não sei olhar este lançador":
-        "aba07 (`interface/aba07.py`), cinco lançadores. O produto fala em "
-        "primeira pessoa sobre o que não aprendeu. Medido em 07/09/2026, fora "
-        "dos arquivos desta leva",
-    "O perfil ainda não tem por onde limitar estes":
-        "aba09 (`interface/aba09.py`), o quadro dos limites. O sujeito é o "
-        "NOSSO esquema de perfil. Medido em 07/09/2026, fora dos arquivos "
-        "desta leva",
-    "O Hefesto ainda não lê a cor por rádio":
-        "`app/widgets/external_card.py`, a `Fala` DICA_DA_COR_NO_RADIO. O "
-        "`porque=` dela diz com todas as letras que *quem ainda não pede somos "
-        "nós*. Medido em 07/09/2026, fora dos arquivos desta leva",
-}
+#: **AS TRÊS SAÍRAM DA TELA EM 08/09/2026, e a lista está VAZIA.** Elas
+#: sobreviveram um dia pela razão escrita acima — apagar todas no mesmo commit
+#: passaria por arquivos de quatro frentes ao mesmo tempo —, e caíram quando as
+#: frentes fecharam e os quatro arquivos ficaram livres:
+#:
+#:   "Ainda não sei olhar este lançador"        `interface/desenho_dos_lancadores.py`
+#:   "O perfil ainda não tem por onde limitar"  `interface/aba09.py`
+#:   "O Hefesto ainda não lê a cor por rádio"   `app/widgets/external_card.py`
+#:
+#: E CAIU UMA QUARTA que não estava declarada aqui: o `DIZ_ACHEI` do mesmo
+#: arquivo dos lançadores dizia *"mas ainda não sei olhar dentro dele: o
+#: produto não lê a biblioteca deste lançador"*. Ela não casava com nenhuma
+#: forma desta régua — a confissão vinha depois de um "Achei", e a régua olha o
+#: começo da frase. **Isso é ponto cego declarado, não linha morta:** quem
+#: acrescentar uma confissão no MEIO de uma frase que começa bem continua
+#: passando. A cura de verdade é a régua olhar a oração, não a frase.
+#:
+#: O FATO ÚTIL SOBREVIVEU NAS QUATRO. Nenhuma virou silêncio: as três primeiras
+#: passaram a dizer o que o produto FAZ (o perfil casa por processo e janela; o
+#: teto não alcança estes; a cor vem da lista), e a dívida continua onde ela
+#: mora — o `docs/data/mapa-controles.csv`.
+A_DIVIDA: dict[str, str] = {}
 
 
 # ---------------------------------------------------------------------------

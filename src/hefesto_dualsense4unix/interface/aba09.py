@@ -1191,7 +1191,7 @@ MIOLO = f'''
 {est("O que ele impõe", impoe(PERFIL_DA_MESA), "info", "◆", dica="O que este perfil limita hoje, em todos os controles. O degrau vem de RUMBLE_POLICY_MULT, no daemon — nenhum número escrito nesta tela.", ident=_id("bateria-impoe"))}
 {est("Vale para", f"Os {N} controles", "info", "◆", dica="É o teto geral. Cada controle pode sobrepô-lo na linha dele, e o campo de lá diz qual dos dois está valendo.", ident=_id("bateria-vale-para"))}
 {est("O teto alcança", _frase(ALCANCA), "info", "◆", ident=CAMPO_DO_ALCANCE, dica="Onde o teto do perfil age de verdade hoje. Sai de LINHAS_DO_TETO, no produto — nenhum nome escrito nesta tela.")}
-{est("Ainda sem teto", _frase(PENDENTES), "info", "◆", ident=CAMPO_DOS_PENDENTES, inteiro=_frase(PENDENTES, curto=False), dica="O perfil ainda não tem por onde limitar estes. Cada um entra quando ganhar ponto de aplicação no daemon, e some daqui sozinho.")}
+{est("Ainda sem teto", _frase(PENDENTES), "info", "◆", ident=CAMPO_DOS_PENDENTES, inteiro=_frase(PENDENTES, curto=False), dica="Estes ficam livres do teto do perfil. Quando um ganhar limite próprio, ele sai desta lista sozinho.")}
             <!-- O VÃO DE 58px, E POR QUE ELE ERA O DEFEITO — 31/08/2026.
                  Palavra dela: *"aqui em perfil da bateria essa seção tá muito feia
                  e distoante do resto da página, tá destacando negativamente"*.
