@@ -22,10 +22,13 @@ Este arquivo é a régua de que os dois defeitos fecharam juntos:
    emite ruído em 2,4 GHz" (especificação de terceiro) e "não medi o ganho nesta
    máquina" (conta) leem igual;
 4. a cura de uma conferência SEM ordem também sai do tooltip;
-5. **nenhum serial chega ao markup.** A tela desta aba vira PNG versionado
-   (`scripts/gui-captura/retratar_abas.py`), nenhum portão de anonimato varre
-   imagem, e `scripts/check_anonymity.sh` diz por escrito que o serial
-   identifica a unidade dela tão bem quanto o MAC.
+5. **nenhum serial chega ao markup.** A exigência nasceu quando a tela desta
+   aba virava PNG versionado pelo retratista da janela GTK — que saiu com ela
+   em 06/09/2026 (`D-0609-GTK-LEVA-INTEIRA`), e o retratista de hoje
+   (`src/hefesto_dualsense4unix/interface/olhar.py`) fotografa as páginas HTML,
+   não este painel. **A exigência fica**, e não depende de quem fotografa:
+   nenhum portão de anonimato varre imagem, e `scripts/check_anonymity.sh` diz
+   por escrito que o serial identifica a unidade dela tão bem quanto o MAC.
 
 POR QUE ``Gtk.OffscreenWindow``, E NUNCA ``Gtk.Window``
 --------------------------------------------------------
@@ -486,10 +489,12 @@ def test_as_chaves_das_regras_nao_colidem_com_as_da_tira() -> None:
 def test_sem_pedir_o_exame_nao_traz_ordem_nenhuma() -> None:
     """O default de `leitura_das_ordens` é desligado, e isso é a foto.
 
-    O `retratar_abas.py` monta uma bancada para os cinco caminhos do exame e
-    fotografa o resultado para `docs/usage/assets/`. Se o catálogo de ordens
-    ligasse sozinho, ele varreria o barramento REAL da máquina dela por dentro
-    de uma chamada que o autor da foto acredita ter injetado inteira — e o
+    A régua nasceu do retratista da janela GTK, que montava uma bancada para os
+    cinco caminhos do exame e fotografava o resultado para `docs/usage/assets/`;
+    ele saiu com a janela em 06/09/2026. **O motivo dela não saiu junto**, e é
+    este: se o catálogo de ordens ligasse sozinho, ele varreria o barramento
+    REAL da máquina dela por dentro de uma chamada que quem monta a bancada
+    acredita ter injetado inteira — e o
     `test_com_as_raizes_injetadas_nada_do_sistema_real_e_lido` não veria, porque
     ele vigia `pathlib` e as duas varreduras usam `os.listdir` e `open`.
     """
