@@ -37,12 +37,17 @@ isso `FRASES_DO_ESPELHO` existe: a régua
 E A CONTAGEM ABSOLUTA NÃO SERVE DE RÉGUA, e isso também foi medido
 -------------------------------------------------------------------
 
-A mesma aba colhe **199** textos num processo solto e **196** sob a suíte: três
-frases da seção do arranjo leem o DMI da placa (*"A BIOS desta placa conta 5
-entradas USB"*) e o `conftest` desvia o `HOME` e os quatro `XDG_*` para um lar
-de mentira. Um número cravado aqui mediria a BANCADA, não o produto — que é a
+A mesma aba colhe **189** textos num processo solto e **186** sob a suíte: as
+três frases do censo do gabinete saem de um arquivo que o `install.sh` grava
+sob o `HOME`, e o `conftest` desvia o `HOME` e os quatro `XDG_*` para um lar de
+mentira. Um número cravado aqui mediria a BANCADA, não o produto — que é a
 família de defeito que esta casa persegue. Por isso a régua cobra as frases que
 somem e um PISO, nunca a igualdade.
+
+**MAS A FOLGA DO PISO TEM TAMANHO, e ele é o dos 3 acima.** Um piso frouxo o
+bastante é a mesma mentira em letra menor: ele valeu 175 contra uma colheita de
+186, e uma seção cortada a menos da metade passava por ele. Ver
+`FRASES_DO_CENSO_DO_GABINETE` e `PISO_DA_COLHEITA`.
 
 `ConfigActionsMixin._get` é o único caminho pelo qual as seções pedem widget, e
 `daemon_autostart_switch` é o ÚNICO id que elas pedem — conferido com
@@ -75,32 +80,50 @@ FRASES_DO_ESPELHO = (
     "Este valor é um espelho. Quem liga e desliga é o interruptor da aba Sistema.",
 )
 
-#: PISO da colheita, e ele é piso e não igualdade: três frases da seção do
-#: arranjo leem o DMI da placa e somem sob o `HOME` de mentira do `conftest`.
+#: Quanto o censo do gabinete acrescenta à colheita, e ele é a ÚNICA diferença
+#: medida entre os dois ambientes: a contagem que a SMBIOS declara, a que o
+#: barramento entrega, e a pergunta que a divergência entre as duas abre. As
+#: três moram na seção "Conexões", saem do `gabinete.json` que o `install.sh`
+#: grava sob o `HOME`, e o `conftest` desvia o `HOME` e os quatro `XDG_*` para
+#: um lar de mentira — então **a suíte nunca as vê**.
 #:
-#: **O PISO MEDIA A BANCADA, que é o que este comentário jurava não fazer —
-#: corrigido em 08/09/2026.** Ele valia 190, calibrado sobre "196 sob a suíte,
-#: 199 num processo solto"; a colheita de hoje dá **186 sob a suíte e 189
-#: solto** — os mesmos 3 de diferença entre os dois ambientes, e 10 a menos dos
-#: dois lados.
-#:
-#: A CAUSA, MEDIDA: os 10 saíram da seção "Os controles", e ela é a ÚNICA
-#: dinâmica das cinco — monta um card por controle que o daemon reporta
-#: (`_BlocoDoMic.encaixar`, `_aplicar`). Os números de 06/09 foram tomados numa
-#: máquina com controle na mesa; nesta leva não havia nenhum, e a seção colheu
-#: 8 textos em vez dos ~18. Nada sumiu do produto: as cinco molduras estão de
-#: pé e as `FRASES_DO_ESPELHO` foram todas colhidas.
-#:
-#: O PISO NOVO É O DA MESA VAZIA, que é o mínimo verdadeiro — controle ligado
-#: só ACRESCENTA texto. E o trabalho de "acusar uma seção que sumiu inteira"
-#: passou para `PISO_POR_SECAO`, que é mais forte que um total: uma seção que
-#: monta VAZIA (o modo de falha real do berço) não mexe na contagem das outras
-#: quatro e escaparia de qualquer total generoso o bastante para não mentir.
-PISO_DA_COLHEITA = 175
+#: Conferido nos dois sentidos em 08/09/2026: 189 num processo solto, 186 sob a
+#: suíte, e a colheita solta repetida sob um lar VAZIO devolve os mesmos 186 —
+#: o que prova que o censo é o mecanismo inteiro, e não um dos vários.
+FRASES_DO_CENSO_DO_GABINETE = 3
 
-#: Piso POR MOLDURA. A menor com a mesa vazia é "Os controles", com 8; abaixo
-#: disto a seção montou oca, que é o defeito que o berço pode causar sem
-#: levantar exceção nenhuma.
+#: PISO da colheita, e ele é piso e não igualdade: com o censo no lugar a mesma
+#: aba colhe `FRASES_DO_CENSO_DO_GABINETE` textos a mais.
+#:
+#: **A FOLGA DELE É A DIFERENÇA ENTRE OS DOIS AMBIENTES, E ESTÁ TODA GASTA** —
+#: 189 solto menos as 3 do censo dá os 186 que a suíte vê, e é aqui que ele
+#: para. Ele valeu 175 até 08/09/2026, contra uma colheita de 186: onze de
+#: folga que ambiente nenhum explicava, e o preço disso foi medido, não
+#: deduzido. Cortada a seção "Está tudo certo?" de 20 textos para 9, a aba caiu
+#: a exatos 175 e as quatro réguas deste arquivo deram `4 passed`, `rc=0`: uma
+#: seção perdendo 55% do conteúdo atravessava os dois pisos em silêncio.
+#: `test_a_folga_do_piso_tem_tamanho_medido` passa a cobrar o tamanho da folga,
+#: e é ela que reprova um piso comprado de novo.
+#:
+#: A RAZÃO QUE ESTAVA ESCRITA AQUI CAIU NA MEDIÇÃO, e fica registrada para
+#: ninguém a rederivar: ela dizia que os textos que faltavam saíam da seção "Os
+#: controles" por não haver controle na mesa. Não é o que acontece.
+#: `HospedeiroDaAbaConfig` não tem `_controles_leitor`, e o pedido que sobra
+#: (`daemon.state_full`) é assíncrono — a colheita é tomada antes de qualquer
+#: resposta poder chegar. Medido em 08/09/2026 com QUATRO DualSense adotados na
+#: mesa: a seção montou os mesmos 8 textos, dizendo "Nenhum controle ligado
+#: agora". **A colheita não enxerga a mesa**, e é por isso que o número acima é
+#: estável o bastante para ser cobrado sem folga.
+PISO_DA_COLHEITA = 186
+
+#: Piso POR MOLDURA. A menor é "Os controles", com 8, e ela não cresce com a
+#: mesa (ver acima); abaixo disto a seção montou oca, que é o defeito que o
+#: berço pode causar sem levantar exceção nenhuma.
+#:
+#: ELE NÃO SUBSTITUI O TOTAL, e a medição acima é a prova: a seção do exame
+#: cortada de 20 para 9 passa por aqui com folga de três, e quem a pega é o
+#: `PISO_DA_COLHEITA`. Os dois cobram defeitos diferentes — este, a seção que
+#: sobe oca; aquele, a seção que perde metade sem esvaziar.
 PISO_POR_SECAO = 6
 
 

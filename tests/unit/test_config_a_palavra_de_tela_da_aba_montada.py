@@ -49,6 +49,7 @@ _gi.require_version("Gtk", "3.0")
 from gi.repository import Gtk
 
 from tests.unit.aba_config_sem_a_janela import (
+    FRASES_DO_CENSO_DO_GABINETE,
     FRASES_DO_ESPELHO,
     PISO_DA_COLHEITA,
     PISO_POR_SECAO,
@@ -87,11 +88,18 @@ def _aba_montada() -> Any:
     restaurado do git — os dois lados deram o mesmo número —, e
     `test_o_berco_nao_e_mais_frouxo_que_o_glade` reprova se ela encolher.
 
-    O NÚMERO SAIU DAQUI EM 08/09/2026: era "199 textos dos dois lados", e ele
-    só vale com a MESA VAZIA. A seção "Os controles" monta um card por controle
-    que o daemon reporta, então a colheita cresce com o que está na mesa —
-    cravar o número aqui é medir a bancada. O piso e a razão estão em
-    `aba_config_sem_a_janela.PISO_DA_COLHEITA`.
+    O NÚMERO SAIU DAQUI EM 08/09/2026: era "199 textos dos dois lados". A
+    colheita de hoje dá 189 num processo solto e 186 sob a suíte, e a única
+    fonte da diferença é o censo do gabinete — ver
+    `aba_config_sem_a_janela.FRASES_DO_CENSO_DO_GABINETE`.
+
+    A RAZÃO QUE ESTAVA ESCRITA AQUI TAMBÉM CAIU: dizia que a colheita cresce
+    com o que está na mesa, porque "Os controles" monta um card por controle.
+    Medido em 08/09/2026 com QUATRO DualSense adotados, a seção montou os
+    mesmos 8 textos do estado vazio — este berço não tem `_controles_leitor` e
+    o pedido que sobra é assíncrono, então a colheita é tomada antes de haver
+    resposta. Continua certo que cravar IGUALDADE aqui seria errado, mas a
+    razão é outra, e é o censo.
     """
     return aba_config_montada()
 
@@ -140,11 +148,12 @@ def test_o_berco_nao_e_mais_frouxo_que_o_glade() -> None:
     frase errada dentro.
 
     A régua cobra as FRASES e um PISO, e não a igualdade: a mesma aba colhe
-    três textos a MENOS sob a suíte do que num processo solto, porque três
-    frases da seção do arranjo leem o DMI da placa e o `conftest` desvia o
-    `HOME`. Um número cravado aqui mediria a bancada — e foi o que aconteceu:
-    o piso de 190 vinha de uma medição com controle na mesa, e reprovou esta
-    aba inteira em 08/09 sem que nada tivesse sumido dela. Ver
+    três textos a MENOS sob a suíte do que num processo solto, porque as três
+    frases do censo do gabinete saem de um arquivo sob o `HOME` e o `conftest`
+    desvia o `HOME`. O piso tem de servir aos dois ambientes, então ele é o do
+    ambiente mais pobre. O que ele NÃO pode ter é folga além dessas três —
+    valeu 175 até 08/09 e deixava passar uma seção cortada a menos da metade,
+    que é o que `test_a_folga_do_piso_tem_tamanho_medido` agora reprova. Ver
     `aba_config_sem_a_janela.PISO_DA_COLHEITA`.
     """
     caixa = _aba_montada()
@@ -168,9 +177,7 @@ def test_o_berco_nao_e_mais_frouxo_que_o_glade() -> None:
 
     # E CADA MOLDURA DE PÉ TEM DE TER CONTEÚDO — 08/09/2026. O total sozinho
     # não pega o modo de falha real do berço: uma seção que monta OCA deixa as
-    # outras quatro intactas, e o total continua acima de qualquer piso que não
-    # minta sobre a bancada. Ver `PISO_DA_COLHEITA`, que foi calibrado
-    # com a mesa cheia.
+    # outras quatro intactas, e o total continua acima do piso.
     for moldura in caixa.get_children():
         rotulo = getattr(moldura, "get_label", lambda: None)() or "?"
         quantos = len(textos_da_arvore(moldura))
@@ -178,6 +185,44 @@ def test_o_berco_nao_e_mais_frouxo_que_o_glade() -> None:
             f"a seção {rotulo!r} montou com {quantos} textos — ela subiu oca, "
             "e o total das outras quatro esconderia isso"
         )
+
+
+def test_a_folga_do_piso_tem_tamanho_medido() -> None:
+    """A folga entre a colheita e o piso é a do AMBIENTE, e nada além.
+
+    ESTA RÉGUA NASCE DE UM PISO COMPRADO, e o preço dele foi medido — 08/09/2026.
+    `PISO_DA_COLHEITA` valia 175 contra uma colheita de 186 sob a suíte: onze de
+    folga sem fonte declarada. Cortada a seção "Está tudo certo?" de 20 textos
+    para 9, a aba caiu a exatos 175 e o arquivo inteiro deu `4 passed`, `rc=0` —
+    uma seção perdendo 55% do conteúdo passava pelos DOIS pisos, porque 9 ainda
+    é folgadamente maior que `PISO_POR_SECAO`.
+
+    O que se cobra aqui é o TAMANHO da folga, e ele tem uma fonte só: o censo do
+    gabinete, que acrescenta `FRASES_DO_CENSO_DO_GABINETE` textos à seção
+    "Conexões" quando o `HOME` é o de verdade e some sob o lar de mentira do
+    `conftest`. Medido nos dois sentidos — 189 solto, 186 sob a suíte, e 186 de
+    novo num processo solto com um lar vazio.
+
+    Por que ela não é a igualdade que o arquivo recusa: o teto legítimo é a
+    colheita COM o censo, então a folga pode ser qualquer coisa de 0 a 3
+    conforme quem roda tenha o produto instalado. O que ela não pode é ser 11.
+    """
+    colhidos = len(textos_da_arvore(_aba_montada()))
+    folga = colhidos - PISO_DA_COLHEITA
+
+    assert folga >= 0, (
+        f"a aba colheu {colhidos} textos e o piso é {PISO_DA_COLHEITA}: "
+        f"faltam {-folga}. Ou sumiu texto da tela, ou o piso subiu sem a "
+        "colheita subir junto."
+    )
+    assert folga <= FRASES_DO_CENSO_DO_GABINETE, (
+        f"a aba colheu {colhidos} textos contra um piso de {PISO_DA_COLHEITA}: "
+        f"{folga} de folga, e o ambiente só explica "
+        f"{FRASES_DO_CENSO_DO_GABINETE} (as frases do censo do gabinete). "
+        "Folga sem fonte é piso comprado — uma seção pode perder metade do "
+        "conteúdo e atravessar. Se a aba ganhou texto, suba o "
+        "`PISO_DA_COLHEITA` junto e diga na nota dele o que entrou."
+    )
 
 
 def test_todo_rotulo_da_aba_comeca_em_maiuscula() -> None:

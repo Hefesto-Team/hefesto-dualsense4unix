@@ -315,9 +315,31 @@ def test_aba_citada_e_a_aba_onde_o_botao_mora(
 #:
 #: Exigir "em que aba isto mora" de uma frase dessas é cobrar endereço de quem
 #: não está dando direção, e foi o que pôs esta régua no vermelho quando o
-#: editor de modo ganhou os quatro segmentos. A lista sai do HTML (o atributo
-#: `data-modo`) em vez de ser digitada: modo novo entra sozinho.
-_MODO_NO_EDITOR = re.compile(r'data-modo="[a-z]+"[^>]*>([^<]+)')
+#: editor de modo ganhou os quatro segmentos. A lista sai do HTML em vez de ser
+#: digitada: modo novo entra sozinho.
+#:
+#: A ÂNCORA É `data-hef="editor.modo"`, E ELA FOI APERTADA EM 08/09/2026 —
+#: antes era `data-modo="[a-z]+"`, o atributo sozinho, e ele **não é exclusivo
+#: do editor de modo**. Medido nas dez páginas publicadas: a régua devolvia
+#: SEIS rótulos, não os quatro que este comentário promete. Os três de sobra
+#: vinham da aba Conexões, onde outro controle reusa o mesmo atributo
+#: (`data-campo="sala-altura"`, `data-campo="sala-visada"`), e os rótulos eram
+#: `'Sim'` e `'Não'`.
+#:
+#: **O BURACO ERA VIVO, não teórico:** os dois são rótulos de botão de verdade,
+#: e `_aba_do_botao` os põe em **Conexões** — ou seja, a isenção desculpava um
+#: botão de OUTRA aba de dizer onde mora. E `'Não'` tem três caracteres, que é
+#: exatamente o piso do varredor de parágrafo (`"([^"]{3,40})"`): bastava uma
+#: frase futura do guia citar `"Não"` para ela sair isenta em silêncio.
+#:
+#: DOS DOIS CAMINHOS — apertar a isenção ou alargar o comentário —, o escolhido
+#: foi APERTAR, porque a razão da isenção é semântica e não vale para os dois
+#: intrusos: os quatro segmentos nomeiam um ESTADO do perfil e a prosa os cita
+#: como estado, enquanto `'Sim'` e `'Não'` são respostas comuns, que num guia
+#: pedem endereço como qualquer outro botão. Alargar o comentário obrigaria a
+#: escrever como regra "e também qualquer palavra que algum widget ponha num
+#: `data-modo`", que ninguém escolheria de propósito.
+_MODO_NO_EDITOR = re.compile(r'data-hef="editor\.modo"[^>]*>([^<]+)')
 
 
 def _nomes_de_modo() -> set[str]:
@@ -326,6 +348,38 @@ def _nomes_de_modo() -> set[str]:
     for _aba, html in _paginas():
         nomes.update(m.strip() for m in _MODO_NO_EDITOR.findall(html))
     return nomes
+
+
+def test_a_isencao_de_nome_de_modo_nao_passa_do_editor_de_modo() -> None:
+    """A isenção alcança só o que a razão dela sustenta: a aba Perfis.
+
+    ESTA RÉGUA NASCE DE UMA ISENÇÃO MAIS LARGA QUE A PRÓPRIA DOCSTRING —
+    08/09/2026. `_MODO_NO_EDITOR` casava o atributo `data-modo` sozinho, e ele
+    não pertence só ao editor de modo: a aba Conexões o reusa noutro controle.
+    Medido nas dez publicadas, a isenção devolvia SEIS rótulos em vez de
+    quatro, e os dois de sobra — `'Sim'` e `'Não'` — são botões de verdade que
+    moram em **Conexões**.
+
+    O que se cobra aqui é o alcance, e não a lista: um modo novo no editor
+    entra sozinho, mas um rótulo de fora da aba Perfis não entra nunca. Sem
+    isto a isenção volta a crescer calada no dia em que outro controle usar o
+    mesmo atributo — e uma frase do guia citando `"Não"` sairia sem endereço.
+    """
+    isentos = _nomes_de_modo()
+    assert isentos, "a isenção esvaziou — `editor.modo` sumiu das publicadas"
+
+    rotulos = _rotulos_de_botao()
+    forasteiros = {
+        nome: _aba_do_botao(nome)
+        for nome in isentos
+        if nome in rotulos and _aba_do_botao(nome) != "Perfis"
+    }
+    assert not forasteiros, (
+        "a isenção de nome de modo alcançou botão que não é do editor de modo: "
+        f"{forasteiros!r}. A razão dela é que os segmentos de `editor.modo` "
+        "nomeiam um ESTADO do perfil e a prosa os cita como estado; um botão "
+        "de outra aba citado no guia continua devendo o endereço dele."
+    )
 
 
 def test_guia_das_mascaras_aponta_o_botao_e_a_aba_que_existem() -> None:
