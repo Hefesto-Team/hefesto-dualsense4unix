@@ -307,6 +307,30 @@ class LedsConfig(BaseModel):
     # inválido em binário antigo (`extra="forbid"`) — coberto nas notas de
     # release (COR-08).
     auto_player_colors: bool = True
+    # A PROCEDÊNCIA DA COR — decisão de produto de 08/09/2026: *"o override de
+    # cor por MAC ganha PROCEDÊNCIA: para qual número ele foi escolhido. Quando
+    # o número daquele aparelho muda, a cor gravada é FÓSSIL e sai sozinha,
+    # caindo de volta na paleta automática."*
+    #
+    # O DEFEITO QUE ELE FECHA, medido na mesa dela: o override é por MAC e
+    # CONGELADO; o número do jogador é de SESSÃO e muda com a ordem de conexão.
+    # Os ranks 2 e 4 dela guardavam as cores dos slots 1 e 2 — o número de
+    # outro dia fossilizado no arquivo — e dois DualSense acendiam o MESMO
+    # `#0000FF`. Sem este campo o resolvedor tinha de ADIVINHAR qual repetição
+    # era fóssil e qual era o "pinta os quatro de verde" dela, e o palpite
+    # matou o broadcast (`core/led_control.py::cores_sem_colisao`).
+    #
+    # SÓ TEM SENTIDO DENTRO DE UM OVERRIDE POR CONTROLE (`ControllerOverrides.
+    # leds`): na seção GLOBAL do perfil não há "qual número", a cor é de todos.
+    # É aceito pelo schema nos dois lugares (reuso do modelo) e ignorado no
+    # global, exatamente como o `auto_player_colors` acima é ignorado aqui.
+    #
+    # `None` = sem procedência gravada. É o valor de TODO perfil escrito antes
+    # deste dia, e o resolvedor o trata como `LEGADO`: volta a provar fóssil
+    # pela forma (a cor é a do número de OUTRO da mesa), que é o melhor que se
+    # pode fazer sem o dado. Aditivo, sem migração; ATENÇÃO downgrade, mesma
+    # nota do `auto_player_colors` (`extra="forbid"`).
+    lightbar_para_o_numero: int | None = None
 
     @field_validator("lightbar")
     @classmethod

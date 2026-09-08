@@ -1210,11 +1210,26 @@ class IpcHandlersMixin:
         if not alvos:
             return []
         from hefesto_dualsense4unix.core.controller import OutputSpec
+        from hefesto_dualsense4unix.core.led_control import DO_BROADCAST
 
         spec = OutputSpec(**campos)
         aplicados: list[str] = []
         for alvo in alvos:
             try:
+                # A PROCEDÊNCIA VAI DECLARADA — 08/09/2026. Este laço grava a
+                # MESMA cor em todo mundo de propósito, e é o único lugar do
+                # produto que faz isso. Sem a declaração, o resolvedor de cor
+                # única tinha de ADIVINHAR se a repetição era o "Todos" dela
+                # ou duas escolhas colididas — e o palpite desfazia o
+                # broadcast no tique seguinte, com o P1 acendendo a cor do
+                # número do 3. Ver `core/led_control.py::cores_sem_colisao`.
+                apply_for(alvo, spec, procedencia_da_cor=DO_BROADCAST)
+            except TypeError:
+                # Backend sem o carimbo (outra árvore, dublê de teste): a cor
+                # chega igual. O `apply_output_for` do produto ainda deduz o
+                # "Todos" comparando com o `_desired_default` que a escrita
+                # clássica acabou de gravar — a rede de segurança do
+                # `_carimbar_procedencia_locked`.
                 apply_for(alvo, spec)
             except Exception as exc:
                 # Um controle que recusa não pode calar os outros (mesma

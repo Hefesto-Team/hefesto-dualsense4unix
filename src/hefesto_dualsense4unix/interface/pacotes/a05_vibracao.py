@@ -1118,7 +1118,7 @@ def _mirar(ctx: Contexto, o: dict[str, Any], p: Any) -> str:
     ISTO NÃO É ENFEITE: é a única forma de o botão da coluna falar com AQUELE
     controle, porque `rumble.set` e `rumble.stop` não têm parâmetro de endereço
     (ver o bloco no topo desta seção). O `rumble.stop` mira no mesmo lugar —
-    `ipc_handlers.py:4485` lê `uniq_do_alvo_de_output` antes de zerar.
+    `ipc_handlers.py:5028` lê `uniq_do_alvo_de_output` antes de zerar.
 
     É o MESMO par de passos da janela estável, só que sem seletor: lá o chip
     manda `controller.target.set` (`app/actions/status_actions.py:2452`) e a
@@ -1889,7 +1889,7 @@ def parar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
 
     A CHECADA, e não a crua: dentro do Modo Nativo o `rumble.stop` não trava
     silêncio, ele SOLTA o par e diz que não alcança o motor que o jogo toca
-    pelo hidraw (`ipc_handlers.py:4527`). Anunciar "parada" ali seria prometer
+    pelo hidraw (`ipc_handlers.py:4543`). Anunciar "parada" ali seria prometer
     o que não aconteceu — NATIVO-RUMBLE-01, segunda metade. O motivo sobe como
     erro porque é o único canal que esta aba tem hoje; um recado de tela para
     ele ainda não existe, e está no relato.

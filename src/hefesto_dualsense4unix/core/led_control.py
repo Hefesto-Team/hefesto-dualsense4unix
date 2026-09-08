@@ -171,15 +171,92 @@ def player_slot_color(slot: int) -> RGB:
     return _PLAYER_SLOT_COLORS.get(slot, (255, 255, 255))
 
 
-#: Uma peça na mesa da regra de cor única: o endereço, a cor que ela PEDE e a
-#: cor do NÚMERO dela (a automática, já escalada — ou None quando ela não tem
-#: número: ausente da mesa, vpad, ou key sem MAC de 12 hex).
-PecaDaMesa = tuple[str, "RGB | None", "RGB | None"]
+#: DE ONDE VEIO A COR DE UMA PEÇA — a PROCEDÊNCIA, e ela é o conserto de
+#: 08/09/2026.
+#:
+#: A primeira volta desta regra não tinha este campo, e por isso o resolvedor
+#: **adivinhava**: ele chamava de fóssil toda cor que fosse a do número de
+#: outro da mesa. No disco, um broadcast (`led.set` sem `uniq`, que grava a
+#: MESMA cor em todos de propósito) é indistinguível de duas escolhas que
+#: colidiram — então o palpite desfez o "pinta os quatro de verde" dela: os
+#: quatro saíam `[verde, vermelho, azul, rosa]`, e o P1 ficava com a cor do
+#: número do 3 enquanto o P3 ficava com a do 1.
+#:
+#: DECISÃO DELA (delegada), 08/09/2026: *"o override de cor por MAC ganha
+#: PROCEDÊNCIA — para qual número ele foi escolhido. Quando o número daquele
+#: aparelho muda, a cor gravada é FÓSSIL e sai sozinha."* Com ela gravada, o
+#: resolvedor **lê** em vez de adivinhar.
+#:
+#: A cor veio da camada AUTOMÁTICA: é a do número dele, por construção.
+DA_PALETA = "paleta"
+#: `led.set` SEM `uniq` — o "Todos" dela. A mesma cor em todos, de propósito.
+#: **Nunca é deslocada**, e é esta linha que devolve o broadcast ao produto.
+DO_BROADCAST = "todos"
+#: A cor é o GLOBAL do perfil: este controle não tem opinião própria. Cede a
+#: quem tem identidade, mas não cede à irmã que também está no global — vários
+#: controles na cor global é o gesto "Todos" do perfil, não uma colisão.
+DO_GLOBAL = "global"
+#: Escolha POR CONTROLE sem número conhecido na hora (controle fora da mesa,
+#: backend sem a consulta de número). Vale como escolha viva: não é fóssil.
+DA_MAO = "mao"  # noqa-acento: VALOR de carimbo, legível por máquina — a mesma escolha de `sim`/`nao` desta casa
+#: Override que veio do disco SEM procedência gravada — todo perfil escrito
+#: antes de 08/09/2026. Não dá para ler para qual número ele foi escolhido, e
+#: é o ÚNICO caso em que a regra ainda prova pela forma (ver `_e_fossil`).
+LEGADO = "legado"
 
 #: Preto é AUSÊNCIA de cor, não identidade. Uma barra apagada não colide com
 #: outra apagada — "as duas estão desligadas" é uma resposta, e deslocar uma
 #: delas para roxo acenderia um controle que a usuária mandou apagar.
 _APAGADA: RGB = (0, 0, 0)
+
+
+@dataclass(frozen=True)
+class PecaDaMesa:
+    """Uma peça na mesa da regra de cor única.
+
+    `pedida` é a cor que as camadas do daemon resolveram para ela (já
+    escalada pelo brilho); `do_numero` é a cor AUTOMÁTICA do número dela — é
+    para onde ela volta quando é deslocada, e é `None` quando ela não tem
+    número (ausente da mesa, vpad, key sem MAC, paleta automática desligada).
+
+    `procedencia` é de onde a `pedida` veio: uma das constantes acima, ou o
+    **número inteiro** para o qual a cor foi escolhida. `numero` é o número
+    que ela tem AGORA — e a comparação entre os dois é a regra inteira: um
+    override escolhido para o número 1 num aparelho que hoje é o 2 é fóssil,
+    e sai sozinho.
+    """
+
+    uniq: str
+    pedida: RGB | None
+    do_numero: RGB | None
+    procedencia: object = LEGADO
+    numero: int | None = None
+
+
+def _e_fossil(peca: PecaDaMesa, numeros: set[RGB]) -> bool:
+    """A cor desta peça é o número de ontem congelado, e não uma escolha?
+
+    As três respostas, e as três se LEEM — nenhuma se adivinha:
+
+    * **procedência inteira** — a cor foi escolhida para um número. É fóssil
+      exatamente quando esse número não é mais o dela. É o caso medido na
+      mesa dela em 08/09/2026: os ranks 2 e 4 guardavam as cores dos slots 1
+      e 2, escolhidas num dia em que eles eram outros;
+    * **`LEGADO`** — override do disco anterior ao campo. Aqui, e SÓ aqui, a
+      regra prova pela FORMA: uma cor que é exatamente a do número de OUTRO
+      da mesa (e não a do próprio) é fóssil. Perfil antigo com uma escolha de
+      verdade — um roxo que não é número de ninguém — sobrevive à migração;
+    * **todo o resto** (`DA_PALETA`, `DO_BROADCAST`, `DO_GLOBAL`, `DA_MAO`)
+      nunca é fóssil. O broadcast dela é o caso que derrubou a primeira
+      volta desta regra.
+    """
+    if isinstance(peca.procedencia, bool):  # bool é int em Python; não é número
+        return False
+    if isinstance(peca.procedencia, int):
+        return peca.numero is None or peca.procedencia != peca.numero
+    if peca.procedencia is not LEGADO or peca.pedida is None:
+        return False
+    return peca.pedida in numeros and peca.pedida != peca.do_numero
 
 
 def cores_sem_colisao(mesa: list[PecaDaMesa]) -> dict[str, RGB]:
@@ -188,7 +265,7 @@ def cores_sem_colisao(mesa: list[PecaDaMesa]) -> dict[str, RGB]:
     `D-DUAS-PECAS-NUNCA-TEM-A-MESMA-COR` (26/08/2026), decidida por ela como
     **REGRA DO PRODUTO, SEMPRE**: *"duas coisas que precisam ser
     distinguíveis não podem colidir"*. A barra é como ela sabe de quem é o
-    controle — na mesa dela dois DualSense são do MESMO modelo, e a luz é a
+    controle — na mesa dela quatro DualSense são do MESMO modelo, e a luz é a
     única coisa que os separa.
 
     **`mesa` já vem NA ORDEM que decide** (o número do controle, quando há
@@ -199,83 +276,86 @@ def cores_sem_colisao(mesa: list[PecaDaMesa]) -> dict[str, RGB]:
     (medido em 05/09/2026: um endereço com dois donos repintou a tela 80
     vezes em 80 tiques).
 
-    **DESLOCA SÓ O QUE CONSEGUE PROVAR QUE É FÓSSIL**, e o critério é o que a
-    medição de 08/09/2026 achou no disco dela: *uma cor que é exatamente a do
-    NÚMERO DE OUTRO controle da mesa não é uma escolha — é o número de ontem
-    congelado no arquivo*. A prova está nos ranks 2 e 4 dela, que guardavam as
-    cores dos slots **1 e 2**: o produto gravou o lugar de cada um num dia em
-    que eles eram outros, e a mesa girou.
+    ELA LÊ A PROCEDÊNCIA, E NÃO ADIVINHA. A primeira volta desta regra
+    deslocava toda cor que fosse o número de outro, e isso **matou o
+    broadcast dela**: `led.set {rgb:[0,255,0]}` sem `uniq` saía
+    `[verde, vermelho, azul, rosa]`. Com a procedência gravada, o "Todos" é
+    LIDO como "Todos" (`DO_BROADCAST`) e nunca se desloca — ver `_e_fossil`.
 
-    A regra, então:
+    AS DUAS VOLTAS, e a segunda é o que faltava na primeira versão:
 
-    1. quem pede a cor do PRÓPRIO número fica com ela — ela é dele;
-    2. quem pede a cor do número de OUTRO da mesa é deslocado: para a cor do
-       próprio número se estiver livre, senão para a primeira livre da paleta;
-    3. com as oito tomadas, **recusa**: devolve o que foi pedido em vez de
-       girar. Rodízio com a mesa cheia troca a cor de todo mundo a cada
-       tique, que é o defeito que esta função existe para não ter;
-    4. **cor que não é de número nenhum da mesa NÃO se toca.**
+    1. **quem tem identidade** — paleta, broadcast, escolha viva, legado
+       honesto. O primeiro a pedir uma cor fica com ela; o fóssil vai para a
+       cor do próprio número, e quem chega numa cor já tomada vai para o
+       primeiro tom livre da paleta;
+    2. **quem está no GLOBAL do perfil** — cor sem dono. Cede a quem tem
+       identidade (era o buraco: um controle numerado em azul automático e
+       outro caindo no azul global ficavam os dois `#0000FF`), mas **não cede
+       à irmã que também está no global**: quatro controles na mesma cor
+       global é o gesto "Todos" do perfil (D4), não uma colisão.
 
-    A LINHA 4 É O LIMITE HONESTO DESTE LUGAR, e ela custou três testes
-    vermelhos até ficar escrita. O `led.set` sem `uniq` é um BROADCAST: ele
-    grava a MESMA cor no override de todos, de propósito — *"pinta os dois de
-    verde"*. No disco isso é indistinguível de duas escolhas independentes que
-    calharam de colidir, porque `ControllerOverrides.leds` não guarda
-    procedência. Um resolvedor que deslocasse toda repetição desfaria o
-    broadcast dela no tique seguinte.
-
-    Então a metade que falta — *"mesmo que eu escolha cor X, meu amigo não pode
-    escolher a mesma"* — **não mora aqui**: ela mora no GESTO, onde se sabe se
-    o alvo é UM controle ou todos, e onde a tela pode dizer o que fez (é o que
-    `D-DUAS-PECAS-NUNCA-TEM-A-MESMA-COR` pede com todas as letras: *"o segundo
-    desloca para o tom vizinho e a tela diz o que fez"*). Ver
-    `interface/pacotes/a04_iluminacao.py::_sem_repetir_a_cor_do_vizinho`.
+    Com as oito tomadas, **recusa**: devolve o que foi pedido em vez de
+    girar. Rodízio com a mesa cheia troca a cor de todo mundo a cada tique,
+    que é o defeito que esta função existe para não ter.
 
     Preto (`_APAGADA`) fica de fora nos dois sentidos: não é deslocado e não
     toma cor de ninguém — barra apagada é ausência de cor, não identidade.
 
-    Rodada na mesa dela, esta regra devolve as quatro cores do número: o rank 1
-    pede azul, que é o dele, e fica; o rank 2 pede o MESMO azul, que é o número
-    do rank 1, e volta para o vermelho do dele; o rank 4 pede esse vermelho,
-    que é o número do rank 2, e volta para o rosa do dele. Sem que uma linha do
-    disco dela seja apagada: o override só se desloca quando usa o número de
-    outro, então uma cor escolhida de verdade sobrevive.
+    A METADE QUE NÃO MORA AQUI é a recusa no GESTO — *"mesmo que eu escolha
+    cor X, meu amigo não pode escolher a mesma"*. Lá se sabe que o alvo é UM
+    controle e a tela pode dizer de quem é a cor; ver
+    `interface/pacotes/a04_iluminacao.py::_sem_repetir_a_cor_do_vizinho`.
     """
     numeros = {
-        do_numero for _, _, do_numero in mesa
-        if do_numero is not None and do_numero != _APAGADA
+        peca.do_numero for peca in mesa
+        if peca.do_numero is not None and peca.do_numero != _APAGADA
     }
     tomadas: dict[RGB, str] = {}
     saida: dict[str, RGB] = {}
-    for uniq, pedida, do_numero in mesa:
-        if pedida is None:
-            continue
-        saida[uniq] = pedida
-        if pedida == _APAGADA:
-            continue
-        # DONO POR DIREITO: a cor do próprio número, e só enquanto ninguém a
-        # tomou antes. O "enquanto" não é zelo — `player_slot_color` devolve
-        # BRANCO para todo slot ≥ 9, então dois controles em 9 e 10 têm o
-        # MESMO "próprio número". Sem esta metade, os dois seriam donos e os
-        # dois ficariam brancos, que é o buraco que esta regra veio fechar.
-        e_dono = pedida == do_numero and pedida not in tomadas
-        # As TRÊS condições do fóssil, e as três têm de valer juntas: a cor já
-        # está tomada por outro (colisão de verdade, não hipótese), quem pede
-        # não é o dono dela, e ela É a do número de alguém na mesa — o que a
-        # torna provável fóssil em vez de escolha.
-        e_fossil = pedida in tomadas and not e_dono and pedida in numeros
-        if not e_fossil:
-            tomadas.setdefault(pedida, uniq)
-            continue
-        for candidata in (do_numero, *_PLAYER_SLOT_COLORS.values()):
+    do_global: list[PecaDaMesa] = []
+
+    def _primeiro_tom_livre(peca: PecaDaMesa) -> RGB | None:
+        for candidata in (peca.do_numero, *_PLAYER_SLOT_COLORS.values()):
             if candidata is None or candidata == _APAGADA:
                 continue
             if candidata not in tomadas:
-                saida[uniq] = candidata
-                tomadas[candidata] = uniq
-                break
-        else:  # as oito tomadas: recusa, não gira
-            tomadas.setdefault(pedida, uniq)
+                return candidata
+        return None  # as oito tomadas: recusa, não gira
+
+    def _acomodar(peca: PecaDaMesa, pedida: RGB) -> None:
+        nova = _primeiro_tom_livre(peca)
+        if nova is None:
+            tomadas.setdefault(pedida, peca.uniq)
+            return
+        saida[peca.uniq] = nova
+        tomadas[nova] = peca.uniq
+
+    for peca in mesa:
+        if peca.pedida is None:
+            continue
+        saida[peca.uniq] = peca.pedida
+        if peca.pedida == _APAGADA:
+            continue
+        if peca.procedencia is DO_GLOBAL:
+            do_global.append(peca)
+            continue
+        if peca.procedencia is DO_BROADCAST:
+            # O "Todos" dela. NUNCA se desloca — nem quando a cor já está
+            # tomada, porque estar tomada é justamente o que ele pediu.
+            tomadas.setdefault(peca.pedida, peca.uniq)
+            continue
+        if _e_fossil(peca, numeros) or peca.pedida in tomadas:
+            _acomodar(peca, peca.pedida)
+            continue
+        tomadas.setdefault(peca.pedida, peca.uniq)
+
+    for peca in do_global:
+        pedida = peca.pedida
+        if pedida is None or pedida not in tomadas:
+            # Ninguém COM IDENTIDADE nessa cor: fica. Duas peças no mesmo
+            # global não se deslocam — é o gesto "Todos" do perfil (D4).
+            continue
+        _acomodar(peca, pedida)
     return saida
 
 
@@ -343,6 +423,11 @@ def hex_to_rgb(hex_str: str) -> RGB:
 
 
 __all__ = [
+    "DA_MAO",
+    "DA_PALETA",
+    "DO_BROADCAST",
+    "DO_GLOBAL",
+    "LEGADO",
     "RGB",
     "LedSettings",
     "PecaDaMesa",

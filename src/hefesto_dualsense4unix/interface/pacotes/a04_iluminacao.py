@@ -2000,8 +2000,25 @@ _DO_PERFIL: Any = object()
 def _escrever_a_cor(ctx: Contexto, p: Any, uniq: str,
                     rgb: tuple[int, int, int], *,
                     apagando: bool = False,
-                    brilho: Any = _DO_PERFIL) -> None:
+                    escolha: bool = False,
+                    brilho: Any = _DO_PERFIL) -> str | None:
     """O CAMINHO ÚNICO de escrita de cor desta aba — com o brilho e com a frase.
+
+    **E COM A GUARDA DE COR ÚNICA, desde 08/09/2026.** Ela morava só no gesto
+    `cor`, e o `reenviar` — que manda ao aparelho o hexa que está na caixa —
+    passava por fora: a segunda porta de escolha de cor não tinha a regra que
+    a primeira tinha. A guarda mudou de lugar para CÁ justamente porque esta
+    docstring já prometia uma porta só; ou a promessa vale para a regra
+    também, ou ela era meia verdade.
+
+    `escolha=True` é quem a liga, e são os dois gestos em que ela ESCOLHE um
+    tom (`cor` e `reenviar`). Os outros dois passam por fora com razão
+    escrita: `apagar` manda preto, que é ausência de cor e não colide com
+    nada; e `brilho` reenvia a cor que o controle JÁ TEM com outro fator — ali
+    a cor não é uma escolha nova, e deslocá-la faria um arraste de brilho
+    trocar a cor dela sem que ela tenha pedido.
+
+    :return: o RECADO quando a cor pedida foi deslocada, senão `None`.
 
     O `brilho` CHEGA PRONTO OU SE PERGUNTA AO PERFIL, e o parâmetro nasceu em
     03/09/2026 com o trilho que grava. Os três gestos de COR não têm brilho na
@@ -2074,6 +2091,9 @@ def _escrever_a_cor(ctx: Contexto, p: Any, uniq: str,
     """
     from hefesto_dualsense4unix.app.actions.lightbar_actions import frase_do_envio
 
+    recado: str | None = None
+    if escolha:
+        rgb, recado = _sem_repetir_a_cor_do_vizinho(ctx, uniq, rgb)
     if brilho is _DO_PERFIL:
         brilho = brilho_do_controle(perfil.ativo(ctx.state.get("active_profile")), uniq)
     corpo = p.led_set_detalhado(rgb, brightness=brilho, uniq=uniq)
@@ -2084,6 +2104,7 @@ def _escrever_a_cor(ctx: Contexto, p: Any, uniq: str,
                            _janela_do_desfecho(ctx, uniq, _nome_da_coluna(ctx, uniq)))
     if frase != enviado:
         raise RuntimeError(frase)
+    return recado
 
 
 @gesto("04-iluminacao.html", "cor")
@@ -2141,10 +2162,11 @@ def cor(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
 
     E DUAS PEÇAS NUNCA FICAM DA MESMA COR — 08/09/2026. O alvo aqui é UM
     controle, então escolher o tom que o vizinho já tem é uma escolha e não um
-    broadcast: `_sem_repetir_a_cor_do_vizinho` desloca para o vizinho livre e
-    devolve a frase que diz o que fez. Vale para as DUAS portas — a guia de
-    oito tons e o `<input type="color">` livre, que alcança o hexa exato de
-    outra coluna.
+    broadcast: `_escrever_a_cor(..., escolha=True)` desloca para o vizinho
+    livre e devolve a frase que diz DE QUEM é a cor. Vale para as DUAS portas
+    desta aba — a guia de oito tons e o `<input type="color">` livre, que
+    alcança o hexa exato de outra coluna —, e para o `reenviar`, que passa pela
+    mesma porta desde que a guarda mudou de lugar.
     """
     from hefesto_dualsense4unix.core.led_control import hex_to_rgb
 
@@ -2158,8 +2180,7 @@ def cor(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
         if _so_abriu_o_seletor(o):
             return None
         pedido = str(o.get("valor") or "")
-    alvo, recado = _sem_repetir_a_cor_do_vizinho(ctx, uniq, hex_to_rgb(pedido))
-    _escrever_a_cor(ctx, p, uniq, alvo)
+    recado = _escrever_a_cor(ctx, p, uniq, hex_to_rgb(pedido), escolha=True)
     return {"recado": recado} if recado else None
 
 
@@ -2178,17 +2199,21 @@ def _sem_repetir_a_cor_do_vizinho(
 ) -> tuple[tuple[int, int, int], str | None]:
     """A cor que ESTE controle recebe, e a frase quando ela não é a pedida.
 
-    `D-DUAS-PECAS-NUNCA-TEM-A-MESMA-COR`, a metade que o resolvedor do daemon
-    **não pode** cumprir. Lá (`core/led_control.py::cores_sem_colisao`) só se
-    desloca o que dá para PROVAR que é fóssil — a cor do número de outro —,
-    porque no disco um broadcast (`led.set` sem `uniq`, que grava a MESMA cor
-    em todos de propósito) é indistinguível de duas escolhas que colidiram.
+    `D-DUAS-PECAS-NUNCA-TEM-A-MESMA-COR`, a metade que **a tela** cumpre.
 
-    AQUI A DÚVIDA NÃO EXISTE: este gesto tem `uniq`, então o alvo é UM
-    controle e a repetição é uma escolha, não um broadcast. É o lugar em que
-    as palavras dela cabem inteiras — *"o segundo desloca para o tom vizinho
-    e a tela diz o que fez"* —, e é o que faz a decisão valer para o gesto
-    dela e não só para o estado herdado do arquivo.
+    **FATO SUBSTITUÍDO — 08/09/2026.** Estas linhas diziam que o resolvedor do
+    daemon *"não pode"* cumprir a regra inteira porque um broadcast e duas
+    escolhas colididas são indistinguíveis no disco. Isso deixou de ser
+    verdade no mesmo dia: `ControllerOverrides.leds` ganhou PROCEDÊNCIA, e o
+    `cores_sem_colisao` LÊ de onde a cor veio em vez de adivinhar. O
+    resolvedor cuida do ESTADO — o que o arquivo e as camadas trazem.
+
+    O QUE SÓ AQUI EXISTE, e é por isso que a metade daqui não some: **a
+    FRASE**. As palavras dela são *"o segundo desloca para o tom vizinho e a
+    tela diz o que fez"*, e "a tela diz" não tem como morar no daemon: o
+    resolvedor devolve uma cor, não um recado, e ele roda a cada tique — não
+    no instante do clique dela. Aqui se sabe QUEM clicou, em QUEM, e a resposta
+    vira uma frase com o nome do dono da cor.
 
     A COMPARAÇÃO É PRÉ-BRILHO, pelo mesmo motivo que `_a_cor_de_agora`
     documenta: `lightbar_rgb` chega PÓS-escala (D8), e comparar o hexa que ela
@@ -2205,8 +2230,13 @@ def _sem_repetir_a_cor_do_vizinho(
     """
     from hefesto_dualsense4unix.core.led_control import _PLAYER_SLOT_COLORS
 
-    nome = str(ctx.state.get("active_profile") or "").strip()
-    cru = perfil.ativo(nome) if nome else {}
+    # SEM `if nome else {}`, e a guarda saiu em 08/09/2026: quem cura o nome
+    # vazio é o DONO (`perfil.ativo` pergunta ao `nome_do_ativo` quando o
+    # daemon não diz), e um curto-circuito aqui não é alcançado pela cura —
+    # com o daemon calado esta aba voltaria a ver `{}` e a comparação de cor
+    # diria "livre" sobre o tom que o vizinho está acendendo. Há régua:
+    # `tests/unit/test_o_perfil_ativado_chega_nas_outras_abas.py`.
+    cru = perfil.ativo(ctx.state.get("active_profile"))
     tomadas: dict[tuple[int, int, int], dict[str, Any]] = {}
     for c in ctx.conectados:
         outro = str(c.get("uniq") or "")
@@ -2262,7 +2292,7 @@ def apagar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
 
 
 @gesto("04-iluminacao.html", "reenviar")
-def reenviar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
+def reenviar(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
     """A caixa `#RRGGBB` é o botão: a cor que está escrita vai ao controle de novo.
 
     DECISÃO DELA, 04/09/2026, na pergunta [03] desta aba, contra as outras duas
@@ -2286,9 +2316,16 @@ def reenviar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     sai daqui é exatamente o que ela está lendo na tela.
 
     NÃO É UM SEGUNDO CAMINHO DE ESCRITA. Ele passa pelo `_escrever_a_cor` como
-    os outros três, então herda o brilho do perfil e a leitura do desfecho. Uma
-    chamada direta ao `led_set` aqui reintroduziria, nesta porta, os dois
-    defeitos que aquele caminho único nasceu para curar.
+    os outros três, então herda o brilho do perfil, a leitura do desfecho **e a
+    guarda de cor única**. Uma chamada direta ao `led_set` aqui reintroduziria,
+    nesta porta, os dois defeitos que aquele caminho único nasceu para curar.
+
+    **A GUARDA CHEGOU AQUI EM 08/09/2026, e antes não estava.** O `cor` a
+    tinha e este não — a caixa do hexadecimal alcança o tom EXATO de outra
+    coluna (é literalmente o texto que a outra coluna imprime), então esta era
+    a porta mais barata para pôr duas peças da mesma cor. A frase acima já
+    dizia "passa pelo `_escrever_a_cor` como os outros"; a regra passou a
+    estar lá dentro para a frase ser verdade inteira.
 
     O TRAVESSÃO É RECUSA. Numa coluna que esvaziou, o molde do lugar sem dono
     escreve `—` nesta caixa; a folha desta aba já lhe tira o clique
@@ -2306,7 +2343,8 @@ def reenviar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
         raise ValueError(
             f"reenviar: a caixa do hexadecimal não tem uma cor a reenviar "
             f"({escrito!r}) — este lugar está sem controle.")
-    _escrever_a_cor(ctx, p, uniq, hex_to_rgb(escrito))
+    recado = _escrever_a_cor(ctx, p, uniq, hex_to_rgb(escrito), escolha=True)
+    return {"recado": recado} if recado else None
 
 
 # O GESTO DO BOTÃO "Automático" DE CADA COLUNA SAIU DAQUI — 07/09/2026, com o
@@ -2606,8 +2644,19 @@ def _a_cor_de_agora(ctx: Contexto, cru: dict[str, Any],
     return player_slot_color(_numero(ctx, c))
 
 
-def _com_a_cor_gravada(prof: Any, uniq: str, rgb: tuple[int, int, int]) -> Any:
+def _com_a_cor_gravada(prof: Any, uniq: str, rgb: tuple[int, int, int],
+                       numero: int | None = None) -> Any:
     """O perfil com a cor DESTE controle escrita no override dele.
+
+    **A COR VAI COM PROCEDÊNCIA** — decisão de produto de 08/09/2026, e é o
+    campo `LedsConfig.lightbar_para_o_numero`: *para qual número esta cor foi
+    escolhida*. Aqui é onde ela mais importa, porque este é o momento em que
+    o produto CONGELA no arquivo a cor que cada controle está acendendo — e a
+    cor que ele acende agora é a do NÚMERO dele agora. Sem o carimbo, o
+    arquivo guarda "azul" e perde "azul porque ele era o 1", que é a
+    diferença entre uma escolha e um fóssil: o número é de SESSÃO e gira com a
+    ordem de conexão. Foi assim que os ranks 2 e 4 dela ficaram com as cores
+    dos slots 1 e 2, e dois DualSense acenderam o mesmo `#0000FF`.
 
     É O IRMÃO DE `_com_o_brilho_gravado`, campo por campo, e a razão de ser um
     segundo é a mesma que aquele documenta: **a fusão é POR CAMPO**. Um override
@@ -2629,8 +2678,11 @@ def _com_a_cor_gravada(prof: Any, uniq: str, rgb: tuple[int, int, int]) -> Any:
     atuais = dict(prof.controllers or {})
     dele = atuais.get(chave) or ControllerOverrides()
     antes = dele.leds
-    novos = (LedsConfig(lightbar=rgb) if antes is None
-             else antes.model_copy(update={"lightbar": rgb}))
+    campos: dict[str, Any] = {"lightbar": rgb}
+    if numero is not None:
+        campos["lightbar_para_o_numero"] = int(numero)
+    novos = (LedsConfig(**campos) if antes is None
+             else antes.model_copy(update=campos))
     atuais[chave] = dele.model_copy(update={"leds": novos})
     return prof.model_copy(update={"controllers": atuais})
 
@@ -2752,7 +2804,8 @@ def auto_cores(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | Non
         for c in ctx.conectados:
             uniq = str(c.get("uniq") or "")
             if uniq:
-                prof = _com_a_cor_gravada(prof, uniq, _a_cor_de_agora(ctx, cru, c))
+                prof = _com_a_cor_gravada(
+                    prof, uniq, _a_cor_de_agora(ctx, cru, c), _numero(ctx, c))
 
     leds = prof.leds.model_copy(update={"auto_player_colors": not ligado})
     perfil.gravar_e_reaplicar(prof.model_copy(update={"leds": leds}), ctx, p)
