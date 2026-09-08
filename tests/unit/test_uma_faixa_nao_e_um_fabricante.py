@@ -547,16 +547,53 @@ class TestNenhumCaminhoDeCasaNaArvore:
     def test_nenhum_script_traz_o_home_dela_como_padrao(self) -> None:
         """A varredura inteira, para o defeito não voltar por outro arquivo.
 
-        **A VARREDURA CRESCEU EM 08/09/2026, e o buraco era medido.** Ela olhava
-        `scripts/` e mais nada — desenhada quando todo instrumento desta casa
-        morava lá. A interface inteira mudou para dentro do `src/` em 01/09
-        (o wheel só empacota `src/hefesto_dualsense4unix`), e com ela o
-        retratista, os dez geradores e o dono das duas pastas de página. Ou
-        seja: os arquivos que MAIS cravam caminho saíram do alcance da régua
-        no dia em que mudaram de casa, e ela continuou verde.
+        **A VARREDURA CRESCEU DUAS VEZES EM 08/09/2026, e a segunda é a que
+        importa.** Ela olhava `scripts/` e mais nada — desenhada quando todo
+        instrumento desta casa morava lá. A interface mudou para dentro do
+        `src/` em 01/09, e com ela o retratista, os dez geradores e o dono das
+        duas pastas de página; a primeira volta de hoje acrescentou
+        `interface/` para alcançá-los.
+
+        **PAROU NA PASTA ERRADA, e o conferente mediu o preço.** Ele plantou o
+        mesmo literal que a cura de hoje tirou — um caminho absoluto de `$HOME`
+        apontando para um SVG — em três arquivos, `count() == 1` conferido em
+        cada um:
+
+        ===============================  =======================================
+        arquivo                          contra a régua de antes
+        ===============================  =======================================
+        `interface/monta.py`             reprova (o alcance recém-ganho)
+        `app/gui_prefs.py`               **VERDE**
+        `daemon/ipc_handlers.py`         **VERDE**
+        ===============================  =======================================
+
+        **As duas últimas estão dentro do que o wheel empacota** —
+        `[tool.hatch.build.targets.wheel] packages = ["src/hefesto_dualsense4unix"]`
+        leva o pacote INTEIRO —, e era esse o argumento do achado original:
+        quem instalasse o Hefesto receberia o caminho da casa de outra pessoa.
+        *A régua ficava verde porque o defeito mudava de pasta*, e continuaria
+        verdadeira uma mudança de pasta adiante. Por isso o alvo agora é o
+        pacote inteiro: a fronteira que importa é a do WHEEL, não a de uma
+        subpasta.
+
+        **O CUSTO FOI MEDIDO ANTES DE ALARGAR, e é zero.** A varredura do
+        `src/` inteiro acusa **0 ocorrências** hoje — inclusive com um padrão
+        mais largo que este (sem exigir barra final e casando em qualquer ponto
+        da string). Não há uma única ocorrência legítima a declarar, e portanto
+        nenhuma isenção foi aberta: se aparecer uma amanhã, ela se declara
+        sozinha, com a razão, nunca em bloco.
+
+        **O QUE ESTA RÉGUA NÃO É:** a companheira dela em
+        `test_luz_cega_e8_o_berco_nao_vaza.py` (RÉGUA 1) varre o `src/` inteiro
+        desde sempre, mas só enxerga `Path.home()` / `expanduser()` chamados no
+        NÍVEL DO MÓDULO — e isso está certo, é a definição do defeito dela
+        (constante avaliada na importação, fora do alcance das fixtures). As
+        duas passavam verdes sobre o mesmo literal, cada uma por metade: aquela
+        vê a chamada e não o literal, esta via o literal e não a pasta. Só esta
+        se alarga; alargar aquela seria trocar o defeito que ela mede.
         """
         culpados = []
-        pastas = (RAIZ / "scripts", RAIZ / "src" / "hefesto_dualsense4unix" / "interface")
+        pastas = (RAIZ / "scripts", RAIZ / "src" / "hefesto_dualsense4unix")
         for pasta in pastas:
             for arquivo in sorted(pasta.rglob("*.py")):
                 for linha, valor in _literais_executaveis(arquivo):
@@ -564,7 +601,14 @@ class TestNenhumCaminhoDeCasaNaArvore:
                         culpados.append(
                             f"{arquivo.relative_to(RAIZ).as_posix()}:{linha}: {valor!r}"
                         )
-        assert not culpados, "caminho absoluto de $HOME em script:\n" + "\n".join(culpados)
+        assert not culpados, (
+            "caminho absoluto de $HOME no pacote ou nos scripts:\n"
+            + "\n".join(culpados)
+            + "\n\nO `src/hefesto_dualsense4unix` inteiro vai para o wheel: "
+            "quem instalar o Hefesto recebe este caminho, que é a casa de uma "
+            "pessoa só. Resolva na CHAMADA (`pathlib.Path.home() / ...`), "
+            "nunca no literal."
+        )
 
 
 # ---------------------------------------------------------------------------
