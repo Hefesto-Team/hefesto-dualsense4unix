@@ -3350,13 +3350,13 @@ class ProfilesActionsMixin(CaronaDoWrapperMixin):
         self._recarregar_as_abas_do_perfil_ativo()
 
     def _recarregar_as_abas_do_perfil_ativo(self) -> None:
-        """Relê o perfil ativo do disco e repinta TODAS as abas.
+        """Repinta as abas com o rascunho em memória. NÃO relê o disco hoje.
 
-        O caminho canônico é o `_bootstrap_draft_async` da janela: ele carrega
-        o rascunho do perfil ativo em worker (nada de disco na thread do GTK) e
-        chama `_refresh_all_tabs` no callback. Sem ele (dublê de teste, mixin
-        montado sozinho), o refresh direto ainda repinta o que já está em
-        memória — melhor que não repintar nada.
+        O caminho que RELIA era o `_bootstrap_draft_async` da janela, e ele saiu
+        do disco em `f5311616`: o recuo abaixo chama só `_refresh_all_tabs`, que
+        repinta o `self.draft` de antes, sem tocar no perfil recém-ativado. O que
+        isso perde, e o que fazer no dia em que um compositor chegar, estão
+        medidos na lápide A FAMÍLIA DO R-08, no fim deste arquivo.
         """
         recarregar = getattr(self, "_bootstrap_draft_async", None)
         if callable(recarregar):
@@ -4682,3 +4682,102 @@ class ProfilesActionsMixin(CaronaDoWrapperMixin):
         )
 
         return tem_edicao_pendente(self)
+
+
+# ===========================================================================
+# A FAMÍLIA DO R-08 — o que voltou, o que não voltou, e o que ainda aponta
+# para fora. Medido em 08/09/2026, com a janela GTK já fora do disco
+# (`D-0609-GTK-LEVA-INTEIRA`, `f5311616`).
+# ===========================================================================
+#
+# O R-08 NUNCA FOI UMA REGRA — ERA UMA MÁQUINA DE TRÊS PEÇAS, e só uma voltou:
+#
+#  1. A REGRA — *"o rascunho diverge do que veio do disco?"*. Morava em
+#     `HefestoApp._tem_edicao_pendente`. VOLTOU em 08/09 como
+#     `profile_writer.tem_edicao_pendente`, com o método logo acima (o último
+#     deste arquivo) que os dois consumidores procuram por `getattr`. É MOTOR:
+#     duas linhas comparando dois `DraftConfig`, sem um `Gtk` dentro — por isso
+#     pôde voltar fiel ao original.
+#
+#  2. O CARREGADOR — `HefestoApp._bootstrap_draft_async`
+#     (`f5311616^:app/app.py:960`). NÃO VOLTOU, e ainda há um
+#     `getattr(self, "_bootstrap_draft_async", None)` apontando para ele, em
+#     `_recarregar_as_abas_do_perfil_ativo`.
+#
+#  3. O RECONCILIADOR — `HefestoApp._reconciliar_draft_com_perfil_ativo`, que a
+#     peça 1 protegia e que o tique de 2 Hz chamava
+#     (`f5311616^:app/app.py:490`). NÃO VOLTOU, e ninguém aponta para ele:
+#     quem o chamava era o `_render_slow_state` DA JANELA, um override que saiu
+#     junto. O `_render_slow_state` que ficou é o do `StatusActionsMixin`
+#     (`status_actions.py:2888`) e nunca teve essas linhas.
+#
+# O QUE O RECUO DA PEÇA 2 PERDE, lido nas duas pontas. O original fazia QUATRO
+# coisas; `_refresh_all_tabs` sozinho faz a última, sobre um `self.draft` que
+# ninguém releu:
+#
+#     o original (`f5311616^:app/app.py:960`)   |  o recuo de hoje
+#     ------------------------------------------+------------------------
+#     relê o perfil ATIVO — IPC `state_full` +   |  não lê disco nenhum
+#       `load_all_profiles` — e põe em `draft`   |
+#     move `_active_profile_name`                |  não move
+#     refaz `_draft_baseline` (a régua da peça 1)|  não refaz
+#     chama `_refresh_all_tabs(self)`            |  chama `_refresh_all_tabs`
+#
+# Logo o recuo NÃO é "o mesmo, mais devagar": **ele repinta o perfil ANTERIOR**.
+# E quem chama é `_refazer_as_abas_apos_ativar`, que existe por causa da queixa
+# literal dela em ATIVAR-NAO-MENTE-01 — *"o perfil que eu ativei não aplica
+# imediatamente as features das abas"*. O recuo entrega, calado, o defeito que o
+# chamador existe para curar.
+#
+# POR QUE ISTO É LÁPIDE E NÃO CÓDIGO NOVO — e os três são medição, não suposição:
+#
+#  * NENHUM caminho vivo passa por aquela linha. Zero classes de `src/` herdam
+#    `ProfilesActionsMixin`; a aba Perfis web toma emprestado UM método por um
+#    `SimpleNamespace` de um atributo só (`interface/pacotes/a10_perfis.py:3011`)
+#    e nunca compõe o mixin.
+#  * A MÁQUINA INTEIRA SAIU: `_compute_draft_from_active_profile`,
+#    `EstadoIndisponivelError`, `_draft_reload_inflight` e `_draft_reload_for`
+#    têm ZERO ocorrências em `src/`. Repor a peça 2 seria repor as quatro.
+#  * A PREMISSA DELA FOI DECIDIDA CONTRA. A interface nova é de ação imediata
+#    (decisão dela, 01/09) e não guarda `self.draft` nenhum: quem lê o perfil
+#    ativo lá é `interface/pacotes/rodape.py:91`, que monta o `DraftConfig` na
+#    hora. Reconstruir aqui a arquitetura da janela seria reescrita de memória —
+#    justamente o que a volta da peça 1 evitou ao ser fiel ao original.
+#
+# NO DIA EM QUE UM COMPOSITOR CHEGAR (a aba Perfis web compondo o mixin, ou
+# outro qualquer): o `getattr` continua degradando para o recuo, e o recuo
+# continua repintando o perfil anterior. Quem compuser tem de LIGAR uma
+# releitura antes de confiar em `_refazer_as_abas_apos_ativar`, e o candidato
+# pronto é `rodape._draft_do_ativo` — não o carregador da janela. O original
+# fica endereçado aqui para ser LIDO, nunca copiado.
+#
+# A COERÊNCIA COM O `TestFiacaoNoApp`, que saiu no mesmo dia em que a peça 1
+# voltou: *"mixin sem compositor vivo em `src/`"* decidiu os dois casos em
+# sentidos opostos, e a régua que os separa é esta —
+#
+#     um teste sobre objeto morto não custa nada ao sair;
+#     uma regra sob um ramo vivo custa trabalho DELA no dia em que o ramo rodar.
+#
+# Os dois testes daquela classe perguntavam ao `HefestoApp`: que ele compunha o
+# `LaunchWrapperDialogMixin` na MRO, e que o `_render_slow_state` DELE chamava o
+# render da Status antes do lembrete. O sujeito das duas perguntas é o
+# compositor, e ele saiu — nenhum compositor futuro herda a pergunta, porque a
+# aba web não terá aquela MRO nem aquele tique. A peça 1 não é pergunta: é a
+# RESPOSTA que dois ramos deste arquivo procuram por `getattr`, e sem ela os
+# dois tomam o caminho do "não há nada a proteger". As duas esperavam
+# compositor; só uma estava armada.
+#
+# O QUE SE PERDEU COM `TestFiacaoNoApp` E NÃO TEM SUBSTITUTO: a ORDEM
+# `super()._render_slow_state(state)` → `_maybe_prompt_wrapper_dialog(state)`
+# não é cobrada por ninguém, e não pode ser — o método que a continha era do
+# compositor. O `_maybe_prompt_wrapper_dialog` em si continua medido direto em
+# `tests/unit/test_launch_wrapper_dialog.py`, e a peça 3 desta lápide é o
+# terceiro elo da mesma ordem que ficou sem dono. Os dois voltam a ser
+# cobráveis no dia do compositor, e é este parágrafo que diz o que cobrar.
+#
+# A RÉGUA QUE ACHOU A PEÇA 2, e que agora é permanente:
+# `tests/unit/test_a_familia_do_getattr_sem_dono.py` varre TODO
+# `getattr`/`hasattr(self, "_…")` de `src/` e reprova o nome que módulo nenhum
+# de `src/` define. É teste e não portão de propósito: a lista dos portões tem
+# um dono só (`scripts/portoes.sh`) e o CI tem de bater com ela, e esta pergunta
+# é da CAUDA — em 08/09 os 50 portões ficaram verdes com a peça 1 já sem dono.

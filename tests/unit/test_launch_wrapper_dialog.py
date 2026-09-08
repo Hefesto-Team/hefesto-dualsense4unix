@@ -816,4 +816,25 @@ def _gdkpixbuf_ok() -> bool:
 # sobre a COMPOSIÇÃO e sobre a ORDEM dentro do tique da janela; hoje o mixin
 # não tem composidor vivo em `src/`, então não há MRO nova a cobrar.
 
-
+# A COERÊNCIA COM A GUARDA QUE VOLTOU NO MESMO COMMIT — 08/09/2026, ressalva do
+# conferente. *"Mixin sem compositor vivo em `src/`"* decidiu dois casos em
+# sentidos opostos no mesmo dia: estes dois testes SAÍRAM, e
+# `_tem_edicao_pendente` VOLTOU ao `ProfilesActionsMixin`. A régua que separa os
+# dois está por extenso na lápide A FAMÍLIA DO R-08, no fim de
+# `app/actions/profiles_actions.py`, e é esta:
+#
+#     um teste sobre objeto morto não custa nada ao sair;
+#     uma regra sob um ramo vivo custa trabalho DELA no dia em que o ramo rodar.
+#
+# O sujeito destes dois testes era o COMPOSITOR, e ele saiu — nenhum compositor
+# futuro herda a pergunta, porque a aba web não terá aquela MRO nem aquele
+# tique. A guarda não é pergunta: é a RESPOSTA que dois ramos daquele arquivo
+# ainda procuram por `getattr`, e sem ela os dois tomam o caminho do "não há
+# nada a proteger" — em silêncio, por cima de edição não salva dela.
+#
+# E A ORDEM QUE ESTE ARQUIVO COBRAVA TINHA UM TERCEIRO ELO: o
+# `_render_slow_state` DA JANELA chamava `super()`, depois
+# `_reconciliar_draft_com_perfil_ativo` (R-08) e só então
+# `_maybe_prompt_wrapper_dialog` (`f5311616^:app/app.py:476-491`). O elo do meio
+# também não voltou, e é a peça 3 daquela lápide — é lá que se lê o que cobrar
+# no dia em que houver compositor.
