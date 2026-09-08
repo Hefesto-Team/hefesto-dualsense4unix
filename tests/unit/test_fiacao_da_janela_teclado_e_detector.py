@@ -27,30 +27,14 @@ import pytest
 
 RAIZ = Path(__file__).resolve().parents[2]
 PACOTE = RAIZ / "src" / "hefesto_dualsense4unix"
-APP_PY = PACOTE / "app" / "app.py"
+# `APP_PY` SAIU — 08/09/2026. Apontava para `app/app.py`, que deixou o disco
+# com a janela GTK (`D-0609-GTK-LEVA-INTEIRA`, `f5311616`), e as duas leituras
+# por AST que ele alimentava (`_chaves_de_signal_handlers` e
+# `_refreshers_da_aba`) morriam em `FileNotFoundError`. Veredito do inventário
+# `docs/data/o-que-ainda-aponta-para-a-janela.csv`: SAI-COM-A-JANELA — a
+# citação mede a janela e sai com ela; o que este arquivo cobre do MOTOR fica.
 EMULACAO_PY = PACOTE / "app" / "actions" / "emulation_actions.py"
 DAEMON_PY = PACOTE / "app" / "actions" / "daemon_actions.py"
-
-
-def _chaves_de_signal_handlers() -> set[str]:
-    """As chaves do dict literal de ``HefestoApp._signal_handlers``.
-
-    Por AST e não por busca de texto: é esse dict que o
-    ``builder.connect_signals`` recebe, e um ``<signal>`` do Glade sem entrada
-    nele vira botão MORTO em silêncio (BUG-GUI-EMULATION-HANDLERS-UNWIRED-01).
-    """
-    arvore = ast.parse(APP_PY.read_text(encoding="utf-8"))
-    for no in ast.walk(arvore):
-        if isinstance(no, ast.FunctionDef) and no.name == "_signal_handlers":
-            for interno in ast.walk(no):
-                if isinstance(interno, ast.Dict):
-                    return {
-                        chave.value
-                        for chave in interno.keys
-                        if isinstance(chave, ast.Constant)
-                        and isinstance(chave.value, str)
-                    }
-    raise AssertionError("_signal_handlers não encontrado em app.py")
 
 
 def _metodos(caminho: Path) -> set[str]:
@@ -60,34 +44,34 @@ def _metodos(caminho: Path) -> set[str]:
     }
 
 
-def _refreshers_da_aba(aba: str) -> tuple[str, ...]:
-    """A tupla de ``_REFRESH_POR_ABA`` para uma aba, lida por AST."""
-    arvore = ast.parse(APP_PY.read_text(encoding="utf-8"))
-    for no in ast.walk(arvore):
-        if not isinstance(no, ast.Dict):
-            continue
-        for chave, valor in zip(no.keys, no.values, strict=False):
-            if (
-                isinstance(chave, ast.Constant)
-                and chave.value == aba
-                and isinstance(valor, ast.Tuple)
-            ):
-                return tuple(
-                    item.value
-                    for item in valor.elts
-                    if isinstance(item, ast.Constant)
-                )
-    raise AssertionError(f"{aba!r} não está em _REFRESH_POR_ABA")
-
-
 # --- E1: o interruptor do teclado existe e o do mouse para de mentir --------
 
 
 class TestOsDoisInterruptores:
 
     def test_o_interruptor_do_teclado_esta_ligado_de_ponta_a_ponta(self) -> None:
-        """Glade -> dict de sinais do app -> método do mixin, sem elo frouxo."""
-        assert "on_keyboard_toggle_set" in _chaves_de_signal_handlers()
+        """O mixin do teclado está inteiro: o handler e o refresher, no motor.
+
+        **METADE DESTE TESTE SAIU EM 08/09/2026, e a que ficou é a que mede o
+        que existe.** A primeira asserção era `"on_keyboard_toggle_set" in
+        _chaves_de_signal_handlers()` — o dict de sinais que o
+        `builder.connect_signals` do Glade recebia —, e a última congelava a
+        tupla de `_REFRESH_POR_ABA` do `app.py`. Os dois mecanismos são a
+        JANELA: saíram por decisão dela (`D-0609-GTK-LEVA-INTEIRA`), e a régua
+        passou a reprovar com `FileNotFoundError`.
+
+        O que sobra NÃO é sobra: `emulation_actions.py` é motor, é o que a
+        interface nova chama, e continua sendo verdade que o handler e o
+        refresher têm de existir e o refresher tem de estar no agregador — sem
+        ele o interruptor mostra a posição do bootstrap pelo resto da sessão.
+
+        **O QUE A INTERFACE NOVA PASSA A DEVER**, e fica escrito para não se
+        perder junto com o mecanismo: era o Glade que garantia que o
+        interruptor da tela chegasse em `on_keyboard_toggle_set`, e era a
+        `_REFRESH_POR_ABA` que garantia a releitura ao exibir a aba. A aba
+        Navegação nova (`interface/pacotes/a06_navegacao.py`) tem o campo, mas
+        quem prova essas duas pontas hoje é outra régua, não esta.
+        """
         metodos = _metodos(EMULACAO_PY)
         assert "on_keyboard_toggle_set" in metodos
         assert "_refresh_keyboard_switch" in metodos
@@ -103,14 +87,6 @@ class TestOsDoisInterruptores:
         )
         assert "_refresh_keyboard_switch()" in fonte, (
             "a chave do teclado não é mais populada no bootstrap da janela"
-        )
-        # O gancho da aba Navegação, congelado com `==` aqui e em
-        # `tests/unit/test_notebook_switch_page.py` (que congela as CHAMADAS):
-        # mexer na tupla exige os dois arquivos no mesmo passe.
-        assert _refreshers_da_aba("tab_navegacao_dsx") == (
-            "_refresh_mouse_tab",
-            "_refresh_key_bindings_from_draft",
-            "_refresh_keyboard_switch",
         )
 
     def test_o_segundo_escritor_da_flag_obriga_o_gancho_da_aba(self) -> None:
@@ -151,11 +127,17 @@ class TestOsDoisInterruptores:
                 "gancho da aba Navegação volta a ser opcional"
             )
 
-        assert "_refresh_keyboard_switch" in _refreshers_da_aba("tab_navegacao_dsx"), (
+        # O ALVO MUDOU DE MECANISMO — 08/09/2026. Esta linha cobrava
+        # `_REFRESH_POR_ABA["tab_navegacao_dsx"]`, a tupla do `app.py` que saiu
+        # com a janela. O REQUISITO não caducou: enquanto o daemon escrever a
+        # flag por fora, o interruptor tem de ser RELIDO em vez de mostrar a
+        # posição de antes do gesto. Quem responde por essa releitura no motor
+        # é o agregador `_refresh_emulation_tab`, que a interface nova chama.
+        fonte = EMULACAO_PY.read_text(encoding="utf-8")
+        assert '"_refresh_keyboard_switch",' in fonte, (
             "o gesto PS + R3 escreve a `keyboard_emulation.flag` em "
-            f"{len(chamadas)} ponto(s) de `hotkey.py`, e a aba onde o "
-            "interruptor DESENHA não o relê ao ser exibida: ela vê a posição "
-            "de antes do gesto"
+            f"{len(chamadas)} ponto(s) de `hotkey.py`, e o agregador que relê "
+            "o interruptor perdeu a chave: ela vê a posição de antes do gesto"
         )
 
 

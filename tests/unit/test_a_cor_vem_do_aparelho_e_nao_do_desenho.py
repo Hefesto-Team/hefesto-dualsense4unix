@@ -195,8 +195,20 @@ def test_a_mordida_do_alvo_plastico(portao: object,
         "a 05-vibracao deixou de estar curada — a mordida não mede mais nada")
 
     sem_cura, quantos = re.subn(r' data-hef-alvo="plastico"', "", pagina)
-    assert quantos == 2, (
-        f"a mordida esperava as duas molduras curadas da 05 e achou {quantos}")
+    # A RÉGUA MEDIA O MUNDO DE ONTEM — 08/09/2026. Aqui estava `quantos == 2`,
+    # e ela achou 4: a bancada passou a desenhar as QUATRO colunas (o foco dela
+    # são quatro DualSense), e as duas vazias já nascem com o alvo posto para o
+    # dia em que o controle chegar. O número que a mordida precisa não é "dois"
+    # — é "TODA moldura tem o alvo", e isso se LÊ da página.
+    molduras = pagina.count('data-campo="plastico"')
+    assert quantos == molduras, (
+        f"a 05 tem {molduras} molduras e só {quantos} trazem "
+        "`data-hef-alvo=\"plastico\"` — uma delas voltou a cravar cor sem alvo")
+    # E O NÚMERO ACUSADO CONTINUA DOIS, medido: arrancados os quatro alvos, a
+    # régua acusa só as duas molduras que de fato CRAVAM uma cor. As outras
+    # duas são lugares vazios e não trazem cor nenhuma — é o que a docstring
+    # acima afirma, e é por isso que "alvos arrancados" e "molduras acusadas"
+    # são dois números diferentes de propósito.
     assert _conta(portao, colorways, sem_cura, "plastico") == 2, (
         "com o alvo arrancado a régua continuou calada — ela não está medindo "
         "o alvo, está passando por acaso")

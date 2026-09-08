@@ -755,7 +755,21 @@ def test_o_rodape_nao_perde_o_campo_que_nao_tem_secao() -> None:
     MORDIDA: tire `_ROTULOS_SEM_SECAO` da fusão em `_rotulos_dos_campos` — o
     campo cai no nome cru `mapa` e o portão de cobertura do schema reprova.
     """
-    assert ipc_bridge._rotulos_dos_campos()["mapa"] == "O desenho da mesa"
+    # A RÉGUA PERGUNTA AO DONO (08/09/2026): esta linha DIGITAVA "O desenho da
+    # mesa" e virou vermelha quando o rótulo passou a dizer "das entradas" —
+    # "mesa" é palavra banida na tela por decisão dela (06/09). Digitar a frase
+    # dava um SEGUNDO dono a ela, que é exatamente o defeito que o dente 6
+    # acima existe para matar; o dono é `_ROTULOS_SEM_SECAO`.
+    #
+    # A MORDIDA CONTINUA DE PÉ, e não virou tautologia: o lado esquerdo é a
+    # FUSÃO e o direito é a FONTE. Tirando `_ROTULOS_SEM_SECAO` da fusão o
+    # campo cai no nome cru `mapa`, os dois deixam de casar e isto reprova —
+    # que é o que a docstring promete.
+    fundidos = ipc_bridge._rotulos_dos_campos()
+    assert fundidos["mapa"] == ipc_bridge._ROTULOS_SEM_SECAO["mapa"]
+    assert fundidos["mapa"] != "mapa", (
+        "o campo sem seção caiu no nome cru — a fusão perdeu `_ROTULOS_SEM_SECAO`"
+    )
 
 
 # ---------------------------------------------------------------------------

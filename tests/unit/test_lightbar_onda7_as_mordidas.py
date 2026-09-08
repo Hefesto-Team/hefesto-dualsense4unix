@@ -421,7 +421,11 @@ def test_envio_recusado_o_rotulo_nao_afirma_o_desenho(
     host.on_player_leds_preset_p2(None)
 
     assert host._toasts, "o toast do resultado continua saindo"
-    assert "Ainda não sei quais controles estão na mesa" in host._toasts[-1]
+    # A RÉGUA PERGUNTA AO DONO (08/09/2026): esta linha DIGITAVA "estão na
+    # mesa" e reprovava a MELHORA — "mesa" é palavra banida na tela por
+    # decisão dela (06/09), e o produto já diz "estão ligados". Digitar a
+    # frase da tela põe um segundo dono nela; ler a constante não.
+    assert lightbar_actions._AVISO_SEM_DESTINATARIO in host._toasts[-1]
     assert "P2" not in host.rotulo_do_desenho.texto, (
         "o rótulo anunciava um desenho que o produto acabou de declarar que "
         "não conseguiu enviar"

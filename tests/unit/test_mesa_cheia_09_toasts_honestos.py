@@ -317,6 +317,13 @@ class TestOQuintoGestoDaAba:
         assert "Modo Nativo" in toast
         assert "Lightbar apagada" not in toast
 
+    # A PALAVRA DA TELA MUDOU — 08/09/2026: "mesa" é banida na tela por decisão
+    # dela (06/09) e `textos_de_aplicacao` passou a dizer "não está ligado".
+    # As frases abaixo continuam pingadas PALAVRA POR PALAVRA de propósito (a
+    # soma das pendências é o que este arquivo mede); o que se corrigiu foi só
+    # o termo decidido. UMA delas era pior que vermelha: o
+    # `assert "…" not in toast` de `test_o_coop_nao_governa…` passava à toa,
+    # porque procurava um texto que o produto não diz mais.
     def test_modo_nativo_e_alvo_fora_somam_no_quinto_gesto_tambem(self) -> None:
         """O gesto novo passa pela mesma soma dos outros — não por uma cópia.
 
@@ -328,7 +335,7 @@ class TestOQuintoGestoDaAba:
         host.on_lightbar_off(None)
         assert host._toasts[-1] == (
             "Apagar a lightbar — guardado: em Modo Nativo quem manda no "
-            "controle é o jogo; o Controle 2 não está na mesa. Vale quando o "
+            "controle é o jogo; o Controle 2 não está ligado. Vale quando o "
             "Modo Nativo sair e o Controle 2 voltar."
         )
 
@@ -419,7 +426,7 @@ class TestAsPendenciasSomam:
             "ligado, quem manda nas 5 luzes é ele; em Modo Nativo quem manda no "
             "controle é o jogo. Vale quando o co-op sair e o Modo Nativo sair."
         )
-        assert "não está na mesa" not in host._toasts[-1], (
+        assert "não está ligado" not in host._toasts[-1], (
             "o alvo está na mesa — a frase não pode inventar a terceira pendência"
         )
 
@@ -444,14 +451,14 @@ class TestAsPendenciasSomam:
         assert toast == (
             "Desenho das luzes (LEDs acesos: 1, 3 e 5) — guardado: com o co-op "
             "ligado, quem manda nas 5 luzes é ele; em Modo Nativo quem manda no "
-            "controle é o jogo; o Controle 2 não está na mesa. Vale quando o "
+            "controle é o jogo; o Controle 2 não está ligado. Vale quando o "
             "co-op sair, o Modo Nativo sair e o Controle 2 voltar."
         )
         # A ordem é a decisão documentada: os donos de AGORA antes da ausência.
         assert (
             toast.index("co-op ligado")
             < toast.index("em Modo Nativo")
-            < toast.index("não está na mesa")
+            < toast.index("não está ligado")
         )
 
     def test_uma_pendencia_so_continua_com_a_frase_de_sempre(self) -> None:

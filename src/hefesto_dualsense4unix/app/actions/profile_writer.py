@@ -317,4 +317,47 @@ class ProfileWriterMixin(CaronaDoWrapperMixin):
         self._status_toast("footer", msg)
 
 
-__all__ = ["ProfileWriterMixin"]
+def tem_edicao_pendente(dono: object) -> bool:
+    """O rascunho em memória diverge do que veio do disco? (R-08)
+
+    **A GUARDA FICOU SEM DONO — 08/09/2026.** Esta pergunta é a que protege o
+    trabalho não salvo dela: enquanto ela responder "sim", a aba Perfis não
+    deixa uma seleção que não foi gesto dela repintar o editor nem mover o alvo
+    do Salvar (``_ha_trabalho_no_editor``, ``_refazer_as_abas_apos_ativar``).
+
+    Ela morava em ``HefestoApp._tem_edicao_pendente`` e saiu do disco junto com
+    a janela GTK (``D-0609-GTK-LEVA-INTEIRA``, ``f5311616``). A decisão dela
+    foi *"a ideia sempre foi reaproveitar o que fiz no gtk"* — **o motor fica**
+    —, e isto é motor: duas linhas que comparam dois ``DraftConfig``, sem um
+    ``Gtk`` e sem um ``self._get`` dentro. Foi levada por engano.
+
+    O QUE MEDIU O ENGANO, e não é leitura de código: ``_draft_baseline`` tinha
+    **três escritores vivos** (``footer_actions._aplicar_perfil_ao_rascunho``,
+    ``ProfileWriterMixin._reapontar_rascunho``,
+    ``profiles_actions._reconciliar_rascunho_com_perfil_salvo``) e **zero
+    leitores**. Um valor que três caminhos mantêm em dia e ninguém consulta é a
+    assinatura de um leitor que caiu — e os dois ``getattr(self,
+    "_tem_edicao_pendente", None)`` de ``profiles_actions`` passavam direto,
+    tomando o caminho do "não há nada a proteger" em silêncio.
+
+    POR QUE FUNÇÃO DE MÓDULO, e não um método herdado: o leitor
+    (``ProfilesActionsMixin``) e os escritores (``ProfileWriterMixin`` e o
+    ``FooterActionsMixin`` que dele desce) **não se herdam** — só compartilham
+    o ``CaronaDoWrapperMixin``, cuja única razão de existir é a carona do
+    wrapper. Pendurar a pergunta lá daria a uma classe de um assunto só um
+    segundo assunto. É o mesmo argumento, o mesmo arquivo e a mesma forma de
+    :func:`carimbo_que_o_save_leva` (PONTE-SOBREVIVE-A-CORRIDA-01): quando os
+    dois lados precisam da MESMA resposta e nenhum descende do outro, a
+    resposta vira função importável — e a divergência não tem onde nascer.
+
+    ``baseline is None`` responde ``False`` de propósito: sem nenhuma foto do
+    disco na história não há divergência a declarar, e era o comportamento da
+    janela.
+    """
+    baseline = getattr(dono, "_draft_baseline", None)
+    if baseline is None:
+        return False
+    return bool(getattr(dono, "draft", None) != baseline)
+
+
+__all__ = ["ProfileWriterMixin", "tem_edicao_pendente"]

@@ -305,6 +305,29 @@ def test_aba_citada_e_a_aba_onde_o_botao_mora(
     assert _aba_do_botao(citados[0]) == abas[0]
 
 
+#: OS NOMES DE MODO, lidos do produto — 08/09/2026.
+#:
+#: Os quatro segmentos de `editor.modo` (`10-perfis.html`) são `<button>` de
+#: verdade, e por isso entram no universo de `_rotulos_de_botao()`. Mas o que
+#: eles carregam é o nome de um ESTADO do perfil, e a prosa os cita como
+#: estado: *"Dentro de «Jogar pelo Hefesto», a máscara diz…"* não manda ela ir
+#: a lugar nenhum — descreve onde a regra vale.
+#:
+#: Exigir "em que aba isto mora" de uma frase dessas é cobrar endereço de quem
+#: não está dando direção, e foi o que pôs esta régua no vermelho quando o
+#: editor de modo ganhou os quatro segmentos. A lista sai do HTML (o atributo
+#: `data-modo`) em vez de ser digitada: modo novo entra sozinho.
+_MODO_NO_EDITOR = re.compile(r'data-modo="[a-z]+"[^>]*>([^<]+)')
+
+
+def _nomes_de_modo() -> set[str]:
+    """Rótulos dos segmentos de `editor.modo` — nomes de ESTADO, não de destino."""
+    nomes: set[str] = set()
+    for _aba, html in _paginas():
+        nomes.update(m.strip() for m in _MODO_NO_EDITOR.findall(html))
+    return nomes
+
+
 def test_guia_das_mascaras_aponta_o_botao_e_a_aba_que_existem() -> None:
     """``docs/usage/jogos-e-mascaras.md`` mandava usar um opt-in inexistente.
 
@@ -333,6 +356,12 @@ def test_guia_das_mascaras_aponta_o_botao_e_a_aba_que_existem() -> None:
             continue
         com_ponteiro.append(trecho)
         abas = _ABA_CITADA.findall(trecho)
+        if botao in _nomes_de_modo() and not abas:
+            # Nome de MODO citado como estado, sem direção — ver `_nomes_de_modo`.
+            # Não é ponteiro, então não deve endereço. Se a frase NOMEAR uma aba,
+            # ela volta a ser cobrada pela asserção de baixo: dizer a aba errada
+            # continua sendo mandar ela ao lugar errado.
+            continue
         assert abas, f"o guia cita {botao!r} e não diz em que aba ele mora: {trecho!r}"
         assert _aba_do_botao(botao) == abas[0], (
             f"o guia manda procurar {botao!r} na aba {abas[0]!r}, que não é "

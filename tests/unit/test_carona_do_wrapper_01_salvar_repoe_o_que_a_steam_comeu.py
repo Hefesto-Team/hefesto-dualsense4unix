@@ -656,55 +656,26 @@ def test_desligada_a_carona_nao_toca_em_nada(
 # ---------------------------------------------------------------------------
 
 
-def test_a_bandeja_tambem_repoe_o_wrapper(
-    biblioteca: Path, steam_fechada: None, monkeypatch: Any
-) -> None:
-    """Trocar de perfil pela BANDEJA — o "fora da guia" mais longe da guia.
-
-    É o caminho de quem nem abriu a janela, e a janela compacta sai do MESMO
-    ``on_switch_profile``. Sem esta carona, quem só usa a bandeja nunca seria
-    consertado: nenhum dos outros quatro gestos passa por aqui.
-
-    MORDIDA: arranque o ``pegar_carona_no_gesto`` de
-    ``HefestoApp._trocar_perfil_de_fora`` e a asserção do wrapper reprova.
-    """
-    from hefesto_dualsense4unix.app import app as app_mod
-
-    trocados: list[str] = []
-    monkeypatch.setattr(
-        app_mod, "profile_switch", lambda nome: trocados.append(nome) or True
-    )
-
-    janela = _janela(monkeypatch)
-    # O `HefestoApp` compõe a `ProfilesActionsMixin`; o dublê tem a mesma base,
-    # então o método do app roda aqui sem subir GTK nenhum.
-    resultado = app_mod.HefestoApp._trocar_perfil_de_fora(janela, "Pragmata")
-
-    assert trocados == ["Pragmata"], "a troca de perfil dela tem de acontecer"
-    assert resultado is True
-    assert _tem_wrapper(biblioteca, PRAGMATA)
-
-
-def test_a_bandeja_repara_mesmo_com_o_daemon_parado(
-    biblioteca: Path, steam_fechada: None, monkeypatch: Any
-) -> None:
-    """O wrapper que a Steam comeu continua comido quando o daemon cai.
-
-    Pendurar a carona no SUCESSO da troca seria deixar sem conserto justamente
-    quem já está com meio produto quebrado. Por isso ela vai no ``finally``.
-    """
-    from hefesto_dualsense4unix.app import app as app_mod
-
-    def _daemon_morto(_nome: str) -> bool:
-        raise RuntimeError("daemon offline")
-
-    monkeypatch.setattr(app_mod, "profile_switch", _daemon_morto)
-
-    janela = _janela(monkeypatch)
-    with pytest.raises(RuntimeError):
-        app_mod.HefestoApp._trocar_perfil_de_fora(janela, "Pragmata")
-
-    assert _tem_wrapper(biblioteca, PRAGMATA)
+# OS DOIS TESTES DA BANDEJA SAÍRAM — 08/09/2026.
+#
+# Mediam `HefestoApp._trocar_perfil_de_fora`, o caminho por onde a BANDEJA (e a
+# janela compacta) trocava de perfil e pegava a carona no `finally`. O método
+# saiu do disco com a janela GTK (`D-0609-GTK-LEVA-INTEIRA`, `f5311616`), e o
+# inventário `docs/data/o-que-ainda-aponta-para-a-janela.csv:206` já os tinha
+# julgado: **SAI-COM-A-JANELA**, linhas 671;696;722 deste arquivo.
+#
+# MEDIDO ANTES DE TIRAR, e é o que separa "sai com a janela" de "perdemos um
+# comportamento em silêncio": a bandeja INTEIRA ficou órfã. `app/tray.py` está
+# no disco mas ninguém o importa em `src/` (o fecho de import da GTK-3 largou
+# `app.tray` junto com `app.app` e `app.compact_window`), e o `on_switch_profile`
+# dela é um callback que só o `HefestoApp` preenchia — hoje não tem quem o
+# forneça. Não há, portanto, gesto de bandeja vivo a quem pendurar a carona:
+# repontar a régua seria inventar um alvo.
+#
+# O REQUISITO FICA ESCRITO, para não se perder com o mecanismo: se a bandeja
+# voltar a ter dono, trocar de perfil por ela tem de repor o wrapper que a
+# Steam come — e a carona vai no `finally`, porque quem está com o daemon caído
+# é justamente quem mais precisa do conserto.
 
 
 def test_os_cinco_gestos_chamam_a_carona() -> None:
@@ -713,13 +684,18 @@ def test_os_cinco_gestos_chamam_a_carona() -> None:
     Este portão existe para que a resposta nunca volte a ser zero: cada gesto
     que ela nomeou tem de ter a chamada no fonte. Reprova antes mesmo de o
     teste de comportamento chegar lá, e diz qual arquivo perdeu o fio.
+
+    `app/app.py` SAIU DO DICIONÁRIO em 08/09/2026 — o arquivo deixou o disco
+    com a janela (`D-0609-GTK-LEVA-INTEIRA`) e a leitura estourava
+    `FileNotFoundError`, derrubando a conta dos outros três antes de contar.
+    Os gestos que sobram aqui são os do motor; os da interface nova têm régua
+    própria no bloco abaixo, que conta POR GESTO em vez de por arquivo.
     """
     raiz = Path(__file__).resolve().parents[2] / "src" / "hefesto_dualsense4unix"
     esperado = {
         "app/actions/profiles_actions.py": 2,  # Salvar e Ativar, na aba
         "app/actions/profile_writer.py": 1,  # o funil: Salvar/Importar/Restaurar
         "app/actions/footer_actions.py": 1,  # o botão verde "Aplicar"
-        "app/app.py": 1,  # bandeja e janela compacta, pelo mesmo método
     }
     for relativo, quantas in esperado.items():
         texto = (raiz / relativo).read_text(encoding="utf-8")
