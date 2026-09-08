@@ -2015,6 +2015,41 @@ DICA_VOL_ALTO = ("Arraste para escolher o volume do alto-falante deste controle.
                  "DualSense não devolve este número — o primeiro arrasto é o que faz o "
                  "Hefesto passar a saber qual ele é, e é ele que destrava o ♪.")
 
+# OS DOIS TEXTOS DO MODO DO MICROFONE — e o do "Virtual" MENTIA, medido.
+#
+# Ele prometia três coisas ("cria uma fonte de áudio própria", "entrega o
+# microfone do controle ao PC por ela", "faz o mic soar igual nos dois
+# transportes") e as três descreviam OUTRO botão, ou coisa nenhuma:
+#
+# * o gesto `mic-modo` (`pacotes/a02_controles.py`) faz UMA coisa: um
+#   `machine.declare` com `microfone: True` (ou `None`). Ele não elege canal,
+#   não escreve no firmware e não manda `0x32` — quem faz isso é o 🎙, pelo
+#   gesto `mudo`, que chama `mic.canal.set`. **São dois botões, dois caminhos**;
+# * "cria uma fonte própria" só acontece no RÁDIO. No cabo o filtro de
+#   `integrations/dualsense_bt_audio.nos_dualsense_bluetooth` descarta o nó
+#   (ele exige `bus == BLUETOOTH`), então `bt_mic.alvos()` não o vê e o clique
+#   só grava a chave no `maquina.json`;
+# * a promessa de simetria entre os dois transportes é contradita pela linha
+#   `audio.microfone.mudo@dualsense` do mapa, `radio_aciona=parcial` com a
+#   assimetria declarada desde 03/08/2026.
+#
+# A ARMADILHA QUE ESTA FRASE JÁ ARMOU, e ela é de processo: em 04/09/2026 este
+# `title` — que ninguém tinha medido — foi usado como PROVA para mudar
+# comportamento do gesto. *A frase da tela virou o argumento.* O gesto ficou de
+# pé por outros dois motivos, mas o argumento caiu; está escrito no docstring
+# de `mic_modo`.
+#
+# O QUE O TEXTO NOVO FAZ: diz o que ESTE botão faz, e manda para o botão que
+# faz a outra metade. **Não confessa dívida** — regra dela, 07/09/2026: o que
+# falta mora no mapa, nunca na tela.
+DICA_MIC_VIRTUAL = ("Guarda que o microfone deste controle passa pelo Hefesto. "
+                    "Pelo rádio é assim que ele ganha um canal só dele; pelo cabo "
+                    "a escolha fica guardada e vale quando ele voltar para o "
+                    "rádio. Quem põe o microfone no ar é o 🎙 logo acima.")
+DICA_MIC_NATIVO = ("Guarda que o microfone deste controle entra sozinho, sem o "
+                   "Hefesto no meio. Vale nos dois transportes, e é o que o "
+                   "sistema já faz quando ninguém escolhe nada.")
+
 # ---------------------------------------------------------------------------
 # OS QUATRO BOTÕES QUE DIZIAM "ESTE É O ESCOLHIDO" SEM LER NADA — 03/09/2026
 # ---------------------------------------------------------------------------
@@ -2322,7 +2357,7 @@ def bloco(c, *, bat, carga=None, glifos_on, l2, r2, touch, sticks,
               <span class="ajuda" style="display:inline-block;vertical-align:-3px">?<span class="dica">
                 A barra mostra o som <b>entrando agora</b>. O <b>🎙</b> cala no
                 <b>firmware</b> e apaga a luz vermelha do plástico.<br><br>
-                O <b>modo</b>, à direita, diz por onde o som do microfone chega ao PC.
+                O <b>modo</b>, logo abaixo, diz por onde o som do microfone chega ao PC.
               </span></span>
               <!-- O MODO DO MICROFONE — pedido dela, 30/08: *"tá faltando o Modo do
                    Mic: Virtual, Desativado e Nativo"*.
@@ -2376,9 +2411,9 @@ def bloco(c, *, bat, carga=None, glifos_on, l2, r2, touch, sticks,
                    CSS: endereçá-lo trocava os dois botões por um travessão. -->
               <span class="rota mic-modo">
                 <button class="{'on' if mic_modo == 'virtual' else ''}" data-gesto="mic-modo" data-mic-modo="virtual" data-campo="mic-modo-aceso" data-hef-alvo="classe" data-hef-quando="virtual"
-                  title="O Hefesto cria uma fonte de áudio própria e entrega o microfone do controle ao PC por ela. É o que faz o mic soar igual no cabo e no rádio.">Virtual</button>
+                  title="{DICA_MIC_VIRTUAL}">Virtual</button>
                 <button class="{'on' if mic_modo == 'nativo' else ''}" data-gesto="mic-modo" data-mic-modo="nativo" data-campo="mic-modo-aceso" data-hef-alvo="classe" data-hef-quando="nativo"
-                  title="O microfone entra como o kernel o expõe, sem o Hefesto no meio. Pelo rádio isso depende do perfil que o adaptador negociou.">Nativo</button>
+                  title="{DICA_MIC_NATIVO}">Nativo</button>
               </span>
 
           </div>

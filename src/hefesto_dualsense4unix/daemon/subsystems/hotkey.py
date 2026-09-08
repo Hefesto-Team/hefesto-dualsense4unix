@@ -24,6 +24,7 @@ from hefesto_dualsense4unix.integrations.eleicao_de_microfone import (
     ResultadoDaEleicao,
     dizer_no_ar,
     esquecer_a_palavra,
+    palavra_no_ar,
     recusa_de_quem_nao_elegeu,
 )
 from hefesto_dualsense4unix.utils.logging_config import get_logger
@@ -1471,22 +1472,76 @@ async def _metade_do_canal(
     palavra já guardada, a ponte que `_canal_no_ar` faz nascer já recebe o
     pedido dela na primeira varredura, em vez de esperar o toque seguinte.
 
+    **E POR ISSO O ATO RECUSADO A DESFAZ — A SEXTA PORTA, 08/09/2026.** Dizer
+    antes é o que faz a ponte nascer sabendo; nada desfazia quando a eleição
+    respondia `ok=False`, e o desfecho era a MESMA mentira de segunda geração
+    que `_apagar_a_luz_de_quem_perdeu_o_canal` fecha do outro lado, entrando
+    pela porta da frente: a tela dizia RECUSADO, o LED não acendia, e
+    `BtMicSubsystem._aplicar_a_palavra_dela` entregava `True` à ponte na
+    varredura seguinte — **0x32 LIGADO**.
+
+    Não é caso inventado: `EleitorDeMicrofone.eleger_o_controle` devolve
+    `ok=False` com *"o PipeWire não publica canal de captura nenhum para o
+    controle"* sempre que a ponte demora a publicar, que é o desfecho COMUM por
+    rádio, e `eleger_por_uniq` tem mais quatro recusas. Medido com o eleitor
+    REAL, a ponte REAL e o registro REAL: `no_ar() == {uniq: True}`,
+    `_pedido_dela is True`, e o `0x32` saindo LIGADO na varredura seguinte com
+    a source ``SUSPENDED``.
+
+    **DESFAZER É DEVOLVER O QUE HAVIA, não apagar.** `palavra_no_ar` é lido
+    ANTES do ato exatamente para isso: um ato que não aconteceu não muda nada.
+    Apagar sempre tiraria do ar o microfone que ela já tinha posto lá num ato
+    ANTERIOR que deu certo; dizer `False` a calaria sem ela ter pedido.
+
+    **E SÓ O `ligado=True` SE DESFAZ.** O `False` é *"me cale"* e não depende
+    de eleição nenhuma: a recusa de quem não elegeu diz, com todas as letras,
+    que *"este botão apagou a luz deste controle e não mexeu no canal de áudio
+    de ninguém"* — o microfone DELE tem de sair do ar do mesmo jeito. Desfazer
+    o mudo aqui seria pôr de volta no ar uma voz que ela mandou calar, que é o
+    defeito de privacidade com o sinal trocado.
+
     **E NO CABO ISTO NÃO FAZ NADA**, que é o desfecho certo: quem atende só
     conhece nós de Bluetooth (`nos_dualsense_bluetooth`), e no fio a placa USB
     publica o canal sozinha. Uma regra só no ato, em vez de um `if` de
     transporte no caminho dela.
     """
+    antes = palavra_no_ar(uniq)
     dizer_no_ar(uniq, ligado)
     resultado = await _eleger_ou_devolver(daemon, uniq, not ligado)
     if resultado is None:
+        _devolver_a_palavra(uniq, antes, ligado)
         return (
             MetadeDoAto(False, "o canal deste controle não foi tocado"),
             None,
         )
+    if not resultado.ok:
+        _devolver_a_palavra(uniq, antes, ligado)
     return (
         MetadeDoAto(bool(resultado.ok), "" if resultado.ok else resultado.motivo),
         resultado.ativo,
     )
+
+
+def _devolver_a_palavra(uniq: str, antes: bool | None, ligado: bool) -> None:
+    """O ato foi RECUSADO: o registro volta a ser o que era antes dele.
+
+    A SEXTA PORTA do pedido dela, e é a única que se fecha depois do ato em vez
+    de antes — as cinco de 08/09 são condições sobre quando a palavra nasce e
+    morre; esta é sobre o ato que NÃO aconteceu.
+
+    `ligado=False` sai pela porta sem tocar em nada, e o porquê está em
+    `_metade_do_canal`: calar não depende de eleição.
+
+    Nunca levanta — `dizer_no_ar` e `esquecer_a_palavra` já engolem o que der
+    errado, e este caminho é o do gesto dela.
+    """
+    if not ligado:
+        return
+    if antes is None:
+        esquecer_a_palavra(uniq)
+    else:
+        dizer_no_ar(uniq, antes)
+    logger.info("mic_da_mesa_palavra_desfeita", uniq=uniq, voltou_para=antes)
 
 
 async def _metade_do_firmware(

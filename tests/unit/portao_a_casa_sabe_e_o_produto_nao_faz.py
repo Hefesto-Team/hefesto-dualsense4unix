@@ -1436,6 +1436,23 @@ _SEM_CAMINHO_HOJE: dict[str, str] = {
         "faz\" — e depois dela, o `AltoFalanteSubsystem` registrado nos DOIS "
         "lugares. 08/09/2026."
     ),
+    'integrations/alto_falante_bt.py::common_de_audio': (
+        "O ENVELOPE DE [3..49] DO ENSAIO, 08/09/2026 — os 47 B que PEDEM rota, "
+        "volume e pré-amp, com os três bits de validação ligados. Ele nasceu de "
+        "um defeito MEDIDO: o `--arranjo common-preservado` ia ao fio com 47 "
+        "ZEROS ali, porque `BombaDeSomPeloRadio.um_report` chamava "
+        "`Arranjo.montar` sem `common` e o ramo caía no valor omitido. Um "
+        "`common` zerado tem os bits de validação apagados: não pede nada — e o "
+        "mapa diz que por rádio o kernel não escreve nenhum dos três campos "
+        "(`hid-playstation.c`, gatilho USB-only). Nenhum offset e nenhum bit é "
+        "digitado aqui: os cinco saem de `core/ds_output_report`, o dono deles. "
+        "Alcançado pelo ensaio `scripts/ensaios/o_som_que_sai.py --arranjo "
+        "common-preservado`. ONDE O CAMINHO SE PERDE: o mesmo dos irmãos — o "
+        "produto não pode chamar isto sem ESCOLHER um arranjo, e a escolha é "
+        "DELA, pela orelha, no ensaio de bancada. O QUE FECHA: a passada "
+        "com/sem, e depois dela o `AltoFalanteSubsystem` registrado nos DOIS "
+        "lugares. 08/09/2026."
+    ),
     'integrations/alto_falante_bt.py::montar_pelos_dois_arranjos': (
         "SOM-QUE-SAI-01, 06/09/2026 — manda o MESMO PCM pelos DOIS arranjos, que "
         "é o que a rota corrigida da sprint pede. O chamador em produção só "

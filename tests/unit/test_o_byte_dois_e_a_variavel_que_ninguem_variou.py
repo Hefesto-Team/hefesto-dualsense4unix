@@ -212,3 +212,136 @@ def test_a_sequencia_rotaciona_no_nibble_alto() -> None:
     for seq in (0, 1, 15, 16, 17):
         pkt = af.montar_com_o_common_preservado(QUADROS, COMMON, seq=seq)
         assert pkt[1] == (seq & 0x0F) << 4, f"seq={seq} saiu como 0x{pkt[1]:02x}"
+
+
+# ---------------------------------------------------------------------------
+# MORDIDA 5 — E TUDO ISSO NO CAMINHO QUE ELA VAI RODAR
+# ---------------------------------------------------------------------------
+#
+# AS QUATRO MORDIDAS ACIMA CHAMAM `montar_com_o_common_preservado` DIRETO, e
+# passam o `common` na mão. **O ensaio não passa por ali.** Ele vai por
+# `BombaDeSomPeloRadio.um_report`, que chamava `arranjo.montar` SEM `common` —
+# e o ramo `common_preservado` caía no `bytes(COMMON_LEN)` do valor omitido.
+#
+# Medido em 08/09/2026, no caminho do `--escrever`:
+#
+#     common no 0x31 do produto : flag0 e flag1 ligados, volume e rota pedidos
+#     common no corpo do ensaio : todos os 47 bytes em zero — pede NADA
+#
+# Um `common` zerado tem os bits de validação apagados: ele não pede rota, não
+# pede volume, não pede pré-amp. E o mapa diz que POR RÁDIO O KERNEL NÃO
+# ESCREVE NENHUM DOS TRÊS. A passada teria custado a orelha dela para medir um
+# corpo que não pedia nada — e o silêncio dela seria lido como "o aparelho não
+# faz", que é exatamente o que o par com/sem existe para NÃO concluir.
+#
+# A REGRA QUE ISSO DEIXA: uma afirmação sobre bytes tem de ser medida no
+# caminho que a pessoa vai rodar, não no atalho que a régua acha cômodo.
+
+
+def _bomba(common: bytes | None) -> af.BombaDeSomPeloRadio:
+    """A bomba do ensaio, com um encoder de mentira. **Nasce SECA.**"""
+    quadro = b"\xcc" * af.BYTES_POR_QUADRO_OPUS
+    return af.BombaDeSomPeloRadio(
+        arranjo=af.ARRANJO_POR_NOME["common-preservado"],
+        fonte=lambda n: b"\x00" * n,
+        codificador=type("Enc", (), {"codificar": lambda self, pcm: quadro})(),
+        common=common,
+    )
+
+
+def test_o_corpo_que_a_bomba_monta_leva_o_common_do_produto() -> None:
+    """[3..49] do report da BOMBA é o mesmo do 0x31 do produto. Byte a byte.
+
+    ARRANQUE A CURA (tire o `common=self.common` de
+    `BombaDeSomPeloRadio.um_report`) e esta régua REPROVA dizendo que o
+    envelope saiu zerado.
+    """
+    envelope = af.common_de_audio()
+    report = _bomba(envelope).um_report()
+    assert report is not None
+    do_produto = bytes(build_bt_report(envelope)[3 : 3 + COMMON_LEN])
+    assert bytes(report[3 : 3 + COMMON_LEN]) == do_produto, (
+        "o corpo que a BOMBA monta não leva o mesmo `common` que o 0x31 do "
+        f"produto: {bytes(report[3:15]).hex()} != {do_produto[:12].hex()}"
+    )
+    assert bytes(report[3 : 3 + COMMON_LEN]) != bytes(COMMON_LEN), (
+        "o envelope saiu ZERADO — ele não pede rota, volume nem pré-amp, e o "
+        "corpo iria ao fio pedindo NADA"
+    )
+    assert report[2] == BT_TAG
+
+
+def test_a_bomba_recusa_o_corpo_preservado_sem_common() -> None:
+    """Ausência é resposta: um envelope que não pede nada não vai ao fio.
+
+    Deixar o padrão zerado passar seria um instrumento dando VERMELHO sobre
+    nada — e mais caro que os que dão verde, porque quem paga é a orelha dela
+    numa passada que não mediu coisa nenhuma.
+
+    Troque o `raise` por um `common = bytes(COMMON_LEN)` e esta régua REPROVA.
+    """
+    with pytest.raises(ValueError, match="pedindo NADA"):
+        _bomba(None)
+
+
+def test_o_envelope_do_ensaio_pede_os_tres_campos_que_o_mapa_nomeia() -> None:
+    """Rota, volume e pré-amp — os TRÊS, com os bits de validação ligados.
+
+    O mapa (`audio.alto_falante*`) é explícito: são três campos, o kernel
+    escreve os três juntos, e **por rádio ele não escreve nenhum**. Um
+    envelope que ligasse o bit e deixasse o byte em zero mandaria "volume
+    zero" com cara de autoridade — a mesma classe do keepalive de vibração
+    que este projeto já pagou.
+
+    O volume é o único número desta bancada com veredito de ORELHA: 85 =
+    "bep bep bep", 0 = "mudo" (15/08/2026).
+    """
+    from hefesto_dualsense4unix.core import ds_output_report as rep
+
+    envelope = af.common_de_audio()
+    assert len(envelope) == COMMON_LEN
+    assert envelope[0] & rep.VALID_FLAG0_SPEAKER_VOLUME, "o volume não foi autorizado"
+    assert envelope[0] & rep.VALID_FLAG0_AUDIO_PATH, "a rota não foi autorizada"
+    assert envelope[1] & rep.VALID_FLAG1_AUDIO_CONTROL2_ENABLE, "o pré-amp não foi"
+    assert envelope[rep.COMMON_SPEAKER_VOLUME] == af.VOLUME_QUE_ELA_OUVIU
+    rota = (
+        envelope[rep.COMMON_AUDIO_PATH] & rep.OUTPUT_PATH_SEL_MASK
+    ) >> rep.OUTPUT_PATH_SEL_SHIFT
+    assert rota == rep.SAIDA_SO_NO_ALTO_FALANTE
+    assert envelope[rep.COMMON_AUDIO_CONTROL2] & rep.SP_PREAMP_GAIN_MASK == (
+        rep.SP_PREAMP_GAIN_PADRAO
+    )
+
+
+def test_o_envelope_nao_apaga_o_caminho_do_microfone() -> None:
+    """A cicatriz de 02/08/2026: o `common[7]` carrega a rota E o mic.
+
+    Escrever o byte com base ZERO fez o `parec` do microfone dela cair de
+    131.072 bytes para **zero**. Um ensaio de ALTO-FALANTE que calasse o
+    microfone dela de passagem seria o pior desfecho possível — ela tem quatro
+    controles na mesa e o microfone pelo rádio é a única coisa que já
+    funcionou.
+
+    Zere o `AUDIO_CONTROL_BASE_SEGURA` de `common_de_audio` e esta régua
+    REPROVA.
+    """
+    from hefesto_dualsense4unix.core import ds_output_report as rep
+
+    envelope = af.common_de_audio()
+    assert envelope[rep.COMMON_AUDIO_PATH] & rep.AUDIO_CONTROL_FORCE_INTERNAL_MIC, (
+        "o `common[7]` foi escrito com base zero e apagou o caminho do "
+        f"microfone: 0x{envelope[rep.COMMON_AUDIO_PATH]:02x}"
+    )
+
+
+def test_os_arranjos_externos_continuam_sem_common() -> None:
+    """A recusa é SÓ do corpo que preserva — os dois candidatos não mudam.
+
+    Eles põem a tag do AudioControl no byte [2] e não têm onde guardar um
+    `common`. Exigir um deles seria inventar campo em leitura de fonte
+    externa, que é o oposto do que este módulo protege.
+    """
+    for arranjo in af.ARRANJOS:
+        bomba = af.BombaDeSomPeloRadio(arranjo=arranjo, fonte=lambda n: b"\x00" * n)
+        assert bomba.common is None
+        assert arranjo.common_preservado is False

@@ -415,8 +415,8 @@ class BtMicSubsystem:
         #: BORDA de descida — ver `_soltar_os_que_ela_desmarcou`.
         self._declarados_antes: frozenset[str] = frozenset()
         self._pedidor_anterior: Any = None
-        #: O par `(dizedor, esquecedor)` que estava instalado antes de nós.
-        self._dizedor_anterior: tuple[Any, Any] | None = None
+        #: `(dizedor, esquecedor, leitor)` que estava instalado antes de nós.
+        self._dizedor_anterior: tuple[Any, Any, Any] | None = None
 
     # -- contrato Subsystem ----------------------------------------------
 
@@ -492,11 +492,28 @@ class BtMicSubsystem:
         microfone dele tem de sair do ar no mesmo gesto. Sem isto o LED diria
         *"saí do ar"* com o `0x32` ainda ligado — a mesma mentira de segunda
         geração que aquele laço existe para matar, do lado de dentro.
+
+        **E a SEXTA PORTA também entra por aqui** (08/09/2026): o ato que a
+        eleição RECUSA devolve o registro ao que ele era, e quando ele não era
+        nada isso é esquecer. Ver `hotkey._metade_do_canal`.
         """
         saiu = self._registro.esquecer_a_palavra(uniq)
         if saiu:
             self._aplicar_a_palavra_dela()
         return saiu
+
+    def palavra_no_ar(self, uniq: str) -> bool | None:
+        """O que ela disse sobre ESTE microfone. `None` = ela não disse nada.
+
+        A terceira porta pública do trio, e ela é só leitura: quem desfaz um
+        ato recusado precisa saber o que havia ANTES dele, senão o desfazer
+        vira chute. Ver `RegistroDePedidosDeCanal.dizer_no_ar`.
+
+        A chave é normalizada aqui pela mesma razão que em `dizer_no_ar`: quem
+        chama entrega o `uniq` do gesto, que pode vir com dois-pontos.
+        """
+        chave = norm_mac(str(uniq)) or ""
+        return self._registro.no_ar().get(chave)
 
     def _aplicar_a_palavra_dela(self) -> None:
         """Entrega a cada ponte viva o que ela disse — ou `None`, se não disse.
@@ -601,8 +618,13 @@ class BtMicSubsystem:
         # OS DOIS GANCHOS SOBEM JUNTOS, e é de propósito: o ato do microfone
         # pede o canal E diz se ele vai ao ar. Instalar só o primeiro é o
         # estado de antes de 08/09/2026 — o canal eleito, o `0x32` desligado.
+        #
+        # E SÃO TRÊS DESDE A SEXTA PORTA (08/09/2026, mesmo dia). O leitor sobe
+        # junto porque desfazer um ato recusado sem saber o que havia antes só
+        # pode ser chute; instalar dizedor sem leitor é o estado em que a
+        # recusa deixava a palavra LIGADA.
         self._dizedor_anterior = registrar_dizedor_do_no_ar(
-            self.no_ar, self.esquecer_a_palavra
+            self.no_ar, self.esquecer_a_palavra, self.palavra_no_ar
         )
 
     async def stop(self) -> None:
@@ -645,8 +667,8 @@ class BtMicSubsystem:
 
         registrar_pedidor_de_canal(self._pedidor_anterior)
         self._pedidor_anterior = None
-        dizedor, esquecedor = self._dizedor_anterior or (None, None)
-        registrar_dizedor_do_no_ar(dizedor, esquecedor)
+        dizedor, esquecedor, leitor = self._dizedor_anterior or (None, None, None)
+        registrar_dizedor_do_no_ar(dizedor, esquecedor, leitor)
         self._dizedor_anterior = None
 
     # -- laço -------------------------------------------------------------

@@ -41,6 +41,20 @@ from hefesto_dualsense4unix.integrations import eleicao_de_microfone as eleicao
 
 P1 = "aa:bb:cc:00:00:01"
 P2 = "aa:bb:cc:00:00:02"
+P3 = "aa:bb:cc:00:00:03"
+P4 = "aa:bb:cc:00:00:04"
+
+#: A MESA DELA — quatro DualSense, dois no cabo e dois no rádio, na disposição
+#: medida em 08/09/2026. As réguas da sexta porta exercitam os QUATRO, e não é
+#: enfeite: a leva anterior foi derrubada por um teste que prometia a mesa dela
+#: no nome e exercitava DOIS controles no corpo, escolhendo o único arranjo em
+#: que o defeito não aparece.
+MESA_DELA: tuple[tuple[str, str], ...] = (
+    (P1, "bluetooth"),
+    (P2, "usb"),
+    (P3, "usb"),
+    (P4, "bluetooth"),
+)
 
 
 # ---------------------------------------------------------------------------
@@ -159,23 +173,61 @@ class _BackendDeMentira:
         return [{"uniq": P1, "connected": True, "transport": "bluetooth"}]
 
 
+#: A recusa que o eleitor REAL devolve mais vezes por rádio — a ponte demora a
+#: publicar e `eleger_o_controle` responde isto (`eleicao_de_microfone`, o ramo
+#: `if not fontes`). Copiada palavra por palavra de lá de propósito: um dublê
+#: que inventasse a própria frase mediria a si mesmo.
+RECUSA_SEM_CANAL = (
+    "o PipeWire não publica canal de captura nenhum para o "
+    "controle — no rádio isso precisa da ponte de microfone"
+)
+
+
 class _EleitorDeMentira:
-    def __init__(self) -> None:
+    """O eleitor dublado — e ele SABE RECUSAR, que é o que o real faz.
+
+    **ELE DEVOLVIA `ok=True` SEMPRE, e isso cegou a suíte inteira** (achado do
+    advogado do diabo, 08/09/2026). O eleitor REAL tem CINCO recusas em
+    `eleger_por_uniq` mais a de `eleger_o_controle`, e a última é o desfecho
+    COMUM por rádio. Com um dublê que nunca recusa, nenhum teste deste arquivo
+    podia ver a SEXTA PORTA — o ato recusado deixando a palavra dela LIGADA —,
+    e ela atravessou a leva inteira com doze réguas verdes.
+
+    É a cicatriz de `_mutar` outra vez, na mesma semana: *um dublê mais frouxo
+    que a função real envenena a suíte inteira*.
+
+    **E A POSSE SÓ MUDA QUANDO A ELEIÇÃO É CONFERIDA**, como no real: lá
+    `eleger_por_uniq` só escreve `self.eleito` dentro do `if resultado.ok`.
+    Marcar o dono na intenção é a mentira de segunda geração que o módulo
+    inteiro existe para não contar, e um dublê que a comete ensina o teste a
+    aceitá-la.
+    """
+
+    def __init__(self, *, recusa: str | None = None) -> None:
         self.eleito: str | None = None
+        #: `None` = elege; uma frase = recusa com ela, como o eleitor real.
+        self.recusa = recusa
+        self.eleicoes: list[str] = []
 
     def eleger_o_controle(self, uniq: str, conectados: list[str]) -> Any:
+        del conectados
+        self.eleicoes.append(uniq)
+        if self.recusa is not None:
+            return eleicao.ResultadoDaEleicao(ok=False, motivo=self.recusa)
         self.eleito = uniq
         return eleicao.ResultadoDaEleicao(ok=True, alvo=uniq, ativo=f"fonte-de-{uniq}")
 
     def devolver_o_microfone(self) -> Any:
+        if self.recusa is not None:
+            return eleicao.ResultadoDaEleicao(ok=False, motivo=self.recusa)
         self.eleito = None
         return eleicao.ResultadoDaEleicao(ok=True, ativo="fonte-de-antes")
 
 
 class _DaemonDeMentira:
-    def __init__(self) -> None:
+    def __init__(self, eleitor: Any = None) -> None:
         self.controller = _BackendDeMentira()
-        self._eleitor_de_microfone = _EleitorDeMentira()
+        self._eleitor_de_microfone = eleitor or _EleitorDeMentira()
         self._tasks: list[Any] = []
         self.config = type("Cfg", (), {"mic_button_toggles_system": True})()
         self.store = type("Store", (), {"native_mode_active": False})()
@@ -206,9 +258,13 @@ def gancho(subsystem):  # type: ignore[no-untyped-def]
 
     É o MESMO mecanismo que o produto usa (`registrar_dizedor_do_no_ar`), e é
     de propósito: um gancho de mentira mediria o teste, não o produto.
+
+    **OS TRÊS, como o `_instalar_o_gancho_da_procura` do produto instala.**
+    Registrar dois deixaria `palavra_no_ar` sempre `None`, e o desfazer da
+    sexta porta só saberia apagar — que é justamente o chute que ele evita.
     """
     anteriores = eleicao.registrar_dizedor_do_no_ar(
-        subsystem.no_ar, subsystem.esquecer_a_palavra
+        subsystem.no_ar, subsystem.esquecer_a_palavra, subsystem.palavra_no_ar
     )
     yield subsystem
     eleicao.registrar_dizedor_do_no_ar(*anteriores)
@@ -256,13 +312,19 @@ def test_sem_ninguem_atendendo_o_ato_nao_explode(registro) -> None:  # type: ign
     O lado inseguro seria o contrário — o toque no botão do microfone dela
     virando um traceback no laço do daemon. É a mesma regra de `pedir_canal`.
     """
-    anteriores = eleicao.registrar_dizedor_do_no_ar(None, None)
+    anteriores = eleicao.registrar_dizedor_do_no_ar(None, None, None)
     try:
         d = _DaemonDeMentira()
         ato = asyncio.run(hotkey.ligar_o_microfone(d, P1, ligado=True))
         assert ato.canal_no_sistema.feita
         assert eleicao.dizer_no_ar(P1, True) is False
         assert eleicao.esquecer_a_palavra(P1) is False
+        assert eleicao.palavra_no_ar(P1) is None
+        # E O ATO RECUSADO TAMBÉM NÃO EXPLODE sem ninguém atendendo: o
+        # desfazer da sexta porta passa pelos mesmos ganchos ausentes.
+        recusado = _DaemonDeMentira(_EleitorDeMentira(recusa=RECUSA_SEM_CANAL))
+        ato2 = asyncio.run(hotkey.ligar_o_microfone(recusado, P1, ligado=True))
+        assert ato2.canal_no_sistema.feita is False
     finally:
         eleicao.registrar_dizedor_do_no_ar(*anteriores)
 
@@ -467,3 +529,149 @@ def test_ligar_pede_o_canal_e_calar_nao_o_solta(subsystem, registro) -> None:  #
         f"calar o microfone derrubou o canal dele: {registro.abertos()}"
     )
     assert registro.no_ar() == {"aabbcc000001": False}
+
+
+# ---------------------------------------------------------------------------
+# MORDIDA 5 — A SEXTA PORTA: o ato RECUSADO não deixa a palavra ligada
+# ---------------------------------------------------------------------------
+#
+# Achada pelo advogado do diabo em 08/09/2026, DEPOIS de esta frente declarar
+# "as cinco portas, todas com régua". As cinco de cima são condições sobre
+# quando a palavra nasce e morre; a sexta é sobre o ato que NÃO aconteceu:
+# `_metade_do_canal` dizia a palavra ANTES da eleição e nada a desfazia quando
+# `resultado.ok` era `False`. A tela dizia RECUSADO, o LED não acendia, e a
+# varredura seguinte entregava `True` à ponte — 0x32 LIGADO.
+#
+# A SUÍTE ERA CEGA A ELA porque o `_EleitorDeMentira` devolvia `ok=True`
+# SEMPRE. Ele agora sabe recusar, com a frase que o eleitor real usa.
+#
+# AS RÉGUAS DAQUI EXERCITAM A MESA DELA INTEIRA — os quatro DualSense.
+
+
+def _mesa_de_quatro(daemon: Any) -> None:
+    """Põe os QUATRO DualSense dela no backend do dublê, com o transporte."""
+    daemon.controller.describe_controllers = lambda: [  # type: ignore[method-assign]
+        {"uniq": uniq, "connected": True, "transport": transporte}
+        for uniq, transporte in MESA_DELA
+    ]
+
+
+def test_o_ato_recusado_nao_deixa_o_microfone_no_ar(gancho, registro) -> None:  # type: ignore[no-untyped-def]
+    """A SEXTA PORTA, nos quatro controles dela.
+
+    ARRANQUE A CURA (tire o `_devolver_a_palavra` do ramo `not resultado.ok`
+    de `hotkey._metade_do_canal`) e esta régua REPROVA nos quatro: cada um
+    deles fica com `no_ar()[uniq] is True` depois de o produto ter respondido
+    que o canal não foi tocado.
+
+    A recusa é a REAL e a mais comum por rádio — `eleger_o_controle` responde
+    isto sempre que a ponte de microfone ainda não publicou o nó, que é o
+    desfecho normal do primeiro toque.
+    """
+    for uniq, _ in MESA_DELA:
+        d = _DaemonDeMentira(_EleitorDeMentira(recusa=RECUSA_SEM_CANAL))
+        _mesa_de_quatro(d)
+        ato = asyncio.run(hotkey.ligar_o_microfone(d, uniq, ligado=True))
+        assert ato.feito is False, f"{uniq}: a recusa saiu como ato feito"
+        assert ato.canal_no_sistema.feita is False
+        assert registro.no_ar() == {}, (
+            f"{uniq}: o ato foi RECUSADO e a palavra dela ficou ligada — a "
+            "tela diz recusado, o LED não acende, e a varredura seguinte "
+            f"entrega `True` à ponte: {registro.no_ar()}"
+        )
+
+
+def test_o_canal_recusado_continua_pedido_para_a_ponte_poder_nascer(  # type: ignore[no-untyped-def]
+    gancho, registro
+) -> None:
+    """Desfazer a PALAVRA não desfaz o PEDIDO — e a distinção é dela.
+
+    *"Ninguém perde nada quando outro é eleito — perder o padrão não é perder o
+    canal"*. O pedido é o que faz a ponte de rádio subir; sem ele o segundo
+    toque dela recusaria pela mesma razão que o primeiro, para sempre.
+
+    Se alguém "curar" a sexta porta chamando `soltar` em vez de
+    `esquecer_a_palavra`, esta régua REPROVA.
+    """
+    d = _DaemonDeMentira(_EleitorDeMentira(recusa=RECUSA_SEM_CANAL))
+    _mesa_de_quatro(d)
+    asyncio.run(hotkey.ligar_o_microfone(d, P4, ligado=True))
+    assert registro.abertos() == {"aabbcc000004"}, (
+        "o ato recusado levou junto o PEDIDO de canal — a ponte não tem mais "
+        f"como nascer, e o toque seguinte recusa pela mesma razão: {registro.abertos()}"
+    )
+
+
+def test_o_ato_recusado_devolve_a_palavra_que_ja_valia(gancho, registro) -> None:  # type: ignore[no-untyped-def]
+    """Um ato que não aconteceu não muda NADA — nem para menos.
+
+    O P1 está no ar por um ato que deu certo. O toque seguinte é recusado (a
+    ponte caiu no meio, o WirePlumber reelegeu, o que for): desfazer não pode
+    ser *apagar sempre*, senão a recusa tira do ar um microfone que ela pôs lá
+    e que continua sendo dela.
+
+    ARRANQUE a leitura do `antes` (troque o `_devolver_a_palavra` por um
+    `esquecer_a_palavra` seco) e esta régua REPROVA.
+    """
+    eleitor = _EleitorDeMentira()
+    d = _DaemonDeMentira(eleitor)
+    _mesa_de_quatro(d)
+    asyncio.run(hotkey.ligar_o_microfone(d, P1, ligado=True))
+    assert registro.no_ar() == {"aabbcc000001": True}
+    eleitor.recusa = RECUSA_SEM_CANAL
+    ato = asyncio.run(hotkey.ligar_o_microfone(d, P1, ligado=True))
+    assert ato.feito is False
+    assert registro.no_ar() == {"aabbcc000001": True}, (
+        "a recusa apagou a palavra que já valia — o microfone dela saiu do ar "
+        f"por causa de um ato que não aconteceu: {registro.no_ar()}"
+    )
+
+
+def test_o_mudo_recusado_continua_calando(gancho, registro) -> None:  # type: ignore[no-untyped-def]
+    """SÓ o `ligado=True` se desfaz. O mudo dela não depende de eleição.
+
+    A recusa de quem não elegeu diz, com todas as letras, que *"este botão
+    apagou a luz deste controle e não mexeu no canal de áudio de ninguém"* — o
+    microfone DELE tem de sair do ar do mesmo jeito. Desfazer o mudo aqui
+    poria de volta no ar uma voz que ela mandou calar.
+
+    Ponha um `if True:` no lugar do `if not ligado: return` de
+    `_devolver_a_palavra` e esta régua REPROVA.
+    """
+    d = _DaemonDeMentira(_EleitorDeMentira(recusa=RECUSA_SEM_CANAL))
+    _mesa_de_quatro(d)
+    asyncio.run(hotkey.ligar_o_microfone(d, P2, ligado=False))
+    assert registro.no_ar() == {"aabbcc000002": False}, (
+        "o mudo dela foi desfeito por uma recusa de eleição — a voz volta ao "
+        f"ar sem ela ter pedido: {registro.no_ar()}"
+    )
+
+
+def test_a_ponte_nao_recebe_pedido_ligado_depois_da_recusa(subsystem, monkeypatch) -> None:  # type: ignore[no-untyped-def]
+    """O DESFECHO no aparelho, medido pelo LAÇO DE PRODUÇÃO nos quatro.
+
+    As três réguas acima medem o registro; esta mede o que chega à PONTE, que
+    é quem escreve o `0x32`. É a diferença entre *"o estado interno está
+    certo"* e *"o controle dela não está transmitindo"*.
+
+    O `_loop` é o de produção, e as pontes são as que ele mesmo ergue.
+    """
+    anteriores = eleicao.registrar_dizedor_do_no_ar(
+        subsystem.no_ar, subsystem.esquecer_a_palavra, subsystem.palavra_no_ar
+    )
+    try:
+        nos = [_no(uniq) for uniq, _ in MESA_DELA]
+        for uniq, _ in MESA_DELA:
+            d = _DaemonDeMentira(_EleitorDeMentira(recusa=RECUSA_SEM_CANAL))
+            _mesa_de_quatro(d)
+            asyncio.run(hotkey.ligar_o_microfone(d, uniq, ligado=True))
+        _uma_volta_do_laco(subsystem, monkeypatch, nos)
+        assert len(subsystem._gerenciador.pontes) == 4
+        for ponte in subsystem._gerenciador.pontes.values():
+            assert ponte.ditos[-1:] == [None], (
+                f"a ponte de {ponte.no.uniq} recebeu {ponte.ditos[-1:]} depois "
+                "de o ato ter sido RECUSADO — o 0x32 sai LIGADO com a tela "
+                "dizendo recusado e o LED apagado"
+            )
+    finally:
+        eleicao.registrar_dizedor_do_no_ar(*anteriores)
