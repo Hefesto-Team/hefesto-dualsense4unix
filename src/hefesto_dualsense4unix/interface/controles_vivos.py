@@ -172,6 +172,55 @@ TIQUE_DO_INTERRUPTOR_MS = 500
 #: pedido não foi alcançado.
 PRAZO_DO_MODO_S = 4.0
 
+#: O ROTEIRO DA `--prova-gesto`: `(ms, seletor CSS dentro do card)`.
+#:
+#: **ELE VIROU DADO EM 08/09/2026, e a razão é um instrumento que mentia.** Dois
+#: dos sete passos clicavam `[data-mudo="mic-liberar"]` — botão que ela mandou
+#: tirar em 30/08 e que aparece **zero vez** em `interface/paginas/02-controles.html`
+#: e no `mockup/`. `querySelector` devolvia `null`, o `.click()` levantava
+#: `TypeError` dentro do WebKit, e `_js` não lê retorno nem erro: **dois dos sete
+#: passos batiam em nada e ninguém ficava sabendo.** É a mesma família que o
+#: comentário abaixo já nomeia ao contrário — só que aqui a régua cobria um botão
+#: que não existe mais, em vez de não cobrir um que existe.
+#:
+#: Como dado, ele ganha DOIS guardas que a lista embutida não podia ter: o portão
+#: de suíte `tests/unit/test_a_prova_de_gesto_nao_clica_no_vazio.py`, que confere
+#: cada seletor contra a página PUBLICADA sem abrir janela nenhuma; e, em tempo de
+#: execução, o :func:`_clique_que_confessa`, que faz cada passo dizer se achou o
+#: alvo em vez de estourar calado.
+ROTEIRO_DA_PROVA_DE_GESTO: tuple[tuple[int, str], ...] = (
+    (1500, ".faixa"),
+    (2000, '.sw[data-sensor="giroscopio"]'),
+    (2500, '.rota button[data-rota="pc"]'),
+    (2800, '[data-mudo="microfone"]'),
+    (3100, '[data-mudo="microfone"]'),
+    (3400, '[data-mudo="alto-falante"]'),
+)
+
+
+def _clique_que_confessa(card: str, seletor: str) -> str:
+    """O clique sintético que AVISA quando o alvo não está lá.
+
+    Um `.click()` cru sobre `querySelector` que devolveu `null` levanta dentro
+    do WebKit, e o `_js` não lê retorno nem erro — o passo some sem uma linha
+    vermelha. Aqui o passo manda o resultado de volta pelo mesmo canal que a
+    página já usa (`webkit.messageHandlers.hefesto`), e o relato final conta.
+
+    É a regra desta casa aplicada a si mesma: *instrumento que sabe do próprio
+    risco RESOLVE, não avisa.*
+    """
+    import json as _json
+
+    sel = _json.dumps(seletor)
+    return (
+        "(function(){var c=" + card + ";"
+        "var e=c?c.querySelector(" + sel + "):null;"
+        "window.webkit.messageHandlers.hefesto.postMessage(JSON.stringify("
+        "{gesto:'roteiro',alvo:" + sel + ",achou:!!e}));"
+        "if(e){e.click();}})()"
+    )
+
+
 #: O DONO REAL DE CADA GESTO, DECLARADO NUM LUGAR SÓ. Dos onze, **só os quatro
 #: do modo aplicam** (e um dos quatro nem isso: o "Desligado" não tem escritor).
 #: Os outros sete continuam eco — a aba é para ela AVALIAR, e um gesto que grave
@@ -779,6 +828,13 @@ class Janela:
         #: nem foi clicado" — que é o buraco pelo qual o `--prova-gesto` deu
         #: verde sobre dois botões mortos em 29/08.
         self.cliques_do_roteiro = 0
+        #: Os seletores da `--prova-gesto` que NÃO acharam alvo na página. Sem
+        #: esta lista, um passo que bate em `null` some sem uma linha vermelha —
+        #: foi assim que dois dos sete passos ficaram mortos de 30/08 a 08/09.
+        self.alvos_mortos_do_roteiro: list[str] = []
+        #: Os que acharam. Os dois números juntos é que separam "o botão estava
+        #: travado" de "o botão nem existe".
+        self.alvos_vivos_do_roteiro = 0
 
 
         # A JANELA, A PONTE E A GUARDA SÃO DA BIBLIOTECA. O que sobra aqui é a
@@ -1076,17 +1132,21 @@ class Janela:
         # interruptor de sensor e um botão de rota, e NUNCA o 🎙 nem o ♪ — dava
         # verde sobre dois botões mortos porque não os tocava.
         #
-        # A ORDEM É A MORDIDA. O "Liberar" é clicado ANTES do 🎙, com a posse
-        # ainda do kernel: ele está travado e tem de produzir ZERO gestos. Depois
-        # o 🎙 assume a posse, e só então o Liberar responde e volta a travar.
-        # Uma régua que só clicasse os três em qualquer ordem não distinguiria
-        # "travado" de "sem ouvinte" — que é exatamente o defeito de origem.
+        # O "LIBERAR" SAIU DO ROTEIRO EM 08/09/2026, e a razão é que ele já
+        # tinha saído da TELA em 30/08, por ordem dela. Dois dos sete passos
+        # clicavam `[data-mudo="mic-liberar"]`, que aparece zero vez na página
+        # publicada e no mockup: `querySelector` devolvia `null`, o `.click()`
+        # levantava dentro do WebKit, e ninguém ficava sabendo. O comentário
+        # aqui descrevia a ordem daquele roteiro — prosa medindo o mundo de
+        # ontem, que é a mesma família do defeito. Ficam SEIS passos, todos com
+        # alvo vivo, e o 🎙 clicado DUAS vezes (liga e volta), que é o que
+        # sobrou da mordida da ordem depois de o "Liberar" sair.
         # A RÉGUA CLICA O ÚLTIMO CARD, E NÃO O SEGUNDO. FATO ERRADO,
         # SUBSTITUÍDO (30/08/2026): estava `document.querySelectorAll('.ctl')[1]`
         # — o SEGUNDO card, escrito quando ela tinha DOIS controles no cabo.
         #
         # MEDIDO em 30/08 às 00:37, com o controle dela de hoje: mesa de UM
-        # controle → `.ctl[1]` é `undefined`, os sete cliques batem em `null`, e
+        # controle → `.ctl[1]` é `undefined`, os cliques batem em `null`, e
         # a prova inteira produz **zero gestos** — sem uma linha vermelha. Mesa
         # de dois → sete cliques, seis gestos, tudo verde. O instrumento
         # desligava exatamente na mesa dela, e desligava CALADO: é "o
@@ -1096,17 +1156,10 @@ class Janela:
         # `length-1` existe para toda mesa com pelo menos um card, então a prova
         # vale na mesa de um e continua valendo na de dois.
         um = "document.querySelectorAll('.ctl')[document.querySelectorAll('.ctl').length-1]"
-        roteiro = [
-            (1500, f"{um}.querySelector('.faixa').click()"),
-            (2000, f"{um}.querySelector('.sw[data-sensor=\"giroscopio\"]').click()"),
-            (2500, f"{um}.querySelector('.rota button[data-rota=\"pc\"]').click()"),
-            (2800, f"{um}.querySelector('[data-mudo=\"mic-liberar\"]').click()"),
-            (3100, f"{um}.querySelector('[data-mudo=\"microfone\"]').click()"),
-            (3400, f"{um}.querySelector('[data-mudo=\"mic-liberar\"]').click()"),
-            (3700, f"{um}.querySelector('[data-mudo=\"alto-falante\"]').click()"),
-        ]
-        for ms, script in roteiro:
-            GLib.timeout_add(ms, lambda s=script: (self._js(s), False)[1])
+        for ms, seletor in ROTEIRO_DA_PROVA_DE_GESTO:
+            GLib.timeout_add(
+                ms, lambda s=seletor: (self._js(_clique_que_confessa(um, s)), False)[1]
+            )
 
     def _agendar_saida(self) -> None:
         foto = self.args.foto
@@ -1509,8 +1562,20 @@ class Janela:
     def _gesto(self, o: dict) -> None:
         """tela → Python, já em JSON. Quem lê a mensagem e RECUSA o que não for
         objeto JSON é a `PonteDaTela`; o que chega aqui é gesto de verdade."""
-        self.gestos.append(o)
         gesto = o.get("gesto")
+        if gesto == "roteiro":
+            # O PASSO CONFESSANDO — e ele NÃO entra em `self.gestos`: ele é o
+            # instrumento falando de si, não gesto da tela. Contá-lo como gesto
+            # inflaria justamente o número que a prova existe para medir.
+            alvo = str(o.get("alvo") or "?")
+            if o.get("achou"):
+                self.alvos_vivos_do_roteiro += 1
+            else:
+                self.alvos_mortos_do_roteiro.append(alvo)
+                print(f"[roteiro] ALVO MORTO: {alvo} não existe na página",
+                      file=sys.stderr)
+            return
+        self.gestos.append(o)
         if gesto == "pintou":
             self.valores.append(int(o.get("valores") or 0))
             print(f'[pintura] {o.get("valores")} valores escritos · {o.get("ms")} ms na página')
@@ -1605,6 +1670,14 @@ class Janela:
         linhas = [
             f"voltas: {self.voltas} · remontagens: {self.remontagens} · "
             f"gestos: {len([g for g in self.gestos if g.get('gesto') != 'pintou'])}",
+            # O ROTEIRO CONFESSA, e esta linha é a cura do achado de 08/09: até
+            # aqui um passo que batia em `null` sumia sem uma palavra, e a prova
+            # dava verde sobre dois botões que ela mandou tirar em 30/08.
+            f"roteiro: {self.alvos_vivos_do_roteiro} alvo(s) clicado(s) de "
+            f"{len(ROTEIRO_DA_PROVA_DE_GESTO)}"
+            + (f" · ALVOS MORTOS: {', '.join(self.alvos_mortos_do_roteiro)}"
+               if self.alvos_mortos_do_roteiro
+               else " · nenhum alvo morto"),
             f"valores escritos por pintura: {sorted(set(self.valores)) or 'NENHUM'}",
             # O INTERRUPTOR TEM RELATO PRÓPRIO, e ele é a régua desta leva. Uma
             # prova que só contasse "gestos" não distinguiria o clique que chegou
