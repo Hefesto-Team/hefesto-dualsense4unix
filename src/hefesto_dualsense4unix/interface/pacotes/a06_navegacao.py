@@ -3512,7 +3512,7 @@ SEM_GESTO = {
 #: este assunto" — é "não há assunto do daemon", que é mais forte.
 #:
 #: SEM ESTA LINHA a régua do aparelho os leria como *"disse aplicado e nada
-#: mudou"* (`hefesto_vivo.py:3409`), que é o rótulo dos botões que mentem — e
+#: mudou"* (`hefesto_vivo.py:3863`), que é o rótulo dos botões que mentem — e
 #: aqui seria a régua acusando o comportamento CERTO. Declará-los sem prova
 #: seria o inverso: lápide escondendo defeito. A prova deles não é o estado do
 #: daemon, é o efeito na pintura, e ela roda no CI, sem janela:

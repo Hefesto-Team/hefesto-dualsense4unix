@@ -238,6 +238,16 @@ rapido|regua-de-tela|py|scripts/check_regua_de_tela.py
 # expressão regular separa *"o jogo ainda não recebeu"* de *"o Hefesto ainda não
 # faz"*, e as duas estavam na tela no dia em que ele nasceu.
 rapido|tela-nao-confessa|py|scripts/check_a_tela_nao_confessa.py
+# A MOLDURA — 08/09/2026, e ele nasceu de um buraco entre as duas réguas acima.
+# Elas medem o CORPO das dez páginas; a barra de título é GTK, o `.desktop` é
+# INI e a unit é systemd. *A régua parava na borda da `<body>`, e a tela dela
+# não para.* Ela leu "Hefesto / as dez abas, vivas" na barra do produto
+# instalado, e na PRIMEIRA corrida esta régua achou a segunda ocorrência que
+# ninguém tinha visto: a mesma frase na dica do `.desktop`, que a dock mostra
+# antes de a janela existir. Quatro peneiras, e duas são LIDAS de quem já as
+# possui — a forma de confissão do irmão acima e as palavras banidas do
+# `frases_que_ela_baniu`.
+rapido|janela-nao-confessa|py|scripts/check_a_janela_nao_confessa.py
 rapido|ruff|bin|ruff check src/ tests/
 completo|shellcheck|bin|shellcheck -S error scripts/*.sh scripts/ci/*.sh install.sh uninstall.sh
 completo|referencias-docs|py|scripts/validar-referencias-docs.py --all

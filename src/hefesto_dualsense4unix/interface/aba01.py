@@ -644,17 +644,37 @@ CSS = """
      Nenhuma medida de caixa se move, então a cena que ela aprovou — os dois
      controles numerados pelo jogo — continua idêntica. */
   .cartao .rotulo b.espera{color:var(--texto-mudo);font-weight:400}
-  /* ---------- O CADEADO DA TROCA AUTOMÁTICA — 04/09/2026 ----------
+  /* ---------- O CADEADO DA TROCA AUTOMÁTICA, NO CANTO — 08/09/2026 ----------
      A caixa que ela pediu em 23/07 e que voltou para esta aba pela decisão [03].
-     A GRAMÁTICA É A DA LINHA DE AJUDA desta mesma página: 12px, `--texto-mudo`,
-     e o rótulo ao lado do controle. Ela mora no rodapé do quadro Modo, fora das
-     duas seções do interruptor — a troca de perfil vale ligado e desligado.
-     A CONTA DA ALTURA, e ela decide se a linha cabe: 16px de caixa contra os
-     ~28px que a decisão orçou. O miolo pedia 502px de 542 antes desta linha, e
-     a foto de 04/09 mostra 106px de vão sobrando embaixo do último quadro —
-     a folga medida comporta a linha com sobra. */
-  .cadeado{display:flex;align-items:center;gap:6px;margin-top:8px;
-           color:var(--texto-mudo);font-size:12px;line-height:16px;cursor:pointer}
+     Ela mora no quadro Modo, fora das duas seções do interruptor — a troca de
+     perfil vale ligado e desligado.
+
+     ELE SAIU DO RODAPÉ DO QUADRO E SUBIU PARA A LINHA DO TÍTULO, a pedido dela:
+     *"Pode colocar ele no canto superior direito do bloco tipo esse banco de
+     provas na guia navegação."* Embaixo dos modos ele lia como um QUINTO modo.
+
+     A GRAMÁTICA PASSOU A SER A DA `.porta` DA NAVEGAÇÃO (`aba06.py`), que é o
+     modelo que ela apontou — e com ela vêm três medidas que não são gosto:
+
+       `margin-left:auto`  o empurrão para o canto, dentro do `.quadro-topo`.
+                           É o mesmo do `.sensores` da aba Controles; não é
+                           padrão novo.
+       `height:17px`       O `.quadro-topo` é `align-items:center`, então a
+                           altura dele é a do filho mais alto, e o
+                           `.quadro-titulo` mede 17px. A porta da Navegação
+                           pagou este preço MEDIDO: a primeira volta dela tinha
+                           19px e **663 das 733 caixas da aba desceram 2px**.
+                           A caixa de marcar tem 13px e cabe dentro dos 17.
+       `11px`              o tamanho da porta, e não os 12px que a linha tinha
+                           embaixo: na linha do título ela divide o espaço com
+                           o `.quadro-titulo` (13,5px) e com o `?`.
+
+     O `white-space:nowrap` + `flex:0 0 auto` são o par que impede o rótulo de
+     quebrar em duas linhas quando a janela encolhe para o piso de 1212px — e
+     duas linhas aqui estouram os 17px e derrubam a conta acima. */
+  .cadeado{display:flex;align-items:center;gap:6px;margin-left:auto;
+           height:17px;line-height:17px;flex:0 0 auto;white-space:nowrap;
+           color:var(--texto-mudo);font-size:11px;cursor:pointer}
   .cadeado input{margin:0;width:13px;height:13px;accent-color:var(--purple);
                  flex:0 0 auto;cursor:pointer}
   .cadeado:hover{color:var(--fg)}
@@ -1505,6 +1525,47 @@ MIOLO = f'''
           Ele <b>tenta na ordem em que estão aqui e para quando acerta</b>; depois não pergunta mais para aquele jogo.<br><br>
           <b>Segurando PS + R3</b> você pula para o próximo sem largar o controle.
         </span></span>
+        <!-- ---------- O CADEADO DA TROCA AUTOMÁTICA, NO CANTO ----------
+             08/09/2026, pedido dela olhando a aba: *"esse não trocar de perfil.
+             Pode colocar ele no canto superior direito do bloco tipo esse banco
+             de provas na guia navegação."*
+
+             O QUE ELA VIU: a caixa ficava solta LOGO ABAIXO da fileira de modos,
+             na coluna dos modos e no fluxo de leitura deles — e ali ela lia como
+             um QUINTO modo. Não é modo nenhum: é uma trava sobre o perfil.
+
+             O MODELO É O QUE ELA APONTOU, `aba06.py:2664`, a `.porta` do *"Banco
+             de provas: o mapa do controle ↗"*: **a coisa que pertence ao bloco
+             mas não é o miolo dele mora no canto, na linha do título.**
+
+             O GESTO NÃO MUDOU, e é o ponto: o gesto do clique, o campo de
+             pintura e o alvo `marcado` continuam os mesmos — estão escritos
+             logo abaixo, e ESTE COMENTÁRIO NÃO OS REPETE de propósito. Um
+             comentário que cita o par `atributo="valor"` VIRA uma segunda
+             ocorrência dele na página, e há régua desta casa que os conta
+             esperando UM. É a armadilha de prosa que esta casa já pagou cinco
+             vezes; aqui ela foi vista com `grep -c` antes de virar defeito.
+             O `title` é o mesmo, e o que ele grava é o mesmo. Mudou o LUGAR.
+             `tests/unit/test_o_cadeado_mora_no_canto_do_bloco.py` mede as duas
+             metades: a geometria na página publicada e a identidade do gesto.
+
+             A ALTURA VEM DO MODELO, e o número é dele: o `.quadro-topo` é
+             `align-items:center`, logo a altura do quadro é a do filho mais
+             alto, e o `.quadro-titulo` mede 17px. A porta da Navegação pagou
+             este preço medido — a primeira volta dela tinha 19px e 663 caixas
+             da aba desceram 2px. Por isso o cadeado entra aqui com a mesma
+             trava de 17px, e não com a altura de linha que ele tinha embaixo.
+
+             A RESSALVA NÃO SOBE JUNTO, e está logo abaixo do bloco de modos: ela
+             é uma FRASE inteira (`texto_do_cadeado_cego`), e frase não cabe numa
+             linha de título sem quebrar o quadro na única máquina em que ela
+             aparece — a que tem o detector cego. Os dois seguem no mesmo bloco,
+             a um palmo um do outro. -->
+        <label class="cadeado" title="{CADEADO_DICA}">
+          <input type="checkbox" data-gesto="cadeado"
+                 data-campo="cadeado" data-hef-alvo="marcado">
+          <span>{CADEADO_ROTULO}</span>
+        </label>
       </div>
       <div class="quadro-corpo hef">
 
@@ -1529,44 +1590,35 @@ MIOLO = f'''
           </div>
         </div>
 
-        <!-- ---------- O CADEADO DA TROCA AUTOMÁTICA ----------
-             04/09/2026, decisão [03] do PO sobre esta aba: *"Volta para a
-             Jogar, embaixo de Modo."* É PEDIDO NOMEADO DELA, de 23/07, e a
-             caixa saiu do desenho por escolha minha — declarada na legenda
-             desta página: *"A caixa saiu — o perfil ativo já diz isso"*.
+        <!-- ---------- O CADEADO SUBIU PARA O CANTO — 08/09/2026 ----------
+             Ele ficava AQUI, solto embaixo da fileira de modos, desde 04/09
+             (decisão [03] do PO: *"Volta para a Jogar, embaixo de Modo."*, sobre
+             pedido nomeado dela de 23/07). Ela olhou a aba em 08/09 e mandou
+             movê-lo para o canto superior direito do bloco; o `<label>` agora
+             mora no `.quadro-topo`, na linha do título, e a razão inteira está
+             escrita lá em cima.
 
-             O QUE MUDOU DESDE ENTÃO, e é o que reverte a escolha: a coluna
-             Atenção passou a ler as fontes do produto, e DUAS delas são o
-             cadeado (`autoswitch_lock_text`) e o detector cego
-             (`texto_do_cadeado_cego`). A tela EXPLICA o cadeado e não oferece
-             onde ligá-lo — em nenhuma das dez abas. Esta é a única posição em
-             que a frase que explica e o botão que resolve ficam na mesma tela.
+             O QUE A MUDANÇA NÃO DESFAZ, e é por isso que estas linhas ficam:
 
-             FORA DAS DUAS SEÇÕES DO INTERRUPTOR, e é o ponto: `so-ligado` e
-             `so-desligado` trocam com o Hefesto; a troca automática de PERFIL
-             vale nas duas. Pôr a caixa dentro de uma delas a faria sumir
-             justamente no Modo Nativo, que é onde ela continua valendo.
+             FORA DAS DUAS SEÇÕES DO INTERRUPTOR — `so-ligado` e `so-desligado`
+             trocam com o Hefesto; a troca automática de PERFIL vale nas duas. A
+             linha do título está fora das duas, como o rodapé do quadro estava.
 
              O RÓTULO E A DICA SÃO DA JANELA ANTIGA, palavra por palavra — o
              `Gtk.CheckButton` de `home_actions._build_home`. Texto novo de tela
-             é decisão dela; texto que ela já leu, não.
+             é decisão dela; texto que ela já leu, não. Nada disso mudou.
 
              `data-hef-alvo="marcado"` É O DÉCIMO ALVO, nascido em 04/09 na
-             ONDA0-P e ainda sem um único endereço nas dez páginas. Ele é o
-             único que escreve `el.checked` — os outros nove escreveriam a
-             string `"on"` no `value`, que num checkbox não é o estado. -->
-        <label class="cadeado" title="{CADEADO_DICA}">
-          <input type="checkbox" data-gesto="cadeado"
-                 data-campo="cadeado" data-hef-alvo="marcado">
-          <span>{CADEADO_ROTULO}</span>
-        </label>
-        <!-- ---------- O DETECTOR CEGO, EMBAIXO DO CADEADO — 07/09/2026 -------
+             ONDA0-P. Ele é o único que escreve `el.checked` — os outros nove
+             escreveriam a string `"on"` no `value`, que num checkbox não é o
+             estado. Ele viajou junto com o `<label>`. -->
+        <!-- ---------- O DETECTOR CEGO, ABAIXO DOS MODOS — 07/09/2026 -------
              ACHADO POR CONFERÊNCIA, e é o buraco que a saída da coluna Atenção
-             abriu. O comentário logo acima diz, com todas as letras, por que a
-             caixa voltou para esta aba em 04/09: *"Esta é a única posição em que
-             a frase que explica e o botão que resolve ficam na mesma tela."* A
-             coluna saiu em 07/09 por ordem dela, e levou a frase — o botão ficou
-             sozinho, e a justificativa dele foi embora junto.
+             abriu. A caixa voltou para esta aba em 04/09 porque *esta era a
+             única posição em que a frase que explica e o botão que resolve
+             ficavam na mesma tela*. A coluna saiu em 07/09 por ordem dela, e
+             levou a frase — o botão ficou sozinho, e a justificativa dele foi
+             embora junto.
 
              O QUE SE PERDEU, medido: `home_actions.texto_do_cadeado_cego`,
              *"O Hefesto não está conseguindo ver qual programa está na frente,
@@ -1590,7 +1642,8 @@ MIOLO = f'''
              AS OUTRAS DEZ FONTES DE `_avisos` CONTINUAM CALADAS, e isso segue
              RELATADO no docstring de `pacotes/a01_jogar._avisos`: o destino
              delas é a aba 09, que é de outra frente. O que esta linha devolve é
-             UMA — a que fala do botão que está logo acima dela. -->
+             UMA — a que fala do cadeado, que desde 08/09 está no canto superior
+             direito DESTE MESMO bloco, e não mais duas linhas acima. -->
         {monta.ressalva(CADEADO_CEGO)}
 
       </div>
@@ -1808,7 +1861,7 @@ LEGENDA = f'''<div class="nota">
       precisaria de ~460px — os quatro somariam 1840px numa fileira que tem 1163px. Quem diz
       o número aqui é o rótulo <b>Player N</b>; o padrão das luzes, desenhado grande, está na
       <b>Iluminação</b>.</li>
-    <li><b>A caixa "Não trocar de perfil sozinho" saiu</b> — o perfil ativo já diz isso.</li>
+    <li><b>A caixa "Não trocar de perfil sozinho" está no canto do bloco Modo</b> — na linha do título, como o "Banco de provas" da Navegação. Embaixo dos modos ela lia como um quinto modo, e não é modo: é uma trava sobre o perfil.</li>
     <li><b>"Reconciliar jogadores" virou "Reconectar Controles"</b>.</li>
     <li><b>A área de avisos tem espaço reservado</b> e <b>conta quantos são</b>. Antes, três banners disputavam a linha e o primeiro escondia os outros. A barra vertical que a separa dos cartões agora vai até embaixo — era um toco de um terço, porque a coluna media a altura do único aviso.</li>  <!-- noqa-acento: `media` é o verbo medir -->
     <li><b>32 frases viraram 12</b> — o resto está nos três ícones <b>?</b>. Passe o mouse neles.</li>
@@ -2006,6 +2059,80 @@ def _campos_por_lugar(fileira: str) -> dict[str, list[str]]:
             fora[dono.group(1)] = re.findall(r'data-campo="([^"]*)"', bloco)
         i = fileira.find(marca, j)
     return fora
+
+
+#: AS TAGS QUE NÃO FECHAM. Quem as empilha nunca as desempilha, e a partir da
+#: primeira toda profundidade fica alta demais — um apagão silencioso, que é o
+#: mesmo defeito que o parser vem curar, só que ao contrário. A lista é a mesma
+#: de `frases_que_ela_baniu._SEM_FECHO`, e pela mesma razão.
+_SEM_FECHO = frozenset((
+    "area", "base", "br", "col", "embed", "hr", "img", "input",
+    "link", "meta", "param", "source", "track", "wbr",
+))
+
+
+def _ancestrais(html: str, classe: str) -> set[str] | None:
+    """Todas as classes dos ELEMENTOS QUE CONTÊM o primeiro `.classe`.
+
+    POR QUE UM ANALISADOR, e não um `split` no texto: a pergunta *"esta caixa
+    está DENTRO daquela seção?"* é sobre aninhamento, e aninhamento não se lê
+    contando `</div>`. A régua que este helper substituiu media a ORDEM no  (noqa-acento: verbo medir)
+    arquivo (*"o cadeado vem depois de `so-desligado`"*) e por isso reprovou uma
+    mudança de posição pedida por ela como se fosse defeito — o instrumento
+    respondia sobre a ordem do fonte, não sobre a árvore que o navegador monta.
+
+    Devolve `None` quando a classe não está lá; um conjunto VAZIO é resposta
+    legítima e diferente (o elemento existe e não tem ancestral com classe).
+
+    O `html.parser` da biblioteca padrão basta e não custa dependência. **Duas
+    armadilhas dele estão tratadas aqui, e as duas empilhariam errado em
+    silêncio:**
+
+    * **as tags SEM FECHO** (`<input>`, `<br>`, `<img>`) — quem as empilha nunca
+      as desempilha, e a partir da primeira toda profundidade fica alta demais.
+      A lista é a mesma de `frases_que_ela_baniu._SEM_FECHO`, e a razão também.
+    * **as tags AUTOFECHADAS** (`<path/>`, `<circle/>`) — esta página embute os
+      SVGs dos quatro controles, e são centenas. O `HTMLParser` chama
+      `handle_startendtag`, cujo padrão dispara `handle_starttag` **e**
+      `handle_endtag`: com a `<path/>` fora da lista de vazias, isso EMPILHA uma
+      vez e DESEMPILHA uma vez — mas com ela dentro, só desempilha, e a pilha
+      desce abaixo do zero. Por isso ele é sobrescrito: uma tag que abre e fecha
+      no mesmo ponto não é ancestral de ninguém.
+    """
+    from html.parser import HTMLParser
+
+    class Cadeia(HTMLParser):
+        def __init__(self) -> None:
+            super().__init__(convert_charrefs=True)
+            self.pilha: list[set[str]] = []
+            self.achado: set[str] | None = None
+
+        def _classes(self, atributos) -> set[str]:
+            for k, v in atributos:
+                if k == "class" and v:
+                    return set(v.split())
+            return set()
+
+        def _olhar(self, atributos) -> None:
+            if self.achado is None and classe in self._classes(atributos):
+                self.achado = {c for nivel in self.pilha for c in nivel}
+
+        def handle_starttag(self, tag, atributos):
+            self._olhar(atributos)
+            if tag.lower() not in _SEM_FECHO:
+                self.pilha.append(self._classes(atributos))
+
+        def handle_startendtag(self, _tag, atributos):
+            # abre e fecha no mesmo ponto: olha, e NÃO mexe na pilha
+            self._olhar(atributos)
+
+        def handle_endtag(self, tag):
+            if tag.lower() not in _SEM_FECHO and self.pilha:
+                self.pilha.pop()
+
+    cadeia = Cadeia()
+    cadeia.feed(html)
+    return cadeia.achado
 
 
 def _conferir(doc):
@@ -2332,23 +2459,42 @@ def _conferir(doc):
     exigir('data-hef-alvo="marcado" checked' not in corpo
            and 'checked data-campo="cadeado"' not in corpo,
            "o cadeado nasce marcado — o desenho afirmaria uma escolha dela")
-    #    E ELE FICA FORA DAS DUAS SEÇÕES DO INTERRUPTOR. `so-ligado` e
-    #    `so-desligado` trocam com o Hefesto; a troca automática de PERFIL vale
-    #    nos dois. Dentro de uma delas a caixa sumiria justamente no Modo
-    #    Nativo, onde ela continua valendo — e sumiria em SILÊNCIO, que é o
-    #    modo de falhar que esta casa persegue.
+    #    ONDE O CADEADO MORA — 08/09/2026, e a régua foi REESCRITA junto com a
+    #    mudança porque a de antes media o mundo de ontem.  (noqa-acento: medir)
+    #
+    #    ELA MEDIA A ORDEM NO ARQUIVO: *"o cadeado vem depois de
+    #    `so-desligado`, com dois `</div>` no meio"* — verdadeiro enquanto ele
+    #    morava no rodapé do quadro, e falso no minuto em que ele subiu para a
+    #    linha do título a pedido dela. A régua reprovou a MUDANÇA, não um
+    #    defeito. É a forma de instrumento falso que esta casa mais paga, e
+    #    desta vez ela custou uma volta de gerador: a exigência real nunca foi
+    #    *"depois de"*, foi **"fora das duas seções"**.
+    #
+    #    AGORA ELA MEDE O ANINHAMENTO, que é o requisito: `so-ligado` e
+    #    `so-desligado` trocam com o Hefesto, e a troca automática de PERFIL
+    #    vale nos dois. Dentro de uma delas a caixa sumiria justamente no Modo
+    #    Nativo, onde ela continua valendo — e sumiria em SILÊNCIO, que é o modo
+    #    de falhar que esta casa persegue. A cadeia de ancestrais responde isso
+    #    em qualquer posição futura; a ordem no arquivo, só na de ontem.
+    #
+    #    E ELA MEDE O PEDIDO NOVO: o cadeado está DENTRO do `.quadro-topo`, que
+    #    é a linha do título — *"no canto superior direito do bloco tipo esse
+    #    banco de provas na guia navegação"*. A prova de GEOMETRIA (que ele está
+    #    de fato à direita, e na altura do título) é da suíte, medida no Chrome
+    #    sobre a página publicada: `tests/unit/test_o_cadeado_mora_no_canto_do_bloco.py`.
     if 'class="cadeado"' in corpo:
-        depois = corpo.split('class="hef-modo so-desligado"', 1)
-        exigir(len(depois) == 2 and 'class="cadeado"' in depois[1],
-               "o cadeado subiu para dentro de uma seção do interruptor — ele "
-               "sumiria da tela na outra posição")
-        # E A SEÇÃO FECHOU ANTES DELE: entre o rótulo da seção e a caixa tem de
-        # haver o fim da `escada` e o fim da própria seção. Menos que isso e ela
-        # está DENTRO, com a ordem certa e o aninhamento errado.
-        entre = depois[1].split('class="cadeado"', 1)[0]
-        exigir(entre.count("</div>") >= 2,
-               "o cadeado está aninhado dentro da seção `so-desligado` — a "
-               "ordem no arquivo está certa e o aninhamento, não")
+        familia = _ancestrais(corpo, "cadeado")
+        exigir(familia is not None,
+               "o cadeado tem a classe e o analisador não o achou — o HTML da "
+               "aba deixou de fechar as tags em volta dele")
+        for secao in ("so-ligado", "so-desligado"):
+            exigir(secao not in familia,
+                   f"o cadeado está aninhado dentro da seção `{secao}` — ele "
+                   f"sumiria da tela na outra posição do interruptor")
+        exigir("quadro-topo" in familia,
+               "o cadeado saiu da linha do título do bloco — ela pediu ele no "
+               "canto superior direito, e embaixo dos modos ele lê como um "
+               "quinto modo")
 
     # 12. O MARCADOR "primário" — JOGAR-O-QUE-FALTA-01, Passo 3 (06/09/2026),
     #     linha 18 do CSV. O SINAL daquela linha é este endereço, e ele é
