@@ -87,6 +87,16 @@ LADOS_RESPONDIDOS: dict[str, tuple[str, ...]] = {
 #: próxima célula que alguém deixar muda de propósito entra aqui e volta a ser
 #: cobrada. O que substitui a cobrança daquela linha é
 #: `test_a_celula_respondida_em_07_09_nao_regrediu_para_o_vazio`, logo abaixo.
+#:
+#: **E ESSE ARGUMENTO PRECISOU DE UMA SEGUNDA PERNA — 08/09/2026.** Ele diz que
+#: o mecanismo continua valendo, mas enquanto o dicionário está vazio nada o
+#: exercita: o teste que o cobrava era um `parametrize` sobre estas entradas, e
+#: sem entrada o pytest não coleta caso nenhum — saía
+#: `SKIPPED [1] …: got empty parameter set for (identificador, marca)`. **Skip
+#: lê-se como verde**, então o mecanismo morava num teste permanentemente
+#: pulado e o laudo não contava a falta. O `parametrize` virou laço, e
+#: `test_o_mecanismo_da_mudez_declarada_continua_mordendo` exercita a cobrança
+#: contra dado real do mapa — as duas metades, a que passa e a que reprova.
 MUDA_COM_RAZAO: dict[str, str] = {}
 
 #: A célula que saiu de `MUDA_COM_RAZAO`, e o que se cobra dela agora.
@@ -256,15 +266,71 @@ class TestOVereditoEstaEscrito:
             "existe para pegar."
         )
 
-    @pytest.mark.parametrize("identificador,marca", sorted(MUDA_COM_RAZAO.items()))
     def test_o_lado_mudo_de_proposito_continua_dizendo_por_que(
-        self, mapa: dict[str, dict[str, str]], identificador: str, marca: str
+        self, mapa: dict[str, dict[str, str]]
     ) -> None:
-        assert marca in mapa[identificador]["cabo_ressalva"], (
-            f"{identificador}: a `cabo_ressalva` perdeu a marca {marca!r}. Sem "
-            "ela, o vazio do cabo volta a ser indistinguível de descuido — e o "
-            "que está escrito ali é a medição de uma linha só que resolve a "
-            "pergunta."
+        """Toda célula de `MUDA_COM_RAZAO` continua carregando a sua marca.
+
+        SEM `parametrize`, E A RAZÃO É UM SKIP PERMANENTE — 08/09/2026. Este
+        teste era `@pytest.mark.parametrize(... MUDA_COM_RAZAO.items())`, e o
+        dicionário esvaziou em 07/09 quando a varredura respondeu a única
+        célula que ele guardava. Um `parametrize` sobre coleção vazia não
+        coleta nada: o pytest emitia
+        `SKIPPED [1] …: got empty parameter set for (identificador, marca)`,
+        e **skip lê-se como verde**. A cobrança sumia do laudo sem sumir do
+        arquivo, que é a forma mais cara de régua comprada desta casa.
+
+        Com o laço aqui dentro o teste RODA sempre: hoje sobre zero células, e
+        sobre as que entrarem amanhã sem ninguém precisar lembrar de nada.
+        Quem prova que o mecanismo ainda está ligado — hoje, com o dicionário
+        vazio — é `test_o_mecanismo_da_mudez_declarada_continua_mordendo`.
+        """
+        for identificador, marca in sorted(MUDA_COM_RAZAO.items()):
+            assert marca in mapa[identificador]["cabo_ressalva"], (
+                f"{identificador}: a `cabo_ressalva` perdeu a marca {marca!r}. "
+                "Sem ela, o vazio do cabo volta a ser indistinguível de "
+                "descuido — e o que está escrito ali é a medição de uma linha "
+                "só que resolve a pergunta."
+            )
+
+    def test_o_mecanismo_da_mudez_declarada_continua_mordendo(
+        self, mapa: dict[str, dict[str, str]]
+    ) -> None:
+        """Com `MUDA_COM_RAZAO` vazio, é ESTE teste que segura o mecanismo.
+
+        O argumento que justificava manter o dicionário vazio era *"o mecanismo
+        continua valendo: a próxima célula muda entra aqui e volta a ser
+        cobrada"*. Ele só é verdade enquanto o mecanismo estiver de pé — e,
+        com o dicionário vazio, nada o exercitava: a coluna podia ser
+        renomeada, ou a cobrança virar vacuidade, e o laudo continuaria verde
+        até alguém acrescentar uma entrada e descobrir a régua quebrada.
+
+        As duas metades, sobre DADO REAL do mapa e sem inventar célula nenhuma:
+
+        1. a coluna `cabo_ressalva` existe e a cobrança passa quando a marca
+           está lá;
+        2. a mesma cobrança REPROVA quando a marca não está — sem isto, a
+           régua que herda a próxima célula muda pode ser vacuidade.
+        """
+        linha = mapa[RESPONDIDA_NA_VARREDURA]
+        ressalva = linha["cabo_ressalva"].strip()
+        assert ressalva, (
+            f"{RESPONDIDA_NA_VARREDURA}: `cabo_ressalva` está vazia — não há "
+            "sobre o que exercitar o mecanismo da mudez declarada."
+        )
+
+        presente = ressalva[:12]
+        assert presente in mapa[RESPONDIDA_NA_VARREDURA]["cabo_ressalva"], (
+            "a cobrança da marca não achou um pedaço da própria `cabo_ressalva`"
+            f" de {RESPONDIDA_NA_VARREDURA}: a coluna que `MUDA_COM_RAZAO` lê "
+            "mudou de nome ou de conteúdo, e o dicionário voltaria quebrado."
+        )
+
+        ausente = "«MARCA QUE CÉLULA NENHUMA ESCREVEU»"
+        assert ausente not in mapa[RESPONDIDA_NA_VARREDURA]["cabo_ressalva"], (
+            "a cobrança da marca passa com uma marca inventada: ela não "
+            "distingue nada, e a próxima célula muda entraria numa régua que "
+            "não morde."
         )
 
     def test_a_celula_respondida_em_07_09_nao_regrediu_para_o_vazio(
