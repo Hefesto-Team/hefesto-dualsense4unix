@@ -454,3 +454,57 @@ def test_a_pagina_fotografada_tem_um_dono_so() -> None:
         "check_endereco_de_radio.py, por forma); o que for montado à mão não "
         "passa por nenhum, e a foto vai para o README sem revisão humana."
     )
+
+
+#: OS DESTINOS QUE NENHUM LITERAL DO RETRATISTA PODE NOMEAR. Voltou em
+#: 08/09/2026 — ver :func:`test_nenhum_literal_do_retratista_aponta_para_fora`.
+#: `/tmp` NÃO está aqui de propósito: o retratista grava o PNG lá no modo
+#: rascunho, e proibi-lo cobraria o legítimo. Quem barra `/tmp` como FONTE é a
+#: metade da FORMA, que só aceita `file://` de um nome vindo do dono.
+_FONTES_PROIBIDAS = ("/home/", "~/", "http://", "https://", "/proc/", "/sys/", "/run/")
+
+
+def test_nenhum_literal_do_retratista_aponta_para_fora() -> None:
+    """A TERCEIRA METADE, e ela é a rede que as outras duas não alcançam.
+
+    **POR QUE ELA VOLTOU — 08/09/2026, e a medição é do conferente.** As duas
+    metades acima (FORMA e PROCEDÊNCIA) nasceram hoje no lugar de uma varredura
+    de literais, e a troca foi melhor em duas mordidas e **PIOR em duas outras**,
+    porque as duas só olham o argumento do ``goto``:
+
+    * ``pg.evaluate("u => location.assign(u)", "http://localhost:8080/vivo")``
+      ao lado de um ``goto`` legítimo — navegação por FORA do ``goto``, e o
+      arquivo já chama ``pg.evaluate`` com string de JS. **Verde nas duas
+      metades**, vermelho na varredura de literais que tinha saído;
+    * um ``onde`` local (``types.SimpleNamespace``) cuja pergunta ao dono devolve
+      ``/proc/self/environ`` — que é **literalmente o "segundo dono do caminho"
+      que a docstring da PROCEDÊNCIA diz impedir**: ela confia no NOME ``onde``
+      sem conferir de onde ele vem.
+
+    *Trocar uma rede por outra deixa passar o que só a primeira pegava.* As três
+    metades são ADITIVAS: a FORMA diz que forma o argumento tem, a PROCEDÊNCIA
+    diz de onde o nome vem, e esta diz que **nenhum literal do arquivo inteiro**
+    nomeia um destino de fora — esteja ele num ``goto``, num ``evaluate``, num
+    ``SimpleNamespace`` de mentira ou numa constante de módulo.
+
+    A MORDIDA: ponha ``"http://localhost:8080/vivo"`` em qualquer lugar do
+    retratista e esta régua reprova nomeando o literal e a linha.
+    """
+    achados: list[str] = []
+    for no in ast.walk(_arvore()):
+        if not isinstance(no, ast.Constant) or not isinstance(no.value, str):
+            continue
+        texto = no.value
+        if texto.startswith(_FONTES_PROIBIDAS) or any(
+            f" {p}" in texto or f'"{p}' in texto or f"'{p}" in texto
+            for p in _FONTES_PROIBIDAS
+        ):
+            achados.append(f"{SCRIPT.name}:{no.lineno}: {texto[:70]!r}")
+
+    assert not achados, (
+        "o retratista tem literal apontando para fora do repositório — o lar de "
+        "quem roda, a rede, ou o `/proc`:\n  " + "\n  ".join(achados) + "\n"
+        "Uma foto que nasce de qualquer uma dessas fontes pode carregar dado "
+        "dela para dentro de `docs/usage/assets/`, que é versionado. Se o "
+        "literal é legítimo (uma mensagem que CITA um caminho, por exemplo), "
+        "declare-o com a razão — nunca afrouxe a lista.")
