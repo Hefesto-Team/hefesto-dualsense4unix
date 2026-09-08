@@ -1757,7 +1757,11 @@ class IpcHandlersMixin:
 
         def _no_fio() -> None:
             try:
-                self._repintar_apos_renumeracao()
+                # O LAÇO VAI JUNTO, e é o conserto do PASSO 3 — ver
+                # `_repintar_apos_renumeracao`. Este corpo roda num WORKER
+                # THREAD (`asyncio.to_thread`), onde `asyncio.create_task` não
+                # existe; sem passar o laço daqui, o passo 3 morria.
+                self._repintar_apos_renumeracao(laco_do_daemon=laco)
             except Exception as exc:
                 logger.warning("repintura_apos_renumeracao_falhou",
                                de_onde=de_onde, err=str(exc))
@@ -1776,8 +1780,18 @@ class IpcHandlersMixin:
         em_voo.add(tarefa)
         tarefa.add_done_callback(em_voo.discard)
 
-    def _repintar_apos_renumeracao(self) -> None:
+    def _repintar_apos_renumeracao(
+        self, laco_do_daemon: asyncio.AbstractEventLoop | None = None
+    ) -> None:
         """As TRÊS repinturas de quem mexeu na fila de números. Nesta ordem.
+
+        ``laco_do_daemon`` é o laço de eventos do daemon, e ele é
+        **obrigatório quando este corpo roda fora da thread do laço** — que é
+        o caso normal desde a RESPOSTA-QUE-CHEGA-TARDE-01, em que
+        `_despachar_repintura` o joga num `asyncio.to_thread`. Só o passo 3 o
+        usa; ver o comentário lá embaixo para a medição que o exige. ``None``
+        significa "estou na thread do laço, ou não há laço nenhum" — o
+        caminho síncrono dos dublês da suíte.
 
         Compartilhada por `identity.renumber` e `identity.number.set` porque o
         defeito é o mesmo nos dois: os dois escrevem a MESMA fila
@@ -1838,8 +1852,41 @@ class IpcHandlersMixin:
             if self.daemon is not None
             else None
         )
-        if callable(schedule_external_tick):
+        if not callable(schedule_external_tick):
+            return
+        if laco_do_daemon is None:
+            # Sem laço de quem chamou: caminho síncrono (dublês da suíte, e o
+            # ramo `except RuntimeError` do `_despachar_repintura`). Roda em
+            # linha, que é onde ele já rodava.
             schedule_external_tick()
+            return
+        # O PASSO 3 VOLTA PARA A THREAD DO LAÇO, e isto é uma CURA, não um
+        # arranjo. MEDIDO no journal da bancada dela em 07/09/2026, no mesmo
+        # segundo em que `identity.renumber` reescreveu o `controllers.json`:
+        #
+        #     repintura_apos_renumeracao_falhou de_onde=identity.renumber
+        #         err='no running event loop'
+        #     RuntimeWarning: coroutine 'Daemon._sync_external_leds'
+        #         was never awaited
+        #
+        # A CONTA: `_schedule_external_tick` (`daemon/lifecycle.py`) termina em
+        # `asyncio.create_task(self._sync_external_leds(), ...)`, que EXIGE um
+        # laço rodando NA THREAD ATUAL. Desde a RESPOSTA-QUE-CHEGA-TARDE-01
+        # este corpo roda em `asyncio.to_thread` — worker thread, laço nenhum.
+        # O `create_task` levantava `RuntimeError` e a coroutine já construída
+        # ficava órfã, sem nunca rodar: os LEDs dos EXTERNOS (o Pro e o 8BitDo)
+        # não eram repintados depois de renumerar, e o passo 3 dos três só
+        # existia no comentário. Os passos 1 e 2 rodavam — por isso as lâmpadas
+        # dos DualSense acertavam e o defeito passou despercebido.
+        #
+        # `call_soon_threadsafe` é a única ponte legítima worker→laço, e é ela
+        # que devolve o `create_task` para a thread onde ele é válido.
+        try:
+            laco_do_daemon.call_soon_threadsafe(schedule_external_tick)
+        except RuntimeError as exc:
+            # Laço já fechado (desligamento). Não pode derrubar a repintura:
+            # os passos 1 e 2 já aconteceram e a renumeração já valeu.
+            logger.warning("tique_externo_nao_agendado", err=str(exc))
 
     async def _handle_identity_number_set(
         self, params: dict[str, Any]
@@ -6355,9 +6402,9 @@ class IpcHandlersMixin:
 
         Params:
             enabled: bool (obrigatório)
-            flavor: "dualsense" | "xbox" e os sinônimos de
-                `uinput_gamepad.FLAVOR_SINONIMOS` ("sony", "ps5", "ps",
-                "playstation", "ds", "xbox360", "x360", "xinput") — opcional;
+            flavor: "dualsense" | "xbox" | "nintendo" (07/09/2026) e os sinônimos
+                de `FLAVOR_SINONIMOS` ("sony", "ps5", "ps", "playstation", "ds",
+                "xbox360", "x360", "xinput", "switch", "pro", "procon") — opcional;
                 ausente mantém a máscara atual. Nome fora dessa lista é
                 **recusado** (`ValueError` → `invalid params`), nunca convertido
                 em xbox por default (ver o comentário no corpo).
@@ -6387,7 +6434,7 @@ class IpcHandlersMixin:
             # vpad como Xbox — a máscara OPOSTA à pedida no primeiro caso —, o
             # daemon respondia `status: "ok"` e devolvia `flavor: "xbox"` como se
             # fosse o pedido atendido. "sony"/"ps5" viraram sinônimos legítimos
-            # (`FLAVOR_SINONIMOS`); o resto tem de RECUSAR em voz alta, senão a
+            # (`FLAVOR_SINONIMOS`, e `nintendo` desde 07/09); o resto RECUSA em voz alta, senão a
             # tolerância do normalizador segue transformando erro de digitação em
             # troca silenciosa de máscara. Mesma lição do `or "xbox"` do editor de
             # perfis (ESCOLHE-DELA-VENCE-01, E1) e da `normalizar_mascara`

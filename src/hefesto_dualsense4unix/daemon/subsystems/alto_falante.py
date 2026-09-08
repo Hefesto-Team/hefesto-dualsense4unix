@@ -52,11 +52,29 @@ O QUE ELE NÃO FAZ, E É METADE DO VALOR DE LER ISTO
   ``module-loopback`` e o casamento por dispositivo USB
   (``integrations.fontes_de_captura.escolher_sink``, ``integrations.usb_pai``),
   que estão fora da posse desta sprint. Ver a entrega;
-* **não é registrado no daemon.** ``daemon/subsystems/__init__.py`` e
-  ``daemon/lifecycle.py`` — os dois lugares que ligam um subsystem, e os dois
-  fora da posse. **Este subsystem nasce órfão de propósito e declarado**, que é
-  o oposto do defeito que o ``__init__.py`` do registry nomeia (o
-  ``BtMicSubsystem`` nasceu órfão em 25/07 sem ninguém saber).
+* **não é registrado no daemon.** ``daemon/subsystems/__init__.py``,
+  ``daemon/lifecycle.py`` e ``daemon/connection.py`` — os TRÊS lugares que
+  ligam um subsystem, e os três fora da posse. **Este subsystem nasce órfão de
+  propósito e declarado**, que é o oposto do defeito que o ``__init__.py`` do
+  registry nomeia (o ``BtMicSubsystem`` nasceu órfão em 25/07 sem ninguém
+  saber).
+
+E O ÓRFÃO TEM DE CONTINUAR ÓRFÃO ATÉ GANHAR ROTA (medido em 07/09/2026)
+------------------------------------------------------------------------
+A leitura fácil de *"subsistema escrito que o daemon nunca monta"* é *"então é
+só ligar"*. **Aqui não é**, e o motivo está duas seções acima: sem o
+``module-loopback``, o nó publicado é um sumidouro. Com os quatro DualSense na
+mesa dela, :meth:`AltoFalanteSubsystem.alvos` devolve os quatro — dois no
+rádio, onde ``app/audio_saida.rota_do_no`` recusa de propósito — e os quatro
+nascem com o MESMO rótulo, porque
+:meth:`GerenciadorDeNosDeSom._construir` não passa rótulo próprio e o default
+é a constante ``DESCRICAO_PROVISORIA``.
+
+Quem for ligar: a entrega que falta é **a rota**, com UM dono para a pergunta
+*"onde este nó entrega?"* — hoje ela tem duas respostas escritas, esta e a de
+``app/audio_saida.py`` (``rota_do_no`` + ``argv_para_ligar_o_no``), e nenhuma
+das duas está no produto. A régua que trava o par é
+``tests/unit/test_o_no_de_som_nao_nasce_sumidouro.py``.
 """
 
 from __future__ import annotations

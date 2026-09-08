@@ -255,7 +255,7 @@ SEGUNDOS_PARA_CONFIRMAR = 8.0
 #:
 #: POR QUE ELE PRECISOU EXISTIR, e é defeito de PARIDADE, não de desenho: na
 #: janela GTK **todo** gesto desta aba termina num `_toast_profile`
-#: (`profiles_actions.py:4615`) — "Perfil removido: X", "Lista recarregada",
+#: (`profiles_actions.py:4648`) — "Perfil removido: X", "Lista recarregada",
 #: `mensagem_do_salvar`, `mensagem_de_ativacao`. Aqui só a RECUSA falava:
 #: `RuntimeError` vira tarja (`hefesto_vivo._recusou_dizendo`) e o SUCESSO era
 #: SILÊNCIO — o piloto anota `("aplicou", "")` e não escreve uma letra na tela.
@@ -1274,7 +1274,7 @@ def _rotulo_do_remover(alvo: str) -> str:
 
     A dica no desenho diz *"Apaga do disco. Pergunta antes."* — e esta janela
     não tem diálogo. O `on_profile_remove` da janela estável abre um
-    `gui_dialogs.confirm_delete_profile` (`profiles_actions.py:3198`), que é
+    `gui_dialogs.confirm_delete_profile` (`profiles_actions.py:3231`), que é
     GTK e MODAL; daqui não dá para abri-lo, porque **os gestos rodam em
     thread** (`hefesto_vivo.py:2117`) e GTK só aceita diálogo no laço principal.
 
@@ -1722,7 +1722,7 @@ def selecionar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     ELE NÃO FALA COM O DAEMON, e é o único desta aba que não fala — de
     propósito. Escolher uma linha não muda nada no aparelho; muda o ALVO dos
     botões ao lado, que é o que a janela estável faz no
-    `on_profile_selection_changed` (`profiles_actions.py:3020`). Ligar isto ao
+    `on_profile_selection_changed` (`profiles_actions.py:3053`). Ligar isto ao
     `profile.switch` faria passar o mouse pela lista trocar o perfil que está
     valendo — o oposto da coluna ter um botão "Ativar".
 
@@ -1807,7 +1807,7 @@ def ativar(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
     # daemon montou com cuidado: a diferença entre "ativado" e "ativado, menos o
     # que o lock manual descartou" (ATIVAR-NAO-MENTE-01). A janela estável lê
     # esse corpo desde sempre — `mensagem_de_ativacao(name, result)`
-    # (`profiles_actions.py:889`) —, e aqui ele estava sendo descartado: ela
+    # (`profiles_actions.py:914`) —, e aqui ele estava sendo descartado: ela
     # trocava de perfil e não ficava sabendo que metade não entrou.
     #
     # `ponte.resultado` é o degrau que entrega o corpo, com o MESMO teto de 3 s
@@ -2344,7 +2344,7 @@ def editor_nome(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | No
     voltava ao normal e mais nada: um gesto que APAGA um `.json` e cria outro
     terminava mudo, e o único jeito de saber que pegou era esperar a lista
     repintar. A frase é a do produto, `mensagem_do_salvar(nome, renomeado_de=…)`
-    (`profiles_actions.py:913`) — a MESMA que o rodapé da janela estável
+    (`profiles_actions.py:933`) — a MESMA que o rodapé da janela estável
     escreve, "Perfil renomeado: era → novo".
 
     SEM `reaplicou=`, e é o honesto: quem reaplica é `gravar_e_reaplicar`, que
@@ -2807,7 +2807,7 @@ def editor_jogo(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | No
     resultado no tique seguinte.
 
     O PRODUTO JÁ FAZ ISSO, e não é invenção desta tela: o
-    `_aplicar_nascimento_com_jogo` (`profiles_actions.py:3124`) chama
+    `_aplicar_nascimento_com_jogo` (`profiles_actions.py:3157`) chama
     `_select_radio("steam_game")` **e** preenche o campo, no mesmo gesto.
 
     QUAL DAS DUAS ELE ESCOLHE: `normalize_appid` decide — só dígitos (ou um
@@ -2983,7 +2983,7 @@ def novo(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
     arquivo nasce e a lista o mostra no tique seguinte, já aberto no editor.
 
     A REGRA DO JOGO EM FOCO É A MESMA DO PRODUTO, e a guarda também: o
-    `_aplicar_nascimento_com_jogo` (`profiles_actions.py:3124`) só age quando há
+    `_aplicar_nascimento_com_jogo` (`profiles_actions.py:3157`) só age quando há
     **appid da Steam**, e devolve `False` calado no resto. É o que este gesto
     faz — com jogo da Steam em foco nasce mirando aquele jogo, sem ele nasce
     catch-all, "que é o certo para um perfil de desktop" (palavras de lá).
@@ -2991,7 +2991,7 @@ def novo(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
     **A PRIORIDADE DEIXOU DE NASCER EM ZERO** — 03/09/2026,
     PERFIL-NASCE-CERTO-01. Aqui estava escrito que a conta *"mora num mixin GTK
     que depende de widget"*. **Não depende.** O corpo de
-    `_prioridade_acima_dos_catch_all` (`profiles_actions.py:4208`) lê UM
+    `_prioridade_acima_dos_catch_all` (`profiles_actions.py:4241`) lê UM
     atributo — `self._profiles_cache`, a lista de perfis — e mais nada: sem
     `Gtk`, sem `self._get`, sem widget. O que faltava era alguém lhe entregar a
     lista, e esta aba já a tem na mão.
@@ -3209,7 +3209,7 @@ def recarregar(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
     feito"*. A premissa está certa e a conclusão não segue — a janela estável
     tem o MESMO botão, sobre uma lista que ela também mantém em cache
     (`on_profile_reload` → `_reload_profiles_store` + toast "Lista recarregada",
-    `profiles_actions.py:3355`). O trabalho que ele faz não é a leitura: é
+    `profiles_actions.py:3388`). O trabalho que ele faz não é a leitura: é
     **dizer que leu**. Um botão cuja promessa é tranquilizar não fica mudo
     porque o produto já estava certo.
 

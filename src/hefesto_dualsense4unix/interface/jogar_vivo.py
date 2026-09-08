@@ -28,9 +28,12 @@ O QUE ESTE ARQUIVO NÃO REESCREVE, e é a metade do trabalho
 * **A mesa** (um item por controle, com cor, transporte, jogador e máscara) é de
   `mesa_viva.mesa_do_estado`, que já é o dono dela para a Controles e para a
   fita.
-* **O HTML de cartão, de chip de fita e de linha de aviso** é do gerador do
-  mockup (`aba01.cartao`, `monta.fita`, `aba01.aviso`) — nunca de HTML escrito
-  aqui. É o que faz esta aba ACOMPANHAR o desenho por construção.
+* **O HTML de cartão e de chip de fita** é do gerador do mockup
+  (`aba01.cartao`, `monta.fita`) — nunca de HTML escrito aqui. É o que faz esta
+  aba ACOMPANHAR o desenho por construção. A `aba01.aviso` estava nesta lista
+  até 07/09/2026, quando a coluna Atenção saiu da Jogar por ordem dela; a
+  `html_dos_avisos` acompanhou o desenho e passou a devolver `""`, que é
+  exatamente o que esta linha promete.
 * **O que o produto sabe responder, e o que não sabe**, é de
   `hefesto_dualsense4unix.app.actions.jogar.painel` — que viaja em worktree,
   passa por `ruff` e por `mypy`, e é onde os três buracos desta aba estão
@@ -150,9 +153,10 @@ DONOS_DOS_GESTOS = {
     "(`painel.chips_sem_degrau`). MIGRA-JOGAR-07, pergunta dela.",
     "mascara": "gamepad.emulation.set (daemon/ipc_handlers.py) pela ponte "
     "app/ipc_bridge — MAS ele NÃO aceita `uniq`: a máscara viva é uma só para a "
-    "mesa toda, e esta tela mostra três chips POR CONTROLE. E 'Nintendo Pro' "
-    "não existe no catálogo (integrations/uinput_gamepad.FLAVORS tem duas "
-    "entradas). MIGRA-JOGAR-10 e -11.",
+    "mesa toda, e esta tela mostra três chips POR CONTROLE (MIGRA-JOGAR-10). O "
+    "'Nintendo Pro' JÁ existe no catálogo desde 07/09/2026 "
+    "(integrations/uinput_gamepad.FLAVORS tem três entradas) — a MIGRA-JOGAR-11 "
+    "fechou.",
     "alvo": "app/alvo_de_edicao.definir_alvo (janela) + controller.target.set "
     "(daemon). Nesta leva o clique no cartão só MOVE a fita, na memória desta "
     "janela.",
@@ -247,13 +251,26 @@ def html_da_fita(mesa: list[dict[str, Any]], alvo: str | None) -> str:
 
 
 def html_dos_avisos(avisos: list[dict[str, str]]) -> str:
-    """A coluna Atenção: de ZERO a N, pela mesma função que o mockup usa.
+    """``""`` — a coluna Atenção SAIU da aba Jogar em 07/09/2026.
 
-    Zero avisos é o estado normal de uma máquina saudável, e o desenho não o
-    tem — ele mostra um. Quem diz a palavra do zero é
-    `painel.texto_da_conta`, e a coluna simplesmente fica sem linhas.
+    Ordem dela: *"em jogar remover essa seção do atenção, nenhum aviso esse —
+    deixar só o reconectar controles."* Esta função montava as linhas pela
+    `aba01.aviso()`, que morreu com a seção; sem esta cura a bancada levantaria
+    `AttributeError` na primeira remontagem.
+
+    **ELA NÃO SOME, e a razão é a chamadora:** `HEF.remonta` (o `BOOTSTRAP`
+    abaixo) recebe `{cartoes, avisos, fita}` e escreve os três. Tirar a chave
+    faria o JS receber `undefined` num ramo que não o espera; devolver `""`
+    escreve vazio na `[data-lista="avisos"]` que a página não tem mais — zero
+    elementos, zero escrito, nenhum erro. **É a bancada acompanhando a aba**, que
+    é o contrato deste arquivo.
+
+    NÃO A ENCHA DE VOLTA COM HTML DIGITADO AQUI. Uma segunda montagem de aviso
+    nesta casa é o que a `aba01.aviso` existia para impedir; se a coluna ganhar
+    casa nova (a proposta é a aba 09 — ver `pacotes/a01_jogar._avisos`), quem
+    monta as linhas é a aba que as recebe, e não esta bancada.
     """
-    return "\n".join(aba01.aviso(a["selo"], a["texto"]) for a in avisos)
+    return ""
 
 
 # ---------------------------------------------------------------------------

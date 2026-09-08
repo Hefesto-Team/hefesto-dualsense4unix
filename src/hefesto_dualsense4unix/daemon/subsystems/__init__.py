@@ -16,6 +16,32 @@ AVISO AO PRÓXIMO QUE MEXER AQUI (BT-MIC-REGISTRY-01, 25/07): esta lista é
 por env var, e não existia a linha no `run()`. **Acrescentar um subsystem
 aqui NÃO o liga**: a lista e o `run()` têm de andar juntos, e o teste
 `tests/unit/test_bt_mic_subsystem_registrado.py` trava exatamente isso.
+
+SÃO **TRÊS** LUGARES, E ESTE AVISO DIZIA DOIS (medido em 07/09/2026). O
+desligamento não passa pela lista tampouco: `daemon/connection.py:1368,1386`
+chama `_stop_bt_mic` e `_stop_metrics` **pelo nome**. Quem seguir a receita de
+duas metades sobe o subsystem e nunca o para — e, no caso do som, o nó fica na
+lista de saída dela depois de o daemon morrer. A receita completa é: a lista
+aqui, o `_safe_start` no `run()` e o `_stop_*` no `shutdown()`.
+
+POR QUE `AltoFalanteSubsystem` E `HotkeySubsystem` NÃO ESTÃO NA LISTA, e os
+dois motivos são diferentes — **nenhum dos dois é esquecimento**:
+
+* `AltoFalanteSubsystem` (`alto_falante.py`) publica um `module-null-sink` por
+  controle e **nenhum `module-loopback`**: o monitor do nó não vai a lugar
+  nenhum. Ligá-lo hoje põe um sink mudo por DualSense na lista de som dela —
+  quatro, medidos na mesa em 07/09/2026, dois deles no rádio, onde não há rota
+  nenhuma. É o defeito que `app/audio_saida.py` nomeia na invariante 4 do
+  `PlanoDoNo`: *"um `module-null-sink` sozinho seria exatamente o sink que
+  aceita o áudio e o joga fora"*. A régua que trava o par —
+  *se subir, tem de ter rota* — é
+  `tests/unit/test_o_no_de_som_nao_nasce_sumidouro.py`. Ela **permite** a cura
+  correta (dar rota ao gerenciador) e reprova só a fiação crua;
+* `HotkeySubsystem` (`hotkey.py:1988`) é uma **lápide, não um órfão**: os dois
+  métodos são `noop` declarados, e a hotkey já está viva no `run()` desde
+  sempre, por FUNÇÃO — `lifecycle.py:914` (`start_hotkey_manager`) e `:916`
+  (`start_mic_hotkey`). Registrá-lo não acende nada; só acrescenta duas linhas
+  de log e a impressão falsa de que o registry é quem manda.
 """
 from __future__ import annotations
 

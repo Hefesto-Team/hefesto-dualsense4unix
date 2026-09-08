@@ -278,6 +278,34 @@
   }
   .ajuda:hover{border-color:var(--cyan);color:var(--cyan)}
   .ajuda:hover .dica{display:block}
+  /* ---------- O `?` ABRE NO FOCO, E NÃO SÓ SOB O PONTEIRO — 07/09/2026 ----------
+     ACHADO POR CONFERÊNCIA, medido na aba Navegação: `.ajuda` é um `<span>` sem
+     `tabindex`, e o ÚNICO caminho de revelação era `:hover`. Medido pelo caminho
+     exato que o controle usa (`hefesto_vivo`, `el.click()`):
+
+         APÓS el.click():  display da dica = 'none' · rect = 0 · foco = BODY
+
+     Isto acontecia na aba cujo próprio `?` diz *"Navegar a janela do Hefesto com
+     o controle"* — a tela que ensina a navegar sem rato era a que exigia um.
+
+     A REGRA MORA AQUI, NA FOLHA DA CASA, e não na aba onde foi achado: são 99
+     `?` em dez abas, e uma cura numa aba só deixaria as outras nove ensinando
+     que o `?` não responde ao controle. É a regra de 05/09 — *quando a cura
+     conhece a causa, ela cobre TODOS os chamadores*.
+
+     `:focus-within` E `:focus` OS DOIS, e não é redundância: o `:focus` pega o
+     próprio `?` recebendo o foco, e o `:focus-within` mantém a dica aberta se o
+     foco cair em algo DENTRO dela (um `<b>`, um `<tt>`, ou o que a frase viva
+     do produto trouxer). Sem o segundo, abrir e ler já fechava.
+
+     O `tabindex` É DO EMISSOR, não desta folha — uma regra de estilo não torna
+     um `<span>` focável. Quem já o emite é `aba06.ajuda()`; as outras nove abas
+     estão declaradas como dívida medida no relatório desta leva. Esta regra
+     nasce pronta para elas: no dia em que o atributo chegar, o `?` daquela aba
+     passa a abrir no foco sem tocar nesta folha de novo. */
+  .ajuda:focus{border-color:var(--cyan);color:var(--cyan);outline:none}
+  .ajuda:focus .dica,
+  .ajuda:focus-within .dica{display:block}
   .dica{
     display:none;position:absolute;left:22px;top:-4px;width:330px;z-index:40;
     background:var(--elevated);border:1px solid var(--linha);border-radius:7px;
@@ -1260,33 +1288,22 @@
   .vib-estado .est{display:flex;gap:8px;align-items:flex-start;
                    font-size:12px;line-height:1.4}
   .vib-estado .est .sinal{flex:0 0 auto;font-size:9px;line-height:1.9}
-  /* O MARCADOR DO `diz` NÃO É MAIS VERDE — 03/09/2026, e é defeito de
-     significado, não de gosto.
+  /* O TOM `diz` SAIU — 07/09/2026, com a única frase que o vestia. Ordem dela,
+     olhando o pé do quadro com os quatro na mesa: *"Vibração remove essa última
+     frase também."* Ver `app/telas/vibracao.SEM_A_CONTAGEM_DE_PEDIDOS`.
 
-     O QUE ESTAVA NA TELA DELA, fotografado com os dois controles na mesa:
+     A REGRA SAI JUNTO E NÃO É ZELO: `.est.diz` era o cinza da contagem de
+     pedidos, e nenhuma outra linha desta faixa usa esse tom. Cor que nada veste
+     é a metade órfã de uma promessa — o mesmo par que o
+     `portao_a_casa_sabe_e_o_produto_nao_faz` cobrou em 05/09, quando a faixa de
+     estado saiu e as cinco peças da trava ficaram sem chamador.
 
-       ● (verde)  não há gamepad virtual — nenhum jogo tem onde pedir vibração
-       ▲ (laranja) A intensidade não está chegando a jogo nenhum: falta o
-                   gamepad virtual…
-
-     Duas linhas coladas, o MESMO fato, e marcadores de sentido oposto. Nesta
-     casa o verde quer dizer CERTO em todas as abas — o `● 2 controles` do
-     cabeçalho, o selo `CERTO` da Conexões, o `✓ OK` da Sistema, o `Ligado` da
-     Navegação, o `CHEGAM` da Lançadores. Aqui ele estava por cima de uma má
-     notícia.
-
-     E O TOM NÃO PODE CARREGAR VALOR, porque as frases dele não têm uma valência
-     só: `rumble_actions.texto_dos_pedidos_de_vibracao` devolve, pelo mesmo
-     `diz`, tanto *"o jogo pediu vibração 12x"* quanto *"não há gamepad virtual"*
-     e *"pediu força zero em todas"*. Um marcador que afirma "bom" sobre um tom
-     de valência mista afirma errado metade das vezes.
-
-     A REGRA QUE SOBRA É A DOS OUTROS DOIS TONS: o marcador tem a cor do texto
-     dele (`alerta` laranja/laranja, `info` ciano/ciano). O `diz` era o único
-     que separava os dois, e agora HERDA — por isso não há linha nenhuma no
-     lugar desta. O contrato do tom já dizia isso desde 02/09
-     (`app/telas/vibracao.DIZ`: *"a cor normal do rótulo"*). */
-  .vib-estado .est.diz{color:var(--texto-suave)}
+     O QUE ESTA REGRA JÁ TINHA CUSTADO, e fica registrado porque foi medido: em
+     03/09 o marcador dela era VERDE, e a foto da tela dela mostrava
+     `● (verde) não há gamepad virtual` colado a `▲ (laranja) A intensidade não
+     está chegando a jogo nenhum` — o MESMO fato com marcadores de sentido
+     oposto. A cura foi o marcador herdar a cor do texto, que é o que os dois
+     tons restantes fazem (`alerta` laranja/laranja, `info` ciano/ciano). */
   .vib-estado .est.alerta{color:var(--orange)}
   .vib-estado .est.alerta .sinal{color:var(--orange)}
   /* O TERCEIRO TOM, e ele é o da janela estável: `#8be9fd` é o token de INFO da
@@ -1813,7 +1830,10 @@
     <div class="perfil-ativo">
       <span class="pa-rot">Perfil ativo</span>
       <span class="pa-nome" data-campo="perfil">Mortal Kombat</span>
-      <span class="ajuda">?<span class="dica" style="left:auto;right:22px">
+      <!-- `tabindex` de 07/09/2026: este `?` está no CABEÇALHO, logo nas dez
+           abas, e explica onde o "Salvar Perfil" grava. Sem ele o `<span>` não
+           recebe foco e o `el.click()` do controle não o abria em aba nenhuma. -->
+      <span class="ajuda" tabindex="0">?<span class="dica" style="left:auto;right:22px">
         Tudo o que você mudar em qualquer aba cai <b>neste</b> perfil quando clicar em
         <b>Salvar Perfil</b>.<br><br>
         Cada controle guarda a <b>sua</b> configuração aqui dentro, pelo ID da peça — amanhã,
@@ -3378,7 +3398,7 @@
              atributo só seria a terceira maneira desta casa dizer a mesma
              coisa, e é o argumento que o `data-hef-atributo` já registrou. -->
         <div class="vib-estado" id="vib-estado"
-             data-hef-recados="sucesso" data-hef-recado-classe="est recibo"><div class="est diz"><span class="sinal">●</span><span>o jogo ainda não pediu vibração nenhuma</span></div></div>
+             data-hef-recados="sucesso" data-hef-recado-classe="est recibo"></div>
       </div>
     </div>
 

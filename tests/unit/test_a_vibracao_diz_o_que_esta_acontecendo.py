@@ -13,8 +13,15 @@ janela estável diz isso desde 11/08/2026
 (``rumble_actions.texto_do_alcance_da_intensidade``); a interface nova ficava
 calada e a pessoa continuava clicando em "Máximo".
 
-AS QUATRO FRASES JÁ EXISTIAM E NINGUÉM AS CHAMAVA — ``rumble_actions.py``
-:186, :291, :370, :459. Esta régua vigia as duas metades do reuso:
+**ERAM QUATRO ATÉ 07/09/2026, E HOJE SÃO TRÊS.** A primeira — a contagem de
+pedidos do jogo — saiu por ordem dela: *"Vibração remove essa última frase
+também."* Ver ``app/telas/vibracao.SEM_A_CONTAGEM_DE_PEDIDOS`` e o caso
+``test_a_contagem_de_pedidos_do_jogo_nao_volta``, que é a mordida que a segura
+fora. **A função do produto NÃO morreu** — a janela estável continua a chamar;
+o que esta aba deixou de fazer é perguntar.
+
+AS FRASES JÁ EXISTIAM E NINGUÉM AS CHAMAVA — ``rumble_actions.py``
+:291, :370, :459. Esta régua vigia as duas metades do reuso:
 
 1. **o texto é o do produto**, byte a byte. Nenhuma comparação com string
    digitada aqui: o esperado sai das MESMAS funções. Uma frase reescrita neste
@@ -126,7 +133,6 @@ def test_as_frases_sao_as_do_produto(estado, orcamento, monkeypatch):
     """
     monkeypatch.setattr(_tela, "_orcamento_da_maquina", lambda: orcamento)
     do_produto = [f for f in (
-        _ra.texto_dos_pedidos_de_vibracao(estado),
         _ra.texto_do_alcance_da_intensidade(estado),
         _ra.texto_do_teto_do_orcamento(_tela._pedido_da_politica(estado), orcamento),
         _ra.texto_de_onde_grava_e_onde_manda(
@@ -139,6 +145,49 @@ def test_as_frases_sao_as_do_produto(estado, orcamento, monkeypatch):
         f"  a aba diz:     {ditas}\n"
         "Falta = frase do produto que ninguém chama; sobra = prosa que motor "
         "nenhum assina, e ela vai para o desenho que ELA olha.")
+
+
+@pytest.mark.parametrize("estado", [
+    # os dois ramos vivos de `texto_dos_pedidos_de_vibracao`: a soma e o
+    # desdobramento por jogador, que é o que a foto DELA mostrava.
+    {"rumble_policy": "balanceado",
+     "rumble_ff": {"plays": 12, "nao_nulos": 12, "vpads": 1}},
+    {"rumble_policy": "balanceado",
+     "rumble_ff": {"plays": 4, "nao_nulos": 0, "vpads": 4, "per_vpad": [
+         {"player": 1, "ff_play_count": 2, "ff_nao_nulo_count": 0},
+         {"player": 2, "ff_play_count": 2, "ff_nao_nulo_count": 0},
+     ]}},
+])
+def test_a_contagem_de_pedidos_do_jogo_nao_volta(estado, monkeypatch):
+    """A frase do pé do quadro saiu, e esta é a mordida que a segura fora.
+
+    **ORDEM DELA, 07/09/2026**, olhando a aba com os quatro DualSense na mesa:
+    *"Vibração remove essa última frase também."* A frase era::
+
+        o jogo pediu vibração — Jogador 1: 2x, todas com força zero · Jogador 2:
+        2x, todas com força zero · Jogador 3: nenhuma · Jogador 4: 2x, todas com
+        força zero
+
+    **O QUE ESTA RÉGUA NÃO DIZ**, e é a metade que importa: ela não manda a
+    frase morrer. ``rumble_actions.texto_dos_pedidos_de_vibracao`` e
+    ``_pedidos_por_jogador`` continuam vivos e continuam tendo chamador na
+    janela estável (``_update_rumble_state_label``) — o que esta ABA deixou de
+    fazer é PERGUNTAR. Por isso o esperado é LIDO do produto: se um dia ela
+    pedir a informação de volta, é aqui que se lê onde ela estava.
+
+    MORDIDA: devolva ``linhas.append((…, pedidos))`` a ``textos_do_estado`` e
+    os dois casos reprovam, nomeando a frase que voltou.
+    """
+    monkeypatch.setattr(_tela, "_orcamento_da_maquina", lambda: None)
+    a_contagem = _ra.texto_dos_pedidos_de_vibracao(estado)
+    assert a_contagem, (
+        "o dublê ficou mudo no lado do produto: esta régua mediria o vazio e "
+        "daria verde sobre qualquer coisa")
+    ditas = [frase for _tom, frase in _tela.textos_do_estado(estado)]
+    assert a_contagem not in ditas, (
+        f"a contagem de pedidos do jogo voltou à faixa de estado: "
+        f"{a_contagem!r}. Ela saiu por ordem dela em 07/09/2026 — ver "
+        f"`app/telas/vibracao.SEM_A_CONTAGEM_DE_PEDIDOS`.")
 
 
 def test_o_alerta_de_alcance_e_alerta():
@@ -278,7 +327,7 @@ def test_a_confissao_de_onde_grava_sai_no_tom_de_info():
     tons = {frase: tom for tom, frase in com_alvo}
     assert tons.get(_ra.TEXTO_ONDE_GRAVA_E_ONDE_MANDA) == _tela.INFO, (
         f"a confissão saiu como {tons.get(_ra.TEXTO_ONDE_GRAVA_E_ONDE_MANDA)!r}")
-    assert _tela.INFO != _tela.DIZ != _tela.ALERTA != _tela.INFO
+    assert _tela.INFO != _tela.ALERTA
 
 
 # --------------------------------------------------------------------------
@@ -290,7 +339,7 @@ def test_o_html_escapa_o_que_vier():
     Nenhuma das quatro leva isso hoje — mas elas são texto de tela e mudam sem
     passar por aqui.
     """
-    saiu = _tela.html_do_estado([(_tela.DIZ, 'a & b <script>x</script>')])
+    saiu = _tela.html_do_estado([(_tela.ALERTA, 'a & b <script>x</script>')])
     assert "<script>" not in saiu
     assert "&amp;" in saiu and "&lt;script&gt;" in saiu
 
@@ -319,7 +368,7 @@ def test_a_aspa_reta_nao_vira_entidade():
     MORDIDA: tire o ``quote=False`` da FRASE em ``html_do_estado`` e este caso
     reprova.
     """
-    saiu = _tela.html_do_estado([(_tela.DIZ, 'clique "Testar"')])
+    saiu = _tela.html_do_estado([(_tela.ALERTA, 'clique "Testar"')])
     assert "&quot;" not in saiu, (
         f"a entidade voltou ao HTML — o bloco repintaria a cada tique: {saiu!r}")
     assert 'clique "Testar"' in saiu
@@ -409,10 +458,15 @@ def test_a_bancada_tem_o_bloco():
     assert 'id="vib-estado"' in doc, "o bloco do estado sumiu do desenho"
     assert ".vib-estado:empty{display:none}" in doc, (
         "sem o `:empty` a linha vazia deixa um vão no meio da aba")
+    # A CENA DO DESENHO RENDE ZERO LINHA DESDE 07/09/2026, e é o desenho certo:
+    # a contagem de pedidos do jogo era a única frase que ela acendia, e saiu
+    # por ordem dela (`app/telas/vibracao.SEM_A_CONTAGEM_DE_PEDIDOS`). Com a
+    # mesa quieta a faixa nasce VAZIA e o `:empty` a esconde.
     cena = _tela.textos_do_estado(
         {"rumble_policy": "economia",
          "rumble_ff": {"plays": 0, "nao_nulos": 0, "vpads": 1}})
-    assert cena, "a cena do desenho ficou muda"
-    assert _tela.html_do_estado(cena) in doc, (
-        "o texto do desenho não é o que o produto monta — há prosa digitada no "
-        "gerador")
+    assert cena == [], (
+        f"a faixa voltou a acender linha permanente no desenho: {cena}")
+    assert 'data-hef-recado-classe="est recibo"></div>' in doc, (
+        "a faixa não nasce vazia no desenho — o que estiver ali é prosa "
+        "cravada, e ela chega à página que ELA olha")

@@ -278,6 +278,34 @@
   }
   .ajuda:hover{border-color:var(--cyan);color:var(--cyan)}
   .ajuda:hover .dica{display:block}
+  /* ---------- O `?` ABRE NO FOCO, E NÃO SÓ SOB O PONTEIRO — 07/09/2026 ----------
+     ACHADO POR CONFERÊNCIA, medido na aba Navegação: `.ajuda` é um `<span>` sem
+     `tabindex`, e o ÚNICO caminho de revelação era `:hover`. Medido pelo caminho
+     exato que o controle usa (`hefesto_vivo`, `el.click()`):
+
+         APÓS el.click():  display da dica = 'none' · rect = 0 · foco = BODY
+
+     Isto acontecia na aba cujo próprio `?` diz *"Navegar a janela do Hefesto com
+     o controle"* — a tela que ensina a navegar sem rato era a que exigia um.
+
+     A REGRA MORA AQUI, NA FOLHA DA CASA, e não na aba onde foi achado: são 99
+     `?` em dez abas, e uma cura numa aba só deixaria as outras nove ensinando
+     que o `?` não responde ao controle. É a regra de 05/09 — *quando a cura
+     conhece a causa, ela cobre TODOS os chamadores*.
+
+     `:focus-within` E `:focus` OS DOIS, e não é redundância: o `:focus` pega o
+     próprio `?` recebendo o foco, e o `:focus-within` mantém a dica aberta se o
+     foco cair em algo DENTRO dela (um `<b>`, um `<tt>`, ou o que a frase viva
+     do produto trouxer). Sem o segundo, abrir e ler já fechava.
+
+     O `tabindex` É DO EMISSOR, não desta folha — uma regra de estilo não torna
+     um `<span>` focável. Quem já o emite é `aba06.ajuda()`; as outras nove abas
+     estão declaradas como dívida medida no relatório desta leva. Esta regra
+     nasce pronta para elas: no dia em que o atributo chegar, o `?` daquela aba
+     passa a abrir no foco sem tocar nesta folha de novo. */
+  .ajuda:focus{border-color:var(--cyan);color:var(--cyan);outline:none}
+  .ajuda:focus .dica,
+  .ajuda:focus-within .dica{display:block}
   .dica{
     display:none;position:absolute;left:22px;top:-4px;width:330px;z-index:40;
     background:var(--elevated);border:1px solid var(--linha);border-radius:7px;
@@ -1946,7 +1974,10 @@
     <div class="perfil-ativo">
       <span class="pa-rot">Perfil ativo</span>
       <span class="pa-nome" data-campo="perfil">Mortal Kombat</span>
-      <span class="ajuda">?<span class="dica" style="left:auto;right:22px">
+      <!-- `tabindex` de 07/09/2026: este `?` está no CABEÇALHO, logo nas dez
+           abas, e explica onde o "Salvar Perfil" grava. Sem ele o `<span>` não
+           recebe foco e o `el.click()` do controle não o abria em aba nenhuma. -->
+      <span class="ajuda" tabindex="0">?<span class="dica" style="left:auto;right:22px">
         Tudo o que você mudar em qualquer aba cai <b>neste</b> perfil quando clicar em
         <b>Salvar Perfil</b>.<br><br>
         Cada controle guarda a <b>sua</b> configuração aqui dentro, pelo ID da peça — amanhã,

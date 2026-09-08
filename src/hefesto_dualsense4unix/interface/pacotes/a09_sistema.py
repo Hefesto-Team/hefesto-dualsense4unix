@@ -1596,22 +1596,18 @@ BOTOES_CINZAS = ("retomar", "reiniciar", "ver-plugins")
 #: No dia em que ela publicar, a régua REPROVA pedindo que estas quatro saiam —
 #: e é assim que a declaração não vira paisagem.
 ESPERA_A_PUBLICACAO: dict[str, str] = {
-    "bateria-frase": "a linha 'O teto alcança', viva na bancada desde "
-                     "06/09/2026. O endereço já estava em "
-                     "`aba_sistema.ENDERECOS` e a página nunca o usara.",
-    "bateria-frase-g": "o glifo da linha acima — `est()` endereça os dois, e um "
-                       "`data-campo` sem escritor é por onde o literal do "
-                       "mockup volta a aparecer.",
-    "bateria-frase-pendentes": "a linha 'Ainda sem teto', viva na bancada desde "
-                               "06/09/2026, derivada do mesmo dono.",
-    "bateria-frase-pendentes-g": "o glifo da linha acima, pelo mesmo motivo.",
-    CAMPO_DO_MODO_AVULSO: "o botão 'Corrigir modo de execução', que nasce "
-                          "ESCONDIDO na bancada e só acende quando o serviço "
-                          "está de pé por fora do systemd (a L315). Até ela "
-                          "publicar, o campo cai no vazio na página do produto "
-                          "e NADA regride: quem cai no modo improvisado "
-                          "continua vendo o aviso que a aba já dá desde 03/09, "
-                          "só não ganha ainda o botão que o conserta.",
+    # VAZIA DESDE 07/09/2026, e é assim que ela devia terminar: as CINCO chaves
+    # que viviam aqui — as quatro linhas do teto de bateria e o botão "Corrigir
+    # modo de execução" — chegaram à página do produto quando ela mandou
+    # publicar as dez abas, para os quatro DualSense aparecerem na bancada.
+    # Conferido campo a campo em `paginas/09-sistema.html`: os cinco
+    # `data-campo` estão lá, uma vez cada.
+    #
+    # A régua NÃO foi afrouxada: `test_a_declaracao_do_que_espera_a_publicacao_
+    # inclui_o_botao_novo` cobra os DOIS sentidos — declarar o que já está
+    # publicado reprova, e deixar de declarar o que ainda não está reprova
+    # também. Um dicionário vazio é a resposta certa quando não há nada
+    # esperando, e a próxima aba que nascer com campo sem página o povoa de novo.
 }
 
 
@@ -1915,7 +1911,7 @@ def perfil_da_mesa(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     `ipc_bridge`. Não é uma segunda porta para o disco.
 
     E ELE PEGA NA HORA, sem reiniciar nada: o `_handle_machine_declare`
-    (`daemon/ipc_handlers.py:6535`) relê o `maquina.json` e **rebinda**
+    (`daemon/ipc_handlers.py:6582`) relê o `maquina.json` e **rebinda**
     `daemon._maquina`; o `_orcamento_declarado` (`core/rumble.py:167`) lê a
     fonte a cada pedido de vibração, e não uma cópia do boot. Está escrito lá
     com todas as letras: *"uma cópia feita no boot ficaria velha exatamente no

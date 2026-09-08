@@ -146,3 +146,13 @@ assets/dkms/rtw88-usb/main.h
 # ela digitou. Já houve senha de sudo dita numa sessão desta casa. Um arquivo
 # assim entra no repositório uma vez e fica no histórico para sempre.
 rodando.txt
+
+# A SAÍDA RECUSADA DE UM GERADOR DE ABA — 07/09/2026.
+# `abaNN.py` escreve a página e só então `_conferir()` a lê de volta; quando a
+# régua recusa, a guarda devolve o desenho aprovado ao lugar e parqueia o que
+# saiu como `NN-*.html.recusado`, para quem mordeu poder olhar.
+#
+# POR QUE ELE NÃO PODE SER VERSIONADO: é uma página com o defeito DENTRO, e o
+# fluxo desta casa é `git add -A && bash scripts/portoes.sh`. Um `.recusado`
+# esquecido no disco entraria no commit como se fosse desenho.
+*.html.recusado

@@ -2454,7 +2454,7 @@ def dica_da_luz(via: str, nascimento: Any = None, mesa_suja: bool | None = None)
        que o daemon põe na conexão (`SINAL-NO-NASCIMENTO-01`). Só a condenação
        fala: ausência, `limpa` e `nao_sei` calam, cada um por um motivo medido
        no dono. O `nascimento` chega por controle no `state_full`
-       (`ipc_handlers.py:3585`) e pacote nenhum o lia.
+       (`ipc_handlers.py:3632`) e pacote nenhum o lia.
 
     **NENHUMA FRASE NASCE AQUI.** O que este arquivo faz é a junção — a mesma
     que `secao_controles._card_do_controle` faz do lado da janela estável — e a
@@ -4554,7 +4554,7 @@ def mic_existe(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     QUEM CONSOME, e é por isso que o clique vale AGORA: o
     `_handle_machine_declare` relê o disco, rebinda `daemon._maquina` e SOBE OU
     DESCE o subsystem `bt_mic` no mesmo pedido — a nota está no próprio handler
-    (`ipc_handlers.py:6535`, QUATRO-MICROFONES-01): *"o 'Aplicar' tem de VALER
+    (`ipc_handlers.py:6582`, QUATRO-MICROFONES-01): *"o 'Aplicar' tem de VALER
     agora"*. Sem essa parte, a escolha dela só valeria no próximo início do
     daemon.
 
@@ -4702,7 +4702,7 @@ def teto_da_vibracao(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     e este gesto não grava nada — a frase que falta é dela.
 
     É DO PERFIL, NÃO DA MÁQUINA. Sem perfil ativo não há onde guardar a força
-    de um controle (`profiles/schema.py:754`), e a recusa diz em que aba
+    de um controle (`profiles/schema.py:768`), e a recusa diz em que aba
     escolher um.
 
     FATO ERRADO, SUBSTITUÍDO no mesmo dia: esta linha dizia *"medido no daemon
@@ -5127,7 +5127,7 @@ def ignorar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
 # OS CINCO QUE GRAVAM SÃO **SEM ECO**, e isso foi MEDIDO em 02/09/2026, não
 # deduzido: as chaves de topo do `state_full` do daemon vivo são 47, e nenhuma
 # delas é `mapa` nem `maquina`. O caminho é `machine_declare` →
-# `_handle_machine_declare` (`daemon/ipc_handlers.py:6535`) → `maquina.json`, e
+# `_handle_machine_declare` (`daemon/ipc_handlers.py:6582`) → `maquina.json`, e
 # ali ele PARA. Nada volta pelo estado. Ver a nota do `SEM_ECO`, no fim deste
 # arquivo, para o que isso significa para quem lê a régua do piloto.
 

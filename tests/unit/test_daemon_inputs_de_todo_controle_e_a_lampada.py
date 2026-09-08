@@ -47,6 +47,7 @@ Hermético: `config_dir` em `tmp_path`, `boot_id` fixo, MACs forjados na faixa
 """
 from __future__ import annotations
 
+import asyncio
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -145,6 +146,33 @@ def _mesa_de_dois(tmp_path: Path) -> tuple[IpcServer, _CoopEspiao, list[str]]:
     return server, coop, diario
 
 
+async def _esperar_repintura(server: IpcServer) -> None:
+    """Espera a repintura DESPACHADA terminar. Sem isto a régua mede o vazio.
+
+    RÉGUA QUE MEDIA O MUNDO DE ONTEM — corrigida em 07/09/2026. Estes testes
+    nasceram quando o handler repintava ANTES de responder, e afirmavam sobre
+    `coop.chamadas`/`diario` na linha seguinte ao `await`. Desde a
+    RESPOSTA-QUE-CHEGA-TARDE-01 (`_despachar_repintura`) a repintura é
+    CONSEQUÊNCIA: ela sai num `asyncio.to_thread` para não estourar os 250 ms
+    do cliente, e no instante do `assert` ainda não rodou. As cinco réguas
+    passaram a reprovar a melhora, não o defeito.
+
+    Ela ESPERA as tasks em voo em vez de dormir um tempo fixo: `sleep(0.2)` é
+    aposta, e aposta em teste vira vermelho intermitente. Os dois giros finais
+    do laço são para o PASSO 3, que volta do worker por
+    `call_soon_threadsafe` e precisa de um turno para rodar.
+    """
+    for _ in range(50):
+        em_voo = list(getattr(server, "_repinturas_em_voo", ()) or ())
+        if em_voo:
+            await asyncio.gather(*em_voo, return_exceptions=True)
+        await asyncio.sleep(0)
+        await asyncio.sleep(0)
+        if not getattr(server, "_repinturas_em_voo", None):
+            return
+    raise AssertionError("a repintura despachada nunca terminou")
+
+
 # ---------------------------------------------------------------------------
 # identity.number.set — o gesto que ela faz na aba
 # ---------------------------------------------------------------------------
@@ -161,6 +189,7 @@ class TestONumeroAcendeALampada:
         resultado = await server._handle_identity_number_set(
             {"uniq": UNIQ_B, "number": 1}
         )
+        await _esperar_repintura(server)
 
         assert resultado["ok"] is True
         assert coop.chamadas, (
@@ -179,6 +208,7 @@ class TestONumeroAcendeALampada:
         server, coop, _diario = _mesa_de_dois(config_isolado)
 
         await server._handle_identity_number_set({"uniq": UNIQ_B, "number": 1})
+        await _esperar_repintura(server)
 
         assert coop.chamadas == [True], (
             f"o co-op foi sincronizado sem `force=True`: {coop.chamadas}"
@@ -196,6 +226,7 @@ class TestONumeroAcendeALampada:
         server, _coop, diario = _mesa_de_dois(config_isolado)
 
         await server._handle_identity_number_set({"uniq": UNIQ_B, "number": 1})
+        await _esperar_repintura(server)
 
         assert diario == ["coop.sync", "reassert", "external_tick"], (
             f"a ordem das três repinturas mudou: {diario}"
@@ -257,6 +288,7 @@ class TestOGemeoRenumber:
         server, _daemon, coop, diario = _servidor(config_isolado, ds)
 
         resultado = await server._handle_identity_renumber({})
+        await _esperar_repintura(server)
 
         assert resultado["ok"] is True
         if not resultado["renumbered"]:
@@ -308,6 +340,7 @@ class TestARepinturaNaoDerrubaARenumeracao:
         resultado = await server._handle_identity_number_set(
             {"uniq": UNIQ_B, "number": 1}
         )
+        await _esperar_repintura(server)
 
         assert resultado["ok"] is True
         assert ds.slot_for(UNIQ_B, assign=False) == 1

@@ -14,10 +14,13 @@ A cura tem duas metades, e este arquivo morde as duas:
 2. **O portão** — ``gamepad.emulation.set`` RECUSA nome desconhecido em vez de
    cair no xbox calado. Nome que ninguém reconhece é erro, não default.
 
-O que este arquivo NÃO pede: que "nintendo"/"switch"/"pro" virem dualsense. Não
-existe máscara de Switch no catálogo; mapeá-las repetiria o defeito (entregar
-calada uma máscara que ninguém pediu). Elas são nome desconhecido — e nome
-desconhecido agora reprova.
+NOTA DATADA — 07/09/2026. Este cabeçalho dizia: *"o que este arquivo NÃO pede
+é que 'nintendo'/'switch'/'pro' virem dualsense — não existe máscara de Switch
+no catálogo"*. **Passou a existir**, por ordem dela, e as três palavras deixaram
+de ser nome desconhecido: hoje elas resolvem para a máscara `nintendo`, que é a
+que a pessoa pedia quando as digitava. O defeito de 10/08 continua medido aqui
+com nomes que de fato ninguém reconhece — a REGRA nunca foi sobre a Nintendo,
+foi sobre não entregar calada uma máscara que ninguém pediu.
 
 E a terceira classe guarda o que JÁ funcionava: o ``normalize_flavor`` continua
 TOLERANTE porque três chamadores internos dependem disso (ver docstrings lá).
@@ -85,7 +88,9 @@ class TestOPortaoRecusaNomeDesconhecido:
     """Metade 2 — a que importa: desconhecido REPROVA, não vira xbox."""
 
     @pytest.mark.parametrize(
-        "pedido", ["nintendo", "switch", "pro", "xboks", "dualshock", "", "   "]
+        # 07/09/2026: "nintendo"/"switch"/"pro" saíram desta lista — viraram
+        # máscara de verdade. O que sobra é o que continua não existindo.
+        "pedido", ["wiimote", "joycon", "xboks", "dualshock", "", "   "]
     )
     @pytest.mark.asyncio
     async def test_desconhecido_reprova_e_nao_toca_no_daemon(
@@ -109,12 +114,12 @@ class TestOPortaoRecusaNomeDesconhecido:
         erro calado."""
         with pytest.raises(ValueError) as exc:
             await _Handlers(_FakeDaemon())._handle_gamepad_emulation_set(
-                {"enabled": True, "flavor": "nintendo"}
+                {"enabled": True, "flavor": "wiimote"}
             )
 
         msg = str(exc.value)
-        assert "nintendo" in msg
-        for nome in ("dualsense", "xbox", "sony"):
+        assert "wiimote" in msg
+        for nome in ("dualsense", "xbox", "sony", "nintendo"):
             assert nome in msg
 
     @pytest.mark.parametrize(
@@ -162,8 +167,13 @@ class TestOQueJaFuncionavaContinua:
         default xbox, e coop/gamepad/virtual_pad precisam de máscara SEMPRE (até
         com config de disco corrompida). Fazer o normalizador estourar quebraria
         esses três; por isso a recusa mora no portão de entrada de gente."""
-        assert ug.normalize_flavor("nintendo") == ug.DEFAULT_FLAVOR == "xbox"
+        # 07/09/2026: o exemplo era `"nintendo"`, que caía no default. Ele
+        # virou máscara própria; o que se mede aqui é a TOLERÂNCIA, e ela pede
+        # um nome que continue sendo lixo.
+        assert ug.normalize_flavor("wiimote") == ug.DEFAULT_FLAVOR == "xbox"
         assert ug.normalize_flavor(None) == "xbox"
+        # O gate do uhid não mudou: "não é dualsense, logo não é meu" — e a
+        # máscara nintendo é uinput puro por isso mesmo.
         assert UhidDualSense.for_flavor("nintendo") is None
 
     def test_os_sinonimos_antigos_seguem_valendo(self) -> None:

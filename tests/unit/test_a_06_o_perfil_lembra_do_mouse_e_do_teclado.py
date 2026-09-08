@@ -524,30 +524,73 @@ def test_a_pagina_publicada_tem_o_endereco_da_ressalva_e_ele_nasce_vazio(a06):
     Uma ressalva cravada no HTML afirmaria também na tela de quem tem um
     controle só — *"ressalva congelada é a que já mentiu na aba 08"*.
 
-    A MORDIDA: passe o texto para o `monta.ressalva` do `aba06.py`, regere a
-    página e esta linha reprova.
+    A FORMA MUDOU EM 07/09/2026, e a razão é dela, olhando a aba com os quatro
+    controles na mesa: *"navegacao tem essas 3 frases aqui na parte de baixo que
+    quebram o layout"*. A ressalva era uma delas — uma `<div class="ressalva">`
+    logo abaixo da grade das sete linhas. Ela virou `<span class="viva">` dentro
+    do `?` dos três campos de que fala, e o que esta régua cobra não mudou: o
+    endereço existe, o alvo é `html` e ele NASCE VAZIO.
+
+    A MORDIDA: passe o texto da ressalva para dentro do `ajuda()` do `aba06.py`,
+    regere a página e esta linha reprova — o `<i class="nada"></i>` some.
     """
     import onde
 
     doc = onde.pagina(PAGINA, publicado=True).read_text(encoding="utf-8")
-    alvo = (f'<div class="ressalva" data-campo="{a06.ENDERECO_DA_RESSALVA}"'
-            f' data-hef-alvo="html"><i class="nada"></i></div>')
+    alvo = (f'<span class="viva" data-campo="{a06.ENDERECO_DA_RESSALVA}"'
+            f' data-hef-alvo="html"><i class="nada"></i></span>')
     assert alvo in doc, (
-        "a página publicada não tem a linha de ressalva da D3 vazia — sem ela a "
+        "a página publicada não tem o lugar da ressalva da D3 vazio — sem ele a "
         "aba promete por-controle e entrega global")
 
 
-def test_a_ressalva_fica_no_painel_das_opcoes_de_ativacao(a06):
-    """Perto das sete linhas cujo ALCANCE ela ressalva, e não na tira de estados.
+def test_a_ressalva_esta_no_ponto_de_interrogacao_dos_tres_campos(a06):
+    """Nos `?` dos três campos que ela NOMEIA, e em nenhum outro lugar.
 
-    As cinco linhas de `.estados` falam do que está ACONTECENDO agora (o portão,
-    o bloqueio, o custo); esta fala de PARA QUEM o ajuste vale.
+    A frase diz *"O cursor, a rolagem e o teclado são um só para o computador
+    inteiro"*, e os três campos são "Velocidade de cursor", "Velocidade da
+    rolagem" e "Função do teclado". Ela nunca valeu para as sete linhas do
+    painel: "Navegação Interna" é por controle e "Modo Steam" já diz na própria
+    dica que vale para a máquina.
+
+    TRÊS, E NÃO CINCO. As dicas das duas velocidades são COMPARTILHADAS com a
+    pop-up "Estilo Point-and-click", cujos dois botões de passo são a velocidade
+    do ESTILO e não escrevem em lugar nenhum. Pendurar a ressalva na dica
+    compartilhada leva a frase para uma tela onde ela é falsa — foi o defeito da
+    primeira volta desta frente, e é o que este número trava.
+
+    A MORDIDA: troque `D_VEL_ESTILO` por `D_VEL` no `TELA_PONTO` do `aba06.py`,
+    regere e esta linha reprova com 4.
     """
     import onde
 
     doc = onde.pagina(PAGINA, publicado=True).read_text(encoding="utf-8")
-    painel = doc.split("As opções de ativação", 1)[-1].split('class="estados"', 1)[0]
-    assert f'data-campo="{a06.ENDERECO_DA_RESSALVA}"' in painel
+    alvo = (f'<span class="viva" data-campo="{a06.ENDERECO_DA_RESSALVA}"'
+            f' data-hef-alvo="html">')
+    assert doc.count(alvo) == 3, (
+        f"a ressalva da D3 aparece em {doc.count(alvo)} dicas e devia aparecer "
+        "em 3 — as de 'Velocidade de cursor', 'Velocidade da rolagem' e "
+        "'Função do teclado'")
+
+
+def test_a_ressalva_nao_ocupa_mais_linha_no_pe_do_painel(a06):
+    """Ela saiu do pé — e nenhuma `.ressalva` solta voltou para lá.
+
+    O QUE FOI MEDIDO em 07/09/2026, na página publicada, com as três frases
+    pintadas: o quadro "As opções de ativação" ia de **215px a 300,25px**, o
+    miolo passava **66px** da janela e a fileira dos quatro botões terminava
+    **41,25px FORA** dela — cortada pelo rodapé, como na foto dela.
+
+    A MORDIDA: devolva o `monta.ressalva` ao `MIOLO` do `aba06.py`, regere e
+    esta linha reprova.
+    """
+    import onde
+
+    doc = onde.pagina(PAGINA, publicado=True).read_text(encoding="utf-8")
+    painel = doc.split("As opções de ativação", 1)[-1].split('class="tela-nova"', 1)[0]
+    assert 'class="ressalva"' not in painel, (
+        "voltou uma linha de ressalva solta ao pé do painel das opções de "
+        "ativação — é uma das três frases que ela mandou tirar em 07/09")
 
 
 # ---------------------------------------------------------------------------

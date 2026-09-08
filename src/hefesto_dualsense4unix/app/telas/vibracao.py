@@ -205,7 +205,7 @@ DONOS_DOS_GESTOS: dict[str, str] = {
     "rumble_policy_set_checked` — a ÚNICA porta desde 26/08/2026. É GLOBAL: o "
     "handler não aceita `uniq` (`daemon/ipc_handlers.py:5012`). E `auto` por "
     "unidade é RECUSADO pelo esquema, com validador e mensagem dedicados "
-    "(`profiles/schema.py:798-811`): ele escala pela bateria do controle "
+    "(`profiles/schema.py:812-825`): ele escala pela bateria do controle "
     "PRIMÁRIO, então guardá-lo por peça faria duas escalarem pela bateria da "
     "mesma.",
     "barra:forca": "rumble.policy_custom {mult} pela ponte `app/ipc_bridge."
@@ -377,28 +377,69 @@ def pacote_da_mesa(
     }
 
 
-#: OS TRÊS TONS DA LINHA DE ESTADO, um por token de cor da janela estável.
-#:
-#: **CORRIGIDO EM 02/09/2026: eram DOIS, e a janela GTK usa TRÊS neste card.**
-#: O comentário anterior dizia *"os dois tons ... são os mesmos da janela GTK"*,
-#: e a quarta frase saía como ``diz`` — cinza. Lá ela é ciano, e o comentário
-#: que a pinta explica por quê: *"a frase explica, não alarma"*.
+#: OS DOIS TONS DA LINHA DE ESTADO, um por token de cor da janela estável.
 #:
 #: ==========  ===========================  ==================================
 #: tom         cor na estável               qual frase
 #: ==========  ===========================  ==================================
-#: ``diz``     a cor normal do rótulo       ``texto_dos_pedidos_de_vibracao``
 #: ``alerta``  ``#ffb86c`` (:1259, :545)    ``…do_alcance_da_intensidade`` e
 #:                                          ``…do_teto_do_orcamento``
 #: ``info``    ``#8be9fd`` (:608)           ``texto_de_onde_grava_e_onde_manda``
 #: ==========  ===========================  ==================================
 #:
 #: Viaja o NOME, e a cor mora no CSS da aba — a mesma disciplina do
-#: ``conta_cor``, que manda ``var(--green)`` em vez de um hexadecimal. Os três
-#: tokens já existem no mockup (``--orange``, ``--cyan``, ``--texto-suave``).
-DIZ = "diz"
+#: ``conta_cor``, que manda ``var(--green)`` em vez de um hexadecimal. Os dois
+#: tokens já existem no mockup (``--orange``, ``--cyan``).
+#:
+#: **O TERCEIRO TOM (``diz``, cinza) MORREU EM 07/09/2026** com a única frase
+#: que o usava — ver :data:`SEM_A_CONTAGEM_DE_PEDIDOS`. Ele sai daqui e a regra
+#: ``.vib-estado .est.diz`` sai do ``interface/aba05.py`` no mesmo passo: uma
+#: constante que ninguém emite e uma cor que nada veste são as duas metades da
+#: mesma promessa sem caminho, e o ``portao_a_casa_sabe_e_o_produto_nao_faz``
+#: cobra exatamente isso — foi o que aconteceu com as cinco peças da trava em
+#: 05/09, no dia em que a faixa de estado saiu.
 ALERTA = "alerta"
 INFO = "info"
+
+#: A CONTAGEM DE PEDIDOS DO JOGO SAIU DA ABA — decisão dela, 07/09/2026, com o
+#: quadro dos quatro DualSense na mesa: *"Vibração remove essa última frase
+#: também."* A frase era a última linha do pé do quadro, e dizia, por jogador,
+#: quantas vezes o jogo pediu vibração e com que força::
+#:
+#:     o jogo pediu vibração — Jogador 1: 2x, todas com força zero · Jogador 2:
+#:     2x, todas com força zero · Jogador 3: nenhuma · Jogador 4: 2x, todas com
+#:     força zero
+#:
+#: **O QUE MORREU E O QUE FICOU DE PÉ.** Só a CHAMADA morreu. A frase continua
+#: tendo dono vivo em ``rumble_actions`` — a função da contagem e a irmã que a
+#: desdobra por jogador —, e por isso ela NÃO sai do produto como saíram as
+#: cinco peças da trava em 05/09: aquelas eram desta aba e de mais nenhuma. O
+#: que esta aba deixou de fazer é PERGUNTAR.
+#:
+#: **O NOME DAS DUAS NÃO SE ESCREVE AQUI**, e é a mesma disciplina da linha 170
+#: do ``docs/data/paridade-gtk-html.csv``: escrevê-lo neste arquivo fecharia no
+#: papel a dívida que a linha 169 declara. Quem guarda o endereço exato é o
+#: CSV, e a régua 8 do ``interface/aba05._conferir`` é quem morde se a chamada
+#: voltar.
+#:
+#: **A FAIXA ``#vib-estado`` FICA**, e não é resto: ela continua sendo o pouso
+#: do recibo do clique (``data-hef-recados="sucesso"``, a 05-Q4 dela) e das duas
+#: linhas de alerta que sobram. O que muda é que, com a mesa quieta, ela nasce
+#: VAZIA e o ``.vib-estado:empty{display:none}`` a esconde — nenhuma linha de
+#: texto permanente sob a grade.
+#:
+#: **O QUE ISTO CUSTA, MEDIDO, e a decisão que sobra para ela.** Esta era a
+#: única coisa na tela que dizia que o JOGO pediu vibração e com que força — o
+#: instrumento que separa *"o motor não tremeu"* de *"o jogo não pediu nada"*.
+#: Nove testes da bancada de 07/09 (``docs/process/sprints/2026-09-07-O-COMO-DO-
+#: MAPA``) a citam; seis deles a usam como confirmação ao lado das mãos e do
+#: desenho que acende em laranja, e TRÊS ficam sem instrumento:
+#: ``vibracao.rumble.ff @ cabo`` e ``@ rádio`` (o passo *"confira que ela NÃO
+#: diz que falta gamepad virtual"*) e ``vibracao.rumble.habilitar @ cabo`` (o
+#: passo *"confira que ela diz que o jogo ainda não pediu vibração nenhuma"*).
+#: O lugar proposto está escrito no relatório da frente; nada foi inventado
+#: aqui, porque onde a informação reaparece é decisão dela.
+SEM_A_CONTAGEM_DE_PEDIDOS = True
 
 
 def _pedido_da_politica(state: dict[str, Any]) -> float | None:
@@ -462,17 +503,19 @@ def textos_do_estado(
     **O buraco que ela fecha, medido em 02/09/2026.** A janela estável mostra
     quatro avisos nesta aba e a interface nova mostrava ZERO — a tela nova tinha
     os dois motores, os quatro degraus e o "Testar", e nenhuma palavra sobre o
-    que acontece com eles. As quatro frases já existiam, prontas, e ninguém as
+    que acontece com eles. As frases já existiam, prontas, e ninguém as
     chamava:
 
     ==================================== =========================================
     o que a linha diz                    de quem é a frase
     ==================================== =========================================
-    quantas vezes o jogo pediu vibração  ``rumble_actions.texto_dos_pedidos_de_vibracao``
     a intensidade não alcança o jogo     ``rumble_actions.texto_do_alcance_da_intensidade``
     o orçamento limitou o multiplicador  ``rumble_actions.texto_do_teto_do_orcamento``
     grava num lugar e manda em outro     ``rumble_actions.texto_de_onde_grava_e_onde_manda``
     ==================================== =========================================
+
+    **ERAM QUATRO ATÉ 07/09/2026**, e a que saiu era a primeira — a contagem de
+    pedidos do jogo. Ver :data:`SEM_A_CONTAGEM_DE_PEDIDOS`.
 
     **NENHUMA FRASE NASCE AQUI.** Este módulo escolhe QUANDO perguntar e traduz
     a resposta para a forma que a tela consome; o texto tem dono, e o dono é o
@@ -508,9 +551,9 @@ def textos_do_estado(
     from hefesto_dualsense4unix.app.alvo_de_edicao import AlvoDeEdicao, EstadoDoAlvo
 
     linhas: list[tuple[str, str]] = []
-    pedidos = _ra.texto_dos_pedidos_de_vibracao(state)
-    if pedidos:
-        linhas.append((DIZ, pedidos))
+    # A CONTAGEM DE PEDIDOS DO JOGO SAIU DAQUI — decisão dela, 07/09/2026:
+    # *"Vibração remove essa última frase também."* Ver :data:`SEM_A_CONTAGEM_
+    # DE_PEDIDOS`, que guarda o que ela custou e onde a informação ficou.
     alcance = _ra.texto_do_alcance_da_intensidade(state)
     if alcance:
         linhas.append((ALERTA, alcance))
@@ -581,7 +624,7 @@ def html_do_estado(linhas: list[tuple[str, str]]) -> str:
     O ``quote=False`` no ``tom`` era o defeito: ele desligava o escape justo na
     fatia que precisa dele, e o argumento vinha com o comentário dizendo o
     contrário — *"isto aqui é conteúdo de TEXTO, nunca atributo"*. Hoje o
-    ``tom`` só vale :data:`DIZ`/:data:`ALERTA`/:data:`INFO`, três constantes
+    ``tom`` só vale :data:`ALERTA`/:data:`INFO`, duas constantes
     deste módulo; o escape é o que impede que a próxima classe de tom, vinda de
     um dado, saia do atributo.
 

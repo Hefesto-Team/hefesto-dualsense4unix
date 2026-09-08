@@ -185,21 +185,87 @@ def test_dois_controles_duas_mascaras() -> None:
         "TODOS os chips de TODOS os cartões, que é o defeito curado em 03/09")
 
 
-def test_nintendo_pro_nunca_acende() -> None:
-    """Ele não é máscara do produto: o daemon recusa tudo o que não for os dois.
+def test_rotulo_desenhado_que_o_produto_nao_monta_fica_apagado(
+    monkeypatch: Any,
+) -> None:
+    """O chip apaga quando a tela DESENHA um rótulo que o produto não monta.
 
-    O chip fica na tela por ordem dela; apagado é a verdade sobre ele. Se algum
+    ESTE TESTE SE CHAMAVA `test_nintendo_pro_nunca_acende`, e a premissa dele
+    MORREU em 07/09/2026: a máscara Nintendo Pro entrou no produto por ordem
+    dela, o `ipc_handlers` passou a aceitá-la, e o chip acende — corretamente.
+    O docstring de então já previa a queda, mas pela causa errada: *"se algum
     dia esta linha reprovar, é porque alguém traduziu uma máscara que o
-    `ipc_handlers` recusa.
+    `ipc_handlers` recusa"*. Não foi isso. Foi o `ipc_handlers` deixar de
+    recusar.
+
+    O INVARIANTE QUE SOBREVIVE não tem nome de fabricante, e são TRÊS estados
+    que `_mascara_do_cartao` separa de propósito:
+
+      * rótulo que o produto monta  -> o rótulo (o chip acende);
+      * rótulo que a tela DESENHA e o produto não monta -> ``""`` (apagado, e
+        isso é a verdade sobre ele);
+      * a mesa não falou de máscara -> a da sessão (o comportamento anterior
+        ao campo existir).
+
+    O SEGUNDO ESTADO NÃO TEM MAIS NENHUM CASO VIVO — hoje `monta.MASCARAS` e
+    `NOME_DA_MASCARA` casam rótulo a rótulo, e essa é justamente a razão de o
+    teste antigo não poder ser só reapontado para outro nome: um nome inventado
+    não está DESENHADO, e cai no terceiro estado, não no segundo. Por isso a
+    régua injeta o rótulo no desenho em vez de o digitar como dado — é a única
+    forma de exercitar o ramo que hoje nenhuma máscara real alcança, e ele tem
+    de continuar funcionando para a próxima que a tela desenhar antes de o
+    produto saber montar.
     """
-    for state in (VIVO_NAVEGACAO, VIVO_GAMEPAD_XBOX, VIVO_NATIVO):
-        assert "Nintendo Pro" not in _mascaras_dos_cartoes(_com_mesa(state))
-    # E NEM QUANDO O REGISTRO PEDE: um valor que o produto não sabe montar não
-    # acende chip nenhum. É a diferença entre "a mesa não falou" (herda a
-    # sessão) e "a mesa falou um nome que a tela desenha e o daemon recusa".
-    ctx = _com_mesa(VIVO_GAMEPAD_XBOX, por_aparelho={UNIQ_A: "Nintendo Pro"})
+    from hefesto_dualsense4unix.interface.mesa_viva import NOME_DA_MASCARA
+
+    so_no_desenho = "Máscara Só Desenhada"
+    assert so_no_desenho not in set(NOME_DA_MASCARA.values()), (
+        "o rótulo de mentira virou rótulo de verdade — troque-o")
+    monkeypatch.setattr(
+        aba, "_MASCARAS_DESENHADAS",
+        lambda: set(NOME_DA_MASCARA.values()) | {so_no_desenho})
+
+    ctx = _com_mesa(VIVO_GAMEPAD_XBOX, por_aparelho={UNIQ_A: so_no_desenho})
     assert _mascaras_dos_cartoes(ctx) == [""], (
-        "um rótulo que o produto não sabe montar acendeu um chip")
+        "um rótulo que a tela desenha e o produto não sabe montar acendeu um "
+        "chip — o cartão passou a afirmar uma máscara que o daemon recusa")
+
+    # E O TERCEIRO ESTADO CONTINUA SEPARADO: sem o rótulo no desenho, o mesmo
+    # valor deixa de ser "desenhado e não montável" e vira "a mesa não falou".
+    ctx = _com_mesa(VIVO_GAMEPAD_XBOX, por_aparelho={UNIQ_A: "nem desenhado"})
+    assert _mascaras_dos_cartoes(ctx) == ["Xbox 360"], (
+        "os dois silêncios voltaram a ser um só: um nome que a tela nem "
+        "desenha tem de herdar a sessão, não apagar o chip")
+
+
+def test_a_nintendo_pro_acende_como_as_outras_duas() -> None:
+    """A máscara nova é chip de primeira classe — 07/09/2026, ordem dela.
+
+    A MORDIDA: tirar `"nintendo"` do `uinput_gamepad.FLAVORS` (ou o rótulo do
+    `mesa_viva.NOME_DA_MASCARA`) apaga este chip e reprova aqui.
+
+    Vale para os TRÊS do catálogo de uma vez, lidos dele: uma quarta máscara
+    entra nesta régua sem edição, que é o que separa esta cura de digitar
+    "Nintendo Pro" no lugar onde estava "nunca acende".
+    """
+    from hefesto_dualsense4unix.daemon.subsystems.external_mask import (
+        mascaras_validas,
+    )
+    from hefesto_dualsense4unix.interface.mesa_viva import NOME_DA_MASCARA
+
+    assert "nintendo" in mascaras_validas(), (
+        "a máscara saiu do catálogo — se foi decisão dela, este teste cai "
+        "junto; se não foi, o chip dela apagou na tela sem ninguém pedir")
+
+    for sabor in sorted(mascaras_validas()):
+        rotulo = NOME_DA_MASCARA.get(sabor)
+        assert rotulo, (
+            f"{sabor!r} está no catálogo e não tem rótulo em `NOME_DA_MASCARA` "
+            "— o chip dele nasce cinza na tela dela")
+        ctx = _com_mesa(VIVO_GAMEPAD_XBOX, por_aparelho={UNIQ_A: sabor})
+        assert _mascaras_dos_cartoes(ctx) == [rotulo], (
+            f"o cartão não acendeu o chip de {sabor!r}: a escolha por aparelho "
+            "não chegou à tela")
 
 
 def test_o_daemon_calado_nao_acende_nada() -> None:
@@ -308,7 +374,7 @@ def duas_listas_vazias(tmp_path: Any, monkeypatch: Any) -> Any:
 
 
 def _coluna(ctx: Contexto) -> tuple[list[str], list[str], str]:
-    fora = aba.pacote(ctx)
+    fora = aba.coluna_de_atencao(ctx)
     return (
         [s for s in fora["aviso-selo"] if s],
         [t for t in fora["aviso-texto"] if t],
@@ -440,7 +506,7 @@ def test_a_coluna_atencao_sai_das_fontes_da_gtk(monkeypatch: Any) -> None:
         painel, "avisos_do_estado",
         lambda _s: [{"selo": "PAUSA", "texto": "de outro dono", "fonte": "x"}])
     monkeypatch.setattr(aba, "_do_exame", lambda: [])
-    fora = aba.pacote(_ctx(VIVO_NAVEGACAO))
+    fora = aba.coluna_de_atencao(_ctx(VIVO_NAVEGACAO))
     assert "PAUSA" in fora["aviso-selo"], (
         "o pacote deixou de chamar `painel.avisos_do_estado`")
     assert "de outro dono" in fora["aviso-texto"]
@@ -466,7 +532,7 @@ def test_uma_boa_noticia_nao_entra_na_coluna_atencao(monkeypatch: Any) -> None:
         {"selo": "CERTO", "titulo": "Economia de energia desligada", "grave": False},
         {"selo": "AJUSTAR", "titulo": "Dois rádios em portas vizinhas", "grave": True},
     ])
-    fora = aba.pacote(_ctx(VIVO_NAVEGACAO))
+    fora = aba.coluna_de_atencao(_ctx(VIVO_NAVEGACAO))
     assert "CERTO" not in fora["aviso-selo"], (
         "uma boa notícia voltou a aparecer sob o cabeçalho 'Atenção'")
     # AS SEIS VIAJAM SEMPRE — 04/09/2026: a lista curta some inteira em
@@ -494,13 +560,13 @@ def test_a_conta_e_a_do_produto_e_conta_o_que_a_coluna_mostra(monkeypatch: Any) 
     monkeypatch.setattr(painel, "avisos_do_estado", lambda _s: [])
     monkeypatch.setattr(aba, "_do_exame", lambda: [
         {"selo": "CERTO", "titulo": "tudo bem", "grave": False}])
-    assert aba.pacote(_ctx(VIVO_NAVEGACAO))["atencao-conta"] == "nenhum aviso"
+    assert aba.coluna_de_atencao(_ctx(VIVO_NAVEGACAO))["atencao-conta"] == "nenhum aviso"
 
     monkeypatch.setattr(painel, "texto_da_conta", lambda n: f"{n} de outro dono")
     monkeypatch.setattr(
         painel, "avisos_do_estado",
         lambda _s: [{"selo": "PAUSA", "texto": "a", "fonte": "x"}])
-    assert aba.pacote(_ctx(VIVO_NAVEGACAO))["atencao-conta"] == "1 de outro dono", (
+    assert aba.coluna_de_atencao(_ctx(VIVO_NAVEGACAO))["atencao-conta"] == "1 de outro dono", (
         "o pacote voltou a escrever a conta em vez de perguntar ao produto")
 
 
@@ -523,7 +589,7 @@ def test_a_linha_sem_aviso_nao_fica_com_travessao(monkeypatch: Any) -> None:
         painel, "avisos_do_estado",
         lambda _s: [{"selo": "PAUSA", "texto": "a", "fonte": "x"},
                     {"selo": "JOGO", "texto": "b", "fonte": "y"}])
-    fora = aba.pacote(_ctx(VIVO_NAVEGACAO))
+    fora = aba.coluna_de_atencao(_ctx(VIVO_NAVEGACAO))
     assert fora["aviso-vivo"] == ["1", "1"] + [""] * (aba.AVISOS_VIVOS - 2), (
         f"o acendedor não acompanha a lista de avisos: {fora['aviso-vivo']!r}")
     assert len(fora["aviso-vivo"]) == len(fora["aviso-selo"]) == aba.AVISOS_VIVOS
@@ -550,7 +616,7 @@ def test_a_coluna_nao_estoura_o_que_a_pagina_publica(monkeypatch: Any) -> None:
         painel, "avisos_do_estado",
         lambda _s: [{"selo": "PAUSA", "texto": str(i), "fonte": "x"}
                     for i in range(quantos)])
-    fora = aba.pacote(_ctx(VIVO_NAVEGACAO))
+    fora = aba.coluna_de_atencao(_ctx(VIVO_NAVEGACAO))
     acesas = [x for x in fora["aviso-selo"] if x]
     assert len(acesas) == aba.AVISOS_NA_COLUNA + 1, (
         f"a coluna acendeu {len(acesas)} linhas: eram para ser as "
@@ -575,7 +641,7 @@ def test_uma_fonte_que_quebra_nao_apaga_a_coluna(monkeypatch: Any) -> None:
 
     monkeypatch.setattr(painel, "avisos_do_estado", lambda _s: [])
     monkeypatch.setattr(aba, "_do_exame", explode)
-    fora = aba.pacote(_ctx(VIVO_NAVEGACAO))
+    fora = aba.coluna_de_atencao(_ctx(VIVO_NAVEGACAO))
     assert "ERRO" in fora["aviso-selo"], (
         "o exame quebrou e a coluna ficou vazia — o silêncio voltou")
 
@@ -659,7 +725,9 @@ def test_a_pagina_publica_os_enderecos_na_quantidade_certa(publicado: bool) -> N
         # um terceiro controle chega, e sem endereço os chips dele ficariam
         # cegos à pintura para sempre.
         "mascara-cartao": len(monta.MASCARAS) * len(aba01.MESA),
-        "aviso-vivo": aba.AVISOS_VIVOS,
+        # `aviso-vivo` SAIU DESTA CONTA em 07/09/2026, com a coluna Atenção que
+        # ela mandou remover da Jogar. Ele não virou zero: virou AUSENTE, e quem
+        # cobra a ausência é `test_a_coluna_atencao_saiu_da_jogar`.
         "pendente-ha": 1,
     }
     for campo, quantos in esperado.items():
@@ -696,15 +764,32 @@ def test_todo_endereco_que_o_pacote_emite_existe_na_pagina() -> None:
 
 
 def test_a_cena_da_coluna_atencao_continua_com_um_aviso() -> None:
-    """As linhas novas são ENDEREÇO, e endereço não move pixel.
+    """A CENA MUDOU POR ORDEM DELA — 07/09/2026, e esta régua trocou de sinal.
 
-    A cena que ela aprovou tem um aviso. As outras cinco nascem sem a classe
-    que as mostra, então a página aberta sozinha desenha exatamente o que ela
-    viu — e é isso que separa "a aba ganhou vida" de "alguém mexeu no desenho".
+    Ela dizia: *"a cena que ela aprovou tem um aviso; as outras cinco nascem sem
+    a classe que as mostra"*. A ordem foi *"em jogar remover essa seção do
+    atenção, nenhum aviso esse — deixar só o reconectar controles"*, e agora o
+    que a página tem de mostrar entre os cartões e o botão é NADA.
+
+    NOS DOIS ARQUIVOS, e não só na bancada: publicar é ato à parte, e uma régua
+    que olhasse só o mockup daria verde com o produto dela ainda mostrando a
+    faixa.
     """
-    corpo = onde.pagina("01-jogar.html").read_text(encoding="utf-8")
-    assert corpo.count('class="aviso-item mostra"') == len(aba01.AVISOS)
-    assert corpo.count('class="aviso-item"') == aba.AVISOS_VIVOS - len(aba01.AVISOS)
+    for publicado in (False, True):
+        corpo = onde.pagina("01-jogar.html", publicado=publicado).read_text(
+            encoding="utf-8")
+        onde_ = "publicado" if publicado else "bancada"
+        # OS MARCADORES SÃO `class="…"`, E NÃO A PALAVRA SOLTA: `.aviso-item` é
+        # regra do ESQUELETO (`monta.py`), das dez abas, e cobrar a palavra crua
+        # acusaria a folha compartilhada — mandando consertar o que esta aba não
+        # pode. Custou uma volta em 07/09/2026.
+        for morto in ('class="aviso-item', 'class="col-atencao"',
+                      'class="conta-avisos"',
+                      'data-campo="aviso-vivo"', 'data-campo="atencao-conta"'):
+            assert morto not in corpo, f"{onde_}: a coluna Atenção voltou ({morto!r})"
+        assert corpo.count('data-gesto="reconectar"') == 1, (
+            f"{onde_}: o botão Reconectar Controles sumiu — ele é o que ela "
+            f"mandou DEIXAR, e uma régua que só proíbe passaria sem ele")
 
 
 # ---------------------------------------------------------------------------

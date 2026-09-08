@@ -74,7 +74,7 @@ from hefesto_dualsense4unix.app.telas.vibracao import (  # noqa: E402
     textos_do_estado,
 )
 
-#: A CENA DA LINHA DE ESTADO no desenho, e o `economia` NÃO é enfeite.
+#: A CENA DA FAIXA DE ESTADO no desenho, e o `economia` NÃO é enfeite.
 #:
 #: `textos_do_estado` consulta o ORÇAMENTO DA MÁQUINA (`carregar_maquina()`) para
 #: decidir se a linha "limitado a 30% pelo orçamento" aparece. Com um degrau
@@ -86,6 +86,14 @@ from hefesto_dualsense4unix.app.telas.vibracao import (  # noqa: E402
 #: orçamento impõe é o mesmo 0,3 (`core.rumble.teto_do_orcamento`), e a função
 #: cala quando `pedido <= teto`. O desenho fica determinístico por CONSTRUÇÃO, e
 #: não por sorte da configuração de quem gerou.
+#:
+#: **E DESDE 07/09/2026 ELA RENDE ZERO LINHA, que é o desenho certo.** A única
+#: frase que esta cena acendia era a contagem de pedidos do jogo, e ela saiu por
+#: ordem dela (`app/telas/vibracao.SEM_A_CONTAGEM_DE_PEDIDOS`). Com a mesa
+#: quieta a faixa nasce VAZIA e o `.vib-estado:empty{display:none}` a esconde —
+#: não há mais linha de texto permanente sob a grade. A cena FICA porque é ela
+#: que prova, no gerador, que a faixa continua saindo do emissor do produto e
+#: não de prosa digitada aqui; a régua 8 do `_conferir` é quem cobra isso.
 CENA_DO_ESTADO = {"rumble_policy": "economia",
                   "rumble_ff": {"plays": 0, "nao_nulos": 0, "vpads": 1}}
 
@@ -849,33 +857,22 @@ CSS = """
   .vib-estado .est{display:flex;gap:8px;align-items:flex-start;
                    font-size:12px;line-height:1.4}
   .vib-estado .est .sinal{flex:0 0 auto;font-size:9px;line-height:1.9}
-  /* O MARCADOR DO `diz` NÃO É MAIS VERDE — 03/09/2026, e é defeito de
-     significado, não de gosto.
+  /* O TOM `diz` SAIU — 07/09/2026, com a única frase que o vestia. Ordem dela,
+     olhando o pé do quadro com os quatro na mesa: *"Vibração remove essa última
+     frase também."* Ver `app/telas/vibracao.SEM_A_CONTAGEM_DE_PEDIDOS`.
 
-     O QUE ESTAVA NA TELA DELA, fotografado com os dois controles na mesa:
+     A REGRA SAI JUNTO E NÃO É ZELO: `.est.diz` era o cinza da contagem de
+     pedidos, e nenhuma outra linha desta faixa usa esse tom. Cor que nada veste
+     é a metade órfã de uma promessa — o mesmo par que o
+     `portao_a_casa_sabe_e_o_produto_nao_faz` cobrou em 05/09, quando a faixa de
+     estado saiu e as cinco peças da trava ficaram sem chamador.
 
-       ● (verde)  não há gamepad virtual — nenhum jogo tem onde pedir vibração
-       ▲ (laranja) A intensidade não está chegando a jogo nenhum: falta o
-                   gamepad virtual…
-
-     Duas linhas coladas, o MESMO fato, e marcadores de sentido oposto. Nesta
-     casa o verde quer dizer CERTO em todas as abas — o `● 2 controles` do
-     cabeçalho, o selo `CERTO` da Conexões, o `✓ OK` da Sistema, o `Ligado` da
-     Navegação, o `CHEGAM` da Lançadores. Aqui ele estava por cima de uma má
-     notícia.
-
-     E O TOM NÃO PODE CARREGAR VALOR, porque as frases dele não têm uma valência
-     só: `rumble_actions.texto_dos_pedidos_de_vibracao` devolve, pelo mesmo
-     `diz`, tanto *"o jogo pediu vibração 12x"* quanto *"não há gamepad virtual"*
-     e *"pediu força zero em todas"*. Um marcador que afirma "bom" sobre um tom
-     de valência mista afirma errado metade das vezes.
-
-     A REGRA QUE SOBRA É A DOS OUTROS DOIS TONS: o marcador tem a cor do texto
-     dele (`alerta` laranja/laranja, `info` ciano/ciano). O `diz` era o único
-     que separava os dois, e agora HERDA — por isso não há linha nenhuma no
-     lugar desta. O contrato do tom já dizia isso desde 02/09
-     (`app/telas/vibracao.DIZ`: *"a cor normal do rótulo"*). */
-  .vib-estado .est.diz{color:var(--texto-suave)}
+     O QUE ESTA REGRA JÁ TINHA CUSTADO, e fica registrado porque foi medido: em
+     03/09 o marcador dela era VERDE, e a foto da tela dela mostrava
+     `● (verde) não há gamepad virtual` colado a `▲ (laranja) A intensidade não
+     está chegando a jogo nenhum` — o MESMO fato com marcadores de sentido
+     oposto. A cura foi o marcador herdar a cor do texto, que é o que os dois
+     tons restantes fazem (`alerta` laranja/laranja, `info` ciano/ciano). */
   .vib-estado .est.alerta{color:var(--orange)}
   .vib-estado .est.alerta .sinal{color:var(--orange)}
   /* O TERCEIRO TOM, e ele é o da janela estável: `#8be9fd` é o token de INFO da
@@ -2084,18 +2081,56 @@ def _conferir(doc):
                f'a coluna do {c["pref"]} não tem data-controle')
     exigir(corpo.count('data-controle="p') == len(MESA),
            f'as colunas endereçadas não são {len(MESA)}')
-    # 8. A LINHA DO ESTADO EXISTE E É A DO PRODUTO — 02/09/2026.
-    #    Não basta o bloco estar lá: o que ele mostra tem de ser BYTE A BYTE o
-    #    que `app/telas/vibracao` monta. É esta comparação que impede alguém de
-    #    "melhorar" a frase aqui e criar a segunda versão de um texto de tela —
-    #    o defeito que a regra de duas cópias existe para matar.
-    exigir('id="vib-estado"' in corpo, "a linha do estado sumiu da aba")
+    # 8. A FAIXA DE ESTADO EXISTE, NASCE VAZIA, E A CONTAGEM NÃO VOLTA —
+    #    02/09/2026, reescrita em 07/09/2026.
+    #
+    #    O QUE ELA COBRAVA ATÉ ONTEM: que o bloco mostrasse, byte a byte, o que
+    #    `app/telas/vibracao` monta — a régua que impede alguém de "melhorar" a
+    #    frase aqui e criar a segunda versão de um texto de tela.
+    #
+    #    O QUE MUDOU: a contagem de pedidos do jogo saiu por ordem dela
+    #    (*"Vibração remove essa última frase também"*, 07/09/2026), e era a
+    #    única linha que a `CENA_DO_ESTADO` acendia. Com a cena rendendo zero
+    #    linha, `html_do_estado(cena) in corpo` vira `"" in corpo` — VERDADEIRO
+    #    sempre, sobre nada. Uma régua que passa a medir o vazio é pior que
+    #    régua nenhuma, porque continua verde no relatório.
+    #
+    #    O QUE ELA COBRA AGORA, e as três metades:
+    #      a) a faixa continua na página (ela é o pouso do recibo do clique —
+    #         ver a régua 17, que confere os dois atributos);
+    #      b) ela nasce VAZIA no desenho, e o CSS que esconde o vazio existe:
+    #         sem `.vib-estado:empty` a faixa vira uma tira de 2 px de nada
+    #         debaixo da grade;
+    #      c) e a MORDIDA que LÊ O PRODUTO — *"com um estado em que a função da
+    #         contagem tem o que dizer, `textos_do_estado` não pode devolvê-la"*
+    #         — mora no `tests/unit/test_a_vibracao_diz_o_que_esta_acontecendo.
+    #         test_a_contagem_de_pedidos_do_jogo_nao_volta`, e NÃO aqui. A razão
+    #         é medida: para escrevê-la aqui eu teria de CHAMAR a função da GTK
+    #         neste arquivo, e o `check_paridade_gtk_html` lê isso como a dívida
+    #         FECHANDO (`divida-fechada`, regra 6) — o lado HTML voltando a fazer
+    #         o que declarou não fazer. Ele distingue prosa de uso
+    #         (`scripts/prosa_do_codigo.py`), então CITAR o nome é livre e
+    #         chamá-lo não é. A régua fica no teste, que está fora daquela
+    #         árvore; o que sobra aqui é estrutura, e as duas primeiras já
+    #         reprovam sozinhas se a linha voltar.
+    exigir('id="vib-estado"' in corpo, "a faixa de estado sumiu da aba")
     cena = textos_do_estado(CENA_DO_ESTADO)
-    exigir(len(cena) >= 1,
-           "a cena do estado ficou MUDA: o desenho não mostraria a linha, e "
-           "ninguém que abrisse o mockup saberia que ela existe")
-    exigir(html_do_estado(cena) in corpo,
-           "o texto da linha do estado não é o que o produto monta")
+    exigir(cena == [],
+           f"a cena do estado voltou a acender linha permanente: {cena} — a "
+           f"decisão dela de 07/09/2026 é que, com a mesa quieta, não há texto "
+           f"nenhum sob a grade")
+    exigir('data-hef-recado-classe="est recibo"></div>' in corpo,
+           "a faixa de estado não nasce vazia no desenho — com a mesa quieta "
+           "ela não tem o que dizer, e o que estiver ali é prosa cravada")
+    exigir(".vib-estado:empty{display:none}" in doc,
+           "sumiu a regra que esconde a faixa vazia: sem ela a faixa vira uma "
+           "tira de nada debaixo da grade")
+    _com_pedidos = {"rumble_policy": "economia",
+                    "rumble_ff": {"plays": 12, "nao_nulos": 12, "vpads": 1}}
+    exigir(textos_do_estado(_com_pedidos) == [],
+           f"a faixa voltou a falar sobre o que o JOGO pediu: "
+           f"{textos_do_estado(_com_pedidos)} — ela saiu por ordem dela em "
+           f"07/09/2026")
     # 9. O PUNHO QUE TREME TEM ENDEREÇO — 03/09/2026.
     #    Sem ele o `acesa` do SVG é a CENA, e ela fica acesa para sempre: a
     #    página publicada nasce com o motor direito do P1 e o esquerdo do P2

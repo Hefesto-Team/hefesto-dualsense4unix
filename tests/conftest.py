@@ -2760,3 +2760,71 @@ def binario_do_venv(nome: str) -> Path | None:
             if candidato.is_file() and os.access(candidato, os.X_OK):
                 return candidato
     return None
+
+
+# ---------------------------------------------------------------------------
+# SOM-DELA-01 (07/09/2026) — a suíte não carrega módulo no PipeWire DELA
+# ---------------------------------------------------------------------------
+#
+# MEDIDO, e o estrago foi real: no meio desta sessão a lista de som dela ganhou
+# **52 sinks fantasma** `hefesto_som_<hex6>`, todos com o mesmo rótulo
+# "Alto-falante do controle", ao lado das duas placas de DualSense de verdade.
+# O daemon dela não os publicou — `journalctl --user` não tem UMA linha de
+# `som_sink_publicado` —, logo quem os publicou foi um processo de TESTE
+# chamando `pactl load-module` de verdade.
+#
+# A porta é estreita e tem nome: `SinkVirtualPipeWire.__init__` resolve
+# `runner or _rodar`, então **todo nó construído sem runner injetado escreve no
+# servidor de som vivo**. Um subsystem iniciado num teste sobe uma THREAD que
+# reconcilia a cada 5 s; se o teste não o parar, a thread sobrevive ao
+# `monkeypatch` que a protegia — o dublê é desfeito no teardown e o laço volta
+# a falar com o `pactl` real.
+#
+# É a mesma família da TELA-DELA-01 lá em cima, com outro periférico: a máquina
+# de desenvolvimento é a máquina DELA, e a suíte não pode mexer no que ela está
+# usando. Lá era a tela; aqui é o som — e ela está com quatro DualSense na mesa.
+#
+# **Só as ESCRITAS são recusadas.** `list`, `info` e `get-default-sink`
+# continuam passando: ler o servidor não muda nada dela, e há teste que lê.
+#
+# ESCAPE, explícito e com nome: `HEFESTO_SOM_DE_VERDADE=1`, para o ensaio de
+# bancada que PRECISA publicar um nó — com a orelha dela do outro lado.
+_VERBOS_QUE_ESCREVEM_NO_SOM = ("load-module", "unload-module")
+
+
+@pytest.fixture(autouse=True, scope="session")
+def _nenhum_modulo_de_som_de_verdade() -> Iterator[None]:
+    """`pactl load-module`/`unload-module` da suíte não chega ao PipeWire dela.
+
+    Devolve `None` para as escritas — que é exatamente o que o `_rodar` real
+    devolve numa máquina sem `pactl`, o caso do CI. Quem quiser afirmar sobre o
+    argv continua injetando o próprio `runner`, como os testes já fazem; esta
+    fixture só fecha a porta de quem NÃO injetou nada.
+    """
+    try:
+        from hefesto_dualsense4unix.integrations import alto_falante_bt
+    except ModuleNotFoundError as erro:  # pragma: no cover — job leve do CI
+        # Mesma razão da `_nenhum_sysfs_vivo_na_varredura_de_vpad`: o portão
+        # "A casa sabe" roda com só o pytest instalado e nunca importa o
+        # produto. Sem o pacote não há o que blindar.
+        if (erro.name or "").split(".")[0] != "hefesto_dualsense4unix":
+            raise
+        yield
+        return
+
+    if os.environ.get("HEFESTO_SOM_DE_VERDADE") == "1":
+        yield
+        return
+
+    real = alto_falante_bt._rodar
+
+    def _sem_escrever(argv: list[str]) -> str | None:
+        if any(verbo in argv for verbo in _VERBOS_QUE_ESCREVEM_NO_SOM):
+            return None
+        return real(argv)
+
+    alto_falante_bt._rodar = _sem_escrever  # type: ignore[assignment]
+    try:
+        yield
+    finally:
+        alto_falante_bt._rodar = real  # type: ignore[assignment]

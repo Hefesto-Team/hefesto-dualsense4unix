@@ -97,7 +97,15 @@ def bancada() -> str:
 
 
 def test_as_tres_linhas_tem_lugar_no_desenho(bancada: str) -> None:
-    """Sem lugar, a frase do produto continua indo para o vazio."""
+    """Sem lugar, a frase do produto continua indo para o vazio.
+
+    LUGAR, E NÃO A TIRA — 07/09/2026. Duas das três continuam na tira de
+    `.estados`; `teclado-osk` mudou de endereço na PÁGINA (foi para o `?` da
+    "Função do teclado", por ordem dela: *"navegacao tem essas 3 frases aqui na
+    parte de baixo que quebram o layout"*). O que esta régua cobra é o que
+    sempre cobrou — que a frase do produto tenha ONDE cair, com o alvo `html` —,
+    e por isso ela não pergunta em que `<div>` o endereço está.
+    """
     for campo in AS_TRES:
         assert f'data-campo="{campo}" data-hef-alvo="html"' in bancada, (
             f"a linha `{campo}` não tem endereço na bancada. O alvo é `html` "
@@ -112,8 +120,10 @@ def test_as_tres_linhas_tem_lugar_no_desenho(bancada: str) -> None:
         "sem esta regra a tela mostra um travessão solto — que é ruído com "
         "cara de dado.")
     assert 'class="estados"' in bancada, (
-        "as três saíram da mesma fileira. Empilhadas, elas empurram a fileira "
-        "dos botões para FORA da janela de 757px — medido em 03/09.")
+        "a tira de estados sumiu. Empilhadas fora dela, as linhas empurram a "
+        "fileira dos botões para FORA da janela — medido em 03/09, e medido de "
+        "novo em 07/09: com três frases no pé, o quadro das opções ia de 215px "
+        "a 300,25px e a fileira terminava 41,25px fora.")
 
 
 def test_as_tres_sairam_da_lista_de_orfaos() -> None:

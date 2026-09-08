@@ -346,6 +346,28 @@ def test_a_palavra_mesa_nao_entra_no_cartao_do_externo() -> None:
 # 5. E EM REPOUSO A CENA QUE ELA APROVOU NÃO MUDA
 # ---------------------------------------------------------------------------
 def test_sem_externo_nenhum_as_duas_abas_devolvem_vazio() -> None:
-    """Zero aparelho, zero HTML — e a vaga em repouso mede zero pixel."""
-    for _aba, html in _html_das_duas([]):
-        assert html == ""
+    """Zero aparelho, zero pixel — e as duas abas dizem isso de jeitos DIFERENTES.
+
+    ATUALIZADO EM 07/09/2026, e a diferença é declarada, não descuido. A aba 01
+    passou a devolver `monta.NADA_A_DIZER` em vez de `""`, e a razão está no
+    dono (`a01_jogar._html_dos_externos`): o `escrever()` do piloto troca valor
+    VAZIO por `—` de propósito — é assim que ele apaga o que estava na tela — e
+    num `.ext-vaga`, que é `display:contents`, esse travessão virava um item
+    anônimo da grade: **um quinto assento**, na linha de baixo. O marcador é a
+    peça da casa para exatamente isso, e o CSS o esconde.
+
+    A ABA 08 AINDA DEVOLVE `""`, e isso é dívida RELATADA no mesmo docstring —
+    `a08_conexoes._html_dos_externos` é de outra frente. Este teste trava as
+    duas respostas SEPARADAS em vez de exigir que sejam iguais: enquanto a 08
+    não for curada, exigir igualdade só daria duas maneiras de ficar vermelho
+    pelo mesmo defeito conhecido — e, no dia em que ela for, é aqui que a
+    mudança aparece.
+    """
+    from hefesto_dualsense4unix.interface import monta
+
+    esperado = {"01": monta.NADA_A_DIZER, "08": ""}
+    for aba, html in _html_das_duas([]):
+        chave = "01" if "01" in str(aba) else "08"
+        assert html == esperado[chave], (
+            f"a aba {chave} devolveu {html!r} com a mesa sem externo nenhum; "
+            f"esperado {esperado[chave]!r}")

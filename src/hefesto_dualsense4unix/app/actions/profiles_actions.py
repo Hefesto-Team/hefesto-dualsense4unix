@@ -217,6 +217,7 @@ def frase_do_radio_fragil_no_modo(kind: object, state: Any) -> str | None:
 _MODE_FLAVOR_ITEMS: list[tuple[str, str]] = [
     ("dualsense", "DualSense (botões PlayStation)"),
     ("xbox", "Xbox 360"),
+    ("nintendo", "Nintendo Pro (botões da Nintendo)"),
 ]
 
 # --- MASCARA-QUE-GRUDA-01 (22/08/2026): a etiqueta de preço fica VISÍVEL -----
@@ -268,14 +269,20 @@ TEXTO_MASCARA_DUALSENSE_VALIDADA: str = (
     "controle, troque para Xbox 360 e nos conte."
 )
 
-#: E o que a tela diz quando NENHUM dos dois está marcado.
+#: E o que a tela diz quando NENHUMA delas está marcada.
 #:
 #: Não é um estado de erro: é o que os presets de gênero passam a shipar e o
 #: que um perfil novo nasce sendo (`gamepad_flavor: null`). A frase existe para
-#: o vazio não parecer defeito — sem ela, dois botões apagados leem como "a
+#: o vazio não parecer defeito — sem ela, os botões apagados leem como "a
 #: janela não carregou".
+#:
+#: FATO SUBSTITUÍDO — 07/09/2026: a frase dizia *"nenhum dos DOIS"*, e as
+#: máscaras passaram a ser TRÊS nesta leva. Um número na tela que conta errado
+#: é a mesma dívida que este arquivo já pagou com o `or "xbox"` — e a correção
+#: aqui é não contar: quem sabe quantas são é o catálogo, e a frase não precisa
+#: do número para dizer o que faz.
 TEXTO_MASCARA_SEM_ESCOLHA: str = (
-    "Sem marcar nenhum dos dois, este perfil não mexe na máscara: ativar ele "
+    "Sem marcar nenhuma delas, este perfil não mexe na máscara: ativar ele "
     "mantém a que estiver valendo. É assim que os perfis de gênero vêm."
 )
 
@@ -286,19 +293,37 @@ def texto_do_preco_da_mascara(flavor: object) -> str:
     Une as três respostas honestas do produto num só lugar, para a aba não ter
     duas opiniões sobre a mesma escolha:
 
-    * ``"xbox"`` — o preço MEDIDO, reusado de `texto_do_custo_da_mascara`;
     * ``"dualsense"`` — o que se ganha, e o endereço da validação de julho;
+    * qualquer máscara COM preço — o preço MEDIDO, perguntado ao dono
+      (`texto_do_custo_da_mascara`), e não a uma lista digitada aqui;
     * qualquer outra coisa (inclusive ``None``) — o que "sem escolha" faz.
 
     O ramo final trata `None` e valor desconhecido do MESMO jeito de propósito:
     um payload estranho não pode virar afirmação sobre giroscópio, que é a
     família de erro que o `or "xbox"` desta aba já causou.
+
+    DEFEITO MEDIDO E CURADO — 07/09/2026, e ele estava VIVO na tela. Esta
+    função tinha `if flavor == "xbox"` digitado, e por isso a máscara
+    **Nintendo Pro**, que entrou no catálogo nesta leva, caía no ramo final:
+    com ela marcada a linha dizia *"Sem marcar nenhum dos dois, este perfil não
+    mexe na máscara"* — negando a escolha que ela acabara de fazer, e calando
+    os CINCO preços da máscara nova. Não era ausência de frase; era a frase
+    oposta, afirmada.
+
+    E a régua guardava o defeito: `test_payload_desconhecido_nao_vira_afirmacao
+    _sobre_giroscopio` tinha `"nintendo"` DIGITADO na lista de lixo, ao lado de
+    `0`, `[]` e `{}` — a mesma forma que esta casa já nomeou tantas vezes, *a
+    régua digitava o que devia LER*. As duas foram curadas juntas.
+
+    A CURA NÃO É UM `if` A MAIS: quem sabe se uma máscara tem preço é
+    `texto_do_custo_da_mascara`, que devolve `""` para quem não tem e para
+    valor que não reconhece. Perguntando a ele, a quarta máscara do catálogo
+    herda a linha no dia em que nascer, sem uma edição aqui — que é a única
+    forma de esta divergência não voltar.
     """
-    if flavor == "xbox":
-        return texto_do_custo_da_mascara("xbox")
     if flavor == "dualsense":
         return TEXTO_MASCARA_DUALSENSE_VALIDADA
-    return TEXTO_MASCARA_SEM_ESCOLHA
+    return texto_do_custo_da_mascara(flavor) or TEXTO_MASCARA_SEM_ESCOLHA
 
 # LEIGO-06: a coluna "Quando usar" mostrava o valor CRU do schema ("any",
 # "criteria") — o nome do campo, não uma resposta. `MatchAny` é o fallback que
@@ -2935,13 +2960,21 @@ class ProfilesActionsMixin(CaronaDoWrapperMixin):
             )
         )
 
+        from hefesto_dualsense4unix.daemon.subsystems.external_mask import (
+            mascaras_validas,
+        )
+
         def _on_state(result: Any) -> bool:
             try:
                 if not isinstance(result, dict):
                     return False
                 gamepad = result.get("gamepad_emulation")
                 flavor = (gamepad or {}).get("flavor") if isinstance(gamepad, dict) else None
-                if flavor not in ("dualsense", "xbox"):
+                # A LISTA TEM DONO, e não é esta linha (07/09/2026). Ela era
+                # `("dualsense", "xbox")` digitada, e por isso a máscara nova
+                # chegava do daemon e o editor a descartava CALADO — o seletor
+                # ficava mostrando a anterior, que é perda de gesto dela.
+                if flavor not in mascaras_validas():
                     return False
                 seletor = getattr(self, "_mode_flavor_selector", None)
                 kind_atual = getattr(self, "_mode_kind_selector", None)

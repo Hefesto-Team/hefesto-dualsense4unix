@@ -827,7 +827,11 @@ def test_a_frase_da_faixa_e_recibo_e_nao_alerta(a05, bancada: str) -> None:
     `.vib-estado .est.recibo` com `--orange` no `aba05.CSS` — este caso reprova
     nas duas.
     """
-    assert a05.TOM_DO_RECIBO not in (_tela.DIZ, _tela.ALERTA, _tela.INFO), (
+    # ERAM TRÊS TONS COM DONO ATÉ 07/09/2026. O `diz` morreu com a contagem de
+    # pedidos do jogo, que era a única frase que o vestia — ver
+    # `app/telas/vibracao.SEM_A_CONTAGEM_DE_PEDIDOS`. A lista é lida do módulo e
+    # não digitada aqui: um quarto tom que nasça lá entra nesta guarda sozinho.
+    assert a05.TOM_DO_RECIBO not in (_tela.ALERTA, _tela.INFO), (
         f"o recibo passou a usar um tom que já tem dono ({a05.TOM_DO_RECIBO!r})"
         f" — o `alerta` é laranja, e alerta sobre um clique que gravou ensina "
         f"que o botão falha")

@@ -132,12 +132,38 @@ def test_a_jogar_escreve_um_cartao_por_externo() -> None:
 
 
 def test_a_jogar_apaga_a_secao_quando_nao_ha_externo() -> None:
-    """Vazio é `""` — e `.ressalva:empty` do esqueleto o faz medir ZERO.
+    """Vazio é o MARCADOR `.nada` — e `""` deixava um travessão solto na grade.
 
     Uma frase de "nenhum controle externo" acusaria ausência, e nenhuma das duas
-    abas acusa: a lista vazia é *"não há"* **e** *"ainda não perguntei"*.
+    abas acusa: a lista vazia é *"não há"* **e** *"ainda não perguntei"*. O que
+    mudou em 07/09/2026 é COMO se diz "nada".
+
+    **O DEFEITO ESTAVA NA TELA DELA, e foi fotografado:** com quatro DualSense na
+    mesa e nenhum externo, a aba Jogar mostrava um `—` solto logo abaixo dos
+    quatro cartões. `escrever()` troca valor vazio por travessão de propósito
+    (`hefesto_vivo.py`), a `.ext-vaga` é `display:contents`, e esse travessão
+    virava um item anônimo da grade `.pecas` — um quinto assento com um traço
+    dentro. O `<i class="nada">` da página não salvava: o alvo `html` troca o
+    miolo inteiro na primeira pintura.
+
+    A MORDIDA: devolva `""` em qualquer um dos DOIS `return` de
+    `_html_dos_externos` e esta régua reprova. **São dois de propósito** — a
+    saída curta (`if not ctx.externos`) é o caminho que a máquina dela percorre,
+    e curar só o de baixo deixa o travessão exatamente onde ela o viu. Foi o que
+    aconteceu na primeira volta desta cura.
     """
-    assert jogar.pacote(_ctx([]))["externos"] == ""
+    import monta
+
+    vazio = jogar.pacote(_ctx([]))["externos"]
+    assert vazio == monta.NADA_A_DIZER, (
+        f"a Jogar sem externo devolveu {vazio!r} — com `''` o piloto escreve "
+        f"`—` e a grade dos assentos ganha um quinto item com um traço dentro")
+    # E ELE MEDE ZERO: o CSS da aba esconde o marcador dentro da `.ext-vaga`.
+    # Sem esta regra o `<i>` estaria lá e continuaria não mostrando nada — mas
+    # por acidente de elemento vazio, não por decisão.
+    assert ".ext-vaga > .nada{display:none}" in (
+        INTERFACE / "aba01.py").read_text(encoding="utf-8"), (
+        "a regra que esconde o marcador saiu do CSS da aba 01")
 
 
 def test_a_jogar_avisa_a_armadilha_do_driver_so_no_nintendo() -> None:

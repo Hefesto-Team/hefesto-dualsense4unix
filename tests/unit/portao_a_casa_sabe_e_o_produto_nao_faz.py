@@ -1168,6 +1168,35 @@ _NAO_E_PROMESSA: dict[str, str] = {
 #: No dia em que o caminho nascer, a entrada deixa de bater com a árvore e
 #: ``test_a_lista_de_lacunas_nao_envelhece_calada`` cobra que ela seja apagada.
 _SEM_CAMINHO_HOJE: dict[str, str] = {
+    # A COLUNA ATENÇÃO PERDEU A TELA E AS FONTES FICARAM — 07/09/2026.
+    #
+    # Ordem dela: *"em jogar remover essa seção do atenção, nenhum aviso esse —
+    # deixar só o reconectar controles."* A faixa saiu da aba Jogar, e com ela
+    # os quatro endereços (`atencao-conta`, `aviso-selo`, `aviso-texto`,
+    # `aviso-vivo`) saíram de `a01_jogar.DA_PAGINA` — endereço emitido sem
+    # elemento onde pousar é o órfão que o `casamento.py` acusa.
+    #
+    # O QUE ELA NÃO MANDOU SAIR SÃO AS ONZE FONTES. Medido antes de apagar: das
+    # onze de `a01_jogar._avisos`, **só uma** tem segunda casa publicada — o
+    # exame da mesa, que vem da aba Conexões. As outras DEZ chegavam à tela só
+    # por essa faixa, e na máquina dela havia UMA acesa no instante da medição
+    # (`home_actions.texto_do_cadeado_cego`).
+    #
+    # ESTA É A DÍVIDA, e ela está declarada em vez de escondida atrás de um
+    # underscore: `coluna_de_atencao` é a porta por onde a próxima frente pega o
+    # canal pronto. Sem ela, quem for dar casa às dez reescreve de zero as onze
+    # chamadas, os quatro `try` próprios e a escada de gravidade.
+    "interface/pacotes/a01_jogar.py::coluna_de_atencao":
+        "07/09/2026 — o canal dos avisos ficou sem tela por ordem dela, e as "
+        "dez fontes que só ele publicava estão caladas no produto. O caminho se "
+        "perde em UM ponto: nenhuma das dez páginas tem hoje um `data-campo` "
+        "onde a linha pouse. O destino proposto é a aba 09, Sistema — é o que a "
+        "própria frase viva manda ('A aba Sistema diz por quê'), e a página já "
+        "publica uma lista de achados com selo, glifo e frase (`exame-lista` / "
+        "`exame-contagem`, de `a09_sistema`), onde as dez cabem sem peça de tela "
+        "nova. Fecha-se chamando esta função de `a09_sistema.pacote` e "
+        "acrescentando as linhas à lista — `aba09.py` e `a09_sistema.py` são de "
+        "outra posse, e por isso a proposta não virou entrega no mesmo dia.",
     # O TESTAR VIROU ESTADO E A TELA AINDA NÃO O LÊ — 07/09/2026.
     #
     # Pedido dela, com os quatro na bancada: *"o botão Testar tem que ficar em
@@ -1257,6 +1286,100 @@ _SEM_CAMINHO_HOJE: dict[str, str] = {
         "próprio `subsystems/__init__.py` avisa que acrescentar à lista NÃO liga "
         "nada, e foi assim que o `BtMicSubsystem` nasceu órfão em 25/07/2026. "
         "06/09/2026."
+    ),
+    'integrations/alto_falante_bt.py::BombaDeSomPeloRadio': (
+        "A BOMBA, 07/09/2026 — o LAÇO que faltava entre o encoder e o fio: lê PCM, "
+        "codifica, monta o degrau e escreve. Ela nasce SECA (`seco=True` é o "
+        "padrão) e o único chamador que a molha é o ensaio de bancada, que recusa "
+        "sem `--eu-estou-ouvindo`. MEDIDO no mesmo dia, em modo seco e sem tocar "
+        "aparelho nenhum: 2.660 reports/s de montagem contra os 50/s do degrau "
+        "`0x39`, 26,7 KiB/s de banda por arranjo. ONDE O CAMINHO SE PERDE: o "
+        "produto não pode chamar isto sem ESCOLHER um arranjo, e a escolha é DELA — "
+        "as duas fontes publicadas divergem sobre onde o áudio mora dentro do "
+        "`0x39` e uma cita a outra. O `AltoFalanteSubsystem` também continua fora "
+        "do `run()` de `daemon/lifecycle.py` e da lista de "
+        "`daemon/subsystems/__init__.py`. O QUE FECHA: o ensaio 1 da "
+        "MESA-DE-QUATRO-01 rodando com a orelha dela "
+        "(`scripts/ensaios/o_som_que_sai.py --escrever --eu-estou-ouvindo`), o "
+        "veredito dela no `docs/data/ensaios.csv`, e só então o arranjo vencedor "
+        "vira caminho de produção. 07/09/2026."
+    ),
+    'integrations/alto_falante_bt.py::ContagemDaBomba': (
+        "A BOMBA, 07/09/2026 — o que a bomba contou, e o campo se chama "
+        "`escritas_aceitas_pelo_kernel` de propósito: `os.write()` devolve sucesso "
+        "quando o KERNEL aceita, nunca quando o firmware obedece. A ressalva viaja "
+        "colada ao número porque é ele que alguém citaria para concluir que a ponte "
+        "funciona — a FALÁCIA DO CANAL QUE RESPONDE. ONDE O CAMINHO SE PERDE: o "
+        "produto não pode chamar isto sem ESCOLHER um arranjo, e a escolha é DELA — "
+        "as duas fontes publicadas divergem sobre onde o áudio mora dentro do "
+        "`0x39` e uma cita a outra. O `AltoFalanteSubsystem` também continua fora "
+        "do `run()` de `daemon/lifecycle.py` e da lista de "
+        "`daemon/subsystems/__init__.py`. O QUE FECHA: o ensaio 1 da "
+        "MESA-DE-QUATRO-01 rodando com a orelha dela "
+        "(`scripts/ensaios/o_som_que_sai.py --escrever --eu-estou-ouvindo`), o "
+        "veredito dela no `docs/data/ensaios.csv`, e só então o arranjo vencedor "
+        "vira caminho de produção. 07/09/2026."
+    ),
+    'integrations/alto_falante_bt.py::argv_do_gravador': (
+        "A BOMBA, 07/09/2026 — o comando que lê PCM cru do monitor de um nó "
+        "(`pw-record`/`parec`, s16le 48 kHz estéreo, sem conversão nossa no meio). "
+        "É o caminho de REGIME; o ensaio de bancada usa fonte sintética de "
+        "propósito, para ter o menor número de coisas entre o timbre e o fio. ONDE "
+        "O CAMINHO SE PERDE: o produto não pode chamar isto sem ESCOLHER um "
+        "arranjo, e a escolha é DELA — as duas fontes publicadas divergem sobre "
+        "onde o áudio mora dentro do `0x39` e uma cita a outra. O "
+        "`AltoFalanteSubsystem` também continua fora do `run()` de "
+        "`daemon/lifecycle.py` e da lista de `daemon/subsystems/__init__.py`. O QUE "
+        "FECHA: o ensaio 1 da MESA-DE-QUATRO-01 rodando com a orelha dela "
+        "(`scripts/ensaios/o_som_que_sai.py --escrever --eu-estou-ouvindo`), o "
+        "veredito dela no `docs/data/ensaios.csv`, e só então o arranjo vencedor "
+        "vira caminho de produção. 07/09/2026."
+    ),
+    'integrations/alto_falante_bt.py::escritor_de_hidraw': (
+        "A BOMBA, 07/09/2026 — o escritor existe para que a bomba NÃO conheça o "
+        "hidraw: quem abre o nó (e decide entre broker e `os.open`) é o ensaio, que "
+        "é onde moram a recusa por transporte e a conferência do MAC. ONDE O "
+        "CAMINHO SE PERDE: o produto não pode chamar isto sem ESCOLHER um arranjo, "
+        "e a escolha é DELA — as duas fontes publicadas divergem sobre onde o áudio "
+        "mora dentro do `0x39` e uma cita a outra. O `AltoFalanteSubsystem` também "
+        "continua fora do `run()` de `daemon/lifecycle.py` e da lista de "
+        "`daemon/subsystems/__init__.py`. O QUE FECHA: o ensaio 1 da "
+        "MESA-DE-QUATRO-01 rodando com a orelha dela "
+        "(`scripts/ensaios/o_som_que_sai.py --escrever --eu-estou-ouvindo`), o "
+        "veredito dela no `docs/data/ensaios.csv`, e só então o arranjo vencedor "
+        "vira caminho de produção. 07/09/2026."
+    ),
+    'integrations/alto_falante_bt.py::fonte_de_arquivo': (
+        "A BOMBA, 07/09/2026 — fonte de PCM que lê de um descritor já aberto, até "
+        "COMPLETAR o pedido. Um `read()` de pipe devolve o que já chegou, e um read "
+        "por report cortaria todo quadro em tamanho variável: a libopus recusaria "
+        "cada um e a bomba contaria 100% de recusa sobre uma fonte sã. ONDE O "
+        "CAMINHO SE PERDE: o produto não pode chamar isto sem ESCOLHER um arranjo, "
+        "e a escolha é DELA — as duas fontes publicadas divergem sobre onde o áudio "
+        "mora dentro do `0x39` e uma cita a outra. O `AltoFalanteSubsystem` também "
+        "continua fora do `run()` de `daemon/lifecycle.py` e da lista de "
+        "`daemon/subsystems/__init__.py`. O QUE FECHA: o ensaio 1 da "
+        "MESA-DE-QUATRO-01 rodando com a orelha dela "
+        "(`scripts/ensaios/o_som_que_sai.py --escrever --eu-estou-ouvindo`), o "
+        "veredito dela no `docs/data/ensaios.csv`, e só então o arranjo vencedor "
+        "vira caminho de produção. 07/09/2026."
+    ),
+    'integrations/alto_falante_bt.py::fonte_com_ritmo': (
+        "A BOMBA, 07/09/2026 — dá RITMO a uma fonte que não tem, com prazo absoluto "
+        "por quadro em vez de sono fixo (sono fixo soma o tempo de codificar e "
+        "escrever, e a deriva cresce sem teto). MEDIDO antes de qualquer escrita: "
+        "sem ela, a fonte sintética do ensaio jogaria 2.660 reports/s num degrau "
+        "que pede 50/s — 53 vezes o necessário, num rádio que carrega os outros "
+        "três controles dela. Não seria ensaio, seria inundação. ONDE O CAMINHO SE "
+        "PERDE: o produto não pode chamar isto sem ESCOLHER um arranjo, e a escolha "
+        "é DELA — as duas fontes publicadas divergem sobre onde o áudio mora dentro "
+        "do `0x39` e uma cita a outra. O `AltoFalanteSubsystem` também continua "
+        "fora do `run()` de `daemon/lifecycle.py` e da lista de "
+        "`daemon/subsystems/__init__.py`. O QUE FECHA: o ensaio 1 da "
+        "MESA-DE-QUATRO-01 rodando com a orelha dela "
+        "(`scripts/ensaios/o_som_que_sai.py --escrever --eu-estou-ouvindo`), o "
+        "veredito dela no `docs/data/ensaios.csv`, e só então o arranjo vencedor "
+        "vira caminho de produção. 07/09/2026."
     ),
     'integrations/alto_falante_bt.py::SinkVirtualPipeWire': (
         "SOM-QUE-SAI-01, 06/09/2026 — o `module-null-sink` de UM controle, com o "
@@ -1769,32 +1892,32 @@ _SEM_CAMINHO_HOJE: dict[str, str] = {
         "caminho faltando: só a régua a chama. Fecha junto com ela, na recusa em "
         "tempo de execução. MEDIDO em 01/09/2026."
     ),
-    # `mapa.py::canal` SAIU DAQUI EM 06/09/2026, e o motivo NÃO é que alguém
-    # passou a chamá-la — **é o ponto cego da referência PLANA, e ele é o preço
-    # declarado no cabeçalho de `_Referencias`**: literal de texto conta.
+    # `mapa.py::canal` VOLTOU EM 07/09/2026, pela porta da frente, e o dia que
+    # a nota de 06/09 marcava chegou exatamente como ela previa.
     #
-    # O QUE ACONTECEU: a `CONTROLES-OS-TRES-SELOS-01` fez a aba Controles
-    # importar `app/fatos_do_mapa.py` — a tabela GERADA do mesmo CSV, que é a que
-    # `validar-fala-de-tela.py` compara com as `Fala` da tela. Aquele arquivo é
-    # 308 entradas com a chave `'canal'` em cada uma (`'canal': 'hidraw'`), e uma
-    # delas basta: o literal vira `plana`, a `plana` casa com QUALQUER símbolo de
-    # mesmo nome, e a lápide passou a "ter caminho" sem uma linha de chamada.
+    # A NOTA DIZIA: *"volta para esta lista no dia em que alguém tirar o
+    # `fatos_do_mapa` do fecho da interface"*. A entrada saíra por um PONTO CEGO,
+    # não por cura — a aba Controles importava `app/fatos_do_mapa.py`, 308
+    # entradas com a chave `'canal'` em cada uma, e o literal de texto casava com
+    # QUALQUER símbolo de mesmo nome pela referência PLANA. A lápide passou a
+    # "ter caminho" sem uma linha de chamada.
     #
-    # **NINGUÉM CHAMA `mapa.canal` HOJE.** A lacuna que a lápide descrevia
-    # continua aberta: a Vibração e os Gatilhos ainda não apagam o que o
-    # transporte de agora não aciona. O que mudou foi a régua enxergar caminho
-    # onde não há.
+    # O QUE MUDOU: a janela GTK saiu inteira em 06/09 e levou junto
+    # `app/actions/config/secao_controles.py` para fora do alcance dos
+    # `_PONTOS_DE_ENTRADA`. Sem ele, o literal sumiu do fecho e a régua voltou a
+    # enxergar o que sempre foi verdade — NINGUÉM CHAMA `mapa.canal`.
     #
-    # POR QUE A ENTRADA SAI EM VEZ DE FICAR: enquanto ela estiver aqui, o
-    # `test_nenhuma_lapide_sobreviveu_a_propria_cura` fica VERMELHO — e um
-    # portão vermelho por um ponto cego dele mesmo é pior que a lápide ausente:
-    # ele para de medir as outras quarenta.
-    #
-    # O QUE FICA NO LUGAR É ESTA NOTA, e a régua que ela pede está escrita:
-    # `interface/pacotes/mapa.py::canal` volta para esta lista no dia em que
-    # alguém tirar o `fatos_do_mapa` do fecho da interface — e volta pela porta
-    # da frente, porque a outra metade do portão (`toda promessa tem registro`)
-    # cobra registro de todo símbolo sem caminho.
+    # A LACUNA NUNCA FECHOU, e é a mesma de 01/09: a Vibração e os Gatilhos ainda
+    # não apagam o que o transporte de agora não aciona. Fecha com a `confere` e
+    # a `da_familia`, abaixo, que são as outras duas metades do mesmo gesto.
+    "interface/pacotes/mapa.py::canal": (
+        "O que o mapa de canais diz sobre uma peça naquele transporte "
+        "(interface/pacotes/mapa.py:48) — a fonte de endereço que impede o valor "
+        "de tela inventado. Existe para a tela PERGUNTAR, e nenhuma aba pergunta "
+        "ainda. Fecha quando a Vibração e os Gatilhos apagarem o que o transporte "
+        "de agora não aciona. MEDIDO em 01/09/2026; a saída de 06/09 foi ponto "
+        "cego da referência plana, não cura — ver a nota acima."
+    ),
     "interface/pacotes/mapa.py::confere": (
         "As chaves que NÃO existem no mapa (interface/pacotes/mapa.py:90) — a "
         "recusa a inventar valor de tela sem linha no CSV, que o docstring do "
@@ -4438,17 +4561,23 @@ class TestOPortaoMorde:
         produto.
         """
         soltas = promessas_sem_caminho()
-        assert len(soltas) < 135, (
+        assert len(soltas) < 150, (
             f"a varredura acusou {len(soltas)} promessas soltas — a régua "
             "quebrou. MEDIDO em 22/08/2026: 60 com a régua de alcance (eram 33 "
             "com a régua plana), e a regra ingênua ('chamador fora do próprio "
-            "arquivo') dava 846. REMEDIDO em 24/08/2026 (ONDA0-Z7): 72 na "
-            "árvore de então (já perto do teto antigo de 75, sem ninguém "
-            "notar — nota para quem coordena) e 76 depois das cinco primitivas "
-            "desta sprint, todas DECLARADAS em `_SEM_CAMINHO_HOJE` com o gancho "
-            "de quem as liga. O teto sobe para 80: folga sobre o crescimento "
-            "normal do registro, não sobre um scanner quebrado — se ele voltar "
-            "a subir sem `_SEM_CAMINHO_HOJE` crescer junto, É a régua quebrando."
+            "arquivo') dava 846.\n"
+            "TETO DE 150, REMEDIDO em 07/09/2026, e o que autoriza subir NÃO é "
+            "o número — é a razão dele: 135 soltas, 134 DECLARADAS, e ZERO "
+            "lápide declarada que já tem caminho. Registro e varredura andam "
+            "juntos, casa a casa, que é a única forma de um teto que sobe não "
+            "ser um teto que desistiu.\n"
+            "DE ONDE VEIO O CRESCIMENTO: a janela GTK saiu inteira em 06/09 "
+            "(`D-0609-GTK-LEVA-INTEIRA`) e levou os CHAMADORES junto. Símbolo "
+            "que era chamado de dentro dela virou solto sem ninguém escrever "
+            "uma linha — o produto encolheu, a lista cresceu, e as duas coisas "
+            "são a MESMA.\n"
+            "A REGRA CONTINUA: se este número subir sem `_SEM_CAMINHO_HOJE` "
+            "crescer junto, É a régua quebrando, não a casa."
         )
         # O fecho de import é a metade que mais engana quando quebra: se ele
         # encolher, o portão passa a acusar quem está certo, e a acusação sobe

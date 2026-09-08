@@ -73,7 +73,15 @@ class TestRotulosDoEditorDeModo:
             "gamepad",
             "native",
         ]
-        assert [i for i, _ in _MODE_FLAVOR_ITEMS] == ["dualsense", "xbox"]
+        # 07/09/2026: a terceira máscara entrou NO FIM, de propósito — a
+        # ordem das duas primeiras é comparada entre as três superfícies pelo
+        # `test_vocabulario_das_quatro_superficies`, e mexer nela seria mudar
+        # a tela dela sem gesto dela.
+        assert [i for i, _ in _MODE_FLAVOR_ITEMS] == [
+            "dualsense",
+            "xbox",
+            "nintendo",
+        ]
 
     def test_aparencia_nao_promete_vibracao_exclusiva(self) -> None:
         """Com o vpad uhid (SPRINT-UHID-VPAD-01) as duas máscaras vibram; o

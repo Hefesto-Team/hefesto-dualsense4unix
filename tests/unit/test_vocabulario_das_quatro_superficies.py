@@ -200,15 +200,20 @@ def test_a_janela_nao_tem_duas_listas_de_modo_divergentes() -> None:
 
 
 # ---------------------------------------------------------------------------
-# Conceito 2 — as duas máscaras do gamepad virtual
+# Conceito 2 — as TRÊS máscaras do gamepad virtual (a terceira, 07/09/2026)
 # ---------------------------------------------------------------------------
 
-def test_as_duas_mascaras_tem_as_mesmas_frases_nas_tres_listas() -> None:
+def test_as_mascaras_tem_as_mesmas_frases_nas_tres_listas() -> None:
     """As frases (não a ordem — a ordem está no livro de divergências, D1).
 
-    Três listas dizem as mesmas duas máscaras: a aba Início, a aba Perfis e o
+    Três listas dizem as mesmas máscaras: a aba Início, a aba Perfis e o
     ``mode_block`` do applet. Renomear ``Xbox 360`` ou
     ``DualSense (botões PlayStation)`` em uma só reprova aqui.
+
+    NOTA DATADA — 07/09/2026: eram DUAS, e a régua as digitava. A máscara
+    **Nintendo Pro** nasceu por ordem dela e teve de entrar nas três listas —
+    inclusive no ``app.rs``, que é a superfície que ninguém lembra, e que só
+    apareceu porque esta régua reprovou. É a razão de ela existir.
     """
     inicio = set(_rotulos_de_pares(_bloco(_JANELA_INICIO, "_FLAVOR_ITEMS = [")))
     perfis = set(
@@ -216,9 +221,11 @@ def test_as_duas_mascaras_tem_as_mesmas_frases_nas_tres_listas() -> None:
     )
     applet = set(_rotulos_de_pares(_bloco(_APPLET, "let flavors = [")))
 
-    assert inicio == {"Xbox 360", "DualSense (botões PlayStation)"}, (
-        f"a aba Início mudou o nome de uma máscara: {sorted(inicio)}"
-    )
+    assert inicio == {
+        "Xbox 360",
+        "DualSense (botões PlayStation)",
+        "Nintendo Pro (botões da Nintendo)",
+    }, f"a aba Início mudou o nome de uma máscara: {sorted(inicio)}"
     assert inicio == perfis == applet, (
         "as máscaras têm nomes diferentes conforme a superfície.\n"
         f"  aba Início:  {sorted(inicio)}\n"
@@ -233,13 +240,28 @@ def test_as_duas_mascaras_tem_as_mesmas_frases_nas_tres_listas() -> None:
 #: a janela contra si mesma, com o applet do lado de uma das duas metades.
 #: Quem decide a ordem canônica é a E1 daquela sprint, com o painel aberto na
 #: frente dela — não este teste.
+#: NOTA DATADA — 07/09/2026: a máscara **Nintendo Pro** entrou nas três listas
+#: e por isso os três valores cresceram. Ela entrou NO FIM das três, de
+#: propósito: a D1 é sobre a ordem das DUAS primeiras, e essa divergência tem
+#: de continuar medindo o que media  # (noqa-acento: verbo medir, imperfeito)
+#: — acrescentar no meio a apagaria por acidente, sem passar pela E1, que é
+#: gesto dela.
 _ORDEM_DAS_MASCARAS_MEDIDA_EM_01_08 = {
-    "janela/Início (home_actions._FLAVOR_ITEMS)": ["Xbox 360", "DualSense (botões PlayStation)"],
+    "janela/Início (home_actions._FLAVOR_ITEMS)": [
+        "Xbox 360",
+        "DualSense (botões PlayStation)",
+        "Nintendo Pro (botões da Nintendo)",
+    ],
     "janela/Perfis (profiles_actions._MODE_FLAVOR_ITEMS)": [
         "DualSense (botões PlayStation)",
         "Xbox 360",
+        "Nintendo Pro (botões da Nintendo)",
     ],
-    "applet (app.rs, let flavors)": ["DualSense (botões PlayStation)", "Xbox 360"],
+    "applet (app.rs, let flavors)": [
+        "DualSense (botões PlayStation)",
+        "Xbox 360",
+        "Nintendo Pro (botões da Nintendo)",
+    ],
 }
 
 

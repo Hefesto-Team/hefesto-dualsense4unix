@@ -2452,7 +2452,7 @@ def teclado(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
     *"'Só dentro do jogo' já existe, e é o `suppress_desktop_emulation`"*. **Os
     dois estão invertidos**, e a medição é de três leituras:
 
-    1. `Profile.suppress_desktop_emulation` (`profiles/schema.py:1176`) diz, no
+    1. `Profile.suppress_desktop_emulation` (`profiles/schema.py:1190`) diz, no
        próprio comentário: *"True = ativar o perfil suprime a emulação de
        mouse/teclado no desktop (jogos de GAMEPAD que leem o controle cru)"*.
        O perfil é ativado quando o jogo casa; logo a supressão vale **durante o

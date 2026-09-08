@@ -164,6 +164,7 @@ _MODE_ITEMS = [
 _FLAVOR_ITEMS = [
     ("xbox", "Xbox 360"),
     ("dualsense", "DualSense (botões PlayStation)"),
+    ("nintendo", "Nintendo Pro (botões da Nintendo)"),
 ]
 
 _MODE_DESCRIPTIONS = {
@@ -418,6 +419,58 @@ TEXTO_CUSTO_MASCARA_XBOX: Final[str] = (
 )
 
 
+#: O preço da máscara Nintendo Pro (07/09/2026), e ele é MAIOR que o do Xbox:
+#: os três buracos daquela mais um quarto que é dela sozinha.
+#:
+#: O QUARTO É MEDIDO, não suposto. O Pro Controller **não tem gatilho
+#: analógico**: o `hid-nintendo` registra `ABS_X/Y/RX/RY` e mais nada
+#: (`joycon_config_left_stick`/`_right_stick`), e ZL/ZR são os botões
+#: `BTN_TL2`/`BTN_TR2` (`procon_button_mappings`, lido no fonte C em
+#: `assets/dkms/hid-nintendo/hid-nintendo.c`). Imitar o aparelho obriga a
+#: imitar o buraco: sob esta máscara o L2/R2 chega ao jogo como ligado ou
+#: desligado, sem meio-termo.
+#:
+#: Giroscópio, acelerômetro e touchpad caem pelo mesmo motivo do Xbox — o
+#: aparelho imitado não os tem por onde entregar. Vibração continua: o Pro tem
+#: `FF_RUMBLE` de verdade (`joycon_config_rumble`), e a SDL confirmou o vpad
+#: com `SDL_GameControllerHasRumble = 1` (medido em 07/09/2026).
+#:
+#: E HÁ UM QUINTO, que esta frase escondeu até 07/09/2026 e que é PIOR que os
+#: outros quatro porque *parece funcionar*: fora do lançador do Hefesto os
+#: quatro botões da frente chegam TROCADOS AOS PARES. Medido nesta máquina
+#: consultando a libSDL2 (2.30.0) pelo GUID das TRÊS máscaras que o produto
+#: emite, com e sem a env que o `daemon.launch_env.compose_env` materializa
+#: (`SDL_GAMECONTROLLER_USE_BUTTON_LABELS=0`):
+#:
+#:     057e:2009 (nintendo) sem a env -> a:b1,b:b0,x:b2,y:b3
+#:     057e:2009 (nintendo) com  =0   -> a:b0,b:b1,x:b3,y:b2
+#:     045e:028e (xbox)     -> a:b0,b:b1,x:b2,y:b3  nos DOIS
+#:     054c:0df2 (dualsense)-> a:b0,b:b1,x:b3,y:b2  nos DOIS
+#:
+#: O mapeamento de fábrica da SDL para o Pro traz
+#: `hint:SDL_GAMECONTROLLER_USE_BUTTON_LABELS:=1` — a etiqueta da Nintendo, em
+#: que confirmar fica à DIREITA. Com o vpad de pé isso significa X (Cruz) -> B
+#: e Círculo -> A, ou seja, confirmar vira voltar em todo jogo aberto por fora
+#: do `hefesto-launch.sh`. **É a única máscara do catálogo com essa
+#: dependência**: Xbox e DualSense entregam o mesmo mapa com ou sem a env.
+#:
+#: Por isso a frase abaixo diz o quinto preço. Declarar quatro e calar este
+#: seria a metade errada — "o preço, declarado E NÃO ESCONDIDO" aplicado só ao
+#: que não constrange, e um jogo com confirmar/cancelar trocados é pior para
+#: quem joga que um chip cinza, porque não acusa nada.
+TEXTO_CUSTO_MASCARA_NINTENDO: Final[str] = (
+    "Nesta máscara o jogo não recebe giroscópio, acelerômetro nem touchpad, e "
+    "os gatilhos L2/R2 chegam como botão — apertado ou solto, sem meio-termo: "
+    "o controle da Nintendo não tem gatilho analógico. Abra o jogo pelo "
+    "Hefesto: aberto por fora, os quatro botões da frente chegam trocados aos "
+    "pares — o X (Cruz) vira Cancelar e o Círculo vira Confirmar —, porque no "
+    "controle da Nintendo o confirmar fica à direita, e esta é a única "
+    "máscara em que isso acontece. Vibração, microfone e alto-falante "
+    "continuam funcionando. Escolha DualSense se o jogo usa mira por "
+    "movimento, o touchpad como botão ou aceleração pelo gatilho."
+)
+
+
 def texto_do_custo_da_mascara(flavor: object) -> str:
     """A frase de preço da máscara; ``""`` quando não há preço a dizer.
 
@@ -425,7 +478,11 @@ def texto_do_custo_da_mascara(flavor: object) -> str:
     ou ausente — inventar um aviso a partir de payload incompleto seria a
     mesma família de erro que o `or "xbox"` que esta casa já removeu daqui.
     """
-    return TEXTO_CUSTO_MASCARA_XBOX if flavor == "xbox" else ""
+    if flavor == "xbox":
+        return TEXTO_CUSTO_MASCARA_XBOX
+    if flavor == "nintendo":
+        return TEXTO_CUSTO_MASCARA_NINTENDO
+    return ""
 
 
 def _flavor_label(flavor_id: object) -> str:

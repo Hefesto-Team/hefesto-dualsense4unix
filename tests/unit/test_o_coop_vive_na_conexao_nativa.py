@@ -288,7 +288,7 @@ def test_a_linha_do_modo_chega_a_coluna_da_aba(monkeypatch: pytest.MonkeyPatch) 
         home_actions, "aviso_de_opt_out_antigo", lambda *a, **k: None)
     ctx = Contexto(
         state=_estado(nativo=True, quantos=2), mesa=[], conectados=[], estados={})
-    fora = aba.pacote(ctx)
+    fora = aba.coluna_de_atencao(ctx)
     assert "MODO" in fora["aviso-selo"], (
         f"o selo do modo não chegou à coluna: {fora['aviso-selo']}")
     escritos = [t for t in fora["aviso-texto"] if t]

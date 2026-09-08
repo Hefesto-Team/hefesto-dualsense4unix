@@ -4,12 +4,14 @@ Liga/desliga o gamepad virtual NO DAEMON (via IPC `gamepad.emulation.set`),
 não como processo avulso — assim há UM leitor do controle (sem input dobrado
 do antigo `emulate xbox360`). A máscara (`flavor`) define o que o jogo vê:
 
-    hefesto-dualsense4unix gamepad on  [--flavor dualsense|xbox]
+    hefesto-dualsense4unix gamepad on  [--flavor dualsense|xbox|nintendo]
     hefesto-dualsense4unix gamepad off
     hefesto-dualsense4unix gamepad status [--json]
 
 `dualsense` (default) → prompts de PlayStation; `xbox` → fallback p/ jogos
-XInput-only. Erros de IPC (daemon offline) viram mensagem clara sem traceback.
+XInput-only; `nintendo` → prompts de Nintendo Switch Pro (desde 07/09/2026;
+custa os gatilhos analógicos, ver `uinput_gamepad._capacidades_procon`).
+Erros de IPC (daemon offline) viram mensagem clara sem traceback.
 """
 from __future__ import annotations
 
@@ -56,8 +58,9 @@ def cmd_on(
         "-f",
         help=(
             "Como o jogo vê o controle: xbox (a vibração funciona em mais jogos) "
-            "| dualsense (botões de PlayStation). Sem esta opção, mantém a que já "
-            "está configurada."
+            "| dualsense (botões de PlayStation) | nintendo (botões da Nintendo; "
+            "os gatilhos viram botão). Sem esta opção, mantém a que já está "
+            "configurada."
         ),
     ),
 ) -> None:

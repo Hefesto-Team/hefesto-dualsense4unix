@@ -151,7 +151,7 @@ class DaemonConfig:
     # FEAT-DSX-GAMEPAD-FLAVOR-01 — gamepad virtual integrado ao daemon (1 leitor
     # → fan-out, sem o conflito de 2 leitores do `emulate xbox360` avulso).
     # Mutuamente exclusivo com mouse_emulation: ligar o gamepad desliga o mouse
-    # (jogar = controle vai pro jogo, não pro cursor). flavor: dualsense|xbox.
+    # (jogar = controle vai pro jogo, não pro cursor). flavor: ds|xbox|nintendo.
     gamepad_emulation_enabled: bool = False
     # HARMONIA-MASK-01 (22/07, decisão da mantenedora): default dualsense — o
     # vpad é DualSense Edge por arquitetura (UHID-04) e a máscara dualsense
@@ -1584,7 +1584,7 @@ class Daemon:
         troca de máscara RECUSADA pelo gate R-04 e tentar de novo na volta
         seguinte; quem precisa da verdade inteira chama a versão `_desfecho`.
 
-        FEAT-DSX-GAMEPAD-FLAVOR-01. `flavor` em ('dualsense','xbox'); None mantém
+        FEAT-DSX-GAMEPAD-FLAVOR-01. `flavor` em ('dualsense','xbox','nintendo'); None mantém
         o atual. Ligar desliga a emulação de mouse (mútua exclusão) e SAI do Modo
         Nativo (idem).
 

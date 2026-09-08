@@ -288,7 +288,7 @@ MASCARAS = ("DualSense", "Xbox 360", "Nintendo Pro")
 # entre a costura e o fecho.
 #
 # A `via` FICA COMO ESTÁ nesta tabela, e é decisão: seis geradores a escrevem
-# DIRETO na tela (`aba04.py:1174`, `aba06.py:1452`, `aba03.py:878`…), e trocá-la
+# DIRETO na tela (`aba04.py:1174`, `aba06.py:1608`, `aba03.py:878`…), e trocá-la
 # pela palavra da tela aqui mudaria o desenho aprovado sem sprint que responda
 # por isso. É trabalho da `A-PALAVRA-MESA-SAI-01`.
 MESA = [
@@ -1384,7 +1384,15 @@ def botao_cinza(rotulo: str, campo: str, tom: str = "", razao: str = "",
             f' data-hef-alvo="classe" data-hef-classe="apagado"'
             f' data-hef-atributo="aria-disabled"'
             f'{" " + extra if extra else ""}>{rotulo}</button>'
-            f'<span class="ajuda porque">?'
+            # O `tabindex` É DE 07/09/2026, e este `?` é o caso mais forte da
+            # casa inteira: ele carrega a RAZÃO de um botão estar apagado — o
+            # "o que está prestes a ser apagado" que a decisão dela de 05/09
+            # (`D-06N-TIRA-DE-AVISO`) proíbe de morar onde ninguém sabe que há
+            # algo. Sem `tabindex` um `<span>` não recebe foco, e o `el.click()`
+            # do piloto não abria dica nenhuma: quem navega de controle via o
+            # botão cinza e NUNCA a razão dele. A regra de estilo que o abre no
+            # foco é da folha da casa (`topo.html`).
+            f'<span class="ajuda porque" tabindex="0">?'
             f'<span class="dica" data-campo="{campo}" data-hef-alvo="html">'
             f'{html.escape(razao) if razao else NADA_A_DIZER}</span></span>')
 

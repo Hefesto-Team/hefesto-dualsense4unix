@@ -178,7 +178,7 @@ LARGURA_MAXIMA_DO_ROTULO_DE_GAMEPADS = 52
 #: VAZIO desde 05/09/2026, e o vazio é o desfecho, não o esquecimento. A única
 #: entrada daqui era a vibração, e ela ganhou lastro nos dois transportes: a
 #: prova morava no repositório desde sempre
-#: (`integrations/uinput_gamepad.py:130` — *"a vibração funciona, provado com
+#: (`integrations/uinput_gamepad.py:174` — *"a vibração funciona, provado com
 #: SDL2 e validado em gameplay"*) e o mapa é que não a registrava. ELA fechou:
 #: *"hj as máscaras funcionam super legal em tudo"*.
 #:
@@ -1628,7 +1628,7 @@ class EmulationActionsMixin(WidgetAccessMixin):
         #
         # A RESSALVA SAIU DAQUI EM 05/09/2026, com a medição que a derrubou: a
         # vibração do jogo chega ao controle nos dois transportes
-        # (`integrations/uinput_gamepad.py:130` repassa o FF_RUMBLE ao hidraw
+        # (`integrations/uinput_gamepad.py:174` repassa o FF_RUMBLE ao hidraw
         # sem consultar o barramento), medida na bancada dela. Colar a ressalva
         # aqui passou a ser afirmar na tela que uma feature que funciona não foi
         # conferida — ver `RESSALVA_DE_TRANSPORTE`, hoje vazio pela mesma razão.

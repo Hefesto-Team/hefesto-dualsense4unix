@@ -129,7 +129,12 @@ def _pintar(pg: Any, *, portao: bool, ligado: bool) -> None:
              else NADA_A_DIZER)
     pg.evaluate(
         """([sel, tog, razao, palavra, acender]) => {
-            document.querySelector(sel).innerHTML = razao;
+            // `querySelectorAll` desde 07/09/2026: a razão do portão deixou de
+            // morar numa linha só. Ela foi para o `?` do "Status do Modo" e o
+            // da "Função do teclado" (ordem dela: *"essas 3 frases … quebram o
+            // layout"*), e o piloto escreve em TODOS os elementos de mesmo
+            // `data-campo`. Pintar só o primeiro mediria meia cena.
+            for (const el of document.querySelectorAll(sel)) el.innerHTML = razao;
             const el = document.querySelector(tog);
             el.classList.toggle('ligado', acender);
             el.querySelector('.txt').textContent = palavra;

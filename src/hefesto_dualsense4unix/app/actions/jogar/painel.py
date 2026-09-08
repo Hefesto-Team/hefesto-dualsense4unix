@@ -817,7 +817,7 @@ def aviso_da_origem_do_modo(state: dict[str, Any] | None) -> str | None:
 #: PROVISÓRIO — texto de tela é palavra dela (PROVA-DE-TELA-01). A janela antiga
 #: dizia *"Não consegui reconciliar — o Hefesto pode estar desligado."*, um
 #: literal solto dentro do ``_sync_fail`` do handler
-#: (`home_actions.py:3319-3322`) — sem constante, e portanto sem como ser
+#: (`home_actions.py:3348-3351`) — sem constante, e portanto sem como ser
 #: importado por quem não é aquela janela.
 #:
 #: **O VERBO MUDOU PORQUE O BOTÃO MUDOU.** A legenda desta aba registra a troca:
