@@ -278,6 +278,34 @@
   }
   .ajuda:hover{border-color:var(--cyan);color:var(--cyan)}
   .ajuda:hover .dica{display:block}
+  /* ---------- O `?` ABRE NO FOCO, E NÃO SÓ SOB O PONTEIRO — 07/09/2026 ----------
+     ACHADO POR CONFERÊNCIA, medido na aba Navegação: `.ajuda` é um `<span>` sem
+     `tabindex`, e o ÚNICO caminho de revelação era `:hover`. Medido pelo caminho
+     exato que o controle usa (`hefesto_vivo`, `el.click()`):
+
+         APÓS el.click():  display da dica = 'none' · rect = 0 · foco = BODY
+
+     Isto acontecia na aba cujo próprio `?` diz *"Navegar a janela do Hefesto com
+     o controle"* — a tela que ensina a navegar sem rato era a que exigia um.
+
+     A REGRA MORA AQUI, NA FOLHA DA CASA, e não na aba onde foi achado: são 99
+     `?` em dez abas, e uma cura numa aba só deixaria as outras nove ensinando
+     que o `?` não responde ao controle. É a regra de 05/09 — *quando a cura
+     conhece a causa, ela cobre TODOS os chamadores*.
+
+     `:focus-within` E `:focus` OS DOIS, e não é redundância: o `:focus` pega o
+     próprio `?` recebendo o foco, e o `:focus-within` mantém a dica aberta se o
+     foco cair em algo DENTRO dela (um `<b>`, um `<tt>`, ou o que a frase viva
+     do produto trouxer). Sem o segundo, abrir e ler já fechava.
+
+     O `tabindex` É DO EMISSOR, não desta folha — uma regra de estilo não torna
+     um `<span>` focável. Quem já o emite é `aba06.ajuda()`; as outras nove abas
+     estão declaradas como dívida medida no relatório desta leva. Esta regra
+     nasce pronta para elas: no dia em que o atributo chegar, o `?` daquela aba
+     passa a abrir no foco sem tocar nesta folha de novo. */
+  .ajuda:focus{border-color:var(--cyan);color:var(--cyan);outline:none}
+  .ajuda:focus .dica,
+  .ajuda:focus-within .dica{display:block}
   .dica{
     display:none;position:absolute;left:22px;top:-4px;width:330px;z-index:40;
     background:var(--elevated);border:1px solid var(--linha);border-radius:7px;
@@ -1190,11 +1218,66 @@
   .cartao.off .ds-svg .corpo,
   .cartao.off .ds-svg .miolo *{fill:var(--linha) !important}
   .cartao.off .ds-svg .corpo{stroke:var(--border-forte) !important}
-  /* Os chips do lugar vazio não se clicam: não há controle para receber a
-     máscara. Sem `on` em nenhum, e sem `:hover`. */
-  .cartao.off .mascara .chip{border-color:var(--border-sutil);color:var(--linha);
-                             background:transparent;cursor:default}
-  .cartao.off .mascara .chip:hover{border-color:var(--border-sutil);color:var(--linha)}
+  /* ---- O LUGAR SEM APARELHO NÃO OFERECE GESTO — 07/09/2026 ----
+     A DECISÃO É DELA, 31/08/2026, e é a mesma que a S-04 da folha das dez abas
+     cumpre em `monta.py`: *um lugar sem aparelho não oferece gesto nenhum*. Um
+     chip clicável numa coluna sem controle ou não faz nada — e mente — ou faz
+     alguma coisa no controle errado, que é pior.
+
+     O QUE ESTAVA AQUI ERA MEIA CURA, e ela é de 30/08: tirava o `cursor` e o
+     `:hover` dos chips do lugar vazio e chamava isso de "não se clicam". TINTA,
+     e não ATO — o chip continuava com caixa, continuava recebendo o clique e
+     continuava com o endereço do gesto de máscara pendurado. É a mesma doença
+     que a `.btn.apagado` da folha declara em voz alta ("aqui a classe é só
+     tinta") e que ali é decisão; aqui era descuido.
+
+     E O ENDEREÇO NÃO SE ESCREVE NESTE COMENTÁRIO, e a razão é de hoje: a régua
+     que conta os doze chips lê o DOCUMENTO, e um comentário que cita o padrão
+     vira a primeira ocorrência dele. A contagem deu 13 na primeira volta desta
+     cura — a prosa entrou na conta. É a armadilha de 05/09, repetida aqui.
+
+     MEDIDO EM CHROME, na página PUBLICADA, em 07/09/2026 —
+     `elementFromPoint` no centro de cada `[data-gesto]` de cada
+     `[data-controle="pN"]`:
+
+         p1 (cheio)  3 gestos · 3 com caixa > 0 · 3 CLICÁVEIS
+         p2 (cheio)  3 gestos · 3 com caixa > 0 · 3 CLICÁVEIS
+         p3 (vazio)  3 gestos · 3 com caixa > 0 · 3 CLICÁVEIS  ← os três mentiam
+         p4 (vazio)  3 gestos · 3 com caixa > 0 · 3 CLICÁVEIS  ← idem
+
+     (cheio/vazio é o `data-conectado` do lugar. A palavra do atributo não se
+     escreve aqui: este comentário VIAJA PARA A PÁGINA dentro da folha de
+     estilo, e o valor sem acento precisaria de uma marca de isenção que
+     viajaria junto — marca de régua não é coisa que se publica.)
+
+     POR QUE A REDE DA CASA NÃO OS PEGA, e isto não é falha dela: a S-04 mira
+     `button, input, select, textarea, [contenteditable]` (`monta.py:1225`), e o
+     chip desta aba é um `<span>` — nenhum dos cinco. O comentário da S-04 diz
+     por que ela some com o WIDGET em vez de o apagar, e a razão vale letra por
+     letra para o chip: *"um botão cinza num lugar vazio ainda promete que ali
+     cabe uma escolha."* Esta regra é a MESMA rede, esticada até o elemento que
+     esta aba escolheu para o seletor por controle. Ela mora aqui, e não na
+     folha, porque o `<span class="chip">` clicável é invenção desta aba.
+
+     A MARCA É `data-conectado`, E NÃO A CLASSE `off`, e a escolha decide se a
+     cura vale AO VIVO: é o atributo que o piloto compara e vira nos passos `1b`
+     e `1c` (`hefesto_vivo.py:1235` e `:1260`), e é a mesma chave da S-04. Com
+     os quatro DualSense dela na mesa, o P3 chega, o passo `1c` escreve
+     `conectado="sim"`, e os três chips voltam a existir no mesmo tique — sem
+     recarregar a página, porque quem os escondia era o seletor e não um nó
+     removido. O piloto vira marca e escreve campo; ele NÃO materializa widget,
+     e é por isso que o chip tem de continuar no HTML.
+
+     `:not(.vazia)` VEM JUNTO pela mesma razão da S-04: a coluna que já NASCE
+     vazia traz o `<span class="nada">` por dentro, e a exclusão a protege. Esta
+     aba não tem nenhuma hoje — a regra é para a que vier.
+
+     `display:none` E NÃO `visibility:hidden`: o cartão é `flex` em coluna com
+     `gap:7px`, e um chip invisível guardaria o vão de 28px de uma escolha que
+     não existe. A ALTURA DA FILEIRA NÃO CAI: `.pecas` é grade e os quatro
+     cartões esticam para a linha, que continua medida pelos cheios. */
+  [data-controle][data-conectado="nao"]:not(.vazia) .mascara .chip{
+    display:none !important}
 
   /* O CABEÇALHO DAS DUAS COLUNAS TEM UMA ALTURA SÓ. O da esquerda ganhou o
      ícone de ajuda (17px) e o da direita é só texto (14,4px): sem isto a
@@ -1231,41 +1314,14 @@
      Medido: a barra vai de 853 para 940px e o botão de x=1271..1431 para
      x=1356..1516. */
   .faixa-final{border-top:1px solid var(--rot-linha);padding-top:6px;margin-top:8px}
-  /* A ATENÇÃO DESCEU — 30/08/2026, pedido dela: *"esse atenção desce"*.
-     Ela era a segunda coluna da `.dupla`, ao lado dos cartões, com a barra
-     vertical à esquerda. Media 129px de VAZIO — 70% da própria coluna —, porque  # (noqa-acento)  (`media` é o verbo medir)
-     a altura dela vinha do irmão (`align-self:stretch`) e o conteúdo era um
-     aviso de uma linha.
-
-     Deitada, ela é uma faixa de largura inteira entre os cartões e a faixa
-     final, e a divisória troca de eixo: a barra vertical vira linha horizontal,
-     que é a mesma gramática das outras nove abas.
-     O RESERVADO DO P8 continua existindo — ele agora é o espaço que a faixa
-     ganha ao receber o segundo aviso, e cresce para baixo em vez de ficar
-     esperando em branco. */
-  /* OS RESPIROS SÃO 8/6 E NÃO 12/10, e o motivo é o orçamento: com 12/10 o miolo
-     pedia 556 de 542 e nascia barra de rolagem por dentro. Aqui cada pixel é
-     disputado — ver o comentário do `--alt-janela` no `topo.html`. */
-  .col-atencao{border-top:1px solid var(--rot-linha);margin-top:8px;padding-top:6px;
-               display:flex;align-items:center;gap:12px;flex-wrap:wrap}
-  .col-atencao .cab-col{margin-bottom:0;flex:0 0 auto}
-  .col-atencao .aviso-item{flex:1;min-width:0}
-  .col-atencao .conta-avisos{margin-left:auto;flex:0 0 auto}
-  /* A COLUNA DE ZERO A N — 03/09/2026. A página publica
-     `pacotes.a01_jogar.AVISOS_VIVOS` linhas e o produto acende as que tiver; as
-     apagadas saem do fluxo com `display:none`, e por isso a cena de UM aviso
-     que ela aprovou fica idêntica. O `flex-wrap` acima e a regra do irmão
-     abaixo são o que faz a segunda linha CRESCER PARA BAIXO em vez de espremer
-     a primeira — é o que o comentário do P8 já prometia ("o espaço que a faixa
-     ganha ao receber o segundo aviso"), e o `display:flex` sozinho fazia o
-     contrário.
-     A CONTA DESCE PARA A ÚLTIMA LINHA, alinhada à direita — fotografado em
-     03/09/2026 com dois avisos na máquina dela. Ela é o último item do `flex`,
-     então a quebra a leva junto; o `margin-left:auto` continua encostando-a na
-     borda. Com UM aviso (a cena dela) nada quebra e a linha é a mesma de
-     sempre. */
-  .col-atencao .aviso-item:not(.mostra){display:none}
-  .col-atencao .aviso-item.mostra ~ .aviso-item.mostra{flex:1 1 100%}
+  /* A ATENÇÃO SAIU — 07/09/2026, ordem dela: *"em jogar remover essa seção do
+     atenção, nenhum aviso esse — deixar só o reconectar controles."*
+     Aqui moravam as seis regras da `.col-atencao`: a faixa deitada de 30/08
+     (*"esse atenção desce"*) e a coluna de zero a N de 03/09. As duas saíram
+     inteiras com o bloco, e o que ficou entre os cartões e o botão é UMA
+     divisória só — a da `.faixa-final` logo acima.
+     O RESERVADO DO P8 morreu junto: ele era o espaço que a faixa ganhava ao
+     receber o segundo aviso, e sem faixa não há espaço a reservar. */
   /* ---------- AS DUAS LINHAS POR CIMA DOS LUGARES — 04/09/2026 ----------
      A frase da mesa (D-07 dela: *"uma frase por cima dos lugares apagados"*) e
      a ressalva da máscara (a queixa 1 dela).
@@ -1471,7 +1527,10 @@
     <div class="perfil-ativo">
       <span class="pa-rot">Perfil ativo</span>
       <span class="pa-nome" data-campo="perfil">Mortal Kombat</span>
-      <span class="ajuda">?<span class="dica" style="left:auto;right:22px">
+      <!-- `tabindex` de 07/09/2026: este `?` está no CABEÇALHO, logo nas dez
+           abas, e explica onde o "Salvar Perfil" grava. Sem ele o `<span>` não
+           recebe foco e o `el.click()` do controle não o abria em aba nenhuma. -->
+      <span class="ajuda" tabindex="0">?<span class="dica" style="left:auto;right:22px">
         Tudo o que você mudar em qualquer aba cai <b>neste</b> perfil quando clicar em
         <b>Salvar Perfil</b>.<br><br>
         Cada controle guarda a <b>sua</b> configuração aqui dentro, pelo ID da peça — amanhã,
@@ -1955,6 +2014,38 @@
                  data-campo="cadeado" data-hef-alvo="marcado">
           <span>Não trocar de perfil sozinho ao abrir um jogo</span>
         </label>
+        <!-- ---------- O DETECTOR CEGO, EMBAIXO DO CADEADO — 07/09/2026 -------
+             ACHADO POR CONFERÊNCIA, e é o buraco que a saída da coluna Atenção
+             abriu. O comentário logo acima diz, com todas as letras, por que a
+             caixa voltou para esta aba em 04/09: *"Esta é a única posição em que
+             a frase que explica e o botão que resolve ficam na mesma tela."* A
+             coluna saiu em 07/09 por ordem dela, e levou a frase — o botão ficou
+             sozinho, e a justificativa dele foi embora junto.
+
+             O QUE SE PERDEU, medido: `home_actions.texto_do_cadeado_cego`,
+             *"O Hefesto não está conseguindo ver qual programa está na frente,
+             então o perfil não vai trocar sozinho de qualquer jeito — isto não
+             é escolha sua."* Ela estava VIVA na tela dela no instante da
+             medição, e era a única linha acesa da coluna.
+
+             POR QUE ISTO NÃO É DESFAZER A ORDEM DELA: ela mandou tirar a SEÇÃO
+             Atenção — uma faixa fixa, com título e contagem, embaixo dos cartões
+             (*"nenhum aviso esse"*). Isto aqui não é aquela faixa: é a
+             `monta.ressalva` da D-02 dela, *"linha fixa só quando HÁ ressalva"*,
+             que NASCE VAZIA e não ocupa um pixel enquanto o detector enxergar.
+             Ela só aparece na máquina em que o cadeado não tem sobre o que agir.
+
+             E É A MESMA GRAMÁTICA DO BOTÃO CINZA: a razão de um controle não
+             valer agora mora COLADA nele, e não numa lista longe. Sem ela a tela
+             oferece trancar uma troca automática que já está morta, sem uma
+             palavra dizendo isso — que é a tela prometendo um ato que não
+             acontece, o defeito que esta casa mais persegue.
+
+             AS OUTRAS DEZ FONTES DE `_avisos` CONTINUAM CALADAS, e isso segue
+             RELATADO no docstring de `pacotes/a01_jogar._avisos`: o destino
+             delas é a aba 09, que é de outra frente. O que esta linha devolve é
+             UMA — a que fala do botão que está logo acima dela. -->
+        <div class="ressalva" data-campo="cadeado-cego" data-hef-alvo="html"><i class="nada"></i></div>
 
       </div>
     </div>
@@ -2310,7 +2401,7 @@
                 <div class="mascara">
                   <span class="chip on" data-gesto="mascara" data-mascara="DualSense" data-campo="mascara-cartao" data-hef-alvo="classe" data-hef-quando="DualSense">DualSense</span>
                   <span class="chip" data-gesto="mascara" data-mascara="Xbox 360" data-campo="mascara-cartao" data-hef-alvo="classe" data-hef-quando="Xbox 360">Xbox 360</span>
-                  <span class="chip inerte" title="O Hefesto não sabe montar esta máscara. As que existem: DualSense, Xbox 360." data-gesto="mascara" data-mascara="Nintendo Pro" data-campo="mascara-cartao" data-hef-alvo="classe" data-hef-quando="Nintendo Pro">Nintendo Pro</span>
+                  <span class="chip" data-gesto="mascara" data-mascara="Nintendo Pro" data-campo="mascara-cartao" data-hef-alvo="classe" data-hef-quando="Nintendo Pro">Nintendo Pro</span>
                 </div>
               </div>
               <div class="cartao"
@@ -2617,7 +2708,7 @@
                 <div class="mascara">
                   <span class="chip" data-gesto="mascara" data-mascara="DualSense" data-campo="mascara-cartao" data-hef-alvo="classe" data-hef-quando="DualSense">DualSense</span>
                   <span class="chip on" data-gesto="mascara" data-mascara="Xbox 360" data-campo="mascara-cartao" data-hef-alvo="classe" data-hef-quando="Xbox 360">Xbox 360</span>
-                  <span class="chip inerte" title="O Hefesto não sabe montar esta máscara. As que existem: DualSense, Xbox 360." data-gesto="mascara" data-mascara="Nintendo Pro" data-campo="mascara-cartao" data-hef-alvo="classe" data-hef-quando="Nintendo Pro">Nintendo Pro</span>
+                  <span class="chip" data-gesto="mascara" data-mascara="Nintendo Pro" data-campo="mascara-cartao" data-hef-alvo="classe" data-hef-quando="Nintendo Pro">Nintendo Pro</span>
                 </div>
               </div>
               <div class="cartao off"
@@ -2925,7 +3016,7 @@
                 <div class="mascara">
                   <span class="chip" data-gesto="mascara" data-mascara="DualSense" data-campo="mascara-cartao" data-hef-alvo="classe" data-hef-quando="DualSense">DualSense</span>
                   <span class="chip" data-gesto="mascara" data-mascara="Xbox 360" data-campo="mascara-cartao" data-hef-alvo="classe" data-hef-quando="Xbox 360">Xbox 360</span>
-                  <span class="chip inerte" title="O Hefesto não sabe montar esta máscara. As que existem: DualSense, Xbox 360." data-gesto="mascara" data-mascara="Nintendo Pro" data-campo="mascara-cartao" data-hef-alvo="classe" data-hef-quando="Nintendo Pro">Nintendo Pro</span>
+                  <span class="chip" data-gesto="mascara" data-mascara="Nintendo Pro" data-campo="mascara-cartao" data-hef-alvo="classe" data-hef-quando="Nintendo Pro">Nintendo Pro</span>
                 </div>
               </div>
               <div class="cartao off"
@@ -3233,7 +3324,7 @@
                 <div class="mascara">
                   <span class="chip" data-gesto="mascara" data-mascara="DualSense" data-campo="mascara-cartao" data-hef-alvo="classe" data-hef-quando="DualSense">DualSense</span>
                   <span class="chip" data-gesto="mascara" data-mascara="Xbox 360" data-campo="mascara-cartao" data-hef-alvo="classe" data-hef-quando="Xbox 360">Xbox 360</span>
-                  <span class="chip inerte" title="O Hefesto não sabe montar esta máscara. As que existem: DualSense, Xbox 360." data-gesto="mascara" data-mascara="Nintendo Pro" data-campo="mascara-cartao" data-hef-alvo="classe" data-hef-quando="Nintendo Pro">Nintendo Pro</span>
+                  <span class="chip" data-gesto="mascara" data-mascara="Nintendo Pro" data-campo="mascara-cartao" data-hef-alvo="classe" data-hef-quando="Nintendo Pro">Nintendo Pro</span>
                 </div>
               </div>
               <!-- OS CONTROLES QUE O HEFESTO SÓ VÊ — EXTERNOS-01, 06/09/2026, e
@@ -3260,42 +3351,16 @@
             </div>
           </div>
 
-        <div class="col-atencao" data-lista="avisos">
-          <div class="linha-rot cab-col">
-            <b style="color:var(--orange)">Atenção</b>
-          </div>
-            <div class="aviso-item mostra" data-aviso
-                 data-campo="aviso-vivo" data-hef-alvo="classe" data-hef-classe="mostra">
-              <span class="selo alerta" data-campo="aviso-selo">RÁDIO</span>
-              <span data-campo="aviso-texto">Dois rádios da bancada estão em portas vizinhas.</span>
-            </div>
-            <div class="aviso-item" data-aviso
-                 data-campo="aviso-vivo" data-hef-alvo="classe" data-hef-classe="mostra">
-              <span class="selo alerta" data-campo="aviso-selo"></span>
-              <span data-campo="aviso-texto"></span>
-            </div>
-            <div class="aviso-item" data-aviso
-                 data-campo="aviso-vivo" data-hef-alvo="classe" data-hef-classe="mostra">
-              <span class="selo alerta" data-campo="aviso-selo"></span>
-              <span data-campo="aviso-texto"></span>
-            </div>
-            <div class="aviso-item" data-aviso
-                 data-campo="aviso-vivo" data-hef-alvo="classe" data-hef-classe="mostra">
-              <span class="selo alerta" data-campo="aviso-selo"></span>
-              <span data-campo="aviso-texto"></span>
-            </div>
-            <div class="aviso-item" data-aviso
-                 data-campo="aviso-vivo" data-hef-alvo="classe" data-hef-classe="mostra">
-              <span class="selo alerta" data-campo="aviso-selo"></span>
-              <span data-campo="aviso-texto"></span>
-            </div>
-            <div class="aviso-item" data-aviso
-                 data-campo="aviso-vivo" data-hef-alvo="classe" data-hef-classe="mostra">
-              <span class="selo alerta" data-campo="aviso-selo"></span>
-              <span data-campo="aviso-texto"></span>
-            </div>
-          <span class="conta-avisos" data-campo="atencao-conta">1 aviso</span>
-        </div>
+        <!-- A COLUNA ATENÇÃO SAIU DAQUI — 07/09/2026, ordem dela: *"em jogar
+             remover essa seção do atenção, nenhum aviso esse — deixar só o
+             reconectar controles."* Era a `.col-atencao`: o cabeçalho laranja,
+             as `AVISOS_VIVOS` linhas de `aviso-vivo`/`aviso-selo`/`aviso-texto`
+             e a conta `atencao-conta`.
+
+             OS QUATRO ENDEREÇOS SAÍRAM DO PACOTE JUNTO, e isso é obrigatório:
+             endereço emitido sem elemento onde pousar é órfão, e o
+             `casamento.py` o acusa — foi assim que o `recado` da aba 04 foi
+             pego em 02/09. Ver `pacotes/a01_jogar.DA_PAGINA`. -->
 
         <!-- O `pendente-ha` MORA AQUI, e não na `.pendente` — 03/09/2026. A
              caixa da pendência já tem `data-campo="pendente"` (a frase), e um

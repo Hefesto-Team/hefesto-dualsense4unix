@@ -278,6 +278,34 @@
   }
   .ajuda:hover{border-color:var(--cyan);color:var(--cyan)}
   .ajuda:hover .dica{display:block}
+  /* ---------- O `?` ABRE NO FOCO, E NÃO SÓ SOB O PONTEIRO — 07/09/2026 ----------
+     ACHADO POR CONFERÊNCIA, medido na aba Navegação: `.ajuda` é um `<span>` sem
+     `tabindex`, e o ÚNICO caminho de revelação era `:hover`. Medido pelo caminho
+     exato que o controle usa (`hefesto_vivo`, `el.click()`):
+
+         APÓS el.click():  display da dica = 'none' · rect = 0 · foco = BODY
+
+     Isto acontecia na aba cujo próprio `?` diz *"Navegar a janela do Hefesto com
+     o controle"* — a tela que ensina a navegar sem rato era a que exigia um.
+
+     A REGRA MORA AQUI, NA FOLHA DA CASA, e não na aba onde foi achado: são 99
+     `?` em dez abas, e uma cura numa aba só deixaria as outras nove ensinando
+     que o `?` não responde ao controle. É a regra de 05/09 — *quando a cura
+     conhece a causa, ela cobre TODOS os chamadores*.
+
+     `:focus-within` E `:focus` OS DOIS, e não é redundância: o `:focus` pega o
+     próprio `?` recebendo o foco, e o `:focus-within` mantém a dica aberta se o
+     foco cair em algo DENTRO dela (um `<b>`, um `<tt>`, ou o que a frase viva
+     do produto trouxer). Sem o segundo, abrir e ler já fechava.
+
+     O `tabindex` É DO EMISSOR, não desta folha — uma regra de estilo não torna
+     um `<span>` focável. Quem já o emite é `aba06.ajuda()`; as outras nove abas
+     estão declaradas como dívida medida no relatório desta leva. Esta regra
+     nasce pronta para elas: no dia em que o atributo chegar, o `?` daquela aba
+     passa a abrir no foco sem tocar nesta folha de novo. */
+  .ajuda:focus{border-color:var(--cyan);color:var(--cyan);outline:none}
+  .ajuda:focus .dica,
+  .ajuda:focus-within .dica{display:block}
   .dica{
     display:none;position:absolute;left:22px;top:-4px;width:330px;z-index:40;
     background:var(--elevated);border:1px solid var(--linha);border-radius:7px;
@@ -1039,7 +1067,39 @@
      as duas pontas do corpo dele. Nenhuma linha de escolha encolhe — elas
      continuam nos 36px de `--h-escolha`, que é o alvo de clique. */
   .miolo > .quadro + .quadro > .quadro-topo{padding:6px 14px 0}
-  .miolo > .quadro + .quadro > .quadro-corpo{padding:4px 14px 6px}
+  /* O PÉ DO SEGUNDO QUADRO FOI DE 6px A 2px EM 07/09/2026, e os 4px pagam a
+     TIRA DE ESTADOS — a que ficou, não a que saiu.
+
+     O QUE A CONFERÊNCIA MEDIU, e derruba a premissa da cura de hoje: a queixa
+     dela (*"essas 3 frases aqui na parte de baixo que quebram o layout"*) foi
+     lida como sendo das TRÊS frases, e não era. A tira nunca coube — **UMA
+     linha sozinha já transbordava**, e a linha que sobra é a mais comum da
+     máquina dela. Medido em Chrome (1200x777), na página publicada e no `HEAD`,
+     `scrollHeight - clientHeight` do `.miolo`:
+
+         tira vazia .............. 0px    0px  (HEAD)
+         só `rato-estado` ........ 4px    4px  (HEAD)   ← e ninguém a tirou
+         + `modo-portao` ........ 44px   44px  (HEAD)
+
+     Os números do `HEAD` são a prova de que isto é HERDADO e não desta leva: o
+     transbordo é o MESMO com as cinco linhas de ontem e com as três de hoje.
+     Tirar três frases reduziu a chance de acontecer e não curou o defeito —
+     `rato-estado` (*"Pronto para usar como mouse"*) acende sozinha e a barra de
+     rolagem nascia por dentro do miolo do mesmo jeito.
+
+     4px É O NÚMERO EXATO, e não uma folga escolhida a esmo: é o que falta para
+     a tira de UMA linha caber (25px de tira contra 21px de sobra). Medido
+     depois: 0px de transbordo com a tira em uma linha, nas duas árvores.
+
+     O QUE ELE NÃO COMPRA, e fica dito: com DUAS linhas o miolo volta a
+     transbordar 40px, porque `modo-portao` sozinha ocupa duas. Ela é uma das
+     que SAÍRAM do pé por ordem dela — e esta medida é a segunda razão, medida,
+     para que continue fora: aquele pé não cabe a frase, com trim nenhum.
+
+     O RESPIRO SAI DE ONDE É FOLGA E NÃO LEITURA, que é a mesma regra da linha
+     de cima: o pé do corpo, e não a altura das linhas de escolha, que continuam
+     nos 36px de `--h-escolha` porque são o alvo de clique. */
+  .miolo > .quadro + .quadro > .quadro-corpo{padding:4px 14px 2px}
   .miolo > .quadro:first-child > .quadro-corpo{padding-bottom:6px}
 
   /* A LINHA HORIZONTAL QUE SEPARA UM CAMPO DO OUTRO — pedido dela, 30/08:
@@ -1108,6 +1168,26 @@
   /* na coluna da direita a dica abre para a esquerda: 22px + 330px de largura
      a partir de x=1154 passava da borda da janela de 1180px */
   .at-col:last-child .dica{left:auto;right:22px}
+  /* E AS DICAS DAS OPÇÕES DE ATIVAÇÃO ABREM PARA CIMA — 07/09/2026, e é a
+     mesma medida daquela linha acima, no outro eixo.
+
+     O painel é o ÚLTIMO quadro da aba: o `?` da "Função do teclado" fica a
+     541,5px do topo da janela de 777px, e a `.dica` do desenho abre para BAIXO
+     (`top:-4px`). Sobravam 235px. Com as frases do produto dentro — que é o que
+     as três que ela mandou tirar do pé passaram a fazer — aquela dica vai a
+     267px com o teclado na tela instalado e a **319px sem** (a frase longa é a
+     que manda instalar `wvkbd-mobintl` ou `onboard` pelo nome), e o
+     `overflow-y` do `.miolo` cortava o último parágrafo. A frase que mudou de
+     lugar para não sumir sumia de novo, por outro caminho.
+
+     ANCORADA EMBAIXO ela cresce para onde há espaço: são 545px do `?` até o
+     topo do miolo, contra 235 para baixo. Nenhuma outra dica desta aba muda —
+     a regra é do painel, e as duas velocidades da pop-up "Estilo
+     Point-and-click" moram fora dele.
+
+     A RÉGUA É `test_a_06_as_tres_frases_do_pe_couberam_no_ponto_de_interrogacao`,
+     e ela mede as duas frases do teclado na tela, não só a curta. */
+  .ativacao .dica{top:auto;bottom:-4px}
   .escolha-at{width:100%;height:var(--h-escolha);border-radius:7px;font-size:12px;
     font-family:inherit;padding:0 10px;border:1px solid var(--border-forte);
     background:var(--app-bg);color:var(--fg);cursor:pointer}
@@ -1342,6 +1422,80 @@
      página usa para código — não uma segunda escolha inventada aqui. */
   .estado tt{font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11px}
 
+  /* ---------- A FRASE DO PRODUTO DENTRO DO `?` ----------
+     07/09/2026, ordem dela: *"navegacao tem essas 3 frases aqui na parte de
+     baixo que quebram o layout"*. As três desceram para o `?` do campo de que
+     falam (`ajuda(..., vivas=…)`), e continuam sendo escritas pelo pacote a
+     cada tique — o que muda é o LUGAR, nunca o dono.
+
+     OS DOIS MARCADORES DE APAGAR SÃO OS MESMOS da tira, e pela mesma razão: o
+     `:empty` cobre o bloco que nasce vazio e nunca é pintado, e o `.nada` cobre
+     o que o piloto pinta a cada tique com "não há o que dizer" — sem ele o
+     `escrever()` troca vazio por `—` e a dica ganha um travessão solto, com o
+     traço de cima em volta de nada. Faltando um dos dois, o traço volta por um
+     dos dois caminhos, calado.
+
+     O TRAÇO SEPARA DUAS VOZES, e é por isso que ele existe: o que está acima é
+     o texto FIXO do desenho, o que está abaixo é o que a máquina dela diz
+     AGORA. Sem a separação, uma frase que muda com o estado se lê como parte da
+     explicação que nunca muda. */
+  .dica .viva{display:block;margin-top:10px;padding-top:9px;
+       border-top:1px solid var(--border-sutil)}
+  .dica .viva:empty{display:none}
+  .dica .viva:has(.nada){display:none}
+
+  /* ---------- O `?` QUE TEM ALGO A DIZER SE ACENDE — 07/09/2026 ----------
+     A razão inteira está no comentário de `ajuda()`, e a curta é a palavra dela
+     de 05/09: *"ninguém passa o rato onde não sabe que há algo"*.
+
+     O SELETOR LÊ O CONTEÚDO VIVO, e é isso que o impede de mentir. Ele não
+     acende porque o `?` foi MARCADO no desenho — acende porque existe, ali
+     dentro, uma `.viva` que não está vazia e não traz o `<i class="nada">` com
+     que o pacote diz *não há o que dizer*. São os MESMOS dois marcadores de
+     apagar da regra logo acima, e de propósito: se um dia um terceiro jeito de
+     "nada a dizer" aparecer, ele apaga a frase e apaga o ponto no mesmo tique,
+     em vez de deixar um ponto aceso sobre um travessão.
+
+     A MORDIDA: apague o `:has()` e o ponto acende em todo `?` marcado, com a
+     máquina em silêncio — que é a promessa falsa que esta casa persegue. A
+     régua está em `_conferir` (a 6c) e no
+     `test_a_06_as_tres_frases_do_pe_couberam_no_ponto_de_interrogacao`.
+
+     É UM PONTO, E NÃO UMA COR NOVA: o `--cyan` já é a cor com que o próprio `?`
+     responde ao ponteiro nesta casa (`topo.html`), então o aceso e o hover
+     falam a mesma língua. O ponto fica FORA do círculo, no canto de cima, para
+     não disputar os 17px com o "?" desenhado dentro dele.
+
+     ---- POR QUE `> :not(.nada)` E NÃO `:not(:has(.nada))` ----
+
+     A PRIMEIRA VOLTA DESTA REGRA ESTAVA MORTA, e passou verde. Ela era
+     `:has(.viva:not(:empty):not(:has(.nada)))` — um `:has()` DENTRO de um
+     `:has()`, que a especificação proíbe. O navegador não avisa: descarta a
+     regra inteira, calado. Medido com `el.matches()` em Chrome:
+
+         .ajuda.tem-viva:has(.viva:not(:empty):not(:has(.nada)))  → SyntaxError
+         .ajuda.tem-viva:has(.viva > :not(.nada))                 → funciona
+
+     E A RÉGUA QUE EU TINHA ESCRITO PARA ELA DAVA VERDE, porque procurava o
+     texto do seletor no documento — e o texto estava lá. *A régua respondia
+     sobre o próprio texto do código, não sobre o produto*, que é a assinatura
+     das seis de 05/09. Quem revelou foi ABRIR e olhar a cor.
+
+     O QUE O SELETOR VÁLIDO EXIGE, e está declarado porque é um contrato: a
+     frase viva tem de trazer ao menos UM elemento. As três trazem —
+     `_a_razao_do_portao` embrulha em `<span class="laranja">`, e as outras duas
+     começam em `<b>` (`frase_do_teclado_na_tela`, `RESSALVA_DOS_GLOBAIS`). Uma
+     frase pelada acenderia a dica e não acenderia o ponto. Isso NÃO fica ao
+     acaso: a régua 6d do `_conferir` chama as três funções e reprova a que
+     voltar sem marcação. */
+  .ajuda.tem-viva:has(.viva > :not(.nada)){
+       border-color:var(--cyan);color:var(--cyan)}
+  .ajuda.tem-viva:has(.viva > :not(.nada))::after{
+       content:"";position:absolute;top:-2px;right:-2px;width:6px;height:6px;
+       border-radius:50%;background:var(--cyan)}
+  .dica .viva .verde{color:var(--green)} .dica .viva .laranja{color:var(--orange)}
+  .dica .viva tt{font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11px}
+
   /* ---- O STATUS DO MODO (27/08, ela: "Status do Modo: ao clicar no botão
           Ligado. Ao clicar nele de novo desligado.") — o dono do que os dois
           botões suspensos faziam embaixo.
@@ -1375,9 +1529,15 @@
      tela aceitava o clique e recusava depois, e ela gastava o clique para
      descobrir.
 
-     UM CAMPO SÓ, E NENHUM SEGUNDO ENDEREÇO: a razão é escrita numa linha só
-     (`data-campo="modo-portao"`, na tira de estados), e o cinza do interruptor
-     SAI DELA por `:has()`. Com dois campos seria possível pintar um interruptor
+     A TIRA DE ESTADOS SAIU DAQUI EM 07/09/2026, e a metade que ela pedia
+     ficou: a frase *"escreve ao lado, na tira de estados"* caducou por ordem
+     dela (*"essas 3 frases … quebram o layout"*) — a razão foi para o `?` do
+     "Status do Modo", que é a linha deste interruptor. O *"apaga o
+     interruptor"* continua letra por letra, e é o que estas três regras fazem.
+
+     UM CAMPO SÓ, E NENHUM SEGUNDO ENDEREÇO: a razão é escrita num endereço só
+     (`data-campo="modo-portao"`), e o cinza do interruptor SAI DELE por
+     `:has()`. Com dois campos seria possível pintar um interruptor
      apagado sem razão, ou uma razão sem interruptor apagado — que é exatamente
      o que a peça `monta.botao_cinza` evita do outro lado, e pela mesma regra.
      Aqui não dá para usar aquela peça: ela emite um `.btn`, e o "Status do
@@ -1426,12 +1586,25 @@
      dentro de um `<span class="laranja">`, como as outras linhas de estado
      fazem, e manda `<i class="nada"></i>` quando não há bloqueio — que é o
      mesmo marcador que apaga a linha. Sem bloqueio não há `.laranja` naquela
-     linha, e o interruptor fica como sempre foi. ---------- */
-  .quadro-corpo:has(.estado.portao .laranja) .at-linha:has(.tog[data-gesto="modo"]){
-       cursor:not-allowed}
-  .quadro-corpo:has(.estado.portao .laranja) .tog[data-gesto="modo"]{
+     linha, e o interruptor fica como sempre foi.
+
+     A REGRA PARTE DO ENDEREÇO, E NÃO MAIS DA CLASSE — 07/09/2026. Ela dizia
+     `.quadro-corpo:has(.estado.portao .laranja)`, e as duas classes só existiam
+     porque a razão morava na tira de `.estados`. A frase desceu para o `?` do
+     "Status do Modo" por ordem dela (*"essas 3 frases … quebram o layout"*), e
+     uma regra ancorada em `.estado.portao` teria parado de apagar o interruptor
+     **em silêncio**: a razão continuaria chegando, o interruptor voltaria a
+     parecer clicável, e nada reprovaria. O `data-campo` é o que não muda de
+     lugar — é o endereço pelo qual o pacote escreve.
+
+     ISTO É O CINZA, E ELE FICA NA TELA SEM HOVER NENHUM. O que foi para o `?`
+     é a RAZÃO, em palavras; o sinal de *não dá para mexer* continua sendo o
+     próprio interruptor apagado, como a 06-Q1 pediu. ---------- */
+  .quadro-corpo:has([data-campo="modo-portao"] .laranja)
+       .at-linha:has(.tog[data-gesto="modo"]){cursor:not-allowed}
+  .quadro-corpo:has([data-campo="modo-portao"] .laranja) .tog[data-gesto="modo"]{
        border-color:var(--border-sutil);color:var(--texto-mudo);pointer-events:none}
-  .quadro-corpo:has(.estado.portao .laranja) .tog[data-gesto="modo"]:hover{
+  .quadro-corpo:has([data-campo="modo-portao"] .laranja) .tog[data-gesto="modo"]:hover{
        border-color:var(--border-sutil)}
 
   /* ---------- A TIRA DE AVISO SOB A TABELA DE BOTÕES ----------
@@ -1965,7 +2138,10 @@
     <div class="perfil-ativo">
       <span class="pa-rot">Perfil ativo</span>
       <span class="pa-nome" data-campo="perfil">Mortal Kombat</span>
-      <span class="ajuda">?<span class="dica" style="left:auto;right:22px">
+      <!-- `tabindex` de 07/09/2026: este `?` está no CABEÇALHO, logo nas dez
+           abas, e explica onde o "Salvar Perfil" grava. Sem ele o `<span>` não
+           recebe foco e o `el.click()` do controle não o abria em aba nenhuma. -->
+      <span class="ajuda" tabindex="0">?<span class="dica" style="left:auto;right:22px">
         Tudo o que você mudar em qualquer aba cai <b>neste</b> perfil quando clicar em
         <b>Salvar Perfil</b>.<br><br>
         Cada controle guarda a <b>sua</b> configuração aqui dentro, pelo ID da peça — amanhã,
@@ -1994,15 +2170,15 @@
     <div class="quadro">
       <div class="quadro-topo">
         <span class="quadro-titulo">Navegação</span>
-        <span class="ajuda">?<span class="dica">Serve para navegar o computador sem largar o controle — e para os jogos que só entendem mouse e teclado.<br><br>Precisa de <b>uinput</b> e de uma regra <b>udev</b>; o instalador já deixa os dois prontos. Se a linha de estado abaixo estiver vermelha, é isso que falta.<br><br><b>Combinações:</b> junte teclas com &quot;+&quot; (ex.: Alt + Tab). Nenhum atalho de fábrica digita letra — para escrever texto, abra o teclado na tela com o <b>L3</b>.</span></span>
+        <span class="ajuda" tabindex="0">?<span class="dica">Serve para navegar o computador sem largar o controle — e para os jogos que só entendem mouse e teclado.<br><br>Precisa de <b>uinput</b> e de uma regra <b>udev</b>; o instalador já deixa os dois prontos. Se a linha de estado abaixo estiver vermelha, é isso que falta.<br><br><b>Combinações:</b> junte teclas com &quot;+&quot; (ex.: Alt + Tab). Nenhum atalho de fábrica digita letra — para escrever texto, abra o teclado na tela com o <b>L3</b>.</span></span>
         <a class="porta" href="mapa-do-controle.html" title="Abre o mapa do controle — as 28 peças do aparelho com nome, apelido e glifo, e as cores de fábrica para ver clicando. É de lá que saem as 22 linhas das duas telas de botões desta aba: o mesmo docs/data/pecas-do-dualsense.csv.">Banco de provas: o mapa do controle&nbsp;↗</a>
       </div>
       <div class="quadro-corpo">
 
         <!-- ---------- A MESA + OS GESTOS, nas duas mesmas colunas ---------- -->
         <div class="sec-rot sec-dupla">
-          <span>Quem navega, e com qual controle<span class="ajuda">?<span class="dica">Os 4 controles ligados, cada um na cor do seu plástico, com as cinco lâmpadas no padrão do número dele e a barra de luz na cor automática daquele número.<br><br><b>O cursor do PC é um só.</b> Mouse, teclado e os 5 gestos saem do controle do <b>Player 1</b> — é o controle que o Hefesto lê por inteiro; os outros chegam ao jogo pelo gamepad virtual e não mexem no cursor.<br><br>Quem escolhe o alvo de um ajuste é a <b>fita do topo</b>, e só ela — estes cartões são leitura.</span></span></span>
-          <span>Os gestos do controle<span class="ajuda">?<span class="dica">São combinações que valem <b>sem largar o controle</b>, a qualquer momento, mesmo com o jogo aberto.<br><br>Apertar os dois botões em até <b>0,15 s</b> conta como combo — mais devagar, o Hefesto entende como dois toques separados.<br><br>O número de cada linha marca a peça no desenho do <b>Player 1</b>; passe o ponteiro por uma linha e ela acende. Acende só ali porque é só ali que o gesto existe.<br><br><b>Ressalva:</b> o <b>PS + R3</b> e o <b>PS + Options</b> são as duas saídas de emergência quando o jogo não responde — trocar o que eles fazem tira essa saída. Os cinco degraus do <b>Modo de conexão</b> se escolhem na aba <b>Jogar</b>, e aqui não se repetem.</span></span></span>
+          <span>Quem navega, e com qual controle<span class="ajuda" tabindex="0">?<span class="dica">Os 4 controles ligados, cada um na cor do seu plástico, com as cinco lâmpadas no padrão do número dele e a barra de luz na cor automática daquele número.<br><br><b>O cursor do PC é um só.</b> Mouse, teclado e os 5 gestos saem do controle do <b>Player 1</b> — é o controle que o Hefesto lê por inteiro; os outros chegam ao jogo pelo gamepad virtual e não mexem no cursor.<br><br>Quem escolhe o alvo de um ajuste é a <b>fita do topo</b>, e só ela — estes cartões são leitura.</span></span></span>
+          <span>Os gestos do controle<span class="ajuda" tabindex="0">?<span class="dica">São combinações que valem <b>sem largar o controle</b>, a qualquer momento, mesmo com o jogo aberto.<br><br>Apertar os dois botões em até <b>0,15 s</b> conta como combo — mais devagar, o Hefesto entende como dois toques separados.<br><br>O número de cada linha marca a peça no desenho do <b>Player 1</b>; passe o ponteiro por uma linha e ela acende. Acende só ali porque é só ali que o gesto existe.<br><br><b>Ressalva:</b> o <b>PS + R3</b> e o <b>PS + Options</b> são as duas saídas de emergência quando o jogo não responde — trocar o que eles fazem tira essa saída. Os cinco degraus do <b>Modo de conexão</b> se escolhem na aba <b>Jogar</b>, e aqui não se repetem.</span></span></span>
         </div>
         <div class="moldura">
         <div class="gestos">
@@ -3331,46 +3507,48 @@
         <div class="moldura">
           <div class="ativacao">
             <div class="at-col">
-              <div class="at-linha"><span class="at-rot">Status do Modo<span class="ajuda">?<span class="dica">Vale para <b>este perfil</b>. Enquanto estiver em <b>Nunca</b>, o controle é só gamepad e nada desta aba chega ao PC.</span></span></span><label class="tog" data-gesto="modo" data-campo="rato-ligado" data-hef-alvo="classe" data-hef-classe="ligado" data-hef-quando="Ligado"><span class="pino"></span><span class="txt" data-campo="rato-ligado">—</span></label></div>
-              <div class="at-linha"><span class="at-rot">Função do teclado<span class="ajuda">?<span class="dica">Liga o que o controle <b>digita</b>: os atalhos da tabela à direita, o teclado na tela e as três regiões do touchpad.<br><br>Passou a viajar no <b>perfil</b>, como o mouse vizinho já viajava.</span></span></span><select class="escolha-at" data-gesto="teclado" data-campo="teclado-estado" data-hef-alvo="valor"><option>Só dentro do jogo</option><option selected>Só fora do jogo</option><option>Desativado</option></select></div>
-              <div class="at-linha"><span class="at-rot">Navegação Interna<span class="ajuda">?<span class="dica">Navegar <b>a janela do Hefesto</b> com o controle — abas, botões e listas.<br><br>Com os 4 controles ligados, cada jogador anda no seu próprio card e o <b>X de cada um grava no controle dele</b> — sem disputar o card do vizinho.<br><br>É outra coisa que o cursor do PC: esse é <b>um só</b>, e sai do controle do Player 1.</span></span></span><select class="escolha-at" data-gesto="navegacao-interna"><option selected>Ligada — cada controle navega o Hefesto</option><option>Só o Player 1 navega</option><option>Desligada</option></select></div>
+              <div class="at-linha"><span class="at-rot">Status do Modo<span class="ajuda tem-viva" tabindex="0">?<span class="dica">Vale para <b>este perfil</b>. Enquanto estiver em <b>Nunca</b>, o controle é só gamepad e nada desta aba chega ao PC.<span class="viva" data-campo="modo-portao" data-hef-alvo="html"><i class="nada"></i></span></span></span></span><label class="tog" data-gesto="modo" data-campo="rato-ligado" data-hef-alvo="classe" data-hef-classe="ligado" data-hef-quando="Ligado"><span class="pino"></span><span class="txt" data-campo="rato-ligado">—</span></label></div>
+              <div class="at-linha"><span class="at-rot">Função do teclado<span class="ajuda tem-viva" tabindex="0">?<span class="dica">Liga o que o controle <b>digita</b>: os atalhos da tabela à direita, o teclado na tela e as três regiões do touchpad.<br><br>Passou a viajar no <b>perfil</b>, como o mouse vizinho já viajava.<span class="viva" data-campo="teclado-osk" data-hef-alvo="html"><i class="nada"></i></span><span class="viva" data-campo="ativacao-ressalva" data-hef-alvo="html"><i class="nada"></i></span></span></span></span><select class="escolha-at" data-gesto="teclado" data-campo="teclado-estado" data-hef-alvo="valor"><option>Só dentro do jogo</option><option selected>Só fora do jogo</option><option>Desativado</option></select></div>
+              <div class="at-linha"><span class="at-rot">Navegação Interna<span class="ajuda" tabindex="0">?<span class="dica">Navegar <b>a janela do Hefesto</b> com o controle — abas, botões e listas.<br><br>Com os 4 controles ligados, cada jogador anda no seu próprio card e o <b>X de cada um grava no controle dele</b> — sem disputar o card do vizinho.<br><br>É outra coisa que o cursor do PC: esse é <b>um só</b>, e sai do controle do Player 1.</span></span></span><select class="escolha-at" data-gesto="navegacao-interna"><option selected>Ligada — cada controle navega o Hefesto</option><option>Só o Player 1 navega</option><option>Desligada</option></select></div>
             </div>
             <div class="at-col">
-              <div class="at-linha"><span class="at-rot">Velocidade de cursor<span class="ajuda">?<span class="dica">Uma velocidade só, porque é um número só no Hefesto: o <b>analógico esquerdo</b> e o <b>touch</b> do touchpad andam pelo mesmo ajuste.<br><br>De 1 a 12. O padrão do Hefesto é 6.</span></span></span><div class="campo-num"><input class="trilho" type="range" min="1" max="12" step="1" value="6" data-gesto="vel-cursor" data-campo="vel-cursor" data-hef-alvo="valor" title="Arraste para escolher a velocidade do cursor — de 1 a 12. Vale na hora."><span class="num" data-campo="vel-cursor">6</span></div></div>
-              <div class="at-linha"><span class="at-rot">Velocidade da rolagem<span class="ajuda">?<span class="dica">Rola com o <b>analógico direito</b>. Rolar com dois dedos no touchpad é outra coisa, e o Hefesto ainda não faz.<br><br>De 1 a 5. O padrão do Hefesto é 1.</span></span></span><div class="campo-num"><input class="trilho" type="range" min="1" max="5" step="1" value="1" data-gesto="vel-rolagem" data-campo="vel-rolagem" data-hef-alvo="valor" title="Arraste para escolher a velocidade da rolagem — de 1 a 5. Vale na hora."><span class="num" data-campo="vel-rolagem">1</span></div></div>
-              <div class="at-linha"><span class="at-rot">Modo Steam<span class="ajuda">?<span class="dica">O controle passa a navegar a <b>Steam</b> do jeito que navega num Steam Deck: o Modo Jogo responde ao d-pad e aos botões, sem mouse.<br><br>O terceiro degrau grava a escolha para a <b>próxima vez</b> — a Steam abre direto em Modo Jogo, sem ninguém clicar. Esse degrau vale para a máquina, não só para este perfil.</span></span></span><select class="escolha-at" data-gesto="modo-steam"><option selected>Desligado</option><option>Ligado — o controle navega a Steam como num Steam Deck</option><option>Ligado, e a Steam abre em Modo Jogo na próxima vez</option></select></div>
+              <div class="at-linha"><span class="at-rot">Velocidade de cursor<span class="ajuda tem-viva" tabindex="0">?<span class="dica">Uma velocidade só, porque é um número só no Hefesto: o <b>analógico esquerdo</b> e o <b>touch</b> do touchpad andam pelo mesmo ajuste.<br><br>De 1 a 12. O padrão do Hefesto é 6.<span class="viva" data-campo="ativacao-ressalva" data-hef-alvo="html"><i class="nada"></i></span></span></span></span><div class="campo-num"><input class="trilho" type="range" min="1" max="12" step="1" value="6" data-gesto="vel-cursor" data-campo="vel-cursor" data-hef-alvo="valor" title="Arraste para escolher a velocidade do cursor — de 1 a 12. Vale na hora."><span class="num" data-campo="vel-cursor">6</span></div></div>
+              <div class="at-linha"><span class="at-rot">Velocidade da rolagem<span class="ajuda tem-viva" tabindex="0">?<span class="dica">Rola com o <b>analógico direito</b>.<br><br>De 1 a 5. O padrão do Hefesto é 1.<span class="viva" data-campo="ativacao-ressalva" data-hef-alvo="html"><i class="nada"></i></span></span></span></span><div class="campo-num"><input class="trilho" type="range" min="1" max="5" step="1" value="1" data-gesto="vel-rolagem" data-campo="vel-rolagem" data-hef-alvo="valor" title="Arraste para escolher a velocidade da rolagem — de 1 a 5. Vale na hora."><span class="num" data-campo="vel-rolagem">1</span></div></div>
+              <div class="at-linha"><span class="at-rot">Modo Steam<span class="ajuda" tabindex="0">?<span class="dica">O controle passa a navegar a <b>Steam</b> do jeito que navega num Steam Deck: o Modo Jogo responde ao d-pad e aos botões, sem mouse.<br><br>O terceiro degrau grava a escolha para a <b>próxima vez</b> — a Steam abre direto em Modo Jogo, sem ninguém clicar. Esse degrau vale para a máquina, não só para este perfil.</span></span></span><select class="escolha-at" data-gesto="modo-steam"><option selected>Desligado</option><option>Ligado — o controle navega a Steam como num Steam Deck</option><option>Ligado, e a Steam abre em Modo Jogo na próxima vez</option></select></div>
             </div>
           </div>
-          <!-- ---------- A RESSALVA DA D3: o ajuste é de todos ----------
-               05/09/2026, decisão D3 de `2026-09-05-AS-TRES-DECISOES-DO-PERFIL`:
-               `mouse`, `key_bindings`, `button_actions`, `teclado_emulado` e
-               `suppress_desktop_emulation` ficam GLOBAIS enquanto o caminho de
-               ENTRADA por unidade não existir — o `Daemon` tem UM
-               `_mouse_device` e UM `_keyboard_device`, e o input vem sempre do
-               primário. A decisão pede a tela junto: *"onde a aba oferece um
-               destes cinco, a linha de ressalva diz que o ajuste vale para a
-               mesa inteira, não só para o controle selecionado."*
+          <!-- ---------- A RESSALVA DA D3 SAIU DA MOLDURA ----------
+               07/09/2026, ordem dela: *"navegacao tem essas 3 frases aqui na
+               parte de baixo que quebram o layout"* — e ela era a primeira das
+               três, 17,25px logo abaixo da grade das sete linhas.
 
-               A PEÇA É A DAS DEZ (`monta.ressalva`, D-02), e ela NASCE VAZIA:
-               quem decide se há o que ressalvar é o pacote, ao vivo, contando
-               os CONECTADOS — com um controle ligado não há promessa quebrada.
-               Uma frase cravada aqui a afirmaria também na tela de quem tem um
-               controle só, que é a ressalva mentindo pelo desenho.
+               A DECISÃO D3 CONTINUA CUMPRIDA, e é o que importa: `mouse`,
+               `key_bindings`, `button_actions`, `teclado_emulado` e
+               `suppress_desktop_emulation` seguem GLOBAIS, e a tela continua
+               dizendo isso — *"onde a aba oferece um destes cinco, a linha de
+               ressalva diz que o ajuste vale para a mesa inteira, não só para o
+               controle selecionado"*. O que mudou é ONDE: em vez de uma linha
+               sob a grade inteira, a mesma frase VIVA está no `?` dos TRÊS
+               campos que ela nomeia — "Velocidade de cursor", "Velocidade da
+               rolagem" e "Função do teclado" (ver `ajuda(..., vivas=…)`).
 
-               DENTRO DA `.moldura` E DEPOIS DA GRADE, e não na tira de
-               `.estados` logo abaixo: aquelas cinco linhas falam do que está
-               ACONTECENDO agora (o portão, o bloqueio, o custo); esta fala do
-               ALCANCE das sete linhas acima dela, e é delas que ela precisa
-               estar perto. -->
-          <div class="ressalva" data-campo="ativacao-ressalva" data-hef-alvo="html"><i class="nada"></i></div>
+               O QUE ISSO GANHA, além dos 17px: a ressalva deixa de ressalvar as
+               SETE linhas em bloco e passa a estar no campo de que fala. Ela
+               nunca valeu para as sete — "Navegação Interna" é por controle
+               (cada jogador anda no seu card) e "Modo Steam" já diz na própria
+               dica que vale para a máquina.
+
+               E ELA CONTINUA NASCENDO VAZIA, pelo mesmo motivo de sempre: quem
+               decide se há o que ressalvar é o pacote, ao vivo, contando os
+               CONECTADOS. Com UM controle ligado não há promessa quebrada, e
+               uma frase cravada no desenho a afirmaria assim mesmo — que é a
+               ressalva mentindo pelo desenho, o defeito da aba 08. -->
         </div>
 
         <div class="estados">
-          <div class="estado portao" data-campo="modo-portao" data-hef-alvo="html"></div>
           <div class="estado" data-campo="rato-estado" data-hef-alvo="html"></div>
           <div class="estado" data-campo="teclado-bloqueio" data-hef-alvo="html"></div>
           <div class="estado" data-campo="teclado-custo" data-hef-alvo="html"></div>
-          <div class="estado" data-campo="teclado-osk" data-hef-alvo="html"></div>
         </div>
 
         <!-- ---------- O TERCEIRO BLOCO: os três botões, sozinhos ----------
@@ -3491,7 +3669,7 @@
   <div class="tn-cx">
     <div class="tn-topo">
       <span class="tn-tit">Definições Controle e Mouse</span>
-      <span class="ajuda">?<span class="dica">As <b>22 linhas</b> de cada botão do controle: <b>o que ele faz</b> — mouse, tecla ou programa, tudo na mesma lista.<br><br>A lista de botões sai de <b>docs/data/pecas-do-dualsense.csv</b>, o mesmo mapa que nomeia as peças do desenho.<br><br><b>O botão PS faz as duas coisas.</b> Ele continua sendo a saída de emergência — os 5 gestos desta aba saem dele, e segurá-lo alterna o modo jogo —, e a tecla que você escolher para ele acontece <b>junto</b>: no toque curto, sem combo e fora do jogo. Escolher <b>— Nada —</b> cala as duas.<br><br><b>As três regiões do touchpad estão marcadas.</b> Enquanto o touchpad do controle for o mouse do computador, o Hefesto não transforma o clique dele em tecla — a escolha fica guardada no perfil e volta a valer no dia em que isso mudar.<br><br>Valem para o controle que navega o PC: o <b data-campo="quem-navega">P1 Cosmic Red USB</b>.</span></span>
+      <span class="ajuda" tabindex="0">?<span class="dica">As <b>22 linhas</b> de cada botão do controle: <b>o que ele faz</b> — mouse, tecla ou programa, tudo na mesma lista.<br><br>A lista de botões sai de <b>docs/data/pecas-do-dualsense.csv</b>, o mesmo mapa que nomeia as peças do desenho.<br><br><b>O botão PS faz as duas coisas.</b> Ele continua sendo a saída de emergência — os 5 gestos desta aba saem dele, e segurá-lo alterna o modo jogo —, e a tecla que você escolher para ele acontece <b>junto</b>: no toque curto, sem combo e fora do jogo. Escolher <b>— Nada —</b> cala as duas.<br><br><b>As três regiões do touchpad estão marcadas.</b> Enquanto o touchpad do controle for o mouse do computador, o Hefesto não transforma o clique dele em tecla — a escolha fica guardada no perfil e volta a valer no dia em que isso mudar.<br><br>Valem para o controle que navega o PC: o <b data-campo="quem-navega">P1 Cosmic Red USB</b>.</span></span>
       <a class="tn-x" href="#" title="Fechar" data-gesto="fechar-definicoes">×</a>
     </div>
     <div class="tn-corpo">
@@ -3644,7 +3822,7 @@
   <div class="tn-cx">
     <div class="tn-topo">
       <span class="tn-tit">Teclas do teclado</span>
-      <span class="ajuda">?<span class="dica">Escreva a tecla que o botão deve digitar. Vale <b>qualquer combinação</b> — não só as da lista de <b>Definições Controle e Mouse</b>.<br><br>Exemplos: <b>Alt + Tab</b>, <b>Ctrl + Shift + F</b>, <b>Super (tecla Windows)</b>, <b>F5</b>.<br><br><b>Campo em branco</b> quer dizer que o botão não digita nada.<br><br>Só estes 8 botões aparecem aqui porque são os únicos em que o Hefesto guarda uma tecla escrita; nos outros o que vale é o que a lista de <b>Definições Controle e Mouse</b> escolhe.<br><br>O <b>↺</b> devolve <b>só aquela linha</b> ao de fábrica.</span></span>
+      <span class="ajuda" tabindex="0">?<span class="dica">Escreva a tecla que o botão deve digitar. Vale <b>qualquer combinação</b> — não só as da lista de <b>Definições Controle e Mouse</b>.<br><br>Exemplos: <b>Alt + Tab</b>, <b>Ctrl + Shift + F</b>, <b>Super (tecla Windows)</b>, <b>F5</b>.<br><br><b>Campo em branco</b> quer dizer que o botão não digita nada.<br><br>Só estes 8 botões aparecem aqui porque são os únicos em que o Hefesto guarda uma tecla escrita; nos outros o que vale é o que a lista de <b>Definições Controle e Mouse</b> escolhe.<br><br>O <b>↺</b> devolve <b>só aquela linha</b> ao de fábrica.</span></span>
       <a class="tn-x" href="#" title="Fechar" data-gesto="fechar-teclas">×</a>
     </div>
     <div class="tn-corpo">
@@ -3720,7 +3898,7 @@
   <div class="tn-cx">
     <div class="tn-topo">
       <span class="tn-tit">Remapeamento dos botões</span>
-      <span class="ajuda">?<span class="dica">As mesmas <b>22 linhas</b>, na mesma ordem, dizendo outra coisa: <b>para qual outro botão</b> cada um passa a valer.<br><br>É troca de botão por botão, e ela vale antes de o jogo ver. O que cada botão <b>faz</b> se escolhe na tela <b>Definições Controle e Mouse</b>, ao lado.<br><br>Valem para o controle que navega o PC: o <b data-campo="quem-navega">P1 Cosmic Red USB</b>.</span></span>
+      <span class="ajuda" tabindex="0">?<span class="dica">As mesmas <b>22 linhas</b>, na mesma ordem, dizendo outra coisa: <b>para qual outro botão</b> cada um passa a valer.<br><br>É troca de botão por botão, e ela vale antes de o jogo ver. O que cada botão <b>faz</b> se escolhe na tela <b>Definições Controle e Mouse</b>, ao lado.<br><br>Valem para o controle que navega o PC: o <b data-campo="quem-navega">P1 Cosmic Red USB</b>.</span></span>
       <a class="tn-x" href="#" title="Fechar">×</a>
     </div>
     <div class="tn-corpo">
@@ -3873,7 +4051,7 @@
   <div class="tn-cx">
     <div class="tn-topo">
       <span class="tn-tit">Estilo Point-and-click</span>
-      <span class="ajuda">?<span class="dica">Um <b>Estilo de Jogo</b>, como o FPS e o Corrida. O perfil escolhe usá-lo; o que ele faz é escrito <b>aqui</b>.<br><br>Enquanto ele estiver valendo, estas linhas mandam — as da aba voltam quando o estilo sai.<br><br>Serve para jogo de <b>apontar e clicar</b>, que espera mouse e não entende controle: <b>o touchpad vira o ponteiro</b>, e o toque vira o clique.</span></span>
+      <span class="ajuda" tabindex="0">?<span class="dica">Um <b>Estilo de Jogo</b>, como o FPS e o Corrida. O perfil escolhe usá-lo; o que ele faz é escrito <b>aqui</b>.<br><br>Enquanto ele estiver valendo, estas linhas mandam — as da aba voltam quando o estilo sai.<br><br>Serve para jogo de <b>apontar e clicar</b>, que espera mouse e não entende controle: <b>o touchpad vira o ponteiro</b>, e o toque vira o clique.</span></span>
       <a class="tn-x" href="#" title="Fechar">×</a>
     </div>
     <div class="tn-corpo">
@@ -3929,10 +4107,15 @@
 </svg><span class="nm">R3</span><span class="rot-gl">Direção</span></span></td><td><select class="campo-linha"><optgroup label="Mouse"><option>Botão esquerdo</option><option>Botão direito</option><option>Botão do meio</option><option>Movimento do cursor</option><option selected>Rolagem vertical e horizontal</option></optgroup><optgroup label="Função do teclado"><option>Seta para cima</option><option>Seta para baixo</option><option>Seta para a esquerda</option><option>Seta para a direita</option><option>Enter</option><option>Esc</option><option>Espaço</option><option>Backspace</option><option>Delete</option><option>Alt + Tab</option><option>Alt + Shift + Tab</option><option>Super (tecla Windows)</option><option>PrintScreen</option><option>F11</option></optgroup><optgroup label="Executar Comando"><option>Abrir e fechar o teclado na tela</option><option>Abrir o teclado na tela</option><option>Fechar o teclado na tela</option><option>Abrir a Steam</option><option>Sair do modo jogo</option><option>Escolher um programa…</option></optgroup><option>— Nada —</option></select></td></tr>
         </table>
       </div>
+      <!-- AS DICAS AQUI SÃO AS `_ESTILO`, e a diferença é uma só: elas NÃO
+           levam a ressalva da D3. Ela diz que o ajuste vale para todos os
+           controles ligados, e é verdade sobre as barras do painel — não sobre
+           estes dois números, que são a velocidade DO ESTILO e não escrevem em
+           lugar nenhum (ver o comentário dos `bignum` logo abaixo). -->
       <div class="tn-vel">
-        <div class="at-linha"><span class="at-rot">Velocidade de cursor<span class="ajuda">?<span class="dica">Uma velocidade só, porque é um número só no Hefesto: o <b>analógico esquerdo</b> e o <b>touch</b> do touchpad andam pelo mesmo ajuste.<br><br>De 1 a 12. O padrão do Hefesto é 6.</span></span></span>
+        <div class="at-linha"><span class="at-rot">Velocidade de cursor<span class="ajuda" tabindex="0">?<span class="dica">Uma velocidade só, porque é um número só no Hefesto: o <b>analógico esquerdo</b> e o <b>touch</b> do touchpad andam pelo mesmo ajuste.<br><br>De 1 a 12. O padrão do Hefesto é 6.</span></span></span>
           <div class="campo-num"><span class="par"><span class="bignum"><button class="passo">−</button><b>8</b><button class="passo">+</button></span></span></div></div>
-        <div class="at-linha"><span class="at-rot">Velocidade da rolagem<span class="ajuda">?<span class="dica">Rola com o <b>analógico direito</b>. Rolar com dois dedos no touchpad é outra coisa, e o Hefesto ainda não faz.<br><br>De 1 a 5. O padrão do Hefesto é 1.</span></span></span>
+        <div class="at-linha"><span class="at-rot">Velocidade da rolagem<span class="ajuda" tabindex="0">?<span class="dica">Rola com o <b>analógico direito</b>.<br><br>De 1 a 5. O padrão do Hefesto é 1.</span></span></span>
           <div class="campo-num"><span class="par"><span class="bignum"><button class="passo">−</button><b>4</b><button class="passo">+</button></span></span></div></div>
       </div>
     </div>
@@ -4068,7 +4251,7 @@
     para o mouse (<code>:4744</code>), para o teclado (<code>:4754</code>) e para o
     <code>hotkey_manager.observe</code> (<code>:4757</code>); os secundários do
     co-op têm um caminho só, o do gamepad virtual
-    (<code>daemon/subsystems/coop.py:1871</code>). Por isso o cartão do
+    (<code>daemon/subsystems/coop.py:2057</code>). Por isso o cartão do
     <b>Player 1</b> diz <i>Navega o PC</i> e os outros dizem <i>Só a
     janela</i>, e por isso o desenho que acende no combo é o dele. A
     <b>Navegação Interna</b> é a outra metade: com ela ligada, cada jogador anda

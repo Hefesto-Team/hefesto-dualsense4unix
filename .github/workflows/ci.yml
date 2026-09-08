@@ -98,6 +98,7 @@ jobs:
       - run: python3 scripts/check_identidade_vem_de_cima.py
       - run: python3 scripts/check_a_cor_vem_do_aparelho.py
       - run: python3 scripts/check_colisao_de_sprints.py
+      - run: python3 scripts/check_a_tela_nao_confessa.py
 
   acentuacao:
     name: Acentuação PT-BR estrita (py${{ matrix.python }})

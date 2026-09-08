@@ -164,18 +164,34 @@ def test_o_trilho_tem_dono(pac, a04):
         f"botões daria verde sobre um trilho que voltou a não fazer nada")
 
 
-def test_a_pagina_oferece_o_trilho_e_o_lugar_vazio_nao(a04):
-    """O `<input type="range">` é o polegar de verdade — e ele não nasce sem dono.
+def test_a_pagina_oferece_o_trilho_e_o_lugar_vazio_nasce_em_zero(a04):
+    """O `<input type="range">` é o polegar de verdade — e sem dono ele nasce em ZERO.
 
-    AS DUAS METADES, e a segunda é a que morde: a coluna VIVA tem o trilho com
-    `data-gesto="brilho"`, e a coluna VAZIA não tem nenhum. Um ajuste vivo num
-    lugar sem aparelho é um gesto que não teria em qual controle escrever — e
-    este escreve no DISCO dela.
+    **ESTA RÉGUA MEDIA O MUNDO DE ONTEM, e estava VERMELHA desde a leva da manhã
+    de 07/09/2026 sem ninguém ver.** Ela exigia que a coluna VAZIA não tivesse
+    `<button>`, nem `data-gesto`, nem `type="range"` — e as três coisas passaram
+    a nascer nos quatro lugares naquela leva, de propósito. A razão está escrita
+    em `test_a_iluminacao_diz_o_numero_certo`: *"o lugar que NASCE vazio perdeu
+    «peça» — o controle que chegar ali fica sem esse gesto na tela, e só
+    recarregar a página desfaz."* O piloto vira a marca `data-conectado`; ele
+    não materializa widget.
 
-    A MORDIDA: emita o `<input>` também na `coluna_vazia` do `aba04.py` e a
-    segunda asserção reprova (o próprio gerador já reprova antes, na régua 4 do
-    `_conferir` — são duas réguas independentes sobre o mesmo defeito, que é
-    regra desta casa).
+    **QUEM TIRA O CLIQUE HOJE É A FOLHA, e quem mede isso é o Chrome:**
+    `test_a_04_iluminacao_o_gesto_esta_onde_deve` abre a página e pergunta ao
+    MOTOR quem recebe o clique em cada lugar, nos dois sentidos. Quando as duas
+    discordaram, a que estava velha era esta — a do TEXTO. É a regra desta casa:
+    *quando o instrumento e o aparelho discordam, o aparelho ganha.*
+
+    **O QUE ESTA RÉGUA PASSA A MEDIR** é o que só se lê no texto e continua
+    valendo, e é a mesma coisa que a §4 do `aba04._conferir` cobra: o trilho de
+    um lugar sem dono nasce em `value="0"` e sem largura. Um brilho cravado ali
+    seria o número do MOCKUP (82%) na tela dela, num lugar que não tem controle
+    para ter brilho nenhum.
+
+    A MORDIDA: faça o `puxador` do `aba04.coluna` nascer com `value="{b}"` em
+    vez de `{b if ligado else 0}` e a asserção do zero reprova (o próprio
+    gerador reprova antes, na §4 do `_conferir` — duas réguas independentes
+    sobre o mesmo defeito, que é regra desta casa).
     """
     from hefesto_dualsense4unix.interface import onde
 
@@ -202,17 +218,50 @@ def test_a_pagina_oferece_o_trilho_e_o_lugar_vazio_nao(a04):
     vazias = re.findall(r'<div class="ctrl vazia"(.*?)(?=<div class="ctrl[" ]|\Z)',
                         grade, re.S)
     assert vazias, "a página não tem lugar vazio — a régua não mediria nada"
+    # DUAS ASSERÇÕES CAÍRAM EM 07/09/2026, e as duas mediam o mundo de ontem.
+    #
+    # **ELAS ESTAVAM VERMELHAS DESDE A LEVA DE 07/09 PELA MANHÃ**, e ninguém
+    # viu: `git show HEAD:mockup/04-iluminacao.html` reprova nas duas exatamente
+    # como a página de hoje. O que mudou naquela leva foi o DESENHO — a guia
+    # dos oito tons e o trilho passaram a nascer nos QUATRO lugares, e quem tira
+    # o clique de quem não tem dono é a FOLHA, não a ausência do widget. A razão
+    # está escrita em `test_a_iluminacao_diz_o_numero_certo`: *"o lugar que
+    # NASCE vazio perdeu «peça» — o controle que chegar ali fica sem esse gesto
+    # na tela, e só recarregar a página desfaz."*
+    #
+    # AS DUAS QUE SAÍRAM:
+    #   `"<button" not in bloco`   — a coluna vazia tem os oito tons da guia,
+    #                                que são `<button>`. A asserção existia para
+    #                                pegar um RECORTE que engolisse o rodapé, e
+    #                                para isso o `"rodape" not in bloco` basta.
+    #   `"data-gesto" not in bloco` — a coluna vazia carrega os endereços de
+    #                                propósito desde 07/09.
+    #
+    # **O QUE PROTEGE HOJE, e não é este arquivo:**
+    # `test_a_04_iluminacao_o_gesto_esta_onde_deve` abre a página no Chrome e
+    # pergunta ao MOTOR quem recebe o clique em cada lugar — nos dois sentidos,
+    # escondido no vazio e clicável no cheio. Ela mede a tela; esta
+    # media o  # noqa-acento: verbo medir
+    # texto, e quando as duas discordaram foi a do texto que estava velha.
+    # É a regra desta casa: *quando o instrumento e o aparelho discordam, o
+    # aparelho ganha.*
+    #
+    # O QUE FICA AQUI é o que só se vê no texto e continua verdadeiro: o trilho
+    # do brilho — que escreve no DISCO dela — não nasce sem dono.
     for bloco in vazias:
         assert "cel-brilho" in bloco and "cel-acoes" in bloco, (
             "o recorte da coluna vazia não alcança as células — a régua estaria "
             "dando verde sobre o desenho")
-        assert "<button" not in bloco and "rodape" not in bloco, (
+        assert "rodape" not in bloco, (
             "o recorte da coluna vazia passou do fim da grade e engoliu o rodapé")
-        assert 'type="range"' not in bloco, (
-            "um lugar VAZIO da mesa oferece o trilho de brilho — arrastá-lo não "
-            "teria em qual controle gravar")
-        assert "data-gesto" not in bloco, (
-            "um lugar VAZIO oferece gesto — botão que engole o toque")
+        assert 'class="puxador"' in bloco, (
+            "o lugar VAZIO perdeu o trilho — o controle que chegar ali fica "
+            "sem o polegar na tela, e só recarregar a página desfaz")
+        assert 'value="0"' in bloco, (
+            "o trilho do lugar VAZIO não nasce em zero — brilho cravado num "
+            "lugar sem dono é o brilho do MOCKUP na tela dela")
+        assert 'style="width:' not in bloco, (
+            "a barra de brilho do lugar VAZIO nasceu com largura")
 
 
 def test_o_trilho_e_pintado_pelo_produto(a04):

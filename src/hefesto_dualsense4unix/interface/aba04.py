@@ -740,22 +740,21 @@ CSS = """
   .chave-auto input:checked:focus-visible + .chave-trilho,
   .chave-auto input:focus-visible + .chave-trilho{outline:1px solid var(--cyan);outline-offset:1px}
   .quadro-topo .ajuda.esq .dica{left:auto;right:22px}
-  /* O ESCOPO GLOBAL DA ABA — LUZES-01, e ele mora na MESMA faixa do
-     interruptor, pela mesma razão medida: a faixa do título tem 17px de altura
-     e mais de mil de largura vaga, e a grade das colunas está a 6px do teto.
-     E o lugar diz o alcance: um botão que mexe em TODOS os controles dentro de
-     UMA coluna mentiria sobre quem ele atinge. */
-  /* A ALTURA É A DA FAIXA, e ela foi MEDIDA: com `padding:5px` o botão tinha
-     23px, a faixa do título ia de 17 para 34 e o quadro passava do teto do
-     `.miolo` — a aba rolava por dentro, que é conteúdo que ninguém sabe que
-     existe. Com 15px de caixa ele cabe ao lado do interruptor (cujo trilho tem
-     15px) e a faixa não cresce um pixel. */
-  .btn-todos{
-    font-size:10px;line-height:13px;padding:0 8px;height:15px;border-radius:5px;
-    border:1px solid var(--border-forte);background:var(--app-bg);
-    color:var(--texto-mudo);cursor:pointer;white-space:nowrap;
-  }
-  .btn-todos:hover{border-color:var(--purple);color:var(--fg)}
+  /* O ESCOPO GLOBAL DESTA FAIXA SAIU — 07/09/2026, e a faixa voltou a ter um
+     morador só: o interruptor. A ordem dela é de hoje, sobre os três cantos
+     que falavam de automático — *"Olha na real sai todos. Deixa só lá o de
+     cima mesmo o tongle."*
+
+     O CSS SAI COM O BOTÃO, e não fica "por via das dúvidas": esta folha entra
+     INTEIRA na página, e uma classe órfã aqui é a próxima pessoa repondo o
+     widget porque o estilo já estava pronto. A medição que ela carregava (a
+     faixa tem 17px de altura, o botão precisava caber em 15) morreu com ela.
+
+     E NENHUM `data-gesto` ESTÁ ESCRITO NESTE COMENTÁRIO, de propósito — ver a
+     nota longa da faixa das lâmpadas, algumas telas acima: o portão
+     `paridade-gtk-html` procura o sinal como TEXTO no HTML, e o comentário que
+     EXPLICA a remoção já virou, nesta mesma aba, a prova de que a peça
+     continuava lá. Os nomes estão no pacote, na nota datada. */
 
   /* ---------- COR: a guia dos oito tons do produto, por controle ---------- */
   .guia{display:flex;gap:4px;align-items:center}
@@ -1019,8 +1018,9 @@ CSS = """
      É a armadilha que o `CLAUDE.md` desta casa nomeia três vezes em três dias:
      *um comentário que descreve o padrão proibido VIRA a primeira ocorrência
      dele*. Quem for escrever aqui o nome de um `data-gesto` que saiu, escreva-o
-     sem o atributo — ou não escreva. Os nomes estão em
-     `pacotes/a04_iluminacao.GESTO_DO_AUTOMATICO_DE_TODOS`, na nota datada. */
+     sem o atributo — ou não escreva. Os nomes estão no pacote desta aba, na
+     nota datada do piso — e o ponteiro que estava aqui apontava para uma
+     constante que morreu com a faixa em 07/09/2026. */
   /* (continua) O que sobra desta faixa: */
 
      O QUE SOBRA É A MOLDURA DE LEITURA, e ela é a de antes da LUZES-01, com as
@@ -1352,8 +1352,18 @@ def coluna(c):
     resto_do_desenho = ({"jogador": j, "luz": tinta} if ligado
                         else {"lampadas": False})
     brilho_escrito = f"{b}%" if ligado else VAZIO
-    opcoes = '''<button class="btn roxo" data-gesto="auto" title="Tira a cor escolhida à mão e devolve a automática — a do número deste controle.">Automático</button>
-            <button class="btn vermelho" data-gesto="apagar" title="Apaga a barra de luz deste controle.">Desligar</button>
+    # A CÉLULA OPÇÕES FICOU COM UM BOTÃO — 07/09/2026, ordem dela sobre os três
+    # cantos que falavam de automático: *"Olha na real sai todos. Deixa só lá o
+    # de cima mesmo o tongle."* Saiu o botão POR CONTROLE que devolvia a barra
+    # ao jogo, e saiu com o gesto dele no mesmo commit — a poda acompanha a
+    # peça, que é o que fecha o `casa-sabe` sem lista de exceção.
+    #
+    # "Desligar" FICA, e a razão é MEDIDA, não zelo: os dois botões faziam
+    # coisas diferentes. O que saiu largava o claim da barra ao jogo
+    # (`lightbar.reset`) e pintava a cor do número por cima; este escreve preto
+    # no aparelho e mais nada. Ela não citou este, e apagar a barra continua
+    # sendo um ato que só ele oferece nesta tela.
+    opcoes = '''<button class="btn vermelho" data-gesto="apagar" title="Apaga a barra de luz deste controle.">Desligar</button>
             '''
 
     # O VALOR DO ATRIBUTO SAI DA f-STRING, e não é asseio: a marca que isenta
@@ -1477,19 +1487,6 @@ MIOLO = f'''
           Isto é do <b>perfil</b>. O botão <b>Automático</b> de cada coluna é outra coisa:
           ele larga a barra <i>daquele</i> controle para o jogo escolher.
         </span></span>
-        <!-- O ÚNICO DESFAZER DE UMA VEZ QUE ELA TEM — LUZES-01, 06/09/2026, e
-             o gêmeo é `lightbar_actions.on_lightbar_auto_reset_all`. O CSV da
-             paridade mediu o perfil dela e achou DOIS `uniq` com
-             `leds.lightbar` gravado: sem este botão, cada cor própria teria de
-             ser desfeita uma a uma, e a interface nova não tinha um só gesto de
-             escopo global nesta aba.
-
-             O RÓTULO NÃO É "Voltar ao automático": essa é a frase LONGA que ela
-             mandou encurtar em 31/08, e o curto ("Automático") já é o botão POR
-             CONTROLE de cada coluna. Duas coisas diferentes na mesma tela não
-             podem ter o mesmo nome. -->
-        <button class="btn-todos" data-gesto="{_pacote04.GESTO_DO_AUTOMATICO_DE_TODOS}"
-                title="Tira a cor própria de TODOS os controles e religa as cores automáticas. O desenho das luzes de jogador e os gatilhos ficam como estão.">Todos no automático</button>
       </div>
       <div class="quadro-corpo">
 
@@ -1627,12 +1624,16 @@ LEGENDA = f'''<div class="nota">
 
   <h2>O que mudou hoje</h2>
   <ul>
-    <li><b>O "Cores automáticas por controle" ganhou interruptor, no alto desta aba.</b>
-        Ele é do <b>perfil</b>, e governa a paleta e a numeração automática — o botão
-        <span class="marca">Automático</span> de cada coluna continua sendo outra coisa:
-        aquele larga a barra <i>daquele</i> controle para o jogo. <b>Desligar grava a cor
-        de cada controle no ato</b>, para nenhuma se perder e nenhuma se repetir. Ele não
-        custou linha nenhuma: mora na faixa do título, que estava vazia à direita.</li>
+    <li><b>Os três cantos que falavam de "automático" viraram um.</b> Ficou o
+        <b>interruptor</b> do alto — pedido seu: <i>"Olha na real sai todos. Deixa só lá o
+        de cima mesmo o tongle."</i> Saíram o botão de escopo global da faixa do título e o
+        <b>Automático</b> de cada coluna, com os gestos deles no mesmo commit. O interruptor
+        é do <b>perfil</b> e governa a paleta e a numeração automática; <b>desligar grava a
+        cor de cada controle no ato</b>, para nenhuma se perder.</li>
+    <li><b>A célula Opções ficou com um botão.</b> <span class="marca">Desligar</span> fica
+        porque faz outra coisa: ele apaga a barra, e o que saiu devolvia a barra ao jogo e
+        pintava a cor do número por cima. Você não citou este, e apagar a barra é o único
+        ato que só ele oferece nesta tela — <b>diga se ele também sai.</b></li>
     <li><b>A célula LEDs voltou a ser só o desenho.</b> Saíram as teclas
         <span class="marca">P1 P2 P3 P4</span> e os dois atalhos, o clique nas cinco
         lâmpadas e a linha de texto que dizia por que a barra apagou — pedido seu:
@@ -1690,8 +1691,8 @@ LEGENDA = f'''<div class="nota">
     <li><b>Os títulos têm todos o mesmo estilo</b>, e agora começam todos no mesmo x, porque
         moram na mesma coluna: <span class="marca">Controle · Cor · Brilho · Selecione o
         Jogador · LEDs · Opções</span>.</li>
-    <li><b>Os dois botões de Opções</b> continuam <span class="marca">roxo</span> e
-        <span class="marca">vermelho</span>, como o <b>Parar</b> da Vibração.</li>
+    <li><b>O botão de Opções</b> continua <span class="marca">vermelho</span>, como o
+        <b>Parar</b> da Vibração. Eram dois até 07/09; o roxo saiu com a sua ordem.</li>
     <li><b>As cinco colunas acabam no mesmo y</b> — as sete linhas são compartilhadas, e a
         cura do vão é na altura, nunca <code>space-between</code>.</li>
     <li><b>Barra vertical entre blocos irmãos</b>, como na Vibração.</li>
@@ -1932,15 +1933,24 @@ def _conferir(doc):
                "num lugar sem dono é o brilho do MOCKUP na tela dela")
         exigir("style=\"width:" not in coluna_html,
                "a barra de brilho do lugar vazio nasceu com largura")
-    # 5. OS TRÊS RÓTULOS QUE ELA ENCURTOU — 31/08/2026: *"aonde tem Voltar ao
+    # 5. OS RÓTULOS QUE ELA ENCURTOU — 31/08/2026: *"aonde tem Voltar ao
     #    automático deixa só Automático; onde tem Disposição dos LEDs coloca só
     #    LEDs; Selecione o player coloca só Jogador — vai ficar subentendido."*
     #    As duas metades: o curto tem de estar lá, e o longo NÃO.
-    for curto, longo in ((">Automático</button>", "Voltar ao automático"),
-                         (">LEDs</div>", "Disposição de LEDs"),
+    #
+    #    ERAM TRÊS PARES E FICARAM DOIS — 07/09/2026. O primeiro deles era o
+    #    botão da célula Opções, e ele SAIU inteiro por ordem dela ("sai
+    #    todos"); exigir o rótulo curto de um botão que ela mandou tirar seria
+    #    esta régua reprovando a ordem dela. **A metade que sobrevive à poda é
+    #    a do rótulo LONGO**, e ela ficou na §13 junto com a ausência do botão:
+    #    o texto que ela mandou encurtar não pode voltar por nenhuma porta,
+    #    nem como botão, nem como dica, nem como legenda.
+    for curto, longo in ((">LEDs</div>", "Disposição de LEDs"),
                          (">Jogador", "Selecione o player")):
         exigir(curto in corpo, f"o rótulo curto sumiu: {curto!r}")
         exigir(longo not in corpo, f"o rótulo longo voltou: {longo!r}")
+    exigir("Voltar ao automático" not in corpo,
+           "o rótulo longo que ela mandou encurtar em 31/08 voltou à tela")
 
     # 6. A COR ESCOLHIDA APARECE MARCADA, e a marca é o `.on` — *"a cor
     #    selecionada precisa ter uma borda."* Ele já existia no CSS e casava
@@ -2040,10 +2050,19 @@ def _conferir(doc):
     #     ESTA RÉGUA MEDE UMA AUSÊNCIA, e por isso ela tem de nomear o que não
     #     pode voltar. Entre 04/09 e hoje esta faixa teve uma linha de ressalva
     #     (D-02) e, desde 06/09, doze teclas de desenho; as duas saíram por
-    #     ordem dela, e as duas voltariam calado — a de ressalva por um `luz-
-    #     ressalva` reposto no pacote, as teclas por um `bits=` devolvido à
-    #     `desenho_da_luz`. Um endereço que o pacote emite e a página não tem é
-    #     ÓRFÃO no piloto: escreve-se em nada, tique após tique, sem erro.
+    #     ordem dela, e as duas voltariam caladas — a de ressalva por um `luz-
+    #     ressalva` reposto no pacote, as teclas por um `<button data-gesto=…>`
+    #     de volta à `.cel-leds` da `coluna`. Um endereço que o pacote emite e a
+    #     página não tem é ÓRFÃO no piloto: escreve-se em nada, tique após
+    #     tique, sem erro.
+    #
+    #     NOTA DATADA — 07/09/2026: esta linha dizia *"as teclas por um `bits=`
+    #     devolvido à `desenho_da_luz`"*, e a receita já não podia ser seguida:
+    #     `desenho_da_luz` perdeu o parâmetro `bits` e `desenho_de_agora` foi
+    #     deletada na mesma leva que podou a botoeira. Quem mordesse por ali
+    #     receberia `TypeError`, não um vermelho — e leria como régua que não
+    #     morde. A receita viva está em `test_a_celula_de_leds_nao_oferece_
+    #     gesto_nenhum`, e foi arrancada e devolvida no dia em que se escreveu.
     exigir('data-campo="luz-ressalva"' not in colunas,
            "a linha de ressalva voltou à célula dos LEDs — ela saiu por ordem "
            "dela em 07/09/2026 (*'o que eu não quero é frase da steam ou "
@@ -2127,21 +2146,37 @@ def _conferir(doc):
                f"— a célula LEDs deixou de replicar a linha `Jogador`, que é o "
                f"que ela mandou em 07/09/2026")
 
-    # 13. O ESCOPO GLOBAL — "Todos no automático", e ele mora na MESMA faixa do
-    #     interruptor, pela mesma razão medida da §9: a grade das colunas está
-    #     no teto do `.miolo` (medido no Chrome: 526px de quadro para 564 de
-    #     caixa, e os 38 restantes são o rodapé). Fora da faixa ele custaria
-    #     linha, e dentro de uma coluna mentiria sobre o alcance.
-    exigir(f'data-gesto="{_pacote04.GESTO_DO_AUTOMATICO_DE_TODOS}"' in topo,
-           "o `Todos no automático` saiu da faixa do título — é o único "
-           "desfazer de uma vez que ela tem, e dentro de uma coluna ele "
-           "afirmaria mexer só naquele controle")
-    #     E O NOME NÃO COLIDE: `Automático` é o botão POR CONTROLE de cada
-    #     coluna desde 31/08 (ordem dela, encurtando "Voltar ao automático").
-    #     Duas coisas diferentes na mesma tela não podem ter o mesmo nome.
-    exigir(">Todos no automático</button>" in topo,
-           "o botão de escopo global perdeu o rótulo que o separa do "
-           "`Automático` de cada coluna")
+    # 13. A FAIXA DO TÍTULO TEM UM MORADOR SÓ — 07/09/2026, ordem dela sobre
+    #     os três cantos que falavam de automático: *"Olha na real sai todos.
+    #     Deixa só lá o de cima mesmo o tongle."*
+    #
+    #     A RÉGUA VIROU DE LADO, e é a única forma de ela morder o que ela
+    #     pediu: até hoje esta §13 EXIGIA o botão de escopo global na faixa;
+    #     agora exige que ele não esteja. Uma régua que ficasse como estava
+    #     reprovaria a ordem dela em vez do defeito.
+    #
+    #     E ELA MEDE O RÓTULO, não só o endereço: o `data-gesto` some do HTML
+    #     no instante em que o `<button>` sai, mas o RÓTULO é o que ela vê. Um
+    #     `<span>` com o mesmo texto passaria pela primeira e é exatamente a
+    #     forma que a próxima pessoa usaria para "só deixar a informação".
+    exigir("Todos no automático" not in topo,
+           "o botão de escopo global voltou à faixa do título — ela mandou "
+           "tirar os três cantos que falavam de automático em 07/09/2026, e "
+           "deixar só o interruptor")
+    #     E O `Automático` DE CADA COLUNA SAIU JUNTO, pela mesma ordem. Ele
+    #     era o botão POR CONTROLE, e a célula `Opções` ficou com um só.
+    exigir(">Automático</button>" not in corpo,
+           "o botão `Automático` voltou à célula Opções — ele saiu com a "
+           "ordem dela de 07/09/2026, e o gesto saiu no mesmo commit")
+    #     O NÚMERO É O DOS LUGARES, e não o dos conectados: a célula `Opções`
+    #     nasce igual nos quatro (é o `.nada` ao lado que marca o lugar vazio),
+    #     e a folha desta aba tira o clique de quem está sem dono. Contar
+    #     conectados aqui daria 2 para 4 e a régua reprovaria o desenho certo.
+    exigir(corpo.count(">Desligar</button>") == len(MESA),
+           f"a célula Opções não tem um `Desligar` por lugar "
+           f"({corpo.count('>Desligar</button>')} para {len(MESA)}) — ela NÃO "
+           f"citou este botão, e apagar a barra é o único ato que só ele "
+           f"oferece nesta tela")
 
     # 14. OS QUATRO LUGARES TÊM OS MESMOS ENDEREÇOS — 07/09/2026, e é a régua
     #     que impede este defeito de voltar.
@@ -2233,10 +2268,42 @@ CSS_DAS_MEDIDAS = f"""
 # mexe no que mede"* — e importava assim mesmo. A `aba01` e a `aba02` já tinham
 # esta guarda desde que `jogar_vivo.py` e `controles_vivos.py` passaram a
 # importá-las; as outras oito não.
+# A RECUSA NÃO PODE DEIXAR ESTRAGO NO DISCO — 07/09/2026, e isto foi MEDIDO
+# nesta pasta, mordendo a própria régua do item 10.
+#
+# `monta()` ESCREVE a página e só então `_conferir()` a lê de volta e levanta.
+# Quem morde o gerador de propósito — que é o protocolo desta casa: *"arranque a
+# cura, veja reprovar, devolva"* — recebia `rc=1` com a mensagem certa **e a
+# página mordida gravada por cima do desenho dela**. O `rc=1` lê-se como "não
+# fez nada", e não era: `mockup/04-iluminacao.html` ficava com o gesto proibido
+# dentro. Medido: md5 `eadea08e…` virou `50e79f6f…` numa recusa.
+#
+# O PREÇO SE PAGA NO PASSO SEGUINTE, e é caro: `--publicar` copia `mockup/` para
+# `paginas/`, que é o que o `WebKit2.WebView` renderiza. Uma mordida esquecida
+# no disco chega à tela dela pelo comando seguinte, sem ninguém ver.
+#
+# O CONSERTO NÃO ESCONDE A SAÍDA RECUSADA: ela é parqueada ao lado, com sufixo
+# `.recusado`, porque quem mordeu quer olhar o que saiu. O que volta ao lugar é
+# só o desenho aprovado.
+#
+# AS OUTRAS NOVE ABAS TÊM A MESMA FORMA (`monta()` e depois `_conferir()`), e
+# esta guarda ainda não está nelas — está escrito aqui para quem for fechá-las.
 if __name__ == "__main__":
+    import shutil
+
+    _pagina = onde.pagina("04-iluminacao.html")
+    _antes = _pagina.read_bytes() if _pagina.exists() else None
     n = monta("04-iluminacao", "Iluminação", MIOLO, CSS + CSS_DAS_MEDIDAS,
               legenda=LEGENDA)
-    _conferir(onde.pagina("04-iluminacao.html").read_text())
+    try:
+        _conferir(_pagina.read_text())
+    except BaseException:
+        if _antes is not None:
+            shutil.copyfile(_pagina, _pagina.with_suffix(".html.recusado"))
+            _pagina.write_bytes(_antes)
+            print(f"a saída recusada ficou em {_pagina.name}.recusado; "
+                  f"{_pagina.name} voltou ao desenho aprovado", file=sys.stderr)
+        raise
     print(f"04-iluminacao: OK, {n} divs · {len(monta_.CONECTADOS)} conectado(s) "
           f"+ {len(MESA) - len(monta_.CONECTADOS)} lugar(es) vazio(s) · "
           f"números {NUMEROS} · respiro 5px, a divisória no meio do vão")

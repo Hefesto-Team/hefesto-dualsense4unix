@@ -278,6 +278,34 @@
   }
   .ajuda:hover{border-color:var(--cyan);color:var(--cyan)}
   .ajuda:hover .dica{display:block}
+  /* ---------- O `?` ABRE NO FOCO, E NÃO SÓ SOB O PONTEIRO — 07/09/2026 ----------
+     ACHADO POR CONFERÊNCIA, medido na aba Navegação: `.ajuda` é um `<span>` sem
+     `tabindex`, e o ÚNICO caminho de revelação era `:hover`. Medido pelo caminho
+     exato que o controle usa (`hefesto_vivo`, `el.click()`):
+
+         APÓS el.click():  display da dica = 'none' · rect = 0 · foco = BODY
+
+     Isto acontecia na aba cujo próprio `?` diz *"Navegar a janela do Hefesto com
+     o controle"* — a tela que ensina a navegar sem rato era a que exigia um.
+
+     A REGRA MORA AQUI, NA FOLHA DA CASA, e não na aba onde foi achado: são 99
+     `?` em dez abas, e uma cura numa aba só deixaria as outras nove ensinando
+     que o `?` não responde ao controle. É a regra de 05/09 — *quando a cura
+     conhece a causa, ela cobre TODOS os chamadores*.
+
+     `:focus-within` E `:focus` OS DOIS, e não é redundância: o `:focus` pega o
+     próprio `?` recebendo o foco, e o `:focus-within` mantém a dica aberta se o
+     foco cair em algo DENTRO dela (um `<b>`, um `<tt>`, ou o que a frase viva
+     do produto trouxer). Sem o segundo, abrir e ler já fechava.
+
+     O `tabindex` É DO EMISSOR, não desta folha — uma regra de estilo não torna
+     um `<span>` focável. Quem já o emite é `aba06.ajuda()`; as outras nove abas
+     estão declaradas como dívida medida no relatório desta leva. Esta regra
+     nasce pronta para elas: no dia em que o atributo chegar, o `?` daquela aba
+     passa a abrir no foco sem tocar nesta folha de novo. */
+  .ajuda:focus{border-color:var(--cyan);color:var(--cyan);outline:none}
+  .ajuda:focus .dica,
+  .ajuda:focus-within .dica{display:block}
   .dica{
     display:none;position:absolute;left:22px;top:-4px;width:330px;z-index:40;
     background:var(--elevated);border:1px solid var(--linha);border-radius:7px;
@@ -1265,22 +1293,21 @@
   .chave-auto input:checked:focus-visible + .chave-trilho,
   .chave-auto input:focus-visible + .chave-trilho{outline:1px solid var(--cyan);outline-offset:1px}
   .quadro-topo .ajuda.esq .dica{left:auto;right:22px}
-  /* O ESCOPO GLOBAL DA ABA — LUZES-01, e ele mora na MESMA faixa do
-     interruptor, pela mesma razão medida: a faixa do título tem 17px de altura
-     e mais de mil de largura vaga, e a grade das colunas está a 6px do teto.
-     E o lugar diz o alcance: um botão que mexe em TODOS os controles dentro de
-     UMA coluna mentiria sobre quem ele atinge. */
-  /* A ALTURA É A DA FAIXA, e ela foi MEDIDA: com `padding:5px` o botão tinha
-     23px, a faixa do título ia de 17 para 34 e o quadro passava do teto do
-     `.miolo` — a aba rolava por dentro, que é conteúdo que ninguém sabe que
-     existe. Com 15px de caixa ele cabe ao lado do interruptor (cujo trilho tem
-     15px) e a faixa não cresce um pixel. */
-  .btn-todos{
-    font-size:10px;line-height:13px;padding:0 8px;height:15px;border-radius:5px;
-    border:1px solid var(--border-forte);background:var(--app-bg);
-    color:var(--texto-mudo);cursor:pointer;white-space:nowrap;
-  }
-  .btn-todos:hover{border-color:var(--purple);color:var(--fg)}
+  /* O ESCOPO GLOBAL DESTA FAIXA SAIU — 07/09/2026, e a faixa voltou a ter um
+     morador só: o interruptor. A ordem dela é de hoje, sobre os três cantos
+     que falavam de automático — *"Olha na real sai todos. Deixa só lá o de
+     cima mesmo o tongle."*
+
+     O CSS SAI COM O BOTÃO, e não fica "por via das dúvidas": esta folha entra
+     INTEIRA na página, e uma classe órfã aqui é a próxima pessoa repondo o
+     widget porque o estilo já estava pronto. A medição que ela carregava (a
+     faixa tem 17px de altura, o botão precisava caber em 15) morreu com ela.
+
+     E NENHUM `data-gesto` ESTÁ ESCRITO NESTE COMENTÁRIO, de propósito — ver a
+     nota longa da faixa das lâmpadas, algumas telas acima: o portão
+     `paridade-gtk-html` procura o sinal como TEXTO no HTML, e o comentário que
+     EXPLICA a remoção já virou, nesta mesma aba, a prova de que a peça
+     continuava lá. Os nomes estão no pacote, na nota datada. */
 
   /* ---------- COR: a guia dos oito tons do produto, por controle ---------- */
   .guia{display:flex;gap:4px;align-items:center}
@@ -1544,8 +1571,9 @@
      É a armadilha que o `CLAUDE.md` desta casa nomeia três vezes em três dias:
      *um comentário que descreve o padrão proibido VIRA a primeira ocorrência
      dele*. Quem for escrever aqui o nome de um `data-gesto` que saiu, escreva-o
-     sem o atributo — ou não escreva. Os nomes estão em
-     `pacotes/a04_iluminacao.GESTO_DO_AUTOMATICO_DE_TODOS`, na nota datada. */
+     sem o atributo — ou não escreva. Os nomes estão no pacote desta aba, na
+     nota datada do piso — e o ponteiro que estava aqui apontava para uma
+     constante que morreu com a faixa em 07/09/2026. */
   /* (continua) O que sobra desta faixa: */
 
      O QUE SOBRA É A MOLDURA DE LEITURA, e ela é a de antes da LUZES-01, com as
@@ -1749,7 +1777,10 @@
     <div class="perfil-ativo">
       <span class="pa-rot">Perfil ativo</span>
       <span class="pa-nome" data-campo="perfil">Mortal Kombat</span>
-      <span class="ajuda">?<span class="dica" style="left:auto;right:22px">
+      <!-- `tabindex` de 07/09/2026: este `?` está no CABEÇALHO, logo nas dez
+           abas, e explica onde o "Salvar Perfil" grava. Sem ele o `<span>` não
+           recebe foco e o `el.click()` do controle não o abria em aba nenhuma. -->
+      <span class="ajuda" tabindex="0">?<span class="dica" style="left:auto;right:22px">
         Tudo o que você mudar em qualquer aba cai <b>neste</b> perfil quando clicar em
         <b>Salvar Perfil</b>.<br><br>
         Cada controle guarda a <b>sua</b> configuração aqui dentro, pelo ID da peça — amanhã,
@@ -2156,19 +2187,6 @@
           Isto é do <b>perfil</b>. O botão <b>Automático</b> de cada coluna é outra coisa:
           ele larga a barra <i>daquele</i> controle para o jogo escolher.
         </span></span>
-        <!-- O ÚNICO DESFAZER DE UMA VEZ QUE ELA TEM — LUZES-01, 06/09/2026, e
-             o gêmeo é `lightbar_actions.on_lightbar_auto_reset_all`. O CSV da
-             paridade mediu o perfil dela e achou DOIS `uniq` com
-             `leds.lightbar` gravado: sem este botão, cada cor própria teria de
-             ser desfeita uma a uma, e a interface nova não tinha um só gesto de
-             escopo global nesta aba.
-
-             O RÓTULO NÃO É "Voltar ao automático": essa é a frase LONGA que ela
-             mandou encurtar em 31/08, e o curto ("Automático") já é o botão POR
-             CONTROLE de cada coluna. Duas coisas diferentes na mesma tela não
-             podem ter o mesmo nome. -->
-        <button class="btn-todos" data-gesto="auto-todos"
-                title="Tira a cor própria de TODOS os controles e religa as cores automáticas. O desenho das luzes de jogador e os gatilhos ficam como estão.">Todos no automático</button>
       </div>
       <div class="quadro-corpo">
 
@@ -2626,7 +2644,6 @@
                  ausência. -->
           </div>
           <div class="cel-acoes">
-            <button class="btn roxo" data-gesto="auto" title="Tira a cor escolhida à mão e devolve a automática — a do número deste controle.">Automático</button>
             <button class="btn vermelho" data-gesto="apagar" title="Apaga a barra de luz deste controle.">Desligar</button>
             <!-- O TRAVESSÃO DESTA CÉLULA NASCE AQUI, escondido na coluna viva, e
                  é o único das sete que precisava nascer: as outras seis têm
@@ -3017,7 +3034,6 @@
                  ausência. -->
           </div>
           <div class="cel-acoes">
-            <button class="btn roxo" data-gesto="auto" title="Tira a cor escolhida à mão e devolve a automática — a do número deste controle.">Automático</button>
             <button class="btn vermelho" data-gesto="apagar" title="Apaga a barra de luz deste controle.">Desligar</button>
             <!-- O TRAVESSÃO DESTA CÉLULA NASCE AQUI, escondido na coluna viva, e
                  é o único das sete que precisava nascer: as outras seis têm
@@ -3387,7 +3403,6 @@
                  ausência. -->
           </div>
           <div class="cel-acoes">
-            <button class="btn roxo" data-gesto="auto" title="Tira a cor escolhida à mão e devolve a automática — a do número deste controle.">Automático</button>
             <button class="btn vermelho" data-gesto="apagar" title="Apaga a barra de luz deste controle.">Desligar</button>
             <!-- O TRAVESSÃO DESTA CÉLULA NASCE AQUI, escondido na coluna viva, e
                  é o único das sete que precisava nascer: as outras seis têm
@@ -3757,7 +3772,6 @@
                  ausência. -->
           </div>
           <div class="cel-acoes">
-            <button class="btn roxo" data-gesto="auto" title="Tira a cor escolhida à mão e devolve a automática — a do número deste controle.">Automático</button>
             <button class="btn vermelho" data-gesto="apagar" title="Apaga a barra de luz deste controle.">Desligar</button>
             <!-- O TRAVESSÃO DESTA CÉLULA NASCE AQUI, escondido na coluna viva, e
                  é o único das sete que precisava nascer: as outras seis têm
@@ -3911,12 +3925,16 @@
 
   <h2>O que mudou hoje</h2>
   <ul>
-    <li><b>O "Cores automáticas por controle" ganhou interruptor, no alto desta aba.</b>
-        Ele é do <b>perfil</b>, e governa a paleta e a numeração automática — o botão
-        <span class="marca">Automático</span> de cada coluna continua sendo outra coisa:
-        aquele larga a barra <i>daquele</i> controle para o jogo. <b>Desligar grava a cor
-        de cada controle no ato</b>, para nenhuma se perder e nenhuma se repetir. Ele não
-        custou linha nenhuma: mora na faixa do título, que estava vazia à direita.</li>
+    <li><b>Os três cantos que falavam de "automático" viraram um.</b> Ficou o
+        <b>interruptor</b> do alto — pedido seu: <i>"Olha na real sai todos. Deixa só lá o
+        de cima mesmo o tongle."</i> Saíram o botão de escopo global da faixa do título e o
+        <b>Automático</b> de cada coluna, com os gestos deles no mesmo commit. O interruptor
+        é do <b>perfil</b> e governa a paleta e a numeração automática; <b>desligar grava a
+        cor de cada controle no ato</b>, para nenhuma se perder.</li>
+    <li><b>A célula Opções ficou com um botão.</b> <span class="marca">Desligar</span> fica
+        porque faz outra coisa: ele apaga a barra, e o que saiu devolvia a barra ao jogo e
+        pintava a cor do número por cima. Você não citou este, e apagar a barra é o único
+        ato que só ele oferece nesta tela — <b>diga se ele também sai.</b></li>
     <li><b>A célula LEDs voltou a ser só o desenho.</b> Saíram as teclas
         <span class="marca">P1 P2 P3 P4</span> e os dois atalhos, o clique nas cinco
         lâmpadas e a linha de texto que dizia por que a barra apagou — pedido seu:
@@ -3974,8 +3992,8 @@
     <li><b>Os títulos têm todos o mesmo estilo</b>, e agora começam todos no mesmo x, porque
         moram na mesma coluna: <span class="marca">Controle · Cor · Brilho · Selecione o
         Jogador · LEDs · Opções</span>.</li>
-    <li><b>Os dois botões de Opções</b> continuam <span class="marca">roxo</span> e
-        <span class="marca">vermelho</span>, como o <b>Parar</b> da Vibração.</li>
+    <li><b>O botão de Opções</b> continua <span class="marca">vermelho</span>, como o
+        <b>Parar</b> da Vibração. Eram dois até 07/09; o roxo saiu com a sua ordem.</li>
     <li><b>As cinco colunas acabam no mesmo y</b> — as sete linhas são compartilhadas, e a
         cura do vão é na altura, nunca <code>space-between</code>.</li>
     <li><b>Barra vertical entre blocos irmãos</b>, como na Vibração.</li>

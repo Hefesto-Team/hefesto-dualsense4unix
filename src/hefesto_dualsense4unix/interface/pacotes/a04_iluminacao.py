@@ -413,17 +413,31 @@ def automatico_do_perfil(p: dict[str, Any] | None) -> bool:
     return bool(leds.get("auto_player_colors"))
 
 
-#: O GESTO QUE SOBRA NESTA FAIXA. O nome é o vocabulário do clique
-#: (`data-gesto`), e fica aqui em vez de digitado no gerador E no pacote: era
-#: assim que o `ENDERECO_DO_AUTOMATICO` já vivia, e pela mesma razão.
-#:
-#: ERAM QUATRO ATÉ 07/09/2026. `GESTO_DA_LAMPADA` (`luzes`),
-#: `GESTO_DO_DESENHO_DE` (`desenho-de`) e `GESTO_DO_REENVIO_DO_DESENHO`
-#: (`reenviar-desenho`) saíram com a botoeira, por ordem dela — ver
-#: `desenho_da_luz`. Eles não foram declarados em `_SEM_CAMINHO_HOJE`: um gesto
-#: sem widget não é promessa por cumprir, é código morto, e a regra desta casa
-#: manda que a poda acompanhe a peça. O widget e o gesto saíram no mesmo commit.
-GESTO_DO_AUTOMATICO_DE_TODOS = "auto-todos"
+# A FAIXA DO TÍTULO FICOU SEM GESTO PRÓPRIO — 07/09/2026, ordem dela sobre os
+# três cantos que falavam de automático:
+#
+#     *"Olha na real sai todos. Deixa só lá o de cima mesmo o tongle. E aí vai
+#      servir pra dizer. O jogo é que escolhe quais serão as cores de todos os
+#      controles."*
+#
+# O que morava aqui era a constante do gesto de escopo GLOBAL da faixa, nascida
+# na LUZES-01 em 06/09 e morta um dia depois. Com ela saíram, no mesmo commit,
+# o `<button>` do gerador, o gesto do pacote e os dois ajudantes que só ele
+# chamava. É a mesma regra que a poda da botoeira aplicou nesta aba na véspera:
+# um gesto sem widget não é promessa por cumprir, é código morto — e a poda
+# acompanha a peça, que é o que fecha o `casa-sabe` sem lista de exceção.
+#
+# O QUE ISSO CUSTA, E ESTÁ MEDIDO — a aba perdeu o único desfazer de uma vez
+# que ela tinha. Aquele botão era o que TIRAVA a cor própria gravada no
+# override por-MAC de cada controle, e é exatamente por isso que a medição da
+# mesa dela de hoje importa: o perfil ativo tem override de `lightbar` em dois
+# dos quatro, e um override vence a camada automática no merge por campo do
+# backend (`core/backend_pydualsense._merged_desired_for_key`). Enquanto eles
+# estiverem lá, ligar o interruptor NÃO devolve a cor do número àqueles dois.
+# Está relatado com endereço e tamanho no relatório desta leva.
+#
+# O INTERRUPTOR CONTINUA COM O NOME DELE em `ENDERECO_DO_AUTOMATICO`, acima —
+# é o único endereço de gesto que esta faixa oferece hoje.
 
 #: O NOME DO TRILHO PARA QUEM NÃO VÊ A TELA. O `aria-label` é a única coisa que
 #: um leitor de tela anuncia num `<input type="range">` sem rótulo próprio — a
@@ -2212,110 +2226,32 @@ def reenviar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     _escrever_a_cor(ctx, p, uniq, hex_to_rgb(escrito))
 
 
-@gesto("04-iluminacao.html", "auto")
-def automatico(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
-    """"Automático": LARGAR a luz, para o jogo escolher a cor.
-
-    DECISÃO DELA, 01/09/2026, e ela corrigiu a minha leitura: *"voltar ao
-    automático nesse caso é deixar o jogo escolher."* Não é devolver a cor do
-    número do jogador — é o Hefesto soltar o claim da barra.
-
-    `lightbar.reset` é exatamente isso, e o `ipc_handlers.py:4714` diz com
-    todas as letras: *"o 0x08 devolve o claim da lightbar ao host"*. O nome do
-    método engana — o docstring dele começa chamando-o de INSTRUMENTO de
-    medição — e foi por isso que eu quase o troquei por outra coisa. **O nome do
-    método não diz o que ele faz; o handler diz.**
-
-    A RESSALVA ESTÁ MEDIDA NO PRÓPRIO HANDLER e vale para a tela: *"a suspeita é
-    que ele só TRAVA quando mandado dentro da janela de ~3,4 s pós-conexão"*.
-    Fora dela o claim pode voltar sozinho. Quando alguém puder medir isso na
-    tela, é aqui que a nota entra.
-
-    E A BARRA NÃO FICA PRETA. Largar o claim sozinho deixa a última cor no
-    plástico — e se a última foi um "Desligar", ela fica apagada, o que parece
-    defeito. Ordem dela: *"deixa em uma das cores default se o jogo não escolher
-    ou não tiver rodando."* Então o gesto larga E pinta a cor do slot, da
-    paleta que o produto já tem.
-
-    E O GESTO SOLTA A TRAVA — 06/09/2026, A-TRAVA-DO-LED-NÃO-SOLTA-01. O passo
-    2 arma a trava manual da categoria `"led"` (todo `led.set` arma), e enquanto
-    ela está armada o `AutoSwitcher` não reaplica perfil por troca de janela.
-    Este botão é o gesto que significa *"pode voltar a mandar"*, e era o único
-    dos quatro que não dizia isso ao daemon: a luz armava em dois lugares e não
-    soltava em nenhum. O passo 3 é o par, e ele vem por ÚLTIMO de propósito.
-
-    `lightbar.reset` e `led.auto_release` não têm função no `ipc_bridge` — são
-    o degrau 3 da ponte, e passam pelo mesmo `_safe_call`, com o mesmo timeout.
-    """
-    uniq = _uniq(o)
-    if not uniq:
-        raise ValueError("auto: o clique não disse em qual controle")
-
-    # 1. LARGA O CLAIM — daí em diante quem manda na barra é o jogo.
-    #
-    #    E SE ELE NÃO FOR LARGADO, A SEGUNDA CHAMADA NÃO CORRE — 02/09/2026.
-    #    O gesto seguia para o `led_set` mesmo com o `chamar` devolvendo
-    #    `False`: a barra ganhava uma cor nova com o claim ainda no Hefesto, que
-    #    é o OPOSTO do que este botão promete (*"deixar o jogo escolher"*), e
-    #    sem uma palavra na tela. Medido com o dublê de ponte muda.
-    if not p.chamar("lightbar.reset", uniq=uniq):
-        raise RuntimeError(sem_resposta_do_daemon())
-
-    # 2. E DEIXA A COR PADRÃO, para não ficar PRETO quando ninguém escreve.
-    #    Ordem dela, 01/09/2026: *"deixa em uma das cores default se o jogo não
-    #    escolher ou não tiver rodando"* — e *"o resto já deveria estar
-    #    registrado e acho que está"*. Está: `core/led_control.player_slot_color`
-    #    é o dono da paleta, a MESMA que acende as cinco lâmpadas.
-    #
-    #    NÃO SE DIGITA A COR AQUI. Ela sai da função, e muda no dia em que a
-    #    paleta mudar — é a regra da casa: o que tem dono não se digita.
-    from hefesto_dualsense4unix.core.led_control import player_slot_color
-
-    # O NÚMERO SAI DO MOTOR, e não de uma queda escrita aqui. Esta linha era
-    # `dele.get("player_slot") or dele.get("player") or 1` — a QUARTA cópia de
-    # uma regra que tem dono (`app/actions/base.numero_do_controle`), e o `or 1`
-    # dela era a POSIÇÃO disfarçada de default: um controle sem número nenhum
-    # ganharia a cor do P1.
-    #    E O BRILHO VIAJA JUNTO — 03/09/2026. A cor do slot é a IDENTIDADE, e o
-    #    `core/led_control` diz isso com todas as letras: *"A cor daqui é a
-    #    IDENTIDADE (pré-brilho, D8); quem escala pelo `lightbar_brightness` do
-    #    perfil é o provider (D11)"*. Mandá-la sem o brilho fazia este botão
-    #    acender a barra CHEIA num perfil de brilho reduzido — e ficar mais forte
-    #    do que a cor automática que ele promete devolver.
-    dele = ctx.por_uniq(uniq) or {}
-    _escrever_a_cor(ctx, p, uniq,
-                    player_slot_color(_numero(ctx, dele or {"uniq": uniq})))
-
-    # 3. E SOLTA A TRAVA MANUAL DA LUZ — o par que faltava, 06/09/2026.
-    #
-    #    A-TRAVA-DO-LED-NÃO-SOLTA-01. Os dois passos acima ARMAM a trava: o
-    #    `led.set` do passo 2 chama `mark_manual_trigger_active("led")`, e
-    #    enquanto qualquer categoria está armada o `AutoSwitcher` NÃO reaplica
-    #    perfil por troca de janela. Até aqui nenhum gesto do produto a soltava
-    #    — nem este, que é exatamente o que significa *"pode voltar a mandar"*.
-    #    A única saída era ela trocar de perfil na mão.
-    #
-    #    ELE É O TERCEIRO, E TEM DE SER. Posto antes do passo 2, o `led.set`
-    #    que pinta a cor do slot o desfaria na linha seguinte — a trava voltaria
-    #    armada e o botão continuaria mentindo. É por isso que a rota é própria
-    #    e não um parâmetro nos outros dois: ver `_handle_led_auto_release`.
-    #
-    #    SÓ A LUZ. `led.auto_release` limpa a categoria `"led"` e nenhuma
-    #    outra — soltar as quatro apagaria o gatilho ou a vibração que ela
-    #    deixou deliberadamente em outra aba (a regressão do ABAS-05).
-    #
-    #    E ELE NÃO TEM `uniq`: a trava mora no `StateStore` do daemon e não tem
-    #    dono por controle. Mandar o MAC daria a impressão de um alcance que o
-    #    daemon não tem.
-    #
-    #    O SILÊNCIO AQUI É DELIBERADO, e é o oposto do passo 1. Lá o `False`
-    #    interrompe porque sem largar o claim a cor nova seria o OPOSTO do que
-    #    o botão promete. Aqui a luz JÁ está no automático — o claim voltou e a
-    #    cor do slot está no plástico. O que se perde é a troca automática de
-    #    perfil voltar HOJE, e ela volta sozinha pelo teto de ociosidade
-    #    (`MANUAL_OVERRIDE_STALE_AFTER_SEC`). Levantar aqui trocaria uma
-    #    demora invisível por um recado vermelho sobre um gesto que funcionou.
-    p.chamar("led.auto_release")
+# O GESTO DO BOTÃO "Automático" DE CADA COLUNA SAIU DAQUI — 07/09/2026, com o
+# widget, no mesmo commit. Ordem dela: *"Olha na real sai todos. Deixa só lá o
+# de cima mesmo o tongle."*
+#
+# O QUE ELE FAZIA, e fica escrito porque a MEDIÇÃO não se perde: largava o claim
+# da barra ao jogo (`lightbar.reset` — o `ipc_handlers` diz com todas as letras
+# que *"o 0x08 devolve o claim da lightbar ao host"*), pintava por cima a cor do
+# número para a barra não ficar preta (ordem dela de 01/09: *"deixa em uma das
+# cores default se o jogo não escolher ou não tiver rodando"*), e SÓ ENTÃO
+# soltava a trava manual da categoria da luz. A ordem dos três era o conserto da
+# A-TRAVA-DO-LED-NÃO-SOLTA-01, e trocar os dois últimos deixava o botão sem
+# soltar nada.
+#
+# A TRAVA CONTINUA SENDO SOLTA, e isto foi MEDIDO antes de o gesto sair — sem
+# essa medição a poda reabriria a A-TRAVA-DO-LED-NÃO-SOLTA-01 em silêncio:
+# `profile.switch` chama `clear_manual_trigger_active()` SEM argumento
+# (`daemon/ipc_handlers.py:921`), que limpa TODAS as categorias, e o interruptor
+# desta aba passa por ele em todo clique (`perfil.gravar_e_reaplicar`). O que se
+# perde é soltar a trava sem mexer no perfil; o que fica é um caminho, e ele é o
+# que ela mandou deixar na tela.
+#
+# E O ATO NÃO FOI ABSORVIDO PELO INTERRUPTOR, de propósito. Ligar o interruptor
+# é *"o automático da casa manda"*; largar a barra ao jogo é a coisa que ela
+# quer que o interruptor passe a dizer — e isso é comportamento novo no daemon,
+# não rótulo novo na tela. Trocar a palavra sem trocar o ato é a mentira que
+# esta casa mais derrubou. O tamanho está no relatório desta leva.
 
 
 def _pct_pedido(o: dict[str, Any]) -> int:
@@ -3068,120 +3004,32 @@ def player(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
 # ---------------------------------------------------------------------------
 
 
-def _leds_sem(antes: Any, campos: set[str]) -> Any:
-    """Um `LedsConfig` de override SEM os campos pedidos — e sem os densificar.
-
-    **É `model_dump(exclude_unset=True)` E NÃO `model_copy`, e a diferença é o
-    ponto inteiro.** `profiles/manager._controllers_to_specs` só põe no
-    `OutputSpec` os campos que estão em `model_fields_set`; um `model_copy` com
-    `update={"player_leds": None}` deixaria a chave MARCADA como escrita, e o
-    esquema recusa `None` ali. Reconstruir a partir do `dump` sem a chave é o
-    único jeito de o campo voltar a ser *"sem opinião"* — que é o que faz a
-    camada AUTOMÁTICA voltar a vencer no merge por campo do backend.
-
-    E É POR AQUI QUE UM OVERRIDE **SAI**, não zera: `LedsConfig(player_leds=[False]*5)`
-    é uma escolha explícita de deixar as cinco apagadas, e o backend a respeita
-    como qualquer outra.
-
-    O CHAMADOR QUE ESTA NOTA CITAVA MORREU — `devolver_o_desenho_ao_automatico`
-    saiu em 07/09/2026 com a botoeira, e com ele o único caminho desta tela para
-    TIRAR um `player_leds` gravado. Quem chama esta função hoje é o
-    `automatico_de_todos`, para os campos de COR (`lightbar`,
-    `lightbar_brightness`); o `player_leds` ele preserva de propósito, que é o
-    que o gêmeo da janela estável fazia. **RELATADO, e a medição está no
-    relatório desta leva:** dos 50 perfis do disco dela, ZERO têm override
-    por-controle de `player_leds`, então não há dado preso — mas a tela deixou
-    de ter escrita E de ter apagamento para esse campo, e isso é fato a contar,
-    não arquivo a mexer sem a palavra dela.
-    """
-    from hefesto_dualsense4unix.profiles.schema import LedsConfig
-
-    dados = {k: v for k, v in (antes.model_dump(exclude_unset=True)
-                               if antes is not None else {}).items()
-             if k not in campos}
-    return LedsConfig(**dados)
-
-
-def _perfil_ativo_ou_recusa(ctx: Contexto, oque: str) -> str:
-    """O nome do perfil ativo, ou a recusa que DIZ — como o `auto_cores` já faz."""
-    nome = str(ctx.state.get("active_profile") or "").strip()
-    if not nome:
-        raise RuntimeError(
-            f"não há perfil ativo agora, e {oque} é do perfil — não da "
-            f"máquina. Escolha um perfil na aba Perfis.")
-    return nome
-
-
-def _o_coop_recusa(ctx: Contexto) -> None:
-    """Com o co-op ligado, quem acende as cinco luzes é ele — e a tela diz isso.
-
-    A MEDIÇÃO É A DE `_acender_o_numero`, e ela não se repete aqui: a camada do
-    co-op está ACIMA do override por-`uniq` no merge por campo do backend, então
-    escrever o desenho aqui seria **escrever debaixo de quem manda** — o daemon
-    responderia `aplicado_em` e as lâmpadas não se moveriam. Foi exatamente esse
-    "aplicado" sobre lâmpadas paradas que a mesa dela mediu em 04/09.
-
-    RECUSAR DIZENDO é a resposta desta casa para o que o produto não faz, e aqui
-    ela é ainda a mais barata: o caminho que MOVE as luzes com o co-op ligado já
-    existe e é outro — dar o número ao controle (`player`), que reconcilia a
-    mesa pelo `coop.sync`.
-    """
-    if o_coop_manda(ctx.state):
-        raise RuntimeError(
-            "um jogo em co-op está mandando nas cinco luzes deste controle — "
-            "enquanto ele estiver, o desenho vem do jogo e não daqui. Para "
-            "mudar quem é quem agora, use os números da linha Jogador.")
-
-
-#: O QUE O CARTÃO DIZ DEPOIS DO "Todos no automático". A frase é do PRODUTO e
-#: conta o que a da GTK conta (`on_lightbar_auto_reset_all`: *"Cores automáticas
-#: religadas para todos os controles"*), sem a metade que só vale lá — *"aplique
-#: ou salve o perfil para valer"*. Aqui vale na hora: `gravar_e_reaplicar` grava
-#: e manda o daemon reaplicar no mesmo clique, que é a lei desta interface desde
-#: a D-01 (*"clicar já aplica e já grava"*).
-_RECADO_DO_AUTOMATICO_DE_TODOS = (
-    "Cores automáticas religadas para todos os controles. As cores próprias "
-    "saíram do perfil, e cada controle volta a acender a cor do número dele.")
-
-
-@gesto("04-iluminacao.html", GESTO_DO_AUTOMATICO_DE_TODOS, grava="gravar_e_reaplicar")
-def automatico_de_todos(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
-    """"Todos no automático" — o único desfazer de uma vez que ela tem.
-
-    O GÊMEO É `lightbar_actions.on_lightbar_auto_reset_all`, e o que ele faz
-    está copiado CAMPO A CAMPO, não de memória: limpa `lightbar` e
-    `lightbar_brightness` de TODOS os overrides por controle e religa
-    `auto_player_colors`. **O desenho das cinco luzes e os gatilhos FICAM** — é
-    o que a GTK preserva, e mexer neles aqui faria as duas telas do mesmo
-    produto responderem coisas diferentes ao mesmo botão.
-
-    POR QUE ELE PRECISOU EXISTIR: o CSV da paridade mediu o perfil dela e achou
-    **dois `uniq` com `leds.lightbar` gravado**. Sem este botão, cada cor
-    própria teria de ser desfeita por outro meio — e o HTML não tinha meio
-    nenhum, porque não havia um só gesto de escopo global na aba.
-
-    ELE MORA NA FAIXA DO TÍTULO, ao lado do interruptor da D-13, e pela mesma
-    razão medida: a faixa tem 17px de altura e mais de mil de largura vaga, e a
-    grade das colunas está a poucos pixels do teto. Um botão de escopo global
-    dentro de uma coluna também mentiria sobre o alcance dele.
-
-    O RÓTULO NÃO É "Voltar ao automático": essa é a frase LONGA que ela mandou
-    encurtar em 31/08 (*"aonde tem Voltar ao automático deixa só Automático"*),
-    e ela agora é o botão POR CONTROLE de cada coluna. Duas coisas diferentes na
-    mesma tela não podem ter o mesmo nome.
-    """
-    nome = _perfil_ativo_ou_recusa(ctx, "as cores próprias de cada controle")
-    loader = perfil._com_o_src()
-    prof = loader.load_profile(nome)
-    atuais = dict(prof.controllers or {})
-    for chave, dele in list(atuais.items()):
-        atuais[chave] = dele.model_copy(
-            update={"leds": _leds_sem(dele.leds,
-                                      {"lightbar", "lightbar_brightness"})})
-    leds = prof.leds.model_copy(update={"auto_player_colors": True})
-    perfil.gravar_e_reaplicar(
-        prof.model_copy(update={"controllers": atuais, "leds": leds}), ctx, p)
-    return {"recado": _RECADO_DO_AUTOMATICO_DE_TODOS}
+# O GESTO DE ESCOPO GLOBAL SAIU DAQUI COM OS DOIS AJUDANTES QUE SÓ ELE CHAMAVA
+# — 07/09/2026, a mesma ordem que tirou o botão da faixa do título.
+#
+# ERAM TRÊS PEÇAS, e as três saíram no mesmo commit porque as três só tinham um
+# chamador: o gesto, o recado que ele devolvia, e as duas funções privadas que
+# só ele usava (a que reconstruía um `LedsConfig` SEM certos campos, e a que
+# devolvia o nome do perfil ativo ou a recusa que diz). Uma delas ainda tinha
+# gêmea viva noutro pacote, com o mesmo nome e outra assinatura — deixá-la aqui
+# órfã convidaria a próxima pessoa a achar que esta aba ainda a usa.
+#
+# O QUE ELE FAZIA, campo a campo, e a medição fica: limpava `lightbar` e
+# `lightbar_brightness` de TODOS os overrides por controle e religava
+# `auto_player_colors`; o desenho das cinco luzes e os gatilhos ele preservava,
+# que é o que o gêmeo da janela estável fazia. A remoção do campo era por
+# `model_dump(exclude_unset=True)` e não por `model_copy(update=...)`, e a
+# diferença era o ponto inteiro: `_controllers_to_specs` só põe no `OutputSpec`
+# o que está em `model_fields_set`, então um `update` deixaria a chave MARCADA
+# como escrita e o campo nunca voltaria a ser "sem opinião" — que é o que faz a
+# camada automática voltar a vencer no merge por campo do backend.
+#
+# **E É ELE QUE FAZIA FALTA NA MESA DELA DE HOJE.** Medido em 07/09/2026, com
+# os quatro na mesa e o daemon vivo: o perfil ativo tem override de `lightbar`
+# em DOIS dos quatro controles, o override vence a camada automática, e por
+# isso dois acendem azul lado a lado. Este gesto era o único desta tela que
+# tirava aquele override. Não repor o botão é ordem dela; o que a leva deixa no
+# lugar é o endereço e o tamanho, no relatório.
 
 
 #: AS FUNÇÕES DA PONTE QUE ESTA ABA USA. A régua confere que existem — um nome
@@ -3198,9 +3046,14 @@ PONTE = {"led_set_detalhado", "identity_number_set",
          "player_leds_set_detalhado", "chamar", "profile_switch"}
 #: `coop.sync` É O ÚNICO JEITO DE MOVER AS LÂMPADAS COM O CO-OP LIGADO —
 #: medido, e o porquê está em `_acender_o_numero`.
-#: `led.auto_release` É O PAR DO `led.set`, e só o gesto `auto` o chama —
-#: A-TRAVA-DO-LED-NÃO-SOLTA-01. Ver o gesto `auto`, passo 3.
-METODOS = {"lightbar.reset", "coop.sync", "led.auto_release"}
+#:
+#: ERAM TRÊS ATÉ 07/09/2026, e os outros dois saíram com o botão POR CONTROLE
+#: que os chamava — um para largar o claim da barra ao jogo, outro para soltar
+#: a trava manual da luz. Nenhum dos dois tinha segundo chamador nesta aba:
+#: `grep` na árvore devolvia só aquele gesto. Declarar aqui um método que
+#: ninguém chama é a régua ficando verde sobre uma ponte que a tela não
+#: atravessa.
+METODOS = {"coop.sync"}
 
 
 #: O QUE ESTA ABA DECLARA À RÉGUA — o piso e as provas moram AQUI, e não no
@@ -3220,7 +3073,8 @@ PAGINA = "04-iluminacao.html"
 #: ganhou o escopo global (`auto-todos`). São as cinco linhas `FALTA_NO_HTML`
 #: que o CSV da paridade cobrava desta aba.
 #:
-#: 11 → 8 EM 07/09/2026, E ESTA É A ÚNICA VEZ EM QUE O PISO DESCE. A regra
+#: 11 → 8 E ENTÃO 8 → 6, TUDO EM 07/09/2026 — as DUAS quedas do piso, no mesmo
+#: dia, e as duas por ordem escrita dela. A regra
 #: ("o piso só sobe") existe porque uma QUEDA não aparece na tela: o clique
 #: simplesmente deixa de fazer alguma coisa, calado. Aqui não há queda calada —
 #: há uma ORDEM dela, medida e datada: *"pq tá surgindo os leds no lado da
@@ -3228,7 +3082,21 @@ PAGINA = "04-iluminacao.html"
 #: final, *"só olhar a linha de cima da seleção de player e replicar o que tem
 #: lá."* Os TRÊS que saem são exatamente os três que a LUZES-01 trouxe —
 #: `luzes`, `desenho-de` e `reenviar-desenho` —, e saíram com o widget que os
-#: oferecia, no mesmo commit. O `auto-todos`, que veio na mesma sprint, FICA.
+#: oferecia, no mesmo commit.
+#:
+#: A SEGUNDA QUEDA, 8 → 6, é a ordem dela sobre os três cantos que falavam de
+#: automático: *"Olha na real sai todos. Deixa só lá o de cima mesmo o tongle.
+#: E aí vai servir pra dizer. O jogo é que escolhe quais serão as cores de
+#: todos os controles."* Os dois que saem são o de escopo GLOBAL da faixa do
+#: título (que a LUZES-01 tinha trazido na véspera, e que esta nota dava por
+#: permanente) e o `Automático` POR CONTROLE de cada coluna. Os dois widgets
+#: saíram no mesmo commit que os gestos.
+#:
+#: O QUE A SEGUNDA QUEDA CUSTA, e está medido: a aba perde o único desfazer de
+#: uma vez que ela tinha — o que tirava a cor própria gravada no override
+#: por-MAC. Com os quatro na mesa e o daemon vivo, o perfil ativo tem esse
+#: override em DOIS controles, e é por isso que dois acendem azul lado a lado.
+#: O endereço e o tamanho do conserto estão no relatório desta leva.
 #:
 #: O QUE ISSO CUSTA, e ela foi avisada antes: some o controle manual do desenho
 #: das cinco luzes. Elas passam a seguir o NÚMERO, que é o caminho automático
@@ -3236,9 +3104,10 @@ PAGINA = "04-iluminacao.html"
 #: reabrem como DECISÃO DELA, não como dívida — o produto não as perdeu por
 #: descuido, ela as dispensou.
 #:
-#: E O PISO NÃO PODE VOLTAR A 11 SEM ELA: subi-lo de novo seria repor a
-#: botoeira que ela mandou tirar. Quem for mexer aqui lê primeiro esta nota.
-PISO_DA_ABA = 8
+#: E O PISO NÃO PODE SUBIR SEM ELA: cada degrau de volta é repor um botão que
+#: ela mandou tirar, em duas ordens diferentes do mesmo dia. Quem for mexer
+#: aqui lê primeiro esta nota.
+PISO_DA_ABA = 6
 PROVAS = [
     {"pagina": PAGINA, "gesto": "cor", "clique": {"hex": "#FF8000"},  # (noqa-acento) id
      "chama": [("led_set_detalhado", [(255, 128, 0)],
@@ -3253,18 +3122,13 @@ PROVAS = [
     {"pagina": PAGINA, "gesto": "reenviar", "clique": {"texto": "#12AB34"},  # (noqa-acento) id
      "chama": [("led_set_detalhado", [(18, 171, 52)],
                 {"uniq": "aa:bb:cc:00:00:01"})]},
-    # TRÊS chamadas, e a ORDEM é o conserto — A-TRAVA-DO-LED-NÃO-SOLTA-01,
-    # 06/09/2026. Largar o claim, SÓ ENTÃO pintar, e SÓ ENTÃO soltar a trava.
-    # A terceira não é decoração de ordem: o `led_set_detalhado` do meio ARMA
-    # a categoria `"led"`, então um `led.auto_release` posto antes dele sairia
-    # desfeito na linha seguinte. Trocar as duas últimas de lugar deixa esta
-    # régua verde sobre um botão que continua sem soltar nada — por isso a
-    # prova declara a sequência inteira, e não um conjunto.
-    {"pagina": PAGINA, "gesto": "auto", "clique": {},  # (noqa-acento) chave do contrato
-     "chama": [("chamar", ["lightbar.reset"], {"uniq": "aa:bb:cc:00:00:01"}),
-               ("led_set_detalhado", [(0, 0, 255)],
-                {"uniq": "aa:bb:cc:00:00:01"}),
-               ("chamar", ["led.auto_release"], {})]},
+    # A PROVA DO BOTÃO POR CONTROLE SAIU DAQUI COM ELE — 07/09/2026. Ela
+    # declarava a sequência inteira das três chamadas daquele gesto (largar o
+    # claim, pintar a cor do número, soltar a trava) porque a ORDEM era o
+    # conserto: a do meio armava a trava que a terceira solta, e trocá-las
+    # deixava a régua verde sobre um botão que não soltava nada. Sem o gesto
+    # não há sequência a provar, e uma prova órfã levantaria na régua com uma
+    # frase sobre um botão que a tela não tem.
     # DUAS chamadas, e a ordem é o desfecho: sem o número novo não há padrão
     # de lâmpada a acender. A mesa da régua tem UM controle, então o parceiro
     # da troca não existe e só o alvo recebe o desenho — ver `_pares_da_troca`.
@@ -3282,11 +3146,6 @@ PROVAS = [
     # é DESENHO DE LEITURA, e desenho não tem prova de chamada porque não chama
     # ninguém — quem escreve as cinco luzes agora é só o `player`, uma linha
     # acima, e a prova dele continua logo aqui em cima.
-    #
-    # `auto-todos` NÃO ESTÁ AQUI pela MESMA razão que tira o `brilho` e o
-    # `auto-cores`: ele ESCREVE NO DISCO (`loader.save_profile`) e chama
-    # `profile.switch` — numa régua que roda com o perfil ATIVO da máquina, uma
-    # prova dele trocaria o perfil de quem rodou o teste.
     #
     # `brilho` E `auto-cores` NÃO ESTÃO AQUI, e a ausência é declarada: os dois
     # ESCREVEM NO DISCO (`loader.save_profile`), e esta régua roda com o perfil

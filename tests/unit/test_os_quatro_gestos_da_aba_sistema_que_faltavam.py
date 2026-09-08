@@ -510,13 +510,34 @@ def test_o_endereco_do_botao_escondido_tem_um_dono_so() -> None:
     assert aba09.CAMPO_DO_MODO_AVULSO == a09.CAMPO_DO_MODO_AVULSO
 
 
-def test_a_declaracao_do_que_espera_a_publicacao_inclui_o_botao_novo() -> None:
-    """Ele está na bancada e não na página que o produto renderiza — e isso é
-    declarado, não esquecido."""
+def test_a_declaracao_do_que_espera_a_publicacao_bate_com_a_pagina() -> None:
+    """O que está declarado como "espera a publicação" NÃO pode estar publicado.
+
+    A RÉGUA MUDOU DE ALVO EM 07/09/2026, e a razão é a que esta casa repete:
+    *a régua media o mundo de ontem*.  # (noqa-acento: verbo medir, imperfeito)
+    A versão anterior cravava UM campo
+    (`CAMPO_DO_MODO_AVULSO`) e exigia que ele estivesse fora da página E dentro
+    da declaração. Ela mandou publicar as dez abas para os quatro DualSense
+    aparecerem na bancada, os cinco campos chegaram à página — e a régua passou
+    a reprovar a publicação que ela pediu, em vez de reprovar defeito.
+
+    O QUE SOBREVIVE É O INVARIANTE, e ele vale para qualquer campo: **declarar
+    o que já está publicado é mentira, e é isso que se cobra**. O outro sentido
+    — campo do gerador que não chegou à página e ninguém declarou — é do
+    `_conferir` da aba, que lê o documento inteiro; aqui seria régua medindo a
+    própria saída, porque a lista de campos viria do mesmo módulo.
+
+    Um dicionário VAZIO passa, e é a resposta certa quando não há nada
+    esperando. A régua volta a morder na próxima aba que nascer com campo sem
+    página.
+    """
     publicada = _onde.pagina(PAGINA, publicado=True).read_text(encoding="utf-8")
-    assert a09.CAMPO_DO_MODO_AVULSO not in publicada, (
-        "a aba foi publicada — TIRE a linha de `ESPERA_A_PUBLICACAO`.")
-    assert a09.CAMPO_DO_MODO_AVULSO in a09.ESPERA_A_PUBLICACAO
+    mentindo = [campo for campo in a09.ESPERA_A_PUBLICACAO
+                if f'data-campo="{campo}"' in publicada]
+    assert not mentindo, (
+        f"{len(mentindo)} campo(s) declarados em `ESPERA_A_PUBLICACAO` JÁ estão "
+        f"na página publicada: {sorted(mentindo)}. Publicar é ato dela; a "
+        f"declaração é que envelheceu — TIRE a linha de cada um.")
 
 
 # ---------------------------------------------------------------------------

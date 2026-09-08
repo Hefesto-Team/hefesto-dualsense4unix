@@ -54,9 +54,7 @@ sys.path.insert(0, str(RAIZ / "src/hefesto_dualsense4unix/interface"))
 
 from hefesto_dualsense4unix.app import audio_saida
 from hefesto_dualsense4unix.app.fala_do_mapa import (
-    AFIRMA_NADA,
     CAUSA_DE_FORA,
-    frase_de_exibicao,
 )
 from hefesto_dualsense4unix.app.fatos_do_mapa import FATOS
 from hefesto_dualsense4unix.app.widgets.controller_card import (
@@ -437,78 +435,93 @@ class TestOsSelosNoCartao:
 
 
 # ---------------------------------------------------------------------------
-# 6. O QUARTO SELO — a ressalva do TRANSPORTE, LIDA do mapa
+# 6. O QUARTO SELO SAIU DA TELA — 07/09/2026, e a dívida ficou no mapa
 # ---------------------------------------------------------------------------
 
 
-class TestOQuartoSelo:
-    def test_a_frase_e_uma_fala_declarada_e_nao_culpa_o_aparelho(self) -> None:
-        """`divida` é causa NOSSA, e com ela a única `Fala` legal é AFIRMA_NADA.
+class TestOQuartoSeloSaiuDaTela:
+    """A ordem dela, e ela vale para a tela inteira:
 
-        `CAUSA_DE_FORA` admite só `nada-a-acionar` e `o-aparelho-recusa` —
-        justamente para a tela não poder culpar o aparelho pelo que é nosso. A
-        célula de hoje diz `divida`, e a frase diz *o Hefesto*.
+        *"O app tem que funcionar e não mostrar na tela que o app não presta. Se
+         não tem como, ok. Testamos e criamos o canal. até lá tudo bem, o layout
+         não informa os nossos defeitos."*
+
+    **SEIS TESTES MORAVAM AQUI**, e mediam bem o que a peça fazia: que a frase
+    era uma `Fala` com `AFIRMA_NADA`, que só o rádio a ganhava, que trocar a
+    célula num dublê a apagava. Eles saem com a peça, e a razão de sair em vez
+    de serem adaptados é a mesma que a casa já pagou: *um teste que continua
+    exigindo a peça reprova a ordem dela em vez do defeito*.
+
+    O QUE FICA NO LUGAR são as DUAS metades que a ordem dela cria — e é o par
+    que nenhuma metade sozinha prova:
+
+    1. **A TELA CALOU.** O campo do cartão não carrega mais aquela frase, e o
+       pacote não a declara mais.
+    2. **A DÍVIDA NÃO SUMIU.** A célula do mapa continua dizendo `aciona=não`
+       com causa `divida`, e virá-la para calar a tela seria mentir ao
+       contrário. É esta segunda metade que separa *"tiramos da tela"* de
+       *"fingimos que fechou"*.
+    """
+
+    def test_a_celula_do_mapa_continua_dizendo_a_divida(self) -> None:
+        """**A METADE QUE IMPEDE A CURA DE VIRAR MENTIRA.**
+
+        Calar a tela é ordem dela; virar a célula não é. O canal continua
+        fechado, e é no mapa — que é de quem desenvolve — que isso tem de
+        continuar escrito. Quem fechar a `SOM-QUE-SAI-01` vira esta célula, e é
+        esta régua que reprova se alguém a virar antes.
+
+        MORDE: troque `radio.aciona` para `"sim"` no mapa sem fechar o canal e
+        esta linha reprova.
         """
         celula = FATOS["audio.alto_falante@dualsense"]["radio"]
         assert isinstance(celula, dict)
-        assert celula["por_que_nao_aciona"] not in CAUSA_DE_FORA
-        fala = mod.RESSALVA_DO_ALTO_NO_RADIO
-        assert fala.afirma == AFIRMA_NADA and fala.porque.strip()
-        assert "Hefesto" in frase_de_exibicao(fala)
-        assert "o controle não" not in frase_de_exibicao(fala)
+        assert celula["aciona"] != "sim", (
+            "a célula do alto-falante no rádio virou para `sim` — o canal "
+            "continua fechado, e virá-la é mentir ao contrário")
+        assert celula["por_que_nao_aciona"] not in CAUSA_DE_FORA, (
+            "a causa deixou de ser NOSSA no mapa — se ela mudou de dono, a "
+            "medição tem de vir junto")
 
-    def test_o_radio_ganha_a_ressalva_e_o_cabo_nao(self) -> None:
-        """A assimetria é a do MAPA: no cabo a célula diz `parcial` e o som sai."""
-        assert mod.ressalva_do_transporte("bt") == frase_de_exibicao(
-            mod.RESSALVA_DO_ALTO_NO_RADIO)
-        assert mod.ressalva_do_transporte("usb") == ""
+    def test_o_pacote_nao_declara_mais_a_frase(self) -> None:
+        """A peça saiu inteira: a `Fala` e a função que a lia.
 
-    def test_sem_transporte_nao_se_afirma_nada(self) -> None:
-        assert mod.ressalva_do_transporte(None) == ""
-        assert mod.ressalva_do_transporte("") == ""
-
-    def test_a_celula_que_vira_apaga_a_ressalva(self) -> None:
-        """**A RÉGUA QUE SEPARA LEITURA DE FRASE DIGITADA.**
-
-        Troca-se a célula num dublê do mapa e a frase SOME. É o que prova que o
-        selo LÊ `fatos_do_mapa` — no dia em que a `SOM-QUE-SAI-01` virar aquela
-        célula para `aciona=sim`, ele muda sozinho, sem ninguém tocar em código.
-
-        MORDE: faça `ressalva_do_transporte` devolver a frase sem consultar a
-        célula, e este caso reprova.
+        MORDE: devolva a `Fala` ou a função ao pacote e esta linha reprova.
         """
-        virado = {"audio.alto_falante@dualsense": {
-            "existe": "tem",
-            "cabo": {"aciona": "sim"},
-            "radio": {"aciona": "sim", "por_que_nao_aciona": ""},
-        }}
-        assert mod.ressalva_do_transporte("bt", virado) == ""
+        for morto in ("RESSALVA_DO_ALTO_NO_RADIO", "ressalva_do_transporte",
+                      "lado_do_mapa", "CHAVE_DO_ALTO_FALANTE"):
+            assert not hasattr(mod, morto), (
+                f"`{morto}` voltou ao pacote — ela mandou a tela calar sobre "
+                f"esta dívida em 07/09/2026")
 
-    def test_o_id_que_some_do_mapa_cala_a_tela(self) -> None:
-        assert mod.ressalva_do_transporte("bt", {}) == ""
+    def test_o_cartao_nao_confessa_no_radio(self) -> None:
+        """O campo continua existindo; o que ele não faz mais é confessar.
+
+        E ELE NÃO FICOU MUDO POR ISSO: o outro informante (o desacordo das duas
+        camadas de som) continua lá, e é o certo — aquilo é um fato de AGORA,
+        que ela desfaz trocando a saída do sistema. Estado presente a tela pode
+        dizer; capacidade por entregar, não.
+        """
+        card = _card(_entrada(transport="bt"))
+        assert "alto-ressalva" in card, (
+            "o campo sumiu do pacote — um campo que a página tem e o pacote "
+            "não manda fica congelado no que o gerador escreveu")
+        assert "Hefesto" not in str(card["alto-ressalva"]), (
+            "o cartão voltou a confessar dívida nossa no rádio")
 
     def test_os_gestos_nao_apagam_por_uma_divida_nossa(self) -> None:
         """A dívida é NOSSA: apagar quatro gestos por ela é empurrá-la para ela.
 
         A célula da ROTA é `aciona=sim` nos dois lados, e o mudo do microfone é
-        `parcial` — nenhum dos dois autoriza apagar coisa nenhuma. O que a tela
-        faz por uma dívida nossa é DIZER.
+        `parcial` — nenhum dos dois autoriza apagar coisa nenhuma. Isto não
+        mudou com a saída do selo: a tela deixou de DIZER, e continua sem
+        apagar nada.
         """
         rota = FATOS["audio.alto_falante.rota@dualsense"]["radio"]
         assert isinstance(rota, dict) and rota["aciona"] == "sim"
         card = _card(_entrada(transport="bt"))
         assert card["som-sem-endereco"] == ""
         assert card["alto-porque"] == mod.DICA_ALTO_SEM_POSSE
-
-    def test_o_desacordo_das_camadas_ganha_da_divida(self) -> None:
-        """Dois informantes, uma linha — e ganha o fato que ela pode desfazer.
-
-        O desacordo das duas camadas é de AGORA e um clique dela o resolve; a
-        ressalva do transporte é dívida nossa, que nenhum clique resolve.
-        """
-        card = _card(_entrada(transport="bt"))
-        assert card["alto-ressalva"] == frase_de_exibicao(
-            mod.RESSALVA_DO_ALTO_NO_RADIO)
 
 
 # ---------------------------------------------------------------------------

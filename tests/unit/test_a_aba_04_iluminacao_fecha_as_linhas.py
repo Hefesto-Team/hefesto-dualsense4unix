@@ -197,10 +197,26 @@ def test_o_interruptor_tem_dono(pac, a04):
     nem o interruptor existia.
     """
     assert pac.gesto_da_pagina(PAGINA, "auto-cores") is not None
-    assert a04.PISO_DA_ABA >= 7, (
-        f"o piso da aba é {a04.PISO_DA_ABA} e só sobe — com 5 a régua dos "
-        f"botões daria verde sobre uma aba que perdeu o interruptor e o "
-        f"reenvio")
+    # O PISO NÃO É MAIS UM `>=`, E A MUDANÇA É DE 07/09/2026. Ele foi de 11 a 8
+    # e de 8 a 6 no mesmo dia, nas duas ordens dela — a botoeira das lâmpadas de
+    # manhã, os dois botões do automático à tarde. Um `>=` escrito contra o
+    # mundo de ontem vira, numa aba que a dona está podando, uma régua que
+    # reprova a ordem dela em vez do defeito: foi exatamente o que esta linha
+    # fez ao ler 6 onde exigia 7.
+    #
+    # O QUE ELA MEDE AGORA é o que ela sempre quis medir e dizia mal: que os
+    # gestos que a tela oferece HOJE estão todos ligados, seja lá quantos forem.
+    # O número tem dono (`PISO_DA_ABA`) e a nota datada dele é quem guarda a
+    # razão de cada degrau; repetir um limiar aqui era a segunda declaração do
+    # mesmo valor, e a que envelhecia calada.
+    vivos = {nome for (pagina, nome) in pac.GESTOS if pagina == PAGINA}
+    assert len(vivos) == a04.PISO_DA_ABA, (
+        f"o pacote registra {len(vivos)} gestos e o piso declarado é "
+        f"{a04.PISO_DA_ABA} — os dois têm de dizer o mesmo, e a nota datada do "
+        f"`PISO_DA_ABA` é quem explica cada degrau")
+    assert {"auto-cores", "reenviar"} <= vivos, (
+        "o interruptor ou o reenvio do hexadecimal saíram do pacote — os dois "
+        "são decisão dela de 04/09/2026, e nenhuma ordem posterior os tocou")
 
 
 def test_a_pagina_oferece_o_interruptor_no_topo_da_aba():

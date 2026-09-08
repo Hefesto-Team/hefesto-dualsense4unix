@@ -998,20 +998,53 @@ def _clicar(gesto, clique, conectados=None):
     return p
 
 
-def test_o_automatico_pinta_a_cor_do_numero_do_motor():
-    """Largar o claim e pintar a cor do slot — com o número que o motor dá.
+def test_o_botao_por_controle_do_automatico_saiu_com_o_widget():
+    """Ela mandou tirar os três cantos que falavam de automático — 07/09/2026.
 
-    A linha era `player_slot or player or 1`: o `or 1` é a POSIÇÃO disfarçada de
-    default, e um controle sem número nenhum ganharia a cor do P1.
+    O TESTE QUE MORAVA AQUI media o gesto do botão  # noqa-acento: verbo medir
+    `Automático` de cada coluna:
+    que ele largava o claim e pintava a cor do slot com o número que o MOTOR dá,
+    e não com o `or 1` que era a posição disfarçada de default. O gesto saiu com
+    o widget, no mesmo commit, por ordem dela — e um teste que continua
+    exigindo o gesto reprovaria a ordem em vez do defeito.
+
+    **O QUE ELE PROTEGIA NÃO SE PERDEU, e é isto que autoriza a troca:** a queda
+    proibida (`player_slot or player or 1`) tinha DOIS chamadores neste pacote,
+    e o outro está vivo — `_a_cor_de_agora`, que responde a cor do controle
+    quando o motor não a afirma. A asserção abaixo mede ESSE, com o mesmo
+    controle e a mesma pergunta: o número sai do motor, e cair em 1 é a posição
+    disfarçada de default.
+
+    A MORDIDA: troque `_numero(ctx, c)` por `1` em `_a_cor_de_agora` e esta
+    linha reprova; registre de novo o gesto e a primeira reprova.
     """
+    import pacotes
     from hefesto_dualsense4unix.core.led_control import player_slot_color
+    from pacotes import a04_iluminacao as pac
 
-    p = _clicar("auto", {"uniq": DO_CABO["uniq"]})
-    assert p.chamadas[0][0] == "chamar" and p.chamadas[0][1] == ("lightbar.reset",)
-    assert p.chamadas[1] == ("led_set_detalhado", (tuple(player_slot_color(2)),),
-                             {"brightness": None, "uniq": DO_CABO["uniq"]}), (
-        f"o automático pintou {p.chamadas[1]!r}. O controle do cabo é o 2 pelo "
-        f"`player_slot`; cair em 1 é a posição disfarçada de default.")
+    assert pacotes.gesto_da_pagina("04-iluminacao.html", "auto") is None, (
+        "o gesto do botão POR CONTROLE voltou ao pacote sem o widget que o "
+        "oferecia — ela mandou tirar os dois botões do automático em "
+        "07/09/2026, e a poda acompanha a peça")
+
+    # O CONTROLE TEM DE ESTAR **SEM COR AFIRMADA**, e a primeira redação desta
+    # régua errava aí: com o `DO_CABO` inteiro ela media o SWATCH,  # noqa-acento: verbo medir
+    # não a queda —
+    # e `DO_CABO["lightbar_rgb"]` é `[255, 0, 0]`, que por acaso é a cor do slot
+    # 2. Ela passava com a cura arrancada, medido na mordida. Sem
+    # `lightbar_rgb` o motor não afirma cor nenhuma, que é o estado em que a
+    # queda existe: Modo Nativo, a Steam com o `fd`, ou o começo da sessão.
+    mudo = {k: v for k, v in DO_CABO.items() if k != "lightbar_rgb"}
+    ctx = pacotes.Contexto(state={"active_profile": "regua"}, mesa=list(MESA),
+                           conectados=[mudo], estados={})
+    assert pac._a_cor_de_agora(ctx, {}, mudo) == player_slot_color(2), (
+        "a cor de queda deixou de ser a do número que o motor dá — o controle "
+        "do cabo é o 2 pelo `player_slot`, e cair em 1 é a posição disfarçada "
+        "de default")
+    # E A MORDIDA TEM DE DISTINGUIR OS DOIS NÚMEROS: se a queda passar a ser a
+    # do slot 1, o valor muda. Esta linha existe para que a régua não fique
+    # verde num dia em que as duas cores coincidirem por outra razão.
+    assert player_slot_color(1) != player_slot_color(2)
 
 
 def test_a_conversao_do_hex_e_a_do_motor():
@@ -1153,9 +1186,17 @@ def _clicar_mudo(gesto, clique, conectados=None):
     return p
 
 
-#: OS TRÊS QUE ESCREVEM NO APARELHO. O quarto (`player`) já lia a resposta.
+#: OS QUE ESCREVEM NO APARELHO. O `player` já lia a resposta.
+#:
+#: ERAM TRÊS ATÉ 07/09/2026, e o terceiro saiu com o botão POR CONTROLE que ela
+#: mandou tirar. O DEFEITO QUE ESTA RÉGUA MEDE CONTINUA COBERTO nos dois que
+#: ficam: os três nasceram com o mesmo defeito (jogavam fora o booleano da
+#: ponte) e a cura foi a mesma nos três — o caminho de escrita é UM só
+#: (`_escrever_a_cor`). Tirar um caso não abre buraco; deixar o caso de um
+#: gesto que não existe faria a régua levantar com uma frase sobre um botão que
+#: a tela não tem.
 QUE_ESCREVEM = [("cor", {"hex": "#FF8000"}),  # (noqa-acento) chave do contrato
-                ("apagar", {}), ("auto", {})]  # (noqa-acento) idem
+                ("apagar", {})]  # (noqa-acento) idem
 
 
 @pytest.mark.parametrize("gesto,clique", QUE_ESCREVEM)
@@ -1222,18 +1263,14 @@ def test_a_frase_da_recusa_e_a_do_motor_e_nao_uma_reescrita(monkeypatch):
             f"dia em que a GTK mudar a dela as duas telas divergem.")
 
 
-def test_o_automatico_nao_pinta_a_cor_se_o_claim_nao_foi_largado():
-    """Duas chamadas, dois desfechos — e a segunda não corre no escuro.
-
-    O gesto `auto` é composto: LARGA o claim (`lightbar.reset`) e SÓ ENTÃO pinta
-    a cor do slot. Se a primeira não passou, pintar depois deixaria a barra numa
-    cor nova com o claim ainda no Hefesto — o oposto do que o botão promete
-    (*"deixar o jogo escolher"*), e sem ninguém saber.
-    """
-    p = _clicar_mudo("auto", {"uniq": DO_CABO["uniq"]})
-    assert [c[0] for c in p.chamadas] == ["chamar"], (
-        f"o automático seguiu para a segunda chamada depois de a primeira "
-        f"falhar: {p.chamadas!r}")
+# O TESTE DA ORDEM DAS DUAS CHAMADAS SAIU COM O GESTO — 07/09/2026.
+#
+# Ele media que o botão POR CONTROLE não pintava a cor nova  # noqa-acento: verbo medir
+# quando o claim não
+# tinha sido largado: pintar depois de a primeira chamada falhar deixaria a
+# barra numa cor nova com o claim ainda no Hefesto, que é o OPOSTO do que
+# aquele botão prometia. A medição fica escrita aqui e no pacote; o gesto não
+# existe mais para medir.
 
 
 # ---------------------------------------------------------------------------
@@ -1301,9 +1338,11 @@ def test_a_coluna_que_esvazia_le_como_a_que_nasce_vazia():
     grade = doc.split('<div class="luz-grade">', 1)[-1].split('<div class="rodape"', 1)[0]
     for coluna in re.findall(
             r'<div class="ctrl vazia"(.*?)(?=<div class="ctrl[" ]|\Z)', grade, re.S):
+        # `data-gesto="auto"` SAIU DESTA LISTA em 07/09/2026, com o botão
+        # que ela mandou tirar. Exigir um endereço que a tela não tem mais
+        # faria esta régua reprovar a ordem dela.
         for peca in ('<span class="guia">', 'class="puxador"',
-                     'data-gesto="auto"', 'data-gesto="apagar"',
-                     'data-gesto="reenviar"'):
+                     'data-gesto="apagar"', 'data-gesto="reenviar"'):
             assert peca in coluna, (
                 f"o lugar que NASCE vazio perdeu {peca!r} — o controle que "
                 f"chegar ali fica sem esse gesto na tela, e só recarregar a "

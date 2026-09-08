@@ -98,9 +98,11 @@ import os
 import shutil
 import subprocess
 import threading
+import time
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Any
 
 from hefesto_dualsense4unix.core.ds_output_report import (
     BT_CRC_SEED,
@@ -876,6 +878,367 @@ _COLUNA_DO_ESTADO = 4
 
 
 # ---------------------------------------------------------------------------
+# A BOMBA — o que faltava entre o nó e o fio, e ela não afirma som nenhum
+# ---------------------------------------------------------------------------
+
+#: Quantos quadros Opus um report do arranjo escolhido carrega vezes 10 ms.
+#: Não é constante: sai do arranjo (`Arranjo.quadros_de_audio`), porque os dois
+#: candidatos carregam dois quadros e um terceiro arranjo poderia carregar
+#: outro número. Fica aqui só como nome do que a conta significa.
+MS_POR_QUADRO = 10
+
+#: O nibble de sequência do envelope de rádio dá a volta em 16. **Ele não é
+#: enfeite**, e o preço de errar já foi pago nesta casa por escrito
+#: (`core/backend_pydualsense.writeReport`): *"o firmware descarta o report
+#: fora de sequência e o log diz 'escrito'"*. Um fluxo de áudio escreve ~100
+#: reports por segundo — sem rotação, do segundo em diante todos repetiriam o
+#: mesmo `seq` e o aparelho jogaria fora tudo menos o primeiro, com o nosso
+#: lado contando 100 "escritas aceitas" por segundo.
+VOLTA_DA_SEQUENCIA = 16
+
+#: Tocadores de leitura crua do monitor de um nó, na ordem de preferência, com
+#: o modelo de argumentos. Os dois entregam **s16le, estéreo, 48 kHz** em
+#: `stdout`, que é exatamente o que :class:`CodificadorOpus` come — nenhuma
+#: conversão nossa no meio, e por isso nenhuma segunda régua de formato.
+#:
+#: `pw-record` primeiro por ser o nativo do PipeWire (o `parec` passa pela
+#: camada de compatibilidade Pulse e já mordeu esta casa uma vez, no
+#: `sink_properties` cortado no espaço).
+GRAVADORES_DO_MONITOR: tuple[tuple[str, tuple[str, ...]], ...] = (
+    (
+        "pw-record",
+        ("--target={fonte}", "--rate={taxa}", "--channels={canais}",
+         "--format=s16", "-"),
+    ),
+    (
+        "parec",
+        ("--device={fonte}", "--rate={taxa}", "--channels={canais}",
+         "--format=s16le", "--raw"),
+    ),
+)
+
+
+def argv_do_gravador(
+    fonte: str, *, taxa: int = TAXA_DO_ENCODER, canais: int = CANAIS_DO_ENCODER
+) -> list[str]:
+    """O comando que lê PCM cru do monitor de um nó. `[]` se não há tocador.
+
+    A fonte vai como ARGUMENTO próprio e nunca por texto de comando (nada de
+    ``shell=True``, invariante do projeto), e ela vai **explícita e não
+    vazia**: `--target=` vazio no `pw-record` cai na fonte padrão do sistema, e
+    o instrumento leria o som da máquina inteira achando que lia o do nó.
+    """
+    if not fonte:
+        return []
+    for binario, modelo in GRAVADORES_DO_MONITOR:
+        if shutil.which(binario) is not None:
+            return [binario, *(m.format(fonte=fonte, taxa=taxa, canais=canais)
+                               for m in modelo)]
+    return []
+
+
+@dataclass
+class ContagemDaBomba:
+    """O que a bomba mediu. **Nenhum destes números é "saiu som".**
+
+    A distinção que dá nome ao campo mais importante está no mapa
+    (``audio.saida_dedicada.payload_do_degrau@dualsense``) e é a razão de este
+    dataclass existir em vez de um contador solto:
+
+        ``os.write()`` num hidraw devolve sucesso quando o **KERNEL** aceita a
+        entrega; ele NÃO espera veredito do firmware. Em 15/08 o kernel aceitou
+        até um pacote de tamanho errado que era o controle negativo.
+
+    Por isso o campo se chama :attr:`escritas_aceitas_pelo_kernel`, e não
+    "reports entregues": quem lê o relatório tem de tropeçar na ressalva antes
+    de conseguir citar o número.
+    """
+
+    pcm_lido: int = 0
+    pcm_curto: int = 0
+    quadros_opus: int = 0
+    quadros_recusados: int = 0
+    reports_montados: int = 0
+    escritas_aceitas_pelo_kernel: int = 0
+    escritas_recusadas: int = 0
+    bytes_escritos: int = 0
+    segundos: float = 0.0
+
+    @property
+    def reports_por_segundo(self) -> float:
+        """A cadência REAL, medida — não a nominal de 100 Hz do encoder."""
+        return (self.reports_montados / self.segundos) if self.segundos > 0 else 0.0
+
+    @property
+    def bytes_por_segundo(self) -> float:
+        """A banda que este arranjo pede do rádio. É o número do D5 dela."""
+        return (self.bytes_escritos / self.segundos) if self.segundos > 0 else 0.0
+
+    def linhas(self) -> list[str]:
+        """O relatório, com a ressalva colada no número que ela protege."""
+        return [
+            f"  PCM lido do nó ............. {self.pcm_lido} B",
+            f"  leituras curtas (completadas com silêncio) {self.pcm_curto}",
+            f"  quadros Opus ............... {self.quadros_opus}",
+            f"  quadros que o encoder recusou {self.quadros_recusados}",
+            f"  reports montados ........... {self.reports_montados}"
+            f"  ({self.reports_por_segundo:.1f}/s)",
+            f"  escritas ACEITAS PELO KERNEL {self.escritas_aceitas_pelo_kernel}",
+            f"  escritas recusadas ......... {self.escritas_recusadas}",
+            f"  bytes no fio ............... {self.bytes_escritos} B"
+            f"  ({self.bytes_por_segundo / 1024:.1f} KiB/s)",
+            "  ATENÇÃO: 'aceitas pelo kernel' NÃO é 'o firmware obedeceu', e",
+            "  nada aqui é medição de som. Quem mede som é a orelha dela.",
+        ]
+
+
+class BombaDeSomPeloRadio:
+    """Do monitor do nó ao fio: lê PCM, codifica, monta o degrau e escreve.
+
+    **É a peça que faltava entre as duas metades que já existiam.** O encoder
+    (:class:`CodificadorOpus`) e o nó (:class:`SinkVirtualPipeWire`) nasceram
+    na SOM-QUE-SAI-01 de 06/09; o arranjo (:class:`Arranjo`) monta o report.
+    Ninguém, até aqui, ligava os três em regime — e sem isso o nó publicado é
+    um sumidouro, que é o defeito que
+    ``tests/unit/test_o_no_de_som_nao_nasce_sumidouro.py`` trava.
+
+    O QUE ELA **NÃO** DECIDE, e a lista é o valor de ler isto
+    ---------------------------------------------------------
+    * **não escolhe o arranjo.** Ele é argumento obrigatório. As duas fontes
+      publicadas divergem sobre onde o áudio mora dentro do ``0x39``, e uma
+      delas cita a outra — escolher aqui seria inventar o caminho. Quem escolhe
+      é a orelha dela, no ensaio de bancada;
+    * **não escolhe o degrau para regime.** O degrau sai do arranjo. A decisão
+      dela (``D-0609-O-NO-DE-SOM-VIVE-COM-O-CONTROLE``) é *só depois do D5*,
+      com o número de banda na mesa — e :attr:`ContagemDaBomba.bytes_por_segundo`
+      é justamente esse número, que é para o que ela serve;
+    * **não afirma que saiu som.** Ver :class:`ContagemDaBomba`.
+
+    E ELA NASCE SECA (``seco=True``), que é o padrão
+    ------------------------------------------------
+    Seca, ela faz a conta inteira — lê, codifica, monta, conta — e **não
+    escreve um byte no aparelho**. É o modo em que a bomba pode ser medida com
+    ela na bancada sem que nada saia no fio, e é o modo em que a suíte roda.
+    Molhar exige um `escritor` explícito de quem chama: sem ele, mesmo
+    ``seco=False`` não escreve, porque não há para onde.
+    """
+
+    def __init__(
+        self,
+        *,
+        arranjo: Arranjo,
+        fonte: Callable[[int], bytes],
+        escritor: Callable[[bytes], int] | None = None,
+        codificador: Any = None,
+        tag_audio: int = BLOCO_SPEAKER,
+        seco: bool = True,
+    ) -> None:
+        self.arranjo = arranjo
+        self.fonte = fonte
+        self.escritor = escritor
+        self.tag_audio = tag_audio
+        self.seco = bool(seco) or escritor is None
+        self._codificador = codificador
+        self._seq = 0
+        self.contagem = ContagemDaBomba()
+
+    # -- a conta ----------------------------------------------------------
+
+    @property
+    def bytes_de_pcm_por_report(self) -> int:
+        """Quanto PCM cru um report deste arranjo consome."""
+        return BYTES_DE_PCM_POR_QUADRO * self.arranjo.quadros_de_audio
+
+    @property
+    def ms_por_report(self) -> int:
+        """Quantos milissegundos de som um report deste arranjo carrega."""
+        return MS_POR_QUADRO * self.arranjo.quadros_de_audio
+
+    def _codificar(self, pcm: bytes) -> bytes | None:
+        """O quadro Opus, ou None se a libopus recusou. Encoder preguiçoso.
+
+        Preguiçoso porque construir o :class:`CodificadorOpus` carrega a
+        `libopus` por `ctypes`: uma bomba montada e nunca rodada — a da suíte,
+        e a do dublê — não pode exigir a biblioteca da máquina.
+        """
+        if self._codificador is None:
+            self._codificador = CodificadorOpus()
+        quadro = self._codificador.codificar(pcm)
+        return quadro if quadro is None else bytes(quadro)
+
+    # -- o ciclo ----------------------------------------------------------
+
+    def um_report(self) -> bytes | None:
+        """Lê o PCM de UM report, codifica, monta e devolve os bytes.
+
+        `None` quando a fonte secou (leitura vazia) — é assim que o laço para
+        sem exceção quando o gravador morre ou o arquivo acaba.
+
+        **Leitura curta não é descartada, é completada com silêncio e CONTADA.**
+        Descartar faria o fim de todo fluxo sumir sem número; completar em
+        silêncio, sem contar, faria a bomba parecer sã com a fonte agonizando.
+        """
+        pedido = self.bytes_de_pcm_por_report
+        pcm = self.fonte(pedido)
+        if not pcm:
+            return None
+        self.contagem.pcm_lido += len(pcm)
+        if len(pcm) < pedido:
+            self.contagem.pcm_curto += 1
+            pcm = pcm + b"\x00" * (pedido - len(pcm))
+        quadros: list[bytes] = []
+        for i in range(self.arranjo.quadros_de_audio):
+            pedaco = pcm[i * BYTES_DE_PCM_POR_QUADRO : (i + 1) * BYTES_DE_PCM_POR_QUADRO]
+            quadro = self._codificar(pedaco)
+            if quadro is None:
+                self.contagem.quadros_recusados += 1
+                return b""
+            self.contagem.quadros_opus += 1
+            quadros.append(quadro)
+        report = self.arranjo.montar(
+            quadros, seq=self._seq, tag_audio=self.tag_audio
+        )
+        self._seq = (self._seq + 1) % VOLTA_DA_SEQUENCIA
+        self.contagem.reports_montados += 1
+        return report
+
+    def escrever(self, report: bytes) -> bool:
+        """Entrega o report ao escritor. **Seco, devolve True sem escrever.**
+
+        O `True` do modo seco não é mentira e não polui a contagem: ele diz *"a
+        bomba seguiu"*, e o número que a pessoa vai citar é
+        :attr:`ContagemDaBomba.escritas_aceitas_pelo_kernel`, que só sobe
+        quando um byte de verdade saiu.
+        """
+        if self.seco or self.escritor is None:
+            return True
+        try:
+            escritos = int(self.escritor(report))
+        except OSError as erro:
+            self.contagem.escritas_recusadas += 1
+            logger.info("som_escrita_recusada", erro=str(erro))
+            return False
+        self.contagem.escritas_aceitas_pelo_kernel += 1
+        self.contagem.bytes_escritos += escritos
+        return True
+
+    def rodar(
+        self,
+        *,
+        segundos: float,
+        agora: Callable[[], float] | None = None,
+        dormir: Callable[[float], None] | None = None,
+    ) -> ContagemDaBomba:
+        """O laço, por `segundos` de relógio. Devolve a contagem.
+
+        **O ritmo é o da FONTE, e não um `sleep` nosso.** `pw-record` entrega
+        no tempo real do nó: pedir 1920 bytes bloqueia até haver 10 ms de som.
+        Um `sleep` por cima disso somaria dois relógios e produziria
+        subcorrida — a mesma classe de defeito do lado da entrada. O `dormir`
+        existe só para a fonte que NÃO tem ritmo próprio (um arquivo, um
+        dublê), e por omissão ele não é chamado.
+        """
+        relogio = agora or time.monotonic
+        comeco = relogio()
+        limite = comeco + max(0.0, float(segundos))
+        while relogio() < limite:
+            report = self.um_report()
+            if report is None:
+                break
+            if report and not self.escrever(report):
+                break
+            if dormir is not None:
+                dormir(self.ms_por_report / 1000.0)
+        self.contagem.segundos = relogio() - comeco
+        return self.contagem
+
+
+def fonte_de_arquivo(fd: int) -> Callable[[int], bytes]:
+    """Uma fonte de PCM que lê de um descritor já aberto (pipe, arquivo).
+
+    Lê **até completar** o pedido, e só devolve curto quando o descritor
+    realmente acabou: um `read()` de pipe devolve o que já chegou, e um único
+    `read` por report cortaria todo quadro em pedaços de tamanho variável — o
+    encoder recusaria cada um deles e a bomba contaria 100% de recusa sobre uma
+    fonte sã.
+    """
+
+    def _ler(quantos: int) -> bytes:
+        pedacos: list[bytes] = []
+        faltam = quantos
+        while faltam > 0:
+            try:
+                pedaco = os.read(fd, faltam)
+            except OSError:
+                break
+            if not pedaco:
+                break
+            pedacos.append(pedaco)
+            faltam -= len(pedaco)
+        return b"".join(pedacos)
+
+    return _ler
+
+
+def fonte_com_ritmo(
+    fonte: Callable[[int], bytes],
+    *,
+    ms_por_report: int,
+    agora: Callable[[], float] | None = None,
+    dormir: Callable[[float], None] | None = None,
+) -> Callable[[int], bytes]:
+    """Dá RITMO a uma fonte que não tem — e sem ela o ensaio vira uma inundação.
+
+    **O DEFEITO QUE ELA MATA, medido em 07/09/2026 antes de qualquer escrita.**
+    A bomba anda no ritmo da fonte, e isso é certo para o monitor de um nó do
+    PipeWire: pedir 20 ms de som bloqueia 20 ms. Uma fonte SINTÉTICA (o timbre
+    do ensaio de bancada, um arquivo já em memória) não bloqueia nada — ela
+    devolve na hora. Medido nesta árvore: a montagem fecha **2.660 reports por
+    segundo**, contra os **50/s** que o degrau ``0x39`` pede. Sem ritmo, quatro
+    segundos de ensaio jogariam ~10.600 reports e ~5,8 MB no enlace de rádio —
+    **53 vezes** o necessário, num rádio que carrega os outros controles dela.
+
+    Isso não seria um ensaio: seria uma inundação medindo a fila do kernel.
+
+    **O RELÓGIO É DE PRAZO, NÃO DE SONO.** Dormir ``ms_por_report`` depois de
+    cada quadro soma o tempo de codificar e escrever ao intervalo, e o fluxo
+    atrasa um pouco a cada volta — 2.660/s vira algo abaixo de 50/s, com deriva
+    que cresce. Aqui cada quadro tem um PRAZO absoluto e o sono é o que falta
+    para ele; quadro atrasado não dorme nada, e o próximo prazo não se perde.
+    """
+    relogio = agora or time.monotonic
+    esperar = dormir or time.sleep
+    intervalo = max(0.0, ms_por_report / 1000.0)
+    prazo = {"t": 0.0}
+
+    def _ler(quantos: int) -> bytes:
+        if prazo["t"] == 0.0:
+            prazo["t"] = relogio()
+        else:
+            falta = prazo["t"] - relogio()
+            if falta > 0:
+                esperar(falta)
+        prazo["t"] += intervalo
+        return fonte(quantos)
+
+    return _ler
+
+
+def escritor_de_hidraw(fd: int) -> Callable[[bytes], int]:
+    """Um escritor que entrega no hidraw aberto em `fd`.
+
+    Ele existe para que :class:`BombaDeSomPeloRadio` **não conheça o hidraw**:
+    quem abre o nó (e quem decide se abre pelo broker ou por `os.open`) é o
+    ensaio, que é onde moram a recusa por transporte e a conferência do MAC.
+    """
+
+    def _escrever(dados: bytes) -> int:
+        return os.write(fd, dados)
+
+    return _escrever
+
+
+# ---------------------------------------------------------------------------
 # Diagnóstico — por que o nó sobe, ou por que não sobe
 # ---------------------------------------------------------------------------
 
@@ -988,19 +1351,28 @@ __all__ = [
     "DEGRAU_DO_KERNEL",
     "DESCRICAO_PROVISORIA",
     "ENVELOPE_BYTES",
+    "GRAVADORES_DO_MONITOR",
     "HEX_DO_SUFIXO",
+    "MS_POR_QUADRO",
     "OFFSET_DO_COMMON",
     "ORCAMENTO_DO_DEGRAU",
     "PREFIXO_SINK_DO_SOM",
     "PRIORIDADE_SESSAO_DO_SOM",
     "TAMANHO_DO_DEGRAU",
     "TAXA_DO_ENCODER",
+    "VOLTA_DA_SEQUENCIA",
     "Arranjo",
+    "BombaDeSomPeloRadio",
     "CodificadorOpus",
+    "ContagemDaBomba",
     "Diagnostico",
     "SinkVirtualPipeWire",
+    "argv_do_gravador",
     "degrau_para_payload",
     "diagnosticar",
+    "escritor_de_hidraw",
+    "fonte_com_ritmo",
+    "fonte_de_arquivo",
     "montar_pelos_dois_arranjos",
     "nome_do_sink",
     "orcamento_do_degrau",

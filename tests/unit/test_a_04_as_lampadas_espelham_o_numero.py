@@ -42,10 +42,11 @@ na mesma sprint e não foi tocado pela ordem.
    (`monta.luzinhas` ← `core/led_control.player_led_pattern`);
 2. ela não oferece gesto nenhum — nem na coluna cheia, nem na vazia.
 
-**A MORDIDA DA SEGUNDA É A QUE IMPORTA**, e ela mede uma AUSÊNCIA: devolva
-`bits=` à chamada de `desenho_da_luz` em `aba04.coluna`, rode o gerador, e a
-régua do gesto reprova. Uma régua de ausência que ninguém arranca é uma régua
-que dá verde sobre a botoeira de volta.
+**A MORDIDA DA SEGUNDA É A QUE IMPORTA**, e ela mede uma AUSÊNCIA: ponha um
+`<button data-gesto="luzes">` dentro da `.cel-leds` de `aba04.coluna` e a régua
+do gesto reprova — a receita inteira, com os dois degraus e o que devolver
+depois, está em `test_a_celula_de_leds_nao_oferece_gesto_nenhum`. Uma régua de
+ausência que ninguém arranca é uma régua que dá verde sobre a botoeira de volta.
 
 O LAR É DE MENTIRA. O `conftest` desvia `HOME` e os quatro `XDG_*`; os casos que
 gravam escrevem perfil de verdade, com `save_profile`, dentro dele — que é a
@@ -55,6 +56,7 @@ chamada.
 from __future__ import annotations
 
 import json
+import re
 import pathlib
 import sys
 
@@ -175,48 +177,107 @@ def _leds_de(caminho, chave: str) -> dict:
 def _clique(**extra) -> dict:
     return {"controle": "p1", "uniq": UM, **extra}
 
-def test_todos_no_automatico_limpa_as_cores_de_todos_e_religa_o_campo(pac, a04):
-    """Campo a campo, o que o gêmeo da GTK faz (`on_lightbar_auto_reset_all`)."""
-    caminho = _semear(
-        automatico=False,
-        overrides={CHAVE_UM: {"lightbar": (255, 0, 0), "lightbar_brightness": 0.5},
-                   CHAVE_DOIS: {"lightbar": (0, 255, 0),
-                                "player_leds": [True] * 5}})
-    fora = a04.automatico_de_todos(_ctx(pac), _clique(), PonteDeMentira())
+def test_o_gesto_de_escopo_global_saiu_do_pacote(pac, a04):
+    """Ela mandou tirar os três cantos que falavam de automático — 07/09/2026.
 
-    disco = _do_disco(caminho)
-    assert disco["leds"]["auto_player_colors"] is True, (
-        "o automático não voltou a valer")
-    for chave in (CHAVE_UM, CHAVE_DOIS):
-        leds = _leds_de(caminho, chave)
-        assert "lightbar" not in leds, f"a cor própria de {chave} ficou"
-        assert "lightbar_brightness" not in leds, f"o brilho de {chave} ficou"
-    # O DESENHO FICA — é o que a GTK preserva, e mexer nele aqui faria as duas
-    # telas do mesmo produto responderem coisas diferentes ao mesmo botão.
-    assert _leds_de(caminho, CHAVE_DOIS).get("player_leds") == [True] * 5, (
-        "o `Todos no automático` apagou o desenho das luzes de jogador — o "
-        "gêmeo da janela estável limpa a COR, e só ela")
-    assert isinstance(fora, dict) and fora.get("recado")
+        *"Olha na real sai todos. Deixa só lá o de cima mesmo o tongle. E aí vai
+         servir pra dizer. O jogo é que escolhe quais serão as cores de todos os
+         controles."*
+
+    OS DOIS TESTES QUE MORAVAM AQUI mediam o gesto de escopo GLOBAL da faixa do
+    título, campo a campo contra o gêmeo da janela estável, e o `profile_switch`
+    que ele disparava. Eles nasceram em 06/09 e morreram em 07/09, um dia
+    depois — não porque estivessem errados, mas porque a peça que mediam saiu.
+    **Um teste que continua exigindo o gesto reprovaria a ordem dela**, e é essa
+    a forma de defeito que esta régua substitui.
+
+    O QUE ELE FAZIA fica escrito no pacote, na nota da poda, com a medição que
+    ele carregava: limpava `lightbar` e `lightbar_brightness` de TODOS os
+    overrides por controle e religava `auto_player_colors`, preservando o
+    desenho das cinco luzes.
+
+    A MORDIDA: registre de novo qualquer gesto de escopo global nesta página
+    com `@gesto` e a primeira asserção reprova.
+    """
+    vivos = {nome for (pagina, nome) in pac.GESTOS if pagina == PAGINA}
+    for morto in ("auto-todos", "auto"):
+        assert morto not in vivos, (
+            f"o gesto `{morto}` voltou ao pacote sem o widget que o oferecia — "
+            f"ela mandou tirar os dois em 07/09/2026, e a poda acompanha a peça")
+    # E OS AJUDANTES ÓRFÃOS SAÍRAM JUNTO. Os dois só tinham aquele chamador; um
+    # ajudante privado que ninguém chama é código morto que portão nenhum vê, e
+    # a próxima pessoa o lê como caminho vivo.
+    for orfao in ("_leds_sem", "_perfil_ativo_ou_recusa"):
+        assert not hasattr(a04, orfao), (
+            f"`{orfao}` ficou no pacote sem chamador — ele só existia para o "
+            f"gesto de escopo global, que saiu em 07/09/2026")
+    # E O MÉTODO DE PONTE QUE SÓ AQUELE BOTÃO CHAMAVA saiu da declaração: uma
+    # `METODOS` que lista o que ninguém chama é a régua verde sobre uma ponte
+    # que a tela não atravessa.
+    assert sorted(a04.METODOS) == ["coop.sync"], (
+        f"a declaração de métodos desta aba é {sorted(a04.METODOS)} — só o "
+        f"`coop.sync` sobrevive à poda de 07/09/2026")
 
 
-def test_todos_no_automatico_reaplica_o_perfil(pac, a04):
-    _semear(automatico=False,
-            overrides={CHAVE_UM: {"lightbar": (255, 0, 0)}})
-    ponte = PonteDeMentira()
-    a04.automatico_de_todos(_ctx(pac), _clique(), ponte)
-    assert ponte.so("profile_switch"), (
-        "o perfil não foi reaplicado — as cores sairiam do disco e ficariam no "
-        "aparelho até a próxima troca de perfil")
+def test_a_faixa_do_titulo_tem_um_morador_so():
+    """Ficou o interruptor, e só ele — ordem dela de 07/09/2026.
 
-def test_o_escopo_global_mora_na_faixa_do_titulo():
-    """Dentro de uma coluna ele mentiria sobre o alcance — e custaria linha."""
+    A RÉGUA MEDE O RÓTULO, e não só o endereço, porque o `data-gesto` some no
+    instante em que o `<button>` sai — mas um `<span>` com o mesmo texto
+    passaria calado, e é a forma exata que a próxima pessoa usaria para "só
+    deixar a informação". O que ela mandou tirar foi o CANTO da tela que fala de
+    automático, não o atributo.
+
+    E OS DOIS LADOS, porque a bancada e o publicado divergem em silêncio: um
+    conserto que fica só no `mockup/` não chega à tela dela, e a página que o
+    `WebKit2.WebView` lê é a de `paginas/`.
+
+    A MORDIDA: devolva o `<button>` ao `quadro-topo` de `aba04.MIOLO`, regere e
+    publique — esta linha reprova, e o `_conferir` do gerador reprova antes.
+    """
     from hefesto_dualsense4unix.interface import onde
-    from pacotes import a04_iluminacao as a04
 
-    texto = onde.pagina(PAGINA).read_text(encoding="utf-8")
-    topo = texto.split('<div class="quadro-topo">', 1)[-1].split("</div>", 1)[0]
-    assert f'data-gesto="{a04.GESTO_DO_AUTOMATICO_DE_TODOS}"' in topo
-    assert ">Todos no automático</button>" in topo
+    for caminho in (onde.pagina(PAGINA), onde.PUBLICADO / PAGINA):
+        texto = caminho.read_text(encoding="utf-8")
+        topo = texto.split('<div class="quadro-topo">', 1)[-1].split("</div>", 1)[0]
+        assert "Todos no automático" not in topo, (
+            f"o botão de escopo global voltou à faixa do título em "
+            f"{caminho.name} — ela mandou tirar os três cantos que falavam de "
+            f"automático em 07/09/2026")
+        assert 'data-gesto="auto-cores"' in topo, (
+            f"o interruptor saiu da faixa em {caminho.name} — ele é o ÚNICO "
+            f"que ela mandou deixar")
+
+
+def test_o_botao_por_controle_saiu_e_o_desligar_ficou():
+    """*"sai todos"* alcançou a célula Opções de cada coluna — e só ela.
+
+    O `Desligar` FICA, e a razão é MEDIDA, não zelo: os dois botões faziam
+    coisas diferentes. O que saiu largava o claim da barra ao jogo e pintava a
+    cor do número por cima; este escreve preto no aparelho e mais nada. Ela não
+    citou este — e é a diferença de ato que autoriza deixá-lo até ela dizer.
+
+    A MORDIDA: devolva o botão à célula Opções de `aba04.coluna`, regere e
+    publique.
+    """
+    from hefesto_dualsense4unix.interface import onde
+
+    for caminho in (onde.pagina(PAGINA), onde.PUBLICADO / PAGINA):
+        corpo = caminho.read_text(encoding="utf-8")
+        grade = corpo.split('<div class="luz-grade">', 1)[-1]
+        grade = grade.split('<div class="rodape"', 1)[0]
+        assert ">Automático</button>" not in grade, (
+            f"o botão `Automático` voltou à célula Opções em {caminho.name}")
+        # O NÚMERO SAI DA PÁGINA, e não do `MESA` deste arquivo: a mesa
+        # daqui tem dois lugares (é o dublê dos gestos) e a página tem os
+        # quatro do gerador. Comparar as duas dava 4 contra 2 e reprovava o
+        # desenho certo — é a armadilha de medir contra a fonte errada.
+        lugares = len(re.findall(r'<div class="ctrl(?:"| vazia")', grade))
+        assert lugares >= 2, "a régua não achou as colunas — não mediria nada"
+        assert grade.count(">Desligar</button>") == lugares, (
+            f"a célula Opções de {caminho.name} não tem um `Desligar` por "
+            f"lugar ({grade.count('>Desligar</button>')} para {lugares}) — "
+            f"ela NÃO citou este botão")
 
 
 # ---------------------------------------------------------------------------
@@ -298,9 +359,28 @@ def test_a_celula_de_leds_nao_oferece_gesto_nenhum():
     voltar. Um `data-gesto` nesta faixa é a botoeira de volta — a segunda maneira
     de mexer nas mesmas luzes, que é exatamente o que ela mandou tirar.
 
-    A MORDIDA: devolva `bits=_pacote04.desenho_de_agora(None, "", j)` à chamada
-    de `desenho_da_luz` em `aba04.coluna`, rode o gerador, e as duas asserções
-    reprovam.
+    A MORDIDA (medida em 07/09/2026, e ela tem DOIS degraus): acrescente uma
+    tecla dentro da `.cel-leds` de `aba04.coluna` — literalmente
+    `<button class="btn" data-gesto="luzes">Desenho</button>` acima da
+    `<div class="aceso" …>` — e rode `aba04.py`.
+
+    O GERADOR RECUSA PRIMEIRO, `rc=1`, nomeando a célula duas vezes: o item 10
+    de `aba04._conferir` mede a mesma ausência, e é o degrau de cima. Para ver
+    ESTA régua vermelha é preciso passar por ele — escreva o `<button>` direto
+    em `mockup/04-iluminacao.html` e rode o pytest: as duas asserções reprovam,
+    uma por `data-gesto=`, outra por `<button`.
+
+    **DEVOLVA A PÁGINA DEPOIS** (`git checkout -- mockup/04-iluminacao.html`).
+    A guarda do `__main__` de `aba04.py` já devolve o desenho aprovado quando o
+    gerador recusa, mas uma mordida escrita à mão no HTML é sua para desfazer —
+    e `--publicar` copia `mockup/` para `paginas/`, que é o que ela vê.
+
+    A RECEITA ANTIGA MORREU COM A FUNÇÃO QUE MORDIA. Ela mandava devolver
+    `bits=_pacote04.desenho_de_agora(None, "", j)` a `desenho_da_luz`, e as duas
+    metades saíram nesta mesma leva: `desenho_de_agora` foi deletada e
+    `desenho_da_luz` não tem mais parâmetro `bits`. Quem a seguisse receberia
+    `AttributeError`/`TypeError` — um erro de digitação, não uma asserção
+    vermelha —, e leria isso como "a régua não morde".
     """
     for n, bloco in _celulas_de_leds(_grade()):
         assert "data-gesto=" not in bloco, (
@@ -346,8 +426,8 @@ def test_os_tres_gestos_da_botoeira_sairam_do_pacote(pac, a04):
             f"o gesto `{morto}` voltou ao pacote sem o widget que o oferecia — "
             f"um gesto que a tela não alcança é código morto, e ela mandou "
             f"remover a botoeira inteira em 07/09/2026")
-    assert vivos >= {"cor", "apagar", "auto", "brilho", "player",
-                     "reenviar", "auto-cores", "auto-todos"}, (
+    assert vivos == {"cor", "apagar", "brilho", "player",
+                     "reenviar", "auto-cores"}, (
         f"a poda da botoeira levou junto um gesto que FICA: {sorted(vivos)}")
 
 
@@ -359,10 +439,12 @@ def test_o_piso_da_aba_desceu_com_a_ordem_dela(a04):
     calada — há uma ordem dela, e os três que saem são exatamente os três que a
     LUZES-01 trouxe. Ver a nota datada em `a04_iluminacao.PISO_DA_ABA`.
     """
-    assert a04.PISO_DA_ABA == 8, (
-        f"o piso da aba é {a04.PISO_DA_ABA}. Ele foi de 11 para 8 em "
-        f"07/09/2026, com a botoeira; subi-lo de volta a 11 é repor a botoeira "
-        f"que ela mandou tirar, e isso pede a palavra dela")
+    assert a04.PISO_DA_ABA == 6, (
+        f"o piso da aba é {a04.PISO_DA_ABA}. Ele desceu DUAS vezes em "
+        f"07/09/2026, nas duas ordens dela — 11 para 8 com a botoeira das "
+        f"lâmpadas, 8 para 6 com os dois botões do automático. Cada degrau de "
+        f"volta é repor um botão que ela mandou tirar, e isso pede a palavra "
+        f"dela")
 
 
 def test_a_linha_de_ressalva_saiu_da_celula_de_leds():
