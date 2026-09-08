@@ -378,7 +378,7 @@ def _id_visivel(uniq: str) -> str:
 
     A chave do dado continua sendo o ``uniq`` cru — é ela que vai no
     ``data-hef-uniq``, porque é a chave de ``Profile.controllers``
-    (``profiles/schema.py:1038``, canonizada em ``:1139``). Endereço que não é a
+    (``profiles/schema.py:1063``, canonizada em ``:1139``). Endereço que não é a
     chave do dado obriga a inventar uma tradução, e a tradução é onde nasce a
     segunda verdade.
     """

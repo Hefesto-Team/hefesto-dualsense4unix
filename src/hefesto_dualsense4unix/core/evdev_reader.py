@@ -262,7 +262,7 @@ def _is_virtual_evdev(event_path: str) -> bool:
     rádio chegasse com `uniq` ilegível, não há segunda perna — o produto
     classificaria um aparelho de VERDADE como virtual. Restaurá-la é trivial e
     já tem molde nesta casa: ler `HID_PHYS` do `uevent` do HID **pai**, que vem
-    preenchido, como `core/backend_pydualsense.py:187` e
+    preenchido, como `core/backend_pydualsense.py:195` e
     `broker/hidraw_broker.py:272` já fazem. Não foi feito aqui porque mudaria
     comportamento sem que ninguém tenha pedido.
     """

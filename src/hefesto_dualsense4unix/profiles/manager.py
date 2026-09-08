@@ -17,7 +17,7 @@ from typing import Any
 
 from hefesto_dualsense4unix.core.controller import IController, OutputSpec, TriggerEffect
 from hefesto_dualsense4unix.core.keyboard_mappings import DEFAULT_BUTTON_BINDINGS, KeyBinding
-from hefesto_dualsense4unix.core.led_control import LedSettings
+from hefesto_dualsense4unix.core.led_control import LEGADO, LedSettings
 from hefesto_dualsense4unix.core.trigger_effects import build_from_name
 from hefesto_dualsense4unix.daemon.state_store import StateStore
 from hefesto_dualsense4unix.profiles.loader import (
@@ -463,6 +463,11 @@ class ProfileManager:
             )
         )
         overrides = _controllers_to_specs(profile.controllers, profile.leds)
+        # A PROCEDÊNCIA DA COR viaja junto com a cor (08/09/2026) — ver
+        # `_controllers_to_procedencias`. Sem ela o backend não sabe se o
+        # `#0000FF` do disco é a escolha dela para o número de hoje ou o
+        # número de ontem congelado no arquivo.
+        procedencias = _controllers_to_procedencias(profile.controllers)
         # R-20 item 2: o brilho por-controle vira ESCALA (aplicada depois do
         # merge), nunca cor materializada — publicado ANTES da camada para o
         # reassert do fim já convergir com ele.
@@ -481,13 +486,20 @@ class ProfileManager:
             escalar_rumble(escalas_rumble or None)
         publicar = getattr(self.controller, "reset_profile_overrides", None)
         if callable(publicar):
-            publicar(overrides or None)
+            _publicar_camada(publicar, overrides, procedencias)
         else:
             # Caminho histórico (backend sem camadas): substitui o mapa e
             # escreve um a um. Correto para quem não tem estado por-controle.
-            self.controller.reset_output_overrides(overrides or None)
+            _publicar_camada(
+                self.controller.reset_output_overrides, overrides, procedencias
+            )
             for uniq, spec in overrides.items():
-                self.controller.apply_output_for(uniq, spec)
+                _aplicar_com_procedencia(
+                    self.controller.apply_output_for,
+                    uniq,
+                    spec,
+                    procedencias.get(uniq, LEGADO),
+                )
         # COR-03 (fix de integração, 2026-07-17): o broadcast acima escreve o
         # GLOBAL nos conectados — sem este reassert, a paleta automática só
         # apareceria no próximo replug (boot com controles presentes ficava
@@ -1988,6 +2000,66 @@ def _controllers_to_specs(
     return out
 
 
+def _controllers_to_procedencias(
+    controllers: dict[str, ControllerOverrides] | None,
+) -> dict[str, object]:
+    """PARA QUAL NÚMERO cada cor do perfil foi escolhida (`{uniq: procedência}`).
+
+    O par de `_controllers_to_specs`, e ele nasceu em 08/09/2026 com o campo
+    `LedsConfig.lightbar_para_o_numero`. A decisão de produto do dia:
+    *"quando o número daquele aparelho muda, a cor gravada é FÓSSIL e sai
+    sozinha, caindo de volta na paleta automática"*.
+
+    Só entra quem escreveu a COR (`lightbar` em `model_fields_set`) — brilho
+    sozinho não materializa cor (R-20 item 2) e não tem procedência a
+    declarar. Override que escreveu a cor SEM o campo novo entra como
+    ``LEGADO``: é todo perfil anterior a este dia, e o resolvedor volta a
+    provar fóssil pela forma para eles (`core/led_control.py::_e_fossil`).
+    """
+    out: dict[str, object] = {}
+    for uniq, cfg in (controllers or {}).items():
+        if cfg.leds is None or "lightbar" not in cfg.leds.model_fields_set:
+            continue
+        numero = cfg.leds.lightbar_para_o_numero
+        out[uniq] = LEGADO if numero is None else int(numero)
+    return out
+
+
+def _publicar_camada(
+    publicar: Any,
+    overrides: dict[str, OutputSpec],
+    procedencias: dict[str, object],
+) -> None:
+    """Publica a camada de overrides levando a procedência, quando ela cabe.
+
+    `TypeError` é a queda, e não um `inspect.signature`: backend de outra
+    árvore, dublê de teste e `FakeController` implementam a porta com a
+    assinatura antiga, e a cor continua chegando neles — só sem o carimbo,
+    que é exatamente o estado `LEGADO`. Chamar e cair é mais barato e mais
+    honesto que interrogar a assinatura de um objeto que pode ser um `Mock`
+    (que aceita QUALQUER assinatura e engoliria o argumento em silêncio).
+    """
+    try:
+        publicar(overrides or None, procedencias=procedencias or None)
+    except TypeError:
+        publicar(overrides or None)
+
+
+def _aplicar_com_procedencia(
+    aplicar: Any, uniq: str, spec: OutputSpec, procedencia: object
+) -> None:
+    """`apply_output_for` com o carimbo, e a MESMA queda do `_publicar_camada`.
+
+    Sem o carimbo aqui, o caminho histórico (backend sem camadas) reescrevia
+    a cor do perfil pela porta que carimba "escolha de agora" — e um fóssil
+    do disco viraria escolha viva no ato de ser carregado.
+    """
+    try:
+        aplicar(uniq, spec, procedencia_da_cor=procedencia)
+    except TypeError:
+        aplicar(uniq, spec)
+
+
 def _brilho_materializa_cor(
     cfg: ControllerOverrides, global_leds: LedsConfig | None
 ) -> bool:
@@ -2412,6 +2484,7 @@ __all__ = [
     "SECAO_DO_APPLIER",
     "ProfileManager",
     "_controllers_to_led_scales",
+    "_controllers_to_procedencias",
     "_controllers_to_specs",
     "_estado_da_secao",
     "_to_key_bindings",

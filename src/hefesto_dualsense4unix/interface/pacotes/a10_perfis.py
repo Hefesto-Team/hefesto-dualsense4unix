@@ -2696,7 +2696,15 @@ def _com_o_estilo(prof: Any, estilo: Any, mesa: list[dict[str, Any]]) -> tuple[A
         dele = atuais.get(uniq) or ControllerOverrides()
         atuais[uniq] = dele.model_copy(update={"leds": LedsConfig(
             lightbar=cor_da_unidade(estilo, jogador),
-            lightbar_brightness=estilo.brilho)})
+            lightbar_brightness=estilo.brilho,
+            # A PROCEDÊNCIA VIAJA COM A COR — 08/09/2026. A cor daqui é
+            # DERIVADA do `jogador` (`cor_da_unidade`), e o `jogador` é de
+            # SESSÃO: sem dizer para qual número ela foi escolhida, o arquivo
+            # guardaria a cor e perderia a razão dela. No dia em que a mesa
+            # girar, o resolvedor de cor única lê o carimbo, vê que o número
+            # mudou e devolve a peça à paleta — em vez de dois controles
+            # acenderem a mesma cor.
+            lightbar_para_o_numero=jogador)})
         pintados += 1
     if pintados:
         mudanca["controllers"] = atuais

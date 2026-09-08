@@ -895,7 +895,12 @@ _CITACOES_PENDENTES: frozenset[str] = frozenset({
     #
     # O NÚMERO CERTO JÁ ESTÁ MEDIDO — quem for dono do arquivo troca e apaga a
     # linha daqui (o `test_a_lista_de_pendentes_nao_vira_paisagem` cobra):
-    #   rumble_actions.py:417  `profiles/manager.py:1556-1567` -> `:1578-1589`
+    #   rumble_actions.py:417  `profiles/manager.py:1556-1567` — REAPONTADA em
+    #     08/09/2026 pela leva da cor única, e não pelo +22 desta lista: o
+    #     endereço "corrigido" para `:1578-1589` continuava caindo no
+    #     `_carimbar_ponte`, que não fala de teto móvel nenhum. A frase que a
+    #     citação promete ("o `auto` tem degrau que muda com a bateria, e a
+    #     casa não promete número móvel na tela") mora em `:2156-2159`.
     #   aba06.py:1714          `uinput_mouse.py:486`  -> `:508` (`emit_touchpad_move`)
     #   a06_navegacao.py:2205  `uinput_mouse.py:500`  -> `:508` (`emit_touchpad_move`)
     #   a06_navegacao.py:2224  `uinput_mouse.py:466`  -> `:488` (`_emit_scroll`)
@@ -905,7 +910,6 @@ _CITACOES_PENDENTES: frozenset[str] = frozenset({
     # As DUAS que a mesma cura deslocou dentro da minha posse não estão aqui
     # porque foram corrigidas no lugar (`core/acoes_de_botao.py`, as citações de
     # `profiles/manager.py:1856`->`:1878` e `uinput_mouse.py:355`->`:377`).
-    "app/actions/rumble_actions.py::profiles/manager.py:1556-1567",
     "interface/aba06.py::integrations/uinput_mouse.py:486",
     "interface/pacotes/a06_navegacao.py::integrations/uinput_mouse.py:466",
     "interface/pacotes/a06_navegacao.py::integrations/uinput_mouse.py:500",

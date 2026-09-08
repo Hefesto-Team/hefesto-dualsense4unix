@@ -1439,6 +1439,28 @@ def coluna(c):
           </div>
         </div>'''
 
+# ---------------------------------------------------------------------------
+# A FRASE QUE FALAVA DO BOTÃO POR COLUNA SAIU — 08/09/2026, queixa textual
+# dela: *"ainda temos 3 cantos falando sobre o automatico"*.  # noqa-acento: citação literal dela
+#
+# A dica do interruptor explicava a diferença entre ele e um botão por coluna
+# que não existe mais — o gesto saiu junto com o widget. Uma tela que explica
+# um botão morto ensina a procurá-lo. O que entrou no lugar não é enfeite:
+# "isto é do perfil" sem contraste não dizia o que muda, e o contraste que
+# sobrou é o que ela precisa — perfil × máquina, não este botão × aquele.
+#
+# ESTA NOTA ESTÁ EM PYTHON, E NÃO EM COMENTÁRIO HTML, E É POR ISSO QUE ELA
+# ESTÁ AQUI EMBAIXO. Ela nasceu dentro do `<!-- … -->` do widget, com o
+# `noqa-acento` num comentário HTML aninhado — e **comentário HTML NÃO
+# ANINHA**: o `-->` de dentro FECHA o de fora, e todo o resto da nota vira
+# CORPO VISÍVEL. Rodando o gerador, a página passava a mostrar à ela, em texto
+# na tela, a prosa de projeto e um hash de commit. É a quinta vez que a
+# armadilha da prosa morde esta casa, e a primeira nesta forma.
+#
+# A REGRA QUE SOBRA: `# noqa-…` só comenta em Python. Prosa de projeto que
+# precise de um `noqa` sai do HTML e vem para cá.
+# ---------------------------------------------------------------------------
+
 MIOLO = f'''
 {CORES_DO_MAPA}
     <div class="quadro luzes">
@@ -1487,15 +1509,6 @@ MIOLO = f'''
           Isto é do <b>perfil</b>: vale para todos os controles dele, e viaja quando
           você troca de perfil.
         </span></span>
-        <!-- A FRASE QUE FALAVA DO BOTÃO POR COLUNA SAIU — 08/09/2026, queixa
-             textual dela: *"ainda temos 3 cantos falando sobre o automatico"*. <!-- noqa-acento: citação literal dela -->
-             A dica explicava a diferença entre este interruptor e um botão por
-             coluna que NÃO EXISTE MAIS desde o `2c228352` — o gesto saiu com
-             ele. Uma tela que explica um botão morto ensina a procurá-lo.
-
-             O QUE ENTROU NO LUGAR não é enfeite: "isto é do perfil" sem
-             contraste não dizia o que muda, e o contraste que sobrou é o que
-             ela precisa — perfil × máquina, não este botão × aquele. -->
       </div>
       <div class="quadro-corpo">
 

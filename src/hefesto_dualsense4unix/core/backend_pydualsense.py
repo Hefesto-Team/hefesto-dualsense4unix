@@ -55,7 +55,15 @@ from hefesto_dualsense4unix.core.evdev_reader import (
 # `ds_output_report` logo acima — o default de adoção precisa ser resolvido em
 # tempo de módulo, e `core/speaker_scale.py` é Python puro (nenhum `gi`,
 # nenhum daemon, nenhum ciclo possível).
-from hefesto_dualsense4unix.core.led_control import PecaDaMesa, cores_sem_colisao
+from hefesto_dualsense4unix.core.led_control import (
+    DA_MAO,
+    DA_PALETA,
+    DO_BROADCAST,
+    DO_GLOBAL,
+    LEGADO,
+    PecaDaMesa,
+    cores_sem_colisao,
+)
 from hefesto_dualsense4unix.core.speaker_scale import volume_do_percentual
 
 if TYPE_CHECKING:
@@ -439,20 +447,26 @@ class _DesiredOutput:
 
 @dataclass(frozen=True)
 class _ResolvidoDoDaemon:
-    """O que `_resolvido_do_daemon` devolve: a saída e as duas respostas que
+    """O que `_resolvido_do_daemon` devolve: a saída e as três respostas que
     a regra de cor única precisa e que o merge sozinho não guarda.
 
     `cor_do_numero` é a cor AUTOMÁTICA deste controle (a do número dele), já
     pela escala de brilho da saída — é para onde ele volta quando é
-    deslocado. `cor_por_controle` diz se a cor veio de uma camada POR
-    CONTROLE (automática, override, co-op) ou se é só o global do perfil:
-    quem está no global fica FORA da mesa da regra, porque pintar os quatro
-    da mesma cor é o gesto "Todos" dela, não uma colisão.
+    deslocado.
+
+    `procedencia` diz DE ONDE a cor resolvida veio, e é o campo que fez a
+    segunda volta desta regra (08/09/2026): uma das constantes de
+    `core/led_control.py` (`DA_PALETA`, `DO_BROADCAST`, `DO_GLOBAL`,
+    `DA_MAO`, `LEGADO`) ou o NÚMERO inteiro para o qual a cor foi escolhida.
+    `numero` é o número de agora — e a diferença entre os dois é o que torna
+    uma cor fóssil. Sem este par o resolvedor adivinhava, e o palpite matou o
+    broadcast dela.
     """
 
     saida: _DesiredOutput
     cor_do_numero: tuple[int, int, int] | None
-    cor_por_controle: bool
+    procedencia: object
+    numero: int | None
 
 
 #: Lugar de quem a consulta de número não alcança (ausente da mesa, vpad, key
@@ -1480,6 +1494,18 @@ class PyDualSenseController(IController):
         # muda em nada. O que passa a existir é a procedência, para a ativação
         # de perfil soltar só a camada dela.
         self._desired_owner_by_uniq: dict[str, dict[str, str]] = {}
+        # A PROCEDÊNCIA DA COR de cada override (`{uniq: número | constante}`),
+        # decidida em 08/09/2026: **para qual número aquela cor foi escolhida**.
+        # É o par do `_desired_owner_by_uniq` acima — aquele guarda QUE CAMADA
+        # escreveu, este guarda POR QUE. Quando o número do aparelho muda, a
+        # cor gravada vira fóssil e sai sozinha (`led_control.cores_sem_colisao`).
+        #
+        # NASCEU DE UM DEFEITO MEDIDO: sem ele o resolvedor adivinhava fóssil
+        # pela FORMA da cor, e no disco um broadcast (`led.set` sem `uniq`, a
+        # MESMA cor em todos de propósito) é indistinguível de duas escolhas
+        # que colidiram. O palpite desfazia o "pinta os quatro de verde" dela
+        # no tique seguinte. `DO_BROADCAST` é lido, não deduzido.
+        self._procedencia_da_cor: dict[str, object] = {}
         # R-13 item 1: camada do CO-OP (padrão de player-LED por jogador).
         # Antes o co-op escrevia sysfs CRU, fora do estado desejado — e o
         # `reassert_resolved_outputs`, que roda em TODO `connect()` (≤30 s),
@@ -1945,25 +1971,37 @@ class PyDualSenseController(IController):
     ) -> _ResolvidoDoDaemon:
         """As camadas do DAEMON de `key`, sem a GAME e sem a regra de cor única.
 
+        Fachada por CHAVE de `_resolvido_do_uniq`. Só traduz o endereço: quem
+        resolve trabalha em `uniq`, porque a mesa da regra de cor única é uma
+        lista de `uniq` e traduzir de volta para chave exigiria varrer os
+        `_handles` por peça — que é o que já quebrou uma vez.
+        """
+        return self._resolvido_do_uniq(
+            self._key_to_uniq(key), incluir_coop=incluir_coop
+        )
+
+    def _resolvido_do_uniq(
+        self, uniq: str | None, *, incluir_coop: bool = True
+    ) -> _ResolvidoDoDaemon:
+        """As camadas do DAEMON de `uniq`, sem a GAME e sem a regra de cor única.
+
         Metade de baixo de `_merged_desired_for_key`, separada porque a regra
         de cor única precisa resolver a MESA INTEIRA para decidir sobre UMA
         peça — e chamar o merge completo de dentro dele mesmo seria recursão.
         Aqui não há mesa nem jogo: só o que este controle pede sozinho.
 
-        Devolve também as duas respostas que a regra de cor única precisa e
-        que se perderiam no merge:
+        Devolve também as três respostas que a regra de cor única precisa e
+        que o merge por campo não guarda:
 
         - `cor_do_numero`: a cor AUTOMÁTICA deste controle, pela mesma escala
           de brilho da saída (é para onde ele volta quando é deslocado);
-        - `cor_por_controle`: se a cor veio de uma camada POR CONTROLE
-          (automática, override ou co-op) ou se é só o global do perfil.
-
-        A segunda é o que preserva o gesto "Todos" (D4): pintar os quatro da
-        MESMA cor global é um ato deliberado dela, não uma colisão, e a regra
-        de unicidade não pode desfazê-lo. Quem não tem cor própria fica fora
-        da mesa nos dois sentidos — não é deslocado e não toma cor de ninguém.
+        - `procedencia`: DE ONDE a cor resolvida veio. É o campo de 08/09/2026
+          e o conserto inteiro da segunda volta — com ele o resolvedor LÊ em
+          vez de adivinhar. A camada mais alta que falou de cor manda:
+          co-op > override por-uniq > automática > global do perfil;
+        - `numero`: o número que este controle tem AGORA, para comparar com a
+          procedência gravada. Diferente = a cor é fóssil e sai sozinha.
         """
-        uniq = self._key_to_uniq(key)
         override = self._desired_by_uniq.get(uniq) if uniq is not None else None
         base = self._desired_default
         self._assentar_mesa_locked()
@@ -1991,21 +2029,94 @@ class PyDualSenseController(IController):
                 cor_do_numero = self._scaled_led(
                     uniq, _DesiredOutput(led=auto.led)
                 ).led
-        por_controle = bool(
-            (auto is not None and auto.led is not None)
-            or (override is not None and override.led is not None)
-            or (coop is not None and coop.led is not None)
+        # A PROCEDÊNCIA É A DA CAMADA MAIS ALTA QUE FALOU DE COR, na mesma
+        # ordem do merge acima. O co-op publica por controle e por gesto
+        # explícito (ligar o co-op), então vale como escolha da mão: ele não
+        # é fóssil de número nenhum.
+        procedencia: object = DO_GLOBAL
+        if auto is not None and auto.led is not None:
+            procedencia = DA_PALETA
+        if override is not None and override.led is not None:
+            # `getattr` pela MESMA razão do `_handles` em `_uniqs_da_mesa_locked`:
+            # a regra de cor única não pode fazer um merge que respondia parar
+            # de responder. Override sem carimbo é `LEGADO` — perfil escrito
+            # antes de 08/09/2026 —, e é o único caso que ainda prova pela forma.
+            procedencia = getattr(self, "_procedencia_da_cor", {}).get(uniq, LEGADO)
+        if coop is not None and coop.led is not None:
+            procedencia = DA_MAO
+        return _ResolvidoDoDaemon(
+            resolved, cor_do_numero, procedencia, self._numero_do_slot(uniq)
         )
-        return _ResolvidoDoDaemon(resolved, cor_do_numero, por_controle)
+
+    def _numero_do_slot(self, uniq: str | None) -> int | None:
+        """O número que `uniq` acende AGORA — ou `None` quando não há resposta.
+
+        A consulta viaja PENDURADA no provider de cor automática
+        (`daemon/subsystems/identity.make_auto_output_provider`), pela injeção
+        que já existe. Backend sem provider, ou provider de teste sem a
+        companheira, devolve `None`: a garantia de unicidade não depende do
+        número — só a leitura de fóssil e a ordem de quem desloca dependem.
+        """
+        if uniq is None:
+            return None
+        consulta = getattr(self._auto_output_provider, "numero_do_slot", None)
+        if not callable(consulta):
+            return None
+        with contextlib.suppress(Exception):
+            n = consulta(uniq)
+            if isinstance(n, int) and not isinstance(n, bool):
+                return n
+        return None
+
+    def _uniqs_da_mesa_locked(self) -> list[str]:
+        """Quem está na mesa da regra de cor única, sem repetir.
+
+        TRÊS FONTES, e a ordem entre elas é deliberada:
+
+        1. a MESA DA IDENTIDADE (`uniqs_da_mesa`, a segunda companheira que
+           `make_auto_output_provider` pendura no provider). É a fonte certa:
+           quem manda no número manda em quem está na mesa, e é a mesma
+           tabela que a tela mostra;
+        2. quem tem COR REGISTRADA (`_desired_by_uniq`, `_desired_coop_by_uniq`)
+           — inclusive o desconectado, cujo override continua no mapa e
+           reivindica a cor dele quando voltar;
+        3. os HANDLES abertos, para o backend cujo provider não tem a
+           companheira (provider de teste, ou nenhum).
+
+        **`_handles` É A ÚLTIMA, e é lido com `getattr`.** A razão está
+        medida: a primeira volta desta regra leu `self._handles` como fonte
+        única e transformou um `_merged_desired_for_key` que respondia numa
+        `AttributeError` — `test_troca_de_player_01` monta o merge com o que
+        o merge precisava, e a regra de cor única passou a precisar de mais.
+        Esta é a ÚNICA parte do merge que olha para fora da chave que
+        resolve, e ela não pode fazer o merge parar de responder.
+        """
+        vistos: list[str] = []
+
+        def _juntar(candidato: object) -> None:
+            if isinstance(candidato, str) and candidato and candidato not in vistos:
+                vistos.append(candidato)
+
+        fonte = getattr(self._auto_output_provider, "uniqs_da_mesa", None)
+        if callable(fonte):
+            with contextlib.suppress(Exception):
+                for uniq in fonte():
+                    _juntar(uniq)
+        for uniq in list(self._desired_by_uniq):
+            _juntar(uniq)
+        for uniq in list(self._desired_coop_by_uniq):
+            _juntar(uniq)
+        for chave in list(getattr(self, "_handles", {})):
+            _juntar(self._key_to_uniq(chave))
+        return vistos
 
     def _mesa_de_cores_locked(self, *, incluir_coop: bool) -> list[PecaDaMesa]:
         """A mesa que a regra de cor única resolve, JÁ NA ORDEM QUE DECIDE.
 
         A ordem é o número do controle (o `rank` que a identidade persiste e
-        que ela já vê na tela), lido pela consulta companheira que
-        `make_auto_output_provider` pendura no provider. Sem ela — provider
-        de teste, ou nenhum provider — a ordem cai no `uniq`, que é
-        arbitrário mas ESTÁVEL: a garantia de que duas peças não ficam
+        que ela já vê na tela). Sem número — provider de teste, ou controle
+        fora da mesa — a peça vai para o FIM, e lá a ordem cai no `uniq`, que
+        é arbitrário mas ESTÁVEL: a garantia de que duas peças não ficam
         iguais não depende da ordem, só o *quem desloca* depende.
 
         Por que o número e não a ordem de `_handles`: `_handles` é ordem de
@@ -2014,28 +2125,31 @@ class PyDualSenseController(IController):
         defeito que o `_assentar_mesa_locked` fechou no NÚMERO, de volta na
         COR. Ordenar pelo número torna a resposta função só do estado, que é
         o que impede a barra de piscar.
+
+        **A COR GLOBAL ENTRA NA MESA**, e não entrava na primeira volta: o
+        `if not r.cor_por_controle: continue` deixava de fora justamente o
+        controle sem opinião própria, e um numerado em azul automático ao
+        lado de um caído no azul global ficava dois `#0000FF`. Quem está no
+        global entra marcado como `DO_GLOBAL` e cede a quem tem identidade,
+        sem ceder à irmã que também está no global — que é o gesto "Todos"
+        do perfil (D4) e continua de pé.
         """
-        numero = getattr(self._auto_output_provider, "numero_do_slot", None)
-        pecas: list[tuple[int, str, tuple[int, int, int] | None,
-                          tuple[int, int, int] | None]] = []
-        vistos: set[str] = set()
-        for chave in list(self._handles):
-            uniq = self._key_to_uniq(chave)
-            if uniq is None or uniq in vistos:
-                continue
-            vistos.add(uniq)
-            r = self._resolvido_do_daemon(chave, incluir_coop=incluir_coop)
-            if not r.cor_por_controle:
-                continue
-            lugar = _SEM_NUMERO
-            if numero is not None:
-                with contextlib.suppress(Exception):
-                    n = numero(uniq)
-                    if isinstance(n, int):
-                        lugar = n
-            pecas.append((lugar, uniq, r.saida.led, r.cor_do_numero))
+        pecas: list[tuple[int, str, PecaDaMesa]] = []
+        for uniq in self._uniqs_da_mesa_locked():
+            r = self._resolvido_do_uniq(uniq, incluir_coop=incluir_coop)
+            pecas.append((
+                _SEM_NUMERO if r.numero is None else r.numero,
+                uniq,
+                PecaDaMesa(
+                    uniq=uniq,
+                    pedida=r.saida.led,
+                    do_numero=r.cor_do_numero,
+                    procedencia=r.procedencia,
+                    numero=r.numero,
+                ),
+            ))
         pecas.sort(key=lambda peca: (peca[0], peca[1]))
-        return [(uniq, pedida, do_numero) for _, uniq, pedida, do_numero in pecas]
+        return [peca for _, _, peca in pecas]
 
     def _com_cor_unica_locked(
         self, key: str, r: _ResolvidoDoDaemon, *, incluir_coop: bool
@@ -2056,7 +2170,7 @@ class PyDualSenseController(IController):
         o que ele pediu. O jogo pinta por cima da regra, como já pinta por
         cima do brilho.
         """
-        if r.saida.led is None or not r.cor_por_controle:
+        if r.saida.led is None:
             return r.saida
         uniq = self._key_to_uniq(key)
         if uniq is None:
@@ -2213,6 +2327,54 @@ class PyDualSenseController(IController):
         for campo in campos:
             donos[campo] = layer
 
+    def _carimbar_procedencia_locked(
+        self,
+        uniq: str,
+        cor: Any,
+        declarada: object,
+        *,
+        deduzir_todos: bool = False,
+    ) -> None:
+        """Grava PARA QUAL NÚMERO esta cor foi escolhida. Sob `_io_lock`.
+
+        Decisão de produto de 08/09/2026 (§4 do handoff do dia). Sem este
+        carimbo o resolvedor de cor única adivinhava, e o palpite matou o
+        broadcast dela — ver `_procedencia_da_cor` no `__init__`.
+
+        `declarada` é o que o CHAMADOR sabe e o backend não pode deduzir:
+        `led_control.DO_BROADCAST` para o "Todos" (`led.set` sem `uniq`), o
+        número inteiro quando o perfil o traz gravado do disco. É a via
+        honesta, e é a que o `_registrar_em_todos` do IPC usa.
+
+        **O PADRÃO É LER O NÚMERO DE AGORA**, e ele vale para as portas que
+        não declaram nada: um gesto por controle é uma escolha PARA o número
+        que aquele aparelho tem neste instante. Quando não há número a ler
+        (controle fora da mesa, backend sem a consulta), fica `DA_MAO` — que
+        é escolha viva e nunca fóssil, porque sem número não há como o número
+        ter mudado.
+
+        A REDE DE SEGURANÇA (`deduzir_todos`), e ela é a única dedução que
+        sobrou: uma escrita por-uniq cuja cor é EXATAMENTE a que o
+        `_desired_default` acabou de declarar é a devolução de um "Todos" — é
+        assim, e só assim, que o `_registrar_em_todos` do IPC reescreve o que
+        `_record_desired_locked(None)` tinha acabado de limpar. Ela existe
+        para o chamador que ainda não declara (CLI antiga, teste, backend de
+        outra árvore) não perder o broadcast dela, e vale SÓ na porta por onde
+        o broadcast passa (`apply_output_for`). A escrita MIRADA não a liga:
+        lá a cor calhar de ser a global não é um "Todos", é coincidência.
+        """
+        carimbos = getattr(self, "_procedencia_da_cor", None)
+        if carimbos is None:
+            carimbos = self._procedencia_da_cor = {}
+        if declarada is not None:
+            carimbos[uniq] = declarada
+            return
+        if deduzir_todos and cor is not None and cor == self._desired_default.led:
+            carimbos[uniq] = DO_BROADCAST
+            return
+        numero = self._numero_do_slot(uniq)
+        carimbos[uniq] = DA_MAO if numero is None else numero
+
     def _prune_overrides_locked(self) -> None:
         """Poda overrides/carimbos que ficaram vazios. Sob `_io_lock`.
 
@@ -2226,6 +2388,14 @@ class PyDualSenseController(IController):
         }
         self._desired_owner_by_uniq = {
             uniq: donos for uniq, donos in self._desired_owner_by_uniq.items() if donos
+        }
+        # O carimbo de procedência morre com a cor que ele explica: override
+        # podado, ou override que ficou sem `led`, não deixa carimbo órfão
+        # para o próximo a escrever herdar.
+        self._procedencia_da_cor = {
+            uniq: proc
+            for uniq, proc in getattr(self, "_procedencia_da_cor", {}).items()
+            if getattr(self._desired_by_uniq.get(uniq), "led", None) is not None
         }
 
     def _record_desired_locked(self, target_key: str | None, fields: dict[str, Any]) -> None:
@@ -2258,6 +2428,11 @@ class PyDualSenseController(IController):
             # R-20: escrita mirada da GUI = camada da USUÁRIA. É este carimbo
             # que faz o ajuste dela sobreviver à próxima ativação de perfil.
             self._stamp_owner_locked(uniq, fields, _LAYER_USER)
+            if "led" in fields:
+                # Escrita MIRADA num controle: a cor foi escolhida para o
+                # número que ele tem agora (08/09/2026). É a mesma porta do
+                # `apply_output_for`, e as duas carimbam pelo mesmo lugar.
+                self._carimbar_procedencia_locked(uniq, fields["led"], None)
             return
         for name, value in fields.items():
             setattr(self._desired_default, name, value)
@@ -5047,7 +5222,13 @@ class PyDualSenseController(IController):
             )
         return "escreveu" if havia_alguem_na_mesa else "registrado"
 
-    def apply_output_for(self, uniq: str, spec: OutputSpec) -> ResultadoDeSaida:
+    def apply_output_for(
+        self,
+        uniq: str,
+        spec: OutputSpec,
+        *,
+        procedencia_da_cor: object = None,
+    ) -> ResultadoDeSaida:
         """Aplica `spec` SÓ no controle de MAC `uniq` e registra o override dele.
 
         PERFIL-01: NÃO passa pelo `_output_target_key` — o alvo é o parâmetro,
@@ -5101,6 +5282,10 @@ class PyDualSenseController(IController):
             for name, value in fields.items():
                 setattr(override, name, value)
             self._stamp_owner_locked(alvo, fields, _LAYER_USER)
+            if "led" in fields:
+                self._carimbar_procedencia_locked(
+                    alvo, fields["led"], procedencia_da_cor, deduzir_todos=True
+                )
             key = self._key_for_uniq(alvo)
             handle = self._handles.get(key) if key is not None else None
             node = self._sysfs.get(key) if key is not None else None
@@ -5127,7 +5312,10 @@ class PyDualSenseController(IController):
         return "escreveu"
 
     def reset_output_overrides(
-        self, overrides: Mapping[str, OutputSpec] | None = None
+        self,
+        overrides: Mapping[str, OutputSpec] | None = None,
+        *,
+        procedencias: Mapping[str, object] | None = None,
     ) -> None:
         """SUBSTITUI o mapa de overrides por-uniq inteiro (gesto da usuária).
 
@@ -5146,9 +5334,16 @@ class PyDualSenseController(IController):
         Overrides de controles DESCONECTADOS também entram no mapa (o hotplug
         lê o mapa em memória). Nenhuma escrita de hardware aqui — o chamador
         aplica na sequência (`apply_output_defaults` + `apply_output_for`).
+
+        `procedencias` traz, por MAC, PARA QUAL NÚMERO cada cor foi escolhida
+        (08/09/2026). Quem manda é `profiles.manager._controllers_to_procedencias`,
+        que lê `ControllerOverrides.leds.lightbar_para_o_numero` do disco.
+        Ausente = `LEGADO`: override gravado antes de o campo existir, e é o
+        único caso em que a regra de cor única ainda prova fóssil pela forma.
         """
         novo: dict[str, _DesiredOutput] = {}
         donos: dict[str, dict[str, str]] = {}
+        carimbos: dict[str, object] = {}
         for uniq, spec in (overrides or {}).items():
             alvo = self._key_to_uniq(uniq)
             if alvo is None:
@@ -5158,12 +5353,18 @@ class PyDualSenseController(IController):
             novo[alvo] = _DesiredOutput(**campos)
             if campos:
                 donos[alvo] = dict.fromkeys(campos, _LAYER_USER)
+            if campos.get("led") is not None:
+                carimbos[alvo] = (procedencias or {}).get(uniq, LEGADO)
         with self._io_lock:
             self._desired_by_uniq = novo
             self._desired_owner_by_uniq = donos
+            self._procedencia_da_cor = carimbos
 
     def reset_profile_overrides(
-        self, overrides: Mapping[str, OutputSpec] | None = None
+        self,
+        overrides: Mapping[str, OutputSpec] | None = None,
+        *,
+        procedencias: Mapping[str, object] | None = None,
     ) -> None:
         """Republica a camada do PERFIL e escreve nos conectados (R-20).
 
@@ -5194,6 +5395,12 @@ class PyDualSenseController(IController):
         cor em "Todos" — solta a camada da usuária, e aí o perfil volta a
         mandar. Sem esse par, a camada alta viraria "estado armado que nunca
         é liberado" (a queixa 5).
+
+        `procedencias` vem do disco pelo `_controllers_to_procedencias` do
+        manager: PARA QUAL NÚMERO cada cor do perfil foi escolhida. Só é
+        carimbado no campo que este passo realmente escreveu — o que cedeu ao
+        ajuste manual dela (passo 2) fica com o carimbo do ajuste, que é de
+        quem a cor é.
         """
         novo: dict[str, dict[str, Any]] = {}
         for uniq, spec in (overrides or {}).items():
@@ -5217,6 +5424,15 @@ class PyDualSenseController(IController):
                         continue
                     setattr(override, nome, valor)
                     self._stamp_owner_locked(alvo, (nome,), _LAYER_PROFILE)
+                    if nome == "led":
+                        # A cor do perfil traz do disco o número para o qual
+                        # ela foi escolhida (08/09/2026). Sem o campo no
+                        # arquivo, `LEGADO`: o resolvedor volta a provar
+                        # fóssil pela forma, que é o que sobra para perfil
+                        # anterior ao campo.
+                        self._carimbar_procedencia_locked(
+                            alvo, valor, (procedencias or {}).get(alvo, LEGADO)
+                        )
             self._prune_overrides_locked()
             # Converge o hardware dos conectados COM override ao resolvido
             # (passo 3 da docstring). Um controle sem override nenhum já ficou

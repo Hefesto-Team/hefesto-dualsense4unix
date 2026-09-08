@@ -3472,7 +3472,7 @@ SEM_GESTO = {
 #:
 #: O `state_full` do daemon publica `active_profile` — o NOME — e mais nada do
 #: conteúdo do perfil. Nem `button_actions` nem `key_bindings` aparecem entre as
-#: chaves do payload (`daemon/ipc_handlers.py:2493`). Logo a régua que compara o
+#: chaves do payload (`daemon/ipc_handlers.py:2509`). Logo a régua que compara o
 #: estado do daemon antes e depois do clique não tem como ver o efeito destes
 #: dois, por mais que eles funcionem — e eles funcionam:
 #:

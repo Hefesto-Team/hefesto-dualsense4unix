@@ -456,7 +456,7 @@ def texto_do_teto_do_orcamento(
     2. **O orçamento não impõe teto** — ``balanceado``, ``max``, e também o
        ``auto``, cujo teto é MÓVEL: ele muda a cada tique com a bateria, e a
        casa já decidiu não prometer número móvel na tela
-       (`profiles/manager.py:1556-1567`). Um "limitado a 70%" que vira 30% no
+       (`profiles/manager.py:2156-2159`). Um "limitado a 70%" que vira 30% no
        minuto seguinte ensina a desconfiar da tela inteira.
     3. **Não se sabe o que a aba está pedindo** (``pedido is None``): política
        fora dos degraus conhecidos, deslizador ainda não lido.

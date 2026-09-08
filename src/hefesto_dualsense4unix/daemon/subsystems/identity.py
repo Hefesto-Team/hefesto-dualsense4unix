@@ -1877,7 +1877,31 @@ def make_auto_output_provider(
         """
         return registry.numero_da_lampada(uniq, autoridade_de_presenca=False)
 
+    def uniqs_da_mesa() -> list[str]:
+        """QUEM está na mesa agora — a segunda companheira do provider de cor.
+
+        A regra de cor única resolve a MESA INTEIRA para decidir sobre UMA
+        peça, e por isso precisa da lista, não só do número de cada um. Ela
+        vem daqui, e não dos `_handles` do backend, por duas razões medidas:
+
+        * **`_handles` é ordem e composição de HOTPLUG.** Quem manda em quem
+          está na mesa é o tique de presença (QUATRO-NA-MESA-01 §1), e é a
+          MESMA tabela que a tela mostra. Duas fontes para "quem está aí" é
+          como a lâmpada e o rótulo divergem;
+        * a primeira volta desta regra leu `self._handles` como fonte única e
+          transformou um `_merged_desired_for_key` que respondia numa
+          `AttributeError` — o merge passou a exigir um mapa que ele nunca
+          precisou. Aqui a pergunta chega pelo fio que já existe
+          (`set_auto_output_provider`), e o backend só cai nos handles quando
+          o provider não tem esta companheira.
+
+        Mesmo contrato do provider e da irmã `numero_do_slot`: barato, só
+        memória, e uma LEITURA — `numeros_da_mesa` não admite ninguém.
+        """
+        return list(registry.numeros_da_mesa())
+
     provider.numero_do_slot = numero_do_slot  # type: ignore[attr-defined]
+    provider.uniqs_da_mesa = uniqs_da_mesa  # type: ignore[attr-defined]
     return provider
 
 

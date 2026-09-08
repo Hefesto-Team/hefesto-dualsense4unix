@@ -199,7 +199,22 @@ ENDERECO_CSV = re.compile(
 NOME_ANTES = re.compile(r"`(?P<nome>[A-Za-z_][A-Za-z0-9_]{2,})`\s*(?:em|no|na)\s+$")
 
 #: `arquivo:N-M` (`SIMBOLO`) — o nome vem entre parênteses logo DEPOIS.
-NOME_DEPOIS = re.compile(r"\s*\(`(?P<nome>[A-Za-z_][A-Za-z0-9_]{2,})`\)")
+#:
+#: **A TERCEIRA FORMA ENTROU EM 08/09/2026**, e ela é a que o mapa mais usa:
+#: `arquivo:N (`SIMBOLO`, e mais uma frase explicando)`. A régua exigia o `)`
+#: colado ao nome, então toda citação que continuava a frase depois da vírgula
+#: caía FORA da pergunta 2 — e foi por aí que oito promessas de símbolo
+#: apodreceram em 24 citações do backend com o portão VERDE. O conferente da
+#: leva de 08/09 nomeou o buraco: *"a pergunta 2 dele só dispara em duas
+#: formas sintáticas, e a célula usa a forma `:N (`SIMBOLO` …)`. Portão verde
+#: aqui NÃO é prova."*
+#:
+#: O nome tem de ABRIR o parêntese — é isso que o mantém colado ao endereço.
+#: `(o bloco `if not rumble_asserted:`, que apaga…)` continua fora, e é de
+#: propósito: ali o parêntese começa com prosa, e o que está entre crases é
+#: uma citação de código, não a promessa "este símbolo está nesta faixa".
+NOME_DEPOIS = re.compile(
+    r"\s*\(`(?P<nome>[A-Za-z_][A-Za-z0-9_]{2,})`\s*(?:[,)]|$)")
 
 #: Quanto do texto à esquerda do endereço entra na busca pelo nome prometido.
 #: Largo o bastante para "com o `VALID_FLAG1_AUDIO_CONTROL2_ENABLE` em", curto

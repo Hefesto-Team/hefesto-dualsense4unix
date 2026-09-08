@@ -2663,8 +2663,8 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
 #
 # O QUE TEM DONO, medido nos 39 métodos do `ipc_server` em 01/09/2026:
 #
-#   🎙  data-mudo="microfone"      `mic.set`      (ipc_handlers.py:4814)
-#   ♪   data-mudo="alto-falante"   `speaker.set`  (ipc_handlers.py:4648)
+#   🎙  data-mudo="microfone"      `mic.set`      (ipc_handlers.py:4830)
+#   ♪   data-mudo="alto-falante"   `speaker.set`  (ipc_handlers.py:4664)
 #   Sons do jogo  data-rota="jogo" `speaker.set`  com `rota`, o mesmo :4589
 #   Virtual / Nativo  data-mic-modo  `machine.declare` (ipc_handlers.py:5258)
 #
@@ -3237,10 +3237,10 @@ def mudo(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     o desenho não tem.
 
     **São métodos diferentes, e não é detalhe.** O `mic.set` é o MUDO NO
-    FIRMWARE (camada 3, `ipc_handlers.py:4814`): é o único que apaga a luz
+    FIRMWARE (camada 3, `ipc_handlers.py:4830`): é o único que apaga a luz
     vermelha do plástico, e a partir dele o botão físico do controle deixa de
     valer — é o que o `title` do desenho já promete. O `speaker.set` manda ZERO
-    ao alto-falante guardando o volume preferido (`ipc_handlers.py:4648`).
+    ao alto-falante guardando o volume preferido (`ipc_handlers.py:4664`).
     Trocar um pelo outro calaria a coisa errada.
 
     ALTERNAR EXIGE LER O ESTADO, e ele vem do daemon, nunca de memória nossa:
@@ -3756,7 +3756,7 @@ def volume(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
         # colapsa isso no mesmo `True` de um pedido honrado, e a tela pintava
         # o selo do card certo sobre um número que aquele controle nunca teve.
         #
-        # O CAMPO EXISTE DESDE 20/08 (`por_uniq`, `ipc_handlers.py:5595`) e a
+        # O CAMPO EXISTE DESDE 20/08 (`por_uniq`, `ipc_handlers.py:6220`) e a
         # janela ANTIGA já o lê (`controller_card:4443`). Quem não lia era esta.
         corpo = _corpo(p.mic_volume_set_detalhado(pedido, uniq=uniq))
         # `sem_fonte` TEM FRASE PRÓPRIA, e SÓ ele: os outros `status` continuam
@@ -3845,7 +3845,7 @@ def _como_o_produto_ve(ctx: Contexto, uniq: str) -> Any:
       mesma chave;
     * `adotado` — `True`, e é afirmação medida: o `state_full["controllers"]`
       sai do `describe_controllers` do controlador de DualSense
-      (`ipc_handlers.py:2626`), e cada entrada traz `lightbar_rgb`,
+      (`ipc_handlers.py:2642`), e cada entrada traz `lightbar_rgb`,
       `player_slot` e `vpad_backend`. Controle externo (8BitDo, Pro) não entra
       por essa porta — ele vem por `controller.list`, que esta aba não lê.
     """
