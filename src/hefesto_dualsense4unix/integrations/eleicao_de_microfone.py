@@ -155,22 +155,63 @@ _DIZEDOR_DO_NO_AR: Callable[[str, bool], bool] | None = None
 #: Quem esquece a palavra dela (a decisão volta ao ouvinte da source).
 _ESQUECEDOR_DA_PALAVRA: Callable[[str], bool] | None = None
 
+#: Quem LÊ a palavra dela sobre um microfone — `True`, `False`, ou `None` para
+#: *"ela não disse nada"*. É o terceiro gancho do mesmo trio, e ele nasceu da
+#: SEXTA PORTA (08/09/2026): sem saber o que havia ANTES do ato, desfazer um
+#: ato recusado só poderia ser um chute — apagar sempre, ou calar sempre, e os
+#: dois inventam estado que ela não pediu. Ver `hotkey._metade_do_canal`.
+_LEITOR_DA_PALAVRA: Callable[[str], bool | None] | None = None
+
+_GanchosDaPalavra = tuple[
+    Callable[[str, bool], bool] | None,
+    Callable[[str], bool] | None,
+    Callable[[str], bool | None] | None,
+]
+
 
 def registrar_dizedor_do_no_ar(
     dizedor: Callable[[str, bool], bool] | None,
     esquecedor: Callable[[str], bool] | None = None,
-) -> tuple[Callable[[str, bool], bool] | None, Callable[[str], bool] | None]:
+    leitor: Callable[[str], bool | None] | None = None,
+) -> _GanchosDaPalavra:
     """Instala quem atende a palavra dela. Devolve os anteriores, para restaurar.
 
     Quem chama é `daemon/subsystems/bt_mic.BtMicSubsystem.start`, pela mesma
     razão que `registrar_pedidor_de_canal`: **daemon importando
     `integrations`**, nunca o contrário.
+
+    **OS TRÊS SOBEM JUNTOS** desde 08/09/2026. Dizer sem poder LER é o que
+    deixava um ato recusado com a palavra ligada: o ato diz a palavra ANTES da
+    eleição (a ponte precisa dela para nascer já sabendo), e quando a eleição
+    recusa não havia como devolver o registro ao que ele era.
     """
-    global _DIZEDOR_DO_NO_AR, _ESQUECEDOR_DA_PALAVRA
-    anteriores = (_DIZEDOR_DO_NO_AR, _ESQUECEDOR_DA_PALAVRA)
+    global _DIZEDOR_DO_NO_AR, _ESQUECEDOR_DA_PALAVRA, _LEITOR_DA_PALAVRA
+    anteriores = (_DIZEDOR_DO_NO_AR, _ESQUECEDOR_DA_PALAVRA, _LEITOR_DA_PALAVRA)
     _DIZEDOR_DO_NO_AR = dizedor
     _ESQUECEDOR_DA_PALAVRA = esquecedor
+    _LEITOR_DA_PALAVRA = leitor
     return anteriores
+
+
+def palavra_no_ar(uniq: str) -> bool | None:
+    """O que ela disse sobre ESTE microfone. `None` = nada, ou ninguém atende.
+
+    Os dois `None` são a mesma resposta para quem chama, e de propósito: sem
+    quem atenda não há palavra guardada em lugar nenhum, então *"ela não
+    disse"* é literalmente verdade. Um valor de erro separado só criaria um
+    ramo que o chamador trataria igual.
+
+    Nunca levanta, pela mesma razão de `pedir_canal`.
+    """
+    leitor = _LEITOR_DA_PALAVRA
+    if leitor is None:
+        return None
+    try:
+        resposta = leitor(uniq)
+    except Exception:  # best-effort: o gesto dela não vira traceback
+        logger.debug("eleicao_mic_leitura_da_palavra_falhou", exc_info=True)
+        return None
+    return resposta if isinstance(resposta, bool) else None
 
 
 def dizer_no_ar(uniq: str, ligado: bool) -> bool:
@@ -865,6 +906,7 @@ __all__ = [
     "fonte_se_sustenta",
     "fontes_de_captura_agora",
     "melhor_fonte_elegivel",
+    "palavra_no_ar",
     "pedir_canal",
     "recusa_de_quem_nao_elegeu",
     "registrar_dizedor_do_no_ar",

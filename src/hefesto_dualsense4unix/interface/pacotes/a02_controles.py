@@ -3351,7 +3351,7 @@ def mudo(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
         # de `mic.canal.set` NÃO traz `por_uniq` — quem o traz é o
         # `mic.volume.set` (`daemon/ipc_handlers.py:6164`). O ato do microfone
         # monta a resposta em `AtoDoMicrofone.como_corpo`
-        # (`daemon/subsystems/hotkey.py:1387`), e lá o campo não existe. Então
+        # (`daemon/subsystems/hotkey.py:1388`), e lá o campo não existe. Então
         # `alvo_honrado` devolve `None` aqui, esta linha fica CALADA contra o
         # daemon de hoje, e o silêncio é o certo: quem cobre o alvo errado
         # neste caminho é a metade do CANAL, que recusa dizendo quando a
@@ -3916,14 +3916,20 @@ def mic_modo(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
       `title` do próprio botão "Virtual"~~ — **ESTE ARGUMENTO CAIU em
       08/09/2026, e a razão é a armadilha da prosa numa forma nova: A FRASE DA
       TELA VIROU O ARGUMENTO.** Um `title` que ninguém tinha medido foi usado
-      como PROVA para mudar comportamento. Medido agora, ele promete três
-      coisas e duas não se sustentam — a de simetria é contradita pela linha
-      `audio.microfone.mudo@dualsense` do mapa de specs, que tem
-      `radio_aciona=parcial` com a assimetria declarada desde 03/08/2026
-      (MIC-BT-DONO-01). Cabo e rádio **não** soam igual, e isso está medido.
+      como PROVA para mudar comportamento. Medido, ele prometia três coisas e
+      as três descreviam OUTRO botão: *"cria uma fonte de áudio própria"* só
+      acontece no rádio (no cabo o filtro de `nos_dualsense_bluetooth` descarta
+      o nó e este gesto só grava a chave), *"entrega o microfone ao PC"* é o
+      🎙, pelo gesto `mudo`, e a simetria é contradita pela linha
+      `audio.microfone.mudo@dualsense` do mapa (`radio_aciona=parcial`, com a
+      assimetria declarada desde 03/08/2026, MIC-BT-DONO-01).
       A CONCLUSÃO DO GESTO NÃO DEPENDIA DISTO e fica de pé pelos dois motivos
-      abaixo, que são sobre o que o código FAZ. Texto de tela é dela: a frase
-      não foi mexida aqui, e o buraco está escrito no mapa, não na página.
+      abaixo, que são sobre o que o código FAZ.
+      **A FRASE SAIU DA TELA na segunda volta** (`aba02.DICA_MIC_VIRTUAL`): o
+      texto novo diz o que ESTE botão faz e manda para o 🎙, que faz a outra
+      metade. Ele não confessa dívida — o que falta mora no mapa, nunca na
+      página. A régua é
+      `tests/unit/test_a02_o_tooltip_do_virtual_diz_o_que_o_botao_faz.py`.
 
     O paralelo com o gesto `rota` também não se sustentava: lá o botão promete
     MOVER SOM AGORA e só metade do caminho existe; aqui a declaração é DURÁVEL,

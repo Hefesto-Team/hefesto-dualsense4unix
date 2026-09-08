@@ -104,6 +104,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from hefesto_dualsense4unix.core import ds_output_report as rep
 from hefesto_dualsense4unix.core.ds_output_report import (
     BT_CRC_SEED,
     BT_TAG,
@@ -682,10 +683,16 @@ def montar_com_o_common_preservado(
     **E ELE NÃO ESCREVE NADA.** Monta bytes e devolve; quem põe no fio é a
     bomba, que nasce seca.
 
-    O ``common`` vem de fora de propósito — quem o monta é
-    :func:`~hefesto_dualsense4unix.core.ds_output_report.build_bt_report`, o
-    dono dele. Montar um segundo aqui seria a décima segunda régua sobre o
-    mesmo estado.
+    O ``common`` vem de fora de propósito, e quem o monta para o ENSAIO é
+    :func:`common_de_audio` — cujos offsets e bits saem todos de
+    :mod:`~hefesto_dualsense4unix.core.ds_output_report`, o dono deles.
+
+    **FATO SUBSTITUÍDO — 08/09/2026.** Esta linha dizia *"quem o monta é
+    `build_bt_report`, o dono dele"*, e era falso nos dois sentidos:
+    ``build_bt_report`` **envolve** um ``common`` que recebe pronto, não o
+    monta, e o caminho que ela vai rodar (``BombaDeSomPeloRadio._montar``) não
+    passava ``common`` nenhum — o corpo saía com **47 zeros**, medido. Ver
+    :func:`common_de_audio` e :class:`BombaDeSomPeloRadio`.
     """
     if len(common) != COMMON_LEN:
         raise ValueError(
@@ -715,6 +722,70 @@ def montar_com_o_common_preservado(
     crc = bt_crc32(pkt[: tamanho - CRC_BYTES], seed=BT_CRC_SEED)
     pkt[tamanho - CRC_BYTES :] = crc.to_bytes(4, "little")
     return bytes(pkt)
+
+
+#: O volume de alto-falante que ela OUVIU, com a orelha dela, em 15/08/2026:
+#: `speaker volume 85` = *"bep bep bep"*; `speaker volume 0` = *"mudo"*. Não é
+#: escolha nossa — é o único número desta bancada com veredito de orelha.
+VOLUME_QUE_ELA_OUVIU = 85
+
+
+def common_de_audio(
+    *,
+    volume: int = VOLUME_QUE_ELA_OUVIU,
+    rota: int = rep.SAIDA_SO_NO_ALTO_FALANTE,
+    preamp: int = rep.SP_PREAMP_GAIN_PADRAO,
+) -> bytes:
+    """O ``common`` de 47 B que PEDE rota, volume e pré-amp. Para o ENSAIO.
+
+    **POR QUE ELE EXISTE, e o defeito que ele fecha é de 08/09/2026.** O
+    terceiro corpo dizia carregar *"o `common` de 47 B idêntico ao do 0x31 do
+    produto em [3..49]"*, e isso valia só para a chamada DIRETA que as réguas
+    fazem — elas passam o ``common`` na mão. O caminho do ensaio vai por
+    :meth:`BombaDeSomPeloRadio.um_report`, que chamava ``arranjo.montar`` **sem
+    `common`**, e o ramo ``common_preservado`` caía no
+    ``bytes(COMMON_LEN)`` do valor omitido. Medido: ``[3..49]`` saía com
+    **47 zeros**::
+
+        common no 0x31 do produto : flag0 e flag1 ligados, volume e rota pedidos
+        common no corpo do ensaio : todos os 47 bytes em zero — pede NADA
+
+    Um ``common`` zerado tem os bits de validação em zero, então ele **não pede
+    nada** — e sair pedindo nada é o pior desfecho possível para um par
+    com/sem: se ela não ouvir, ninguém saberá dizer se o firmware sequer
+    entendeu o corpo. O terceiro corpo existe para separar *"o arranjo está
+    errado"* de *"o aparelho não faz"*, e um envelope inerte não separa nada.
+
+    **O QUE O MAPA JÁ SABIA, e o ensaio ignorava** (``audio.alto_falante*``):
+    são TRÊS campos, não um — rota (``common[7]``), volume (``common[5]``) e
+    pré-amp (``common[37]``) —, e **por rádio o kernel nunca escreve nenhum
+    deles** (o gatilho é USB-only, ``hid-playstation.c``). Quem não os mandar
+    no próprio report não os tem.
+
+    **NENHUM OFFSET E NENHUM BIT É DIGITADO AQUI.** Os cinco saem de
+    :mod:`~hefesto_dualsense4unix.core.ds_output_report`, que é o dono deles —
+    a regra da casa: *o nome mora com quem o lê, e quem o escreve LÊ de lá*. É
+    por isso que este envelope é o mesmo que o produto pede pelos mesmos
+    valores, e é isso que a régua confere.
+
+    **O ``common[7]`` NÃO É ESCRITO INTEIRO**, e a cicatriz é de 02/08/2026:
+    ele carrega a rota (bits 4-5) **e o caminho do microfone**, e escrever o
+    byte com base zero fez o `parec` do microfone dela cair de 131.072 bytes
+    para **zero**. A base é :data:`~…ds_output_report.AUDIO_CONTROL_BASE_SEGURA`.
+
+    **NÃO ESCREVE NADA.** Monta 47 bytes e devolve.
+    """
+    common = bytearray(COMMON_LEN)
+    common[0] = rep.VALID_FLAG0_SPEAKER_VOLUME | rep.VALID_FLAG0_AUDIO_PATH
+    common[1] = rep.VALID_FLAG1_AUDIO_CONTROL2_ENABLE
+    common[rep.COMMON_SPEAKER_VOLUME] = min(
+        max(0, int(volume)), rep.TETO_SPEAKER_VOLUME
+    )
+    common[rep.COMMON_AUDIO_PATH] = rep.AUDIO_CONTROL_BASE_SEGURA | (
+        (int(rota) << rep.OUTPUT_PATH_SEL_SHIFT) & rep.OUTPUT_PATH_SEL_MASK
+    )
+    common[rep.COMMON_AUDIO_CONTROL2] = int(preamp) & rep.SP_PREAMP_GAIN_MASK
+    return bytes(common)
 
 
 def montar_pelos_dois_arranjos(
@@ -1179,12 +1250,40 @@ class BombaDeSomPeloRadio:
         codificador: Any = None,
         tag_audio: int = BLOCO_SPEAKER,
         seco: bool = True,
+        common: bytes | None = None,
     ) -> None:
+        # O `common` É OBRIGATÓRIO PARA O CORPO QUE O PRESERVA — 08/09/2026.
+        #
+        # Sem ele o ramo `common_preservado` de `Arranjo.montar` caía no
+        # `bytes(COMMON_LEN)` do valor omitido e o corpo saía com 47 ZEROS,
+        # medido. Um `common` zerado tem os bits de validação apagados, logo
+        # não pede rota, não pede volume e não pede pré-amp — e o mapa diz que
+        # por rádio o kernel não escreve nenhum dos três. O corpo ia ao fio
+        # pedindo NADA, num ensaio cujo desfecho é a orelha dela.
+        #
+        # Recusar é a regra da casa: *ausência é resposta*. Deixar o padrão
+        # zerado passar seria um instrumento dando VERMELHO sobre nada — a
+        # mesma família dos que dão verde, com o sinal trocado, e mais cara,
+        # porque quem paga é a orelha dela numa passada que não mediu nada.
+        if arranjo.common_preservado and common is None:
+            raise ValueError(
+                f"o arranjo {arranjo.nome!r} preserva o `common` em [3..49] e "
+                "a bomba não recebeu nenhum — um `common` zerado não pede rota, "
+                "volume nem pré-amp, e o corpo iria ao fio pedindo NADA. Passe "
+                "`common=alto_falante_bt.common_de_audio()`"
+            )
+        if common is not None and len(common) != COMMON_LEN:
+            raise ValueError(
+                f"o `common` tem de ter {COMMON_LEN} B medidos, veio com {len(common)}"
+            )
         self.arranjo = arranjo
         self.fonte = fonte
         self.escritor = escritor
         self.tag_audio = tag_audio
         self.seco = bool(seco) or escritor is None
+        #: O envelope de [3..49]. `None` = o arranjo não o preserva e o corpo
+        #: dele põe a tag do AudioControl no byte [2].
+        self.common = common
         self._codificador = codificador
         self._seq = 0
         self.contagem = ContagemDaBomba()
@@ -1242,8 +1341,13 @@ class BombaDeSomPeloRadio:
                 return b""
             self.contagem.quadros_opus += 1
             quadros.append(quadro)
+        # O `common` ATRAVESSA — e é isto que faz o corpo do ensaio ser o
+        # mesmo que as réguas medem. Sem esta linha o `common=` do construtor
+        # ficaria guardado e nunca chegaria ao fio: a cura pela metade, que é
+        # como o defeito de 08/09 nasceu (a afirmação valia na chamada direta
+        # e não no caminho que ela roda).
         report = self.arranjo.montar(
-            quadros, seq=self._seq, tag_audio=self.tag_audio
+            quadros, seq=self._seq, tag_audio=self.tag_audio, common=self.common
         )
         self._seq = (self._seq + 1) % VOLTA_DA_SEQUENCIA
         self.contagem.reports_montados += 1
@@ -1510,6 +1614,7 @@ __all__ = [
     "TAMANHO_DO_DEGRAU",
     "TAXA_DO_ENCODER",
     "VOLTA_DA_SEQUENCIA",
+    "VOLUME_QUE_ELA_OUVIU",
     "Arranjo",
     "BombaDeSomPeloRadio",
     "CodificadorOpus",
@@ -1517,6 +1622,7 @@ __all__ = [
     "Diagnostico",
     "SinkVirtualPipeWire",
     "argv_do_gravador",
+    "common_de_audio",
     "degrau_para_payload",
     "diagnosticar",
     "escritor_de_hidraw",
