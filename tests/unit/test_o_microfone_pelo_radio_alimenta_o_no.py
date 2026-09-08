@@ -497,6 +497,113 @@ def test_o_parar_desliga_o_microfone_mesmo_sem_ter_ligado(pactl, par) -> None:  
 
 
 # ---------------------------------------------------------------------------
+# MORDIDA 5 — o 0x32 tem DOIS donos em OU: o ouvinte **ou** a palavra dela
+# ---------------------------------------------------------------------------
+#
+# A TERCEIRA PERGUNTA, e é a que faltava. As duas de cima medem os dois lados
+# do OUVINTE, corretamente — e é por isso que o defeito atravessou 06/09 e
+# 07/09 com a suíte verde: a régua respondia sobre o ouvinte, e a pergunta que
+# ninguém fazia era sobre o DONO. `pactl set-default-source` (o que o botão do
+# microfone faz) não põe nó nenhum em `RUNNING`, então o gesto dela deixava a
+# source `SUSPENDED` e o 0x32 saía DESLIGADO.
+
+
+def test_sem_ouvinte_o_ato_dela_liga_o_microfone(pactl, par) -> None:  # type: ignore[no-untyped-def]
+    """SUSPENDED + a palavra DELA: o microfone vai ao ar.
+
+    O caso medido no journal dela em 07/09/2026, das 19h11m18 às 19h14m14:
+    quase três minutos apertando o botão, a ponte em `bt_mic_pedido
+    ligar=False`, e o microfone só subindo quando um aplicativo ABRIU o canal
+    para gravar. Ela apertava o botão e ouvia silêncio.
+
+    ARRANQUE O OU (tire o ramo `pedido_dela is not None` de
+    `_talvez_seguir_a_source`) e esta régua REPROVA — é a que faltava.
+    """
+    pactl.estado = "SUSPENDED"
+    ponte = _ponte(P1, par)
+    assert ponte.iniciar()
+    try:
+        assert _esperar(lambda: par.pedidos_de_mic()[-1:] == [bt.AUDIO_CONTROL_MIC_OFF])
+        ponte.dizer_o_pedido_dela(True)
+        assert _esperar(
+            lambda: par.pedidos_de_mic()[-1:] == [bt.AUDIO_CONTROL_MIC_ON]
+        ), (
+            "ela pediu o microfone e a ponte continuou com ele desligado — o "
+            f"gesto dela não alcança o 0x32: {par.pedidos_de_mic()}"
+        )
+    finally:
+        ponte.parar()
+
+
+def test_o_mudo_dela_vence_o_gravador(pactl, par) -> None:  # type: ignore[no-untyped-def]
+    """RUNNING + `False`: *"não quero ser ouvida"* vence um app gravando.
+
+    A outra metade do OU, e ela não é simetria de enfeite: sem esta, o mudo
+    dela seria uma sugestão que qualquer aplicativo com o nó aberto ignora.
+
+    ARRANQUE O OU e esta régua REPROVA: o ouvinte volta a ser o único dono e o
+    microfone fica no ar por cima da palavra dela.
+    """
+    pactl.estado = bt.ESTADO_COM_OUVINTE
+    ponte = _ponte(P1, par)
+    assert ponte.iniciar()
+    try:
+        assert _esperar(lambda: par.pedidos_de_mic() == [bt.AUDIO_CONTROL_MIC_ON])
+        ponte.dizer_o_pedido_dela(False)
+        assert _esperar(
+            lambda: par.pedidos_de_mic()[-1:] == [bt.AUDIO_CONTROL_MIC_OFF]
+        ), (
+            "ela mandou calar e o microfone continuou no ar porque um "
+            f"aplicativo estava gravando: {par.pedidos_de_mic()}"
+        )
+    finally:
+        ponte.parar()
+
+
+def test_sem_a_palavra_dela_o_ouvinte_continua_dono(pactl, par) -> None:  # type: ignore[no-untyped-def]
+    """`None` devolve a decisão ao ouvinte — a economia de 06/09 fica inteira.
+
+    É o NEGATIVO da cura, e ele é o que prova que ela não virou *"liga e deixa
+    ligado para sempre"*: esquecida a palavra, o comportamento de 06/09 volta
+    linha por linha e o microfone cai sozinho sem ninguém gravando.
+    """
+    pactl.estado = "SUSPENDED"
+    ponte = _ponte(P1, par)
+    assert ponte.iniciar()
+    try:
+        ponte.dizer_o_pedido_dela(True)
+        assert _esperar(lambda: par.pedidos_de_mic()[-1:] == [bt.AUDIO_CONTROL_MIC_ON])
+        ponte.dizer_o_pedido_dela(None)
+        assert _esperar(
+            lambda: par.pedidos_de_mic()[-1:] == [bt.AUDIO_CONTROL_MIC_OFF]
+        ), (
+            "a palavra dela foi esquecida e o microfone ficou no ar assim "
+            f"mesmo — o latch não tem porta de saída: {par.pedidos_de_mic()}"
+        )
+    finally:
+        ponte.parar()
+
+
+def test_o_parar_esquece_a_palavra_dela(pactl, par) -> None:  # type: ignore[no-untyped-def]
+    """A terceira das cinco portas: o pedido dela morre com a ponte.
+
+    Sem isto, uma ponte reiniciada sobre o mesmo objeto voltaria com o
+    microfone no ar sem ninguém ter pedido de novo — o *"liga sozinho"* pela
+    porta dos fundos, que é exatamente o defeito que a cura de 06/09 matou.
+    """
+    pactl.estado = "SUSPENDED"
+    ponte = _ponte(P1, par)
+    assert ponte.iniciar()
+    ponte.dizer_o_pedido_dela(True)
+    assert _esperar(lambda: par.pedidos_de_mic()[-1:] == [bt.AUDIO_CONTROL_MIC_ON])
+    ponte.parar()
+    assert ponte._pedido_dela is None, (
+        "o `parar()` deixou a palavra dela de pé; a ponte seguinte nasceria "
+        "com o microfone no ar sem ninguém ter pedido"
+    )
+
+
+# ---------------------------------------------------------------------------
 # A TELA CONTA QUATRO
 # ---------------------------------------------------------------------------
 

@@ -19,8 +19,17 @@ e recusava o mais forte — e o que "não vale no cabo" nunca foi a feature: é 
 IMPLEMENTAÇÃO dela, a `PonteMicBluetooth`. A frase deu à ponte o nome da
 capacidade.
 
-E A MESMA TELA JÁ PROMETIA A SIMETRIA QUE O GESTO RECUSAVA: o `title` do próprio
-botão "Virtual" diz *"É o que faz o mic soar igual no cabo e no rádio"*.
+ESTE ARGUMENTO CAIU, E O `title` QUE O SUSTENTAVA SAIU DA TELA — 08/09/2026.
+Ele dizia que a mesma tela já prometia a simetria que o gesto recusava, citando
+o `title` do botão "Virtual". Medido: aquele `title` prometia TRÊS coisas e
+nenhuma era deste botão — o gesto `mic-modo` faz um `machine.declare` e mais
+nada; quem elege canal, escreve firmware e manda o `0x32` é o 🎙, pelo gesto
+`mudo`. **A frase da tela tinha virado o argumento.** O texto novo diz o que
+este botão faz (`aba02.DICA_MIC_VIRTUAL`), e a régua que o trava é
+`test_a02_o_tooltip_do_virtual_diz_o_que_o_botao_faz.py`.
+
+A CONCLUSÃO DESTE ARQUIVO NÃO DEPENDIA DAQUELA FRASE e fica de pé pelos dois
+motivos que sobram, que são sobre o que o código FAZ — o CSV e o gesto.
 
 A DECISÃO DELA (D-12), verbatim: *"tá errado o conceito da coisa. o botão é pra
 ligar o microfone e ele ser ouvido no canal específico dele."* — **é um ato só**,
@@ -279,8 +288,12 @@ def test_no_radio_o_virtual_continua_gravando(monkeypatch: pytest.MonkeyPatch) -
     """O outro transporte não regrediu — é a metade "em ambos" da queixa dela.
 
     Com um controle no cabo e outro no rádio (a mesa dela em 04/09/2026), os
-    DOIS botões fazem a MESMA coisa. Era essa simetria que a tela prometia no
-    `title` e o gesto recusava.
+    DOIS botões fazem a MESMA coisa — e a prova é o `machine_declare` abaixo
+    ser a ÚNICA chamada, nos dois transportes.
+
+    (Este docstring dizia que a simetria era *"o que a tela prometia no
+    `title`"*. Aquele `title` saiu em 08/09/2026: ele descrevia outro botão.
+    O que sustenta esta régua é a chamada medida, não a frase da tela.)
     """
     import pacotes
     import pacotes.a02_controles as a02
@@ -302,8 +315,8 @@ def test_a_aba_02_nao_condiciona_mais_o_microfone_ao_transporte() -> None:
 
     Ela é sobre as CONSTANTES de texto do gerador e do pacote, que são o que vai
     para o `title` da tela. As frases que descrevem o que o transporte MUDA (a
-    taxa do giroscópio, o perfil que o adaptador negociou) continuam — o que não
-    pode voltar é a que diz que o microfone não vale num deles.
+    taxa do giroscópio) continuam — o que não pode voltar é a que diz que o
+    microfone não vale num deles.
     """
     import aba02
 

@@ -104,8 +104,10 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from hefesto_dualsense4unix.core import ds_output_report as rep
 from hefesto_dualsense4unix.core.ds_output_report import (
     BT_CRC_SEED,
+    BT_TAG,
     COMMON_LEN,
     bt_crc32,
 )
@@ -174,6 +176,10 @@ CRC_BYTES = 4
 #: com o olho dela, por rádio. É a única parte do corpo do degrau que esta
 #: casa mediu.
 OFFSET_DO_COMMON = 3
+
+#: Onde o áudio começa quando o ``common`` de 47 B é PRESERVADO: logo depois
+#: dele. Derivado, nunca digitado — ver :func:`montar_com_o_common_preservado`.
+OFFSET_APOS_O_COMMON = OFFSET_DO_COMMON + COMMON_LEN
 
 
 def orcamento_do_degrau(degrau: int) -> int:
@@ -455,6 +461,11 @@ class Arranjo:
     len_haptico: int
     pos_haptico: int
     de_onde_sei: str = "leitura de fonte externa — NÃO medido nesta bancada"
+    #: Este corpo PRESERVA o ``common`` em [3..49] e o ``[2] = 0x10``, em vez de
+    #: pôr a tag do AudioControl no byte [2]. Ver
+    #: :func:`montar_com_o_common_preservado` — e note que ele não é leitura de
+    #: fonte externa nenhuma: é o envelope que ESTA bancada mediu.
+    common_preservado: bool = False
 
     @property
     def bytes_de_audio(self) -> int:
@@ -473,6 +484,7 @@ class Arranjo:
         tag_audio: int = BLOCO_SPEAKER,
         controle: bytes = b"",
         haptico: bytes = b"",
+        common: bytes | None = None,
     ) -> bytes:
         """O report inteiro, com o CRC-32 já no lugar. Levanta em vez de mentir.
 
@@ -490,6 +502,18 @@ class Arranjo:
         if len(quadros) != self.quadros_de_audio:
             raise ValueError(
                 f"{self.nome} quer {self.quadros_de_audio} quadros, veio {len(quadros)}"
+            )
+        if self.common_preservado:
+            # UM DONO SÓ para este corpo: a função é a implementação, e este
+            # ramo só a chama. Uma segunda montagem aqui seria a régua paralela
+            # que esta casa já pagou onze vezes.
+            return montar_com_o_common_preservado(
+                quadros,
+                bytes(COMMON_LEN) if common is None else common,
+                degrau=self.degrau,
+                seq=seq,
+                tag_audio=tag_audio,
+                len_audio=self.len_audio,
             )
         for quadro in quadros:
             if len(quadro) > self.len_audio:
@@ -567,7 +591,201 @@ ARRANJO_SENSHI = Arranjo(
 #: quem escolhe é a orelha dela no ensaio de bancada.
 ARRANJOS: tuple[Arranjo, ...] = (ARRANJO_DS5DONGLE, ARRANJO_SENSHI)
 
-ARRANJO_POR_NOME: dict[str, Arranjo] = {a.nome: a for a in ARRANJOS}
+#: (C) O TERCEIRO CORPO, e ele **não entra em** :data:`ARRANJOS` de propósito.
+#: Aquela tupla é *"os candidatos de fonte externa, registrados sem escolher"*;
+#: este aqui não é leitura de código alheio nenhum — é o ENVELOPE QUE ESTA
+#: BANCADA MEDIU obedecendo por rádio (o `common` de 47 B por 0x32 e 0x39
+#: acendendo a cor na lightbar, com o olho dela, 15/08/2026), com o Opus
+#: pendurado nos 493 bytes que sobram. Misturá-lo com os outros dois apagaria
+#: a diferença de procedência que este módulo inteiro existe para proteger.
+#:
+#: **ELE É A METADE *COM* DE UM PAR COM/SEM**, e a razão está em
+#: :func:`montar_com_o_common_preservado`: as seis passadas do ensaio variaram
+#: a TAG e o ARRANJO, e nenhuma variou o byte [2] — que é a única parte do
+#: corpo do degrau que esta casa mediu importar.
+ARRANJO_COMMON_PRIMEIRO = Arranjo(
+    nome="common-preservado",
+    fonte=(
+        "esta bancada — plataforma.escada_de_output@dualsense, 15/08/2026: o "
+        "`common` de 47 B por 0x32 e 0x39 acendeu a cor na lightbar por rádio, "
+        "com o olho dela. NÃO é leitura de fonte externa."
+    ),
+    degrau=0x39,
+    # [2] é o tag obrigatório 0x10, e NÃO uma tag de AudioControl: o valor do
+    # bloco de controle viaja DENTRO do common (volume em [4..7], pré-amp em
+    # [37]), que é como o 0x31 do produto já o manda.
+    pos_tag_controle=2,
+    len_controle=0,
+    pos_tag_audio=OFFSET_APOS_O_COMMON,
+    len_audio=BYTES_POR_QUADRO_OPUS,
+    pos_audio=OFFSET_APOS_O_COMMON + 2,
+    quadros_de_audio=2,
+    # Sem bloco háptico: ele é o que os dois arranjos externos declaram, e
+    # acrescentá-lo aqui introduziria uma segunda variável no par.
+    pos_tag_haptico=0,
+    len_haptico=0,
+    pos_haptico=0,
+    de_onde_sei=(
+        "MEDIDO nesta bancada quanto ao envelope ([2]=0x10 e o common em "
+        "[3..49]); a POSIÇÃO DO OPUS depois dele é hipótese não medida"
+    ),
+    common_preservado=True,
+)
+
+#: Os três por nome — é este dicionário que o ensaio consulta em `--arranjo`.
+#: O terceiro entra AQUI e não em :data:`ARRANJOS` para que `--arranjo
+#: common-preservado` exista sem que `montar_pelos_dois_arranjos` deixe de ser
+#: sobre os dois.
+ARRANJO_POR_NOME: dict[str, Arranjo] = {
+    a.nome: a for a in (*ARRANJOS, ARRANJO_COMMON_PRIMEIRO)
+}
+
+
+def montar_com_o_common_preservado(
+    quadros: Sequence[bytes],
+    common: bytes,
+    *,
+    degrau: int = 0x39,
+    seq: int = 0,
+    tag_audio: int = BLOCO_SPEAKER,
+    len_audio: int = BYTES_POR_QUADRO_OPUS,
+) -> bytes:
+    """O corpo do degrau com o ``[2] = 0x10`` e o ``common`` em [3..49] INTACTO.
+
+    **NÃO É UM TERCEIRO CANDIDATO DE FONTE EXTERNA, e a diferença é o ponto
+    inteiro desta função.** Os dois de :data:`ARRANJOS` são leitura de código
+    alheio; este corpo é o ENVELOPE QUE ESTA BANCADA MEDIU obedecendo por
+    rádio, com o Opus pendurado depois dele.
+
+    **A VARIÁVEL QUE NINGUÉM TINHA VARIADO, medida em 08/09/2026.** As seis
+    passadas do ensaio variaram a TAG (0x13/0x16) e o ARRANJO
+    (ds5dongle/senshi) e não variaram o byte [2] — que é a única parte do corpo
+    do degrau que esta casa mediu importar::
+
+        0x31 do produto           : [2]=0x10   <- o ÚNICO valor medido obedecendo
+        0x39 ds5dongle 0x13 e 0x16: [2]=0x91
+        0x39 senshi    0x13 e 0x16: [2]=0x91
+
+    :data:`OFFSET_DO_COMMON` diz, citando a medição de 15/08/2026, que o
+    ``common`` de 47 bytes mora em [3..49] — e para ele cair ali o [2] tem de
+    ser ``0x10``. Os dois arranjos escrevem a tag do AudioControl (``0x91``)
+    exatamente nesse byte, **sobrescrevendo o único valor que esta bancada já
+    viu o firmware aceitar**. O kernel aceita a escrita de qualquer jeito (ele
+    não lê o corpo): 251 reports, zero recusa, silêncio — sintoma idêntico ao
+    das seis passadas. É a ressalva (b) do mapa, aberta desde 31/08/2026.
+
+    **ISTO NÃO PROVA NADA SOZINHO — ele é a metade COM de um par com/sem.**
+    Rodado contra as passadas de ``[2] = 0x91``, é o que separa *"o arranjo
+    está errado"* de *"o aparelho não faz"*. Só a orelha dela decide, e o
+    ensaio (`scripts/ensaios/o_som_que_sai.py`) continua parando em ``rc=3``
+    sem ``--eu-estou-ouvindo``.
+
+    **E ELE NÃO ESCREVE NADA.** Monta bytes e devolve; quem põe no fio é a
+    bomba, que nasce seca.
+
+    O ``common`` vem de fora de propósito, e quem o monta para o ENSAIO é
+    :func:`common_de_audio` — cujos offsets e bits saem todos de
+    :mod:`~hefesto_dualsense4unix.core.ds_output_report`, o dono deles.
+
+    **FATO SUBSTITUÍDO — 08/09/2026.** Esta linha dizia *"quem o monta é
+    `build_bt_report`, o dono dele"*, e era falso nos dois sentidos:
+    ``build_bt_report`` **envolve** um ``common`` que recebe pronto, não o
+    monta, e o caminho que ela vai rodar (``BombaDeSomPeloRadio._montar``) não
+    passava ``common`` nenhum — o corpo saía com **47 zeros**, medido. Ver
+    :func:`common_de_audio` e :class:`BombaDeSomPeloRadio`.
+    """
+    if len(common) != COMMON_LEN:
+        raise ValueError(
+            f"o `common` tem de ter {COMMON_LEN} B medidos, veio com {len(common)}"
+        )
+    tamanho = TAMANHO_DO_DEGRAU[degrau]
+    cabe = orcamento_do_degrau(degrau)
+    preciso = len(quadros) * len_audio + 2  # +2: a tag e o `len` do bloco
+    if preciso > cabe:
+        raise ValueError(
+            f"{len(quadros)} quadro(s) de {len_audio} B não cabem nos {cabe} B "
+            f"livres do degrau 0x{degrau:02x}"
+        )
+    for quadro in quadros:
+        if len(quadro) > len_audio:
+            raise ValueError(f"quadro de {len(quadro)} B não cabe em {len_audio} B")
+    pkt = bytearray(tamanho)
+    pkt[0] = degrau
+    pkt[1] = (int(seq) & 0x0F) << 4
+    pkt[2] = BT_TAG
+    pkt[OFFSET_DO_COMMON : OFFSET_DO_COMMON + COMMON_LEN] = common
+    pkt[OFFSET_APOS_O_COMMON] = tag_tlv(tag_audio, duplo=len(quadros) > 1)
+    pkt[OFFSET_APOS_O_COMMON + 1] = len_audio
+    for i, quadro in enumerate(quadros):
+        comeco = OFFSET_APOS_O_COMMON + 2 + i * len_audio
+        pkt[comeco : comeco + len(quadro)] = quadro
+    crc = bt_crc32(pkt[: tamanho - CRC_BYTES], seed=BT_CRC_SEED)
+    pkt[tamanho - CRC_BYTES :] = crc.to_bytes(4, "little")
+    return bytes(pkt)
+
+
+#: O volume de alto-falante que ela OUVIU, com a orelha dela, em 15/08/2026:
+#: `speaker volume 85` = *"bep bep bep"*; `speaker volume 0` = *"mudo"*. Não é
+#: escolha nossa — é o único número desta bancada com veredito de orelha.
+VOLUME_QUE_ELA_OUVIU = 85
+
+
+def common_de_audio(
+    *,
+    volume: int = VOLUME_QUE_ELA_OUVIU,
+    rota: int = rep.SAIDA_SO_NO_ALTO_FALANTE,
+    preamp: int = rep.SP_PREAMP_GAIN_PADRAO,
+) -> bytes:
+    """O ``common`` de 47 B que PEDE rota, volume e pré-amp. Para o ENSAIO.
+
+    **POR QUE ELE EXISTE, e o defeito que ele fecha é de 08/09/2026.** O
+    terceiro corpo dizia carregar *"o `common` de 47 B idêntico ao do 0x31 do
+    produto em [3..49]"*, e isso valia só para a chamada DIRETA que as réguas
+    fazem — elas passam o ``common`` na mão. O caminho do ensaio vai por
+    :meth:`BombaDeSomPeloRadio.um_report`, que chamava ``arranjo.montar`` **sem
+    `common`**, e o ramo ``common_preservado`` caía no
+    ``bytes(COMMON_LEN)`` do valor omitido. Medido: ``[3..49]`` saía com
+    **47 zeros**::
+
+        common no 0x31 do produto : flag0 e flag1 ligados, volume e rota pedidos
+        common no corpo do ensaio : todos os 47 bytes em zero — pede NADA
+
+    Um ``common`` zerado tem os bits de validação em zero, então ele **não pede
+    nada** — e sair pedindo nada é o pior desfecho possível para um par
+    com/sem: se ela não ouvir, ninguém saberá dizer se o firmware sequer
+    entendeu o corpo. O terceiro corpo existe para separar *"o arranjo está
+    errado"* de *"o aparelho não faz"*, e um envelope inerte não separa nada.
+
+    **O QUE O MAPA JÁ SABIA, e o ensaio ignorava** (``audio.alto_falante*``):
+    são TRÊS campos, não um — rota (``common[7]``), volume (``common[5]``) e
+    pré-amp (``common[37]``) —, e **por rádio o kernel nunca escreve nenhum
+    deles** (o gatilho é USB-only, ``hid-playstation.c``). Quem não os mandar
+    no próprio report não os tem.
+
+    **NENHUM OFFSET E NENHUM BIT É DIGITADO AQUI.** Os cinco saem de
+    :mod:`~hefesto_dualsense4unix.core.ds_output_report`, que é o dono deles —
+    a regra da casa: *o nome mora com quem o lê, e quem o escreve LÊ de lá*. É
+    por isso que este envelope é o mesmo que o produto pede pelos mesmos
+    valores, e é isso que a régua confere.
+
+    **O ``common[7]`` NÃO É ESCRITO INTEIRO**, e a cicatriz é de 02/08/2026:
+    ele carrega a rota (bits 4-5) **e o caminho do microfone**, e escrever o
+    byte com base zero fez o `parec` do microfone dela cair de 131.072 bytes
+    para **zero**. A base é :data:`~…ds_output_report.AUDIO_CONTROL_BASE_SEGURA`.
+
+    **NÃO ESCREVE NADA.** Monta 47 bytes e devolve.
+    """
+    common = bytearray(COMMON_LEN)
+    common[0] = rep.VALID_FLAG0_SPEAKER_VOLUME | rep.VALID_FLAG0_AUDIO_PATH
+    common[1] = rep.VALID_FLAG1_AUDIO_CONTROL2_ENABLE
+    common[rep.COMMON_SPEAKER_VOLUME] = min(
+        max(0, int(volume)), rep.TETO_SPEAKER_VOLUME
+    )
+    common[rep.COMMON_AUDIO_PATH] = rep.AUDIO_CONTROL_BASE_SEGURA | (
+        (int(rota) << rep.OUTPUT_PATH_SEL_SHIFT) & rep.OUTPUT_PATH_SEL_MASK
+    )
+    common[rep.COMMON_AUDIO_CONTROL2] = int(preamp) & rep.SP_PREAMP_GAIN_MASK
+    return bytes(common)
 
 
 def montar_pelos_dois_arranjos(
@@ -1032,12 +1250,40 @@ class BombaDeSomPeloRadio:
         codificador: Any = None,
         tag_audio: int = BLOCO_SPEAKER,
         seco: bool = True,
+        common: bytes | None = None,
     ) -> None:
+        # O `common` É OBRIGATÓRIO PARA O CORPO QUE O PRESERVA — 08/09/2026.
+        #
+        # Sem ele o ramo `common_preservado` de `Arranjo.montar` caía no
+        # `bytes(COMMON_LEN)` do valor omitido e o corpo saía com 47 ZEROS,
+        # medido. Um `common` zerado tem os bits de validação apagados, logo
+        # não pede rota, não pede volume e não pede pré-amp — e o mapa diz que
+        # por rádio o kernel não escreve nenhum dos três. O corpo ia ao fio
+        # pedindo NADA, num ensaio cujo desfecho é a orelha dela.
+        #
+        # Recusar é a regra da casa: *ausência é resposta*. Deixar o padrão
+        # zerado passar seria um instrumento dando VERMELHO sobre nada — a
+        # mesma família dos que dão verde, com o sinal trocado, e mais cara,
+        # porque quem paga é a orelha dela numa passada que não mediu nada.
+        if arranjo.common_preservado and common is None:
+            raise ValueError(
+                f"o arranjo {arranjo.nome!r} preserva o `common` em [3..49] e "
+                "a bomba não recebeu nenhum — um `common` zerado não pede rota, "
+                "volume nem pré-amp, e o corpo iria ao fio pedindo NADA. Passe "
+                "`common=alto_falante_bt.common_de_audio()`"
+            )
+        if common is not None and len(common) != COMMON_LEN:
+            raise ValueError(
+                f"o `common` tem de ter {COMMON_LEN} B medidos, veio com {len(common)}"
+            )
         self.arranjo = arranjo
         self.fonte = fonte
         self.escritor = escritor
         self.tag_audio = tag_audio
         self.seco = bool(seco) or escritor is None
+        #: O envelope de [3..49]. `None` = o arranjo não o preserva e o corpo
+        #: dele põe a tag do AudioControl no byte [2].
+        self.common = common
         self._codificador = codificador
         self._seq = 0
         self.contagem = ContagemDaBomba()
@@ -1095,8 +1341,13 @@ class BombaDeSomPeloRadio:
                 return b""
             self.contagem.quadros_opus += 1
             quadros.append(quadro)
+        # O `common` ATRAVESSA — e é isto que faz o corpo do ensaio ser o
+        # mesmo que as réguas medem. Sem esta linha o `common=` do construtor
+        # ficaria guardado e nunca chegaria ao fio: a cura pela metade, que é
+        # como o defeito de 08/09 nasceu (a afirmação valia na chamada direta
+        # e não no caminho que ela roda).
         report = self.arranjo.montar(
-            quadros, seq=self._seq, tag_audio=self.tag_audio
+            quadros, seq=self._seq, tag_audio=self.tag_audio, common=self.common
         )
         self._seq = (self._seq + 1) % VOLTA_DA_SEQUENCIA
         self.contagem.reports_montados += 1
@@ -1339,6 +1590,7 @@ def diagnosticar(uniqs: Sequence[str] | None = None) -> Diagnostico:
 __all__ = [
     "AMOSTRAS_POR_QUADRO",
     "ARRANJOS",
+    "ARRANJO_COMMON_PRIMEIRO",
     "ARRANJO_DS5DONGLE",
     "ARRANJO_POR_NOME",
     "ARRANJO_SENSHI",
@@ -1354,6 +1606,7 @@ __all__ = [
     "GRAVADORES_DO_MONITOR",
     "HEX_DO_SUFIXO",
     "MS_POR_QUADRO",
+    "OFFSET_APOS_O_COMMON",
     "OFFSET_DO_COMMON",
     "ORCAMENTO_DO_DEGRAU",
     "PREFIXO_SINK_DO_SOM",
@@ -1361,6 +1614,7 @@ __all__ = [
     "TAMANHO_DO_DEGRAU",
     "TAXA_DO_ENCODER",
     "VOLTA_DA_SEQUENCIA",
+    "VOLUME_QUE_ELA_OUVIU",
     "Arranjo",
     "BombaDeSomPeloRadio",
     "CodificadorOpus",
@@ -1368,11 +1622,13 @@ __all__ = [
     "Diagnostico",
     "SinkVirtualPipeWire",
     "argv_do_gravador",
+    "common_de_audio",
     "degrau_para_payload",
     "diagnosticar",
     "escritor_de_hidraw",
     "fonte_com_ritmo",
     "fonte_de_arquivo",
+    "montar_com_o_common_preservado",
     "montar_pelos_dois_arranjos",
     "nome_do_sink",
     "orcamento_do_degrau",

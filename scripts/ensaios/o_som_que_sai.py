@@ -338,6 +338,31 @@ TETO_DE_SEGUNDOS = 15.0
 SEGUNDOS_PADRAO = 4.0
 
 
+def _linha_do_common(common: bytes | None) -> str:
+    """A linha que DIZ o que vai em [3..49] — ou que ali não vai nada.
+
+    Ela existe porque o defeito de 08/09/2026 era invisível na saída: o corpo
+    saía com 47 zeros e o ensaio imprimia exatamente o mesmo texto que
+    imprimiria com o envelope cheio. Um instrumento que não mostra a variável
+    que ele está variando não é instrumento.
+    """
+    from hefesto_dualsense4unix.core import ds_output_report as rep
+
+    if common is None:
+        return (
+            "  common      NENHUM — este arranjo põe a tag do AudioControl no "
+            "byte [2]\n"
+        )
+    rota = (common[rep.COMMON_AUDIO_PATH] & rep.OUTPUT_PATH_SEL_MASK) >> (
+        rep.OUTPUT_PATH_SEL_SHIFT
+    )
+    return (
+        f"  common      47 B em [3..49] — rota {rota}, volume "
+        f"{common[rep.COMMON_SPEAKER_VOLUME]}, pré-amp "
+        f"{common[rep.COMMON_AUDIO_CONTROL2] & rep.SP_PREAMP_GAIN_MASK}\n"
+    )
+
+
 def escrever_no_aparelho(argumentos: argparse.Namespace) -> int:
     """A porta do ensaio de bancada — e ela recusa muito mais do que aceita.
 
@@ -392,12 +417,26 @@ def escrever_no_aparelho(argumentos: argparse.Namespace) -> int:
         print("RECUSADO: degrau fora da escada 0x31-0x39.")
         return 2
     segundos = min(max(0.0, float(argumentos.segundos)), TETO_DE_SEGUNDOS)
+    # O ENVELOPE DE [3..49], e ele só existe para o corpo que o PRESERVA.
+    #
+    # DEFEITO MEDIDO EM 08/09/2026: o `--arranjo common-preservado` ia ao fio
+    # com 47 ZEROS em [3..49] — a bomba chamava `arranjo.montar` sem `common`.
+    # Um `common` zerado tem os bits de validação apagados, então ele não pede
+    # rota, não pede volume e não pede pré-amp; e o mapa diz que por rádio o
+    # kernel NUNCA escreve os três. A passada teria custado a orelha dela para
+    # medir um corpo que não pedia nada.
+    #
+    # Os dois arranjos externos põem a tag do AudioControl no byte [2] e não
+    # têm onde guardar um `common` — passá-lo a eles seria inventar campo.
+    common = af.common_de_audio() if arranjo.common_preservado else None
+    linha_do_common = _linha_do_common(common)
     if not argumentos.eu_estou_ouvindo:
         print(
             "PARADO ANTES DE ESCREVER, e de propósito.\n"
             f"  alvo        {controle.caminho} ({controle.transporte})\n"
             f"  arranjo     {arranjo.nome} — {arranjo.fonte}\n"
             f"  degrau      0x{arranjo.degrau:02x} ({arranjo.tamanho} B)\n"
+            f"{linha_do_common}"
             "  A escrita é o ensaio 1 da MESA-DE-QUATRO-01: ela precisa da bancada\n"
             "  reservada (scripts/bancada.sh exigir) e da orelha dela do outro lado.\n"
             "  Acrescente --eu-estou-ouvindo quando as duas coisas forem verdade.\n"
@@ -423,6 +462,7 @@ def escrever_no_aparelho(argumentos: argparse.Namespace) -> int:
         f"  duração     {segundos:.1f} s\n"
         f"  arranjo     {arranjo.nome} — {arranjo.fonte}\n"
         f"  degrau      0x{arranjo.degrau:02x} ({arranjo.tamanho} B)\n"
+        f"{linha_do_common}"
         f"  tag do bloco 0x{argumentos.tag:02x}"
         f"  ({'alto-falante interno' if argumentos.tag == af.BLOCO_SPEAKER else 'fone'})\n"
     )
@@ -440,7 +480,9 @@ def escrever_no_aparelho(argumentos: argparse.Namespace) -> int:
         # 2.660 reports/s num degrau que pede 50/s — 53 vezes o necessário, num
         # rádio que carrega os outros três controles dela. Isso não é ensaio, é
         # inundação, e ela mediria a fila do kernel.
-        molde = af.BombaDeSomPeloRadio(arranjo=arranjo, fonte=pcm_pulsado())
+        molde = af.BombaDeSomPeloRadio(
+            arranjo=arranjo, fonte=pcm_pulsado(), common=common
+        )
         bomba = af.BombaDeSomPeloRadio(
             arranjo=arranjo,
             fonte=af.fonte_com_ritmo(
@@ -449,6 +491,7 @@ def escrever_no_aparelho(argumentos: argparse.Namespace) -> int:
             escritor=af.escritor_de_hidraw(fd),
             tag_audio=argumentos.tag,
             seco=False,
+            common=common,
         )
         print(f"  PCM por report {bomba.bytes_de_pcm_por_report} B / {bomba.ms_por_report} ms")
         print(f"  cadência       {1000 / bomba.ms_por_report:.0f} reports/s")
@@ -479,7 +522,14 @@ def main(argv: list[str] | None = None) -> int:
     analisador.add_argument("--sink", action="store_true", help="carrega e LÊ o nó no PipeWire")
     analisador.add_argument("--escrever", action="store_true", help="a porta do ensaio de bancada")
     analisador.add_argument("--exigir-mac", default="", help="endereço conferido do alvo")
-    analisador.add_argument("--arranjo", default="", help="ds5dongle | senshi")
+    analisador.add_argument(
+        "--arranjo", default="",
+        # O TERCEIRO É A METADE *COM* DO PAR COM/SEM: `common-preservado`
+        # mantém o `[2] = 0x10` e o `common` em [3..49], que é o único
+        # envelope que esta bancada mediu o firmware aceitar por rádio. As
+        # seis passadas de 07/09 variaram a TAG e o ARRANJO e NÃO variaram
+        # este byte — os dois candidatos externos escrevem 0x91 nele.
+        help="ds5dongle | senshi | common-preservado")
     analisador.add_argument("--eu-estou-ouvindo", action="store_true",
                             help="a orelha dela está do outro lado — sem isto, rc=3")
     analisador.add_argument("--segundos", type=float, default=SEGUNDOS_PADRAO,

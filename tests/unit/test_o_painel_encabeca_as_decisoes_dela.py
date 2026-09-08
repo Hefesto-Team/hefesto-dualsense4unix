@@ -223,10 +223,18 @@ def test_o_check_do_painel_sabe_reprovar() -> None:
             "gancho de pré-commit que o roda não protege nada"
         )
     finally:
+        # O `write_bytes` VAI POR ÚLTIMO, e é a cura de 08/09/2026. Aqui havia
+        # um `subprocess.run([GERADOR])` DEPOIS dele: a restauração acontecia e
+        # a linha seguinte a desfazia, regerando a página com o carimbo desta
+        # árvore — branch, commit e contagem de arquivos não commitados. Numa
+        # worktree de agente isso escreve o NOME DA BRANCH DELE num arquivo
+        # versionado, e o `add -A` da leva o leva junto sem ninguém ver.
+        # MEDIDO em 08/09/2026: rodar a suíte deixava `html/painel.html` sujo
+        # com `branch worktree-wf_...` e `árvore com N mudança(s)`.
+        #
+        # Regerar aqui também não servia ao `--check`: o painel que ele compara
+        # é o COMMITADO, e é ele que os bytes guardados devolvem.
         publicado.write_bytes(guardado)
-        subprocess.run(
-            ["python3", str(GERADOR)], cwd=RAIZ, capture_output=True, timeout=180
-        )
 
 
 
