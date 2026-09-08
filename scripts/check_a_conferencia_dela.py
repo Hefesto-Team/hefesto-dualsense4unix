@@ -179,12 +179,30 @@ def cor_unica() -> tuple[bool, str]:
             continue
         por_cor.setdefault(tuple(rgb), []).append(c.get("player"))
     colisoes = {cor: js for cor, js in por_cor.items() if len(js) > 1}
-    if colisoes:
-        ditas = "; ".join(
-            f"jogadores {sorted(j for j in js if j is not None)} todos em #{r:02X}{g:02X}{b:02X}"
-            for (r, g, b), js in colisoes.items())
-        return False, f"COLISÃO no aparelho: {ditas}"
-    return True, f"os {len(mesa)} controles da mesa acendem cores distintas"
+    if not colisoes:
+        return True, f"os {len(mesa)} controles da mesa acendem cores distintas"
+
+    ditas = "; ".join(
+        f"jogadores {sorted(j for j in js if j is not None)} todos em #{r:02X}{g:02X}{b:02X}"
+        for (r, g, b), js in colisoes.items())
+
+    # O DAEMON VIVO É DE ANTES DO INSTALL, e essa é a única leitura desta régua
+    # que NÃO fecha antes dele. A cura mora na árvore; o aparelho só muda quando
+    # o daemon reinicia — e reiniciar o daemon dela é o `install.sh`, que derruba
+    # os quatro controles e por isso não acontece sozinho.
+    #
+    # A régua NÃO fica verde por isso. Ela DIZ o que mediu e o que falta para
+    # fechar, porque "curado na árvore" e "curado no plástico" são duas coisas, e
+    # confundi-las é o verde falso que esta casa mais arranca. A ordem dela é
+    # `dev` depois install depois conferência de novo — e é nessa terceira volta
+    # que esta linha fecha.
+    daqui = pathlib.Path(__file__).resolve().parents[1] / "src/hefesto_dualsense4unix/core/led_control.py"
+    curado_na_arvore = daqui.exists() and "cores_sem_colisao" in daqui.read_text(encoding="utf-8")
+    if curado_na_arvore:
+        return False, (f"COLISÃO no aparelho: {ditas} — MAS a cura está na árvore "
+                       "(`core/led_control.cores_sem_colisao`). O daemon vivo é de "
+                       "ANTES do install; esta linha fecha na volta depois dele")
+    return False, f"COLISÃO no aparelho: {ditas}"
 
 
 LINHAS = [
