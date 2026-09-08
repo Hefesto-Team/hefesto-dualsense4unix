@@ -8,29 +8,46 @@ o `README.md` ainda mostrava dez imagens. Nada reclamou, porque nada
 media.  (noqa-acento: verbo medir, imperfeito) verbo medir
 
 **ELE CONHECIA UM PRODUTO SÓ, E ERA O APOSENTADO — curado em 05/09/2026.** A
-janela GTK tem onze abas e o lançador abre DEZ páginas HTML; as dez podiam
+janela GTK tinha onze abas e o lançador abre DEZ páginas HTML; as dez podiam
 nascer, mudar de nome ou sumir sem que este portão dissesse uma palavra. Agora
-ele mede as duas telas, cada uma contra o documento que a publica:
+ele mede o produto de hoje contra os documentos que o publicam:
 
 | tela | a lista vem de | o documento que a publica |
 | --- | --- | --- |
 | as DEZ de hoje | `interface/monta.py:ABAS` | `README.md` + `AS-DEZ-ABAS-o-que-cada-uma-faz.md` |
-| as ONZE da janela | `gui/main.glade` | `docs/usage/interface.md`, que é registro datado |
 
 E a foto da janela velha deixou de ser cobrada no `README.md` no mesmo dia: a
 vitrine passou a mostrar as dez do produto, e as `readme_*.png` continuam
-publicadas onde viraram história.
+publicadas no `interface.md`, onde viraram história.
 
-**A LISTA DE ABAS É DERIVADA DO PRÓPRIO GLADE**, e essa é a decisão que faz o
+**A LISTA DE ABAS É DERIVADA DO PRÓPRIO FONTE**, e essa é a decisão que faz o
 portão valer alguma coisa. Uma lista escrita à mão aqui envelheceria junto com a
 documentação que ela deveria vigiar — as duas erradas, concordando entre si, e o
-teste verde. O `main.glade` é o único lugar onde a tira de abas existe de fato;
-quem acrescentar a décima segunda aba lá ganha este portão de graça, sem tocar
+teste verde. `monta.ABAS` é o único lugar onde a tira de abas existe de fato;
+quem acrescentar a décima primeira lá ganha este portão de graça, sem tocar
 neste arquivo.
 
-Pelo mesmo argumento, a lista de FOTOS vem do
-`scripts/gui-captura/retratar_abas.py` — de `NOMES` e de `ABAS_ESTICADAS`, lidos
-por `ast` sem executar o módulo (importá-lo puxaria GTK e montaria a janela).
+A LISTA DE FOTOS MUDOU DE DONO — 08/09/2026
+--------------------------------------------
+
+**A CAUSA MEDIDA:** ela vinha de `scripts/gui-captura/retratar_abas.py`, de
+`NOMES` e de `ABAS_ESTICADAS`, lidos por `ast`. **A janela GTK saiu inteira em
+06/09/2026** (`D-0609-GTK-LEVA-INTEIRA`) e o retratista dela saiu junto — o
+Passo 2 da `GTK-3` apagou o script, e o Passo 1 ("os 62 testes, um a um") não
+alcançou este arquivo. `_tupla_de_texto` passou a morrer no
+`RETRATO.read_text()`, e os dois testes que a chamavam ficaram vermelhos.
+
+**O fato não caducou; ele agora é mais forte.** As duas réguas perguntavam
+*"toda foto que o retratista grava está publicada?"* — uma pergunta que só
+alcança as fotos de UM instrumento. A pergunta que este arquivo passa a fazer é
+a inversa, e cobre o defeito real: *"toda imagem que a documentação publica
+existe no disco?"* A lista sai dos PRÓPRIOS DOCUMENTOS, então nenhuma imagem
+escapa por ter sido gravada por outro programa, à mão, ou por programa nenhum.
+
+E ela pega exatamente o defeito de 05/09 que esta casa já pagou: o
+`AS-DEZ-ABAS-o-que-cada-uma-faz.md` citava `assets/aba-01-jogar.png` nas dez
+seções e **as dez imagens não existiam** — o documento publicava dez imagens
+quebradas desde que foi escrito, e régua nenhuma via.
 
 O QUE ESTE PORTÃO **NÃO** MEDE
 ------------------------------
@@ -43,19 +60,25 @@ seja referenciada nos dois documentos que a publicam. Conteúdo é
 AS MORDIDAS (aplicadas uma a uma em 22/08/2026, todas reprovaram)
 ------------------------------------------------------------------
 
-1. **Arrancar a seção "## Configurações" do `interface.md`:**
-   `test_toda_aba_do_glade_tem_secao_no_interface` reprova nomeando a aba órfã —
-   ``abas sem seção no interface.md: Configurações``.
-2. **Arrancar a linha da imagem nova do `README.md`:**
-   `test_toda_foto_do_retrato_aparece_no_readme` reprova nomeando o arquivo
-   (``readme_configuracoes.png``).
-3. **Trocar a leitura do glade por uma lista de dez nomes escrita à mão:**
-   `test_a_lista_de_abas_vem_do_glade_e_nao_de_uma_lista_a_mao` reprova — ele
-   confere que o extrator devolve exatamente as abas que o XML tem, contando de
-   novo por outro caminho.
-4. **Apagar a menção à foto esticada no `interface.md`:**
-   `test_a_foto_esticada_e_publicada` reprova. Sem ela a aba mais alta da janela
-   ficaria documentada pela metade, que é o motivo de a segunda foto existir.
+1. **Trocar a leitura de `monta.ABAS` por uma lista de dez nomes escrita à mão:**
+   `test_a_lista_das_dez_vem_do_monta_e_nao_de_uma_lista_a_mao` reprova — ele
+   confere que o extrator devolve exatamente as abas que o fonte tem, contando
+   de novo por outro caminho.
+2. **Arrancar a seção de uma aba do `AS-DEZ-ABAS`:**
+   `test_toda_aba_nova_tem_secao_na_pagina_das_dez` reprova nomeando a órfã.
+
+AS MORDIDAS DE 08/09/2026, das duas réguas que trocaram de dono (aplicadas,
+as duas reprovaram):
+
+3. **Apagar `docs/usage/assets/readme_status.png` do disco, deixando o
+   `interface.md` citando-a:** `test_toda_imagem_que_a_documentacao_publica_existe`
+   reprova nomeando `interface.md -> assets/readme_status.png`. É o defeito de
+   05/09 exatamente, medido do lado do documento.
+4. **Trocar o recorte na moldura por uma foto do viewport** (`so_a_janela=para_a_doc`
+   por `so_a_janela=False`): `test_a_foto_da_doc_mostra_a_aba_inteira` reprova.
+   Sem o recorte na moldura, uma aba mais alta que a dobra volta a ser
+   documentada só até onde cabe — que é o motivo de `ABAS_ESTICADAS` ter
+   existido na janela, e o motivo de esta régua herdar dela.
 """
 
 from __future__ import annotations
@@ -69,8 +92,11 @@ import pytest
 RAIZ = Path(__file__).resolve().parents[2]
 INTERFACE = RAIZ / "docs/usage/interface.md"
 README = RAIZ / "README.md"
-RETRATO = RAIZ / "scripts/gui-captura/retratar_abas.py"
 ASSETS = RAIZ / "docs/usage/assets"
+
+#: QUEM FOTOGRAFA AS DEZ. Era `scripts/gui-captura/retratar_abas.py`, apagado
+#: com a janela em 06/09/2026.
+RETRATO = RAIZ / "src/hefesto_dualsense4unix/interface/olhar.py"
 
 #: O DONO DA LISTA DAS DEZ. `monta.ABAS` é o que o piloto lê para montar a tira
 #: da interface nova — o mesmo argumento do glade, uma tela adiante: lista
@@ -82,26 +108,59 @@ MONTA = RAIZ / "src/hefesto_dualsense4unix/interface/monta.py"
 AS_DEZ = RAIZ / "docs/usage/AS-DEZ-ABAS-o-que-cada-uma-faz.md"
 
 
-def _tupla_de_texto(nome: str) -> tuple[str, ...]:
-    """Uma tupla de literais do `retratar_abas.py`, lida SEM executar o módulo.
+#: OS DOCUMENTOS QUE PUBLICAM IMAGEM, e o que cada caminho é relativo A.
+#: `README.md` mora na raiz e escreve `docs/usage/assets/...`; os dois de
+#: `docs/usage/` escrevem `assets/...`. Resolver contra a pasta do próprio
+#: documento é o que faz as duas formas caírem no mesmo lugar.
+_DOCUMENTOS_COM_IMAGEM = (
+    "README.md",
+    "docs/usage/interface.md",
+    "docs/usage/AS-DEZ-ABAS-o-que-cada-uma-faz.md",
+)
 
-    Importar o script puxaria `gi`, montaria a janela e faria deste teste um
-    teste de GTK. `ast` responde a pergunta que interessa — *o que está escrito
-    lá* — sem nada disso.
+#: `![alt](caminho)`, `[texto](caminho)` e `<img src="caminho">`. O link comum
+#: entra de propósito: a foto da aba mais alta da janela é publicada como LINK
+#: no `interface.md` (`readme_configuracoes_inteira.png`), não como imagem, e
+#: um leitor que clica num link quebrado perde a mesma coisa que num `<img>`
+#: quebrado.
+_REFERENCIA = re.compile(r"!?\[[^\]]*\]\(([^)\s]+)\)|<img[^>]+src=\"([^\"]+)\"")
+
+#: Marcador de prosa, não referência — um NOME DE FORMA, do tipo
+#: `assets/aba-NN-….png`, com que um documento explica o padrão dos arquivos
+#: em vez de apontar para um deles. Cobrar a existência de um desses seria a
+#: régua reprovando a própria explicação.
+#:
+#: É a armadilha de prosa desta casa, e ela mordeu AQUI em 08/09/2026: o
+#: `AS-DEZ-ABAS` abria com uma nota dizendo *"as imagens ainda não estão no
+#: disco"* e desenhava o padrão com `aba-NN-….png` — a nota estava velha (as
+#: dez existem desde 05/09) e o desenho do padrão era, para uma régua ingênua,
+#: a décima primeira imagem quebrada do documento. A nota foi corrigida na
+#: mesma leva e o exemplo saiu com ela; **a guarda fica**, porque a próxima
+#: pessoa que for explicar um padrão de nome vai escrevê-lo do mesmo jeito.
+_E_MARCADOR = ("…", "NN-", "<", ">", "{")
+
+
+def _imagens_publicadas() -> list[tuple[str, str, Path]]:
+    """`(documento, referência, alvo no disco)` de cada imagem que a doc publica.
+
+    A lista sai dos DOCUMENTOS, e é por isso que ela alcança o que nenhuma
+    lista de instrumento alcança: uma imagem citada e nunca gravada, ou gravada
+    por um programa que já não existe.
     """
-    arvore = ast.parse(RETRATO.read_text(encoding="utf-8"))
-    for no in arvore.body:
-        if not isinstance(no, ast.Assign):
-            continue
-        alvos = [a.id for a in no.targets if isinstance(a, ast.Name)]
-        if nome not in alvos or not isinstance(no.value, ast.Tuple):
-            continue
-        return tuple(
-            item.value
-            for item in no.value.elts
-            if isinstance(item, ast.Constant) and isinstance(item.value, str)
-        )
-    raise AssertionError(f"{nome} não encontrada em {RETRATO}")
+    achados: list[tuple[str, str, Path]] = []
+    for nome in _DOCUMENTOS_COM_IMAGEM:
+        doc = RAIZ / nome
+        texto = doc.read_text(encoding="utf-8")
+        for m in _REFERENCIA.finditer(texto):
+            ref = m.group(1) or m.group(2)
+            if not ref or not ref.lower().endswith((".png", ".jpg", ".svg", ".gif")):
+                continue
+            if ref.startswith(("http://", "https://")):
+                continue  # emblema de serviço externo; não é arquivo desta árvore
+            if any(marca in ref for marca in _E_MARCADOR):
+                continue
+            achados.append((nome, ref, (doc.parent / ref).resolve()))
+    return achados
 
 
 def _abas_da_interface_nova() -> list[tuple[str, str]]:
@@ -136,47 +195,77 @@ def dez() -> list[tuple[str, str]]:
     return _abas_da_interface_nova()
 
 
-def test_toda_foto_do_retrato_aparece_no_readme() -> None:
-    """Toda foto da JANELA é publicada no `interface.md`.
+def test_toda_imagem_que_a_documentacao_publica_existe() -> None:
+    """Nenhum documento desta casa publica imagem quebrada.
 
-    Ela era cobrada nos DOIS documentos, e o `README.md` saiu da conta em
-    05/09/2026: a vitrine passou a mostrar as dez abas do produto, e as
-    `readme_*.png` viraram o registro datado que o `interface.md` guarda. Cobrar
-    a vitrine pela foto da janela aposentada obrigaria o README a publicar as
-    duas telas para sempre — que é a contradição que esta casa apaga, não
-    documenta.
+    HERDEIRA de `test_toda_foto_do_retrato_aparece_no_readme` (08/09/2026), e a
+    pergunta virou do avesso: em vez de *"toda foto do instrumento está
+    publicada?"* — que só alcançava as fotos de um programa, e morreu com ele —
+    ela pergunta *"toda imagem publicada existe?"*, que é o defeito medido.
+
+    A lista sai dos documentos, então ela cobre as três famílias de uma vez: as
+    dez `aba-*.png` que o `olhar.py` grava hoje, as `readme_*.png` da janela
+    aposentada e os cinco diálogos — nenhuma delas depende de um instrumento
+    vivo para ser cobrada.
     """
-    interface = INTERFACE.read_text(encoding="utf-8")
-    faltando: list[str] = []
-    for nome in _tupla_de_texto("NOMES"):
-        arquivo = f"{nome}.png"
-        assert (ASSETS / arquivo).exists(), f"{arquivo} não existe em {ASSETS}"
-        if arquivo not in interface:
-            faltando.append(arquivo)
-    assert not faltando, (
-        "fotos que o retratar_abas.py grava e o interface.md não publica: "
-        + "; ".join(faltando)
+    achados = _imagens_publicadas()
+    assert achados, (
+        "nenhuma referência de imagem encontrada nos documentos. Se eles "
+        "mudaram de nome, esta régua tem de aprender os nomes novos — sem "
+        "isso ela fica verde sobre coisa nenhuma."
+    )
+
+    quebradas = [
+        f"{doc} -> {ref}" for doc, ref, alvo in achados if not alvo.is_file()
+    ]
+    assert not quebradas, (
+        "a documentação publica imagem que não existe no disco:\n  "
+        + "\n  ".join(quebradas)
+        + "\n\nÉ o defeito de 05/09/2026 de novo: o AS-DEZ-ABAS citava as dez "
+        "`aba-*.png` e nenhuma existia. Rode: "
+        "interface/olhar.py --todas --publicado --doc"
     )
 
 
-def test_a_foto_esticada_e_publicada() -> None:
-    """A aba que não cabe na janela tem a segunda foto, e ela é citada.
+def test_a_foto_da_doc_mostra_a_aba_inteira() -> None:
+    """A foto da documentação recorta na MOLDURA, não no que coube na tela.
 
-    `ABAS_ESTICADAS` existe porque uma aba mais alta que 1080px sai cortada, e
-    uma foto cortada é pior que nenhuma: quem lê conclui que o que ficou abaixo
-    da dobra não existe. Gravar a esticada e não publicá-la desfaz a cura.
+    HERDEIRA de `test_a_foto_esticada_e_publicada` (08/09/2026). Na janela GTK
+    a aba mais alta que 1080 px saía cortada, e a cura era uma SEGUNDA foto
+    (`ABAS_ESTICADAS`, `*_inteira.png`) — porque a janela tinha altura fixa e o
+    retratista fotografava o viewport.
+
+    A página HTML não precisa da segunda foto: `moldura.screenshot()` do
+    Playwright captura o elemento INTEIRO, rolando se preciso. Mas essa
+    propriedade depende de uma linha — `so_a_janela=para_a_doc` — e trocá-la por
+    uma foto de viewport devolve o corte em silêncio, com a régua acima verde
+    (o arquivo existiria; só estaria cortado). Por isso o fato tem régua
+    própria, e ela mede o modo `--doc`.
     """
-    interface = INTERFACE.read_text(encoding="utf-8")
-    for nome in _tupla_de_texto("ABAS_ESTICADAS"):
-        arquivo = f"{nome}_inteira.png"
-        assert (ASSETS / arquivo).exists(), (
-            f"{arquivo} não existe: o retrato lista {nome} em ABAS_ESTICADAS e "
-            "a foto da página inteira não foi commitada"
-        )
-        assert arquivo in interface, (
-            f"{arquivo} não é citada no interface.md — a aba mais alta da "
-            "janela ficaria documentada só até a dobra"
-        )
+    fonte = RETRATO.read_text(encoding="utf-8")
+    arvore = ast.parse(fonte)
+
+    chamadas = [
+        ast.unparse(no)
+        for no in ast.walk(arvore)
+        if isinstance(no, ast.Call)
+    ]
+
+    recorte = [c for c in chamadas if "so_a_janela=para_a_doc" in c]
+    assert recorte, (
+        "o modo `--doc` deixou de recortar na moldura da aba. Sem "
+        "`so_a_janela=para_a_doc` a foto vira retrato do viewport, e toda aba "
+        "mais alta que ele passa a ser documentada só até onde coube — que é a "
+        "situação que `ABAS_ESTICADAS` curava na janela, com uma segunda foto. "
+        f"Chamadas encontradas em {RETRATO.name}: "
+        + "; ".join(c for c in chamadas if "so_a_janela" in c)
+    )
+
+    assert "moldura.screenshot" in fonte, (
+        "o recorte deixou de sair do elemento. `moldura.screenshot()` captura o "
+        "elemento inteiro, rolando se preciso; um `pg.screenshot(clip=...)` "
+        "cortaria de novo no que cabe na tela."
+    )
 
 
 # ---------------------------------------------------------------------------

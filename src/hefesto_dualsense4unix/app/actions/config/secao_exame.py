@@ -34,14 +34,18 @@ Um segundo lugar decidindo a cor do topo é como aquilo volta.
 
 O QUE MORA AQUI E NÃO LÁ: a cor, o glifo, e o texto que a pessoa lê. O módulo
 devolve chave, estado e um porquê; a tradução para tela é desta camada, e é
-por isso que nenhuma mensagem do doctor chega à janela — as de lá carregam
+por isso que nenhuma mensagem do doctor chega à tela — as de lá carregam
 `sudo` e carregam endereço de rádio, e esta tela é fotografada e versionada
-pelo `scripts/gui-captura/retratar_abas.py`.
+(`interface/olhar.py --todas --publicado --doc`; era
+`scripts/gui-captura/retratar_abas.py` até 06/09/2026, apagado com a janela
+GTK — `D-0609-GTK-LEVA-INTEIRA`).
 
-QUANDO O EXAME RODA: ao ENTRAR na aba e no botão. Nunca na montagem, que
-acontece no arranque da janela — é o caminho por onde o retrato das abas passa,
-e um exame ali poria leitura viva de `/sys` e do rádio dentro de um PNG que
-entra em `docs/usage/assets/` sem revisão humana.
+QUANDO O EXAME RODA: ao ENTRAR na aba e no botão. Nunca na montagem — era o
+caminho por onde o retrato das abas passava, e um exame ali poria leitura viva
+de `/sys` e do rádio dentro de um PNG que entra em `docs/usage/assets/` sem
+revisão humana. **A regra sobrevive ao retratista que a motivou**: o de hoje
+não monta esta seção (fotografa HTML já gravado), mas o produto monta a cada
+entrada na aba, e é dele que a leitura viva tem de continuar fora.
 
 O CARD RESPONDE (26/08/2026)
 -----------------------------

@@ -15,18 +15,23 @@ dá **verde sobre o desenho velho**, que é a armadilha mais cara do
 ELE É O RETRATISTA DA INTERFACE NOVA — 05/09/2026
 --------------------------------------------------
 
-`scripts/gui-captura/retratar_abas.py` fotografa a JANELA GTK, e é ele que o
-`CLAUDE.md` manda rodar antes de commitar. Só que a janela tem ONZE abas e o
-produto tem DEZ páginas HTML — as fotos do README mostravam uma tela que não é
-mais a que abre. Queixa dela, 05/09/2026:
+**ELE É O ÚNICO — desde 06/09/2026.** Quem fotografava a JANELA GTK era
+`scripts/gui-captura/retratar_abas.py`, e era ele que o `CLAUDE.md` mandava
+rodar antes de commitar. A janela tinha ONZE abas e o produto tem DEZ páginas
+HTML — as fotos do README mostravam uma tela que não é mais a que abre. A
+janela saiu inteira (`D-0609-GTK-LEVA-INTEIRA`) e o retratista dela saiu junto;
+**este arquivo é o retratista desta casa, e não há outro.** Queixa dela que
+abriu o caminho, 05/09/2026:
 
     *"termos scripts no repo atual que ou apontam pro gtk ou só funcionam lá
     (…) o certo é ajustar ele pra comportar todas as features do html"*
 
-O modo `--todas` é esse ajuste, e mora AQUI e não lá por uma razão de
-dependência: o retratista da janela importa GTK na primeira linha, e um modo
-que não precisa de GTK dentro dele obrigaria toda máquina a ter PyGObject para
-fotografar HTML. Este arquivo já era o dono do Chrome e da receita da foto.
+O modo `--todas` é esse ajuste, e nasceu AQUI e não lá por uma razão de
+dependência que a remoção confirmou: o retratista da janela importava GTK na
+primeira linha, e um modo que não precisa de GTK dentro dele obrigaria toda
+máquina a ter PyGObject para fotografar HTML. Este arquivo já era o dono do
+Chrome e da receita da foto — e por isso sobreviveu à janela sem uma linha de
+migração.
 
     interface/olhar.py --todas              # as dez, da bancada, em /tmp
     interface/olhar.py --todas --publicado --doc   # as dez do produto,
@@ -78,15 +83,104 @@ DESTINO_DOC = onde.RAIZ / "docs" / "usage" / "assets"
 #: documento publicava dez imagens quebradas desde que foi escrito. O prefixo é
 #: o que ele já cita, e o `--doc` passa a preencher exatamente esses dez nomes.
 #:
-#: As `readme_*.png` são da janela GTK e continuam onde estão até a janela
-#: morrer: apagá-las agora deixaria o `docs/usage/interface.md` com furo, e o
-#: histórico de uma tela que existiu não é fato errado a substituir — é decisão
-#: medida, e leva data.
+#: As `readme_*.png` são da janela GTK. **A janela morreu em 06/09/2026 e elas
+#: FICARAM**, que era a condição escrita aqui antes: apagá-las deixaria o
+#: `docs/usage/interface.md` com furo, e o histórico de uma tela que existiu não
+#: é fato errado a substituir — é decisão medida, e leva data. Nenhum
+#: instrumento vivo as refaz, e é por isso que o recibo abaixo só soma o que
+#: começa com este prefixo.
 PREFIXO_NOVO = "aba-"
 
 #: Só as DEZ abas. As avulsas (`mapa-do-controle`, `calibrar-sensores`,
 #: `mapa-das-portas`) abrem por fora da janela e não são aba de documentação.
 E_ABA = re.compile(r"^\d\d-")
+
+#: O RECIBO, e ele diz DE QUE BANCADA a foto saiu — 08/09/2026.
+#:
+#: Este arquivo já existia, escrito pelo retratista da JANELA GTK
+#: (`scripts/gui-captura/retratar_abas.py`), que saiu com ela em 06/09
+#: (`D-0609-GTK-LEVA-INTEIRA`). O recibo ficou órfão: nomeava um programa
+#: apagado e listava dezesseis fotos que nenhum instrumento vivo refaz.
+#:
+#: O FATO QUE ELE GUARDA NÃO CADUCOU, e a forma dele mudou de risco. Na janela
+#: a pergunta era *"esta foto é medição ou dublê?"* — as onze abas podiam ser
+#: alimentadas por IPC vivo ou por fixture, e sem o recibo ninguém separava.
+#: Aqui não há essa dúvida: a foto é sempre de uma página do repositório. A
+#: dúvida que sobra é OUTRA, e é a armadilha mais cara do `COMO-OLHAR-A-TELA`:
+#:
+#:   `--todas` fotografa a BANCADA (`mockup/`), o desenho sendo concluído;
+#:   `--todas --publicado` fotografa o PRODUTO (`interface/paginas/`).
+#:
+#: As duas gravam PNG com o mesmo nome. Uma foto da bancada em
+#: `docs/usage/assets/` documenta uma tela que o produto NÃO renderiza — e
+#: reincidiu quatro vezes só em 31/08. O recibo é o que deixa isso legível
+#: depois, sem reabrir o navegador.
+NOME_DA_PROVA = "PROVA-DA-FOTO.txt"
+
+
+def _gravar_prova_da_foto(destino: pathlib.Path, modo: str, origem: str) -> pathlib.Path:
+    """O recibo do ensaio: quando, quantas, de que bancada, e a soma de cada PNG.
+
+    `modo` é o que a pessoa pediu (`--todas --publicado --doc`); `origem` é a
+    pasta de onde as páginas foram lidas, relativa à raiz — os dois, porque o
+    primeiro é a INTENÇÃO e o segundo é o que de fato aconteceu, e é a
+    divergência entre eles que denuncia o instrumento apontado para o lugar
+    errado.
+
+    A data existe por um motivo medido: uma mudança de tela que não move pixel
+    deixa as fotos idênticas, e sem recibo o portão das fotos
+    (`test_as_fotos_acompanham_a_versao`) ficaria vermelho para sempre — a
+    régua confundindo a PALAVRA com o ATO, que é o defeito mais caro desta casa.
+    """
+    import datetime
+    import hashlib
+
+    pngs = sorted(p for p in destino.glob(f"{PREFIXO_NOVO}*.png") if p.is_file())
+    linhas = [
+        f"# Recibo do ensaio de fotos — gerado por {_meu_endereco()}",
+        "#",
+        "# NÃO edite à mão. Rode o retratista; ele reescreve este arquivo.",
+        "# Existe porque uma mudança de tela que não move pixel deixa as fotos",
+        "# idênticas, e sem este recibo o portão das fotos ficaria vermelho",
+        "# para sempre.",
+        "",
+        f"ensaio:  {datetime.datetime.now().strftime('%Y-%m-%d %H:%M')}",
+        f"abas:    {len(pngs)}",
+        f"modo:    {modo}",
+        f"origem:  {origem}",
+        "",
+        "# Toda linha destas imagens é PÁGINA DO REPOSITÓRIO fotografada num",
+        "# Chrome headless — nenhuma delas é medição desta ou de qualquer",
+        "# máquina, e o retratista não fala com o daemon (portão:",
+        "# tests/unit/test_retrato_das_abas_nao_vaza_dado_real.py).",
+        "",
+        "# soma sha256 de cada foto, em ordem alfabética",
+    ]
+    for p in pngs:
+        linhas.append(f"{hashlib.sha256(p.read_bytes()).hexdigest()}  {p.name}")
+
+    alvo = destino / NOME_DA_PROVA
+    alvo.write_text("\n".join(linhas) + "\n", encoding="utf-8")
+    return alvo
+
+
+def _meu_endereco() -> str:
+    """Como o recibo se refere a quem o escreveu.
+
+    DERIVADO DO PRÓPRIO ARQUIVO, e não digitado — é a razão inteira de esta
+    função existir: o recibo velho nomeava `scripts/gui-captura/retratar_abas.py`
+    e continuou nomeando por dois dias depois de o programa ser APAGADO,
+    porque o nome era um literal. Um endereço que sai de `__file__` não pode
+    envelhecer sem que o arquivo se mova junto.
+
+    Instalado não há repositório acima, e `relative_to` levanta — aí o nome do
+    módulo basta, e é o que se pode afirmar com honestidade.
+    """
+    meu = pathlib.Path(__file__).resolve()
+    try:
+        return str(meu.relative_to(onde.RAIZ))
+    except ValueError:
+        return f"hefesto_dualsense4unix.interface.{meu.stem}"
 
 
 def _navegador(pw):
@@ -203,6 +297,23 @@ def _todas(publicado: bool, para_a_doc: bool) -> int:
         dobra = f" · passa {r['passa_da_dobra']} px da dobra" if r["passa_da_dobra"] else ""
         print(f"{r['aba']:<20} {r['larg']}x{r['alt']}{dobra}  ->  {r['png']}")
     print(f"\n{len(saiu)} abas retratadas em {destino}")
+
+    # O RECIBO SÓ NO `--doc`, e a assimetria é de propósito: `/tmp` é rascunho,
+    # e `docs/usage/assets/` é o que a próxima pessoa lê sem ter visto o
+    # comando. É lá que a diferença entre a bancada e o produto precisa estar
+    # escrita.
+    if para_a_doc:
+        origem = paginas[0].parent
+        try:
+            origem_legivel = str(origem.relative_to(onde.RAIZ))
+        except ValueError:
+            origem_legivel = str(origem)
+        recibo = _gravar_prova_da_foto(
+            destino,
+            modo="--todas --publicado --doc" if publicado else "--todas --doc",
+            origem=origem_legivel,
+        )
+        print(f"recibo: {recibo}")
     return 0
 
 

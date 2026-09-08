@@ -67,8 +67,10 @@ A DISCIPLINA — a mesma de ``exame_da_mesa.py`` e ``censo_do_barramento.py``
   guarda ``vid``, ``pid`` e o caminho de barramento — e um booleano dizendo se a
   tripla ficou AMBÍGUA. O serial é lido dentro de :func:`identidades`, usado
   para comparar, e descartado. A tela desta aba vira PNG versionado
-  (``scripts/gui-captura/retratar_abas.py``), e ``scripts/check_anonymity.sh``
-  diz por escrito que o serial identifica a unidade dela tão bem quanto o MAC.
+  (``interface/olhar.py --todas --publicado --doc``; era
+  ``scripts/gui-captura/retratar_abas.py`` até 06/09/2026, apagado com a janela
+  GTK), e ``scripts/check_anonymity.sh`` diz por escrito que o serial
+  identifica a unidade dela tão bem quanto o MAC.
 
 O QUE NENHUMA ORDEM PODE DIZER
 -------------------------------

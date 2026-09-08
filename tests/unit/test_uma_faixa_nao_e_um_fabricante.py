@@ -497,30 +497,73 @@ class TestNenhumCaminhoDeCasaNaArvore:
         Antes de 22/08/2026 o default era o `$HOME` da mantenedora, e só
         resolvia aqui por causa de um symlink; fora desta máquina o script
         morria no `add_from_file` do `main.glade`.
+
+        **O ALVO MUDOU EM 08/09/2026, e a pergunta não.** Ele era
+        `scripts/gui-captura/retrato_offscreen.py`, o retratista OFFSCREEN da
+        JANELA GTK — apagado com ela em 06/09 (`D-0609-GTK-LEVA-INTEIRA`,
+        Passo 2 da `GTK-3`). O `read_text` passou a morrer em
+        `FileNotFoundError`, e o teste ficou vermelho medindo um caminho que
+        não existe.
+
+        Quem retrata as dez abas hoje é `interface/olhar.py`, e ele **não deduz
+        a raiz sozinho** — pede a `interface/onde.py`, que é o dono único das
+        duas pastas (a bancada e o publicado). Então o alvo são os dois: o
+        retratista não pode trazer `$HOME`, e o dono da raiz tem de deduzi-la
+        do próprio arquivo. O `onde.py` mora três níveis abaixo da raiz
+        (`src/hefesto_dualsense4unix/interface/`), e por isso a dedução é
+        `parents[3]` — era `parents[2]` no retratista velho, que morava em
+        `scripts/gui-captura/`.
         """
-        alvo = RAIZ / "scripts/gui-captura/retrato_offscreen.py"
-        codigo = alvo.read_text(encoding="utf-8")
-        for linha, valor in _literais_executaveis(alvo):
-            assert not valor.startswith("/home/"), f"{alvo.name}:{linha}: {valor!r}"
-        assert "parents[2]" in codigo
+        retratista = RAIZ / "src/hefesto_dualsense4unix/interface/olhar.py"
+        dono_da_raiz = RAIZ / "src/hefesto_dualsense4unix/interface/onde.py"
+
+        for alvo in (retratista, dono_da_raiz):
+            assert alvo.is_file(), (
+                f"{alvo.relative_to(RAIZ)} sumiu. Se o retratista mudou de casa "
+                "de novo, este teste muda com ele — apagá-lo devolve o defeito "
+                "de 22/08/2026, em que só a máquina dela rodava o script."
+            )
+            for linha, valor in _literais_executaveis(alvo):
+                assert not valor.startswith("/home/"), (
+                    f"{alvo.name}:{linha}: {valor!r}"
+                )
+
+        codigo = dono_da_raiz.read_text(encoding="utf-8")
+        assert "parents[3]" in codigo, (
+            "o `onde.py` deixou de deduzir a raiz de `__file__`. Ele é o único "
+            "lugar onde as duas pastas de página têm endereço; uma raiz cravada "
+            "aqui reescreveria o mockup DELA a partir de qualquer cópia — foi o "
+            "que se mediu em 28/08/2026, em oito arquivos."
+        )
         # E a dedução tem de dar na raiz DE VERDADE, não só num caminho bonito.
-        assert alvo.resolve().parents[2] == RAIZ.resolve()
+        assert dono_da_raiz.resolve().parents[3] == RAIZ.resolve()
         # A ÂNCORA MUDOU EM 06/09/2026 (`GTK-3`, primeira volta): era o
-        # `gui/main.glade`, e a janela GTK sai inteira
+        # `gui/main.glade`, e a janela GTK saiu inteira
         # (`D-0609-GTK-LEVA-INTEIRA`). A pergunta é a mesma — a raiz deduzida
         # é a raiz DE VERDADE —, e o `pyproject.toml` é o arquivo que existe
         # em toda árvore deste repositório e em nenhuma outra pasta.
         assert (RAIZ / "pyproject.toml").exists()
 
     def test_nenhum_script_traz_o_home_dela_como_padrao(self) -> None:
-        """A varredura inteira, para o defeito não voltar por outro arquivo."""
+        """A varredura inteira, para o defeito não voltar por outro arquivo.
+
+        **A VARREDURA CRESCEU EM 08/09/2026, e o buraco era medido.** Ela olhava
+        `scripts/` e mais nada — desenhada quando todo instrumento desta casa
+        morava lá. A interface inteira mudou para dentro do `src/` em 01/09
+        (o wheel só empacota `src/hefesto_dualsense4unix`), e com ela o
+        retratista, os dez geradores e o dono das duas pastas de página. Ou
+        seja: os arquivos que MAIS cravam caminho saíram do alcance da régua
+        no dia em que mudaram de casa, e ela continuou verde.
+        """
         culpados = []
-        for arquivo in sorted((RAIZ / "scripts").rglob("*.py")):
-            for linha, valor in _literais_executaveis(arquivo):
-                if re.match(r"^/home/[^/]+/", valor):
-                    culpados.append(
-                        f"{arquivo.relative_to(RAIZ).as_posix()}:{linha}: {valor!r}"
-                    )
+        pastas = (RAIZ / "scripts", RAIZ / "src" / "hefesto_dualsense4unix" / "interface")
+        for pasta in pastas:
+            for arquivo in sorted(pasta.rglob("*.py")):
+                for linha, valor in _literais_executaveis(arquivo):
+                    if re.match(r"^/home/[^/]+/", valor):
+                        culpados.append(
+                            f"{arquivo.relative_to(RAIZ).as_posix()}:{linha}: {valor!r}"
+                        )
         assert not culpados, "caminho absoluto de $HOME em script:\n" + "\n".join(culpados)
 
 

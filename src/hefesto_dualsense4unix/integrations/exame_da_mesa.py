@@ -662,8 +662,14 @@ def exame(
     `test_com_as_raizes_injetadas_nada_do_sistema_real_e_lido` vigia
     ``pathlib``, e as duas varreduras do catálogo usam ``os.listdir`` e
     ``open`` — o portão passaria verde sobre um exame lendo a máquina dela.
-    Com o default desligado, quem quer ordens pede: `main()` pede,
-    `app/actions/config/secao_exame.py` pede, e o `retratar_abas.py` não pede.
+    Com o default desligado, quem quer ordens pede: `main()` pede e
+    `app/actions/config/secao_exame.py` pede.
+
+    O terceiro nome desta lista era `scripts/gui-captura/retratar_abas.py`,
+    citado como quem NÃO pedia — o retratista da JANELA GTK, apagado com ela em
+    06/09/2026 (`D-0609-GTK-LEVA-INTEIRA`). O retratista de hoje
+    (`interface/olhar.py`) não pede porque não chega aqui: ele fotografa página
+    HTML já gravada, sem executar este módulo.
     """
     argumentos_do_radio: dict[str, Path] = {}
     if parametro_do_radio is not None:

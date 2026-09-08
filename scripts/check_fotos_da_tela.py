@@ -44,9 +44,11 @@ ONDE ELE SE CALA DE PROPÓSITO
 -----------------------------
 
 **Em worktree de agente.** Fotografar é de quem coordena (R4 de
-COMO-REGER-AGENTES.md), e o agente de sprint tem `retratar_abas.py` na lista do
-que **não** pode rodar. Cobrar foto dele seria cobrar o que ele está proibido
-de fazer, e o preço seria o gancho desinstalado. O gancho só fala na árvore
+COMO-REGER-AGENTES.md), e o agente de sprint tem o retratista na lista do
+que **não** pode rodar (era `retratar_abas.py`, apagado com a janela GTK em
+06/09/2026; hoje é `interface/olhar.py --todas --publicado --doc`). Cobrar foto
+dele seria cobrar o que ele está proibido de fazer, e o preço seria o gancho
+desinstalado. O gancho só fala na árvore
 principal — a de quem integra. A distinção é `--git-dir` contra
 `--git-common-dir`, que só divergem em worktree ligada.
 

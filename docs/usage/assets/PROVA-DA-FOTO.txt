@@ -1,32 +1,28 @@
-# Recibo do ensaio de fotos — gerado por scripts/gui-captura/retratar_abas.py
+# Recibo do ensaio de fotos — gerado por src/hefesto_dualsense4unix/interface/olhar.py
 #
-# NÃO edite à mão. Rode o script; ele reescreve este arquivo.
+# NÃO edite à mão. Rode o retratista; ele reescreve este arquivo.
 # Existe porque uma mudança de tela que não move pixel deixa as fotos
-# idênticas, e sem este recibo o portão das fotos ficaria vermelho para
-# sempre. Ver FOTO-QUE-NAO-MOVE-PIXEL-01 no próprio script.
+# idênticas, e sem este recibo o portão das fotos ficaria vermelho
+# para sempre.
 
-ensaio:  2026-09-05 18:06
-abas:    16
-modo:    padrão
-fixture: nenhum — os dublês nascem fixos no próprio script (padrão de dois controles)
+ensaio:  2026-09-08 13:17
+abas:    10
+modo:    --todas --publicado --doc
+origem:  src/hefesto_dualsense4unix/interface/paginas
 
-# toda linha destas imagens é dublê — nenhuma delas é medição desta ou
-# de qualquer máquina. Ver docs/usage/interface.md, "Sobre as capturas".
+# Toda linha destas imagens é PÁGINA DO REPOSITÓRIO fotografada num
+# Chrome headless — nenhuma delas é medição desta ou de qualquer
+# máquina, e o retratista não fala com o daemon (portão:
+# tests/unit/test_retrato_das_abas_nao_vaza_dado_real.py).
 
 # soma sha256 de cada foto, em ordem alfabética
-b7016b2cc75aab92ba658e195bd815ebd73ef375b21324bb33c733af70c57b02  perfis-jogo-da-steam.png
-1fbbb73f24b101d1888c1b6aa18d7703612b90e16f0f5c385a8ef92e5e2263ed  readme_cabecalho.png
-cdded7497f0a96227ec9cbb9f3b9da1629bea017f3c2f968cf6d2bac9684a48f  readme_cabecalho_alvo_inativo.png
-e8175c3ab51e2b2fbe4ffcb80014381e297f3895871581528b9c6eeb2b5fb1e1  readme_configuracoes.png
-c348cf6e98e7849166e76092d4f20d3082afa359f676ca25c72f811adb82ff99  readme_configuracoes_inteira.png
-df92bfd34e43839746362ef143e28686c913127e7cb620adada6aa6967607a94  readme_emulacao.png
-b012924afb3abbf093c62d3a2d3e97ebc13ba1906aec92cd5338daab01c7ece9  readme_gatilhos.png
-f58f792a2cf6fa63c95ba5800241f48ad7ea3b761fae3e2f4e6de58abc7dd252  readme_inicio.png
-133486cfab7b99613c8c67b4e7076511123fb370b2dd8ef61a3bd2113956a16b  readme_lightbar.png
-2ab4198dc69e550fdd797b752738f5b68436aeeaa6004ca6a27faa263832ad05  readme_navegacao_dsx.png
-d2ef1e8fa945716d1a3d4331fdcd72b6d63b35961a4b1b509e60002d87f874a9  readme_no_jogo.png
-096ddb6166626840fc2af41616dc02c3b9d1c1085c0a84f9bb4aeb956b37fcf2  readme_perfis.png
-e8c08b6cced746a3bf30f4b641614f3524aecadc79d9fa5adc8080892cbf5a62  readme_rumble.png
-0f7f3c6f0a8aa9e0c94d912032a9dc9b12166c29a752b28a18fcf4168d414c2a  readme_sistema.png
-8cb8169a094ab85596dfac9de1b4d63010963f85330b2c5c9b8f88270ce8ef64  readme_status.png
-d4f96145200656d478ea9c8297fcf5dd0c83a950b2c7f71676979242ef85c943  social-preview.png
+8e1e5874163e5ebfb27dc2c33a161957dc2704274e61241e5fb2dc3591b6363c  aba-01-jogar.png
+14b1ad4e25f36de6049a2cc2c17fb3bc707334d22851a95d16b849d29c654394  aba-02-controles.png
+a780caccf2d46369e5b755761960f5046d2efb5ae7c1c7029d5cbbd072826b40  aba-03-gatilhos.png
+11b02aaac6657e336ee49819171a768d4817afc1a68d12ddeaae9fb979ee8086  aba-04-iluminacao.png
+b1a90000e04f34270d202ee025a649cda7f8acb04c0926954d6a38bebfd622b9  aba-05-vibracao.png
+376041105ad074c27322211169bb2f3df55424bfa3e3b990a1559150897cb5d8  aba-06-navegacao.png
+70c362cb14e77d872988d53f083ab2cd7774b62af8b77e177901775d0c9dad31  aba-07-lancadores.png
+dcd4436c1d8a9271dd40672fc0723afb7da377ee58f5710c54259edb9a2c5595  aba-08-conexoes.png
+d2bc2b390ba07b476573ee0b5ebc5ad4fb213bf22b8acca0cf3b1e5b8baf1648  aba-09-sistema.png
+38590a308b65af2dc6d4cebdb1820fa4200e992a2c717a2f863c237b856ed32f  aba-10-perfis.png
