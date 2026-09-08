@@ -205,11 +205,12 @@ def test_sem_historia_a_segunda_pergunta_se_cala() -> None:
 def test_worktree_de_agente_nao_e_cobrada(tmp_path: Path) -> None:
     """O falso positivo que desinstalaria o gancho na primeira hora.
 
-    Agente de sprint commita `app/` o dia inteiro na SUA árvore e tem
-    `retratar_abas.py` na lista do que NÃO pode rodar (COMO-EXECUTAR-UMA-SPRINT
-    §5; R4 de COMO-REGER-AGENTES.md). Cobrar foto dele é cobrar o que ele está
-    proibido de fazer — e os ganchos são compartilhados com a árvore principal,
-    então isto não é hipótese.
+    Agente de sprint commita `app/` o dia inteiro na SUA árvore e tem o
+    retratista na lista do que NÃO pode rodar (COMO-EXECUTAR-UMA-SPRINT §5; R4
+    de COMO-REGER-AGENTES.md) — era `retratar_abas.py`, apagado com a janela
+    GTK em 06/09/2026; hoje é `interface/olhar.py --todas --publicado --doc`.
+    Cobrar foto dele é cobrar o que ele está proibido de fazer — e os ganchos
+    são compartilhados com a árvore principal, então isto não é hipótese.
     """
     raiz = _repo_de_mentira(tmp_path)
     galho = tmp_path / "sprint-Z9"

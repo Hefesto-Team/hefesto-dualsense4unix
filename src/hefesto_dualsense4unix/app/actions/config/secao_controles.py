@@ -818,14 +818,23 @@ class _PainelDosControles:
             logger.warning("config_controles_reexame_falhou", exc_info=True)
 
     def _e_bancada_de_retrato(self) -> bool:
-        """O hospedeiro é o de `scripts/gui-captura/retratar_abas.py`?
+        """O hospedeiro é uma bancada de retrato, e não o produto?
 
-        O sinal é o `_mesa_leitor`, que aquele host monta para a seção da mesa
-        (`secao_mesa.py:772`, `_mesa_leitor`) e que nenhum hospedeiro de produção tem. Usar um
-        sinal que já existe é melhor que inventar uma segunda bandeira: uma
-        bandeira nova precisaria ser posta em `retratar_abas.py`, que é
-        território de outra frente nesta leva, e até lá a captura sairia falando
-        com o daemon vivo — falha CALADA, do tipo que só aparece no PNG.
+        O sinal é o `_mesa_leitor`, que a bancada monta para a seção da mesa
+        (`secao_mesa.py:772`, `_mesa_leitor`) e que nenhum hospedeiro de
+        produção tem. Usar um sinal que já existe é melhor que inventar uma
+        segunda bandeira: uma bandeira nova precisaria ser posta no retratista,
+        e até lá a captura sairia falando com o daemon vivo — falha CALADA, do
+        tipo que só aparece no PNG.
+
+        **O HOSPEDEIRO QUE ISTO DETECTAVA NÃO EXISTE MAIS — 08/09/2026.** Era
+        `scripts/gui-captura/retratar_abas.py`, apagado com a janela GTK em
+        06/09 (`D-0609-GTK-LEVA-INTEIRA`); o retratista de hoje fotografa HTML
+        já gravado e nunca monta esta seção. A guarda FICA, e por dois motivos
+        medidos: ela falha para o lado seguro (sem o sinal, devolve `False` e o
+        produto se comporta como produto), e o sinal continua sendo o que a
+        SUÍTE usa para montar a seção sem daemon. Arrancá-la seria trocar uma
+        guarda inerte por um caminho a menos de teste.
         """
         return getattr(self._host, "_mesa_leitor", None) is not None
 

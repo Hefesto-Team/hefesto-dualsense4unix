@@ -141,8 +141,10 @@ if git rev-parse --git-dir >/dev/null 2>&1; then
     # casou o regex POR ACASO, nos bytes comprimidos — a saída era um
     # "Binary file docs/usage/assets/readme_lightbar.png matches" que reprovava
     # o repositório inteiro e não tinha como ser "corrigido", porque não havia
-    # texto nenhum ali. E a imagem MUDA a cada `retratar_abas.py`, então o
-    # falso positivo é intermitente: aparece e some conforme o desenho da aba.
+    # texto nenhum ali. E a imagem MUDA a cada passada do retratista
+    # (`interface/olhar.py --todas --publicado --doc`; era `retratar_abas.py`
+    # até 06/09/2026), então o falso positivo é intermitente: aparece e some
+    # conforme o desenho da aba.
     #
     # Isto não afrouxa o portão. Ele nunca soube ler imagem: o `README.md` já
     # avisa que os portões de anonimato NÃO varrem imagens, e que a foto da

@@ -18,9 +18,10 @@ foi lido das páginas que a janela renderiza —
 > A aba **Emulação** não existe mais; o conteúdo dela se espalhou por cinco
 > abas, e aquele documento diz para onde cada pedaço foi.
 
-> **As imagens ainda não estão no disco.** Os marcadores `![Aba …](assets/aba-NN-….png)`
-> abaixo esperam a frente que fotografa as abas. Enquanto ela não passa, a
-> imagem aparece quebrada e o texto ao lado se basta.
+> **As dez imagens estão no disco desde 05/09/2026**, e quem as grava é
+> `src/hefesto_dualsense4unix/interface/olhar.py --todas --publicado --doc`.
+> Elas retratam o que o produto RENDERIZA, não a bancada — a diferença está
+> declarada em `assets/PROVA-DA-FOTO.txt`, que o próprio retratista escreve.
 
 ---
 

@@ -26,8 +26,10 @@ E o resto:
     --duble a.json        os perfis e o estado vêm de um roteiro, não do disco
                           nem do daemon. É o PADRÃO, e é de propósito: os perfis
                           dela têm nome de jogo, e uma foto versionada com eles
-                          seria a biblioteca dela num PNG (a mesma razão do
-                          `retratar_abas._PERFIS_DA_FOTO`).
+                          seria a biblioteca dela num PNG. (A mesma razão do
+                          `retratar_abas._PERFIS_DA_FOTO`, que fazia isto na
+                          JANELA GTK e saiu com ela em 06/09/2026 — a razão
+                          ficou, e o dublê aqui é quem a carrega agora.)
     --do-disco            lê os perfis DELA de verdade (`load_all_profiles`).
                           Não fotografe com isto ligado.
     --prova-gesto         cliques sintéticos, para provar tela → Python → eco

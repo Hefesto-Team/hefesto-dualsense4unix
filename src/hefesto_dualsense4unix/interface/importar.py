@@ -39,10 +39,22 @@ from onde import RAIZ as R  # noqa: E402
 #: O `docs/data/` do repositório. Dono único, para não voltar a ser montado
 #: à mão a partir de um contador de níveis.
 DADOS_DO_REPO = R / "docs/data"
-EDITADO = pathlib.Path("/home/vitoriamaria/Imagens/dualsense-para-editar.svg")
 LIMPO = R / "src/hefesto_dualsense4unix/interface/ds_limpo.svg"
 PROD = R / "assets/control-svg/dualsense.svg"
 CSV = DADOS_DO_REPO / "pecas-do-dualsense.csv"
+
+
+def svg_editado() -> pathlib.Path:
+    """A OUTRA PONTA DO MESMO CAMINHO — casa com `exportar.svg_para_editar()`.
+
+    FUNÇÃO e não constante pela razão medida na gêmea, que vale inteira aqui:
+    constante de módulo resolve o `$HOME` na IMPORTAÇÃO, e na suíte a
+    importação acontece na COLETA, antes de o `conftest` desviar o lar.
+
+    O docstring deste arquivo já dizia `~/Imagens/dualsense-para-editar.svg`
+    desde que ele nasceu; era o CÓDIGO que cravava o `/home/` de uma pessoa só.
+    """
+    return pathlib.Path.home() / "Imagens" / "dualsense-para-editar.svg"
 
 
 def grupos(texto):
@@ -164,27 +176,27 @@ def caixas(caminho):
 
 def main():
     gravar = "--gravar" in sys.argv
-    if not EDITADO.exists():
-        sys.exit(f"não achei {EDITADO} — rode o exportar.py primeiro")
+    if not svg_editado().exists():
+        sys.exit(f"não achei {svg_editado()} — rode o exportar.py primeiro")
 
     # O ARQUIVO TEM DE SER XML VÁLIDO. Um atributo duplicado fez o parser abortar
     # no meio e os 18 glifos sumirem da tela dela — e o importador anterior teria
     # gravado o estrago sem reclamar.
     import xml.etree.ElementTree as ET
     try:
-        ET.parse(EDITADO)
+        ET.parse(svg_editado())
     except Exception as exc:
         sys.exit(f"o SVG editado não é XML válido: {exc}\n"
                  "nada foi lido. Conserte no editor e salve de novo.")
 
-    novo = grupos(EDITADO.read_text())
+    novo = grupos(svg_editado().read_text())
     velho = grupos(LIMPO.read_text())
     faltam = [k for k in velho if k not in novo]
     if faltam:
         sys.exit(f"o arquivo editado perdeu peças: {faltam}\n"
                  "os `id` dos grupos não podem ser renomeados nem apagados.")
 
-    cx_novo, cx_velho = caixas(EDITADO), caixas(LIMPO)
+    cx_novo, cx_velho = caixas(svg_editado()), caixas(LIMPO)
     mudou = {k: (cx_velho.get(k), cx_novo[k]) for k in cx_novo
              if cx_velho.get(k) != cx_novo[k]}
     print(f"=== {len(novo)} peças lidas · {len(mudou)} mudaram de lugar ===")
@@ -240,7 +252,7 @@ def main():
     # grupo. Um glifo dentro de um grupo espelhado ou transladado tem a posição
     # dele decidida pela CADEIA inteira; lendo só o atributo, os rótulos dos ombros
     # e as setas do d-pad caíram fora do desenho.
-    _glifos = medir_matriz(EDITADO)
+    _glifos = medir_matriz(svg_editado())
     t = CSV.read_text()
     for pid, cx in cx_novo.items():
         alvo = [l for l in t.splitlines() if l.startswith(pid + ",")]

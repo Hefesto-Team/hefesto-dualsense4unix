@@ -303,6 +303,62 @@ APOSENTADOS: dict[str, str] = {
         "`HefestoApp._ALVO_POR_ABA` — a fita da JANELA. Apagado em 06/09/2026 "
         "(GTK-3), junto com o passo do `ci.yml` que o rodava."
     ),
+    # AS SEIS RÉGUAS DO ESTÚDIO — 08/09/2026, e elas são o rastro que a GTK-3
+    # deixou. O Passo 2 daquela sprint apagou `scripts/gui-captura/`; o Passo 1
+    # ("os 62 testes, um a um") não alcançou estas. Ficaram dois dias
+    # VERMELHAS medindo um caminho que não existe — e vermelho constante num
+    # portão se lê como ruído e se desliga, que é o pior destino possível para
+    # uma régua de anonimato.
+    #
+    # A PERGUNTA FOI FEITA UMA A UMA, e não em massa (é a advertência que abre
+    # a própria GTK-3): *o que esta régua provava, e esse fato ainda importa?*
+    # Cinco das onze REAPONTARAM para `interface/olhar.py` e voltaram a morder;
+    # estas seis provavam coisa que só existia dentro da janela, e o herdeiro
+    # de cada uma está escrito na razão.
+    "tests/unit/test_a_aba_perfis_na_foto.py": (
+        "montava a aba Perfis da JANELA a partir do `.glade` e conferia que a "
+        "foto dela não perguntava ao daemon. Apagada em 08/09/2026 — o widget "
+        "que ela montava saiu com a janela em 06/09 (GTK-3). O fato do "
+        "anonimato ficou, medido sobre o retratista de hoje, em "
+        "`tests/unit/test_retrato_das_abas_nao_vaza_dado_real.py`."
+    ),
+    "tests/unit/test_a_foto_do_cabecalho_prova_o_alvo.py": (
+        "media a fita 'Ajustes vão para:' no `header_bar` da JANELA, que ficava "  # (noqa-acento: verbo medir, imperfeito)
+        "fora do recorte de toda foto de aba. Apagada em 08/09/2026 — não há "
+        "`header_bar` nem `main_notebook`. O que ela cobrava do lado da "
+        "documentação (as duas fotos existem e o `interface.md` as publica) é "
+        "hoje `test_toda_imagem_que_a_documentacao_publica_existe`, que mede o "
+        "documento inteiro em vez de duas imagens nomeadas."
+    ),
+    "tests/unit/test_a_foto_monta_como_o_produto_monta.py": (
+        "exigia que o retratista chamasse os mixins de produção em vez de "
+        "montar widget GTK à mão. Apagada em 08/09/2026 — o retratista de hoje "
+        "não monta widget nenhum: ele abre uma página HTML num Chrome. A regra "
+        "de fundo (a foto sai do que o produto renderiza) virou estrutura, e "
+        "está em `test_a_foto_da_doc_mostra_a_aba_inteira`."
+    ),
+    "tests/unit/test_a_mesa_cheia_na_foto.py": (
+        "o modo `--mesa-cheia`, que alimentava as onze abas da JANELA com "
+        "`tests/fixtures/state_full_quatro_controles.json`. Apagada em "
+        "08/09/2026 — não há modo, nem fixture, nem abas montadas em widget. "
+        "A garantia de que a foto não nasce de estado vivo ficou em "
+        "`test_retrato_das_abas_nao_vaza_dado_real`."
+    ),
+    "tests/unit/test_home_foto_dos_estados.py": (
+        "fotografava a aba Início da JANELA em cinco estados e exigia PNG "
+        "diferente para cada um. Apagada em 08/09/2026 — a aba Início é a "
+        "página `01-jogar.html`, e nenhum instrumento desta casa a fotografa "
+        "por estado. **É a única das seis cujo fato não tem herdeiro**, e fica "
+        "escrito: os cinco estados do produto de hoje seguem sem foto de prova."
+    ),
+    "tests/unit/test_retrato_dos_dialogos_nao_vaza_dado_real.py": (
+        "impedia o retratista dos DIÁLOGOS de publicar os perfis dela. Apagada "
+        "em 08/09/2026 com `scripts/gui-captura/retratar_dialogos.py`, que saiu "
+        "em 06/09 — sem gerador não há o que travar. As cinco imagens que ele "
+        "produziu continuam publicadas no `interface.md` como registro datado, "
+        "e o único programa que hoje escreve em `docs/usage/assets/` está "
+        "travado por `test_retrato_das_abas_nao_vaza_dado_real`."
+    ),
 }
 
 

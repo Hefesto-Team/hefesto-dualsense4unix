@@ -188,11 +188,23 @@ class RadioUsb:
 class Mesa:
     """A leitura inteira, de uma vez — o que a seção "A mesa" desenha.
 
-    Existe para que haja UM ponto de injeção em vez de seis: quem fotografa a
-    aba (``scripts/gui-captura/retratar_abas.py``) troca esta chamada por uma
-    com raízes de mentira, e nenhum caminho de ``/sys`` real é tocado. A foto
-    entra em ``docs/usage/assets`` sem revisão humana, e um endereço de rádio
-    dela num PNG versionado não tem portão que pegue.
+    Existe para que haja UM ponto de injeção em vez de seis: quem fotografava a
+    aba trocava esta chamada por uma com raízes de mentira, e nenhum caminho de
+    ``/sys`` real era tocado. A foto entra em ``docs/usage/assets`` sem revisão
+    humana, e um endereço de rádio dela num PNG versionado não tem portão que
+    pegue — os de anonimato desta casa não leem imagem.
+
+    **O FOTÓGRAFO MUDOU E A RAZÃO FICOU MAIS FORTE — 08/09/2026.** Era
+    ``scripts/gui-captura/retratar_abas.py``, que montava a JANELA GTK e por
+    isso EXECUTAVA este módulo para desenhar a seção. Apagado em 06/09 com a
+    janela (``D-0609-GTK-LEVA-INTEIRA``). Quem fotografa hoje é
+    ``interface/olhar.py``, que abre uma página HTML já gravada num Chrome
+    headless — **ele não chama esta função em momento nenhum**, e há portão
+    dizendo que ele não fala com o daemon
+    (``tests/unit/test_retrato_das_abas_nao_vaza_dado_real.py``).
+
+    O ponto de injeção NÃO é dívida a recolher: ele continua sendo como a
+    suíte lê uma mesa de mentira, e é o que impede o teste de tocar ``/sys``.
     """
 
     adaptadores: tuple[Adaptador, ...] = ()

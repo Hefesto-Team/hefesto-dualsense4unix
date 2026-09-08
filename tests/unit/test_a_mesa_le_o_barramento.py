@@ -18,11 +18,15 @@ a que importa:
    22/08/2026, tem ZERO adaptadores Bluetooth (`/sys/class/bluetooth` vazio) e
    nenhum hub — um teste contra o `/sys` real aqui não testaria nada e, na
    máquina seguinte, testaria outra coisa;
-2. **o mesmo ponto de injeção é o que protege a foto.** `retratar_abas.py`
-   monta a aba de verdade para fotografá-la, e a foto entra em
+2. **o mesmo ponto de injeção é o que protege a foto.** O retratista da JANELA
+   montava a aba de verdade para fotografá-la, e a foto entra em
    `docs/usage/assets` sem revisão humana. Sem raízes injetáveis, o PNG
    versionado carregaria o barramento dela. O teste
    `test_nenhum_caminho_do_sys_real_e_tocado` é o que segura essa porta.
+   (Aquele retratista — `scripts/gui-captura/retratar_abas.py` — saiu com a
+   janela em 06/09/2026. **A razão não caducou, e a injeção fica**: ela é
+   também como a suíte lê uma mesa de mentira. Ver a nota gêmea em
+   `integrations/mesa_de_radio.py`, na classe `Mesa`.)
 
 A BANCADA DE MENTIRA
 ---------------------
@@ -546,11 +550,12 @@ def test_sysfs_vazio_ou_ilegivel_devolve_lista_vazia_sem_levantar() -> None:
 def test_nenhum_caminho_do_sys_real_e_tocado() -> None:
     """O teste que protege a FOTO — e o único que morde o vazamento.
 
-    `retratar_abas.py` monta esta aba para fotografá-la, e o PNG entra em
+    O retratista da JANELA montava esta aba para fotografá-la, e o PNG entra em
     `docs/usage/assets` sem revisão humana. Nenhum portão desta casa varre
-    imagem: `test_retrato_das_abas_nao_vaza_dado_real` inspeciona o SCRIPT, e
-    `check_test_data.sh` só olha `tests/`. Se a leitura escapar para `/sys`
-    quando as raízes foram injetadas, o barramento dela vai para a
+    imagem: `test_retrato_das_abas_nao_vaza_dado_real` inspeciona o
+    RETRATISTA — hoje `interface/olhar.py`, que fotografa página HTML e não
+    chega aqui —, e `check_test_data.sh` só olha `tests/`. Se a leitura escapar
+    para `/sys` quando as raízes foram injetadas, o barramento dela vai para a
     documentação.
 
     Mordida: pus de volta um `os.listdir("/sys/bus/usb/devices")` dentro de

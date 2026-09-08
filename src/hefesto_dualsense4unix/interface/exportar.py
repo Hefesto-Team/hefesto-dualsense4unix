@@ -36,7 +36,35 @@ from onde import RAIZ as R  # noqa: E402
 #: à mão a partir de um contador de níveis.
 DADOS_DO_REPO = R / "docs/data"
 FONTE = R / "src/hefesto_dualsense4unix/interface/ds_limpo.svg"
-SAIDA = pathlib.Path("/home/vitoriamaria/Imagens/dualsense-para-editar.svg")
+
+
+def svg_para_editar() -> pathlib.Path:
+    """O SVG que ela abre no Inkscape — resolvido na CHAMADA, nunca no import.
+
+    FUNÇÃO E NÃO CONSTANTE, e as duas metades da razão foram medidas em
+    08/09/2026, uma depois da outra:
+
+    1. aqui estava `/home/<usuária>/Imagens/...` cravado, e o par
+       exportar/importar só funcionava na máquina dela. Estes dois arquivos
+       moram dentro de `src/hefesto_dualsense4unix/`, que é o que o wheel
+       empacota: quem instalasse o Hefesto recebia o caminho de OUTRA casa.
+       Quem achou foi `test_nenhum_script_traz_o_home_dela_como_padrao`, e só
+       depois de a varredura dele passar a olhar esta pasta — até 08/09 ela
+       varria `scripts/` e mais nada, e a interface mudou de casa em 01/09.
+       *A régua ficou verde porque o defeito mudou de pasta, não porque ele
+       saiu.*
+    2. a primeira cura foi `SAIDA = pathlib.Path.home() / ...`, no nível do
+       módulo — e `test_nenhum_modulo_do_produto_congela_caminho_de_home`
+       reprovou na hora. Constante de módulo é avaliada na IMPORTAÇÃO, que na
+       suíte acontece na COLETA, antes de qualquer fixture: o desvio de `HOME`
+       do `conftest` (escopo de função) não a alcança, e o que o produto
+       gravasse sob teste iria para o disco de quem roda.
+
+    **As duas réguas têm pontos cegos opostos**, e é o que este par prova: a
+    primeira não via a constante congelada, a segunda não via o literal
+    cravado. A cura verdadeira é a que passa nas duas.
+    """
+    return pathlib.Path.home() / "Imagens" / "dualsense-para-editar.svg"
 
 linhas = [l for l in (DADOS_DO_REPO / "pecas-do-dualsense.csv").read_text().splitlines()
           if l and not l.startswith("#")]
@@ -187,7 +215,7 @@ ESTILO = f"""  <style>
     #grupo-glifos [stroke-width] {{ stroke-width: calc(.35 * 32 / var(--lado)); }}
   </style>"""
 
-SAIDA.write_text(
+svg_para_editar().write_text(
 f'''<?xml version="1.0" encoding="UTF-8"?>
 <!-- ===========================================================================
      DualSense — o controle para EDITAR.
@@ -215,5 +243,5 @@ f'''<?xml version="1.0" encoding="UTF-8"?>
 ''')
 n_g = len(corpo)
 n_p = sum(len(p) for _, _, p in GRUPOS)
-print(f"  ok  {SAIDA}")
+print(f"  ok  {svg_para_editar()}")
 print(f"      {n_g} grupos nomeados · {n_p} peças, cada uma com <title> em português")
