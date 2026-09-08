@@ -922,14 +922,14 @@ def coluna(c):
     # com o botão na tela e a foto ao lado, escolheu *"sai"*. A faixa volta a ser
     # o que era — o campo do nome e o botão de guardar.
     #
-    # O GESTO `reenviar` NÃO saiu do pacote junto, e não é esquecimento: a página
-    # que o PRODUTO renderiza é a PUBLICADA (o piloto abre sempre
-    # `onde.pagina(..., publicado=True)`), e ela ainda tem este botão. Tirar o
-    # dono agora daria a ela um `↻` que morre CALADO — um gesto sem dono só
-    # imprime `[gesto sem dono]` no stderr de quem lançou a janela, e a tela não
-    # muda. Os dois saem no MESMO ato: `check_o_desenho_aprovado.py --publicar
-    # 03`, que é dela. Quem amarra os dois lados, para que nenhum dos dois seja
-    # esquecido, é `test_o_reenvio_sai_do_pacote_quando_sair_do_produto`.
+    # O GESTO SAIU DO PACOTE EM 08/09/2026, e a espera dele acabou aqui. Ele
+    # ficou de propósito enquanto a página PUBLICADA — a que o produto renderiza
+    # — ainda mostrava o botão: tirar o dono de um botão vivo daria a ela um `↻`
+    # que morre CALADO, porque um gesto sem dono só imprime `[gesto sem dono]`
+    # no stderr de quem lançou a janela. A publicação de `44c2327e` tirou o
+    # botão e a segunda metade do ato ficou pendurada dois dias. Quem amarra os
+    # dois lados, nos DOIS sentidos, continua sendo
+    # `test_o_reenvio_sai_do_pacote_quando_sair_do_produto`.
     #
     # E A EXPLICAÇÃO MORA AQUI, E NÃO NUM `<!-- -->` DENTRO DA COLUNA: esta
     # f-string é emitida UMA VEZ POR CONTROLE, e um comentário de doze linhas

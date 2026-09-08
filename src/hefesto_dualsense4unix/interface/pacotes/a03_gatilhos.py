@@ -2401,19 +2401,18 @@ def _params_da_curva(modo_: str, curva: list[int]) -> list[int]:
 #: (`hefesto_vivo.pintar_recados` escreve `textContent`), e um `<span>` ali
 #: apareceria escrito na tela dela.
 #:
-#: **DOIS DONOS, E O SEGUNDO É A D-17** (06/09/2026): o `reenviar` soma com ele
-#: os desfechos dos DOIS gatilhos da coluna, e o `_aplicar` soma o recibo do
+#: **ELE TEVE DOIS DONOS E VOLTOU A TER UM** — 08/09/2026. O segundo era o
+#: `reenviar`, que somava com ele os desfechos dos DOIS gatilhos da coluna, e
+#: saiu com o botão. Fica o primeiro, a D-17: o `_aplicar` soma o recibo do
 #: aparelho com o que o DISCO não guardou — *o aparelho recebeu · o perfil não
-#: guardou*. Ele subiu de junto do `reenviar` para cá quando ganhou o segundo:
-#: uma constante lida acima do primeiro chamador é uma constante que o leitor
-#: de `_aplicar` não precisa caçar.
+#: guardou*. A constante fica onde subiu, acima do chamador: quem lê `_aplicar`
+#: não precisa caçá-la.
 _E_TAMBEM = " · "
 
 
 def _aplicar(p: Any, lado: str, modo_: str, params: list[int],
              uniq: str, ctx: Contexto | None = None,
              guardar: bool = True, *,
-             recibo_sempre: bool = False,
              lembrar_em: list[str] | None = None) -> tuple[bool, str, str]:
     """Manda o efeito ao daemon pela porta CERTA, e a certa depende do modo.
 
@@ -2477,13 +2476,13 @@ def _aplicar(p: Any, lado: str, modo_: str, params: list[int],
     **`_recibo` NÃO se apagou**, e continua dono da frase: o que mudou é QUANDO
     ele é chamado — só quando há uma segunda metade para prefixar.
 
-    ``recibo_sempre=True`` É A EXCEÇÃO, E ELA TEM UM DONO SÓ: o :func:`reenviar`,
-    que decide pelo **par** e não pelo lado. Ele manda os DOIS gatilhos da
-    coluna num clique, e a notícia dele é uma propriedade dos dois juntos —
-    *"o L2 recusou e o R2 foi"* é notícia, e nenhuma das duas chamadas a esta
-    função pode sabê-lo sozinha. Então ele pede o recibo sempre e decide depois:
-    guarda-os calados no sucesso pleno e só os usa quando há uma recusa a
-    nomear. **Sem esta porta, a frase da recusa perderia o nome do gatilho que
+    ``recibo_sempre`` SAIU EM 08/09/2026, COM O `reenviar`. Ele era a exceção e
+    tinha um dono só: o reenvio decidia pelo **par** e não pelo lado, então
+    pedia o recibo sempre e escolhia depois. Com o botão fora da tela por
+    decisão dela, o sinalizador ficou sem chamador — e um parâmetro que ninguém
+    passa é um ramo que ninguém mede. Se a faixa de reenvio voltar, ele volta
+    com ela; a razão está guardada na lápide. **Sem aquela porta, a frase da
+    recusa perderia o nome do gatilho que
     FUNCIONOU** — medido: a régua `test_um_lado_que_recusa_nao_cala_o_outro`
     reprovou com a frase *"Gatilho esquerdo (L2): Rigid — end (3)… · "*, com o
     separador pendurado e o R2 sumido. É a cura TRG-01 de novo, pelo avesso.
@@ -2511,7 +2510,7 @@ def _aplicar(p: Any, lado: str, modo_: str, params: list[int],
     rodapé não o alcançava — `pacotes/rodape.py` não importa este módulo. Clicar
     `Rígido` no L2 e depois "Salvar Perfil" gravava o gatilho DE ONTEM, porque o
     rodapé monta o rascunho a partir do PERFIL NO DISCO. É o mesmo defeito que
-    o `reenviar` já nomeia pela outra ponta.
+    o reenvio nomeava pela outra ponta, antes de o botão sair da tela.
 
     **O RASCUNHO CONTINUA, e não é redundância:** ele é a memória entre o clique
     e o tique seguinte (500 ms), e é ele que impede a coluna de voltar ao valor
@@ -2521,10 +2520,11 @@ def _aplicar(p: Any, lado: str, modo_: str, params: list[int],
     Gravar no perfil um efeito que o aparelho recusou seria a tela prometendo
     amanhã o que não fez hoje.
 
-    ``guardar=False`` é para quem REENVIA o que já está na tela — ver
-    :func:`reenviar`, cuja docstring declara *"ELE NÃO GRAVA NADA NO DISCO
-    DELA"*. O sinalizador existe para que o contrato dele continue verdadeiro
-    sem que o ESCRITOR se multiplique: a gravação segue morando só aqui.
+    ``guardar=False`` é para quem manda ao aparelho sem opinar pelo controle —
+    hoje só o :func:`em_todos`, que escreve na seção GLOBAL e não pode criar um
+    override por MAC. O sinalizador existe para que esse contrato continue
+    verdadeiro sem que o ESCRITOR se multiplique: a gravação segue morando só
+    aqui.
 
     ``lembrar_em`` É PARA QUEM MANDA EM BROADCAST — :func:`em_todos`, e é o
     único chamador. Com `uniq=""` o pedido vai para os controles todos (é o que
@@ -2556,7 +2556,7 @@ def _aplicar(p: Any, lado: str, modo_: str, params: list[int],
     # O SUCESSO PLENO NÃO TEM NOTÍCIA — e por isso não manda frase nenhuma. A
     # piscada do campo é a resposta inteira (`03-Q4`). Ver a docstring.
     recibo = ""
-    if nao_guardou or recibo_sempre:
+    if nao_guardou:
         recibo = _recibo(lado, modo_, corpo, ctx, uniq)
     if nao_guardou:
         # A SEGUNDA METADE VEM DEPOIS DO RECIBO, NUNCA ANTES — a frase tem de
@@ -3085,107 +3085,51 @@ def ajuste(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
     return {"recado": recibo}
 
 
-@gesto("03-gatilhos.html", "reenviar")
-def reenviar(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
-    """Manda de novo ao controle os DOIS gatilhos que estão NA TELA desta coluna.
+#: A LÁPIDE DO `reenviar` — 08/09/2026, e o roteiro desta remoção foi escrito
+#: pela própria régua que a cobrou.
+#:
+#: O botão `↻` nasceu em 04/09 (decisão [03] do PO), ela o VIU na tela e
+#: mandou tirar em 06/09 — *"sai"*. O desenho saiu no mesmo dia; o gesto ficou
+#: DE PROPÓSITO, porque o produto renderiza a PUBLICADA e o botão continuava
+#: lá: tirar o dono de um botão vivo troca um botão indesejado por um botão
+#: MORTO na mão dela, que é a `A-CASA-SABE-E-O-PRODUTO-NAO-FAZ` em miniatura.
+#:
+#: A PUBLICAÇÃO VEIO EM `44c2327e` e a segunda metade do ato ficou pendurada.
+#: `test_o_reenvio_sai_do_pacote_quando_sair_do_produto` acendeu exatamente no
+#: dia em que venceu — e nenhum dos 49 portões roda aquele arquivo, então o
+#: vermelho atravessou a integração calado até 08/09.
+#:
+#: O QUE O REENVIO PAGAVA CONTINUA EM ABERTO, e não se apaga com ele: a GTK tem
+#: *"Aplicar em L2"*/*"Aplicar em R2"* e esta aba não tem equivalente. A razão é
+#: do aparelho — o DualSense não devolve o modo em que está, `state_full` não
+#: publica `triggers`, e quando o efeito se perde não há caminho de volta senão
+#: reenviar. Se ela pedir de novo, o lugar é uma faixa própria, não a `guardar`.
 
-    DECISÃO [03] do PO, 04/09/2026: *"Um botão na faixa que JÁ EXISTE
-    (`--r-acao`, 34 px, já desenhada e aprovada), mandando os DOIS gatilhos
-    daquela coluna. Zero trilha nova."*
+    """O par L2+R2 que está NA COLUNA, pronto para o disco. Levanta se não houver.
 
-    **O QUE ELE PAGA, e a dívida é medida** (linha `Aplicar o efeito no
-    aparelho`): a GTK tem *"Aplicar em L2"* e *"Aplicar em R2"*, dois botões que
-    reenviam o que está na tela sem mexer em nada; a interface nova não tinha
-    nenhum. E o "Aplicar" do rodapé **não é substituto** — ele manda o rascunho
-    montado a partir do PERFIL NO DISCO, não o que ela acabou de escolher.
+    ELE ERA O MIOLO DO `guardar` E VIROU FUNÇÃO em 06/09/2026, quando o
+    :func:`em_todos` passou a precisar exatamente do mesmo par. Escrito duas
+    vezes, o segundo é o que esquece o `TRAVESSAO` — e `—` não é *"desligue este
+    gatilho"*, é *"não há controle neste lugar"*. Gravar um `Off` por causa dele
+    silenciaria, no perfil, um gatilho que o perfil dava a todo mundo.
 
-    **POR QUE ISSO NÃO É LUXO, e é a natureza do aparelho:** o DualSense não
-    devolve o modo em que está. Gatilho adaptativo é comando de IDA, e o
-    `state_full` não publica `triggers` — está escrito no topo deste arquivo e
-    o `docs/data/mapa-controles.csv` diz o mesmo pela outra ponta. Quando o
-    efeito se perde (o jogo escreveu por cima pelo hidraw, o controle voltou do
-    rádio, o daemon reaplicou um perfil), **não há como a tela saber**: o único
-    caminho de volta é reenviar.
-
-    **A FONTE É A TELA, e não o disco** — é a diferença inteira em relação ao
-    rodapé. O piloto recolhe a coluna pelo `data-hef-forma="@controle"`, do
-    mesmo jeito que o "Guardar esse efeito" já recolhe, e por isso este gesto
-    reusa o `_ajustes_da_coluna` em vez de escrever uma segunda leitura.
-
-    **ELE NÃO GRAVA NADA NO DISCO DELA**, e é o que o distingue do vizinho: o
-    `guardar` escreve em `meu_perfil.json` (e por isso está em
-    `hefesto_vivo.PERIGOSOS`); este só reenvia ao APARELHO valores que já estão
-    na tela. Reenviar o que já está lá é idempotente — nenhum valor novo, nenhum
-    byte a mais do que o `modo` e o `pronto` já mandam a cada clique dela.
-
-    **E CONTINUA NÃO GRAVANDO DEPOIS DA D2** — 05/09/2026, quando `modo`,
-    `pronto` e `ajuste` passaram a persistir no clique. Este passa
-    ``guardar=False``, e a razão é de PRODUTO, não de economia: a coluna pode
-    estar mostrando o gatilho da seção GLOBAL do perfil, sem override nenhum
-    daquele controle. Persistir aqui criaria uma opinião por-controle que ela
-    nunca deu — e a partir dali mudar o global deixaria de alcançar este
-    aparelho. Reenviar é dizer *"manda de novo o que está aí"*, não *"esta é a
-    minha escolha para este controle"*.
-
-    **UM LADO QUE RECUSA NÃO CALA O OUTRO.** Os dois gatilhos são independentes,
-    e parar no primeiro deixaria a coluna pela metade sem dizer. Aqui os dois
-    vão, e o desfecho de cada um entra na frase: se algum recusou, a frase
-    inteira sai como recusa (que é o canal que pousa no cartão em laranja); se
-    os dois foram, sai como recibo verde. **Um recibo que some a recusa de um
-    lado com o sucesso do outro seria a tela afirmando o que não é.**
+    O LADO SEM MODO FICA DE FORA, e é o que faz a fusão por campo funcionar: o
+    esquema lê `model_fields_set` lado a lado, e um lado ausente do pedido
+    continua *"sem opinião"*. Ver :func:`_com_os_gatilhos`.
     """
-    uniq = _exigir_controle(o, "reenviar")
-    forma = o.get("forma")
-    if not isinstance(forma, dict) or not forma:
-        raise RuntimeError(
-            "não consegui ler a coluna deste controle. O botão precisa do "
-            "`data-hef-forma` para o piloto recolher os campos — e sem eles não "
-            "há o que reenviar, porque o daemon não devolve o modo do gatilho.")
-
-    recibos: list[str] = []
-    recusas: list[str] = []
-    for sigla, disco in LADOS.items():
+    dos_lados: dict[str, dict[str, Any]] = {}
+    for lado, sigla in (("left", "e"), ("right", "d")):
         modo_ = str(forma.get(f"modo-chave-{sigla}") or "").strip()
         if not modo_ or modo_ == TRAVESSAO:
             continue
-        params = _ajustes_da_coluna(forma, sigla, modo_)
-        try:
-            ok, motivo, recibo = _aplicar(p, disco, modo_, params, uniq, ctx,
-                                          guardar=False, recibo_sempre=True)
-        except RuntimeError as erro:
-            # O `_conferir_o_desfecho` LEVANTA quando o byte não saiu, e a
-            # frase dele já nomeia o lado. Deixá-la subir aqui mataria o outro
-            # gatilho antes de ele ser tentado.
-            recusas.append(str(erro))
-            continue
-        if ok:
-            recibos.append(recibo)
-        else:
-            # O ASSUNTO VAI NA FRENTE, e aqui ele NÃO é opcional — medido na
-            # mordida desta frente. `_na_lingua_da_tela` devolve a recusa
-            # traduzida do daemon (*"Fim (3) precisa ser maior que Início (5)"*)
-            # e ela não nomeia gatilho nenhum: num clique que manda os DOIS, a
-            # frase sozinha deixa ela sem saber qual dos dois recusou.
-            recusas.append(
-                f"{_assunto(disco, modo_)} — "
-                f"{_na_lingua_da_tela(motivo, modo_) or 'o daemon não aplicou'}")
-    if not recibos and not recusas:
+        dos_lados[lado] = {"mode": modo_,
+                           "params": _ajustes_da_coluna(forma, sigla, modo_)}
+    if not dos_lados:
         raise RuntimeError(
-            "esta coluna não tem gatilho nenhum para reenviar. Escolha um modo "
-            "em L2 ou em R2 — `—` é como esta tela diz que o lugar está vazio.")
-    if recusas:
-        # OS RECIBOS ENTRAM AQUI, E SÓ AQUI — 06/09/2026, a `03-Q4`. O gesto
-        # decide pelo PAR: com uma recusa há notícia, e a frase precisa nomear
-        # também o gatilho que FUNCIONOU, senão ela deixa a coluna pela metade
-        # sem dizer. É por isto que o laço acima pede `recibo_sempre=True`.
-        return_ = _E_TAMBEM.join(recusas + [r for r in recibos if r])
-        raise RuntimeError(return_)
-    # SUCESSO PLENO DOS DOIS LADOS: a tela PISCA e nada é dito. Devolver
-    # `{"recado": _E_TAMBEM.join(recibos)}` com os recibos calados escreveria
-    # `" · "` no cartão dela — o separador sozinho, sem uma palavra em volta.
-    # Medido nesta frente, com os DOIS lados na forma; a régua de um lado só
-    # não o via, e é a diferença entre uma régua e uma opinião.
-    return None
+            "a coluna não trouxe modo nenhum. Os dois `<select>` de modo são "
+            "`modo-chave-e` e `modo-chave-d` — se eles mudaram de endereço, o "
+            "Guardar deixou de achar o que guardar.")
+    return dos_lados
 
 
 def _o_par_da_coluna(forma: dict[str, Any]) -> dict[str, dict[str, Any]]:
@@ -3269,18 +3213,18 @@ def em_todos(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
     clique dela por trás. O que ele nunca faz é o segundo caso — sem coluna não
     há `forma`, e sem `forma` ele recusa dizendo.
 
-    **A FONTE É A TELA, e não o disco** — a mesma razão do `reenviar`: o
-    DualSense não devolve o modo em que está, e o que ela acabou de escolher só
-    existe na coluna. O piloto recolhe a coluna pelo `data-hef-forma="@controle"`,
+    **A FONTE É A TELA, e não o disco** — pela razão do aparelho: o DualSense
+    não devolve o modo em que está, e o que ela acabou de escolher só existe na
+    coluna. O piloto recolhe a coluna pelo `data-hef-forma="@controle"`,
     e por isso este gesto reusa o :func:`_o_par_da_coluna` do "Guardar esse
     efeito" em vez de escrever uma segunda leitura.
 
-    **PROVISÓRIO — DECISÃO DELA.** O gesto é do produto e vale; o BOTÃO que o
-    alcança está na bancada (`mockup/03-gatilhos.html`) e **não** na página
-    publicada, porque publicar é ato dela e aqui nasce um botão VISÍVEL numa
-    faixa de que ela mandou tirar outro em 06/09. Enquanto ela não publicar, o
-    caminho existe e ninguém o alcança sem querer — que é a mesma forma com que
-    o `reenviar` espera, pelo lado inverso.
+    **DEIXOU DE SER PROVISÓRIO — 08/09/2026.** Esta docstring dizia que o botão
+    estava na bancada e **não** na publicada, esperando o ato dela; a publicação
+    de `44c2327e` o levou, e as quatro colunas da página que o produto renderiza
+    o têm. O gesto que estava à espera passou a ser clicável, e o texto que
+    dizia o contrário atravessou dois dias — o mesmo `--publicar` cuja outra
+    metade deixou o `reenviar` sem botão. Ver a lápide dele neste arquivo.
     """
     uniq = _exigir_controle(o, "em todos")
     forma = o.get("forma")
@@ -3313,7 +3257,7 @@ def em_todos(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
             # O ASSUNTO VAI NA FRENTE porque um clique manda os DOIS lados: a
             # recusa traduzida do daemon não nomeia gatilho nenhum, e sem o
             # assunto ela fica sem saber qual dos dois recusou. É a mesma cura
-            # do `reenviar`, com a mesma razão medida.
+            # que o reenvio tinha, com a mesma razão medida.
             raise RuntimeError(
                 f"{_assunto(disco, str(cfg['mode']))} — "
                 f"{_na_lingua_da_tela(motivo, str(cfg['mode'])) or 'o daemon não aplicou'}")
@@ -3687,7 +3631,14 @@ METODOS: set[str] = set()
 #: ESCOPO GLOBAL desta aba — a linha 110 do CSV da paridade. Era o único caminho
 #: que faltava para a seção global do perfil, e é ela que um controle novo
 #: herda. Ver :func:`em_todos`.
-PISO_DA_ABA = 6
+#:
+#: **6 → 5 EM 08/09/2026, E É A PRIMEIRA QUEDA DESTE PISO.** "O piso SÓ SOBE" é
+#: a regra, e a exceção tem de ser exatamente esta: ela olhou o botão na tela e
+#: mandou tirá-lo, a publicação levou o desenho, e o gesto saiu atrás. Uma queda
+#: por DECISÃO DELA é o contrário do defeito que a regra existe para pegar — o
+#: que ela pega é a queda SILENCIOSA, o clique que deixa de fazer alguma coisa
+#: sem ninguém escolher isso. Ver a lápide do `reenviar` acima.
+PISO_DA_ABA = 5
 #: O `uniq` da prova é a faixa sintética da casa: há dois portões de anonimato
 #: nesta árvore e eles não perdoam.
 _UNIQ = "aa:bb:cc:00:00:01"
@@ -3764,19 +3715,6 @@ PROVAS = [
                                    "forma": _forma_de_prova("e", "Rigid")},
      "chama": [("trigger_set_detalhado",
                 ["left", "Rigid", [_padroes("Rigid")[0], 200]], {"uniq": _UNIQ}), _GUARDOU]},
-    # O REENVIO: UM clique, DOIS envios, na ordem L2 → R2. A prova mistura os
-    # dois modos de propósito — `Rigid` de um lado e `Desligado` do outro —
-    # porque as PORTAS são diferentes e a R-19 mora nessa diferença: `Off` é
-    # `trigger.reset` (que LIMPA a trava manual) e nunca `trigger.set` com
-    # `Off` (que a ARMA). Se alguém fizer o reenvio mandar tudo pela mesma
-    # porta, esta linha reprova pelo NOME da função.
-    {"pagina": PAGINA,  # (noqa-acento) chave do contrato
-     "gesto": "reenviar",
-     "clique": {"forma": {**_forma_de_prova("e", "Rigid"),
-                          **_forma_de_prova("d", "Off")}},
-     "chama": [("trigger_set_detalhado", ["left", "Rigid", _padroes("Rigid")],
-                {"uniq": _UNIQ}),
-               ("trigger_reset_detalhado", ["right"], {"uniq": _UNIQ})]},
     # O ESCOPO GLOBAL: UM clique, o par da coluna, e o `uniq` VAZIO. O `""` é o
     # que prova o broadcast — `ipc_bridge._payload_trigger_set` só põe a chave
     # no pedido quando ela é verdadeira, e é assim que a GTK manda com o alvo em
@@ -3790,10 +3728,6 @@ PROVAS = [
      "clique": {"forma": _forma_de_prova("e", "Rigid")},
      "chama": [("trigger_set_detalhado", ["left", "Rigid", _padroes("Rigid")],
                 {"uniq": ""}), _GUARDOU]},
-    #: O `reenviar` NÃO leva `_GUARDOU`, e não é esquecimento: ele reenvia ao
-    #: aparelho o que o rascunho JÁ tem, e o rascunho veio do perfil. Não há
-    #: escolha nova a guardar, e gravar aqui reescreveria o perfil a cada
-    #: reenvio — inclusive por cima de uma edição feita noutra aba no meio.
 ]
 
 #: OS GESTOS QUE O DAEMON ACEITA E NÃO PUBLICA. O `state_full` não traz

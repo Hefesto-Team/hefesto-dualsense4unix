@@ -400,124 +400,16 @@ def test_a_dica_do_pronto_acompanha_o_modo_no_tique(a03, ctx):
 
 
 # ---------------------------------------------------------------------------
-# [03] O REENVIO
+# [03] O REENVIO — as cinco réguas do GESTO saíram em 08/09/2026, com ele.
+#
+# Elas exercitavam `a03_gatilhos.reenviar`, que foi apagado no dia em que a
+# publicação de `44c2327e` tirou o `↻` da página que o produto renderiza. Ver a
+# lápide em `a03_gatilhos.py`, que diz o que o botão pagava e continua aberto.
+#
+# AS DUAS QUE FICAM são as que guardam a DECISÃO DELA, e nenhuma das duas toca
+# o gesto: uma cobra que o botão não volte ao desenho, a outra que o botão e o
+# dono nunca voltem em separado.
 # ---------------------------------------------------------------------------
-def test_o_reenvio_manda_os_dois_gatilhos_da_coluna(a03, ctx):
-    """Um clique, DOIS envios — L2 e R2 —, e cada um pela porta do seu modo.
-
-    A DÍVIDA (linha `Aplicar o efeito no aparelho`): a GTK tem "Aplicar em L2" e
-    "Aplicar em R2"; a interface nova não tinha nenhum, e o "Aplicar" do rodapé
-    não substitui — ele manda o que está no DISCO.
-
-    A R-19 ESTÁ NA MESMA LINHA, e é o que a mistura de modos prova: `Off` é
-    `trigger.reset` (que LIMPA a trava manual da troca automática de perfil) e
-    nunca `trigger.set` com `Off` (que a ARMA).
-
-    MORDIDA: mandar só um lado reprova na contagem; mandar `Off` por
-    `trigger_set_detalhado` reprova no NOME da função.
-    """
-    p = _Ponte()
-    forma = {"modo-chave-e": "Rigid", "modo-chave-d": "Off"}
-    _clicar(a03, "reenviar", ctx(), {"forma": forma}, p)
-
-    assert [c[0] for c in p.chamadas] == [
-        "trigger_set_detalhado", "trigger_reset_detalhado"], (
-        f"o reenvio chamou {[c[0] for c in p.chamadas]} — esperava um envio por "
-        f"gatilho, e o `Off` pela porta do reset (R-19)")
-    assert p.chamadas[0][1][0] == "left" and p.chamadas[1][1][0] == "right"
-    assert all(c[2].get("uniq") == UNIQ for c in p.chamadas), (
-        "um dos dois envios foi sem `uniq` — sem ele o daemon vai em BROADCAST "
-        "e zera o gatilho dos quatro (o defeito ABAS-06)")
-
-
-def test_o_reenvio_manda_o_que_esta_na_tela_e_nao_o_que_esta_no_disco(a03, ctx):
-    """É a diferença inteira em relação ao "Aplicar" do rodapé.
-
-    O rodapé monta o rascunho com `DraftConfig.from_profile(load_profile(nome))`
-    — o perfil do DISCO. Este botão recolhe a COLUNA (`data-hef-forma`), que é o
-    único lugar onde a escolha viva existe: o DualSense não devolve o modo em
-    que está.
-
-    A régua põe no disco um modo e na tela OUTRO, e cobra o da tela.
-
-    MORDIDA: trocar a leitura da `forma` por uma consulta ao perfil e o daemon
-    passa a receber `Rigid` (o do disco) em vez de `Machine` (o da tela).
-    """
-    p = _Ponte()
-    _clicar(a03, "reenviar", ctx("Rigid", "Rigid"),
-            {"forma": {"modo-chave-e": "Machine"}}, p)
-
-    assert len(p.chamadas) == 1, "só um lado tinha modo na tela"
-    assert p.chamadas[0][1][1] == "Machine", (
-        f"o reenvio mandou {p.chamadas[0][1][1]!r} — o modo do DISCO. A tela "
-        f"dizia `Machine`, e é o que ela vê que tem de ir")
-
-
-def test_o_reenvio_leva_os_ajustes_da_coluna(a03, ctx):
-    """Os números vão junto, na ORDEM do spec — nunca na ordem da tela.
-
-    Sem isto o reenvio mandaria os PADRÕES do modo, e ela veria o botão desfazer
-    o ajuste que acabou de fazer. O leitor é o mesmo do "Guardar esse efeito"
-    (`_ajustes_da_coluna`), e por isso não há uma segunda ordem a divergir.
-
-    MORDIDA: mandar `_padroes(modo)` em vez de ler a coluna e o `200` some.
-    """
-    from pacotes.a03_gatilhos import _padroes
-
-    p = _Ponte()
-    _clicar(a03, "reenviar", ctx(),
-            {"forma": {"modo-chave-e": "Rigid", "aj-val-e-1": "200"}}, p)
-
-    esperado = list(_padroes("Rigid"))
-    esperado[1] = 200
-    assert p.chamadas[0][1][2] == esperado, (
-        f"o reenvio mandou {p.chamadas[0][1][2]!r} e a coluna dizia "
-        f"{esperado!r} — o botão desfaria na mão dela o ajuste que ela fez")
-
-
-def test_um_lado_que_recusa_nao_cala_o_outro(a03, ctx):
-    """Os dois gatilhos são independentes, e parar no primeiro deixa metade.
-
-    E A FRASE TEM DE DIZER OS DOIS: um recibo que some a recusa de um lado com o
-    sucesso do outro seria a tela afirmando o que não é — a nona aparição do
-    mesmo defeito de forma nesta aba.
-
-    MORDIDA: deixar o `RuntimeError` do primeiro lado subir e o R2 nunca é
-    tentado; juntar tudo num "não deu" e o nome do lado some da frase.
-    """
-    p = _Ponte(recusa=("left",))
-    with pytest.raises(RuntimeError) as erro:
-        _clicar(a03, "reenviar", ctx(),
-                {"forma": {"modo-chave-e": "Rigid", "modo-chave-d": "Bow"}}, p)
-
-    assert len(p.chamadas) == 2, (
-        f"o L2 recusou e o R2 recebeu {len(p.chamadas) - 1} envio(s) — parar no "
-        f"primeiro deixa a coluna pela metade, sem dizer")
-    frase = str(erro.value)
-    assert a03.NOME_DO_LADO["left"] in frase and a03.NOME_DO_LADO["right"] in frase, (
-        f"a frase não nomeia os dois gatilhos: {frase!r}. É a cura TRG-01 — a "
-        f"barra dizia `LEFT -> Off`, trocando a fala dela por id interno")
-
-
-def test_o_reenvio_recusa_dizendo_quando_nao_ha_o_que_mandar(a03, ctx):
-    """Sem coluna e sem modo ele RECUSA DIZENDO, nunca manda às cegas.
-
-    São dois casos e duas frases: o botão que chegou sem `data-hef-forma` (a
-    página perdeu o endereço) e a coluna cujos dois campos estão no travessão (o
-    lugar vazio). Tratá-los pela mesma frase foi um defeito medido nesta aba.
-
-    MORDIDA: devolver `None` em vez de levantar e os dois cliques passam a
-    "dar certo" sem um byte no fio.
-    """
-    p = _Ponte()
-    with pytest.raises(RuntimeError):
-        _clicar(a03, "reenviar", ctx(), {}, p)
-    with pytest.raises(RuntimeError):
-        _clicar(a03, "reenviar", ctx(),
-                {"forma": {"modo-chave-e": a03.TRAVESSAO,
-                           "modo-chave-d": a03.TRAVESSAO}}, p)
-    assert p.chamadas == [], "recusou e chamou o daemon assim mesmo"
-
 
 def test_o_reenvio_saiu_do_desenho():
     """O `↻` SAIU da bancada — 06/09/2026, decisão dela.
@@ -549,33 +441,28 @@ def test_o_reenvio_saiu_do_desenho():
 def test_o_reenvio_sai_do_pacote_quando_sair_do_produto(a03):
     """O botão e o dono dele saem JUNTOS, e esta régua é a corda entre os dois.
 
-    **O ESTADO DE HOJE, e ele é de propósito:** o `↻` saiu do DESENHO e continua
-    no PRODUTO. O piloto renderiza sempre a página PUBLICADA
-    (`onde.pagina(…, publicado=True)`), e publicar é ato dela —
-    `check_o_desenho_aprovado.py --publicar 03`. Enquanto isso não acontece, o
-    botão está na tela dela, e o gesto TEM de ter dono.
+    **O ATO ACONTECEU — 08/09/2026, e esta régua é quem o cobrou.** Ela mandou
+    tirar o `↻` em 06/09 (*"sai"*), vendo-o na tela; o desenho saiu no mesmo dia
+    e o gesto ficou de propósito, porque o produto renderiza a PUBLICADA e o
+    botão continuava lá. A publicação veio em `44c2327e` e a segunda metade do
+    ato ficou pendurada — esta régua acendeu no dia em que venceu, e portão
+    nenhum dos 49 roda este arquivo, então o vermelho atravessou a integração
+    calado. Hoje os dois lados estão fora: página sem botão, pacote sem gesto.
 
-    **POR QUE O GESTO NÃO SAIU JUNTO COM O DESENHO, medido e não suposto:** um
-    clique sem dono não recusa, não avisa e não muda a tela — o piloto só
-    imprime `[gesto sem dono]` no stderr de quem lançou a janela. Tirar o dono
-    agora trocaria um botão que ela mandou remover por um botão MORTO na mão
-    dela, que é a `A-CASA-SABE-E-O-PRODUTO-NAO-FAZ` em miniatura.
+    **ELA CONTINUA MORDENDO NOS DOIS SENTIDOS**, e é por isso que fica depois de
+    cobrada:
 
-    **E ELA MORDE NOS DOIS SENTIDOS**, que é o ponto inteiro:
+    * devolva o `<button>` ao desenho e publique → reprova, porque haveria um
+      botão sem dono, e um clique sem dono não recusa, não avisa e não muda a
+      tela: o piloto só imprime `[gesto sem dono]` no stderr de quem lançou a
+      janela. É a `A-CASA-SABE-E-O-PRODUTO-NAO-FAZ` em miniatura;
+    * devolva o `@gesto(…, "reenviar")` sem o botão → reprova, porque sobra
+      código que ninguém alcança.
 
-    * arranque o `@gesto(…, "reenviar")` hoje → reprova, porque o produto ainda
-      mostra o botão;
-    * publique a aba 03 sem tirar o gesto → reprova, porque o dono ficou para um
-      botão que ninguém mais desenha. **É esta metade que impede o resto do
-      trabalho de ser esquecido**, e ela acende exatamente no dia em que ele
-      vence.
-
-    O QUE FAZER QUANDO ELA REPROVAR PELA SEGUNDA METADE: apague a função
-    `reenviar` e o `@gesto` dela em `a03_gatilhos.py`, a entrada do `PROVAS`,
-    baixe `PISO_DA_ABA` de 5 para 4, e apague as quatro réguas de gesto desta
-    seção mais esta. O `test_reenviar_nao_grava` e o
-    `test_o_reenviar_nao_ganhou_frase_de_disco`
-    (`test_o_gatilho_aplicado_vai_para_o_perfil.py`) saem no mesmo ato.
+    Um `git revert` desatento ou uma sprint velha fazem qualquer um dos dois sem
+    barulho. A lápide em `a03_gatilhos.py` diz o que o botão pagava e o que
+    continua aberto: a GTK tem *"Aplicar em L2"*/*"Aplicar em R2"* e esta aba
+    não tem equivalente, porque o DualSense não devolve o modo em que está.
     """
     from pacotes import gesto_da_pagina
 
@@ -592,41 +479,6 @@ def test_o_reenvio_sai_do_pacote_quando_sair_do_produto(a03):
         "Ver a docstring desta régua para o que apagar.")
 
 
-def test_o_glifo_do_reenvio_nao_e_emoji():
-    """`U+21BB` é do bloco Arrows, que o ADR-011 preserva como UI textual.
-
-    O emoji de mesmo desenho (`U+1F504`) seria barrado por
-    `scripts/validar-glifos.py`, e com razão — **e ele não aparece escrito
-    aqui**: o portão lê os arquivos desta árvore, e um exemplo do proibido é o
-    proibido. Foi assim que este arquivo reprovou o `glifos` na primeira leva de
-    portões desta frente, com o exemplo dentro de um comentário.
-
-    A régua olha o que o desenho PUBLICOU, e não a constante do gerador: é no
-    arquivo que o portão morde.
-
-    **ELA MUDOU DE ARQUIVO EM 06/09/2026, e a troca é o ponto:** o botão saiu da
-    BANCADA e continua no PUBLICADO, que é o que ela clica. Deixá-la na bancada
-    a faria medir o glifo dentro de um COMENTÁRIO de CSS — e por pouco: a
-    primeira versão da nota que explica a saída escrevia o `↻` por extenso, e o
-    comentário é EMITIDO para dentro do `<style>` da página. A régua teria dado
-    verde sobre a própria prosa, que é o defeito que o
-    `a03_gatilhos.sem_comentarios_de_css` documenta e que esta aba já pagou uma
-    vez. O glifo saiu do comentário, e a régua veio para onde o botão está.
-
-    Ela se apaga no `--publicar 03`, junto com o gesto —
-    `test_o_reenvio_sai_do_pacote_quando_sair_do_produto` diz o que sai.
-    """
-    from unicodedata import name
-
-    html = _publicada()
-    assert "↻" in html, (
-        "o glifo do reenvio sumiu da página PUBLICADA. Se foi o `--publicar 03`, "
-        "esta régua sai junto com o gesto")
-    assert "ARROW" in name("↻")
-    assert chr(0x1F504) not in html, (
-        "a página ganhou o emoji U+1F504 — o portão de glifos o reprova")
-
-
 # ---------------------------------------------------------------------------
 # [04] A TELA AVISA QUANDO O EFEITO CHEGA — a D-01, e o conflito C-3
 # ---------------------------------------------------------------------------
@@ -637,11 +489,6 @@ _OS_QUE_APLICAM = [
     ("pronto", {"lado": "d", "v": "stop_hard"}),
     ("ajuste", {"lado": "e", "i": "1", "valor": "200",
                 "forma": {"modo-chave-e": "Rigid"}}),
-    # O REENVIO VAI COM OS DOIS LADOS, e a diferença é um defeito medido: com
-    # UM lado só, o `_E_TAMBEM.join` de um recibo calado devolve `""` e a régua
-    # dá verde; com DOIS, ele devolve `" · "` — o separador sozinho, escrito no
-    # cartão dela. A primeira versão desta régua tinha um lado só e não o viu.
-    ("reenviar", {"forma": {"modo-chave-e": "Rigid", "modo-chave-d": "Bow"}}),
 ]
 
 
@@ -687,7 +534,7 @@ def test_o_sucesso_pleno_nao_manda_recado(
         f"recusou a palavra no cartão: *'nenhuma palavra nova entra na tela'*")
 
 
-@pytest.mark.parametrize(("gesto_", "clique"), _OS_QUE_APLICAM[:3])
+@pytest.mark.parametrize(("gesto_", "clique"), _OS_QUE_APLICAM)
 def test_a_falha_de_disco_continua_falando(
         a03, ctx, disco_que_nao_abre, gesto_, clique):
     """Meio ato deu certo: aí SIM a tela fala, e diz as DUAS metades.
@@ -719,7 +566,7 @@ def test_a_falha_de_disco_continua_falando(
         f"a frase não tem as duas metades: {recado!r}")
 
 
-@pytest.mark.parametrize(("gesto_", "clique"), _OS_QUE_APLICAM[:3])
+@pytest.mark.parametrize(("gesto_", "clique"), _OS_QUE_APLICAM)
 def test_o_recibo_ainda_nomeia_o_gatilho_quando_prefixa_a_noticia(
         a03, ctx, disco_que_nao_abre, gesto_, clique):
     """A frase abre pelo que ELA FEZ, e o recibo é quem nomeia o gatilho.

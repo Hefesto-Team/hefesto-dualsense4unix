@@ -298,33 +298,6 @@ def test_a_secao_global_do_perfil_fica_intacta(pac, disco) -> None:
 
 
 # ---------------------------------------------------------------------------
-# 3. O REENVIAR NÃO GRAVA
-# ---------------------------------------------------------------------------
-
-
-def test_reenviar_nao_grava(pac, disco) -> None:
-    """A medição que sustenta a isenção em `test_todo_gesto_que_grava_esta_protegido`.
-
-    A coluna pode estar mostrando o gatilho da seção GLOBAL, sem override
-    nenhum: persistir aqui criaria uma opinião por-controle que ela nunca deu, e
-    a partir dali mudar o global deixaria de alcançar este aparelho.
-    """
-    _, gravados = disco
-    p = PonteDeMentira()
-    _gesto(pac, "reenviar")(
-        _ctx(pac),
-        {"uniq": UNIQ, "forma": {"modo-chave-e": "Rigid", "modo-chave-d": "Off"}},
-        p)
-
-    assert len(p.enviados) == 2, (
-        f"o reenviar mandou {len(p.enviados)} gatilho(s) ao aparelho — ele "
-        f"manda os DOIS da coluna")
-    assert gravados == [], (
-        f"o reenviar gravou {len(gravados)} vez(es) no perfil dela. Ele reenvia "
-        f"o que está na TELA, e a tela pode estar mostrando o global.")
-
-
-# ---------------------------------------------------------------------------
 # 4, 5 e 6. AS TRÊS GUARDAS
 # ---------------------------------------------------------------------------
 
@@ -513,40 +486,6 @@ def test_os_tres_gestos_que_gravam_carregam_a_frase(
         f"continuam mudos.")
     assert SUMIU in str(saida["recado"]), (
         f"o gesto {gesto_!r} não nomeou o perfil: {saida['recado']!r}")
-
-
-def test_o_reenviar_nao_ganhou_frase_de_disco(pac, perfil_que_nao_abre) -> None:
-    """O contrato do `reenviar` diz *"ELE NÃO GRAVA NADA NO DISCO DELA"*.
-
-    Ele passa `guardar=False`, então `_guardar_no_perfil` nem é chamado e a
-    frase é sempre `""`. **Isto não é sorte, e sem esta régua o Passo 2 da D-17
-    poderia somar uma queixa de disco num gesto que por contrato não toca o
-    disco** — e ninguém veria: o recibo dele já é uma soma de duas metades pelo
-    mesmo separador.
-
-    A razão do `guardar=False` é de PRODUTO: a coluna pode estar mostrando o
-    gatilho da seção GLOBAL do perfil. Persistir aqui criaria uma opinião
-    por-controle que ela nunca deu.
-
-    A MORDIDA: troque o `guardar=False` da chamada em `reenviar` por `True` e
-    esta régua reprova com a frase do perfil dentro do recibo do reenvio — e
-    `test_reenviar_nao_grava` reprova junto, pelo disco.
-    """
-    gravados = perfil_que_nao_abre
-    p = PonteDeMentira()
-    saida = _gesto(pac, "reenviar")(
-        _ctx(pac, ativo=SUMIU),
-        {"uniq": UNIQ, "forma": {"modo-chave-e": "Rigid", "modo-chave-d": "Off"}},
-        p)
-
-    assert len(p.enviados) == 2, (
-        f"o reenviar mandou {len(p.enviados)} gatilho(s) — ele manda os DOIS")
-    assert gravados == [], "o reenviar gravou no perfil dela"
-    frase = str((saida or {}).get("recado") or "")
-    assert "perfil" not in frase.lower() and SUMIU not in frase, (
-        f"o reenviar ganhou uma frase de disco: {frase!r}. Ele reenvia o que "
-        f"está na TELA e não guarda nada — queixar-se do perfil aqui seria a "
-        f"tela falando de um disco que este gesto não tocou.")
 
 
 def test_a_falha_de_disco_diz_as_duas_metades(pac, monkeypatch) -> None:
