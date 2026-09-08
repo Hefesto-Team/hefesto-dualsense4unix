@@ -692,12 +692,37 @@ async def test_ida_e_volta_pelo_socket_de_verdade(
     a primeira asserção reprova com ``(False, 'O Hefesto não entendeu o que você
     declarou...')``, e nada chega ao disco.
     """
-    monkeypatch.setenv("XDG_RUNTIME_DIR", str(tmp_path / "run"))
+    # O BERÇO É CURTO DE PROPÓSITO, e o número é medido — 08/09/2026.
+    #
+    # `AF_UNIX` tem um teto de **108 caracteres** no caminho, e o `tmp_path` do
+    # pytest é longo: `/tmp/pytest-of-<usuária>/pytest-NNN/<nome-do-teste-0>/`.
+    # Somado a `run/hefesto-dualsense4unix/e2e.sock`, o caminho desta régua
+    # chegava a **106** nesta máquina — **dois** caracteres de folga. Um nome de
+    # usuária dois caracteres mais longo, ou um `-1` no diretório do pytest
+    # quando a volta anterior não foi limpa, e o teste morre com
+    # `OSError: AF_UNIX path too long` sobre um produto que está certo.
+    #
+    # Medido: ele estava VERMELHO na base e ninguém tinha visto, porque nenhum
+    # dos 51 portões roda este arquivo.
+    #
+    # O berço vem de `mkdtemp` na raiz do sistema (4 caracteres), o que deixa a
+    # folga em ~70. O `XDG_RUNTIME_DIR` continua isolado — o daemon VIVO dela
+    # não é tocado —, e a limpeza é do `finally`, não do pytest.
+    import shutil
+    import tempfile
+
+    berco = Path(tempfile.mkdtemp(prefix="hef-e2e-"))
+    monkeypatch.setenv("XDG_RUNTIME_DIR", str(berco / "run"))
+    caminho = berco / "run" / "hefesto-dualsense4unix" / "e2e.sock"
+    assert len(str(caminho)) < 100, (
+        f"o berço do socket mede {len(str(caminho))} caracteres e o teto do "
+        f"`AF_UNIX` é 108: {caminho}. Esta régua morreria por endereço longo, "
+        f"não por defeito.")
     servidor = IpcServer(
         controller=FakeController(transport="usb", states=[_estado()]),
         store=StateStore(),
         profile_manager=None,  # type: ignore[arg-type]
-        socket_path=tmp_path / "run" / "hefesto-dualsense4unix" / "e2e.sock",
+        socket_path=caminho,
         daemon=SimpleNamespace(_maquina=MaquinaConfig()),
     )
     monkeypatch.setenv("HEFESTO_DUALSENSE4UNIX_IPC_SOCKET_NAME", "e2e.sock")
@@ -715,6 +740,8 @@ async def test_ida_e_volta_pelo_socket_de_verdade(
         assert segunda == (True, None)
     finally:
         await servidor.stop()
+        # O berço é nosso, então a limpeza também é — o pytest não conhece este.
+        shutil.rmtree(berco, ignore_errors=True)
 
     assert _documento(arquivo) == {
         "version": 1,
