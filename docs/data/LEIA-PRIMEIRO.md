@@ -10,8 +10,9 @@ nele. **O que ele não é:** um resumo do mapa. Nada aqui substitui a prosa das
 células — ele te dá o endereço dela.
 
 **A conta que justifica este arquivo.** Até hoje havia duas portas: ler o CSV
-inteiro (661.177 caracteres em células, ~165 mil tokens) ou não ler nada. O
-veredito por lado das 308 linhas, sem uma linha de prosa, custa 27.828
+inteiro (<!--@caracteres-do-mapa-->1.396.169<!--/--> caracteres em células,
+~<!--@tokens-do-mapa-->349<!--/--> mil tokens) ou não ler nada. O
+veredito por lado das <!--@linhas-do-mapa-->308<!--/--> linhas, sem uma linha de prosa, custa 27.828
 caracteres — **4,2%**. A porta barata sempre existiu; faltava alguém dizer onde
 ela fica.
 
@@ -35,13 +36,13 @@ onde saiu em 25/08. Corrigir à mão seria pagar o mesmo preço de novo amanhã.
 
 | Arquivo | Bytes | O que é | Quando abrir |
 |---|---:|---|---|
-| `docs/data/mapa-controles.csv` | <!--@bytes:docs/data/mapa-controles.csv-->1.333.843<!--/--> | **A FONTE.** <!--@linhas-do-mapa-->308<!--/--> linhas x <!--@colunas-do-mapa-->50<!--/--> colunas. Uma linha = uma feature em um controle. É portão, não documentação. | Sempre, mas **filtrado** — nunca com `Read` inteiro. Veja a seção 5. |
-| `docs/data/ensaios.csv` | <!--@bytes:docs/data/ensaios.csv-->152.590<!--/--> | **O LASTRO.** <!--@linhas-do-caderno-->181<!--/--> ensaios x <!--@colunas-do-caderno-->14<!--/--> colunas. Cada linha é uma medição com hardware na mesa. Casa com o mapa por `linha_id == id`. **`degrau` e `ponte` existem no cabeçalho desde 20/08/2026 e quase ninguém as respondeu:** `ponte` está vazia em <!--@caderno-sem-ponte-->181<!--/--> ensaios e `degrau` em <!--@caderno-sem-degrau-->177<!--/-->. Não procure dado que ninguém escreveu ainda. | Quando a célula do mapa diz `medido` e você quer ver a medição. |
-| `html/specs.html` | <!--@bytes:html/specs.html-->2.081.795<!--/--> | **DERIVADO** do CSV + do caderno, por `scripts/gerar-mapa.py`. Filtra no navegador. Mudou da raiz para `html/` em 25/08/2026. | **IA: não abra.** Ele embute o CSV inteiro como JSON: custa ~2x a fonte pela mesma informação. É excelente para olho humano com navegador, e péssimo para leitura por texto. |
+| `docs/data/mapa-controles.csv` | <!--@bytes:docs/data/mapa-controles.csv-->1.455.161<!--/--> | **A FONTE.** <!--@linhas-do-mapa-->308<!--/--> linhas x <!--@colunas-do-mapa-->50<!--/--> colunas. Uma linha = uma feature em um controle. É portão, não documentação. | Sempre, mas **filtrado** — nunca com `Read` inteiro. Veja a seção 5. |
+| `docs/data/ensaios.csv` | <!--@bytes:docs/data/ensaios.csv-->157.291<!--/--> | **O LASTRO.** <!--@linhas-do-caderno-->184<!--/--> ensaios x <!--@colunas-do-caderno-->14<!--/--> colunas. Cada linha é uma medição com hardware na mesa. Casa com o mapa por `linha_id == id`. **`degrau` e `ponte` existem no cabeçalho desde 20/08/2026 e quase ninguém as respondeu:** `ponte` está vazia em <!--@caderno-sem-ponte-->184<!--/--> ensaios e `degrau` em <!--@caderno-sem-degrau-->178<!--/-->. Não procure dado que ninguém escreveu ainda. | Quando a célula do mapa diz `medido` e você quer ver a medição. |
+| `html/specs.html` | <!--@bytes:html/specs.html-->2.208.432<!--/--> | **DERIVADO** do CSV + do caderno, por `scripts/gerar-mapa.py`. Filtra no navegador. Mudou da raiz para `html/` em 25/08/2026. | **IA: não abra.** Ele embute o CSV inteiro como JSON: custa ~2x a fonte pela mesma informação. É excelente para olho humano com navegador, e péssimo para leitura por texto. |
 | `docs/protocol/dualsense-referencia-canonica.md` | <!--@bytes:docs/protocol/dualsense-referencia-canonica.md-->103.624<!--/--> | **O PROTOCOLO.** O que o DualSense entende, byte a byte. | Quando a pergunta é "que report/offset/valor eu mando". Use a régua de conversão da seção 6. |
 | `docs/protocol/paridade-bluetooth-versus-cabo.md` | <!--@bytes:docs/protocol/paridade-bluetooth-versus-cabo.md-->18.735<!--/--> | Tabela cabo x rádio em prosa. Declara-se desempatador nas linhas `MEDIDO AO VIVO`. | Para visão geral. **Onde divergir do mapa fora das linhas `MEDIDO AO VIVO`, o mapa vence** — ele tem domínio fechado e portão; a tabela é prosa. |
-| `docs/process/METODO-DE-ISOLAMENTO.md` | <!--@bytes:docs/process/METODO-DE-ISOLAMENTO.md-->63.404<!--/--> | O ciclo de ensaio: perguntas de sanidade, oito passos, as armadilhas A-1..A-25. | Quando você vai **produzir** medição nova, não consumir. Cuidado: ele ainda ensina o nome de coluna `grau`, que o portão de hoje reprova (seção 6). |
-| `scripts/check_paridade_transporte.py` | <!--@bytes:scripts/check_paridade_transporte.py-->136.747<!--/--> | **O PORTÃO** do mapa, e a melhor explicação de método da casa — a docstring nomeia cada regra e o defeito real que a fez nascer. | Antes de escrever no CSV. Leia a docstring inteira — ela vai da linha 2 à <!--@ultima-linha-da-docstring-do-portao-->343<!--/-->. |
+| `docs/process/METODO-DE-ISOLAMENTO.md` | <!--@bytes:docs/process/METODO-DE-ISOLAMENTO.md-->63.681<!--/--> | O ciclo de ensaio: perguntas de sanidade, oito passos, as armadilhas A-1..A-25. | Quando você vai **produzir** medição nova, não consumir. Cuidado: ele ainda ensina o nome de coluna `grau`, que o portão de hoje reprova (seção 6). |
+| `scripts/check_paridade_transporte.py` | <!--@bytes:scripts/check_paridade_transporte.py-->143.239<!--/--> | **O PORTÃO** do mapa, e a melhor explicação de método da casa — a docstring nomeia cada regra e o defeito real que a fez nascer. | Antes de escrever no CSV. Leia a docstring inteira — ela vai da linha 2 à <!--@ultima-linha-da-docstring-do-portao-->343<!--/-->. |
 | `scripts/eliminacao.py` | <!--@bytes:scripts/eliminacao.py-->11.675<!--/--> | **O JUIZ.** Lê o caderno e devolve um veredito por suspeito. | Seção 4. |
 | `bancada.py` | <!--@bytes:bancada.py-->25.465<!--/--> | O formulário que grava no mapa. **A escada de degraus não nasce aqui:** ele a importa do portão (`from check_paridade_transporte import VALORES_DA_ESCADA`) desde 19/08/2026 — há um dono só. | Quando for editar célula. |
 
@@ -63,7 +64,7 @@ o estudo guarda o caminho.
 
 ## 2. Como uma linha do mapa é organizada
 
-`id` é sempre exatamente `chave@controle` (confere em 308 de 308 linhas), então
+`id` é sempre exatamente `chave@controle` (confere em 308 de <!--@linhas-do-mapa-->308<!--/--> linhas), então
 `vibracao.rumble.ff@dualsense` é uma chave de busca legítima. Os três controles
 são `dualsense` (110 linhas), `pro` (99) e `sn30` (99).
 
@@ -81,7 +82,7 @@ cabo e rádio respondidos lado a lado na mesma linha. As que importam para decid
 - `ponte_alcanca` / `ponte_de_onde_sei` — **o eixo de ponte** (20/08/2026), e
   ele não é um par cabo/rádio: pergunta por qual ponte a feature chega ao jogo
   (`gamepad/dualsense`, `gamepad/xbox360`, `mouse+teclado`). Preenchido em 10 de
-  308 linhas hoje, todas com `gamepad/dualsense` + `inferido-do-codigo`. Quem
+  <!--@linhas-do-mapa-->308<!--/--> linhas hoje, todas com `gamepad/dualsense` + `inferido-do-codigo`. Quem
   filtrar o mapa sem estas duas colunas não enxerga a direção inteira.
 - `teste_que_morde` (66 linhas) e `mordida_provada_em` (33) — o teste que
   reprova quando a cura é arrancada, e a prova de que alguém arrancou e viu.
@@ -142,7 +143,7 @@ conta handle MORTO como fd vivo; a outra varre só os PIDs da Steam, onde o
 `winedevice` não está).
 
 **A confusão que custa caro, dita na cara: uma régua não implica a outra.** O
-cruzamento das 616 células (308 linhas x 2 lados), medido em 02/09/2026:
+cruzamento das 616 células (<!--@linhas-do-mapa-->308<!--/--> linhas x 2 lados), medido em 02/09/2026:
 
 | | vazio | MONTOU | SAIU NO FIO | OBEDECEU |
 |---|---:|---:|---:|---:|
@@ -171,7 +172,7 @@ falha, são censo que ninguém respondeu.
 e a regra 6 do portão exige que cada uma tenha ensaio casado no caderno. Conferi
 agora: **37 de 37 têm. Zero órfãos.**
 
-**O mapa da ignorância, de graça:** o caderno cobre **30 das 308 linhas
+**O mapa da ignorância, de graça:** o caderno cobre **30 das <!--@linhas-do-mapa-->308<!--/--> linhas
 (9,7%)**. As outras 278 são inferência de código. Antes de gastar leitura,
 saiba que o lastro empírico está concentrado em 10% do mapa.
 
@@ -268,7 +269,7 @@ for x in csv.DictReader(open("docs/data/ensaios.csv", encoding="utf-8")):
 ```
 
 **A tabela cabo x rádio inteira, que cabe em 3.447 caracteres** (medido rodando
-o trecho abaixo em 22/08/2026)**:** só **37 das 308 linhas** têm
+o trecho abaixo em 22/08/2026)**:** só **37 das <!--@linhas-do-mapa-->308<!--/--> linhas** têm
 `cabo_aciona != radio_aciona`. O mapa paga 26 colunas espelhadas em todas as 308
 para uma distinção que existe em 11,4% delas.
 
@@ -308,9 +309,15 @@ esteja o documento onde ele aparece.
 
 - `transporte` = `ambos` **ou** `cabo+rádio` (36 e 74 linhas, mesmo sentido). A
   coluna não tem domínio declarado, então o portão não vê. Não filtre por ela.
-- `provado_por` (mapa, 58 linhas: `aparelho` 40, `fonte-do-driver` 11,
-  `olho-dela` 4, `descritor` 3) e `observado_por` (caderno, 177 linhas:
-  `olho-dela` 104, `bancada` 51, `aparelho` 22) fazem a mesma pergunta com
+- `provado_por` (mapa, <!--@mapa-com-provado-por-->77<!--/--> linhas:
+  `aparelho` <!--@mapa-provado-aparelho-->44<!--/-->, `fonte-do-driver`
+  <!--@mapa-provado-fonte-do-driver-->25<!--/-->, `olho-dela`
+  <!--@mapa-provado-olho-dela-->5<!--/-->, `descritor`
+  <!--@mapa-provado-descritor-->3<!--/-->) e `observado_por` (caderno,
+  <!--@caderno-com-observado-por-->184<!--/--> linhas: `olho-dela`
+  <!--@caderno-observado-olho-dela-->107<!--/-->, `bancada`
+  <!--@caderno-observado-bancada-->55<!--/-->, `aparelho`
+  <!--@caderno-observado-aparelho-->22<!--/-->) fazem a mesma pergunta com
   vocabulários diferentes. **Quem sustenta o degrau mais alto é o
   `observado_por` do caderno** — é lá que a regra 10 do portão foi cobrar.
   Preencher `provado_por` não sustenta grau nenhum.
