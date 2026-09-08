@@ -852,9 +852,12 @@ COPIAR_ROTULO = "Copiar a linha"
 # ---------------------------------------------------------------------------
 # REGISTRAR O QUE O HEFESTO NÃO CONHECE — 08/09/2026, pedido dela
 #
-#     "Pensei em outro botão pra Adicionar novo Emulador Ou novo lançador algo
-#      assim, pra devs mais experimentais e permitir que o user adicione algo
-#      novo"                                                <!-- noqa-acento -->
+#     "Pensei em outro botão pra Adicc ionar novo Emulador Ou novo lançador
+#      algo assim, pra devs mais experiementais e poermitir que o user
+#      adicione algo novo"  # (noqa-acento): citação literal dela, como ela
+#                           # escreveu — a versão anterior deste comentário
+#                           # corrigia a digitação dela, que é falsificar a
+#                           # citação. Nesta casa a fala dela não se limpa.
 #
 # A PORTA É UMA SÓ, e isso é desenho, não economia. O botão do cartão que não
 # localizou e o botão global mandam o MESMO gesto; o que muda é o que vai
