@@ -223,7 +223,7 @@ RADIO = "rádio"
 _VID_SONY = 0x054C
 _PID_DUALSENSE = 0x0CE6
 
-#: Identidade do NOSSO vpad no HID (``core/backend_pydualsense.py:151-153``). Ele
+#: Identidade do NOSSO vpad no HID (``core/backend_pydualsense.py:152-154``). Ele
 #: forja VID/PID/bus de DualSense no cabo de propósito — é o que o faz o
 #: ``hid_playstation`` fazer bind nele —, então sem este filtro o módulo pediria o
 #: serial de fábrica à saída do próprio produto.

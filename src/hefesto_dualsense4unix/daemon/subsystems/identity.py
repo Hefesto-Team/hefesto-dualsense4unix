@@ -1855,6 +1855,29 @@ def make_auto_output_provider(
             return None  # os dois eixos desligados = sem opinião nenhuma
         return _DesiredOutput(**campos)
 
+    def numero_do_slot(uniq: str) -> int | None:
+        """O NÚMERO de `uniq` agora — a companheira do provider de cor.
+
+        A regra de cor única (`core/led_control.py::cores_sem_colisao`)
+        resolve a mesa NA ORDEM DO NÚMERO: é ele que define "o primeiro", e
+        as palavras dela são *"o segundo desloca para o tom vizinho"*. O
+        `_DesiredOutput` que o provider devolve não carrega o número — ele é
+        a saída de HID, e um campo de identidade não cabe ali —, então a
+        consulta viaja PENDURADA no próprio provider.
+
+        Assim ela chega ao backend pela injeção que já existe
+        (`set_auto_output_provider`), sem um segundo fio para o daemon
+        ligar. Quem injeta um provider sem esta companheira (teste com
+        `lambda`) não perde a garantia de unicidade: o backend cai na ordem
+        do `uniq`, que é arbitrária mas estável.
+
+        Mesmo contrato do provider: barato, só memória, e
+        `autoridade_de_presenca=False` — uma LEITURA de cor não ressuscita
+        ausente na mesa (QUATRO-NA-MESA-01 §1).
+        """
+        return registry.numero_da_lampada(uniq, autoridade_de_presenca=False)
+
+    provider.numero_do_slot = numero_do_slot  # type: ignore[attr-defined]
     return provider
 
 
