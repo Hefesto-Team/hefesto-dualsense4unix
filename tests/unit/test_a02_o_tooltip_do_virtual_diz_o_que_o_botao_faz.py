@@ -111,7 +111,7 @@ def test_o_tooltip_nao_confessa_divida() -> None:
         )
 
 
-def test_o_gesto_do_modo_nao_faz_o_ato_do_microfone() -> None:
+def test_o_gesto_do_modo_nao_faz_o_ato_do_microfone(monkeypatch) -> None:
     """O FATO que o texto descreve, medido no gesto — e é a trava de verdade.
 
     Se alguém fizer o `mic-modo` eleger canal ou mandar `0x32`, o texto novo
@@ -120,6 +120,23 @@ def test_o_gesto_do_modo_nao_faz_o_ato_do_microfone() -> None:
 
     ARRANQUE a cura ao contrário (faça o gesto chamar `mic_canal_set_detalhado`)
     e esta régua REPROVA.
+
+    **O `monkeypatch` NÃO É ASSEIO — 08/09/2026.** Esta régua nasceu trocando
+    `a02._controles_declarados` A CRU, sem restaurar. O símbolo ficava trocado no
+    módulo pelo resto do PROCESSO, e todo teste posterior que lesse o modo
+    declarado lia `{}` e caía no `nativo`: dois testes de
+    `test_aba02_os_acesos_sao_leitura_e_nao_desenho.py` reprovaram com
+    `assert 'nativo' == 'virtual'` — e reprovavam SÓ no lote, nunca isolados.
+
+    É a cicatriz nomeada da casa pela terceira vez (*"o dublê do co-op era mais
+    frouxo que a função real e envenenava outro arquivo por ordem de teste"*,
+    04/09), e a forma certa estava aberta no arquivo irmão: o
+    `test_a02_mic_e_um_ato_so_nos_dois_transportes.py` usa `monkeypatch.setattr`
+    para o MESMO símbolo, quatro vezes.
+
+    **A REGRA QUE SOBRA:** comparar quais ARQUIVOS falham esconde contaminação
+    por ordem — a vítima passa sozinha nas duas árvores. Compare TESTES, na
+    mesma composição de lote.
     """
     import pacotes
     import pacotes.a02_controles as a02
@@ -140,7 +157,7 @@ def test_o_gesto_do_modo_nao_faz_o_ato_do_microfone() -> None:
     entrada = {"uniq": uniq, "transport": "usb", "connected": True}
     ctx = pacotes.Contexto(state={}, mesa=[], conectados=[entrada], estados={})
     p = _Ponte()
-    a02._controles_declarados = lambda **_: {}  # type: ignore[attr-defined]
+    monkeypatch.setattr(a02, "_controles_declarados", lambda **_: {})
     fn = pacotes.gesto_da_pagina("02-controles.html", "mic-modo")
     assert fn is not None, "02-controles.html:mic-modo não tem dono"
     fn(ctx, {"uniq": uniq, "micModo": "virtual"}, p)
