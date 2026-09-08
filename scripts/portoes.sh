@@ -144,6 +144,22 @@ completo|mac-por-oui|pytest|tests/unit/test_docs_mac_anonimato.py
 # tem de usar faixa FORJADA (`aa:bb:cc`), não endereço real podado — a máscara
 # da casa preserva o OUI, e o OUI é identidade de fabricante do aparelho dela.
 completo|mac-de-fixture|pytest|tests/unit/test_anonimato_de_fixtures.py
+# 08/09/2026 — A RÉGUA DO SANITIZADOR EXISTIA SEM CHAMADOR.
+# MEDIDO: cinco arquivos de `docs/process/agentes/2026-09-06/` entraram com
+# seis glifos que o sanitizador da casa troca por texto — quatro U+266A (o
+# rótulo do botão do alto-falante) e um U+2713. O sanitizador estava CERTO
+# e a régua estava CERTA: ela acusa os cinco. Nenhum dos dois envelheceu —
+# os dois mudaram pela última vez em 03/09, TRÊS DIAS antes dos arquivos.
+# O que faltava era alguém que a rodasse.
+# POR QUE O `glifos` NÃO PEGA, e não é descuido dele: o `validar-glifos.py`
+# segue o Emoji_Presentation estrito, e esses dois pontos de código têm
+# apresentação de TEXTO — passam por ele e travariam no hook de pre-commit,
+# que usa faixas largas. São critérios diferentes de propósito; quem
+# sanitiza obedece ao MAIS ESTRITO, e só esta régua mede o mais estrito.
+# A LIÇÃO É A DO `mac-por-oui`, dez linhas acima: era teste da SUÍTE, e a
+# suíte roda no FIM. Entre o commit de 06/09 e a reprovação passaram DOIS
+# DIAS. Custa ~2 s.
+completo|saida-de-agente|pytest|tests/unit/test_saida_de_agente_sanitizada.py
 completo|casa-sabe|pytest|tests/unit/portao_a_casa_sabe_e_o_produto_nao_faz.py
 # 25/08/2026: o portão que exige que TODO portão tenha quem o rode não era
 # rodado por esta lista — só pela camada `suite`, que é de quem coordena e
