@@ -191,10 +191,34 @@ def patched(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(
         "hefesto_dualsense4unix.integrations.uinput_gamepad.UinputGamepad", _FakeVpad
     )
-    monkeypatch.setattr(
-        "hefesto_dualsense4unix.integrations.uinput_gamepad.normalize_flavor",
-        lambda f: f or "dualsense",
-    )
+    # O DUBLÊ DE `normalize_flavor` SAIU — 08/09/2026, e ele nunca foi preciso.
+    #
+    # Aqui havia `lambda f: f or "dualsense"` sobre
+    # `uinput_gamepad.normalize_flavor`. Ele VAZAVA, e é REINCIDÊNCIA: em 04/09
+    # esta casa mediu *"o dublê do co-op era mais frouxo que a função real e
+    # envenenava outro arquivo por ordem de teste"*, e o mesmo arquivo repetiu.
+    # O alvo desta vez foi `test_flavor_desconhecido_normaliza_antes_de_escolher`
+    # — com este arquivo rodando antes, `'ps'` chegava CRU ao uinput e a factory
+    # do vpad escolhia o backend errado.
+    #
+    # A CAUSA, medida com sonda: `daemon/subsystems/external_mask` é importado
+    # TARDE (a factory o traz de dentro da função), então nascia DENTRO da
+    # janela do `monkeypatch` e o `from … import normalize_flavor` copiava o
+    # DUBLÊ. O `undo` do pytest desfaz o que ELE trocou; **não desfaz o que
+    # nasceu torto.**
+    #
+    # E A MORDIDA REVELOU O QUE O CONSERTO ESCONDERIA: arrancado o dublê
+    # INTEIRO, os 37 testes deste arquivo passam com a função real. Ele diferia
+    # dela em quatro de sete entradas (`None` → real diz `'xbox'`, ele dizia
+    # `'dualsense'`) e nenhuma dessas quatro é exercitada aqui. **Um dublê que
+    # não muda nenhum resultado só pode esconder — nunca provar.**
+    #
+    # SE ALGUM DIA FOR PRECISO DUBLAR ISTO: trocar em `uinput_gamepad` não
+    # basta. Cinco módulos de `src/` capturam o símbolo no import, e quem nasce
+    # depois copia o que estiver de pé. Quem protege contra a volta é
+    # `test_virtual_pad_factory.py::test_a_normalizacao_sobrevive_ao_duble_do_coop`,
+    # que mede a PROPRIEDADE — nenhum módulo segurando um símbolo que não é o do
+    # dono — em vez da ordem.
     # Hermético: NUNCA tocar o /sys/class/leds real (na máquina da mantenedora
     # há um DualSense de verdade plugado). Testes de LED sobrescrevem com nós
     # falsos via _set_led_nodes.

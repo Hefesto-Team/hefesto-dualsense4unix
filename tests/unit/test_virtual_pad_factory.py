@@ -428,3 +428,39 @@ def test_uhid_declara_o_flavor_dualsense() -> None:
     from hefesto_dualsense4unix.integrations.uhid_gamepad import UhidDualSense
 
     assert UhidDualSense(player=1).flavor == "dualsense"
+
+
+def test_a_normalizacao_sobrevive_ao_duble_do_coop() -> None:
+    """O dublê do co-op não pode ficar preso em quem importou o símbolo.
+
+    **REINCIDÊNCIA MEDIDA — 08/09/2026.** Em 04/09 esta casa registrou *"o dublê
+    do co-op era mais frouxo que a função real e envenenava outro arquivo por
+    ordem de teste"*. O mesmo arquivo repetiu, e desta vez o alvo foi
+    `test_flavor_desconhecido_normaliza_antes_de_escolher`: com
+    `test_subsystem_coop.py` rodando antes, `'ps'` chegava CRU ao uinput e a
+    factory escolhia o backend errado.
+
+    A CAUSA, medida com sonda e não suposta: `daemon/subsystems/external_mask`
+    é importado TARDE — a factory o traz de dentro da função —, então ele nascia
+    DENTRO da janela do `monkeypatch` e o `from … import normalize_flavor`
+    copiava o DUBLÊ. O `undo` do pytest desfaz o que ele trocou; **não desfaz o
+    que nasceu torto.**
+
+    Esta régua mede a PROPRIEDADE, não a ordem: o símbolo que o produto de fato
+    consulta tem de ser a função real, no fim de qualquer teste. Ela reprova
+    mesmo rodando sozinha se alguém deixar um dublê preso em `sys.modules`.
+    """
+    import sys
+
+    from hefesto_dualsense4unix.integrations import uinput_gamepad
+
+    real = uinput_gamepad.normalize_flavor
+    presos = [
+        nome for nome, mod in list(sys.modules.items())
+        if nome.startswith("hefesto_dualsense4unix")
+        and getattr(mod, "normalize_flavor", real) is not real
+    ]
+    assert not presos, (
+        f"{presos} está segurando um `normalize_flavor` que não é o do dono. "
+        f"Um dublê preso decide o backend do vpad pelo arquivo que rodou antes "
+        f"— e o produto responde sobre outra coisa que não o produto.")
