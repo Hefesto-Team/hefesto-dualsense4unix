@@ -274,7 +274,7 @@ DOMINIO = _DOMINIO_DO_PORTAO["por_que_nao_aciona"]
 #:
 #: QUANDO CRUZOU, e o commit é nomeado: `ef61c628` (07/09, *"as 53 células
 #: mudas do Pro e do 8BitDo respondidas no fonte do driver"*). O saldo dele
-#: foi +2 −1:
+#: foi +2 -1:
 #:
 #:   ENTRARAM  `combinacao.rumble_simultaneo@pro`, cabo E rádio
 #:   SAIU      `audio.saida_dedicada.payload_do_degrau@dualsense`, rádio
