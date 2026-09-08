@@ -2480,6 +2480,76 @@ def onde_isso_esta(alvo: str) -> tuple[str, str, str]:
     return "", "", ""
 
 
+def _botoes_do_cartao_agora(chave: str) -> tuple[str, ...]:
+    """Os rótulos que o cartão de `chave` mostra NESTE instante.
+
+    Pergunta ao DONO do desenho com a leitura VIVA, em vez de supor o estado.
+    Uma leitura que levanta devolve tupla vazia: a recusa então não cita botão
+    nenhum, que é melhor do que citar um que talvez não esteja lá.
+    """
+    try:
+        lida = VIGIA.agora()
+        for cartao in desenho.cartoes(lida):
+            if cartao.chave == chave:
+                return tuple(a.rotulo for a in cartao.acoes)
+    except Exception:  # a recusa não pode virar erro de leitura
+        return ()
+    return ()
+
+
+def _recusa_de_quem_ja_tem_cartao(chave: str, nome: str,
+                                  tem: tuple[str, ...] | None = None) -> str:
+    """A recusa do botão global para um lançador que já tem cartão de fábrica.
+
+    **ELA MANDAVA CLICAR ONDE NÃO HAVIA NADA EM DOIS DOS TRÊS ESTADOS**, e o
+    estado aberto era o da máquina dela — 08/09/2026, achado pelo conferente.
+    A frase citava o «Localizar este Lançador», que o cartão só mostra quando o
+    Hefesto NÃO achou. Numa máquina com a Steam instalada o cartão sai
+    `selo='ok'` com «Abrir o lançador» e «Criar perfil para um jogo», e a tela
+    mandava clicar num botão ausente.
+
+    A régua que nasceu com o conserto do beco olhava só o estado `off` — ela
+    montava uma `Leitura` com tudo vazio —, e por isso ficava verde. *Uma régua
+    que só mede o estado em que a cura foi escrita não mede a cura.*
+
+    **AGORA A FRASE PERGUNTA AO CARTÃO.** Ela cita o botão que ESTÁ lá, e quando
+    nenhum dos dois serve ela diz o FATO e para — porque a alternativa é a tela
+    inventar um caminho, que é o defeito de origem.
+
+    A FRASE NÃO LEVA ARTIGO ANTES DO NOME: os nomes de cartão têm gêneros
+    diferentes ("a Steam", "o Lutris") e esta aba escreve **a** Steam em toda
+    parte. Mesma medição de `desenho.NOVO_PARA_O_CARTAO`.
+
+    E OS RÓTULOS SÃO LIDOS, nunca digitados: esta frase manda clicar num botão,
+    e um texto digitado aqui envelheceria calado no dia em que ela trocasse a
+    palavra — que foi o dia de hoje.
+    """
+    #: `tem=None` PERGUNTA À MÁQUINA; uma tupla dispensa a leitura. O parâmetro
+    #: existe para a régua poder cobrar os TRÊS estados — foi por medir só o
+    #: estado em que a cura foi escrita que a primeira versão ficou verde sobre
+    #: um beco aberto nos outros dois.
+    if tem is None:
+        tem = _botoes_do_cartao_agora(chave)
+    abertura = f"{nome} já tem cartão nesta aba"
+
+    if desenho.ADICIONAR_ROTULO in tem:
+        return (f"{abertura}, e o Hefesto não achou onde ele está. Use o "
+                f"«{desenho.ADICIONAR_ROTULO}» do cartão dele — assim o que "
+                f"você me disser entra na busca daquele cartão, em vez de "
+                f"criar um segundo com o mesmo nome.")
+
+    tirar = desenho.acao_de_tirar(chave).rotulo
+    if tirar in tem:
+        return (f"{abertura}, e ele já está apontado. Para apontar outro, use "
+                f"o «{tirar}» do cartão dele primeiro — o cartão volta a "
+                f"perguntar onde ele está, e a sua resposta entra ali.")
+
+    return (f"{abertura}, e o Hefesto já o achou sozinho nesta máquina. Não há "
+            f"o que apontar: o que você digitar aqui criaria um segundo cartão "
+            f"com o mesmo nome. Se o que ele achou não é o que você quer, me "
+            f"diga — hoje o cartão não tem por onde trocar.")
+
+
 def _o_que_ela_digitou(o: dict[str, Any]) -> tuple[str, str]:
     """`(rótulo, alvo)` da tela de registro, já aparados."""
     forma = o.get("forma") or {}
@@ -2550,20 +2620,7 @@ def adicionar_lancador(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, An
             "Diga como ele se chama. O nome é o que aparece no topo do cartão, "
             "e é dele que sai o endereço interno do cartão.")
     if not para_quem and chave in de_fabrica:
-        # A FRASE NÃO LEVA ARTIGO ANTES DO NOME, e é a mesma medição de
-        # `desenho.NOVO_PARA_O_CARTAO`: os nomes de cartão têm gêneros
-        # diferentes ("a Steam", "o Lutris") e esta casa escreve **a** Steam em
-        # toda a aba. Com o cartão da Steam ganhando o botão de localizar, esta
-        # recusa passou a ser alcançável com o nome dela no meio.
-        #
-        # E O RÓTULO DO BOTÃO É LIDO, nunca digitado: esta frase manda clicar
-        # num botão, e um texto digitado aqui envelheceria calado no dia em que
-        # ela trocasse a palavra — que é o dia de hoje.
-        raise RuntimeError(
-            f"{de_fabrica[chave]} já tem cartão nesta aba. Se ele está aqui e "
-            f"o Hefesto não achou, use o «{desenho.ADICIONAR_ROTULO}» do cartão "
-            f"dele — assim o que você me disser entra na busca daquele cartão, "
-            f"em vez de criar um segundo com o mesmo nome.")
+        raise RuntimeError(_recusa_de_quem_ja_tem_cartao(chave, de_fabrica[chave]))
 
     campo, agulha, onde = onde_isso_esta(alvo)
     if not campo:
@@ -2598,8 +2655,28 @@ def adicionar_lancador(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, An
     # que grava e responde calado.
     VIGIA.esquecer()
     nome = de_fabrica.get(chave) if para_quem else rotulo
-    return {**_resposta(VIGIA.ler(), ctx.state),
-            "recado": f"Guardei: {nome or chave} está em {onde}."}
+    recado = f"Guardei: {nome or chave} está em {onde}."
+
+    # O QUE ELA DIGITOU E O PRODUTO NÃO USOU TEM DE SER DITO — 08/09/2026,
+    # achado pelo conferente da segunda volta. Chegando pelo botão de um cartão,
+    # a tela mostra «Como ele se chama» com rótulo e foco, e o nome digitado é
+    # DESCARTADO: a chave e o rótulo vêm do cartão. Ela digitava e o produto
+    # gravava outra coisa, calado.
+    #
+    # POR QUE O NOME DO CARTÃO GANHA, e isto não muda: aquele rótulo é DESENHO
+    # que ela aprovou, e `test_o_que_ela_ensina_soma_com_a_busca_de_fabrica`
+    # cobra que o ensino SOME com a busca em vez de trocar o nome. O defeito
+    # nunca foi qual nome vence — é o silêncio.
+    #
+    # ESCONDER O CAMPO SERIA MELHOR, e é DESENHO: um campo a menos na caixa é
+    # pixel, e pixel é decisão dela. Enquanto ela não vê, o produto para de
+    # descartar calado — que é a metade que não precisa de aprovação nenhuma.
+    if para_quem and rotulo and nome and rotulo.strip().casefold() != nome.casefold():
+        recado += (f" O nome que você digitou, «{rotulo.strip()}», não entrou: "
+                   f"este cartão já se chama {nome}, e o que o botão dele "
+                   f"acrescenta é ONDE procurar.")
+
+    return {**_resposta(VIGIA.ler(), ctx.state), "recado": recado}
 
 
 @gesto("07-lancadores.html", desenho.REMOVER, grava="machine_declare")

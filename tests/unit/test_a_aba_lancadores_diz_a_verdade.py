@@ -512,7 +512,7 @@ def test_o_piso_de_gestos_da_aba_e_catorze(a07):
     dela (`D-0609-STEAM-DIVIDIDO`) trouxe para esta aba — "Desligar o Steam
     Input", "Este jogo não funciona" e "Deixar tudo pronto"; e DE CATORZE PARA
     DEZESSEIS em 08/09/2026, com o registro do lançador que o Hefesto não
-    conhece (pedido dela) — «Adicionar Launcher» e «Tirar daqui».
+    conhece (pedido dela) — «Localizar este Lançador» e «Tirar daqui».
     """
     import pacotes
 
@@ -1871,7 +1871,7 @@ def test_o_lancador_declarado_entra_no_cartao(desenho, a07, monkeypatch,
 def test_o_declarado_com_a_chave_de_um_de_fabrica_ensina_o_cartao(desenho):
     """CHAVE REPETIDA NÃO VIRA SEGUNDO CARTÃO — ela soma à busca do primeiro.
 
-    É o sentido literal do «Adicionar Launcher» do cartão que não localizou:
+    É o sentido literal do «Localizar este Lançador» do cartão não localizado:
     *"ele está aqui, eu te mostro onde"*. Dois cartões com a mesma chave seriam
     pior que inúteis — os endereços do desenho levam a chave como prefixo
     (`data-campo="retroarch-selo"`), e o piloto pintaria o valor de um nos DOIS.
@@ -2062,8 +2062,8 @@ def _lancadores_do_disco() -> dict:
     return dict(carregar_maquina().lancadores)
 
 
-def test_a_recusa_do_botao_global_manda_clicar_num_botao_que_existe(a07, ctx,
-                                                                    desenho):
+def test_a_recusa_do_botao_global_manda_clicar_num_botao_que_existe(
+        a07, ctx, desenho, monkeypatch):
     """A TELA NÃO MANDA CLICAR ONDE NÃO HÁ NADA — e mandava, num cartão.
 
     O botão global recusa um nome que já tem cartão de fábrica, e a recusa
@@ -2082,7 +2082,18 @@ def test_a_recusa_do_botao_global_manda_clicar_num_botao_que_existe(a07, ctx,
     """
     lida = desenho.Leitura(
         onde_estao=tuple((x.chave, "") for x in desenho.EMBUTIDOS))
-    fileiras = {c.chave: desenho.acoes_html(c) for c in desenho.cartoes(lida)}
+    cartoes = {c.chave: c for c in desenho.cartoes(lida)}
+    fileiras = {k: desenho.acoes_html(c) for k, c in cartoes.items()}
+
+    # O PRODUTO TEM DE OLHAR O MESMO MUNDO QUE ESTA RÉGUA MONTA — 08/09/2026.
+    # A recusa passou a PERGUNTAR AO CARTÃO quais botões ele mostra, e quem
+    # responde é a leitura VIVA. Sem esta linha a régua montava o estado `off` e
+    # lia a resposta do estado da MÁQUINA (que tem Steam, logo `ok`): duas
+    # perguntas diferentes, e o verde de uma não dizia nada da outra. É a mesma
+    # distância entre régua e produto que abriu o beco.
+    monkeypatch.setattr(
+        a07, "_botoes_do_cartao_agora",
+        lambda chave: tuple(a.rotulo for a in cartoes[chave].acoes))
 
     p = _PonteQueAnota()
     for item in desenho.EMBUTIDOS:
@@ -2100,6 +2111,11 @@ def test_a_recusa_do_botao_global_manda_clicar_num_botao_que_existe(a07, ctx,
             a07.adicionar_lancador(ctx, {"gesto": desenho.ADICIONAR, "forma": {
                 desenho.NOVO_ROTULO: item.chave,
                 desenho.NOVO_ALVO: "/bin/sh"}}, p)
+        # O ESTADO É O `off` — a `Leitura` acima põe todos os seis sem caminho.
+        # É o estado em que a recusa DEVE mandar para o «Localizar», e os outros
+        # dois são cobrados em `test_a_recusa_serve_os_tres_estados_do_cartao`,
+        # que nasceu porque esta aqui olhava só este e dava verde sobre um beco
+        # aberto na máquina dela.
         recusa = str(caiu.value)
         assert desenho.ADICIONAR_ROTULO in recusa, (
             f"a recusa do {item.chave!r} não nomeia o botão do cartão: "
@@ -2145,3 +2161,161 @@ def test_o_campo_que_esta_aba_criou_tem_rotulo_de_tela():
         f"o rótulo do `lancadores` é {rotulo[0]!r} e não nomeia o que se perde. "
         f"A frase do rodapé diz «isto o Hefesto não entendeu e descartou: …», e "
         f"quem lê precisa saber que perdeu onde os lançadores dela estão.")
+
+
+def test_a_recusa_serve_os_tres_estados_do_cartao(a07, desenho):
+    """A frase cita um botão QUE ESTÁ NA FILEIRA — nos três estados, não em um.
+
+    **O BURACO MEDIDO — 08/09/2026, pelo conferente da segunda volta.** A cura
+    do beco escreveu a recusa citando o «Localizar este Lançador», e a régua
+    irmã monta uma `Leitura` com tudo vazio: só o estado `off`. Numa máquina que
+    TEM a Steam — a dela — o cartão sai `selo='ok'` com «Abrir o lançador» e
+    «Criar perfil para um jogo», e a tela mandava clicar num botão ausente.
+
+    *Uma régua que só mede o estado em que a cura foi escrita não mede a cura.*
+
+    A MORDIDA: faça a recusa devolver sempre a frase do «Localizar» (ignorando o
+    `tem`), e os dois últimos casos reprovam nomeando o botão que falta.
+    """
+    localizar = desenho.ADICIONAR_ROTULO
+    tirar = desenho.acao_de_tirar(desenho.STEAM).rotulo
+    achou = ("Abrir o lançador", "Criar perfil para um jogo")
+
+    casos = (
+        ("não achou", (localizar, tirar), localizar),
+        ("achou, e ela apontou", (*achou, tirar), tirar),
+        ("achou sozinho", achou, None),
+    )
+    for estado, fileira, esperado in casos:
+        frase = a07._recusa_de_quem_ja_tem_cartao(desenho.STEAM, "Steam", fileira)
+        assert "Steam já tem cartão nesta aba" in frase, (estado, frase)
+        citados = [r for r in (localizar, tirar) if r in frase]
+        if esperado is None:
+            assert not citados, (
+                f"estado {estado!r}: a fileira é {fileira} e a recusa manda "
+                f"clicar em {citados} — nenhum deles está lá. A tela não manda "
+                f"clicar onde não há nada; sem botão, ela diz o fato e para.")
+            continue
+        assert citados == [esperado], (
+            f"estado {estado!r}: a fileira é {fileira} e a recusa cita "
+            f"{citados}, não «{esperado}»")
+        assert esperado in fileira, (
+            f"estado {estado!r}: a recusa manda usar «{esperado}» e AQUELE "
+            f"CARTÃO NÃO TEM ESSE BOTÃO — é o beco de volta.")
+
+
+def test_a_recusa_viva_nunca_cita_botao_ausente(a07, ctx, desenho):
+    """O caminho de VERDADE, na máquina de verdade — sem `Leitura` montada.
+
+    A régua acima prova a decisão; esta prova a FIAÇÃO. Ela chama o gesto como o
+    piloto chama, deixa a recusa perguntar à máquina, e cobra o mesmo contrato
+    contra a fileira que o cartão realmente mostra HOJE. Numa máquina com Steam
+    ela mede o ramo `ok`; numa sem, o `off` — e nas duas o contrato é um só.
+    """
+    p = _PonteQueAnota()
+    a07.adicionar_lancador(ctx, {"gesto": desenho.ADICIONAR, "v": ""}, p)
+    with pytest.raises(RuntimeError) as caiu:
+        a07.adicionar_lancador(ctx, {"gesto": desenho.ADICIONAR, "forma": {
+            desenho.NOVO_ROTULO: desenho.STEAM,
+            desenho.NOVO_ALVO: "/bin/sh"}}, p)
+
+    frase = str(caiu.value)
+    fileira = a07._botoes_do_cartao_agora(desenho.STEAM)
+    for rotulo in (desenho.ADICIONAR_ROTULO,
+                   desenho.acao_de_tirar(desenho.STEAM).rotulo):
+        if rotulo in frase:
+            assert rotulo in fileira, (
+                f"a recusa viva manda clicar em «{rotulo}» e a fileira do "
+                f"cartão da Steam nesta máquina é {fileira} — é o beco.")
+
+
+def test_o_tirar_daqui_alcanca_os_seis_cartoes(desenho):
+    """*O que se acrescenta se tira* — e o sexto cartão não tinha régua nenhuma.
+
+    **O BURACO MEDIDO — 08/09/2026, pelo conferente da segunda volta.** O
+    «Tirar daqui» do cartão da Steam nasceu na mesma leva que o «Localizar», e
+    a leva o mostrou num log de clique — mas log de clique é prosa. Arrancar a
+    cura inteira (`tirar = ()` em `cartao_da_steam`) deixava os TRINTA E CINCO
+    arquivos de teste que citam lançador **verdes**.
+
+    *Um botão que se pode apagar inteiro com a suíte verde não está entregue.*
+
+    E O ALCANCE É O DE SEMPRE nesta aba: a Steam tem função de desenho PRÓPRIA
+    (`cartao_da_steam`), e as cinco irmãs saem de `cartao_sem_censo`. Foi essa
+    mesma bifurcação que deixou o «Localizar» faltando no sexto e abriu o beco.
+    Por isso a régua cobra os SEIS pela mesma pergunta, e não a Steam à parte.
+
+    A MORDIDA: `tirar = ()` em qualquer um dos dois lados, e o cartão dele
+    aparece na lista dos que ensinam sem desensinar.
+    """
+    tirar = desenho.acao_de_tirar("x").rotulo
+
+    def fileira(chave: str, declarado: bool) -> tuple[str, ...]:
+        lida = desenho.Leitura(
+            onde_estao=tuple((x.chave, "") for x in desenho.EMBUTIDOS),
+            declarados=((desenho.SemCenso(chave=chave, nome=chave,
+                                          declarado=True),)
+                        if declarado else ()))
+        c = next(x for x in desenho.cartoes(lida) if x.chave == chave)
+        return tuple(a.rotulo for a in c.acoes)
+
+    sem_desensinar = [x.chave for x in desenho.EMBUTIDOS
+                      if tirar not in fileira(x.chave, True)]
+    assert not sem_desensinar, (
+        f"{sem_desensinar} tem declaração dela e NÃO oferece «{tirar}». O que "
+        f"ela ensinou fica gravado para sempre — e o caminho errado junto.")
+
+    fingem = [x.chave for x in desenho.EMBUTIDOS
+              if tirar in fileira(x.chave, False)]
+    assert not fingem, (
+        f"{fingem} oferece «{tirar}» sem ela ter declarado nada. Um botão que "
+        f"não tem o que desfazer é um botão que finge — a mesma regra que tirou "
+        f"o «Tirar daqui» dos cinco cartões não ensinados.")
+
+
+def test_o_nome_descartado_e_dito(a07, ctx, desenho, monkeypatch):
+    """A tela não come em silêncio o que ela digitou.
+
+    **O DEFEITO MEDIDO — 08/09/2026, pelo conferente da segunda volta.** Chegando
+    pelo botão de um cartão de fábrica, a pop-up mostra «Como ele se chama» com
+    rótulo e foco. O conferente digitou `'A MINHA STEAM DE TESTE'`; o disco
+    recebeu `{'steam': {'rotulo': 'Steam', …}}` e o recado disse *"Guardei:
+    Steam está em /bin/sh."* — nenhuma palavra sobre o nome descartado.
+
+    É o **botão que finge** um nível abaixo: este mesmo commit esconde o «Tirar
+    daqui» dos cartões que ela não ensinou justamente porque um botão sem efeito
+    mente. Um CAMPO sem efeito mente igual.
+
+    QUAL NOME VENCE NÃO MUDOU, e não é o defeito: o rótulo de fábrica é desenho
+    que ela aprovou, e `test_o_que_ela_ensina_soma_com_a_busca_de_fabrica` cobra
+    que o ensino SOME com a busca em vez de trocar o nome. O defeito era o
+    silêncio.
+
+    A MORDIDA: tire o ramo que acrescenta a frase ao `recado` e esta régua
+    reprova dizendo que o nome sumiu sem aviso.
+    """
+    p = _PonteQueAnota()
+    a07.adicionar_lancador(ctx, {"gesto": desenho.ADICIONAR, "v": desenho.STEAM}, p)
+    fora = a07.adicionar_lancador(ctx, {"gesto": desenho.ADICIONAR, "forma": {
+        desenho.NOVO_ROTULO: "A MINHA STEAM DE TESTE",
+        desenho.NOVO_ALVO: "/bin/sh"}}, p)
+
+    recado = str((fora or {}).get("recado") or "")
+    assert "A MINHA STEAM DE TESTE" in recado, (
+        f"ela digitou um nome, o produto gravou outro e não disse: {recado!r}. "
+        f"Um campo que a tela oferece e o produto descarta é um campo que finge.")
+    assert "Steam" in recado, (
+        f"o recado não diz com que nome o cartão ficou: {recado!r}")
+
+
+def test_o_nome_igual_nao_vira_recado(a07, ctx, desenho):
+    """E o aviso só sai quando há o que avisar — senão vira ruído em todo clique."""
+    p = _PonteQueAnota()
+    a07.adicionar_lancador(ctx, {"gesto": desenho.ADICIONAR, "v": desenho.STEAM}, p)
+    fora = a07.adicionar_lancador(ctx, {"gesto": desenho.ADICIONAR, "forma": {
+        desenho.NOVO_ROTULO: "steam", desenho.NOVO_ALVO: "/bin/sh"}}, p)
+
+    recado = str((fora or {}).get("recado") or "")
+    assert "não entrou" not in recado, (
+        f"ela digitou o mesmo nome do cartão e a tela avisou de um descarte que "
+        f"não houve: {recado!r}")
