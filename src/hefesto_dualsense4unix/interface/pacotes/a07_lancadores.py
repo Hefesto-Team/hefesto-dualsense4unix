@@ -155,13 +155,14 @@ prontuário só sai do lugar quando ela clica em "Ver o que impede".
 from __future__ import annotations
 
 import dataclasses
+import re
 import threading
 import time
 from typing import Any
 
 from hefesto_dualsense4unix.interface import desenho_dos_lancadores as desenho
 
-from . import Contexto, registrar
+from . import Contexto, perfil, registrar
 
 #: De quanto em quanto tempo a vigia repergunta ao disco. 20 s é o compromisso:
 #: a linha de inicialização só muda quando a Steam a regrava (ao sair) ou quando
@@ -309,8 +310,69 @@ def _porque(motivo: str) -> str:
     }.get(motivo, motivo)
 
 
-def _onde_estao_os_lancadores() -> tuple[tuple[str, str], ...]:
-    """PROCURA os SEIS lançadores nesta máquina. Não lê dentro de nenhum.
+def _declarados() -> tuple[desenho.SemCenso, ...]:
+    """O que ELA declarou no `maquina.json`, no molde do procurador.
+
+    ELA ESCOLHEU ONDE PROCURAR, e o produto não tem como adivinhar isso: um
+    Ryujinx em `/opt`, um AppImage no `~/Jogos`, um emulador que ninguém
+    empacotou. É a definição do que mora naquele arquivo — o que o Hefesto
+    **não tem como medir**.
+
+    A TRADUÇÃO É DE UM CAMPO PARA O MESMO CAMPO, e é o que prova que não há
+    segundo caminho: `rotulo` → `nome`, `atalhos` → `atalhos`, `comandos` →
+    `comandos`. Se um dia divergirem, o `SemCenso` ganha o campo e o
+    `LancadorDeclarado` também — nunca um conversor com regra própria.
+
+    **NUNCA LEVANTA**, e a razão é a mesma de `carregar_maquina`: esta função é
+    chamada pela vigia da aba, e um `maquina.json` estranho não pode derrubar a
+    tela inteira. Sem declaração, a aba é a de fábrica — que é o pior caso
+    honesto.
+
+    NÃO SE GUARDA EM MEMÓRIA, e a escolha é medida contra o alvo: a leitura
+    inteira já roda fora do tique, na :class:`_Vigia`, e `carregar_maquina` abre
+    UM json de poucos bytes. Guardar num global obrigaria o gesto de registrar a
+    lembrar-se de invalidá-lo — e um cartão que só aparece na próxima abertura
+    do Hefesto é a forma mais cara do defeito-mãe desta casa.
+    """
+    # O `perfil` VEM DO TOPO DO MÓDULO, e isso é CURA MEDIDA — 08/09/2026.
+    #
+    # A primeira versão desta função chamava `perfil._com_o_src()` com o
+    # `perfil` **nunca importado neste arquivo**. O `NameError` caía no
+    # `except Exception` de baixo, a função devolvia `()`, e o registro inteiro
+    # ficava morto sem uma linha de erro: ela clicaria em «Adicionar», o gesto
+    # gravaria no `maquina.json` de verdade, e o cartão não apareceria NUNCA.
+    # Quem revelou foi o CLIQUE de ponta a ponta — nenhuma régua de existência
+    # veria, porque o motor estava todo lá.
+    #
+    # E O `except` FICOU ESTREITO POR CAUSA DISSO: ele cobre a LEITURA do disco,
+    # que é o que pode falhar na máquina dela. Um nome que não existe é defeito
+    # de código, e defeito de código tem de rebentar no import — onde toda régua
+    # desta casa o vê.
+    perfil._com_o_src()
+    from hefesto_dualsense4unix.utils.maquina import carregar_maquina
+
+    try:
+        declaracao = carregar_maquina()
+    except Exception:  # pragma: no cover - o disco dela não derruba a aba
+        return ()
+    return tuple(
+        desenho.SemCenso(chave=chave, nome=item.rotulo,
+                         atalhos=tuple(item.atalhos),
+                         comandos=tuple(item.comandos),
+                         declarado=True)
+        for chave, item in sorted(declaracao.lancadores.items())
+    )
+
+
+def _onde_estao_os_lancadores(
+    declarados: tuple[desenho.SemCenso, ...] | None = None,
+) -> tuple[tuple[str, str], ...]:
+    """PROCURA os lançadores desta máquina. Não lê dentro de nenhum.
+
+    `declarados=None` LÊ O DISCO; uma tupla dispensa a leitura. O parâmetro
+    existe para que uma passada da vigia abra o `maquina.json` UMA vez em vez de
+    duas (a busca e a `Leitura` precisam da mesma lista), e para que uma régua
+    monte a declaração à mão sem tocar no disco.
 
     A PERGUNTA É ESTREITA DE PROPÓSITO, e é a única que o produto sabe
     responder hoje sem inventar: *"este lançador está instalado aqui?"* — não
@@ -323,7 +385,14 @@ def _onde_estao_os_lancadores() -> tuple[tuple[str, str], ...]:
     interior não responde se o lançador está aqui, e o cartão da Steam nascia
     com `presente=True` cravado. Numa casa de mentira sem Steam nenhuma o topo
     dizia **"1 encontrado"** e o cartão acendia o selo verde `CHEGAM`. Agora a
-    lista percorrida é :data:`desenho.PROCURADOS`, que são os SEIS.
+    lista percorrida é :func:`desenho.procurados`, que devolve os de fábrica
+    **mais** o que ela declarou.
+
+    UM PROCURADOR SÓ, E É ESTE — 08/09/2026. O lançador que ela acrescenta pelo
+    botão «Adicionar Launcher» não ganha busca própria: ele entra na MESMA lista,
+    com os MESMOS três campos, e é achado pelas MESMAS duas buscas. Um segundo
+    caminho seria a assimetria que produz duas respostas para a mesma pergunta —
+    e a segunda envelhece calada, porque só a máquina dela a exercita.
 
     AS PASTAS SÃO AS DO MOTOR, e não uma lista minha:
     `jogos_locais.pastas_de_atalhos()` já resolve `XDG_DATA_HOME` e
@@ -362,7 +431,8 @@ def _onde_estao_os_lancadores() -> tuple[tuple[str, str], ...]:
         pastas = []
 
     fora: list[tuple[str, str]] = []
-    for item in desenho.PROCURADOS:
+    lista = _declarados() if declarados is None else declarados
+    for item in desenho.procurados(lista):
         onde = ""
         for pasta in pastas:
             for stem in item.atalhos:
@@ -510,7 +580,12 @@ def _ler_do_disco() -> desenho.Leitura:
 
     global PORTOES
 
-    onde_estao = _onde_estao_os_lancadores()
+    # UMA LEITURA DO `maquina.json` POR PASSADA, e ela serve às DUAS pontas: a
+    # busca em disco e a lista de cartões. Ler duas vezes daria a chance de as
+    # duas discordarem — um cartão desenhado para um lançador que a busca não
+    # percorreu nasceria eternamente «NÃO LOCALIZADO».
+    declarados = _declarados()
+    onde_estao = _onde_estao_os_lancadores(declarados)
 
     try:
         censo = sw.censo_do_wrapper(anotar=False)
@@ -520,7 +595,8 @@ def _ler_do_disco() -> desenho.Leitura:
         # acenderia o botão que fecha a Steam dela com base numa leitura que
         # falhou. O padrão não oferece o botão, que é a recusa honesta.
         PORTOES = _Portoes()
-        return desenho.Leitura(erros=(str(erro),), onde_estao=onde_estao)
+        return desenho.Leitura(erros=(str(erro),), onde_estao=onde_estao,
+                               declarados=declarados)
 
     # O `getattr` É TOLERÂNCIA A DUBLÊ, e não a um motor que mudou de nome: as
     # réguas desta casa montam censos de mentira com os campos que cada uma
@@ -564,6 +640,7 @@ def _ler_do_disco() -> desenho.Leitura:
         instalados=instalados,
         pontes=pontes,
         onde_estao=onde_estao,
+        declarados=declarados,
         frase=sw.frase_do_aviso(censo),
         # A LINHA É A CONSTANTE DO MOTOR, e não uma segunda redação: é a MESMA
         # que o botão "Copiar opções para os jogos" da janela velha copia
@@ -1364,8 +1441,32 @@ def _pintura(lancadores: list[desenho.Lancador]) -> dict[str, Any]:
     relatado como trabalho do PINTOR: comparar ignorando o `data-hef-visto`,
     carimbar depois de comparar, ou pintar `blocos` DEPOIS de `mesa`.
     """
+    # A LINHA «PARA QUEM» DA TELA DE REGISTRO SAI DAQUI, e não do `pacote()`,
+    # porque ela tem de acompanhar TODA resposta — inclusive a do próprio clique
+    # que abriu a tela. Emiti-la só na pintura do tique faria a tela abrir
+    # dizendo o alvo ANTERIOR por até um décimo de segundo, e num campo cuja
+    # única função é dizer "para qual?" isso é a tela respondendo errado.
+    #
+    # ELA É TEXTO E O PRODUTO É O DONO — por isso é `data-campo`, e por isso ela
+    # pode ser repintada a cada tique sem brigar com ninguém. As DUAS caixas de
+    # texto da tela não têm endereço nenhum, e a razão está em
+    # `desenho.NOVO_ALVO`: um `data-campo` num `<input>` seria reescrito por
+    # cima do que ela está digitando, dez vezes por segundo.
+    # O NOME SAI DOS CARTÕES QUE JÁ ESTÃO NA MÃO, e não de uma leitura nova.
+    # A primeira versão desta linha chamava `_declarados()` aqui — e isso é um
+    # `maquina.json` aberto A CADA TIQUE, dez vezes por segundo, dentro do
+    # orçamento de 100 ms da janela inteira. Toda leitura de disco desta aba
+    # roda fora do tique, na `_Vigia`, e por uma razão que o próprio
+    # `_onde_estao_os_lancadores` declara: *"disco é disco"*. Os `lancadores`
+    # que chegam aqui JÁ vieram daquela leitura, com `chave` e `nome` — pedir
+    # de novo ao disco o que já está no argumento é o custo pelo nada.
+    quem = {x.chave: x.nome for x in lancadores}
+    valores = desenho.Quadro(lancadores=lancadores).valores()
+    valores[desenho.NOVO_PARA_QUEM] = (
+        desenho.NOVO_PARA_O_CARTAO.format(nome=quem[_PARA_QUEM])
+        if _PARA_QUEM in quem else desenho.NOVO_SEM_ALVO)
     return {
-        "mesa": desenho.Quadro(lancadores=lancadores).valores(),
+        "mesa": valores,
         "blocos": {desenho.SELETOR_DA_GRADE: desenho.cartoes_html(lancadores)},
     }
 
@@ -2268,6 +2369,286 @@ def deixar_tudo_pronto(ctx: Contexto, o: dict[str, Any],
     return {**_resposta(VIGIA.ler(), ctx.state), "recado": frase}
 
 
+# ---------------------------------------------------------------------------
+# REGISTRAR O QUE O HEFESTO NÃO CONHECE — 08/09/2026, pedido dela
+#
+# A PORTA É UMA SÓ e o gesto é um só (:data:`desenho.ADICIONAR`); o que muda é
+# o que chega. Sem `forma`, o clique veio de um BOTÃO DE CARTÃO e o que ele faz
+# é abrir a tela apontando para aquele cartão. Com `forma`, o clique veio do
+# «Adicionar» da tela e traz o que ela digitou — é ali que se grava.
+#
+# POR QUE DUAS METADES NO MESMO GESTO, e não dois gestos: a tela abre por
+# `:target`, que é CSS puro e não passa pelo Python. Sem a primeira metade,
+# nada saberia para qual cartão a tela abriu, e a segunda teria de adivinhar
+# pelo texto — que é o palpite que esta aba inteira existe para não dar.
+# ---------------------------------------------------------------------------
+#: PARA QUAL CARTÃO a tela de registro está aberta. Vazio = ela abriu pelo botão
+#: global, e o lançador nasce novo.
+#:
+#: É MEMÓRIA DE SESSÃO, e é o certo: a pergunta que ele responde ("de qual
+#: cartão foi o último clique?") só existe entre o clique e o «Adicionar». Gravá-lo
+#: em disco seria guardar uma intenção que não sobrevive a fechar a janela.
+_PARA_QUEM = ""
+
+#: O TETO DO QUE ELA DIGITA, e ele é do LADO DE CÁ de propósito: o schema já tem
+#: o dele (`LancadorDeclarado`), e este existe para a recusa chegar à TELA com
+#: uma frase, em vez de subir como `ValidationError` do pydantic — que quem lê
+#: não tem como interpretar.
+_MAXIMO_DA_AGULHA = 240
+
+
+def _sem_acento(texto: str) -> str:
+    """`Ryujinx à Solta` → `ryujinx a solta`. Só para fabricar a CHAVE."""
+    import unicodedata
+
+    cru = unicodedata.normalize("NFKD", texto)
+    return "".join(c for c in cru if not unicodedata.combining(c)).lower()
+
+
+def chave_do_rotulo(rotulo: str) -> str:
+    """A chave de um lançador novo, a partir do nome que ELA deu.
+
+    ELA VIRA ATRIBUTO DE HTML (`data-lancador`, e o prefixo de todo `data-campo`
+    do cartão), então a forma é a que `maquina._CHAVE_DE_LANCADOR` cobra:
+    minúscula, sem acento, sem espaço. Fabricá-la aqui é o que poupa ELA de
+    digitar um identificador — o que a tela pede é o NOME.
+
+    DEVOLVE `""` QUANDO NÃO SOBRA NADA (um rótulo só de pontuação), e quem chama
+    recusa dizendo. Fabricar uma chave de um nome que não tem letra nem número
+    daria um cartão endereçado por acaso.
+    """
+    limpo = re.sub(r"[^a-z0-9]+", "-", _sem_acento(rotulo)).strip("-")
+    return limpo[:32].strip("-")
+
+
+def onde_isso_esta(alvo: str) -> tuple[str, str, str]:
+    """O que ela digitou, resolvido no disco: `(campo, agulha, onde)`.
+
+    AS TRÊS FORMAS QUE ELA PODE DIGITAR, e as três são aceitas porque as três
+    são como um programa se nomeia nesta máquina:
+
+    ==========================  ==========  ==================================
+    o que ela digita            `campo`     o que se guarda
+    ==========================  ==========  ==================================
+    ``ryujinx``                 comandos    o comando, achado no ``PATH``
+    ``/opt/Ryujinx/Ryujinx``    comandos    o caminho inteiro (é o AppImage)
+    ``org.ryujinx.Ryujinx``     atalhos     o ``stem`` do ``.desktop``
+    ==========================  ==========  ==================================
+
+    O CAMINHO INTEIRO CABE EM ``comandos`` SEM UMA LINHA NOVA, e isso é
+    medição, não sorte: ``shutil.which`` devolve o próprio caminho quando ele
+    tem uma barra e é executável. É exatamente o caso que a frase do cartão
+    ausente nomeia — *"um AppImage solto, por exemplo"*.
+
+    **O TERCEIRO RETORNO É O QUE PROVA**: `onde` é o caminho que o disco
+    devolveu, e é ele que a tela mostra. Dizer "guardei" sem dizer ONDE seria
+    pedir que ela acredite; com o caminho, ela confere com um `ls`.
+
+    DEVOLVE `("", "", "")` QUANDO NÃO ACHA NADA — e quem chama **não grava**.
+    Guardar um lançador que não está no disco é fabricar um cartão que mente, e
+    ele mentiria para sempre: a busca nunca o acharia, e o cartão diria «NÃO
+    LOCALIZADO» sobre uma coisa que ela mesma acabou de declarar.
+    """
+    import shutil
+
+    from hefesto_dualsense4unix.integrations import jogos_locais as jl
+
+    # O `.desktop` PRIMEIRO, e a ordem importa num caso real: `flatpak run …`
+    # publica atalhos com nome de pacote, e um `stem` que por acaso também seja
+    # um comando no `PATH` deve ser lido como o atalho, que é o mais específico.
+    stem = alvo[:-len(".desktop")] if alvo.endswith(".desktop") else alvo
+    nu = stem.rsplit("/", 1)[-1]
+    if nu:
+        try:
+            pastas = jl.pastas_de_atalhos()
+        except Exception:  # pragma: no cover - pastas ilegíveis
+            pastas = []
+        for pasta in pastas:
+            try:
+                caminho = pasta / f"{nu}.desktop"
+                if caminho.is_file():
+                    return "atalhos", nu, str(caminho)
+            except OSError:  # pragma: no cover - pasta sumiu no meio
+                continue
+
+    try:
+        achado = shutil.which(alvo)
+    except Exception:  # pragma: no cover - PATH torto
+        achado = None
+    if achado:
+        return "comandos", alvo, achado
+    return "", "", ""
+
+
+def _o_que_ela_digitou(o: dict[str, Any]) -> tuple[str, str]:
+    """`(rótulo, alvo)` da tela de registro, já aparados."""
+    forma = o.get("forma") or {}
+    if not isinstance(forma, dict):
+        forma = {}
+    return (str(forma.get(desenho.NOVO_ROTULO) or "").strip(),
+            str(forma.get(desenho.NOVO_ALVO) or "").strip())
+
+
+@gesto("07-lancadores.html", desenho.ADICIONAR, grava="machine_declare")
+def adicionar_lancador(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
+    """«Adicionar Launcher» — ela diz ONDE o lançador está, e o cartão acende.
+
+    ELE NÃO INSTALA NADA, e o cartão já explicava por quê antes de este gesto
+    existir: *"Instalado de outro jeito (um AppImage solto, por exemplo) ele não
+    aparece aqui"*. O que faltava não era o programa — era o produto saber onde
+    procurá-lo. Ver :data:`desenho.ADICIONAR_ROTULO`.
+
+    **AS DUAS METADES.** Sem `forma`, o clique é o do botão de um cartão: ele só
+    aponta a tela para aquele cartão e devolve a aba repintada, com a linha de
+    cima dizendo de quem se trata. Com `forma`, é o «Adicionar» da tela — e é
+    aqui que se grava.
+
+    **NÃO GRAVA O QUE NÃO ESTÁ NO DISCO**, e esta é a regra que mais importa:
+    :func:`onde_isso_esta` procura antes, com as MESMAS duas buscas do
+    procurador. Se não acha, o gesto recusa dizendo o que procurou. Um declarado
+    que a busca nunca acha é um cartão «NÃO LOCALIZADO» permanente — a tela
+    mentindo sobre uma coisa que ela mesma declarou.
+
+    **A CHAVE REPETIDA ENSINA, NÃO DUPLICA** (ver :func:`desenho.procurados`).
+    Pelo botão de um cartão isso é o ato inteiro. Pelo botão GLOBAL não é: ali
+    ela quis um lançador NOVO, e um nome que por acaso caia sobre um cartão de
+    fábrica faria o rótulo dela ser descartado em silêncio. Esse caso recusa
+    dizendo qual cartão já responde por aquele nome.
+
+    O `machine.declare` E NÃO UMA ESCRITA DAQUI: o `maquina.json` tem UM
+    escritor (`_handle_machine_declare`), e o lock dele é de PROCESSO. Uma
+    segunda escrita viva noutro processo perde a declaração de quem gravou
+    primeiro, sem uma linha de erro.
+    """
+    global _PARA_QUEM
+
+    rotulo, alvo = _o_que_ela_digitou(o)
+    if not o.get("forma"):
+        # A PRIMEIRA METADE: só aponta. `data-v` vazio é o botão global, e ele é
+        # legítimo — quem recusa `v` vazio é o `abrir-lancador`, que sem ele
+        # abriria um lançador escolhido por acaso. Aqui o vazio É a resposta.
+        _PARA_QUEM = str(o.get("v") or "").strip()
+        return _resposta(VIGIA.agora(), ctx.state)
+
+    para_quem = _PARA_QUEM
+    de_fabrica = {x.chave: x.nome for x in desenho.EMBUTIDOS}
+
+    if not alvo:
+        raise ValueError(
+            "Diga onde ele está: o comando (`ryujinx`), o caminho do programa "
+            "(`/opt/Ryujinx/Ryujinx`) ou o nome do atalho "
+            "(`org.ryujinx.Ryujinx`). É o que eu preciso para achá-lo.")
+    if len(alvo) > _MAXIMO_DA_AGULHA:
+        raise ValueError(
+            f"São {len(alvo)} caracteres, e o teto é {_MAXIMO_DA_AGULHA}. O que "
+            "eu preciso é do comando ou do nome do atalho, não da linha de "
+            "inicialização inteira.")
+
+    chave = para_quem or chave_do_rotulo(rotulo)
+    if not chave:
+        raise ValueError(
+            "Diga como ele se chama. O nome é o que aparece no topo do cartão, "
+            "e é dele que sai o endereço interno do cartão.")
+    if not para_quem and chave in de_fabrica:
+        raise RuntimeError(
+            f"O {de_fabrica[chave]} já tem cartão nesta aba. Se ele está aqui e "
+            f"o Hefesto não achou, use o «{desenho.ADICIONAR_ROTULO}» do cartão "
+            f"dele — assim o que você me disser entra na busca daquele cartão, "
+            f"em vez de criar um segundo com o mesmo nome.")
+
+    campo, agulha, onde = onde_isso_esta(alvo)
+    if not campo:
+        raise RuntimeError(
+            f"Não achei {alvo!r} nesta máquina. Procurei o comando no `PATH` e "
+            f"o atalho `{alvo.rsplit('/', 1)[-1]}.desktop` nas pastas de "
+            f"aplicativos. Confira o caminho e tente de novo — nada foi "
+            f"guardado.")
+
+    # O NOME DE UM CARTÃO QUE JÁ EXISTE NÃO SE REESCREVE. Quem chega pelo botão
+    # de um cartão está dizendo ONDE ele está — não como ele se chama. Mandar o
+    # que ela digitou aqui faria a gravação trocar o rótulo de um cartão de
+    # fábrica (que é desenho que ela aprovou) ou apagar o nome que ela mesma deu
+    # a um declarado, porque `fundir_declaracao` SOBRESCREVE valor que não é
+    # dicionário. O cartão novo é o único caso em que o nome vem do teclado.
+    de_hoje = {x.chave: x.nome for x in desenho.procurados(_declarados())}
+    ok, motivo = _ok_e_motivo(p.machine_declare({"lancadores": {
+        chave: {"rotulo": de_hoje.get(chave) or rotulo or chave,
+                # A AGULHA NOVA SUBSTITUI A ANTERIOR DAQUELE CAMPO, e isso é a
+                # fusão do `maquina.json` fazendo o que ela documenta. É o certo
+                # aqui: ensinar de novo é CORRIGIR o que se ensinou antes, e uma
+                # lista que só cresce não teria como perder o caminho errado
+                # sem apagar o cartão inteiro.
+                campo: [agulha]}}}))
+    if not ok:
+        raise RuntimeError(
+            motivo or "Não consegui guardar isso agora. Nada foi alterado.")
+
+    _PARA_QUEM = ""
+    # ESQUECER É O QUE FAZ O CARTÃO ACENDER NO MESMO CLIQUE: a busca em disco
+    # tem TTL, e sem isto o cartão novo só apareceria no vencimento — o botão
+    # que grava e responde calado.
+    VIGIA.esquecer()
+    nome = de_fabrica.get(chave) if para_quem else rotulo
+    return {**_resposta(VIGIA.ler(), ctx.state),
+            "recado": f"Guardei: {nome or chave} está em {onde}."}
+
+
+@gesto("07-lancadores.html", desenho.REMOVER, grava="machine_declare")
+def esquecer_lancador(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
+    """«Tirar daqui» — desfaz o que ela declarou sobre um lançador.
+
+    *O QUE SE ACRESCENTA SE TIRA.* Sem isto a lista dela vira lixo permanente:
+    um cartão acrescentado por engano ficaria na tela para sempre, e a única
+    saída seria editar o `maquina.json` à mão — que é exatamente a forma de
+    defeito que o `jogos_sem_wrapper.txt` tinha antes desta aba existir.
+
+    NUM CARTÃO DE FÁBRICA ELE NÃO APAGA O CARTÃO: apaga o ENSINO. O cartão volta
+    a ser procurado só pelos caminhos de fábrica, que é o estado anterior ao
+    clique dela — e é por isso que o botão é o mesmo nos dois casos, e não dois.
+
+    O DESFAZER É O `None`, e a língua é a que o `maquina.json` já fala — ver
+    `MaquinaConfig._o_none_e_o_esquecimento`, que carrega a razão inteira:
+    `machine.declare` não tem verbo de remoção, e mandar a lista MENOS uma chave
+    não tira chave nenhuma.
+    """
+    qual = str(o.get("v") or "").strip()
+    if not qual:
+        raise ValueError(
+            "esquecer-lancador: o clique não disse qual. Cada botão manda "
+            "`data-v` com a chave do cartão — sem ela eu apagaria a declaração "
+            "de um lançador escolhido por acaso.")
+    declarados = {x.chave: x.nome for x in _declarados()}
+    if qual not in declarados:
+        raise RuntimeError(
+            "Não há nada a tirar deste cartão: ele é de fábrica e você não "
+            "declarou nada sobre ele.")
+
+    ok, motivo = _ok_e_motivo(p.machine_declare({"lancadores": {qual: None}}))
+    if not ok:
+        raise RuntimeError(
+            motivo or "Não consegui guardar isso agora. Nada foi alterado.")
+    VIGIA.esquecer()
+    return {**_resposta(VIGIA.ler(), ctx.state),
+            "recado": f"Tirei {declarados[qual]} daqui."}
+
+
+def _ok_e_motivo(resposta: Any) -> tuple[bool, str | None]:
+    """`(ok, motivo)`, seja tupla ou `bool` o que a ponte devolveu.
+
+    A MESMA FUNÇÃO DA ABA 09 (`a09_sistema._ok_e_motivo`), e a cópia é
+    consciente: os pacotes são território exclusivo por desenho — é o que deixa
+    dez abas serem ligadas em paralelo sem uma linha de merge — e um pacote
+    importar outro trocaria essa propriedade por sete linhas.
+
+    A TOLERÂNCIA AO `bool` NÃO É ENFEITE: o dublê da régua dos botões devolve
+    `True` para quase tudo, e sem esta função o gesto rebentaria com `TypeError`
+    na régua e funcionaria na mão dela — a régua reprovando a cura.
+    """
+    if isinstance(resposta, tuple) and len(resposta) == 2:
+        return bool(resposta[0]), resposta[1]
+    return bool(resposta), None
+
+
 #: O ÚNICO MÉTODO DO DAEMON QUE ESTA ABA CHAMA, e ele nasceu em 06/09/2026 com
 #: o "Este jogo não funciona". Ver :func:`este_jogo_nao_funciona`.
 METODO_DA_RECARGA = "launch_env.refresh"
@@ -2281,8 +2662,12 @@ METODO_DA_RECARGA = "launch_env.refresh"
 #: OS OUTROS DEZ CONTINUAM SEM PONTE, e a medição que os deixou assim não mudou:
 #: o wrapper vive em dois arquivos em disco, e o `state_full` não tem UMA chave
 #: sobre a Steam, sobre a lista de recusados ou sobre a de dispensados.
-PONTE: set[str] = {"chamar"}
-METODOS: set[str] = {METODO_DA_RECARGA}
+# `machine_declare` ENTROU EM 08/09/2026 com o lançador declarado por ELA: é a
+# ÚNICA porta de escrita do `maquina.json`, e o lock daquele arquivo é de
+# PROCESSO — uma segunda escrita viva noutro processo perderia a declaração de
+# quem gravou primeiro, calada.
+PONTE: set[str] = {"chamar", "machine_declare"}
+METODOS: set[str] = {METODO_DA_RECARGA, "machine.declare"}
 
 
 PAGINA = "07-lancadores.html"
@@ -2297,7 +2682,9 @@ PAGINA = "07-lancadores.html"
 #: 06/09/2026, com os TRÊS do Steam Input (decisão dela,
 #: `D-0609-STEAM-DIVIDIDO`): "Desligar o Steam Input", "Este jogo não funciona"
 #: e "Deixar tudo pronto".
-PISO_DA_ABA = 14
+#: e de 14 PARA 16 em 08/09/2026, com o registro do lançador que o Hefesto não
+#: conhece (pedido dela): «Adicionar Launcher» e «Tirar daqui».
+PISO_DA_ABA = 16
 
 #: SEM `PROVAS`, e a razão é o contrato da régua dos botões: ela injeta uma
 #: `PonteDeMentira` e cobra QUAL função da ponte o gesto chamou. Um gesto que
@@ -2337,4 +2724,9 @@ SEM_ECO = ("procurar", "consertar", "ver-o-que-impede", "detectar",
            "tirar-daqui", "voltar-a-usar", "voltar-a-perguntar",
            "abrir-lancador", "nao-perguntar", FECHAR, desenho.COPIAR,
            desenho.DESLIGAR_STEAM_INPUT, desenho.JOGO_NAO_FUNCIONA,
-           desenho.TUDO_PRONTO)
+           desenho.TUDO_PRONTO,
+           # OS DOIS DO REGISTRO (08/09/2026) entram pelo mesmo motivo dos
+           # outros catorze, e por um a mais: o efeito deles é o
+           # `maquina.json`, e o `state_full` não tem UMA chave sobre a
+           # declaração dela — nem sobre lançador nenhum.
+           desenho.ADICIONAR, desenho.REMOVER)

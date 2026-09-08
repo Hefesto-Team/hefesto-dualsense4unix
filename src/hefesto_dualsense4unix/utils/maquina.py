@@ -563,6 +563,117 @@ class ControleDeclarado(BaseModel):
     microfone: bool | None = None
 
 
+#: A CHAVE DE UM LANÇADOR DECLARADO, e a forma é estreita porque ela vira
+#: ATRIBUTO DE HTML: o desenho da aba Lançadores prefixa os endereços do cartão
+#: com ela (``data-lancador="x"``, ``data-campo="x-selo"``). Uma chave com aspas
+#: ou espaço quebraria a marcação do cartão; uma com maiúscula faria
+#: ``Retroarch`` e ``retroarch`` serem dois cartões que dizem o mesmo.
+_CHAVE_DE_LANCADOR = re.compile(r"^[a-z0-9][a-z0-9_-]{0,31}$")
+
+#: O TETO DA LISTA DELA. Não é medo de disco — é a mesma razão do
+#: ``_MAXIMO_DO_ARRANJO``: um documento que cresce sem teto é um documento que
+#: um laço com defeito enche calado, e o sintoma seria a aba inteira lenta.
+#: Trinta e dois lançadores é muitas vezes mais do que a soma de tudo o que esta
+#: casa conhece de fábrica.
+_MAXIMO_DE_LANCADORES = 32
+
+
+class LancadorDeclarado(BaseModel):
+    """Um lançador ou emulador que ELA acrescentou — ou onde um de fábrica está.
+
+    PEDIDO DELA, 08/09/2026: *"Pensei em outro botão pra Adicionar novo Emulador
+    Ou novo lançador algo assim, pra devs mais experimentais e permitir que o
+    user adicione algo novo"*.
+
+    ELE MORA AQUI, e não num arquivo próprio, pela razão do cabeçalho deste
+    módulo: ``maquina.json`` é o lugar do que o Hefesto **não tem como medir**.
+    Que o Ryujinx dela está em ``/opt`` é exatamente isso — nenhuma varredura
+    adivinha um caminho que ninguém publicou.
+
+    OS TRÊS CAMPOS SÃO OS TRÊS QUE O PROCURADOR JÁ USA
+    (``interface/desenho_dos_lancadores.SemCenso``): ``rotulo`` é o nome do
+    cartão, ``atalhos`` são os ``stem`` de ``.desktop`` e ``comandos`` é o que
+    procurar no ``PATH``. **Serem os mesmos é o ponto inteiro:** o declarado e o
+    embutido passam pelo MESMO procurador, e um segundo caminho de busca seria a
+    assimetria que produz duas respostas para a mesma pergunta.
+
+    ``comandos`` ACEITA CAMINHO INTEIRO, e isso não é frouxidão: ``shutil.which``
+    devolve o próprio caminho quando ele contém uma barra e é executável, então
+    ``/home/…/Heroic.AppImage`` já é achado pelo procurador que existe, sem uma
+    linha nova. É o caso que a frase do cartão ausente nomeia — *"um AppImage
+    solto, por exemplo"*.
+
+    NÃO GUARDA COMO ABRIR, e a ausência é decisão: abrir um ``.desktop`` exige
+    ler o ``Exec=`` com os códigos de campo, e isso é capacidade nova. O que
+    este registro compra é o cartão ACENDER e o perfil casar pelo processo — que
+    é o que a aba promete.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    rotulo: str
+    atalhos: tuple[str, ...] = ()
+    comandos: tuple[str, ...] = ()
+
+    @field_validator("rotulo")
+    @classmethod
+    def _o_rotulo_e_o_nome_do_cartao(cls, valor: str) -> str:
+        limpo = valor.strip()
+        if not limpo:
+            raise ValueError(
+                "um lançador declarado sem rótulo vira um cartão sem nome na "
+                "tela, e nada nele diz de que lançador se trata"
+            )
+        if len(limpo) > 60:
+            raise ValueError(
+                f"rótulo de {len(limpo)} caracteres não cabe no topo do cartão, "
+                "que divide a linha com o selo e a contagem"
+            )
+        return limpo
+
+    @field_validator("atalhos", "comandos")
+    @classmethod
+    def _nada_de_agulha_vazia(cls, valor: tuple[str, ...]) -> tuple[str, ...]:
+        # UMA AGULHA VAZIA ACHA TUDO OU NADA, e as duas são erro: `pasta /
+        # ".desktop"` é um arquivo que pode existir, e `shutil.which("")`
+        # devolve `None` calado. Gravar o vazio é gravar uma busca que ninguém
+        # consegue depurar depois.
+        limpas = tuple(dict.fromkeys(x.strip() for x in valor if x.strip()))
+        if len(limpas) > 16:
+            raise ValueError(
+                f"{len(limpas)} agulhas para um lançador só — cada uma custa um "
+                "`stat` por pasta a cada busca, e a lista existe para dizer onde "
+                "ele está, não para varrer o disco"
+            )
+        return limpas
+
+    @model_validator(mode="after")
+    def _sem_agulha_nao_ha_o_que_procurar(self) -> LancadorDeclarado:
+        """Um lançador sem ``atalhos`` **e** sem ``comandos`` é INACHÁVEL.
+
+        A GUARDA NASCEU DE UMA MEDIÇÃO, e ela é do dia em que este campo nasceu:
+        ``{"rotulo": "X", "comandos": ["", "  "]}`` passava. O validador de cima
+        apara o vazio, sobrava a tupla vazia, e o documento gravava um lançador
+        que a busca **nunca** acharia — um cartão «NÃO LOCALIZADO» permanente
+        sobre uma coisa que ela mesma declarou. É a definição do cartão que
+        mente, chegando pelo lado do disco.
+
+        **HÁ DUAS GUARDAS PARA ISTO, E ELAS SÃO DIFERENTES DE PROPÓSITO.** O
+        gesto da tela recusa antes de escrever, e recusa MAIS: ele confere que o
+        que ela digitou EXISTE no disco agora (``a07_lancadores.onde_isso_esta``).
+        Esta aqui é a de FORMA — ela alcança o que aquela não pode alcançar: um
+        ``maquina.json`` escrito à mão, ou uma versão futura com outro gesto.
+        Duas réguas independentes é regra desta casa.
+        """
+        if not self.atalhos and not self.comandos:
+            raise ValueError(
+                f"o lançador {self.rotulo!r} não diz onde procurar: sem um "
+                "`.desktop` em `atalhos` nem um comando em `comandos` a busca "
+                "nunca o acha, e o cartão dele diz «não localizei» para sempre"
+            )
+        return self
+
+
 class OrcamentoDeclarado(BaseModel):
     """O teto da mesa inteira — as abas seguem mandando, só não passam daqui.
 
@@ -597,6 +708,11 @@ class MaquinaConfig(BaseModel):
     # devolver "não sei" em mesa, controles e orçamento, e a gravação dizer
     # "não gravei" para sempre. Não há passo de migração a escrever.
     mapa: MapaDaMesa = Field(default_factory=MapaDaMesa)
+    # LANÇADORES-DELA-01 (08/09/2026): o que ela acrescentou à aba Lançadores.
+    # A ``version`` NÃO sobe, e a razão é a mesma escrita para o ``mapa`` logo
+    # acima — campo novo sem bump É a migração, e o caminho já está construído
+    # nos dois sentidos.
+    lancadores: dict[str, LancadorDeclarado] = Field(default_factory=dict)
     # NOTA DATADA (T2, CONFIGURAÇÕES-FECHA-01, 24/08/2026): ``ambiente`` saiu
     # do esquema. O campo nasceu na v1 sem escritor NEM leitor — quem grava a
     # correção de ambiente é ``gravar_correcao_de_ambiente``
@@ -622,6 +738,54 @@ class MaquinaConfig(BaseModel):
                     "dois clones recebem o mesmo, e gravá-lo funde dois aparelhos"
                 )
         return valor
+
+    @field_validator("lancadores", mode="before")
+    @classmethod
+    def _o_none_e_o_esquecimento(cls, valor: Any) -> Any:
+        """``{"lancadores": {"x": None}}`` **APAGA** o ``x``. É o único desfazer.
+
+        POR QUE ELE PRECISOU EXISTIR, e a alternativa era pior: ``machine.declare``
+        não tem verbo de remoção, e :func:`fundir_declaracao` desce nos
+        dicionários aninhados — mandar a lista MENOS uma chave não tira chave
+        nenhuma, ela sobrevive do lado do disco. Sem um desfazer, um lançador que
+        ela acrescentou por engano ficaria no cartão dela para sempre, e a aba
+        Conexões já pagou esse preço uma vez (ver ``_DISPENSADAS``, em
+        ``a08_conexoes``: *"o arranjo vazio é o desfazer"*).
+
+        A LÍNGUA É A QUE O ARQUIVO JÁ FALA, e por isso não é vocabulário novo:
+        :func:`fundir_declaracao` declara que ``None`` na declaração *"é uma
+        escolha e SOBRESCREVE"*, e :func:`_podar` declara que ``None`` e chave
+        ausente *"querem dizer a MESMA coisa aqui"*. Este validador é só o
+        terceiro passo dessa mesma frase — o ``None`` chega pela fusão, some na
+        validação, e o documento gravado não tem a chave.
+
+        **A ALTERNATIVA QUE NÃO SE FEZ** era tipar o campo como
+        ``dict[str, LancadorDeclarado | None]``. Ela funcionaria e cobraria o
+        preço em outro lugar: TODO leitor passaria a ter de peneirar o ``None``,
+        e o primeiro que esquecesse desenharia um cartão a partir do nada. O
+        ``None`` é vocabulário da ESCRITA; quem lê nunca deve vê-lo.
+
+        Uma segunda porta continua sendo uma segunda porta, então este é o único
+        lugar em que a palavra existe — e a mordida está em
+        ``test_o_lancador_declarado_entra_no_cartao``.
+        """
+        if not isinstance(valor, Mapping):
+            return valor
+        vivos = {k: v for k, v in valor.items() if v is not None}
+        if len(vivos) > _MAXIMO_DE_LANCADORES:
+            raise ValueError(
+                f"{len(vivos)} lançadores declarados, e o teto é "
+                f"{_MAXIMO_DE_LANCADORES}"
+            )
+        for chave in vivos:
+            if not isinstance(chave, str) or not _CHAVE_DE_LANCADOR.match(chave):
+                raise ValueError(
+                    f"chave de lançador {chave!r} não serve como endereço de "
+                    "tela — o cartão a usa em `data-lancador` e no prefixo de "
+                    "cada `data-campo`, então ela é minúscula, sem espaço e sem "
+                    "aspas (a-z, 0-9, `-` e `_`, até 32)"
+                )
+        return vivos
 
 
 def caminho_da_maquina() -> Path:

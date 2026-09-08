@@ -906,6 +906,122 @@
     background:var(--elevated);border:1px solid var(--border-sutil)}
   .linha-do-wrapper code{font-family:'JetBrains Mono',monospace;font-size:10px;
     line-height:1.5;color:var(--texto-suave);word-break:break-all}
+  /* A TELA DE REGISTRO — 08/09/2026, o «Adicionar Launcher» dela.
+     A CAIXA, o topo, o corpo e o rodapé vêm do `monta.CSS_POPUP`, que é o dono
+     da `.tela-nova` desde 29/08 e existe justamente para a segunda aba com
+     pop-up não copiar as 49 linhas da primeira. O que é DESTA tela — e só
+     dela — são as três regras abaixo, pela mesma razão que deixou a `.tn-vel`
+     no `aba06.py`: CSS de uma tela só num arquivo comum é a mesma doença pelo
+     avesso.
+     A LINHA DE CIMA É A QUE RESPONDE «PARA QUAL?», e por isso ela é a única com
+     endereço: quem abre a tela pelo botão de um cartão precisa ver de que
+     cartão se trata antes de digitar. */
+  .lanc-novo-para{font-size:11.5px;color:var(--texto-mudo);margin-bottom:12px}
+  /* `flex-direction:column` e não uma linha: com o rótulo à esquerda os dois
+     campos ficariam com larguras diferentes (os textos têm tamanhos
+     diferentes), e dois campos de texto desalinhados numa caixa de 660px é o
+     que faz a tela parecer montada por pessoas diferentes. */
+  .lanc-novo-campo{display:flex;flex-direction:column;gap:5px;margin-bottom:12px}
+  .lanc-novo-campo > span{font-size:11px;color:var(--texto-suave)}
+  /* A ALTURA É A DO `--h-acao` do esqueleto, que é a dos botões do rodapé desta
+     mesma caixa — um campo mais baixo que o botão que o guarda é a costura à
+     vista. `font-family` monoespaçada porque o que se digita aqui é caminho e
+     comando, e num `l` contra um `1` a diferença decide se o Hefesto acha. */
+  .lanc-novo-campo input{height:var(--h-acao);border-radius:7px;padding:0 10px;
+    background:var(--app-bg);border:1px solid var(--border-forte);color:var(--fg);
+    font-family:'JetBrains Mono',monospace;font-size:11.5px}
+  .lanc-novo-campo input:focus{outline:none;border-color:var(--purple)}
+  /* O BOTÃO QUE É ÂNCORA TEM DE PARECER BOTÃO — 08/09/2026, e foi a FOTO que
+     mostrou. Dois dos botões desta aba são `<a class="btn">` porque só uma
+     âncora abre a `.tela-nova` pelo `:target` (ver `desenho_dos_lancadores.
+     Acao.href`); o `.btn` do esqueleto não desliga o sublinhado, que é
+     `text-decoration` padrão de `<a>`. Resultado medido na primeira foto: o
+     «Adicionar lançador ou emulador» e o «Adicionar Launcher» saíam
+     SUBLINHADOS ao lado de irmãos idênticos que não saíam — a mesma quebra de
+     "mesma família, mesma largura" que fez o `.lanc .btn` cair em 02/09.
+     O `.tn-rod .btn` do `monta.CSS_POPUP` já resolve isto DENTRO da pop-up, e
+     pela mesma razão; esta regra é a mesma lição, na fileira da aba. */
+  .acoes a.btn,.lanc a.btn{text-decoration:none;display:inline-flex;
+    align-items:center;justify-content:center}
+
+  /* ---- AS TELAS NOVAS (:target, sem script) ---- */
+  .tela-nova{display:none;position:fixed;inset:0;z-index:60;
+             background:rgba(9,10,15,.72);align-items:center;justify-content:center}
+  .tela-nova:target{display:flex}
+  /* ---------------------------------------------------------------------
+     A CAIXA TEM TETO, E O TETO É A JANELA DO PRODUTO (28/08/2026).
+     A `.tn-cx` não tinha `max-height` nem `overflow`: se o conteúdo crescesse,
+     ele saía da tela SEM barra de rolagem e SEM aviso — o defeito não aparecia
+     porque régua nenhuma desta casa mede pop-up (a `.tela-nova` é
+     `position:fixed`, fora do `.miolo` que as réguas varrem).
+     717px = os 757px da janela do Hefesto menos 20px de respiro em cima e
+     embaixo; o `min()` com `100vh` cobre quem abrir numa janela menor que isso.
+
+     QUEM ROLA É A MOLDURA DA TABELA, e não o corpo — e isso é uma CORREÇÃO, não
+     uma escolha de gosto. A primeira versão pôs `overflow-y:auto` no `.tn-corpo`
+     inteiro, e o `overflow` recorta TODO descendente posicionado, role ou não:
+     a dica de "Velocidade de cursor" do Point-and-click, que tem 330×123px e
+     abre para fora da caixa, apareceu CORTADA em dois lados. Medido em 28/08.
+     A moldura é a única parte que cresce com o número de linhas, e não há uma
+     só dica dentro dela — a do título mora no `.tn-topo` e as do Point-and-click
+     no `.tn-vel`, ambos fora. Assim título, frase, velocidades e o rodapé com o
+     "Guardar" ficam sempre à vista, e nenhuma dica é recortada.
+     --------------------------------------------------------------------- */
+  .tn-cx{width:660px;max-width:94vw;background:var(--panel);border-radius:11px;
+         border:1px solid var(--border-forte);box-shadow:0 26px 70px rgba(0,0,0,.62);
+         display:flex;flex-direction:column;max-height:min(717px,calc(100vh - 40px))}
+  .tn-topo{display:flex;align-items:center;gap:9px;padding:14px 18px 0;flex:none}
+  .tn-tit{font-size:14.5px;font-weight:600;color:var(--purple)}
+  .tn-x{margin-left:auto;width:26px;height:26px;border-radius:6px;text-decoration:none;
+        border:1px solid var(--border-forte);color:var(--texto-mudo);font-size:14px;
+        display:flex;align-items:center;justify-content:center}
+  .tn-x:hover{border-color:var(--red);color:var(--red)}
+  /* `min-height:0` nos dois níveis não é enfeite: sem ele um item de flex-column
+     não encolhe abaixo do `min-content`, e a rolagem interna nunca chega a
+     existir — o teto passaria a cortar em silêncio, que é o defeito de origem. */
+  .tn-corpo{padding:11px 18px 16px;display:flex;flex-direction:column;min-height:0}
+  /* `scrollbar-gutter:stable` NÃO é enfeite, e a razão foi medida em 29/08/2026:
+     a moldura da `#mapear-entradas` escondia 180px — a confissão INTEIRA e a
+     segunda pergunta da sala — e `offsetWidth - clientWidth` dava ZERO, porque
+     no Linux a barra do Chrome é overlay e não ocupa largura. Havia rolagem e
+     nada na tela dizia isso: quem abrisse a pop-up leria uma tela completa que
+     não estava completa. O `.miolo` do esqueleto já resolve assim
+     (`topo.html:134`); a moldura da pop-up não tinha herdado a lição. */
+  .tn-corpo > .moldura{overflow-y:auto;min-height:0;scrollbar-gutter:stable}
+  /* A BARRA, E O QUE O INSTRUMENTO NÃO CONSEGUE PROVAR (29/08/2026).
+     O `scrollbar-gutter:stable` reserva os 9px — isso está MEDIDO
+     (`offsetWidth - clientWidth == 9`). O `scrollbar-color` e as regras
+     `::-webkit-scrollbar` abaixo pedem que ela seja pintada.
+
+     **O QUE NÃO CONSEGUI PROVAR:** o Chrome headless do `olhar.py` NÃO pinta a
+     barra na foto — amostrei a coluna dela pixel a pixel e só há cor de fundo,
+     inclusive com `--disable-features=OverlayScrollbar`. Três tentativas.
+     Logo: a rolagem existe e funciona, mas **nenhuma foto desta casa prova que
+     a pessoa vê que há mais abaixo**. Quem for validar isto valida em navegador
+     de verdade, ou no produto — onde quem desenha é o GTK, cuja barra é sólida.
+
+     POR QUE ISSO IMPORTA: a `#mapear-entradas` esconde 140px, e entre eles está
+     a confissão inteira ("o que eu não consegui conferir neste desenho"). Uma
+     tela que parece completa e não está é a classe de defeito que esta casa
+     mais paga. O número está na mesa; encolher o conteúdo é decisão dela. */
+  .tn-corpo > .moldura{scrollbar-width:thin;
+                       scrollbar-color:var(--border-forte) var(--panel-2, #21222c)}
+  .moldura::-webkit-scrollbar{width:9px}
+  .moldura::-webkit-scrollbar-track{background:var(--panel-2, #21222c);border-radius:5px}
+  .moldura::-webkit-scrollbar-thumb{background:var(--border-forte);border-radius:5px}
+  .tn-frase{font-size:11.5px;color:var(--texto-mudo);line-height:1.55;margin-bottom:11px}
+  .tn-rod{display:flex;gap:var(--gap);padding:0 18px 16px;flex:none}
+  .tn-rod .btn{flex:1;text-decoration:none}
+  /* a confirmação do rodapé segue os botões, e não a borda da caixa: o
+     `left:0/right:0` do `.confirma` mira a caixa de padding do `.tn-rod`, que
+     começa 18px antes do primeiro botão. */
+  .tn-rod .confirma{left:18px;right:18px}
+  .tn-cx .tab td{height:23px}
+  .tn-cx .campo-linha{height:22px}
+  /* dentro de uma pop-up a dica abre para a ESQUERDA: a caixa tem 660px e
+     22+330 a partir do rótulo passava da borda direita dela. Medido na
+     Point-and-click, e vale para toda `.tn-cx` pela mesma aritmética. */
+  .tn-cx .dica{left:auto;right:22px}
 
 </style>
 </head>
@@ -1096,6 +1212,7 @@
         <div class="acoes" style="margin-top:0;margin-bottom:12px">
           <button class="btn roxo" data-gesto="detectar">Detectar o jogo que está aberto</button>
           <button class="btn" data-gesto="procurar">Procurar de novo</button>
+          <a class="btn" href="#novo-lancador" data-gesto="adicionar-lancador">Adicionar lançador ou emulador</a>
         </div>
 
         <div class="lancadores">
@@ -1167,6 +1284,17 @@
           <button class="btn" data-gesto="abrir-lancador" data-v="emuladores">Abrir o lançador</button>
         </div>
       </div>
+      <div class="lanc ausente" data-lancador="epic">
+        <div class="lanc-topo">
+          <span class="lanc-nome">Epic Games</span>
+          <span data-campo="epic-selo" data-hef-alvo="html"><span class="lanc-selo nao_sei">NÃO SEI</span></span>
+          <span class="lanc-jogos" data-campo="epic-jogos">—</span>
+        </div>
+        <div class="lanc-diz" data-campo="epic-diz" data-hef-alvo="html"><b>O perfil casa pelo nome do processo e pela janela.</b> Um jogo aberto por aqui entra pelo mesmo caminho de qualquer outro.</div>
+        <div class="acoes" data-campo="epic-acoes" data-hef-alvo="html">
+          <button class="btn" data-gesto="abrir-lancador" data-v="epic">Abrir o lançador</button>
+        </div>
+      </div>
         </div>
 
       </div>
@@ -1231,6 +1359,43 @@
 
 </div>
 
+<div class="tela-nova" id="novo-lancador">
+  <div class="tn-cx">
+    <div class="tn-topo">
+      <span class="tn-tit">Adicionar lançador ou emulador</span>
+      <span class="ajuda">?<span class="dica">
+        O Hefesto procura cada lançador de dois jeitos: o atalho
+        <code>.desktop</code> nas pastas de aplicativos e o comando no
+        <code>PATH</code>. Diga qualquer um dos dois e ele passa a procurar
+        também o seu.<br><br>
+        Vale o <b>comando</b> (<code>ryujinx</code>), o <b>caminho inteiro</b> de
+        um programa (<code>/opt/Ryujinx/Ryujinx</code>, e é assim que entra um
+        AppImage solto) ou o <b>nome do atalho</b>
+        (<code>org.ryujinx.Ryujinx</code>).<br><br>
+        O que você escrever é conferido no disco antes de ser guardado.
+      </span></span>
+      <a class="tn-x" href="#" title="Fechar">&times;</a>
+    </div>
+    <div class="tn-corpo">
+      <div class="lanc-novo-para" data-campo="lanc-novo-para-quem">Um lançador ou emulador que você usa</div>
+      <label class="lanc-novo-campo">
+        <span>Como ele se chama</span>
+        <input type="text" data-linha="lanc-novo-rotulo" placeholder="Ryujinx">
+      </label>
+      <label class="lanc-novo-campo">
+        <span>Onde ele está</span>
+        <input type="text" data-linha="lanc-novo-alvo"
+               placeholder="ryujinx  ·  /opt/Ryujinx/Ryujinx  ·  org.ryujinx.Ryujinx">
+      </label>
+    </div>
+    <div class="tn-rod">
+      <a class="btn" href="#">Cancelar</a>
+      <a class="btn roxo" href="#" data-gesto="adicionar-lancador"
+         data-hef-forma="novo-lancador">Adicionar</a>
+    </div>
+  </div>
+</div>
+
 <!-- ================= LEGENDA DO MOCKUP ================= -->
 <div class="nota">
   <h2>A aba mudou de assunto inteiro</h2>
@@ -1248,6 +1413,14 @@
     <li><b>Nasceu o selo <code>NÃO SEI</code>, e ele é a cura disso.</b> Heroic, Lutris, Flatpak, RetroArch e Dolphin·mGBA passam a dizer que o produto ainda não sabe olhá-los — <code>CHEGAM</code> e <code>NÃO CHEGAM</code> seriam as duas afirmações que ele não pode fazer. Há régua que reprova no dia em que um deles ganhar fonte e continuar com o <code>NÃO SEI</code>.</li>
     <li><b>O cartão da Steam ganhou a lista dos jogos que perderam o atalho</b>, com o nome de cada um e o botão de tirar/devolver. Ela <b>nasce vazia</b> e não ocupa um pixel quando não há o que dizer — a mesma regra do carimbo.</li>
     <li><b>A contagem do quadro continua derivada</b> — hoje <b>0</b> —, e agora dos mesmos cartões que o produto monta.</li>
+  </ul>
+
+  <h2>08/09/2026 — as quatro que ela pediu olhando a aba</h2>
+  <ul>
+    <li><b>O selo diz <code>NÃO LOCALIZADO</code></b>, e não mais <code>NÃO ACHEI</code> — palavra dela. O valor mudou num lugar só (<code>desenho_dos_lancadores.SELOS</code>); as dezenas de menções em comentário ficaram, porque contam o que aconteceu num dia. E as réguas que digitavam a palavra passaram a <b>ler</b> o selo.</li>
+    <li><b>No cartão que não localizou, o botão virou <code>Adicionar Launcher</code></b> — palavra dela. Ele não instala nada: ele abre a tela onde <b>você diz onde o lançador está</b>, que é o que faltava para o cartão acender. No cartão que <i>achou</i>, o botão continua sendo <code>Abrir o lançador</code>: são dois estados, dois botões.</li>
+    <li><b>A Epic Games ganhou cartão</b>, e ele procura os três clientes que entregam jogo da Epic no Linux: o <code>Rare</code>, o <code>legendary</code> e o <b>Heroic</b>. O Heroic entra na busca de propósito — sem ele, esta máquina veria o cartão da Epic dizendo <code>NÃO LOCALIZADO</code> com o cartão do Heroic ao lado dizendo que achou.</li>
+    <li><b>E há um botão para acrescentar o que o Hefesto não conhece</b> — <code>Adicionar lançador ou emulador</code>, pedido dela <i>"pra devs mais experimentais"</i>. O que você declara mora no <code>maquina.json</code> e passa pelo <b>mesmo procurador</b> dos de fábrica; o que não está no disco <b>não é guardado</b>, e o recado diz o que foi procurado. O que se acrescenta se tira, pelo <code>Tirar daqui</code>.</li>
   </ul>
 
   <h2>O que estava no código e nunca teve tela — agora tem</h2>

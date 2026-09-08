@@ -33,6 +33,7 @@ dois.
 """
 from __future__ import annotations
 
+import dataclasses
 import html
 from dataclasses import dataclass, field
 
@@ -44,10 +45,23 @@ from dataclasses import dataclass, field
 #: `profiles/schema.py:1509`). Sem este selo, o cartão do Heroic teria de
 #: escolher entre `CHEGAM` e `NÃO CHEGAM`, e as duas seriam afirmação sobre um
 #: lançador que o produto nunca olhou. **"Não sei" é resposta; palpite não é.**
+#: O `off` DIZ «NÃO LOCALIZADO» DESDE 08/09/2026 — palavra dela, olhando a aba
+#: com os quatro DualSense na mesa: *"ao invés de não achei. Deveria ter Não
+#: Localizado"*.
+#:
+#: **O VALOR MUDOU; A HISTÓRIA FICOU.** A grafia antiga aparece dezenas de vezes
+#: neste arquivo e nos vizinhos, em comentário e docstring que NARRAM o que
+#: aconteceu num dia — o selo que nasceu morto, os cinco cartões que o diziam ao
+#: lado de uma Steam verde. Trocar aquilo reescreveria o registro do passado, e
+#: o passado não se edita para combinar com a tela de hoje.
+#:
+#: **E QUEM MEDE PASSOU A LER.** As réguas que digitavam a palavra agora leem
+#: `SELOS["off"]` — é a regra que as onze réguas de 26/08/2026 deixaram: *régua
+#: que digita o que devia LER reprova a melhora em vez do defeito*.
 SELOS = {
     "ok": "CHEGAM",
     "warn": "NÃO CHEGAM",
-    "off": "NÃO ACHEI",
+    "off": "NÃO LOCALIZADO",
     "nao_sei": "NÃO SEI",
 }
 
@@ -90,6 +104,17 @@ class Acao:
     #: `o["v"]` do gesto, e é o que separa "Consertar a Steam" de "Consertar o
     #: Heroic" sem o gesto ter de adivinhar pelo texto do botão.
     v: str = ""
+    #: O destino do `href`, e um `href` troca a TAG: com ele o botão nasce
+    #: `<a class="btn">`, sem ele `<button>`. Ele existe para UM caso e ele é
+    #: mecânico: a pop-up desta casa abre por `:target` (`monta.CSS_POPUP`,
+    #: `.tela-nova:target{display:flex}`), e **só uma âncora muda o fragmento**.
+    #:
+    #: O GESTO CONTINUA SAINDO NO MESMO CLIQUE: o ouvinte do piloto não chama
+    #: `preventDefault` (`hefesto_vivo.py`, o `addEventListener('click', …)`),
+    #: então o mesmo toque abre a tela E manda o gesto — que é como o registro
+    #: sabe para QUAL cartão a tela abriu. É a forma que o `aba06.py` já usa nos
+    #: "Guardar" das telas de teclas.
+    href: str = ""
 
 
 @dataclass(frozen=True)
@@ -219,6 +244,13 @@ def acao_html(a: Acao) -> str:
     classe = f"btn {a.classe}".strip()
     endereco = f' data-gesto="{_a(a.gesto)}"' if a.gesto else ""
     valor = f' data-v="{_a(a.v)}"' if a.v else ""
+    # A TAG SEGUE O `href`, e a razão está em :attr:`Acao.href`: só uma âncora
+    # abre a pop-up por `:target`. Um `<button>` com `href` não navega, e um
+    # `<a>` sem `href` não é clicável pelo teclado — por isso os dois casos são
+    # tags diferentes, e não um atributo opcional numa tag só.
+    if a.href:
+        return (f'<a class="{classe}" href="{_a(a.href)}"'
+                f'{endereco}{valor}>{_e(a.rotulo)}</a>')
     return f'<button class="{classe}"{endereco}{valor}>{_e(a.rotulo)}</button>'
 
 
@@ -343,6 +375,89 @@ def um_cartao(lanc: Lancador) -> str:
 def cartoes_html(lancadores: list[Lancador]) -> str:
     """A grade inteira. Usada pelo gerador; o pacote pinta campo a campo."""
     return "\n".join(um_cartao(x) for x in lancadores)
+
+
+#: O QUE A LINHA «PARA QUEM» DIZ QUANDO A TELA ABRIU PELO BOTÃO GLOBAL — o
+#: estado em que ela nasce vazia. Ele mora aqui, e não no pacote, porque é o
+#: DESENHO da tela estática: o gerador o escreve dentro do `data-campo`, e o
+#: pacote o repinta com o mesmo texto enquanto não houver cartão apontado.
+#: ELA DIZIA O QUE NÓS NÃO TEMOS, e foi apanhada pelo portão no mesmo dia em que
+#: nasceu: *"Um lançador ou emulador que o Hefesto **ainda não** traz de
+#: fábrica"* — o «ainda não» põe o sujeito em NÓS e transforma a linha numa
+#: confissão de dívida. A ordem dela, 07/09/2026: *"O app tem que funcionar e não
+#: mostrar na tela que o app não presta."*
+#:
+#: O SUJEITO CERTO É ELA, e a frase fica melhor: quem está para ser acrescentado
+#: é um lançador que ELA usa. O fato não se perdeu — quem chega a esta tela já
+#: sabe que o lançador não tem cartão, porque foi por isso que ela a abriu.
+NOVO_SEM_ALVO = "Um lançador ou emulador que você usa"
+
+#: O que a linha diz quando a tela abriu pelo botão «Adicionar Launcher» de um
+#: cartão. O `{nome}` é o nome daquele cartão, e é o que responde à única
+#: pergunta que ela faria olhando dois campos vazios: *para qual?*
+NOVO_PARA_O_CARTAO = "Onde está o {nome} nesta máquina"
+
+
+def tela_do_registro_html(para_quem: str = NOVO_SEM_ALVO) -> str:
+    """A pop-up em que ela diz onde o lançador está. Sem uma linha de script.
+
+    ELA ABRE POR `:target` (`monta.CSS_POPUP`), que é o mecanismo que esta casa
+    já usa nas cinco pop-ups das abas 06 e 08 — o botão é uma âncora para o
+    `id` daqui, e o fechar e o `Cancelar` são âncoras para `#`. Um segundo
+    mecanismo de abrir tela seria o segundo vocabulário que o `CSS_POPUP` subiu
+    para o `monta.py` justamente para não existir.
+
+    **DOIS CAMPOS, E O SEGUNDO É O MÍNIMO.** O nome é o rótulo do cartão; o que
+    o produto precisa é do outro — o comando ou o caminho. Quem chega pelo botão
+    de um cartão não precisa nem do primeiro: o cartão já tem nome.
+
+    O GLIFO DE FECHAR VAI COMO ENTIDADE (`&times;`) e não como caractere, e a
+    razão é de LINT, não de gosto: os `aba*.py` têm isenção de `RUF001`/`RUF002`
+    no `pyproject.toml` (eles são HTML dentro de Python por natureza) e **este
+    módulo não tem** — ele é o desenho compartilhado, e a régua estrita nele é o
+    que impede um caractere ambíguo de entrar num valor que o produto compara.
+    A entidade renderiza igual e não pede exceção nenhuma.
+
+    A CAIXA DE TEXTO NÃO TEM `data-campo`, e isso é cura de defeito conhecido —
+    ver :data:`NOVO_ALVO`. O que o piloto recolhe é `data-linha`, e o que ele
+    pinta é só a linha de cima, que é texto do produto.
+    """
+    return f'''<div class="tela-nova" id="{TELA_DO_NOVO}">
+  <div class="tn-cx">
+    <div class="tn-topo">
+      <span class="tn-tit">{_e(ADICIONAR_NOVO_ROTULO)}</span>
+      <span class="ajuda">?<span class="dica">
+        O Hefesto procura cada lançador de dois jeitos: o atalho
+        <code>.desktop</code> nas pastas de aplicativos e o comando no
+        <code>PATH</code>. Diga qualquer um dos dois e ele passa a procurar
+        também o seu.<br><br>
+        Vale o <b>comando</b> (<code>ryujinx</code>), o <b>caminho inteiro</b> de
+        um programa (<code>/opt/Ryujinx/Ryujinx</code>, e é assim que entra um
+        AppImage solto) ou o <b>nome do atalho</b>
+        (<code>org.ryujinx.Ryujinx</code>).<br><br>
+        O que você escrever é conferido no disco antes de ser guardado.
+      </span></span>
+      <a class="tn-x" href="#" title="Fechar">&times;</a>
+    </div>
+    <div class="tn-corpo">
+      <div class="lanc-novo-para" data-campo="{NOVO_PARA_QUEM}">{_e(para_quem)}</div>
+      <label class="lanc-novo-campo">
+        <span>Como ele se chama</span>
+        <input type="text" data-linha="{NOVO_ROTULO}" placeholder="Ryujinx">
+      </label>
+      <label class="lanc-novo-campo">
+        <span>Onde ele está</span>
+        <input type="text" data-linha="{NOVO_ALVO}"
+               placeholder="ryujinx  ·  /opt/Ryujinx/Ryujinx  ·  org.ryujinx.Ryujinx">
+      </label>
+    </div>
+    <div class="tn-rod">
+      <a class="btn" href="#">Cancelar</a>
+      <a class="btn roxo" href="#" data-gesto="{_a(ADICIONAR)}"
+         data-hef-forma="{_a(TELA_DO_NOVO)}">Adicionar</a>
+    </div>
+  </div>
+</div>'''
 
 
 def valores_do_cartao(lanc: Lancador) -> dict[str, str]:
@@ -500,6 +615,23 @@ class SemCenso:
     nome: str
     atalhos: tuple[str, ...] = ()
     comandos: tuple[str, ...] = ()
+    #: A frase de ACHEI deste lançador, quando a geral não serve. Vazia = usa
+    #: :data:`DIZ_ACHEI`, que é o caso dos seis embutidos e de todo declarado.
+    #:
+    #: ELA EXISTE POR UM FATO DO LINUX, e não por gosto: o cartão da Epic
+    #: procura o cliente que ENTREGA o jogo, e "achei este lançador aqui" seria
+    #: dizer que achou a Epic quando o que está em disco é o Rare, o legendary
+    #: ou o Heroic. Ver :data:`DIZ_EPIC_ACHEI`.
+    diz_achei: str = ""
+    #: A frase de NÃO ACHEI deste lançador. Vazia = usa :data:`DIZ_NAO_ACHEI`.
+    diz_nao_achei: str = ""
+    #: ELA declarou este lançador (ou ensinou onde este embutido está)?
+    #:
+    #: É O QUE DECIDE O BOTÃO DE TIRAR, e nada mais: um cartão declarado tem de
+    #: poder sair, senão a lista dela vira lixo permanente. Num embutido que ela
+    #: ensinou, tirar desfaz o ensino e devolve a busca de fábrica — as duas
+    #: coisas são o mesmo ato, e por isso é o mesmo botão.
+    declarado: bool = False
 
 
 #: OS LANÇADORES CUJO INTERIOR O PRODUTO NÃO LÊ. A lista é dado, e não `if`: no
@@ -518,6 +650,37 @@ class SemCenso:
 #: `app-id` do Flatpak (que é como a máquina dela os teria, pelos 54 atalhos em
 #: `~/.local/share/flatpak/exports/share/applications`) e o nome nativo do
 #: pacote da distribuição.
+#: AS DUAS FRASES DO CARTÃO DA EPIC, e elas moram AQUI — coladas na declaração
+#: do cartão — porque são de UM cartão só. É a mesma regra que deixou a `.tn-vel`
+#: no `aba06.py` quando o resto do CSS de pop-up subiu para o `monta.py`: o que
+#: vale para mais de uma tela sobe; o que é de uma tela só desce. As gerais
+#: continuam sendo :data:`DIZ_ACHEI` e :data:`DIZ_NAO_ACHEI`, logo abaixo.
+#:
+#: **O FATO DO LINUX QUE ELAS RESPEITAM:** não existe Epic Games Launcher nativo
+#: aqui. Quem entrega o jogo da Epic nesta máquina é o `legendary` (a CLI), o
+#: `Rare` (a janela do legendary) ou o Heroic. As frases NOMEIAM os três — dizer
+#: "achei a Epic" seria dizer que achou o que não está lá, e dizer que a Epic
+#: não tem cliente no Linux seria falso além de confissão.
+#:
+#: **É POR ISSO QUE ELAS DIZEM «POR ONDE ENTRAR» E NÃO «ESTE LANÇADOR».** O
+#: sujeito do cartão é a LOJA; o que se procura em disco é a PORTA para ela.
+DIZ_EPIC_ACHEI = (
+    "<b>Achei por onde entrar na Epic</b> (<code>{onde}</code>). Quem entrega o "
+    "jogo da Epic aqui é o Heroic, o Rare ou o legendary — e o perfil casa pelo "
+    "nome do processo e pela janela, então o jogo entra pelo mesmo caminho de "
+    "qualquer outro."
+)
+
+#: A do outro estado. Ela nomeia os três clientes e as duas buscas pela mesma
+#: razão da :data:`DIZ_NAO_ACHEI`: quem lê tem de poder conferir a resposta.
+DIZ_EPIC_NAO_ACHEI = (
+    "<b>Não localizei por onde entrar na Epic nesta máquina.</b> Quem entrega o "
+    "jogo "
+    "da Epic aqui é o Heroic, o Rare ou o legendary — procurei os três pelo "
+    "atalho <code>.desktop</code> e pelo comando no <code>PATH</code>. O perfil "
+    "casa pelo nome do processo e pela janela de qualquer um deles."
+)
+
 SEM_FONTE: tuple[SemCenso, ...] = (
     SemCenso("heroic", "Heroic (Epic · GOG)",
              ("com.heroicgameslauncher.hgl", "heroic"), ("heroic",)),
@@ -529,6 +692,35 @@ SEM_FONTE: tuple[SemCenso, ...] = (
              ("org.DolphinEmu.dolphin-emu", "dolphin-emu", "io.mgba.mGBA",
               "mgba-qt", "mgba"),
              ("dolphin-emu", "mgba-qt", "mgba")),
+    # A EPIC — pedido dela, 08/09/2026: *"Seria interessante termos o da Epic
+    # Games Aqui também não?"*
+    #
+    # A DECISÃO, e as duas saídas honestas eram (a) um cartão que procura o
+    # Rare e o legendary, ou (b) a Epic ganhar cartão próprio apontando para os
+    # mesmos binários. **É a (a), com uma correção que a medição exigiu: o
+    # HEROIC ENTRA NA BUSCA.**
+    #
+    # POR QUE ELE ENTRA, e sem isso o cartão mentiria nesta máquina: o Heroic é
+    # cliente da Epic (o rótulo do cartão dele já diz "Epic · GOG"). Um cartão
+    # da Epic que só procurasse `rare`/`legendary` diria NÃO LOCALIZADO numa
+    # máquina onde os jogos da Epic abrem — com o cartão do Heroic a dois
+    # centímetros dizendo que achou. **Duas células da mesma tela dizendo o
+    # contrário uma da outra** é o defeito que esta aba inteira existe para
+    # matar, e ele voltaria pela porta da frente.
+    #
+    # A ORDEM DOS `atalhos` É A RESPOSTA DA FRASE: quem casa primeiro é quem
+    # aparece no `{onde}`. Os clientes DEDICADOS da Epic vêm antes do Heroic,
+    # que é o de propósito geral — numa máquina com os dois, o cartão nomeia o
+    # que é só da Epic. Medido nesta bancada em 08/09/2026: os dois estão
+    # instalados por Flatpak, e o cartão nomeia o `io.github.dummerle.rare`.
+    #
+    # O RÓTULO DO HEROIC NÃO MUDOU, e é decisão de ALCANCE: ele é desenho que
+    # ela aprovou, e trocar rótulo aprovado é dela. A pergunta está no relatório.
+    SemCenso("epic", "Epic Games",
+             ("io.github.dummerle.rare", "rare", "legendary",
+              "com.heroicgameslauncher.hgl", "heroic"),
+             ("rare", "legendary", "heroic"),
+             diz_achei=DIZ_EPIC_ACHEI, diz_nao_achei=DIZ_EPIC_NAO_ACHEI),
 )
 
 #: A STEAM TAMBÉM SE PROCURA — 02/09/2026, e ela nasceu de uma acusação provada.
@@ -560,11 +752,59 @@ A_STEAM = SemCenso("steam", "Steam",
                    ("steam", "com.valvesoftware.Steam", "steam-native"),
                    ("steam", "steam-native"))
 
-#: OS SEIS QUE O PRODUTO PROCURA em disco. É esta lista que o pacote percorre —
-#: :data:`SEM_FONTE` responde outra coisa (*"sei ler a biblioteca dele?"*) e
-#: percorrê-la para procurar deixava a Steam de fora da única pergunta que o
-#: produto sabe responder sobre os seis sem inventar.
-PROCURADOS: tuple[SemCenso, ...] = (A_STEAM, *SEM_FONTE)
+#: OS SETE QUE VÊM DE FÁBRICA. :data:`SEM_FONTE` responde outra coisa (*"sei ler
+#: a biblioteca dele?"*) e percorrê-la para procurar deixava a Steam de fora da
+#: única pergunta que o produto sabe responder sobre todos sem inventar.
+#:
+#: **ELE NÃO É A LISTA QUE SE PROCURA — quem responde isso é :func:`procurados`,
+#: e a diferença nasceu em 08/09/2026 com o lançador declarado por ELA.** O
+#: nome antigo (`PROCURADOS`) morreu de propósito: enquanto uma constante
+#: respondesse "o que se procura", quem a lesse por hábito procuraria só os de
+#: fábrica e o lançador que ela acrescentou seria invisível — calado, e só na
+#: máquina dela. Um nome que mente é pior que um nome comprido.
+EMBUTIDOS: tuple[SemCenso, ...] = (A_STEAM, *SEM_FONTE)
+
+
+def procurados(declarados: tuple[SemCenso, ...] = ()) -> tuple[SemCenso, ...]:
+    """Os :data:`EMBUTIDOS` **mais** o que ELA declarou — a lista única.
+
+    É esta que se procura em disco, esta que se ordena e esta que vira cartão.
+    Um segundo caminho de busca para o declarado seria a assimetria que esta
+    casa passou o dia arrancando: o embutido e o declarado passam pelo MESMO
+    procurador, com os mesmos três campos (`atalhos`, `comandos`, `nome`).
+
+    **CHAVE REPETIDA NÃO VIRA SEGUNDO CARTÃO — ela ENSINA o primeiro.** Se ela
+    declarar `retroarch` (o botão «Adicionar Launcher» do cartão que não achou
+    manda a chave do cartão), o que entra são os `atalhos` e `comandos` dela
+    SOMADOS aos de fábrica, no mesmo cartão. É o sentido literal do botão: *"ele
+    está aqui, eu te mostro onde"* — não *"faça um cartão novo com o mesmo
+    nome"*. Dois cartões com a mesma `chave` seriam pior que inútil: os
+    endereços do desenho levam a chave como prefixo (`data-campo="retroarch-selo"`),
+    e o piloto pintaria o valor de um nos DOIS.
+
+    O NOME DE FÁBRICA VENCE no cartão ensinado, e é o mesmo raciocínio: o rótulo
+    daquele cartão é desenho que ela aprovou. O que ela acrescentou foi ONDE
+    procurar, não como se chama.
+
+    A ORDEM É ESTÁVEL: os de fábrica na ordem do desenho, os novos no fim, na
+    ordem em que o disco os devolveu. Um cartão que troca de lugar entre dois
+    tiques é a grade inteira piscando.
+    """
+    novos = {x.chave: x for x in declarados}
+    fora: list[SemCenso] = []
+    for item in EMBUTIDOS:
+        ensino = novos.pop(item.chave, None)
+        if ensino is None:
+            fora.append(item)
+            continue
+        # `dict.fromkeys` e não `set`: ordem preservada, repetido descartado.
+        fora.append(dataclasses.replace(
+            item,
+            atalhos=tuple(dict.fromkeys(item.atalhos + ensino.atalhos)),
+            comandos=tuple(dict.fromkeys(item.comandos + ensino.comandos)),
+            declarado=True))
+    fora.extend(novos.values())
+    return tuple(fora)
 
 #: A frase de quem AINDA NÃO PROCUROU — a primeira meia volta, antes de a
 #: leitura de disco voltar.
@@ -593,12 +833,21 @@ DIZ_ACHEI = (
     "mesmo caminho de qualquer outro."
 )
 
-#: A frase de quem PROCUROU E NÃO ACHOU. Ela nomeia as duas buscas, porque uma
+#: A frase de quem PROCUROU E NÃO ACHOU.
+#:
+#: **ELA DIZ «NÃO LOCALIZEI» DESDE 08/09/2026**, e a razão é a mesma do selo: a
+#: palavra dela foi *"ao invés de não achei"*, e a tela dizia a frase que ela
+#: recusou em DOIS lugares — o selo, em maiúsculas, e a primeira oração daqui.
+#: Trocar só o selo deixaria a mesma tela com as duas grafias, uma ao lado da
+#: outra. **O NOME DA CONSTANTE FICA**: ele nomeia o ESTADO ("procurei e não
+#: achei"), que não mudou, e é lido por réguas que perguntam pelo estado.
+#:
+#: Ela nomeia as duas buscas, porque uma
 #: instalação fora das duas (um AppImage solto, um script no `~/bin`) existe e
 #: esta frase não pode afirmar que o lançador não está na máquina — só que o
 #: produto não o achou por onde sabe procurar.
 DIZ_NAO_ACHEI = (
-    "<b>Não achei este lançador nesta máquina.</b> Procurei o atalho "
+    "<b>Não localizei este lançador nesta máquina.</b> Procurei o atalho "
     "<code>.desktop</code> nas pastas de aplicativos e o comando no "
     "<code>PATH</code>. Instalado de outro jeito (um AppImage solto, por "
     "exemplo) ele não aparece aqui — e o perfil continua casando pelo nome do "
@@ -628,6 +877,78 @@ COPIAR = "copiar-a-linha"
 #: O RÓTULO DO BOTÃO, palavra por palavra da decisão. Ele mora aqui e não no
 #: pacote porque quem o escreve é o desenho; o pacote só atende o gesto.
 COPIAR_ROTULO = "Copiar a linha"
+
+# ---------------------------------------------------------------------------
+# REGISTRAR O QUE O HEFESTO NÃO CONHECE — 08/09/2026, pedido dela
+#
+#     "Pensei em outro botão pra Adicionar novo Emulador Ou novo lançador algo
+#      assim, pra devs mais experimentais e permitir que o user adicione algo
+#      novo"                                                <!-- noqa-acento -->
+#
+# A PORTA É UMA SÓ, e isso é desenho, não economia. O botão do cartão que não
+# localizou e o botão global mandam o MESMO gesto; o que muda é o que vai
+# preenchido — o do cartão já sabe a chave e o rótulo, o global nasce vazio.
+# Dois gestos para o mesmo ato seriam duas validações, duas recusas e duas
+# maneiras de gravar a mesma coisa, e a segunda envelheceria calada.
+#
+# O NOME MORA AQUI pela razão de sempre (:data:`ABRIR`): o desenho o escreve no
+# `data-gesto` e o pacote o registra em `@gesto(...)`. Digitá-lo duas vezes é
+# como um botão ganha endereço que ninguém atende.
+# ---------------------------------------------------------------------------
+#: O gesto de REGISTRAR. Ele tem duas metades, e as duas são o mesmo clique:
+#: sem `forma`, ele só ABRE a tela apontando para quem; com `forma`, ele GRAVA.
+ADICIONAR = "adicionar-lancador"
+
+#: O RÓTULO, e ele é palavra DELA — 08/09/2026, olhando o cartão que não achou:
+#: *"o Botão Abrir o Lançador deveria ser o Adicionar Launcher"*.
+#:
+#: **ELE NÃO INSTALA NADA, e é o próprio cartão que diz por quê:** a frase do
+#: estado NÃO LOCALIZADO termina em *"Instalado de outro jeito (um AppImage
+#: solto, por exemplo) ele não aparece aqui"*. Então «Adicionar Launcher» quer
+#: dizer **"ele está aqui, eu te mostro onde"** — ela aponta o caminho e o
+#: cartão passa a acender. O botão do cartão que ACHOU continua sendo «Abrir o
+#: lançador»: são dois estados, dois botões, e trocar o rótulo dos dois faria o
+#: cartão aceso oferecer um registro que já existe.
+ADICIONAR_ROTULO = "Adicionar Launcher"
+
+#: O RÓTULO DO BOTÃO GLOBAL — o que nasce vazio, para o que o Hefesto não
+#: conhece de fábrica. Ele diz as DUAS palavras dela ("emulador" e "lançador")
+#: porque o público que ela nomeou procura pelas duas.
+ADICIONAR_NOVO_ROTULO = "Adicionar lançador ou emulador"
+
+#: O gesto de TIRAR. *O que se acrescenta se tira* — sem ele a lista dela vira
+#: lixo permanente, e um cartão que ela não consegue remover é pior que a
+#: ausência dele.
+REMOVER = "esquecer-lancador"
+
+#: O RÓTULO DO TIRAR. «Tirar daqui» é a palavra que esta aba JÁ usa para o mesmo
+#: ato na lista de jogos do cartão da Steam — uma segunda palavra para o mesmo
+#: gesto seria a terceira maneira de dizer a mesma coisa numa tela só.
+REMOVER_ROTULO = "Tirar daqui"
+
+#: O `id` da tela de registro. Ele é o alvo do `href="#…"` que ABRE a pop-up:
+#: `.tela-nova` só aparece em `:target`, sem uma linha de script (`monta.
+#: CSS_POPUP`). O desenho escreve o `id` e o `href`, e os dois saem daqui para
+#: não poderem divergir — um `href` para um `id` que não existe abre NADA, e o
+#: clique some sem uma palavra.
+TELA_DO_NOVO = "novo-lancador"
+
+#: OS DOIS CAMPOS QUE ELA DIGITA, e eles são `data-linha` — **nunca
+#: `data-campo`**, e a diferença aqui é a diferença entre funcionar e brigar
+#: com ela.
+#:
+#: O piloto recolhe a forma por `[data-linha],[data-campo]` e chaveia pelo
+#: primeiro que existir (`hefesto_vivo.py`, o bloco `forma:`), então `data-linha`
+#: basta para o valor chegar ao Python. O que ele NÃO faz é pintar: um
+#: `data-campo` num `<input>` seria repintado a cada tique — dez vezes por
+#: segundo, por cima do que ela está digitando. É o samba que a `A-TELA-SAMBA-01`
+#: mediu, e num campo de texto ele não é cosmético: apaga a frase no meio.
+NOVO_ROTULO = "lanc-novo-rotulo"
+NOVO_ALVO = "lanc-novo-alvo"
+
+#: O endereço da linha que diz PARA QUEM a tela de registro está aberta. Este é
+#: `data-campo` de verdade — é TEXTO, o produto é o dono, e ela não digita nele.
+NOVO_PARA_QUEM = "lanc-novo-para-quem"
 
 # ---------------------------------------------------------------------------
 # O STEAM INPUT — o que a Steam põe ENTRE o controle e o jogo
@@ -765,6 +1086,15 @@ class Leitura:
     #: distinção é o ponto inteiro: as duas viram frases diferentes na tela.
     #: A `steam` entrou no mapa em 02/09 — ver :data:`A_STEAM`.
     onde_estao: tuple[tuple[str, str], ...] = ()
+    #: O QUE ELA DECLAROU no `maquina.json` — 08/09/2026. Um lançador que o
+    #: Hefesto não conhece de fábrica, ou o ENSINO de onde um de fábrica está.
+    #:
+    #: ELE VEM PELA `Leitura` e não por import, e é a mesma razão de tudo neste
+    #: arquivo: o desenho não importa o produto (é o que deixa o gerador rodar
+    #: como script solto), então quem lê o disco é o pacote e o que chega aqui é
+    #: dado frio. Uma `Leitura` montada à mão — e a régua desta aba monta várias
+    #: — não declara nada, e aí só os de fábrica viram cartão.
+    declarados: tuple[SemCenso, ...] = ()
     #: a frase da sentinela, que já nomeia o jogo e já diz o que vai acontecer.
     frase: str = ""
     #: A LINHA DE INICIALIZAÇÃO do Hefesto — o que o botão «Copiar a linha»
@@ -1083,22 +1413,47 @@ def cartao_sem_censo(item: SemCenso, onde: str | None) -> Lancador:
     conclui que funcionou. Ver `a07_lancadores.abrir_lancador`.
     """
     abrir = (Acao("Abrir o lançador", "", ABRIR, item.chave),)
+    # «ADICIONAR LAUNCHER» É O BOTÃO DO ESTADO NÃO LOCALIZADO — 08/09/2026,
+    # palavra dela. Ele NÃO abre nada: ele registra onde o lançador está, e o
+    # `href` leva à tela de registro pelo `:target`, sem script. Ver
+    # :data:`ADICIONAR_ROTULO`, que carrega a razão inteira.
+    adicionar = (Acao(ADICIONAR_ROTULO, "", ADICIONAR, item.chave,
+                      href=f"#{TELA_DO_NOVO}"),)
+    # E O TIRAR, SÓ ONDE HÁ O QUE TIRAR: o cartão que ELA ensinou. Nos de
+    # fábrica que ela nunca tocou não há declaração a esquecer, e um botão que
+    # não tem o que fazer é o botão que finge.
+    tirar = ((Acao(REMOVER_ROTULO, "", REMOVER, item.chave),)
+             if item.declarado else ())
     if onde is None:
         return Lancador(chave=item.chave, nome=item.nome, selo="nao_sei",
-                        jogos="—", diz=DIZ_SEM_FONTE, acoes=abrir)
+                        jogos="—", diz=DIZ_SEM_FONTE, acoes=abrir + tirar)
     if not onde:
         return Lancador(chave=item.chave, nome=item.nome, selo="off",
-                        jogos="—", diz=DIZ_NAO_ACHEI, acoes=abrir)
+                        jogos="—", diz=item.diz_nao_achei or DIZ_NAO_ACHEI,
+                        acoes=adicionar + tirar)
     return Lancador(chave=item.chave, nome=item.nome, selo="nao_sei",
-                    jogos="—", diz=DIZ_ACHEI.format(onde=_e(onde)),
-                    acoes=abrir, presente=True)
+                    jogos="—",
+                    diz=(item.diz_achei or DIZ_ACHEI).format(onde=_e(onde)),
+                    acoes=abrir + tirar, presente=True)
 
 
 def cartoes(lida: Leitura | None) -> list[Lancador]:
-    """Os seis cartões: o que tem censo, e os cinco que só têm presença."""
+    """Os cartões: o que tem censo, e os que só têm presença.
+
+    ERAM SEIS ATÉ 08/09/2026 e o número saiu daqui de propósito. Hoje são os
+    SETE de fábrica (a Epic entrou) mais o que ELA declarou, e o segundo grupo
+    só existe na máquina dela — a página publicada nasce com os sete, e os
+    declarados chegam pela troca da grade inteira (`_pintura`, no pacote).
+    Cravar um número aqui faria a régua reprovar a máquina dela.
+    """
     onde_estao = dict(lida.onde_estao) if lida is not None else {}
     fora = [cartao_da_steam(lida)]
-    for item in SEM_FONTE:
+    for item in procurados(lida.declarados if lida is not None else ()):
+        # A STEAM JÁ SAIU ACIMA, com o censo dela. Ela está em `procurados`
+        # porque a PRESENÇA dela se mede como a dos outros — mas o cartão é
+        # outro, e desenhá-la duas vezes daria dois `data-lancador="steam"`.
+        if item.chave == STEAM:
+            continue
         fora.append(cartao_sem_censo(item, onde_estao.get(item.chave)))
     return fora
 
@@ -1140,6 +1495,9 @@ class Quadro:
 
 __all__ = [
     "ABRIR",
+    "ADICIONAR",
+    "ADICIONAR_NOVO_ROTULO",
+    "ADICIONAR_ROTULO",
     "AINDA_LENDO",
     "A_STEAM",
     "CLASSE_DA_GRADE",
@@ -1148,13 +1506,22 @@ __all__ = [
     "DESLIGAR_STEAM_INPUT",
     "DESLIGAR_STEAM_INPUT_ROTULO",
     "DIZ_ACHEI",
+    "DIZ_EPIC_ACHEI",
+    "DIZ_EPIC_NAO_ACHEI",
     "DIZ_NAO_ACHEI",
     "DIZ_SEM_FONTE",
+    "EMBUTIDOS",
     "JOGO_NAO_FUNCIONA",
     "JOGO_NAO_FUNCIONA_ROTULO",
     "MOLDURA",
-    "PROCURADOS",
+    "NOVO_ALVO",
+    "NOVO_PARA_O_CARTAO",
+    "NOVO_PARA_QUEM",
+    "NOVO_ROTULO",
+    "NOVO_SEM_ALVO",
     "QUANTOS",
+    "REMOVER",
+    "REMOVER_ROTULO",
     "SELETOR_DA_GRADE",
     "SELOS",
     "SEM_FONTE",
@@ -1162,6 +1529,7 @@ __all__ = [
     "STEAM",
     "SUFIXOS",
     "SUFIXO_DA_LISTA",
+    "TELA_DO_NOVO",
     "TUDO_PRONTO",
     "TUDO_PRONTO_ROTULO",
     "Acao",  # (noqa-acento) nome de CLASSE — identificador Python não leva acento
@@ -1182,9 +1550,11 @@ __all__ = [
     "linha_do_wrapper_html",
     "linhas_de_jogos",
     "lista_de_jogos",
+    "procurados",
     "quantos_html",
     "selo_html",
     "steam_input_html",
+    "tela_do_registro_html",
     "um_cartao",
     "valores_do_cartao",
 ]
