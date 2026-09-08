@@ -1089,6 +1089,12 @@ class PonteMicBluetooth:
         #: parcimônia do cabeçalho ("nunca em regime") vale igual depois que o
         #: pedido passou a seguir o ouvinte.
         self._mic_pedido: bool | None = None
+        #: A PALAVRA DELA sobre este microfone. `None` = ela não disse nada, e
+        #: aí quem decide é o ouvinte, como desde 06/09/2026. Três valores pelo
+        #: mesmo molde que `mic.led.set` e `ControleDeclarado.microfone` já
+        #: usam — nenhuma gramática nova entra na casa por causa disto.
+        #: Ver :meth:`dizer_o_pedido_dela` e :meth:`_talvez_seguir_a_source`.
+        self._pedido_dela: bool | None = None
         self._ultimo_olhar_na_source = 0.0
         self._stats = EstatisticaMic(source=self._nome_source)
 
@@ -1122,6 +1128,31 @@ class PonteMicBluetooth:
             fone_plugado=stats.fone_plugado,
             source=stats.source,
         )
+
+    def dizer_o_pedido_dela(self, ligado: bool | None) -> None:
+        """A palavra DELA sobre este microfone. `None` devolve a decisão ao ouvinte.
+
+        **O SEGUNDO DONO DO 0x32, e ele faltava.** Desde 06/09/2026 quem decide
+        se o microfone vai ao ar é o estado da source — e só ele. O ouvinte é um
+        PROXY de *"alguém quer este microfone"*; o ato dela é a MESMA afirmação
+        dita pelo dono, direto, e era a única que este caminho ignorava. Medido
+        no journal dela em 07/09/2026, das 19h11m18 às 19h14m14: quase três
+        minutos de botão apertado, a ponte em `bt_mic_pedido ligar=False`, e o
+        microfone só subindo quando um aplicativo abriu o canal para gravar.
+
+        **NÃO ESCREVE NADA AQUI, e isso é desenho.** O `0x32` sai do fio numa
+        thread só — a do :meth:`_loop` —, e ela relê este campo antes de cada
+        `select` (`_SELECT_TIMEOUT_S`, 0,25 s). Escrever da thread do ato daria
+        dois donos ao contador de sequência do 0x32, que é exatamente a hipótese
+        não refutada por trás do defeito de 16/08/2026 (o botão PS disparando
+        sozinho aos ~3 minutos). Guardar e deixar o laço aplicar custa um quarto
+        de segundo e não acrescenta escritor nenhum.
+
+        Quem chama é uma porta só: `daemon/subsystems/bt_mic.BtMicSubsystem`,
+        que reaplica a palavra guardada a cada varredura — é o que faz o pedido
+        dela sobreviver ao hotplug do rádio, onde a ponte morre por rotina.
+        """
+        self._pedido_dela = ligado
 
     def iniciar(self) -> bool:
         """Sobe tudo: decodificador, source, fd do hidraw, thread e o 0x32.
@@ -1187,6 +1218,13 @@ class PonteMicBluetooth:
         # ligado depois de fechar não é opção.
         self._escrever_pedido(ligar=False)
         self._mic_pedido = False
+        # E A PALAVRA DELA MORRE COM A PONTE — a terceira das cinco portas do
+        # pedido dela (ver `dizer_o_pedido_dela`). Sem esta linha, uma ponte
+        # reiniciada sobre o MESMO objeto voltaria com o microfone no ar sem
+        # que ninguém tivesse pedido de novo, que é o *"liga sozinho"* pela
+        # porta dos fundos. Quem guarda o pedido entre pontes é o registro do
+        # subsystem, e é ele quem o reaplica — nunca a ponte, por si.
+        self._pedido_dela = None
         self._fechar_fd()
         if self._source is not None:
             self._fechar_a_source()
@@ -1338,7 +1376,7 @@ class PonteMicBluetooth:
         )
 
     def _talvez_seguir_a_source(self, agora: float | None = None) -> bool | None:
-        """O 0x32 SEGUE O OUVINTE — e devolve o que ficou pedido (`None` = nada).
+        """O 0x32 segue O OUVINTE **OU** A PALAVRA DELA — o que ficou pedido.
 
         **O DEFEITO QUE ISTO FECHA está escrito no cabeçalho do subsystem desde
         03/09/2026**, com estas palavras: *"A ponte do rádio não sabe fazer
@@ -1368,9 +1406,42 @@ class PonteMicBluetooth:
         **A ESCRITA É DE BORDA**, e a parcimônia do cabeçalho continua inteira:
         só se escreve quando o pedido MUDA. Em regime — ouvinte de pé, áudio
         chegando — nenhum 0x32 vai para o controle.
+
+        **E DESDE 08/09/2026 O 0x32 TEM DOIS DONOS EM OU, não um.** O que estava
+        acima continua inteiro, linha por linha, para `_pedido_dela is None` —
+        que é o caso de sempre, porque ninguém disse nada até ela dizer. O que
+        entrou é a pergunta que faltava: *e quando o DONO fala?*
+
+        * `False` DESLIGA sem consultar a source. É o mudo dela, e ele vence um
+          aplicativo gravando — quem não quer ser ouvida não é ouvida.
+        * `True` LIGA sem consultar. `pactl set-default-source` (o que o botão
+          do microfone faz) NÃO põe nó nenhum em ``RUNNING``: ``RUNNING`` é
+          *"tem app gravando AGORA"* (ver :data:`ESTADO_COM_OUVINTE`), então o
+          gesto dela deixava a source ``SUSPENDED`` e este método respondia
+          ``False`` sobre um microfone que ela acabara de pedir.
+        * `None` devolve a decisão ao ouvinte, e a economia de 06/09 fica
+          intacta: nada liga sozinho, que era o defeito que aquela cura matou.
+
+        **E O PEDIDO DELA NÃO PASSA PELO INTERVALO.** A janela de
+        `_OLHAR_NA_SOURCE_S` existe para não pagar um `pactl` por quadro de
+        áudio; ler um campo desta instância não custa `pactl` nenhum, e fazer o
+        ato dela esperar até um segundo seria a mesma demora que a tela lê como
+        *"não pegou"*.
+
+        **POR QUE ISTO NÃO É "LIGA E DEIXA LIGADO PARA SEMPRE":** o pedido dela
+        nasce só de um ATO, morre pelo ato inverso, morre em :meth:`parar`,
+        morre com a desdeclaração e com o controle saindo do rádio (a ponte cai
+        junto), e morre quando ela perde a eleição para outro controle — quem
+        apaga é o mesmo laço que já apaga a luz do ex-dono
+        (`daemon/subsystems/hotkey._apagar_a_luz_de_quem_perdeu_o_canal`), para
+        que o LED aceso e o microfone no ar continuem sendo a MESMA frase.
         """
         source = self._source
         if source is None:
+            return self._mic_pedido
+        pedido_dela = self._pedido_dela
+        if pedido_dela is not None:
+            self._pedir_mic(pedido_dela)
             return self._mic_pedido
         relogio = time.monotonic() if agora is None else agora
         if (

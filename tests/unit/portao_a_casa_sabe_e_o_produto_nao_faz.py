@@ -1420,6 +1420,22 @@ _SEM_CAMINHO_HOJE: dict[str, str] = {
         "nada, e foi assim que o `BtMicSubsystem` nasceu órfão em 25/07/2026. "
         "06/09/2026."
     ),
+    'integrations/alto_falante_bt.py::montar_com_o_common_preservado': (
+        "A METADE *COM* DO PAR COM/SEM, 08/09/2026 — o corpo do 0x39 com o "
+        "`[2] = 0x10` e o `common` de 47 B intacto em [3..49], que é o único "
+        "envelope que esta bancada mediu o firmware aceitar por rádio (a cor na "
+        "lightbar, com o olho dela, 15/08/2026). As seis passadas do ensaio de "
+        "07/09 variaram a TAG e o ARRANJO e NÃO variaram este byte; os dois "
+        "candidatos externos escrevem 0x91 exatamente ali. Alcançado por "
+        "`Arranjo.montar` (via `ARRANJO_COMMON_PRIMEIRO`) e pelo ensaio "
+        "`scripts/ensaios/o_som_que_sai.py --arranjo common-preservado`. ONDE O "
+        "CAMINHO SE PERDE: o mesmo do irmão logo abaixo — o produto não pode "
+        "chamar isto sem ESCOLHER um arranjo, e a escolha é DELA, pela orelha, "
+        "no ensaio de bancada. O QUE FECHA: a passada com/sem contra as de "
+        "`[2] = 0x91`, que separa \"o arranjo está errado\" de \"o aparelho não "
+        "faz\" — e depois dela, o `AltoFalanteSubsystem` registrado nos DOIS "
+        "lugares. 08/09/2026."
+    ),
     'integrations/alto_falante_bt.py::montar_pelos_dois_arranjos': (
         "SOM-QUE-SAI-01, 06/09/2026 — manda o MESMO PCM pelos DOIS arranjos, que "
         "é o que a rota corrigida da sprint pede. O chamador em produção só "

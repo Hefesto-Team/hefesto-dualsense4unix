@@ -147,6 +147,79 @@ def pedir_canal(uniq: str) -> bool:
         return False
 
 
+#: Quem ouve a PALAVRA DELA sobre o microfone de um controle. `None` = ninguém
+#: está atendendo (subsystem no chão, ou processo que não é o daemon). Mesmo
+#: molde e mesmo sentido de import de `_PEDIDOR_DE_CANAL`, logo acima.
+_DIZEDOR_DO_NO_AR: Callable[[str, bool], bool] | None = None
+
+#: Quem esquece a palavra dela (a decisão volta ao ouvinte da source).
+_ESQUECEDOR_DA_PALAVRA: Callable[[str], bool] | None = None
+
+
+def registrar_dizedor_do_no_ar(
+    dizedor: Callable[[str, bool], bool] | None,
+    esquecedor: Callable[[str], bool] | None = None,
+) -> tuple[Callable[[str, bool], bool] | None, Callable[[str], bool] | None]:
+    """Instala quem atende a palavra dela. Devolve os anteriores, para restaurar.
+
+    Quem chama é `daemon/subsystems/bt_mic.BtMicSubsystem.start`, pela mesma
+    razão que `registrar_pedidor_de_canal`: **daemon importando
+    `integrations`**, nunca o contrário.
+    """
+    global _DIZEDOR_DO_NO_AR, _ESQUECEDOR_DA_PALAVRA
+    anteriores = (_DIZEDOR_DO_NO_AR, _ESQUECEDOR_DA_PALAVRA)
+    _DIZEDOR_DO_NO_AR = dizedor
+    _ESQUECEDOR_DA_PALAVRA = esquecedor
+    return anteriores
+
+
+def dizer_no_ar(uniq: str, ligado: bool) -> bool:
+    """*"Quero/não quero este microfone no ar"*. False = ninguém atendeu.
+
+    **É O SEGUNDO DONO DO 0x32 do rádio**, e ele faltava. O ato do microfone
+    já fazia as duas metades que tinha — o canal no sistema e o bit do
+    firmware —, e nenhuma delas alcança o `0x32` que põe o microfone do
+    controle no ar por Bluetooth: esse seguia só o ouvinte da source, e eleger
+    o canal como fonte padrão deixa a source ``SUSPENDED``. O resultado medido
+    no journal dela em 07/09/2026 foi um ato respondendo `feito=True` sobre um
+    microfone mudo no ar.
+
+    **NO CABO ISTO NÃO FAZ NADA, e é o desfecho certo:** não há ponte, não há
+    `0x32`, e a placa USB já publica o canal sozinha — quem atende só conhece
+    nós de Bluetooth. Chamar daqui para os dois transportes é o que mantém uma
+    regra só no ato, em vez de um `if` de transporte no caminho dela.
+
+    Nunca levanta, pela mesma razão de `pedir_canal`: o toque no botão do
+    microfone dela não vira traceback no laço do daemon.
+    """
+    dizedor = _DIZEDOR_DO_NO_AR
+    if dizedor is None:
+        return False
+    try:
+        return bool(dizedor(uniq, ligado))
+    except Exception:  # best-effort: o gesto dela não vira traceback
+        logger.debug("eleicao_mic_palavra_dela_falhou", exc_info=True)
+        return False
+
+
+def esquecer_a_palavra(uniq: str) -> bool:
+    """Ela deixa de ter dito qualquer coisa sobre este microfone.
+
+    Não é o mesmo que `dizer_no_ar(uniq, False)`: `False` é *"me cale"* e vence
+    um aplicativo gravando; esquecer devolve a decisão ao ouvinte da source.
+    Quem chama é a perda da eleição — ver
+    `daemon/subsystems/hotkey._apagar_a_luz_de_quem_perdeu_o_canal`.
+    """
+    esquecedor = _ESQUECEDOR_DA_PALAVRA
+    if esquecedor is None:
+        return False
+    try:
+        return bool(esquecedor(uniq))
+    except Exception:  # best-effort: o gesto dela não vira traceback
+        logger.debug("eleicao_mic_esquecer_a_palavra_falhou", exc_info=True)
+        return False
+
+
 def _ambiente_c() -> dict[str, str]:
     """`LC_ALL=C`: a saída do `pactl` é TRADUZIDA nesta máquina."""
     env = dict(os.environ)
@@ -786,11 +859,14 @@ __all__ = [
     "ResultadoDaEleicao",
     "_script_conhece",
     "casamento_usb_agora",
+    "dizer_no_ar",
+    "esquecer_a_palavra",
     "fonte_ativa",
     "fonte_se_sustenta",
     "fontes_de_captura_agora",
     "melhor_fonte_elegivel",
     "pedir_canal",
     "recusa_de_quem_nao_elegeu",
+    "registrar_dizedor_do_no_ar",
     "registrar_pedidor_de_canal",
 ]

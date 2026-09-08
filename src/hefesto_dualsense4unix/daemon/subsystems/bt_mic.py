@@ -208,6 +208,17 @@ class RegistroDePedidosDeCanal:
     def __init__(self) -> None:
         self._lock = threading.Lock()
         self._abertos: set[str] = set()
+        #: A PALAVRA DELA sobre o microfone de cada controle: `True` = no ar,
+        #: `False` = calado, ausente = ela não disse nada e quem decide é o
+        #: ouvinte da source. Ver `dizer_no_ar`.
+        #:
+        #: **ELA MORA AQUI E NÃO NA PONTE, e é medição:** a `PonteMicBluetooth`
+        #: morre a cada reconexão de rádio — rotina, não exceção —, e um pedido
+        #: guardado nela evaporaria no primeiro hotplug. O sintoma seria o
+        #: mesmo que esta cura fecha, voltando por outra porta. O registro já é
+        #: o dono do *"quem quer canal"* e sobrevive à ponte; guardar aqui não
+        #: cria um segundo dono do mesmo estado.
+        self._no_ar: dict[str, bool] = {}
         self.novidade = threading.Event()
 
     def pedir(self, uniq: str) -> bool:
@@ -231,12 +242,76 @@ class RegistroDePedidosDeCanal:
             self.novidade.set()
         return True
 
+    def dizer_no_ar(self, uniq: str, ligado: bool) -> bool:
+        """A PALAVRA DELA sobre este microfone. False = `uniq` ilegível.
+
+        O ATO tem dois lados desde que ele existe — o canal no sistema e o bit
+        do firmware —, e o do RÁDIO tinha um terceiro que ninguém dizia: o
+        `0x32` que põe o microfone do controle no ar. Ele seguia só o ouvinte
+        da source, e o gesto dela ELEGE o canal como fonte padrão, o que deixa
+        a source ``SUSPENDED``. Medido no journal dela em 07/09/2026: quase
+        três minutos de botão apertado com a ponte em `ligar=False`.
+
+        **UMA PORTA SÓ, e é isso que faz a cura cobrir os DOIS chamadores.**
+        Quem chama é `hotkey._metade_do_canal`, que é por onde passam o 🎙 da
+        tela E a borda do botão do plástico — os dois entram por
+        `ligar_o_microfone`. Costurar isto no `ipc_handlers` deixaria o
+        plástico de fora com a suíte verde, e a regra dela é explícita: *"o
+        botão fisico do mic se ligado no microfone ele fica ligado tambem.  # (noqa-acento) dela
+        indepente se nativo ou virtual"*.
+
+        A CHAVE TEM DE TER OS DOZE HEX, pela mesma razão que `pedir` documenta.
+
+        **DIZER `False` NÃO SOLTA O CANAL**, e a distinção é dela: *"ninguém
+        perde nada quando outro é eleito — perder o padrão não é perder o
+        canal"*. Calar o microfone é uma coisa; derrubar a ponte é outra, e
+        quem a derruba é o controle sair da mesa ou ela desmarcar o modo.
+        """
+        chave = norm_mac(str(uniq)) or ""
+        if len(chave) != _UNIQ_HEX:
+            return False
+        with self._lock:
+            mudou = self._no_ar.get(chave) is not ligado
+            self._no_ar[chave] = ligado
+        if mudou:
+            logger.info("bt_mic_palavra_dela", uniq=chave, ligado=ligado)
+            self.novidade.set()
+        return True
+
+    def esquecer_a_palavra(self, uniq: str) -> bool:
+        """Ela deixa de ter dito qualquer coisa — a decisão volta ao ouvinte.
+
+        Não é o mesmo que dizer `False`: `False` é *"me cale"* e vence um
+        aplicativo gravando; esquecer é *"não tenho opinião"*, e aí o
+        comportamento de 06/09/2026 volta inteiro. Quem chama é a perda da
+        eleição — a luz do ex-dono apaga, e o microfone dele tem de sair do ar
+        junto, senão o contrato *"aceso = este mic está no ar"* passa a mentir
+        do outro lado.
+        """
+        chave = norm_mac(str(uniq)) or ""
+        with self._lock:
+            saiu = self._no_ar.pop(chave, None) is not None
+        if saiu:
+            logger.info("bt_mic_palavra_dela_esquecida", uniq=chave)
+            self.novidade.set()
+        return saiu
+
+    def no_ar(self) -> dict[str, bool]:
+        """O que ela disse, por `uniq`. Cópia: o chamador não escreve aqui."""
+        with self._lock:
+            return dict(self._no_ar)
+
     def soltar(self, uniq: str) -> bool:
         """Tira o pedido (o controle saiu da mesa, ou alguém desistiu)."""
         chave = norm_mac(str(uniq)) or ""
         with self._lock:
             saiu = chave in self._abertos
             self._abertos.discard(chave)
+            # A PALAVRA DELA CAI JUNTO. Soltar é o controle saindo da mesa ou
+            # ela desmarcando o modo — nos dois casos a ponte cai, e um pedido
+            # sobrevivente ressuscitaria o microfone na volta sem ninguém ter
+            # pedido nada.
+            self._no_ar.pop(chave, None)
         if saiu:
             self.novidade.set()
         return saiu
@@ -250,6 +325,12 @@ class RegistroDePedidosDeCanal:
         with self._lock:
             sumidos = frozenset(self._abertos - presentes)
             self._abertos -= sumidos
+            # A QUARTA PORTA do pedido dela: quem saiu do rádio perde a
+            # palavra junto com o pedido de canal. Sem isto a reconexão traria
+            # o microfone de volta ao ar sozinha.
+            for uniq in list(self._no_ar):
+                if uniq not in presentes:
+                    del self._no_ar[uniq]
         if sumidos:
             logger.info("bt_mic_pedidos_esquecidos", uniqs=sorted(sumidos))
         return sumidos
@@ -257,6 +338,7 @@ class RegistroDePedidosDeCanal:
     def limpar(self) -> None:
         with self._lock:
             self._abertos.clear()
+            self._no_ar.clear()
         self.novidade.set()
 
 
@@ -333,6 +415,8 @@ class BtMicSubsystem:
         #: BORDA de descida — ver `_soltar_os_que_ela_desmarcou`.
         self._declarados_antes: frozenset[str] = frozenset()
         self._pedidor_anterior: Any = None
+        #: O par `(dizedor, esquecedor)` que estava instalado antes de nós.
+        self._dizedor_anterior: tuple[Any, Any] | None = None
 
     # -- contrato Subsystem ----------------------------------------------
 
@@ -380,6 +464,70 @@ class BtMicSubsystem:
         — sem endereço não há de quem seja o canal.
         """
         return self._registro.pedir(uniq)
+
+    def no_ar(self, uniq: str, ligado: bool) -> bool:
+        """A palavra DELA sobre este microfone. Porta pública, irmã de `pedir_canal`.
+
+        É o gancho que `hotkey._metade_do_canal` chama — o mesmo ponto por onde
+        passam o 🎙 da tela e a borda do botão do plástico. Ver
+        `RegistroDePedidosDeCanal.dizer_no_ar` para o porquê.
+
+        **PEDIR O CANAL VEM JUNTO quando ela liga**, e não é atalho: sem ponte
+        de pé não há a quem entregar a palavra. Com a ponte já erguida o pedido
+        é idempotente e não custa nada; sem ela, é o que a faz subir para
+        receber o `0x32`. Desligar NÃO solta o canal — calar não é desconectar.
+        """
+        if ligado:
+            self._registro.pedir(uniq)
+        ok = self._registro.dizer_no_ar(uniq, ligado)
+        if ok:
+            self._aplicar_a_palavra_dela()
+        return ok
+
+    def esquecer_a_palavra(self, uniq: str) -> bool:
+        """Ela deixa de ter dito qualquer coisa sobre este microfone.
+
+        Quem chama é a perda da eleição, pelo mesmo gancho: o ex-dono do canal
+        tem a luz apagada por `_apagar_a_luz_de_quem_perdeu_o_canal`, e o
+        microfone dele tem de sair do ar no mesmo gesto. Sem isto o LED diria
+        *"saí do ar"* com o `0x32` ainda ligado — a mesma mentira de segunda
+        geração que aquele laço existe para matar, do lado de dentro.
+        """
+        saiu = self._registro.esquecer_a_palavra(uniq)
+        if saiu:
+            self._aplicar_a_palavra_dela()
+        return saiu
+
+    def _aplicar_a_palavra_dela(self) -> None:
+        """Entrega a cada ponte viva o que ela disse — ou `None`, se não disse.
+
+        **É CHAMADO A CADA VARREDURA, e é isso que sobrevive ao hotplug.** No
+        rádio a reconexão é rotina: o gerenciador derruba a ponte e ergue
+        outra, e a nova nasce sem saber de nada. Reaplicar aqui, depois do
+        `reconciliar`, é o que impede o pedido dela de evaporar no primeiro
+        hotplug — o mesmo sintoma que esta cura fecha, voltando por outra porta.
+
+        Nunca levanta: uma ponte que não conheça a porta (dublê, versão velha)
+        vale como *"não deu para dizer"*, e o caminho segue para as outras.
+        """
+        gerenciador = self._gerenciador
+        if gerenciador is None:
+            return
+        try:
+            pontes = gerenciador.pontes
+        except Exception:  # best-effort: o relato nunca derruba o áudio
+            logger.debug("bt_mic_pontes_ilegiveis", exc_info=True)
+            return
+        if not isinstance(pontes, dict):
+            return
+        palavras = self._registro.no_ar()
+        for ponte in pontes.values():
+            dizer = getattr(ponte, "dizer_o_pedido_dela", None)
+            if not callable(dizer):
+                continue
+            uniq = norm_mac(str(getattr(getattr(ponte, "no", None), "uniq", ""))) or ""
+            with contextlib.suppress(Exception):
+                dizer(palavras.get(uniq))
 
     def uniqs_com_ponte(self) -> frozenset[str]:
         """Os `uniq` cuja ponte está DE PÉ agora — o que o rádio carrega.
@@ -445,10 +593,17 @@ class BtMicSubsystem:
         casamento USB, que é o mesmo motivo do import da ponte logo acima.
         """
         from hefesto_dualsense4unix.integrations.eleicao_de_microfone import (
+            registrar_dizedor_do_no_ar,
             registrar_pedidor_de_canal,
         )
 
         self._pedidor_anterior = registrar_pedidor_de_canal(self.pedir_canal)
+        # OS DOIS GANCHOS SOBEM JUNTOS, e é de propósito: o ato do microfone
+        # pede o canal E diz se ele vai ao ar. Instalar só o primeiro é o
+        # estado de antes de 08/09/2026 — o canal eleito, o `0x32` desligado.
+        self._dizedor_anterior = registrar_dizedor_do_no_ar(
+            self.no_ar, self.esquecer_a_palavra
+        )
 
     async def stop(self) -> None:
         """Derruba as pontes (o que DESLIGA o mic em cada controle). Idempotente.
@@ -484,11 +639,15 @@ class BtMicSubsystem:
     def _desinstalar_o_gancho_da_procura(self) -> None:
         """Devolve o pedidor anterior — o subsystem parado não atende ninguém."""
         from hefesto_dualsense4unix.integrations.eleicao_de_microfone import (
+            registrar_dizedor_do_no_ar,
             registrar_pedidor_de_canal,
         )
 
         registrar_pedidor_de_canal(self._pedidor_anterior)
         self._pedidor_anterior = None
+        dizedor, esquecedor = self._dizedor_anterior or (None, None)
+        registrar_dizedor_do_no_ar(dizedor, esquecedor)
+        self._dizedor_anterior = None
 
     # -- laço -------------------------------------------------------------
 
@@ -510,6 +669,11 @@ class BtMicSubsystem:
                 # tirar um controle da lista DERRUBA a ponte dele e deixa as
                 # outras de pé. Sem isto, ligar um microfone ligaria os quatro.
                 gerenciador.reconciliar(self.alvos(nos))
+                # DEPOIS do reconciliar, sempre: a ponte que acabou de nascer
+                # (hotplug de rádio, que é rotina) não sabe o que ela pediu, e
+                # sem esta linha o pedido dela evaporaria na primeira
+                # reconexão. Ver `_aplicar_a_palavra_dela`.
+                self._aplicar_a_palavra_dela()
             except Exception as exc:  # nunca derruba a thread
                 logger.debug("bt_mic_reconciliacao_falhou", err=str(exc))
             if self._dormir(gerenciador):
