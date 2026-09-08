@@ -30,6 +30,7 @@ from __future__ import annotations
 
 import re
 import shutil
+import ast
 import subprocess
 import sys
 from pathlib import Path
@@ -94,6 +95,13 @@ def _arvore_de_brinquedo(tmp_path: Path) -> Path:
     documento.parent.mkdir(parents=True, exist_ok=True)
     documento.write_text(texto, encoding="utf-8")
     return documento
+
+
+def _declaradas() -> tuple[str, ...]:
+    """Lê a lista do DONO, nunca digitada aqui — é a régua da própria régua."""
+    origem = SCRIPT.read_text(encoding="utf-8")
+    corpo = origem.split("_MEDIDAS_QUE_NAO_SAO_DAQUI: tuple[str, ...] = (", 1)[1]
+    return tuple(ast.literal_eval("(" + corpo.split("\n)", 1)[0] + ")"))
 
 
 def _troca_a_mao(documento: Path, chave: str, valor: str) -> None:
@@ -209,3 +217,51 @@ def test_documento_sem_marca_nenhuma_reprova(tmp_path: Path) -> None:
     processo = _rodar(raiz=tmp_path)
     assert processo.returncode == 1, processo.stdout
     assert "literal digitado" in processo.stdout
+
+
+def test_a_marcacao_arrancada_reprova(tmp_path: Path) -> None:
+    """O buraco medido em 08/09/2026, e ele é o que deixou NOVE envelhecerem.
+
+    A régua das marcas confere só o que está MARCADO. Tirar a marcação de um
+    número passava verde — e o que não é conferido não é medido. Foi assim que o
+    aviso de custo do documento publicou *"661.177 caracteres, ~165 mil
+    tokens"* contra 1.396.169 e ~349 mil medidos: **um aviso de custo que erra
+    pela metade convida exatamente a leitura que ele existe para impedir.**
+
+    *Uma régua que só olha o que alguém lembrou de marcar não trava nada.*
+    """
+    documento = _arvore_de_brinquedo(tmp_path)
+    texto = documento.read_text(encoding="utf-8")
+    alvo = _MARCA.search(texto)
+    assert alvo is not None, "o documento de brinquedo nasceu sem marca nenhuma"
+    documento.write_text(texto.replace(alvo.group(0), alvo.group(2), 1), encoding="utf-8")
+
+    processo = _rodar(raiz=tmp_path)
+    assert processo.returncode == 1, processo.stdout
+    assert "numero-solto" in processo.stdout, processo.stdout
+
+
+def test_um_numero_novo_e_solto_reprova(tmp_path: Path) -> None:
+    """É esta metade que pega a PRÓXIMA, e não as 43 declaradas de hoje."""
+    documento = _arvore_de_brinquedo(tmp_path)
+    documento.write_text(
+        documento.read_text(encoding="utf-8") + "\n\nO caderno tem 999 ensaios.\n",
+        encoding="utf-8",
+    )
+    processo = _rodar(raiz=tmp_path)
+    assert processo.returncode == 1, processo.stdout
+    assert "999 ensaios" in processo.stdout, processo.stdout
+
+
+def test_a_declaracao_nao_vira_ponto_cego(tmp_path: Path) -> None:
+    """Toda entrada declarada tem de estar VIVA no documento.
+
+    Uma isenção que sobrevive ao trecho que a justificava é a régua se
+    desligando sem ninguém decidir isso — a mesma espécie de defeito que o
+    `ESPERANDO_A_PUBLICACAO` da aba 10 pagou em 08/09.
+    """
+    texto = DOCUMENTO.read_text(encoding="utf-8")
+    mortas = [d for d in _declaradas() if d not in texto]
+    assert not mortas, (
+        f"{mortas} está declarada em `_MEDIDAS_QUE_NAO_SAO_DAQUI` e não aparece "
+        "mais no documento. Tire a entrada no mesmo commit que tirou o número.")

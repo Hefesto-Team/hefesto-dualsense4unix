@@ -2672,6 +2672,106 @@ def ultima_linha_da_docstring(caminho: Path) -> int:
     return 0
 
 
+#: AS PALAVRAS QUE FAZEM UM NÚMERO SER MEDIÇÃO, e não data nem versão. A régua
+#: só acusa quando uma delas está ao lado — assim `31/08/2026` e `A-1..A-25`
+#: passam, e `184 ensaios` não.
+_PALAVRAS_DE_MEDIDA = (
+    "linha", "linhas", "coluna", "colunas", "ensaio", "ensaios", "caractere",
+    "caracteres", "token", "tokens", "célula", "células", "byte", "bytes",
+    "arquivo", "arquivos", "feature", "features",
+)
+#: O NÚMERO COM SEPARADOR DE MILHAR É MEDIÇÃO SOZINHO — ninguém escreve
+#: `1.396.169` sem ter contado alguma coisa.
+_NUMERO_SOLTO = re.compile(
+    r"(?<![\d.>-])(\d{1,3}(?:\.\d{3})+)(?![\d.<])"
+    r"|(?<![\d>-])(\d{2,})\s+(?:mil\s+)?(" + "|".join(_PALAVRAS_DE_MEDIDA) + r")\b"
+)
+#: OS QUE ESTÃO SOLTOS HOJE — 08/09/2026, declarados, e a declaração diz a
+#: verdade sobre o que ela é.
+#:
+#: **ELES NÃO FORAM CONFERIDOS UM A UM.** São de duas espécies, e as duas foram
+#: lidas antes de declarar: (a) NOTA HISTÓRICA — o parágrafo que conta a
+#: correção de 31/08 cita os números ERRADOS de propósito (*"o mapa em 700.602
+#: contra 696.546 publicados"*), e gerar esses seria apagar o registro; (b)
+#: CUSTO DE EXEMPLO — o documento mostra quanto custa cada filtro (*"custa
+#: 27.828"*), e cada um é a saída de um `grep`/`awk` diferente, medida numa
+#: árvore anterior.
+#:
+#: **A LISTA TEM DE ENCOLHER, e este é o contrato.** A régua nasceu para pegar a
+#: PRÓXIMA, não para catalogar as 43 de hoje: um número novo e solto reprova na
+#: hora, porque não está aqui. Quem marcar um destes com um gerador tira a linha
+#: no mesmo commit — e a espécie (b) toda se resolve com um gerador que rode os
+#: próprios filtros que o documento ensina.
+_MEDIDAS_QUE_NAO_SAO_DAQUI: tuple[str, ...] = (
+    '10 colunas',
+    '102.818',
+    '110 linhas',
+    '12.717',
+    '122.766',
+    '128 linhas',
+    '14.534',
+    '16 linhas',
+    '16.050',
+    '163 linhas',
+    '21 linhas',
+    '21.026',
+    '225 células',
+    '225 linhas',
+    '26 colunas',
+    '264 linhas',
+    '27.828',
+    '3.447',
+    '30 linhas',
+    '30.711',
+    '37 células',
+    '37 linhas',
+    '4.750',
+    '45 células',
+    '5.250',
+    '53.899',
+    '60 caracteres',
+    '600 caracteres',
+    '616 células',
+    '63 células',
+    '64 células',
+    '66 linhas',
+    '696.546',
+    '700.602',
+    '74 linhas',
+    '85.063',
+)
+
+
+def numeros_soltos(texto: str) -> list[tuple[int, str]]:
+    """Números com cara de medição que estão FORA de `<!--@…-->…<!--/-->`.
+
+    **POR QUE ELA EXISTE, e o buraco é medido — 08/09/2026.** A régua das marcas
+    confere só o que está marcado, e por isso NOVE números do documento
+    envelheceram calados: eles nunca foram marcados. O pior deles era o aviso de
+    custo — *"661.177 caracteres, ~165 mil tokens"* contra 1.396.169 e ~349 mil
+    medidos. **Um aviso de custo que erra pela metade convida a leitura que ele
+    existe para impedir.**
+
+    E o buraco tem a forma exata da MORDIDA que faltava: tirar a marcação de um
+    número passava verde, porque o que não está marcado não é conferido. Uma
+    régua que só olha o que alguém lembrou de marcar não trava nada.
+    """
+    fora, ultimo = [], 0
+    limpo: list[tuple[int, str]] = []
+    for marca in _MARCA_GERADA.finditer(texto):
+        fora.append((ultimo, texto[ultimo:marca.start()]))
+        ultimo = marca.end()
+    fora.append((ultimo, texto[ultimo:]))
+    for inicio, pedaco in fora:
+        for achado in _NUMERO_SOLTO.finditer(pedaco):
+            trecho = achado.group(0)
+            if any(d in trecho for d in _MEDIDAS_QUE_NAO_SAO_DAQUI):
+                continue
+            linha = texto.count("\n", 0, inicio + achado.start()) + 1
+            limpo.append((linha, trecho))
+    return limpo
+
+
 def numeros_do_leia_primeiro(raiz: Path) -> dict[str, str]:
     """Os números que o `LEIA-PRIMEIRO.md` publica, medidos agora.
 
@@ -2693,7 +2793,48 @@ def numeros_do_leia_primeiro(raiz: Path) -> dict[str, str]:
     def sem_coluna(nome: str) -> int:
         return sum(1 for ensaio in ensaios if not (ensaio.get(nome) or "").strip())
 
+    # OS NOVE DE 08/09/2026, E OS NOVE ESTAVAM ERRADOS. Eles eram DIGITADOS: a
+    # marcação alcançava a tabela do topo e parava ali, e a §5 e a §6 do
+    # documento seguiram publicando a medição de uma árvore antiga.
+    #
+    # O PIOR ERA O PRIMEIRO, e o documento existe por causa dele: a linha que
+    # diz a quem lê quanto custa abrir o mapa publicava *"661.177 caracteres,
+    # ~165 mil tokens"*, e a medição de agora é 1.396.169 e ~349 mil. **Um aviso
+    # de custo que erra o custo pela METADE convida exatamente a leitura que ele
+    # existe para impedir.**
+    #
+    # `provado_por` publicava 58 linhas contra 77 medidas, e as quatro
+    # contagens erradas; `observado_por`, 177 contra 184.
+    with (raiz / CSV_RELATIVO).open(encoding="utf-8", newline="") as arquivo:
+        celulas = list(csv.DictReader(arquivo))
+    caracteres = sum(len(valor or "") for l in celulas for valor in l.values())
+
+    def contar(base: list[dict[str, str]], coluna: str) -> dict[str, int]:
+        contagem: dict[str, int] = {}
+        for linha in base:
+            chave = (linha.get(coluna) or "").strip()
+            if chave:
+                contagem[chave] = contagem.get(chave, 0) + 1
+        return contagem
+
+    provado = contar(celulas, "provado_por")
+    observado = contar(ensaios, "observado_por")
+
     return {
+        "caracteres-do-mapa": _milhar(caracteres),
+        #: O DIVISOR É 4, e é a regra de bolso da casa para texto latino. Ele
+        #: não precisa ser exato: precisa não estar errado por um fator de 2,
+        #: que é o que a versão digitada estava.
+        "tokens-do-mapa": _milhar(round(caracteres / 4 / 1000)),
+        "mapa-com-provado-por": _milhar(sum(provado.values())),
+        "mapa-provado-aparelho": _milhar(provado.get("aparelho", 0)),
+        "mapa-provado-fonte-do-driver": _milhar(provado.get("fonte-do-driver", 0)),
+        "mapa-provado-olho-dela": _milhar(provado.get("olho-dela", 0)),
+        "mapa-provado-descritor": _milhar(provado.get("descritor", 0)),
+        "caderno-com-observado-por": _milhar(sum(observado.values())),
+        "caderno-observado-olho-dela": _milhar(observado.get("olho-dela", 0)),
+        "caderno-observado-bancada": _milhar(observado.get("bancada", 0)),
+        "caderno-observado-aparelho": _milhar(observado.get("aparelho", 0)),
         "linhas-do-mapa": _milhar(linhas),
         "colunas-do-mapa": _milhar(len(cabecalho)),
         "colunas-em-pares": _milhar(2 * len(pares)),
@@ -2758,6 +2899,7 @@ def confere_leia_primeiro(raiz: Path, escrever: bool) -> int:
 
     antes = caminho.read_text(encoding="utf-8")
     marcas = _MARCA_GERADA.findall(antes)
+    soltos = numeros_soltos(antes)
     if not marcas:
         print(
             f"FALHA: {LEIA_PRIMEIRO_RELATIVO} não tem uma única marca "
@@ -2794,7 +2936,14 @@ def confere_leia_primeiro(raiz: Path, escrever: bool) -> int:
             f"  FALHA numero-caduco: `{chave}` publica {publicado} e a medição "
             f"de agora diz {medido}"
         )
-    if divergentes or problemas:
+    for linha, trecho in soltos:
+        print(
+            f"  FALHA numero-solto: linha {linha} publica {trecho!r} fora de "
+            "marca. Um número desmarcado é invisível para esta régua — "
+            "envolva-o em `<!--@chave-->valor<!--/-->` com um gerador que o "
+            "meça, ou declare o trecho em `_MEDIDAS_QUE_NAO_SAO_DAQUI`."
+        )
+    if divergentes or problemas or soltos:
         print("")
         print("Rode: python3 scripts/check_paridade_transporte.py --leia-primeiro --escrever")
         return 1
