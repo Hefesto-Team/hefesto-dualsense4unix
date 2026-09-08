@@ -2184,9 +2184,18 @@
           Ao <b>desligar</b>, a cor que cada controle tem agora é <b>gravada no perfil</b>
           na hora. Assim nenhuma se perde e nenhuma se repete: sem isso, o próximo
           controle a chegar cairia na cor global e ficaria igual ao vizinho.<br><br>
-          Isto é do <b>perfil</b>. O botão <b>Automático</b> de cada coluna é outra coisa:
-          ele larga a barra <i>daquele</i> controle para o jogo escolher.
+          Isto é do <b>perfil</b>: vale para todos os controles dele, e viaja quando
+          você troca de perfil.
         </span></span>
+        <!-- A FRASE QUE FALAVA DO BOTÃO POR COLUNA SAIU — 08/09/2026, queixa
+             textual dela: *"ainda temos 3 cantos falando sobre o automatico"*.
+             A dica explicava a diferença entre este interruptor e um botão por
+             coluna que NÃO EXISTE MAIS desde o `2c228352` — o gesto saiu com
+             ele. Uma tela que explica um botão morto ensina a procurá-lo.
+
+             O QUE ENTROU NO LUGAR não é enfeite: "isto é do perfil" sem
+             contraste não dizia o que muda, e o contraste que sobrou é o que
+             ela precisa — perfil × máquina, não este botão × aquele. -->
       </div>
       <div class="quadro-corpo">
 
@@ -3923,93 +3932,26 @@
     </ul>
   </div>
 
-  <h2>O que mudou hoje</h2>
-  <ul>
-    <li><b>Os três cantos que falavam de "automático" viraram um.</b> Ficou o
-        <b>interruptor</b> do alto — pedido seu: <i>"Olha na real sai todos. Deixa só lá o
-        de cima mesmo o tongle."</i> Saíram o botão de escopo global da faixa do título e o
-        <b>Automático</b> de cada coluna, com os gestos deles no mesmo commit. O interruptor
-        é do <b>perfil</b> e governa a paleta e a numeração automática; <b>desligar grava a
-        cor de cada controle no ato</b>, para nenhuma se perder.</li>
-    <li><b>A célula Opções ficou com um botão.</b> <span class="marca">Desligar</span> fica
-        porque faz outra coisa: ele apaga a barra, e o que saiu devolvia a barra ao jogo e
-        pintava a cor do número por cima. Você não citou este, e apagar a barra é o único
-        ato que só ele oferece nesta tela — <b>diga se ele também sai.</b></li>
-    <li><b>A célula LEDs voltou a ser só o desenho.</b> Saíram as teclas
-        <span class="marca">P1 P2 P3 P4</span> e os dois atalhos, o clique nas cinco
-        lâmpadas e a linha de texto que dizia por que a barra apagou — pedido seu:
-        <i>"só olhar a linha de cima da seleção de player e replicar o que tem lá."</i>
-        Ficaram as duas tiras da barra de luz, que são o desenho original, e as cinco
-        lâmpadas, que agora <b>espelham o número</b> escolhido na linha
-        <span class="marca">Jogador</span> logo acima — sem escolha própria. A razão de
-        uma barra tracejada continua a um rato de distância, na dica das tiras.</li>
-    <li><b>O hexadecimal virou botão.</b> Clicar em <span class="marca">#0000FF</span> manda
-        aquela cor ao controle de novo. Antes, uma cor escolhida à mão era a única sem
-        caminho de volta: os oito tons reenviam ao serem clicados, e o seletor livre só
-        avisa quando o valor muda.</li>
-    <li><b>A fita está esmaecida, e a aba parou de ter um "escolhido".</b> Antes as seções de
-        baixo ajustavam UM controle — o que a fita apontava, de borda roxa. Com a fita
-        inerte e presa em <span class="marca">Todos</span>, esse destaque passaria a afirmar
-        na tela uma coisa que a fita já não faz. Saiu o escolhido, não o ajuste: cada coluna
-        se ajusta sozinha, e agora dá para mudar a cor dos quatro sem sair da tela.</li>
-    <li><b>"Selecione o player" deixou de perguntar o que já está respondido.</b> Com os
-        4 na tela, "qual estou vendo" não tem mais objeto. Ele agora <b>dá</b> o número —
-        e dar um número ocupado é uma troca, não uma fila. O texto antigo dizia que o outro
-        "desliza para abrir lugar", o que é um rodízio; a sua palavra de 28/08 é
-        <b>troca</b>, e as duas dão resultados diferentes com três ou mais controles.</li>
-    <li><b>As lâmpadas do jogador ficam aqui — e agora se leem.</b> Medido no Chrome, no
-        desenho de 224 px elas saíam com <b>3,84 × 1,29 px</b>: um traço, não cinco pontos.
-        Agrandar o desenho não resolvia (ocupar a coluna inteira ganharia 0,1 px de altura),
-        então quem cresceu foi a lâmpada, dentro do desenho, até ~4 × 4 px. Elas saem só dos
-        desenhos pequenos das outras abas.</li>
-    <li><b>Saiu o "Sony" do rótulo</b>, que ainda estava aqui. Decisão sua de 27/08 — "tira o
-        Sony das outras abas também", porque a marca se repetia em cada card sem separar um
-        controle do outro. Agora ele lê <span class="marca">P1 • Modelo • USB</span>,
-        que é exatamente o que os chips da fita dizem 100 px acima, na mesma tela.
-        <b>Aviso:</b> Controles e Conexões ainda escrevem a forma longa
-        (<i>Sony • Player 1 • Modelo • USB</i>), citando a sua ordem de 26/08 — a que
-        você trocou no dia seguinte. Não é falta de espaço: medida aqui, a forma longa dá
-        196 px numa coluna de 208. É uma escolha, e ela precisa valer para as três.</li>
-    <li><b>O hexadecimal fica</b>, por decisão sua de 28/08 — e agora há um por controle,
-        debaixo da guia da coluna dele.</li>
-    <li><b>O que NÃO coube, dito:</b> as cinco luzinhas em miniatura que ficavam dentro de
-        cada botão de número. A coluna de um controle tem 208 px e os
-        4 botões ficam com 48 px cada; as luzinhas pedem 56 px só elas. O padrão de
-        cada número não se perdeu — ele está nos 4 desenhos, lado a lado: o P1 acende uma,
-        o P2 duas, o P3 três, o P4 quatro. A tela mostra os
-        4 padrões ao mesmo tempo, que é mais do que o botão mostrava.</li>
-    <li><b>E o arranjo que você pediu virou coluna, com um motivo:</b> "O Opções fica ao lado
-        direito de Cor e brilho e abaixo fica os outros dois. <i>Isso por controle</i>" era
-        para a aba que mostrava UM controle na largura inteira. Com
-        4 colunas de 208 px não cabem dois tópicos lado a lado — quem ficou lado a lado
-        foram os controles. Os cinco tópicos empilham na coluna, e a FILEIRA é o que os
-        alinha entre os 4.</li>
-  </ul>
+  <!-- O BILHETE DE PROJETO SAIU DA PÁGINA — 08/09/2026.
 
-  <h2>O que você pediu, e continua aqui</h2>
-  <ul>
-    <li><b>Cor e Brilho na mesma largura</b> — os dois são a coluna inteira do controle.</li>
-    <li><b>Os títulos têm todos o mesmo estilo</b>, e agora começam todos no mesmo x, porque
-        moram na mesma coluna: <span class="marca">Controle · Cor · Brilho · Selecione o
-        Jogador · LEDs · Opções</span>.</li>
-    <li><b>O botão de Opções</b> continua <span class="marca">vermelho</span>, como o
-        <b>Parar</b> da Vibração. Eram dois até 07/09; o roxo saiu com a sua ordem.</li>
-    <li><b>As cinco colunas acabam no mesmo y</b> — as sete linhas são compartilhadas, e a
-        cura do vão é na altura, nunca <code>space-between</code>.</li>
-    <li><b>Barra vertical entre blocos irmãos</b>, como na Vibração.</li>
-  </ul>
+       Moravam aqui três listas — "O que mudou hoje", "O que você pediu, e
+       continua aqui" e "Ainda aberto" —, 87 linhas que narravam commits,
+       citavam decisões dela por data e nomeavam um botão que não existe mais
+       (o por coluna, que saiu no `2c228352`). A regra dela, 07/09: *"O app tem
+       que funcionar e não mostrar na tela que o app não presta. (...) o layout
+       não informa os nossos defeitos."*
 
-  <h2>Ainda aberto</h2>
-  <ul>
-    <li><b>Um número que ninguém está usando.</b> A fileira oferece os
-        4 números ocupados, porque troca só existe entre dois. O produto cobre 1 a 8
-        (<code>core/led_control.py</code>) — se um dia for preciso pôr um DualSense no 5 com
-        quatro ligados, isso é <i>mover</i>, não trocar, e é outra decisão sua.</li>
-    <li><b>O "Desligar" guarda a cor ou grava preto?</b> A dica de hoje promete uma coisa e o
-        código faz a outra (<code>lightbar_actions.py:1023</code>).</li>
-    <li><b>Ajustar os quatro de uma vez?</b> Não há mais alvo único nesta aba, então um
-        "aplicar a todos" teria de ser um botão próprio — e ele não existe.</li>
-  </ul>
+       A `.nota` é `display:none` no PRODUTO (`interface/folha_da_casa.py`), mas
+       NÃO na BANCADA: `mockup/04-iluminacao.html` é o que ela abre no
+       navegador, sem folha de usuário nenhuma, e ali as 87 linhas eram texto
+       visível. Era esse o terceiro canto da queixa *"ainda temos 3 cantos
+       falando sobre o automatico"*.
+
+       O REGISTRO NÃO SE PERDEU, ele mudou de casa:
+       `docs/process/2026-09-08-A-LEGENDA-DA-ABA-04-o-bilhete-sai-da-tela.md`.
+
+       O que FICA aqui é a `.nota-troca`: ela não é bilhete, é PRODUTO — o
+       `data-hef="troca"` que o piloto reescreve a cada tique com `ctx.mesa`. -->
 </div>
 
 </body>

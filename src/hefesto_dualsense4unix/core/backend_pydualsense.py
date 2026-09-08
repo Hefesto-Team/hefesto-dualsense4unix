@@ -55,6 +55,7 @@ from hefesto_dualsense4unix.core.evdev_reader import (
 # `ds_output_report` logo acima — o default de adoção precisa ser resolvido em
 # tempo de módulo, e `core/speaker_scale.py` é Python puro (nenhum `gi`,
 # nenhum daemon, nenhum ciclo possível).
+from hefesto_dualsense4unix.core.led_control import PecaDaMesa, cores_sem_colisao
 from hefesto_dualsense4unix.core.speaker_scale import volume_do_percentual
 
 if TYPE_CHECKING:
@@ -435,6 +436,29 @@ class _DesiredOutput:
     player_leds: tuple[bool, bool, bool, bool, bool] | None = None
     mic_led: bool | None = None
 
+
+@dataclass(frozen=True)
+class _ResolvidoDoDaemon:
+    """O que `_resolvido_do_daemon` devolve: a saída e as duas respostas que
+    a regra de cor única precisa e que o merge sozinho não guarda.
+
+    `cor_do_numero` é a cor AUTOMÁTICA deste controle (a do número dele), já
+    pela escala de brilho da saída — é para onde ele volta quando é
+    deslocado. `cor_por_controle` diz se a cor veio de uma camada POR
+    CONTROLE (automática, override, co-op) ou se é só o global do perfil:
+    quem está no global fica FORA da mesa da regra, porque pintar os quatro
+    da mesma cor é o gesto "Todos" dela, não uma colisão.
+    """
+
+    saida: _DesiredOutput
+    cor_do_numero: tuple[int, int, int] | None
+    cor_por_controle: bool
+
+
+#: Lugar de quem a consulta de número não alcança (ausente da mesa, vpad, key
+#: sem MAC, provider sem a companheira). Vai para o FIM da ordem: quem tem
+#: número reivindica a cor dele primeiro, e o resto se acomoda no que sobra.
+_SEM_NUMERO = 1 << 30
 
 #: Campos de `_DesiredOutput`/`OutputSpec` — a ordem é a de aplicação no HID.
 _OUTPUT_FIELDS = ("trigger_left", "trigger_right", "led", "player_leds", "mic_led")
@@ -1916,6 +1940,133 @@ class PyDualSenseController(IController):
             logger.debug("game_authority_provider_falhou", err=str(exc))
             return True
 
+    def _resolvido_do_daemon(
+        self, key: str, *, incluir_coop: bool = True
+    ) -> _ResolvidoDoDaemon:
+        """As camadas do DAEMON de `key`, sem a GAME e sem a regra de cor única.
+
+        Metade de baixo de `_merged_desired_for_key`, separada porque a regra
+        de cor única precisa resolver a MESA INTEIRA para decidir sobre UMA
+        peça — e chamar o merge completo de dentro dele mesmo seria recursão.
+        Aqui não há mesa nem jogo: só o que este controle pede sozinho.
+
+        Devolve também as duas respostas que a regra de cor única precisa e
+        que se perderiam no merge:
+
+        - `cor_do_numero`: a cor AUTOMÁTICA deste controle, pela mesma escala
+          de brilho da saída (é para onde ele volta quando é deslocado);
+        - `cor_por_controle`: se a cor veio de uma camada POR CONTROLE
+          (automática, override ou co-op) ou se é só o global do perfil.
+
+        A segunda é o que preserva o gesto "Todos" (D4): pintar os quatro da
+        MESMA cor global é um ato deliberado dela, não uma colisão, e a regra
+        de unicidade não pode desfazê-lo. Quem não tem cor própria fica fora
+        da mesa nos dois sentidos — não é deslocado e não toma cor de ninguém.
+        """
+        uniq = self._key_to_uniq(key)
+        override = self._desired_by_uniq.get(uniq) if uniq is not None else None
+        base = self._desired_default
+        self._assentar_mesa_locked()
+        auto: _DesiredOutput | None = None
+        provider = self._auto_output_provider
+        if provider is not None and uniq is not None:
+            try:
+                auto = provider(uniq)
+            except Exception as exc:
+                logger.debug(
+                    "auto_output_provider_falhou", uniq=uniq, err=str(exc)
+                )
+                auto = None
+            if auto is not None:
+                base = _merge_desired(base, auto)
+        resolved = _merge_desired(base, override)
+        coop: _DesiredOutput | None = None
+        cor_do_numero: tuple[int, int, int] | None = None
+        if uniq is not None:
+            if incluir_coop:
+                coop = self._desired_coop_by_uniq.get(uniq)
+                resolved = _merge_desired(resolved, coop)
+            resolved = self._scaled_led(uniq, resolved)
+            if auto is not None and auto.led is not None:
+                cor_do_numero = self._scaled_led(
+                    uniq, _DesiredOutput(led=auto.led)
+                ).led
+        por_controle = bool(
+            (auto is not None and auto.led is not None)
+            or (override is not None and override.led is not None)
+            or (coop is not None and coop.led is not None)
+        )
+        return _ResolvidoDoDaemon(resolved, cor_do_numero, por_controle)
+
+    def _mesa_de_cores_locked(self, *, incluir_coop: bool) -> list[PecaDaMesa]:
+        """A mesa que a regra de cor única resolve, JÁ NA ORDEM QUE DECIDE.
+
+        A ordem é o número do controle (o `rank` que a identidade persiste e
+        que ela já vê na tela), lido pela consulta companheira que
+        `make_auto_output_provider` pendura no provider. Sem ela — provider
+        de teste, ou nenhum provider — a ordem cai no `uniq`, que é
+        arbitrário mas ESTÁVEL: a garantia de que duas peças não ficam
+        iguais não depende da ordem, só o *quem desloca* depende.
+
+        Por que o número e não a ordem de `_handles`: `_handles` é ordem de
+        HOTPLUG. Com ela, quem replugasse primeiro reivindicaria a cor do
+        vizinho e a mesa inteira mudaria de cor a cada religada — o mesmo
+        defeito que o `_assentar_mesa_locked` fechou no NÚMERO, de volta na
+        COR. Ordenar pelo número torna a resposta função só do estado, que é
+        o que impede a barra de piscar.
+        """
+        numero = getattr(self._auto_output_provider, "numero_do_slot", None)
+        pecas: list[tuple[int, str, tuple[int, int, int] | None,
+                          tuple[int, int, int] | None]] = []
+        vistos: set[str] = set()
+        for chave in list(self._handles):
+            uniq = self._key_to_uniq(chave)
+            if uniq is None or uniq in vistos:
+                continue
+            vistos.add(uniq)
+            r = self._resolvido_do_daemon(chave, incluir_coop=incluir_coop)
+            if not r.cor_por_controle:
+                continue
+            lugar = _SEM_NUMERO
+            if numero is not None:
+                with contextlib.suppress(Exception):
+                    n = numero(uniq)
+                    if isinstance(n, int):
+                        lugar = n
+            pecas.append((lugar, uniq, r.saida.led, r.cor_do_numero))
+        pecas.sort(key=lambda peca: (peca[0], peca[1]))
+        return [(uniq, pedida, do_numero) for _, uniq, pedida, do_numero in pecas]
+
+    def _com_cor_unica_locked(
+        self, key: str, r: _ResolvidoDoDaemon, *, incluir_coop: bool
+    ) -> _DesiredOutput:
+        """Aplica `D-DUAS-PECAS-NUNCA-TEM-A-MESMA-COR` à saída de `key`.
+
+        A regra mora AQUI, no resolvedor, e não em cada gesto que grava cor:
+        a leva de 08/09/2026 contou **dezenove** escritores de cor por
+        controle (doze em `Profile.controllers[...]`, quatro no mapa vivo
+        `_desired_by_uniq`, mais as camadas co-op, jogo e automática). Curar
+        um deixaria dezoito; o resolvedor é por onde os dezenove passam, e é
+        o mesmo funil que alimenta a TELA (`resolved_led_for` →
+        `lightbar_source == "desired"` do `state_full`). Uma linha cura o
+        aparelho e a tela.
+
+        FICA ABAIXO DA CAMADA GAME de propósito (R-20 item 2, mesma razão da
+        escala de brilho): deslocar a cor que o jogo pediu seria mentir sobre
+        o que ele pediu. O jogo pinta por cima da regra, como já pinta por
+        cima do brilho.
+        """
+        if r.saida.led is None or not r.cor_por_controle:
+            return r.saida
+        uniq = self._key_to_uniq(key)
+        if uniq is None:
+            return r.saida
+        mesa = self._mesa_de_cores_locked(incluir_coop=incluir_coop)
+        cor = cores_sem_colisao(mesa).get(uniq)
+        if cor is None or cor == r.saida.led:
+            return r.saida
+        return replace(r.saida, led=cor)
+
     def _merged_desired_for_key(
         self, key: str, *, incluir_coop: bool = True
     ) -> _DesiredOutput:
@@ -1944,29 +2095,19 @@ class PyDualSenseController(IController):
         É exatamente por isso que a semântica D4 manda a GUI DESLIGAR o
         toggle ao aplicar "Todos"; o merge daqui fica honesto e não resolve
         isso por conta própria.
+
+        E ENTRE O MERGE E O JOGO passa a regra de cor única
+        (`_com_cor_unica_locked` → `cores_sem_colisao`): duas peças da mesa
+        nunca ficam da mesma cor. Ela vem depois das camadas do daemon
+        porque precisa das cores JÁ resolvidas de todo mundo, e antes da
+        GAME pela mesma razão do brilho — o que o jogo pinta é do jogo.
         """
         uniq = self._key_to_uniq(key)
-        override = self._desired_by_uniq.get(uniq) if uniq is not None else None
-        base = self._desired_default
-        self._assentar_mesa_locked()
-        provider = self._auto_output_provider
-        if provider is not None and uniq is not None:
-            try:
-                auto = provider(uniq)
-            except Exception as exc:
-                logger.debug(
-                    "auto_output_provider_falhou", uniq=uniq, err=str(exc)
-                )
-                auto = None
-            if auto is not None:
-                base = _merge_desired(base, auto)
-        resolved = _merge_desired(base, override)
-        if uniq is not None:
-            if incluir_coop:
-                resolved = _merge_desired(
-                    resolved, self._desired_coop_by_uniq.get(uniq)
-                )
-            resolved = self._scaled_led(uniq, resolved)
+        resolved = self._com_cor_unica_locked(
+            key,
+            self._resolvido_do_daemon(key, incluir_coop=incluir_coop),
+            incluir_coop=incluir_coop,
+        )
         game = self._game_output_by_uniq.get(uniq) if uniq is not None else None
         # NUMA-02 (gate de exibição em ponto ÚNICO): sob autoridade 'daemon' a
         # camada GAME não entra no merge — este if governa de uma vez o

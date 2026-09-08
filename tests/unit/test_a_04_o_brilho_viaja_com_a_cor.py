@@ -271,10 +271,16 @@ def test_sem_brilho_no_perfil_o_campo_nao_viaja(a04, ctx, monkeypatch):
 # ---------------------------------------------------------------------------
 # 5. os três gestos escrevem pela MESMA porta
 # ---------------------------------------------------------------------------
+#: O TERCEIRO GESTO MORREU, e a linha dele saiu junto — 08/09/2026. Havia aqui
+#: um `("auto", {}, ["chamar", "led_set_detalhado"])`, e o gesto por coluna que
+#: ele exercitava saiu da aba no `2c228352`, com o botão. Desde então
+#: `gesto_da_pagina("04-iluminacao.html", "auto")` devolvia `None` e a linha
+#: reprovava com `TypeError: 'NoneType' object is not callable` — uma régua
+#: vermelha sobre um botão que não existe não mede nada, e escondia as duas
+#: que medem. Os gestos de COR desta aba são dois.
 @pytest.mark.parametrize(("nome", "clique", "espera"), [
     ("cor", {"hex": "#FF8000"}, ["led_set_detalhado"]),
     ("apagar", {}, ["led_set_detalhado"]),
-    ("auto", {}, ["chamar", "led_set_detalhado"]),
 ])
 def test_os_tres_gestos_de_cor_passam_pela_porta_detalhada(
         a04, ctx, monkeypatch, nome, clique, espera):

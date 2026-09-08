@@ -2087,7 +2087,7 @@ def _escrever_a_cor(ctx: Contexto, p: Any, uniq: str,
 
 
 @gesto("04-iluminacao.html", "cor")
-def cor(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
+def cor(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
     """Ela clicou num tom. A cor vai AO CONTROLE NA HORA.
 
     DECISÃO DELA, 01/09/2026: *"clicar na cor já deveria aplicar a cor no
@@ -2138,6 +2138,13 @@ def cor(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
 
     E O BRILHO VIAJA JUNTO — 03/09/2026. Ver `_escrever_a_cor`: até aqui este
     gesto DESFAZIA o brilho dela a cada clique num tom.
+
+    E DUAS PEÇAS NUNCA FICAM DA MESMA COR — 08/09/2026. O alvo aqui é UM
+    controle, então escolher o tom que o vizinho já tem é uma escolha e não um
+    broadcast: `_sem_repetir_a_cor_do_vizinho` desloca para o vizinho livre e
+    devolve a frase que diz o que fez. Vale para as DUAS portas — a guia de
+    oito tons e o `<input type="color">` livre, que alcança o hexa exato de
+    outra coluna.
     """
     from hefesto_dualsense4unix.core.led_control import hex_to_rgb
 
@@ -2149,9 +2156,85 @@ def cor(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     pedido = str(o.get("hex") or "")
     if not pedido:
         if _so_abriu_o_seletor(o):
-            return
+            return None
         pedido = str(o.get("valor") or "")
-    _escrever_a_cor(ctx, p, uniq, hex_to_rgb(pedido))
+    alvo, recado = _sem_repetir_a_cor_do_vizinho(ctx, uniq, hex_to_rgb(pedido))
+    _escrever_a_cor(ctx, p, uniq, alvo)
+    return {"recado": recado} if recado else None
+
+
+#: A RECUSA QUANDO NÃO SOBRA TOM. Ela é do PRODUTO e não confessa defeito
+#: nosso: diz o estado da mesa e o que fazer. `a10_perfis._com_o_estilo` já
+#: recusa assim quando dois controles caem no mesmo P — a casa sabia recusar
+#: num lugar só, e este é o segundo.
+_RECUSA_SEM_TOM_LIVRE = (
+    "Os oito tons já estão em uso pelos controles ligados, e duas peças nunca "
+    "ficam da mesma cor. Troque a cor de outro controle primeiro, ou escolha "
+    "um tom que esteja livre. Nada foi mudado.")
+
+
+def _sem_repetir_a_cor_do_vizinho(
+    ctx: Contexto, uniq: str, rgb: tuple[int, int, int]
+) -> tuple[tuple[int, int, int], str | None]:
+    """A cor que ESTE controle recebe, e a frase quando ela não é a pedida.
+
+    `D-DUAS-PECAS-NUNCA-TEM-A-MESMA-COR`, a metade que o resolvedor do daemon
+    **não pode** cumprir. Lá (`core/led_control.py::cores_sem_colisao`) só se
+    desloca o que dá para PROVAR que é fóssil — a cor do número de outro —,
+    porque no disco um broadcast (`led.set` sem `uniq`, que grava a MESMA cor
+    em todos de propósito) é indistinguível de duas escolhas que colidiram.
+
+    AQUI A DÚVIDA NÃO EXISTE: este gesto tem `uniq`, então o alvo é UM
+    controle e a repetição é uma escolha, não um broadcast. É o lugar em que
+    as palavras dela cabem inteiras — *"o segundo desloca para o tom vizinho
+    e a tela diz o que fez"* —, e é o que faz a decisão valer para o gesto
+    dela e não só para o estado herdado do arquivo.
+
+    A COMPARAÇÃO É PRÉ-BRILHO, pelo mesmo motivo que `_a_cor_de_agora`
+    documenta: `lightbar_rgb` chega PÓS-escala (D8), e comparar o hexa que ela
+    clicou com um valor já escurecido diria "livre" sobre a cor que o vizinho
+    está acendendo. `_a_cor_de_agora` é quem inverte a escala, e usá-lo aqui
+    mantém UM dono para essa conta.
+
+    MESA CHEIA RECUSA, não gira: com os oito tons em uso, deslocar seria tirar
+    a cor de um terceiro que não pediu nada — e no tique seguinte ele
+    deslocaria outro. Ver `_RECUSA_SEM_TOM_LIVRE`.
+
+    :return: `(cor, recado)` — `recado` é `None` quando a pedida estava livre.
+    :raises RuntimeError: mesa cheia, com o motivo por extenso.
+    """
+    from hefesto_dualsense4unix.core.led_control import _PLAYER_SLOT_COLORS
+
+    nome = str(ctx.state.get("active_profile") or "").strip()
+    cru = perfil.ativo(nome) if nome else {}
+    tomadas: dict[tuple[int, int, int], dict[str, Any]] = {}
+    for c in ctx.conectados:
+        outro = str(c.get("uniq") or "")
+        if outro and outro != uniq:
+            tomadas.setdefault(_a_cor_de_agora(ctx, cru, c), c)
+    dono = tomadas.get(rgb)
+    if dono is None:
+        return rgb, None
+    for candidata in _PLAYER_SLOT_COLORS.values():
+        if candidata not in tomadas and candidata != rgb:
+            return candidata, (
+                f"O {_quem_e(ctx, dono)} já está nesse tom, então este ficou "
+                f"com o vizinho — duas peças nunca ficam da mesma cor. "
+                f"Escolha um tom livre se quiser outro.")
+    raise RuntimeError(_RECUSA_SEM_TOM_LIVRE)
+
+
+def _quem_e(ctx: Contexto, c: dict[str, Any]) -> str:
+    """Como a tela chama ESTE controle numa frase — "P2", ou o modelo dele.
+
+    A fita e o cabeçalho das colunas já dizem `P2 • Modelo • USB`, e a frase
+    de deslocamento tem de nomear o MESMO controle com a MESMA palavra: um
+    recado que diz "Controle 2" ao lado de uma coluna que diz "P2" obriga ela
+    a fazer a tradução na cabeça.
+    """
+    modelo = str(_da_mesa(ctx, str(c.get("uniq") or "")).get("nome") or "").strip()
+    numero = f"P{_numero(ctx, c)}"
+    return f"{numero} ({modelo})" if modelo else numero
 
 
 @gesto("04-iluminacao.html", "apagar")
@@ -2562,12 +2645,26 @@ _RECADO_DO_AUTOMATICO_SAIU = (
     "Cores automáticas desligadas. Guardei a cor de cada controle no perfil, "
     "para nenhuma se perder e nenhuma se repetir.")
 
-#: E QUANDO ELE VOLTA. Curta porque não há consequência a confessar: as cores
-#: gravadas continuam no perfil e a camada automática passa a vencer no merge
-#: por campo do backend — nada se apaga.
+#: E QUANDO ELE VOLTA.
+#:
+#: FATO ERRADO, SUBSTITUÍDO — 08/09/2026. Este comentário dizia que ao voltar
+#: *"a camada automática passa a vencer no merge por campo do backend"*, e
+#: justificava com isso a frase curta "cada controle volta a acender a cor do
+#: número dele". A precedência é a CONTRÁRIA, e o próprio arquivo a cita certa
+#: em quatro lugares: a automática está ABAIXO do override por-uniq
+#: (`_merged_desired_for_key`), então uma cor gravada continua vencendo. O
+#: comentário errado gerou a frase errada, e ela era falsa para dois dos quatro
+#: controles dela.
+#:
+#: O QUE A FRASE DIZ AGORA é o que o produto faz depois da regra de cor única
+#: (`core/led_control.py::cores_sem_colisao`): quem não tem cor própria acende
+#: a do número, quem tem a mantém — e a cor gravada que COLIDE volta para a do
+#: número, porque uma cor igual à de outro na mesa é o número de ontem
+#: fossilizado, não uma escolha. A segunda metade é promessa de produto
+#: (`D-DUAS-PECAS-NUNCA-TEM-A-MESMA-COR`), não confissão de defeito nosso.
 _RECADO_DO_AUTOMATICO_VOLTOU = (
-    "Cores automáticas ligadas. Cada controle volta a acender a cor do número "
-    "dele.")
+    "Cores automáticas ligadas. Cada controle sem cor própria acende a cor do "
+    "número dele, e duas nunca ficam iguais.")
 
 
 @gesto("04-iluminacao.html", "auto-cores", grava="gravar_e_reaplicar")

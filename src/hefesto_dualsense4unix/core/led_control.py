@@ -160,8 +160,123 @@ def player_slot_color(slot: int) -> RGB:
 
     5..8 são extensões desta casa (R-25, ver tabela). Slot ≥9 cai no branco —
     fallback neutro, distinguível das oito cores acima.
+
+    **ELA NÃO É INJETIVA ACIMA DE 8, e o irmão é.** `player_led_pattern` tem o
+    `_PLAYER_LED_OVERFLOW` declarado como *"só colide consigo mesmo"*; aqui
+    dois controles em 9 e 10 recebem o MESMO branco. A garantia de que duas
+    peças nunca ficam da mesma cor NÃO mora nesta função — mora em
+    :func:`cores_sem_colisao`, que resolve a mesa inteira e desempata o branco
+    repetido. Quem chamar isto direto, sem passar por lá, herda a colisão.
     """
     return _PLAYER_SLOT_COLORS.get(slot, (255, 255, 255))
+
+
+#: Uma peça na mesa da regra de cor única: o endereço, a cor que ela PEDE e a
+#: cor do NÚMERO dela (a automática, já escalada — ou None quando ela não tem
+#: número: ausente da mesa, vpad, ou key sem MAC de 12 hex).
+PecaDaMesa = tuple[str, "RGB | None", "RGB | None"]
+
+#: Preto é AUSÊNCIA de cor, não identidade. Uma barra apagada não colide com
+#: outra apagada — "as duas estão desligadas" é uma resposta, e deslocar uma
+#: delas para roxo acenderia um controle que a usuária mandou apagar.
+_APAGADA: RGB = (0, 0, 0)
+
+
+def cores_sem_colisao(mesa: list[PecaDaMesa]) -> dict[str, RGB]:
+    """Resolve a mesa inteira de modo que duas peças nunca fiquem da mesma cor.
+
+    `D-DUAS-PECAS-NUNCA-TEM-A-MESMA-COR` (26/08/2026), decidida por ela como
+    **REGRA DO PRODUTO, SEMPRE**: *"duas coisas que precisam ser
+    distinguíveis não podem colidir"*. A barra é como ela sabe de quem é o
+    controle — na mesa dela dois DualSense são do MESMO modelo, e a luz é a
+    única coisa que os separa.
+
+    **`mesa` já vem NA ORDEM que decide** (o número do controle, quando há
+    um), e a ordem é o contrato: *"o segundo desloca para o tom vizinho"* são
+    as palavras dela, e "primeiro" só tem definição estável se for o número.
+    Quem chama ordena; aqui a regra é cega e determinista — a MESMA mesa
+    devolve SEMPRE a mesma resposta, que é o que impede a barra de piscar
+    (medido em 05/09/2026: um endereço com dois donos repintou a tela 80
+    vezes em 80 tiques).
+
+    **DESLOCA SÓ O QUE CONSEGUE PROVAR QUE É FÓSSIL**, e o critério é o que a
+    medição de 08/09/2026 achou no disco dela: *uma cor que é exatamente a do
+    NÚMERO DE OUTRO controle da mesa não é uma escolha — é o número de ontem
+    congelado no arquivo*. A prova está nos ranks 2 e 4 dela, que guardavam as
+    cores dos slots **1 e 2**: o produto gravou o lugar de cada um num dia em
+    que eles eram outros, e a mesa girou.
+
+    A regra, então:
+
+    1. quem pede a cor do PRÓPRIO número fica com ela — ela é dele;
+    2. quem pede a cor do número de OUTRO da mesa é deslocado: para a cor do
+       próprio número se estiver livre, senão para a primeira livre da paleta;
+    3. com as oito tomadas, **recusa**: devolve o que foi pedido em vez de
+       girar. Rodízio com a mesa cheia troca a cor de todo mundo a cada
+       tique, que é o defeito que esta função existe para não ter;
+    4. **cor que não é de número nenhum da mesa NÃO se toca.**
+
+    A LINHA 4 É O LIMITE HONESTO DESTE LUGAR, e ela custou três testes
+    vermelhos até ficar escrita. O `led.set` sem `uniq` é um BROADCAST: ele
+    grava a MESMA cor no override de todos, de propósito — *"pinta os dois de
+    verde"*. No disco isso é indistinguível de duas escolhas independentes que
+    calharam de colidir, porque `ControllerOverrides.leds` não guarda
+    procedência. Um resolvedor que deslocasse toda repetição desfaria o
+    broadcast dela no tique seguinte.
+
+    Então a metade que falta — *"mesmo que eu escolha cor X, meu amigo não pode
+    escolher a mesma"* — **não mora aqui**: ela mora no GESTO, onde se sabe se
+    o alvo é UM controle ou todos, e onde a tela pode dizer o que fez (é o que
+    `D-DUAS-PECAS-NUNCA-TEM-A-MESMA-COR` pede com todas as letras: *"o segundo
+    desloca para o tom vizinho e a tela diz o que fez"*). Ver
+    `interface/pacotes/a04_iluminacao.py::_sem_repetir_a_cor_do_vizinho`.
+
+    Preto (`_APAGADA`) fica de fora nos dois sentidos: não é deslocado e não
+    toma cor de ninguém — barra apagada é ausência de cor, não identidade.
+
+    Rodada na mesa dela, esta regra devolve as quatro cores do número: o rank 1
+    pede azul, que é o dele, e fica; o rank 2 pede o MESMO azul, que é o número
+    do rank 1, e volta para o vermelho do dele; o rank 4 pede esse vermelho,
+    que é o número do rank 2, e volta para o rosa do dele. Sem que uma linha do
+    disco dela seja apagada: o override só se desloca quando usa o número de
+    outro, então uma cor escolhida de verdade sobrevive.
+    """
+    numeros = {
+        do_numero for _, _, do_numero in mesa
+        if do_numero is not None and do_numero != _APAGADA
+    }
+    tomadas: dict[RGB, str] = {}
+    saida: dict[str, RGB] = {}
+    for uniq, pedida, do_numero in mesa:
+        if pedida is None:
+            continue
+        saida[uniq] = pedida
+        if pedida == _APAGADA:
+            continue
+        # DONO POR DIREITO: a cor do próprio número, e só enquanto ninguém a
+        # tomou antes. O "enquanto" não é zelo — `player_slot_color` devolve
+        # BRANCO para todo slot ≥ 9, então dois controles em 9 e 10 têm o
+        # MESMO "próprio número". Sem esta metade, os dois seriam donos e os
+        # dois ficariam brancos, que é o buraco que esta regra veio fechar.
+        e_dono = pedida == do_numero and pedida not in tomadas
+        # As TRÊS condições do fóssil, e as três têm de valer juntas: a cor já
+        # está tomada por outro (colisão de verdade, não hipótese), quem pede
+        # não é o dono dela, e ela É a do número de alguém na mesa — o que a
+        # torna provável fóssil em vez de escolha.
+        e_fossil = pedida in tomadas and not e_dono and pedida in numeros
+        if not e_fossil:
+            tomadas.setdefault(pedida, uniq)
+            continue
+        for candidata in (do_numero, *_PLAYER_SLOT_COLORS.values()):
+            if candidata is None or candidata == _APAGADA:
+                continue
+            if candidata not in tomadas:
+                saida[uniq] = candidata
+                tomadas[candidata] = uniq
+                break
+        else:  # as oito tomadas: recusa, não gira
+            tomadas.setdefault(pedida, uniq)
+    return saida
 
 
 def apply_led_settings(controller: IController, settings: LedSettings) -> None:
@@ -230,7 +345,9 @@ def hex_to_rgb(hex_str: str) -> RGB:
 __all__ = [
     "RGB",
     "LedSettings",
+    "PecaDaMesa",
     "apply_led_settings",
+    "cores_sem_colisao",
     "hex_to_rgb",
     "off",
     "player_bitmask",
