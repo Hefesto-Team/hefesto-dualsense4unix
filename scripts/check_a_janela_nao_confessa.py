@@ -106,6 +106,21 @@ from check_a_tela_nao_confessa import FORMA
 
 FONTE = RAIZ / "src" / "hefesto_dualsense4unix"
 
+#: OS CAMINHOS QUE AS LISTAS APONTAM E NINGUÉM ABRE. Um caminho morto numa lista
+#: de isenção é pior que um defeito, porque o vermelho que ele deveria causar
+#: simplesmente não acontece — mas ele NÃO aborta a corrida.
+#:
+#: **POR QUE JUNTAR EM VEZ DE ABORTAR NO PRIMEIRO — 08/09/2026, ressalva do
+#: conferente:** `app/tray.py` e `app/compact_window.py` moram numa pasta em
+#: demolição (`D-0609-GTK-LEVA-INTEIRA`, que já levou `app/app.py`). No dia em
+#: que os dois saírem, um `SystemExit` no primeiro pararia a varredura e o
+#: portão diria UM caminho, escondendo o outro e todo o resto que ele mediria.
+#: Quem for consertar a lista conserta uma vez, com ela inteira na frente.
+#:
+#: A SEVERIDADE NÃO MUDOU: continua reprovação, e a mensagem continua mandando
+#: consertar o ponteiro em vez de tirar a linha.
+_CAMINHOS_MORTOS: list[tuple[str, str]] = []
+
 # ---------------------------------------------------------------------------
 # ONDE A MOLDURA DO PRODUTO É ESCRITA
 # ---------------------------------------------------------------------------
@@ -285,9 +300,8 @@ def _texto_de_moldura(rel: str, lista: object) -> list[tuple[str, str]]:
     """
     p = FONTE / rel
     if not p.is_file():
-        raise SystemExit(
-            f"ERRO: `{lista}` aponta para {rel}, que não existe. "
-            f"A moldura mudou de lugar e esta régua ficou cega para ela.")
+        _CAMINHOS_MORTOS.append((str(lista), rel))
+        return []
     fora: list[tuple[str, str]] = []
     arvore = ast.parse(p.read_text(encoding="utf-8"))
     for no in ast.walk(arvore):
@@ -397,6 +411,17 @@ def main() -> int:
         print(f"  ({marcados} deles falam a língua de dentro na própria moldura. "
               f"São instrumentos, não o produto — mas o dia em que um virar "
               f"produto, ele muda de tabela, não de silêncio.)")
+
+    if _CAMINHOS_MORTOS:
+        print(f"\nFALHA: {len(_CAMINHOS_MORTOS)} caminho(s) das listas desta "
+              f"régua não existem nesta árvore:\n")
+        for lista, rel in _CAMINHOS_MORTOS:
+            print(f"  `{lista}` aponta para {rel}")
+        print("\nA moldura mudou de lugar e esta régua ficou cega para ela.")
+        print("CONSERTE O PONTEIRO — tirar a linha some com a vigilância junto.")
+        print("Se o arquivo saiu de vez, a linha sai com uma lápide dizendo")
+        print("quem herdou o que ele escrevia na moldura.")
+        return 1
 
     if achados:
         print(f"\nFALHA: {len(achados)} texto(s) de MOLDURA falando a língua de "
