@@ -99,6 +99,9 @@ jobs:
       - run: python3 scripts/check_a_cor_vem_do_aparelho.py
       - run: python3 scripts/check_colisao_de_sprints.py
       - run: python3 scripts/check_a_tela_nao_confessa.py
+      # A moldura: a barra de título, o `.desktop` e a unit — o que ela lê
+      # ANTES de qualquer página, e o que as duas réguas de corpo não alcançam.
+      - run: python3 scripts/check_a_janela_nao_confessa.py
 
   acentuacao:
     name: Acentuação PT-BR estrita (py${{ matrix.python }})

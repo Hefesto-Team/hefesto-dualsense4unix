@@ -36,7 +36,17 @@ Type=Application
 # é o título da janela e o do `--version`.
 Name=Hefesto
 GenericName=DualSense Controller
-Comment=Gerenciador de DualSense para Linux. As dez abas, com o dado do aparelho.
+# A SEGUNDA FRASE SAIU — 08/09/2026. Ela era *"As dez abas, com o dado do
+# aparelho."*: o apelido que ESTA CASA deu ao piloto único, na dica que a dock e
+# o menu do sistema mostram ANTES de a janela existir. É o mesmo defeito que ela
+# leu na barra de título no mesmo dia, e ninguém o tinha visto porque as duas
+# réguas de tela param na borda da `<body>`. Achado por
+# `scripts/check_a_janela_nao_confessa.py`, na primeira corrida dele.
+#
+# O QUE FICOU é o que o produto já diz de si na própria página
+# (`interface/topo.html`, a linha `.sub` do cabeçalho) e o que os outros três
+# `.desktop` desta árvore já diziam — um dono, uma frase.
+Comment=Gerenciador DualSense para Linux
 Exec=@RAIZ@/interface.sh
 Icon=hefesto-dualsense4unix
 Categories=Settings;HardwareSettings;

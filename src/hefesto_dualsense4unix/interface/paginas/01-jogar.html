@@ -123,7 +123,47 @@
   }
   .mono{font-family:'JetBrains Mono',ui-monospace,monospace}
 
-  /* a janela, na proporção real: 1180px de largura é o que o produto abre */
+  /* A LARGURA ESTICA, COM TETO — 08/09/2026, decisão dela.
+
+     ELA ERA `width:1180px` FIXO. Ela, com o produto instalado e os quatro
+     DualSense na mesa: *"o background fica completamente preto"*. Medido: não
+     era falta de fundo — o `body` já pinta `#11121a` logo acima, e o que ela
+     via era a cor da casa, só que MUITA: a janela maximizada tem ~1900px e o
+     desenho parava em 1180, deixando ~360px de casa de cada lado.
+
+     A recomendação foi levada a ela e ela aprovou (*"eu confio em vc, manda
+     ver"*): ESTICA, COM TETO. As razões, para ninguém as desfazer sem medir:
+     ela tem UMA tela e maximiza, então a sobra é o que ela vê o tempo todo;
+     ela tem QUATRO controles, e as abas de uma coluna por jogador estavam
+     espremidas; e o teto protege a leitura, porque esticar sem limite alonga a
+     linha até ela deixar de se ler.
+
+     DE ONDE SAI O 1600, e ele é HIPÓTESE MEDIDA, não dogma. As dez páginas
+     publicadas foram fotografadas e medidas em 1180, 1400, 1600 e 1900 —
+     geometria computada no Chrome, não o texto deste CSS:
+
+       * NADA QUEBRA em nenhuma das quatro. Zero rolagem lateral, zero caixa
+         fora da moldura, e a contagem de conteúdo-que-não-cabe é IDÊNTICA nas
+         quatro (02: 4 · 03: 51 · 04: 36 · 05: 34) — ela é anterior e não tem a
+         ver com a largura. A grade é fluida e cresce.
+       * O QUE SE GANHA: a coluna por jogador da Gatilhos
+         (`.duas-colunas`, `repeat(4, minmax(0,1fr))`) vai de **228px a 333px**,
+         +46%. É a razão 2 dela, com número.
+       * O QUE SE PAGA, e é o que fecha o teto: a linha de leitura alonga.
+         O registro da Sistema vai de 157 para 237 caracteres por linha; o
+         número de um ajuste da Gatilhos se afasta do nome dele de 87 para
+         183px. Em 1900 os mesmos viram 294 e 258 — o dobro do preço para
+         metade do ganho, e as fotos mostram o botão de modo virando uma caixa
+         de 460px para uma palavra.
+
+     Em 1600 o ganho ainda é grande e o preço ainda é o dobro do aprovado; daí
+     para cima o preço cresce e o ganho não. Se alguém remedir e achar melhor,
+     troque o número E a razão — o que NÃO muda é a decisão: estica, com teto.
+
+     O `min()` faz o teto e o encolhimento na mesma linha; o `max-width:100%`
+     abaixo continua por redundância barata. Abaixo de 1212px de documento nada
+     mudou: quem segura o piso é o `set_size_request` da janela GTK
+     (`gui/ponte_da_tela.py`), e ele ficou MAIS carregado, não menos. */
   /* A JANELA TEM UMA ALTURA SÓ, nas dez abas. Ela, 27/08: "sair clicando entre
      as abas causa muito desconforto, pq muda tudo". Media de 530 (Iluminação) a
      1032 (Conexões) — quase o dobro: o rodapé pulava meia tela a cada clique.
@@ -144,7 +184,7 @@
      O `overflow-y:auto` do miolo é rede: hoje nada passa dos 817px que sobram,
      e o dia em que passar a janela continua do mesmo tamanho. */
   .janela{
-    width:1180px; height:var(--alt-janela); max-width:100%; background:var(--app-bg);
+    width:min(100%,1600px); height:var(--alt-janela); max-width:100%; background:var(--app-bg);
     display:flex; flex-direction:column;
     border:1px solid var(--linha); border-radius:10px; overflow:hidden;
     box-shadow:0 18px 50px rgba(0,0,0,.45);
@@ -205,8 +245,45 @@
                      color:var(--comment)}
   /* a borda de 2px na cor do plástico é a marca da peça VIVA — some com a fita */
   .fita.inerte .chip.plastico{border-color:var(--border-sutil);border-width:1px}
-  .fita.inerte .chip.on{border-color:var(--comment);background:transparent;
-                        color:var(--texto-suave);font-weight:600}
+  /* O CHIP MARCADO FICA IGUAL AOS OUTROS QUANDO A FITA NÃO ESCOLHE NADA —
+     08/09/2026, pedido dela na aba Gatilhos: *"o player 1 tipo no caso cosmic
+     red - cabo, fica sempre selecionado com borda diferente mesmo nas abas que
+     cada player tem sua propria config. conseguimos deixar ele cinza como os
+     demais?"* (a citação é palavra por palavra, inclusive onde falta acento).
+
+     A HIPÓTESE ÓBVIA ESTAVA ERRADA, e conferi-la primeiro poupa a sprint: a
+     Gatilhos NÃO está em `monta.ABAS_QUE_ESCOLHEM` ({"01-jogar",
+     "02-controles", "08-conexoes"}), a fita dela já nasce `inerte` e o produto
+     estava certo nessa parte. Quem devolvia o destaque eram estas três linhas:
+     as duas de cima apagam o chip na fita inerte, e esta desfazia as duas.
+
+     O QUE O `.on` CARREGA AQUI, medido antes de apagar, porque ele podia estar
+     dizendo mais de uma coisa: nada. `monta._endereco_do_chip` devolve string
+     VAZIA quando `inerte` — na fita que não escolhe, o chip não tem
+     endereço de clique nem de alvo, e não leva a lugar nenhum. O `.on` ali é
+     só a memória de uma escolha que esta aba não usa, e "o marcado" não quer
+     dizer coisa alguma para quem olha.
+
+     ESTE COMENTÁRIO NÃO ESCREVE OS ATRIBUTOS COM O NOME LITERAL, e isso é
+     medido, não asseio: a primeira redação dizia o nome do endereço de clique
+     entre crases, e como o `topo.html` entra INTEIRO nas dez páginas, cada uma
+     ganhou uma ocorrência a mais dele — 24 viraram 25 na Gatilhos. Há régua
+     desta casa que os conta esperando um número exato. É a armadilha de prosa
+     desta casa pela sexta vez, e desta vez quem a pegou foi `grep -c` na
+     página PUBLICADA, não no fonte.
+
+     ELA REPETE OS QUATRO VALORES em vez de ser apagada, e o `font-weight` é o
+     motivo: sem esta regra o chip cairia em `.fita.inerte .chip` (0,3,0) para
+     cor e fundo, mas o `font-weight:600` de `.chip.on` continuaria valendo — e
+     o chip seguiria em NEGRITO, diferente dos irmãos. "Cinza como os demais"
+     inclui o peso da letra.
+
+     A LARGURA DA BORDA vem de `.fita.inerte .chip.plastico` (1px), que esta
+     regra não sobrescreve: num chip `plastico on` os dois seletores empatam em
+     (0,4,0) e a cor é a mesma dos dois lados. A fita que ESCOLHE não muda —
+     `.fita.inerte` é a única porta desta regra. */
+  .fita.inerte .chip.on{border-color:var(--border-sutil);background:transparent;
+                        color:var(--comment);font-weight:400}
   .chip{
     padding:5px 12px;border-radius:6px;font-size:12px;
     border:1px solid var(--linha);background:var(--app-bg);color:var(--texto-mudo);
@@ -498,6 +575,10 @@
   .r-exportar{border-color:var(--comment)!important;color:var(--texto-mudo);background:transparent}
 
   /* ---------- legenda do mockup (fora da janela) ---------- */
+  /* ELA NÃO ACOMPANHOU O TETO DE 1600 da `.janela`, e é escolha: a legenda é
+     PROSA CORRIDA e o produto a esconde (`folha_da_casa`). Em 1180 ela já está
+     no limite de leitura; alargá-la pioraria o único lugar em que ela é lida —
+     a bancada — sem devolver nada ao produto. */
   .nota{
     width:1180px;max-width:100%;font-size:12px;color:var(--texto-mudo);line-height:1.65;
     border-left:2px solid var(--purple);padding-left:14px;
@@ -1063,17 +1144,37 @@
      Nenhuma medida de caixa se move, então a cena que ela aprovou — os dois
      controles numerados pelo jogo — continua idêntica. */
   .cartao .rotulo b.espera{color:var(--texto-mudo);font-weight:400}
-  /* ---------- O CADEADO DA TROCA AUTOMÁTICA — 04/09/2026 ----------
+  /* ---------- O CADEADO DA TROCA AUTOMÁTICA, NO CANTO — 08/09/2026 ----------
      A caixa que ela pediu em 23/07 e que voltou para esta aba pela decisão [03].
-     A GRAMÁTICA É A DA LINHA DE AJUDA desta mesma página: 12px, `--texto-mudo`,
-     e o rótulo ao lado do controle. Ela mora no rodapé do quadro Modo, fora das
-     duas seções do interruptor — a troca de perfil vale ligado e desligado.
-     A CONTA DA ALTURA, e ela decide se a linha cabe: 16px de caixa contra os
-     ~28px que a decisão orçou. O miolo pedia 502px de 542 antes desta linha, e
-     a foto de 04/09 mostra 106px de vão sobrando embaixo do último quadro —
-     a folga medida comporta a linha com sobra. */
-  .cadeado{display:flex;align-items:center;gap:6px;margin-top:8px;
-           color:var(--texto-mudo);font-size:12px;line-height:16px;cursor:pointer}
+     Ela mora no quadro Modo, fora das duas seções do interruptor — a troca de
+     perfil vale ligado e desligado.
+
+     ELE SAIU DO RODAPÉ DO QUADRO E SUBIU PARA A LINHA DO TÍTULO, a pedido dela:
+     *"Pode colocar ele no canto superior direito do bloco tipo esse banco de
+     provas na guia navegação."* Embaixo dos modos ele lia como um QUINTO modo.
+
+     A GRAMÁTICA PASSOU A SER A DA `.porta` DA NAVEGAÇÃO (`aba06.py`), que é o
+     modelo que ela apontou — e com ela vêm três medidas que não são gosto:
+
+       `margin-left:auto`  o empurrão para o canto, dentro do `.quadro-topo`.
+                           É o mesmo do `.sensores` da aba Controles; não é
+                           padrão novo.
+       `height:17px`       O `.quadro-topo` é `align-items:center`, então a
+                           altura dele é a do filho mais alto, e o
+                           `.quadro-titulo` mede 17px. A porta da Navegação
+                           pagou este preço MEDIDO: a primeira volta dela tinha
+                           19px e **663 das 733 caixas da aba desceram 2px**.
+                           A caixa de marcar tem 13px e cabe dentro dos 17.
+       `11px`              o tamanho da porta, e não os 12px que a linha tinha
+                           embaixo: na linha do título ela divide o espaço com
+                           o `.quadro-titulo` (13,5px) e com o `?`.
+
+     O `white-space:nowrap` + `flex:0 0 auto` são o par que impede o rótulo de
+     quebrar em duas linhas quando a janela encolhe para o piso de 1212px — e
+     duas linhas aqui estouram os 17px e derrubam a conta acima. */
+  .cadeado{display:flex;align-items:center;gap:6px;margin-left:auto;
+           height:17px;line-height:17px;flex:0 0 auto;white-space:nowrap;
+           color:var(--texto-mudo);font-size:11px;cursor:pointer}
   .cadeado input{margin:0;width:13px;height:13px;accent-color:var(--purple);
                  flex:0 0 auto;cursor:pointer}
   .cadeado:hover{color:var(--fg)}
@@ -1948,6 +2049,47 @@
           Ele <b>tenta na ordem em que estão aqui e para quando acerta</b>; depois não pergunta mais para aquele jogo.<br><br>
           <b>Segurando PS + R3</b> você pula para o próximo sem largar o controle.
         </span></span>
+        <!-- ---------- O CADEADO DA TROCA AUTOMÁTICA, NO CANTO ----------
+             08/09/2026, pedido dela olhando a aba: *"esse não trocar de perfil.
+             Pode colocar ele no canto superior direito do bloco tipo esse banco
+             de provas na guia navegação."*
+
+             O QUE ELA VIU: a caixa ficava solta LOGO ABAIXO da fileira de modos,
+             na coluna dos modos e no fluxo de leitura deles — e ali ela lia como
+             um QUINTO modo. Não é modo nenhum: é uma trava sobre o perfil.
+
+             O MODELO É O QUE ELA APONTOU, `aba06.py:2664`, a `.porta` do *"Banco
+             de provas: o mapa do controle ↗"*: **a coisa que pertence ao bloco
+             mas não é o miolo dele mora no canto, na linha do título.**
+
+             O GESTO NÃO MUDOU, e é o ponto: o gesto do clique, o campo de
+             pintura e o alvo `marcado` continuam os mesmos — estão escritos
+             logo abaixo, e ESTE COMENTÁRIO NÃO OS REPETE de propósito. Um
+             comentário que cita o par `atributo="valor"` VIRA uma segunda
+             ocorrência dele na página, e há régua desta casa que os conta
+             esperando UM. É a armadilha de prosa que esta casa já pagou cinco
+             vezes; aqui ela foi vista com `grep -c` antes de virar defeito.
+             O `title` é o mesmo, e o que ele grava é o mesmo. Mudou o LUGAR.
+             `tests/unit/test_o_cadeado_mora_no_canto_do_bloco.py` mede as duas
+             metades: a geometria na página publicada e a identidade do gesto.
+
+             A ALTURA VEM DO MODELO, e o número é dele: o `.quadro-topo` é
+             `align-items:center`, logo a altura do quadro é a do filho mais
+             alto, e o `.quadro-titulo` mede 17px. A porta da Navegação pagou
+             este preço medido — a primeira volta dela tinha 19px e 663 caixas
+             da aba desceram 2px. Por isso o cadeado entra aqui com a mesma
+             trava de 17px, e não com a altura de linha que ele tinha embaixo.
+
+             A RESSALVA NÃO SOBE JUNTO, e está logo abaixo do bloco de modos: ela
+             é uma FRASE inteira (`texto_do_cadeado_cego`), e frase não cabe numa
+             linha de título sem quebrar o quadro na única máquina em que ela
+             aparece — a que tem o detector cego. Os dois seguem no mesmo bloco,
+             a um palmo um do outro. -->
+        <label class="cadeado" title="Congela a troca automática: o perfil que você deixou ativo continua valendo mesmo ao abrir qualquer jogo. Desmarque para o Hefesto voltar a escolher o perfil por você.">
+          <input type="checkbox" data-gesto="cadeado"
+                 data-campo="cadeado" data-hef-alvo="marcado">
+          <span>Não trocar de perfil sozinho ao abrir um jogo</span>
+        </label>
       </div>
       <div class="quadro-corpo hef">
 
@@ -1983,44 +2125,35 @@
           </div>
         </div>
 
-        <!-- ---------- O CADEADO DA TROCA AUTOMÁTICA ----------
-             04/09/2026, decisão [03] do PO sobre esta aba: *"Volta para a
-             Jogar, embaixo de Modo."* É PEDIDO NOMEADO DELA, de 23/07, e a
-             caixa saiu do desenho por escolha minha — declarada na legenda
-             desta página: *"A caixa saiu — o perfil ativo já diz isso"*.
+        <!-- ---------- O CADEADO SUBIU PARA O CANTO — 08/09/2026 ----------
+             Ele ficava AQUI, solto embaixo da fileira de modos, desde 04/09
+             (decisão [03] do PO: *"Volta para a Jogar, embaixo de Modo."*, sobre
+             pedido nomeado dela de 23/07). Ela olhou a aba em 08/09 e mandou
+             movê-lo para o canto superior direito do bloco; o `<label>` agora
+             mora no `.quadro-topo`, na linha do título, e a razão inteira está
+             escrita lá em cima.
 
-             O QUE MUDOU DESDE ENTÃO, e é o que reverte a escolha: a coluna
-             Atenção passou a ler as fontes do produto, e DUAS delas são o
-             cadeado (`autoswitch_lock_text`) e o detector cego
-             (`texto_do_cadeado_cego`). A tela EXPLICA o cadeado e não oferece
-             onde ligá-lo — em nenhuma das dez abas. Esta é a única posição em
-             que a frase que explica e o botão que resolve ficam na mesma tela.
+             O QUE A MUDANÇA NÃO DESFAZ, e é por isso que estas linhas ficam:
 
-             FORA DAS DUAS SEÇÕES DO INTERRUPTOR, e é o ponto: `so-ligado` e
-             `so-desligado` trocam com o Hefesto; a troca automática de PERFIL
-             vale nas duas. Pôr a caixa dentro de uma delas a faria sumir
-             justamente no Modo Nativo, que é onde ela continua valendo.
+             FORA DAS DUAS SEÇÕES DO INTERRUPTOR — `so-ligado` e `so-desligado`
+             trocam com o Hefesto; a troca automática de PERFIL vale nas duas. A
+             linha do título está fora das duas, como o rodapé do quadro estava.
 
              O RÓTULO E A DICA SÃO DA JANELA ANTIGA, palavra por palavra — o
              `Gtk.CheckButton` de `home_actions._build_home`. Texto novo de tela
-             é decisão dela; texto que ela já leu, não.
+             é decisão dela; texto que ela já leu, não. Nada disso mudou.
 
              `data-hef-alvo="marcado"` É O DÉCIMO ALVO, nascido em 04/09 na
-             ONDA0-P e ainda sem um único endereço nas dez páginas. Ele é o
-             único que escreve `el.checked` — os outros nove escreveriam a
-             string `"on"` no `value`, que num checkbox não é o estado. -->
-        <label class="cadeado" title="Congela a troca automática: o perfil que você deixou ativo continua valendo mesmo ao abrir qualquer jogo. Desmarque para o Hefesto voltar a escolher o perfil por você.">
-          <input type="checkbox" data-gesto="cadeado"
-                 data-campo="cadeado" data-hef-alvo="marcado">
-          <span>Não trocar de perfil sozinho ao abrir um jogo</span>
-        </label>
-        <!-- ---------- O DETECTOR CEGO, EMBAIXO DO CADEADO — 07/09/2026 -------
+             ONDA0-P. Ele é o único que escreve `el.checked` — os outros nove
+             escreveriam a string `"on"` no `value`, que num checkbox não é o
+             estado. Ele viajou junto com o `<label>`. -->
+        <!-- ---------- O DETECTOR CEGO, ABAIXO DOS MODOS — 07/09/2026 -------
              ACHADO POR CONFERÊNCIA, e é o buraco que a saída da coluna Atenção
-             abriu. O comentário logo acima diz, com todas as letras, por que a
-             caixa voltou para esta aba em 04/09: *"Esta é a única posição em que
-             a frase que explica e o botão que resolve ficam na mesma tela."* A
-             coluna saiu em 07/09 por ordem dela, e levou a frase — o botão ficou
-             sozinho, e a justificativa dele foi embora junto.
+             abriu. A caixa voltou para esta aba em 04/09 porque *esta era a
+             única posição em que a frase que explica e o botão que resolve
+             ficavam na mesma tela*. A coluna saiu em 07/09 por ordem dela, e
+             levou a frase — o botão ficou sozinho, e a justificativa dele foi
+             embora junto.
 
              O QUE SE PERDEU, medido: `home_actions.texto_do_cadeado_cego`,
              *"O Hefesto não está conseguindo ver qual programa está na frente,
@@ -2044,7 +2177,8 @@
              AS OUTRAS DEZ FONTES DE `_avisos` CONTINUAM CALADAS, e isso segue
              RELATADO no docstring de `pacotes/a01_jogar._avisos`: o destino
              delas é a aba 09, que é de outra frente. O que esta linha devolve é
-             UMA — a que fala do botão que está logo acima dela. -->
+             UMA — a que fala do cadeado, que desde 08/09 está no canto superior
+             direito DESTE MESMO bloco, e não mais duas linhas acima. -->
         <div class="ressalva" data-campo="cadeado-cego" data-hef-alvo="html"><i class="nada"></i></div>
 
       </div>
@@ -3545,7 +3679,7 @@
       precisaria de ~460px — os quatro somariam 1840px numa fileira que tem 1163px. Quem diz
       o número aqui é o rótulo <b>Player N</b>; o padrão das luzes, desenhado grande, está na
       <b>Iluminação</b>.</li>
-    <li><b>A caixa "Não trocar de perfil sozinho" saiu</b> — o perfil ativo já diz isso.</li>
+    <li><b>A caixa "Não trocar de perfil sozinho" está no canto do bloco Modo</b> — na linha do título, como o "Banco de provas" da Navegação. Embaixo dos modos ela lia como um quinto modo, e não é modo: é uma trava sobre o perfil.</li>
     <li><b>"Reconciliar jogadores" virou "Reconectar Controles"</b>.</li>
     <li><b>A área de avisos tem espaço reservado</b> e <b>conta quantos são</b>. Antes, três banners disputavam a linha e o primeiro escondia os outros. A barra vertical que a separa dos cartões agora vai até embaixo — era um toco de um terço, porque a coluna media a altura do único aviso.</li>  <!-- noqa-acento: `media` é o verbo medir -->
     <li><b>32 frases viraram 12</b> — o resto está nos três ícones <b>?</b>. Passe o mouse neles.</li>

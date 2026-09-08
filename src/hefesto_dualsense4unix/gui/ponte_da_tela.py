@@ -145,13 +145,26 @@ SEGUNDOS_PARA_ESQUECER_O_CRASH = 60.0
 #: ``window.webkit.messageHandlers.<canal>.postMessage``.
 CANAL_PADRAO = "hefesto"
 
-#: O QUE O DESENHO PEDE, em pixels, e cada parcela tem dono no CSS:
+#: O QUE O DESENHO PEDE NO MÍNIMO, em pixels, e cada parcela tem dono no CSS:
 #:
-#:     .janela{width:1180px; height:var(--alt-janela)}   `interface/topo.html:147`
-#:     --alt-janela:777px                                `interface/topo.html:567`
-#:     body{padding:16px}                                `interface/topo.html:122`
+#:     .janela{width:min(100%,1600px); height:var(--alt-janela)}  `interface/topo.html:187`
+#:     --alt-janela:777px                                         `interface/topo.html:693`
+#:     body{padding:16px}                                         `interface/topo.html:122`
 #:
 #: Logo o documento ocupa ``16+1180+16 = 1212`` por ``16+777+16 = 809``.
+#:
+#: **A LARGURA DEIXOU DE SER FIXA EM 08/09/2026**, e os números aqui NÃO mudam
+#: por isso. Ela era `width:1180px`; agora é `min(100%,1600px)` — decisão dela
+#: ao ver a sobra da casa em volta do desenho na janela maximizada (a razão
+#: inteira, com as quatro larguras medidas, está no `topo.html`).
+#:
+#: O 1180 continua sendo o número certo AQUI porque o que ele descreve é o PISO,
+#: não o desenho: abaixo dele as colunas em px do miolo não têm para onde
+#: encolher. O `min()` faz a `.janela` seguir a janela para cima, até 1600, e
+#: para baixo, até onde o `set_size_request` a deixar chegar — e é só isto que
+#: segura o piso agora, porque o CSS não tem mais o 1180 escrito.
+#: **Esta linha ficou MAIS carregada, não menos: tirá-la deixa a página encolher
+#: sem fundo, que é o defeito de 04/09 de volta.**
 LARGURA_DO_DESENHO = 1212
 ALTURA_DO_DESENHO = 809
 

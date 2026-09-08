@@ -2325,7 +2325,25 @@ class Piloto:
             # lá); o que o piloto faz aqui é PARAR de pintar no vazio e DIZER.
             ao_morrer_a_pagina=self._a_pagina_morreu,
             oculta=args.oculta,
-            subtitulo="as dez abas, vivas",
+            # A MOLDURA NÃO TEM SEGUNDA LINHA — 08/09/2026, e ela saiu porque
+            # falava a língua de dentro. Aqui ia `subtitulo="as dez abas,
+            # vivas"`, que a `Gtk.HeaderBar` escrevia embaixo de "Hefesto": era
+            # o jeito de ESTA CASA dizer que o piloto único monta as dez abas de
+            # verdade — registro de obra, não informação para quem usa. Ela
+            # fotografou a barra de título e o leu lá.
+            #
+            # SAIU EM VEZ DE SER TROCADO: a barra já diz "Hefesto", e tudo o
+            # que muda — a aba, o alvo, o perfil ativo — já está DENTRO da
+            # janela, escrito e vivo. Uma segunda linha aqui repetiria o de
+            # dentro ou inventaria assunto.
+            #
+            # POR QUE ISTO ATRAVESSOU AS DUAS RÉGUAS DE TELA, e é o achado que
+            # sobra: `check_a_conferencia_dela` e `check_a_tela_nao_confessa`
+            # medem o CORPO das dez páginas. A barra de título é GTK, não HTML —
+            # nenhuma das duas a alcançava. *A régua parava na borda da
+            # `<body>`, e a tela dela não para.* Quem passa a medir a moldura é
+            # `scripts/check_a_janela_nao_confessa.py`, que nasceu com esta
+            # linha e reprova se ela voltar.
         )
         self.view = self.tela.view
         self.ponte = self.tela.ponte

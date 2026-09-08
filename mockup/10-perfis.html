@@ -123,7 +123,47 @@
   }
   .mono{font-family:'JetBrains Mono',ui-monospace,monospace}
 
-  /* a janela, na proporção real: 1180px de largura é o que o produto abre */
+  /* A LARGURA ESTICA, COM TETO — 08/09/2026, decisão dela.
+
+     ELA ERA `width:1180px` FIXO. Ela, com o produto instalado e os quatro
+     DualSense na mesa: *"o background fica completamente preto"*. Medido: não
+     era falta de fundo — o `body` já pinta `#11121a` logo acima, e o que ela
+     via era a cor da casa, só que MUITA: a janela maximizada tem ~1900px e o
+     desenho parava em 1180, deixando ~360px de casa de cada lado.
+
+     A recomendação foi levada a ela e ela aprovou (*"eu confio em vc, manda
+     ver"*): ESTICA, COM TETO. As razões, para ninguém as desfazer sem medir:
+     ela tem UMA tela e maximiza, então a sobra é o que ela vê o tempo todo;
+     ela tem QUATRO controles, e as abas de uma coluna por jogador estavam
+     espremidas; e o teto protege a leitura, porque esticar sem limite alonga a
+     linha até ela deixar de se ler.
+
+     DE ONDE SAI O 1600, e ele é HIPÓTESE MEDIDA, não dogma. As dez páginas
+     publicadas foram fotografadas e medidas em 1180, 1400, 1600 e 1900 —
+     geometria computada no Chrome, não o texto deste CSS:
+
+       * NADA QUEBRA em nenhuma das quatro. Zero rolagem lateral, zero caixa
+         fora da moldura, e a contagem de conteúdo-que-não-cabe é IDÊNTICA nas
+         quatro (02: 4 · 03: 51 · 04: 36 · 05: 34) — ela é anterior e não tem a
+         ver com a largura. A grade é fluida e cresce.
+       * O QUE SE GANHA: a coluna por jogador da Gatilhos
+         (`.duas-colunas`, `repeat(4, minmax(0,1fr))`) vai de **228px a 333px**,
+         +46%. É a razão 2 dela, com número.
+       * O QUE SE PAGA, e é o que fecha o teto: a linha de leitura alonga.
+         O registro da Sistema vai de 157 para 237 caracteres por linha; o
+         número de um ajuste da Gatilhos se afasta do nome dele de 87 para
+         183px. Em 1900 os mesmos viram 294 e 258 — o dobro do preço para
+         metade do ganho, e as fotos mostram o botão de modo virando uma caixa
+         de 460px para uma palavra.
+
+     Em 1600 o ganho ainda é grande e o preço ainda é o dobro do aprovado; daí
+     para cima o preço cresce e o ganho não. Se alguém remedir e achar melhor,
+     troque o número E a razão — o que NÃO muda é a decisão: estica, com teto.
+
+     O `min()` faz o teto e o encolhimento na mesma linha; o `max-width:100%`
+     abaixo continua por redundância barata. Abaixo de 1212px de documento nada
+     mudou: quem segura o piso é o `set_size_request` da janela GTK
+     (`gui/ponte_da_tela.py`), e ele ficou MAIS carregado, não menos. */
   /* A JANELA TEM UMA ALTURA SÓ, nas dez abas. Ela, 27/08: "sair clicando entre
      as abas causa muito desconforto, pq muda tudo". Media de 530 (Iluminação) a
      1032 (Conexões) — quase o dobro: o rodapé pulava meia tela a cada clique.
@@ -144,7 +184,7 @@
      O `overflow-y:auto` do miolo é rede: hoje nada passa dos 817px que sobram,
      e o dia em que passar a janela continua do mesmo tamanho. */
   .janela{
-    width:1180px; height:var(--alt-janela); max-width:100%; background:var(--app-bg);
+    width:min(100%,1600px); height:var(--alt-janela); max-width:100%; background:var(--app-bg);
     display:flex; flex-direction:column;
     border:1px solid var(--linha); border-radius:10px; overflow:hidden;
     box-shadow:0 18px 50px rgba(0,0,0,.45);
@@ -205,8 +245,45 @@
                      color:var(--comment)}
   /* a borda de 2px na cor do plástico é a marca da peça VIVA — some com a fita */
   .fita.inerte .chip.plastico{border-color:var(--border-sutil);border-width:1px}
-  .fita.inerte .chip.on{border-color:var(--comment);background:transparent;
-                        color:var(--texto-suave);font-weight:600}
+  /* O CHIP MARCADO FICA IGUAL AOS OUTROS QUANDO A FITA NÃO ESCOLHE NADA —
+     08/09/2026, pedido dela na aba Gatilhos: *"o player 1 tipo no caso cosmic
+     red - cabo, fica sempre selecionado com borda diferente mesmo nas abas que
+     cada player tem sua propria config. conseguimos deixar ele cinza como os
+     demais?"* (a citação é palavra por palavra, inclusive onde falta acento).
+
+     A HIPÓTESE ÓBVIA ESTAVA ERRADA, e conferi-la primeiro poupa a sprint: a
+     Gatilhos NÃO está em `monta.ABAS_QUE_ESCOLHEM` ({"01-jogar",
+     "02-controles", "08-conexoes"}), a fita dela já nasce `inerte` e o produto
+     estava certo nessa parte. Quem devolvia o destaque eram estas três linhas:
+     as duas de cima apagam o chip na fita inerte, e esta desfazia as duas.
+
+     O QUE O `.on` CARREGA AQUI, medido antes de apagar, porque ele podia estar
+     dizendo mais de uma coisa: nada. `monta._endereco_do_chip` devolve string
+     VAZIA quando `inerte` — na fita que não escolhe, o chip não tem
+     endereço de clique nem de alvo, e não leva a lugar nenhum. O `.on` ali é
+     só a memória de uma escolha que esta aba não usa, e "o marcado" não quer
+     dizer coisa alguma para quem olha.
+
+     ESTE COMENTÁRIO NÃO ESCREVE OS ATRIBUTOS COM O NOME LITERAL, e isso é
+     medido, não asseio: a primeira redação dizia o nome do endereço de clique
+     entre crases, e como o `topo.html` entra INTEIRO nas dez páginas, cada uma
+     ganhou uma ocorrência a mais dele — 24 viraram 25 na Gatilhos. Há régua
+     desta casa que os conta esperando um número exato. É a armadilha de prosa
+     desta casa pela sexta vez, e desta vez quem a pegou foi `grep -c` na
+     página PUBLICADA, não no fonte.
+
+     ELA REPETE OS QUATRO VALORES em vez de ser apagada, e o `font-weight` é o
+     motivo: sem esta regra o chip cairia em `.fita.inerte .chip` (0,3,0) para
+     cor e fundo, mas o `font-weight:600` de `.chip.on` continuaria valendo — e
+     o chip seguiria em NEGRITO, diferente dos irmãos. "Cinza como os demais"
+     inclui o peso da letra.
+
+     A LARGURA DA BORDA vem de `.fita.inerte .chip.plastico` (1px), que esta
+     regra não sobrescreve: num chip `plastico on` os dois seletores empatam em
+     (0,4,0) e a cor é a mesma dos dois lados. A fita que ESCOLHE não muda —
+     `.fita.inerte` é a única porta desta regra. */
+  .fita.inerte .chip.on{border-color:var(--border-sutil);background:transparent;
+                        color:var(--comment);font-weight:400}
   .chip{
     padding:5px 12px;border-radius:6px;font-size:12px;
     border:1px solid var(--linha);background:var(--app-bg);color:var(--texto-mudo);
@@ -498,6 +575,10 @@
   .r-exportar{border-color:var(--comment)!important;color:var(--texto-mudo);background:transparent}
 
   /* ---------- legenda do mockup (fora da janela) ---------- */
+  /* ELA NÃO ACOMPANHOU O TETO DE 1600 da `.janela`, e é escolha: a legenda é
+     PROSA CORRIDA e o produto a esconde (`folha_da_casa`). Em 1180 ela já está
+     no limite de leitura; alargá-la pioraria o único lugar em que ela é lida —
+     a bancada — sem devolver nada ao produto. */
   .nota{
     width:1180px;max-width:100%;font-size:12px;color:var(--texto-mudo);line-height:1.65;
     border-left:2px solid var(--purple);padding-left:14px;
