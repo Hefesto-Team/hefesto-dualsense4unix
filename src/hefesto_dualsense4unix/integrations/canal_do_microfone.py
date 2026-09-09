@@ -280,17 +280,24 @@ def propriedades_do_canal(uniq: str) -> dict[str, str]:
     **E ELAS NÃO CABERIAM NO NÓ, medido em 06/09/2026 nesta máquina:** o
     ``source_properties`` do ``pactl load-module`` só sobrevive inteiro entre
     ASPAS DUPLAS. Sem elas, tudo depois do primeiro espaço é descartado em
-    silêncio — e é o que acontece hoje com a source da ponte de rádio, que monta
-    ``device.description='…' priority.session=1500 device.icon_name=…``::
+    silêncio::
 
         A) source_properties=priority.session=7                 → prio 7   ✓
         B) …description='canal medicao' priority.session=7 …    → prio 2000 ✗
         C) source_properties="…=7 hefesto.papel=… hefesto.uniq=…" → tudo ✓
 
     O ``--property=CHAVE=VALOR`` do ``parec`` é um argv por propriedade e não
-    tem esse buraco. (O caso B é defeito vivo de
-    ``integrations/dualsense_bt_audio.py``, que esta sprint não toca — está
-    RELATADO, não curado.)
+    tem esse buraco.
+
+    **O CASO B NÃO ESTÁ VIVO EM LUGAR NENHUM — conferido em 09/09/2026.** Esta
+    linha dizia que ele era *"defeito vivo de ``integrations/dualsense_bt_audio``,
+    RELATADO e não curado"*, e o fato nasceu errado: a cura entrou às 07h11 de
+    06/09 (``d8901de0``), duas horas depois de a frase ser escrita.
+    :func:`~hefesto_dualsense4unix.integrations.dualsense_bt_audio.propriedades_da_source`
+    monta o argumento inteiro entre aspas duplas, e o ``device.description`` que
+    ela entrega é «Microfone do Controle N», sem o endereço do controle
+    (MIC-OS-QUATRO-01, 09/09/2026). O que sobra do caso B é o que ele sempre
+    foi: a medição que explica por que ESTAS propriedades vão no STREAM.
     """
     return {
         f"{PREFIXO_PROPRIEDADE_HEFESTO}papel": PAPEL_DO_ALIMENTADOR,

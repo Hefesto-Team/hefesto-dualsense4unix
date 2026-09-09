@@ -603,6 +603,32 @@ class BtMicSubsystem:
             return []
         return [item for item in itens if isinstance(item, dict)]
 
+    def _conectados_da_mesa(self) -> list[dict[str, Any]]:
+        """Os itens CONECTADOS de `describe_controllers()`, na ordem da tela.
+
+        **A FONTE ÚNICA DAS DUAS LEITURAS, e ela nasceu de uma discordância
+        entre elas — 09/09/2026.** `uniqs_na_mesa` filtrava por `connected` e
+        `numero_do_assento` não. `describe_controllers()` devolve uma entrada
+        por HANDLE ABERTO, não por controle na mesa
+        (`core/backend_pydualsense.describe_controllers`: *"Uma entrada por
+        handle aberto"*), e um handle de controle desligado vem com
+        `connected: False` — com `index` próprio e tudo. As duas leituras se
+        contradiziam nas duas pontas: o desligado ganhava um assento que a mesa
+        não lhe dava, e empurrava para baixo o assento de quem estava ligado.
+
+        **E O ASSENTO É O DA TELA, não o do handle.**
+        `interface/hefesto_vivo._contexto` monta `ctx.conectados` com
+        `[c for c in controllers if c.get("connected", True)]` e numera os
+        cards por `enumerate` DESSA lista — é também assim que a aba Gatilhos
+        monta o `_target_uniq_by_index`. Contar o handle desligado poria
+        «Microfone do Controle 2» no controle cujo card diz 1.
+
+        Um conectado sem `uniq` legível (a key por path, `uniq: None`) CONTA na
+        contagem e não entra no conjunto: ele tem card na tela, logo ocupa
+        assento, mas não há nome por onde pedir canal para ele.
+        """
+        return [item for item in self._controles_da_mesa() if item.get("connected")]
+
     def uniqs_na_mesa(self) -> frozenset[str]:
         """Todo controle CONECTADO agora — o do rádio e o do CABO.
 
@@ -621,9 +647,7 @@ class BtMicSubsystem:
         imediatamente, porque `dizer_no_ar` toca a `novidade` e acorda o laço.
         """
         vivos: set[str] = set()
-        for item in self._controles_da_mesa():
-            if not item.get("connected"):
-                continue
+        for item in self._conectados_da_mesa():
             chave = norm_mac(str(item.get("uniq") or "")) or ""
             if len(chave) == _UNIQ_HEX:
                 vivos.add(chave)
@@ -633,9 +657,15 @@ class BtMicSubsystem:
         """P1..P4 deste controle — a POSIÇÃO na mesa, `None` quando não dá.
 
         É o número que ela lê no card, e por isso a fonte é a MESMA lista que
-        desenha os cards: `describe_controllers()`, cujo `index` é a posição em
-        `list(self._handles)` (0 = primário) e que o `state_full` publica como
-        `controllers` sem reordenar.
+        desenha os cards, filtrada do MESMO jeito: `_conectados_da_mesa`.
+
+        **NÃO é o `index` do item, e a correção é de 09/09/2026.** O `index` do
+        `describe_controllers()` é a posição em `list(self._handles)` — a lista
+        de HANDLES ABERTOS, que conta os desligados. Ler o `index` dava assento
+        a quem não está na mesa e roubava o assento 1 de quem está; a régua é
+        `test_um_controle_desligado_nao_ocupa_assento`. Quem numera os cards
+        dela também não lê o `index`: `interface/hefesto_vivo._contexto` filtra
+        por `connected` e enumera o que sobra.
 
         **NÃO é `resolve_player_numbers`, e a diferença é medida:** aquele é o
         número que o JOGO vê, e com o co-op desligado ele responde `1` para
@@ -646,17 +676,16 @@ class BtMicSubsystem:
         A decisão dela de 09/09 diz *"o número é o assento (P1..P4), como na
         tela"*, e aceita explicitamente que ele siga o ASSENTO e não o
         aparelho.
+
+        **A INVARIANTE que isto fecha:** `numero_do_assento(u) is not None`
+        se e somente se `u in uniqs_na_mesa()`.
         """
         chave = norm_mac(str(uniq)) or ""
         if len(chave) != _UNIQ_HEX:
             return None
-        for posicao, item in enumerate(self._controles_da_mesa(), start=1):
-            if (norm_mac(str(item.get("uniq") or "")) or "") != chave:
-                continue
-            indice = item.get("index")
-            if isinstance(indice, int) and not isinstance(indice, bool) and indice >= 0:
-                return indice + 1
-            return posicao
+        for posicao, item in enumerate(self._conectados_da_mesa(), start=1):
+            if (norm_mac(str(item.get("uniq") or "")) or "") == chave:
+                return posicao
         return None
 
     async def start(self, ctx: DaemonContext) -> None:
