@@ -41,6 +41,24 @@ próprio produto. Essa armadilha custou uma sessão em 11/08/2026.
 
 ## Os instrumentos documentados aqui
 
+**Os de 09/09/2026 — as decisões dela viraram instrumento antes de virarem
+campo** (*"1-b;2b;3-c;4a"*; a regra é *a bancada vem antes do campo*):
+
+| instrumento | sprint | escreve? | o que decide |
+| --- | --- | --- | --- |
+| `escrita_pelo_broker.py` | (os três abaixo) | — | a porta comum: o report do transporte pelos construtores do produto, o `common` vazio, o martelo a N Hz, a linha do caderno proposta |
+| `o_fone_tem_volume_proprio.py` | FONE-01 | `common[4]` + flag0 `0x10` | o byte do fone manda sozinho? (orelha dela, tom no sink do controle) |
+| `o_brilho_de_hardware_da_barra.py` | BRILHO-DE-HARDWARE-01 | `common[42]` + flag2 bit0 | o firmware escurece a barra pelo byte que nem o kernel escreve? (olho dela, com e sem o bit) |
+| `o_byte_do_microfone_muda_a_captura.py` | MIC-VOLUME-02 | `common[6]` + flag0 `0x40` | o byte é ganho de hardware? (o PICO de três gravações, razão 1,5 declarada) |
+| `os_nos_de_som_por_controle.py` | SOM-POR-CONTROLE-01 · MIC-OS-QUATRO-01 | não | um nó de saída e um de entrada por controle, na lista viva; `--observar` para a mordida de tirar o cabo |
+| `o_envelope_do_som_no_radio.py` | ensaio 13 · SOM-POR-CONTROLE-01 | reports da escada | o mesmo Opus em DOIS envelopes HID (DATA vs SET_REPORT); passo 0 de luz; `--crc-errado` |
+
+Os cinco que escrevem fazem isso pelo broker, com o daemon VIVO, e nenhum
+conclui: a linha do caderno sai PROPOSTA no fim, e quem coordena a escreve.
+Todos rodam nos DOIS transportes; o do envelope só existe no rádio, e o do
+fone no rádio só monta (não há sink de som lá até o ensaio 13 dar som).
+
+
 A pasta tem mais arquivos que esta lista: os instrumentos que nasceram para
 um ensaio só do PLANO-DA-MESA-2-2 (`imu_no_cabo.py`, `giro_e_buraco.py`,
 `microfone_no_cabo.py`, `taxa_no_hidraw.py`, `corpo_do_0x32.py`,
