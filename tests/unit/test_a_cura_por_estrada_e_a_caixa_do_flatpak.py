@@ -21,10 +21,18 @@
    espaço em volta do `=` — que é como o `flatpak override` o escreve e como o
    `GKeyFile` o lê.
 
-**O LAR É DE MENTIRA em todos os casos**, e é o que permite medir as duas
-estradas sem tocar num arquivo de configuração dela. A ÚNICA leitura feita no
-disco real desta máquina foi a medição de 09/09/2026 que está escrita nos dois
-módulos — e ela é `read_text`, nunca escrita.
+**O LAR É DE MENTIRA em todos os casos** — e a INSTALAÇÃO DO SISTEMA também,
+desde 09/09/2026. A primeira versão desta régua passava só o `lar`, e o
+`raiz_sistema` continuava valendo `/var/lib/flatpak`: **a medição escapava para
+o disco de verdade** e a resposta dependia da máquina em que rodasse. Nesta
+bancada `/var/lib/flatpak` nem existe — o escape era invisível aqui e mudaria a
+resposta na máquina de quem tem um flatpak instalado para todo mundo.
+
+Os dois viajam juntos em :func:`_lar_de_mentira`, e
+:func:`test_a_regua_nao_sai_do_lar_de_mentira` cobra que nenhum caminho fora do
+`tmp_path` seja sequer consultado. A ÚNICA leitura feita no disco real desta
+máquina foi a medição de 09/09/2026 que está escrita nos dois módulos — e ela é
+`read_text`, nunca escrita.
 """
 from __future__ import annotations
 
@@ -64,6 +72,17 @@ LD_PRELOAD=/tmp/algo-que-o-wrapper-nao-exporta.so
 """
 
 
+def _lar_de_mentira(tmp: pathlib.Path) -> dict[str, pathlib.Path]:
+    """O PAR que mantém a medição inteira dentro do `tmp` — lar e sistema.
+
+    O Flatpak tem DUAS instalações, e ler só uma delas de mentira não é ler de
+    mentira: o `raiz_sistema` em branco vale `/var/lib/flatpak`, no disco de
+    verdade desta máquina. Ver o cabeçalho e
+    :func:`test_a_regua_nao_sai_do_lar_de_mentira`.
+    """
+    return {"lar": tmp, "raiz_sistema": tmp / "instalacao-do-sistema"}
+
+
 def _instalar(lar: pathlib.Path, app_id: str, devices: str = "all") -> None:
     """Um flatpak de mentira: o `metadata` que o pacote publica."""
     meta = lar / ".local/share/flatpak/app" / app_id / "current/active/metadata"
@@ -100,7 +119,7 @@ def test_a_caixa_com_devices_all_deixa_o_controle_entrar(tmp_path) -> None:
     """
     _instalar(tmp_path, HEROIC)
 
-    p = caixa.permissao_de(HEROIC, lar=tmp_path)
+    p = caixa.permissao_de(HEROIC, **_lar_de_mentira(tmp_path))
 
     assert p.estado == caixa.ENTRA
     assert p.dispositivos == ("all",)
@@ -111,7 +130,7 @@ def test_a_caixa_sem_dispositivo_nenhum_recusa(tmp_path) -> None:
     """Sem `all` e sem `input`, nenhum controle atravessa — e a tela o diz."""
     _instalar(tmp_path, HEROIC, devices="dri")
 
-    p = caixa.permissao_de(HEROIC, lar=tmp_path)
+    p = caixa.permissao_de(HEROIC, **_lar_de_mentira(tmp_path))
 
     assert p.estado == caixa.NAO_ENTRA
     assert not p.entra
@@ -125,7 +144,7 @@ def test_a_permissao_estreita_basta_para_o_controle(tmp_path) -> None:
     """
     _instalar(tmp_path, HEROIC, devices="input")
 
-    assert caixa.permissao_de(HEROIC, lar=tmp_path).entra
+    assert caixa.permissao_de(HEROIC, **_lar_de_mentira(tmp_path)).entra
 
 
 def test_o_override_dela_soma_e_o_com_exclamacao_tira(tmp_path) -> None:
@@ -144,12 +163,12 @@ def test_o_override_dela_soma_e_o_com_exclamacao_tira(tmp_path) -> None:
     """
     _instalar(tmp_path, DOLPHIN, devices="dri")
     _override(tmp_path, DOLPHIN, "[Context]\ndevices=all;\n")
-    assert caixa.permissao_de(DOLPHIN, lar=tmp_path).entra, (
+    assert caixa.permissao_de(DOLPHIN, **_lar_de_mentira(tmp_path)).entra, (
         "o override dela ACRESCENTA, e o `all` que ela pôs não chegou")
 
     _instalar(tmp_path, DOLPHIN, devices="all")
     _override(tmp_path, DOLPHIN, "[Context]\ndevices=!all;\n")
-    fechada = caixa.permissao_de(DOLPHIN, lar=tmp_path)
+    fechada = caixa.permissao_de(DOLPHIN, **_lar_de_mentira(tmp_path))
     assert fechada.estado == caixa.NAO_ENTRA, (
         "o pacote pede `all`, ela fechou com `!all`, e o produto ainda diz "
         "que o controle entra — verde sobre uma caixa fechada à mão")
@@ -162,7 +181,7 @@ def test_quem_nao_e_flatpak_nao_e_caixa_fechada(tmp_path) -> None:
     Contá-lo como fechado baixaria a conta do cartão «Flatpak» por um lançador
     NATIVO, que não tem caixa nenhuma a abrir.
     """
-    p = caixa.permissao_de("net.lutris.Lutris", lar=tmp_path)
+    p = caixa.permissao_de("net.lutris.Lutris", **_lar_de_mentira(tmp_path))
 
     assert p.estado == caixa.NAO_INSTALADO
     assert caixa.RespostaDoFlatpak((p,)).dentro == ()
@@ -201,7 +220,7 @@ def test_um_cartao_pode_ser_dois_programas_e_os_dois_contam(tmp_path) -> None:
     achado = ("/lar/.local/share/flatpak/exports/share/applications/"
               f"{DOLPHIN}.desktop")
 
-    ids = caixa.app_ids_do_cartao(ATALHOS_EMULADORES, achado, lar=tmp_path)
+    ids = caixa.app_ids_do_cartao(ATALHOS_EMULADORES, achado, **_lar_de_mentira(tmp_path))
 
     assert ids == (DOLPHIN, MGBA), (
         "o cartão duplo entrou com um programa só — a conta do «Flatpak» "
@@ -214,12 +233,12 @@ def test_a_frase_do_cartao_flatpak_conta_e_nomeia(tmp_path) -> None:
     _instalar(tmp_path, MGBA, devices="dri")
     _instalar(tmp_path, HEROIC)
 
-    r = caixa.resposta_do_flatpak((DOLPHIN, MGBA, HEROIC), lar=tmp_path)
+    r = caixa.resposta_do_flatpak((DOLPHIN, MGBA, HEROIC), **_lar_de_mentira(tmp_path))
 
     assert len(r.dentro) == 3
     assert r.resumo == "2 de 3 deixam o controle entrar"
 
-    todos = caixa.resposta_do_flatpak((DOLPHIN, HEROIC), lar=tmp_path)
+    todos = caixa.resposta_do_flatpak((DOLPHIN, HEROIC), **_lar_de_mentira(tmp_path))
     assert todos.resumo == "2 lançadores por aqui, e o controle entra em todos"
 
 
@@ -257,7 +276,7 @@ def test_sem_ambiente_publicado_a_cura_recusa_dizendo(tmp_path) -> None:
     vazio = tmp_path / "sem-daemon"
     vazio.mkdir()
 
-    plano = cura.planejar("emuladores", ATALHOS_EMULADORES, lar=tmp_path,
+    plano = cura.planejar("emuladores", ATALHOS_EMULADORES, **_lar_de_mentira(tmp_path),
                           pasta_do_ambiente=vazio)
 
     assert plano.ambiente == {}
@@ -280,7 +299,7 @@ def test_o_heroic_tem_estrada_propria_e_nao_ganha_override(tmp_path) -> None:
     (tmp_path / ".var/app" / HEROIC / "config/heroic").mkdir(parents=True)
 
     estradas = cura.estradas_do_cartao("heroic", (HEROIC, "heroic"),
-                                       lar=tmp_path)
+                                       **_lar_de_mentira(tmp_path))
 
     assert [e.tipo for e in estradas] == [cura.HEROIC_CONFIG]
     assert estradas[0].arquivo.name == "config.json"
@@ -292,7 +311,7 @@ def test_o_cartao_duplo_ganha_uma_estrada_por_programa(tmp_path) -> None:
     _instalar(tmp_path, MGBA)
 
     estradas = cura.estradas_do_cartao("emuladores", ATALHOS_EMULADORES,
-                                       lar=tmp_path)
+                                       **_lar_de_mentira(tmp_path))
 
     assert [e.app_id for e in estradas] == [DOLPHIN, MGBA]
     assert {e.tipo for e in estradas} == {cura.FLATPAK_OVERRIDE}
@@ -305,8 +324,8 @@ def test_quem_nao_tem_estrada_nao_ganha_botao(chave, tmp_path) -> None:
     Um botão «Consertar» em qualquer dos dois seria o botão que finge — a
     regra desta aba desde que ela nasceu.
     """
-    assert cura.estradas_do_cartao(chave, ("flatpak",), lar=tmp_path) == ()
-    assert not cura.tem_estrada(chave, ("flatpak",), lar=tmp_path)
+    assert cura.estradas_do_cartao(chave, ("flatpak",), **_lar_de_mentira(tmp_path)) == ()
+    assert not cura.tem_estrada(chave, ("flatpak",), **_lar_de_mentira(tmp_path))
 
 
 # ---------------------------------------------------------------------------
@@ -330,7 +349,7 @@ def test_a_cura_do_heroic_escreve_e_preserva_o_que_e_dela(tmp_path) -> None:
         },
     }), encoding="utf-8")
 
-    plano = cura.planejar("heroic", (HEROIC,), lar=tmp_path,
+    plano = cura.planejar("heroic", (HEROIC,), **_lar_de_mentira(tmp_path),
                           pasta_do_ambiente=_ambiente(tmp_path))
     frase = cura.escrever_a_estrada(plano)
 
@@ -363,7 +382,7 @@ def test_a_cura_do_override_escreve_no_formato_do_flatpak(tmp_path) -> None:
                      "[Environment]\nMANGOHUD=1\n")
 
     cura.escrever_a_estrada(cura.planejar(
-        "emuladores", (DOLPHIN,), lar=tmp_path,
+        "emuladores", (DOLPHIN,), **_lar_de_mentira(tmp_path),
         pasta_do_ambiente=_ambiente(tmp_path)))
 
     linhas = alvo.read_text(encoding="utf-8").splitlines()
@@ -380,7 +399,7 @@ def test_a_cura_nasce_onde_nao_havia_override(tmp_path) -> None:
     _instalar(tmp_path, MGBA)
 
     cura.escrever_a_estrada(cura.planejar(
-        "emuladores", (MGBA,), lar=tmp_path,
+        "emuladores", (MGBA,), **_lar_de_mentira(tmp_path),
         pasta_do_ambiente=_ambiente(tmp_path)))
 
     novo = tmp_path / ".local/share/flatpak/overrides" / MGBA
@@ -389,6 +408,47 @@ def test_a_cura_nasce_onde_nao_havia_override(tmp_path) -> None:
     assert "SDL_GAMECONTROLLER_USE_BUTTON_LABELS" not in corpo, (
         "o `default.env` de mentira não traz esta variável, e a cura escreveu "
         "uma que ninguém publicou")
+
+
+def test_a_cura_devolve_a_permissao_do_arquivo_dela(tmp_path) -> None:
+    """**MEDIDO PELO CONFERENTE EM 09/09/2026: o clique fechava o arquivo dela.**
+
+    `config.json` do Heroic a **0644** antes da cura, **0600** depois — porque
+    `NamedTemporaryFile` nasce 0600 (é o contrato dele) e `replace()` leva o
+    modo do temporário junto. Este módulo promete *"nunca apaga o que já estava
+    lá"*, e a permissão é parte do que estava lá: um override fechado deixa de
+    ser legível por um serviço que rode com outro usuário, e ninguém liga isso
+    ao clique de ontem.
+
+    **E O QUE NASCE herda a PASTA**, não o 0600 do temporário: a pasta a 0755
+    dá 0644, uma pasta fechada a 0700 daria 0600. Ver `_modo_de_nascimento` — o
+    `umask` não se consulta numa thread de gesto, porque consultá-lo é
+    escrevê-lo.
+
+    **A MORDIDA:** tire o `os.chmod` de `_escrever_atomico` e os dois primeiros
+    `assert` reprovam com `0o600`.
+    """
+    import os
+    import stat as _stat
+
+    _instalar(tmp_path, DOLPHIN)
+    _instalar(tmp_path, MGBA)
+    dela = _override(tmp_path, DOLPHIN, "[Context]\ndevices=all;\n")
+    os.chmod(dela, 0o644)
+    pasta = tmp_path / ".local/share/flatpak/overrides"
+    os.chmod(pasta, 0o755)
+    nasce = pasta / MGBA
+
+    cura.escrever_a_estrada(cura.planejar(
+        "emuladores", ATALHOS_EMULADORES, **_lar_de_mentira(tmp_path),
+        pasta_do_ambiente=_ambiente(tmp_path)))
+
+    assert _stat.S_IMODE(dela.stat().st_mode) == 0o644, (
+        "a cura fechou um arquivo de configuração DELA ao escrever nele")
+    assert dela.stat().st_uid == os.getuid()
+    assert _stat.S_IMODE(nasce.stat().st_mode) == 0o644, (
+        "o override que NASCEU herdou o 0600 do arquivo temporário em vez da "
+        "pasta em que ele mora")
 
 
 def test_o_recibo_diz_o_nome_do_cartao_e_nao_a_chave(tmp_path) -> None:
@@ -412,13 +472,13 @@ def test_o_recibo_diz_o_nome_do_cartao_e_nao_a_chave(tmp_path) -> None:
     (tmp_path / ".var/app" / HEROIC / "config/heroic").mkdir(parents=True)
 
     um = cura.frase_do_feito(cura.planejar(
-        "heroic", (HEROIC,), lar=tmp_path, nome="Heroic (Epic · GOG)",
+        "heroic", (HEROIC,), **_lar_de_mentira(tmp_path), nome="Heroic (Epic · GOG)",
         pasta_do_ambiente=_ambiente(tmp_path)))
     assert um.startswith("Heroic (Epic · GOG): ajustei para o jogo"), um
     assert "programas" not in um, (
         f"um programa só, e a frase fala no plural: {um}")
 
-    plano = cura.planejar("emuladores", ATALHOS_EMULADORES, lar=tmp_path,
+    plano = cura.planejar("emuladores", ATALHOS_EMULADORES, **_lar_de_mentira(tmp_path),
                           pasta_do_ambiente=_ambiente(tmp_path),
                           nome="Dolphin · mGBA")
     frase = cura.frase_do_feito(plano)
@@ -451,7 +511,7 @@ def test_arquivo_ilegivel_recusa_e_nao_e_reescrito(tmp_path) -> None:
 
     with pytest.raises(RuntimeError, match=re.escape("config.json")):
         cura.escrever_a_estrada(cura.planejar(
-            "heroic", (HEROIC,), lar=tmp_path,
+            "heroic", (HEROIC,), **_lar_de_mentira(tmp_path),
             pasta_do_ambiente=_ambiente(tmp_path)))
 
     assert (pasta / "config.json").read_text(encoding="utf-8") == truncado, (
@@ -476,7 +536,7 @@ def test_a_recusa_de_um_programa_nao_deixa_o_outro_escrito(tmp_path) -> None:
 
     with pytest.raises(RuntimeError, match=re.escape(MGBA)):
         cura.escrever_a_estrada(cura.planejar(
-            "emuladores", ATALHOS_EMULADORES, lar=tmp_path,
+            "emuladores", ATALHOS_EMULADORES, **_lar_de_mentira(tmp_path),
             pasta_do_ambiente=_ambiente(tmp_path)))
 
     assert not dolphin.exists(), (
@@ -493,8 +553,14 @@ def test_o_cartao_localizado_ganha_o_consertar_e_o_flatpak_muda_de_pergunta(
     """Os dois itens juntos, do lado de quem olha a tela.
 
     **A MORDIDA:** apague o ramo do `consertar` em `cartao_sem_censo` e o
-    primeiro `assert` reprova nomeando o cartão; devolva `biblioteca.resumo or
-    "—"` e o cartão «Flatpak» volta ao travessão.
+    primeiro `assert` reprova nomeando o cartão; devolva `""` em vez da linha
+    do «Flatpak» em `medir_no_disco` e o cartão volta ao travessão.
+
+    **A LEITURA É DA VIGIA, e por isso ela aparece aqui como uma CHAMADA
+    SEPARADA** — 09/09/2026. Até o reparo deste dia, `cartoes()` abria os
+    arquivos sozinho, dentro do tique; agora quem abre é `medir_no_disco`, e o
+    que a pintura recebe é a `DoDisco` fria. Medir os dois na mesma volta é o
+    que mantém a régua cobrindo a cadeia inteira.
     """
     from hefesto_dualsense4unix.interface import desenho_dos_lancadores as d
 
@@ -508,7 +574,10 @@ def test_o_cartao_localizado_ganha_o_consertar_e_o_flatpak_muda_de_pergunta(
             ("emuladores", str(exports / f"{DOLPHIN}.desktop")),
             ("flatpak", "/usr/bin/flatpak"))
 
-    cartoes = {c.chave: c for c in d.cartoes(d.Leitura(onde_estao=onde))}
+    do_disco = d.medir_no_disco(onde, **_lar_de_mentira(tmp_path))
+    cartoes = {c.chave: c
+               for c in d.cartoes(d.Leitura(onde_estao=onde,
+                                            do_disco=do_disco))}
 
     gestos = [a.gesto for a in cartoes["emuladores"].acoes]
     assert d.CONSERTAR_LANCADOR in gestos, (
@@ -518,6 +587,103 @@ def test_o_cartao_localizado_ganha_o_consertar_e_o_flatpak_muda_de_pergunta(
         "3 lançadores por aqui, e o controle entra em todos"), (
         f"o cartão «Flatpak» não mudou de pergunta: {cartoes['flatpak'].jogos!r}")
     assert d.CONSERTAR_LANCADOR not in [a.gesto for a in cartoes["flatpak"].acoes]
+
+
+#: OS MÉTODOS PELOS QUAIS ESTES TRÊS MÓDULOS TOCAM O DISCO. É `pathlib` em
+#: todos: nenhum deles abre arquivo por outro caminho, e o `open` embutido não
+#: aparece em nenhum dos três (medido em 09/09/2026, `grep -n "open("`).
+_PORTAS_DO_DISCO = ("is_file", "is_dir", "exists", "read_text", "stat",
+                    "iterdir", "glob")
+
+
+def _espiar_o_disco(monkeypatch) -> list[str]:
+    """Grava TODO caminho que alguém consultar daqui para a frente.
+
+    É o instrumento das duas réguas de baixo, e ele mede o que nenhum `assert`
+    de conteúdo alcança: *quais arquivos foram abertos*. Sem ele, "a pintura
+    não lê disco" e "a régua não sai do `tmp`" são afirmações que só a leitura
+    do código sustenta — e leitura de código foi exatamente o que deixou as
+    duas passarem.
+    """
+    tocados: list[str] = []
+
+    def espiao(nome: str, original):
+        def dentro(self, *a, **k):
+            tocados.append(f"{nome} {self}")
+            return original(self, *a, **k)
+        return dentro
+
+    for nome in _PORTAS_DO_DISCO:
+        monkeypatch.setattr(pathlib.Path, nome,
+                            espiao(nome, getattr(pathlib.Path, nome)))
+    return tocados
+
+
+def test_a_pintura_do_tique_nao_abre_arquivo(tmp_path, monkeypatch) -> None:
+    """**O DEFEITO DE 09/09/2026, e ele é do tamanho do tique.**
+
+    `cartoes()` chamava o censo, a caixa do Flatpak e a pergunta da estrada na
+    hora de desenhar o cartão — **dez vezes por segundo**, dentro de um
+    orçamento de 100 ms para a janela inteira. Medido nesta bancada com os
+    cinco lançadores dela no disco: **6,4 ms de mediana** por tique (30 voltas,
+    máximo 18,6 ms). Depois da cura, **0,03 ms** — e o disco voltou para a
+    vigia, que é onde o `a07_lancadores` já escrevia que ele mora.
+
+    **A MORDIDA:** devolva a `_censo.biblioteca_do_cartao` (ou o
+    `_cura.tem_estrada`) para dentro de `cartao_sem_censo` e esta régua nomeia
+    os arquivos que o tique passou a abrir.
+    """
+    from hefesto_dualsense4unix.interface import desenho_dos_lancadores as d
+
+    for app in (HEROIC, DOLPHIN, MGBA):
+        _instalar(tmp_path, app)
+    exports = tmp_path / ".local/share/flatpak/exports/share/applications"
+    exports.mkdir(parents=True, exist_ok=True)
+    onde = (("heroic", str(exports / f"{HEROIC}.desktop")),
+            ("emuladores", str(exports / f"{DOLPHIN}.desktop")),
+            ("flatpak", "/usr/bin/flatpak"))
+    lida = d.Leitura(onde_estao=onde,
+                     do_disco=d.medir_no_disco(onde,
+                                               **_lar_de_mentira(tmp_path)))
+
+    tocados = _espiar_o_disco(monkeypatch)
+    cartoes = {c.chave: c for c in d.cartoes(lida)}
+
+    assert not tocados, (
+        f"a pintura do tique abriu {len(tocados)} caminho(s) — dez vezes por "
+        f"segundo, dentro dos 100 ms da janela: {tocados[:8]}")
+    assert cartoes["flatpak"].jogos == (
+        "3 lançadores por aqui, e o controle entra em todos"), (
+        "a pintura parou de ler o disco E parou de dizer o que ele disse — "
+        "verde por vacuidade")
+
+
+def test_a_regua_nao_sai_do_lar_de_mentira(tmp_path, monkeypatch) -> None:
+    """**O ESCAPE MEDIDO PELO CONFERENTE, 09/09/2026.**
+
+    O cabeçalho desta régua afirmava *"o lar é de mentira em todos os casos"* e
+    a afirmação era falsa pela metade: o Flatpak tem DUAS instalações, e o
+    `raiz_sistema` em branco vale `/var/lib/flatpak` — o disco de verdade.
+    Nesta bancada essa pasta nem existe, então o escape não mudava resposta
+    nenhuma **aqui**; numa máquina com um flatpak instalado para todo mundo, a
+    resposta de uma medição de mentira passaria a depender da máquina.
+
+    **A MORDIDA:** tire o `raiz_sistema` de :func:`_lar_de_mentira` e esta
+    régua nomeia o caminho fora do `tmp` que a medição foi consultar.
+    """
+    from hefesto_dualsense4unix.interface import desenho_dos_lancadores as d
+
+    _instalar(tmp_path, DOLPHIN)
+    onde = (("emuladores", "/qualquer/exports/nao-flatpak.desktop"),)
+
+    tocados = _espiar_o_disco(monkeypatch)
+    d.medir_no_disco(onde, **_lar_de_mentira(tmp_path))
+    caixa.permissao_de(DOLPHIN, **_lar_de_mentira(tmp_path))
+
+    fora = [x for x in tocados if str(tmp_path) not in x]
+    assert not fora, (
+        f"a medição saiu do lar de mentira e foi ao disco desta máquina: "
+        f"{sorted(set(fora))[:8]}")
 
 
 def test_o_gesto_sem_data_v_recusa_e_nao_escreve(tmp_path, monkeypatch) -> None:
@@ -536,6 +702,67 @@ def test_o_gesto_sem_data_v_recusa_e_nao_escreve(tmp_path, monkeypatch) -> None:
 
     with pytest.raises(ValueError, match="qual lançador"):
         gesto(ctx, {}, None)
+
+
+def test_o_consertar_pergunta_antes_de_escrever(tmp_path, monkeypatch) -> None:
+    """**PROVISÓRIO, e é a palavra DELA que o mantém assim** — 09/09/2026:
+
+    *"Preciso vêr como fica e se faz sentido um botão pra isso"*  # noqa-acento: citação dela
+
+    Enquanto ela não vê, o botão não pode escrever na configuração dela num
+    clique: o primeiro PERGUNTA (e a tela mostra a cara verde do próximo
+    clique), o segundo escreve. É o mesmo consentimento de dois tempos que esta
+    aba já usa para fechar a Steam.
+
+    **A MORDIDA:** tire o `_este_clique_confirma` de `consertar_lancador` e o
+    primeiro `assert` reprova com o override já escrito no disco de mentira.
+    """
+    from hefesto_dualsense4unix.interface import desenho_dos_lancadores as d
+    from hefesto_dualsense4unix.interface import pacotes
+    from hefesto_dualsense4unix.interface.pacotes import a07_lancadores as a07
+
+    monkeypatch.setenv("HOME", str(tmp_path))
+    monkeypatch.setattr(pathlib.Path, "home", lambda: tmp_path)
+    monkeypatch.setattr(cura, "launch_env_dir", lambda: _ambiente(tmp_path))
+    _instalar(tmp_path, DOLPHIN)
+    _instalar(tmp_path, MGBA)
+    exports = tmp_path / ".local/share/flatpak/exports/share/applications"
+    exports.mkdir(parents=True, exist_ok=True)
+    onde = (("emuladores", str(exports / f"{DOLPHIN}.desktop")),)
+    lida = d.Leitura(onde_estao=onde,
+                     do_disco=d.medir_no_disco(onde,
+                                               **_lar_de_mentira(tmp_path)))
+    # A VIGIA NÃO VAI AO DISCO NESTA RÉGUA: o que se mede aqui é o GESTO, e uma
+    # leitura de verdade traria o censo da Steam (e uma varredura de `/proc`)
+    # para dentro de um teste que não fala deles.
+    monkeypatch.setattr(a07, "_ler_do_disco", lambda: lida)
+    a07.VIGIA.ler()
+    a07._desarmar()
+    gesto = pacotes.GESTOS[("07-lancadores.html", d.CONSERTAR_LANCADOR)]
+    ctx = pacotes.Contexto(state={}, mesa=[], conectados=[], estados={})
+    alvo = tmp_path / ".local/share/flatpak/overrides" / DOLPHIN
+
+    primeiro = gesto(ctx, {"v": "emuladores"}, None)
+
+    assert not alvo.exists(), (
+        "o PRIMEIRO clique escreveu na configuração dela — e ela ainda não viu "
+        "o botão para dizer se ele faz sentido")
+    assert "Clique de novo" in primeiro["recado"], primeiro["recado"]
+
+    cartoes = {c.chave: c
+               for c in a07.com_o_que_o_daemon_diz(d.cartoes(lida), {}, lida)}
+    armado = [a for a in cartoes["emuladores"].acoes
+              if a.gesto == d.CONSERTAR_LANCADOR]
+    assert [a.rotulo for a in armado] == [a07.CONFIRMA_A_CURA], (
+        f"a tela não mostrou a cara armada: {[a.rotulo for a in armado]}")
+    assert armado[0].classe == "verde"
+
+    segundo = gesto(ctx, {"v": armado[0].v}, None)
+
+    assert "[Environment]" in alvo.read_text(encoding="utf-8"), (
+        "o SEGUNDO clique não escreveu — o consentimento dela virou uma parede")
+    assert "Feche e abra" in segundo["recado"]
+    assert a07._armado_agora() == "", "o consentimento ficou pendurado"
 
 
 def test_o_gesto_da_cura_declara_que_mexe_na_maquina_dela() -> None:

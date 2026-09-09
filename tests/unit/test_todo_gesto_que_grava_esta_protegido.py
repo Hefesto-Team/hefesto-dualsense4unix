@@ -129,6 +129,15 @@ ESCREVEM = {
     "restaurar_do_historico",  # troca o perfil pelo backup de ontem
     "_systemctl",              # liga, para e reinicia o serviço na máquina dela
     "curar_todos",             # tira ou devolve as camadas Vulkan dos prefixos dela
+
+    # A CURA POR ESTRADA — 09/09/2026, `LANCADORES-ZERO-01`. Ela escreve
+    # arquivo de OUTRO programa: o `config.json` do Heroic e o override do
+    # Flatpak dos demais lançadores. O gesto declarou `grava=` no mesmo commit
+    # que nasceu, e a DIREÇÃO B desta régua reprovou porque o nome não estava
+    # aqui: *"declara `grava='escrever_a_estrada'` e a árvore acha NADA"*. É a
+    # metade que falta de toda declaração — a porta declarada tem de ser uma
+    # porta que esta lista conhece.
+    "escrever_a_estrada",      # escreve o ambiente na configuração do lançador
 }
 
 #: E O QUE CHEGA LÁ POR IPC, pelo nome do método. `p.chamar("machine.declare")`

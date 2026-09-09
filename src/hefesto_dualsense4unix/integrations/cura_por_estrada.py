@@ -57,7 +57,9 @@ O QUE ESTE MÓDULO NUNCA FAZ
   `SDL_GAMECONTROLLER_IGNORE_DEVICES` deduzido aqui seria uma segunda conta ao
   lado da do daemon, e a segunda conta envelhece calada;
 * **nunca apaga o que é dela.** As duas estradas leem, fundem e regravam: um
-  `MANGOHUD=1` que ela pôs no Heroic continua lá depois da cura;
+  `MANGOHUD=1` que ela pôs no Heroic continua lá depois da cura — e a
+  PERMISSÃO do arquivo volta como estava, que é parte do que estava lá (ver
+  :func:`_escrever_atomico`);
 * **nunca escreve fora da allowlist** (`daemon.launch_env.ENV_ALLOWLIST`). O
   arquivo do daemon é lido por um wrapper `sh` que filtra por essa lista
   justamente contra arquivo adulterado; a mesma lista filtra aqui.
@@ -65,8 +67,10 @@ O QUE ESTE MÓDULO NUNCA FAZ
 from __future__ import annotations
 
 import configparser
+import contextlib
 import json
 import os
+import stat
 import tempfile
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -237,15 +241,42 @@ def planejar(chave: str, atalhos: tuple[str, ...], lar: Path | None = None,
 
 
 def tem_estrada(chave: str, atalhos: tuple[str, ...],
-                lar: Path | None = None) -> bool:
-    """Há botão a oferecer neste cartão? — a pergunta do DESENHO.
+                lar: Path | None = None,
+                raiz_sistema: Path | None = None) -> bool:
+    """Há botão a oferecer neste cartão? — a pergunta da VIGIA.
 
     Ela NÃO olha o ambiente de propósito. Um botão que some quando o serviço
     está desligado seria a tela escondendo a cura justamente de quem está
     tentando entender por que o controle não chega; o botão fica, e a recusa
     (:data:`SEM_AMBIENTE`) diz o que ligar.
+
+    **ELA ABRE DISCO**, e por isso quem pergunta é `desenho.medir_no_disco`, na
+    thread da vigia — nunca a pintura do tique.
+
+    O `raiz_sistema` VIAJA COM O `lar` desde 09/09/2026: sem ele, uma régua com
+    lar de mentira ainda ia ler `/var/lib/flatpak` no disco de verdade, e a
+    resposta dela dependia da máquina em que rodasse.
     """
-    return bool(estradas_do_cartao(chave, atalhos, lar))
+    return bool(estradas_do_cartao(chave, atalhos, lar, raiz_sistema))
+
+
+def _modo_de_nascimento(pasta: Path) -> int:
+    """O modo de um arquivo que NASCE nesta pasta — herdado dela.
+
+    **NÃO SE LÊ O `umask` AQUI, e a razão é de thread:** `os.umask` é a única
+    forma de consultá-lo pela biblioteca padrão, e consultar é ESCREVER (põe
+    zero e devolve o valor). Esta escrita roda na thread de um gesto, com a
+    janela viva ao lado; um arquivo que outra thread abrisse naquela janelinha
+    nasceria com a permissão errada.
+
+    A PASTA CARREGA A MESMA INTENÇÃO: `~/.local/share/flatpak/overrides` a
+    0755 devolve 0644, e uma pasta fechada a 0700 devolve 0600. É o que o
+    `flatpak override` produz nas duas máquinas, sem perguntar nada ao processo.
+    """
+    try:
+        return stat.S_IMODE(pasta.stat().st_mode) & 0o666
+    except OSError:  # pragma: no cover - a pasta acabou de ser criada
+        return 0o644
 
 
 def _escrever_atomico(alvo: Path, texto: str) -> None:
@@ -255,8 +286,28 @@ def _escrever_atomico(alvo: Path, texto: str) -> None:
     `config.json` do Heroic truncado, e o Heroic abriria sem a biblioteca. O
     temporário vizinho garante que ou o arquivo velho está inteiro, ou o novo
     está.
+
+    **E ELE DEVOLVE O MODO E O DONO DO ARQUIVO DELA — 09/09/2026, e sem isto a
+    troca era silenciosa.** `NamedTemporaryFile` nasce **0600** (é o contrato
+    dele, contra arquivo temporário bisbilhotado), e `replace()` leva o modo do
+    TEMPORÁRIO junto: o `config.json` do Heroic dela, medido a **0644** antes
+    da cura, ficava **0600** depois. Este módulo promete *"nunca apaga o que já
+    estava lá"*, e a permissão de um arquivo é parte do que estava lá — um
+    override a 0600 deixa de ser legível por um serviço que rode com outro
+    usuário, e ninguém liga isso ao clique de ontem.
+
+    O DONO VAI JUNTO **quando dá**: um `chown` para o mesmo usuário é sempre
+    permitido, e para outro usuário só com privilégio que este produto não tem
+    (e não quer). O `OSError` é o caso normal, não a exceção — por isso ele
+    passa em silêncio: o arquivo continua inteiro, com o modo certo.
     """
     alvo.parent.mkdir(parents=True, exist_ok=True)
+    #: O ANTES SE MEDE ANTES DE ESCREVER, e não depois: `replace()` já terá
+    #: destruído o modo original quando alguém pensar em perguntar por ele.
+    try:
+        antes: os.stat_result | None = alvo.stat()
+    except OSError:
+        antes = None
     tmp = None
     try:
         with tempfile.NamedTemporaryFile(
@@ -266,6 +317,12 @@ def _escrever_atomico(alvo: Path, texto: str) -> None:
             fh.write(texto)
             fh.flush()
             os.fsync(fh.fileno())
+        if antes is None:
+            os.chmod(tmp, _modo_de_nascimento(alvo.parent))
+        else:
+            os.chmod(tmp, stat.S_IMODE(antes.st_mode))
+            with contextlib.suppress(OSError):
+                os.chown(tmp, antes.st_uid, antes.st_gid)
         tmp.replace(alvo)
         tmp = None
     finally:
