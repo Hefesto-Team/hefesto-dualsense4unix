@@ -274,6 +274,13 @@ jobs:
       # `provado_por` ou uma ressalva declarada. Trava a dívida onde ela está.
       - name: Nada é afirmado no mapa sem prova nem ressalva
         run: python3 -m pytest tests/unit/test_portao_nada_e_afirmado_sem_prova.py -q
+      # CABO-BT-PERFIL-CONTROLE-01 (09/09/2026): a régua de pronto dela — toda
+      # feature da TELA responde cabo? rádio? no perfil? por controle? A lista
+      # de features é lida dos `data-gesto` das dez páginas publicadas.
+      - name: Toda feature da tela responde as quatro perguntas
+        run: python3 scripts/check_cabo_bt_perfil_controle.py
+      - name: A régua das quatro respostas morde
+        run: python3 -m pytest tests/unit/test_portao_a_regua_das_quatro_respostas.py -q
       - name: O specs.html publicado reflete o CSV e os desenhos
         run: python3 scripts/gerar-mapa.py --check
       # Z6-02 (24/08/2026): o mesmo desenho do `gerar-mapa.py --check` acima,
