@@ -26,10 +26,21 @@ serve o gerador e o pacote, e a página regerada saiu byte a byte igual à que e
 aprovou). Sem ele, o desenho e o produto seriam dois donos do mesmo cartão — e o
 segundo dono envelhece calado.
 
-**Este módulo não importa NADA do produto.** É desenho puro: entra dado, sai
-marcação. Ele é importado pelo gerador (que roda como script solto) e pelo
-pacote (que roda dentro da janela), e uma dependência aqui atravessaria para os
-dois.
+**Este módulo não importa MOTOR nenhum.** Ele é importado pelo gerador (que
+roda como script solto, `python3 aba07.py`) e pelo pacote (que roda dentro da
+janela), e uma dependência pesada aqui atravessaria para os dois.
+
+**A LINHA MUDOU EM 09/09/2026, e o fato antigo dizia MAIS do que era verdade.**
+Ela dizia *"não importa NADA do produto"*, e desde o censo (`7dc8af8f`) isso
+deixou de ser exato: ele importa TRÊS módulos de `integrations/` — o censo, a
+cura por estrada e a leitura das caixas do Flatpak. Os três são `pathlib`,
+`json` e `configparser`, e os três respondem o que o CARTÃO mostra; nenhum puxa
+daemon, GTK ou IPC (a `cura_por_estrada` adia o único import pesado que teria,
+a allowlist do daemon, justamente por causa desta linha).
+
+**A regra que fica é a que importa:** o gerador tem de continuar rodando SOLTO.
+Se um import novo aqui quebrar `python3 aba07.py`, ele não pertence a este
+arquivo.
 """
 from __future__ import annotations
 
@@ -63,6 +74,14 @@ from dataclasses import dataclass, field
 #: `configparser` e `pathlib`), e um import dentro da função seria pago em
 #: todo cartão, a cada tique.
 from hefesto_dualsense4unix.integrations import censo_dos_lancadores as _censo
+
+#: A CURA POR ESTRADA e a leitura das CAIXAS do Flatpak — LANCADORES-ZERO-01
+#: §5.3 e §5.4. Os dois entram aqui pela mesma razão do censo acima: são
+#: `pathlib`, `json` e `configparser`, e o desenho já os chama para responder o
+#: que o cartão mostra. `cura_por_estrada` adia o único import pesado que teria
+#: (a allowlist do daemon) justamente para o gerador continuar rodando solto.
+from hefesto_dualsense4unix.integrations import cura_por_estrada as _cura
+from hefesto_dualsense4unix.integrations import sandbox_dos_lancadores as _caixa
 
 SELOS = {
     "ok": "CHEGAM",
@@ -866,6 +885,19 @@ STEAM = "steam"
 #: `test_todo_gesto_do_html_tem_dono_ou_esta_declarado_sem_dono` cobra.
 ABRIR = "abrir-lancador"
 
+#: O NOME DO GESTO DA CURA POR ESTRADA — LANCADORES-ZERO-01 §5.3, 09/09/2026.
+#: Ele mora aqui pela mesma razão do :data:`ABRIR`, e o nome é OUTRO de
+#: propósito: o `consertar` da Steam repõe o **atalho de inicialização** no
+#: `localconfig.vdf`, e este escreve o **ambiente** na configuração de um
+#: lançador que não é a Steam. Dois atos diferentes, dois endereços — um nome
+#: só faria o gesto ter de adivinhar pelo `data-v` qual dos dois foi pedido.
+CONSERTAR_LANCADOR = "consertar-lancador"
+
+#: O RÓTULO, e ele é a MESMA palavra do cartão da Steam de propósito: o ato que
+#: ela pede é o mesmo — *"faça o controle chegar aqui"* —, e dois verbos para o
+#: mesmo pedido obrigariam a traduzir um no outro ao ler a tela.
+CONSERTAR_LANCADOR_ROTULO = "Consertar"
+
 #: O NOME DO GESTO DO "Copiar a linha", pela mesma razão do :data:`ABRIR`.
 #: DECISÃO DELA (PO, 04/09/2026, `07[01]`): *"Os dois, só quando faz falta"* —
 #: o botão E a linha à mostra, e **só** no estado em que o cartão já diz
@@ -1478,7 +1510,23 @@ def carimbo_da_steam(lida: Leitura) -> str:
     return " · ".join(partes)
 
 
-def cartao_sem_censo(item: SemCenso, onde: str | None) -> Lancador:
+def resposta_do_flatpak(vizinhos: tuple[str, ...]) -> str:
+    """A linha do cartão «Flatpak» — §5.4 da sprint, e ele MUDA DE PERGUNTA.
+
+    ELE NÃO É LANÇADOR: é o runtime dos outros cinco, e por isso o censo lhe
+    devolve `SEM_BIBLIOTECA` e a linha ficava com um travessão. A pergunta que
+    só ele responde é a da §4: **o controle entra na caixa em que o jogo roda?**
+
+    QUEM MEDE É :mod:`sandbox_dos_lancadores`, e a lista de quem examinar vem de
+    fora — são os lançadores que a aba ACHOU e que vieram do Flatpak, um
+    `app-id` cada. Perguntar pela caixa de um lançador nativo devolveria "não
+    instalado" e baixaria a conta por um motivo que não é dela.
+    """
+    return _caixa.resposta_do_flatpak(vizinhos).resumo
+
+
+def cartao_sem_censo(item: SemCenso, onde: str | None,
+                     vizinhos: tuple[str, ...] = ()) -> Lancador:
     """Um dos cinco cartões cujo INTERIOR o produto não lê — em três estados.
 
     E OS TRÊS SÃO DIFERENTES, que é a razão de esta função existir:
@@ -1540,6 +1588,21 @@ def cartao_sem_censo(item: SemCenso, onde: str | None) -> Lancador:
     #: contagem, e "37 jogos" contra "37 na biblioteca" na mesma tela é a cara
     #: de uma janela montada em dois lugares que não se falam.
     biblioteca = _censo.biblioteca_do_cartao(item.chave)
+    #: **A LINHA DO «FLATPAK» É OUTRA PERGUNTA — §5.4, 09/09/2026.** Ele não
+    #: tem biblioteca (o censo diz `SEM_BIBLIOTECA`, e o resumo sai vazio), e
+    #: até hoje a linha dele ficava com um travessão. Ver
+    #: :func:`resposta_do_flatpak`.
+    resumo = biblioteca.resumo or resposta_do_flatpak(vizinhos)
+    #: **O «CONSERTAR» DOS OUTROS CINCO — §5.3.** Ele só aparece onde há
+    #: estrada: o cartão que não tem por onde receber o ambiente não ganha
+    #: botão, que é a regra desta aba desde que ela nasceu — *o que não tem
+    #: dono não vira botão que finge*. Quem responde é
+    #: `cura_por_estrada.tem_estrada`, e ele NÃO olha se o serviço publicou o
+    #: ambiente: um botão que some com o serviço desligado esconderia a cura de
+    #: quem está tentando entender por que o controle não chega.
+    consertar = ((Acao(CONSERTAR_LANCADOR_ROTULO, "", CONSERTAR_LANCADOR,
+                       item.chave),)
+                 if _cura.tem_estrada(item.chave, item.atalhos) else ())
     #: **O RESUMO VAI PARA A LINHA `jogos`, e não para o corpo** — §5.2 da
     #: sprint: *"a linha de baixo diz «37 jogos na biblioteca · 0 instalados»"*.
     #: É o mesmo lugar em que a Steam imprime *"23 jogos instalados"*, e ele é
@@ -1551,9 +1614,9 @@ def cartao_sem_censo(item: SemCenso, onde: str | None) -> Lancador:
     #: antes de a linha existir.
     return Lancador(
         chave=item.chave, nome=item.nome, selo="localizado",
-        jogos=biblioteca.resumo or "—",
+        jogos=resumo or "—",
         diz=DIZ_ACHEI.format(onde=_e(onde)),
-        acoes=abrir + tirar, presente=True)
+        acoes=consertar + abrir + tirar, presente=True)
 
 
 def cartoes(lida: Leitura | None) -> list[Lancador]:
@@ -1569,6 +1632,30 @@ def cartoes(lida: Leitura | None) -> list[Lancador]:
     inteira está em :data:`SEM_FONTE`.
     """
     onde_estao = dict(lida.onde_estao) if lida is not None else {}
+    #: OS `app-id` DOS LANÇADORES QUE VIERAM DO FLATPAK — a lista de que o
+    #: cartão «Flatpak» precisa para mudar de pergunta (§5.4). Ela sai do
+    #: CAMINHO em que cada `.desktop` foi achado, e não do rótulo do cartão:
+    #: um `io.mgba.mGBA` publicado por `/usr/share/applications` é o pacote da
+    #: distribuição, que não tem caixa a examinar. Ver
+    #: :func:`sandbox_dos_lancadores.app_id_do_atalho`.
+    #:
+    #: **UM CARTÃO PODE SER DOIS PROGRAMAS**, e por isso a lista não sai só do
+    #: caminho achado: `app_ids_do_cartao` completa o `.desktop` da busca com
+    #: os demais `app-id` do cartão que têm caixa no disco. Sem isso o
+    #: «Dolphin · mGBA» entrava com UM, e o cartão «Flatpak» contou 4 numa
+    #: máquina com 5 (medido em 09/09/2026).
+    vistos: list[str] = []
+    for item in procurados(lida.declarados if lida is not None else ()):
+        # O PRÓPRIO FLATPAK FICA DE FORA: ele é achado pelo `PATH`
+        # (`/usr/bin/flatpak`), não tem caixa, e um cartão que se examinasse a
+        # si mesmo responderia sobre a coisa errada.
+        if item.chave == "flatpak":
+            continue
+        for app_id in _caixa.app_ids_do_cartao(item.atalhos,
+                                               onde_estao.get(item.chave)):
+            if app_id not in vistos:
+                vistos.append(app_id)
+    vizinhos = tuple(vistos)
     fora = [cartao_da_steam(lida)]
     for item in procurados(lida.declarados if lida is not None else ()):
         # A STEAM JÁ SAIU ACIMA, com o censo dela. Ela está em `procurados`
@@ -1576,7 +1663,7 @@ def cartoes(lida: Leitura | None) -> list[Lancador]:
         # outro, e desenhá-la duas vezes daria dois `data-lancador="steam"`.
         if item.chave == STEAM:
             continue
-        fora.append(cartao_sem_censo(item, onde_estao.get(item.chave)))
+        fora.append(cartao_sem_censo(item, onde_estao.get(item.chave), vizinhos))
     return fora
 
 
@@ -1623,6 +1710,8 @@ __all__ = [
     "AINDA_LENDO",
     "A_STEAM",
     "CLASSE_DA_GRADE",
+    "CONSERTAR_LANCADOR",
+    "CONSERTAR_LANCADOR_ROTULO",
     "COPIAR",
     "COPIAR_ROTULO",
     "DESLIGAR_STEAM_INPUT",
@@ -1675,6 +1764,7 @@ __all__ = [
     "lista_de_jogos",
     "procurados",
     "quantos_html",
+    "resposta_do_flatpak",
     "selo_html",
     "steam_input_html",
     "tela_do_registro_html",
