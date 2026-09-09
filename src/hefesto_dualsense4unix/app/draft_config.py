@@ -544,7 +544,7 @@ class DraftConfig(BaseModel):
     # round-trip mais favorável possível (mesmo nome, todo passthrough
     # valendo): `button_actions={"circle": "KEY_ESC"}` entrava e saía `None`;
     # `teclado_emulado=True` entrava e saía `None`. Os dois são campos do
-    # `Profile` (`schema.py:1367` e `:1363`) e os dois nomes apareciam ZERO
+    # `Profile` (`schema.py:1431` e `:1427`) e os dois nomes apareciam ZERO
     # vezes neste arquivo — o `Profile(...)` de `to_profile` simplesmente não
     # os emitia, então cada Salvar zerava um campo que ninguém tinha tocado.
     #
@@ -1404,6 +1404,69 @@ class DraftConfig(BaseModel):
             )
         return self._with_override_section(
             uniq, "sensores", ControllerSensoresOverride(**campos)
+        )
+
+    def with_controller_mascara(self, uniq: str, mascara: str | None) -> DraftConfig:
+        """Novo draft com a MÁSCARA de ``uniq`` substituída (08/09/2026).
+
+        MASCARA-NO-PERFIL-01, decisão dela: *"pode entrar sim"*. ``None`` limpa
+        a escolha daquela peça — ela volta a herdar a máscara do perfil —, e é
+        o caminho de volta, sem o qual um registro em que só se entra vira
+        armadilha.
+
+        VALOR DESCONHECIDO É ERRO, NÃO "LIMPAR". Um `mascara="xbox 360"` que
+        virasse `None` apagaria a escolha dela em silêncio — o mesmo defeito do
+        `or "xbox"` do editor de perfis (ESCOLHE-DELA-VENCE-01), só que do outro
+        lado. Quem recusa é o `normalizar_gamepad_flavor` do esquema, que é a
+        fronteira já existente; não há um segundo catálogo aqui.
+
+        NÃO HÁ "IGUAL AO GLOBAL" A CONFERIR, e a diferença com as seções irmãs é
+        medida: o vizinho global desta escolha é o `mode.gamepad_flavor`, que
+        vale para a SESSÃO inteira e não é uma seção por peça. Escrever a
+        máscara de uma peça igual à do modo é uma afirmação legítima — *"este
+        controle segue o jogo, e eu quero que continue seguindo mesmo se o jogo
+        mudar"*.
+        """
+        from hefesto_dualsense4unix.profiles.schema import normalizar_gamepad_flavor
+
+        if mascara is None:
+            return self._with_override_scalar_cleared(uniq, "mascara")
+        valor = normalizar_gamepad_flavor(mascara)
+        if valor is None:
+            raise ValueError(
+                f"máscara desconhecida {mascara!r} — use 'dualsense', 'xbox' "
+                "ou 'nintendo', ou None para o controle herdar a do perfil"
+            )
+        return self._with_override_section(uniq, "mascara", valor)
+
+    def _with_override_scalar_cleared(self, uniq: str, section: str) -> DraftConfig:
+        """Apaga uma seção de UM VALOR SÓ do override de ``uniq``.
+
+        Irmã de ``with_controller_fields_cleared``, e separada dela por
+        construção: aquela limpa CAMPOS de dentro de uma seção
+        (``cfg.model_fields_set``), e uma seção escalar não tem campos dentro —
+        ``"xbox".model_fields_set`` não existe. Chamar a irmã aqui daria
+        ``AttributeError`` na primeira vez que ela apagasse a máscara.
+
+        Sem override, ou já sem a seção, devolve ``self`` intacto. A entrada que
+        esvaziou some do mapa, pela mesma razão do resto do arquivo: um `uniq`
+        apontando para `{}` faz a próxima leitura achar que aquela peça tem
+        opinião.
+        """
+        override = self.controller_override(uniq)
+        if override is None or getattr(override, section, None) is None:
+            return self
+        novo_override = override.model_copy(update={section: None})
+        mapa: dict[str, Any] = dict(self.source_controllers or {})
+        if _override_vazio(novo_override):
+            mapa.pop(uniq, None)
+        else:
+            mapa[uniq] = novo_override
+        return self.model_copy(
+            update={
+                "source_controllers": mapa or None,
+                "controllers_esvaziados_nesta_edicao": not mapa,
+            }
         )
 
     def _with_override_section(

@@ -1173,7 +1173,7 @@ class PonteMicBluetooth:
             logger.info("bt_mic_hidraw_sem_acesso", no=self.no.caminho, err=str(exc))
             self._encerrar_decodificador()
             return False
-        descricao = f"Microfone DualSense BT ({self.no.uniq or self.no.caminho})"
+        descricao = descricao_do_microfone(self.no.uniq)
         if self._source is None:
             self._source = self._abrir_o_canal_por_controle(descricao)
         if self._source is None:
@@ -1745,6 +1745,102 @@ _DIRS_PIPEWIRE = (
 )
 
 
+# ---------------------------------------------------------------------------
+# O NOME DE GENTE do canal por controle — «Microfone do Controle N»
+#
+# ELE MORA NO FIM DO MÓDULO DE PROPÓSITO, e não é arrumação: o
+# `docs/data/mapa-controles.csv` cita este arquivo por `arquivo:LINHA` — a
+# célula `audio.microfone@dualsense` aponta `dizer_o_pedido_dela` e
+# `_talvez_seguir_a_source` —, e código novo enfiado acima daquelas linhas
+# envelhece a citação inteira. Há portão que reprova: `citacoes-de-linha`.
+# ---------------------------------------------------------------------------
+
+#: O rótulo que a pessoa lê na lista de ENTRADA do sistema, sem o número.
+#:
+#: **Decisão DELA, 09/09/2026** — `D-0909-OS-NOS-SE-CHAMAM-ALTO-FALANTE-E-
+#: MICROFONE-DO-CONTROLE-N`, palavra dela: *"4a"*. As outras duas opções na
+#: frente dela eram «Jogador 1 — microfone» e «DualSense 1 · mic»; a razão da
+#: escolha está escrita na decisão e manda no código daqui: **o número é o
+#: ASSENTO (P1..P4), como na tela** — um nome por APARELHO mudaria quando o
+#: controle trocasse de assento.
+#:
+#: O par com «Alto-falante do Controle N» está em
+#: `docs/A-LINGUA-DESTA-CASA-o-glossario-que-a-tela-e-o-codigo-falam.md`, que é
+#: a condição que ela pôs: *"o par vai para a LÍNGUA DESTA CASA antes de nascer
+#: na lista do sistema"*.
+NOME_DO_MICROFONE_DO_CONTROLE = "Microfone do Controle"
+
+#: Quem sabe em que ASSENTO está o controle. `None` = ninguém está atendendo
+#: (o subsystem no chão, ou um processo que não é o daemon), e aí a resposta
+#: honesta é *"não sei o número"* — nunca um número inventado, que poria dois
+#: controles com o mesmo rótulo na lista da pessoa.
+#:
+#: Mesmo desenho de `eleicao_de_microfone.registrar_pedidor_de_canal`, e pela
+#: mesma razão de camada: quem SABE o assento é o daemon (ele tem o backend com
+#: a lista de controles), e uma integração que importasse o daemon inverteria a
+#: dependência. Aqui a integração conhece um chamável; quem o instala é
+#: `daemon/subsystems/bt_mic.BtMicSubsystem`.
+_NUMERADOR_DE_ASSENTO: Callable[[str], int | None] | None = None
+
+
+def registrar_numerador_de_assento(
+    numerador: Callable[[str], int | None] | None,
+) -> Callable[[str], int | None] | None:
+    """Instala quem sabe o assento de um `uniq`. Devolve o anterior."""
+    global _NUMERADOR_DE_ASSENTO
+    anterior = _NUMERADOR_DE_ASSENTO
+    _NUMERADOR_DE_ASSENTO = numerador
+    return anterior
+
+
+def numero_do_assento(uniq: str) -> int | None:
+    """P1..P4 deste controle, ou `None` quando ninguém sabe dizer.
+
+    Nunca levanta: o caminho até aqui é a ponte subindo ou o toque dela no
+    botão do microfone, e um numerador que explodisse não pode derrubar
+    nenhum dos dois. Um número que não seja um inteiro positivo vale como
+    *"não sei"* — `bool` é `int` em Python, e `True` viraria o assento 1.
+    """
+    numerador = _NUMERADOR_DE_ASSENTO
+    if numerador is None or not uniq:
+        return None
+    try:
+        numero = numerador(uniq)
+    except Exception:  # pragma: no cover - defensivo
+        logger.debug("assento_do_microfone_ilegivel", uniq=uniq, exc_info=True)
+        return None
+    if isinstance(numero, bool) or not isinstance(numero, int) or numero <= 0:
+        return None
+    return numero
+
+
+def descricao_do_microfone(uniq: str) -> str:
+    """«Microfone do Controle N» — e SEM o endereço dela, com número ou sem.
+
+    **O QUE ISTO SUBSTITUIU, e eram dois defeitos numa linha só.** Até
+    09/09/2026 a ponte batizava o nó com
+    ``f"Microfone DualSense BT ({self.no.uniq or self.no.caminho})"``:
+
+    * o rótulo dizia **o transporte** — trocar o cabo pelo rádio trocava o nome
+      que a pessoa vê, que é o defeito inteiro que o canal por controle existe
+      para matar (`integrations/canal_do_microfone`, "o defeito é de NOME").
+      O nome INTERNO já tinha sido curado em 06/09; o rótulo LEGÍVEL, que é o
+      que ela lê no seletor de entrada de qualquer aplicativo, não veio junto;
+    * e ele publicava **o MAC do controle dela** na lista de dispositivos de
+      áudio da máquina — visível em todo aplicativo que abra um seletor de
+      microfone. A máscara da casa cobre arquivo versionado; esta linha
+      escapava por não ser arquivo.
+
+    **Sem número não se inventa número.** A lista da pessoa com dois
+    «Microfone do Controle 1» é pior que uma com dois «Microfone do Controle»:
+    o rótulo repetido com número MENTE sobre qual é qual, e o sem número só
+    diz que o assento ainda não é sabido.
+    """
+    numero = numero_do_assento(uniq)
+    if numero is None:
+        return NOME_DO_MICROFONE_DO_CONTROLE
+    return f"{NOME_DO_MICROFONE_DO_CONTROLE} {numero}"
+
 __all__ = [
     "AUDIO_CONTROL_MIC_OFF",
     "AUDIO_CONTROL_MIC_ON",
@@ -1764,6 +1860,7 @@ __all__ = [
     "MIC_OPUS_LEN",
     "MIC_OPUS_OFFSET",
     "MIC_TAXA_HZ",
+    "NOME_DO_MICROFONE_DO_CONTROLE",
     "PRIORIDADE_SESSAO_DA_PONTE",
     "STATUS_FONE_PLUGADO",
     "STATUS_MIC_MUDO",
@@ -1776,12 +1873,15 @@ __all__ = [
     "PonteMicBluetooth",
     "SourceVirtualPipeWire",
     "abrir_hidraw_rw",
+    "descricao_do_microfone",
     "diagnosticar",
     "eh_report_de_audio",
     "frame_opus_do_report",
     "montar_pedido_de_mic",
     "nos_dualsense_bluetooth",
+    "numero_do_assento",
     "propriedades_da_source",
+    "registrar_numerador_de_assento",
     "status_de_audio",
     "versao_libopus",
 ]

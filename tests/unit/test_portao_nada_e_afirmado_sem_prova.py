@@ -31,21 +31,26 @@ aquilo. Três coisas podem sustentar a afirmação:
    `radio_ressalva`) — a afirmação vem com o que a limita, escrito;
 3. nada — e aí é **desenho fingindo ser produto**.
 
-**MEDIDO EM 09/09/2026, nas 311 linhas do mapa:**
+**MEDIDO EM 09/09/2026, nas 311 linhas do mapa, e REMEDIDO na mesma noite
+depois de `luz.led_jogador.escrita_hefesto@dualsense` ganhar prova:**
 
-    afirmações fortes (aciona = sim)             208
-    sem `provado_por`                            104
+    afirmações fortes (aciona = sim)             169
+    sem `provado_por`                            103
     dessas, COM ressalva declarada                68
-    dessas, sem prova E sem ressalva              36   <- a dívida
+    dessas, sem prova E sem ressalva              35   <- a dívida
 
-Das 104 sem prova, **81 dizem `de_onde_sei = inferido-do-codigo`**: o mapa
+O primeiro número dizia **208**, e a medição o derrubou: são **169** — a conta
+não fechava com as próprias linhas de baixo (169 = 66 com prova + 103 sem).
+Substituído em vez de guardado ao lado, que é a lei desta casa.
+
+Das 103 sem prova, **80 dizem `de_onde_sei = inferido-do-codigo`**: o mapa
 afirma que o aparelho aciona porque alguém LEU o código, não porque tocou o
 aparelho. *Ler o código e tocar o aparelho são coisas diferentes, e esta casa
 tem quatro cicatrizes provando isso.*
 
 ## O TETO, e por que ele não é frouxidão
 
-Exigir prova de aparelho nas 104 hoje pararia a casa — e a sprint diz o
+Exigir prova de aparelho nas 103 hoje pararia a casa — e a sprint diz o
 contrário: *"comece por ali, não do zero"*. O que este portão faz é **travar a
 dívida onde ela está**: uma linha NOVA que afirme forte tem de trazer prova ou
 ressalva, e o número só desce.
@@ -68,12 +73,12 @@ MAPA = RAIZ / "docs/data/mapa-controles.csv"
 #: **SE VOCÊ PRECISA SUBIR ESTE NÚMERO, a linha nova está errada**: ela afirma
 #: que o aparelho aciona sem ninguém ter provado e sem dizer o que limita a
 #: afirmação. Ponha `provado_por` (como provou) ou a ressalva do transporte.
-TETO_SEM_PROVA_NEM_RESSALVA = 36
+TETO_SEM_PROVA_NEM_RESSALVA = 35  # 36 -> 35 em 09/09/2026: ver abaixo
 
 #: O MESMO PARA O CONJUNTO MAIOR — as fortes sem `provado_por`, com ou sem
 #: ressalva. Ele desce mais devagar (cada uma pede aparelho na mesa dela), e
 #: está aqui para que a conta não se perca entre uma leva e outra.
-TETO_SEM_PROVA = 104
+TETO_SEM_PROVA = 103  # 104 -> 103 em 09/09/2026: ver abaixo
 
 _SIM = {"sim", "1", "true"}
 
@@ -149,10 +154,17 @@ def test_o_teto_acompanha_a_realidade_e_nunca_sobra() -> None:
 
 
 def test_a_divida_maior_das_afirmacoes_sem_prova_nao_cresce() -> None:
-    """As 104 que afirmam forte e ninguém provou — com ou sem ressalva.
+    """As 103 que afirmam forte e ninguém provou — com ou sem ressalva.
 
-    **81 delas dizem `inferido-do-codigo`**, que é ler o código e não tocar o
+    **80 delas dizem `inferido-do-codigo`**, que é ler o código e não tocar o
     aparelho. Elas descem uma a uma, na bancada dela.
+
+    **OS DOIS TETOS DESCERAM UM, EM 09/09/2026**, e desceram pela mesma linha:
+    `luz.led_jogador.escrita_hefesto@dualsense` ganhou
+    `provado_por = olho-dela` — ela pôs os quatro na mesa (dois cabo, dois
+    rádio) e viu as lâmpadas acenderem. Uma linha que sai das duas contas de
+    uma vez é o desenho funcionando: prova de aparelho tira a afirmação das
+    duas listas ao mesmo tempo.
 
     **A MORDIDA:** a mesma da primeira; sem `cabo_ressalva` a linha cai nas
     duas contas, com ela cai só nesta.

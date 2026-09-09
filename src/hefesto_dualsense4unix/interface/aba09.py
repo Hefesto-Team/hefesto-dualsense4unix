@@ -674,7 +674,34 @@ CSS = """
      ela dizia foi para o fim da segunda: a cor de fábrica só é perguntada NO
      CABO (`app/actions/config/secao_controles.py:929`), e por isso p2 e p3, que
      estão no rádio, não têm leitura. */
-  .col-log{display:flex;flex-direction:column}
+  /* A CAIXA NÃO MANDA NA FILEIRA — ROLAGEM-01, 09/09/2026, e é a cura da barra
+     que ela achou em 08/09.
+
+     O comentário abaixo PROMETE que "a altura do irmão CHEGA aqui sozinha", e
+     ele estava certo no Chrome, com as quatro linhas de registro do desenho.
+     Com o DAEMON VIVO o registro tem dezenas de linhas, e `white-space:pre` não
+     quebra nenhuma: medido no WebKit com os quatro na mesa, `.avancado` fechava
+     em **438px** onde a lista dos quatro botões pede **136** — os 302px que
+     estouravam o `.miolo` (`866>564`) eram a caixa arrastando a fileira do
+     grid, e não o contrário.
+
+     `position:absolute` É O QUE TORNA A PROMESSA VERDADEIRA: um filho absoluto
+     não conta para o tamanho do pai, então a fileira do `.avancado` volta a ser
+     medida pela `.lista` — o irmão — e a caixa preenche o que sobrar. Um
+     `max-height:136px` digitado aqui seria a segunda verdade sobre a altura da
+     lista, que é exatamente o que o comentário abaixo proíbe.
+
+     O registro passa a ROLAR por dentro, e é o desenho: quantas linhas o daemon
+     escreveu não é assunto desta aba — o `data-hef-rolar="fim"` do HTML já dizia
+     isso desde que nasceu. Está declarado em `POR_DESENHO`
+     (`scripts/ensaios/a_janela_cabe_no_que_ela_ve.py`).
+
+     MEDIDO DEPOIS: `.avancado` 438 -> **136**, `.miolo` 866 -> **564**. A página
+     fecha em 530 de conteúdo para 530 de espaço útil, que é o par `ALTURA,
+     MIOLO_H` escrito no topo deste arquivo. O número já estava certo; o que
+     faltava era a caixa obedecer a ele. */
+  .col-log{display:flex;flex-direction:column;min-height:0;position:relative}
+  .col-log > .log{position:absolute;top:0;right:0;bottom:0;left:0}
   /* A CAIXA ACOMPANHA O IRMÃO — TELA-TRES-01 §1, pedido dela de 08/09/2026:
      "em sistema aumentar a altura do detalhes técnicos pra ficar igual ao
      bloco à esquerda".

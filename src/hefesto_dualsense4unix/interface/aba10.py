@@ -139,6 +139,21 @@ MODOS = _lista_de_pares(_DONO_DO_MODO, "_MODE_KIND_ITEMS")
 # deste controle"* enquanto o cabeçalho ao lado dizia *"os cinco ajustes"*.
 # Um controle cujo único ajuste próprio fosse o sensor entrava na conta do
 # cabeçalho ("1 de 2 controles com ajuste próprio") com a fileira toda apagada.
+#
+# A SÉTIMA NASCEU EM 08/09/2026, com a decisão dela: *"pode entrar sim"* — a
+# máscara por controle entrou em `ControllerOverrides` (MASCARA-NO-PERFIL-01), e
+# a régua `test_a_coluna_de_ajuste_proprio_mostra_o_disco_inteiro` cobra na hora
+# toda seção do esquema que a página não mostre. A `mascara` é a primeira que
+# NÃO é uma seção — é um valor só (`"xbox"`, `"dualsense"`, `"nintendo"`) —, e
+# para a coluna isso não muda nada: ela sempre teve dois estados, e `!!` de um
+# valor é o mesmo `!!` de um objeto.
+#
+# O GLIFO É PROVISÓRIO — decisão dela. A máscara não tem peça de plástico: as
+# outras seis acendem a peça que elas mexem (a barra de luz, o L2, o motor), e
+# esta responde *"como este controle inteiro aparece no jogo"*. Escolhi o botão
+# `ps` porque é o botão que carrega a marca do console, e é o mais próximo de
+# "de que console este controle diz ser". Se ela preferir outro glifo, muda-se
+# esta linha e a página se regenera — nada mais depende dela.
 SECOES = [
     ("leds", ("lightbar", "led-jogador")),
     ("triggers", ("l2", "r2")),
@@ -146,6 +161,7 @@ SECOES = [
     ("speaker", ("alto-falante",)),
     ("mic", ("mic",)),
     ("sensores", ("giroscopio", "acelerometro")),
+    ("mascara", ("ps",)),
 ]
 
 #: COMO CADA SEÇÃO SE CHAMA NA DICA DO CABEÇALHO, e por que ela não é digitada
@@ -161,6 +177,9 @@ NOME_DA_SECAO = {
     "speaker": "alto-falante",
     "mic": "microfone",
     "sensores": "sensores",
+    # "máscara" é a palavra que a aba Jogar já usa no chip de cada cartão
+    # (`data-gesto="mascara"`) — não é vocabulário novo de tela.
+    "mascara": "máscara",
 }
 
 
@@ -174,7 +193,8 @@ def _lista_das_secoes() -> str:
 #: dizem "os seis ajustes"; escrever a palavra à mão em três lugares é como a
 #: contagem de `NAO_PINTAVEIS` divergiu no primeiro dia. Sai daqui, de
 #: `len(SECOES)`, e muda sozinha quando a lista mudar.
-_EXTENSO = {1: "um", 2: "dois", 3: "três", 4: "quatro", 5: "cinco", 6: "seis"}
+_EXTENSO = {1: "um", 2: "dois", 3: "três", 4: "quatro", 5: "cinco", 6: "seis",
+            7: "sete"}
 QUANTAS_SECOES = _EXTENSO[len(SECOES)]
 
 # O ESTADO DESTE PERFIL, controle a controle. Um mockup que acende TODAS as
@@ -190,12 +210,15 @@ QUANTAS_SECOES = _EXTENSO[len(SECOES)]
 GUARDA = {
     "p1": {"leds", "triggers", "rumble", "mic"},
     "p2": {"leds", "rumble", "sensores"},
-    "p3": {"leds"},
+    # A `mascara` entra no P3 pela MESMA regra do `sensores`: acesa em um,
+    # apagada em três. E no P3, e não no P2, para as duas colunas novas não
+    # empilharem na mesma linha — a pedagogia é "quem não tem opinião herda".
+    "p3": {"leds", "mascara"},
     "p4": set(),
 }
 
 # O ID DA PEÇA é o endereço de rádio normalizado — a MESMA chave que o
-# `_validate_controllers_keys` aceita e canoniza (`profiles/schema.py:1566`), e
+# `_validate_controllers_keys` aceita e canoniza (`profiles/schema.py:1629`), e
 # a mesma que a dica do "Perfil ativo" promete no esqueleto: *"pelo ID da peça —
 # amanhã, em outra porta ou no rádio, ele traz de volta o que você deixou hoje"*.
 # A promessa é verdadeira porque o endereço é ESTÁVEL entre USB e BT no

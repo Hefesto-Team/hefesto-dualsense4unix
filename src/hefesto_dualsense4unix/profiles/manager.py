@@ -951,6 +951,139 @@ class ProfileManager:
         # que a tela dela ofereça, e um global aqui seria um interruptor sem
         # botão que uma troca de perfil acionaria pelas costas.
         self.apply_controller_sensores(profile, origin=origin, relatorio=resultado)
+        # MASCARA-NO-PERFIL-01 (08/09/2026, decisão dela): e a máscara daquela
+        # peça, POR ÚLTIMO. A ordem importa e é medida: esta é a única seção
+        # cuja aplicação pode DERRUBAR E RECRIAR o gamepad virtual do jogador,
+        # e um vpad recriado no meio da leva invalidaria os handles que as
+        # seções acima acabaram de escrever.
+        self.apply_controller_mascaras(profile, origin=origin, relatorio=resultado)
+        return resultado
+
+    def apply_controller_mascaras(
+        self,
+        profile: Profile,
+        *,
+        origin: str = "manual",
+        relatorio: dict[str, str] | None = None,
+    ) -> dict[str, str]:
+        """Aplica a MÁSCARA das UNIDADES que o perfil declara (08/09/2026).
+
+        Decisão dela, MASCARA-NO-PERFIL-01: *"pode entrar sim"* — a máscara por
+        controle entra no perfil, ao lado de luz, gatilho, vibração, som, mic e
+        sensores. **A consequência que ela sentiu, e que abriu a sprint:**
+        trocar de perfil trocava o modo e **não trocava a máscara** de ninguém,
+        porque a máscara era da SESSÃO e sobrevivia ao perfil.
+
+        QUEM É O DONO AGORA — e é o ponto inteiro desta entrega. O
+        ``controller_masks.json`` (``daemon/subsystems/external_mask.py``)
+        deixou de ser dono e virou **cache do que o perfil ativo diz**. Ele
+        continua existindo, e por uma razão medida: ``mascara_efetiva`` é
+        consultada na criação de todo gamepad virtual **e no tique do co-op**,
+        que compara para decidir recriar. Ler o perfil do disco ali seria uma
+        tempestade de syscalls — a mesma lição do
+        ``gamepad._motores_do_perfil_ativo``. Então o perfil escreve no
+        registro, e o registro responde em memória.
+
+        **O PERFIL CALADO DEVOLVE AO PADRÃO — DECISÃO DELA, 09/09/2026.** A
+        pergunta era *"um perfil que não fala de máscara deve devolver todo
+        mundo ao padrão, ou deixar cada um como está?"*, e a resposta dela foi
+        a primeira: *"Default é Hefesto dualsense padrão"*. Então esta função
+        varre o registro e **apaga a máscara própria de todo controle que o
+        perfil não declara** (:meth:`ExternalMaskRegistry.manter_somente`).
+        Aquele controle passa a herdar o degrau de baixo — o
+        ``mode.gamepad_flavor`` do perfil e, na falta dele, o
+        ``DaemonConfig.gamepad_flavor``, que de fábrica é ``dualsense``. Isto
+        SUBSTITUI a leitura provisória que esta docstring trazia (*"``mascara``
+        ausente não mexe na máscara daquela peça"*): aqui ``None`` não é silêncio
+        — é *"volte ao padrão"*, e só nesta seção.
+
+        **O CUSTO FOI MEDIDO ANTES DE SER PAGO, e ele é pequeno** (09/09/2026,
+        esta árvore). O medo escrito na entrega de ontem era *"derrubar e
+        recriar os quatro vpads dela ao ativar um perfil calado"*. Não é o que
+        acontece, e o número diz por quê:
+
+        * quem derruba vpad é o laço do co-op, por ``vpad_ficou_para_tras``, e
+          ele compara a máscara EFETIVA. Apagar a entrada de quem já estava no
+          padrão não muda a efetiva — a comparação dá igual e o vpad **não
+          cai**. Só cai o vpad de quem estava FORA do padrão, que é exatamente
+          quem a decisão dela manda trazer de volta;
+        * medido nos quatro assentos, com o padrão em ``dualsense``: **0 de 4**
+          vpads caem quando a mesa já seguia o padrão, **1 de 4** quando um só
+          estava em Xbox, **4 de 4** quando os quatro estavam. E **0 de 4**
+          quando os quatro TINHAM entrada própria, mas igual ao padrão: as
+          quatro entradas somem do disco e nenhum controle dela sai da partida;
+        * a varredura em si custa **0,034 ms** e ZERO escrita de disco quando
+          não há nada a devolver — o caso comum —, e **0,21 ms** com uma
+          escrita só quando há quatro. (Mediana de 200 voltas, ``ext4``. O
+          ``manter_somente`` batelha de propósito: quatro ``clear_mask``
+          seguidos custariam 0,63 ms e quatro ``_save_locked``.)
+
+        **UMA POR CONTROLE, E SÓ PARA QUEM MUDOU.** A escrita é peça a peça, na
+        ordem em que o perfil as declara, e a máscara que já está valendo não é
+        reescrita: ``set_mask`` só persiste quando o valor difere, e
+        ``vpad_ficou_para_tras`` compara antes de derrubar. Um perfil que repete
+        a máscara de três jogadores e muda a do quarto derruba UM vpad.
+
+        Relatório: ``mascara:<uniq>`` → a máscara, uma chave por unidade, no
+        mesmo formato-por-peça do ``mic:<uniq>`` e do ``sensores:<uniq>``. Quem
+        foi devolvido ao padrão entra com o valor ``"padrão"``, e não com uma
+        máscara: o nome do flavor herdado é do degrau de baixo, que esta função
+        não conhece (ela não vê a config do daemon) e não pode fingir conhecer.
+        """
+        from hefesto_dualsense4unix.daemon.subsystems.external_mask import (
+            registro_de_mascaras,
+        )
+
+        resultado: dict[str, str] = relatorio if relatorio is not None else {}
+        registro = registro_de_mascaras()
+        controllers = getattr(profile, "controllers", None) or {}
+        declaradas: list[str] = []
+        for uniq, cfg in controllers.items():
+            mascara = getattr(cfg, "mascara", None)
+            if mascara is None:
+                continue
+            alvo = str(uniq)
+            declaradas.append(alvo)
+            anterior = registro.mask_for(alvo)
+            if anterior == str(mascara):
+                # NÃO REPINTA QUEM NÃO MUDOU: nem uma escrita no disco, nem uma
+                # linha de log. O relatório continua dizendo o que vale.
+                resultado[f"mascara:{alvo}"] = str(mascara)
+                continue
+            if not registro.set_mask(alvo, str(mascara)):
+                # A RECUSA É NOTÍCIA, e ela tem uma causa só que importa: um
+                # `uniq` que o registro não resolve (o esquema já barrou o que
+                # não é MAC de 12 hex, e o catálogo já barrou a máscara inválida).
+                resultado[f"mascara:{alvo}"] = "recusado"
+                logger.warning(
+                    "profile_mascara_por_peca_recusada",
+                    profile=getattr(profile, "name", None),
+                    uniq=alvo,
+                    origin=origin,
+                    mascara=str(mascara),
+                )
+                continue
+            resultado[f"mascara:{alvo}"] = str(mascara)
+            logger.info(
+                "profile_mascara_por_peca",
+                profile=getattr(profile, "name", None),
+                uniq=alvo,
+                origin=origin,
+                mascara=str(mascara),
+                anterior=anterior,
+            )
+        # A DECISÃO DELA, e ela é a última coisa que acontece aqui: quem o
+        # perfil NÃO declarou volta ao padrão. É uma varredura só, batelhada, e
+        # ela devolve as chaves que perderam máscara própria — vazio no caso
+        # comum, que é a mesa já seguindo o padrão.
+        for chave in registro.manter_somente(declaradas):
+            resultado[f"mascara:{chave}"] = "padrão"
+            logger.info(
+                "profile_mascara_devolvida_ao_padrao",
+                profile=getattr(profile, "name", None),
+                uniq=chave,
+                origin=origin,
+            )
         return resultado
 
     def apply_controller_sensores(

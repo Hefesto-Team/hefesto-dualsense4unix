@@ -392,7 +392,7 @@ def tabela_efetiva(
     `— Nada —`.
 
     ELA NÃO MESCLA COM O DE FÁBRICA, e isso é medido, não escolhido:
-    `resolve_key_bindings` (`profiles/manager.py:1890`) devolve só as chaves do
+    `resolve_key_bindings` (`profiles/manager.py:2023`) devolve só as chaves do
     dict, e é ele quem alimenta o device no `apply_keyboard`. Mesclar aqui faria
     esta tabela discordar do device que ela mesma vai reescrever um método
     depois — que é o defeito que esta camada existe para fechar.
