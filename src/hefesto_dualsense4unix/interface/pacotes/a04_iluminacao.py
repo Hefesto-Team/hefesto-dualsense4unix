@@ -2344,7 +2344,23 @@ def _a_cor_guardada(cru: dict[str, Any] | None,
     return (int(r), int(g), int(b))
 
 
-@gesto("04-iluminacao.html", "cor")
+# OS TRÊS DECLARAM `grava=` DESDE 09/09/2026, e a declaração ficou para trás de
+# uma cura por UM DIA. Em 08/09 o `_escrever_a_cor` passou a gravar a escolha no
+# perfil (`COR-NO-DISCO-01`, commit `4f616f3e`) — era a cura do defeito que ela
+# viu: o controle branco oscilando entre a cor dela e o azul, porque a escolha
+# não estava em disco nenhum. Os três gestos aprenderam a escrever e nenhum
+# entrou em `ESCREVEM`.
+#
+# É A QUINTA VEZ QUE ESTA LISTA FICA PARA TRÁS DE UMA CURA, e as cinco têm a
+# mesma forma: quem ensina um gesto a gravar mexe no PACOTE e não lembra da
+# régua. O preço é medido e está no cabeçalho de
+# `test_todo_gesto_que_grava_esta_protegido.py`: sem a declaração, a prova de
+# clique roda com o daemon vivo e ESCREVE NO PERFIL DELA a cada volta.
+#
+# QUEM ACHOU FORAM DOIS AGENTES DO LOTE-0909, cada um por conta própria, e
+# nenhum portão pegou — este teste não está no `portoes.sh`. O `--rapido`
+# também não o veria; a suíte inteira o via, e a suíte roda no fim.
+@gesto("04-iluminacao.html", "cor", grava="save_profile")
 def cor(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
     """Ela clicou num tom. A cor vai AO CONTROLE NA HORA.
 
@@ -2512,7 +2528,7 @@ def _quem_e(ctx: Contexto, c: dict[str, Any]) -> str:
     return f"{numero} ({modelo})" if modelo else numero
 
 
-@gesto("04-iluminacao.html", "apagar")
+@gesto("04-iluminacao.html", "apagar", grava="save_profile")
 def apagar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     """"Desligar": a barra vai a preto.
 
@@ -2536,7 +2552,7 @@ def apagar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     _escrever_a_cor(ctx, p, uniq, (0, 0, 0), apagando=True)
 
 
-@gesto("04-iluminacao.html", "reenviar")
+@gesto("04-iluminacao.html", "reenviar", grava="save_profile")
 def reenviar(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
     """A caixa `#RRGGBB` é o botão: a cor que está escrita vai ao controle de novo.
 
