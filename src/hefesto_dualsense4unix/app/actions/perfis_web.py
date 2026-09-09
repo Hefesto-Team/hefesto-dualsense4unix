@@ -535,6 +535,7 @@ def _linhas_da_lista(
 #: ``len(SECOES_POR_CONTROLE)``, como o ``QUANTAS_SECOES`` do gerador.
 _EXTENSO: dict[int, str] = {
     1: "um", 2: "dois", 3: "três", 4: "quatro", 5: "cinco", 6: "seis",
+    7: "sete",
 }
 
 

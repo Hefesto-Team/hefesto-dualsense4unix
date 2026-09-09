@@ -375,7 +375,10 @@ def test_a_frase_da_linha_sem_ajuste_conta_os_ajustes_certos() -> None:
     """
     from hefesto_dualsense4unix.profiles.schema import MatchAny, Profile
 
-    esperado = {4: "quatro", 5: "cinco", 6: "seis"}[
+    # DIGITADO AQUI DE PROPÓSITO — é a segunda opinião sobre o número, e ler a
+    # tabela do produto faria a régua concordar com ele por construção. O
+    # `sete` entrou em 08/09/2026, com a `mascara` (MASCARA-NO-PERFIL-01).
+    esperado = {4: "quatro", 5: "cinco", 6: "seis", 7: "sete"}[
         len(perfis_web.SECOES_POR_CONTROLE)]
     sem_nada = Profile(name="sem nada", match=MatchAny(), controllers={})
     linhas = perfis_web._linhas_da_guarda([dict(MESA[0])], sem_nada)

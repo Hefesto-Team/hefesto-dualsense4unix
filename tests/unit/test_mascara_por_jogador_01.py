@@ -310,10 +310,19 @@ def test_sem_identidade_o_vpad_se_comporta_exatamente_como_antes() -> None:
 def test_a_frase_de_10_08_vale_so_para_o_mode() -> None:
     """A decisão de 15/08 mora no esquema, não só no documento.
 
-    O esquema é o que a próxima pessoa lê quando pergunta *"por que a máscara
-    não é um campo daqui?"*. Enquanto a frase antiga estiver ali, ela responde
-    a pergunta ERRADA — e foi ela que segurou o `ExternalMaskRegistry` desligado
-    por oito dias.
+    O esquema é o que a próxima pessoa lê quando pergunta *"de quem é a
+    máscara?"*. Enquanto a frase antiga estiver ali, ela responde a pergunta
+    ERRADA — e foi ela que segurou o `ExternalMaskRegistry` desligado por oito
+    dias.
+
+    **A PERGUNTA MUDOU EM 08/09/2026, e as asserções continuam as mesmas.** Ela
+    era *"por que a máscara não é um campo daqui?"*; com a decisão dela
+    (MASCARA-NO-PERFIL-01, *"pode entrar sim"*) a máscara VIROU campo — o
+    `ControllerOverrides.mascara`. O que esta régua guarda não caducou: a frase
+    de 10/08 continua valendo só para o `mode`, e o esquema continua tendo de
+    dizer ONDE a máscara é resolvida (`external_mask.py`, hoje como cache do
+    perfil). Quem cobra o campo é
+    `tests/unit/test_perfil_por_controle_o_campo_espera_o_caminho.py`.
     """
     from hefesto_dualsense4unix.profiles.schema import ControllerOverrides
 

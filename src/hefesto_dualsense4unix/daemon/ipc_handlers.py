@@ -6367,7 +6367,30 @@ class IpcHandlersMixin:
         `set_mask` e `clear_mask` existiam no registro e não tinham UM chamador
         em `src/`.
 
-        `flavor` VAZIO LIMPA a escolha, e o aparelho volta a herdar a da sessão.
+        **O GESTO GRAVA NO PERFIL DESDE 08/09/2026** (MASCARA-NO-PERFIL-01,
+        decisão dela: *"pode entrar sim"*). A forma do gesto **não mudou** — o
+        chip do cartão continua chamando `gamepad.mask.set {uniq, flavor}` —, e
+        o que mudou é onde a escolha para: `controllers[uniq].mascara` do perfil
+        ATIVO, que é a mesma estrada que o `rumble.motores.set` já usava. Não
+        nasceu uma segunda.
+
+        SÃO DUAS ESCRITAS, e a ordem é o contrato:
+
+        1. **o registro vivo** (`external_mask.registro_de_mascaras`) — é ele
+           que `mascara_efetiva` consulta na criação de todo vpad e no tique do
+           co-op, e é o que faz a escolha valer AGORA. Sem esta escrita, a
+           máscara nova só entraria na próxima ativação de perfil, com a tela
+           dizendo "aplicado" sobre um vpad que não mudou;
+        2. **o perfil ativo**, que é o DONO — é o que faz a escolha sobreviver à
+           troca de perfil e voltar amanhã.
+
+        SEM PERFIL ATIVO (ou com um `uniq` que não é MAC de peça) a escrita 2
+        não acontece e a 1 acontece do mesmo jeito: a resposta diz `gravado:
+        false` com o `motivo`, em vez de recusar o gesto inteiro. Recusar
+        deixaria a tela sem máscara nenhuma em uma máquina sem perfil, que é
+        pior que uma escolha que dura a sessão.
+
+        `flavor` VAZIO LIMPA a escolha, e o aparelho volta a herdar a do perfil.
         É a mesma semântica de `ControllerOverrides`: campo em branco = sem
         opinião. Sem isso não haveria como desfazer uma escolha pela tela — e
         um registro em que só se entra é uma armadilha.
@@ -6396,19 +6419,77 @@ class IpcHandlersMixin:
         bruto = params.get("flavor")
         if bruto is None or str(bruto).strip() == "":
             limpou = registro_de_mascaras().clear_mask(uniq)
+            perfil, gravado, motivo = self._mascara_no_perfil(uniq, None)
             return {"status": "ok", "uniq": uniq, "flavor": None,
-                    "mudou": bool(limpou)}
+                    "mudou": bool(limpou), "perfil": perfil,
+                    "gravado": gravado, "motivo": motivo}
 
         flavor = normalizar_mascara(bruto)
         if flavor is None:
             aceitos = ", ".join(sorted(mascaras_validas()))
             raise ValueError(
                 f"gamepad.mask.set: máscara desconhecida {bruto!r} — "
-                f"aceito: {aceitos}, ou vazio para herdar a da sessão")
+                f"aceito: {aceitos}, ou vazio para herdar a do perfil")
 
         mudou = registro_de_mascaras().set_mask(uniq, flavor)
+        perfil, gravado, motivo = self._mascara_no_perfil(uniq, flavor)
         return {"status": "ok", "uniq": uniq, "flavor": flavor,
-                "mudou": bool(mudou)}
+                "mudou": bool(mudou), "perfil": perfil,
+                "gravado": gravado, "motivo": motivo}
+
+    def _mascara_no_perfil(
+        self, alvo: str, mascara: str | None
+    ) -> tuple[str | None, bool, str | None]:
+        """Grava a máscara de UMA peça no perfil ATIVO (MASCARA-NO-PERFIL-01).
+
+        Devolve ``(nome do perfil, gravou?, motivo de não ter gravado)``. O
+        motivo é `None` quando gravou — e é ele que a tela pode mostrar em vez
+        de um "aplicado" sobre nada.
+
+        A CHAVE É A MESMA DO `rumble.motores.set`, e pela mesma medição:
+        `_chave_de_peca_que_grava` exige doze dígitos hex e recusa o vpad. Um
+        `path:` que por acaso tenha letras hex vira uma chave que motor nenhum
+        casa — para LER isso é inofensivo, para GRAVAR é a escolha dela sumindo
+        calada.
+
+        NADA MUDOU = NÃO REGRAVA. Um `save_profile` troca a data do arquivo e
+        faz o daemon reaplicar o perfil inteiro; no meio de uma partida isso não
+        é de graça, e aqui custaria mais que no motor — a reaplicação passa por
+        `apply_controller_mascaras`, e é justamente ela que pode derrubar vpad.
+
+        A ENTRADA VAZIA SOME DO MAPA, como no rascunho da janela
+        (`app/draft_config._override_vazio`): um `uniq` apontando para `{}` no
+        JSON faria a próxima leitura achar que aquela peça tem opinião, e a
+        coluna "Ajuste próprio" da aba Perfis acenderia sobre nada.
+        """
+        from hefesto_dualsense4unix.profiles.loader import load_profile, save_profile
+        from hefesto_dualsense4unix.profiles.schema import ControllerOverrides
+
+        chave = self._chave_de_peca_que_grava(alvo)
+        if not chave:
+            return None, False, "sem_endereco"
+        nome = getattr(self.store, "active_profile", None)
+        if not isinstance(nome, str) or not nome:
+            return None, False, "sem_perfil"
+        perfil = load_profile(nome)
+        atuais = dict(perfil.controllers or {})
+        dele = atuais.get(chave) or ControllerOverrides()
+        if getattr(dele, "mascara", None) == mascara:
+            return nome, False, "sem_mudanca"
+        novo = dele.model_copy(update={"mascara": mascara})
+        if all(
+            getattr(novo, campo, None) is None
+            for campo in ControllerOverrides.model_fields
+        ):
+            atuais.pop(chave, None)
+        else:
+            atuais[chave] = novo
+        save_profile(perfil.model_copy(update={"controllers": atuais or None}))
+        logger.info(
+            "gamepad_mascara_gravada_no_perfil",
+            uniq=chave, perfil=nome, mascara=mascara,
+        )
+        return nome, True, None
 
     async def _handle_gamepad_emulation_set(
         self, params: dict[str, Any]
