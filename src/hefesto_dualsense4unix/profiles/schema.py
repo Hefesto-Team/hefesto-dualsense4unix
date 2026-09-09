@@ -1154,6 +1154,15 @@ class ControllerOverrides(BaseModel):
     (merge POR CAMPO na aplicação, PERFIL-01 — override parcial nunca apaga a
     cor global no replug).
 
+    **A EXCEÇÃO É UMA, E É DECISÃO DELA (09/09/2026):** em ``mascara``, ``None``
+    quer dizer *"volte ao padrão"* — *"Default é Hefesto dualsense padrão"*. O
+    controle que o perfil não declara **perde** a máscara própria que estivesse
+    valendo, em vez de mantê-la. A diferença existe porque a máscara é a única
+    seção cujo estado anterior sobreviveria FORA do perfil: as outras seis são
+    reaplicadas por inteiro a cada ativação, e a máscara morava num registro
+    próprio que atravessava a troca. Ver o campo, lá embaixo, e
+    ``manager.apply_controller_mascaras``, que mede o que a devolução custa.
+
     O ALVO É TUDO — DECISÃO DELA, 02/09/2026
     -----------------------------------------
     *"acelerômetro, giroscópio, e todas as demais features. **é tudo mesmo**"*
@@ -1191,7 +1200,12 @@ class ControllerOverrides(BaseModel):
       ``manager.apply_controller_mics`` chama ``apply_mic(uniq=...)`` →
       ``apply_profile_mic(uniq=...)`` → ``set_microphone_mute(uniq=...)``. É um
       subconjunto — só o ``muted`` —, e ``ControllerMicOverride`` diz por
-      medição o que ficou de fora e o que cada um espera.
+      medição o que ficou de fora e o que cada um espera;
+    - ``mascara``, desde MASCARA-NO-PERFIL-01 (08/09/2026, decisão dela — *"pode
+      entrar sim"*): ``manager.apply_controller_mascaras`` escreve a máscara
+      daquela peça no registro que ``external_mask.mascara_efetiva`` consulta na
+      criação de cada gamepad virtual, e é o perfil que passa a mandar (ver o
+      item 3 da fila abaixo, que dizia o contrário até 08/09).
 
     Fora por decisão, e não por falta de caminho:
     - ``label`` — identidade visível é outra frente (4P-03);
@@ -1252,15 +1266,35 @@ class ControllerOverrides(BaseModel):
        cada um carrega o próprio ``flavor``, então a máscara **é do jogador**,
        com a do jogo como padrão herdado.
 
-       E mesmo assim a máscara não é campo daqui, por uma razão diferente e
-       medida: **trocar a máscara derruba e recria o gamepad virtual** — num
-       campo de perfil, cada troca automática (cada alt-tab) faria o controle
-       sumir e voltar no meio da partida. Por isso a escolha por unidade mora
-       em ``daemon/subsystems/external_mask.py``, chaveada pela identidade do
-       APARELHO e persistida em arquivo próprio, com a MESMA semântica de
-       override deste modelo: sem escolha registrada, o jogador herda a máscara
-       do jogo. Trazê-la para cá exige antes uma troca de máscara que NÃO
-       derrube o vpad.
+       **A MÁSCARA SAIU DESTA FILA EM 08/09/2026 — decisão dela, MASCARA-NO-
+       PERFIL-01.** A pergunta foi *"a máscara por controle deve entrar no
+       perfil, junto com luz, gatilho, vibração, som, mic e sensores — ou fica
+       da máquina?"*, e a resposta foi *"pode entrar sim"*. **FATO
+       SUBSTITUÍDO:** esta entrada dizia *"a máscara não é campo daqui"* e que
+       trazê-la *"exige antes uma troca de máscara que NÃO derrube o vpad"*. O
+       campo é o ``mascara`` declarado abaixo, e a razão de a porta ter sido
+       aberta sem essa troca é a consequência que ela sentiu: **trocar de perfil
+       trocava o modo e não trocava a máscara de ninguém** — um perfil de jogo
+       que precisa do P2 em Xbox não tinha como dizer isso.
+
+       O custo medido continua de pé e não some por decisão: trocar a máscara
+       **derruba e recria o gamepad virtual**. O que o desenho garante é que
+       isso só aconteça para quem MUDOU — ``apply_controller_mascaras`` escreve
+       peça por peça e ``external_mask.vpad_ficou_para_tras`` compara antes de
+       recriar, então um perfil que repete a máscara de alguém não o faz sumir
+       no meio da partida (é a regra da NUMA-03). Isso vale inclusive para o
+       perfil CALADO, que desde 09/09/2026 devolve todo mundo ao padrão
+       (decisão dela): a devolução apaga a entrada, mas só cai o vpad de quem
+       estava FORA do padrão — medido, 0 de 4 com a mesa já no padrão.
+
+       ONDE A MÁSCARA É RESOLVIDA, e a resposta continua num arquivo só:
+       ``daemon/subsystems/external_mask.py``. O que mudou é o papel dele — de
+       DONO da escolha para CACHE do perfil ativo, consultado por
+       ``mascara_efetiva`` na criação de todo vpad e no tique do co-op. Ler o
+       perfil do disco naquele tique seria a tempestade de syscalls que o mapa
+       de motores do ``gamepad.py`` já pagou uma vez.
+
+       O ``mode`` fica na fila; ele é o eixo que continua sendo da sessão.
 
     4. ``mouse``, ``key_bindings``, ``button_actions``, ``teclado_emulado`` e
        ``suppress_desktop_emulation``. Os cinco esbarram na MESMA medição, e
@@ -1297,17 +1331,47 @@ class ControllerOverrides(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
-    # SÃO SEIS, e a tela oferece nove. O que falta, e o CAMINHO que cada um
+    # SÃO SETE, e a tela oferece nove. O que falta, e o CAMINHO que cada um
     # espera antes de poder entrar, está na fila da docstring acima — ordenada
     # por custo. O `mic` entrou em 03/09/2026 pelo `muted`, que é o campo dele
     # cuja escada carrega o `uniq` em todo degrau; o `sensores` entrou em
-    # 04/09/2026, quando o interruptor que ele prometia passou a existir.
+    # 04/09/2026, quando o interruptor que ele prometia passou a existir; a
+    # `mascara` entrou em 08/09/2026, por decisão dela — e é a primeira que não
+    # é uma SEÇÃO, e sim um valor só.
     leds: LedsConfig | None = None
     triggers: TriggersConfig | None = None
     rumble: ControllerRumbleOverride | None = None
     speaker: ProfileSpeakerConfig | None = None
     mic: ControllerMicOverride | None = None
     sensores: ControllerSensoresOverride | None = None
+    #: *"Como este controle aparece nos jogos"*, SÓ desta peça — MASCARA-NO-
+    #: PERFIL-01 (08/09/2026, decisão dela: *"pode entrar sim"*).
+    #:
+    #: ``None`` = **volte ao padrão**, e esta é a ÚNICA seção desta classe em
+    #: que ``None`` não quer dizer *"sem opinião"*. É decisão dela, 09/09/2026:
+    #: *"Default é Hefesto dualsense padrão"*. O controle que o perfil não
+    #: declara perde a máscara própria e passa a seguir o
+    #: ``mode.gamepad_flavor`` do perfil e, sem ele, o
+    #: ``DaemonConfig.gamepad_flavor`` — de fábrica ``dualsense``. Um perfil
+    #: antigo (que nunca falou de máscara) carrega igual e devolve a mesa ao
+    #: padrão; **quem já estava no padrão não tem vpad derrubado**, porque a
+    #: máscara efetiva dele não muda (medido em
+    #: ``manager.apply_controller_mascaras``: 0 de 4).
+    #:
+    #: A ORDEM DE DECISÃO, e ela é UMA só desde esta sprint:
+    #: ``controllers[uniq].mascara`` > ``mode.gamepad_flavor`` > o padrão. Os
+    #: degraus 2 e 3 são resolvidos por ``external_mask.mascara_efetiva``; o
+    #: degrau 1 é EXECUTADO por ``manager.apply_controller_mascaras``, que
+    #: escreve no cache que aquela função consulta — e o apaga de quem o perfil
+    #: não declara. A régua da ordem mede o comportamento dos três degraus, não
+    #: o texto: ``tests/unit/test_a_mascara_mora_no_perfil.py``.
+    #:
+    #: TIPO FECHADO, e é o mesmo do ``mode.gamepad_flavor``: um valor que o
+    #: vpad não saiba criar não pode chegar ao disco. O ``MascaraDeGamepad`` é
+    #: comparado com ``external_mask.mascaras_validas()`` nos dois sentidos por
+    #: ``tests/unit/test_a_mascara_nintendo_pro_atravessa_a_casa.py``, então
+    #: uma máscara nova não precisa ser declarada aqui de novo.
+    mascara: MascaraDeGamepad | None = None
 
 
 # Regex para tokens aceitos em `Profile.key_bindings` values (FEAT-KEYBOARD-PERSISTENCE-01).

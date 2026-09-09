@@ -183,7 +183,13 @@ def test_todo_gesto_do_html_tem_dono_ou_esta_declarado_sem_dono(a07):
                                   # O `adicionar-lancador` NÃO está aqui de
                                   # propósito: o botão global mora no HTML
                                   # estático, e se ele sumir esta régua acusa.
-                                  "esquecer-lancador"}, (
+                                  "esquecer-lancador",
+                                  # A CURA POR ESTRADA ENTROU EM 09/09/2026 e
+                                  # cai na mesma categoria: ela só nasce no
+                                  # cartão LOCALIZADO que tem por onde receber
+                                  # o ambiente, e a página estática nasce de
+                                  # `cartoes(None)` — antes de procurar nada.
+                                  "consertar-lancador"}, (
         f"estes gestos têm dono e não aparecem em estado nenhum da página: "
         f"{sorted(com_dono - no_html)}")
 
@@ -500,7 +506,7 @@ def test_esta_regua_nao_alcanca_a_biblioteca_dela():
         "`conftest` caiu, e um teste desta aba passaria a ler a biblioteca dela")
 
 
-def test_o_piso_de_gestos_da_aba_e_catorze(a07):
+def test_o_piso_de_gestos_da_aba_so_sobe(a07):
     """Ele SÓ SOBE. Uma queda não aparece na tela: o clique não faz nada.
 
     SUBIU DE SEIS PARA SETE em 02/09/2026, com o "Voltar a perguntar" que a
@@ -514,12 +520,19 @@ def test_o_piso_de_gestos_da_aba_e_catorze(a07):
     dela (`D-0609-STEAM-DIVIDIDO`) trouxe para esta aba — "Desligar o Steam
     Input", "Este jogo não funciona" e "Deixar tudo pronto"; e DE CATORZE PARA
     DEZESSEIS em 08/09/2026, com o registro do lançador que o Hefesto não
-    conhece (pedido dela) — «Localizar este Lançador» e «Tirar daqui».
+    conhece (pedido dela) — «Localizar este Lançador» e «Tirar daqui»; e DE
+    DEZESSEIS PARA DEZESSETE em 09/09/2026, com a CURA POR ESTRADA
+    (LANCADORES-ZERO-01 §5.3): o «Consertar» dos lançadores que o atalho de
+    inicialização da Steam não alcança.
+
+    **O NOME DESTA RÉGUA DIZIA `catorze` E O PISO JÁ ERA 16** — ele envelheceu
+    duas vezes em três dias, porque nome com número dentro é um fato a manter
+    em dois lugares. O nome de agora diz a REGRA, que não muda: o piso só sobe.
     """
     import pacotes
 
     quantos = sum(1 for (p, _) in pacotes.GESTOS if p == PAGINA)
-    assert quantos >= a07.PISO_DA_ABA == 16, (
+    assert quantos >= a07.PISO_DA_ABA == 17, (
         f"{PAGINA} tem {quantos} gestos com dono e o piso é {a07.PISO_DA_ABA}")
 
 

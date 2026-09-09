@@ -317,7 +317,15 @@ def test_nenhuma_aba_declara_orfao_que_tem_dono(ctx_com):
         #                         botão que não existe mais não é dívida: é
         #                         fantasma.
         "05-vibracao.html": ["lado:ligado"],
-        "07-lancadores.html": ["criar-perfil", "heroic"],
+        # **`heroic` SAIU EM 09/09/2026, CURADO** — `LANCADORES-ZERO-01`. Ele
+        # dizia *"o produto procura os seis e sabe dizer se estão aqui, mas não
+        # LÊ a biblioteca de nenhum deles"*, e as três afirmações caíram na
+        # mesma leva: `integrations/censo_dos_lancadores` abre os cinco
+        # catálogos, o selo do achado é `LOCALIZADO`, e a linha de baixo diz a
+        # contagem. A cura está escrita no `SEM_DONO` do pacote
+        # (`a07_lancadores`), que é o que esta régua exige de quem tira um da
+        # lista — sem isso a dívida vira fantasma.
+        "07-lancadores.html": ["criar-perfil"],
         "09-sistema.html": ["plugins"],
     }, (
         f"os órfãos mudaram: {orfaos}. Cada um aqui é um valor que a tela mostra "

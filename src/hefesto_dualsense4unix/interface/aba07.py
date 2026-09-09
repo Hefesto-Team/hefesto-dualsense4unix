@@ -240,7 +240,61 @@ CHEGAM = f"Os {N_CTRL} controles chegam."
 
 CSS = """
   /* ---------- Lançadores ---------- */
-  .lancadores{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  /* A GRADE ROLA POR DENTRO, E O `.miolo` PARA DE ROLAR — ROLAGEM-01, 09/09/2026.
+     Achado dela em 08/09: *"duas paginas ficaram com barra de navegação  (noqa-acento: citação dela)
+     vertical. tipo a gatilhos e lançadores."*
+
+     A CAUSA, MEDIDA NO WEBKIT VIVO com os quatro na mesa e o daemon dela:
+     `DIV.miolo 668>564`. O `.miolo` tem 564px de caixa; o conteúdo desta aba
+     pediu **668**. Não é a `.janela`, que fecha em 775/775 nas dez — é o filho.
+
+     E O CONTEÚDO NÃO TEM TETO, que é o que decide o desenho. Medido duas vezes
+     na MESMA sessão, com meia hora de intervalo: `.lancadores` foi de **493 a
+     534px** sozinha, porque o cartão da Steam saiu de «CHEGAM» para «NÃO
+     CHEGAM» com um jogo pendente — e a lista de pendências (`.lanc-fora`) tem o
+     tamanho que os jogos DELA tiverem. Some-se «Adicionar novo Lançador», que
+     cria cartão. *Quantos lançadores ela tem, e quantos jogos com pendência, é
+     dela — e a caixa não pode crescer com eles.*
+
+     É a mesma frase que declara o `DIV.rolo` da `10-perfis` em `POR_DESENHO`
+     (`scripts/ensaios/a_janela_cabe_no_que_ela_ve.py`), e por isso a cura é a
+     mesma: o `.quadro` vira `estica`, a GRADE ganha a barra, e o que fica
+     pregado acima dela é o que ela precisa ler sem rolar — o título, a conta
+     («N localizados · N com impedimentos») e os três botões. Hoje o inverso
+     acontecia: a página inteira rolava e a conta saía de vista.
+
+     O QUE FOI MEDIDO E NÃO SERVIU — três hipóteses derrubadas na bancada, para
+     ninguém as repetir:
+       * **três colunas** em vez de duas: `.miolo` foi de 627 para **669**. A
+         coluna estreita faz a prosa quebrar em mais linhas do que a fileira que
+         se economiza;
+       * **o caminho do lançador numa linha só** (`.lanc-diz code` com
+         reticências): **668**, pior — `display:inline-block` joga o `<code>`
+         para uma linha de caixa própria;
+       * **espremer** (prosa cortada em 2 linhas, botões à direita da prosa,
+         a fileira de botões subindo para o título): o melhor par chegou a
+         **592**, ainda 28px acima — e ainda assim quebraria no dia seguinte,
+         porque o teto não existe.
+
+     `align-content:start` é o que impede a grade de esticar as fileiras quando
+     sobra espaço: sem ele, com poucos cartões, cada um viraria um retângulo
+     alto e vazio — o defeito que o `.quadro.estica` já teve em 27/08. */
+  /* `minmax(0,1fr)` E NÃO `1fr` — a coluna da direita saía PELA BORDA, e a foto
+     de 09/09 mostra que ela já saía antes desta sprint. `1fr` é
+     `minmax(auto,1fr)`, e o mínimo `auto` de uma coluna de grade é o
+     **min-content** do que há dentro. Dentro há o caminho do lançador num
+     `<code>`, e um caminho não tem espaço onde quebrar:
+     `/home/…/flatpak/exports/share/applications/net.lutris.Lutris.desktop`
+     mede ~470px de min-content, a coluna se recusa a encolher, e as duas somam
+     mais do que a caixa — o cartão da direita ficava cortado ao meio, sem borda
+     e com a prosa decepada.
+     `minmax(0,…)` deixa a coluna encolher, e o `overflow-wrap:anywhere` do
+     `<code>` dá ao caminho onde quebrar. As duas juntas: sem a segunda, o
+     caminho vazaria do cartão em vez de vazar da grade. */
+  .lancadores{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;
+              flex:1;min-height:0;overflow-y:auto;scrollbar-gutter:stable;
+              align-content:start}
+  .lanc-diz code{overflow-wrap:anywhere}
   .lanc{border:1px solid var(--border-sutil);border-radius:8px;background:var(--app-bg);padding:11px 13px}
   .lanc.chega{border-color:rgba(80,250,123,.28)}
   .lanc.impede{border-color:var(--orange)}
@@ -423,7 +477,7 @@ QUADRO = dl.Quadro(lancadores=dl.cartoes(None))
 CARTOES = dl.cartoes_html(QUADRO.lancadores)
 
 MIOLO = f'''
-    <div class="quadro">
+    <div class="quadro estica">
       <div class="quadro-topo">
         <span class="quadro-titulo">De onde os seus jogos vêm</span>
         <span class="ajuda">?<span class="dica">

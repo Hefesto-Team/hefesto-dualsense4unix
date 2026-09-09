@@ -3406,7 +3406,7 @@ def _teto_do_controle(
     A CHAVE É O `uniq` NORMALIZADO — doze hexa minúsculos sem separador, e a
     normalização é do :func:`_so_hex` deste arquivo, nunca escrita de novo. É o
     que `Profile._validate_controllers_keys` canoniza ao carregar
-    (`profiles/schema.py:1527-1568`), logo é o que está no disco; procurar por
+    (`profiles/schema.py:1591-1632`), logo é o que está no disco; procurar por
     `aa:bb:…` não acharia nada e a tela mostraria "Segue o global" para sempre.
     A cópia que morava aqui tinha perdido o `.strip()` do helper, e um `uniq`
     com espaço ou quebra fazia a gravação cair numa chave e a pintura procurar
@@ -4587,7 +4587,7 @@ def mic_existe(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     QUEM CONSOME, e é por isso que o clique vale AGORA: o
     `_handle_machine_declare` relê o disco, rebinda `daemon._maquina` e SOBE OU
     DESCE o subsystem `bt_mic` no mesmo pedido — a nota está no próprio handler
-    (`ipc_handlers.py:6598`, QUATRO-MICROFONES-01): *"o 'Aplicar' tem de VALER
+    (`ipc_handlers.py:6678`, QUATRO-MICROFONES-01): *"o 'Aplicar' tem de VALER
     agora"*. Sem essa parte, a escolha dela só valeria no próximo início do
     daemon.
 
@@ -4678,7 +4678,7 @@ def _com_o_teto(prof: Any, chave: str, policy: str | None) -> Any:
     `app/draft_config.with_controller_rumble:1193-1223` já decidiu que
     "intensidade igual à global não vira override". A razão é aritmética:
     `_controllers_to_rumble_scales` calcula `mult / base` e DESCARTA o fator
-    1,0 (`profiles/manager.py:2196-2199`) — guardar o override só deixaria no
+    1,0 (`profiles/manager.py:2329-2332`) — guardar o override só deixaria no
     disco uma opinião que o motor ignora.
     """
     from hefesto_dualsense4unix.profiles.schema import (
@@ -5160,7 +5160,7 @@ def ignorar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
 # OS CINCO QUE GRAVAM SÃO **SEM ECO**, e isso foi MEDIDO em 02/09/2026, não
 # deduzido: as chaves de topo do `state_full` do daemon vivo são 47, e nenhuma
 # delas é `mapa` nem `maquina`. O caminho é `machine_declare` →
-# `_handle_machine_declare` (`daemon/ipc_handlers.py:6598`) → `maquina.json`, e
+# `_handle_machine_declare` (`daemon/ipc_handlers.py:6678`) → `maquina.json`, e
 # ali ele PARA. Nada volta pelo estado. Ver a nota do `SEM_ECO`, no fim deste
 # arquivo, para o que isso significa para quem lê a régua do piloto.
 

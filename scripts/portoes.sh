@@ -85,6 +85,16 @@ rapido|nada-mockado|pytest|tests/unit/test_portao_nada_e_afirmado_sem_prova.py
 # um CSV e o fonte do `schema.py`, custa milissegundos.
 rapido|quatro-respostas|py|scripts/check_cabo_bt_perfil_controle.py
 rapido|quatro-respostas-morde|pytest|tests/unit/test_portao_a_regua_das_quatro_respostas.py
+# A QUINTA PERGUNTA — TUDO-FUNCIONA-01, 09/09/2026. A cobrança dela: "pq o
+# programa de dias a fio é de brinquedo? uma prova de conceito?". As quatro
+# acima leem `*_aciona` ("o Hefesto MEXE nisso?"); esta lê `*_ate_onde_foi`
+# ("até onde a PROVA chegou?"), e a diferença é o critério do primeiro degrau:
+# *tratar MONTOU como «funciona» é a mentira mais cara desta casa*. Como a tela
+# não confessa dívida nossa (ordem dela de 07/09), a falta mora aqui — com
+# CUSTO e com DONA, e os custos NUNCA somados numa frase só. Camada RÁPIDA:
+# 76 ms, e reaproveita as duas réguas donas (a lista de features e a escada).
+rapido|ate-onde-a-prova-chegou|py|scripts/check_ate_onde_a_prova_chegou.py
+rapido|ate-onde-a-prova-chegou-morde|pytest|tests/unit/test_portao_a_quinta_pergunta_morde.py
 rapido|mapa-de-canais|py|scripts/gerar-mapa.py --check
 rapido|fatos-de-tela|py|scripts/gerar-fatos-de-tela.py --check
 rapido|fala-de-tela|py|scripts/validar-fala-de-tela.py --all

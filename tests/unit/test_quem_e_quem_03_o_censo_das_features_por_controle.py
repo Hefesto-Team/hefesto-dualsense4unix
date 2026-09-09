@@ -118,9 +118,11 @@ class LinhaDoCenso:
 
 
 #: NOVE LINHAS, SEMPRE NOVE. A tela oferece nove ajustes por controle; o perfil
-#: carrega seis deles. As três restantes estão declaradas onde estão, com a
-#: razão medida — que é o que impede a tabela de virar ficção quando alguém
-#: olhar daqui a um mês.
+#: carrega SETE deles desde 08/09/2026 — a `mascara` entrou com a decisão dela
+#: (MASCARA-NO-PERFIL-01: *"pode entrar sim"*), e a linha dela deixou de dizer
+#: *"NÃO no perfil, por medição"*. As duas restantes estão declaradas onde
+#: estão, com a razão medida — que é o que impede a tabela de virar ficção
+#: quando alguém olhar daqui a um mês.
 CENSO: tuple[LinhaDoCenso, ...] = (
     LinhaDoCenso(
         feature="barra de luz",
@@ -217,23 +219,17 @@ CENSO: tuple[LinhaDoCenso, ...] = (
     ),
     LinhaDoCenso(
         feature="o controle é visto como",
-        nivel="ausente",
-        campo=None,
+        nivel="por-controle",
+        campo="mascara",
         subcampo=None,
-        sem_opiniao="",
+        sem_opiniao="esta peça não escolheu como aparecer nos jogos",
         quem_responde=(
-            "a escolha registrada para aquele jogador; sem escolha registrada, "
-            "ele herda a máscara do jogo"
+            "o `mode.gamepad_flavor` do perfil e, sem ele, o padrão do daemon "
+            "— a mesma herança de sempre, agora com o perfil como dono"
         ),
-        dono="A-MASCARA-POR-CONTROLE-01",
-        chave_do_mapa="",
-        mora_em=(
-            "`daemon/subsystems/external_mask.py`, chaveada pela identidade do "
-            "APARELHO e persistida em arquivo próprio — e NÃO no perfil, por "
-            "medição: trocar a máscara derruba e recria o gamepad virtual, "
-            "então num campo de perfil cada troca automática (cada alt-tab) "
-            "faria o controle sumir e voltar no meio da partida"
-        ),
+        dono="MASCARA-NO-PERFIL-01",
+        chave_do_mapa="plataforma.vpad",
+        mora_em="",
     ),
     LinhaDoCenso(
         feature="touchpad",

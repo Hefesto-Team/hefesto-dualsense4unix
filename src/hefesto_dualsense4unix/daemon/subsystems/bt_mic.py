@@ -417,6 +417,16 @@ class BtMicSubsystem:
         self._pedidor_anterior: Any = None
         #: `(dizedor, esquecedor, leitor)` que estava instalado antes de nós.
         self._dizedor_anterior: tuple[Any, Any, Any] | None = None
+        self._numerador_anterior: Any = None
+        #: O backend do daemon (`DaemonContext.controller`). É por ele que este
+        #: subsystem enxerga a MESA INTEIRA — o rádio e o CABO —, e não só os
+        #: nós de Bluetooth que o gerenciador reconcilia. Ver `uniqs_na_mesa`.
+        self._backend: Any = None
+        #: `{uniq: nome do nó}` dos canais do CABO que ESTE supervisor ergueu.
+        #: Só o que está aqui é fechado por ele: o canal do rádio é da ponte, e
+        #: derrubar o do vizinho pelas costas do dono é o defeito que
+        #: `PonteMicBluetooth._fechar_a_source` já nomeia do outro lado.
+        self._canais_do_cabo: dict[str, str] = {}
 
     # -- contrato Subsystem ----------------------------------------------
 
@@ -571,6 +581,113 @@ class BtMicSubsystem:
                 vivos.add(uniq)
         return frozenset(vivos)
 
+    # -- a mesa inteira: o rádio E o cabo ---------------------------------
+
+    def _controles_da_mesa(self) -> list[dict[str, Any]]:
+        """`describe_controllers()` do backend, ou `[]` quando ele não sabe.
+
+        `getattr` porque nem todo backend é o de produção: os dublês da suíte e
+        o backend de um controle só não conhecem a pergunta, e um backend que
+        não conhece a pergunta não pode virar portão silencioso — é a mesma
+        regra de `mic_da_mesa._bordas`.
+        """
+        descrever = getattr(self._backend, "describe_controllers", None)
+        if not callable(descrever):
+            return []
+        try:
+            itens = descrever()
+        except Exception:  # pragma: no cover - defensivo
+            logger.debug("bt_mic_mesa_ilegivel", exc_info=True)
+            return []
+        if not isinstance(itens, list):
+            return []
+        return [item for item in itens if isinstance(item, dict)]
+
+    def _conectados_da_mesa(self) -> list[dict[str, Any]]:
+        """Os itens CONECTADOS de `describe_controllers()`, na ordem da tela.
+
+        **A FONTE ÚNICA DAS DUAS LEITURAS, e ela nasceu de uma discordância
+        entre elas — 09/09/2026.** `uniqs_na_mesa` filtrava por `connected` e
+        `numero_do_assento` não. `describe_controllers()` devolve uma entrada
+        por HANDLE ABERTO, não por controle na mesa
+        (`core/backend_pydualsense.describe_controllers`: *"Uma entrada por
+        handle aberto"*), e um handle de controle desligado vem com
+        `connected: False` — com `index` próprio e tudo. As duas leituras se
+        contradiziam nas duas pontas: o desligado ganhava um assento que a mesa
+        não lhe dava, e empurrava para baixo o assento de quem estava ligado.
+
+        **E O ASSENTO É O DA TELA, não o do handle.**
+        `interface/hefesto_vivo._contexto` monta `ctx.conectados` com
+        `[c for c in controllers if c.get("connected", True)]` e numera os
+        cards por `enumerate` DESSA lista — é também assim que a aba Gatilhos
+        monta o `_target_uniq_by_index`. Contar o handle desligado poria
+        «Microfone do Controle 2» no controle cujo card diz 1.
+
+        Um conectado sem `uniq` legível (a key por path, `uniq: None`) CONTA na
+        contagem e não entra no conjunto: ele tem card na tela, logo ocupa
+        assento, mas não há nome por onde pedir canal para ele.
+        """
+        return [item for item in self._controles_da_mesa() if item.get("connected")]
+
+    def uniqs_na_mesa(self) -> frozenset[str]:
+        """Todo controle CONECTADO agora — o do rádio e o do CABO.
+
+        **É ISTO QUE FALTAVA, e o defeito era de perda de dado dela.** Até
+        09/09/2026 este subsystem só enxergava `nos_dualsense_bluetooth()`, e
+        `_esquecer_quem_saiu_da_mesa` tratava *"não está no rádio"* como *"saiu
+        da mesa"*. Medido nesta árvore, com o registro em mãos::
+
+            sub.no_ar("aa:bb:cc:00:00:01", True)        # ela aperta o botão
+              -> {'aabbcc000001': True}  pedidos: ['aabbcc000001']
+            sub._esquecer_quem_saiu_da_mesa([<só o do rádio>])
+              -> {}                     pedidos: []
+
+        O controle do CABO está na mesa dela, com o microfone aceso, e a
+        palavra dela sobre ele era apagada na varredura seguinte —
+        imediatamente, porque `dizer_no_ar` toca a `novidade` e acorda o laço.
+        """
+        vivos: set[str] = set()
+        for item in self._conectados_da_mesa():
+            chave = norm_mac(str(item.get("uniq") or "")) or ""
+            if len(chave) == _UNIQ_HEX:
+                vivos.add(chave)
+        return frozenset(vivos)
+
+    def numero_do_assento(self, uniq: str) -> int | None:
+        """P1..P4 deste controle — a POSIÇÃO na mesa, `None` quando não dá.
+
+        É o número que ela lê no card, e por isso a fonte é a MESMA lista que
+        desenha os cards, filtrada do MESMO jeito: `_conectados_da_mesa`.
+
+        **NÃO é o `index` do item, e a correção é de 09/09/2026.** O `index` do
+        `describe_controllers()` é a posição em `list(self._handles)` — a lista
+        de HANDLES ABERTOS, que conta os desligados. Ler o `index` dava assento
+        a quem não está na mesa e roubava o assento 1 de quem está; a régua é
+        `test_um_controle_desligado_nao_ocupa_assento`. Quem numera os cards
+        dela também não lê o `index`: `interface/hefesto_vivo._contexto` filtra
+        por `connected` e enumera o que sobra.
+
+        **NÃO é `resolve_player_numbers`, e a diferença é medida:** aquele é o
+        número que o JOGO vê, e com o co-op desligado ele responde `1` para
+        todos os controles conectados (`coop.resolve_player_numbers`). Batizar
+        os nós por ele poria quatro «Microfone do Controle 1» na lista dela —
+        um rótulo repetido que mente sobre qual é qual.
+
+        A decisão dela de 09/09 diz *"o número é o assento (P1..P4), como na
+        tela"*, e aceita explicitamente que ele siga o ASSENTO e não o
+        aparelho.
+
+        **A INVARIANTE que isto fecha:** `numero_do_assento(u) is not None`
+        se e somente se `u in uniqs_na_mesa()`.
+        """
+        chave = norm_mac(str(uniq)) or ""
+        if len(chave) != _UNIQ_HEX:
+            return None
+        for posicao, item in enumerate(self._conectados_da_mesa(), start=1):
+            if (norm_mac(str(item.get("uniq") or "")) or "") == chave:
+                return posicao
+        return None
+
     async def start(self, ctx: DaemonContext) -> None:
         """Sobe a thread de reconciliação. Idempotente.
 
@@ -578,6 +695,7 @@ class BtMicSubsystem:
         varredura do sysfs (mais o `pactl` do load-module) roda na thread.
         """
         self._config = getattr(ctx, "config", None)
+        self._backend = getattr(ctx, "controller", None)
         if self._thread is not None and self._thread.is_alive():
             return
         from hefesto_dualsense4unix.integrations.dualsense_bt_audio import (
@@ -626,6 +744,17 @@ class BtMicSubsystem:
         self._dizedor_anterior = registrar_dizedor_do_no_ar(
             self.no_ar, self.esquecer_a_palavra, self.palavra_no_ar
         )
+        # E O QUARTO É O ASSENTO (09/09/2026). Quem SABE em que assento está o
+        # controle é o daemon — o backend tem a lista que desenha os cards —, e
+        # quem BATIZA o nó é a integração. O gancho é o que junta os dois sem
+        # inverter a camada, exatamente como os três acima.
+        from hefesto_dualsense4unix.integrations.dualsense_bt_audio import (
+            registrar_numerador_de_assento,
+        )
+
+        self._numerador_anterior = registrar_numerador_de_assento(
+            self.numero_do_assento
+        )
 
     async def stop(self) -> None:
         """Derruba as pontes (o que DESLIGA o mic em cada controle). Idempotente.
@@ -649,6 +778,13 @@ class BtMicSubsystem:
             with contextlib.suppress(Exception):
                 await asyncio.to_thread(thread.join, 2.0)
         self._gerenciador = None
+        self._backend = None
+        # OS CANAIS DO CABO MORREM COM A SESSÃO, e pela mesma razão que os
+        # pedidos: cada um carrega um `module-pipe-source` no servidor de áudio
+        # e um `parec` lendo o microfone dela. Deixá-los de pé com o daemon
+        # fora seria um microfone ligado sem ninguém a quem pedir para desligar.
+        for uniq in list(self._canais_do_cabo):
+            self._fechar_o_canal_do_cabo(uniq)
         with contextlib.suppress(Exception):
             self._desinstalar_o_gancho_da_procura()
         # OS PEDIDOS MORREM COM A SESSÃO. Guardá-los faria o próximo boot subir
@@ -660,6 +796,9 @@ class BtMicSubsystem:
 
     def _desinstalar_o_gancho_da_procura(self) -> None:
         """Devolve o pedidor anterior — o subsystem parado não atende ninguém."""
+        from hefesto_dualsense4unix.integrations.dualsense_bt_audio import (
+            registrar_numerador_de_assento,
+        )
         from hefesto_dualsense4unix.integrations.eleicao_de_microfone import (
             registrar_dizedor_do_no_ar,
             registrar_pedidor_de_canal,
@@ -670,6 +809,8 @@ class BtMicSubsystem:
         dizedor, esquecedor, leitor = self._dizedor_anterior or (None, None, None)
         registrar_dizedor_do_no_ar(dizedor, esquecedor, leitor)
         self._dizedor_anterior = None
+        registrar_numerador_de_assento(self._numerador_anterior)
+        self._numerador_anterior = None
 
     # -- laço -------------------------------------------------------------
 
@@ -686,6 +827,14 @@ class BtMicSubsystem:
                 nos = nos_dualsense_bluetooth()
                 self._esquecer_quem_saiu_da_mesa(nos)
                 self._soltar_os_que_ela_desmarcou()
+                # ANTES do `reconciliar`, e a ordem é a cura de um estrago:
+                # o canal do cabo e o do rádio são o MESMO nó do PipeWire
+                # (`hefesto_mic_<hex6>`), e quem sobe um nó com nome que já
+                # existe DERRUBA o de pé como órfão
+                # (`SourceVirtualPipeWire.iniciar`). Soltar o do cabo antes de
+                # a ponte nascer é o que faz a troca de fio para rádio passar
+                # o nó de mão em mão em vez de os dois disputarem o nome.
+                self._reconciliar_o_cabo(nos)
                 # A LISTA vai explícita, e é aqui que o "por controle" acontece:
                 # o gerenciador casa as pontes vivas com os nós que recebe, então
                 # tirar um controle da lista DERRUBA a ponte dele e deixa as
@@ -714,15 +863,159 @@ class BtMicSubsystem:
         return self._parar.is_set() or gerenciador.dormir(0.0)
 
     def _esquecer_quem_saiu_da_mesa(self, nos: list[Any]) -> None:
-        """Um pedido vale enquanto o controle está no rádio, e não mais.
+        """Um pedido vale enquanto o controle está NA MESA, e não mais.
 
         Sem isto o pedido sobreviveria à queda do controle e a reconexão dele
         subiria a ponte sozinha — o *"liga sozinho"* pela porta dos fundos.
+
+        **A MESA É O RÁDIO MAIS O CABO — e era só o rádio até 09/09/2026.**
+        `nos` vem de `nos_dualsense_bluetooth()`, então um controle no fio
+        nunca estava entre os presentes e a palavra dela sobre o microfone
+        dele era apagada na varredura seguinte. Ver a medição em
+        :meth:`uniqs_na_mesa`.
+
+        A união é o que corrige, e não a troca: o rádio continua entrando
+        inteiro porque um nó de BT pode existir sem que o backend tenha um
+        handle aberto para ele (o `describe_controllers` responde por handle),
+        e trocar uma leitura pela outra derrubaria a ponte de quem o backend
+        ainda não enxerga.
         """
-        presentes = frozenset(
+        do_radio = frozenset(
             (norm_mac(str(getattr(no, "uniq", ""))) or "") for no in nos
         ) - {""}
-        self._registro.esquecer_ausentes(presentes)
+        self._registro.esquecer_ausentes(do_radio | self.uniqs_na_mesa())
+
+    # -- o canal do CABO ---------------------------------------------------
+
+    def _reconciliar_o_cabo(self, nos: list[Any]) -> None:
+        """O canal com nome de controle para quem está no FIO.
+
+        **POR QUE ELE PRECISA DE UM SUPERVISOR, e o rádio não.** No rádio a
+        `PonteMicBluetooth` já chama `canal_do_microfone.abrir` ao subir
+        (`_abrir_o_canal_por_controle`, 06/09/2026), então o controle do rádio
+        ganha o `hefesto_mic_<hex6>` de graça. **No cabo não havia ninguém**:
+        `grep -rn "canal_do_microfone" src/` devolvia UM chamador de `abrir`, e
+        era a ponte. O nó ALSA do cabo continua existindo, mas ele tem o nome
+        do TRANSPORTE — trocar o fio pelo rádio troca o microfone de nome, que
+        é o defeito inteiro que o canal por controle existe para matar.
+
+        **O GESTO CONTINUA SENDO DELA.** Só sobe canal para `uniq` que PEDIU, e
+        o pedido vem de `no_ar(uniq, True)` — o 🎙 da tela e a borda do botão do
+        plástico, pela porta única de `hotkey._metade_do_canal`. Sem toque, o
+        conjunto é vazio e nada acontece: nenhum módulo carregado, nenhum
+        `parec` lançado. É a mesma privacidade que o cabeçalho protege no
+        rádio, pela mesma alavanca.
+
+        **E ELE SÓ FECHA O QUE ELE ABRIU** (`_canais_do_cabo`). O canal do
+        rádio é da ponte, e derrubá-lo daqui seria o mesmo erro que
+        `PonteMicBluetooth._fechar_a_source` já recusa do outro lado.
+
+        **QUEM ESTÁ NO RÁDIO NÃO É DAQUI, e a régua é o NÓ, não a ponte.** O
+        alvo é o `uniq` que o sysfs mostra no rádio AGORA, mesmo que a ponte
+        dele ainda não tenha subido: os dois transportes publicam o MESMO nó
+        (`hefesto_mic_<hex6>`), e quem carrega um `module-pipe-source` com nome
+        que já existe derruba o de pé como órfão. Ler a ponte em vez do nó
+        deixaria uma janela em que os dois disputam o nome — a janela em que o
+        microfone dela entrega zeros perfeitos (MIC-RADIO-ORFAO-01).
+        """
+        do_radio = frozenset(
+            (norm_mac(str(getattr(no, "uniq", ""))) or "") for no in nos
+        ) - {""}
+        querem = self._registro.abertos() - do_radio
+        for uniq in list(self._canais_do_cabo):
+            if uniq not in querem:
+                self._fechar_o_canal_do_cabo(uniq)
+        faltam = sorted(u for u in querem if u not in self._canais_do_cabo)
+        if faltam:
+            self._abrir_os_canais_do_cabo(faltam)
+
+    def _abrir_os_canais_do_cabo(self, uniqs: list[str]) -> None:
+        """Ergue o canal de cada `uniq` da lista, alimentado pelo nó ALSA dele.
+
+        **A FONTE É RESOLVIDA PELO DONO**, `fontes_de_captura.escolher_fonte`,
+        e não por uma segunda régua escrita aqui: é a mesma função que a
+        eleição, a luz, o áudio da janela e o `escolher_sink` chamam, e uma
+        régua paralela sobre o mesmo estado é o defeito RECEITA-ERRADA-01.
+
+        **E ela é perguntada ANTES de o canal subir**, por causa da regra 0
+        daquela função: depois que `hefesto_mic_<hex6>` está no ar ela responde
+        o próprio canal — a resposta certa para *"qual é o microfone dele"* e a
+        errada para *"de onde eu leio"*. É o que a docstring de
+        `canal_do_microfone.abrir` manda fazer.
+
+        Um `uniq` sem nó ALSA atribuível não abre nada e não vira falta: no
+        rádio quem ergue é a ponte, e no cabo sem casamento de USB o produto
+        não sabe de quem é a placa — inventar aqui apontaria o microfone do
+        controle errado.
+
+        **E NUNCA SE SOBE UM NÓ QUE JÁ ESTÁ NO AR**, mesmo que a tabela do dono
+        o guarde sob outra chave: a ponte de rádio abre o canal com o `uniq`
+        do sysfs (``aa:bb:cc:…``, com dois-pontos) e este supervisor com a
+        chave normalizada do registro (doze hex), então o dicionário do dono
+        não é comparável entre os dois — mas o NOME DO NÓ é o mesmo nos dois,
+        e é ele que o servidor de áudio usa para decidir quem é órfão. É a
+        régua que impede o supervisor de derrubar o canal da ponte.
+        """
+        from hefesto_dualsense4unix.integrations import canal_do_microfone
+        from hefesto_dualsense4unix.integrations.dualsense_bt_audio import (
+            descricao_do_microfone,
+        )
+        from hefesto_dualsense4unix.integrations.eleicao_de_microfone import (
+            casamento_usb_agora,
+            fontes_de_captura_agora,
+        )
+        from hefesto_dualsense4unix.integrations.fontes_de_captura import (
+            PREFIXO_SOURCE_CANAL_DO_MIC,
+            escolher_fonte,
+        )
+
+        # A RECUSA DA REGRA 0 É NA ENTRADA, e não na saída: o canal por
+        # controle sai da lista ANTES da pergunta. Perguntar com ele dentro e
+        # descartar a resposta depois daria o mesmo veredicto só quando ele é a
+        # única resposta — nos outros casos a regra 0 responde primeiro e as
+        # regras do cabo nunca chegam a correr.
+        do_cabo = [
+            f for f in fontes_de_captura_agora()
+            if not f.startswith(PREFIXO_SOURCE_CANAL_DO_MIC)
+        ]
+        if not do_cabo:
+            return
+        na_mesa = sorted(self.uniqs_na_mesa() | set(uniqs))
+        usb = casamento_usb_agora(na_mesa)
+        ja_no_ar = set(canal_do_microfone.de_pe().values())
+        for uniq in uniqs:
+            if canal_do_microfone.nome_do_canal(uniq) in ja_no_ar:
+                logger.debug("bt_mic_canal_do_cabo_ja_tem_dono", uniq=uniq)
+                continue
+            fonte = escolher_fonte(do_cabo, uniq, na_mesa, usb)
+            if not fonte:
+                continue
+            canal = canal_do_microfone.abrir(
+                uniq, descricao_do_microfone(uniq), fonte=fonte
+            )
+            if canal is None:
+                logger.warning("bt_mic_canal_do_cabo_nao_subiu", uniq=uniq)
+                continue
+            self._canais_do_cabo[uniq] = canal.nome
+            logger.info("bt_mic_canal_do_cabo_no_ar", uniq=uniq, source=canal.nome)
+
+    def _fechar_o_canal_do_cabo(self, uniq: str) -> None:
+        """Derruba o canal deste `uniq` PELO DONO dele, e esquece a posse.
+
+        `canal_do_microfone.fechar` mata o alimentador ANTES da source, que é a
+        ordem que impede um `parec` vivo gravando o microfone dela sem nó para
+        onde mandar. Chamar `source.parar()` daqui pularia essa ordem e ainda
+        deixaria o dono anunciando de pé um canal que não existe mais.
+        """
+        self._canais_do_cabo.pop(uniq, None)
+        try:
+            from hefesto_dualsense4unix.integrations import canal_do_microfone
+
+            canal_do_microfone.fechar(uniq)
+        except Exception:  # pragma: no cover - defensivo
+            logger.warning("bt_mic_canal_do_cabo_nao_fechou", uniq=uniq, exc_info=True)
+            return
+        logger.info("bt_mic_canal_do_cabo_fora", uniq=uniq)
 
     def _soltar_os_que_ela_desmarcou(self) -> None:
         """O interruptor do card vence o botão do controle, e por isso a BORDA.

@@ -784,6 +784,36 @@ COLUNA_DA_PONTE_DE_ONDE_SEI = "ponte_de_onde_sei"
 #: detalhe da afirmação, é a condição dela existir.
 CANAL_QUE_A_MASCARA_DECIDE = "uhid"
 
+#: ─────────────────────────────────────────────────────────────────────────
+#: A DIREÇÃO DE CADA CANAL — e ela mora aqui porque as DUAS listas moram aqui.
+#: ─────────────────────────────────────────────────────────────────────────
+#: A pergunta é a da `ESCADA`: a cadeia daquele canal termina no APARELHO
+#: (direção de SAÍDA, e o fim dela é `O APARELHO OBEDECEU`) ou dentro do JOGO
+#: (direção de ENTRADA, e o fim dela é `O JOGO REAGIU`)?
+#:
+#: NASCEU EM 09/09/2026, e nasceu de um defeito: `check_ate_onde_a_prova_chegou`
+#: guardava o destino de cada feature DENTRO da mesma tabela em que declarava a
+#: falta dela. Quem declarasse a falta escolhia junto a linha de chegada — e
+#: apagar a declaração MOVIA o destino, medido: arrancar a linha do `sensor`
+#: fazia a régua imprimir *"o destino é O APARELHO OBEDECEU"* para uma feature
+#: cuja prova só termina no jogo. É a família *trava medida contra a própria
+#: saída*. Aqui o destino passa a vir do MAPA (a coluna `*_canal`) e o
+#: vocabulário, de quem já é dono das duas pontas: a `ESCADA` e o domínio de
+#: `canal`, no mesmo arquivo, a poucas linhas um do outro.
+#:
+#: `outro` NÃO ENTRA de propósito, e a ausência é a regra: um canal que não diz
+#: por onde o dado anda não decide destino nenhum, e quem depender da direção
+#: tem de reprovar em vez de escolher o degrau mais barato — que é a mesma
+#: recusa do `SEM_REGISTRO`, que fica ABAIXO de `MONTOU` e não vira "montou".
+DIRECAO_POR_CANAL: dict[str, str] = {
+    "hidraw": DIRECAO_SAIDA,        # o produto escreve no aparelho
+    "sysfs": DIRECAO_SAIDA,         # idem, pelo caminho que o kernel expõe
+    "dbus": DIRECAO_SAIDA,          # o produto pede a outro serviço da máquina
+    "alsa-pipewire": DIRECAO_SAIDA,  # o som para de andar na máquina, não no jogo
+    "evdev": DIRECAO_ENTRADA,       # o que o aparelho manda e o vpad repassa
+    "uhid": DIRECAO_ENTRADA,        # o nó que o processo do jogo abre
+}
+
 #: Os campos de `Ponte`, na ORDEM da assinatura do dataclass
 #: (`Ponte(kind, mascara=None, steam_input=False)`), para o leitor por AST
 #: resolver argumento posicional.

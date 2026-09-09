@@ -80,7 +80,7 @@ ABAS = ["01-jogar.html", "02-controles.html", "03-gatilhos.html",
 #: `_NAO_E_PROMESSA` do `casa-sabe`: *a lista se lê, a razão se escreve*.
 #:
 #: Nem toda barra é defeito. A `10-perfis` tem uma lista que rola desde que
-#: nasceu, e a §1 da ROLAGEM-01 já dizia isso em 08/09 (*"Só a 10 (`div.rolo`,
+#: nasceu, e a §1 da ROLAGEM-01 já a mediu assim em 08/09 (*"Só a 10 (`div.rolo`,
 #: 475/383 px), por desenho"*). Reprová-la seria a régua chamando de dívida o
 #: desenho que ela aprovou; deixá-la fora do relato seria a régua ficando cega.
 #: Ela fica DECLARADA: sai na tabela, não conta no vermelho, e uma caixa nova
@@ -89,6 +89,19 @@ POR_DESENHO: dict[str, tuple[str, str]] = {
     "10-perfis.html": ("DIV.rolo", "a lista de perfis rola por desenho — quantos "
                                    "perfis ela tem é dela, e a caixa não pode "
                                    "crescer com eles (§1 da ROLAGEM-01, 08/09)"),
+    #: AS DUAS DE 09/09, e as duas pela MESMA frase da linha de cima — o que
+    #: entra na caixa é dela ou do daemon, e a caixa não pode crescer com isso.
+    "07-lancadores.html": ("DIV.lancadores",
+                           "a grade de cartões rola por desenho — quantos "
+                           "lançadores ela tem, e quantos jogos com pendência, é "
+                           "dela: medido, a grade foi de 493 a 534px sozinha "
+                           "numa sessão, quando o cartão da Steam ganhou um jogo "
+                           "pendente (ROLAGEM-01 §8, 09/09)"),
+    "09-sistema.html": ("DIV.log",
+                        "o registro técnico rola por desenho — quantas linhas o "
+                        "daemon escreveu não é assunto da aba, e o "
+                        "`data-hef-rolar=\"fim\"` do HTML já dizia isso desde que "
+                        "nasceu (ROLAGEM-01 §8, 09/09)"),
 }
 
 #: A PERGUNTA AO DOM. Ela mede a `.janela` e o documento, e nomeia o primeiro
