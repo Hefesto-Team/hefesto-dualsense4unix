@@ -217,8 +217,16 @@ VALID_FLAG1_MOTOR_POWER = 0x40
 VALID_FLAG1_AUDIO_CONTROL2_ENABLE = 0x80
 
 # --- bits de valid_flag2 (common[38]) --------------------------------------
-#: bit0 (pydualsense `LedOptions.PlayerLedBrightness`): habilita o controle de
-#: BRILHO da lightbar (common[42]).
+#: bit0 (pydualsense `LedOptions.PlayerLedBrightness`; fonte externa
+#: `SET_PLAYER_LED_BRIGHTNESS`): habilita o BRILHO DOS LEDS DE JOGADOR
+#: (common[42], três degraus: 0 alto · 1 médio · 2 baixo).
+#:
+#: NÃO É O BRILHO DA LIGHTBAR, e o nome desta constante engana — ele veio do
+#: kernel, que chama o campo de `led_brightness` sem dizer de qual led. Medido
+#: por ela em 09/09/2026 com os dois transportes na bancada: os três degraus
+#: atenuam as lâmpadas de numeração (P1, P2…) e a intensidade da barra não
+#: muda. Sem este bit o byte é inerte; a COR da barra não depende dele.
+#: `luz.led_jogador.brilho@dualsense` no mapa; BRILHO-DE-HARDWARE-01.
 VALID_FLAG2_LED_BRIGHTNESS_CONTROL_ENABLE = 0x01
 #: bit1 (pydualsense `LedOptions.UninterrumpableLed`; kernel
 #: `DS_OUTPUT_VALID_FLAG2_LIGHTBAR_SETUP_CONTROL_ENABLE`): habilita o SETUP da

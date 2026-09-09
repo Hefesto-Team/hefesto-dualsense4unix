@@ -1307,8 +1307,11 @@ class _PinnedPyDualSense(pydualsense):  # type: ignore[misc]
                 rep.VALID_FLAG1_LIGHTBAR_CONTROL_ENABLE
                 | rep.VALID_FLAG1_PLAYER_INDICATOR_CONTROL_ENABLE
             )
-            # LIGHTBAR-BT-KEEPALIVE-01: não tocar a máquina de setup/brilho da
-            # lightbar (o kernel é o dono) — o keepalive vira LED-neutro de fato.
+            # LIGHTBAR-BT-KEEPALIVE-01: não tocar o setup da lightbar nem o
+            # brilho dos LEDs de jogador (o kernel é o dono) — o keepalive vira
+            # LED-neutro de fato. O bit0 do flag2 é `SET_PLAYER_LED_BRIGHTNESS`,
+            # medido por ela em 09/09/2026: ele atenua as lâmpadas de numeração,
+            # não a barra.
             flag2 &= ~(
                 rep.VALID_FLAG2_LIGHTBAR_SETUP_CONTROL_ENABLE
                 | rep.VALID_FLAG2_LED_BRIGHTNESS_CONTROL_ENABLE
@@ -1361,6 +1364,11 @@ class _PinnedPyDualSense(pydualsense):  # type: ignore[misc]
         common[rep.COMMON_VALID_FLAG2] = flag2
         if not suppress_leds:
             common[41] = int(self.light.pulseOptions.value) & 0xFF
+            # DÍVIDA NOMEADA EM 09/09/2026 (BRILHO-DE-HARDWARE-01): este byte é o
+            # brilho dos LEDS DE JOGADOR, não o da barra — medido por ela nos dois
+            # transportes. O valor que entra aqui é o da BARRA, e só não faz estrago
+            # porque nada liga o `flag2` bit0. Quem ligar o bit sem trocar a fonte
+            # atenua as lâmpadas de numeração achando que escurece a lightbar.
             common[42] = int(self.light.brightness.value) & 0xFF
             common[43] = int(self.light.playerNumber.value) & 0xFF
             common[44] = int(self.light.TouchpadColor[0]) & 0xFF
