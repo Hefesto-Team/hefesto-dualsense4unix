@@ -41,12 +41,19 @@ a allowlist do daemon, justamente por causa desta linha).
 **A regra que fica é a que importa:** o gerador tem de continuar rodando SOLTO.
 Se um import novo aqui quebrar `python3 aba07.py`, ele não pertence a este
 arquivo.
+
+**E O DISCO NÃO SE ABRE NA PINTURA — 09/09/2026.** Os três de `integrations/`
+são chamados por :func:`medir_no_disco`, que BLOQUEIA e é da vigia do pacote;
+:func:`cartoes` recebe a resposta fria (:class:`DoDisco`) e não abre arquivo
+nenhum. O `pathlib` do topo é ANOTAÇÃO — o `lar` de mentira que a régua passa é
+um `Path`, e nada neste módulo o usa para ler.
 """
 from __future__ import annotations
 
 import dataclasses
 import html
 from dataclasses import dataclass, field
+from pathlib import Path
 
 #: O selo é o resumo de UMA palavra do corpo do cartão.
 #:
@@ -1126,6 +1133,115 @@ def linha_do_wrapper_html(linha: str) -> str:
 
 
 @dataclass(frozen=True)
+class DoDisco:
+    """O que o DISCO diz sobre os cartões que não são a Steam — já respondido.
+
+    **ELE EXISTE PORQUE A PINTURA NÃO PODE PERGUNTAR — 09/09/2026, e é uma
+    recaída medida.** As três respostas de baixo (a biblioteca de cada
+    lançador, a linha do «Flatpak» e quem tem estrada para a cura) nasceram
+    dentro de :func:`cartao_sem_censo`, chamadas na hora de desenhar o cartão —
+    isto é, DEZ VEZES POR SEGUNDO, dentro do tique.
+
+    **O CUSTO FOI MEDIDO NESTA BANCADA, com os cinco lançadores dela no
+    disco:** `cartoes()` levava **6,4 ms de mediana** (30 voltas, máximo 18,6
+    ms) num orçamento de 100 ms para a janela inteira, e agora leva **0,03
+    ms** — o disco saiu do tique e voltou para a :class:`a07_lancadores._Vigia`,
+    que é onde o próprio arquivo já escrevia que ele tem de viver: *"a pintura
+    NUNCA bloqueia"*.
+
+    É FRIO como a :class:`Leitura` e pela mesma razão: quem lê é o pacote, na
+    thread da vigia; o desenho recebe texto pronto e não abre arquivo nenhum.
+    """
+
+    #: A linha de baixo de cada cartão, por chave: `(chave, linha)`. Já é a
+    #: resposta final — inclusive a do «Flatpak», que é outra pergunta (ver
+    #: :func:`resposta_do_flatpak`). Chave AUSENTE = nada a dizer, e o cartão
+    #: fica com o travessão.
+    resumos: tuple[tuple[str, str], ...] = ()
+    #: As chaves que TÊM por onde receber o ambiente — as que ganham o botão
+    #: «Consertar». Ver :func:`cura_por_estrada.tem_estrada`.
+    estradas: tuple[str, ...] = ()
+
+    def resumo(self, chave: str) -> str:
+        return dict(self.resumos).get(chave, "")
+
+
+#: A RESPOSTA VAZIA — a primeira meia volta, e o padrão de toda `Leitura`
+#: montada à mão. Ela é um SINGLETON porque :class:`DoDisco` é congelada: duas
+#: instâncias vazias são a mesma coisa ocupando dois lugares, e uma chamada em
+#: argumento padrão é o que o `B008` recusa.
+SEM_DISCO = DoDisco()
+
+
+def medir_no_disco(onde_estao: tuple[tuple[str, str], ...],
+                   declarados: tuple[SemCenso, ...] = (),
+                   lar: Path | None = None,
+                   raiz_sistema: Path | None = None) -> DoDisco:
+    """BLOQUEIA — abre os arquivos dos lançadores e responde o que o cartão mostra.
+
+    **QUEM CHAMA É A VIGIA, e só ela** (`a07_lancadores._Vigia.ler`, na thread
+    de fundo). Chamar isto de dentro da pintura é o defeito que a
+    :class:`DoDisco` documenta, com o número medido.
+
+    SÓ O QUE FOI ACHADO ENTRA. Um cartão sem caminho em `onde_estao` é um
+    lançador que a busca não achou (ou não procurou), e perguntar pela
+    biblioteca de um programa ausente é abrir pastas para ouvir "não existe".
+
+    :param lar: o `HOME` a inspecionar; o padrão é o de verdade. A régua passa
+        um lar de mentira, e por isso ele viaja junto com `raiz_sistema` — os
+        dois formam o par que faz uma medição ficar inteira dentro do `tmp`.
+    """
+    onde = dict(onde_estao)
+    itens = [x for x in procurados(declarados) if x.chave != STEAM]
+    #: OS `app-id` DOS LANÇADORES QUE VIERAM DO FLATPAK — a lista de que o
+    #: cartão «Flatpak» precisa para mudar de pergunta (§5.4). Ela sai do
+    #: CAMINHO em que cada `.desktop` foi achado, e não do rótulo do cartão:
+    #: um `io.mgba.mGBA` publicado por `/usr/share/applications` é o pacote da
+    #: distribuição, que não tem caixa a examinar. Ver
+    #: :func:`sandbox_dos_lancadores.app_id_do_atalho`.
+    #:
+    #: **UM CARTÃO PODE SER DOIS PROGRAMAS**, e por isso a lista não sai só do
+    #: caminho achado: `app_ids_do_cartao` completa o `.desktop` da busca com
+    #: os demais `app-id` do cartão que têm caixa no disco. Sem isso o
+    #: «Dolphin · mGBA» entrava com UM, e o cartão «Flatpak» contou 4 numa
+    #: máquina com 5 (medido em 09/09/2026).
+    vistos: list[str] = []
+    for item in itens:
+        # O PRÓPRIO FLATPAK FICA DE FORA: ele é achado pelo `PATH`
+        # (`/usr/bin/flatpak`), não tem caixa, e um cartão que se examinasse a
+        # si mesmo responderia sobre a coisa errada.
+        if item.chave == "flatpak" or not onde.get(item.chave):
+            continue
+        for app_id in _caixa.app_ids_do_cartao(item.atalhos,
+                                               onde.get(item.chave), lar,
+                                               raiz_sistema):
+            if app_id not in vistos:
+                vistos.append(app_id)
+    caixas = resposta_do_flatpak(tuple(vistos), lar, raiz_sistema)
+
+    resumos: list[tuple[str, str]] = []
+    estradas: list[str] = []
+    for item in itens:
+        if not onde.get(item.chave):
+            continue
+        #: A LEITURA É DO DONO (`integrations/censo_dos_lancadores`), e o
+        #: resumo também: montar a frase aqui seria a segunda verdade sobre a
+        #: mesma contagem, e "37 jogos" contra "37 na biblioteca" na mesma tela
+        #: é a cara de uma janela montada em dois lugares que não se falam.
+        linha = _censo.biblioteca_do_cartao(item.chave, lar).resumo
+        #: **A LINHA DO «FLATPAK» É OUTRA PERGUNTA — §5.4, 09/09/2026.** Ele
+        #: não tem biblioteca (o censo diz `SEM_BIBLIOTECA`, e o resumo sai
+        #: vazio), e até hoje a linha dele ficava com um travessão.
+        if not linha and item.chave == "flatpak":
+            linha = caixas
+        if linha:
+            resumos.append((item.chave, linha))
+        if _cura.tem_estrada(item.chave, item.atalhos, lar, raiz_sistema):
+            estradas.append(item.chave)
+    return DoDisco(tuple(resumos), tuple(estradas))
+
+
+@dataclass(frozen=True)
 class Leitura:
     """O que o disco respondeu sobre a Steam. É o contrato pacote → desenho.
 
@@ -1189,6 +1305,13 @@ class Leitura:
     #: "Desligar" ali seria oferecer uma recusa.
     steam_input_ligado: bool | None = None
     erros: tuple[str, ...] = ()
+    #: O QUE O DISCO DIZ DOS OUTROS CARTÕES, medido na MESMA passada da vigia:
+    #: a linha de cada um e quem tem estrada para a cura. Ver :class:`DoDisco`.
+    #:
+    #: VAZIO É RESPOSTA, e é o estado da primeira meia volta: cartão sem linha
+    #: fica com o travessão e sem o «Consertar» — que é o que uma leitura que
+    #: ainda não aconteceu autoriza a tela a dizer.
+    do_disco: DoDisco = SEM_DISCO
 
     @property
     def onde_esta_a_steam(self) -> str | None:
@@ -1510,7 +1633,8 @@ def carimbo_da_steam(lida: Leitura) -> str:
     return " · ".join(partes)
 
 
-def resposta_do_flatpak(vizinhos: tuple[str, ...]) -> str:
+def resposta_do_flatpak(vizinhos: tuple[str, ...], lar: Path | None = None,
+                        raiz_sistema: Path | None = None) -> str:
     """A linha do cartão «Flatpak» — §5.4 da sprint, e ele MUDA DE PERGUNTA.
 
     ELE NÃO É LANÇADOR: é o runtime dos outros cinco, e por isso o censo lhe
@@ -1521,12 +1645,15 @@ def resposta_do_flatpak(vizinhos: tuple[str, ...]) -> str:
     fora — são os lançadores que a aba ACHOU e que vieram do Flatpak, um
     `app-id` cada. Perguntar pela caixa de um lançador nativo devolveria "não
     instalado" e baixaria a conta por um motivo que não é dela.
+
+    **ELA BLOQUEIA**, e por isso quem a chama é :func:`medir_no_disco`, na
+    vigia — nunca a pintura.
     """
-    return _caixa.resposta_do_flatpak(vizinhos).resumo
+    return _caixa.resposta_do_flatpak(vizinhos, lar, raiz_sistema).resumo
 
 
 def cartao_sem_censo(item: SemCenso, onde: str | None,
-                     vizinhos: tuple[str, ...] = ()) -> Lancador:
+                     do_disco: DoDisco = SEM_DISCO) -> Lancador:
     """Um dos cinco cartões cujo INTERIOR o produto não lê — em três estados.
 
     E OS TRÊS SÃO DIFERENTES, que é a razão de esta função existir:
@@ -1583,16 +1710,13 @@ def cartao_sem_censo(item: SemCenso, onde: str | None,
     #: viu. Agora o selo diz `LOCALIZADO` (está aqui) e a linha de baixo diz o
     #: que a biblioteca tem — ou o que fazer para ela existir.
     #:
-    #: A LEITURA É DO DONO (`integrations/censo_dos_lancadores`), e o resumo
-    #: também: montar a frase aqui seria a segunda verdade sobre a mesma
-    #: contagem, e "37 jogos" contra "37 na biblioteca" na mesma tela é a cara
-    #: de uma janela montada em dois lugares que não se falam.
-    biblioteca = _censo.biblioteca_do_cartao(item.chave)
-    #: **A LINHA DO «FLATPAK» É OUTRA PERGUNTA — §5.4, 09/09/2026.** Ele não
-    #: tem biblioteca (o censo diz `SEM_BIBLIOTECA`, e o resumo sai vazio), e
-    #: até hoje a linha dele ficava com um travessão. Ver
-    #: :func:`resposta_do_flatpak`.
-    resumo = biblioteca.resumo or resposta_do_flatpak(vizinhos)
+    #: **A LEITURA NÃO ACONTECE AQUI, e a linha que dizia o contrário caducou
+    #: no mesmo dia:** ela chamava `_censo.biblioteca_do_cartao`,
+    #: `resposta_do_flatpak` e `_cura.tem_estrada` dentro da PINTURA, dez vezes
+    #: por segundo. Quem lê é :func:`medir_no_disco`, na vigia; o que chega
+    #: aqui é a :class:`DoDisco`, já respondida — com o custo medido escrito
+    #: nela.
+    resumo = do_disco.resumo(item.chave)
     #: **O «CONSERTAR» DOS OUTROS CINCO — §5.3.** Ele só aparece onde há
     #: estrada: o cartão que não tem por onde receber o ambiente não ganha
     #: botão, que é a regra desta aba desde que ela nasceu — *o que não tem
@@ -1602,7 +1726,7 @@ def cartao_sem_censo(item: SemCenso, onde: str | None,
     #: quem está tentando entender por que o controle não chega.
     consertar = ((Acao(CONSERTAR_LANCADOR_ROTULO, "", CONSERTAR_LANCADOR,
                        item.chave),)
-                 if _cura.tem_estrada(item.chave, item.atalhos) else ())
+                 if item.chave in do_disco.estradas else ())
     #: **O RESUMO VAI PARA A LINHA `jogos`, e não para o corpo** — §5.2 da
     #: sprint: *"a linha de baixo diz «37 jogos na biblioteca · 0 instalados»"*.
     #: É o mesmo lugar em que a Steam imprime *"23 jogos instalados"*, e ele é
@@ -1632,30 +1756,13 @@ def cartoes(lida: Leitura | None) -> list[Lancador]:
     inteira está em :data:`SEM_FONTE`.
     """
     onde_estao = dict(lida.onde_estao) if lida is not None else {}
-    #: OS `app-id` DOS LANÇADORES QUE VIERAM DO FLATPAK — a lista de que o
-    #: cartão «Flatpak» precisa para mudar de pergunta (§5.4). Ela sai do
-    #: CAMINHO em que cada `.desktop` foi achado, e não do rótulo do cartão:
-    #: um `io.mgba.mGBA` publicado por `/usr/share/applications` é o pacote da
-    #: distribuição, que não tem caixa a examinar. Ver
-    #: :func:`sandbox_dos_lancadores.app_id_do_atalho`.
-    #:
-    #: **UM CARTÃO PODE SER DOIS PROGRAMAS**, e por isso a lista não sai só do
-    #: caminho achado: `app_ids_do_cartao` completa o `.desktop` da busca com
-    #: os demais `app-id` do cartão que têm caixa no disco. Sem isso o
-    #: «Dolphin · mGBA» entrava com UM, e o cartão «Flatpak» contou 4 numa
-    #: máquina com 5 (medido em 09/09/2026).
-    vistos: list[str] = []
-    for item in procurados(lida.declarados if lida is not None else ()):
-        # O PRÓPRIO FLATPAK FICA DE FORA: ele é achado pelo `PATH`
-        # (`/usr/bin/flatpak`), não tem caixa, e um cartão que se examinasse a
-        # si mesmo responderia sobre a coisa errada.
-        if item.chave == "flatpak":
-            continue
-        for app_id in _caixa.app_ids_do_cartao(item.atalhos,
-                                               onde_estao.get(item.chave)):
-            if app_id not in vistos:
-                vistos.append(app_id)
-    vizinhos = tuple(vistos)
+    #: **A PINTURA NÃO ABRE ARQUIVO** — 09/09/2026. Aqui morava a varredura das
+    #: caixas do Flatpak, e dentro de `cartao_sem_censo` a biblioteca de cada
+    #: lançador e a pergunta da estrada: **6,4 ms de mediana por tique**, dez
+    #: vezes por segundo, num orçamento de 100 ms para a janela inteira. A
+    #: resposta chega pronta pela `Leitura`, medida na vigia — ver
+    #: :class:`DoDisco`.
+    do_disco = lida.do_disco if lida is not None else SEM_DISCO
     fora = [cartao_da_steam(lida)]
     for item in procurados(lida.declarados if lida is not None else ()):
         # A STEAM JÁ SAIU ACIMA, com o censo dela. Ela está em `procurados`
@@ -1663,7 +1770,7 @@ def cartoes(lida: Leitura | None) -> list[Lancador]:
         # outro, e desenhá-la duas vezes daria dois `data-lancador="steam"`.
         if item.chave == STEAM:
             continue
-        fora.append(cartao_sem_censo(item, onde_estao.get(item.chave), vizinhos))
+        fora.append(cartao_sem_censo(item, onde_estao.get(item.chave), do_disco))
     return fora
 
 
@@ -1733,6 +1840,7 @@ __all__ = [
     "REMOVER_ROTULO",
     "SELETOR_DA_GRADE",
     "SELOS",
+    "SEM_DISCO",
     "SEM_FONTE",
     "SEM_LISTA",
     "STEAM",
@@ -1743,6 +1851,7 @@ __all__ = [
     "TUDO_PRONTO",
     "TUDO_PRONTO_ROTULO",
     "Acao",  # (noqa-acento) nome de CLASSE — identificador Python não leva acento
+    "DoDisco",
     "JogoNaLista",
     "Lancador",
     "Leitura",
@@ -1762,6 +1871,7 @@ __all__ = [
     "linha_do_wrapper_html",
     "linhas_de_jogos",
     "lista_de_jogos",
+    "medir_no_disco",
     "procurados",
     "quantos_html",
     "resposta_do_flatpak",
