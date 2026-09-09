@@ -200,7 +200,7 @@ def make_virtual_pad(
     do jogo, como sempre foi — o contrato histórico, intacto.
 
     A RESOLUÇÃO É AQUI, E ANTES DO BACKEND — a armadilha que
-    `external_mask.py:59-68` descreveu para quem escrevesse este degrau: o gate
+    `external_mask.py:68-77` descreveu para quem escrevesse este degrau: o gate
     do `_try_uhid` (*"não é dualsense, logo não é meu"*) decide pela máscara que
     RECEBE. Se ele continuasse recebendo a do JOGO, um jogador que escolheu
     `dualsense` numa sessão `xbox` teria o uhid vetado e cairia no uinput com
@@ -306,7 +306,7 @@ def _try_uhid(
     # `for_flavor(identity=...)` faz uma SEGUNDA leitura do registro de
     # máscaras, e o `make_virtual_pad` acima já resolveu a máscara efetiva
     # justamente para não existir janela em que os dois discordem sobre quem é
-    # este controle (a armadilha que `external_mask.py:59-68` descreveu). O que
+    # este controle (a armadilha que `external_mask.py:68-77` descreveu). O que
     # o MAC do vpad precisa da identidade não é o veredito da máscara — é a
     # âncora, e ela é o mesmo dado nas duas leituras. Atribuir antes do
     # `start()` é o que importa: é lá que o MAC vai para o feature 0x09.

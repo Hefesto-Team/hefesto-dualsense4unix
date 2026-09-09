@@ -425,7 +425,7 @@ def secao_do_modo(atual: Any, kind: str, flavor: str | None = None) -> Any:
     máscara não passa a exigir uma.
 
     O `ProfileModeConfig` É RECONSTRUÍDO e não `model_copy`ado, pelo motivo
-    escrito em `profiles/manager.py:1854`: `model_copy` do pydantic v2 não
+    escrito em `profiles/manager.py:1999`: `model_copy` do pydantic v2 não
     revalida, e um `kind` fora da faixa viraria um arquivo que o próximo `load`
     recusa — o perfil dela deixando de abrir por causa de um clique.
     """

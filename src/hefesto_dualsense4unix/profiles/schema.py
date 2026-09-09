@@ -1154,6 +1154,15 @@ class ControllerOverrides(BaseModel):
     (merge POR CAMPO na aplicação, PERFIL-01 — override parcial nunca apaga a
     cor global no replug).
 
+    **A EXCEÇÃO É UMA, E É DECISÃO DELA (09/09/2026):** em ``mascara``, ``None``
+    quer dizer *"volte ao padrão"* — *"Default é Hefesto dualsense padrão"*. O
+    controle que o perfil não declara **perde** a máscara própria que estivesse
+    valendo, em vez de mantê-la. A diferença existe porque a máscara é a única
+    seção cujo estado anterior sobreviveria FORA do perfil: as outras seis são
+    reaplicadas por inteiro a cada ativação, e a máscara morava num registro
+    próprio que atravessava a troca. Ver o campo, lá embaixo, e
+    ``manager.apply_controller_mascaras``, que mede o que a devolução custa.
+
     O ALVO É TUDO — DECISÃO DELA, 02/09/2026
     -----------------------------------------
     *"acelerômetro, giroscópio, e todas as demais features. **é tudo mesmo**"*
@@ -1273,7 +1282,10 @@ class ControllerOverrides(BaseModel):
        isso só aconteça para quem MUDOU — ``apply_controller_mascaras`` escreve
        peça por peça e ``external_mask.vpad_ficou_para_tras`` compara antes de
        recriar, então um perfil que repete a máscara de alguém não o faz sumir
-       no meio da partida (é a regra da NUMA-03).
+       no meio da partida (é a regra da NUMA-03). Isso vale inclusive para o
+       perfil CALADO, que desde 09/09/2026 devolve todo mundo ao padrão
+       (decisão dela): a devolução apaga a entrada, mas só cai o vpad de quem
+       estava FORA do padrão — medido, 0 de 4 com a mesa já no padrão.
 
        ONDE A MÁSCARA É RESOLVIDA, e a resposta continua num arquivo só:
        ``daemon/subsystems/external_mask.py``. O que mudou é o papel dele — de
@@ -1335,15 +1347,24 @@ class ControllerOverrides(BaseModel):
     #: *"Como este controle aparece nos jogos"*, SÓ desta peça — MASCARA-NO-
     #: PERFIL-01 (08/09/2026, decisão dela: *"pode entrar sim"*).
     #:
-    #: ``None`` = **sem opinião**, como em toda seção acima: o controle segue o
-    #: ``mode.gamepad_flavor`` do perfil e, sem ele, o padrão do daemon. Um
-    #: perfil antigo carrega igual, e um perfil que nunca falou de máscara não
-    #: derruba vpad nenhum ao ser ativado.
+    #: ``None`` = **volte ao padrão**, e esta é a ÚNICA seção desta classe em
+    #: que ``None`` não quer dizer *"sem opinião"*. É decisão dela, 09/09/2026:
+    #: *"Default é Hefesto dualsense padrão"*. O controle que o perfil não
+    #: declara perde a máscara própria e passa a seguir o
+    #: ``mode.gamepad_flavor`` do perfil e, sem ele, o
+    #: ``DaemonConfig.gamepad_flavor`` — de fábrica ``dualsense``. Um perfil
+    #: antigo (que nunca falou de máscara) carrega igual e devolve a mesa ao
+    #: padrão; **quem já estava no padrão não tem vpad derrubado**, porque a
+    #: máscara efetiva dele não muda (medido em
+    #: ``manager.apply_controller_mascaras``: 0 de 4).
     #:
     #: A ORDEM DE DECISÃO, e ela é UMA só desde esta sprint:
-    #: ``controllers[uniq].mascara`` > ``mode.gamepad_flavor`` > o padrão. Quem
-    #: a executa é ``external_mask.mascara_efetiva``, e quem escreve o primeiro
-    #: degrau é ``manager.apply_controller_mascaras``.
+    #: ``controllers[uniq].mascara`` > ``mode.gamepad_flavor`` > o padrão. Os
+    #: degraus 2 e 3 são resolvidos por ``external_mask.mascara_efetiva``; o
+    #: degrau 1 é EXECUTADO por ``manager.apply_controller_mascaras``, que
+    #: escreve no cache que aquela função consulta — e o apaga de quem o perfil
+    #: não declara. A régua da ordem mede o comportamento dos três degraus, não
+    #: o texto: ``tests/unit/test_a_mascara_mora_no_perfil.py``.
     #:
     #: TIPO FECHADO, e é o mesmo do ``mode.gamepad_flavor``: um valor que o
     #: vpad não saiba criar não pode chegar ao disco. O ``MascaraDeGamepad`` é

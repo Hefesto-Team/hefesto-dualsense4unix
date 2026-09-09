@@ -40,10 +40,19 @@ decidir recriar; ler o perfil do disco ali seria a tempestade de syscalls que o
 para valer agora.
 
 A CONSEQUÊNCIA PARA QUEM LER ESTE ARQUIVO NO DISCO: uma entrada de
-``controller_masks.json`` que o perfil ativo não repita é resto do perfil
-anterior — não é escolha perdida, e não é dado a defender. Apagar o arquivo com
-o daemon parado não muda máscara nenhuma de quem o perfil declara: a próxima
-ativação o reescreve.
+``controller_masks.json`` que o perfil ativo não repita **não sobrevive à
+próxima ativação** — ela é apagada por :meth:`ExternalMaskRegistry.manter_somente`,
+e aquele controle volta ao padrão. Não é escolha perdida, e não é dado a
+defender. Apagar o arquivo com o daemon parado também não muda máscara nenhuma
+de quem o perfil declara: a próxima ativação o reescreve.
+
+**PERFIL CALADO DEVOLVE AO PADRÃO — DECISÃO DELA, 09/09/2026.** A pergunta
+aberta na entrega de 08/09 era *"um perfil que não fala de máscara devolve todo
+mundo ao padrão, ou deixa cada um como está?"*; a resposta dela foi *"Default é
+Hefesto dualsense padrão"*. Nesta seção — e só nesta — ``None`` no perfil não é
+*"sem opinião"*: é *"volte ao padrão"*. O padrão é o degrau de baixo desta
+ordem, ou seja o ``mode.gamepad_flavor`` do perfil e, na falta dele, o
+``DaemonConfig.gamepad_flavor``, que de fábrica é ``dualsense``.
 
 DE QUEM É A MÁSCARA — DO JOGADOR, DESDE 15/08/2026
 ---------------------------------------------------
@@ -187,6 +196,7 @@ import json
 import os
 import tempfile
 import threading
+from collections.abc import Iterable
 from pathlib import Path
 from typing import Any
 
@@ -419,6 +429,76 @@ class ExternalMaskRegistry:
                 self._save_locked()
             return True
 
+    def manter_somente(self, identidades: Iterable[str | None]) -> tuple[str, ...]:
+        """Só estas ficam com máscara própria; TODA outra volta ao padrão.
+
+        É a decisão dela de 09/09/2026 (MASCARA-NO-PERFIL-01) escrita no
+        registro: *"Default é Hefesto dualsense padrão"* — um perfil que não
+        fala da máscara de um controle **devolve aquele controle ao padrão**, em
+        vez de deixar valendo a escolha do perfil anterior. Quem chama é
+        :meth:`~...profiles.manager.ProfileManager.apply_controller_mascaras`,
+        com a lista do que o perfil declarou.
+
+        Devolve as chaves canônicas que foram APAGADAS, ordenadas — vazio quando
+        não havia nada a apagar, que é o caso comum.
+
+        **UMA ESCRITA DE DISCO, NÃO UMA POR PEÇA, e o número é medido**
+        (09/09/2026, esta árvore, ``ext4``, mediana de 200 voltas): o
+        ``_save_locked`` custa **0,12 ms** e é read-modify-write do arquivo
+        inteiro, então quatro :meth:`clear_mask` seguidos pagam quatro deles —
+        **0,63 ms e 4 escritas**. A varredura aqui apaga os mesmos quatro
+        assentos em **0,21 ms e 1 escrita**. E quando não há nada a devolver (a
+        mesa já no padrão) ela custa **0,034 ms** e **ZERO** escrita: nada a
+        apagar, nada a gravar — que é o caso comum, e é o que torna barato
+        chamá-la em toda ativação de perfil.
+
+        O QUE ESTE MÉTODO NÃO DECIDE: quais vpads caem. Apagar a entrada não
+        derruba nada por si — quem derruba é o laço do co-op, consultando
+        :func:`vpad_ficou_para_tras`, e ele só derruba o vpad cuja máscara
+        EFETIVA mudou. Um controle que já estava no padrão perde a entrada e
+        continua no mesmo flavor: a comparação dá igual e o vpad sobrevive.
+        Medido sobre os quatro assentos, com o padrão em ``dualsense``:
+
+        =========================================  =============  ==========
+        a mesa antes do perfil calado              vpads que caem  escritas
+        =========================================  =============  ==========
+        ninguém com máscara própria                 0 de 4         0
+        um assento em Xbox                          1 de 4         1
+        os quatro em Xbox                           4 de 4         1
+        os quatro COM entrada, mas já no padrão     **0 de 4**     1
+        =========================================  =============  ==========
+
+        A última linha é a que responde ao medo que abriu esta decisão: quatro
+        entradas apagadas, e **nenhum** controle dela some da partida.
+        """
+        manter: set[str] = set()
+        for identidade in identidades:
+            par = self._key(identidade)
+            if par is not None:
+                manter.add(par[0])
+        with self._lock:
+            self._load_locked()
+            sobrando = tuple(
+                chave for chave in sorted(self._mascaras) if chave not in manter
+            )
+            if not sobrando:
+                return ()
+            persistiu = False
+            for chave in sobrando:
+                anterior = self._mascaras.pop(chave, None)
+                if chave in self._volateis:
+                    self._volateis.discard(chave)
+                else:
+                    persistiu = True
+                logger.info(
+                    "external_mascara_devolvida_ao_padrao",
+                    identidade=chave,
+                    anterior=anterior,
+                )
+            if persistiu:
+                self._save_locked()
+            return sobrando
+
     # -- persistência ------------------------------------------------------
 
     def load(self) -> None:
@@ -649,20 +729,28 @@ def _zerar_registro_de_mascaras() -> None:
 def mascara_efetiva(identity: str | None, flavor_do_jogo: object) -> str:
     """A máscara DESTE aparelho: a que ele escolheu ou, sem escolha, a do jogo.
 
-    **A ORDEM DE DECISÃO DA MÁSCARA MORA AQUI, E É UMA SÓ** (MASCARA-NO-PERFIL-01,
+    **A ORDEM DE DECISÃO DA MÁSCARA TERMINA AQUI** (MASCARA-NO-PERFIL-01,
     08/09/2026). Três degraus, nesta ordem:
 
-    1. ``controllers[uniq].mascara`` **do perfil ativo** — o registro consultado
-       abaixo é o cache dele, escrito por
-       ``profiles.manager.apply_controller_mascaras`` a cada ativação e pelo
-       ``gamepad.mask.set`` no gesto dela;
+    1. ``controllers[uniq].mascara`` **do perfil ativo**;
     2. ``mode.gamepad_flavor`` do perfil — é o que chega em ``flavor_do_jogo``,
        pela config do daemon;
     3. o padrão, quando nem um nem outro disse nada.
 
-    Repetir esta ordem em qualquer outro lugar é como duas camadas passam a
-    discordar sobre quem é a máscara de um controle; quem precisa dela
-    PERGUNTA aqui.
+    **CORREÇÃO DE FATO — 09/09/2026.** Esta docstring dizia *"a ordem mora
+    AQUI"*, e isso é falso pela metade que mais importa: **esta função não
+    executa o degrau 1.** Ela lê o registro, que é um CACHE — quem executa o
+    degrau 1 é ``profiles.manager.apply_controller_mascaras``, escrevendo no
+    cache a cada ativação de perfil (e apagando dele quem o perfil não declara),
+    e o ``gamepad.mask.set`` no gesto dela. O que esta função executa são os
+    degraus 2 e 3, e o que ela faz com o degrau 1 é **honrar o que já foi
+    aplicado**: entrada no registro vence ``flavor_do_jogo``, sem exceção.
+
+    Quem quiser saber se a ordem continua de pé não lê esta prosa: mede o
+    comportamento, degrau a degrau, em
+    ``tests/unit/test_a_mascara_mora_no_perfil.py``. Uma régua que só procurasse
+    estas palavras aqui passaria com a ordem trocada no código — foi o que ela
+    fazia até 09/09/2026.
 
     É a regra de herança da **D-5** (14/08/2026), respondida por ela em
     15/08/2026: *máscara do JOGADOR, com a do jogo como padrão herdado*. Sem
