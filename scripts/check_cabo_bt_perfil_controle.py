@@ -151,9 +151,15 @@ NAO_E_DO_APARELHO: dict[str, str] = {
 #: **O `brilho` NÃO É `luz.lightbar.brilho`** — e a distinção custou uma
 #: reprovação falsa em 09/09/2026. O trilho da tela termina em
 #: `_escrever_a_cor` (`a04_iluminacao.py:2909`): ele manda RGB JÁ ESCALADO,
-#: logo o que viaja no fio é `luz.lightbar.cor`. `luz.lightbar.brilho` é o BYTE
-#: de brilho do firmware, que a tela não oferece e cujo caminho ninguém conhece
-#: — é o objeto da BRILHO-DE-HARDWARE-01, sprint de bancada aberta.
+#: logo o que viaja no fio é `luz.lightbar.cor`.
+#:
+#: `luz.lightbar.brilho` é o byte de brilho do firmware, e a BRILHO-DE-HARDWARE-01
+#: FECHOU na bancada dela em 09/09 derrubando a própria premissa: o `common[42]`
+#: obedece nos dois transportes, mas o que ele atenua **são as lâmpadas de
+#: numeração**, não a barra — palavra dela, com os quatro na mão. O mapa ganhou
+#: `luz.led_jogador.brilho` por causa disso, e `luz.lightbar.brilho` continua
+#: `aciona = não` agora por MEDIÇÃO, não por falta de olhar. A tela não oferece
+#: nenhuma das duas.
 DO_APARELHO: dict[str, tuple[str, ...]] = {
     "mascara": ("plataforma.vpad",),
     "mic-modo": ("audio.microfone",),
