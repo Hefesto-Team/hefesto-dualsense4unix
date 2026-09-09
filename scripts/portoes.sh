@@ -77,6 +77,14 @@ completo|citacoes-no-codigo|pytest|tests/unit/test_portao_o_par_com_metade_ligad
 # ressalva declarada, e trava a dívida onde ela está (36 sem nenhum dos dois, de
 # 104 sem prova). Camada RÁPIDA: lê um CSV, custa milissegundos.
 rapido|nada-mockado|pytest|tests/unit/test_portao_nada_e_afirmado_sem_prova.py
+# A RÉGUA DE PRONTO DELA — CABO-BT-PERFIL-CONTROLE-01, 09/09/2026. A palavra
+# dela de 08/09: "tudo funcionando por cabo ou bt ou tudo funcionando via perfil
+# e dentro de cada um um setting pra cada controle". Virou régua: toda feature
+# que a TELA oferece responde as quatro perguntas, e a lista de features é LIDA
+# dos `data-gesto` das dez páginas — nunca digitada. Camada RÁPIDA: lê dez HTML,
+# um CSV e o fonte do `schema.py`, custa milissegundos.
+rapido|quatro-respostas|py|scripts/check_cabo_bt_perfil_controle.py
+rapido|quatro-respostas-morde|pytest|tests/unit/test_portao_a_regua_das_quatro_respostas.py
 rapido|mapa-de-canais|py|scripts/gerar-mapa.py --check
 rapido|fatos-de-tela|py|scripts/gerar-fatos-de-tela.py --check
 rapido|fala-de-tela|py|scripts/validar-fala-de-tela.py --all
