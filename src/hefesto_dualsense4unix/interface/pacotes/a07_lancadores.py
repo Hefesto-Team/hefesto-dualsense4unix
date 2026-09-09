@@ -180,15 +180,18 @@ SEGUNDOS_PARA_CONFIRMAR = 20.0
 #: isso"* é verdade pelo IPC e o produto sabia abrir a Steam por outro caminho
 #: desde 23/08 (`steam_launch_options.reopen_steam`). O botão tem dono agora;
 #: quem conta o que ele sabe e o que não sabe é :func:`abrir_lancador`.
+#: O `heroic` SAIU DAQUI EM 09/09/2026 — LANCADORES-ZERO-01, e o motivo escrito
+#: nesta linha virou FATO ERRADO no dia em que o censo nasceu. Ele dizia *"não
+#: LÊ a biblioteca de nenhum deles — nenhuma função de `src/` abre o catálogo do
+#: Heroic, do Lutris, do RetroArch, do Dolphin ou do mGBA, e por isso o cartão
+#: do que foi achado continua dizendo NÃO SEI"*. As três afirmações caíram na
+#: mesma leva: `integrations/censo_dos_lancadores` abre os cinco catálogos, o
+#: selo do achado é `LOCALIZADO`, e a linha de baixo diz a contagem. Guardar a
+#: frase velha ao lado da certa obrigaria a próxima pessoa a escolher entre
+#: duas afirmações — que é o defeito que a regra desta casa existe para matar.
 SEM_DONO: dict[str, str] = {
     "criar-perfil": "criar perfil é da aba Perfis (`a10_perfis`); dois caminhos "
                     "para o mesmo disco é como duas telas passam a discordar",
-    "heroic": "o produto PROCURA os seis (`_onde_estao_os_lancadores`, pelas "
-              "pastas de `.desktop` e pelo `PATH`) e sabe dizer se estão aqui, "
-              "mas não LÊ a biblioteca de nenhum deles — nenhuma função de "
-              "`src/` abre o catálogo do Heroic, do Lutris, do RetroArch, do "
-              "Dolphin ou do mGBA, e por isso o cartão do que foi achado "
-              "continua dizendo NÃO SEI",
 }
 
 
@@ -1640,6 +1643,74 @@ def consertar(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
     return _resposta(VIGIA.ler(), ctx.state)
 
 
+def _o_cartao(chave: str) -> desenho.SemCenso | None:
+    """A `SemCenso` daquele cartão — inclusive um que ELA tenha declarado.
+
+    LER DE `procurados()` E NÃO DE `SEM_FONTE` é o que faz o cartão declarado
+    por ela também poder ser consertado: `SEM_FONTE` é a lista de fábrica, e
+    quem acrescentou um lançador ao produto esperaria o mesmo botão nele.
+    """
+    lida = VIGIA.agora()
+    for item in desenho.procurados(lida.declarados if lida is not None else ()):
+        if item.chave == chave:
+            return item
+    return None
+
+
+@gesto("07-lancadores.html", desenho.CONSERTAR_LANCADOR,
+       grava="escrever_a_estrada")
+def consertar_lancador(ctx: Contexto, o: dict[str, Any], p: Any
+                       ) -> dict[str, Any]:
+    """"Consertar" nos lançadores que não são a Steam — o ambiente por estrada.
+
+    A §5.3 DA SPRINT, e é o irmão do :func:`consertar` da Steam com um alvo
+    diferente: aquele repõe o **atalho de inicialização** no `localconfig.vdf`;
+    este escreve o **ambiente** na configuração do lançador, porque
+    `hefesto-launch` não alcança nenhum jogo sem `SteamAppId`.
+
+    QUEM SABE ESCREVER É `cura_por_estrada`, e o gesto não decide nada: ele
+    pergunta o plano, manda escrever e leva a frase para a tela. Duas estradas
+    hoje — o `config.json` do Heroic e o arquivo de override do Flatpak dos
+    demais —, e a escolha é do módulo, com a razão de cada uma escrita lá.
+
+    **A RECUSA VAI PARA A TELA**, que é o contrato desta casa: `RuntimeError`
+    vira a tarja laranja de 30 s com a frase do dono. Sem o ambiente publicado
+    pelo serviço, a cura recusa dizendo o que ligar — **nunca inventa a conta**.
+    Escrever aqui um `SDL_GAMECONTROLLER_IGNORE_DEVICES` deduzido seria uma
+    segunda conta ao lado da do daemon, e a segunda envelhece calada.
+
+    **O RECIBO VAI PELO CANAL DE RECADO, E NÃO PELO CORPO DO CARTÃO — medido
+    na tela viva em 09/09/2026.** A primeira versão escrevia a frase no `diz`
+    daquele cartão, como o `ver-o-que-impede` faz com o da Steam. **Fotografada
+    1,6 s depois do clique, a frase já não estava lá:** o tique repinta o corpo
+    do cartão a partir da leitura do disco, dez vezes por segundo, e o recibo
+    vivia 100 ms. Quem tem prazo próprio é o `recado` — seis segundos, o
+    `SEGUNDOS_DO_RECADO_DE_SUCESSO` do piloto —, e ele é um depósito DO PILOTO
+    e não um valor da página. É a decisão dela de 04/09, a D-01.
+
+    ELE DECLARA `grava=` PORQUE ESCREVE NA MÁQUINA DELA — o `config.json` do
+    Heroic e o override do Flatpak são arquivos DELA, e a prova botão a botão
+    (`--prova-gesto`) não pode clicá-lo sozinha. A lista é derivada daqui
+    (`pacotes.perigosos()`), e não digitada num arquivo distante.
+    """
+    from hefesto_dualsense4unix.integrations import cura_por_estrada as cura
+
+    qual = str(o.get("v") or "").strip()
+    if not qual:
+        raise ValueError(
+            "consertar-lancador: o clique não disse qual lançador. Cada botão "
+            "manda `data-v` com a chave do cartão — sem ela o gesto escreveria "
+            "na configuração de um lançador escolhido por acaso.")
+    item = _o_cartao(qual)
+    if item is None:
+        raise RuntimeError(
+            "Não conheço este lançador. Procure de novo e tente outra vez.")
+    frase = cura.escrever_a_estrada(
+        cura.planejar(qual, item.atalhos, nome=item.nome))
+    VIGIA.esquecer()
+    return {**_resposta(VIGIA.ler(), ctx.state), "recado": frase}
+
+
 @gesto("07-lancadores.html", "ver-o-que-impede")
 def ver_o_que_impede(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
     """"Ver o que impede": os cinco impedimentos nomeados, do prontuário.
@@ -2822,7 +2893,10 @@ PAGINA = "07-lancadores.html"
 #: e de 14 PARA 16 em 08/09/2026, com o registro do lançador que o Hefesto não
 #: conhece (pedido dela): o de LOCALIZAR (:data:`desenho.ADICIONAR`) e o de
 #: TIRAR (:data:`desenho.REMOVER`).
-PISO_DA_ABA = 16
+#: e de 16 PARA 17 em 09/09/2026, com a CURA POR ESTRADA
+#: (:data:`desenho.CONSERTAR_LANCADOR`): o ambiente do Hefesto entrando nos
+#: lançadores que o atalho de inicialização da Steam não alcança.
+PISO_DA_ABA = 17
 
 #: SEM `PROVAS`, e a razão é o contrato da régua dos botões: ela injeta uma
 #: `PonteDeMentira` e cobra QUAL função da ponte o gesto chamou. Um gesto que
@@ -2867,4 +2941,10 @@ SEM_ECO = ("procurar", "consertar", "ver-o-que-impede", "detectar",
            # outros catorze, e por um a mais: o efeito deles é o
            # `maquina.json`, e o `state_full` não tem UMA chave sobre a
            # declaração dela — nem sobre lançador nenhum.
-           desenho.ADICIONAR, desenho.REMOVER)
+           desenho.ADICIONAR, desenho.REMOVER,
+           # A CURA POR ESTRADA (09/09/2026) entra pelo motivo mais forte da
+           # lista: o efeito dela é o `config.json` do Heroic e o arquivo de
+           # override do Flatpak — arquivos de OUTROS programas, que o daemon
+           # não lê nem por acidente. Um `state_full` pedido logo depois
+           # responde exatamente o que respondia antes.
+           desenho.CONSERTAR_LANCADOR)
