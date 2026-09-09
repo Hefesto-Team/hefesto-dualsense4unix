@@ -160,9 +160,9 @@ CSS = CSS_GLIFO + """
   .duas-colunas{display:grid;grid-template-columns:var(--larg-rot) repeat(N_COLS,minmax(0,1fr));
     column-gap:var(--gap-col);row-gap:var(--r-passo);
     grid-template-rows:var(--r-nome) var(--r-modo) var(--r-pronto)
-                       minmax(var(--r-aj-e),auto) var(--r-sep)
+                       var(--t-aj-e) var(--r-sep)
                        var(--r-modo) var(--r-pronto)
-                       minmax(var(--r-aj-d),auto) var(--r-acao)}
+                       var(--t-aj-d) var(--r-acao)}
 
   /* A LINHA HORIZONTAL QUE SEPARA UM CAMPO DO OUTRO — pedido dela, 30/08:
      *"as linhas divisórias em todas as páginas (…) a primeira coluna serve como
@@ -408,6 +408,88 @@ CSS = CSS_GLIFO + """
      mantém a primeira barra de toda coluna no mesmo y quando o modo tem menos
      barras do que a linha reserva. */
   .ajustes{display:grid;grid-auto-rows:var(--h-barra);align-content:start}
+
+  /* ---------- O ACORDEÃO DOS AJUSTES — ROLAGEM-01, 09/09/2026 ----------
+     Proposta DELA, 08/09, olhando o produto instalado e maximizado: *"E tava
+     pensando pra gatilhos talvez fosse interessante colocar a seção do r2 e l2
+     dentros de blocos de expansão igual fizemos na aba controles o que vc
+     acha?"*  <!-- noqa-acento: citação literal dela, palavra por palavra -->
+
+     A CAUSA ESTÁ MEDIDA, e não era a `.janela` (775/775 nas dez): era o
+     `DIV.miolo`, 863 contra uma caixa de 564. Com os quatro na mesa e o dado
+     VIVO, cada linha de ajustes vale 230px — o desenho reserva 92 e 46, mas o
+     `minmax(…,auto)` do subgrid a deixa crescer até o maior modo da LINHA, e
+     `MultiPositionVibration` tem onze parâmetros. O mockup nunca rolou porque
+     a cena do desenho não tem esse modo em coluna nenhuma.
+
+     O QUE DOBRA É A LINHA DE AJUSTES, e só ela: as três coisas que a §3 da
+     sprint exigia caem de graça neste desenho —
+
+       1. *a linha fechada DIZ o estado*: Modo e Efeito pronto continuam à
+          vista, vivos e editáveis. O que se dobra é o ajuste fino (posição,
+          força), que é o que ninguém precisa ler para saber o que o gatilho
+          está fazendo;
+       2. *dobra por LINHA, não por coluna*: a trilha é da GRADE, e as quatro
+          colunas a partilham por `subgrid`. Não há como dobrar o L2 de uma
+          coluna só — o desalinhamento que a §3 temia é impossível por
+          construção, não por disciplina;
+       3. *«Guardar / Em todos» fica fora*: é a trilha 9, e nenhuma das duas
+          dobras a toca.
+
+     SÓ UM ABRE POR VEZ — é a opção (A) da §6, com o número na mão: os dois
+     abertos pedem 863 (299 de sobra); um aberto pede 633 (69 de sobra); os dois
+     fechados pedem 403, e a caixa tem 564. Os 69px de um só aberto rolam no
+     instante em que ela está mexendo NAQUELE bloco, que é quando ela quer
+     vê-lo inteiro. É a mesma gramática de rádio do acordeão da `02-controles`
+     que ela já aprovou (`aba02.py:2268`, `name="mesa"`).
+
+     `height:0;overflow:hidden;visibility:hidden` E NÃO `display:none`, e a
+     razão está escrita na `02-controles`: a régua de alturas mede o corpo
+     fechado POR DENTRO, e `display:none` a cegaria. Um item de flex/grid com
+     `display:none` some do DOM medido; com altura zero ele continua lá, mudo. */
+  .duas-colunas{--t-aj-e:0px;--t-aj-d:0px}
+  body:has(#dobra-l2:checked) .duas-colunas{--t-aj-e:minmax(var(--r-aj-e),auto)}
+  body:has(#dobra-r2:checked) .duas-colunas{--t-aj-d:minmax(var(--r-aj-d),auto)}
+  /* O RÁDIO NÃO SE VÊ, e não é `display:none`: um controle de formulário
+     escondido assim sai da ordem de tabulação e o teclado perde a dobra. */
+  .dobra-estado{position:absolute;width:1px;height:1px;opacity:0;pointer-events:none}
+  .ajustes,.duas-colunas .rotulos > .rot-l2-3,
+  .duas-colunas .rotulos > .rot-r2-3{overflow:hidden}
+  body:not(:has(#dobra-l2:checked)) .ajustes.e,
+  body:not(:has(#dobra-l2:checked)) .duas-colunas .rotulos > .rot-l2-3,
+  body:not(:has(#dobra-r2:checked)) .ajustes.d,
+  body:not(:has(#dobra-r2:checked)) .duas-colunas .rotulos > .rot-r2-3{
+    height:0;visibility:hidden}
+  /* A CÉLULA DOBRADA NÃO DESENHA A DIVISÓRIA: o `::before` de cada célula é a
+     linha que separa uma linha da outra, e numa trilha de 0px ela cairia em
+     cima da linha de baixo — duas divisórias no mesmo y. */
+  body:not(:has(#dobra-l2:checked)) .duas-colunas > div > .ajustes.e::before,
+  body:not(:has(#dobra-r2:checked)) .duas-colunas > div > .ajustes.d::before,
+  body:not(:has(#dobra-l2:checked)) .duas-colunas .rotulos > .rot-l2-3::before,
+  body:not(:has(#dobra-r2:checked)) .duas-colunas .rotulos > .rot-r2-3::before{display:none}
+
+  /* O GLIFO DA SEÇÃO É O QUE SE CLICA. Ele já era o cabeçalho das três linhas
+     (decisão dela de 31/08: *"o L2 e o R2 deveriam controlar a seção"*) — agora
+     ele controla mesmo. São DOIS `<label>` sobrepostos, e só um está visível:
+     o de abrir aponta para o rádio da seção, o de fechar aponta para o rádio
+     `#dobra-nenhum`. Com um `<label>` só não haveria como FECHAR sem abrir o
+     outro, que é o buraco da gramática de rádio pura. */
+  .duas-colunas .rotulos .sec-glifo > label{display:none;cursor:pointer;
+       align-items:center;justify-content:center;gap:4px;
+       -webkit-user-select:none;user-select:none;border-radius:6px;padding:2px}
+  .duas-colunas .rotulos .sec-glifo > label:hover{background:rgba(255,255,255,.03)}
+  .duas-colunas .rotulos > .g-l2 > .abre,
+  .duas-colunas .rotulos > .g-r2 > .abre{display:flex}
+  body:has(#dobra-l2:checked) .duas-colunas .rotulos > .g-l2 > .abre,
+  body:has(#dobra-r2:checked) .duas-colunas .rotulos > .g-r2 > .abre{display:none}
+  body:has(#dobra-l2:checked) .duas-colunas .rotulos > .g-l2 > .fecha,
+  body:has(#dobra-r2:checked) .duas-colunas .rotulos > .g-r2 > .fecha{display:flex}
+  /* A SETA DIZ O ESTADO SEM PALAVRA, e é a mesma que o resto da casa usa. Ela
+     mora no `::after` do label para não entrar no SVG do glifo, que é dado. */
+  .duas-colunas .rotulos .sec-glifo > .abre::after{content:'\25be';font-size:10px;
+       color:var(--comment)}
+  .duas-colunas .rotulos .sec-glifo > .fecha::after{content:'\25b4';font-size:10px;
+       color:var(--comment)}
   .barra{display:flex;align-items:center;gap:8px;font-size:11.5px;color:var(--texto-mudo)}
   .barra .trilho{flex:1;height:5px;border-radius:3px;background:var(--border-forte);
                  position:relative}
@@ -1100,6 +1182,12 @@ CSS = CSS.replace("repeat(N_COLS,", f"repeat({len(MESA)},")
 # não rola. Quem cresce é a LARGURA da coluna de rótulos, e ela já foi paga: os
 # 128px do `grid-template-columns` e o "Gatilho / esquerdo" em duas linhas
 # existem por causa deste glifo — está escrito no comentário do `.sec-rot .duas`.
+#: AS DICAS DAS DUAS DOBRAS. Elas moram aqui e não na f-string porque a
+#: f-string do `ROTULOS` sai UMA VEZ, mas a do `bloco()` sai por controle — e
+#: um texto de tela repetido em dois lugares é o defeito que esta casa nomeia.
+DICA_DE_ABRIR = "Abrir os ajustes deste gatilho. Só um dos dois fica aberto por vez."
+DICA_DE_FECHAR = "Fechar os ajustes. Modo e Efeito pronto continuam à vista."
+
 ROTULOS = f'''        <div class="rotulos">
           <div class="rot-linha-1"><span class="sec-rot">Controle</span></div>
 
@@ -1118,7 +1206,10 @@ ROTULOS = f'''        <div class="rotulos">
                é o que ela nomeia: Modo, Efeito pronto, Ajustes.
 
                CUSTO DE ALTURA: ZERO. A célula ocupa trilhas que já existiam. -->
-          <div class="sec-glifo g-l2">{glifo("l2", tam=GL)}</div>
+          <div class="sec-glifo g-l2">
+            <label class="abre" for="dobra-l2" title="{DICA_DE_ABRIR}">{glifo("l2", tam=GL)}</label>
+            <label class="fecha" for="dobra-nenhum" title="{DICA_DE_FECHAR}">{glifo("l2", tam=GL)}</label>
+          </div>
           <div class="rot-l2-1"><span class="sec-rot">Modo</span></div>
           <div class="rot-l2-2"><span class="sec-rot">Efeito pronto</span></div>
           <div class="rot-l2-3 no-topo"><span class="sec-rot">Ajustes</span></div>
@@ -1133,7 +1224,10 @@ ROTULOS = f'''        <div class="rotulos">
                o lugar, e por isso não leva borda. -->
           <div class="vao-l2-r2"></div>
 
-          <div class="sec-glifo g-r2">{glifo("r2", tam=GL)}</div>
+          <div class="sec-glifo g-r2">
+            <label class="abre" for="dobra-r2" title="{DICA_DE_ABRIR}">{glifo("r2", tam=GL)}</label>
+            <label class="fecha" for="dobra-nenhum" title="{DICA_DE_FECHAR}">{glifo("r2", tam=GL)}</label>
+          </div>
           <div class="rot-r2-1"><span class="sec-rot">Modo</span></div>
           <div class="rot-r2-2"><span class="sec-rot">Efeito pronto</span></div>
           <div class="rot-r2-3 no-topo"><span class="sec-rot">Ajustes</span></div>
@@ -1157,6 +1251,12 @@ MIOLO = f'''
         </span></span>
       </div>
       <div class="quadro-corpo">
+        <!-- OS TRÊS ESTADOS DA DOBRA — ROLAGEM-01. `nenhum` nasce marcado: é o
+             único arranjo em que a aba CABE (403 contra 564), e é o que cura a
+             barra que ela achou em 08/09. Ver o comentário do acordeão no CSS. -->
+        <input class="dobra-estado" type="radio" name="dobra" id="dobra-nenhum" checked>
+        <input class="dobra-estado" type="radio" name="dobra" id="dobra-l2">
+        <input class="dobra-estado" type="radio" name="dobra" id="dobra-r2">
         <div class="duas-colunas">
 {ROTULOS}
 {chr(10).join(coluna(c) for c in MESA)}
