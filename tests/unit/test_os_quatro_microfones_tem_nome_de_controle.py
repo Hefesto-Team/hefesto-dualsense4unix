@@ -461,6 +461,43 @@ def test_o_assento_e_a_posicao_na_mesa_e_nao_o_numero_do_coop() -> None:
     )
 
 
+def test_um_controle_desligado_nao_ocupa_assento() -> None:
+    """Handle aberto e DESCONECTADO não empurra o assento de quem está na mesa.
+
+    `describe_controllers()` devolve uma entrada por HANDLE ABERTO, e o handle
+    de um controle desligado continua na lista com `connected: False` e `index`
+    próprio. Até 09/09/2026 `numero_do_assento` lia esse `index` e
+    `uniqs_na_mesa` filtrava por `connected` — as duas leituras discordavam nas
+    DUAS pontas: o desligado ganhava assento, e quem estava ligado perdia o
+    assento 1 para ele.
+
+    A MORDIDA: com o P1 desligado, ler o `index` devolve `[1, 2, 3, 4]` e dá
+    assento ao ausente; a mesa tem TRÊS, e eles são 1, 2 e 3.
+    """
+    sub = bt_mic.BtMicSubsystem(registro=bt_mic.RegistroDePedidosDeCanal())
+    sub._backend = _BackendDaMesa(OS_QUATRO, desconectado=P1)
+
+    assert sub.uniqs_na_mesa() == frozenset(_hex(u) for u in (P2, P3, P4)), (
+        "a mesa não é a dos conectados"
+    )
+    assert sub.numero_do_assento(P1) is None, (
+        "um controle DESLIGADO ganhou assento na mesa dela"
+    )
+    assentos = [sub.numero_do_assento(u) for u in (P2, P3, P4)]
+    assert assentos == [1, 2, 3], (
+        f"o handle desligado empurrou o assento de quem está ligado: {assentos}"
+    )
+
+    # A INVARIANTE, controle a controle: ter assento é estar na mesa.
+    mesa = sub.uniqs_na_mesa()
+    for u in OS_QUATRO:
+        tem_assento = sub.numero_do_assento(u) is not None
+        assert tem_assento == (_hex(u) in mesa), (
+            f"as duas leituras discordam sobre {_hex(u)}: "
+            f"assento={sub.numero_do_assento(u)} na_mesa={_hex(u) in mesa}"
+        )
+
+
 def test_o_gancho_do_assento_sobe_e_desce_com_o_subsystem(  # type: ignore[no-untyped-def]
     numerador_limpo,
 ) -> None:
