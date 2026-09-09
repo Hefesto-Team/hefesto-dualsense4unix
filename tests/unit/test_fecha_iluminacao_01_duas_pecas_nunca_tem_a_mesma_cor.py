@@ -732,8 +732,16 @@ class TestOGestoDaAba:
         Uma tela que oferece o que o gesto recusa é pior do que uma que não
         oferece nada: ela clica, o produto diz não, e a culpa parece dela.
 
+        **O X DEIXOU DE SER SÓ DESENHO — 09/09/2026.** A casa tomada perde o
+        `data-gesto`, e é isso que cumpre a palavra dela: *"um X (…) de forma
+        que me IMPEÇA de setar alguma cor de um coleguinha"*. Até aqui o X era
+        pintado e o botão guardava o gesto do lado — ela clicava, e três linhas
+        de recusa cobriam o desenho do controle por 30 s. Ela viu na bancada:
+        *"no caso o X fica o aviso saí"*. <!-- noqa-acento: citação dela -->
+
         **A MORDIDA:** faça `fileira_de_tons` ignorar `tomadas` e o X some,
-        enquanto o gesto continua recusando.
+        enquanto o gesto continua recusando; ou devolva o `data-gesto` à casa
+        tomada e o aviso volta a nascer.
         """
         from hefesto_dualsense4unix.interface.pacotes import a04_iluminacao as a04
 
@@ -742,17 +750,56 @@ class TestOGestoDaAba:
             _hexa(player_slot_color(1)),
             {tomado: {"nome": "P2 (DualSense)", "plastico": "#1c1c1c"}})
 
-        casas = [linha for linha in html.splitlines() if "data-hex" in linha]
+        casas = [linha for linha in html.splitlines() if "<button" in linha]
         assert len(casas) == len(a04.tons_da_guia())
-        do_vizinho = [c for c in casas if f'data-hex="{tomado}"' in c]
-        assert len(do_vizinho) == 1
-        assert "tomado" in do_vizinho[0], "a casa do vizinho não ganhou o X"
-        assert "--dono:#1c1c1c" in do_vizinho[0], (
-            "o X não saiu na cor do plástico de quem tem o tom")
-        assert "P2 (DualSense)" in do_vizinho[0], "o X não diz de quem é"
+        do_vizinho = [c for c in casas if "tomado" in c]
+        assert len(do_vizinho) == 1, "o X não caiu em exatamente uma casa"
+        assert 'data-hex' not in do_vizinho[0], (
+            "a casa tomada ainda carrega o endereço do gesto")
+        assert 'data-gesto' not in do_vizinho[0], (
+            "a casa com X continua clicável — o clique vira aviso, e o aviso é "
+            "o que ela mandou sair")
+        assert 'aria-disabled="true"' in do_vizinho[0], (
+            "quem usa leitor de tela não é avisado de que a casa está travada")
+        assert "P2 (DualSense)" in do_vizinho[0], (
+            "o X não diz de quem é — e agora ele é o ÚNICO canal que diz, "
+            "porque o aviso saiu")
+        # AS OUTRAS TREZE CONTINUAM SENDO GESTO — sem isto, travar o vizinho
+        # poderia travar a guia inteira e ninguém veria.
+        livres = [c for c in casas if "tomado" not in c]
+        assert len(livres) == len(a04.tons_da_guia()) - 1
+        assert all('data-gesto="cor"' in c for c in livres)
         # a MINHA cor ganha o anel, e nunca o X
         minha = [c for c in casas if f'data-hex="{_hexa(player_slot_color(1))}"' in c]
         assert "tom on" in minha[0] and "tomado" not in minha[0]
+
+    def test_o_x_e_preto_com_borda_branca_e_nao_a_cor_do_dono(self) -> None:
+        """Decisão dela, 09/09/2026, com os quatro na mesa.
+
+        *"deixa o nosso x preto com borda branca pra destacar. Falo isso pois
+        ficou perfeito o nosso x, o complicado é que são tons pasteis e o
+        controle branco por exemplo não ajuda nisso o x dele fica invisível."*
+        <!-- noqa-acento: citação literal dela -->
+
+        A ideia antiga — o X na cor do PLÁSTICO do dono — vinha da regra que
+        pinta a borda da coluna, e a bancada a derrubou: **branco sobre pastel
+        não tem contraste**, e o X do controle branco dela sumia justamente na
+        casa em que ela precisa vê-lo. Um X que aparece em três dos quatro é
+        pior do que um X neutro que aparece nos quatro.
+
+        **A MORDIDA:** devolva `var(--dono)` ao `background` do `::after` e o
+        X do controle branco volta a ser invisível sobre o pastel.
+        """
+        from hefesto_dualsense4unix.interface import aba04
+
+        css = aba04.CSS
+        bloco = css.split(".guia .tom.tomado::after{", 1)[1].split("}", 1)[0]
+        assert "--dono" not in bloco, (
+            "o X voltou a depender da cor do plástico — o do controle branco "
+            "some sobre o pastel")
+        assert "#000" in bloco, "o X não é preto"
+        assert "#fff" in bloco and "drop-shadow" in bloco, (
+            "o X perdeu a borda branca que o destaca do tom pastel")
 
     def test_um_lugar_sem_controle_nao_ganha_anel_nem_x(self) -> None:
         """Não há escolha a marcar e não há dono a proteger — COR-X-01 §3.4.
