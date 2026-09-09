@@ -833,7 +833,7 @@ CSS = CSS_GLIFO + """
           quando o gesto RECUSAVA — a tela trocava de lado sozinha e nada a
           devolvia.
 
-          O piloto ganhou o alvo `classe` em 02/09 (`hefesto_vivo.py:227`), e é
+          O piloto ganhou o alvo `classe` em 02/09 (`hefesto_vivo.py:636`), e é
           ele quem acende agora; a palavra virou nó de texto, que o alvo padrão
           escreve. Nasce em `—` de propósito: antes do primeiro tique ninguém
           perguntou ao Hefesto, e "Desligado" seria uma afirmação. ---- */
@@ -1964,7 +1964,7 @@ D_STEAM = ajuda(
 #      o gesto RECUSAVA — e nada a devolvia.
 #
 # AS DUAS SAEM COM A MESMA MUDANÇA: o `<input>` some, a cor passa a ser a classe
-# `ligado` (alvo `classe` do piloto, `hefesto_vivo.py:227`, com
+# `ligado` (alvo `classe` do piloto, `hefesto_vivo.py:636`, com
 # `data-hef-quando` dizendo qual palavra a acende) e a palavra vira nó de texto
 # no `.txt` (alvo padrão). Os dois elementos levam o MESMO `data-campo`: o
 # `achar()` visita os dois com o mesmo valor e cada um decide por si — é a

@@ -288,7 +288,7 @@ MASCARAS = ("DualSense", "Xbox 360", "Nintendo Pro")
 # entre a costura e o fecho.
 #
 # A `via` FICA COMO ESTÁ nesta tabela, e é decisão: seis geradores a escrevem
-# DIRETO na tela (`aba04.py:1174`, `aba06.py:1608`, `aba03.py:878`…), e trocá-la
+# DIRETO na tela (`aba04.py:1279`, `aba06.py:1608`, `aba03.py:878`…), e trocá-la
 # pela palavra da tela aqui mudaria o desenho aprovado sem sprint que responda
 # por isso. É trabalho da `A-PALAVRA-MESA-SAI-01`.
 MESA = [
@@ -820,6 +820,33 @@ def _endereco_do_chip(pref: str, inerte: bool) -> str:
             f' data-controle=""')
 
 
+def rotulo_do_chip(c: dict[str, Any]) -> str:
+    """O rótulo curto com a VIA marcada, para o chip da fita.
+
+    **TELA-TRES-01 §3, decisão dela de 08/09/2026:** *"cabo e rádio coloca
+    maiúsculo."*
+
+    **A CAIXA É CSS, E ISSO NÃO É DETALHE** — `rotulo` já escrevia a razão:
+    *"quem escreve em maiúscula no HTML tira da pessoa a chance de copiar o
+    nome do plástico"*. Então o texto continua `cabo`/`rádio` no documento, e
+    o `<span class="via">` é o que a folha alcança com `text-transform`.
+
+    E O DONO DO TEXTO CONTINUA SENDO `rotulo`: esta função não remonta o
+    rótulo, ela MARCA a última parte do que aquele devolveu. Remontar seria a
+    sexta gramática do nome de um controle nesta janela — as cinco que havia
+    estão contadas na docstring do dono.
+
+    QUEDA SILENCIOSA: se a `via` não estiver no fim (um controle sem
+    transporte, o travessão), o rótulo volta como veio. Marcar por posição
+    fixa quebraria no dia em que a ordem dela mudasse.
+    """
+    texto = rotulo(c, "curta")
+    via = str(c.get("via") or "")
+    if via and texto.endswith(via):
+        return f'{texto[:-len(via)]}<span class="via">{via}</span>'
+    return texto
+
+
 def fita(ativo: str = "todos", inerte: bool = False, titulo: str | None = None,
          mesa: list[dict[str, Any]] | None = None) -> str:
     """Os chips da fita, um por controle da mesa, gerados.
@@ -934,7 +961,7 @@ def fita(ativo: str = "todos", inerte: bool = False, titulo: str | None = None,
             f'<label class="chip{" plastico" if slug else ""}{on}" data-campo="fita-chip"'
             + _endereco_do_chip(str(c["pref"]), inerte)
             + f'{pintado} title="{dica}">'
-            + rotulo({**c, "nome": nome}, "curta") + "</label>")
+            + rotulo_do_chip({**c, "nome": nome}) + "</label>")
     # SEM O RECUO DA PRIMEIRA LINHA, e isto é medição, não estilo. Quem monta a
     # página põe o recuo (`RECUO_DA_FITA`); quem pinta a tela viva joga esta
     # string num `outerHTML`, e o navegador devolve o nó SEM recuo nenhum. Com o

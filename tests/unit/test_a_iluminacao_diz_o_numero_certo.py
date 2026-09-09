@@ -481,22 +481,34 @@ def test_o_anel_da_cor_escolhida_tem_endereco_e_e_o_mesmo_do_hex():
     #: aqui mediria o mundo de ontem, que é o defeito que esta casa nomeia:
     #: *a régua media o mundo de ontem*.  (noqa-acento: verbo medir, imperfeito)
     #:
-    #: E O ENDEREÇO CONTINUA VALENDO NOS QUATRO, que é o ponto: `hex` +
-    #: `data-hef-alvo="classe"` é o que faz o anel acender no tom certo quando
-    #: o controle chega. Sem ele nos lugares vazios, o P3 mostraria a guia e
-    #: nenhuma cor marcada.
-    assert bancada.count('data-campo="hex" data-hef-alvo="classe"') == 32, (
-        "os botões da guia de cores voltaram a não ter endereço de estado — ou "
-        "a guia deixou de nascer nos QUATRO lugares, e o P3 que ganha um "
-        "controle volta a ficar sem onde trocar a cor.")
+    #: E O ENDEREÇO CONTINUA VALENDO NOS QUATRO, que é o ponto: sem ele nos
+    #: lugares vazios, o P3 mostraria a guia e nenhuma cor marcada.
+    #:
+    #: **O ENDEREÇO MUDOU — 09/09/2026, COR-X-01.** Era um `data-campo="hex"`
+    #: com `data-hef-alvo="classe"` por BOTÃO, e o alvo `classe` compara por
+    #: IGUALDADE: ele acende o tom escolhido e não tem como dizer "esta cor é
+    #: de OUTRO controle", que é o X que ela pediu. A guia virou bloco
+    #: (`data-campo="tons"`, alvo `html`), como a fileira de players.
+    #:
+    #: **E ESTA RÉGUA ESTAVA VERMELHA DESDE A LEVA DOS CATORZE TONS**, sem
+    #: ninguém ver: ela exigia `32` (oito tons por quatro lugares) e o arquivo
+    #: trazia `56`. *Um número cravado envelhece calado no dia em que a guia
+    #: cresce* — por isso o que se conta agora é o BLOCO, um por lugar, e o
+    #: tamanho da guia vem de `tons_da_guia()`, que tem dono.
+    assert bancada.count('data-campo="tons" data-hef-alvo="html"') == 4, (
+        "a guia de cores voltou a não ter endereço de estado — ou ela deixou "
+        "de nascer nos QUATRO lugares, e o P3 que ganha um controle volta a "
+        "ficar sem onde trocar a cor.")
+    assert bancada.count('class="tom') == 4 * len(pac.tons_da_guia()), (
+        "a bancada e `tons_da_guia()` discordam sobre quantos tons a guia tem")
 
-    #: O `data-hef-quando` LEVA O HEX DO PRODUTO, que é o que o pacote emite —
-    #: e não o tom da casa, que é só o que a tela desenha. Foi essa mesma
-    #: confusão que fez o `.tom.on` do desenho casar ZERO botões em 31/08.
+    #: O `data-hex` LEVA O HEX DO PRODUTO, que é o que o gesto lê — e não o tom
+    #: da casa, que é só o que a tela desenha. Foi essa mesma confusão que fez
+    #: o `.tom.on` do desenho casar ZERO botões em 31/08.
     from hefesto_dualsense4unix.core.led_control import player_slot_color
 
     for n in (1, 2):
-        assert f'data-hef-quando="{pac._hex(player_slot_color(n))}"' in bancada
+        assert f'data-hex="{pac._hex(player_slot_color(n))}"' in bancada
 
 
 def test_a_bancada_perdeu_a_dica_congelada_da_celula_de_leds():
@@ -1341,7 +1353,11 @@ def test_a_coluna_que_esvazia_le_como_a_que_nasce_vazia():
         # `data-gesto="auto"` SAIU DESTA LISTA em 07/09/2026, com o botão
         # que ela mandou tirar. Exigir um endereço que a tela não tem mais
         # faria esta régua reprovar a ordem dela.
-        for peca in ('<span class="guia">', 'class="puxador"',
+        # `class="guia"` SEM o `>`: desde a COR-X-01 o `<span>` carrega
+        # atributos (o `data-campo="plastico"` e, dentro, o bloco dos tons),
+        # e uma busca pelo fecho mede a FORMA da tag em vez da presença da
+        # guia. O que esta régua quer saber é se o lugar vazio TEM a guia.
+        for peca in ('class="guia"', 'class="puxador"',
                      'data-gesto="apagar"', 'data-gesto="reenviar"'):
             assert peca in coluna, (
                 f"o lugar que NASCE vazio perdeu {peca!r} — o controle que "

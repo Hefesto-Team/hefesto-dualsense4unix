@@ -675,9 +675,27 @@ CSS = """
      CABO (`app/actions/config/secao_controles.py:929`), e por isso p2 e p3, que
      estão no rádio, não têm leitura. */
   .col-log{display:flex;flex-direction:column}
+  /* A CAIXA ACOMPANHA O IRMÃO — TELA-TRES-01 §1, pedido dela de 08/09/2026:
+     "em sistema aumentar a altura do detalhes técnicos pra ficar igual ao
+     bloco à esquerda".
+
+     MEDIDO NO CHROME, na página publicada, antes da cura: a lista dos quatro
+     botões fechava em 136px e esta caixa em 110px — 26px de diferença, e a
+     lista das identidades de fábrica rolava enquanto sobrava espaço embaixo
+     dela. Com QUATRO controles na mesa são quatro linhas, e é o caso dela.
+
+     `flex:1` E NÃO UMA SEGUNDA ALTURA CRAVADA: o `.avancado` já é um grid com
+     `align-items:stretch` e o `.col-log` já é uma coluna flex — a altura do
+     irmão CHEGA aqui sozinha. Um `height:136px` digitado seria a segunda
+     verdade sobre a altura da lista, e envelheceria no dia em que o quinto
+     botão entrasse (o quarto entrou em 06/09 e já custou 26px a esta caixa).
+
+     O `min-height` GUARDA O PISO: se um dia a faixa encolher, a caixa não cai
+     abaixo do que já cabia — quatro linhas de identidade mais o título. */
   .log{padding:10px 12px;border:1px solid var(--border-sutil);border-radius:7px;
        background:var(--app-bg);font-family:'JetBrains Mono',monospace;font-size:10.5px;
-       line-height:1.6;color:var(--texto-mudo);height:110px;overflow:auto;white-space:pre}
+       line-height:1.6;color:var(--texto-mudo);flex:1;min-height:110px;
+       overflow:auto;white-space:pre}
 """ + CSS_GLIFO
 
 

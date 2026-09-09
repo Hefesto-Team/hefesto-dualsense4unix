@@ -172,12 +172,13 @@ def test_a_pagina_sem_pacote_continua_devolvendo_none(pacotes_mod):
     "ninguém pinta isto ainda" de "pintei nada", e confundir os dois é como uma
     tela morta passa por tela sem novidade.
 
-    FATO DERRUBADO, medido em 02/09/2026: a casa diz em dois lugares que a
-    `07-lancadores` é a aba SEM pacote — `hefesto_vivo.SEM_PACOTE` e o
-    comentário do `_tique` ("a `07-lancadores` não tem pacote e sai daquele
-    `return`"). **Ela tem**: `a07_lancadores.py:236` traz
-    `@registrar("07-lancadores.html")`, e `pacote_da_pagina` devolve 26 chaves
-    para ela. Por isso este teste usa uma página que de fato não existe.
+    FATO DERRUBADO, medido em 02/09/2026 e SUBSTITUÍDO em 09/09/2026: a casa
+    dizia em dois lugares que a `07-lancadores` era a aba SEM pacote. **Ela
+    tem** — `a07_lancadores.py` traz `@registrar("07-lancadores.html")` e
+    `pacote_da_pagina` devolve 26 chaves para ela —, e os dois lugares foram
+    reescritos pela LANCADORES-ZERO-01 §5: a constante `SEM_PACOTE` saiu (era
+    morta) e os comentários do `_tique` pararam de nomear esta aba. Por isso
+    este teste usa uma página que de fato não existe.
     """
     ctx = _mesa_vazia(pacotes_mod)
     assert pacotes_mod.pacote_da_pagina("99-nao-existe.html", ctx) is None

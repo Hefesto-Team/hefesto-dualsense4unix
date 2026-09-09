@@ -810,6 +810,22 @@ _SEM_MAO_HOJE: dict[str, str] = {
 #: Não é dívida: é classificação. A razão CITA a evidência que a sustenta,
 #: porque "confie em mim" não é razão.
 _NAO_E_PROMESSA: dict[str, str] = {
+    "integrations/censo_dos_lancadores.py::sabe_ler": (
+        "09/09/2026, LANCADORES-ZERO-01 — é a pergunta que uma RÉGUA faz ao "
+        "módulo, e não uma promessa ao produto: a tela nunca a chama, porque "
+        "`biblioteca_do_cartao` já devolve o estado certo para os quatro "
+        "casos (`LIDO`, `NUNCA_ABERTO`, `ILEGIVEL`, `SEM_BIBLIOTECA`) e a "
+        "frase sai de `BibliotecaDoLancador.resumo`. Perguntar "
+        "\"sei ler?\" antes de ler seria a segunda verdade sobre a mesma "
+        "tabela `_LEITORES`. Quem chama é "
+        "`tests/unit/test_a_aba_lancadores_diz_a_verdade.py::"
+        "test_os_cinco_lancadores_ganharam_leitor_de_biblioteca`, que existe "
+        "para reprovar no dia em que um dos cinco perder o leitor — a régua "
+        "que ANTES provava o contrário, e que escrevia o próprio gatilho de "
+        "virada. Evidência: `tests/unit/"
+        "test_o_censo_dos_lancadores_le_a_biblioteca.py`, 13 casos com lar de "
+        "mentira; arrancar o leitor do Heroic reprova oito."
+    ),
     "interface/frases_que_ela_baniu.py::texto_visivel_no_produto": (
         "06/09/2026, A-REGUA-DA-PALAVRA-VE-O-PRODUTO-01 — é a irmã de "
         "`texto_visivel` e não é promessa pela MESMA razão: o produto não lê a "

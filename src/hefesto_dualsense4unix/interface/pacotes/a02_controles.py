@@ -2451,7 +2451,7 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
                 # return 1 }`, e o CSSOM NORMALIZA na atribuição (`#0000FF`
                 # volta `rgb(0, 0, 255)`) — a comparação nunca casa e o contador
                 # soma +1 por tique, para sempre. O ramo do `cor` ESCREVE e
-                # depois COMPARA (`hefesto_vivo.py:246-250`), então é idempotente
+                # depois COMPARA (`hefesto_vivo.py:547-552`), então é idempotente
                 # por construção. O gerador pinta o retângulo com
                 # `background:currentColor`, e escrever a cor de linha muda o
                 # fundo.

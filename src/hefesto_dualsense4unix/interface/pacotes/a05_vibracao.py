@@ -325,6 +325,30 @@ def _ressalva_da_mesa(perfil: dict[str, Any], mesa: list[dict[str, Any]]) -> str
             f"Auto e as escolhas voltam a valer.")
 
 
+def _quanto_multiplica(pct: dict[str, Any], barra: int | None) -> str:
+    """A frase que diz o efetivo deste motor — `barra x degrau`.
+
+    **VIBRA-MULT-01, 09/09/2026.** Ela responde, sem um clique, a pergunta que
+    a queixa dela fazia: *"o motor esquerdo está multiplicando pela força?"*.
+
+    CALA QUANDO NÃO SABE, que é a regra desta casa para campo sem informação:
+    sem degrau conhecido (uma política fora das cinco) não há produto a
+    afirmar, e uma frase com `—` no meio é pior que silêncio.
+
+    O NÚMERO SAI INTEIRO quando é redondo — `75%`, não `75.0%`: a tela desta
+    aba imprime porcentagem sem casa em toda parte, e uma casa decimal aqui
+    faria a dica parecer mais precisa do que o degrau que a origina.
+    """
+    if not pct.get("sabe") or barra is None:
+        return ""
+    degrau = float(str(pct.get("n", "")).rstrip("%") or 0)
+    efetivo = degrau * int(barra) / 100.0
+    def _n(v: float) -> str:
+        return f"{v:.0f}" if abs(v - round(v)) < 0.05 else f"{v:.1f}"
+    return (f"Este motor a {barra}%, força {_n(degrau)}% — sai "
+            f"{_n(efetivo)}% do que o jogo pedir.")
+
+
 def _barras_dos_motores(state: dict[str, Any], uniq: str) -> dict[str, int]:
     """``{"e": forte_pct, "d": fraco_pct}`` DESTE controle, do `state_full`.
 
@@ -700,9 +724,29 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
             # parar quando a linha virou AJUSTE. O alvo é `atributo`, e quando
             # não há o que dizer o pintor **APAGA** o atributo em vez de escrever
             # travessão: não sobra dica afirmando um pedido que ninguém mediu.
+            #
+            # **E QUANDO O JOGO NÃO PEDE NADA, ELA DIZ A MULTIPLICAÇÃO** —
+            # VIBRA-MULT-01, 09/09/2026. A queixa dela era *"na guia vibração
+            # os slicers não estão se multiplicando: motor esquerdo x força de
+            # vibração (…) pra cada controle"*, e o que estava errado não era a
+            # conta — `gamepad._mults_por_motor` faz `degrau x barra` desde
+            # 04/09, com 55 réguas — era **a tela, que não a mostrava em lugar
+            # nenhum**. Medido em 09/09 com os quatro na mesa: o P2 imprimia
+            # `mult 200%` com os DOIS motores em 0%, e o efetivo era zero.
+            #
+            # O `mult` CONTINUA SENDO O DEGRAU, e não vira o produto: ele é o
+            # que o trilho ao lado move, e trocar o significado do campo faria
+            # o número discordar do cursor. O produto vai para onde havia
+            # espaço vazio — esta dica, que só falava quando o jogo tremia.
+            #
+            # A CONTA NÃO SE DIGITA AQUI: `barras[lado]` é lido do
+            # `state_full.rumble_motores`, o MESMO mapa que
+            # `apply_game_rumble` multiplica, e o degrau sai do `pct` da
+            # coluna. Uma multiplicação escrita à mão nesta linha seria a
+            # segunda cópia da conta do daemon — e a que envelheceria calada.
             plano[f"motor-{lado}-pedido"] = (
                 f'O jogo pediu {m.get("n")} de 255 neste motor agora.'
-                if m.get("sabe") else "")
+                if m.get("sabe") else _quanto_multiplica(pct, barras.get(lado)))
             # A BARRA DAQUELE MOTOR — o AJUSTE, de 0 a 100, que MULTIPLICA o
             # degrau da coluna (decisão dela, 04/09/2026). Endereço NOVO de
             # propósito: `motor-e` já quer dizer outra coisa na página publicada.
@@ -724,7 +768,7 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
         # esquerdo, para sempre, com a mesa parada e `vpads == 0`.
         #
         # BOOLEANO, como o `mult-teto`: o alvo `classe` sem `data-hef-quando`
-        # acende por si (`hefesto_vivo.py:227`). `""` atravessa como o travessão
+        # acende por si (`hefesto_vivo.py:636`). `""` atravessa como o travessão
         # e APAGA — que é a resposta certa para "ninguém mediu tremor nenhum".
         for lado, treme in (col.get("treme") or {}).items():
             plano[f"treme-{lado}"] = "1" if treme else ""

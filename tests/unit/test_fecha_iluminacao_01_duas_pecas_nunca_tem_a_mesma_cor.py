@@ -444,9 +444,15 @@ class TestAProcedenciaEOQueElaLe:
     def test_o_interruptor_congela_a_cor_com_o_numero_de_hoje(self) -> None:
         """Desligar o automático GRAVA a cor de cada um — e agora com o número.
 
-        É o único caminho da aba que escreve cor no disco, e é exatamente o
-        que fabricava os fósseis: ele congelava "azul" e perdia "azul porque
-        ele era o 1".
+        Ele congelava "azul" e perdia "azul porque ele era o 1", que é
+        exatamente como os fósseis nasciam.
+
+        **FATO SUBSTITUÍDO — 09/09/2026.** Estas linhas diziam que este era *"o
+        único caminho da aba que escreve cor no disco"*, e era verdade — era
+        também o defeito: a cor que ela ESCOLHIA não ia a lugar nenhum, e
+        voltava ao azul no primeiro replug. Agora `_escrever_a_cor` grava toda
+        escolha dela pelo mesmo `_com_a_cor_gravada`; ver
+        `test_a_cor_escolhida_vai_ao_disco_e_o_trilho_nao_reescala.py`.
 
         **A MORDIDA:** tire o `numero` de `_com_a_cor_gravada` e o campo volta
         a nascer `None` — todo perfil novo já nasceria `LEGADO`.
@@ -694,22 +700,75 @@ class _PonteQueAceita:
 class TestOGestoDaAba:
     """A metade que só a TELA cumpre — a frase que diz de quem é a cor."""
 
-    def test_escolher_o_tom_do_vizinho_desloca_e_diz_de_quem_e(self) -> None:
-        """*"O segundo desloca para o tom vizinho e a tela diz o que fez."*
+    def test_escolher_o_tom_do_vizinho_recusa_e_diz_de_quem_e(self) -> None:
+        """A cor com dono RECUSA — decisão dela, 09/09/2026.
+
+        **FATO SUBSTITUÍDO.** Este teste chamava-se
+        `test_escolher_o_tom_do_vizinho_desloca_e_diz_de_quem_e` e mediu o
+        deslocamento — *"o segundo desloca para o tom vizinho"* —, que existiu
+        de 08/09 a 09/09. Ela decidiu o contrário
+        (`D-0909-A-COR-DE-OUTRO-CONTROLE-SE-RECUSA-COM-X`), e o deslocamento
+        era uma terceira coisa: ela clicava num tom e o aparelho acendia
+        OUTRO, escolhido pelo produto.
 
         **A MORDIDA:** faça `_sem_repetir_a_cor_do_vizinho` devolver
-        `(rgb, None)` na primeira linha e as três asserções reprovam — a cor
-        sai repetida, o recado some e ela não sabe de quem era o tom.
+        `(rgb, None)` quando há dono e nada recusa — a cor sai repetida e ela
+        não sabe de quem era o tom.
         """
         from hefesto_dualsense4unix.interface.pacotes import a04_iluminacao as a04
 
-        alvo, recado = a04._sem_repetir_a_cor_do_vizinho(
-            _CtxDeMentira(), UNIQS[0], player_slot_color(2))
+        with pytest.raises(RuntimeError) as erro:
+            a04._sem_repetir_a_cor_do_vizinho(
+                _CtxDeMentira(), UNIQS[0], player_slot_color(2))
 
-        assert alvo != player_slot_color(2), "ficou com o tom que o vizinho tem"
-        assert recado and "P2" in recado, f"a tela não disse de quem é: {recado}"
-        assert alvo not in [player_slot_color(n) for n in (2, 3, 4)], (
-            "deslocou para o tom de um TERCEIRO, que também está na mesa")
+        frase = str(erro.value)
+        assert "P2" in frase, f"a tela não disse de quem é: {frase}"
+        assert "Nada foi mudado" in frase, (
+            f"a recusa não diz que o aparelho ficou como estava: {frase}")
+
+    def test_a_guia_desenha_o_x_exatamente_no_que_o_gesto_recusa(self) -> None:
+        """As duas metades da regra leem a MESMA mesa — COR-X-01.
+
+        Uma tela que oferece o que o gesto recusa é pior do que uma que não
+        oferece nada: ela clica, o produto diz não, e a culpa parece dela.
+
+        **A MORDIDA:** faça `fileira_de_tons` ignorar `tomadas` e o X some,
+        enquanto o gesto continua recusando.
+        """
+        from hefesto_dualsense4unix.interface.pacotes import a04_iluminacao as a04
+
+        tomado = _hexa(player_slot_color(2))
+        html = a04.fileira_de_tons(
+            _hexa(player_slot_color(1)),
+            {tomado: {"nome": "P2 (DualSense)", "plastico": "#1c1c1c"}})
+
+        casas = [linha for linha in html.splitlines() if "data-hex" in linha]
+        assert len(casas) == len(a04.tons_da_guia())
+        do_vizinho = [c for c in casas if f'data-hex="{tomado}"' in c]
+        assert len(do_vizinho) == 1
+        assert "tomado" in do_vizinho[0], "a casa do vizinho não ganhou o X"
+        assert "--dono:#1c1c1c" in do_vizinho[0], (
+            "o X não saiu na cor do plástico de quem tem o tom")
+        assert "P2 (DualSense)" in do_vizinho[0], "o X não diz de quem é"
+        # a MINHA cor ganha o anel, e nunca o X
+        minha = [c for c in casas if f'data-hex="{_hexa(player_slot_color(1))}"' in c]
+        assert "tom on" in minha[0] and "tomado" not in minha[0]
+
+    def test_um_lugar_sem_controle_nao_ganha_anel_nem_x(self) -> None:
+        """Não há escolha a marcar e não há dono a proteger — COR-X-01 §3.4.
+
+        **A MORDIDA:** tire o `if ligado` da conta do `on` e o lugar vazio
+        passa a afirmar uma cor que ninguém escolheu.
+        """
+        from hefesto_dualsense4unix.interface.pacotes import a04_iluminacao as a04
+
+        html = a04.fileira_de_tons(
+            _hexa(player_slot_color(1)),
+            {_hexa(player_slot_color(2)): {"nome": "P2", "plastico": "#1c1c1c"}},
+            ligado=False)
+
+        assert "tom on" not in html
+        assert "tomado" not in html
 
     def test_o_reenviar_passa_pela_mesma_porta_que_o_cor(
         self, monkeypatch: pytest.MonkeyPatch
@@ -737,13 +796,13 @@ class TestOGestoDaAba:
         # como "botão que aceita o toque e não age".
         atende = pacotes.gesto_da_pagina("04-iluminacao.html", "reenviar")
         assert atende is not None, "ninguém atende o `reenviar` da página 04"
-        recado = atende(_CtxDeMentira(), {"uniq": UNIQS[0], "texto": vizinho},
-                        ponte)
+        with pytest.raises(RuntimeError) as erro:
+            atende(_CtxDeMentira(), {"uniq": UNIQS[0], "texto": vizinho}, ponte)
 
-        assert ponte.cores, "o reenviar não chegou a escrever"
-        assert ponte.cores[-1][0] != player_slot_color(2), (
-            "o reenviar mandou ao aparelho o tom que o vizinho já tem")
-        assert recado and "P2" in recado["recado"]
+        assert "P2" in str(erro.value)
+        assert not ponte.cores, (
+            "o reenviar escreveu no aparelho apesar da recusa — "
+            "«Nada foi mudado» tem de ser verdade")
 
     def test_o_tom_livre_passa_calado(self) -> None:
         """Sem colisão não há frase — recado sobre nada é ruído."""
