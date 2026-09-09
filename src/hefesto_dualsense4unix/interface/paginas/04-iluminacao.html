@@ -1429,22 +1429,46 @@
      coleguinha". <!-- noqa-acento: citação literal dela -->
 
      ELE É DESENHADO, e não um caractere: um `×` de texto herda a fonte, muda
-     de tamanho com ela e não alcança a cor do plástico de quem tem o tom. Dois
-     gradientes cruzados desenham as duas hastes em `var(--dono)`, que o pacote
-     escreve inline por botão.
+     de tamanho com ela e o traço fino some sobre um tom claro. Dois gradientes
+     cruzados desenham as duas hastes, e uma sombra os contorna.
 
-     O `--dono` TEM QUEDA para `--comment`: um controle sem cor de plástico no
-     mapa (o primeiro tique de toda sessão, e o rádio antes da leitura chegar)
-     ganharia um X invisível, que é pior do que um X neutro — ela clicaria numa
-     casa que o gesto recusa. */
+     A COR DO X É PRETA COM BORDA BRANCA — decisão dela, 09/09/2026, com os
+     quatro na mesa: *"deixa o nosso x preto com borda branca pra destacar.
+     Falo isso pois ficou perfeito o nosso x, o complicado é que são tons
+     pasteis e o controle branco por exemplo não ajuda nisso o x dele fica
+     invisível."* <!-- noqa-acento: citação literal dela -->
+
+     ELE ERA `var(--dono)` — a cor do PLÁSTICO de quem tem o tom —, e a ideia
+     vinha da mesma regra que pinta a borda da coluna
+     (`D-A-BORDA-E-A-IDENTIDADE-DA-PECA`): o X diria de quem é a cor sem
+     palavra nenhuma. **A bancada derrubou a ideia**, e o caso que a derruba é o
+     controle BRANCO dela: branco sobre um tom pastel não tem contraste
+     nenhum, e o X dele fica invisível — exatamente na casa em que ela precisa
+     ver que não pode clicar. Um X que só aparece em três dos quatro controles
+     é pior do que um X neutro que aparece nos quatro.
+
+     QUEM DIZ DE QUEM É A COR PASSA A SER O `title`, e ele já dizia: o pacote
+     escreve *"P3 (Starlight Blue) já está neste tom"* em cada botão tomado. A
+     identidade não se perdeu — mudou de canal, do desenho para a palavra, e a
+     palavra não depende de contraste.
+
+     O `--dono` SAIU DO CSS mas continua sendo escrito pelo pacote: ele veste a
+     BORDA do tom escolhido, que é outro uso e continua valendo. */
   .guia .tom.tomado{cursor:not-allowed;position:relative}
+  /* O CONTORNO BRANCO É `filter:drop-shadow`, e não um segundo X por baixo:
+     o `drop-shadow` segue a FORMA alfa do gradiente, então ele contorna as
+     duas hastes de verdade. Quatro sombras de 1px (uma por diagonal) fecham
+     o contorno inteiro; com uma só, o X ganha borda de um lado e fica torto.
+     Um `::before` com o mesmo X mais grosso por baixo também funcionaria e
+     custaria um pseudo-elemento a mais em 14 botões por coluna, vezes quatro
+     colunas — 56 nós contra zero. */
   .guia .tom.tomado::after{
     content:"";position:absolute;inset:5px;
     background:
-      linear-gradient(to top left,transparent 45%,var(--dono,var(--comment)) 45%,
-                      var(--dono,var(--comment)) 55%,transparent 55%),
-      linear-gradient(to top right,transparent 45%,var(--dono,var(--comment)) 45%,
-                      var(--dono,var(--comment)) 55%,transparent 55%);
+      linear-gradient(to top left,transparent 45%,#000 45%,#000 55%,transparent 55%),
+      linear-gradient(to top right,transparent 45%,#000 45%,#000 55%,transparent 55%);
+    filter:drop-shadow(1px 0 0 #fff) drop-shadow(-1px 0 0 #fff)
+           drop-shadow(0 1px 0 #fff) drop-shadow(0 -1px 0 #fff);
   }
   .guia .livre{
     flex:1;height:26px;border-radius:6px;padding:2px;cursor:pointer;min-width:0;

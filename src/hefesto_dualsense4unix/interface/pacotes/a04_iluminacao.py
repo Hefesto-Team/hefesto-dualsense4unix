@@ -568,9 +568,35 @@ def fileira_de_tons(escolhida: str, tomadas: dict[str, dict[str, str]],
             estilo += f";--dono:{dono.get('plastico') or 'var(--comment)'}"
         titulo = (f"{dono.get('nome')} já está neste tom — duas peças nunca "
                   f"ficam da mesma cor." if dono else titulo_da_casa(i))
+        # O TOM COM X NÃO É GESTO — 09/09/2026, e é a palavra dela sendo
+        # cumprida: *"um X na cor selecionada por mim de forma que me IMPEÇA de
+        # setar alguma cor de um coleguinha"*. <!-- noqa-acento: citação dela -->
+        #
+        # ATÉ AGORA ELE ACEITAVA O TOQUE. O X era desenhado e o botão guardava o
+        # `data-gesto="cor"` do lado, então clicar nele chegava ao piloto, o
+        # `_sem_repetir_a_cor_do_vizinho` levantava e a tela respondia com três
+        # linhas de recusa POR CIMA do desenho do controle, por 30 s. Ela viu na
+        # bancada e disse a frase que nomeia o defeito: *"ontem pensei que
+        # tinhamos resolvido esse aviso"*. <!-- noqa-acento: citação dela -->
+        # A recusa nunca foi o pedido — ela é o que sobra quando a prevenção
+        # falha, e a prevenção é o X.
+        #
+        # SEM `data-gesto` O PILOTO NÃO O ENXERGA: o `BOOTSTRAP` casa por
+        # `[data-gesto]`, então o clique morre no botão e nenhum recado nasce. O
+        # `aria-disabled` diz o mesmo a quem usa leitor de tela, e o `title`
+        # continua nomeando o dono — a explicação custa ZERO clique, que é a
+        # regra dela de 07/09.
+        #
+        # E O `RuntimeError` DO PACOTE FICA: ele é a rede, não a porta. O gesto
+        # `cor` também chega por outros caminhos (a prova botão a botão, um
+        # tique entre a leitura e o clique), e duas peças da mesma cor não podem
+        # passar por nenhum deles. Quem o guarda é
+        # `test_a_cor_do_vizinho_se_recusa_com_o_nome_do_dono`.
+        aberto = ("" if dono else f' data-gesto="cor" data-hex="{cru}"')
+        travado = ' aria-disabled="true"' if dono else ""
         linhas.append(
             f'{recuo}<button class="{classes}" style="{estilo}"'
-            f' data-gesto="cor" data-hex="{cru}" title="{titulo}"></button>')
+            f'{aberto}{travado} title="{titulo}"></button>')
     return "\n".join(linhas)
 
 
