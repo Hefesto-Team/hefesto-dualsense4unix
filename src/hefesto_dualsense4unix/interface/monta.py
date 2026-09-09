@@ -288,7 +288,7 @@ MASCARAS = ("DualSense", "Xbox 360", "Nintendo Pro")
 # entre a costura e o fecho.
 #
 # A `via` FICA COMO ESTÁ nesta tabela, e é decisão: seis geradores a escrevem
-# DIRETO na tela (`aba04.py:1279`, `aba06.py:1608`, `aba03.py:878`…), e trocá-la
+# DIRETO na tela (`aba04.py:1303`, `aba06.py:1724`, `aba03.py:960`…), e trocá-la
 # pela palavra da tela aqui mudaria o desenho aprovado sem sprint que responda
 # por isso. É trabalho da `A-PALAVRA-MESA-SAI-01`.
 MESA = [

@@ -2,8 +2,7 @@
 
 **A palavra dela, 08/09/2026:** *"tudo funcionando por cabo ou bt ou tudo
 funcionando via perfil e dentro de cada um um setting pra cada controle é assim
-que eu queria que sua revisao nos auxiliasse."*
-(noqa-acento: citação literal dela, palavra por palavra)
+que eu queria que sua revisao nos auxiliasse."*  (noqa-acento: citação dela)
 
 O portão é `scripts/check_cabo_bt_perfil_controle.py`, e ele tem TRÊS mordidas.
 Cada uma nasceu de um jeito real de a tabela envelhecer:
@@ -18,6 +17,12 @@ Cada uma nasceu de um jeito real de a tabela envelhecer:
 é o TERCEIRO valor de `*_aciona` no mapa e quer dizer *aciona, com a dívida na
 ressalva*. Lê-lo como `não` reprovou quatro features vivas em 09/09/2026 — o
 microfone, o mudo e as cinco lâmpadas de jogador pelo rádio.
+
+**O VALOR SEM ACENTO VEM DA RÉGUA, e não é digitado aqui:** `regua.NAO` é o
+dono, declarado uma vez com a isenção do portão de acentuação. Digitá-lo em
+cada `assert` seria a segunda cópia de um dado — e é o que dois agentes
+independentes fizeram em 09/09, com redações diferentes, antes de o dono
+existir.
 """
 from __future__ import annotations
 
@@ -88,25 +93,25 @@ def test_morde_classificacao_que_a_tela_nao_oferece_mais(regua, monkeypatch,
 
 
 def test_parcial_nao_e_nao(regua):
-    """`parcial` é `com ressalva` — nunca `nao`.
+    """`parcial` é `com ressalva` — nunca a resposta negativa.
 
     A linha `audio.microfone@dualsense` responde `radio_aciona=parcial`, e o
-    microfone FUNCIONA por rádio na mesa dela. Ler isso como `nao` foi o defeito
-    de 09/09/2026, e é ele que este teste impede de voltar.
+    microfone FUNCIONA por rádio na mesa dela. Ler o `parcial` como negativa
+    foi o defeito de 09/09/2026, e é ele que este teste impede de voltar.
     """
     linha = {"controle": "dualsense", "radio_aciona": "parcial",
              "radio_ressalva": "a dívida escrita"}
     assert regua._resposta_de_transporte([linha], "radio") == "com ressalva"
-    assert regua._resposta_de_transporte([linha], "radio") != "nao"
+    assert regua._resposta_de_transporte([linha], "radio") != regua.NAO
 
 
 def test_o_gesto_responde_pela_pior_das_chaves(regua):
     """Um gesto com dois atos no aparelho responde pela metade que FALTA."""
-    assert regua._pior(["sim", "nao"]) == "nao"
+    assert regua._pior(["sim", regua.NAO]) == regua.NAO
     assert regua._pior(["sim", "com ressalva"]) == "com ressalva"
     assert regua._pior([]) == "sem linha"
     # o `volume` da 02 é o caso vivo: o alto-falante responde `sim` e o
-    # microfone responde `nao`, e a tabela imprime `nao`.
+    # microfone responde a negativa, que é o que a tabela imprime.
     assert regua.DO_APARELHO["volume"] == ("audio.microfone.volume",
                                            "audio.alto_falante.volume")
 
@@ -155,4 +160,4 @@ def test_morde_o_transporte_rebaixado_no_mapa(regua, monkeypatch, capsys):
     assert regua.main() == 1
     saida = capsys.readouterr().out
     for gesto in ("cor", "brilho", "apagar", "reenviar"):
-        assert f"{gesto}: rádio: nao" in saida
+        assert f"{gesto}: rádio: {regua.NAO}" in saida
