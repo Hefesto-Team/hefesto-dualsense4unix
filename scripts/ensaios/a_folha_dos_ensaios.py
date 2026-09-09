@@ -93,12 +93,57 @@ from os_nos_de_som_por_controle import censo
 
 HZ = 10.0
 
+#: AS TREZE DA LINHA DE COR — decisão dela, 09/09/2026: *"deixar na tela 11 cores
+#: principais (primárias e interseções) + preto + branco"*, e *"na linha de cor,
+#: terão as cores apenas sem abrir essa tela"*.
+#:
+#: São os onze matizes do círculo andando de 30 em 30 graus, de 0° a 300° — o
+#: passo que dá nomes canônicos a todos e cobre o círculo sem repetir vizinho.
+#: Preto e branco entram porque não são matiz nenhum: um apaga a barra, o outro
+#: é a referência de intensidade cheia.
+#:
+#: OS TONS SÃO PASTÉIS, e é decisão dela ao ver a primeira versão saturada:
+#: *"os tons de cores pré disponíveis tem que serem na mesma pega de tons
+#: pastéis"* — a mesma pegada da fileira que a aba Iluminação já mostra. Cada
+#: matiz sai de HSL com saturação cheia e luminosidade 72 %; branco e preto
+#: ficam como estão, porque não são matiz.
+#:
+#: POR QUE UMA FILEIRA E NÃO O SELETOR DO GTK: ela abriu o diálogo «Select
+#: Color» e ele toma a tela inteira para escolher uma cor que o aparelho mostra
+#: em cinco lâmpadas. Escolher cor aqui é um clique, não um formulário.
+CORES_DA_LINHA: tuple[tuple[str, tuple[int, int, int]], ...] = (
+    ("Vermelho", (255, 112, 112)),  # 0°  #FF7070
+    ("Laranja", (255, 184, 112)),  # 30°  #FFB870
+    ("Amarelo", (255, 255, 112)),  # 60°  #FFFF70
+    ("Verde-limão", (184, 255, 112)),  # 90°  #B8FF70
+    ("Verde", (112, 255, 112)),  # 120°  #70FF70
+    ("Verde-água", (112, 255, 184)),  # 150°  #70FFB8
+    ("Ciano", (112, 255, 255)),  # 180°  #70FFFF
+    ("Azul-céu", (112, 184, 255)),  # 210°  #70B8FF
+    ("Azul", (112, 112, 255)),  # 240°  #7070FF
+    ("Violeta", (184, 112, 255)),  # 270°  #B870FF
+    ("Magenta", (255, 112, 255)),  # 300°  #FF70FF
+    ("Branco", (255, 255, 255)),
+    ("Preto", (0, 0, 0)),
+)
+
 #: Onde os WAV desta corrida vivem. Fora da árvore, de propósito: é rascunho.
 PASTA = os.path.join(os.environ.get("XDG_RUNTIME_DIR") or "/tmp", "hefesto-folha-dos-ensaios")
 
 #: Quanto dura uma gravação do microfone. Três segundos é o que ela leva para
 #: dizer «aaaa» sem pressa, e o pico não precisa de mais.
 SEGUNDOS_DE_GRAVACAO = 3.0
+
+
+def _hex_para_rgb(tom: str) -> tuple[float, float, float]:
+    """`#rrggbb` em 0..1 para o cairo. Tom ruim vira cinza, nunca exceção."""
+    tom = (tom or "").lstrip("#")
+    if len(tom) != 6:
+        return (0.75, 0.75, 0.75)
+    try:
+        return (int(tom[0:2], 16) / 255, int(tom[2:4], 16) / 255, int(tom[4:6], 16) / 255)
+    except ValueError:
+        return (0.75, 0.75, 0.75)
 
 
 def _ferramenta(*candidatas: str) -> str:
@@ -319,13 +364,26 @@ ENSAIOS: tuple[Ensaio, ...] = (
         sprint="SOM-POR-CONTROLE-01",
         linha_do_mapa="audio.alto_falante.rota@dualsense",
         campos=(
+            # REDUZIDAS ÀS QUE FUNCIONAM — decisão dela, 09/09/2026: *"reduzir
+            # pras que funcionam"*, depois de medir as quatro e achar
+            # *"NA REAL TODOS SÃO MONO NO FONE, O DO ALTO FALANTE NÃO FUNCIONA
+            # AQUI MAS FUNCIONOU NO SOM DO CONTROLE"*.
+            #
+            # Ficam as DUAS que fazem o que o nome diz. As outras continuam no
+            # `ds_output_report` — o firmware as aceita, e apagá-las de lá seria
+            # apagar protocolo. O que sai é a OFERTA: a tela não nomeia por
+            # consequência três rotas que produzem a mesma coisa.
+            #
+            # A CONTRADIÇÃO MEDIDA, e ela pede uma segunda passada: «só no
+            # alto-falante» não saiu por esta rota, mas o alto-falante TOCA pelo
+            # ensaio de volume. Ou a rota não é o caminho, ou o valor 3 não é o
+            # que a fonte externa diz. Enquanto não se medir, ela fica na oferta
+            # com o nome que o ensaio sustenta.
             Campo("Rota", rep.COMMON_AUDIO_PATH, forma="escolha",
                   desloca=rep.OUTPUT_PATH_SEL_SHIFT, base=BASE_DO_BYTE_7,
                   escolhas=(
                       (rep.SAIDA_ESTEREO_NO_FONE, "estéreo no fone"),
-                      (rep.SAIDA_MONO_NO_FONE, "mono no fone"),
-                      (rep.SAIDA_L_FONE_R_ALTO_FALANTE, "L no fone · R no controle"),
-                      (rep.SAIDA_SO_NO_ALTO_FALANTE, "só no alto-falante"),
+                      (rep.SAIDA_SO_NO_ALTO_FALANTE, "só no alto-falante (a conferir)"),
                   )),
         ),
         autorizacoes=((0, rep.VALID_FLAG0_AUDIO_PATH),),
@@ -425,9 +483,32 @@ class Aparelho:
     #: coluna de tons do mesmo verde É a escada de intensidade.
     cor_base: tuple[int, int, int] = (255, 255, 255)
     intensidade: float = 1.0
+    #: O tom do PLÁSTICO deste controle, perguntado a ELE. É a borda que marca
+    #: a cor escolhida, e o X que marca a cor tomada na coluna do vizinho.
+    #: Vazio = não sei, e aí a borda é neutra em vez de mentir uma cor.
+    tom_do_plastico: str = ""
+    nome_do_plastico: str = ""
 
     def __post_init__(self) -> None:
+        self.ler_o_plastico()
         self.escritor = Escritor(self.alvo)
+
+    def ler_o_plastico(self) -> None:
+        """Pergunta a cor do plástico AO APARELHO, pelo caminho do produto.
+
+        `ler_pelo_cabo` monta o `SET_FEATURE 0x80` e decodifica o serial. Não
+        responder é caso comum, e falhar em silêncio pintaria uma borda
+        inventada: sem resposta o tom fica vazio e a borda vira neutra.
+        """
+        try:
+            from hefesto_dualsense4unix.integrations.cor_do_plastico import ler_pelo_cabo
+
+            cor = ler_pelo_cabo(self.alvo.mac)
+        except Exception:
+            cor = None
+        if cor is not None:
+            self.tom_do_plastico = cor.tom
+            self.nome_do_plastico = cor.nome
         try:
             self.escritor.abrir()
         except Exception as erro:
@@ -597,6 +678,16 @@ class Folha:
         #: que afirma sobre o que não mediu é a família de defeito mais cara
         #: desta casa.
         self.notas: dict[tuple[str, str], Gtk.Entry] = {}
+        #: As escadas de tom, redesenhadas no tique. Decisão dela, 09/09/2026:
+        #: *"na linha de brilho vamos fazer a ilusão de que o slicer funciona.
+        #: Subindo tons ou diminuindo eles"* — e a palavra ILUSÃO é exata: a
+        #: barra não tem brilho de hardware (medido de manhã), então o que sobe
+        #: e desce é o RGB multiplicado, que é a mesma conta do produto.
+        self.escadas: list[tuple[Gtk.DrawingArea, Aparelho]] = []
+        #: As amostras de cor, redesenhadas no tique: o X de uma depende do que
+        #: o OUTRO controle escolheu, e isso muda por fora dela.
+        self.amostras: list[Gtk.DrawingArea] = []
+        self.recados_de_cor: dict[str, Gtk.Label] = {}
         self.contadores: list[tuple[Aparelho, Gtk.Label]] = []
 
         self.janela = Gtk.Window(title="Ajustes do controle" if enxuta else "Ensaios do controle")
@@ -797,6 +888,85 @@ class Folha:
             return f"{round(aparelho.intensidade * 100)}%"
         return str(aparelho.common[campo.offset])
 
+    def _amostra(self, nome: str, rgb: tuple[int, int, int], aparelho: Aparelho) -> Gtk.Widget:
+        """Um quadrado da cor, desenhado — porque ele carrega TRÊS estados.
+
+        Livre; ESCOLHIDO por este controle (borda da cor do plástico dele); ou
+        TOMADO por outro (um X na cor do plástico do outro, e o clique recusa
+        dizendo de quem é). Decisão dela, 09/09/2026: *"onde eu escolher uma
+        cor, em volta dela fica a borda da cor do plastico do controle e um X
+        na cor selecionada por mim de forma que me impeça de setar alguma cor
+        de um coleguinha"*.
+        """
+        area = Gtk.DrawingArea()
+        area.set_size_request(-1, 26)
+        area.connect("draw", self._pintar_amostra, rgb, aparelho)
+        caixa = Gtk.EventBox()
+        caixa.add(area)
+        caixa.set_tooltip_text(nome)
+        caixa.connect("button-press-event", self._clicar_cor, rgb, aparelho, nome)
+        self.amostras.append(area)
+        return caixa
+
+    def _dono_da_cor(self, rgb: tuple[int, int, int], menos: Aparelho) -> Aparelho | None:
+        """Qual OUTRO controle está com esta cor. `None` = livre."""
+        for outro in self.aparelhos:
+            if outro is not menos and outro.cor_base == rgb:
+                return outro
+        return None
+
+    def _pintar_amostra(self, area: Gtk.DrawingArea, cr, rgb: tuple[int, int, int],
+                        aparelho: Aparelho) -> bool:
+        largura, altura = area.get_allocated_width(), area.get_allocated_height()
+        r, g, b = rgb
+        cr.set_source_rgb(r / 255, g / 255, b / 255)
+        cr.rectangle(2, 2, largura - 4, altura - 4)
+        cr.fill()
+
+        dono = self._dono_da_cor(rgb, aparelho)
+        if aparelho.cor_base == rgb:
+            # A ESCOLHIDA: a borda é a cor do plástico DESTE controle.
+            cr.set_source_rgb(*_hex_para_rgb(aparelho.tom_do_plastico or "#c0c0c0"))
+            cr.set_line_width(3.0)
+            cr.rectangle(1.5, 1.5, largura - 3, altura - 3)
+            cr.stroke()
+        elif dono is not None:
+            # TOMADA: o X na cor do plástico de quem a tem.
+            cr.set_source_rgb(*_hex_para_rgb(dono.tom_do_plastico or "#101010"))
+            cr.set_line_width(3.0)
+            cr.move_to(5, 5)
+            cr.line_to(largura - 5, altura - 5)
+            cr.move_to(largura - 5, 5)
+            cr.line_to(5, altura - 5)
+            cr.stroke()
+        else:
+            cr.set_source_rgb(0.55, 0.55, 0.55)
+            cr.set_line_width(1.0)
+            cr.rectangle(2.5, 2.5, largura - 5, altura - 5)
+            cr.stroke()
+        return False
+
+    def _clicar_cor(self, _caixa, _evento, rgb: tuple[int, int, int],
+                    aparelho: Aparelho, nome: str) -> bool:
+        """RECUSAR DIZENDO: a cor de outro controle não se toma em silêncio."""
+        recado = self.recados_de_cor.get(aparelho.alvo.mac)
+        dono = self._dono_da_cor(rgb, aparelho)
+        if dono is not None:
+            if recado is not None:
+                de_quem = dono.nome.split(" ·")[0]
+                plastico = f" ({dono.nome_do_plastico})" if dono.nome_do_plastico else ""
+                recado.set_markup(
+                    f"<span foreground='#e5a50a'>{nome} já é do {de_quem}{plastico} — "
+                    "escolha outra, ou troque a dele primeiro.</span>"
+                )
+            return True
+        aparelho.escrever_cor(rgb=rgb)
+        if recado is not None:
+            plastico = aparelho.nome_do_plastico or "plástico não lido"
+            recado.set_text(f"{nome} · a borda é a cor do aparelho ({plastico})")
+        return True
+
+
     def _fazer(self, acao: str, aparelho: Aparelho, ensaio: Ensaio, recado: Gtk.Label) -> None:
         """Um ato. Quando o produto não faz, o motivo VAI PARA A TELA."""
         def recusa(motivo: str | None, feito: str) -> None:
@@ -825,20 +995,21 @@ class Folha:
     def _campo(self, campo: Campo, aparelho: Aparelho) -> Gtk.Widget:
         caixa = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=0)
         if campo.forma == "cor":
-            linha = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
-            linha.pack_start(Gtk.Label(label=campo.rotulo), False, False, 0)
-            botao = Gtk.ColorButton()
-            botao.set_rgba(Gdk.RGBA(1.0, 1.0, 1.0, 1.0))
+            rot = Gtk.Label(label=campo.rotulo)
+            rot.set_xalign(0.0)
+            rot.get_style_context().add_class("dim-label")
+            caixa.pack_start(rot, False, False, 0)
             aparelho.escrever_cor((255, 255, 255))
-            botao.connect(
-                "color-set",
-                lambda b, a=aparelho: a.escrever_cor(
-                    rgb=(int(b.get_rgba().red * 255), int(b.get_rgba().green * 255),
-                         int(b.get_rgba().blue * 255))
-                ),
-            )
-            linha.pack_end(botao, False, False, 0)
-            caixa.pack_start(linha, False, False, 0)
+            fileira = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=3)
+            for nome, rgb in CORES_DA_LINHA:
+                fileira.pack_start(self._amostra(nome, rgb, aparelho), True, True, 0)
+            caixa.pack_start(fileira, False, False, 0)
+            recado = Gtk.Label()
+            recado.set_xalign(0.0)
+            recado.set_line_wrap(True)
+            recado.get_style_context().add_class("dim-label")
+            self.recados_de_cor[aparelho.alvo.mac] = recado
+            caixa.pack_start(recado, False, False, 0)
             return caixa
 
         if campo.forma == "intensidade":
@@ -859,7 +1030,16 @@ class Folha:
             escala.connect("value-changed",
                            lambda sc, a=aparelho: a.escrever_cor(intensidade=sc.get_value() / 100.0))
             caixa.pack_start(escala, False, False, 0)
+            escada = Gtk.DrawingArea()
+            escada.set_size_request(-1, 22)
+            escada.connect("draw", self._pintar_escada, aparelho)
+            escada.set_tooltip_text(
+                "Os degraus da cor escolhida. O quadro aceso é o que a barra está mostrando."
+            )
+            self.escadas.append((escada, aparelho))
+            caixa.pack_start(escada, False, False, 0)
             return caixa
+
 
         if campo.forma == "escolha":
             linha = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
@@ -896,10 +1076,38 @@ class Folha:
         caixa.pack_start(escala, False, False, 0)
         return caixa
 
+
+    #: Quantos degraus a escada mostra. Onze é o mesmo número dos matizes da
+    #: linha de cor — de 0 a 100 % de dez em dez.
+    DEGRAUS_DA_ESCADA: ClassVar[int] = 11
+
+    def _pintar_escada(self, area: Gtk.DrawingArea, cr, aparelho: Aparelho) -> bool:
+        """A cor escolhida em onze degraus, com o atual destacado."""
+        largura = area.get_allocated_width()
+        altura = area.get_allocated_height()
+        passo = largura / self.DEGRAUS_DA_ESCADA
+        atual = round(aparelho.intensidade * (self.DEGRAUS_DA_ESCADA - 1))
+        r, g, b = aparelho.cor_base
+        for i in range(self.DEGRAUS_DA_ESCADA):
+            fracao = i / (self.DEGRAUS_DA_ESCADA - 1)
+            cr.set_source_rgb(r / 255 * fracao, g / 255 * fracao, b / 255 * fracao)
+            cr.rectangle(i * passo + 1, 0, passo - 2, altura)
+            cr.fill()
+            if i == atual:
+                cr.set_source_rgb(1.0, 1.0, 1.0)
+                cr.set_line_width(2.0)
+                cr.rectangle(i * passo + 2, 1, passo - 4, altura - 2)
+                cr.stroke()
+        return False
+
     # ---------------------------------------------------------------- laço
     def _tique(self) -> bool:
         for aparelho in self.aparelhos:
             aparelho.bater()
+        for escada, _ in self.escadas:
+            escada.queue_draw()
+        for amostra in self.amostras:
+            amostra.queue_draw()
         for aparelho, conta in self.contadores:
             if aparelho.erro:
                 conta.set_markup(f"<span foreground='#c01c28'>{aparelho.nome}: {aparelho.erro}</span>")
