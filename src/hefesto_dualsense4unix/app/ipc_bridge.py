@@ -283,9 +283,41 @@ def profile_switch(name: str) -> bool:
     return ok
 
 
+#: O TETO DO ATO DO MICROFONE, e ele é MEDIDO — 08/09/2026, na máquina dela com
+#: os quatro na mesa, logo depois do `install.sh`.
+#:
+#: `mic.canal.set` responde em **3.070 ms** (três voltas: 3071, 3069, 3070) e o
+#: teto de `_safe_call` é **250 ms** — doze vezes menos. A resposta chegava
+#: SEMPRE tarde, `_safe_call` devolvia `ok=False`, `_corpo_do_daemon` devolvia
+#: `None`, e a tela mostrava a frase de três causas: *"ou o Hefesto está parado,
+#: ou este controle se desligou, ou o Hefesto instalado é mais velho que esta
+#: janela"*. **NENHUMA DAS TRÊS ERA VERDADE** — o daemon é o recém-instalado,
+#: conhece o método, e respondeu com a razão CERTA:
+#: *"não há canal de captura atribuível a este controle — no rádio ele só
+#: aparece com a ponte de microfone de pé"*.
+#:
+#: É EXATAMENTE O DEFEITO QUE `a02_controles` DIZ TER CURADO EM 04/09, voltando
+#: por outra porta: *"uma frase de recusa que não contém o caso que acontece
+#: manda a pessoa procurar o defeito no lugar errado"*. Da primeira vez faltava
+#: a terceira causa na lista; desta vez a razão verdadeira existia e o
+#: TRANSPORTE a jogou fora.
+#:
+#: POR QUE O ATO DEMORA, e não é lentidão a consertar: ele varre as fontes de
+#: captura do PulseAudio para achar o canal do controle. É trabalho real, e é o
+#: mesmo trabalho que produz a frase que ela precisa ler.
+#:
+#: O NÚMERO É 6 s, e a folga é deliberada: o dobro do medido. Um teto colado no
+#: valor de hoje vira vermelho no dia em que a máquina estiver mais carregada —
+#: e o modo de falhar é o pior possível, porque não parece um teto: parece um
+#: daemon quebrado.
+_TETO_DO_ATO_DE_AUDIO = 6.0
+
+
 def _corpo_do_daemon(
     method: str,
     params: dict[str, Any] | None = None,
+    *,
+    timeout: float | None = None,
 ) -> dict[str, Any] | None:
     """RPC que entrega o CORPO da resposta, ou ``None`` quando não houve corpo.
 
@@ -310,7 +342,10 @@ def _corpo_do_daemon(
     ``machine_declare``, que escrevem em disco — continua chamando o
     ``_safe_call`` direto com o teto dele.
     """
-    ok, result = _safe_call(method, params)
+    if timeout is None:
+        ok, result = _safe_call(method, params)
+    else:
+        ok, result = _safe_call(method, params, timeout=timeout)
     if ok and isinstance(result, dict):
         return result
     return None
@@ -1259,7 +1294,8 @@ def mic_canal_set_detalhado(
     payload: dict[str, Any] = {"ligado": bool(ligado)}
     if uniq:
         payload["uniq"] = uniq
-    return _corpo_do_daemon("mic.canal.set", payload)
+    return _corpo_do_daemon("mic.canal.set", payload,
+                             timeout=_TETO_DO_ATO_DE_AUDIO)
 
 
 def sensor_set_detalhado(
@@ -1417,7 +1453,8 @@ def mic_volume_set_detalhado(
     payload: dict[str, Any] = {"volume": volume}
     if uniq:
         payload["uniq"] = uniq
-    return _corpo_do_daemon("mic.volume.set", payload)
+    return _corpo_do_daemon("mic.volume.set", payload,
+                             timeout=_TETO_DO_ATO_DE_AUDIO)
 
 
 def speaker_set(
@@ -1507,7 +1544,8 @@ def speaker_set_detalhado(
         # junto do volume porque é o mesmo bloco de posse — e sozinha quando o
         # seletor de canal muda sem mexer no número.
         payload["rota"] = int(rota)
-    return _corpo_do_daemon("speaker.set", payload)
+    return _corpo_do_daemon("speaker.set", payload,
+                             timeout=_TETO_DO_ATO_DE_AUDIO)
 
 
 # PODA DE 26/08/2026 (BG-07) — cinco pontes públicas sem NENHUM chamador em
