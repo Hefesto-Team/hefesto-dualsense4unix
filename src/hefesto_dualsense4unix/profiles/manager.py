@@ -951,6 +951,105 @@ class ProfileManager:
         # que a tela dela ofereça, e um global aqui seria um interruptor sem
         # botão que uma troca de perfil acionaria pelas costas.
         self.apply_controller_sensores(profile, origin=origin, relatorio=resultado)
+        # MASCARA-NO-PERFIL-01 (08/09/2026, decisão dela): e a máscara daquela
+        # peça, POR ÚLTIMO. A ordem importa e é medida: esta é a única seção
+        # cuja aplicação pode DERRUBAR E RECRIAR o gamepad virtual do jogador,
+        # e um vpad recriado no meio da leva invalidaria os handles que as
+        # seções acima acabaram de escrever.
+        self.apply_controller_mascaras(profile, origin=origin, relatorio=resultado)
+        return resultado
+
+    def apply_controller_mascaras(
+        self,
+        profile: Profile,
+        *,
+        origin: str = "manual",
+        relatorio: dict[str, str] | None = None,
+    ) -> dict[str, str]:
+        """Aplica a MÁSCARA das UNIDADES que o perfil declara (08/09/2026).
+
+        Decisão dela, MASCARA-NO-PERFIL-01: *"pode entrar sim"* — a máscara por
+        controle entra no perfil, ao lado de luz, gatilho, vibração, som, mic e
+        sensores. **A consequência que ela sentiu, e que abriu a sprint:**
+        trocar de perfil trocava o modo e **não trocava a máscara** de ninguém,
+        porque a máscara era da SESSÃO e sobrevivia ao perfil.
+
+        QUEM É O DONO AGORA — e é o ponto inteiro desta entrega. O
+        ``controller_masks.json`` (``daemon/subsystems/external_mask.py``)
+        deixou de ser dono e virou **cache do que o perfil ativo diz**. Ele
+        continua existindo, e por uma razão medida: ``mascara_efetiva`` é
+        consultada na criação de todo gamepad virtual **e no tique do co-op**,
+        que compara para decidir recriar. Ler o perfil do disco ali seria uma
+        tempestade de syscalls — a mesma lição do
+        ``gamepad._motores_do_perfil_ativo``. Então o perfil escreve no
+        registro, e o registro responde em memória.
+
+        SÓ QUEM TEM OPINIÃO, e o resto é silêncio: ``mascara`` ausente não mexe
+        na máscara daquela peça. É o contrato do topo de ``ControllerOverrides``
+        e vale mais aqui do que em qualquer seção irmã — trocar a máscara
+        **derruba e recria o vpad**, e um perfil que não pediu nada não pode
+        fazer o controle dela sumir e voltar no meio de uma partida.
+
+        **UMA POR CONTROLE, E SÓ PARA QUEM MUDOU.** A escrita é peça a peça, na
+        ordem em que o perfil as declara, e a máscara que já está valendo não é
+        reescrita: ``set_mask`` só persiste quando o valor difere, e
+        ``vpad_ficou_para_tras`` compara antes de derrubar. Um perfil que repete
+        a máscara de três jogadores e muda a do quarto derruba UM vpad.
+
+        **O QUE ESTA FUNÇÃO NÃO FAZ, e é decisão dela — PROVISÓRIO:** ela não
+        LIMPA a máscara de um controle que o perfil não menciona. Sair do perfil
+        A (que põe o P2 em Xbox) para o perfil B (que não fala de máscara)
+        deixa o P2 em Xbox, porque ``None`` é *sem opinião* em toda esta classe.
+        A alternativa — perfil sem opinião devolve todo mundo ao padrão — é a
+        contradição aberta que já está registrada na docstring de
+        ``ControllerOverrides`` (*"o perfil tem de guardar tudo"* contra *"campo
+        ``None`` = sem opinião"*), e ela não se fecha escrevendo código.
+
+        Relatório: ``mascara:<uniq>`` → a máscara, uma chave por unidade, no
+        mesmo formato-por-peça do ``mic:<uniq>`` e do ``sensores:<uniq>``.
+        """
+        from hefesto_dualsense4unix.daemon.subsystems.external_mask import (
+            registro_de_mascaras,
+        )
+
+        resultado: dict[str, str] = relatorio if relatorio is not None else {}
+        controllers = getattr(profile, "controllers", None)
+        if not controllers:
+            return resultado
+        registro = registro_de_mascaras()
+        for uniq, cfg in controllers.items():
+            mascara = getattr(cfg, "mascara", None)
+            if mascara is None:
+                continue
+            alvo = str(uniq)
+            anterior = registro.mask_for(alvo)
+            if anterior == str(mascara):
+                # NÃO REPINTA QUEM NÃO MUDOU: nem uma escrita no disco, nem uma
+                # linha de log. O relatório continua dizendo o que vale.
+                resultado[f"mascara:{alvo}"] = str(mascara)
+                continue
+            if not registro.set_mask(alvo, str(mascara)):
+                # A RECUSA É NOTÍCIA, e ela tem uma causa só que importa: um
+                # `uniq` que o registro não resolve (o esquema já barrou o que
+                # não é MAC de 12 hex, e o catálogo já barrou a máscara inválida).
+                resultado[f"mascara:{alvo}"] = "recusado"
+                logger.warning(
+                    "profile_mascara_por_peca_recusada",
+                    profile=getattr(profile, "name", None),
+                    uniq=alvo,
+                    origin=origin,
+                    mascara=str(mascara),
+                )
+                continue
+            resultado[f"mascara:{alvo}"] = str(mascara)
+            logger.info(
+                "profile_mascara_por_peca",
+                profile=getattr(profile, "name", None),
+                uniq=alvo,
+                origin=origin,
+                mascara=str(mascara),
+                anterior=anterior,
+            )
         return resultado
 
     def apply_controller_sensores(

@@ -280,8 +280,14 @@ def test_cada_secao_guardada_acende_a_sua_celula_e_so_a_dela(
     # aceitam `{}`; o `speaker` exige `volume`, e a razão está no próprio
     # schema (SOM-02: `muted` sem `volume` mandaria volume ZERO e tomaria a
     # posse do alto-falante).
-    menor_corpo: dict[str, dict[str, Any]] = {
+    menor_corpo: dict[str, Any] = {
         "leds": {}, "triggers": {}, "rumble": {}, "speaker": {"volume": 40},
+        # A `mascara` é a SÉTIMA, desde 08/09/2026 (MASCARA-NO-PERFIL-01,
+        # decisão dela: *"pode entrar sim"*) — e a primeira que NÃO é uma
+        # sub-seção: o campo é um valor só. Por isso o tipo deste mapa é `Any`.
+        # Para a coluna a diferença não existe: `_secoes_do_controle` pergunta
+        # `is not None`, e `"xbox"` responde igual a um objeto.
+        "mascara": "xbox",
         # O `mic` é o QUINTO ajuste desde a decisão nº20 dela (03/09/2026). Ele
         # aceita `{}` como os três primeiros — `ControllerMicOverride.muted`
         # nasce `None`, e `_secoes_do_controle` pergunta `is not None` sobre a

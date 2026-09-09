@@ -1,20 +1,49 @@
 """Máscara por APARELHO — de CADA controle, externo ou DualSense (MÁSCARA-01/E1).
 
-*"Como este controle deve aparecer nos jogos?"* — a escolha é do **aparelho**,
-não da configuração de jogo. É verdade sobre o plástico e sobre os rótulos
-impressos nele, e não muda porque a janela em foco mudou. Há também a razão
-dura: **trocar a máscara derruba e recria o gamepad virtual**; se ela morasse no
-perfil, cada troca automática de perfil — cada alt-tab — faria o controle sumir
-e voltar no meio da partida (sprint
-``docs/process/sprints/2026-07-25-MASCARA-01-como-este-controle-aparece-nos-jogos.md``,
-seção *"Onde a máscara mora"*).
+*"Como este controle deve aparecer nos jogos?"* — a escolha é de CADA controle,
+e desde 08/09/2026 ela mora no **perfil**.
 
-Este módulo é **o registro e a regra de herança**: onde a escolha mora, como ela
-sobrevive ao reboot, o que ela NÃO promete, e — desde 15/08/2026 — qual máscara
-um jogador recebe quando não escolheu nenhuma. Ele não adota externo, não cria
-gamepad virtual, não esconde ninguém do jogo e não desenha tela — isso é a
-`E2`/`E3`/`E4` da MÁSCARA-01 e a `E3` da LUGAR-À-MESA-01, que ela autorizou
-**depois** desta.
+Este módulo é **o registro e a regra de herança**: onde a escolha mora enquanto
+o daemon roda, como ela sobrevive ao reboot, o que ela NÃO promete, e — desde
+15/08/2026 — qual máscara um jogador recebe quando não escolheu nenhuma. Ele não
+adota externo, não cria gamepad virtual, não esconde ninguém do jogo e não
+desenha tela — isso é a `E2`/`E3`/`E4` da MÁSCARA-01 e a `E3` da
+LUGAR-À-MESA-01, que ela autorizou **depois** desta.
+
+O DONO DA MÁSCARA É O PERFIL — DESDE 08/09/2026
+------------------------------------------------
+
+**NOTA DATADA — 08/09/2026 (MASCARA-NO-PERFIL-01).** A pergunta foi *"a máscara
+por controle deve entrar no perfil, junto com luz, gatilho, vibração, som, mic e
+sensores — ou fica da máquina?"*; a resposta dela foi *"pode entrar sim"*. O
+campo é ``profiles.schema.ControllerOverrides.mascara``, e quem o escreve aqui é
+``profiles.manager.apply_controller_mascaras``, a cada ativação de perfil.
+
+**FATO SUBSTITUÍDO.** O cabeçalho deste módulo dizia que *"a escolha é do
+aparelho, não da configuração de jogo"* e que ela não podia morar no perfil
+porque *"cada troca automática de perfil — cada alt-tab — faria o controle sumir
+e voltar no meio da partida"*. A primeira metade caiu por decisão dela; a
+segunda **continua medida e não some**: trocar a máscara derruba e recria o
+vpad. O que a torna suportável é que ninguém repinta quem não mudou —
+``apply_controller_mascaras`` escreve peça a peça e :func:`vpad_ficou_para_tras`
+compara antes de derrubar, então um perfil que repete a máscara de um jogador
+não o faz sumir. A sprint que fechou a porta velha é
+``docs/process/sprints/2026-07-25-MASCARA-01-como-este-controle-aparece-nos-jogos.md``
+(seção *"Onde a máscara mora"*), e o que valia lá vale só até esta nota.
+
+**O QUE ESTE REGISTRO É AGORA: um CACHE do perfil ativo, não o dono.** Ele
+continua existindo por uma razão medida, e não por inércia — ``mascara_efetiva``
+é consultada na criação de todo vpad **e no tique do co-op**, que compara para
+decidir recriar; ler o perfil do disco ali seria a tempestade de syscalls que o
+``gamepad._motores_do_perfil_ativo`` já pagou uma vez. Quem grava o gesto dela
+(``gamepad.mask.set``) escreve nos DOIS: no perfil ativo, que é o dono, e aqui,
+para valer agora.
+
+A CONSEQUÊNCIA PARA QUEM LER ESTE ARQUIVO NO DISCO: uma entrada de
+``controller_masks.json`` que o perfil ativo não repita é resto do perfil
+anterior — não é escolha perdida, e não é dado a defender. Apagar o arquivo com
+o daemon parado não muda máscara nenhuma de quem o perfil declara: a próxima
+ativação o reescreve.
 
 DE QUEM É A MÁSCARA — DO JOGADOR, DESDE 15/08/2026
 ---------------------------------------------------
@@ -88,6 +117,9 @@ recurso com aviso na tela, não num defeito a caçar no nosso lado.
 
 O ARQUIVO É PRÓPRIO, E NÃO É UM BUMP DO ``controllers.json``
 -----------------------------------------------------------
+
+*(Continua valendo para ONDE o cache mora — o que mudou em 08/09/2026 é quem
+manda nele, e está na nota acima.)*
 
 A sprint de 25/07 pedia *"registro de identidade, no mesmo arquivo que já guarda
 a ordem de preferência, com versão de esquema nova"*. Isso **caducou em
@@ -616,6 +648,21 @@ def _zerar_registro_de_mascaras() -> None:
 
 def mascara_efetiva(identity: str | None, flavor_do_jogo: object) -> str:
     """A máscara DESTE aparelho: a que ele escolheu ou, sem escolha, a do jogo.
+
+    **A ORDEM DE DECISÃO DA MÁSCARA MORA AQUI, E É UMA SÓ** (MASCARA-NO-PERFIL-01,
+    08/09/2026). Três degraus, nesta ordem:
+
+    1. ``controllers[uniq].mascara`` **do perfil ativo** — o registro consultado
+       abaixo é o cache dele, escrito por
+       ``profiles.manager.apply_controller_mascaras`` a cada ativação e pelo
+       ``gamepad.mask.set`` no gesto dela;
+    2. ``mode.gamepad_flavor`` do perfil — é o que chega em ``flavor_do_jogo``,
+       pela config do daemon;
+    3. o padrão, quando nem um nem outro disse nada.
+
+    Repetir esta ordem em qualquer outro lugar é como duas camadas passam a
+    discordar sobre quem é a máscara de um controle; quem precisa dela
+    PERGUNTA aqui.
 
     É a regra de herança da **D-5** (14/08/2026), respondida por ela em
     15/08/2026: *máscara do JOGADOR, com a do jogo como padrão herdado*. Sem

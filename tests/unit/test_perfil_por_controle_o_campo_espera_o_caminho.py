@@ -140,6 +140,13 @@ _CONSUMIDOR: dict[str, ConsumidorPorUnidade] = {
             "grabado"
         ),
     ),
+    "mascara": ConsumidorPorUnidade(
+        funcao="apply_controller_mascaras",
+        chega_em=(
+            "set_mask(uniq) → mascara_efetiva(uniq) devolve a do perfil, e o "
+            "vpad daquela peça nasce (ou é recriado) com o VID/PID dela"
+        ),
+    ),
 }
 
 
@@ -186,6 +193,7 @@ def test_a_regua_sabe_recusar() -> None:
     sintetico = {"leds", "touchpad"}
     assert _campos_sem_consumidor(sintetico, _CONSUMIDOR) == ["touchpad"]
     assert _consumidores_orfaos(sintetico, _CONSUMIDOR) == [
+        "mascara",
         "mic",
         "rumble",
         "sensores",
@@ -326,6 +334,44 @@ def _prova_sensores(uniq: str) -> object:
         REGISTRO.limpar()
 
 
+def _prova_mascara(uniq: str) -> object:
+    """A máscara escrita para UMA peça vale só nela (MASCARA-NO-PERFIL-01).
+
+    O ENDEREÇO É O TESTE, como no sensor: a peça que o perfil nomeia recebe
+    ``xbox`` e a vizinha continua herdando a máscara do jogo. Sem isso o campo
+    novo poderia estar gravando no registro inteiro — que é o defeito que a
+    escolha por controle existe para não ter.
+    """
+    from hefesto_dualsense4unix.daemon.subsystems.external_mask import (
+        _zerar_registro_de_mascaras,
+        mascara_efetiva,
+        registro_de_mascaras,
+    )
+
+    _zerar_registro_de_mascaras()
+    try:
+        gerente = ProfileManager(
+            controller=object(),  # type: ignore[arg-type]
+            store=_StoreSemTrava(),  # type: ignore[arg-type]
+        )
+        perfil = Profile(
+            name="uma_peca_so",
+            match=MatchAny(),
+            controllers={uniq: ControllerOverrides(mascara="xbox")},
+        )
+        gerente.apply_controller_mascaras(perfil)
+        return (
+            mascara_efetiva(uniq, "dualsense") == "xbox"
+            and mascara_efetiva("aa:bb:cc:00:00:ff", "dualsense") == "dualsense"
+        ) or None
+    finally:
+        # O registro PERSISTE (o `config_dir` do conftest é de mentira, mas é o
+        # mesmo entre testes): sem apagar, a máscara desta prova sobreviveria a
+        # ela e responderia por outro teste.
+        registro_de_mascaras().clear_mask(uniq)
+        _zerar_registro_de_mascaras()
+
+
 _PROVAS = {
     "leds": _prova_leds,
     "triggers": _prova_triggers,
@@ -333,6 +379,7 @@ _PROVAS = {
     "speaker": _prova_speaker,
     "mic": _prova_mic,
     "sensores": _prova_sensores,
+    "mascara": _prova_mascara,
 }
 
 

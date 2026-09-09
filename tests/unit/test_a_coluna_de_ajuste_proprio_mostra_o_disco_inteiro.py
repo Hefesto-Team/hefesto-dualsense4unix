@@ -75,9 +75,14 @@ MESA = [
 #: ``_secoes_do_controle`` pergunta ``is not None`` sobre a SEÇÃO, não sobre o
 #: campo de dentro. Só o ``speaker`` exige conteúdo (SOM-02: ``muted`` sem
 #: ``volume`` mandaria volume ZERO e tomaria a posse do alto-falante).
-MENOR_CORPO: dict[str, dict[str, Any]] = {
+#:
+#: **A `mascara` NÃO É UM DICIONÁRIO, e é a primeira** (MASCARA-NO-PERFIL-01,
+#: 08/09/2026): o campo dela é um valor só (``"xbox"``), não uma sub-seção. Para
+#: a coluna isso é indiferente — ``!!`` de um valor é o mesmo ``!!`` de um
+#: objeto —, e por isso o tipo deste mapa é `Any` e não `dict`.
+MENOR_CORPO: dict[str, Any] = {
     "leds": {}, "triggers": {}, "rumble": {}, "speaker": {"volume": 40},
-    "mic": {}, "sensores": {},
+    "mic": {}, "sensores": {}, "mascara": "xbox",
 }
 
 #: O QUE O PILOTO FAZ COM UMA LISTA, e é a linha que se mede aqui:
@@ -276,7 +281,12 @@ def test_o_cabecalho_e_a_dica_da_linha_contam_o_mesmo_numero() -> None:
     passa a dizer "cinco" e esta régua reprova mostrando os dois números.
     """
     html = onde.pagina("10-perfis.html", publicado=True).read_text(encoding="utf-8")
-    extenso = {1: "um", 2: "dois", 3: "três", 4: "quatro", 5: "cinco", 6: "seis"}
+    # DIGITADO AQUI DE PROPÓSITO: é a terceira opinião. O produto e o gerador
+    # têm cada um a sua tabela, e uma régua que lesse a de qualquer um dos dois
+    # deixaria de ver um erro que os dois cometessem juntos. O `sete` entrou em
+    # 08/09/2026, com a `mascara` (MASCARA-NO-PERFIL-01).
+    extenso = {1: "um", 2: "dois", 3: "três", 4: "quatro", 5: "cinco",
+               6: "seis", 7: "sete"}
     quantas = len(perfis_web.SECOES_POR_CONTROLE)
     esperado = extenso.get(quantas, str(quantas))
     assert f"São os {esperado} ajustes" in html, (
