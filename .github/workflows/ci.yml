@@ -281,6 +281,13 @@ jobs:
         run: python3 scripts/check_cabo_bt_perfil_controle.py
       - name: A régua das quatro respostas morde
         run: python3 -m pytest tests/unit/test_portao_a_regua_das_quatro_respostas.py -q
+      # TUDO-FUNCIONA-01 (09/09/2026): a QUINTA pergunta — até onde a PROVA de
+      # cada feature da tela chegou. As quatro acima leem `*_aciona`; esta lê a
+      # escada `*_ate_onde_foi`, e cobra CUSTO e DONA de cada falta.
+      - name: Até onde a prova de cada feature da tela chegou
+        run: python3 scripts/check_ate_onde_a_prova_chegou.py
+      - name: A régua da quinta pergunta morde
+        run: python3 -m pytest tests/unit/test_portao_a_quinta_pergunta_morde.py -q
       - name: O specs.html publicado reflete o CSV e os desenhos
         run: python3 scripts/gerar-mapa.py --check
       # Z6-02 (24/08/2026): o mesmo desenho do `gerar-mapa.py --check` acima,
