@@ -276,6 +276,129 @@ def _nome_do_desktop(texto: str) -> str:
     return ""
 
 
+#: AS CATEGORIAS QUE FAZEM DE UM `.desktop` UM LANÇADOR — LANCADOR-ACHADO-01,
+#: 09/09/2026, degrau 2: *"procurar pelo que a coisa É, não pelo nome que ela
+#: tem"*.
+#:
+#: **`Game` SOZINHO NÃO BASTA, e a medição na máquina dela diz por quê:** dos
+#: 23 `.desktop` com `Categories=Game` em `~/.local/share/applications`, a
+#: grande maioria são JOGOS instalados, não lançadores. Um cartão por jogo na
+#: aba Lançadores seria uma lista de 23 cartões onde ela espera seis.
+#:
+#: O QUE SEPARA UM LANÇADOR DE UM JOGO é a segunda categoria, e ela é
+#: declarada pelo próprio programa: `PackageManager` (o Heroic e o Lutris
+#: INSTALAM jogos) ou `Emulator` (o RetroArch, o Dolphin e o mGBA RODAM jogos
+#: de outra plataforma). Medido nos sete `Game` do flatpak dela::
+#:
+#:     org.DolphinEmu.dolphin-emu   Game;Emulator;        -> lançador
+#:     io.mgba.mGBA                 Game;Emulator;        -> lançador
+#:     org.libretro.RetroArch       Game;Emulator;        -> lançador
+#:     com.heroicgameslauncher.hgl  Game;PackageManager;  -> lançador
+#:     net.lutris.Lutris            Game;PackageManager;  -> lançador
+#:     io.github.dummerle.rare      Game;                 -> não decide
+#:     net.davidotek.pupgui2        Game;Utility;         -> não decide
+#:
+#: **OS CINCO DA LISTA APARECEM SOZINHOS**, sem que ninguém digite o nome
+#: deles — que é a entrega inteira do degrau 2.
+_CATEGORIAS_DE_LANCADOR = frozenset({"PackageManager", "Emulator"})
+
+#: A ARMADILHA MEDIDA, e ela é por que a comparação é por TOKEN e nunca por
+#: substring: `debian-uxterm` declara `Categories=System;TerminalEmulator;`, e
+#: `"Emulator" in texto` o transformaria num lançador de jogos. Estão os dois
+#: na máquina dela hoje.
+#:
+#: A spec XDG diz que `Categories` é uma lista separada por `;` — então o que
+#: se compara é o item da lista, inteiro.
+_NAO_E_JOGO = frozenset({"TerminalEmulator"})
+
+
+def _campo_do_desktop(texto: str, campo: str) -> str:
+    """O valor de `campo=` no `.desktop`, sem as variantes de idioma.
+
+    É o irmão de `_nome_do_desktop`, generalizado — e ele nasceu junto com o
+    degrau 2, que precisa de `Categories` e `NoDisplay` além do `Name`.
+    """
+    alvo = f"{campo}="
+    for linha in texto.splitlines():
+        crua = linha.strip()
+        if crua.startswith(alvo):
+            return crua[len(alvo):].strip()
+    return ""
+
+
+def _categorias(texto: str) -> frozenset[str]:
+    """As `Categories` deste `.desktop`, como CONJUNTO de itens inteiros."""
+    cru = _campo_do_desktop(texto, "Categories")
+    return frozenset(p.strip() for p in cru.split(";") if p.strip())
+
+
+def e_lancador_de_jogos(texto: str) -> bool:
+    """Este `.desktop` se declara um lançador de jogos?
+
+    **LANCADOR-ACHADO-01, degrau 2.** A pergunta que o produto fazia era
+    *"existe um arquivo com este nome?"* — cinco strings que alguém digitou —,
+    e tudo que não batia sumia da tela com um `NÃO LOCALIZADO` sobre um
+    programa instalado e funcionando. A palavra dela foi *"isso é uma falha de
+    produto e a culpa é minha"*, e **a culpa não é dela**: o produto que exige
+    a forma certa de instalar terceiriza para quem usa uma pergunta que ele
+    mesmo deveria responder.
+
+    A pergunta agora é sobre o MUNDO: *"existe um programa que declara fazer
+    isso?"* — que é exatamente a pergunta que o cartão do Flatpak já fazia, e
+    a assimetria que a §2 da sprint nomeia.
+
+    O QUE ISSO ALCANÇA SOZINHO: o `net.lutris.Lutris-beta`, o AppImage que
+    publica `.desktop`, o snap, o pacote compilado em `/opt` e o emulador que
+    ninguém previu. O que ele **não** alcança é o AppImage solto, que não
+    publica nada — e esse é o degrau 3, o registro à mão.
+
+    `NoDisplay=true` FICA DE FORA: é o que a spec usa para dizer *"não me
+    mostre no menu"*, e um lançador escondido do menu dela não é um cartão.
+    """
+    cats = _categorias(texto)
+    if cats & _NAO_E_JOGO:
+        return False
+    if "Game" not in cats:
+        return False
+    if _campo_do_desktop(texto, "NoDisplay").lower() == "true":
+        return False
+    return bool(cats & _CATEGORIAS_DE_LANCADOR)
+
+
+def lancadores_por_conteudo(
+    pastas: Sequence[Path] | None = None,
+) -> dict[str, str]:
+    """`{stem do .desktop: Name=}` de todo lançador de jogos DESTA máquina.
+
+    **A CHAVE É O `stem`** porque é o que `_onde_estao_os_lancadores` já casa
+    contra os `atalhos` do `SemCenso` — assim o achado por conteúdo entra na
+    aba pelo caminho que já existe, sem uma segunda rota de identidade.
+
+    NUNCA LEVANTA: um `.desktop` ilegível é pulado. Esta função é chamada na
+    montagem da aba, e uma exceção aqui apagaria a grade inteira por um
+    arquivo com byte torto.
+
+    A ORDEM DAS PASTAS É A DA SPEC (`pastas_de_atalhos`), e o PRIMEIRO nome
+    vence: `~/.local/share` sobrepõe `/usr/share`, que é o que a XDG manda.
+    """
+    achados: dict[str, str] = {}
+    for pasta in (pastas if pastas is not None else pastas_de_atalhos()):
+        try:
+            arquivos = sorted(pasta.glob("*.desktop"))
+        except OSError:  # pragma: no cover - pasta some entre o listar e o ler
+            continue
+        for arq in arquivos:
+            if arq.stem in achados:
+                continue
+            try:
+                texto = arq.read_text(encoding="utf-8", errors="replace")
+            except OSError:  # pragma: no cover
+                continue
+            if e_lancador_de_jogos(texto):
+                achados[arq.stem] = _nome_do_desktop(texto) or arq.stem
+    return achados
+
+
 def jogos_dos_atalhos_desktop(
     pastas: Sequence[Path] | None = None,
 ) -> list[JogoLocal]:

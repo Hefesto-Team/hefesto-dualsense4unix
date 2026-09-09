@@ -268,6 +268,12 @@ jobs:
           else
             echo "ref=HEAD~1" >> "$GITHUB_OUTPUT"
           fi
+      # NADA-MOCKADO-01 (09/09/2026): a pergunta dela — "não tem nada rodando
+      # em sandbox ou mockada, certo?" — virou portão. Uma linha do mapa que
+      # diz `aciona=sim` afirma que o APARELHO faz aquilo, e tem de trazer
+      # `provado_por` ou uma ressalva declarada. Trava a dívida onde ela está.
+      - name: Nada é afirmado no mapa sem prova nem ressalva
+        run: python3 -m pytest tests/unit/test_portao_nada_e_afirmado_sem_prova.py -q
       - name: O specs.html publicado reflete o CSV e os desenhos
         run: python3 scripts/gerar-mapa.py --check
       # Z6-02 (24/08/2026): o mesmo desenho do `gerar-mapa.py --check` acima,

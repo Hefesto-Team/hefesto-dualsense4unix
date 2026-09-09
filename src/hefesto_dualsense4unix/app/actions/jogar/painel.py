@@ -850,8 +850,94 @@ def recibo_do_reconectar(jogadores: object, resultado: object) -> str:
     do dono dentro do lado HTML — e é este módulo, e não o pacote da aba, que a
     casa elegeu como a ponte entre os dois (é o que `AVISOS_DA_TELA` já faz com
     as outras sete).
+
+    **E ELA PASSOU A CALAR QUANDO NÃO HÁ NOTÍCIA — JOGAR-02, 09/09/2026.**
+    Pedido dela, com um print da aba Jogar: *"remover essa frase que aparece
+    tambem ao clciar em reconectar controles"*.  # noqa-acento: citação dela
+    A frase era::
+
+        Jogadores reconciliados — 2 jogador(es). A numeração já estava compacta.
+
+    e ela está errada por três razões que não são uma:
+
+    1. **é a língua de dentro** — *reconciliados* e *numeração compacta* são
+       palavras do daemon (`CoopManager.sync`, `identity.compact`), e a
+       LÍNGUA DESTA CASA §3 já decidiu que "deu certo" se responde com a
+       piscada verde, sem palavra nova;
+    2. **"já estava compacta" não é notícia** — é a ausência dela. Um recibo
+       que diz "não mudou nada" é o piloto falando sem ter o que dizer;
+    3. **o recado pousa no CARTÃO do controle escolhido e cobre a identidade
+       dele por seis segundos** — o desenho, o nome, o plástico, o transporte
+       e a bateria somem. *Um recado que apaga a identidade tira a resposta da
+       pergunta que ele veio responder.*
+
+    :return: a frase, ou **`""`** quando não houve o que contar — e o gesto
+        traduz o vazio em "sem recado", que é a piscada verde do botão.
     """
-    return home_actions.reconciliar_toast(jogadores, resultado)
+    if _sem_noticia(resultado):
+        return ""
+    return _na_lingua_da_tela(resultado)
+
+
+#: A FRASE DO RECONECTAR, NA LÍNGUA DA TELA — JOGAR-02 §2, 09/09/2026.
+#:
+#: **ELA NÃO VEM MAIS DE `home_actions.reconciliar_toast`**, e são duas razões
+#: somadas: aquela frase é a da JANELA GTK, que está saindo inteira
+#: (`D-0609-GTK-LEVA-INTEIRA`) e sai com ela; e ela fala a língua de dentro —
+#: *"Jogadores reconciliados"*, *"numeração compactada"* são
+#: `CoopManager.sync` e `identity.compact` escritos na tela dela.
+#:
+#: O QUE ENTRA NO LUGAR nomeia o ASSENTO, que é a palavra que esta tela já usa
+#: em toda parte: `P1`, `P2`. A LÍNGUA DESTA CASA §1 diz isso para `mesa`, e
+#: vale igual aqui.
+#:
+#: A FRASE DE FALHA CONTINUA SENDO FALHA: *"não consegui"* não é língua de
+#: dentro, é o produto dizendo que não fez — e silêncio sobre isso é a mentira
+#: que esta casa persegue.
+_RENUMEROU = "Os controles foram renumerados: {quais}."
+_NAO_CONFERIU = "Não consegui conferir a numeração dos controles."
+_NAO_COMPACTOU = "Não consegui ajustar a numeração dos controles."
+
+
+def _na_lingua_da_tela(resultado: object) -> str:
+    """O desfecho do `identity.renumber` em palavras da tela.
+
+    OS NÚMEROS SAEM DO PRÓPRIO `renumbered`, e não de uma contagem: dizer
+    *"2 controle(s)"* obriga ela a descobrir QUAIS; dizer `P1, P2` responde.
+    """
+    if not isinstance(resultado, dict):
+        return _NAO_CONFERIU
+    if not resultado.get("ok"):
+        return _NAO_COMPACTOU
+    renumerados = resultado.get("renumbered")
+    if not isinstance(renumerados, dict) or not renumerados:
+        return ""
+    #: A ORDEM É A DO NÚMERO, e não a do dicionário: a tela lê da esquerda
+    #: para a direita, e `P2, P1` faria ela conferir duas vezes.
+    quais = sorted({f"P{v}" for v in renumerados.values()
+                    if isinstance(v, int) and not isinstance(v, bool)})
+    return _RENUMEROU.format(quais=", ".join(quais)) if quais else ""
+
+
+#: OS DESFECHOS QUE NÃO SÃO NOTÍCIA — e a lista é curta de propósito.
+#:
+#: `renumbered` VAZIO é "a numeração já estava compacta", e
+#: `sessao_de_jogo_aberta` é a recusa do passo 2 com o jogo aberto — que **não
+#: é falha**: os jogadores já voltaram no passo 1, e um recado de erro ali
+#: seria a interface mentindo (é a mesma regra do `reported_step_index`).
+#:
+#: O QUE CONTINUA SENDO NOTÍCIA: a numeração que MUDOU (`renumbered` com
+#: entradas) e as duas falhas de leitura ("não consegui conferir", "não
+#: consegui compactar") — as duas dizem que o produto não fez, e silêncio
+#: sobre isso é a mentira que esta casa persegue.
+def _sem_noticia(resultado: object) -> bool:
+    """Este desfecho do `identity.renumber` tem alguma coisa a contar?"""
+    if not isinstance(resultado, dict):
+        return False
+    if not resultado.get("ok"):
+        return resultado.get("reason") == "sessao_de_jogo_aberta"
+    renumerados = resultado.get("renumbered")
+    return not (isinstance(renumerados, dict) and renumerados)
 
 
 #: AS DOZE FONTES DE AVISO. Dez são função PURA de ``home_actions`` que devolve

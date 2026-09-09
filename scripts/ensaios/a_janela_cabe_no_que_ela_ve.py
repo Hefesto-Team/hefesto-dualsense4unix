@@ -99,8 +99,22 @@ LER = """(function(){
       }
     }
   }
+  // E QUEM SÃO OS FILHOS DA PRIMEIRA COLUNA, com altura — sem isso o relato
+  // diz "estourou 299px" e ninguém sabe qual bloco dobrar. `--dentro` liga.
+  var dentro = [];
+  if (window.__hef_dentro && j) {
+    var alvo = j.querySelector('.ctrl') || j.querySelector('.miolo');
+    if (alvo) {
+      for (var k = 0; k < alvo.children.length; k++) {
+        var f = alvo.children[k];
+        dentro.push((String(f.className) || f.tagName).slice(0, 22) + ':' +
+                    Math.round(f.getBoundingClientRect().height));
+      }
+    }
+  }
   return JSON.stringify({
     url: (location.pathname.split('/').pop() || ''),
+    dentro: dentro,
     janela_alt: j ? j.scrollHeight : 0,
     janela_caixa: j ? j.clientHeight : 0,
     doc_alt: d.scrollHeight,
@@ -139,6 +153,12 @@ def main() -> int:
         return False
 
     def medir() -> bool:
+        if "--dentro" in sys.argv:
+            alvo = next((x.split("=", 1)[1] for x in sys.argv
+                         if x.startswith("--alvo=")), ".ctrl")
+            piloto.ponte.perguntar(
+                f'window.__hef_dentro = 1; window.__hef_alvo = "{alvo}";',
+                lambda *_: None)
         def respondeu(texto: str | None, erro: Exception | None) -> None:
             if erro or not texto:
                 print(f"[dom] a ponte não respondeu em {fila[0]}: {erro}")
@@ -173,6 +193,8 @@ def main() -> int:
         marca = "ROLA" if (rola_j or rola_d) else "ok"
         print(f"{d['url']:18} {ja:6}/{jc:<7} {da:6}/{dc:<7}  "
               f"{marca:5} {d.get('culpado') or ''}")
+        if d.get("dentro"):
+            print(f"{'':18}   dentro: {' '.join(d['dentro'])}")
         if rola_j:
             culpados.append(
                 f"{d['url']}: a `.janela` tem {ja}px de conteúdo numa caixa de "

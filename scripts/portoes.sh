@@ -71,6 +71,12 @@ rapido|citacoes-de-linha|py|scripts/validar-citacoes-de-linha.py --all
 # furo"*, e tinha. Ele entra na camada COMPLETA porque custa ~60 s: ele abre
 # cada arquivo citado e confere a âncora, não só o número de linhas.
 completo|citacoes-no-codigo|pytest|tests/unit/test_portao_o_par_com_metade_ligada.py
+# NADA-MOCKADO-01, 09/09/2026 — a pergunta dela virou portão: *"não tem nada
+# rodando em sandbox ou mockada, certo?"*. Uma linha do mapa que diz `aciona=sim`
+# está afirmando que o APARELHO faz aquilo; ele exige `provado_por` ou uma
+# ressalva declarada, e trava a dívida onde ela está (36 sem nenhum dos dois, de
+# 104 sem prova). Camada RÁPIDA: lê um CSV, custa milissegundos.
+rapido|nada-mockado|pytest|tests/unit/test_portao_nada_e_afirmado_sem_prova.py
 rapido|mapa-de-canais|py|scripts/gerar-mapa.py --check
 rapido|fatos-de-tela|py|scripts/gerar-fatos-de-tela.py --check
 rapido|fala-de-tela|py|scripts/validar-fala-de-tela.py --all
