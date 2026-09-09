@@ -25,6 +25,7 @@ se acrescenta aqui antes de entrar na tela.
 | **gatilho** (L2/R2) · **efeito** | `trigger`, `TriggerEffect` | o gatilho adaptativo e o que ele faz na mão |
 | **vibração** · **motor forte / fraco** · **degrau** (Economia · Balanceado · Máximo) | `rumble`, `weak`/`strong`, `orcamento` | a força; o degrau multiplica a barra de cada motor |
 | **microfone** · **alto-falante** · **fone** | `mic`, `speaker`, `jack` | o áudio do controle; o mic tem UM ato: ligar e ser ouvido no canal dele |
+| **Alto-falante do Controle N** · **Microfone do Controle N** | `alto_falante_bt.nome_do_sink` (`hefesto_som_<hex6>`) · `canal_do_microfone.nome_do_canal` (`hefesto_mic_<hex6>`) | **o rótulo do nó na lista de som do SISTEMA**, um par por controle. Decisão dela, 09/09 (*"4a"*): o número é o **assento** (P1…P4), como na tela — não o aparelho. O nome interno segue o aparelho e não muda de transporte; o rótulo segue o assento. **O endereço nunca entra no rótulo** |
 | **giroscópio** · **acelerômetro** · **touchpad** | `gyro`, `accel`, `touchpad`, `sensor_hub` | o movimento e o toque |
 
 ## 2. O que ela escolhe
