@@ -76,6 +76,21 @@ ABAS = ["01-jogar.html", "02-controles.html", "03-gatilhos.html",
         "07-lancadores.html", "08-conexoes.html", "09-sistema.html",
         "10-perfis.html"]
 
+#: AS CAIXAS QUE ROLAM POR DESENHO, com a razão de cada uma — o molde do
+#: `_NAO_E_PROMESSA` do `casa-sabe`: *a lista se lê, a razão se escreve*.
+#:
+#: Nem toda barra é defeito. A `10-perfis` tem uma lista que rola desde que
+#: nasceu, e a §1 da ROLAGEM-01 já a media assim em 08/09 (*"Só a 10 (`div.rolo`,
+#: 475/383 px), por desenho"*). Reprová-la seria a régua chamando de dívida o
+#: desenho que ela aprovou; deixá-la fora do relato seria a régua ficando cega.
+#: Ela fica DECLARADA: sai na tabela, não conta no vermelho, e uma caixa nova
+#: que role sem estar aqui reprova.
+POR_DESENHO: dict[str, tuple[str, str]] = {
+    "10-perfis.html": ("DIV.rolo", "a lista de perfis rola por desenho — quantos "
+                                   "perfis ela tem é dela, e a caixa não pode "
+                                   "crescer com eles (§1 da ROLAGEM-01, 08/09)"),
+}
+
 #: A PERGUNTA AO DOM. Ela mede a `.janela` e o documento, e nomeia o primeiro
 #: estouro — sem o culpado, o relato diz "rolou" e ninguém sabe onde mexer.
 #:
@@ -85,18 +100,20 @@ ABAS = ["01-jogar.html", "02-controles.html", "03-gatilhos.html",
 LER = """(function(){
   var j = document.querySelector('.janela');
   var d = document.documentElement;
-  var culpado = null;
+  var culpado = null, cortado = null;
   if (j) {
     var todos = j.querySelectorAll('*');
     for (var i = 0; i < todos.length; i++) {
       var e = todos[i];
-      if (e.scrollHeight > e.clientHeight + 2) {
-        var ov = getComputedStyle(e).overflowY;
-        if (ov === 'visible') continue;
-        culpado = e.tagName + '.' + String(e.className).slice(0, 30) +
+      if (e.scrollHeight <= e.clientHeight + 2) continue;
+      var ov = getComputedStyle(e).overflowY;
+      if (ov === 'visible') continue;
+      var ficha = e.tagName + '.' + String(e.className).slice(0, 30) +
                   ' ' + e.scrollHeight + '>' + e.clientHeight;
-        break;
-      }
+      // SÓ `auto` E `scroll` DESENHAM BARRA. `hidden` CORTA, em silêncio — e
+      // as duas coisas pedem conserto diferente, então o relato as separa.
+      if (ov === 'auto' || ov === 'scroll') { culpado = ficha; break; }
+      if (!cortado) cortado = ficha;
     }
   }
   // E QUEM SÃO OS FILHOS DA PRIMEIRA COLUNA, com altura — sem isso o relato
@@ -115,6 +132,7 @@ LER = """(function(){
   return JSON.stringify({
     url: (location.pathname.split('/').pop() || ''),
     dentro: dentro,
+    cortado: cortado,
     janela_alt: j ? j.scrollHeight : 0,
     janela_caixa: j ? j.clientHeight : 0,
     doc_alt: d.scrollHeight,
@@ -123,6 +141,12 @@ LER = """(function(){
     culpado: culpado
   });
 })()"""
+
+
+def _e_por_desenho(aba: str, culpado: str) -> bool:
+    """A caixa declarada em `POR_DESENHO` rola porque alguém quis."""
+    declarada = POR_DESENHO.get(aba)
+    return bool(declarada and culpado.startswith(declarada[0]))
 
 
 def main() -> int:
@@ -181,7 +205,9 @@ def main() -> int:
 
     print(f"{'aba':18} {'janela':>14} {'documento':>14}  quem estourou")
     print("-" * 92)
-    culpados = []
+    culpados, cortes = [], []
+
+
     for d in lidas:
         if d.get("erro"):
             print(f"{d['url']:18} (sem resposta: {d['erro']})")
@@ -192,14 +218,15 @@ def main() -> int:
         rola_d = da > dc + 2
         marca = "ROLA" if (rola_j or rola_d) else "ok"
         print(f"{d['url']:18} {ja:6}/{jc:<7} {da:6}/{dc:<7}  "
-              f"{marca:5} {d.get('culpado') or ''}")
+              f"{marca:5} {d.get('culpado') or ''}"
+              f"{('  (corta: ' + d['cortado'] + ')') if d.get('cortado') and not d.get('culpado') else ''}")
         if d.get("dentro"):
             print(f"{'':18}   dentro: {' '.join(d['dentro'])}")
         if rola_j:
             culpados.append(
                 f"{d['url']}: a `.janela` tem {ja}px de conteúdo numa caixa de "
                 f"{jc}px — {ja - jc}px de sobra. {d.get('culpado') or ''}")
-        elif d.get("culpado"):
+        elif d.get("culpado") and not _e_por_desenho(d["url"], d["culpado"]):
             #: **O CULPADO SOZINHO JÁ REPROVA — e a primeira volta desta régua
             #: não sabia disso.** Ela olhava só a `.janela` e o documento, e os
             #: dois FECHAM: `775/775` e `809/809` nas dez. Deu **PASSA** com a
@@ -220,8 +247,26 @@ def main() -> int:
             culpados.append(
                 f"{d['url']}: o DOCUMENTO tem {da}px numa vista de {dc}px "
                 f"({da - dc}px). A `.janela` cabe — o que sobra está FORA dela.")
+        if d.get("cortado") and not d.get("culpado"):
+            cortes.append(f"{d['url']}: {d['cortado']}")
 
+    #: O CORTE NÃO É BARRA, E POR ISSO NÃO REPROVA — 09/09/2026, ROLAGEM-01.
+    #: `overflow:hidden` esconde em silêncio: nenhuma barra nasce dali. A régua
+    #: reprovava os dois juntos e ficava VERMELHA em quatro abas por causa de
+    #: caixa **fechada de propósito** — o corpo do acordeão da `02-controles`
+    #: (`DIV.corpo-cx 267>0`), o da `03-gatilhos` que esta sprint criou
+    #: (`DIV.rot-l2-3 16>0`) e o `DIV.desfecho 15>0` da `10-perfis`. Régua que
+    #: reprova sempre não ensina nada, e a que reprova o desenho aprovado ensina
+    #: errado. O corte fica no relato porque ele PODE ser dívida — a
+    #: `DIV.moldura 153>144` da `04` esconde 9px de desenho —, mas quem decide
+    #: o vermelho é a barra.
     print()
+    if cortes:
+        print(f"CORTE (não é barra, `overflow:hidden` esconde calado): "
+              f"{len(cortes)}")
+        for c in cortes:
+            print(f"  {c}")
+        print()
     if culpados:
         print(f"REPROVA: {len(culpados)} aba(s) com barra de rolagem:")
         for c in culpados:
