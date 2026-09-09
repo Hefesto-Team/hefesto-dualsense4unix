@@ -500,18 +500,18 @@ def _pct_da_coluna(policy: str, custom: Any) -> dict[str, str]:
     )
 
 
-def _do_vpad(ff: dict[str, Any], player: Any) -> dict[str, Any]:
-    """O bloco `per_vpad` daquele jogador, ou `{}`.
-
-    Casa por `player`, não por posição na lista: a ordem do `per_vpad` é a de
-    criação dos gamepads virtuais, e ela não acompanha a ordem da mesa quando um
-    controle cai e volta.
-    """
-    for v in (ff or {}).get("per_vpad") or []:
-        if v.get("player") == player:
-            do_vpad: dict[str, Any] = v
-            return do_vpad
-    return {}
+# O `_do_vpad` SAIU EM 09/09/2026, com o único chamador que ele tinha.
+#
+# Ele achava o bloco `per_vpad` de um jogador para que :func:`_par_das_barras`
+# lesse dali `last_weak`/`last_strong` — **duas chaves que aquele bloco nunca
+# teve**: elas moram no TOPO do `rumble_ff` (`daemon/ipc_handlers.py:3529`). A
+# leitura dava zero em toda execução de produção, e o "Testar" mandava o par
+# fixo fizesse ela o que fizesse com as barras. A prosa da VIBRA-MULT-01 em
+# :func:`_par_das_barras` tem a medição.
+#
+# Não é decisão a preservar, é código que respondia sobre outra coisa: sai. Se
+# alguém precisar de novo do bloco por jogador, o `per_vpad` continua no
+# `state_full` e a busca por `player` cabe em três linhas.
 
 
 @registrar("05-vibracao.html")
@@ -982,24 +982,85 @@ def parar_o_teste() -> None:
     _EM_TESTE[0] = ""
 
 
-def _par_das_barras(ctx: Contexto, uniq: str) -> tuple[int, int]:
-    """`(weak, strong)` das barras DAQUELE controle, com o par de teste no zero.
+def _reduzido_pela_barra(valor: int, pontos: int) -> int:
+    """`valor` (0-255) reduzido pela barra daquele motor, e nunca fora da faixa.
 
-    A conta não é daqui: `last_strong` é o motor da ESQUERDA e `last_weak` o da
-    direita, e a inversão é a armadilha deste assunto
-    (`core/backend_pydualsense.py:3840`: `setLeftMotor(eff_strong)`). Extraída
-    para um lugar só porque agora TRÊS gestos a fazem — o "Testar" e os dois
-    que refrescam o teste vivo quando ela arrasta.
+    A barra é o SEGUNDO fator da conta dela; o primeiro — o degrau — é do
+    daemon. Ver :func:`_par_das_barras`, que é quem sabe por que a conta está
+    partida em dois.
     """
-    v = _do_vpad(ctx.state.get("rumble_ff") or {}, ctx.por_uniq(uniq).get("player"))
-    strong = int(v.get("last_strong") or 0)
-    weak = int(v.get("last_weak") or 0)
-    if not weak and not strong:
-        weak, strong = PAR_DE_TESTE
-    return weak, strong
+    return max(0, min(255, round(valor * int(pontos) / 100.0)))
 
 
-def _refrescar_o_teste(ctx: Contexto, p: Any, uniq: str) -> None:
+def _par_das_barras(
+    ctx: Contexto, uniq: str, *, acabou_de_gravar: tuple[str, int] | None = None
+) -> tuple[int, int]:
+    """`(weak, strong)` do teste DAQUELE controle, **reduzido pela barra de cada motor**.
+
+    **MEDIDO EM 09/09/2026 — VIBRA-MULT-01, e é a queixa dela inteira.** Ela:
+    *"na guia vibração os slicers não estão se multiplicando: motor esquerdo x
+    força de vibração (…) pra cada controle"*. Duas coisas estavam erradas, e a
+    segunda é a razão de a primeira nunca ter aparecido:
+
+    1. **Esta função lia duas chaves que o daemon não publica no bloco de onde
+       ela lia.** `last_weak` e `last_strong` moram no TOPO do `rumble_ff`
+       (`daemon/ipc_handlers.py:3529`), e o que chegava aqui era um bloco de
+       `per_vpad`, que não tem nem uma nem outra. As duas leituras davam `0`
+       sempre, o `if` caía sempre no :data:`PAR_DE_TESTE`, e o "Testar" mandava
+       `(160, 220)` **fizesse ela o que fizesse com as barras**. Medido com a
+       barra esquerda em ZERO: `rumble.set(160, 220)` — o motor que ela mandou
+       calar tremia igual ao outro.
+    2. **O caminho do rumble FIXADO não aplica a barra.**
+       `gamepad._mults_por_motor` — o dono da conta `degrau x barra` — tem UM
+       chamador, `gamepad.apply_game_rumble`, que é o FF do JOGO. O `rumble.set`
+       desta aba vai por `daemon/ipc_handlers._handle_rumble_set` ->
+       `apply_rumble_policy`, e o reassert de 5 Hz por
+       `daemon/subsystems/rumble.reassert_rumble` -> `_effective_mult`: os dois
+       aplicam **um fator só, o degrau, igual nos dois motores**. Mesmo com a
+       leitura curada, arrastar a barra não mudaria uma vírgula na mão dela.
+
+    **O QUE ESTA FUNÇÃO FAZ, e o que ela NÃO faz.** Ela reduz o par de teste
+    pela barra de cada motor, e **só isso**. O degrau continua sendo do daemon
+    nos três andares em que ele já morava — a política global em
+    `apply_rumble_policy`, a escala por controle em
+    `profiles/manager._controllers_to_rumble_scales` e o teto do card do cabo no
+    backend. O que a mão dela sente passa a ser `base x barra x degrau`: o mesmo
+    produto que `_mults_por_motor` monta para o jogo, com cada metade aplicada
+    por quem já a aplicava.
+
+    **É PROVISÓRIO — decisão dela.** A cura que cobre TODOS os chamadores é do
+    lado do daemon (`_handle_rumble_set` e `reassert_rumble` passando por
+    `_mults_por_motor`), e os dois arquivos não são da posse desta sprint. Sem
+    ela, `hef test rumble` e o "Testar" da janela GTK continuam sem a barra —
+    está na entrega, com as linhas nomeadas.
+
+    A INVERSÃO É A ARMADILHA DESTE ASSUNTO: `weak` é o motor da DIREITA (`d`) e
+    `strong` o da ESQUERDA (`e`) — `core/backend_pydualsense.py:3840` faz
+    `setLeftMotor(eff_strong)`. A tradução não se digita aqui: ela é de
+    `app/telas/vibracao.LADO_PARA_MOTOR`, e :func:`_barras_dos_motores` já
+    devolve o mapa na língua da tela.
+
+    `acabou_de_gravar` É O ARRASTE QUE AINDA NÃO VOLTOU: o `ctx` de um gesto é
+    o tique ANTERIOR à gravação, então reenviar lendo só o `state` faria ela
+    sentir o valor de antes do arraste — o "ao vivo" atrasado em um tique. Quem
+    grava sabe o que gravou e diz.
+    """
+    barras = dict(_barras_dos_motores(ctx.state, uniq))
+    if acabou_de_gravar is not None:
+        lado, pontos = acabou_de_gravar
+        if lado in barras:
+            barras[lado] = pontos
+    weak, strong = PAR_DE_TESTE
+    return (
+        _reduzido_pela_barra(weak, barras["d"]),
+        _reduzido_pela_barra(strong, barras["e"]),
+    )
+
+
+def _refrescar_o_teste(
+    ctx: Contexto, p: Any, uniq: str, *,
+    acabou_de_gravar: tuple[str, int] | None = None,
+) -> None:
     """Reenvia o par ao controle em teste — é o "ao vivo" que ela pediu.
 
     SÓ FALA SE O TESTE FOR DAQUELE CONTROLE. Arrastar a barra do P2 enquanto o
@@ -1018,7 +1079,7 @@ def _refrescar_o_teste(ctx: Contexto, p: Any, uniq: str) -> None:
     if not any(str(c.get("uniq") or "") == uniq for c in ctx.mesa):
         parar_o_teste()
         return
-    weak, strong = _par_das_barras(ctx, uniq)
+    weak, strong = _par_das_barras(ctx, uniq, acabou_de_gravar=acabou_de_gravar)
     with contextlib.suppress(Exception):
         p.rumble_set_checked(weak, strong)
 
@@ -1432,6 +1493,14 @@ def _aplicar_a_forca(ctx: Contexto, p: Any, uniq: str,
     # E O TESTE VIVO SEGUE O DEGRAU. A força e a intensidade multiplicam as
     # barras (`efetivo = degrau x barra`), então mudá-las com o teste ligado
     # tem de chegar à mão dela igual ao arraste da barra — é o mesmo "ao vivo".
+    #
+    # AQUI NÃO VAI `acabou_de_gravar`, e a diferença é de ANDAR (09/09/2026): a
+    # barra é o fator que ESTA aba aplica ao par (:func:`_par_das_barras`), e
+    # por isso ela precisa do valor recém-gravado; o degrau é aplicado pelo
+    # daemon e pelo backend sobre o par que chega — a escala por controle sai
+    # de `profiles/manager._controllers_to_rumble_scales` no `profile.switch`
+    # que o :func:`_gravar_a_forca` acabou de fazer. Reenviar o mesmo par já
+    # basta: quem o escala é o outro lado, com o número novo.
     _refrescar_o_teste(ctx, p, uniq)
     # A COLUNA DE DEPOIS, lida PELA MESMA FUNÇÃO QUE PINTA. É o ponto inteiro:
     # se o que sai daqui não bate com o que ela pediu, é literalmente o que a
@@ -1857,7 +1926,14 @@ def motor(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
                 or "o Hefesto não aceitou gravar esta barra, e não disse por quê"))
     # E O TESTE VIVO SEGUE O ARRASTE — o "ao vivo" que ela pediu. Depois da
     # gravação, nunca antes: o que ela sente tem de ser o que ficou gravado.
-    _refrescar_o_teste(ctx, p, uniq)
+    #
+    # O `acabou_de_gravar` NÃO É ENFEITE (09/09/2026): o `ctx` deste gesto é o
+    # tique ANTERIOR ao `rumble.motores.set` que acabou de responder, então
+    # `state.rumble_motores` ainda traz a barra VELHA. Sem dizer o que gravou,
+    # o reenvio faria a mão dela sentir o valor de antes do arraste — um "ao
+    # vivo" atrasado em um tique, que é a forma mais convincente de um ajuste
+    # parecer que não funciona.
+    _refrescar_o_teste(ctx, p, uniq, acabou_de_gravar=(lado, pontos))
 
 
 @gesto("05-vibracao.html", "testar")
@@ -1895,6 +1971,14 @@ def testar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     `_refrescar_o_teste` reenvia o par a cada mudança de barra, de intensidade e
     de força, enquanto o teste for DESTE controle. Ver `_par_das_barras` para a
     inversão `weak`/`strong`, que é a armadilha deste assunto.
+
+    **E O PAR SAI REDUZIDO PELA BARRA DE CADA MOTOR — 09/09/2026,
+    VIBRA-MULT-01.** Até esta manhã a frase acima era falsa em duas camadas: a
+    leitura das barras batia em chave inexistente e o caminho do rumble FIXADO
+    não aplica a barra em lugar nenhum. Um motor posto em ZERO tremia igual ao
+    outro no "Testar", que é a queixa dela — *"os slicers não estão se
+    multiplicando"*. A medição e o que ficou em aberto estão em
+    :func:`_par_das_barras`.
     """
     _minha_vez()
     uniq = _mirar(ctx, o, p)
