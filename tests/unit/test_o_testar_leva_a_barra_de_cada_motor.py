@@ -31,6 +31,12 @@ já o aplicavam. A outra metade — `_handle_rumble_set` e `reassert_rumble`
 passando por `_mults_por_motor`, que cobriria também o `hef test rumble` e a
 janela GTK — está relatada na entrega.
 
+E A CURA É PROVISÓRIA POR DESENHO, o que cria um risco com data marcada: no dia
+em que o daemon passar a multiplicar os dois fatores, a barra é contada DUAS
+vezes e o que ela sente vira `base x barra² x degrau`. **A §3 deste arquivo é a
+guarda desse dia** — três réguas que reprovam nomeando a dobra e dizendo o que
+tirar da aba, para que a descoberta não seja pela mão dela.
+
 A MORDIDA DE CADA CASO está no docstring dele. A de todos:
 em `a05_vibracao._par_das_barras`, troque o `return` por `return PAR_DE_TESTE`
 — a barra some, o motor que ela calou volta a tremer, e os casos 1 a 4
@@ -323,3 +329,143 @@ def test_o_arraste_no_p2_nao_sacode_o_p1_em_teste(pac, a05, monkeypatch) -> None
     assert "rumble_set_checked" not in p.nomes, (
         f"arrastar a barra do P2 mandou vibração ({p.nomes}) com o teste ligado "
         f"no P1")
+
+
+# ---------------------------------------------------------------------------
+# 3. A GUARDA DA CURA PROVISÓRIA — o dia em que o daemon curar
+# ---------------------------------------------------------------------------
+#
+# A CURA DESTA SPRINT É PARTIDA EM DOIS POR DESENHO, e o risco tem nome: a ABA
+# pré-multiplica o par pela barra de cada motor (`_par_das_barras`), e o DAEMON
+# aplica só o degrau (`apply_rumble_policy` no `rumble.set`, `_effective_mult`
+# no reassert de 5 Hz). O produto na mão dela é `base x barra x degrau`, com
+# cada fator aplicado UMA vez, por quem já o aplicava.
+#
+# A CURA DEFINITIVA — as duas portas do rumble FIXADO passando por
+# `gamepad._mults_por_motor`, que é o que cobre o `hef test rumble` e a janela
+# GTK — **dobra a conta**: a barra entraria de novo, e o que ela sentiria seria
+# `base x barra² x degrau`. Com a barra em 50 % o motor cairia para 25 %, e o
+# instrumento que veria isso primeiro seria a MÃO DELA.
+#
+# ESTAS TRÊS RÉGUAS REPROVAM NAQUELE DIA, e é o ponto delas: elas não medem uma
+# feature — medem a REPARTIÇÃO. Quem curar o daemon vê o vermelho, lê o recado,
+# e tira o `_reduzido_pela_barra` da aba no MESMO commit. Sem elas, a descoberta
+# seria por reclamação.
+#
+# Elas não impedem a cura definitiva. Uma régua que impedisse trabalho seria
+# outra coisa: o que elas exigem é que as duas metades andem JUNTAS.
+
+from tests.unit.test_cada_motor_tem_o_seu_multiplicador import (
+    BRANCO,
+    _Backend,
+    _daemon,
+    _degrau,
+    _grava,
+    perfis,  # noqa: F401 — fixture, e é a fixture que isola o disco de perfis
+)
+
+
+def test_o_rumble_fixado_aplica_um_fator_so_nos_dois_motores(perfis) -> None:  # noqa: F811
+    """`rumble.set` com barra ASSIMÉTRICA no perfil -> os dois motores, o MESMO fator.
+
+    É a porta por onde o par do "Testar" desta aba entra no daemon
+    (`ipc_handlers._handle_rumble_set` -> `apply_rumble_policy`). Hoje ela
+    aplica o degrau e mais nada, e é POR ISSO que a aba pode pré-multiplicar
+    pela barra sem dobrar a conta.
+
+    MORDIDA (é a cura definitiva, feita de propósito): em
+    `daemon/ipc_rumble_policy.apply_rumble_policy`, troque o `mult` único pelos
+    dois fatores de `gamepad._mults_por_motor` — o `strong` sai 75 onde este
+    caso exige 150, e a régua nomeia a dobra.
+    """
+    from hefesto_dualsense4unix.daemon.ipc_rumble_policy import apply_rumble_policy
+
+    _grava("Bancada", motor_forte_pct=50, motor_fraco_pct=100)
+    d = _daemon(policy="max", perfil_ativo="Bancada")
+
+    saiu = apply_rumble_policy(d, 100, 100)
+
+    assert saiu == (150, 150), (
+        f"`apply_rumble_policy` devolveu {saiu} para (100, 100) com a barra "
+        f"forte em 50 % e o degrau em {_degrau('max')}. O caminho do rumble "
+        f"FIXADO passou a aplicar a BARRA além do degrau — e a aba Vibração já "
+        f"a aplica antes de mandar (`a05_vibracao._par_das_barras`). A conta "
+        f"DOBROU: o que ela sente virou `base x barra² x degrau`. A cura é "
+        f"tirar o `_reduzido_pela_barra` da aba NO MESMO COMMIT, e o par do "
+        f"'Testar' volta a ser o `PAR_DE_TESTE` seco.")
+
+
+def test_o_reassert_de_5hz_aplica_um_fator_so_nos_dois_motores(perfis) -> None:  # noqa: F811
+    """A segunda porta do rumble FIXADO — o laço que re-afirma o par a cada 200 ms.
+
+    Ela é o outro caminho que o par da aba percorre, e sozinha bastaria para
+    dobrar a conta: o "Testar" desta aba fica LIGADO (`_EM_TESTE`), então o
+    reassert reescreve aquele par cinco vezes por segundo enquanto a mão dela
+    está no plástico.
+
+    MORDIDA: em `daemon/subsystems/rumble.reassert_rumble`, troque
+    `weak_raw * mult` / `strong_raw * mult` pelos dois fatores de
+    `_mults_por_motor` — o par escrito no controle sai `(150, 75)`.
+    """
+    from hefesto_dualsense4unix.daemon.subsystems.rumble import reassert_rumble
+
+    _grava("Bancada", motor_forte_pct=50, motor_fraco_pct=100)
+    backend = _Backend()
+    d = _daemon(policy="max", perfil_ativo="Bancada", controller=backend)
+    d.config.rumble_active = (100, 100)
+    d.config.rumble_active_uniq = BRANCO
+
+    reassert_rumble(d, 0.0)
+
+    assert backend.rumbles == [(BRANCO, 150, 150)], (
+        f"o reassert escreveu {backend.rumbles} — esperado "
+        f"[({BRANCO!r}, 150, 150)]. Se o `strong` saiu 75, o laço de 5 Hz "
+        f"passou a aplicar a barra que a aba Vibração já aplicou: a conta "
+        f"dobrou, e o motor que ela pôs em 50 % está em 25 %.")
+
+
+def test_a_conta_inteira_da_barra_vale_uma_vez_so(pac, a05, perfis) -> None:  # noqa: F811
+    """A CONTA DE PONTA A PONTA: o clique dela, a aba, o daemon, o número final.
+
+    É a régua que diz a repartição por extenso, com um número que ninguém
+    precisa derivar:
+
+        base 220 · barra forte 50 % · degrau máximo 1,5  ->  **165**
+
+    `165` é `base x barra x degrau`. `82` seria `base x barra² x degrau` — a
+    barra contada duas vezes, que é exatamente o que a cura definitiva do
+    daemon produz se ninguém tirar a metade da aba. **O número da dobra foi
+    MEDIDO, não derivado:** a mordida deste caso saiu `(240, 82)`, e não `83`,
+    porque `round(82.5)` em Python arredonda para o PAR. Uma mensagem que
+    nomeia um número que o leitor não vai ver é uma mentira pequena.
+
+    A MESMA PEÇA DOS DOIS LADOS: `CHAVE_P1` é `aabbcc000001`, que é o `BRANCO`
+    com que o perfil no disco foi gravado. A barra é uma só, e é a que os dois
+    lados leem.
+
+    MORDIDA: qualquer uma das duas metades sozinha. Arranque a redução da aba
+    (`_par_das_barras` devolvendo `PAR_DE_TESTE`) e o final vira `330 -> 255`;
+    acrescente a barra ao daemon e ele vira `83`.
+    """
+    from hefesto_dualsense4unix.daemon.ipc_rumble_policy import apply_rumble_policy
+
+    assert CHAVE_P1 == BRANCO, (
+        "a peça da aba e a do perfil no disco deixaram de ser a mesma — esta "
+        "régua estaria compondo a barra de um controle com o degrau de outro")
+
+    # 1. A METADE DA ABA: o clique dela sai com a barra aplicada.
+    _grava("Bancada", motor_forte_pct=50, motor_fraco_pct=100)
+    ctx = _ctx(pac, {CHAVE_P1: {"forte_pct": 50, "fraco_pct": 100}})
+    da_aba = _testar(pac, a05, ctx, P1, "p1")
+    assert da_aba == (160, 110), f"a aba mandou {da_aba}, e devia mandar (160, 110)"
+
+    # 2. A METADE DO DAEMON: o degrau, e SÓ o degrau, sobre o par que chegou.
+    d = _daemon(policy="max", perfil_ativo="Bancada")
+    no_motor = apply_rumble_policy(d, *da_aba)
+
+    assert no_motor == (240, 165), (
+        f"o par que chega ao motor é {no_motor}. O contrato é "
+        f"`base x barra x degrau` = 220 x 50 % x 1,5 = 165 no motor esquerdo. "
+        f"Se saiu 82, a barra foi contada DUAS vezes — uma na aba e outra no "
+        f"daemon — e o que ela sente é `barra²`. Ver o comentário desta seção: "
+        f"as duas metades têm de andar juntas.")

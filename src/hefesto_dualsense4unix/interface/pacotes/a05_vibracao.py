@@ -1490,9 +1490,19 @@ def _aplicar_a_forca(ctx: Contexto, p: Any, uniq: str,
     disco.
     """
     global_do_perfil, depois = _gravar_a_forca(ctx, p, uniq, policy, custom)
-    # E O TESTE VIVO SEGUE O DEGRAU. A força e a intensidade multiplicam as
-    # barras (`efetivo = degrau x barra`), então mudá-las com o teste ligado
-    # tem de chegar à mão dela igual ao arraste da barra — é o mesmo "ao vivo".
+    # E O TESTE VIVO SEGUE O DEGRAU — E A CONTA TEM DOIS DONOS (09/09/2026,
+    # VIBRA-MULT-01). O que a mão dela sente é `base x barra x degrau`, e cada
+    # fator é aplicado por um lado diferente: a BARRA é a metade DESTA ABA,
+    # aplicada em :func:`_par_das_barras` antes de o par sair; o DEGRAU — a
+    # força e a intensidade — é a metade do DAEMON, aplicada sobre o par que
+    # chega. Mudar o degrau com o teste ligado tem de chegar à mão dela igual
+    # ao arraste da barra: é o mesmo "ao vivo", por caminhos diferentes.
+    #
+    # ATÉ 09/09/2026 ESTA LINHA DIZIA O CONTRÁRIO DO QUE O PRODUTO FAZIA —
+    # *"a força e a intensidade multiplicam as barras"* —, e ela é de 07/09. O
+    # caminho do rumble FIXADO aplicava só o degrau; a barra não chegava ao
+    # motor em lugar nenhum, e um motor posto em ZERO tremia igual ao outro.
+    # A medição está em :func:`_par_das_barras`.
     #
     # AQUI NÃO VAI `acabou_de_gravar`, e a diferença é de ANDAR (09/09/2026): a
     # barra é o fator que ESTA aba aplica ao par (:func:`_par_das_barras`), e
