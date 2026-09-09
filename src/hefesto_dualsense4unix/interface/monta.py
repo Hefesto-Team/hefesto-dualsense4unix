@@ -389,6 +389,27 @@ TOM_DA_CASA = {
     "#00FFFF": "#8BE9FD",   # ciano    -> --cyan
     "#FF8000": "#FFB86C",   # laranja  -> --orange
     "#8000FF": "#BD93F9",   # roxo     -> --purple
+    # OS SEIS QUE FALTAVAM — 09/09/2026, decisão dela na bancada: *"deixar na
+    # tela 11 cores principais (primárias e interseções) + preto + branco"*, e
+    # *"os tons de cores pré disponíveis tem que serem na mesma pega de tons
+    # pastéis"*.
+    #
+    # Os oito de cima são `player_slot_color(1..8)` — a cor AUTOMÁTICA de cada
+    # número, e por isso ficam. Os quatro matizes abaixo completam o círculo de
+    # 30 em 30 graus (faltavam 90°, 150°, 210° e 300°), e preto e branco entram
+    # porque não são matiz nenhum: um apaga a barra, o outro é o cheio.
+    #
+    # A PEGADA É MEDIDA, não escolhida no olho: os oito acima têm S≈92 % e
+    # L≈71 %, e os quatro novos saem de HSL com S=92 % e L=72 %. Branco e preto
+    # não têm matiz para converter, então pegam o `--foreground` e o
+    # `--current-line` do Dracula — o preto precisa continuar VISÍVEL como
+    # amostra, senão a casa apagada some da fileira em vez de dizer "apagada".
+    "#80FF00": "#B8F976",   # verde-limão (90°)
+    "#00FF80": "#76F9B8",   # verde-água (150°)
+    "#0080FF": "#76B8F9",   # azul-céu (210°)
+    "#FF00FF": "#F976F9",   # magenta (300°)
+    "#FFFFFF": "#F8F8F2",   # branco  -> --foreground
+    "#000000": "#44475A",   # preto   -> --current-line
 }
 
 

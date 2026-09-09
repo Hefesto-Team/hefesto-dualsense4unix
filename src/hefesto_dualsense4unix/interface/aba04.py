@@ -205,7 +205,21 @@ BRILHO = {c["pref"]: next(_b) for c in MESA}
 #: enquanto ele não adotar estes tons o controle acende a cor de cima e a tela
 #: mostra a de baixo. A troca no produto foi aprovada por ela; falta executar.
 # (o mapa mora em `monta.py` — dois donos: esta guia e a barra de luz da 02)
-TONS = [tom_da_casa(luz(n)) for n in range(1, 9)]
+# OS CATORZE DA GUIA — era `range(1, 9)` até 09/09/2026, decisão dela na
+# bancada: *"adicionamos os tons faltantes pra cada controle"*. O dono da lista
+# é `_pacote04.tons_da_guia()`, que junta os oito automáticos do produto com os
+# seis que `TOM_DA_CASA` conhece e eles não cobrem. Contar até oito AQUI era a
+# segunda lista, e ela envelheceria calada no dia em que a guia crescesse — que
+# é hoje.
+CRUS_DA_GUIA = ["#%02X%02X%02X" % rgb for rgb in _pacote04.tons_da_guia()]
+TONS = [tom_da_casa(h) for h in CRUS_DA_GUIA]
+
+
+def TITULO_DA_CASA(i: int) -> str:  # noqa: N802 - constante de molde, não classe
+    """A frase de cada casa da guia. As oito primeiras são cor de número."""
+    quem = (f"Cor automática do Player {i} — usar aqui pinta"
+            if i <= 8 else "Pinta")
+    return f"{quem} a barra deste controle, e não muda o número dele."
 
 #: O EXEMPLO DA TROCA SAIU DAQUI — 03/09/2026. Ele era `TEM_O_1`/`QUER_O_1`,
 #: derivado da `MESA` do desenho, e alimentava a dica do "Jogador" e a legenda do
@@ -769,7 +783,14 @@ CSS = """
   /* o tom escolhido engrossa POR DENTRO, com sombra, e não com `border-width:2`:
      os nove são `flex:1` e a borda de 2px conta no piso do item — o escolhido
      ficava 2px mais largo que os outros oito, na fileira que ela mede a olho. */
-  .guia .tom.on{border-color:var(--fg);box-shadow:inset 0 0 0 1px var(--fg)}
+  /* A BORDA DA ESCOLHIDA É O PLÁSTICO DO CONTROLE — 09/09/2026, decisão dela.
+     `currentColor` é o `color` que o pintor escreve na `.guia` pelo
+     `data-campo="plastico"`; sem controle no lugar, o campo não é pintado e o
+     `color` herdado do cartão devolve a borda neutra de antes. Dois pixels em
+     vez de um: a cor do plástico pode ser escura (Midnight Black) e uma borda
+     de um pixel some contra o tom da casa. */
+  .guia .tom.on{border-color:currentColor;border-width:2px;
+                box-shadow:inset 0 0 0 1px currentColor}
   .guia .livre{
     flex:1;height:26px;border-radius:6px;padding:2px;cursor:pointer;min-width:0;
     border:1px dashed var(--comment);background:
@@ -1238,19 +1259,21 @@ def coluna(c):
         # ninguém — é o desenho. Marcar o anel ali seria afirmar uma cor
         # escolhida onde não há controle que a tenha escolhido.
         f'            <button class="tom{" on" if ligado and t == tom_da_casa(cor) else ""}" style="background:{t}"'
-        f' data-campo="hex" data-hef-alvo="classe" data-hef-quando="{luz(i)}"'
-        f' data-gesto="cor" data-hex="{luz(i)}"'
+        f' data-campo="hex" data-hef-alvo="classe" data-hef-quando="{cru}"'
+        f' data-gesto="cor" data-hex="{cru}"'
         # E O `title` NÃO NOMEIA CONTROLE — 03/09/2026. Ele dizia *"pinta a
         # barra do {nome}"*, com o nome do MOCKUP, e a régua da identidade não o
         # acusava: ela pula o `title` de quem já tem endereço, e este botão tem
         # (`data-campo="hex"`). Endereço não cura frase congelada — `title` é
         # ATRIBUTO, e o pintor não tem alvo para atributo, então o que estivesse
-        # escrito aqui ficaria na tela dela para sempre. A frase que sobra é
-        # verdadeira em qualquer mesa: quem é "este controle" a coluna já diz,
-        # no rótulo vivo logo acima.
-        f' title="Cor automática do Player {i} — usar aqui pinta a barra deste'
-        f' controle, e não muda o número dele."></button>'
-        for i, t in enumerate(TONS, 1))
+        # escrito aqui ficaria na tela dela para sempre.
+        #
+        # E ELE DIZ A VERDADE SOBRE CADA CASA DESDE 09/09/2026: as OITO
+        # primeiras são a cor automática de um número; as SEIS que ela mandou
+        # acrescentar não são de número nenhum, e chamá-las de "Cor automática
+        # do Player 9" seria inventar um jogador que não existe.
+        f' title="{TITULO_DA_CASA(i)}"></button>'
+        for i, (cru, t) in enumerate(zip(CRUS_DA_GUIA, TONS, strict=True), 1))
 
     # ---- O QUE O `conectado` DECIDE, peça por peça ----
     # Cada nome abaixo é UM pedaço do molde único lá embaixo. O endereço
@@ -1309,7 +1332,20 @@ def coluna(c):
     # identidade de aparelho nenhum —, e o `.cheio` continua sem `style=
     # "width"`. Quem escreve os valores é o pintor, pelo `data-campo`.
     cor_de_partida = cor.lower() if ligado else "#000000"
-    guia = f'''<span class="guia">
+    # A GUIA VESTE O PLÁSTICO — 09/09/2026, decisão dela: *"onde eu escolher uma
+    # cor, em volta dela fica a borda da cor do plastico do controle"*.
+    #
+    # NÃO HÁ ENDEREÇO NOVO, e é isso que faz a cura caber numa linha: o
+    # `data-campo="plastico"` já existe na moldura do desenho, e o pintor
+    # escreve o mesmo valor em TODO elemento que carregue aquele campo (é o
+    # mesmo desenho dos catorze botões que dividem o `hex`). Pondo o par aqui, a
+    # guia inteira passa a ter `color` = a cor do plástico daquele controle, e o
+    # `.tom.on` só precisa pedir `currentColor`.
+    #
+    # A ALTERNATIVA ERA UM SEGUNDO CAMPO com o mesmo valor — e dois endereços
+    # para o mesmo fato é o que esta casa persegue o oposto de fazer: eles podem
+    # divergir na tela.
+    guia = f'''<span class="guia" data-campo="plastico" data-hef-alvo="cor"{plastico_de_partida}>
 {tons}
               <input type="color" class="livre" value="{cor_de_partida}" data-gesto="cor"
                      title="Livre — abre o seletor para uma cor que não está na guia.">

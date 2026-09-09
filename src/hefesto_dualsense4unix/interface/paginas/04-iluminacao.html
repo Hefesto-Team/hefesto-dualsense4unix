@@ -1403,7 +1403,14 @@
   /* o tom escolhido engrossa POR DENTRO, com sombra, e não com `border-width:2`:
      os nove são `flex:1` e a borda de 2px conta no piso do item — o escolhido
      ficava 2px mais largo que os outros oito, na fileira que ela mede a olho. */
-  .guia .tom.on{border-color:var(--fg);box-shadow:inset 0 0 0 1px var(--fg)}
+  /* A BORDA DA ESCOLHIDA É O PLÁSTICO DO CONTROLE — 09/09/2026, decisão dela.
+     `currentColor` é o `color` que o pintor escreve na `.guia` pelo
+     `data-campo="plastico"`; sem controle no lugar, o campo não é pintado e o
+     `color` herdado do cartão devolve a borda neutra de antes. Dois pixels em
+     vez de um: a cor do plástico pode ser escura (Midnight Black) e uma borda
+     de um pixel some contra o tom da casa. */
+  .guia .tom.on{border-color:currentColor;border-width:2px;
+                box-shadow:inset 0 0 0 1px currentColor}
   .guia .livre{
     flex:1;height:26px;border-radius:6px;padding:2px;cursor:pointer;min-width:0;
     border:1px dashed var(--comment);background:
@@ -2656,7 +2663,7 @@
           </div>
           <div class="ctrl-rot" data-campo="identidade">P1 <span class="pt">•</span> Cosmic Red <span class="pt">•</span> USB</div>
           <div class="cel-cor">
-            <span class="guia">
+            <span class="guia" data-campo="plastico" data-hef-alvo="cor" style="color:#ae335a">
             <button class="tom on" style="background:#7EB8D4" data-campo="hex" data-hef-alvo="classe" data-hef-quando="#0000FF" data-gesto="cor" data-hex="#0000FF" title="Cor automática do Player 1 — usar aqui pinta a barra deste controle, e não muda o número dele."></button>
             <button class="tom" style="background:#FF5555" data-campo="hex" data-hef-alvo="classe" data-hef-quando="#FF0000" data-gesto="cor" data-hex="#FF0000" title="Cor automática do Player 2 — usar aqui pinta a barra deste controle, e não muda o número dele."></button>
             <button class="tom" style="background:#50FA7B" data-campo="hex" data-hef-alvo="classe" data-hef-quando="#00FF00" data-gesto="cor" data-hex="#00FF00" title="Cor automática do Player 3 — usar aqui pinta a barra deste controle, e não muda o número dele."></button>
@@ -2665,6 +2672,12 @@
             <button class="tom" style="background:#8BE9FD" data-campo="hex" data-hef-alvo="classe" data-hef-quando="#00FFFF" data-gesto="cor" data-hex="#00FFFF" title="Cor automática do Player 6 — usar aqui pinta a barra deste controle, e não muda o número dele."></button>
             <button class="tom" style="background:#FFB86C" data-campo="hex" data-hef-alvo="classe" data-hef-quando="#FF8000" data-gesto="cor" data-hex="#FF8000" title="Cor automática do Player 7 — usar aqui pinta a barra deste controle, e não muda o número dele."></button>
             <button class="tom" style="background:#BD93F9" data-campo="hex" data-hef-alvo="classe" data-hef-quando="#8000FF" data-gesto="cor" data-hex="#8000FF" title="Cor automática do Player 8 — usar aqui pinta a barra deste controle, e não muda o número dele."></button>
+            <button class="tom" style="background:#B8F976" data-campo="hex" data-hef-alvo="classe" data-hef-quando="#80FF00" data-gesto="cor" data-hex="#80FF00" title="Pinta a barra deste controle, e não muda o número dele."></button>
+            <button class="tom" style="background:#76F9B8" data-campo="hex" data-hef-alvo="classe" data-hef-quando="#00FF80" data-gesto="cor" data-hex="#00FF80" title="Pinta a barra deste controle, e não muda o número dele."></button>
+            <button class="tom" style="background:#76B8F9" data-campo="hex" data-hef-alvo="classe" data-hef-quando="#0080FF" data-gesto="cor" data-hex="#0080FF" title="Pinta a barra deste controle, e não muda o número dele."></button>
+            <button class="tom" style="background:#F976F9" data-campo="hex" data-hef-alvo="classe" data-hef-quando="#FF00FF" data-gesto="cor" data-hex="#FF00FF" title="Pinta a barra deste controle, e não muda o número dele."></button>
+            <button class="tom" style="background:#F8F8F2" data-campo="hex" data-hef-alvo="classe" data-hef-quando="#FFFFFF" data-gesto="cor" data-hex="#FFFFFF" title="Pinta a barra deste controle, e não muda o número dele."></button>
+            <button class="tom" style="background:#44475A" data-campo="hex" data-hef-alvo="classe" data-hef-quando="#000000" data-gesto="cor" data-hex="#000000" title="Pinta a barra deste controle, e não muda o número dele."></button>
               <input type="color" class="livre" value="#0000ff" data-gesto="cor"
                      title="Livre — abre o seletor para uma cor que não está na guia.">
             </span>
@@ -3046,7 +3059,7 @@
           </div>
           <div class="ctrl-rot" data-campo="identidade">P2 <span class="pt">•</span> Starlight Blue <span class="pt">•</span> BT</div>
           <div class="cel-cor">
-            <span class="guia">
+            <span class="guia" data-campo="plastico" data-hef-alvo="cor" style="color:#7eb8d4">
             <button class="tom" style="background:#7EB8D4" data-campo="hex" data-hef-alvo="classe" data-hef-quando="#0000FF" data-gesto="cor" data-hex="#0000FF" title="Cor automática do Player 1 — usar aqui pinta a barra deste controle, e não muda o número dele."></button>
             <button class="tom on" style="background:#FF5555" data-campo="hex" data-hef-alvo="classe" data-hef-quando="#FF0000" data-gesto="cor" data-hex="#FF0000" title="Cor automática do Player 2 — usar aqui pinta a barra deste controle, e não muda o número dele."></button>
             <button class="tom" style="background:#50FA7B" data-campo="hex" data-hef-alvo="classe" data-hef-quando="#00FF00" data-gesto="cor" data-hex="#00FF00" title="Cor automática do Player 3 — usar aqui pinta a barra deste controle, e não muda o número dele."></button>
@@ -3055,6 +3068,12 @@
             <button class="tom" style="background:#8BE9FD" data-campo="hex" data-hef-alvo="classe" data-hef-quando="#00FFFF" data-gesto="cor" data-hex="#00FFFF" title="Cor automática do Player 6 — usar aqui pinta a barra deste controle, e não muda o número dele."></button>
             <button class="tom" style="background:#FFB86C" data-campo="hex" data-hef-alvo="classe" data-hef-quando="#FF8000" data-gesto="cor" data-hex="#FF8000" title="Cor automática do Player 7 — usar aqui pinta a barra deste controle, e não muda o número dele."></button>
             <button class="tom" style="background:#BD93F9" data-campo="hex" data-hef-alvo="classe" data-hef-quando="#8000FF" data-gesto="cor" data-hex="#8000FF" title="Cor automática do Player 8 — usar aqui pinta a barra deste controle, e não muda o número dele."></button>
+            <button class="tom" style="background:#B8F976" data-campo="hex" data-hef-alvo="classe" data-hef-quando="#80FF00" data-gesto="cor" data-hex="#80FF00" title="Pinta a barra deste controle, e não muda o número dele."></button>
+            <button class="tom" style="background:#76F9B8" data-campo="hex" data-hef-alvo="classe" data-hef-quando="#00FF80" data-gesto="cor" data-hex="#00FF80" title="Pinta a barra deste controle, e não muda o número dele."></button>
+            <button class="tom" style="background:#76B8F9" data-campo="hex" data-hef-alvo="classe" data-hef-quando="#0080FF" data-gesto="cor" data-hex="#0080FF" title="Pinta a barra deste controle, e não muda o número dele."></button>
+            <button class="tom" style="background:#F976F9" data-campo="hex" data-hef-alvo="classe" data-hef-quando="#FF00FF" data-gesto="cor" data-hex="#FF00FF" title="Pinta a barra deste controle, e não muda o número dele."></button>
+            <button class="tom" style="background:#F8F8F2" data-campo="hex" data-hef-alvo="classe" data-hef-quando="#FFFFFF" data-gesto="cor" data-hex="#FFFFFF" title="Pinta a barra deste controle, e não muda o número dele."></button>
+            <button class="tom" style="background:#44475A" data-campo="hex" data-hef-alvo="classe" data-hef-quando="#000000" data-gesto="cor" data-hex="#000000" title="Pinta a barra deste controle, e não muda o número dele."></button>
               <input type="color" class="livre" value="#ff0000" data-gesto="cor"
                      title="Livre — abre o seletor para uma cor que não está na guia.">
             </span>
@@ -3420,7 +3439,7 @@
           </div>
           <div class="ctrl-rot" data-campo="identidade">P3 <span class="pt">•</span> Desconectado</div>
           <div class="cel-cor">
-            <span class="guia">
+            <span class="guia" data-campo="plastico" data-hef-alvo="cor">
             <button class="tom" style="background:#7EB8D4" data-campo="hex" data-hef-alvo="classe" data-hef-quando="#0000FF" data-gesto="cor" data-hex="#0000FF" title="Cor automática do Player 1 — usar aqui pinta a barra deste controle, e não muda o número dele."></button>
             <button class="tom" style="background:#FF5555" data-campo="hex" data-hef-alvo="classe" data-hef-quando="#FF0000" data-gesto="cor" data-hex="#FF0000" title="Cor automática do Player 2 — usar aqui pinta a barra deste controle, e não muda o número dele."></button>
             <button class="tom" style="background:#50FA7B" data-campo="hex" data-hef-alvo="classe" data-hef-quando="#00FF00" data-gesto="cor" data-hex="#00FF00" title="Cor automática do Player 3 — usar aqui pinta a barra deste controle, e não muda o número dele."></button>
@@ -3429,6 +3448,12 @@
             <button class="tom" style="background:#8BE9FD" data-campo="hex" data-hef-alvo="classe" data-hef-quando="#00FFFF" data-gesto="cor" data-hex="#00FFFF" title="Cor automática do Player 6 — usar aqui pinta a barra deste controle, e não muda o número dele."></button>
             <button class="tom" style="background:#FFB86C" data-campo="hex" data-hef-alvo="classe" data-hef-quando="#FF8000" data-gesto="cor" data-hex="#FF8000" title="Cor automática do Player 7 — usar aqui pinta a barra deste controle, e não muda o número dele."></button>
             <button class="tom" style="background:#BD93F9" data-campo="hex" data-hef-alvo="classe" data-hef-quando="#8000FF" data-gesto="cor" data-hex="#8000FF" title="Cor automática do Player 8 — usar aqui pinta a barra deste controle, e não muda o número dele."></button>
+            <button class="tom" style="background:#B8F976" data-campo="hex" data-hef-alvo="classe" data-hef-quando="#80FF00" data-gesto="cor" data-hex="#80FF00" title="Pinta a barra deste controle, e não muda o número dele."></button>
+            <button class="tom" style="background:#76F9B8" data-campo="hex" data-hef-alvo="classe" data-hef-quando="#00FF80" data-gesto="cor" data-hex="#00FF80" title="Pinta a barra deste controle, e não muda o número dele."></button>
+            <button class="tom" style="background:#76B8F9" data-campo="hex" data-hef-alvo="classe" data-hef-quando="#0080FF" data-gesto="cor" data-hex="#0080FF" title="Pinta a barra deste controle, e não muda o número dele."></button>
+            <button class="tom" style="background:#F976F9" data-campo="hex" data-hef-alvo="classe" data-hef-quando="#FF00FF" data-gesto="cor" data-hex="#FF00FF" title="Pinta a barra deste controle, e não muda o número dele."></button>
+            <button class="tom" style="background:#F8F8F2" data-campo="hex" data-hef-alvo="classe" data-hef-quando="#FFFFFF" data-gesto="cor" data-hex="#FFFFFF" title="Pinta a barra deste controle, e não muda o número dele."></button>
+            <button class="tom" style="background:#44475A" data-campo="hex" data-hef-alvo="classe" data-hef-quando="#000000" data-gesto="cor" data-hex="#000000" title="Pinta a barra deste controle, e não muda o número dele."></button>
               <input type="color" class="livre" value="#000000" data-gesto="cor"
                      title="Livre — abre o seletor para uma cor que não está na guia.">
             </span>
@@ -3789,7 +3814,7 @@
           </div>
           <div class="ctrl-rot" data-campo="identidade">P4 <span class="pt">•</span> Desconectado</div>
           <div class="cel-cor">
-            <span class="guia">
+            <span class="guia" data-campo="plastico" data-hef-alvo="cor">
             <button class="tom" style="background:#7EB8D4" data-campo="hex" data-hef-alvo="classe" data-hef-quando="#0000FF" data-gesto="cor" data-hex="#0000FF" title="Cor automática do Player 1 — usar aqui pinta a barra deste controle, e não muda o número dele."></button>
             <button class="tom" style="background:#FF5555" data-campo="hex" data-hef-alvo="classe" data-hef-quando="#FF0000" data-gesto="cor" data-hex="#FF0000" title="Cor automática do Player 2 — usar aqui pinta a barra deste controle, e não muda o número dele."></button>
             <button class="tom" style="background:#50FA7B" data-campo="hex" data-hef-alvo="classe" data-hef-quando="#00FF00" data-gesto="cor" data-hex="#00FF00" title="Cor automática do Player 3 — usar aqui pinta a barra deste controle, e não muda o número dele."></button>
@@ -3798,6 +3823,12 @@
             <button class="tom" style="background:#8BE9FD" data-campo="hex" data-hef-alvo="classe" data-hef-quando="#00FFFF" data-gesto="cor" data-hex="#00FFFF" title="Cor automática do Player 6 — usar aqui pinta a barra deste controle, e não muda o número dele."></button>
             <button class="tom" style="background:#FFB86C" data-campo="hex" data-hef-alvo="classe" data-hef-quando="#FF8000" data-gesto="cor" data-hex="#FF8000" title="Cor automática do Player 7 — usar aqui pinta a barra deste controle, e não muda o número dele."></button>
             <button class="tom" style="background:#BD93F9" data-campo="hex" data-hef-alvo="classe" data-hef-quando="#8000FF" data-gesto="cor" data-hex="#8000FF" title="Cor automática do Player 8 — usar aqui pinta a barra deste controle, e não muda o número dele."></button>
+            <button class="tom" style="background:#B8F976" data-campo="hex" data-hef-alvo="classe" data-hef-quando="#80FF00" data-gesto="cor" data-hex="#80FF00" title="Pinta a barra deste controle, e não muda o número dele."></button>
+            <button class="tom" style="background:#76F9B8" data-campo="hex" data-hef-alvo="classe" data-hef-quando="#00FF80" data-gesto="cor" data-hex="#00FF80" title="Pinta a barra deste controle, e não muda o número dele."></button>
+            <button class="tom" style="background:#76B8F9" data-campo="hex" data-hef-alvo="classe" data-hef-quando="#0080FF" data-gesto="cor" data-hex="#0080FF" title="Pinta a barra deste controle, e não muda o número dele."></button>
+            <button class="tom" style="background:#F976F9" data-campo="hex" data-hef-alvo="classe" data-hef-quando="#FF00FF" data-gesto="cor" data-hex="#FF00FF" title="Pinta a barra deste controle, e não muda o número dele."></button>
+            <button class="tom" style="background:#F8F8F2" data-campo="hex" data-hef-alvo="classe" data-hef-quando="#FFFFFF" data-gesto="cor" data-hex="#FFFFFF" title="Pinta a barra deste controle, e não muda o número dele."></button>
+            <button class="tom" style="background:#44475A" data-campo="hex" data-hef-alvo="classe" data-hef-quando="#000000" data-gesto="cor" data-hex="#000000" title="Pinta a barra deste controle, e não muda o número dele."></button>
               <input type="color" class="livre" value="#000000" data-gesto="cor"
                      title="Livre — abre o seletor para uma cor que não está na guia.">
             </span>

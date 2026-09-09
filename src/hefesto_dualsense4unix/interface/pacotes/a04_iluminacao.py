@@ -478,15 +478,36 @@ def _com_o_brilho(rgb: tuple[int, int, int], brilho: float) -> tuple[int, int, i
 
 
 def tons_da_guia() -> tuple[tuple[int, int, int], ...]:
-    """Os OITO tons que a guia desta aba oferece, na ordem em que o desenho os põe.
+    """Os CATORZE tons que a guia desta aba oferece, na ordem do desenho.
 
-    NÃO SE DIGITA NENHUM: são `core/led_control.player_slot_color(1..8)`, a mesma
-    paleta que acende as cinco lâmpadas, que o gerador usa para pintar os oito
-    botões (`aba04.luz`) e que o daemon usa como cor automática de cada número.
+    NÃO SE DIGITA NENHUM, e as duas metades têm donos diferentes:
+
+    * os OITO primeiros são `core/led_control.player_slot_color(1..8)` — a mesma
+      paleta que acende as cinco lâmpadas e que o daemon usa como cor automática
+      de cada número. Eles ficam porque são o atalho para a cor do jogador;
+    * os SEIS seguintes são as chaves que `monta.TOM_DA_CASA` conhece e os oito
+      não cobrem: os quatro matizes que faltavam para o círculo fechar de 30 em
+      30 graus, mais o branco e o preto.
+
+    ERA OITO ATÉ 09/09/2026. Decisão dela na bancada: *"deixar na tela 11 cores
+    principais (primárias e interseções) + preto + branco"* e *"adicionamos os
+    tons faltantes pra cada controle"*.
+
+    A ORDEM IMPORTA e é esta: quem procura a cor do próprio número a encontra
+    onde sempre esteve, e o que é novo entra depois.
     """
+    import monta  # o `pacotes/__init__` põe `interface/` no `sys.path`
+
     from hefesto_dualsense4unix.core.led_control import player_slot_color
 
-    return tuple(player_slot_color(n) for n in range(1, 9))
+    automaticos = tuple(player_slot_color(n) for n in range(1, 9))
+    ja_tem = {"#{:02X}{:02X}{:02X}".format(*rgb) for rgb in automaticos}
+    extras = tuple(
+        (int(h[1:3], 16), int(h[3:5], 16), int(h[5:7], 16))
+        for h in monta.TOM_DA_CASA
+        if h not in ja_tem
+    )
+    return automaticos + extras
 
 
 def cor_escolhida(efetiva: Any, brilho: float | None) -> Any:
