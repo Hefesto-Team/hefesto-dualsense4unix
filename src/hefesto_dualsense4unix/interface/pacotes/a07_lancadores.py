@@ -361,6 +361,57 @@ def _declarados() -> tuple[desenho.SemCenso, ...]:
                          comandos=tuple(item.comandos),
                          declarado=True)
         for chave, item in sorted(declaracao.lancadores.items())
+    ) + _achados_por_conteudo()
+
+
+def _achados_por_conteudo() -> tuple[desenho.SemCenso, ...]:
+    """Os lançadores que a máquina DECLARA ser, e que ninguém digitou.
+
+    **LANCADOR-ACHADO-01 §3, degrau 2 — 09/09/2026.** A busca do produto era
+    por CINCO STRINGS que alguém escreveu no arquivo, e tudo que não batia
+    sumia com um `NÃO LOCALIZADO` sobre um programa instalado e funcionando: o
+    `net.lutris.Lutris-beta`, o AppImage que publica `.desktop`, o snap, o
+    compilado em `/opt`, e todo lançador fora dos seis (itch, Bottles, ES-DE)
+    — *e são dezenas de emuladores*.
+
+    A palavra dela foi *"isso é uma falha de produto e a culpa é minha"*. **A
+    culpa não é dela:** um produto que exige a forma certa de instalar
+    terceiriza uma pergunta que ele mesmo deveria responder.
+
+    A PERGUNTA VIROU SOBRE O MUNDO: `jogos_locais.e_lancador_de_jogos` lê o
+    que o `.desktop` DIZ DE SI — `Categories=Game` mais `PackageManager` ou
+    `Emulator`. É a mesma pergunta que o cartão do Flatpak já fazia ao
+    procurar o COMANDO, e a assimetria que a §2 da sprint nomeia.
+
+    **ELE ENTRA PELA PORTA QUE JÁ EXISTE**, e é o ponto: `desenho.procurados`
+    soma os de fábrica ao que ela declarou, e **chave repetida ENSINA o
+    primeiro cartão em vez de criar um segundo**. Então um achado cujo `stem`
+    já é atalho de um cartão de fábrica não vira cartão novo — ele só confirma
+    aquele. Um segundo procurador seria a assimetria que esta casa passou
+    dias arrancando.
+
+    `declarado=False`: ela não declarou nada, então o cartão **não** ganha o
+    botão «Tirar» — não há declaração a esquecer. É a mesma regra que
+    `cartao_sem_censo` já aplica.
+
+    NUNCA LEVANTA, pela mesma razão de `_declarados`: a vigia da aba chama
+    isto, e uma pasta ilegível não pode derrubar a tela.
+    """
+    from hefesto_dualsense4unix.integrations import jogos_locais as jl
+
+    try:
+        achados = jl.lancadores_por_conteudo()
+    except Exception:  # pragma: no cover - o disco dela não derruba a aba
+        return ()
+    #: OS `stem` QUE OS CARTÕES DE FÁBRICA JÁ PROCURAM. Um achado que caia
+    #: aqui não é notícia: o cartão dele existe e a busca de sempre o alcança.
+    de_fabrica = {atalho for item in desenho.SEM_FONTE for atalho in item.atalhos}
+    de_fabrica |= {atalho for atalho in desenho.A_STEAM.atalhos}
+    return tuple(
+        desenho.SemCenso(chave=stem.lower().replace(".", "-"), nome=nome,
+                         atalhos=(stem,), comandos=())
+        for stem, nome in sorted(achados.items())
+        if stem not in de_fabrica
     )
 
 

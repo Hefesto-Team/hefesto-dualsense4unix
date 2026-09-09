@@ -415,21 +415,55 @@ def test_o_recibo_diz_quantos_voltaram_e_o_que_a_numeracao_fez() -> None:
     assert p.chamadas == ["coop.sync", "identity.renumber"], (
         "a ORDEM é a entrega: renumerar antes de reconciliar compactaria uma "
         "lista que ainda não está completa")
-    assert fora["recado"] == home_actions.reconciliar_toast(
-        3, {"ok": True, "renumbered": {UNIQ: 1, "bb": 2}}), (
+    #: **A FRASE MUDOU DE DONO E DE LÍNGUA — JOGAR-02, 09/09/2026.** Era
+    #: `home_actions.reconciliar_toast`, a frase da JANELA GTK, e ela dizia
+    #: *"Jogadores reconciliados — 3 jogador(es). Numeração compactada em 2
+    #: controle(s)."* — a língua de dentro (`CoopManager.sync`,
+    #: `identity.compact`) escrita na tela dela, e o número de CONTROLES sem
+    #: dizer QUAIS.
+    #:
+    #: Agora a frase nomeia o assento, que é a palavra que esta tela já usa, e
+    #: a régua a lê do dono novo (`painel._RENUMEROU`) em vez de digitá-la.
+    assert fora["recado"] == painel._RENUMEROU.format(quais="P1, P2"), (
         "o recibo deixou de ser a frase do dono e virou texto deste arquivo")
-    assert "3" in fora["recado"], "o recibo não disse quantos jogadores voltaram"
+    assert "P1" in fora["recado"] and "P2" in fora["recado"], (
+        "o recibo não disse QUAIS controles foram renumerados — um número "
+        "sozinho obriga ela a descobrir quais")
 
 
-def test_a_recusa_por_jogo_aberto_nao_e_falha() -> None:
-    """Com os jogadores já de pé, um recado de erro seria a interface mentindo."""
+def test_a_recusa_por_jogo_aberto_nao_e_falha_nem_recado() -> None:
+    """Com os jogadores já de pé, um recado de erro seria a interface mentindo.
+
+    **E DEIXOU DE SER RECADO NENHUM — JOGAR-02, 09/09/2026.** A recusa do
+    passo 2 com o jogo aberto não é falha E não é notícia: o passo 1 fez o que
+    o botão promete. O gesto sai sem `recado`, e a tela responde com a piscada
+    verde no botão — que é como esta casa diz "deu certo" desde a 03-Q4.
+
+    **A MORDIDA:** tire `sessao_de_jogo_aberta` de `painel._sem_noticia` e o
+    gesto volta a pousar uma caixa verde em cima da identidade do cartão.
+    """
     p = _PonteQueResponde({
         "coop.sync": {"players": 2},
         "identity.renumber": {"ok": False, "reason": "sessao_de_jogo_aberta"},
     })
-    fora = aba.reconectar(_ctx(), {}, p)
-    assert fora["recado"] == home_actions.reconciliar_toast(
-        2, {"ok": False, "reason": "sessao_de_jogo_aberta"})
+    assert aba.reconectar(_ctx(), {}, p) is None
+
+
+def test_a_numeracao_ja_compacta_nao_vira_recado() -> None:
+    """"Já estava compacta" é a AUSÊNCIA de notícia — o caso do print dela.
+
+    A frase que ela mandou remover era exatamente esta::
+
+        Jogadores reconciliados — 2 jogador(es). A numeração já estava compacta.
+
+    **A MORDIDA:** faça `_sem_noticia` devolver `False` para o `renumbered`
+    vazio e a frase volta, em cima do cartão do P1.
+    """
+    p = _PonteQueResponde({
+        "coop.sync": {"players": 2},
+        "identity.renumber": {"ok": True, "renumbered": {}},
+    })
+    assert aba.reconectar(_ctx(), {}, p) is None
 
 
 def test_o_acabamento_mudo_nao_derruba_o_gesto() -> None:
@@ -439,7 +473,9 @@ def test_o_acabamento_mudo_nao_derruba_o_gesto() -> None:
         "identity.renumber": RuntimeError("o daemon não respondeu"),
     })
     fora = aba.reconectar(_ctx(), {}, p)
-    assert fora["recado"] == home_actions.reconciliar_toast(1, None)
+    #: **CONTINUA SENDO NOTÍCIA:** "não consegui conferir" é o produto dizendo
+    #: que não fez, e silêncio sobre isso é a mentira que esta casa persegue.
+    assert fora is not None and fora["recado"] == painel._NAO_CONFERIU
 
 
 def test_sem_o_primeiro_passo_o_botao_recusa_dizendo() -> None:

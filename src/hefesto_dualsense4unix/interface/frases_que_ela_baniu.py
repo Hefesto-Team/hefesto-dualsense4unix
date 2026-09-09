@@ -116,7 +116,17 @@ FRASES_BANIDAS: tuple[str, ...] = (
 #: dela está no glossário, §1: *os controles*, *todos*, *P1 e P2*, *quem está
 #: ligado*. **A feature não sai; a palavra sai** — nenhuma tabela, contagem ou
 #: aviso caiu por causa disto.
-PALAVRAS_BANIDAS: tuple[str, ...] = ("mesa",)
+#: ``reconciliad`` e ``compactada`` entraram em 09/09/2026 (JOGAR-02 §5), e as
+#: duas são a LÍNGUA DE DENTRO: `CoopManager.sync` e `identity.compact`
+#: escritos na tela dela. A frase que ela mandou remover era
+#: *"Jogadores reconciliados — 2 jogador(es). A numeração já estava
+#: compacta."*, e o que entra no lugar nomeia o assento: *"Os controles foram
+#: renumerados: P1, P2."*
+#:
+#: **`compactada` E NÃO `compacta`:** a segunda é raiz de `compactar`, que é o
+#: verbo certo em código e em comentário, e a régua casa por BORDA DE PALAVRA —
+#: banir a raiz curta acusaria toda prosa que explica o que o daemon faz.
+PALAVRAS_BANIDAS: tuple[str, ...] = ("mesa", "reconciliad", "compactada")
 
 #: As letras que fazem de uma ocorrência um IDENTIFICADOR e não uma palavra.
 #: `-` e `_` estão aqui porque `mesa-frase`, `radio-mesa` e `MESA_VAZIA` são

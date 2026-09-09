@@ -2513,7 +2513,7 @@ def cadeado(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
 
 
 @gesto("01-jogar.html", "reconectar")
-def reconectar(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
+def reconectar(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
     """"Reconectar Controles": os jogadores voltam, e a numeração se ajeita.
 
     O NOME DA TELA É DELA E É NOVO; o gesto não é. A legenda desta aba registra
@@ -2584,7 +2584,13 @@ def reconectar(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
         renumerou = p.resultado("identity.renumber")
     except Exception:
         renumerou = None
-    return {"recado": _painel().recibo_do_reconectar(jogadores, renumerou)}
+    #: **SEM NOTÍCIA, SEM FRASE — JOGAR-02, 09/09/2026.** O recibo devolve `""`
+    #: quando não houve o que contar, e um `{"recado": ""}` não é o mesmo que
+    #: nenhum recado: o piloto pousaria uma caixa verde VAZIA em cima da
+    #: identidade do cartão. `None` é o que faz a tela responder com a piscada
+    #: verde no botão, que é como esta casa diz "deu certo" desde a 03-Q4.
+    recibo = _painel().recibo_do_reconectar(jogadores, renumerou)
+    return {"recado": recibo} if recibo else None
 
 
 #: OS DOIS DESTA ABA NA LISTA DOS DEZESSEIS, classificados um a um — 02/09/2026.
