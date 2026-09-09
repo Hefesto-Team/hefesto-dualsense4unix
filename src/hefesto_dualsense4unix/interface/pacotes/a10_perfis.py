@@ -2520,7 +2520,7 @@ def editor_modo(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | No
     máscara só faz sentido com o gamepad virtual de pé.
 
     O `ProfileModeConfig` É RECONSTRUÍDO e não `model_copy`ado, pelo motivo
-    escrito em `manager.py:1854`: `model_copy` do pydantic v2 não revalida, e um
+    escrito em `manager.py:1999`: `model_copy` do pydantic v2 não revalida, e um
     `kind` fora da faixa viraria um arquivo que o próximo `load` recusa — o
     perfil dela deixando de abrir por causa de um clique.
     """

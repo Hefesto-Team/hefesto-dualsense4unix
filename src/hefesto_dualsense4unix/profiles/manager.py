@@ -984,11 +984,39 @@ class ProfileManager:
         ``gamepad._motores_do_perfil_ativo``. Então o perfil escreve no
         registro, e o registro responde em memória.
 
-        SÓ QUEM TEM OPINIÃO, e o resto é silêncio: ``mascara`` ausente não mexe
-        na máscara daquela peça. É o contrato do topo de ``ControllerOverrides``
-        e vale mais aqui do que em qualquer seção irmã — trocar a máscara
-        **derruba e recria o vpad**, e um perfil que não pediu nada não pode
-        fazer o controle dela sumir e voltar no meio de uma partida.
+        **O PERFIL CALADO DEVOLVE AO PADRÃO — DECISÃO DELA, 09/09/2026.** A
+        pergunta era *"um perfil que não fala de máscara deve devolver todo
+        mundo ao padrão, ou deixar cada um como está?"*, e a resposta dela foi
+        a primeira: *"Default é Hefesto dualsense padrão"*. Então esta função
+        varre o registro e **apaga a máscara própria de todo controle que o
+        perfil não declara** (:meth:`ExternalMaskRegistry.manter_somente`).
+        Aquele controle passa a herdar o degrau de baixo — o
+        ``mode.gamepad_flavor`` do perfil e, na falta dele, o
+        ``DaemonConfig.gamepad_flavor``, que de fábrica é ``dualsense``. Isto
+        SUBSTITUI a leitura provisória que esta docstring trazia (*"``mascara``
+        ausente não mexe na máscara daquela peça"*): aqui ``None`` não é silêncio
+        — é *"volte ao padrão"*, e só nesta seção.
+
+        **O CUSTO FOI MEDIDO ANTES DE SER PAGO, e ele é pequeno** (09/09/2026,
+        esta árvore). O medo escrito na entrega de ontem era *"derrubar e
+        recriar os quatro vpads dela ao ativar um perfil calado"*. Não é o que
+        acontece, e o número diz por quê:
+
+        * quem derruba vpad é o laço do co-op, por ``vpad_ficou_para_tras``, e
+          ele compara a máscara EFETIVA. Apagar a entrada de quem já estava no
+          padrão não muda a efetiva — a comparação dá igual e o vpad **não
+          cai**. Só cai o vpad de quem estava FORA do padrão, que é exatamente
+          quem a decisão dela manda trazer de volta;
+        * medido nos quatro assentos, com o padrão em ``dualsense``: **0 de 4**
+          vpads caem quando a mesa já seguia o padrão, **1 de 4** quando um só
+          estava em Xbox, **4 de 4** quando os quatro estavam. E **0 de 4**
+          quando os quatro TINHAM entrada própria, mas igual ao padrão: as
+          quatro entradas somem do disco e nenhum controle dela sai da partida;
+        * a varredura em si custa **0,034 ms** e ZERO escrita de disco quando
+          não há nada a devolver — o caso comum —, e **0,21 ms** com uma
+          escrita só quando há quatro. (Mediana de 200 voltas, ``ext4``. O
+          ``manter_somente`` batelha de propósito: quatro ``clear_mask``
+          seguidos custariam 0,63 ms e quatro ``_save_locked``.)
 
         **UMA POR CONTROLE, E SÓ PARA QUEM MUDOU.** A escrita é peça a peça, na
         ordem em que o perfil as declara, e a máscara que já está valendo não é
@@ -996,32 +1024,26 @@ class ProfileManager:
         ``vpad_ficou_para_tras`` compara antes de derrubar. Um perfil que repete
         a máscara de três jogadores e muda a do quarto derruba UM vpad.
 
-        **O QUE ESTA FUNÇÃO NÃO FAZ, e é decisão dela — PROVISÓRIO:** ela não
-        LIMPA a máscara de um controle que o perfil não menciona. Sair do perfil
-        A (que põe o P2 em Xbox) para o perfil B (que não fala de máscara)
-        deixa o P2 em Xbox, porque ``None`` é *sem opinião* em toda esta classe.
-        A alternativa — perfil sem opinião devolve todo mundo ao padrão — é a
-        contradição aberta que já está registrada na docstring de
-        ``ControllerOverrides`` (*"o perfil tem de guardar tudo"* contra *"campo
-        ``None`` = sem opinião"*), e ela não se fecha escrevendo código.
-
         Relatório: ``mascara:<uniq>`` → a máscara, uma chave por unidade, no
-        mesmo formato-por-peça do ``mic:<uniq>`` e do ``sensores:<uniq>``.
+        mesmo formato-por-peça do ``mic:<uniq>`` e do ``sensores:<uniq>``. Quem
+        foi devolvido ao padrão entra com o valor ``"padrão"``, e não com uma
+        máscara: o nome do flavor herdado é do degrau de baixo, que esta função
+        não conhece (ela não vê a config do daemon) e não pode fingir conhecer.
         """
         from hefesto_dualsense4unix.daemon.subsystems.external_mask import (
             registro_de_mascaras,
         )
 
         resultado: dict[str, str] = relatorio if relatorio is not None else {}
-        controllers = getattr(profile, "controllers", None)
-        if not controllers:
-            return resultado
         registro = registro_de_mascaras()
+        controllers = getattr(profile, "controllers", None) or {}
+        declaradas: list[str] = []
         for uniq, cfg in controllers.items():
             mascara = getattr(cfg, "mascara", None)
             if mascara is None:
                 continue
             alvo = str(uniq)
+            declaradas.append(alvo)
             anterior = registro.mask_for(alvo)
             if anterior == str(mascara):
                 # NÃO REPINTA QUEM NÃO MUDOU: nem uma escrita no disco, nem uma
@@ -1049,6 +1071,18 @@ class ProfileManager:
                 origin=origin,
                 mascara=str(mascara),
                 anterior=anterior,
+            )
+        # A DECISÃO DELA, e ela é a última coisa que acontece aqui: quem o
+        # perfil NÃO declarou volta ao padrão. É uma varredura só, batelhada, e
+        # ela devolve as chaves que perderam máscara própria — vazio no caso
+        # comum, que é a mesa já seguindo o padrão.
+        for chave in registro.manter_somente(declaradas):
+            resultado[f"mascara:{chave}"] = "padrão"
+            logger.info(
+                "profile_mascara_devolvida_ao_padrao",
+                profile=getattr(profile, "name", None),
+                uniq=chave,
+                origin=origin,
             )
         return resultado
 
