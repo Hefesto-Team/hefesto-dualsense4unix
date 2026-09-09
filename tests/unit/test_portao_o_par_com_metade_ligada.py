@@ -939,7 +939,6 @@ _CITACOES_PENDENTES: frozenset[str] = frozenset({
     # a régua consegue ancorar).
     "interface/pacotes/a03_gatilhos.py::hefesto_vivo.py:1515",
     "interface/pacotes/a06_navegacao.py::hefesto_vivo.py:2288",
-    "interface/pacotes/a09_sistema.py::interface/hefesto_vivo.py:2111-2113",
     "interface/pacotes/a10_perfis.py::hefesto_vivo.py:2288",
     "profiles/loader.py::schema.py:52",
     "utils/repo_files.py::cli/cmd_doctor.py:23",

@@ -510,6 +510,70 @@ def tons_da_guia() -> tuple[tuple[int, int, int], ...]:
     return automaticos + extras
 
 
+def titulo_da_casa(i: int) -> str:
+    """A frase de cada casa da guia. As oito primeiras são cor de número.
+
+    UM DONO, DOIS CHAMADORES — o gerador `aba04.py` desenha a bancada com ela
+    e o pacote pinta o produto a cada tique. Ela morava só no gerador, e por
+    isso a guia VIVA (COR-X-01) não tinha como dizer a mesma frase.
+    """
+    quem = (f"Cor automática do Player {i} — usar aqui pinta"
+            if i <= 8 else "Pinta")
+    return f"{quem} a barra deste controle, e não muda o número dele."
+
+
+def fileira_de_tons(escolhida: str, tomadas: dict[str, dict[str, str]],
+                    recuo: str = "", *, ligado: bool = True) -> str:
+    """Os catorze tons de uma coluna, em HTML — o miolo da `.guia`.
+
+    **COR-X-01, decisão dela de 09/09/2026:** *"onde eu escolher uma cor, em
+    volta dela fica a borda da cor do plastico do controle e um X na cor
+    selecionada por mim de forma que me impeça de setar alguma cor de um
+    coleguinha"* <!-- noqa-acento: citação literal dela -->
+
+    POR QUE A FILEIRA INTEIRA, e não um endereço por botão — é a mesma razão
+    de `fileira_de_players`, um degrau mais funda: **o alvo `classe` do pintor
+    compara por IGUALDADE** (`hefesto_vivo.escrever`, ramo `classe`:
+    `aceso = (t === quando)`). "Esta cor está na lista das que os OUTROS
+    tomaram" não é uma igualdade, e não há `data-hef-quando` que a exprima.
+    Quem sabe quem tem qual cor é o pacote, que vê a mesa inteira.
+
+    O X É DESENHADO NA COR DO PLÁSTICO DO DONO, e não numa cor de aviso: é
+    assim que esta aba diz de quem é a luz
+    (`D-A-BORDA-E-A-IDENTIDADE-DA-PECA`). Ele viaja no `--dono`, uma variável
+    inline, porque o valor é por-botão e a folha é uma só.
+
+    E A DICA DIZ O NOME, não só que está tomada: um X mudo obriga ela a
+    adivinhar qual dos outros controles está naquele tom.
+
+    :param escolhida: o hex CRU da cor deste controle, ou `""` se não há.
+    :param tomadas: `{hex cru: {"nome": …, "plastico": …}}` das cores dos
+        OUTROS controles ligados.
+    :param ligado: há controle neste lugar? Um lugar vazio não ganha `on` nem
+        X — não há escolha a marcar e não há dono a proteger.
+    """
+    import monta  # o `pacotes/__init__` põe `interface/` no `sys.path`
+
+    linhas = []
+    for i, rgb in enumerate(tons_da_guia(), start=1):
+        cru = "#{:02X}{:02X}{:02X}".format(*rgb)
+        dono = tomadas.get(cru) if ligado else None
+        classes = "tom"
+        if ligado and escolhida and cru.upper() == escolhida.upper():
+            classes += " on"
+        if dono:
+            classes += " tomado"
+        estilo = f"background:{monta.tom_da_casa(cru)}"
+        if dono:
+            estilo += f";--dono:{dono.get('plastico') or 'var(--comment)'}"
+        titulo = (f"{dono.get('nome')} já está neste tom — duas peças nunca "
+                  f"ficam da mesma cor." if dono else titulo_da_casa(i))
+        linhas.append(
+            f'{recuo}<button class="{classes}" style="{estilo}"'
+            f' data-gesto="cor" data-hex="{cru}" title="{titulo}"></button>')
+    return "\n".join(linhas)
+
+
 def cor_escolhida(efetiva: Any, brilho: float | None) -> Any:
     """A cor que ela PEDIU, a partir da que está ACESA e do brilho.
 
@@ -1508,6 +1572,29 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
         if casa_dele:
             donos[_numero(ctx, c)] = casa_dele
 
+    # AS CORES TOMADAS, uma vez para a mesa inteira — COR-X-01. Cada coluna
+    # precisa saber que tons os OUTROS estão acendendo, para desenhar o X.
+    #
+    # A CHAVE É A COR PEDIDA, PRÉ-BRILHO, e é o mesmo `_a_cor_de_agora` que
+    # `_sem_repetir_a_cor_do_vizinho` usa para recusar: comparar o hexa da guia
+    # com o valor já escurecido diria "livre" sobre a cor que o vizinho está
+    # acendendo, e a tela ofereceria o que o gesto recusa — as duas metades da
+    # mesma regra discordando na mesma tela.
+    cru_do_perfil = perfil.ativo(ctx.state.get("active_profile"))
+    tons_tomados: dict[str, dict[str, str]] = {}
+    for c in ctx.conectados:
+        rgb = _a_cor_de_agora(ctx, cru_do_perfil, c)
+        if rgb == (0, 0, 0):
+            # BARRA APAGADA NÃO TOMA COR DE NINGUÉM — é a mesma isenção que
+            # `cores_sem_colisao` dá ao preto: ausência de cor não é identidade.
+            continue
+        casa_dele = _da_mesa(ctx, str(c.get("uniq") or ""))
+        tons_tomados["#{:02X}{:02X}{:02X}".format(*rgb)] = {
+            "uniq": str(c.get("uniq") or ""),
+            "nome": _quem_e(ctx, c),
+            "plastico": _cor_do_plastico(str((casa_dele or {}).get("cor") or "")),
+        }
+
     colunas: dict[str, dict[str, Any]] = {}
     #: A LUZ DO DESENHO GRANDE, por LUGAR — ver `folha_da_luz`. Ela nasce vazia
     #: e só recebe quem tem controle: `folha_da_luz` APAGA todo lugar que não
@@ -1584,6 +1671,15 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
             #: todos: a tela deixava de dizer qual cor está escolhida
             #: exatamente quando ela mexia no brilho. Ver `cor_escolhida`.
             "hex": _hex(pedida),
+            #: A GUIA VIVA — COR-X-01. Ela vem pelo alvo `html` porque o X não
+            #: é uma igualdade: ver `fileira_de_tons`. As cores dos OUTROS
+            #: entram; a DESTA coluna sai, senão o controle ganharia um X na
+            #: própria cor e o gesto de reenviar ficaria bloqueado por si mesmo.
+            "tons": fileira_de_tons(
+                _hex(pedida),
+                {k: v for k, v in tons_tomados.items()
+                 if v.get("uniq") != str(c.get("uniq") or "")},
+                "              "),
             #: A COR DO PLÁSTICO, e ela é a lei dela de 03/09/2026: *"se
             #: identificou o controle como modelo White a cor do card em volta
             #: tem que ser branco. Temos isso no mapa."*
@@ -2125,7 +2221,101 @@ def _escrever_a_cor(ctx: Contexto, p: Any, uniq: str,
                            _janela_do_desfecho(ctx, uniq, _nome_da_coluna(ctx, uniq)))
     if frase != enviado:
         raise RuntimeError(frase)
+    if escolha or apagando:
+        _guardar_a_cor_no_perfil(ctx, uniq, rgb)
     return recado
+
+
+def _guardar_a_cor_no_perfil(ctx: Contexto, uniq: str,
+                             rgb: tuple[int, int, int]) -> None:
+    """A cor que ela ESCOLHEU vai ao disco, no override daquele controle.
+
+    **O DEFEITO QUE ISTO MATA, medido na bancada dela em 09/09/2026**, e ele
+    tinha duas caras que ela viu como uma só — *"o controle branco fica
+    oscilando entre a cor que eu seleciono e a cor azul. fora que o slicer tá
+    estranho ainda"*:  # noqa-acento: citação literal dela
+
+        no disco, o override do branco  {"leds": {"lightbar_brightness": 0.49}}
+        a cor que ela escolheu           em lugar NENHUM
+
+    `_escrever_a_cor` mandava a cor só ao daemon (`led_set_detalhado`), que a
+    guarda na camada VIVA por-uniq. Ela acende, e some no primeiro evento que
+    faça o resolvedor reler o perfil — replug, `profile.switch`, reaplicação.
+    O que sobra embaixo é a camada automática, `player_slot_color(1)` =
+    `#0000FF`, ou o global dela, `#2850B4`: **os dois são azuis**, e é o azul
+    que ela via voltar.
+
+    E ERA A MESMA RAIZ DO TRILHO. Sem cor no disco, o gesto `brilho` só podia
+    adivinhar a cor pela luz ACESA — que já vem escalada (D8) — e reescalá-la:
+    medido, `#2850B4` a 80% -> 60% -> 70% -> 80% desceu para `(19,38,86)`,
+    `(13,26,60)`, `(10,20,48)`. **Subindo o brilho, a cor escurecia**, até
+    morrer no preto. Ver a escada nova em `brilho`.
+
+    ERA UM CAMINHO SÓ, E FECHADO — 08/09/2026: `_com_a_cor_gravada` já
+    existia, já carimba a PROCEDÊNCIA (`lightbar_para_o_numero`) que
+    `cores_sem_colisao` lê para não fossilizar a escolha dela, e tinha UM
+    chamador — desligar o automático. A escolha de um tom nunca passou por
+    ele.
+
+    OS DOIS ATOS QUE GRAVAM SÃO OS DOIS QUE ELA DECIDE SOBRE A COR: escolher
+    um tom (`cor`, `reenviar` — `escolha=True`) e desligar a barra (`apagar`
+    — `apagando=True`). O `brilho` passa por fora de propósito: ele não
+    escolhe cor, e gravar ali faria um arraste de trilho congelar no perfil
+    uma cor que ela não pediu.
+
+    SEM PERFIL NO DISCO NÃO HÁ ONDE GUARDAR, e o gesto sai calado: a cor JÁ
+    está no aparelho, que é o que ela pediu, e um cartão de recusa depois do
+    ato diria que o produto não fez o que fez. É o mesmo estado que o gesto
+    `brilho` recusa na ENTRADA, antes de qualquer escrita — lá dá para
+    recusar, aqui já não.
+
+    **SÃO DOIS ESTADOS, E O SEGUNDO APARECEU NA PRÓPRIA LEVA:** o
+    `active_profile` VAZIO, e o `active_profile` que nomeia um perfil que o
+    disco não tem (`FileNotFoundError: perfil não encontrado`). Sete réguas
+    desta aba caíram nele no minuto em que esta função nasceu — elas montam
+    um contexto com perfil ativo e não semeiam arquivo nenhum, que é
+    exatamente a forma do estado real. **A gravação é a SEGUNDA metade deste
+    gesto e não pode derrubar a primeira**, que já chegou ao plástico dela.
+
+    O `except` É ESTREITO DE PROPÓSITO — só `OSError`, que é o que o disco
+    tem a dizer. Um `except Exception` engoliria o `ValidationError` de um
+    perfil malformado, e aí a cor sumiria do arquivo em silêncio, que é o
+    defeito que esta função nasceu para matar.
+    """
+    nome = str(ctx.state.get("active_profile") or "").strip()
+    if not nome:
+        return
+    dele = next((c for c in ctx.conectados
+                 if str(c.get("uniq") or "") == uniq), None)
+    loader = perfil._com_o_src()
+    try:
+        antigo = loader.load_profile(nome)
+    except OSError:
+        return
+    novo = _com_a_cor_gravada(antigo, uniq, rgb,
+                              _numero(ctx, dele) if dele is not None else None)
+    loader.save_profile(novo, origem="interface-nova")
+
+
+def _a_cor_guardada(cru: dict[str, Any] | None,
+                    uniq: str) -> tuple[int, int, int] | None:
+    """A cor que o PERFIL guarda para este controle, ou `None` se não há.
+
+    Ela é o primeiro degrau da escada do gesto `brilho`, e é o único degrau
+    que não adivinha: a luz acesa vem pós-escala (D8) e a cor do slot é o que
+    o automático daria — nenhuma das duas é a escolha dela.
+
+    LÊ O CRU, e não o `Profile`, pela mesma razão que `_a_cor_de_agora`
+    documenta no parâmetro dele: `perfil.ativo` é o que a aba já tem na mão a
+    cada tique, e abrir um segundo caminho de leitura do perfil seria a
+    segunda verdade sobre o mesmo arquivo.
+    """
+    dono = ((cru or {}).get("controllers") or {}).get(chave_do_override(uniq))
+    rgb = ((dono or {}).get("leds") or {}).get("lightbar")
+    if not rgb or len(tuple(rgb)) < 3:
+        return None
+    r, g, b = tuple(rgb)[:3]
+    return (int(r), int(g), int(b))
 
 
 @gesto("04-iluminacao.html", "cor")
@@ -2205,14 +2395,12 @@ def cor(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
     return {"recado": recado} if recado else None
 
 
-#: A RECUSA QUANDO NÃO SOBRA TOM. Ela é do PRODUTO e não confessa defeito
-#: nosso: diz o estado da mesa e o que fazer. `a10_perfis._com_o_estilo` já
-#: recusa assim quando dois controles caem no mesmo P — a casa sabia recusar
-#: num lugar só, e este é o segundo.
-_RECUSA_SEM_TOM_LIVRE = (
-    "Os oito tons já estão em uso pelos controles ligados, e duas peças nunca "
-    "ficam da mesma cor. Troque a cor de outro controle primeiro, ou escolha "
-    "um tom que esteja livre. Nada foi mudado.")
+#: A RECUSA SAIU DAQUI — 09/09/2026. Ela dizia *"os oito tons já estão em uso
+#: pelos controles ligados"*, e era a recusa da MESA CHEIA: o caso em que não
+#: sobrava tom para onde deslocar. Com a decisão dela
+#: (`D-0909-A-COR-DE-OUTRO-CONTROLE-SE-RECUSA-COM-X`) não há mais deslocamento,
+#: logo não há mais "mesa cheia" — toda cor com dono recusa igual, com o nome
+#: dele. A frase que sobra mora em `_sem_repetir_a_cor_do_vizinho`, e é uma só.
 
 
 def _sem_repetir_a_cor_do_vizinho(
@@ -2242,14 +2430,27 @@ def _sem_repetir_a_cor_do_vizinho(
     está acendendo. `_a_cor_de_agora` é quem inverte a escala, e usá-lo aqui
     mantém UM dono para essa conta.
 
-    MESA CHEIA RECUSA, não gira: com os oito tons em uso, deslocar seria tirar
-    a cor de um terceiro que não pediu nada — e no tique seguinte ele
-    deslocaria outro. Ver `_RECUSA_SEM_TOM_LIVRE`.
+    **ELA RECUSA, E NÃO DESLOCA MAIS — 09/09/2026, decisão dela
+    `D-0909-A-COR-DE-OUTRO-CONTROLE-SE-RECUSA-COM-X`.** Perguntada entre trocar
+    as duas de lugar (COR-TROCA-01) e bloquear, ela escolheu bloquear, com
+    estas palavras: *"um X na cor selecionada por mim de forma que me impeça de
+    setar alguma cor de um coleguinha"* <!-- noqa-acento: citação literal dela -->
 
-    :return: `(cor, recado)` — `recado` é `None` quando a pedida estava livre.
-    :raises RuntimeError: mesa cheia, com o motivo por extenso.
+    **FATO SUBSTITUÍDO.** Estas linhas descreviam o deslocamento — *"o segundo
+    desloca para o tom vizinho e a tela diz o que fez"* — e ele existiu de
+    08/09 até 09/09. Ele era uma terceira coisa, nem a troca nem o bloqueio:
+    ela clicava num tom e o aparelho acendia OUTRO, escolhido pelo produto. A
+    decisão nova o revoga; o que sobra é a recusa que diz de quem é a cor.
+
+    E A TELA NÃO OFERECE O QUE ESTA FUNÇÃO RECUSA: a guia desenha um X na cor
+    do plástico do dono, pela mesma leitura (`fileira_de_tons`). Ofereceria
+    duas metades da mesma regra discordando na mesma tela.
+
+    :return: `(cor, recado)` — hoje o `recado` é sempre `None`, e o par fica
+        porque o `_escrever_a_cor` já o lê: um dia a regra volta a ter algo a
+        dizer no caminho feliz, e o formato não precisa mudar de novo.
+    :raises RuntimeError: a cor tem dono, com o nome dele por extenso.
     """
-    from hefesto_dualsense4unix.core.led_control import _PLAYER_SLOT_COLORS
 
     # SEM `if nome else {}`, e a guarda saiu em 08/09/2026: quem cura o nome
     # vazio é o DONO (`perfil.ativo` pergunta ao `nome_do_ativo` quando o
@@ -2266,13 +2467,10 @@ def _sem_repetir_a_cor_do_vizinho(
     dono = tomadas.get(rgb)
     if dono is None:
         return rgb, None
-    for candidata in _PLAYER_SLOT_COLORS.values():
-        if candidata not in tomadas and candidata != rgb:
-            return candidata, (
-                f"O {_quem_e(ctx, dono)} já está nesse tom, então este ficou "
-                f"com o vizinho — duas peças nunca ficam da mesma cor. "
-                f"Escolha um tom livre se quiser outro.")
-    raise RuntimeError(_RECUSA_SEM_TOM_LIVRE)
+    raise RuntimeError(
+        f"O {_quem_e(ctx, dono)} já está nesse tom, e duas peças nunca ficam "
+        f"da mesma cor. Troque a cor dele primeiro, ou escolha um tom livre. "
+        f"Nada foi mudado.")
 
 
 def _quem_e(ctx: Contexto, c: dict[str, Any]) -> str:
@@ -2623,7 +2821,18 @@ def brilho(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
     # SEMPRE, com a cor do perfil (`_current_rgb`, semeado de
     # `draft.effective_leds_for`). Aqui a escada é a mesma, um degrau mais
     # funda: cor pedida -> cor do perfil -> cor do slot do jogador.
-    alvo = tuple(pedida)[:3] if pedida else _a_cor_de_agora(ctx, perfil.ativo(nome), dele)
+    # A ESCADA GANHOU O PRIMEIRO DEGRAU — 09/09/2026, e é ele que faltava.
+    # Era `pedida -> cor do slot`, e as duas pontas adivinham: `pedida` sai da
+    # luz ACESA invertida por `cor_escolhida`, que só sabe inverter os catorze
+    # tons da guia. Toda cor fora deles — o seletor livre, o global do perfil
+    # dela (`#2850B4`) — voltava INTEIRA e era reescalada por cima de si
+    # mesma, escurecendo a cada arraste até o preto. Medido na bancada dela.
+    #
+    # A cor GUARDADA não adivinha nada, e existe desde que `_escrever_a_cor`
+    # grava a escolha dela; ver `_guardar_a_cor_no_perfil`.
+    alvo = (_a_cor_guardada(perfil.ativo(nome), uniq)
+            or (tuple(pedida)[:3] if pedida
+                else _a_cor_de_agora(ctx, perfil.ativo(nome), dele)))
     _escrever_a_cor(ctx, p, uniq, alvo, brilho=_fracao_do_disco(pct))
     if recado is not None:
         # A ressalva NÃO some: ela diz que o motor não afirma a cor, e isso

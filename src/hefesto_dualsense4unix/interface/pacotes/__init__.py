@@ -1221,11 +1221,16 @@ from . import (  # noqa: E402
     a05_vibracao,  # noqa: F401
     a06_navegacao,  # noqa: F401
     # A 07 FALTAVA AQUI, e a falta era exatamente o que este bloco existe para
-    # impedir. A casa diz em dois lugares que ela é a aba SEM pacote
-    # (`hefesto_vivo.SEM_PACOTE` e o comentário do `_tique`) — mas
-    # `a07_lancadores.py:1491` traz `@registrar("07-lancadores.html")` desde que
-    # foi ligada, e `pacote_da_pagina` devolve 26 chaves para ela. Achado em
+    # impedir: `a07_lancadores.py` traz `@registrar("07-lancadores.html")` desde
+    # que foi ligada, e `pacote_da_pagina` devolve 26 chaves para ela. Achado em
     # 02/09/2026 por um teste que assumiu a frase da casa e reprovou.
+    #
+    # A FRASE DA CASA CAIU JUNTO — 09/09/2026, LANCADORES-ZERO-01 §5. Estas
+    # linhas diziam que *"a casa diz em dois lugares que ela é a aba SEM
+    # pacote (`hefesto_vivo.SEM_PACOTE` e o comentário do `_tique`)"*, e os
+    # dois lugares foram reescritos: a constante era morta — ninguém a lia — e
+    # os comentários nomeavam esta aba. **Uma correção pela metade deixa as
+    # duas versões vivas**, que é o defeito que a regra existe para matar.
     a07_lancadores,  # noqa: F401
     a08_conexoes,  # noqa: F401
     a09_sistema,  # noqa: F401

@@ -58,17 +58,40 @@ from dataclasses import dataclass, field
 #: **E QUEM MEDE PASSOU A LER.** As réguas que digitavam a palavra agora leem
 #: `SELOS["off"]` — é a regra que as onze réguas de 26/08/2026 deixaram: *régua
 #: que digita o que devia LER reprova a melhora em vez do defeito*.
+#: O LEITOR DE BIBLIOTECA dos cinco que não são a Steam — o dono do censo.
+#: Import no topo e não tardio: ele não puxa motor nenhum (só `json`,
+#: `configparser` e `pathlib`), e um import dentro da função seria pago em
+#: todo cartão, a cada tique.
+from hefesto_dualsense4unix.integrations import censo_dos_lancadores as _censo
+
 SELOS = {
     "ok": "CHEGAM",
     "warn": "NÃO CHEGAM",
     "off": "NÃO LOCALIZADO",
     "nao_sei": "NÃO SEI",
+    #: **O POSITIVO DO PAR — 09/09/2026, LANCADORES-ZERO-01 §5.2**, e a palavra
+    #: é dela (`D-0809-O-SELO-DOS-LANCADORES-DIZ-LOCALIZADO`): *"Deveria ter
+    #: Não Localizado"*.  # noqa-acento: citação literal dela
+    #:
+    #: O DEFEITO QUE ELE MATA: cinco lançadores INSTALADOS recebiam `NÃO SEI`,
+    #: porque o selo respondia *"sei ler a biblioteca dele?"*. Ela leu isso
+    #: como *"a aba lançadores tá identificando nada"* — e estava  # noqa-acento: citação dela
+    #: certa: um selo grande e negativo sobre um programa instalado não diz
+    #: outra coisa.
+    #:
+    #: **AGORA O SELO RESPONDE UMA PERGUNTA SÓ — "está aqui?"** — e o
+    #: veredito (`ok`/`warn`) só aparece onde há censo, como na Steam. O que a
+    #: biblioteca diz vai para a linha de baixo, que é onde cabe um número.
+    "localizado": "LOCALIZADO",
 }
 
 #: A classe da MOLDURA do cartão, por selo. `nao_sei` divide a moldura apagada
 #: com `off` de propósito: as duas dizem "não há o que agir aqui", e um terceiro
 #: tom só acrescentaria uma cor para ela decodificar.
-MOLDURA = {"ok": "chega", "warn": "impede", "off": "ausente", "nao_sei": "ausente"}
+#: `localizado` divide a moldura de `ok`: as duas dizem "este está aqui e não
+#: há impedimento a agir". Um quarto tom só acrescentaria cor para decodificar.
+MOLDURA = {"ok": "chega", "warn": "impede", "off": "ausente",
+           "nao_sei": "ausente", "localizado": "chega"}
 
 #: A GRADE QUE SEGURA OS SEIS CARTÕES — e ela é constante porque o PACOTE
 #: precisa dela, não só o gerador.
@@ -585,7 +608,11 @@ def conta_html(achados: int, impedidos: int) -> str:
     cartão que ela mesma carimba `NÃO ACHEI`), e continua sendo — o que muda é
     de ONDE: da lista de cartões que o produto montou, e não da que ele digitou.
     """
-    return (f'{_plural(achados, "encontrado", "encontrados")} '
+    #: **"localizados", E NÃO "encontrados" — 09/09/2026, §5.2.** A palavra do
+    #: cabeçalho passa a ser a MESMA do selo: com `LOCALIZADO` no cartão e
+    #: "encontrados" no topo, a tela diria duas palavras para o mesmo fato, e
+    #: ela teria de traduzir uma na outra ao ler.
+    return (f'{_plural(achados, "localizado", "localizados")} '
             f'<span class="sep">·</span> '
             f'{_plural(impedidos, "com impedimento", "com impedimentos")}')
 
@@ -1503,9 +1530,30 @@ def cartao_sem_censo(item: SemCenso, onde: str | None) -> Lancador:
         return Lancador(chave=item.chave, nome=item.nome, selo="off",
                         jogos="—", diz=DIZ_NAO_ACHEI,
                         acoes=localizar + tirar)
-    return Lancador(chave=item.chave, nome=item.nome, selo="nao_sei",
-                    jogos="—", diz=DIZ_ACHEI.format(onde=_e(onde)),
-                    acoes=abrir + tirar, presente=True)
+    #: **O CENSO ENTRA AQUI — LANCADORES-ZERO-01 §5, 09/09/2026.** Era
+    #: `selo="nao_sei", jogos="—"` para todo lançador ACHADO, e é o que ela
+    #: viu. Agora o selo diz `LOCALIZADO` (está aqui) e a linha de baixo diz o
+    #: que a biblioteca tem — ou o que fazer para ela existir.
+    #:
+    #: A LEITURA É DO DONO (`integrations/censo_dos_lancadores`), e o resumo
+    #: também: montar a frase aqui seria a segunda verdade sobre a mesma
+    #: contagem, e "37 jogos" contra "37 na biblioteca" na mesma tela é a cara
+    #: de uma janela montada em dois lugares que não se falam.
+    biblioteca = _censo.biblioteca_do_cartao(item.chave)
+    #: **O RESUMO VAI PARA A LINHA `jogos`, e não para o corpo** — §5.2 da
+    #: sprint: *"a linha de baixo diz «37 jogos na biblioteca · 0 instalados»"*.
+    #: É o mesmo lugar em que a Steam imprime *"23 jogos instalados"*, e ele é
+    #: uma linha própria no cartão.
+    #:
+    #: **MEDIDO NA TELA VIVA, 09/09/2026:** com o resumo colado na frente do
+    #: `diz`, o corpo do cartão passou a estourar a caixa nas colunas da
+    #: direita — o caminho do `.desktop` já é longo e não quebra. Fotografado
+    #: antes de a linha existir.
+    return Lancador(
+        chave=item.chave, nome=item.nome, selo="localizado",
+        jogos=biblioteca.resumo or "—",
+        diz=DIZ_ACHEI.format(onde=_e(onde)),
+        acoes=abrir + tirar, presente=True)
 
 
 def cartoes(lida: Leitura | None) -> list[Lancador]:

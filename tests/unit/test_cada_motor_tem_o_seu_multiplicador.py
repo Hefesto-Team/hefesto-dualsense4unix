@@ -1031,3 +1031,93 @@ def test_o_norm_mac_nao_devolve_none_para_caminho_e_a_docstring_diz_isso() -> No
         "a docstring voltou a prometer um `None` que a função não entrega."
     )
     assert "adeee9" in doc, "a docstring tem de carregar a medição, não a promessa"
+
+
+# ---------------------------------------------------------------------------
+# 9. A TELA DIZ A MULTIPLICAÇÃO — VIBRA-MULT-01, 09/09/2026
+# ---------------------------------------------------------------------------
+#: A QUEIXA DELA, como está registrada na sprint VIBRA-MULT-01:
+#:
+#:     "na guia vibração os slicers não estão se multiplicando: motor
+#:      esquerdo × força de vibração (ou personalizado), motor direito ×  # noqa: RUF003
+#:      força de vibração ou personalizado, pra cada controle"
+#:
+#: ELA MORA NUM COMENTÁRIO, e não na docstring abaixo, por uma razão de
+#: ferramenta: o sinal de multiplicação da digitação dela é ambíguo para o
+#: `ruff` (RUF002/RUF003), e um
+#: `# noqa` dentro de uma docstring é texto, não diretiva. Trocar o símbolo
+#: seria limpar a citação dela, que esta casa não faz.
+_QUEIXA = "os slicers não estão se multiplicando"
+
+
+class TestATelaDizOProduto:
+    """A conta acontecia e a tela não a mostrava em lugar nenhum.
+
+    **A QUEIXA DELA** está no comentário acima, com a digitação preservada.
+
+    **MEDIDO EM 09/09/2026, com os QUATRO controles na mesa:** o P2 imprimia
+    `mult 200%` com os DOIS motores em **0%**. A conta do daemon estava certa
+    — o efetivo era zero — e a tela dizia `200%` e mais nada. *Um número que
+    não diz o que produz é um número que ela tem de multiplicar de cabeça.*
+
+    O `mult` CONTINUA SENDO O DEGRAU: ele é o que o trilho ao lado move.
+    """
+
+    def test_a_dica_diz_barra_forca_e_o_efetivo(self) -> None:
+        """Os três números na mesma frase, sem um clique.
+
+        **A MORDIDA:** faça `_quanto_multiplica` devolver `""` sempre e a
+        dica volta a ficar vazia quando o jogo não treme — que era o estado
+        em que ela olhou a tela.
+        """
+        from hefesto_dualsense4unix.interface.pacotes import a05_vibracao as a05
+
+        frase = a05._quanto_multiplica({"sabe": True, "n": "150%"}, 50)
+
+        assert "50%" in frase and "150%" in frase
+        assert "75%" in frase, f"o produto não saiu na frase: {frase}"
+
+    def test_o_caso_dela_barra_zero_confessa_o_zero(self) -> None:
+        """O P2 da mesa dela: força 200%, motores em 0%.
+
+        **A MORDIDA:** troque o produto pelo degrau e a frase volta a dizer
+        `200%` sobre um motor que não sai do lugar.
+        """
+        from hefesto_dualsense4unix.interface.pacotes import a05_vibracao as a05
+
+        frase = a05._quanto_multiplica({"sabe": True, "n": "200%"}, 0)
+
+        assert "sai 0%" in frase, frase
+
+    def test_sem_degrau_conhecido_a_dica_cala(self) -> None:
+        """Campo sem informação não mostra nada — a regra dela.
+
+        Uma política fora das cinco que o produto conhece não tem degrau, e
+        uma frase com travessão no meio afirma menos do que o silêncio.
+
+        **A MORDIDA:** tire o `if not pct.get("sabe")` e a frase sai com um
+        `0%` inventado no lugar do degrau.
+        """
+        from hefesto_dualsense4unix.interface.pacotes import a05_vibracao as a05
+
+        assert a05._quanto_multiplica({"sabe": False, "n": "—"}, 100) == ""
+        assert a05._quanto_multiplica({"sabe": True, "n": "150%"}, None) == ""
+
+    def test_o_pedido_do_jogo_ainda_ganha_a_dica(self) -> None:
+        """Quando o jogo TREME, o que ela precisa ver é o pedido dele.
+
+        A frase da multiplicação é o que ocupa o silêncio, e não o que o
+        substitui: com o motor em movimento, o número de 0-255 é o dado vivo.
+
+        **A MORDIDA:** troque a ordem do ternário no pacote e a dica passa a
+        esconder o pedido do jogo atrás de uma conta que não mudou.
+        """
+        import inspect
+
+        from hefesto_dualsense4unix.interface.pacotes import a05_vibracao as a05
+
+        fonte = inspect.getsource(a05.pacote)
+        alvo = fonte.split('plano[f"motor-{lado}-pedido"]')[1].split("\n\n")[0]
+        assert 'O jogo pediu' in alvo
+        assert alvo.index("O jogo pediu") < alvo.index("_quanto_multiplica"), (
+            "a conta passou na frente do pedido do jogo")

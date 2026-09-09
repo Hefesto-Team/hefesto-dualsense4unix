@@ -772,6 +772,8 @@ CSS = """
 
   /* ---------- COR: a guia dos oito tons do produto, por controle ---------- */
   .guia{display:flex;gap:4px;align-items:center}
+  /* os catorze botões continuam itens do flex da `.guia` — ver o gerador */
+  .guia .tons{display:contents}
   /* A MOLDURA DA AMOSTRA SAIU — 31/08/2026, e é a mais pura das "bordas
      sobrando": um retângulo de 1px em volta de um retângulo CHEIO da cor que
      ele mostra. São oito por controle, trinta e dois na tela, e nenhum deles
@@ -791,6 +793,28 @@ CSS = """
      de um pixel some contra o tom da casa. */
   .guia .tom.on{border-color:currentColor;border-width:2px;
                 box-shadow:inset 0 0 0 1px currentColor}
+  /* O X DA COR DO VIZINHO — COR-X-01, 09/09/2026, decisão dela: "um X na cor
+     selecionada por mim de forma que me impeça de setar alguma cor de um
+     coleguinha". <!-- noqa-acento: citação literal dela -->
+
+     ELE É DESENHADO, e não um caractere: um `×` de texto herda a fonte, muda
+     de tamanho com ela e não alcança a cor do plástico de quem tem o tom. Dois
+     gradientes cruzados desenham as duas hastes em `var(--dono)`, que o pacote
+     escreve inline por botão.
+
+     O `--dono` TEM QUEDA para `--comment`: um controle sem cor de plástico no
+     mapa (o primeiro tique de toda sessão, e o rádio antes da leitura chegar)
+     ganharia um X invisível, que é pior do que um X neutro — ela clicaria numa
+     casa que o gesto recusa. */
+  .guia .tom.tomado{cursor:not-allowed;position:relative}
+  .guia .tom.tomado::after{
+    content:"";position:absolute;inset:5px;
+    background:
+      linear-gradient(to top left,transparent 45%,var(--dono,var(--comment)) 45%,
+                      var(--dono,var(--comment)) 55%,transparent 55%),
+      linear-gradient(to top right,transparent 45%,var(--dono,var(--comment)) 45%,
+                      var(--dono,var(--comment)) 55%,transparent 55%);
+  }
   .guia .livre{
     flex:1;height:26px;border-radius:6px;padding:2px;cursor:pointer;min-width:0;
     border:1px dashed var(--comment);background:
@@ -1219,61 +1243,17 @@ def coluna(c):
     #
     # A CURA TRADUZ OS DOIS LADOS, não escolhe um: o botão continua pintado com o
     # tom da casa (é o que ela vê) e a comparação passa a ser entre tons.
-    tons = "\n".join(
-        # `data-gesto="cor"` É O ENDEREÇO DO CLIQUE, e `data-hex` é o que ele
-        # leva. Sem os dois o botão era pintura pura: o piloto via um `<button>`
-        # sem `data-*` e não tinha o que mandar ao daemon. Medido em 01/09/2026
-        # — dos 202 botões das dez páginas, 178 estavam assim.
-        #
-        # O `data-hex` LEVA A COR DO PRODUTO, não o tom da casa, e a diferença
-        # foi um defeito de verdade que a prova botão a botão pegou em
-        # 01/09/2026, no pedido dela: *"no aparelho por favor valida botão a
-        # botão"*. O `monta.TOM_DA_CASA` traduz `#0000FF → #7EB8D4` para o
-        # DESENHO — a paleta Dracula não usa azul puro — e o botão levava esse
-        # tom AO APARELHO. A tela pintava no plástico dela a cor de tela.
-        #
-        # Os dois lados ficam, e cada um no seu lugar: `style="background"` usa
-        # o tom da casa (é o que ela vê) e `data-hex` usa `luz(i)` (é o que o
-        # produto acende). É a mesma cura que a linha do `.tom.on` já fazia para
-        # a comparação — faltava fazê-la para o VALOR.
-        # O ANEL DA COR ESCOLHIDA DEIXOU DE SER PINTURA — 02/09/2026. O `on`
-        # acima é o que o GERADOR soube: a cor cravada do mockup. Quem escolhe
-        # uma cor fora da guia, ou muda a cor pelo aparelho, via o anel parado
-        # no tom velho para sempre — a pintura da casa sabia texto, largura,
-        # fundo, valor e HTML, e o estado desta guia é uma CLASSE.
-        #
-        # Agora sabe: `data-hef-alvo="classe"` com `data-hef-quando` acende no
-        # botão cujo valor casa com o pintado, e apaga nos outros — sem lista de
-        # irmãos, porque os oito dividem o MESMO `data-campo` e cada um decide
-        # por si (`hefesto_vivo.escrever`, o ramo do alvo `classe`).
-        #
-        # O ENDEREÇO É `hex`, o MESMO da caixa `#RRGGBB` logo abaixo, e não um
-        # segundo: é UM valor — a cor gravada — em duas renderizações. Um nome
-        # novo faria o pacote emitir a mesma cor duas vezes, e as duas poderiam
-        # divergir. O `data-hef-quando` leva `luz(i)`, o hex do PRODUTO, porque
-        # é ele que o pacote emite; o `style` continua no tom da casa, que é o
-        # que ela vê.
-        # E O `on` PEDE `ligado` DESDE 07/09/2026, junto com a guia que passou a
-        # nascer nos quatro lugares: `cor` é `luz(j)`, a cor AUTOMÁTICA do
-        # número daquele lugar, e num lugar sem aparelho ela não é escolha de
-        # ninguém — é o desenho. Marcar o anel ali seria afirmar uma cor
-        # escolhida onde não há controle que a tenha escolhido.
-        f'            <button class="tom{" on" if ligado and t == tom_da_casa(cor) else ""}" style="background:{t}"'
-        f' data-campo="hex" data-hef-alvo="classe" data-hef-quando="{cru}"'
-        f' data-gesto="cor" data-hex="{cru}"'
-        # E O `title` NÃO NOMEIA CONTROLE — 03/09/2026. Ele dizia *"pinta a
-        # barra do {nome}"*, com o nome do MOCKUP, e a régua da identidade não o
-        # acusava: ela pula o `title` de quem já tem endereço, e este botão tem
-        # (`data-campo="hex"`). Endereço não cura frase congelada — `title` é
-        # ATRIBUTO, e o pintor não tem alvo para atributo, então o que estivesse
-        # escrito aqui ficaria na tela dela para sempre.
-        #
-        # E ELE DIZ A VERDADE SOBRE CADA CASA DESDE 09/09/2026: as OITO
-        # primeiras são a cor automática de um número; as SEIS que ela mandou
-        # acrescentar não são de número nenhum, e chamá-las de "Cor automática
-        # do Player 9" seria inventar um jogador que não existe.
-        f' title="{TITULO_DA_CASA(i)}"></button>'
-        for i, (cru, t) in enumerate(zip(CRUS_DA_GUIA, TONS, strict=True), 1))
+    # A GUIA É DO PACOTE — COR-X-01, 09/09/2026, e é o mesmo "um dono, dois
+    # chamadores" da `fileira_de_players` e do `desenho_da_luz`: o gerador
+    # desenha a bancada com ela, o pacote pinta o produto a cada tique. Enquanto
+    # eram duas escritas, o desenho e o produto podiam divergir sem ninguém ver
+    # — e o X do vizinho, que só o pacote sabe calcular, nunca chegaria aqui.
+    #
+    # NO DESENHO NÃO HÁ VIZINHO A PROTEGER: a bancada é uma mesa fixa, e um X
+    # cravado no HTML ficaria na tela dela para sempre. O dicionário vazio é a
+    # forma honesta de dizer "nenhuma cor tomada, ainda".
+    tons = _pacote04.fileira_de_tons(cor if ligado else "", {}, "            ",
+                                     ligado=ligado)
 
     # ---- O QUE O `conectado` DECIDE, peça por peça ----
     # Cada nome abaixo é UM pedaço do molde único lá embaixo. O endereço
@@ -1345,8 +1325,21 @@ def coluna(c):
     # A ALTERNATIVA ERA UM SEGUNDO CAMPO com o mesmo valor — e dois endereços
     # para o mesmo fato é o que esta casa persegue o oposto de fazer: eles podem
     # divergir na tela.
+    # DOIS ENDEREÇOS, DOIS ELEMENTOS — e não dois no mesmo. O vocabulário do
+    # pintor é UM `data-campo` com UM `data-hef-alvo` por elemento
+    # (`hefesto_vivo.escrever`); um segundo par no mesmo `<span>` seria um
+    # endereço inventado, que o piloto ignora em silêncio.
+    #
+    # Então a `.guia` continua com o `plastico` (alvo `cor`, que é o
+    # `currentColor` da borda) e ganha DENTRO um `<span class="tons">` que
+    # carrega o miolo (alvo `html`). O `display:contents` da folha faz os
+    # catorze botões continuarem sendo itens do flex do avô — sem ele o
+    # `flex:1` de cada um passaria a dividir a largura do wrapper, e a fileira
+    # inteira encolheria ao lado do seletor livre.
     guia = f'''<span class="guia" data-campo="plastico" data-hef-alvo="cor"{plastico_de_partida}>
+              <span class="tons" data-campo="tons" data-hef-alvo="html">
 {tons}
+              </span>
               <input type="color" class="livre" value="{cor_de_partida}" data-gesto="cor"
                      title="Livre — abre o seletor para uma cor que não está na guia.">
             </span>

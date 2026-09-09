@@ -229,7 +229,12 @@ def test_nenhum_lancador_sem_fonte_afirma_que_os_controles_chegam(desenho):
     for item in desenho.SEM_FONTE:
         for onde in (None, "", f"{item.chave}.desktop"):
             cartao = desenho.cartao_sem_censo(item, onde)
-            assert cartao.selo in ("nao_sei", "off"), (
+            #: **`localizado` ENTROU EM 09/09/2026**, e ele NÃO é o `ok`: o
+            #: selo passou a responder *"está aqui?"*, e o veredito
+            #: (`CHEGAM`/`NÃO CHEGAM`) continua reservado a quem tem censo de
+            #: impedimento — a Steam. O que esta régua guarda é o mesmo de
+            #: sempre: nenhum destes cinco pode acender `ok`.
+            assert cartao.selo in ("nao_sei", "off", "localizado"), (
                 f"o cartão {item.chave!r} com onde={onde!r} afirma "
                 f"{desenho.SELOS[cartao.selo]!r} e o produto não lê a "
                 f"biblioteca dele.")
@@ -240,49 +245,46 @@ def test_nenhum_lancador_sem_fonte_afirma_que_os_controles_chegam(desenho):
             f"o cartão {item.chave!r} afirma algo antes de a leitura voltar")
 
 
-def test_os_cinco_lancadores_sem_fonte_continuam_sem_fonte():
-    """A MORDIDA DO OUTRO LADO: se alguém escrever o censo do Heroic, aqui acusa.
+def test_os_cinco_lancadores_ganharam_leitor_de_biblioteca():
+    """**ESTA RÉGUA VIROU DO AVESSO em 09/09/2026, e era o que ela pedia.**
 
-    ELA LÊ CÓDIGO, e não texto. A primeira versão desta régua descartava só o
-    que vinha depois de um `#` e reprovou com QUATRO achados — os quatro em
-    docstring (`profiles/schema.py:1336`, `daemon/lifecycle.py:2271` e `:4169`,
-    `daemon/subsystems/game_signal.py:97`), que é exatamente a prosa que
-    documenta *"nós ainda não olhamos isto"*. Contar prosa como código é a
-    mesma forma de erro que produziu o "77% da interface" de 01/09: **presença
-    de string não é funcionamento.**
+    Ela se chamava `test_os_cinco_lancadores_sem_fonte_continuam_sem_fonte` e
+    varria `src/` com `tokenize` para provar que **ninguém** olhava o Heroic, o
+    Lutris, o RetroArch, o Dolphin ou o mGBA em código — porque, enquanto
+    ninguém olhasse, o `NÃO SEI` do cartão era verdade. E ela escrevia o gatilho
+    da própria virada:
 
-    O `tokenize` resolve porque descarta comentário E literal de texto de uma
-    vez — sobra identificador, que é o que denuncia código de verdade.
+        "Ele SAI do `desenho_dos_lancadores.SEM_FONTE` e ganha cartão com fonte
+         — o `NÃO SEI` dele virou mentira no minuto em que esta linha nasceu."
+
+    A LANCADORES-ZERO-01 escreveu essa linha. **A régua tinha razão e o mundo
+    mudou**: agora ela cobra o contrário — o leitor EXISTE, e o cartão não pode
+    voltar a dizer `NÃO SEI` sobre um lançador que está na máquina.
+
+    **A MORDIDA:** apague um dos cinco de `censo_dos_lancadores._LEITORES` e
+    esta linha reprova nomeando qual perdeu o leitor.
     """
-    import io
-    import tokenize
+    from hefesto_dualsense4unix.integrations import censo_dos_lancadores as censo
 
-    nomes = re.compile(r"heroic|lutris|retroarch|dolphin|mgba", re.IGNORECASE)
-    #: Estes NOMEIAM os cinco de propósito: um é o desenho dos cartões, os
-    #: outros são a aba que os mostra. Isentá-los é o que impede a régua de
-    #: acusar a própria cura.
-    meus = {"aba07.py", "aba10.py", "desenho_dos_lancadores.py",
-            "a07_lancadores.py"}
-    fora: list[str] = []
-    for arq in (RAIZ / "src").rglob("*.py"):
-        if arq.name in meus:
-            continue
-        texto = arq.read_text(encoding="utf-8")
-        if not nomes.search(texto):
-            continue  # nem em prosa — não há o que examinar
-        try:
-            fichas = list(tokenize.generate_tokens(io.StringIO(texto).readline))
-        except (tokenize.TokenError, IndentationError, SyntaxError):
-            continue
-        for f in fichas:
-            if f.type in (tokenize.COMMENT, tokenize.STRING):
-                continue
-            if nomes.search(f.string):
-                fora.append(f"{arq.relative_to(RAIZ)}:{f.start[0]} → {f.string}")
-    assert fora == [], (
-        f"o produto passou a olhar um destes lançadores EM CÓDIGO: {fora}. Ele "
-        f"SAI do `desenho_dos_lancadores.SEM_FONTE` e ganha cartão com fonte — "
-        f"o `NÃO SEI` dele virou mentira no minuto em que esta linha nasceu.")
+    sem_leitor = [n for n in ("Heroic", "Lutris", "RetroArch", "Dolphin", "mGBA")
+                  if not censo.sabe_ler(n)]
+
+    assert sem_leitor == [], (
+        f"estes lançadores perderam o leitor de biblioteca: {sem_leitor}. Sem "
+        f"leitor o cartão volta a dizer `NÃO SEI` sobre um programa instalado, "
+        f"que é o que ela chamou de «a aba lançadores tá identificando nada».")
+
+    #: E CADA CARTÃO TEM DE SABER A QUE LANÇADOR PERTENCE — o `emuladores` é
+    #: UM cartão com DOIS programas dentro, e foi o caso que ficou mudo na
+    #: primeira ligação, por casar cartão com nome em vez de chave.
+    from hefesto_dualsense4unix.interface import desenho_dos_lancadores as des
+
+    mudos = [i.chave for i in des.SEM_FONTE
+             if i.chave != "flatpak"
+             and censo.biblioteca_do_cartao(i.chave).estado == censo.SEM_BIBLIOTECA]
+    assert mudos == [], (
+        f"estes cartões não sabem que lançador representam: {mudos} — o censo "
+        f"existe e não chega neles")
 
 
 def test_nenhum_cartao_promete_um_numero_de_controles(desenho):
@@ -859,7 +861,7 @@ def test_o_titulo_da_tela_de_registro_nao_contradiz_o_botao_que_a_abriu(desenho)
 
 
 def test_a_contagem_do_topo_conta_presenca_e_nao_selo(desenho):
-    """`N encontrados` responde "quantos estão aqui", não "em quantos eu sei".
+    """`N localizados` responde "quantos estão aqui", não "em quantos eu sei".
 
     A MORDIDA: volte `Quadro.achados` para `x.selo in ("ok", "warn")` e o
     lançador achado some da conta enquanto o cartão dele continua dizendo
@@ -870,7 +872,11 @@ def test_a_contagem_do_topo_conta_presenca_e_nao_selo(desenho):
     quadro = desenho.Quadro(lancadores=desenho.cartoes(lida))
     assert quadro.achados == 2, (
         f"a Steam e o Heroic estão aqui e a conta diz {quadro.achados}")
-    assert "2 encontrados" in desenho.conta_html(quadro.achados, quadro.impedidos)
+    #: A PALAVRA SE LÊ DO DONO, e não se digita: ela virou "localizados" em
+    #: 09/09/2026 (§5.2), e uma régua que digitasse a antiga reprovaria a
+    #: melhora em vez do defeito — é o que as onze de 26/08 deixaram escrito.
+    assert desenho.conta_html(quadro.achados, quadro.impedidos).startswith(
+        desenho._plural(2, "localizado", "localizados"))
 
 
 def test_nenhuma_fileira_de_botoes_vira_travessao(desenho):
@@ -1370,7 +1376,7 @@ def test_a_contagem_do_topo_nao_cai_depois_do_gesto(a07, monkeypatch, desenho):
 
     O SINTOMA, MEDIDO: com o construtor à mão dos nove campos no lugar do
     `dataclasses.replace`, o décimo campo (`presente`) volta ao padrão e a
-    contagem do topo CAI de "2 encontrados" para "1 encontrado" **depois** de
+    contagem do topo CAI de "2 localizados" para "1 localizado" **depois** de
     ela clicar em "Detectar o jogo que está aberto" ou em "Ver o que impede" —
     com os seis cartões inalterados, e nada acusando.
 
@@ -1387,7 +1393,7 @@ def test_a_contagem_do_topo_nao_cai_depois_do_gesto(a07, monkeypatch, desenho):
     do_tique = a07._valores(lida)["lanc-conta"]
     do_gesto = a07._com_outra_frase("uma frase qualquer")["mesa"]["lanc-conta"]
 
-    assert "2 encontrados" in do_tique, (
+    assert desenho._plural(2, "localizado", "localizados") in do_tique, (
         f"a régua perdeu o pé: a pintura do tique já não conta 2 ({do_tique!r})")
     assert do_gesto == do_tique, (
         f"a contagem do topo MUDA depois do gesto — o tique diz {do_tique!r} e "
@@ -1492,8 +1498,10 @@ def test_a_steam_ausente_nao_afirma_que_os_controles_chegam(a07, desenho,
     assert quadro.achados == 0, (
         f"o topo diz {quadro.achados} encontrado(s) numa máquina sem lançador "
         f"nenhum")
-    assert "0 encontrados" in a07._valores(lida)["lanc-conta"], (
-        "a conta chegou certa ao quadro e errada à tela")
+    #: A PALAVRA SE LÊ DO DONO — virou "localizados" em 09/09/2026 (§5.2).
+    assert desenho._plural(0, "localizado", "localizados") in \
+        a07._valores(lida)["lanc-conta"], (
+            "a conta chegou certa ao quadro e errada à tela")
 
 
 def test_a_steam_sem_procura_e_sem_biblioteca_nao_conta_como_encontrada(desenho):

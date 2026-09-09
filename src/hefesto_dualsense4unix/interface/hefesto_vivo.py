@@ -119,8 +119,15 @@ TIQUE_MS = 100
 #: aplica tinha aqui uma régua que cobrava LITERAIS deste arquivo — e literal
 #: não é comportamento: a cura morria inteira com os três literais em pé.
 
-#: A aba que NÃO tem pacote, por decisão dela — só o botão que leva a ela.
-SEM_PACOTE = {"07-lancadores.html"}
+#: **`SEM_PACOTE` SAIU — 09/09/2026, LANCADORES-ZERO-01 §5.** A constante dizia
+#: que a `07-lancadores` era *"a aba que NÃO tem pacote, por decisão dela"*, e
+#: isso deixou de ser verdade: `pacotes/a07_lancadores.py::pacote` existe e é
+#: registrado. **Nenhuma linha deste arquivo a lia** — ela era prosa com forma
+#: de código, e a régua do despachante já mede o mundo certo
+#: (`test_o_despachante_serve_as_dez.SEM_PACOTE` é o conjunto VAZIO).
+#:
+#: Fato errado se substitui, e sai de todos os lugares onde aparece: os três
+#: comentários deste arquivo que a citavam foram reescritos no mesmo ato.
 
 #: QUANTO TEMPO A FRASE DE RECUSA FICA NA TELA. Decisão dela, 02/09/2026, sobre
 #: a recusa do microfone: *"a frase de recusa SOME depois de um tempo — ~30 s e
@@ -425,6 +432,40 @@ BOOTSTRAP = r"""
     // E o `innerHTML` recriaria 56 nós a dez vezes por segundo; este alvo
     // escreve estilo e devolve 0 quando nada mudou, que é o que mantém o
     // contador de pinturas honesto.
+    // NÃO SE PINTA O QUE ESTÁ SOB O DEDO DELA — 09/09/2026, e a queixa é dela:
+    // *"o slicer do brilho tá super estranho"*, *"oscila, aplica e não aplica"*.
+    //
+    // O DEFEITO, medido: o trilho do brilho carrega `data-campo="brilho-pct"`
+    // com alvo `valor`, e o tique repinta `el.value` dez vezes por segundo com
+    // o número que está NO DISCO. Enquanto ela arrasta, o polegar dela vai para
+    // 60 e o tique seguinte o devolve para 82 — a cada 100 ms. O gesto só grava
+    // no `change`, ou seja no SOLTAR, então o que ela vê durante o arraste é o
+    // trilho brigando com o próprio dedo. "Aplica e não aplica" descreve isso
+    // com precisão: aplica no soltar, e não aplica no caminho.
+    //
+    // A CURA É NO MOTOR, e não em cada aba lembrar-se dela — é o mesmo cuidado
+    // que a guarda do `<select>` e a do `<input type=range>` sem número já
+    // tomam logo abaixo, pela mesma razão: uma aba não pode ter de saber disso.
+    //
+    // DOIS TESTES, e os dois são necessários: `activeElement` pega o foco (o
+    // arraste dá foco, e as setas do teclado também), e `:active` pega o botão
+    // do mouse pressionado sobre o elemento. Um sem o outro deixa metade dos
+    // caminhos passando.
+    //
+    // O QUE ISSO CUSTA, declarado: enquanto o foco estiver no controle, um
+    // valor que mude POR FORA (o daemon, outro cliente) não aparece ali. É o
+    // mal menor — e é o que qualquer campo de formulário faz. Sem o foco, o
+    // tique seguinte repinta.
+    //
+    // ELE NÃO AFETA MEDIÇÃO AUTOMÁTICA: sem ninguém tocando a tela o
+    // `activeElement` é o `<body>` e nada casa, então a contagem de pinturas do
+    // passeio e das réguas continua a mesma.
+    function sob_o_dedo(el){
+      try{
+        if(el === document.activeElement) return true;
+        return !!(el.matches && el.matches(':active'));
+      }catch(e){ return false; }
+    }
     if(alvo === 'altura'){
       if(el.style.height !== t + '%'){ el.style.height = t + '%'; return 1; }
       return 0;
@@ -434,6 +475,7 @@ BOOTSTRAP = r"""
       return 0;
     }
     if(alvo === 'valor'){
+      if(sob_o_dedo(el)) return 0;
       // UM <select> SÓ ACEITA O QUE ELE OFERECE, e escrever nele qualquer outra
       // coisa deixa `selectedIndex = -1` e `value = ''` — o campo RENDERIZA EM
       // BRANCO e, como `el.value` nunca volta igual ao que se escreveu, o
@@ -504,6 +546,7 @@ BOOTSTRAP = r"""
     // da aba que o publicar: atributo invisível, zero pixel.
     if(alvo === 'marcado'){
       const querido = (t === 'sim');
+      if(sob_o_dedo(el)) return 0;
       if(el.checked === querido) return 0;
       el.checked = querido;
       return 1;
@@ -3068,10 +3111,13 @@ class Piloto:
                 return True
             self._voltas_da_aba += 1
             # A CONTA SOBE AQUI, ANTES do `pacote is None` lá embaixo, e não é
-            # detalhe: a `07-lancadores` não tem pacote e sai daquele `return`
-            # sem contar volta nenhuma. Com a conta lá, o passeio ficava preso
-            # nela para sempre — a única aba que o `--passear` também nunca
-            # visitou, pela mesma razão.
+            # detalhe: UMA aba sem pacote sairia daquele `return` sem contar
+            # volta nenhuma, e o passeio ficaria preso nela para sempre.
+            #
+            # FATO SUBSTITUÍDO — 09/09/2026: estas linhas nomeavam a
+            # `07-lancadores` como essa aba, e ela TEM pacote
+            # (`pacotes/a07_lancadores.py::pacote`). Hoje as dez têm; a guarda
+            # fica porque protege a aba que um dia nascer sem um.
             if self._voltas_da_aba >= self.args.voltas_por_aba and not self._medindo:
                 self._medindo = True
                 pagina = self.pagina
@@ -3130,9 +3176,9 @@ class Piloto:
         if pacote is None:
             # A ABA SEM PACOTE AINDA TEM CABEÇALHO, e ele é das DEZ. Antes desta
             # linha ela saía daqui sem pintar nada — nem o topo, nem a fita — e
-            # a `07-lancadores` (a única sem pacote, por decisão dela) ficava
-            # mostrando o desenho inteiro. Medido pela `--prova-de-mockup` em
-            # 02/09/2026, com o daemon dela no ar:
+            # ficava mostrando o desenho inteiro. Medido pela `--prova-de-mockup`
+            # em 02/09/2026, com o daemon dela no ar, na `07-lancadores`, que
+            # era a aba sem pacote naquele dia e hoje tem um:
             #
             #     perfil  = 'Mortal Kombat'   ← e o perfil ativo dela era outro
             #
@@ -3379,10 +3425,12 @@ class Piloto:
             return False
         self._voltas_da_aba = 0
         self._medindo = False
-        # A CARGA DA ABA ANTERIOR NÃO PODE SOBREVIVER À TRAVESSIA: a
-        # `07-lancadores` não tem pacote e não produz carga nenhuma, e o que
-        # ficasse aqui seria lido como "o pacote da Lançadores declara isto" —
-        # os campos da aba anterior, atribuídos a uma aba que não tem dono.
+        # A CARGA DA ABA ANTERIOR NÃO PODE SOBREVIVER À TRAVESSIA: uma aba sem
+        # pacote não produz carga nenhuma, e o que ficasse aqui seria lido como
+        # "o pacote daquela aba declara isto" — os campos da aba anterior,
+        # atribuídos a uma aba que não tem dono. (A `07-lancadores` foi o caso
+        # que revelou isto e desde então ganhou pacote; a guarda continua
+        # valendo para a próxima.)
         self._carga_de_agora = {}
         # O `pronto = False` É OBRIGATÓRIO, e a razão é uma armadilha do
         # `_carregou`: quando a aba nova é a MESMA que está à vista (é o caso da

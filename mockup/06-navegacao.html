@@ -284,6 +284,17 @@
      `.fita.inerte` é a única porta desta regra. */
   .fita.inerte .chip.on{border-color:var(--border-sutil);background:transparent;
                         color:var(--comment);font-weight:400}
+  /* CABO e RÁDIO em CAIXA ALTA — TELA-TRES-01 §3, decisão dela de 08/09/2026:
+     "cabo e rádio coloca maiúsculo."
+
+     SÓ A VIA, e não o chip inteiro: `text-transform` no `<label>` subiria o
+     nome do plástico junto (`GALACTIC PURPLE`), que ela não pediu — e o `P1`
+     já é maiúsculo por natureza.
+
+     E O TEXTO NO DOCUMENTO CONTINUA MINÚSCULO, que é a regra escrita em
+     `monta.rotulo`: quem escreve em maiúscula no HTML tira dela a chance de
+     copiar o nome como ele é. */
+  .fita .chip .via{text-transform:uppercase}
   .chip{
     padding:5px 12px;border-radius:6px;font-size:12px;
     border:1px solid var(--linha);background:var(--app-bg);color:var(--texto-mudo);

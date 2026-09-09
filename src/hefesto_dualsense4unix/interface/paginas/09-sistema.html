@@ -284,6 +284,17 @@
      `.fita.inerte` é a única porta desta regra. */
   .fita.inerte .chip.on{border-color:var(--border-sutil);background:transparent;
                         color:var(--comment);font-weight:400}
+  /* CABO e RÁDIO em CAIXA ALTA — TELA-TRES-01 §3, decisão dela de 08/09/2026:
+     "cabo e rádio coloca maiúsculo."
+
+     SÓ A VIA, e não o chip inteiro: `text-transform` no `<label>` subiria o
+     nome do plástico junto (`GALACTIC PURPLE`), que ela não pediu — e o `P1`
+     já é maiúsculo por natureza.
+
+     E O TEXTO NO DOCUMENTO CONTINUA MINÚSCULO, que é a regra escrita em
+     `monta.rotulo`: quem escreve em maiúscula no HTML tira dela a chance de
+     copiar o nome como ele é. */
+  .fita .chip .via{text-transform:uppercase}
   .chip{
     padding:5px 12px;border-radius:6px;font-size:12px;
     border:1px solid var(--linha);background:var(--app-bg);color:var(--texto-mudo);
@@ -1178,9 +1189,27 @@
      CABO (`app/actions/config/secao_controles.py:929`), e por isso p2 e p3, que
      estão no rádio, não têm leitura. */
   .col-log{display:flex;flex-direction:column}
+  /* A CAIXA ACOMPANHA O IRMÃO — TELA-TRES-01 §1, pedido dela de 08/09/2026:
+     "em sistema aumentar a altura do detalhes técnicos pra ficar igual ao
+     bloco à esquerda".
+
+     MEDIDO NO CHROME, na página publicada, antes da cura: a lista dos quatro
+     botões fechava em 136px e esta caixa em 110px — 26px de diferença, e a
+     lista das identidades de fábrica rolava enquanto sobrava espaço embaixo
+     dela. Com QUATRO controles na mesa são quatro linhas, e é o caso dela.
+
+     `flex:1` E NÃO UMA SEGUNDA ALTURA CRAVADA: o `.avancado` já é um grid com
+     `align-items:stretch` e o `.col-log` já é uma coluna flex — a altura do
+     irmão CHEGA aqui sozinha. Um `height:136px` digitado seria a segunda
+     verdade sobre a altura da lista, e envelheceria no dia em que o quinto
+     botão entrasse (o quarto entrou em 06/09 e já custou 26px a esta caixa).
+
+     O `min-height` GUARDA O PISO: se um dia a faixa encolher, a caixa não cai
+     abaixo do que já cabia — quatro linhas de identidade mais o título. */
   .log{padding:10px 12px;border:1px solid var(--border-sutil);border-radius:7px;
        background:var(--app-bg);font-family:'JetBrains Mono',monospace;font-size:10.5px;
-       line-height:1.6;color:var(--texto-mudo);height:110px;overflow:auto;white-space:pre}
+       line-height:1.6;color:var(--texto-mudo);flex:1;min-height:110px;
+       overflow:auto;white-space:pre}
 
   /* Os glifos são os MESMOS SVGs da aba Status (assets/glyphs, 27 peças).
      `currentColor` faz cada um herdar a cor da linha em que está. */
@@ -1322,8 +1351,8 @@
     <div class="fita inerte" title="Esta aba não usa o controle escolhido aqui — os cards são leitura." data-campo="fita-chips" data-hef-alvo="html">
       <span>Selecionar:</span>
       <label class="chip on">Todos</label>
-      <label class="chip plastico" data-campo="fita-chip" style="--plastico:#ae335a" title="Cosmic Red — a borda é a cor do plástico">P1 <span class="pt">•</span> Cosmic Red <span class="pt">•</span> USB</label>
-      <label class="chip plastico" data-campo="fita-chip" style="--plastico:#7eb8d4" title="Starlight Blue — a borda é a cor do plástico">P2 <span class="pt">•</span> Starlight Blue <span class="pt">•</span> BT</label>
+      <label class="chip plastico" data-campo="fita-chip" style="--plastico:#ae335a" title="Cosmic Red — a borda é a cor do plástico">P1 <span class="pt">•</span> Cosmic Red <span class="pt">•</span> <span class="via">USB</span></label>
+      <label class="chip plastico" data-campo="fita-chip" style="--plastico:#7eb8d4" title="Starlight Blue — a borda é a cor do plástico">P2 <span class="pt">•</span> Starlight Blue <span class="pt">•</span> <span class="via">BT</span></label>
     </div>
     <div class="perfil-ativo">
       <span class="pa-rot">Perfil ativo</span>
