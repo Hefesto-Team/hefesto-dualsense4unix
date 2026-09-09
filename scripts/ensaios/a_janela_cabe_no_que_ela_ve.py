@@ -80,7 +80,7 @@ ABAS = ["01-jogar.html", "02-controles.html", "03-gatilhos.html",
 #: `_NAO_E_PROMESSA` do `casa-sabe`: *a lista se lê, a razão se escreve*.
 #:
 #: Nem toda barra é defeito. A `10-perfis` tem uma lista que rola desde que
-#: nasceu, e a §1 da ROLAGEM-01 já a media assim em 08/09 (*"Só a 10 (`div.rolo`,
+#: nasceu, e a §1 da ROLAGEM-01 já dizia isso em 08/09 (*"Só a 10 (`div.rolo`,
 #: 475/383 px), por desenho"*). Reprová-la seria a régua chamando de dívida o
 #: desenho que ela aprovou; deixá-la fora do relato seria a régua ficando cega.
 #: Ela fica DECLARADA: sai na tabela, não conta no vermelho, e uma caixa nova

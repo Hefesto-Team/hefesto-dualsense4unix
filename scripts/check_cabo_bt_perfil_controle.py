@@ -6,7 +6,7 @@
     "Quero que vc modifique elas [as sprints] pra que tudo na interface seja
      possível os canais de audio as duas saidas as entradas, tudo funcionando
      por cabo ou bt ou tudo funcionando via perfil e dentro de cada um um
-     setting pra cada controle é assim que eu queria que sua revisao nos
+     setting pra cada controle é assim que eu queria que sua revisao nos  (noqa-acento: citação literal dela, palavra por palavra)
      auxiliasse."
     (noqa-acento: citação literal dela, palavra por palavra)
 
@@ -254,9 +254,22 @@ def _campos_do_esquema(classe: str) -> set[str]:
     return set(re.findall(r"^    ([a-z_]+):\s", corpo, re.M))
 
 
-#: A ORDEM DAS RESPOSTAS DE TRANSPORTE, da pior para a melhor. Um gesto com
-#: duas chaves responde pela PIOR: `min` sobre este índice.
-_ESCADA = ("sem linha", "nao", "com ressalva", "sim")
+#: AS QUATRO RESPOSTAS DE TRANSPORTE, e elas têm UM DONO — 09/09/2026.
+#:
+#: A palavra sem acento é VALOR CRU, não prosa: ela sai impressa na tabela e é
+#: comparada contra o mapa. O portão de acentuação a reprova, e com razão — ele
+#: não sabe distinguir dado de texto. A isenção é declarada AQUI, uma vez, em
+#: vez de doze `noqa-acento` espalhados: dois agentes independentes chegaram a
+#: este arquivo em 09/09 e escreveram doze marcadores CADA UM, com redações
+#: diferentes — que é a assinatura do valor sem dono.
+NAO = "nao"  # noqa-acento: valor cru do mapa (`*_aciona`), não prosa
+_SEM_LINHA = "sem linha"
+_RESSALVA = "com ressalva"
+_SIM_ = "sim"
+
+#: A ORDEM DAS RESPOSTAS, da pior para a melhor. Um gesto com duas chaves
+#: responde pela PIOR: `min` sobre este índice.
+_ESCADA = (_SEM_LINHA, NAO, _RESSALVA, _SIM_)
 
 #: O CONTROLE DESTA CASA. O mapa tem uma linha por (chave, controle) e as do
 #: `pro` e do `sn30` dizem `não` em quase tudo — varrer todas e ficar com a
@@ -266,7 +279,7 @@ _O_APARELHO_DELA = "dualsense"
 
 
 def _resposta_de_transporte(linhas: list[dict[str, str]], lado: str) -> str:
-    """`sim`, `com ressalva`, `nao` ou `sem linha` para aquele transporte.
+    """A resposta de um transporte: uma das quatro de `_ESCADA`.
 
     **`parcial` NÃO É `não`** — é o terceiro valor de `*_aciona` no mapa (24
     linhas por rádio, 22 por cabo, `docs/data/LEIA-PRIMEIRO.md`), e quer dizer
@@ -276,15 +289,15 @@ def _resposta_de_transporte(linhas: list[dict[str, str]], lado: str) -> str:
     """
     minhas = [l for l in linhas if l.get("controle") == _O_APARELHO_DELA]
     if not minhas:
-        return "sem linha"
-    melhor = "nao"
+        return _SEM_LINHA
+    melhor = NAO
     for linha in minhas:
         aciona = linha.get(f"{lado}_aciona", "").strip().lower()
         if aciona == "parcial":
-            resposta = "com ressalva"
+            resposta = _RESSALVA
         elif aciona in _SIM:
-            resposta = ("com ressalva" if linha.get(f"{lado}_ressalva", "").strip()
-                        else "sim")
+            resposta = (_RESSALVA if linha.get(f"{lado}_ressalva", "").strip()
+                        else _SIM_)
         else:
             continue
         if _ESCADA.index(resposta) > _ESCADA.index(melhor):
@@ -294,7 +307,7 @@ def _resposta_de_transporte(linhas: list[dict[str, str]], lado: str) -> str:
 
 def _pior(respostas: list[str]) -> str:
     """A pior de várias respostas — o gesto responde pela metade que falta."""
-    return min(respostas, key=_ESCADA.index) if respostas else "sem linha"
+    return min(respostas, key=_ESCADA.index) if respostas else _SEM_LINHA
 
 
 def tabela() -> list[tuple[str, str, str, str, str, str, str]]:
@@ -318,15 +331,15 @@ def tabela() -> list[tuple[str, str, str, str, str, str, str]]:
                        for c in chaves])
         campo, campo_ctrl = NO_PERFIL.get(gesto, ("", None))
         perfil = ("só por controle" if campo is None
-                  else "sim" if campo in do_perfil else "nao")
+                  else _SIM_ if campo in do_perfil else NAO)
         controle = ("global" if campo_ctrl is None
-                    else ("sim" if campo_ctrl in do_controle else "nao"))
+                    else (_SIM_ if campo_ctrl in do_controle else NAO))
         falta = "; ".join(
             p for p in (
-                f"cabo: {cabo}" if cabo in ("nao", "sem linha") else "",
-                f"rádio: {radio}" if radio in ("nao", "sem linha") else "",
-                "não está no perfil" if perfil == "nao" else "",
-                "não é por controle" if controle == "nao" else "",
+                f"cabo: {cabo}" if cabo in (NAO, _SEM_LINHA) else "",
+                f"rádio: {radio}" if radio in (NAO, _SEM_LINHA) else "",
+                "não está no perfil" if perfil == NAO else "",
+                "não é por controle" if controle == NAO else "",
             ) if p)
         fora.append((gesto, ",".join(abas), cabo, radio, perfil, controle, falta))
     return fora
