@@ -7,20 +7,25 @@ consta de `SUBSYSTEM_REGISTRY` nem do `run()` de `daemon/lifecycle.py`. A
 leitura fácil — e ela foi escrita num despacho — é *"então é só ligar as duas
 metades, como o `BtMicSubsystem`"*.
 
-**Ligá-lo hoje não é cura, é regressão**, e a medição é esta:
+**A METADE DE CIMA FOI CURADA EM 09/09/2026 (SOM-POR-CONTROLE-01), e o texto
+que a descrevia fica como registro do que custou.** Até 08/09 o nó subia assim:
 
     pactl load-module module-null-sink sink_name=hefesto_som_<hex6>
         format=s16le rate=48000 channels=2
         sink_properties="device.description='Alto-falante do controle' …"
 
-e **mais nada**. Nenhum `module-loopback`. O monitor do nó não vai a lugar
-nenhum — o nó aceita o áudio e o joga fora.
+e **mais nada**. Nenhum `module-loopback`, e os quatro com o MESMO rótulo. Hoje
+`SinkVirtualPipeWire` recebe uma `RotaDoNo` e sobe o `module-loopback` junto
+quando há rota, e o `GerenciadorDeNosDeSom` batiza cada um «Alto-falante do
+Controle N». **O que continua faltando para ligá-lo são as TRÊS linhas do
+registro** — `daemon/subsystems/__init__.py`, `daemon/lifecycle.py` e
+`daemon/connection.py` —, e nenhuma delas estava na posse daquela sprint.
 
 Com os quatro DualSense na mesa dela (medido em 07/09/2026: dois no cabo, dois
 no rádio), `AltoFalanteSubsystem.alvos()` devolve **os quatro**, e os quatro
-nasceriam com o MESMO rótulo `Alto-falante do controle` — porque
+nasceriam com o MESMO rótulo genérico — porque
 `GerenciadorDeNosDeSom._construir` chama `SinkVirtualPipeWire(uniq=uniq)` sem
-rótulo próprio, e o default é a constante `DESCRICAO_PROVISORIA`. Quatro entradas
+rótulo próprio, e o default era uma constante de rótulo genérico. Quatro entradas
 idênticas e mudas na lista de som dela, ao lado das DUAS placas reais que hoje
 FUNCIONAM pelo cabo. Ela escolhe uma das quatro e o som some.
 
@@ -33,9 +38,17 @@ cuidadosa, e ela nomeia o defeito na invariante 4 do `PlanoDoNo`:
     seria exatamente o sink que aceita o áudio e o joga fora."*
 
 `rota_do_no` recusa no rádio (`ponte_do_radio=None` é *"o estado de hoje e o
-padrão de propósito"*) e, no cabo, só publica quando `sink_do_controle` resolve
-a placa DAQUELE controle pela identidade. O `AltoFalanteSubsystem` não faz
-nenhuma das duas coisas.
+padrão de propósito"*) e, no cabo, só entrega quando `sink_do_controle` resolve
+a placa DAQUELE controle pela identidade. **Desde 09/09/2026 ele mora em
+`integrations/alto_falante_bt` e é o subsystem quem o chama** — o daemon não
+importa `app/`, e por isso a resposta mudou de endereço em vez de ganhar uma
+segunda cópia.
+
+E a invariante 4 mudou de forma: `D-0809-O-NO-DE-SOM-POR-CONTROLE-VIVE-SEMPRE`
+(decisão DELA) diz que o nó é publicado mesmo sem rota — *"nó que some quebra o
+jogo que o escolheu"*. O que sobra dela, e é o que este arquivo trava, é que
+**um `module-null-sink` publicado pelo DAEMON tenha o `module-loopback` ao
+lado**: o daemon só publica quem tem rota; quem não tem, ele nem constrói.
 
 O QUE ESTA RÉGUA PERMITE — e é metade do desenho
 -------------------------------------------------
@@ -85,27 +98,46 @@ def _config(**over: object) -> DaemonConfig:
     return DaemonConfig(**base)  # type: ignore[arg-type]
 
 
-def test_o_no_publicado_hoje_nao_leva_o_som_a_lugar_nenhum() -> None:
-    """A MEDIÇÃO, congelada: o nó sobe sozinho, sem `module-loopback`.
+def test_o_no_com_rota_leva_o_som_ao_aparelho_e_sem_rota_nao_engana() -> None:
+    """A MEDIÇÃO, refeita em 09/09/2026: o nó só liga o que ele tem para ligar.
 
-    Este é o fato que torna a fiação uma regressão. Se um dia ele passar a
-    emitir o loopback, ESTE teste reprova — e é o sinal de que a fiação virou
-    possível, não de que algo quebrou. Leia o teste de baixo antes de mexer.
+    **FATO SUBSTITUÍDO.** Este teste se chamava
+    `test_o_no_publicado_hoje_nao_leva_o_som_a_lugar_nenhum` e exigia que
+    NENHUM `module-loopback` fosse emitido — congelando a medição que tornava a
+    fiação uma regressão. A rota existe desde a SOM-POR-CONTROLE-01, e o que se
+    mede agora é o PAR: com rota o loopback sai, sem rota ele não sai.
+
+    MORDIDA: emita o loopback também quando `rota is None` e a segunda metade
+    reprova — o produto ligaria o som a um sink que ninguém resolveu.
     """
-    gravado: list[list[str]] = []
+    from hefesto_dualsense4unix.integrations.alto_falante_bt import RotaDoNo
 
-    def runner(argv: list[str]) -> str:
-        gravado.append(argv)
-        return "77\n"
+    def _gravar() -> tuple[list[list[str]], object]:
+        gravado: list[list[str]] = []
 
-    assert SinkVirtualPipeWire(uniq=_UNIQ, runner=runner).iniciar() is True
+        def runner(argv: list[str]) -> str:
+            gravado.append(argv)
+            return "77\n"
 
-    juntos = [" ".join(argv) for argv in gravado]
+        return gravado, runner
+
+    com, runner_com = _gravar()
+    assert SinkVirtualPipeWire(
+        uniq=_UNIQ,
+        runner=runner_com,  # type: ignore[arg-type]
+        rota=RotaDoNo(True, sink="alsa_output.usb-x", por_onde="cabo"),
+    ).iniciar() is True
+    juntos = [" ".join(argv) for argv in com]
     assert any("module-null-sink" in linha for linha in juntos), juntos
-    assert not any("module-loopback" in linha for linha in juntos), (
-        "o nó de som passou a ter rota — a fiação no `run()` deixou de ser "
-        "regressão, e o teste do par abaixo é quem manda agora"
-    )
+    assert any("module-loopback" in linha for linha in juntos), juntos
+
+    sem, runner_sem = _gravar()
+    assert SinkVirtualPipeWire(
+        uniq=_UNIQ, runner=runner_sem  # type: ignore[arg-type]
+    ).iniciar() is True
+    soltos = [" ".join(argv) for argv in sem]
+    assert any("module-null-sink" in linha for linha in soltos), soltos
+    assert not any("module-loopback" in linha for linha in soltos), soltos
 
 
 @pytest.mark.asyncio

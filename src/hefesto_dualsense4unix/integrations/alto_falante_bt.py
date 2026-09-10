@@ -858,11 +858,19 @@ HEX_DO_SUFIXO = 6
 #: qualquer saída plausível — não é um número mágico, é o piso.
 PRIORIDADE_SESSAO_DO_SOM = 10
 
-#: PROVISÓRIO — decisão dela. O rótulo que aparece na lista de saída do
-#: sistema é da **O-ALTO-FALANTE-VIRTUAL-01** (*"o nó com nome de gente"*), que
-#: é a sprint da SUPERFÍCIE. Esta é o MOTOR. Até ela decidir, o nó nasce com um
-#: rótulo neutro que diz o aparelho e o controle, e nada mais.
-DESCRICAO_PROVISORIA = "Alto-falante do controle"
+#: **FATO SUBSTITUÍDO em 09/09/2026.** Esta constante se chamava
+#: ``DESCRICAO_PROVISORIA`` e valia ``"Alto-falante do controle"`` — um rótulo
+#: neutro, "até ela decidir". **Ela decidiu** (*"4a"*,
+#: ``D-0909-OS-NOS-SE-CHAMAM-ALTO-FALANTE-E-MICROFONE-DO-CONTROLE-N``), e o
+#: provisório virou o nome: «Alto-falante do Controle N», com o número do
+#: ASSENTO. Quem monta o rótulo com número é :func:`descricao_do_alto_falante`,
+#: no fim deste módulo; esta constante é a metade SEM número, que é a resposta
+#: honesta quando ninguém sabe dizer o assento.
+#:
+#: O par com «Microfone do Controle N»
+#: (``dualsense_bt_audio.NOME_DO_MICROFONE_DO_CONTROLE``) está em
+#: ``docs/A-LINGUA-DESTA-CASA-o-glossario-que-a-tela-e-o-codigo-falam.md``.
+NOME_DO_ALTO_FALANTE_DO_CONTROLE = "Alto-falante do Controle"
 
 _TIMEOUT_PACTL_S = 5.0
 
@@ -998,14 +1006,23 @@ class SinkVirtualPipeWire:
         taxa_hz: int = TAXA_DO_ENCODER,
         canais: int = CANAIS_DO_ENCODER,
         runner: Callable[[list[str]], str | None] | None = None,
+        rota: RotaDoNo | None = None,
     ) -> None:
         self.uniq = str(uniq)
         self.nome = nome_do_sink(uniq)
-        self.descricao = descricao or DESCRICAO_PROVISORIA
+        self.descricao = descricao or descricao_do_alto_falante(uniq)
         self.taxa_hz = taxa_hz
         self.canais = canais
         self.runner = runner or _rodar
+        #: Para onde este nó entrega, e a frase quando não entrega. ``None`` é
+        #: *"ninguém resolveu a rota"* e vale como recusa — nunca como "entrega
+        #: em algum lugar". Ver :meth:`iniciar`.
+        self.rota = rota
         self._module_id: str | None = None
+        #: Os ids dos ``module-loopback`` que ESTE nó carregou, na ordem em que
+        #: subiram. Descarregados na ordem INVERSA, e só os que ele carregou:
+        #: derrubar um loopback alheio é derrubar o som de outra pessoa.
+        self._rotas: list[str] = []
 
     # -- ciclo de vida ----------------------------------------------------
 
@@ -1015,9 +1032,22 @@ class SinkVirtualPipeWire:
         return self._module_id
 
     def iniciar(self) -> bool:
-        """Carrega o ``module-null-sink``. False = não deu (e nada ficou de pé).
+        """Carrega o ``module-null-sink`` E a rota dele. False = não deu.
 
         Recusa sem nome: um ``uniq`` ilegível não vira nó. Ausência é resposta.
+
+        **O NÓ SOBE MESMO SEM ROTA, e é decisão DELA de 08/09/2026**
+        (``D-0809-O-NO-DE-SOM-POR-CONTROLE-VIVE-SEMPRE``, palavra dela
+        *"concordo com as 5"*): *"nó que some quebra o jogo que o escolheu"*. O
+        que vai e volta é a ROTA, não o nó. **FATO SUBSTITUÍDO:** até 07/09 a
+        casa escrevia o contrário — *"sem rota não se carrega módulo nenhum"*
+        (a invariante 4 de ``app/audio_saida.PlanoDoNo``, e a régua
+        ``tests/unit/test_o_no_de_som_nao_nasce_sumidouro.py``) — porque a
+        decisão então valendo era a de 06/09, *"o nó vive só enquanto há
+        controle"*, tomada por DELEGAÇÃO e declarada reversível numa frase. Ela
+        reverteu. O que sobra da invariante 4, e continua de pé, é a metade que
+        importa: **um nó sem rota tem de DIZER que não tem para onde ir** —
+        :attr:`rota` carrega a frase, e quem a mostra é a tela.
         """
         if self._module_id is not None:
             return True
@@ -1045,10 +1075,48 @@ class SinkVirtualPipeWire:
             return False
         self._module_id = linhas[-1]
         logger.info("som_sink_publicado", sink=self.nome, module_id=self._module_id)
+        self._ligar_a_rota()
         return True
 
+    def _ligar_a_rota(self) -> None:
+        """Carrega os ``module-loopback`` desta rota. Silencioso quando não há.
+
+        São até DOIS, e eles respondem a perguntas diferentes:
+
+        * **a saída** — o monitor do nó para o alto-falante DAQUELE controle. É
+          o que faz o som que entra no nó sair no plástico;
+        * **a fonte «mix»** — o monitor da saída padrão do sistema PARA o nó. É
+          o *«HDMI completo»* dela: o que a TV recebe, o controle recebe junto.
+          Em ``sfx`` este segundo não existe, e o nó fica livre para a corrente
+          que o jogo mandar — que é o padrão do cabo por decisão dela
+          (``D-0809-NO-CABO-O-PADRAO-DO-SOM-E-SFX``).
+
+        Um loopback que não sobe **não derruba o nó**: o nó publicado com o som
+        do jogo mudo ainda é o dispositivo que o jogo escolheu, e derrubá-lo
+        aqui traria de volta exatamente o defeito que ele existe para matar.
+        """
+        rota = self.rota
+        if rota is None or not rota.tem_rota:
+            return
+        for argv in argv_das_rotas(self.nome, rota):
+            saida = self.runner(list(argv))
+            linhas = [ln.strip() for ln in (saida or "").splitlines() if ln.strip()]
+            if not linhas or not linhas[-1].isdigit():
+                logger.info("som_rota_nao_subiu", sink=self.nome, argv=" ".join(argv))
+                continue
+            self._rotas.append(linhas[-1])
+            logger.info("som_rota_ligada", sink=self.nome, module_id=linhas[-1])
+
     def parar(self) -> None:
-        """Descarrega o módulo. Idempotente."""
+        """Descarrega a rota e o módulo, nessa ordem. Idempotente.
+
+        **A rota cai ANTES do nó**, e não é estética: um ``module-loopback``
+        cuja ponta some é um módulo órfão no servidor de áudio dela, e foi
+        assim que 52 sinks fantasma entraram no PipeWire dela em 07/09.
+        """
+        for module_id in reversed(self._rotas):
+            self.runner(["pactl", "unload-module", module_id])
+        self._rotas.clear()
         if self._module_id is None:
             return
         self.runner(["pactl", "unload-module", self._module_id])
@@ -1587,6 +1655,299 @@ def diagnosticar(uniqs: Sequence[str] | None = None) -> Diagnostico:
     )
 
 
+# ---------------------------------------------------------------------------
+# A ROTA DO NÓ — «onde este nó entrega?», e a pergunta tem UM dono
+#
+# POR QUE ELA MORA AQUI E NÃO EM `app/audio_saida.py`, onde nasceu:
+# **o daemon não importa nada de `app/`**, e a régua é `grep -r "from
+# hefesto_dualsense4unix.app" src/…/daemon/` devolvendo zero
+# (`integrations/fontes_de_captura.py`, que fez este mesmo movimento em
+# 01/09). Quem precisa da rota é o `AltoFalanteSubsystem`; deixar a resposta
+# em `app/` obrigaria o daemon a escrever a SEGUNDA, e duas verdades sobre a
+# mesma pergunta é como esta casa fabrica divergência silenciosa. O molde é o
+# `app/usb_pai.py` → `integrations/usb_pai.py`: o dono muda de endereço e
+# `app/audio_saida.py` REEXPORTA tudo, byte a byte da mesma resposta.
+#
+# ESTE BLOCO FICA NO FIM DO MÓDULO DE PROPÓSITO: o `docs/data/mapa-controles.csv`
+# cita este arquivo por `arquivo:LINHA` (`:268`, `:455`, `:523`), e código novo
+# enfiado acima daquelas linhas envelhece a citação inteira. Há portão que
+# reprova: `citacoes-de-linha`.
+# ---------------------------------------------------------------------------
+
+#: As duas FONTES que ela nomeou em 08/09/2026: *"os somns seja hdmi completo
+#: seja o canal do sfx caindo pra cada controle"*. <!-- noqa-acento: citação literal dela -->
+#:
+#: * ``mix`` — o *«HDMI completo»*: o mix inteiro da saída padrão do sistema
+#:   cai também no controle, por um ``module-loopback`` do monitor dela;
+#: * ``sfx`` — só o que o jogo mandar para o nó DAQUELE controle. O nó fica
+#:   livre, e nenhum loopback de entrada é carregado.
+FONTE_MIX = "mix"
+FONTE_SFX = "sfx"
+
+#: O padrão quando o perfil não diz nada. **Decisão DELA, 08/09/2026**
+#: (``D-0809-NO-CABO-O-PADRAO-DO-SOM-E-SFX``, palavra dela: *"concordo com as
+#: 5"*): com ``mix`` por padrão o controle viraria saída de todo o som do PC
+#: sozinho, que é a regra que esta casa já recusou.
+FONTE_PADRAO = FONTE_SFX
+
+#: Rádio, e a ponte host→controle não está de pé. **Não é falha do aparelho** —
+#: o alto-falante existe e ela já o OUVIU (rota 3, orelha dela, 02/08/2026). A
+#: frase diz as três coisas: o quê, por quê, e o que fazer.
+MOTIVO_NO_SEM_PONTE_NO_RADIO = (
+    "o som do PC ainda não chega a este controle pelo rádio — o Hefesto sabe "
+    "por qual canal mandar, mas ainda não sabe montar o pacote de áudio que o "
+    "controle entende sem fio. Ligue-o no cabo para ouvir por ele."
+)
+
+#: Cabo, e o sistema não publicou placa de som atribuível a este controle. É o
+#: caso do controle recém-ligado, e o do cabo que só alimenta.
+MOTIVO_NO_SEM_PLACA_NO_CABO = (
+    "o sistema ainda não publicou a placa de som deste controle, e sem ela não "
+    "há por onde o som entrar. Reconecte o cabo do controle."
+)
+
+#: Nem assento nem controle: não há nó nenhum de que falar.
+MOTIVO_NO_SEM_ASSENTO = (
+    "este controle ainda não tem um lugar de jogador, e o alto-falante leva o "
+    "número do lugar. Reconecte o controle."
+)
+
+#: Por onde o nó entrega, quando entrega. ``""`` é "não entrega".
+POR_CABO = "cabo"
+POR_RADIO = "radio"
+
+#: Os dois transportes, com a palavra do sysfs (a da TELA é *cabo* e *rádio*).
+TRANSPORTE_CABO = "usb"
+TRANSPORTE_RADIO = "bt"
+
+#: Toda palavra que esta casa usa para dizer *"este controle está no ar"* —
+#: e são QUATRO, escritas em lugares diferentes por gente diferente.
+#:
+#: **ISTO NASCEU DE UM DEFEITO MEDIDO EM 09/09/2026**, na primeira passada seca
+#: com os quatro DualSense dela na mesa. ``daemon/subsystems/alto_falante
+#: .ControleNaLista.transporte`` diz ``"rádio"`` (a palavra da TELA, com
+#: acento); ``app/audio_saida`` diz ``"bt"`` (a palavra do ``state_full``). O
+#: ``rota_do_no`` comparava com UMA delas, então os dois controles do rádio
+#: caíam no ramo do CABO e recebiam a frase errada:
+#:
+#:     "o sistema ainda não publicou a placa de som deste controle (…)
+#:      Reconecte o cabo do controle."
+#:
+#: — mandando ela mexer num cabo que não existe, quando a verdade é que a ponte
+#: de rádio ainda não monta o pacote de áudio. **A frase certa é a metade do
+#: valor do nó sem rota**, e uma comparação de texto a trocava em silêncio.
+_PALAVRAS_DE_RADIO = frozenset({"bt", "radio", "rádio", "bluetooth"})
+
+
+def e_radio(transporte: str) -> bool:
+    """Este transporte é o rádio? Aceita as quatro palavras da casa.
+
+    Peneira e não tabela de tradução de propósito: a pergunta que esta camada
+    faz é binária, e uma tabela convidaria alguém a guardar a palavra traduzida
+    — que é como o transporte entra na identidade do nó, o defeito que ele
+    existe para não ter.
+    """
+    return str(transporte or "").strip().lower() in _PALAVRAS_DE_RADIO
+
+#: Os canais do sink do controle por onde o alto-falante interno toca. O mapa
+#: (``docs/data/mapa-controles.csv``, ``audio.alto_falante@dualsense``,
+#: ``cabo_canal``) registra: *canais 1-2 do sink
+#: ``alsa_output.usb-...analog-surround-40``*. Numa placa ``surround-40`` os
+#: canais 1 e 2 são ``front-left`` e ``front-right`` — é este o nome que o
+#: PipeWire entende, e por isso o número da célula vira nome aqui, sem virar
+#: uma segunda verdade.
+CANAIS_DO_ALTO_FALANTE = "front-left,front-right"
+
+
+@dataclass(frozen=True)
+class RotaDoNo:
+    """Para onde o nó entrega — e, quando não entrega, a frase que diz por quê.
+
+    NÃO É ``bool``: um ``False`` cru vira "não aconteceu nada" na tela, que é o
+    silêncio que ela reclamou.
+    """
+
+    tem_rota: bool
+    sink: str = ""
+    por_onde: str = ""
+    motivo: str = ""
+    fonte: str = FONTE_PADRAO
+    monitor_do_mix: str = ""
+
+
+def sink_do_controle(
+    uniq: str,
+    uniqs_na_mesa: Sequence[str] = (),
+    *,
+    runner: Callable[[list[str]], str | None] | None = None,
+) -> str:
+    """O sink de SAÍDA deste controle — ``""`` quando não dá para saber.
+
+    Quem DECIDE é ``fontes_de_captura.escolher_sink``; aqui só se juntam os
+    ingredientes (a lista viva de sinks e o casamento por dispositivo USB).
+    Escrever uma segunda regra de atribuição seria dar ao alto-falante do
+    controle errado o som do PC.
+
+    ``""`` é resposta honesta e frequente: é o RÁDIO.
+    """
+    from hefesto_dualsense4unix.integrations.fontes_de_captura import (
+        CasamentoUSB,
+        escolher_sink,
+        sinks_dualsense,
+    )
+
+    if not uniq:
+        return ""
+    ler = runner if runner is not None else _rodar
+    sinks = sinks_dualsense(ler(["pactl", "list", "sinks", "short"]) or "")
+    if not sinks:
+        return ""
+    conhecidos = list(uniqs_na_mesa) or [uniq]
+    usb: CasamentoUSB | None = None
+    with contextlib.suppress(Exception):
+        from hefesto_dualsense4unix.integrations.usb_pai import (
+            nos_e_sysfs,
+            usb_pai_por_no,
+            usb_pai_por_uniq,
+        )
+
+        longa = ler(["pactl", "list", "sinks"]) or ""
+        if longa.strip():
+            usb = CasamentoUSB(
+                por_uniq=usb_pai_por_uniq(conhecidos),
+                por_no=usb_pai_por_no(nos_e_sysfs(longa)),
+            )
+    return escolher_sink(sinks, uniq, conhecidos, usb) or ""
+
+
+def monitor_da_saida_padrao(
+    *, runner: Callable[[list[str]], str | None] | None = None
+) -> str:
+    """O monitor da saída padrão do sistema — a fonte do «HDMI completo».
+
+    ``""`` quando o servidor não responde, e o ``""`` é recusa: ligar um
+    loopback com origem vazia é o mesmo defeito do ``paplay --device=`` que
+    este produto já pagou — o comando é aceito e o som vai para outro lugar.
+    """
+    ler = runner if runner is not None else _rodar
+    padrao = (ler(["pactl", "get-default-sink"]) or "").strip()
+    if not padrao or padrao.startswith("@"):
+        return ""
+    return f"{padrao}.monitor"
+
+
+def rota_do_no(
+    uniq: str,
+    transporte: str = TRANSPORTE_CABO,
+    uniqs_na_mesa: Sequence[str] = (),
+    *,
+    fonte: str = FONTE_PADRAO,
+    ponte_do_radio: Callable[[], bool] | None = None,
+    runner: Callable[[list[str]], str | None] | None = None,
+) -> RotaDoNo:
+    """Onde este nó entrega o áudio — ou a frase de por que ele não entrega.
+
+    **No cabo** ele entrega nos canais 1-2 do sink USB DAQUELE controle, e quem
+    resolve o sink é :func:`sink_do_controle` — pela identidade, nunca pelo
+    texto do nome. Um ``startswith("alsa_output.usb-")`` aqui entrega o som do
+    P2 no alto-falante do P1 assim que há dois no cabo.
+
+    **No rádio** ele entrega à ponte host→controle quando ela existir —
+    ``ponte_do_radio`` é quem responde se ela está de pé. ``None`` é o estado
+    de hoje e o padrão de propósito: enquanto o payload dos degraus de OUTPUT
+    por rádio não estiver identificado, quem chamar sem passar nada recebe a
+    recusa honesta, e não um silêncio.
+    """
+    fonte = fonte if fonte in (FONTE_MIX, FONTE_SFX) else FONTE_PADRAO
+    monitor = (
+        monitor_da_saida_padrao(runner=runner) if fonte == FONTE_MIX else ""
+    )
+    if not uniq:
+        return RotaDoNo(False, motivo=MOTIVO_NO_SEM_ASSENTO, fonte=fonte)
+    if e_radio(transporte):
+        if ponte_do_radio is not None and ponte_do_radio():
+            return RotaDoNo(
+                True, por_onde=POR_RADIO, fonte=fonte, monitor_do_mix=monitor
+            )
+        return RotaDoNo(False, motivo=MOTIVO_NO_SEM_PONTE_NO_RADIO, fonte=fonte)
+    alvo = sink_do_controle(uniq, uniqs_na_mesa, runner=runner)
+    if not alvo:
+        return RotaDoNo(False, motivo=MOTIVO_NO_SEM_PLACA_NO_CABO, fonte=fonte)
+    return RotaDoNo(
+        True, sink=alvo, por_onde=POR_CABO, fonte=fonte, monitor_do_mix=monitor
+    )
+
+
+def argv_para_ligar_o_no(id_do_no: str, sink: str) -> tuple[str, ...]:
+    """O comando que leva o que entrar no nó até o alto-falante do controle."""
+    return (
+        "pactl",
+        "load-module",
+        "module-loopback",
+        f"source={id_do_no}.monitor",
+        f"sink={sink}",
+        f"channel_map={CANAIS_DO_ALTO_FALANTE}",
+    )
+
+
+def argv_para_ligar_o_mix(id_do_no: str, monitor: str) -> tuple[str, ...]:
+    """O comando que faz o mix inteiro do PC cair TAMBÉM neste controle.
+
+    É o *«HDMI completo»* dela: a origem é o monitor da SAÍDA PADRÃO, e o
+    destino é o nó do controle. O sentido é o contrário do de
+    :func:`argv_para_ligar_o_no`, e trocar os dois manda o som do controle para
+    a televisão dela.
+    """
+    return (
+        "pactl",
+        "load-module",
+        "module-loopback",
+        f"source={monitor}",
+        f"sink={id_do_no}",
+    )
+
+
+def argv_das_rotas(id_do_no: str, rota: RotaDoNo) -> tuple[tuple[str, ...], ...]:
+    """Os ``module-loopback`` desta rota, na ordem em que sobem — () se não há.
+
+    A SAÍDA primeiro e a FONTE depois, e a ordem é medida em consequência: com
+    o mix entrando antes de haver por onde sair, o PCM do sistema inteiro fica
+    parado no nó por um instante. Sem rota, tupla vazia — o nó existe e não
+    engole nada de ninguém.
+    """
+    if not id_do_no or not rota.tem_rota:
+        return ()
+    comandos: list[tuple[str, ...]] = []
+    if rota.sink:
+        comandos.append(argv_para_ligar_o_no(id_do_no, rota.sink))
+    if rota.fonte == FONTE_MIX and rota.monitor_do_mix:
+        comandos.append(argv_para_ligar_o_mix(id_do_no, rota.monitor_do_mix))
+    return tuple(comandos)
+
+
+def descricao_do_alto_falante(uniq: str) -> str:
+    """«Alto-falante do Controle N» — e SEM o endereço dela, com número ou sem.
+
+    Gêmea de ``dualsense_bt_audio.descricao_do_microfone``, e o gêmeo não é
+    coincidência: o assento vem do MESMO numerador
+    (``dualsense_bt_audio.numero_do_assento``), instalado por gancho pelo
+    subsystem que estiver de pé. Escrever um segundo numerador aqui poria o
+    mesmo controle no assento 2 na lista de entrada e no 3 na de saída.
+
+    **Sem número não se inventa número.** Uma lista com dois «Alto-falante do
+    Controle 1» mente sobre qual é qual; uma com dois «Alto-falante do
+    Controle» só diz que o assento ainda não é sabido.
+    """
+    from hefesto_dualsense4unix.integrations.dualsense_bt_audio import (
+        numero_do_assento,
+    )
+
+    numero = numero_do_assento(str(uniq or ""))
+    if numero is None:
+        return NOME_DO_ALTO_FALANTE_DO_CONTROLE
+    return f"{NOME_DO_ALTO_FALANTE_DO_CONTROLE} {numero}"
+
+
 __all__ = [
     "AMOSTRAS_POR_QUADRO",
     "ARRANJOS",
@@ -1598,21 +1959,32 @@ __all__ = [
     "BLOCO_FONE",
     "BYTES_DE_PCM_POR_QUADRO",
     "BYTES_POR_QUADRO_OPUS",
+    "CANAIS_DO_ALTO_FALANTE",
     "CANAIS_DO_ENCODER",
     "CRC_BYTES",
     "DEGRAU_DO_KERNEL",
-    "DESCRICAO_PROVISORIA",
     "ENVELOPE_BYTES",
+    "FONTE_MIX",
+    "FONTE_PADRAO",
+    "FONTE_SFX",
     "GRAVADORES_DO_MONITOR",
     "HEX_DO_SUFIXO",
+    "MOTIVO_NO_SEM_ASSENTO",
+    "MOTIVO_NO_SEM_PLACA_NO_CABO",
+    "MOTIVO_NO_SEM_PONTE_NO_RADIO",
     "MS_POR_QUADRO",
+    "NOME_DO_ALTO_FALANTE_DO_CONTROLE",
     "OFFSET_APOS_O_COMMON",
     "OFFSET_DO_COMMON",
     "ORCAMENTO_DO_DEGRAU",
+    "POR_CABO",
+    "POR_RADIO",
     "PREFIXO_SINK_DO_SOM",
     "PRIORIDADE_SESSAO_DO_SOM",
     "TAMANHO_DO_DEGRAU",
     "TAXA_DO_ENCODER",
+    "TRANSPORTE_CABO",
+    "TRANSPORTE_RADIO",
     "VOLTA_DA_SEQUENCIA",
     "VOLUME_QUE_ELA_OUVIU",
     "Arranjo",
@@ -1620,20 +1992,29 @@ __all__ = [
     "CodificadorOpus",
     "ContagemDaBomba",
     "Diagnostico",
+    "RotaDoNo",
     "SinkVirtualPipeWire",
+    "argv_das_rotas",
     "argv_do_gravador",
+    "argv_para_ligar_o_mix",
+    "argv_para_ligar_o_no",
     "common_de_audio",
     "degrau_para_payload",
+    "descricao_do_alto_falante",
     "diagnosticar",
+    "e_radio",
     "escritor_de_hidraw",
     "fonte_com_ritmo",
     "fonte_de_arquivo",
+    "monitor_da_saida_padrao",
     "montar_com_o_common_preservado",
     "montar_pelos_dois_arranjos",
     "nome_do_sink",
     "orcamento_do_degrau",
     "propriedades_do_sink",
     "rodar_pactl",
+    "rota_do_no",
+    "sink_do_controle",
     "so_hex",
     "sufixo_do_sink_do_som",
     "tag_tlv",

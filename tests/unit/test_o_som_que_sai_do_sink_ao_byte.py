@@ -494,7 +494,9 @@ class TestOSubsystemEscolheQuemGanhaNo:
             ControleNaLista(uniq=MAC_A, caminho="/dev/hidraw9", transporte="cabo"),
             ControleNaLista(uniq="", caminho="/dev/hidraw8", transporte="rádio"),
         ]
-        assert subsystem.alvos(controles) == [MAC_A]
+        # `alvos` devolve o CONTROLE desde 09/09/2026 (quem resolve a rota
+        # precisa do transporte ao lado), como o `bt_mic.alvos` já fazia.
+        assert [c.uniq for c in subsystem.alvos(controles)] == [MAC_A]
 
     def test_o_mesmo_controle_nos_dois_nos_conta_uma_vez(self) -> None:
         subsystem = AltoFalanteSubsystem()
@@ -502,7 +504,9 @@ class TestOSubsystemEscolheQuemGanhaNo:
             ControleNaLista(uniq=MAC_A, caminho="/dev/hidraw9", transporte="cabo"),
             ControleNaLista(uniq=MAC_A, caminho="/dev/hidraw7", transporte="cabo"),
         ]
-        assert subsystem.alvos(controles) == [MAC_A]
+        # `alvos` devolve o CONTROLE desde 09/09/2026 (quem resolve a rota
+        # precisa do transporte ao lado), como o `bt_mic.alvos` já fazia.
+        assert [c.uniq for c in subsystem.alvos(controles)] == [MAC_A]
 
     def test_esta_sempre_ligado_porque_o_no_precede_a_escolha_do_jogo(self) -> None:
         assert AltoFalanteSubsystem().is_enabled(object()) is True  # type: ignore[arg-type]
