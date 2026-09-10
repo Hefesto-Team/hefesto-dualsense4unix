@@ -52,6 +52,7 @@ campo** (*"1-b;2b;3-c;4a"*; a regra é *a bancada vem antes do campo*):
 | `o_byte_do_microfone_muda_a_captura.py` | MIC-VOLUME-02 | `common[6]` + flag0 `0x40` | o byte é ganho de hardware? (o PICO de três gravações, razão 1,5 declarada) |
 | `os_nos_de_som_por_controle.py` | SOM-POR-CONTROLE-01 · MIC-OS-QUATRO-01 | não | um nó de saída e um de entrada por controle, na lista viva; `--observar` para a mordida de tirar o cabo |
 | `o_envelope_do_som_no_radio.py` | ensaio 13 · SOM-POR-CONTROLE-01 | reports da escada | o mesmo Opus em DOIS envelopes HID (DATA vs SET_REPORT); passo 0 de luz; `--crc-errado` |
+| `a_folha_do_microfone_por_controle.py` | MIC-OS-QUATRO-01 · MIC-VOLUME-02 | `common[6]` + flag0 `0x40`, só com «Assumir» | a FOLHA do microfone, uma coluna por controle: o nó (casado por ENDEREÇO), o botão que PEDE o canal, o pico ao vivo sem tocar disco, o byte do aparelho ao lado do campo da tela, e a resposta CRUA do daemon — que é o que desmascara a tarja do «sem_fonte» |
 
 Os cinco que escrevem fazem isso pelo broker, com o daemon VIVO, e nenhum
 conclui: a linha do caderno sai PROPOSTA no fim, e quem coordena a escreve.
