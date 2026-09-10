@@ -284,14 +284,17 @@ EXCECOES_DATADAS: dict[str, str] = {
         "cartão dizer `Player 2` para um controle que o jogo não recebeu — o "
         "dano medido na mesa dela em 02/09."
     ),
-    '_do_vpad: if v.get("player") == player:': (
-        "a05_vibracao.py — NÃO é controle: casa a entrada de `rumble_ff.per_vpad` "
-        "pelo número do vpad"
-    ),
-    'testar: v = _do_vpad(ctx.state.get("rumble_ff") or {}, ctx.por_uniq(uniq).get("player"))': (
-        "a05_vibracao.py — lê o `player` do controle para casar com o vpad acima; "
-        "migra junto"
-    ),
+    # AS DUAS EXCEÇÕES DO `_do_vpad` SAÍRAM EM 09/09/2026, e a dívida ficou
+    # MENOR do que esta lista dizia. A VIBRA-MULT-01 matou a leitura de
+    # `last_weak`/`last_strong` do `per_vpad` — ela era MORTA: as chaves moram
+    # no TOPO do `rumble_ff` (`ipc_handlers.py:3529-3530`) e os blocos de
+    # `per_vpad` nunca as tiveram. Sem a leitura, não há o que casar por número
+    # de vpad, e as duas linhas passaram a descrever código que não existe.
+    #
+    # É a régua trabalhando na direção que quase nenhuma trabalha: ela reprova
+    # quando a dívida ENCOLHE, para a lista não virar propaganda do que já foi
+    # curado. Foi ela que nomeou as duas, com a frase *"apague a linha — a
+    # dívida é menor do que ela diz"*.
     'player: n = int(str(o.get("player") or "0"))': (
         "a04_iluminacao.py — lê o `player` do CLIQUE (`o`), não do controle — "
         "não é state_full"

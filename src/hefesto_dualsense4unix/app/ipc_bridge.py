@@ -332,15 +332,25 @@ def _corpo_do_daemon(
     assim que "aplicado" apareceu com ``aplicado_em: []`` e ``guardado_em: []``
     na mesa vazia.
 
-    **Sem parâmetro de ``timeout``, de propósito.** As cinco rotas que passam
-    por aqui são as de leitura curta (250 ms), e a chamada sai com a MESMA forma
-    de sempre — ``_safe_call(method, params)``, dois argumentos posicionais.
-    Isso não é detalhe: há dublês de ``_safe_call`` em testes de outras abas
-    escritos como uma lambda de DOIS parâmetros, e acrescentar um ``timeout=``
-    aqui os quebra sem que nada do produto tenha mudado (medido em 23/08, dois
-    testes da SOM-02). Quem precisar de folga — ``apply_draft_detalhado`` e
-    ``machine_declare``, que escrevem em disco — continua chamando o
-    ``_safe_call`` direto com o teto dele.
+    **O ``timeout`` É OPCIONAL, e omitido a chamada sai com a forma de sempre**
+    — ``_safe_call(method, params)``, dois argumentos posicionais. Isso não é
+    detalhe: há dublês de ``_safe_call`` em testes escritos como uma lambda de
+    DOIS parâmetros, e um ``timeout=`` os quebra com ``TypeError`` sem que nada
+    do produto tenha mudado.
+
+    **FATO SUBSTITUÍDO — 09/09/2026.** Este parágrafo dizia *"sem parâmetro de
+    ``timeout``, de propósito"*, e a afirmação morreu em ``edfcc9b4``: os três
+    atos de áudio (``speaker.set``, e os dois irmãos em ``:1298`` e ``:1457``)
+    passaram a sair com ``_TETO_DO_ATO_DE_AUDIO`` = 6 s — a cura do teto que
+    fazia a tela mentir. Os 250 ms de leitura curta devolviam *"não respondeu"*
+    sobre um daemon que ia responder.
+
+    **E O AVISO ACERTOU:** os dois dublês da SOM-02 quebraram exatamente como
+    este parágrafo previa, e ficaram vermelhos até 09/09. Quem cedeu foi o
+    DUBLÊ (``**_teto`` na lambda), não o produto — um ato que escreve no
+    aparelho tem direito a mais fôlego que uma leitura. A lição fica: um aviso
+    que descreve o preço não impede ninguém de pagá-lo; só a régua impede, e a
+    régua aqui é a suíte, que roda no fim.
     """
     if timeout is None:
         ok, result = _safe_call(method, params)

@@ -492,7 +492,16 @@ class TestPonteDaJanela:
         monkeypatch.setattr(
             ipc_bridge,
             "_safe_call",
-            lambda metodo, params: (vistos.append((metodo, params)), (True, {"status": "ok"}))[1],
+            # O DUBLÊ ACEITA O TETO — 09/09/2026, e a razão é do PRODUTO.
+            # Ele era uma lambda de DOIS parâmetros, e o `speaker.set` passou a
+            # sair com `timeout=_TETO_DO_ATO_DE_AUDIO` (6 s) em `edfcc9b4` — a
+            # cura do teto que fazia a tela mentir. O dublê quebrou com
+            # `TypeError: got an unexpected keyword argument 'timeout'`, e a
+            # docstring de `_corpo_do_daemon` PREVIA isto com todas as letras.
+            # Quem tinha de ceder é o dublê: um ato de áudio que espera 250 ms
+            # devolve "não respondeu" sobre um daemon que ia responder.
+            lambda metodo, params, **_teto: (vistos.append((metodo, params)),
+                                             (True, {"status": "ok"}))[1],
         )
         assert ipc_bridge.speaker_set(uniq=MAC1, release=True) is True
         assert vistos == [("speaker.set", {"release": True, "uniq": MAC1})]
@@ -507,7 +516,8 @@ class TestPonteDaJanela:
         monkeypatch.setattr(
             ipc_bridge,
             "_safe_call",
-            lambda metodo, params: (vistos.append(params), (True, {"status": "ok"}))[1],
+            lambda metodo, params, **_teto: (vistos.append(params),
+                                            (True, {"status": "ok"}))[1],
         )
         ipc_bridge.speaker_set(volume=180, muted=False, uniq=MAC2)
         assert vistos == [{"volume": 180, "muted": False, "uniq": MAC2}]
