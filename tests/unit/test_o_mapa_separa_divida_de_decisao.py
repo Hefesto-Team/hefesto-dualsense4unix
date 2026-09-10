@@ -5,7 +5,7 @@ O DEFEITO QUE ESTE ARQUIVO EXISTE PARA NÃO DEIXAR VOLTAR
 Medido em 22/08/2026, rodando o contador deste arquivo contra
 `docs/data/mapa-controles.csv`: **41 células diziam que a casa MEDIU e o produto
 NÃO ACIONA** — 20 no cabo, 21 no rádio, 13 linhas com as duas assim. (São
-**43 em 07/09/2026** — a recontagem está no fim deste bloco.) (Foram
+**45 em 09/09/2026** — a recontagem está no fim deste bloco.) (Foram
 **39 entre 29/08 e 02/09/2026**, e as duas que saíram saíram PELO MOTIVO CERTO:
 o acelerômetro do DualSense passou a ser lido nos dois transportes —
 ONDA-CONTROLES-04. O número desce quando a dívida é paga; é para isso que ele
@@ -17,7 +17,19 @@ não mudou. As duas células entraram com `nada-a-acionar`, que é DECISÃO: nã
 o que acionar porque não existe comando de ligar a IMU e o sensor emite sempre.
 O contador de dívida deste arquivo não se moveu.)
 
-**RECONTADO EM 07/09/2026: são 43** — 22 no cabo, 21 no rádio.
+**RECONTADO EM 09/09/2026: são 45** — 23 no cabo, 22 no rádio. As DUAS que
+entraram são os dois lados de `luz.lightbar.brilho@dualsense`, e a subida é de
+HONESTIDADE pela terceira vez neste arquivo: a BRILHO-DE-HARDWARE-01 mediu o
+byte na bancada DELA e a premissa da sprint caiu junto — o `common[42]` obedece
+nos dois transportes, mas o que ele atenua são as **lâmpadas de numeração**, não
+a barra. Palavra dela, com os quatro na mão: *"o que o slicer altera não são as
+cores do lightbar mas os leds que indicam qual player é o dono daquele
+controle"*. <!-- noqa-acento: citação literal dela -->
+A célula subiu de `nao-medido` para `medido` e o `aciona = não` continua onde
+estava — agora por MEDIÇÃO, e não por falta de olhar. O mapa ganhou a chave
+`luz.led_jogador.brilho` para o dono verdadeiro do byte.
+
+**RECONTADO EM 07/09/2026: eram 43** — 22 no cabo, 21 no rádio.
 E o saldo é o que este número existe para mostrar: **três SAÍRAM porque a
 dívida foi paga** — `identidade.cor_do_aparelho@dualsense` no rádio e o
 `movimento.acelerometro@dualsense` nos dois transportes passaram a ser
@@ -468,8 +480,8 @@ def test_a_populacao_nao_depende_da_coluna_que_ela_confere() -> None:
         "que ela é derivada da própria coluna, e o portão ficaria verde "
         "justamente quando alguém esquecesse de responder"
     )
-    assert len(antes) == 43, (
-        f"o recorte de 07/09/2026 tinha 43 células medidas e não "
+    assert len(antes) == 45, (
+        f"o recorte de 09/09/2026 tinha 45 células medidas e não "
         f"acionadas, e agora tem {len(antes)}. Não é reprovação de defeito: é "
         "aviso de que o retrato deste arquivo envelheceu e o texto precisa ser "
         "recontado — leia o cabeçalho deste arquivo, que diz como"
