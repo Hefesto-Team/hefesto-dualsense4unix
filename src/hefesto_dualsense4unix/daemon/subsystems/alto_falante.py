@@ -26,11 +26,11 @@ AS TRÊS DECISÕES DELA, E ELAS SÃO CURTAS
 ``D-0609-O-NO-DE-SOM-VIVE-COM-O-CONTROLE`` (06/09/2026, por delegação,
 reversível numa frase — ``docs/data/decisoes-dela.csv:213``):
 
-1. **o nó vive só enquanto há controle.** Um nó permanente impediria o jogo de
-   perder a saída na troca de transporte, e seria ruído na lista de som quando
-   não há controle nenhum ligado. Ela escolheu o segundo lado: sem controle,
-   sem nó. É por isso que :meth:`AltoFalanteSubsystem._reconciliar` derruba o
-   nó de quem sumiu, e o teste que morde é o de tirar um controle da lista;
+1. **REVERTIDA POR ELA EM 08/09/2026.** Dizia *"o nó vive só enquanto há
+   controle"* — decisão por DELEGAÇÃO, e declarada reversível numa frase. Ela
+   reverteu com todas as letras em `D-0809-O-NO-DE-SOM-POR-CONTROLE-VIVE-
+   SEMPRE` (*"concordo com as 5"*): **nó que some quebra o jogo que o
+   escolheu.** O que vai e volta é a ROTA, e o nó fica;
 2. **no cabo ele não vira saída padrão.** ``priority.session`` baixa
    (``integrations.alto_falante_bt.PRIORIDADE_SESSAO_DO_SOM``). Publicar o nó
    é uma coisa; mandar o som do sistema para ele é outra, e a segunda é dela;
@@ -48,10 +48,12 @@ O QUE ELE NÃO FAZ, E É METADE DO VALOR DE LER ISTO
   que, porque um canal responde, ele FAZ o que a gente esperava dele. O
   honesto é o par: *o canal responde, e o conteúdo vai pelos dois arranjos
   candidatos*;
-* **não liga o monitor ao sink USB do controle no cabo.** O link exige
-  ``module-loopback`` e o casamento por dispositivo USB
-  (``integrations.fontes_de_captura.escolher_sink``, ``integrations.usb_pai``),
-  que estão fora da posse desta sprint. Ver a entrega;
+* **PASSOU A LIGAR — 09/09/2026, SOM-POR-CONTROLE-01.** Esta linha dizia *"não
+  liga o monitor ao sink USB do controle no cabo"*, e era verdade: o
+  ``module-loopback`` e o casamento por dispositivo USB estavam fora da posse
+  daquela sprint. Estão dentro desta. Quem resolve a rota é
+  ``integrations.alto_falante_bt.rota_do_no``, e ele é o MESMO que a janela
+  chama por ``app/audio_saida`` — uma pergunta, um dono;
 * **não é registrado no daemon.** ``daemon/subsystems/__init__.py``,
   ``daemon/lifecycle.py`` e ``daemon/connection.py`` — os TRÊS lugares que
   ligam um subsystem, e os três fora da posse. **Este subsystem nasce órfão de
@@ -59,22 +61,32 @@ O QUE ELE NÃO FAZ, E É METADE DO VALOR DE LER ISTO
   registry nomeia (o ``BtMicSubsystem`` nasceu órfão em 25/07 sem ninguém
   saber).
 
-E O ÓRFÃO TEM DE CONTINUAR ÓRFÃO ATÉ GANHAR ROTA (medido em 07/09/2026)
-------------------------------------------------------------------------
-A leitura fácil de *"subsistema escrito que o daemon nunca monta"* é *"então é
-só ligar"*. **Aqui não é**, e o motivo está duas seções acima: sem o
-``module-loopback``, o nó publicado é um sumidouro. Com os quatro DualSense na
-mesa dela, :meth:`AltoFalanteSubsystem.alvos` devolve os quatro — dois no
-rádio, onde ``app/audio_saida.rota_do_no`` recusa de propósito — e os quatro
-nascem com o MESMO rótulo, porque
-:meth:`GerenciadorDeNosDeSom._construir` não passa rótulo próprio e o default
-é a constante ``DESCRICAO_PROVISORIA``.
+O ÓRFÃO GANHOU A ROTA — E CONTINUA ÓRFÃO POR TRÊS LINHAS QUE NÃO SÃO DAQUI
+----------------------------------------------------------------------------
+**As duas razões de 07/09 para não o ligar caíram em 09/09**, e as duas eram
+razões de verdade:
 
-Quem for ligar: a entrega que falta é **a rota**, com UM dono para a pergunta
-*"onde este nó entrega?"* — hoje ela tem duas respostas escritas, esta e a de
-``app/audio_saida.py`` (``rota_do_no`` + ``argv_para_ligar_o_no``), e nenhuma
-das duas está no produto. A régua que trava o par é
-``tests/unit/test_o_no_de_som_nao_nasce_sumidouro.py``.
+* *"sem o ``module-loopback``, o nó publicado é um sumidouro"* — agora
+  :class:`~integrations.alto_falante_bt.SinkVirtualPipeWire` sobe o loopback
+  junto, e a pergunta *"onde este nó entrega?"* passou a ter **um** dono
+  (``integrations.alto_falante_bt.rota_do_no``), que é o mesmo que a janela
+  chama por ``app/audio_saida``. Eram duas respostas escritas; ficou uma;
+* *"os quatro nascem com o MESMO rótulo"* — agora cada um nasce «Alto-falante
+  do Controle N», com o número do ASSENTO, pelo mesmo gancho do «Microfone do
+  Controle N» (decisão dela de 09/09, *"4a"*).
+
+**O QUE FALTA PARA ELE VIVER NA MESA DELA, e não está nesta árvore:** as três
+linhas do registro — ``daemon/subsystems/__init__.py`` (a lista),
+``daemon/lifecycle.py`` (o ``_safe_start`` no ``run()``) e
+``daemon/connection.py`` (o ``_stop_*`` no ``shutdown()``). Os TRÊS estão fora
+da posse da SOM-POR-CONTROLE-01, e a receita de duas metades é a armadilha que
+o ``subsystems/__init__.py`` já nomeia: quem faz duas sobe o subsystem e nunca
+o para, e o nó fica na lista de saída dela **depois de o daemon morrer**.
+
+A régua que trava o par continua sendo
+``tests/unit/test_o_no_de_som_nao_nasce_sumidouro.py`` — e ela sempre permitiu
+esta cura: *"ela NÃO proíbe ligar o subsystem; ela trava o PAR — se ele subir,
+o nó tem de ter rota"*.
 """
 
 from __future__ import annotations
@@ -98,6 +110,15 @@ logger = get_logger(__name__)
 #: *"apareceu/sumiu controle?"*. O mesmo número da metade de entrada.
 RECONCILIA_S = 5.0
 
+#: Os doze dígitos hex de um MAC. Um ``uniq`` que não os tenha não é endereço,
+#: e `norm_mac` só FILTRA hex — sem esta trava, `"a"` viraria uma chave válida
+#: e casaria com qualquer coisa. Mesma régua da metade de entrada.
+_UNIQ_HEX = 12
+
+#: O transporte suposto quando quem chamou não disse qual é. É o CABO porque é
+#: o único onde há rota hoje, e supor rádio faria o nó recusar antes de tentar.
+TRANSPORTE_CABO = "usb"
+
 
 @dataclass(frozen=True)
 class ControleNaLista:
@@ -116,13 +137,23 @@ class ControleNaLista:
 class GerenciadorDeNosDeSom:
     """Sobe/derruba um :class:`SinkVirtualPipeWire` por controle na lista.
 
-    ``reconciliar()`` é idempotente e barato, e é ele que faz o *"vive só
-    enquanto há controle"* da decisão dela: um controle que sai da lista tem o
-    nó derrubado, e os outros ficam de pé.
+    ``reconciliar()`` é idempotente e barato: um controle que sai da lista tem
+    o nó derrubado, e os outros ficam de pé.
+
+    **O CICLO DE VIDA É O DE 08/09/2026, e é dela.** Este texto dizia *"é ele
+    que faz o «vive só enquanto há controle»"* — a decisão de 06/09, por
+    delegação. Ela a reverteu (`D-0809-O-NO-DE-SOM-POR-CONTROLE-VIVE-SEMPRE`):
+    o nó que ela quer é FIXO, e é a ROTA que vai e volta. Enquanto o subsystem
+    não estiver registrado, quem publica os quatro nós fixos não existe — este
+    gerenciador segue a lista viva, e o que a decisão dela cobra dele é
+    **não derrubar o que não saiu**, que é o que ele já faz.
     """
 
-    def __init__(self, *, fabrica: Any = None) -> None:
+    def __init__(
+        self, *, fabrica: Any = None, fonte_por_controle: Any = None
+    ) -> None:
         self._fabrica = fabrica
+        self._fonte_por_controle = fonte_por_controle
         self._nos: dict[str, Any] = {}
         self._acordar = threading.Event()
 
@@ -130,31 +161,77 @@ class GerenciadorDeNosDeSom:
     def nos(self) -> dict[str, Any]:
         return dict(self._nos)
 
-    def _construir(self, uniq: str) -> Any:
+    def _construir(self, uniq: str, transporte: str, mesa: tuple[str, ...]) -> Any:
+        """O nó daquele controle, JÁ com rótulo próprio e rota resolvida.
+
+        O rótulo e a rota nascem aqui e não dentro do nó porque quem sabe a
+        MESA é este gerenciador: ``sink_do_controle`` precisa da lista inteira
+        de ``uniq`` para casar a placa USB certa. Com um só, dois DualSense no
+        cabo entregam o som do P2 no alto-falante do P1.
+        """
         if self._fabrica is not None:
             return self._fabrica(uniq)
         from hefesto_dualsense4unix.integrations.alto_falante_bt import (
             SinkVirtualPipeWire,
+            descricao_do_alto_falante,
+            rota_do_no,
         )
 
-        return SinkVirtualPipeWire(uniq=uniq)
+        return SinkVirtualPipeWire(
+            uniq=uniq,
+            descricao=descricao_do_alto_falante(uniq),
+            rota=rota_do_no(uniq, transporte, mesa, fonte=self._fonte_do_no(uniq)),
+        )
 
-    def reconciliar(self, uniqs: list[str] | None = None) -> None:
+    def _fonte_do_no(self, uniq: str) -> str:
+        """``mix`` ou ``sfx`` para este controle — o padrão dela quando ninguém disse.
+
+        A escolha mora no PERFIL (``ControllerOverrides.speaker.fonte``) e
+        chega aqui por injeção, nunca por leitura de disco no laço: ler o
+        perfil a cada varredura é a tempestade de syscalls que o mapa de
+        motores do ``gamepad.py`` já pagou uma vez.
+        """
+        from hefesto_dualsense4unix.integrations.alto_falante_bt import FONTE_PADRAO
+
+        if self._fonte_por_controle is None:
+            return FONTE_PADRAO
+        try:
+            return self._fonte_por_controle(uniq) or FONTE_PADRAO
+        except Exception:  # pragma: no cover - defensivo
+            logger.debug("som_fonte_ilegivel", uniq=uniq, exc_info=True)
+            return FONTE_PADRAO
+
+    def reconciliar(self, controles: list[Any] | None = None) -> None:
         """Casa os nós vivos com a lista de controles recebida.
 
         **Tirar um controle da lista DERRUBA o nó dele e deixa os outros de
         pé.** Sem isso, um controle sumir derrubaria o som dos quatro — que é
         exatamente o defeito de "a rota some debaixo do jogo", só que causado
         por nós.
+
+        Aceita ``str`` (só o ``uniq``) e :class:`ControleNaLista` (o ``uniq``
+        **e** o transporte). A segunda forma é a que resolve rota; a primeira
+        sobrevive porque as réguas de ciclo de vida a usam, e trocá-las por
+        objeto não mediria nada de novo.
         """
-        alvos = [u for u in (uniqs or []) if u]
+        vistos: dict[str, str] = {}
+        for item in controles or []:
+            uniq = item if isinstance(item, str) else str(getattr(item, "uniq", ""))
+            if not uniq or uniq in vistos:
+                continue
+            transporte = (
+                "" if isinstance(item, str) else str(getattr(item, "transporte", ""))
+            )
+            vistos[uniq] = transporte
+        alvos = list(vistos)
+        mesa = tuple(alvos)
         for uniq in list(self._nos):
             if uniq not in alvos:
                 self._derrubar(uniq)
         for uniq in alvos:
             if uniq in self._nos:
                 continue
-            no = self._construir(uniq)
+            no = self._construir(uniq, vistos[uniq] or TRANSPORTE_CABO, mesa)
             try:
                 subiu = bool(no.iniciar())
             except Exception as exc:  # nunca derruba a varredura
@@ -251,6 +328,11 @@ class AltoFalanteSubsystem:
         self._fonte = fonte_de_controles or controles_na_lista
         self._thread: threading.Thread | None = None
         self._parar = threading.Event()
+        self._backend: Any = None
+        #: O numerador de assento que estava instalado quando este subsystem
+        #: subiu. `Ellipsis` = ele não instalou nada (já havia dono) e não tem
+        #: nada a devolver no `stop` — ver :meth:`start`.
+        self._numerador_anterior: Any = Ellipsis
 
     # -- contrato Subsystem ----------------------------------------------
 
@@ -268,22 +350,86 @@ class AltoFalanteSubsystem:
         del config
         return True
 
-    def alvos(self, controles: list[Any]) -> list[str]:
-        """Os ``uniq`` que ganham nó — os que têm identidade legível.
+    def alvos(self, controles: list[Any]) -> list[Any]:
+        """Os controles que ganham nó — os que têm identidade legível.
 
         Um controle sem ``HID_UNIQ`` NUNCA entra: sem endereço não há de quem
         seja o nó, e dois anônimos disputariam o mesmo nome. Ausência é
         resposta.
+
+        **Devolve o CONTROLE e não o ``uniq``**, como o ``bt_mic.alvos`` já
+        fazia: quem resolve a rota precisa do TRANSPORTE ao lado, e voltar a
+        pedi-lo depois seria uma segunda varredura de sysfs com a chance de
+        discordar da primeira.
         """
         from hefesto_dualsense4unix.integrations.alto_falante_bt import nome_do_sink
 
-        vistos: list[str] = []
+        vistos: list[Any] = []
+        conhecidos: set[str] = set()
         for controle in controles:
             uniq = str(getattr(controle, "uniq", "") or "")
-            if not nome_do_sink(uniq) or uniq in vistos:
+            if not nome_do_sink(uniq) or uniq in conhecidos:
                 continue
-            vistos.append(uniq)
+            conhecidos.add(uniq)
+            vistos.append(controle)
         return vistos
+
+    def _controles_da_mesa(self) -> list[dict[str, Any]]:
+        """``describe_controllers()`` do backend, ou ``[]`` quando ele não sabe.
+
+        ``getattr`` porque nem todo backend é o de produção: os dublês da suíte
+        e o backend de um controle só não conhecem a pergunta, e um backend que
+        não conhece a pergunta não pode virar portão silencioso.
+        """
+        descrever = getattr(self._backend, "describe_controllers", None)
+        if not callable(descrever):
+            return []
+        try:
+            itens = descrever()
+        except Exception:  # pragma: no cover - defensivo
+            logger.debug("som_mesa_ilegivel", exc_info=True)
+            return []
+        if not isinstance(itens, list):
+            return []
+        return [item for item in itens if isinstance(item, dict)]
+
+    def numero_do_assento(self, uniq: str) -> int | None:
+        """P1..P4 deste controle — o número que vai no rótulo do nó.
+
+        **A MESMA REGRA do ``BtMicSubsystem.numero_do_assento``, palavra por
+        palavra, e é obrigatório que seja:** os dois rótulos que ela lê —
+        «Alto-falante do Controle N» e «Microfone do Controle N» — têm de dizer
+        o MESMO número sobre o MESMO aparelho, lado a lado na mesma lista de
+        som. A regra é *filtrar por ``connected`` e enumerar a partir de 1*, e
+        as duas armadilhas que ela evita estão medidas em 09/09/2026:
+
+        * **não é o ``index``** de ``describe_controllers()``: aquele é a
+          posição em ``list(self._handles)``, que conta o controle DESLIGADO —
+          dá assento a quem não está na mesa e rouba o assento 1 de quem está;
+        * **não é ``coop.resolve_player_numbers``**: com o co-op desligado ele
+          responde ``1`` para todos, e a lista dela ganharia quatro
+          «Alto-falante do Controle 1».
+
+        **DUAS IMPLEMENTAÇÕES DA MESMA REGRA É DÍVIDA, e ela está declarada:**
+        a de lá vive em ``daemon/subsystems/bt_mic.py``, que não está na posse
+        desta sprint, então não deu para as duas chamarem uma terceira. O que
+        segura o par é régua, não boa vontade —
+        ``tests/unit/test_o_som_por_controle_cai_em_cada_um.py`` alimenta as
+        DUAS com a mesma mesa e reprova a divergência.
+
+        Sem daemon vivo não há assento: ``None`` é *"não sei o número"*, e o
+        rótulo nasce sem número — nunca com um inventado.
+        """
+        from hefesto_dualsense4unix.core.sysfs_leds import norm_mac
+
+        chave = norm_mac(str(uniq)) or ""
+        if len(chave) != _UNIQ_HEX:
+            return None
+        conectados = [i for i in self._controles_da_mesa() if i.get("connected")]
+        for posicao, item in enumerate(conectados, start=1):
+            if (norm_mac(str(item.get("uniq") or "")) or "") == chave:
+                return posicao
+        return None
 
     def uniqs_com_no(self) -> frozenset[str]:
         """Os ``uniq`` cujo nó está DE PÉ agora — o efeito, não o pedido."""
@@ -302,9 +448,10 @@ class AltoFalanteSubsystem:
         Nada de bloquear o event loop: a varredura do sysfs e o ``pactl`` do
         ``load-module`` rodam na thread.
         """
-        del ctx
+        self._backend = getattr(ctx, "controller", None)
         if self._thread is not None and self._thread.is_alive():
             return
+        self._instalar_o_numerador()
         self._gerenciador = self._gerenciador_injetado or GerenciadorDeNosDeSom()
         self._parar.clear()
         self._thread = threading.Thread(
@@ -330,7 +477,47 @@ class AltoFalanteSubsystem:
             with contextlib.suppress(Exception):
                 await asyncio.to_thread(thread.join, 2.0)
         self._gerenciador = None
+        self._desinstalar_o_numerador()
+        self._backend = None
         logger.info("som_subsystem_parado")
+
+    # -- o número do assento, que é do rótulo e de mais nada --------------
+
+    def _instalar_o_numerador(self) -> None:
+        """Instala o numerador de assento **só se ninguém o estiver atendendo**.
+
+        O registro é UM (``dualsense_bt_audio.registrar_numerador_de_assento``)
+        e serve aos dois rótulos, porque a resposta tem de ser a mesma nos
+        dois. Quem chega primeiro atende; quem chega depois não derruba o
+        dono, e a prova de que havia dono é o valor devolvido pelo registro —
+        não existe leitor, e inventar um seria API nova por conveniência.
+
+        Sem isto, subir este subsystem depois do ``BtMicSubsystem`` trocaria o
+        numerador dele pelo nosso no meio da sessão, com os dois respondendo o
+        mesmo — troca sem efeito e com risco.
+        """
+        from hefesto_dualsense4unix.integrations.dualsense_bt_audio import (
+            registrar_numerador_de_assento,
+        )
+
+        anterior = registrar_numerador_de_assento(self.numero_do_assento)
+        if anterior is not None:
+            registrar_numerador_de_assento(anterior)
+            self._numerador_anterior = Ellipsis
+            return
+        self._numerador_anterior = anterior
+
+    def _desinstalar_o_numerador(self) -> None:
+        """Devolve o numerador anterior — e só se tiver sido ELE a instalar."""
+        if self._numerador_anterior is Ellipsis:
+            return
+        from hefesto_dualsense4unix.integrations.dualsense_bt_audio import (
+            registrar_numerador_de_assento,
+        )
+
+        with contextlib.suppress(Exception):
+            registrar_numerador_de_assento(self._numerador_anterior)
+        self._numerador_anterior = Ellipsis
 
     # -- laço -------------------------------------------------------------
 
@@ -347,6 +534,13 @@ class AltoFalanteSubsystem:
                 return
 
     def _reconciliar(self, gerenciador: Any) -> None:
+        """Uma varredura: quem está na lista ganha nó, quem saiu perde.
+
+        Passa os CONTROLES, não os ``uniq``: quem resolve a rota precisa do
+        transporte ao lado, e ir buscá-lo depois seria uma segunda varredura de
+        sysfs com a chance de discordar da primeira — que é o defeito que
+        `bt_mic._conectados_da_mesa` já pagou.
+        """
         gerenciador.reconciliar(self.alvos(list(self._fonte())))
 
 
