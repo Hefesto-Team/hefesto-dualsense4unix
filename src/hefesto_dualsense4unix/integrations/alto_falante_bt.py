@@ -2264,6 +2264,25 @@ class RotaDoNo:
     monitor_do_mix: str = ""
 
 
+def _sink_proprio_vivo(uniq: str, saida_curta: str) -> str:
+    """``hefesto_som_<hex6>`` deste controle, se ele estiver na lista viva.
+
+    Lê a MESMA saída de ``pactl list sinks short`` que o chamador já pediu — não
+    há segunda leitura do servidor. O nome vem de :func:`nome_do_sink`, o dono
+    único, e a conferência é por campo exato: um ``in`` na string casaria
+    ``hefesto_som_c311f0`` dentro de ``hefesto_som_c311f0.monitor`` de uma lista
+    de sources, e o monitor não é lugar para onde se manda som.
+    """
+    nome = nome_do_sink(uniq)
+    if not nome:
+        return ""
+    for linha in saida_curta.splitlines():
+        campos = linha.split("\t")
+        if len(campos) >= 2 and campos[1].strip() == nome:
+            return nome
+    return ""
+
+
 def sink_do_controle(
     uniq: str,
     uniqs_na_mesa: Sequence[str] = (),
@@ -2288,9 +2307,23 @@ def sink_do_controle(
     if not uniq:
         return ""
     ler = runner if runner is not None else _rodar
-    sinks = sinks_dualsense(ler(["pactl", "list", "sinks", "short"]) or "")
+    curtos = ler(["pactl", "list", "sinks", "short"]) or ""
+    # O NÓ QUE ESTA CASA PUBLICA CONTA COMO PLACA — 10/09/2026, queixa dela.
+    # Antes desta linha a resposta pelo RÁDIO era `""` *enquanto o som do PC
+    # saía pelo controle*: a ponte 0x35 lê o monitor de `hefesto_som_<hex6>`,
+    # que o `AltoFalanteSubsystem` cria por controle, e três lugares que
+    # perguntam "qual é o sink deste controle?" só sabiam dos `alsa_output` da
+    # Sony. Daí a frase «este controle não publica placa de som» na tela dela
+    # com a música tocando, o "Todo o som do PC" recusando e a onda do
+    # alto-falante sem leitura — tudo pela mesma pergunta mal respondida.
+    #
+    # É RECUO, e não preferência: no CABO quem manda continua sendo
+    # `escolher_sink` sobre as placas de verdade, porque lá o nó do Hefesto é
+    # só a boca de um `module-loopback` que termina naquela mesma placa.
+    proprio = _sink_proprio_vivo(uniq, curtos)
+    sinks = sinks_dualsense(curtos)
     if not sinks:
-        return ""
+        return proprio
     conhecidos = list(uniqs_na_mesa) or [uniq]
     usb: CasamentoUSB | None = None
     with contextlib.suppress(Exception):
@@ -2306,7 +2339,7 @@ def sink_do_controle(
                 por_uniq=usb_pai_por_uniq(conhecidos),
                 por_no=usb_pai_por_no(nos_e_sysfs(longa)),
             )
-    return escolher_sink(sinks, uniq, conhecidos, usb) or ""
+    return escolher_sink(sinks, uniq, conhecidos, usb) or proprio
 
 
 def monitor_da_saida_padrao(
