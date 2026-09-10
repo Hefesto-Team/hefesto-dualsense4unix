@@ -833,6 +833,24 @@ class _PinnedPyDualSense(pydualsense):  # type: ignore[misc]
         # `_mic_mudo_em` o carimbo de tempo da última.
         self.zerar_estado_da_borda_do_mic()
 
+    def _garantir_estado_da_borda_do_mic(self) -> None:
+        """Zera o estado UMA vez, se ninguém o zerou — e não é remendo cego.
+
+        DEZESSEIS dublês desta suíte constroem `_PinnedPyDualSense` por
+        ``__new__`` e listam à mão os campos de que precisam. É o desenho certo
+        para eles (abrir aparelho num teste é proibido nesta casa), e é o
+        desenho que quebra toda vez que o produto ganha um campo: em
+        10/09/2026 a cura da sustentação acrescentou dois, e nove testes
+        caíram com `AttributeError` em quatro arquivos diferentes.
+
+        **A cura não pode ser redigitar o campo em dezesseis lugares** — isso é
+        a mesma família de defeito com outra roupa. Aqui o dono único se
+        garante sozinho, e o `__init__` continua chamando-o para que o custo
+        seja zero no caminho vivo.
+        """
+        if "_mudos_que_pedimos" not in self.__dict__:
+            self.zerar_estado_da_borda_do_mic()
+
     def zerar_estado_da_borda_do_mic(self) -> None:
         """TODO o estado da eleição do mic, num lugar só — e o motivo é medido.
 
@@ -1181,6 +1199,7 @@ class _PinnedPyDualSense(pydualsense):  # type: ignore[misc]
             STATUS_MIC_MUDO,
         )
 
+        self._garantir_estado_da_borda_do_mic()
         mudo = bool(status & STATUS_MIC_MUDO)
         anterior = self._mic_mudo
         self._mic_mudo = mudo
@@ -1267,17 +1286,29 @@ class _PinnedPyDualSense(pydualsense):  # type: ignore[misc]
         fazia sem querer.
         """
         self._mic_mute_desejado = None if muted is None else bool(muted)
-        # A MARCA PARA `_registrar_borda_do_mic`: a próxima mudança do bit de
-        # mudo PARA ESTE VALOR é eco nosso, não gesto dela. `None` devolve a
-        # posse ao kernel e não prevê borda nenhuma.
-        #
-        # É FILA, e o teto de quatro é a cicatriz: sem teto, uma escrita que
-        # nunca ecoa (o report se perdeu no rádio) deixaria a marca viva para
-        # sempre e engoliria um gesto DELA muito depois. Quatro cobre a rajada
-        # de ligar/desligar do canal e esquece o resto.
-        if muted is not None:
-            self._mudos_que_pedimos.append(bool(muted))
-            del self._mudos_que_pedimos[:-4]
+        self._marcar_o_mudo_que_pedimos(muted)
+
+    def _marcar_o_mudo_que_pedimos(self, muted: bool | None) -> None:
+        """A MARCA PARA :meth:`_registrar_borda_do_mic`: este eco é NOSSO.
+
+        A próxima mudança do bit de mudo PARA ESTE VALOR é eco da nossa própria
+        escrita, não gesto dela. ``None`` devolve a posse ao kernel e não prevê
+        borda nenhuma.
+
+        É FILA, e o teto de quatro é a cicatriz: sem teto, uma escrita que
+        nunca ecoa (o report se perdeu no rádio) deixaria a marca viva para
+        sempre e engoliria um gesto DELA muito depois. Quatro cobre a rajada de
+        ligar/desligar do canal e esquece o resto.
+
+        Método próprio desde 10/09/2026 para poder ser MEDIDO sem tocar
+        aparelho: `set_microphone_mute` escreve no firmware, e uma régua que
+        precisasse dele para provar a marca não caberia na suíte.
+        """
+        if muted is None:
+            return
+        self._garantir_estado_da_borda_do_mic()
+        self._mudos_que_pedimos.append(bool(muted))
+        del self._mudos_que_pedimos[:-4]
 
     def set_microphone_led(self, aceso: bool | int | None) -> None:
         """Assume (ou devolve) a POSSE do LED do botão de mudo (`common[8]`).

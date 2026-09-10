@@ -703,7 +703,7 @@ em `:1514`, diz que a faixa aceita parece ser `[0x3d..0x64]`.)
 > | campo | onde é escrito | grau |
 > |---|---|---|
 > | volume, `common[5]` | o laço dos quatro bytes de áudio — `_AUDIO_COMMON_OFFSETS` em `core/backend_pydualsense.py:322-324` | **ALTA** — lido no código |
-> | pré-amp, `common[37]` | `core/backend_pydualsense.py:1471-1478`, com o `VALID_FLAG1_AUDIO_CONTROL2_ENABLE` em `:1475-1477`; o valor padrão `0x2` é o `SP_PREAMP_GAIN_PADRAO` em `core/ds_output_report.py:184` | **ALTA** — lido no código |
+> | pré-amp, `common[37]` | `core/backend_pydualsense.py:1504-1511`, com o `VALID_FLAG1_AUDIO_CONTROL2_ENABLE` em `:1508-1510`; o valor padrão `0x2` é o `SP_PREAMP_GAIN_PADRAO` em `core/ds_output_report.py:184` | **ALTA** — lido no código |
 <!-- ENDEREÇOS REAPONTADOS em 01/09/2026: MIC-DA-MESA-ELEICAO-01 acrescentou
      a leitura disciplinada do byte de áudio e o contador de bordas ao
      `backend_pydualsense.py`, e as citações de áudio desceram ~59 linhas.
