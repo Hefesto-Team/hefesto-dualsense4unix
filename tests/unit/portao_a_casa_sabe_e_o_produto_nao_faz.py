@@ -1184,6 +1184,37 @@ _NAO_E_PROMESSA: dict[str, str] = {
 #: No dia em que o caminho nascer, a entrada deixa de bater com a árvore e
 #: ``test_a_lista_de_lacunas_nao_envelhece_calada`` cobra que ela seja apagada.
 _SEM_CAMINHO_HOJE: dict[str, str] = {
+    # O `alto_falante_bt` ENTROU EM PRODUÇÃO — 09/09/2026, SOM-POR-CONTROLE-01.
+    #
+    # DEZ entradas deste registro saíram de uma vez, e a razão é uma só: o
+    # módulo `integrations/alto_falante_bt.py` passou a ser IMPORTADO por
+    # `app/audio_saida.py`, que é alcançado. Ele virou a casa da pergunta *"onde
+    # este nó de som entrega?"* — o daemon precisava dela e **não importa nada
+    # de `app/`** (a régua está escrita em `integrations/fontes_de_captura.py`),
+    # então a resposta mudou de endereço em vez de ganhar uma segunda cópia.
+    #
+    # DUAS das dez ganharam chamador de verdade: `nome_do_sink` (o `sink_name`
+    # do nó, agora o único — o `hefesto_alto_falante_<assento>` que morava no
+    # `audio_saida` MORREU) e `propriedades_do_sink` (as aspas duplas sem as
+    # quais «Alto-falante do Controle 1» chegaria ao PipeWire como
+    # «Alto-falante»).
+    #
+    # AS OUTRAS OITO entraram pela porta do módulo: a régua deste portão diz que
+    # um símbolo está alcançado quando **um nó de topo de um módulo alcançado o
+    # cita**, e `Arranjo`, `CodificadorOpus`, `ContagemDaBomba`, `Diagnostico`,
+    # `montar_com_o_common_preservado`, `orcamento_do_degrau`, `tag_tlv` e
+    # `versao_libopus` são citados por definições de topo do próprio
+    # `alto_falante_bt`. **Elas não ganharam chamador de produção**, e a dívida
+    # que a nota de cada uma descrevia continua exatamente onde estava — o
+    # `AltoFalanteSubsystem` fora do `run()` de `daemon/lifecycle.py`, da lista
+    # de `daemon/subsystems/__init__.py` e do `shutdown()` de
+    # `daemon/connection.py`, os três fora da posse daquela sprint e desta. Essa
+    # dívida NÃO se perdeu: ela está escrita no docstring de
+    # `daemon/subsystems/alto_falante.py` (seção *"O ÓRFÃO GANHOU A ROTA"*), com
+    # os três endereços e a receita de três metades. Apagar aqui é o que o
+    # contrato deste portão manda quando a acusação some — manter a entrada
+    # seria a lápide que ele existe para não deixar envelhecer.
+    #
     # A COLUNA ATENÇÃO PERDEU A TELA E AS FONTES FICARAM — 07/09/2026.
     #
     # Ordem dela: *"em jogar remover essa seção do atenção, nenhum aviso esse —
@@ -1320,22 +1351,6 @@ _SEM_CAMINHO_HOJE: dict[str, str] = {
         "veredito dela no `docs/data/ensaios.csv`, e só então o arranjo vencedor "
         "vira caminho de produção. 07/09/2026."
     ),
-    'integrations/alto_falante_bt.py::ContagemDaBomba': (
-        "A BOMBA, 07/09/2026 — o que a bomba contou, e o campo se chama "
-        "`escritas_aceitas_pelo_kernel` de propósito: `os.write()` devolve sucesso "
-        "quando o KERNEL aceita, nunca quando o firmware obedece. A ressalva viaja "
-        "colada ao número porque é ele que alguém citaria para concluir que a ponte "
-        "funciona — a FALÁCIA DO CANAL QUE RESPONDE. ONDE O CAMINHO SE PERDE: o "
-        "produto não pode chamar isto sem ESCOLHER um arranjo, e a escolha é DELA — "
-        "as duas fontes publicadas divergem sobre onde o áudio mora dentro do "
-        "`0x39` e uma cita a outra. O `AltoFalanteSubsystem` também continua fora "
-        "do `run()` de `daemon/lifecycle.py` e da lista de "
-        "`daemon/subsystems/__init__.py`. O QUE FECHA: o ensaio 1 da "
-        "MESA-DE-QUATRO-01 rodando com a orelha dela "
-        "(`scripts/ensaios/o_som_que_sai.py --escrever --eu-estou-ouvindo`), o "
-        "veredito dela no `docs/data/ensaios.csv`, e só então o arranjo vencedor "
-        "vira caminho de produção. 07/09/2026."
-    ),
     'integrations/alto_falante_bt.py::argv_do_gravador': (
         "A BOMBA, 07/09/2026 — o comando que lê PCM cru do monitor de um nó "
         "(`pw-record`/`parec`, s16le 48 kHz estéreo, sem conversão nossa no meio). "
@@ -1410,48 +1425,6 @@ _SEM_CAMINHO_HOJE: dict[str, str] = {
         "nada, e foi assim que o `BtMicSubsystem` nasceu órfão em 25/07/2026. "
         "06/09/2026."
     ),
-    'integrations/alto_falante_bt.py::CodificadorOpus': (
-        "SOM-QUE-SAI-01, 06/09/2026 — o ENCODER que faltava, nomeado pelo mapa em "
-        "`audio.alto_falante@dualsense`.radio_codigo_ref (`opus_encoder_create` e "
-        "`opus_encode` não existiam em `src/`). MEDIDO: CBR 160 kbps fecha 200 "
-        "bytes por quadro, o `len` que as duas fontes declaram. O chamador "
-        "natural é a ponte de saída, que só se escreve DEPOIS do ensaio 1 da "
-        "MESA-DE-QUATRO-01 escolher o arranjo. ONDE O CAMINHO SE PERDE: o "
-        "`AltoFalanteSubsystem` não está no `run()` de `daemon/lifecycle.py` nem "
-        "na lista de `daemon/subsystems/__init__.py`, e os dois estão FORA da "
-        "posse desta sprint (o frontmatter dá três arquivos). O QUE FECHA: "
-        "registrar o subsystem nos DOIS lugares — o próprio "
-        "`subsystems/__init__.py` avisa que acrescentar à lista NÃO liga nada, e "
-        "foi assim que o `BtMicSubsystem` nasceu órfão em 25/07/2026. 06/09/2026."
-    ),
-    'integrations/alto_falante_bt.py::Arranjo': (
-        "SOM-QUE-SAI-01, 06/09/2026 — um dos DOIS candidatos ao corpo do `0x39`, "
-        "com a procedência colada. O mapa registra os dois sem escolher e é o "
-        "ensaio que escolhe; até lá ninguém em produção pode montar um. ONDE O "
-        "CAMINHO SE PERDE: o `AltoFalanteSubsystem` não está no `run()` de "
-        "`daemon/lifecycle.py` nem na lista de `daemon/subsystems/__init__.py`, e "
-        "os dois estão FORA da posse desta sprint (o frontmatter dá três "
-        "arquivos). O QUE FECHA: registrar o subsystem nos DOIS lugares — o "
-        "próprio `subsystems/__init__.py` avisa que acrescentar à lista NÃO liga "
-        "nada, e foi assim que o `BtMicSubsystem` nasceu órfão em 25/07/2026. "
-        "06/09/2026."
-    ),
-    'integrations/alto_falante_bt.py::montar_com_o_common_preservado': (
-        "A METADE *COM* DO PAR COM/SEM, 08/09/2026 — o corpo do 0x39 com o "
-        "`[2] = 0x10` e o `common` de 47 B intacto em [3..49], que é o único "
-        "envelope que esta bancada mediu o firmware aceitar por rádio (a cor na "
-        "lightbar, com o olho dela, 15/08/2026). As seis passadas do ensaio de "
-        "07/09 variaram a TAG e o ARRANJO e NÃO variaram este byte; os dois "
-        "candidatos externos escrevem 0x91 exatamente ali. Alcançado por "
-        "`Arranjo.montar` (via `ARRANJO_COMMON_PRIMEIRO`) e pelo ensaio "
-        "`scripts/ensaios/o_som_que_sai.py --arranjo common-preservado`. ONDE O "
-        "CAMINHO SE PERDE: o mesmo do irmão logo abaixo — o produto não pode "
-        "chamar isto sem ESCOLHER um arranjo, e a escolha é DELA, pela orelha, "
-        "no ensaio de bancada. O QUE FECHA: a passada com/sem contra as de "
-        "`[2] = 0x91`, que separa \"o arranjo está errado\" de \"o aparelho não "
-        "faz\" — e depois dela, o `AltoFalanteSubsystem` registrado nos DOIS "
-        "lugares. 08/09/2026."
-    ),
     'integrations/alto_falante_bt.py::common_de_audio': (
         "O ENVELOPE DE [3..49] DO ENSAIO, 08/09/2026 — os 47 B que PEDEM rota, "
         "volume e pré-amp, com os três bits de validação ligados. Ele nasceu de "
@@ -1481,46 +1454,12 @@ _SEM_CAMINHO_HOJE: dict[str, str] = {
         "que acrescentar à lista NÃO liga nada, e foi assim que o "
         "`BtMicSubsystem` nasceu órfão em 25/07/2026. 06/09/2026."
     ),
-    'integrations/alto_falante_bt.py::tag_tlv': (
-        "SOM-QUE-SAI-01, 06/09/2026 — o byte de tag da cadeia TLV (`tag | "
-        "presente [| duplo]`), conferido contra o `0xD2` que o mapa registra do "
-        "Senshi. Alcançado por `Arranjo.montar`. ONDE O CAMINHO SE PERDE: o "
-        "`AltoFalanteSubsystem` não está no `run()` de `daemon/lifecycle.py` nem "
-        "na lista de `daemon/subsystems/__init__.py`, e os dois estão FORA da "
-        "posse desta sprint (o frontmatter dá três arquivos). O QUE FECHA: "
-        "registrar o subsystem nos DOIS lugares — o próprio "
-        "`subsystems/__init__.py` avisa que acrescentar à lista NÃO liga nada, e "
-        "foi assim que o `BtMicSubsystem` nasceu órfão em 25/07/2026. 06/09/2026."
-    ),
     'integrations/alto_falante_bt.py::degrau_para_payload': (
         "SOM-QUE-SAI-01, 06/09/2026 — o MENOR degrau da escada cujo orçamento "
         "comporta o payload, lido de TABELA e nunca de aritmética (a fórmula `78 "
         "+ 64 * (id - 0x31)` dá 590 no `0x39` contra 547). Quem o chamaria é o "
         "empacotador do D5, que só se escreve depois do D4. ONDE O CAMINHO SE "
         "PERDE: o `AltoFalanteSubsystem` não está no `run()` de "
-        "`daemon/lifecycle.py` nem na lista de `daemon/subsystems/__init__.py`, e "
-        "os dois estão FORA da posse desta sprint (o frontmatter dá três "
-        "arquivos). O QUE FECHA: registrar o subsystem nos DOIS lugares — o "
-        "próprio `subsystems/__init__.py` avisa que acrescentar à lista NÃO liga "
-        "nada, e foi assim que o `BtMicSubsystem` nasceu órfão em 25/07/2026. "
-        "06/09/2026."
-    ),
-    'integrations/alto_falante_bt.py::orcamento_do_degrau': (
-        "SOM-QUE-SAI-01, 06/09/2026 — quantos bytes cabem num degrau depois do "
-        "`common` de 47 B. Derivado da tabela, e alcançado por "
-        "`degrau_para_payload`. ONDE O CAMINHO SE PERDE: o `AltoFalanteSubsystem` "
-        "não está no `run()` de `daemon/lifecycle.py` nem na lista de "
-        "`daemon/subsystems/__init__.py`, e os dois estão FORA da posse desta "
-        "sprint (o frontmatter dá três arquivos). O QUE FECHA: registrar o "
-        "subsystem nos DOIS lugares — o próprio `subsystems/__init__.py` avisa "
-        "que acrescentar à lista NÃO liga nada, e foi assim que o "
-        "`BtMicSubsystem` nasceu órfão em 25/07/2026. 06/09/2026."
-    ),
-    'integrations/alto_falante_bt.py::nome_do_sink': (
-        "SOM-QUE-SAI-01, 06/09/2026 — `hefesto_som_<hex6>` a partir do `uniq`, e "
-        "a identidade vem do CONTROLE, nunca do transporte. Chamado por "
-        "`SinkVirtualPipeWire.__init__` e por `AltoFalanteSubsystem.alvos`. ONDE "
-        "O CAMINHO SE PERDE: o `AltoFalanteSubsystem` não está no `run()` de "
         "`daemon/lifecycle.py` nem na lista de `daemon/subsystems/__init__.py`, e "
         "os dois estão FORA da posse desta sprint (o frontmatter dá três "
         "arquivos). O QUE FECHA: registrar o subsystem nos DOIS lugares — o "
@@ -1544,19 +1483,6 @@ _SEM_CAMINHO_HOJE: dict[str, str] = {
         "`subsystems/__init__.py` avisa que acrescentar à lista NÃO liga nada, e "
         "foi assim que o `BtMicSubsystem` nasceu órfão em 25/07/2026. 06/09/2026."
     ),
-    'integrations/alto_falante_bt.py::propriedades_do_sink': (
-        "SOM-QUE-SAI-01, 06/09/2026 — o `sink_properties=` ENTRE ASPAS DUPLAS, "
-        "que é a cura paga do lado da entrada no mesmo dia: sem as aspas o "
-        "`pipewire-pulse` corta no primeiro espaço e a prioridade nunca chega ao "
-        "nó. Alcançado por `SinkVirtualPipeWire.iniciar`. ONDE O CAMINHO SE "
-        "PERDE: o `AltoFalanteSubsystem` não está no `run()` de "
-        "`daemon/lifecycle.py` nem na lista de `daemon/subsystems/__init__.py`, e "
-        "os dois estão FORA da posse desta sprint (o frontmatter dá três "
-        "arquivos). O QUE FECHA: registrar o subsystem nos DOIS lugares — o "
-        "próprio `subsystems/__init__.py` avisa que acrescentar à lista NÃO liga "
-        "nada, e foi assim que o `BtMicSubsystem` nasceu órfão em 25/07/2026. "
-        "06/09/2026."
-    ),
     'integrations/alto_falante_bt.py::rodar_pactl': (
         "SOM-QUE-SAI-01, 06/09/2026 — a porta pública que deixa o ensaio "
         "PERGUNTAR ao servidor (`pactl list sinks`, `get-default-sink`) em vez de "
@@ -1570,17 +1496,6 @@ _SEM_CAMINHO_HOJE: dict[str, str] = {
         "que acrescentar à lista NÃO liga nada, e foi assim que o "
         "`BtMicSubsystem` nasceu órfão em 25/07/2026. 06/09/2026."
     ),
-    'integrations/alto_falante_bt.py::Diagnostico': (
-        "SOM-QUE-SAI-01, 06/09/2026 — por que o nó sobe, ou por que não sobe, um "
-        "fato por linha: o molde do *ausência é resposta* da metade de entrada. "
-        "Devolvido por `diagnosticar`. ONDE O CAMINHO SE PERDE: o "
-        "`AltoFalanteSubsystem` não está no `run()` de `daemon/lifecycle.py` nem "
-        "na lista de `daemon/subsystems/__init__.py`, e os dois estão FORA da "
-        "posse desta sprint (o frontmatter dá três arquivos). O QUE FECHA: "
-        "registrar o subsystem nos DOIS lugares — o próprio "
-        "`subsystems/__init__.py` avisa que acrescentar à lista NÃO liga nada, e "
-        "foi assim que o `BtMicSubsystem` nasceu órfão em 25/07/2026. 06/09/2026."
-    ),
     'integrations/alto_falante_bt.py::diagnosticar': (
         "SOM-QUE-SAI-01, 06/09/2026 — fotografa as pré-condições do nó sem mexer "
         "em nada (só leitura). O chamador natural é o `doctor` e a tela de "
@@ -1592,17 +1507,6 @@ _SEM_CAMINHO_HOJE: dict[str, str] = {
         "próprio `subsystems/__init__.py` avisa que acrescentar à lista NÃO liga "
         "nada, e foi assim que o `BtMicSubsystem` nasceu órfão em 25/07/2026. "
         "06/09/2026."
-    ),
-    'integrations/alto_falante_bt.py::versao_libopus': (
-        "SOM-QUE-SAI-01, 06/09/2026 — a versão da libopus vista pelo handle do "
-        "ENCODER (o irmão de entrada tem a sua, pelo handle do decodificador). "
-        "Alcançado por `diagnosticar`. ONDE O CAMINHO SE PERDE: o "
-        "`AltoFalanteSubsystem` não está no `run()` de `daemon/lifecycle.py` nem "
-        "na lista de `daemon/subsystems/__init__.py`, e os dois estão FORA da "
-        "posse desta sprint (o frontmatter dá três arquivos). O QUE FECHA: "
-        "registrar o subsystem nos DOIS lugares — o próprio "
-        "`subsystems/__init__.py` avisa que acrescentar à lista NÃO liga nada, e "
-        "foi assim que o `BtMicSubsystem` nasceu órfão em 25/07/2026. 06/09/2026."
     ),
     # AS DUAS DA MESA DE MEDIÇÃO — 06/09/2026, A-VALIDACAO-DOS-QUATRO-01. Elas
     # nascem declaradas em vez de nascerem esquecidas, e a lápide diz onde o
@@ -1836,18 +1740,25 @@ _SEM_CAMINHO_HOJE: dict[str, str] = {
     # justamente `app/audio_saida.py`. As duas se encontram sem que nenhuma abra
     # o arquivo da outra — e é por isso que a promessa existe antes do caminho.
     "app/audio_saida.py::no_do_controle": (
-        "O alto-falante virtual de UMA entrada de `state_full.controllers` — o nó "
-        "`Alto-falante · P1`…`P4`, com nome e id que não sabem do transporte "
-        "(app/audio_saida.py:1548). É a porta da seção: `plano_de_publicacao` só "
-        "recebe o que sai daqui. ONDE O CAMINHO SE PERDE: nenhuma aba monta a "
-        "lista de saída por controle ainda — a aba 02 acende os botões da rota "
-        "(`mandar_o_som_do_pc`), que é a camada 1 do sink do sistema, e não o nó "
-        "virtual. FECHA quando a SOM-QUE-SAI-01 montar o subsistema do "
-        "alto-falante e perguntar por controle, em worker. MEDIDO em 06/09/2026."
+        "O alto-falante virtual de UMA entrada de `state_full.controllers` "
+        "(app/audio_saida.py:1623). É a porta da seção: `plano_de_publicacao` só "
+        "recebe o que sai daqui. "
+        "FATO SUBSTITUÍDO em 09/09/2026 pela SOM-POR-CONTROLE-01: esta entrada "
+        "dizia que o nó se chamava `Alto-falante · P1`…`P4` e citava a linha "
+        "1548, que era esta função e hoje é outra coisa. O nó chama-se "
+        "«Alto-falante do Controle N» (decisão dela, 09/09) e o nome interno "
+        "segue o APARELHO (`hefesto_som_<hex6>`), não o assento — a mesma "
+        "gramática do `hefesto_mic_<hex6>` da MIC-OS-QUATRO-01. "
+        "ONDE O CAMINHO SE PERDE, e a razão encolheu: o nó já sabe do "
+        "transporte e já sobe com loopback, mas as TRÊS linhas de registro do "
+        "daemon (`daemon/subsystems/__init__.py`, `daemon/lifecycle.py`, "
+        "`daemon/connection.py`) ficaram de fora da posse daquela sprint. Até "
+        "elas, `os_nos_de_som_por_controle.py` devolve rc=1 na mesa dela — e "
+        "esse rc=1 é o retrato honesto."
     ),
     "app/audio_saida.py::plano_de_publicacao": (
         "Os comandos `pactl` que põem o nó de pé, ou `argv=()` com a frase de por "
-        "que não há rota (app/audio_saida.py:1713). Ela NÃO executa nada de "
+        "que não há rota (app/audio_saida.py:1758). Ela NÃO executa nada de "
         "propósito: carregar `module-null-sink` põe um nó na lista de saída dela, "
         "na sessão viva, e o aceite pela orelha é o ensaio 1 da MESA-DE-QUATRO-01. "
         "ONDE O CAMINHO SE PERDE: falta o dono do ciclo de vida — quem decide "

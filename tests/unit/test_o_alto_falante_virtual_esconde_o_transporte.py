@@ -7,7 +7,21 @@ transporte — aqui, quem escolhe a saída escolhe um CONTROLE, não um sink.
 
 **As duas decisões que a sprint deixava para ela já estão tomadas**, por
 delegação (`docs/data/decisoes-dela.csv`, `D-0609-UM-NO-DE-SOM-POR-CONTROLE`):
-um nó por controle, nome pelo assento — `Alto-falante · P1` … `P4`.
+um nó por controle, com o número do assento.
+
+**O NOME MUDOU EM 09/09/2026, E QUEM O MUDOU FOI ELA.** Este arquivo aferia
+`Alto-falante · P1` … `P4` e escrevia, como MORDIDA de um dos testes, *"troque
+o rótulo por «Alto-falante do Controle N»"*. Era a leitura certa do mundo de
+06/09 — a decisão de então era por DELEGAÇÃO. Ela decidiu o contrário
+(`D-0909-OS-NOS-SE-CHAMAM-ALTO-FALANTE-E-MICROFONE-DO-CONTROLE-N`, palavra
+dela: *"4a"*), e o par com «Microfone do Controle N» está na LÍNGUA DESTA
+CASA. **O que era a mordida virou o produto**, e o que este arquivo mede agora
+é o nome dela.
+
+E o `sink_name` também tinha DOIS donos — `hefesto_alto_falante_<assento>`
+aqui e `hefesto_som_<hex6>` em `integrations/alto_falante_bt`, que é o que o
+produto de fato publica. Ficou o segundo: ele segue o APARELHO, e por isso
+sobrevive à troca de assento tanto quanto à troca de cabo.
 
 Cada teste deste arquivo diz, na docstring, **o que arrancar para vê-lo
 reprovar**. Nenhum áudio real, nenhum módulo carregado no PipeWire de ninguém:
@@ -35,7 +49,6 @@ from hefesto_dualsense4unix.app.audio_saida import (
     TRANSPORTE_CABO,
     TRANSPORTE_RADIO,
     NoDeAltoFalante,
-    id_do_alto_falante,
     no_do_controle,
     nome_do_alto_falante,
     plano_de_publicacao,
@@ -151,7 +164,7 @@ def test_o_mesmo_controle_no_cabo_e_no_radio_e_o_mesmo_no() -> None:
     """Trocar o cabo pelo rádio não pode trocar o nome nem o id da saída.
 
     MORDIDA: derive o nome ou o id do transporte — por exemplo, fazendo
-    `NoDeAltoFalante.id_do_no` devolver `f"{id_do_alto_falante(self.assento)}_"
+    `NoDeAltoFalante.id_do_no` devolver `f"{nome_do_sink(self.uniq)}_"
     f"{self.transporte}"` — e este teste reprova nas duas comparações. É o
     defeito que o nó existe para não ter: quem escolheu esta saída uma vez
     continua com ela escolhida depois que o controle sai do cabo.
@@ -161,24 +174,23 @@ def test_o_mesmo_controle_no_cabo_e_no_radio_e_o_mesmo_no() -> None:
 
     assert no_cabo is not None
     assert no_radio is not None
-    assert no_cabo.nome == no_radio.nome == "Alto-falante · P1"
-    assert no_cabo.id_do_no == no_radio.id_do_no == "hefesto_alto_falante_p1"
+    assert no_cabo.nome == no_radio.nome == "Alto-falante do Controle 1"
+    assert no_cabo.id_do_no == no_radio.id_do_no == "hefesto_som_11a1b2"
 
 
 def test_o_nome_e_o_id_vem_do_assento_e_de_mais_nada() -> None:
     """Quatro assentos, quatro nomes, e o número é o do JOGADOR.
 
-    A palavra é a do glossário (`P1`…`P4`); *"Controle 1"* não é a língua desta
-    casa. MORDIDA: troque o rótulo por `f"Alto-falante do Controle {n}"` e as
-    quatro comparações caem.
+    A palavra é DELA (`D-0909-OS-NOS-SE-CHAMAM-…`, *"4a"*): «Alto-falante do
+    Controle 1»… MORDIDA: volte o rótulo para `f"Alto-falante · {a.upper()}"`,
+    que é o que esta casa escrevia até 08/09, e as quatro comparações caem.
     """
     assert [nome_do_alto_falante(a) for a in ASSENTOS] == [
-        "Alto-falante · P1",
-        "Alto-falante · P2",
-        "Alto-falante · P3",
-        "Alto-falante · P4",
+        "Alto-falante do Controle 1",
+        "Alto-falante do Controle 2",
+        "Alto-falante do Controle 3",
+        "Alto-falante do Controle 4",
     ]
-    assert id_do_alto_falante("p4") == "hefesto_alto_falante_p4"
 
 
 def test_um_assento_que_o_desenho_nao_tem_nao_ganha_no() -> None:
@@ -188,7 +200,6 @@ def test_um_assento_que_o_desenho_nao_tem_nao_ganha_no() -> None:
     `nome_do_alto_falante` e o produto passa a nomear assentos que não existem.
     """
     assert nome_do_alto_falante("p5") == ""
-    assert id_do_alto_falante("p5") == ""
     assert no_do_controle({"player_slot": 5, "uniq": _UNIQ_NUNCA_VISTO}) is None
     assert rota_do_no(None).motivo == MOTIVO_NO_SEM_ASSENTO
 
@@ -263,10 +274,12 @@ def test_o_plano_do_cabo_liga_o_no_ao_sink_pelos_dois_canais_da_frente(
     assert len(plano.argv) == 2
     criar, ligar = plano.argv
     assert "module-null-sink" in criar
-    assert "sink_name=hefesto_alto_falante_p1" in criar
-    assert 'sink_properties=device.description="Alto-falante · P1"' in criar
+    assert "sink_name=hefesto_som_11a1b2" in criar
+    assert any(
+        "device.description='Alto-falante do Controle 1'" in arg for arg in criar
+    ), criar
     assert "module-loopback" in ligar
-    assert "source=hefesto_alto_falante_p1.monitor" in ligar
+    assert "source=hefesto_som_11a1b2.monitor" in ligar
     assert f"sink={_SINK_P1}" in ligar
     assert "channel_map=front-left,front-right" in ligar
 
@@ -274,15 +287,23 @@ def test_o_plano_do_cabo_liga_o_no_ao_sink_pelos_dois_canais_da_frente(
 def test_sem_placa_de_som_no_cabo_o_no_diz_o_que_fazer() -> None:
     """O `pactl` sem nenhum sink de DualSense é "não sei", e "não sei" se diz.
 
-    MORDIDA: devolva `PlanoDoNo(True, ...)` neste ramo e o produto promete uma
-    saída que não existe.
+    **O NÓ EXISTE MESMO ASSIM — decisão dela de 08/09/2026**
+    (`D-0809-O-NO-DE-SOM-POR-CONTROLE-VIVE-SEMPRE`): *"nó que some quebra o
+    jogo que o escolheu"*. O que falta sem placa é a ROTA, e é ela que o plano
+    recusa — com a frase, e sem um único `module-loopback`.
+
+    MORDIDA: devolva um `module-loopback` neste ramo e o produto liga o som a
+    um sink que ele não resolveu.
     """
     plano = plano_de_publicacao(
         no_do_controle(_entry(_UNIQ_NUNCA_VISTO, slot=3)), runner=_runner(curto="")
     )
 
-    assert plano.vai_publicar is False
-    assert plano.argv == ()
+    assert plano.vai_publicar is True
+    assert plano.tem_rota is False
+    assert len(plano.argv) == 1
+    assert "module-null-sink" in plano.argv[0]
+    assert not any("module-loopback" in a for argv in plano.argv for a in argv)
     assert plano.motivo == MOTIVO_NO_SEM_PLACA_NO_CABO
 
 
@@ -297,20 +318,27 @@ def test_no_radio_sem_ponte_o_no_recusa_com_a_frase() -> None:
     O nó EXISTE (tem nome e id, os mesmos do cabo) e reporta indisponível com a
     frase do quê/por quê/o que fazer.
 
-    MORDIDA: aceite o áudio e jogue fora — devolva
-    `PlanoDoNo(True, argv=(argv_para_publicar_o_no(no),))` neste ramo. O nó
-    aparece na lista de saída dela, ela escolhe, e o som some sem uma palavra.
-    Este teste reprova em `vai_publicar` e em `argv`.
+    **O QUE MUDOU EM 08/09/2026, e foi ELA:** o nó por rádio é PUBLICADO —
+    `D-0809-O-NO-DE-SOM-POR-CONTROLE-VIVE-SEMPRE`. Este teste aferia
+    `vai_publicar is False`, que era o mundo da decisão por delegação de 06/09.
+    O que ele mede agora é o par: o nó existe **e** a frase está lá.
+
+    MORDIDA: apague o `motivo` deste ramo — devolva `PlanoDoNo(True,
+    argv=(argv_para_publicar_o_no(no),))` e nada mais. O nó aparece na lista de
+    saída dela, ela escolhe, e o som some **sem uma palavra**, que é a metade
+    da invariante 4 que a decisão dela NÃO derrubou.
     """
     no = no_do_controle(_entry(_UNIQ_P1, slot=1, transporte=TRANSPORTE_RADIO))
     assert no is not None
 
     plano = plano_de_publicacao(no)
 
-    assert plano.nome == "Alto-falante · P1"
-    assert plano.id_do_no == "hefesto_alto_falante_p1"
-    assert plano.vai_publicar is False
-    assert plano.argv == ()
+    assert plano.nome == "Alto-falante do Controle 1"
+    assert plano.id_do_no == "hefesto_som_11a1b2"
+    assert plano.vai_publicar is True
+    assert plano.tem_rota is False
+    assert len(plano.argv) == 1
+    assert not any("module-loopback" in a for argv in plano.argv for a in argv)
     assert plano.motivo == MOTIVO_NO_SEM_PONTE_NO_RADIO
 
 
@@ -343,7 +371,7 @@ def test_quando_a_ponte_do_radio_existir_o_no_publica_por_ela() -> None:
     assert plano.por_onde == POR_RADIO
     assert plano.sink == ""
     assert len(plano.argv) == 1
-    assert "sink_name=hefesto_alto_falante_p2" in plano.argv[0]
+    assert "sink_name=hefesto_som_11a1b3" in plano.argv[0]
 
 
 def test_ponte_do_radio_que_diz_nao_e_o_mesmo_que_ponte_nenhuma() -> None:
@@ -380,8 +408,8 @@ def test_a_mascara_nao_muda_o_no(flavor: str, usb_da_bancada: None) -> None:
         runner=_runner(),
     )
 
-    assert plano.nome == "Alto-falante · P1"
-    assert plano.id_do_no == "hefesto_alto_falante_p1"
+    assert plano.nome == "Alto-falante do Controle 1"
+    assert plano.id_do_no == "hefesto_som_11a1b2"
     assert plano.sink == _SINK_P1
     assert plano.vai_publicar is True
 
@@ -389,7 +417,7 @@ def test_a_mascara_nao_muda_o_no(flavor: str, usb_da_bancada: None) -> None:
 def test_a_mascara_nao_entra_em_assinatura_nenhuma() -> None:
     """A invariante escrita como régua: `flavor` não é parâmetro desta seção.
 
-    MORDIDA: acrescente `flavor: str = "dualsense"` a qualquer uma das seis e
+    MORDIDA: acrescente `flavor: str = "dualsense"` a qualquer uma das cinco e
     este teste nomeia a que ganhou o parâmetro.
     """
     import inspect
@@ -398,7 +426,6 @@ def test_a_mascara_nao_entra_em_assinatura_nenhuma() -> None:
 
     for nome in (
         "nome_do_alto_falante",
-        "id_do_alto_falante",
         "no_do_controle",
         "assento_do_controle",
         "rota_do_no",
@@ -425,8 +452,9 @@ def test_um_controle_que_nunca_esteve_aqui_ganha_o_mesmo_no() -> None:
     """
     no = no_do_controle(_entry(_UNIQ_NUNCA_VISTO, slot=4))
     assert no is not None
-    assert no.nome == "Alto-falante · P4"
+    assert no.nome == "Alto-falante do Controle 4"
 
     plano = plano_de_publicacao(no, [_UNIQ_NUNCA_VISTO], runner=_runner(curto=""))
-    assert plano.vai_publicar is False
+    assert plano.vai_publicar is True
+    assert plano.tem_rota is False
     assert plano.motivo == MOTIVO_NO_SEM_PLACA_NO_CABO

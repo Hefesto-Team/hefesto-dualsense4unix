@@ -569,6 +569,31 @@ class ProfileSpeakerConfig(BaseModel):
     volume: int = Field(ge=0, le=255)
     muted: bool = False
     rota: int | None = Field(default=None, ge=0, le=3)
+    #: A FONTE do nó de som deste controle — ``"mix"`` (todo o som do PC cai
+    #: aqui também, o *«HDMI completo»* dela) ou ``"sfx"`` (o nó fica livre para
+    #: a corrente que o jogo mandar). Pedido dela, 08/09/2026: *"os somns seja
+    #: hdmi completo seja o canal do sfx caindo pra cada controle"*.
+    #: <!-- noqa-acento: citação literal dela -->
+    #:
+    #: **ADITIVO e sem bump de versão**, como a ``rota``: perfil antigo carrega
+    #: com ``None``, que é **não mexer** — o nó daquele controle segue o padrão
+    #: da casa, que é ``sfx`` por decisão dela
+    #: (``D-0809-NO-CABO-O-PADRAO-DO-SOM-E-SFX``, *"concordo com as 5"*). Com
+    #: ``mix`` por padrão o controle viraria a saída de todo o som do PC
+    #: sozinho, que é a regra que esta casa já recusou.
+    #:
+    #: É CAMADA 1 (o PipeWire), e a ``rota`` é a CAMADA 2 (o byte do firmware).
+    #: São campos diferentes de propósito: a fonte diz **o que entra no nó**, a
+    #: rota diz **por onde o plástico toca o que saiu dele** — o fone, o
+    #: alto-falante, ou os dois. Fundir os dois num só tiraria dela a escolha
+    #: do fone, que ela nomeou com todas as letras.
+    #:
+    #: TIPO FECHADO: um valor que ``rota_do_no`` não saiba tratar não chega ao
+    #: disco. Os dois nomes têm UM dono
+    #: (``integrations.alto_falante_bt.FONTE_MIX`` / ``FONTE_SFX``), e o
+    #: ``Literal`` daqui é conferido contra ele por
+    #: ``tests/unit/test_o_som_por_controle_cai_em_cada_um.py``.
+    fonte: Literal["mix", "sfx"] | None = None
 
     @model_validator(mode="before")
     @classmethod
@@ -598,8 +623,15 @@ class ProfileSpeakerConfig(BaseModel):
         fato escolheu um canal carrega a chave nova.
         """
         dados = handler(self)
-        if isinstance(dados, dict) and dados.get("rota") is None:
-            dados.pop("rota", None)
+        if not isinstance(dados, dict):
+            return dados
+        # A `fonte` entra na MESMA regra, e pela mesma razão: um hefesto de
+        # antes de 09/09/2026 tem `extra="forbid"` e RECUSA o perfil inteiro ao
+        # ver a chave nova. Gravá-la como `null` em todo perfil salvo faria
+        # "voltar uma versão" virar "todos os perfis com som quebrados".
+        for sem_opiniao in ("rota", "fonte"):
+            if dados.get(sem_opiniao) is None:
+                dados.pop(sem_opiniao, None)
         return dados
 
 
