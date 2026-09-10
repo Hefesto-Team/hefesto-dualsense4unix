@@ -1748,12 +1748,18 @@ def dica_do_canal(sono: str, regra: bool | None) -> str:
 # Hefesto ainda não faz o som sair naquele alto-falante — uma CAPACIDADE que
 # devemos, confessada no cartão de um controle que funciona.
 #
-# **A CÉLULA NÃO FOI VIRADA, e virá-la seria mentir ao contrário.** O canal
-# continua fechado: `audio.alto_falante@dualsense` segue com `radio_aciona=não`
-# e causa `divida`, e é ali que a dívida mora — no mapa, que é de quem
-# desenvolve, e não na tela, que é de quem joga. Quem fechar a
-# `SOM-QUE-SAI-01` vira a célula; nada aqui precisa mudar junto, porque não há
-# mais nada aqui.
+# **A CÉLULA NÃO FOI VIRADA, e virá-la seria mentir ao contrário.**
+# `audio.alto_falante@dualsense` segue com `radio_aciona=não`, e é ali que a
+# dívida mora — no mapa, que é de quem desenvolve, e não na tela, que é de
+# quem joga.
+#
+# **O QUE MUDOU EM 10/09/2026, e não muda uma linha deste arquivo:** o som SAIU
+# pelo rádio (report `0x35`, 70 s com a orelha dela) e a ponte por controle
+# passou a ser construída em produção (`SOM-FIADO-01`). A dívida deixou de ser
+# NOSSA e virou bancada: o que falta para a célula virar é o **negativo de
+# rota** e o **teste cego**, os dois DELA. Enquanto isso, a tela continua sem
+# confessar nada — que é a decisão dela citada acima, e ela vale igual quando
+# a dívida é de código e quando é de medição.
 #
 # O QUE SE PERDE, dito por inteiro: o selo era o exemplo vivo de *"quando a
 # célula virar, a tela muda sozinha"* — a leitura do mapa chegando à tela sem

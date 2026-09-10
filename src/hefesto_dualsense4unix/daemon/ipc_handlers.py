@@ -912,7 +912,7 @@ class IpcHandlersMixin:
             MANUAL_PROFILE_LOCK_SEC,
         )
         # `getattr` pelo mesmo motivo que `ProfileManager._categorias_travadas`
-        # (`profiles/manager.py:384-387`): dublês de teste e stores parciais
+        # (`profiles/manager.py:562-565`): dublês de teste e stores parciais
         # continuam funcionando, e "não sei listar" vira "nada a restaurar".
         travadas_antes = getattr(self.store, "manual_override_categories", ()) or ()
         lock_antes = getattr(self.store, "_manual_profile_lock_until", 0.0)
@@ -1134,9 +1134,9 @@ class IpcHandlersMixin:
         A causa é a ORDEM DAS CAMADAS do merge, não a escrita. ``set_led``
         escreve no hardware E grava o valor em ``_desired_default``
         (``_record_desired_locked`` com alvo ``None``,
-        ``core/backend_pydualsense.py:1335``); o ``reassert_resolved_outputs``
+        ``core/backend_pydualsense.py:2558``); o ``reassert_resolved_outputs``
         logo abaixo re-resolve por controle, e o ``_merged_desired_for_key``
-        (``core/backend_pydualsense.py:1222``) põe a camada AUTOMÁTICA do slot
+        (``core/backend_pydualsense.py:6141``) põe a camada AUTOMÁTICA do slot
         (COR-03) EM CIMA do default — a paleta repinta por cima da cor que
         acabou de sair. O caminho por-``uniq`` SEMPRE funcionou pelo mesmo
         motivo, ao contrário: ``apply_output_for`` grava em ``_desired_by_uniq``,
@@ -1146,7 +1146,7 @@ class IpcHandlersMixin:
         segundos depois em vez de instantes.
 
         A camada não é nova: é exatamente o que a GUI já faz desde a R-14
-        (``app/actions/lightbar_actions.py:828`` ``_enviar_led_em_todos`` —
+        (``app/actions/lightbar_actions.py:1199`` ``_enviar_led_em_todos`` —
         "Todos" vira um pedido POR MAC, "sem desligar o automático"). O que
         faltava era o DAEMON fazer o mesmo para quem não é a GUI: a CLI
         (``hefesto test lightbar``) e qualquer chamada IPC direta continuavam

@@ -136,7 +136,7 @@ a ordem de preferência, com versão de esquema nova"*. Isso **caducou em
 árvore fecham aquela porta, e os quatro estão registrados na
 ``REGRA-NAO-REGISTRO-01``:
 
-1. ``identity.load`` (``identity.py:858``) DESCARTA a fila inteira quando a
+1. ``identity.load`` (``identity.py:1619``) DESCARTA a fila inteira quando a
    versão do arquivo difere — um bump renumeraria a mesa dela;
 2. ``identity._save_locked`` só aproveita as entradas do outro lado quando
    ``bruto.get("version") == CONTROLLERS_SCHEMA_VERSION`` (``:940-950``): o

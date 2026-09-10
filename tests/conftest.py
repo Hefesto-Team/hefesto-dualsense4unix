@@ -2694,6 +2694,58 @@ def _nenhum_sysfs_vivo_na_varredura_de_vpad(
         ) = antes
 
 
+@pytest.fixture(autouse=True, scope="session")
+def _nenhum_hidraw_vivo_na_varredura_de_som(
+    tmp_path_factory: pytest.TempPathFactory,
+) -> Iterator[None]:
+    """A varredura de `/sys/class/hidraw` do SOM e do MIC aponta para o VAZIO.
+
+    IRMÃ DA `_nenhum_sysfs_vivo_na_varredura_de_vpad`, E NASCEU DE UM SUSTO
+    ---------------------------------------------------------------------
+    Em 10/09/2026 o `AltoFalanteSubsystem` entrou no `SUBSYSTEM_REGISTRY`
+    (SOM-FIADO-01). Na primeira corrida depois disso,
+    `test_o_no_de_som_nao_nasce_sumidouro` imprimiu isto::
+
+        som_radio_ponte_de_pe   arranjo=0x35  uniq=<o DualSense dela>
+
+    **Aquele `uniq` era o controle DELA, na mesa, ligado** — o endereço real
+    saiu daqui de propósito (`scripts/check_endereco_de_radio.py` pega por
+    FORMA, e está certo). A suíte tinha aberto
+    o hidraw do aparelho dela e subido uma ponte de som — porque
+    `controles_na_lista()` varre `/sys/class/hidraw` de verdade, e agora há
+    linha de produção chamando isso dentro de todo teste que sobe um `Daemon`.
+
+    Não é só hermetismo. Esta casa tem regra: *afirmação sobre aparelho se mede
+    na bancada, nunca na suíte* — e um teste que fala com o DualSense dela
+    disputa o hidraw com o daemon vivo, que é exatamente a armadilha nº 3 de
+    `COMO-OLHAR-A-TELA.md`.
+
+    Vazio, e não um dublê, pelo mesmo motivo da irmã: o default é *"não achei
+    controle nenhum"*, que é a resposta honesta de uma máquina sem DualSense.
+    Quem precisa de uma árvore forjada a monta e aponta a constante para ela
+    com `monkeypatch` de escopo de função, que desfaz por cima desta.
+    """
+    vazio = tmp_path_factory.mktemp("sysfs-sem-hidraw")
+    (vazio / "hidraw").mkdir()
+    try:
+        from hefesto_dualsense4unix.integrations import dualsense_bt_audio
+    except ModuleNotFoundError as erro:  # pragma: no cover - só no job leve do CI
+        # A mesma razão, palavra por palavra, da irmã logo acima: o job "A casa
+        # sabe e o produto não faz" instala só o pytest e nunca importa o
+        # produto. Sem o pacote não há o que blindar.
+        if (erro.name or "").split(".")[0] != "hefesto_dualsense4unix":
+            raise
+        yield
+        return
+
+    antes = dualsense_bt_audio._SYSFS_HIDRAW
+    dualsense_bt_audio._SYSFS_HIDRAW = str(vazio / "hidraw")
+    try:
+        yield
+    finally:
+        dualsense_bt_audio._SYSFS_HIDRAW = antes
+
+
 # ---------------------------------------------------------------------------
 # BINARIO-QUE-SO-EXISTE-NA-ARVORE-DELA-01 (25/08/2026)
 # ---------------------------------------------------------------------------

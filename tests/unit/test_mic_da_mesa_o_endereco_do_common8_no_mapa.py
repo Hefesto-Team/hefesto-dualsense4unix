@@ -54,17 +54,17 @@ CAMPOS = (
 #: aqui de propósito: a cura fácil seria somar 59 a tudo, e somar nelas
 #: QUEBRARIA duas referências que estavam certas.
 ANCORAS: tuple[tuple[str, str], ...] = (
-    (":1259-1260", "VALID_FLAG1_MIC_MUTE_LED_CONTROL_ENABLE"),
-    (":1294-1300", "common[8] = int(mic_led) & 0xFF"),
-    (":1095-1122", "def set_microphone_led"),
-    (":4000", "def set_mic_led"),
-    (":4006-4007", "report[11] no rádio"),
-    (":4009-4013", "CORRIGIDO em 15/08/2026"),
-    (":1359-1360", "build_bt_report"),
-    (":1415-1422", "self.device.write"),
-    (":2496-2509", "should_reclaim_on_wake"),
+    (":1445-1446", "VALID_FLAG1_MIC_MUTE_LED_CONTROL_ENABLE"),
+    (":1488-1494", "common[8] = int(mic_led) & 0xFF"),
+    (":1280-1307", "def set_microphone_led"),
+    (":4520", "def set_mic_led"),
+    (":4527-4528", "report[11] no rádio"),
+    (":4529-4533", "CORRIGIDO em 15/08/2026"),
+    (":1553-1554", "build_bt_report"),
+    (":1615-1622", "self.device.write"),
+    (":2936-2949", "should_reclaim_on_wake"),
     (":361-374", "def _escrever_led_do_mic"),
-    (":751", "_audio_status"),
+    (":829", "_audio_status"),
 )
 
 #: Os endereços que a auditoria aposentou. Se um deles voltar à célula, ou a

@@ -599,7 +599,7 @@ def _aplicar_ponte(daemon: DaemonProtocol, alvo: str) -> bool:
         # SEGUNDO-ESCRITOR-01 (22/08/2026): esta linha é o segundo escritor da
         # `keyboard_emulation.flag`, e por isso ela tem eco na janela. O
         # `set_keyboard_emulation` persiste por padrão
-        # (`daemon/protocols.py:180`), então o gesto não liga o teclado só para
+        # (`daemon/protocols.py:185`), então o gesto não liga o teclado só para
         # esta partida — grava a escolha. Enquanto a janela era o único caminho
         # até a flag, o interruptor da aba Navegação não era relido ao entrar na
         # aba; agora é (`app/app.py`, `_REFRESH_POR_ABA["tab_navegacao_dsx"]`).
@@ -936,7 +936,7 @@ def build_profile_cycle_callback(daemon: DaemonProtocol, direction: int) -> Any:
         # travadas (inclusive `audio`) e portanto aplica o volume do perfil que
         # entra"*) não se cumpria. Este é o gesto que ela usa DENTRO do jogo.
         # `getattr` pelo mesmo motivo que `ProfileManager._categorias_travadas`
-        # (`profiles/manager.py:384-387`): dublês de teste e stores parciais
+        # (`profiles/manager.py:562-565`): dublês de teste e stores parciais
         # continuam funcionando, e "não sei listar" vira "nada a restaurar".
         travadas_antes = getattr(daemon.store, "manual_override_categories", ()) or ()
         lock_antes = getattr(daemon.store, "_manual_profile_lock_until", 0.0)

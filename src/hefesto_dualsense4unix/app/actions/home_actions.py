@@ -1587,7 +1587,7 @@ def palavra_do_transporte(transporte: object) -> str:
 #:    recusas do journal (13, 14 e 15/08) trazem **Errno 16**, que só existe
 #:    quando OUTRO leitor já tem o dispositivo — quem, não está provado, e por
 #:    isso a frase não acusa ninguém. O daemon retoma sozinho a cada
-#:    `GRAB_RECONCILE_SEC` = 2 s (`daemon/lifecycle.py:84`), e o que curou na
+#:    `GRAB_RECONCILE_SEC` = 2 s (`daemon/lifecycle.py:90`), e o que curou na
 #:    medição daquele dia foi reiniciar o Hefesto.
 #:
 #: PROVISÓRIO — decisão dela (o texto exato é palavra dela, PROVA-DE-TELA-01).

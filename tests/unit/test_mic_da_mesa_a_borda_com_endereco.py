@@ -32,7 +32,10 @@ from typing import Any
 import pytest
 
 from hefesto_dualsense4unix.core import physical_report_reader as prr
-from hefesto_dualsense4unix.core.backend_pydualsense import _PinnedPyDualSense
+from hefesto_dualsense4unix.core.backend_pydualsense import (
+    SUSTENTACAO_DO_MUDO_S,
+    _PinnedPyDualSense,
+)
 from hefesto_dualsense4unix.integrations.dualsense_bt_audio import STATUS_MIC_MUDO
 
 _MAC_A = "aabbcc000001"
@@ -40,13 +43,61 @@ _MAC_B = "aabbcc000002"
 
 
 def _handle() -> Any:
-    """Handle com só o estado que `_captura_status_audio` toca."""
+    """Handle com o estado da eleição do mic — pedido AO PRODUTO.
+
+    Este dublê listava os quatro campos à mão, e em 10/09/2026 a cura da
+    sustentação acrescentou dois: sete testes deste arquivo caíram com
+    `AttributeError` porque o dublê ficou mais POBRE que o produto. Agora quem
+    zera é `zerar_estado_da_borda_do_mic`, o dono único — acrescentar campo lá
+    chega aqui de graça.
+    """
     h = _PinnedPyDualSense.__new__(_PinnedPyDualSense)
     h._audio_status = None
-    h._mic_mudo = None
-    h._mic_mudo_seq = 0
-    h._mic_mudo_em = None
+    h.zerar_estado_da_borda_do_mic()
     return h
+
+
+#: O laço de `mic_da_mesa` lê ~31 reports/s — é este o relógio real do
+#: caminho sob prova, e é ele que estes testes usam.
+_PERIODO_S = 1.0 / 31.0
+
+#: Quantos reports cobrem `SUSTENTACAO_DO_MUDO_S` com folga de um.
+_REPORTS_PARA_SUSTENTAR = int(SUSTENTACAO_DO_MUDO_S / _PERIODO_S) + 2
+
+
+@pytest.fixture(autouse=True)
+def _relogio(monkeypatch: pytest.MonkeyPatch) -> None:
+    """O tempo anda UM report a cada leitura — e sem isso nada aqui mede nada.
+
+    A cura de 10/09/2026 (`SUSTENTACAO_DO_MUDO_S`) mudou o contrato: **uma
+    mudança de bit só vira borda depois de SUSTENTAR**, porque com o microfone
+    no ar o firmware oscilava o `MicMuted` a ~16,7 Hz e cada oscilação virava
+    "ela apertou o botão". Com o relógio parado, como este arquivo o deixava,
+    nenhuma mudança sustenta e o contador nunca sobe.
+
+    O alvo é `_relogio_da_borda`, o ponto de injeção do produto, e nunca
+    `time.monotonic` — trocar a stdlib congela o relógio da corrida inteira e
+    envenena o vizinho por ordem de teste.
+    """
+    from hefesto_dualsense4unix.core import backend_pydualsense as bp
+
+    marca = {"agora": 0.0}
+
+    def _andar() -> float:
+        marca["agora"] += _PERIODO_S
+        return marca["agora"]
+
+    monkeypatch.setattr(bp, "_relogio_da_borda", _andar)
+
+
+def _segurar(h: Any, status: int, reports: int = _REPORTS_PARA_SUSTENTAR) -> None:
+    """Repete o MESMO valor tempo bastante para ele sustentar.
+
+    É o que o dedo dela faz: o kernel trava o valor e ele fica. O gating do
+    firmware não faz isso — some antes — e é essa diferença que a cura mede.
+    """
+    for _ in range(reports):
+        h._captura_status_audio(_report_usb(status))
 
 
 def _report_usb(status: int) -> bytes:
@@ -149,8 +200,8 @@ def test_a_borda_carrega_o_uniq_de_quem_apertou() -> None:
     backend = _backend({_MAC_A: a, _MAC_B: b})
 
     for h in (a, b):
-        h._captura_status_audio(_report_usb(0x00))
-    b._captura_status_audio(_report_usb(STATUS_MIC_MUDO))
+        _segurar(h, 0x00)
+    _segurar(b, STATUS_MIC_MUDO)
 
     bordas = backend.bordas_do_mic()
     assert bordas[_MAC_A][0] == 0, "o Jogador 1 não encostou no botão"
@@ -166,11 +217,11 @@ def test_toque_duplo_entre_duas_leituras_conta_duas_bordas() -> None:
     """
     h = _handle()
     backend = _backend({_MAC_A: h})
-    h._captura_status_audio(_report_usb(STATUS_MIC_MUDO))
+    _segurar(h, STATUS_MIC_MUDO)
     antes = backend.bordas_do_mic()[_MAC_A]
 
-    h._captura_status_audio(_report_usb(0x00))
-    h._captura_status_audio(_report_usb(STATUS_MIC_MUDO))
+    _segurar(h, 0x00)
+    _segurar(h, STATUS_MIC_MUDO)
     depois = backend.bordas_do_mic()[_MAC_A]
 
     assert depois[1] == antes[1], "o ESTADO voltou ao que era — este é o ponto"
@@ -193,8 +244,8 @@ def test_handle_sem_uniq_resolvivel_fica_de_fora() -> None:
     """
     h = _handle()
     backend = _backend({"/dev/hidraw3": h})
-    h._captura_status_audio(_report_usb(0x00))
-    h._captura_status_audio(_report_usb(STATUS_MIC_MUDO))
+    _segurar(h, 0x00)
+    _segurar(h, STATUS_MIC_MUDO)
     assert backend.bordas_do_mic() == {}
 
 
@@ -222,4 +273,34 @@ def test_o_contador_sobrevive_a_uma_sessao_inteira(apertos: int) -> None:
             mudo = not mudo
         h._captura_status_audio(_report_usb(STATUS_MIC_MUDO if mudo else 0x00))
 
-    assert backend.bordas_do_mic()[_MAC_A][0] == apertos
+    assert backend.bordas_do_mic()[_MAC_A][0] == apertos, (
+        "cada aperto dela fica no lugar por segundos — os 60 estão espalhados "
+        "em 200 s, logo todos sustentam com folga"
+    )
+
+
+def test_o_repique_que_NAO_sustenta_nao_e_aperto(  # noqa: N802
+) -> None:
+    """A METADE NOVA DO CONTRATO, e ela é a cura de 10/09/2026.
+
+    Com o microfone no ar o firmware oscilava o `MicMuted` a ~16,7 Hz (~60 ms
+    por valor), e cada oscilação virava *"ela apertou o botão"* — o daemon
+    desligava o microfone sozinho aos 1,1 s. Aqui o bit vira e volta rápido
+    demais **sessenta vezes**, e o contador tem de ficar em ZERO.
+
+    MORDIDA: ponha `SUSTENTACAO_DO_MUDO_S = 0.0` e este teste conta 60 apertos
+    que ninguém deu.
+    """
+    h = _handle()
+    backend = _backend({_MAC_A: h})
+    _segurar(h, 0x00)
+    partida = backend.bordas_do_mic()[_MAC_A][0]
+
+    # ~60 ms por valor: dois reports a 31 Hz, bem abaixo dos 300 ms.
+    for i in range(60):
+        _segurar(h, STATUS_MIC_MUDO if i % 2 else 0x00, reports=2)
+
+    assert backend.bordas_do_mic()[_MAC_A][0] == partida, (
+        "o gating do firmware virou aperto — é o defeito que corta o "
+        "microfone dela aos 1,1 s"
+    )

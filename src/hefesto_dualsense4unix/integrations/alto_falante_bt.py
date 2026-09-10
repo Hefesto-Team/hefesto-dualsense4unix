@@ -318,8 +318,30 @@ def _carregar_libopus_encoder() -> ctypes.CDLL:
             ctypes.c_int32,
         ]
         # `opus_encoder_ctl` é VARIÁDICA: prototipar `argtypes` aqui obrigaria
-        # uma assinatura por request, e ctypes já passa int como int no ABI
-        # desta plataforma. Só o retorno é fixado.
+        # uma assinatura por request, então só o retorno é fixado.
+        #
+        # A FRASE QUE ESTAVA AQUI ERA FALSA, E ELA MATAVA O DAEMON — medido em
+        # 10/09/2026. Ela dizia *"ctypes já passa int como int no ABI desta
+        # plataforma"*. **Sem `argtypes`, ctypes passa um `int` do Python como
+        # C `int` de 32 BITS** — e `opus_encoder_create` devolve um `c_void_p`,
+        # que chega ao Python como um `int` de 64.
+        #
+        # Na thread PRINCIPAL isso passa por sorte: o heap do `brk` fica abaixo
+        # de 4 GB e a truncagem não perde byte nenhum. **Numa thread de
+        # trabalho, não**: o glibc aloca numa arena própria, acima de 4 GB.
+        # Medido nesta máquina::
+        #
+        #     thread principal  0x00001ac2da40 -> 0x1ac2da40   (cabe)
+        #     thread de trabalho 0x706a50000ba0 -> 0x50000ba0   (PERDE)
+        #
+        # O ponteiro morto chega em C e o processo INTEIRO cai com
+        # `Segmentation fault`. Ninguém tinha visto porque, até 10/09, todo
+        # `CodificadorOpus` desta casa nascia na thread principal — a
+        # `PonteDeSomPorRadio` é a primeira a construí-lo dentro de uma thread.
+        #
+        # A cura é envelopar o ponteiro em `ctypes.c_void_p` em TODA chamada
+        # variádica; ver `CodificadorOpus._ctl`. Régua:
+        # `tests/unit/test_o_ponteiro_do_opus_atravessa_a_thread.py`.
         lib.opus_encoder_ctl.restype = ctypes.c_int
         _LIB_OPUS_ENC = lib
         return lib
@@ -359,11 +381,27 @@ class CodificadorOpus:
         self.bitrate_bps = bitrate_bps
         # CBR: `OPUS_SET_VBR(0)` ANTES do bitrate. Com VBR ligado o quadro
         # varia de tamanho e o bloco de 200 bytes deixa de fechar.
-        self._lib.opus_encoder_ctl(ponteiro, OPUS_SET_VBR_REQUEST, ctypes.c_int32(0))
-        self._lib.opus_encoder_ctl(
-            ponteiro, OPUS_SET_BITRATE_REQUEST, ctypes.c_int32(bitrate_bps)
-        )
+        self._ctl(OPUS_SET_VBR_REQUEST, 0)
+        self._ctl(OPUS_SET_BITRATE_REQUEST, bitrate_bps)
         self._saida = ctypes.create_string_buffer(4000)
+
+    def _ctl(self, request: int, valor: int) -> int:
+        """`opus_encoder_ctl` com o ponteiro ENVELOPADO — dono único da chamada.
+
+        **O envelope é a cura, não estilo.** `opus_encoder_ctl` é variádica e
+        não tem `argtypes`; sem `ctypes.c_void_p` em volta, o ponteiro do
+        encoder vai como C `int` de 32 bits e perde os bytes altos quando o
+        glibc aloca acima de 4 GB — que é o que acontece em toda thread de
+        trabalho. O processo cai com `Segmentation fault`.
+
+        Ter UM lugar que faz esta chamada é o que impede a próxima pessoa de
+        acrescentar um `ctl` cru e reintroduzir a falha em silêncio.
+        """
+        return int(
+            self._lib.opus_encoder_ctl(
+                ctypes.c_void_p(self._enc), int(request), ctypes.c_int32(int(valor))
+            )
+        )
 
     @property
     def bytes_de_pcm_por_quadro(self) -> int:
@@ -461,6 +499,18 @@ class Arranjo:
     len_haptico: int
     pos_haptico: int
     de_onde_sei: str = "leitura de fonte externa — NÃO medido nesta bancada"
+    #: A cadência de ENVIO **medida**, em segundos. `None` = ninguém mediu, e o
+    #: chamador cai no nominal (:attr:`quadros_de_audio` x 10 ms). Ela existe
+    #: porque o nominal ESTAVA ERRADO: o `0x35` carrega um quadro de 10 ms mas
+    #: o aparelho o consome a cada **10,667 ms** (512/48000), e alimentá-lo a
+    #: 10 ms daria 100 quadros/s num aparelho que come 93,75.
+    intervalo_de_envio_s: float | None = None
+    #: O valor do bloco de controle deste arranjo leva um CONTADOR DE QUADROS
+    #: que o chamador tem de avançar (o `[10]` do `0x35`). Quando `True`,
+    #: :class:`BombaDeSomPeloRadio` monta o bloco a cada report em vez de
+    #: mandar o mesmo `controle` fixo — sem isso o contador ficaria em zero e o
+    #: firmware perderia a conta dos quadros.
+    controle_conta_quadros: bool = False
     #: Este corpo PRESERVA o ``common`` em [3..49] e o ``[2] = 0x10``, em vez de
     #: pôr a tag do AudioControl no byte [2]. Ver
     #: :func:`montar_com_o_common_preservado` — e note que ele não é leitura de
@@ -528,11 +578,17 @@ class Arranjo:
         pkt[self.pos_tag_controle + 1] = self.len_controle
         valor = controle[: self.len_controle]
         pkt[self.pos_tag_controle + 2 : self.pos_tag_controle + 2 + len(valor)] = valor
-        # Háptico (dois sub-blocos do tamanho declarado).
-        pkt[self.pos_tag_haptico] = tag_tlv(BLOCO_HAPTICS, duplo=True)
-        pkt[self.pos_tag_haptico + 1] = self.len_haptico
-        corpo = haptico[: self.len_haptico * 2]
-        pkt[self.pos_haptico : self.pos_haptico + len(corpo)] = corpo
+        # Háptico (dois sub-blocos do tamanho declarado) — SÓ SE O ARRANJO O
+        # DECLARAR. A guarda nasceu com o `ARRANJO_035` em 10/09/2026: um
+        # arranjo sem háptico traz `pos_tag_haptico=0`, e escrever a tag ali
+        # sobrescreveria o BYTE DE ID em [0] com `0xD2`. O report sairia com o
+        # id errado, o firmware o descartaria calado, e o sintoma seria o
+        # silêncio de sempre — indistinguível de payload errado.
+        if self.len_haptico:
+            pkt[self.pos_tag_haptico] = tag_tlv(BLOCO_HAPTICS, duplo=True)
+            pkt[self.pos_tag_haptico + 1] = self.len_haptico
+            corpo = haptico[: self.len_haptico * 2]
+            pkt[self.pos_haptico : self.pos_haptico + len(corpo)] = corpo
         # Áudio.
         pkt[self.pos_tag_audio] = tag_tlv(tag_audio, duplo=self.quadros_de_audio > 1)
         pkt[self.pos_tag_audio + 1] = self.len_audio
@@ -632,13 +688,111 @@ ARRANJO_COMMON_PRIMEIRO = Arranjo(
     common_preservado=True,
 )
 
+# ---------------------------------------------------------------------------
+# (D) O ARRANJO QUE TOCA — e ele não é candidato: é o MEDIDO
+# ---------------------------------------------------------------------------
+
+#: Os SETE bytes do valor do bloco `0x11` (AudioControl) do `0x35`, em [4..10].
+#: O `len_controle` do arranjo é 7 porque são estes: um de enables, cinco de
+#: `audio_buffer_length`, um de contador de quadros.
+BYTES_DO_CONTROLE_035 = 7
+
+#: O primeiro byte do bloco `0x11`: sete bits de enable. **O bit 0 é o
+#: MICROFONE** — `0xFE` o deixa de fora, `0xFF` o liga junto. Medido em
+#: 10/09/2026: com `0xFF` o microfone entra no mesmo report que leva o som.
+ENABLES_SEM_MIC = 0xFE
+ENABLES_COM_MIC = 0xFF
+
+#: O `audio_buffer_length` que TOCOU. O outro valor que as fontes mostram
+#: (`40 40 40 40 40`) não foi medido nesta bancada.
+BUFFER_QUE_TOCOU = bytes((0x00, 0x00, 0x00, 0x00, 0xFF))
+
+#: A CADÊNCIA MEDIDA, em segundos: 512 amostras a 48 kHz. **Não são 10 ms nem
+#: 20 ms**, e a diferença é o defeito que segurou esta casa por nove passadas —
+#: o aparelho consome 93,75 quadros/s, e 20 ms alimentam 100.
+INTERVALO_DE_ENVIO_035 = 512 / 48_000
+
+
+def controle_de_audio_035(
+    *,
+    contador_de_quadros: int,
+    com_microfone: bool = False,
+    buffer: bytes = BUFFER_QUE_TOCOU,
+) -> bytes:
+    """Os sete bytes do bloco `0x11` do `0x35`, prontos para `Arranjo.montar`.
+
+    ``contador_de_quadros`` conta **QUADROS de áudio**, não reports — e a
+    distinção não é preciosismo: um report do `0x35` leva um quadro, mas um
+    arranjo de dois quadros avançaria o contador de dois em dois. Contar
+    reports aqui daria a metade do valor, e o firmware perderia a conta.
+    """
+    if len(buffer) != 5:
+        raise ValueError(f"o audio_buffer_length tem 5 bytes, veio {len(buffer)}")
+    return bytes(
+        (ENABLES_COM_MIC if com_microfone else ENABLES_SEM_MIC, *buffer,
+         int(contador_de_quadros) & 0xFF)
+    )
+
+
+#: (D) **O ARRANJO QUE FEZ O SOM SAIR** — 10/09/2026, na bancada dela: setenta
+#: segundos contínuos pelo alto-falante do DualSense, por rádio, sem um corte, e
+#: com a mordida do CRC provando que o som veio deste report.
+#:
+#: **ELE NÃO ENTRA EM** :data:`ARRANJOS`, e a razão é a mesma do
+#: `common-preservado`: aquela tupla é *"os candidatos de fonte externa,
+#: registrados sem escolher"*. Este aqui não é candidato — **é o medido**, e
+#: misturá-lo apagaria a diferença de procedência que este módulo protege.
+#:
+#: **AS DUAS FONTES EXTERNAS ESTAVAM AS DUAS ERRADAS.** O DS5Dongle e o Senshi
+#: descrevem o `0x39` de 547 B com DOIS quadros; o que toca é o `0x35` de 334 B
+#: com UM. As nove passadas de áudio desta casa bateram todas no `0x39`.
+#:
+#: **O layout encaixa no** :class:`Arranjo` **genérico sem exceção nenhuma:**
+#: `pos_tag_controle=2` põe a tag em [2], o `len` 7 em [3] e os sete bytes do
+#: valor em [4..10] — que são exatamente enables, `audio_buffer_length` e o
+#: contador de quadros. A tag de áudio cai em [11], o `len` 200 em [12] e o
+#: quadro em [13..212]. Nada é caso especial.
+ARRANJO_035 = Arranjo(
+    nome="0x35",
+    fonte=(
+        "ESTA BANCADA, 10/09/2026 — o alto-falante tocou por rádio, 70 s "
+        "contínuos, com a orelha dela e a mordida do CRC. O layout é o do "
+        "`HeadsetPlayMusic` de awalol/dualsense-bt-haptics, e o achado [8.19] "
+        "da pesquisa de 31/08 já trazia o tamanho: «0x35 com 334 (CRC em "
+        "330..333)»."
+    ),
+    degrau=0x35,
+    pos_tag_controle=2,
+    len_controle=BYTES_DO_CONTROLE_035,
+    pos_tag_audio=11,
+    len_audio=BYTES_POR_QUADRO_OPUS,
+    pos_audio=13,
+    quadros_de_audio=1,
+    # SEM bloco háptico. `Arranjo.montar` tem guarda para isto desde 10/09 —
+    # sem ela, `pos_tag_haptico=0` sobrescreveria o byte de id.
+    pos_tag_haptico=0,
+    len_haptico=0,
+    pos_haptico=0,
+    de_onde_sei=(
+        "MEDIDO NESTA BANCADA, 10/09/2026, com som audível: 70 s contínuos "
+        "pelo alto-falante, alcance testado, e o som CALA com o CRC invertido"
+    ),
+    intervalo_de_envio_s=INTERVALO_DE_ENVIO_035,
+    controle_conta_quadros=True,
+)
+
 #: Os três por nome — é este dicionário que o ensaio consulta em `--arranjo`.
 #: O terceiro entra AQUI e não em :data:`ARRANJOS` para que `--arranjo
 #: common-preservado` exista sem que `montar_pelos_dois_arranjos` deixe de ser
 #: sobre os dois.
 ARRANJO_POR_NOME: dict[str, Arranjo] = {
-    a.nome: a for a in (*ARRANJOS, ARRANJO_COMMON_PRIMEIRO)
+    a.nome: a for a in (*ARRANJOS, ARRANJO_COMMON_PRIMEIRO, ARRANJO_035)
 }
+
+#: **O ARRANJO PADRÃO DO PRODUTO desde 10/09/2026.** Quem manda som por rádio
+#: sem dizer qual arranjo quer recebe o que TOCA, não um dos candidatos. Os
+#: outros três continuam alcançáveis por nome, para ensaio.
+ARRANJO_PADRAO = ARRANJO_035
 
 
 def montar_com_o_common_preservado(
@@ -1319,6 +1473,7 @@ class BombaDeSomPeloRadio:
         tag_audio: int = BLOCO_SPEAKER,
         seco: bool = True,
         common: bytes | None = None,
+        com_microfone: bool = False,
     ) -> None:
         # O `common` É OBRIGATÓRIO PARA O CORPO QUE O PRESERVA — 08/09/2026.
         #
@@ -1354,6 +1509,12 @@ class BombaDeSomPeloRadio:
         self.common = common
         self._codificador = codificador
         self._seq = 0
+        #: QUADROS de áudio já mandados — não reports. O `[10]` do `0x35` conta
+        #: quadros, e um arranjo de dois quadros avança de dois em dois.
+        self._quadros_mandados = 0
+        #: O bit 0 dos enables. Ligado, o microfone entra no MESMO report que
+        #: leva o som — medido em 10/09/2026.
+        self.com_microfone = bool(com_microfone)
         self.contagem = ContagemDaBomba()
 
     # -- a conta ----------------------------------------------------------
@@ -1415,11 +1576,44 @@ class BombaDeSomPeloRadio:
         # como o defeito de 08/09 nasceu (a afirmação valia na chamada direta
         # e não no caminho que ela roda).
         report = self.arranjo.montar(
-            quadros, seq=self._seq, tag_audio=self.tag_audio, common=self.common
+            quadros,
+            seq=self._seq,
+            tag_audio=self.tag_audio,
+            common=self.common,
+            controle=self._controle_deste_report(),
         )
         self._seq = (self._seq + 1) % VOLTA_DA_SEQUENCIA
+        self._quadros_mandados += self.arranjo.quadros_de_audio
         self.contagem.reports_montados += 1
         return report
+
+    def _controle_deste_report(self) -> bytes:
+        """Os bytes do bloco de controle, montados por report quando ele conta.
+
+        Vazio para os arranjos que não contam quadros — é o que eles já
+        recebiam, e mudar isso mexeria no corpo que as réguas deles medem.
+        """
+        if not self.arranjo.controle_conta_quadros:
+            return b""
+        return controle_de_audio_035(
+            contador_de_quadros=self._quadros_mandados,
+            com_microfone=self.com_microfone,
+        )
+
+    @property
+    def intervalo_de_envio_s(self) -> float:
+        """O intervalo entre reports, em segundos — o MEDIDO quando existe.
+
+        **O nominal está errado para o `0x35`, e essa é a razão deste caminho.**
+        Um quadro Opus carrega 10 ms de som, mas o aparelho o consome a cada
+        10,667 ms (512/48000): alimentá-lo pelo nominal daria 100 quadros/s num
+        aparelho que come 93,75, que é a taxa de estouro pela qual esta casa
+        passou nove vezes.
+        """
+        medido = self.arranjo.intervalo_de_envio_s
+        if medido is not None:
+            return float(medido)
+        return self.ms_por_report / 1000.0
 
     def escrever(self, report: bytes) -> bool:
         """Entrega o report ao escritor. **Seco, devolve True sem escrever.**
@@ -1467,7 +1661,7 @@ class BombaDeSomPeloRadio:
             if report and not self.escrever(report):
                 break
             if dormir is not None:
-                dormir(self.ms_por_report / 1000.0)
+                dormir(self.intervalo_de_envio_s)
         self.contagem.segundos = relogio() - comeco
         return self.contagem
 
@@ -1690,13 +1884,308 @@ FONTE_SFX = "sfx"
 #: sozinho, que é a regra que esta casa já recusou.
 FONTE_PADRAO = FONTE_SFX
 
-#: Rádio, e a ponte host→controle não está de pé. **Não é falha do aparelho** —
-#: o alto-falante existe e ela já o OUVIU (rota 3, orelha dela, 02/08/2026). A
-#: frase diz as três coisas: o quê, por quê, e o que fazer.
+# ---------------------------------------------------------------------------
+# A PONTE HOST -> CONTROLE POR RÁDIO — uma por controle
+# ---------------------------------------------------------------------------
+
+
+def a_ponte_do_radio_sabe_montar() -> bool:
+    """O Hefesto sabe montar o pacote de áudio que o controle entende sem fio?
+
+    **SIM DESDE 10/09/2026**, e esta função existe porque a resposta mudou.
+    Até então o produto respondia *não* em três lugares — a frase da tela, a
+    recusa de :func:`rota_do_no` e a célula do mapa —, e a razão era verdadeira:
+    ninguém sabia qual dos nove degraus carregava áudio.
+
+    Agora sabe: :data:`ARRANJO_035`, medido com som audível por 70 s.
+
+    **Ela não pergunta se a ponte SOBE** — isso depende da `libopus`, do hidraw
+    e do controle estar na mesa. Pergunta se o CONHECIMENTO existe, que é outra
+    coisa e era exatamente o que faltava.
+    """
+    return True
+
+
+def a_ponte_do_radio_pode_subir() -> tuple[bool, str]:
+    """Esta máquina consegue subir a ponte AGORA? `(pode, por quê não)`.
+
+    Separada de :func:`a_ponte_do_radio_sabe_montar` de propósito: *"não sei
+    montar"* e *"sei, mas falta a libopus nesta máquina"* pedem recados
+    diferentes, e juntá-las foi o que fez a tela dizer, por semanas, que o
+    aparelho não podia — quando quem não podia éramos nós.
+    """
+    try:
+        _carregar_libopus_encoder()
+    except OpusIndisponivelError as erro:
+        return False, str(erro)
+    return True, ""
+
+
+def fonte_do_monitor_do_no(
+    id_do_no: str,
+    *,
+    abrir: Callable[[list[str]], Any] | None = None,
+) -> tuple[Callable[[int], bytes] | None, Any, str]:
+    """`(fonte de PCM, processo, motivo)` lendo o monitor do nó DAQUELE controle.
+
+    A fonte é o `.monitor` do `module-null-sink` que o `SinkVirtualPipeWire`
+    publica — ou seja, **o que o jogo mandou para aquele controle**, e nada
+    mais. Um `--target` vazio cairia na saída padrão do sistema e o controle
+    tocaria o som da máquina inteira; `argv_do_gravador` recusa isso.
+
+    O processo volta junto porque quem sobe tem de poder derrubar: um
+    `pw-record` órfão continua lendo o monitor depois de a ponte cair.
+    """
+    if not id_do_no:
+        return None, None, "o controle não tem nó de som publicado"
+    argv = argv_do_gravador(f"{id_do_no}.monitor")
+    if not argv:
+        return None, None, "nem `pw-record` nem `parec` nesta máquina"
+    lancar = abrir or (
+        lambda cmd: subprocess.Popen(
+            cmd, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL
+        )
+    )
+    try:
+        proc = lancar(argv)
+    except OSError as erro:
+        return None, None, f"não consegui abrir o gravador do monitor: {erro}"
+    saida = getattr(proc, "stdout", None)
+    if saida is None:
+        return None, proc, "o gravador subiu sem `stdout`"
+    return fonte_de_arquivo(saida.fileno()), proc, ""
+
+
+class PonteDeSomPorRadio:
+    """Do monitor do nó ao alto-falante do controle, por rádio. Uma por controle.
+
+    **É a peça que faltava**, e a lista do que já existia mostra o tamanho dela:
+    :class:`CodificadorOpus` codifica desde 06/09, :class:`SinkVirtualPipeWire`
+    publica o nó desde 06/09, :class:`BombaDeSomPeloRadio` monta e escreve, e
+    :data:`ARRANJO_035` diz o layout desde 10/09. Ninguém ligava os quatro por
+    controle — e sem isso o nó publicado era um sumidouro.
+
+    **A IDENTIDADE É O ``uniq``, NUNCA O ``hidrawN``.** O número do nó muda a
+    cada reconexão; o endereço do controle não. É a mesma regra que
+    :func:`sink_do_controle` já segue no cabo.
+
+    Ela **não decide** se deve subir: quem decide é o subsystem, com a lista de
+    controles na mão. Ela sobe, roda e desce.
+    """
+
+    def __init__(
+        self,
+        *,
+        uniq: str,
+        abrir_hidraw: Callable[[], int | None],
+        fonte_de_pcm: Callable[[int], bytes],
+        arranjo: Arranjo | None = None,
+        rota: int = BLOCO_SPEAKER,
+        com_microfone: bool = False,
+        seco: bool = False,
+        gravador: Any | None = None,
+    ) -> None:
+        self.uniq = uniq
+        self._abrir_hidraw = abrir_hidraw
+        self._fonte = fonte_de_pcm
+        self.arranjo = arranjo or ARRANJO_PADRAO
+        self.rota = rota
+        self.com_microfone = bool(com_microfone)
+        self._seco = bool(seco)
+        self._bomba: BombaDeSomPeloRadio | None = None
+        self._thread: threading.Thread | None = None
+        #: O `pw-record` do monitor, quando a fonte veio de um. Ele morre com a
+        #: ponte: um gravador órfão continua lendo o monitor do nó depois de a
+        #: ponte cair, e o próximo `subir()` acharia a fonte já consumida.
+        self._gravador: Any | None = gravador
+        #: O SINAL É POR CORRIDA, NUNCA REUSADO — cura de 10/09/2026. Um
+        #: `Event` só, com `clear()` no `subir()`, RESSUSCITA a thread da
+        #: corrida anterior que ainda não morreu: ela testa `not
+        #: _parar.is_set()` e volta a bombear, no fd da corrida NOVA.
+        self._parar: threading.Event | None = None
+        #: Por que a ponte não subiu. Vazio enquanto ela está de pé — a tela e
+        #: o log leem daqui em vez de adivinhar.
+        self.motivo: str = ""
+
+    def esta_de_pe(self) -> bool:
+        """A ponte está no ar para ESTE controle, **e continuará**?
+
+        É este o callable que :func:`rota_do_no` recebe em ``ponte_do_radio``,
+        e é ele que decide se o nó do PipeWire publica rota.
+
+        **DESCENDO NÃO É DE PÉ — 10/09/2026.** A thread viva não basta: depois
+        de um `descer()` cujo `join` estourou, ela ainda respira mas já foi
+        mandada parar, e vai sair no próximo tique. Responder *de pé* ali fazia
+        duas coisas erradas de uma vez: o nó publicava rota para um som que não
+        vai mais sair, e `subir()` devolvia `True` sem subir nada — a chamada
+        parava no atalho do topo e a corrida morria em seguida, calada.
+
+        Quem precisa saber se a THREAD ainda respira — para não abrir um fd por
+        cima dela — pergunta a `_corrida_viva`, e é o que `subir()` faz.
+        """
+        parar = self._parar
+        return self._corrida_viva() and (parar is None or not parar.is_set())
+
+    def _corrida_viva(self) -> bool:
+        """A thread da última corrida ainda respira? (Mesmo já mandada parar.)"""
+        thread = self._thread
+        return thread is not None and thread.is_alive()
+
+    def subir(self) -> bool:
+        """Abre o hidraw, monta a bomba e põe o laço numa thread. Idempotente."""
+        if self.esta_de_pe():
+            return True
+        # A CORRIDA ANTERIOR AINDA ESTÁ MORRENDO — 10/09/2026, e subir por cima
+        # dela é o defeito. `descer()` desiste do `join` depois do prazo, e uma
+        # thread presa num `read` bloqueante da fonte continua viva: abrir um fd
+        # novo aqui dava ao kernel o MESMO número recém-liberado, e as duas
+        # corridas passavam a escrever no mesmo descritor, ao dobro da cadência.
+        if self._corrida_viva():
+            self.motivo = (
+                "a ponte anterior deste controle ainda está descendo; "
+                "não subo por cima dela"
+            )
+            logger.info("som_radio_ponte_anterior_viva", uniq=self.uniq)
+            return False
+        pode, porque = a_ponte_do_radio_pode_subir()
+        if not pode:
+            self.motivo = porque
+            logger.info("som_radio_ponte_sem_opus", uniq=self.uniq, motivo=porque)
+            return False
+        fd = self._abrir_hidraw()
+        if fd is None:
+            self.motivo = "não consegui abrir o hidraw deste controle"
+            logger.info("som_radio_ponte_sem_hidraw", uniq=self.uniq)
+            return False
+        parar = threading.Event()
+        self._parar = parar
+        self._bomba = BombaDeSomPeloRadio(
+            arranjo=self.arranjo,
+            fonte=self._fonte,
+            escritor=escritor_de_hidraw(fd),
+            tag_audio=self.rota,
+            seco=self._seco,
+            com_microfone=self.com_microfone,
+        )
+        # O fd e o sinal VÃO COM A THREAD, e é isso que impede a corrida velha
+        # de escrever (ou de fechar) o descritor da corrida nova.
+        self._thread = threading.Thread(
+            target=self._laco,
+            args=(fd, parar),
+            name=f"som-radio-{self.uniq[:6]}",
+            daemon=True,
+        )
+        self._thread.start()
+        self.motivo = ""
+        logger.info(
+            "som_radio_ponte_de_pe",
+            uniq=self.uniq,
+            arranjo=self.arranjo.nome,
+            reports_por_segundo=round(1.0 / self._bomba.intervalo_de_envio_s, 2),
+        )
+        return True
+
+    def _laco(self, fd: int, parar: threading.Event) -> None:
+        """O laço da bomba, até mandarem parar ou a fonte secar.
+
+        **O ritmo é o da FONTE**, como em :meth:`BombaDeSomPeloRadio.rodar`: o
+        monitor do nó entrega no tempo real. O `dormir` só entra para fonte sem
+        ritmo próprio, e aí ele usa a cadência MEDIDA do arranjo.
+        """
+        bomba = self._bomba
+        if bomba is None:
+            os.close(fd)
+            return
+        try:
+            while not parar.is_set():
+                report = bomba.um_report()
+                if report is None:
+                    logger.info("som_radio_fonte_secou", uniq=self.uniq)
+                    break
+                if report and not bomba.escrever(report):
+                    logger.info("som_radio_escrita_recusada", uniq=self.uniq)
+                    break
+        finally:
+            # O FD É DESTA CORRIDA, e ela fecha o DELA. Fechar `self._fd` aqui
+            # era o quarto elo do defeito de 10/09: a thread velha, ao sair,
+            # fechava o descritor que a ponte NOVA tinha acabado de abrir.
+            try:
+                os.close(fd)
+            except OSError:
+                logger.debug("som_radio_fd_ja_fechado", uniq=self.uniq)
+
+    def descer(self, *, esperar_s: float = 1.0) -> bool:
+        """Para o laço e espera a thread juntar. Idempotente.
+
+        Devolve `True` se a corrida acabou de verdade. `False` diz que a thread
+        NÃO morreu no prazo — e aí a ponte continua se declarando de pé, de
+        propósito: `esta_de_pe()` lendo `is_alive()` é o que impede um `subir()`
+        seguinte de abrir um fd por cima de uma corrida ainda viva.
+
+        **QUEM FECHA O FD É A THREAD**, no `finally` do laço. Fechá-lo aqui,
+        depois de um `join` que estourou, entregava ao kernel um número que a
+        corrida viva ainda usava — e o próximo `open` de qualquer parte do
+        daemon receberia esse mesmo número, com os 334 B do report indo para
+        dentro dele.
+        """
+        parar = self._parar
+        if parar is not None:
+            parar.set()
+        gravador, self._gravador = self._gravador, None
+        if gravador is not None:
+            with contextlib.suppress(Exception):
+                gravador.terminate()
+
+        thread = self._thread
+        if thread is None:
+            return True
+        if thread.is_alive():
+            thread.join(timeout=esperar_s)
+        if thread.is_alive():
+            logger.info(
+                "som_radio_ponte_nao_desceu", uniq=self.uniq, esperou_s=esperar_s
+            )
+            return False
+        self._thread = None
+        self._parar = None
+        return True
+
+    @property
+    def contagem(self) -> ContagemDaBomba | None:
+        """A contagem da bomba — `None` se ela nunca subiu."""
+        return self._bomba.contagem if self._bomba is not None else None
+
+
+#: Rádio, e a ponte host→controle não está de pé NESTE MOMENTO. **Não é falha
+#: do aparelho** — o alto-falante existe, ela já o OUVIU pelo cabo (rota 3,
+#: orelha dela, 02/08/2026) e **pelo rádio** (70 s contínuos, 10/09/2026).
+#:
+#: **A FRASE ANTERIOR CADUCOU EM 10/09/2026, e ela dizia uma coisa falsa.** O
+#: texto era: *"o Hefesto sabe por qual canal mandar, mas ainda não sabe montar
+#: o pacote de áudio que o controle entende sem fio"*. **Ele sabe** — é o
+#: :data:`ARRANJO_035`, medido com som audível. Enquanto a frase viveu, a tela
+#: dela atribuía ao aparelho um limite que era nosso.
+#:
+#: A frase de hoje diz o que é verdade: o caminho existe, e a ponte deste
+#: controle não está no ar agora. Quando a razão for conhecida (falta a
+#: `libopus`, o hidraw não abriu), quem a tem é
+#: :attr:`PonteDeSomPorRadio.motivo` — e ela é mais precisa que este texto.
 MOTIVO_NO_SEM_PONTE_NO_RADIO = (
-    "o som do PC ainda não chega a este controle pelo rádio — o Hefesto sabe "
-    "por qual canal mandar, mas ainda não sabe montar o pacote de áudio que o "
-    "controle entende sem fio. Ligue-o no cabo para ouvir por ele."
+    "o som do PC ainda não está saindo neste controle pelo rádio — o caminho "
+    "existe e já foi ouvido, e o que falta é a ponte deste controle subir. "
+    "Ligue-o no cabo para ouvir por ele enquanto isso."
+)
+
+#: E O CASO EM QUE O CONHECIMENTO NÃO EXISTISSE — a frase que a tela mostraria
+#: se :func:`a_ponte_do_radio_sabe_montar` voltasse a responder `False`. Ela é
+#: a frase que viveu até 10/09/2026, guardada aqui com a razão certa: *não é o
+#: aparelho que não pode; somos nós que não sabemos*. Enquanto ela existir
+#: como constante, ninguém precisa redigitá-la de memória — e a diferença
+#: entre os dois recados fica ONDE ela pertence, que é no código que decide.
+MOTIVO_NO_SEM_SABER_MONTAR = (
+    "o Hefesto ainda não sabe montar o pacote de áudio que este controle "
+    "entende sem fio. Não é limite do aparelho: ligue-o no cabo para ouvir "
+    "por ele enquanto isso."
 )
 
 #: Cabo, e o sistema não publicou placa de som atribuível a este controle. É o
@@ -1869,7 +2358,17 @@ def rota_do_no(
             return RotaDoNo(
                 True, por_onde=POR_RADIO, fonte=fonte, monitor_do_mix=monitor
             )
-        return RotaDoNo(False, motivo=MOTIVO_NO_SEM_PONTE_NO_RADIO, fonte=fonte)
+        # DOIS «NÃO» DIFERENTES, E A TELA TEM DE SABER QUAL É — 10/09/2026.
+        # *"não sei montar o pacote"* e *"sei, e a ponte deste controle não
+        # está no ar"* pedem recados diferentes: o primeiro é limite NOSSO, o
+        # segundo é estado de agora. Juntá-los foi o que fez a tela dela
+        # atribuir ao aparelho, por semanas, um limite que era do produto.
+        motivo = (
+            MOTIVO_NO_SEM_PONTE_NO_RADIO
+            if a_ponte_do_radio_sabe_montar()
+            else MOTIVO_NO_SEM_SABER_MONTAR
+        )
+        return RotaDoNo(False, motivo=motivo, fonte=fonte)
     alvo = sink_do_controle(uniq, uniqs_na_mesa, runner=runner)
     if not alvo:
         return RotaDoNo(False, motivo=MOTIVO_NO_SEM_PLACA_NO_CABO, fonte=fonte)
@@ -1951,27 +2450,34 @@ def descricao_do_alto_falante(uniq: str) -> str:
 __all__ = [
     "AMOSTRAS_POR_QUADRO",
     "ARRANJOS",
+    "ARRANJO_035",
     "ARRANJO_COMMON_PRIMEIRO",
     "ARRANJO_DS5DONGLE",
+    "ARRANJO_PADRAO",
     "ARRANJO_POR_NOME",
     "ARRANJO_SENSHI",
     "BITRATE_DO_ENCODER",
     "BLOCO_FONE",
+    "BUFFER_QUE_TOCOU",
     "BYTES_DE_PCM_POR_QUADRO",
     "BYTES_POR_QUADRO_OPUS",
     "CANAIS_DO_ALTO_FALANTE",
     "CANAIS_DO_ENCODER",
     "CRC_BYTES",
     "DEGRAU_DO_KERNEL",
+    "ENABLES_COM_MIC",
+    "ENABLES_SEM_MIC",
     "ENVELOPE_BYTES",
     "FONTE_MIX",
     "FONTE_PADRAO",
     "FONTE_SFX",
     "GRAVADORES_DO_MONITOR",
     "HEX_DO_SUFIXO",
+    "INTERVALO_DE_ENVIO_035",
     "MOTIVO_NO_SEM_ASSENTO",
     "MOTIVO_NO_SEM_PLACA_NO_CABO",
     "MOTIVO_NO_SEM_PONTE_NO_RADIO",
+    "MOTIVO_NO_SEM_SABER_MONTAR",
     "MS_POR_QUADRO",
     "NOME_DO_ALTO_FALANTE_DO_CONTROLE",
     "OFFSET_APOS_O_COMMON",
@@ -1992,13 +2498,17 @@ __all__ = [
     "CodificadorOpus",
     "ContagemDaBomba",
     "Diagnostico",
+    "PonteDeSomPorRadio",
     "RotaDoNo",
     "SinkVirtualPipeWire",
+    "a_ponte_do_radio_pode_subir",
+    "a_ponte_do_radio_sabe_montar",
     "argv_das_rotas",
     "argv_do_gravador",
     "argv_para_ligar_o_mix",
     "argv_para_ligar_o_no",
     "common_de_audio",
+    "controle_de_audio_035",
     "degrau_para_payload",
     "descricao_do_alto_falante",
     "diagnosticar",
@@ -2006,6 +2516,7 @@ __all__ = [
     "escritor_de_hidraw",
     "fonte_com_ritmo",
     "fonte_de_arquivo",
+    "fonte_do_monitor_do_no",
     "monitor_da_saida_padrao",
     "montar_com_o_common_preservado",
     "montar_pelos_dois_arranjos",

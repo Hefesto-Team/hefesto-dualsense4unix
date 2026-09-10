@@ -1,0 +1,101 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Hefesto DualSense4Unix Project <hefesto-dualsense4unix@users.noreply.github.com>
+Date: Thu, 10 Sep 2026 10:00:00 -0300
+Subject: [PATCH] HID: playstation: do not parse microphone audio frames as
+ gamepad input
+
+When the DualSense microphone is streaming over Bluetooth, the firmware sends
+the Opus audio frames using the SAME report id (0x31), the SAME 78 byte size
+and a valid CRC-32 as a regular input report. Only bit 1 of byte 1 tells them
+apart, and the driver never looks at it.
+
+So the driver parses compressed audio as gamepad state. Two things follow, and
+both were measured on a Pop!_OS 24.04 machine with a DualSense over Bluetooth:
+
+  1. ds_report->buttons[2] lands on audio payload, so DS_BUTTONS2_MIC_MUTE
+     toggles with the bitstream. On each rising edge the driver flips
+     ds->mic_muted and schedules the work that writes
+     DS_OUTPUT_POWER_SAVE_CONTROL_MIC_MUTE -- the driver turns the user's
+     microphone off by itself. Measured: capture stops after ~1.1 s and never
+     comes back, because once muted the firmware stops streaming and no further
+     edges are produced.
+
+  2. The axes and the remaining buttons receive audio values, so the pointer
+     and the keyboard move on their own. Userspace sees stick deflection and
+     key events that nobody produced.
+
+Measured before and after loading the patched module, same instrument and same
+duration, with the microphone on: dwell times of the MicMuted bit went from
+1231 transitions (6 ms median) to a single one, with the bit steady for 152 s.
+Both symptoms are gone.
+
+Discard those reports: an audio frame carries no input state, so there is
+nothing to publish. Return 0 rather than -EILSEQ -- the report is not
+malformed, it is simply of another kind, and erroring out would flood dmesg at
+about a hundred lines per second while the microphone is on.
+
+Note this only affects the driver's own parsing. hidraw consumers still receive
+the full report, so userspace bridges that decode the microphone keep working.
+
+Signed-off-by: Hefesto DualSense4Unix Project <hefesto-dualsense4unix@users.noreply.github.com>
+---
+ drivers/hid/hid-playstation.c | 36 ++++++++++++++++++++++++++++++
+ 1 file changed, 36 insertions(+)
+
+diff --git a/drivers/hid/hid-playstation.c b/drivers/hid/hid-playstation.c
+--- a/drivers/hid/hid-playstation.c
++++ b/drivers/hid/hid-playstation.c
+@@ -141,6 +141,13 @@
+ #define DS_INPUT_REPORT_USB_SIZE		64
+ #define DS_INPUT_REPORT_BT			0x31
+ #define DS_INPUT_REPORT_BT_SIZE			78
++
++/*
++ * HEFESTO / MIC-NAO-E-BOTAO-01: bit 1 do byte 1 de um 0x31 de Bluetooth.
++ * Ligado, o report carrega quadros de audio Opus do microfone -- nao estado
++ * de gamepad. Mesmo id, mesmo tamanho e CRC valido nos dois casos.
++ */
++#define DS_INPUT_BT_FLAG_AUDIO 0x02
+ #define DS_OUTPUT_REPORT_USB			0x02
+ #define DS_OUTPUT_REPORT_USB_SIZE		63
+ #define DS_OUTPUT_REPORT_BT			0x31
+@@ -1589,6 +1596,37 @@
+ 			return -EILSEQ;
+ 		}
+ 
++		/*
++		 * HEFESTO / MIC-NAO-E-BOTAO-01 (10/09/2026): quando o microfone
++		 * do controle esta no ar, o firmware manda os quadros de audio
++		 * Opus com o MESMO reportID 0x31, o MESMO tamanho de 78 bytes e
++		 * um CRC-32 valido. Nada acima distingue os dois -- so o bit 1
++		 * do byte 1, que o firmware liga nos reports de AUDIO.
++		 *
++		 * Sem esta guarda o driver le audio comprimido como estado de
++		 * gamepad. As consequencias sao duas, e as duas foram medidas:
++		 *
++		 *  1. `buttons[2]` cai sobre payload de audio, e o bit
++		 *     DS_BUTTONS2_MIC_MUTE oscila. Na borda de subida o driver
++		 *     inverte ds->mic_muted e agenda o trabalho que escreve
++		 *     POWER_SAVE_CONTROL_MIC_MUTE -- ou seja, DESLIGA O
++		 *     MICROFONE sozinho, sem ninguem encostar no controle;
++		 *  2. os eixos e os botoes recebem valores de audio, e o cursor
++		 *     e o teclado do usuario se mexem sozinhos.
++		 *
++		 * A metade em espaco de usuario deste projeto ja fazia a mesma
++		 * guarda desde 16/08/2026 -- ver INPUT_FLAG_AUDIO em
++		 * src/hefesto_dualsense4unix/core/physical_report_reader.py.
++		 * Faltava aqui, que e onde o evdev nasce.
++		 *
++		 * Descartar e o certo: um report de audio nao carrega estado de
++		 * input nenhum, entao nao ha nada a publicar. Devolver 0 diz
++		 * "consumido, sem erro" -- -EILSEQ encheria o dmesg dela a 100
++		 * reports por segundo com o microfone ligado.
++		 */
++		if (data[1] & DS_INPUT_BT_FLAG_AUDIO)
++			return 0;
++
+ 		ds_report = (struct dualsense_input_report *)&data[2];
+ 	} else {
+ 		hid_err(hdev, "Unhandled reportID=%d\n", report->id);
+-- 
+2.43.0

@@ -141,6 +141,13 @@ struct ps_led_info {
 #define DS_INPUT_REPORT_USB_SIZE		64
 #define DS_INPUT_REPORT_BT			0x31
 #define DS_INPUT_REPORT_BT_SIZE			78
+
+/*
+ * HEFESTO / MIC-NAO-E-BOTAO-01: bit 1 do byte 1 de um 0x31 de Bluetooth.
+ * Ligado, o report carrega quadros de audio Opus do microfone -- nao estado
+ * de gamepad. Mesmo id, mesmo tamanho e CRC valido nos dois casos.
+ */
+#define DS_INPUT_BT_FLAG_AUDIO 0x02
 #define DS_OUTPUT_REPORT_USB			0x02
 #define DS_OUTPUT_REPORT_USB_SIZE		63
 #define DS_OUTPUT_REPORT_BT			0x31
@@ -1588,6 +1595,37 @@ static int dualsense_parse_report(struct ps_device *ps_dev, struct hid_report *r
 			hid_err(hdev, "DualSense input CRC's check failed\n");
 			return -EILSEQ;
 		}
+
+		/*
+		 * HEFESTO / MIC-NAO-E-BOTAO-01 (10/09/2026): quando o microfone
+		 * do controle esta no ar, o firmware manda os quadros de audio
+		 * Opus com o MESMO reportID 0x31, o MESMO tamanho de 78 bytes e
+		 * um CRC-32 valido. Nada acima distingue os dois -- so o bit 1
+		 * do byte 1, que o firmware liga nos reports de AUDIO.
+		 *
+		 * Sem esta guarda o driver le audio comprimido como estado de
+		 * gamepad. As consequencias sao duas, e as duas foram medidas:
+		 *
+		 *  1. `buttons[2]` cai sobre payload de audio, e o bit
+		 *     DS_BUTTONS2_MIC_MUTE oscila. Na borda de subida o driver
+		 *     inverte ds->mic_muted e agenda o trabalho que escreve
+		 *     POWER_SAVE_CONTROL_MIC_MUTE -- ou seja, DESLIGA O
+		 *     MICROFONE sozinho, sem ninguem encostar no controle;
+		 *  2. os eixos e os botoes recebem valores de audio, e o cursor
+		 *     e o teclado do usuario se mexem sozinhos.
+		 *
+		 * A metade em espaco de usuario deste projeto ja fazia a mesma
+		 * guarda desde 16/08/2026 -- ver INPUT_FLAG_AUDIO em
+		 * src/hefesto_dualsense4unix/core/physical_report_reader.py.
+		 * Faltava aqui, que e onde o evdev nasce.
+		 *
+		 * Descartar e o certo: um report de audio nao carrega estado de
+		 * input nenhum, entao nao ha nada a publicar. Devolver 0 diz
+		 * "consumido, sem erro" -- -EILSEQ encheria o dmesg dela a 100
+		 * reports por segundo com o microfone ligado.
+		 */
+		if (data[1] & DS_INPUT_BT_FLAG_AUDIO)
+			return 0;
 
 		ds_report = (struct dualsense_input_report *)&data[2];
 	} else {

@@ -70,7 +70,19 @@ PATCH_PATH = (
 PATCH2_PATH = (
     ASSET_DIR / "patch" / "0002-HID-playstation-survive-a-DualShock4-pairing-info-rep.patch"
 )
-PATCH_PATHS = (PATCH_PATH, PATCH2_PATH)
+# 10/09/2026: 0003 impede o driver de parsear os quadros de ÁUDIO do microfone
+# como estado de gamepad — eles chegam com o MESMO id 0x31, MESMO tamanho e CRC
+# válido, e só o bit 1 do byte 1 os separa. Sem ele o driver desliga o microfone
+# sozinho e injeta eixos e botões que ninguém apertou.
+PATCH3_PATH = (
+    ASSET_DIR / "patch" / "0003-HID-playstation-do-not-parse-microphone-audio-frames-.patch"
+)
+
+#: A SÉRIE INTEIRA, na ordem de aplicação. O 0003 entrou em 10/09/2026 e a
+#: série passou a ter TRÊS: editar o `.c` sem acrescentar o patch e o novo
+#: `SHA256_PATCHED_C` ao BASELINE reprova três testes deste arquivo — que é
+#: exatamente o que eles existem para pegar.
+PATCH_PATHS = (PATCH_PATH, PATCH2_PATH, PATCH3_PATH)
 BASELINE_PATH = ASSET_DIR / "patch" / "BASELINE"
 MODPROBE_CONF_PATH = REPO_ROOT / "assets" / "modprobe.d" / "hefesto-hid-playstation.conf"
 

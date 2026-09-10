@@ -704,13 +704,19 @@ class SemCenso:
 #: dia em que alguém escrever o censo do Heroic, ele SAI daqui e ganha cartão
 #: próprio.
 #:
-#: A PROVA DE QUE NENHUM É LIDO POR DENTRO, medida em 02/09/2026:
-#:     grep -rniE "heroic|lutris|retroarch|dolphin|mgba" src --include="*.py"
-#: devolve CINCO linhas fora desta aba, e as cinco são COMENTÁRIO
-#: (`daemon/subsystems/hotkey.py:56`, `daemon/lifecycle.py:2271`,
-#:  `daemon/subsystems/game_signal.py:97`, `daemon/lifecycle.py:4169`,
-#:  `profiles/schema.py:1509`). Zero função, zero chamada — e o
-#: `test_os_cinco_lancadores_sem_fonte_continuam_sem_fonte` é quem segura isso.
+#: A PROVA DE 02/09/2026 CADUCOU, e o número que ela citava era este:
+#: *"o `grep -rniE "heroic|lutris|…" src` devolve CINCO linhas fora desta aba,
+#: e as cinco são COMENTÁRIO"*. **Remedido em 10/09/2026: são 58 linhas**, e
+#: `integrations/cura_por_estrada.py` LÊ e ESCREVE o `config.json` do Heroic
+#: (`_ler_heroic`, `_escrever_no_heroic`, `CHAVE_DO_HEROIC`).
+#:
+#: **A LISTA CONTINUA CERTA, e a distinção é a razão:** o que ela nomeia é o
+#: lançador cuja BIBLIOTECA o produto não lê — quais jogos existem lá dentro.
+#: `cura_por_estrada` não lê biblioteca nenhuma: ela escreve VARIÁVEIS DE
+#: AMBIENTE na estrada daquele lançador, o que é o outro lado do trabalho.
+#: Quem segura o contrato desta lista continua sendo o
+#: `test_os_cinco_lancadores_sem_fonte_continuam_sem_fonte`, e um `grep` de
+#: nome próprio nunca foi régua boa: ele conta MENÇÕES, não leituras.
 #:
 #: OS IDENTIFICADORES SÃO OS DE VERDADE, e as duas formas de cada um entram: o
 #: `app-id` do Flatpak (que é como a máquina dela os teria, pelos 54 atalhos em

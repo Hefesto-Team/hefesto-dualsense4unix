@@ -362,7 +362,7 @@ def _sondar_a_bandeja(host: Any) -> None:
     """Pergunta, FORA da thread do GTK, se a barra do sistema recebe o ícone.
 
     `statusnotifierwatcher_available` é síncrona e fala D-Bus com
-    `_DBUS_TIMEOUT_SECONDS = 2.0` (`desktop_notifications.py:33`): chamada aqui,
+    `_DBUS_TIMEOUT_SECONDS = 2.0` (`desktop_notifications.py:169`): chamada aqui,
     ela congela a janela por até dois segundos na abertura. Vai por
     `run_in_thread`, cujos callbacks voltam pela thread do GTK via
     `GLib.idle_add` — e por isso DEVEM devolver `False`, senão o GLib reagenda

@@ -647,6 +647,10 @@ class Daemon:
     # sozinho com o daemon é inaceitável. Sobe e desce no meio da sessão pelo
     # `reconciliar_bt_mic`, que o "Aplicar" da aba Configurações chama.
     _bt_mic_subsystem: Any = None
+    # SOM-FIADO-01: AltoFalanteSubsystem (o nó de som por controle) ou None.
+    # SEM opt-in, ao contrário do `bt_mic`: um alto-falante não escuta, e a
+    # privacidade não entra nesta conta. Ver `_start_alto_falante`.
+    _alto_falante_subsystem: Any = None
     # BUG-DAEMON-NO-DEVICE-FATAL-01 — task de probe de conexão em background
     # (substitui connect_with_retry bloqueante no boot). Cancelada em shutdown.
     _reconnect_task: asyncio.Task[Any] | None = None
@@ -925,6 +929,11 @@ class Daemon:
             # devolve sem instanciar nada. Sobe aqui, ao lado do resto do
             # mundo de microfone e antes dos plugins (código de usuário).
             await self._safe_start("bt_mic", self._start_bt_mic)
+            # SOM-FIADO-01: o nó de som por controle. Sobe LOGO DEPOIS do
+            # microfone porque as duas metades leem a mesma lista de sysfs, e
+            # na ordem inversa o som cai antes do IPC — o mesmo motivo do
+            # `bt_mic`, do outro lado do áudio.
+            await self._safe_start("alto_falante", self._start_alto_falante)
             await self._safe_start("plugins", self._start_plugins)
             # FEAT-METRICS-01: sobe o servidor de métricas Prometheus (gate
             # interno respeita metrics_enabled). Antes nunca era iniciado —
@@ -3731,6 +3740,62 @@ class Daemon:
         )
         await bm.start(ctx)
         self._bt_mic_subsystem = bm
+
+    async def _start_alto_falante(self) -> None:
+        """Sobe o nó de som de cada DualSense — SOM-FIADO-01 (10/09/2026).
+
+        POR QUE ELE FICOU FORA ATÉ HOJE, e os dois motivos MORRERAM
+        -----------------------------------------------------------
+        `daemon/subsystems/__init__.py` registrava a razão: o subsystem
+        publicava um `module-null-sink` por controle e **nenhum
+        `module-loopback`** — quatro entradas mudas na lista de som dela.
+
+        * a rota do CABO chegou em 09/09 (SOM-POR-CONTROLE-01): o nó recebe
+          uma `RotaDoNo` e sobe o `module-loopback` junto quando ela existe;
+        * a rota do RÁDIO chegou em 10/09: o som saiu de verdade pelo report
+          `0x35`, e `AltoFalanteSubsystem._casar_as_pontes` constrói uma
+          `PonteDeSomPorRadio` por controle;
+        * e a guarda que fecha o par vive em `GerenciadorDeNosDeSom.
+          reconciliar`: **sem rota, sem nó**. Quem não entrega não é
+          publicado, então o sumidouro não pode nascer nem por acidente.
+
+        A régua que trava tudo isto é
+        `tests/unit/test_o_no_de_som_nao_nasce_sumidouro.py`, e ela mede o
+        PRODUTO — sobe um `Daemon` de verdade e conta o que foi ao `pactl`.
+
+        Espelha `_start_bt_mic`: um erro aqui vira
+        `_failed_subsystems["alto_falante"]` pelo `_safe_start` do chamador, e
+        o boot segue. Som que não sobe não pode derrubar o resto da mesa.
+        """
+        from hefesto_dualsense4unix.daemon.context import DaemonContext
+        from hefesto_dualsense4unix.daemon.subsystems.alto_falante import (
+            AltoFalanteSubsystem,
+        )
+
+        af = AltoFalanteSubsystem()
+        if not af.is_enabled(self.config):
+            return
+
+        ctx = DaemonContext(
+            controller=self.controller,
+            bus=self.bus,
+            store=self.store,
+            config=self.config,
+            executor=self._executor,
+        )
+        await af.start(ctx)
+        self._alto_falante_subsystem = af
+
+    async def _stop_alto_falante(self) -> None:
+        """Derruba os nós de som e as pontes de rádio. Idempotente.
+
+        Sem isto, os `module-null-sink` ficam na lista de som DELA depois de o
+        daemon morrer — e cada ponte segura um fd de hidraw e um `pw-record`.
+        """
+        if self._alto_falante_subsystem is not None:
+            subsystem = self._alto_falante_subsystem
+            self._alto_falante_subsystem = None
+            await subsystem.stop()
 
     async def _stop_bt_mic(self) -> None:
         """Para o BtMicSubsystem (DESLIGA o mic de cada controle). Idempotente."""

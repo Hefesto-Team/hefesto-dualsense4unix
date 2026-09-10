@@ -2614,7 +2614,20 @@ install_dkms_rtw88_usb_host
 # input, sem LED. Diagnóstico completo (as 3 medidas encadeadas) em
 # assets/dkms/hid-playstation/README.md.
 # Contrato fail-safe idêntico ao 3i/3j: nada aqui aborta o install.
-step "3k" "contenção BT: hid-playstation patchado via DKMS (retry de feature report)"
+# TERCEIRA CURA NO MESMO MÓDULO — 10/09/2026 (patch/0003, MIC-NAO-E-BOTAO-01).
+# O driver parseava os quadros de ÁUDIO do microfone como estado de gamepad:
+# eles chegam com o MESMO report id 0x31, o MESMO tamanho de 78 B e CRC válido,
+# e só o bit 1 do byte 1 os separa. Consequência dupla, medida na bancada com
+# os dois sintomas ao vivo: o driver DESLIGA o microfone sozinho depois de
+# ~1,1 s (borda falsa do botão de mudo sobre payload Opus) e injeta eixos e
+# botões que ninguém apertou — o cursor e o teclado da pessoa se mexem sozinhos.
+#
+# NADA MUDA NA MECÂNICA DESTE PASSO, e isso é de propósito: o `dkms_lib.sh`
+# rebuilda quando o SOURCE muda (`diff -rq -x patch`), então a cura entra pelo
+# caminho normal. **O PACKAGE_VERSION continua 1.0.0** — bumpar deixaria a
+# versão antiga registrada e instalada em updates/dkms, dois `.ko` candidatos
+# para o mesmo módulo; a razão está escrita no próprio `dkms.conf`.
+step "3k" "contenção BT + microfone: hid-playstation patchado via DKMS"
 install_dkms_hid_playstation_host
 
 # ---------------------------------------------------------------------------

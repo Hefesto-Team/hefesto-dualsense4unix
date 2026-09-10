@@ -93,6 +93,7 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
+import functools
 import threading
 from dataclasses import dataclass
 from pathlib import Path
@@ -150,10 +151,23 @@ class GerenciadorDeNosDeSom:
     """
 
     def __init__(
-        self, *, fabrica: Any = None, fonte_por_controle: Any = None
+        self,
+        *,
+        fabrica: Any = None,
+        fonte_por_controle: Any = None,
+        ponte_do_radio_por_controle: Any = None,
     ) -> None:
         self._fabrica = fabrica
         self._fonte_por_controle = fonte_por_controle
+        #: UMA PONTE POR CONTROLE NO RÁDIO — 10/09/2026. Recebe o ``uniq`` e
+        #: devolve um callable que responde *"a ponte deste controle está no
+        #: ar?"*. `None` = ninguém injetou ponte, e :func:`rota_do_no` recusa o
+        #: rádio com a frase honesta, que é o comportamento de sempre.
+        #:
+        #: **A INJEÇÃO É O PONTO.** Este gerenciador não abre hidraw nem sobe
+        #: thread: ele sabe QUAIS controles existem e qual é a mesa, e nada
+        #: mais. Quem constrói a ponte é quem tem o broker na mão.
+        self._ponte_do_radio_por_controle = ponte_do_radio_por_controle
         self._nos: dict[str, Any] = {}
         self._acordar = threading.Event()
 
@@ -180,8 +194,31 @@ class GerenciadorDeNosDeSom:
         return SinkVirtualPipeWire(
             uniq=uniq,
             descricao=descricao_do_alto_falante(uniq),
-            rota=rota_do_no(uniq, transporte, mesa, fonte=self._fonte_do_no(uniq)),
+            rota=rota_do_no(
+                uniq,
+                transporte,
+                mesa,
+                fonte=self._fonte_do_no(uniq),
+                ponte_do_radio=self._ponte_do_radio(uniq),
+            ),
         )
+
+    def _ponte_do_radio(self, uniq: str) -> Any:
+        """O callable que diz se a ponte DESTE controle está no ar — ou `None`.
+
+        `None` não é falha: é *"ninguém me deu ponte"*, e :func:`rota_do_no`
+        responde com a frase honesta. O que ele NÃO pode virar é um `lambda:
+        True` otimista — isso publicaria a rota sobre uma ponte que não existe,
+        e o nó voltaria a ser o sumidouro que
+        `tests/unit/test_o_no_de_som_nao_nasce_sumidouro.py` trava.
+        """
+        if self._ponte_do_radio_por_controle is None:
+            return None
+        try:
+            return self._ponte_do_radio_por_controle(uniq)
+        except Exception:  # pragma: no cover - defensivo
+            logger.debug("som_ponte_do_radio_ilegivel", uniq=uniq, exc_info=True)
+            return None
 
     def _fonte_do_no(self, uniq: str) -> str:
         """``mix`` ou ``sfx`` para este controle — o padrão dela quando ninguém disse.
@@ -232,6 +269,25 @@ class GerenciadorDeNosDeSom:
             if uniq in self._nos:
                 continue
             no = self._construir(uniq, vistos[uniq] or TRANSPORTE_CABO, mesa)
+            # SEM ROTA, SEM NÓ — e a razão está na invariante 4 de
+            # `app/audio_saida.py`: *"um `module-null-sink` sozinho seria
+            # exatamente o sink que aceita o áudio e o joga fora"*. Publicar
+            # aqui poria uma entrada MUDA por DualSense na lista de som dela;
+            # ela escolhe uma das quatro e o som some.
+            #
+            # Isto NÃO contradiz `D-0809-O-NO-DE-SOM-POR-CONTROLE-VIVE-SEMPRE`.
+            # A decisão dela é sobre o nó não sumir debaixo do jogo quando o
+            # controle troca de transporte ou pisca; esta guarda é sobre nunca
+            # PUBLICAR um nó que não entrega em lugar nenhum. `rota.motivo`
+            # carrega a frase honesta, e é ela que a tela mostra.
+            rota = getattr(no, "rota", None)
+            if rota is not None and not getattr(rota, "tem_rota", True):
+                logger.info(
+                    "som_no_sem_rota",
+                    uniq=uniq,
+                    motivo=str(getattr(rota, "motivo", "")),
+                )
+                continue
             try:
                 subiu = bool(no.iniciar())
             except Exception as exc:  # nunca derruba a varredura
@@ -325,6 +381,8 @@ class AltoFalanteSubsystem:
     ) -> None:
         self._gerenciador_injetado = gerenciador
         self._gerenciador: Any = None
+        #: UMA ponte por controle no rádio, pelo `uniq`.
+        self._pontes: dict[str, Any] = {}
         self._fonte = fonte_de_controles or controles_na_lista
         self._thread: threading.Thread | None = None
         self._parar = threading.Event()
@@ -442,6 +500,100 @@ class AltoFalanteSubsystem:
             logger.debug("som_nos_ilegiveis", exc_info=True)
             return frozenset()
 
+    # -----------------------------------------------------------------
+    # SOM-FIADO-01 (10/09/2026) — a ponte por rádio sobe DE VERDADE
+    # -----------------------------------------------------------------
+    # `PonteDeSomPorRadio` nasceu em 10/09 com régua e com o report que TOCOU,
+    # e **ninguém a construía**: o único lugar onde o nome aparecia fora do
+    # módulo que a define era a assinatura de um construtor. O degrau era
+    # MONTOU, e a conferência daquele dia pegou o mapa chamando isso de "existe
+    # no produto".
+    #
+    # É AQUI QUE A FIAÇÃO ACONTECE, e ela é POR CONTROLE: uma ponte por `uniq`,
+    # com o hidraw DAQUELE controle e o monitor do nó DAQUELE controle. Uma
+    # ponte compartilhada mandaria o som do P2 pelo alto-falante do P1 — a
+    # mesma família do `sink_do_controle` no cabo.
+
+    def _ponte_do_radio_de(self, uniq: str) -> Any:
+        """O callable que diz se a ponte DESTE controle está no ar.
+
+        `None` é resposta honesta e o padrão: sem ponte, `rota_do_no` recusa o
+        rádio com a frase certa. O que ele NUNCA pode ser é um `lambda: True`
+        otimista — isso publicaria rota sobre uma ponte inexistente e o nó
+        voltaria a ser o sumidouro que
+        `tests/unit/test_o_no_de_som_nao_nasce_sumidouro.py` trava.
+        """
+        ponte = self._pontes.get(uniq)
+        if ponte is None:
+            return None
+        return ponte.esta_de_pe
+
+    def _casar_as_pontes(self, controles: list[Any]) -> None:
+        """Sobe uma ponte por controle NO RÁDIO, e derruba a de quem saiu.
+
+        Roda na thread de reconciliação, junto com os nós — as duas coisas
+        respondem à mesma lista, e separá-las abriria a janela em que o nó
+        existe e a ponte não (ou o contrário).
+        """
+        from hefesto_dualsense4unix.integrations.alto_falante_bt import (
+            PonteDeSomPorRadio,
+            e_radio,
+            fonte_do_monitor_do_no,
+            nome_do_sink,
+        )
+
+        vivos: dict[str, str] = {}
+        for c in controles:
+            uniq = str(getattr(c, "uniq", "") or "")
+            if uniq and e_radio(str(getattr(c, "transporte", "") or "")):
+                vivos[uniq] = str(getattr(c, "caminho", "") or "")
+
+        for uniq in [u for u in self._pontes if u not in vivos]:
+            ponte = self._pontes.pop(uniq, None)
+            if ponte is not None:
+                ponte.descer()
+                logger.info("som_ponte_derrubada", uniq=uniq)
+
+        for uniq, caminho in vivos.items():
+            if uniq in self._pontes:
+                continue
+            if not caminho:
+                continue
+            fonte, gravador, motivo = fonte_do_monitor_do_no(nome_do_sink(uniq))
+            if fonte is None:
+                logger.info("som_ponte_sem_fonte", uniq=uniq, motivo=motivo)
+                continue
+            # O CAMINHO VAI NO FECHO, e o `functools.partial` diz o tipo: um
+            # `lambda c=caminho: …` amarra igual, mas o mypy não infere o tipo
+            # do default e o portão reprova.
+            ponte = PonteDeSomPorRadio(
+                uniq=uniq,
+                abrir_hidraw=functools.partial(self._abrir_hidraw, caminho),
+                fonte_de_pcm=fonte,
+                gravador=gravador,
+            )
+            if ponte.subir():
+                self._pontes[uniq] = ponte
+            else:
+                ponte.descer()
+                logger.info("som_ponte_nao_subiu", uniq=uniq, motivo=ponte.motivo)
+
+    def _abrir_hidraw(self, caminho: str) -> int | None:
+        """O fd de escrita daquele nó, pelo BROKER — nunca por `os.open` cru.
+
+        Com o co-op ligado os hidraw dos físicos estão escondidos, e só o
+        broker os entrega. É a mesma porta que todo instrumento desta casa usa.
+        """
+        from hefesto_dualsense4unix.integrations.hidraw_broker_client import (
+            abrir_hidraw,
+        )
+
+        try:
+            return abrir_hidraw(caminho, escrita=True).fd
+        except Exception:
+            logger.debug("som_hidraw_nao_abriu", caminho=caminho, exc_info=True)
+            return None
+
     async def start(self, ctx: DaemonContext) -> None:
         """Sobe a thread de reconciliação. Idempotente.
 
@@ -452,7 +604,9 @@ class AltoFalanteSubsystem:
         if self._thread is not None and self._thread.is_alive():
             return
         self._instalar_o_numerador()
-        self._gerenciador = self._gerenciador_injetado or GerenciadorDeNosDeSom()
+        self._gerenciador = self._gerenciador_injetado or GerenciadorDeNosDeSom(
+            ponte_do_radio_por_controle=self._ponte_do_radio_de,
+        )
         self._parar.clear()
         self._thread = threading.Thread(
             target=self._loop, name="hefesto-som-sup", daemon=True
@@ -476,6 +630,13 @@ class AltoFalanteSubsystem:
         if thread is not None:
             with contextlib.suppress(Exception):
                 await asyncio.to_thread(thread.join, 2.0)
+        # As pontes MORREM COM O SUBSYSTEM. Cada uma segura um fd de hidraw e
+        # um `pw-record`; deixá-las de pé depois do `stop()` é vazar os dois
+        # por controle, e o próximo `start()` abriria um segundo par.
+        for uniq, ponte in list(self._pontes.items()):
+            with contextlib.suppress(Exception):
+                ponte.descer()
+            self._pontes.pop(uniq, None)
         self._gerenciador = None
         self._desinstalar_o_numerador()
         self._backend = None
@@ -541,7 +702,14 @@ class AltoFalanteSubsystem:
         sysfs com a chance de discordar da primeira — que é o defeito que
         `bt_mic._conectados_da_mesa` já pagou.
         """
-        gerenciador.reconciliar(self.alvos(list(self._fonte())))
+        alvos = self.alvos(list(self._fonte()))
+        # A PONTE PRIMEIRO, O NÓ DEPOIS — e a ordem é medida, não estética.
+        # `rota_do_no` pergunta à ponte se ela está de pé no momento em que o
+        # nó nasce. Fiar na ordem inversa publicaria a rota do rádio como
+        # recusada e só a corrigiria na varredura seguinte, 2 s depois: o jogo
+        # que abrisse o nó nesse intervalo pegaria a rota errada.
+        self._casar_as_pontes(alvos)
+        gerenciador.reconciliar(alvos)
 
 
 __all__ = [

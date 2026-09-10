@@ -1,8 +1,9 @@
 # Baseline do módulo DKMS hefesto-hid-playstation (contenção BT 25/07 +
-# clone DualShock4 no cabo 25/07)
+# clone DualShock4 no cabo 25/07 + microfone que não é botão 10/09)
 # O hid-playstation.c deste diretório == vanilla v7.0.11 + patches aplicados
 # NA ORDEM da lista PATCH abaixo.
 # Paridade verificável (reverte na ordem INVERSA):
+#   patch -R -p3 hid-playstation.c < patch/0003-*.patch
 #   patch -R -p3 hid-playstation.c < patch/0002-*.patch
 #   patch -R -p3 hid-playstation.c < patch/0001-*.patch
 # deve reproduzir exatamente SHA256_VANILLA_C.
@@ -23,7 +24,13 @@ KERNEL_BASE=v7.0.11
 KERNEL_TESTED=7.0.11-76070011-generic
 POP_LINUX_COMMIT=3af2f9de43174ce5063110f94b7b01226499ba13
 SHA256_VANILLA_C=bdb6ed1d1e0dc27f10a7e25ec758c1cc45eaf0ef00f026fe733aafc6f0f09db2
-SHA256_PATCHED_C=3729dd2e25650d5162463b408cd26727a46c41c481ee7212ef3e9ae2adaf55fb
+# SHA256_PATCHED_C mudou em 10/09/2026 com o 0003 (era
+# 3729dd2e25650d5162463b408cd26727a46c41c481ee7212ef3e9ae2adaf55fb, a série de
+# dois patches). Editar o .c sem mexer AQUI quebra a proveniência do módulo que
+# roda na máquina dela, e três testes desta série reprovam — foi o que
+# aconteceu quando o 0003 entrou.
+SHA256_PATCHED_C=4e7b30c62692a6149088c7e97a5bdb302ebcbbe8633f68aa8e171bd0753af318
 SHA256_HID_IDS_H=a88d22bed0835d0b12d2ade286e9f562fcdb2dcebe2db380ab6b3c3ea8ad7838
 PATCH=0001-HID-playstation-retry-feature-reports-that-time-out-o.patch
 PATCH=0002-HID-playstation-survive-a-DualShock4-pairing-info-rep.patch
+PATCH=0003-HID-playstation-do-not-parse-microphone-audio-frames-.patch

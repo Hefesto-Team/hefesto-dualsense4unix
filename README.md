@@ -226,13 +226,14 @@ A2DP/HFP — manda o áudio como agente dentro dos relatórios HID, e o Hefesto 
 ponte que decodifica e publica no PipeWire. A ponte é opt-in: ligá-la custa
 ~35% dos relatórios de input (260,4 Hz caem para 170,5 Hz) e acrescenta 106,2 Hz
 de áudio na mesma fila — o áudio não abre canal novo. **O som SAINDO pelo
-alto-falante do controle, por rádio, ainda não anda NO PRODUTO — mas o caminho
-está provado.** Em 10/09/2026 o alto-falante tocou por rádio na bancada: 70
-segundos contínuos, com a orelha dela, por `write()` no `/dev/hidraw`. O report
-é o `0x35` (334 B, um quadro Opus de 10 ms, a cada 10,667 ms), e o produto ainda
-monta o `0x39` a 20 ms — o report errado, na cadência errada. **É dívida nossa,
-com endereço**, não limitação do aparelho. Por USB, mic e fone funcionam
-normalmente.
+alto-falante do controle, por rádio: o caminho está PROVADO e o produto já monta
+o report certo — falta ligá-lo.** Em 10/09/2026 o alto-falante tocou por rádio
+na bancada: 70 segundos contínuos, com a orelha dela, por `write()` no
+`/dev/hidraw`. O report é o `0x35` (334 B, um quadro Opus de 10 ms, a cada
+10,667 ms), e o produto passou a montá-lo no mesmo dia — byte a byte igual ao
+que tocou. O que falta é a fiação: nenhuma linha de produção constrói a ponte
+ainda. **É dívida nossa, com endereço**, não limitação do aparelho. Por USB, mic
+e fone funcionam normalmente.
 
 **A troca automática de perfil não vê janelas Wayland nativas.** No COSMIC o
 portal ainda não expõe a janela ativa, então o reconhecimento cobre o que roda

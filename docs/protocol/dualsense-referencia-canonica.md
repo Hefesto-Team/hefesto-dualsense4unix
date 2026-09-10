@@ -703,7 +703,7 @@ em `:1514`, diz que a faixa aceita parece ser `[0x3d..0x64]`.)
 > | campo | onde é escrito | grau |
 > |---|---|---|
 > | volume, `common[5]` | o laço dos quatro bytes de áudio — `_AUDIO_COMMON_OFFSETS` em `core/backend_pydualsense.py:322-324` | **ALTA** — lido no código |
-> | pré-amp, `common[37]` | `core/backend_pydualsense.py:1363-1370`, com o `VALID_FLAG1_AUDIO_CONTROL2_ENABLE` em `:1367-1369`; o valor padrão `0x2` é o `SP_PREAMP_GAIN_PADRAO` em `core/ds_output_report.py:184` | **ALTA** — lido no código |
+> | pré-amp, `common[37]` | `core/backend_pydualsense.py:1471-1478`, com o `VALID_FLAG1_AUDIO_CONTROL2_ENABLE` em `:1475-1477`; o valor padrão `0x2` é o `SP_PREAMP_GAIN_PADRAO` em `core/ds_output_report.py:184` | **ALTA** — lido no código |
 <!-- ENDEREÇOS REAPONTADOS em 01/09/2026: MIC-DA-MESA-ELEICAO-01 acrescentou
      a leitura disciplinada do byte de áudio e o contador de bordas ao
      `backend_pydualsense.py`, e as citações de áudio desceram ~59 linhas.
@@ -885,8 +885,99 @@ enquadramento. O layout vem do `HeadsetPlayMusic` de `awalol/dualsense-bt-haptic
 `install.sh` já a instala — ver `_dep_presente "lib:libopus.so.0"` —, e desde
 10/09 ela é dependência **do alto-falante por rádio também**, não só do microfone.
 
-**O QUE CONTINUA ABERTO:** a ponte no produto. O `alto_falante_bt.py` monta
-`0x39` a 20 ms; o som de hoje vive só no ensaio.
+**A PONTE ESTÁ NO PRODUTO desde a tarde do mesmo 10/09** (SOM-FIADO-01). O
+texto acima dizia *"o `alto_falante_bt.py` monta `0x39` a 20 ms; o som de hoje
+vive só no ensaio"* — **caducou em horas**:
+
+* `ARRANJO_035` é o arranjo PADRÃO do módulo, provado byte a byte contra o
+  ensaio em 64 combinações (`test_o_produto_monta_o_report_que_tocou.py`);
+* `PonteDeSomPorRadio` bombeia esse report, **uma ponte por controle**, com o
+  hidraw e o monitor daquele controle;
+* quem a constrói é `AltoFalanteSubsystem._casar_as_pontes`, e o subsystem
+  entrou no daemon nas três pontas (registry, `run()`, `shutdown()`);
+* `GerenciadorDeNosDeSom.reconciliar` guarda o par: **sem rota, sem nó** — o
+  `module-null-sink` mudo não nasce nem por acidente.
+
+**O QUE CONTINUA ABERTO É BANCADA, e é dela:** o **negativo de rota** (o mesmo
+timbre mirado no HDMI não sai do controle) e o **teste cego**. Enquanto os dois
+não acontecerem, `audio.alto_falante@dualsense` fica com `radio_aciona: não` —
+por disciplina desta casa, não por dúvida sobre o que ela ouviu.
+
+### O microfone por rádio, e o driver que o desliga — 10/09/2026
+
+**GRAU: LIDO NO FONTE do driver que este produto instala**, mais a assinatura
+no journal dela.
+
+Um quadro de microfone por Bluetooth chega com o **mesmo `reportID` `0x31`, o
+mesmo tamanho de 78 bytes e um CRC-32 válido** que um report de estado de
+gamepad. **Só o bit 1 do byte 1 os separa.**
+
+```
+data[1] & 0x02  ->  este report carrega ÁUDIO, não estado de input
+```
+
+O `hid-playstation` **não consulta esse bit**. Ele checa o id, o tamanho e o
+CRC, e aponta o `struct dualsense_input_report` para o payload — que é Opus
+comprimido. As duas consequências foram medidas:
+
+| onde cai | o que acontece |
+|---|---|
+| `ds_report->buttons[2]`, bit `DS_BUTTONS2_MIC_MUTE` | oscila com o áudio. Na borda de subida o driver inverte `ds->mic_muted` e escreve `POWER_SAVE_CONTROL_MIC_MUTE` — **desliga o microfone sozinho** |
+| os eixos e os demais botões | recebem valores de áudio: **o cursor e o teclado se mexem sozinhos** |
+
+**A segunda é a "entrada fantasma"**, relatada duas vezes na bancada. E ela
+explica por que uma medição de 120 s do evdev deu ZERO: naquela corrida o
+microfone não estava no ar, logo não havia quadro de áudio a ser lido como
+botão. *Um zero só derruba a hipótese se a corrida tiver a condição que a
+hipótese exige.*
+
+**Isso fecha o `BT-MIC-GATING-01`** — o bit `MicMuted` oscilando a ~16,7 Hz com
+o mic ligado e estável com ele desligado **é o kernel oscilando**, não uma
+reação do firmware.
+
+**E o corte do microfone em 1,1 s tem a cadeia inteira:** o gating oscila; o
+debounce de 1,0 s do daemon (`MIC_SOSSEGO_S`) engole as primeiras transições; a
+seguinte é aceita como o dedo dela no botão; o daemon desliga o microfone. Sem
+o `0x32` o firmware para de oscilar, então nunca mais nasce borda e ele não
+volta. No journal dela, às 09:42 de 10/09:
+
+```
+mic_da_mesa_borda    mudo=True  repiques_engolidos=15  seq=1
+bt_mic_palavra_dela  ligado=False
+```
+
+**O NÚMERO, com o mesmo instrumento e a mesma duração, antes e depois:**
+
+| | antes | depois |
+|---|---|---|
+| transições do bit `MicMuted` | **1231** | **1** |
+| mediana da permanência | 6,0 ms | — (o bit ficou parado) |
+| p95 | 27,0 ms | — |
+| bordas contadas pelo daemon | ~28/s | **0** |
+| bit estável por | — | **152 segundos** |
+
+Com o microfone no ar e ela falando: *"nao ficou maluco e nao desligou"*. <!-- (noqa-acento: citação literal dela) -->
+
+**Isso prova a cadeia inteira.** O gating não era reação do firmware ao microfone
+ativo — era o **kernel** mutando e desmutando, a partir de bordas que ele
+inventava lendo áudio Opus como botão. Uma guarda de UMA LINHA curou os DOIS
+sintomas de uma vez.
+
+**AS DUAS CURAS, e elas são de camadas diferentes:**
+
+1. **A raiz** — `if (data[1] & DS_INPUT_BT_FLAG_AUDIO) return 0;` no ramo
+   Bluetooth do parse (`patch/0003`, MIC-NAO-E-BOTAO-01). **INSTALADA E MEDIDA em 10/09/2026.** O módulo curado entrou pelo DKMS e foi carregado (o `srcversion` em memória foi de `E493EAD26536CF68977110C` para `CFB81A3D4C7FAA41489CCBD`), e os dois sintomas sumiram no mesmo instante.
+   Ela entra pelo caminho normal do `install.sh` (passo 3k);
+2. **A defesa** — a borda do bit de mudo passa a exigir SUSTENTAÇÃO
+   (`SUSTENTACAO_DO_MUDO_S`, em `core/backend_pydualsense.py`): o dedo trava o
+   valor, o gating oscila, e são duas ordens de grandeza. Ela protege a máquina
+   enquanto o módulo não for recompilado.
+
+**A METADE EM PYTHON JÁ FAZIA A GUARDA CERTA DESDE 16/08/2026** —
+`core/physical_report_reader.INPUT_FLAG_AUDIO`, do PS-PRESO-01. A casa sabia a
+resposta numa linguagem e a esquecia na outra; a régua
+`tests/unit/test_o_quadro_do_microfone_nao_e_botao.py` trava as duas no mesmo
+bit.
 
 ### Microfone
 
@@ -1320,10 +1411,10 @@ começa pela esquerda ou pela direita?"* não muda nenhuma das cinco, e por isso
 >
 > - **fora de supressão (cabo):** o `flag2` sai com setup **e** brilho
 >   ligados em TODO report, e o `common[41]` vai sempre zero
->   (`core/backend_pydualsense.py:848`) — escolha deliberada, travada por
+>   (`core/backend_pydualsense.py:871`) — escolha deliberada, travada por
 >   teste;
 > - **sob supressão (rádio):** o bit de setup é **explicitamente limpo**
->   (`core/backend_pydualsense.py:802-807`), porque reengatá-lo em regime
+>   (`core/backend_pydualsense.py:825-830`), porque reengatá-lo em regime
 >   trava a exibição no firmware — é a `LIGHTBAR-BT-KEEPALIVE-01`.
 >
 > E o perigo registrado, que esta página não carregava: a
