@@ -77,13 +77,22 @@ class _HandleDeMentira:
         monkeypatch.setattr(bp, "_relogio_da_borda", lambda: self._agora)
         self._sustentacao = bp.SUSTENTACAO_DO_MUDO_S
 
-        self._mic_mudo: bool | None = None
-        self._mic_mudo_seq = 0
-        self._mic_mudo_em: float | None = None
-        self._mudos_que_pedimos: list[bool] = []
-        self._borda_armada: tuple[bool, float] | None = None
+        # O ESTADO VEM DO DONO ÚNICO, e não de uma lista redigitada aqui —
+        # 10/09/2026. Este bloco listava os cinco campos à mão, e no dia em que
+        # a cura da sustentação acrescentou dois, ele ficou mais POBRE que o
+        # produto: sete testes deste arquivo morreram no SETUP, com um
+        # `AttributeError` que não diz nada sobre sustentação nenhuma.
+        self._zerar = _Alvo.zerar_estado_da_borda_do_mic.__get__(self)
+        self._garantir_estado_da_borda_do_mic = (
+            _Alvo._garantir_estado_da_borda_do_mic.__get__(self)
+        )
+        self.zerar_estado_da_borda_do_mic = self._zerar
+        self._zerar()
         self._mic_mute_desejado: bool | None = None
         self._registrar_borda_do_mic = _Alvo._registrar_borda_do_mic.__get__(self)
+        self._marcar_o_mudo_que_pedimos = (
+            _Alvo._marcar_o_mudo_que_pedimos.__get__(self)
+        )
         self._set_mute = _Alvo.set_microphone_mute.__get__(self)
 
     def _um_report(self, mudo: bool) -> None:

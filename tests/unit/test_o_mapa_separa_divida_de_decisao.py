@@ -17,7 +17,17 @@ não mudou. As duas células entraram com `nada-a-acionar`, que é DECISÃO: nã
 o que acionar porque não existe comando de ligar a IMU e o sensor emite sempre.
 O contador de dívida deste arquivo não se moveu.)
 
-**RECONTADO EM 09/09/2026: são 45** — 23 no cabo, 22 no rádio. As DUAS que
+**RECONTADO EM 10/09/2026: são 47** — 23 no cabo, 24 no rádio. As DUAS que
+entraram são do lado do RÁDIO, e a subida é de HONESTIDADE pela quarta vez
+neste arquivo: `audio.alto_falante@dualsense` e
+`audio.saida_dedicada.payload_do_degrau@dualsense` subiram para `medido`
+porque o som SAIU pelo rádio na bancada dela (report `0x35`, 70 s com a
+orelha dela) — e o `aciona = não` continua onde estava, porque o contrato
+daquela célula pede TRÊS coisas e a corrida cumpriu uma: falta o **negativo de
+rota** e o **teste cego**, que são dela. *A casa passou a admitir que mediu, e
+a dívida não se moveu.*
+
+**RECONTADO EM 09/09/2026: eram 45** — 23 no cabo, 22 no rádio. As DUAS que
 entraram são os dois lados de `luz.lightbar.brilho@dualsense`, e a subida é de
 HONESTIDADE pela terceira vez neste arquivo: a BRILHO-DE-HARDWARE-01 mediu o
 byte na bancada DELA e a premissa da sprint caiu junto — o `common[42]` obedece
@@ -480,8 +490,8 @@ def test_a_populacao_nao_depende_da_coluna_que_ela_confere() -> None:
         "que ela é derivada da própria coluna, e o portão ficaria verde "
         "justamente quando alguém esquecesse de responder"
     )
-    assert len(antes) == 45, (
-        f"o recorte de 09/09/2026 tinha 45 células medidas e não "
+    assert len(antes) == 47, (
+        f"o recorte de 10/09/2026 tinha 47 células medidas e não "
         f"acionadas, e agora tem {len(antes)}. Não é reprovação de defeito: é "
         "aviso de que o retrato deste arquivo envelheceu e o texto precisa ser "
         "recontado — leia o cabeçalho deste arquivo, que diz como"

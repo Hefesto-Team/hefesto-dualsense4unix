@@ -171,7 +171,7 @@ def report_035(quadro: bytes, *, seq: int, contador: int, rota: int,
     return bytes(pkt)
 
 
-def o_controle_no_radio(): — o tipo é o `Aparelho` de `comum`
+def o_controle_no_radio():  # o tipo é o `Aparelho` de `comum`
     """O DualSense do rádio. Um só: com dois, não se sabe de quem é o som."""
     reais = [a for a in fisicos(descobrir_aparelhos()) if a.transporte == RADIO]
     return reais[0] if len(reais) == 1 else None
