@@ -793,6 +793,12 @@ class _PinnedPyDualSense(pydualsense):  # type: ignore[misc]
         # `_mic_mudo_em` o carimbo de tempo da última.
         self._mic_mudo: bool | None = None
         self._mic_mudo_seq: int = 0
+        #: OS MUDOS QUE **NÓS** PEDIMOS, em FILA — e a fila não é luxo: medido
+        #: na bancada dela em 10/09/2026, ligar o canal do microfone escreve
+        #: DUAS vezes em sequência (`ligar=False seq=1`, `ligar=True seq=2`), e
+        #: uma marca de valor único deixava o segundo eco escapar. Ver
+        #: `_registrar_borda_do_mic`.
+        self._mudos_que_pedimos: list[bool] = []
         self._mic_mudo_em: float | None = None
 
     # O nome manglado de `pydualsense.__find_device` é
@@ -1110,6 +1116,28 @@ class _PinnedPyDualSense(pydualsense):  # type: ignore[misc]
         self._mic_mudo = mudo
         if anterior is None or anterior == mudo:
             return
+
+        # O ECO DA PRÓPRIA ESCRITA NÃO É GESTO DELA — 10/09/2026, e o defeito
+        # era um LAÇO FECHADO, medido na bancada com o DualSense do rádio:
+        #
+        #   1. o daemon liga o microfone -> `set_microphone_mute(False)`
+        #   2. o firmware apaga o bit de mudo
+        #   3. a mudança volta no report de entrada
+        #   4. AQUI o contador incrementava -> `mic_da_mesa_loop` lia uma borda
+        #   5. o daemon concluía "ela apertou o botão" e DESLIGAVA o microfone
+        #
+        # No journal dela isso saía como `mic_da_mesa_borda mudo=True` 620 ms
+        # depois de o canal subir, sem ninguém encostar no controle — e o áudio
+        # captado parava no mesmo instante: 800 ms de voz e silêncio.
+        #
+        # A borda que CASA com o que acabamos de pedir é nossa, e some depois de
+        # consumida: a próxima mudança para o mesmo valor já é dela de novo.
+        # Contar só o que NÃO pedimos é o que devolve o botão do plástico à
+        # dona dele.
+        if mudo in self._mudos_que_pedimos:
+            self._mudos_que_pedimos.remove(mudo)
+            return
+
         self._mic_mudo_seq += 1
         self._mic_mudo_em = time.monotonic()
 
@@ -1129,6 +1157,17 @@ class _PinnedPyDualSense(pydualsense):  # type: ignore[misc]
         fazia sem querer.
         """
         self._mic_mute_desejado = None if muted is None else bool(muted)
+        # A MARCA PARA `_registrar_borda_do_mic`: a próxima mudança do bit de
+        # mudo PARA ESTE VALOR é eco nosso, não gesto dela. `None` devolve a
+        # posse ao kernel e não prevê borda nenhuma.
+        #
+        # É FILA, e o teto de quatro é a cicatriz: sem teto, uma escrita que
+        # nunca ecoa (o report se perdeu no rádio) deixaria a marca viva para
+        # sempre e engoliria um gesto DELA muito depois. Quatro cobre a rajada
+        # de ligar/desligar do canal e esquece o resto.
+        if muted is not None:
+            self._mudos_que_pedimos.append(bool(muted))
+            del self._mudos_que_pedimos[:-4]
 
     def set_microphone_led(self, aceso: bool | int | None) -> None:
         """Assume (ou devolve) a POSSE do LED do botão de mudo (`common[8]`).
