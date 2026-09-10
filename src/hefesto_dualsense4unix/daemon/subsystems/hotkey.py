@@ -17,6 +17,7 @@ import threading
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, Final
 
+from hefesto_dualsense4unix.core.sysfs_leds import norm_mac
 from hefesto_dualsense4unix.daemon.subsystems import recado_do_microfone
 from hefesto_dualsense4unix.integrations import ponte_tentativa
 from hefesto_dualsense4unix.integrations.eleicao_de_microfone import (
@@ -1349,10 +1350,9 @@ class AtoDoMicrofone:
     E ao meio-dia de 04/09 acrescentou as duas regras que faltavam, com todas
     as letras:
 
-        *"o botão fisico do mic se ligado no  # noqa-acento: citação dela
-        microfone ele fica ligado tambem.  # noqa-acento: citação dela
-        indepente se nativo ou virtual"*  # noqa-acento: citação dela
-
+        *"o botão fisico do mic se ligado no  # (noqa-acento: citação dela)
+        microfone ele fica ligado tambem.  # (noqa-acento: citação dela)
+        indepente se nativo ou virtual"*  # (noqa-acento: citação dela)
     Não são duas camadas com duas verdades: é UM ato, e ele só está feito
     quando as duas metades estão feitas. Por isso este tipo carrega as duas
     separadas — para a frase de recusa poder dizer QUAL faltou, que é o que a
@@ -1952,9 +1952,31 @@ async def _apagar_a_luz_de_quem_perdeu_o_canal(
     comportamento de 06/09. Não é `dizer_no_ar(False)`: ela não pediu para ser
     calada, ela só deixou de ser a dona do canal.
     """
-    if dono_antes is None or dono_antes == quem_tocou:
+    # OS TRÊS ENDEREÇOS SE NORMALIZAM ANTES DE SE COMPARAREM — 10/09/2026, e o
+    # defeito é de FORMA, não de lógica. Medido na bancada dela com o DualSense
+    # do rádio, o log desta função saiu assim:
+    #
+    #     ex_dono=aa:bb:cc:dd:ee:d8   por=aabbccddeed8   eleito_agora=aabbccddeed8
+    #
+    # (o endereço acima é a faixa FORJADA da casa; o real da bancada não
+    #  entra em arquivo versionado)
+    #
+    # É O MESMO CONTROLE nos três campos. `dono_antes` vem com os dois-pontos e
+    # `quem_tocou` vem normalizado, então as duas guardas acima falhavam e o
+    # controle PERDIA O CANAL PARA SI MESMO: `esquecer_a_palavra` apagava o
+    # pedido dela 49 ms depois de ela o ter feito, e o microfone do rádio nunca
+    # (noqa-acento: a citação literal dela vem na linha seguinte)
+    # ficava no ar. Ela viu como *"algo tava bugando"* — o nó `hefesto_mic_<hex>`
+    # nascendo, sumindo e voltando.
+    #
+    # As duas guardas EXISTIAM e estavam certas na intenção; o que faltava era
+    # comparar a mesma coisa dos dois lados.
+    antes = norm_mac(dono_antes) or dono_antes
+    tocou = norm_mac(quem_tocou) or quem_tocou
+    eleito_agora = norm_mac(eleitor.eleito) or eleitor.eleito
+    if dono_antes is None or antes == tocou:
         return
-    if eleitor.eleito == dono_antes:
+    if eleito_agora == antes:
         return
     logger.info(
         "mic_da_mesa_luz_do_ex_dono_apagada",
