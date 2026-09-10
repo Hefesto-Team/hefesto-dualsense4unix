@@ -3406,7 +3406,7 @@ def _teto_do_controle(
     A CHAVE É O `uniq` NORMALIZADO — doze hexa minúsculos sem separador, e a
     normalização é do :func:`_so_hex` deste arquivo, nunca escrita de novo. É o
     que `Profile._validate_controllers_keys` canoniza ao carregar
-    (`profiles/schema.py:1591-1632`), logo é o que está no disco; procurar por
+    (`profiles/schema.py:1661-1722`), logo é o que está no disco; procurar por
     `aa:bb:…` não acharia nada e a tela mostraria "Segue o global" para sempre.
     A cópia que morava aqui tinha perdido o `.strip()` do helper, e um `uniq`
     com espaço ou quebra fazia a gravação cair numa chave e a pintura procurar
