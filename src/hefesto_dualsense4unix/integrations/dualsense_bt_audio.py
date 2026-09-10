@@ -1163,6 +1163,20 @@ class PonteMicBluetooth:
     def nome_source(self) -> str:
         return self._nome_source
 
+    @property
+    def mic_no_ar(self) -> bool:
+        """O microfone deste controle está PEDIDO agora — 10/09/2026.
+
+        `_mic_pedido` é o único lugar desta casa que sabe o que foi escrito no
+        `0x32` por último; `None` é *"ainda não pedi nada"*, que vale `False`.
+
+        Ele nasceu público porque o SOM precisa dele: o report `0x35` que leva
+        o som carrega, no bit 0 dos enables, o mesmo microfone. Sem esta
+        pergunta o som desliga o microfone a cada report, e as duas metades da
+        casa passam a se contradizer noventa e três vezes por segundo.
+        """
+        return self._mic_pedido is True
+
     def estatistica(self) -> EstatisticaMic:
         """Snapshot dos contadores (barato: só lê um dataclass sob lock).
 
@@ -1842,6 +1856,45 @@ NOME_DO_MICROFONE_DO_CONTROLE = "Microfone do Controle"
 _NUMERADOR_DE_ASSENTO: Callable[[str], int | None] | None = None
 
 
+#: Quem sabe dizer se o microfone de um `uniq` está no ar. O `BtMicSubsystem`
+#: o instala ao subir e o retira ao descer — é o mesmo padrão de gancho do
+#: numerador de assento logo abaixo, e pela mesma razão: quem PERGUNTA (o
+#: subsystem do alto-falante) não pode importar quem RESPONDE sem amarrar dois
+#: subsystems um ao outro.
+_OUVINTE_DO_MICROFONE: Callable[[str], bool] | None = None
+
+
+def registrar_ouvinte_do_microfone(
+    ouvinte: Callable[[str], bool] | None,
+) -> Callable[[str], bool] | None:
+    """Instala quem sabe se o microfone de um `uniq` está no ar. Devolve o anterior."""
+    global _OUVINTE_DO_MICROFONE
+    anterior = _OUVINTE_DO_MICROFONE
+    _OUVINTE_DO_MICROFONE = ouvinte
+    return anterior
+
+
+def o_microfone_esta_no_ar(uniq: str) -> bool:
+    """O microfone deste controle está pedido agora — `False` quando ninguém sabe.
+
+    **`False` é a resposta segura, e a escolha é medida.** Quem consome isto é
+    o bit 0 dos enables do `0x35`: dizer `True` sem saber ligaria o microfone
+    dela por conta própria, a cada report do som, sem gesto nenhum. Dizer
+    `False` sem saber deixa o aparelho onde ele já estava.
+
+    Nunca levanta: o caminho até aqui é o laço de envio do som, a 93,75
+    reports por segundo.
+    """
+    ouvinte = _OUVINTE_DO_MICROFONE
+    if ouvinte is None or not uniq:
+        return False
+    try:
+        return bool(ouvinte(uniq))
+    except Exception:  # pragma: no cover - defensivo
+        logger.debug("ouvinte_do_microfone_ilegivel", uniq=uniq, exc_info=True)
+        return False
+
+
 def registrar_numerador_de_assento(
     numerador: Callable[[str], int | None] | None,
 ) -> Callable[[str], int | None] | None:
@@ -1939,8 +1992,10 @@ __all__ = [
     "montar_pedido_de_mic",
     "nos_dualsense_bluetooth",
     "numero_do_assento",
+    "o_microfone_esta_no_ar",
     "propriedades_da_source",
     "registrar_numerador_de_assento",
+    "registrar_ouvinte_do_microfone",
     "status_de_audio",
     "versao_libopus",
 ]

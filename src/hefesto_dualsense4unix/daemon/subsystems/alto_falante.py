@@ -665,6 +665,9 @@ class AltoFalanteSubsystem:
             fonte_do_monitor_do_no,
             nome_do_sink,
         )
+        from hefesto_dualsense4unix.integrations.dualsense_bt_audio import (
+            o_microfone_esta_no_ar,
+        )
 
         vivos: dict[str, str] = {}
         for c in controles:
@@ -690,10 +693,19 @@ class AltoFalanteSubsystem:
             # O CAMINHO VAI NO FECHO, e o `functools.partial` diz o tipo: um
             # `lambda c=caminho: …` amarra igual, mas o mypy não infere o tipo
             # do default e o portão reprova.
+            # O BIT DO MICROFONE VAI JUNTO, E ELE É PERGUNTADO A CADA REPORT
+            # — 10/09/2026, queixa dela com o som tocando pelo rádio. O `0x35`
+            # carrega, no bit 0 dos enables, o mesmo microfone; a ponte nascia
+            # com ele em ZERO e o repetia 93,75 vezes por segundo, desligando
+            # o microfone dela enquanto o som saía. Quem responde é o
+            # `BtMicSubsystem`, pelo gancho — nenhum subsystem importa o
+            # outro. `functools.partial` e não `lambda` pela mesma razão do
+            # `abrir_hidraw` acima: o mypy infere o tipo do primeiro.
             ponte = PonteDeSomPorRadio(
                 uniq=uniq,
                 abrir_hidraw=functools.partial(self._abrir_hidraw, caminho),
                 fonte_de_pcm=fonte,
+                com_microfone=functools.partial(o_microfone_esta_no_ar, uniq),
                 gravador=gravador,
             )
             if ponte.subir():

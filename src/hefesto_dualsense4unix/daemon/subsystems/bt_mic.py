@@ -418,6 +418,8 @@ class BtMicSubsystem:
         #: `(dizedor, esquecedor, leitor)` que estava instalado antes de nós.
         self._dizedor_anterior: tuple[Any, Any, Any] | None = None
         self._numerador_anterior: Any = None
+        #: O ouvinte que o SOM consulta — ver `microfone_no_ar`.
+        self._ouvinte_anterior: Any = None
         #: O backend do daemon (`DaemonContext.controller`). É por ele que este
         #: subsystem enxerga a MESA INTEIRA — o rádio e o CABO —, e não só os
         #: nós de Bluetooth que o gerenciador reconcilia. Ver `uniqs_na_mesa`.
@@ -555,6 +557,40 @@ class BtMicSubsystem:
             uniq = norm_mac(str(getattr(getattr(ponte, "no", None), "uniq", ""))) or ""
             with contextlib.suppress(Exception):
                 dizer(palavras.get(uniq))
+
+    def microfone_no_ar(self, uniq: str) -> bool:
+        """O microfone deste controle está PEDIDO agora — 10/09/2026.
+
+        **Quem pergunta é o SOM**, e a pergunta nasceu de um defeito medido na
+        bancada dela: o report `0x35` que leva o som carrega, no bit 0 dos
+        enables, o mesmo microfone. A ponte do som nascia com aquele bit em
+        zero e o mantinha em 93,75 reports por segundo — desligando o
+        microfone dela noventa e três vezes por segundo enquanto tocava.
+
+        Responde pelo EFEITO e não pelo pedido: a fonte é o `_mic_pedido` de
+        cada ponte viva, que é o último `0x32` escrito no aparelho. Uma ponte
+        que ela pediu e que não subiu não tem microfone no ar, e dizer que tem
+        poria o bit no fio contra o estado do controle.
+        """
+        alvo = norm_mac(str(uniq or "")) or ""
+        if not alvo:
+            return False
+        gerenciador = self._gerenciador
+        if gerenciador is None:
+            return False
+        try:
+            pontes = gerenciador.pontes
+        except Exception:  # best-effort: quem chama está no laço do som
+            logger.debug("bt_mic_pontes_ilegiveis", exc_info=True)
+            return False
+        if not isinstance(pontes, dict):
+            return False
+        for ponte in pontes.values():
+            no = getattr(ponte, "no", None)
+            if (norm_mac(str(getattr(no, "uniq", ""))) or "") != alvo:
+                continue
+            return bool(getattr(ponte, "mic_no_ar", False))
+        return False
 
     def uniqs_com_ponte(self) -> frozenset[str]:
         """Os `uniq` cuja ponte está DE PÉ agora — o que o rádio carrega.
@@ -755,6 +791,17 @@ class BtMicSubsystem:
         self._numerador_anterior = registrar_numerador_de_assento(
             self.numero_do_assento
         )
+        # E O QUINTO É O MICROFONE VISTO PELO SOM (10/09/2026). Ver
+        # `microfone_no_ar`: sem ele o `0x35` do alto-falante desliga o
+        # microfone a cada report, e as duas metades da casa se contradizem no
+        # fio. Sobe e desce com os outros quatro, pela mesma razão de sempre —
+        # um gancho que fica de pé depois do `stop()` responde por um
+        # gerenciador que não existe mais.
+        from hefesto_dualsense4unix.integrations.dualsense_bt_audio import (
+            registrar_ouvinte_do_microfone,
+        )
+
+        self._ouvinte_anterior = registrar_ouvinte_do_microfone(self.microfone_no_ar)
 
     async def stop(self) -> None:
         """Derruba as pontes (o que DESLIGA o mic em cada controle). Idempotente.
@@ -798,6 +845,7 @@ class BtMicSubsystem:
         """Devolve o pedidor anterior — o subsystem parado não atende ninguém."""
         from hefesto_dualsense4unix.integrations.dualsense_bt_audio import (
             registrar_numerador_de_assento,
+            registrar_ouvinte_do_microfone,
         )
         from hefesto_dualsense4unix.integrations.eleicao_de_microfone import (
             registrar_dizedor_do_no_ar,
@@ -811,6 +859,8 @@ class BtMicSubsystem:
         self._dizedor_anterior = None
         registrar_numerador_de_assento(self._numerador_anterior)
         self._numerador_anterior = None
+        registrar_ouvinte_do_microfone(self._ouvinte_anterior)
+        self._ouvinte_anterior = None
 
     # -- laço -------------------------------------------------------------
 
