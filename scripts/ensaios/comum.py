@@ -572,3 +572,109 @@ def censo_da_mesa(aparelhos: list[Aparelho]) -> str:
             "coluna cabo-x-rádio abaixo compara coisa alguma."
         )
     return f"mesa com {len(reais)} controle(s): {desenho} — os dois transportes presentes."
+
+
+# ---------------------------------------------------------------------------
+# O TEMA DA FOLHA — e ele se decide pela LETRA, não pelo sinalizador
+# ---------------------------------------------------------------------------
+#
+# MEDIDO EM 10/09/2026, com ela na bancada e as duas folhas na tela:
+# *"fora que nao deu pra ler nada nos botoes"*.  # noqa-acento: citação literal dela
+#
+# A CAUSA, e ela some se alguém olhar só o nome da propriedade: as três folhas
+# decidiam claro-ou-escuro por `gtk-application-prefer-dark-theme`. Na máquina
+# dela esse sinalizador é **False** e o tema é **`adw-gtk3-dark`** — escuro. As
+# folhas pintavam a janela de CLARO e o GTK continuava pintando `button` e
+# `entry` pelo tema ESCURO, com a letra BRANCA. Branco sobre claro é o que ela
+# não conseguiu ler; e o rótulo do botão era justamente o que dizia o que fazer.
+#
+# `prefer-dark` é um PEDIDO do aplicativo ao tema, não uma descrição do tema.
+# O produto o liga por conta própria (`app/theme.py:399`) e por isso nunca viu
+# este defeito; um instrumento que não o liga lê `False` num desktop escuro.
+#
+# A RÉGUA QUE SOBRA é a cor que o tema ESCREVE: se a letra do botão é clara, o
+# tema é escuro, e o fundo tem de acompanhá-la. Isso se mede sem abrir janela
+# nenhuma na tela dela — `Gtk.OffscreenWindow`, sem `show()` — e não depende de
+# o tema ter a palavra «dark» no nome.
+
+
+def o_tema_e_escuro() -> bool:
+    """Escuro pelo que o tema PINTA, e não pelo sinalizador que ninguém liga.
+
+    A medição é a luminância da cor da LETRA de um `Gtk.Button` do tema: acima
+    de 0,5 o tema escreve claro, logo o fundo dele é escuro. O nome do tema e o
+    `prefer-dark` ficam como reforço, para o caso de o estilo não resolver.
+    """
+    import gi
+
+    gi.require_version("Gtk", "3.0")
+    from gi.repository import Gtk
+
+    ajustes = Gtk.Settings.get_default()
+    if ajustes is not None:
+        if bool(ajustes.get_property("gtk-application-prefer-dark-theme")):
+            return True
+        nome = str(ajustes.get_property("gtk-theme-name") or "")
+        if "dark" in nome.lower():
+            return True
+
+    # A MEDIÇÃO, e ela é a que alcança o tema escuro sem «dark» no nome.
+    # `OffscreenWindow` de propósito: TELA-DELA-02 — instrumento não abre janela
+    # na tela dela, e aqui não há nada a mostrar.
+    janela = Gtk.OffscreenWindow()
+    botao = Gtk.Button(label="x")
+    janela.add(botao)
+    try:
+        letra = botao.get_style_context().get_color(Gtk.StateFlags.NORMAL)
+        luminancia = 0.2126 * letra.red + 0.7152 * letra.green + 0.0722 * letra.blue
+        return bool(luminancia > 0.5)
+    finally:
+        janela.destroy()
+
+
+def pintar_fundo_solido(janela: object) -> None:
+    """Um fundo SÓLIDO e LEGÍVEL para a folha — razão dela: *"o fundo tá muito transparente"*.
+
+    Sem isto a `Gtk.Window` herda o fundo do compositor, e sob o COSMIC vira uma
+    folha translúcida com o desktop dela atravessando.
+
+    **E ele pinta `button`, `entry` e `combobox` de propósito.** A versão que
+    pintava só `window`/`frame`/`scrolledwindow` deixava esses três com as cores
+    do tema do sistema; quando o instrumento erra o tema, o rótulo do botão some
+    dentro do próprio botão. Declarar os três é o que faz a folha ser legível
+    mesmo que a detecção acima um dia se engane.
+    """
+    import gi
+
+    gi.require_version("Gtk", "3.0")
+    gi.require_version("Gdk", "3.0")
+    from gi.repository import Gdk, Gtk
+
+    escuro = o_tema_e_escuro()
+    if escuro:
+        fundo, letra, moldura = "#1f1f1f", "#f2f2f2", "#2a2a2a"
+        campo, borda = "#333333", "#555555"
+    else:
+        fundo, letra, moldura = "#f6f5f4", "#1b1b1b", "#ffffff"
+        campo, borda = "#ffffff", "#c0bfbc"
+    css = (
+        f"window, window.background {{ background-color: {fundo}; color: {letra}; }}"
+        f"frame {{ background-color: {moldura}; border-radius: 6px; }}"
+        f"scrolledwindow {{ background-color: {fundo}; }}"
+        f"label {{ color: {letra}; }}"
+        f"button {{ background-image: none; background-color: {campo}; color: {letra};"
+        f" border: 1px solid {borda}; }}"
+        f"button:hover {{ background-color: {borda}; }}"
+        f"entry {{ background-image: none; background-color: {campo}; color: {letra};"
+        f" border: 1px solid {borda}; }}"
+        f"entry placeholder {{ color: {borda}; }}"
+        f"combobox button {{ background-color: {campo}; color: {letra}; }}"
+        f"scale value {{ color: {letra}; }}"
+        f"scale marks label {{ color: {letra}; }}"
+    )
+    provedor = Gtk.CssProvider()
+    provedor.load_from_data(css.encode("utf-8"))
+    Gtk.StyleContext.add_provider_for_screen(
+        Gdk.Screen.get_default(), provedor, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION
+    )
+    janela.set_app_paintable(False)  # type: ignore[attr-defined]

@@ -3,10 +3,9 @@
 
 A ENCOMENDA É DELA, 09/09/2026, com o produto instalado e os controles na mão:
 
-    *"materializa o teste pensando em dois controles. um com cabo e o da  # noqa-acento: citação dela
-     direita via bt. vou desconectar os demais. Faz eles estilo o que  # noqa-acento: citação dela
-     fizemos hoje mais cedo. (…) com os controles pra eu poder ver e tal."*  # noqa-acento: citação literal dela
-
+    *"materializa o teste pensando em dois controles. um com cabo e o da  # (noqa-acento: citação dela)
+     direita via bt. vou desconectar os demais. Faz eles estilo o que  # (noqa-acento: citação dela)
+     fizemos hoje mais cedo. (…) com os controles pra eu poder ver e tal."*  # (noqa-acento: citação literal dela)
 «Estilo o que fizemos hoje mais cedo» é a `a_folha_dos_ensaios.py`, e o que
 esta herda dela é o desenho inteiro: uma TABELA declarativa que se monta em
 tela, **um controle por pergunta**, o martelo a 10 Hz, e nenhuma conclusão —
@@ -172,7 +171,7 @@ import gi
 
 gi.require_version("Gtk", "3.0")
 gi.require_version("Gdk", "3.0")
-from gi.repository import Gdk, GLib, Gtk
+from gi.repository import GLib, Gtk
 
 import hefesto_dualsense4unix.core.ds_output_report as rep
 
@@ -182,7 +181,7 @@ import hefesto_dualsense4unix.core.ds_output_report as rep
 # declaração de procedência deixando de declarar.
 from hefesto_dualsense4unix.integrations.audio_control import fonte_de_captura_do_uniq
 from hefesto_dualsense4unix.integrations.canal_do_microfone import nome_do_canal
-from comum import CABO, RADIO, cabecalho_do_instrumento, resumo
+from comum import CABO, RADIO, cabecalho_do_instrumento, pintar_fundo_solido, resumo
 from escrita_pelo_broker import (
     Escritor,
     alvos_da_mesa,
@@ -868,22 +867,11 @@ class Folha:
         COSMIC isso vira uma folha translúcida com o desktop dela atravessando
         — o pior fundo possível para quem olha uma barra subir.
         """
-        ajustes = Gtk.Settings.get_default()
-        escuro = bool(ajustes and ajustes.get_property("gtk-application-prefer-dark-theme"))
-        fundo, letra, moldura = (
-            ("#1f1f1f", "#f2f2f2", "#2a2a2a") if escuro else ("#f6f5f4", "#1b1b1b", "#ffffff")
-        )
-        css = (
-            f"window, window.background {{ background-color: {fundo}; color: {letra}; }}"
-            f"frame {{ background-color: {moldura}; border-radius: 6px; }}"
-            f"scrolledwindow {{ background-color: {fundo}; }}"
-        )
-        provedor = Gtk.CssProvider()
-        provedor.load_from_data(css.encode("utf-8"))
-        Gtk.StyleContext.add_provider_for_screen(
-            Gdk.Screen.get_default(), provedor, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION
-        )
-        self.janela.set_app_paintable(False)
+        # O DONO É `comum.pintar_fundo_solido` DESDE 10/09/2026, e a razão está
+        # lá: estas três folhas decidiam o tema por `prefer-dark`, que é False
+        # na máquina dela sob um tema ESCURO — e o rótulo do botão sumia dentro
+        # do próprio botão. *"nao deu pra ler nada nos botoes"*.  # (noqa-acento: citação literal dela)
+        pintar_fundo_solido(self.janela)
 
     # ----------------------------------------------------------------- topo
     def _topo(self) -> Gtk.Widget:

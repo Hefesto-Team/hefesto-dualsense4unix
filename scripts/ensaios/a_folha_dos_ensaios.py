@@ -78,10 +78,10 @@ import gi
 
 gi.require_version("Gtk", "3.0")
 gi.require_version("Gdk", "3.0")
-from gi.repository import Gdk, GLib, Gtk
+from gi.repository import GLib, Gtk
 
 import hefesto_dualsense4unix.core.ds_output_report as rep
-from comum import CABO
+from comum import CABO, pintar_fundo_solido
 from escrita_pelo_broker import (
     Escritor,
     alvos_da_mesa,
@@ -726,22 +726,11 @@ class Folha:
         lâmpada acender. A cor sai do tema (`prefer-dark` na máquina dela), com
         alfa 1 escrito à mão: o que não pode é herdar transparência.
         """
-        ajustes = Gtk.Settings.get_default()
-        escuro = bool(ajustes and ajustes.get_property("gtk-application-prefer-dark-theme"))
-        fundo, letra, moldura = (
-            ("#1f1f1f", "#f2f2f2", "#2a2a2a") if escuro else ("#f6f5f4", "#1b1b1b", "#ffffff")
-        )
-        css = (
-            f"window, window.background {{ background-color: {fundo}; color: {letra}; }}"
-            f"frame {{ background-color: {moldura}; border-radius: 6px; }}"
-            f"scrolledwindow {{ background-color: {fundo}; }}"
-        )
-        provedor = Gtk.CssProvider()
-        provedor.load_from_data(css.encode("utf-8"))
-        Gtk.StyleContext.add_provider_for_screen(
-            Gdk.Screen.get_default(), provedor, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION
-        )
-        self.janela.set_app_paintable(False)
+        # O DONO É `comum.pintar_fundo_solido` DESDE 10/09/2026, e a razão está
+        # lá: estas três folhas decidiam o tema por `prefer-dark`, que é False
+        # na máquina dela sob um tema ESCURO — e o rótulo do botão sumia dentro
+        # do próprio botão. *"nao deu pra ler nada nos botoes"*.  # (noqa-acento: citação literal dela)
+        pintar_fundo_solido(self.janela)
 
     # ------------------------------------------------------------------ topo
     def _topo(self) -> Gtk.Widget:
