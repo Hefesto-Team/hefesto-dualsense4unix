@@ -30,6 +30,13 @@ Controle N» · «Microfone do Controle N». O instrumento procura por esses, e
 também pelo `nome_do_sink(uniq)` do produto (`integrations/alto_falante_bt`),
 para não dar NÃO EXISTE a um nó que exista com o nome de dentro.
 
+ELE PODE ATRIBUIR O NÓ AO CONTROLE ERRADO — medido em 09/09/2026, e o defeito
+é conhecido: o casamento é pelo TEXTO do `Description`, cujo N é o
+`numero_do_assento` (a posição entre os conectados). Entre duas corridas com a
+mesa mudando, o mesmo nó trocou de dono. A cura tem dona:
+`docs/process/sprints/2026-09-09-TRES-CONTAS-PARA-UM-NUMERO-01-o-assento-do-som-e-o-controle-N-da-tela.md`,
+§6 — casar por propriedade de posse do nó, nunca por prosa de rótulo.
+
 USO
     os_nos_de_som_por_controle.py
     os_nos_de_som_por_controle.py --observar 60
