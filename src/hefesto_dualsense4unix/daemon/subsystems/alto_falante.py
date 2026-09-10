@@ -317,6 +317,61 @@ class GerenciadorDeNosDeSom:
         self._acordar.set()
 
 
+def _uniq_de_perfil(uniq: str) -> str:
+    """O `uniq` na grafia que o PERFIL usa: doze hex minúsculos, sem separador.
+
+    O sysfs entrega `aa:bb:cc:dd:ee:ff` e o `Profile.controllers` é chaveado
+    por `aabbccddeeff` — o schema recusa a outra forma. Casar as duas grafias
+    à mão em cada chamador é como esta casa já perdeu uma escolha dela: a
+    chave não bate, `get` devolve `None`, e ninguém vê erro nenhum.
+    """
+    return "".join(c for c in uniq.lower() if c in "0123456789abcdef")[:12]
+
+
+def _carimbo_do_perfil(nome: str) -> Any:
+    """`mtime_ns` do arquivo daquele perfil — `None` quando não dá para saber.
+
+    É o que invalida o cache das fontes. `None` (arquivo não encontrado, erro
+    de `stat`) força a releitura na varredura seguinte, que é o lado seguro:
+    ler demais custa uma syscall, ler de menos entrega a escolha de ontem.
+    """
+    try:
+        # `_profile_path` é privado do loader, e usá-lo é deliberado: a
+        # alternativa seria redigitar aqui `profiles_dir() / f"{slug}.json"`,
+        # e uma segunda regra de "onde mora o perfil" é como esta casa já
+        # perdeu escrita dela — o `slugify` e a recusa de travessia moram lá.
+        from hefesto_dualsense4unix.profiles.loader import _profile_path
+
+        return Path(_profile_path(nome)).stat().st_mtime_ns
+    except Exception:
+        return None
+
+
+def _fontes_por_controle(nome: str) -> dict[str, str]:
+    """`{uniq: "mix"|"sfx"}` dos overrides daquele perfil. `{}` é honesto.
+
+    Só entra quem DECLAROU: `speaker.fonte is None` significa *"sem opinião"*
+    em todo o esquema de perfil, e transformá-lo em `sfx` aqui apagaria a
+    diferença entre «ela escolheu efeitos» e «ela não escolheu nada» — que é
+    a distinção que faz o padrão poder mudar um dia sem reescrever perfil.
+    """
+    try:
+        from hefesto_dualsense4unix.profiles.loader import load_profile
+
+        perfil = load_profile(nome)
+    except Exception:
+        logger.debug("som_perfil_ilegivel", perfil=nome, exc_info=True)
+        return {}
+
+    fontes: dict[str, str] = {}
+    for chave, override in (getattr(perfil, "controllers", None) or {}).items():
+        alto_falante = getattr(override, "speaker", None)
+        fonte = getattr(alto_falante, "fonte", None)
+        if fonte:
+            fontes[_uniq_de_perfil(str(chave))] = str(fonte)
+    return fontes
+
+
 def controles_na_lista(raiz: str | None = None) -> list[ControleNaLista]:
     """Todo DualSense que o sysfs mostra, **nos dois transportes**.
 
@@ -383,6 +438,10 @@ class AltoFalanteSubsystem:
         self._gerenciador: Any = None
         #: UMA ponte por controle no rádio, pelo `uniq`.
         self._pontes: dict[str, Any] = {}
+        #: `({uniq: fonte}, (nome do perfil, carimbo))` — SFX-POR-CONTROLE-01.
+        self._fontes_em_cache: tuple[dict[str, str], Any] = ({}, None)
+        #: O `StateStore` do daemon, que sabe o perfil ATIVO agora.
+        self._store: Any = None
         self._fonte = fonte_de_controles or controles_na_lista
         self._thread: threading.Thread | None = None
         self._parar = threading.Event()
@@ -501,6 +560,71 @@ class AltoFalanteSubsystem:
             return frozenset()
 
     # -----------------------------------------------------------------
+    # SFX-POR-CONTROLE-01 (10/09/2026) — a fonte de CADA controle
+    # -----------------------------------------------------------------
+    # `GerenciadorDeNosDeSom` aceita `fonte_por_controle` desde que nasceu, e
+    # **ninguém o injetava** — exatamente a mesma família do
+    # `ponte_do_radio_por_controle` que a A1 fiou. Consequência para quem joga:
+    # o campo `speaker.fonte` do perfil dela existia, a aba o gravava, e todo
+    # nó nascia com `FONTE_PADRAO`. A escolha morria no disco.
+    #
+    # A DIFERENÇA ENTRE AS DUAS FONTES É A CENA DELA:
+    #
+    # * `sfx` — o nó fica LIVRE para a corrente que o jogo mandar. É o tiro
+    #   saindo no plástico DAQUELE jogador, e é o padrão;
+    # * `mix` — o monitor da SAÍDA PADRÃO cai também neste nó. É o «HDMI
+    #   completo» dela: o que a TV recebe, o controle recebe junto.
+    #
+    # Numa mesa de quatro isso é por pessoa: o P1 pode querer o mix inteiro no
+    # ouvido e o P2 só os efeitos do jogo. Um nó que ignora a escolha entrega
+    # a mesma coisa aos quatro.
+
+    def _fonte_do_controle(self, uniq: str) -> str:
+        """`mix` ou `sfx` para ESTE controle, lido do perfil ativo dela.
+
+        **NÃO LÊ DISCO NO LAÇO.** A varredura roda a cada
+        :data:`RECONCILIA_S`; reler o perfil ali seria a tempestade de syscalls
+        que o mapa de motores do `gamepad.py` já pagou uma vez. O cache é por
+        `(nome do perfil, mtime do arquivo)`, então a escolha dela vale na
+        varredura seguinte ao "Salvar" e nem um instante depois.
+        """
+        from hefesto_dualsense4unix.integrations.alto_falante_bt import FONTE_PADRAO
+
+        fontes = self._fontes_do_perfil()
+        return fontes.get(_uniq_de_perfil(uniq)) or FONTE_PADRAO
+
+    def _fontes_do_perfil(self) -> dict[str, str]:
+        """`{uniq: fonte}` do perfil ativo — e `{}` é resposta honesta.
+
+        Sem perfil ativo, com o arquivo ilegível, ou sem a seção `speaker` em
+        override nenhum, a resposta é vazia e cada nó fica com o padrão. O que
+        ela NUNCA pode ser é um palpite: publicar `mix` em quem não pediu põe
+        o áudio do sistema inteiro no ouvido daquele jogador.
+        """
+        from hefesto_dualsense4unix.utils.session import load_last_profile
+
+        try:
+            nome = (
+                getattr(getattr(self, "_store", None), "active_profile", None)
+                or load_last_profile()
+            )
+        except Exception:  # pragma: no cover - defensivo
+            nome = None
+        if not nome:
+            self._fontes_em_cache = ({}, None)
+            return {}
+
+        carimbo = _carimbo_do_perfil(nome)
+        cacheado, chave = self._fontes_em_cache
+        if chave == (nome, carimbo):
+            return cacheado
+
+        fontes = _fontes_por_controle(nome)
+        self._fontes_em_cache = (fontes, (nome, carimbo))
+        logger.debug("som_fontes_relidas", perfil=nome, controles=len(fontes))
+        return fontes
+
+    # -----------------------------------------------------------------
     # SOM-FIADO-01 (10/09/2026) — a ponte por rádio sobe DE VERDADE
     # -----------------------------------------------------------------
     # `PonteDeSomPorRadio` nasceu em 10/09 com régua e com o report que TOCOU,
@@ -604,8 +728,10 @@ class AltoFalanteSubsystem:
         if self._thread is not None and self._thread.is_alive():
             return
         self._instalar_o_numerador()
+        self._store = getattr(ctx, "store", None)
         self._gerenciador = self._gerenciador_injetado or GerenciadorDeNosDeSom(
             ponte_do_radio_por_controle=self._ponte_do_radio_de,
+            fonte_por_controle=self._fonte_do_controle,
         )
         self._parar.clear()
         self._thread = threading.Thread(
