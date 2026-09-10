@@ -847,7 +847,7 @@ class Janela:
             ao_receber=self._gesto,
             ao_sair_da_aba=self._saiu_da_aba,
             oculta=args.oculta,
-            subtitulo="Controles — a mesa de verdade",
+            subtitulo="Controles — o que o aparelho diz",
         )
         self.view = self.tela.view
         self.ponte = self.tela.ponte

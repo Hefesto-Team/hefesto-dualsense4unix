@@ -218,7 +218,7 @@ class Janela:
             ao_receber=self._gesto,
             ao_sair_da_aba=self._saiu_da_aba,
             oculta=args.oculta,
-            subtitulo="Conexões — a mesa de verdade",
+            subtitulo="Conexões — o que o aparelho diz",
         )
         self.ponte = self.tela.ponte
         self.janela = self.tela.janela
