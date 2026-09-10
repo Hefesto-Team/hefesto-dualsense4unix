@@ -775,3 +775,63 @@ def test_o_cabo_continua_sendo_cabo_nas_duas_grafias() -> None:
         assert som.e_radio(palavra) is False
     rota = som.rota_do_no(_UNIQ_P1, "cabo", (_UNIQ_P1,), runner=lambda a: "")
     assert rota.motivo == som.MOTIVO_NO_SEM_PLACA_NO_CABO
+
+
+def test_o_terceiro_numerador_do_mesmo_rotulo_esta_medido_e_confinado() -> None:
+    """HÁ TRÊS contas para o mesmo «Controle N», e a terceira nasceu em 09/09.
+
+    Achado pelo conferente da SOM-POR-CONTROLE-01. A sprint declarou DUAS
+    implementações do assento (`AltoFalanteSubsystem` e `BtMicSubsystem`) e
+    escreveu a régua que as amarra — o teste logo acima. **A terceira já
+    existia**, e é a da casa:
+
+        `app/actions/base.numero_do_controle`   `player_slot`, senão `index+1`
+        `daemon/ipc_handlers.py:609`            a MESMA regra, copiada para o
+                                                daemon porque `base.py` importa
+                                                `gi`; há portão que compara as
+                                                duas sobre o payload REAL de
+                                                quatro controles
+        `*.numero_do_assento` (09/09)           posição entre os CONECTADOS
+
+    **A DIVERGÊNCIA ESTÁ MEDIDA, e é esta:** com o P1 desligado, a conta da casa
+    chama o P2 de **Controle 2** (o `player_slot` dele é estável e sobrevive a
+    desconectar) e a conta nova o chama de **Controle 1** (ele é o primeiro
+    conectado). O portão `test_mesa_cheia_11_a_janela_conta_quatro` já mediu que
+    a escolha importa: no payload real de quatro, `player_slot` é `[4,1,3,2]` e
+    `player` é `[1,2,3,4]` — listas DIFERENTES.
+
+    **POR QUE NÃO CUREI AGORA, e a razão é de posse:** `numero_do_assento` não
+    pode simplesmente chamar a regra da casa, porque `describe_controllers()`
+    não devolve `player_slot` — ele vem do registro, pelo `slot_resolver`, e
+    ligar o subsistema ao registro são as MESMAS três linhas de `daemon/` que a
+    SOM-POR-CONTROLE-01 declarou fora da posse dela. Curar por metade daria um
+    quarto número.
+
+    **NÃO É DEFEITO VIVO HOJE, e este teste é a guarda de que continue assim:**
+    quem batiza o nó no PipeWire é o daemon, e a app só lê. Vira defeito no dia
+    em que a tela mostrar o número dela ao lado do nó que o daemon nomeou — dois
+    números para o mesmo aparelho na mesma janela é exatamente o defeito que o
+    `numero_do_controle` foi criado para matar (*"Controle 1" no card e
+    *"Sony 3" no cabeçalho*, COR-01/D6).
+
+    Este teste FIXA a divergência onde ela está. Se ela mudar — para qualquer
+    lado — alguém mexeu numa das três contas e tem de decidir as três juntas.
+
+    MORDIDA: faça `numero_do_assento` contar por `index` e o assento do P2 vira
+    2 aqui; faça-o preferir `player_slot` e vira 2 também, mas pelo caminho
+    certo — e aí esta linha sai, com a sprint fechada.
+    """
+    from hefesto_dualsense4unix.app import audio_saida
+
+    mesa = _mesa((_UNIQ_P1, False), (_UNIQ_P2, True))
+    saida = AltoFalanteSubsystem()
+    saida._backend = type(
+        "B", (), {"describe_controllers": staticmethod(lambda: mesa)}
+    )()
+    do_p2 = next(e for e in mesa if e["uniq"] == _UNIQ_P2)
+
+    # a conta NOVA: primeiro conectado
+    assert saida.numero_do_assento(_UNIQ_P2) == 1
+    # a conta DA CASA: a posição real dele na lista (sem `player_slot`, cai no
+    # `index + 1`, que é o que a janela imprime no título do card)
+    assert audio_saida.assento_do_controle(do_p2) == "p2"
