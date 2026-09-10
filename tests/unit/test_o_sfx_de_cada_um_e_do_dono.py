@@ -71,7 +71,7 @@ def _perfil_com_fontes(tmp_path: Path, fontes: dict[str, str]) -> str:
         "name": nome,
         # `match` é OBRIGATÓRIO no schema, e omiti-lo aqui fazia o perfil ser
         # recusado pelo pydantic — `_fontes_por_controle` devolvia `{}` pelo
-        # `except` (que é o comportamento CERTO do produto) e a régua media o
+        # `except` (que é o comportamento CERTO do produto) e a régua média o
         # dublê inválido em vez da fiação. `{"type": "any"}` é o que o
         # `assets/profiles_default/personalizado.json` usa.
         "match": {"type": "any"},
