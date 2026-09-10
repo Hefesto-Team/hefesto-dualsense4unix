@@ -209,7 +209,7 @@ def mesa_de_agora(daemon: Any) -> list[str] | None:
     função e não a elas. O
     `describe_controllers` do backend real devolve uma entrada POR HANDLE e
     preenche o `uniq` mesmo com `connected: False`
-    (`core/backend_pydualsense.py:5918`) — ler só o `uniq` daria "está na mesa"
+    (`core/backend_pydualsense.py:5957`) — ler só o `uniq` daria "está na mesa"
     a um handle que o controle já largou, que é exatamente o defeito que este
     campo existe para matar. As outras duas montam a lista que vai para a
     ELEIÇÃO (`eleger_o_controle`), e mudá-las mexeria em quem pode ser eleito;

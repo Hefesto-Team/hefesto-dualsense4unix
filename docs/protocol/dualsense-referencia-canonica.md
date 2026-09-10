@@ -75,7 +75,7 @@ pagar um custo já pago.
 |---|---|---|
 | §2 | `common[4..7]` é PROVÁVEL; o kernel os chama `reserved[4]` | **CADUCOU** — ALTA nos bytes 5, 6 e 7. O byte 4 se parte em dois: campo ALTA, **bit** de autorização MÉDIA |
 | §3 | *"Este projeto escreve só o volume"* | **CADUCOU** — o pré-amp e a rota são escritos desde 01-02/08 |
-| §3 | o áudio por Bluetooth sai no report `0x32` | **A PERGUNTA ESTAVA MAL FEITA** — em 15/08 o descritor foi lido por rádio e há **nove** reports de saída, `0x31` a `0x39`. `0x32` **e** `0x39` aceitam e executam o `common`, os dois; qual deles carrega áudio **continua não identificado**. Ver *"Os reports de saída por transporte"* |
+| §3 | o áudio por Bluetooth sai no report `0x32` | **RESPONDIDO EM 10/09/2026: é o `0x35`, de 334 B** — um quadro Opus de 10 ms por report, a cada 10,667 ms, escrito no `/dev/hidraw` com o daemon vivo. Ela ouviu 70 s sem corte. Nem `0x32` nem `0x39`: os dois aceitam o `common` e nenhum toca som — é a **falácia do canal que responde**. Ver *"O som que saiu pelo rádio"* |
 | §4 | a decodificação dos modos está curada | `weapon()` e `vibration()` seguem mandando o modo ERRADO pela régua desta própria seção — **não medido** |
 | §5 | player LED do jogador 4 | **CORRIGIDO** — é `xx-xx`, pelo fonte do driver desta máquina. O padrão que estava escrito aqui é o de *slot fora da tabela* do código desta casa |
 | §5 | a taxa do giroscópio, *"nunca medida"* | **MEDIDA em 11/08** — cabo 250,0 Hz exatos, rádio variável em rajadas. O que continua aberto é o que o **SDL declara ao jogo**, não o que o aparelho entrega |
@@ -433,7 +433,7 @@ mesmo minuto.
 | `0x32` | — | OUTPUT 141 B |
 | `0x33` | — | OUTPUT 205 B |
 | `0x34` | — | OUTPUT 269 B |
-| `0x35` | — | OUTPUT 333 B |
+| **`0x35`** | — | OUTPUT 333 B — **é o report de ÁUDIO**, medido em 10/09/2026 |
 | `0x36` | — | OUTPUT 397 B |
 | `0x37` | — | OUTPUT 461 B |
 | `0x38` | — | OUTPUT 525 B |
@@ -703,7 +703,7 @@ em `:1514`, diz que a faixa aceita parece ser `[0x3d..0x64]`.)
 > | campo | onde é escrito | grau |
 > |---|---|---|
 > | volume, `common[5]` | o laço dos quatro bytes de áudio — `_AUDIO_COMMON_OFFSETS` em `core/backend_pydualsense.py:322-324` | **ALTA** — lido no código |
-> | pré-amp, `common[37]` | `core/backend_pydualsense.py:1324-1331`, com o `VALID_FLAG1_AUDIO_CONTROL2_ENABLE` em `:1330`; o valor padrão `0x2` é o `SP_PREAMP_GAIN_PADRAO` em `core/ds_output_report.py:184` | **ALTA** — lido no código |
+> | pré-amp, `common[37]` | `core/backend_pydualsense.py:1363-1370`, com o `VALID_FLAG1_AUDIO_CONTROL2_ENABLE` em `:1367-1369`; o valor padrão `0x2` é o `SP_PREAMP_GAIN_PADRAO` em `core/ds_output_report.py:184` | **ALTA** — lido no código |
 <!-- ENDEREÇOS REAPONTADOS em 01/09/2026: MIC-DA-MESA-ELEICAO-01 acrescentou
      a leitura disciplinada do byte de áudio e o contador de bordas ao
      `backend_pydualsense.py`, e as citações de áudio desceram ~59 linhas.
@@ -821,6 +821,72 @@ em `:1514`, diz que a faixa aceita parece ser `[0x3d..0x64]`.)
 > comunidade foi confirmada nem derrubada, e **ninguém aqui escreveu um byte de
 > áudio de saída por rádio.** Um id que aceita um `common` não é um id que toca
 > som: é a **falácia do canal que responde**, batizada na mesma seção.
+
+> **E FOI MEDIDO EM 10/09/2026: é o `0x35`.** A frase acima — *"ninguém aqui
+> escreveu um byte de áudio de saída por rádio"* — **caducou na bancada dela**,
+> com o alto-falante do DualSense tocando por rádio pela primeira vez nesta
+> casa. Os dois candidatos de comunidade estavam **os dois errados**: não é o
+> `0x32` nem o `0x39`. É o quinto degrau, e o layout está logo abaixo.
+
+### O som que saiu pelo rádio — o `0x35`, medido em 10/09/2026
+
+**GRAU: MEDIDO NO APARELHO**, com a orelha dela como instrumento: 70 segundos
+contínuos sem um corte, alcance testado, e a mordida do CRC calando o som.
+
+```
+report 0x35 · 334 B · UM quadro Opus · tag 0x13 · a cada 10,667 ms
+write() no /dev/hidraw, com o daemon vivo e o hid-playstation ligado
+sem primer · sem socket L2CAP · sem root · sem unbind
+```
+
+| onde | o quê |
+|---|---|
+| `[0]` | `0x35` |
+| `[1]` | `seq << 4` |
+| `[2]` | `0x11 \| 0x80` — tag AudioControl |
+| `[3]` | `7` — comprimento do valor |
+| `[4]` | `0xFE` — os sete enables. **O bit 0 é o microfone**; `0xFF` liga junto |
+| `[5..9]` | `00 00 00 00 FF` — `audio_buffer_length` |
+| `[10]` | contador de **QUADROS** de áudio, não de reports |
+| `[11]` | `0x13 \| 0x80` alto-falante · `0x16 \| 0x80` fone |
+| `[12]` | `200` — bytes do quadro |
+| `[13..212]` | o quadro Opus — 48 kHz estéreo, 10 ms, **CBR 160 kbps** = 200 B exatos |
+| `[330..333]` | CRC-32 LE, semente `0xA2` (= o byte HIDP `DATA\|OUTPUT`) |
+
+**A CADÊNCIA É 512/48000 = 10,667 ms, e não 10 nem 20.** O aparelho consome
+93,75 quadros/s; alimentá-lo a 20 ms dá 100 quadros/s — a taxa de estouro que o
+`dualsense-neo` diagnosticou. Esta página dizia *"um report a cada 20 ms"*, e
+isso **caducou**.
+
+**QUATRO OUTRAS AFIRMAÇÕES DESTA CASA CAÍRAM NA MESMA CORRIDA:**
+
+| a casa dizia | a medição diz |
+|---|---|
+| *"o DS5Dongle é um dongle: prova report HID, não hidraw"* | **o hidraw basta.** Escrita direta em `/dev/hidraw`, no Linux, pelo BlueZ |
+| *"o MTU do BlueZ pode ser a parede"* | **672 basta.** O `setsockopt`/1024 foi trabalho pago por nada, e deu silêncio |
+| *"a escada `0x32`-`0x39` já foi variada"* | **não foi.** Os três arranjos do produto são todos `degrau=0x39`; nove passadas bateram no mesmo degrau |
+| *"faltava o primer `0x31` que ARMA a rota"* | **toca desarmado.** A tag `0x13` do bloco de áudio já endereça o alto-falante |
+
+**A MORDIDA QUE ESTAVA FURADA, e a regra que ela deixa:** a primeira mordida do
+primer passou por engano — ela tocou sem primer logo depois de uma corrida COM
+primer. **A rota persiste no firmware entre corridas**, então a mordida MEDIA a
+memória do aparelho, não o primer. Refeita com `--desarmar` (um `0x31` pedindo
+rota=fone, o padrão de fábrica), ela ouviu igual, e só então a hipótese caiu.
+
+> **Mordida que não desfaz o estado da corrida anterior não mede o que promete.
+> O aparelho tem memória, e ela sobrevive ao processo que a escreveu.**
+
+O instrumento é `scripts/ensaios/o_som_pelo_035.py`. O produto **já tinha** o
+codificador certo (`integrations/alto_falante_bt.CodificadorOpus`, CBR 160 kbps
+sobre a `libopus` do sistema por `ctypes`) e o CRC — o que faltava era o
+enquadramento. O layout vem do `HeadsetPlayMusic` de `awalol/dualsense-bt-haptics`.
+
+**O QUE ISSO EXIGE DA MÁQUINA:** a `libopus` do sistema (`libopus.so.0`). O
+`install.sh` já a instala — ver `_dep_presente "lib:libopus.so.0"` —, e desde
+10/09 ela é dependência **do alto-falante por rádio também**, não só do microfone.
+
+**O QUE CONTINUA ABERTO:** a ponte no produto. O `alto_falante_bt.py` monta
+`0x39` a 20 ms; o som de hoje vive só no ensaio.
 
 ### Microfone
 
@@ -1254,10 +1320,10 @@ começa pela esquerda ou pela direita?"* não muda nenhuma das cinco, e por isso
 >
 > - **fora de supressão (cabo):** o `flag2` sai com setup **e** brilho
 >   ligados em TODO report, e o `common[41]` vai sempre zero
->   (`core/backend_pydualsense.py:842`) — escolha deliberada, travada por
+>   (`core/backend_pydualsense.py:848`) — escolha deliberada, travada por
 >   teste;
 > - **sob supressão (rádio):** o bit de setup é **explicitamente limpo**
->   (`core/backend_pydualsense.py:796-801`), porque reengatá-lo em regime
+>   (`core/backend_pydualsense.py:802-807`), porque reengatá-lo em regime
 >   trava a exibição no firmware — é a `LIGHTBAR-BT-KEEPALIVE-01`.
 >
 > E o perigo registrado, que esta página não carregava: a

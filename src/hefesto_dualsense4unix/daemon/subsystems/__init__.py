@@ -37,7 +37,7 @@ dois motivos são diferentes — **nenhum dos dois é esquecimento**:
   *se subir, tem de ter rota* — é
   `tests/unit/test_o_no_de_som_nao_nasce_sumidouro.py`. Ela **permite** a cura
   correta (dar rota ao gerenciador) e reprova só a fiação crua;
-* `HotkeySubsystem` (`hotkey.py:2081`) é uma **lápide, não um órfão**: os dois
+* `HotkeySubsystem` (`hotkey.py:2103`) é uma **lápide, não um órfão**: os dois
   métodos são `noop` declarados, e a hotkey já está viva no `run()` desde
   sempre, por FUNÇÃO — `lifecycle.py:914` (`start_hotkey_manager`) e `:916`
   (`start_mic_hotkey`). Registrá-lo não acende nada; só acrescenta duas linhas
