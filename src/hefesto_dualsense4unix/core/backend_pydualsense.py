@@ -620,6 +620,46 @@ def _casar_key(handles: dict[str, Any], uniq: str) -> str | None:
     return None
 
 
+#: Quanto tempo o bit de mudo tem de FICAR no valor novo para virar borda.
+#:
+#: **MEDIDO EM 10/09/2026**, com ela apertando o botão do microfone e o
+#: instrumento `scripts/ensaios/a_permanencia_do_bit_do_mic.py` lendo o hidraw::
+#:
+#:     1231 permanências do bit MicMuted, com o microfone no ar:
+#:       MUDO=True   mediana 6,0 ms · p95 27,0 ms
+#:       MUDO=False  mediana 6,0 ms · p95 25,0 ms
+#:
+#: O gating é DEZ VEZES mais rápido do que a média de ~60 ms que esta casa
+#: derivava da taxa. Esta janela fica **11x acima do p95**, e nenhuma das 1231
+#: permanências a alcança.
+#:
+#: **O INSTRUMENTO ERROU A SUGESTÃO NA PRIMEIRA CORRIDA, e a lição fica:** ele
+#: mandou usar «acima do MÁXIMO», que deu 23,4 s. O máximo (11,7 s) era o bit
+#: PARADO com o microfone desligado — misturar repouso com oscilação num
+#: percentil só é medir duas populações como se fossem uma.
+#:
+#: **E ELA É DEFESA EM PROFUNDIDADE, NÃO A RAIZ.** A raiz está no driver
+#: (`patch/0003`, MIC-NAO-E-BOTAO-01), instalada e medida no mesmo dia: com o
+#: módulo curado o gating SUMIU — uma permanência em 180 s, contra 1231. Esta
+#: guarda passou a não ter trabalho a fazer, e fica pelo custo nenhum.
+#:
+#: O PREÇO: o botão do plástico passa a ser visto ~300 ms depois. Invisível ao
+#: lado do próprio ato, que já leva ~550 ms para confirmar
+#: (`CONFIRMACAO_DO_MUDO_S`, `daemon/subsystems/hotkey.py`).
+SUSTENTACAO_DO_MUDO_S = 0.30
+
+
+def _relogio_da_borda() -> float:
+    """O relógio que a borda do mudo consulta. UM ponto, e ele existe por régua.
+
+    Sem isto, medir a sustentação obrigava o teste a trocar `time.monotonic` —
+    e `time` é o módulo da biblioteca padrão, o mesmo objeto que o processo
+    inteiro usa. Um dublê assim congela o relógio de TODA a corrida do pytest,
+    e envenena o vizinho por ordem de teste.
+    """
+    return time.monotonic()
+
+
 class _PinnedPyDualSense(pydualsense):  # type: ignore[misc]
     """`pydualsense` "pinada" a um hidraw `path` específico (multi-controle).
 
@@ -791,6 +831,30 @@ class _PinnedPyDualSense(pydualsense):  # type: ignore[misc]
         # `_mic_mudo` é o último valor visto (None = nunca vimos report
         # íntegro), `_mic_mudo_seq` é o contador monotônico de bordas e
         # `_mic_mudo_em` o carimbo de tempo da última.
+        self.zerar_estado_da_borda_do_mic()
+
+    def zerar_estado_da_borda_do_mic(self) -> None:
+        """TODO o estado da eleição do mic, num lugar só — e o motivo é medido.
+
+        Este bloco morava solto no ``__init__``, e `_handle()` de
+        `tests/unit/test_mic_da_mesa_a_borda_com_endereco.py` o **redigitava**:
+        o teste constrói o handle por ``__new__`` (nada de abrir aparelho) e
+        listava à mão os quatro campos que conhecia. Em 10/09/2026 a cura da
+        sustentação acrescentou dois — `_mudos_que_pedimos` e `_borda_armada` —
+        e sete testes caíram com `AttributeError`, porque o dublê ficou mais
+        POBRE que o produto.
+
+        *Dois lugares que precisam concordar e são digitados separadamente* é a
+        família de defeito que esta casa já nomeia. Com um dono só, acrescentar
+        campo não pode mais deixar o dublê para trás.
+
+        Pública (sem ``_``) porque quem a chama de fora é a suíte, e um nome
+        privado ali seria o mesmo acordo escrito com outra letra.
+        """
+        #: MIC-DA-MESA-ELEICAO-01 — a BORDA do bit de mudo, por controle.
+        #: `_mic_mudo` é o último valor visto (None = nunca vimos report
+        #: íntegro), `_mic_mudo_seq` é o contador monotônico de bordas e
+        #: `_mic_mudo_em` o carimbo de tempo da última.
         self._mic_mudo: bool | None = None
         self._mic_mudo_seq: int = 0
         #: OS MUDOS QUE **NÓS** PEDIMOS, em FILA — e a fila não é luxo: medido
@@ -799,7 +863,13 @@ class _PinnedPyDualSense(pydualsense):  # type: ignore[misc]
         #: uma marca de valor único deixava o segundo eco escapar. Ver
         #: `_registrar_borda_do_mic`.
         self._mudos_que_pedimos: list[bool] = []
+        #: `(valor, quando)` de uma mudança que ainda NÃO virou borda. Ela só
+        #: conta depois de SUSTENTAR — ver `_registrar_borda_do_mic`.
+        self._borda_armada: tuple[bool, float] | None = None
         self._mic_mudo_em: float | None = None
+        # `_audio_status` NÃO se zera aqui: ele é o último byte de status
+        # LIDO do aparelho, e apagá-lo transformaria «ainda não vi report
+        # íntegro» em «vi, e estava limpo». Quem o define é o `__init__`.
 
     # O nome manglado de `pydualsense.__find_device` é
     # `_pydualsense__find_device`; o `init()` do upstream chama
@@ -1114,7 +1184,23 @@ class _PinnedPyDualSense(pydualsense):  # type: ignore[misc]
         mudo = bool(status & STATUS_MIC_MUDO)
         anterior = self._mic_mudo
         self._mic_mudo = mudo
-        if anterior is None or anterior == mudo:
+        agora = _relogio_da_borda()
+
+        if anterior is not None and anterior == mudo:
+            # A MUDANÇA ARMOU E AGORA SUSTENTA — 10/09/2026. Só aqui ela vira
+            # borda; ver a razão inteira no bloco de baixo.
+            armada = self._borda_armada
+            if armada is None or armada[0] != mudo:
+                self._borda_armada = None
+                return
+            if (agora - armada[1]) < SUSTENTACAO_DO_MUDO_S:
+                return
+            self._borda_armada = None
+            self._mic_mudo_seq += 1
+            self._mic_mudo_em = agora
+            return
+
+        if anterior is None:
             return
 
         # O ECO DA PRÓPRIA ESCRITA NÃO É GESTO DELA — 10/09/2026, e o defeito
@@ -1136,10 +1222,34 @@ class _PinnedPyDualSense(pydualsense):  # type: ignore[misc]
         # dona dele.
         if mudo in self._mudos_que_pedimos:
             self._mudos_que_pedimos.remove(mudo)
+            self._borda_armada = None
             return
 
-        self._mic_mudo_seq += 1
-        self._mic_mudo_em = time.monotonic()
+        # E A MUDANÇA SOZINHA NÃO É GESTO: ELA TEM DE SUSTENTAR — 10/09/2026,
+        # e este é o TERCEIRO defeito da mesma família num dia.
+        #
+        # O microfone por rádio captava ~1,1 s e parava. A cadeia, com a
+        # assinatura no journal dela às 09:42 (`repiques_engolidos=15`):
+        #
+        #   1. com o mic no ar, o bit `MicMuted` OSCILA a ~16,7 Hz — a casa já
+        #      mediu isso (`integrations/dualsense_bt_audio`, BT-MIC-GATING-01:
+        #      ~100 transições em 6 s; sem o mic, ZERO em 1183 reports);
+        #   2. `mic_da_mesa` engole as do primeiro segundo como repique;
+        #   3. a PRIMEIRA depois de 1,0 s é aceita e lida como o dedo dela;
+        #   4. o daemon desliga o microfone — e sem mic o firmware para de
+        #      oscilar, então nunca mais nasce borda e ele não volta.
+        #
+        # A RAIZ está no driver e já tem cura escrita (MIC-NAO-E-BOTAO-01, em
+        # `assets/dkms/hid-playstation/hid-playstation.c`): o `hid-playstation`
+        # lê os quadros de ÁUDIO como estado de gamepad e muta o microfone na
+        # borda falsa. **Esta guarda aqui não é a raiz — é o que protege a
+        # máquina dela enquanto o módulo não for recompilado**, e continua
+        # valendo depois, porque o custo é nenhum.
+        #
+        # O QUE SEPARA UM DO OUTRO É O TEMPO: o dedo dela TRAVA o valor (o
+        # kernel faz latch de `ds->mic_muted`); o gating oscila. São duas
+        # ordens de grandeza.
+        self._borda_armada = (mudo, agora)
 
     def set_microphone_mute(self, muted: bool | None) -> None:
         """Assume (ou devolve) a POSSE do mudo de microfone do firmware.

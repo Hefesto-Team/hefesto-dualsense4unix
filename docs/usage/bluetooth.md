@@ -152,6 +152,26 @@ nasce em opt-in, por privacidade e por banda: ligue com
 `HEFESTO_DUALSENSE4UNIX_BT_MIC=1`. *Não implementado* e *não ligado por padrão*
 são coisas diferentes, e confundi-las já custou tempo aqui.
 
+> **DEFEITO CONHECIDO, com causa achada em 10/09/2026 — e ele é do driver.**
+> Com o microfone no ar, o `hid-playstation` lê os quadros de áudio como estado
+> de gamepad: eles chegam com o mesmo `reportID`, o mesmo tamanho e CRC válido,
+> e só um bit os separa. O driver não o consulta. **O resultado é duplo: o
+> microfone se desliga sozinho depois de ~1 segundo, e o cursor e o teclado se
+> mexem sozinhos.**
+>
+> **CURADO EM 10/09/2026, e a cura é uma linha no módulo do kernel.** Ela vem
+> no `patch/0003` do módulo DKMS que este projeto instala, e entra pelo caminho
+> normal: rode o `./install.sh` e reconecte o controle.
+>
+> Medido antes e depois, com o microfone ligado: as transições do bit de mudo
+> caíram de **1231** para **uma**, e os dois sintomas sumiram.
+>
+> Se você atualizou o projeto e o defeito continua, o módulo velho ainda está
+> carregado — reinicie a máquina, ou reconecte depois de rodar o instalador.
+>
+> O detalhe técnico está em `docs/protocol/dualsense-referencia-canonica.md`,
+> seção *"O microfone por rádio, e o driver que o desliga"*.
+
 **O som SAINDO pelo alto-falante do controle, por rádio: o caminho está PROVADO,
 e o produto ainda não o usa.** As duas metades desta frase importam.
 
@@ -164,11 +184,13 @@ vivo e o `hid-playstation` ligado — sem socket L2CAP, sem root, sem unbind.
 report 0x35 · 334 B · UM quadro Opus de 10 ms · tag 0x13 · a cada 10,667 ms
 ```
 
-**O QUE O PRODUTO AINDA NÃO FAZ:** montar esse report. O
-`integrations/alto_falante_bt.py` monta o `0x39` de 547 B a cada 20 ms — o
-report errado, com o dobro de quadros, na cadência errada. **É dívida nossa, e
-está com endereço.** Enquanto ela não fechar, o som por rádio existe no ensaio
-(`scripts/ensaios/o_som_pelo_035.py`) e não na interface.
+**O QUE O PRODUTO JÁ FAZ, e o que ainda falta.** Ele monta esse report desde
+10/09 — `integrations/alto_falante_bt.ARRANJO_035`, provado byte a byte contra o
+que tocou, e a peça que o bombeia por controle (`PonteDeSomPorRadio`) existe e
+tem teste. **O que falta é a FIAÇÃO:** nenhuma linha de produção constrói a
+ponte, então o daemon ainda não a sobe sozinho. Enquanto isso não fechar, o som
+por rádio sai pelo ensaio (`scripts/ensaios/o_som_pelo_035.py`) e a interface
+diz honestamente que a ponte deste controle não está no ar.
 
 O que continua valendo do que se sabia antes:
 

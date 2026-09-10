@@ -24,19 +24,32 @@ duas metades sobe o subsystem e nunca o para — e, no caso do som, o nó fica n
 lista de saída dela depois de o daemon morrer. A receita completa é: a lista
 aqui, o `_safe_start` no `run()` e o `_stop_*` no `shutdown()`.
 
-POR QUE `AltoFalanteSubsystem` E `HotkeySubsystem` NÃO ESTÃO NA LISTA, e os
-dois motivos são diferentes — **nenhum dos dois é esquecimento**:
+`AltoFalanteSubsystem` ENTROU NA LISTA EM 10/09/2026 — SOM-FIADO-01
+-------------------------------------------------------------------
+Ele ficou de fora desde que nasceu, e a razão era boa: publicava um
+`module-null-sink` por controle e **nenhum `module-loopback`**, isto é, um sink
+mudo por DualSense na lista de som dela. É o defeito que `app/audio_saida.py`
+nomeia na invariante 4 do `PlanoDoNo`: *"um `module-null-sink` sozinho seria
+exatamente o sink que aceita o áudio e o joga fora"*.
 
-* `AltoFalanteSubsystem` (`alto_falante.py`) publica um `module-null-sink` por
-  controle e **nenhum `module-loopback`**: o monitor do nó não vai a lugar
-  nenhum. Ligá-lo hoje põe um sink mudo por DualSense na lista de som dela —
-  quatro, medidos na mesa em 07/09/2026, dois deles no rádio, onde não há rota
-  nenhuma. É o defeito que `app/audio_saida.py` nomeia na invariante 4 do
-  `PlanoDoNo`: *"um `module-null-sink` sozinho seria exatamente o sink que
-  aceita o áudio e o joga fora"*. A régua que trava o par —
-  *se subir, tem de ter rota* — é
-  `tests/unit/test_o_no_de_som_nao_nasce_sumidouro.py`. Ela **permite** a cura
-  correta (dar rota ao gerenciador) e reprova só a fiação crua;
+**Os dois buracos de rota fecharam, e a guarda que sobra é estrutural:**
+
+* o CABO ganhou rota em 09/09 (SOM-POR-CONTROLE-01) — `sink_do_controle`
+  resolve a placa DAQUELE controle e o nó sobe o `module-loopback` ao lado;
+* o RÁDIO ganhou rota em 10/09 — o som saiu de verdade pelo report `0x35`, e
+  `AltoFalanteSubsystem._casar_as_pontes` constrói uma `PonteDeSomPorRadio`
+  por controle, com o hidraw e o monitor daquele controle;
+* e `GerenciadorDeNosDeSom.reconciliar` guarda o par: **sem rota, sem nó.**
+  Quem não entrega não é publicado, então o sumidouro não nasce nem por
+  acidente — e a régua que mede isso no PRODUTO, subindo um `Daemon` de
+  verdade, é `tests/unit/test_o_no_de_som_nao_nasce_sumidouro.py`.
+
+A receita completa das TRÊS pontas foi cumprida: a lista aqui,
+`_safe_start("alto_falante", …)` no `run()` de `lifecycle.py` e o
+`_stop_alto_falante` no `shutdown()` de `connection.py`.
+
+POR QUE `HotkeySubsystem` NÃO ESTÁ NA LISTA — e não é esquecimento:
+
 * `HotkeySubsystem` (`hotkey.py:2103`) é uma **lápide, não um órfão**: os dois
   métodos são `noop` declarados, e a hotkey já está viva no `run()` desde
   sempre, por FUNÇÃO — `lifecycle.py:914` (`start_hotkey_manager`) e `:916`
@@ -45,6 +58,9 @@ dois motivos são diferentes — **nenhum dos dois é esquecimento**:
 """
 from __future__ import annotations
 
+from hefesto_dualsense4unix.daemon.subsystems.alto_falante import (
+    AltoFalanteSubsystem,
+)
 from hefesto_dualsense4unix.daemon.subsystems.autoswitch import AutoswitchSubsystem
 from hefesto_dualsense4unix.daemon.subsystems.base import Subsystem
 from hefesto_dualsense4unix.daemon.subsystems.bt_mic import BtMicSubsystem
@@ -74,12 +90,14 @@ SUBSYSTEM_REGISTRY: list[type[Subsystem]] = [
     GamepadSubsystem,
     RumbleSubsystem,
     BtMicSubsystem,
+    AltoFalanteSubsystem,
     PluginsSubsystem,
     MetricsSubsystem,
 ]
 
 __all__ = [
     "SUBSYSTEM_REGISTRY",
+    "AltoFalanteSubsystem",
     "AutoswitchSubsystem",
     "BtMicSubsystem",
     "GamepadSubsystem",

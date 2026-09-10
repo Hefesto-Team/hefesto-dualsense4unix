@@ -288,10 +288,19 @@ def pacotes_do_tom(
     return pacotes
 
 
-def ms_por_report(arranjo_nome: str) -> int:
-    """O ritmo do arranjo: quantos milissegundos de som cada report carrega."""
+def ms_por_report(arranjo_nome: str) -> float:
+    """O ritmo do arranjo — o MEDIDO quando existe, o nominal quando não.
+
+    **O nominal está errado para o `0x35`, e a folha o anunciava.** Um quadro
+    Opus carrega 10 ms de som, mas o aparelho o consome a cada 10,667 ms
+    (512/48000): a folha dizia *"um report a cada 10 ms"* na tela dela, que é a
+    taxa de estouro pela qual esta casa passou nove vezes.
+    """
     arranjo = af.ARRANJO_POR_NOME[arranjo_nome]
-    return max(1, int(arranjo.quadros_de_audio)) * af.MS_POR_QUADRO
+    medido = getattr(arranjo, "intervalo_de_envio_s", None)
+    if medido:
+        return round(float(medido) * 1000.0, 3)
+    return float(max(1, int(arranjo.quadros_de_audio)) * af.MS_POR_QUADRO)
 
 
 def rota_do_controle(alvo: Aparelho, uniqs: tuple[str, ...]) -> af.RotaDoNo:

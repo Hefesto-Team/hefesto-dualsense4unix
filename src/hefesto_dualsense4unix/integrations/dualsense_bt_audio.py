@@ -108,8 +108,61 @@ nó, uma entrada, dois transportes. O nome antigo continua sendo o caminho de
 volta para controle sem ``HID_UNIQ`` — ver
 :meth:`PonteMicBluetooth._abrir_o_canal_por_controle`.
 
-ABERTO — o gating do firmware (BT-MIC-GATING-01)
--------------------------------------------------
+RESOLVIDO — o gating NÃO era do firmware (BT-MIC-GATING-01, fechado em 10/09/2026)
+-----------------------------------------------------------------------------------
+**A CAUSA É O `hid-playstation`, e o título desta seção estava errado desde
+agosto.** O bit `MicMuted` não oscila porque o firmware reage ao mic ativo: ele
+oscila porque **o driver o manda mutar e desmutar**, dezenas de vezes por
+segundo, a partir de bordas que ele inventa lendo áudio como botão.
+
+O elo que faltava: um quadro de microfone chega com o **mesmo `reportID`
+`0x31`, o mesmo tamanho de 78 bytes e CRC-32 válido** que um report de estado.
+Só o bit 1 do byte 1 os separa — e o driver não o consulta
+(`assets/dkms/hid-playstation/hid-playstation.c`, o ramo `BUS_BLUETOOTH`).
+Então `ds_report->buttons[2]` cai sobre payload Opus, o bit
+`DS_BUTTONS2_MIC_MUTE` oscila com ele, e na borda de subida o driver inverte
+`ds->mic_muted` e escreve `POWER_SAVE_CONTROL_MIC_MUTE`.
+
+Isso explica, de uma vez, tudo o que esta seção mediu e não sabia juntar:
+
+* **por que só acontece com o mic no ar** — só aí existem quadros de áudio;
+* **por que ~100 transições em 6 s e ZERO sem o `0x32`** — é a taxa de bordas
+  falsas no payload Opus, e sem mic não há payload;
+* **por que os quadros com `MicMuted=True` vêm silenciosos** — o microfone
+  está REALMENTE mutado nesses instantes, pelo driver;
+* **por que nenhuma das três tentativas resolveu** (bloco AudioControl
+  completo, `MicSelect`, `SetState`): as três mexiam no que MANDÁVAMOS, e o
+  escritor era outro.
+
+**E O «PRINCIPAL SUSPEITO NÃO TESTADO» REGISTRADO AQUI ESTAVA ERRADO.** A
+suspeita era o nosso próprio daemon escrevendo `common[9]` a 60 Hz. Não era: o
+`dualsense_output_worker` do driver **não é periódico** — é `work_struct`, e só
+a rota do botão MUTE o agenda por rádio. O A/B que esta seção pedia (medir com
+o daemon parado) teria dado o mesmo resultado e mandado a próxima pessoa para o
+lugar errado.
+
+**A CURA está INSTALADA E MEDIDA** (MIC-NAO-E-BOTAO-01, `patch/0003` do fonte
+DKMS desta árvore, entregue pelo `install.sh`): o módulo foi carregado em
+10/09/2026 e os dois sintomas sumiram. A régua é
+`tests/unit/test_o_quadro_do_microfone_nao_e_botao.py`,
+e ela trava as duas metades no MESMO bit — porque a metade em Python já fazia a
+guarda certa desde 16/08/2026 (`core/physical_report_reader.INPUT_FLAG_AUDIO`,
+do PS-PRESO-01). **A casa sabia a resposta numa linguagem e a esquecia na
+outra.**
+
+**O NÚMERO CAIU, e é isto que fecha a seção.** Com o módulo curado carregado, e
+o mesmo instrumento na mesma duração::
+
+    ANTES   1231 permanências do bit MicMuted, mediana 6,0 ms, p95 27,0 ms
+            (o contador de bordas do daemon subindo ~28/s, sozinho)
+    DEPOIS  UMA permanência — o bit PARADO por 152 s, zero bordas no journal
+
+Com o microfone no ar e ela falando, a palavra dela:  # (noqa-acento: a citação literal vem abaixo)
+*"nao ficou maluco e nao desligou"*.  # (noqa-acento: verbo/citação)
+O que restava provar era a queda do número, e ela caiu.
+
+O que a seção media, e continua valendo como medição  # (noqa-acento: verbo/citação)
+-----------------------------------------------------
 O microfone FUNCIONA (áudio real, decodificado, gravável), mas com o mic no ar
 o firmware declara `MicMuted` (byte 55, bit 2) numa fração grande dos reports
 de input, e os quadros de áudio dessa fração vêm silenciosos. Medido nesta
@@ -145,15 +198,12 @@ Por isso o código mantém a borda simples (UMA escrita): as alternativas custam
 centenas de escritas por segundo disputando o link com o `hid-playstation` e
 não compram o problema de volta.
 
-**Principal suspeito não testado**: existe um SEGUNDO escritor de 0x31 neste
-device — o próprio daemon do hefesto, que emite output report a 60 Hz com
-`valid_flag1` bit 0x02 (`POWER_SAVE_CONTROL_ENABLE`) SEMPRE asserido e
-`common[9]` (MuteControl/PowerSave) escrito a cada quadro
-(`core/backend_pydualsense.py`, no builder do report). É o padrão de "escritor
-sem dono" que este projeto já pagou caro em outra área. O A/B decisivo —
-medir o ciclo de trabalho do MUDO com o poll do daemon parado — NÃO foi feito
-porque parar o daemon estava fora do que esta tarefa podia tocar. É o primeiro
-experimento a rodar quando alguém retomar isto.
+**O «principal suspeito» que esta seção nomeava CAIU em 10/09/2026**, e a
+frase fica registrada porque ela custou uma hipótese: *"existe um SEGUNDO
+escritor de 0x31 neste device — o próprio daemon do hefesto, que emite output
+report a 60 Hz"*. O segundo escritor existe, mas não é o nosso daemon: é o
+**kernel**, e ele escreve na borda falsa do botão de mudo. Ver o topo desta
+seção.
 
 Enquanto isso, a `EstatisticaMic` expõe `mudo_pct` e o `mic bt` o imprime: dá
 para medir a anomalia em um comando, com e sem daemon, sem instrumentar nada.
@@ -382,12 +432,21 @@ def _uevent(diretorio: Path) -> dict[str, str]:
     return out
 
 
-def nos_dualsense_bluetooth(raiz: str = _SYSFS_HIDRAW) -> list[NoDualSenseBT]:
+def nos_dualsense_bluetooth(raiz: str | None = None) -> list[NoDualSenseBT]:
     """Todos os DualSense conectados por BT, na ordem do sysfs.
 
     Sem BT nenhum devolve lista vazia — é o caminho normal de quem só usa cabo,
     não um erro.
+
+    A RAIZ SE RESOLVE NA CHAMADA, NUNCA NO `def` — cura de 10/09/2026. Esta
+    assinatura era ``raiz: str = _SYSFS_HIDRAW``, e um default de função é
+    avaliado no IMPORT: quem apontasse `_SYSFS_HIDRAW` para outro lugar depois
+    disso — a fixture `_nenhum_hidraw_vivo_na_varredura_de_som` do
+    `tests/conftest.py`, por exemplo — não alcançava esta função, que continuava
+    lendo `/sys/class/hidraw` de verdade. É a *régua que mede o mundo de
+    ontem*, e nesta casa ela já tem nome e reincidência.
     """
+    raiz = raiz or _SYSFS_HIDRAW
     achados: list[NoDualSenseBT] = []
     try:
         entradas = sorted(Path(raiz).iterdir())

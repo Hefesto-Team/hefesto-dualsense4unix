@@ -345,16 +345,45 @@ def test_no_radio_sem_ponte_o_no_recusa_com_a_frase() -> None:
 def test_a_frase_do_radio_diz_as_tres_coisas() -> None:
     """O quê, por quê, e o que fazer — e sem palavra de dentro da máquina.
 
-    MORDIDA: troque a frase por *"indisponível"* e as três asserções caem;
-    escreva `hidraw` nela e a última cai.
+    ESTA RÉGUA MEDIA O MUNDO DE ONTEM, e foi curada em 10/09/2026. Ela exigia
+    a frase *"ainda não sabe montar o pacote de áudio"* — que era verdade até
+    o alto-falante tocar por rádio, e passou a ser uma afirmação FALSA que a
+    tela dela repetia. Digitar o texto exigido aqui prendia a tela ao dia em
+    que a régua foi escrita.
+
+    Agora ela mede o que a frase PROMETE, não as palavras dela.
+
+    MORDIDA: troque a frase por *"indisponível"* e as três primeiras caem;
+    escreva `hidraw` nela e a quarta cai; volte a dizer que o Hefesto não sabe
+    montar e a quinta cai.
     """
     frase = MOTIVO_NO_SEM_PONTE_NO_RADIO
 
-    assert "não chega a este controle pelo rádio" in frase
-    assert "ainda não sabe montar o pacote de áudio" in frase
+    # 1. O QUÊ: nomeia o som, o controle e o rádio.
+    assert "som" in frase.lower()
+    assert "rádio" in frase.lower()
+    # 2. POR QUÊ: diz que falta alguma coisa, em vez de só constatar.
+    assert "falta" in frase.lower() or "não está" in frase.lower()
+    # 3. O QUE FAZER: dá a saída que funciona hoje.
     assert "Ligue-o no cabo" in frase
+    # 4. Sem palavra de dentro da máquina.
     for proibida in ("hidraw", "uniq", "MAC", "sink", "mesa"):
         assert proibida not in frase
+
+    # 5. E ELA NÃO PODE MAIS CULPAR O NOSSO CONHECIMENTO — o Hefesto SABE
+    #    montar o pacote desde 10/09/2026 (`ARRANJO_035`, som audível por 70 s).
+    #    Uma tela que diz "não sei fazer" quando o produto sabe empurra para o
+    #    aparelho um limite que é de fiação nossa.
+    assert "não sabe montar" not in frase, (
+        "a frase voltou a dizer que o Hefesto não sabe montar o pacote de "
+        "áudio por rádio — e ele sabe desde 10/09/2026, medido com a orelha "
+        "dela; ver `alto_falante_bt.a_ponte_do_radio_sabe_montar`"
+    )
+    from hefesto_dualsense4unix.integrations.alto_falante_bt import (
+        a_ponte_do_radio_sabe_montar,
+    )
+
+    assert a_ponte_do_radio_sabe_montar() is True
 
 
 def test_quando_a_ponte_do_radio_existir_o_no_publica_por_ela() -> None:

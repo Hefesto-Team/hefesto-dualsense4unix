@@ -43,29 +43,128 @@ class _HandleDeMentira:
     Ele reusa os métodos DE VERDADE do backend — `_registrar_borda_do_mic` e
     `set_microphone_mute` — em vez de reimplementá-los, que é o que faria esta
     régua medir a si mesma.
+
+    **O RELÓGIO É DELE DESDE 10/09/2026**, e sem isso este arquivo não mede
+    mais nada: a borda passou a exigir SUSTENTAÇÃO (`SUSTENTACAO_DO_MUDO_S`),
+    porque o bit oscila a ~16,7 Hz com o microfone no ar. Um teste que manda a
+    mudança e espera a borda no mesmo instante estaria medindo o mundo de
+    ontem — e foi exatamente o que aconteceu quando a cura entrou.
     """
 
-    def __init__(self) -> None:
-        from hefesto_dualsense4unix.core.backend_pydualsense import _PinnedPyDualSense as _Alvo
+    def __init__(self, monkeypatch) -> None:
+        from hefesto_dualsense4unix.core import backend_pydualsense as bp
+        from hefesto_dualsense4unix.core.backend_pydualsense import (
+            _PinnedPyDualSense as _Alvo,
+        )
+
+        self._agora = 1000.0
+        # O RELÓGIO É DESTE DUBLÊ, e o alvo é ESTREITO — 10/09/2026.
+        #
+        # A primeira versão fazia `monkeypatch.setattr(bp.time, "monotonic", …)`,
+        # e `bp.time` **é o módulo `time` da biblioteca padrão** — o mesmo objeto
+        # que o interpretador inteiro usa. A conferência alegou que isso
+        # congelava o relógio do PROCESSO e envenenava o vizinho por ordem de
+        # teste.
+        #
+        # **MEDIDO, E O ALCANCE ERA MENOR:** o `monkeypatch` do pytest desfaz ao
+        # fim de cada teste, então um vizinho que meça tempo DEPOIS vê o relógio
+        # andando. A mordida foi rodada e não pegou.
+        #
+        # A cura fica assim mesmo, e a razão é outra: trocar um símbolo da
+        # stdlib para exercitar UMA guarda nossa é alvo largo demais — alcança
+        # todo código que rode dentro do mesmo teste, inclusive o que não está
+        # sob prova. `_relogio_da_borda` existe para dar o alvo estreito.
+        monkeypatch.setattr(bp, "_relogio_da_borda", lambda: self._agora)
+        self._sustentacao = bp.SUSTENTACAO_DO_MUDO_S
 
         self._mic_mudo: bool | None = None
         self._mic_mudo_seq = 0
         self._mic_mudo_em: float | None = None
         self._mudos_que_pedimos: list[bool] = []
+        self._borda_armada: tuple[bool, float] | None = None
         self._mic_mute_desejado: bool | None = None
         self._registrar_borda_do_mic = _Alvo._registrar_borda_do_mic.__get__(self)
         self._set_mute = _Alvo.set_microphone_mute.__get__(self)
 
-    def chega_report(self, mudo: bool) -> None:
+    def _um_report(self, mudo: bool) -> None:
         self._registrar_borda_do_mic(STATUS_MIC_MUDO if mudo else 0x00)
+
+    def chega_report(self, mudo: bool) -> None:
+        """O valor muda E SUSTENTA — é o gesto dela, que trava o bit.
+
+        Dois reports: o que muda (arma) e o que repete depois da janela
+        (confirma). É como o fio se comporta quando o dedo dela troca o
+        estado: o kernel faz latch e o valor fica.
+        """
+        self._um_report(mudo)
+        self._agora += self._sustentacao + 0.01
+        self._um_report(mudo)
+
+    def oscila(
+        self, vezes: int, periodo_s: float = 0.06, taxa_hz: float = 170.5
+    ) -> None:
+        """O GATING do firmware: o bit alterna e NUNCA fica.
+
+        ESTA FUNÇÃO NASCEU FROUXA E FOI APERTADA NA MORDIDA, em 10/09/2026.
+        A primeira versão mandava UM report por transição — e com a cura
+        arrancada (`SUSTENTACAO_DO_MUDO_S = 0`) os testes continuavam passando,
+        porque um valor que nunca se repete nunca sustenta, com janela ou sem.
+        **Ela média um cenário que não existe no fio.**
+
+        No fio os reports de entrada chegam a ~170 Hz (medido, em
+        `integrations/dualsense_bt_audio`) e o bit oscila a ~16,7 Hz: cada
+        valor se REPETE umas dez vezes antes de mudar. É essa repetição que
+        faz a sustentação ser uma guarda de verdade — e é ela que tem de estar
+        aqui, senão a régua não mede a cura.
+
+        `periodo_s` é a permanência média derivada dos ~16,7 Hz.
+        """
+        passo = 1.0 / taxa_hz
+        valor = bool(self._mic_mudo)
+        for _ in range(vezes):
+            valor = not valor
+            fim = self._agora + periodo_s
+            while self._agora < fim:
+                self._um_report(valor)   # o MESMO valor, ~10x, como no fio
+                self._agora += passo
 
 
 @pytest.fixture()
-def handle() -> _HandleDeMentira:
-    h = _HandleDeMentira()
+def handle(monkeypatch) -> _HandleDeMentira:
+    h = _HandleDeMentira(monkeypatch)
     h.chega_report(True)   # a primeira leitura só adota o estado
     assert h._mic_mudo_seq == 0
     return h
+
+
+def test_o_gating_do_firmware_nao_e_o_dedo_dela(handle: _HandleDeMentira) -> None:
+    """40 oscilações a ~16,7 Hz não são 40 apertos — não são aperto nenhum.
+
+    É o defeito de 10/09/2026 que fazia o microfone parar em 1,1 s: o bit
+    oscila com o mic no ar, o daemon lia a primeira transição depois do
+    debounce como o dedo dela, e desligava o microfone.
+
+    A MORDIDA: ponha `SUSTENTACAO_DO_MUDO_S` em `0` e este teste reprova com
+    dezenas de bordas.
+    """
+    handle.oscila(40)
+    assert handle._mic_mudo_seq == 0, (
+        f"o gating do firmware virou {handle._mic_mudo_seq} aperto(s) dela — "
+        "é o corte de 1,1 s do microfone por rádio"
+    )
+
+
+def test_depois_do_gating_o_dedo_dela_continua_valendo(
+    handle: _HandleDeMentira,
+) -> None:
+    """A cura não pode virar mordaça: o botão tem de sobreviver ao gating."""
+    handle.oscila(40)
+    estado = bool(handle._mic_mudo)
+    handle.chega_report(not estado)
+    assert handle._mic_mudo_seq == 1, (
+        "depois do gating o aperto dela parou de contar — a guarda virou "
+        "mordaça, que é a cura errada"
+    )
 
 
 def test_o_gesto_DELA_conta_borda(handle: _HandleDeMentira) -> None:  # noqa: N802

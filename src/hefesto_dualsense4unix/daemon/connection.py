@@ -1369,6 +1369,16 @@ async def shutdown(daemon: DaemonProtocol) -> None:
     if getattr(daemon, "_bt_mic_subsystem", None) is not None and callable(parar_bt_mic):
         with contextlib.suppress(Exception):
             await parar_bt_mic()
+    # SOM-FIADO-01: o som cai junto com o microfone, e pela mesma razão que
+    # o `__init__.py` dos subsystems avisa — quem seguir a receita de DUAS
+    # metades sobe o subsystem e nunca o para, e no caso do som o nó fica na
+    # lista de saída dela depois de o daemon morrer. São TRÊS lugares.
+    parar_som = getattr(daemon, "_stop_alto_falante", None)
+    if getattr(daemon, "_alto_falante_subsystem", None) is not None and callable(
+        parar_som
+    ):
+        with contextlib.suppress(Exception):
+            await parar_som()
     # Plugins: stop antes dos outros subsystems (on_unload pode usar controller).
     if daemon._plugins_subsystem is not None:
         with contextlib.suppress(Exception):

@@ -10,7 +10,7 @@ código, que já haviam divergido:
 
 - `app/actions/daemon_actions.py:495` (`BASES_DE_INSTALACAO`) — ganhou
   `/app/share` na T-02(b), hoje;
-- `cli/cmd_doctor.py:23` (`_find_repo_file`) — ficou com as três bases de
+- `cli/cmd_doctor.py:31` (`_find_repo_file`) — ficou com as três bases de
   sempre, e por isso o `doctor` continuava cego no Flatpak.
 
 Este módulo é a resposta única. **BG-BASES-01 (26/08/2026): as outras quatro
@@ -21,8 +21,8 @@ clique achava o script num formato de instalação e falhava no outro:
 | resolvedor | bases | o que faltava |
 |---|---|---|
 | `daemon_actions.py:495` (`BASES_DE_INSTALACAO`) | 4 | `sys.prefix` e o `share/` do usuário |
-| `emulation_actions.py:1200` (`_mic_script`) | 3 | as duas acima **e `/app/share`** |
-| `emulation_actions.py:1763` (`_steam_input_script`) | 3 | as mesmas três |
+| `emulation_actions.py:1220` (`_mic_script`) | 3 | as duas acima **e `/app/share`** |
+| `emulation_actions.py:1220` (`_steam_input_script`) | 3 | as mesmas três |
 | `cli/cmd_mic.py:102` (`_find_script`) | 3 | as mesmas três |
 
 `sys.prefix/share/…` é AppImage, venv e Nix; `/app/share` é o Flatpak; o

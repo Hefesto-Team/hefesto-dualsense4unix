@@ -160,7 +160,19 @@ def test_todo_arranjo_do_produto_vira_linha_em_todo_envelope(folha):
     assert achadas == esperadas, (
         "a folha deixou de cobrir o cruzamento inteiro de arranjo por envelope"
     )
-    assert len(esperadas) == 6, "são TRÊS arranjos no produto e DOIS envelopes"
+    # O NÚMERO É LIDO, NÃO DIGITADO — 10/09/2026. Esta linha dizia `== 6` e
+    # "são TRÊS arranjos", e envelheceu no dia em que o `ARRANJO_035` entrou:
+    # a folha se atualizou sozinha (ela gera do `ARRANJO_POR_NOME`) e foi a
+    # RÉGUA que reprovou, sobre nada. É a família que esta casa já nomeia —
+    # *a régua digita o que devia LER* —, e ela custa uma reprovação falsa a
+    # cada arranjo novo.
+    #
+    # O que continua sendo travado é o que importa: que o produto tenha MAIS de
+    # um arranjo (senão o cruzamento não prova nada) e que a conta feche.
+    assert len(folha.af.ARRANJO_POR_NOME) >= 2, (
+        "com um arranjo só o cruzamento arranjo x envelope não separa nada"
+    )
+    assert len(esperadas) == len(folha.af.ARRANJO_POR_NOME) * len(ENVELOPES)
 
 
 def test_o_terceiro_arranjo_nao_e_alcancavel_por_montar_pelos_dois_arranjos(folha):
@@ -256,8 +268,32 @@ def test_o_volume_dela_chega_ao_report_de_audio_do_arranjo_que_carrega_o_common(
 
 
 def test_o_ritmo_sai_do_arranjo_e_nao_de_um_numero_digitado(folha):
+    """O ritmo vem do ARRANJO — e do que foi MEDIDO nele, quando houver.
+
+    ESTA RÉGUA EXIGIA O NOMINAL, e por isso travava o número errado. Ela dizia
+    `== quadros_de_audio * MS_POR_QUADRO` para TODO arranjo, inclusive o `0x35`
+    — cujo intervalo medido é 10,667 ms, não 10. A folha anunciava na tela dela
+    a taxa de estouro, e a régua defendia isso.
+
+    O que ela trava agora é o que o nome dela promete: nenhum número digitado.
+    """
     for nome, arranjo in folha.af.ARRANJO_POR_NOME.items():
-        assert folha.ms_por_report(nome) == arranjo.quadros_de_audio * folha.af.MS_POR_QUADRO
+        nominal = arranjo.quadros_de_audio * folha.af.MS_POR_QUADRO
+        medido = getattr(arranjo, "intervalo_de_envio_s", None)
+        esperado = round(float(medido) * 1000.0, 3) if medido else float(nominal)
+        assert folha.ms_por_report(nome) == pytest.approx(esperado), (
+            f"o ritmo de {nome} não saiu do arranjo"
+        )
+
+    # E o MEDIDO tem de vencer o nominal onde os dois existem — senão a cura é
+    # letra morta e a folha volta a anunciar 10 ms para o report que toca.
+    do_035 = folha.af.ARRANJO_POR_NOME.get("0x35")
+    if do_035 is not None and do_035.intervalo_de_envio_s:
+        nominal_035 = do_035.quadros_de_audio * folha.af.MS_POR_QUADRO
+        assert folha.ms_por_report("0x35") != nominal_035, (
+            "a folha voltou a anunciar o nominal para o arranjo que TOCOU — "
+            "10 ms alimentam 100 quadros/s num aparelho que come 93,75"
+        )
 
 
 # ---------------------------------------------------------------------------

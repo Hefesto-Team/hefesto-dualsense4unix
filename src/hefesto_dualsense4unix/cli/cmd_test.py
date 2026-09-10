@@ -176,7 +176,7 @@ def _apply_via_ipc(rgb: tuple[int, int, int], brightness: int | None) -> bool:
     hardware sem dizer nada, e `--brightness 1` passava na validação como
     `1.0` — ou seja, era aplicado como **100%**, o oposto do pedido.
     A conversão mora aqui porque a unidade amigável é da CLI: a GUI já manda
-    fração (`app/ipc_bridge.py:341` `led_set`), que é o contrato do daemon.
+    fração (`app/ipc_bridge.py:555` `led_set`), que é o contrato do daemon.
     (O docstring antigo dizia que o daemon "ignora" o parâmetro; ele valida e
     aplica desde a FEAT-LED-BRIGHTNESS-01.)
     """

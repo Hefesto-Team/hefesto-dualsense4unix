@@ -79,7 +79,7 @@ tem, sem tocar arquivo de fora.
 FATO SUBSTITUÍDO — 02/09/2026, corretivo. Aqui estava escrito que **a frase de
 recusa NÃO CHEGA À TELA DELA**, e que toda frase deste arquivo era escrita para
 um dia futuro. **Isso caducou no mesmo dia:** o piloto ganhou
-`_recusou_dizendo` (`hefesto_vivo.py:2288`), e o `except` de `trabalhar()` põe a
+`_recusou_dizendo` (`hefesto_vivo.py:2724`), e o `except` de `trabalhar()` põe a
 frase no cartão pelo `idle_add`, na hora do clique e não no tique seguinte.
 
 O QUE CONTINUA VALENDO, e é o que separa os dois erros: **só o `RuntimeError`
@@ -114,7 +114,7 @@ mesmo tempo, medidas contra a página que o produto renderiza:
 
 * das TRÊS opções que a tela dela oferece, DUAS viraram clique morto — e uma
   delas era a única forma de desligar o teclado por esta aba. Morto **e mudo,
-  por contrato**: `_recusou_dizendo` (`hefesto_vivo.py:2288`) leva à tela a
+  por contrato**: `_recusou_dizendo` (`hefesto_vivo.py:2724`) leva à tela a
   frase do `RuntimeError` e NÃO a do `ValueError`, porque clique-inválido fala
   com quem programa. Transformar uma opção de verdade em clique-inválido é
   justamente pedir esse silêncio para o clique dela;
@@ -232,7 +232,7 @@ SEM_ENDERECO: dict[str, str] = {
 #: DUAS TÊM DONO E UMA NÃO, e qual é qual foi MEDIDO — ver o `fato_derrubado`
 #: no corpo de `teclado()`. O que o teclado emulado faz hoje **já é** "só fora
 #: do jogo": o daemon cala a emulação de desktop quando um jogo assume
-#: (`_jogo_no_controle_do_desktop`, `daemon/lifecycle.py:2270`, e o
+#: (`_jogo_no_controle_do_desktop`, `daemon/lifecycle.py:2279`, e o
 #: `gamepad_dispatched` do laço em `:4780`), e o `suppress_desktop_emulation`
 #: do perfil é a versão explícita e por perfil da MESMA coisa. Quem não tem
 #: dono é o INVERSO — "só dentro do jogo".
@@ -1070,7 +1070,7 @@ def _linhas_dos_botoes(p: dict[str, Any]) -> dict[str, str]:
 # `_persist_key_bindings_to_draft` protege o que a lista não mostra. **Aqui é o
 # contrário**: o "Voltar ao padrão" desta tela zera `key_bindings` inteiro, e o
 # "Guardar" faz `apply_button_actions` reescrever o conjunto todo a partir do de
-# fábrica (`profiles/manager.py:570`, `core/acoes_de_botao.resolver`, que nunca
+# fábrica (`profiles/manager.py:629`, `core/acoes_de_botao.resolver`, que nunca
 # consulta `profile.key_bindings`). Copiar a frase de lá seria a tela afirmando
 # o oposto do que este produto faz — e é a família de defeito que esta casa
 # persegue acima de todas.
@@ -1207,7 +1207,7 @@ def atalhos_que_param_de_valer(p: dict[str, Any]) -> list[tuple[str, str]]:
     """Os `key_bindings` do perfil que o "Guardar" desta tela faz parar de valer.
 
     **É A METADE VISÍVEL DO DEFEITO §3-1**, e o defeito é do produto, não desta
-    aba: `apply_button_actions` (`profiles/manager.py:570`) roda DEPOIS do
+    aba: `apply_button_actions` (`profiles/manager.py:629`) roda DEPOIS do
     `apply_keyboard` e chama `teclado.set_bindings(...)` com o conjunto INTEIRO
     que `acoes_de_botao.resolver()` deriva — e `resolver()` parte de
     `acoes.padrao()` e **nunca consulta `profile.key_bindings`**. Logo, um perfil com
@@ -1221,7 +1221,7 @@ def atalhos_que_param_de_valer(p: dict[str, Any]) -> list[tuple[str, str]]:
     que não se perde é ruído.
 
     A RESSALVA QUE A FRASE CARREGA, e ela é medida: sem device de mouse vivo o
-    `apply_button_actions` sai antes (`manager.py:614`) e nada é reescrito. Por
+    `apply_button_actions` sai antes (`manager.py:629`) e nada é reescrito. Por
     isso a tira diz *"quando o mouse virtual estiver de pé"* em vez de prometer
     o desastre em todo caso.
 
@@ -2457,7 +2457,7 @@ def teclado(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
        mouse/teclado no desktop (jogos de GAMEPAD que leem o controle cru)"*.
        O perfil é ativado quando o jogo casa; logo a supressão vale **durante o
        jogo** — o teclado funciona FORA dele.
-    2. `apply_profile_suppression` (`daemon/lifecycle.py:1951`) recebe esse
+    2. `apply_profile_suppression` (`daemon/lifecycle.py:1960`) recebe esse
        campo a cada ativação de perfil e liga a supressão com `desired=True`.
     3. Sem perfil nenhum a dizer o contrário, o daemon **já** cala a emulação de
        desktop quando um jogo assume: `_jogo_no_controle_do_desktop`
@@ -2474,15 +2474,15 @@ def teclado(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
 
     SEM PORTÃO DE MODO, ao contrário do gesto `modo` logo acima, e é medido: o
     portão de lá existe porque ligar o MOUSE derruba o gamepad virtual — o
-    `set_mouse_emulation` (`daemon/lifecycle.py:1372`).
+    `set_mouse_emulation` (`daemon/lifecycle.py:1381`).
 
     Do outro lado, o teclado não mexe no gamepad virtual em momento nenhum.
     Quem o liga e desliga é o
-    `set_keyboard_emulation` (`daemon/lifecycle.py:1505`): ele cria ou destrói o
+    `set_keyboard_emulation` (`daemon/lifecycle.py:1514`): ele cria ou destrói o
     teclado virtual e nada mais.
 
     E COM O GAMEPAD DESPACHANDO, o teclado nem chega a ser consultado — a
-    guarda está em `lifecycle.py:2240`, no `if not gamepad_dispatched`. Copiar o
+    guarda está em `lifecycle.py:4867`, no `if not gamepad_dispatched`. Copiar o
     portão daqui bloquearia, dentro do jogo, o único interruptor que existe
     para calar o Alt+Tab do R1 — que é o defeito que este método nasceu para
     curar (queixa dela, 29/07).
@@ -2565,7 +2565,7 @@ def vel_cursor(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | Non
     O ALCANCE É O DE UM NÚMERO SÓ, e a medição é de 01/09: `mouse_speed` move o
     analógico esquerdo **e** o cursor do touchpad — `emit_touchpad_move` escala
     por `TOUCHPAD_SENSITIVITY * (mouse_speed / DEFAULT_MOUSE_SPEED)`
-    (`integrations/uinput_mouse.py:500`).
+    (`integrations/uinput_mouse.py:508`).
 
     E ELE PASSOU A DURAR ALÉM DA JANELA — 05/09/2026, decisão D2. Até aqui o
     número ia ao daemon e ao `session.json`, e o perfil só o recebia se ela
@@ -2584,7 +2584,7 @@ def vel_rolagem(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | No
 
     Mesma rota speed-only do vizinho, e o mesmo motivo — ver :func:`_velocidade`.
     O que muda é o alcance: `scroll_speed` multiplica o passo do analógico
-    DIREITO em `_emit_scroll` (`integrations/uinput_mouse.py:466`) e nada mais —
+    DIREITO em `_emit_scroll` (`integrations/uinput_mouse.py:488`) e nada mais —
     o touchpad não rola.
 
     A FAIXA DELE É OUTRA, e o dono é o mesmo: `SCROLL_SPEED_MIN`/`MAX` (1..5,
@@ -2707,7 +2707,7 @@ def tecla_escrita(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | 
     trava; o `change` que vem depois a atualiza com o texto final.
 
     A RECUSA É `RuntimeError`, e não `ValueError`, de propósito: o
-    `_recusou_dizendo` do piloto (`hefesto_vivo.py:2288`) leva à tela a frase do
+    `_recusou_dizendo` do piloto (`hefesto_vivo.py:2724`) leva à tela a frase do
     `RuntimeError` e cala a do `ValueError`, que é a linguagem de quem programa.
     Uma combinação que ela digitou e o produto não sabe digitar é conversa com
     ELA — tem de aparecer no cartão, em laranja.
@@ -3391,7 +3391,7 @@ def padrao_definicoes(ctx: Contexto, o: dict[str, Any],
 #:    tela mostra" —, então pendurá-lo num "Voltar ao padrão" faria o botão
 #:    prometer uma coisa e fazer outra;
 #: 3. **ele LIGA o mouse.** `restore_mouse_preference`
-#:    (`daemon/lifecycle.py:1438`) chama `set_mouse_emulation(pref, …)` e, com a
+#:    (`daemon/lifecycle.py:1447`) chama `set_mouse_emulation(pref, …)` e, com a
 #:    preferência nunca gravada, `pref` vira `True` por default (`:1403`) — o
 #:    cursor DELA passa a andar pelo controle, e o gamepad virtual cai junto
 #:    (`:1359`). Isso o põe na mesma prateleira do gesto `modo`, que já está em
@@ -3409,7 +3409,7 @@ SEM_GESTO = {
     # ajustar ali pra deixar um só se for o caso pra ambos"*.
     #
     # O que estava escrito aqui era: o cursor do touchpad sai do MESMO
-    # `mouse_speed` (`uinput_mouse.py:446`), e rolagem por dois dedos não existe
+    # `mouse_speed` (`uinput_mouse.py:467`), e rolagem por dois dedos não existe
     # (`_emit_scroll` lê só o analógico direito). As duas linhas do desenho
     # ofereciam DOIS números onde o produto tem UM — e a cura foi no desenho, não
     # num gesto que fingisse o segundo. As dicas passaram a ler a faixa do

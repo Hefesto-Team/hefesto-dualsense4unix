@@ -846,25 +846,20 @@ _JANELA = 3
 #:    `utils/repo_files.py`, mortas pela BG-BASES-01). Não há número novo para
 #:    escrever: o conserto é a prosa dizer que o endereço é de antes da cura.
 _CITACOES_PENDENTES: frozenset[str] = frozenset({
+    # VINTE E SETE SAÍRAM DAQUI EM 10/09/2026, de uma vez: a leva do som
+    # (SOM-FIADO-01) deslocou `backend_pydualsense.py`, `lifecycle.py` e
+    # `a02_controles.py`, e reapontar TUDO por SÍMBOLO — nunca por aritmética —
+    # curou de passagem 27 endereços que estavam declarados como pendentes de
+    # outra posse. A régua acusou as 27 no mesmo fôlego (*«já conferem — apague
+    # de `_CITACOES_PENDENTES`»*), que é exatamente o que ela existe para
+    # fazer: não deixar a lápide envelhecer calada.
     "app/actions/config/moldura.py::test_config_a_janela_na_tela.py:262",
-    "app/actions/config/secao_janela.py::desktop_notifications.py:33",
-    "app/actions/footer_actions.py::home_actions.py:1050-1054",
-    "app/actions/home_actions.py::daemon/lifecycle.py:84",
     "app/actions/trigger_specs.py::app/widgets/segmented_selector.py:168-180",
     # `trigger_specs.py::profiles/schema.py:161` SAIU DAQUI — 07/09/2026, e ela
     # era da primeira família (endereço deslocado). O `_validate_mode` desceu
     # para a linha 220 nesta leva; o comentário agora o NOMEIA, e por isso a
     # régua voltou a poder corroborá-lo em vez de só conferir que a linha não
     # está em branco.
-    "cli/cmd_test.py::app/ipc_bridge.py:341",
-    "core/led_control.py::core/backend_pydualsense.py:2801",
-    "daemon/ipc_handlers.py::app/actions/lightbar_actions.py:828",
-    "daemon/ipc_handlers.py::core/backend_pydualsense.py:1222",
-    "daemon/ipc_handlers.py::core/backend_pydualsense.py:1335",
-    "daemon/ipc_handlers.py::profiles/manager.py:384-387",
-    "daemon/subsystems/external_mask.py::identity.py:858",
-    "daemon/subsystems/hotkey.py::daemon/protocols.py:180",
-    "daemon/subsystems/hotkey.py::profiles/manager.py:384-387",
     # ONDA5-06-01 (06/09/2026) — AS QUATRO QUE O BOTÃO PS DESLOCOU, e as quatro
     # são de arquivo que a sprint declara em `nao_toca:`. A âncora de cada uma
     # CONTINUA EXISTINDO; só o número mudou, porque o PS ganhou dono em
@@ -883,9 +878,6 @@ _CITACOES_PENDENTES: frozenset[str] = frozenset({
     # CORRIGIDAS no lugar (`core/rumble.py`, `a02_controles.py` e duas em
     # `a08_conexoes.py`): fora do `nao_toca:`, o número se reescreve.
     "interface/pacotes/a06_navegacao.py::core/acoes_de_botao.py:285",
-    "interface/pacotes/a06_navegacao.py::manager.py:614",
-    "interface/pacotes/a06_navegacao.py::profiles/manager.py:570",
-    "profiles/schema.py::daemon/subsystems/hotkey.py:1004",
     # ONDA3-MOTOR-01 (06/09/2026) — AS SEIS QUE A CURA DO `— Nada —` E DA
     # HERANÇA DE `key_bindings` DESLOCOU. O deslocamento é de **+22 linhas** em
     # `profiles/manager.py` e em `integrations/uinput_mouse.py`, medido linha a
@@ -910,11 +902,6 @@ _CITACOES_PENDENTES: frozenset[str] = frozenset({
     # As DUAS que a mesma cura deslocou dentro da minha posse não estão aqui
     # porque foram corrigidas no lugar (`core/acoes_de_botao.py`, as citações de
     # `profiles/manager.py:1856`->`:1878` e `uinput_mouse.py:355`->`:377`).
-    "interface/aba06.py::integrations/uinput_mouse.py:486",
-    "interface/pacotes/a06_navegacao.py::integrations/uinput_mouse.py:466",
-    "interface/pacotes/a06_navegacao.py::integrations/uinput_mouse.py:500",
-    "interface/pacotes/a06_navegacao.py::uinput_mouse.py:446",
-    "interface/pacotes/a08_conexoes.py::profiles/manager.py:2106",
     # ONDA5-P-01 (06/09/2026) — AS TRÊS QUE A QUARTA PORTA DESLOCOU. O piloto
     # ganhou o seletor do dono, o `input` do "ao vivo" e o despacho do gesto
     # vivo; o deslocamento em `interface/hefesto_vivo.py` é de **+163 linhas**
@@ -937,13 +924,6 @@ _CITACOES_PENDENTES: frozenset[str] = frozenset({
     # `:1616` — as três citações do `data-controle` daquela aba, que já
     # apontavam para linhas erradas antes desta leva e só agora caíram numa que
     # a régua consegue ancorar).
-    "interface/pacotes/a03_gatilhos.py::hefesto_vivo.py:1515",
-    "interface/pacotes/a06_navegacao.py::hefesto_vivo.py:2288",
-    "interface/pacotes/a10_perfis.py::hefesto_vivo.py:2288",
-    "profiles/loader.py::schema.py:52",
-    "utils/repo_files.py::cli/cmd_doctor.py:23",
-    "utils/repo_files.py::emulation_actions.py:1200",
-    "utils/repo_files.py::emulation_actions.py:1763",
 })
 
 

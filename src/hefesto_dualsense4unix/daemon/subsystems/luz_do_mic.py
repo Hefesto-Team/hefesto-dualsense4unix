@@ -40,7 +40,7 @@ voltou a ser dele.
 
 **POR QUE `set_microphone_led` E NÃO `set_mic_led`, e isto não é preferência.**
 Medido nesta árvore em 03/09/2026: `set_mic_led` coage a `bool` DUAS VEZES em
-série (`core/backend_pydualsense.py:4412`, `flag = bool(aceso)`, e `:372`,
+série (`core/backend_pydualsense.py:4522`, `flag = bool(aceso)`, e `:372`,
 `tomar(bool(aceso))`), então `2` e `3` viram `1` sem erro e sem log — luz acesa
 fixa onde devia piscar, que se lê como *"a PEÇA B não está detectando som"*. O
 único caminho de produção que carrega o nível é
@@ -257,7 +257,7 @@ def _mudo(backend: Any, uniq: str) -> bool | None:
     """O mudo do FIRMWARE daquele controle, ou `None` quando ele não disse.
 
     `audio_status_for` é a leitura direta do byte de estado que veio no report
-    de INPUT (`core/backend_pydualsense.py:4489`). **Não é `microphone_mute_for`
+    de INPUT (`core/backend_pydualsense.py:4599`). **Não é `microphone_mute_for`
     de propósito**: aquele diz quem MANDA (o valor que o Hefesto afirma), não o
     que está valendo no aparelho, e a §1.1 fala do firmware.
     """
@@ -279,7 +279,7 @@ def _baterias(backend: Any) -> dict[str, int]:
     """`{uniq: battery_pct}` dos controles conectados. Só quem reportou entra.
 
     `describe_controllers` já devolve a carga por controle
-    (`core/backend_pydualsense.py:5957`) e a leitura é `getattr` no objeto que
+    (`core/backend_pydualsense.py:6067`) e a leitura é `getattr` no objeto que
     a thread de report atualiza — sem HID I/O, e já há três consumidores do
     daemon pagando esse preço por tique.
 
@@ -357,7 +357,7 @@ async def _fora_do_laco(daemon: Any, fn: Any, *args: Any) -> Any:
     pior caso, 9 s, se lê como a máquina dela travando.
 
     A queda para a chamada direta existe porque `_run_blocking` exige o
-    executor montado (`daemon/lifecycle.py:4874` afirma isso), e um daemon
+    executor montado (`daemon/lifecycle.py:4939` afirma isso), e um daemon
     dublado ou meio subido não o tem. Bloquear um teste é aceitável; derrubar
     a luz por causa dele não é.
     """
@@ -527,7 +527,7 @@ def _escrever(backend: Any, uniq: str, valor: int | None) -> bool:
 
     **NÃO É `set_mic_led`.** Aquele esmaga em `bool` duas vezes em série e faz
     o `2` e o `3` virarem `1` sem erro e sem log (medido em 03/09/2026,
-    `core/backend_pydualsense.py:4412` e `:372`).
+    `core/backend_pydualsense.py:4522` e `:372`).
 
     `valor is None` é a DEVOLUÇÃO DA POSSE (o bit `0x01` do flag1 cai e o
     kernel volta a escrever a luz na borda do botão); `0` é uma ORDEM

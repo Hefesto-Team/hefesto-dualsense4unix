@@ -513,7 +513,7 @@ class FooterActionsMixin(ProfileWriterMixin):
 
         O ``_jogo_aberto`` tem UM escritor: `home_actions._render_home`
         (`:1339`), e ele **só roda com a aba Início à vista** — o poller checa a
-        página corrente antes de trabalhar (`home_actions.py:1050-1054`).
+        página corrente antes de trabalhar (`home_actions.py:2654-2658`).
         Consequência: clicar no "Aplicar" a partir da aba Lightbar, ou nos
         primeiros 2 s da janela, deixava o flag em ``False`` e o diálogo **não
         aparecia** — a transição saía direto, com o jogo aberto. É exatamente o

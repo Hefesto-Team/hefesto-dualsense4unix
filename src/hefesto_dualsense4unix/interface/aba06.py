@@ -2086,7 +2086,7 @@ D_REMAPEAMENTO = ajuda(
 #: gosto: ela dizia **"Ligada — atalhos e teclado na tela"**, e "ligada"
 #: afirmava um alcance que o produto NÃO tem. O daemon já cala a emulação de
 #: desktop quando um jogo assume — `_jogo_no_controle_do_desktop`
-#: (`daemon/lifecycle.py:2270`, a cura da queixa dela de 29/07 *"aperto r1 e ele
+#: (`daemon/lifecycle.py:2279`, a cura da queixa dela de 29/07 *"aperto r1 e ele
 #: muda de app ao invés de funcionar no jogo"*) e o `gamepad_dispatched` do laço
 #: (`:4780`). O que o teclado emulado faz hoje **é** "só fora do jogo": a
 #: etiqueta é que mentia.
@@ -2117,7 +2117,7 @@ ATIVACAO_ESQ = [
 #   · `mouse_emulation.speed`        é UM número (1..12), e o cursor do TOUCHPAD
 #     sai dele: `emit_touchpad_move` escala por
 #     `TOUCHPAD_SENSITIVITY * (mouse_speed / DEFAULT_MOUSE_SPEED)`
-#     (`integrations/uinput_mouse.py:486`). Não há segunda velocidade a ajustar
+#     (`integrations/uinput_mouse.py:508`). Não há segunda velocidade a ajustar
 #     — o "Touch" da tela era uma conta que ninguém faz do outro lado.
 #   · `mouse_emulation.scroll_speed` é UM número (1..5) e vale só para o
 #     analógico DIREITO: `_emit_scroll(rx, ry)` (`uinput_mouse.py:412`). Rolagem
