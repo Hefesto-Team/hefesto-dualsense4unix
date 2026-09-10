@@ -152,22 +152,43 @@ nasce em opt-in, por privacidade e por banda: ligue com
 `HEFESTO_DUALSENSE4UNIX_BT_MIC=1`. *Não implementado* e *não ligado por padrão*
 são coisas diferentes, e confundi-las já custou tempo aqui.
 
-**O som SAINDO pelo alto-falante do controle, por rádio, não anda** — e o que se
-sabe hoje é mais preciso que "protocolo proprietário":
+**O som SAINDO pelo alto-falante do controle, por rádio: o caminho está PROVADO,
+e o produto ainda não o usa.** As duas metades desta frase importam.
+
+**PROVADO em 10/09/2026, na bancada:** o alto-falante do DualSense tocou por
+rádio, **70 segundos contínuos sem um corte**, com a orelha dela como
+instrumento e o alcance testado. Foi `write()` no `/dev/hidraw`, com o daemon
+vivo e o `hid-playstation` ligado — sem socket L2CAP, sem root, sem unbind.
+
+```
+report 0x35 · 334 B · UM quadro Opus de 10 ms · tag 0x13 · a cada 10,667 ms
+```
+
+**O QUE O PRODUTO AINDA NÃO FAZ:** montar esse report. O
+`integrations/alto_falante_bt.py` monta o `0x39` de 547 B a cada 20 ms — o
+report errado, com o dobro de quadros, na cadência errada. **É dívida nossa, e
+está com endereço.** Enquanto ela não fechar, o som por rádio existe no ensaio
+(`scripts/ensaios/o_som_pelo_035.py`) e não na interface.
+
+O que continua valendo do que se sabia antes:
 
 - **A2DP e HFP estão descartados por medição** (07/08/2026, registro do BlueZ):
   o controle anuncia só HID (`0x1124`) e PnP (`0x1200`), e a Class of Device
   `0x002508` não tem o bit de áudio. Nenhum card de áudio nasce, e nenhum perfil
   Bluetooth **padrão** leva som a este aparelho. Não é o host que não sabe: o
-  adaptador expõe A2DP Source e Sink, com aptX/LDAC/LC3/mSBC/G722.
+  adaptador expõe A2DP Source e Sink, com aptX/LDAC/LC3/mSBC/G722. **O som de
+  10/09 não passou por nenhum perfil de áudio — passou por HID.**
 - **O canal por HID existe e responde** (15/08/2026): o descritor do rádio
   declara nove degraus de report de saída, de `0x31` (77 B) a `0x39` (546 B), de
-  64 em 64 bytes. O firmware executou o mesmo bloco de 47 bytes mandado por
-  `0x32` e por `0x39`, com o olho dela na lightbar.
-- **O que falta é o conteúdo**: ninguém identificou o que vai nos ~469 bytes que
-  sobram além do bloco de controle, e ninguém mandou um byte de áudio e ouviu
-  coisa alguma. A frase honesta, contra o nosso próprio entusiasmo: *o canal
-  existe, o firmware responde, e o payload não foi identificado.*
+  64 em 64 bytes. **O degrau que carrega áudio é o `0x35`** — o quinto, não o
+  teto.
+
+**A frase que caducou, e ela viveu aqui até 10/09:** *"o payload não foi
+identificado"*. Foi. E o que atrasou a resposta foi mirar no `0x39`, o report
+maior, por nove passadas — em vez do `0x35`.
+
+**A `libopus` do sistema (`libopus.so.0`) é necessária nas DUAS direções:** o
+microfone a decodifica, o alto-falante a codifica. O `install.sh` já a instala.
 
 Linha por linha, com a procedência de cada célula, no
 [mapa de canais](../../html/specs.html) — `audio.microfone@dualsense`,

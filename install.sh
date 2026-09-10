@@ -1808,11 +1808,26 @@ fi
 # `gi` do venv, que só existe depois do bloco acima.
 _garantir_deps_de_sistema
 
-# --- BT-MIC-01: microfone do DualSense por Bluetooth -------------------------
-# Em Bluetooth o DualSense NÃO fala A2DP/HFP: o áudio do microfone vem como
-# Opus dentro dos reports HID e a ponte (`mic bt`) o decodifica por ctypes
+# --- BT-MIC-01: o ÁUDIO do DualSense por Bluetooth, nas DUAS direções --------
+# Em Bluetooth o DualSense NÃO fala A2DP/HFP: o áudio vai e vem como Opus
+# dentro dos reports HID, e o Hefesto o codifica e o decodifica por ctypes
 # sobre a libopus DO SISTEMA — de propósito, para não precisar de binding pip
 # (regra do projeto: nada de pip ad-hoc; tudo replicável por script).
+#
+# A libopus SERVE ÀS DUAS PONTAS DESDE 10/09/2026, e antes desta data este
+# bloco só conhecia a de ENTRADA:
+#   * ENTRA  — o microfone. `mic bt` DECODIFICA (`integrations/dualsense_bt_audio.py`);
+#   * SAI    — o alto-falante. O som CODIFICADO chega ao plástico pelo report
+#              `0x35`, um quadro Opus de 10 ms (48 kHz estéreo, CBR 160 kbps)
+#              a cada 10,667 ms. Medido na bancada dela em 10/09/2026, com a
+#              orelha dela e 70 s sem um corte; o codificador é o
+#              `integrations/alto_falante_bt.CodificadorOpus`, e ele abre a
+#              MESMA `libopus.so.0` por um handle próprio (`:276`).
+#
+# **Sem a libopus o som por rádio não sai** — e o sintoma é silêncio, que se lê
+# como «o controle não suporta». Era exatamente o que esta casa acreditava até
+# 10/09. Ver `docs/protocol/dualsense-referencia-canonica.md`, seção *"O som que
+# saiu pelo rádio"*.
 # `pactl` (pulseaudio-utils) é quem publica o microfone no PipeWire.
 # Best-effort: sem isso o hefesto inteiro funciona, só o `mic bt` não sobe —
 # e ele já diz exatamente o que falta (`mic bt-status`).
@@ -1833,16 +1848,17 @@ _btmic_faltando=()
 _dep_presente "lib:libopus.so.0" || _btmic_faltando+=(opus)
 _dep_presente "cmd:pactl" || _btmic_faltando+=(pactl)
 if (( ${#_btmic_faltando[@]} )); then
-    printf '\n      Microfone por Bluetooth: faltam %s\n' "${_btmic_faltando[*]}"
+    printf '\n      Áudio do controle por Bluetooth (microfone E alto-falante): faltam %s\n' \
+        "${_btmic_faltando[*]}"
     ask_yn "instalar agora com sudo?" "${AUTO_YES}" "y"
     if [[ "${REPLY,,}" =~ ^y ]]; then
         if run_pkg "${_btmic_faltando[@]}"; then
-            printf '      ok — `hefesto-dualsense4unix mic bt` disponível\n'
+            printf '      ok — `hefesto-dualsense4unix mic bt` e o som por rádio disponíveis\n'
         else
-            warn "não instalei ${_btmic_faltando[*]} — o mic por BT fica indisponível"
+            warn "não instalei ${_btmic_faltando[*]} — o mic por BT e o som por rádio ficam indisponíveis"
         fi
     else
-        printf '      pulando (mic por BT indisponível; instale depois: %s)\n' \
+        printf '      pulando (mic e som por BT indisponíveis; instale depois: %s)\n' \
             "$(comando_manual_pkg "${_btmic_faltando[@]}")"
     fi
 fi
