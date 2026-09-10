@@ -1473,7 +1473,7 @@ class BombaDeSomPeloRadio:
         tag_audio: int = BLOCO_SPEAKER,
         seco: bool = True,
         common: bytes | None = None,
-        com_microfone: bool = False,
+        com_microfone: bool | Callable[[], bool] = False,
     ) -> None:
         # O `common` É OBRIGATÓRIO PARA O CORPO QUE O PRESERVA — 08/09/2026.
         #
@@ -1514,10 +1514,38 @@ class BombaDeSomPeloRadio:
         self._quadros_mandados = 0
         #: O bit 0 dos enables. Ligado, o microfone entra no MESMO report que
         #: leva o som — medido em 10/09/2026.
-        self.com_microfone = bool(com_microfone)
+        #:
+        #: **ELE É PERGUNTADO A CADA REPORT, e não congelado na construção** —
+        #: 10/09/2026, queixa dela. Um `bool` fixo aqui vale para sempre, e o
+        #: estado do microfone muda ENQUANTO a ponte está de pé: ela aperta o
+        #: botão, e daí em diante todo report do som contradiz o gesto. Com
+        #: 93,75 reports por segundo, um `0xFE` congelado é o microfone sendo
+        #: desligado noventa e três vezes por segundo.
+        self.com_microfone = com_microfone
         self.contagem = ContagemDaBomba()
 
     # -- a conta ----------------------------------------------------------
+
+    def quer_o_microfone(self) -> bool:
+        """O bit 0 dos enables DESTE report. Nunca levanta.
+
+        Aceita as duas formas de :attr:`com_microfone` — o `bool` de quem já
+        sabe, e o chamável de quem PERGUNTA a cada report. O segundo é o do
+        produto: quem responde é o subsystem do microfone, e a resposta muda
+        no meio da ponte.
+
+        Uma exceção aqui não pode calar o som: quem chama está no laço de
+        envio, a 93,75 reports por segundo, e um oráculo que explodiu é um
+        *"não sei"* — que vale `False`, o estado em que o aparelho já estava.
+        """
+        quer = self.com_microfone
+        if not callable(quer):
+            return bool(quer)
+        try:
+            return bool(quer())
+        except Exception:  # pragma: no cover - defensivo
+            logger.debug("som_radio_oraculo_do_mic_ilegivel", exc_info=True)
+            return False
 
     @property
     def bytes_de_pcm_por_report(self) -> int:
@@ -1597,7 +1625,7 @@ class BombaDeSomPeloRadio:
             return b""
         return controle_de_audio_035(
             contador_de_quadros=self._quadros_mandados,
-            com_microfone=self.com_microfone,
+            com_microfone=self.quer_o_microfone(),
         )
 
     @property
@@ -1981,7 +2009,7 @@ class PonteDeSomPorRadio:
         fonte_de_pcm: Callable[[int], bytes],
         arranjo: Arranjo | None = None,
         rota: int = BLOCO_SPEAKER,
-        com_microfone: bool = False,
+        com_microfone: bool | Callable[[], bool] = False,
         seco: bool = False,
         gravador: Any | None = None,
     ) -> None:
@@ -1990,7 +2018,10 @@ class PonteDeSomPorRadio:
         self._fonte = fonte_de_pcm
         self.arranjo = arranjo or ARRANJO_PADRAO
         self.rota = rota
-        self.com_microfone = bool(com_microfone)
+        #: Repassado à bomba sem `bool()`: um chamável tem de chegar VIVO lá,
+        #: senão `bool(f)` o congela em `True` — a função existe, logo é
+        #: verdadeira — e o microfone ficaria ligado para sempre.
+        self.com_microfone = com_microfone
         self._seco = bool(seco)
         self._bomba: BombaDeSomPeloRadio | None = None
         self._thread: threading.Thread | None = None
