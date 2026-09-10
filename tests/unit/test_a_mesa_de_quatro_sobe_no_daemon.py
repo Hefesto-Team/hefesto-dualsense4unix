@@ -338,3 +338,75 @@ async def test_quem_nao_tem_ponte_nao_ganha_no_mudo(
     finally:
         daemon.stop()
         await run_task
+
+
+@pytest.mark.asyncio
+async def test_o_mix_de_um_nao_vira_o_mix_do_vizinho(
+    mesa: dict[str, Any], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """SFX-POR-CONTROLE-01 no DAEMON: a fonte é de cada um.
+
+    É a régua de aceitação dela, dita com as palavras dela: *"se cada user
+    escolher desativar uma delas, vai conseguir sem impactar os demais"*.
+
+    O `mix` carrega o monitor da SAÍDA PADRÃO para dentro do nó — o áudio do
+    sistema inteiro. Publicá-lo em quem pediu `sfx` põe a chamada de voz, o
+    navegador e a música no ouvido daquele jogador; e não publicá-lo em quem
+    pediu `mix` cala o «HDMI completo» que ela desenhou.
+
+    MORDIDA: tire `fonte_por_controle=` do `_start_alto_falante` e os quatro
+    nós nascem com o padrão — o `mix` do P1 some.
+    """
+    import json
+
+    from hefesto_dualsense4unix.integrations import alto_falante_bt as af
+    from hefesto_dualsense4unix.profiles.loader import profiles_dir
+
+    p1 = _MESA[0][0]
+    nome = "mesa-de-quatro"
+    pasta = Path(profiles_dir(ensure=True))
+    (pasta / f"{nome}.json").write_text(
+        json.dumps(
+            {
+                "name": nome,
+                "match": {"type": "any"},
+                "controllers": {
+                    "".join(c for c in p1.lower() if c in "0123456789abcdef")[:12]: {
+                        "speaker": {"volume": 180, "fonte": "mix"}
+                    }
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(
+        "hefesto_dualsense4unix.utils.session.load_last_profile", lambda: nome
+    )
+    # O monitor da saída padrão existe nesta máquina de mentira: sem ele o
+    # `mix` não teria de onde puxar e a régua mediria a ausência do PipeWire.
+    monkeypatch.setattr(
+        af, "monitor_da_saida_padrao", lambda **k: "alsa_output.hdmi.monitor"
+    )
+
+    daemon, run_task = await _subir_o_daemon(mesa)
+    try:
+        nos = daemon._alto_falante_subsystem._gerenciador.nos
+        fontes = {u: no.rota.fonte for u, no in nos.items()}
+        assert fontes[p1] == "mix", (
+            f"o P1 pediu o mix inteiro e o nó dele nasceu com {fontes[p1]!r}"
+        )
+        for uniq, _ in _MESA[1:]:
+            assert fontes[uniq] == af.FONTE_PADRAO, (
+                f"o {uniq} herdou a fonte do P1 ({fontes[uniq]!r}) — a escolha "
+                "de um jogador mudou o som do vizinho"
+            )
+        assert nos[p1].rota.monitor_do_mix, (
+            "o nó do P1 está em `mix` e não sabe de qual monitor puxar"
+        )
+        for uniq, _ in _MESA[1:]:
+            assert not nos[uniq].rota.monitor_do_mix, (
+                f"o {uniq} ficou com o monitor do sistema sem ter pedido"
+            )
+    finally:
+        daemon.stop()
+        await run_task
