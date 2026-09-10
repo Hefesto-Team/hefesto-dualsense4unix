@@ -23,9 +23,9 @@ registro** — `daemon/subsystems/__init__.py`, `daemon/lifecycle.py` e
 
 Com os quatro DualSense na mesa dela (medido em 07/09/2026: dois no cabo, dois
 no rádio), `AltoFalanteSubsystem.alvos()` devolve **os quatro**, e os quatro
-nasceriam com o MESMO rótulo `Alto-falante do controle` — porque
+nasceriam com o MESMO rótulo genérico — porque
 `GerenciadorDeNosDeSom._construir` chama `SinkVirtualPipeWire(uniq=uniq)` sem
-rótulo próprio, e o default é a constante `DESCRICAO_PROVISORIA`. Quatro entradas
+rótulo próprio, e o default era uma constante de rótulo genérico. Quatro entradas
 idênticas e mudas na lista de som dela, ao lado das DUAS placas reais que hoje
 FUNCIONAM pelo cabo. Ela escolhe uma das quatro e o som some.
 
