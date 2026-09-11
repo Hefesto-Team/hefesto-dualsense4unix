@@ -322,8 +322,11 @@ def test_o_selo_segue_os_reparaveis_e_nao_os_faltantes(desenho):
         intocaveis=(("9", "Jogo intocável", "linha editada à mão — não vou tocar"),),
         instalados=3)
     cartao = desenho.cartao_da_steam(so_intocavel)
-    assert cartao.selo == "ok", (
-        "o cartão diz NÃO CHEGAM por causa de um jogo que o produto não toca")
+    # `localizado` DESDE 11/09/2026, ordem dela — a Steam deixou de ter selo
+    # próprio e usa o dos outros cinco. O que esta régua cobra continua sendo o
+    # mesmo: que um jogo INTOCÁVEL não faça o cartão acusar impedimento.
+    assert cartao.selo == "localizado", (
+        "o cartão acusa impedimento por causa de um jogo que o produto não toca")
     assert 'data-gesto="consertar"' not in desenho.acoes_html(cartao), (
         "o `Consertar` está aceso e não há nada que ele possa consertar")
     assert "intocável" in cartao.carimbo, (
@@ -1034,10 +1037,11 @@ def test_a_moldura_do_cartao_segue_o_selo_que_o_produto_mediu(a07, ctx, desenho,
                            onde_estao=(("heroic", ""), ("lutris", "")))
     cartoes = desenho.cartoes(lida)
     html = a07._pintura(cartoes)["blocos"][desenho.SELETOR_DA_GRADE]
-    assert cartoes[0].selo == "ok", "a Leitura da régua deixou de ser a `CHEGAM`"
-    assert f'class="lanc {desenho.MOLDURA["ok"]}" data-lancador="steam"' in html, (
-        "a Steam mede `CHEGAM` e a moldura dela continua a de `ausente` — é o "
-        "cartão dizendo duas coisas opostas na mesma tela")
+    assert cartoes[0].selo == "localizado", (
+        "a Leitura da régua deixou de ser a do cartão sem impedimento")
+    assert f'class="lanc {desenho.MOLDURA["localizado"]}" data-lancador="steam"' in html, (
+        "a Steam mede `LOCALIZADO` e a moldura dela continua a de `ausente` — é "
+        "o cartão dizendo duas coisas opostas na mesma tela")
 
     quebrada = desenho.cartoes(desenho.Leitura(
         com_wrapper=("1",), instalados=2,
@@ -1588,9 +1592,15 @@ def test_a_steam_que_esta_aqui_continua_respondendo_pelo_censo(a07, desenho,
         com_wrapper=("1", "2"), instalados=2,
         onde_estao=tuple(a07._onde_estao_os_lancadores()))
     cartao = desenho.cartao_da_steam(lida)
-    assert desenho.SELOS[cartao.selo] == "CHEGAM" and cartao.presente, (
+    # O SELO, E NÃO A PALAVRA — 11/09/2026, pelo mesmo motivo que a régua do
+    # `NÃO LOCALIZADO` já escreve: aqui estava `== "CHEGAM"`, e quando ela
+    # mandou a Steam usar a palavra dos outros cinco esta linha reprovou a
+    # MELHORA. O que se cobra é o ESTADO — a Steam foi achada e não há
+    # impedimento —, e a palavra que a tela mostra é decisão dela.
+    assert cartao.selo == "localizado" and cartao.presente, (
         f"a Steam ACHADA e com a biblioteca lida perdeu o cartão de sempre: "
-        f"{desenho.SELOS[cartao.selo]!r}")
+        f"selo {cartao.selo!r} ({desenho.SELOS[cartao.selo]!r}), "
+        f"presente={cartao.presente}")
     assert "2 jogos instalados" in cartao.jogos
 
 
@@ -1608,9 +1618,11 @@ def test_a_steam_fora_das_tres_buscas_nao_apaga_a_biblioteca_lida(desenho):
     lida = desenho.Leitura(com_wrapper=("1",), instalados=1,
                            onde_estao=(("steam", ""),))
     cartao = desenho.cartao_da_steam(lida)
-    assert desenho.SELOS[cartao.selo] == "CHEGAM", (
-        "o produto leu 1 jogo da biblioteca e o cartão diz que não achou a "
-        "Steam — a tela discorda de si mesma")
+    # O SELO, E NÃO A PALAVRA — ver a régua acima.
+    assert cartao.selo == "localizado", (
+        f"o produto leu 1 jogo da biblioteca e o cartão sai com selo "
+        f"{cartao.selo!r} ({desenho.SELOS[cartao.selo]!r}) — a tela discorda "
+        f"de si mesma")
     assert cartao.presente, (
         "a biblioteca foi lida e o topo não conta a Steam como encontrada")
 

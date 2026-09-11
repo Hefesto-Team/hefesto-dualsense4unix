@@ -1823,7 +1823,8 @@ def atualizar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     `p.chamar("daemon.reload")`, e `chamar` devolve `bool` que ninguém lia.
     `_safe_call` devolve `False` para serviço desligado, socket ausente, timeout
     e erro JSON-RPC (`app/ipc_bridge.py:105-112`); o gesto não levantava, o
-    piloto executava o ramo do sucesso (`interface/hefesto_vivo.py:2111-2113`) e
+    piloto executava o ramo do sucesso (`_deu_certo`,
+    `interface/hefesto_vivo.py:2730`) e
     a tela dizia **"Pronto."** em verde. **A cena inteira, com o serviço
     parado:** o botão trocava de palavra, esperava o teto, voltava ao rótulo e
     afirmava ter feito. Nenhum byte havia saído. E ele não fica cinza para

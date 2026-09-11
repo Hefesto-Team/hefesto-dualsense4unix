@@ -1633,7 +1633,24 @@ def cartao_da_steam(lida: Leitura | None) -> Lancador:
                f"{_plural(len(lida.com_wrapper), 'jogo', 'jogos')} da sua "
                "biblioteca (instalados ou não).")
         acoes = (abrir, criar)
-        selo = "ok"
+        # O SELO DA STEAM É `LOCALIZADO` COMO OS OUTROS CINCO — 11/09/2026,
+        # ordem dela: *"troca o chegam da steam por localizado como os  (noqa-acento) citação
+        # demais"*.
+        #
+        # A `CHEGAM` era a última sobra de quando o selo respondia DUAS
+        # perguntas ao mesmo tempo — *"está aqui?"* e *"o controle chega?"*. Os
+        # outros cinco cartões já tinham sido separados em 09/09
+        # (`D-0809-O-SELO-DOS-LANCADORES-DIZ-LOCALIZADO`), e a Steam ficou para
+        # trás com uma palavra só dela: seis cartões lado a lado, cinco dizendo
+        # a mesma coisa e um dizendo outra, sem que a diferença significasse
+        # nada para quem lê.
+        #
+        # O VEREDITO NÃO SE PERDEU, e é o que impede esta troca de apagar
+        # informação: o `warn` (`NÃO CHEGAM`) continua nascendo quando há
+        # impedimento, e o corpo do cartão continua dizendo em quantos jogos o
+        # atalho está no lugar. O que sai é a palavra que dizia «está tudo bem»
+        # num lugar em que as outras cinco dizem «achei».
+        selo = "localizado"
 
     # A LINHA DO STEAM INPUT — `D-0609-STEAM-DIVIDIDO`, decisão dela.
     #
