@@ -504,10 +504,20 @@ def jogos_dos_lancadores(lar: Path | None = None) -> list[JogoLocal]:
 
     **SÓ ENTRA QUEM TEM ENDEREÇO.** `censo_dos_lancadores.jogos_com_chave_de_janela`
     é quem decide, e a docstring dele diz o preço da alternativa: uma linha sem
-    chave é uma linha que nunca casa com janela nenhuma (R-12). Isto **não** é
-    a decisão (A)/(B) da §3 da sprint — aquela é sobre a LISTA DE PERFIS
-    crescer sozinha, e é dela; esta é a lista de SUGESTÃO do campo, que é o (C)
-    que ela já tem, e que não cria linha nenhuma sem ela pedir.
+    chave é uma linha que nunca casa com janela nenhuma (R-12).
+
+    **ELA DECIDIU A (A) EM 11/09/2026, e esta função ganhou um SEGUNDO leitor.**
+    Até aqui ela só alimentava a lista de SUGESTÃO do campo «Nome do Jogo», que
+    não cria linha nenhuma sem ela pedir. Agora `profiles.loader.semear_perfis_dos_jogos`
+    também a lê, e o que ela devolve VIRA PERFIL NO DISCO
+    (PERFIL-DOS-LANCADORES-E1). Palavra dela: *"os demais jogos de outros
+    lançadores deve aparecer um perfil automaticamente aqui na nossa guia de
+    perfil"*.  # noqa-acento: citação literal dela
+
+    **O QUE ISSO COBRA DE QUEM MEXER AQUI:** alargar esta lista passou a ter
+    preço de disco. Uma linha a mais é um `.json` a mais na pasta dela — e
+    perfil que nasce não se apaga sozinho (a marca de semeadura garante que ele
+    não RENASÇA, não que ele suma).
 
     O `appid` sai VAZIO de propósito: um jogo de fora da Steam não tem appid, e
     inventar um número nosso obrigaria a traduzir nos dois sentidos para

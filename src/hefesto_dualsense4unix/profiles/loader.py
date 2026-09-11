@@ -981,17 +981,30 @@ def _maybe_seed_presets() -> None:
 # seria o produto escolhendo por ela.
 
 #: Um registro por jogo já processado, no diretório de perfis. Formato:
-#: ``<appid>\t<arquivo.json>`` para o que ESTE produto criou, e ``<appid>\t``
-#: (segundo campo vazio) para o jogo que o produto NÃO criou porque ela já
-#: tinha um perfil para ele.
+#: ``<identidade>\t<arquivo.json>`` para o que ESTE produto criou, e
+#: ``<identidade>\t`` (segundo campo vazio) para o jogo que o produto NÃO criou
+#: porque ela já tinha um perfil para ele.
 #:
 #: É a "marca de semeadura" do pedido, e ela responde a duas perguntas que sem
 #: marca nenhuma são indistinguíveis: *o que é meu e o que é dela* (só o que
 #: tem arquivo no segundo campo é do produto — base de qualquer desfazer do
-#: lote) e *o que já foi decidido* (appid registrado não volta a ser semeado,
+#: lote) e *o que já foi decidido* (jogo registrado não volta a ser semeado,
 #: nem depois de ela apagar o perfil — mesmo contrato de `.seeded_presets`:
 #: perfil que ela apagou de propósito não ressuscita).
 MARCA_DE_SEMEADURA_DE_JOGOS = ".perfis_de_jogo_semeados"
+
+#: O PREFIXO QUE SEPARA AS DUAS IDENTIDADES NA MARCA —
+#: PERFIL-DOS-LANCADORES-E1, 11/09/2026. A Steam endereça por `appid` (só
+#: dígitos); um jogo de lançador não tem appid nenhum, e o endereço dele é a
+#: `wm_class` que a janela anuncia (``gotg.exe``).
+#:
+#: **SEM O PREFIXO AS DUAS DISPUTAM A MESMA LINHA**, e o estrago não é
+#: hipotético: `_linhas_da_marca` descartava tudo que não fosse dígito, então
+#: um ``gotg.exe`` cru seria escrito e nunca relido — o jogo renasceria a cada
+#: varredura, inclusive depois de ela apagar o perfil, que é exatamente o
+#: contrato que a marca existe para cumprir. E um lançador que um dia use um
+#: número como chave passaria a colidir com o appid de mesmo valor.
+PREFIXO_DA_CHAVE_DE_JANELA = "janela:"
 
 #: A prioridade do perfil semeado. O 80 foi COPIADO, não escolhido: era o do
 #: `sackboy_nativo`, o preset de fábrica que mirava um jogo.
@@ -1018,6 +1031,7 @@ DesfechoDaSemeadura = Literal[
     "nome_ocupado",
     "casa_com_a_loja",
     "sem_slug",
+    "sem_endereco",
 ]
 
 #: Os dois desfechos que ficam GRAVADOS na marca. Os outros são recusas que
@@ -1037,13 +1051,23 @@ class PerfilSemeado:
     justamente o que esta casa aprendeu a ler como sucesso falso.
     """
 
+    #: O appid da Steam. **VAZIO para jogo de lançador**, que não tem appid —
+    #: ver `chave`. O nome do campo não mudou de propósito: as réguas da Steam
+    #: perguntam `r.appid` desde 22/08 e a resposta delas continua a mesma.
     appid: str
     jogo: str
     desfecho: DesfechoDaSemeadura
     #: O arquivo criado — só no desfecho ``criado``. Nos outros, o arquivo que
-    #: EXPLICA a recusa (o perfil dela que já cobre o appid, ou que já ocupa o
+    #: EXPLICA a recusa (o perfil dela que já cobre o jogo, ou que já ocupa o
     #: nome), ou vazio quando não há arquivo envolvido.
     arquivo: str = ""
+    #: A `wm_class` do jogo de lançador (``gotg.exe``). Vazia na Steam.
+    chave: str = ""
+
+    @property
+    def identidade(self) -> str:
+        """A linha da marca deste jogo — `appid`, ou ``janela:<classe>``."""
+        return _identidade(self.appid, self.chave)
 
 
 @dataclass(frozen=True)
@@ -1067,30 +1091,87 @@ class ResultadoDaSemeadura:
 # semeadura de presets que já roda ali, e um arquivo de estado a mais seria uma
 # terceira coisa para ficar velha.
 _ultima_varredura_de_jogos: float | None = None
-_assinatura_da_biblioteca_vista: tuple[tuple[str, int], ...] | None = None
+#: A impressão das DUAS bibliotecas — a da Steam e a dos cinco lançadores.
+#: Um par, e não uma soma achatada: as duas têm donos e formas diferentes, e
+#: compará-las juntas é só a pergunta "mudou alguma coisa?".
+_assinatura_da_biblioteca_vista: tuple[object, object] | None = None
 
 
 def _caminho_da_marca(directory: Path) -> Path:
     return directory / MARCA_DE_SEMEADURA_DE_JOGOS
 
 
+def _identidade(appid: str, chave: str) -> str:
+    """A identidade de UM jogo na marca — e as duas formas não se confundem.
+
+    `appid` da Steam (só dígitos) ou ``janela:<wm_class em minúsculas>`` para o
+    jogo de lançador. Vazia quando o jogo não tem endereço nenhum, e nesse caso
+    ele é recusado com `sem_endereco` em vez de virar uma linha muda na marca.
+
+    A CLASSE ENTRA EM MINÚSCULAS pela mesma razão que `_donos_dos_jogos` dobra
+    a caixa: o `pga.db` do Lutris guarda ``GOTG.exe`` e a janela pelo Heroic
+    anuncia ``gotg.exe``. Duas linhas na marca para o mesmo jogo fariam o
+    perfil renascer conforme o lançador por onde ela o abriu.
+    """
+    if appid.strip():
+        return appid.strip()
+    if chave.strip():
+        return f"{PREFIXO_DA_CHAVE_DE_JANELA}{chave.strip().casefold()}"
+    return ""
+
+
+def _identidade_valida(identidade: str) -> bool:
+    """A linha da marca é uma das duas formas conhecidas?
+
+    Nem toda linha do arquivo é nossa: `test_a_marca_sobrevive_a_linha_estragada`
+    mede justamente o meio-escrito. O que não casa com uma das formas é lixo, e
+    lixo não pode virar "este jogo já foi tratado".
+    """
+    if identidade.isdigit():
+        return True
+    return (
+        identidade.startswith(PREFIXO_DA_CHAVE_DE_JANELA)
+        and len(identidade) > len(PREFIXO_DA_CHAVE_DE_JANELA)
+    )
+
+
 def _linhas_da_marca(marca: Path) -> list[tuple[str, str]]:
-    """``[(appid, arquivo)]`` do arquivo de marca. Ausente/ilegível = vazio."""
+    """``[(identidade, arquivo)]`` da marca. Ausente/ilegível = vazio."""
     try:
         bruto = marca.read_text(encoding="utf-8")
     except OSError:
         return []
     lidas: list[tuple[str, str]] = []
     for linha in bruto.splitlines():
-        appid, _, arquivo = linha.strip().partition("\t")
-        if not appid.isdigit():
+        identidade, _, arquivo = linha.strip().partition("\t")
+        if not _identidade_valida(identidade):
             continue
-        lidas.append((appid, arquivo.strip()))
+        lidas.append((identidade, arquivo.strip()))
     return lidas
 
 
+def classes_de_jogo_da_marca(dest_dir: Path | None = None) -> list[str]:
+    """As `wm_class` de jogo que a marca já conhece — sem a Steam.
+
+    É metade do que `schema.registrar_classes_de_jogo` recebe; a outra metade
+    é a biblioteca dos lançadores desta varredura. As duas se somam porque elas
+    respondem a coisas diferentes: a biblioteca diz *o que está instalado
+    agora*, e a marca diz *o que este produto já tratou como jogo* — inclusive
+    o que foi recusado por colisão de nome, que continua sendo um jogo.
+    """
+    directory = dest_dir if dest_dir is not None else profiles_dir()
+    return [
+        identidade[len(PREFIXO_DA_CHAVE_DE_JANELA) :]
+        for identidade, _ in _linhas_da_marca(_caminho_da_marca(directory))
+        if identidade.startswith(PREFIXO_DA_CHAVE_DE_JANELA)
+    ]
+
+
 def perfis_de_jogo_semeados(dest_dir: Path | None = None) -> dict[str, str]:
-    """``{appid: arquivo}`` do que o PRODUTO criou — nunca do que é dela.
+    """``{identidade: arquivo}`` do que o PRODUTO criou — nunca do que é dela.
+
+    A chave é o `appid` para jogo da Steam e ``janela:<wm_class>`` para jogo de
+    lançador — as mesmas duas formas da marca (ver `_identidade`).
 
     É a resposta de "quais destes perfis eu posso desfazer sem tocar no
     trabalho dela". Um jogo que o produto NÃO criou (porque ela já tinha
@@ -1104,8 +1185,8 @@ def perfis_de_jogo_semeados(dest_dir: Path | None = None) -> dict[str, str]:
     """
     directory = dest_dir if dest_dir is not None else profiles_dir()
     return {
-        appid: arquivo
-        for appid, arquivo in _linhas_da_marca(_caminho_da_marca(directory))
+        identidade: arquivo
+        for identidade, arquivo in _linhas_da_marca(_caminho_da_marca(directory))
         if arquivo
     }
 
@@ -1137,17 +1218,30 @@ def _classes_do_match(dados: dict[str, object]) -> list[str]:
     return [c for c in classes if isinstance(c, str)]
 
 
-def _appids_com_dono(directory: Path) -> dict[str, str]:
-    """``{appid: arquivo}`` dos jogos que JÁ têm perfil no diretório.
+def _donos_dos_jogos(directory: Path) -> dict[str, str]:
+    """``{identidade: arquivo}`` de TODO jogo que já tem perfil no diretório.
 
-    **A conferência é pelo APPID, nunca pelo nome do arquivo**, e isso é medido
-    no disco dela: o perfil do Sackboy se chamava ``sackboy_nativo``, não
-    ``Sackboy: A Big Adventure`` (o preset de fábrica com esse nome foi podado
-    em 26/08/2026; o perfil DELA continua lá, com o mesmo descasamento entre
-    nome de arquivo e nome de jogo). Uma checagem por nome de arquivo não o
-    encontraria, e o produto criaria um SEGUNDO perfil para o mesmo jogo —
+    **A conferência é pelo ENDEREÇO, nunca pelo nome do arquivo**, e isso é
+    medido no disco dela: o perfil do Sackboy se chamava ``sackboy_nativo``,
+    não ``Sackboy: A Big Adventure`` (o preset de fábrica com esse nome foi
+    podado em 26/08/2026; o perfil DELA continua lá, com o mesmo descasamento
+    entre nome de arquivo e nome de jogo). Uma checagem por nome de arquivo não
+    o encontraria, e o produto criaria um SEGUNDO perfil para o mesmo jogo —
     dois perfis empatados em 80 disputando a mesma janela, que é o defeito que
     `profiles/sanidade.py` chama de `prioridades_empatadas`.
+
+    PERFIL-DOS-LANCADORES-E1 (11/09/2026): antes ele só enxergava
+    ``steam_app_<n>``, e por isso não podia enxergar o jogo de lançador. Agora
+    toda `window_class` que NÃO é da Steam vira ``janela:<classe>``, que é a
+    identidade de um jogo de lançador.
+
+    **ISTO ENTRA MAIS DO QUE JOGO, e é o certo.** O `personalizado.json` dela
+    mira ``Hefesto-Dualsense4Unix`` e vira ``janela:hefesto-dualsense4unix``
+    aqui dentro. Não faz mal e evita o mal: se algum dia um lançador anunciar
+    essa classe, o produto vê que já há dono e recusa em vez de semear por
+    cima. O que este dicionário responde é *"já existe perfil mirando este
+    endereço?"* — nunca *"este endereço é de jogo?"*, que é outra pergunta e
+    tem outro dono (`schema.e_endereco_de_jogo`).
     """
     donos: dict[str, str] = {}
     for path in sorted(directory.glob("*.json")):
@@ -1156,8 +1250,11 @@ def _appids_com_dono(directory: Path) -> dict[str, str]:
             continue
         for classe in _classes_do_match(dados):
             appid = steam_appid_from_wm_class(classe)
-            if appid is not None:
-                donos.setdefault(str(appid), path.name)
+            identidade = (
+                str(appid) if appid is not None else _identidade("", classe)
+            )
+            if identidade:
+                donos.setdefault(identidade, path.name)
     return donos
 
 
@@ -1220,18 +1317,51 @@ def classes_do_perfil_do_jogo(appid: str) -> list[str]:
     return [f"steam_app_{appid}"]
 
 
+def classes_do_perfil_do_jogo_de_lancador(chave: str) -> list[str]:
+    """As `window_class` do perfil semeado para um jogo de LANÇADOR.
+
+    UMA, e é a `wm_class` que a janela do jogo anuncia — ``gotg.exe``, o
+    basename do `install.executable` do Heroic. É a MESMA forma que o botão
+    «Detectar» grava (a sexta forma do `simple_match`, ``"janela"``) e a mesma
+    que `MatchCriteria(window_class=[…])` compara sem caixa.
+
+    **A CAIXA VAI COMO VEIO DO DISCO, sem `.casefold()`**, e é a mesma decisão
+    do `simple_match.from_simple_choice`: quem compara sem caixa é o matcher do
+    esquema, não quem escreve a regra. Minúsculas só na IDENTIDADE da marca
+    (`_identidade`), que é chave de dicionário e não regra.
+    """
+    return [chave.strip()]
+
+
+def _classes_do_perfil(jogo: JogoLocal) -> list[str]:
+    """O `match` que serve a ESTE jogo — a Steam por appid, o resto por janela.
+
+    Chama `classes_do_perfil_do_jogo` pelo nome do módulo de propósito: é o que
+    a régua da guarda `casa_com_a_loja` substitui para provar que a semeadura
+    RECUSA em vez de plantar treze cópias do defeito do `steamwebhelper`.
+    """
+    if jogo.appid.strip():
+        return classes_do_perfil_do_jogo(jogo.appid)
+    return classes_do_perfil_do_jogo_de_lancador(jogo.chave)
+
+
 def _perfil_do_jogo(jogo: JogoLocal) -> Profile:
     """O perfil que nasce para um jogo — e SÓ o que o pedido dela manda.
 
-    Nome do jogo como veio do `appmanifest` (o produto não reescreve o nome que
-    a Steam dá), `match` pelo appid e prioridade 80. Todo o resto fica no
+    Nome do jogo como veio da biblioteca (o produto não reescreve o nome que a
+    Steam nem o que o lançador dão), `match` pelo endereço — appid para a Steam,
+    `wm_class` para o jogo de lançador — e prioridade 80. Todo o resto fica no
     default do schema, que é o "sem opinião" desta casa: gatilhos ``Off``,
     `leds` com `auto_player_colors` (cada controle acende a cor do seu slot) e
     as seções opcionais em ``None``, que `_payload_do_perfil` nem grava.
+
+    **A PRIORIDADE É A MESMA NOS DOIS, e não por descuido:** um jogo do Heroic
+    não é menos jogo que um da Steam, e a fila do autoswitch é a mesma — 80
+    fica acima dos presets de gênero (55-70) e da Navegação (50).
     """
     return Profile(
         name=jogo.nome,
-        match=MatchCriteria(window_class=classes_do_perfil_do_jogo(jogo.appid)),
+        match=MatchCriteria(window_class=_classes_do_perfil(jogo)),
         priority=PRIORIDADE_DO_PERFIL_DE_JOGO,
     )
 
@@ -1300,23 +1430,41 @@ def semear_perfis_dos_jogos(
     home: Path | None = None,
     jogos: Sequence[JogoLocal] | None = None,
 ) -> ResultadoDaSemeadura:
-    """Cria um perfil para cada jogo da biblioteca Steam que ainda não tem.
+    """Cria um perfil para cada jogo INSTALADO que ainda não tem — venha de onde vier.
 
-    As quatro recusas, e nenhuma delas apaga nem sobrescreve nada:
+    **AS DUAS ORIGENS, e a segunda é de 11/09/2026 (PERFIL-DOS-LANCADORES-E1):**
+    a biblioteca da Steam (`jogos_da_biblioteca_steam`) e os jogos instalados
+    dos cinco lançadores que o censo lê (`jogos_dos_lancadores` → Heroic,
+    Lutris, RetroArch, Dolphin, mGBA). Decisão dela, posta a escolha entre
+    semear todos, semear ao abrir e deixar como estava: *"2-a e se por algum
+    motivo não encontrar eu posso criar ou criar um perfil duplicado do mesmo
+    jogo"*.  # noqa-acento: citação literal dela
 
-    - **`ja_semeado`** — o appid está na marca. Não volta a nascer, nem depois
-      de ela apagar o perfil (mesmo contrato de `.seeded_presets`).
-    - **`ja_tinha_perfil`** — algum perfil do diretório já mira este appid.
+    **O QUE NÃO ENTRA DOS LANÇADORES, e quem decide é o censo, não esta
+    função:** o jogo que não está no disco (a biblioteca do Heroic dela tem 29
+    e só 1 está baixado — semear os 28 encheria a lista de linhas que ela não
+    pode abrir), o DLC e o redistribuível (`JogoDoLancador.e_acessorio`), e o
+    jogo sem `classe_de_janela` — as ROMs dos emuladores, que rodam todas no
+    MESMO processo: um perfil por ROM casaria com o emulador inteiro.
+
+    As recusas, e nenhuma delas apaga nem sobrescreve nada:
+
+    - **`ja_semeado`** — a identidade está na marca. Não volta a nascer, nem
+      depois de ela apagar o perfil (mesmo contrato de `.seeded_presets`).
+    - **`ja_tinha_perfil`** — algum perfil do diretório já mira este endereço.
       Fica registrado na marca com o campo de arquivo VAZIO: o produto sabe que
       tratou o jogo, e sabe que o arquivo não é dele.
     - **`nome_ocupado`** — o nome do jogo dá no mesmo arquivo que outro perfil
       já ocupa. Colisão de nome é RECUSA, nunca sobrescrita. Não vai para a
       marca: se ela renomear o perfil que ocupava o nome, a próxima varredura
       tenta de novo.
-    - **`casa_com_a_loja`** — guarda de invariante. O `match` que sai daqui é
-      sempre ``steam_app_<n>``, que nunca é a janela do cliente Steam; se um
-      dia deixar de ser, a semeadura recusa em vez de plantar treze cópias do
-      defeito que custou 54 minutos de partida a ela.
+    - **`casa_com_a_loja`** — guarda de invariante. O `match` que sai daqui
+      nunca é a janela do cliente Steam; se um dia deixar de ser, a semeadura
+      recusa em vez de plantar treze cópias do defeito que custou 54 minutos de
+      partida a ela.
+    - **`sem_slug`** / **`sem_endereco`** — o nome não vira arquivo, ou o jogo
+      chegou sem appid E sem chave de janela. Recusa calada no disco e nomeada
+      no log.
 
     `jogos` injetável para teste hermético — nenhum teste desta entrega toca a
     biblioteca real dela.
@@ -1329,9 +1477,14 @@ def semear_perfis_dos_jogos(
         # `desktop_notifications`.
         from hefesto_dualsense4unix.integrations.jogos_locais import (
             jogos_da_biblioteca_steam,
+            jogos_dos_lancadores,
         )
 
-        jogos = jogos_da_biblioteca_steam(home)
+        # A MORDIDA DESTA ENTREGA: arrancar a segunda metade da soma faz a
+        # régua `test_o_jogo_do_heroic_ganha_perfil_sem_dubles` reprovar — é
+        # ela que anda o caminho inteiro, do `legendary_library.json` ao
+        # `.json` no disco, sem um dublê.
+        jogos = [*jogos_da_biblioteca_steam(home), *jogos_dos_lancadores(home)]
 
     marca = _caminho_da_marca(directory)
     linhas: list[PerfilSemeado] = []
@@ -1339,31 +1492,66 @@ def semear_perfis_dos_jogos(
     # O MESMO FileLock da marca segura a varredura inteira: daemon e janela
     # semeando ao mesmo tempo no primeiro boot é o caso normal, não o exótico.
     with FileLock(str(_lock_path(marca))):
-        ja_processados = {appid for appid, _ in _linhas_da_marca(marca)}
-        donos = _appids_com_dono(directory)
+        ja_processados = {identidade for identidade, _ in _linhas_da_marca(marca)}
+        donos = _donos_dos_jogos(directory)
         ocupados = {p.name for p in directory.glob("*.json")}
         novas: list[tuple[str, str]] = []
-        for jogo in sorted(jogos, key=lambda j: (j.nome.casefold(), j.appid)):
+        for jogo in sorted(jogos, key=lambda j: (j.nome.casefold(), j.appid, j.chave)):
             linha = _semear_um_jogo(jogo, directory, ja_processados, donos, ocupados)
             linhas.append(linha)
             if linha.desfecho == "criado":
                 criados.append(linha.arquivo)
                 ocupados.add(linha.arquivo)
-                donos[jogo.appid] = linha.arquivo
+                donos[linha.identidade] = linha.arquivo
             if linha.desfecho in _DESFECHOS_QUE_MARCAM:
                 novas.append(
-                    (jogo.appid, linha.arquivo if linha.desfecho == "criado" else "")
+                    (
+                        linha.identidade,
+                        linha.arquivo if linha.desfecho == "criado" else "",
+                    )
                 )
         if novas or not marca.exists():
             with marca.open("a", encoding="utf-8") as fh:
-                for appid, arquivo in novas:
-                    fh.write(f"{appid}\t{arquivo}\n")
+                for identidade, arquivo in novas:
+                    fh.write(f"{identidade}\t{arquivo}\n")
 
+    _declarar_as_classes_de_jogo(directory, jogos)
     avisos = perfis_que_casam_com_o_cliente_steam(directory)
     _relatar_semeadura(linhas, criados, avisos)
     return ResultadoDaSemeadura(
         linhas=tuple(linhas), criados=tuple(criados), avisos_da_loja=tuple(avisos)
     )
+
+
+def _declarar_as_classes_de_jogo(
+    directory: Path, jogos: Sequence[JogoLocal]
+) -> None:
+    """Diz ao esquema QUAIS `wm_class` de fora da Steam são de jogo.
+
+    **É O ELO QUE FAZ O PERFIL DO HEROIC ENTRAR.** Sem esta declaração o perfil
+    nasce, aparece na lista e não faz nada quando ela abre o jogo: com o
+    cadeado do autoswitch armado (ou a trava de gesto manual), quem decide se a
+    troca fura é `schema.perfil_e_regra_de_jogo`, e ele não tem como saber que
+    ``gotg.exe`` é um jogo. Ver `schema._CLASSES_DE_JOGO_CONHECIDAS` para o
+    porquê de ser um cadastro e não um predicado.
+
+    **AS DUAS METADES SE SOMAM:** a biblioteca DESTA varredura (o que está
+    instalado agora) e a marca (o que este produto já tratou como jogo —
+    inclusive o recusado por colisão de nome, que continua sendo um jogo, e o
+    que já era dela). Só a primeira perderia o jogo que ela desinstalou e
+    manteve o perfil; só a segunda perderia o jogo recém-baixado cuja marca
+    ainda não foi escrita nesta passada.
+
+    Best-effort por contrato: uma falha aqui não pode derrubar a varredura que
+    já gravou os perfis — mesmo contrato de `_talvez_semear_jogos`.
+    """
+    with contextlib.suppress(Exception):
+        from hefesto_dualsense4unix.profiles.schema import registrar_classes_de_jogo
+
+        da_biblioteca = [j.chave for j in jogos if not j.appid.strip() and j.chave]
+        registrar_classes_de_jogo(
+            [*da_biblioteca, *classes_de_jogo_da_marca(dest_dir=directory)]
+        )
 
 
 def _semear_um_jogo(
@@ -1374,26 +1562,35 @@ def _semear_um_jogo(
     ocupados: set[str],
 ) -> PerfilSemeado:
     """A decisão de UM jogo. Ver `semear_perfis_dos_jogos` para as recusas."""
-    if jogo.appid in ja_processados:
-        return PerfilSemeado(jogo.appid, jogo.nome, "ja_semeado", donos.get(jogo.appid, ""))
-    dono = donos.get(jogo.appid)
+    identidade = _identidade(jogo.appid, jogo.chave)
+    if not identidade:
+        # Sem appid e sem chave de janela não há `match` a escrever: o perfil
+        # nasceria mirando o vazio e nunca casaria com janela nenhuma (R-12).
+        return PerfilSemeado(jogo.appid, jogo.nome, "sem_endereco", "", jogo.chave)
+    if identidade in ja_processados:
+        return PerfilSemeado(
+            jogo.appid, jogo.nome, "ja_semeado", donos.get(identidade, ""), jogo.chave
+        )
+    dono = donos.get(identidade)
     if dono is not None:
-        return PerfilSemeado(jogo.appid, jogo.nome, "ja_tinha_perfil", dono)
+        return PerfilSemeado(jogo.appid, jogo.nome, "ja_tinha_perfil", dono, jogo.chave)
     try:
         slug = slugify(jogo.nome)
     except ValueError:
-        return PerfilSemeado(jogo.appid, jogo.nome, "sem_slug")
+        return PerfilSemeado(jogo.appid, jogo.nome, "sem_slug", "", jogo.chave)
     arquivo = f"{slug}.json"
     if arquivo in ocupados:
-        return PerfilSemeado(jogo.appid, jogo.nome, "nome_ocupado", arquivo)
-    if any(e_janela_do_cliente_steam(c) for c in classes_do_perfil_do_jogo(jogo.appid)):
-        return PerfilSemeado(jogo.appid, jogo.nome, "casa_com_a_loja", arquivo)
+        return PerfilSemeado(jogo.appid, jogo.nome, "nome_ocupado", arquivo, jogo.chave)
+    if any(e_janela_do_cliente_steam(c) for c in _classes_do_perfil(jogo)):
+        return PerfilSemeado(
+            jogo.appid, jogo.nome, "casa_com_a_loja", arquivo, jogo.chave
+        )
     perfil = _perfil_do_jogo(jogo)
     if not _gravar_sem_pisar(directory / arquivo, _payload_do_perfil_de_jogo(perfil)):
         # Outro processo criou o arquivo entre o glob e o link. Recusa, e a
-        # próxima varredura vai enxergá-lo como dono do appid.
-        return PerfilSemeado(jogo.appid, jogo.nome, "nome_ocupado", arquivo)
-    return PerfilSemeado(jogo.appid, jogo.nome, "criado", arquivo)
+        # próxima varredura vai enxergá-lo como dono do endereço.
+        return PerfilSemeado(jogo.appid, jogo.nome, "nome_ocupado", arquivo, jogo.chave)
+    return PerfilSemeado(jogo.appid, jogo.nome, "criado", arquivo, jogo.chave)
 
 
 def _relatar_semeadura(
@@ -1417,10 +1614,16 @@ def _relatar_semeadura(
             desfechos=contagem,
         )
         for linha in linhas:
-            if linha.desfecho in {"nome_ocupado", "casa_com_a_loja", "sem_slug"}:
+            if linha.desfecho in {
+                "nome_ocupado",
+                "casa_com_a_loja",
+                "sem_slug",
+                "sem_endereco",
+            }:
                 logger.warning(
                     "perfil_de_jogo_recusado",
                     appid=linha.appid,
+                    endereco=linha.identidade,
                     jogo=linha.jogo,
                     motivo=linha.desfecho,
                     arquivo=linha.arquivo or None,
@@ -1460,11 +1663,27 @@ def _talvez_semear_jogos() -> None:
         return
     _ultima_varredura_de_jogos = agora
     try:
+        from hefesto_dualsense4unix.integrations.censo_dos_lancadores import (
+            assinatura_das_bibliotecas,
+        )
         from hefesto_dualsense4unix.integrations.jogos_locais import (
             assinatura_da_biblioteca,
         )
 
-        assinatura = assinatura_da_biblioteca()
+        # AS DUAS BIBLIOTECAS ASSINAM JUNTAS desde 11/09/2026
+        # (PERFIL-DOS-LANCADORES-E1). Com só a da Steam, o jogo que ela baixa
+        # pelo Heroic NÃO ganhava perfil enquanto o daemon estivesse de pé: o
+        # `mtime` da `steamapps` não muda quando o Heroic escreve, a assinatura
+        # dava igual, e a varredura voltava sem olhar. O daemon dela fica dias
+        # de pé — era o mesmo defeito que
+        # `test_o_jogo_instalado_amanha_e_semeado_sem_reiniciar_o_daemon` já
+        # cobrava para a Steam, com a outra metade da casa fora da régua.
+        #
+        # O PREÇO, medido e aceito: quando o Heroic reescreve o
+        # `store_cache/*_library.json`, os 33 `.acf` da Steam são relidos uma
+        # vez. O piso de cinco minutos (`INTERVALO_MINIMO_DA_VARREDURA_S`)
+        # continua valendo, então é no máximo uma releitura por piso.
+        assinatura = (assinatura_da_biblioteca(), assinatura_das_bibliotecas())
         if assinatura == _assinatura_da_biblioteca_vista:
             return
         semear_perfis_dos_jogos()
@@ -2203,13 +2422,16 @@ __all__ = [
     "HISTORICO_MAX_VERSOES",
     "INTERVALO_MINIMO_DA_VARREDURA_S",
     "MARCA_DE_SEMEADURA_DE_JOGOS",
+    "PREFIXO_DA_CHAVE_DE_JANELA",
     "PRIORIDADE_DO_PERFIL_DE_JOGO",
     "SEED_MARKER_NAME",
     "SEED_SKIP_ENV_VAR",
     "PerfilSemeado",
     "ResultadoDaSemeadura",
     "ResultadoDosEstilos",
+    "classes_de_jogo_da_marca",
     "classes_do_perfil_do_jogo",
+    "classes_do_perfil_do_jogo_de_lancador",
     "delete_profile",
     "enxugar_perfis_de_jogo",
     "historico_dir",
