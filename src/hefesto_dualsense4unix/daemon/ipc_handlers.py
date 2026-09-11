@@ -4149,6 +4149,20 @@ class IpcHandlersMixin:
         rota = speaker.get("rota")
         if isinstance(rota, int) and not isinstance(rota, bool):
             bloco["rota"] = rota
+        # A FONTE ENTRA PELA MESMA PORTA DA ROTA — 10/09/2026 (SOM-NA-TELA-01),
+        # e a assimetria era a mesma: o produto OBEDECE a `speaker.fonte`
+        # (`mix` = o som do PC cai também neste controle, sem sair da TV;
+        # `sfx` = só o que o jogo mandar) desde a SFX-POR-CONTROLE-01, e a tela
+        # não tinha como ler qual está valendo — logo, não tinha como oferecer
+        # a escolha. `""` fica de fora do bloco pelo mesmo critério do `None`
+        # da rota: é *"ninguém sabe dizer"*, não é `sfx`.
+        from hefesto_dualsense4unix.integrations.alto_falante_bt import (
+            fonte_publicada,
+        )
+
+        fonte = fonte_publicada(str(uniq or ""))
+        if fonte:
+            bloco["fonte"] = fonte
         if isinstance(status, dict):
             bloco.update(status)
         entry["speaker"] = bloco

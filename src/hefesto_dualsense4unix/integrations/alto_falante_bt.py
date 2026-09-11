@@ -1903,6 +1903,48 @@ def diagnosticar(uniqs: Sequence[str] | None = None) -> Diagnostico:
 #:   cai também no controle, por um ``module-loopback`` do monitor dela;
 #: * ``sfx`` — só o que o jogo mandar para o nó DAQUELE controle. O nó fica
 #:   livre, e nenhum loopback de entrada é carregado.
+#: Quem sabe dizer a `fonte` (`mix`/`sfx`) de um controle. O
+#: `AltoFalanteSubsystem` o instala ao subir e o retira ao descer, no mesmo
+#: padrão de gancho do numerador de assento e do ouvinte do microfone.
+#:
+#: **POR QUE UM GANCHO E NÃO UMA LEITURA:** quem PERGUNTA é o `state_full`, que
+#: roda a cada tique; quem SABE lê o perfil ativo do disco e mantém cache por
+#: `(nome, mtime)`. Uma segunda leitura de perfil no laço do IPC seria a
+#: tempestade de syscalls que esta casa já pagou uma vez — e, pior, um segundo
+#: dono da mesma resposta.
+_DIZEDOR_DA_FONTE: Callable[[str], str] | None = None
+
+
+def registrar_dizedor_da_fonte(
+    dizedor: Callable[[str], str] | None,
+) -> Callable[[str], str] | None:
+    """Instala quem sabe a `fonte` de um `uniq`. Devolve o anterior."""
+    global _DIZEDOR_DA_FONTE
+    anterior = _DIZEDOR_DA_FONTE
+    _DIZEDOR_DA_FONTE = dizedor
+    return anterior
+
+
+def fonte_publicada(uniq: str) -> str:
+    """A `fonte` deste controle para a TELA — `""` quando ninguém sabe dizer.
+
+    `""` não é `sfx`: é *"não perguntei a ninguém"*, e a tela o traduz em
+    "nenhum botão aceso" em vez de acender o padrão. Acender `sfx` sem saber
+    seria a tela afirmando uma escolha que ela não fez.
+
+    Nunca levanta: quem chama é o `state_full`.
+    """
+    dizedor = _DIZEDOR_DA_FONTE
+    if dizedor is None or not uniq:
+        return ""
+    try:
+        fonte = dizedor(uniq)
+    except Exception:  # pragma: no cover - defensivo
+        logger.debug("fonte_do_controle_ilegivel", uniq=uniq, exc_info=True)
+        return ""
+    return fonte if fonte in (FONTE_MIX, FONTE_SFX) else ""
+
+
 FONTE_MIX = "mix"
 FONTE_SFX = "sfx"
 

@@ -450,6 +450,8 @@ class AltoFalanteSubsystem:
         #: subiu. `Ellipsis` = ele não instalou nada (já havia dono) e não tem
         #: nada a devolver no `stop` — ver :meth:`start`.
         self._numerador_anterior: Any = Ellipsis
+        #: Quem respondia a `fonte` antes de nós — devolvido no `stop()`.
+        self._dizedor_anterior: Any = None
 
     # -- contrato Subsystem ----------------------------------------------
 
@@ -736,6 +738,10 @@ class AltoFalanteSubsystem:
         Nada de bloquear o event loop: a varredura do sysfs e o ``pactl`` do
         ``load-module`` rodam na thread.
         """
+        from hefesto_dualsense4unix.integrations.alto_falante_bt import (
+            registrar_dizedor_da_fonte,
+        )
+
         self._backend = getattr(ctx, "controller", None)
         if self._thread is not None and self._thread.is_alive():
             return
@@ -745,6 +751,11 @@ class AltoFalanteSubsystem:
             ponte_do_radio_por_controle=self._ponte_do_radio_de,
             fonte_por_controle=self._fonte_do_controle,
         )
+        # A FONTE VAI À TELA PELO MESMO DONO QUE O DAEMON JÁ CONSULTA —
+        # 10/09/2026 (SOM-NA-TELA-01). Sem este gancho a aba teria de abrir o
+        # perfil por conta própria a cada tique, e a casa passaria a ter dois
+        # leitores da mesma escolha dela.
+        self._dizedor_anterior = registrar_dizedor_da_fonte(self._fonte_do_controle)
         self._parar.clear()
         self._thread = threading.Thread(
             target=self._loop, name="hefesto-som-sup", daemon=True
@@ -775,8 +786,14 @@ class AltoFalanteSubsystem:
             with contextlib.suppress(Exception):
                 ponte.descer()
             self._pontes.pop(uniq, None)
+        from hefesto_dualsense4unix.integrations.alto_falante_bt import (
+            registrar_dizedor_da_fonte,
+        )
+
         self._gerenciador = None
         self._desinstalar_o_numerador()
+        registrar_dizedor_da_fonte(self._dizedor_anterior)
+        self._dizedor_anterior = None
         self._backend = None
         logger.info("som_subsystem_parado")
 

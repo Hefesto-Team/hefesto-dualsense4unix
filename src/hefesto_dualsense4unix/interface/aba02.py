@@ -1873,6 +1873,15 @@ DICA_MIC_MUDO = ("Calar no firmware do controle — apaga a luz vermelha do plá
 # ninguém pode ler qual era o de antes. Isso vai DITO, porque é a diferença que
 # a própria porta escreve (`cli/cmd_speaker.py`) e é o que separa "largar" de
 # "desfazer".
+#: A DICA DO BOTÃO DO MEIO — 10/09/2026 (a A3). Ela diz a única coisa que
+#: separa este botão do vizinho da direita: a televisão continua tocando.
+#: Sem nome de nó, sem comando, sem jargão — as três proibições da língua desta
+#: casa para texto de tela.
+DICA_OUVIR_JUNTO = ("O som do computador passa a sair TAMBÉM no alto-falante "
+                    "deste controle, sem sair da televisão. É o que serve a "
+                    "quem joga acompanhado: cada controle ouve o jogo no "
+                    "próprio plástico, e a sala continua ouvindo o de sempre.")
+
 DICA_ALTO_MUDO = ("Manda zero ao alto-falante do controle, sem perder o volume "
                   "guardado. A partir da primeira escrita quem guarda o volume "
                   "deste alto-falante é o Hefesto — o controle não o devolve. "
@@ -2424,7 +2433,8 @@ def bloco(c, *, bat, carga=None, glifos_on, l2, r2, touch, sticks,
               <span class="selo-som" data-campo="alto-selo" data-hef-alvo="html">{NADA_A_DIZER}</span>
               <span class="ajuda" style="display:inline-block;vertical-align:-3px">?<span class="dica">
                 <b>Sons do jogo</b> manda só o áudio do jogo ao alto-falante do controle;
-                <b>Todo o som do PC</b> manda tudo, inclusive notificação.
+                <b>Ouvir junto</b> traz o som do PC para cá <b>sem tirá-lo da televisão</b>;
+                <b>Todo o som do PC</b> manda tudo, inclusive notificação, e só para cá.
               </span></span>
             </div>
             {onda(alto_v, lado="alto")}
@@ -2435,8 +2445,20 @@ def bloco(c, *, bat, carga=None, glifos_on, l2, r2, touch, sticks,
               <button class="mudo-i" data-gesto="mudo" data-mudo="alto-falante" data-campo="alto-mudo" data-hef-alvo="atributo" data-hef-atributo="{ATRIBUTO_DO_SOM}" {ATRIBUTO_DO_SOM}="{alto_som}" title="{DICA_ALTO_MUDO}">♪</button>
               {ponto_de_interrogacao("alto-porque", "" if alto_pode else DICA_ALTO_SEM_POSSE)}
             </div>
+            <!-- TRÊS BOTÕES, UMA PERGUNTA — 10/09/2026 (a A3). A fileira
+                 responde *"o que este controle ouve?"*, e o terceiro estado é
+                 a `fonte` que o produto já obedecia sem ninguém poder
+                 escolher. O do meio é o único que NÃO tira o som da televisão,
+                 e é o que faz sentido numa mesa de quatro: cada um ouve junto,
+                 no seu próprio plástico.
+                 A GRAMÁTICA É A MESMA DOS OUTROS DOIS — mesmo `data-campo`,
+                 cada botão com o seu `data-hef-quando` —, e é por isso que o
+                 terceiro não custa uma linha de folha nem uma altura a mais:
+                 um par novo abaixo seria a segunda gramática que o gerador já
+                 recusou uma vez. -->
             <div class="rota">
               <button class="{'on' if not rota_pc else ''}" data-gesto="rota" data-rota="jogo" data-campo="alto-rota" data-hef-alvo="classe" data-hef-quando="jogo">Sons do jogo</button>
+              <button data-gesto="rota" data-rota="junto" data-campo="alto-rota" data-hef-alvo="classe" data-hef-quando="junto" title="{DICA_OUVIR_JUNTO}">Ouvir junto</button>
               <button class="{'on' if rota_pc else ''}" data-gesto="rota" data-rota="pc" data-campo="alto-rota" data-hef-alvo="classe" data-hef-quando="pc">Todo o som do PC</button>
             </div>
             <!-- A RESSALVA DA ROTA — a peça da ONDA0-F (D-02), e o texto é do
