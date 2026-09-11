@@ -547,17 +547,31 @@ def test_a_recusa_de_um_programa_nao_deixa_o_outro_escrito(tmp_path) -> None:
 # ---------------------------------------------------------------------------
 # 5. O CARTÃO — a régua olha o que a tela recebe
 # ---------------------------------------------------------------------------
-def test_o_cartao_localizado_ganha_o_consertar_e_o_flatpak_muda_de_pergunta(
+def test_o_cartao_localizado_nao_oferece_conserto_e_o_flatpak_muda_de_pergunta(
     tmp_path, monkeypatch,
 ) -> None:
-    """Os dois itens juntos, do lado de quem olha a tela.
+    """O cartão que ACHOU não oferece conserto, e o «Flatpak» conta as caixas.
 
-    **A MORDIDA:** apague o ramo do `consertar` em `cartao_sem_censo` e o
-    primeiro `assert` reprova nomeando o cartão; devolva `""` em vez da linha
-    do «Flatpak» em `medir_no_disco` e o cartão volta ao travessão.
+    **A RÉGUA VIROU DE LADO EM 10/09/2026, e quem a virou foi ELA.** Até 09/09
+    o primeiro `assert` cobrava o contrário — que o cartão LOCALIZADO com
+    estrada OFERECESSE o «Consertar». Ela leu a tela e recusou:
+
+        "na real não faz sentido. Digo se tenho tudo
+         instalado e tá pra ser identificado não tem
+         pq ter o botão de consertar."
+
+    **A LEITURA DELA É A LEITURA CERTA DO CARTÃO:** selo `LOCALIZADO`, moldura
+    `chega` — a mesma do `ok`/CHEGAM da Steam — e a frase do corpo terminando em
+    *"um jogo aberto por aqui entra pelo mesmo caminho de qualquer outro"*. Nada
+    ali declara defeito, e uma cura oferecida onde a tela não declarou defeito
+    nenhum lê-se como cura de coisa nenhuma.
+
+    **A MORDIDA:** devolva o ramo do `consertar` a `cartao_sem_censo` e o
+    primeiro `assert` reprova nomeando o cartão e o selo; devolva `""` em vez da
+    linha do «Flatpak» em `medir_no_disco` e o cartão volta ao travessão.
 
     **A LEITURA É DA VIGIA, e por isso ela aparece aqui como uma CHAMADA
-    SEPARADA** — 09/09/2026. Até o reparo deste dia, `cartoes()` abria os
+    SEPARADA** — 09/09/2026. Até o reparo daquele dia, `cartoes()` abria os
     arquivos sozinho, dentro do tique; agora quem abre é `medir_no_disco`, e o
     que a pintura recebe é a `DoDisco` fria. Medir os dois na mesma volta é o
     que mantém a régua cobrindo a cadeia inteira.
@@ -579,14 +593,20 @@ def test_o_cartao_localizado_ganha_o_consertar_e_o_flatpak_muda_de_pergunta(
                for c in d.cartoes(d.Leitura(onde_estao=onde,
                                             do_disco=do_disco))}
 
-    gestos = [a.gesto for a in cartoes["emuladores"].acoes]
-    assert d.CONSERTAR_LANCADOR in gestos, (
-        f"o cartão «Dolphin · mGBA» está LOCALIZADO, tem por onde receber o "
-        f"ambiente e não oferece o Consertar: {gestos}")
+    emuladores = cartoes["emuladores"]
+    rotulos = [a.rotulo for a in emuladores.acoes]
+    assert emuladores.selo == "localizado", (
+        f"o cartão «Dolphin · mGBA» deixou de sair LOCALIZADO com os dois "
+        f"emuladores no disco: selo {emuladores.selo!r}")
+    assert not [r for r in rotulos if r.startswith("Consertar")], (
+        f"o cartão «Dolphin · mGBA» tem selo {emuladores.selo!r} — a tela diz "
+        f"que está tudo no lugar — e oferece {rotulos}. Uma cura oferecida onde "
+        f"a tela não declarou defeito nenhum lê-se como cura de coisa nenhuma.")
+    assert d.ADICIONAR_ROTULO in rotulos, (
+        f"o cartão achado não oferece «{d.ADICIONAR_ROTULO}»: {rotulos}")
     assert cartoes["flatpak"].jogos == (
         "3 lançadores por aqui, e o controle entra em todos"), (
         f"o cartão «Flatpak» não mudou de pergunta: {cartoes['flatpak'].jogos!r}")
-    assert d.CONSERTAR_LANCADOR not in [a.gesto for a in cartoes["flatpak"].acoes]
 
 
 #: OS MÉTODOS PELOS QUAIS ESTES TRÊS MÓDULOS TOCAM O DISCO. É `pathlib` em
@@ -685,95 +705,29 @@ def test_a_regua_nao_sai_do_lar_de_mentira(tmp_path, monkeypatch) -> None:
         f"a medição saiu do lar de mentira e foi ao disco desta máquina: "
         f"{sorted(set(fora))[:8]}")
 
-
-def test_o_gesto_sem_data_v_recusa_e_nao_escreve(tmp_path, monkeypatch) -> None:
-    """Um clique sem `data-v` escreveria na configuração de um lançador ao acaso.
-
-    É a mesma mordida que o `abrir-lancador` e o `tirar-daqui` já têm, e pela
-    mesma razão: o botão é o mesmo nos seis cartões.
-    """
-    from hefesto_dualsense4unix.interface import desenho_dos_lancadores as d
-    from hefesto_dualsense4unix.interface import pacotes
-    from hefesto_dualsense4unix.interface.pacotes import a07_lancadores  # noqa: F401
-
-    monkeypatch.setenv("HOME", str(tmp_path))
-    ctx = pacotes.Contexto(state={}, mesa=[], conectados=[], estados={})
-    gesto = pacotes.GESTOS[("07-lancadores.html", d.CONSERTAR_LANCADOR)]
-
-    with pytest.raises(ValueError, match="qual lançador"):
-        gesto(ctx, {}, None)
-
-
-def test_o_consertar_pergunta_antes_de_escrever(tmp_path, monkeypatch) -> None:
-    """**PROVISÓRIO, e é a palavra DELA que o mantém assim** — 09/09/2026:
-
-    *"Preciso vêr como fica e se faz sentido um botão pra isso"*  # noqa-acento: citação dela
-
-    Enquanto ela não vê, o botão não pode escrever na configuração dela num
-    clique: o primeiro PERGUNTA (e a tela mostra a cara verde do próximo
-    clique), o segundo escreve. É o mesmo consentimento de dois tempos que esta
-    aba já usa para fechar a Steam.
-
-    **A MORDIDA:** tire o `_este_clique_confirma` de `consertar_lancador` e o
-    primeiro `assert` reprova com o override já escrito no disco de mentira.
-    """
-    from hefesto_dualsense4unix.interface import desenho_dos_lancadores as d
-    from hefesto_dualsense4unix.interface import pacotes
-    from hefesto_dualsense4unix.interface.pacotes import a07_lancadores as a07
-
-    monkeypatch.setenv("HOME", str(tmp_path))
-    monkeypatch.setattr(pathlib.Path, "home", lambda: tmp_path)
-    monkeypatch.setattr(cura, "launch_env_dir", lambda: _ambiente(tmp_path))
-    _instalar(tmp_path, DOLPHIN)
-    _instalar(tmp_path, MGBA)
-    exports = tmp_path / ".local/share/flatpak/exports/share/applications"
-    exports.mkdir(parents=True, exist_ok=True)
-    onde = (("emuladores", str(exports / f"{DOLPHIN}.desktop")),)
-    lida = d.Leitura(onde_estao=onde,
-                     do_disco=d.medir_no_disco(onde,
-                                               **_lar_de_mentira(tmp_path)))
-    # A VIGIA NÃO VAI AO DISCO NESTA RÉGUA: o que se mede aqui é o GESTO, e uma
-    # leitura de verdade traria o censo da Steam (e uma varredura de `/proc`)
-    # para dentro de um teste que não fala deles.
-    monkeypatch.setattr(a07, "_ler_do_disco", lambda: lida)
-    a07.VIGIA.ler()
-    a07._desarmar()
-    gesto = pacotes.GESTOS[("07-lancadores.html", d.CONSERTAR_LANCADOR)]
-    ctx = pacotes.Contexto(state={}, mesa=[], conectados=[], estados={})
-    alvo = tmp_path / ".local/share/flatpak/overrides" / DOLPHIN
-
-    primeiro = gesto(ctx, {"v": "emuladores"}, None)
-
-    assert not alvo.exists(), (
-        "o PRIMEIRO clique escreveu na configuração dela — e ela ainda não viu "
-        "o botão para dizer se ele faz sentido")
-    assert "Clique de novo" in primeiro["recado"], primeiro["recado"]
-
-    cartoes = {c.chave: c
-               for c in a07.com_o_que_o_daemon_diz(d.cartoes(lida), {}, lida)}
-    armado = [a for a in cartoes["emuladores"].acoes
-              if a.gesto == d.CONSERTAR_LANCADOR]
-    assert [a.rotulo for a in armado] == [a07.CONFIRMA_A_CURA], (
-        f"a tela não mostrou a cara armada: {[a.rotulo for a in armado]}")
-    assert armado[0].classe == "verde"
-
-    segundo = gesto(ctx, {"v": armado[0].v}, None)
-
-    assert "[Environment]" in alvo.read_text(encoding="utf-8"), (
-        "o SEGUNDO clique não escreveu — o consentimento dela virou uma parede")
-    assert "Feche e abra" in segundo["recado"]
-    assert a07._armado_agora() == "", "o consentimento ficou pendurado"
-
-
-def test_o_gesto_da_cura_declara_que_mexe_na_maquina_dela() -> None:
-    """Ele escreve arquivo DE OUTRO PROGRAMA — a prova automática não o clica.
-
-    `pacotes.perigosos()` é DERIVADO do `grava=` do próprio gesto desde
-    06/09/2026, e é o que impede a lista de chegar um commit atrasada. Sem esta
-    linha, a `--prova-gesto` escreveria no `config.json` do Heroic dela.
-    """
-    from hefesto_dualsense4unix.interface import desenho_dos_lancadores as d
-    from hefesto_dualsense4unix.interface import pacotes
-    from hefesto_dualsense4unix.interface.pacotes import a07_lancadores  # noqa: F401
-
-    assert ("07-lancadores.html", d.CONSERTAR_LANCADOR) in pacotes.perigosos()
+# ---------------------------------------------------------------------------
+# AS TRÊS RÉGUAS DO GESTO SAÍRAM — LANCADOR-LOCALIZAR-01, 10/09/2026
+#
+# `test_o_gesto_sem_data_v_recusa_e_nao_escreve`,
+# `test_o_consertar_pergunta_antes_de_escrever` e
+# `test_o_gesto_da_cura_declara_que_mexe_na_maquina_dela` mediam o GESTO
+# `consertar-lancador` — o botão «Consertar» dos cartões sem censo. O botão e o
+# gesto saíram por palavra dela, e uma régua apontada para um gesto que não
+# existe morre num `KeyError` que não diz nada.
+#
+# **O QUE ELAS MEDIAM NÃO SE PERDEU, e é o que separa isto de apagar decisão
+# medida:** as duas primeiras cobravam a recusa sem `data-v` e o consentimento
+# de dois cliques, e as duas eram do VASO — o botão. A terceira cobrava que o
+# gesto declarasse `grava=`, e a porta que ela protegia (`escrever_a_estrada`)
+# continua protegida pela régua que é dona do assunto,
+# `tests/unit/test_todo_gesto_que_grava_esta_protegido.py`: nenhum gesto a
+# chama hoje, e a DIREÇÃO A daquela régua acusa no dia em que um voltar a
+# chamar sem declarar.
+#
+# **AS 26 PROVAS DO MÓDULO FICAM**, e são as de cima: a cura por estrada
+# continua sendo o único código desta casa que entrega o ambiente da ponte a um
+# lançador que não é a Steam, e a lacuna que ela fecha continua aberta —
+# `hefesto-launch` só age com jogo da Steam. A dívida está declarada em
+# `tests/unit/portao_a_casa_sabe_e_o_produto_nao_faz.py`, com o endereço da
+# sprint que a desfaz (LANCADOR-CARONA-01).
+# ---------------------------------------------------------------------------

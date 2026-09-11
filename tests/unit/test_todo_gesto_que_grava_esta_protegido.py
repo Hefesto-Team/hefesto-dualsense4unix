@@ -130,14 +130,24 @@ ESCREVEM = {
     "_systemctl",              # liga, para e reinicia o serviço na máquina dela
     "curar_todos",             # tira ou devolve as camadas Vulkan dos prefixos dela
 
-    # A CURA POR ESTRADA — 09/09/2026, `LANCADORES-ZERO-01`. Ela escreve
-    # arquivo de OUTRO programa: o `config.json` do Heroic e o override do
-    # Flatpak dos demais lançadores. O gesto declarou `grava=` no mesmo commit
-    # que nasceu, e a DIREÇÃO B desta régua reprovou porque o nome não estava
-    # aqui: *"declara `grava='escrever_a_estrada'` e a árvore acha NADA"*. É a
-    # metade que falta de toda declaração — a porta declarada tem de ser uma
-    # porta que esta lista conhece.
-    "escrever_a_estrada",      # escreve o ambiente na configuração do lançador
+    # `escrever_a_estrada` SAIU DAQUI — LANCADOR-LOCALIZAR-01, 10/09/2026.
+    #
+    # Ela entrou em 09/09 com o gesto `consertar-lancador`, que escrevia o
+    # ambiente na configuração de OUTRO programa (o `config.json` do Heroic e o
+    # override do Flatpak dos demais). O botão e o gesto saíram por palavra
+    # dela, e com eles o único `grava="escrever_a_estrada"` da árvore.
+    #
+    # **A LINHA SAI PORQUE ESTA LISTA NÃO É UM CATÁLOGO DE PERIGOS, é o
+    # vocabulário que a DIREÇÃO A usa para ACUSAR:** um nome aqui sem chamador
+    # nenhum não protege coisa alguma e não acusa coisa alguma — é ruído, e a
+    # própria régua diz que "uma declaração que a árvore não acha é ruído".
+    #
+    # **E O PERIGO NÃO SUMIU: `integrations/cura_por_estrada` continua no disco**
+    # (a lacuna que ela cura continua aberta — ver
+    # `tests/unit/portao_a_casa_sabe_e_o_produto_nao_faz.py`). No dia em que a
+    # LANCADOR-CARONA-01 ligar `escrever_a_estrada` à carona do perfil, a
+    # DIREÇÃO A desta régua acusa o gesto novo — e a resposta será devolver esta
+    # linha, junto com o `grava=`, no MESMO commit.
 }
 
 #: E O QUE CHEGA LÁ POR IPC, pelo nome do método. `p.chamar("machine.declare")`

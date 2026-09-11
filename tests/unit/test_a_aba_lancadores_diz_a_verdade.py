@@ -722,12 +722,32 @@ def test_todo_cartao_tem_botao_nos_tres_estados_e_o_do_ausente_e_outro(desenho):
                     f"o cartão {cartao.chave!r} que NÃO localizou oferece «Abrir "
                     f"o lançador» — o produto não sabe abrir o que não achou, e "
                     f"ela pediu o contrário")
-            else:
+            elif estado == "ainda não procurei":
+                # A PRIMEIRA MEIA VOLTA NÃO OFERECE LOCALIZAR, e é o que
+                # mantém a PÁGINA ESTÁTICA intacta: ela nasce de
+                # `cartoes(None)`, e um botão a mais aqui seria mudança de
+                # desenho — que só entra pelo `--publicar`, ato dela.
                 assert desenho.ADICIONAR_ROTULO not in html, (
                     f"o cartão {cartao.chave!r} em {estado!r} oferece "
-                    f"«{desenho.ADICIONAR_ROTULO}» — são dois estados e dois "
-                    f"botões, e trocar o rótulo dos dois faz o cartão aceso "
-                    f"pedir um registro que já existe")
+                    f"«{desenho.ADICIONAR_ROTULO}» antes de o produto ter "
+                    f"procurado — e isso muda a página publicada")
+            else:
+                # 10/09/2026 — O CARTÃO ACHADO OFERECE OS DOIS. Aqui estava o
+                # contrário (`ADICIONAR_ROTULO not in html`), e ele valeu
+                # enquanto «Localizar este Lançador» só existia no estado
+                # `off`. Ela pediu o botão *"no Máximo"* justamente onde ele
+                # não chegava: os SEIS cartões dela estão localizados.
+                #
+                # A MORDIDA: tire o `localizar` do ramo achado de
+                # `cartao_sem_censo` (ou de `cartao_da_steam`) e esta linha
+                # cai nomeando o cartão — nunca num só, que é o ponto cego que
+                # esta aba já pagou em 08/09.
+                assert desenho.ADICIONAR_ROTULO in html, (
+                    f"o cartão {cartao.chave!r} em {estado!r} (selo "
+                    f"{cartao.selo!r}) não oferece "
+                    f"«{desenho.ADICIONAR_ROTULO}» — se o que o Hefesto achou "
+                    f"não é o que ela quer, não há por onde trocar, e a recusa "
+                    f"do botão global volta a mandar clicar no vazio")
 
     # E O DA STEAM, NOMEADO. A régua acima já o cobre por percorrer os cartões;
     # esta linha existe para a MENSAGEM: foi a Steam que ficou de fora, e uma
@@ -2202,10 +2222,19 @@ def test_a_recusa_serve_os_tres_estados_do_cartao(a07, desenho):
     tirar = desenho.acao_de_tirar(desenho.STEAM).rotulo
     achou = ("Abrir o lançador", "Criar perfil para um jogo")
 
+    # 10/09/2026 — O TERCEIRO CASO MUDOU DE RESPOSTA, e o beco fechou. Ele era
+    # `("achou sozinho", achou, None)`: sem botão a citar, a recusa dizia o fato
+    # e PARAVA — *"hoje o cartão não tem por onde trocar"*, o produto
+    # confessando dívida nossa na tela, que a decisão dela de 07/09 proíbe. Com
+    # o «Localizar» no cartão achado, o caso passou a ter botão, e o `None`
+    # sobrou para os estados em que realmente não há nenhum: a primeira meia
+    # volta e a leitura que levantou.
     casos = (
         ("não achou", (localizar, tirar), localizar),
-        ("achou, e ela apontou", (*achou, tirar), tirar),
-        ("achou sozinho", achou, None),
+        ("achou, e ela apontou", (*achou, localizar, tirar), localizar),
+        ("achou sozinho", (*achou, localizar), localizar),
+        ("só ela apontou", (*achou, tirar), tirar),
+        ("ainda não procurei", achou, None),
     )
     for estado, fileira, esperado in casos:
         frase = a07._recusa_de_quem_ja_tem_cartao(desenho.STEAM, "Steam", fileira)
@@ -2340,3 +2369,320 @@ def test_o_nome_igual_nao_vira_recado(a07, ctx, desenho):
     assert "não entrou" not in recado, (
         f"ela digitou o mesmo nome do cartão e a tela avisou de um descarte que "
         f"não houve: {recado!r}")
+
+
+# ---------------------------------------------------------------------------
+# LANCADOR-LOCALIZAR-01, 10/09/2026 — o par SELO↔BOTÃO, e o seletor do sistema
+# ---------------------------------------------------------------------------
+#: OS SELOS QUE AFIRMAM QUE ESTÁ TUDO NO LUGAR. Eles são lidos do dono
+#: (`desenho.SELOS` e `desenho.MOLDURA`) em vez de digitados: a palavra que cada
+#: um mostra é decisão DELA e já mudou uma vez (o `off` virou «NÃO LOCALIZADO»
+#: em 08/09), e uma régua que digitasse a palavra reprovaria a melhora em vez do
+#: defeito — a forma exata das onze de 26/08.
+_SELOS_QUE_DIZEM_QUE_ESTA_BOM = ("ok", "localizado")
+
+
+def test_cartao_que_nao_declara_defeito_nao_oferece_conserto(desenho):
+    """A RÉGUA QUE NÃO EXISTIA — e é a que ELA fez em 09/09/2026, olhando a tela.
+
+    O «Consertar» nasceu pendurado no estado POSITIVO: selo `LOCALIZADO`,
+    moldura `chega` (a MESMA do `ok`/CHEGAM da Steam) e a frase do corpo
+    terminando em *"um jogo aberto por aqui entra pelo mesmo caminho de qualquer
+    outro"*. A palavra dela é a descrição exata do que a tela mostrava:
+
+        "na real não faz sentido. Digo se tenho tudo
+         instalado e tá pra ser identificado não tem
+         pq ter o botão de consertar."
+
+    **NENHUMA DAS DUAS RÉGUAS DA ABA PERGUNTAVA ISSO.** A do gesto cobrava que o
+    botão funcionasse; as 26 da cura, que a escrita chegasse ao arquivo. A
+    pergunta dela é sobre o PAR selo↔botão — se o botão *deveria existir naquele
+    estado* —, e essa nenhuma fazia.
+
+    **O CONTRASTE QUE PROVA que a régua não é ampla demais:** no cartão da Steam
+    o mesmo verbo tem antecedente. Selo `NÃO CHEGAM`, moldura `impede`, e a
+    frase logo acima do botão nomeando o jogo que perdeu o atalho — ali o
+    «Consertar» responde a uma frase, e esta régua o deixa passar.
+
+    **A MORDIDA:** devolva o ramo do `consertar` ao estado `localizado` de
+    `cartao_sem_censo` e ela cai nomeando o cartão e o selo. Ela é o que impede
+    o defeito de voltar num sétimo cartão amanhã — que é como o «Localizar»
+    faltou na Steam em 08/09, por ser LINHA e não função.
+    """
+    de_fabrica = [x.chave for x in desenho.EMBUTIDOS]
+    onde = tuple((k, f"/usr/bin/{k}") for k in de_fabrica)
+    estados = {
+        "achei, e nada falta": desenho.Leitura(
+            com_wrapper=("1",), instalados=1, onde_estao=onde),
+        "achei, e há jogo sem o atalho": desenho.Leitura(
+            com_wrapper=("1",), instalados=1, onde_estao=onde,
+            reparaveis=(("2", "Um jogo", "nunca recebeu o atalho"),)),
+        "ainda não procurei": None,
+        "procurei e não achei": desenho.Leitura(
+            onde_estao=tuple((k, "") for k in de_fabrica)),
+    }
+
+    acusados = []
+    for estado, lida in estados.items():
+        for cartao in desenho.cartoes(lida):
+            if cartao.selo not in _SELOS_QUE_DIZEM_QUE_ESTA_BOM:
+                continue
+            for acao in cartao.acoes:
+                if acao.rotulo.startswith("Consertar"):
+                    acusados.append(
+                        f"{cartao.chave} em {estado!r}: selo {cartao.selo!r} "
+                        f"({desenho.SELOS.get(cartao.selo)!r}, moldura "
+                        f"{desenho.MOLDURA.get(cartao.selo)!r}) e o botão "
+                        f"«{acao.rotulo}»")
+
+    assert not acusados, (
+        "cartão que NÃO declara defeito nenhum oferecendo conserto:\n  "
+        + "\n  ".join(acusados)
+        + "\n\nO selo diz que está tudo bem, a moldura diz que está tudo bem, e "
+          "embaixo disso o produto oferece consertar. Uma cura oferecida onde a "
+          "tela não declarou defeito nenhum lê-se como cura de coisa nenhuma — "
+          "é a palavra dela, de 09/09/2026.")
+
+
+def test_o_consertar_da_steam_continua_onde_ha_o_que_consertar(desenho):
+    """A GUARDA DE VACUIDADE da régua acima: ela não pode ter matado o certo.
+
+    Sem esta, apagar o «Consertar» da Steam INTEIRO — inclusive do estado que
+    nomeia o jogo quebrado — deixaria a régua de cima verde. *Uma régua que só
+    sabe proibir não mede nada.*
+    """
+    lida = desenho.Leitura(
+        com_wrapper=("1",), instalados=3, frase="alguma frase",
+        reparaveis=(("2", "Um jogo", "nunca recebeu o atalho"),))
+    steam = next(c for c in desenho.cartoes(lida) if c.chave == desenho.STEAM)
+
+    assert steam.selo == "warn", (
+        f"a Steam com jogo reparável deixou de sair `warn`: {steam.selo!r}")
+    assert "Consertar" in [a.rotulo for a in steam.acoes], (
+        f"o cartão que DIZ que os controles não chegam perdeu o «Consertar»: "
+        f"{[a.rotulo for a in steam.acoes]}")
+
+
+class _Seletor:
+    """O dublê de `ponte.escolher_arquivo` — e ele SABE RECUSAR.
+
+    **TÃO ESTRITO QUANTO A PONTE REAL**, que é a cicatriz de 04/09: ele recolhe
+    os dois argumentos que o gesto mandou, para a régua poder cobrá-los,
+    e devolve `None` quando o roteiro diz que ela cancelou. Um dublê que só
+    sabe devolver caminho nunca exerce o caminho do cancelamento — e é o
+    cancelamento que não pode virar erro na tela.
+    """
+
+    def __init__(self, escolha) -> None:
+        self.escolha = escolha
+        self.pedidos: list[tuple[str, str, str]] = []
+        self.chamadas: list[dict] = []
+
+    def escolher_arquivo(self, titulo, padrao="*", **extra):
+        self.pedidos.append((titulo, padrao, str(extra.get("sugestao") or "")))
+        return self.escolha
+
+    def machine_declare(self, maquina: dict) -> tuple[bool, None]:
+        self.chamadas.append(maquina)
+        return True, None
+
+
+def _com_lar_de_mentira(monkeypatch, tmp_path):
+    """`HOME` e as quatro pastas XDG dentro do `tmp` — o disco desta régua."""
+    monkeypatch.setenv("HOME", str(tmp_path))
+    monkeypatch.setenv("XDG_DATA_HOME", str(tmp_path / ".local/share"))
+    monkeypatch.setenv("XDG_DATA_DIRS", str(tmp_path / "usr/share"))
+    monkeypatch.setattr(pathlib.Path, "home", lambda: tmp_path)
+    pasta = tmp_path / ".local/share/applications"
+    pasta.mkdir(parents=True, exist_ok=True)
+    (tmp_path / "usr/share/applications").mkdir(parents=True, exist_ok=True)
+    return pasta
+
+
+def test_o_seletor_grava_o_desktop_que_ela_apontou(a07, ctx, desenho,
+                                                   tmp_path, monkeypatch):
+    """«Escolher o arquivo…» — decisão dela de 09/09/2026, a opção (C).
+
+        "Ou no Máximo Localizar o lançador. aí eu mesmo
+         abro a tela e procuro o .desktop."
+
+    O QUE ESTA RÉGUA PROVA, e é o caminho inteiro: o gesto abre o seletor com o
+    filtro e a pasta de partida, resolve o que voltou nas MESMAS buscas do
+    procurador, e grava pela MESMA porta do «Adicionar» (`machine_declare`).
+
+    **A MORDIDA:** troque `_achar_o_que_ela_apontou` por uma função que devolve
+    o caminho cru sem procurar, e o `agulha` gravado deixa de ser o `stem` do
+    atalho — o cartão passa a apontar para uma agulha que a busca nunca casa.
+    """
+    pasta = _com_lar_de_mentira(monkeypatch, tmp_path)
+    atalho = pasta / "org.ryujinx.Ryujinx.desktop"
+    atalho.write_text("[Desktop Entry]\nName=Ryujinx\n", encoding="utf-8")
+
+    p = _Seletor(str(atalho))
+    a07.adicionar_lancador(ctx, {"gesto": desenho.ADICIONAR, "v": ""}, p)
+    fora = a07.procurar_o_arquivo(ctx, {"gesto": desenho.PROCURAR_O_ARQUIVO,
+                                        "forma": {desenho.NOVO_ROTULO: "Ryujinx",
+                                                  desenho.NOVO_ALVO: ""}}, p)
+
+    assert p.pedidos, "o gesto não chegou a abrir o seletor do sistema"
+    _titulo, padrao, sugestao = p.pedidos[0]
+    assert padrao == "*.desktop", (
+        f"o seletor abriu sem filtro de `.desktop`: {padrao!r} — ela pediu para "
+        f"apontar o atalho, não para caçá-lo entre todos os arquivos do disco")
+    assert sugestao == str(pasta), (
+        f"o seletor abriu em {sugestao!r} e não na pasta de atalhos {str(pasta)!r} "
+        f"— duas das quatro pastas dela ficam dentro de `~/.local`, que um "
+        f"seletor aberto no `$HOME` com ocultos desligados NÃO mostra")
+    assert p.chamadas == [{"lancadores": {
+        "ryujinx": {"rotulo": "Ryujinx",
+                    "atalhos": ["org.ryujinx.Ryujinx"]}}}], (
+        f"o gesto não gravou a agulha que a busca casa: {p.chamadas}")
+    assert str(atalho) in fora["recado"], (
+        f"o recibo não diz ONDE — sem o caminho, ela teria de acreditar em mim: "
+        f"{fora['recado']!r}")
+
+
+def test_o_seletor_recusa_o_desktop_fora_das_pastas_em_que_o_produto_procura(
+        a07, ctx, desenho, tmp_path, monkeypatch):
+    """Um atalho que a busca nunca acharia viraria um cartão que mente PARA SEMPRE.
+
+    **É A MORDIDA QUE A SPRINT PEDIU, palavra por palavra:** faça o dublê
+    devolver um `.desktop` de fora das quatro pastas e a régua tem de ver a
+    RECUSA — se o cartão acender, o produto acabou de gravar um lançador que a
+    busca nunca vai achar, e o selo diria «NÃO LOCALIZADO» sobre uma coisa que
+    ela mesma apontou com o dedo.
+
+    **E A FRASE É OUTRA, de propósito.** A recusa de quem DIGITOU manda conferir
+    o caminho; aqui o caminho está certo — ela apontou com o mouse. O que está
+    errado é a PASTA, e é isso que a frase tem de dizer.
+    """
+    _com_lar_de_mentira(monkeypatch, tmp_path)
+    solto = tmp_path / "Downloads" / "ryujinx.desktop"
+    solto.parent.mkdir(parents=True, exist_ok=True)
+    solto.write_text("[Desktop Entry]\nName=Ryujinx\n", encoding="utf-8")
+
+    p = _Seletor(str(solto))
+    a07.adicionar_lancador(ctx, {"gesto": desenho.ADICIONAR, "v": ""}, p)
+    with pytest.raises(RuntimeError) as caiu:
+        a07.procurar_o_arquivo(ctx, {"gesto": desenho.PROCURAR_O_ARQUIVO,
+                                     "forma": {desenho.NOVO_ROTULO: "Ryujinx"}}, p)
+
+    frase = str(caiu.value)
+    assert "fora das pastas" in frase, (
+        f"a recusa não diz o que está errado — a PASTA: {frase!r}")
+    assert "Confira o caminho" not in frase, (
+        f"a recusa mandou conferir um caminho que ela APONTOU com o mouse: "
+        f"{frase!r}")
+    assert p.chamadas == [], (
+        f"o produto GRAVOU um lançador que a busca dele nunca acharia: "
+        f"{p.chamadas}")
+
+
+def test_cancelar_o_seletor_nao_e_erro_nem_noticia(a07, ctx, desenho,
+                                                   tmp_path, monkeypatch):
+    """Ela fechou o diálogo. Nada mudou, e a tela NÃO FALA.
+
+    Com a janela oculta o piloto devolve `None` pelo mesmo caminho — não há
+    onde pôr um modal numa `Gtk.OffscreenWindow`, e abrir um sem pai o jogaria
+    NA TELA DELA. Os dois casos chegam aqui como "nada foi escolhido".
+
+    **A MORDIDA:** faça o gesto levantar quando o caminho vier vazio e esta
+    régua reprova — a tarja laranja de 30 s acenderia por um clique que ela
+    mesma desfez.
+    """
+    _com_lar_de_mentira(monkeypatch, tmp_path)
+    p = _Seletor(None)
+    a07.adicionar_lancador(ctx, {"gesto": desenho.ADICIONAR, "v": ""}, p)
+
+    assert a07.procurar_o_arquivo(
+        ctx, {"gesto": desenho.PROCURAR_O_ARQUIVO, "forma": {}}, p) is None
+    assert p.chamadas == [], f"cancelar GRAVOU alguma coisa: {p.chamadas}"
+
+
+def test_o_seletor_aceita_um_programa_do_path(a07, ctx, desenho,
+                                              tmp_path, monkeypatch):
+    """O quarto caso medido: ela apontou um BINÁRIO, e não um atalho.
+
+    `onde_isso_esta` resolve o caminho inteiro de um executável pelo campo
+    `comandos` — é exatamente o caso que a frase do cartão ausente nomeia (*"um
+    AppImage solto, por exemplo"*), e é a razão de o campo de texto FICAR ao
+    lado do botão. Aqui o seletor chega ao mesmo lugar pelo mouse.
+    """
+    _com_lar_de_mentira(monkeypatch, tmp_path)
+    binario = tmp_path / "opt" / "Ryujinx"
+    binario.parent.mkdir(parents=True, exist_ok=True)
+    binario.write_text("#!/bin/sh\n", encoding="utf-8")
+    binario.chmod(0o755)
+
+    p = _Seletor(str(binario))
+    a07.adicionar_lancador(ctx, {"gesto": desenho.ADICIONAR, "v": ""}, p)
+    a07.procurar_o_arquivo(ctx, {"gesto": desenho.PROCURAR_O_ARQUIVO,
+                                 "forma": {desenho.NOVO_ROTULO: "Ryujinx"}}, p)
+
+    assert p.chamadas == [{"lancadores": {
+        "ryujinx": {"rotulo": "Ryujinx", "comandos": [str(binario)]}}}], (
+        f"o binário apontado não entrou pelo campo `comandos`: {p.chamadas}")
+
+
+def test_o_seletor_declara_que_mexe_na_maquina_dela(a07, desenho):
+    """Com `--oculta` não há diálogo, logo a prova de clique NÃO pode acioná-lo.
+
+    `pacotes.perigosos()` é DERIVADO do `grava=` do próprio gesto — nunca
+    digitado numa lista distante —, e é isso que o mantém um commit em dia. É a
+    mesma porta do «Importar» do rodapé, e pela mesma razão.
+
+    **A MORDIDA:** tire o `grava="machine_declare"` do decorador e esta régua
+    reprova; a `--prova-gesto` passaria a clicar num botão que abre um diálogo
+    do sistema (ou, com a janela oculta, a gravar no `maquina.json` dela).
+    """
+    import pacotes
+
+    assert ("07-lancadores.html", desenho.PROCURAR_O_ARQUIVO) in pacotes.perigosos()
+
+
+#: O QUE UMA FRASE DE TELA NUNCA DIZ. Decisão dela, 07/09/2026: *a dívida vai
+#: para o mapa, nunca para a tela.* A lista é curta e nomeada — uma régua por
+#: FORMA (qualquer frase com "hoje" e "não tem") acusaria texto legítimo.
+_CONFISSOES = ("não tem por onde", "ainda não sei fazer", "por enquanto não dá",
+               "não está pronto", "ainda não implementei")
+
+
+def test_a_recusa_do_registro_nunca_confessa_divida_nossa(a07, desenho):
+    """A TELA NÃO CONTA À USUÁRIA UM BURACO NOSSO — decisão dela, 07/09/2026.
+
+    O terceiro ramo desta recusa dizia, para o cartão já achado: *"Se o que ele
+    achou não é o que você quer, me diga — hoje o cartão não tem por onde
+    trocar"*. Era verdade, e era exatamente o que ela proibiu: o produto
+    contando o próprio buraco em vez de fechá-lo.
+
+    **O BURACO FECHOU DE VERDADE, e é o que autoriza a frase a sair:** o
+    «Localizar este Lançador» passou a existir no cartão ACHADO — nos seis. Sem
+    esse botão, apagar a frase seria esconder a dívida, que é pior.
+
+    **A MORDIDA:** devolva a oração ao terceiro ramo e esta régua cai nomeando o
+    estado.
+    """
+    localizar = desenho.ADICIONAR_ROTULO
+    tirar = desenho.acao_de_tirar(desenho.STEAM).rotulo
+    achou = ("Abrir o lançador", "Criar perfil para um jogo")
+    fileiras = {
+        "não achou": (localizar, tirar),
+        "achou sozinho": (*achou, localizar),
+        "achou, e ela apontou": (*achou, localizar, tirar),
+        "só ela apontou": (*achou, tirar),
+        "ainda não procurei": achou,
+        "a leitura levantou": (),
+    }
+
+    acusadas = []
+    for estado, fileira in fileiras.items():
+        frase = a07._recusa_de_quem_ja_tem_cartao(desenho.STEAM, "Steam", fileira)
+        for confissao in _CONFISSOES:
+            if confissao in frase.casefold():
+                acusadas.append(f"{estado}: …{confissao}… → {frase!r}")
+
+    assert not acusadas, (
+        "a recusa confessa dívida NOSSA na tela dela:\n  " + "\n  ".join(acusadas)
+        + "\n\nDecisão dela, 07/09/2026: a dívida vai para o mapa "
+          "(`docs/data/paridade-gtk-html.csv`), nunca para a tela. Ou o buraco "
+          "fecha, ou ele fica no mapa — a tela não o conta.")

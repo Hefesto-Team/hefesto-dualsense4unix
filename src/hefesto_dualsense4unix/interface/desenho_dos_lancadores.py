@@ -32,11 +32,13 @@ janela), e uma dependência pesada aqui atravessaria para os dois.
 
 **A LINHA MUDOU EM 09/09/2026, e o fato antigo dizia MAIS do que era verdade.**
 Ela dizia *"não importa NADA do produto"*, e desde o censo (`7dc8af8f`) isso
-deixou de ser exato: ele importa TRÊS módulos de `integrations/` — o censo, a
-cura por estrada e a leitura das caixas do Flatpak. Os três são `pathlib`,
-`json` e `configparser`, e os três respondem o que o CARTÃO mostra; nenhum puxa
-daemon, GTK ou IPC (a `cura_por_estrada` adia o único import pesado que teria,
-a allowlist do daemon, justamente por causa desta linha).
+deixou de ser exato: ele importa DOIS módulos de `integrations/` — o censo e a
+leitura das caixas do Flatpak. Os dois são `pathlib`, `json` e `configparser`, e
+os dois respondem o que o CARTÃO mostra; nenhum puxa daemon, GTK ou IPC.
+
+**ERAM TRÊS ATÉ 10/09/2026**: a `cura_por_estrada` saiu com o botão «Consertar»
+do cartão LOCALIZADO (LANCADOR-LOCALIZAR-01, palavra dela). O número está
+corrigido aqui e não guardado ao lado do certo — é fato, não decisão medida.
 
 **A regra que fica é a que importa:** o gerador tem de continuar rodando SOLTO.
 Se um import novo aqui quebrar `python3 aba07.py`, ele não pertence a este
@@ -82,12 +84,18 @@ from pathlib import Path
 #: todo cartão, a cada tique.
 from hefesto_dualsense4unix.integrations import censo_dos_lancadores as _censo
 
-#: A CURA POR ESTRADA e a leitura das CAIXAS do Flatpak — LANCADORES-ZERO-01
-#: §5.3 e §5.4. Os dois entram aqui pela mesma razão do censo acima: são
-#: `pathlib`, `json` e `configparser`, e o desenho já os chama para responder o
-#: que o cartão mostra. `cura_por_estrada` adia o único import pesado que teria
-#: (a allowlist do daemon) justamente para o gerador continuar rodando solto.
-from hefesto_dualsense4unix.integrations import cura_por_estrada as _cura
+#: A LEITURA DAS CAIXAS DO FLATPAK — LANCADORES-ZERO-01 §5.4. Entra aqui pela
+#: mesma razão do censo acima: é `pathlib`, `json` e `configparser`, e o desenho
+#: já o chama para responder o que o cartão mostra.
+#:
+#: **A `cura_por_estrada` SAIU DAQUI — LANCADOR-LOCALIZAR-01, 10/09/2026.** Ela
+#: era importada para uma pergunta só: *quem tem por onde receber o ambiente?*,
+#: que decidia o botão «Consertar» do cartão LOCALIZADO. O botão saiu por
+#: palavra dela — *"se tenho tudo instalado e tá pra ser identificado não tem
+#: pq ter o botão de consertar"* — e com ele a pergunta.  # noqa-acento: citação literal dela
+#: O módulo FICA, com a dívida declarada em
+#: `tests/unit/portao_a_casa_sabe_e_o_produto_nao_faz.py`: a lacuna que ele
+#: curava continua aberta, e quem a fecha é a LANCADOR-CARONA-01.
 from hefesto_dualsense4unix.integrations import sandbox_dos_lancadores as _caixa
 
 SELOS = {
@@ -478,6 +486,17 @@ def tela_do_registro_html(para_quem: str = NOVO_SEM_ALVO) -> str:
     o produto precisa é do outro — o comando ou o caminho. Quem chega pelo botão
     de um cartão não precisa nem do primeiro: o cartão já tem nome.
 
+    **E O SEGUNDO TEM DUAS PORTAS — 10/09/2026, decisão dela (a opção C).** Ao
+    lado do campo há o :data:`PROCURAR_O_ARQUIVO_ROTULO`, que abre o seletor do
+    sistema e ela aponta o `.desktop` com o mouse. **O campo FICA**, e é ela
+    quem diz por quê: um AppImage solto não tem `.desktop` para apontar, e é
+    justamente o caso que a frase do cartão promete cobrir.
+
+    O `href` DO BOTÃO É O `id` DESTA CAIXA, e não `#`: um `#` mudaria o
+    `:target` e FECHARIA a pop-up no mesmo clique que abre o seletor — a tela
+    sumindo debaixo do diálogo que ela pediu. Apontar para si mesma deixa o
+    `:target` onde está.
+
     O GLIFO DE FECHAR VAI COMO ENTIDADE (`&times;`) e não como caractere, e a
     razão é de LINT, não de gosto: os `aba*.py` têm isenção de `RUF001`/`RUF002`
     no `pyproject.toml` (eles são HTML dentro de Python por natureza) e **este
@@ -519,8 +538,14 @@ def tela_do_registro_html(para_quem: str = NOVO_SEM_ALVO) -> str:
       </label>
       <label class="lanc-novo-campo">
         <span>Onde ele está</span>
-        <input type="text" data-linha="{NOVO_ALVO}"
-               placeholder="ryujinx  ·  /opt/Ryujinx/Ryujinx  ·  org.ryujinx.Ryujinx">
+        <div class="lanc-novo-linha">
+          <input type="text" data-linha="{NOVO_ALVO}"
+                 placeholder="ryujinx  ·  /opt/Ryujinx/Ryujinx  ·  org.ryujinx.Ryujinx">
+          <a class="btn" href="#{TELA_DO_NOVO}"
+             data-gesto="{_a(PROCURAR_O_ARQUIVO)}"
+             data-hef-forma="{_a(TELA_DO_NOVO)}"
+             >{_e(PROCURAR_O_ARQUIVO_ROTULO)}</a>
+        </div>
       </label>
     </div>
     <div class="tn-rod">
@@ -898,18 +923,23 @@ STEAM = "steam"
 #: `test_todo_gesto_do_html_tem_dono_ou_esta_declarado_sem_dono` cobra.
 ABRIR = "abrir-lancador"
 
-#: O NOME DO GESTO DA CURA POR ESTRADA — LANCADORES-ZERO-01 §5.3, 09/09/2026.
-#: Ele mora aqui pela mesma razão do :data:`ABRIR`, e o nome é OUTRO de
-#: propósito: o `consertar` da Steam repõe o **atalho de inicialização** no
-#: `localconfig.vdf`, e este escreve o **ambiente** na configuração de um
-#: lançador que não é a Steam. Dois atos diferentes, dois endereços — um nome
-#: só faria o gesto ter de adivinhar pelo `data-v` qual dos dois foi pedido.
-CONSERTAR_LANCADOR = "consertar-lancador"
-
-#: O RÓTULO, e ele é a MESMA palavra do cartão da Steam de propósito: o ato que
-#: ela pede é o mesmo — *"faça o controle chegar aqui"* —, e dois verbos para o
-#: mesmo pedido obrigariam a traduzir um no outro ao ler a tela.
-CONSERTAR_LANCADOR_ROTULO = "Consertar"
+#: O «CONSERTAR» DOS OUTROS LANÇADORES MORREU AQUI — LANCADOR-LOCALIZAR-01,
+#: 10/09/2026, e o que caiu foi o VASO, não a cura.
+#:
+#: `CONSERTAR_LANCADOR` e `CONSERTAR_LANCADOR_ROTULO` moravam nesta linha desde
+#: 09/09. Ela leu o cartão como ele estava pintado — selo `LOCALIZADO`, moldura
+#: `chega`, e a frase dizendo que *um jogo aberto por aqui entra pelo mesmo
+#: caminho de qualquer outro* — e recusou o botão: *"na real não faz sentido.
+#: Digo se tenho tudo instalado e tá pra ser identificado não tem pq ter o botão
+#: de consertar."*  Uma cura oferecida onde a tela não declarou defeito nenhum
+#: lê-se como cura de coisa nenhuma.
+#:
+#: **A LACUNA CONTINUA ABERTA**, e é por isso que `integrations/cura_por_estrada`
+#: fica: `hefesto-launch` só age com jogo da Steam, e nenhum jogo do Heroic, do
+#: Lutris, do RetroArch, do Dolphin ou do mGBA tem um. O vaso certo é a CARONA
+#: — palavra dela de 16/08, em `app/actions/carona_do_wrapper.py:7`: *"nem
+#: precisa ter um botão na gui, mas ele se auto corrigir ao clicarmos em aplicar
+#: ou salvar o perfil"*. Quem o constrói é a LANCADOR-CARONA-01.
 
 #: O NOME DO GESTO DO "Copiar a linha", pela mesma razão do :data:`ABRIR`.
 #: DECISÃO DELA (PO, 04/09/2026, `07[01]`): *"Os dois, só quando faz falta"* —
@@ -981,6 +1011,38 @@ ADICIONAR_ROTULO = "Localizar este Lançador"
 #: que ela nomeou — a dica da tela de registro nomeia os dois casos, e o exemplo
 #: que ela mostra (`Ryujinx`) é justamente um emulador.
 ADICIONAR_NOVO_ROTULO = "Adicionar novo Lançador"
+
+# ---------------------------------------------------------------------------
+# O SELETOR DO SISTEMA — LANCADOR-LOCALIZAR-01, 10/09/2026, decisão dela
+#
+#     "aí eu mesmo abro a tela e procuro o .desktop"   # noqa-acento: citação
+#                                                      # literal dela
+#
+# Ela escolheu a opção (C) — **campo + botão que abre o seletor**, e o campo de
+# texto FICA: ele é o único caminho para um AppImage solto, que não tem
+# `.desktop`, e o próprio cartão promete cobrir esse caso.
+#
+# NÃO É CAPACIDADE NOVA, é ligar o que já está no produto: `ponte.escolher_
+# arquivo` é um ponto de extensão que o piloto preenche ao subir
+# (`hefesto_vivo.py`, `ponte.escolher_arquivo = self._escolher_arquivo`), com
+# precedente vivo no «Importar» do rodapé.
+# ---------------------------------------------------------------------------
+#: O gesto do botão que abre o seletor do sistema. Ele mora aqui pela razão de
+#: sempre (:data:`ABRIR`): o desenho o escreve no `data-gesto` e o pacote o
+#: registra em `@gesto(...)`.
+PROCURAR_O_ARQUIVO = "procurar-o-arquivo"
+
+#: O RÓTULO, e ele NÃO diz «Procurar…» de propósito — foi medido nesta aba.
+#: «Procurar de novo» já é o botão do topo do quadro, e ele quer dizer *"varra a
+#: máquina outra vez"*: é a busca automática, sobre os SEIS cartões. Este quer
+#: dizer *"eu te mostro o arquivo"*, sobre UM. Duas palavras iguais para dois
+#: atos diferentes na mesma tela é a quebra de "mesma família, mesma coisa" que
+#: esta aba já pagou uma vez (o `.lanc .btn` que encolhia).
+#:
+#: **É TEXTO DE TELA, e por isso está escrito para ela conferir na bancada.**
+#: Se ela preferir a palavra dela — *"procuro o .desktop"* —, é trocar esta
+#: linha: o gesto, a recusa e a régua não dependem do rótulo.
+PROCURAR_O_ARQUIVO_ROTULO = "Escolher o arquivo…"
 
 #: O TÍTULO DA CAIXA DE REGISTRO, e ele não é o rótulo de nenhum dos dois
 #: botões — de propósito.
@@ -1164,9 +1226,13 @@ class DoDisco:
     #: :func:`resposta_do_flatpak`). Chave AUSENTE = nada a dizer, e o cartão
     #: fica com o travessão.
     resumos: tuple[tuple[str, str], ...] = ()
-    #: As chaves que TÊM por onde receber o ambiente — as que ganham o botão
-    #: «Consertar». Ver :func:`cura_por_estrada.tem_estrada`.
-    estradas: tuple[str, ...] = ()
+
+    #: **O CAMPO `estradas` SAIU — LANCADOR-LOCALIZAR-01, 10/09/2026.** Ele
+    #: guardava as chaves que TÊM por onde receber o ambiente, e existia para
+    #: UMA coisa: decidir o botão «Consertar» do cartão LOCALIZADO. O botão saiu
+    #: por palavra dela, e um campo que ninguém lê é a segunda leitura de disco
+    #: que a :class:`DoDisco` inteira existe para não pagar — `tem_estrada` abre
+    #: o `config.json` do Heroic e as caixas do Flatpak a cada volta da vigia.
 
     def resumo(self, chave: str) -> str:
         return dict(self.resumos).get(chave, "")
@@ -1226,7 +1292,6 @@ def medir_no_disco(onde_estao: tuple[tuple[str, str], ...],
     caixas = resposta_do_flatpak(tuple(vistos), lar, raiz_sistema)
 
     resumos: list[tuple[str, str]] = []
-    estradas: list[str] = []
     for item in itens:
         if not onde.get(item.chave):
             continue
@@ -1242,9 +1307,7 @@ def medir_no_disco(onde_estao: tuple[tuple[str, str], ...],
             linha = caixas
         if linha:
             resumos.append((item.chave, linha))
-        if _cura.tem_estrada(item.chave, item.atalhos, lar, raiz_sistema):
-            estradas.append(item.chave)
-    return DoDisco(tuple(resumos), tuple(estradas))
+    return DoDisco(tuple(resumos))
 
 
 @dataclass(frozen=True)
@@ -1595,6 +1658,25 @@ def cartao_da_steam(lida: Leitura | None) -> Lancador:
         acoes = (*acoes, Acao(COPIAR_ROTULO, "", COPIAR, STEAM))
         diz = diz + linha_do_wrapper_html(lida.linha)
 
+    # O «LOCALIZAR» ENTRA NOS DOIS ESTADOS BONS — LANCADOR-LOCALIZAR-01,
+    # 10/09/2026, e ele é o MESMO botão dos outros cinco cartões.
+    #
+    # ELE JÁ ESTAVA NO `off` DESDE 08/09 e faltava aqui, que é a metade do
+    # buraco que ninguém tinha medido: quando a Steam ESTÁ achada e o que o
+    # Hefesto achou não é o que ela quer, não havia por onde dizer — e a recusa
+    # do botão global confessava isso na tela (*"hoje o cartão não tem por onde
+    # trocar"*), que é o que a decisão dela de 07/09 proíbe.
+    #
+    # E É A REGRA DE 05/09 DESTA CASA: *quando a cura conhece a causa, ela cobre
+    # TODOS os chamadores.* Pôr o botão só nos cinco `cartao_sem_censo` deixaria
+    # o sexto repetindo, em outro estado, exatamente o esquecimento de 08/09 —
+    # que foi a Steam ficar de fora por o botão ser LINHA e não função. Ver
+    # :func:`acao_de_localizar`.
+    #
+    # DEPOIS DO QUE ELA FAZ, ANTES DO QUE ELA DESFAZ: localizar de novo é ato
+    # CORRETIVO, e ato corretivo não disputa a primeira posição com o «Abrir».
+    acoes = (*acoes, acao_de_localizar(STEAM))
+
     # O TIRAR VAI POR ÚLTIMO nos dois estados bons, e por último de propósito: o
     # que ela desfaz nunca disputa a primeira posição com o que ela FAZ.
     acoes = (*acoes, *tirar)
@@ -1717,22 +1799,38 @@ def cartao_sem_censo(item: SemCenso, onde: str | None,
     #: que a biblioteca tem — ou o que fazer para ela existir.
     #:
     #: **A LEITURA NÃO ACONTECE AQUI, e a linha que dizia o contrário caducou
-    #: no mesmo dia:** ela chamava `_censo.biblioteca_do_cartao`,
-    #: `resposta_do_flatpak` e `_cura.tem_estrada` dentro da PINTURA, dez vezes
-    #: por segundo. Quem lê é :func:`medir_no_disco`, na vigia; o que chega
-    #: aqui é a :class:`DoDisco`, já respondida — com o custo medido escrito
-    #: nela.
+    #: no mesmo dia:** ela chamava `_censo.biblioteca_do_cartao` e
+    #: `resposta_do_flatpak` dentro da PINTURA, dez vezes por segundo. Quem lê é
+    #: :func:`medir_no_disco`, na vigia; o que chega aqui é a :class:`DoDisco`,
+    #: já respondida — com o custo medido escrito nela.
     resumo = do_disco.resumo(item.chave)
-    #: **O «CONSERTAR» DOS OUTROS CINCO — §5.3.** Ele só aparece onde há
-    #: estrada: o cartão que não tem por onde receber o ambiente não ganha
-    #: botão, que é a regra desta aba desde que ela nasceu — *o que não tem
-    #: dono não vira botão que finge*. Quem responde é
-    #: `cura_por_estrada.tem_estrada`, e ele NÃO olha se o serviço publicou o
-    #: ambiente: um botão que some com o serviço desligado esconderia a cura de
-    #: quem está tentando entender por que o controle não chega.
-    consertar = ((Acao(CONSERTAR_LANCADOR_ROTULO, "", CONSERTAR_LANCADOR,
-                       item.chave),)
-                 if item.chave in do_disco.estradas else ())
+    #: **O «CONSERTAR» SAIU DAQUI — LANCADOR-LOCALIZAR-01, 10/09/2026.** Ele
+    #: nascera pendurado no estado POSITIVO: selo `LOCALIZADO`, moldura `chega`
+    #: — a MESMA do `ok`/CHEGAM da Steam — e a frase do corpo terminando em *"um
+    #: jogo aberto por aqui entra pelo mesmo caminho de qualquer outro"*. Nada
+    #: no cartão declarava defeito, e embaixo disso o produto oferecia
+    #: *consertar*. O contraste que prova é o cartão da Steam: lá o mesmo verbo
+    #: tem antecedente — selo `NÃO CHEGAM`, moldura `impede`, e a frase logo
+    #: acima do botão nomeando o jogo que perdeu o atalho.
+    #:
+    #: **O «LOCALIZAR» ENTRA NO LUGAR, e ele não é botão novo** — é o
+    #: :func:`acao_de_localizar` que o estado `off` já usava. O que mudou é o
+    #: ESTADO em que ele aparece: até hoje só o cartão NÃO LOCALIZADO o tinha,
+    #: e os seis cartões dela estão localizados — o botão que ela pediu *"no
+    #: Máximo"* estava no produto e não alcançava um cartão sequer dela.
+    #:
+    #: **ELE VEM DEPOIS DO «ABRIR», e a ordem é o que cada um responde:** o
+    #: cartão está localizado, então o ato normal é abrir; localizar de novo é o
+    #: ato CORRETIVO — *"o que ele achou não é o que eu quero"* —, e ato
+    #: corretivo não disputa a primeira posição com o ato normal. É a mesma
+    #: leitura de cima para baixo que fez o selo e o botão falarem a mesma
+    #: palavra em :data:`ADICIONAR_ROTULO`.
+    #:
+    #: **E ISSO FECHA UM BECO NA TELA:** a recusa do botão global
+    #: (`a07_lancadores._recusa_de_quem_ja_tem_cartao`) dizia, para o cartão já
+    #: achado, *"hoje o cartão não tem por onde trocar"* — o produto confessando
+    #: dívida nossa, que a decisão dela de 07/09 proíbe. Com o «Localizar» aqui,
+    #: o buraco some e a frase perde a razão de existir.
     #: **O RESUMO VAI PARA A LINHA `jogos`, e não para o corpo** — §5.2 da
     #: sprint: *"a linha de baixo diz «37 jogos na biblioteca · 0 instalados»"*.
     #: É o mesmo lugar em que a Steam imprime *"23 jogos instalados"*, e ele é
@@ -1746,7 +1844,7 @@ def cartao_sem_censo(item: SemCenso, onde: str | None,
         chave=item.chave, nome=item.nome, selo="localizado",
         jogos=resumo or "—",
         diz=DIZ_ACHEI.format(onde=_e(onde)),
-        acoes=consertar + abrir + tirar, presente=True)
+        acoes=abrir + localizar + tirar, presente=True)
 
 
 def cartoes(lida: Leitura | None) -> list[Lancador]:
@@ -1823,8 +1921,6 @@ __all__ = [
     "AINDA_LENDO",
     "A_STEAM",
     "CLASSE_DA_GRADE",
-    "CONSERTAR_LANCADOR",
-    "CONSERTAR_LANCADOR_ROTULO",
     "COPIAR",
     "COPIAR_ROTULO",
     "DESLIGAR_STEAM_INPUT",
@@ -1841,6 +1937,8 @@ __all__ = [
     "NOVO_PARA_QUEM",
     "NOVO_ROTULO",
     "NOVO_SEM_ALVO",
+    "PROCURAR_O_ARQUIVO",
+    "PROCURAR_O_ARQUIVO_ROTULO",
     "QUANTOS",
     "REMOVER",
     "REMOVER_ROTULO",

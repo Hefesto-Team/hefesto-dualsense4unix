@@ -449,6 +449,24 @@ CSS = """
     background:var(--app-bg);border:1px solid var(--border-forte);color:var(--fg);
     font-family:'JetBrains Mono',monospace;font-size:11.5px}
   .lanc-novo-campo input:focus{outline:none;border-color:var(--purple)}
+  /* AS DUAS PORTAS DO «ONDE ELE ESTÁ» — 10/09/2026, decisão dela (a opção C):
+     o campo que ela digita e o botão que abre o seletor do sistema. A linha é
+     `flex` e o campo é quem estica (`flex:1`), porque o rótulo do botão tem
+     tamanho FIXO e o caminho não tem: dividir a largura ao meio deixaria o
+     campo curto para um `/home/…/.local/share/flatpak/exports/…` e o botão com
+     folga que ele não usa.
+     O `white-space:nowrap` no botão é o que impede a reticência de cair sozinha
+     na segunda linha quando a caixa encolhe — o `.tn-cx` do `CSS_POPUP` já tem
+     largura máxima, e um botão de duas linhas ficaria mais alto que o campo ao
+     lado, que é a costura à vista que a regra do `--h-acao` acima evita.
+     E O `text-decoration:none` ENTRA AQUI porque o `CSS_POPUP` só o desliga em
+     `.tn-rod .btn` — o rodapé da caixa. Este botão é do CORPO, e sem esta linha
+     ele sairia SUBLINHADO ao lado do «Adicionar» que não sai: a mesma quebra
+     que a foto de 08/09 mostrou na fileira dos cartões, duas regras abaixo. */
+  .lanc-novo-linha{display:flex;gap:8px;align-items:center}
+  .lanc-novo-linha input{flex:1;min-width:0}
+  .lanc-novo-linha a.btn{white-space:nowrap;flex:none;text-decoration:none;
+    display:inline-flex;align-items:center;justify-content:center}
   /* O BOTÃO QUE É ÂNCORA TEM DE PARECER BOTÃO — 08/09/2026, e foi a FOTO que
      mostrou. Dois dos botões desta aba são `<a class="btn">` porque só uma
      âncora abre a `.tela-nova` pelo `:target` (ver `desenho_dos_lancadores.
