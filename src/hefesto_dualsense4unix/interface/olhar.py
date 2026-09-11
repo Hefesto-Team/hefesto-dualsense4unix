@@ -168,6 +168,56 @@ E_ABA = re.compile(r"^\d\d-")
 #: depois, sem reabrir o navegador.
 NOME_DA_PROVA = "PROVA-DA-FOTO.txt"
 
+#: A MEDIDA DA PÁGINA NA VISTA, e ela mora FORA da função de propósito —
+#: 11/09/2026, no reparo da PRINTS-DAS-DEZ-01.
+#:
+#: Enquanto este JavaScript era uma literal enfiada no meio do `_retratar`, as
+#: três medidas que ele devolve não tinham como ser medidas por régua nenhuma:
+#: a única porta era abrir o Chrome pelo `main`, e as mordidas viviam no texto
+#: de uma entrega, que é onde régua nenhuma vive. Agora ele é um nome, e
+#: `test_o_retratista_fotografa_a_vista_pedida.py` o roda contra páginas de
+#: medida conhecida.
+#:
+#: AS DUAS FAMÍLIAS DE PÁGINA, e ele precisa saber medir as duas: as dez ABAS
+#: moram numa `.janela`; as páginas AVULSAS que abrem por fora dela (o mapa do
+#: controle, a calibração) moram numa `.cx`. Antes ele só conhecia a primeira e
+#: ESTOURAVA na segunda, com `Cannot read properties of null` — que ao menos é
+#: um erro barulhento. O caso perigoso é o silencioso, e por isso o `erro`
+#: abaixo devolve o motivo em vez de um número inventado: seletor que casou
+#: ZERO elemento é ERRO, nunca medida.
+#:
+#: O `1080` ESTAVA DIGITADO no `passa_da_dobra`, e era a segunda cópia da
+#: altura da vista — 11/09/2026. Com a vista de 840 ele diria "passa 0 da
+#: dobra" sobre uma página que passa 240: a régua responderia sobre o viewport
+#: de ontem. Agora ela PERGUNTA à janela em que está.
+#:
+#: E AS DUAS MEDIDAS NOVAS são as que a foto maximizada existe para mostrar:
+#: `morto_abaixo` é o que sobra entre o rodapé da `.janela` e a borda da vista
+#: (`ALTURA-DA-VISTA-01` §4.3: *"nenhuma régua a enxerga — todas medem dentro
+#: da `.janela`, e a tela dela não para ali"*), e `vao_dos_lados` é a mesma
+#: cegueira na largura.
+#:
+#: **O PISO DAS TRÊS É `Math.max(0, …)`, e as duas primeiras o ganharam no
+#: reparo de 11/09** — o `passa_da_dobra` já o tinha e os irmãos não. Medido em
+#: 1918x500, com a `.janela` passando da borda de baixo: `morto_abaixo` saía
+#: **−293**, e o `--todas` imprimia *"−293 px mortos embaixo"*. Ali não SOBRA
+#: nada: ali FALTA — e o que falta já tem instrumento próprio, o
+#: `passa_da_dobra` na altura e o `rolagem_lateral` na largura. Um número
+#: negativo num campo cujo nome promete sobra é afirmação falsa com cara de
+#: medida, que é o defeito que esta casa mais paga.
+MEDIDA_NA_VISTA = """() => {
+  const d = document.documentElement;
+  const cx = document.querySelector('.janela') || document.querySelector('.cx');
+  if (!cx) return {erro: 'nem .janela nem .cx nesta página — não há o que medir'};
+  const j = cx.getBoundingClientRect();
+  return {caixa: cx.className, larg: Math.round(j.width), alt: Math.round(j.height),
+          vista: `${window.innerWidth}x${window.innerHeight}`,
+          morto_abaixo: Math.max(0, Math.round(window.innerHeight - j.bottom)),
+          vao_dos_lados: Math.max(0, Math.round((window.innerWidth - j.width) / 2)),
+          passa_da_dobra: Math.max(0, Math.round(d.scrollHeight - window.innerHeight)),
+          rolagem_lateral: d.scrollWidth > d.clientWidth};
+}"""
+
 
 def _gravar_prova_da_foto(destino: pathlib.Path, modo: str, origem: str,
                           vista: str = "") -> pathlib.Path:
@@ -286,35 +336,10 @@ def _retratar(navegador, alvo: pathlib.Path, saida: pathlib.Path,
             content="".join(f"{s}{{display:none}}" for s in seletores_escondidos())
         )
         pg.wait_for_timeout(400)
-        # AS DUAS FAMÍLIAS DE PÁGINA, e ele precisa saber medir as duas: as dez
-        # ABAS moram numa `.janela`; as páginas AVULSAS que abrem por fora dela (o
-        # mapa do controle, a calibração) moram numa `.cx`. Antes ele só conhecia
-        # a primeira e ESTOURAVA na segunda, com `Cannot read properties of null`
-        # — que ao menos é um erro barulhento. O caso perigoso é o silencioso, e
-        # por isso o `else` abaixo devolve o motivo em vez de um número inventado:
-        # seletor que casou ZERO elemento é ERRO, nunca medida.
-        # O `1080` ESTAVA DIGITADO AQUI, e era a segunda cópia da altura da
-        # vista — 11/09/2026. Com a vista de 840 ele diria "passa 0 da dobra"
-        # sobre uma página que passa 240: a régua responderia sobre o viewport
-        # de ontem. Agora ela PERGUNTA à janela em que está.
-        #
-        # E as duas medidas NOVAS são as que a foto maximizada existe para
-        # mostrar: `morto_abaixo` é o que sobra entre o rodapé da `.janela` e a
-        # borda da vista (`ALTURA-DA-VISTA-01` §4.3: *"nenhuma régua a
-        # enxerga — todas medem dentro da `.janela`, e a tela dela não para
-        # ali"*), e `vao_dos_lados` é a mesma cegueira na largura.
-        cx = pg.evaluate("""() => {
-          const d = document.documentElement;
-          const cx = document.querySelector('.janela') || document.querySelector('.cx');
-          if (!cx) return {erro: 'nem .janela nem .cx nesta página — não há o que medir'};
-          const j = cx.getBoundingClientRect();
-          return {caixa: cx.className, larg: Math.round(j.width), alt: Math.round(j.height),
-                  vista: `${window.innerWidth}x${window.innerHeight}`,
-                  morto_abaixo: Math.round(window.innerHeight - j.bottom),
-                  vao_dos_lados: Math.round((window.innerWidth - j.width) / 2),
-                  passa_da_dobra: Math.max(0, Math.round(d.scrollHeight - window.innerHeight)),
-                  rolagem_lateral: d.scrollWidth > d.clientWidth};
-        }""")
+        # O que ele mede, por que cada medida existe e por que as três têm piso
+        # está em `MEDIDA_NA_VISTA`, lá em cima — ela mora fora daqui para que
+        # a régua a alcance sem abrir o `main`.
+        cx = pg.evaluate(MEDIDA_NA_VISTA)
         if cx.get("erro"):
             return {"erro": cx["erro"]}
         # PÁGINA INTEIRA: o viewport de 1080 cortava tudo o que nasce abaixo da
@@ -353,6 +378,25 @@ def _uma(arq: str, publicado: bool, vista: tuple[int, int] | None = None) -> int
     return 0
 
 
+def destino_das_fotos(para_a_doc: bool, vista: tuple[int, int] | None) -> pathlib.Path:
+    """Onde as fotos desta execução caem — e por que a vista tem pasta PRÓPRIA.
+
+    Ela estava enterrada dentro do `_todas`, e por isso régua nenhuma podia
+    perguntar-lhe nada; era só abrindo o Chrome pelo `main` que se descobria
+    onde o PNG tinha ido parar. Extraída no reparo de 11/09/2026, ela virou
+    uma pergunta de uma linha:
+    `destino_das_fotos(True, VISTA_DELA) != destino_das_fotos(True, None)`.
+
+    **E essa desigualdade é o contrato inteiro:** o `CLAUDE.md` manda todo
+    mundo rodar `--todas --publicado --doc` antes de commitar, e se as duas
+    famílias tivessem o mesmo nome a execução seguinte apagaria a foto da vista
+    **calada** — sem erro, sem recibo divergente, sem nada a ver depois.
+    """
+    if not para_a_doc:
+        return pathlib.Path("/tmp")
+    return DESTINO_DOC / SUBPASTA_DA_VISTA if vista is not None else DESTINO_DOC
+
+
 def _todas(publicado: bool, para_a_doc: bool,
            vista: tuple[int, int] | None = None) -> int:
     paginas = [p for p in onde.paginas(publicado=publicado) if E_ABA.match(p.name)]
@@ -361,12 +405,7 @@ def _todas(publicado: bool, para_a_doc: bool,
     if len(paginas) < 10:
         sys.exit(f"achei {len(paginas)} abas em {'publicado' if publicado else 'bancada'} — o caminho mudou?")
 
-    if not para_a_doc:
-        destino = pathlib.Path("/tmp")
-    elif vista is not None:
-        destino = DESTINO_DOC / SUBPASTA_DA_VISTA
-    else:
-        destino = DESTINO_DOC
+    destino = destino_das_fotos(para_a_doc, vista)
     from playwright.sync_api import sync_playwright
 
     saiu: list[dict] = []

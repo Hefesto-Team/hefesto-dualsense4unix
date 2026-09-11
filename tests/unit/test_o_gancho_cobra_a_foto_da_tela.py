@@ -55,6 +55,16 @@ O_RETRATO = "src/hefesto_dualsense4unix/interface/olhar.py"
 UMA_FOTO = "docs/usage/assets/readme_inicio.png"
 O_RECIBO = "docs/usage/assets/PROVA-DA-FOTO.txt"
 
+#: A SEGUNDA FAMÍLIA — 11/09/2026. `docs/usage/assets/maximizada/` guarda as
+#: dez abas na vista maximizada dela, e o gancho passou a cobrar as DUAS
+#: pastas: uma foto da vista não paga a dívida das dez do README, e vice-versa.
+#: Ver `test_a_foto_da_vista_nao_paga_a_divida_das_dez_do_readme`.
+A_FOTO_DA_VISTA = "docs/usage/assets/maximizada/aba-01-jogar.png"
+O_RECIBO_DA_VISTA = "docs/usage/assets/maximizada/PROVA-DA-FOTO.txt"
+
+#: A prova COMPLETA: uma por família. É o que um commit de tela precisa levar.
+AS_DUAS_PROVAS = [UMA_FOTO, A_FOTO_DA_VISTA]
+
 
 # ---------------------------------------------------------------- a mordida
 
@@ -89,8 +99,15 @@ def test_deixa_passar_quem_leva_a_foto_junto() -> None:
 
     Sem este, "bloquear sempre" satisfaria a mordida — e portão que reprova
     sempre é desinstalado na primeira semana.
+
+    **A prova são as DUAS famílias desde 11/09/2026** — as dez do README e as
+    dez da vista maximizada. Não é severidade a mais: é a mesma pergunta que o
+    portão da suíte faz, e um gancho mais frouxo que ele promete cobrir o que
+    não cobre.
     """
-    veredito, _ = portao.julgar([UMA_ABA, UMA_FOTO], fotos_sujas=False, historia_em_dia=True)
+    veredito, _ = portao.julgar(
+        [UMA_ABA, *AS_DUAS_PROVAS], fotos_sujas=False, historia_em_dia=True
+    )
     assert veredito == portao.EM_DIA
 
 
@@ -98,12 +115,52 @@ def test_o_recibo_sozinho_basta_de_prova() -> None:
     """Mudança de tela que não move pixel: o recibo é a saída, e tem de servir.
 
     `PROVA-DA-FOTO.txt` carrega a data do ensaio, então **toda** execução do
-    retrato o modifica, mesmo com as onze abas byte a byte idênticas. Se o
+    retrato o modifica, mesmo com as dez abas byte a byte idênticas. Se o
     portão não aceitasse o recibo, existiria commit sem saída — o defeito que
     o `CONFERIDO-EM.md` foi criado para resolver, reinventado no gancho.
+
+    Cada família tem o SEU recibo, e é o de cada pasta que vale por ela.
     """
-    veredito, _ = portao.julgar([UMA_ABA, O_RECIBO], fotos_sujas=False, historia_em_dia=True)
+    veredito, _ = portao.julgar(
+        [UMA_ABA, O_RECIBO, O_RECIBO_DA_VISTA],
+        fotos_sujas=False,
+        historia_em_dia=True,
+    )
     assert veredito == portao.EM_DIA
+
+
+def test_a_foto_da_vista_nao_paga_a_divida_das_dez_do_readme() -> None:
+    """A MORDIDA DA PASTA NOVA — a simulação do conferente, 11/09/2026.
+
+    `docs/usage/assets/maximizada/` cai DENTRO de `docs/usage/assets` quando a
+    pergunta casa por prefixo, e era assim que ela casava: este commit — a aba
+    01 mexida, e como prova só a foto da VISTA — devolvia `em-dia`. A dívida
+    das dez do README ficava paga por foto que não é delas, e elas podiam
+    apodrecer caladas. É o defeito que a PRINTS-DAS-DEZ-01 tinha acabado de
+    achar (as do README paradas em 08/09), reaberto numa família ainda menos
+    coberta.
+
+    **Para morder:** troque `familias_sem_prova` por
+    `any(_toca(c, (FOTOS,)) for c in caminhos)` e este teste reprova.
+    """
+    veredito, culpados = portao.julgar(
+        [UMA_ABA, A_FOTO_DA_VISTA], fotos_sujas=False, historia_em_dia=True
+    )
+
+    assert veredito == portao.BLOQUEADO, (
+        "o gancho aceitou a foto da vista como prova das dez do README. A "
+        "partir daí, gravar só em `maximizada/` quitaria a dívida delas para "
+        "sempre, sem uma linha de aviso."
+    )
+    assert culpados == [UMA_ABA]
+    assert portao.familias_sem_prova([UMA_ABA, A_FOTO_DA_VISTA]) == [portao.FOTOS], (
+        "o bloqueio precisa NOMEAR a pasta que está devendo. Sem isso quem "
+        "apanha roda o comando da outra família, vê nada mudar, e conclui que "
+        "o portão quebrou."
+    )
+    assert portao.familias_sem_prova([UMA_ABA, UMA_FOTO]) == [
+        portao.FOTOS_DA_VISTA
+    ], "e o inverso também: a foto do README não paga a dívida da vista."
 
 
 def test_nao_reclama_de_commit_que_nao_toca_a_tela() -> None:
@@ -189,7 +246,9 @@ def test_a_foto_no_commit_quita_a_divida_herdada() -> None:
     seria impossível.
     """
     veredito, _ = portao.julgar(
-        [O_RECIBO, UMA_FOTO], fotos_sujas=True, historia_em_dia=False
+        [O_RECIBO, UMA_FOTO, O_RECIBO_DA_VISTA, A_FOTO_DA_VISTA],
+        fotos_sujas=True,
+        historia_em_dia=False,
     )
     assert veredito == portao.EM_DIA
 
@@ -289,11 +348,17 @@ def test_as_duas_listas_de_codigo_de_tela_sao_a_mesma() -> None:
     """
     from tests.unit.test_as_fotos_acompanham_a_versao import (
         CODIGO_DA_TELA as DA_SUITE,
+        FAMILIAS_DE_FOTO as FAMILIAS_DA_SUITE,
         FOTOS as FOTOS_DA_SUITE,
     )
 
     assert portao.CODIGO_DA_TELA == DA_SUITE
     assert portao.FOTOS == FOTOS_DA_SUITE
+    # E AS FAMÍLIAS DE FOTO TAMBÉM — 11/09/2026. Quem criar uma terceira pasta
+    # de foto num lado só recria, num nível acima, o buraco que a `maximizada/`
+    # abriu: a pasta nova cairia dentro da velha por prefixo e quitaria a
+    # dívida dela.
+    assert portao.FAMILIAS_DE_FOTO == FAMILIAS_DA_SUITE
 
 
 # ----------------------------------------------------- o portão de verdade, e2e
