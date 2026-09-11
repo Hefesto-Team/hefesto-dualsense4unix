@@ -70,6 +70,11 @@ from gi.repository import GLib, Gtk  # noqa: E402
 
 from hefesto_dualsense4unix.app.actions import perfis_web  # noqa: E402
 
+# O RÓTULO DA TABELA «AJUSTE PRÓPRIO» VEM DO DONO — 11/09/2026. Ver
+# `mesa_de_agora`: a junção que o PRODUTO usa mora em `a10_perfis`, e uma cópia
+# aqui seria a terceira gramática do mesmo rótulo.
+from hefesto_dualsense4unix.interface.pacotes import a10_perfis  # noqa: E402
+
 AQUI = pathlib.Path(__file__).resolve().parent
 sys.path.insert(0, str(AQUI))
 
@@ -326,18 +331,36 @@ def perfis_do_duble(bruto: list[dict[str, Any]]) -> list[Any]:
 
 
 def mesa_de_agora(state: dict[str, Any] | None) -> list[dict[str, Any]]:
-    """A mesa no formato que o `perfis_web` espera, pelo gerador do mockup.
+    """A mesa no formato que o `perfis_web` espera — o MESMO do produto.
 
-    `rotulo` e `plastico` saem de `monta.rotulo` e `aba10.cor_da_zona` — os
-    mesmos que desenham o mockup —, e não de texto escrito aqui. É o que faz o
-    desenho ACOMPANHAR a mudança: quando ela mudar a gramática do rótulo, esta
-    aba muda junto, sem ninguém reescrever nada.
+    O INSTRUMENTO MENTIA, e a prova é uma foto — 11/09/2026. O `rotulo` saía de
+    `monta.rotulo(c, "curta")`, que devolve MARCAÇÃO: o separador dele é
+    `' <span class="pt">•</span> '`. Quem pinta a tabela «Ajuste próprio»
+    escreve `textContent` — de propósito, porque nome de controle é dado que não
+    atravessa a fronteira como HTML —, então esta bancada mostrava, nas quatro
+    linhas, o texto literal `P1 <span class="pt">•</span> Não sei …`.
+
+    **E O PRODUTO NÃO FAZ ISSO.** O caminho dele é
+    `pacotes/a10_perfis._mesa_com_rotulo`, que usa `_rotulo_curto` — a mesma
+    ordem dela de 26/08 (marca • player • plástico • transporte), em TEXTO. A
+    bancada era a única superfície com o defeito, e quem a olhasse concluiria
+    que a tela dela estava quebrada de um jeito que ela não está. É a assinatura
+    que esta casa já nomeou: *o instrumento respondia sobre outra coisa que não
+    o produto*.
+
+    A CURA É PERGUNTAR AO DONO, e não reescrever a junção aqui: `_rotulo_curto`
+    é quem o produto chama, e a régua `test_o_rotulo_da_guarda_e_o_mesmo_do_monta`
+    já o amarra ao `monta.rotulo` sem a marcação. Uma terceira junção nesta
+    bancada seria a gramática do rótulo com três donos.
+
+    O `plastico` FICA COMO ESTAVA: `cor_da_zona` devolve um hexadecimal, não
+    marcação, e o alvo daquele endereço é `cor`.
     """
     if not state:
         return []
     mesa = mesa_viva.mesa_do_estado(state, {})
     for controle in mesa:
-        controle["rotulo"] = monta.rotulo(controle, "curta")
+        controle["rotulo"] = a10_perfis._rotulo_curto(controle)
         controle["plastico"] = _cor_da_zona_tolerante(str(controle.get("cor") or ""))
     return mesa
 

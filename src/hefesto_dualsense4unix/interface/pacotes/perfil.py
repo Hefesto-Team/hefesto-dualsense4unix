@@ -387,18 +387,25 @@ def com_a_carona(frase: str = "") -> str:
 #: 'Xbox' na 01, clica em 'Salvar Perfil' na 10, e o perfil grava a máscara que
 #: estava no disco — a escolha dela não entra."*
 #:
-#: **POR QUE AQUI, e não no pacote da aba 01:** a seção tem UM dono e DUAS telas
-#: — o quadro «Modo» da aba Perfis (`a10_perfis.editor_modo`, PERFIL-MODO-01) e
-#: o interruptor/fileira da aba Jogar. Escrever a regra dentro de `a01_jogar`
+#: **POR QUE AQUI, e não no pacote da aba 01:** a seção tinha UM dono e DUAS
+#: telas — o quadro «Modo» da aba Perfis (PERFIL-MODO-01) e o
+#: interruptor/fileira da aba Jogar. Escrever a regra dentro de `a01_jogar`
 #: faria a terceira cópia dela nesta casa, e a sprint diz por que isso é o
 #: perigo desta entrega: *"se você criar um segundo caminho de gravação, o que
 #: ela escolher numa aba some quando ela mexer na outra"*. Este módulo já é o
 #: compartilhado do assunto — é onde `gravar_e_reaplicar` e `com_a_carona`
 #: pousaram pelo mesmo motivo, e pela mesma medição (ONDA5-07-02).
 #:
+#: **SOBROU UMA TELA — 11/09/2026.** Ordem dela: *"em perfis ainda aparece
+#: modo. Isso deve aparecer só na aba jogar."* O quadro saiu do editor de
+#: Perfis e o gesto que o gravava saiu com ele. **A razão deste módulo não
+#: caduca com isso**: ele continua sendo o único lugar onde a regra mora, e é
+#: o que impede que a próxima tela que precise dela escreva a segunda cópia.
+#:
 #: **O QUE ELE NÃO FAZ, e é o contrário do gesto da aba 10:** ele não recusa
-#: dizendo. O `editor_modo` levanta quando o valor já é o mesmo, porque lá o
-#: clique É o ato; aqui a gravação é EFEITO COLATERAL de outro ato que já deu
+#: dizendo. O gesto do quadro da aba Perfis levantava quando o valor já era o
+#: mesmo, porque lá o clique ERA o ato — ele saiu em 11/09/2026 com o quadro;
+#: aqui a gravação é EFEITO COLATERAL de outro ato que já deu
 #: certo (a troca de modo, que já foi ao daemon). Uma recusa aqui viraria tarja
 #: laranja sobre um modo que mudou — e é a mesma disciplina que `com_a_carona`
 #: declara duas funções acima: *"uma exceção aqui transformaria uma gravação
@@ -409,8 +416,8 @@ def secao_do_modo(atual: Any, kind: str, flavor: str | None = None) -> Any:
     """O `ProfileModeConfig` que o perfil passa a ter, ou ``None`` para remover.
 
     A REGRA NÃO É MINHA e não se digita duas vezes — ela é a de
-    `profiles_actions._mode_section_from_editor`, que é o dono na janela GTK, e
-    a mesma que `a10_perfis.editor_modo` aplica na aba Perfis:
+    `profiles_actions._mode_section_from_editor`, que é o dono na janela GTK.
+    A aba Perfis também a aplicava, pelo quadro «Modo», até 11/09/2026:
 
     * ``"none"`` → ``None``: *"a seção é REMOVIDA do perfil salvo"*. Um perfil
       sem `mode` não mexe no modo do sistema quando entra;
@@ -461,7 +468,8 @@ def gravar_o_modo_no_ativo(state: Any, kind: str,
     tique: o interruptor da aba Jogar é idempotente (clicar "Ligado" com o
     daemon já em `gamepad` não muda campo nenhum), e reescrever o `.json` dela a
     cada clique repetido encheria o histórico de versões idênticas — o mesmo
-    cuidado que o `editor_modo` toma ao recusar o valor repetido.
+    cuidado que o gesto do quadro «Modo» tomava ao recusar o valor repetido,
+    até ele sair da aba Perfis em 11/09/2026.
 
     **NUNCA LEVANTA.** Ela é efeito colateral de um gesto que já foi ao daemon:
     um `.json` ilegível, uma pasta sem permissão ou um esquema novo não podem

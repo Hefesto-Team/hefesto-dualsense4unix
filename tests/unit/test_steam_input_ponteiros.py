@@ -365,8 +365,24 @@ def test_a_isencao_de_nome_de_modo_nao_passa_do_editor_de_modo() -> None:
     isto a isenção volta a crescer calada no dia em que outro controle usar o
     mesmo atributo — e uma frase do guia citando `"Não"` sairia sem endereço.
     """
+    # A ISENÇÃO ESVAZIOU DE PROPÓSITO — 11/09/2026, e isto é o inverso do que
+    # esta linha cobrava. Ela dizia `assert isentos, "a isenção esvaziou —
+    # editor.modo sumiu das publicadas"`, e cobrava certo enquanto o quadro
+    # existia: uma isenção que some sem ninguém decidir é a régua se desligando.
+    #
+    # ELA DECIDIU: *"em perfis ainda aparece modo. Isso deve aparecer só na aba
+    # jogar."* O quadro saiu do editor de Perfis, e a isenção não tem mais o que
+    # isentar. O que se cobra agora é que ela **continue vazia** — se alguém
+    # reescrever `editor.modo` numa página publicada sem reabrir a razão, este
+    # caso volta a exigir que os rótulos sejam da aba Perfis, e eles não serão.
     isentos = _nomes_de_modo()
-    assert isentos, "a isenção esvaziou — `editor.modo` sumiu das publicadas"
+    assert not isentos, (
+        "`editor.modo` voltou a uma página publicada. A isenção de nome de modo "
+        "foi escrita para o editor da aba Perfis, e o quadro saiu de lá por "
+        f"ordem dela em 11/09/2026: {isentos!r}. Se o endereço ressuscitou "
+        "noutra aba, a razão da isenção precisa ser reescrita para ELA — a "
+        "razão é semântica (nome de ESTADO, não de destino) e não viaja sozinha."
+    )
 
     rotulos = _rotulos_de_botao()
     forasteiros = {
