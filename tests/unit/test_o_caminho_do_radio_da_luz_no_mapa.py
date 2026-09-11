@@ -66,7 +66,15 @@ LINHAS_DO_0X31 = (
     "luz.led_jogador@dualsense",
     "luz.led_jogador.escrita_hefesto@dualsense",
     "luz.led_jogador.quinto@dualsense",
-    "luz.lightbar.brilho@dualsense",
+    # ERA A `luz.lightbar.brilho` ATÉ 11/09/2026, e a troca é da MEDIÇÃO DELA,
+    # não de gosto: com um deslizante na mão e os dois transportes na bancada
+    # ela viu que *"o que o slicer altera não são as cores do lightbar mas os
+    # leds que indicam qual player é o dono daquele controle"*. O `common[42]`
+    # mudou de dono no mapa (`a3081004`, 09/09) e o endereço de rádio do brilho
+    # da BARRA voltou a ser desconhecido — cobrar dela um byte que ninguém
+    # mediu é cobrar uma resposta inventada. Quem tem o byte é a chave nova, e
+    # é ela que esta lista vigia.
+    "luz.led_jogador.brilho@dualsense",
     "luz.lightbar.fade@dualsense",
     "luz.lightbar.release_leds@dualsense",
     "luz.led_microfone@dualsense",
@@ -270,7 +278,12 @@ def test_o_numero_do_jogador_sai_no_byte_que_a_celula_do_radio_promete(
 @pytest.mark.parametrize(
     ("ident", "byte_do_dado", "bit_do_flag2"),
     (
-        ("luz.lightbar.brilho@dualsense", 42, rep.VALID_FLAG2_LED_BRIGHTNESS_CONTROL_ENABLE),
+        # O NOME DA CONSTANTE JÁ DIZIA DE QUEM ERA O BYTE —
+        # `LED_BRIGHTNESS`, e a fonte externa (RPCS3) o chama
+        # `SET_PLAYER_LED_BRIGHTNESS`. A régua o cobrava da barra por
+        # três meses, até ela medir. Ver o comentário da
+        # `LINHAS_DO_0X31` acima.
+        ("luz.led_jogador.brilho@dualsense", 42, rep.VALID_FLAG2_LED_BRIGHTNESS_CONTROL_ENABLE),
         ("luz.lightbar.fade@dualsense", 41, rep.VALID_FLAG2_LIGHTBAR_SETUP_CONTROL_ENABLE),
     ),
 )
