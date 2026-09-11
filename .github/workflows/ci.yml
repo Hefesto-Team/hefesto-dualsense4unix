@@ -102,6 +102,11 @@ jobs:
       # A moldura: a barra de título, o `.desktop` e a unit — o que ela lê
       # ANTES de qualquer página, e o que as duas réguas de corpo não alcançam.
       - run: python3 scripts/check_a_janela_nao_confessa.py
+      # A caixa alta que não significa nada — 11/09/2026. Ela leu `CABO` na fita
+      # e `cabo` no cartão logo abaixo: *"Esse tipo de coisa não pode se repetir
+      # na interface."* Duas peneiras, o texto e a FOLHA — o `CABO` não estava
+      # escrito em lugar nenhum, quem gritava era uma linha de CSS.
+      - run: python3 scripts/check_a_maiuscula_decorativa.py
 
   acentuacao:
     name: Acentuação PT-BR estrita (py${{ matrix.python }})

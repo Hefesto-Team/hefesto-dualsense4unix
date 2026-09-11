@@ -96,6 +96,11 @@ def _so_o_texto(pedaco: str) -> str:
     marcação de hoje seria a segunda cópia de uma decisão de folha de estilo —
     e ela envelheceria no dia seguinte, que é o defeito que acabou de custar
     dois vermelhos.
+
+    **E ELA ENVELHECEU NO MESMO DIA, o que prova a escolha:** a caixa alta da
+    via foi REVOGADA em 11/09/2026 (ESQUELETO-C2) — ela leu `CABO` na fita com
+    `cabo` no cartão logo abaixo. O `<span class="via">` ficou, agora como
+    ENDEREÇO da via e não como gancho de estilo, e esta régua não sentiu nada.
     """
     return re.sub(r"<[^>]+>", "", pedaco).strip()
 
