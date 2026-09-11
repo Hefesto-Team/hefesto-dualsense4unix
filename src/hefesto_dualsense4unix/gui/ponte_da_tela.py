@@ -419,7 +419,7 @@ class JanelaDaAba:
         ao_falhar: Callable[[str], None] | None = None,
         ao_morrer_a_pagina: Callable[[str], None] | None = None,
         oculta: bool = False,
-        titulo: str = "Hefesto",
+        titulo: str = "Hefesto — DualSense4Unix",
         subtitulo: str = "",
         canal: str = CANAL_PADRAO,
         folha: str | None = FOLHA_DA_CASA,

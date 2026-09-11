@@ -178,7 +178,20 @@ def main() -> int:
     # botoes ganham o tema do sistema em vez do desenho do compositor.
     barra = Gtk.HeaderBar()
     barra.set_show_close_button(True)
-    barra.set_title("Hefesto")
+    # O NOME INTEIRO NA BARRA — 11/09/2026, ordem dela: *"no nome da
+    # janela não conseguimos deixar Hefesto - DualSense4Unix ao invés de só
+    # hefesto?"*  (noqa-acento) citação literal dela
+    #
+    # O `<h1>` das dez páginas já dizia exatamente isto; quem ficou para
+    # trás foi a barra da janela, que é o primeiro lugar em que o produto
+    # se apresenta.
+    #
+    # O NOME É DIGITADO E NÃO LIDO DO DONO, e isso é dívida declarada: o
+    # `utils/identidade.py` grafa `Dualsense4Unix` (s minúsculo) em 306
+    # lugares de 110 arquivos. Ler de lá hoje poria a grafia errada na
+    # barra — a cura da grafia é frente própria, e quando ela fechar estas
+    # duas linhas passam a ler do dono.
+    barra.set_title("Hefesto — DualSense4Unix")
     barra.set_subtitle("a interface nova · mockup no motor de verdade")
     janela.set_titlebar(barra)
 
