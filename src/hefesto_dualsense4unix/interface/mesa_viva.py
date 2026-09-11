@@ -541,6 +541,48 @@ def selo_do_mic(mudo: bool, sabemos: bool) -> str:
     return "MUDO" if mudo else "ATIVO"
 
 
+#: As palavras dos TRÊS estados do botão 🎙 — MIC-NA-TELA-01, 10/09/2026.
+#: Pedido dela: *"ele aceso (vai indicar que agora tá gravando audio), ele
+#: captando audio vai ficar no estado de piscando (guia visual pro leigo que
+#: pegar o controle de primeira)"*.  <!-- noqa-acento: citação literal dela -->
+#:
+#: São palavras e não números porque quem as lê é um SELETOR DE CSS, e um
+#: seletor com o número do protocolo dentro (`[data-mic-luz="2"]`) não diz nada
+#: a quem abre a folha. O número fica do lado de quem fala com o aparelho.
+BOTAO_MIC_GRAVANDO = "gravando"
+BOTAO_MIC_CAPTANDO = "captando"
+
+#: O que o daemon publica em `audio.luz_do_mic`, e é o MESMO byte que acende a
+#: luz do plástico (`daemon/subsystems/luz_do_mic`: 0 apagada · 1 acesa ·
+#: 2 piscando · 3 piscando devagar, que é piscando com bateria baixa).
+_LUZ_ACESA, _LUZ_PISCA, _LUZ_PISCA_LENTO = 1, 2, 3
+
+
+def estado_do_botao_do_mic(luz: object) -> str:
+    """A palavra do botão 🎙 para o estado da luz — `""` quando não se sabe.
+
+    **UM DONO, E ELE NÃO DECIDE NADA** — traduz. Quem decide os três estados é
+    `luz_do_mic.decidir`, no daemon, e é o mesmo byte que acende a luz no
+    plástico; escrever um segundo ternário aqui (mudo? canal? nível?) poria a
+    tela e o controle na mão dela discordando no primeiro dia em que um dos
+    dois fosse corrigido.
+
+    `""` é resposta de primeira classe: nenhuma classe acende, e o botão fica
+    com o cinza de base — *"ninguém leu o microfone deste controle"*. É a mesma
+    disciplina do terceiro estado do ♪.
+
+    O `3` (piscando devagar, bateria baixa) devolve a mesma palavra do `2`: a
+    diferença entre eles é um aviso de CARGA, e a carga já tem lugar próprio no
+    cartão. Duas piscadas diferentes no mesmo botão seriam duas gramáticas para
+    quem só quer saber se está sendo ouvido.
+    """
+    if isinstance(luz, bool) or not isinstance(luz, int):
+        return ""
+    if luz in (_LUZ_PISCA, _LUZ_PISCA_LENTO):
+        return BOTAO_MIC_CAPTANDO
+    return BOTAO_MIC_GRAVANDO if luz == _LUZ_ACESA else ""
+
+
 def estado_do_card(
     entrada: dict[str, Any],
     *,

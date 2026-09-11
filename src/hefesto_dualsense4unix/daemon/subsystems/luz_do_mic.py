@@ -140,6 +140,42 @@ ACESA: int = 1
 PISCANDO: int = 2
 PISCANDO_LENTO: int = 3
 
+#: O QUE ESTE LAÇO DECIDIU POR CONTROLE, para quem PINTA — 10/09/2026
+#: (MIC-NA-TELA-01, o pedido dela: *"ele aceso vai indicar que agora tá
+#: gravando audio, ele captando audio vai ficar no estado de piscando"*).
+#:
+#: **A TELA NÃO DECIDE DE NOVO, e é o ponto.** O contrato de três estados que
+#: ela desenhou já existia — aqui, no byte que acende a luz do PLÁSTICO — e um
+#: segundo ternário do lado da tela seria a mesma resposta escrita duas vezes,
+#: que é a família de defeito que esta casa persegue por escrito. O botão 🎙 da
+#: aba Controles passa a mostrar o MESMO estado que o controle na mão dela
+#: mostra, e os dois discordarem deixa de ser possível.
+#:
+#: Guarda o ALVO decidido, não o escrito: sem a posse do byte a luz do plástico
+#: não muda, e ainda assim a tela sabe dizer o estado. `None` some daqui —
+#: *"não sei"* é a ausência da chave, nunca um número.
+_DECIDIDO: dict[str, int] = {}
+
+
+def estado_da_luz_do_mic(uniq: str) -> int | None:
+    """O estado decidido para este controle — `None` = ninguém decidiu ainda.
+
+    Leitura barata (um `dict`), pensada para o `state_full`: quem chama é o
+    laço do IPC, a cada tique.
+    """
+    return _DECIDIDO.get(str(uniq or ""))
+
+
+def _lembrar_o_estado(uniq: str, alvo: int | None) -> None:
+    """Guarda (ou esquece) o que foi decidido para este controle."""
+    chave = str(uniq or "")
+    if not chave:
+        return
+    if alvo is None:
+        _DECIDIDO.pop(chave, None)
+    else:
+        _DECIDIDO[chave] = int(alvo)
+
 #: Cadência da DECISÃO. O `2` é atividade de voz, que muda em ~100 ms; a 1 Hz a
 #: luz acompanharia o parágrafo e não a fala. A 4 Hz nada disto custa: as
 #: leituras deste tique (mudo e bateria) são `getattr` sobre o que a thread de
@@ -679,6 +715,7 @@ async def luz_do_mic_loop(daemon: DaemonProtocol) -> None:
                 u for u in posse if u not in mesa
             ]:
                 escrito.pop(uniq, None)
+                _lembrar_o_estado(uniq, None)
                 posse.discard(uniq)
                 sem_resposta_desde.pop(uniq, None)
 
@@ -717,6 +754,7 @@ async def luz_do_mic_loop(daemon: DaemonProtocol) -> None:
                     bateria_pct=baterias.get(uniq),
                 )
 
+                _lembrar_o_estado(uniq, alvo)
                 if alvo is None:
                     # PAROU DE SABER. Segurar para sempre deixaria um `2`
                     # eterno quando a PEÇA A cai; soltar na primeira falha

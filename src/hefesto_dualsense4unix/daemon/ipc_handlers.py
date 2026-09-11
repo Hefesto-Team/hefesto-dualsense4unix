@@ -4119,6 +4119,27 @@ class IpcHandlersMixin:
                 status["canal_mudo"] = lido.get("canal_mudo")
                 status["volume_captura"] = lido.get("volume_captura")
                 status["canal_fonte"] = lido.get("fonte")
+            # E A LUZ DO MICROFONE VAI JUNTO — 10/09/2026 (MIC-NA-TELA-01).
+            # Pedido dela: *"ele aceso vai indicar que agora tá gravando
+            # audio, ele captando audio vai ficar no estado de piscando"*.
+            #
+            # **O CONTRATO DE TRÊS ESTADOS JÁ EXISTIA**, no byte que acende a
+            # luz do PLÁSTICO (`luz_do_mic.decidir`). Publicá-lo é o que faz o
+            # botão da tela e a luz na mão dela dizerem a MESMA coisa; um
+            # segundo ternário do lado da aba seria a mesma resposta escrita
+            # duas vezes, e as duas versões divergem no primeiro dia em que
+            # uma delas for corrigida.
+            #
+            # Leitura de `dict`, sem I/O: quem decide é o laço da luz, a 4 Hz.
+            # A chave só aparece quando alguém decidiu — ausência é *"não
+            # sei"*, como nas três acima.
+            from hefesto_dualsense4unix.daemon.subsystems.luz_do_mic import (
+                estado_da_luz_do_mic,
+            )
+
+            luz = estado_da_luz_do_mic(str(uniq or ""))
+            if luz is not None:
+                status["luz_do_mic"] = int(luz)
             entry["audio"] = status
 
         speaker: Any = None

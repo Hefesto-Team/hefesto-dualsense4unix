@@ -1962,6 +1962,41 @@
   .mudo-i[data-som="ATIVO"]{border-color:var(--green);color:var(--green)}
   .mudo-i[data-som="MUDO"]{border-color:var(--orange);color:var(--orange);
     background:rgba(255,184,108,.1)}
+  /* ---------- O 🎙 EM TRÊS ESTADOS — pedido dela, 10/09/2026 ----------
+     *"ele aceso (vai indicar que agora tá gravando audio), ele captando audio
+     vai ficar no estado de piscando (guia visual pro leigo que pegar o
+     controle de primeira)"*.
+
+     A INVERSÃO É O PEDIDO: o botão falava a língua de quem programa (`mudo-i`,
+     "calar") e passa a falar a de quem pega o controle pela primeira vez —
+     **aceso = estou sendo ouvido**.
+
+     `.mudo-i.on` JÁ ESTEVE AQUI E CAIU EM 06/09, com razão: pintava `--red` (a
+     cor da FALHA) e, no segundo card, a classe vinha do GERADOR e não do
+     aparelho. Estas duas regras são o oposto nos dois pontos — a palavra vem
+     de `mesa_viva.estado_do_botao_do_mic`, o valor vem do daemon a cada tique,
+     e a cor é `--green`, a mesma que o ♪ usa para "ligado". **Se o escritor
+     vivo sumir, estas regras saem junto** — é a regra que o `.solta` deixou:
+     *"CSS de elemento que ninguém mais escreve é promessa esperando alguém
+     tropeçar nela"*.
+
+     O PISCANDO É O MESMO VERDE, não uma cor nova: o que muda é o FUNDO
+     pulsando, porque piscar a borda de um botão de 22px some no olho — medido
+     no desenho. `prefers-reduced-motion` o deixa aceso e firme, que continua
+     dizendo a verdade (está no ar), só sem o guia visual do movimento. */
+  .mudo-i[data-mic-luz="gravando"],
+  .mudo-i[data-mic-luz="captando"]{
+    border-color:var(--green);color:var(--green)}
+  .mudo-i[data-mic-luz="captando"]{
+    animation:mic-captando 1.2s ease-in-out infinite}
+  @keyframes mic-captando{
+    0%,100%{background:var(--panel)}
+    50%{background:rgba(80,250,123,.22)}
+  }
+  @media (prefers-reduced-motion: reduce){
+    .mudo-i[data-mic-luz="captando"]{
+      animation:none;background:rgba(80,250,123,.14)}
+  }
 
 </style>
 <style data-campo="plastico-css" data-hef-alvo="html">
@@ -2485,7 +2520,7 @@
             <div class="vol" data-campo="mic-porque" data-hef-alvo="atributo" data-hef-atributo="data-porque">
               <span class="trilho"><span class="cheio" style="width:80%"></span><input class="puxa-vol" type="range" min="0" max="100" step="1" value="80" data-gesto="volume" data-volume="microfone" aria-label="Volume do microfone deste controle" title="Arraste para escolher quanto do microfone deste controle chega ao PC — de 0 a 100. É o ganho da FONTE no sistema, e não o mudo do plástico: não apaga a luz vermelha e não tira o botão do controle. Grava na hora."></span>
               <span class="n">80</span>
-              <button class="mudo-i" data-gesto="mudo" data-mudo="microfone" title="Calar no firmware do controle — apaga a luz vermelha do plástico. A partir daqui quem manda no mudo é o Hefesto, e o botão do controle para de valer. Esta tela não devolve o comando: quem devolve é hefesto-dualsense4unix mic release, ou reiniciar o Hefesto.">🎙</button>
+              <button class="mudo-i" data-gesto="mudo" data-mudo="microfone" data-campo="mic-botao-estado" data-hef-alvo="atributo" data-hef-atributo="data-mic-luz" title="Calar no firmware do controle — apaga a luz vermelha do plástico. A partir daqui quem manda no mudo é o Hefesto, e o botão do controle para de valer. Esta tela não devolve o comando: quem devolve é hefesto-dualsense4unix mic release, ou reiniciar o Hefesto.">🎙</button>
               <span class="ajuda porque">?<span class="dica" data-campo="mic-porque" data-hef-alvo="html"><i class="nada"></i></span></span>
             </div>
             <!-- OS DOIS MODOS DESCERAM PARA CÁ — decisão dela, 31/08/2026:
@@ -2944,7 +2979,7 @@
             <div class="vol" data-campo="mic-porque" data-hef-alvo="atributo" data-hef-atributo="data-porque">
               <span class="trilho"><span class="cheio" style="width:0%"></span><input class="puxa-vol" type="range" min="0" max="100" step="1" value="0" data-gesto="volume" data-volume="microfone" aria-label="Volume do microfone deste controle" title="Arraste para escolher quanto do microfone deste controle chega ao PC — de 0 a 100. É o ganho da FONTE no sistema, e não o mudo do plástico: não apaga a luz vermelha e não tira o botão do controle. Grava na hora."></span>
               <span class="n">0</span>
-              <button class="mudo-i" data-gesto="mudo" data-mudo="microfone" title="Calar no firmware do controle — apaga a luz vermelha do plástico. A partir daqui quem manda no mudo é o Hefesto, e o botão do controle para de valer. Esta tela não devolve o comando: quem devolve é hefesto-dualsense4unix mic release, ou reiniciar o Hefesto.">🎙</button>
+              <button class="mudo-i" data-gesto="mudo" data-mudo="microfone" data-campo="mic-botao-estado" data-hef-alvo="atributo" data-hef-atributo="data-mic-luz" title="Calar no firmware do controle — apaga a luz vermelha do plástico. A partir daqui quem manda no mudo é o Hefesto, e o botão do controle para de valer. Esta tela não devolve o comando: quem devolve é hefesto-dualsense4unix mic release, ou reiniciar o Hefesto.">🎙</button>
               <span class="ajuda porque">?<span class="dica" data-campo="mic-porque" data-hef-alvo="html"><i class="nada"></i></span></span>
             </div>
             <!-- OS DOIS MODOS DESCERAM PARA CÁ — decisão dela, 31/08/2026:
@@ -3403,7 +3438,7 @@
             <div class="vol" data-campo="mic-porque" data-hef-alvo="atributo" data-hef-atributo="data-porque">
               <span class="trilho"><span class="cheio" style="width:60%"></span><input class="puxa-vol" type="range" min="0" max="100" step="1" value="60" data-gesto="volume" data-volume="microfone" aria-label="Volume do microfone deste controle" title="Arraste para escolher quanto do microfone deste controle chega ao PC — de 0 a 100. É o ganho da FONTE no sistema, e não o mudo do plástico: não apaga a luz vermelha e não tira o botão do controle. Grava na hora."></span>
               <span class="n">60</span>
-              <button class="mudo-i" data-gesto="mudo" data-mudo="microfone" title="Calar no firmware do controle — apaga a luz vermelha do plástico. A partir daqui quem manda no mudo é o Hefesto, e o botão do controle para de valer. Esta tela não devolve o comando: quem devolve é hefesto-dualsense4unix mic release, ou reiniciar o Hefesto.">🎙</button>
+              <button class="mudo-i" data-gesto="mudo" data-mudo="microfone" data-campo="mic-botao-estado" data-hef-alvo="atributo" data-hef-atributo="data-mic-luz" title="Calar no firmware do controle — apaga a luz vermelha do plástico. A partir daqui quem manda no mudo é o Hefesto, e o botão do controle para de valer. Esta tela não devolve o comando: quem devolve é hefesto-dualsense4unix mic release, ou reiniciar o Hefesto.">🎙</button>
               <span class="ajuda porque">?<span class="dica" data-campo="mic-porque" data-hef-alvo="html"><i class="nada"></i></span></span>
             </div>
             <!-- OS DOIS MODOS DESCERAM PARA CÁ — decisão dela, 31/08/2026:
@@ -3862,7 +3897,7 @@
             <div class="vol" data-campo="mic-porque" data-hef-alvo="atributo" data-hef-atributo="data-porque">
               <span class="trilho"><span class="cheio" style="width:75%"></span><input class="puxa-vol" type="range" min="0" max="100" step="1" value="75" data-gesto="volume" data-volume="microfone" aria-label="Volume do microfone deste controle" title="Arraste para escolher quanto do microfone deste controle chega ao PC — de 0 a 100. É o ganho da FONTE no sistema, e não o mudo do plástico: não apaga a luz vermelha e não tira o botão do controle. Grava na hora."></span>
               <span class="n">75</span>
-              <button class="mudo-i" data-gesto="mudo" data-mudo="microfone" title="Calar no firmware do controle — apaga a luz vermelha do plástico. A partir daqui quem manda no mudo é o Hefesto, e o botão do controle para de valer. Esta tela não devolve o comando: quem devolve é hefesto-dualsense4unix mic release, ou reiniciar o Hefesto.">🎙</button>
+              <button class="mudo-i" data-gesto="mudo" data-mudo="microfone" data-campo="mic-botao-estado" data-hef-alvo="atributo" data-hef-atributo="data-mic-luz" title="Calar no firmware do controle — apaga a luz vermelha do plástico. A partir daqui quem manda no mudo é o Hefesto, e o botão do controle para de valer. Esta tela não devolve o comando: quem devolve é hefesto-dualsense4unix mic release, ou reiniciar o Hefesto.">🎙</button>
               <span class="ajuda porque">?<span class="dica" data-campo="mic-porque" data-hef-alvo="html"><i class="nada"></i></span></span>
             </div>
             <!-- OS DOIS MODOS DESCERAM PARA CÁ — decisão dela, 31/08/2026:
