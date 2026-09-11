@@ -45,10 +45,16 @@ nenhum dos seus alvos. O "102%" ia para um vão invisível.
 
 **O ENDEREÇO DAQUELA LINHA DO GERADOR MORREU, e o número foi retirado em
 06/09/2026:** o `<span hidden>` saiu do desenho em 04/09 (decisão [09]) e o
-que resta é o comentário que registra a saída (`aba02.py:1939`). O número que
-estava aqui apontava para uma linha em branco desde a primeira edição que
-empurrou o gerador — citação de linha que sobrevive ao código que citava é
-endereço morto, e esta casa mede isso (`citacoes-no-codigo`).
+que resta é o comentário que registra a saída — o do parâmetro `estado_alto`
+na assinatura de `aba02.bloco`. O número que estava aqui apontava para uma
+linha em branco desde a primeira edição que empurrou o gerador — citação de
+linha que sobrevive ao código que citava é endereço morto, e esta casa mede
+isso (`citacoes-no-codigo`).
+
+**E O ENDEREÇO NOVO NÃO TEM NÚMERO, de propósito — 11/09/2026 (LINGUA-A3).**
+A troca dos nomes das rotas do som empurrou o `aba02.py` e a âncora `:1939`
+caiu em linha vazia; o portão pegou. Um endereço por SÍMBOLO não envelhece com
+o arquivo, que é a única forma de esta nota sobreviver à próxima edição.
 
 **O QUE ELA VÊ NO BLOCO DO ALTO-FALANTE JÁ TEM ENDEREÇO — 02/09/2026, decisão
 dela (item 16).** Eram o `<span class="n">100</span>` e a `.cheio` de
@@ -996,7 +1002,7 @@ def luz_porque(rotulo: str | None, base: tuple[int, ...] | None) -> str:
 # escreveu o arquivo. Medido na mesa dela em 03/09/2026:
 #
 #   na tela (o desenho)                    no aparelho / no disco
-#   card 2: "Todo o som do PC" aceso       speaker.rota = 2  (Sons do jogo)
+#   card 2: "Só no controle" aceso         speaker.rota = 2  (Sons do jogo)
 #   card 1: "Virtual" aceso                maquina.json sem `microfone` (Nativo)
 #
 # E NO CARD 2 O DESENHO NÃO É NEUTRO: ele afirma que o som INTEIRO do PC está
@@ -1505,7 +1511,7 @@ def _a_pagina_tem_o_ouvir_junto() -> bool:
     11/09/2026, SOM-BOTOES-01, e era a queixa dela inteira.** Ela nasceu em
     10/09 com TRÊS defeitos na mesma linha, e os três se somavam num só
     sintoma: `A_FILEIRA_TEM_TRES` valia `False` com a página publicada
-    trazendo o «Ouvir junto» quatro vezes, então `aceso_da_fileira` nunca
+    trazendo o «No controle e na TV» quatro vezes, então `aceso_da_fileira` nunca
     devolvia `"junto"` e **o botão do meio não acendia nunca**. Ela clicava, o
     gesto gravava `fonte: mix` no perfil, e a fileira acendia o botão de antes.
 
@@ -1558,12 +1564,12 @@ def aceso_da_fileira(uniq: str, entry: Any) -> str:
     ==================  ===========================================  =========
     botão               o que ele quer dizer                         camada
     ==================  ===========================================  =========
-    Sons do jogo        só o que o jogo mandar para este controle    firmware
-    Ouvir junto         o som do PC cai TAMBÉM aqui, sem sair da TV  sistema
-    Todo o som do PC    o som do PC sai SÓ aqui                      sistema+fw
+    Sons do jogo          só o que o jogo mandar para este controle  firmware
+    No controle e na TV   o som do PC cai TAMBÉM aqui, sem sair da TV  sistema
+    Só no controle        o som do PC sai SÓ aqui                      sistema+fw
     ==================  ===========================================  =========
 
-    **A ORDEM DE PRECEDÊNCIA É MEDIDA, e não é gosto:** «Todo o som do PC»
+    **A ORDEM DE PRECEDÊNCIA É MEDIDA, e não é gosto:** «Só no controle»
     vence, porque ele é o único estado em que a saída padrão do sistema mudou
     de lugar — um fato que a pessoa OUVE, e que contradizer na tela é o defeito
     de 03/09 (botão aceso, som na TV). Só depois dele o `mix` fala.
@@ -1963,9 +1969,9 @@ PAGINA = "02-controles.html"
 #:
 #: ESTA LINHA MORAVA 400 LINHAS ACIMA, junto da função, e era esse o defeito:
 #: `PAGINA` ainda não existia quando ela corria, o `NameError` virava `False`, e
-#: o «Ouvir junto» não acendia nunca. Ela fica DEPOIS da constante que usa, e o
-#: `except` estreito da função é o que garante que ninguém a mova de volta em
-#: silêncio: acima daqui, o import REPROVA em vez de responder `False`.
+#: o «No controle e na TV» não acendia nunca. Ela fica DEPOIS da constante que
+#: usa, e o `except` estreito da função é o que garante que ninguém a mova de
+#: volta em silêncio: acima daqui, o import REPROVA em vez de responder `False`.
 A_FILEIRA_TEM_TRES = _a_pagina_tem_o_ouvir_junto()
 
 
@@ -2142,7 +2148,7 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
     # A CAMADA 1 DA ROTA, uma vez por tique e para a mesa inteira — ver
     # `_camada_1`. Ela é BLOQUEANTE (roda `pactl`), então tem relógio próprio:
     # a leitura fica em cache e uma thread a renova a cada dois segundos. Sem
-    # isto o "Todo o som do PC" continuaria acendendo pelo byte, que é como o
+    # isto o "Só no controle" continuaria acendendo pelo byte, que é como o
     # card 2 dela ficou aceso com o som saindo na TV, em 03/09.
     na_mesa = tuple(str(c.get("uniq") or "") for c in ctx.conectados if c.get("uniq"))
     _camada_1(
@@ -2626,7 +2632,7 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
                 # desligar a irmã" acontecer sem lista de irmãs.
                 # **ELE PASSOU A LER AS DUAS CAMADAS — 04/09/2026, decisão
                 # [09].** Era `rota_na_tela(c)`, o byte e mais nada, e foi
-                # assim que o card 2 dela acendeu "Todo o som do PC" com o som
+                # assim que o card 2 dela acendeu "Só no controle" com o som
                 # saindo na TV. Ver `aceso_da_rota`, e a ressalva logo abaixo,
                 # que é onde o desacordo entre as duas vira palavra.
                 # A FILEIRA TEM TRÊS DESDE 10/09/2026 (A3) — ver
@@ -2845,7 +2851,7 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
 #
 # O QUE SAIU DESTA LISTA EM 04/09/2026:
 #
-#   Todo o som do PC            **GANHOU DONO** — `audio_saida.mandar_o_som_do_pc`,
+#   Só no controle              **GANHOU DONO** — `audio_saida.mandar_o_som_do_pc`,
 #                               que é a camada 1 sem GTK. Ver o gesto `rota`.
 #   Os dois deslizantes de volume   **GANHARAM PEÇA E DONO** (D-08 dela:
 #                               *"Deslizante nos dois"*). Aqui estava escrito que
@@ -3594,7 +3600,7 @@ def mudo(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
 
 @gesto("02-controles.html", "rota", grava="save_profile")
 def rota(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
-    """Onde o som do controle sai. **"Sons do jogo" tem dono; "Todo o som do PC" não.**
+    """Onde o som do controle sai. **"Sons do jogo" tem dono; "Só no controle" não.**
 
     "SONS DO JOGO" É UM BYTE, e ele é o caso que ela descreveu com o Zelda —
     *"o speaker do controle faz os barulhos da espada do Link enquanto na tela
@@ -3660,22 +3666,22 @@ def rota(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     # escolha — *"o efeito pronto e sem escolha"*, o defeito-mãe desta casa
     # virado do avesso.
     #
-    # ELE DESLIGA A CAMADA 1, e não pode ser diferente: «Todo o som do PC»
-    # TIRA o som da televisão, «Ouvir junto» o deixa lá. Sair de um para o
+    # ELE DESLIGA A CAMADA 1, e não pode ser diferente: «Só no controle» TIRA
+    # o som da televisão, «No controle e na TV» o deixa lá. Sair de um para o
     # outro sem devolver a saída padrão deixaria a TV muda com a tela dizendo
     # "junto" — o desacordo de 03/09, pela outra porta.
     #
     # **E ELE TAMBÉM DESFAZ A CAMADA 2 QUANDO VEM DO «pc» — 11/09/2026,
     # SOM-BOTOES-01, e é a outra metade do mesmo parágrafo.** Até hoje este
-    # ramo devolvia a saída padrão e NÃO mexia no byte, então sair de «Todo o
-    # som do PC» para «Ouvir junto» deixava o firmware em
+    # ramo devolvia a saída padrão e NÃO mexia no byte, então sair de «Só no
+    # controle» para «No controle e na TV» deixava o firmware em
     # `SAIDA_SO_NO_ALTO_FALANTE` com a camada 1 de volta na televisão — que é,
     # letra por letra, o desacordo que `audio_saida.recado_da_rota` existe para
-    # denunciar. Medido nesta árvore: o cartão dela acendia «Ouvir junto» e
-    # publicava, na mesma coluna, a ressalva *"o alto-falante deste controle
-    # está roteado para receber todo o som, mas a saída padrão do sistema não é
-    # ele (…) Clique em 'Todo o som do PC' para mandá-lo para cá"* — a tela
-    # mandando desfazer o clique que ela acabou de dar.
+    # denunciar. Medido nesta árvore: o cartão dela acendia «No controle e na
+    # TV» e publicava, na mesma coluna, a ressalva *"o alto-falante deste
+    # controle está roteado para receber todo o som, mas a saída padrão do
+    # sistema não é ele (…) Clique em 'Só no controle' para mandá-lo para cá"*
+    # — a tela mandando desfazer o clique que ela acabou de dar.
     #
     # SÓ QUANDO VEIO DO «pc», e a condição é o que preserva o contrato do
     # `test_o_junto_nao_manda_byte_de_rota_ao_daemon`: vindo de «Sons do jogo»

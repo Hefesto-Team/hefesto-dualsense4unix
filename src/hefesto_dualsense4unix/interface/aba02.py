@@ -529,7 +529,7 @@ CSS = CSS_GLIFO + CSS_LUZINHAS + """
      que 1180 (o `.janela` é `max-width:100%`): com quatro colunas em pixel fixo,
      TODO o encolhimento caía na única coluna flexível — a do som. Medido em
      31/08 num navegador de 1000px: ela ia a 78px e os três botões do Modo do
-     Mic, mais o "Todo o som do PC", pintavam 200px POR CIMA dos Sensores e dos
+     Mic, mais o "Só no controle", pintavam 200px POR CIMA dos Sensores e dos
      Gatilhos. É a tela que ela fotografou. Em proporção, as cinco encolhem
      juntas e nenhuma colapsa — que é como as outras nove abas se comportam.
      `minmax(0,…)` continua obrigatório: `Nfr` sozinho tem mínimo automático
@@ -1881,14 +1881,15 @@ DICA_MIC_MUDO = ("Calar no firmware do controle — apaga a luz vermelha do plá
 # ninguém pode ler qual era o de antes. Isso vai DITO, porque é a diferença que
 # a própria porta escreve (`cli/cmd_speaker.py`) e é o que separa "largar" de
 # "desfazer".
-#: A DICA DO BOTÃO DO MEIO — 10/09/2026 (a A3). Ela diz a única coisa que
-#: separa este botão do vizinho da direita: a televisão continua tocando.
-#: Sem nome de nó, sem comando, sem jargão — as três proibições da língua desta
-#: casa para texto de tela.
-DICA_OUVIR_JUNTO = ("O som do computador passa a sair TAMBÉM no alto-falante "
-                    "deste controle, sem sair da televisão. É o que serve a "
-                    "quem joga acompanhado: cada controle ouve o jogo no "
-                    "próprio plástico, e a sala continua ouvindo o de sempre.")
+#: A DICA DO BOTÃO DO MEIO — 10/09/2026 (a A3), ENCURTADA em 11/09 pela
+#: LINGUA-A3. Ela dizia a única coisa que separava este botão do vizinho da
+#: direita — *a televisão continua tocando* —, e desde 11/09 quem diz isso é o
+#: PRÓPRIO RÓTULO («No controle e na TV», decisão dela). O que sobra para a
+#: dica é o que o rótulo não cabe: para que serve. Sem nome de nó, sem comando,
+#: sem jargão — as três proibições da língua desta casa para texto de tela.
+DICA_OUVIR_JUNTO = ("O som do PC sai no alto-falante deste controle e continua "
+                    "saindo na TV. Serve para jogar acompanhado: cada um ouve "
+                    "no próprio controle.")
 
 DICA_ALTO_MUDO = ("Manda zero ao alto-falante do controle, sem perder o volume "
                   "guardado. A partir da primeira escrita quem guarda o volume "
@@ -2070,10 +2071,10 @@ DICA_MIC_NATIVO = ("Guarda que o microfone deste controle entra sozinho, sem o "
 # ---------------------------------------------------------------------------
 # OS QUATRO BOTÕES QUE DIZIAM "ESTE É O ESCOLHIDO" SEM LER NADA — 03/09/2026
 # ---------------------------------------------------------------------------
-# São os dois da rota do alto-falante (`Sons do jogo` / `Todo o som do PC`) e os
+# São os dois da rota do alto-falante (`Sons do jogo` / `Só no controle`) e os
 # dois do modo do microfone (`Virtual` / `Nativo`). Até hoje o aceso era a
 # classe `on` que ESTE arquivo escreveu, uma vez, e valia para sempre. Medido na
-# mesa dela em 03/09/2026: o card 2 mostrava `Todo o som do PC` aceso com
+# mesa dela em 03/09/2026: o card 2 mostrava `Só no controle` aceso com
 # `speaker.rota = 2` no daemon, e o card 1 mostrava `Virtual` aceso sem uma
 # linha de `microfone` no `maquina.json`.
 #
@@ -2440,9 +2441,9 @@ def bloco(c, *, bat, carga=None, glifos_on, l2, r2, touch, sticks,
               {sufixo_do_canal(c)}
               <span class="selo-som" data-campo="alto-selo" data-hef-alvo="html">{NADA_A_DIZER}</span>
               <span class="ajuda" style="display:inline-block;vertical-align:-3px">?<span class="dica">
-                <b>Sons do jogo</b> manda só o áudio do jogo ao alto-falante do controle;
-                <b>Ouvir junto</b> traz o som do PC para cá <b>sem tirá-lo da televisão</b>;
-                <b>Todo o som do PC</b> manda tudo, inclusive notificação, e só para cá.
+                <b>Sons do jogo</b>: só o áudio do jogo, no alto-falante do controle.
+                <b>No controle e na TV</b>: o som do PC sai nos dois.
+                <b>Só no controle</b>: o som do PC sai aqui, e a TV cala.
               </span></span>
             </div>
             {onda(alto_v, lado="alto")}
@@ -2466,12 +2467,12 @@ def bloco(c, *, bat, carga=None, glifos_on, l2, r2, touch, sticks,
                  recusou uma vez. -->
             <div class="rota">
               <button class="{'on' if not rota_pc else ''}" data-gesto="rota" data-rota="jogo" data-campo="alto-rota" data-hef-alvo="classe" data-hef-quando="jogo">Sons do jogo</button>
-              <button data-gesto="rota" data-rota="junto" data-campo="alto-rota" data-hef-alvo="classe" data-hef-quando="junto" title="{DICA_OUVIR_JUNTO}">Ouvir junto</button>
-              <button class="{'on' if rota_pc else ''}" data-gesto="rota" data-rota="pc" data-campo="alto-rota" data-hef-alvo="classe" data-hef-quando="pc">Todo o som do PC</button>
+              <button data-gesto="rota" data-rota="junto" data-campo="alto-rota" data-hef-alvo="classe" data-hef-quando="junto" title="{DICA_OUVIR_JUNTO}">No controle e na TV</button>
+              <button class="{'on' if rota_pc else ''}" data-gesto="rota" data-rota="pc" data-campo="alto-rota" data-hef-alvo="classe" data-hef-quando="pc">Só no controle</button>
             </div>
             <!-- A RESSALVA DA ROTA — a peça da ONDA0-F (D-02), e o texto é do
                  motor (`audio_saida.MOTIVO_ROTA_SO_NO_BYTE`). Ela existe por um
-                 estado que ela VIU em 03/09: o card 2 com "Todo o som do PC"
+                 estado que ela VIU em 03/09: o card 2 com "Só no controle"
                  aceso e o som saindo na TV. Hoje os dois botões APAGAM nesse
                  desacordo (a decisão [09]), e apagar sozinho não explica —
                  esta linha é o que explica.
@@ -3107,6 +3108,11 @@ MIOLO = f'''
 # ordem PRODUZIU — o rótulo `Calibrar Sensores de Movimento`, que está lá.
 
 LEGENDA = f'''<div class="nota">
+  <h2>O que mudou em 11/09</h2>
+  <ul>
+    <li><b>Os três botões do alto-falante passaram a dizer DE ONDE O SOM SAI</b> — decisão sua, depois da sua pergunta: <i>"Tem diferença real entre todo o som do PC e Ouvir Juntos?"</i> Tem, e era a única coisa que os separava: um deixa a TV tocando, o outro a cala. Nenhum dos dois nomes dizia isso, e você leu um pelo outro. Agora a fileira é <b>Sons do jogo</b> · <b>No controle e na TV</b> · <b>Só no controle</b>. O que o botão faz não mudou: o byte do firmware e a saída padrão do sistema são os mesmos de ontem.</li>
+  </ul>
+
   <h2>O que mudou em 31/08</h2>
   <ul>
     <li class="foi"><b>O <code>Liberar</code> do microfone saiu desta tela — decisão sua, mantida depois que o motivo dela caiu.</b> Ele estava aqui e devolvia ao <b>botão físico do controle</b> o comando do mudo. Você olhou a tela e disse: <i>"esse botão liberar no microfone não existe."</i> A RETOMADA de 30/08 anotou isso como <i>"não existe em lugar nenhum"</i> e mandou tirá-lo — e essa generalização é <b>falsa</b>: o produto tem o botão (<code>app/widgets/controller_card.py:490</code>) e o daemon aceita <code>mic.set {{muted: null}}</code> (<code>daemon/ipc_server.py:32</code>), que é a devolução. O fato foi medido e levado a você em 31/08 e <b>você manteve a decisão</b>: ele fica fora da tela nova, mesmo existindo no produto. <b>O preço, dito inteiro:</b> quem clicar no <b>🎙</b> daqui <b>assume</b> o mudo, e o botão do controle para de valer; a volta não existe por esta tela — o botão do plástico volta a valer reiniciando o Hefesto — e é isso que a dica do 🎙 passou a dizer, no lugar de mandar clicar num botão ausente. Os três testes que mediam este botão viraram <b>lápide</b> em <code>tests/unit/test_regua_de_tela_a_aba_controles.py</code>; se ele voltar, eles voltam inteiros do <code>git log</code>.</li>
@@ -3226,7 +3232,7 @@ LEGENDA = f'''<div class="nota">
 # ou estado. Nome de classe ou de `data-*` não entra: a legenda fala com ela, e
 # ela lê o que está escrito na tela.
 TERMOS_DA_TELA = (
-    "Liberar", "Sons do jogo", "Todo o som do PC",
+    "Liberar", "Sons do jogo", "No controle e na TV", "Só no controle",
     "Calibrar sensores de movimento", "Mapa do Controle", "Dispositivos Conectados",
     "Sem toque", "Tocando", "LED do jogador", "Barra de luz", "Touchpad",
     "Microfone", "Alto-falante", "Gatilhos", "Giroscópio",
@@ -3765,6 +3771,31 @@ def _conferir(doc):
     exigir('data-campo="mic-modo"' not in corpo,
            "o `data-campo` voltou ao container dos modos do microfone: a "
            "pintura vai apagar os dois botões")
+
+    # 2b'. OS TRÊS BOTÕES DO SOM DIZEM DE ONDE O SOM SAI — decisão dela,
+    #      11/09/2026, depois da pergunta dela: *"Tem diferença real entre todo
+    #      o som do PC e Ouvir Juntos?"*  <!-- noqa-acento: citação literal dela -->
+    #
+    #      A DIFERENÇA É REAL e é UMA SÓ: o do meio deixa a televisão tocando,
+    #      o da direita a cala. Nenhum dos dois nomes antigos dizia isso — «Ouvir
+    #      junto» e «Todo o som do PC» falavam de QUANTO som, nunca de ONDE ele
+    #      sai —, e ela leu um pelo outro descrevendo o «Todo o som do PC» como
+    #      *"o sfx + todo o som que sai no outofalante do hmdmi"*,  <!-- noqa-acento: citação literal dela -->
+    #      que é o do meio.
+    #
+    #      A RÉGUA DIGITA A DECISÃO DELA E LÊ A TELA, que é a única forma de
+    #      uma decisão de PALAVRA morder: o rótulo sai do HTML acima, e a
+    #      correspondência `data-rota` → rótulo mora aqui. Trocar um nome no
+    #      desenho sem a palavra dela PARA o gerador.
+    #      MORDIDA: devolva `Todo o som do PC` ao botão `data-rota="pc"`.
+    for rota, palavra_dela in (("jogo", "Sons do jogo"),
+                               ("junto", "No controle e na TV"),
+                               ("pc", "Só no controle")):
+        vistos = re.findall(rf'data-rota="{rota}"[^>]*>([^<]*)</button>', corpo)
+        exigir(vistos == [palavra_dela] * len(MESA),
+               f"o botão `{rota}` da rota do som diz {sorted(set(vistos)) or '[]'} "
+               f"e a palavra dela de 11/09 é {palavra_dela!r} — os três nomes dizem "
+               f"DE ONDE O SOM SAI, que é o que os separa")
 
     # 2c. A BATERIA TEM ENDEREÇO, os DOIS. Sem eles o número e a barra ficam
     #     nos 100% / 64% que este gerador desenhou, com o controle dela em

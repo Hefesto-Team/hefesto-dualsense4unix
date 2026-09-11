@@ -1280,7 +1280,7 @@
      que 1180 (o `.janela` é `max-width:100%`): com quatro colunas em pixel fixo,
      TODO o encolhimento caía na única coluna flexível — a do som. Medido em
      31/08 num navegador de 1000px: ela ia a 78px e os três botões do Modo do
-     Mic, mais o "Todo o som do PC", pintavam 200px POR CIMA dos Sensores e dos
+     Mic, mais o "Só no controle", pintavam 200px POR CIMA dos Sensores e dos
      Gatilhos. É a tela que ela fotografou. Em proporção, as cinco encolhem
      juntas e nenhuma colapsa — que é como as outras nove abas se comportam.
      `minmax(0,…)` continua obrigatório: `Nfr` sozinho tem mínimo automático
@@ -2556,9 +2556,9 @@
               <span class="canal" data-campo="alto-canal-porque" data-hef-alvo="atributo" data-hef-atributo="title"><span data-campo="alto-canal" data-hef-alvo="html">· acordado</span></span>
               <span class="selo-som" data-campo="alto-selo" data-hef-alvo="html"><i class="nada"></i></span>
               <span class="ajuda" style="display:inline-block;vertical-align:-3px">?<span class="dica">
-                <b>Sons do jogo</b> manda só o áudio do jogo ao alto-falante do controle;
-                <b>Ouvir junto</b> traz o som do PC para cá <b>sem tirá-lo da televisão</b>;
-                <b>Todo o som do PC</b> manda tudo, inclusive notificação, e só para cá.
+                <b>Sons do jogo</b>: só o áudio do jogo, no alto-falante do controle.
+                <b>No controle e na TV</b>: o som do PC sai nos dois.
+                <b>Só no controle</b>: o som do PC sai aqui, e a TV cala.
               </span></span>
             </div>
             <span class="onda" data-campo="alto-onda-lida" data-hef-alvo="classe" data-hef-classe="sem-leitura" data-hef-quando="nao"><i data-campo="alto-onda-0" data-hef-alvo="altura" style="height:100%"></i><i data-campo="alto-onda-1" data-hef-alvo="altura" style="height:88%"></i><i data-campo="alto-onda-2" data-hef-alvo="altura" style="height:64%"></i><i data-campo="alto-onda-3" data-hef-alvo="altura" style="height:92%"></i><i data-campo="alto-onda-4" data-hef-alvo="altura" style="height:76%"></i><i data-campo="alto-onda-5" data-hef-alvo="altura" style="height:54%"></i><i data-campo="alto-onda-6" data-hef-alvo="altura" style="height:82%"></i><i data-campo="alto-onda-7" data-hef-alvo="altura" style="height:96%"></i><i data-campo="alto-onda-8" data-hef-alvo="altura" style="height:70%"></i><i data-campo="alto-onda-9" data-hef-alvo="altura" style="height:48%"></i><i data-campo="alto-onda-10" data-hef-alvo="altura" style="height:86%"></i><i data-campo="alto-onda-11" data-hef-alvo="altura" style="height:60%"></i><i data-campo="alto-onda-12" data-hef-alvo="altura" style="height:74%"></i><i data-campo="alto-onda-13" data-hef-alvo="altura" style="height:90%"></i></span>
@@ -2582,12 +2582,12 @@
                  recusou uma vez. -->
             <div class="rota">
               <button class="on" data-gesto="rota" data-rota="jogo" data-campo="alto-rota" data-hef-alvo="classe" data-hef-quando="jogo">Sons do jogo</button>
-              <button data-gesto="rota" data-rota="junto" data-campo="alto-rota" data-hef-alvo="classe" data-hef-quando="junto" title="O som do computador passa a sair TAMBÉM no alto-falante deste controle, sem sair da televisão. É o que serve a quem joga acompanhado: cada controle ouve o jogo no próprio plástico, e a sala continua ouvindo o de sempre.">Ouvir junto</button>
-              <button class="" data-gesto="rota" data-rota="pc" data-campo="alto-rota" data-hef-alvo="classe" data-hef-quando="pc">Todo o som do PC</button>
+              <button data-gesto="rota" data-rota="junto" data-campo="alto-rota" data-hef-alvo="classe" data-hef-quando="junto" title="O som do PC sai no alto-falante deste controle e continua saindo na TV. Serve para jogar acompanhado: cada um ouve no próprio controle.">No controle e na TV</button>
+              <button class="" data-gesto="rota" data-rota="pc" data-campo="alto-rota" data-hef-alvo="classe" data-hef-quando="pc">Só no controle</button>
             </div>
             <!-- A RESSALVA DA ROTA — a peça da ONDA0-F (D-02), e o texto é do
                  motor (`audio_saida.MOTIVO_ROTA_SO_NO_BYTE`). Ela existe por um
-                 estado que ela VIU em 03/09: o card 2 com "Todo o som do PC"
+                 estado que ela VIU em 03/09: o card 2 com "Só no controle"
                  aceso e o som saindo na TV. Hoje os dois botões APAGAM nesse
                  desacordo (a decisão [09]), e apagar sozinho não explica —
                  esta linha é o que explica.
@@ -3015,9 +3015,9 @@
               <span class="canal" data-campo="alto-canal-porque" data-hef-alvo="atributo" data-hef-atributo="title"><span data-campo="alto-canal" data-hef-alvo="html"><i class="nada"></i></span></span>
               <span class="selo-som" data-campo="alto-selo" data-hef-alvo="html"><i class="nada"></i></span>
               <span class="ajuda" style="display:inline-block;vertical-align:-3px">?<span class="dica">
-                <b>Sons do jogo</b> manda só o áudio do jogo ao alto-falante do controle;
-                <b>Ouvir junto</b> traz o som do PC para cá <b>sem tirá-lo da televisão</b>;
-                <b>Todo o som do PC</b> manda tudo, inclusive notificação, e só para cá.
+                <b>Sons do jogo</b>: só o áudio do jogo, no alto-falante do controle.
+                <b>No controle e na TV</b>: o som do PC sai nos dois.
+                <b>Só no controle</b>: o som do PC sai aqui, e a TV cala.
               </span></span>
             </div>
             <span class="onda" data-campo="alto-onda-lida" data-hef-alvo="classe" data-hef-classe="sem-leitura" data-hef-quando="nao"><i data-campo="alto-onda-0" data-hef-alvo="altura" style="height:70%"></i><i data-campo="alto-onda-1" data-hef-alvo="altura" style="height:52%"></i><i data-campo="alto-onda-2" data-hef-alvo="altura" style="height:66%"></i><i data-campo="alto-onda-3" data-hef-alvo="altura" style="height:44%"></i><i data-campo="alto-onda-4" data-hef-alvo="altura" style="height:72%"></i><i data-campo="alto-onda-5" data-hef-alvo="altura" style="height:58%"></i><i data-campo="alto-onda-6" data-hef-alvo="altura" style="height:48%"></i><i data-campo="alto-onda-7" data-hef-alvo="altura" style="height:64%"></i><i data-campo="alto-onda-8" data-hef-alvo="altura" style="height:54%"></i><i data-campo="alto-onda-9" data-hef-alvo="altura" style="height:70%"></i><i data-campo="alto-onda-10" data-hef-alvo="altura" style="height:46%"></i><i data-campo="alto-onda-11" data-hef-alvo="altura" style="height:60%"></i><i data-campo="alto-onda-12" data-hef-alvo="altura" style="height:50%"></i><i data-campo="alto-onda-13" data-hef-alvo="altura" style="height:68%"></i></span>
@@ -3041,12 +3041,12 @@
                  recusou uma vez. -->
             <div class="rota">
               <button class="" data-gesto="rota" data-rota="jogo" data-campo="alto-rota" data-hef-alvo="classe" data-hef-quando="jogo">Sons do jogo</button>
-              <button data-gesto="rota" data-rota="junto" data-campo="alto-rota" data-hef-alvo="classe" data-hef-quando="junto" title="O som do computador passa a sair TAMBÉM no alto-falante deste controle, sem sair da televisão. É o que serve a quem joga acompanhado: cada controle ouve o jogo no próprio plástico, e a sala continua ouvindo o de sempre.">Ouvir junto</button>
-              <button class="on" data-gesto="rota" data-rota="pc" data-campo="alto-rota" data-hef-alvo="classe" data-hef-quando="pc">Todo o som do PC</button>
+              <button data-gesto="rota" data-rota="junto" data-campo="alto-rota" data-hef-alvo="classe" data-hef-quando="junto" title="O som do PC sai no alto-falante deste controle e continua saindo na TV. Serve para jogar acompanhado: cada um ouve no próprio controle.">No controle e na TV</button>
+              <button class="on" data-gesto="rota" data-rota="pc" data-campo="alto-rota" data-hef-alvo="classe" data-hef-quando="pc">Só no controle</button>
             </div>
             <!-- A RESSALVA DA ROTA — a peça da ONDA0-F (D-02), e o texto é do
                  motor (`audio_saida.MOTIVO_ROTA_SO_NO_BYTE`). Ela existe por um
-                 estado que ela VIU em 03/09: o card 2 com "Todo o som do PC"
+                 estado que ela VIU em 03/09: o card 2 com "Só no controle"
                  aceso e o som saindo na TV. Hoje os dois botões APAGAM nesse
                  desacordo (a decisão [09]), e apagar sozinho não explica —
                  esta linha é o que explica.
@@ -3474,9 +3474,9 @@
               <span class="canal" data-campo="alto-canal-porque" data-hef-alvo="atributo" data-hef-atributo="title"><span data-campo="alto-canal" data-hef-alvo="html"><i class="nada"></i></span></span>
               <span class="selo-som" data-campo="alto-selo" data-hef-alvo="html"><i class="nada"></i></span>
               <span class="ajuda" style="display:inline-block;vertical-align:-3px">?<span class="dica">
-                <b>Sons do jogo</b> manda só o áudio do jogo ao alto-falante do controle;
-                <b>Ouvir junto</b> traz o som do PC para cá <b>sem tirá-lo da televisão</b>;
-                <b>Todo o som do PC</b> manda tudo, inclusive notificação, e só para cá.
+                <b>Sons do jogo</b>: só o áudio do jogo, no alto-falante do controle.
+                <b>No controle e na TV</b>: o som do PC sai nos dois.
+                <b>Só no controle</b>: o som do PC sai aqui, e a TV cala.
               </span></span>
             </div>
             <span class="onda" data-campo="alto-onda-lida" data-hef-alvo="classe" data-hef-classe="sem-leitura" data-hef-quando="nao"><i data-campo="alto-onda-0" data-hef-alvo="altura" style="height:55%"></i><i data-campo="alto-onda-1" data-hef-alvo="altura" style="height:40%"></i><i data-campo="alto-onda-2" data-hef-alvo="altura" style="height:62%"></i><i data-campo="alto-onda-3" data-hef-alvo="altura" style="height:48%"></i><i data-campo="alto-onda-4" data-hef-alvo="altura" style="height:58%"></i><i data-campo="alto-onda-5" data-hef-alvo="altura" style="height:36%"></i><i data-campo="alto-onda-6" data-hef-alvo="altura" style="height:50%"></i><i data-campo="alto-onda-7" data-hef-alvo="altura" style="height:44%"></i><i data-campo="alto-onda-8" data-hef-alvo="altura" style="height:60%"></i><i data-campo="alto-onda-9" data-hef-alvo="altura" style="height:38%"></i><i data-campo="alto-onda-10" data-hef-alvo="altura" style="height:52%"></i><i data-campo="alto-onda-11" data-hef-alvo="altura" style="height:46%"></i><i data-campo="alto-onda-12" data-hef-alvo="altura" style="height:42%"></i><i data-campo="alto-onda-13" data-hef-alvo="altura" style="height:56%"></i></span>
@@ -3500,12 +3500,12 @@
                  recusou uma vez. -->
             <div class="rota">
               <button class="" data-gesto="rota" data-rota="jogo" data-campo="alto-rota" data-hef-alvo="classe" data-hef-quando="jogo">Sons do jogo</button>
-              <button data-gesto="rota" data-rota="junto" data-campo="alto-rota" data-hef-alvo="classe" data-hef-quando="junto" title="O som do computador passa a sair TAMBÉM no alto-falante deste controle, sem sair da televisão. É o que serve a quem joga acompanhado: cada controle ouve o jogo no próprio plástico, e a sala continua ouvindo o de sempre.">Ouvir junto</button>
-              <button class="" data-gesto="rota" data-rota="pc" data-campo="alto-rota" data-hef-alvo="classe" data-hef-quando="pc">Todo o som do PC</button>
+              <button data-gesto="rota" data-rota="junto" data-campo="alto-rota" data-hef-alvo="classe" data-hef-quando="junto" title="O som do PC sai no alto-falante deste controle e continua saindo na TV. Serve para jogar acompanhado: cada um ouve no próprio controle.">No controle e na TV</button>
+              <button class="" data-gesto="rota" data-rota="pc" data-campo="alto-rota" data-hef-alvo="classe" data-hef-quando="pc">Só no controle</button>
             </div>
             <!-- A RESSALVA DA ROTA — a peça da ONDA0-F (D-02), e o texto é do
                  motor (`audio_saida.MOTIVO_ROTA_SO_NO_BYTE`). Ela existe por um
-                 estado que ela VIU em 03/09: o card 2 com "Todo o som do PC"
+                 estado que ela VIU em 03/09: o card 2 com "Só no controle"
                  aceso e o som saindo na TV. Hoje os dois botões APAGAM nesse
                  desacordo (a decisão [09]), e apagar sozinho não explica —
                  esta linha é o que explica.
@@ -3933,9 +3933,9 @@
               <span class="canal" data-campo="alto-canal-porque" data-hef-alvo="atributo" data-hef-atributo="title"><span data-campo="alto-canal" data-hef-alvo="html">· acordado</span></span>
               <span class="selo-som" data-campo="alto-selo" data-hef-alvo="html"><i class="nada"></i></span>
               <span class="ajuda" style="display:inline-block;vertical-align:-3px">?<span class="dica">
-                <b>Sons do jogo</b> manda só o áudio do jogo ao alto-falante do controle;
-                <b>Ouvir junto</b> traz o som do PC para cá <b>sem tirá-lo da televisão</b>;
-                <b>Todo o som do PC</b> manda tudo, inclusive notificação, e só para cá.
+                <b>Sons do jogo</b>: só o áudio do jogo, no alto-falante do controle.
+                <b>No controle e na TV</b>: o som do PC sai nos dois.
+                <b>Só no controle</b>: o som do PC sai aqui, e a TV cala.
               </span></span>
             </div>
             <span class="onda" data-campo="alto-onda-lida" data-hef-alvo="classe" data-hef-classe="sem-leitura" data-hef-quando="nao"><i data-campo="alto-onda-0" data-hef-alvo="altura" style="height:80%"></i><i data-campo="alto-onda-1" data-hef-alvo="altura" style="height:66%"></i><i data-campo="alto-onda-2" data-hef-alvo="altura" style="height:74%"></i><i data-campo="alto-onda-3" data-hef-alvo="altura" style="height:58%"></i><i data-campo="alto-onda-4" data-hef-alvo="altura" style="height:84%"></i><i data-campo="alto-onda-5" data-hef-alvo="altura" style="height:62%"></i><i data-campo="alto-onda-6" data-hef-alvo="altura" style="height:70%"></i><i data-campo="alto-onda-7" data-hef-alvo="altura" style="height:76%"></i><i data-campo="alto-onda-8" data-hef-alvo="altura" style="height:54%"></i><i data-campo="alto-onda-9" data-hef-alvo="altura" style="height:68%"></i><i data-campo="alto-onda-10" data-hef-alvo="altura" style="height:60%"></i><i data-campo="alto-onda-11" data-hef-alvo="altura" style="height:78%"></i><i data-campo="alto-onda-12" data-hef-alvo="altura" style="height:64%"></i><i data-campo="alto-onda-13" data-hef-alvo="altura" style="height:72%"></i></span>
@@ -3959,12 +3959,12 @@
                  recusou uma vez. -->
             <div class="rota">
               <button class="" data-gesto="rota" data-rota="jogo" data-campo="alto-rota" data-hef-alvo="classe" data-hef-quando="jogo">Sons do jogo</button>
-              <button data-gesto="rota" data-rota="junto" data-campo="alto-rota" data-hef-alvo="classe" data-hef-quando="junto" title="O som do computador passa a sair TAMBÉM no alto-falante deste controle, sem sair da televisão. É o que serve a quem joga acompanhado: cada controle ouve o jogo no próprio plástico, e a sala continua ouvindo o de sempre.">Ouvir junto</button>
-              <button class="" data-gesto="rota" data-rota="pc" data-campo="alto-rota" data-hef-alvo="classe" data-hef-quando="pc">Todo o som do PC</button>
+              <button data-gesto="rota" data-rota="junto" data-campo="alto-rota" data-hef-alvo="classe" data-hef-quando="junto" title="O som do PC sai no alto-falante deste controle e continua saindo na TV. Serve para jogar acompanhado: cada um ouve no próprio controle.">No controle e na TV</button>
+              <button class="" data-gesto="rota" data-rota="pc" data-campo="alto-rota" data-hef-alvo="classe" data-hef-quando="pc">Só no controle</button>
             </div>
             <!-- A RESSALVA DA ROTA — a peça da ONDA0-F (D-02), e o texto é do
                  motor (`audio_saida.MOTIVO_ROTA_SO_NO_BYTE`). Ela existe por um
-                 estado que ela VIU em 03/09: o card 2 com "Todo o som do PC"
+                 estado que ela VIU em 03/09: o card 2 com "Só no controle"
                  aceso e o som saindo na TV. Hoje os dois botões APAGAM nesse
                  desacordo (a decisão [09]), e apagar sozinho não explica —
                  esta linha é o que explica.
@@ -4114,6 +4114,11 @@
 
 <!-- ================= LEGENDA DO MOCKUP ================= -->
 <div class="nota">
+  <h2>O que mudou em 11/09</h2>
+  <ul>
+    <li><b>Os três botões do alto-falante passaram a dizer DE ONDE O SOM SAI</b> — decisão sua, depois da sua pergunta: <i>"Tem diferença real entre todo o som do PC e Ouvir Juntos?"</i> Tem, e era a única coisa que os separava: um deixa a TV tocando, o outro a cala. Nenhum dos dois nomes dizia isso, e você leu um pelo outro. Agora a fileira é <b>Sons do jogo</b> · <b>No controle e na TV</b> · <b>Só no controle</b>. O que o botão faz não mudou: o byte do firmware e a saída padrão do sistema são os mesmos de ontem.</li>
+  </ul>
+
   <h2>O que mudou em 31/08</h2>
   <ul>
     <li class="foi"><b>O <code>Liberar</code> do microfone saiu desta tela — decisão sua, mantida depois que o motivo dela caiu.</b> Ele estava aqui e devolvia ao <b>botão físico do controle</b> o comando do mudo. Você olhou a tela e disse: <i>"esse botão liberar no microfone não existe."</i> A RETOMADA de 30/08 anotou isso como <i>"não existe em lugar nenhum"</i> e mandou tirá-lo — e essa generalização é <b>falsa</b>: o produto tem o botão (<code>app/widgets/controller_card.py:490</code>) e o daemon aceita <code>mic.set {muted: null}</code> (<code>daemon/ipc_server.py:32</code>), que é a devolução. O fato foi medido e levado a você em 31/08 e <b>você manteve a decisão</b>: ele fica fora da tela nova, mesmo existindo no produto. <b>O preço, dito inteiro:</b> quem clicar no <b>🎙</b> daqui <b>assume</b> o mudo, e o botão do controle para de valer; a volta não existe por esta tela — o botão do plástico volta a valer reiniciando o Hefesto — e é isso que a dica do 🎙 passou a dizer, no lugar de mandar clicar num botão ausente. Os três testes que mediam este botão viraram <b>lápide</b> em <code>tests/unit/test_regua_de_tela_a_aba_controles.py</code>; se ele voltar, eles voltam inteiros do <code>git log</code>.</li>

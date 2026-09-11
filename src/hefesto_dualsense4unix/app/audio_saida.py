@@ -1118,12 +1118,17 @@ BYTE_SONS_DO_JOGO: Final[int] = SAIDA_L_FONE_R_ALTO_FALANTE
 BYTE_TODO_O_SOM_DO_PC: Final[int] = SAIDA_SO_NO_ALTO_FALANTE
 
 #: A frase do cartão quando as duas camadas DISCORDAM: o firmware está roteado
-#: para "Todo o som do PC" e a saída padrão do sistema não é este controle.
+#: para "Só no controle" e a saída padrão do sistema não é este controle.
 #: Foi o estado medido em 03/09 — o botão aceso com o som saindo na TV.
+#:
+#: **O NOME DO BOTÃO É CITADO AQUI, e por isso esta frase MUDA QUANDO ELE MUDA.**
+#: Em 11/09/2026 ela renomeou a fileira para dizer de onde o som sai
+#: («Ouvir junto» → «No controle e na TV», «Todo o som do PC» → «Só no
+#: controle»), e esta linha mandava clicar num botão que a tela não tem mais.
 MOTIVO_ROTA_SO_NO_BYTE: Final[str] = (
     "o alto-falante deste controle está roteado para receber todo o som, mas "
     "a saída padrão do sistema não é ele — o som continua saindo onde estava. "
-    "Clique em 'Todo o som do PC' para mandá-lo para cá."
+    "Clique em 'Só no controle' para mandá-lo para cá."
 )
 
 
