@@ -1962,6 +1962,41 @@
   .mudo-i[data-som="ATIVO"]{border-color:var(--green);color:var(--green)}
   .mudo-i[data-som="MUDO"]{border-color:var(--orange);color:var(--orange);
     background:rgba(255,184,108,.1)}
+  /* ---------- O 🎙 EM TRÊS ESTADOS — pedido dela, 10/09/2026 ----------
+     *"ele aceso (vai indicar que agora tá gravando audio), ele captando audio
+     vai ficar no estado de piscando (guia visual pro leigo que pegar o
+     controle de primeira)"*.
+
+     A INVERSÃO É O PEDIDO: o botão falava a língua de quem programa (`mudo-i`,
+     "calar") e passa a falar a de quem pega o controle pela primeira vez —
+     **aceso = estou sendo ouvido**.
+
+     `.mudo-i.on` JÁ ESTEVE AQUI E CAIU EM 06/09, com razão: pintava `--red` (a
+     cor da FALHA) e, no segundo card, a classe vinha do GERADOR e não do
+     aparelho. Estas duas regras são o oposto nos dois pontos — a palavra vem
+     de `mesa_viva.estado_do_botao_do_mic`, o valor vem do daemon a cada tique,
+     e a cor é `--green`, a mesma que o ♪ usa para "ligado". **Se o escritor
+     vivo sumir, estas regras saem junto** — é a regra que o `.solta` deixou:
+     *"CSS de elemento que ninguém mais escreve é promessa esperando alguém
+     tropeçar nela"*.
+
+     O PISCANDO É O MESMO VERDE, não uma cor nova: o que muda é o FUNDO
+     pulsando, porque piscar a borda de um botão de 22px some no olho — medido
+     no desenho. `prefers-reduced-motion` o deixa aceso e firme, que continua
+     dizendo a verdade (está no ar), só sem o guia visual do movimento. */
+  .mudo-i[data-mic-luz="gravando"],
+  .mudo-i[data-mic-luz="captando"]{
+    border-color:var(--green);color:var(--green)}
+  .mudo-i[data-mic-luz="captando"]{
+    animation:mic-captando 1.2s ease-in-out infinite}
+  @keyframes mic-captando{
+    0%,100%{background:var(--panel)}
+    50%{background:rgba(80,250,123,.22)}
+  }
+  @media (prefers-reduced-motion: reduce){
+    .mudo-i[data-mic-luz="captando"]{
+      animation:none;background:rgba(80,250,123,.14)}
+  }
 
 </style>
 <style data-campo="plastico-css" data-hef-alvo="html">
@@ -2485,7 +2520,7 @@
             <div class="vol" data-campo="mic-porque" data-hef-alvo="atributo" data-hef-atributo="data-porque">
               <span class="trilho"><span class="cheio" style="width:80%"></span><input class="puxa-vol" type="range" min="0" max="100" step="1" value="80" data-gesto="volume" data-volume="microfone" aria-label="Volume do microfone deste controle" title="Arraste para escolher quanto do microfone deste controle chega ao PC — de 0 a 100. É o ganho da FONTE no sistema, e não o mudo do plástico: não apaga a luz vermelha e não tira o botão do controle. Grava na hora."></span>
               <span class="n">80</span>
-              <button class="mudo-i" data-gesto="mudo" data-mudo="microfone" title="Calar no firmware do controle — apaga a luz vermelha do plástico. A partir daqui quem manda no mudo é o Hefesto, e o botão do controle para de valer. Esta tela não devolve o comando: quem devolve é hefesto-dualsense4unix mic release, ou reiniciar o Hefesto.">🎙</button>
+              <button class="mudo-i" data-gesto="mudo" data-mudo="microfone" data-campo="mic-botao-estado" data-hef-alvo="atributo" data-hef-atributo="data-mic-luz" title="Calar no firmware do controle — apaga a luz vermelha do plástico. A partir daqui quem manda no mudo é o Hefesto, e o botão do controle para de valer. Esta tela não devolve o comando: quem devolve é hefesto-dualsense4unix mic release, ou reiniciar o Hefesto.">🎙</button>
               <span class="ajuda porque">?<span class="dica" data-campo="mic-porque" data-hef-alvo="html"><i class="nada"></i></span></span>
             </div>
             <!-- OS DOIS MODOS DESCERAM PARA CÁ — decisão dela, 31/08/2026:
@@ -2522,7 +2557,8 @@
               <span class="selo-som" data-campo="alto-selo" data-hef-alvo="html"><i class="nada"></i></span>
               <span class="ajuda" style="display:inline-block;vertical-align:-3px">?<span class="dica">
                 <b>Sons do jogo</b> manda só o áudio do jogo ao alto-falante do controle;
-                <b>Todo o som do PC</b> manda tudo, inclusive notificação.
+                <b>Ouvir junto</b> traz o som do PC para cá <b>sem tirá-lo da televisão</b>;
+                <b>Todo o som do PC</b> manda tudo, inclusive notificação, e só para cá.
               </span></span>
             </div>
             <span class="onda" data-campo="alto-onda-lida" data-hef-alvo="classe" data-hef-classe="sem-leitura" data-hef-quando="nao"><i data-campo="alto-onda-0" data-hef-alvo="altura" style="height:100%"></i><i data-campo="alto-onda-1" data-hef-alvo="altura" style="height:88%"></i><i data-campo="alto-onda-2" data-hef-alvo="altura" style="height:64%"></i><i data-campo="alto-onda-3" data-hef-alvo="altura" style="height:92%"></i><i data-campo="alto-onda-4" data-hef-alvo="altura" style="height:76%"></i><i data-campo="alto-onda-5" data-hef-alvo="altura" style="height:54%"></i><i data-campo="alto-onda-6" data-hef-alvo="altura" style="height:82%"></i><i data-campo="alto-onda-7" data-hef-alvo="altura" style="height:96%"></i><i data-campo="alto-onda-8" data-hef-alvo="altura" style="height:70%"></i><i data-campo="alto-onda-9" data-hef-alvo="altura" style="height:48%"></i><i data-campo="alto-onda-10" data-hef-alvo="altura" style="height:86%"></i><i data-campo="alto-onda-11" data-hef-alvo="altura" style="height:60%"></i><i data-campo="alto-onda-12" data-hef-alvo="altura" style="height:74%"></i><i data-campo="alto-onda-13" data-hef-alvo="altura" style="height:90%"></i></span>
@@ -2533,8 +2569,20 @@
               <button class="mudo-i" data-gesto="mudo" data-mudo="alto-falante" data-campo="alto-mudo" data-hef-alvo="atributo" data-hef-atributo="data-som" data-som="ATIVO" title="Manda zero ao alto-falante do controle, sem perder o volume guardado. A partir da primeira escrita quem guarda o volume deste alto-falante é o Hefesto — o controle não o devolve. Quem larga é hefesto-dualsense4unix speaker release: ele devolve o controle, não o valor — o alto-falante fica com o último volume que o Hefesto mandou.">♪</button>
               <span class="ajuda porque">?<span class="dica" data-campo="alto-porque" data-hef-alvo="html"><i class="nada"></i></span></span>
             </div>
+            <!-- TRÊS BOTÕES, UMA PERGUNTA — 10/09/2026 (a A3). A fileira
+                 responde *"o que este controle ouve?"*, e o terceiro estado é
+                 a `fonte` que o produto já obedecia sem ninguém poder
+                 escolher. O do meio é o único que NÃO tira o som da televisão,
+                 e é o que faz sentido numa mesa de quatro: cada um ouve junto,
+                 no seu próprio plástico.
+                 A GRAMÁTICA É A MESMA DOS OUTROS DOIS — mesmo `data-campo`,
+                 cada botão com o seu `data-hef-quando` —, e é por isso que o
+                 terceiro não custa uma linha de folha nem uma altura a mais:
+                 um par novo abaixo seria a segunda gramática que o gerador já
+                 recusou uma vez. -->
             <div class="rota">
               <button class="on" data-gesto="rota" data-rota="jogo" data-campo="alto-rota" data-hef-alvo="classe" data-hef-quando="jogo">Sons do jogo</button>
+              <button data-gesto="rota" data-rota="junto" data-campo="alto-rota" data-hef-alvo="classe" data-hef-quando="junto" title="O som do computador passa a sair TAMBÉM no alto-falante deste controle, sem sair da televisão. É o que serve a quem joga acompanhado: cada controle ouve o jogo no próprio plástico, e a sala continua ouvindo o de sempre.">Ouvir junto</button>
               <button class="" data-gesto="rota" data-rota="pc" data-campo="alto-rota" data-hef-alvo="classe" data-hef-quando="pc">Todo o som do PC</button>
             </div>
             <!-- A RESSALVA DA ROTA — a peça da ONDA0-F (D-02), e o texto é do
@@ -2931,7 +2979,7 @@
             <div class="vol" data-campo="mic-porque" data-hef-alvo="atributo" data-hef-atributo="data-porque">
               <span class="trilho"><span class="cheio" style="width:0%"></span><input class="puxa-vol" type="range" min="0" max="100" step="1" value="0" data-gesto="volume" data-volume="microfone" aria-label="Volume do microfone deste controle" title="Arraste para escolher quanto do microfone deste controle chega ao PC — de 0 a 100. É o ganho da FONTE no sistema, e não o mudo do plástico: não apaga a luz vermelha e não tira o botão do controle. Grava na hora."></span>
               <span class="n">0</span>
-              <button class="mudo-i" data-gesto="mudo" data-mudo="microfone" title="Calar no firmware do controle — apaga a luz vermelha do plástico. A partir daqui quem manda no mudo é o Hefesto, e o botão do controle para de valer. Esta tela não devolve o comando: quem devolve é hefesto-dualsense4unix mic release, ou reiniciar o Hefesto.">🎙</button>
+              <button class="mudo-i" data-gesto="mudo" data-mudo="microfone" data-campo="mic-botao-estado" data-hef-alvo="atributo" data-hef-atributo="data-mic-luz" title="Calar no firmware do controle — apaga a luz vermelha do plástico. A partir daqui quem manda no mudo é o Hefesto, e o botão do controle para de valer. Esta tela não devolve o comando: quem devolve é hefesto-dualsense4unix mic release, ou reiniciar o Hefesto.">🎙</button>
               <span class="ajuda porque">?<span class="dica" data-campo="mic-porque" data-hef-alvo="html"><i class="nada"></i></span></span>
             </div>
             <!-- OS DOIS MODOS DESCERAM PARA CÁ — decisão dela, 31/08/2026:
@@ -2968,7 +3016,8 @@
               <span class="selo-som" data-campo="alto-selo" data-hef-alvo="html"><i class="nada"></i></span>
               <span class="ajuda" style="display:inline-block;vertical-align:-3px">?<span class="dica">
                 <b>Sons do jogo</b> manda só o áudio do jogo ao alto-falante do controle;
-                <b>Todo o som do PC</b> manda tudo, inclusive notificação.
+                <b>Ouvir junto</b> traz o som do PC para cá <b>sem tirá-lo da televisão</b>;
+                <b>Todo o som do PC</b> manda tudo, inclusive notificação, e só para cá.
               </span></span>
             </div>
             <span class="onda" data-campo="alto-onda-lida" data-hef-alvo="classe" data-hef-classe="sem-leitura" data-hef-quando="nao"><i data-campo="alto-onda-0" data-hef-alvo="altura" style="height:70%"></i><i data-campo="alto-onda-1" data-hef-alvo="altura" style="height:52%"></i><i data-campo="alto-onda-2" data-hef-alvo="altura" style="height:66%"></i><i data-campo="alto-onda-3" data-hef-alvo="altura" style="height:44%"></i><i data-campo="alto-onda-4" data-hef-alvo="altura" style="height:72%"></i><i data-campo="alto-onda-5" data-hef-alvo="altura" style="height:58%"></i><i data-campo="alto-onda-6" data-hef-alvo="altura" style="height:48%"></i><i data-campo="alto-onda-7" data-hef-alvo="altura" style="height:64%"></i><i data-campo="alto-onda-8" data-hef-alvo="altura" style="height:54%"></i><i data-campo="alto-onda-9" data-hef-alvo="altura" style="height:70%"></i><i data-campo="alto-onda-10" data-hef-alvo="altura" style="height:46%"></i><i data-campo="alto-onda-11" data-hef-alvo="altura" style="height:60%"></i><i data-campo="alto-onda-12" data-hef-alvo="altura" style="height:50%"></i><i data-campo="alto-onda-13" data-hef-alvo="altura" style="height:68%"></i></span>
@@ -2979,8 +3028,20 @@
               <button class="mudo-i" data-gesto="mudo" data-mudo="alto-falante" data-campo="alto-mudo" data-hef-alvo="atributo" data-hef-atributo="data-som" data-som="ATIVO" title="Manda zero ao alto-falante do controle, sem perder o volume guardado. A partir da primeira escrita quem guarda o volume deste alto-falante é o Hefesto — o controle não o devolve. Quem larga é hefesto-dualsense4unix speaker release: ele devolve o controle, não o valor — o alto-falante fica com o último volume que o Hefesto mandou.">♪</button>
               <span class="ajuda porque">?<span class="dica" data-campo="alto-porque" data-hef-alvo="html"><i class="nada"></i></span></span>
             </div>
+            <!-- TRÊS BOTÕES, UMA PERGUNTA — 10/09/2026 (a A3). A fileira
+                 responde *"o que este controle ouve?"*, e o terceiro estado é
+                 a `fonte` que o produto já obedecia sem ninguém poder
+                 escolher. O do meio é o único que NÃO tira o som da televisão,
+                 e é o que faz sentido numa mesa de quatro: cada um ouve junto,
+                 no seu próprio plástico.
+                 A GRAMÁTICA É A MESMA DOS OUTROS DOIS — mesmo `data-campo`,
+                 cada botão com o seu `data-hef-quando` —, e é por isso que o
+                 terceiro não custa uma linha de folha nem uma altura a mais:
+                 um par novo abaixo seria a segunda gramática que o gerador já
+                 recusou uma vez. -->
             <div class="rota">
               <button class="" data-gesto="rota" data-rota="jogo" data-campo="alto-rota" data-hef-alvo="classe" data-hef-quando="jogo">Sons do jogo</button>
+              <button data-gesto="rota" data-rota="junto" data-campo="alto-rota" data-hef-alvo="classe" data-hef-quando="junto" title="O som do computador passa a sair TAMBÉM no alto-falante deste controle, sem sair da televisão. É o que serve a quem joga acompanhado: cada controle ouve o jogo no próprio plástico, e a sala continua ouvindo o de sempre.">Ouvir junto</button>
               <button class="on" data-gesto="rota" data-rota="pc" data-campo="alto-rota" data-hef-alvo="classe" data-hef-quando="pc">Todo o som do PC</button>
             </div>
             <!-- A RESSALVA DA ROTA — a peça da ONDA0-F (D-02), e o texto é do
@@ -3377,7 +3438,7 @@
             <div class="vol" data-campo="mic-porque" data-hef-alvo="atributo" data-hef-atributo="data-porque">
               <span class="trilho"><span class="cheio" style="width:60%"></span><input class="puxa-vol" type="range" min="0" max="100" step="1" value="60" data-gesto="volume" data-volume="microfone" aria-label="Volume do microfone deste controle" title="Arraste para escolher quanto do microfone deste controle chega ao PC — de 0 a 100. É o ganho da FONTE no sistema, e não o mudo do plástico: não apaga a luz vermelha e não tira o botão do controle. Grava na hora."></span>
               <span class="n">60</span>
-              <button class="mudo-i" data-gesto="mudo" data-mudo="microfone" title="Calar no firmware do controle — apaga a luz vermelha do plástico. A partir daqui quem manda no mudo é o Hefesto, e o botão do controle para de valer. Esta tela não devolve o comando: quem devolve é hefesto-dualsense4unix mic release, ou reiniciar o Hefesto.">🎙</button>
+              <button class="mudo-i" data-gesto="mudo" data-mudo="microfone" data-campo="mic-botao-estado" data-hef-alvo="atributo" data-hef-atributo="data-mic-luz" title="Calar no firmware do controle — apaga a luz vermelha do plástico. A partir daqui quem manda no mudo é o Hefesto, e o botão do controle para de valer. Esta tela não devolve o comando: quem devolve é hefesto-dualsense4unix mic release, ou reiniciar o Hefesto.">🎙</button>
               <span class="ajuda porque">?<span class="dica" data-campo="mic-porque" data-hef-alvo="html"><i class="nada"></i></span></span>
             </div>
             <!-- OS DOIS MODOS DESCERAM PARA CÁ — decisão dela, 31/08/2026:
@@ -3414,7 +3475,8 @@
               <span class="selo-som" data-campo="alto-selo" data-hef-alvo="html"><i class="nada"></i></span>
               <span class="ajuda" style="display:inline-block;vertical-align:-3px">?<span class="dica">
                 <b>Sons do jogo</b> manda só o áudio do jogo ao alto-falante do controle;
-                <b>Todo o som do PC</b> manda tudo, inclusive notificação.
+                <b>Ouvir junto</b> traz o som do PC para cá <b>sem tirá-lo da televisão</b>;
+                <b>Todo o som do PC</b> manda tudo, inclusive notificação, e só para cá.
               </span></span>
             </div>
             <span class="onda" data-campo="alto-onda-lida" data-hef-alvo="classe" data-hef-classe="sem-leitura" data-hef-quando="nao"><i data-campo="alto-onda-0" data-hef-alvo="altura" style="height:55%"></i><i data-campo="alto-onda-1" data-hef-alvo="altura" style="height:40%"></i><i data-campo="alto-onda-2" data-hef-alvo="altura" style="height:62%"></i><i data-campo="alto-onda-3" data-hef-alvo="altura" style="height:48%"></i><i data-campo="alto-onda-4" data-hef-alvo="altura" style="height:58%"></i><i data-campo="alto-onda-5" data-hef-alvo="altura" style="height:36%"></i><i data-campo="alto-onda-6" data-hef-alvo="altura" style="height:50%"></i><i data-campo="alto-onda-7" data-hef-alvo="altura" style="height:44%"></i><i data-campo="alto-onda-8" data-hef-alvo="altura" style="height:60%"></i><i data-campo="alto-onda-9" data-hef-alvo="altura" style="height:38%"></i><i data-campo="alto-onda-10" data-hef-alvo="altura" style="height:52%"></i><i data-campo="alto-onda-11" data-hef-alvo="altura" style="height:46%"></i><i data-campo="alto-onda-12" data-hef-alvo="altura" style="height:42%"></i><i data-campo="alto-onda-13" data-hef-alvo="altura" style="height:56%"></i></span>
@@ -3425,8 +3487,20 @@
               <button class="mudo-i" data-gesto="mudo" data-mudo="alto-falante" data-campo="alto-mudo" data-hef-alvo="atributo" data-hef-atributo="data-som" title="Manda zero ao alto-falante do controle, sem perder o volume guardado. A partir da primeira escrita quem guarda o volume deste alto-falante é o Hefesto — o controle não o devolve. Quem larga é hefesto-dualsense4unix speaker release: ele devolve o controle, não o valor — o alto-falante fica com o último volume que o Hefesto mandou.">♪</button>
               <span class="ajuda porque">?<span class="dica" data-campo="alto-porque" data-hef-alvo="html"><i class="nada"></i></span></span>
             </div>
+            <!-- TRÊS BOTÕES, UMA PERGUNTA — 10/09/2026 (a A3). A fileira
+                 responde *"o que este controle ouve?"*, e o terceiro estado é
+                 a `fonte` que o produto já obedecia sem ninguém poder
+                 escolher. O do meio é o único que NÃO tira o som da televisão,
+                 e é o que faz sentido numa mesa de quatro: cada um ouve junto,
+                 no seu próprio plástico.
+                 A GRAMÁTICA É A MESMA DOS OUTROS DOIS — mesmo `data-campo`,
+                 cada botão com o seu `data-hef-quando` —, e é por isso que o
+                 terceiro não custa uma linha de folha nem uma altura a mais:
+                 um par novo abaixo seria a segunda gramática que o gerador já
+                 recusou uma vez. -->
             <div class="rota">
               <button class="" data-gesto="rota" data-rota="jogo" data-campo="alto-rota" data-hef-alvo="classe" data-hef-quando="jogo">Sons do jogo</button>
+              <button data-gesto="rota" data-rota="junto" data-campo="alto-rota" data-hef-alvo="classe" data-hef-quando="junto" title="O som do computador passa a sair TAMBÉM no alto-falante deste controle, sem sair da televisão. É o que serve a quem joga acompanhado: cada controle ouve o jogo no próprio plástico, e a sala continua ouvindo o de sempre.">Ouvir junto</button>
               <button class="" data-gesto="rota" data-rota="pc" data-campo="alto-rota" data-hef-alvo="classe" data-hef-quando="pc">Todo o som do PC</button>
             </div>
             <!-- A RESSALVA DA ROTA — a peça da ONDA0-F (D-02), e o texto é do
@@ -3823,7 +3897,7 @@
             <div class="vol" data-campo="mic-porque" data-hef-alvo="atributo" data-hef-atributo="data-porque">
               <span class="trilho"><span class="cheio" style="width:75%"></span><input class="puxa-vol" type="range" min="0" max="100" step="1" value="75" data-gesto="volume" data-volume="microfone" aria-label="Volume do microfone deste controle" title="Arraste para escolher quanto do microfone deste controle chega ao PC — de 0 a 100. É o ganho da FONTE no sistema, e não o mudo do plástico: não apaga a luz vermelha e não tira o botão do controle. Grava na hora."></span>
               <span class="n">75</span>
-              <button class="mudo-i" data-gesto="mudo" data-mudo="microfone" title="Calar no firmware do controle — apaga a luz vermelha do plástico. A partir daqui quem manda no mudo é o Hefesto, e o botão do controle para de valer. Esta tela não devolve o comando: quem devolve é hefesto-dualsense4unix mic release, ou reiniciar o Hefesto.">🎙</button>
+              <button class="mudo-i" data-gesto="mudo" data-mudo="microfone" data-campo="mic-botao-estado" data-hef-alvo="atributo" data-hef-atributo="data-mic-luz" title="Calar no firmware do controle — apaga a luz vermelha do plástico. A partir daqui quem manda no mudo é o Hefesto, e o botão do controle para de valer. Esta tela não devolve o comando: quem devolve é hefesto-dualsense4unix mic release, ou reiniciar o Hefesto.">🎙</button>
               <span class="ajuda porque">?<span class="dica" data-campo="mic-porque" data-hef-alvo="html"><i class="nada"></i></span></span>
             </div>
             <!-- OS DOIS MODOS DESCERAM PARA CÁ — decisão dela, 31/08/2026:
@@ -3860,7 +3934,8 @@
               <span class="selo-som" data-campo="alto-selo" data-hef-alvo="html"><i class="nada"></i></span>
               <span class="ajuda" style="display:inline-block;vertical-align:-3px">?<span class="dica">
                 <b>Sons do jogo</b> manda só o áudio do jogo ao alto-falante do controle;
-                <b>Todo o som do PC</b> manda tudo, inclusive notificação.
+                <b>Ouvir junto</b> traz o som do PC para cá <b>sem tirá-lo da televisão</b>;
+                <b>Todo o som do PC</b> manda tudo, inclusive notificação, e só para cá.
               </span></span>
             </div>
             <span class="onda" data-campo="alto-onda-lida" data-hef-alvo="classe" data-hef-classe="sem-leitura" data-hef-quando="nao"><i data-campo="alto-onda-0" data-hef-alvo="altura" style="height:80%"></i><i data-campo="alto-onda-1" data-hef-alvo="altura" style="height:66%"></i><i data-campo="alto-onda-2" data-hef-alvo="altura" style="height:74%"></i><i data-campo="alto-onda-3" data-hef-alvo="altura" style="height:58%"></i><i data-campo="alto-onda-4" data-hef-alvo="altura" style="height:84%"></i><i data-campo="alto-onda-5" data-hef-alvo="altura" style="height:62%"></i><i data-campo="alto-onda-6" data-hef-alvo="altura" style="height:70%"></i><i data-campo="alto-onda-7" data-hef-alvo="altura" style="height:76%"></i><i data-campo="alto-onda-8" data-hef-alvo="altura" style="height:54%"></i><i data-campo="alto-onda-9" data-hef-alvo="altura" style="height:68%"></i><i data-campo="alto-onda-10" data-hef-alvo="altura" style="height:60%"></i><i data-campo="alto-onda-11" data-hef-alvo="altura" style="height:78%"></i><i data-campo="alto-onda-12" data-hef-alvo="altura" style="height:64%"></i><i data-campo="alto-onda-13" data-hef-alvo="altura" style="height:72%"></i></span>
@@ -3871,8 +3946,20 @@
               <button class="mudo-i" data-gesto="mudo" data-mudo="alto-falante" data-campo="alto-mudo" data-hef-alvo="atributo" data-hef-atributo="data-som" title="Manda zero ao alto-falante do controle, sem perder o volume guardado. A partir da primeira escrita quem guarda o volume deste alto-falante é o Hefesto — o controle não o devolve. Quem larga é hefesto-dualsense4unix speaker release: ele devolve o controle, não o valor — o alto-falante fica com o último volume que o Hefesto mandou.">♪</button>
               <span class="ajuda porque">?<span class="dica" data-campo="alto-porque" data-hef-alvo="html"><i class="nada"></i></span></span>
             </div>
+            <!-- TRÊS BOTÕES, UMA PERGUNTA — 10/09/2026 (a A3). A fileira
+                 responde *"o que este controle ouve?"*, e o terceiro estado é
+                 a `fonte` que o produto já obedecia sem ninguém poder
+                 escolher. O do meio é o único que NÃO tira o som da televisão,
+                 e é o que faz sentido numa mesa de quatro: cada um ouve junto,
+                 no seu próprio plástico.
+                 A GRAMÁTICA É A MESMA DOS OUTROS DOIS — mesmo `data-campo`,
+                 cada botão com o seu `data-hef-quando` —, e é por isso que o
+                 terceiro não custa uma linha de folha nem uma altura a mais:
+                 um par novo abaixo seria a segunda gramática que o gerador já
+                 recusou uma vez. -->
             <div class="rota">
               <button class="" data-gesto="rota" data-rota="jogo" data-campo="alto-rota" data-hef-alvo="classe" data-hef-quando="jogo">Sons do jogo</button>
+              <button data-gesto="rota" data-rota="junto" data-campo="alto-rota" data-hef-alvo="classe" data-hef-quando="junto" title="O som do computador passa a sair TAMBÉM no alto-falante deste controle, sem sair da televisão. É o que serve a quem joga acompanhado: cada controle ouve o jogo no próprio plástico, e a sala continua ouvindo o de sempre.">Ouvir junto</button>
               <button class="" data-gesto="rota" data-rota="pc" data-campo="alto-rota" data-hef-alvo="classe" data-hef-quando="pc">Todo o som do PC</button>
             </div>
             <!-- A RESSALVA DA ROTA — a peça da ONDA0-F (D-02), e o texto é do
@@ -4029,7 +4116,7 @@
 <div class="nota">
   <h2>O que mudou em 31/08</h2>
   <ul>
-    <li class="foi"><b>O <code>Liberar</code> do microfone saiu desta tela — decisão sua, mantida depois que o motivo dela caiu.</b> Ele estava aqui e devolvia ao <b>botão físico do controle</b> o comando do mudo. Você olhou a tela e disse: <i>"esse botão liberar no microfone não existe."</i> A RETOMADA de 30/08 anotou isso como <i>"não existe em lugar nenhum"</i> e mandou tirá-lo — e essa generalização é <b>falsa</b>: o produto tem o botão (<code>app/widgets/controller_card.py:490</code>) e o daemon aceita <code>mic.set {muted: null}</code> (<code>daemon/ipc_server.py:32</code>), que é a devolução. O fato foi medido e levado a você em 31/08 e <b>você manteve a decisão</b>: ele fica fora da tela nova, mesmo existindo no produto. <b>O preço, dito inteiro:</b> quem clicar no <b>🎙</b> daqui <b>assume</b> o mudo, e o botão do controle para de valer; a volta só existe pela janela do aplicativo completo ou reiniciando o Hefesto — e é isso que a dica do 🎙 passou a dizer, no lugar de mandar clicar num botão ausente. Os três testes que mediam este botão viraram <b>lápide</b> em <code>tests/unit/test_regua_de_tela_a_aba_controles.py</code>; se ele voltar, eles voltam inteiros do <code>git log</code>.</li>
+    <li class="foi"><b>O <code>Liberar</code> do microfone saiu desta tela — decisão sua, mantida depois que o motivo dela caiu.</b> Ele estava aqui e devolvia ao <b>botão físico do controle</b> o comando do mudo. Você olhou a tela e disse: <i>"esse botão liberar no microfone não existe."</i> A RETOMADA de 30/08 anotou isso como <i>"não existe em lugar nenhum"</i> e mandou tirá-lo — e essa generalização é <b>falsa</b>: o produto tem o botão (<code>app/widgets/controller_card.py:490</code>) e o daemon aceita <code>mic.set {muted: null}</code> (<code>daemon/ipc_server.py:32</code>), que é a devolução. O fato foi medido e levado a você em 31/08 e <b>você manteve a decisão</b>: ele fica fora da tela nova, mesmo existindo no produto. <b>O preço, dito inteiro:</b> quem clicar no <b>🎙</b> daqui <b>assume</b> o mudo, e o botão do controle para de valer; a volta não existe por esta tela — o botão do plástico volta a valer reiniciando o Hefesto — e é isso que a dica do 🎙 passou a dizer, no lugar de mandar clicar num botão ausente. Os três testes que mediam este botão viraram <b>lápide</b> em <code>tests/unit/test_regua_de_tela_a_aba_controles.py</code>; se ele voltar, eles voltam inteiros do <code>git log</code>.</li>
     <li><b>Esta legenda anunciava o botão de cima como novidade — dois dias depois de ele sair da tela.</b> É o defeito que esta aba existe para não cometer, virado para dentro: <i>a prosa afirmando o que o produto não faz</i>. Agora o gerador <b>para</b> se a legenda citar um rótulo que o desenho não escreve, e só um <code>&lt;li class="foi"&gt;</code> — a lápide, o item recuado aqui em cima — tem licença de nomear o que saiu. A mesma régua recusa título com data relativa: foi um <i>"hoje"</i> num <code>&lt;h2&gt;</code> que envelheceu calado.</li>
   </ul>
 
@@ -4109,7 +4196,7 @@
     <li><b>Os 16 quadradinhos viram o desenho do DualSense?</b> A pergunta é sua, do contrato da aba. A medição pende para os quadradinhos: a coluna deles tem 212 px e é a única das cinco que ainda estica sem estourar — o desenho inteiro do controle nessa largura empurraria o card muito além dos 304 px, e o card tem exatamente <b>24 px</b> de folga.</li>
     <li><b>O botão de mic do controle muda o mudo do PC inteiro?</b> O campo existe no perfil e o daemon já o aplica, sem nenhuma tela que o escreva (<code>profiles/schema.py:451</code>).</li>
     <li><b>Histórico de bateria.</b> O diário grava por controle desde sempre e ninguém lê (<code>daemon/battery_journal.py:214</code>). Com 4 ligados o P3 já aparece em 31%.</li>
-    <li><b>O acelerômetro está desenhado e não é pintado ao vivo.</b> Os três eixos em <b>g</b> aparecem no card, mas a ponte que dá vida a esta aba só escreve os do giroscópio: ela procura o endereço <code>acel-x</code> e a tela escreve <code>accel-x</code>, com dois cc (<code>controles_vivos.py:1340</code>). Com o daemon ligado, esses números ficam <b>parados</b> na medição de 30/08 em vez de acompanharem o aparelho — e número parado tem a mesma cara de número lido. A cura é de uma linha, mas mora fora deste gerador; fica dito aqui porque quem fotografar a aba não tem como notar.</li>
+    <li><b>Fechou:</b> o acelerômetro <b>é</b> pintado ao vivo. Os três eixos em <b>g</b> saem do mesmo caminho do giroscópio, escritos a cada tique pelo pacote desta aba. Esta linha dizia o contrário desde 30/08 — que a ponte procurava <code>acel-x</code> e a tela escrevia <code>accel-x</code> —, e a varredura de 10/09 mediu os três elos e desmentiu os três: o pacote escreve, a página tem os endereços, e o piloto que a frase citava já registrava, em comentário, que aquele nome não existia mais. <b>A tela estava confessando uma dívida que o produto não tinha</b> — o oposto exato do defeito que esta aba persegue, e igualmente caro.</li>
     <li><b>A régua não vê o "Todos".</b> Ela mede a página como ela abre, e a página abre com um card e 1 linhas — nenhum quadro escondido, nenhuma rolagem. O estado que rola só existe depois de um clique, e a régua de arranjo não clica. Medi-o à mão, clicando, e os números estão acima; fica dito, porque a régua não é minha para mexer.<br><br><b>Fechou:</b> esta legenda avisava que o <code>olhar.py</code> escondia a barra de rolagem e que ela não sairia na foto. Não é mais verdade — a ferramenta foi curada em 30/08 e hoje fotografa a barra, os <b>10 px</b> que ela ocupa no "Todos" inclusive.</li>
   </ul>
 </div>

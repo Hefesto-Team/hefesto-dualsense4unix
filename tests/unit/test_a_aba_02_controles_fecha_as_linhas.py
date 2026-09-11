@@ -1013,17 +1013,29 @@ def test_o_clique_no_som_sai_com_dono_e_a_cor_segue_o_tique(
 
 
 def test_o_microfone_nao_tem_mais_cor_congelada(som: dict[str, Any]) -> None:
-    """A mentira vermelha do 🎙 saiu — e a cura é TIRAR o sinal, não somar um.
+    """A mentira vermelha do 🎙 saiu — e o que a substituiu é um sinal VIVO.
 
-    O 🎙 não tem `data-campo`: o piloto nunca o visita, logo a cor que o
-    gerador escrevia uma vez valia para sempre. Na tela viva dela, o microfone
-    do segundo card ficava aceso de vermelho independentemente do aparelho.
-    Quem diz o estado do microfone é o selo ao lado, que é vivo e composto das
-    quatro faces; uma borda viva no 🎙 seria um SEGUNDO sinal para o mesmo
-    fato.
+    O defeito de 06/09 era a cor que o GERADOR escrevia uma vez e valia para
+    sempre: o 🎙 do segundo card ficava vermelho independentemente do aparelho,
+    porque não havia `data-campo` e o piloto nunca o visitava.
 
-    MORDE: devolva o `mic_on` ao gerador, regere a bancada, e a régua reprova
-    achando um 🎙 pintado num card cujo selo diz outra coisa.
+    **A SEGUNDA METADE DESTA RÉGUA CADUCOU EM 10/09/2026, e por decisão DELA.**
+    Ela dizia *"uma borda viva no 🎙 seria um SEGUNDO sinal para o que o selo
+    ao lado já diz"*, e a cura de então foi TIRAR o sinal. O pedido dela de
+    10/09 é o oposto, e com a razão junto: *"invertemos o botão mic, ele aceso
+    (vai indicar que agora tá gravando audio), ele captando audio vai ficar no
+    estado de piscando (**guia visual pro leigo que pegar o controle de
+    primeira**)"*.  <!-- noqa-acento: citação literal dela -->
+
+    O selo é PALAVRA e o botão é FORMA, e quem pega o controle pela primeira
+    vez lê a forma. A lição que sobrevive inteira é a outra — **a cor não pode
+    vir do gerador** —, e é ela que esta régua passa a medir dos dois lados:
+    o 🎙 nasce sem classe de cor E com endereço, para que quem o pinte seja o
+    aparelho, a cada tique.
+
+    MORDE: devolva o `mic_on` ao gerador (a cor congelada volta e a primeira
+    parte reprova); ou tire o `data-campo` do 🎙 (o sinal morre e a segunda
+    reprova).
     """
     assert som["mics"], "a régua não achou 🎙 nenhum — ela mediria o vazio"
     for i, m in enumerate(som["mics"], start=1):
@@ -1033,9 +1045,9 @@ def test_o_microfone_nao_tem_mais_cor_congelada(som: dict[str, Any]) -> None:
         assert m["borda"] != som["vermelho"], (
             f"o 🎙 do card {i} continua vermelho sobre um aparelho que ninguém "
             f"leu")
-        assert not m["campo"], (
-            f"o 🎙 do card {i} ganhou `data-campo` — uma borda viva aqui é um "
-            f"SEGUNDO sinal para o que o selo ao lado já diz")
+        assert m["campo"] == "mic-botao-estado", (
+            f"o 🎙 do card {i} está com o campo {m['campo']!r} — sem o endereço "
+            f"vivo, o aceso e o piscando que ela pediu não têm quem os escreva")
     assert len({m["borda"] for m in som["mics"]}) == 1, (
         "os 🎙 dos dois cards pintam bordas diferentes sem o produto ter dito "
         "nada sobre nenhum dos dois")
