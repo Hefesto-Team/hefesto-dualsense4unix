@@ -605,7 +605,17 @@ def test_o_piloto_sabe_pintar_html() -> None:
 
     assert "alvo === 'html'" in hefesto_vivo.BOOTSTRAP, (
         "o `escrever()` do piloto não tem o alvo `html`")
-    assert "el.innerHTML = t" in hefesto_vivo.BOOTSTRAP, (
+    # ERA A LINHA LITERAL `el.innerHTML = t` ATÉ 11/09/2026, e a cura do
+    # travessão a quebrou sem tocar nesta régua: o ramo passou a calcular o
+    # pedaço de página numa variável (`h`) antes de escrevê-lo, para o `—` de
+    # valor ausente não virar conteúdo de bloco. A régua reprovou anunciando
+    # que o alvo não escreve `innerHTML` — com ele escrevendo `innerHTML` duas
+    # linhas abaixo. É a doença desta casa outra vez: *a régua DIGITAVA o que
+    # devia LER*. O que importa é o ATO — o ramo `html` atribuir a
+    # `el.innerHTML` —, não o nome da variável do lado direito.
+    ramo = hefesto_vivo.BOOTSTRAP.split("alvo === 'html'", 1)[1]
+    ramo = ramo.split("if(alvo ===", 1)[0]
+    assert re.search(r"el\.innerHTML\s*=", ramo), (
         "o alvo `html` existe e não escreve `innerHTML`")
 
 
