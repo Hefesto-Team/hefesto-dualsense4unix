@@ -648,9 +648,25 @@ def test_o_cartao_achado_e_o_nao_achado_dizem_coisas_diferentes(desenho):
     assert len({nao_procurei.diz, nao_achei.diz, achei.diz}) == 3, (
         "dois dos três estados dizem a MESMA frase — a tela voltou a não "
         "separar 'procurei e não achei' de 'ainda não procurei'")
-    assert "com.heroicgameslauncher.hgl.desktop" in achei.diz, (
-        "o cartão diz que achou e não diz ONDE — sem isso ela não tem como "
-        "conferir a resposta sem acreditar em mim")
+    # O CARTÃO ACHADO É O ÚNICO SEM FRASE — 11/09/2026, ordem dela:
+    # *"remove as frases do achei esse lançador aqui"*.  (noqa-acento) citação
+    # Aqui estava cravado o caminho do `.desktop`, e a régua cobrava que a tela
+    # o pintasse. Ela olhou cinco cartões empilhados repetindo o mesmo parágrafo
+    # e recusou os cinco: quem responde *"o produto achou este lançador"* é o
+    # SELO, e a linha de cima diz quantos jogos ele tem. A frase era o selo de
+    # novo, em prosa.
+    #
+    # O QUE A RÉGUA COBRA AGORA é o que sobrou de verdade: que o estado ACHADO
+    # continue distinguível dos outros dois na tela — pelo selo e pelo
+    # `presente`, que as linhas acima já medem — e que ele seja o único calado.
+    # Uma frase que voltasse a nascer aqui reprovaria, e é isso que morde.
+    assert achei.diz == "", (
+        f"o cartão do lançador ACHADO voltou a falar: {achei.diz!r}. Ela o "
+        f"calou em 11/09 — o selo `LOCALIZADO` e a contagem de jogos já dizem "
+        f"tudo o que a frase dizia")
+    assert nao_achei.diz and nao_procurei.diz, (
+        "o cartão calado tinha de ser SÓ o do achado — os outros dois estados "
+        "precisam da frase, porque neles o selo sozinho não diz o que fazer")
 
 
 def test_todo_cartao_tem_botao_nos_tres_estados_e_o_do_ausente_e_outro(desenho):
