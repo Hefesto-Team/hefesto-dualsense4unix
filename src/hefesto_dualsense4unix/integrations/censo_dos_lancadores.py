@@ -63,7 +63,10 @@ cópia. É a mesma disciplina do `prontuario_dos_jogos`, que a aba 07 e o
 from __future__ import annotations
 
 import configparser
+import contextlib
 import json
+import os
+import sqlite3
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import cast
@@ -104,6 +107,61 @@ class JogoDoLancador:
     loja: str = ""
     instalado: bool = False
     caminho: Path | None = None
+    #: O BINÁRIO QUE O JOGO ABRE, relativo à pasta de instalação —
+    #: ``retail/gotg.exe``. **É A CHAVE QUE FALTAVA**, e ela só existe depois
+    #: de o jogo estar no disco: ver `classe_de_janela`.
+    executavel: str = ""
+    #: Conteúdo adicional (DLC, pacote de arte, redistribuível). **Não é jogo**
+    #: — ver `e_acessorio`.
+    dlc: bool = False
+
+    @property
+    def classe_de_janela(self) -> str:
+        """A `wm_class` que este jogo vai anunciar — ou ``""`` quando não se sabe.
+
+        **A PREMISSA DA SPRINT CAIU AQUI, e a medição é de 10/09/2026.** O
+        enunciado dizia que *"a Steam entrega uma CHAVE; os outros cinco
+        entregam um NOME"*, e listava as portas fechadas: *"campos com `exe` /
+        `executable` / `launch` / `binar`: NENHUM"*. Isso era verdade sobre uma
+        biblioteca com **zero** jogos instalados. Com um jogo baixado, o
+        `legendary_library.json` passa a trazer::
+
+            install: {"executable": "retail/gotg.exe", "install_path": "…"}
+
+        O basename disso — ``gotg.exe`` — é exatamente a forma que o
+        `MatchCriteria(window_class=[…])` guarda para jogo de fora da Steam
+        (a sexta forma do `simple_match`, "janela"), e a mesma que o botão
+        «Detectar» grava quando ela abre o jogo. **A chave existe antes de ela
+        abrir o jogo uma vez — desde que ele esteja instalado.**
+
+        O QUE ELA NÃO ALCANÇA, e fica declarado em vez de adivinhado: os três
+        emuladores (RetroArch, Dolphin, mGBA) são **UM processo para todas as
+        ROMs**, então a janela é a do emulador e não a do jogo. Devolver aqui o
+        nome da ROM seria uma chave que nunca casa — o defeito R-12 que esta
+        casa já pagou. Por isso quem não tem `executavel` devolve ``""``, e
+        quem chama simplesmente não oferece a linha.
+        """
+        if not self.executavel:
+            return ""
+        return self.executavel.replace("\\", "/").rsplit("/", 1)[-1].strip()
+
+    @property
+    def e_acessorio(self) -> bool:
+        """Isto é conteúdo adicional, e não um jogo?
+
+        **O FILTRO É UM CAMPO DECLARADO, e não uma lista de nomes** — que é a
+        diferença desta régua para a `jogos_locais.e_ferramenta_da_steam`, onde
+        campo não existe e o filtro tem de ser por nome. Aqui a Epic e a GOG
+        gravam ``install.is_dlc`` no próprio arquivo de biblioteca, e é ele que
+        manda.
+
+        MEDIDO NO DISCO DELA EM 10/09/2026, e o número da sprint estava velho:
+        o enunciado dizia *"dos 37, um é `gog-redist` … São 36 jogos"*. São
+        **oito** acessórios — sete DLC da Epic (trilha sonora, art book, roupa,
+        wallpaper) mais o `gog-redist` (*Galaxy Common Redistributables*, que
+        também traz `is_dlc: true`) —, e sobram **29 jogos**.
+        """
+        return self.dlc
 
 
 @dataclass(frozen=True)
@@ -202,10 +260,21 @@ def _heroic(pasta: Path) -> BibliotecaDoLancador:
     **A Epic fica aqui dentro**, decisão dela de 08/09/2026: *"dentro
     heróic"*. Ela não ganha cartão próprio.  # noqa-acento: citação dela
 
-    O INSTALADO SAI DO `*_install_info.json`, e não de um campo da biblioteca:
-    o arquivo de biblioteca lista o que a CONTA tem, e é por isso que o disco
-    dela dizia 37 com zero instalados — a leitura certa sobre um estado que
-    parecia defeito.
+    O INSTALADO SAI DO `*_install_info.json`, e não SÓ de um campo da
+    biblioteca: o arquivo de biblioteca lista o que a CONTA tem, e é por isso
+    que o disco dela dizia 37 com zero instalados — a leitura certa sobre um
+    estado que parecia defeito.
+
+    **AS DUAS FONTES SE SOMAM DESDE 10/09/2026, e o motivo é medido.** Com um
+    jogo baixado, o `legendary_library.json` passa a dizer ``is_installed:
+    true`` e a trazer o `install.executable` — que é a CHAVE de janela (ver
+    `JogoDoLancador.classe_de_janela`). Ler só o `install_info` continuaria
+    certo sobre "está no disco?" e jogaria fora a chave; ler só a biblioteca
+    perderia o caso dela de 09/09, em que o `install_info` era quem sabia.
+    Então lê-se os dois, e o instalado é a UNIÃO.
+
+    **E O QUE É ACESSÓRIO NÃO ENTRA**, pela mesma leitura: `install.is_dlc`.
+    Ver `JogoDoLancador.e_acessorio` para os oito medidos no disco dela.
     """
     cache = pasta / "store_cache"
     jogos: list[JogoDoLancador] = []
@@ -228,11 +297,20 @@ def _heroic(pasta: Path) -> BibliotecaDoLancador:
             chave = str(it.get(ch_id) or it.get("app_name") or it.get("id") or "")
             if not chave:
                 continue
-            jogos.append(JogoDoLancador(
+            instalacao = it.get("install")
+            instalacao = instalacao if isinstance(instalacao, dict) else {}
+            jogo = JogoDoLancador(
                 chave=chave,
                 nome=str(it.get(ch_nome) or it.get("title") or chave),
                 loja=loja,
-                instalado=chave in instalados))
+                instalado=chave in instalados or bool(it.get("is_installed")),
+                caminho=(Path(str(instalacao["install_path"]))
+                         if instalacao.get("install_path") else None),
+                executavel=str(instalacao.get("executable") or ""),
+                dlc=bool(instalacao.get("is_dlc")))
+            if jogo.e_acessorio:
+                continue
+            jogos.append(jogo)
     return BibliotecaDoLancador("Heroic", LIDO, pasta, jogos, erros)
 
 
@@ -249,22 +327,90 @@ def _instalados_do_heroic(caminho: Path) -> set[str]:
     return set()
 
 
-def _lutris(pasta: Path) -> BibliotecaDoLancador:
-    """Um `.yml` por jogo em `games/` — o nome do arquivo É o slug.
+#: As colunas do `games` do `pga.db` que interessam, na ordem em que saem.
+#: Nomeadas uma a uma, e nunca `SELECT *`: o Lutris acrescenta coluna entre
+#: versões (medido: 23 colunas no dela), e ler por posição quebraria calado.
+_COLUNAS_DO_LUTRIS = ("name", "slug", "executable", "directory", "installed",
+                      "runner")
 
-    NÃO SE IMPORTA UM PARSER DE YAML por isto: o que se precisa aqui é o SLUG,
-    que é o nome do arquivo, e o `pyproject` não declara `pyyaml`. Uma
-    dependência nova para ler um nome de arquivo seria o custo errado — e a
-    §4 da sprint, que escreve `system: env:` no `.yml`, é quem vai precisar
-    de um e vai declará-lo com a razão.
+
+def _lutris(pasta: Path) -> BibliotecaDoLancador:
+    """A biblioteca do Lutris — do `pga.db`, que é onde ela mora.
+
+    **O LEITOR ANTIGO OLHAVA O ARQUIVO ERRADO, e o sintoma era a AUSÊNCIA de
+    dado.** Ele lia `games/*.yml` e devolvia o `stem` como nome. Medido no
+    disco dela em 11/09/2026:
+
+        ~/.var/app/net.lutris.Lutris/config/lutris  ->  data/lutris (symlink)
+        data/lutris/games/   0 arquivos
+        data/lutris/pga.db   tabela `games`, 23 colunas
+
+    O `games/*.yml` só nasce para jogo com configuração PRÓPRIA; a biblioteca
+    é a tabela. Com a pasta vazia o cartão dizia `LIDO · 0 jogos` — que se lê
+    como *"o Lutris está vazio"* e não como *"eu olhei no lugar errado"*.
+
+    **E O `.yml` NÃO DAVA A ETIQUETA.** Um `stem` (`sea-of-stars`) não é a
+    `wm_class` que a janela anuncia, e é a etiqueta que esta sprint precisa —
+    a mesma coisa que o `steam_app_<id>` é para a Steam. O `pga.db` traz
+    `executable`, e o basename dele é a classe (ver
+    `JogoDoLancador.classe_de_janela`), do mesmo jeito que o
+    `install.executable` do Heroic.
+
+    **`sqlite3` É BIBLIOTECA PADRÃO** — nenhuma dependência nova, ao contrário
+    do `pyyaml` que o leitor antigo recusou (e recusou com razão: uma
+    dependência para ler um nome de arquivo era o custo errado).
+
+    ABERTO EM MODO SOMENTE-LEITURA (`mode=ro`), e é requisito e não zelo: o
+    Lutris dela pode estar aberto com o banco na mão, e este módulo é chamado
+    da PINTURA de uma aba. `immutable=` seria mais rápido e mentiria sobre um
+    arquivo que muda.
+
+    O `.yml` continua entrando, e só ACRESCENTA o que a tabela não tiver: um
+    jogo configurado à mão que nunca entrou no banco continua aparecendo, e a
+    leitura nova não pode ENCOLHER o que já funcionava.
     """
+    jogos: list[JogoDoLancador] = []
+    erros: list[str] = []
+    vistos: set[str] = set()
+    banco = pasta / "pga.db"
+    if banco.is_file():
+        try:
+            conexao = sqlite3.connect(f"file:{banco}?mode=ro", uri=True)
+        except sqlite3.Error as erro:  # pragma: no cover - banco ilegível
+            erros.append(f"pga.db não abriu: {erro}")
+        else:
+            with contextlib.closing(conexao):
+                colunas = ", ".join(_COLUNAS_DO_LUTRIS)
+                try:
+                    linhas = list(
+                        conexao.execute(f"SELECT {colunas} FROM games"))
+                except sqlite3.Error as erro:
+                    erros.append(f"pga.db não traz `games`: {erro}")
+                    linhas = []
+                for nome, slug, executavel, pasta_do_jogo, instalado, _ in linhas:
+                    chave = str(slug or nome or "")
+                    if not chave or chave in vistos:
+                        continue
+                    vistos.add(chave)
+                    jogos.append(JogoDoLancador(
+                        chave=chave,
+                        nome=str(nome or chave),
+                        loja="Lutris",
+                        instalado=bool(instalado),
+                        caminho=(Path(str(pasta_do_jogo))
+                                 if pasta_do_jogo else None),
+                        executavel=str(executavel or "")))
     games = pasta / "games"
-    if not games.is_dir():
-        return BibliotecaDoLancador("Lutris", LIDO, pasta, [], [])
-    jogos = [JogoDoLancador(chave=p.stem, nome=p.stem.replace("-", " "),
-                            loja="Lutris", instalado=True, caminho=p)
-             for p in sorted(games.glob("*.yml"))]
-    return BibliotecaDoLancador("Lutris", LIDO, pasta, jogos, [])
+    if games.is_dir():
+        for p in sorted(games.glob("*.yml")):
+            if p.stem in vistos:
+                continue
+            vistos.add(p.stem)
+            jogos.append(JogoDoLancador(
+                chave=p.stem, nome=p.stem.replace("-", " "),
+                loja="Lutris", instalado=True, caminho=p))
+    jogos.sort(key=lambda j: (j.nome.casefold(), j.chave))
+    return BibliotecaDoLancador("Lutris", LIDO, pasta, jogos, erros)
 
 
 def _retroarch(pasta: Path) -> BibliotecaDoLancador:
@@ -420,6 +566,62 @@ def biblioteca_do_cartao(chave: str, lar: Path | None = None
         onde=lidas[0].onde,
         jogos=[j for b in lidas for j in b.jogos],
         erros=[e for b in partes for e in b.erros])
+
+
+def jogos_com_chave_de_janela(
+    lar: Path | None = None,
+) -> list[tuple[str, JogoDoLancador]]:
+    """``[(lançador, jogo)]`` — só os jogos que dá para RECONHECER numa janela.
+
+    **É A METADE HONESTA DA §3 DA SPRINT**, e a linha que ela corta é de
+    propósito. O enunciado propunha levar os 36 do Heroic ao campo «Nome do
+    Jogo» *"sem custar um pixel"*; medido em 10/09/2026, oferecer um jogo sem
+    chave é oferecer uma linha que **nunca casa com janela nenhuma** — o
+    defeito R-12, que esta casa já pagou uma vez. Então a oferta é do que tem
+    endereço, e o resto fica de fora até ter.
+
+    Quem tem chave hoje, no disco dela: **1** — *Marvel's Guardians of the
+    Galaxy*, `gotg.exe`. Os outros 28 do Heroic não estão baixados; as 7 ROMs
+    do RetroArch e a pasta do Dolphin não têm janela própria (um processo para
+    todas); o Lutris está aberto e vazio.
+
+    NUNCA LEVANTA — `biblioteca_de` já promete isso, e esta função é chamada de
+    dentro da pintura da aba Perfis.
+
+    :param lar: o `HOME` a inspecionar. Uma régua passa um lar de mentira.
+    """
+    achados: list[tuple[str, JogoDoLancador]] = []
+    for nome in _LEITORES:
+        for jogo in biblioteca_de(nome, lar).jogos:
+            if jogo.instalado and jogo.classe_de_janela:
+                achados.append((nome, jogo))
+    return achados
+
+
+def assinatura_das_bibliotecas(lar: Path | None = None) -> tuple[tuple[str, int], ...]:
+    """Impressão BARATA das cinco bibliotecas: ``(pasta, mtime_ns)``.
+
+    Irmã de `jogos_locais.assinatura_da_biblioteca`, e **separada dela de
+    propósito**: aquela responde *"a biblioteca da STEAM mudou?"* olhando as
+    `steamapps`, e um `mtime` de `~/.var/app/…/heroic` não diz nada sobre a
+    Steam. Somar as duas num freio só faria a semeadura de perfis da Steam
+    varrer 33 `.acf` toda vez que o Heroic escrevesse um log.
+
+    Pasta ausente entra com ``-1`` em vez de sumir: instalar o Lutris depois
+    também tem de contar como mudança.
+    """
+    linhas: list[tuple[str, int]] = []
+    lar = Path.home() if lar is None else lar
+    for nome in _LEITORES:
+        pasta = _pasta_de_config(nome, lar)
+        if pasta is None:
+            linhas.append((nome, -1))
+            continue
+        try:
+            linhas.append((str(pasta), os.stat(pasta).st_mtime_ns))
+        except OSError:
+            linhas.append((str(pasta), -1))
+    return tuple(linhas)
 
 
 def sabe_ler(lancador: str) -> bool:
