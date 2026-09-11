@@ -5239,6 +5239,56 @@ class IpcHandlersMixin:
             return None
         return chave
 
+    def _perfil_que_grava(self) -> str | None:
+        """Em que perfil uma escolha POR PEÇA vai ser gravada — `None` quando nenhum.
+
+        A-PERNA-QUE-FALTA-01, 11/09/2026. **DUAS PERNAS, e a segunda é a do
+        próprio boot deste daemon.**
+
+        O QUE ESTA FUNÇÃO CURA, e foi medido na conferência da
+        `O-SALVAR-DA-JOGAR-01`: com `self.store.active_profile` em `None` e os
+        marcadores em disco valendo — *o estado da máquina dela*, descrito em
+        `profiles_actions.perfil_que_esta_valendo` — os três gravadores deste
+        arquivo respondiam `sem_perfil` e **não gravavam byte nenhum**. O
+        `gamepad.mask.set` fazia isso CALADO: o registro de sessão guardava a
+        máscara, a tela acendia o chip, e o `.json` do perfil ficava
+        byte-idêntico. Amanhã a escolha não estava lá.
+
+        A SEGUNDA PERNA NÃO INVENTA POLÍTICA NOVA — `utils/session.
+        resolve_boot_profile` é o MESMO resolvedor que `daemon/connection.py`
+        usa para restaurar o perfil ao ligar (`session.json` + o marker
+        `active_profile.txt`, com a regra de desempate escrita lá). Curar aqui é
+        devolver a simetria que o boot já tem, não criar uma terceira leitura —
+        e é por isso que `utils/session.py` não é tocado.
+
+        **O NOME DO DISCO SÓ VALE SE ELE CARREGAR**, e esta guarda é a razão de
+        a função existir em vez de três `or resolve_boot_profile()`. A docstring
+        do resolvedor avisa: *"esta função só resolve NOMES — não valida se o
+        perfil carrega"*, e quem cobre marker órfão é o `restore_last_profile`.
+        Sem a confirmação, um marker apontando para um perfil apagado trocaria o
+        `sem_perfil` calado de hoje por um `FileNotFoundError` estourando no
+        meio de um gesto dela — que é piorar, não curar.
+
+        NUNCA LEVANTA: quem chama é rota de escrita de um clique. Uma exceção
+        aqui derrubaria o gesto inteiro por causa de um arquivo de sessão, que é
+        a doença que o `nome_do_ativo` da interface já trata do outro lado.
+        """
+        do_daemon = getattr(self.store, "active_profile", None)
+        if isinstance(do_daemon, str) and do_daemon:
+            return do_daemon
+        try:
+            from hefesto_dualsense4unix.profiles.loader import load_profile
+            from hefesto_dualsense4unix.utils.session import resolve_boot_profile
+
+            do_disco = resolve_boot_profile()
+            if not isinstance(do_disco, str) or not do_disco:
+                return None
+            load_profile(do_disco)  # só a confirmação; quem grava recarrega
+        except Exception as exc:
+            logger.debug("perfil_que_grava_sem_perna_de_disco", err=str(exc))
+            return None
+        return do_disco
+
     async def _handle_rumble_motores_set(self, params: dict[str, Any]) -> dict[str, Any]:
         """`rumble.motores.set` — a barra de CADA motor, no perfil (VIBRACAO-POR-MOTOR-01).
 
@@ -5348,8 +5398,11 @@ class IpcHandlersMixin:
                     "sumir calada"
                 ),
             }
-        nome = getattr(self.store, "active_profile", None)
-        if not isinstance(nome, str) or not nome:
+        # AS DUAS PERNAS — ver `_perfil_que_grava`. O store calado com um perfil
+        # valendo no disco é o estado da máquina dela, e aqui ele custava a
+        # barra de motor que ela acabou de arrastar.
+        nome = self._perfil_que_grava()
+        if not nome:
             return {
                 "status": "sem_perfil",
                 "uniq": alvo,
@@ -5515,9 +5568,9 @@ class IpcHandlersMixin:
         # já mudou) — só não sobrevive ao replug, e a resposta diz isso. Recusar
         # o ato inteiro por falta de perfil seria trocar meio interruptor por
         # nenhum.
-        nome = getattr(self.store, "active_profile", None)
+        nome = self._perfil_que_grava()  # as duas pernas — `_perfil_que_grava`
         gravado = False
-        if isinstance(nome, str) and nome:
+        if nome:
             from hefesto_dualsense4unix.profiles.loader import (
                 load_profile,
                 save_profile,
@@ -6503,8 +6556,12 @@ class IpcHandlersMixin:
         chave = self._chave_de_peca_que_grava(alvo)
         if not chave:
             return None, False, "sem_endereco"
-        nome = getattr(self.store, "active_profile", None)
-        if not isinstance(nome, str) or not nome:
+        # O QUARTO CHAMADOR, e o único que perdia dado dela CALADO — é a razão
+        # de a `A-PERNA-QUE-FALTA-01` existir. Ver `_perfil_que_grava`: com o
+        # store em `None` e os marcadores valendo, o `.json` do perfil ficava
+        # byte-idêntico enquanto a tela acendia o chip.
+        nome = self._perfil_que_grava()
+        if not nome:
             return None, False, "sem_perfil"
         perfil = load_profile(nome)
         atuais = dict(perfil.controllers or {})

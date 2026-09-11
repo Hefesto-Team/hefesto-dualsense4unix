@@ -335,6 +335,21 @@ def _o_que_e_da_mesa_inteira(draft: Any, ctx: Contexto) -> Any:
     return draft
 
 
+# OS TRÊS GESTOS DESTE RODAPÉ PERGUNTAM O PERFIL ATIVO A `perfil.nome_do_ativo`,
+# e nenhum dos três lê `ctx.state["active_profile"]` cru. A-PERNA-QUE-FALTA-01,
+# 11/09/2026.
+#
+# A PERGUNTA TEM UM DONO E ELE RESOLVE EM DUAS PERNAS — o daemon primeiro, o
+# marcador em disco depois (`profiles_actions.perfil_que_esta_valendo`, e deste
+# lado `perfil.nome_do_ativo`). O estado cru só tem a primeira.
+#
+# E A SEGUNDA PERNA NÃO É HIPÓTESE: `nome_do_ativo` documenta, medido em
+# 06/09/2026 na máquina dela, o daemon respondendo `active_profile: null` com um
+# perfil valendo no disco. Sob esse estado os três levantavam — *"não há perfil
+# ativo. Escolha um na aba Perfis."* — em cima de um perfil que ESTAVA escolhido.
+#
+# Três linhas iguais e nenhum `if`: quem decide é a função dona, e um segundo
+# `or ""` aqui seria a terceira leitura de uma pergunta que já tem resposta.
 @gesto("*", "aplicar")
 def aplicar(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
     """O botão verde. Manda o perfil ativo aos controles, sem gravar.
@@ -346,7 +361,7 @@ def aplicar(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
     máscara) da janela estável vem de uma escolha PENDENTE da aba Início, que a
     interface nova ainda não guarda. Aqui vai só o "agora".
     """
-    nome = str(ctx.state.get("active_profile") or "")
+    nome = perfil.nome_do_ativo(ctx.state)
     draft = _draft_do_ativo(nome)
     if draft is None:
         raise ValueError(
@@ -369,7 +384,7 @@ def salvar(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
     ele exige perfil ativo em vez de escolher um: gravar no perfil errado é o
     tipo de estrago que não se desfaz por engano.
     """
-    nome = str(ctx.state.get("active_profile") or "")
+    nome = perfil.nome_do_ativo(ctx.state)
     # O `ctx` VAI JUNTO: é o que faz o Salvar gravar o que ESTÁ VALENDO, e não
     # o que já estava no disco.
     draft = _draft_do_ativo(nome, ctx)
@@ -399,7 +414,7 @@ def exportar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     para outra máquina é byte a byte o que está aqui — sem passar pelo pydantic,
     que normalizaria campos e mudaria o arquivo sem ninguém pedir.
     """
-    nome = str(ctx.state.get("active_profile") or "")
+    nome = perfil.nome_do_ativo(ctx.state)
     if not nome:
         raise ValueError("exportar: não há perfil ativo para exportar.")
     pasta = perfil.pasta()

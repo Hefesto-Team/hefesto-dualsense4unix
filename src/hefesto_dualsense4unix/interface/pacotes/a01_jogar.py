@@ -2315,8 +2315,57 @@ def modo_xbox(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     _gravar_o_modo_do_chip(ctx, "xbox")
 
 
+#: O QUE A TELA DIZ QUANDO A MÁSCARA VALE E NÃO FICA GUARDADA — as duas metades
+#: (`AS-DUAS-ABAS-FALAM-01`), e a forma é a do `a02_controles.SOM_SEM_ENDERECO`,
+#: que já resolveu esta mesma pergunta para o som.
+#:
+#: A-PERNA-QUE-FALTA-01, 11/09/2026. Até hoje o gesto chamava `ponte.chamar`, que
+#: devolve `bool`: o `motivo` que o daemon acabava de mandar morria na ponte, e
+#: a tela piscava VERDE sobre um perfil byte-idêntico. A `§3` desta sprint tirou
+#: a causa comum (o daemon calado com um perfil valendo no disco); estas frases
+#: fecham a CLASSE — no dia em que o daemon recusar por outra razão, a tela diz.
+#:
+#: NENHUMA DELAS NOMEIA O ESTADO INTERNO, e é regra dela (07/09): *"o layout não
+#: informa os nossos defeitos"*. `sem_perfil` vira o que ELA faz a seguir.
+#:
+#: PROVISÓRIO — texto de tela é palavra dela.
+MASCARA_VALE_SEM_PERFIL = (
+    "A máscara vale agora, mas não ficou guardada: escolha um perfil na aba "
+    "Perfis e ela passa a ser lembrada nele."
+)
+MASCARA_VALE_SEM_ENDERECO = (
+    "A máscara vale agora, mas o perfil recusou guardá-la só para este "
+    "controle: ele não se identifica de um jeito que o perfil saiba mirar."
+)
+MASCARA_VALE_SEM_GUARDAR = (
+    "A máscara vale agora, mas não consegui guardá-la no perfil."
+)
+
+#: A TRADUÇÃO DA RECUSA DO CORPO, e o `None` é o caso comum.
+#:
+#: `sem_mudanca` NÃO É RECUSA e por isso não está aqui: ele quer dizer que o
+#: perfil JÁ guardava essa máscara. Falar seria transformar um clique sem efeito
+#: nenhum num aviso de 6 s — e a piscada verde já responde por ele.
+#:
+#: O DESCONHECIDO CAI NA FRASE GENÉRICA de propósito: um motivo que esta tabela
+#: não conhece é um token interno, e mandá-lo cru para o cartão seria a tela
+#: falando a língua do daemon.
+_FRASE_DA_MASCARA_NAO_GUARDADA = {
+    "sem_perfil": MASCARA_VALE_SEM_PERFIL,
+    "sem_endereco": MASCARA_VALE_SEM_ENDERECO,
+    "sem_mudanca": "",
+}
+
+
+def _recado_da_mascara(motivo: str | None) -> str:
+    """A frase do cartão para o `motivo` que o daemon devolveu — `""` se calou."""
+    if not motivo:
+        return ""
+    return _FRASE_DA_MASCARA_NAO_GUARDADA.get(motivo, MASCARA_VALE_SEM_GUARDAR)
+
+
 @gesto("01-jogar.html", "mascara", grava="gamepad.mask.set")
-def mascara_do_controle(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
+def mascara_do_controle(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
     """A máscara de UM aparelho — os chips dentro do cartão de cada controle.
 
     O PEDIDO É DELA, 03/09/2026: *"É uma máscara por controle. Mesmo caso do
@@ -2397,7 +2446,25 @@ def mascara_do_controle(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     # que confere nome contra o `ipc_server`) e o gesto `mascara` não tinha
     # linha em `PROVAS` (a régua que confere a CHAMADA). As duas nasceram com
     # esta cura, e é a de `PROVAS` que morde a assinatura.
-    p.chamar("gamepad.mask.set", uniq=uniq, flavor=flavor)
+    #
+    # `chamar_detalhado` E NÃO `chamar` — A-PERNA-QUE-FALTA-01, 11/09/2026. O
+    # `chamar` devolve `bool` e o `motivo` que o daemon acabou de mandar morria
+    # aqui; a docstring dele já dizia isso UMA LINHA ACIMA da própria chamada
+    # (*"perde a tradução da recusa, que é o que faz a tela dizer por que não
+    # deu"*). `gamepad.mask.set` responde `{"gravado": false, "motivo": …}`
+    # numa resposta BEM-SUCEDIDA, e é `ponte.chamar_detalhado` que junta as duas
+    # formas de o daemon dizer não.
+    ok, motivo = p.chamar_detalhado("gamepad.mask.set", uniq=uniq, flavor=flavor)
+    if not ok:
+        # A FRASE DA RECUSA É DO DAEMON, e ela é escrita para ela: o
+        # `gamepad.mask.set` recusa em voz alta com o catálogo do que aceita.
+        # Sem motivo é falha de transporte — o gesto continua calado, como
+        # sempre foi, porque a tela inteira já está parada nesse caso.
+        if motivo:
+            raise RuntimeError(motivo)
+        return None
+    recado = _recado_da_mascara(motivo)
+    return {"recado": recado} if recado else None
 
 
 @gesto("01-jogar.html", "modo-navegacao",
@@ -2672,7 +2739,12 @@ OS_DOIS_DA_LISTA_DOS_DEZESSEIS: dict[str, str] = {
 #: `{ok, renumbered}`, e é desse corpo que sai a frase do recibo. Um `chamar`
 #: ali devolveria `bool` — o botão que responde calado, que é o defeito que a
 #: JOGAR-OS-SEIS-AVISOS-01 fecha.
-PONTE = {"chamar", "autoswitch_lock_set", "resultado"}
+#: `chamar_detalhado` ENTROU EM 11/09/2026 (A-PERNA-QUE-FALTA-01), e é o
+#: `chamar` que **não joga o MOTIVO fora**. A `mascara_do_controle` precisa
+#: dele porque `gamepad.mask.set` responde `{"gravado": false, "motivo": …}`
+#: dentro de uma resposta bem-sucedida: com `chamar` a tela piscava verde
+#: sobre um perfil que não mudou.
+PONTE = {"chamar", "chamar_detalhado", "autoswitch_lock_set", "resultado"}
 #: OS MÉTODOS CRUS. A régua confere um a um contra o `ipc_server.py`, e um nome
 #: inventado reprova AQUI, não na mão de quem clica.
 #: OS CINCO DA TROCA DE MODO — os que `ponte.TETOS` cobre com os 2,0 s do
@@ -2694,12 +2766,15 @@ METODOS = METODOS_DA_TROCA_DE_MODO | {
     # nunca olhou para este método, e a única régua que sobrava era o clique na
     # mão dela.
     #
-    # DÍVIDA DECLARADA, e ela é de `pacotes/ponte.py`: `gamepad.mask.set` não
-    # está em `ponte.TETOS`, logo cai nos 250 ms do bridge — que cobrem também
-    # a LEITURA da resposta. `set_mask` grava um JSON no disco; sob carga, o
-    # `chamar` pode voltar `False` com a escolha JÁ gravada, e este gesto não
-    # lê o retorno. Uma linha em `TETOS` (2,0 s) fecha isso, e ela não é desta
-    # aba.
+    # A DÍVIDA DECLARADA AQUI FOI PAGA DOS DOIS LADOS, e o fato velho sai em vez
+    # de ficar ao lado do certo. Ela dizia que `gamepad.mask.set` não estava em
+    # `ponte.TETOS` e que este gesto não lia o retorno:
+    #
+    #   * o teto entrou em 04/09/2026 — `ponte.TETOS["gamepad.mask.set"] = 2.0`,
+    #     com a razão escrita lá (a máscara grava em disco e pode recriar o
+    #     vpad, mesma família do `gamepad.emulation.set`);
+    #   * o retorno passou a ser lido em 11/09/2026 (A-PERNA-QUE-FALTA-01): o
+    #     gesto chama `chamar_detalhado` e traduz o `motivo` para o cartão.
     "gamepad.mask.set",
 }
 
@@ -2780,9 +2855,14 @@ PROVAS = [
     #
     # O RÓTULO DA TELA VIRA `flavor` PELO DONO (`mesa_viva.NOME_DA_MASCARA`),
     # nunca por um mapa digitado aqui: o que está declarado é a EXPECTATIVA.
+    #
+    # A FUNÇÃO DA PONTE MUDOU EM 11/09/2026 (A-PERNA-QUE-FALTA-01) e esta linha
+    # foi junto: `chamar_detalhado`, porque o `motivo` da resposta é o que faz a
+    # tela dizer que a máscara vale e NÃO ficou guardada. A régua continua
+    # medindo os parâmetros por nome, que é o que o defeito de 03/09 escondia.
     {"pagina": PAGINA, "gesto": "mascara",  # (noqa-acento) chave do contrato
      "clique": {"uniq": "aa:bb:cc:00:00:01", "mascara": "Xbox 360"},
-     "chama": [("chamar", ["gamepad.mask.set"],
+     "chama": [("chamar_detalhado", ["gamepad.mask.set"],
                 {"uniq": "aa:bb:cc:00:00:01", "flavor": "xbox"})]},
     # O CADEADO — 04/09/2026. Ele NÃO passa pelo `chamar`: `autoswitch_lock_set`
     # é função da ponte (degrau 2), a mesma que a janela antiga aciona.

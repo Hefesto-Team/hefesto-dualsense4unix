@@ -2087,7 +2087,7 @@ def _recusa_do_mouse(resposta: Any) -> str:
     `_call_checked_detalhado`, que é o único que entrega o corpo"*, e por isso
     um `{"status": "failed", "bloqueio": "sem_device"}` voltava como sucesso e a
     tela dela ficava sem uma palavra. A ponte entrega o corpo desde 01/09:
-    `ponte.resultado` (`interface/pacotes/ponte.py:193`) devolve o `result` do
+    `ponte.resultado` (`interface/pacotes/ponte.py:221`) devolve o `result` do
     daemon e levanta quando ninguém responde. Era um caminho que já existia e
     esta aba não chamava.
 

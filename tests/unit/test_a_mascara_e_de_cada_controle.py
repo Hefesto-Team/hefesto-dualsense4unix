@@ -178,6 +178,24 @@ class _Ponte:
         # um dicionário posicional voltar a estourar aqui, como estoura lá.
         self.chamadas.append((metodo, p))
 
+    def chamar_detalhado(self, metodo: str, **p) -> tuple[bool, str | None]:
+        """A que o gesto da máscara usa desde 11/09/2026 — `(ok, motivo)`.
+
+        **SEM `timeout` NA ASSINATURA, e isso é a ponte real.** A dela é
+
+            chamar_detalhado(metodo, **params)  # (assinatura) noqa-acento
+
+        e não tem o parâmetro: ela pergunta o teto ao `teto()` da própria ponte.
+        Copiar aqui o `timeout` do `chamar` faria este dublê aceitar uma chamada
+        que a ponte recusa, que é a doença que o docstring desta classe já
+        descreve.
+
+        DEVOLVE `(True, None)` — o daemon aceitou e GRAVOU. A recusa no corpo é
+        medida em `test_a_perna_que_falta_01_*`, com um dublê que a devolve.
+        """
+        self.chamadas.append((metodo, p))
+        return True, None
+
 
 def _clicar(**o):
     # O CAMINHO DE IMPORT É O DA INTERFACE, e não o `pacotes` solto: este

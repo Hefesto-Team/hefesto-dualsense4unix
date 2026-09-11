@@ -186,8 +186,36 @@ def chamar_detalhado(metodo: str, **params: Any) -> tuple[bool, str | None]:
 
     Prefira esta quando o botão precisar DIZER por que não deu. Um botão que
     falha calado é a mesma doença de um botão que não faz nada.
+
+    **`motivo` JUNTA AS DUAS FORMAS DE O DAEMON DIZER NÃO** — A-PERNA-QUE-FALTA-01,
+    11/09/2026 — e até hoje ela só trazia uma.
+
+    Esta casa tem dois "não" (`ipc_bridge._recusa_no_corpo`): o erro JSON-RPC de
+    parâmetro inválido, e a FRASE NO CORPO de uma resposta bem-sucedida — o
+    pedido era válido e mesmo assim não se realizou. `_call_checked` só lê o
+    primeiro: para o segundo ele responde `(True, None)`, porque o RPC foi bem.
+
+    O QUE ISSO CUSTAVA, medido: `gamepad.mask.set` responde
+    `{"status": "ok", "gravado": false, "motivo": "sem_perfil"}` quando não há
+    onde guardar a máscara. O RPC deu certo; a gravação não. A tela recebia
+    `(True, None)` e piscava verde sobre um perfil que não mudou — a família de
+    defeito mais cara desta casa.
+
+    A CURA É O PADRÃO QUE O BRIDGE JÁ USA, e não um terceiro caminho:
+    `_call_checked_detalhado` + `_recusa_no_corpo`, exatamente como
+    `trigger_set_detalhado` e `trigger_reset_detalhado` fazem. O corpo continua
+    descartado aqui — quem o quer inteiro chama `resultado`.
+
+    O CONTRATO NÃO MUDA: continua `(ok, motivo)`, e `ok` continua sendo só o do
+    RPC. Um corpo que traz `motivo` sem ter fracassado — um `sem_mudanca`, uma
+    ressalva — chega com `ok=True` e a frase ao lado; **quem decide o que é
+    recusa e o que é ressalva é o dono do assunto**, que é o gesto. Ver
+    `a01_jogar.mascara_do_controle`.
     """
-    return _b._call_checked(metodo, params, timeout=teto(metodo))
+    ok, motivo, corpo = _b._call_checked_detalhado(
+        metodo, params, timeout=teto(metodo)
+    )
+    return ok, motivo or _b._recusa_no_corpo(corpo)
 
 
 def resultado(metodo: str, timeout: float | None = None, **params: Any) -> Any:
