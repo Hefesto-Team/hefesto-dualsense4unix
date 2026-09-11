@@ -1064,7 +1064,7 @@ def rota_na_tela(entry: Any) -> str:
     valor vazio, e no alvo `classe` com `data-hef-quando` nenhum dos dois casa
     com `—`: os dois botões ficam apagados, que é o que a tela pode afirmar
     quando o daemon nunca publicou `speaker` para este controle — o estado real
-    de quem nunca recebeu um `speaker.set` (`ipc_handlers.py:4659`).
+    de quem nunca recebeu um `speaker.set` (`ipc_handlers.py:4694`).
 
     ELE TAMBÉM APAGA OS DOIS NAS ROTAS 0 E 1 (tudo no fone, mono no fone), e
     isso é de propósito: são rotas legítimas do protocolo que estes dois botões
@@ -2146,7 +2146,7 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
         #
         # `None` = o daemon nunca publicou `speaker` para este controle, que é o
         # estado real de quem nunca recebeu um `speaker.set` — o registrador não
-        # se lê, só se escreve (`ipc_handlers.py:4659`).
+        # se lê, só se escreve (`ipc_handlers.py:4694`).
         sp_lido = speaker_do_entry(c)
         # A COR DA BARRA DE LUZ, pelo dono das CINCO situações. **Os DOIS
         # valores são usados**: o rótulo é o discriminador e a base é a cor.
@@ -2387,7 +2387,7 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
             #      comando): `texto_volume(102, False)` = **"100 %"**;
             #   2. `sp.get('volume', 0)` transformava AUSÊNCIA em **zero**. O
             #      daemon só publica `speaker` depois do primeiro `speaker.set`
-            #      (`ipc_handlers.py:4659`) — antes dele a tela afirmava "0%"
+            #      (`ipc_handlers.py:4694`) — antes dele a tela afirmava "0%"
             #      sobre um alto-falante que ninguém mediu, que é o gêmeo exato
             #      do "Sem toque" logo abaixo. `speaker_do_entry` devolve `None`
             #      nesse caso, e `None` é o travessão.
@@ -2761,7 +2761,7 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
 #   🎙  data-mudo="microfone"      `mic.set`      (ipc_handlers.py:4830)
 #   ♪   data-mudo="alto-falante"   `speaker.set`  (ipc_handlers.py:4664)
 #   Sons do jogo  data-rota="jogo" `speaker.set`  com `rota`, o mesmo :4589
-#   Virtual / Nativo  data-mic-modo  `machine.declare` (ipc_handlers.py:5258)
+#   Virtual / Nativo  data-mic-modo  `machine.declare` (ipc_handlers.py:6713)
 #
 # O "VIRTUAL / NATIVO" GANHOU DONO EM 01/09/2026, E A AFIRMAÇÃO ANTERIOR CAIU.
 # Aqui estava escrito, e é uma frase minha, da primeira leva:
@@ -2929,7 +2929,7 @@ def _volume_conhecido(dele: dict[str, Any]) -> dict[str, Any]:
 
     ELE NÃO SE INVENTA, e a razão é do aparelho: o DualSense **não devolve** o
     registrador de volume, então `daemon.state_full` só publica a chave
-    `speaker` depois do primeiro `speaker.set` (`ipc_handlers.py:4659`). Mandar
+    `speaker` depois do primeiro `speaker.set` (`ipc_handlers.py:4694`). Mandar
     um número de palpite tomaria a posse com o valor errado.
 
     E MANDÁ-LO QUANDO SE SABE É O QUE A GUI ESTÁVEL FAZ, pela cura de
@@ -3826,7 +3826,7 @@ def volume(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
 
     **E A FALTA DELES TRANCAVA O ♪.** O DualSense não devolve o volume do
     alto-falante, então o daemon só publica a chave `speaker` **depois** de
-    alguém ESCREVER um (`ipc_handlers.py:4659`); sem escritor nesta tela, o ♪
+    alguém ESCREVER um (`ipc_handlers.py:4694`); sem escritor nesta tela, o ♪
     recusava para sempre num controle cujo volume nunca foi ajustado por outro
     caminho — e a frase de recusa original mandava *"use o controle deslizante
     primeiro"*, sobre um deslizante que não existia. Este gesto é o escritor que

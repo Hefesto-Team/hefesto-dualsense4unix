@@ -150,7 +150,7 @@ class TestABombaPerguntaACadaReport:
         porque mede a BOMBA. Este teste mede a PONTE.
         """
         ponte = af.PonteDeSomPorRadio(
-            uniq="a0fa9c02fe00",
+            uniq="02fe00d4c311",
             abrir_hidraw=lambda: None,
             fonte_de_pcm=_fonte_infinita(),
             com_microfone=lambda: False,
@@ -223,7 +223,7 @@ class TestAFiacao:
         """
         anterior = bt.registrar_ouvinte_do_microfone(None)
         try:
-            assert bt.o_microfone_esta_no_ar("a0fa9c02fe00") is False
+            assert bt.o_microfone_esta_no_ar("02fe00d4c311") is False
         finally:
             bt.registrar_ouvinte_do_microfone(anterior)
 

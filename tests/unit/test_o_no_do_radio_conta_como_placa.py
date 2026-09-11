@@ -23,9 +23,9 @@ from hefesto_dualsense4unix.app import audio_saida
 from hefesto_dualsense4unix.integrations.alto_falante_bt import nome_do_sink
 
 #: Um controle no rádio: nenhuma placa da Sony na lista, só o nó desta casa.
-UNIQ_RADIO = "a0fa9c02fe00"
+UNIQ_RADIO = "02fe00d4c311"
 #: Um controle no cabo, com a placa de verdade e o nó desta casa ao lado.
-UNIQ_CABO = "d42f4baabbcc"
+UNIQ_CABO = "aabbcc4846d8"
 
 _PLACA_SONY = (
     "alsa_output.usb-Sony_Interactive_Entertainment_DualSense_Wireless_"
