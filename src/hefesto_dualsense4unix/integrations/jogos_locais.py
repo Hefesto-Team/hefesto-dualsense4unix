@@ -29,6 +29,7 @@ digitado, e degradar calado aqui é requisito, não descuido.
 """
 from __future__ import annotations
 
+import configparser
 import contextlib
 import os
 import re
@@ -146,18 +147,54 @@ class JogoLocal:
 
     appid: str
     nome: str
-    #: ``"steam"`` (veio de um `appmanifest_*.acf`) ou ``"desktop"``.
+    #: ``"steam"`` (veio de um `appmanifest_*.acf`), ``"desktop"``, ou o nome do
+    #: lançador em minúsculas (``"heroic"``) — JOGOS-DOS-LANCADORES-01.
     fonte: str
+    #: O LANÇADOR de onde ele veio, como a tela o escreve (``"Heroic"``). Vazio
+    #: para a Steam, que é a fonte que já tinha nome próprio nos dois rótulos.
+    lancador: str = ""
+    #: A `wm_class` que a janela dele anuncia (``"gotg.exe"``). Vazia na Steam,
+    #: que endereça por `appid`. **Um dos dois sempre existe** — ver `valor`.
+    chave: str = ""
 
     @property
     def rotulo(self) -> str:
-        """Como ele aparece na lista da completação: nome e número juntos.
+        """Como ele aparece na lista da completação: nome e endereço juntos.
 
         O número NÃO some do rótulo pelo mesmo motivo que ele não some de
         `steam_launch_options.rotulo_do_jogo`: é o que ela confere na Steam, e
         é o único identificador que os cadastros do projeto compartilham.
+
+        **O JOGO DE LANÇADOR DIZ O LANÇADOR, e não a chave** — 10/09/2026. A
+        chave dele é o nome do binário (``gotg.exe``), que não é um dado que
+        ela confira em lugar nenhum; o que responde *"de onde vem este jogo?"*
+        é o nome do programa que o instalou, e é o que o desenho da coluna
+        «Quando usar» já escreve (*«Jogo · mk1.exe»*, *«Jogo da Steam · …»*).
         """
+        if self.lancador:
+            return f"{self.nome} ({self.lancador})"
         return f"{self.nome} (appid {self.appid})"
+
+    @property
+    def valor(self) -> str:
+        """O que o CAMPO grava quando ela escolhe esta linha.
+
+        É a metade que o `<datalist>` põe no `value`, e trocá-la por outra
+        coisa é o defeito que a régua da lista já guarda: escrever o NOME faria
+        nascer um `steam_app_Sea of Stars`, que nunca casa com janela nenhuma.
+        """
+        return self.chave or self.appid
+
+    @property
+    def forma(self) -> str:
+        """A chave de `simple_match.from_simple_choice` para esta linha.
+
+        ``"steam_game"`` guarda ``steam_app_<id>``; ``"janela"`` guarda a
+        `wm_class` crua — a sexta forma, nascida na ONDA5-10-01 para o jogo de
+        fora da Steam. **São o MESMO campo do perfil** (`window_class`), que é
+        o que o critério de pronto desta sprint exige: *"nunca um campo novo"*.
+        """
+        return "janela" if self.chave else "steam_game"
 
 
 def e_ferramenta_da_steam(nome: str) -> bool:
@@ -458,6 +495,287 @@ def catalogo_de_jogos(
     return sorted(por_appid.values(), key=lambda j: (chave_de_busca(j.nome), j.appid))
 
 
+def jogos_dos_lancadores(lar: Path | None = None) -> list[JogoLocal]:
+    """A SEGUNDA ORIGEM — os jogos dos cinco lançadores que não são a Steam.
+
+    **JOGOS-DOS-LANCADORES-01, 10/09/2026.** A frase dela era *"cada um dos
+    lançadores passarem a ter os jogos com perfis dentro da aba perfis"*, e o
+    que o produto tinha era uma origem só: a Steam.  # noqa-acento: citação dela
+
+    **SÓ ENTRA QUEM TEM ENDEREÇO.** `censo_dos_lancadores.jogos_com_chave_de_janela`
+    é quem decide, e a docstring dele diz o preço da alternativa: uma linha sem
+    chave é uma linha que nunca casa com janela nenhuma (R-12). Isto **não** é
+    a decisão (A)/(B) da §3 da sprint — aquela é sobre a LISTA DE PERFIS
+    crescer sozinha, e é dela; esta é a lista de SUGESTÃO do campo, que é o (C)
+    que ela já tem, e que não cria linha nenhuma sem ela pedir.
+
+    O `appid` sai VAZIO de propósito: um jogo de fora da Steam não tem appid, e
+    inventar um número nosso obrigaria a traduzir nos dois sentidos para
+    sempre — é o mesmo argumento que `JogoDoLancador.chave` já carrega.
+
+    NUNCA LEVANTA: `biblioteca_de` promete não levantar, e quem chama é a
+    pintura de uma aba.
+
+    :param lar: o `HOME` a inspecionar. Uma régua passa um lar de mentira — e
+        **nenhuma régua desta sprint depende de a máquina ter Heroic**.
+    """
+    from hefesto_dualsense4unix.integrations.censo_dos_lancadores import (
+        jogos_com_chave_de_janela,
+    )
+
+    achados: dict[str, JogoLocal] = {}
+    for lancador, jogo in jogos_com_chave_de_janela(lar):
+        classe = jogo.classe_de_janela
+        achados.setdefault(classe, JogoLocal(
+            appid="", nome=jogo.nome, fonte=lancador.casefold(),
+            lancador=lancador, chave=classe))
+    return sorted(achados.values(), key=lambda j: (chave_de_busca(j.nome), j.chave))
+
+
+#: O `.desktop` de um LANÇADOR não é um jogo. `Game;PackageManager;` é como o
+#: Heroic, o Lutris e o Rare se declaram — são a loja, e um perfil para a
+#: vitrine não é o que ela pediu. `Game;Emulator;` FICA: o RetroArch é um
+#: processo para todas as ROMs (é o que a §4 desta sprint diz), então a linha
+#: por emulador é a única que existe, e é a certa.
+_CATEGORIA_QUE_NAO_E_JOGO = "packagemanager"
+
+#: O rótulo do lançador para um jogo que não veio de lançador nenhum. Aparece
+#: na lista (``"Celeste (Instalado aqui)"``) e é o que responde *"de onde vem
+#: este?"* — a única resposta honesta quando a resposta é "de lugar nenhum,
+#: está no menu".
+LANCADOR_DIRETO = "Instalado aqui"
+
+
+def jogos_diretos_dos_atalhos(
+    pastas: Sequence[Path] | None = None,
+) -> list[JogoLocal]:
+    """A TERCEIRA ORIGEM — o jogo que não é de lançador nenhum, pelo `.desktop`.
+
+    **`StartupWMClass=` É A ETIQUETA, e ela não é invenção nossa**: é o campo
+    da spec XDG com que o compositor liga uma janela ao atalho que a abriu —
+    exatamente a pergunta que o perfil faz. Medido nas quatro pastas XDG dela
+    em 11/09/2026:
+
+        221 `.desktop` · 59 com `StartupWMClass` · 31 com `Categories=Game`
+
+    e dos 31, **23 são os `meow-steam-*.desktop` dela, que escrevem
+    ``StartupWMClass=steam_app_<id>``** — a prova de que este campo é o MESMO
+    endereço que o perfil da Steam já guarda, e não um segundo cadastro.
+
+    **OS `steam_app_<id>` SAEM DAQUI**, e não por serem inúteis: são a origem
+    da Steam, que `catalogo_de_jogos` já lê com o nome COMPLETO do `.acf`
+    (o atalho já foi medido cortando ``ORPHEUS: TO HELL AND BACK`` em
+    ``ORPHEUS``). Deixá-los entrar seria a mesma linha duas vezes, uma delas
+    com o nome pior.
+
+    **E OS LANÇADORES SAEM PELO QUE ELES MESMOS DECLARAM** —
+    `Categories` com `PackageManager` (ver `_CATEGORIA_QUE_NAO_E_JOGO`). Sem
+    isso, Heroic, Lutris e Rare entrariam na lista de JOGOS da aba Perfis.
+
+    NUNCA LEVANTA, e devolve lista vazia em silêncio numa máquina sem atalho
+    nenhum — o mesmo contrato de `jogos_dos_atalhos_desktop`, logo acima.
+    """
+    alvos = list(pastas) if pastas is not None else pastas_de_atalhos()
+    achados: dict[str, JogoLocal] = {}
+    for pasta in alvos:
+        try:
+            arquivos = sorted(pasta.glob("*.desktop"))
+        except OSError:
+            continue
+        for arquivo in arquivos:
+            try:
+                texto = arquivo.read_text(encoding="utf-8", errors="replace")
+            except OSError:
+                continue
+            cfg = configparser.ConfigParser(strict=False, interpolation=None)
+            try:
+                cfg.read_string(texto)
+            except configparser.Error:
+                continue
+            if not cfg.has_section("Desktop Entry"):
+                continue
+            entrada = cfg["Desktop Entry"]
+            if entrada.get("NoDisplay", "").strip().casefold() == "true":
+                continue
+            classe = entrada.get("StartupWMClass", "").strip()
+            categorias = {c.strip().casefold()
+                          for c in entrada.get("Categories", "").split(";")}
+            if not classe or "game" not in categorias:
+                continue
+            if _CATEGORIA_QUE_NAO_E_JOGO in categorias:
+                continue
+            if steam_appid_de_texto(classe) is not None:
+                continue
+            nome = _nome_do_desktop(texto)
+            if not nome:
+                continue
+            achados.setdefault(classe, JogoLocal(
+                appid="", nome=nome, fonte="desktop",
+                lancador=LANCADOR_DIRETO, chave=classe))
+    return sorted(achados.values(), key=lambda j: (chave_de_busca(j.nome), j.chave))
+
+
+def jogos_com_janela(
+    lar: Path | None = None,
+    pastas: Sequence[Path] | None = None,
+) -> list[JogoLocal]:
+    """**AS TRÊS ORIGENS DE FORA DA STEAM, numa lista só** — o motor da sprint.
+
+    Heroic, Lutris (`jogos_dos_lancadores`) e o jogo direto do menu
+    (`jogos_diretos_dos_atalhos`), cada um com a `chave` que a janela dele
+    anuncia. **Quem vem de lançador ganha o desempate**: ele sabe o nome da
+    loja, e o `.desktop` às vezes traz o nome do atalho e não o do jogo.
+
+    É a lista que `jogo_da_janela` procura e que `nomes_das_janelas` indexa.
+    """
+    jogos = list(jogos_dos_lancadores(lar))
+    vistos = {j.chave.casefold() for j in jogos}
+    jogos += [j for j in jogos_diretos_dos_atalhos(pastas)
+              if j.chave.casefold() not in vistos]
+    return sorted(jogos, key=lambda j: (chave_de_busca(j.nome), j.chave))
+
+
+def jogo_da_janela(
+    classe: str | None,
+    jogos: Iterable[JogoLocal],
+) -> JogoLocal | None:
+    """**A FUNÇÃO QUE O «DETECTAR» PRECISAVA**: de uma `wm_class`, QUE JOGO É.
+
+    É a volta do caminho que `steam_appid_from_wm_class` já fazia para a
+    Steam, e ela é a falta que ELA nomeou em 11/09/2026, com a foto na mão:
+    o botão «Detectar» responde ``PRAGMATA`` para ``steam_app_3357650`` e
+    **não responde nada** para um jogo que não é da Steam —
+    *"em perfil falta detectar os jogos dos demais lançadores"*.
+
+    O botão SEMPRE GRAVOU a regra certa para o jogo de fora da Steam (a forma
+    "janela", ONDA5-10-01): o que faltava não era a regra, era o NOME. Sem
+    ele o desfecho diz *"«Perfil» agora vale em: Só neste programa"* sobre
+    uma `wm_class` que ela não digitou, vinda de uma janela que ela não está
+    mais olhando — que é a mesma coisa que não achar.
+
+    PURA: recebe a lista já lida (`jogos_com_janela`), para que a régua não
+    precise da biblioteca dela. Quem lê o disco é `nomes_das_janelas`.
+
+    **A COMPARAÇÃO É INSENSÍVEL A CAIXA, e isso é medido e não gosto:** o
+    `pga.db` dela guarda ``/home/x/Games/gotg/GOTG.exe`` e a janela do mesmo
+    jogo pelo Heroic anuncia ``gotg.exe``. Exigir caixa igual faria o mesmo
+    jogo não se reconhecer conforme o lançador por onde ela o abriu.
+
+    `steam_app_<id>` devolve `None` de propósito: ele tem dono, e o dono é
+    `catalogo_de_jogos` pelo appid. Duas respostas para o mesmo endereço é a
+    segunda verdade que esta casa já pagou.
+    """
+    alvo = (classe or "").strip().casefold()
+    if not alvo or alvo == "unknown":
+        return None
+    for jogo in jogos:
+        if jogo.chave and jogo.chave.casefold() == alvo:
+            return jogo
+    return None
+
+
+#: O caderno de `nomes_das_janelas`: `(assinatura, {wm_class: nome})`.
+_NOMES_DAS_JANELAS: tuple[object, dict[str, str]] | None = None
+
+
+def assinatura_das_janelas(
+    lar: Path | None = None,
+    pastas: Sequence[Path] | None = None,
+) -> tuple[object, ...]:
+    """Impressão BARATA das três origens de fora da Steam — o freio do caderno.
+
+    Mesmo molde de `assinatura_da_biblioteca` e pela mesma razão: responder
+    *"mudou alguma coisa desde a última vez?"* com `stat()` de diretório, em
+    vez de reabrir o `pga.db` e os 221 `.desktop` dez vezes por segundo.
+
+    **AS DUAS METADES SÃO PRECISAS SEPARADAS:** as cinco pastas de lançador
+    vêm de `censo_dos_lancadores.assinatura_das_bibliotecas`, e as pastas de
+    `.desktop` entram aqui — somá-las numa assinatura só faria a lista do
+    Heroic ser relida toda vez que um flatpak qualquer instalasse um atalho,
+    mas separá-las em dois cadernos custaria dois caminhos de invalidação para
+    uma lista só. Um caderno, uma assinatura que soma as duas.
+    """
+    from hefesto_dualsense4unix.integrations.censo_dos_lancadores import (
+        assinatura_das_bibliotecas,
+    )
+
+    linhas: list[object] = [assinatura_das_bibliotecas(lar)]
+    alvos = list(pastas) if pastas is not None else pastas_de_atalhos()
+    for pasta in alvos:
+        try:
+            linhas.append((str(pasta), os.stat(pasta).st_mtime_ns))
+        except OSError:
+            linhas.append((str(pasta), -1))
+    return tuple(linhas)
+
+
+def nomes_das_janelas(
+    lar: Path | None = None,
+    pastas: Sequence[Path] | None = None,
+) -> dict[str, str]:
+    """``{wm_class: nome}`` das três origens — **a PONTA que a tela chama**.
+
+    É a metade que lê o disco, separada de `jogo_da_janela` (que é pura) pela
+    mesma disciplina de `_nomes_dos_jogos` na aba: a leitura é memoizada pela
+    assinatura, e a decisão fica testável sem a biblioteca dela.
+
+    **NUNCA LEVANTA.** Quem a chama é o rótulo ao lado do campo «Nome do
+    Jogo», que é PINTURA — dez vezes por segundo. Uma exceção lendo o
+    `pga.db` do Lutris derrubaria a aba Perfis inteira por causa de um rótulo,
+    que é o contrato que `a10_perfis._jogo_reconhecido` já declara.
+
+    A caixa da chave é a do disco; quem compara é `jogo_da_janela`, que dobra
+    os dois lados. Aqui a chave entra em minúsculas para que uma consulta
+    direta ao dicionário (que é o que `frase_do_campo_do_jogo` faz) não
+    dependa de ela ter aberto o jogo pelo Heroic ou pelo Lutris.
+    """
+    global _NOMES_DAS_JANELAS
+    try:
+        assinatura = assinatura_das_janelas(lar, pastas)
+        if _NOMES_DAS_JANELAS is not None and _NOMES_DAS_JANELAS[0] == assinatura:
+            return _NOMES_DAS_JANELAS[1]
+        nomes = {j.chave.casefold(): j.nome
+                 for j in jogos_com_janela(lar, pastas) if j.chave}
+    except Exception:  # pragma: no cover - disco hostil; ver o contrato acima
+        return {}
+    _NOMES_DAS_JANELAS = (assinatura, nomes)
+    return nomes
+
+
+def ofertas_do_campo_do_jogo(
+    da_steam: Iterable[JogoLocal],
+    dos_lancadores: Iterable[JogoLocal],
+) -> list[JogoLocal]:
+    """AS DUAS ORIGENS JUNTAS — o que o campo «Nome do Jogo» oferece.
+
+    A Steam (`catalogo_de_jogos`) e os lançadores (`jogos_dos_lancadores`), em
+    ordem alfabética pelo NOME, que é o que ela procura — nunca pelo endereço.
+
+    **RECEBE AS DUAS LISTAS, e não as lê do disco**, porque quem chama é a
+    PINTURA da aba Perfis, dez vezes por segundo: ela já guarda cada origem
+    memoizada pela assinatura da sua biblioteca, e ler aqui de novo seria pagar
+    duas vezes o que está na mão. O que sobra é a JUNÇÃO — que é o que precisa
+    ter um dono só: escrevê-la também dentro do pacote da aba seria a segunda
+    verdade sobre qual jogo a lista oferece.
+
+    **`catalogo_de_jogos` NÃO FOI ALARGADO, e a razão é de contrato**: o dono
+    dele promete *"sem appid repetido"* e `nomes_por_appid` indexa por appid.
+    Um jogo de lançador tem `appid=""`; enfiá-lo ali faria os 29 do Heroic
+    colapsarem numa única entrada de chave vazia, e levaria a mudança para
+    dentro de um chamador que não é desta sprint (`profiles_actions`, que enche
+    o `Gtk.EntryCompletion`).
+
+    **A DESEMPATE É DA STEAM**, pelo mesmo motivo de sempre: se o mesmo jogo
+    aparecer nas duas origens, o número é o endereço que o produto inteiro já
+    compartilha.
+    """
+    jogos = list(da_steam)
+    vistos = {chave_de_busca(j.nome) for j in jogos}
+    jogos += [j for j in dos_lancadores
+              if chave_de_busca(j.nome) not in vistos]
+    return sorted(jogos, key=lambda j: (chave_de_busca(j.nome), j.valor))
+
+
 def nomes_por_appid(jogos: Iterable[JogoLocal]) -> dict[str, str]:
     """``{"851100": "Touhou Luna Nights"}`` — o que a frase da tela consulta."""
     return {jogo.appid: jogo.nome for jogo in jogos}
@@ -467,13 +785,15 @@ def casa_com_o_que_ela_digitou(jogo: JogoLocal, digitado: str) -> bool:
     """A linha entra na lista suspensa para este texto?
 
     Casa por PEDAÇO do nome (``"sea"`` acha ``"Sea of Stars"``, e ``"stars"``
-    também) e por começo do número — depois de escolher um jogo o campo fica
-    com o appid, e o número é o que ela tem na frente para conferir.
+    também) e por começo do ENDEREÇO — depois de escolher um jogo o campo fica
+    com o appid (ou com a `wm_class`, num jogo de lançador), e é isso que ela
+    tem na frente para conferir.
     """
     chave = chave_de_busca(digitado)
     if not chave:
         return False
-    return chave in chave_de_busca(jogo.nome) or jogo.appid.startswith(chave)
+    endereco = chave_de_busca(jogo.valor)
+    return chave in chave_de_busca(jogo.nome) or endereco.startswith(chave)
 
 
 #: A frase que a janela mostra quando o texto colado não é jogo nenhum. Fica
@@ -496,6 +816,7 @@ MSG_FORA_DA_MAQUINA = "Não instalado aqui (o número vale)."
 def frase_do_campo_do_jogo(
     texto: str | None,
     nomes: Mapping[str, str],
+    chaves: Mapping[str, str] | None = None,
 ) -> tuple[str, bool] | None:
     """O que fica ao lado do campo: ``(frase, é_alerta)``, ou ``None`` p/ esconder.
 
@@ -512,6 +833,18 @@ def frase_do_campo_do_jogo(
       é o caso normal do jogo que ela ainda vai comprar.
     - não virou appid → só reclama se PARECE endereço (`parece_endereco`).
       Enquanto ela digita o nome atrás da lista, silêncio.
+
+    **A QUINTA, E ELA É DE 10/09/2026:** o campo pode agora guardar a
+    `wm_class` de um jogo de lançador (``gotg.exe``), porque o `<datalist>`
+    passou a oferecê-la. Sem `chaves`, esse texto caía no silêncio do último
+    ramo — a lista ofereceria a linha e o rótulo ao lado não diria o nome do
+    jogo que ela acabou de escolher. Com `chaves` (``{wm_class: nome}``), ele
+    responde igual ao da Steam: **o NOME**.
+
+    O silêncio continua sendo o certo para `chaves` vazio: sem catálogo de
+    lançador não há o que afirmar, e afirmar "não reconheci" sobre um texto
+    que é só o começo de um nome digitado é o alarme que a quarta resposta
+    existe para evitar.
     """
     if not isinstance(texto, str) or not texto.strip():
         return None
@@ -519,24 +852,38 @@ def frase_do_campo_do_jogo(
     if appid is not None:
         nome = nomes.get(str(appid))
         return (nome, False) if nome else (MSG_FORA_DA_MAQUINA, False)
+    # A CONSULTA DOBRA A CAIXA dos dois lados — `nomes_das_janelas` entrega a
+    # chave em minúsculas, e o que ela digita (ou o que o «Detectar» pegou da
+    # janela) vem como o compositor o anunciou. Ver `jogo_da_janela`.
+    do_lancador = (chaves or {}).get(texto.strip().casefold())
+    if do_lancador:
+        return (do_lancador, False)
     if parece_endereco(texto):
         return (MSG_NAO_RECONHECI, True)
     return None
 
 
 __all__ = [
+    "LANCADOR_DIRETO",
     "MSG_FORA_DA_MAQUINA",
     "MSG_NAO_RECONHECI",
     "PASTAS_DE_ATALHOS",
     "JogoLocal",
     "assinatura_da_biblioteca",
+    "assinatura_das_janelas",
     "casa_com_o_que_ela_digitou",
     "catalogo_de_jogos",
     "chave_de_busca",
     "e_ferramenta_da_steam",
     "frase_do_campo_do_jogo",
+    "jogo_da_janela",
+    "jogos_com_janela",
     "jogos_da_biblioteca_steam",
+    "jogos_diretos_dos_atalhos",
     "jogos_dos_atalhos_desktop",
+    "jogos_dos_lancadores",
+    "nomes_das_janelas",
     "nomes_por_appid",
+    "ofertas_do_campo_do_jogo",
     "pastas_de_atalhos",
 ]
