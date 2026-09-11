@@ -823,13 +823,21 @@ def _endereco_do_chip(pref: str, inerte: bool) -> str:
 def rotulo_do_chip(c: dict[str, Any]) -> str:
     """O rótulo curto com a VIA marcada, para o chip da fita.
 
-    **TELA-TRES-01 §3, decisão dela de 08/09/2026:** *"cabo e rádio coloca
-    maiúsculo."*
+    O `<span class="via">` É O ENDEREÇO DA VIA, e não um gancho de estilo. Ele
+    nasceu em 08/09/2026 para que a folha subisse de caixa só o transporte
+    (TELA-TRES-01 §3, pedido dela: *"cabo e rádio coloca maiúsculo."*), e a
+    caixa alta **saiu em 11/09** — ela leu na mesma tela `CABO` na fita e
+    `cabo` no cartão logo abaixo: *"Esse tipo de coisa não pode se repetir na
+    interface."* A razão inteira, com a foto e a regra dela de 30/08 sobre
+    maiúscula, está no `topo.html`, ao lado da regra que morreu.
 
-    **A CAIXA É CSS, E ISSO NÃO É DETALHE** — `rotulo` já escrevia a razão:
-    *"quem escreve em maiúscula no HTML tira da pessoa a chance de copiar o
-    nome do plástico"*. Então o texto continua `cabo`/`rádio` no documento, e
-    o `<span class="via">` é o que a folha alcança com `text-transform`.
+    **A MARCA FICOU PORQUE O ESTILO NÃO ERA O SERVIÇO DELA:** ela diz QUAL
+    pedaço do rótulo é o transporte, sem obrigar ninguém a remontar o nome — e
+    é por ela que `scripts/check_a_maiuscula_decorativa.py` sabe onde olhar.
+
+    **O TEXTO NUNCA SOBE DE CAIXA AQUI**, e a razão é de `rotulo`: *"quem
+    escreve em maiúscula no HTML tira da pessoa a chance de copiar o nome do
+    plástico"*. O documento diz `cabo`/`rádio`, e é isso que a tela mostra.
 
     E O DONO DO TEXTO CONTINUA SENDO `rotulo`: esta função não remonta o
     rótulo, ela MARCA a última parte do que aquele devolveu. Remontar seria a

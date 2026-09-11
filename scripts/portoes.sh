@@ -288,6 +288,15 @@ rapido|tela-nao-confessa|py|scripts/check_a_tela_nao_confessa.py
 # possui — a forma de confissão do irmão acima e as palavras banidas do
 # `frases_que_ela_baniu`.
 rapido|janela-nao-confessa|py|scripts/check_a_janela_nao_confessa.py
+# A CAIXA ALTA QUE NÃO SIGNIFICA NADA — 11/09/2026, ordem dela: *"Esse tipo de
+# coisa não pode se repetir na interface."* Ela leu na MESMA tela `CABO` na fita
+# e `cabo` no cartão logo abaixo. O `CABO` não estava escrito em lugar nenhum:
+# o HTML dizia `cabo` e quem gritava era UMA LINHA DE FOLHA DE ESTILO — por isso
+# a régua tem duas peneiras, e uma sozinha daria verde sobre o defeito da outra.
+# A dívida das dez páginas sai declarada com o dono, e não reprova; o que
+# reprova é a caixa alta NOVA.
+rapido|maiuscula-decorativa|py|scripts/check_a_maiuscula_decorativa.py
+rapido|maiuscula-decorativa-morde|pytest|tests/unit/test_portao_a_maiuscula_decorativa_morde.py
 rapido|ruff|bin|ruff check src/ tests/
 completo|shellcheck|bin|shellcheck -S error scripts/*.sh scripts/ci/*.sh install.sh uninstall.sh
 completo|referencias-docs|py|scripts/validar-referencias-docs.py --all

@@ -284,17 +284,31 @@
      `.fita.inerte` é a única porta desta regra. */
   .fita.inerte .chip.on{border-color:var(--border-sutil);background:transparent;
                         color:var(--comment);font-weight:400}
-  /* CABO e RÁDIO em CAIXA ALTA — TELA-TRES-01 §3, decisão dela de 08/09/2026:
-     "cabo e rádio coloca maiúsculo."
+  /* AQUI MORAVA A CAIXA ALTA DA VIA, e ela SAIU — ESQUELETO-C2, 11/09/2026.
+     Era a TELA-TRES-01 §3, pedido dela de 08/09: "cabo e rádio coloca
+     maiúsculo." O que ela leu três dias depois, na MESMA tela:
 
-     SÓ A VIA, e não o chip inteiro: `text-transform` no `<label>` subiria o
-     nome do plástico junto (`GALACTIC PURPLE`), que ela não pediu — e o `P1`
-     já é maiúsculo por natureza.
+         fita   P1 • Cosmic Red • CABO
+         card   Cosmic Red • cabo
 
-     E O TEXTO NO DOCUMENTO CONTINUA MINÚSCULO, que é a regra escrita em
-     `monta.rotulo`: quem escreve em maiúscula no HTML tira dela a chance de
-     copiar o nome como ele é. */
-  .fita .chip .via{text-transform:uppercase}
+     "Leia o cabo e acordado (ambos minusculo sem iniciar de forma   (noqa-acento: citação literal dela)
+      capitular). Esse tipo de coisa não pode se repetir na interface."   (noqa-acento: citação literal dela)
+
+     A REVOGAÇÃO É A LEITURA CERTA DE «coloca maiúsculo», e não humor: a regra
+     dela é de 30/08 — "a maiúscula a regra é sobre a primeira letra a ser   (noqa-acento: citação literal dela)
+     capitalizada, é o padrão do projeto" —, e foi por ela que a caixa alta
+     saiu dos rótulos de seção no mesmo dia (`.sec-rot`, nos geradores). Subir
+     a palavra INTEIRA nunca foi o que esse padrão diz.
+
+     E O DOCUMENTO NUNCA FOI O CULPADO: o texto no HTML já era minúsculo (a
+     regra de `monta.rotulo` — maiúscula escrita no HTML tira dela a chance de
+     copiar o nome como ele é). A grafia dupla morava SÓ na folha de estilo, e
+     é por isso que uma régua que lesse apenas o texto das dez páginas daria
+     verde sobre uma tela que gritava. Quem mede as DUAS metades é
+     `scripts/check_a_maiuscula_decorativa.py`, que nasceu com esta cura.
+
+     O `<span class="via">` FICA: ele é o ENDEREÇO da via no rótulo do chip
+     (`monta.rotulo_do_chip`), não um gancho de estilo. */
   .chip{
     padding:5px 12px;border-radius:6px;font-size:12px;
     border:1px solid var(--linha);background:var(--app-bg);color:var(--texto-mudo);
