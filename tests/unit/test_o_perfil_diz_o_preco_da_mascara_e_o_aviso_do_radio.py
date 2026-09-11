@@ -317,8 +317,16 @@ def _prioridade(ctx: Contexto, ponte: Any) -> None:
                                  ponte)
 
 
-def _modo(ctx: Contexto, ponte: Any) -> None:
-    a10_perfis.editor_modo(ctx, {"modo": "desktop"}, ponte)
+# O `_modo` SAIU DAQUI — 11/09/2026. Ordem dela: *"em perfis ainda aparece
+# modo. Isso deve aparecer só na aba jogar."* O quadro «Modo» saiu do editor de
+# Perfis e o gesto `a10_perfis.editor_modo` saiu com ele, porque clique nenhum
+# o alcançava mais.
+#
+# O QUE ESTE CASO PROVAVA CONTINUA PROVADO pelos outros quatro: a linha 370 é
+# sobre `_com_o_que_esta_valendo` — *todo* gesto que grava o perfil INTEIRO lê o
+# que está valendo em vez do `.json`. O funil é o mesmo (`_gravar`), e quatro
+# gestos o exercem. Um quinto que não existe não acrescenta cobertura; ele só
+# faria a régua morrer com um `AttributeError` que não é sobre o defeito.
 
 
 def _jogo(ctx: Contexto, ponte: Any) -> None:
@@ -333,7 +341,6 @@ def _ambiente(ctx: Contexto, ponte: Any) -> None:
 @pytest.mark.parametrize("gesto,nome_do_gesto", [
     (_renomear, "editor.nome"),
     (_prioridade, "editor.prioridade"),
-    (_modo, "editor.modo"),
 ])
 def test_o_gesto_que_grava_nao_apaga_a_cor_viva(
     disco: dict[str, Any], gesto: Any, nome_do_gesto: str

@@ -1,36 +1,37 @@
-"""O quadro "Modo" entrega os quatro botões — e NENHUMA das duas frases.
+"""O quadro "Modo" não mora mais na aba Perfis — e as duas frases têm dono.
 
-**A ENCOMENDA É DA `ONDA5-10-03`, decisão 10-Q6 dela**, e a `PERFIL-MODO-01` a
-cumpre no mesmo dia em que o quadro nasce. As duas frases que a janela GTK põe
-ao lado do modo NÃO atravessam:
+**ESTA RÉGUA INVERTEU EM 11/09/2026, por ordem dela:**
 
-* **o preço da máscara Xbox** — `home_actions.TEXTO_CUSTO_MASCARA_XBOX`, o
-  tooltip que diz o que o Xbox 360 não faz (giroscópio, touchpad, vibração
-  fina). Na janela estável ele vive no seletor de máscara do editor de perfil
-  (`profiles_actions._install_mode_section`, `flavor_sel.set_tooltips`);
-* **o rádio frágil no Nativo** — `home_actions.texto_do_radio_fragil`, a linha
-  condicional que a aba Perfis passou a mostrar em 24/08 ao oferecer "Conexão
-  Nativa (Sony)".
+    "em perfis ainda aparece modo. Isso deve aparecer só na aba jogar."
 
-**ELA LÊ AS CONSTANTES, NUNCA AS DIGITA**, e a razão é a armadilha desta casa:
-uma régua que carregasse o texto se desligaria sozinha no dia em que a frase
-mudasse uma vírgula — e ficaria VERDE sobre a frase nova, que é o pior estado
-de um portão. O dono das duas é `app/actions/home_actions.py`, e ele continua
-sendo o dono: as duas frases estão CERTAS na janela GTK, e o que esta régua diz
-é que elas não pertencem a ESTE quadro.
+O QUE ELA COBRAVA ANTES, e cobrava certo: o quadro «Modo» nasceu em 06/09
+(`PERFIL-MODO-01`) com os quatro botões e **nenhuma** das duas frases que a
+janela GTK põe ao lado do modo — decisão 10-Q6 dela, executada pela
+`ONDA5-10-03`. Esta régua vigiava o alcance daquele quadro.
 
-**O ALCANCE É O QUADRO, NÃO A PÁGINA.** As palavras "rádio" e "Xbox 360"
-aparecem legitimamente noutros pontos da aba 10 (as dicas do Estilo de Jogo, a
-tabela da guarda). Medir a página inteira daria um portão que reprova por
-motivo errado — e um portão assim é desligado por quem for mexer nele.
+**O QUADRO SAIU INTEIRO**, e com ele o gesto que gravava
+(`a10_perfis.editor_modo`) e a regra de CSS da fileira. Uma régua que some com o
+assunto é dívida; uma régua que inverte com a decisão registrada é o contrato
+novo — então o que se cobra aqui agora é a AUSÊNCIA, nas duas páginas, e pelas
+quatro marcas que o quadro deixava (o bloco, o atributo do botão, o endereço da
+pintura e a regra do CSS). Cada uma pode voltar por um caminho diferente.
 
-MORDIDA (as duas colhidas em 06/09/2026, com a cura arrancada e devolvida):
-ponha `title="{TEXTO_CUSTO_MASCARA_XBOX}"` num dos quatro botões do
-`aba10.botoes_do_modo` e a primeira asserção reprova nomeando a constante.
+**AS DUAS FRASES CONTINUAM CERTAS ONDE ELAS MORAM.** O dono é
+`app/actions/home_actions.py`, e esta régua continua perguntando a ele — nunca
+digitando o texto. O que ela diz é que elas não pertencem a esta página: nem no
+quadro, que saiu, nem fora dele.
+
+**POR QUE A VARREDURA NÃO É A PÁGINA INTEIRA**, e isto não mudou: as palavras
+"rádio" e "Xbox 360" aparecem legitimamente noutros pontos da aba 10 (as dicas
+do Estilo de Jogo, a tabela da guarda). O que se procura é a FRASE INTEIRA do
+dono, que é o que a decisão 10-Q6 baniu desta tela.
+
+A IRMÃ DESTA RÉGUA é
+`tests/unit/test_o_quadro_do_modo_grava_no_perfil.py`, e a divisão é de
+assunto: aqui a TELA (o quadro não está, e as frases do dono não chegam); lá o
+DADO (`Profile.mode` sobrevive à retirada, e o perfil novo nasce sem a seção).
 """
 from __future__ import annotations
-
-import re
 
 import pytest
 
@@ -52,17 +53,27 @@ _ESTADO_DO_RADIO_FRAGIL = {
     "native_mode": {"enabled": True},
 }
 
+#: AS QUATRO MARCAS QUE O QUADRO DEIXAVA, e nenhuma é redundante — cada uma
+#: volta por um caminho diferente:
+#:
+#: * o bloco volta num `git revert` do gerador;
+#: * o atributo do botão volta se outro controle desta aba reusar o nome — e a
+#:   régua de ponteiros da casa (`test_steam_input_ponteiros`) o lê como modo;
+#: * o endereço da pintura volta se o pacote for religado;
+#: * a regra de CSS volta num `merge` de folha de estilo.
+#:
+#: O NOME DE CADA UMA NÃO SE ESCREVE EM COMENTÁRIO QUE VIAJE PARA O HTML — este
+#: arquivo é `tests/`, não vai para página nenhuma, então aqui pode.
+_MARCAS_DO_QUADRO = (
+    ('<div class="campo modo">', "o bloco da fileira no editor"),
+    ('data-modo="', "o atributo que dizia qual dos quatro"),
+    ('data-hef="editor.modo"', "o endereço que o produto pintava"),
+    (".campo.modo", "a regra de CSS da fileira"),
+)
 
-def _quadro_do_modo(publicado: bool) -> str:
-    """Só o `<div class="campo modo">` — o alcance desta régua.
 
-    `""` quando o quadro ainda não existe naquela página: na PUBLICADA ele
-    espera o `--publicar 10`, que é ato dela, e um `assert` sobre a página que o
-    produto renderiza hoje reprovaria por uma ausência que é o desenho.
-    """
-    html = onde.pagina(PAGINA, publicado=publicado).read_text(encoding="utf-8")
-    achado = re.search(r'<div class="campo modo">.*?</div>', html, re.S)
-    return achado.group(0) if achado else ""
+def _pagina(publicado: bool) -> str:
+    return onde.pagina(PAGINA, publicado=publicado).read_text(encoding="utf-8")
 
 
 def _frases_proibidas() -> list[tuple[str, str]]:
@@ -75,7 +86,7 @@ def _frases_proibidas() -> list[tuple[str, str]]:
 
 
 def test_as_duas_frases_do_dono_existem_de_verdade() -> None:
-    """A régua acima só morde se as constantes ainda produzem texto.
+    """A régua abaixo só morde se as constantes ainda produzem texto.
 
     **RÉGUA QUE ACHA ZERO NÃO É RÉGUA VERDE.** Se o dono passar a devolver
     vazio, a varredura de baixo ficaria verde sem varrer nada — o estado que
@@ -90,26 +101,38 @@ def test_as_duas_frases_do_dono_existem_de_verdade() -> None:
 
 
 @pytest.mark.parametrize("publicado", [False, True], ids=["bancada", "publicada"])
-def test_o_quadro_do_modo_nao_descreve_o_que_perde(publicado: bool) -> None:
-    """Decisão 10-Q6 dela: o quadro entrega os quatro botões e nada mais."""
-    quadro = _quadro_do_modo(publicado)
-    if not quadro:
-        pytest.skip(
-            "o quadro Modo ainda não existe nesta página — na PUBLICADA ele "
-            "espera o `--publicar 10`, que é ato dela")
-    for nome, texto in _frases_proibidas():
-        assert texto not in quadro, (
-            f"o quadro Modo carrega `{nome}` — a decisão 10-Q6 dela tirou as "
-            f"DUAS frases, e o aviso pertence ao canal de recado. A frase "
-            f"continua certa onde ela mora (a janela GTK); errada é a tela.")
+@pytest.mark.parametrize("marca,o_que_e", _MARCAS_DO_QUADRO,
+                         ids=[m for m, _ in _MARCAS_DO_QUADRO])
+def test_o_quadro_do_modo_nao_esta_na_aba_perfis(
+    publicado: bool, marca: str, o_que_e: str
+) -> None:
+    """Ordem dela, 11/09/2026 — e as duas páginas respondem igual.
 
-
-def test_o_quadro_do_modo_existe_na_bancada() -> None:
-    """E o `skip` acima não pode virar o portão inteiro se calando.
-
-    Se o quadro sumir da BANCADA, o teste de cima passa a pular nos dois casos e
-    a decisão 10-Q6 fica sem quem a guarde. Esta asserção é o que impede isso.
+    AS DUAS E NÃO SÓ A BANCADA: o gerador escreve em `mockup/` e só o
+    `--publicar 10` leva ao que o produto renderiza. Uma régua que olhasse só
+    uma das duas daria verde sobre a tela que ela NÃO abre — é a armadilha que o
+    `onde.pagina` documenta, e ela reincidiu quatro vezes num dia só.
     """
-    assert _quadro_do_modo(publicado=False), (
-        "o quadro Modo sumiu da bancada — com ele some a régua acima, que "
-        "passaria a pular nas duas páginas e a dar verde sobre nada")
+    assert marca not in _pagina(publicado), (
+        f"{o_que_e} voltou à aba Perfis ({'publicada' if publicado else 'bancada'}) "
+        f"— {marca!r}. O quadro «Modo» saiu do editor por ordem dela em "
+        f"11/09/2026: *\"em perfis ainda aparece modo. Isso deve aparecer só na "
+        f"aba jogar.\"* Se a decisão mudou, ela muda aqui primeiro."
+    )
+
+
+@pytest.mark.parametrize("publicado", [False, True], ids=["bancada", "publicada"])
+def test_as_duas_frases_do_dono_nao_chegam_a_esta_pagina(publicado: bool) -> None:
+    """Decisão 10-Q6 dela, e ela sobrevive à saída do quadro.
+
+    O ALCANCE ERA O QUADRO, e virou a PÁGINA quando o quadro saiu — e pôde
+    virar sem falso positivo porque o que se procura é a FRASE INTEIRA do dono,
+    não as palavras dela soltas. Com o quadro fora, um alcance preso a ele seria
+    uma régua medindo string vazia: verde sobre nada.
+    """
+    html = _pagina(publicado)
+    for nome, texto in _frases_proibidas():
+        assert texto not in html, (
+            f"a aba Perfis carrega `{nome}` — a decisão 10-Q6 dela tirou as "
+            f"DUAS frases, e o aviso pertence ao canal de recado. A frase "
+            f"continua certa onde ela mora; errada é a tela.")

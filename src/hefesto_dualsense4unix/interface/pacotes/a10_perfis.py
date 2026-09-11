@@ -555,6 +555,17 @@ SEM_ENDERECO = {
     # mostra em lugar nenhum. Quem tem endereço para a troca automática é a aba
     # Sistema (`data-campo="hefesto-troca-de-perfil"`, em `09-sistema.html`).
     "travado": "a trava da troca automática não é desenhada nesta aba",
+    # 11/09/2026, ordem dela: *"em perfis ainda aparece modo. Isso deve
+    # aparecer só na aba jogar."* O quadro dos quatro botões saiu do editor,
+    # e com ele o endereço. O DONO DO DADO NÃO MUDA: `perfis_web.
+    # _pacote_do_editor` continua publicando `modo`, porque o perfil continua
+    # guardando `Profile.mode` e porque `perfis_web` não é desta aba — quem
+    # decide o que a tela mostra é a tela. Declarar é o que deixa a queda
+    # visível: sem esta linha a chave cairia no vazio calada.
+    "editor.modo": "o quadro «Modo» saiu do editor por ordem dela em "
+                   "11/09/2026 — a aba onde o modo se escolhe é a Jogar; "
+                   "`Profile.mode` continua no disco e o `ativar` continua "
+                   "o aplicando",
 }
 
 #: OS ENDEREÇOS QUE JÁ ESTÃO NA BANCADA E ESPERAM O ATO DELA — 03/09/2026.
@@ -853,10 +864,17 @@ def _mesa_com_rotulo(mesa: list[dict[str, Any]]) -> list[dict[str, Any]]:
     `mascara` (`mesa_viva.py:340-352`). Medido: `guarda.nome` saía `["", ""]`
     para os DOIS controles da mesa dela, e a tabela ficava sem nome nenhum.
 
-    QUEM JÁ FAZIA ISTO CERTO: `interface/perfis_vivos.mesa_de_agora:318` — o
-    visor da aba, que o piloto **não carrega**. É o padrão que a ONDA B1 mediu:
-    *o reuso aconteceu, no arquivo que o piloto não abre*. Aqui ele entra no
-    caminho do produto.
+    FATO ERRADO, SUBSTITUÍDO — 11/09/2026. Aqui estava escrito *"QUEM JÁ FAZIA
+    ISTO CERTO: `interface/perfis_vivos.mesa_de_agora` — o visor da aba"*.
+    **Ele fazia o CONTRÁRIO**, e a medição é uma foto: aquele visor punha em
+    `rotulo` a saída de `monta.rotulo(c, "curta")`, que é MARCAÇÃO
+    (`P1 <span …>•</span> Cosmic Red …`), e o pintor da tela escreve
+    `textContent`. A bancada mostrava a marcação como TEXTO, em quatro linhas —
+    e o produto, que passa por aqui, mostrava o rótulo certo. O instrumento
+    respondia sobre outra coisa que não o produto, que é a assinatura de defeito
+    mais cara desta casa. O visor foi curado no mesmo commit e passou a chamar
+    `_rotulo_curto`; o que ele já fazia certo era a FORMA — uma mesa com
+    `rotulo` e `plastico` —, não o conteúdo.
 
     O `plastico` ENTROU EM 03/09/2026, e o fato acima valia para ele também:
     `_linhas_da_guarda` lê `controle.get("plastico")` (`perfis_web.py:560`) e
@@ -2025,8 +2043,12 @@ def _gravar(prof: Any, ctx: Contexto, p: Any, *, era: str = "") -> None:
     gestos desta aba que gravam o perfil INTEIRO sem repor o atalho de
     inicialização que a Steam come: os OITO que passam por este funil
     (`editor.nome`, `editor.prioridade`, `editor.ambiente`, `editor.estilo`,
-    `editor.jogo`, `detectar`, `novo`, `duplicar` — e agora o `editor.modo`,
-    que são NOVE) mais o `voltar-a-de-ontem`, que tem funil próprio.
+    `editor.jogo`, `detectar`, `novo`, `duplicar` — OITO) mais o
+    `voltar-a-de-ontem`, que tem funil próprio.
+
+    ERAM NOVE ATÉ 11/09/2026: o `editor.modo` passava por aqui e saiu com o
+    quadro «Modo», por ordem dela. O funil não muda — o que muda é quem entra
+    nele.
 
     **AQUI E NÃO EM `perfil.gravar_e_reaplicar`**, e a razão é medida e está
     escrita lá: aquela função tem SEIS chamadores em CINCO abas, e a interface
@@ -2484,80 +2506,22 @@ def editor_ambiente(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] 
     return _dizer(f"“{prof.name}” agora vale em: {rotulo}")
 
 
-@gesto("10-perfis.html", "editor.modo", grava="_gravar")
-def editor_modo(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
-    """"Modo": o que ATIVAR este perfil liga. `ProfileModeConfig`.
-
-    PERFIL-MODO-01, Passo 1 (06/09/2026). Era a linha 384 do CSV da paridade, e
-    o veredito do lado HTML era o mais duro da aba: *"NÃO EXISTE — nem na
-    página, nem no pacote. Grep de `ProfileModeConfig`, `with_mode`, `mode_kind`
-    em `interface/` dá zero"*. Um perfil criado ou editado por esta tela não
-    tinha como dizer *"quando eu entrar, ligue o modo jogo"* — o campo não era
-    alcançável, e o valor do disco sobrevivia só por herança.
-
-    O CLIQUE JÁ APLICA E JÁ GRAVA — D1/D2, e vale aqui como nas outras nove
-    abas. Não há "Salvar este perfil" ao lado: um botão de salvar sobre um gesto
-    que já gravou ensina o contrário do que o produto faz.
-
-    O `kind` VEM DO `data-modo`, e não do texto do botão. O ouvinte do piloto
-    manda o dataset inteiro e nomeia `modo` explicitamente
-    (`hefesto_vivo.py`, `modo: d.modo || ''`); ler o TEXTO faria o gesto
-    depender da palavra que ela pode mandar mudar amanhã — e ela já mandou uma
-    vez, em 06/08 ("Jogar direto (Sony)" virou "Conexão Nativa (Sony)").
-
-    "none" REMOVE A SEÇÃO, e isso não é um atalho: é o que
-    `profiles_actions._mode_section_from_editor` faz, com todas as letras —
-    *""none" (sem opinião) → `None`: a seção é REMOVIDA do perfil salvo"*. Um
-    perfil sem `mode` não mexe no modo do sistema quando entra, que é
-    exatamente o que o rótulo dela promete.
-
-    A MÁSCARA DO DISCO É PRESERVADA, e é a cicatriz de ESCOLHA-DELA-VENCE-01/E1:
-    havia um `or "xbox"` no Salvar da janela estável, e bastava salvar um perfil
-    para ele passar a EXIGIR Xbox. Este quadro não tem a linha da máscara (fora
-    de escopo por decisão desta sprint), então ele nunca escreve `gamepad_flavor`
-    — só carrega adiante o que já estava no `.json`. Fora do `gamepad` o campo é
-    zerado, pela mesma regra que `manager.alinhar_o_modo_com_a_ponte` aplica:
-    máscara só faz sentido com o gamepad virtual de pé.
-
-    O `ProfileModeConfig` É RECONSTRUÍDO e não `model_copy`ado, pelo motivo
-    escrito em `manager.py:1999`: `model_copy` do pydantic v2 não revalida, e um
-    `kind` fora da faixa viraria um arquivo que o próximo `load` recusa — o
-    perfil dela deixando de abrir por causa de um clique.
-    """
-    from hefesto_dualsense4unix.profiles.schema import ProfileModeConfig
-
-    kind = str(o.get("modo") or "").strip()
-    if kind not in _tela.MODO_DO_PERFIL:
-        raise RuntimeError(
-            f"“{kind or '—'}” não é um modo que o perfil saiba guardar. O "
-            f"produto conhece {', '.join(_tela.MODO_DO_PERFIL)}.")
-    prof = _com_o_que_esta_valendo(_perfil_do_editor(ctx), ctx)
-    atual = getattr(prof, "mode", None)
-    if kind == _tela.MODO_SEM_OPINIAO:
-        # JÁ ESTAVA SEM SEÇÃO: recusar dizendo, em vez de gravar o mesmo arquivo
-        # e anunciar "aplicado". É a mesma disciplina do `ativar` sobre o perfil
-        # que já está valendo — *"reativar o mesmo não muda nada, e dizer
-        # 'aplicado' seria mentira"*.
-        if atual is None:
-            raise RuntimeError(
-                f"“{prof.name}” já não mexe no modo. Escolha outro dos quatro "
-                f"— este perfil entra e deixa o modo como estiver.")
-        prof.mode = None
-    else:
-        if getattr(atual, "kind", None) == kind:
-            raise RuntimeError(
-                f"“{prof.name}” já liga «{_tela.MODO_DO_PERFIL[kind]}» ao "
-                f"entrar. Escolha outro dos quatro.")
-        campos: dict[str, Any] = {} if atual is None else atual.model_dump()
-        campos["kind"] = kind
-        if kind != "gamepad":
-            campos["gamepad_flavor"] = None
-        prof.mode = ProfileModeConfig(**campos)
-    _gravar(prof, ctx, p)
-    return _dizer(
-        f"“{prof.name}” ao entrar: {_tela.MODO_DO_PERFIL[kind].lower()}",
-        **{"editor.modo": kind})
-
+# O `editor_modo` MORREU AQUI — 11/09/2026, e a morte é a entrega. Ordem dela:
+#
+#     "em perfis ainda aparece modo. Isso deve aparecer só na aba jogar."
+#
+# Ele nasceu em 06/09 (PERFIL-MODO-01) e gravava `Profile.mode` a partir dos
+# quatro botões do quadro «Modo» do editor. O quadro saiu da página no mesmo
+# commit (`interface/aba10.py`), e um gesto que nenhum clique alcança é o
+# "campo morto com nome de promessa" que esta casa já nomeou — pior que ausente,
+# porque a régua dos gestos o conta como ligado.
+#
+# O QUE FICA DE PÉ, e é a parte que importa: `Profile.mode` continua no esquema,
+# no disco e no `ativar`. Um perfil que já diz «Jogar pelo Hefesto» continua
+# dizendo, e nada nesta leva escreveu ou zerou o campo de um perfil dela — a
+# retirada é de TELA, não de dado. Quem escolhe o modo é a aba Jogar.
+#
+# O PERFIL NOVO NASCE SEM A SEÇÃO, e isso não é omissão: ver a nota do `novo`.
 
 # O `_sem_a_sprint` MORREU AQUI — 03/09/2026, e a morte é a entrega. Ele
 # aparava o `(ONDA-PERFIS-04)` do fim da frase de `GESTOS_SEM_MOTOR` para a
@@ -2990,6 +2954,23 @@ def novo(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
     que É catch-all (`Profile.e_catch_all`) ficariam com dois donos.
 
     Ele NÃO é ativado: nascer não é passar a valer.
+
+    **E NASCE SEM A SEÇÃO `mode` — decisão desta sprint, 11/09/2026.** Com o
+    quadro «Modo» fora do editor (ordem dela), a pergunta *"que modo tem um
+    perfil criado aqui?"* deixou de ter quem a responda na tela, e alguém tinha
+    de decidir. É `None`, que é o que `Profile` já faz sozinho, e o valor tem
+    nome na tela dela: **«Não mexer no modo»** — o perfil sem opinião, que entra
+    e deixa o modo como estiver.
+
+    POR QUE ESTE E NÃO OUTRO: é o único que preserva o comportamento de HOJE.
+    Antes de 06/09 o campo não era alcançável por esta tela e todo perfil nascia
+    assim; nos cinco dias em que o quadro existiu, quem não o tocou continuou
+    nascendo assim. Qualquer outro padrão faria um perfil novo passar a MEXER no
+    modo da máquina dela sem que ninguém tivesse pedido — que é a cicatriz do
+    `or "xbox"` do Salvar da janela estável (ESCOLHA-DELA-VENCE-01/E1).
+
+    QUEM MUDA DEPOIS É A ABA JOGAR, e nada aqui zera o campo de um perfil que já
+    o tem: este gesto cria arquivo novo, não reescreve os dela.
     """
     global _ESCOLHIDO
     from types import SimpleNamespace
@@ -3288,7 +3269,13 @@ PAGINA = "10-perfis.html"
 #: silenciosa que este número existe para pegar.
 #: 13 → 14 EM 06/09/2026: nasceu o `editor.modo` (PERFIL-MODO-01), o quadro que
 #: diz o que ATIVAR este perfil liga — a maior ausência isolada da aba.
-PISO_DA_ABA = 14
+#: 14 → 13 EM 11/09/2026, e é a ÚNICA queda que este número já teve. Ela não
+#: é regressão: é ordem dela — *"em perfis ainda aparece modo. Isso deve
+#: aparecer só na aba jogar."* O gesto saiu junto com o quadro, e deixar o
+#: piso em 14 faria a régua cobrar um gesto que a decisão dela apagou.
+#: **O "SÓ SOBE" CONTINUA VALENDO PARA QUEDA SEM DONO**, que é o que ele
+#: existe para pegar: um gesto que some por descuido não aparece na tela.
+PISO_DA_ABA = 13
 #: SÓ UMA PROVA DECLARADA PARA ONZE GESTOS, e a razão é estrutural, não
 #: preguiça: nove dos outros dez agem sobre o perfil ESCOLHIDO, e o `ctx` desta
 #: régua é fixo — `active_profile="regua"`, sem `_ESCOLHIDO` (um gesto que
@@ -3339,11 +3326,12 @@ PROVAS: list[dict[str, Any]] = [
 #: `—`). Agora ele grava, e grava no DISCO — que é a mesma razão dos outros
 #: onze. Deixá-lo de fora depois do motor faria a régua acusar de mudo um gesto
 #: que fez três coisas no aparelho dela.
-#: `editor.modo` ENTROU EM 06/09/2026 e entra pela MESMA razão dos outros doze:
-#: ele grava no DISCO. O modo do perfil só vira estado do daemon quando aquele
-#: perfil ENTRA — e quem o faz entrar é o `ativar`, que é o único desta aba com
-#: eco.
+#: `editor.modo` ENTROU EM 06/09/2026 e SAIU EM 11/09/2026, com o quadro que o
+#: acionava (ordem dela: *"em perfis ainda aparece modo. Isso deve aparecer só
+#: na aba jogar."*). Ele não deixa lápide nesta tupla porque a tupla é a lista
+#: dos gestos VIVOS desta aba: um nome aqui sem `@gesto` atrás faria a régua
+#: isentar de eco um gesto que não existe.
 SEM_ECO = ("selecionar", "editor.nome", "editor.ambiente", "editor.jogo",
-           "editor.prioridade", "editor.estilo", "editor.modo",
+           "editor.prioridade", "editor.estilo",
            "detectar", "novo", "duplicar", "remover", "voltar-a-de-ontem",
            "recarregar")

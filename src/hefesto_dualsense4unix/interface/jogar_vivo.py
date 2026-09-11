@@ -117,8 +117,11 @@ PAGINA = onde.PUBLICADO / "01-jogar.html"
 #: publicado, e a régua daria verde sobre a página de ontem — que é a armadilha
 #: que o `COMO-OLHAR-A-TELA` chama de *"régua que pergunta no lugar errado"*.
 #: A frente da `PERFIL-MODO-01` pagou esse preço em 06/09 escrevendo um ensaio
-#: próprio (`scripts/ensaios/o_quadro_do_modo_grava_pelo_webkit.py`) para medir
-#: exatamente isto.
+#: próprio para medir exatamente isto. **Aquele ensaio morreu em 11/09/2026**,
+#: com o quadro «Modo» que ele clicava (ordem dela: o modo só aparece na aba
+#: Jogar); quem mede a aba Perfis no WebKit hoje é
+#: `scripts/ensaios/a_tabela_do_perfil_cabe_com_a_tira.py`, que tem esta mesma
+#: bandeira pela mesma razão.
 #:
 #: **ELE NÃO PUBLICA NADA.** É só de onde o `WebKit2.WebView` lê; a direção
 #: `mockup/` → `interface/paginas/` continua sendo do

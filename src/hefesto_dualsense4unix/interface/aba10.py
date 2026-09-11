@@ -35,48 +35,30 @@ from hefesto_dualsense4unix.profiles.schema import (  # noqa: E402
 )
 
 # ---------------------------------------------------------------------------
-# OS QUATRO RÓTULOS DO MODO — perguntados ao dono, LIDOS e não importados.
+# O QUADRO "MODO" SAIU DAQUI — 11/09/2026, ordem dela:
 #
-# O dono é `app/actions/profiles_actions._MODE_KIND_ITEMS`: a mesma lista que a
-# janela GTK põe no `SegmentedSelector` do editor de perfil, e cujos rótulos ela
-# escolheu em 06/08/2026 (UX-MODE-TERMS-02). Digitar as quatro palavras aqui
-# seria a quinta superfície a envelhecer sozinha — é o que o
-# `test_vocabulario_das_quatro_superficies.py` já guarda para as outras quatro.
+#     "em perfis ainda aparece modo. Isso deve aparecer só na aba jogar."
 #
-# **POR QUE LER E NÃO `import`, e o motivo é medido, não estilo:**
-# `profiles_actions.py` faz `import gi` / `gi.require_version("Gtk", "3.0")` no
-# TOPO do módulo. Este arquivo é um GERADOR — quatro fixtures de teste o
-# importam (`test_a_lista_de_perfis_cabe_inteira`, `test_a10_a_linha_escolhida_
-# tem_marca`, `test_a_coluna_do_ajuste_proprio_acende_pela_classe`,
-# `test_a_aba10_nao_reserva_banda_morta_no_titulo`) e o CI tem um job sem
-# PyGObject. Um `from …profiles_actions import _MODE_KIND_ITEMS` aqui derrubaria
-# a geração da tela num ambiente que hoje a gera sem GTK nenhum.
+# ELE NASCEU EM 06/09 (PERFIL-MODO-01) e viveu cinco dias. O que morre junto: o
+# leitor `_lista_de_pares`, que ia buscar os quatro rótulos em
+# `app/actions/profiles_actions._MODE_KIND_ITEMS` sem importar GTK; a constante
+# `MODOS`; o `botoes_do_modo()`; a regra `.campo.modo` do CSS; e o gesto
+# `a10_perfis.editor_modo`, que é quem gravava.
 #
-# O leitor é o do `aba09.py` encolhido ao que este caso precisa: uma lista de
-# tuplas de literais, num `AnnAssign` de módulo. Ele REPROVA EM VOZ ALTA quando
-# o nome some — uma constante renomeada no produto tem de derrubar a geração,
-# não sumir da tela em silêncio.
-import ast  # noqa: E402
-
-# O `R` É A PASTA `interface/`, DENTRO do pacote — logo o `app/` é irmão dela, e
-# o caminho vale igual numa árvore de repositório e num `pip install`.
-_DONO_DO_MODO = R.parent / "app/actions/profiles_actions.py"
-
-
-def _lista_de_pares(caminho, nome):
-    """Os pares `(id, rótulo)` daquela constante de módulo, sem importar nada."""
-    for no in ast.parse(caminho.read_text(encoding="utf-8")).body:
-        alvo = (no.targets[0] if isinstance(no, ast.Assign) and len(no.targets) == 1
-                else no.target if isinstance(no, ast.AnnAssign) else None)
-        if isinstance(alvo, ast.Name) and alvo.id == nome and no.value is not None:
-            return [tuple(par) for par in ast.literal_eval(no.value)]
-    raise SystemExit(
-        f"ERRO: {caminho} não tem mais `{nome}` — o quadro Modo da aba 10 "
-        f"depende dele, e digitar os rótulos aqui seria a segunda verdade.")
-
-
-#: `[("none", "Não mexer no modo"), ("desktop", "Controlar o PC"), …]`
-MODOS = _lista_de_pares(_DONO_DO_MODO, "_MODE_KIND_ITEMS")
+# O QUE **NÃO** MORRE, e a distinção é o assunto inteiro: `Profile.mode`
+# continua no esquema e no disco. Um perfil que já diz «Jogar pelo Hefesto»
+# continua dizendo, e o `ativar` continua aplicando. O que sai é quem EDITA —
+# e a aba onde se edita é a **Jogar**, que não é desta sprint.
+#
+# O PERFIL NOVO NASCE SEM SEÇÃO `mode` — decisão desta sprint, registrada em
+# `a10_perfis.novo`: é o padrão vivo («Não mexer no modo», o perfil sem
+# opinião), e é o único valor que preserva o comportamento de hoje para quem
+# nunca tocou no quadro nos cinco dias em que ele existiu.
+#
+# E A RETIRADA TEM UM PREÇO MEDIDO A FAVOR — os números estão no bloco da
+# `.guarda`, lá embaixo: a fileira do Modo custava **36px** de uma coluna em que
+# a tabela «Ajuste próprio» já disputava cada pixel com a tira do desfecho, e
+# era ela que deixava a linha do P4 fora do quadro a cada gesto dela.
 
 # ---------------------------------------------------------------------------
 # O QUE O PERFIL GUARDA DE CADA CONTROLE — e isto NÃO é escolha de desenho.
@@ -505,55 +487,33 @@ CSS = CSS_GLIFO + """
     border:2px solid var(--app-bg);margin-top:1px}
   .campo .n{flex:0 0 40px;text-align:right;font-family:'JetBrains Mono',monospace;color:var(--fg)}
   .campo .btn{flex:0 0 auto;white-space:nowrap}
-  /* ---------- O QUADRO "MODO" — o que ATIVAR este perfil liga ----------
-     PERFIL-MODO-01 (06/09/2026). Era a maior ausência isolada desta aba: a
-     janela GTK tem um frame com QUATRO escolhas (`profiles_actions.
-     _install_mode_section`) e aqui não havia nem campo nem endereço — o valor
-     do disco sobrevivia só por herança, porque ninguém escrevia nele.
+  /* ---------- O QUADRO "MODO" NÃO MORA MAIS AQUI ----------
+     11/09/2026, ordem dela: *"em perfis ainda aparece modo. Isso deve aparecer
+     só na aba jogar."* Saíram com ele as três regras que a PERFIL-MODO-01
+     escrevera em 06/09 para a fileira dos quatro botões — a altura solta, a
+     fileira que não quebra, e os 11,5px do rótulo em duas linhas dentro do
+     botão.
 
-     `.seg` É O DA CASA e não uma fileira nova: o `topo.html` já o define para
-     as dez páginas, e é o mesmo componente que a aba Jogar usa nos modos. O que
-     esta linha acrescenta é só o que a LARGURA obriga.
+     O SELETOR NÃO SE ESCREVE NESTE COMENTÁRIO, e isso não é asseio: a régua
+     `_conferir` reprova a página em que ele reaparecer, e um comentário CSS
+     viaja INTEIRO para dentro do HTML. Escrevê-lo aqui faria o aviso virar a
+     primeira ocorrência do defeito que ele descreve — que é uma armadilha já
+     paga nesta casa, três vezes em três dias.
 
-     A LINHA TEM DE CABER EM **UMA** FILEIRA, E O NÚMERO É MEDIDO, não escolhido.
-     Medido no Chrome em 06/09/2026, na página inteira, a 1212x809 (o tamanho
-     do desenho):
+     O QUE A RETIRADA DEVOLVE, medido no WebKit em 11/09/2026 a 1212x809, com a
+     tabela pintada como o PRODUTO a pinta (dois lugares vazios e o travessão no
+     ID da peça), e não como o desenho a congela:
 
-       o `.val` desta coluna    412px
-       os quatro `.seg button`  563px na fileira de sempre (12,5px, padding 10)
-       a folga da coluna        41px  — o `.guarda` é `flex:1` e ABSORVE o que
-                                       sobra, e ele tinha exatamente 41px
+       a fileira do Modo             36px
+       ANTES, sem a tira            115px de espaço · 107 pedidos · sobra  +8
+       ANTES, com a tira acesa       78px de espaço · 107 pedidos · sobra -29
+       DEPOIS, sem a tira           155px de espaço · 107 pedidos · sobra +48
+       DEPOIS, com a tira acesa     118px de espaço · 107 pedidos · sobra +11
 
-     Ou seja: **os quatro botões em DUAS fileiras custam 82px e a coluna tem
-     41.** A varredura de 180 combinações de altura, padding, margem e
-     espaçamento não achou UMA que coubesse com folga — a segunda fileira
-     empurra a tabela "Ajuste próprio" para fora do quadro, e ela é `overflow:
-     hidden`: as linhas do P3 e do P4 saem CORTADAS. É a régua
-     `test_a_janela_estreita_nao_engole_o_desenho` que o pega, e ela está certa.
-
-     A SAÍDA É O RÓTULO EM DUAS LINHAS DENTRO DO BOTÃO, e ela custa ZERO:
-     `flex:1 1 0` reparte os 412px em quatro de 99px, `white-space:normal` deixa
-     "Conexão Nativa / (Sony)" quebrar dentro do próprio botão, e a fileira
-     inteira fica com os mesmos 36px de um `<select>` desta aba. Medido: nenhum
-     dos quatro corta (`scrollWidth`/`scrollHeight` iguais aos `client*`), e o
-     `.guarda` volta a caber inteiro.
-
-     `flex-wrap:nowrap` É O QUE SEGURA ISSO: o `.seg` da casa é `wrap`, e sem
-     esta linha o quarto botão desce para a segunda fileira no primeiro pixel
-     que faltar — de volta ao defeito, e sem sintoma até alguém medir.
-
-     E OS 11,5px SÃO DA JANELA ESTREITA, não desta: a 1212px o rótulo cabe em
-     duas linhas com os 12,5px de sempre; a **940px** (a janela dela de 04/09,
-     que a régua mede) o `.val` cai para 93px por botão e "Conexão Nativa
-     (Sony)" passa a TRÊS linhas — 49px de fileira, 12px fora do quadro. Medido
-     nos três tamanhos da régua; a 11,5px os quatro ficam em duas linhas nos
-     três. */
-  .campo.modo{height:auto;min-height:var(--h-escolha)}
-  .campo.modo .seg{flex-wrap:nowrap;gap:5px}
-  .campo.modo .seg button{
-    flex:1 1 0;min-width:0;height:auto;min-height:var(--h-escolha);
-    padding:3px 6px;font-size:11.5px;line-height:1.15;
-    white-space:normal;text-align:center}
+     A LINHA DE -29 É A QUEIXA DELA. Com a tira do desfecho acesa — e ela acende
+     a cada gesto, por 30 segundos — a tabela rolava 36px e a linha do P4 ficava
+     **15px FORA** do quadro. Os 36px da fileira do Modo eram exatamente os 37
+     que a tira pede: as duas queixas dela eram uma. */
   /* A COLUNA DO RÓTULO É JUSTA — remedida no Chrome em 31/08/2026, DEPOIS que ela
      pediu os dois pontos e a maiúscula — com a preposição minúscula, que foi a
      segunda palavra dela: `Nome:` 36px · `Prioridade:` 63 · `Funciona em:` 77 ·
@@ -745,7 +705,14 @@ CSS = CSS_GLIFO + """
      E O ARGUMENTO É O QUE O `.rolo` já escreveu logo acima: *"barra de verdade
      porque ela nasce só quando há o que rolar (…) os estados em que a lista
      cabe não pagam nada por ela"*. No tamanho do desenho, sem tira, ela não
-     nasce — as quatro linhas cabem inteiras. */
+     nasce — as quatro linhas cabem inteiras.
+
+     A BARRA DEIXOU DE NASCER NO ESTADO EM QUE ELA A VIU — 11/09/2026. Com o
+     quadro Modo fora do editor, a conta desta coluna passou a fechar **com a
+     tira acesa**: 118px de espaço para 107 pedidos, sobra +11. Os números dos
+     quatro estados estão no bloco do Modo, lá em cima. A barra fica: ela
+     continua sendo a rede para a janela que ela arrastar, e no tamanho do
+     desenho não custa um pixel. */
   .guarda{flex:1;min-height:0;display:flex;flex-direction:column;
           overflow-y:auto;overflow-x:hidden;
           margin-top:7px;padding-top:7px;border-top:1px solid var(--linha)}
@@ -787,7 +754,38 @@ CSS = CSS_GLIFO + """
   .tab thead th:nth-child(2){background-image:linear-gradient(color-mix(in srgb, var(--purple) 20%, transparent),color-mix(in srgb, var(--purple) 20%, transparent))}
   .tab thead th:nth-child(3){background-image:linear-gradient(color-mix(in srgb, var(--orange) 14%, transparent),color-mix(in srgb, var(--orange) 14%, transparent))}
   .tab.miuda td{padding:1px 8px;cursor:default}
-  .gd-nome{display:flex;align-items:center;gap:8px;white-space:nowrap;font-size:11px}
+  /* O NOME VOLTOU A SER CÉLULA DE TABELA — 11/09/2026, e esta é a SEGUNDA
+     metade da queixa dela: *"em perfis as linhas dos controles e ajustes
+     proprios quebram"*.
+
+     O QUE ESTAVA AQUI: `display:flex;align-items:center;gap:8px`. Um `<td>` com
+     `display:flex` deixa de ser célula de tabela — e perde o
+     `vertical-align:middle` que as outras duas colunas têm de graça. O texto do
+     nome passa a pousar no TOPO da linha enquanto o glifo e o ID se centram
+     nela.
+
+     E O FLEX NÃO REPARTIA NADA. Os filhos do `<td>` são dois: a barra da cor
+     (`.pl`) e o `<span>` do nome. A barra é `position:absolute`, logo está FORA
+     do fluxo — em flex também. Sobrava UM item, e o `gap:8px` entre um item só
+     e ninguém. O respiro à esquerda sempre foi o `padding:1px 8px` do `<td>`.
+
+     MEDIDO NO WEBKIT, a 1212x809, com a tabela pintada como o produto a pinta —
+     o espalhamento vertical entre os centros de texto das três colunas da mesma
+     linha:
+
+       linhas apertadas (21,25px, com o quadro Modo ainda lá)   3,13px
+       linhas soltas    (31,25px, com o Modo já fora)           8,13px
+       com esta regra                                           1,50px
+
+     A SEGUNDA LINHA É O PONTO, e é por isso que as duas queixas vinham juntas:
+     **tirar o Modo devolve altura às linhas e a altura ESCANCARA o desalinho.**
+     Curar só a primeira metade teria piorado a segunda de 3,13 para 8,13px — a
+     cura de uma queixa dela agravando a outra, na mesma tela.
+
+     O 1,50px QUE SOBRA é o glifo, não o texto: o `.gls` é SVG com
+     `vertical-align:-3px` (o deslocamento ótico que a coluna do meio pede), e o
+     nome fecha EXATO com o ID da peça — 16,13 contra 16,13. */
+  .gd-nome{vertical-align:middle;white-space:nowrap;font-size:11px}
   /* O DESENHO DE 32px SAIU, e a barrinha de plástico ficou com o trabalho.
      Ele existia para dizer QUAL controle é a linha, e não dizia: medido em
      28/08 no 1x da tela dela, com os quatro desenhos comparados pixel a pixel,
@@ -904,40 +902,6 @@ CADEADO = ('<svg viewBox="0 0 12 12" width="11" height="11" aria-hidden="true">'
            'stroke="currentColor" stroke-width="1.2"/>'
            '<rect x="2.3" y="5.2" width="7.4" height="5.4" rx="1.1" '
            'fill="currentColor"/></svg>')
-
-
-def botoes_do_modo() -> str:
-    """Os quatro botões do quadro "Modo", na ordem e com as palavras DELA.
-
-    OS RÓTULOS NÃO ESTÃO AQUI: eles vêm de `MODOS`, lido do
-    `profiles_actions._MODE_KIND_ITEMS` — ver o comentário do leitor, no alto
-    deste arquivo, e a razão de ser leitura e não `import`.
-
-    CADA BOTÃO CARREGA TRÊS COISAS, e nenhuma é redundante:
-
-    * `data-hef="editor.modo"` + `data-hef-alvo="classe"` + `data-hef-quando` —
-      o ESTADO. O pacote manda UM valor (`"gamepad"`) e o alvo `classe` do
-      piloto acende o botão cujo `data-hef-quando` casa, apagando os outros
-      três. É o mesmo mecanismo dos quatro degraus da aba Jogar
-      (`hefesto_vivo.escrever`, ramo `classe`);
-    * `data-hef-gesto="editor.modo"` — o CLIQUE. Um gesto só para os quatro;
-    * `data-modo` — QUAL dos quatro. O ouvinte do piloto manda o dataset inteiro
-      e nomeia `modo` explicitamente (`hefesto_vivo.py`, `modo: d.modo || ''`),
-      então o gesto lê o id sem precisar adivinhar pelo texto do botão — que é
-      justamente a palavra que ela pode mandar mudar amanhã.
-
-    O `title` DE CADA BOTÃO É O RÓTULO, e nada mais. **As duas frases que
-    explicavam o preço NÃO nascem** — decisão 10-Q6 dela, executada pela
-    `ONDA5-10-03`: nem a linha condicional do rádio frágil no Nativo, nem a
-    dica com o custo da máscara Xbox. O quadro entrega os quatro botões e o
-    mecanismo; o aviso pertence ao canal de recado, e a aba onde a escolha
-    acontece é a Jogar (relatado para a `JOGAR-O-QUE-FALTA-01`).
-    """
-    return "".join(
-        f'<button data-hef="editor.modo" data-hef-alvo="classe"'
-        f' data-hef-quando="{ident}" data-hef-gesto="editor.modo"'
-        f' data-modo="{ident}">{palavra}</button>'
-        for ident, palavra in MODOS)
 
 
 def marca_com_dica(classe: str, campo_estado: str, campo_frase: str,
@@ -1497,31 +1461,6 @@ MIOLO = f'''
 {opts(ESTILOS, "", vazio=True)}
                 </select></span>
               </div>
-              <!-- O QUADRO "MODO" — PERFIL-MODO-01, 06/09/2026.
-                   O que ATIVAR este perfil liga. É a linha 384 do CSV da
-                   paridade, e o veredito era `FALTA_NO_HTML` com a nota mais
-                   dura da aba: *"NÃO EXISTE — nem na página, nem no pacote"*.
-
-                   A POSIÇÃO É PROVISÓRIA — decisão dela. Os quatro campos de
-                   cima dizem QUEM o perfil é e QUANDO ele entra (nome,
-                   prioridade, funciona em, nome do jogo); os dois de baixo
-                   dizem O QUE ele faz ao entrar — o Estilo de Jogo pré-aplica
-                   gatilho/vibração/luz, e o Modo diz o que ligar. Agrupá-los é
-                   coerente, mas ORDEM DE SEÇÃO é dela: se ela quiser o Modo em
-                   cima, é uma linha.
-
-                   NÃO HÁ LINHA DA MÁSCARA aqui, e a janela GTK tem uma ("O jogo
-                   vê o controle como:", que abre com "Jogar pelo Hefesto"). Ela
-                   fica de fora por decisão de escopo desta sprint — *"o quadro
-                   entrega os quatro botões e nada mais"* — e o `gamepad_flavor`
-                   do disco é PRESERVADO pelo gesto, nunca zerado: é a mesma
-                   cicatriz do `or "xbox"` que fazia salvar um perfil passar a
-                   exigir Xbox (ESCOLHA-DELA-VENCE-01/E1). -->
-              <div class="campo modo">
-                <span title="O que ATIVAR este perfil liga. “Não mexer no modo” é o perfil sem opinião: ele entra e deixa o modo como estiver.">Modo:</span>
-                <span class="val"><span class="seg">{botoes_do_modo()}</span></span>
-              </div>
-
               <div class="guarda">
                 <table class="tab miuda">
                   <thead><tr>
@@ -1627,6 +1566,8 @@ LEGENDA = f'''<div class="nota">
     <li><b>"Salvar este perfil"</b> — fora.</li>
     <li><b>"Esconder os controles físicos neste jogo"</b> — fora.</li>
     <li><b>"◆ este jogo já sabe por onde entra"</b> — fora: <span class="marca">isso está na aba Jogar</span>, palavra sua.</li>
+    <li><b>O quadro "Modo"</b>, com os quatro botões — fora: <span class="marca">isso está na aba Jogar</span>, palavra sua.
+      O que o perfil já guarda continua guardado: quem o escolhe é a Jogar.</li>
   </ul>
 
   <h2>O que estava no código e nunca teve tela</h2>
@@ -1640,10 +1581,10 @@ LEGENDA = f'''<div class="nota">
 
   <h2>Ainda é sua a palavra</h2>
   <ul>
-    <li><b>"Modo que liga" e "O jogo vê o controle como" não estão desenhados aqui.</b>
-      <span class="marca">A legenda anterior dizia que ficaram, e era falso</span> — nenhum dos
-      dois estava na tela. Eles moram hoje na <b>Jogar</b>; se vêm também para cá, é decisão
-      sua, e a tela não decide por você.</li>
+    <li><b>"O jogo vê o controle como" não está desenhado aqui.</b> Ele mora hoje na
+      <b>Jogar</b>; se vem também para cá, é decisão sua, e a tela não decide por você.
+      <span class="marca">O "Modo que liga" saiu desta lista</span> — você já decidiu, e
+      ele está no bloco de cima.</li>
     <li><b>O conteúdo dos Estilos de Jogo</b> continua em aberto: a lista está aqui, o que
       cada um liga não.</li>
     <li><b>A tabela é leitura</b>, como a fita esmaecida diz. Se você quiser mudar o ajuste de
@@ -1993,56 +1934,65 @@ def _conferir(html: str) -> None:
            "MIN-CONTENT, e o rótulo do jogo é texto: a segunda coluna estoura a "
            "página e leva o `Detectar` junto")
 
-    # O QUADRO DO MODO — PERFIL-MODO-01, 06/09/2026. As quatro coisas que o
-    # fazem funcionar, e todas somem caladas.
-    exigir('<div class="campo modo">' in html,
-           "o quadro Modo sumiu do editor — o perfil volta a não poder dizer o "
-           "que ativar ele liga, e o valor do disco sobrevive só por herança")
-    for ident, palavra in MODOS:
-        botao = re.search(rf'<button[^>]*data-hef-quando="{ident}"[^>]*>([^<]*)</button>',
-                          html)
-        exigir(botao is not None,
-               f"o botão do modo `{ident}` sumiu do quadro — os quatro rótulos "
-               f"são dela (`_MODE_KIND_ITEMS`, 06/08) e o conjunto é fechado")
-        if botao:
-            exigir(botao.group(1) == palavra,
-                   f"o botão `{ident}` diz {botao.group(1)!r} e o dono diz "
-                   f"{palavra!r} — o desenho passou a digitar a palavra dela")
-            exigir(f'data-modo="{ident}"' in botao.group(0),
-                   f"o botão `{ident}` perdeu o `data-modo` — o gesto passaria "
-                   f"a adivinhar o modo pelo TEXTO do botão, que é a palavra "
-                   f"que ela pode mandar mudar amanhã")
-    exigir(html.count('data-hef="editor.modo"') == len(MODOS),
-           f"o quadro Modo não tem {len(MODOS)} endereços `editor.modo` — o "
-           f"alvo `classe` acende por grupo, e um botão sem endereço fica "
-           f"apagado para sempre")
-    # A LINHA DO MODO NÃO PODE TER A ALTURA FIXA DOS OUTROS CINCO: os quatro
-    # botões não cabem numa fileira, e `height:var(--h-escolha)` cortaria a
-    # segunda ao meio.
-    regra_modo = re.search(r"\.campo\.modo\{[^}]*\}", html)
-    exigir(regra_modo is not None, "a regra `.campo.modo` sumiu do CSS")
-    if regra_modo:
-        exigir("height:auto" in regra_modo.group(0),
-               "a linha do Modo voltou à altura fixa — o rótulo de duas linhas "
-               "dentro do botão sai cortado, e botão cortado é botão que ela "
-               "não clica")
-    regra_seg = re.search(r"\.campo\.modo \.seg\{[^}]*\}", html)
-    exigir(regra_seg is not None and "flex-wrap:nowrap" in regra_seg.group(0),
-           "a fileira do Modo perdeu o `flex-wrap:nowrap` — o quarto botão "
-           "desce para uma segunda fileira, que custa 82px numa coluna que tem "
-           "41, e a tabela «Ajuste próprio» sai cortada no P3 e no P4")
+    # O QUADRO DO MODO NÃO VOLTA — 11/09/2026, e estas quatro exigências são as
+    # de 06/09 INVERTIDAS. Ordem dela, literal:
+    #
+    #     "em perfis ainda aparece modo. Isso deve aparecer só na aba jogar."
+    #
+    # AS DE 06/09 COBRAVAM O CONTRÁRIO, e cobravam com razão: elas nasceram para
+    # impedir que o quadro sumisse calado depois de a PERFIL-MODO-01 o trazer.
+    # A ordem dela as revoga; o que fica é a mesma vigilância virada — uma régua
+    # que some é dívida, uma régua que inverte com a decisão registrada é o
+    # contrato novo.
+    #
+    # POR QUE QUATRO E NÃO UMA: cada peça do quadro morria por um caminho
+    # diferente, e cada caminho pode voltar sozinho. O `<div class="campo modo">`
+    # volta com um `git revert`; o `data-modo` volta se alguém reaproveitar o
+    # componente `.seg` nesta aba; o `data-hef="editor.modo"` volta se o pacote
+    # for religado; e a regra `.campo.modo` volta num `merge` de CSS. As quatro
+    # são a mesma decisão dela vista de quatro lados.
+    exigir('<div class="campo modo">' not in html,
+           "o quadro Modo voltou ao editor de Perfis — ele sai por ordem dela "
+           "de 11/09/2026, e a aba onde o modo se escolhe é a Jogar")
+    exigir('data-modo="' not in html,
+           "um botão desta aba voltou a carregar `data-modo` — o atributo é do "
+           "quadro que saiu; se for outro controle reusando o nome, ele precisa "
+           "de nome próprio, porque a régua de ponteiros da casa o lê como modo")
+    exigir('data-hef="editor.modo"' not in html,
+           "o endereço `editor.modo` voltou à página — o gesto que o gravava "
+           "saiu de `a10_perfis` junto com o quadro, e um endereço sem gesto é "
+           "um botão que responde calado")
+    exigir(".campo.modo" not in html,
+           "a regra `.campo.modo` voltou ao CSS — ela reservava a altura solta "
+           "da fileira de quatro botões, e era essa fileira (36px) que deixava "
+           "a linha do P4 fora do quadro sempre que a tira do desfecho acendia")
 
-    # AS DUAS FRASES DO MODO NÃO NASCEM — decisão 10-Q6 dela, executada pela
-    # ONDA5-10-03. A régua completa (que LÊ as constantes de `home_actions`, em
-    # vez de digitá-las) é
-    # `tests/unit/test_o_quadro_do_modo_nao_descreve_o_que_perde.py`; aqui fica
-    # a metade barata, que reprova na própria geração.
-    for proibida in ("rádio", "Xbox 360 não", "giroscópio"):
-        exigir(proibida not in html.split('<div class="campo modo">')[-1]
-               .split("</div>")[0],
-               f"o quadro Modo passou a descrever o que se perde ({proibida!r})"
-               f" — as duas frases saíram por decisão dela (10-Q6), e o aviso "
-               f"pertence ao canal de recado")
+    # E O QUE O PERFIL GUARDA CONTINUA GUARDADO: a legenda tem de dizer QUEM
+    # escolhe o modo agora. Sem esta linha a retirada vira sumiço — a tela
+    # perderia o quadro e não diria para onde ele foi.
+    exigir("O quadro &quot;Modo&quot;" in html or 'O quadro "Modo"' in html,
+           "a legenda parou de dizer que o quadro Modo saiu e onde ele mora — "
+           "quem abrir a aba depois de 11/09 procuraria um quadro que a versão "
+           "anterior tinha, sem nada na tela que o mande à Jogar")
+
+    # A COLUNA DO NOME SE CENTRA NA LINHA — 11/09/2026, a segunda metade da
+    # queixa dela. Um `<td>` com `display:flex` deixa de ser célula de tabela e
+    # perde o `vertical-align:middle`: o nome pousa no TOPO da linha enquanto o
+    # glifo e o ID se centram nela. Medido no WebKit: 3,13px de espalhamento com
+    # as linhas apertadas, **8,13px** quando a saída do Modo lhes devolve
+    # altura, 1,50px com esta regra. A cura da primeira queixa AGRAVAVA a
+    # segunda; as duas fecham juntas ou nenhuma fecha.
+    regra_nome = re.search(r"\.gd-nome\{[^}]*\}", html)
+    exigir(regra_nome is not None, "a regra `.gd-nome` sumiu do CSS")
+    if regra_nome:
+        exigir("display:flex" not in regra_nome.group(0),
+               "o `<td>` do nome voltou a `display:flex` — ele deixa de ser "
+               "célula de tabela e o nome desalinha do glifo e do ID em 8px, "
+               "que é a linha «quebrada» que ela fotografou")
+        exigir("vertical-align:middle" in regra_nome.group(0),
+               "o `<td>` do nome perdeu o `vertical-align:middle` — sem ele o "
+               "texto pousa no topo da linha e as três colunas deixam de "
+               "alinhar assim que a linha ganha altura")
 
     # A LISTA DOS JOGOS DESTA MÁQUINA — PERFIL-MODO-01, Passo 3. As duas metades
     # e cada uma sozinha não faz nada: o `<datalist>` sem o `list=` no campo é um
