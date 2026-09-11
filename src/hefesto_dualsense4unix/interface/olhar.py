@@ -56,7 +56,28 @@ pergunta à `interface.folha_da_casa` o que o produto esconde.
     interface/olhar.py --palavra mesa               # a bancada
     interface/olhar.py --palavra mesa --publicado   # o que o produto renderiza
 
-Uso:  olhar.py 05-vibracao.html [--publicado]
+ELE FOTOGRAFA A VISTA QUE SE PEDIR — 11/09/2026, PRINTS-DAS-DEZ-01
+
+Ordem dela: *"quero que vc maximize as telas e tire prints de todas as abas"*.
+Até hoje o retratista tinha UMA vista cravada (1920x1080) e o `--doc` recortava
+na `.janela`, e **as duas coisas juntas tornavam a ordem impossível de
+atender**: a `.janela` é `width:min(100%,1600px)` por `height:var(--alt-janela)`
+com `--alt-janela:777px` fixo, então o recorte sai **o mesmo pixel em qualquer
+vista** acima de 1632x809. Fotografar maximizado não mudava a foto.
+
+    interface/olhar.py --todas --publicado --doc --vista 1918x840
+
+`--vista LARGxALT` faz DUAS coisas, e a segunda é a razão da primeira:
+
+1. abre o Chrome nessa vista;
+2. no `--doc`, a foto passa a ser a **VISTA INTEIRA** em vez do recorte da
+   `.janela` — porque é a vista que responde à pergunta dela. O que ela vê
+   maximizada não é o cartão: é o cartão **mais** os vãos dos lados e a faixa
+   morta embaixo, e é exatamente isso que o recorte jogava fora.
+
+Sem `--vista` nada muda: 1920x1080, recorte na `.janela`, as fotos do README.
+
+Uso:  olhar.py 05-vibracao.html [--publicado] [--vista 1918x840|dela]
 """
 from __future__ import annotations
 
@@ -74,8 +95,38 @@ import onde  # noqa: E402
 # aba passa da dobra.
 LARG, ALT = 1920, 1080
 
+#: A VISTA MAXIMIZADA DA MÁQUINA DELA, e cada parcela é medida — 11/09/2026.
+#:
+#: A TV é 1920x1080 a 100 % (`cosmic-randr`, saída DP-1). O que o compositor
+#: come dela está medido pixel a pixel em
+#: `docs/process/sprints/2026-09-09-ALTURA-DA-VISTA-01-*.md` §1, sobre a foto
+#: da janela dela maximizada às 22:24 de 09/09:
+#:
+#:     painel do COSMIC (zona exclusiva)   82   em cima
+#:     doca do COSMIC   (zona exclusiva)  110   embaixo
+#:     borda da janela                      1   de cada lado
+#:     Gtk.HeaderBar                       46   (= ponte_da_tela.ALTURA_DA_BARRA)
+#:
+#:     altura da vista: 1080 − 82 − 1 − 46 − 1 − 110 = 840   <- MEDIDO na foto
+#:     largura da vista: 1920 − 1 − 1 = 1918                 <- derivado: o
+#:         painel e a doca são de cima e de baixo, e não há zona exclusiva
+#:         lateral; sobra a mesma borda de 1 px que a foto mostra em cima e
+#:         embaixo. NÃO foi lida pixel a pixel — está na entrega, declarada.
+VISTA_DELA = (1918, 840)
+
 #: Onde as fotos da documentação moram — as mesmas que o README mostra.
 DESTINO_DOC = onde.RAIZ / "docs" / "usage" / "assets"
+
+#: E AS FOTOS DE VISTA MORAM AO LADO, NÃO POR CIMA — 11/09/2026.
+#:
+#: As duas famílias respondem perguntas diferentes: o recorte da `.janela` é a
+#: miniatura do README (*"como é a aba?"*) e a vista é a tela dela maximizada
+#: (*"como fica na TV dela?"*). Gravar as duas com o MESMO NOME repetiria, num
+#: nível acima, a armadilha que o recibo existe para desfazer — e teria uma
+#: consequência medida: o `CLAUDE.md` manda todo mundo rodar
+#: `--todas --publicado --doc` antes de commitar, e a execução seguinte
+#: apagaria calada a foto da vista. Pasta própria, recibo próprio.
+SUBPASTA_DA_VISTA = "maximizada"
 
 #: O NOME DAS FOTOS NÃO SE INVENTOU — 05/09/2026. O
 #: `docs/usage/AS-DEZ-ABAS-o-que-cada-uma-faz.md` já pedia
@@ -118,7 +169,8 @@ E_ABA = re.compile(r"^\d\d-")
 NOME_DA_PROVA = "PROVA-DA-FOTO.txt"
 
 
-def _gravar_prova_da_foto(destino: pathlib.Path, modo: str, origem: str) -> pathlib.Path:
+def _gravar_prova_da_foto(destino: pathlib.Path, modo: str, origem: str,
+                          vista: str = "") -> pathlib.Path:
     """O recibo do ensaio: quando, quantas, de que bancada, e a soma de cada PNG.
 
     `modo` é o que a pessoa pediu (`--todas --publicado --doc`); `origem` é a
@@ -148,6 +200,11 @@ def _gravar_prova_da_foto(destino: pathlib.Path, modo: str, origem: str) -> path
         f"abas:    {len(pngs)}",
         f"modo:    {modo}",
         f"origem:  {origem}",
+        # A VISTA É PARTE DA PROCEDÊNCIA — 11/09/2026. Duas fotos da mesma
+        # página em vistas diferentes são telas diferentes, e nada no PNG diz
+        # em qual delas ele nasceu. Sem esta linha, a foto da vista maximizada
+        # dela e a do recorte de 1600x777 ficam indistinguíveis na pasta.
+        f"vista:   {vista or 'recorte da .janela'}",
         "",
         "# Toda linha destas imagens é PÁGINA DO REPOSITÓRIO fotografada num",
         "# Chrome headless — nenhuma delas é medição desta ou de qualquer",
@@ -199,15 +256,22 @@ def _navegador(pw):
 
 
 def _retratar(navegador, alvo: pathlib.Path, saida: pathlib.Path,
-              so_a_janela: bool = False) -> dict:
+              so_a_janela: bool = False,
+              vista: tuple[int, int] | None = None) -> dict:
     """Uma página, já assentada, medida e fotografada.
 
     `so_a_janela` recorta na moldura em vez de gravar a página inteira, e é o
     modo da DOCUMENTAÇÃO: a janela do produto tem 777 px de altura dentro de um
     viewport de 1080, então a foto de página inteira publica 300 px de fundo
     vazio — que numa miniatura de README come um terço da imagem.
+
+    `vista` troca o viewport E o enquadramento: pedida a vista, a foto é o que
+    a vista mostra (nem recorte, nem página inteira). Ver o topo do arquivo —
+    com a `.janela` de altura fixa, o recorte é o mesmo pixel em toda vista, e
+    "fotografar maximizado" só significa alguma coisa se a foto for a vista.
     """
-    pg = navegador.new_page(viewport={"width": LARG, "height": ALT}, device_scale_factor=1)
+    larg, alt = vista or (LARG, ALT)
+    pg = navegador.new_page(viewport={"width": larg, "height": alt}, device_scale_factor=1)
     try:
         pg.goto(f"file://{alvo}")
         pg.wait_for_load_state("networkidle")
@@ -229,13 +293,26 @@ def _retratar(navegador, alvo: pathlib.Path, saida: pathlib.Path,
         # — que ao menos é um erro barulhento. O caso perigoso é o silencioso, e
         # por isso o `else` abaixo devolve o motivo em vez de um número inventado:
         # seletor que casou ZERO elemento é ERRO, nunca medida.
+        # O `1080` ESTAVA DIGITADO AQUI, e era a segunda cópia da altura da
+        # vista — 11/09/2026. Com a vista de 840 ele diria "passa 0 da dobra"
+        # sobre uma página que passa 240: a régua responderia sobre o viewport
+        # de ontem. Agora ela PERGUNTA à janela em que está.
+        #
+        # E as duas medidas NOVAS são as que a foto maximizada existe para
+        # mostrar: `morto_abaixo` é o que sobra entre o rodapé da `.janela` e a
+        # borda da vista (`ALTURA-DA-VISTA-01` §4.3: *"nenhuma régua a
+        # enxerga — todas medem dentro da `.janela`, e a tela dela não para
+        # ali"*), e `vao_dos_lados` é a mesma cegueira na largura.
         cx = pg.evaluate("""() => {
           const d = document.documentElement;
           const cx = document.querySelector('.janela') || document.querySelector('.cx');
           if (!cx) return {erro: 'nem .janela nem .cx nesta página — não há o que medir'};
           const j = cx.getBoundingClientRect();
           return {caixa: cx.className, larg: Math.round(j.width), alt: Math.round(j.height),
-                  passa_da_dobra: Math.max(0, Math.round(d.scrollHeight - 1080)),
+                  vista: `${window.innerWidth}x${window.innerHeight}`,
+                  morto_abaixo: Math.round(window.innerHeight - j.bottom),
+                  vao_dos_lados: Math.round((window.innerWidth - j.width) / 2),
+                  passa_da_dobra: Math.max(0, Math.round(d.scrollHeight - window.innerHeight)),
                   rolagem_lateral: d.scrollWidth > d.clientWidth};
         }""")
         if cx.get("erro"):
@@ -244,7 +321,13 @@ def _retratar(navegador, alvo: pathlib.Path, saida: pathlib.Path,
         # dobra, e era justamente o que ela precisava ver.
         saida.parent.mkdir(parents=True, exist_ok=True)
         moldura = pg.query_selector(".janela") or pg.query_selector(".cx")
-        if so_a_janela and moldura is not None:
+        if vista is not None:
+            # A VISTA PEDIDA: nem recorte, nem página inteira — o que a vista
+            # mostra. É o único enquadramento que responde *"como fica
+            # maximizado?"*, porque é o único que carrega o que está FORA da
+            # `.janela` e dentro da tela.
+            pg.screenshot(path=str(saida))
+        elif so_a_janela and moldura is not None:
             moldura.screenshot(path=str(saida))
         else:
             pg.screenshot(path=str(saida), full_page=True)
@@ -253,7 +336,7 @@ def _retratar(navegador, alvo: pathlib.Path, saida: pathlib.Path,
         pg.close()
 
 
-def _uma(arq: str, publicado: bool) -> int:
+def _uma(arq: str, publicado: bool, vista: tuple[int, int] | None = None) -> int:
     alvo = onde.pagina(arq, publicado=publicado)
     saida = pathlib.Path(f"/tmp/olhar-{arq[:2]}{'-publicado' if publicado else ''}.png")
     from playwright.sync_api import sync_playwright
@@ -261,7 +344,7 @@ def _uma(arq: str, publicado: bool) -> int:
     with sync_playwright() as pw:
         nav = _navegador(pw)
         try:
-            r = _retratar(nav, alvo, saida)
+            r = _retratar(nav, alvo, saida, vista=vista)
         finally:
             nav.close()
     if "erro" in r:
@@ -270,14 +353,20 @@ def _uma(arq: str, publicado: bool) -> int:
     return 0
 
 
-def _todas(publicado: bool, para_a_doc: bool) -> int:
+def _todas(publicado: bool, para_a_doc: bool,
+           vista: tuple[int, int] | None = None) -> int:
     paginas = [p for p in onde.paginas(publicado=publicado) if E_ABA.match(p.name)]
     # RETRATISTA QUE ACHA ZERO NÃO É RETRATISTA VERDE: se a pasta mudar de
     # lugar, ele reprova em vez de dizer "pronto" sobre nenhuma foto.
     if len(paginas) < 10:
         sys.exit(f"achei {len(paginas)} abas em {'publicado' if publicado else 'bancada'} — o caminho mudou?")
 
-    destino = DESTINO_DOC if para_a_doc else pathlib.Path("/tmp")
+    if not para_a_doc:
+        destino = pathlib.Path("/tmp")
+    elif vista is not None:
+        destino = DESTINO_DOC / SUBPASTA_DA_VISTA
+    else:
+        destino = DESTINO_DOC
     from playwright.sync_api import sync_playwright
 
     saiu: list[dict] = []
@@ -286,7 +375,8 @@ def _todas(publicado: bool, para_a_doc: bool) -> int:
         try:
             for p in paginas:
                 nome = f"{PREFIXO_NOVO}{p.stem}.png" if para_a_doc else f"olhar-{p.stem}.png"
-                r = _retratar(nav, p, destino / nome, so_a_janela=para_a_doc)
+                r = _retratar(nav, p, destino / nome, so_a_janela=para_a_doc,
+                              vista=vista)
                 if "erro" in r:
                     sys.exit(f"ERRO ao medir {p.name}: {r['erro']}")
                 saiu.append({"aba": p.name, **r})
@@ -295,7 +385,10 @@ def _todas(publicado: bool, para_a_doc: bool) -> int:
 
     for r in saiu:
         dobra = f" · passa {r['passa_da_dobra']} px da dobra" if r["passa_da_dobra"] else ""
-        print(f"{r['aba']:<20} {r['larg']}x{r['alt']}{dobra}  ->  {r['png']}")
+        sobra = f" · {r['morto_abaixo']} px mortos embaixo" if r["morto_abaixo"] else ""
+        lados = f" · vão {r['vao_dos_lados']} px de cada lado" if r["vao_dos_lados"] else ""
+        print(f"{r['aba']:<20} {r['larg']}x{r['alt']} em {r['vista']}"
+              f"{dobra}{sobra}{lados}  ->  {r['png']}")
     print(f"\n{len(saiu)} abas retratadas em {destino}")
 
     # O RECIBO SÓ NO `--doc`, e a assimetria é de propósito: `/tmp` é rascunho,
@@ -308,10 +401,13 @@ def _todas(publicado: bool, para_a_doc: bool) -> int:
             origem_legivel = str(origem.relative_to(onde.RAIZ))
         except ValueError:
             origem_legivel = str(origem)
+        pedida = f"{vista[0]}x{vista[1]}" if vista else ""
         recibo = _gravar_prova_da_foto(
             destino,
-            modo="--todas --publicado --doc" if publicado else "--todas --doc",
+            modo=("--todas --publicado --doc" if publicado else "--todas --doc")
+            + (f" --vista {pedida}" if pedida else ""),
             origem=origem_legivel,
+            vista=pedida,
         )
         print(f"recibo: {recibo}")
     return 0
@@ -394,6 +490,29 @@ def _palavra(alvo: str, publicado: bool) -> int:
     return 1 if total else 0
 
 
+def _vista_pedida(texto: str) -> tuple[int, int]:
+    """`1918x840` -> `(1918, 840)`, e recusa qualquer outra forma.
+
+    RECUSAR É METADE DO TRABALHO: um `--vista 1918` aceito calado viraria uma
+    vista inventada, e a foto sairia respondendo sobre outra tela — que é o
+    defeito que esta casa mais paga.
+
+    A palavra `dela` resolve para a vista maximizada da máquina dela, medida em
+    `VISTA_DELA`, para que esse número não precise ser redigitado a cada
+    execução — um número com dono, digitado de novo, é um número esperando
+    para envelhecer.
+    """
+    if texto.strip().lower() == "dela":
+        return VISTA_DELA
+    m = re.fullmatch(r"\s*(\d{3,5})\s*[xX×]\s*(\d{3,5})\s*", texto)
+    if not m:
+        raise argparse.ArgumentTypeError(
+            f"vista {texto!r} não tem a forma LARGURAxALTURA (ex.: 1918x840), "
+            "nem é a palavra 'dela'"
+        )
+    return int(m.group(1)), int(m.group(2))
+
+
 def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser(description="fotografa a interface nova")
     p.add_argument("pagina", nargs="?",  # (noqa-acento)  (nome do argumento)
@@ -403,16 +522,20 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--doc", action="store_true", help="grava em docs/usage/assets/")
     p.add_argument("--palavra", metavar="PALAVRA",
                    help="lista onde esta palavra é LIDA nas dez abas, com a origem")
+    p.add_argument("--vista", metavar="LARGxALT", type=_vista_pedida,
+                   help="a vista em que fotografar — 'dela' é a janela dela "
+                        "maximizada. Com ela a foto é a VISTA INTEIRA, não o "
+                        "recorte da .janela")
     a = p.parse_args(argv)
     if a.palavra:
         return _palavra(a.palavra, a.publicado)
     if a.todas:
-        return _todas(a.publicado, a.doc)
+        return _todas(a.publicado, a.doc, a.vista)
     if not a.pagina:  # (noqa-acento)  (nome do argumento)
         p.error("diga a página, ou peça --todas")
     if a.doc:
         p.error("--doc é do modo --todas")
-    return _uma(a.pagina, a.publicado)  # (noqa-acento)  (nome do argumento)
+    return _uma(a.pagina, a.publicado, a.vista)  # (noqa-acento)  (nome do argumento)
 
 
 if __name__ == "__main__":
