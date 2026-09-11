@@ -1883,7 +1883,7 @@ LEGENDA = f'''<div class="nota">
       precisaria de ~460px — os quatro somariam 1840px numa fileira que tem 1163px. Quem diz
       o número aqui é o rótulo <b>Player N</b>; o padrão das luzes, desenhado grande, está na
       <b>Iluminação</b>.</li>
-    <li><b>A caixa "Não trocar de perfil sozinho" está no canto do bloco Modo</b> — na linha do título, como o "Banco de provas" da Navegação. Embaixo dos modos ela lia como um quinto modo, e não é modo: é uma trava sobre o perfil.</li>
+    <li><b>A caixa "Trava o perfil ativo" está no canto do bloco Modo</b> — na linha do título, como o "Banco de provas" da Navegação. Embaixo dos modos ela lia como um quinto modo, e não é modo: é uma trava sobre o perfil. O rótulo é palavra dela de 11/09; o mecanismo, que era o rótulo antigo, passou para a dica no ponteiro do mouse.</li>
     <li><b>"Reconciliar jogadores" virou "Reconectar Controles"</b>.</li>
     <li><b>A área de avisos tem espaço reservado</b> e <b>conta quantos são</b>. Antes, três banners disputavam a linha e o primeiro escondia os outros. A barra vertical que a separa dos cartões agora vai até embaixo — era um toco de um terço, porque a coluna media a altura do único aviso.</li>  <!-- noqa-acento: `media` é o verbo medir -->
     <li><b>32 frases viraram 12</b> — o resto está nos três ícones <b>?</b>. Passe o mouse neles.</li>

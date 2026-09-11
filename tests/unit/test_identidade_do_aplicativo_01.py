@@ -42,16 +42,22 @@ PONTOS_DE_TRANSICAO: dict[str, str] = {
     "uninstall.sh": "desinstala os DOIS ids e preserva a config dos dois sandboxes",
     "scripts/purge.sh": "descontamina os DOIS ids",
     "src/hefesto_dualsense4unix/utils/migrate_legacy_paths.py": "lê a config do sandbox antigo",
-    "src/hefesto_dualsense4unix/app/main.py": "mata a instância anterior sob qualquer dos dois ids",
     # 29/08/2026 (AS DUAS CASAS): os padrões de matança saíram do corpo do
     # `app/main.py` e passaram a derivar de `utils/identidade.py`, porque o app
     # de desenvolvimento precisa dos DELE e não dos do estável. Os dois ids de
-    # Flatpak vieram junto, e é aqui que eles moram agora — `app/main.py`
-    # continua na lista porque a docstring dele ainda explica o porquê.
+    # Flatpak vieram junto, e é aqui que eles moram agora.
     "src/hefesto_dualsense4unix/utils/identidade.py": (
         "os dois app-ids do Flatpak entram nos padrões de matança do ESTÁVEL"
     ),
-    "src/hefesto_dualsense4unix/app/app.py": "idem, no pkill de saída",
+    # OS DOIS QUE SAÍRAM DA LISTA — 11/09/2026, e não foi conserto: foi a
+    # ÁRVORE. `app/main.py` e `app/app.py` estavam aqui desde 21/08 ("mata a
+    # instância anterior sob qualquer dos dois ids" e "idem, no pkill de
+    # saída"), e o commit `f5311616` (*"a janela GTK sai — o motor fica"*,
+    # decisão `D-0609-GTK-LEVA-INTEIRA`) APAGOU OS DOIS ARQUIVOS do disco.
+    # A permissão ficou apontando para o vazio, e o sentido 2 desta régua —
+    # *"todo arquivo da lista ainda o nomeia"* — reprovou por isso, como
+    # nasceu para fazer. Quem herdou o assunto já está na lista logo acima:
+    # `utils/identidade.py` é o dono dos padrões de matança desde 29/08.
     f"flatpak/{APP_ID}.yml": "a permissão :ro que deixa a migração LER a casa antiga",
     f"flatpak/{APP_ID}.metainfo.xml": "<replaces> — a loja entende que um SUBSTITUI o outro",
     ".github/workflows/flatpak.yml": "registra de onde o id veio",

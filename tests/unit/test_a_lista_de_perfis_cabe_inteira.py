@@ -302,8 +302,21 @@ def test_um_nome_de_perfil_com_aspas_nao_derrama_marcacao() -> None:
     """
     linhas = _linhas(_pacote(['Elden Ring "GOTY"']))
     assert "&quot;GOTY&quot;" in linhas[0]
-    assert linhas[0].count('title="') == 1
+    # A ASPA CRUA É O DERRAME, e é ela que se mede — 11/09/2026. Esta linha
+    # contava `title="` e exigia UM: era um proxy, e ele caducou no dia em que
+    # a coluna «Quando usar» ganhou o `title` que a régua da janela estreita
+    # pede. Contar atributos legítimos para provar que nenhum ilegítimo nasceu
+    # é medir o vizinho do defeito; a aspa que sobrevive ao `_atr` é o defeito.
+    # SÓ NA ABERTURA DA `<tr>`: no TEXTO da célula a aspa crua é CERTA e
+    # declarada (`_texto` a deixa passar — *"aspa em texto não fecha nada"*).
+    # O derrame mora na tag, onde a aspa fecha o atributo.
+    assert '"GOTY"' not in linhas[0].split(">", 1)[0], (
+        "o nome saiu com a aspa CRUA na abertura da `<tr>` — ela fecha o "
+        "atributo e o resto do nome vira marcação")
     assert linhas[0].count("<tr") == 1
+    assert linhas[0].count("<td") == 3, (
+        "a linha tem três células; um <td> a mais é marcação derramada pelo "
+        "nome, que é exatamente o que o `_atr` existe para impedir")
 
 
 # --------------------------------------------------------------------------

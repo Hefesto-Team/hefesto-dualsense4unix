@@ -483,27 +483,44 @@ def gravar_o_modo_no_ativo(state: Any, kind: str,
     plano de IPC do próprio gesto. O que esta função grava é o que ATIVAR o
     perfil vai ligar da próxima vez; o agora já está aplicado.
 
-    **A PERDA QUE ESTA FUNÇÃO NÃO COBRE — declarada em 11/09/2026, e ela é
-    real.** Com o quadro «Modo» fora do editor de Perfis (ordem dela) e a janela
+    **O ALCANCE DESTA FUNÇÃO — e ele NÃO é uma perda de capacidade.** Com o
+    quadro «Modo» fora do editor de Perfis (ordem dela, 11/09/2026) e a janela
     GTK aposentada (`D-0609-GTK-LEVA-INTEIRA`), esta é a ÚNICA escrita de
-    `Profile.mode` que sobrou na interface — e ela tem dois limites, os dois
-    medidos aqui:
+    `Profile.mode` que a interface tem.
+
+    **FATO ERRADO, SUBSTITUÍDO — 11/09/2026.** Esta docstring dizia "A PERDA QUE
+    ESTA FUNÇÃO NÃO COBRE … e ela é real", e **ela derrubou o fato no mesmo
+    dia**:
+
+        *"a informação que eu selecionar no modo ou mascara na aba jogar ao
+        salvar o perfil faz a mesma função que o modo tinha na aba perfil isso
+        foi implementado desde o inicio mas voltou e não deVEria ter ocorrido"*
+
+    **E O CÓDIGO CONCORDA COM ELA**: `a01_jogar._gravar_o_modo_do_chip` →
+    `a01_jogar._gravar_o_modo` → esta função — e a docstring daquela já dizia
+    *"Leva o modo clicado à seção `mode` do perfil ativo"*. (Citado por SÍMBOLO
+    e não por linha: o número envelhece a cada edição do arquivo, e reapontá-lo
+    por aritmética é como esta casa já errou.) Clicar um chip na aba Jogar já
+    grava `mode`, e a máscara também; não precisa nem do «Salvar Perfil». O
+    quadro em Perfis era DUPLICATA disto, e ter voltado para lá foi o engano: a
+    retirada de 11/09 não tirou capacidade, **desfez a duplicata**.
+
+    **O QUE SOBRA SÃO DOIS LIMITES, e os dois são consequência de decisão dela
+    — não dívida:**
 
     * **de ALVO:** o perfil é resolvido por :func:`nome_do_ativo`, logo só o
-      perfil que está VALENDO recebe. Um perfil que ela seleciona na lista e não
-      ativou não tem, hoje, tela que escreva o modo dele;
+      perfil que está VALENDO recebe. Mexer no modo de outro perfil pede ativá-lo
+      antes;
     * **de FAIXA:** os quatro gestos da aba Jogar que chamam esta função passam
       ``gamepad``, ``native`` e ``desktop``, nunca ``"none"`` — então
       :func:`secao_do_modo` nunca é chamada com o valor que REMOVE a seção. Um
-      perfil que já tem `mode` não tem como voltar a «Não mexer no modo» por
-      tela nenhuma.
+      perfil que já tem `mode` não volta a «Não mexer no modo» por tela nenhuma.
 
-    A janela GTK cobria as duas coisas (`profiles_actions._mode_section_from_editor`).
-    **O CUSTO:** quem tem um perfil com `mode` gravado e quiser trocá-lo tem de
-    ativar o perfil primeiro; quem quiser apagar a seção não tem caminho de
-    tela. A dívida está declarada em `docs/data/paridade-gtk-html.csv` (linha
-    384, `FALTA_NO_HTML`) — é lá que ela mora, e não na tela: *"o layout não
-    informa os nossos defeitos"*, palavra dela de 07/09/2026.
+    Onde isso está escrito é `docs/data/paridade-gtk-html.csv`, na linha da
+    feature *"A seção «Modo» do perfil"* — que voltou a `DIFERENTE` em 11/09
+    justamente porque a função existe deste lado. Na TELA não aparece, nem como
+    perda nem como alcance: *"o layout não informa os nossos defeitos"*, palavra
+    dela de 07/09/2026.
     """
     nome = nome_do_ativo(state)
     if not nome:

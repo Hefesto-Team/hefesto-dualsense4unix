@@ -99,8 +99,18 @@ class PonteDeMentira:
     def __getattr__(self, nome: str):
         def registrar(*args, **kwargs):
             self.chamadas.append((nome, args, kwargs))
-            # `identity_number_set` devolve `(ok, motivo)`; os outros, `bool`.
-            return (True, None) if nome.endswith("_set") and "identity" in nome else True
+            # `identity_number_set` e a família `*_detalhado` devolvem
+            # `(ok, motivo)`; os outros, `bool`.
+            #
+            # O `_detalhado` ENTROU EM 11/09/2026 (A-PERNA-QUE-FALTA-01) e não é
+            # conforto: um dublê que respondesse `True` a `chamar_detalhado`
+            # seria MAIS FROUXO QUE A PONTE REAL, e o gesto que desempacota
+            # `ok, motivo = …` estouraria só na mão dela. É a cicatriz de 04/09
+            # com a máscara e a de 05/09 com o co-op, pela terceira vez.
+            duas = (nome.endswith("_set") and "identity" in nome) or nome.endswith(
+                "_detalhado"
+            )
+            return (True, None) if duas else True
         return registrar
 
 

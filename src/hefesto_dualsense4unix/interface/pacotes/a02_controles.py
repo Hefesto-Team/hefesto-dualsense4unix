@@ -3491,7 +3491,7 @@ def mudo(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
         #
         # O QUE O DAEMON DESTA ÁRVORE RESPONDE, medido em 06/09/2026: o corpo
         # de `mic.canal.set` NÃO traz `por_uniq` — quem o traz é o
-        # `mic.volume.set` (`daemon/ipc_handlers.py:6164`). O ato do microfone
+        # `mic.volume.set` (`daemon/ipc_handlers.py:6165`). O ato do microfone
         # monta a resposta em `AtoDoMicrofone.como_corpo`
         # (`daemon/subsystems/hotkey.py:1388`), e lá o campo não existe. Então
         # `alvo_honrado` devolve `None` aqui, esta linha fica CALADA contra o
@@ -3953,7 +3953,7 @@ def volume(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
         # colapsa isso no mesmo `True` de um pedido honrado, e a tela pintava
         # o selo do card certo sobre um número que aquele controle nunca teve.
         #
-        # O CAMPO EXISTE DESDE 20/08 (`por_uniq`, `ipc_handlers.py:6220`) e a
+        # O CAMPO EXISTE DESDE 20/08 (`por_uniq`, `ipc_handlers.py:6308`) e a
         # janela ANTIGA já o lê (`controller_card:4443`). Quem não lia era esta.
         corpo = _corpo(p.mic_volume_set_detalhado(pedido, uniq=uniq))
         # `sem_fonte` TEM FRASE PRÓPRIA, e SÓ ele: os outros `status` continuam
