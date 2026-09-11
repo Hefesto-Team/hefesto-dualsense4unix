@@ -533,11 +533,42 @@ def jogos_dos_lancadores(lar: Path | None = None) -> list[JogoLocal]:
 
 
 #: O `.desktop` de um LANÇADOR não é um jogo. `Game;PackageManager;` é como o
-#: Heroic, o Lutris e o Rare se declaram — são a loja, e um perfil para a
-#: vitrine não é o que ela pediu. `Game;Emulator;` FICA: o RetroArch é um
-#: processo para todas as ROMs (é o que a §4 desta sprint diz), então a linha
-#: por emulador é a única que existe, e é a certa.
+#: Heroic e o Lutris se declaram — são a loja, e um perfil para a vitrine não é
+#: o que ela pediu. `Game;Emulator;` FICA, e é DECISÃO com razão escrita, não
+#: descuido: ver o bloco «POR QUE O EMULADOR FICA», logo abaixo.
 _CATEGORIA_QUE_NAO_E_JOGO = "packagemanager"
+
+#: **O CLIENTE DE LOJA QUE NÃO SE DECLARA COMO TAL.** `Categories` é o filtro
+#: certo e resolve Heroic e Lutris, que escrevem `PackageManager`. O Rare —
+#: cliente alternativo da Epic — **não escreve**. Medido no `.desktop` dele em
+#: 11/09/2026, `…/flatpak/exports/share/applications/io.github.dummerle.rare`::
+#:
+#:     Categories=Game;
+#:     StartupWMClass=rare
+#:     Comment=Open source alternative for Epic Games Launcher, using Legendary
+#:
+#: … e não há campo que o separe de um jogo. Então ele é declarado aqui, pelo
+#: mesmo argumento que `_FERRAMENTA_RE` já carrega para a infraestrutura da
+#: Steam: um filtro POR NOME, ESCRITO, é melhor que adivinhar. E o preço de
+#: deixá-lo entrar era concreto — a biblioteca que o Rare abre é a MESMA que
+#: `censo_dos_lancadores._heroic` já lê pelo `legendary_library.json`, jogo por
+#: jogo: ele ofereceria a VITRINE da Epic no campo «Nome do Jogo», ao lado dos
+#: jogos dela.
+_CLIENTES_DE_LOJA = frozenset({"rare"})
+
+# **POR QUE O EMULADOR FICA, e isto é DECISÃO — 11/09/2026.** Os quatro que a
+# máquina dela tem (`azahar`, `mGBA`, `retroarch`, `SUPERZSNES`) declaram
+# `Game;Emulator;`, e `e_lancador_de_jogos` os chama de LANÇADOR na aba 07.
+# Aqui eles entram assim mesmo, e a razão é a §4 da sprint: um emulador é UM
+# processo para todas as ROMs, então **a janela do emulador é a única janela
+# que existe**. Um perfil mirando `SUPERZSNES` é o perfil daquele console; um
+# perfil mirando `240pSuite.sfc` seria uma regra que nunca casa (R-12).
+#
+# **O QUE ISSO NÃO É: um jogo achado.** Nesta origem, no disco dela hoje, o
+# número de JOGOS é ZERO — os cinco achados eram quatro emuladores mais o
+# Rare, que agora sai. Quem prova o motor desta sprint é o Heroic (`gotg.exe`
+# → *Marvel's Guardians of the Galaxy*), e esta origem existe para o dia em
+# que ela puser um jogo no menu — que é o caso do `.desktop` escrito à mão.
 
 #: O rótulo do lançador para um jogo que não veio de lançador nenhum. Aparece
 #: na lista (``"Celeste (Instalado aqui)"``) e é o que responde *"de onde vem
@@ -570,7 +601,18 @@ def jogos_diretos_dos_atalhos(
 
     **E OS LANÇADORES SAEM PELO QUE ELES MESMOS DECLARAM** —
     `Categories` com `PackageManager` (ver `_CATEGORIA_QUE_NAO_E_JOGO`). Sem
-    isso, Heroic, Lutris e Rare entrariam na lista de JOGOS da aba Perfis.
+    isso, Heroic e Lutris entrariam na lista de JOGOS da aba Perfis. **O Rare
+    não se declara** e sai por `_CLIENTES_DE_LOJA`, que diz por quê.
+
+    **O QUE ELA ACHA NO DISCO DELA HOJE, medido em 11/09/2026 e corrigindo o
+    que esta entrega publicou primeiro: ZERO jogos.** Os cinco `.desktop` que
+    passam pelos filtros são quatro EMULADORES (`azahar`, `mGBA`, `retroarch`,
+    `SUPERZSNES`) mais o `rare`, que agora sai. Os emuladores ficam por
+    decisão escrita — a janela deles é a única que existe —, e **isso não os
+    torna jogos achados**: quem prova o motor desta sprint é o Heroic
+    (``gotg.exe`` → *Marvel's Guardians of the Galaxy*), que é o exemplo da
+    queixa dela. Esta origem existe para o jogo posto no menu à mão, e o
+    número dela hoje é honesto: zero.
 
     NUNCA LEVANTA, e devolve lista vazia em silêncio numa máquina sem atalho
     nenhum — o mesmo contrato de `jogos_dos_atalhos_desktop`, logo acima.
@@ -603,6 +645,8 @@ def jogos_diretos_dos_atalhos(
             if not classe or "game" not in categorias:
                 continue
             if _CATEGORIA_QUE_NAO_E_JOGO in categorias:
+                continue
+            if classe.casefold() in _CLIENTES_DE_LOJA:
                 continue
             if steam_appid_de_texto(classe) is not None:
                 continue
@@ -674,8 +718,15 @@ def jogo_da_janela(
     return None
 
 
-#: O caderno de `nomes_das_janelas`: `(assinatura, {wm_class: nome})`.
-_NOMES_DAS_JANELAS: tuple[object, dict[str, str]] | None = None
+#: O caderno das três origens: `(assinatura, [JogoLocal], {wm_class: nome})`.
+#:
+#: **UM CADERNO PARA AS DUAS FORMAS, e não dois.** A tela precisa das duas — a
+#: LISTA para oferecer no `<datalist>` e para perguntar a FORMA da regra
+#: (`JogoLocal.forma`), e o DICIONÁRIO para o rótulo consultar em O(1) dez
+#: vezes por segundo. Dois cadernos seriam duas leituras do mesmo `pga.db` e
+#: dos mesmos 221 `.desktop`, e dois caminhos de invalidação para uma verdade
+#: só — que é a forma exata do defeito que esta casa nomeia toda semana.
+_NOMES_DAS_JANELAS: tuple[object, list[JogoLocal], dict[str, str]] | None = None
 
 
 def assinatura_das_janelas(
@@ -685,8 +736,24 @@ def assinatura_das_janelas(
     """Impressão BARATA das três origens de fora da Steam — o freio do caderno.
 
     Mesmo molde de `assinatura_da_biblioteca` e pela mesma razão: responder
-    *"mudou alguma coisa desde a última vez?"* com `stat()` de diretório, em
-    vez de reabrir o `pga.db` e os 221 `.desktop` dez vezes por segundo.
+    *"mudou alguma coisa desde a última vez?"* com `stat()` barato, em vez de
+    reabrir o `pga.db` e os 221 `.desktop` dez vezes por segundo.
+
+    **O QUE A METADE DOS LANÇADORES ASSINA É O ARQUIVO, e isso é de
+    11/09/2026:** `assinatura_das_bibliotecas` assinava a pasta de cima e
+    nunca invalidava para o Heroic — ver `censo_dos_lancadores._FONTES`. A
+    metade dos `.desktop` continua sendo o `mtime` da PASTA, e aqui isso é o
+    certo: instalar, desinstalar ou atualizar um programa CRIA, APAGA ou
+    renomeia um arquivo dentro da pasta, e é isso que o `mtime` de um
+    diretório enxerga.
+
+    O QUE ELA NÃO ALCANÇA, declarado em vez de adivinhado: um `.desktop` que
+    já existe EDITADO no lugar (alguém acrescentando `StartupWMClass=` à mão)
+    não muda o `mtime` da pasta. Assiná-los um a um custaria 221 `stat()` por
+    tique, dez vezes por segundo, para cobrir um caso que nenhum instalador
+    produz — eles escrevem em arquivo temporário e renomeiam, o que a pasta
+    vê. O degrau, se ele aparecer, é acrescentar os arquivos aqui, como
+    `censo_dos_lancadores._FONTES` faz do outro lado.
 
     **AS DUAS METADES SÃO PRECISAS SEPARADAS:** as cinco pastas de lançador
     vêm de `censo_dos_lancadores.assinatura_das_bibliotecas`, e as pastas de
@@ -709,37 +776,73 @@ def assinatura_das_janelas(
     return tuple(linhas)
 
 
-def nomes_das_janelas(
-    lar: Path | None = None,
-    pastas: Sequence[Path] | None = None,
-) -> dict[str, str]:
-    """``{wm_class: nome}`` das três origens — **a PONTA que a tela chama**.
+def _caderno_das_janelas(
+    lar: Path | None,
+    pastas: Sequence[Path] | None,
+) -> tuple[list[JogoLocal], dict[str, str]]:
+    """A leitura das três origens, memoizada — a LISTA e o índice, de uma vez.
 
-    É a metade que lê o disco, separada de `jogo_da_janela` (que é pura) pela
-    mesma disciplina de `_nomes_dos_jogos` na aba: a leitura é memoizada pela
-    assinatura, e a decisão fica testável sem a biblioteca dela.
+    **NUNCA LEVANTA.** Quem chama é a aba Perfis, que é PINTURA — dez vezes
+    por segundo. Uma exceção lendo o `pga.db` do Lutris derrubaria a aba
+    inteira por causa de um rótulo, que é o contrato que
+    `a10_perfis._jogo_reconhecido` já declara.
 
-    **NUNCA LEVANTA.** Quem a chama é o rótulo ao lado do campo «Nome do
-    Jogo», que é PINTURA — dez vezes por segundo. Uma exceção lendo o
-    `pga.db` do Lutris derrubaria a aba Perfis inteira por causa de um rótulo,
-    que é o contrato que `a10_perfis._jogo_reconhecido` já declara.
-
-    A caixa da chave é a do disco; quem compara é `jogo_da_janela`, que dobra
-    os dois lados. Aqui a chave entra em minúsculas para que uma consulta
-    direta ao dicionário (que é o que `frase_do_campo_do_jogo` faz) não
-    dependa de ela ter aberto o jogo pelo Heroic ou pelo Lutris.
+    O ÍNDICE ENTRA EM MINÚSCULAS, e a lista guarda a caixa do disco: quem
+    consulta o índice direto (`frase_do_campo_do_jogo`) não pode depender de
+    ela ter aberto o jogo pelo Heroic (``gotg.exe``) ou pelo Lutris
+    (``GOTG.exe``); quem varre a lista é `jogo_da_janela`, que dobra os dois
+    lados sozinho.
     """
     global _NOMES_DAS_JANELAS
     try:
         assinatura = assinatura_das_janelas(lar, pastas)
         if _NOMES_DAS_JANELAS is not None and _NOMES_DAS_JANELAS[0] == assinatura:
-            return _NOMES_DAS_JANELAS[1]
-        nomes = {j.chave.casefold(): j.nome
-                 for j in jogos_com_janela(lar, pastas) if j.chave}
+            return _NOMES_DAS_JANELAS[1], _NOMES_DAS_JANELAS[2]
+        jogos = list(jogos_com_janela(lar, pastas))
     except Exception:  # pragma: no cover - disco hostil; ver o contrato acima
-        return {}
-    _NOMES_DAS_JANELAS = (assinatura, nomes)
-    return nomes
+        return [], {}
+    nomes = {j.chave.casefold(): j.nome for j in jogos if j.chave}
+    _NOMES_DAS_JANELAS = (assinatura, jogos, nomes)
+    return jogos, nomes
+
+
+def nomes_das_janelas(
+    lar: Path | None = None,
+    pastas: Sequence[Path] | None = None,
+) -> dict[str, str]:
+    """``{wm_class: nome}`` das três origens — **o que o RÓTULO consulta**.
+
+    É a metade que lê o disco, separada de `jogo_da_janela` (que é pura) pela
+    mesma disciplina de `_nomes_dos_jogos` na aba: a leitura é memoizada pela
+    assinatura, e a decisão fica testável sem a biblioteca dela.
+
+    Entra como terceiro argumento de `frase_do_campo_do_jogo`, que é a quinta
+    resposta do rótulo ao lado do campo «Nome do Jogo»
+    (`a10_perfis._jogo_reconhecido`). Nunca levanta — ver `_caderno_das_janelas`.
+    """
+    return _caderno_das_janelas(lar, pastas)[1]
+
+
+def jogos_de_janela(
+    lar: Path | None = None,
+    pastas: Sequence[Path] | None = None,
+) -> list[JogoLocal]:
+    """A MESMA leitura na forma de LISTA — o que o `<datalist>` oferece.
+
+    Duas perguntas da tela precisam do `JogoLocal` inteiro, e não só do nome:
+
+    * **o que oferecer** no campo «Nome do Jogo» — `JogoLocal.rotulo` diz o
+      lançador (*"(Heroic)"*) e `JogoLocal.valor` diz o que o campo grava;
+    * **que FORMA de regra** o texto escolhido pede — `JogoLocal.forma`, que é
+      o que `a10_perfis._forma_do_que_ela_escolheu` pergunta antes de gravar.
+      Sem ela a `wm_class` que a própria lista ofereceu era gravada como
+      `process_name`, que é outro dado e casa por acaso (medido na tela viva
+      em 10/09/2026).
+
+    Mesmo caderno de `nomes_das_janelas`, então chamar as duas no mesmo tique
+    custa UMA leitura de disco. Nunca levanta.
+    """
+    return _caderno_das_janelas(lar, pastas)[0]
 
 
 def ofertas_do_campo_do_jogo(
@@ -879,6 +982,7 @@ __all__ = [
     "jogo_da_janela",
     "jogos_com_janela",
     "jogos_da_biblioteca_steam",
+    "jogos_de_janela",
     "jogos_diretos_dos_atalhos",
     "jogos_dos_atalhos_desktop",
     "jogos_dos_lancadores",
