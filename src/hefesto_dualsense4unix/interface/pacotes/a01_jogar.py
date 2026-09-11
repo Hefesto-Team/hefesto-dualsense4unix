@@ -389,7 +389,20 @@ ESPERA_DICA = (
     "O número fica forte quando ele entrar na partida."
 )
 
-CADEADO_ROTULO = "Não trocar de perfil sozinho ao abrir um jogo"
+#: O RÓTULO É PALAVRA DELA, de 11/09/2026, e são três: **«Trava o perfil
+#: ativo»**. A frase anterior — sete palavras descrevendo o mecanismo — passou a
+#: ser dita pela `CADEADO_DICA`, que já a dizia melhor. O curto na tela, o longo
+#: no ponteiro do mouse: é a mesma divisão que as outras dicas desta aba fazem.
+#: Não se enfeita nem se alonga para preencher a linha do título do bloco.
+#:
+#: **QUEM TROCAR ESTA PALAVRA TROCA O `label=` DO `Gtk.CheckButton` JUNTO** —
+#: `app/actions/home_actions._build_home` —, e lá o literal fica quebrado em
+#: três linhas DE PROPÓSITO. Medido em 11/09/2026: colapsá-lo numa linha só
+#: encurtou o `home_actions.py` em dois números, e o portão `citacoes-no-codigo`
+#: reprovou com DUAS âncoras de linha — em `app/actions/footer_actions.py` e
+#: neste arquivo — caindo em linha em branco. O texto muda; o tamanho do
+#: arquivo, não.
+CADEADO_ROTULO = "Trava o perfil ativo"
 CADEADO_DICA = (
     "Congela a troca automática: o perfil que você deixou ativo continua "
     "valendo mesmo ao abrir qualquer jogo. "
@@ -2415,7 +2428,7 @@ def modo_navegacao(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
 
 @gesto("01-jogar.html", "cadeado", grava="autoswitch_lock_set")
 def cadeado(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
-    """A caixa "Não trocar de perfil sozinho ao abrir um jogo".
+    """A caixa "Trava o perfil ativo".
 
     PEDIDO NOMEADO DELA, de 23/07/2026, e ele saiu do desenho por escolha minha
     — declarada na legenda desta própria página: *"A caixa saiu — o perfil ativo
