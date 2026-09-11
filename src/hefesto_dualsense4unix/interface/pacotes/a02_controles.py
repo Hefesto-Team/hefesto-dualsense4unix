@@ -2334,6 +2334,18 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
             # `selo_composto`, logo acima; o `sabemos`/`mudo` daqui continuam
             # vivos porque o `resumo_fechado` da linha fechada os usa.
             "mic-selo": selo_composto(a),
+            # OS TRÊS ESTADOS DO BOTÃO 🎙 — MIC-NA-TELA-01, 10/09/2026, e o
+            # valor vem do DAEMON: `audio.luz_do_mic` é o mesmo byte que acende
+            # a luz no plástico. A tradução para a palavra do seletor tem um
+            # dono só (`mesa_viva.estado_do_botao_do_mic`), e ele não decide
+            # nada — decidir aqui poria a tela e o controle na mão dela
+            # discordando no primeiro dia em que um dos dois fosse corrigido.
+            #
+            # `""` REMOVE O ATRIBUTO (ramo `vazio` do alvo `atributo` no
+            # piloto), e é o que deixa o cinza de base sozinho quando ninguém
+            # leu este microfone — a mesma disciplina do terceiro estado do ♪.
+            "mic-botao-estado": mesa_viva.estado_do_botao_do_mic(
+                a.get("luz_do_mic")),
             # O `mic-modo` SAIU DAQUI EM 01/09/2026, e ele APAGAVA DOIS BOTÕES.
             # O endereço `data-campo="mic-modo"` não era uma folha: era o
             # `<span class="rota mic-modo">` que ENVOLVE o Virtual e o Nativo. O

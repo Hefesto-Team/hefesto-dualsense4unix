@@ -1666,6 +1666,14 @@ def resumo_fechado(mic_mudo):
 SELO_ATIVO = mesa_viva.selo_do_mic(False, True)
 SELO_MUDO = mesa_viva.selo_do_mic(True, True)
 
+#: O ATRIBUTO DOS TRÊS ESTADOS DO 🎙 — MIC-NA-TELA-01, 10/09/2026. Atributo e
+#: não classe, pela mesma razão do `data-som` do ♪: o dono do valor é o
+#: APARELHO, e o piloto REMOVE o atributo quando não há leitura, deixando o
+#: cinza de base sozinho. Uma classe ficaria pendurada.
+ATRIBUTO_DA_LUZ_DO_MIC = "data-mic-luz"
+MIC_GRAVANDO = mesa_viva.BOTAO_MIC_GRAVANDO
+MIC_CAPTANDO = mesa_viva.BOTAO_MIC_CAPTANDO
+
 #: O ATRIBUTO QUE O ♪ VESTE, e ele tem UM dono porque aparece em TRÊS lugares
 #: deste arquivo — o `data-hef-atributo` do botão, o `data-som` do desenho e os
 #: dois seletores de CSS. Escrevê-lo à mão nos três é como uma folha para de
@@ -2396,7 +2404,7 @@ def bloco(c, *, bat, carga=None, glifos_on, l2, r2, touch, sticks,
             {linha_de_volume("mic-porque")}
               <span class="trilho"><span class="cheio" style="width:{mic_vol}%"></span><input class="puxa-vol" type="range" min="0" max="100" step="1" value="{mic_vol}" data-gesto="volume" data-volume="microfone" aria-label="{ROTULO_VOL_MIC}" title="{DICA_VOL_MIC}"></span>
               <span class="n">{mic_vol}</span>
-              <button class="mudo-i" data-gesto="mudo" data-mudo="microfone" title="{DICA_MIC_MUDO}">🎙</button>
+              <button class="mudo-i" data-gesto="mudo" data-mudo="microfone" data-campo="mic-botao-estado" data-hef-alvo="atributo" data-hef-atributo="{ATRIBUTO_DA_LUZ_DO_MIC}" title="{DICA_MIC_MUDO}">🎙</button>
               {ponto_de_interrogacao("mic-porque")}
             </div>
             <!-- OS DOIS MODOS DESCERAM PARA CÁ — decisão dela, 31/08/2026:
@@ -3009,6 +3017,41 @@ CSS += f"""
   .mudo-i[{ATRIBUTO_DO_SOM}="{SELO_ATIVO}"]{{border-color:var(--green);color:var(--green)}}
   .mudo-i[{ATRIBUTO_DO_SOM}="{SELO_MUDO}"]{{border-color:var(--orange);color:var(--orange);
     background:rgba(255,184,108,.1)}}
+  /* ---------- O 🎙 EM TRÊS ESTADOS — pedido dela, 10/09/2026 ----------
+     *"ele aceso (vai indicar que agora tá gravando audio), ele captando audio
+     vai ficar no estado de piscando (guia visual pro leigo que pegar o
+     controle de primeira)"*.
+
+     A INVERSÃO É O PEDIDO: o botão falava a língua de quem programa (`mudo-i`,
+     "calar") e passa a falar a de quem pega o controle pela primeira vez —
+     **aceso = estou sendo ouvido**.
+
+     `.mudo-i.on` JÁ ESTEVE AQUI E CAIU EM 06/09, com razão: pintava `--red` (a
+     cor da FALHA) e, no segundo card, a classe vinha do GERADOR e não do
+     aparelho. Estas duas regras são o oposto nos dois pontos — a palavra vem
+     de `mesa_viva.estado_do_botao_do_mic`, o valor vem do daemon a cada tique,
+     e a cor é `--green`, a mesma que o ♪ usa para "ligado". **Se o escritor
+     vivo sumir, estas regras saem junto** — é a regra que o `.solta` deixou:
+     *"CSS de elemento que ninguém mais escreve é promessa esperando alguém
+     tropeçar nela"*.
+
+     O PISCANDO É O MESMO VERDE, não uma cor nova: o que muda é o FUNDO
+     pulsando, porque piscar a borda de um botão de 22px some no olho — medido
+     no desenho. `prefers-reduced-motion` o deixa aceso e firme, que continua
+     dizendo a verdade (está no ar), só sem o guia visual do movimento. */
+  .mudo-i[{ATRIBUTO_DA_LUZ_DO_MIC}="{MIC_GRAVANDO}"],
+  .mudo-i[{ATRIBUTO_DA_LUZ_DO_MIC}="{MIC_CAPTANDO}"]{{
+    border-color:var(--green);color:var(--green)}}
+  .mudo-i[{ATRIBUTO_DA_LUZ_DO_MIC}="{MIC_CAPTANDO}"]{{
+    animation:mic-captando 1.2s ease-in-out infinite}}
+  @keyframes mic-captando{{
+    0%,100%{{background:var(--panel)}}
+    50%{{background:rgba(80,250,123,.22)}}
+  }}
+  @media (prefers-reduced-motion: reduce){{
+    .mudo-i[{ATRIBUTO_DA_LUZ_DO_MIC}="{MIC_CAPTANDO}"]{{
+      animation:none;background:rgba(80,250,123,.14)}}
+  }}
 """
 
 MIOLO = f'''
