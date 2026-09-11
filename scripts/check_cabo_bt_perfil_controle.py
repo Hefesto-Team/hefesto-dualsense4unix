@@ -80,6 +80,9 @@ NAO_E_DO_APARELHO: dict[str, str] = {
     "procurar": "reprocura os lançadores — é leitura do disco",
     "abrir-lancador": "abre um programa da máquina dela",
     "adicionar-lancador": "registra onde um lançador está — é da máquina",
+    "procurar-o-arquivo": "abre o seletor do sistema para ela apontar o "
+                          "`.desktop` — é da máquina, e nada aqui toca o "
+                          "controle",
     "ver-detalhes": "joga o registro técnico no painel — é leitura",
     "ver-plugins": "lista os plugins do daemon — é leitura",
     # ---- máquina e serviço: nada disso passa pelo controle ----
