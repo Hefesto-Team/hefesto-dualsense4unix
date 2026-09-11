@@ -77,10 +77,28 @@ sempre. Rodou e não mudou nada? Declare o commit. Qualquer outra mexida na tela
 gera um SHA novo, a declaração fica velha sozinha e o portão reabre — que é
 exatamente a propriedade que se quer.
 
+A SEGUNDA FAMÍLIA DE FOTO, E O BURACO QUE ELA ABRIU — 11/09/2026
+-----------------------------------------------------------------
+
+`docs/usage/assets/maximizada/` nasceu na PRINTS-DAS-DEZ-01 (as dez abas na
+vista maximizada dela) e **caía dentro de `docs/usage/assets` em toda pergunta
+deste arquivo**, porque as três casavam por PREFIXO. Medido pelo conferente no
+mesmo dia: um commit que gravasse só na pasta nova devolvia `em-dia`, e a
+dívida das dez do README ficava paga por foto que não é delas.
+
+A cura é medir POR FAMÍLIA — `familias_sob`, `_pathspec`, `uma_familia_em_dia`
+— e ela alcança as TRÊS perguntas, não só a primeira: a topologia, o perdão de
+`fotos_sendo_refeitas_agora`, e a mensagem, que agora nomeia a pasta devedora e
+o comando daquela pasta. Uma família atrasada reprova por todas; uma família
+que não dá para medir continua se calando.
+
 A MORDIDA
 ---------
 
-São quatro, e todas em repositório de mentira em `tmp_path`:
+São cinco, e todas em repositório de mentira em `tmp_path`:
+
+* `test_a_foto_da_vista_nao_paga_a_divida_das_dez_do_readme` — a mordida da
+  família nova. Tire o `:(exclude)` de `_pathspec` e ela reprova.
 
 * `test_o_portao_acusa_foto_atrasada` — a ordem errada tem de reprovar.
   Arrancando a comparação (fazendo-a devolver sempre "em dia"), reprova.
@@ -103,6 +121,32 @@ RAIZ = Path(__file__).resolve().parents[2]
 
 #: As fotos que o `interface/olhar.py --todas --publicado --doc` grava.
 FOTOS = "docs/usage/assets"
+
+#: A SEGUNDA FAMÍLIA DE FOTO, e o buraco que ela abriu — 11/09/2026.
+#:
+#: `docs/usage/assets/maximizada/` nasceu na PRINTS-DAS-DEZ-01 com as dez abas
+#: na vista maximizada dela (`--vista dela`, 1918x840). As duas famílias
+#: respondem perguntas diferentes — o recorte da `.janela` é a miniatura do
+#: README, a vista é a TV dela — e moram em pastas separadas por isso.
+#:
+#: **O DEFEITO QUE A PASTA NOVA INTRODUZIU, medido pelo conferente no mesmo
+#: dia:** este portão casava `docs/usage/assets` por PREFIXO, e a subpasta cai
+#: dentro dele. `julgar(['src/.../aba01.py', 'docs/usage/assets/maximizada/
+#: aba-01-jogar.png'])` devolvia `em-dia` — ou seja, **gravar só na pasta nova
+#: QUITAVA a dívida das dez do README**, que podiam apodrecer caladas. É o
+#: defeito que esta própria sprint ACHOU (as dez do README paradas em 08/09 sem
+#: régua acusar), reaberto um nível acima e numa família ainda menos coberta.
+#:
+#: A cura é medir POR FAMÍLIA: cada uma responde por si, e foto de uma nunca
+#: paga a dívida da outra. Ver `familias_sob` e `_pathspec`.
+SUBPASTA_DA_VISTA = "maximizada"
+FOTOS_DA_VISTA = f"{FOTOS}/{SUBPASTA_DA_VISTA}"
+
+#: Toda família de foto desta casa, da mais externa para a mais interna. Quem
+#: criar uma terceira pasta de foto acrescenta a linha AQUI e no irmão
+#: `scripts/check_fotos_da_tela.py` — `test_as_duas_listas_de_codigo_de_tela_sao_a_mesma`
+#: tranca as duas juntas.
+FAMILIAS_DE_FOTO = (FOTOS, FOTOS_DA_VISTA)
 
 #: O que, mudando, torna as fotos suspeitas. `interface/` é a tela de hoje —
 #: as dez páginas e o retratista delas; `app/` é o motor que elas chamam;
@@ -143,6 +187,17 @@ CODIGO_DA_TELA = (
 #: existe. Ver a seção "O ESTADO SEM SAÍDA" no cabeçalho.
 CONFERIDO = f"{FOTOS}/CONFERIDO-EM.txt"
 
+#: UM COMANDO POR FAMÍLIA, e a segunda linha é a razão de esta constante
+#: existir — 11/09/2026. Enquanto a mensagem citava só o primeiro comando, quem
+#: apanhasse pela pasta da vista rodaria o retratista, veria a foto certa não
+#: mudar, e concluiria que o portão estava quebrado. Portão que não diz o gesto
+#: exato é portão que se aprende a ignorar.
+RETRATISTA = "src/hefesto_dualsense4unix/interface/olhar.py"
+COMANDOS_DE_CURA = (
+    f"    {RETRATISTA} --todas --publicado --doc                 # {FOTOS}\n"
+    f"    {RETRATISTA} --todas --publicado --doc --vista dela    # {FOTOS_DA_VISTA}"
+)
+
 
 def _git(raiz: Path, *args: str) -> str:
     saida = subprocess.run(
@@ -160,18 +215,48 @@ def _ultimo_commit(raiz: Path, *caminhos: str) -> str:
     return _git(raiz, "log", "-1", "--format=%H", "--", *caminhos)
 
 
-def fotos_em_dia(raiz: Path, fotos: str, codigo: tuple[str, ...]) -> bool | None:
-    """As fotos foram tiradas DEPOIS da última mexida na tela?
+def familias_sob(fotos: str) -> tuple[str, ...]:
+    """As famílias de foto que moram em `fotos`, ela inclusive.
 
-    `True` = sim; `False` = não; `None` = não dá para saber aqui (sem git, ou
-    num clone raso, ou porque um dos dois lados nunca foi commitado).
+    `docs/usage/assets` devolve as duas; `docs/usage/assets/maximizada`
+    devolve só ela mesma. É o que permite a este arquivo continuar sendo
+    chamado com `FOTOS` e ainda assim perguntar por família.
+    """
+    return tuple(
+        f for f in FAMILIAS_DE_FOTO if f == fotos or f.startswith(fotos + "/")
+    )
+
+
+def _pathspec(familia: str) -> list[str]:
+    """Os caminhos que são DESTA família e de nenhuma outra.
+
+    A pasta externa é ela MENOS as internas, e quem faz isso é o `:(exclude)`
+    do git — não um filtro escrito à mão, que seria uma segunda régua a
+    divergir. Sem esta exclusão, `git log -- docs/usage/assets` responde com o
+    commit que tocou `docs/usage/assets/maximizada/`, e a dívida das dez do
+    README fica quitada por foto que não é delas.
+    """
+    return [familia] + [
+        f":(exclude){outra}"
+        for outra in FAMILIAS_DE_FOTO
+        if outra != familia and outra.startswith(familia + "/")
+    ]
+
+
+def uma_familia_em_dia(
+    raiz: Path, familia: str, codigo: tuple[str, ...]
+) -> bool | None:
+    """A pergunta da topologia, para UMA família de foto.
+
+    `True` = a foto veio depois; `False` = não; `None` = não dá para saber aqui
+    (sem git, num clone raso, ou porque um dos dois lados nunca foi commitado).
 
     O critério é a TOPOLOGIA, não o relógio: `merge-base --is-ancestor` responde
     "o commit do código é ancestral do commit das fotos?". Data de commit
     mentiria — um `rebase` reescreve a ordem sem reescrever os carimbos, e dois
     commits podem carregar o mesmo segundo.
     """
-    commit_das_fotos = _ultimo_commit(raiz, fotos)
+    commit_das_fotos = _ultimo_commit(raiz, *_pathspec(familia))
     commit_do_codigo = _ultimo_commit(raiz, *codigo)
     if not commit_das_fotos or not commit_do_codigo:
         return None
@@ -184,6 +269,33 @@ def fotos_em_dia(raiz: Path, fotos: str, codigo: tuple[str, ...]) -> bool | None
         capture_output=True,
     )
     return pergunta.returncode == 0
+
+
+def fotos_em_dia(raiz: Path, fotos: str, codigo: tuple[str, ...]) -> bool | None:
+    """TODAS as famílias sob `fotos` foram refeitas depois da mexida na tela?
+
+    Uma família atrasada reprova por todas — é o ponto inteiro da cura de
+    11/09/2026. Uma família que não dá para medir (`None`) se cala, e não
+    arrasta o veredito: é a mesma prudência que o `None` sempre teve, agora
+    aplicada uma vez por pasta.
+    """
+    vereditos = [uma_familia_em_dia(raiz, f, codigo) for f in familias_sob(fotos)]
+    if any(v is False for v in vereditos):
+        return False
+    if all(v is None for v in vereditos):
+        return None
+    return True
+
+
+def familias_atrasadas(
+    raiz: Path, fotos: str, codigo: tuple[str, ...]
+) -> list[str]:
+    """Quais famílias estão devendo foto — o que a mensagem precisa nomear."""
+    return [
+        f
+        for f in familias_sob(fotos)
+        if uma_familia_em_dia(raiz, f, codigo) is False
+    ]
 
 
 def fotos_sendo_refeitas_agora(raiz: Path, fotos: str) -> bool:
@@ -203,8 +315,23 @@ def fotos_sendo_refeitas_agora(raiz: Path, fotos: str) -> bool:
     continua reprovando, porque aqui só a sujeira das FOTOS conta. E a mordida
     do portão não passa por aqui — `test_o_portao_acusa_foto_atrasada` chama
     `fotos_em_dia` direto, num repositório de mentira.
+
+    **O PERDÃO TAMBÉM É POR FAMÍLIA desde 11/09/2026** (ver `familias_sujas`):
+    imagem suja em `maximizada/` não podia continuar perdoando a dívida das dez
+    do README, que é o buraco que a pasta nova abriu em toda pergunta que
+    casava por prefixo.
     """
-    return bool(_git(raiz, "status", "--porcelain", "--", fotos))
+    return bool(_git(raiz, "status", "--porcelain", "--", *_pathspec(fotos)))
+
+
+def familias_sujas(raiz: Path, fotos: str) -> set[str]:
+    """As famílias que estão sendo refeitas AGORA — o perdão, uma pasta por vez.
+
+    Perdoar em bloco é o mesmo defeito de casar por prefixo: quem refaz só a
+    foto da vista teria a dívida das dez do README perdoada junto, sem ter
+    tirado nenhuma delas.
+    """
+    return {f for f in familias_sob(fotos) if fotos_sendo_refeitas_agora(raiz, f)}
 
 
 def conferencia_declarada(raiz: Path, conferido: str) -> set[str]:
@@ -262,22 +389,29 @@ def test_as_fotos_nao_ficam_atras_do_codigo_da_tela() -> None:
     if _sem_historico(RAIZ):
         pytest.skip("sem histórico git completo (clone raso ou pasta sem git)")
 
-    if fotos_sendo_refeitas_agora(RAIZ, FOTOS):
+    sujas = familias_sujas(RAIZ, FOTOS)
+    a_medir = [f for f in familias_sob(FOTOS) if f not in sujas]
+    if not a_medir:
         return  # a cura está em curso: as imagens novas ainda não têm commit
 
-    veredito = portao_fechado(RAIZ, FOTOS, CODIGO_DA_TELA, CONFERIDO)
-    if veredito is None:
+    vereditos = [portao_fechado(RAIZ, f, CODIGO_DA_TELA, CONFERIDO) for f in a_medir]
+    if all(v is None for v in vereditos):
         pytest.skip("as fotos ou o código da tela ainda não têm commit próprio")
+    veredito = not any(v is False for v in vereditos)
 
-    commit_das_fotos = _ultimo_commit(RAIZ, FOTOS)[:7]
+    atrasadas = [f for f, v in zip(a_medir, vereditos, strict=True) if v is False]
+    commit_das_fotos = (
+        _ultimo_commit(RAIZ, *_pathspec(atrasadas[0]))[:7] if atrasadas else ""
+    )
     commit_do_codigo = _ultimo_commit(RAIZ, *CODIGO_DA_TELA)
 
     assert veredito, (
-        f"a interface mudou em {commit_do_codigo[:7]} e as fotos de `{FOTOS}` "
+        f"a interface mudou em {commit_do_codigo[:7]} e as fotos de "
+        f"`{'`, `'.join(atrasadas)}` "
         f"são de {commit_das_fotos}, que veio ANTES. As imagens do `README.md` "
         "e do `docs/usage/interface.md` documentam uma tela que pode não "
         "existir mais.\n\n"
-        "    src/hefesto_dualsense4unix/interface/olhar.py --todas --publicado --doc\n\n"
+        f"{COMANDOS_DE_CURA}\n\n"
         "Uma execução, nenhum clique. Se as imagens saírem DIFERENTES, olhe-as "
         "antes de commitar: mudança de DESENHO é palavra dela "
         "(PROVA-DE-TELA-01), não de quem tirou a foto.\n\n"
@@ -409,6 +543,73 @@ def test_o_portao_acusa_retrato_mexido_depois_da_foto(tmp_path: Path) -> None:
         "posterior à foto. É o buraco exato do F14: o instrumento que decide "
         "o que a foto mostra mudou +645 linhas no commit `3de95ff` e nada "
         "acusou, porque `CODIGO_DA_TELA` não o citava."
+    )
+
+
+def test_a_foto_da_vista_nao_paga_a_divida_das_dez_do_readme(tmp_path: Path) -> None:
+    """A MORDIDA DA PASTA NOVA: cada família de foto responde por si.
+
+    O DEFEITO, simulado pelo conferente em 11/09/2026 sobre a régua velha:
+    `docs/usage/assets/maximizada/` cai DENTRO de `docs/usage/assets` quando a
+    pergunta casa por prefixo, então um commit que gravasse só a foto da vista
+    devolvia `em-dia` e a dívida das dez do README ficava quitada por foto que
+    não é delas. As dez podiam apodrecer caladas — que é exatamente o defeito
+    que a PRINTS-DAS-DEZ-01 tinha acabado de ACHAR (as do README paradas em
+    08/09), reaberto numa segunda família ainda menos coberta.
+
+    Três commits, nesta ordem: a foto do README, o código da tela, e a foto da
+    VISTA. A família do README está atrasada e a da vista está em dia.
+
+    **Para morder:** troque `_pathspec(familia)` por `[familia]` (tirando o
+    `:(exclude)`) e este teste reprova com `assert True is False` — o
+    `git log -- docs/usage/assets` volta a responder com o commit da subpasta.
+    """
+    raiz = tmp_path / "so_a_vista_refeita"
+    (raiz / FOTOS_DA_VISTA).mkdir(parents=True)
+    (raiz / CODIGO_DA_TELA[0]).mkdir(parents=True)
+    subprocess.run(["git", "init", "-q"], cwd=str(raiz), check=True)
+    for chave, valor in (
+        ("user.email", "portao@exemplo.invalido"),
+        ("user.name", "Portão"),
+    ):
+        subprocess.run(["git", "config", chave, valor], cwd=str(raiz), check=True)
+    sem_hooks = tmp_path / "sem_hooks_vista"
+    sem_hooks.mkdir(exist_ok=True)
+    subprocess.run(
+        ["git", "config", "core.hooksPath", str(sem_hooks)], cwd=str(raiz), check=True
+    )
+
+    def _commitar(caminho: str, conteudo: str, mensagem: str) -> None:
+        (raiz / caminho).write_text(conteudo, encoding="utf-8")
+        subprocess.run(["git", "add", "-A"], cwd=str(raiz), check=True)
+        subprocess.run(
+            ["git", "commit", "-q", "-m", mensagem], cwd=str(raiz), check=True
+        )
+
+    _commitar(f"{FOTOS}/aba-01-jogar.png", "a foto do README", "primeiro")
+    _commitar(f"{CODIGO_DA_TELA[0]}/aba01.py", "a aba mudou", "segundo — a tela")
+    _commitar(
+        f"{FOTOS_DA_VISTA}/aba-01-jogar.png",
+        "a foto da vista, refeita",
+        "terceiro — só a pasta nova",
+    )
+
+    assert uma_familia_em_dia(raiz, FOTOS_DA_VISTA, CODIGO_DA_TELA) is True, (
+        "a família da VISTA foi refeita depois da mudança de tela e mesmo "
+        "assim não passou — a régua ficaria reprovando quem fez o certo."
+    )
+    assert uma_familia_em_dia(raiz, FOTOS, CODIGO_DA_TELA) is False, (
+        "as dez fotos do README são anteriores à mudança de tela e a régua "
+        "disse que estavam em dia. A foto da pasta `maximizada/` pagou a "
+        "dívida delas — o buraco medido em 11/09/2026."
+    )
+    assert fotos_em_dia(raiz, FOTOS, CODIGO_DA_TELA) is False, (
+        "uma família atrasada tem de reprovar por todas: a pergunta do portão "
+        "é 'a tela de hoje está fotografada?', e meia resposta é não."
+    )
+    assert familias_atrasadas(raiz, FOTOS, CODIGO_DA_TELA) == [FOTOS], (
+        "a mensagem precisa NOMEAR a pasta que está devendo — sem isso quem "
+        "apanha roda o comando da outra família e conclui que o portão quebrou."
     )
 
 

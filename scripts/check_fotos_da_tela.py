@@ -40,6 +40,22 @@ O `PROVA-DA-FOTO.txt` mora dentro de `FOTOS` e carrega a data do ensaio, então
 **rodar o retrato sempre produz a prova**, mesmo quando nenhum pixel se mexe.
 Não existe estado sem saída aqui.
 
+AS FAMÍLIAS DE FOTO SÃO DUAS — 11/09/2026, e a pergunta é uma por pasta
+-----------------------------------------------------------------------
+
+`docs/usage/assets/maximizada/` nasceu na PRINTS-DAS-DEZ-01 com as dez abas na
+vista maximizada dela, e **abriu buraco nas duas perguntas acima**: as duas
+casavam `docs/usage/assets` por PREFIXO, e a subpasta cai dentro. Medido pelo
+conferente no mesmo dia, `julgar(['src/.../aba01.py',
+'docs/usage/assets/maximizada/aba-01-jogar.png'])` devolvia `em-dia` — gravar
+só na pasta nova QUITAVA a dívida das dez do README, que podiam apodrecer
+caladas.
+
+Cada família responde por si (`familias_sem_prova`, `_uma_familia_em_dia`), o
+bloqueio NOMEIA a pasta devedora, e `_CURA` traz o comando daquela pasta — sem
+ele quem apanhasse pela vista rodaria o comando do README, veria nada mudar, e
+concluiria que o portão quebrou.
+
 ONDE ELE SE CALA DE PROPÓSITO
 -----------------------------
 
@@ -86,6 +102,24 @@ from pathlib import Path
 #: As fotos que o `interface/olhar.py --todas --publicado --doc` grava, mais os dois
 #: recibos que moram junto delas (`PROVA-DA-FOTO.txt`, `CONFERIDO-EM.md`).
 FOTOS = "docs/usage/assets"
+
+#: A SEGUNDA FAMÍLIA — 11/09/2026, e ela abriu buraco neste portão e no irmão.
+#:
+#: `docs/usage/assets/maximizada/` guarda as dez abas na vista maximizada dela
+#: (`--vista dela`, 1918x840) e cai DENTRO de `FOTOS` quando a pergunta casa
+#: por prefixo. Medido pelo conferente:
+#: `julgar(['src/.../aba01.py', 'docs/usage/assets/maximizada/aba-01-jogar.png'])`
+#: devolvia `em-dia` — gravar só na pasta nova QUITAVA a dívida das dez do
+#: README, que podiam apodrecer caladas.
+#:
+#: A cura é a mesma dos dois lados: cada família responde por si, e foto de uma
+#: nunca paga a dívida da outra. Cópia deliberada de `FAMILIAS_DE_FOTO` do
+#: `test_as_fotos_acompanham_a_versao.py`, e
+#: `test_as_duas_listas_de_codigo_de_tela_sao_a_mesma` tranca as duas juntas.
+FOTOS_DA_VISTA = f"{FOTOS}/maximizada"
+
+#: Toda família de foto desta casa, da mais externa para a mais interna.
+FAMILIAS_DE_FOTO = (FOTOS, FOTOS_DA_VISTA)
 
 #: O que, mudando, torna as fotos suspeitas. Cópia deliberada de
 #: `CODIGO_DA_TELA` do `test_as_fotos_acompanham_a_versao.py`, e o
@@ -140,6 +174,57 @@ def _toca(caminho: str, prefixos: Iterable[str]) -> bool:
     return any(caminho == p or caminho.startswith(p + "/") for p in prefixos)
 
 
+def familia_de(caminho: str) -> str | None:
+    """A família de foto a que este caminho pertence — a MAIS INTERNA que o cobre.
+
+    `docs/usage/assets/maximizada/aba-01-jogar.png` é da família da VISTA, não
+    da do README, e é essa distinção que fecha o buraco de 11/09/2026: sem ela
+    a foto da pasta nova contava como prova das dez do README.
+    """
+    cobrem = [f for f in FAMILIAS_DE_FOTO if _toca(caminho, (f,))]
+    return max(cobrem, key=len) if cobrem else None
+
+
+def _pathspec(familia: str) -> list[str]:
+    """Os caminhos que são DESTA família e de nenhuma outra, para o `git log`.
+
+    Quem recorta é o `:(exclude)` do git, e não um filtro escrito à mão — um
+    segundo recorte escrito à mão é uma segunda régua a divergir.
+    """
+    return [familia] + [
+        f":(exclude){outra}"
+        for outra in FAMILIAS_DE_FOTO
+        if outra != familia and outra.startswith(familia + "/")
+    ]
+
+
+def familias_sem_prova(no_indice: Iterable[str]) -> list[str]:
+    """As famílias de foto que este commit NÃO carrega — o buraco de 11/09/2026.
+
+    Antes desta função a pergunta era uma só (*"tem alguma coisa em
+    `docs/usage/assets`?"*), e a pasta `maximizada/` cai dentro dela por
+    prefixo: uma foto da vista quitava a dívida das dez do README. Agora cada
+    família precisa da sua própria prova, e o bloqueio NOMEIA a que falta.
+
+    **Não é severidade a mais: é a mesma pergunta que o portão da suíte passou
+    a fazer** (`test_as_fotos_acompanham_a_versao.fotos_em_dia`, por família).
+    Um gancho mais frouxo que o portão que ele antecipa promete cobrir o que
+    não cobre, e deixaria a dívida aparecer só no vermelho da suíte — que é o
+    defeito que este arquivo inteiro existe para adiantar.
+    """
+    com_prova = {familia_de(c) for c in no_indice} - {None}
+    return [f for f in FAMILIAS_DE_FOTO if f not in com_prova]
+
+
+def comando_da_familia(familia: str) -> str:
+    """O gesto EXATO que refaz aquela pasta — sem ele o bloqueio não é acionável."""
+    sufixo = " --vista dela" if familia == FOTOS_DA_VISTA else ""
+    return (
+        f"    src/hefesto_dualsense4unix/interface/olhar.py "
+        f"--todas --publicado --doc{sufixo}\n    git add {familia}"
+    )
+
+
 def julgar(
     no_indice: Iterable[str],
     fotos_sujas: bool,
@@ -156,9 +241,8 @@ def julgar(
     """
     caminhos = list(no_indice)
     de_tela = sorted(c for c in caminhos if _toca(c, CODIGO_DA_TELA))
-    leva_a_prova = any(_toca(c, (FOTOS,)) for c in caminhos)
 
-    if leva_a_prova:
+    if not familias_sem_prova(caminhos):
         return EM_DIA, de_tela
     if de_tela:
         return (CURA_EM_CURSO if fotos_sujas else BLOQUEADO), de_tela
@@ -198,18 +282,13 @@ def caminhos_no_indice(raiz: Path) -> list[str]:
 
 
 def fotos_sujas(raiz: Path) -> bool:
-    """As imagens estão modificadas na árvore? `--porcelain` responde por conteúdo."""
+    """Alguma imagem está modificada na árvore? `--porcelain` responde por conteúdo."""
     return bool(_git(raiz, "status", "--porcelain", "--", FOTOS))
 
 
-def historia_em_dia(raiz: Path) -> bool | None:
-    """`HEAD` já deve foto? A MESMA topologia do portão da suíte.
-
-    Data de commit mentiria — um `rebase` reescreve a ordem sem reescrever os
-    carimbos, e dois commits podem carregar o mesmo segundo. A pergunta certa é
-    "o commit do código é ancestral do commit das fotos?".
-    """
-    das_fotos = _git(raiz, "log", "-1", "--format=%H", "--", FOTOS)
+def _uma_familia_em_dia(raiz: Path, familia: str) -> bool | None:
+    """A topologia de UMA família: a foto dela veio depois da mexida na tela?"""
+    das_fotos = _git(raiz, "log", "-1", "--format=%H", "--", *_pathspec(familia))
     do_codigo = _git(raiz, "log", "-1", "--format=%H", "--", *CODIGO_DA_TELA)
     if not das_fotos or not do_codigo:
         return None
@@ -223,10 +302,31 @@ def historia_em_dia(raiz: Path) -> bool | None:
     return pergunta.returncode == 0
 
 
+def historia_em_dia(raiz: Path) -> bool | None:
+    """`HEAD` já deve foto? A MESMA topologia do portão da suíte, POR FAMÍLIA.
+
+    Data de commit mentiria — um `rebase` reescreve a ordem sem reescrever os
+    carimbos, e dois commits podem carregar o mesmo segundo. A pergunta certa é
+    "o commit do código é ancestral do commit das fotos?".
+
+    **E ela é uma por PASTA desde 11/09/2026.** Perguntada sobre
+    `docs/usage/assets` inteiro, o `git log` responde com o commit que tocou
+    `docs/usage/assets/maximizada/` — e a dívida das dez do README ficava
+    quitada por foto que não é delas, para sempre e sem ninguém ver. Uma
+    família atrasada reprova por todas; uma que não dá para medir se cala.
+    """
+    vereditos = [_uma_familia_em_dia(raiz, f) for f in FAMILIAS_DE_FOTO]
+    if any(v is False for v in vereditos):
+        return False
+    if all(v is None for v in vereditos):
+        return None
+    return True
+
+
 _CURA = (
-    "  Cure rodando o retrato — uma execução, nenhum clique:\n"
-    "    src/hefesto_dualsense4unix/interface/olhar.py --todas --publicado --doc\n"
-    f"    git add {FOTOS}\n"
+    "  Cure rodando o retrato — uma execução por família, nenhum clique:\n"
+    + "\n".join(comando_da_familia(f) for f in FAMILIAS_DE_FOTO)
+    + "\n"
     "\n  Se as imagens saírem iguais, o recibo `PROVA-DA-FOTO.txt` muda "
     "sozinho\n"
     "  e já serve de prova; se saírem diferentes, OLHE-AS antes de commitar —\n"
@@ -267,11 +367,17 @@ def main(argv: list[str] | None = None) -> int:
         return 0
 
     if veredito == DIVIDA_HERDADA:
-        das_fotos = _git(raiz, "log", "-1", "--format=%h", "--", FOTOS)
+        atrasadas = [
+            f for f in FAMILIAS_DE_FOTO if _uma_familia_em_dia(raiz, f) is False
+        ]
+        das_fotos = _git(
+            raiz, "log", "-1", "--format=%h", "--", *_pathspec(atrasadas[0])
+        )
         do_codigo = _git(raiz, "log", "-1", "--format=%h", "--", *CODIGO_DA_TELA)
         print(
             "pre-commit: BLOQUEADO — a tela mudou em "
-            f"{do_codigo} e as fotos são de {das_fotos}, que veio ANTES.\n"
+            f"{do_codigo} e as fotos de `{'`, `'.join(atrasadas)}` "
+            f"são de {das_fotos}, que veio ANTES.\n"
             "  Este commit não tem culpa, mas a dívida é de agora: os merges "
             "de leva\n"
             "  não passam por gancho nenhum, e este é o primeiro commit "
@@ -281,9 +387,10 @@ def main(argv: list[str] | None = None) -> int:
         print(_CURA, file=sys.stderr)
         return 1
 
+    faltando = familias_sem_prova(caminhos_no_indice(raiz))
     print(
         "pre-commit: BLOQUEADO — este commit mexe no código da tela e não leva "
-        "foto nenhuma.\n",
+        f"a foto de `{'`, `'.join(faltando)}`.\n",
         file=sys.stderr,
     )
     for caminho in de_tela[:10]:
