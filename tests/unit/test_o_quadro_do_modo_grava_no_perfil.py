@@ -257,7 +257,7 @@ def test_duplicar_leva_o_modo_junto(disco: dict[str, Any]) -> None:
 def test_o_pacote_continua_publicando_o_modo_como_id(disco: dict[str, Any]) -> None:
     """O dono do dado não mudou, e é ele quem a aba Jogar vai ler.
 
-    MORDIDA: troque `"modo": ...kind` por `MODO_DO_PERFIL[kind]` em
+    MORDIDA: troque `"modo": ...kind` por `dict(_MODE_KIND_ITEMS)[kind]` em
     `perfis_web._pacote_do_editor` e isto reprova — quem compara com um id
     passaria a comparar com a palavra dela, que muda.
     """
@@ -301,21 +301,31 @@ def test_o_perfil_novo_nasce_sem_opiniao_de_modo(disco: dict[str, Any]) -> None:
 # 4. O DONO DA REGRA CONTINUA DE PÉ — é por ele que a aba Jogar escreve
 # --------------------------------------------------------------------------
 
-def test_os_quatro_rotulos_continuam_vindo_do_dono() -> None:
-    """A tabela dos modos não morreu com o quadro: a aba Jogar a usa.
+def test_o_perfil_sem_opiniao_e_o_primeiro_par_do_dono() -> None:
+    """`MODO_SEM_OPINIAO` é o id que REMOVE a seção, e ele tem de casar com o dono.
 
-    MORDIDA: troque uma palavra em `perfis_web.MODO_DO_PERFIL` e isto reprova —
-    porque o dicionário PASSOU a ser digitado em vez de derivado de
-    `profiles_actions._MODE_KIND_ITEMS`.
+    **ESTA RÉGUA MUDOU DE ALVO EM 11/09/2026, na conferência.** Ela perguntava a
+    `perfis_web.MODO_DO_PERFIL` — uma cópia dos quatro rótulos que existia para
+    o quadro «Modo» da aba Perfis. O quadro saiu por ordem dela, e a cópia ficou
+    **sem um único leitor em `src/`**: os únicos que restavam eram estas
+    asserções. Uma régua cujo alvo só existe para ela medir não mede o produto,
+    então a cópia morreu e a pergunta passou ao DONO.
+
+    O QUE ELA GUARDA é o que `interface/pacotes/perfil.secao_do_modo` depende:
+    "none" é o primeiro par de `profiles_actions._MODE_KIND_ITEMS` — «Não mexer
+    no modo» —, e é o valor com que a seção é REMOVIDA do perfil.
+
+    MORDIDA: mova `("none", "Não mexer no modo")` para o fim de
+    `_MODE_KIND_ITEMS` e isto reprova, com o id de remoção apontando para um
+    modo que LIGA alguma coisa.
     """
-    assert dict(_MODE_KIND_ITEMS) == perfis_web.MODO_DO_PERFIL, (
-        "os rótulos do Modo deixaram de sair de "
-        "`profiles_actions._MODE_KIND_ITEMS` — a superfície com as palavras "
-        "dela digitadas é a que envelhece sozinha")
-    primeiro = next(iter(perfis_web.MODO_DO_PERFIL))
+    primeiro = next(iter(dict(_MODE_KIND_ITEMS)))
     assert primeiro == perfis_web.MODO_SEM_OPINIAO, (
-        "«Não mexer no modo» deixou de ser o primeiro — é o que a MAIORIA dos "
-        "perfis é, e a ordem é a do dono")
+        "«Não mexer no modo» deixou de ser o primeiro par do dono — é o que a "
+        "MAIORIA dos perfis é, e é o id com que a seção `mode` é removida")
+    assert perfil.secao_do_modo(None, primeiro) is None, (
+        "o primeiro par do dono deixou de REMOVER a seção — o rótulo promete "
+        "que ativar não mexe, e o arquivo diria o contrário")
 
 
 def test_a_regra_do_modo_ficou_no_dono_compartilhado() -> None:

@@ -1567,7 +1567,8 @@ LEGENDA = f'''<div class="nota">
     <li><b>"Esconder os controles físicos neste jogo"</b> — fora.</li>
     <li><b>"◆ este jogo já sabe por onde entra"</b> — fora: <span class="marca">isso está na aba Jogar</span>, palavra sua.</li>
     <li><b>O quadro "Modo"</b>, com os quatro botões — fora: <span class="marca">isso está na aba Jogar</span>, palavra sua.
-      O que o perfil já guarda continua guardado: quem o escolhe é a Jogar.</li>
+      O que este perfil já guarda continua guardado — nenhum botão desta aba mexe nisso.
+      <span class="marca">Quem escreve o modo é a Jogar, e ela escreve no perfil que está valendo</span>.</li>
   </ul>
 
   <h2>O que estava no código e nunca teve tela</h2>
@@ -1968,12 +1969,34 @@ def _conferir(html: str) -> None:
            "a linha do P4 fora do quadro sempre que a tira do desfecho acendia")
 
     # E O QUE O PERFIL GUARDA CONTINUA GUARDADO: a legenda tem de dizer QUEM
-    # escolhe o modo agora. Sem esta linha a retirada vira sumiço — a tela
+    # escreve o modo agora. Sem esta linha a retirada vira sumiço — a tela
     # perderia o quadro e não diria para onde ele foi.
     exigir("O quadro &quot;Modo&quot;" in html or 'O quadro "Modo"' in html,
            "a legenda parou de dizer que o quadro Modo saiu e onde ele mora — "
            "quem abrir a aba depois de 11/09 procuraria um quadro que a versão "
            "anterior tinha, sem nada na tela que o mande à Jogar")
+
+    # E A FRASE TEM DE DIZER O ALCANCE — 11/09/2026, achado da conferência.
+    #
+    # A primeira redação desta legenda dizia que quem ESCOLHE o modo é a Jogar,
+    # sem qualificar o perfil, e isso é FALSO medido: quem escreve é
+    # `pacotes/perfil.gravar_o_modo_no_ativo`, que resolve o alvo por
+    # `nome_do_ativo(state)` — logo a Jogar grava a seção `mode` do perfil que
+    # está VALENDO, e só dele. Para um perfil que ela seleciona na lista e não
+    # ativou, nenhuma tela escolhe modo nenhum.
+    #
+    # A retirada do quadro é ordem dela e continua de pé; o que não pode ficar
+    # de pé é a tela AFIRMANDO alcance que o produto não tem. Esta exigência é o
+    # que impede a frase larga de voltar — e ela pede o ALCANCE escrito, não a
+    # confissão de dívida: o que falta mora no mapa da paridade, nunca aqui.
+    exigir("no perfil que está valendo" in html,
+           "a legenda perdeu o ALCANCE do que a aba Jogar escreve — sem ele a "
+           "frase promete que a Jogar escolhe o modo de QUALQUER perfil, e o "
+           "escritor (`pacotes/perfil.gravar_o_modo_no_ativo`) só alcança o "
+           "perfil ativo")
+    exigir("quem o escolhe é a Jogar" not in html,
+           "a frase larga voltou à legenda — ela afirma que a Jogar escolhe o "
+           "modo de qualquer perfil, e a Jogar grava só no que está valendo")
 
     # A COLUNA DO NOME SE CENTRA NA LINHA — 11/09/2026, a segunda metade da
     # queixa dela. Um `<td>` com `display:flex` deixa de ser célula de tabela e

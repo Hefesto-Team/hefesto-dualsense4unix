@@ -482,6 +482,28 @@ def gravar_o_modo_no_ativo(state: Any, kind: str,
     luz, vibração e atalhos — logo depois de o modo já ter sido aplicado pelo
     plano de IPC do próprio gesto. O que esta função grava é o que ATIVAR o
     perfil vai ligar da próxima vez; o agora já está aplicado.
+
+    **A PERDA QUE ESTA FUNÇÃO NÃO COBRE — declarada em 11/09/2026, e ela é
+    real.** Com o quadro «Modo» fora do editor de Perfis (ordem dela) e a janela
+    GTK aposentada (`D-0609-GTK-LEVA-INTEIRA`), esta é a ÚNICA escrita de
+    `Profile.mode` que sobrou na interface — e ela tem dois limites, os dois
+    medidos aqui:
+
+    * **de ALVO:** o perfil é resolvido por :func:`nome_do_ativo`, logo só o
+      perfil que está VALENDO recebe. Um perfil que ela seleciona na lista e não
+      ativou não tem, hoje, tela que escreva o modo dele;
+    * **de FAIXA:** os quatro gestos da aba Jogar que chamam esta função passam
+      ``gamepad``, ``native`` e ``desktop``, nunca ``"none"`` — então
+      :func:`secao_do_modo` nunca é chamada com o valor que REMOVE a seção. Um
+      perfil que já tem `mode` não tem como voltar a «Não mexer no modo» por
+      tela nenhuma.
+
+    A janela GTK cobria as duas coisas (`profiles_actions._mode_section_from_editor`).
+    **O CUSTO:** quem tem um perfil com `mode` gravado e quiser trocá-lo tem de
+    ativar o perfil primeiro; quem quiser apagar a seção não tem caminho de
+    tela. A dívida está declarada em `docs/data/paridade-gtk-html.csv` (linha
+    384, `FALTA_NO_HTML`) — é lá que ela mora, e não na tela: *"o layout não
+    informa os nossos defeitos"*, palavra dela de 07/09/2026.
     """
     nome = nome_do_ativo(state)
     if not nome:
