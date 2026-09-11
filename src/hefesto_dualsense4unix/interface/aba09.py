@@ -931,7 +931,7 @@ def item_cinza(rotulo, diz, gesto, cls=""):
 #: têm como discordar.
 #:
 #: `data-v` E NÃO `data-perfil` — 01/09/2026, e o atributo antigo era um ENDEREÇO
-#: MORTO. O ouvinte de clique do piloto (`hefesto_vivo.py:984-1000`) encaminha uma
+#: MORTO. O ouvinte de clique do piloto (`hefesto_vivo.py:1007-1023`) encaminha uma
 #: lista FIXA de campos ao Python — `gesto, modo, forca, player, lado, campo,
 #: hef, hex, sensor, rota, mudo, micModo, v, controle, texto` — e `perfil` não
 #: está nela. O botão parecia endereçado e chegava do outro lado sem dizer QUAL

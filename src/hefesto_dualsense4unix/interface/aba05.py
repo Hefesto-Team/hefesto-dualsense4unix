@@ -1635,7 +1635,7 @@ def _coluna(c, e=None, conectado=None):
     # é o que o pintor e o ouvinte de clique procuram. As três frentes que ele
     # destrava, medidas em 02/09 contra o daemon dela:
     #
-    # 1. A PINTURA POR CONTROLE. `hefesto_vivo.py:1272` faz
+    # 1. A PINTURA POR CONTROLE. `hefesto_vivo.py:1322` faz
     #    `querySelectorAll('[data-controle="p1"]')` e pinta DENTRO. Sem o
     #    atributo, os doze valores por coluna — identidade, o multiplicador e os
     #    dois motores, nos dois controles — não tinham onde cair: a aba pintava
@@ -1643,7 +1643,7 @@ def _coluna(c, e=None, conectado=None):
     #    tela continuava mostrando `0 /255` e `60 /255` do desenho com o daemon
     #    dizendo `—`.
     # 2. O DONO DO CLIQUE. O ouvinte sobe com
-    #    `closest` pela lista de assentos (`hefesto_vivo.py:1417`) e lê
+    #    `closest` pela lista de assentos (`hefesto_vivo.py:1474`) e lê
     #    `dataset.controle || dataset.uniq`. Achava este `<div>` e lia `""`, de
     #    modo que "Testar" e "Parar" chegavam ao pacote sem controle nenhum e
     #    RECUSAVAM SEMPRE — para ela, com o rato de verdade. A régua unitária

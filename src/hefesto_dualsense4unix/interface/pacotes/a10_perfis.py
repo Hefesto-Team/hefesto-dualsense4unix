@@ -1477,12 +1477,12 @@ def _rotulo_do_remover(alvo: str) -> str:
     não tem diálogo. O `on_profile_remove` da janela estável abre um
     `gui_dialogs.confirm_delete_profile` (`profiles_actions.py:3231`), que é
     GTK e MODAL; daqui não dá para abri-lo, porque **os gestos rodam em
-    thread** (`hefesto_vivo.py:2117`) e GTK só aceita diálogo no laço principal.
+    thread** (`hefesto_vivo.py:2466`) e GTK só aceita diálogo no laço principal.
 
     **FATO CADUCO, SUBSTITUÍDO — 02/09/2026.** Aqui estava escrito que *"a
     recusa do piloto não serve de pergunta: ela sai em `stderr`, no terminal,
     onde a dona não está olhando"*. **Não sai mais.** O piloto ganhou
-    `_recusou_dizendo` (`hefesto_vivo.py:2757`): todo `RuntimeError` de gesto
+    `_recusou_dizendo` (`hefesto_vivo.py:3107`): todo `RuntimeError` de gesto
     vira TARJA na tela — no cartão do controle quando a página tem um, e no
     `document.body` quando não tem, que é o caso desta aba. Ela some sozinha em
     `SEGUNDOS_DO_RECADO = 30.0`.
@@ -1992,7 +1992,7 @@ def ativar(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
 
     1. **A LINHA NÃO ERA CLICÁVEL.** O gesto lê o texto da linha, mas nenhum
        elemento da lista tinha endereço — o ouvinte do piloto casa
-       `[data-gesto],[data-hef-gesto],…` (`hefesto_vivo.py:1000`) e a `<tr>` só
+       `[data-gesto],[data-hef-gesto],…` (`hefesto_vivo.py:1023`) e a `<tr>` só
        trazia `data-hef-perfil`. Quem clicava num perfil não mandava nada; quem
        clicava no BOTÃO mandava `texto="Ativar"`, e o gesto pedia ao daemon um
        perfil chamado "Ativar". Agora a célula do nome marca `selecionar`, e o
@@ -2566,7 +2566,7 @@ def _so_mudou(o: dict[str, Any]) -> bool:
         editor.jogo   tipo=input   evento=change  valor='1599660'
         editor.nome   tipo=input   evento=click   valor='Elden Ring BR' ← só cliquei
 
-    O ouvinte do piloto escuta `click` E `change` (`hefesto_vivo.py:1034-1035`), e
+    O ouvinte do piloto escuta `click` E `change` (`hefesto_vivo.py:1057-1058`), e
     **clicar dentro de um campo para pôr o cursor manda o valor que já estava
     lá**. Sem esta guarda, clicar no "Nome do Jogo" de um perfil em "Todos"
     faria o gesto inferir a regra e GRAVAR — uma troca de regra disparada por

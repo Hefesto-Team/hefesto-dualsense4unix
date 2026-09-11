@@ -811,6 +811,29 @@ BOOTSTRAP = r"""
       // outro — então a régua do mockup acusa este endereço, que é o barulho
       // certo para um `data-hef-atributo` mal escrito.
       if(!atributo_escrevivel(nome)) return 0;
+      // A DICA QUE ESTÁ SOB O PONTEIRO NÃO MORA MAIS NO `title` — TOOLTIP-C1,
+      // 11/09/2026. A camada da dica (`DICA_DA_CASA`) guarda o texto em
+      // `data-hef-dica` enquanto o ponteiro está em cima, justamente para o
+      // popup do sistema não aparecer junto. Escrever `title` aqui
+      // ressuscitaria esse popup NO MEIO da dica aberta — os dois na tela, um
+      // por cima do outro.
+      //
+      // ENTÃO O ALVO SEGUE O TEXTO até onde ele está, e avisa a camada para a
+      // dica aberta trocar de frase no mesmo tique. Fora da hover não há
+      // `data-hef-dica` e este ramo não existe: o `title` é escrito como
+      // sempre foi.
+      //
+      // O VAZIO APAGA DOS DOIS LADOS, como o ramo de baixo: uma dica sem texto
+      // é dica que não existe, e deixar um travessão ali seria a tela
+      // explicando um botão com um traço.
+      if(nome === 'title' && el.hasAttribute('data-hef-dica')){
+        const dica = (vazio || t === '—') ? '' : t;
+        if(el.getAttribute('data-hef-dica') === dica) return 0;
+        if(dica === ''){ el.removeAttribute('data-hef-dica'); }
+        else { el.setAttribute('data-hef-dica', dica); }
+        if(window.__hefDica) window.__hefDica.trocar(el, dica);
+        return 1;
+      }
       const antes = el.getAttribute(nome);
       // COMPARA ANTES DE ESCREVER — A-TELA-SAMBA-01, 06/09/2026, e é a cura do
       // *"algo ativa o tooltip mas ele se desativa"* que ela escreveu com o
@@ -1150,6 +1173,13 @@ BOOTSTRAP = r"""
   };
   window.__hef.pintar = function(p){
     let n = 0;
+    // A DICA CONFERE O PRÓPRIO ALVO ANTES DE O TIQUE MEXER NA PÁGINA —
+    // TOOLTIP-C1, 11/09/2026. Um bloco trocado inteiro leva embora o nó em que
+    // a dica está pousada, e uma dica aberta sobre um nó que saiu do documento
+    // é a tela afirmando o que já não existe. Ela NÃO conta como pintura: não
+    // há pixel do produto aqui, e um contador que subisse a cada tique faria
+    // toda aba parecer inquieta — a quietude é o que aquele número mede.
+    if(window.__hefDica) window.__hefDica.varrer();
     // O ALVO QUE A FITA ESCOLHEU. Ele NÃO conta como pintura — não há pixel
     // aqui —, e por isso `n` não sobe: um contador que subisse a cada tique
     // faria toda aba parecer inquieta, e a quietude é o que este número mede.
@@ -1193,12 +1223,32 @@ BOOTSTRAP = r"""
         // dela no meio do caminho.
         const desejado = String(p.fita).trim();
         const agora = f.outerHTML.split(' data-hef-visto="1"').join('');
-        if(agora !== desejado){
-          if(f.querySelector('.hef-em-voo') || f.closest('.hef-em-voo')){
-            window.__hef.blocosAdiados = (window.__hef.blocosAdiados || 0) + 1;
-          } else {
-            f.outerHTML = desejado; n += 1;
-          }
+        // A MEMÓRIA DO QUE ESTE LAÇO ESCREVEU, e ela é a única comparação que
+        // sobrevive à camada da dica — TOOLTIP-C1, 11/09/2026.
+        //
+        // O DEFEITO MEDIDO: a `DICA_DA_CASA` colhe o `title` de todo elemento
+        // para `data-hef-dica`, e a fita tem dois (a tarja e o chip). O
+        // `outerHTML` passa a trazer um atributo com outro NOME e em outra
+        // POSIÇÃO — `removeAttribute` + `setAttribute` mandam o atributo para o
+        // fim da tag —, e o texto que o Python emitiu nunca vai casar com isso.
+        // Sem esta memória a fita se trocava inteira DEZ VEZES POR SEGUNDO, com
+        // a mesa parada: é o defeito de 03/09 de volta, com outra causa.
+        //
+        // É O MESMO REMÉDIO DOS BLOCOS (`alvo.__hefBloco`, três passos abaixo),
+        // com uma diferença de forma: a fita se troca por `outerHTML`, ou seja
+        // o NÓ morre a cada troca e uma memória pendurada nele morreria junto.
+        // Por isso ela mora em `window.__hef`, que vive enquanto o documento.
+        //
+        // A COMPARAÇÃO VELHA FICA AO LADO, e não é redundância: no primeiro
+        // tique de cada carga não há memória nenhuma, e é ela que impede a
+        // primeira troca inútil enquanto a colheita ainda não aconteceu.
+        if(window.__hef.fitaEscrita === desejado){ /* já é esta */ }
+        else if(agora === desejado){ window.__hef.fitaEscrita = desejado; }
+        else if(f.querySelector('.hef-em-voo') || f.closest('.hef-em-voo')){
+          window.__hef.blocosAdiados = (window.__hef.blocosAdiados || 0) + 1;
+        } else {
+          f.outerHTML = desejado; n += 1;
+          window.__hef.fitaEscrita = desejado;
         }
         // O SELO DA VISITA NOS CHIPS, e sem ele o endereço deles pareceria
         // MORTO. Os chips ganharam `data-campo` em 03/09/2026 (`monta.fita`)
@@ -1278,7 +1328,14 @@ BOOTSTRAP = r"""
     for(const [seletor, html] of Object.entries(p.blocos || {})){
       const alvo = document.querySelector(seletor);
       if(!alvo) continue;
-      if(alvo.__hefBloco === html || alvo.innerHTML === html) continue;
+      if(alvo.__hefBloco === html) continue;
+      // A MEMÓRIA SE ESCREVE TAMBÉM QUANDO NADA PRECISOU MUDAR — TOOLTIP-C1,
+      // 11/09/2026. Sem esta linha, o bloco que já nasce igual nunca ganha
+      // memória; a camada da dica colhe os `title` de dentro dele logo depois,
+      // o `innerHTML` passa a divergir do texto do Python, e o tique seguinte
+      // reconstrói um bloco que ninguém mudou — uma vez por carga, em cada
+      // bloco de cada aba.
+      if(alvo.innerHTML === html){ alvo.__hefBloco = html; continue; }
       if(alvo.querySelector('.hef-em-voo') || alvo.closest('.hef-em-voo')){
         window.__hef.blocosAdiados = (window.__hef.blocosAdiados || 0) + 1;
         continue;
@@ -1614,6 +1671,291 @@ BOOTSTRAP = r"""
 })();
 """
 
+
+#: A DICA DA CASA — a explicação da tela sai do POPUP DO SISTEMA e passa a ser
+#: desenhada DENTRO da página. TOOLTIP-C1, 11/09/2026.
+#:
+#: A QUEIXA DELA, com o produto instalado na frente: *"em todos os tooltips
+#: somem os textos e eles não mostram ou mostram e saem direto. em todas as
+#: paginas isso ocorre."*  <!-- noqa-acento: citação literal dela -->
+#:
+#: **É O DEFEITO MAIS CARO DA LISTA**, e a razão é aritmética: são 665 `title`
+#: nas dez páginas publicadas mais 1.756 `<title>` dentro dos desenhos. Uma dica
+#: que não abre apaga a explicação das dez abas de uma vez.
+#:
+#: AS QUATRO HIPÓTESES DA SPRINT, MEDIDAS — e três morreram
+#: --------------------------------------------------------
+#: Medido em 11/09/2026 nesta árvore, com o daemon vivo, um DualSense no cabo,
+#: num servidor X próprio (`Xvfb`), com o ponteiro dirigido de verdade e a dica
+#: contada ABRINDO — não a presença do atributo no DOM, que é o que as réguas de
+#: hoje mediam e é por isso que nenhuma via este defeito:
+#:
+#: | hipótese | o que se mediu | veredito |
+#: | --- | --- | --- |
+#: | 1. o tique reescreve o nó sob o ponteiro | 0 de 665 dicas destruídas em 12 s, nas DEZ abas | **morta** |
+#: | 2. o `title` reescrito com o MESMO valor | 0 reescritas iguais; a única que se reescreve é `giro-no-jogo` (3,1/s) e sempre com um número novo | **morta** |
+#: | 4. o CSS come o evento | a dica abre em 8 de 8 chegadas e fica 40/40 amostras, com tique vivo, tique CONGELADO, sob carga, com o processo web 85% ocupado, com o laço da janela bloqueado 90 ms de cada 100, e nas duas vistas (1180x757 e a dela, 1918x840) | **morta** |
+#: | 3. o popup nativo não se desenha NESTA configuração | é a que sobra — e é a única diferença que a bancada não alcança | **de pé** |
+#:
+#: E ELA NÃO É UMA SUSPEITA NOVA: **é o TERCEIRO popup desta casa a quebrar na
+#: sessão dela**, e os dois primeiros estão medidos e fotografados —
+#: `run.sh:80-86` força XWayland porque *"os popups de GtkMenu quebram no
+#: Wayland nativo"*, e o `<select>` nascia BRANCO no meio da interface escura
+#: (`gui/ponte_da_tela.JanelaDaAba.__init__`, fotografado por ela em
+#: 04/09/2026). A dica nativa é o mesmo mecanismo: uma janela que o produto não
+#: desenha, não posiciona e não pinta — quem a desenha é o compositor dela.
+#:
+#: A CURA, ENTÃO, NÃO É CONSERTAR O POPUP: É NÃO DEPENDER DELE
+#: -----------------------------------------------------------
+#: É a mesma resposta que o `<select>` já recebeu (`appearance:none`, devolver o
+#: controle ao CSS dela) e o mesmo desenho que o `?` das dez abas já usa desde a
+#: `D-TUDO-QUE-EXPLICA-VIRA-DICA`: a `.dica` de `interface/topo.html:397-402` é
+#: um elemento DA PÁGINA. Esta camada dá a MESMA `.dica` a todo `title` e a todo
+#: `<title>` de SVG — mesma cor, mesma borda, mesma sombra, porque é a que ela
+#: aprovou. Nada de desenho novo: o que muda é QUEM desenha.
+#:
+#: O QUE ELA GANHA DE QUEBRA, e é o §0 da onda: a dica passa a ser do PRODUTO.
+#: Ela pode ser medida, encurtada e um dia traduzida — nenhuma dessas três
+#: coisas se faz num popup do toolkit.
+#:
+#: POR QUE A DICA NATIVA TEM DE SAIR, e não pode só ficar por baixo: as duas
+#: apareceriam juntas onde o popup funciona. Então a camada COLHE o texto assim
+#: que a página carrega — `title` vira `data-hef-dica`, e o `<title>` do SVG
+#: guarda o dele no mesmo atributo e fica vazio. O `escrever()` e o
+#: `LER_CAMPOS` deste piloto já consultam `data-hef-dica`, então o endereço
+#: `atributo/title` continua pintando e continua sendo medido.
+#:
+#: **COLHER NA HOVER É TARDE, E ISSO FOI MEDIDO** (11/09/2026, e derrubou a
+#: primeira forma desta camada): o WebKit resolve a dica no MESMO evento de
+#: movimento, e tirar o atributo depois não desfaz o que ele já resolveu. Com a
+#: mão parada, as DUAS ficavam na tela — a da casa e a do compositor, uma por
+#: cima da outra, em 5 de 5 chegadas.
+#:
+#: E O TEMPO É O DO GTK — meio segundo. Mas com UMA diferença medida: o GTK
+#: reinicia a contagem a cada evento de movimento, e por isso a mão que treme
+#: nunca vê a dica (medido: 0 de 200 amostras em 80 s com o ponteiro tremendo
+#: 1 px a cada 150 ms). Aqui a contagem começa na ENTRADA do elemento e só se
+#: reinicia quando o elemento MUDA. A dica abre com a mão em cima, não com a mão
+#: parada.
+DICA_DA_CASA = r"""
+(function(){
+  if(window.__hefDica && window.__hefDica.instalada) return 'ja';
+  if(!document.body) return 'sem body';
+  var SVG = 'http://www.w3.org/2000/svg';
+  // MEIO SEGUNDO, o mesmo do GTK (`HOVER_TIMEOUT`). Copiar o número é
+  // deliberado: a dica tem de parecer a mesma coisa que ela já conhece.
+  var ATRASO = 500;
+  var caixa = document.createElement('div');
+  caixa.id = 'hef-dica';
+  caixa.setAttribute('role', 'tooltip');
+  // A CARA É A DA `.dica` DA CASA (`interface/topo.html`), variável a variável,
+  // com literal de reserva para a página que não as definir. `pointer-events`
+  // desligado: a dica não pode roubar o ponteiro de quem ela explica — seria o
+  // mesmo defeito de novo, um elemento por cima comendo o evento.
+  caixa.style.cssText =
+    'position:fixed;left:0;top:0;z-index:2147483000;display:none;'
+    + 'max-width:340px;pointer-events:none;white-space:pre-line;'
+    + 'background:var(--elevated,#2b2d3a);border:1px solid var(--linha,#44475a);'
+    + 'border-radius:7px;padding:9px 11px;font-size:11.5px;line-height:1.5;'
+    + 'color:var(--texto-suave,#d8dae6);text-align:left;font-weight:400;'
+    + 'box-shadow:0 8px 24px rgba(0,0,0,.5);';
+  document.body.appendChild(caixa);
+
+  var E = {alvo: null, texto: '', tempo: 0, x: 0, y: 0, aberta: false, abriu: 0};
+
+  // A COLHEITA — E ELA É O QUE FAZ O POPUP DO SISTEMA NÃO NASCER.
+  //
+  // MEDIDO em 11/09/2026, e derrubou a primeira forma desta camada: tirar o
+  // `title` no `mousemove` é TARDE. O WebKit resolve a dica no MESMO evento, e
+  // remover o atributo depois não desfaz o que ele já resolveu — só o próximo
+  // movimento de ponteiro refaria a conta. Com a mão parada as DUAS ficavam na
+  // tela, uma por cima da outra: a da casa e a do compositor.
+  //
+  // Então o texto sai do `title` ANTES de qualquer ponteiro chegar, para
+  // `data-hef-dica`, que é onde o `escrever()` e o `LER_CAMPOS` deste piloto já
+  // sabem procurá-lo. O `title` deixa de existir no DOM vivo; nas páginas
+  // publicadas ele continua onde sempre esteve, e é de lá que esta camada o
+  // colhe a cada carga.
+  //
+  // O `title` VAZIO É UMA ORDEM, e ela se preserva: no HTML um `title=""` CALA
+  // a dica dos ancestrais, e a `10-perfis` tem quinze. Ele vira
+  // `data-hef-dica=""`, e a busca para nele — como pararia no navegador.
+  function colher(raiz){
+    var n = 0;
+    var lista = raiz.querySelectorAll('[title]');
+    for(var i = 0; i < lista.length; i++){
+      var el = lista[i];
+      if(el === caixa) continue;
+      el.setAttribute('data-hef-dica', String(el.getAttribute('title') || '').trim());
+      el.removeAttribute('title');
+      n += 1;
+    }
+    // NO SVG A DICA É UM FILHO, NÃO UM ATRIBUTO — `interface/monta.py` já pagou
+    // essa lição: quem escreve `<svg title="…">` não vê dica nenhuma. São 1.756
+    // `<title>` nos desenhos das dez abas, e sem este laço a camada deixaria de
+    // fora a metade da tela que é desenho. O `<title>` do documento fica de
+    // fora pelo namespace: ele é o nome da janela, não uma dica.
+    var tt = raiz.querySelectorAll('svg title:not([data-hef-dica])');
+    for(var j = 0; j < tt.length; j++){
+      var t = tt[j];
+      if(t.namespaceURI !== SVG) continue;
+      t.setAttribute('data-hef-dica', String(t.textContent || '').trim());
+      t.textContent = '';
+      n += 1;
+    }
+    return n;
+  }
+
+  // O TEXTO DE UM ELEMENTO, em três estados e não dois: uma frase, o SILÊNCIO
+  // declarado (o `title=""`), ou nada a dizer. Sem o do meio a busca subiria
+  // por cima de um `title=""` e mostraria a dica que a página mandou calar.
+  function textoDe(el){
+    if(!el || !el.getAttribute) return null;
+    if(el.hasAttribute('data-hef-dica')){
+      var g = String(el.getAttribute('data-hef-dica') || '').trim();
+      return g ? g : '';
+    }
+    if(el.hasAttribute('title')){
+      // COLHEITA TARDIA: um bloco que o produto acabou de trocar traz o `title`
+      // de volta. Colher aqui, no caminho, é o que mantém a camada inteira sem
+      // varrer o documento a cada movimento do ponteiro.
+      var t = String(el.getAttribute('title') || '').trim();
+      el.setAttribute('data-hef-dica', t);
+      el.removeAttribute('title');
+      return t ? t : '';
+    }
+    return null;
+  }
+  function svgTituloDe(el){
+    if(!el || el.namespaceURI !== SVG) return null;
+    var f = el.firstChild;
+    while(f){
+      if(f.nodeType === 1 && f.localName === 'title' && f.namespaceURI === SVG){
+        if(!f.hasAttribute('data-hef-dica')){
+          f.setAttribute('data-hef-dica', String(f.textContent || '').trim());
+          f.textContent = '';
+        }
+        var s = String(f.getAttribute('data-hef-dica') || '').trim();
+        if(s) return {no: f, texto: s};
+        return null;
+      }
+      f = f.nextSibling;
+    }
+    return null;
+  }
+  // SOBE A ÁRVORE como o próprio navegador faz para o `title`: a dica pode
+  // estar no pai do nó que recebeu o evento, e quase sempre está.
+  function achar(no){
+    var e = (no && no.nodeType === 1) ? no : (no ? no.parentElement : null);
+    while(e){
+      var s = svgTituloDe(e);
+      if(s) return {el: e, texto: s.texto, svg: s.no};
+      var t = textoDe(e);
+      if(t) return {el: e, texto: t, svg: null};
+      if(t === '') return null;   // silêncio declarado: não sobe mais
+      e = e.parentElement;
+    }
+    return null;
+  }
+  function esconder(){
+    if(E.tempo){ clearTimeout(E.tempo); E.tempo = 0; }
+    caixa.style.display = 'none';
+    E.aberta = false;
+  }
+  function limpar(){
+    esconder();
+    E.alvo = null; E.texto = '';
+  }
+  function mostrar(){
+    E.tempo = 0;
+    if(!E.alvo || !document.contains(E.alvo.el)){ limpar(); return; }
+    caixa.textContent = E.texto;
+    caixa.style.display = 'block';
+    E.aberta = true;
+    E.abriu += 1;
+    // POSICIONA DEPOIS DE MEDIR, e dentro da janela: uma dica que nasce fora da
+    // borda é uma dica que não abriu. A `05-vibracao` já mediu essa regra do
+    // lado do desenho (`tests/unit/test_moldura_a_dica_nao_atravessa_a_janela.py`);
+    // esta é a mesma regra, agora do lado de quem desenha a dica.
+    var r = caixa.getBoundingClientRect();
+    var x = E.x + 14, y = E.y + 20;
+    if(x + r.width + 6 > window.innerWidth){
+      x = Math.max(6, window.innerWidth - r.width - 6);
+    }
+    if(y + r.height + 6 > window.innerHeight){
+      y = Math.max(6, E.y - r.height - 12);
+    }
+    caixa.style.left = Math.round(x) + 'px';
+    caixa.style.top = Math.round(y) + 'px';
+  }
+  // O MOVIMENTO, E A DIFERENÇA MEDIDA COM O GTK: lá a contagem de meio segundo
+  // RECOMEÇA a cada evento de movimento, e por isso a mão que treme nunca vê a
+  // dica — medido nesta bancada em 11/09/2026, 0 de 200 amostras em 80 s com o
+  // ponteiro tremendo 1 px a cada 150 ms. Aqui a contagem começa na ENTRADA do
+  // elemento e só se reinicia quando o elemento MUDA: a dica abre com a mão em
+  // cima, e não só com a mão parada. Passar correndo por cima continua não
+  // abrindo nada, porque a troca de alvo zera tudo.
+  document.addEventListener('mousemove', function(ev){
+    E.x = ev.clientX; E.y = ev.clientY;
+    var a = achar(ev.target);
+    if(!a){ if(E.alvo) limpar(); return; }
+    if(!E.alvo || a.el !== E.alvo.el || a.svg !== E.alvo.svg){
+      limpar();
+      E.alvo = a; E.texto = a.texto;
+      E.tempo = setTimeout(mostrar, ATRASO);
+      return;
+    }
+    if(!E.aberta && !E.tempo){ E.tempo = setTimeout(mostrar, ATRASO); }
+  }, true);
+  // SAIR DA JANELA fecha. `relatedTarget` nulo é o único `mouseout` que diz
+  // isso; escutar `mouseleave` em captura fecharia a dica ao sair de QUALQUER
+  // elemento filho, que é o contrário do que se quer.
+  document.addEventListener('mouseout', function(ev){
+    if(!ev.relatedTarget) limpar();
+  }, true);
+  document.addEventListener('mousedown', function(){ esconder(); }, true);
+  document.addEventListener('wheel', function(){ esconder(); }, true);
+  document.addEventListener('scroll', function(){ esconder(); }, true);
+  document.addEventListener('keydown', function(){ esconder(); }, true);
+  window.addEventListener('blur', function(){ limpar(); });
+
+  var colhidas = colher(document);
+
+  window.__hefDica = {
+    instalada: true,
+    colhidas: colhidas,
+    aberta: function(){ return E.aberta; },
+    texto: function(){ return E.aberta ? E.texto : ''; },
+    quantas: function(){ return E.abriu; },
+    // A VARREDURA, chamada pelo tique. Duas coisas, e as duas são de tempo:
+    // um alvo cujo nó saiu do documento (um bloco trocado inteiro debaixo do
+    // ponteiro) não tem mais dica a mostrar; e um bloco recém-trocado traz
+    // `title` de volta, que é o popup do compositor voltando com ele.
+    //
+    // O CUSTO É UMA CONSULTA, e não uma varredura: `querySelector` para na
+    // primeira ocorrência, e com a colheita feita não há ocorrência nenhuma.
+    varrer: function(){
+      if(E.alvo && !document.contains(E.alvo.el)){
+        esconder(); E.alvo = null; E.texto = '';
+      }
+      if(document.querySelector('[title]')
+         || document.querySelector('svg title:not([data-hef-dica])')){
+        window.__hefDica.colhidas += colher(document);
+      }
+    },
+    // O PRODUTO TROCANDO O TEXTO DA DICA QUE ESTÁ ABERTA. Sem isto, a dica de
+    // um valor vivo (a taxa do giroscópio, a carga da bateria) congelaria no
+    // texto do instante em que abriu.
+    trocar: function(el, t){
+      if(E.alvo && E.alvo.el === el){
+        E.texto = String(t);
+        if(E.aberta) caixa.textContent = E.texto;
+      }
+    },
+  };
+  return 'ok';
+})();
+"""
 
 #: A TABELA LOCAL MORREU em 01/09/2026, e a razão é de processo: ela era um
 #: dicionário num arquivo só, e ligar as dez abas em paralelo significaria oito
@@ -1975,7 +2317,15 @@ LER_CAMPOS = r"""
       // `data-colorway` o produto APAGOU (o aparelho não disse a cor) seria lido
       // como `null` de um lado e `''` do outro, e a régua acusaria a pintura
       // certa.
-      v = el.getAttribute((el.dataset.hefAtributo || '').trim().toLowerCase()) || '';
+      const qual = (el.dataset.hefAtributo || '').trim().toLowerCase();
+      v = el.getAttribute(qual) || '';
+      // E O `title` PODE ESTAR EMPRESTADO — TOOLTIP-C1, 11/09/2026. Enquanto o
+      // ponteiro está sobre o elemento, a camada da dica guarda o texto em
+      // `data-hef-dica` para o popup do sistema não abrir junto. Sem esta
+      // linha, a régua do mockup leria `''` de um endereço que o produto
+      // acabou de pintar e acusaria a pintura CERTA — que é exatamente a
+      // família de defeito que esta casa chama de instrumento falso.
+      if(!v && qual === 'title') v = el.getAttribute('data-hef-dica') || '';
     }
     else if(alvo === 'marcado'){
       // NA MESMA LÍNGUA DO `escrever`: `sim` quando está marcado, vazio quando
@@ -2993,6 +3343,24 @@ class Piloto:
             self.ponte.perguntar(LER_CAMPOS, retratou)
         self.ponte.perguntar(BOOTSTRAP, self._instalado)
 
+    def _dica_instalada(self, valor: Any, erro: Any) -> None:
+        """A camada da dica respondeu — ou a página ficou com a dica do sistema.
+
+        ``'ok'`` é instalação nova, ``'ja'`` é a camada que já estava de pé
+        (duas cargas da mesma página sem descarregar o documento). Qualquer
+        outra coisa é cegueira: a tela volta a depender do popup do compositor,
+        que é o mecanismo que a TOOLTIP-C1 mediu e tirou do caminho.
+        """
+        if erro is not None:
+            self.cegueiras.append(f"{self.pagina}: a camada da dica não instalou — {erro}")
+            print(f"ERRO: a camada da dica não instalou em {self.pagina}: {erro}",
+                  file=sys.stderr)
+            return
+        resposta = str(valor)
+        if resposta not in ("ok", "ja"):
+            self.cegueiras.append(
+                f"{self.pagina}: a camada da dica respondeu {resposta!r}")
+
     def _leu_virgem(self, pagina: str, valor: Any, erro: Any) -> None:
         import json
 
@@ -3014,6 +3382,16 @@ class Piloto:
             print(f"ERRO: o bootstrap não instalou em {self.pagina}: {erro}", file=sys.stderr)
             return
         self.pronto = True
+        # A CAMADA DA DICA, A CADA CARGA — TOOLTIP-C1, 11/09/2026. Ela vive em
+        # `window.__hefDica`, que MORRE com o documento: instalar uma vez e
+        # navegar deixaria as outras nove abas com a dica do sistema de volta,
+        # que é o defeito que ela relatou *"em todas as paginas"*.  # noqa-acento: citação literal dela
+        #
+        # E ELA NÃO PODE FALHAR CALADA. Uma camada que não instalou devolve a
+        # tela ao popup do compositor — a mesma tela de antes, sem um erro na
+        # frente de ninguém. Por isso a falha vai para `cegueiras`, que é o que
+        # o relato imprime.
+        self.ponte.perguntar(DICA_DA_CASA, self._dica_instalada)
         # O TIMER E A SAÍDA SÓ UMA VEZ, e a flag é própria. Testar `voltas == 0`
         # aqui não funciona: `_tique()` roda logo acima e já a incrementa, então
         # a condição era sempre falsa — a janela ficava viva para sempre, sem

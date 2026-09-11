@@ -15,7 +15,7 @@ disco (o número dela) e dublê de ponte — nada foi ao daemon.
    que o segundo clique armava *"calado"*. Medido: um tique depois do segundo
    clique — 500 ms — o rótulo **já diz "Sackboy"**, ainda sem cura nenhuma.
    E o "calado" é o que menos se sustenta: desde que o piloto ganhou
-   ``_recusou_dizendo`` (``hefesto_vivo.py:1074``), todo ``RuntimeError`` de
+   ``_recusou_dizendo`` (``hefesto_vivo.py:1097``), todo ``RuntimeError`` de
    gesto vira TARJA na tela por 30 s — o clique que arma o Sackboy FALA. O
    defeito do passo 4 é real e é sério; o exagero em volta dele não era.
 

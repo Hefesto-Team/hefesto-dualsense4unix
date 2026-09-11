@@ -93,6 +93,29 @@ def _pagina(arquivo: str) -> Gtk.Widget:
         )
     )
 
+    # A DICA DA CASA TAMBÉM AQUI — TOOLTIP-C1, 11/09/2026, e ela não é enfeite
+    # neste visor: ele existe para ela OLHAR o desenho e apontar o que está
+    # errado, e a dica é metade do que há para olhar (665 `title` e 1.756
+    # `<title>` de SVG nas dez páginas). Um visor que ainda usasse o popup do
+    # sistema mostraria a ela uma tela que o produto já não tem.
+    #
+    # POR `UserScript`, e não por uma chamada depois da carga: este visor não
+    # tem tique nem ponte para reinstalar nada, e a tira do desenho navega
+    # sozinha por `href` — a camada morre com o documento a cada troca de aba.
+    # O `UserScript` nasce com cada página, que é exatamente o que o
+    # `_instalado` do piloto faz do outro lado.
+    from hefesto_dualsense4unix.interface.hefesto_vivo import DICA_DA_CASA
+
+    view.get_user_content_manager().add_script(
+        WebKit2.UserScript(
+            DICA_DA_CASA,
+            WebKit2.UserContentInjectedFrames.TOP_FRAME,
+            WebKit2.UserScriptInjectionTime.END,
+            None,
+            None,
+        )
+    )
+
     view.load_uri(caminho.as_uri())
     return view
 

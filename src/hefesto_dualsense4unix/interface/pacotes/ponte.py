@@ -274,7 +274,7 @@ def dentro_da_janela() -> bool:
 
     **NÃO É ADIVINHAÇÃO, E MUITO MENOS "estou sob teste?"** — é a leitura de um
     fato que já existia: quem sobe a janela SUBSTITUI os dois pontos de extensão
-    acima (`interface/hefesto_vivo.py:2302`), e mais ninguém o faz. Enquanto
+    acima (`interface/hefesto_vivo.py:2652`), e mais ninguém o faz. Enquanto
     `escolher_arquivo` for a função declarada aqui, não há janela: quem está
     chamando um gesto é uma régua, um script ou um driver de medição.
 

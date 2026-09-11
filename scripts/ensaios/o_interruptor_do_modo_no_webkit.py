@@ -10,7 +10,7 @@ estado do daemon dela sendo lido de verdade.
 
 **A PONTE É INTERCEPTADA, E ISSO NÃO É COMODIDADE — É REGRA DA CASA.** O par
 ``("06-navegacao.html", "modo")`` está na lista de PERIGOSOS do piloto
-(``hefesto_vivo.py:1033``), com a razão escrita: *"O CURSOR É DELA. Ligar a
+(``hefesto_vivo.py:1056``), com a razão escrita: *"O CURSOR É DELA. Ligar a
 emulação de mouse move o ponteiro na tela em que ela está trabalhando"*. E há um
 segundo custo, medido aqui: o interruptor é dos DOIS (decisão dela, 27/08), então
 dois cliques a partir de *mouse desligado · teclado ligado* deixariam o **teclado
