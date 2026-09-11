@@ -369,8 +369,10 @@ def _sem_a_maquina(monkeypatch: Any) -> None:
     `snd_usb_audio` só é carregado quando há aparelho de áudio USB plugado, e
     um DualSense no cabo é um deles:
 
-    * **sem áudio USB no cabo** — o módulo não está carregado, o
-      `quirk_flags` nem existe, sobra o drop-in de `/etc/modprobe.d`, e o
+    * **sem áudio USB no cabo** — o módulo não foi carregado (e, se já
+      estava, ele não cai no desplugue: módulo carregado não descarrega
+      sozinho), o `quirk_flags` nem existe, sobra o drop-in de
+      `/etc/modprobe.d`, e o
       veredito é ``[INFO]``: *"a cura está agendada"*. Uma linha de selo
       ``CONTROLE`` entra na coluna, e as nove reprovam com nove diffs
       diferentes da MESMA causa. **É o estado de 11/09/2026**, medido:
@@ -381,14 +383,20 @@ def _sem_a_maquina(monkeypatch: Any) -> None:
     OS DOIS LADOS, sem plugar nada — `check_snd_quirk` é pura quando se dá o
     texto do `quirk_flags`::
 
-        python -c "from hefesto_dualsense4unix.integrations.storm_doctor \
+        .venv/bin/python -c "from hefesto_dualsense4unix.integrations.storm_doctor \
             import check_snd_quirk as c; print(c()); \
             print(c('054c:0ce6:ignore_ctl_error|ctl_msg_delay_1m'))"
         ('[INFO]', 'a cura do travamento está agendada. …')  ← o cabo de hoje
         ('[ OK ]', 'cura do travamento do USB ATIVA …')      ← o quirk no ar
 
-    **O ``[ OK ]`` NÃO FOI OBSERVADO com controle no cabo** — ele saiu da
-    função com o texto dado à mão, acima. *"Não medido"* é o que se sabe dele.
+    **O ``[ OK ]`` NÃO FOI OBSERVADO AQUI com controle no cabo** — ele saiu da
+    função com o texto dado à mão, acima. **Mas ele JÁ FOI VISTO VIVO nesta
+    máquina**, do sysfs real, em 06/09/2026 e com a bancada LIVRE a sessão
+    inteira: `docs/process/agentes/2026-09-06/ONDA5-01-01.md:53-62` registra o
+    `/sys/module/snd_usb_audio/parameters/quirk_flags` EXISTINDO com o quirk e
+    o `check_snd_quirk()` devolvendo ``[ OK ]``. É a prova de que o ramo bom é
+    alcançável, e é por isso que ele não custa um gesto dela na bancada: esta
+    casa já pagou essa medição.
 
     `_do_exame` ENTRA PELO MESMO MOTIVO, e não por asseio: ele chama
     `a08_conexoes._exame()`, que examina os controles que estão na mesa AGORA.
