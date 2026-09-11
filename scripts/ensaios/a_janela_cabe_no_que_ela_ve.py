@@ -30,12 +30,49 @@ cada aba, espera o tique pintar com o dado do daemon vivo, e pergunta ao DOM:
 
 * a altura do conteúdo da `.janela` contra a caixa que ela tem;
 * o mesmo para o documento inteiro;
-* e QUEM estourou — o primeiro elemento cujo conteúdo passa da caixa.
+* e QUEM estourou — o primeiro elemento cujo conteúdo passa da caixa;
+* **e quanta tela sobra ABAIXO da `.janela`** — ver `--vista`, logo abaixo.
 
 REPROVA nomeando a aba e os dois números em pixel.
 
     scripts/ensaios/a_janela_cabe_no_que_ela_ve.py             # as dez
     scripts/ensaios/a_janela_cabe_no_que_ela_ve.py 03 07       # só duas
+    scripts/ensaios/a_janela_cabe_no_que_ela_ve.py --vista=840 # a TV dela
+
+A VISTA DELA NÃO É A VISTA PADRÃO — 10/09/2026, ALTURA-DA-VISTA-01
+-------------------------------------------------------------------
+
+Esta régua rodava numa vista só: a do `ponte_da_tela.TAMANHO_OCULTA`, que é o
+PISO (`1212x809`). **Enquanto a altura da `.janela` era um pixel fixo isso não
+importava** — 809 e 840 devolviam os mesmos números, porque a `.janela` não
+olhava para a vista.
+
+Com a altura fluida é a diferença inteira, e medido: na vista de 840 px da TV
+dela a `.janela` vai a 808 e o `.miolo` a 666; no piso, a 777 e 634. *Uma régua
+presa ao piso responderia sobre outra JANELA que não a dela* — a assinatura dos
+seis instrumentos falsos de 05/09, um nível acima.
+
+Por isso `--vista=N` existe e o padrão deixou de ser o único caso. As duas
+pontas que esta sprint mede:
+
+    --vista=809   o PISO: nenhuma aba pode ficar pior do que já era
+    --vista=840   a TELA DELA: é onde a barra que ela reclamou nasce ou morre
+
+E A TELA QUE SOBRA EMBAIXO DA `.janela` PASSOU A CONTAR. Nenhuma régua desta
+casa olhava para lá: todas mediam DENTRO da `.janela`, e a `.janela` parava
+antes do fim da tela. Na vista dela sobravam **47 px** — 16 de recuo do `body`
+e **31 mortos**, a faixa escura entre o rodapé e a moldura da janela, que é o
+*"tem espaço vertical pra aproveitar aqui"* da queixa dela. A conta é uma
+linha, e agora ela tem dono:
+
+    window.innerHeight - document.querySelector('.janela').getBoundingClientRect().bottom
+
+Com `--vista`, o que sobra tem de ser exatamente o recuo do `body`; qualquer
+pixel a mais é tela que a página recusou, e REPROVA — **exceto quando a
+`.janela` parou no teto que ela promete parar** (`--teto-da-vista`). Aí a sobra
+é decisão, não desperdício, e sai no relato como `TETO`. A primeira volta desta
+régua não sabia disso e reprovou as dez numa vista 4K; a razão está na nota do
+`no_teto`, no corpo.
 """
 from __future__ import annotations
 
@@ -75,6 +112,15 @@ ABAS = ["01-jogar.html", "02-controles.html", "03-gatilhos.html",
         "04-iluminacao.html", "05-vibracao.html", "06-navegacao.html",
         "07-lancadores.html", "08-conexoes.html", "09-sistema.html",
         "10-perfis.html"]
+
+#: A LARGURA EM QUE SE MEDE COM `--vista`, e ela é a da janela MAXIMIZADA dela.
+#:
+#: A TV dela tem 1920 px a 100% (`cosmic-randr`), e a janela maximizada deixa
+#: 1918 de vista depois das duas bordas. Medir a altura numa largura estreita
+#: mentiria por cima: coluna estreita é coluna ALTA, e o `.miolo` pediria mais
+#: do que pede na tela dela. O teto de 1600 da `.janela` cuida do resto — acima
+#: dele o desenho para de esticar, por decisão dela de 08/09.
+LARGURA_MAXIMIZADA = 1918
 
 #: AS CAIXAS QUE ROLAM POR DESENHO, com a razão de cada uma — o molde do
 #: `_NAO_E_PROMESSA` do `casa-sabe`: *a lista se lê, a razão se escreve*.
@@ -151,6 +197,24 @@ LER = """(function(){
     doc_alt: d.scrollHeight,
     doc_caixa: d.clientHeight,
     vista: window.innerHeight,
+    // O QUE SOBRA EMBAIXO DA `.janela`, em pixel. Tem de ser o recuo do
+    // `body` e nada mais; o que passar disso é tela que a página recusou.
+    sobra: j ? Math.round(window.innerHeight -
+                          j.getBoundingClientRect().bottom) : -1,
+    // O RECUO DO `body` NÃO SE DIGITA AQUI: quem o conhece é o CSS
+    // (`--recuo-do-corpo`), e perguntar a ele é o que impede esta régua de
+    // ficar velha no dia em que o recuo mudar.
+    recuo: (function(){
+      var v = getComputedStyle(document.documentElement)
+                .getPropertyValue('--recuo-do-corpo').trim();
+      var n = parseInt(v, 10);
+      return isNaN(n) ? -1 : n; })(),
+    // O TETO DA `.janela`, e ele é o que separa tela MORTA de vão DECIDIDO.
+    teto: (function(){
+      var v = getComputedStyle(document.documentElement)
+                .getPropertyValue('--teto-da-vista').trim();
+      var n = parseInt(v, 10);
+      return isNaN(n) ? -1 : n; })(),
     culpado: culpado
   });
 })()"""
@@ -162,6 +226,25 @@ def _e_por_desenho(aba: str, culpado: str) -> bool:
     return bool(declarada and culpado.startswith(declarada[0]))
 
 
+def _vista_pedida(argv: list[str]) -> int:
+    """A altura da vista em que medir, ou 0 para o padrão do piloto.
+
+    O PADRÃO É O PISO (`ponte_da_tela.TAMANHO_OCULTA`, 809 px de vista). Ele
+    continua sendo o caso que diz *"nenhuma aba ficou pior do que era"*; o que
+    ele NÃO diz é o que acontece na tela dela, e é por isso que ele deixou de
+    ser o único.
+    """
+    for arg in argv:
+        if arg.startswith("--vista="):
+            bruto = arg.split("=", 1)[1]
+            if not bruto.isdigit() or int(bruto) < 200:
+                raise SystemExit(
+                    f"ERRO: `--vista={bruto}` não é uma altura de tela. "
+                    "Ela é um inteiro de pixels, e a da TV dela é 840.")
+            return int(bruto)
+    return 0
+
+
 def main() -> int:
     pedidas = [a for a in sys.argv[1:] if not a.startswith("-")]
     alvos = ([a for a in ABAS if any(a.startswith(p) for p in pedidas)]
@@ -169,11 +252,26 @@ def main() -> int:
     if not alvos:
         print(f"REPROVA: nenhuma aba casa com {pedidas}. As dez estão em `ABAS`.")
         return 1
+    vista = _vista_pedida(sys.argv[1:])
 
     args = argparse.Namespace(**BANDEIRAS, abre=alvos[0])
     piloto = hefesto_vivo.Piloto(args)
     lidas: list[dict] = []
     fila = list(alvos)
+
+    def esticar() -> None:
+        """Põe a vista na altura pedida, e a largura da janela maximizada dela.
+
+        É O `view` QUE RECEBE O PEDIDO, e não a janela. Medido em 10/09/2026:
+        `Gtk.OffscreenWindow.resize()` depois do `show_all()` não move um pixel
+        — a janela oculta se dimensiona pelo que o filho PEDE. Um `resize()`
+        aqui devolveria teimosamente os 809 do padrão, e a régua diria ter
+        medido a tela dela sem nunca ter saído do piso.
+        """
+        if vista:
+            piloto.tela.view.set_size_request(LARGURA_MAXIMIZADA, vista)
+
+    esticar()
 
     def proxima() -> bool:
         if not piloto.pronto:
@@ -181,6 +279,7 @@ def main() -> int:
         if not fila:
             Gtk.main_quit()
             return False
+        esticar()
         piloto._ir(fila[0])
         #: ESPERA O TIQUE PINTAR, e não só a página carregar: o que faz a
         #: caixa crescer é o DADO, e ele chega no tique seguinte ao carregar.
@@ -216,9 +315,9 @@ def main() -> int:
         print("REPROVA: não li o DOM — a janela não respondeu.")
         return 1
 
-    print(f"{'aba':18} {'janela':>14} {'documento':>14}  quem estourou")
-    print("-" * 92)
-    culpados, cortes = [], []
+    print(f"{'aba':18} {'janela':>14} {'documento':>14} {'vista':>13}  quem estourou")
+    print("-" * 106)
+    culpados, cortes, mortos, tetos = [], [], [], []
 
 
     for d in lidas:
@@ -227,19 +326,59 @@ def main() -> int:
             continue
         ja, jc = d["janela_alt"], d["janela_caixa"]
         da, dc = d["doc_alt"], d["doc_caixa"]
-        rola_j = ja > jc + 2
         rola_d = da > dc + 2
-        marca = "ROLA" if (rola_j or rola_d) else "ok"
-        print(f"{d['url']:18} {ja:6}/{jc:<7} {da:6}/{dc:<7}  "
+        #: O RAMO `rola_j` MORREU AQUI — 10/09/2026, §4.2 da ALTURA-DA-VISTA-01,
+        #: e ele sai NOMEADO em vez de sumir calado.
+        #:
+        #: Ele comparava a `.janela` com a própria caixa (`ja > jc + 2`). Com a
+        #: altura em pixel isso ainda podia acontecer; com a altura seguindo a
+        #: vista, **uma `.janela` que segue a vista jamais transborda de si
+        #: mesma** — o ramo passaria a dar verde sobre nada, que é exatamente o
+        #: que ele já fez uma vez: em 09/09 ele dava PASSA (`775/775` nas dez)
+        #: com a barra de rolagem na tela dela.
+        #:
+        #: Quem reprova continua sendo o ramo do CULPADO — o `.miolo` —, que
+        #: nasceu por causa daquele verde falso. Os dois números da `.janela`
+        #: continuam SAINDO no relato: eles dizem se a altura pegou.
+        sobra, recuo = d.get("sobra", -1), d.get("recuo", -1)
+        teto = d.get("teto", -1)
+        #: A TELA QUE A PÁGINA RECUSA. Tem de ser o recuo do `body` e nada mais.
+        #: O `+2` é a mesma folga de arredondamento do WebKit usada acima.
+        sobrou = sobra >= 0 and recuo >= 0 and sobra > recuo + 2
+        #: O TETO NÃO É TELA MORTA, E ESTA LINHA NASCEU DE UM VERMELHO FALSO.
+        #:
+        #: Medido em 10/09/2026, na primeira volta desta régua: numa vista de
+        #: 2160 px — a TV dela tem o modo 3840x2160 — ela reprovou as DEZ com
+        #: *"1289px de tela que a página não usou"*. E estava errada: a
+        #: `.janela` tinha parado no teto que ela PROMETE parar
+        #: (`--teto-da-vista`), porque vão vazio é queixa dela e o teto existe
+        #: para capá-lo. *Uma régua que reprova o desenho aprovado ensina
+        #: errado* — é a mesma lição do corte, doze linhas abaixo.
+        #:
+        #: O TETO SE PERGUNTA AO CSS, nunca se digita aqui: quem o conhece é o
+        #: `:root` do `topo.html`, e uma segunda cópia dele aqui seria a régua
+        #: medindo o mundo de ontem no dia em que ele mudasse.
+        no_teto = teto > 0 and jc >= teto - 2
+        morre = sobrou and not no_teto
+        marca = ("ROLA" if rola_d else "MORRE" if morre
+                 else "teto" if sobrou else "ok")
+        print(f"{d['url']:18} {ja:6}/{jc:<7} {da:6}/{dc:<7} "
+              f"{d.get('vista', 0):6}-{sobra:<6} "
               f"{marca:5} {d.get('culpado') or ''}"
               f"{('  (corta: ' + d['cortado'] + ')') if d.get('cortado') and not d.get('culpado') else ''}")
         if d.get("dentro"):
             print(f"{'':18}   dentro: {' '.join(d['dentro'])}")
-        if rola_j:
-            culpados.append(
-                f"{d['url']}: a `.janela` tem {ja}px de conteúdo numa caixa de "
-                f"{jc}px — {ja - jc}px de sobra. {d.get('culpado') or ''}")
-        elif d.get("culpado") and not _e_por_desenho(d["url"], d["culpado"]):
+        if morre:
+            mortos.append(
+                f"{d['url']}: sobram {sobra}px embaixo da `.janela` numa vista "
+                f"de {d.get('vista', 0)}px, e o recuo do `body` é {recuo} — "
+                f"{sobra - recuo}px de tela que a página não usou")
+        elif sobrou:
+            tetos.append(
+                f"{d['url']}: a `.janela` parou no teto de {teto}px e sobram "
+                f"{sobra - recuo}px de tela. É o teto fazendo o serviço dele — "
+                f"acima dele o que sobra viraria vão dentro do quadro")
+        if d.get("culpado") and not _e_por_desenho(d["url"], d["culpado"]):
             #: **O CULPADO SOZINHO JÁ REPROVA — e a primeira volta desta régua
             #: não sabia disso.** Ela olhava só a `.janela` e o documento, e os
             #: dois FECHAM: `775/775` e `809/809` nas dez. Deu **PASSA** com a
@@ -274,6 +413,14 @@ def main() -> int:
     #: `DIV.moldura 153>144` da `04` esconde 9px de desenho —, mas quem decide
     #: o vermelho é a barra.
     print()
+    #: O TETO SAI NO RELATO E NÃO NO VERMELHO — ver a nota do `no_teto`, acima.
+    #: Ele fica VISÍVEL porque é o número que diz quanto de tela o desenho está
+    #: deixando de lado por decisão; calá-lo faria a próxima pessoa remedir.
+    if tetos:
+        print(f"TETO (não é tela morta, é o limite decidido): {len(tetos)}")
+        for t_ in tetos:
+            print(f"  {t_}")
+        print()
     if cortes:
         print(f"CORTE (não é barra, `overflow:hidden` esconde calado): "
               f"{len(cortes)}")
@@ -285,7 +432,17 @@ def main() -> int:
         for c in culpados:
             print(f"  {c}")
         return 1
-    print(f"PASSA: as {len(lidas)} abas cabem na janela, com o dado vivo.")
+    #: A TELA QUE MORRE REPROVA DEPOIS DA BARRA, e a ordem é escolha: a barra
+    #: corta o que ela quer ler, e a faixa morta só desperdiça. Quando as duas
+    #: aparecem juntas, a que se conserta primeiro é a barra.
+    if mortos:
+        print(f"REPROVA: {len(mortos)} aba(s) deixam tela morta embaixo da "
+              f"`.janela`:")
+        for m in mortos:
+            print(f"  {m}")
+        return 1
+    print(f"PASSA: as {len(lidas)} abas cabem na janela e usam a vista "
+          f"inteira, com o dado vivo.")
     return 0
 
 

@@ -29,6 +29,11 @@ from monta import (  # noqa: E402
 import onde  # noqa: E402
 from onde import RAIZ as R  # noqa: E402
 
+# O PISO DO MIOLO TEM UM DONO SÓ, e ele mora na ponte da janela — §3.5 da
+# ALTURA-DA-VISTA-01. Custa 0,13 s e NÃO abre tela: o módulo importa o `gi`
+# dentro da função que cria a janela, não no topo.
+from hefesto_dualsense4unix.gui import ponte_da_tela as _ponte  # noqa: E402
+
 # ---------------------------------------------------------------------------
 # A MESA MANDA NOS NÚMEROS DESTA ABA.
 #
@@ -67,7 +72,22 @@ BT = [c for c in CONECTADOS if c["via"] == "BT"]
 #: medida: `.avancado` foi de 110 para 136 (o botão novo, sem vão entre eles) e
 #: o vão entre faixas caiu 2px em cada `sec-alta` — a página fecha em **530 de
 #: conteúdo para 530 de espaço útil**, e o miolo não rola um pixel.
-MIOLO_H, ALTURA = 564, 530
+#:
+#: O `MIOLO_H` DEIXOU DE SER DIGITADO — 10/09/2026, §3.5 da ALTURA-DA-VISTA-01.
+#: Ele dizia **564**, que era o miolo de uma janela de altura FIXA; no instante
+#: em que a altura passou a seguir a vista (decisão dela, «1 + rodapé») esse
+#: número parou de ser verdade em qualquer tela.
+#:
+#: A REGRA QUE O RESOLVE: *um gerador não pode assegurar contra a vista, porque
+#: ele roda sem tela.* Ele assegura contra o PISO — a menor vista prometida —,
+#: e quem mede a vista de verdade é
+#: `scripts/ensaios/a_janela_cabe_no_que_ela_ve.py --vista=N`, com a janela
+#: aberta. O dono do piso é um só: `gui/ponte_da_tela.MIOLO_NO_PISO`.
+#:
+#: NA TELA DELA ELE SOBRA, e é o ponto do piso: medido com a vista de 840 px
+#: da TV dela, o miolo desta aba vai a **666**, não a estes 634. Assegurar
+#: contra o menor é o que faz a promessa valer nas duas pontas.
+MIOLO_H, ALTURA = _ponte.MIOLO_NO_PISO, 530
 
 
 def _lista(nomes):

@@ -23,6 +23,11 @@ from hefesto_dualsense4unix.profiles.trigger_presets import (
     FEEDBACK_POSITION_LABELS,
 )
 
+# O PISO DO MIOLO TEM UM DONO SÓ, e ele mora na ponte da janela — §3.5 da
+# ALTURA-DA-VISTA-01. Custa 0,13 s e NÃO abre tela: o módulo importa o `gi`
+# dentro da função que cria a janela, não no topo.
+from hefesto_dualsense4unix.gui import ponte_da_tela as _ponte  # noqa: E402
+
 SPEC = {p.label: {q.label: q for q in p.params} for p in PRESETS}
 
 # A CAIXA DE AJUSTES TEM UM DONO SÓ, e ele é o PACOTE. O desenho e o produto
@@ -1144,7 +1149,26 @@ LARG_ROT = monta_.larg_rotulos("03-gatilhos", com_glifo=True)
 #:     m.scrollHeight > m.clientHeight + 1
 #:
 #: Última coluna que coube: 477px. A primeira que rolou: 479px.
-TETO_DA_GRADE = 477
+#:
+#: O 477 DEIXOU DE SER DIGITADO — 10/09/2026, §3.5 da ALTURA-DA-VISTA-01. Ele
+#: era o teto de um miolo de **564**, que era o miolo de uma janela de altura
+#: FIXA; com a altura seguindo a vista (decisão dela, «1 + rodapé») o miolo
+#: mudou e o 477 passou a descrever uma janela que não existe mais.
+#:
+#: O QUE SOBREVIVE DA MEDIÇÃO ACIMA É O VÃO, e é ele que vira o dado: o Chrome
+#: disse que a última coluna que coube tinha 477 num miolo de 564, logo o
+#: quadro e os recuos que a grade NÃO pode usar medem **87 px**. Esse vão é do
+#: desenho do quadro, não da altura da janela — e é ele que se carrega para o
+#: miolo novo, em vez de somar as partes de novo. *Somar as partes é o erro que
+#: o parágrafo acima registra: deu 528, 51 px a mais do que a tela aguentava.*
+#:
+#: O TETO PASSA A SUBIR SOZINHO com o piso, porque o dono do piso é um só
+#: (`gui/ponte_da_tela.MIOLO_NO_PISO`). E ele continua sendo um teto de PISO:
+#: na vista de 840 px da TV dela a grade tem mais do que isto. Quem for GASTAR
+#: a folga nova refaz o empurrão de 2 px acima — um teto herdado prova que a
+#: coluna de hoje cabe, não que a de amanhã caiba.
+VAO_DO_QUADRO_NA_GRADE = 87
+TETO_DA_GRADE = _ponte.MIOLO_NO_PISO - VAO_DO_QUADRO_NA_GRADE
 if ALT_COLUNA > TETO_DA_GRADE:
     raise SystemExit(f"ERRO: a coluna pede {ALT_COLUNA}px e a grade tem "
                      f"{TETO_DA_GRADE}px — o quadro passaria a rolar por dentro.")
