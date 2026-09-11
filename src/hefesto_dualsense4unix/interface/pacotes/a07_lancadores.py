@@ -158,6 +158,7 @@ import dataclasses
 import re
 import threading
 import time
+from collections.abc import Callable
 from typing import Any
 
 from hefesto_dualsense4unix.interface import desenho_dos_lancadores as desenho
@@ -908,30 +909,20 @@ FECHAR = "consertar-fechando-a-steam"
 PERGUNTA_DA_STEAM = "Posso fechar a Steam por uns 20 segundos?"
 CONFIRMA_A_STEAM = "Fechar e continuar"
 
-#: ============================ PROVISÓRIO ============================
-#: **O «Consertar» DOS OUTROS LANÇADORES ESPERA A PALAVRA DELA**, 09/09/2026:
-#: *"Preciso vêr como fica e se faz sentido um botão pra isso"*  # noqa-acento: citação dela
+#: **O «Consertar» DOS OUTROS LANÇADORES SAIU — LANCADOR-LOCALIZAR-01,
+#: 10/09/2026.** Aqui moravam a `PERGUNTA_DA_CURA` e o `CONFIRMA_A_CURA`, o
+#: consentimento de dois tempos que segurava o lugar até ela ver o botão. Ela
+#: viu, e o bloco PROVISÓRIO já deixava as duas saídas escritas: esta é a
+#: segunda — *"ela decide que o botão NÃO deve existir → tire o ramo do
+#: `consertar` em `desenho_dos_lancadores.cartao_sem_censo`"*.
 #:
-#: Enquanto ela não vê, o botão **não escreve na configuração dela num clique**:
-#: o primeiro clique PERGUNTA (é o mesmo consentimento de dois tempos que esta
-#: aba já usa para fechar a Steam — :func:`_este_clique_confirma`), e só o
-#: segundo escreve. O ato alcança arquivo de OUTRO programa, fora do Hefesto;
-#: um clique só ali é o produto decidindo por ela antes de ela ter visto.
-#:
-#: **REVERSÍVEL NUMA FRASE, e as duas direções estão escritas:**
-#:
-#: * ela aprova o botão como está → tire a linha `if not _este_clique_confirma(
-#:   armado, o):` de :func:`consertar_lancador` (e este bloco), e o clique
-#:   volta a agir direto;
-#: * ela decide que o botão NÃO deve existir → tire o ramo do `consertar` em
-#:   `desenho_dos_lancadores.cartao_sem_censo`, e o cartão perde o botão sem
-#:   que nada mais mude: o gesto, a cura e a régua continuam de pé para o dia
-#:   em que houver outro caminho.
-#: ====================================================================
-PERGUNTA_DA_CURA = ("Vou escrever na configuração de {nome} o que faz o jogo "
-                    "enxergar o controle pelo Hefesto. Clique de novo para "
-                    "confirmar.")
-CONFIRMA_A_CURA = "Ajustar e continuar"
+#: **O QUE CAIU FOI O VASO, NÃO A CURA.** `integrations/cura_por_estrada` fica,
+#: com as 26 provas e a dívida declarada em
+#: `tests/unit/portao_a_casa_sabe_e_o_produto_nao_faz.py`: `hefesto-launch` só
+#: age com jogo da Steam, e nenhum jogo do Heroic, do Lutris, do RetroArch, do
+#: Dolphin ou do mGBA tem um — a lacuna continua aberta. O vaso certo é a
+#: CARONA (`perfil.com_a_carona`, que o Salvar e o Aplicar já chamam), e quem a
+#: constrói é a LANCADOR-CARONA-01.
 
 #: QUAL GESTO ESTÁ ARMADO E ATÉ QUANDO (`time.monotonic`). Vazio = nenhum.
 #:
@@ -1311,12 +1302,11 @@ def com_o_que_o_daemon_diz(
     """
     if not lancadores:
         return lancadores
-    # 4. **a cara ARMADA do «Consertar» dos outros lançadores** — 09/09/2026, e
-    #    ela é PROVISÓRIA até a palavra dela (ver :data:`PERGUNTA_DA_CURA`).
-    #    Vem primeiro porque não toca no cartão da Steam: a lista que sai daqui
-    #    é a mesma quando nada está armado, e as comparações de identidade de
-    #    baixo continuam valendo.
-    lancadores = _com_a_confirmacao_da_cura(lancadores)
+    # A QUINTA COISA SAIU DAQUI — LANCADOR-LOCALIZAR-01, 10/09/2026. Era a cara
+    # ARMADA do «Consertar» dos outros lançadores (`_com_a_confirmacao_da_cura`),
+    # o consentimento de dois cliques que segurava o lugar até a palavra dela. A
+    # palavra chegou e o botão saiu; a confirmação saiu com ele, porque não há
+    # mais o que confirmar.
     steam = lancadores[0]
     aviso, appid = aviso_do_jogo_aberto(state, lida)
     noticia = VIGIA_DA_STEAM.noticia()
@@ -1687,141 +1677,38 @@ def consertar(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
     return _resposta(VIGIA.ler(), ctx.state)
 
 
-def _armado_da_cura(chave: str) -> str:
-    """O nome armado deste CARTÃO — o consentimento é do ato E do alvo.
-
-    `_ARMADO` guarda um gesto por vez, e o gesto da cura é o mesmo botão em
-    quatro cartões. Sem a chave aqui, perguntar no «Heroic» e confirmar no
-    «Dolphin · mGBA» escreveria no segundo com o sim dado ao primeiro — que é
-    exatamente o que :data:`_ARMADO` deixou de permitir entre os três botões
-    que fecham a Steam.
-    """
-    return f"{desenho.CONSERTAR_LANCADOR}:{chave}"
-
-
-def _qual_cartao(v: str) -> str:
-    """A chave do cartão que o clique nomeia — nas DUAS caras do botão.
-
-    A cara da pergunta manda a chave (`emuladores`); a cara armada manda o
-    `_confirmo` daquele cartão (`consertar-lancador:emuladores:confirmo`), que
-    é o valor que só existe no botão já armado. Uma função só lê as duas, para
-    não haver dois lugares onde a forma do `data-v` seja decidida.
-    """
-    prefixo = f"{desenho.CONSERTAR_LANCADOR}:"
-    if v.startswith(prefixo) and v.endswith(":confirmo"):
-        return v[len(prefixo):-len(":confirmo")]
-    return v
-
-
-def _com_a_confirmacao_da_cura(
-    lancadores: list[desenho.Lancador],
-) -> list[desenho.Lancador]:
-    """Troca o «Consertar» pela cara ARMADA, no cartão que já perguntou.
-
-    É o :func:`_botao_armavel` dos outros cartões, e ele mora aqui pela mesma
-    razão que aquele: o desenho decide o que o cartão É, e quem sabe que existe
-    um consentimento pendurado é o produto vivo.
-
-    **DEVOLVE A MESMA LISTA quando nada está armado** — e isso não é estilo: um
-    cartão reconstruído a cada tique é o samba que a `A-TELA-SAMBA-01` fechou
-    nesta aba. Ver o `if extras` de :func:`com_o_que_o_daemon_diz`.
-    """
-    armado = _armado_agora()
-    prefixo = f"{desenho.CONSERTAR_LANCADOR}:"
-    if not armado.startswith(prefixo):
-        return lancadores
-    chave = armado[len(prefixo):]
-    fora = list(lancadores)
-    for i, cartao in enumerate(fora):
-        if cartao.chave != chave:
-            continue
-        fora[i] = dataclasses.replace(cartao, acoes=tuple(
-            desenho.Acao(CONFIRMA_A_CURA, "verde", desenho.CONSERTAR_LANCADOR,
-                         _confirmo(armado))
-            if a.gesto == desenho.CONSERTAR_LANCADOR else a
-            for a in cartao.acoes))
-    return fora
-
-
-def _o_cartao(chave: str) -> desenho.SemCenso | None:
-    """A `SemCenso` daquele cartão — inclusive um que ELA tenha declarado.
-
-    LER DE `procurados()` E NÃO DE `SEM_FONTE` é o que faz o cartão declarado
-    por ela também poder ser consertado: `SEM_FONTE` é a lista de fábrica, e
-    quem acrescentou um lançador ao produto esperaria o mesmo botão nele.
-    """
-    lida = VIGIA.agora()
-    for item in desenho.procurados(lida.declarados if lida is not None else ()):
-        if item.chave == chave:
-            return item
-    return None
-
-
-@gesto("07-lancadores.html", desenho.CONSERTAR_LANCADOR,
-       grava="escrever_a_estrada")
-def consertar_lancador(ctx: Contexto, o: dict[str, Any], p: Any
-                       ) -> dict[str, Any]:
-    """"Consertar" nos lançadores que não são a Steam — o ambiente por estrada.
-
-    A §5.3 DA SPRINT, e é o irmão do :func:`consertar` da Steam com um alvo
-    diferente: aquele repõe o **atalho de inicialização** no `localconfig.vdf`;
-    este escreve o **ambiente** na configuração do lançador, porque
-    `hefesto-launch` não alcança nenhum jogo sem `SteamAppId`.
-
-    QUEM SABE ESCREVER É `cura_por_estrada`, e o gesto não decide nada: ele
-    pergunta o plano, manda escrever e leva a frase para a tela. Duas estradas
-    hoje — o `config.json` do Heroic e o arquivo de override do Flatpak dos
-    demais —, e a escolha é do módulo, com a razão de cada uma escrita lá.
-
-    **A RECUSA VAI PARA A TELA**, que é o contrato desta casa: `RuntimeError`
-    vira a tarja laranja de 30 s com a frase do dono. Sem o ambiente publicado
-    pelo serviço, a cura recusa dizendo o que ligar — **nunca inventa a conta**.
-    Escrever aqui um `SDL_GAMECONTROLLER_IGNORE_DEVICES` deduzido seria uma
-    segunda conta ao lado da do daemon, e a segunda envelhece calada.
-
-    **O RECIBO VAI PELO CANAL DE RECADO, E NÃO PELO CORPO DO CARTÃO — medido
-    na tela viva em 09/09/2026.** A primeira versão escrevia a frase no `diz`
-    daquele cartão, como o `ver-o-que-impede` faz com o da Steam. **Fotografada
-    1,6 s depois do clique, a frase já não estava lá:** o tique repinta o corpo
-    do cartão a partir da leitura do disco, dez vezes por segundo, e o recibo
-    vivia 100 ms. Quem tem prazo próprio é o `recado` — seis segundos, o
-    `SEGUNDOS_DO_RECADO_DE_SUCESSO` do piloto —, e ele é um depósito DO PILOTO
-    e não um valor da página. É a decisão dela de 04/09, a D-01.
-
-    ELE DECLARA `grava=` PORQUE ESCREVE NA MÁQUINA DELA — o `config.json` do
-    Heroic e o override do Flatpak são arquivos DELA, e a prova botão a botão
-    (`--prova-gesto`) não pode clicá-lo sozinha. A lista é derivada daqui
-    (`pacotes.perigosos()`), e não digitada num arquivo distante. **A porta
-    declarada é `escrever_a_estrada`, e ela está em `ESCREVEM`** — a régua cobra
-    as duas direções, e uma declaração que a árvore não acha é ruído.
-
-    **E ELE PERGUNTA ANTES DE ESCREVER — PROVISÓRIO, por palavra dela.** O
-    primeiro clique arma e devolve :data:`PERGUNTA_DA_CURA`; só o segundo, com
-    o `data-v` que **só existe no botão armado**, escreve. A razão, e as duas
-    frases que desfazem isto quando ela decidir, estão na própria
-    :data:`PERGUNTA_DA_CURA`.
-    """
-    from hefesto_dualsense4unix.integrations import cura_por_estrada as cura
-
-    qual = _qual_cartao(str(o.get("v") or "").strip())
-    if not qual:
-        raise ValueError(
-            "consertar-lancador: o clique não disse qual lançador. Cada botão "
-            "manda `data-v` com a chave do cartão — sem ela o gesto escreveria "
-            "na configuração de um lançador escolhido por acaso.")
-    item = _o_cartao(qual)
-    if item is None:
-        raise RuntimeError(
-            "Não conheço este lançador. Procure de novo e tente outra vez.")
-    # A PERGUNTA VEM ANTES DA ESCRITA — e é PROVISÓRIA. A razão inteira, e as
-    # duas frases que a desfazem, estão em :data:`PERGUNTA_DA_CURA`.
-    if not _este_clique_confirma(_armado_da_cura(qual), o):
-        return {**_resposta(VIGIA.agora(), ctx.state),
-                "recado": PERGUNTA_DA_CURA.format(nome=item.nome)}
-    frase = cura.escrever_a_estrada(
-        cura.planejar(qual, item.atalhos, nome=item.nome))
-    VIGIA.esquecer()
-    return {**_resposta(VIGIA.ler(), ctx.state), "recado": frase}
+# ---------------------------------------------------------------------------
+# O «CONSERTAR» DOS OUTROS LANÇADORES MORREU AQUI — LANCADOR-LOCALIZAR-01,
+# 10/09/2026, e o que caiu foi o VASO, não a cura.
+#
+# Cinco funções viviam neste ponto: `_armado_da_cura`, `_qual_cartao`,
+# `_com_a_confirmacao_da_cura`, `_o_cartao` e o gesto `consertar_lancador`.
+# Elas nasceram em 09/09 com o botão «Consertar» do cartão LOCALIZADO, e o
+# botão saiu por palavra dela:
+#
+#     "na real não faz sentido. Digo se tenho tudo instalado e tá pra ser
+#      identificado não tem pq ter o botão de consertar. Ou no Máximo Localizar
+#      o lançador. aí eu mesmo abro a tela e procuro o .desktop."
+#
+# A LEITURA DELA É A LEITURA CERTA DO CARTÃO como ele estava pintado: selo
+# `LOCALIZADO`, moldura `chega` (a MESMA do `ok`/CHEGAM da Steam) e a frase do
+# corpo terminando em *"um jogo aberto por aqui entra pelo mesmo caminho de
+# qualquer outro"*. Nada ali declarava defeito, e embaixo disso o produto
+# oferecia *consertar*.
+#
+# **A LACUNA CONTINUA ABERTA, e é real:** `assets/hefesto-launch.sh` só age com
+# `SteamAppId`, e nenhum jogo do Heroic, do Lutris, do RetroArch, do Dolphin ou
+# do mGBA tem um. `integrations/cura_por_estrada` continua sendo o único código
+# que entrega o ambiente da ponte a um lançador que não é a Steam — o módulo e
+# as 26 provas FICAM, com a dívida declarada em
+# `tests/unit/portao_a_casa_sabe_e_o_produto_nao_faz.py`.
+#
+# O VASO CERTO É A CARONA, e a palavra dela é de 16/08
+# (`app/actions/carona_do_wrapper.py:7`): *"nem precisa ter um botão na gui, mas
+# ele se auto corrigir ao clicarmos em aplicar ou salvar o perfil"*. Para a
+# Steam a casa já honrou isso (`perfil.com_a_carona`, chamada pelo «Aplicar» e
+# pelo «Salvar» do rodapé); para os outros, é a LANCADOR-CARONA-01.
+# ---------------------------------------------------------------------------
 
 
 @gesto("07-lancadores.html", "ver-o-que-impede")
@@ -2768,10 +2655,15 @@ def _recusa_de_quem_ja_tem_cartao(chave: str, nome: str,
     abertura = f"{nome} já tem cartão nesta aba"
 
     if desenho.ADICIONAR_ROTULO in tem:
-        return (f"{abertura}, e o Hefesto não achou onde ele está. Use o "
-                f"«{desenho.ADICIONAR_ROTULO}» do cartão dele — assim o que "
-                f"você me disser entra na busca daquele cartão, em vez de "
-                f"criar um segundo com o mesmo nome.")
+        # A ORAÇÃO «e o Hefesto não achou onde ele está» SAIU EM 10/09/2026, e
+        # ela teria virado mentira no mesmo commit: o «Localizar este Lançador»
+        # passou a aparecer TAMBÉM no cartão LOCALIZADO, e ali o Hefesto achou.
+        # O que sobra vale nos dois estados — é o cartão que aponta onde o
+        # lançador está, e digitar aqui criaria um segundo com o mesmo nome.
+        return (f"{abertura}, e é por ele que se aponta onde este lançador "
+                f"está. Use o «{desenho.ADICIONAR_ROTULO}» do cartão de "
+                f"{nome} — assim o que você me disser entra na busca daquele "
+                f"cartão, em vez de criar um segundo com o mesmo nome.")
 
     tirar = desenho.acao_de_tirar(chave).rotulo
     if tirar in tem:
@@ -2779,10 +2671,20 @@ def _recusa_de_quem_ja_tem_cartao(chave: str, nome: str,
                 f"o «{tirar}» do cartão dele primeiro — o cartão volta a "
                 f"perguntar onde ele está, e a sua resposta entra ali.")
 
-    return (f"{abertura}, e o Hefesto já o achou sozinho nesta máquina. Não há "
-            f"o que apontar: o que você digitar aqui criaria um segundo cartão "
-            f"com o mesmo nome. Se o que ele achou não é o que você quer, me "
-            f"diga — hoje o cartão não tem por onde trocar.")
+    # O TERCEIRO RAMO PERDEU O BECO — 10/09/2026. Ele dizia *"Se o que ele
+    # achou não é o que você quer, me diga — hoje o cartão não tem por onde
+    # trocar"*: o produto contando à usuária um buraco NOSSO, que é o que a
+    # decisão dela de 07/09 proíbe. O buraco fechou (o «Localizar» está no
+    # cartão achado), e a frase perdeu a razão de existir.
+    #
+    # ELE NÃO CITA BOTÃO NENHUM, e é o que o torna verdadeiro em todo estado
+    # que sobra: a primeira meia volta (`nao_sei`, ainda não procurei), o cartão
+    # da Steam que não conseguiu ler a biblioteca, e a leitura que LEVANTOU.
+    # Nesses três não há botão a apontar, e inventar um é o defeito de origem
+    # desta função — a tela mandando clicar onde não há nada.
+    return (f"{abertura}, e o que você digitar aqui criaria um segundo cartão "
+            f"com o mesmo nome. Quem responde por {nome} nesta máquina é o "
+            f"cartão dele, nesta mesma aba.")
 
 
 def _o_que_ela_digitou(o: dict[str, Any]) -> tuple[str, str]:
@@ -2835,19 +2737,69 @@ def adicionar_lancador(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, An
         _PARA_QUEM = str(o.get("v") or "").strip()
         return _resposta(VIGIA.agora(), ctx.state)
 
-    para_quem = _PARA_QUEM
-    de_fabrica = {x.chave: x.nome for x in desenho.EMBUTIDOS}
-
     if not alvo:
         raise ValueError(
             "Diga onde ele está: o comando (`ryujinx`), o caminho do programa "
             "(`/opt/Ryujinx/Ryujinx`) ou o nome do atalho "
-            "(`org.ryujinx.Ryujinx`). É o que eu preciso para achá-lo.")
+            "(`org.ryujinx.Ryujinx`). É o que eu preciso para achá-lo. Ou "
+            f"clique em «{desenho.PROCURAR_O_ARQUIVO_ROTULO}» e aponte o "
+            "atalho com o mouse.")
     if len(alvo) > _MAXIMO_DA_AGULHA:
         raise ValueError(
             f"São {len(alvo)} caracteres, e o teto é {_MAXIMO_DA_AGULHA}. O que "
             "eu preciso é do comando ou do nome do atalho, não da linha de "
             "inicialização inteira.")
+    # O RECIBO VEM ANTES DA LEITURA, e a ORDEM é cura: `_guardar_onde_ele_esta`
+    # chama `VIGIA.esquecer()`, e num `{**_resposta(VIGIA.ler(), …), "recado":
+    # …}` o Python avalia o `**` PRIMEIRO — a aba sairia pintada com a busca
+    # velha, e o cartão que ela acabou de ensinar só acenderia no vencimento do
+    # TTL. É o defeito "o botão que grava e responde calado", pelo avesso.
+    recado = _guardar_onde_ele_esta(p, rotulo, alvo, _achar_o_que_ela_digitou)
+    return {**_resposta(VIGIA.ler(), ctx.state), "recado": recado}
+
+
+def _achar_o_que_ela_digitou(alvo: str) -> tuple[str, str, str]:
+    """`onde_isso_esta`, e a RECUSA na língua de quem DIGITOU.
+
+    São duas portas para a mesma pergunta e duas recusas, porque quem digitou um
+    comando e quem apontou um arquivo erraram coisas diferentes — ver
+    :func:`_achar_o_que_ela_apontou`.
+    """
+    achado = onde_isso_esta(alvo)
+    if not achado[0]:
+        raise RuntimeError(
+            f"Não achei {alvo!r} nesta máquina. Procurei o comando no `PATH` e "
+            f"o atalho `{alvo.rsplit('/', 1)[-1]}.desktop` nas pastas de "
+            f"aplicativos. Confira o caminho e tente de novo — nada foi "
+            f"guardado.")
+    return achado
+
+
+def _guardar_onde_ele_esta(p: Any, rotulo: str, alvo: str,
+                           achar: Callable[[str], tuple[str, str, str]]) -> str:
+    """Grava a agulha no `maquina.json` e devolve o RECIBO. Dono único da escrita.
+
+    **AS DUAS PORTAS DA TELA DE REGISTRO PASSAM POR AQUI** — o «Adicionar», que
+    lê o que ela digitou, e o seletor do sistema
+    (:data:`desenho.PROCURAR_O_ARQUIVO`), que lê o que ela apontou com o mouse.
+    Dois caminhos até a mesma gravação, e a gravação é UMA: duas cópias desta
+    função seriam duas validações, duas recusas e duas maneiras de escrever o
+    mesmo `maquina.json` — e a segunda envelheceria calada, que é a razão pela
+    qual esta aba já tinha UM gesto para os dois botões de registro.
+
+    `achar` É QUEM RESOLVE E QUEM RECUSA, e é o único ponto em que os dois
+    caminhos divergem: a frase de "não achei" tem de falar da coisa que ELA fez
+    — digitar um comando, ou apontar um arquivo.
+
+    A ORDEM DAS RECUSAS NÃO MUDOU: a chave e a colisão com cartão de fábrica
+    vêm ANTES da procura em disco. Inverter faria quem digita «Steam» no botão
+    global ouvir *"não achei"* em vez de *"já tem cartão nesta aba"* — a
+    resposta certa para a pergunta errada.
+    """
+    global _PARA_QUEM
+
+    para_quem = _PARA_QUEM
+    de_fabrica = {x.chave: x.nome for x in desenho.EMBUTIDOS}
 
     chave = para_quem or chave_do_rotulo(rotulo)
     if not chave:
@@ -2857,13 +2809,7 @@ def adicionar_lancador(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, An
     if not para_quem and chave in de_fabrica:
         raise RuntimeError(_recusa_de_quem_ja_tem_cartao(chave, de_fabrica[chave]))
 
-    campo, agulha, onde = onde_isso_esta(alvo)
-    if not campo:
-        raise RuntimeError(
-            f"Não achei {alvo!r} nesta máquina. Procurei o comando no `PATH` e "
-            f"o atalho `{alvo.rsplit('/', 1)[-1]}.desktop` nas pastas de "
-            f"aplicativos. Confira o caminho e tente de novo — nada foi "
-            f"guardado.")
+    campo, agulha, onde = achar(alvo)
 
     # O NOME DE UM CARTÃO QUE JÁ EXISTE NÃO SE REESCREVE. Quem chega pelo botão
     # de um cartão está dizendo ONDE ele está — não como ele se chama. Mandar o
@@ -2911,6 +2857,120 @@ def adicionar_lancador(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, An
                    f"este cartão já se chama {nome}, e o que o botão dele "
                    f"acrescenta é ONDE procurar.")
 
+    return recado
+
+
+#: A PASTA EM QUE O SELETOR ABRE, e ela não é o `$HOME` por medição: DUAS das
+#: quatro pastas de atalho desta máquina ficam dentro de `~/.local`, que um
+#: seletor aberto no `$HOME` com arquivos ocultos desligados **não mostra**. A
+#: sugestão é a primeira pasta de atalhos que existe no disco.
+#:
+#: **HOJE O PILOTO A DESCARTA, e isto está declarado em vez de escondido:**
+#: `hefesto_vivo._escolher_arquivo` não repassa `sugestao` ao `_dialogo` (só o
+#: `_salvar_arquivo` repassa), e aquele arquivo é de outra posse. O gesto manda
+#: assim mesmo — o dia em que a linha nascer lá, isto passa a valer sem que
+#: ninguém precise voltar aqui. Ver a entrega de LANCADOR-LOCALIZAR-01.
+def _pasta_de_partida() -> str:
+    """A primeira pasta de atalhos que existe, ou `""`. NUNCA levanta."""
+    from hefesto_dualsense4unix.integrations import jogos_locais as jl
+
+    try:
+        for pasta in jl.pastas_de_atalhos():
+            if pasta.is_dir():
+                return str(pasta)
+    except Exception:  # pragma: no cover - pastas ilegíveis
+        return ""
+    return ""
+
+
+#: O TÍTULO DO DIÁLOGO DO SISTEMA. Ele é texto de tela, e diz o que ela vai
+#: apontar — não "escolha um arquivo", que serviria para qualquer coisa.
+TITULO_DO_SELETOR = "Escolha o atalho do lançador (.desktop)"
+
+
+def _achar_o_que_ela_apontou(alvo: str) -> tuple[str, str, str]:
+    """`onde_isso_esta`, e a RECUSA na língua de quem APONTOU um arquivo.
+
+    **A RECUSA É OUTRA, e a diferença é medida.** Quem digitou errou o comando
+    ou o nome do atalho, e a frase manda conferir os dois. Quem apontou com o
+    mouse acertou o arquivo — o que ele pode ter errado é a PASTA: o produto só
+    reencontra um `.desktop` que esteja numa das quatro pastas de aplicativos
+    (`jogos_locais.pastas_de_atalhos`), e mandar a frase do teclado aqui seria
+    dizer *"confira o caminho"* sobre um caminho que ela apontou com o dedo.
+
+    **E A RECUSA ESTÁ CERTA, não é aspereza:** um atalho fora das quatro pastas
+    é um lançador que a busca nunca acharia — o cartão diria «NÃO LOCALIZADO»
+    para sempre sobre uma coisa que ela mesma acabou de apontar. É a mesma regra
+    de `onde_isso_esta`: *não se grava o que não está no disco onde o produto
+    procura*.
+    """
+    achado = onde_isso_esta(alvo)
+    if not achado[0]:
+        pastas = ", ".join(str(x) for x in _pastas_de_atalhos_para_a_frase())
+        raise RuntimeError(
+            f"Este arquivo está fora das pastas em que eu procuro, e por isso "
+            f"eu nunca o reencontraria: {alvo}. Eu procuro atalhos "
+            f"`.desktop` em {pastas or 'nenhuma pasta de aplicativos'} — e "
+            f"programas pelo comando, no `PATH`. Nada foi guardado.")
+    return achado
+
+
+def _pastas_de_atalhos_para_a_frase() -> tuple[str, ...]:
+    """As pastas que a recusa NOMEIA — lidas do dono, nunca digitadas.
+
+    Digitar as quatro aqui é como a frase envelhece calada no dia em que o
+    `jogos_locais` ganhar a quinta. NUNCA levanta: uma recusa que vira erro de
+    leitura troca a frase do dono por um traceback.
+    """
+    from hefesto_dualsense4unix.integrations import jogos_locais as jl
+
+    try:
+        return tuple(str(x) for x in jl.pastas_de_atalhos())
+    except Exception:  # pragma: no cover - pastas ilegíveis
+        return ()
+
+
+@gesto("07-lancadores.html", desenho.PROCURAR_O_ARQUIVO, grava="machine_declare")
+def procurar_o_arquivo(ctx: Contexto, o: dict[str, Any], p: Any
+                       ) -> dict[str, Any] | None:
+    """«Escolher o arquivo…» — ela aponta o `.desktop` com o mouse.
+
+    **DECISÃO DELA, 09/09/2026, a opção (C):** *"Ou no Máximo Localizar o
+    lançador. aí eu mesmo abro a tela e procuro o .desktop."* — o campo de
+    texto FICA (é o único caminho para um AppImage solto, que não tem
+    `.desktop`) e ganha ao lado o botão que abre o seletor do sistema.
+
+    **NÃO É CAPACIDADE NOVA.** `ponte.escolher_arquivo` é um ponto de extensão
+    que o piloto preenche ao subir, com precedente vivo no «Importar» do
+    rodapé. O pacote continua PURO — quem importa GTK é o piloto —, e é por
+    isso que a régua o prova com um dublê.
+
+    **CANCELAR NÃO É ERRO NEM NOTÍCIA**, e o `None` explícito diz isso: ela
+    fechou o diálogo, nada mudou, e a tela não fala. Um `RuntimeError` aqui
+    acenderia a tarja laranja de 30 s por um clique que ela mesma desfez.
+
+    **COM A JANELA OCULTA NÃO HÁ DIÁLOGO**, e é de propósito: uma
+    `Gtk.OffscreenWindow` não tem onde pôr um modal, e abrir um sem pai o
+    jogaria NA TELA DELA. O piloto devolve `None` e imprime no `stderr`, e este
+    gesto o lê como "cancelou" — que é a leitura certa: nada foi escolhido.
+    Logo a prova botão a botão (`--prova-gesto`) **não pode** exercitá-lo, e é
+    por isso que ele declara `grava=` e entra em `pacotes.perigosos()` **pela
+    derivação** — como o `importar` do rodapé já entra.
+
+    **A GRAVAÇÃO É A MESMA DO «Adicionar»** (:func:`_guardar_onde_ele_esta`), e
+    tem de ser: dois caminhos escrevendo o `maquina.json` cada um do seu jeito
+    é como um deles esquece a colisão com cartão de fábrica. O que muda é só a
+    frase de "não achei" — ver :func:`_achar_o_que_ela_apontou`.
+    """
+    caminho = p.escolher_arquivo(TITULO_DO_SELETOR, padrao="*.desktop",
+                                 sugestao=_pasta_de_partida())
+    if not caminho:
+        return None
+    rotulo, _digitado = _o_que_ela_digitou(o)
+    # A MESMA ORDEM DO «Adicionar»: o recibo primeiro, porque a gravação chama
+    # `VIGIA.esquecer()` e a leitura tem de vir DEPOIS.
+    recado = _guardar_onde_ele_esta(p, rotulo, str(caminho),
+                                    _achar_o_que_ela_apontou)
     return {**_resposta(VIGIA.ler(), ctx.state), "recado": recado}
 
 
@@ -2987,7 +3047,12 @@ METODO_DA_RECARGA = "launch_env.refresh"
 # ÚNICA porta de escrita do `maquina.json`, e o lock daquele arquivo é de
 # PROCESSO — uma segunda escrita viva noutro processo perderia a declaração de
 # quem gravou primeiro, calada.
-PONTE: set[str] = {"chamar", "machine_declare"}
+#: O `escolher_arquivo` ENTROU EM 10/09/2026 com o seletor do sistema da tela
+#: de registro (decisão dela, a opção C). Ele é um PONTO DE EXTENSÃO da ponte,
+#: não um método do daemon: o WebView não abre `FileChooserDialog` e a página
+#: não alcança o disco — quem o abre é o piloto, que é GTK, e por isso ele não
+#: entra em `METODOS`.
+PONTE: set[str] = {"chamar", "machine_declare", "escolher_arquivo"}
 METODOS: set[str] = {METODO_DA_RECARGA, "machine.declare"}
 
 
@@ -3006,9 +3071,15 @@ PAGINA = "07-lancadores.html"
 #: e de 14 PARA 16 em 08/09/2026, com o registro do lançador que o Hefesto não
 #: conhece (pedido dela): o de LOCALIZAR (:data:`desenho.ADICIONAR`) e o de
 #: TIRAR (:data:`desenho.REMOVER`).
-#: e de 16 PARA 17 em 09/09/2026, com a CURA POR ESTRADA
-#: (:data:`desenho.CONSERTAR_LANCADOR`): o ambiente do Hefesto entrando nos
-#: lançadores que o atalho de inicialização da Steam não alcança.
+#: e de 16 PARA 17 em 09/09/2026, com a CURA POR ESTRADA — o ambiente do
+#: Hefesto entrando nos lançadores que o atalho de inicialização da Steam não
+#: alcança.
+#:
+#: **E CONTINUOU 17 EM 10/09/2026, com DOIS movimentos que se anulam na conta e
+#: não se anulam na tela** (LANCADOR-LOCALIZAR-01): o `consertar-lancador` SAIU
+#: por palavra dela, e o :data:`desenho.PROCURAR_O_ARQUIVO` — o seletor do
+#: sistema na tela de registro — ENTROU. O piso só sobe, e aqui ele nem subiu
+#: nem caiu: quem conta é a régua, e ela conta gestos com dono, não atos.
 PISO_DA_ABA = 17
 
 #: SEM `PROVAS`, e a razão é o contrato da régua dos botões: ela injeta uma
@@ -3055,9 +3126,12 @@ SEM_ECO = ("procurar", "consertar", "ver-o-que-impede", "detectar",
            # `maquina.json`, e o `state_full` não tem UMA chave sobre a
            # declaração dela — nem sobre lançador nenhum.
            desenho.ADICIONAR, desenho.REMOVER,
-           # A CURA POR ESTRADA (09/09/2026) entra pelo motivo mais forte da
-           # lista: o efeito dela é o `config.json` do Heroic e o arquivo de
-           # override do Flatpak — arquivos de OUTROS programas, que o daemon
-           # não lê nem por acidente. Um `state_full` pedido logo depois
-           # responde exatamente o que respondia antes.
-           desenho.CONSERTAR_LANCADOR)
+           # O SELETOR DO SISTEMA (10/09/2026) entra pelo mesmo motivo dos dois
+           # acima: quando ela escolhe um arquivo, o que muda é o `maquina.json`
+           # — e o `state_full` não tem UMA chave sobre lançador. Quando ela
+           # CANCELA, o gesto não muda nada em lugar nenhum, e cobrar eco de um
+           # cancelamento seria reprovar o botão por estar certo.
+           desenho.PROCURAR_O_ARQUIVO)
+
+# A CURA POR ESTRADA saiu desta lista em 10/09/2026 junto com o gesto — ver o
+# bloco que a substitui, acima de `ver_o_que_impede`.
