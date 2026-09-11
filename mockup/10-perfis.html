@@ -1898,7 +1898,7 @@
               </div>
               </div>
               <div class="botoes">
-                <button class="btn verde" data-hef-gesto="ativar" title="Passa a usar este perfil agora, em todas as abas.">Ativar</button>
+                <button class="btn" data-hef-gesto="duplicar" title="Copia o perfil inteiro para o editor, com &quot;(cópia)&quot; no nome.">Duplicar</button>
                 <button class="btn" data-hef-gesto="novo" title="Perfil em branco, já com a regra do jogo aberto agora — venha ele de onde vier.">Novo</button>
                 <button class="btn vermelho" data-hef-gesto="remover" data-hef="perfis.remover" title="Apaga do disco. Pergunta antes.">Remover</button>
               </div>
@@ -2369,12 +2369,25 @@
                    para o rótulo `Perfis Salvos` (ele relê a LISTA, e a lista é a
                    tabela da esquerda) e o `Voltar à de ontem` para o rótulo
                    `Definições` — *"tem que arrumar outro canto pra deixar ele ao  (noqa-acento) citação
-                   invés de botão como os demais"*. O `Duplicar` fica botão, e  (noqa-acento) citação
-                   sozinho: ele é o único dos três que CRIA alguma coisa.
-                   A classe `um-so` é o que impede a grade de três colunas de o
-                   deixar com um terço da largura e dois vãos vazios ao lado. -->
+                   invés de botão como os demais"*. Sobrou UM botão neste canto, e  (noqa-acento) citação
+                   a classe `um-so` o faz ocupar a largura inteira em vez de um
+                   terço com dois vãos vazios ao lado.
+
+                   QUEM FICA NELE É O `Ativar`, E FOI ELA QUEM TROCOU — 11/09,
+                   depois de ver: *"trocar o botão do novo Duplicar que ficou  (noqa-acento) citação
+                   gigante pelo ativar e deixar ele verde"*. O `Duplicar` desceu  (noqa-acento) citação
+                   para a fileira da esquerda, no lugar que o `Ativar` deixou —
+                   os quatro gestos continuam na tela, nenhum se perdeu na troca.
+
+                   E A TROCA TEM RAZÃO DE PRODUTO, não só de tamanho: o botão
+                   largo é o da AÇÃO PRINCIPAL desta aba, e a ação principal de
+                   um perfil é passar a usá-lo. Duplicar é o gesto raro; ele
+                   cabe na fileira com o `Novo` e o `Remover`, que são os outros
+                   dois que mexem na LISTA da esquerda. O `Ativar` fica verde
+                   (`btn verde`) — a mesma classe que ele já tinha à esquerda,
+                   para a cor não mudar de significado ao mudar de lugar. -->
               <div class="botoes um-so">
-                <button class="btn" data-hef-gesto="duplicar" title="Copia o perfil inteiro para o editor, com &quot;(cópia)&quot; no nome.">Duplicar</button>
+                <button class="btn verde" data-hef-gesto="ativar" title="Passa a usar este perfil agora, em todas as abas.">Ativar</button>
               </div>
             </div>
           </div>
