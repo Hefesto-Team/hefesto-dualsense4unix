@@ -1464,6 +1464,80 @@ def aceso_da_rota(uniq: str, entry: Any) -> str:
     return str(lida.botao_aceso)
 
 
+#: A `fonte` na língua da TELA. O botão dela é o do meio da fileira, e o texto
+#: é o que ELA lê: não «mix», não «fonte», não o nome do nó.
+ROTA_OUVIR_JUNTO = "junto"
+
+
+def fonte_do_controle(entry: Any) -> str:
+    """`mix`/`sfx` deste controle, do `state_full` — `""` = ninguém sabe dizer.
+
+    Quem publica é o daemon (`ipc_handlers`, bloco `speaker`), que pergunta ao
+    `AltoFalanteSubsystem`, que lê o perfil ativo com cache por `(nome, mtime)`.
+    A aba **não abre perfil**: um segundo leitor da mesma escolha dela é a
+    família de defeito que esta casa persegue por escrito.
+
+    `""` não vira `sfx`: sem resposta, nenhum dos três botões acende — é o
+    mesmo contrato do `""` de `aceso_da_rota`.
+    """
+    bloco = _bloco_do_speaker(entry) or {}
+    fonte = bloco.get("fonte")
+    return str(fonte) if fonte in ("mix", "sfx") else ""
+
+
+def _a_pagina_tem_o_ouvir_junto() -> bool:
+    """A página PUBLICADA já tem o terceiro botão? Lido uma vez, do arquivo.
+
+    **O PACOTE SE LIMITA AO QUE A PÁGINA TEM**, e esta linha é a régua do
+    `check_o_desenho_aprovado` virada em código. Enquanto ela não aprova a aba,
+    o desenho mora em `mockup/` e o produto renderiza a página publicada, que
+    tem DOIS botões. Emitir `"junto"` para uma página de dois acende **nenhum**
+    — a fileira inteira apagada, sem uma palavra, que é pior do que o estado
+    anterior.
+
+    Custou três frentes em 02/09/2026, sempre do mesmo jeito: o pacote foi para
+    o merge com o rótulo novo e a página ficou com o antigo.
+
+    Uma leitura, no import: a página não muda debaixo do processo — quem a
+    troca é `--publicar`, e depois dele o piloto sobe de novo.
+    """
+    from hefesto_dualsense4unix.interface import onde
+
+    try:
+        return 'data-hef-quando="junto"' in onde.pagina(PAGINA).read_text()
+    except Exception:  # pragma: no cover - defensivo
+        return False
+
+
+#: Resolvido no import — ver :func:`_a_pagina_tem_o_ouvir_junto`.
+A_FILEIRA_TEM_TRES = _a_pagina_tem_o_ouvir_junto()
+
+
+def aceso_da_fileira(uniq: str, entry: Any) -> str:
+    """Qual dos TRÊS botões da fileira do som acende — 10/09/2026, A3.
+
+    A fileira responde UMA pergunta — *"o que este controle ouve?"* — em três
+    respostas que se excluem:
+
+    ==================  ===========================================  =========
+    botão               o que ele quer dizer                         camada
+    ==================  ===========================================  =========
+    Sons do jogo        só o que o jogo mandar para este controle    firmware
+    Ouvir junto         o som do PC cai TAMBÉM aqui, sem sair da TV  sistema
+    Todo o som do PC    o som do PC sai SÓ aqui                      sistema+fw
+    ==================  ===========================================  =========
+
+    **A ORDEM DE PRECEDÊNCIA É MEDIDA, e não é gosto:** «Todo o som do PC»
+    vence, porque ele é o único estado em que a saída padrão do sistema mudou
+    de lugar — um fato que a pessoa OUVE, e que contradizer na tela é o defeito
+    de 03/09 (botão aceso, som na TV). Só depois dele o `mix` fala.
+    """
+    aceso = aceso_da_rota(uniq, entry)
+    if aceso == "pc" or not A_FILEIRA_TEM_TRES:
+        return aceso
+    return ROTA_OUVIR_JUNTO if fonte_do_controle(entry) == "mix" else aceso
+
+
 def recado_da_rota(uniq: str) -> str:
     """A frase do cartão quando as duas camadas discordam; `""` quando não.
 
@@ -2496,7 +2570,10 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
                 # assim que o card 2 dela acendeu "Todo o som do PC" com o som
                 # saindo na TV. Ver `aceso_da_rota`, e a ressalva logo abaixo,
                 # que é onde o desacordo entre as duas vira palavra.
-                "alto-rota": aceso_da_rota(uniq, c),
+                # A FILEIRA TEM TRÊS DESDE 10/09/2026 (A3) — ver
+                # `aceso_da_fileira`. O terceiro é a `fonte`, que o produto já
+                # obedecia e que a tela não tinha como oferecer.
+                "alto-rota": aceso_da_fileira(uniq, c),
                 # A RESSALVA DO ALTO-FALANTE — a peça da ONDA0-F (D-02), e o
                 # texto é do motor (`audio_saida.MOTIVO_ROTA_SO_NO_BYTE`). Ela
                 # **nasce e morre com o desacordo**: sem ele, o campo vai com
@@ -3511,9 +3588,36 @@ def rota(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     uniq, qual = _uniq(o), str(o.get("rota") or "")
     if not uniq:
         raise ValueError("rota: o clique não disse em qual controle")
-    if qual not in ("jogo", "pc"):
+    if qual not in ("jogo", "pc", ROTA_OUVIR_JUNTO):
         raise ValueError(f"rota: não conheço a rota {qual!r} — a página manda "
-                         f"'jogo' ou 'pc'")
+                         f"'jogo', 'junto' ou 'pc'")
+
+    # "OUVIR JUNTO" É A `fonte`, E ELA NÃO É UMA TERCEIRA CAMADA — 10/09/2026
+    # (SOM-NA-TELA-01, a A3). O produto já obedecia a `speaker.fonte` desde a
+    # SFX-POR-CONTROLE-01: com `mix`, o monitor da saída padrão cai TAMBÉM no
+    # nó daquele controle — o som do PC chega ao plástico **sem sair da TV**,
+    # que é a diferença que importa numa mesa de quatro. O que faltava era o
+    # gesto: nenhuma aba gravava aquele campo, e o efeito estava pronto sem
+    # escolha — *"o efeito pronto e sem escolha"*, o defeito-mãe desta casa
+    # virado do avesso.
+    #
+    # ELE DESLIGA A CAMADA 1, e não pode ser diferente: «Todo o som do PC»
+    # TIRA o som da televisão, «Ouvir junto» o deixa lá. Sair de um para o
+    # outro sem devolver a saída padrão deixaria a TV muda com a tela dizendo
+    # "junto" — o desacordo de 03/09, pela outra porta.
+    if qual == ROTA_OUVIR_JUNTO:
+        audio_saida.devolver_o_som_do_pc()
+        _lembrar_do_som(ctx, uniq, speaker={"fonte": "mix"})
+        _confirmar_com_som(ctx, uniq)
+        return
+
+    # SAIR DO «junto» APAGA O `mix`, e é a mesma disciplina do parágrafo acima:
+    # os três botões são um estado só, e deixar o `mix` de pé embaixo de «Sons
+    # do jogo» faria o controle continuar ouvindo o PC com a tela dizendo que
+    # não. Vai ANTES do resto para que uma recusa da camada 1 não deixe o
+    # perfil a meio caminho.
+    if fonte_do_controle(ctx.por_uniq(uniq)) == "mix":
+        _lembrar_do_som(ctx, uniq, speaker={"fonte": "sfx"})
 
     # A CAMADA 1 VEM PRIMEIRO — ver a docstring. `uniqs_na_mesa` é a mesa
     # inteira porque o casamento por dispositivo USB precisa saber de QUEM são

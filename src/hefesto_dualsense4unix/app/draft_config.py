@@ -257,6 +257,18 @@ class SpeakerDraft(BaseModel):
     volume: int | None = Field(default=None, ge=0, le=255)
     muted: bool = False
     rota: int | None = Field(default=None, ge=0, le=3)
+    #: O QUE ENTRA NO NÓ daquele controle — `mix` (o som do PC cai também
+    #: aqui, sem sair da televisão) ou `sfx` (só o que o jogo mandar).
+    #: `None` = sem opinião, e vale a mesma regra do `rota`: "não sei" é "não
+    #: escrevo".
+    #:
+    #: **ELE FALTAVA AQUI, e a falta DESTRUÍA a escolha dela** — 10/09/2026.
+    #: `ProfileSpeakerConfig.fonte` existe desde 09/09 e o daemon o OBEDECE
+    #: (`AltoFalanteSubsystem._fonte_do_controle`), mas o caminho de disco da
+    #: janela e da aba Perfis passa por este draft: sem o campo, todo "Salvar
+    #: Perfil" reescrevia a seção do som sem ele. É a família exata do item 13
+    #: do laudo de 05/09 — *"o Salvar DESTRUÍA o que a aba tinha gravado"*.
+    fonte: Literal["mix", "sfx"] | None = None
     dirty: bool = False
     in_profile: bool = False
 
@@ -640,6 +652,7 @@ class DraftConfig(BaseModel):
                 volume=profile.speaker.volume,
                 muted=profile.speaker.muted,
                 rota=getattr(profile.speaker, "rota", None),
+                fonte=getattr(profile.speaker, "fonte", None),
                 dirty=False,
                 in_profile=True,
             )
@@ -763,6 +776,7 @@ class DraftConfig(BaseModel):
                 volume=self.speaker.volume,
                 muted=self.speaker.muted,
                 rota=self.speaker.rota,
+                fonte=self.speaker.fonte,
             )
             if (
                 self.speaker.volume is not None
@@ -1061,6 +1075,10 @@ class DraftConfig(BaseModel):
                     volume=max(0, min(255, int(volume))),
                     muted=bool(muted),
                     rota=self.speaker.rota if rota is None else int(rota),
+                    # A FONTE SOBREVIVE AO VOLUME pela mesma razão escrita
+                    # acima para o canal: mexer no volume depois de escolher
+                    # «Ouvir junto» não pode desfazer a escolha em silêncio.
+                    fonte=self.speaker.fonte,
                     dirty=True,
                     in_profile=True,
                 )
@@ -1269,6 +1287,7 @@ class DraftConfig(BaseModel):
             volume=int(cfg.volume),
             muted=bool(cfg.muted),
             rota=getattr(cfg, "rota", None),
+            fonte=getattr(cfg, "fonte", None),
             dirty=self.speaker.dirty,
             in_profile=True,
         )
@@ -1284,14 +1303,20 @@ class DraftConfig(BaseModel):
         """
         from hefesto_dualsense4unix.profiles.schema import ProfileSpeakerConfig
 
+        # A FONTE ENTRA NAS DUAS CONTAS — 10/09/2026, e nas duas ela faltava:
+        # fora do `igual_ao_global`, um controle cuja ÚNICA diferença fosse a
+        # fonte era lido como igual ao global e tinha o override APAGADO; fora
+        # do `ProfileSpeakerConfig`, ela era descartada na escrita. Os dois
+        # perdem em silêncio a escolha que o daemon obedece.
         igual_ao_global = (
             speaker.volume == self.speaker.volume
             and speaker.muted == self.speaker.muted
             and speaker.rota == self.speaker.rota
+            and speaker.fonte == self.speaker.fonte
         )
         if speaker.volume is None or igual_ao_global:
             return self.with_controller_fields_cleared(
-                uniq, "speaker", {"volume", "muted", "rota"}
+                uniq, "speaker", {"volume", "muted", "rota", "fonte"}
             )
         return self._with_override_section(
             uniq,
@@ -1300,6 +1325,7 @@ class DraftConfig(BaseModel):
                 volume=int(speaker.volume),
                 muted=bool(speaker.muted),
                 rota=speaker.rota,
+                fonte=speaker.fonte,
             ),
         )
 
