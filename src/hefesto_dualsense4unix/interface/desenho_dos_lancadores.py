@@ -879,14 +879,24 @@ DIZ_SEM_FONTE = (
     "por aqui entra pelo mesmo caminho de qualquer outro."
 )
 
-#: A frase de quem PROCUROU E ACHOU. O `{onde}` é o atalho ou o comando que
-#: denunciou o lançador — dizer ONDE é o que separa esta frase de um palpite,
-#: e é o que deixa ela conferir a resposta sem acreditar em mim.
-DIZ_ACHEI = (
-    "<b>Achei este lançador aqui</b> (<code>{onde}</code>). O perfil casa pelo "
-    "nome do processo e pela janela, então um jogo aberto por aqui entra pelo "
-    "mesmo caminho de qualquer outro."
-)
+#: A frase de quem PROCUROU E ACHOU — **VAZIA DESDE 11/09/2026, ordem dela**:
+#: *"remove as frases do achei esse lançador aqui"*.  <!-- noqa-acento: citação literal dela -->
+#:
+#: O CARTÃO JÁ DIZ AS DUAS COISAS SEM ELA. O selo `LOCALIZADO` responde *"o
+#: produto achou este lançador"*, e a linha de cima responde quantos jogos ele
+#: tem — a frase repetia o selo em prosa, no plural, em cinco cartões
+#: empilhados. Ela viu os cinco de uma vez e recusou os cinco.
+#:
+#: **O CAMINHO NÃO SE PERDEU, mudou de lugar**: ele continua sendo lido e
+#: continua sendo o que o `presente=True` afirma; o que saiu foi pintá-lo na
+#: tela. Quem precisa conferir por onde o produto achou o lançador tem o
+#: `doctor`, que imprime o atalho e o comando de cada um.
+#:
+#: A CONSTANTE FICA, e vazia de propósito — ela é o LUGAR da frase deste
+#: estado, e apagá-la faria o cartão do achado e o do não-achado deixarem de
+#: ser simétricos no código. As réguas que perguntam pelo estado continuam
+#: tendo a quem perguntar.
+DIZ_ACHEI = ""
 
 #: A frase de quem PROCUROU E NÃO ACHOU.
 #:
@@ -1843,7 +1853,7 @@ def cartao_sem_censo(item: SemCenso, onde: str | None,
     return Lancador(
         chave=item.chave, nome=item.nome, selo="localizado",
         jogos=resumo or "—",
-        diz=DIZ_ACHEI.format(onde=_e(onde)),
+        diz=DIZ_ACHEI,
         acoes=abrir + localizar + tirar, presente=True)
 
 

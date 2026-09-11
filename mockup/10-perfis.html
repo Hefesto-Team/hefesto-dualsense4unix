@@ -1180,6 +1180,21 @@
   /* UM BOTÃO SÓ, e a grade de três o deixaria com um terço da largura e dois
      vãos vazios ao lado — que é mais sujo do que os três eram. 11/09/2026. */
   .botoes.um-so{grid-template-columns:1fr}
+  /* O «Ativar» É SÓLIDO COMO O «Aplicar» — ordem dela, 11/09/2026: *"deixa esse
+     botão verde do ativar igual o do aplicar"*.  (noqa-acento) citação literal dela
+     O `.btn.verde` da casa pinta só o TEXTO de verde, e é assim que o `Ativar`
+     nasceu na fileira da esquerda, ao lado de dois irmãos de contorno. Sozinho
+     no canto largo ele é a ação PRINCIPAL desta aba, e ela o leu como tal: a
+     mesma forma do `r-aplicar` do rodapé (fundo verde, texto na cor do fundo
+     da janela), que é o único outro botão desta tela que faz alguma coisa
+     acontecer nos controles agora.
+     O SELETOR É LOCAL DE PROPÓSITO — `.botoes.um-so` e não `.btn.verde`: a casa
+     tem outros botões verdes de contorno, e trocá-los todos por causa deste
+     mudaria nove telas que ela não olhou. */
+  .botoes.um-so .btn.verde{background:var(--green);color:var(--app-bg);
+                           border-color:var(--green)}
+  .botoes.um-so .btn.verde:hover{background:var(--green);color:var(--app-bg);
+                                 border-color:var(--green)}
   /* os campos do editor, todos na mesma grade */
   /* os campos ficam sobre o MESMO fundo da tabela ao lado, e assim os três botões
      de baixo nascem na mesma base nos dois blocos. */
