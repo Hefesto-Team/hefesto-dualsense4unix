@@ -33,6 +33,7 @@ arquivo versionado, e há dois portões que reprovam.
 
 from __future__ import annotations
 
+import re
 import sys
 from typing import Any
 
@@ -79,6 +80,26 @@ def _chips(html: str) -> list[str]:
             or ('class="chip' in c and "Todos" not in c)]
 
 
+def _so_o_texto(pedaco: str) -> str:
+    """O que a PESSOA lê no pedaço do chip, sem a marcação que o envolve.
+
+    **A RÉGUA MEDIA A MARCAÇÃO DE ONTEM — medido em 11/09/2026.** Em 08/09 a
+    `monta.rotulo_do_chip` passou a MARCAR o último degrau
+    (``<span class="via">USB</span>``), porque a decisão dela — *"cabo e rádio
+    coloca maiúsculo"* — virou `text-transform` na folha, e não caixa alta no
+    documento: escrever `USB` em maiúscula no HTML tiraria dela a chance de
+    copiar o nome. O texto na tela não mudou; a régua comparava a linha CRUA
+    com a sigla e passou a exigir do chip um `USB` que o produto marca.
+
+    **POR QUE TIRAR A MARCAÇÃO EM VEZ DE DIGITAR O `<span>` ESPERADO:** o que
+    esta régua cobra é o que a fita AFIRMA, e afirmar é texto. Cravar aqui a
+    marcação de hoje seria a segunda cópia de uma decisão de folha de estilo —
+    e ela envelheceria no dia seguinte, que é o defeito que acabou de custar
+    dois vermelhos.
+    """
+    return re.sub(r"<[^>]+>", "", pedaco).strip()
+
+
 def _nome_escrito(chip: str, c: dict[str, Any]) -> str:
     """O pedaço do MEIO do chip — o que a fita afirma ser o nome do aparelho.
 
@@ -87,7 +108,7 @@ def _nome_escrito(chip: str, c: dict[str, Any]) -> str:
     lugar", que é a diferença entre uma régua e um instrumento falso.
     """
     dentro = chip[chip.index(">", chip.index("title=")) + 1: chip.rindex("</label>")]
-    partes = [p.strip() for p in dentro.split(monta.SEPARADOR.strip())]
+    partes = [_so_o_texto(p) for p in dentro.split(monta.SEPARADOR.strip())]
     partes = [p for p in partes if p]
     # O MEIO É POSIÇÃO, NÃO FILTRO. Filtrar "o que não for `P2` nem `BT`"
     # apagaria também o `BT` do MEIO — e a régua ficaria verde exatamente sobre

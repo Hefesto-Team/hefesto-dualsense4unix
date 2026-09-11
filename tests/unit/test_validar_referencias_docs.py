@@ -31,6 +31,28 @@ ADR_GLIFOS = "docs/adr/011-glyphs-vs-emojis.md"
 LINHA_DA_PROVA = 18
 NOME_FANTASMA = "guardian.py"
 
+#: O ARQUIVO ANINHADO DO REPOSITÓRIO DE MENTIRA, citado pelo SUFIXO — é com ele
+#: que as duas réguas da leniência de sufixo medem, a positiva e a negativa.
+#:
+#: **ELE ERA `gui/main.glade`, E O NOME APODRECEU — medido em 11/09/2026.** Em
+#: 06/09 a janela GTK saiu inteira (`f5311616`, decisão `D-0609-GTK-LEVA-INTEIRA`)
+#: e o `src/hefesto_dualsense4unix/gui/main.glade` foi APAGADO; o validador
+#: passou a isentar as 783 citações dos quatro artefatos aposentados, por nome.
+#: A partir daí o nome que estas duas réguas usavam era isento **antes** de
+#: qualquer regra de sufixo ser aplicada:
+#:
+#: * a régua POSITIVA (`test_caminho_encurtado_casa_por_sufixo`) continuou
+#:   VERDE — mas pela isenção, não pela leniência. Um instrumento falso;
+#: * a régua NEGATIVA (`test_link_que_sobe_nao_ganha_a_leniencia_de_sufixo`)
+#:   ficou VERMELHA, e foi ela que revelou as duas.
+#:
+#: **O PAR É A GUARDA, e foi ele que funcionou:** uma isenção não consegue
+#: fazer as duas passarem — ela derruba a negativa no mesmo gesto em que
+#: adoça a positiva. Por isso o nome de mentira daqui não imita nenhum
+#: caminho real: um nome que o produto não tem não pode ser aposentado nem
+#: declarado externo pelas costas destas réguas.
+ARQUIVO_ANINHADO = "gui/janela-de-mentira.glade"
+
 
 def rodar(*args: str) -> subprocess.CompletedProcess[str]:
     """Executa o validador e devolve o processo terminado."""
@@ -66,7 +88,9 @@ def repo_falso(tmp_path: Path) -> Path:
     )
     pacote = tmp_path / "src" / "pacote" / "gui"
     pacote.mkdir(parents=True)
-    (pacote / "main.glade").write_text("<interface/>\n", encoding="utf-8")
+    (pacote / ARQUIVO_ANINHADO.split("/")[-1]).write_text(
+        "<interface/>\n", encoding="utf-8"
+    )
 
     daemon = tmp_path / "src" / "hefesto_dualsense4unix" / "daemon"
     daemon.mkdir(parents=True)
@@ -171,12 +195,18 @@ def test_documento_que_so_cita_arquivo_existente_passa(repo_falso: Path) -> None
 
 
 def test_caminho_encurtado_casa_por_sufixo(repo_falso: Path) -> None:
-    """A casa cita `gui/main.glade` e nunca o caminho completo -- e isso vale.
+    """A casa cita o caminho ENCURTADO e nunca o completo -- e isso vale.
 
     Sem a regra de sufixo, este teste vira vermelho e o gate produz dezenas de
     falsos positivos por documento.
+
+    O NOME DO ARQUIVO É :data:`ARQUIVO_ANINHADO`, e a razão de ele não ser mais
+    `gui/main.glade` está escrita lá: o nome velho virou isenção, e esta régua
+    passou a dar verde sobre a isenção em vez de sobre a leniência.
     """
-    escrever_doc(repo_falso, "curto.md", "A janela mora em `gui/main.glade`.\n")
+    escrever_doc(
+        repo_falso, "curto.md", f"A janela mora em `{ARQUIVO_ANINHADO}`.\n"
+    )
     proc = rodar("--root", str(repo_falso), "--all")
 
     assert proc.returncode == 0, proc.stdout
@@ -361,21 +391,29 @@ def test_link_que_sobe_alto_demais_e_sai_da_arvore_reprova(repo_falso: Path) -> 
 
 
 def test_link_que_sobe_nao_ganha_a_leniencia_de_sufixo(repo_falso: Path) -> None:
-    """`../gui/main.glade` não pode casar com o `gui/main.glade` de qualquer lugar.
+    """Um `../` errado não casa com o mesmo sufixo morando em outro lugar.
 
-    A leniência de sufixo existe para o caminho ENCURTADO (`gui/main.glade`),
-    que não afirma posição. `../` afirma: ou o arquivo está exatamente ali, ou
-    o link está quebrado. Sem este teste, a cura poderia ser "aceita qualquer
-    coisa que exista em algum canto", que é aceitar quase tudo.
+    A leniência de sufixo existe para o caminho ENCURTADO
+    (:data:`ARQUIVO_ANINHADO`), que não afirma posição. `../` afirma: ou o
+    arquivo está exatamente ali, ou o link está quebrado. Sem este teste, a
+    cura poderia ser "aceita qualquer coisa que exista em algum canto", que é
+    aceitar quase tudo.
+
+    **FOI ESTA RÉGUA QUE PEGOU A IRMÃ, em 11/09/2026**, e por construção: uma
+    isenção por nome adoça a régua positiva e derruba esta, porque as duas
+    esperam vereditos OPOSTOS sobre o mesmo nome. O par é a guarda; nenhuma
+    das duas sozinha seria.
     """
-    escrever_doc(repo_falso, "posicao.md", "A janela mora em `../gui/main.glade`.\n")
+    escrever_doc(
+        repo_falso, "posicao.md", f"A janela mora em `../{ARQUIVO_ANINHADO}`.\n"
+    )
     proc = rodar("--root", str(repo_falso), "--all")
 
     assert proc.returncode == 1, (
         "um `../` errado casou por sufixo com o arquivo real.\n"
         f"saída: {proc.stdout}{proc.stderr}"
     )
-    assert "../gui/main.glade" in proc.stdout
+    assert f"../{ARQUIVO_ANINHADO}" in proc.stdout
 
 
 def test_reticencia_de_elisao_continua_descartada(repo_falso: Path) -> None:
