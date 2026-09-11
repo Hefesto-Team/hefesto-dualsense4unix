@@ -991,16 +991,30 @@ class DesfechoDaRota:
     sink: str = ""
 
 
-#: Não há sink de saída atribuível a este controle. **É o caso do RÁDIO**, e não
-#: é falha: medido em 15/08/2026, a placa de som segue o transporte — um
-#: DualSense no rádio não publica placa nenhuma, e o `mapa-controles.csv`
-#: registra o mesmo fato do outro lado (`audio.alto_falante`, `radio_aciona=não`).
-#: **Esta é a única assimetria de transporte REAL do bloco de som**, e por isso
-#: é a única frase de transporte que esta leva manteve.
+#: Não há saída de som atribuível a este controle AGORA.
+#:
+#: **A FRASE MUDOU EM 10/09/2026, e o que caducou foi a CONCLUSÃO, não o fato.**
+#: Ela dizia *"este controle não publica placa de som — pelo rádio o DualSense
+#: não expõe nenhuma, e é por isso que 'Todo o som do PC' não tem para onde
+#: mandar"*, e ELA a fotografou na tela **com o som do PC saindo pelo controle,
+#: por rádio**. As duas metades tiveram destinos diferentes:
+#:
+#: * a primeira continua exata — o DualSense **não** expõe placa ALSA própria
+#:   pelo rádio, e a célula `audio.alto_falante@dualsense` do mapa registra o
+#:   mesmo;
+#: * a segunda caiu no mesmo dia: o produto passou a publicar um nó de som POR
+#:   CONTROLE (`hefesto_som_<hex6>`) e a ponte `0x35` o carrega ao aparelho,
+#:   então **há, sim, para onde mandar** — e `sink_do_controle` o reconhece.
+#:
+#: O que sobra é um estado, e a frase agora descreve SÓ o estado: é o que se lê
+#: nos primeiros segundos depois de o controle chegar (o nó ainda nascendo), com
+#: o Hefesto parado, ou numa máquina sem `pactl`. Ensinar uma regra de
+#: transporte aqui foi o que fez a tela contradizer o que ela estava ouvindo.
 MOTIVO_ROTA_SEM_SINK: Final[str] = (
-    "este controle não publica placa de som para o sistema — pelo rádio o "
-    "DualSense não expõe nenhuma, e é por isso que 'Todo o som do PC' não tem "
-    "para onde mandar. Pelo cabo ele tem."
+    "não achei a saída de som deste controle agora, então não há para onde "
+    "mandar o som do computador. Se ele acabou de chegar, espere alguns "
+    "segundos e clique de novo; se o Hefesto estiver parado, ligue-o na aba "
+    "Sistema."
 )
 
 #: O `pactl` não confirmou a troca. Reler é a régua desta casa: o `pactl`
