@@ -105,6 +105,46 @@ class Ponte:
         return [p for n, p in self.chamadas if n == nome]
 
 
+@pytest.fixture(autouse=True)
+def _o_cache_da_camada_1_comeca_vazio() -> Any:
+    """Esta régua mede o MÓDULO, então ela garante o estado do módulo.
+
+    ACHADO NA COSTURA DE 11/09/2026, e o envenenador é ANTERIOR a esta leva:
+    `test_a02_o_botao_do_mic_tem_tres_estados.py` (commit `79bde59e`, de 10/09)
+    chama `a02.pacote(ctx)` de verdade, e o `pacote` preenche o cache de módulo
+    `_CAMADA_1` com a leitura daquele contexto. Quem roda DEPOIS dele no mesmo
+    processo lê o resto do vizinho: `aceso_da_rota` acha `_CAMADA_1[P1]` e
+    devolve o `botao_aceso` de lá (`""`) em vez de ler o byte do `entry`.
+
+    MEDIDO, e a bissecção dá o par exato:
+        pytest test_a02_o_botao_do_mic_tem_tres_estados.py <este arquivo>
+            → 1 failed — `assert '' == 'jogo'`
+        pytest <este arquivo>
+            → 19 passed
+
+    A casa já nomeou esta família duas vezes — *um default de função média o
+    mundo do import* e *o dublê mais POBRE que o produto*. A saída é a mesma das
+    duas: **estado de módulo tem um dono, e quem mede o módulo o zera.** Zerar
+    aqui não afrouxa nada: o que esta classe quer medir é `aceso_da_fileira`
+    sobre o `entry` que ELA monta, e o cache vazio é exatamente o estado dos
+    primeiros milissegundos da aba, que a docstring de `aceso_da_rota` descreve.
+    """
+    from pacotes import a02_controles as a02
+
+    antes = dict(a02._CAMADA_1)
+    a02._CAMADA_1.clear()
+    quando, em_voo = a02._CAMADA_1_QUANDO[0], a02._CAMADA_1_EM_VOO[0]
+    a02._CAMADA_1_QUANDO[0] = 0.0
+    a02._CAMADA_1_EM_VOO[0] = False
+    yield
+    # E DEVOLVE O QUE ACHOU: um teste que limpa a casa do vizinho e não a
+    # devolve troca um defeito de ordem por outro, na direção contrária.
+    a02._CAMADA_1.clear()
+    a02._CAMADA_1.update(antes)
+    a02._CAMADA_1_QUANDO[0] = quando
+    a02._CAMADA_1_EM_VOO[0] = em_voo
+
+
 @pytest.fixture
 def casa(tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch) -> pathlib.Path:
     """Um lar de mentira com um perfil ativo. Nada dela é tocado."""
