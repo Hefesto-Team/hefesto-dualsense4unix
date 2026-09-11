@@ -72,7 +72,15 @@ PAGINA = "10-perfis.html"  # (noqa-acento) nome de arquivo
 #: modelo num `title`, e ali está CERTO: ela é `monta.fita()`, e o piloto troca
 #: o `outerHTML` dela inteiro a cada tique com a mesa viva. Medir a página toda
 #: acusaria a fita curada e deixaria de separar o que se pinta do que congela.
-ABRE = '<table class="tab miuda">'
+#: ERA A TAG LITERAL ATÉ 11/09/2026, e a PERFIS-LIMPA-01 a quebrou sem tocar
+#: numa linha desta régua: a tabela ganhou os atributos da coluna que ela
+#: arrasta (`data-hef`, `data-hef-alvo`, `data-hef-atributo`, `data-tabela`,
+#: `data-larguras`), a string parou de casar, e as CINCO réguas deste arquivo
+#: passaram a reprovar dizendo *"a tabela por controle sumiu"* com a tabela no
+#: lugar de sempre. É a armadilha desta casa pela enésima vez — *a régua
+#: DIGITAVA o que devia LER* —, e a forma de não repetir é ancorar na CLASSE,
+#: que é o que identifica a tabela, e deixar o resto dos atributos livre.
+ABRE = re.compile(r'<table[^>]*class="tab miuda"[^>]*>')
 
 
 def _bancada() -> str:
@@ -85,8 +93,9 @@ def _publicada() -> str:
 
 def _tabela(html: str) -> str:
     """O trecho entre a abertura da tabela por controle e o `</table>` dela."""
-    assert ABRE in html, f"a tabela por controle sumiu de {PAGINA}"
-    return html.split(ABRE, 1)[1].split("</table>", 1)[0]
+    achou = ABRE.search(html)
+    assert achou, f"a tabela por controle sumiu de {PAGINA}"
+    return html[achou.end():].split("</table>", 1)[0]
 
 
 def _linhas(html: str) -> list[str]:

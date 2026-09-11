@@ -230,7 +230,13 @@ CSS = CSS_GLIFO + """
   /* `min-height:0` em cada elo: por padrão um filho de flex não encolhe abaixo do
      próprio conteúdo. Sem ele, a lista sem teto empurrou a coluna para baixo e a
      fileira `Ativar · Novo · Remover` saiu pela borda do quadro — sumiu da tela. */
-  .perfis > div{display:flex;flex-direction:column;padding:10px 14px;min-height:0}
+  /* E `min-width:0` PELA MESMA RAZÃO, no outro eixo — 11/09/2026. O piso
+     da tabela por controle (`.tab.miuda{min-width:524px}`) é conteúdo, e
+     um item de grade com `min-width:auto` NÃO encolhe abaixo do próprio
+     conteúdo: a coluna da direita empurrava 4px para fora do quadro e
+     levava junto o rótulo «Definições» e o botão «Ativar». Com o zero a
+     coluna cede e quem rola é a `.guarda`, que é quem tem a barra. */
+  .perfis > div{display:flex;flex-direction:column;padding:10px 14px;min-height:0;min-width:0}
   .perfis > div:first-child{padding-right:7px}
   .perfis > div:last-child{padding-left:7px}
 
@@ -838,7 +844,19 @@ CSS = CSS_GLIFO + """
      continua sendo a rede para a janela que ela arrastar, e no tamanho do
      desenho não custa um pixel. */
   .guarda{flex:1;min-height:0;display:flex;flex-direction:column;
-          overflow-y:auto;overflow-x:hidden;
+          /* ROLA DE LADO EM VEZ DE ENGOLIR — 11/09/2026. Era
+             `overflow-x:hidden`, e com o `table-layout:fixed` que a
+             PERFIS-LIMPA-01 deu ao `.tab` isso virou perda de dado: as
+             duas colunas de largura CRAVADA (`.gd-pecas` 255px e
+             `.gd-id` 118px) somam 373 dos 374px que a tabela tem numa
+             janela de 940px, e sobrava **1px** para o nome do controle.
+             Medido, não estimado. `title` aqui não serve — o `<td>` é
+             estático e quem pinta o nome é o `guarda.nome` de dentro,
+             então a dica ficaria com o nome do MOCKUP sobre o controle
+             da mesa dela. Rolar é a afordância que
+             `test_a_janela_estreita_nao_engole_o_desenho` nomeia, e na
+             vista dela (1918x840) nada muda: a tabela cabe e não rola. */
+          overflow-y:auto;overflow-x:auto;
           margin-top:7px;padding-top:7px;border-top:1px solid var(--linha)}
   .guarda::-webkit-scrollbar{width:10px}
   .guarda::-webkit-scrollbar-track{background:transparent}
@@ -909,7 +927,25 @@ CSS = CSS_GLIFO + """
      O 1,50px QUE SOBRA é o glifo, não o texto: o `.gls` é SVG com
      `vertical-align:-3px` (o deslocamento ótico que a coluna do meio pede), e o
      nome fecha EXATO com o ID da peça — 16,13 contra 16,13. */
+  /* O NOME DO CONTROLE QUEBRA EM VEZ DE SUMIR — 11/09/2026. A PERFIS-LIMPA-01
+     deu `table-layout:fixed` ao `.tab` para a divisa arrastável valer, e com ele
+     a `.tab tbody td{white-space:nowrap}` passou a CORTAR esta célula: a 940px
+     de janela «P1 • Cosmic Red • USB» sobrava 119px para fora e virava
+     reticências, sem `title` que devolvesse o nome. Um nome de controle cortado
+     é a informação que esta tabela existe para dar.
+     `title` AQUI NÃO SERVE, e a razão é de dono: o `<td>` é estático e quem
+     pinta é o `guarda.nome` de dentro — um `title` cravado no desenho ficaria
+     com o nome do MOCKUP enquanto o texto traz o da mesa dela, que é o defeito
+     que `test_aba10_a_dica_da_linha_nao_e_do_mockup` caça. Quebrar a linha não
+     tem dono nenhum: ela cabe inteira, em duas linhas, quando a janela aperta.
+     Na vista dela (1918x840) nada muda — o nome cabe numa linha só. */
   .gd-nome{vertical-align:middle;white-space:nowrap;font-size:11px}
+  /* O PISO DA TABELA POR CONTROLE. 151px para o nome mais longo do
+     desenho («P2 • Starlight Blue • BT», medido a 11px com os 16px de
+     padding) mais os 255 e os 118 cravados das outras duas. Sem ele o
+     `overflow-x:auto` acima não tem o que rolar: a tabela encolhe até
+     caber e a coluna do nome é a única que cede. */
+  .tab.miuda{min-width:524px}
   /* O DESENHO DE 32px SAIU, e a barrinha de plástico ficou com o trabalho.
      Ele existia para dizer QUAL controle é a linha, e não dizia: medido em
      28/08 no 1x da tela dela, com os quatro desenhos comparados pixel a pixel,
@@ -1561,7 +1597,14 @@ def linha_do_perfil(nome, prioridade, quando, ativo, dica="", escolhido=False):
             f'aria-selected="{"true" if escolhido else "false"}" title="{dica}">'
             f'<td data-hef="perfis.linha.nome" data-hef-gesto="selecionar">{nome}</td>'
             f'<td class="pri" data-hef="perfis.linha.prioridade">{prioridade}</td>'
-            f'<td class="quando" data-hef="perfis.linha.quando">{quando}</td></tr>')
+            # O `title` REPETE O TEXTO, e é a afordância que a régua da
+            # janela estreita aceita — 11/09/2026. A PERFIS-LIMPA-01 deu
+            # `white-space:nowrap` a esta coluna para a divisa arrastável
+            # funcionar, e com ele «Jogo da Steam · 1245620» passou a ser
+            # CORTADO por reticências a 940px de janela: 21 peças de texto
+            # sumindo sem rolagem e sem dica. Reticências com `title` é a
+            # saída que `test_a_janela_estreita_nao_engole_o_desenho` nomeia.
+            f'<td class="quando" data-hef="perfis.linha.quando" title="{quando}">{quando}</td></tr>')
 
 
 # ---------------------------------------------------------------------------
@@ -1940,7 +1983,7 @@ MIOLO = f'''
                        data-larguras="">
                   <colgroup><col data-coluna="controle"><col data-coluna="status"><col data-coluna="id"></colgroup>
                   <thead><tr>
-                    <th title="O perfil não guarda uma configuração: guarda uma por controle. Esta tabela mostra, para cada controle, quais ajustes ele tem só para si e quais usa do perfil.">Controle{puxador("controle", "10-perfis.guarda")}</th>
+                    <th title="Controle — o perfil não guarda uma configuração: guarda uma por controle. Esta tabela mostra, para cada controle, quais ajustes ele tem só para si e quais usa do perfil.">Controle{puxador("controle", "10-perfis.guarda")}</th>
                     <th class="gd-pecas" title="Aceso: este perfil guarda um ajuste só deste controle. Apagado: ele usa o do perfil, igual aos outros. São os {QUANTAS_SECOES} ajustes que o perfil sabe guardar por controle — {_lista_das_secoes()}.">Status{puxador("status", "10-perfis.guarda")}</th>
                     <th class="gd-id" title="O endereço de rádio do controle. É por ele que o perfil reconhece a peça — e ele não muda quando você troca o cabo pelo rádio, então o que você deixou hoje volta amanhã.">ID da peça</th>
                   </tr></thead>

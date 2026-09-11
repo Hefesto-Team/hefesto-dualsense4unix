@@ -1200,7 +1200,8 @@ def _linha_da_lista(nome: str, prioridade: str, quando: str,
             f'{_texto(nome)}</td>'
             f'<td class="pri" data-hef="perfis.linha.prioridade">'
             f'{_texto(prioridade)}</td>'
-            f'<td class="quando" data-hef="perfis.linha.quando">'
+            f'<td class="quando" data-hef="perfis.linha.quando" '
+            f'title="{_atr(quando)}">'
             f'{_texto(quando)}</td></tr>')
 
 
