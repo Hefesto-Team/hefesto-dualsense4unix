@@ -140,7 +140,7 @@ NAO_DEU = "—"
 
 #: Os três selos que o desenho tem para uma linha de estado, e mais nada:
 #: ``.est.ok`` (verde), ``.est.warn`` (laranja) e ``.est.info`` (ciano)
-#: (``aba09.py:247-249``). **NÃO HÁ classe vermelha para linha de estado** — o
+#: (``aba09.py:539-541``). **NÃO HÁ classe vermelha para linha de estado** — o
 #: desenho não a tem, e inventá-la mudaria o que ela aprovou. Por isso o
 #: "Desligado" sai em ``warn``, e isso está declarado em vez de escondido.
 OK, AVISO, INFO, NEUTRO = "ok", "warn", "info", ""

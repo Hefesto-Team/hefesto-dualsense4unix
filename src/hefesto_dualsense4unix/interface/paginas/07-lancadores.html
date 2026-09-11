@@ -119,7 +119,10 @@
   body{
     background:#11121a; color:var(--fg);
     font-family:'Space Grotesk',system-ui,sans-serif;
-    padding:16px; display:flex; flex-direction:column; align-items:center; gap:18px;
+    /* O RECUO TEM DONO — `--recuo-do-corpo`, no `:root` de baixo. Ele entra
+       DUAS vezes na conta da altura da `.janela` (em cima e embaixo), e era
+       justamente esse 16 que o `gui/ponte_da_tela.py` transcrevia à mão. */
+    padding:var(--recuo-do-corpo); display:flex; flex-direction:column; align-items:center; gap:18px;
   }
   .mono{font-family:'JetBrains Mono',ui-monospace,monospace}
 
@@ -163,7 +166,9 @@
      O `min()` faz o teto e o encolhimento na mesma linha; o `max-width:100%`
      abaixo continua por redundância barata. Abaixo de 1212px de documento nada
      mudou: quem segura o piso é o `set_size_request` da janela GTK
-     (`gui/ponte_da_tela.py`), e ele ficou MAIS carregado, não menos. */
+     (`gui/ponte_da_tela.py`), e ele ficou MAIS carregado, não menos. O COSMIC
+     que ladrilha não o lê (medido em 13/09/2026: janela de 816 px, a vista
+     rola e o rodapé sai por baixo). */
   /* A JANELA TEM UMA ALTURA SÓ, nas dez abas. Ela, 27/08: "sair clicando entre
      as abas causa muito desconforto, pq muda tudo". Media de 530 (Iluminação) a
      1032 (Conexões) — quase o dobro: o rodapé pulava meia tela a cada clique.
@@ -190,30 +195,56 @@
     box-shadow:0 18px 50px rgba(0,0,0,.45);
   }
 
-  /* ---------- cabeçalho ---------- */
-  .cabecalho{padding:14px 18px 0; display:flex; align-items:flex-start; gap:14px}
+  /* ---------- a marca ----------
+     A FAIXA DE CABEÇALHO SAIU — 10/09/2026, decisão dela («1 + rodapé»,
+     ALTURA-DA-VISTA-01). Eram 60 px em cada uma das dez abas: o logotipo de
+     46, o `h1` «Hefesto — DualSense4Unix» e a linha «Gerenciador DualSense
+     para Linux».
+
+     A RAZÃO É A MESMA QUE TIROU O SUBTÍTULO DA MOLDURA EM 08/09, e ela serve
+     inteira aqui: *"a barra já diz «Hefesto», e tudo o que muda — a aba, o
+     alvo, o perfil ativo — já está DENTRO da janela"*
+     (`interface/hefesto_vivo.py`). Das 213 px de cromo da `.janela`, essa
+     faixa era a única parcela que REPETIA o que a moldura do sistema já diz.
+
+     O QUE ELA CARREGAVA E NÃO ERA REPETIÇÃO desceu uma faixa: o logotipo
+     DELA, que continua na tela como marca de 24 px à esquerda da linha do
+     alvo, e a contagem de controles, que é dado vivo do daemon e agora mora
+     ao lado do perfil ativo. As duas mudanças estão em `.fita-linha`, logo
+     abaixo.
+
+     O LUGAR DA CONTAGEM («N controles: x USB · y BT») ficou onde a entrega
+     propôs, com a foto (`docs/process/agentes/2026-09-10/`): decidido por
+     quem coordena na costura de 13/09/2026, por delegação dela — a palavra de
+     13/09 está no índice da terceira lista. É reversível: o que muda é este
+     bloco e a linha do alvo, no corpo da página. */
   .logo{
-    width:46px;height:46px;border-radius:50%;flex:0 0 46px;
+    width:24px;height:24px;border-radius:50%;flex:0 0 24px;
     background:radial-gradient(circle at 35% 30%,#3b2d5c,#1a1b24 70%);
     border:1px solid var(--linha);
-    display:flex;align-items:center;justify-content:center;font-size:20px;
+    display:flex;align-items:center;justify-content:center;font-size:12px;
   }
-  h1{font-size:19px;font-weight:700;letter-spacing:.2px}
-  h1 .p{color:var(--pink)} h1 .t{color:var(--comment)}
-  h1 .n{color:var(--green)} h1 .b{color:var(--fg)}
-  .sub{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--comment);margin-top:1px}
+
+  /* ---------- a marca + a fita do alvo + a contagem + o perfil ativo ----------
+     O RECUO SUBIU DA `.fita` PARA A LINHA — 10/09/2026. Enquanto a linha tinha
+     um filho só que pagasse o recuo, tanto fazia; agora ela tem quatro (marca,
+     fita, contagem, perfil), e um recuo que mora no segundo deles deixa o
+     primeiro colado na borda. O 10/12 vertical é o MESMO de antes, então a
+     faixa continua medindo o que media. */
+  .fita-linha{display:flex;align-items:center;gap:10px;padding:10px 18px 12px}
   .conectado{margin-left:auto;text-align:right;font-size:12.5px;color:var(--green);white-space:nowrap}
   .conectado .bolinha{color:var(--green)}
-
-  /* ---------- a fita do alvo + o perfil ativo ---------- */
-  .fita-linha{display:flex;align-items:center;padding-right:18px}
   .fita{
-    display:flex;align-items:center;gap:8px;padding:10px 18px 12px;
+    display:flex;align-items:center;gap:8px;
     font-size:12px;color:var(--texto-mudo);
   }
-  /* o Perfil Ativo — igual nas dez abas, sempre visível */
+  /* o Perfil Ativo — igual nas dez abas, sempre visível.
+     O EMPURRÃO PARA A DIREITA MUDOU DE DONO em 10/09/2026: quem carrega o
+     `margin-left:auto` agora é a `.conectado`, que passou a ser o PRIMEIRO do
+     grupo da direita. Dois `auto` na mesma linha flex não empurram mais: eles
+     PARTEM a sobra ao meio, e a contagem pousaria no centro da faixa. */
   .perfil-ativo{
-    margin-left:auto;display:flex;align-items:center;gap:7px;
+    display:flex;align-items:center;gap:7px;
     padding:5px 11px;border-radius:7px;
     border:1px solid var(--linha);background:var(--panel);
   }
@@ -580,9 +611,20 @@
   .col-atencao{border-left:1px solid var(--linha);padding-left:16px}
 
 
-  /* ---------- rodapé ---------- */
+  /* ---------- rodapé ----------
+     O RECUO VERTICAL CAIU DE 12 PARA 6 — 10/09/2026, a metade «+ rodapé» da
+     decisão dela. A faixa media 59 px (12 + 34 do botão + 12 + 1 de borda) e
+     passa a medir 47; os 12 px vão para o quadro, nas DEZ abas de uma vez,
+     porque esta barra existe nas dez.
+
+     O QUE NÃO ENCOLHEU, e é a ressalva dela: *"nenhum dos quatro botões pode
+     ficar menor do que a mão dela alcança"*. O botão continua com
+     `height:var(--h-acao)` = 34 px, que é a escala de ação desta casa
+     (`:root`, lá embaixo) — o que encolheu é o AR em volta dele. Encolher o
+     botão seria trocar a barra de rolagem dela por um alvo de clique menor,
+     que é pagar a queixa com outra queixa. */
   .rodape{
-    display:flex;align-items:center;gap:10px;padding:12px 18px;
+    display:flex;align-items:center;gap:10px;padding:6px 18px;
     border-top:1px solid var(--linha);background:var(--app-bg);
   }
   /* O EMPURRÃO TROCOU DE DONO. Era o `.recibo{flex:1}` que jogava os quatro
@@ -628,7 +670,11 @@
      folha das cores por `data-colorway`, gerada de `docs/data/cores-do-dualsense.csv`
      — a mesma fonte que o specs.html usa. */
   .logo{background:none;border:none;overflow:hidden}
-  .logo svg{width:44px;height:44px;display:block}
+  /* 22 E NÃO 44 desde 10/09/2026: o logotipo desceu da faixa de cabeçalho (que
+     saiu) para a linha do alvo, e ali a caixa mede 24 px. A tag do `.svg` dela
+     continua saindo 40x40 do `monta.py` — quem manda no tamanho final é esta
+     linha, e sempre foi. */
+  .logo svg{width:22px;height:22px;display:block}
   .ds-svg{width:100%;height:auto;display:block}
   .cartao .ds-svg{width:72px;flex:0 0 72px}
 
@@ -722,8 +768,47 @@
        Com 777 a folga passa a 21px.
        O QUE ELE CUSTA, e está medido nas dez: a Jogar vai de 89 para 109px de
        vão e a Conexões de 216 para 236 — as duas já eram as mais vazias, e o
-       vão delas é o ponto 6.2 da lista dela. Nenhuma outra aba passa a rolar. */
-    --alt-janela:777px; /* a MESMA altura nas dez abas — veja `.janela` */
+       vão delas é o ponto 6.2 da lista dela. Nenhuma outra aba passa a rolar.
+
+       O 777 DEIXOU DE SER A ALTURA E VIROU O PISO — 10/09/2026, decisão dela
+       («1 + rodapé», ALTURA-DA-VISTA-01). Ela, com a janela maximizada na TV:
+       *"ainda joga pra baixo e abre a barra de navegação. tem espaço vertical  <!-- noqa-acento: citação literal dela -->
+       pra aproveitar aqui"*.
+
+       O QUE ESTAVA MEDIDO, e é a causa inteira: a vista da `WebView` na TV dela
+       mede **840** px e a página pedia **809** (16 + 777 + 16). Os 31 px que
+       sobravam não iam para aba nenhuma — morriam entre a moldura da `.janela`
+       e a borda da janela do sistema. Cresça a janela quanto quiser: com a
+       altura em pixel o `.miolo` ficava nos mesmos 564, e a barra de rolagem
+       que ela viu era a mesma que veria numa janela de 809.
+
+       DE ONDE SAI CADA UM DOS TRÊS NÚMEROS:
+
+         piso 777   é o desenho de ontem: nenhuma aba fica pior do que já estava;
+         100dvh     a vista de verdade. Numa `WebView` embutida não há barra de
+                    navegador que apareça e suma, então `dvh`, `svh`, `lvh` e
+                    `vh` valem o mesmo — medido neste WebKit, os quatro dão 840
+                    na vista dela. `dvh` fica porque DIZ a intenção;
+         menos 32   o recuo do `body`, que tem dono uma linha acima
+                    (`--recuo-do-corpo`) e não se digita duas vezes;
+         teto 855   a maior vista que este desenho promete PREENCHER. Acima
+                    dela o que sobra viraria vão, e vão vazio é queixa dela
+                    (*"iluminação, jogar e outras abas tão muito ruins com esse
+                    super espaço vazio na parte inferior"*). Na TV dela o teto
+                    nunca é alcançado: 840 − 32 = 808. Numa tela 4K — e a TV
+                    dela tem o modo 3840x2160 — sem teto a Navegação ficaria com
+                    mais de mil pixels de vão.
+
+       QUEM MANDA EM QUEM, depois desta linha: o CSS manda em quanto a `.janela`
+       usa da tela; o Python manda no PISO (`gui/ponte_da_tela.PISO_DA_VISTA`,
+       que é o `set_size_request` da janela). Nenhum dos dois copia o número do
+       outro — era o que acontecia até hoje, e a cópia já tinha apodrecido. */
+    --recuo-do-corpo:16px;
+    --piso-da-vista:777px;
+    --teto-da-vista:855px;
+    --alt-janela:clamp(var(--piso-da-vista),
+                       calc(100dvh - var(--recuo-do-corpo) * 2),
+                       var(--teto-da-vista));
   }
   .seg button,.modos button,.players button,.degrau,select.pronto,.escolha{
     height:var(--h-escolha);padding-top:0;padding-bottom:0;
@@ -1233,23 +1318,34 @@
 
 <div class="janela">
 
-  <!-- ================= CABEÇALHO ================= -->
-  <div class="cabecalho">
-    <!-- A LOGO NÃO MORA MAIS AQUI — 30/08/2026, e a razão está medida.
-         Eram 55 linhas de SVG coladas neste arquivo, e por isso eram a versão
-         VELHA: ela redesenhou o logotipo em `layout/assets/hefesto-logo.svg`
-         (6.039 bytes, com `transform-box`/`transform-origin` no anel, a chama
-         nova e a bigorna com sombra) e as dez páginas continuaram mostrando o
-         desenho de antes. Pior: havia TRÊS desenhos vivos ao mesmo tempo — o
-         dela, os 3.466 bytes deste arquivo em oito páginas, e outros 2.566 na
-         02 e na 04, que estavam paradas há mais tempo. Ninguém tinha como saber
-         que existia uma segunda cópia, muito menos uma terceira.
-         É a mesma doença da fita, das cores do plástico e do padrão das
-         lâmpadas: desenho digitado num arquivo que não é o dono dele.
-         Agora o `monta.py` LÊ o `.svg` — ela redesenha, e as dez abas mudam
-         juntas na próxima volta do `regerar.py`. O anti-defeito que morava neste
-         comentário viaja com o arquivo dela: os `<title>` do SVG são TOOLTIP, e
-         os dela já nascem capitalizados ("Bolinha rosa", "Chama amarela"). -->
+  <!-- ================= A LINHA DO ALVO =================
+       A FAIXA DE CABEÇALHO SAIU EM 10/09/2026, decisão dela («1 + rodapé»).
+       Eram 60 px repetindo o que a moldura do sistema já diz; a razão inteira,
+       com o número, está no bloco `---------- a marca ----------` do `<style>`.
+       O que ela carregava e NÃO era repetição desceu para esta linha: o
+       logotipo dela, agora como marca de 24 px, e a contagem de controles, que
+       é dado vivo do daemon.
+
+       A MARCA CONTINUA VINDO DO ARQUIVO DELA — 30/08/2026, e a razão está
+       medida. Eram 55 linhas de SVG coladas neste arquivo, e por isso eram a
+       versão VELHA: ela redesenhou o logotipo em `assets/hefesto-logo.svg`
+       (6.039 bytes, com `transform-box`/`transform-origin` no anel, a chama
+       nova e a bigorna com sombra) e as dez páginas continuaram mostrando o
+       desenho de antes. Pior: havia TRÊS desenhos vivos ao mesmo tempo — o
+       dela, os 3.466 bytes deste arquivo em oito páginas, e outros 2.566 na
+       02 e na 04, que estavam paradas há mais tempo. Ninguém tinha como saber
+       que existia uma segunda cópia, muito menos uma terceira.
+       É a mesma doença da fita, das cores do plástico e do padrão das
+       lâmpadas: desenho digitado num arquivo que não é o dono dele.
+       O `monta.py` LÊ o `.svg` — ela redesenha, e as dez abas mudam juntas na
+       próxima volta do `regerar.py`. O anti-defeito que morava neste
+       comentário viaja com o arquivo dela: os `<title>` do SVG são TOOLTIP, e
+       os dela já nascem capitalizados ("Bolinha rosa", "Chama amarela").
+
+       A fita fica ESMAECIDA aqui: nada nesta aba ajusta por controle.
+       O PERFIL ATIVO fica à direita, e é IGUAL nas dez abas: em cada tela ele
+       diz em qual perfil aquela mudança vai cair. -->
+  <div class="fita-linha">
     <div class="logo"><svg width="40" height="40" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Hefesto - DualSense4Unix" xmlns:bx="https://boxy-svg.com">
   <defs>
     <linearGradient id="ring" x1="0" y1="0" x2="1" y2="1">
@@ -1347,21 +1443,11 @@
     <rect x="70" y="108" width="60" height="24" rx="6" style="fill: rgb(144, 144, 144); paint-order: stroke markers; filter: url(&quot;#outline-filter-0&quot;);"/>
   </g>
 </svg></div>
-    <div>
-      <h1><span class="p">Hefesto</span> <span class="t">—</span> <span class="b">DualSense</span><span class="n">4</span><span class="b">Unix</span></h1>
-      <div class="sub">Gerenciador DualSense para Linux</div>
-    </div>
-    <div class="conectado"><span class="bolinha">●</span> <span data-campo="conta">2 controles:</span> <b data-campo="conta-b">1 USB · 1 BT</b></div>
-  </div>
-
-  <!-- A fita fica ESMAECIDA aqui: nada nesta aba ajusta por controle.
-       O PERFIL ATIVO fica à direita, e é IGUAL nas dez abas: em cada tela ele diz
-       em qual perfil aquela mudança vai cair. -->
-  <div class="fita-linha">
     <div class="fita inerte" title="Esta aba não usa o controle escolhido aqui — os cards são leitura.">
       <span>Selecionar:</span>
       <label class="chip on">Todos</label>
     </div>
+    <div class="conectado"><span class="bolinha">●</span> <span data-campo="conta">2 controles:</span> <b data-campo="conta-b">1 USB · 1 BT</b></div>
     <div class="perfil-ativo">
       <span class="pa-rot">Perfil ativo</span>
       <span class="pa-nome" data-campo="perfil">Mortal Kombat</span>

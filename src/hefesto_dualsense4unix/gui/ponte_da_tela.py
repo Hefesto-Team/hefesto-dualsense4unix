@@ -150,17 +150,11 @@ SEGUNDOS_PARA_ESQUECER_O_CRASH = 60.0
 #: ``window.webkit.messageHandlers.<canal>.postMessage``.
 CANAL_PADRAO = "hefesto"
 
-#: O QUE O DESENHO PEDE NO MÍNIMO, em pixels, e cada parcela tem dono no CSS:
+#: O QUE O DESENHO PEDE NO MÍNIMO, em pixels.
 #:
-#:     .janela{width:min(100%,1600px); height:var(--alt-janela)}  `interface/topo.html:187`
-#:     --alt-janela:777px                                         `interface/topo.html:693`
-#:     body{padding:16px}                                         `interface/topo.html:122`
-#:
-#: Logo o documento ocupa ``16+1180+16 = 1212`` por ``16+777+16 = 809``.
-#:
-#: **A LARGURA DEIXOU DE SER FIXA EM 08/09/2026**, e os números aqui NÃO mudam
-#: por isso. Ela era `width:1180px`; agora é `min(100%,1600px)` — decisão dela
-#: ao ver a sobra da casa em volta do desenho na janela maximizada (a razão
+#: **A LARGURA DEIXOU DE SER FIXA EM 08/09/2026**, e este número NÃO mudou por
+#: isso. Ela era `width:1180px`; agora é `min(100%,1600px)` — decisão dela ao
+#: ver a sobra da casa em volta do desenho na janela maximizada (a razão
 #: inteira, com as quatro larguras medidas, está no `topo.html`).
 #:
 #: O 1180 continua sendo o número certo AQUI porque o que ele descreve é o PISO,
@@ -171,7 +165,53 @@ CANAL_PADRAO = "hefesto"
 #: **Esta linha ficou MAIS carregada, não menos: tirá-la deixa a página encolher
 #: sem fundo, que é o defeito de 04/09 de volta.**
 LARGURA_DO_DESENHO = 1212
-ALTURA_DO_DESENHO = 809
+
+#: O PISO DA VISTA — a menor altura de vista que este desenho promete servir.
+#:
+#: **A DIREÇÃO INVERTEU EM 10/09/2026** (ALTURA-DA-VISTA-01, decisão dela
+#: «1 + rodapé»). Até aqui o CSS mandava e este arquivo COPIAVA: estas linhas
+#: transcreviam três regras do `topo.html` para justificar o 809, e a cópia já
+#: tinha apodrecido — o endereço que ela dava para o `--alt-janela` apontava
+#: dezenove linhas antes de onde ele morava. É a forma exata do defeito que
+#: esta casa já nomeou: *quando um valor tem dono, a régua PERGUNTA ao dono*.
+#:
+#: DEPOIS DA CURA NINGUÉM COPIA MAIS NADA, e a divisão é esta:
+#:
+#: * o **CSS** manda em quanto a `.janela` usa da tela — ela é
+#:   `clamp(--piso-da-vista, 100dvh menos o recuo, --teto-da-vista)` e não precisa
+#:   saber a altura da janela do sistema;
+#: * o **Python** manda no PISO — abaixo de que vista o desenho deixa de
+#:   servir — e não precisa saber a altura da `.janela`.
+#:
+#: O QUE O NÚMERO É: 809 é a vista que a janela do piso oferece à página. Não é
+#: mais "a altura do desenho": com a altura fluida a página se ajusta, e o que
+#: este número guarda é a PROMESSA — abaixo dela as colunas em px do miolo não
+#: têm para onde encolher e a `.janela` passaria a cortar em vez de rolar.
+#:
+#: ELE PODE CAIR, e cair remove um penhasco medido: a área útil da TV dela tem
+#: 888 px (1080 menos o painel e a doca do COSMIC) e a janela pede 855 de
+#: mínimo — 33 de folga. Um painel ou uma doca 34 px maiores e a janela do
+#: Hefesto deixa de caber na tela dela, sem afordância nenhuma: para o GTK e
+#: para a janela flutuante, `set_size_request` é mínimo DURO. **Mas o COSMIC
+#: que ladrilha não o lê** — medido em 13/09/2026 (RECONECTAR-SAMBA-02): uma
+#: foto dela mostra a janela com 816 px de altura, abaixo dos 855. Com a altura
+#: fluida a página já degrada
+#: com barra em vez de se recusar a encolher (medido: forçando a `.janela` a
+#: 500 px, as abas rolam por dentro e nenhuma é cortada). **Quanto baixar é
+#: decisão de produto, e é dela** — esta sprint deixou o piso onde estava para
+#: que nenhuma aba ficasse pior do que já era.
+PISO_DA_VISTA = 809
+
+#: O NOME VELHO, e ele sai quando os dois últimos chamadores saírem.
+#:
+#: Não é um segundo valor: é o MESMO objeto, com o nome que dois arquivos de
+#: teste ainda citam —
+#: ``tests/unit/test_o_aviso_da_vibracao_cabe_na_aba.py`` e
+#: ``tests/unit/test_a_janela_estreita_nao_engole_o_desenho.py``. Nenhum dos
+#: dois é desta sprint, e reescrevê-los daqui seria a edição de um arquivo
+#: alheio virar conflito de merge na costura. Quem os tocar troca o nome nos
+#: dois e apaga esta linha.
+ALTURA_DO_DESENHO = PISO_DA_VISTA
 
 #: A ``Gtk.HeaderBar`` desta janela, medida (04/09/2026, GTK3 + adw-gtk3-dark):
 #: **46 px**. Ela fica FORA do miolo, então a janela na tela precisa pedir a
@@ -200,8 +240,44 @@ ALTURA_DA_BARRA = 46
 #: são declaradas em px; por isso a janela também ganhou um MÍNIMO (o
 #: ``set_size_request`` lá embaixo), sem o qual ela pode ser arrastada até
 #: engolir o desenho em silêncio.
-TAMANHO_NA_TELA = (LARGURA_DO_DESENHO, ALTURA_DO_DESENHO + ALTURA_DA_BARRA)
-TAMANHO_OCULTA = (LARGURA_DO_DESENHO, ALTURA_DO_DESENHO)
+TAMANHO_NA_TELA = (LARGURA_DO_DESENHO, PISO_DA_VISTA + ALTURA_DA_BARRA)
+TAMANHO_OCULTA = (LARGURA_DO_DESENHO, PISO_DA_VISTA)
+
+#: O RECUO DO `body` DA PÁGINA, em cima e embaixo — dono no CSS
+#: (`--recuo-do-corpo`), repetido aqui porque o Python precisa dele para
+#: responder quanto o `.miolo` tem no PISO. Se algum dia os dois divergirem,
+#: quem mente é este; o CSS é o dono.
+RECUO_DO_CORPO = 16
+
+#: O CROMO DA `.janela` — tudo o que ela gasta com ela mesma antes do `.miolo`.
+#:
+#: MEDIDO no WebKit da janela oculta, com o dado vivo, depois da cura de
+#: 10/09/2026: fita 52 + tira 42 + rodapé 47 + 2 de borda = **143**. Antes da
+#: cura eram 215, com uma faixa de cabeçalho de 60 e um rodapé de 59.
+#:
+#: 52 E NÃO 51, e a escolha é deliberada: a linha do alvo mede 51 px em sete
+#: abas e 52 em três (01, 02 e 08, cujos chips são mais altos). O número aqui é
+#: o MAIOR dos dois, porque o que um gerador assegura tem de ser o caso
+#: APERTADO — assegurar contra 51 deixaria as três de fora por um pixel.
+#:
+#: E ELE FOI MEDIDO DEPOIS DE SOMADO, nesta ordem: a primeira volta desta
+#: sprint escreveu 141 somando as partes de cabeça, e a janela devolveu 634 de
+#: miolo onde a conta prometia 636. *Somar as partes erra por margens que
+#: ninguém lembra* — é a mesma cicatriz que o teto da grade da `interface/aba03`
+#: já carrega, onde a soma deu 528 contra 477 medidos.
+CROMO_DA_JANELA = 143
+
+#: O QUE O `.miolo` TEM NO PISO — o único número contra o qual um GERADOR pode
+#: se assegurar, e a razão está na §3.5 da ALTURA-DA-VISTA-01:
+#:
+#:     *um gerador não pode assegurar contra a vista, porque ele roda sem tela.*
+#:
+#: Ele assegura contra o PISO — a menor vista prometida —, e quem mede a vista
+#: de verdade é `scripts/ensaios/a_janela_cabe_no_que_ela_ve.py --vista=N`, com
+#: a janela aberta. Até 10/09/2026 este número estava DIGITADO em dois
+#: geradores (`interface/aba09.MIOLO_H` e o teto da grade da `interface/aba03`)
+#: e os dois passariam a mentir no instante em que a altura virou fluida.
+MIOLO_NO_PISO = PISO_DA_VISTA - 2 * RECUO_DO_CORPO - CROMO_DA_JANELA
 
 #: A TRAVA DA TELA DELA — 02/09/2026, e ela nasceu de uma foto.
 #:
@@ -499,7 +575,8 @@ class JanelaDaAba:
             # O PISO DA JANELA, e ele é o desenho inteiro. `set_size_request` é
             # MÍNIMO, nunca máximo (armadilha que o COMO-OLHAR-A-TELA já lista):
             # a janela continua crescendo, e deixa de encolher até engolir o que
-            # ela veio ver.
+            # ela veio ver. **O COSMIC que ladrilha não o lê** (13/09/2026, a
+            # foto dela com 816 px): lá a vista rola, e o piso é só do GTK.
             #
             # SEM ELE O CSS É A ÚNICA DEFESA, E ELE PERDE: `.janela` tem
             # `max-width:100%` com `overflow:hidden` e colunas em px, então
@@ -513,7 +590,7 @@ class JanelaDaAba:
             # 04/09/2026, no mesmo dia em que a frase foi escrita. Comentário que
             # descreve código inexistente é pior que comentário nenhum: ele faz a
             # próxima pessoa parar de procurar.
-            self.janela.set_size_request(LARGURA_DO_DESENHO, ALTURA_DO_DESENHO + ALTURA_DA_BARRA)
+            self.janela.set_size_request(LARGURA_DO_DESENHO, PISO_DA_VISTA + ALTURA_DA_BARRA)
             # SEM A HeaderBar OS BOTÕES SAEM DO LADO ERRADO NO COSMIC. Não é
             # enfeite: a barra de título do sistema não segue a decoração do
             # tema, e a janela nasce com fechar/minimizar espelhados.

@@ -89,6 +89,13 @@ _JS_ALVO = """(function(){
     const r = el.getBoundingClientRect();
     if(r.width < LARG || r.height < ALT) continue;
     if(r.top < 40 || r.left < 40) continue;
+    // alvo que embrulha outra dica não serve — costura da vista fluida,
+    // 13/09/2026. Sem o cabeçalho, o primeiro alvo passou a ser o rótulo do
+    // bloco L2, que embrulha um svg com `<title>` próprio; a camada mostra a
+    // dica do elemento mais interno («L2»), e a régua reprovava a camada
+    // certa. A régua mede a dica de UM elemento, e o ponteiro no centro dele
+    // tem de cair nele.
+    if(el.querySelector('[title],[data-hef-dica],title')) continue;
     if(r.bottom > window.innerHeight - 20 || r.right > window.innerWidth - 20) continue;
     fora.push({x:r.left, y:r.top, w:r.width, h:r.height, texto:t,
                tag:el.tagName});

@@ -1,6 +1,6 @@
 ---
 sprint: ALTURA-DA-VISTA-01
-estado: aberta
+estado: feita
 posse:
   ALTURA-DA-VISTA-01:
     - src/hefesto_dualsense4unix/interface/topo.html
@@ -26,16 +26,25 @@ depois_de:
   - LINGUA-A4
 ---
 
-> **ESTADO 12/09/2026: continua ABERTA, e o motivo não é falta de
-> trabalho.** Ela foi ENTREGUE em `voo/ALTURA-DA-VISTA-01-opus` e **não está na costura** —
-> medido com `git cherry` contra `onda/0911c`, que não a tem:
+> **ESTADO 2026-09-10: feita** — a altura virou
+> `clamp(--piso-da-vista, 100dvh - 32, --teto-da-vista)`, a faixa de cabeçalho
+> saiu (60 px) e o rodapé encolheu 12; medido na vista de 840 px da TV dela, o
+> `.miolo` vai de 564 para **666** e a tela morta embaixo da `.janela` de 31
+> para **zero**. O logotipo dela e a contagem de controles desceram para a
+> linha do alvo — o LUGAR da contagem é PROPOSTA, com foto, e é dela decidir.
+> O piso e os dois números digitados (`aba09.MIOLO_H`, `aba03.TETO_DA_GRADE`)
+> passaram a sair de um dono só, `ponte_da_tela.MIOLO_NO_PISO`. A régua ganhou
+> `--vista=N` e passou a medir a tela que sobra abaixo da `.janela`.
+> Entrega: `docs/process/agentes/2026-09-10/ALTURA-DA-VISTA-01-opus.md`.
 >
->   · `87de2f54e2bf` feat(tela): a altura segue a vista, e as duas faixas de cromo que sobr
->
-> Ela ficou de fora da arrumação de estados de 12/09 DE PROPÓSITO:
-> carimbá-la `feita` porque existe uma branch faria o trabalho
-> desaparecer — ninguém mais abriria essa branch. **O que falta é a
-> costura, não o código.**
+> **COSTURADA EM 13/09/2026** na `onda/1309`, liberada pela triagem das branches
+> entregues (a nota de 12/09 que a mantinha aberta cumpriu o papel dela). Na
+> costura, o LUGAR da contagem ficou onde a entrega propôs, decidido por quem
+> coordena por delegação (a palavra dela de 13/09 no
+> [índice da terceira lista](2026-09-13-A-TERCEIRA-LISTA-DELA-INDICE.md)); a régua
+> da dica com ponteiro deixou de escolher alvo que embrulha outra dica (os dois
+> vermelhos da §3 da OS-QUATRO-ORFAOS-DE-1009 eram da régua); e a §2.2 perdeu o
+> fato que o COSMIC derrubou.
 
 > *"maximizando a tela ela vai pra fora do limite, mas ponto 2 aprovado"* <!-- noqa-acento: citação literal dela -->
 >
@@ -156,11 +165,14 @@ gui/ponte_da_tela.py:511   self.janela.set_size_request(LARGURA_DO_DESENHO,
                                                         ALTURA_DO_DESENHO + ALTURA_DA_BARRA)
 ```
 
-São **1212 x 855** de MÍNIMO. A janela dela não encolhe abaixo disso — o
-compositor não consegue, e a tentativa de medir uma vista menor no piloto
-oculto devolve teimosamente 809, porque a `Gtk.OffscreenWindow` também se
-recusa a ficar menor que a página. *Não há como a `.janela` passar da tela por
-encolhimento.*
+São **1212 x 855** de MÍNIMO. A tentativa de medir uma vista menor no piloto
+oculto devolve teimosamente 809, porque a `Gtk.OffscreenWindow` se recusa a
+ficar menor que a página. **FATO SUBSTITUÍDO EM 13/09/2026:** esta linha dizia
+que a janela dela não encolhe abaixo disso porque o compositor não consegue. O
+COSMIC que ladrilha (autotile ligado na sessão dela) não lê o mínimo do GTK —
+uma foto dela das 02:48 de 13/09 mostra a janela com 816 px de altura, a vista
+rolando e o rodapé cortado (estudo da RECONECTAR-SAMBA-02). *A `.janela` pode
+passar da vista por encolhimento, sim — quando o ladrilho é menor que o piso.*
 
 **O que existe é o inverso, e é um penhasco de 33 px:**
 
