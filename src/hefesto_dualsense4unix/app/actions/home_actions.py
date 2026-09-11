@@ -332,7 +332,7 @@ def autoswitch_lock_text(state: dict[str, Any] | None) -> str:
     )
 
 
-#: O que a caixa "Não trocar de perfil sozinho ao abrir um jogo" NÃO vai fazer
+#: O que a caixa "Trava o perfil ativo" NÃO vai fazer
 #: quando o mecanismo que ela governa está cego.
 #:
 #: PROVISÓRIO — decisão dela (o texto exato é palavra dela, PROVA-DE-TELA-01).
@@ -347,7 +347,7 @@ TEXTO_DETECTOR_CEGO: Final[str] = (
 def texto_do_cadeado_cego(state: dict[str, Any] | None) -> str:
     """O mecanismo do cadeado está cego? — função PURA (I11, 25/08/2026).
 
-    A caixa "Não trocar de perfil sozinho ao abrir um jogo" governa a troca
+    A caixa "Trava o perfil ativo" governa a troca
     automática POR JANELA. **Na máquina dela, medido em 23/08/2026**, essa
     troca está cega — ``window_detect_seeing=False``,
     ``reason='sem_conexao_x'`` — e o produto ainda publica
@@ -2404,7 +2404,7 @@ class HomeActionsMixin(WidgetAccessMixin):
         # congela; gamepad/co-op/rumble seguem. O estado vem do daemon no
         # _render_home; o toggle persiste e vale na hora.
         lock_check = Gtk.CheckButton(
-            label="Não trocar de perfil sozinho ao abrir um jogo"
+            label="Trava o perfil ativo"
         )
         lock_check.set_tooltip_text(
             "Congela a troca automática: o perfil que você deixou ativo continua "

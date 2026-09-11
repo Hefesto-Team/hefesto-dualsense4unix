@@ -226,9 +226,13 @@ def test_o_chip_cinza_continua_clicavel_e_recusa_dizendo() -> None:
         def __init__(self) -> None:
             self.chamadas: list[tuple[str, Any]] = []
 
-        def chamar(self, metodo: str, *a: Any, **k: Any) -> bool:
-            self.chamadas.append((metodo, a or k))
-            return True
+        # A ASSINATURA É A DA PONTE DE VERDADE (11/09/2026): o gesto chama
+        # `chamar_detalhado`, que devolve `(ok, motivo)`. Um dublê que
+        # devolvesse `bool` seria mais frouxo que o produto — e é assim que a
+        # régua fica verde sobre um gesto que estoura na mão dela.
+        def chamar_detalhado(self, metodo: str, **k: Any) -> tuple[bool, str | None]:
+            self.chamadas.append((metodo, k))
+            return True, None
 
     # NOTA DATADA — 07/09/2026: este bloco pedia que "Nintendo Pro" fosse
     # RECUSADO, porque era rótulo sem motor. Ele tem motor desde hoje, e agora
@@ -262,9 +266,10 @@ def test_a_mascara_que_o_produto_monta_e_gravada_em_qualquer_modo() -> None:
         def __init__(self) -> None:
             self.chamadas: list[tuple[str, Any]] = []
 
-        def chamar(self, metodo: str, *a: Any, **k: Any) -> bool:
-            self.chamadas.append((metodo, a[0] if a else k))
-            return True
+        # `chamar_detalhado`, e `(ok, motivo)` — ver o dublê irmão acima.
+        def chamar_detalhado(self, metodo: str, **k: Any) -> tuple[bool, str | None]:
+            self.chamadas.append((metodo, k))
+            return True, None
 
     for estado in (VIVO_NATIVO, VIVO_NAVEGACAO, VIVO_GAMEPAD):
         p = _Ponte()

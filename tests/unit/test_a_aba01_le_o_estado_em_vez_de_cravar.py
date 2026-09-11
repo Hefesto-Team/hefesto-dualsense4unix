@@ -349,6 +349,77 @@ VIVO_JOGO_SEM_ATALHO: dict[str, Any] = {
 }
 
 
+def _sem_a_maquina(monkeypatch: Any) -> None:
+    """Cala as DUAS fontes da coluna que perguntam ao HARDWARE desta máquina.
+
+    **É ISTO QUE DERRUBOU NOVE RÉGUAS DESTE ARQUIVO, e a causa é uma só** —
+    medida em 11/09/2026, na leva de `OS-VINTE-E-SEIS-VERMELHOS-01`. Em
+    06/09 a **cura do travamento do USB** entrou como mais uma fonte de
+    `a01_jogar._avisos`, e ela não pergunta ao ``state`` que estes testes
+    montam: ela lê o disco — `/sys/module/snd_usb_audio/parameters/quirk_flags`
+    e `/etc/modprobe.d/hefesto-dualsense-storm.conf`. O arquivo irmão
+    (`test_a01_a_coluna_atencao_acende_o_mais_grave.py`) nasceu já calando-a,
+    com a razão escrita no `_so_estes` dele; **este aqui não foi junto**, e as
+    nove réguas da coluna passaram a responder sobre a máquina em que rodam.
+
+    **O QUE FAZ A RÉGUA VIRAR É O QUE ESTÁ NO CABO AGORA, e não a máquina.**
+    Há UMA máquina aqui (`MeowSystem`): a árvore dela e a de qualquer agente
+    dividem o mesmo disco, e `/sys/module` e `/etc/modprobe.d` são da MÁQUINA,
+    não da árvore — então a régua vira no TEMPO, não no lugar. O
+    `snd_usb_audio` só é carregado quando há aparelho de áudio USB plugado, e
+    um DualSense no cabo é um deles:
+
+    * **sem áudio USB no cabo** — o módulo não foi carregado (e, se já
+      estava, ele não cai no desplugue: módulo carregado não descarrega
+      sozinho), o `quirk_flags` nem existe, sobra o drop-in de
+      `/etc/modprobe.d`, e o
+      veredito é ``[INFO]``: *"a cura está agendada"*. Uma linha de selo
+      ``CONTROLE`` entra na coluna, e as nove reprovam com nove diffs
+      diferentes da MESMA causa. **É o estado de 11/09/2026**, medido:
+      `/proc/asound/cards` sem nenhuma placa DualSense;
+    * **com o módulo carregado trazendo o quirk** — veredito ``[ OK ]``,
+      nenhuma linha a mais na coluna, as nove VERDES.
+
+    OS DOIS LADOS, sem plugar nada — `check_snd_quirk` é pura quando se dá o
+    texto do `quirk_flags`::
+
+        .venv/bin/python -c "from hefesto_dualsense4unix.integrations.storm_doctor \
+            import check_snd_quirk as c; print(c()); \
+            print(c('054c:0ce6:ignore_ctl_error|ctl_msg_delay_1m'))"
+        ('[INFO]', 'a cura do travamento está agendada. …')  ← o cabo de hoje
+        ('[ OK ]', 'cura do travamento do USB ATIVA …')      ← o quirk no ar
+
+    **O ``[ OK ]`` NÃO FOI OBSERVADO AQUI com controle no cabo** — ele saiu da
+    função com o texto dado à mão, acima. **Mas ele JÁ FOI VISTO VIVO nesta
+    máquina**, do sysfs real, em 06/09/2026 e com a bancada LIVRE a sessão
+    inteira: `docs/process/agentes/2026-09-06/ONDA5-01-01.md:53-62` registra o
+    `/sys/module/snd_usb_audio/parameters/quirk_flags` EXISTINDO com o quirk e
+    o `check_snd_quirk()` devolvendo ``[ OK ]``. É a prova de que o ramo bom é
+    alcançável, e é por isso que ele não custa um gesto dela na bancada: esta
+    casa já pagou essa medição.
+
+    `_do_exame` ENTRA PELO MESMO MOTIVO, e não por asseio: ele chama
+    `a08_conexoes._exame()`, que examina os controles que estão na mesa AGORA.
+    Com a mesa VAZIA ele cala, e por isso as quatro réguas do selo ``JOGO``
+    nunca precisaram silenciá-lo — com os quatro DualSense na mesa ele fala, e
+    as mesmas quatro caem de novo por outro nome. **A virada é a mesma da cura
+    do travamento: o que muda é o que está plugado no minuto em que a suíte
+    roda.** Calar um e deixar o outro seria pagar este diagnóstico duas vezes.
+
+    **O QUE ESTE ARQUIVO NÃO MEDE, e tem dono:** a cura do travamento é de
+    `test_a01_a_coluna_atencao_acende_o_mais_grave.py`, que a exercita com a
+    função REAL sobre uma máquina de fixture; o exame da mesa é das réguas da
+    `a08`. Aqui o assunto é outro — o que a coluna faz com o que as fontes
+    dizem.
+
+    A NEUTRALIZAÇÃO NÃO APODRECE CALADA: `monkeypatch.setattr` levanta
+    `AttributeError` se um dos dois nomes sumir do produto, então uma
+    renomeação grita em vez de devolver as nove réguas à máquina.
+    """
+    monkeypatch.setattr(aba, "_do_exame", lambda: [])
+    monkeypatch.setattr(aba, "_aviso_da_cura_do_travamento", lambda: None)
+
+
 @pytest.fixture()
 def duas_listas_vazias(tmp_path: Any, monkeypatch: Any) -> Any:
     """As DUAS listas de recusa em disco, num diretório só deste teste.
@@ -370,6 +441,11 @@ def duas_listas_vazias(tmp_path: Any, monkeypatch: Any) -> Any:
     # lista que nunca foi escrita. Custou uma volta, em 06/09/2026.
     monkeypatch.setattr(lwd, "_dismissed_path", lambda **_: dispensados)
     monkeypatch.setattr(slo, "sem_wrapper_path", lambda *_a, **_k: sem_wrapper)
+    # AS DUAS FONTES DE MÁQUINA SAEM COM AS LISTAS — 11/09/2026. Estas quatro
+    # réguas contam os selos que a coluna acende, e uma linha que vem do
+    # `/sys` desta máquina entra na conta sem ter nada a ver com a recusa
+    # dela. O porquê inteiro está em `_sem_a_maquina`.
+    _sem_a_maquina(monkeypatch)
     return lwd, slo
 
 
@@ -526,6 +602,7 @@ def test_uma_boa_noticia_nao_entra_na_coluna_atencao(monkeypatch: Any) -> None:
     # "nenhuma" com a cor de aviso do produto. Este teste mede OUTRA coisa, e
     # deixá-la entrar aqui trocaria uma régua afiada por uma que conta linhas.
     # Quem mede a ponte é `tests/unit/test_a01_a_ponte_entra_na_coluna.py`.
+    _sem_a_maquina(monkeypatch)
     monkeypatch.setattr(aba, "_aviso_da_ponte", lambda _s: None)
     monkeypatch.setattr(painel, "avisos_do_estado", lambda _s: [])
     monkeypatch.setattr(aba, "_do_exame", lambda: [
@@ -556,6 +633,7 @@ def test_a_conta_e_a_do_produto_e_conta_o_que_a_coluna_mostra(monkeypatch: Any) 
     # "nenhuma" com a cor de aviso do produto. Este teste mede OUTRA coisa, e
     # deixá-la entrar aqui trocaria uma régua afiada por uma que conta linhas.
     # Quem mede a ponte é `tests/unit/test_a01_a_ponte_entra_na_coluna.py`.
+    _sem_a_maquina(monkeypatch)
     monkeypatch.setattr(aba, "_aviso_da_ponte", lambda _s: None)
     monkeypatch.setattr(painel, "avisos_do_estado", lambda _s: [])
     monkeypatch.setattr(aba, "_do_exame", lambda: [
@@ -583,8 +661,8 @@ def test_a_linha_sem_aviso_nao_fica_com_travessao(monkeypatch: Any) -> None:
     # "nenhuma" com a cor de aviso do produto. Este teste mede OUTRA coisa, e
     # deixá-la entrar aqui trocaria uma régua afiada por uma que conta linhas.
     # Quem mede a ponte é `tests/unit/test_a01_a_ponte_entra_na_coluna.py`.
+    _sem_a_maquina(monkeypatch)
     monkeypatch.setattr(aba, "_aviso_da_ponte", lambda _s: None)
-    monkeypatch.setattr(aba, "_do_exame", lambda: [])
     monkeypatch.setattr(
         painel, "avisos_do_estado",
         lambda _s: [{"selo": "PAUSA", "texto": "a", "fonte": "x"},
@@ -609,7 +687,7 @@ def test_a_coluna_nao_estoura_o_que_a_pagina_publica(monkeypatch: Any) -> None:
     `+N` é a quarta, e ela não sai do teto: com quatro avisos a coluna mostra
     três e diz "+1".
     """
-    monkeypatch.setattr(aba, "_do_exame", lambda: [])
+    _sem_a_maquina(monkeypatch)
     monkeypatch.setattr(aba, "_aviso_da_ponte", lambda _s: None)
     quantos = aba.AVISOS_NA_COLUNA + 2
     monkeypatch.setattr(
@@ -644,6 +722,45 @@ def test_uma_fonte_que_quebra_nao_apaga_a_coluna(monkeypatch: Any) -> None:
     fora = aba.coluna_de_atencao(_ctx(VIVO_NAVEGACAO))
     assert "ERRO" in fora["aviso-selo"], (
         "o exame quebrou e a coluna ficou vazia — o silêncio voltou")
+
+
+def test_nenhuma_fonte_fala_sem_este_arquivo_saber(monkeypatch: Any) -> None:
+    """Caladas as fontes que este arquivo conhece, `_avisos` não diz NADA.
+
+    **A RÉGUA QUE FALTAVA EM 06/09/2026, e a falta custou nove vermelhos.**
+    Naquele dia a cura do travamento do USB virou mais uma fonte de
+    `a01_jogar._avisos` — uma que lê o `/sys` e o `/etc` desta máquina. As
+    nove réguas da coluna deste arquivo calavam as fontes uma a uma, pelo
+    nome, e nenhuma sabia da décima: em 11/09 as nove reprovaram com nove
+    diffs diferentes, e o trabalho foi descobrir que a causa era UMA.
+
+    **O QUE ESTA AQUI COMPRA É O NOME.** Ela reprova UMA vez, e a mensagem
+    diz o campo ``fonte`` de quem falou — que é literalmente o endereço da
+    função a acrescentar em :func:`_sem_a_maquina`. Nove diffs de lista
+    contra uma frase que manda no lugar certo.
+
+    **O LIMITE, DECLARADO:** ela pega a fonte nova que FALA no estado em que a
+    máquina está QUANDO a suíte roda. Uma fonte nova que esteja calada nesse
+    minuto passa — e é por isso que ela não substitui `_sem_a_maquina`, só
+    avisa mais cedo. Foi exatamente o caso da cura do travamento: ela responde
+    ``[INFO]`` sem áudio USB no cabo (e aí FALA, e esta régua a pega) e
+    ``[ OK ]`` com o quirk carregado (e aí cala, e esta régua não a veria). O
+    lado que vira é o do CABO, não o da máquina — ver :func:`_sem_a_maquina`.
+
+    AS FONTES QUE ESTE ARQUIVO CONHECE são as puras de estado — que
+    `VIVO_NAVEGACAO` já responde — mais as duas de máquina de
+    `_sem_a_maquina` e as duas que voltam em markup (`painel.avisos_do_estado`
+    e `_aviso_da_ponte`), que os testes acima calam pelo nome.
+    """
+    _sem_a_maquina(monkeypatch)
+    monkeypatch.setattr(painel, "avisos_do_estado", lambda _s: [])
+    monkeypatch.setattr(aba, "_aviso_da_ponte", lambda _s: None)
+    sobrando = aba._avisos(_ctx(VIVO_NAVEGACAO))
+    assert sobrando == [], (
+        "uma fonte que este arquivo não conhece acendeu a coluna: "
+        + ", ".join(f"{a.get('fonte')} ({a.get('selo')})" for a in sobrando)
+        + " — acrescente-a a `_sem_a_maquina` se ela perguntar à máquina, "
+        "ou cale-a pelo nome no teste que a tiver por assunto")
 
 
 # ---------------------------------------------------------------------------

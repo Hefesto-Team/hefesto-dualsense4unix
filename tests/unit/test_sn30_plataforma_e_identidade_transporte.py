@@ -31,11 +31,19 @@ from __future__ import annotations
 
 import csv
 import re
+import sys
 from pathlib import Path
 
 import pytest
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
+
+sys.path.insert(0, str(REPO_ROOT / "scripts"))
+# A PALAVRA DA PROCEDÊNCIA FORTE TEM DONO, e ele é o portão do mapa. Digitar
+# `"medido"` aqui seria a segunda cópia de um domínio que já existe — e é
+# `check_paridade_transporte` quem reprova quando ela sai do domínio, então
+# uma cópia daqui envelheceria calada no dia em que a palavra mudasse.
+from check_paridade_transporte import DE_ONDE_SEI_FORTE
 MAPA = REPO_ROOT / "docs" / "data" / "mapa-controles.csv"
 DRIVER = REPO_ROOT / "assets" / "dkms" / "hid-nintendo" / "hid-nintendo.c"
 COOP = REPO_ROOT / "src" / "hefesto_dualsense4unix" / "daemon" / "subsystems" / "coop.py"
@@ -162,14 +170,40 @@ class TestAsDezCelulasContinuamEscritas:
                 "(regra 7 do portão)."
             )
 
-    def test_as_nove_linhas_de_combinacao_continuam_mudas_de_proposito(
+    def test_as_nove_linhas_de_combinacao_nunca_afirmam_medido_sem_bancada(
         self, mapa: dict[str, dict[str, str]]
     ) -> None:
-        # Estas NÃO foram respondidas por esta leva, e não devem ser — a
-        # nota de cada uma diz "só o aparelho na mesa fecha esta linha".
-        # Preencher por leitura de código seria exatamente a analogia que a
-        # nota adverte que destruiria o valor do mapa. Este teste é o
-        # espelho negativo dos de cima: aqui a mordida é NÃO responder.
+        """As nove `combinacao.*` do SN30 respondem — e nenhuma diz `medido`.
+
+        **O MAPA VENCEU ESTE TESTE, e a régua da casa manda ser assim.** Ele
+        exigia que as nove continuassem MUDAS, e o commit `49118905`
+        (*"o CSV responde o que o código sabe"*) respondeu-as, uma a uma, com
+        a procedência declarada em `de_onde_sei`. A ordem dela de 06/09/2026
+        é literal: *"o csv do specs e o mapa vencem a sprint em termo de
+        informações precisas. sempre."* — e célula respondida com procedência
+        não é o mesmo que célula preenchida por analogia, que é o que a
+        redação antiga temia. Medido em 11/09/2026, com as nove lidas: seis
+        dizem `inferido-do-codigo`, e as outras `afirmado-no-doc` ou
+        `incerto`.
+
+        **O QUE O TESTO ANTIGO PROTEGIA DE VERDADE, e continua aqui:** a
+        bancada do SN30 nunca aconteceu. O teto do que se afirma sem o
+        aparelho na mesa é a procedência fraca; promover uma destas nove a
+        ``medido`` é afirmar prova que ninguém tem. É a mesma régua que
+        `test_o_lado_que_esta_leva_escreveu_nao_afirma_medido_sem_bancada` já
+        aplica às dez de cima, e agora ela alcança as nove de baixo.
+
+        **A MORDIDA:** ponha `medido` em qualquer `*_de_onde_sei` de uma
+        `combinacao.*@sn30` e este teste reprova nomeando a linha e o lado.
+        E o lado respondido sem procedência nenhuma reprova também — é a
+        regra 19 do portão (`lado-sem-regua`), aqui de novo porque estas
+        nove estavam FORA de `LINHAS_RESPONDIDAS` e ninguém as cobria.
+
+        **O DIA EM QUE ELA MEDIR, este teste sai do caminho por ensaio, não
+        por edição:** a promoção para `medido` é legítima com o ensaio no
+        caderno (`docs/data/ensaios.csv`), e é o caderno que a autoriza —
+        exatamente como a docstring das dez já diz.
+        """
         combinacoes = [
             r
             for r in mapa.values()
@@ -177,11 +211,21 @@ class TestAsDezCelulasContinuamEscritas:
         ]
         assert len(combinacoes) == 9
         for linha in combinacoes:
-            assert not linha["cabo_aciona"].strip() and not linha["radio_aciona"].strip(), (
-                f"{linha['id']}: uma linha de combinação SN30 ganhou "
-                "`aciona` sem bancada dela — se foi medição real, ótimo, "
-                "mas então ajuste este teste com o mesmo commit."
-            )
+            for lado in ("cabo", "radio"):
+                procedencia = linha[f"{lado}_de_onde_sei"].strip()
+                assert procedencia != DE_ONDE_SEI_FORTE, (
+                    f"{linha['id']}: {lado}_de_onde_sei virou "
+                    f"{DE_ONDE_SEI_FORTE!r} sem bancada do SN30 — só o "
+                    "aparelho na mesa fecha uma linha de combinação, e o "
+                    "ensaio dela mora em `docs/data/ensaios.csv`."
+                )
+                if linha[f"{lado}_aciona"].strip():
+                    assert procedencia, (
+                        f"{linha['id']}: `{lado}_aciona` respondido "
+                        f"({linha[f'{lado}_aciona']!r}) com "
+                        f"`{lado}_de_onde_sei` vazio — a régua 19 do portão "
+                        "(`lado-sem-regua`) existe exatamente para isto."
+                    )
 
 
 class TestOFonteAindaSustentaOQueEstaLevaAfirmou:

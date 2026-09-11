@@ -130,14 +130,51 @@ def test_causa_vazia_com_aciona_nao_medido_reprova(tmp_path: Path) -> None:
     assert "identidade.cor_do_aparelho@dualsense" in processo.stdout
 
 
-def test_causa_vazia_com_de_onde_sei_inferido_nao_reprova(tmp_path: Path) -> None:
-    """Só `de_onde_sei = medido` cobra causa — inferência ainda é dívida geral."""
-    caminho = monta_arvore(
-        tmp_path,
-        [_linha(radio_por_que_nao_aciona="", radio_de_onde_sei="inferido-do-codigo")],
+def test_a_causa_nao_depende_do_de_onde_sei(tmp_path: Path) -> None:
+    """Todo `aciona = não` diz por quê — inclusive o que ninguém mediu.
+
+    **O PORTÃO VENCEU ESTE TESTE, e a data está no dono.** Ele dizia *"só
+    `de_onde_sei = medido` cobra causa — inferência ainda é dívida geral"*, e
+    em 06/09/2026 a regra 16 perdeu essa metade de propósito:
+    `check_paridade_transporte` declara, no comentário do próprio `if`, que
+    *"ELA VALIA SÓ PARA O `medido` ATÉ 06/09/2026, e era essa metade que
+    faltava"*. A razão medida está lá: um `não` de célula NÃO medida era o
+    mais ambíguo de todos — podia querer dizer *"o aparelho recusa"* ou
+    *"ninguém olhou"* —, e **foi lendo um desses que o coordenador mandou um
+    agente PARAR um passo que funciona.**
+
+    **O QUE SOBROU DA PERGUNTA ANTIGA, e é o que se mede aqui:** o
+    `de_onde_sei` responde OUTRA coisa — *como se soube* —, e por isso ele saiu
+    da condição em vez de ganhar um segundo valor. Então a régua cobra os DOIS
+    sentidos sobre o MESMO `inferido-do-codigo`: com a causa preenchida passa,
+    com a causa vazia reprova. Um lado só continuaria a medir um portão que
+    não existe mais.
+
+    Para o caso de ninguém ter olhado existe a palavra que o diz —
+    `nao-medido` —, e ela não autoriza afirmar que o aparelho não faz.
+    """
+    inferido = {"radio_de_onde_sei": "inferido-do-codigo"}
+
+    com_causa = monta_arvore(
+        tmp_path / "com-causa",
+        [_linha(radio_por_que_nao_aciona="nao-medido", **inferido)],
     )
-    processo = rodar(caminho, tmp_path)
-    assert "causa-nao-declarada" not in processo.stdout
+    passou = rodar(com_causa, tmp_path / "com-causa")
+    assert "causa-nao-declarada" not in passou.stdout, (
+        "a causa declarada num lado inferido reprovou — a regra 16 passou a "
+        f"cobrar o `de_onde_sei`, que não é a pergunta dela:\n{passou.stdout}"
+    )
+
+    sem_causa = monta_arvore(
+        tmp_path / "sem-causa",
+        [_linha(radio_por_que_nao_aciona="", **inferido)],
+    )
+    reprovou = rodar(sem_causa, tmp_path / "sem-causa")
+    assert reprovou.returncode == 1
+    assert "causa-nao-declarada" in reprovou.stdout, (
+        "um `aciona = não` sem causa passou porque o lado era inferido — é a "
+        f"metade que a regra 16 ganhou em 06/09/2026:\n{reprovou.stdout}"
+    )
 
 
 def test_valor_o_aparelho_recusa_e_aceito_no_dominio(tmp_path: Path) -> None:

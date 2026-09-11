@@ -64,8 +64,17 @@ VAZIAS = frozenset({
 #: E ``altura`` entrou em 05/09/2026, pelo mesmo motivo dos três de 03/09: ele
 #: escreve ``style.height`` e não toca ``textContent``. É o alvo das ondas
 #: sonoras da aba 02.
+#: E ``atributo`` ENTROU EM 11/09/2026, pela TERCEIRA vez que esta lista
+#: envelhece calada — depois dos três de 03/09 e do ``altura`` de 05/09. Ele
+#: escreve ``el.setAttribute(nome, valor)`` (``hefesto_vivo.py:795``) e passa
+#: antes pela guarda ``atributo_escrevivel``, que recusa nome fora da lista
+#: curta; ``textContent`` não é tocado em nenhum dos dois ramos. A
+#: PERFIS-LIMPA-01 o usou para devolver ao ``<table>`` a largura de coluna que
+#: ela arrastou (``data-larguras``), e esta régua acusou de apagar a página
+#: justamente quem estava fazendo a coisa certa. O padrão é sempre o mesmo:
+#: *a régua confunde a PALAVRA com o ATO*, e desliga quando alguém acerta.
 ALVOS_SEGUROS = frozenset({"largura", "altura", "fundo", "valor", "html",
-                           "classe", "cor", "plastico"})
+                           "classe", "cor", "plastico", "atributo"})
 
 
 class _Leitor(HTMLParser):
