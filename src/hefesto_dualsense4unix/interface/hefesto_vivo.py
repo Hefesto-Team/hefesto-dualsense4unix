@@ -592,9 +592,21 @@ BOOTSTRAP = r"""
     // `04-iluminacao` (24 nós por tique) e `adaptadores-tabela` na
     // `08-conexoes`.
     if(alvo === 'html'){
-      if(el.__hefHtml === t) return 0;
-      if(el.innerHTML !== t){ el.innerHTML = t; el.__hefHtml = t; return 1; }
-      el.__hefHtml = t;
+      // O TRAVESSÃO TAMBÉM NÃO ENTRA NUM BLOCO DE HTML — 11/09/2026, e é a
+      // irmã da guarda do campo digitável logo acima. O `—` marca VALOR
+      // AUSENTE num lugar de leitura: uma coluna sem dado, um slot vazio da
+      // mesa. Um alvo `html` não recebe um valor — recebe um PEDAÇO DE PÁGINA
+      // já montado, e um pedaço de página vazio é ausência de página, não um
+      // valor desconhecido a anunciar.
+      //
+      // MEDIDO NA ABA LANÇADORES, no mesmo dia em que ela mandou calar os
+      // cinco cartões achados: com a frase vazia, os cinco passaram a mostrar
+      // um `—` solto no lugar do parágrafo — um travessão anunciando a
+      // ausência de uma frase que ela acabara de mandar tirar.
+      const h = (v === null || v === undefined || v === '') ? '' : t;
+      if(el.__hefHtml === h) return 0;
+      if(el.innerHTML !== h){ el.innerHTML = h; el.__hefHtml = h; return 1; }
+      el.__hefHtml = h;
       return 0;
     }
     // O ALVO `classe` — o ESTADO, que na tela dela é uma classe e não uma
