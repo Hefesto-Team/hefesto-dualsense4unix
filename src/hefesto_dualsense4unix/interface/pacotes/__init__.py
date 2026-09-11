@@ -369,6 +369,50 @@ LUGAR_SEM_DONO = "*"
 #: apagar o que a mesa de agora não preenche.
 TODOS_OS_LUGARES = frozenset({"p1", "p2", "p3", "p4"})
 
+#: UM BLOCO QUE MIRA O CAMPO DE UM LUGAR. É a forma que `a03_gatilhos.
+#: seletor_do_chip` emite, e a única que esta conta precisa reconhecer:
+#: um `data-controle` e, dentro dele, um `data-campo`. Selector de classe
+#: (`.ajustes.e`, `select.modo[data-lado="e"]`) não casa de propósito — aqueles
+#: elementos não têm endereço de campo, logo o molde nunca escreveria neles.
+_BLOCO_DE_UM_CAMPO = re.compile(
+    r'\[data-controle="(?P<pref>[^"]+)"\]\s*\[data-campo="(?P<campo>[^"]+)"\]')
+
+
+def _o_que_o_bloco_ja_escreveu(carga: dict[str, Any]) -> dict[str, set[str]]:
+    """`{pref: {campo, …}}` — o que a aba já pôs naquele lugar por BLOCO.
+
+    POR QUE ISTO EXISTE, medido no DOM vivo em 11/09/2026 com UM controle na
+    bancada, na aba 03::
+
+        p1  'P1 • Starlight Blue • rádio'
+        p2  '—'                             ← a queixa dela
+        p3  'P3 • Desconectado'
+        p4  'P4 • Desconectado'
+
+    O bloco do P2 POUSAVA — `a03_gatilhos` o emite, e o piloto o escreve no
+    passo 0 da pintura. O que vinha depois é que o desfazia: o passo 2 escreve
+    os CAMPOS, e o molde desta função tinha acabado de encher a coluna do P2
+    com `dict.fromkeys(chaves, TRAVESSAO)` — `chip-do-controle` entre elas,
+    porque as outras três colunas o emitem. Duas escritas no mesmo elemento, e
+    a segunda ganha; no tique seguinte o bloco se cala (`alvo.__hefBloco ===
+    html`) e o travessão fica para sempre.
+
+    A REGRA É A QUE ESTA CASA JÁ ESCREVE EM TODA PARTE: **não se escreve duas
+    vezes no mesmo elemento.** Quem mandou um bloco para aquele endereço daquele
+    lugar já disse o que ele mostra — o molde não tem o que acrescentar ali.
+
+    E ELA É GERAL DE PROPÓSITO. A cura de 05/09 conhecia esta causa e cobriu UM
+    nome de campo (`identidade`, logo abaixo); seis dias depois a mesma falta
+    voltou noutra aba com outro nome de campo. Cobrir um chamador deixa a
+    próxima pessoa remedindo o mesmo defeito — é o que aconteceu.
+    """
+    fora: dict[str, set[str]] = {}
+    for seletor in (carga.get("blocos") or {}):
+        achado = _BLOCO_DE_UM_CAMPO.search(str(seletor))
+        if achado:
+            fora.setdefault(achado.group("pref"), set()).add(achado.group("campo"))
+    return fora
+
 
 def apagar_os_lugares_sem_dono(
         carga: dict[str, Any],
@@ -411,8 +455,14 @@ def apagar_os_lugares_sem_dono(
     # seguro: a tela pode ficar atrasada, nunca mentindo a mais.
     ocupados = sorted(set(com_dono or ()) & TODOS_OS_LUGARES)
     apagar = sorted(TODOS_OS_LUGARES - set(colunas))
+    # O QUE A ABA JÁ ESCREVEU POR BLOCO NÃO SE APAGA — 11/09/2026, e a razão
+    # inteira está em `_o_que_o_bloco_ja_escreveu`. Sem esta linha o molde
+    # reescreve por cima do que o passo 0 da pintura acabou de pôr na tela, e
+    # o que sobra é um travessão onde a aba tinha escrito o estado do lugar.
+    ja_escrito = _o_que_o_bloco_ja_escreveu(carga)
     for pref in apagar:
-        colunas[pref] = dict.fromkeys(chaves, TRAVESSAO)
+        colunas[pref] = dict.fromkeys(chaves - ja_escrito.get(pref, set()),
+                                      TRAVESSAO)
         # O LUGAR VAZIO DIZ QUE ESTÁ VAZIO, e não um travessão mudo.
         #
         # MEDIDO NA TELA EM 05/09/2026, com UM controle na bancada: a aba 05

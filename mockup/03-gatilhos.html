@@ -1273,10 +1273,20 @@
   body:has(#dobra-l2:checked) .duas-colunas .rotulos > .g-l2 > .fecha,
   body:has(#dobra-r2:checked) .duas-colunas .rotulos > .g-r2 > .fecha{display:flex}
   /* A SETA DIZ O ESTADO SEM PALAVRA, e é a mesma que o resto da casa usa. Ela
-     mora no `::after` do label para não entrar no SVG do glifo, que é dado. */
-  .duas-colunas .rotulos .sec-glifo > .abre::after{content:'be';font-size:10px;
+     mora no `::after` do label para não entrar no SVG do glifo, que é dado.
+
+     ELA É O CARACTERE, e não a fuga CSS — 11/09/2026, e a razão é do PYTHON,
+     não do navegador. Este CSS mora numa string Python, e ali uma barra
+     seguida de dígitos de 0 a 7 é uma fuga OCTAL: o que o gerador escrevia
+     virava o byte 0x15 mais as duas letras que sobravam, e a tela mostrava o
+     retângulo de glifo faltando ao lado do L2 e do R2 — fotografado no produto
+     publicado, com a mesa dela. O navegador nunca viu fuga nenhuma.
+
+     O RESTO DA CASA JÁ ESCREVIA ASSIM (`topo.html`, `aba08.py`): o caractere
+     cru atravessa Python e CSS sem quem o interprete no meio. */
+  .duas-colunas .rotulos .sec-glifo > .abre::after{content:'▾';font-size:10px;
        color:var(--comment)}
-  .duas-colunas .rotulos .sec-glifo > .fecha::after{content:'b4';font-size:10px;
+  .duas-colunas .rotulos .sec-glifo > .fecha::after{content:'▴';font-size:10px;
        color:var(--comment)}
   .barra{display:flex;align-items:center;gap:8px;font-size:11.5px;color:var(--texto-mudo)}
   .barra .trilho{flex:1;height:5px;border-radius:3px;background:var(--border-forte);

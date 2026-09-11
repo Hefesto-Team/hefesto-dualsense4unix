@@ -43,6 +43,16 @@ O QUE ESTA RÉGUA MORDE:
 * pôr a cor de volta dentro do chip             → `test_a_cor_saiu_de_dentro_do_chip`
 * o produto deixar a cor acesa num lugar vazio  → `test_o_lugar_vazio_apaga_a_cor`
 * o pacote assinar a visita que não fez         → `test_o_pacote_nao_emite_o_selo`
+
+E AS DUAS DE 11/09/2026, que medem o que a TELA recebe e não o que o pacote
+devolve — os cinco testes acima estavam VERDES enquanto o P2 mostrava um
+travessão na tela dela, porque nenhum deles passava por `normalizar()` e
+`apagar_os_lugares_sem_dono()`:
+
+* o molde escrever por cima do bloco do P2
+  → `test_o_p2_sem_aparelho_diz_desconectado_na_tela`
+* a cura fácil apagar a moldura de vazio
+  → `test_o_lugar_sem_dono_continua_com_a_moldura_de_vazio`
 """
 from __future__ import annotations
 
@@ -110,6 +120,28 @@ def _pacote(a03, mesa, conectados):
 def _chip_de_bloco(a03, r, pref: str) -> str | None:
     """O chip que saiu por BLOCO naquele `pref`, ou `None` se não saiu."""
     return r["blocos"].get(a03.seletor_do_chip(pref))
+
+
+def _o_que_a_tela_recebe(a03, mesa, conectados):
+    """A carga na forma EXATA em que o piloto a manda ao JS.
+
+    ELA É O PONTO DESTA RÉGUA. Todos os testes acima param no que `pacote()`
+    devolve — e foi por isso que eles ficaram VERDES enquanto o P2 mostrava um
+    travessão na tela dela. Entre o pacote e o DOM há dois passos que mudam o
+    que chega: `normalizar()` e `apagar_os_lugares_sem_dono()`, e é o segundo
+    que enchia a coluna sem dono com `dict.fromkeys(chaves, '—')`.
+
+    A ORDEM É A DO PRODUTO, copiada de `hefesto_vivo.Piloto._tique`
+    (`pacotes.normalizar(...)` e depois `pacotes.apagar_os_lugares_sem_dono(
+    carga, _com_dono(ctx))`). Medir noutra ordem seria a régua respondendo
+    sobre um produto que não existe.
+    """
+    import pacotes
+
+    r = _pacote(a03, mesa, conectados)
+    carga = pacotes.normalizar(r, {str(m["uniq"]): str(m["pref"]) for m in mesa})
+    pacotes.apagar_os_lugares_sem_dono(carga, [str(m["pref"]) for m in mesa])
+    return carga
 
 
 # ---------------------------------------------------------------------------
@@ -260,3 +292,83 @@ def test_o_pacote_nao_emite_o_selo(a03):
         "o pacote está emitindo o SELO do piloto. Quem escreve o selo declara "
         "que esteve no elemento; escrevê-lo aqui seria a aba assinando a visita "
         "que não fez — e a régua do mockup passaria a medir a si mesma.")
+
+
+# ---------------------------------------------------------------------------
+# 3. O QUE CHEGA À TELA — e é aqui que a queixa dela de 11/09/2026 morde.
+# ---------------------------------------------------------------------------
+
+def test_o_p2_sem_aparelho_diz_desconectado_na_tela(a03):
+    """Com UM controle na mesa, o P2 chega à tela dizendo, não com um traço.
+
+    A QUEIXA DELA, 11/09/2026 — a digitação é dela e não se limpa:
+    *"o p2 tá com - ao invés de P2 - Desconectado  # noqa-acento: citação dela
+    como os demais."*
+
+    MEDIDO NO DOM VIVO no mesmo dia, um DualSense por rádio no P1, aba 03
+    aberta no `WebKit2.WebView` com `--oculta`::
+
+        p1  'P1 • Starlight Blue • rádio'
+        p2  '—'                             ← a queixa
+        p3  'P3 • Desconectado'
+        p4  'P4 • Desconectado'
+
+    A CAUSA NÃO ERA O BLOCO NÃO POUSAR: ele pousava. O que o desfazia era o
+    molde de `apagar_os_lugares_sem_dono`, que enche a coluna sem dono com
+    `dict.fromkeys(chaves, '—')` — e `chip-do-controle` está em `chaves`,
+    porque as outras três colunas o emitem por campo. O piloto pinta BLOCOS no
+    passo 0 e CAMPOS no passo 2: a segunda escrita ganhava, e no tique seguinte
+    o bloco se calava (`alvo.__hefBloco === html`).
+
+    POR QUE ESTA RÉGUA E NÃO AS DE CIMA: as cinco acima param no que `pacote()`
+    devolve, e as cinco estavam VERDES com o travessão na tela dela. Quem mede
+    o produto tem de medir o que o produto MANDA — ver `_o_que_a_tela_recebe`.
+
+    A MORDIDA: troque `chaves - ja_escrito.get(pref, set())` por `chaves` em
+    `pacotes.apagar_os_lugares_sem_dono` e esta régua reprova dizendo o
+    travessão.
+    """
+    carga = _o_que_a_tela_recebe(a03, MESA_DE_UM, [NO_CABO])
+    import pacotes
+
+    for pref in sorted(a03._todos_os_lugares_da_pagina()
+                       - {str(m["pref"]) for m in MESA_DE_UM}):
+        col = carga["colunas"].get(pref) or {}
+        por_campo = col.get(a03.CAMPO_DO_CHIP)
+        por_bloco = carga.get("blocos", {}).get(a03.seletor_do_chip(pref))
+        assert por_campo != pacotes.TRAVESSAO, (
+            f"a coluna de {pref} chega à tela com {pacotes.TRAVESSAO!r} no "
+            f"cabeçalho. O bloco já escrevera {por_bloco!r} ali, e o molde "
+            f"passou por cima — duas escritas no mesmo elemento, e a última "
+            f"vence. É a queixa dela de 11/09/2026, palavra por palavra.")
+        escrito = str(por_campo if por_campo is not None else por_bloco)
+        assert pacotes.SEM_NINGUEM_AQUI in escrito, (
+            f"{pref} está sem aparelho e a tela recebe {escrito!r} — os outros "
+            f"lugares vazios dizem {pacotes.SEM_NINGUEM_AQUI!r}, e três lugares "
+            f"igualmente vazios não podem falar línguas diferentes.")
+
+
+def test_o_lugar_sem_dono_continua_com_a_moldura_de_vazio(a03):
+    """A cura do cabeçalho NÃO pode devolver o P2 à moldura de conectado.
+
+    É a metade que a cura fácil quebraria. Emitir uma `colunas` para o P2 — o
+    caminho óbvio para o cabeçalho parar de levar travessão — o tiraria da
+    conta `TODOS_OS_LUGARES - colunas`, e com ela iriam embora o
+    `data-conectado="nao"` e a classe `off` que o piloto escreve a partir de
+    `vazios`. A página publicada crava `data-conectado="sim"` no P2 (é o
+    segundo controle do desenho), então o lugar ficaria com os `<select>` e os
+    botões VIVOS e com a borda acesa, sem aparelho nenhum — meio apagado, que é
+    pior que aceso, e clique que só pode terminar em recusa.
+
+    A MORDIDA: faça o laço dos vazios de `a03_gatilhos.pacote()` emitir também
+    o `pref` que a página dá por conectado e esta régua reprova.
+    """
+    carga = _o_que_a_tela_recebe(a03, MESA_DE_UM, [NO_CABO])
+    assert "p2" in (carga.get("vazios") or []), (
+        f"o P2 saiu da lista de vazios: {carga.get('vazios')!r}. Sem ela o "
+        f"piloto não marca a coluna como desconectada, e um lugar sem aparelho "
+        f"volta a parecer — e a responder — como um lugar vivo.")
+    assert "p2" not in (carga.get("ocupados") or []), (
+        f"o P2 entrou em ocupados: {carga.get('ocupados')!r}, e não há "
+        f"aparelho nele. Quem tem dono é a mesa que diz, nunca a lista de "
+        f"colunas que a aba emitiu.")
