@@ -1403,7 +1403,7 @@
 
   /* ---------- COR: a guia dos oito tons do produto, por controle ---------- */
   .guia{display:flex;gap:4px;align-items:center}
-  /* os catorze botões continuam itens do flex da `.guia` — ver o gerador */
+  /* os onze botões continuam itens do flex da `.guia` — ver o gerador */
   .guia .tons{display:contents}
   /* A MOLDURA DA AMOSTRA SAIU — 31/08/2026, e é a mais pura das "bordas
      sobrando": um retângulo de 1px em volta de um retângulo CHEIO da cor que
@@ -1470,14 +1470,21 @@
     filter:drop-shadow(1px 0 0 #fff) drop-shadow(-1px 0 0 #fff)
            drop-shadow(0 1px 0 #fff) drop-shadow(0 -1px 0 #fff);
   }
-  .guia .livre{
-    flex:1;height:26px;border-radius:6px;padding:2px;cursor:pointer;min-width:0;
-    border:1px dashed var(--comment);background:
-      linear-gradient(45deg,transparent 44%,var(--comment) 44%,var(--comment) 56%,transparent 56%);
-  }
-  .guia .livre:hover{border-color:var(--purple)}
-  .guia .livre::-webkit-color-swatch-wrapper{padding:0}
-  .guia .livre::-webkit-color-swatch{border:none;border-radius:4px;opacity:0}
+  /* A CASA HACHURADA DO FIM DA FILEIRA SAIU — 11/09/2026, ordem dela. A razão,
+     as palavras dela e os três tons que saíram junto estão na nota datada de
+     `FORA_DA_GUIA`, no pacote desta aba.
+
+     Eram quatro regras: o losango tracejado, o realce ao passar por cima, e os
+     dois pseudo-elementos com que o WebKit desenha a amostra por dentro do
+     campo. As quatro saem com a peça, e não ficam "por via das dúvidas" —
+     classe órfã nesta folha é a próxima pessoa repondo o widget porque o estilo
+     já estava pronto. É a mesma lição que o botão da faixa das lâmpadas pagou,
+     algumas telas acima.
+
+     E O NOME DO SINAL NÃO ESTÁ ESCRITO AQUI, de propósito: o portão
+     `paridade-gtk-html` procura o sinal como TEXTO no HTML, e nesta MESMA aba
+     um comentário que explicava uma remoção já virou a prova de que a peça
+     continuava lá. */
   /* O HEXADECIMAL FICA NA TELA — decisão dela, 28/08, para as duas abas que o
      têm (Controles e Iluminação). Ele é o valor do campo Cor, e por isso mora
      debaixo da guia, na coluna do controle a que pertence. */
@@ -1489,10 +1496,13 @@
      terceiro botão em Opções).
 
      O QUE ELA FECHA: a aba manda a cor no instante do clique, e um botão da
-     guia SEMPRE dispara — clicar de novo no mesmo tom reenvia. O seletor livre
-     não: ele só avisa quando o valor MUDA, então a cor que ela escolheu à mão
-     era justamente a única sem porta de volta. A janela GTK tem um botão
-     dedicado para isso; aqui o botão é o lugar onde a cor já está escrita.
+     guia SEMPRE dispara — clicar de novo no mesmo tom reenvia. O campo de cor
+     do fim da fileira não: ele só avisava quando o valor MUDAVA, então a cor
+     que ela escolhia à mão era justamente a única sem porta de volta. Aquele
+     campo saiu em 11/09/2026 e esta caixa FICA — o que ela reenvia agora é a
+     cor que a fileira não tem (o global do perfil, ou um tom podado que um
+     perfil antigo ainda guarda), e a confirmação de que a cor chegou depois de
+     um controle cair e voltar.
 
      NENHUM ELEMENTO NOVO E NENHUMA LINHA, que é a razão da escolha — a fileira
      de Opções já estava apertada. O que muda é o SINAL de que se pode clicar:
@@ -2370,12 +2380,17 @@
                    ele diz de qual peça se fala. -->
               <div class="sec-rot">Cor
                 <span class="ajuda">?<span class="dica">
-                  Sem escolha à mão, cada barra fica na <b>cor do número</b> do controle.
-                  O último quadradinho é o <b>livre</b>, para uma cor fora das oito.<br><br>
-                  Os oito quadradinhos são as <b>oito cores do produto</b> — uma por número
-                  de jogador (1 azul, 2 vermelho, 3 verde, 4 rosa, 5 amarelo, 6 ciano,
-                  7 laranja, 8 roxo). O nono é o <b>livre</b>, para uma cor que não está
-                  nelas.<br><br>
+                  <!-- A DICA PAROU DE CONTAR CASAS — 11/09/2026. Ela dizia "os oito
+                       quadradinhos" e "o nono é o livre", e as duas frases já estavam
+                       velhas: a fileira tinha CATORZE desde 09/09, e hoje tem onze. Um
+                       número digitado aqui envelhece calado a cada poda — "os oito
+                       primeiros" é estrutura (`player_slot_color(1..8)`), "os demais"
+                       nunca mente. -->
+                  Sem escolha à mão, cada barra fica na <b>cor do número</b> do controle.<br><br>
+                  Os <b>oito primeiros</b> quadradinhos são as cores do produto — uma por
+                  número de jogador (1 azul, 2 vermelho, 3 verde, 4 rosa, 5 amarelo,
+                  6 ciano, 7 laranja, 8 roxo). Os demais são tons a mais, que não
+                  pertencem a número nenhum.<br><br>
                   Escolher um tom aqui pinta a barra <b>daquele controle</b> e <b>não muda o
                   número dele</b>. O código embaixo é a cor exata que vai para o aparelho.
                 </span></span>
@@ -2734,13 +2749,8 @@
             <button class="tom" style="background:#BD93F9" data-gesto="cor" data-hex="#8000FF" title="Cor automática do Player 8 — usar aqui pinta a barra deste controle, e não muda o número dele."></button>
             <button class="tom" style="background:#B8F976" data-gesto="cor" data-hex="#80FF00" title="Pinta a barra deste controle, e não muda o número dele."></button>
             <button class="tom" style="background:#76F9B8" data-gesto="cor" data-hex="#00FF80" title="Pinta a barra deste controle, e não muda o número dele."></button>
-            <button class="tom" style="background:#76B8F9" data-gesto="cor" data-hex="#0080FF" title="Pinta a barra deste controle, e não muda o número dele."></button>
-            <button class="tom" style="background:#F976F9" data-gesto="cor" data-hex="#FF00FF" title="Pinta a barra deste controle, e não muda o número dele."></button>
             <button class="tom" style="background:#F8F8F2" data-gesto="cor" data-hex="#FFFFFF" title="Pinta a barra deste controle, e não muda o número dele."></button>
-            <button class="tom" style="background:#44475A" data-gesto="cor" data-hex="#000000" title="Pinta a barra deste controle, e não muda o número dele."></button>
               </span>
-              <input type="color" class="livre" value="#0000ff" data-gesto="cor"
-                     title="Livre — abre o seletor para uma cor que não está na guia.">
             </span>
             <!-- E ELA REENVIA — 04/09/2026, decisão [03] dela. O `data-gesto`
                  vai NESTA caixa e não num botão novo, e o valor que ele leva é
@@ -3132,13 +3142,8 @@
             <button class="tom" style="background:#BD93F9" data-gesto="cor" data-hex="#8000FF" title="Cor automática do Player 8 — usar aqui pinta a barra deste controle, e não muda o número dele."></button>
             <button class="tom" style="background:#B8F976" data-gesto="cor" data-hex="#80FF00" title="Pinta a barra deste controle, e não muda o número dele."></button>
             <button class="tom" style="background:#76F9B8" data-gesto="cor" data-hex="#00FF80" title="Pinta a barra deste controle, e não muda o número dele."></button>
-            <button class="tom" style="background:#76B8F9" data-gesto="cor" data-hex="#0080FF" title="Pinta a barra deste controle, e não muda o número dele."></button>
-            <button class="tom" style="background:#F976F9" data-gesto="cor" data-hex="#FF00FF" title="Pinta a barra deste controle, e não muda o número dele."></button>
             <button class="tom" style="background:#F8F8F2" data-gesto="cor" data-hex="#FFFFFF" title="Pinta a barra deste controle, e não muda o número dele."></button>
-            <button class="tom" style="background:#44475A" data-gesto="cor" data-hex="#000000" title="Pinta a barra deste controle, e não muda o número dele."></button>
               </span>
-              <input type="color" class="livre" value="#ff0000" data-gesto="cor"
-                     title="Livre — abre o seletor para uma cor que não está na guia.">
             </span>
             <!-- E ELA REENVIA — 04/09/2026, decisão [03] dela. O `data-gesto`
                  vai NESTA caixa e não num botão novo, e o valor que ele leva é
@@ -3514,13 +3519,8 @@
             <button class="tom" style="background:#BD93F9" data-gesto="cor" data-hex="#8000FF" title="Cor automática do Player 8 — usar aqui pinta a barra deste controle, e não muda o número dele."></button>
             <button class="tom" style="background:#B8F976" data-gesto="cor" data-hex="#80FF00" title="Pinta a barra deste controle, e não muda o número dele."></button>
             <button class="tom" style="background:#76F9B8" data-gesto="cor" data-hex="#00FF80" title="Pinta a barra deste controle, e não muda o número dele."></button>
-            <button class="tom" style="background:#76B8F9" data-gesto="cor" data-hex="#0080FF" title="Pinta a barra deste controle, e não muda o número dele."></button>
-            <button class="tom" style="background:#F976F9" data-gesto="cor" data-hex="#FF00FF" title="Pinta a barra deste controle, e não muda o número dele."></button>
             <button class="tom" style="background:#F8F8F2" data-gesto="cor" data-hex="#FFFFFF" title="Pinta a barra deste controle, e não muda o número dele."></button>
-            <button class="tom" style="background:#44475A" data-gesto="cor" data-hex="#000000" title="Pinta a barra deste controle, e não muda o número dele."></button>
               </span>
-              <input type="color" class="livre" value="#000000" data-gesto="cor"
-                     title="Livre — abre o seletor para uma cor que não está na guia.">
             </span>
             <!-- E ELA REENVIA — 04/09/2026, decisão [03] dela. O `data-gesto`
                  vai NESTA caixa e não num botão novo, e o valor que ele leva é
@@ -3891,13 +3891,8 @@
             <button class="tom" style="background:#BD93F9" data-gesto="cor" data-hex="#8000FF" title="Cor automática do Player 8 — usar aqui pinta a barra deste controle, e não muda o número dele."></button>
             <button class="tom" style="background:#B8F976" data-gesto="cor" data-hex="#80FF00" title="Pinta a barra deste controle, e não muda o número dele."></button>
             <button class="tom" style="background:#76F9B8" data-gesto="cor" data-hex="#00FF80" title="Pinta a barra deste controle, e não muda o número dele."></button>
-            <button class="tom" style="background:#76B8F9" data-gesto="cor" data-hex="#0080FF" title="Pinta a barra deste controle, e não muda o número dele."></button>
-            <button class="tom" style="background:#F976F9" data-gesto="cor" data-hex="#FF00FF" title="Pinta a barra deste controle, e não muda o número dele."></button>
             <button class="tom" style="background:#F8F8F2" data-gesto="cor" data-hex="#FFFFFF" title="Pinta a barra deste controle, e não muda o número dele."></button>
-            <button class="tom" style="background:#44475A" data-gesto="cor" data-hex="#000000" title="Pinta a barra deste controle, e não muda o número dele."></button>
               </span>
-              <input type="color" class="livre" value="#000000" data-gesto="cor"
-                     title="Livre — abre o seletor para uma cor que não está na guia.">
             </span>
             <!-- E ELA REENVIA — 04/09/2026, decisão [03] dela. O `data-gesto`
                  vai NESTA caixa e não num botão novo, e o valor que ele leva é

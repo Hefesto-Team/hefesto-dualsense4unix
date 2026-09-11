@@ -477,21 +477,67 @@ def _com_o_brilho(rgb: tuple[int, int, int], brilho: float) -> tuple[int, int, i
     return LedSettings(lightbar=rgb).apply_brightness(brilho).lightbar
 
 
+#: OS TRÊS QUE A GUIA DEIXOU DE MOSTRAR — 11/09/2026, ordem dela:
+#:
+#:     "remover um tom de azul. um tom de rosa e o tom de preto de todas as
+#:      cores pros 4 controles. isso deve dar um desafogo horizontal legal
+#:      pra página."
+#:
+#: ELA DISSE *UM* AZUL E *UM* ROSA, NÃO *QUAL* — e a escolha foi medida, não
+#: escolhida a gosto. O critério é a distância de matiz: sai o tom mais perto
+#: do vizinho que fica, porque é o que menos custa em escolha. Medido nos
+#: catorze (HLS, matiz em graus):
+#:
+#:     azul    #0000FF 240,00° (automático do P1)  vizinho mais perto a 30,12°
+#:             #0080FF 209,88° (extra)             vizinho mais perto a 29,88°  ← SAI
+#:     rosa    #FF0080 329,88° (automático do P4)  vizinho mais perto a 29,88°
+#:             #FF00FF 300,00° (extra)             vizinho mais perto a 29,88°  ← SAI
+#:
+#: O AZUL SE DECIDE SOZINHO pela medida. O ROSA EMPATA em 29,88°, e o
+#: desempate é o da §2 da sprint — *"o corte é na metade 2"*, com a razão de
+#: produto escrita: tirar um tom da metade automática tiraria da guia a cor de
+#: um jogador, e um controle no número 4 e na cor automática deixaria de ter
+#: tom marcado na fileira. O segundo número concorda: tirar o `#FF00FF` abre um
+#: vão de 59,76° entre os que ficam, e tirar o `#FF0080` abre 60,00°.
+#:
+#: O PRETO É O ÚNICO — ela disse *"o tom de preto"*, e há um só.
+#:
+#: A ESCOLHA DO PAR É DELA (§5 da sprint): se ela olhar a foto e disser que o
+#: azul errado saiu, a troca é de um hex nesta linha, e nada mais.
+FORA_DA_GUIA = ("#0080FF", "#FF00FF", "#000000")
+
+
 def tons_da_guia() -> tuple[tuple[int, int, int], ...]:
-    """Os CATORZE tons que a guia desta aba oferece, na ordem do desenho.
+    """Os ONZE tons que a guia desta aba oferece, na ordem do desenho.
 
     NÃO SE DIGITA NENHUM, e as duas metades têm donos diferentes:
 
     * os OITO primeiros são `core/led_control.player_slot_color(1..8)` — a mesma
       paleta que acende as cinco lâmpadas e que o daemon usa como cor automática
       de cada número. Eles ficam porque são o atalho para a cor do jogador;
-    * os SEIS seguintes são as chaves que `monta.TOM_DA_CASA` conhece e os oito
-      não cobrem: os quatro matizes que faltavam para o círculo fechar de 30 em
-      30 graus, mais o branco e o preto.
+    * os TRÊS seguintes são as chaves que `monta.TOM_DA_CASA` conhece, os oito
+      não cobrem e :data:`FORA_DA_GUIA` não tirou.
 
-    ERA OITO ATÉ 09/09/2026. Decisão dela na bancada: *"deixar na tela 11 cores
-    principais (primárias e interseções) + preto + branco"* e *"adicionamos os
-    tons faltantes pra cada controle"*.
+    ERA OITO ATÉ 09/09/2026, CATORZE ATÉ 11/09/2026. A primeira mudança foi
+    decisão dela na bancada (*"adicionamos os tons faltantes pra cada
+    controle"*); a segunda é a poda de :data:`FORA_DA_GUIA`, e a razão dela é
+    de espaço.
+
+    QUEM FILTRA É ESTA FUNÇÃO, E NÃO O DONO DOS TONS. `monta.TOM_DA_CASA`
+    continua conhecendo os catorze e `core/led_control.player_slot_color`
+    continua devolvendo os oito: o que mudou é o que a GUIA mostra. Os dois
+    estão em `nao_toca` da sprint de propósito — a cor automática de um jogador
+    é do daemon, não desta tela.
+
+    ELA RECUSA DIZENDO, e as duas recusas existem porque um erro em
+    :data:`FORA_DA_GUIA` seria mudo de outro jeito:
+
+    1. **um hex que não está em `TOM_DA_CASA`** não tira nada — seria uma linha
+       morta parecendo decisão;
+    2. **um hex que é cor automática de jogador** quebraria o contrato de
+       `titulo_da_casa`, que promete *"Cor automática do Player i"* para as
+       oito primeiras casas pela POSIÇÃO. Tirar uma da frente faria a nona
+       casa dizer o nome da oitava.
 
     A ORDEM IMPORTA e é esta: quem procura a cor do próprio número a encontra
     onde sempre esteve, e o que é novo entra depois.
@@ -502,10 +548,22 @@ def tons_da_guia() -> tuple[tuple[int, int, int], ...]:
 
     automaticos = tuple(player_slot_color(n) for n in range(1, 9))
     ja_tem = {"#{:02X}{:02X}{:02X}".format(*rgb) for rgb in automaticos}
+    fora = {h.upper() for h in FORA_DA_GUIA}
+    desconhecidos = sorted(fora - {h.upper() for h in monta.TOM_DA_CASA})
+    if desconhecidos:
+        raise ValueError(
+            "FORA_DA_GUIA cita tom que `monta.TOM_DA_CASA` não conhece e por "
+            f"isso não tira nada da fileira: {', '.join(desconhecidos)}")
+    automaticos_podados = sorted(fora & ja_tem)
+    if automaticos_podados:
+        raise ValueError(
+            "FORA_DA_GUIA cita cor automática de jogador, e a guia numera as "
+            "oito primeiras casas pela posição — a casa seguinte passaria a "
+            f"dizer o número da anterior: {', '.join(automaticos_podados)}")
     extras = tuple(
         (int(h[1:3], 16), int(h[3:5], 16), int(h[5:7], 16))
         for h in monta.TOM_DA_CASA
-        if h not in ja_tem
+        if h not in ja_tem and h.upper() not in fora
     )
     return automaticos + extras
 
@@ -627,21 +685,34 @@ def cor_escolhida(efetiva: Any, brilho: float | None) -> Any:
     cor que está acesa — o mesmo desenho de `lightbar_actions.nome_do_desenho`,
     que varre os oito padrões canônicos para batizar um bitmask.
 
-    SEM CASAMENTO, A EFETIVA VOLTA INTEIRA. É o caso da cor livre do seletor —
-    `#12AB34` a 82% acende `#0E8C2A`, e não há como saber de qual pedido ele
-    veio. Aí a tela mostra o que está no plástico, que é o honesto; inventar um
-    pedido seria afirmar uma escolha que ninguém fez.
+    QUEM ELA VARRE É `monta.TOM_DA_CASA`, OS CATORZE — e NÃO os onze da guia.
+    A diferença nasceu em 11/09/2026, quando :data:`FORA_DA_GUIA` tirou três da
+    fileira, e ela é a razão de a varredura ter dono próprio: o que esta função
+    inverte é *o que o produto pode ter ACESO*, e não *o que a guia oferece
+    HOJE*. Um perfil dela salvo ontem no `#0080FF`, a 50% de brilho, acende
+    `#004080`; varrer só os onze devolveria o escuro, e a caixa `#RRGGBB`
+    passaria a mostrar uma cor que ela nunca pediu **por causa de uma poda de
+    tela**. Poda de guia não pode reescrever o passado do disco dela.
+
+    SEM CASAMENTO, A EFETIVA VOLTA INTEIRA. É o caso de uma cor que não é tom
+    da casa — o global do perfil dela (`#2850B4`) — que a 82% acende outro
+    hexa, e não há como saber de qual pedido ele veio. Aí a tela mostra o que
+    está no plástico, que é o honesto; inventar um pedido seria afirmar uma
+    escolha que ninguém fez.
 
     :param efetiva: o `lightbar_rgb` do daemon, ou `None`/vazio quando não há.
     :param brilho: `brilho_do_controle`. `None` ou `1.0` devolvem a efetiva sem
         varrer nada — a 100% as duas escalas são a mesma, e varrer só gastaria.
     """
+    import monta  # o `pacotes/__init__` põe `interface/` no `sys.path`
+
     if not efetiva:
         return efetiva
     if brilho is None or brilho >= 1.0:
         return efetiva
     alvo = tuple(efetiva)[:3]
-    for tom in tons_da_guia():
+    for h in monta.TOM_DA_CASA:
+        tom = (int(h[1:3], 16), int(h[3:5], 16), int(h[5:7], 16))
         if _com_o_brilho(tom, brilho) == alvo:
             return tom
     return efetiva
@@ -1962,11 +2033,18 @@ def _so_abriu_o_seletor(o: dict[str, Any]) -> bool:
     03/09/2026. Um `<input type="range">` clicado na pista dispara `input`,
     depois `change` e depois `click`; o BOOTSTRAP escuta `change` e `click`, e
     sem este guarda cada clique na pista viraria DUAS gravações no perfil dela e
-    DUAS escritas no rádio. No seletor de cor o `click` chega ANTES da escolha e
-    carrega o valor velho; no trilho ele chega DEPOIS e carrega o mesmo valor.
-    Nos dois casos ele não é um pedido — o pedido é o `change` —, e nos dois a
-    resposta certa é sair calado: recusar dizendo poria uma frase de erro na
-    tela dela por um gesto que ela fez uma vez só.
+    DUAS escritas no rádio. No seletor de cor o `click` chegava ANTES da escolha
+    e carregava o valor velho; no trilho ele chega DEPOIS e carrega o mesmo
+    valor. Nos dois casos ele não é um pedido — o pedido é o `change` —, e nos
+    dois a resposta certa é sair calado: recusar dizendo poria uma frase de erro
+    na tela dela por um gesto que ela fez uma vez só.
+
+    O CHAMADOR QUE O PARIU SAIU EM 11/09/2026, e ele FICA. O seletor de cores
+    do sistema deixou a guia (:data:`FORA_DA_GUIA`), e com ele o único caso em
+    que o `click` chegava ANTES. Quem continua chamando são o `brilho` e o
+    `auto-cores` — os dois pelo tempo invertido, que é o caso do trilho. A
+    medição do caso de cor fica escrita porque é a razão de o guarda existir:
+    apagá-la faria a próxima pessoa achar que ele é só para `range`.
     """
     return (str(o.get("tipo") or "").lower() == "input"
             and str(o.get("evento") or "").lower() == "click")
@@ -2383,29 +2461,33 @@ def cor(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
     DIZENDO**: `ValueError` com a razão escrita — *"hex_to_rgb espera formato
     RRGGBB"*, *"componente não numérico"*.
 
-    DUAS PORTAS PARA O MESMO GESTO, e a segunda é o seletor livre: os oito
-    botões da guia trazem a cor em `data-hex`, e o `<input type="color">` a traz
-    em `value`, que o ouvinte manda como `valor`.
+    UMA PORTA SÓ, DESDE 11/09/2026 — e eram DUAS. A segunda era o seletor de
+    cores do sistema, a casa hachurada no fim da fileira: ela não trazia
+    `data-hex`, e a cor vinha no `valor` que o ouvinte lia do campo. Ela saiu
+    por ordem dela (ver :data:`FORA_DA_GUIA`, a mesma decisão), e a queda pelo
+    `valor` saiu junto — **peça sem chamador é o que o portão `casa-sabe`
+    acusa, e peça com chamador e sem tela é pior**: um caminho que nenhum
+    elemento da página alcança aceita, calado, carga que ninguém desenhou.
 
-    ABRIR O SELETOR NÃO É APLICAR — e esta é a razão de `_so_abriu_o_seletor`
-    existir. Medido em 02/09/2026 com o BOOTSTRAP REAL avaliado dentro de um
-    Chrome, com `window.webkit.messageHandlers` dublado::
+    O QUE MORREU JUNTO, e fica escrito porque custou uma medição em
+    02/09/2026: a guarda `_so_abriu_o_seletor` era chamada AQUI porque um campo
+    de cor dispara `click` ao ABRIR, com o valor velho, e `change` quando ela
+    confirma. Medido com o BOOTSTRAP real dentro de um Chrome::
 
-        ela ABRE o seletor   {gesto:'cor', hex:'', valor:'#0000ff',
-                              tipo:'input', evento:'click'}
-        ela ESCOLHE a cor    {gesto:'cor', hex:'', valor:'#12ab34',
-                              tipo:'input', evento:'change'}
+        ela ABRE     {gesto:'cor', hex:'', valor:'#0000ff', tipo:'input',
+                      evento:'click'}
+        ela ESCOLHE  {gesto:'cor', hex:'', valor:'#12ab34', tipo:'input',
+                      evento:'change'}
 
-    O ouvinte escuta `click` E `change`, e um `<input type="color">` dispara
-    `click` no instante em que ela o ABRE — carregando o valor VELHO, que é a
-    cor cravada no arquivo pelo gerador. Ler o `valor` nesse clique manda a
-    barra dela para `#0000FF` (p1) ou `#FF0000` (p2) antes de ela escolher
-    qualquer coisa; se ela CANCELAR, a barra fica na cor que ela nunca pediu.
+    Sem a guarda, abrir e CANCELAR deixava a barra dela numa cor que ela nunca
+    pediu. **A guarda continua viva** — o `brilho` e o `auto-cores` a chamam
+    pelo mesmo motivo, com o tempo invertido —, mas não aqui: um botão da guia
+    não abre nada.
 
-    UM CONTROLE QUE AGE SEM ELA PEDIR é da mesma família do que aceita o toque e
-    não age, e MUDA O APARELHO. O ato é o `change`; a abertura não é gesto
-    nenhum, e por isso o gesto sai calado — recusar dizendo poria uma frase de
-    erro na tela dela só por ela ter aberto um seletor.
+    SEM `hex`, RECUSA DIZENDO. Todo botão da fileira nasce com `data-hex`, e
+    um pedido sem ele não vem da tela: é carga inventada ou endereço que
+    envelheceu. Sair calado esconderia o defeito; adivinhar pelo `valor`
+    ressuscitaria a porta que ela mandou fechar.
 
     E O DESFECHO SE LÊ — 02/09/2026. A linha era `p.led_set(...)` sem olhar o
     retorno; ver `sem_resposta_do_daemon` para o que isso custava.
@@ -2415,24 +2497,21 @@ def cor(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
 
     E DUAS PEÇAS NUNCA FICAM DA MESMA COR — 08/09/2026. O alvo aqui é UM
     controle, então escolher o tom que o vizinho já tem é uma escolha e não um
-    broadcast: `_escrever_a_cor(..., escolha=True)` desloca para o vizinho
-    livre e devolve a frase que diz DE QUEM é a cor. Vale para as DUAS portas
-    desta aba — a guia de oito tons e o `<input type="color">` livre, que
-    alcança o hexa exato de outra coluna —, e para o `reenviar`, que passa pela
-    mesma porta desde que a guarda mudou de lugar.
+    broadcast: `_escrever_a_cor(..., escolha=True)` devolve a frase que diz DE
+    QUEM é a cor. Vale também para o `reenviar`, que passa pela mesma porta
+    desde que a guarda mudou de lugar.
     """
     from hefesto_dualsense4unix.core.led_control import hex_to_rgb
 
     uniq = _uniq(o)
     if not uniq:
         raise ValueError("cor: o clique não disse em qual controle")
-    # O `data-hex` MANDA, e o `valor` é a queda: um botão da guia tem os dois
-    # (o `value` de um `<button>` é vazio) e o seletor livre só tem o segundo.
     pedido = str(o.get("hex") or "")
     if not pedido:
-        if _so_abriu_o_seletor(o):
-            return None
-        pedido = str(o.get("valor") or "")
+        raise ValueError(
+            "cor: o clique não disse qual tom. Todo botão da fileira manda o "
+            "próprio hex; quem mandava a cor por outro campo era o seletor de "
+            "cores do sistema, que saiu da guia em 11/09/2026")
     recado = _escrever_a_cor(ctx, p, uniq, hex_to_rgb(pedido), escolha=True)
     return {"recado": recado} if recado else None
 
@@ -2560,14 +2639,20 @@ def reenviar(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
     opções que eu ofereci (deixar como está, ou um terceiro botão em Opções):
     *"A caixa do hexadecimal vira o botão."*
 
-    O BURACO QUE ISSO FECHA, e ele só existe para UMA das duas portas de cor: um
+    O BURACO QUE ISSO FECHOU era o do seletor de cores do sistema: um
     `<button>` da guia sempre dispara, então clicar de novo no mesmo tom
-    reenvia. O `<input type="color">` não — ele só avisa no `change`, e reabrir
-    o seletor para confirmar a MESMA cor não manda nada ao aparelho (ver
+    reenvia; aquele campo não — ele só avisava no `change`, e reabri-lo para
+    confirmar a MESMA cor não mandava nada ao aparelho (ver
     `_so_abriu_o_seletor`, que é quem descarta o `click` de abertura, e tem de
-    descartar). Quando um controle cai e volta, ou quando ela quer conferir se a
-    cor chegou, a cor que ela escolheu à mão era justamente a única sem porta de
-    volta. A janela GTK tem um botão dedicado para isso.
+    descartar). A cor que ela escolhia à mão era justamente a única sem porta
+    de volta.
+
+    **A PORTA QUE ABRIU O BURACO SAIU EM 11/09/2026** (:data:`FORA_DA_GUIA`), e
+    este botão FICA — a decisão [03] dela não caducou com ela. O que ele serve
+    agora é a cor que a fileira não tem: o global do perfil dela, um dos três
+    tons podados que um perfil antigo ainda guarda, ou simplesmente um controle
+    que caiu e voltou e ela quer conferir se a cor chegou. A janela GTK tinha
+    um botão dedicado para isso.
 
     O VALOR VEM DO `texto`, e não de um `data-hex`, e essa é a parte que
     importa: `data-hex` é escrito pelo GERADOR e fica congelado no que o mockup
@@ -2866,9 +2951,10 @@ def brilho(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
     # A ESCADA GANHOU O PRIMEIRO DEGRAU — 09/09/2026, e é ele que faltava.
     # Era `pedida -> cor do slot`, e as duas pontas adivinham: `pedida` sai da
     # luz ACESA invertida por `cor_escolhida`, que só sabe inverter os catorze
-    # tons da guia. Toda cor fora deles — o seletor livre, o global do perfil
-    # dela (`#2850B4`) — voltava INTEIRA e era reescalada por cima de si
-    # mesma, escurecendo a cada arraste até o preto. Medido na bancada dela.
+    # tons da casa. Toda cor fora deles — o global do perfil dela (`#2850B4`),
+    # e naquele dia também o seletor de cores do sistema, que a guia ainda
+    # tinha — voltava INTEIRA e era reescalada por cima de si mesma,
+    # escurecendo a cada arraste até o preto. Medido na bancada dela.
     #
     # A cor GUARDADA não adivinha nada, e existe desde que `_escrever_a_cor`
     # grava a escolha dela; ver `_guardar_a_cor_no_perfil`.
