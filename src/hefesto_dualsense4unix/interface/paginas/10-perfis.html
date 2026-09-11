@@ -1043,7 +1043,7 @@
      sugestão, e o Chrome media 86px para caber o cabeçalho. O número aqui passa  # (noqa-acento) id
      a ser o medido; escrever 46 embaixo de uma coluna de 86 é deixar no CSS uma
      afirmação que a tela desmente. */
-  .tab .pri{font-family:'JetBrains Mono',monospace;width:86px;text-align:right}
+  .tab .pri{font-family:'JetBrains Mono',monospace;width:96px;text-align:right}
   .tab .quando{color:var(--texto-mudo);font-weight:400}
   /* ------------------------------------------------------------------
      A LUPA, OS DOIS ÍCONES, A SETA E A DIVISA — PERFIS-LIMPA-01, 11/09/2026.
@@ -1091,9 +1091,29 @@
      célula do nome, que é o gesto `selecionar` e troca o perfil aberto no
      editor. Com ela, mouse nenhum alcança este nó; quem o aciona é o roteiro
      da página, no `dblclick`, por `.click()`. Ela pediu duplo clique. */
-  .ordena{pointer-events:none;margin-left:4px;font-size:10px;line-height:1;
-          opacity:0;color:var(--purple)}
-  .ordena.on{opacity:1}
+  /* O GLIFO VEM DO CSS, E NÃO DO PILOTO — 11/09/2026, e o defeito era duplo.
+     A seta nasceu com `data-hef-alvo="classe"`, e o ramo `classe` do
+     `escrever()` (`hefesto_vivo.py:636`) só liga classe e RETORNA: nunca
+     escreve texto. Medido na conferência: com `perfis.ordem.nome = "↑"` o
+     span ficava `class="ordena on"`, `opacity:1`, `textContent:""` e
+     **0px de largura** — a seta que diz qual coluna ordena NÃO EXISTIA na
+     tela, nos três estados. E o alvo `texto` não servia: com valor vazio o
+     `escrever()` põe o travessão do lugar vazio (`:382`), e as duas colunas
+     não ordenadas mostrariam «—».
+     O alvo é `atributo`, que é o único que APAGA quando o valor é vazio
+     (`hefesto_vivo.py:804`). O glifo é `content` do CSS; o Python só diz
+     qual, pelo `data-ordem`.
+
+     E A MARGEM SÓ EXISTE QUANDO HÁ SETA. Os 4px de um span vazio cortaram
+     «Priorização» para «Priorizaçã…» — medido em duas larguras de janela,
+     scrollWidth 90 num clientWidth 86. Sem a seta, o mesmo `<th>` mede 86/86.
+
+     `pointer-events:none` NÃO É ENFEITE — a razão inteira está no bloco de
+     comentário acima desta regra. */
+  .ordena{pointer-events:none;font-size:10px;line-height:1;color:var(--purple)}
+  .ordena[data-ordem]{margin-left:4px}
+  .ordena[data-ordem="↑"]::after{content:"↑"}
+  .ordena[data-ordem="↓"]::after{content:"↓"}
   /* A DIVISA QUE ELA ARRASTA. O cursor muda quando ela chega perto — é
      literalmente o que ela descreveu: *"quando o cursor muda e permite  (noqa-acento) citação
      alterar a largura da coluna"*. 9px de faixa, metade para cada lado da
@@ -1120,14 +1140,29 @@
      `blocos` do piloto (que só troca o `<tbody>`), e um `<col>` por coluna dá
      ao roteiro um lugar só para escrever. */
   .tab{table-layout:fixed}
-  /* AS LARGURAS DE PARTIDA, e as duas saem da MEDIÇÃO da tela de ontem: com
-     `auto` o Chrome dava 255px ao `Nome` e 86 à `Priorização`, e o `Quando
-     usar` ficava com o resto. Escrevê-las no `<col>` é o que faz a tabela abrir
-     exatamente como abria antes de a largura virar arrastável — quem nunca
-     arrastar não vê diferença nenhuma. Quem arrastar ganha um `style` inline
-     no mesmo `<col>`, e inline vence folha. */
-  .tab col[data-coluna="nome"]{width:255px}
-  .tab col[data-coluna="prioridade"]{width:86px}
+  /* AS LARGURAS DE PARTIDA, e as duas foram REMEDIDAS no motor certo em
+     11/09/2026. Elas nasceram de uma medição feita no CHROME, e o produto
+     renderiza no `WebKit2.WebView`: medido nos dois motores, o `Nome` de 255px
+     tirava 69px do `Quando usar` numa janela de 1280px (ontem, com `auto`:
+     185·86·294; com os 255 cravados: 255·86·225). **O `Quando usar` é onde mora
+     o nome do jogo, e foi ele que ela pediu para achar rápido** — então quem
+     devolve o espaço é o `Nome`, não ele.
+
+     `Nome` 255 → 185: é o que o `auto` dava a 1280. `Priorização` 86 → 96: é a
+     largura do rótulo MAIS a seta da ordem (6,2px de glifo + 4px de margem) —
+     sem os 10px o cabeçalho da coluna ORDENADA media  (noqa-acento: verbo medir,
+     imperfeito) 96 num espaço de 86 e
+     saía «Priorizaçã…», que é o defeito que a conferência fotografou. Uma
+     coluna que se ordena tem de caber no próprio rótulo com a marca de ordem.
+
+     E O `QUANDO USAR` NÃO GANHA `<col>` DE PROPÓSITO: sem largura escrita ele
+     fica com o resto, que é o único jeito de uma tabela `fixed` ter uma coluna
+     elástica. A 1600px isso lhe dá 444px, mais que os 392 de ontem.
+
+     O `<colgroup>` é quem carrega o número e não a `width` da `<th>`; quem
+     arrastar ganha um `style` inline no mesmo `<col>`, e inline vence folha. */
+  .tab col[data-coluna="nome"]{width:185px}
+  .tab col[data-coluna="prioridade"]{width:96px}
   .tab td,.tab th{overflow:hidden;text-overflow:ellipsis}
   .tab .quando{white-space:nowrap}
   .tab tbody td{white-space:nowrap}
@@ -1842,7 +1877,7 @@
                      data-hef-atributo="data-larguras" data-tabela="10-perfis.lista"
                      data-larguras="">
                 <colgroup><col data-coluna="nome"><col data-coluna="prioridade"><col data-coluna="quando"></colgroup>
-                <thead><tr><th data-coluna="nome" title="Duplo clique para ordenar por esta coluna; de novo, inverte.">Nome<span class="ordena" data-hef="perfis.ordem.nome" data-hef-alvo="classe" data-hef-gesto="ordenar" data-coluna="nome"></span><span class="puxador" data-hef-gesto="largura-da-coluna" data-tabela="10-perfis.lista" data-coluna="nome" data-px="0" role="separator" aria-label="Arraste para mudar a largura da coluna"></span></th><th class="pri" data-coluna="prioridade" title="Duplo clique para ordenar por esta coluna; de novo, inverte.">Priorização<span class="ordena" data-hef="perfis.ordem.prioridade" data-hef-alvo="classe" data-hef-gesto="ordenar" data-coluna="prioridade"></span><span class="puxador" data-hef-gesto="largura-da-coluna" data-tabela="10-perfis.lista" data-coluna="prioridade" data-px="0" role="separator" aria-label="Arraste para mudar a largura da coluna"></span></th><th data-coluna="quando" title="Duplo clique para ordenar por esta coluna; de novo, inverte.">Quando usar<span class="ordena" data-hef="perfis.ordem.quando" data-hef-alvo="classe" data-hef-gesto="ordenar" data-coluna="quando"></span></th></tr></thead>
+                <thead><tr><th data-coluna="nome" title="Duplo clique para ordenar por esta coluna; de novo, inverte.">Nome<span class="ordena" data-hef="perfis.ordem.nome" data-hef-alvo="atributo" data-hef-atributo="data-ordem" data-hef-gesto="ordenar" data-coluna="nome"></span><span class="puxador" data-hef-gesto="largura-da-coluna" data-tabela="10-perfis.lista" data-coluna="nome" data-px="0" role="separator" aria-label="Arraste para mudar a largura da coluna"></span></th><th class="pri" data-coluna="prioridade" title="Duplo clique para ordenar por esta coluna; de novo, inverte.">Priorização<span class="ordena" data-hef="perfis.ordem.prioridade" data-hef-alvo="atributo" data-hef-atributo="data-ordem" data-hef-gesto="ordenar" data-coluna="prioridade"></span><span class="puxador" data-hef-gesto="largura-da-coluna" data-tabela="10-perfis.lista" data-coluna="prioridade" data-px="0" role="separator" aria-label="Arraste para mudar a largura da coluna"></span></th><th data-coluna="quando" title="Duplo clique para ordenar por esta coluna; de novo, inverte.">Quando usar<span class="ordena" data-hef="perfis.ordem.quando" data-hef-alvo="atributo" data-hef-atributo="data-ordem" data-hef-gesto="ordenar" data-coluna="quando"></span></th></tr></thead>
                 <tbody data-hef="perfis.lista">
                 <tr class="ativo" data-hef-perfil="Mortal Kombat" aria-selected="true" title=""><td data-hef="perfis.linha.nome" data-hef-gesto="selecionar">Mortal Kombat</td><td class="pri" data-hef="perfis.linha.prioridade">90</td><td class="quando" data-hef="perfis.linha.quando">Jogo · mk1.exe</td></tr>
                 <tr class="" data-hef-perfil="Elden Ring" aria-selected="false" title=""><td data-hef="perfis.linha.nome" data-hef-gesto="selecionar">Elden Ring</td><td class="pri" data-hef="perfis.linha.prioridade">85</td><td class="quando" data-hef="perfis.linha.quando">Jogo da Steam · 1245620</td></tr>

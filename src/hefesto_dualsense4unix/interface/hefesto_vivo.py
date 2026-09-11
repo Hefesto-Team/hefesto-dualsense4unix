@@ -379,7 +379,28 @@ BOOTSTRAP = r"""
   function escrever(el, v){
     if(!el) return 0;
     const vazio = (v === null || v === undefined || v === '');
-    const t = vazio ? '—' : String(v);
+    // O TRAVESSÃO NÃO ENTRA NUM CAMPO QUE A PESSOA DIGITA — 11/09/2026.
+    //
+    // O `—` existe para MOSTRAR AUSÊNCIA num lugar de leitura (um slot vazio da
+    // mesa, uma coluna sem dado). Num campo de digitar ele é LIXO: ela abre a
+    // busca e acha um travessão escrito lá, que ela tem de apagar antes de
+    // procurar. Medido na aba Perfis: `perfis.procura` sai `""` em todo tique,
+    // e o campo da lupa nascia com `—` no PRIMEIRO tique em repouso — antes de
+    // ela clicar, e de volta a cada fechamento. A guarda `sob_o_dedo` só
+    // protege enquanto o campo TEM foco, e o travessão entra antes disso.
+    //
+    // O ALVO É `data-hef-vivo`, que é a QUARTA PORTA (`:1406`) — o gesto que LÊ
+    // e não grava, ou seja, exatamente os campos que a PESSOA dirige. São UM na
+    // casa inteira hoje (`procurar`, na 10-perfis), então o alcance é o defeito
+    // e nada mais; e no dia em que houver um segundo ele já nasce curado.
+    //
+    // É A MESMA DISCIPLINA DO `<select>` E DO `<input type=range>` logo abaixo,
+    // e a razão é a que aquelas duas guardas já escrevem: uma aba não pode ter
+    // de lembrar-se disto — quem esquecer publica o defeito sem erro e sem
+    // aviso.
+    const digitavel = !!(el.dataset && el.dataset.hefVivo !== undefined
+                         && String(el.dataset.hefVivo).trim() !== '');
+    const t = vazio ? (digitavel ? '' : '—') : String(v);
     // O ALVO PADRÃO É O TEXTO. `data-hef-alvo` desvia para um atributo quando a
     // tela precisa de outra coisa — a largura de uma barra, o `value` de um
     // campo. Sem isso, pintar uma barra escreveria o número DENTRO dela.

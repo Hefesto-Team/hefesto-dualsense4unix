@@ -382,7 +382,7 @@ CSS = CSS_GLIFO + """
      sugestão, e o Chrome media 86px para caber o cabeçalho. O número aqui passa  # (noqa-acento) id
      a ser o medido; escrever 46 embaixo de uma coluna de 86 é deixar no CSS uma
      afirmação que a tela desmente. */
-  .tab .pri{font-family:'JetBrains Mono',monospace;width:86px;text-align:right}
+  .tab .pri{font-family:'JetBrains Mono',monospace;width:96px;text-align:right}
   .tab .quando{color:var(--texto-mudo);font-weight:400}
   /* ------------------------------------------------------------------
      A LUPA, OS DOIS ÍCONES, A SETA E A DIVISA — PERFIS-LIMPA-01, 11/09/2026.
@@ -430,9 +430,29 @@ CSS = CSS_GLIFO + """
      célula do nome, que é o gesto `selecionar` e troca o perfil aberto no
      editor. Com ela, mouse nenhum alcança este nó; quem o aciona é o roteiro
      da página, no `dblclick`, por `.click()`. Ela pediu duplo clique. */
-  .ordena{pointer-events:none;margin-left:4px;font-size:10px;line-height:1;
-          opacity:0;color:var(--purple)}
-  .ordena.on{opacity:1}
+  /* O GLIFO VEM DO CSS, E NÃO DO PILOTO — 11/09/2026, e o defeito era duplo.
+     A seta nasceu com `data-hef-alvo="classe"`, e o ramo `classe` do
+     `escrever()` (`hefesto_vivo.py:636`) só liga classe e RETORNA: nunca
+     escreve texto. Medido na conferência: com `perfis.ordem.nome = "↑"` o
+     span ficava `class="ordena on"`, `opacity:1`, `textContent:""` e
+     **0px de largura** — a seta que diz qual coluna ordena NÃO EXISTIA na
+     tela, nos três estados. E o alvo `texto` não servia: com valor vazio o
+     `escrever()` põe o travessão do lugar vazio (`:382`), e as duas colunas
+     não ordenadas mostrariam «—».
+     O alvo é `atributo`, que é o único que APAGA quando o valor é vazio
+     (`hefesto_vivo.py:804`). O glifo é `content` do CSS; o Python só diz
+     qual, pelo `data-ordem`.
+
+     E A MARGEM SÓ EXISTE QUANDO HÁ SETA. Os 4px de um span vazio cortaram
+     «Priorização» para «Priorizaçã…» — medido em duas larguras de janela,
+     scrollWidth 90 num clientWidth 86. Sem a seta, o mesmo `<th>` mede 86/86.
+
+     `pointer-events:none` NÃO É ENFEITE — a razão inteira está no bloco de
+     comentário acima desta regra. */
+  .ordena{pointer-events:none;font-size:10px;line-height:1;color:var(--purple)}
+  .ordena[data-ordem]{margin-left:4px}
+  .ordena[data-ordem="↑"]::after{content:"↑"}
+  .ordena[data-ordem="↓"]::after{content:"↓"}
   /* A DIVISA QUE ELA ARRASTA. O cursor muda quando ela chega perto — é
      literalmente o que ela descreveu: *"quando o cursor muda e permite  (noqa-acento) citação
      alterar a largura da coluna"*. 9px de faixa, metade para cada lado da
@@ -459,14 +479,29 @@ CSS = CSS_GLIFO + """
      `blocos` do piloto (que só troca o `<tbody>`), e um `<col>` por coluna dá
      ao roteiro um lugar só para escrever. */
   .tab{table-layout:fixed}
-  /* AS LARGURAS DE PARTIDA, e as duas saem da MEDIÇÃO da tela de ontem: com
-     `auto` o Chrome dava 255px ao `Nome` e 86 à `Priorização`, e o `Quando
-     usar` ficava com o resto. Escrevê-las no `<col>` é o que faz a tabela abrir
-     exatamente como abria antes de a largura virar arrastável — quem nunca
-     arrastar não vê diferença nenhuma. Quem arrastar ganha um `style` inline
-     no mesmo `<col>`, e inline vence folha. */
-  .tab col[data-coluna="nome"]{width:255px}
-  .tab col[data-coluna="prioridade"]{width:86px}
+  /* AS LARGURAS DE PARTIDA, e as duas foram REMEDIDAS no motor certo em
+     11/09/2026. Elas nasceram de uma medição feita no CHROME, e o produto
+     renderiza no `WebKit2.WebView`: medido nos dois motores, o `Nome` de 255px
+     tirava 69px do `Quando usar` numa janela de 1280px (ontem, com `auto`:
+     185·86·294; com os 255 cravados: 255·86·225). **O `Quando usar` é onde mora
+     o nome do jogo, e foi ele que ela pediu para achar rápido** — então quem
+     devolve o espaço é o `Nome`, não ele.
+
+     `Nome` 255 → 185: é o que o `auto` dava a 1280. `Priorização` 86 → 96: é a
+     largura do rótulo MAIS a seta da ordem (6,2px de glifo + 4px de margem) —
+     sem os 10px o cabeçalho da coluna ORDENADA media  (noqa-acento: verbo medir,
+     imperfeito) 96 num espaço de 86 e
+     saía «Priorizaçã…», que é o defeito que a conferência fotografou. Uma
+     coluna que se ordena tem de caber no próprio rótulo com a marca de ordem.
+
+     E O `QUANDO USAR` NÃO GANHA `<col>` DE PROPÓSITO: sem largura escrita ele
+     fica com o resto, que é o único jeito de uma tabela `fixed` ter uma coluna
+     elástica. A 1600px isso lhe dá 444px, mais que os 392 de ontem.
+
+     O `<colgroup>` é quem carrega o número e não a `width` da `<th>`; quem
+     arrastar ganha um `style` inline no mesmo `<col>`, e inline vence folha. */
+  .tab col[data-coluna="nome"]{width:185px}
+  .tab col[data-coluna="prioridade"]{width:96px}
   .tab td,.tab th{overflow:hidden;text-overflow:ellipsis}
   .tab .quando{white-space:nowrap}
   .tab tbody td{white-space:nowrap}
@@ -1155,8 +1190,8 @@ def cabeca(coluna: str, rotulo_visivel: str, tabela: str, classe: str = "",
             f'title="Duplo clique para ordenar por esta coluna; de novo, inverte.">'
             f'{rotulo_visivel}'
             f'<span class="ordena" data-hef="perfis.ordem.{coluna}" '
-            f'data-hef-alvo="classe" data-hef-gesto="ordenar" '
-            f'data-coluna="{coluna}"></span>'
+            f'data-hef-alvo="atributo" data-hef-atributo="data-ordem" '
+            f'data-hef-gesto="ordenar" data-coluna="{coluna}"></span>'
             f'{puxador(coluna, tabela) if divisa else ""}</th>')
 
 
@@ -2614,6 +2649,60 @@ def _conferir(html: str) -> None:
                    f"a seta da coluna `{coluna}` perdeu o gesto ou o nome da "
                    f"coluna — o duplo clique chegaria ao Python sem dizer por "
                    f"qual coluna ordenar")
+            # A SETA TEM DE CHEGAR À TELA, e o alvo é o que decide isso. O ramo
+            # `classe` do `escrever()` só liga classe e RETORNA — com ele o
+            # glifo que o Python calcula é jogado fora e a seta fica 0px, que é
+            # o defeito que a conferência de 11/09 fotografou. O ramo `texto`
+            # tampouco serve: com valor vazio ele escreve o travessão do lugar
+            # vazio, e as duas colunas não ordenadas mostrariam «—».
+            exigir('data-hef-alvo="atributo"' in seta.group(0)
+                   and 'data-hef-atributo="data-ordem"' in seta.group(0),
+                   f"a seta da coluna `{coluna}` mudou de alvo — só o "
+                   f"`atributo` chega à tela nos TRÊS estados: ele é o único "
+                   f"que APAGA quando o valor é vazio. Com `classe` a seta "
+                   f"fica vazia e invisível; com `texto`, as colunas não "
+                   f"ordenadas ganham um «—»")
+
+    # A MARGEM SÓ EXISTE QUANDO HÁ SETA — 11/09/2026, e é o defeito que a régua
+    # velha desta seção não pegava porque comparava TEXTO DE FONTE. Os 4px de um
+    # span vazio cortaram «Priorização» para «Priorizaçã…» na tela (scrollWidth
+    # 90 num clientWidth 86, medido em duas larguras de janela), com a palavra
+    # INTEIRA no HTML — é por isso que a régua tem de ser sobre a REGRA, e não
+    # sobre a colagem do rótulo.
+    regra_base = re.search(r"\.ordena\{[^}]*\}", html)
+    exigir(regra_base is not None and "margin-left" not in regra_base.group(0),
+           "a regra `.ordena` voltou a ter margem incondicional — um span vazio "
+           "com margem empurra o rótulo e abrevia o cabeçalho na tela, com a "
+           "palavra inteira no HTML. A margem mora em `.ordena[data-ordem]`")
+    exigir(re.search(r"\.ordena\[data-ordem\]\{[^}]*margin-left", html) is not None,
+           "a seta ORDENADA perdeu a margem — ela encosta no rótulo da coluna")
+    # A COLUNA QUE SE ORDENA TEM DE CABER NO PRÓPRIO RÓTULO MAIS A SETA, e as
+    # duas larguras da `Priorização` têm de andar JUNTAS. São dois números para
+    # a mesma coluna — a `width` da célula e a do `<col>` —, e mexer num só
+    # deixa a folha discordando de si mesma sem nada acusar. Medido em
+    # 11/09/2026 no WebKit: com 86px o cabeçalho da coluna ORDENADA pedia 96px
+    # num espaço de 86, e a tela mostrava «Priorizaçã…».
+    larg_col = re.search(r'\.tab col\[data-coluna="prioridade"\]\{width:(\d+)px\}', html)
+    larg_cel = re.search(r"\.tab \.pri\{[^}]*width:(\d+)px", html)
+    exigir(larg_col is not None and larg_cel is not None,
+           "sumiu uma das duas larguras da coluna `Priorização` — a da célula "
+           "ou a do `<col>`")
+    if larg_col and larg_cel:
+        exigir(larg_col.group(1) == larg_cel.group(1),
+               f"as duas larguras da `Priorização` discordam: `<col>` diz "
+               f"{larg_col.group(1)}px e `.pri` diz {larg_cel.group(1)}px")
+        exigir(int(larg_col.group(1)) >= 96,
+               f"a coluna `Priorização` voltou a {larg_col.group(1)}px — o "
+               f"rótulo mede 86px e a seta da ordem custa 10 (6,2 de glifo + 4 "
+               f"de margem). Abaixo de 96 o cabeçalho da coluna ORDENADA sai "
+               f"abreviado na tela, com a palavra inteira no HTML")
+
+    for seta_glifo in ("↑", "↓"):
+        exigir(f'.ordena[data-ordem="{seta_glifo}"]::after{{content:"{seta_glifo}"}}' in html,
+               f"o glifo `{seta_glifo}` sumiu do CSS — quem desenha a seta é o "
+               f"`content`, porque o piloto não escreve texto no alvo "
+               f"`atributo`. Sem esta regra a seta some da tela e nada diz "
+               f"qual coluna ordena")
 
     # §3 — OS DOIS BOTÕES VIRARAM ÍCONE, e cada um no seu canto. A régua cobra
     # as TRÊS coisas que a §3 da sprint nomeia: o gesto com o MESMO nome, a
