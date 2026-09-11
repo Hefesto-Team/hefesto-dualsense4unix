@@ -362,21 +362,41 @@ def _sem_a_maquina(monkeypatch: Any) -> None:
     com a razão escrita no `_so_estes` dele; **este aqui não foi junto**, e as
     nove réguas da coluna passaram a responder sobre a máquina em que rodam.
 
-    O NÚMERO QUE ISSO DÁ, medido nas duas máquinas:
+    **O QUE FAZ A RÉGUA VIRAR É O QUE ESTÁ NO CABO AGORA, e não a máquina.**
+    Há UMA máquina aqui (`MeowSystem`): a árvore dela e a de qualquer agente
+    dividem o mesmo disco, e `/sys/module` e `/etc/modprobe.d` são da MÁQUINA,
+    não da árvore — então a régua vira no TEMPO, não no lugar. O
+    `snd_usb_audio` só é carregado quando há aparelho de áudio USB plugado, e
+    um DualSense no cabo é um deles:
 
-    * na dela, `check_snd_quirk` responde ``[ OK ]`` — a cura de pé, nenhuma
-      linha a mais, as nove VERDES;
-    * aqui, ``[INFO]`` — o `quirk_flags` nem existe (o `snd_usb_audio` não
-      está carregado) e o drop-in está no lugar, que é *"a cura está
-      agendada"*. Uma linha de selo ``CONTROLE`` entra na coluna, e as nove
-      reprovam com nove diffs diferentes da MESMA causa.
+    * **sem áudio USB no cabo** — o módulo não está carregado, o
+      `quirk_flags` nem existe, sobra o drop-in de `/etc/modprobe.d`, e o
+      veredito é ``[INFO]``: *"a cura está agendada"*. Uma linha de selo
+      ``CONTROLE`` entra na coluna, e as nove reprovam com nove diffs
+      diferentes da MESMA causa. **É o estado de 11/09/2026**, medido:
+      `/proc/asound/cards` sem nenhuma placa DualSense;
+    * **com o módulo carregado trazendo o quirk** — veredito ``[ OK ]``,
+      nenhuma linha a mais na coluna, as nove VERDES.
+
+    OS DOIS LADOS, sem plugar nada — `check_snd_quirk` é pura quando se dá o
+    texto do `quirk_flags`::
+
+        python -c "from hefesto_dualsense4unix.integrations.storm_doctor \
+            import check_snd_quirk as c; print(c()); \
+            print(c('054c:0ce6:ignore_ctl_error|ctl_msg_delay_1m'))"
+        ('[INFO]', 'a cura do travamento está agendada. …')  ← o cabo de hoje
+        ('[ OK ]', 'cura do travamento do USB ATIVA …')      ← o quirk no ar
+
+    **O ``[ OK ]`` NÃO FOI OBSERVADO com controle no cabo** — ele saiu da
+    função com o texto dado à mão, acima. *"Não medido"* é o que se sabe dele.
 
     `_do_exame` ENTRA PELO MESMO MOTIVO, e não por asseio: ele chama
     `a08_conexoes._exame()`, que examina os controles que estão na mesa AGORA.
-    Hoje ele cala aqui e as quatro réguas do selo ``JOGO`` não o silenciavam —
-    com os quatro DualSense na bancada dela ele fala, e as mesmas quatro caem
-    de novo por outro nome. Calar um e deixar o outro seria pagar este
-    diagnóstico duas vezes.
+    Com a mesa VAZIA ele cala, e por isso as quatro réguas do selo ``JOGO``
+    nunca precisaram silenciá-lo — com os quatro DualSense na mesa ele fala, e
+    as mesmas quatro caem de novo por outro nome. **A virada é a mesma da cura
+    do travamento: o que muda é o que está plugado no minuto em que a suíte
+    roda.** Calar um e deixar o outro seria pagar este diagnóstico duas vezes.
 
     **O QUE ESTE ARQUIVO NÃO MEDE, e tem dono:** a cura do travamento é de
     `test_a01_a_coluna_atencao_acende_o_mais_grave.py`, que a exercita com a
@@ -711,10 +731,13 @@ def test_nenhuma_fonte_fala_sem_este_arquivo_saber(monkeypatch: Any) -> None:
     função a acrescentar em :func:`_sem_a_maquina`. Nove diffs de lista
     contra uma frase que manda no lugar certo.
 
-    **O LIMITE, DECLARADO:** ela pega a fonte nova que FALA na máquina em que
-    a suíte roda. Uma fonte nova que esteja calada aqui passa — e é por isso
-    que ela não substitui `_sem_a_maquina`, só avisa mais cedo. Foi
-    exatamente o caso da cura: ``[ OK ]`` na máquina dela, ``[INFO]`` nesta.
+    **O LIMITE, DECLARADO:** ela pega a fonte nova que FALA no estado em que a
+    máquina está QUANDO a suíte roda. Uma fonte nova que esteja calada nesse
+    minuto passa — e é por isso que ela não substitui `_sem_a_maquina`, só
+    avisa mais cedo. Foi exatamente o caso da cura do travamento: ela responde
+    ``[INFO]`` sem áudio USB no cabo (e aí FALA, e esta régua a pega) e
+    ``[ OK ]`` com o quirk carregado (e aí cala, e esta régua não a veria). O
+    lado que vira é o do CABO, não o da máquina — ver :func:`_sem_a_maquina`.
 
     AS FONTES QUE ESTE ARQUIVO CONHECE são as puras de estado — que
     `VIVO_NAVEGACAO` já responde — mais as duas de máquina de
