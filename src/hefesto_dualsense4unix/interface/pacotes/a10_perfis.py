@@ -118,6 +118,7 @@ from typing import Any
 #
 # O `sys.path` já tem o `src/` quando esta linha roda: `pacotes/__init__.py` o
 # insere no import do pacote.
+from hefesto_dualsense4unix.app import gui_prefs as _prefs
 from hefesto_dualsense4unix.app.actions import perfis_web as _tela
 
 from . import (
@@ -249,6 +250,190 @@ def _escolhido(todos: list[dict[str, Any]], ativo: str) -> str:
     if not _ESCOLHIDO and ativo in nomes:
         _ESCOLHIDO = ativo
     return _ESCOLHIDO or ativo
+
+
+# ---------------------------------------------------------------------------
+# A LUPA, A ORDEM E A LARGURA — PERFIS-LIMPA-01, 11/09/2026.
+#
+# ORDEM DELA: *"Na tabela do perfil tem que terum svg dde  # (noqa-acento) cita ela
+# lupa no titulo da tabela"*, *"Procura nome de perfil, e  # (noqa-acento) cita ela
+# demais configs dos perfis, a ideia é  # (noqa-acento) cita ela
+# acharmos rápido o nome de um jogo e essa tabela precisa permitir que eu  # (noqa-acento) cita ela
+# escolha a ordenação dando duplo clique no nome das colunas."*  # (noqa-acento) cita ela
+#
+# **FILTRAR E ORDENAR MORAM AQUI, NO PYTHON, E NÃO NO DOM — e isso é uma linha
+# da sprint que CAIU, derrubada por medição.** A §6 dizia que *"as três coisas
+# novas — filtrar, ordenar, arrastar — são comportamento de DOM"*. Medido no
+# piloto: só DUAS são.
+#
+# O QUE A MEDIÇÃO MOSTROU: o pacote emite a lista por DUAS portas ao mesmo
+# tempo — o `blocos` (o `<tbody>` inteiro, pronto) e as três listas
+# `perfis.linha.*`, que o pintor distribui pelos elementos de mesmo endereço
+# **na ordem do documento** (`hefesto_vivo`, `alvos.forEach`). Reordenar as
+# `<tr>` no DOM não move as listas: no tique seguinte o nome do primeiro perfil
+# é escrito na PRIMEIRA linha da tela, que já é outra. A tela volta ao conteúdo
+# da ordem antiga com as marcas `ativo`/`aria-selected` nas linhas da ordem
+# nova — nomes de um perfil com o realce de outro, em silêncio, 100 ms depois.
+#
+# **ESCONDER, ao contrário, é seguro**: uma `<tr>` oculta continua no mesmo
+# lugar do documento, e a distribuição por posição continua certa. Por isso o
+# FILTRO poderia ser de DOM — e mesmo assim ele vem para cá, por duas razões
+# que a ordem já obrigava: o normalizador desta casa (`profiles.slug.slugify`)
+# é Python, e escrever um segundo em JS seria a segunda verdade; e uma lista
+# filtrada no DOM morre no primeiro `blocos` (a armadilha que a própria §6
+# nomeia), obrigando a um reaplicador que aqui não precisa existir.
+#
+# ARRASTAR CONTINUA SENDO DE DOM, e é a única das três que é: a largura vive no
+# `<colgroup>`, que o `blocos` desta aba não toca.
+#
+# O QUE SOBRA PARA O ROTEIRO DA PÁGINA: abrir o campo da lupa, traduzir o duplo
+# clique em gesto, e arrastar a divisa. Nenhum dos três decide o que a lista
+# mostra.
+
+#: O QUE ELA DIGITOU NA LUPA. Vive na memória desta janela, como o `_ESCOLHIDO`
+#: — e, ao contrário da largura e da ordem, **não vai para o disco**: abrir a
+#: aba com um filtro de ontem seria a tela escondendo perfis dela sem que ela
+#: tivesse pedido nada nesta sessão.
+_PROCURA: str = ""
+
+#: O NOME DA TABELA nas preferências da janela. Uma constante porque ele é
+#: chave de disco: digitá-lo em dois lugares é como se grava num e lê do outro.
+TABELA_DA_LISTA = "10-perfis.lista"
+
+#: A TABELA DA DIREITA — a do `Status`. Ela não ordena (as linhas são os quatro
+#: lugares da mesa, e a ordem deles é a mesa), mas ARRASTA: a decisão de dar o
+#: arraste às duas está na §5 da sprint, e a razão é que ela vai arrastar a que
+#: alcançar primeiro.
+TABELA_DA_GUARDA = "10-perfis.guarda"
+
+#: AS TRÊS COLUNAS QUE ORDENAM, e o que cada uma compara. `prioridade` é
+#: NÚMERO: ordenar `90` e `9` como texto põe o 9 depois do 90, que é o defeito
+#: clássico e o que ela veria primeiro, porque é a coluna mais curta.
+COLUNAS_DA_LISTA = ("nome", "prioridade", "quando")
+
+#: COMO A TELA CHAMA CADA UMA. Os três rótulos são os do cabeçalho da tabela, e
+#: a frase do desfecho os repete — dizer *"ordenado por quando"* sobre uma
+#: coluna escrita `Quando usar` é a tela falando de uma coluna que não existe.
+_NOME_DA_COLUNA = {"nome": "Nome", "prioridade": "Priorização",
+                   "quando": "Quando usar"}
+
+
+def _sem_acento(texto: str) -> str:
+    """O texto pronto para comparar — sem acento, sem caixa, sem pontuação.
+
+    **É O NORMALIZADOR DESTA CASA, e não um segundo.** `profiles.slug.slugify`
+    é quem já responde *"«Ação» e «acao» são a mesma  # (noqa-acento) exemplo
+    palavra"* para o disco
+    inteiro — é ele que decide o nome do `.json` de cada perfil dela. Escrever
+    outro aqui faria a busca discordar do disco no primeiro nome torto.
+
+    ELE LEVANTA EM VEZ DE DEVOLVER VAZIO, e por isso a  # (noqa-acento) valor
+    guarda: `slugify("—")`
+    é `ValueError`, e a coluna "Quando usar" traz travessão em todo perfil sem
+    regra. Um `except` que devolve `""` é a resposta certa: um valor que não
+    tem letra nenhuma não casa com busca nenhuma, e não é erro.
+    """
+    from hefesto_dualsense4unix.profiles.slug import slugify
+    try:
+        return slugify(texto)
+    except ValueError:
+        return ""
+
+
+def _casa(linha: dict[str, Any], termo: str) -> bool:
+    """Aquela linha responde à busca?
+
+    O QUE CASA, e é a frase dela — *"nome de perfil, e demais configs dos  # (noqa-acento) cita ela
+    perfis… achar rápido o nome de um jogo"*:  # (noqa-acento) citação literal dela
+
+    1. as TRÊS células da linha — `Nome`, `Priorização`, `Quando usar`. O nome
+       do jogo mora no `Quando usar`, e é o alvo declarado dela;
+    2. o `title` da linha, que é a disputa (`explicacao_da_disputa`).
+
+    **E NÃO ABRE UM `.json` SEQUER.** Ela pediu  # (noqa-acento) cita ela
+    *"demais configs dos perfis"*, e  # (noqa-acento) cita ela
+    a sprint já tinha medido o preço de levá-la ao pé da letra: 33 arquivos
+    lidos por TECLA é uma tela que trava. O que esta busca alcança é o que a
+    linha MOSTRA — e o que isso deixa de fora está dito na entrega, com
+    exemplo, para ela decidir.
+    """
+    alvo = " ".join(str(linha.get(c) or "") for c in
+                    ("nome", "prioridade", "quando", "dica"))
+    return termo in _sem_acento(alvo)
+
+
+def _filtrada(lista: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """A lista com o filtro da lupa aplicado. Sem termo, ela sai inteira."""
+    termo = _sem_acento(_PROCURA)
+    if not termo:
+        return list(lista)
+    return [x for x in lista if _casa(x, termo)]
+
+
+def _chave_da_ordem(coluna: str) -> Callable[[dict[str, Any]], Any]:
+    """Como cada coluna se compara.
+
+    `prioridade` sai como NÚMERO e as outras duas como texto normalizado. O
+    `(0, n)` / `(1, s)` põe o que não é número no fim em vez de derrubar a
+    ordenação com um `TypeError` entre `int` e `str`.
+    """
+    if coluna == "prioridade":
+        def por_numero(x: dict[str, Any]) -> tuple[int, float, str]:
+            try:
+                return (0, float(str(x.get("prioridade") or "")), "")
+            except ValueError:
+                return (1, 0.0, _sem_acento(str(x.get("prioridade") or "")))
+        return por_numero
+
+    def por_texto(x: dict[str, Any]) -> tuple[int, float, str]:
+        return (0, 0.0, _sem_acento(str(x.get(coluna) or "")))
+    return por_texto
+
+
+def _seta_da_coluna(coluna: str) -> str:
+    """O que a seta daquela coluna mostra: `"↑"`, `"↓"` ou nada.
+
+    O ALVO É `classe`, e o `ligado()` do piloto lê o vazio como APAGADO — então
+    a coluna que não ordena não acende, sem precisar de um segundo endereço só
+    para desligá-la. As duas colunas que não estão ordenadas devolvem `""` no
+    mesmo tique em que a terceira devolve a seta: é o que impede duas setas de
+    ficarem acesas quando ela troca de coluna.
+    """
+    escolhida, sentido = _prefs.ordem_da_tabela(TABELA_DA_LISTA)
+    if coluna != escolhida:
+        return ""
+    return "↓" if sentido == "desc" else "↑"
+
+
+def _larguras_em_texto(tabela: str) -> str:
+    """As larguras daquela tabela como `coluna:px` separados por `·`.
+
+    **É TEXTO E NÃO JSON, e a razão é o funil de saída do piloto**: tudo o que
+    vai para a tela passa por um serializador que troca aspas, e um JSON dentro
+    de um atributo HTML é uma cadeia de escapes a mais para cada lado errar. O
+    formato aqui tem UM separador e UM dois-pontos, não tem aspas, e o roteiro o
+    lê com dois `split`.
+
+    VAZIO É QUEM NUNCA ARRASTOU — e o `escrever()` do piloto põe um travessão no
+    lugar de um valor vazio, então o roteiro tem de tratar o travessão como
+    "nenhuma largura". Está escrito lá, e é a única pegadinha desta porta.
+    """
+    larguras = _prefs.larguras_da_tabela(tabela)
+    return "·".join(f"{c}:{px}" for c, px in sorted(larguras.items()))
+
+
+def _ordenada(lista: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """A lista na ordem que ela escolheu — ou na que o produto monta.
+
+    SEM ESCOLHA, NADA MUDA: `ordem_da_tabela` devolve `("", "")` para quem nunca
+    deu duplo clique, e a lista sai como `ordem_de_exibicao` a montou (o ativo
+    primeiro). É o que a tela mostrava antes de esta memória existir, e é o que
+    ela continua mostrando até ela pedir outra coisa.
+    """
+    coluna, sentido = _prefs.ordem_da_tabela(TABELA_DA_LISTA)
+    if coluna not in COLUNAS_DA_LISTA:
+        return list(lista)
+    return sorted(lista, key=_chave_da_ordem(coluna), reverse=(sentido == "desc"))
 
 
 #: A JANELA DA CONFIRMAÇÃO do "Remover", em segundos. Não é gosto: um armamento
@@ -1136,7 +1321,7 @@ def _html_dos_jogos() -> str:
 
     **E OS JOGOS DE FORA DA STEAM ENTRAM — 11/09/2026**, que é a queixa dela
     com o exemplo na mão: *"em perfil falta detectar os jogos dos demais
-    lançadores. dando exemplo do guardi]ães da galáxia."*  # noqa-acento: citação dela
+    lançadores. dando exemplo do guardi]ães da galáxia."*  # (noqa-acento) citação dela
 
     A DIVISÃO `value`/`label` É A MESMA, e o `value` de um jogo de lançador é a
     `wm_class` dele (``gotg.exe``) em vez do appid — o MESMO campo do perfil
@@ -1422,7 +1607,15 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
     except Exception:
         return {"sem_dono": {}, "cobertura": {"pintados": 0, "sem_dono": 1}}
 
-    lista = bruto.get("lista") or []
+    # A LUPA E O DUPLO CLIQUE ENTRAM AQUI, e é UMA LINHA de propósito — 11/09.
+    #
+    # Filtrar e ordenar **antes** de a lista virar qualquer coisa é o que faz as
+    # DUAS portas dizerem a mesma coisa: o `blocos` (o `<tbody>` pronto, lá
+    # embaixo) e as três listas `perfis.linha.*` (logo abaixo) saem da MESMA
+    # `lista`. Aplicar o filtro só numa delas é o defeito que a §6 da sprint
+    # descreve — o pintor distribui as três listas pela ordem do DOCUMENTO, e
+    # duas ordens diferentes põem o nome de um perfil na linha de outro.
+    lista = _ordenada(_filtrada(bruto.get("lista") or []))
     editor = bruto.get("editor") or {}
     fora = {
         "perfis.conta": bruto.get("conta", "—"),
@@ -1433,6 +1626,26 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
         "perfis.linha.nome": [x.get("nome", "") for x in lista],
         "perfis.linha.prioridade": [x.get("prioridade", "") for x in lista],
         "perfis.linha.quando": [x.get("quando", "") for x in lista],
+        # O QUE A LUPA ESTÁ PROCURANDO — e ele volta para a tela porque o campo
+        # é pintado como qualquer outro: sem este endereço, o texto sobrevive a
+        # um repinte do piloto por acidente e some no primeiro que o alcance.
+        "perfis.procura": _PROCURA,
+        # QUANTOS A LUPA ESCONDEU. Vazio quando não há filtro: uma tarja
+        # dizendo "0 escondidos" em toda tela é ruído. Com filtro, é o que
+        # separa *"não tenho esse perfil"* de *"a lupa está ligada e eu esqueci"*.
+        "perfis.procura.conta": (f"{len(bruto.get('lista') or []) - len(lista)} "
+                                 f"fora da busca" if _PROCURA.strip() else ""),
+        # A SETA DA COLUNA ORDENADA — três endereços, um por coluna, e o alvo é
+        # `classe`. Só a escolhida acende, e o valor diz o SENTIDO: é a seta que
+        # responde *"qual coluna e para onde"* sem texto novo, como a §2 pede.
+        **{f"perfis.ordem.{c}": (_seta_da_coluna(c)) for c in COLUNAS_DA_LISTA},
+        # AS LARGURAS QUE ELA ARRASTOU, as duas tabelas. Elas viajam como TEXTO
+        # num atributo (`data-larguras`) e quem as espalha pelos `<col>` é o
+        # roteiro da página: o pintor não tem alvo que escreva num `<colgroup>`,
+        # e inventar um faria esta aba mexer no piloto, que é de outro dono
+        # nesta leva.
+        "perfis.larguras": _larguras_em_texto(TABELA_DA_LISTA),
+        "guarda.larguras": _larguras_em_texto(TABELA_DA_GUARDA),
         # O `ativo` SAIU DAQUI — 02/09/2026, e ele é o achado desta correção.
         # Esta chave carregava o nome resolvido por `_valendo` e **não tinha
         # endereço em página nenhuma**: `data-(campo|papel|hef)="ativo"` dá ZERO
@@ -3290,6 +3503,128 @@ def recarregar(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
                      if k != "blocos" and not isinstance(v, dict)}}
 
 
+@gesto("10-perfis.html", "procurar")
+def procurar(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
+    """A lupa: guarda o que ela digitou, e o tique seguinte mostra a lista curta.
+
+    **ELE É UM GESTO VIVO (`data-hef-vivo`), e não um clique** — a quarta porta
+    do piloto, a que dispara a cada TECLA e por contrato só LÊ. As outras três
+    portas despacham o `data-hef-gesto`, e nenhuma delas é acionada por digitar.
+
+    **ELE NÃO PINTA NADA, E ISSO É O DESENHO INTEIRO.** O vivo tem
+    `CHAVES_QUE_O_VIVO_RECUSA = ("blocos", "fita", "recado", "recados")`: uma
+    resposta que troque HTML é recusada na porta. Então este gesto só ANOTA, e
+    quem mostra a lista curta é o tique de 100 ms, que já relê o disco e já
+    monta o `blocos` — por `_filtrada`, uma linha acima de onde a lista vira
+    tela. A latência é de um décimo de segundo e o caminho é o mesmo de sempre.
+
+    **E ELE NÃO GRAVA**, que é a outra metade do contrato do vivo: `_PROCURA`
+    mora na memória desta janela. Um filtro que voltasse do disco esconderia
+    perfis dela na próxima abertura sem que ela tivesse digitado nada.
+
+    O TERMO VEM DO `valor`, e não do `texto`: num `<input>` o `textContent` é
+    vazio — é o defeito que deixou quatro campos desta aba sem dono em 01/09.
+    """
+    global _PROCURA
+    _PROCURA = str(o.get("valor") or "")
+    return {}
+
+
+@gesto("10-perfis.html", "ordenar")
+def ordenar(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
+    """O duplo clique no nome da coluna: ordena por ela; de novo, inverte.
+
+    ORDEM DELA: *"essa tabela precisa permitir que eu  # (noqa-acento) cita ela
+    escolha a ordenação dando  # (noqa-acento) cita ela
+    duplo clique no nome das colunas."*  # (noqa-acento) citação literal dela
+
+    **QUEM TRADUZ O DUPLO CLIQUE EM CLIQUE É O ROTEIRO DA PÁGINA**, e não este
+    gesto: o piloto ouve `click`, e um `data-hef-gesto` no `<th>` dispararia no
+    PRIMEIRO clique — a um pixel da célula do nome, que é o gesto `selecionar` e
+    troca o perfil aberto no editor. O roteiro escuta `dblclick` e só então
+    manda. É a razão pela qual ela pediu duplo clique, e ela tem razão.
+
+    O CICLO TEM TRÊS ESTADOS, e não dois: ↑ → ↓ → nenhuma. O terceiro é o que
+    devolve a ordem do PRODUTO (o perfil ativo em primeiro), e sem ele não há
+    caminho de volta pela tela — quem ordenou uma vez ficaria ordenado para
+    sempre.
+
+    NÃO DECLARA `grava=`, e a razão é medida, não descuido: o que ele escreve é
+    `gui_preferences.json`, o arquivo da JANELA — nenhum perfil dela, nenhum
+    aparelho, nenhuma linha de lançamento. É a mesma classe dos `ISENTOS` de
+    `test_todo_gesto_que_grava_esta_protegido`, e protegê-lo custaria a prova
+    botão a botão: um gesto protegido é um gesto que ninguém prova.
+    """
+    coluna = str(o.get("coluna") or "").strip()
+    if coluna not in COLUNAS_DA_LISTA:
+        raise ValueError(
+            f"ordenar: o duplo clique não disse por qual coluna ({coluna!r}). "
+            f"As que ordenam são {COLUNAS_DA_LISTA}.")
+    atual, sentido = _prefs.ordem_da_tabela(TABELA_DA_LISTA)
+    if atual != coluna:
+        _prefs.guardar_ordem_da_tabela(TABELA_DA_LISTA, coluna, "asc")
+        frase = f"Ordenado por {_NOME_DA_COLUNA[coluna]}, do menor para o maior"
+    elif sentido == "asc":
+        _prefs.guardar_ordem_da_tabela(TABELA_DA_LISTA, coluna, "desc")
+        frase = f"Ordenado por {_NOME_DA_COLUNA[coluna]}, do maior para o menor"
+    else:
+        _prefs.guardar_ordem_da_tabela(TABELA_DA_LISTA, "", "")
+        frase = "Ordem de sempre: o perfil que está valendo em primeiro"
+    carga = pacote(ctx)
+    _anotar(frase)
+    carga["perfis.desfecho"] = frase
+    return {"blocos": carga.get("blocos") or {},
+            "mesa": {k: v for k, v in carga.items()
+                     if k != "blocos" and not isinstance(v, dict)}}
+
+
+@gesto("10-perfis.html", "largura-da-coluna")
+def largura_da_coluna(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
+    """Soltar a divisa entre duas colunas: grava a largura que ficou.
+
+    ORDEM DELA: *"essa tabela abaixo dele tem a largura  # (noqa-acento) cita ela
+    configurável pelo user (quando o cursor muda e permite  # (noqa-acento) cita ela
+    alterar a largura da coluna) e isso passa a  # (noqa-acento) cita ela
+    ser lembrado no futuro"*  # (noqa-acento) citação literal dela
+
+    O GESTO CHEGA UMA VEZ POR ARRASTE, no `mouseup` — não a cada pixel. Quem
+    desenha a coluna enquanto ela arrasta é o roteiro, no próprio `<col>`; aqui
+    só pousa o número final.
+
+    **O PISO É DO PYTHON, e por isso ele devolve o valor APARADO.** Uma coluna
+    arrastada a 3px some e não volta: ela não tem onde pegar de novo. O roteiro
+    tem o mesmo piso para o cursor não passar dele enquanto arrasta, mas quem
+    decide é este lado — um roteiro é uma linha de JS a mudar, e o disco é para
+    sempre.
+
+    NÃO DECLARA `grava=`, pela mesma razão escrita em `ordenar` — e aqui há uma
+    a mais, e ela é a dos `ISENTOS` ao pé da letra: em repouso o `data-px` do
+    elemento carrega a largura que a coluna JÁ tem, então a régua que clica
+    botão a botão regrava exatamente o que estava no disco.
+    """
+    tabela = str(o.get("tabela") or "").strip()
+    coluna = str(o.get("coluna") or "").strip()
+    if tabela not in (TABELA_DA_LISTA, TABELA_DA_GUARDA):
+        raise ValueError(f"largura-da-coluna: tabela desconhecida ({tabela!r})")
+    if not coluna:
+        raise ValueError("largura-da-coluna: o arraste não disse qual coluna")
+    try:
+        pedido = int(float(str(o.get("px") or "")))
+    except ValueError:
+        raise ValueError(
+            f"largura-da-coluna: {o.get('px')!r} não é um número de pixels"
+        ) from None
+    ficou = _prefs.guardar_largura_de_coluna(tabela, coluna, pedido)
+    carga = pacote(ctx)
+    return {"mesa": {k: v for k, v in carga.items()
+                     if k != "blocos" and not isinstance(v, dict)},
+            # O NÚMERO QUE FICOU volta pela mesma porta por onde as larguras já
+            # viajam — o roteiro reescreve o `<col>` com ele. Sem isto, uma
+            # coluna que ela arrastou abaixo do piso ficaria na tela com a
+            # largura que o disco RECUSOU até o próximo tique.
+            "perfis.desfecho": f"Coluna com {ficou} pixels"}
+
+
 def _editor_de(prof: Any) -> dict[str, Any]:
     """Os campos do editor daquele perfil, pela porta da FRENTE do produto.
 
@@ -3363,7 +3698,10 @@ PAGINA = "10-perfis.html"
 #: piso em 14 faria a régua cobrar um gesto que a decisão dela apagou.
 #: **O "SÓ SOBE" CONTINUA VALENDO PARA QUEDA SEM DONO**, que é o que ele
 #: existe para pegar: um gesto que some por descuido não aparece na tela.
-PISO_DA_ABA = 13
+#: 13 → 16 EM 11/09/2026: a PERFIS-LIMPA-01 traz `procurar` (a lupa),
+#: `ordenar` (o duplo clique no cabeçalho) e `largura-da-coluna` (a divisa
+#: arrastada), os três por ordem dela.
+PISO_DA_ABA = 16
 #: SÓ UMA PROVA DECLARADA PARA ONZE GESTOS, e a razão é estrutural, não
 #: preguiça: nove dos outros dez agem sobre o perfil ESCOLHIDO, e o `ctx` desta
 #: régua é fixo — `active_profile="regua"`, sem `_ESCOLHIDO` (um gesto que
@@ -3422,4 +3760,10 @@ PROVAS: list[dict[str, Any]] = [
 SEM_ECO = ("selecionar", "editor.nome", "editor.ambiente", "editor.jogo",
            "editor.prioridade", "editor.estilo",
            "detectar", "novo", "duplicar", "remover", "voltar-a-de-ontem",
-           "recarregar")
+           "recarregar",
+           # OS TRÊS DE 11/09/2026 — e eles são o caso mais puro desta tupla: o
+           # daemon não sabe o que é uma coluna. `procurar` mora na memória
+           # desta janela; `ordenar` e `largura-da-coluna` moram no
+           # `gui_preferences.json`, que é da JANELA. Nenhuma das 49 chaves do
+           # `state_full` muda quando ela arrasta uma divisa.
+           "procurar", "ordenar", "largura-da-coluna")

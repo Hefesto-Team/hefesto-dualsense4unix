@@ -1045,11 +1045,100 @@
      afirmação que a tela desmente. */
   .tab .pri{font-family:'JetBrains Mono',monospace;width:86px;text-align:right}
   .tab .quando{color:var(--texto-mudo);font-weight:400}
+  /* ------------------------------------------------------------------
+     A LUPA, OS DOIS ÍCONES, A SETA E A DIVISA — PERFIS-LIMPA-01, 11/09/2026.
+
+     O ALVO DO CLIQUE TEM TAMANHO, e o desenho NÃO É O ALVO. O SVG mede 11px
+     (o mesmo do CADEADO, que era o único ícone desta aba), e 11px é desenho
+     — ela clica isto com o mouse. Os 24x24 são o mínimo de alvo, e eles cabem
+     na linha de 15px do `.sec-rot` porque o botão é `align-self:center` com
+     `margin` negativa vertical: ele SOBRA para cima e para baixo sem empurrar
+     nada. É assim que os dois ícones entram em linhas que já existem sem
+     acrescentar um pixel de altura — que é o que a ordem dela pedia.
+
+     ELES SÃO `<button>` E NÃO HERDAM NADA DE `.btn`: o botão desta casa tem
+     borda, fundo e 11,5px de texto, e é justamente o que sai de cena aqui. */
+  .icone-rot{-webkit-appearance:none;appearance:none;border:none;background:none;
+             padding:0;margin:-5px 0;width:24px;height:24px;flex:0 0 24px;
+             display:inline-flex;align-items:center;justify-content:center;
+             color:inherit;cursor:pointer;border-radius:5px;align-self:center}
+  .icone-rot:hover{background:rgba(255,255,255,.09)}
+  .icone-rot:active{background:rgba(255,255,255,.15)}
+  .icone-rot.on{background:var(--sel-bg,rgba(189,147,249,.30))}
+  /* O CAMPO DA LUPA NASCE FECHADO — decisão dela em uma frase: *"Temos que  (noqa-acento) citação
+     deixar o layout mais limpo"*. Um campo de busca sempre visível ACRESCENTA  (noqa-acento) citação
+     uma linha ao bloco em vez de tirar; ele nasce do clique na lupa e some no
+     clique seguinte. `width:0` em vez de `display:none` para a abertura ter
+     movimento — e `padding:0` junto, senão o campo fechado continua com 12px
+     de folga ocupando a linha. */
+  .procura{-webkit-appearance:none;appearance:none;width:0;padding:0;border:none;
+           background:var(--panel);color:var(--fg);font:inherit;font-weight:400;
+           font-size:11px;border-radius:5px;min-width:0;
+           transition:width .12s ease,padding .12s ease}
+  .procura.on{width:150px;padding:3px 7px;border:1px solid var(--border-forte)}
+  .procura::placeholder{color:var(--comment)}
+  /* QUANTOS A LUPA ESCONDEU. Ela nasce vazia e o `ligado()` do piloto lê o
+     vazio como apagado — sem filtro, nada aparece. */
+  .fora-da-busca{font-size:10.5px;color:var(--comment);font-weight:400;
+                 letter-spacing:0;text-transform:none;display:none}
+  .fora-da-busca.on{display:inline}
+  /* A SETA DA COLUNA ORDENADA — do tamanho do ícone, e sem texto novo.
+
+     `pointer-events:none` NÃO É ENFEITE, É A TRAVA DO DUPLO CLIQUE: este
+     `<span>` é o elemento que carrega `data-hef-gesto="ordenar"`, e o ouvinte
+     do piloto despacha no PRIMEIRO clique. Sem esta linha, um clique simples
+     no cabeçalho ordenaria — e o cabeçalho é `position:sticky` a um pixel da
+     célula do nome, que é o gesto `selecionar` e troca o perfil aberto no
+     editor. Com ela, mouse nenhum alcança este nó; quem o aciona é o roteiro
+     da página, no `dblclick`, por `.click()`. Ela pediu duplo clique. */
+  .ordena{pointer-events:none;margin-left:4px;font-size:10px;line-height:1;
+          opacity:0;color:var(--purple)}
+  .ordena.on{opacity:1}
+  /* A DIVISA QUE ELA ARRASTA. O cursor muda quando ela chega perto — é
+     literalmente o que ela descreveu: *"quando o cursor muda e permite  (noqa-acento) citação
+     alterar a largura da coluna"*. 9px de faixa, metade para cada lado da
+     borda, é o que a mão acha sem procurar. */
+  .puxador{position:absolute;top:0;bottom:0;right:0;width:9px;z-index:3;
+           cursor:col-resize;background:none}
+  .puxador:hover{background:linear-gradient(90deg,transparent 3px,
+                 var(--purple) 3px,var(--purple) 5px,transparent 5px)}
+  .arrastando,.arrastando *{cursor:col-resize !important;user-select:none}
+  /* A LARGURA DA COLUNA SÓ MANDA COM `table-layout:fixed` — MEDIDO, e é a
+     armadilha que o próprio arquivo já registrava: `.tab .pri` dizia 46px e o
+     navegador media 86px  (noqa-acento: verbo medir, imperfeito), porque com
+     `auto` a `width` é SUGESTÃO. Uma largura
+     arrastada sobre `auto` é uma largura que o navegador reescreve no repinte
+     seguinte, e a coluna volta sozinha ao que o texto mandar.
+
+     O PREÇO, declarado: com `fixed` o texto mais largo que a coluna não a
+     ESTICA mais — ele precisa de onde parar, e é por isso que as três células
+     ganham reticência aqui embaixo. É o que torna o arraste útil: ela alarga a
+     coluna para ler o nome inteiro do jogo, em vez de a coluna decidir por ela.
+
+     O `<colgroup>` É QUEM CARREGA O NÚMERO, e não a `width` da `<th>`: é o
+     único elemento da tabela que existe para isso, ele não é reescrito pelo
+     `blocos` do piloto (que só troca o `<tbody>`), e um `<col>` por coluna dá
+     ao roteiro um lugar só para escrever. */
+  .tab{table-layout:fixed}
+  /* AS LARGURAS DE PARTIDA, e as duas saem da MEDIÇÃO da tela de ontem: com
+     `auto` o Chrome dava 255px ao `Nome` e 86 à `Priorização`, e o `Quando
+     usar` ficava com o resto. Escrevê-las no `<col>` é o que faz a tabela abrir
+     exatamente como abria antes de a largura virar arrastável — quem nunca
+     arrastar não vê diferença nenhuma. Quem arrastar ganha um `style` inline
+     no mesmo `<col>`, e inline vence folha. */
+  .tab col[data-coluna="nome"]{width:255px}
+  .tab col[data-coluna="prioridade"]{width:86px}
+  .tab td,.tab th{overflow:hidden;text-overflow:ellipsis}
+  .tab .quando{white-space:nowrap}
+  .tab tbody td{white-space:nowrap}
   .conta-perfis{font-size:10.5px;color:var(--comment);margin-left:auto;text-transform:none;
                 letter-spacing:0}
   /* 3 botões e 3 botões, todos da mesma largura */
   .botoes{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin-top:auto;padding-top:12px}
   .botoes .btn{width:100%;justify-content:center;padding:0 8px;font-size:11.5px}
+  /* UM BOTÃO SÓ, e a grade de três o deixaria com um terço da largura e dois
+     vãos vazios ao lado — que é mais sujo do que os três eram. 11/09/2026. */
+  .botoes.um-so{grid-template-columns:1fr}
   /* os campos do editor, todos na mesma grade */
   /* os campos ficam sobre o MESMO fundo da tabela ao lado, e assim os três botões
      de baixo nascem na mesma base nos dois blocos. */
@@ -1474,7 +1563,14 @@
   /* AS QUATRO SEÇÕES TÊM DE SE LER COMO QUATRO. Com o mesmo vão entre todos os
      glifos, os sete viravam um borrão só e ninguém achava onde a luz acaba e o
      gatilho começa: 2px DENTRO de uma seção, 11px ENTRE elas. */
-  .gd-pecas{width:150px}
+  /* O NÚMERO É MEDIDO, e ele mudou de dono em 11/09/2026. Com `table-layout`
+     em `auto` esta coluna media  (noqa-acento: verbo medir, imperfeito) 255px
+     na tela (a fileira de glifos pede 239 e a
+     folga da célula 16), e o `150px` escrito aqui era SUGESTÃO que o navegador
+     ignorava. Com `fixed` a sugestão virou ordem: mantido o 150, a fileira de
+     glifos era CORTADA — fotografado. O valor agora é o que a tela
+     media.  (noqa-acento: verbo medir, imperfeito) */
+  .gd-pecas{width:255px}
   .gd-pecas .gls{gap:11px}
   /* aceso = tem ajuste só dele · apagado = usa o do perfil, como os outros */
   /* O APAGADO PASSOU DE `--border-forte` PARA `--comment` — 30/08/2026.
@@ -1486,7 +1582,9 @@
   .gr{display:inline-flex;align-items:center;gap:2px;color:var(--comment)}
   .gr.on{color:var(--purple);filter:drop-shadow(0 0 4px rgba(189,147,249,.45))}
   .gr .gl{vertical-align:-3px}
-  .gd-id{width:112px;text-align:right;font-family:'JetBrains Mono',monospace;font-size:10px;
+  /* MESMA CURA, MESMO DIA: o endereço de rádio mede 118px em JetBrains Mono de
+     10px mais a folga, e o `112` cortava o último octeto com reticências. */
+  .gd-id{width:118px;text-align:right;font-family:'JetBrains Mono',monospace;font-size:10px;
          color:var(--comment)}
   /* A COR DO PLÁSTICO NA BORDA DA LINHA, pela mesma razão do chip da fita: num
      desenho de 32px o modelo mal se distingue, e é a cor que identifica a peça.
@@ -1737,11 +1835,14 @@
 
           <div>
             <div class="moldura">
-              <div class="sec-rot">Perfis Salvos</div>
+              <div class="sec-rot">Perfis Salvos<button type="button" class="icone-rot lupa" title="Procurar um perfil pelo nome, pela prioridade ou pelo jogo." aria-label="Procurar um perfil"><svg viewBox="0 0 12 12" width="11" height="11" aria-hidden="true"><circle cx="5.2" cy="5.2" r="3.4" fill="none" stroke="currentColor" stroke-width="1.3"/><path d="M7.8 7.8 L10.6 10.6" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg></button><input type="text" class="procura" data-hef="perfis.procura" data-hef-alvo="valor" data-hef-vivo="procurar" placeholder="procurar" aria-label="Procurar um perfil" value=""><button type="button" class="icone-rot" data-hef-gesto="recarregar" title="Relê a lista do disco. Não descarta o que está no editor ao lado." aria-label="Relê a lista do disco. Não descarta o que está no editor ao lado."><svg viewBox="0 0 12 12" width="11" height="11" aria-hidden="true"><path d="M9.8 6a3.8 3.8 0 1 1-1.2-2.8" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><path d="M9.4 1.3v2.6H6.8" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg></button><span class="fora-da-busca" data-hef="perfis.procura.conta" data-hef-alvo="classe"><span data-hef="perfis.procura.conta"></span></span></div>
               <div class="lista">
               <div class="rolo">
-              <table class="tab">
-                <thead><tr><th>Nome</th><th class="pri">Priorização</th><th>Quando usar</th></tr></thead>
+              <table class="tab" data-hef="perfis.larguras" data-hef-alvo="atributo"
+                     data-hef-atributo="data-larguras" data-tabela="10-perfis.lista"
+                     data-larguras="">
+                <colgroup><col data-coluna="nome"><col data-coluna="prioridade"><col data-coluna="quando"></colgroup>
+                <thead><tr><th data-coluna="nome" title="Duplo clique para ordenar por esta coluna; de novo, inverte.">Nome<span class="ordena" data-hef="perfis.ordem.nome" data-hef-alvo="classe" data-hef-gesto="ordenar" data-coluna="nome"></span><span class="puxador" data-hef-gesto="largura-da-coluna" data-tabela="10-perfis.lista" data-coluna="nome" data-px="0" role="separator" aria-label="Arraste para mudar a largura da coluna"></span></th><th class="pri" data-coluna="prioridade" title="Duplo clique para ordenar por esta coluna; de novo, inverte.">Priorização<span class="ordena" data-hef="perfis.ordem.prioridade" data-hef-alvo="classe" data-hef-gesto="ordenar" data-coluna="prioridade"></span><span class="puxador" data-hef-gesto="largura-da-coluna" data-tabela="10-perfis.lista" data-coluna="prioridade" data-px="0" role="separator" aria-label="Arraste para mudar a largura da coluna"></span></th><th data-coluna="quando" title="Duplo clique para ordenar por esta coluna; de novo, inverte.">Quando usar<span class="ordena" data-hef="perfis.ordem.quando" data-hef-alvo="classe" data-hef-gesto="ordenar" data-coluna="quando"></span></th></tr></thead>
                 <tbody data-hef="perfis.lista">
                 <tr class="ativo" data-hef-perfil="Mortal Kombat" aria-selected="true" title=""><td data-hef="perfis.linha.nome" data-hef-gesto="selecionar">Mortal Kombat</td><td class="pri" data-hef="perfis.linha.prioridade">90</td><td class="quando" data-hef="perfis.linha.quando">Jogo · mk1.exe</td></tr>
                 <tr class="" data-hef-perfil="Elden Ring" aria-selected="false" title=""><td data-hef="perfis.linha.nome" data-hef-gesto="selecionar">Elden Ring</td><td class="pri" data-hef="perfis.linha.prioridade">85</td><td class="quando" data-hef="perfis.linha.quando">Jogo da Steam · 1245620</td></tr>
@@ -1790,7 +1891,7 @@
 
                    E É O QUE TORNA OS GESTOS HONESTOS: sem isto, ligar o campo Nome
                    faria ela renomear um perfil olhando para o nome de outro. -->
-              <div class="sec-rot">Definições</div>
+              <div class="sec-rot">Definições<button type="button" class="icone-rot" data-hef-gesto="voltar-a-de-ontem" title="Desfaz um perfil salvo por engano: cada gravação já guarda a anterior." aria-label="Desfaz um perfil salvo por engano: cada gravação já guarda a anterior."><svg viewBox="0 0 12 12" width="11" height="11" aria-hidden="true"><path d="M2.2 6a3.8 3.8 0 1 0 1.2-2.8" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><path d="M2.6 1.3v2.6h2.6" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg></button></div>
               <div class="campos">
 
               <div class="campo">
@@ -1920,10 +2021,13 @@
                 </select></span>
               </div>
               <div class="guarda">
-                <table class="tab miuda">
+                <table class="tab miuda" data-hef="guarda.larguras" data-hef-alvo="atributo"
+                       data-hef-atributo="data-larguras" data-tabela="10-perfis.guarda"
+                       data-larguras="">
+                  <colgroup><col data-coluna="controle"><col data-coluna="status"><col data-coluna="id"></colgroup>
                   <thead><tr>
-                    <th title="O perfil não guarda uma configuração: guarda uma por controle. Esta tabela mostra, para cada controle, quais ajustes ele tem só para si e quais usa do perfil.">Controle</th>
-                    <th class="gd-pecas" title="Aceso: este perfil guarda um ajuste só deste controle. Apagado: ele usa o do perfil, igual aos outros. São os sete ajustes que o perfil sabe guardar por controle — luz, gatilhos, vibração, alto-falante, microfone, sensores e máscara.">Ajuste próprio</th>
+                    <th title="O perfil não guarda uma configuração: guarda uma por controle. Esta tabela mostra, para cada controle, quais ajustes ele tem só para si e quais usa do perfil.">Controle<span class="puxador" data-hef-gesto="largura-da-coluna" data-tabela="10-perfis.guarda" data-coluna="controle" data-px="0" role="separator" aria-label="Arraste para mudar a largura da coluna"></span></th>
+                    <th class="gd-pecas" title="Aceso: este perfil guarda um ajuste só deste controle. Apagado: ele usa o do perfil, igual aos outros. São os sete ajustes que o perfil sabe guardar por controle — luz, gatilhos, vibração, alto-falante, microfone, sensores e máscara.">Status<span class="puxador" data-hef-gesto="largura-da-coluna" data-tabela="10-perfis.guarda" data-coluna="status" data-px="0" role="separator" aria-label="Arraste para mudar a largura da coluna"></span></th>
                     <th class="gd-id" title="O endereço de rádio do controle. É por ele que o perfil reconhece a peça — e ele não muda quando você troca o cabo pelo rádio, então o que você deixou hoje volta amanhã.">ID da peça</th>
                   </tr></thead>
                   <tbody data-hef="guarda.linhas">
@@ -2226,10 +2330,16 @@
               </div>
 
               </div>
-              <div class="botoes">
+              <!-- OS TRÊS VIRARAM UM — 11/09/2026, ordem dela. O `Recarregar` foi
+                   para o rótulo `Perfis Salvos` (ele relê a LISTA, e a lista é a
+                   tabela da esquerda) e o `Voltar à de ontem` para o rótulo
+                   `Definições` — *"tem que arrumar outro canto pra deixar ele ao  (noqa-acento) citação
+                   invés de botão como os demais"*. O `Duplicar` fica botão, e  (noqa-acento) citação
+                   sozinho: ele é o único dos três que CRIA alguma coisa.
+                   A classe `um-so` é o que impede a grade de três colunas de o
+                   deixar com um terço da largura e dois vãos vazios ao lado. -->
+              <div class="botoes um-so">
                 <button class="btn" data-hef-gesto="duplicar" title="Copia o perfil inteiro para o editor, com &quot;(cópia)&quot; no nome.">Duplicar</button>
-                <button class="btn" data-hef-gesto="voltar-a-de-ontem" title="Desfaz um perfil salvo por engano: cada gravação já guarda a anterior.">Voltar à de ontem</button>
-                <button class="btn" data-hef-gesto="recarregar" title="Relê a lista do disco. Não descarta o que está no editor ao lado.">Recarregar</button>
               </div>
             </div>
           </div>
@@ -2237,6 +2347,133 @@
         </div>
       </div>
     </div>
+
+  <script>
+  (function(){
+    'use strict';
+    var PISO = 48, TETO = 900;
+
+    // ---- a lupa: abre, fecha e limpa --------------------------------------
+    // FECHAR LIMPA, e é decisão: um campo fechado com termo dentro é uma lista
+    // curta sem nada na tela dizendo por quê. O `input` sintético é o que avisa
+    // o Python — é o mesmo evento que a digitação dispara, pela mesma porta.
+    function oCampo(){ return document.querySelector('.procura'); }
+    document.addEventListener('click', function(ev){
+      var b = ev.target.closest ? ev.target.closest('.icone-rot.lupa') : null;
+      if(!b) return;
+      var campo = oCampo();
+      if(!campo) return;
+      var abrindo = !campo.classList.contains('on');
+      campo.classList.toggle('on', abrindo);
+      b.classList.toggle('on', abrindo);
+      if(abrindo){ campo.focus(); return; }
+      if(campo.value !== ''){
+        campo.value = '';
+        campo.dispatchEvent(new Event('input', {bubbles: true}));
+      }
+    }, false);
+
+    // ---- o duplo clique do cabeçalho --------------------------------------
+    // ELE NÃO ORDENA: ele CLICA no elemento que carrega o gesto, e quem ordena
+    // é o Python. A seta é `pointer-events:none`, então este `.click()` é o
+    // único caminho até ela — um clique simples no cabeçalho não chega lá, que
+    // é exatamente o que ela pediu ao dizer DUPLO clique.
+    document.addEventListener('dblclick', function(ev){
+      var th = ev.target.closest ? ev.target.closest('th[data-coluna]') : null;
+      if(!th) return;
+      var seta = th.querySelector('.ordena[data-hef-gesto]');
+      if(seta) seta.click();
+    }, false);
+
+    // ---- a divisa arrastada -----------------------------------------------
+    // O CURSOR MUDA PORQUE A ALÇA EXISTE (`cursor:col-resize` no `.puxador`), e
+    // é o que ela descreveu. Enquanto arrasta, quem desenha é este roteiro, no
+    // `<col>`; ao soltar, o número vai para o Python, que o apara pelo piso e o
+    // grava. O piso está nos DOIS lados de propósito: aqui para o desenho não
+    // passar dele durante o arraste, e lá porque o disco é para sempre.
+    var voo = null;
+    function colDe(pux){
+      var tab = pux.closest('table');
+      var col = tab ? tab.querySelector('col[data-coluna="' + pux.dataset.coluna + '"]') : null;
+      return {tabela: tab, col: col};
+    }
+    document.addEventListener('mousedown', function(ev){
+      var pux = ev.target.closest ? ev.target.closest('.puxador') : null;
+      if(!pux) return;
+      var alvo = colDe(pux);
+      if(!alvo.col) return;
+      var th = pux.closest('th');
+      voo = {pux: pux, col: alvo.col, x: ev.clientX,
+             largura: th ? th.getBoundingClientRect().width : 0};
+      document.body.classList.add('arrastando');
+      ev.preventDefault();
+    }, false);
+    document.addEventListener('mousemove', function(ev){
+      if(!voo) return;
+      var px = Math.round(voo.largura + (ev.clientX - voo.x));
+      if(px < PISO) px = PISO;
+      if(px > TETO) px = TETO;
+      voo.col.style.width = px + 'px';
+      voo.pux.dataset.px = String(px);
+    }, false);
+    document.addEventListener('mouseup', function(){
+      if(!voo) return;
+      var pux = voo.pux;
+      voo = null;
+      document.body.classList.remove('arrastando');
+      pux.click();
+    }, false);
+
+    // ---- as larguras que voltam do disco ----------------------------------
+    // O FORMATO É `coluna:px` separado por `·`, e o travessão é o VAZIO — o
+    // `escrever()` do piloto escreve `—` no lugar de um valor em branco, e ler
+    // isso como uma largura poria a coluna em zero em toda janela de quem nunca
+    // arrastou nada.
+    function espalhar(tab){
+      var bruto = tab.getAttribute('data-larguras') || '';
+      if(!bruto || bruto === '\u2014') return;
+      bruto.split('\u00b7').forEach(function(par){
+        var pedaco = par.split(':');
+        if(pedaco.length !== 2) return;
+        var px = parseInt(pedaco[1], 10);
+        if(!isFinite(px)) return;
+        if(px < PISO) px = PISO;
+        if(px > TETO) px = TETO;
+        var col = tab.querySelector('col[data-coluna="' + pedaco[0] + '"]');
+        if(col) col.style.width = px + 'px';
+        var pux = tab.querySelector('.puxador[data-coluna="' + pedaco[0] + '"]');
+        if(pux) pux.dataset.px = String(px);
+      });
+    }
+    // E AS QUE NUNCA SAÍRAM DO DISCO: em repouso o `data-px` da alça tem de
+    // dizer a largura que a coluna JÁ tem, senão o primeiro clique sem arraste
+    // gravaria zero. É o que torna o gesto idempotente, e é o que autoriza a
+    // régua de clique a acioná-lo.
+    function medir(tab){
+      tab.querySelectorAll('.puxador').forEach(function(pux){
+        var th = pux.closest('th');
+        if(!th) return;
+        var px = Math.round(th.getBoundingClientRect().width);
+        if(px > 0 && (pux.dataset.px || '0') === '0') pux.dataset.px = String(px);
+      });
+    }
+    function tabelas(){ return document.querySelectorAll('table[data-tabela]'); }
+    function assentar(){ tabelas().forEach(function(t){ espalhar(t); medir(t); }); }
+    // O OBSERVADOR VIGIA O ATRIBUTO, e só ele. Uma largura que volta do disco
+    // chega por `data-larguras` (o pintor escreve o atributo), e é o único
+    // caminho de fora para dentro — o `blocos` desta aba não toca o
+    // `<colgroup>`. Vigiar o `<tbody>` seria acordar dez vezes por segundo
+    // para não fazer nada.
+    tabelas().forEach(function(t){
+      new MutationObserver(function(){ espalhar(t); }).observe(
+        t, {attributes: true, attributeFilter: ['data-larguras']});
+    });
+    if(document.readyState === 'loading'){
+      document.addEventListener('DOMContentLoaded', assentar);
+    } else { assentar(); }
+  })();
+  </script>
+
 
   </div>
 
