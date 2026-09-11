@@ -190,10 +190,16 @@ _ESTADO_IMU_PERDA = (
     'o contador que ele nunca teve e ao rádio um que mede perda de verdade, em vez do '
     '`bt_drops`, que conta o que o PRODUTO descartou.'
 )
+_ESTADO_BRILHO_INERTE = (
+    'o produto escreve `common[42]` com o valor do brilho da BARRA '
+    '(backend_pydualsense.py:1364) e nunca liga o bit: hoje é inerte, e o valor '
+    'que ele manda é de outra grandeza. Ver BRILHO-DE-HARDWARE-01.'
+)
 ESTADOS = ["", "funciona", "regrediu", "nunca funcionou",
            "não implementado", "impossível",
            _ESTADO_RUMBLE_SIMULTANEO, _ESTADO_RUMBLE_FF,
-           _ESTADO_GIROSCOPIO_BIAS, _ESTADO_IMU_LIGAR, _ESTADO_IMU_PERDA]
+           _ESTADO_GIROSCOPIO_BIAS, _ESTADO_IMU_LIGAR, _ESTADO_IMU_PERDA,
+           _ESTADO_BRILHO_INERTE]
 LADOS = {"cabo": "cabo_", "rádio": "radio_"}
 
 st.set_page_config(page_title="Hefesto · bancada de medição", layout="wide")
