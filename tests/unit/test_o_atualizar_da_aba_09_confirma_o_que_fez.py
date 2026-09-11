@@ -232,11 +232,18 @@ def test_a_porta_nova_continua_esperando_os_quinze_segundos(monkeypatch):
 
     visto: list[float | None] = []
 
+    # O NOME DA FUNÇÃO MUDOU EM 11/09/2026, e o teto NÃO — A-PERNA-QUE-FALTA-01
+    # trocou `_call_checked` por `_call_checked_detalhado` dentro do
+    # `chamar_detalhado`, para o motivo que vem NO CORPO parar de morrer na
+    # ponte. O `timeout` seguiu vindo do mesmo `teto()`, na mesma linha. A régua
+    # espionava o nome velho: com ele fora do caminho, `visto` chegava VAZIO e
+    # a régua reprovava anunciando uma espera encolhida que ninguém encolheu.
+    # Ela mede o número que SAI da ponte — então tem de espionar quem o leva.
     def espiao(metodo, params, timeout=None):
         visto.append(timeout)
-        return True, None
+        return True, None, None
 
-    monkeypatch.setattr(ponte._b, "_call_checked", espiao)
+    monkeypatch.setattr(ponte._b, "_call_checked_detalhado", espiao)
     ponte.chamar_detalhado("daemon.reload")
 
     assert visto == [15.0], (
