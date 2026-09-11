@@ -41,10 +41,21 @@ CATALOGO = [
 
 @pytest.fixture(autouse=True)
 def _catalogo(monkeypatch: pytest.MonkeyPatch) -> None:
-    """A biblioteca DELA nunca é lida por uma régua."""
+    """A biblioteca DELA nunca é lida por uma régua.
+
+    **E AS ORIGENS PASSARAM A SER DUAS — 11/09/2026, JOGOS-DOS-LANCADORES-01.**
+    Calar só a da Steam deixou o `<datalist>` lendo o Heroic, o Lutris e os 221
+    `.desktop` da máquina de quem roda a régua: nesta bancada o
+    ``test_com_a_biblioteca_vazia…`` reprovou com três emuladores DELA na
+    lista, e no CI teria passado — a mesma linha com dois resultados conforme
+    a máquina. A segunda origem entra VAZIA, e quem precisa dela a enche.
+    """
+    from hefesto_dualsense4unix.integrations import jogos_locais
+
     monkeypatch.setattr(
         a10_perfis, "_nomes_dos_jogos",
         lambda: {j.appid: j.nome for j in CATALOGO})
+    monkeypatch.setattr(jogos_locais, "jogos_de_janela", lambda *a, **k: [])
 
 
 # --------------------------------------------------------------------------

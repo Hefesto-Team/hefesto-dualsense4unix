@@ -1134,18 +1134,43 @@ def _html_dos_jogos() -> str:
     reescrever o bloco a cada 500 ms para sempre. A medição está na docstring de
     `_atr`.
 
+    **E OS JOGOS DE FORA DA STEAM ENTRAM — 11/09/2026**, que é a queixa dela
+    com o exemplo na mão: *"em perfil falta detectar os jogos dos demais
+    lançadores. dando exemplo do guardi]ães da galáxia."*  # noqa-acento: citação dela
+
+    A DIVISÃO `value`/`label` É A MESMA, e o `value` de um jogo de lançador é a
+    `wm_class` dele (``gotg.exe``) em vez do appid — o MESMO campo do perfil
+    (`window_class`), pela sexta forma do `simple_match` ("janela"). Quem
+    decide qual dos dois é `JogoLocal.valor`, e a JUNÇÃO das duas origens é
+    `jogos_locais.ofertas_do_campo_do_jogo`: escrever aqui um `if` e uma ordem
+    própria seria a segunda verdade sobre o que esta lista oferece.
+
     NUNCA LEVANTA, pela mesma razão de `_jogo_reconhecido`: isto é PINTURA, a
     duas vezes por segundo, sobre a biblioteca dela. Uma exceção lendo um
     `.desktop` estragado derrubaria a aba inteira por causa de uma sugestão.
     """
     try:
+        from hefesto_dualsense4unix.integrations.jogos_locais import (
+            JogoLocal,
+            jogos_de_janela,
+            ofertas_do_campo_do_jogo,
+        )
+
         nomes = _nomes_dos_jogos()
+        # A LISTA DE FORA DA STEAM É MEMOIZADA NO DONO, e não aqui: é o mesmo
+        # caderno que `nomes_das_janelas` usa para o rótulo, então as duas
+        # chamadas do mesmo tique custam UMA leitura de disco.
+        de_janela = jogos_de_janela()
+        jogos = ofertas_do_campo_do_jogo(
+            [JogoLocal(appid=appid, nome=nome, fonte="steam")
+             for appid, nome in nomes.items()],
+            de_janela)
     except Exception:
         return ""
     linhas = [
-        f'<option value="{_atr(appid)}" label="{_atr(nome)} (appid {_atr(appid)})">'
+        f'<option value="{_atr(jogo.valor)}" label="{_atr(jogo.rotulo)}">'
         f'</option>'
-        for appid, nome in sorted(nomes.items(), key=lambda par: par[1].lower())
+        for jogo in jogos
     ]
     return "".join(linhas[:TETO_DA_LISTA_DE_JOGOS])
 
@@ -2184,6 +2209,54 @@ def _nomes_dos_jogos() -> dict[str, str]:
     return nomes
 
 
+def _forma_do_que_ela_escolheu(texto: str) -> str:
+    """Que FORMA de regra este texto pede, quando o seletor não disse nada.
+
+    **DEFEITO MEDIDO NA TELA VIVA, 10/09/2026, e ele nasce com a lista nova.**
+    A queda de `editor_jogo` era de duas pernas — *"appid vira «Jogo da Steam»,
+    o resto vira «Jogo (pelo processo)»"* — e ela estava certa **enquanto a
+    lista só oferecia appid**. Com o `<datalist>` oferecendo a `wm_class` de um
+    jogo de lançador, o produto passa a **entregar à mão dela um texto que ele
+    mesmo classifica errado**: escolher *Marvel's Guardians of the Galaxy
+    (Heroic)* no piloto com `--oculta` fazia o perfil nascer com::
+
+        "process_name": ["gotg.exe"]     ← e não `window_class`
+
+    `process_name` é o basename de `/proc/PID/exe`, **outro dado**, e o próprio
+    `simple_match` já avisa que confundir os dois faz o perfil *"casar por
+    acaso"* — a família do R-12 que a §3 da sprint manda não repetir.
+
+    **A TERCEIRA PERNA PERGUNTA AO CATÁLOGO, e não a um regex.** Se o texto é
+    uma das chaves que ESTA MESMA ABA ofereceu, a forma é a que aquela oferta
+    declara (`JogoLocal.forma`) — o dono da resposta é um só. Adivinhar por
+    ``.exe`` no fim seria a segunda verdade, e erraria nos dois sentidos: um
+    jogo nativo do Lutris não termina em `.exe`, e um `process_name` legítimo
+    pode terminar.
+
+    E QUEM RESPONDE *"que jogo é esta classe"* É `jogos_locais.jogo_da_janela`,
+    que dobra a caixa dos dois lados — o `pga.db` guarda ``GOTG.exe`` onde a
+    janela do Heroic anuncia ``gotg.exe``, e um `dict.get` cru faria a mesma
+    linha da lista classificar diferente conforme o lançador por onde ela abriu
+    o jogo.
+
+    NUNCA LEVANTA: sem catálogo, a queda é a de sempre.
+    """
+    from hefesto_dualsense4unix.profiles.simple_match import normalize_appid
+
+    if normalize_appid(texto) is not None:
+        return "steam_game"
+    try:
+        from hefesto_dualsense4unix.integrations.jogos_locais import (
+            jogo_da_janela,
+            jogos_de_janela,
+        )
+
+        achado = jogo_da_janela(texto, jogos_de_janela())
+    except Exception:
+        return "game"
+    return achado.forma if achado is not None else "game"
+
+
 def _jogo_reconhecido(texto: str) -> tuple[str, bool]:
     """``(frase, é_alerta)`` para o campo do jogo — a decisão da janela estável.
 
@@ -2211,6 +2284,14 @@ def _jogo_reconhecido(texto: str) -> tuple[str, bool]:
     ainda está digitando. Escrever um `if` aqui seria a segunda verdade sobre o
     que é um jogo reconhecido.
 
+    **A QUINTA RESPOSTA CHEGOU COM O TERCEIRO ARGUMENTO — 11/09/2026, e é a
+    queixa dela fechada.** O `<datalist>` passou a oferecer jogo de lançador,
+    cujo `value` é a `wm_class` (``gotg.exe``), e o «Detectar» sempre gravou
+    essa classe para um jogo de fora da Steam. Sem as `chaves`, as duas
+    deixavam o rótulo MUDO: o botão respondia *"PRAGMATA"* a um jogo da Steam
+    e **nada** a um do Heroic — exatamente o silêncio que a decisão 10-Q4 dela
+    existe para fechar.
+
     NUNCA LEVANTA, e é o mesmo contrato de `_com_a_carona`: ela é acabamento de
     um gesto que JÁ GRAVOU — e, desde o rótulo, também é PINTURA, chamada dez
     vezes por segundo. Uma exceção lendo a biblioteca dela transformaria uma
@@ -2220,9 +2301,11 @@ def _jogo_reconhecido(texto: str) -> tuple[str, bool]:
     try:
         from hefesto_dualsense4unix.integrations.jogos_locais import (
             frase_do_campo_do_jogo,
+            nomes_das_janelas,
         )
 
-        decisao = frase_do_campo_do_jogo(texto, _nomes_dos_jogos())
+        decisao = frase_do_campo_do_jogo(texto, _nomes_dos_jogos(),
+                                         nomes_das_janelas())
     except Exception:
         return ("", False)
     if decisao is None:
@@ -2238,9 +2321,10 @@ def _agora_vale_em(prof: Any, texto: str = "") -> str:
     logo acima: *o desfecho não pode chamar de outra coisa um perfil que a
     lista chama de "Só manual"*.
 
-    `texto` É O QUE ELA DIGITOU (ou o appid que o Detectar achou), e serve só
-    para o nome do jogo. Vazio, a frase termina no rótulo — que é o certo para
-    "Todos" e "Steam", onde jogo nenhum entra na regra.
+    `texto` É O QUE ELA DIGITOU (ou o que o «Detectar» achou: o appid da Steam
+    **ou a `wm_class`**, desde 11/09/2026), e serve só para o nome do jogo.
+    Vazio, a frase termina no rótulo — que é o certo para "Todos" e "Steam",
+    onde jogo nenhum entra na regra.
     """
     from hefesto_dualsense4unix.app.actions.profiles_actions import _match_label
 
@@ -2791,7 +2875,6 @@ def editor_jogo(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | No
     """
     from hefesto_dualsense4unix.profiles.simple_match import (
         from_simple_choice,
-        normalize_appid,
         simple_extra,
     )
 
@@ -2810,7 +2893,7 @@ def editor_jogo(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | No
     # parágrafo "E ele SÓ decide quando o seletor não estava numa das duas".
     chave = PRESET_DO_ROTULO.get(str(editor.get("ambiente") or ""))
     if chave not in ("game", "steam_game", "janela"):
-        chave = "steam_game" if normalize_appid(texto) is not None else "game"
+        chave = _forma_do_que_ela_escolheu(texto)
     prof.match = from_simple_choice(chave, texto, regra_do_disco=prof.match)
     _gravar(prof, ctx, p)
     # O `or texto` É O PISO, e não zelo: `simple_extra` devolve `""` para uma
@@ -2906,11 +2989,16 @@ def detectar(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
     # semanas e que o produto recusava (ONDA5-10-01, 06/09/2026).
     prof.match = from_simple_choice("janela", classe)
     _gravar(prof, ctx, p)
-    # O DESFECHO VAI SEM `texto`, e é escolha: `_agora_vale_em` usa o texto só
-    # para traduzir um NÚMERO DA STEAM em nome de jogo (`_jogo_reconhecido`).
-    # Uma `wm_class` não é isso — passá-la faria a tela ou calar (o comum) ou
-    # dizer "não reconheci este endereço" sobre uma regra que gravou certo.
-    return _dizer(_agora_vale_em(prof),
+    # O DESFECHO VAI **COM** A CLASSE desde 11/09/2026, e o fato que o mandava
+    # sair saiu com ele: até aqui `_agora_vale_em` só sabia traduzir um NÚMERO
+    # DA STEAM em nome de jogo, então passar uma `wm_class` faria a tela calar
+    # ou dizer "não reconheci este endereço" sobre uma regra que gravou certo.
+    # Agora `frase_do_campo_do_jogo` tem a quinta resposta — `gotg.exe` vira
+    # *Marvel's Guardians of the Galaxy* —, e é ela que fecha a queixa dela: o
+    # botão grava uma classe que ela não digitou, vinda de uma janela que ela
+    # não está mais olhando, e dizer só "Só neste programa" sobre isso é a
+    # mesma coisa que não achar o jogo.
+    return _dizer(_agora_vale_em(prof, classe),
                   **{"editor.jogo": simple_extra(prof.match) or classe})
 
 

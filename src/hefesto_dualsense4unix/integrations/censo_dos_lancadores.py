@@ -140,6 +140,29 @@ class JogoDoLancador:
         nome da ROM seria uma chave que nunca casa — o defeito R-12 que esta
         casa já pagou. Por isso quem não tem `executavel` devolve ``""``, e
         quem chama simplesmente não oferece a linha.
+
+        **A IGUALDADE ACIMA É DERIVAÇÃO, E NÃO MEDIÇÃO — 11/09/2026, e fica
+        escrito porque sem aparelho não se inventa fato.** *"o basename do
+        `install.executable` É a `wm_class`"* vem de duas coisas verdadeiras —
+        o `MatchCriteria(window_class=…)` guarda essa forma, e o «Detectar»
+        grava o que o compositor anuncia — e de nenhuma terceira: **ninguém
+        abriu *Guardiões da Galáxia* e leu a classe da janela viva**. Abrir um
+        jogo exige a tela DELA, e é o que o preâmbulo de toda leva proíbe.
+
+        O DEGRAU QUE FECHA, e ele custa um minuto dela: com o jogo aberto e em
+        foco, perguntar ao daemon vivo (as mesmas duas chaves que `detectar`
+        lê)::
+
+            from hefesto_dualsense4unix.app.ipc_bridge import daemon_state_full
+            daemon_state_full()["window_detect_last_class"]
+
+        * resposta ``gotg.exe`` → a derivação vira medição e esta nota sai;
+        * resposta qualquer outra (o Heroic embrulha o jogo num script, e a
+          janela pode anunciar o wrapper) → o `executavel` **deixa de ser a
+          chave**, e o que sobra é ela clicar «Detectar» uma vez por jogo, que
+          é o caminho que o produto já tem. Nada aqui depende do resultado
+          para funcionar: o «Detectar» grava o que o compositor disse, e esta
+          propriedade só ADIANTA a linha na lista.
         """
         if not self.executavel:
             return ""
@@ -598,8 +621,59 @@ def jogos_com_chave_de_janela(
     return achados
 
 
-def assinatura_das_bibliotecas(lar: Path | None = None) -> tuple[tuple[str, int], ...]:
-    """Impressão BARATA das cinco bibliotecas: ``(pasta, mtime_ns)``.
+#: O QUE CADA LEITOR ABRE DE VERDADE — relativo à pasta de configuração. É
+#: ESTA tabela que `assinatura_das_bibliotecas` assina, e não a pasta de cima.
+#:
+#: **A CÓPIA DO MOLDE PERDEU A PROPRIEDADE QUE O FAZ FUNCIONAR — medido em
+#: 11/09/2026.** `jogos_locais.assinatura_da_biblioteca` assina a `steamapps`,
+#: e funciona porque a `steamapps` é a pasta que SEGURA os manifestos:
+#: instalar ou desinstalar um jogo CRIA ou APAGA um arquivo dentro dela, e o
+#: `mtime` de um diretório muda quando isso acontece. A biblioteca do Heroic
+#: não é uma pasta de manifestos — é UM arquivo,
+#: `store_cache/legendary_library.json`, reescrito no lugar. E **o `mtime` de
+#: um diretório não muda quando um arquivo de um SUBdiretório é reescrito**:
+#: assinar `…/config/heroic` dava a mesma impressão com um jogo novo
+#: instalado, o caderno de `jogos_locais.nomes_das_janelas` nunca invalidava,
+#: e a aba Perfis — que é PINTURA num processo longo — CONGELAVA a resposta
+#: até ela reiniciar o produto. O gatilho é exatamente o passo que a sprint
+#: manda ela dar: *instalar um jogo do Heroic*.
+#:
+#: Um padrão com `*` assina a PASTA (nasceu ou morreu arquivo) **e** cada
+#: arquivo que casa (o conteúdo mudou). Sem `*`, assina o arquivo.
+_FONTES: dict[str, tuple[str, ...]] = {
+    "Heroic": ("store_cache/*_library.json", "store_cache/*_install_info.json"),
+    #: O `-wal` ENTRA, e é requisito e não zelo: em modo WAL o sqlite escreve
+    #: as linhas novas no `pga.db-wal` e pode não tocar no `pga.db`. Quem lê
+    #: em `mode=ro` enxerga os dois; a impressão tem de enxergar os dois.
+    "Lutris": ("pga.db", "pga.db-wal", "games/*.yml"),
+    "RetroArch": ("playlists/*.lpl",),
+    "Dolphin": ("Dolphin.ini",),
+    "mGBA": ("config.ini",),
+}
+
+
+def _impressao(caminho: Path) -> tuple[str, int, int]:
+    """``(caminho, mtime_ns, tamanho)`` de um arquivo ou pasta — e nunca levanta.
+
+    O TAMANHO ENTRA JUNTO porque o `mtime` sozinho tem a resolução do sistema
+    de arquivos, e duas escritas dentro do mesmo tique existem — um
+    `legendary_library.json` que ganha um jogo muda de tamanho sempre.
+
+    Ausente entra com ``-1`` em vez de sumir da lista: instalar o Lutris (ou
+    baixar o primeiro jogo, que é quando o `*_install_info.json` nasce)
+    também tem de contar como mudança.
+    """
+    try:
+        st = os.stat(caminho)
+    except OSError:
+        return (str(caminho), -1, -1)
+    return (str(caminho), st.st_mtime_ns, st.st_size)
+
+
+def assinatura_das_bibliotecas(
+    lar: Path | None = None,
+) -> tuple[tuple[str, int, int], ...]:
+    """Impressão BARATA das cinco bibliotecas — **do que se LÊ**, não da pasta.
 
     Irmã de `jogos_locais.assinatura_da_biblioteca`, e **separada dela de
     propósito**: aquela responde *"a biblioteca da STEAM mudou?"* olhando as
@@ -607,20 +681,32 @@ def assinatura_das_bibliotecas(lar: Path | None = None) -> tuple[tuple[str, int]
     Steam. Somar as duas num freio só faria a semeadura de perfis da Steam
     varrer 33 `.acf` toda vez que o Heroic escrevesse um log.
 
-    Pasta ausente entra com ``-1`` em vez de sumir: instalar o Lutris depois
-    também tem de contar como mudança.
+    **O QUE ELA ASSINA ESTÁ EM `_FONTES`, e o porquê está lá também**: assinar
+    a pasta de cima é o defeito que esta função teve até 11/09/2026 — ela
+    nunca invalidava para o Heroic, que é justamente o lançador da queixa
+    dela. A pasta de configuração continua entrando: instalar o lançador
+    depois também é mudança.
     """
-    linhas: list[tuple[str, int]] = []
+    linhas: list[tuple[str, int, int]] = []
     lar = Path.home() if lar is None else lar
     for nome in _LEITORES:
         pasta = _pasta_de_config(nome, lar)
         if pasta is None:
-            linhas.append((nome, -1))
+            linhas.append((nome, -1, -1))
             continue
-        try:
-            linhas.append((str(pasta), os.stat(pasta).st_mtime_ns))
-        except OSError:
-            linhas.append((str(pasta), -1))
+        linhas.append(_impressao(pasta))
+        for padrao in _FONTES.get(nome, ()):
+            if "*" not in padrao:
+                linhas.append(_impressao(pasta / padrao))
+                continue
+            sub, _, molde = padrao.rpartition("/")
+            onde = pasta / sub if sub else pasta
+            linhas.append(_impressao(onde))
+            try:
+                achados = sorted(onde.glob(molde))
+            except OSError:  # pragma: no cover - pasta ilegível
+                achados = []
+            linhas.extend(_impressao(a) for a in achados)
     return tuple(linhas)
 
 
