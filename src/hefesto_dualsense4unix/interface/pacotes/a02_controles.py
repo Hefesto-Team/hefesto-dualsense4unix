@@ -1500,17 +1500,53 @@ def _a_pagina_tem_o_ouvir_junto() -> bool:
 
     Uma leitura, no import: a página não muda debaixo do processo — quem a
     troca é `--publicar`, e depois dele o piloto sobe de novo.
+
+    **ESTA FUNÇÃO RESPONDIA FALSO SOBRE UMA PÁGINA QUE TEM O BOTÃO — medido em
+    11/09/2026, SOM-BOTOES-01, e era a queixa dela inteira.** Ela nasceu em
+    10/09 com TRÊS defeitos na mesma linha, e os três se somavam num só
+    sintoma: `A_FILEIRA_TEM_TRES` valia `False` com a página publicada
+    trazendo o «Ouvir junto» quatro vezes, então `aceso_da_fileira` nunca
+    devolvia `"junto"` e **o botão do meio não acendia nunca**. Ela clicava, o
+    gesto gravava `fonte: mix` no perfil, e a fileira acendia o botão de antes.
+
+    Os três, e cada um sozinho já bastava:
+
+    1. **a chamada rodava ANTES de `PAGINA` existir.** A atribuição de
+       `A_FILEIRA_TEM_TRES` está 400 linhas acima da constante, e no import o
+       nome ainda não tem valor: `NameError`. Medido com
+       `python -c "print(a02.A_FILEIRA_TEM_TRES, a02._a_pagina_tem_o_ouvir_junto())"`
+       → `False True` — a mesma função, duas respostas, porque a primeira
+       corria cedo demais;
+    2. **o `except Exception` engolia esse `NameError`** e o devolvia como
+       *"a página não tem o botão"*. Erro de programação vestido de fato sobre
+       o desenho: a forma exata de defeito que esta casa persegue. Agora só
+       `OSError` e `UnicodeDecodeError` são engolidos — que são as duas
+       maneiras de um ARQUIVO faltar ou não abrir. Qualquer outra sobe, e sobe
+       no import, onde ninguém consegue não ver;
+    3. **ela perguntava à BANCADA** (`onde.pagina(PAGINA)`, cujo padrão é
+       `mockup/`) enquanto o produto renderiza o PUBLICADO. Hoje as duas
+       páginas concordam, e por isso este terceiro defeito era LATENTE — mas é
+       o mesmo *"régua que pergunta no lugar errado"* que o
+       `_enderecos_da_pagina` desta mesma aba já tinha resolvido com
+       `publicado=True`, e a razão está escrita lá: *"o piloto abre SEMPRE o
+       publicado"*.
+
+    **E NENHUMA RÉGUA VIA, porque as duas que existiam mediam a si mesmas:** as
+    quatro de leitura da `test_a02_a_fonte_do_som_ganha_gesto.py` passam por
+    uma fixture que faz `monkeypatch.setattr(a02, "A_FILEIRA_TEM_TRES", True)`.
+    Ela foi escrita em 10/09, quando a página ainda não estava publicada e o
+    `False` era a verdade; o `--publicar 02` de `5fdbf090` mudou o mundo e a
+    fixture continuou afirmando o mundo de ontem. Quem cobra o valor DE VERDADE
+    agora é `test_a02_os_botoes_do_som_fazem_o_que_dizem.py`, que lê a página
+    publicada e compara — sem monkeypatch nenhum no caminho.
     """
     from hefesto_dualsense4unix.interface import onde
 
     try:
-        return 'data-hef-quando="junto"' in onde.pagina(PAGINA).read_text()
-    except Exception:  # pragma: no cover - defensivo
+        doc = onde.pagina(PAGINA, publicado=True).read_text(encoding="utf-8")
+    except (OSError, UnicodeDecodeError):  # pragma: no cover - defensivo
         return False
-
-
-#: Resolvido no import — ver :func:`_a_pagina_tem_o_ouvir_junto`.
-A_FILEIRA_TEM_TRES = _a_pagina_tem_o_ouvir_junto()
+    return 'data-hef-quando="junto"' in doc
 
 
 def aceso_da_fileira(uniq: str, entry: Any) -> str:
@@ -1921,6 +1957,17 @@ def modo_do_mic(endereco: str) -> str:
 #: embaixo, o `_enderecos_da_pagina` o lê aqui, e o `@registrar` o repete porque
 #: o decorador roda antes de qualquer coisa que este módulo defina.
 PAGINA = "02-controles.html"
+
+#: A fileira do som tem TRÊS botões na página publicada? Resolvido no import,
+#: **e AQUI de propósito** — ver :func:`_a_pagina_tem_o_ouvir_junto`, defeito 1.
+#:
+#: ESTA LINHA MORAVA 400 LINHAS ACIMA, junto da função, e era esse o defeito:
+#: `PAGINA` ainda não existia quando ela corria, o `NameError` virava `False`, e
+#: o «Ouvir junto» não acendia nunca. Ela fica DEPOIS da constante que usa, e o
+#: `except` estreito da função é o que garante que ninguém a mova de volta em
+#: silêncio: acima daqui, o import REPROVA em vez de responder `False`.
+A_FILEIRA_TEM_TRES = _a_pagina_tem_o_ouvir_junto()
+
 
 def texto_da_bateria(pct: int | None) -> str:
     """A carga na grafia da GTK, PERGUNTADA a ela — as duas frases.
@@ -3617,9 +3664,37 @@ def rota(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     # TIRA o som da televisão, «Ouvir junto» o deixa lá. Sair de um para o
     # outro sem devolver a saída padrão deixaria a TV muda com a tela dizendo
     # "junto" — o desacordo de 03/09, pela outra porta.
+    #
+    # **E ELE TAMBÉM DESFAZ A CAMADA 2 QUANDO VEM DO «pc» — 11/09/2026,
+    # SOM-BOTOES-01, e é a outra metade do mesmo parágrafo.** Até hoje este
+    # ramo devolvia a saída padrão e NÃO mexia no byte, então sair de «Todo o
+    # som do PC» para «Ouvir junto» deixava o firmware em
+    # `SAIDA_SO_NO_ALTO_FALANTE` com a camada 1 de volta na televisão — que é,
+    # letra por letra, o desacordo que `audio_saida.recado_da_rota` existe para
+    # denunciar. Medido nesta árvore: o cartão dela acendia «Ouvir junto» e
+    # publicava, na mesma coluna, a ressalva *"o alto-falante deste controle
+    # está roteado para receber todo o som, mas a saída padrão do sistema não é
+    # ele (…) Clique em 'Todo o som do PC' para mandá-lo para cá"* — a tela
+    # mandando desfazer o clique que ela acabou de dar.
+    #
+    # SÓ QUANDO VEIO DO «pc», e a condição é o que preserva o contrato do
+    # `test_o_junto_nao_manda_byte_de_rota_ao_daemon`: vindo de «Sons do jogo»
+    # o byte JÁ é o certo, e mandá-lo de novo escreveria no aparelho uma
+    # escolha que ela não fez. A `fonte` é do NÓ; a rota é do FIRMWARE — o que
+    # esta linha faz é devolver o firmware ao estado que os outros dois botões
+    # chamam de «Sons do jogo», porque é sobre ele que o `mix` se soma.
     if qual == ROTA_OUVIR_JUNTO:
         audio_saida.devolver_o_som_do_pc()
-        _lembrar_do_som(ctx, uniq, speaker={"fonte": "mix"})
+        lembrar: dict[str, Any] = {"fonte": "mix"}
+        if _byte_da_rota(ctx.por_uniq(uniq)) == ROTA_DO_CANAL[CANAL_TODO_O_PC]:
+            de_volta = ROTA_DO_CANAL[CANAL_SONS_DO_JOGO]
+            if not p.speaker_set(rota=de_volta, uniq=uniq,
+                                 **_volume_conhecido(ctx.por_uniq(uniq))):
+                raise RuntimeError(
+                    "o daemon não confirmou a volta da rota do alto-falante — "
+                    "ou o Hefesto está parado, ou este controle se desligou")
+            lembrar["rota"] = de_volta
+        _lembrar_do_som(ctx, uniq, speaker=lembrar)
         _confirmar_com_som(ctx, uniq)
         return
 
