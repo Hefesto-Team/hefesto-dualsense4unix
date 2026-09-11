@@ -485,10 +485,20 @@ CSS = CSS_GLIFO + """
   body:has(#dobra-l2:checked) .duas-colunas .rotulos > .g-l2 > .fecha,
   body:has(#dobra-r2:checked) .duas-colunas .rotulos > .g-r2 > .fecha{display:flex}
   /* A SETA DIZ O ESTADO SEM PALAVRA, e é a mesma que o resto da casa usa. Ela
-     mora no `::after` do label para não entrar no SVG do glifo, que é dado. */
-  .duas-colunas .rotulos .sec-glifo > .abre::after{content:'\25be';font-size:10px;
+     mora no `::after` do label para não entrar no SVG do glifo, que é dado.
+
+     ELA É O CARACTERE, e não a fuga CSS — 11/09/2026, e a razão é do PYTHON,
+     não do navegador. Este CSS mora numa string Python, e ali uma barra
+     seguida de dígitos de 0 a 7 é uma fuga OCTAL: o que o gerador escrevia
+     virava o byte 0x15 mais as duas letras que sobravam, e a tela mostrava o
+     retângulo de glifo faltando ao lado do L2 e do R2 — fotografado no produto
+     publicado, com a mesa dela. O navegador nunca viu fuga nenhuma.
+
+     O RESTO DA CASA JÁ ESCREVIA ASSIM (`topo.html`, `aba08.py`): o caractere
+     cru atravessa Python e CSS sem quem o interprete no meio. */
+  .duas-colunas .rotulos .sec-glifo > .abre::after{content:'▾';font-size:10px;
        color:var(--comment)}
-  .duas-colunas .rotulos .sec-glifo > .fecha::after{content:'\25b4';font-size:10px;
+  .duas-colunas .rotulos .sec-glifo > .fecha::after{content:'▴';font-size:10px;
        color:var(--comment)}
   .barra{display:flex;align-items:center;gap:8px;font-size:11.5px;color:var(--texto-mudo)}
   .barra .trilho{flex:1;height:5px;border-radius:3px;background:var(--border-forte);
@@ -1547,6 +1557,23 @@ def _conferir(doc):
     #    Ela decidiu o CONTRÁRIO do que eu tinha escrito no CSS um turno antes, e
     #    é por isso que a régua nomeia o valor errado: quem herdar o comentário
     #    velho e "consertar" para `flex-start` esbarra aqui.
+    #    E A SETA DO GLIFO É UM CARACTERE QUE SE LÊ — 11/09/2026. Ela saía como
+    #    o byte 0x15 mais duas letras soltas, e a tela mostrava o retângulo de
+    #    glifo faltando ao lado do L2 e do R2, com um `be` colado. A causa é do
+    #    PYTHON (ver a nota no CSS), e por isso a régua olha o DOCUMENTO: o que
+    #    reprova aqui é o byte de controle na tela, venha ele de onde vier.
+    #
+    #    A MORDIDA: devolva `'\25be'` ao `content` e o gerador para aqui.
+    _controles = sorted({hex(ord(ch)) for ch in doc
+                         if ord(ch) < 32 and ch not in "\n\t"})
+    exigir(not _controles,
+           f"há caractere de controle no documento ({', '.join(_controles)}) — "
+           f"ele vira o retângulo de glifo faltando na tela dela. Quase sempre "
+           f"é uma fuga CSS `\\NN` lida como OCTAL pelo Python")
+    for _seta in ("▾", "▴"):
+        exigir(f"content:'{_seta}'" in doc,
+               f"a seta {_seta!r} do glifo da seção sumiu do CSS — o L2 e o R2 "
+               f"deixam de dizer se a seção abre ou fecha")
     exigir("align-items:flex-start" not in doc.split(".sec-glifo", 1)[-1][:200],
            "o glifo voltou a ficar preso no alto da seção")
     exigir(".rotulos > .sec-glifo{display:flex;align-items:center" in doc,
