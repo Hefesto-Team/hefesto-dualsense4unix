@@ -393,11 +393,14 @@ def _chave_da_ordem(coluna: str) -> Callable[[dict[str, Any]], Any]:
 def _seta_da_coluna(coluna: str) -> str:
     """O que a seta daquela coluna mostra: `"↑"`, `"↓"` ou nada.
 
-    O ALVO É `classe`, e o `ligado()` do piloto lê o vazio como APAGADO — então
-    a coluna que não ordena não acende, sem precisar de um segundo endereço só
-    para desligá-la. As duas colunas que não estão ordenadas devolvem `""` no
-    mesmo tique em que a terceira devolve a seta: é o que impede duas setas de
-    ficarem acesas quando ela troca de coluna.
+    **O ALVO É `atributo` (`data-ordem`), e não `classe`** — corrigido em
+    11/09/2026, na conferência. O ramo `classe` do `escrever()` só liga classe
+    e RETORNA: o glifo calculado aqui era jogado fora, e a seta não existia na
+    tela. O ramo `atributo` é o único que APAGA o atributo quando o valor é
+    vazio (`hefesto_vivo.py:804`) — que é o que faz as duas colunas não
+    ordenadas ficarem sem seta no mesmo tique em que a terceira a tem, sem
+    precisar de um segundo endereço só para desligá-las. Quem desenha o glifo
+    é o `content` do CSS, pela regra `.ordena[data-ordem="…"]`.
     """
     escolhida, sentido = _prefs.ordem_da_tabela(TABELA_DA_LISTA)
     if coluna != escolhida:
@@ -1478,7 +1481,7 @@ def _rotulo_do_remover(alvo: str) -> str:
     **FATO CADUCO, SUBSTITUÍDO — 02/09/2026.** Aqui estava escrito que *"a
     recusa do piloto não serve de pergunta: ela sai em `stderr`, no terminal,
     onde a dona não está olhando"*. **Não sai mais.** O piloto ganhou
-    `_recusou_dizendo` (`hefesto_vivo.py:2724`): todo `RuntimeError` de gesto
+    `_recusou_dizendo` (`hefesto_vivo.py:2745`): todo `RuntimeError` de gesto
     vira TARJA na tela — no cartão do controle quando a página tem um, e no
     `document.body` quando não tem, que é o caso desta aba. Ela some sozinha em
     `SEGUNDOS_DO_RECADO = 30.0`.
