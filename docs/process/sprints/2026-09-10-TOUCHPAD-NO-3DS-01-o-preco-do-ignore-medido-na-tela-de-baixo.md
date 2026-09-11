@@ -1,6 +1,6 @@
 ---
 sprint: TOUCHPAD-NO-3DS-01
-estado: aberta
+estado: feita
 posse:
   TOUCHPAD-NO-3DS-01:
     - scripts/ensaios/o_touchpad_chega_na_tela_de_baixo.py
@@ -26,6 +26,21 @@ nao_toca:
 > costura, não o código.**
 
 # TOUCHPAD-NO-3DS-01 — o preço do `ignore`, medido na tela de baixo
+
+> **ESTADO 2026-09-10: feita** — nasceu
+> `scripts/ensaios/o_touchpad_chega_na_tela_de_baixo.py`, que mede QUATRO
+> degraus e fecha três: o **degrau 0**, que a sprint não tinha (o recurso está
+> **DESLIGADO** na configuração do emulador, `use_touchpad=false` e nunca
+> tocado — sem ele o dedo não faria nada mesmo com o descritor aberto); o
+> **degrau 1** (os dois nós de touchpad existem); e o **degrau 2**, VERMELHO
+> como previsto — com a cura, o emulador abre e segura só o nó principal e o de
+> movimento do vpad, **zero `hidraw`**. A mordida mediu a outra ponta: sem a
+> cura, a janela **nunca nasce** e o que muda é o emulador abrir o **evdev do
+> DualSense físico**. O **degrau 3 continua dela** — ROM e dedo. Entrega:
+> `docs/process/agentes/2026-09-10/TOUCHPAD-NO-3DS-01-opus.md`. **O `hidraw7`
+> do §0 caiu:** o número não é endereço, e com o daemon vivo o `hidraw` do
+> físico é `0600 root:root`; o travamento aconteceu três vezes com ZERO
+> `hidraw` aberto. Medido no CABO — o rádio não estava na mesa.
 
 **Nasce de uma ressalva escrita e NÃO medida, em 10/09/2026.** A sprint existe
 porque a ressalva não pode ficar só em prosa: ou ela vira medição, ou vira
