@@ -858,7 +858,7 @@ def _mesa_com_rotulo(mesa: list[dict[str, Any]]) -> list[dict[str, Any]]:
     FATO ERRADO, SUBSTITUÍDO — 02/09/2026. A docstring de
     `perfis_web.pacote_da_aba` afirma que a mesa vem *"no formato que
     ``mesa_viva.mesa_do_estado`` devolve mais ``rotulo`` e ``plastico``"*, e o
-    `_linhas_da_guarda` lê `controle.get("rotulo")` (`perfis_web.py:580`).
+    `_linhas_da_guarda` lê `controle.get("rotulo")` (`perfis_web.py:588`).
     **`mesa_do_estado` não devolve nenhum dos dois** — os campos dela são
     `pref`, `uniq`, `jogador`, `cor`, `nome`, `via`, `transporte`, `alvo`,
     `mascara` (`mesa_viva.py:340-352`). Medido: `guarda.nome` saía `["", ""]`
@@ -877,7 +877,7 @@ def _mesa_com_rotulo(mesa: list[dict[str, Any]]) -> list[dict[str, Any]]:
     `rotulo` e `plastico` —, não o conteúdo.
 
     O `plastico` ENTROU EM 03/09/2026, e o fato acima valia para ele também:
-    `_linhas_da_guarda` lê `controle.get("plastico")` (`perfis_web.py:560`) e
+    `_linhas_da_guarda` lê `controle.get("plastico")` (`perfis_web.py:587`) e
     recebia `""` para todo controle, porque ninguém o punha aqui. Ver `_plastico`.
     """
     return [{**c, "rotulo": _rotulo_curto(c), "plastico": _plastico(c)}

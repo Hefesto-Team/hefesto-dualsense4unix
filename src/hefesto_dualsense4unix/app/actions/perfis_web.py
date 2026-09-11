@@ -80,7 +80,6 @@ from hefesto_dualsense4unix.profiles.schema import (
 # letras — e é por importá-las que a tela nova e a janela de hoje nunca podem
 # discordar sobre qual perfil vence a disputa.
 from hefesto_dualsense4unix.app.actions.profiles_actions import (  # isort:skip
-    _MODE_KIND_ITEMS,
     explicacao_da_disputa,
     ordem_de_exibicao,
     rotulo_quando_usar,
@@ -253,29 +252,38 @@ AMBIENTE_DO_PRESET: dict[str, str] = {
 #: cinco mais "Programas"), sem lápide dizendo qual caducou. Mapeá-las para
 #: "Todos" é o defeito R-12 pelo avesso, e por isso elas caem no estado honesto
 #: de :data:`AMBIENTE_QUE_A_TELA_NAO_MOSTRA`, com a regra do disco intacta.
-#: OS QUATRO RÓTULOS DO **MODO** DO PERFIL — o que ATIVAR este perfil liga.
-#: PERFIL-MODO-01 (06/09/2026), Passo 1.
-#:
-#: **ELES NÃO SÃO DIGITADOS AQUI**: são `profiles_actions._MODE_KIND_ITEMS`, e
-#: essa lista é a mesma que a janela GTK põe no `SegmentedSelector` do editor.
-#: A frase-dona é `home_actions._MODE_ITEMS` (UX-MODE-TERMS-01/02, decisão dela
-#: de 06/08 — *"Já tinha pedido pra deixarmos: Conexão Nativa (Sony)"*), e o
-#: `test_vocabulario_das_quatro_superficies.py` reprova quem mudar um lado só.
-#: Uma quinta superfície com as palavras redigitadas seria a quinta a envelhecer
-#: sozinha.
-#:
-#: A ORDEM É A DO DONO, e ela importa na tela: "Não mexer no modo" vem primeiro
-#: porque é o que a MAIORIA dos perfis é — perfil sem a seção `mode`.
-#:
-#: `dict` E NÃO A TUPLA CRUA: quem consome é a página, por `id → rótulo`; a
-#: ordem é preservada (dict do Python 3.7+ é ordenado) e o gerador do desenho lê
-#: os pares na mesma sequência.
-MODO_DO_PERFIL: dict[str, str] = dict(_MODE_KIND_ITEMS)
+# O `MODO_DO_PERFIL` MORREU AQUI — 11/09/2026, achado da conferência da
+# PERFIS-A-TELA-01. Ele era `dict(profiles_actions._MODE_KIND_ITEMS)`: os quatro
+# rótulos do modo do perfil, servidos à página por `id → rótulo`.
+#
+# QUEM O CONSUMIA ERA O QUADRO «MODO» do editor de Perfis, e o quadro saiu por
+# ordem dela no mesmo dia (*"em perfis ainda aparece modo. Isso deve aparecer só
+# na aba jogar."*). Medido depois disso: nenhum arquivo de `src/` o lia — só
+# asserções de teste. **Tabela de rótulos sem quem a renderize é o "campo morto
+# com nome de promessa" na versão de dado**, e a próxima pessoa a encontrá-la
+# gastaria a leitura procurando a tela que ela alimenta.
+#
+# A ABA JOGAR NÃO ERA A SEGUNDA LEITORA, e esta é a afirmação que caiu: ela tem
+# léxico próprio, `jogar/painel._ROTULO_DO_MODO`, que é `home_actions._MODE_ITEMS`
+# — a MESMA frase-dona, alcançada por outro caminho. Nada se perdeu com a morte
+# desta cópia.
+#
+# O QUE FICOU NO LUGAR é a régua: `test_o_quadro_do_modo_grava_no_perfil.
+# test_os_quatro_rotulos_continuam_vindo_do_dono` passou a perguntar ao DONO
+# (`_MODE_KIND_ITEMS`) se «Não mexer no modo» ainda é o primeiro par — que é o
+# fato do qual :data:`MODO_SEM_OPINIAO` depende.
 
-#: O id do modo de um perfil SEM a seção ``mode``. Ele não é invenção da tela:
-#: é o primeiro par de :data:`MODO_DO_PERFIL`, e o
+#: O id do modo de um perfil SEM a seção ``mode``. Ele não é invenção da tela: é
+#: o primeiro par de `profiles_actions._MODE_KIND_ITEMS`, e o
 #: `profiles_actions._mode_section_from_editor` já trata "none" como *remova a
 #: seção*. Perfil sem opinião de modo é o caso comum — 24 dos 33 perfis dela.
+#:
+#: **ELE É LITERAL DE PROPÓSITO, e não `next(iter(...))` do dono.** Derivá-lo
+#: faria uma reordenação da lista do dono trocar, em silêncio, o id que
+#: :func:`interface.pacotes.perfil.secao_do_modo` usa para REMOVER a seção — e a
+#: régua que hoje morde (ela compara este literal com o primeiro par do dono)
+#: passaria a se medir contra a própria saída, que é a família de defeito que
+#: esta casa mais pagou.
 MODO_SEM_OPINIAO = "none"
 
 FORA_DO_DESENHO: dict[str, str] = {
