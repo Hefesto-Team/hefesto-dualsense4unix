@@ -2241,7 +2241,7 @@ def _velocidade(p: Any, o: dict[str, Any], campo: str,
 
     SEM `enabled` DE PROPÓSITO, e é a rota que o produto criou para isto: o
     handler manda o pedido sem `enabled` para `set_mouse_speed`
-    (`daemon/ipc_handlers.py:5029`), que atualiza a config e o device vivo **sem
+    (`daemon/ipc_handlers.py:5064`), que atualiza a config e o device vivo **sem
     start/stop e sem gravar o flag**. É o que impede um ajuste de velocidade de
     RELIGAR a emulação e matar o gamepad virtual — a regressão que o
     BUG-MOUSE-GUI-SYNC-01 (A4) fechou. O `_send_mouse_param_async` da GUI

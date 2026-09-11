@@ -887,7 +887,7 @@ def _sem_marcacao(texto: str) -> str:
 #     rumble.passthrough  ('enabled',)            ← nenhum endereço
 #
 # Quem escolhe o controle é o ALVO DE OUTPUT do daemon, e o handler o congela
-# junto do par: `daemon/ipc_handlers.py:4913` grava `rumble_active_uniq =
+# junto do par: `daemon/ipc_handlers.py:4948` grava `rumble_active_uniq =
 # uniq_do_alvo_de_output(self.controller)`. Sem alvo escolhido o padrão é
 # BROADCAST (`ipc_handlers.py:4533`) — os quatro tremeriam, e a coluna, que é o
 # endereço desta aba, estaria mentindo. Por isso `_mirar()` vem antes.
@@ -1150,7 +1150,7 @@ def _indice(ctx: Contexto, uniq: str) -> int:
     """A POSIÇÃO daquele controle na lista do daemon — o que o alvo espera.
 
     `controller.target.set` recebe `index` (0 = primário), **não** `uniq`:
-    `daemon/ipc_handlers.py:4196`. O número sai do próprio bloco `controllers`
+    `daemon/ipc_handlers.py:4231`. O número sai do próprio bloco `controllers`
     (`core/backend_pydualsense.py:5945`, `"index": idx`), que é a posição em
     `list(self._handles)` — o MESMO que cada linha do seletor da janela estável
     carrega (`app/actions/status_actions.py:1585`).
@@ -2027,7 +2027,7 @@ def parar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
 
     A CHECADA, e não a crua: dentro do Modo Nativo o `rumble.stop` não trava
     silêncio, ele SOLTA o par e diz que não alcança o motor que o jogo toca
-    pelo hidraw (`ipc_handlers.py:4543`). Anunciar "parada" ali seria prometer
+    pelo hidraw (`ipc_handlers.py:4578`). Anunciar "parada" ali seria prometer
     o que não aconteceu — NATIVO-RUMBLE-01, segunda metade. O motivo sobe como
     erro porque é o único canal que esta aba tem hoje; um recado de tela para
     ele ainda não existe, e está no relato.
