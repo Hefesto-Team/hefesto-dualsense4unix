@@ -940,7 +940,33 @@
   .lanc-nome{font-size:12.5px;font-weight:600;color:var(--fg)}
   .lanc-selo{font-size:10px;padding:2px 7px;border-radius:4px;font-weight:600;
              font-family:'JetBrains Mono',monospace}
-  .lanc-selo.ok{background:var(--green);color:var(--app-bg)}
+  /* O VERDE DO «LOCALIZADO» — 11/09/2026, LANCADOR-LOCALIZAR-01, e ele nasceu
+     de uma queixa dela: *"não aparece verde os localizados"*.
+
+     MEDIDO NA PÁGINA VIVA antes da cura, com a grade pintada como o pacote a
+     pinta (`blocos` -> `cartoes_html`): o selo da Steam saía
+     `background: rgb(80,250,123)` e os CINCO `LOCALIZADO` saíam
+     `background: rgba(0,0,0,0)` — transparente. Não era um verde fraco: era
+     verde NENHUM. A pílula não existia, e o selo caía como texto branco solto
+     ao lado do nome do cartão.
+
+     A CAUSA É DE 09/09: `SELOS` ganhou a chave `localizado` no Python
+     (LANCADORES-ZERO-01 §5.2) e `MOLDURA` ganhou o `chega` junto — mas a FOLHA
+     nunca soube da classe nova. O gerador emitia
+     `<span class="lanc-selo localizado">`, e nenhuma regra casava: sobrava só
+     a `.lanc-selo` base, que dá tamanho e fonte e não dá cor.
+
+     ELE DIVIDE O ESTILO COM `ok`, e é a mesma decisão que `off`/`nao_sei` já
+     tinham tomado do outro lado: as duas dizem *"este está aqui e não há
+     impedimento a agir"* — é a razão escrita em `MOLDURA`, que já dá a mesma
+     moldura `chega` aos dois. Um quinto tom só acrescentaria uma cor para ela
+     decodificar; quem separa CHEGAM de LOCALIZADO é a PALAVRA, que é o que o
+     selo existe para dizer.
+
+     E ESTE VERDE É ESTADO, NÃO RESPOSTA A GESTO. A piscada de deu-certo tem
+     outro dono (`hef-deu-certo`) e não passa por aqui: este cartão está verde
+     desde que a página pinta, e continua verde sem ninguém clicar em nada. */
+  .lanc-selo.ok,.lanc-selo.localizado{background:var(--green);color:var(--app-bg)}
   .lanc-selo.warn{background:var(--orange);color:var(--app-bg)}
   /* o selo apagado ficava a 3,47:1 sobre o próprio fundo — o texto claro
      dá 9,3:1 e o selo continua lendo como "desligado" pelo fundo cinza. */

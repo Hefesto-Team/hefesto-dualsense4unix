@@ -2686,3 +2686,120 @@ def test_a_recusa_do_registro_nunca_confessa_divida_nossa(a07, desenho):
         + "\n\nDecisão dela, 07/09/2026: a dívida vai para o mapa "
           "(`docs/data/paridade-gtk-html.csv`), nunca para a tela. Ou o buraco "
           "fecha, ou ele fica no mapa — a tela não o conta.")
+
+
+# --------------------------------------------------------------------------
+# 12. a cor do selo — e ela é a régua que NÃO EXISTIA em 09/09/2026
+# --------------------------------------------------------------------------
+#: Onde a cor do selo mora, na folha da aba. O `.lanc-selo` base dá tamanho e
+#: fonte; quem dá COR é sempre uma regra `.lanc-selo.<chave>`.
+_REGRA_DE_SELO = re.compile(r"(?P<seletores>[^{}]+)\{(?P<corpo>[^{}]*)\}")
+
+
+def _folha_da_aba() -> str:
+    """O `<style>` da página da bancada, com a prosa decepada.
+
+    O comentário sai ANTES de qualquer casamento: um `/* … .lanc-selo.ok … */`
+    contaria como regra, e a régua ficaria verde sobre uma cor comentada — que
+    é a forma exata do defeito que esta casa já pagou três vezes em três dias
+    (*um comentário que descreve o padrão proibido vira a primeira ocorrência
+    dele*).
+    """
+    return re.sub(r"/\*.*?\*/", " ", _bancada(), flags=re.S)
+
+
+def _corpo_da_regra_do_selo(folha: str, chave: str) -> str | None:
+    """A declaração que pinta `.lanc-selo.<chave>`, ou `None` se não há nenhuma.
+
+    Devolve o CORPO e não um booleano de propósito: é o corpo que permite
+    perguntar se dois selos da mesma família estão pintados do mesmo jeito, sem
+    ninguém digitar qual é a cor.
+    """
+    agulha = f".lanc-selo.{chave}"
+    for regra in _REGRA_DE_SELO.finditer(folha):
+        seletores = [s.strip() for s in regra.group("seletores").split(",")]
+        if agulha in seletores:
+            return " ".join(regra.group("corpo").split())
+    return None
+
+
+def test_todo_selo_do_produto_tem_cor_na_folha(desenho):
+    """Um selo que o Python emite e a folha não conhece sai SEM PÍLULA.
+
+    **O DEFEITO, MEDIDO NA PÁGINA VIVA EM 11/09/2026** — a grade pintada como o
+    pacote a pinta (`blocos` → `cartoes_html`) e lida por `getComputedStyle`:
+
+        steam       selo `ok`           background: rgb(80, 250, 123)
+        heroic      selo `localizado`   background: rgba(0, 0, 0, 0)
+        lutris      selo `localizado`   background: rgba(0, 0, 0, 0)
+        flatpak     selo `localizado`   background: rgba(0, 0, 0, 0)
+        retroarch   selo `localizado`   background: rgba(0, 0, 0, 0)
+        emuladores  selo `localizado`   background: rgba(0, 0, 0, 0)
+
+    Não era um verde fraco: era verde NENHUM. `SELOS` ganhou a chave
+    `localizado` em 09/09 (LANCADORES-ZERO-01 §5.2) e a FOLHA nunca soube dela;
+    o gerador emitia `<span class="lanc-selo localizado">` e nenhuma regra
+    casava. A queixa dela, dois dias depois: *"não aparece verde os
+    localizados"*.
+
+    **POR QUE NENHUMA RÉGUA VIA:** as desta aba mediam o SELO (a palavra, o
+    estado, a moldura do cartão) e nenhuma perguntava se o selo tem COR. O
+    Python e a folha eram duas listas independentes, e só uma delas era medida.
+
+    **A MORDIDA:** apague a regra `.lanc-selo.localizado` da folha (ou
+    acrescente uma chave a `SELOS` sem pintá-la) e esta régua cai nomeando a
+    chave órfã.
+    """
+    folha = _folha_da_aba()
+    sem_cor = [k for k in desenho.SELOS
+               if _corpo_da_regra_do_selo(folha, k) is None]
+
+    assert not sem_cor, (
+        f"o produto emite {sorted(sem_cor)} e a folha da aba não pinta "
+        f"nenhum deles: `<span class=\"lanc-selo {sem_cor[0]}\">` cai só na "
+        f"`.lanc-selo` base, que dá tamanho e fonte e NÃO dá fundo — o selo "
+        f"sai como texto solto ao lado do nome do cartão, e foi exatamente "
+        f"isso que ela viu em 11/09/2026. `SELOS` e a folha são duas listas, "
+        f"e quem acrescenta uma chave numa tem de acrescentar na outra.")
+
+
+def test_os_selos_de_uma_mesma_moldura_tem_a_mesma_cor(desenho):
+    """A família do selo já está escrita em `MOLDURA` — a folha a obedece.
+
+    **ISTO É LIDO, E NÃO DIGITADO.** Nenhuma linha aqui diz "localizado é
+    verde": quem diz que `ok` e `localizado` são a mesma família é
+    `MOLDURA`, que dá `chega` aos dois com a razão escrita ao lado —
+    *"as duas dizem «este está aqui e não há impedimento a agir»"*. A régua só
+    cobra que a folha não contradiga o desenho. É a mesma decisão que `off` e
+    `nao_sei` já cumpriam do outro lado, dividindo a moldura `ausente` e o
+    fundo cinza.
+
+    **E ISSO É ESTADO, NÃO RESPOSTA A GESTO:** a piscada verde de deu-certo tem
+    outro dono (`hef-deu-certo`) e não entra aqui — o cartão está verde desde
+    que a página pinta, sem ninguém clicar em nada.
+
+    **A MORDIDA:** dê ao `localizado` um verde próprio (um quinto tom) e esta
+    régua cai nomeando as duas chaves e os dois corpos, porque a tela passaria a
+    ter duas cores para ela decodificar onde o desenho declarou uma família.
+    """
+    folha = _folha_da_aba()
+    familias: dict[str, list[str]] = {}
+    for chave in desenho.SELOS:
+        familias.setdefault(desenho.MOLDURA[chave], []).append(chave)
+
+    discordantes = []
+    for moldura, chaves in sorted(familias.items()):
+        if len(chaves) < 2:
+            continue
+        pintados = {k: _corpo_da_regra_do_selo(folha, k) for k in sorted(chaves)}
+        if len(set(pintados.values())) > 1:
+            discordantes.append(f"moldura {moldura!r}: " + " · ".join(
+                f"{k} → {v!r}" for k, v in pintados.items()))
+
+    assert not discordantes, (
+        "selos da MESMA moldura estão pintados de cores diferentes:\n  "
+        + "\n  ".join(discordantes)
+        + "\n\n`MOLDURA` é quem declara a família, e ela já dá a mesma moldura "
+          "aos dois. Duas cores para o mesmo estado é uma cor a mais para ela "
+          "decodificar — é a razão escrita em `MOLDURA` e a que `off`/`nao_sei` "
+          "já cumprem.")
