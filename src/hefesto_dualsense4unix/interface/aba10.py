@@ -384,11 +384,100 @@ CSS = CSS_GLIFO + """
      afirmação que a tela desmente. */
   .tab .pri{font-family:'JetBrains Mono',monospace;width:86px;text-align:right}
   .tab .quando{color:var(--texto-mudo);font-weight:400}
+  /* ------------------------------------------------------------------
+     A LUPA, OS DOIS ÍCONES, A SETA E A DIVISA — PERFIS-LIMPA-01, 11/09/2026.
+
+     O ALVO DO CLIQUE TEM TAMANHO, e o desenho NÃO É O ALVO. O SVG mede 11px
+     (o mesmo do CADEADO, que era o único ícone desta aba), e 11px é desenho
+     — ela clica isto com o mouse. Os 24x24 são o mínimo de alvo, e eles cabem
+     na linha de 15px do `.sec-rot` porque o botão é `align-self:center` com
+     `margin` negativa vertical: ele SOBRA para cima e para baixo sem empurrar
+     nada. É assim que os dois ícones entram em linhas que já existem sem
+     acrescentar um pixel de altura — que é o que a ordem dela pedia.
+
+     ELES SÃO `<button>` E NÃO HERDAM NADA DE `.btn`: o botão desta casa tem
+     borda, fundo e 11,5px de texto, e é justamente o que sai de cena aqui. */
+  .icone-rot{-webkit-appearance:none;appearance:none;border:none;background:none;
+             padding:0;margin:-5px 0;width:24px;height:24px;flex:0 0 24px;
+             display:inline-flex;align-items:center;justify-content:center;
+             color:inherit;cursor:pointer;border-radius:5px;align-self:center}
+  .icone-rot:hover{background:rgba(255,255,255,.09)}
+  .icone-rot:active{background:rgba(255,255,255,.15)}
+  .icone-rot.on{background:var(--sel-bg,rgba(189,147,249,.30))}
+  /* O CAMPO DA LUPA NASCE FECHADO — decisão dela em uma frase: *"Temos que  (noqa-acento) citação
+     deixar o layout mais limpo"*. Um campo de busca sempre visível ACRESCENTA  (noqa-acento) citação
+     uma linha ao bloco em vez de tirar; ele nasce do clique na lupa e some no
+     clique seguinte. `width:0` em vez de `display:none` para a abertura ter
+     movimento — e `padding:0` junto, senão o campo fechado continua com 12px
+     de folga ocupando a linha. */
+  .procura{-webkit-appearance:none;appearance:none;width:0;padding:0;border:none;
+           background:var(--panel);color:var(--fg);font:inherit;font-weight:400;
+           font-size:11px;border-radius:5px;min-width:0;
+           transition:width .12s ease,padding .12s ease}
+  .procura.on{width:150px;padding:3px 7px;border:1px solid var(--border-forte)}
+  .procura::placeholder{color:var(--comment)}
+  /* QUANTOS A LUPA ESCONDEU. Ela nasce vazia e o `ligado()` do piloto lê o
+     vazio como apagado — sem filtro, nada aparece. */
+  .fora-da-busca{font-size:10.5px;color:var(--comment);font-weight:400;
+                 letter-spacing:0;text-transform:none;display:none}
+  .fora-da-busca.on{display:inline}
+  /* A SETA DA COLUNA ORDENADA — do tamanho do ícone, e sem texto novo.
+
+     `pointer-events:none` NÃO É ENFEITE, É A TRAVA DO DUPLO CLIQUE: este
+     `<span>` é o elemento que carrega `data-hef-gesto="ordenar"`, e o ouvinte
+     do piloto despacha no PRIMEIRO clique. Sem esta linha, um clique simples
+     no cabeçalho ordenaria — e o cabeçalho é `position:sticky` a um pixel da
+     célula do nome, que é o gesto `selecionar` e troca o perfil aberto no
+     editor. Com ela, mouse nenhum alcança este nó; quem o aciona é o roteiro
+     da página, no `dblclick`, por `.click()`. Ela pediu duplo clique. */
+  .ordena{pointer-events:none;margin-left:4px;font-size:10px;line-height:1;
+          opacity:0;color:var(--purple)}
+  .ordena.on{opacity:1}
+  /* A DIVISA QUE ELA ARRASTA. O cursor muda quando ela chega perto — é
+     literalmente o que ela descreveu: *"quando o cursor muda e permite  (noqa-acento) citação
+     alterar a largura da coluna"*. 9px de faixa, metade para cada lado da
+     borda, é o que a mão acha sem procurar. */
+  .puxador{position:absolute;top:0;bottom:0;right:0;width:9px;z-index:3;
+           cursor:col-resize;background:none}
+  .puxador:hover{background:linear-gradient(90deg,transparent 3px,
+                 var(--purple) 3px,var(--purple) 5px,transparent 5px)}
+  .arrastando,.arrastando *{cursor:col-resize !important;user-select:none}
+  /* A LARGURA DA COLUNA SÓ MANDA COM `table-layout:fixed` — MEDIDO, e é a
+     armadilha que o próprio arquivo já registrava: `.tab .pri` dizia 46px e o
+     navegador media 86px  (noqa-acento: verbo medir, imperfeito), porque com
+     `auto` a `width` é SUGESTÃO. Uma largura
+     arrastada sobre `auto` é uma largura que o navegador reescreve no repinte
+     seguinte, e a coluna volta sozinha ao que o texto mandar.
+
+     O PREÇO, declarado: com `fixed` o texto mais largo que a coluna não a
+     ESTICA mais — ele precisa de onde parar, e é por isso que as três células
+     ganham reticência aqui embaixo. É o que torna o arraste útil: ela alarga a
+     coluna para ler o nome inteiro do jogo, em vez de a coluna decidir por ela.
+
+     O `<colgroup>` É QUEM CARREGA O NÚMERO, e não a `width` da `<th>`: é o
+     único elemento da tabela que existe para isso, ele não é reescrito pelo
+     `blocos` do piloto (que só troca o `<tbody>`), e um `<col>` por coluna dá
+     ao roteiro um lugar só para escrever. */
+  .tab{table-layout:fixed}
+  /* AS LARGURAS DE PARTIDA, e as duas saem da MEDIÇÃO da tela de ontem: com
+     `auto` o Chrome dava 255px ao `Nome` e 86 à `Priorização`, e o `Quando
+     usar` ficava com o resto. Escrevê-las no `<col>` é o que faz a tabela abrir
+     exatamente como abria antes de a largura virar arrastável — quem nunca
+     arrastar não vê diferença nenhuma. Quem arrastar ganha um `style` inline
+     no mesmo `<col>`, e inline vence folha. */
+  .tab col[data-coluna="nome"]{width:255px}
+  .tab col[data-coluna="prioridade"]{width:86px}
+  .tab td,.tab th{overflow:hidden;text-overflow:ellipsis}
+  .tab .quando{white-space:nowrap}
+  .tab tbody td{white-space:nowrap}
   .conta-perfis{font-size:10.5px;color:var(--comment);margin-left:auto;text-transform:none;
                 letter-spacing:0}
   /* 3 botões e 3 botões, todos da mesma largura */
   .botoes{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin-top:auto;padding-top:12px}
   .botoes .btn{width:100%;justify-content:center;padding:0 8px;font-size:11.5px}
+  /* UM BOTÃO SÓ, e a grade de três o deixaria com um terço da largura e dois
+     vãos vazios ao lado — que é mais sujo do que os três eram. 11/09/2026. */
+  .botoes.um-so{grid-template-columns:1fr}
   /* os campos do editor, todos na mesma grade */
   /* os campos ficam sobre o MESMO fundo da tabela ao lado, e assim os três botões
      de baixo nascem na mesma base nos dois blocos. */
@@ -813,7 +902,14 @@ CSS = CSS_GLIFO + """
   /* AS QUATRO SEÇÕES TÊM DE SE LER COMO QUATRO. Com o mesmo vão entre todos os
      glifos, os sete viravam um borrão só e ninguém achava onde a luz acaba e o
      gatilho começa: 2px DENTRO de uma seção, 11px ENTRE elas. */
-  .gd-pecas{width:150px}
+  /* O NÚMERO É MEDIDO, e ele mudou de dono em 11/09/2026. Com `table-layout`
+     em `auto` esta coluna media  (noqa-acento: verbo medir, imperfeito) 255px
+     na tela (a fileira de glifos pede 239 e a
+     folga da célula 16), e o `150px` escrito aqui era SUGESTÃO que o navegador
+     ignorava. Com `fixed` a sugestão virou ordem: mantido o 150, a fileira de
+     glifos era CORTADA — fotografado. O valor agora é o que a tela
+     media.  (noqa-acento: verbo medir, imperfeito) */
+  .gd-pecas{width:255px}
   .gd-pecas .gls{gap:11px}
   /* aceso = tem ajuste só dele · apagado = usa o do perfil, como os outros */
   /* O APAGADO PASSOU DE `--border-forte` PARA `--comment` — 30/08/2026.
@@ -825,7 +921,9 @@ CSS = CSS_GLIFO + """
   .gr{display:inline-flex;align-items:center;gap:2px;color:var(--comment)}
   .gr.on{color:var(--purple);filter:drop-shadow(0 0 4px rgba(189,147,249,.45))}
   .gr .gl{vertical-align:-3px}
-  .gd-id{width:112px;text-align:right;font-family:'JetBrains Mono',monospace;font-size:10px;
+  /* MESMA CURA, MESMO DIA: o endereço de rádio mede 118px em JetBrains Mono de
+     10px mais a folga, e o `112` cortava o último octeto com reticências. */
+  .gd-id{width:118px;text-align:right;font-family:'JetBrains Mono',monospace;font-size:10px;
          color:var(--comment)}
   /* A COR DO PLÁSTICO NA BORDA DA LINHA, pela mesma razão do chip da fita: num
      desenho de 32px o modelo mal se distingue, e é a cor que identifica a peça.
@@ -902,6 +1000,164 @@ CADEADO = ('<svg viewBox="0 0 12 12" width="11" height="11" aria-hidden="true">'
            'stroke="currentColor" stroke-width="1.2"/>'
            '<rect x="2.3" y="5.2" width="7.4" height="5.4" rx="1.1" '
            'fill="currentColor"/></svg>')
+
+
+# ---------------------------------------------------------------------------
+# OS TRÊS DESENHOS DE 11/09/2026 — PERFIS-LIMPA-01, e os três são ordem dela:
+#
+#     "Na tabela do perfil tem que terum svg dde lupa no titulo da tabela.  # (noqa-acento) citação literal dela
+#      Temos que remover esse botão voltar a de ontem ??? e o botão  # (noqa-acento) citação literal dela
+#      recarregar vira um svg clicável ao lado de Perfis Salvos que irá  # (noqa-acento) citação literal dela
+#      fazer essa função. Temos que deixar o layout mais limpo.."  # (noqa-acento) citação literal dela
+#
+# O TAMANHO DO DESENHO É O DO `CADEADO` — 11px. É o único ícone que esta aba já
+# tinha, e um segundo tamanho ao lado dele seria a tela com dois vocabulários de
+# desenho na mesma linha. **O ALVO DO CLIQUE NÃO É O DESENHO**: quem lhe dá os
+# 24x24 é a regra `.icone-rot` do CSS, e a razão está escrita lá.
+#
+# `currentColor` EM TODOS: os três nascem dentro do `.sec-rot`, que é verde por
+# decisão dela. Um hexadecimal aqui seria o ícone discordando do título ao lado
+# no dia em que a cor do bloco mudar.
+LUPA = ('<svg viewBox="0 0 12 12" width="11" height="11" aria-hidden="true">'
+        '<circle cx="5.2" cy="5.2" r="3.4" fill="none" stroke="currentColor" '
+        'stroke-width="1.3"/>'
+        '<path d="M7.8 7.8 L10.6 10.6" stroke="currentColor" stroke-width="1.3" '
+        'stroke-linecap="round"/></svg>')
+
+RECARREGA = ('<svg viewBox="0 0 12 12" width="11" height="11" aria-hidden="true">'
+             '<path d="M9.8 6a3.8 3.8 0 1 1-1.2-2.8" fill="none" '
+             'stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>'
+             '<path d="M9.4 1.3v2.6H6.8" fill="none" stroke="currentColor" '
+             'stroke-width="1.3" stroke-linecap="round" '
+             'stroke-linejoin="round"/></svg>')
+
+DESFAZ = ('<svg viewBox="0 0 12 12" width="11" height="11" aria-hidden="true">'
+          '<path d="M2.2 6a3.8 3.8 0 1 0 1.2-2.8" fill="none" '
+          'stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>'
+          '<path d="M2.6 1.3v2.6h2.6" fill="none" stroke="currentColor" '
+          'stroke-width="1.3" stroke-linecap="round" '
+          'stroke-linejoin="round"/></svg>')
+
+
+def icone_do_rotulo(gesto: str, desenho: str, dica: str) -> str:
+    """Um ícone clicável no título de um bloco — o invólucro novo de um botão.
+
+    **O NOME DO GESTO NÃO MUDA, e é a metade que a §3 da sprint cobra.**
+    `data-hef-gesto="recarregar"` e `data-hef-gesto="voltar-a-de-ontem"` são os
+    mesmos de quando eram botões: o `recarregar` levou até 31/08 para ganhar
+    dono e não vai perdê-lo por troca de invólucro.
+
+    **A DICA VAI JUNTO, PALAVRA POR PALAVRA.** Um ícone sem dica é uma função
+    que ninguém acha — é o custo inteiro de trocar palavra por desenho, e ele se
+    paga assim.
+
+    `<button>` E NÃO `<span>`: ele recebe foco pelo teclado e o leitor de tela o
+    anuncia como botão, que é o que ele é. O `aria-label` repete a dica porque
+    `title` não é nome acessível confiável, e o desenho é `aria-hidden`.
+    """
+    return (f'<button type="button" class="icone-rot" '
+            f'data-hef-gesto="{gesto}" title="{dica}" '
+            f'aria-label="{dica}">{desenho}</button>')
+
+
+def icone_da_lupa() -> str:
+    """A lupa do título da tabela dos perfis. Ela ABRE o campo, e nada mais.
+
+    ORDEM DELA: *"Na tabela do perfil tem que terum svg dde lupa no titulo da  # (noqa-acento) citação literal dela
+    tabela"*, e *"Procura nome de perfil, e demais configs dos perfis, a ideia é  # (noqa-acento) citação literal dela
+    acharmos rápido o nome de um jogo"*.  # (noqa-acento) citação literal dela
+
+    **ELA NÃO TEM GESTO, e é a única coisa clicável desta aba que não tem.**
+    Abrir e fechar um campo não é trabalho do Python: é um `classList.toggle`
+    que não toca o disco, não fala com o daemon e não muda uma letra do que a
+    tela AFIRMA. Mandá-lo a Python custaria uma travessia de fronteira e 100 ms
+    de espera para acender uma borda. Quem procura de verdade é o campo ao lado,
+    e esse tem dono (`procurar`).
+
+    **E O ENDEREÇO DELA É A CLASSE, e isso foi MEDIDO em 11/09/2026.** A
+    primeira versão usava `data-papel="abrir-a-lupa"`, e `data-papel` está na
+    lista de atributos que o ouvinte do piloto casa (`manda_do_alvo`): cada
+    clique na lupa chegava ao Python como um gesto sem dono e imprimia
+    `[gesto sem dono] 10-perfis.html · abrir-a-lupa` no stdout de quem lançou a
+    janela — exatamente o defeito que o `recarregar` levou até 31/08 para
+    perder. A classe `.lupa` não está em lista nenhuma do piloto, e o roteiro a
+    acha pelo mesmo seletor.
+    """
+    return ('<button type="button" class="icone-rot lupa" '
+            'title="Procurar um perfil pelo nome, pela prioridade ou pelo jogo." '
+            f'aria-label="Procurar um perfil">{LUPA}</button>')
+
+
+def campo_da_lupa() -> str:
+    """O campo que a lupa abre — fechado no desenho, e é decisão dela.
+
+    **SEM CAMPO NA TELA ATÉ ELA CLICAR**: um campo de busca sempre visível
+    ACRESCENTA uma linha ao bloco em vez de tirar, e a ordem era *"deixar o  # (noqa-acento) citação literal dela
+    layout mais limpo"*.  # (noqa-acento) citação literal dela
+
+    `data-hef-vivo` E NÃO `data-hef-gesto`: a quarta porta do piloto é a única
+    que dispara a cada TECLA, e ela é de LEITURA por contrato. As outras três
+    despacham no clique, no `change` e no `blur` — nenhuma delas serve a quem
+    digita e quer ver a lista encolher enquanto digita.
+
+    `data-hef-alvo="valor"` PARA O CAMINHO DE VOLTA: o produto reescreve aqui o
+    termo que ele está aplicando. Ele nunca atropela o que ela está digitando —
+    o `escrever()` do piloto devolve 0 para o elemento que tem o foco
+    (`sob_o_dedo`) —, e é isso que faz o campo e a lista dizerem a mesma coisa
+    depois de um repinte.
+    """
+    return ('<input type="text" class="procura" data-hef="perfis.procura" '
+            'data-hef-alvo="valor" data-hef-vivo="procurar" '
+            'placeholder="procurar" aria-label="Procurar um perfil" value="">')
+
+
+def puxador(coluna: str, tabela: str) -> str:
+    """A divisa arrastável no canto direito de um `<th>`.
+
+    **ELE É O ELEMENTO DO GESTO, e não um irmão dele.** Arrastar termina num
+    `mouseup` sobre este mesmo nó, e é dele que o roteiro atualiza o `data-px`
+    antes de chamar `.click()` — um segundo elemento escondido para levar o
+    número seria um nó a mais para envelhecer separado.
+
+    **E UM CLIQUE SEM ARRASTE É INÓCUO POR CONSTRUÇÃO**: em repouso o `data-px`
+    carrega a largura que a coluna JÁ tem, então o clique regrava o que já
+    estava no disco. É o que autoriza este gesto a não declarar `grava=` e a
+    continuar sendo provado botão a botão — a mesma medição que isenta os três
+    `machine.declare` idempotentes da régua de 03/09.
+
+    A ÚLTIMA COLUNA NÃO GANHA DIVISA: arrastar a borda direita da tabela não
+    tem o que redistribuir, e uma alça ali some junto com a barra de rolagem.
+    """
+    return (f'<span class="puxador" data-hef-gesto="largura-da-coluna" '
+            f'data-tabela="{tabela}" data-coluna="{coluna}" data-px="0" '
+            f'role="separator" aria-label="Arraste para mudar a largura da coluna"></span>')
+
+
+def cabeca(coluna: str, rotulo_visivel: str, tabela: str, classe: str = "",
+           divisa: bool = True) -> str:
+    """Um `<th>` da lista de perfis: o nome, a seta da ordem e a divisa.
+
+    ORDEM DELA: *"essa tabela precisa permitir que eu escolha a ordenação dando  # (noqa-acento) citação literal dela
+    duplo clique no nome das colunas."*  # (noqa-acento) citação literal dela
+
+    **A SETA É QUEM CARREGA O GESTO, e ela é `pointer-events:none`** — ver a
+    regra `.ordena` no CSS, que tem a razão inteira. Em uma linha: o ouvinte do
+    piloto despacha no PRIMEIRO clique, e o cabeçalho está a um pixel da célula
+    do nome, que troca o perfil aberto no editor. Nenhum mouse alcança este nó;
+    quem o aciona é o roteiro, no `dblclick`, e é o que faz o duplo clique que
+    ela pediu ser duplo de verdade.
+
+    O `title` DIZ O GESTO. Um cabeçalho que ordena e não avisa é uma função que
+    ninguém acha — o mesmo custo que a §3 cobra dos dois ícones.
+    """
+    cls = f' class="{classe}"' if classe else ""
+    return (f'<th{cls} data-coluna="{coluna}" '
+            f'title="Duplo clique para ordenar por esta coluna; de novo, inverte.">'
+            f'{rotulo_visivel}'
+            f'<span class="ordena" data-hef="perfis.ordem.{coluna}" '
+            f'data-hef-alvo="classe" data-hef-gesto="ordenar" '
+            f'data-coluna="{coluna}"></span>'
+            f'{puxador(coluna, tabela) if divisa else ""}</th>')
 
 
 def marca_com_dica(classe: str, campo_estado: str, campo_frase: str,
@@ -1273,6 +1529,179 @@ def linha_do_perfil(nome, prioridade, quando, ativo, dica="", escolhido=False):
             f'<td class="quando" data-hef="perfis.linha.quando">{quando}</td></tr>')
 
 
+# ---------------------------------------------------------------------------
+# O ROTEIRO DA PÁGINA — PERFIS-LIMPA-01, 11/09/2026, e ele é a primeira linha de
+# JavaScript que uma página desta casa emite.
+#
+# ONDE ELE VIVE, e a decisão foi MEDIDA duas vezes:
+#
+# 1. **a colisão.** As outras duas casas possíveis estavam ocupadas nesta mesma
+#    leva — o `BOOTSTRAP` (`hefesto_vivo.py`, posse da MIC-SEM-FONTE-01) e um
+#    `js_extra` no `monta()` (posse da VAO-DO-ESQUELETO-01). Sobrou a terceira,
+#    e ela é melhor que as duas: `monta` insere o `miolo` VERBATIM dentro do
+#    `<p class="miolo">` (`monta.py`, o `doc = t + …`), então a aba emite o que
+#    quiser ali sem tocar em arquivo de ninguém. O comportamento da aba 10 fica
+#    COM a aba 10, e o piloto continua genérico — que é o que ele é por desenho;
+# 2. **o WebKit executa.** Medido em 11/09/2026 no `WebKit2.WebView` montado
+#    como o piloto o monta (`gui.ponte_da_tela.PonteDaTela`), com a página vinda
+#    de `file://`: um `<script>` inline roda, e roda com `document.readyState`
+#    em `"loading"` — ou seja, ANTES do `LoadEvent.FINISHED` em que o piloto
+#    instala o `BOOTSTRAP`. É por isso que este roteiro não pode CONTAR com o
+#    `window.__hef`: quando ele corre, o piloto ainda não chegou.
+#
+# O QUE ELE FAZ, e são só três coisas — **nenhuma delas decide o que a lista
+# mostra**:
+#
+#     abrir e fechar o campo da lupa
+#     traduzir o DUPLO clique do cabeçalho num clique no elemento do gesto
+#     arrastar a divisa entre duas colunas
+#
+# FILTRAR E ORDENAR NÃO ESTÃO AQUI, e isso é uma linha da sprint que caiu por
+# medição — a razão inteira está em `pacotes/a10_perfis`, no bloco da lupa. Em
+# uma frase: o pintor distribui as três colunas da lista pela ordem do
+# DOCUMENTO, então reordenar as `<tr>` no DOM põe o nome de um perfil na linha
+# de outro no tique seguinte.
+#
+# E É POR ISSO QUE ELE NÃO PRECISA DE REAPLICADOR. A armadilha que a §6 da
+# sprint descreve — *"filtro aplicado ao DOM, ordem aplicada ao DOM e largura
+# aplicada ao DOM morrem no primeiro repinte"* — alcança duas das três, e as
+# duas saíram do DOM. A que sobrou, a largura, mora no `<colgroup>`, e o
+# `blocos` desta aba troca o `<tbody>` e o `<datalist>` — nunca o `<colgroup>`.
+# **O que muda a largura de fora é o ATRIBUTO `data-larguras`**, escrito pelo
+# pintor, e é nele que este roteiro observa. Medido, não suposto.
+#
+# NADA DE `<` SOLTO AQUI DENTRO: o balanço de `<p>` do `monta()` conta
+# SUBSTRING no documento inteiro, e um `a < b` em JavaScript não o atrapalha,
+# mas um `'<p'` numa string, sim. Use `>` ao contrário quando precisar comparar.
+ROTEIRO = """
+  <script>
+  (function(){
+    'use strict';
+    var PISO = 48, TETO = 900;
+
+    // ---- a lupa: abre, fecha e limpa --------------------------------------
+    // FECHAR LIMPA, e é decisão: um campo fechado com termo dentro é uma lista
+    // curta sem nada na tela dizendo por quê. O `input` sintético é o que avisa
+    // o Python — é o mesmo evento que a digitação dispara, pela mesma porta.
+    function oCampo(){ return document.querySelector('.procura'); }
+    document.addEventListener('click', function(ev){
+      var b = ev.target.closest ? ev.target.closest('.icone-rot.lupa') : null;
+      if(!b) return;
+      var campo = oCampo();
+      if(!campo) return;
+      var abrindo = !campo.classList.contains('on');
+      campo.classList.toggle('on', abrindo);
+      b.classList.toggle('on', abrindo);
+      if(abrindo){ campo.focus(); return; }
+      if(campo.value !== ''){
+        campo.value = '';
+        campo.dispatchEvent(new Event('input', {bubbles: true}));
+      }
+    }, false);
+
+    // ---- o duplo clique do cabeçalho --------------------------------------
+    // ELE NÃO ORDENA: ele CLICA no elemento que carrega o gesto, e quem ordena
+    // é o Python. A seta é `pointer-events:none`, então este `.click()` é o
+    // único caminho até ela — um clique simples no cabeçalho não chega lá, que
+    // é exatamente o que ela pediu ao dizer DUPLO clique.
+    document.addEventListener('dblclick', function(ev){
+      var th = ev.target.closest ? ev.target.closest('th[data-coluna]') : null;
+      if(!th) return;
+      var seta = th.querySelector('.ordena[data-hef-gesto]');
+      if(seta) seta.click();
+    }, false);
+
+    // ---- a divisa arrastada -----------------------------------------------
+    // O CURSOR MUDA PORQUE A ALÇA EXISTE (`cursor:col-resize` no `.puxador`), e
+    // é o que ela descreveu. Enquanto arrasta, quem desenha é este roteiro, no
+    // `<col>`; ao soltar, o número vai para o Python, que o apara pelo piso e o
+    // grava. O piso está nos DOIS lados de propósito: aqui para o desenho não
+    // passar dele durante o arraste, e lá porque o disco é para sempre.
+    var voo = null;
+    function colDe(pux){
+      var tab = pux.closest('table');
+      var col = tab ? tab.querySelector('col[data-coluna="' + pux.dataset.coluna + '"]') : null;
+      return {tabela: tab, col: col};
+    }
+    document.addEventListener('mousedown', function(ev){
+      var pux = ev.target.closest ? ev.target.closest('.puxador') : null;
+      if(!pux) return;
+      var alvo = colDe(pux);
+      if(!alvo.col) return;
+      var th = pux.closest('th');
+      voo = {pux: pux, col: alvo.col, x: ev.clientX,
+             largura: th ? th.getBoundingClientRect().width : 0};
+      document.body.classList.add('arrastando');
+      ev.preventDefault();
+    }, false);
+    document.addEventListener('mousemove', function(ev){
+      if(!voo) return;
+      var px = Math.round(voo.largura + (ev.clientX - voo.x));
+      if(px < PISO) px = PISO;
+      if(px > TETO) px = TETO;
+      voo.col.style.width = px + 'px';
+      voo.pux.dataset.px = String(px);
+    }, false);
+    document.addEventListener('mouseup', function(){
+      if(!voo) return;
+      var pux = voo.pux;
+      voo = null;
+      document.body.classList.remove('arrastando');
+      pux.click();
+    }, false);
+
+    // ---- as larguras que voltam do disco ----------------------------------
+    // O FORMATO É `coluna:px` separado por `·`, e o travessão é o VAZIO — o
+    // `escrever()` do piloto escreve `—` no lugar de um valor em branco, e ler
+    // isso como uma largura poria a coluna em zero em toda janela de quem nunca
+    // arrastou nada.
+    function espalhar(tab){
+      var bruto = tab.getAttribute('data-larguras') || '';
+      if(!bruto || bruto === '\\u2014') return;
+      bruto.split('\\u00b7').forEach(function(par){
+        var pedaco = par.split(':');
+        if(pedaco.length !== 2) return;
+        var px = parseInt(pedaco[1], 10);
+        if(!isFinite(px)) return;
+        if(px < PISO) px = PISO;
+        if(px > TETO) px = TETO;
+        var col = tab.querySelector('col[data-coluna="' + pedaco[0] + '"]');
+        if(col) col.style.width = px + 'px';
+        var pux = tab.querySelector('.puxador[data-coluna="' + pedaco[0] + '"]');
+        if(pux) pux.dataset.px = String(px);
+      });
+    }
+    // E AS QUE NUNCA SAÍRAM DO DISCO: em repouso o `data-px` da alça tem de
+    // dizer a largura que a coluna JÁ tem, senão o primeiro clique sem arraste
+    // gravaria zero. É o que torna o gesto idempotente, e é o que autoriza a
+    // régua de clique a acioná-lo.
+    function medir(tab){
+      tab.querySelectorAll('.puxador').forEach(function(pux){
+        var th = pux.closest('th');
+        if(!th) return;
+        var px = Math.round(th.getBoundingClientRect().width);
+        if(px > 0 && (pux.dataset.px || '0') === '0') pux.dataset.px = String(px);
+      });
+    }
+    function tabelas(){ return document.querySelectorAll('table[data-tabela]'); }
+    function assentar(){ tabelas().forEach(function(t){ espalhar(t); medir(t); }); }
+    // O OBSERVADOR VIGIA O ATRIBUTO, e só ele. Uma largura que volta do disco
+    // chega por `data-larguras` (o pintor escreve o atributo), e é o único
+    // caminho de fora para dentro — o `blocos` desta aba não toca o
+    // `<colgroup>`. Vigiar o `<tbody>` seria acordar dez vezes por segundo
+    // para não fazer nada.
+    tabelas().forEach(function(t){
+      new MutationObserver(function(){ espalhar(t); }).observe(
+        t, {attributes: true, attributeFilter: ['data-larguras']});
+    });
+    if(document.readyState === 'loading'){
+      document.addEventListener('DOMContentLoaded', assentar);
+    } else { assentar(); }
+  })();
+  </script>
+"""
+
+
 COM_AJUSTE = sum(1 for c in MESA if GUARDA[c["pref"]])
 
 MIOLO = f'''
@@ -1311,11 +1740,18 @@ MIOLO = f'''
 
           <div>
             <div class="moldura">
-              <div class="sec-rot">Perfis Salvos</div>
+              <div class="sec-rot">Perfis Salvos{icone_da_lupa()}{campo_da_lupa()}{icone_do_rotulo(
+                  "recarregar", RECARREGA,
+                  "Relê a lista do disco. Não descarta o que está no editor ao lado.")}<span class="fora-da-busca" data-hef="perfis.procura.conta" data-hef-alvo="classe"><span data-hef="perfis.procura.conta"></span></span></div>
               <div class="lista">
               <div class="rolo">
-              <table class="tab">
-                <thead><tr><th>Nome</th><th class="pri">Priorização</th><th>Quando usar</th></tr></thead>
+              <table class="tab" data-hef="perfis.larguras" data-hef-alvo="atributo"
+                     data-hef-atributo="data-larguras" data-tabela="10-perfis.lista"
+                     data-larguras="">
+                <colgroup><col data-coluna="nome"><col data-coluna="prioridade"><col data-coluna="quando"></colgroup>
+                <thead><tr>{cabeca("nome", "Nome", "10-perfis.lista")}{cabeca(
+                    "prioridade", "Priorização", "10-perfis.lista", classe="pri")}{cabeca(
+                    "quando", "Quando usar", "10-perfis.lista", divisa=False)}</tr></thead>
                 <tbody data-hef="perfis.lista">
 {chr(10).join(linha_do_perfil(n, p, q, a, escolhido=n == PERFIL_DO_EDITOR) for n,p,q,a in PERFIS)}
                 </tbody>
@@ -1351,7 +1787,9 @@ MIOLO = f'''
 
                    E É O QUE TORNA OS GESTOS HONESTOS: sem isto, ligar o campo Nome
                    faria ela renomear um perfil olhando para o nome de outro. -->
-              <div class="sec-rot">Definições</div>
+              <div class="sec-rot">Definições{icone_do_rotulo(
+                  "voltar-a-de-ontem", DESFAZ,
+                  "Desfaz um perfil salvo por engano: cada gravação já guarda a anterior.")}</div>
               <div class="campos">
 
               <div class="campo">
@@ -1462,10 +1900,13 @@ MIOLO = f'''
                 </select></span>
               </div>
               <div class="guarda">
-                <table class="tab miuda">
+                <table class="tab miuda" data-hef="guarda.larguras" data-hef-alvo="atributo"
+                       data-hef-atributo="data-larguras" data-tabela="10-perfis.guarda"
+                       data-larguras="">
+                  <colgroup><col data-coluna="controle"><col data-coluna="status"><col data-coluna="id"></colgroup>
                   <thead><tr>
-                    <th title="O perfil não guarda uma configuração: guarda uma por controle. Esta tabela mostra, para cada controle, quais ajustes ele tem só para si e quais usa do perfil.">Controle</th>
-                    <th class="gd-pecas" title="Aceso: este perfil guarda um ajuste só deste controle. Apagado: ele usa o do perfil, igual aos outros. São os {QUANTAS_SECOES} ajustes que o perfil sabe guardar por controle — {_lista_das_secoes()}.">Ajuste próprio</th>
+                    <th title="O perfil não guarda uma configuração: guarda uma por controle. Esta tabela mostra, para cada controle, quais ajustes ele tem só para si e quais usa do perfil.">Controle{puxador("controle", "10-perfis.guarda")}</th>
+                    <th class="gd-pecas" title="Aceso: este perfil guarda um ajuste só deste controle. Apagado: ele usa o do perfil, igual aos outros. São os {QUANTAS_SECOES} ajustes que o perfil sabe guardar por controle — {_lista_das_secoes()}.">Status{puxador("status", "10-perfis.guarda")}</th>
                     <th class="gd-id" title="O endereço de rádio do controle. É por ele que o perfil reconhece a peça — e ele não muda quando você troca o cabo pelo rádio, então o que você deixou hoje volta amanhã.">ID da peça</th>
                   </tr></thead>
                   <tbody data-hef="guarda.linhas">
@@ -1475,10 +1916,16 @@ MIOLO = f'''
               </div>
 
               </div>
-              <div class="botoes">
+              <!-- OS TRÊS VIRARAM UM — 11/09/2026, ordem dela. O `Recarregar` foi
+                   para o rótulo `Perfis Salvos` (ele relê a LISTA, e a lista é a
+                   tabela da esquerda) e o `Voltar à de ontem` para o rótulo
+                   `Definições` — *"tem que arrumar outro canto pra deixar ele ao  (noqa-acento) citação
+                   invés de botão como os demais"*. O `Duplicar` fica botão, e  (noqa-acento) citação
+                   sozinho: ele é o único dos três que CRIA alguma coisa.
+                   A classe `um-so` é o que impede a grade de três colunas de o
+                   deixar com um terço da largura e dois vãos vazios ao lado. -->
+              <div class="botoes um-so">
                 <button class="btn" data-hef-gesto="duplicar" title="Copia o perfil inteiro para o editor, com &quot;(cópia)&quot; no nome.">Duplicar</button>
-                <button class="btn" data-hef-gesto="voltar-a-de-ontem" title="Desfaz um perfil salvo por engano: cada gravação já guarda a anterior.">Voltar à de ontem</button>
-                <button class="btn" data-hef-gesto="recarregar" title="Relê a lista do disco. Não descarta o que está no editor ao lado.">Recarregar</button>
               </div>
             </div>
           </div>
@@ -1486,6 +1933,7 @@ MIOLO = f'''
         </div>
       </div>
     </div>
+{ROTEIRO}
 '''
 
 # A LINHA DA MÁSCARA AUTOMÁTICA SAIU DA LEGENDA — 29/08/2026.
@@ -1663,7 +2111,16 @@ def _conferir(html: str) -> None:
     # OS RÓTULOS COM DOIS PONTOS, e o cabeçalho por extenso.
     for rot in ("Nome:", "Prioridade:", "Funciona em:", "Nome do Jogo:", "Estilo de Jogo:"):
         exigir(f">{rot}</span>" in html, f"o rótulo '{rot}' não está na tela")
-    exigir('class="pri">Priorização<' in html, "o cabeçalho voltou a ser abreviado")
+    # O CABEÇALHO POR EXTENSO — e a régua passou a ler o ELEMENTO, não a
+    # colagem `class="pri">Priorização<`. Ela quebrou em 11/09/2026 quando o
+    # `<th>` ganhou `data-coluna` e `title`: a palavra continuava na tela e a
+    # régua acusava abreviação. É a forma que esta casa nomeia — *a régua digita
+    # o que devia LER* —, e a cura é olhar o `<th>` da coluna inteira.
+    th_pri = re.search(r'<th class="pri"[^>]*>([^<]*)', html)
+    exigir(th_pri is not None, "o cabeçalho da Priorização sumiu da tabela")
+    if th_pri:
+        exigir(th_pri.group(1).strip() == "Priorização",
+               f"o cabeçalho voltou a ser abreviado: {th_pri.group(1)!r}")
 
     # O FUNDO POR COLUNA — três regras, três cores. Se as três virarem uma só, a
     # coluna deixa de se distinguir e o pedido dela caiu.
@@ -2099,6 +2556,170 @@ def _conferir(html: str) -> None:
            "a coluna do rótulo não é mais a medida do rótulo mais largo (86px)")
     exigir("--rot-p:104px" not in html,
            "a coluna do rótulo voltou aos 104px — 22px de vão morto por rótulo")
+
+    # AS CINCO DE 11/09/2026 — PERFIS-LIMPA-01, e cada uma guarda uma ordem
+    # dela. Elas moram aqui, e não só no pytest, porque o gerador é quem pode
+    # RECUSAR de escrever: uma decisão dela desfeita não chega ao disco.
+
+    # §1 — A LUPA. As três metades, e cada uma sozinha não faz nada: o ícone
+    # (sem ele não há como abrir), o campo com o endereço da QUARTA PORTA (sem
+    # `data-hef-vivo` digitar não manda nada a lugar nenhum) e o campo NASCENDO
+    # FECHADO, que é o que cumpre *"deixar o layout mais limpo"*.
+    exigir('class="icone-rot lupa"' in html,
+           "a lupa sumiu do título da tabela dos perfis — ela é ordem dela de "
+           "11/09/2026 e é por onde o campo de busca aparece")
+    exigir('data-papel="abrir-a-lupa"' not in html,
+           "a lupa voltou a endereçar por `data-papel` — o ouvinte do piloto "
+           "casa esse atributo, e cada clique nela chegaria ao Python como um "
+           "gesto SEM DONO, imprimindo no stdout de quem lançou a janela")
+    campo = re.search(r'<input[^>]*class="procura"[^>]*>', html)
+    exigir(campo is not None, "o campo da lupa sumiu da página")
+    if campo:
+        exigir('data-hef-vivo="procurar"' in campo.group(0),
+               "o campo da lupa perdeu o `data-hef-vivo` — sem a quarta porta "
+               "do piloto, digitar nele não manda nada a lugar nenhum: as três "
+               "outras portas despacham no clique, no `change` e no `blur`")
+        exigir('data-hef-alvo="valor"' in campo.group(0),
+               "o campo da lupa perdeu o alvo `valor` — a pintura escreveria o "
+               "termo como TEXTO dentro de um `<input>`, que não aparece")
+        exigir('value=""' in campo.group(0),
+               "o campo da lupa nasce com termo dentro — o desenho passaria a "
+               "afirmar uma busca que ela não fez")
+    exigir('class="procura on"' not in html,
+           "o campo da lupa nasce ABERTO — um campo de busca sempre visível "
+           "acrescenta uma linha ao bloco em vez de tirar, e a ordem dela era "
+           "de limpeza")
+
+    # §2 — A ORDENAÇÃO POR DUPLO CLIQUE. A trava inteira é uma linha de CSS, e
+    # sem ela o clique SIMPLES no cabeçalho ordena — a um pixel da célula do
+    # nome, que troca o perfil aberto no editor. Ela pediu duplo clique.
+    regra_seta = re.search(r"\.ordena\{[^}]*\}", html)
+    exigir(regra_seta is not None, "a regra da seta da ordem sumiu do CSS")
+    if regra_seta:
+        exigir("pointer-events:none" in regra_seta.group(0),
+               "a seta da ordem perdeu o `pointer-events:none` — ela carrega o "
+               "gesto `ordenar`, e sem esta linha um clique "
+               "SIMPLES no cabeçalho passa a ordenar. Ela pediu DUPLO clique, "
+               "e a razão está na regra: o cabeçalho é `sticky` a um pixel da "
+               "célula que troca o perfil aberto no editor")
+    for coluna in ("nome", "prioridade", "quando"):
+        seta = re.search(rf'<span class="ordena" data-hef="perfis\.ordem\.{coluna}"[^>]*>',
+                         html)
+        exigir(seta is not None,
+               f"a coluna `{coluna}` não tem seta de ordem — ela é o que diz "
+               f"qual coluna ordena e para onde, sem texto novo")
+        if seta:
+            exigir('data-hef-gesto="ordenar"' in seta.group(0)
+                   and f'data-coluna="{coluna}"' in seta.group(0),
+                   f"a seta da coluna `{coluna}` perdeu o gesto ou o nome da "
+                   f"coluna — o duplo clique chegaria ao Python sem dizer por "
+                   f"qual coluna ordenar")
+
+    # §3 — OS DOIS BOTÕES VIRARAM ÍCONE, e cada um no seu canto. A régua cobra
+    # as TRÊS coisas que a §3 da sprint nomeia: o gesto com o MESMO nome, a
+    # dica palavra por palavra, e o ícone fora da fileira de botões.
+    for gesto_, canto, dica_ in (
+            ("recarregar", "Perfis Salvos",
+             "Relê a lista do disco. Não descarta o que está no editor ao lado."),
+            ("voltar-a-de-ontem", "Definições",
+             "Desfaz um perfil salvo por engano: cada gravação já guarda a anterior.")):
+        icone = re.search(rf'<button type="button" class="icone-rot" '
+                          rf'data-hef-gesto="{gesto_}"[^>]*>', html)
+        exigir(icone is not None,
+               f"o gesto `{gesto_}` não é um ícone do rótulo — ele virou ícone "
+               f"por ordem dela em 11/09/2026, e o nome do gesto não muda por "
+               f"troca de invólucro")
+        if icone:
+            exigir(f'title="{dica_}"' in icone.group(0),
+                   f"o ícone de `{gesto_}` perdeu a dica, palavra por palavra. "
+                   f"Um ícone sem dica é uma função que ninguém acha — é o "
+                   f"custo inteiro de trocar palavra por desenho")
+        bloco = html.split(f'class="sec-rot">{canto}')
+        exigir(len(bloco) == 2 and f'data-hef-gesto="{gesto_}"' in bloco[1][:700],
+               f"o ícone de `{gesto_}` não está no rótulo `{canto}` — ela disse "
+               f"onde cada um vai, e são cantos diferentes de propósito")
+    exigir(html.count('class="btn" data-hef-gesto="voltar-a-de-ontem"') == 0
+           and html.count('class="btn" data-hef-gesto="recarregar"') == 0,
+           "um dos dois voltou a ser botão na fileira do rodapé — a fileira de "
+           "TRÊS virou UM, e é isso que faz o layout ficar mais limpo sem "
+           "acrescentar altura nenhuma")
+    # O ALVO DO CLIQUE TEM TAMANHO. Um `<svg>` de 11px é o DESENHO; ela clica
+    # isto com o mouse, e 11px de alvo é um alvo que ela erra.
+    regra_icone = re.search(r"\.icone-rot\{[^}]*\}", html)
+    exigir(regra_icone is not None, "a regra do ícone do rótulo sumiu do CSS")
+    if regra_icone:
+        exigir("width:24px" in regra_icone.group(0)
+               and "height:24px" in regra_icone.group(0),
+               "o ícone do rótulo perdeu o alvo de 24x24 — o desenho tem 11px, "
+               "e 11px é o DESENHO, não a área clicável")
+
+    # §4 — «Ajuste próprio» VIROU «Status», e SÓ O NOME MUDOU.
+    th_status = re.search(r'<th class="gd-pecas"[^>]*>([^<]*)', html)
+    exigir(th_status is not None, "o cabeçalho da coluna do meio sumiu")
+    if th_status:
+        exigir(th_status.group(1).strip() == "Status",
+               f"o rótulo da coluna não é `Status`: {th_status.group(1)!r}. "
+               f"Ela mandou trocar o nome em 11/09/2026, e SÓ o nome")
+    # E A PROSA CONTINUA NOMEANDO A COISA. A frase morre se ela for junto:
+    # *"3 de 4 controles com status neste perfil"* não quer dizer nada.
+    exigir("controles com ajuste próprio neste perfil" in html,
+           "o contador do cabeçalho virou `status` — a troca é do RÓTULO da "
+           "coluna, e a prosa continua nomeando a coisa")
+    exigir("guarda um ajuste só deste controle" in html,
+           "a dica do `<th>` mudou — ela é quem explica o que os ícones acesos "
+           "querem dizer, e encurtar o rótulo só funciona porque a explicação "
+           "tem outro dono")
+
+    # §5 — A LARGURA ARRASTADA. As TRÊS metades, e a primeira é a armadilha que
+    # o próprio arquivo já registrava: com `table-layout:auto` a `width` é
+    # SUGESTÃO, e a largura arrastada volta sozinha no repinte seguinte.
+    regra_tab = re.search(r"\.tab\{[^}]*\}", html)
+    exigir(regra_tab is not None, "a regra da tabela sumiu do CSS")
+    exigir("table-layout:fixed" in html,
+           "a tabela voltou a `table-layout:auto` — nele a `width` é SUGESTÃO, "
+           "e a largura que ela arrastar é reescrita pelo navegador no próximo "
+           "repinte. Está medido neste arquivo desde 31/08: `.tab .pri` dizia "
+           "46px e o Chrome media 86px")  # (noqa-acento) verbo medir
+    exigir(html.count('<col data-coluna=') == 6,
+           "não são 6 `<col>` nas duas tabelas — o `<colgroup>` é quem carrega "
+           "a largura, e é o único elemento da tabela que o `blocos` do piloto "
+           "não reescreve")
+    puxadores = re.findall(r'<span class="puxador"[^>]*>', html)
+    exigir(len(puxadores) == 4,
+           f"não são 4 divisas arrastáveis, e sim {len(puxadores)} — duas por "
+           f"tabela, porque a última coluna não tem o que redistribuir")
+    for pux in puxadores:
+        exigir('data-hef-gesto="largura-da-coluna"' in pux
+               and 'data-tabela="' in pux and 'data-px="' in pux,
+               "uma divisa perdeu o gesto, a tabela ou o número — soltar o "
+               "arraste deixaria de gravar, e a coluna voltaria ao que era na "
+               "próxima abertura")
+    regra_pux = re.search(r"\.puxador\{[^}]*\}", html)
+    exigir(regra_pux is not None, "a regra da divisa sumiu do CSS")
+    if regra_pux:
+        exigir("cursor:col-resize" in regra_pux.group(0),
+               "a divisa perdeu o `cursor:col-resize` — «quando o cursor muda "
+               "e permite alterar a largura da coluna» é a descrição dela do "
+               "gesto, e sem o cursor não há gesto a achar")
+
+    # §6 — O ROTEIRO, e ele é a primeira linha de JS que uma página desta casa
+    # emite. As três coisas que ele faz somem caladas se ninguém as cobrar.
+    roteiro = re.search(r"<script>.*?</script>", html, re.S)
+    exigir(roteiro is not None,
+           "o roteiro da página sumiu — sem ele a lupa não abre, o duplo "
+           "clique não ordena e a divisa não arrasta")
+    if roteiro:
+        corpo = roteiro.group(0)
+        for peca, queixa in (
+                ("icone-rot.lupa", "o roteiro parou de abrir o campo da lupa"),
+                ("dblclick", "o roteiro parou de ouvir o DUPLO clique — e um "
+                             "clique simples no cabeçalho é vizinho de um "
+                             "gesto que troca o perfil aberto no editor"),
+                ("col-resize", "o roteiro perdeu o arraste da divisa"),
+                ("MutationObserver", "o roteiro parou de vigiar o "
+                                     "`data-larguras` — a largura que volta do "
+                                     "disco chega por ali, e só por ali")):
+            exigir(peca in corpo, queixa)
 
     if falhas:
         raise SystemExit("ERRO em 10-perfis — decisão dela desfeita:\n  "
