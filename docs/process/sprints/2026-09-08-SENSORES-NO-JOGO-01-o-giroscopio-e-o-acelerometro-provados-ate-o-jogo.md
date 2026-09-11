@@ -1,6 +1,6 @@
 ---
 sprint: SENSORES-NO-JOGO-01
-estado: aberta
+estado: feita
 posse:
   SENSORES-NO-JOGO-01:
     - scripts/ensaios/o_jogo_para_de_ver_o_giro.py
@@ -26,6 +26,14 @@ nao_toca:
 > costura, não o código.**
 
 # SENSORES-NO-JOGO-01 — o giroscópio e o acelerômetro, provados até o JOGO
+
+> **ESTADO 2026-09-10: feita** — medido na bancada: os dois sensores chegam
+> íntegros ao vpad nos dois transportes (250 relatórios/s, 222 valores
+> distintos de giro), e **o jogo recebe ZERO em Modo Virtual** — o SDL abre
+> o vpad por evdev e responde `HasSensor=False`, não é decimação. Em Modo
+> Nativo o mesmo instrumento recebe 96 amostras de giro e 586 de
+> acelerômetro. O laudo é
+> [OS SENSORES ATÉ O JOGO](../2026-09-09-OS-SENSORES-ATE-O-JOGO-o-que-a-bancada-mediu.md).
 
 **A dúvida é dela, 08/09/2026:** *"tambem tenho duvidas se a função giroscopio e acelerometro funcionam de fato."* <!-- noqa-acento: citação literal dela, palavra por palavra -->
 E, na mesma noite, a pergunta que a NADA-MOCKADO-01 guarda: *"e serão
