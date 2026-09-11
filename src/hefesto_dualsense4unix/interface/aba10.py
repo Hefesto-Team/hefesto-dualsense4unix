@@ -1581,7 +1581,7 @@ def linha_do_perfil(nome, prioridade, quando, ativo, dica="", escolhido=False):
     ao ligar os botões. A razão é medida, e são duas:
 
     1. **O ouvinte do piloto não enxerga a linha.** Ele casa
-       `[data-gesto],[data-hef-gesto],[data-papel],…` (`hefesto_vivo.py:1000`), e
+       `[data-gesto],[data-hef-gesto],[data-papel],…` (`hefesto_vivo.py:1023`), e
        a `<tr>` só tinha `data-hef-perfil`, que não está na lista. Clicar num
        perfil não mandava nada a lugar nenhum.
     2. **O nome VIVO só existe na célula.** O clique leva

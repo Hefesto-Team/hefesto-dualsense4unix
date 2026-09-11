@@ -638,7 +638,7 @@ def html_do_estado(linhas: list[tuple[str, str]]) -> str:
             devolvido: <span>clique "Testar"</span>
 
     O guarda do pintor é ``if (alvo && alvo.innerHTML !== html)``
-    (``hefesto_vivo.py:944``). Com ``&quot;`` no conteúdo a comparação seria
+    (``hefesto_vivo.py:967``). Com ``&quot;`` no conteúdo a comparação seria
     VERDADEIRA sempre: o bloco repintaria e contaria ``+1`` a cada tique, a
     2 Hz, para sempre — o defeito que o ramo ``SELECT`` do ``escrever()`` foi
     escrito para impedir, e o mesmo instrumento com que esta casa prova que um

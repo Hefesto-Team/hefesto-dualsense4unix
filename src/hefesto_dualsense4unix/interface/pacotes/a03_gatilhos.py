@@ -1476,7 +1476,7 @@ def html_das_opcoes_de_pronto(modo: str = MODO_DA_CURVA) -> str:
 # Ela dizia `any(not c.get("cor") for c in mesa)` e outra frente a retirou no
 # mesmo 03/09 exatamente por mentir: pelo rádio a cor NUNCA chega, então a fita
 # ficava eternamente no desenho. Hoje `_fita` só devolve `""` com a MESA VAZIA
-# (`hefesto_vivo.py:1769`); quem trata a cor ausente é o `monta.fita`, que
+# (`hefesto_vivo.py:2111`); quem trata a cor ausente é o `monta.fita`, que
 # emite o chip sem `--plastico`. Esta aba continua não dependendo disso: ela lê
 # a MESA, controle a controle, e cala sobre quem não disse a cor em vez de
 # calar sobre todos.

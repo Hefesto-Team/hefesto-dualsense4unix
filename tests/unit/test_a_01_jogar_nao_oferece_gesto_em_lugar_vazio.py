@@ -39,12 +39,12 @@ família de defeito que esta casa pagou onze vezes em 26/08.
    com caixa maior que zero, nenhum recebendo clique.
 2. **VISÍVEL NO CHEIO** — ``data-conectado="sim"``: TODOS com caixa e TODOS
    recebendo clique. E não só como o arquivo nasce: a régua faz o que o piloto
-   faz no passo ``1c`` (``hefesto_vivo.py:1260``) — vira a marca para ``"sim"``
+   faz no passo ``1c`` (``hefesto_vivo.py:1310``) — vira a marca para ``"sim"``
    **sem recarregar a página** — e cobra que os três chips do P3 e do P4 voltem
    no mesmo tique. É o estado da mesa DELA, que está com os quatro DualSense
    agora; o piloto vira marca e escreve campo, ele não materializa widget.
 
-E O PASSO ``1b`` TAMBÉM (``hefesto_vivo.py:1235``): a régua esvazia o P1 ao vivo
+E O PASSO ``1b`` TAMBÉM (``hefesto_vivo.py:1285``): a régua esvazia o P1 ao vivo
 e cobra que os gestos dele sumam. Sem isto a cura poderia ser um estado inicial
 sortudo em vez de uma regra que segue a mesa.
 
@@ -149,7 +149,7 @@ O_QUE_O_NAVEGADOR_DESENHA = r"""
     }
     return saida;
   };
-  // O PASSO 1c DO PILOTO, letra por letra (`hefesto_vivo.py:1260`): a marca
+  // O PASSO 1c DO PILOTO, letra por letra (`hefesto_vivo.py:1310`): a marca
   // vira e a classe sai. NENHUM nó é criado — é justamente o ponto.
   const encher = (quem) => {
     for (const el of document.querySelectorAll('[data-controle="' + quem + '"]')) {
@@ -157,7 +157,7 @@ O_QUE_O_NAVEGADOR_DESENHA = r"""
       el.classList.remove('off');
     }
   };
-  // E O PASSO 1b (`hefesto_vivo.py:1235`), que é o simétrico.
+  // E O PASSO 1b (`hefesto_vivo.py:1285`), que é o simétrico.
   const esvaziar = (quem) => {
     for (const el of document.querySelectorAll('[data-controle="' + quem + '"]')) {
       el.dataset.conectado = 'nao';  // (noqa-acento) o valor, não a palavra
@@ -279,7 +279,7 @@ def test_o_passo_1c_do_piloto_devolve_o_gesto_sem_recarregar(medido: dict) -> No
     """Ela está com os QUATRO na mesa: o P3 chega e o chip volta no mesmo tique.
 
     Esta é a metade que separa uma cura viva de uma cura de arquivo. O piloto
-    vira a marca (`hefesto_vivo.py:1260`) e **não materializa widget** — se a
+    vira a marca (`hefesto_vivo.py:1310`) e **não materializa widget** — se a
     cura tivesse apagado o nó, ou se ela mordesse a classe `off` em vez da marca
     que o piloto escreve, o P3 reabriria sem os três chips e só recarregar a
     página os traria de volta.
@@ -304,7 +304,7 @@ def test_o_passo_1b_do_piloto_recolhe_o_gesto_sem_recarregar(medido: dict) -> No
 
     Sem esta, a cura poderia ser um estado inicial sortudo — o desenho nasce com
     dois vazios e alguém poderia tê-los tratado no gerador. Quem descobre que um
-    lugar esvaziou é o produto, ao vivo (`hefesto_vivo.py:1235`), e a diferença
+    lugar esvaziou é o produto, ao vivo (`hefesto_vivo.py:1285`), e a diferença
     entre "o desenho disse vazio" e "o produto descobriu vazio" foi o buraco que
     a S-04 da folha pagou em 05/09.
     """

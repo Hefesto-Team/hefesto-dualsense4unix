@@ -1824,7 +1824,7 @@ def atualizar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     `_safe_call` devolve `False` para serviço desligado, socket ausente, timeout
     e erro JSON-RPC (`app/ipc_bridge.py:105-112`); o gesto não levantava, o
     piloto executava o ramo do sucesso (`_deu_certo`,
-    `interface/hefesto_vivo.py:2730`) e
+    `interface/hefesto_vivo.py:3080`) e
     a tela dizia **"Pronto."** em verde. **A cena inteira, com o serviço
     parado:** o botão trocava de palavra, esperava o teto, voltava ao rótulo e
     afirmava ter feito. Nenhum byte havia saído. E ele não fica cinza para
@@ -1995,7 +1995,7 @@ def autostart(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     ter dois estados, o clique não muda nem a aparência (não há um `<script>` na
     página que troque a classe localmente), e quem clica não tem como saber que
     não pegou. Medido em execução em 02/09: `autostart` estava entre os SETE
-    gestos desta página sem dono — o clique caía em `hefesto_vivo.py:1690`,
+    gestos desta página sem dono — o clique caía em `hefesto_vivo.py:2032`,
     imprimia `[gesto sem dono]` no stdout do processo e voltava.
 
     O QUE ELE MANDA É O CONTRÁRIO DO QUE ESTÁ LIDO, e a leitura é a mesma que

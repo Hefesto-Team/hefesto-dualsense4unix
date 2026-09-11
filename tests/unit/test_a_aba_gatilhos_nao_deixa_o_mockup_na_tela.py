@@ -481,7 +481,7 @@ def test_a_contagem_de_casas_sai_da_pagina_e_nao_do_codigo(a03, publicada):
 #
 # "ENDEREÇO MORTO" na régua quer dizer: **o pacote declara um valor e a tela
 # mostra outro**. O piloto preenche todo lugar que a mesa não tem com um
-# travessão (`hefesto_vivo.py:1006-1016`) e `escrever()` RECUSA pôr num
+# travessão (`hefesto_vivo.py:1029-1039`) e `escrever()` RECUSA pôr num
 # `<select>` um valor que ele não oferece (`:145-151`) — a recusa é certa, e o
 # desfecho é que a coluna vazia continua com o que o gerador escreveu.
 #
@@ -583,7 +583,7 @@ def test_o_lugar_vazio_nao_rouba_a_marca_do_piloto(a03):
     """O pacote NÃO escreve numa coluna que o desenho dá por conectada.
 
     POR QUE ISTO É UMA RÉGUA E NÃO UM DETALHE: o piloto deduz "lugar vazio" de
-    "coluna que ninguém emitiu" (`hefesto_vivo.py:1006-1016`) e é essa dedução
+    "coluna que ninguém emitiu" (`hefesto_vivo.py:1029-1039`) e é essa dedução
     que põe o `data-conectado="nao"` — o atributo de que pende o
     `pointer-events:none` do lugar vazio (`03-gatilhos.html:899`). Emitir a
     coluna do P2 com um controle só na mesa tiraria o P2 daquela conta, e a

@@ -862,7 +862,7 @@ CSS = """
 
      A MARCA É `data-conectado`, E NÃO A CLASSE `off`, e a escolha decide se a
      cura vale AO VIVO: é o atributo que o piloto compara e vira nos passos `1b`
-     e `1c` (`hefesto_vivo.py:1235` e `:1260`), e é a mesma chave da S-04. Com
+     e `1c` (`hefesto_vivo.py:1285` e `:1260`), e é a mesma chave da S-04. Com
      os quatro DualSense dela na mesa, o P3 chega, o passo `1c` escreve
      `conectado="sim"`, e os três chips voltam a existir no mesmo tique — sem
      recarregar a página, porque quem os escondia era o seletor e não um nó
