@@ -678,8 +678,15 @@ def assinatura_das_bibliotecas(
     Irmã de `jogos_locais.assinatura_da_biblioteca`, e **separada dela de
     propósito**: aquela responde *"a biblioteca da STEAM mudou?"* olhando as
     `steamapps`, e um `mtime` de `~/.var/app/…/heroic` não diz nada sobre a
-    Steam. Somar as duas num freio só faria a semeadura de perfis da Steam
-    varrer 33 `.acf` toda vez que o Heroic escrevesse um log.
+    Steam. As duas continuam sendo duas funções, cada uma com o seu dono.
+
+    **QUEM PRECISA DAS DUAS AS LÊ EM PAR, e isso mudou em 11/09/2026**
+    (PERFIL-DOS-LANCADORES-E1): `profiles.loader._talvez_semear_jogos` compara
+    `(assinatura_da_biblioteca(), assinatura_das_bibliotecas())` porque agora
+    ele semeia perfil para as DUAS origens, e um jogo baixado pelo Heroic tem
+    de acordar a varredura. O preço está medido e aceito no comentário daquele
+    ponto: os 33 `.acf` da Steam são relidos uma vez quando o Heroic reescreve
+    a biblioteca, no máximo uma vez por `INTERVALO_MINIMO_DA_VARREDURA_S`.
 
     **O QUE ELA ASSINA ESTÁ EM `_FONTES`, e o porquê está lá também**: assinar
     a pasta de cima é o defeito que esta função teve até 11/09/2026 — ela

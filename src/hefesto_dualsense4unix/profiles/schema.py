@@ -1757,6 +1757,86 @@ class Profile(BaseModel):
         )
 
 
+#: AS `wm_class` QUE ESTE PRODUTO SABE SEREM DE JOGO E NÃO SÃO DA STEAM —
+#: PERFIL-DOS-LANCADORES-E1, 11/09/2026. Já em minúsculas (`casefold`), porque
+#: toda comparação de janela desta casa é sem caixa (`_casa_sem_caixa`).
+#:
+#: **POR QUE UM CADASTRO, E NÃO UM PREDICADO:** *"esta janela é de um jogo?"*
+#: não se responde olhando a janela. Para a Steam há um CARIMBO — a `wm_class`
+#: é `steam_app_<id>` e ninguém mais a usa. Para um jogo do Heroic a janela
+#: anuncia `gotg.exe`, que é indistinguível de qualquer outro programa. Quem
+#: sabe a resposta é o censo dos lançadores, que lê a biblioteca no disco; e
+#: `perfil_e_regra_de_jogo` roda a 2 Hz, dentro do tique do autoswitch, onde
+#: não cabe leitura de disco. Então o dono RESPONDE UMA VEZ por varredura e o
+#: predicado consulta o que ele respondeu.
+#:
+#: **VAZIO = O COMPORTAMENTO HISTÓRICO**, e isso é fail-safe deliberado: sem
+#: ninguém ter registrado nada (o processo que não semeia, o opt-out da suíte,
+#: a máquina sem lançador), `e_endereco_de_jogo` volta a ser exatamente o
+#: `steam_appid_from_wm_class(...) is not None` de antes.
+_CLASSES_DE_JOGO_CONHECIDAS: frozenset[str] = frozenset()
+
+
+def registrar_classes_de_jogo(classes: object) -> None:
+    """Declara QUAIS `wm_class` de fora da Steam são de jogo. Um dono só.
+
+    O dono é `profiles.loader.semear_perfis_dos_jogos`, que já lê a biblioteca
+    dos lançadores e a marca de semeadura a cada varredura — é a única peça
+    desta casa que sabe a resposta inteira e a recalcula sozinha.
+
+    **SUBSTITUI, não soma**: a varredura conhece o conjunto COMPLETO, e somar
+    faria uma classe sobreviver ao jogo desinstalado para sempre. Entrada
+    inválida vira conjunto vazio, que é o fail-safe (ver o cadastro acima).
+    """
+    global _CLASSES_DE_JOGO_CONHECIDAS
+    if not isinstance(classes, (list, tuple, set, frozenset)):
+        # Algo que não é coleção não pode deixar o cadastro pela metade: ele
+        # fica VAZIO, que é o fail-safe declarado acima.
+        _CLASSES_DE_JOGO_CONHECIDAS = frozenset()
+        return
+    _CLASSES_DE_JOGO_CONHECIDAS = frozenset(
+        c.strip().casefold() for c in classes if isinstance(c, str) and c.strip()
+    )
+
+
+def classes_de_jogo_conhecidas() -> frozenset[str]:
+    """O cadastro de agora — o ÚNICO leitor do módulo, e o de fora também.
+
+    `e_endereco_de_jogo` lê por aqui de propósito: um `global` com dois leitores
+    é duas verdades esperando divergir, e esta é a função que a régua e a tela
+    perguntam quando querem saber o que foi declarado.
+    """
+    return _CLASSES_DE_JOGO_CONHECIDAS
+
+
+def e_endereco_de_jogo(wm_class: object) -> bool:
+    """Esta `wm_class` endereça um JOGO?
+
+    Duas respostas verdadeiras, e a segunda é a que a E1 acrescentou:
+
+    1. ``steam_app_<id>`` — o carimbo da Steam, que nunca é outra coisa;
+    2. uma classe que o censo dos lançadores declarou
+       (`registrar_classes_de_jogo`) — ``gotg.exe``, do Heroic.
+
+    **O QUE ISTO NÃO PODE VIRAR, e foi medido no disco dela em 11/09/2026:**
+    *"qualquer `window_class` que case"*. O perfil `personalizado.json` dela
+    mira ``Hefesto-Dualsense4Unix`` — a janela DO PRODUTO, gravada ali pelo
+    «Detectar» — com prioridade 1. Solto o critério, focar a janela do Hefesto
+    passaria a valer como "a regra própria do jogo": o cadeado cederia e o
+    `manual_trigger_active` seria LIMPO em `AutoSwitcher._activate`, ou seja, o
+    perfil pisaria no gatilho que ela acabou de aplicar na aba — no momento em
+    que ela está justamente olhando para a janela. É o buraco da R-01 pela
+    porta dos fundos, e é a única coisa que a linha antiga protegia.
+    """
+    if not isinstance(wm_class, str):
+        return False
+    # `is not None` e nunca a verdade do valor: `steam_app_0` devolve o int 0,
+    # que é FALSO — o mesmo engano que `if appid:` já produziu nesta casa.
+    if steam_appid_from_wm_class(wm_class) is not None:
+        return True
+    return wm_class.strip().casefold() in classes_de_jogo_conhecidas()
+
+
 def perfil_e_regra_de_jogo(profile: Profile | None, window_info: dict[str, Any]) -> bool:
     """True quando o perfil é a regra PRÓPRIA do jogo em foco.
 
@@ -1772,8 +1852,9 @@ def perfil_e_regra_de_jogo(profile: Profile | None, window_info: dict[str, Any])
 
     1. ``match.type == "criteria"`` com critério de verdade (catch-all não é
        regra de jogo, nem o ``MatchAny`` nem o criteria vazio);
-    2. a ``wm_class`` ``steam_app_<id>`` em foco estar listada em
-       ``match.window_class``.
+    2. a ``wm_class`` em foco ser ENDEREÇO DE JOGO (`e_endereco_de_jogo`: o
+       carimbo ``steam_app_<id>``, ou uma classe que o censo dos lançadores
+       declarou) e estar listada em ``match.window_class``.
 
     Regex de título **não** conta: o ``fps.json`` da usuária tem ``|Control)``
     e ``|Metro)`` sem âncora — deixá-lo valer como regra de jogo reabriria o
@@ -1800,7 +1881,14 @@ def perfil_e_regra_de_jogo(profile: Profile | None, window_info: dict[str, Any])
     # jogo". Agora as duas linhas usam a MESMA noção de caixa. Portão:
     # `tests/unit/test_match_sem_caixa_e_sentinel_manual.py::
     # TestComparacaoSemCaixa::test_regra_de_jogo_com_a_janela_em_caixa_alta`.
-    if steam_appid_from_wm_class(wm_class) is None:
+    # PERFIL-DOS-LANCADORES-E1 (11/09/2026): era
+    # `if steam_appid_from_wm_class(wm_class) is None: return False` — de
+    # quando «perfil de jogo» e «perfil da Steam» eram sinônimos. Com o perfil
+    # do Heroic nascendo sozinho, ele nascia e NÃO ENTRAVA: a linha aparecia na
+    # lista e não fazia nada. O que a linha protegia continua protegido, e está
+    # medido na docstring de `e_endereco_de_jogo` — o critério não afrouxou
+    # para "qualquer window_class", ele passou a perguntar ao DONO da resposta.
+    if not e_endereco_de_jogo(wm_class):
         return False
     # Mesma comparação de `MatchCriteria.matches` (R-12): sem ela, um
     # `steam_app_` digitado com maiúscula faria o perfil CASAR pelo matcher e
@@ -1915,8 +2003,11 @@ __all__ = [
     "RumbleConfig",
     "TriggerConfig",
     "TriggersConfig",
+    "classes_de_jogo_conhecidas",
+    "e_endereco_de_jogo",
     "normalizar_gamepad_flavor",
     "perfil_declara_modo_de_jogo",
     "perfil_e_regra_de_jogo",
+    "registrar_classes_de_jogo",
     "resolver_teclado_emulado",
 ]
