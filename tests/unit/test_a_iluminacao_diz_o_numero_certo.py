@@ -31,9 +31,12 @@ AS RÉGUAS DAQUI, e cada uma nasceu de uma coisa que a tela fazia:
 6. a tira APAGADA não acende: um ``color:`` vazio deixava o halo
    ``currentColor`` herdar o ``--fg`` e a barra desligada saía BRANCA, mais
    forte que a acesa;
-7. ABRIR o seletor livre não é APLICAR: um ``<input type="color">`` dispara
-   ``click`` ao abrir, com o valor VELHO, e o gesto mandava essa cor ao
-   aparelho antes de ela escolher.
+7. a fileira tem ONZE casas e nenhuma porta de cor fora dela — 11/09/2026,
+   ordem dela. O que morava aqui era a régua do seletor de cores do sistema
+   (*ABRIR não é APLICAR*): ele saiu da guia, e com ele a segunda porta do
+   gesto ``cor``. A medição que o justificava não se perdeu — mora na docstring
+   de ``a04_iluminacao._so_abriu_o_seletor``, que continua guardando o trilho e
+   o interruptor pelo mesmo motivo com o tempo invertido.
 """
 from __future__ import annotations
 
@@ -1092,58 +1095,116 @@ def test_o_hex_torto_recusa_com_a_razao_do_motor():
     assert "controle" in str(sem_dono.value)
 
 
-def test_o_seletor_livre_manda_a_cor_pelo_valor():
-    """O `<input type="color">` traz a cor em `value`, não em `data-hex`.
+def test_a_casa_hachurada_saiu_e_o_gesto_nao_aceita_cor_sem_tom():
+    """A segunda porta do gesto `cor` morreu inteira — 11/09/2026, ordem dela.
 
-    Ele estava na página desde o desenho SEM endereço de gesto nenhum: ela
-    escolhia uma cor fora da guia de oito e o clique nem chegava ao Python. O
-    endereço (`data-gesto="cor"`) é atributo invisível ao
-    `check_o_desenho_aprovado`, e o ouvinte do BOOTSTRAP já manda `valor`.
+    *"temos que remover esse botão que o mouse tá (que abre outras cores.)"*
+
+    ERAM DUAS PORTAS: os botões da fileira, que trazem o tom em `data-hex`, e o
+    campo de cor do fim da fileira, que o trazia no `valor` que o ouvinte lia.
+    Tirar o widget e deixar a queda pelo `valor` seria o pior dos dois mundos —
+    **peça com chamador e sem tela**: um caminho que nenhum elemento da página
+    alcança, aceitando calado carga que ninguém desenhou. É o que esta régua
+    mede, nas duas metades.
+
+    A MORDIDA: devolva o `pedido = str(o.get("valor") or "")` ao gesto e a
+    segunda asserção passa a não levantar nada.
     """
     import onde
 
-    p = _clicar("cor", {"uniq": DO_CABO["uniq"], "hex": "", "valor": "#00ff80",
-                        "tipo": "input", "evento": "change"})
-    assert p.chamadas == [("led_set_detalhado", ((0, 255, 128),),
-                          {"brightness": None, "uniq": DO_CABO["uniq"]})]
-
+    # a) o widget não está na página, em nenhum dos quatro lugares
     bancada = onde.pagina("04-iluminacao.html").read_text(encoding="utf-8")
-    assert bancada.count('class="livre" value="#0000ff" data-gesto="cor"') == 1
+    assert '<input type="color"' not in bancada, (
+        "o campo de cor do sistema voltou à fileira — e o gesto dele morreu "
+        "junto, então ele seria um clique sem resposta")
+    assert 'class="livre"' not in bancada
 
+    # b) e o gesto recusa DIZENDO um pedido sem tom, em vez de adivinhar
+    with pytest.raises(ValueError) as sem_tom:
+        _clicar("cor", {"uniq": DO_CABO["uniq"], "hex": "", "valor": "#00ff80",
+                        "tipo": "input", "evento": "change"})
+    assert "qual tom" in str(sem_tom.value)
 
-def test_abrir_o_seletor_livre_nao_manda_cor_nenhuma():
-    """ABRIR não é APLICAR — e sem esta régua o gesto muda o aparelho dela.
-
-    MEDIDO em 02/09/2026 com o BOOTSTRAP REAL avaliado dentro de um Chrome, com
-    `window.webkit.messageHandlers` dublado::
-
-        ela ABRE     {gesto:'cor', hex:'', valor:'#0000ff', tipo:'input', evento:'click'}
-        ela ESCOLHE  {gesto:'cor', hex:'', valor:'#12ab34', tipo:'input', evento:'change'}
-
-    O ouvinte escuta `click` E `change`, e um `<input type="color">` dispara
-    `click` no instante da ABERTURA, carregando o valor VELHO — a cor cravada no
-    arquivo pelo gerador. Ler o `valor` nesse clique mandava a barra dela para
-    `#0000FF` antes de ela escolher; se ela cancelasse, a barra ficava numa cor
-    que ela nunca pediu.
-
-    E SAI CALADO, de propósito: recusar dizendo poria uma frase de erro na tela
-    dela só por ela ter aberto um seletor. O ato é o `change`, e ele age.
-
-    A MORDIDA: tire o `_so_abriu_o_seletor` do gesto e a primeira asserção
-    reprova com `led_set((0, 0, 255))`.
-    """
-    p = _clicar("cor", {"uniq": DO_CABO["uniq"], "hex": "", "valor": "#0000ff",
-                        "tipo": "input", "evento": "click"})
-    assert p.chamadas == [], (
-        f"abrir o seletor mandou {p.chamadas!r} ao aparelho. A cor é a CRAVADA "
-        f"no arquivo pelo gerador, e a tela não a mostra em lugar nenhum.")
-
-    # O BOTÃO DA GUIA NÃO É AFETADO: ele é um `<button>` com `data-hex`, e o
-    # `click` dele é o gesto inteiro.
+    # c) o botão da fileira continua inteiro — ele é quem manda o `data-hex`
     p = _clicar("cor", {"uniq": DO_CABO["uniq"], "hex": "#FF8000",
                         "tipo": "button", "evento": "click"})
     assert p.chamadas == [("led_set_detalhado", ((255, 128, 0),),
                           {"brightness": None, "uniq": DO_CABO["uniq"]})]
+
+
+def test_os_tres_tons_sairam_dos_quatro_controles():
+    """Um azul, um rosa e o preto — 11/09/2026, e a poda é de tela, não do daemon.
+
+    *"remover um tom de azul. um tom de rosa e o tom de preto de todas as
+    cores pros 4 controles."*
+
+    QUAL AZUL E QUAL ROSA foi MEDIDO, não escolhido a gosto: sai o tom mais
+    perto do vizinho que fica (distância de matiz). O azul se decide sozinho
+    — `#0080FF` a 29,88° do vizinho contra 30,12° do `#0000FF` —, e o rosa
+    empata em 29,88°, com o desempate na razão de produto: o corte é na metade
+    que NÃO é cor automática de jogador, porque tirar da outra deixaria um
+    controle no número 4 sem tom marcado na fileira.
+
+    O DAEMON NÃO PERDEU NADA, e é a metade que esta régua também mede: as oito
+    cores automáticas continuam inteiras em `player_slot_color`, e os catorze
+    tons continuam em `monta.TOM_DA_CASA`. O que encolheu foi a GUIA.
+
+    A MORDIDA: tire um hex de `FORA_DA_GUIA` e a primeira asserção reprova
+    dizendo qual voltou.
+    """
+    import onde
+
+    from hefesto_dualsense4unix.core.led_control import player_slot_color
+
+    from pacotes import a04_iluminacao as pac
+
+    crus = ["#{:02X}{:02X}{:02X}".format(*rgb) for rgb in pac.tons_da_guia()]
+
+    # a) os três não estão na fileira, nem como tom nem como endereço de clique
+    bancada = onde.pagina("04-iluminacao.html").read_text(encoding="utf-8")
+    for h in ("#0080FF", "#FF00FF", "#000000"):
+        assert h not in crus, f"{h} continua na guia"
+        assert f'data-hex="{h}"' not in bancada, (
+            f"{h} voltou à fileira da página — ela mandou os três saírem")
+
+    # b) a fileira tem ONZE casas, e são as mesmas em todos os lugares da grade
+    assert len(crus) == 11, crus
+    assert bancada.count('class="tom') == 4 * len(crus)
+
+    # c) as oito automáticas do produto NÃO foram tocadas — a poda é de tela
+    for n in range(1, 9):
+        assert "#{:02X}{:02X}{:02X}".format(*player_slot_color(n)) == crus[n - 1], (
+            "a guia deixou de começar pelas oito cores automáticas, e "
+            "`titulo_da_casa` numera as oito primeiras casas pela POSIÇÃO")
+
+
+def test_a_poda_da_guia_recusa_dizendo_o_que_nao_pode_podar():
+    """`FORA_DA_GUIA` sabe RECUSAR, e as duas recusas são diferentes.
+
+    Régua que só sabe passar não é régua: um hex errado ali seria mudo de dois
+    jeitos — um que não existe no dono não tira nada, e um que é cor automática
+    de jogador faria a nona casa dizer o nome da oitava, porque
+    `titulo_da_casa` numera pela POSIÇÃO.
+
+    A MORDIDA: tire qualquer um dos dois `raise` de `tons_da_guia()` e o
+    `pytest.raises` correspondente reprova.
+    """
+    from pacotes import a04_iluminacao as pac
+
+    antes = pac.FORA_DA_GUIA
+    try:
+        pac.FORA_DA_GUIA = ("#123456",)
+        with pytest.raises(ValueError) as fantasma:
+            pac.tons_da_guia()
+        assert "não conhece" in str(fantasma.value)
+
+        pac.FORA_DA_GUIA = ("#FF0080",)   # a cor automática do Player 4
+        with pytest.raises(ValueError) as automatica:
+            pac.tons_da_guia()
+        assert "automática" in str(automatica.value)
+    finally:
+        pac.FORA_DA_GUIA = antes
+    assert len(pac.tons_da_guia()) == 11
 
 
 # ---------------------------------------------------------------------------

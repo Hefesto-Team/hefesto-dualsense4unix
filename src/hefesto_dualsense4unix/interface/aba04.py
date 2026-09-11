@@ -205,12 +205,13 @@ BRILHO = {c["pref"]: next(_b) for c in MESA}
 #: enquanto ele não adotar estes tons o controle acende a cor de cima e a tela
 #: mostra a de baixo. A troca no produto foi aprovada por ela; falta executar.
 # (o mapa mora em `monta.py` — dois donos: esta guia e a barra de luz da 02)
-# OS CATORZE DA GUIA — era `range(1, 9)` até 09/09/2026, decisão dela na
-# bancada: *"adicionamos os tons faltantes pra cada controle"*. O dono da lista
-# é `_pacote04.tons_da_guia()`, que junta os oito automáticos do produto com os
-# seis que `TOM_DA_CASA` conhece e eles não cobrem. Contar até oito AQUI era a
-# segunda lista, e ela envelheceria calada no dia em que a guia crescesse — que
-# é hoje.
+# OS ONZE DA GUIA — foram OITO até 09/09/2026 (*"adicionamos os tons faltantes
+# pra cada controle"*), CATORZE até 11/09/2026, e são onze desde a poda de
+# `_pacote04.FORA_DA_GUIA`. O dono da lista é `_pacote04.tons_da_guia()`, que
+# junta os oito automáticos do produto com os que `TOM_DA_CASA` conhece, eles
+# não cobrem e ela não mandou tirar. Contar AQUI seria a segunda lista, e ela
+# envelheceria calada a cada mudança — como envelheceu duas vezes em três
+# dias.
 CRUS_DA_GUIA = ["#%02X%02X%02X" % rgb for rgb in _pacote04.tons_da_guia()]
 TONS = [tom_da_casa(h) for h in CRUS_DA_GUIA]
 
@@ -772,7 +773,7 @@ CSS = """
 
   /* ---------- COR: a guia dos oito tons do produto, por controle ---------- */
   .guia{display:flex;gap:4px;align-items:center}
-  /* os catorze botões continuam itens do flex da `.guia` — ver o gerador */
+  /* os onze botões continuam itens do flex da `.guia` — ver o gerador */
   .guia .tons{display:contents}
   /* A MOLDURA DA AMOSTRA SAIU — 31/08/2026, e é a mais pura das "bordas
      sobrando": um retângulo de 1px em volta de um retângulo CHEIO da cor que
@@ -839,14 +840,21 @@ CSS = """
     filter:drop-shadow(1px 0 0 #fff) drop-shadow(-1px 0 0 #fff)
            drop-shadow(0 1px 0 #fff) drop-shadow(0 -1px 0 #fff);
   }
-  .guia .livre{
-    flex:1;height:26px;border-radius:6px;padding:2px;cursor:pointer;min-width:0;
-    border:1px dashed var(--comment);background:
-      linear-gradient(45deg,transparent 44%,var(--comment) 44%,var(--comment) 56%,transparent 56%);
-  }
-  .guia .livre:hover{border-color:var(--purple)}
-  .guia .livre::-webkit-color-swatch-wrapper{padding:0}
-  .guia .livre::-webkit-color-swatch{border:none;border-radius:4px;opacity:0}
+  /* A CASA HACHURADA DO FIM DA FILEIRA SAIU — 11/09/2026, ordem dela. A razão,
+     as palavras dela e os três tons que saíram junto estão na nota datada de
+     `FORA_DA_GUIA`, no pacote desta aba.
+
+     Eram quatro regras: o losango tracejado, o realce ao passar por cima, e os
+     dois pseudo-elementos com que o WebKit desenha a amostra por dentro do
+     campo. As quatro saem com a peça, e não ficam "por via das dúvidas" —
+     classe órfã nesta folha é a próxima pessoa repondo o widget porque o estilo
+     já estava pronto. É a mesma lição que o botão da faixa das lâmpadas pagou,
+     algumas telas acima.
+
+     E O NOME DO SINAL NÃO ESTÁ ESCRITO AQUI, de propósito: o portão
+     `paridade-gtk-html` procura o sinal como TEXTO no HTML, e nesta MESMA aba
+     um comentário que explicava uma remoção já virou a prova de que a peça
+     continuava lá. */
   /* O HEXADECIMAL FICA NA TELA — decisão dela, 28/08, para as duas abas que o
      têm (Controles e Iluminação). Ele é o valor do campo Cor, e por isso mora
      debaixo da guia, na coluna do controle a que pertence. */
@@ -858,10 +866,13 @@ CSS = """
      terceiro botão em Opções).
 
      O QUE ELA FECHA: a aba manda a cor no instante do clique, e um botão da
-     guia SEMPRE dispara — clicar de novo no mesmo tom reenvia. O seletor livre
-     não: ele só avisa quando o valor MUDA, então a cor que ela escolheu à mão
-     era justamente a única sem porta de volta. A janela GTK tem um botão
-     dedicado para isso; aqui o botão é o lugar onde a cor já está escrita.
+     guia SEMPRE dispara — clicar de novo no mesmo tom reenvia. O campo de cor
+     do fim da fileira não: ele só avisava quando o valor MUDAVA, então a cor
+     que ela escolhia à mão era justamente a única sem porta de volta. Aquele
+     campo saiu em 11/09/2026 e esta caixa FICA — o que ela reenvia agora é a
+     cor que a fileira não tem (o global do perfil, ou um tom podado que um
+     perfil antigo ainda guarda), e a confirmação de que a cor chegou depois de
+     um controle cair e voltar.
 
      NENHUM ELEMENTO NOVO E NENHUMA LINHA, que é a razão da escolha — a fileira
      de Opções já estava apertada. O que muda é o SINAL de que se pode clicar:
@@ -1214,8 +1225,9 @@ def coluna(c):
        Nenhum valor cravado sobra num lugar sem dono: nem `data-colorway`, nem
        a cor do plástico no `style`, nem a largura da barra de brilho. Valor
        cravado num lugar vazio é identidade do mockup parada na tela.
-    3. **os widgets que carregam GESTO** — a guia das oito cores, o seletor
-       livre, o puxador do brilho e os dois botões de Opções. Estes são a
+    3. **os widgets que carregam GESTO** — a guia de tons, o puxador do brilho
+       e os dois botões de Opções (eram quatro até 11/09/2026: o campo de cor
+       do fim da fileira saiu com a poda de `FORA_DA_GUIA`). Estes são a
        exceção, e ela é decisão dela: *um lugar sem aparelho não oferece gesto
        nenhum* (a régua §4 abaixo, e a razão medida está no bloco `.ctrl.off`
        do CSS — os dez endereços dessa coluna levantam `o clique não disse em
@@ -1331,18 +1343,22 @@ def coluna(c):
     #
     # E A ESTRUTURA VEM SEM O VALOR, que é a outra metade: um lugar sem dono
     # não carrega a cor nem o brilho do MOCKUP (a lei da `check_a_cor_vem_do_
-    # aparelho.py`, e a razão do item 2 da docstring). O `value` do seletor
-    # livre nasce preto e o do puxador nasce zero — nenhum dos dois é
-    # identidade de aparelho nenhum —, e o `.cheio` continua sem `style=
-    # "width"`. Quem escreve os valores é o pintor, pelo `data-campo`.
-    cor_de_partida = cor.lower() if ligado else "#000000"
+    # aparelho.py`, e a razão do item 2 da docstring). O `value` do puxador
+    # nasce zero — ele não é identidade de aparelho nenhum —, e o `.cheio`
+    # continua sem `style="width"`. Quem escreve os valores é o pintor, pelo
+    # `data-campo`.
+    #
+    # ERAM DOIS VALORES A ZERAR ATÉ 11/09/2026. O outro era o do campo de cor
+    # do fim da fileira, que nascia preto no lugar vazio; ele saiu inteiro com
+    # a poda de `FORA_DA_GUIA`, e a régua §4 que cobrava o preto saiu junto —
+    # exigir que um widget morto nasça neutro é régua medindo fantasma.
     # A GUIA VESTE O PLÁSTICO — 09/09/2026, decisão dela: *"onde eu escolher uma
     # cor, em volta dela fica a borda da cor do plastico do controle"*.
     #
     # NÃO HÁ ENDEREÇO NOVO, e é isso que faz a cura caber numa linha: o
     # `data-campo="plastico"` já existe na moldura do desenho, e o pintor
     # escreve o mesmo valor em TODO elemento que carregue aquele campo (é o
-    # mesmo desenho dos catorze botões que dividem o `hex`). Pondo o par aqui, a
+    # mesmo desenho dos onze botões que dividem o `hex`). Pondo o par aqui, a
     # guia inteira passa a ter `color` = a cor do plástico daquele controle, e o
     # `.tom.on` só precisa pedir `currentColor`.
     #
@@ -1356,16 +1372,14 @@ def coluna(c):
     #
     # Então a `.guia` continua com o `plastico` (alvo `cor`, que é o
     # `currentColor` da borda) e ganha DENTRO um `<span class="tons">` que
-    # carrega o miolo (alvo `html`). O `display:contents` da folha faz os
-    # catorze botões continuarem sendo itens do flex do avô — sem ele o
-    # `flex:1` de cada um passaria a dividir a largura do wrapper, e a fileira
-    # inteira encolheria ao lado do seletor livre.
+    # carrega o miolo (alvo `html`). O `display:contents` da folha faz os onze
+    # botões continuarem sendo itens do flex do avô — sem ele o `flex:1` de
+    # cada um passaria a dividir a largura do wrapper em vez da largura da
+    # célula.
     guia = f'''<span class="guia" data-campo="plastico" data-hef-alvo="cor"{plastico_de_partida}>
               <span class="tons" data-campo="tons" data-hef-alvo="html">
 {tons}
               </span>
-              <input type="color" class="livre" value="{cor_de_partida}" data-gesto="cor"
-                     title="Livre — abre o seletor para uma cor que não está na guia.">
             </span>
             '''
     reenvio = ' data-gesto="reenviar"'
@@ -1598,12 +1612,17 @@ MIOLO = f'''
                    ele diz de qual peça se fala. -->
               <div class="sec-rot">Cor
                 <span class="ajuda">?<span class="dica">
-                  Sem escolha à mão, cada barra fica na <b>cor do número</b> do controle.
-                  O último quadradinho é o <b>livre</b>, para uma cor fora das oito.<br><br>
-                  Os oito quadradinhos são as <b>oito cores do produto</b> — uma por número
-                  de jogador (1 azul, 2 vermelho, 3 verde, 4 rosa, 5 amarelo, 6 ciano,
-                  7 laranja, 8 roxo). O nono é o <b>livre</b>, para uma cor que não está
-                  nelas.<br><br>
+                  <!-- A DICA PAROU DE CONTAR CASAS — 11/09/2026. Ela dizia "os oito
+                       quadradinhos" e "o nono é o livre", e as duas frases já estavam
+                       velhas: a fileira tinha CATORZE desde 09/09, e hoje tem onze. Um
+                       número digitado aqui envelhece calado a cada poda — "os oito
+                       primeiros" é estrutura (`player_slot_color(1..8)`), "os demais"
+                       nunca mente. -->
+                  Sem escolha à mão, cada barra fica na <b>cor do número</b> do controle.<br><br>
+                  Os <b>oito primeiros</b> quadradinhos são as cores do produto — uma por
+                  número de jogador (1 azul, 2 vermelho, 3 verde, 4 rosa, 5 amarelo,
+                  6 ciano, 7 laranja, 8 roxo). Os demais são tons a mais, que não
+                  pertencem a número nenhum.<br><br>
                   Escolher um tom aqui pinta a barra <b>daquele controle</b> e <b>não muda o
                   número dele</b>. O código embaixo é a cor exata que vai para o aparelho.
                 </span></span>
@@ -1757,7 +1776,6 @@ _MIOLO_DO_ALVO_HTML = re.compile(
 #: nele é o CLIQUE.
 _COBERTURA_SEM_DONO = {
     "tom": '.luz-grade .ctrl[data-conectado="nao"] .guia',
-    "livre": '.luz-grade .ctrl[data-conectado="nao"] .guia',
     "puxador": '.luz-grade .ctrl[data-conectado="nao"] .trilho',
     "btn": '.luz-grade .ctrl[data-conectado="nao"] .cel-acoes .btn',
     "hex": '.luz-grade .ctrl[data-conectado="nao"] .cel-cor .hex.reenvia{pointer-events:none',
@@ -1933,9 +1951,6 @@ def _conferir(doc):
                "um lugar vazio marca uma cor escolhida — `luz(j)` é a cor "
                "AUTOMÁTICA daquele número, e ali não há controle que a tenha "
                "escolhido")
-        exigir('value="#000000"' in coluna_html,
-               "o seletor livre do lugar vazio deixou de nascer neutro — o "
-               "`value` passa a ser a cor que o DESENHO deu àquele número")
         exigir('class="puxador"' in coluna_html and 'value="0"' in coluna_html,
                "o puxador do lugar vazio não nasce em zero — brilho cravado "
                "num lugar sem dono é o brilho do MOCKUP na tela dela")
@@ -2244,6 +2259,59 @@ def _conferir(doc):
         exigir(not sobram,
                f"o lugar {pref} tem endereço que o lugar cheio não tem "
                f"({sobram}) — o conjunto tem de ser IGUAL, não maior")
+
+    # 15. A PODA DA FILEIRA — 11/09/2026, ordem dela: *"remover esse botão que  <!-- noqa-acento: citação literal dela -->
+    #     o mouse tá (que abre outras cores.) remover um tom de azul. um tom de  <!-- noqa-acento: citação literal dela -->
+    #     rosa e o tom de preto de todas as cores pros 4 controles."*           <!-- noqa-acento: citação literal dela -->
+    #
+    #     AS DUAS METADES, e nenhuma sozinha prova a ordem dela:
+    #
+    #     a) OS TRÊS TONS NÃO VOLTAM. A régua procura o `data-hex` de cada um
+    #        deles em QUALQUER coluna: é ele que o piloto lê no clique, e um tom
+    #        de volta traz o `data-hex` junto. Procurar a COR pintada não
+    #        serviria — o `background` é o tom da casa, e o hex cru também mora
+    #        no desenho do controle e nas luzinhas. É a armadilha que a §7 desta
+    #        mesma régua já pagou: casar um token em qualquer lugar do texto, em
+    #        vez do campo que o significa.
+    #     b) A CASA HACHURADA NÃO VOLTA. Um `<input type="color">` na grade é o
+    #        widget que ela mandou tirar, e ele é a segunda porta do mesmo
+    #        gesto — o pacote deixou de saber lê-la de propósito
+    #        (`a04_iluminacao.cor` recusa dizendo sem `data-hex`), então um
+    #        campo de volta na tela seria um clique que não faz nada.
+    #
+    #     OS TRÊS HEXES ESTÃO DIGITADOS AQUI, E É DE PROPÓSITO — esta é a
+    #     exceção à regra da lista única, e a razão é estrutural: uma trava que
+    #     se mede contra a própria saída não trava nada. Ler `FORA_DA_GUIA`
+    #     para conferir `FORA_DA_GUIA` faria a régua SEGUIR quem a mudasse, em
+    #     silêncio — que é exatamente o defeito que esta casa nomeou em
+    #     08/09/2026, quando a régua do CSV comparava o arquivo novo com ele
+    #     mesmo e passou enquanto o mapa perdia cinquenta colunas.
+    #
+    #     O QUE ESTA RÉGUA É: a decisão DELA, escrita por extenso, conferida
+    #     contra a saída E contra o dono. Mexer em `FORA_DA_GUIA` passa a
+    #     custar esta linha — que é o preço certo para uma escolha que é dela
+    #     (§5 da sprint: *"o olho, e a escolha do par"*), e não do código.
+    #
+    #     E O NÚMERO DE CASAS, esse VEM DO DONO e nunca digitado: são
+    #     `len(CRUS_DA_GUIA)` em cada um dos `len(MESA)` lugares — os vazios
+    #     inclusive, porque desde 07/09/2026 o widget NASCE nos quatro e quem
+    #     o esconde é o CSS. Contar onze aqui seria a segunda lista de um
+    #     número que ninguém decidiu; os três hexes, sim, ela decidiu.
+    os_tres_que_sairam = ("#0080FF", "#FF00FF", "#000000")
+    exigir(tuple(_pacote04.FORA_DA_GUIA) == os_tres_que_sairam,
+           f"a poda da guia mudou sem esta régua saber: o pacote tira "
+           f"{tuple(_pacote04.FORA_DA_GUIA)} e a ordem dela de 11/09/2026 era "
+           f"{os_tres_que_sairam} — um azul, um rosa e o preto")
+    for h in os_tres_que_sairam:
+        exigir(f'data-hex="{h}"' not in corpo,
+               f"o tom {h} voltou à fileira — ela mandou os três saírem de "
+               f"todos os quatro controles em 11/09/2026")
+    exigir('<input type="color"' not in grade,
+           "a casa hachurada do fim da fileira voltou — e o gesto dela morreu "
+           "junto em 11/09/2026, então ela seria um clique sem resposta")
+    exigir(grade.count('class="tom') == len(MESA) * len(CRUS_DA_GUIA),
+           f"a fileira não tem {len(CRUS_DA_GUIA)} casas em cada um dos "
+           f"{len(MESA)} lugares da grade")
 
     if falhas:
         raise SystemExit("ERRO em 04-iluminacao — decisão dela desfeita:\n  "
