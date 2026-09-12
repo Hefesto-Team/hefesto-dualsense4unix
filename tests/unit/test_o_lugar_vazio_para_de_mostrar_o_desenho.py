@@ -260,6 +260,20 @@ PISO_DO_MOLDE = {
     "05-vibracao.html": 4,
     "06-navegacao.html": 0,
     "08-conexoes.html": 6,
+    # A CALIBRAÇÃO NÃO É ABA — é a página avulsa `calibrar-sensores.html`, que
+    # ganhou pacote em 11/09/2026 (F3-CALIBRAR). Ela entra aqui porque o
+    # PUBLICADO nasce com os dois lugares do desenho, e é isso que
+    # `lugares_da_pagina` lê.
+    #
+    # O MOLDE DELA É INERTE POR CONSTRUÇÃO, e vale dizer: com a mesa vazia o
+    # pacote troca o bloco inteiro dos cartões por uma FRASE, então não sobra
+    # `[data-controle="pN"]` nenhum para o travessão alcançar. O piso fica
+    # mesmo assim — o dia em que o pacote parar de emitir os seis eixos, este
+    # número cai e a régua acusa.
+    #
+    # DOZE E NÃO VINTE E QUATRO: os `-neg`/`-pos` de cada eixo são escritos com
+    # o alvo `largura`, que `ALVOS_QUE_O_TRAVESSAO_NAO_ATENDE` exclui.
+    "calibrar-sensores.html": 12,
 }
 
 
