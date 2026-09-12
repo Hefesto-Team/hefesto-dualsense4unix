@@ -225,21 +225,47 @@ def test_a_marca_esta_nas_tres_regioes_do_touchpad_e_so_nelas():
     # cada tela. Três células distintas com a marca, e as três com a mesma
     # contagem: é isso que diz "nenhuma região ficou para trás", sem digitar
     # quantas telas existem hoje.
+    # A CONTA ERA POR IGUALDADE E DEIXOU DE PODER SER — 11/09/2026,
+    # F2-POINT-AND-CLICK. Ela exigia que as três regiões aparecessem o MESMO
+    # número de vezes, e essa igualdade era um PROXY que só valia enquanto toda
+    # tela que lista botões listasse as TRÊS. O *Estilo Point-and-click* lista
+    # DUAS (o clique esquerdo e o direito, e nenhum outro) — a igualdade passou
+    # a reprovar uma tela correta.
+    #
+    # A REGRA SEM PROXY É ESTA: **nenhuma célula de região do touchpad sem a
+    # marca.** Ela cobre o mesmo que a igualdade cobria (uma região esquecida
+    # numa tela) e ainda cobre o que a igualdade não via — as três esquecidas
+    # de uma vez na mesma tela. Quem diz quais são as regiões é `TOUCH_REGIOES`,
+    # do gerador, que por sua vez as tira da nota de `pecas-do-dualsense.csv`:
+    # a lista continua sem ser digitada aqui.
+    from aba06 import TOUCH_REGIOES
+
     celulas = re.findall(r'<td class="b">(.*?)</td>', doc, re.S)
+    # O RÓTULO VAI CAPITALIZADO NA TELA (`aba06._rot`: *"o qualificador ao lado
+    # do glifo é capitalizado, como o nome da peça no `pecas-do-dualsense.csv`"*)
+    # e a constante o guarda em minúscula. Comparar sem baixar a caixa acharia
+    # ZERO células — e régua que acha zero é erro, não silêncio.
+    de_regiao_na_celula = [
+        c for c in celulas
+        if any(f">{rot}</span>".lower() in c.lower() for rot in TOUCH_REGIOES)]
+    assert de_regiao_na_celula, (
+        "não achei UMA célula de região do touchpad — as três ficaram, com a "
+        "marca, por decisão do PO de 04/09/2026.")
+    sem_marca = [c for c in de_regiao_na_celula if "marca-nao-dispara" not in c]
+    assert not sem_marca, (
+        f"{len(sem_marca)} célula(s) de região do touchpad sem a marca — a tela "
+        "volta a PROMETER um clique que o produto não dispara. A primeira: "
+        f"{sem_marca[0][:160]}")
     com_marca = [c for c in celulas if "marca-nao-dispara" in c]
+    assert len(com_marca) == len(de_regiao_na_celula), (
+        f"{len(com_marca) - len(de_regiao_na_celula)} célula(s) levam a marca "
+        "sem ser região do touchpad — marcar uma linha que dispara é a tela "
+        "mentindo pelo outro lado.")
     distintas = set(com_marca)
     assert len(distintas) == len(REGIOES_DO_TOUCHPAD), (
         f"achei {len(distintas)} célula(s) distinta(s) com a marca e as regiões "
-        f"do touchpad são {len(REGIOES_DO_TOUCHPAD)} — ou uma perdeu a marca, "
-        "ou a marca foi parar numa linha que não é região.")
-    contas = {c: com_marca.count(c) for c in distintas}
-    assert len(set(contas.values())) == 1, (
-        f"as três regiões não aparecem o mesmo número de vezes ({sorted(contas.values())}) "
-        "— uma delas ficou sem a marca em alguma das telas que listam botões.")
-    assert min(contas.values()) >= 2, (
-        f"cada região aparece {min(contas.values())} vez(es) com a marca — as "
-        "duas telas de botões existem desde 28/08 e a primeira coluna é a mesma "
-        "nas duas.")
+        f"do touchpad são {len(REGIOES_DO_TOUCHPAD)} — ou uma perdeu a marca em "
+        "todas as telas, ou a marca foi parar numa linha que não é região.")
     # E CADA LINHA ENDEREÇADA DE REGIÃO TEM A SUA. A tela de Remapeamento não
     # endereça as linhas dela (o Guardar de lá não tem dono no produto), então
     # esta metade cobre as que endereçam — e é ela que pega a marca posta na
