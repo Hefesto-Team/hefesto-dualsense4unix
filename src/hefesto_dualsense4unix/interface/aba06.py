@@ -54,6 +54,12 @@ from pacotes.a06_navegacao import (  # noqa: E402
     chips_da_fita,
     rotulo_de_quem_navega,
 )
+#: O PREFIXO DO ENDEREÇO DE CADA LINHA de *o que cada botão faz*, do dono — o
+#: pacote, que é quem EMITE a chave a cada tique. Ele era digitado aqui (`acao-`
+#: dentro de uma f-string) e passou a ser lido em 11/09/2026, quando a tela do
+#: Estilo Point-and-click virou a SEGUNDA a usá-lo: duas digitações do mesmo
+#: prefixo é como o desenho e o produto deixam de se encontrar sem ninguém ver.
+from pacotes.a06_navegacao import PREFIXO_DA_ACAO  # noqa: E402
 #: A PALAVRA DO LUGAR VAZIO, do dono dela — 07/09/2026,
 #: O-LUGAR-VAZIO-TEM-ENDERECO. Agora que o rótulo do lugar vazio tem endereço,
 #: o PRODUTO escreve nele (`pacotes.apagar_os_lugares_sem_dono`, chave
@@ -2279,14 +2285,51 @@ FILEIRA = '''
               </div>
             </div>'''
 
+#: AS SETE LINHAS DO ESTILO POINT-AND-CLICK, e a terceira coluna é o ENDEREÇO —
+#: 11/09/2026, F2-POINT-AND-CLICK. Ela é o id do botão em
+#: `core/acoes_de_botao.BOTOES`, e é o que faz a linha SER GRAVADA: sem ela o
+#: `<select>` abre, aceita escolha e não tem onde guardar — que foi o que a
+#: `PAGINAS-ESPECIAIS-B1` mediu nos sete e nos vinte e dois do remapeamento, e o
+#: que ela leu com estas palavras: *"eu achei que elas funcionavam"*.
+#:
+#: O ENDEREÇO É O MESMO DA TELA "Definições Controle e Mouse", de propósito:
+#: `data-campo="acao-<botão>"` e `data-linha="<botão>"`. As duas telas falam do
+#: MESMO campo do perfil (`Profile.button_actions`), e um segundo endereço para
+#: o mesmo dado seria a segunda verdade que esta casa persegue — o piloto pinta
+#: as duas de uma vez, com o valor do perfil, e nenhuma pode mostrar o contrário
+#: da outra. A `forma` de cada "Guardar" é recortada pelo `id` da pop-up
+#: (`hefesto_vivo`, o bloco `forma:`), então as duas não disputam.
+#:
+#: A PRIMEIRA LINHA FICA SEM ENDEREÇO, e a razão é medida: *deslizar o dedo no
+#: touchpad* não é botão em lugar nenhum do produto — não está em `BOTOES`, e
+#: quem move o cursor por ali é `uinput_mouse.emit_touchpad_move`, o próprio
+#: mouse virtual, não uma escolha por peça. Dar-lhe um `data-campo` inventaria
+#: um botão que o `resolver()` não conhece; está no relato da frente, com o que
+#: seria preciso.
+#: E AS DUAS LINHAS DE CLIQUE DO TOUCHPAD GANHARAM A MARCA no mesmo dia, e não
+#: por gosto: a régua `test_a_marca_esta_nas_tres_regioes_do_touchpad_e_so_nelas`
+#: cobra a marca de TODA linha de região do touchpad que tenha endereço, e o
+#: comentário dela diz por quê — *"é ela que pega a marca posta na tela certa e
+#: na LINHA errada"*. Até aqui as duas escapavam por não terem endereço; dar-lhes
+#: endereço sem dar-lhes a marca seria a tela voltando a PROMETER um clique que o
+#: produto não dispara, agora numa terceira tela. O texto é o mesmo dos outros
+#: nove lugares — decisão do PO de 04/09/2026 sobre a D-15 dela —, e não uma
+#: frase nova.
+#:
+#: FICA PARA ELA, e está no relato da frente: a dica do cabeçalho desta tela
+#: promete que *"o toque vira o clique"*, e a marca diz que nesta máquina ele
+#: não vira. As duas são verdade sobre coisas diferentes (o toque MOVE o cursor;
+#: o CLIQUE é que não dispara tecla), e quem decide como a tela diz isso é ela.
 PONTO_MAPA = [
-    (gl("touchpad", rot="deslizar"), "Movimento do cursor"),
-    (gl("touchpad", rot=TOUCH_REGIOES[0]), "Botão esquerdo"),
-    (gl("touchpad", rot=TOUCH_REGIOES[1]), "Botão direito"),
-    (gl("cross"),                    "Botão esquerdo"),
-    (gl("circle"),                   "Botão direito"),
-    (gl("stick_l", rot="direção"),   "Movimento do cursor"),
-    (gl("stick_r", rot="direção"),   "Rolagem vertical e horizontal"),
+    (gl("touchpad", rot="deslizar"), "Movimento do cursor", ""),
+    (gl("touchpad", rot=TOUCH_REGIOES[0]) + MARCA_DO_TOUCHPAD,
+     "Botão esquerdo", "touchpad_left_press"),
+    (gl("touchpad", rot=TOUCH_REGIOES[1]) + MARCA_DO_TOUCHPAD,
+     "Botão direito", "touchpad_right_press"),
+    (gl("cross"),                    "Botão esquerdo", "cross"),
+    (gl("circle"),                   "Botão direito", "circle"),
+    (gl("stick_l", rot="direção"),   "Movimento do cursor", EIXO_ESQUERDO),
+    (gl("stick_r", rot="direção"),   "Rolagem vertical e horizontal", EIXO_DIREITO),
 ]
 
 # ---------------------------------------------------------------------------
@@ -2410,7 +2453,7 @@ TELA_DEFINICOES = tela_de_botoes(
     "O que ele faz",
     chr(10).join(
         f'          <tr><td class="b">{b}</td>'
-        f'<td>{drop(ACOES_UNI, _PADRAO_DOS_BOTOES[i], gesto=LINHA_DE_BOTAO, linha=i, campo=f"acao-{i}")}</td></tr>'
+        f'<td>{drop(ACOES_UNI, _PADRAO_DOS_BOTOES[i], gesto=LINHA_DE_BOTAO, linha=i, campo=f"{PREFIXO_DA_ACAO}{i}")}</td></tr>'
         for b, i in BOTOES),
     # A CONFIRMAÇÃO GANHOU A METADE QUE FALTAVA — 04/09/2026, e é o defeito §3-2
     # dito na tela. Ela dizia só *"as 21 linhas de o que cada botão faz"* e
@@ -2566,7 +2609,7 @@ TELA_PONTO = f'''
       {ajuda(
         "Serve para jogo de <b>apontar e clicar</b>, que espera mouse e não entende "
         "controle: <b>o touchpad vira o ponteiro</b>, e o toque vira o clique.")}
-      <a class="tn-x" href="#" title="Fechar">×</a>
+      <a class="tn-x" href="#" title="Fechar" data-gesto="fechar-ponto">×</a>
     </div>
     <div class="tn-corpo">
       <!-- TEXTO NA TELA É ZERO — regra dela, 30/08/2026: *"texto na interface é
@@ -2577,7 +2620,7 @@ TELA_PONTO = f'''
       <div class="moldura">
         <table class="tab">
           <tr><th>Botão do controle</th><th>O que ele faz neste estilo</th></tr>
-{chr(10).join(f'          <tr><td class="b">{b}</td><td>{drop(ACOES_UNI, f)}</td></tr>' for b, f in PONTO_MAPA)}
+{chr(10).join(f'          <tr><td class="b">{b}</td><td>{drop(ACOES_UNI, f, gesto=LINHA_DE_BOTAO, linha=i, campo=f"{PREFIXO_DA_ACAO}{i}") if i else drop(ACOES_UNI, f)}</td></tr>' for b, f, i in PONTO_MAPA)}
         </table>
       </div>
       <!-- AS DICAS AQUI SÃO AS `_ESTILO`, e a diferença é uma só: elas NÃO
@@ -2599,8 +2642,23 @@ TELA_PONTO = f'''
          que é a pior forma de um botão mentir. Quem carrega o que falta é o
          "Guardar" desta tela, que é o ponto de gravação de todos eles. -->
     <div class="tn-rod">
-      <a class="btn" href="#">Cancelar</a>
-      <a class="btn roxo" href="#" data-gesto="guardar-ponto">Guardar</a>
+      <!-- O "Cancelar" E O "×" GANHARAM NOME EM 11/09/2026, pela mesma razão
+           que os da tela de Definições ganharam em 02/09: FECHAR É O "SAIR" da
+           decisão dela (*"as listas param de ser repintadas enquanto ela está
+           mexendo, até guardar ou sair"*). Eles já fechavam a pop-up sozinhos,
+           pelo `:target` do CSS; o que faltava era o Python saber que ela
+           desistiu — sem isso a trava ficaria presa depois do "Cancelar", e as
+           sete linhas continuariam mostrando escolha que ninguém vai guardar.
+           As duas telas dividem a MESMA trava porque dividem o mesmo campo. -->
+      <a class="btn" href="#" data-gesto="fechar-ponto">Cancelar</a>
+      <!-- O `data-hef-forma` É O QUE FAZ ESTE BOTÃO PODER GRAVAR — 11/09/2026.
+           O ouvinte do piloto manda o valor do elemento CLICADO, e o Guardar é
+           outro elemento: sem a forma ele não tem como saber o que está
+           escolhido em cada linha. O `id` recorta a varredura nesta pop-up, e é
+           por isso que as duas telas que escrevem o MESMO campo do perfil não
+           disputam a forma uma da outra. -->
+      <a class="btn roxo" href="#" data-gesto="guardar-ponto"
+         data-hef-forma="point-and-click">Guardar</a>
     </div>
   </div>
 </div>
@@ -3164,19 +3222,45 @@ def _conferir(doc):
     #    `change` morre no navegador, o tique reescreve a escolha por cima em
     #    ≤1,5 s e o "Guardar" ao lado nunca vê forma diferente do perfil.
     #    Tirá-lo desfaz a decisão CALADO, e é por isso que ele é conferido aqui.
-    exigir(corpo.count(f'data-gesto="{LINHA_DE_BOTAO}"') == len(BOTOES),
-           f"as {len(BOTOES)} linhas de 'o que cada botão faz' perderam o "
-           f"`data-gesto=\"{LINHA_DE_BOTAO}\"` — sem ele a pintura volta a "
-           f"desfazer a escolha antes do clique em Guardar")
-    # 4-bis. E O "SAIR" TEM NOME. O `×` e o `Cancelar` da tela de definições
-    #    fecham a pop-up pelo `:target` sozinhos; o que eles NÃO faziam era
-    #    avisar o Python, e é nesse instante que as escolhas pendentes têm de
-    #    ser largadas. São DOIS na tela de definições, e ZERO na de
-    #    remapeamento, que não tem trava a soltar.
-    exigir(corpo.count('data-gesto="fechar-definicoes"') == 2,
-           "o `×` e o `Cancelar` da tela de definições perderam o "
-           "`data-gesto=\"fechar-definicoes\"` — a trava das 21 linhas ficaria "
-           "presa depois de ela desistir")
+    #    E A CONTA É POR TELA DESDE 11/09/2026, não do documento inteiro. Com
+    #    DUAS telas escrevendo o mesmo campo do perfil, um total certo esconde o
+    #    par de erros que se anulam — seis linhas a menos numa e seis a mais na
+    #    outra dão o mesmo número, e a tela que perdeu o endereço volta a ser a
+    #    que ela abre e não grava. É a forma de defeito que esta casa mais
+    #    persegue: o instrumento respondendo sobre outra coisa.
+    def _tela(ident: str) -> str:
+        return corpo.split(f'id="{ident}"', 1)[-1].split('class="tela-nova"', 1)[0]
+
+    _com_endereco = [i for _b, _f, i in PONTO_MAPA if i]
+    for _ident, _quantas, _oque in (
+            ("definicoes-mouse", len(BOTOES), "'o que cada botão faz'"),
+            ("point-and-click", len(_com_endereco), "do Estilo Point-and-click")):
+        exigir(_tela(_ident).count(f'data-gesto="{LINHA_DE_BOTAO}"') == _quantas,
+               f"as {_quantas} linhas {_oque} perderam o "
+               f"`data-gesto=\"{LINHA_DE_BOTAO}\"` — sem ele a pintura volta a "
+               f"desfazer a escolha antes do clique em Guardar")
+    # 4-bis. E O "SAIR" TEM NOME. O `×` e o `Cancelar` fecham a pop-up pelo
+    #    `:target` sozinhos; o que eles NÃO faziam era avisar o Python, e é nesse
+    #    instante que as escolhas pendentes têm de ser largadas. São DOIS em cada
+    #    uma das telas que têm trava a soltar — a de definições e a do estilo —,
+    #    e ZERO na de remapeamento, cujo Guardar continua sem dono.
+    for _ident, _nome_do_gesto in (("definicoes-mouse", "fechar-definicoes"),
+                                   ("point-and-click", "fechar-ponto")):
+        exigir(_tela(_ident).count(f'data-gesto="{_nome_do_gesto}"') == 2,
+               f"o `×` e o `Cancelar` da tela {_ident} perderam o "
+               f"`data-gesto=\"{_nome_do_gesto}\"` — a trava das linhas ficaria "
+               "presa depois de ela desistir")
+    # 4-quater. E O "Guardar" DO ESTILO TEM DE PEDIR A FORMA — 11/09/2026. Sem
+    #    `data-hef-forma`, o piloto manda só o valor do elemento CLICADO, e o
+    #    Guardar é outro elemento: ele volta a não ter o que gravar, que é
+    #    exatamente o estado de que esta frente o tirou. O `id` pedido é o da
+    #    própria pop-up — é o que recorta a varredura e impede as duas telas de
+    #    recolherem a forma uma da outra.
+    exigir('data-gesto="guardar-ponto"\n         data-hef-forma="point-and-click"'
+           in corpo,
+           "o Guardar do Estilo Point-and-click perdeu o "
+           "`data-hef-forma=\"point-and-click\"` — sem a forma ele não sabe o "
+           "que está escolhido em cada linha e volta a só poder recusar")
 
     # 4-ter. A TELA "Teclas do teclado" — 06/09/2026, NAVEGACAO-TECLAS-01.
     #    As cinco conferências são a mesma cura vista de cinco lados, e cada uma

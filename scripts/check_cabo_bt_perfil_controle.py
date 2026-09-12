@@ -70,6 +70,7 @@ NAO_E_DO_APARELHO: dict[str, str] = {
     # ---- tela: navegar, abrir, fechar, voltar ao padrão ----
     "escolher-na-fita": "escolhe qual controle a aba edita — não muda o aparelho",
     "fechar-definicoes": "fecha um painel da própria tela",
+    "fechar-ponto": "fecha um painel da própria tela",
     "fechar-teclas": "fecha um painel da própria tela",
     "padrao-da-aba": "devolve a aba ao desenho — é da tela",
     "padrao-da-tecla": "devolve UMA tecla ao padrão — é do mapeamento, não do aparelho",
@@ -128,7 +129,14 @@ NAO_E_DO_APARELHO: dict[str, str] = {
     "guardar": "guarda o efeito no perfil — o ATO já é medido pelo gesto do efeito",
     "em-todos": "espalha o efeito — o ATO é o mesmo do gesto do efeito",
     "guardar-definicoes": "grava no perfil — é do perfil",
-    "guardar-ponto": "grava um ponto de mira — é do perfil",
+    # FATO SUBSTITUÍDO (11/09/2026, F2-POINT-AND-CLICK): esta linha dizia
+    # *"grava um ponto de mira"*. Ponto de mira não existe em lugar nenhum
+    # deste produto — o gesto é o "Guardar" do *Estilo Point-and-click*, e o
+    # que ele grava é o que cada peça do controle faz naquele estilo, em
+    # `Profile.button_actions`. A classificação estava certa (é do perfil, não
+    # do aparelho); a descrição é que apontava para outra coisa.
+    "guardar-ponto": "grava o que cada peça faz no Estilo Point-and-click — é "
+                     "do perfil",
     "guardar-remapeamento": "grava o remapeamento — é do perfil",
     "guardar-teclas": "grava as teclas — é do perfil",
     "tecla-escrita": "digita uma tecla no campo — é da tela",

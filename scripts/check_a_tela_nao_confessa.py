@@ -732,6 +732,10 @@ SEM_LETRA: dict[str, str] = {
         "idem, pelo caminho do jogo",
     "a06_navegacao.py:guardar_definicoes ← ' '.join(recados)":
         "os recados juntados de várias gravações; cada um nasce no seu dono",
+    "a06_navegacao.py:guardar_ponto ← ' '.join(recados)":
+        "idem, pelo Guardar do Estilo Point-and-click — os dois costuram as "
+        "mesmas três frases (o atalho que para de valer, a linha sem "
+        "atendente, o desenho congelado), e cada uma tem o seu dono",
     "a02_controles.py:mudo ← acao.dica":
         "a dica da ação de microfone, que mora no dono da ação",
 
