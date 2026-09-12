@@ -455,9 +455,8 @@ ROTULO_DO_BRILHO = "Brilho da barra de luz deste controle"
 #: só sabe o que sabia quando gerou. Uma frase com o nome do perfil ficaria
 #: CONGELADA no nome de hoje na tela dela para sempre — é a mesma armadilha que
 #: tirou a dica da célula `LEDs` do desenho, em 02/09.
-DICA_DO_BRILHO = ("Arraste para mudar o brilho da barra deste controle. "
-                  "Ao soltar, a barra acende no brilho novo e o valor é "
-                  "gravado no perfil ativo — não espera o Salvar Perfil.")
+DICA_DO_BRILHO = ("Brilho da barra deste controle. Grava no perfil ao "
+                  "soltar — não espera o Salvar Perfil.")
 
 
 def _com_o_brilho(rgb: tuple[int, int, int], brilho: float) -> tuple[int, int, int]:
@@ -575,9 +574,8 @@ def titulo_da_casa(i: int) -> str:
     e o pacote pinta o produto a cada tique. Ela morava só no gerador, e por
     isso a guia VIVA (COR-X-01) não tinha como dizer a mesma frase.
     """
-    quem = (f"Cor automática do Player {i} — usar aqui pinta"
-            if i <= 8 else "Pinta")
-    return f"{quem} a barra deste controle, e não muda o número dele."
+    quem = f"Cor do Player {i}. " if i <= 8 else ""
+    return f"{quem}Pinta a barra, não muda o número."
 
 
 def fileira_de_tons(escolhida: str, tomadas: dict[str, dict[str, str]],
@@ -1070,15 +1068,14 @@ def um_botao_de_player(nome: str, meu: int, n: int,
     #: da conta, porque quem tem dono está ligado.
     fora = dono is None and n > quantos
     if n == meu:
-        dica = f"O {nome} É o Player {n} — é o número dele hoje."
+        dica = f"O {nome} é o Player {n} hoje."
     elif fora:
         dica = f"Player {n} — {fora_da_mesa()}."
     elif dono is None:
         dica = f"Player {n} — livre."
     else:
-        dica = (f"Dar o Player {n} ao {nome}: o {dono['nome']} ({dono['via']}), "
-                f"que tem o {n} hoje, fica com o {meu}. Os dois trocam de "
-                f"lugar — ninguém repete número e ninguém fica sem.")
+        dica = (f"Dar o {n} ao {nome}: o {dono['nome']} fica com o {meu}. "
+                f"Os dois trocam.")
     #: O BOTÃO CONTINUA CLICÁVEL, e isso é escolha. `disabled` calaria a recusa:
     #: quem clicar mesmo assim tem de ouvir o motivo, que é a regra desta casa
     #: (*"vira botão que recusa dizendo"*). `aria-disabled` diz o estado a quem
@@ -2589,9 +2586,8 @@ def _sem_repetir_a_cor_do_vizinho(
     if dono is None:
         return rgb, None
     raise RuntimeError(
-        f"O {_quem_e(ctx, dono)} já está nesse tom, e duas peças nunca ficam "
-        f"da mesma cor. Troque a cor dele primeiro, ou escolha um tom livre. "
-        f"Nada foi mudado.")
+        f"O {_quem_e(ctx, dono)} já está nesse tom: duas peças nunca ficam da "
+        f"mesma cor. Nada mudou — escolha outro tom.")
 
 
 def _quem_e(ctx: Contexto, c: dict[str, Any]) -> str:
@@ -3302,9 +3298,7 @@ def _acender_o_numero(ctx: Contexto, p: Any, uniq: str, n: int) -> str:
         if not p.chamar(_RECONCILIAR_O_COOP):
             raise RuntimeError(
                 f"o número deste controle mudou para {n}, mas as cinco "
-                f"lâmpadas não acompanharam: com o co-op ligado quem as "
-                f"acende é ele, e o Hefesto não respondeu ao pedido de "
-                f"reconciliar os controles. {sem_resposta_do_daemon()}")
+                f"lâmpadas não: com o co-op ligado, quem as acende é o jogo.")
         return ""
 
     recado = ""
@@ -3441,8 +3435,8 @@ def _cobrar_a_frase_do_desenho(ctx: Contexto, uniq: str,
         # frase seria prometer um aviso que ela não tem. As duas metades têm de
         # andar juntas, e quem as separou é quem conserta.
         raise RuntimeError(
-            f"{frase} (o desenho foi para {janela._quantos_recebem_o_desenho()} "
-            f"controles e a frase do produto não disse isso)")
+            f"o número mudou em {janela._quantos_recebem_o_desenho()} "
+            f"controles.")
     return frase
 
 

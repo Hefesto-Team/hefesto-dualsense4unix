@@ -385,8 +385,22 @@ def test_a_dica_do_jogador_diz_a_regra_e_nao_o_exemplo(bancada):
     é endereço, é dizer a REGRA em vez do exemplo — quem nomeia os dois de
     verdade é a dica de cada botão da fileira, que o pacote reescreve.
 
-    A MORDIDA: devolva os dois `{...["nome"]}` à dica e esta linha reprova.
+    ELA PERGUNTA PELO ATO, E NÃO PELA FRASE — 11/09/2026. Até hoje ela digitava
+    *"quem tem aquele número hoje fica com o deste"*, e a leva de língua (A4-049,
+    aprovada por ela) encurtou a dica para *"faz os dois trocarem: ninguém repete
+    e ninguém fica sem"* — a MESMA regra, em menos palavras. Uma régua que digita
+    o texto que mede reprova a melhora em vez do defeito, que é a família que
+    esta casa mais paga. O que se mede agora é o que a régua sempre quis: a dica
+    DIZ a troca e NÃO NOMEIA controle nenhum do desenho.
+
+    A MORDIDA: devolva um `{...["nome"]}` à dica e esta linha reprova.
     """
     corpo = _miolo(bancada)
-    assert "quem tem aquele número hoje fica com o deste" in corpo
-    assert "faz o\n" not in corpo.split("Dar a este controle", 1)[-1][:400]
+    dica = corpo.split("o número do jogador a este controle", 1)[-1][:600]
+    assert "os dois trocarem" in dica, (
+        "a dica do Jogador parou de dizer a REGRA da troca — sem ela, a pessoa "
+        "clica um número de outro sem saber o que vai acontecer")
+    nomeados = [nome for nome in _nomes_do_desenho() if nome in dica]
+    assert not nomeados, (
+        f"a dica do Jogador voltou a nomear {nomeados}: são controles do "
+        f"DESENHO, numa coluna de rótulos que vale para as quatro colunas")

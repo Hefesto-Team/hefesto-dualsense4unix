@@ -723,7 +723,9 @@ class TestOGestoDaAba:
 
         frase = str(erro.value)
         assert "P2" in frase, f"a tela não disse de quem é: {frase}"
-        assert "Nada foi mudado" in frase, (
+        # "Nada foi mudado" virou "Nada mudou" em 11/09/2026 (A4-050,
+        # aprovado por ela): o conserto passou para o fim, junto do fato.
+        assert "Nada mudou" in frase, (
             f"a recusa não diz que o aparelho ficou como estava: {frase}")
 
     def test_a_guia_desenha_o_x_exatamente_no_que_o_gesto_recusa(self) -> None:
