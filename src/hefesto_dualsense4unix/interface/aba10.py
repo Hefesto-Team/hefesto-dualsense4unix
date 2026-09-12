@@ -255,8 +255,9 @@ CSS = CSS_GLIFO + """
      em que mandou tirar o verde dos nomes: *"coloca essa na cor ver[de] e o
      Definições também"*. E é coerente com a regra que ela desenhou: o verde
      saiu de quem NOMEIA UMA LINHA (rótulo de campo, cabeçalho de coluna) e
-     ficou em quem ABRE UM BLOCO — são dois, `Perfis Salvos` e `Definições`, e
-     eles é que dizem onde a pessoa está. */
+     ficou em quem ABRE UM BLOCO — são dois, `Perfis salvos` e `Editar`, e
+     eles é que dizem onde a pessoa está. (Os dois rótulos mudaram de caixa e
+     de palavra em 11/09/2026, A5-033 e A5-041; a decisão do VERDE é a mesma.) */
   .sec-rot{font-size:12px;font-weight:700;color:var(--rot-campo);
            margin-bottom:10px;display:flex;align-items:center;gap:6px;height:15px}
   /* A LISTA LÊ COMO TABELA: cabeçalho com fundo próprio e linhas zebradas. Quem
@@ -1170,7 +1171,7 @@ def icone_da_lupa() -> str:
     acha pelo mesmo seletor.
     """
     return ('<button type="button" class="icone-rot lupa" '
-            'title="Procurar um perfil pelo nome, pela prioridade ou pelo jogo." '
+            'title="Procura pelo nome, pela prioridade ou pelo jogo." '
             f'aria-label="Procurar um perfil">{LUPA}</button>')
 
 
@@ -1238,7 +1239,7 @@ def cabeca(coluna: str, rotulo_visivel: str, tabela: str, classe: str = "",
     """
     cls = f' class="{classe}"' if classe else ""
     return (f'<th{cls} data-coluna="{coluna}" '
-            f'title="Duplo clique para ordenar por esta coluna; de novo, inverte.">'
+            f'title="Duplo clique ordena por esta coluna; de novo, inverte.">'
             f'{rotulo_visivel}'
             f'<span class="ordena" data-hef="perfis.ordem.{coluna}" '
             f'data-hef-alvo="atributo" data-hef-atributo="data-ordem" '
@@ -1331,13 +1332,12 @@ def rotulo_do_jogo() -> str:
 #: mudar a frase do produto deixaria o desenho recitando a versão velha — que é
 #: a forma de defeito que esta seção inteira existe para curar.
 FRASE_DA_PRIORIDADE_DELA = (
-    "Quando dois perfis servem ao mesmo tempo, o de número maior entra.")
+    "Quando dois perfis servem ao mesmo tempo, entra o de número maior.")
 #: A SEGUNDA METADE, que o texto de hoje tem e o dela não. Ela responde a única
 #: pergunta que a frase dela deixa aberta — *"e o perfil que vale para tudo,
 #: que número tem?"* —, e o PO mandou as duas, nesta ordem.
 FRASE_DO_UNIVERSAL = (
-    "O Universal fica em zero, para nunca atropelar ninguém e nunca deixar o "
-    "controle sem nada.")
+    "O Universal fica em zero: ele só entra quando nenhum outro serve.")
 DICA_DA_PRIORIDADE = f"{FRASE_DA_PRIORIDADE_DELA} {FRASE_DO_UNIVERSAL}"
 
 #: AS OPÇÕES DO "Funciona em". Todas menos "Estilo de Jogo" têm preset atrás em
@@ -1539,10 +1539,13 @@ def linha_do_controle(c, tem=None, id_da_peca=None, uniq=None):
     # envelhece quando a mesa muda — é o oposto exato do que saiu daqui.
     nome = rotulo(c, "curta") if na_mesa else f'P{c["jogador"]}{SEPARADOR}Desconectado'
     plastico = cor_da_zona(c['cor']) if na_mesa else "transparent"
+    # SEM `<b>` NO `title`, e é o canal: um atributo `title` não renderiza
+    # marcação — o negrito que a A5-049 pede em «controle» sairia como `<b>`
+    # em letra na dica do ponteiro. A palavra fica, o negrito não pode.
     dica = ("" if na_mesa else
-            f'\n                      title="Nenhum controle neste lugar. O perfil '
-            f"guarda o que está aqui pelo ID da peça: quando o P{c['jogador']} "
-            f'voltar, ele encontra o que você deixou."')
+            '\n                      title="Este lugar está vazio. O que você '
+            'ajusta fica guardado com o controle: quando ele voltar, encontra '
+            'o que você deixou."')
     # A CLASSE `fora` PASSA A SER PINTÁVEL — 05/09/2026, palavra dela: *"os svgs
     # não deveriam aparecer prós demais controles desconectados"*.
     #
@@ -1813,7 +1816,7 @@ MIOLO = f'''
           vibração, som, sensores e máscara — e o traz de volta quando aquele jogo abre.
         </span></span>
         <span class="conta"><span data-hef="perfis.conta">{len(PERFIS)} perfis</span> <span class="sep">·</span>
-          <span data-hef="perfis.com-ajuste">{COM_AJUSTE} de {len(MESA)} controles com ajuste próprio neste perfil</span></span>
+          <span data-hef="perfis.com-ajuste">{COM_AJUSTE} de {len(MESA)} controles com ajuste próprio</span></span>
       </div>
       <!-- O DESFECHO DO ÚLTIMO GESTO — ver `.desfecho` no CSS para a razão.
            SÃO DOIS ENDEREÇOS PARA UM VALOR, e não é redundância: a CAIXA usa o
@@ -1833,9 +1836,9 @@ MIOLO = f'''
 
           <div>
             <div class="moldura">
-              <div class="sec-rot">Perfis Salvos{icone_da_lupa()}{campo_da_lupa()}{icone_do_rotulo(
+              <div class="sec-rot">Perfis salvos{icone_da_lupa()}{campo_da_lupa()}{icone_do_rotulo(
                   "recarregar", RECARREGA,
-                  "Relê a lista do disco. Não descarta o que está no editor ao lado.")}<span class="fora-da-busca" data-hef="perfis.procura.conta" data-hef-alvo="classe"><span data-hef="perfis.procura.conta"></span></span></div>
+                  "Relê a lista de perfis. Não mexe no editor ao lado.")}<span class="fora-da-busca" data-hef="perfis.procura.conta" data-hef-alvo="classe"><span data-hef="perfis.procura.conta"></span></span></div>
               <div class="lista">
               <div class="rolo">
               <table class="tab" data-hef="perfis.larguras" data-hef-alvo="atributo"
@@ -1843,8 +1846,8 @@ MIOLO = f'''
                      data-larguras="">
                 <colgroup><col data-coluna="nome"><col data-coluna="prioridade"><col data-coluna="quando"></colgroup>
                 <thead><tr>{cabeca("nome", "Nome", "10-perfis.lista")}{cabeca(
-                    "prioridade", "Priorização", "10-perfis.lista", classe="pri")}{cabeca(
-                    "quando", "Quando usar", "10-perfis.lista", divisa=False)}</tr></thead>
+                    "prioridade", "Prioridade", "10-perfis.lista", classe="pri")}{cabeca(
+                    "quando", "Funciona em", "10-perfis.lista", divisa=False)}</tr></thead>
                 <tbody data-hef="perfis.lista">
 {chr(10).join(linha_do_perfil(n, p, q, a, escolhido=n == PERFIL_DO_EDITOR) for n,p,q,a in PERFIS)}
                 </tbody>
@@ -1853,8 +1856,8 @@ MIOLO = f'''
               </div>
               <div class="botoes">
                 <button class="btn" data-hef-gesto="duplicar" title="Copia o perfil inteiro para o editor, com &quot;(cópia)&quot; no nome.">Duplicar</button>
-                <button class="btn" data-hef-gesto="novo" title="Perfil em branco, já com a regra do jogo aberto agora — venha ele de onde vier.">Novo</button>
-                <button class="btn vermelho" data-hef-gesto="remover" data-hef="perfis.remover" title="Apaga do disco. Pergunta antes.">Remover</button>
+                <button class="btn" data-hef-gesto="novo" title="Perfil em branco. Com um jogo da Steam aberto, ele nasce valendo só para esse jogo; sem isso, vale para tudo.">Novo</button>
+                <button class="btn vermelho" data-hef-gesto="remover" data-hef="perfis.remover" title="Apaga o perfil. Pergunta antes.">Remover</button>
               </div>
             </div>
           </div>
@@ -1880,9 +1883,9 @@ MIOLO = f'''
 
                    E É O QUE TORNA OS GESTOS HONESTOS: sem isto, ligar o campo Nome
                    faria ela renomear um perfil olhando para o nome de outro. -->
-              <div class="sec-rot">Definições{icone_do_rotulo(
+              <div class="sec-rot">Editar{icone_do_rotulo(
                   "voltar-a-de-ontem", DESFAZ,
-                  "Desfaz um perfil salvo por engano: cada gravação já guarda a anterior.")}</div>
+                  "Volta o perfil à gravação anterior.")}</div>
               <div class="campos">
 
               <div class="campo">
@@ -1983,11 +1986,11 @@ MIOLO = f'''
                            "exige", "editor.jogo.exige", "editor.jogo.exigencia")}
                   <datalist id="jogos-desta-maquina" data-hef="editor.jogo.lista"></datalist>
                   {rotulo_do_jogo()}
-                  <button class="btn roxo" data-hef-gesto="detectar" title="Pega o jogo que está rodando atrás desta janela e monta a regra — funciona com jogo de qualquer lugar, não só da Steam.">Detectar</button>
+                  <button class="btn roxo" data-hef-gesto="detectar" title="Usa o jogo que está aberto agora e monta a regra — de qualquer lugar, não só da Steam.">Detectar</button>
                 </span>
               </div>
               <div class="campo">
-                <span title="Pré-aplica um perfil inteiro: escolhendo FPS, o gatilho, a luz, a vibração e a máscara já vêm resolvidos. Os catorze de fábrica não se editam; o Personalizado usa o que você ajustou nas abas.">Estilo de Jogo:</span>
+                <span title="Pré-aplica de uma vez o gatilho, a vibração e a cor da luz. Os catorze de fábrica não se editam; o Personalizado usa o que você ajustou nas abas.">Estilo de Jogo:</span>
                 <span class="val"><select class="destaque" data-hef="editor.estilo" data-hef-gesto="editor.estilo" data-hef-alvo="valor">
 {opts(ESTILOS, "", vazio=True)}
                 </select></span>
@@ -1998,9 +2001,9 @@ MIOLO = f'''
                        data-larguras="">
                   <colgroup><col data-coluna="controle"><col data-coluna="status"><col data-coluna="id"></colgroup>
                   <thead><tr>
-                    <th title="Controle — o perfil não guarda uma configuração: guarda uma por controle. Esta tabela mostra, para cada controle, quais ajustes ele tem só para si e quais usa do perfil.">Controle{puxador("controle", "10-perfis.guarda")}</th>
-                    <th class="gd-pecas" title="Aceso: este perfil guarda um ajuste só deste controle. Apagado: ele usa o do perfil, igual aos outros. São os {QUANTAS_SECOES} ajustes que o perfil sabe guardar por controle — {_lista_das_secoes()}.">Status{puxador("status", "10-perfis.guarda")}</th>
-                    <th class="gd-id" title="O endereço de rádio do controle. É por ele que o perfil reconhece a peça — e ele não muda quando você troca o cabo pelo rádio, então o que você deixou hoje volta amanhã.">ID da peça</th>
+                    <th title="O perfil guarda um ajuste por controle. Aqui você vê quais são só deste controle e quais vêm do perfil.">Controle{puxador("controle", "10-perfis.guarda")}</th>
+                    <th class="gd-pecas" title="Aceso: este perfil guarda um ajuste só deste controle. Apagado: ele usa o do perfil. São {QUANTAS_SECOES}: {_lista_das_secoes()}.">Status{puxador("status", "10-perfis.guarda")}</th>
+                    <th class="gd-id" title="O endereço de rádio do controle: é por ele que o perfil o reconhece, no cabo e no rádio.">ID da peça</th>
                   </tr></thead>
                   <tbody data-hef="guarda.linhas">
 {chr(10).join(linha_do_controle(c) for c in MESA)}
@@ -2010,9 +2013,9 @@ MIOLO = f'''
 
               </div>
               <!-- OS TRÊS VIRARAM UM — 11/09/2026, ordem dela. O `Recarregar` foi
-                   para o rótulo `Perfis Salvos` (ele relê a LISTA, e a lista é a
+                   para o rótulo `Perfis salvos` (ele relê a LISTA, e a lista é a
                    tabela da esquerda) e o `Voltar à de ontem` para o rótulo
-                   `Definições` — *"tem que arrumar outro canto pra deixar ele ao  (noqa-acento) citação
+                   `Editar` — *"tem que arrumar outro canto pra deixar ele ao  (noqa-acento) citação
                    invés de botão como os demais"*. Sobrou UM botão neste canto, e  (noqa-acento) citação
                    a classe `um-so` o faz ocupar a largura inteira em vez de um
                    terço com dois vãos vazios ao lado.
@@ -2103,7 +2106,7 @@ LEGENDA = f'''<div class="nota">
       <code>a10_perfis</code>, com o que leu dos controles — a mesma leitura da fita do topo.
       Sem cor lida, a barra <b>some</b>: campo sem informação não mostra nada.</li>
     <li><b>O cabeçalho conta os controles</b>: {len(PERFIS)} perfis e
-      {COM_AJUSTE} de {len(MESA)} controles com ajuste próprio neste perfil.</li>
+      {COM_AJUSTE} de {len(MESA)} controles com ajuste próprio.</li>
     <li><b>A linha diz DUAS coisas, e elas não são a mesma.</b> A <b>cor verde e a barra
       verde</b> dizem <b>está valendo agora</b>; o <b>fundo roxo e a barra roxa</b> dizem
       <b>é esta que o editor ao lado está mostrando</b> — a que os nove botões vão mexer.
@@ -2210,7 +2213,7 @@ def _conferir(html: str) -> None:
     if r:
         exigir("color:var(--rot-campo)" in r.group(0),
                "o título de bloco perdeu o verde que ela pediu")
-    for titulo in ("Perfis Salvos", "Definições"):
+    for titulo in ("Perfis salvos", "Editar"):
         exigir(f'class="sec-rot">{titulo}<' in html,
                f"o título de bloco '{titulo}' não está na tela")
 
@@ -2223,9 +2226,9 @@ def _conferir(html: str) -> None:
     # régua acusava abreviação. É a forma que esta casa nomeia — *a régua digita
     # o que devia LER* —, e a cura é olhar o `<th>` da coluna inteira.
     th_pri = re.search(r'<th class="pri"[^>]*>([^<]*)', html)
-    exigir(th_pri is not None, "o cabeçalho da Priorização sumiu da tabela")
+    exigir(th_pri is not None, "o cabeçalho da Prioridade sumiu da tabela")
     if th_pri:
-        exigir(th_pri.group(1).strip() == "Priorização",
+        exigir(th_pri.group(1).strip() == "Prioridade",
                f"o cabeçalho voltou a ser abreviado: {th_pri.group(1)!r}")
 
     # O FUNDO POR COLUNA — três regras, três cores. Se as três virarem uma só, a
@@ -2362,8 +2365,14 @@ def _conferir(html: str) -> None:
     # ANTES de o campo existir no esquema, e é a decisão que manda.
     exigir('data-hef-secao="mic"' in html,
            "a coluna do microfone sumiu da linha `Ajuste próprio` (decisão nº20)")
-    exigir(f"São os {QUANTAS_SECOES} ajustes" in html,
-           f"a dica do cabeçalho não diz mais `{QUANTAS_SECOES}` ajustes por controle")
+    # A RÉGUA LÊ O NÚMERO, E NÃO A FRASE INTEIRA — 11/09/2026, A5-047. Ela
+    # digitava *"São os sete ajustes"*, e a dica aprovada por ela diz
+    # *"São sete: …"*: a palavra `ajustes` saiu porque a lista que vem a seguir
+    # já diz o que são. O que a régua protege é o NÚMERO por extenso ao lado da
+    # lista de nomes — e isso ela continua cobrando, junto com o `fora_da_dica`
+    # logo abaixo, que exige cada nome.
+    exigir(f"São {QUANTAS_SECOES}:" in html,
+           f"a dica do cabeçalho não diz mais `{QUANTAS_SECOES}` por controle")
     # E A DICA NOMEIA AS SEIS, uma a uma — 05/09/2026. O número já saía de
     # `len(SECOES)` e a LISTA DE NOMES continuava digitada: quando o `sensores`
     # chegou ao esquema, a frase seguiu dizendo "luz, gatilhos, vibração,
@@ -2779,10 +2788,10 @@ def _conferir(html: str) -> None:
     # as TRÊS coisas que a §3 da sprint nomeia: o gesto com o MESMO nome, a
     # dica palavra por palavra, e o ícone fora da fileira de botões.
     for gesto_, canto, dica_ in (
-            ("recarregar", "Perfis Salvos",
-             "Relê a lista do disco. Não descarta o que está no editor ao lado."),
-            ("voltar-a-de-ontem", "Definições",
-             "Desfaz um perfil salvo por engano: cada gravação já guarda a anterior.")):
+            ("recarregar", "Perfis salvos",
+             "Relê a lista de perfis. Não mexe no editor ao lado."),
+            ("voltar-a-de-ontem", "Editar",
+             "Volta o perfil à gravação anterior.")):
         icone = re.search(rf'<button type="button" class="icone-rot" '
                           rf'data-hef-gesto="{gesto_}"[^>]*>', html)
         exigir(icone is not None,
@@ -2821,8 +2830,8 @@ def _conferir(html: str) -> None:
                f"o rótulo da coluna não é `Status`: {th_status.group(1)!r}. "
                f"Ela mandou trocar o nome em 11/09/2026, e SÓ o nome")
     # E A PROSA CONTINUA NOMEANDO A COISA. A frase morre se ela for junto:
-    # *"3 de 4 controles com status neste perfil"* não quer dizer nada.
-    exigir("controles com ajuste próprio neste perfil" in html,
+    # *"3 de 4 controles com status"* não quer dizer nada.
+    exigir("controles com ajuste próprio" in html,
            "o contador do cabeçalho virou `status` — a troca é do RÓTULO da "
            "coluna, e a prosa continua nomeando a coisa")
     exigir("guarda um ajuste só deste controle" in html,
@@ -2907,4 +2916,4 @@ if __name__ == "__main__":
     ROT_P = re.search(r"--rot-p:(\d+)px", CSS).group(1)
     FORA = sum(1 for c in MESA if not c.get("conectado", True))
     print(f"10-perfis: OK, {n} divs · rótulo à esquerda com dois pontos, coluna de {ROT_P}px, "
-          f"zero divisórias no editor · Perfis Salvos e Definições · {FORA} lugar(es) Desconectado")
+          f"zero divisórias no editor · Perfis salvos e Editar · {FORA} lugar(es) Desconectado")
