@@ -604,6 +604,15 @@ def banco_de_provas():
     return barra_html, script
 
 
+# DUAS LINHAS SAÍRAM DO RODAPÉ — 11/09/2026, aprovado por ela. «N propostas, a
+# conferir» era o estado de revisão interna do CSV, e os dois caminhos de
+# `docs/data/` eram endereço do repositório na tela de quem usa o produto. Os
+# dois números continuam existindo — no CSV, que é o dono deles; o que saiu foi
+# a confissão na tela.
+#
+# E ESTA NOTA MORA AQUI, e não dentro da f-string: comentário de HTML escrito lá
+# VIAJA para a página publicada. O mesmo vale para qualquer bilhete de projeto —
+# a folha do produto só apaga `.nota`, não comentário.
 def main():
     pecas = le_csv()
     ds = controle(pecas)
@@ -932,8 +941,8 @@ def main():
          duplo clique, que é como ela abre. -->
     <a class="voltar" href="02-controles.html"
        onclick="if (document.referrer) {{ history.back(); return false }}"
-       title="Volta para a aba de onde você veio.">← Voltar</a>
-    <h1><span class="p">O mapa do controle</span> — a fonte da verdade das peças</h1>
+       title="Volta para a aba anterior.">← Voltar</a>
+    <h1><span class="p">O mapa do controle</span> — o nome de cada peça</h1>
     <!-- A LINHA DE INSTRUÇÃO SAIU — decisão dela, 31/08/2026: *"passe o mouse
          num glifo e a peça acende no desenho · passe na peça e o glifo acende
          só remove isso."* O comportamento FICA: o que sai é a legenda que o
@@ -954,10 +963,7 @@ def main():
   <div class="rodape">
     <span><b>{len(pecas)}</b> peças</span>
     <span><b>{len([p for p in pecas if p["glifo"] != "-"])}</b> com glifo · <b>{len(sem_glifo)}</b> sem</span>
-    <span><b>{len([p for p in pecas if p["grau"] == "PROPOSTO"])}</b> propostas, a conferir</span>
     <span><b>{len(cores_do_csv())}</b> modelos de cor · <b>{len(ZONAS_NA_PROVA)}</b> zonas</span>
-    <span>fontes: <b class="mono">docs/data/pecas-do-dualsense.csv</b>
-      · <b class="mono">docs/data/cores-do-dualsense.csv</b></span>
   </div>
 </div>
 
