@@ -2551,8 +2551,14 @@
             </div>
             <span class="onda" data-campo="mic-onda-lida" data-hef-alvo="classe" data-hef-classe="sem-leitura" data-hef-quando="nao"><i data-campo="mic-onda-0" data-hef-alvo="altura" style="height:22%"></i><i data-campo="mic-onda-1" data-hef-alvo="altura" style="height:48%"></i><i data-campo="mic-onda-2" data-hef-alvo="altura" style="height:72%"></i><i data-campo="mic-onda-3" data-hef-alvo="altura" style="height:95%"></i><i data-campo="mic-onda-4" data-hef-alvo="altura" style="height:64%"></i><i data-campo="mic-onda-5" data-hef-alvo="altura" style="height:38%"></i><i data-campo="mic-onda-6" data-hef-alvo="altura" style="height:52%"></i><i data-campo="mic-onda-7" data-hef-alvo="altura" style="height:80%"></i><i data-campo="mic-onda-8" data-hef-alvo="altura" style="height:44%"></i><i data-campo="mic-onda-9" data-hef-alvo="altura" style="height:26%"></i><i data-campo="mic-onda-10" data-hef-alvo="altura" style="height:58%"></i><i data-campo="mic-onda-11" data-hef-alvo="altura" style="height:88%"></i><i data-campo="mic-onda-12" data-hef-alvo="altura" style="height:40%"></i><i data-campo="mic-onda-13" data-hef-alvo="altura" style="height:20%"></i></span>
             <div class="vol" data-campo="mic-porque" data-hef-alvo="atributo" data-hef-atributo="data-porque">
-              <span class="trilho"><span class="cheio" style="width:80%"></span><input class="puxa-vol" type="range" min="0" max="100" step="1" value="80" data-gesto="volume" data-volume="microfone" aria-label="Volume do microfone deste controle" title="Arraste para escolher quanto do microfone deste controle chega ao PC. Não é o mudo: a luz vermelha fica acesa e o botão do controle continua valendo. Grava na hora."></span>
-              <span class="n">80</span>
+              <!-- O VOLUME DO MICROFONE GANHA ENDEREÇO, 12/09/2026: é a
+                   METADE QUE FALTOU da decisão dela de 02/09 (item 16), que
+                   endereçou o alto-falante desta mesma coluna e deixou este
+                   deslizante no número do DESENHO. Dono do valor e razão dos
+                   dois alvos num endereço só: `a02_controles.volume_do_microfone`. -->
+              <span class="trilho"><span class="cheio" data-campo="mic-barra"
+                data-hef-alvo="largura" style="width:80%"></span><input class="puxa-vol" type="range" min="0" max="100" step="1" value="80" data-gesto="volume" data-volume="microfone" data-campo="mic-barra" data-hef-alvo="valor" aria-label="Volume do microfone deste controle" title="Arraste para escolher quanto do microfone deste controle chega ao PC. Não é o mudo: a luz vermelha fica acesa e o botão do controle continua valendo. Grava na hora."></span>
+              <span class="n" data-campo="mic-num">80</span>
               <button class="mudo-i" data-gesto="mudo" data-mudo="microfone" data-campo="mic-botao-estado" data-hef-alvo="atributo" data-hef-atributo="data-mic-luz" title="Cala o microfone e apaga a luz vermelha do controle. A partir daqui quem manda no mudo é o Hefesto, e o botão do controle para de valer. Para devolvê-lo ao controle, reinicie o Hefesto.">🎙</button>
               <span class="ajuda porque">?<span class="dica" data-campo="mic-porque" data-hef-alvo="html"><i class="nada"></i></span></span>
             </div>
@@ -3021,8 +3027,14 @@
             </div>
             <span class="onda mudo" data-campo="mic-onda-lida" data-hef-alvo="classe" data-hef-classe="sem-leitura" data-hef-quando="nao"><i data-campo="mic-onda-0" data-hef-alvo="altura" style="height:16%"></i><i data-campo="mic-onda-1" data-hef-alvo="altura" style="height:16%"></i><i data-campo="mic-onda-2" data-hef-alvo="altura" style="height:16%"></i><i data-campo="mic-onda-3" data-hef-alvo="altura" style="height:16%"></i><i data-campo="mic-onda-4" data-hef-alvo="altura" style="height:16%"></i><i data-campo="mic-onda-5" data-hef-alvo="altura" style="height:16%"></i><i data-campo="mic-onda-6" data-hef-alvo="altura" style="height:16%"></i><i data-campo="mic-onda-7" data-hef-alvo="altura" style="height:16%"></i><i data-campo="mic-onda-8" data-hef-alvo="altura" style="height:16%"></i><i data-campo="mic-onda-9" data-hef-alvo="altura" style="height:16%"></i><i data-campo="mic-onda-10" data-hef-alvo="altura" style="height:16%"></i><i data-campo="mic-onda-11" data-hef-alvo="altura" style="height:16%"></i><i data-campo="mic-onda-12" data-hef-alvo="altura" style="height:16%"></i><i data-campo="mic-onda-13" data-hef-alvo="altura" style="height:16%"></i></span>
             <div class="vol" data-campo="mic-porque" data-hef-alvo="atributo" data-hef-atributo="data-porque">
-              <span class="trilho"><span class="cheio" style="width:0%"></span><input class="puxa-vol" type="range" min="0" max="100" step="1" value="0" data-gesto="volume" data-volume="microfone" aria-label="Volume do microfone deste controle" title="Arraste para escolher quanto do microfone deste controle chega ao PC. Não é o mudo: a luz vermelha fica acesa e o botão do controle continua valendo. Grava na hora."></span>
-              <span class="n">0</span>
+              <!-- O VOLUME DO MICROFONE GANHA ENDEREÇO, 12/09/2026: é a
+                   METADE QUE FALTOU da decisão dela de 02/09 (item 16), que
+                   endereçou o alto-falante desta mesma coluna e deixou este
+                   deslizante no número do DESENHO. Dono do valor e razão dos
+                   dois alvos num endereço só: `a02_controles.volume_do_microfone`. -->
+              <span class="trilho"><span class="cheio" data-campo="mic-barra"
+                data-hef-alvo="largura" style="width:0%"></span><input class="puxa-vol" type="range" min="0" max="100" step="1" value="0" data-gesto="volume" data-volume="microfone" data-campo="mic-barra" data-hef-alvo="valor" aria-label="Volume do microfone deste controle" title="Arraste para escolher quanto do microfone deste controle chega ao PC. Não é o mudo: a luz vermelha fica acesa e o botão do controle continua valendo. Grava na hora."></span>
+              <span class="n" data-campo="mic-num">0</span>
               <button class="mudo-i" data-gesto="mudo" data-mudo="microfone" data-campo="mic-botao-estado" data-hef-alvo="atributo" data-hef-atributo="data-mic-luz" title="Cala o microfone e apaga a luz vermelha do controle. A partir daqui quem manda no mudo é o Hefesto, e o botão do controle para de valer. Para devolvê-lo ao controle, reinicie o Hefesto.">🎙</button>
               <span class="ajuda porque">?<span class="dica" data-campo="mic-porque" data-hef-alvo="html"><i class="nada"></i></span></span>
             </div>
@@ -3491,8 +3503,14 @@
             </div>
             <span class="onda" data-campo="mic-onda-lida" data-hef-alvo="classe" data-hef-classe="sem-leitura" data-hef-quando="nao"><i data-campo="mic-onda-0" data-hef-alvo="altura" style="height:18%"></i><i data-campo="mic-onda-1" data-hef-alvo="altura" style="height:30%"></i><i data-campo="mic-onda-2" data-hef-alvo="altura" style="height:22%"></i><i data-campo="mic-onda-3" data-hef-alvo="altura" style="height:41%"></i><i data-campo="mic-onda-4" data-hef-alvo="altura" style="height:28%"></i><i data-campo="mic-onda-5" data-hef-alvo="altura" style="height:19%"></i><i data-campo="mic-onda-6" data-hef-alvo="altura" style="height:35%"></i><i data-campo="mic-onda-7" data-hef-alvo="altura" style="height:24%"></i><i data-campo="mic-onda-8" data-hef-alvo="altura" style="height:30%"></i><i data-campo="mic-onda-9" data-hef-alvo="altura" style="height:20%"></i><i data-campo="mic-onda-10" data-hef-alvo="altura" style="height:38%"></i><i data-campo="mic-onda-11" data-hef-alvo="altura" style="height:26%"></i><i data-campo="mic-onda-12" data-hef-alvo="altura" style="height:22%"></i><i data-campo="mic-onda-13" data-hef-alvo="altura" style="height:31%"></i></span>
             <div class="vol" data-campo="mic-porque" data-hef-alvo="atributo" data-hef-atributo="data-porque">
-              <span class="trilho"><span class="cheio" style="width:60%"></span><input class="puxa-vol" type="range" min="0" max="100" step="1" value="60" data-gesto="volume" data-volume="microfone" aria-label="Volume do microfone deste controle" title="Arraste para escolher quanto do microfone deste controle chega ao PC. Não é o mudo: a luz vermelha fica acesa e o botão do controle continua valendo. Grava na hora."></span>
-              <span class="n">60</span>
+              <!-- O VOLUME DO MICROFONE GANHA ENDEREÇO, 12/09/2026: é a
+                   METADE QUE FALTOU da decisão dela de 02/09 (item 16), que
+                   endereçou o alto-falante desta mesma coluna e deixou este
+                   deslizante no número do DESENHO. Dono do valor e razão dos
+                   dois alvos num endereço só: `a02_controles.volume_do_microfone`. -->
+              <span class="trilho"><span class="cheio" data-campo="mic-barra"
+                data-hef-alvo="largura" style="width:60%"></span><input class="puxa-vol" type="range" min="0" max="100" step="1" value="60" data-gesto="volume" data-volume="microfone" data-campo="mic-barra" data-hef-alvo="valor" aria-label="Volume do microfone deste controle" title="Arraste para escolher quanto do microfone deste controle chega ao PC. Não é o mudo: a luz vermelha fica acesa e o botão do controle continua valendo. Grava na hora."></span>
+              <span class="n" data-campo="mic-num">—</span>
               <button class="mudo-i" data-gesto="mudo" data-mudo="microfone" data-campo="mic-botao-estado" data-hef-alvo="atributo" data-hef-atributo="data-mic-luz" title="Cala o microfone e apaga a luz vermelha do controle. A partir daqui quem manda no mudo é o Hefesto, e o botão do controle para de valer. Para devolvê-lo ao controle, reinicie o Hefesto.">🎙</button>
               <span class="ajuda porque">?<span class="dica" data-campo="mic-porque" data-hef-alvo="html"><i class="nada"></i></span></span>
             </div>
@@ -3961,8 +3979,14 @@
             </div>
             <span class="onda mudo" data-campo="mic-onda-lida" data-hef-alvo="classe" data-hef-classe="sem-leitura" data-hef-quando="nao"><i data-campo="mic-onda-0" data-hef-alvo="altura" style="height:16%"></i><i data-campo="mic-onda-1" data-hef-alvo="altura" style="height:16%"></i><i data-campo="mic-onda-2" data-hef-alvo="altura" style="height:16%"></i><i data-campo="mic-onda-3" data-hef-alvo="altura" style="height:16%"></i><i data-campo="mic-onda-4" data-hef-alvo="altura" style="height:16%"></i><i data-campo="mic-onda-5" data-hef-alvo="altura" style="height:16%"></i><i data-campo="mic-onda-6" data-hef-alvo="altura" style="height:16%"></i><i data-campo="mic-onda-7" data-hef-alvo="altura" style="height:16%"></i><i data-campo="mic-onda-8" data-hef-alvo="altura" style="height:16%"></i><i data-campo="mic-onda-9" data-hef-alvo="altura" style="height:16%"></i><i data-campo="mic-onda-10" data-hef-alvo="altura" style="height:16%"></i><i data-campo="mic-onda-11" data-hef-alvo="altura" style="height:16%"></i><i data-campo="mic-onda-12" data-hef-alvo="altura" style="height:16%"></i><i data-campo="mic-onda-13" data-hef-alvo="altura" style="height:16%"></i></span>
             <div class="vol" data-campo="mic-porque" data-hef-alvo="atributo" data-hef-atributo="data-porque">
-              <span class="trilho"><span class="cheio" style="width:75%"></span><input class="puxa-vol" type="range" min="0" max="100" step="1" value="75" data-gesto="volume" data-volume="microfone" aria-label="Volume do microfone deste controle" title="Arraste para escolher quanto do microfone deste controle chega ao PC. Não é o mudo: a luz vermelha fica acesa e o botão do controle continua valendo. Grava na hora."></span>
-              <span class="n">75</span>
+              <!-- O VOLUME DO MICROFONE GANHA ENDEREÇO, 12/09/2026: é a
+                   METADE QUE FALTOU da decisão dela de 02/09 (item 16), que
+                   endereçou o alto-falante desta mesma coluna e deixou este
+                   deslizante no número do DESENHO. Dono do valor e razão dos
+                   dois alvos num endereço só: `a02_controles.volume_do_microfone`. -->
+              <span class="trilho"><span class="cheio" data-campo="mic-barra"
+                data-hef-alvo="largura" style="width:75%"></span><input class="puxa-vol" type="range" min="0" max="100" step="1" value="75" data-gesto="volume" data-volume="microfone" data-campo="mic-barra" data-hef-alvo="valor" aria-label="Volume do microfone deste controle" title="Arraste para escolher quanto do microfone deste controle chega ao PC. Não é o mudo: a luz vermelha fica acesa e o botão do controle continua valendo. Grava na hora."></span>
+              <span class="n" data-campo="mic-num">—</span>
               <button class="mudo-i" data-gesto="mudo" data-mudo="microfone" data-campo="mic-botao-estado" data-hef-alvo="atributo" data-hef-atributo="data-mic-luz" title="Cala o microfone e apaga a luz vermelha do controle. A partir daqui quem manda no mudo é o Hefesto, e o botão do controle para de valer. Para devolvê-lo ao controle, reinicie o Hefesto.">🎙</button>
               <span class="ajuda porque">?<span class="dica" data-campo="mic-porque" data-hef-alvo="html"><i class="nada"></i></span></span>
             </div>

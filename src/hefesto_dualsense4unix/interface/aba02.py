@@ -2433,8 +2433,14 @@ def bloco(c, *, bat, carga=None, glifos_on, l2, r2, touch, sticks,
             </div>
             {onda(mic_v, mic_mudo, "mic")}
             {linha_de_volume("mic-porque")}
-              <span class="trilho"><span class="cheio" style="width:{mic_vol}%"></span><input class="puxa-vol" type="range" min="0" max="100" step="1" value="{mic_vol}" data-gesto="volume" data-volume="microfone" aria-label="{ROTULO_VOL_MIC}" title="{DICA_VOL_MIC}"></span>
-              <span class="n">{mic_vol}</span>
+              <!-- O VOLUME DO MICROFONE GANHA ENDEREÇO, 12/09/2026: é a
+                   METADE QUE FALTOU da decisão dela de 02/09 (item 16), que
+                   endereçou o alto-falante desta mesma coluna e deixou este
+                   deslizante no número do DESENHO. Dono do valor e razão dos
+                   dois alvos num endereço só: `a02_controles.volume_do_microfone`. -->
+              <span class="trilho"><span class="cheio" data-campo="mic-barra"
+                data-hef-alvo="largura" style="width:{mic_vol}%"></span><input class="puxa-vol" type="range" min="0" max="100" step="1" value="{mic_vol}" data-gesto="volume" data-volume="microfone" data-campo="mic-barra" data-hef-alvo="valor" aria-label="{ROTULO_VOL_MIC}" title="{DICA_VOL_MIC}"></span>
+              <span class="n" data-campo="mic-num">{mic_vol}</span>
               <button class="mudo-i" data-gesto="mudo" data-mudo="microfone" data-campo="mic-botao-estado" data-hef-alvo="atributo" data-hef-atributo="{ATRIBUTO_DA_LUZ_DO_MIC}" title="{DICA_MIC_MUDO}">🎙</button>
               {ponto_de_interrogacao("mic-porque")}
             </div>
@@ -3891,8 +3897,13 @@ def _conferir(doc):
     #     —, e é ela que garante que o anel e o retângulo nunca discordem. Por
     #     isso a conta de baixo é `alvos.count(alvo)`, e não `1`: perder UMA das
     #     duas continua reprovando com o nome.
+    #     E O DESLIZANTE DO MICROFONE ENTROU NA LISTA — 12/09/2026. Ele era o
+    #     único volume da coluna sem endereço nenhum, e por isso o número e a
+    #     barra ficavam no valor do DESENHO para sempre; a régua não o via
+    #     porque uma lista só cobra o que está escrita nela.
     for campo, alvos in (("bateria-barra", ("largura",)),
                          ("alto-barra", ("largura", "valor")),
+                         ("mic-barra", ("largura", "valor")),
                          ("luz-cor", ("cor", "cor")), ("touch-ponto", ("classe",))):
         tags = re.findall(r'<[^>]*data-campo="' + re.escape(campo) + r'"[^>]*>', corpo)
         exigir(len(tags) == len(MESA) * len(alvos),
