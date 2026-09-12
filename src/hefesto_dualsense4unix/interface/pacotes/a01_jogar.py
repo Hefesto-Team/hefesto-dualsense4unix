@@ -291,9 +291,8 @@ SERVICO_DESLIGADO = "O Hefesto está desligado."
 #:
 #: PROVISÓRIO — texto de tela é palavra dela (PROVA-DE-TELA-01).
 SERVICO_CALADO = (
-    f"{SERVICO_DESLIGADO} Esta tela parou de ler o serviço: o modo, os "
-    "controles e a carga não estão sendo afirmados. Ela volta sozinha quando o "
-    "serviço responder."
+    f"{SERVICO_DESLIGADO} Esta tela parou de ler o serviço. Ela volta sozinha "
+    "quando ele responder."
 )
 
 #: A LINHA DO ``+N`` — o que a coluna diz quando não coube tudo.
@@ -322,8 +321,8 @@ def _linha_do_mais(quantos: int) -> tuple[str, str]:
 #: afastarem. Quem cuidar de `jogar_vivo.py` fecha isto com uma linha: importar
 #: esta constante em vez de repetir a frase.
 MESA_VAZIA = (
-    "Nenhum controle ligado agora. Conecte um pelo cabo ou pelo "
-    "rádio — ele aparece sozinho, sem recarregar esta tela."
+    "Nenhum controle ligado. Conecte um pelo cabo ou pelo "
+    "rádio: ele aparece aqui sozinho."
 )
 
 #: QUANTOS LUGARES A PÁGINA TEM. O dono é o desenho (`monta.MESA`), e o número
@@ -354,8 +353,8 @@ def lugares_da_mesa() -> int:
 #:
 #: PROVISÓRIO — texto de tela é palavra dela.
 RESSALVA_DA_MASCARA = (
-    "Guardada por controle: o Hefesto não está entregando o controle ao jogo "
-    "agora, e a escolha vale assim que ele voltar a entregar."
+    "Guardada neste controle. Ela passa a valer quando o Hefesto voltar a "
+    "entregá-lo ao jogo."
 )
 
 #: O RÓTULO E A DICA DO CADEADO — **as duas palavras são da JANELA ANTIGA**, e
@@ -385,8 +384,8 @@ RESSALVA_DA_MASCARA = (
 #:
 #: PROVISÓRIO — texto de tela é palavra dela (PROVA-DE-TELA-01).
 ESPERA_DICA = (
-    "O lugar está reservado e o jogo ainda não recebeu este controle. "
-    "O número fica forte quando ele entrar na partida."
+    "O jogo ainda não recebeu este controle. "
+    "O número acende quando ele entrar na partida."
 )
 
 #: O RÓTULO É PALAVRA DELA, de 11/09/2026, e são três: **«Trava o perfil
@@ -404,9 +403,8 @@ ESPERA_DICA = (
 #: arquivo, não.
 CADEADO_ROTULO = "Trava o perfil ativo"
 CADEADO_DICA = (
-    "Congela a troca automática: o perfil que você deixou ativo continua "
-    "valendo mesmo ao abrir qualquer jogo. "
-    "Desmarque para o Hefesto voltar a escolher o perfil por você."
+    "O perfil ativo continua valendo mesmo quando você abre outro jogo. "
+    "Desmarque para o Hefesto voltar a escolher sozinho."
 )
 
 #: O QUE A TELA DIZ QUANDO O SERVIÇO NÃO CONFIRMOU O CADEADO — e a frase é da
@@ -424,7 +422,7 @@ CADEADO_DICA = (
 #: `test_a_palavra_do_cadeado_e_a_que_ela_ja_leu` confere as TRÊS contra o fonte
 #: da GTK — no dia em que a janela antiga trocar a palavra, a tela nova não fica
 #: falando sozinha.
-CADEADO_RECUSA = "O Hefesto está desligado — o cadeado não foi aplicado."
+CADEADO_RECUSA = "O Hefesto está desligado: a trava não foi aplicada."
 
 
 def _cadeado(state: dict[str, Any]) -> str:
@@ -475,8 +473,8 @@ MARCA_DO_PRIMARIO = "primário"
 #:
 #: PROVISÓRIO — texto de tela é palavra dela (PROVA-DE-TELA-01).
 PRIMARIO_DICA = (
-    "É este controle que o Hefesto ouve para navegar o computador, e é dele "
-    "que ele lê os botões. Quem é o primário quem decide é o serviço."
+    "É por este controle que o Hefesto navega o computador. "
+    "Quem o escolhe é o serviço."
 )
 
 
@@ -2330,12 +2328,12 @@ def modo_xbox(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
 #:
 #: PROVISÓRIO — texto de tela é palavra dela.
 MASCARA_VALE_SEM_PERFIL = (
-    "A máscara vale agora, mas não ficou guardada: escolha um perfil na aba "
-    "Perfis e ela passa a ser lembrada nele."
+    "A máscara vale agora, mas não ficou guardada. Escolha um perfil na aba "
+    "Perfis para ela ser lembrada."
 )
 MASCARA_VALE_SEM_ENDERECO = (
-    "A máscara vale agora, mas o perfil recusou guardá-la só para este "
-    "controle: ele não se identifica de um jeito que o perfil saiba mirar."
+    "A máscara vale agora, mas o perfil não consegue guardá-la só para este "
+    "controle."
 )
 MASCARA_VALE_SEM_GUARDAR = (
     "A máscara vale agora, mas não consegui guardá-la no perfil."
@@ -2406,8 +2404,8 @@ def mascara_do_controle(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, A
         lugar = str(o.get("controle") or "").strip()
         if lugar:
             raise RuntimeError(
-                f"Não há controle no lugar {lugar.upper()}. A máscara é de um "
-                "aparelho: ligue um controle aqui e ele recebe a escolha.")
+                f"Não há controle no lugar {lugar.upper()}. Ligue um controle "
+                "aqui para ele receber a máscara.")
         raise ValueError("mascara: o clique não disse em qual controle")
 
     rotulo = str(o.get("mascara") or o.get("rotulo") or "").strip()

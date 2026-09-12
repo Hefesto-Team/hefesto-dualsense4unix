@@ -15,19 +15,17 @@ legais, medidas no mesmo dia:
 
     "o Hefesto não consegue nomear o que o sistema não nomeia"   limite do Linux
     "sem ela o Hefesto não consegue escrever nos controles"      explica o módulo
-    "o Hefesto não está entregando o controle ao jogo agora"     estado de agora
     "o Hefesto não volta a perguntar"                            comportamento
 
 
 A PARTE DIFÍCIL, e por que a régua NÃO é um `grep` de frases proibidas
 ----------------------------------------------------------------------
-As duas famílias têm a MESMA forma. Estas quatro estão na tela hoje e as quatro
+As duas famílias têm a MESMA forma. Estas três estão na tela hoje e as três
 são legítimas::
 
-    "O lugar está reservado e o jogo ainda não recebeu este controle"
+    "O jogo ainda não recebeu este controle"
     "Um traço no lugar do número quer dizer que a leitura ainda não chegou"
     "o menor número que ainda não existe em face nenhuma"
-    "O PS+R3 ainda não para aqui"
 
 O que separa não é a palavra — é **de quem é o sujeito**. Quando o sujeito é o
 jogo, a leitura ou o número, `ainda não` é estado do mundo. Quando o sujeito
@@ -161,12 +159,16 @@ FATOS: dict[str, str] = {
     "o menor número que ainda não existe em face nenhuma":
         "o sujeito é O NÚMERO. Fato de aritmética, descrevendo o que o botão "
         "faz — 07/09/2026",
-    "O PS+R3 ainda não para aqui":
-        "o sujeito é O ATALHO, e a frase diz ONDE ele age — o limite de escopo "
-        "de um gesto, não capacidade por entregar — 07/09/2026",
-    "o Hefesto não está entregando o controle ao jogo agora":
-        "ESTADO DE AGORA, nomeado por ela como legal em 07/09/2026 — a escolha "
-        "vale assim que ele voltar a entregar",
+    # A FRASE DO ATALHO SAIU DA TELA — 11/09/2026, proposta A3-011, aprovada
+    # por ela. Ela estava classificada aqui como legítima (o sujeito era o
+    # ATALHO, e a frase dizia ONDE ele age), e quem a tirou não foi esta
+    # peneira: foi a decisão dela de encurtar as dicas dos modos. Uma
+    # classificação que sobrevive à frase envelhece calada, e a checagem nos
+    # DOIS SENTIDOS existe justamente para isto — foi ela que pegou.
+    # A RESSALVA DA MÁSCARA FOI REESCRITA — 11/09/2026, proposta A3-018,
+    # aprovada por ela: a oração que morava aqui repetia a entrega duas vezes
+    # na mesma frase e saiu. A classificação dela (estado de agora, legítima)
+    # morre com a frase que ela classificava.
     "o Hefesto não volta a perguntar":
         "COMPORTAMENTO, nomeado por ela como legal em 07/09/2026 — a frase diz "
         "o que o botão faz",
