@@ -4,7 +4,7 @@ set -e
 case "$1" in
     remove)
         echo ""
-        echo "Hefesto - Dualsense4Unix removido."
+        echo "Hefesto - DualSense4Unix removido."
         echo ""
         echo "Configuracoes do usuario foram preservadas em:"
         echo "  ~/.config/hefesto-dualsense4unix/  (perfis, sessao, preferencias)"

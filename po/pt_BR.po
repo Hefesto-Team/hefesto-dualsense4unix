@@ -1,5 +1,5 @@
 # Portuguese (Brazil) translation for hefesto-dualsense4unix.
-# Copyright (C) 2026 Hefesto - Dualsense4Unix project
+# Copyright (C) 2026 Hefesto - DualSense4Unix project
 # This file is distributed under the same license as the hefesto-dualsense4unix package.
 # Vitoria Maria <[REDACTED]>, 2026.
 #
@@ -389,8 +389,8 @@ msgid "Aplicar e fechar"
 msgstr "Aplicar em L2"
 
 #: src/hefesto_dualsense4unix/app/tray.py:218
-msgid "Hefesto - Dualsense4Unix (carregando...)"
-msgstr "Hefesto - Dualsense4Unix (carregando...)"
+msgid "Hefesto - DualSense4Unix (carregando...)"
+msgstr "Hefesto - DualSense4Unix (carregando...)"
 
 #: src/hefesto_dualsense4unix/app/tray.py:222
 msgid "Abrir painel"
@@ -401,8 +401,8 @@ msgid "Perfis"
 msgstr "Perfis"
 
 #: src/hefesto_dualsense4unix/app/tray.py:239
-msgid "Sair do Hefesto - Dualsense4Unix"
-msgstr "Sair do Hefesto - Dualsense4Unix"
+msgid "Sair do Hefesto - DualSense4Unix"
+msgstr "Sair do Hefesto - DualSense4Unix"
 
 #: src/hefesto_dualsense4unix/app/tray.py:445
 #, python-format
@@ -411,13 +411,13 @@ msgstr ""
 
 #: src/hefesto_dualsense4unix/app/tray.py:492
 #, python-format
-msgid "Hefesto - Dualsense4Unix - perfil: %s"
-msgstr "Hefesto - Dualsense4Unix - perfil: %s"
+msgid "Hefesto - DualSense4Unix - perfil: %s"
+msgstr "Hefesto - DualSense4Unix - perfil: %s"
 
 #: src/hefesto_dualsense4unix/app/tray.py:494
 #, python-format
-msgid "Hefesto - Dualsense4Unix - %d perfis"
-msgstr "Hefesto - Dualsense4Unix - %d perfis"
+msgid "Hefesto - DualSense4Unix - %d perfis"
+msgstr "Hefesto - DualSense4Unix - %d perfis"
 
 #: src/hefesto_dualsense4unix/app/mesa.py:111
 #, fuzzy, python-brace-format
@@ -599,8 +599,8 @@ msgid ""
 msgstr ""
 
 #: src/hefesto_dualsense4unix/gui/main.glade:96
-msgid "Hefesto - Dualsense4Unix"
-msgstr "Hefesto - Dualsense4Unix"
+msgid "Hefesto - DualSense4Unix"
+msgstr "Hefesto - DualSense4Unix"
 
 #. Tamanho/peso saem da escala tipográfica (.hefesto-titulo
 #. = 21px/700, o valor do mockup). O `size="xx-large"` que
@@ -2185,9 +2185,9 @@ msgstr "Restaura o perfil 'Meu Perfil' ao estado original"
 #~ msgstr "Envia gatilhos LEDs rumble e mouse ao controle"
 
 #~ msgid ""
-#~ "<span size=\"xx-large\" weight=\"bold\">Hefesto - Dualsense4Unix</span>"
+#~ "<span size=\"xx-large\" weight=\"bold\">Hefesto - DualSense4Unix</span>"
 #~ msgstr ""
-#~ "<span size=\"xx-large\" weight=\"bold\">Hefesto - Dualsense4Unix</span>"
+#~ "<span size=\"xx-large\" weight=\"bold\">Hefesto - DualSense4Unix</span>"
 
 #~ msgid ""
 #~ "<span size=\"small\" foreground=\"#888\">daemon de gatilhos adaptativos "

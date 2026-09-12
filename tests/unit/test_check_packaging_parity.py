@@ -800,7 +800,7 @@ def test_dkms_playstation_parity_do_repo_real_esta_verde() -> None:
 
 _DESKTOP_APP = (
     "[Desktop Entry]\n"
-    "Name=Hefesto - Dualsense4Unix\n"
+    "Name=Hefesto - DualSense4Unix\n"
     "Exec=/usr/bin/hefesto-dualsense4unix-gui\n"
     "Icon=hefesto\n"
     "Type=Application\n"

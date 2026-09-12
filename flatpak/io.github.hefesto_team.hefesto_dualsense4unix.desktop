@@ -1,5 +1,5 @@
 [Desktop Entry]
-Name=Hefesto - Dualsense4Unix
+Name=Hefesto - DualSense4Unix
 Comment=Gerenciador DualSense para Linux
 Exec=hefesto-dualsense4unix-gui
 Icon=io.github.hefesto_team.hefesto_dualsense4unix

@@ -1,4 +1,4 @@
-"""O MOTOR do Hefesto - Dualsense4Unix: o que a tela chama, sem a tela.
+"""O MOTOR do Hefesto - DualSense4Unix: o que a tela chama, sem a tela.
 
 A JANELA GTK SAIU EM 06/09/2026, e este pacote NÃO saiu com ela. Decisão dela
 (`D-0609-GTK-LEVA-INTEIRA`): *"a ideia sempre foi reaproveitar o que fiz no gtk

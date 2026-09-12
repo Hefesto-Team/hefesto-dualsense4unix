@@ -1,7 +1,7 @@
 """Instalação e gestão da unidade systemd --user `hefesto-dualsense4unix.service`.
 
 Unidade única (SIMPLIFY-UNIT-01). A dualidade histórica normal/headless foi
-eliminada porque o Hefesto - Dualsense4Unix é inerentemente um daemon desktop com DualSense.
+eliminada porque o Hefesto - DualSense4Unix é inerentemente um daemon desktop com DualSense.
 
 Path canônico: `~/.config/systemd/user/`. Para descobrir o `.service`
 original, lemos o diretório `assets/` do repo (desenvolvimento) ou

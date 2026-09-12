@@ -1,4 +1,4 @@
-"""ABC Plugin — interface base para todos os plugins do Hefesto - Dualsense4Unix.
+"""ABC Plugin — interface base para todos os plugins do Hefesto - DualSense4Unix.
 
 Cada plugin Python em ~/.config/hefesto-dualsense4unix/plugins/*.py deve definir
 exatamente uma subclasse de Plugin. A subclasse é instanciada pelo
@@ -27,7 +27,7 @@ if TYPE_CHECKING:
 
 
 class Plugin(ABC):
-    """Classe base para plugins do Hefesto - Dualsense4Unix.
+    """Classe base para plugins do Hefesto - DualSense4Unix.
 
     Atributos de classe obrigatórios:
         name: slug único do plugin (snake_case, sem espacos).

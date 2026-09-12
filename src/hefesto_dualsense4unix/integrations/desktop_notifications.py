@@ -22,6 +22,7 @@ import os
 import time
 from typing import Any
 
+from hefesto_dualsense4unix.utils import identidade
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 
 logger = get_logger(__name__)
@@ -76,7 +77,7 @@ def notify(
     summary: str,
     body: str = "",
     *,
-    app_name: str = "Hefesto - Dualsense4Unix",
+    app_name: str = identidade.atual().nome_longo,
     icon: str = "input-gaming",
     timeout_ms: int = 4000,
     once_key: str | None = None,

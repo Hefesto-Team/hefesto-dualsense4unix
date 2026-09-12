@@ -18,7 +18,7 @@ de sistema não tocam nele. O daemon lê esse arquivo no startup (via
 `resolve_boot_profile`) e re-ativa o perfil automaticamente.
 
 CLUSTER-IPC-STATE-PROFILE-01 (Bug B): adicional `active_profile.txt` é marker
-secundário lido por `cli/cmd_profile.py:402` (`profile save --from-active`,
+secundário lido por `cli/cmd_profile.py:403` (`profile save --from-active`,
 que clona o perfil ativo). Fato substituído (ONDA0-Z5/T14, 24/08/2026): o
 cabeçalho dizia que o consumidor era um subcomando de leitura da CLI que
 mediu-se não existir (`typer` devolve "No such command", sugerindo `create`
@@ -108,7 +108,7 @@ def save_active_marker(name: str) -> None:
 def read_active_marker() -> str | None:
     """Lê `active_profile.txt`, ou None se ausente/vazio.
 
-    Marker secundário lido por `cli/cmd_profile.py:402`
+    Marker secundário lido por `cli/cmd_profile.py:403`
     (`profile save --from-active`). Daemon usa `resolve_boot_profile`
     (session.json + seed do marker) no restore.
 

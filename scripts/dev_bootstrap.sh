@@ -30,7 +30,7 @@ python3 -m venv --system-site-packages .venv
 # shellcheck disable=SC1091
 . .venv/bin/activate
 
-echo "[3/4] instalando Hefesto - Dualsense4Unix em modo dev..."
+echo "[3/4] instalando Hefesto - DualSense4Unix em modo dev..."
 EXTRAS="dev,emulation"
 [[ "$WITH_TRAY" == "1" ]] && EXTRAS="$EXTRAS,tray"
 pip install --upgrade pip

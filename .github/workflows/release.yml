@@ -421,7 +421,7 @@ jobs:
             gh release delete "v${VERSION}" --yes
           fi
           gh release create "v${VERSION}" \
-            --title "Hefesto - Dualsense4Unix v${VERSION}" \
+            --title "Hefesto - DualSense4Unix v${VERSION}" \
             --notes-file /tmp/release-notes.md \
             dist/hefesto_dualsense4unix-*.whl dist/hefesto_dualsense4unix-*.tar.gz \
             dist/appimage/*.AppImage \

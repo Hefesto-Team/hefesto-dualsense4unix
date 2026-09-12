@@ -21,6 +21,7 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import Any
 
+from hefesto_dualsense4unix.utils import identidade
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 
 logger = get_logger(__name__)
@@ -96,7 +97,7 @@ class TrayController:
         self._indicator.set_status(indicator_cls.IndicatorStatus.ACTIVE)
 
         self._menu = Gtk.Menu()
-        self._status_item = Gtk.MenuItem(label="Hefesto - Dualsense4Unix: carregando...")
+        self._status_item = Gtk.MenuItem(label=f"{identidade.atual().nome_longo}: carregando...")
         self._status_item.set_sensitive(False)
         self._menu.append(self._status_item)
 

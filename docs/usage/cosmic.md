@@ -1,6 +1,6 @@
-# Hefesto - Dualsense4Unix no COSMIC DE (Pop!_OS 24.04, Wayland)
+# Hefesto - DualSense4Unix no COSMIC DE (Pop!_OS 24.04, Wayland)
 
-Guia de uso do Hefesto - Dualsense4Unix no ambiente COSMIC, o desktop Wayland nativo do Pop!_OS.
+Guia de uso do Hefesto - DualSense4Unix no ambiente COSMIC, o desktop Wayland nativo do Pop!_OS.
 
 ---
 
@@ -26,13 +26,13 @@ numeração recomeçou em 0.1.0 em 24/07/2026 (ver [CHANGELOG](../../CHANGELOG.m
 
 ## Autoswitch de perfil no COSMIC
 
-O Hefesto - Dualsense4Unix detecta automaticamente o backend de janela ativa com base nas
+O Hefesto - DualSense4Unix detecta automaticamente o backend de janela ativa com base nas
 variaveis de ambiente do compositor:
 
 ### Cenario 1 — XWayland ativo (padrão no COSMIC 1.0+)
 
 Quando `DISPLAY` e `WAYLAND_DISPLAY` estao presentes simultaneamente (XWayland
-em execução), o Hefesto - Dualsense4Unix usa o backend X11 (`XlibBackend`). O autoswitch de
+em execução), o Hefesto - DualSense4Unix usa o backend X11 (`XlibBackend`). O autoswitch de
 perfil funciona normalmente.
 
 Verificar:
@@ -44,7 +44,7 @@ Esperado: ambas as variaveis preenchidas.
 
 ### Cenario 2 — Wayland puro (sem XWayland)
 
-Quando apenas `WAYLAND_DISPLAY` esta presente, o Hefesto - Dualsense4Unix tenta usar o portal
+Quando apenas `WAYLAND_DISPLAY` esta presente, o Hefesto - DualSense4Unix tenta usar o portal
 XDG D-Bus `org.freedesktop.portal.Window.GetActiveWindow` (disponivel no
 COSMIC 1.0+ e GNOME 46+).
 
@@ -71,7 +71,7 @@ foi o perfil do jogo caindo num alt-tab. Sem informação, o produto não mexe.
 
 ### Cenario 3 — Sem display (servidor headless)
 
-O Hefesto - Dualsense4Unix inicia em modo silencioso. Daemon e polling funcionam; GUI não abre.
+O Hefesto - DualSense4Unix inicia em modo silencioso. Daemon e polling funcionam; GUI não abre.
 
 ---
 

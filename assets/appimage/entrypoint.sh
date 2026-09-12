@@ -1,5 +1,5 @@
 #!/bin/bash
-# Entrypoint do AppImage Hefesto - Dualsense4Unix.
+# Entrypoint do AppImage Hefesto - DualSense4Unix.
 # $APPDIR é definido pelo AppRun do python-appimage.
 #
 # IMPORTANTE: este AppImage expõe APENAS a CLI. A GUI GTK3 requer
@@ -50,7 +50,7 @@ print(version("hefesto-dualsense4unix"))' 2>/dev/null || true)"
     # O .deb carrega a tag do Python no nome (_py312 / _py310), que depende de
     # em qual distro ele foi construído — por isso o glob no fim.
     cat <<BANNER >&2
-Hefesto - Dualsense4Unix v${HEFESTO_VERSION} — AppImage (CLI only)
+Hefesto - DualSense4Unix v${HEFESTO_VERSION} — AppImage (CLI only)
 
 Para a GUI GTK3 use:
   - .deb       sudo apt install ./hefesto-dualsense4unix_${HEFESTO_VERSION}_amd64_py*.deb

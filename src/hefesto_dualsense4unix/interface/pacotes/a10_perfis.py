@@ -2499,7 +2499,7 @@ def voltar_a_de_ontem(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any
     A FRASE É A DA CLI, que era o único chamador antes desta tela: *"perfil
     restaurado: X (versão …)"* (`cli/cmd_profile.py:295`). O carimbo da versão
     entra porque é ele que o `profile historico` lista  (noqa-acento: nome do
-    subcomando da CLI, ASCII em `cmd_profile.py:233`) — é o que ela digita para
+    subcomando da CLI, ASCII em `cmd_profile.py:234`) — é o que ela digita para
     voltar a outra, e sem ele a frase não diz de onde veio.
 
     O NOME, E NÃO O CAMINHO: a CLI imprime o `Path` que `restaurar_do_historico`
