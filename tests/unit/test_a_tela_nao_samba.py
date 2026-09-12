@@ -577,3 +577,57 @@ def test_a_fita_nao_e_trocada_com_um_chip_em_voo() -> None:
     # o REGIME: da segunda volta em diante, com o chip em voo, nada se move.
     assert fora["contas"][1:] == [0, 0], (
         f"a fita mexeu no DOM com um chip em voo dentro — {fora['contas']}")
+
+
+def test_a_largura_normalizada_pelo_cssom_nao_reconta() -> None:
+    """`5.0%` escrito volta `5%` lido — e o contador não pode somar por isso.
+
+    ACHADO EM 11/09/2026 (F3-CALIBRAR), na página de calibração, com a bancada
+    PARADA e um dublê de daemon::
+
+        60 tiques · 60 pinturas · 69 valores   ← e ZERO mutações de DOM
+
+    O DEFEITO NÃO É SAMBA, e é por isso que ele atravessou as réguas deste
+    arquivo: o DOM não se mexe. O `style` serializado é o mesmo, então nenhum
+    `MutationRecord` nasce. O que mente é o CONTADOR — e ele é O instrumento com
+    que esta casa prova que um endereço existe, e o que separa "pintou uma vez e
+    sossegou" de "esta aba repinta para sempre".
+
+    A CAUSA: `mesa_viva._barra_bipolar` emite `f"{largura:.1f}"`, então toda
+    barra de número redondo vai como `5.0`; o CSSOM guarda `5%`. Com a
+    comparação ANTES da escrita (`el.style.width !== t + '%'`), os dois nunca
+    casam. Paga QUEM USAR O ALVO: os eixos da `02-controles`, os da calibração, e
+    toda barra futura com uma casa decimal.
+
+    A MORDIDA: devolva ao ramo `largura` a forma de antes —
+    `if(el.style.width !== t + '%'){ …; return 1 } return 0` — e as duas últimas
+    pinturas voltam a contar 1 cada.
+    """
+    fora = _no_webkit(
+        '<i data-campo="barra" data-hef-alvo="largura" style="width:0%"></i>'
+        '<i data-campo="alto" data-hef-alvo="altura" style="height:0%"></i>',
+        [{"mesa": {"barra": "5.0", "alto": "22.0"}}] * 3,
+    )
+    assert fora["pintou"] == [2, 0, 0], (
+        f"a largura/altura foi recontada com o mesmo valor — {fora['pintou']}. "
+        "O CSSOM normalizou `5.0%` para `5%` e a comparação antes da escrita "
+        "nunca casa")
+    assert fora["contas"][1:] == [0, 0], (
+        f"a largura mexeu no DOM ao repetir — {fora['contas']}")
+
+
+def test_a_largura_invalida_nao_conta_pintura() -> None:
+    """O travessão de um lugar sem dono não é largura, e não soma pintura.
+
+    `molde_do_lugar` escreve `—` em todo campo de um lugar sem aparelho. Numa
+    barra isso vira `width: —%`, que o CSSOM RECUSA: nada muda na tela, e com a
+    comparação antes da escrita o contador somava +1 por tique **para sempre**.
+
+    A MORDIDA: a mesma do teste acima.
+    """
+    fora = _no_webkit(
+        '<i data-campo="barra" data-hef-alvo="largura" style="width:0%"></i>',
+        [{"mesa": {"barra": None}}] * 3,
+    )
+    assert fora["pintou"] == [0, 0, 0], (
+        f"o travessão contou como pintura numa barra — {fora['pintou']}")
