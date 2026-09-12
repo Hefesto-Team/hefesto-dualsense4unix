@@ -367,6 +367,50 @@ _AUDIO_TETOS = (
 VOLUME_PADRAO_DO_SOM: int = volume_do_percentual(100)
 
 
+def byte_do_volume_do_microfone(percentual: Any) -> int:
+    """Porcentagem da tela (0-100) -> `common[6]`, o ganho de captura do aparelho.
+
+    MIC-VOLUME-02 (09/09/2026). **A régua mora aqui e só aqui**, pela mesma
+    razão que fez a do alto-falante virar módulo próprio: a grandeza é falada
+    por três superfícies (o `mic.volume.set` do IPC, o applier de perfil e o
+    ensaio da bancada), e duas contas para a mesma grandeza é a classe de
+    defeito que esta casa mais paga.
+
+    **O teto é LIDO, não digitado**: `rep.TETO_MIC_VOLUME` (`0x40`), que é o
+    mesmo número que o `hid-playstation` desta máquina anota ao NOMEAR o campo
+    (`mic_volume`, comentário `0x0 - 0x40`). Um segundo `0x40` escrito aqui
+    envelheceria no dia em que o primeiro mudasse.
+
+    A CONTA É LINEAR, e a diferença em relação à do alto-falante é medição, não
+    gosto: a curva do alto-falante foi levantada byte a byte em 01/08 (mudo até
+    38, satura em 102), e a do microfone **ninguém levantou**. O que a bancada
+    dela mediu em 09/09/2026 foi que o byte AGE — *"Deu certo. funciona"*,
+    `docs/data/ensaios.csv`, `folha-mic-volume-o-byte-age-cabo-0909` —, e não
+    onde ele fica mudo nem onde satura. Inventar uma curva aqui seria publicar
+    como medida uma forma que ninguém viu; a linear é a única que não afirma
+    nada além do teto.
+
+    **0 % é ZERO e qualquer coisa acima de 0 % sai pelo menos em 1**, que é
+    literalmente a regra que `core/speaker_scale.volume_do_percentual` já
+    cobra do irmão: *"pedir 1 % e receber silêncio seria o defeito de novo, uma
+    ponta do curso que não faz nada"*. A conta crua do enunciado da sprint
+    (`v * 0x40 // 100`) devolve **0 para 1 %**, o que faria o número da tela
+    dizer "um pouquinho" sobre um microfone mudo no aparelho.
+
+    LIMITE DECLARADO, e é o mesmo do alto-falante: 64 passos de registrador
+    para 101 valores de tela, logo há porcentagens vizinhas que caem no mesmo
+    byte. Quem ler de volta o que mandou pode ver um ponto de diferença.
+    """
+    try:
+        p = int(percentual)
+    except (TypeError, ValueError):
+        p = 0
+    p = max(0, min(100, p))
+    if p == 0:
+        return 0
+    return max(1, round(p * rep.TETO_MIC_VOLUME / 100))
+
+
 def _escrever_led_do_mic(handle: pydualsense, aceso: bool) -> None:
     """Acende/apaga o LED do mudo TOMANDO A POSSE do byte (AUDIO-OWNER-01).
 
@@ -1369,8 +1413,20 @@ class _PinnedPyDualSense(pydualsense):  # type: ignore[misc]
         if preamp is not None:
             self._preamp_audio = int(preamp) & rep.SP_PREAMP_GAIN_MASK
 
-    def release_audio_volumes(self) -> None:
+    def release_audio_volumes(self, *, microfone: bool = True) -> None:
         """Devolve a posse dos bytes de áudio (volta ao neutro). Idempotente.
+
+        `microfone=False` POUPA o `common[6]` — MIC-VOLUME-02 (09/09/2026), e o
+        parâmetro existe por um defeito medido no papel antes de existir no
+        disco: a partir do momento em que o ganho do microfone tem dono
+        (`set_microphone_volume`), um "Devolver" do ALTO-FALANTE levava o byte
+        do microfone junto e em silêncio — o número continuava na tela e o
+        aparelho voltava a obedecer ao firmware. São dois campos, com dois
+        donos e duas telas; a devolução de um não pode gastar a do outro.
+
+        O default segue `True` porque o sentido desta porta não mudou: quem
+        pede a devolução INTEIRA (o dono do handle desistindo do bloco) continua
+        recebendo os quatro bytes de volta.
 
         SOM-ROTA-01: o pré-amplificador (`common[37]`) entra na devolução
         junto com os quatro de `common[4..7]`. Deixá-lo de fora faria
@@ -1381,8 +1437,20 @@ class _PinnedPyDualSense(pydualsense):  # type: ignore[misc]
         DualSense não devolve o volume — não há report de entrada nem feature
         que o leia. "Devolver" devolve o CONTROLE, nunca o número.
         """
-        self._volumes_audio = [None, None, None, None]
+        guardado = self._volumes_audio[2] if not microfone else None
+        self._volumes_audio = [None, None, guardado, None]
         self._preamp_audio = None
+
+    def soltar_volume_do_microfone(self) -> None:
+        """Devolve ao firmware SÓ o `common[6]`. MIC-VOLUME-02.
+
+        O espelho do `microfone=False` do irmão acima, e existe como método para
+        que a lista `_volumes_audio` continue com UM dono: o serviço de saída
+        pede, o handle mexe. Um `handle._volumes_audio[2] = None` escrito de fora
+        seria a segunda mão no mesmo estado, que é como esta casa fabrica
+        divergência silenciosa.
+        """
+        self._volumes_audio[2] = None
 
     def setLeftMotor(self, intensity: int) -> None:  # noqa: N802 - nome do upstream
         super().setLeftMotor(intensity)
@@ -4835,6 +4903,20 @@ class PyDualSenseController(IController):
             # FORA da chamada, e isso é decisão, não esquecimento — o dono
             # do microfone no Linux é o kernel (AUDIO-OWNER-01), e "o som"
             # que ela pediu a 100% é o que SAI do controle.
+            #
+            # E A DECISÃO DE 06/09 FOI REVOGADA **NESTE PONTO** EM
+            # 09/09/2026, por decisão dela (`D-0909-O-VOLUME-DO-MIC-LIGA-O-
+            # BYTE-DO-APARELHO`, *"3-c"*), depois de a bancada responder que o
+            # byte AGE — *"Deu certo. funciona"*, `docs/data/ensaios.csv`,
+            # `folha-mic-volume-o-byte-age-cabo-0909`. O que mudou é QUEM
+            # escreve o byte, e não este bloco: quem o escreve é o campo do
+            # microfone (`set_microphone_volume`, MIC-VOLUME-02), pelo gesto
+            # dela ou pelo applier de perfil. Aqui ele continua omitido de
+            # propósito, e agora por uma razão mais forte: "o som" desta
+            # chamada é o que SAI do controle, e escrever o ganho de captura
+            # junto faria o volume do alto-falante mexer no microfone dela
+            # sem que ninguém pedisse — omitir é o que PRESERVA o valor que o
+            # outro campo escreveu (argumento omitido mantém o vigente).
             handle.set_audio_volumes(
                 headphone=efetivo,
                 speaker=efetivo,
@@ -4878,7 +4960,13 @@ class PyDualSenseController(IController):
             return False
         ok = False
         try:
-            alvo.release_audio_volumes()
+            # MIC-VOLUME-02: `microfone=False` — o `common[6]` NÃO vem nesta
+            # devolução. Desde 09/09/2026 aquele byte tem dono próprio (o campo
+            # do microfone), e levá-lo junto faria o "Devolver" do alto-falante
+            # apagar em silêncio o ganho de captura que ela ajustou: o número
+            # ficaria na tela e o aparelho voltaria ao firmware. Quem devolve o
+            # microfone é `release_microphone_volume`.
+            alvo.release_audio_volumes(microfone=False)
             alvo._speaker_volume_pref = None
             ok = True
         except Exception as exc:
@@ -4930,8 +5018,21 @@ class PyDualSenseController(IController):
         com o som ligado, não com o silêncio de antes desta cura.
 
         **O que fica de fora, de propósito**: o volume do MICROFONE
-        (`common[6]`, do kernel) e a ROTA de saída (`common[7]`, que carrega o
-        caminho do microfone nos outros bits). Fone e alto-falante vão os DOIS
+        (`common[6]`) e a ROTA de saída (`common[7]`, que carrega o
+        caminho do microfone nos outros bits).
+
+        **SOBRE O MICROFONE, A RAZÃO TROCOU EM 09/09/2026 e a omissão FICOU.**
+        Até 06/09 ele ficava fora porque *"o dono do microfone no Linux é o
+        kernel"*; a bancada dela derrubou a premissa (o byte AGE — *"Deu certo.
+        funciona"*, `folha-mic-volume-o-byte-age-cabo-0909`) e ela mandou ligá-lo
+        (`D-0909-O-VOLUME-DO-MIC-LIGA-O-BYTE-DO-APARELHO`). Quem o liga é o
+        CAMPO do microfone (`set_microphone_volume`), e não a adoção: nascer a
+        100 % é decisão dela sobre o som que SAI (*"precisamos setar o som
+        sempre em todos os controles no 100%"*), e tomar a posse do ganho de
+        CAPTURA de todo controle adotado seria decidir por ela uma coisa que ela
+        não pediu — com o preço de nunca mais o firmware mandar naquele byte.
+
+        Fone e alto-falante vão os DOIS
         ao mesmo valor porque é UM volume só para quem segura o controle, e
         porque o fone manda por cima da rota (ensaio `sfx-o-fone-manda-por-
         cima`): deixar o fone em zero faria a cura silenciar justamente quem
@@ -5035,6 +5136,115 @@ class PyDualSenseController(IController):
             else:
                 self._mic_mute_by_uniq[alvo] = bool(muted)
         return alvo
+
+    def set_microphone_volume(
+        self, percentual: int, *, uniq: str | None = None
+    ) -> bool:
+        """Assume a posse do `common[6]` — o GANHO DE CAPTURA do aparelho.
+
+        MIC-VOLUME-02 (09/09/2026). **Decisão dela, `D-0909-O-VOLUME-DO-MIC-
+        LIGA-O-BYTE-DO-APARELHO`, textual: *"3-c"*** — ligar o byte do
+        aparelho, revogando neste ponto a decisão de 06/09 que o mantinha fora
+        da chamada. A revogação está datada nos dois lugares em que aquela
+        decisão foi escrita (`_escrever_volume_no_handle` e
+        `assumir_volume_padrao_na_adocao`), e a decisão de 06/09 não se apaga.
+
+        **O QUE DECIDIU FOI A BANCADA, e é o único jeito que valia.** Duas
+        afirmações desta casa se contradiziam: a docstring do `mic.volume.set`
+        dizia que *"o DualSense não expõe registrador de ganho de microfone em
+        transporte nenhum"*, e o mapa mais o kernel diziam que o registrador
+        existe e tem nome. O olho dela desempatou no CABO, em 09/09/2026, com o
+        P2 plugado e a fonte do sistema travada a 100 % para isolar o ganho do
+        aparelho: *"Deu certo. funciona"* (`docs/data/ensaios.csv`,
+        `folha-mic-volume-o-byte-age-cabo-0909`). Byte que obedece ganha campo.
+
+        **UM CAMPO, DOIS DEGRAUS**, e este é o SEGUNDO. O primeiro é o ganho da
+        FONTE no PipeWire, que `mic.volume.set` já mexia e continua mexendo — é
+        ele que faz a feature valer nos dois transportes. Este aqui é o do
+        aparelho, e os dois juntos são o que faz o número da tela ser o que a
+        pessoa ouve do outro lado.
+
+        **O QUE NÃO ESTÁ MEDIDO, dito na cara:** onde este byte fica mudo e
+        onde ele satura (a curva que o alto-falante tem e o microfone não —
+        ver :func:`byte_do_volume_do_microfone`), e o RÁDIO. Pelo rádio o byte
+        vai no `0x31` (`common[6] = report[9]`) e o caminho de escrita é o
+        mesmo, mas ninguém gravou voz pelo rádio para conferir — e não há o que
+        gravar enquanto o controle no rádio não publicar microfone nenhum, que
+        é a MIC-OS-QUATRO-01. O mapa de canais guarda essa metade em
+        `inferido-do-codigo`, e não em `medido`.
+
+        **O PREÇO, o mesmo do alto-falante:** tomar a posse é irreversível até
+        `release_microphone_volume` ou até o controle desconectar. Enquanto
+        formos donos, o firmware recebe o NOSSO byte em todo report. Quem
+        desconecta e volta perde a posse (o handle é outro) — e quem a
+        restaura é o applier de perfil, não este método.
+
+        `percentual` é 0-100, a MESMA faixa de `mic.volume.set` e de
+        `ControllerMicOverride.volume`; a conversão para o byte é a régua única
+        de :func:`byte_do_volume_do_microfone`. Devolve True quando o handle
+        daquele `uniq` recebeu a escrita, e False quando não havia handle —
+        "não havia controle" nunca pode ser lido como "aplicado".
+        """
+        alvo = self._handle_for(uniq)
+        if alvo is None:
+            logger.debug("output_offline_noop", op="set_microphone_volume")
+            return False
+        bruto = byte_do_volume_do_microfone(percentual)
+        escritor = getattr(alvo, "set_audio_volumes", None)
+        if not callable(escritor):
+            # Dublê ou handle sem a porta: NÃO se finge que escreveu. O byte só
+            # vale com o bit 0x40 do flag0, que mora naquela porta.
+            logger.debug("output_handle_sem_porta", op="set_microphone_volume")
+            return False
+        try:
+            escritor(microphone=bruto)
+        except Exception as exc:
+            logger.warning(
+                "output_handle_failed", op="set_microphone_volume", err=str(exc)
+            )
+            return False
+        # O `percentual` vai CRU para o log, sem `int()`: a régua acima já
+        # tolera lixo devolvendo 0, e um `int("nada")` aqui levantaria DEPOIS de
+        # a escrita ter dado certo — a linha de log derrubando a chamada que
+        # funcionou é a pior troca possível.
+        logger.info(
+            "microphone_volume_set",
+            percentual=percentual,
+            bruto=bruto,
+            uniq=uniq,
+            ok=True,
+        )
+        return True
+
+    def release_microphone_volume(self, *, uniq: str | None = None) -> bool:
+        """Devolve ao firmware a posse do `common[6]`, e SÓ dele.
+
+        MIC-VOLUME-02. O irmão de `release_speaker_volume`, e a razão de ser um
+        método separado é a mesma pela qual `release_audio_volumes` ganhou o
+        `microfone=`: são dois campos com dois donos. Devolver o microfone não
+        pode apagar o volume do alto-falante que ela acabou de ajustar.
+
+        Como toda devolução desta casa, ela devolve o CONTROLE e nunca o
+        número: o DualSense não tem leitura de volume, então o firmware
+        conserva o último byte que mandamos até a próxima desconexão.
+        """
+        alvo = self._handle_for(uniq)
+        if alvo is None:
+            logger.debug("output_offline_noop", op="release_microphone_volume")
+            return False
+        soltar = getattr(alvo, "soltar_volume_do_microfone", None)
+        if not callable(soltar):
+            logger.debug("output_handle_sem_porta", op="release_microphone_volume")
+            return False
+        try:
+            soltar()
+        except Exception as exc:
+            logger.warning(
+                "output_handle_failed", op="release_microphone_volume", err=str(exc)
+            )
+            return False
+        logger.info("microphone_volume_released", uniq=uniq, ok=True)
+        return True
 
     def set_microphone_led(
         self, aceso: bool | int | None, *, uniq: str | None = None
