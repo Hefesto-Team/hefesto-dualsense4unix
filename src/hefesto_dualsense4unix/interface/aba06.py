@@ -668,10 +668,13 @@ CSS = CSS_GLIFO + """
   .acoes a.btn{text-decoration:none}
   .acoes.dois{grid-template-columns:1fr 1fr}
   .acoes.tres{grid-template-columns:1fr 1fr 1fr}
-  /* quatro botões na fileira de 1086px dão 261,8px cada. Coube — mas só depois
-     de "Configurar o estilo Point-and-click" virar "Estilo Point-and-click":
-     com o rótulo longo o texto QUEBRAVA em duas linhas dentro de uma caixa de
-     34px de altura fixa, medido em 28/08. */
+  /* quatro botões na fileira de 1086px dão 261,8px cada, e o rótulo mais longo
+     cabe numa linha. O comentário daqui afirmava, desde 28/08, que "Configurar
+     o estilo Point-and-click" JÁ tinha virado "Estilo Point-and-click" — e o
+     gerador continuava escrevendo o rótulo longo: era comentário descrevendo
+     cura que não existia. A troca aconteceu de fato em 11/09/2026, aprovada por
+     ela, e por outra razão: o botão e a tela que ele abre tinham nomes
+     diferentes. A medida de 28/08 fica registrada na LEGENDA. */
   .acoes.quatro{grid-template-columns:repeat(4,1fr)}
   .grupo-padrao{position:relative}
   /* a confirmação do "Voltar ao padrão": aparece sob o grupo, sem faixa fixa
@@ -1771,11 +1774,13 @@ _PADRAO_DOS_BOTOES = {b: rotulo_da_acao(a)
 #:
 #: O TEXTO CURTO FICA NA COLUNA e o inteiro no `title`: a decisão diz, com todas
 #: as letras, que a marca cabe na coluna do nome e não custa linha nova.
+#: A DICA ENCOLHEU PELA METADE — 11/09/2026, aprovado por ela. Ela aparece
+#: NOVE vezes na tela (3 linhas × 3 pop-ups), e as 245 letras da versão antiga
+#: explicavam o mecanismo duas vezes. O que ela precisa saber cabe em duas
+#: orações: por que não dispara, e que a escolha não se perde.
 MARCA_DO_TOUCHPAD = (
-    '<span class="marca-nao-dispara" title="O touchpad do controle continua '
-    "sendo o mouse do computador nesta máquina, e enquanto for assim o Hefesto "
-    "não transforma o clique dele em tecla. A escolha fica guardada no perfil e "
-    'volta a valer no dia em que o touchpad deixar de ser o ponteiro.">'
+    '<span class="marca-nao-dispara" title="O touchpad é o mouse do computador '
+    'nesta máquina. A escolha fica guardada e passa a valer quando isso mudar.">'
     "não dispara</span>")
 
 BOTOES = [
@@ -2263,8 +2268,8 @@ ESTADOS = '''
 FILEIRA = f'''
             <div class="acoes quatro grupo-padrao">
               <a class="btn roxo" href="#definicoes-mouse">Definições Controle e Mouse</a>
-              <a class="btn roxo" href="#remapeamento">Remapeamento dos botões</a>
-              <a class="btn roxo" href="#point-and-click">Configurar o estilo Point-and-click</a>
+              <a class="btn roxo" href="#remapeamento">Trocar os botões</a>
+              <a class="btn roxo" href="#point-and-click">Estilo Point-and-click</a>
               <!-- O RÁDIO VEM ANTES de tudo o que reage a ele: o `~` do CSS só
                    enxerga irmão POSTERIOR. É a mesma armadilha que o interruptor
                    da aba Jogar documenta, e a mesma cura. -->
@@ -2437,14 +2442,14 @@ TELA_DEFINICOES = tela_de_botoes(
     "Isto apaga também os <b>atalhos de teclado</b> que este perfil guarda — "
     "inclusive os que você escreveu na janela antiga e esta lista não sabe "
     "mostrar. Para voltar <b>uma linha só</b>, use o ↺ dela em "
-    "<b>Teclas do teclado</b>. O <b>Remapeamento dos botões</b> não é tocado.",
+    "<b>Teclas do teclado</b>. A tela <b>Trocar os botões</b> não é tocada.",
     guardar="guardar-definicoes", padrao="padrao-definicoes",
     fechar="fechar-definicoes", aviso=AVISO_DA_TABELA,
     extra='      <a class="btn" href="#teclas-do-teclado">Teclas do teclado</a>')
 
 TELA_REMAPEAMENTO = tela_de_botoes(
-    "remapeamento", "Remapeamento dos botões", D_REMAPEAMENTO,
-    "Passa a valer como",
+    "remapeamento", "Trocar os botões", D_REMAPEAMENTO,
+    "Passa a ser",
     chr(10).join(f'          <tr><td class="b">{b}</td><td>{drop(REMAP, SEM_TROCA)}</td></tr>'
                  for b, _ in BOTOES),
     f"Devolver as {len(BOTOES)} linhas ao <b>{SEM_TROCA}</b>? "
@@ -2599,7 +2604,7 @@ TELA_PONTO = f'''
            estes dois números, que são a velocidade DO ESTILO e não escrevem em
            lugar nenhum (ver o comentário dos `bignum` logo abaixo). -->
       <div class="tn-vel">
-        <div class="at-linha"><span class="at-rot">Velocidade de cursor{D_VEL_ESTILO}</span>
+        <div class="at-linha"><span class="at-rot">Velocidade do cursor{D_VEL_ESTILO}</span>
           {bignum(("", 8))}</div>
         <div class="at-linha"><span class="at-rot">Velocidade da rolagem{D_ROL_ESTILO}</span>
           {bignum(("", 4))}</div>
@@ -2610,10 +2615,10 @@ TELA_PONTO = f'''
          não a velocidade viva do daemon. Ligá-los ao `mouse.emulation.set`
          mudaria o cursor AGORA enquanto ela pensa que edita um estilo guardado,
          que é a pior forma de um botão mentir. Quem carrega o que falta é o
-         "Guardar no estilo", que é o ponto de gravação de todos eles. -->
+         "Guardar" desta tela, que é o ponto de gravação de todos eles. -->
     <div class="tn-rod">
       <a class="btn" href="#">Cancelar</a>
-      <a class="btn roxo" href="#" data-gesto="guardar-ponto">Guardar no estilo</a>
+      <a class="btn roxo" href="#" data-gesto="guardar-ponto">Guardar</a>
     </div>
   </div>
 </div>
@@ -2661,7 +2666,7 @@ MIOLO = f'''
           "<br><br><b>Combinações:</b> junte teclas com &quot;+&quot; (ex.: Alt + Tab). Nenhum "
           "atalho de fábrica digita letra — para escrever texto, abra o teclado na tela "
           "com o <b>L3</b>.")}
-        <a class="porta" href="mapa-do-controle.html" title="Abre o mapa do controle — as {len(PECAS)} peças do aparelho com nome, apelido e glifo, e as cores de fábrica para ver clicando. É de lá que saem as {len(BOTOES)} linhas das duas telas de botões desta aba: o mesmo docs/data/pecas-do-dualsense.csv.">Banco de provas: o mapa do controle&nbsp;↗</a>
+        <a class="porta" href="mapa-do-controle.html" title="Abre o mapa do controle — as {len(PECAS)} peças do aparelho com nome, apelido e glifo, e as cores de fábrica para ver clicando. É de lá que saem as {len(BOTOES)} linhas das duas telas de botões desta aba: o mesmo docs/data/pecas-do-dualsense.csv.">Ver o mapa do controle&nbsp;↗</a>
       </div>
       <div class="quadro-corpo">
 
@@ -2818,7 +2823,12 @@ LEGENDA = f'''<div class="nota">
     <code>system-ui</code> e <b>210,8px</b> com a DejaVu Sans, contra os
     <b>233px</b> que a caixa oferece — uma linha só nos três casos, com 22px de
     folga no pior deles. O rótulo <b>ficou como ela o aprovou</b>; encurtá-lo teria
-    sido mudança que ninguém pediu, por um defeito que não existe.</li>
+    sido mudança que ninguém pediu, por um defeito que não existe.
+    <br><br><b>CADUCOU EM 11/09/2026</b>, e não pela largura: a medida acima
+    continua valendo — o rótulo longo cabia. O que a derrubou foi a língua. O
+    botão dizia <i>"Configurar o estilo Point-and-click"</i> e a tela que ele
+    abre dizia <i>"Estilo Point-and-click"</i>: dois nomes para a mesma tela.
+    Ela aprovou o do destino para os dois.</li>
   </ul>
 
   <h2>A rodada dos quatro controles</h2>
