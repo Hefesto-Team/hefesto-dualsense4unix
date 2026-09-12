@@ -54,15 +54,13 @@ O QUE ELE NÃO FAZ, E É METADE DO VALOR DE LER ISTO
   daquela sprint. Estão dentro desta. Quem resolve a rota é
   ``integrations.alto_falante_bt.rota_do_no``, e ele é o MESMO que a janela
   chama por ``app/audio_saida`` — uma pergunta, um dono;
-* **não é registrado no daemon.** ``daemon/subsystems/__init__.py``,
-  ``daemon/lifecycle.py`` e ``daemon/connection.py`` — os TRÊS lugares que
-  ligam um subsystem, e os três fora da posse. **Este subsystem nasce órfão de
-  propósito e declarado**, que é o oposto do defeito que o ``__init__.py`` do
-  registry nomeia (o ``BtMicSubsystem`` nasceu órfão em 25/07 sem ninguém
-  saber).
+* **não escolhe o número do rótulo.** O «Controle N» de «Alto-falante do
+  Controle N» é a conta DA CASA, e este subsystem só a alcança — ver
+  :meth:`AltoFalanteSubsystem.numero_do_assento` e
+  ``daemon/subsystems/base.numero_do_assento_na_mesa``.
 
-O ÓRFÃO GANHOU A ROTA — E CONTINUA ÓRFÃO POR TRÊS LINHAS QUE NÃO SÃO DAQUI
-----------------------------------------------------------------------------
+O ÓRFÃO GANHOU A ROTA, E DEPOIS GANHOU AS TRÊS LINHAS DO REGISTRO
+------------------------------------------------------------------
 **As duas razões de 07/09 para não o ligar caíram em 09/09**, e as duas eram
 razões de verdade:
 
@@ -75,13 +73,17 @@ razões de verdade:
   do Controle N», com o número do ASSENTO, pelo mesmo gancho do «Microfone do
   Controle N» (decisão dela de 09/09, *"4a"*).
 
-**O QUE FALTA PARA ELE VIVER NA MESA DELA, e não está nesta árvore:** as três
-linhas do registro — ``daemon/subsystems/__init__.py`` (a lista),
-``daemon/lifecycle.py`` (o ``_safe_start`` no ``run()``) e
-``daemon/connection.py`` (o ``_stop_*`` no ``shutdown()``). Os TRÊS estão fora
-da posse da SOM-POR-CONTROLE-01, e a receita de duas metades é a armadilha que
-o ``subsystems/__init__.py`` já nomeia: quem faz duas sobe o subsystem e nunca
-o para, e o nó fica na lista de saída dela **depois de o daemon morrer**.
+**ELE DEIXOU DE SER ÓRFÃO EM 10/09/2026 — SOM-FIADO-01.** As três linhas do
+registro existem, e são as três que a receita exige:
+``daemon/subsystems/__init__.py`` (a lista), ``daemon/lifecycle.py``
+(o ``_safe_start("alto_falante", …)`` no ``run()``) e ``daemon/connection.py``
+(o ``_stop_alto_falante`` no ``shutdown()``). Fazer só duas é a armadilha que o
+``subsystems/__init__.py`` nomeia: sobe o subsystem e nunca o para, e o nó fica
+na lista de saída dela **depois de o daemon morrer**.
+
+**E EM 12/09/2026 O DAEMON PASSOU A ENTRAR PELO CONSTRUTOR** (TRES-CONTAS-PARA-
+UM-NUMERO-01): é por ele que o «Controle N» do rótulo chega ao mesmo número do
+cartão dela, perguntando o ``player_slot`` ao ``identity_registry``.
 
 A régua que trava o par continua sendo
 ``tests/unit/test_o_no_de_som_nao_nasce_sumidouro.py`` — e ela sempre permitiu
@@ -99,6 +101,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
+from hefesto_dualsense4unix.daemon.subsystems.base import numero_do_assento_na_mesa
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 
 if TYPE_CHECKING:
@@ -433,7 +436,14 @@ class AltoFalanteSubsystem:
         *,
         gerenciador: Any = None,
         fonte_de_controles: Any = None,
+        daemon: Any = None,
     ) -> None:
+        #: O `Daemon`, e é por ele que o «Controle N» do nó chega ao mesmo
+        #: número do cartão — ver `numero_do_assento` e
+        #: `subsystems/base.slot_de_sessao`. Entra o DAEMON e não o registro
+        #: porque a fiação do `identity_registry` (`lifecycle._wire_identity_
+        #: registry`) acontece DEPOIS deste `start()`.
+        self._daemon: Any = daemon
         self._gerenciador_injetado = gerenciador
         self._gerenciador: Any = None
         #: UMA ponte por controle no rádio, pelo `uniq`.
@@ -513,42 +523,39 @@ class AltoFalanteSubsystem:
         return [item for item in itens if isinstance(item, dict)]
 
     def numero_do_assento(self, uniq: str) -> int | None:
-        """P1..P4 deste controle — o número que vai no rótulo do nó.
+        """O «Controle N» deste controle — o MESMO que a tela imprime no cartão.
 
-        **A MESMA REGRA do ``BtMicSubsystem.numero_do_assento``, palavra por
-        palavra, e é obrigatório que seja:** os dois rótulos que ela lê —
-        «Alto-falante do Controle N» e «Microfone do Controle N» — têm de dizer
-        o MESMO número sobre o MESMO aparelho, lado a lado na mesma lista de
-        som. A regra é *filtrar por ``connected`` e enumerar a partir de 1*, e
-        as duas armadilhas que ela evita estão medidas em 09/09/2026:
+        **A DÍVIDA DAS DUAS IMPLEMENTAÇÕES MORREU EM 12/09/2026**
+        (TRES-CONTAS-PARA-UM-NUMERO-01). Esta função e a
+        ``BtMicSubsystem.numero_do_assento`` eram a MESMA regra escrita duas
+        vezes, e a régua que as amarrava era o que sobrava por não haver um dono
+        só. Agora as duas chamam
+        ``subsystems/base.numero_do_assento_na_mesa`` — e aquela função não
+        conta nada: **ela pergunta o ``player_slot`` ao dono**, o
+        ``identity_registry``, e aplica a regra da casa.
 
-        * **não é o ``index``** de ``describe_controllers()``: aquele é a
-          posição em ``list(self._handles)``, que conta o controle DESLIGADO —
-          dá assento a quem não está na mesa e rouba o assento 1 de quem está;
-        * **não é ``coop.resolve_player_numbers``**: com o co-op desligado ele
-          responde ``1`` para todos, e a lista dela ganharia quatro
-          «Alto-falante do Controle 1».
+        Os dois rótulos que ela lê — «Alto-falante do Controle N» e «Microfone
+        do Controle N» — continuam obrigados a dizer o MESMO número sobre o
+        MESMO aparelho, lado a lado na mesma lista de som. Agora eles o dizem
+        porque é o mesmo código, não porque duas cópias combinaram.
 
-        **DUAS IMPLEMENTAÇÕES DA MESMA REGRA É DÍVIDA, e ela está declarada:**
-        a de lá vive em ``daemon/subsystems/bt_mic.py``, que não está na posse
-        desta sprint, então não deu para as duas chamarem uma terceira. O que
-        segura o par é régua, não boa vontade —
-        ``tests/unit/test_o_som_por_controle_cai_em_cada_um.py`` alimenta as
-        DUAS com a mesma mesa e reprova a divergência.
+        E o número passou a ser o da TELA. Antes era a posição entre os
+        conectados, que é a ordem dos HANDLES — na mesa dela, às 22h de 09/09,
+        isso batizou de «Microfone do Controle 2» o aparelho cujo cartão dizia
+        P1.
 
-        Sem daemon vivo não há assento: ``None`` é *"não sei o número"*, e o
-        rótulo nasce sem número — nunca com um inventado.
+        **CONTINUA NÃO SENDO ``coop.resolve_player_numbers``:** com o co-op
+        desligado ele responde ``1`` para todos, e a lista dela ganharia quatro
+        «Alto-falante do Controle 1».
+
+        Sem daemon vivo não há número: ``None`` é *"não sei"*, e o rótulo nasce
+        sem número — nunca com um inventado.
         """
-        from hefesto_dualsense4unix.core.sysfs_leds import norm_mac
-
-        chave = norm_mac(str(uniq)) or ""
-        if len(chave) != _UNIQ_HEX:
-            return None
-        conectados = [i for i in self._controles_da_mesa() if i.get("connected")]
-        for posicao, item in enumerate(conectados, start=1):
-            if (norm_mac(str(item.get("uniq") or "")) or "") == chave:
-                return posicao
-        return None
+        return numero_do_assento_na_mesa(
+            [i for i in self._controles_da_mesa() if i.get("connected")],
+            uniq,
+            daemon=self._daemon,
+        )
 
     def uniqs_com_no(self) -> frozenset[str]:
         """Os ``uniq`` cujo nó está DE PÉ agora — o efeito, não o pedido."""

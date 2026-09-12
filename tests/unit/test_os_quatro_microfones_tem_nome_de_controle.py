@@ -462,17 +462,26 @@ def test_o_assento_e_a_posicao_na_mesa_e_nao_o_numero_do_coop() -> None:
 
 
 def test_um_controle_desligado_nao_ocupa_assento() -> None:
-    """Handle aberto e DESCONECTADO não empurra o assento de quem está na mesa.
+    """Handle aberto e DESCONECTADO não ganha nome de nó. A invariante é essa.
 
     `describe_controllers()` devolve uma entrada por HANDLE ABERTO, e o handle
     de um controle desligado continua na lista com `connected: False` e `index`
-    próprio. Até 09/09/2026 `numero_do_assento` lia esse `index` e
-    `uniqs_na_mesa` filtrava por `connected` — as duas leituras discordavam nas
-    DUAS pontas: o desligado ganhava assento, e quem estava ligado perdia o
-    assento 1 para ele.
+    próprio. Publicar um nó por ele poria na lista de som dela um «Microfone do
+    Controle N» de um aparelho que não está lá — e que ninguém consegue
+    desligar, porque ele não existe.
 
-    A MORDIDA: com o P1 desligado, ler o `index` devolve `[1, 2, 3, 4]` e dá
-    assento ao ausente; a mesa tem TRÊS, e eles são 1, 2 e 3.
+    **E OS NÚMEROS AQUI SÃO `[2, 3, 4]` DESDE 12/09/2026** (TRES-CONTAS-PARA-UM-
+    NUMERO-01), onde eram `[1, 2, 3]`. Não é regressão: é o nó passando a dizer
+    o número que o CARTÃO diz. Sem `identity_registry` fiado — que é o caso deste
+    dublê — a regra da casa (`app/actions/base.numero_do_controle`) cai no
+    `index + 1`, e é exatamente esse número que a tela imprime nessa mesma
+    situação. O subsystem deixou de ter conta própria; ele lê a da casa. A régua
+    que compara as três está em
+    `test_o_som_por_controle_cai_em_cada_um.py::test_as_tres_contas_do_mesmo_
+    rotulo_viraram_uma`.
+
+    A MORDIDA: pare de filtrar `connected` em
+    `base.numero_do_assento_na_mesa` e o P1 desligado ganha nome.
     """
     sub = bt_mic.BtMicSubsystem(registro=bt_mic.RegistroDePedidosDeCanal())
     sub._backend = _BackendDaMesa(OS_QUATRO, desconectado=P1)
@@ -484,8 +493,8 @@ def test_um_controle_desligado_nao_ocupa_assento() -> None:
         "um controle DESLIGADO ganhou assento na mesa dela"
     )
     assentos = [sub.numero_do_assento(u) for u in (P2, P3, P4)]
-    assert assentos == [1, 2, 3], (
-        f"o handle desligado empurrou o assento de quem está ligado: {assentos}"
+    assert assentos == [2, 3, 4], (
+        f"o nó deixou de dizer o número do cartão: {assentos}"
     )
 
     # A INVARIANTE, controle a controle: ter assento é estar na mesa.
