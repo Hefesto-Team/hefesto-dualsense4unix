@@ -12,6 +12,8 @@ do launch_env. Daí a opção "steam_game".
 """
 from __future__ import annotations
 
+from collections.abc import Callable, Iterable
+
 from hefesto_dualsense4unix.profiles.schema import Match, MatchAny, MatchCriteria
 from hefesto_dualsense4unix.profiles.steam_app import (
     steam_appid_de_texto,
@@ -43,6 +45,25 @@ MSG_STEAM_APPID_INVALIDO = (
 MSG_JANELA_SEM_CLASSE = (
     "Diga a janela do jogo (ex.: GrimFandango) ou escolha outro contexto em "
     "\"Funciona em\". Com o jogo em foco, o botão Detectar preenche sozinho."
+)
+
+#: A TERCEIRA IRMÃ, e ela nasceu com «de onde o jogo vem» (C4-FUNCIONA-EM,
+#: 11/09/2026). Trocar a procedência para um lançador enquanto o campo de baixo
+#: guarda um jogo de OUTRO lugar é uma frase pela metade: o endereço que está
+#: lá não vale naquele lançador, e gravá-lo assim mesmo faria nascer uma regra
+#: que nunca casa — o R-12, de novo.
+#:
+#: **ELA MANDA PARA A LISTA, e não para a linha de comando.** O caminho existe
+#: e está a um campo de distância: escolhido o lançador, o campo de baixo passa
+#: a oferecer os jogos DELE pelo nome, e escolher um grava a regra inteira.
+#:
+#: FORA DE `MENSAGENS_DE_GENTE` de propósito: aquele conjunto é comparado por
+#: igualdade EXATA, e um molde com `{procedencia}` dentro nunca casaria — ele
+#: entraria como uma linha morta que dá a impressão de cobrir o caso. Quem a
+#: levanta é a aba, que já mostra a frase crua na tarja.
+MSG_ESCOLHA_O_JOGO = (
+    "Escolha o jogo na lista de baixo — “{procedencia}” mostra os jogos que "
+    "vêm de lá pelo nome."
 )
 
 #: Frases que a GUI pode mostrar CRUAS para a usuária (ver `_humanize_profile_error`).
@@ -553,3 +574,186 @@ def exigencia_invisivel(match: Match) -> str:
         f"Este perfil também exige {' e '.join(partes)}, e só entra quando isso "
         "bater junto com o número do jogo."
     )
+
+
+# --- AS PROCEDÊNCIAS — «de onde o jogo vem», e as seis formas que isso vira ---
+#
+# C4-FUNCIONA-EM, 11/09/2026. Desenho DELA, confirmado com todas as letras
+# (*"isso mesmo."*), e a ordem original foi esta:
+#
+#     "seria legal nome do programa launcher aqui: A gente adicionaria  (noqa-acento) cita ela
+#      Navegação, remopve jogo da steam, jogo, jogo pela janela, estilo de
+#      jogo, e colocariamos os launchers. Isso deveria ajudar a identificar
+#      mais rápido o nome do jogo depois"
+#
+# **O QUE ELA MANDOU TIRAR ERA JARGÃO DE IMPLEMENTAÇÃO NA CARA DE QUEM JOGA.**
+# "Jogo" contra "Jogo pela janela" pedia dela exatamente o conhecimento que o
+# produto tem e ela não: por qual chave aquele jogo é reconhecível — o
+# `process_name` (basename de `/proc/PID/exe`) ou a `wm_class`. A pergunta que
+# ela SABE responder é outra: *de onde vem este jogo?*
+#
+# **A REGRA QUE ISSO IMPÕE, e é o §4 da sprint:** a tela ganha uma tradução; o
+# `MatchCriteria` NÃO MUDA. «lançador» não vira um tipo novo de casamento no
+# disco — quem escolhe a forma técnica é o produto, aqui, com o que o lançador
+# entrega. O arquivo continua guardando `steam_app_1245620` ou `gotg.exe`.
+#
+# **E ESTAS FUNÇÕES NÃO IMPORTAM `integrations`, de propósito.** Quem sabe que
+# lançadores a máquina tem é o censo, e quem sabe de qual deles vem uma chave é
+# o catálogo — os dois são leitura de disco, e `profiles/` é o esquema. A ponte
+# é o parâmetro `lancador_da_chave`: a TELA passa a função, este módulo decide a
+# forma. Sem isso, uma régua daqui precisaria da biblioteca dela para rodar.
+
+#: O perfil do desktop, sem jogo. **Atrás dele está o preset `browser`** — a
+#: lista declarada de navegadores de `_NAVEGADORES`, que existia no produto e
+#: não no desenho dela (`perfis_web.FORA_DO_DESENHO`). Esta sprint o traz para
+#: a tela com a palavra DELA, e é por isso que ela é a primeira da lista: não é
+#: procedência de jogo nenhum, é o que vale quando não há jogo.
+PROCEDENCIA_DA_NAVEGACAO = "Navegação"
+
+#: O catch-all — `MatchAny`. Última da lista pela mesma razão que o `fallback`
+#: tem prioridade zero: ele só entra quando nenhum outro serve.
+PROCEDENCIA_DE_QUALQUER_JOGO = "Qualquer jogo"
+
+#: A Steam. **Ela não vem do censo dos lançadores** (`censo_dos_lancadores` lê
+#: os CINCO que não são a Steam): quem responde por ela é o
+#: `jogos_locais.jogos_da_biblioteca_steam`. Para esta tradução isso é
+#: indiferente — o que chega aqui é o NOME, e a Steam é o único nome que tem
+#: duas formas atrás (ver `forma_da_procedencia`).
+PROCEDENCIA_DA_STEAM = "Steam"
+
+#: As duas que NÃO são lançador e existem em toda máquina — inclusive numa
+#: recém-instalada, sem Steam, sem Heroic e sem Lutris. É a ordem dela de
+#: 11/09/2026: *"a ideia é que todas as features mesmo do app funcionem  (noqa-acento)
+#: nao so pra mim mas pra qualquer outro user"*.  (noqa-acento) cita ela
+_FORMA_FIXA: dict[str, str] = {
+    PROCEDENCIA_DA_NAVEGACAO: "browser",
+    PROCEDENCIA_DE_QUALQUER_JOGO: "any",
+}
+
+#: O CAMINHO DE VOLTA das duas fixas — a inversão de `_FORMA_FIXA`, e não uma
+#: segunda tabela.
+_FIXA_DO_PRESET: dict[str, str] = {v: k for k, v in _FORMA_FIXA.items()}
+
+
+def forma_da_procedencia(
+    procedencia: str,
+    jogo: str = "",
+    *,
+    forma_do_catalogo: str = "",
+) -> str:
+    """A chave de `from_simple_choice` que ESTA procedência pede. É o §4.
+
+    As quatro respostas, e cada uma tem razão medida:
+
+    * **«Navegação»** → ``browser``. O preset dos navegadores, que já existia.
+    * **«Qualquer jogo»** → ``any``.
+    * **«Steam»** → ``steam_game`` com jogo, ``steam`` sem. **As duas formas
+      continuam alcançáveis, e isso não é esperteza — é a única saída que não
+      perde uma.** A Steam é o único nome deste campo com DOIS significados no
+      disco: o CLIENTE aberto (``process_name=["steam"]``) e UM JOGO dela
+      (``steam_app_<id>``). Mapear «Steam» só para o jogo faria todo perfil do
+      cliente abrir travado; só para o cliente faria o campo de baixo não
+      valer nada. Quem separa os dois é o campo de baixo estar cheio, que é
+      exatamente a pergunta *"é um jogo da Steam ou é a Steam?"*.
+    * **um lançador** (Heroic, Lutris, RetroArch, «Instalado aqui»…) → o que o
+      CATÁLOGO daquele jogo declarar (`jogos_locais.JogoLocal.forma`), e
+      ``janela`` quando ele não está no catálogo. **Nunca ``game``**: o que
+      esses lançadores entregam é a `wm_class` (o basename do
+      ``install.executable`` do Heroic, do ``executable`` do `pga.db` do
+      Lutris), e gravá-la como ``process_name`` é o defeito que
+      `_forma_do_que_ela_escolheu` mediu na tela viva em 10/09/2026 — outro
+      dado, que casa por acaso.
+
+    **ELA NÃO LEVANTA, e a recusa continua sendo de `from_simple_choice`.** As
+    frases de gente já estão escritas lá (`MSG_STEAM_SEM_APPID`,
+    `MSG_JANELA_SEM_CLASSE`), e duplicá-las aqui seria a segunda verdade sobre
+    o que falta no campo.
+    """
+    fixa = _FORMA_FIXA.get(procedencia)
+    if fixa is not None:
+        return fixa
+    if procedencia == PROCEDENCIA_DA_STEAM:
+        return "steam_game" if jogo.strip() else "steam"
+    return forma_do_catalogo or "janela"
+
+
+def procedencia_do_match(
+    match: Match | None,
+    lancador_da_chave: Callable[[str], str] | None = None,
+) -> str | None:
+    """De onde vem o jogo deste perfil — ou ``None``, e aí a tela não sabe.
+
+    É o CAMINHO DE VOLTA de `forma_da_procedencia`, e o ``None`` é o estado
+    honesto que o produto já tinha: `perfis_web._ambiente_do_perfil` devolve
+    ``None`` para a regra que este seletor não sabe descrever (título de
+    janela, lista de classes, `MatchManual`), o campo abre TRAVADO com a frase
+    do que ele é, e o `match` do disco fica intacto. Isto não inventa um sexto
+    estado: reusa aquele.
+
+    **O ``game`` E O ``janela`` PERGUNTAM AO CATÁLOGO**, e é aí que a §5 da
+    sprint se cumpre — *"um perfil que já existe com forma escolhida à mão
+    continua válido e continua sendo mostrado"*. A chave que o perfil guarda
+    (``gotg.exe``, ``mk1.exe``) é levada ao `lancador_da_chave`, que responde
+    «Heroic», «Lutris» ou o que for; quem não está no catálogo cai no rótulo
+    residual que a TELA escolhe (`jogos_locais.LANCADOR_DIRETO`, *"Instalado
+    aqui"*), e continua editável. **Medido nos 27 perfis dela em 11/09/2026:**
+    25 são `steam_game` (→ «Steam»), um é `game` (``guard``) e um é `janela`
+    (``Hefesto-Dualsense4Unix``) — os dois últimos são exatamente os que
+    dependem desta porta para não abrirem travados.
+
+    Sem `lancador_da_chave` a resposta é ``None``: afirmar uma procedência sem
+    ter a quem perguntar seria a tela adivinhando de onde o jogo dela veio.
+    """
+    preset = detect_simple_preset(match) if match is not None else None
+    if preset is None:
+        return None
+    fixa = _FIXA_DO_PRESET.get(preset)
+    if fixa is not None:
+        return fixa
+    if preset in ("steam", "steam_game"):
+        return PROCEDENCIA_DA_STEAM
+    if preset in ("game", "janela"):
+        # O `match is None` já saiu na primeira linha desta função — o
+        # `detect_simple_preset` só devolve preset para um `Match` de verdade —,
+        # e esta guarda repete o fato para o verificador de tipo, que não
+        # consegue seguir a implicação por duas chamadas.
+        if lancador_da_chave is None or match is None:
+            return None
+        return lancador_da_chave(simple_extra(match)) or None
+    # `terminal` e `editor` continuam FORA do desenho dela, e continuam caindo
+    # no campo travado com a frase — o que é o certo: nenhum dos dois responde
+    # *"de onde vem o jogo?"*, porque nenhum dos dois é jogo.
+    return None
+
+
+def oferta_do_funciona_em(
+    lancadores_da_maquina: Iterable[str],
+    atual: str = "",
+) -> list[str]:
+    """O que o campo «Funciona em:» oferece NESTA máquina, na ordem da tela.
+
+    ``[«Navegação»] + os lançadores que existem + [«Qualquer jogo»]``.
+
+    **A LISTA NÃO É DIGITADA** — os lançadores vêm do censo, e um que a máquina
+    não tem não aparece. Numa instalação sem Steam, sem Heroic e sem Lutris
+    sobram as duas fixas, **e a tela continua certa**: sem linha vazia, sem
+    erro e sem uma palavra que pressuponha Steam. É a §6.4 da sprint, e a razão
+    é a ordem dela: o produto é para qualquer pessoa, não para esta bancada.
+
+    **O `atual` ENTRA SEMPRE, e sem ele a tela mentiria.** Um ``<select>`` só
+    mostra o que oferece: se ela desinstalar o Heroic, o perfil de um jogo do
+    Heroic continua no disco e continua válido, e sem esta linha o campo cairia
+    para a primeira opção — a tela AFIRMANDO uma regra que o arquivo não tem.
+    É o mesmo defeito que o `opts(travessao=True)` do desenho veio curar, medido
+    no DOM vivo em 04/09/2026.
+
+    Duplicata não entra duas vezes, e a ordem de chegada manda: quem ordena os
+    lançadores é quem os conta.
+    """
+    fora = [PROCEDENCIA_DA_NAVEGACAO]
+    for nome in list(lancadores_da_maquina) + ([atual] if atual else []):
+        limpo = str(nome or "").strip()
+        if limpo and limpo not in fora and limpo != PROCEDENCIA_DE_QUALQUER_JOGO:
+            fora.append(limpo)
+    fora.append(PROCEDENCIA_DE_QUALQUER_JOGO)
+    return fora

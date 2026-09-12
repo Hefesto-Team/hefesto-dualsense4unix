@@ -33,6 +33,20 @@ from hefesto_dualsense4unix.profiles.schema import (  # noqa: E402
     PRIORIDADE_MAXIMA,
     PRIORIDADE_MINIMA,
 )
+# AS PROCEDÊNCIAS SAEM DO PRODUTO, pelo mesmo argumento do `ESTILOS_DO_MOTOR`
+# logo acima: digitá-las aqui faria o desenho oferecer uma opção que o gesto
+# não sabe gravar no dia em que uma delas mudasse de nome. `LANCADOR_DIRETO` é
+# o rótulo residual — *"Instalado aqui"* —, e ele mora no catálogo porque é lá
+# que ele já responde *"de onde vem este jogo?"* na lista do campo de baixo.
+from hefesto_dualsense4unix.integrations.jogos_locais import (  # noqa: E402
+    LANCADOR_DIRETO,
+)
+from hefesto_dualsense4unix.profiles.simple_match import (  # noqa: E402
+    PROCEDENCIA_DA_NAVEGACAO,
+    PROCEDENCIA_DA_STEAM,
+    PROCEDENCIA_DE_QUALQUER_JOGO,
+    oferta_do_funciona_em,
+)
 
 # ---------------------------------------------------------------------------
 # O QUADRO "MODO" SAIU DAQUI — 11/09/2026, ordem dela:
@@ -1340,18 +1354,41 @@ FRASE_DO_UNIVERSAL = (
     "O Universal fica em zero: ele só entra quando nenhum outro serve.")
 DICA_DA_PRIORIDADE = f"{FRASE_DA_PRIORIDADE_DELA} {FRASE_DO_UNIVERSAL}"
 
-#: AS OPÇÕES DO "Funciona em". Todas menos "Estilo de Jogo" têm preset atrás em
-#: `perfis_web.AMBIENTE_DO_PRESET` — e a régua
-#: `test_toda_forma_que_o_produto_escreve_tem_rotulo_nas_duas_telas` cobra os
-#: dois sentidos, para nenhuma forma nova nascer órfã de rótulo.
+#: OS LANÇADORES DO DESENHO — a máquina de exemplo. **A lista VIVA não é esta**:
+#: ela sai do censo (`a10_perfis._procedencias_da_maquina`) e chega ao
+#: `<select>` pelo `blocos`, como a lista de perfis e a dos jogos. Estes nomes
+#: existem para o desenho ter o que mostrar, e a régua
+#: `test_o_funciona_em_oferece_lancador` cobra que todo nome daqui seja um
+#: lançador que o censo sabe ler (ou a Steam, ou o residual).
+LANCADORES_DO_DESENHO = [PROCEDENCIA_DA_STEAM, "Heroic", "Lutris", "RetroArch",
+                         LANCADOR_DIRETO]
+
+#: AS OPÇÕES DO "Funciona em" — **«de onde o jogo vem», e não mais a forma
+#: técnica de casar.** C4-FUNCIONA-EM, 11/09/2026, desenho DELA (*"isso
+#: mesmo."*). As quatro que saíram eram jargão de implementação na cara de quem
+#: joga: "Jogo da Steam", "Jogo", "Jogo (pela janela)" e "Estilo de Jogo".
 #:
-#: **A SEXTA NASCEU EM 06/09/2026** — "Jogo (pela janela)", a ONDA5-10-01. Ela é
-#: o que o botão "Detectar" produz quando o jogo NÃO é da Steam: uma classe de
-#: janela só. Sem esta linha, gravar a forma nova abriria o perfil com o seletor
-#: travado — a tela ganhando uma regra que não sabe mostrar, que é o estrago que
-#: a própria recusa do "Detectar" previa.
-AMBIENTES = ["Todos","Steam","Estilo de Jogo","Jogo","Jogo da Steam",
-             "Jogo (pela janela)"]
+#: **A ORDEM DELA, literal** — e a digitação dela não se limpa:
+#: *"A gente adicionaria Navegação, remopve jogo da steam,  (noqa-acento) cita ela
+#: jogo, jogo pela janela, estilo de jogo, e colocariamos  (noqa-acento) cita ela
+#: os launchers."*
+#:
+#: **"Estilo de Jogo" NÃO MORRE — muda de lugar.** Ele não é uma procedência, é
+#: um corte transversal, e continua no campo próprio logo abaixo, com o mesmo
+#: `<select>` e o mesmo gesto. Quem some daqui é a linha, não a feature.
+#:
+#: A LISTA SAI DO PRODUTO (`simple_match.oferta_do_funciona_em`), e por isso o
+#: desenho não pode discordar da tela viva na ORDEM nem nas duas fixas —
+#: «Navegação» na frente, «Qualquer jogo» no fim.
+AMBIENTES = oferta_do_funciona_em(LANCADORES_DO_DESENHO)
+
+#: A PROCEDÊNCIA QUE O EDITOR DO DESENHO MOSTRA. É a tradução honesta do perfil
+#: que ele abre — `PERFIS[0]` é *Mortal Kombat*, cujo "Quando usar" diz
+#: `Jogo · mk1.exe`: uma regra por nome de programa, que não está no catálogo de
+#: lançador nenhum. **«Instalado aqui» é a resposta para isso**, e marcar
+#: «Steam» aqui seria o desenho afirmando, sobre o MESMO perfil, duas
+#: procedências diferentes em dois widgets da mesma tela.
+PROCEDENCIA_DO_DESENHO = LANCADOR_DIRETO
 #: OS RÓTULOS SAEM DO MOTOR — ver o comentário do import, no alto. Eram quinze
 #: palavras digitadas aqui, e a coincidência com o motor não era construção.
 ESTILOS = [e.rotulo for e in ESTILOS_DO_MOTOR]
@@ -1943,7 +1980,7 @@ MIOLO = f'''
               <div class="campo">
                 <span>Funciona em:</span>
                 <span class="val"><select data-hef="editor.ambiente" data-hef-gesto="editor.ambiente" data-hef-alvo="valor">
-{opts(AMBIENTES, "Jogo", travessao=True)}
+{opts(AMBIENTES, PROCEDENCIA_DO_DESENHO, travessao=True)}
                 </select>{marca_com_dica("trava", "editor.ambiente.travado",
                                         "editor.ambiente.recado", CADEADO)}</span>
               </div>
@@ -2665,6 +2702,27 @@ def _conferir(html: str) -> None:
     exigir(f'<option value="{TRAVESSAO}" disabled>{TRAVESSAO}</option>' in html,
            "a opção `—` do 'Funciona em' saiu — o perfil de regra fina volta a "
            "mostrar a opção que o DESENHO trazia")
+
+    # O JARGÃO SAIU DO "FUNCIONA EM" — C4-FUNCIONA-EM, 11/09/2026, ordem dela.
+    # A régua mora aqui, e não só no pytest, porque o gerador é quem pode
+    # RECUSAR de escrever: uma decisão dela desfeita não chega ao disco.
+    #
+    # **"Estilo de Jogo" NÃO está nesta lista de propósito** — ele não morreu,
+    # mudou de lugar, e a linha própria dele está logo abaixo na mesma tela.
+    # Cobrá-lo aqui faria a régua reprovar o campo que a ordem dela preservou.
+    for jargao in ("Jogo da Steam", "Jogo (pela janela)"):
+        exigir(f">{jargao}</option>" not in html,
+               f"“{jargao}” voltou ao 'Funciona em' — é o jargão de "
+               f"implementação que ela mandou tirar em 11/09/2026, e ele pede "
+               f"dela a chave pela qual o jogo é reconhecível")
+    exigir(">Jogo</option>" not in html,
+           "“Jogo” voltou ao 'Funciona em' — a opção que pedia dela a "
+           "diferença entre `process_name` e `wm_class`")
+    for fixa in (PROCEDENCIA_DA_NAVEGACAO, PROCEDENCIA_DE_QUALQUER_JOGO):
+        exigir(f">{fixa}</option>" in html,
+               f"“{fixa}” saiu do 'Funciona em' — as duas fixas são o que "
+               f"sobra numa máquina sem lançador nenhum, e sem elas o campo "
+               f"nasce vazio em quem acabou de instalar")
 
     # A COLUNA JUSTA. O `104px` é o valor antigo, e o vão morto de 22px é ele.
     exigir("--rot-p:86px" in html,
