@@ -91,6 +91,13 @@ RAIZ = pathlib.Path(__file__).resolve().parents[1]
 BANCADA = RAIZ / "mockup"
 PUBLICADO = RAIZ / "src" / "hefesto_dualsense4unix" / "interface" / "paginas"  # noqa-acento: nome de PASTA, e caminho nao leva acento
 FONTE = RAIZ / "src"
+PACOTES = FONTE / "hefesto_dualsense4unix" / "interface" / "pacotes"
+
+#: O que fica no lugar de um pedaço que só existe RODANDO — o nome de um jogo, o
+#: número de um assento, a resposta do daemon. Ele não é enfeite: as letras dele
+#: não casam com `\s+`, então a peneira da confissão não consegue atravessar o
+#: buraco e inventar uma frase que ninguém escreveu.
+VALOR_DE_EXECUCAO = "‹…›"
 
 
 # ---------------------------------------------------------------------------
@@ -183,6 +190,63 @@ FATOS: dict[str, str] = {
     "O Hefesto não é só para a Steam":
         "AFIRMAÇÃO POSITIVA sobre o alcance do produto — a peneira a pega pela "
         "forma, e ela é o oposto de uma confissão — 07/09/2026",
+
+    # -- O RECADO DO GESTO, visto pela primeira vez em 11/09/2026 -----------
+    # As dezoito de baixo já estavam na tela antes desta data; o que mudou é
+    # que a régua passou a ler o canal por onde elas chegam. Todas foram
+    # classificadas pela mesma pergunta das de cima: *de quem é o sujeito?*
+    "o Hefesto não respondeu":
+        "ESTADO DO ATO que acabou de acontecer: o daemon não devolveu resposta, "
+        "e a frase diz na mesma linha o que ficou como estava. É a família de "
+        "*o Hefesto não está entregando o controle ao jogo agora* — cinco "
+        "gestos da Navegação e da Iluminação, inclusive o das lâmpadas com o "
+        "co-op ligado, em que a frase ainda nomeia o dono — 11/09/2026",
+    "o Hefesto não está rodando — ligue na aba Sistema":
+        "ESTADO DE AGORA, e ela diz onde ligar. O serviço parado é fato "
+        "presente, não capacidade por entregar — 11/09/2026",
+    "o Hefesto não confirmou a troca para":
+        "ESTADO DO ATO: o daemon não confirmou, e o perfil fica como estava — "
+        "11/09/2026",
+    "o Hefesto não aceitou gravar esta barra":
+        "ESTADO DO ATO, com a segunda metade dita (*e não disse por quê*), que "
+        "é o contrato AS-DUAS-ABAS-FALAM — 11/09/2026",
+    "o Hefesto não aceitou mirar este controle":
+        "ESTADO DO ATO, e a frase diz a consequência (*sem mira a vibração iria "
+        "para todos*) e o que fazer — 11/09/2026",
+    "na lista do Hefesto não há como mirar só nele":
+        "o sujeito é O CONTROLE, que se desligou entre o clique e agora. A "
+        "frase explica por que nada foi mandado — 11/09/2026",
+    "o Hefesto não conseguiu mirar este":
+        "ESTADO DO ATO, e diz AS DUAS METADES: para onde o volume foi e que o "
+        "perfil deste controle não mudou — 11/09/2026",
+    "o Hefesto instalado é mais velho que esta janela":
+        "LIMITE DA INSTALAÇÃO, não do produto: o daemon no disco é de uma "
+        "versão anterior à da janela. Fato do ambiente, e o sujeito é a "
+        "instalação dela — 11/09/2026",
+    "o Hefesto ainda não disse se este sensor está ligado":
+        "ESTADO DE AGORA: o dado do daemon não chegou, e a frase diz por que "
+        "alternar sem ele seria chutar — 11/09/2026",
+    "este controle ainda não tem leitor de entradas":
+        "o sujeito é O CONTROLE. Limite do aparelho conectado, e é a segunda "
+        "metade da frase acima — 11/09/2026",
+    "o canal do microfone que ainda não está de pé":
+        "o sujeito é O CANAL do sistema de som: no rádio ele sobe, no cabo é a "
+        "placa que aparece. Fato do sistema — 11/09/2026",
+    "o Hefesto não precisa de ponte":
+        "AFIRMAÇÃO POSITIVA: pelo cabo o PipeWire publica o canal sozinho. A "
+        "peneira a pega pela forma, e ela diz o contrário de uma dívida — "
+        "11/09/2026",
+    "o Hefesto não tem como guardar a quem esta ponte pertence":
+        "LIMITE DO APARELHO, e a frase nomeia a causa na mesma oração: este "
+        "controle não tem endereço fixo, então não há chave por onde guardar — "
+        "11/09/2026",
+    "o perfil ainda não sabe o volume dele":
+        "ESTADO DE AGORA do perfil DELA, com a razão de firmware escrita ao "
+        "lado (seção sem número manda ZERO e tranca o alto-falante) e o gesto "
+        "que resolve — 11/09/2026",
+    "Esta instalação ainda não tem":
+        "o sujeito é A INSTALAÇÃO dela — o Proton pinado, a aplicação em massa. "
+        "Fato do que está no disco desta máquina — 11/09/2026",
 }
 
 
@@ -215,7 +279,38 @@ FATOS: dict[str, str] = {
 #: passaram a dizer o que o produto FAZ (o perfil casa por processo e janela; o
 #: teto não alcança estes; a cor vem da lista), e a dívida continua onde ela
 #: mora — o `docs/data/mapa-controles.csv`.
-A_DIVIDA: dict[str, str] = {}
+#:
+#: **A LISTA VOLTOU A TER LINHA EM 11/09/2026, e nenhuma delas é dívida nova.**
+#: As quatro de baixo estão na tela desde antes desta data; o que mudou é que a
+#: régua passou a ler o canal por onde elas chegam — o `raise RuntimeError` do
+#: gesto. Elas não foram curadas no mesmo gesto porque os quatro arquivos são de
+#: outras frentes hoje (as 352 mudanças de texto dela), e reescrever a frase de
+#: quem está com o arquivo na mão é como se perde trabalho de duas pessoas.
+#: **O endereço de cada uma está aqui, e a lista volta a encolher.**
+A_DIVIDA: dict[str, str] = {
+    "está desenhado na tela e o Hefesto não sabe montar essa máscara":
+        "`interface/pacotes/a01_jogar.py` — a tela OFERECE uma máscara que o "
+        "produto não constrói. O que falta é o construtor, e a frase é o "
+        "recibo disso no cartão dela — medida em 11/09/2026",
+    "ainda não tem dono, e é o INVERSO":
+        "`interface/pacotes/a06_navegacao.py` — a primeira metade da mesma "
+        "frase, e ela precisa de chave própria: a peneira acha duas vezes na "
+        "mesma oração, e cada achado casa com a janela que o cerca — medida "
+        "em 11/09/2026",
+    "o portão com o sinal trocado —, e ele ainda não existe":
+        "`interface/pacotes/a06_navegacao.py` — a lista oferece *Só dentro do "
+        "jogo* e o perfil não tem o campo que o sustenta. A opção sai da lista "
+        "ou o campo nasce; as duas curas tiram a frase — medida em 11/09/2026",
+    "Ainda não sei abrir o":
+        "`interface/pacotes/a07_lancadores.py` — *o Hefesto só sabe abrir a "
+        "Steam por enquanto*. O «por enquanto» é a promessa que a ordem dela "
+        "proíbe na tela — medida em 11/09/2026",
+    "a frase do produto não disse isso":
+        "`interface/pacotes/a04_iluminacao.py` — este recado fala com quem "
+        "DESENVOLVE: ele acusa que o dono da frase parou de colar o aviso dos "
+        "N. A guarda é certa; o canal é que está errado, e o cartão dela não é "
+        "lugar de laudo nosso — medida em 11/09/2026",
+}
 
 
 # ---------------------------------------------------------------------------
@@ -273,11 +368,366 @@ def _falas() -> list[tuple[str, str]]:
     return fora
 
 
+# ---------------------------------------------------------------------------
+# 3. O RECADO DO GESTO — o terceiro canal, e o que esta régua nunca lia
+# ---------------------------------------------------------------------------
+# TRÊS AGENTES O ACHARAM SOZINHOS, cada um numa aba, sem se falarem (LINGUA-A2,
+# A4 e A5, 11/09/2026). O contrato do piloto é explícito: um `RuntimeError`
+# levantado dentro de um gesto quer dizer *"o produto recusou, e a frase VAI PARA
+# A TELA"* — `hefesto_vivo._recusou_dizendo` faz `str(erro)` e deposita o texto
+# no cartão da coluna em que ela clicou, laranja, por 30 segundos.
+#
+# Essa frase nunca passou por peneira nenhuma. Ela não é uma `Fala`, não está no
+# HTML e nasce montada em execução: f-string, concatenação, uma constante do
+# módulo vizinho. A mordida de quem achou foi chamar o casador desta régua com
+# as frases dos gestos — elas CASAM. A régua não falhava em reconhecer; ela não
+# olhava ali.
+#
+# POR QUE A RECONSTRUÇÃO É ESTÁTICA, e por que ela declara o que não alcança:
+# importar o pacote para ler a frase pediria GTK, daemon e perfil da casa. Então
+# a régua monta a frase do jeito que o fonte a escreve, e onde um pedaço só
+# existe rodando ela põe :data:`VALOR_DE_EXECUCAO` no lugar. O que sobra sem uma
+# letra de prosa não passa calado: cai na terceira tabela, :data:`SEM_LETRA`.
+def _arvore(p: pathlib.Path) -> ast.Module | None:
+    if p not in _ARVORES:
+        try:
+            _ARVORES[p] = ast.parse(p.read_text(encoding="utf-8"))
+        except (SyntaxError, UnicodeDecodeError, OSError):
+            _ARVORES[p] = None
+    return _ARVORES[p]
+
+
+_ARVORES: dict[pathlib.Path, ast.Module | None] = {}
+_ESCOPOS: dict[pathlib.Path, tuple[dict, dict, dict]] = {}
+
+
+def _modulo(nome: str, base: pathlib.Path, nivel: int) -> pathlib.Path | None:
+    """O arquivo de um `import`, se ele morar DENTRO de `src/`.
+
+    O `nivel` é o do `from . import x`: um ponto é o pacote do próprio arquivo.
+    Import de biblioteca de fora devolve `None` e a régua para ali — ler o mundo
+    inteiro para montar uma frase de tela seria trocar um ponto cego por uma
+    varredura que ninguém termina.
+    """
+    if nivel:
+        pasta = base.parent
+        for _ in range(nivel - 1):
+            pasta = pasta.parent
+        rel = (nome or "").replace(".", "/")
+        candidatos = ([pasta / f"{rel}.py", pasta / rel / "__init__.py"]
+                      if rel else [pasta / "__init__.py"])
+    else:
+        if not nome:
+            return None
+        rel = nome.replace(".", "/")
+        candidatos = [FONTE / f"{rel}.py", FONTE / rel / "__init__.py"]
+    return next((c for c in candidatos if c.is_file()), None)
+
+
+def _colher(corpo: list[ast.stmt], p: pathlib.Path) -> tuple[dict, dict, dict]:
+    """O que um corpo declara: constantes, apelidos de import e funções.
+
+    Serve para o módulo e para o corpo de uma função, e o segundo importa: meia
+    dúzia de gestos faz `from ... import x` DENTRO da função, e quem só olhasse
+    o topo do arquivo perderia a frase.
+    """
+    constantes: dict[str, ast.expr] = {}
+    apelidos: dict[str, tuple[str, pathlib.Path, str]] = {}
+    funcoes: dict[str, ast.FunctionDef | ast.AsyncFunctionDef] = {}
+    for no in corpo:
+        if isinstance(no, ast.ImportFrom):
+            de = _modulo(no.module or "", p, no.level)
+            for n in no.names:
+                if n.name == "*":
+                    continue
+                inteiro = (f"{no.module}.{n.name}" if no.module else n.name)
+                sub = _modulo(inteiro, p, no.level)
+                if sub is not None:
+                    apelidos[n.asname or n.name] = ("módulo", sub, "")
+                elif de is not None:
+                    apelidos[n.asname or n.name] = ("nome", de, n.name)
+        elif isinstance(no, ast.Import):
+            for n in no.names:
+                achado = _modulo(n.name, p, 0)
+                if achado is not None:
+                    apelidos[n.asname or n.name.split(".")[0]] = (
+                        "módulo", achado, "")
+        elif isinstance(no, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            funcoes[no.name] = no
+        elif isinstance(no, ast.Assign):
+            for alvo in no.targets:
+                if isinstance(alvo, ast.Name):
+                    constantes.setdefault(alvo.id, no.value)
+        elif isinstance(no, ast.AnnAssign):
+            if isinstance(no.target, ast.Name) and no.value is not None:
+                constantes.setdefault(no.target.id, no.value)
+    return constantes, apelidos, funcoes
+
+
+def _escopo(p: pathlib.Path) -> tuple[dict, dict, dict]:
+    if p not in _ESCOPOS:
+        arvore = _arvore(p)
+        _ESCOPOS[p] = _colher(arvore.body, p) if arvore else ({}, {}, {})
+    return _ESCOPOS[p]
+
+
+def _dentro(fn: ast.FunctionDef | ast.AsyncFunctionDef,
+            p: pathlib.Path) -> tuple[dict, dict, dict]:
+    """O corpo da função INTEIRO, e não só o primeiro nível.
+
+    Um `from ... import` e uma frase de recusa moram com frequência dentro de um
+    `try` ou de um `if`, que são corpos aninhados. Por isso a colheita percorre
+    os filhos — o que se perde é a ORDEM (a régua lê a primeira atribuição a um
+    nome, não a que valia naquela linha), e o que se ganha é a frase.
+    """
+    partes = [_colher([n], p) for n in ast.walk(fn) if isinstance(n, ast.stmt)]
+    constantes: dict = {}
+    apelidos: dict = {}
+    funcoes: dict = {}
+    for c, a, f in partes:
+        for d, nova in ((constantes, c), (apelidos, a), (funcoes, f)):
+            for k, v in nova.items():
+                d.setdefault(k, v)
+    return constantes, apelidos, funcoes
+
+
+def _do_dono(fn: ast.FunctionDef | ast.AsyncFunctionDef, p: pathlib.Path,
+             prof: int, vistos: frozenset) -> tuple[str, bool]:
+    """O que uma função DEVOLVE, para a régua perguntar ao dono da frase.
+
+    É a regra desta casa aplicada à leitura: *quando um valor tem dono, a régua
+    PERGUNTA ao dono*. `raise RuntimeError(sem_resposta_do_daemon())` não é frase
+    ilegível — é frase que mora uma porta adiante.
+
+    OS RAMOS ENTRAM TODOS, separados pelo buraco: a régua não sabe qual `return`
+    acontece, e emendá-los sem separador deixaria a peneira casar por cima da
+    costura, inventando uma frase que nenhum caminho produz.
+    """
+    dentro = _dentro(fn, p)
+    pedacos, inteiro, achou = [], True, False
+    for no in ast.walk(fn):
+        if isinstance(no, ast.Return) and no.value is not None:
+            achou = True
+            t, c = _montar(no.value, p, dentro, prof + 1, vistos)
+            pedacos.append(t)
+            inteiro = inteiro and c
+    if not achou:
+        return VALOR_DE_EXECUCAO, False
+    return f" {VALOR_DE_EXECUCAO} ".join(pedacos), inteiro
+
+
+_TETO = 12
+
+
+def _montar(no: ast.expr, p: pathlib.Path, local: tuple[dict, dict, dict],
+            prof: int = 0, vistos: frozenset = frozenset()) -> tuple[str, bool]:
+    """A frase como ela CHEGA ao cartão — e se a régua a montou inteira.
+
+    O segundo valor é o que separa *"li tudo"* de *"li o que deu"*: ele é
+    `False` assim que um pedaço vira :data:`VALOR_DE_EXECUCAO`, e é por ele que
+    a régua sabe quando tem de confessar o próprio limite.
+    """
+    if prof > _TETO:
+        return VALOR_DE_EXECUCAO, False
+    consts, apelidos, funcoes = _escopo(p)
+    l_consts, l_apelidos, l_funcoes = local
+    consts = {**consts, **l_consts}
+    apelidos = {**apelidos, **l_apelidos}
+    funcoes = {**funcoes, **l_funcoes}
+
+    if isinstance(no, ast.Constant):
+        return ((no.value, True) if isinstance(no.value, str)
+                else (VALOR_DE_EXECUCAO, False))
+
+    if isinstance(no, ast.Name):
+        chave = (p, no.id)
+        if chave in vistos:
+            return VALOR_DE_EXECUCAO, False
+        adiante = vistos | {chave}
+        if no.id in consts:
+            return _montar(consts[no.id], p, local, prof + 1, adiante)
+        if no.id in funcoes:
+            return _do_dono(funcoes[no.id], p, prof, adiante)
+        if no.id in apelidos:
+            tipo, onde, orig = apelidos[no.id]
+            c2, _a2, f2 = _escopo(onde)
+            if tipo == "nome" and orig in c2:
+                return _montar(c2[orig], onde, ({}, {}, {}), prof + 1, adiante)
+            if tipo == "nome" and orig in f2:
+                return _do_dono(f2[orig], onde, prof, adiante)
+        return VALOR_DE_EXECUCAO, False
+
+    if isinstance(no, ast.Attribute):
+        base = no.value
+        if isinstance(base, ast.Name) and apelidos.get(base.id, ("", None, ""))[0] == "módulo":
+            onde = apelidos[base.id][1]
+            chave = (onde, no.attr)
+            if chave in vistos:
+                return VALOR_DE_EXECUCAO, False
+            adiante = vistos | {chave}
+            c2, _a2, f2 = _escopo(onde)
+            if no.attr in c2:
+                return _montar(c2[no.attr], onde, ({}, {}, {}), prof + 1, adiante)
+            if no.attr in f2:
+                return _do_dono(f2[no.attr], onde, prof, adiante)
+        return VALOR_DE_EXECUCAO, False
+
+    if isinstance(no, ast.Call):
+        # `str(x)` é embrulho, não dono: a frase é o `x`. Sem esta linha a régua
+        # perdia `return str(lightbar_actions._AVISO_HEFESTO_DESLIGADO)`, que é
+        # o recado de três botões da Iluminação.
+        if isinstance(no.func, ast.Name) and no.func.id == "str" and len(no.args) == 1:
+            return _montar(no.args[0], p, local, prof + 1, vistos)
+        if isinstance(no.func, (ast.Name, ast.Attribute)):
+            return _montar(no.func, p, local, prof, vistos)
+        return VALOR_DE_EXECUCAO, False
+
+    if isinstance(no, ast.JoinedStr):
+        pedacos, inteiro = [], True
+        for parte in no.values:
+            t, c = _montar(parte, p, local, prof + 1, vistos)
+            pedacos.append(t)
+            inteiro = inteiro and c
+        return "".join(pedacos), inteiro
+
+    if isinstance(no, ast.FormattedValue):
+        t, c = _montar(no.value, p, local, prof + 1, vistos)
+        return (t, c) if c else (VALOR_DE_EXECUCAO, False)
+
+    if isinstance(no, ast.BinOp) and isinstance(no.op, ast.Add):
+        a, ca = _montar(no.left, p, local, prof + 1, vistos)
+        b, cb = _montar(no.right, p, local, prof + 1, vistos)
+        return a + b, ca and cb
+
+    if isinstance(no, ast.BoolOp):
+        # `motivo or "o Hefesto não respondeu"` põe os DOIS na tela, conforme o
+        # dia. Os dois entram, separados pelo buraco.
+        pedacos, inteiro = [], True
+        for parte in no.values:
+            t, c = _montar(parte, p, local, prof + 1, vistos)
+            pedacos.append(t)
+            inteiro = inteiro and c
+        return f" {VALOR_DE_EXECUCAO} ".join(pedacos), inteiro
+
+    if isinstance(no, ast.IfExp):
+        a, ca = _montar(no.body, p, local, prof + 1, vistos)
+        b, cb = _montar(no.orelse, p, local, prof + 1, vistos)
+        return f"{a} {VALOR_DE_EXECUCAO} {b}", ca and cb
+
+    return VALOR_DE_EXECUCAO, False
+
+
+def _recados() -> tuple[list[tuple[str, str]], list[tuple[str, str]]]:
+    """Os recados dos gestos: os que a régua LEU, e os que ela não alcançou.
+
+    O primeiro par de cada item é o endereço e a frase montada. O segundo par é
+    a lista do que ficou sem uma letra de prosa: `arquivo:gesto ← expressão`, que
+    é a chave de :data:`SEM_LETRA`. A chave não leva NÚMERO DE LINHA de
+    propósito — uma declaração presa a uma linha envelhece na primeira edição
+    acima dela, e a régua que a cobra passaria a cobrar um lugar que se mudou.
+    """
+    lidos: list[tuple[str, str]] = []
+    mudos: list[tuple[str, str]] = []
+    for p in sorted(PACOTES.glob("*.py")):
+        arvore = _arvore(p)
+        if arvore is None:
+            continue
+        nome_do_arquivo = p.name
+        for fn in ast.walk(arvore):
+            if not isinstance(fn, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                continue
+            local = _dentro(fn, p)
+            for no in ast.walk(fn):
+                if not (isinstance(no, ast.Raise) and isinstance(no.exc, ast.Call)):
+                    continue
+                alvo = no.exc.func
+                qual = (alvo.id if isinstance(alvo, ast.Name)
+                        else getattr(alvo, "attr", ""))
+                if qual != "RuntimeError" or not no.exc.args:
+                    continue
+                texto, inteiro = _montar(no.exc.args[0], p, local)
+                onde = f"{p.relative_to(RAIZ)}:{no.lineno}"
+                if not inteiro and not texto.replace(VALOR_DE_EXECUCAO, "").strip():
+                    mudos.append((
+                        f"{nome_do_arquivo}:{fn.name} ← "
+                        f"{ast.unparse(no.exc.args[0])}", onde))
+                lidos.append((onde, texto))
+    return lidos, mudos
+
+
+# ---------------------------------------------------------------------------
+# TABELA 3 — O RECADO QUE A RÉGUA NÃO CONSEGUE LER, e de quem ele é
+# ---------------------------------------------------------------------------
+#: A chave é `arquivo.py:gesto ← expressão`, e o valor diz QUEM é o dono da
+#: frase. Ela existe porque um portão que lê 80% e cala os outros 20% é pior que
+#: um que não lê nada: quem vê o verde conclui que a tela inteira passou.
+#:
+#: **Nenhuma linha aqui é permissão.** É o endereço de uma frase que mora fora
+#: do alcance da reconstrução estática — quase sempre a resposta do daemon ou um
+#: texto do motor (`app/actions/*`) que o gesto só repassa. Quando o dono ganhar
+#: uma leitura própria, a linha sai daqui.
+#:
+#: A CHECAGEM É NOS DOIS SENTIDOS, como nas outras duas tabelas: uma chave que
+#: o fonte não tem mais reprova, para a lista não envelhecer calada.
+SEM_LETRA: dict[str, str] = {
+    # -- A RESPOSTA DO DAEMON, repassada tal como veio ----------------------
+    # O gesto pergunta, o daemon recusa com um `motivo`, e o gesto põe esse
+    # motivo no cartão sem uma palavra própria. Quem escreve a frase é o
+    # `daemon/ipc_handlers.py` e o motor que ele chama.
+    "a01_jogar.py:mascara_do_controle ← motivo":
+        "a recusa do `gamepad.mask.set`, palavra por palavra do daemon",
+    "a02_controles.py:mudo ← frase":
+        "a recusa do `mic.set`, montada pelo motor do microfone",
+    "a02_controles.py:rota ← desfecho.motivo":
+        "o campo `motivo` do desfecho de `app/actions` da rota do som",
+    "a04_iluminacao.py:_cobrar_a_frase_do_desenho ← frase":
+        "a frase do DONO do desenho das lâmpadas (`app/actions`), devolvida "
+        "inteira quando ela difere do desfecho feliz",
+    "a05_vibracao.py:parar ← motivo":
+        "a recusa do `rumble.stop`, palavra do daemon",
+    "a08_conexoes.py:luz_nao_acende ← resultado.porque":
+        "o campo `porque` do resultado de `app/actions` da barra de luz",
+    "a09_sistema.py:reiniciar ← motivo":
+        "a recusa do `systemctl restart`, como o systemd a devolve",
+    "a09_sistema.py:retomar ← motivo":
+        "a recusa de retomar o serviço, idem",
+    "a09_sistema.py:ver_plugins ← motivo":
+        "a recusa da leitura dos plugins, idem",
+    "a09_sistema.py:_systemctl ← f'{recusa}{(f': {detalhe}' if detalhe else '.')}'":
+        "a recusa do systemd mais o detalhe que ele mesmo dá — as duas metades "
+        "vêm de fora, e o `f''` só as costura",
+    "a10_perfis.py:editor_ambiente ← str(editor.get('ambiente_recado') or '')":
+        "o recado do editor de ambiente, escrito em `app/actions` do perfil",
+    "a10_perfis.py:editor_jogo ← str(editor.get('ambiente_recado') or '')":
+        "idem, pelo caminho do jogo",
+    "a06_navegacao.py:guardar_definicoes ← ' '.join(recados)":
+        "os recados juntados de várias gravações; cada um nasce no seu dono",
+    "a02_controles.py:mudo ← acao.dica":
+        "a dica da ação de microfone, que mora no dono da ação",
+
+    # -- O TEXTO MORA EM `app/actions/*`, e o gesto só o busca --------------
+    "a01_jogar.py:_plano ← painel.porque_nao_aplica(chave)":
+        "`app/actions/jogar/painel.py:porque_nao_aplica` — a razão do cinza, "
+        "montada por chave",
+    "a01_jogar.py:reconectar ← _painel().RECONECTAR_SEM_SERVICO":
+        "`app/actions/jogar/painel.py:RECONECTAR_SEM_SERVICO` — o import é "
+        "tardio e vem por uma função, então a régua perde o rastro",
+    "a09_sistema.py:restaurar_de_fabrica ← _rodape.frase_do_preset_ausente()":
+        "`app/actions/footer_actions.py:frase_do_preset_ausente`",
+
+    # -- A TABELA DO PRÓPRIO ARQUIVO, lida por chave de execução ------------
+    "a01_jogar.py:_plano_do_chip ← BOTOES_SEM_DONO.get(f'modo-{chave}', 'sem dono no produto')":
+        "o valor sai de um dicionário pela chave do clique; as frases estão no "
+        "próprio `a01_jogar.py`, e ler qual delas sai pediria saber a chave",
+}
+
+
 def main() -> int:
     achados: list[str] = []
     vistas: set[str] = set()
 
-    for onde, texto in _paginas() + _falas():
+    lidos, mudos = _recados()
+    for onde, texto in _paginas() + _falas() + lidos:
         for trecho in _forma(texto):
             casou = next((k for k in {**FATOS, **A_DIVIDA} if k.lower() in trecho.lower()),
                          None)
@@ -287,6 +737,11 @@ def main() -> int:
                 vistas.add(casou)
 
     orfas = [k for k in sorted(set(FATOS) | set(A_DIVIDA)) if k not in vistas]
+
+    chaves_mudas = {chave for chave, _ in mudos}
+    nao_declarados = sorted(
+        (chave, onde) for chave, onde in mudos if chave not in SEM_LETRA)
+    sem_dono = [k for k in sorted(SEM_LETRA) if k not in chaves_mudas]
 
     if achados:
         print(f"FALHA: {len(achados)} frase(s) de tela com forma de confissão "
@@ -313,10 +768,31 @@ def main() -> int:
         print("envelhece calada, e a próxima pessoa a lê como se a confissão")
         print("continuasse na tela.")
 
-    if achados or orfas:
+    if nao_declarados:
+        print(f"\nFALHA: {len(nao_declarados)} recado(s) de gesto que a régua "
+              f"NÃO CONSEGUIU LER.\n")
+        for chave, onde in nao_declarados:
+            print(f"  {onde}\n      {chave}")
+        print("\nA frase chega ao cartão dela por `str(erro)`, e aqui ela não")
+        print("tem uma letra de prosa que a régua alcance. Diga de quem ela é")
+        print("em SEM_LETRA — o dono costuma ser o daemon ou `app/actions/*`.")
+        print("Se o dono for ESTE arquivo, escreva a frase no `raise` e a")
+        print("régua passa a lê-la sozinha.")
+
+    if sem_dono:
+        print(f"\nFALHA: {len(sem_dono)} recado(s) declarado(s) em SEM_LETRA "
+              f"que o fonte não tem mais.")
+        for k in sem_dono:
+            print(f"  {k!r}")
+        print("\nTire-os da tabela, pela razão das outras duas: declaração que")
+        print("sobrevive ao código vira ponto cego com aparência de cuidado.")
+
+    if achados or orfas or nao_declarados or sem_dono:
         return 1
     print(f"OK: a tela não confessa dívida nossa — {len(FATOS)} frase(s) "
-          f"legítima(s) declarada(s), {len(A_DIVIDA)} dívida(s) ainda na tela.")
+          f"legítima(s) declarada(s), {len(A_DIVIDA)} dívida(s) ainda na tela, "
+          f"{len(lidos)} recado(s) de gesto lidos ({len(SEM_LETRA)} com o dono "
+          f"declarado fora do alcance).")
     return 0
 
 
