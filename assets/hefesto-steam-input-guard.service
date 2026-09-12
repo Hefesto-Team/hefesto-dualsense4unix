@@ -1,7 +1,7 @@
 [Unit]
 # doc: docs/process/sprints/2026-07-26-STEAM-INPUT-01-ela-nunca-mais-precisa-decidir.md
 # doc: docs/process/sprints/2026-08-16-SENTINELA-WRAPPER-01-a-steam-guarda-uma-linha-por-jogo-e-comeu-a-nossa.md
-Description=Hefesto — desfaz o que a Steam reescreve no localconfig.vdf (Steam Input OFF, e o wrapper hefesto-launch)
+Description=Hefesto — devolve a configuração que a Steam reescreve (Steam Input desligado, e o atalho de inicialização de volta)
 
 [Service]
 Type=oneshot

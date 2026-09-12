@@ -126,7 +126,40 @@ FRASES_BANIDAS: tuple[str, ...] = (
 #: **`compactada` E NÃO `compacta`:** a segunda é raiz de `compactar`, que é o
 #: verbo certo em código e em comentário, e a régua casa por BORDA DE PALAVRA —
 #: banir a raiz curta acusaria toda prosa que explica o que o daemon faz.
-PALAVRAS_BANIDAS: tuple[str, ...] = ("mesa", "reconciliad", "compactada")
+#:
+#: **A LISTA DEIXOU DE SER DIGITADA — 11/09/2026, F5-A-REGUA-LE-O-GESTO.** Ela
+#: tinha TRÊS palavras enquanto o glossário
+#: (`docs/A-LINGUA-DESTA-CASA-o-glossario-que-a-tela-e-o-codigo-falam.md`)
+#: proibia ONZE, e só a de baixo tinha régua. Foi por essa fresta que `uinput`
+#: chegou à dica da Navegação e ficou.
+#:
+#: **O DONO É O GLOSSÁRIO, e esta tupla é a CÓPIA que o produto carrega.** O
+#: pacote instalado não leva `docs/` junto, então um módulo que lesse o arquivo
+#: em execução quebraria na máquina dela. A cópia não envelhece porque
+#: `tests/unit/test_a_palavra_mesa_nao_chega_a_tela.py` mede as duas listas uma
+#: contra a outra NOS DOIS SENTIDOS: palavra nova no glossário e ausente daqui
+#: reprova, e palavra daqui que o glossário não tem reprova também.
+#:
+#: As oito que entraram são língua de dentro — o nome do subsistema
+#: (`uinput`, `hidraw`), o do arquivo da Steam (`vdf`), o da variável (`env`), o
+#: do endereço do aparelho (`uniq`, `MAC`), o do campo interno (`wrapper_used`,
+#: `dedup`) — mais duas frases que mandam a pessoa a um lugar que a tela dela
+#: não tem (*janela do aplicativo*, *linha de comando*).
+PALAVRAS_BANIDAS: tuple[str, ...] = (
+    "env",
+    "vdf",
+    "uinput",
+    "hidraw",
+    "MAC",
+    "uniq",
+    "wrapper_used",
+    "dedup",
+    "mesa",
+    "janela do aplicativo",
+    "linha de comando",
+    "reconciliad",
+    "compactada",
+)
 
 #: As letras que fazem de uma ocorrência um IDENTIFICADOR e não uma palavra.
 #: `-` e `_` estão aqui porque `mesa-frase`, `radio-mesa` e `MESA_VAZIA` são
