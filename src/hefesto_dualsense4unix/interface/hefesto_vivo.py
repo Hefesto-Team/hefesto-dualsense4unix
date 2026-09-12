@@ -3594,6 +3594,37 @@ class Piloto:
             self.cegueiras.append(
                 f"{self.pagina}: a camada da dica respondeu {resposta!r}")
 
+    def _entregar_o_arranjo(self) -> None:
+        """Entrega ao `mapa-das-portas` o gabinete de quem abriu a janela.
+
+        `arranjo()` devolve `None` quando não há faces declaradas no
+        `maquina.json` — e aí NÃO se entrega nada: a página fica com o exemplo,
+        que se declara exemplo no cabeçalho. Entregar meio arranjo desenharia um
+        gabinete sem entradas, e isso se lê como *"não tenho nada ligado"*.
+
+        A FALHA VAI PARA `cegueiras`, como a da camada da dica: a página
+        continua na tela, com o exemplo, e quem olhar o relato vê que a leitura
+        desta máquina não chegou — em vez de concluir que ela não existe.
+        """
+        import json
+
+        from hefesto_dualsense4unix.interface import arranjo_desta_maquina
+
+        dado = arranjo_desta_maquina.arranjo()
+        if dado is None:
+            return
+        js = f"window.hefestoArranjo({json.dumps(dado, ensure_ascii=False)})"
+        self.ponte.perguntar(js, self._arranjo_entregue)
+
+    def _arranjo_entregue(self, valor: Any, erro: Any) -> None:
+        if erro is not None:
+            self.cegueiras.append(f"{self.pagina}: o arranjo desta máquina não "
+                                  f"chegou à página — {erro}")
+            return
+        if str(valor) != "ok":
+            self.cegueiras.append(f"{self.pagina}: a página recusou o arranjo "
+                                  f"desta máquina — respondeu {valor!r}")
+
     def _leu_virgem(self, pagina: str, valor: Any, erro: Any) -> None:
         import json
 
@@ -3625,6 +3656,27 @@ class Piloto:
         # frente de ninguém. Por isso a falha vai para `cegueiras`, que é o que
         # o relato imprime.
         self.ponte.perguntar(DICA_DA_CASA, self._dica_instalada)
+        # O MAPA DAS ENTRADAS RECEBE O ARRANJO DESTA MÁQUINA — F4, 11/09/2026.
+        # Ela é a única página que desenha o GABINETE de quem abre, e até aqui
+        # desenhava um gabinete digitado dentro do HTML — de uma máquina só,
+        # lido em 24/08. Aqui ela deixa de ser a tela de uma pessoa.
+        #
+        # NÃO PASSA PELO DESPACHANTE de propósito: o que ela recebe não é um
+        # valor num `data-campo`, é o arranjo inteiro; e ela não é uma das dez
+        # abas, então entrar em `pacotes.PACOTES` faria o
+        # `test_o_despachante_serve_as_dez` contar onze.
+        #
+        # E O IMPORT MORA AQUI, NÃO NO BLOCO DO TOPO — medido nesta sprint, pelo
+        # portão `citacoes-no-codigo`: uma linha a mais lá em cima empurra as
+        # 3.500 abaixo, e SEIS comentários de outras posses citam
+        # `hefesto_vivo.py:NNN`. A linha do import derrubou SETE endereços de uma
+        # vez, quatro deles em arquivos que esta frente não pode tocar. É a
+        # mesma razão do `SEGUNDOS_ENTRE_LEITURAS_DOS_EXTERNOS` ser atributo de
+        # classe, escrita lá em cima.
+        from hefesto_dualsense4unix.interface import arranjo_desta_maquina
+
+        if self.pagina == arranjo_desta_maquina.PAGINA:
+            self._entregar_o_arranjo()
         # O TIMER E A SAÍDA SÓ UMA VEZ, e a flag é própria. Testar `voltas == 0`
         # aqui não funciona: `_tique()` roda logo acima e já a incrementa, então
         # a condição era sempre falsa — a janela ficava viva para sempre, sem

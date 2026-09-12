@@ -279,15 +279,16 @@
   <header class="topo" style="position:relative;padding-left:132px">
     <!-- O BOTÃO DE VOLTAR — 30/08/2026, pergunta dela: "ok temos um botão pra vir
          pra cá. Mas e o botão pra voltar?". Não havia nenhum href de saída nesta
-         página. O destino não é chute: `grep -l mapa-das-portas.html layout/*.html`
-         devolve UMA aba, a Conexões. -->
+         página. O destino não é chute: `grep -l mapa-das-portas.html` devolve UMA
+         aba, a Conexões — e ela existe ao lado desta cópia, não ao lado da
+         origem congelada, que tem três arquivos e nenhuma aba. -->
     <a href="08-conexoes.html" title="Volta para a aba Conexões, que é de onde este mapa se abre."
        style="position:absolute;left:0;top:2px;display:inline-flex;align-items:center;gap:6px;
               padding:5px 11px;border-radius:7px;text-decoration:none;
               border:1px solid var(--border-forte);background:var(--panel);
               color:var(--texto-suave);font-size:12px">← Voltar</a>
     <h1><em>Conexões</em> — o mapa dos seus objetos</h1>
-    <p class="quando">leitura de exemplo · 24/08/2026</p>
+    <p class="quando" id="de-quando">leitura de exemplo · 24/08/2026</p>
   </header>
 
   <div class="modos" id="modos"></div>
@@ -319,18 +320,17 @@
   </section>
 
   <footer class="rodape">
-    <p><b>O que é medição e o que é declaração.</b> Medido nesta máquina em 24/08/2026: os três adaptadores e
-      seus caminhos de barramento (<code>3-1.2</code>, <code>3-1.1.4</code>, <code>3-3</code>); que os dois
-      chips do hub (<code>4-1</code>, <code>4-1.1</code>) enumeram a <b>5000M</b> — o enlace SuperSpeed fica
-      treinado com ou sem o Wi-Fi; o consumo de cada entrada; e que <code>physical_location</code> só responde
-      em <code>1-3</code>, então nas outras dez o kernel não sabe onde a entrada fica no gabinete. Declarado por
-      você, na foto numerada: quantas entradas cada face tem, e o que está em cada uma.</p>
-    <p><b>Qual UB500 está na 9 e qual na 15 é declaração sua</b>, não medição: os dois são idênticos e o
-      barramento não distingue posição. O que ele distingue é o serial, e é por ele que o pareamento fica
-      preso ao adaptador certo — <code>hciN</code> troca de aparelho entre sessões e não serve de identidade.</p>
-    <p><b>O extensor não aparece sozinho.</b> Cabo passivo não tem identidade USB: o dongle na ponta enumera
-      como se estivesse na porta do hub. Por isso a 15 ganha uma entrada-filha declarada — para o desenho
-      mostrar onde a antena está de verdade.</p>
+    <p><b>O que é medição e o que é declaração.</b> Medido no seu computador: cada aparelho ligado e o
+      caminho de barramento dele, a velocidade de cada hub e o consumo de cada entrada. Declarado por você:
+      quantas entradas cada face do gabinete tem, o número que você escreveu em cada uma, e qual entrada é
+      qual caminho. O kernel raramente sabe onde a entrada fica no metal — por isso quem diz é você.</p>
+    <p><b>Dois adaptadores iguais o barramento não distingue</b>: qual deles está em cada entrada é
+      declaração sua, não medição. O que o barramento distingue é o serial, e é por ele que o pareamento
+      fica preso ao adaptador certo — <code>hciN</code> troca de aparelho entre sessões e não serve de
+      identidade.</p>
+    <p><b>O extensor não aparece sozinho.</b> Cabo passivo não tem identidade USB: o aparelho na ponta
+      enumera como se estivesse na entrada do hub. Por isso uma entrada com extensor ganha uma
+      entrada-filha declarada — para o desenho mostrar onde a antena está de verdade.</p>
   </footer>
 </div>
 
@@ -338,34 +338,50 @@
 (function () {
   "use strict";
 
-  /* ══ 1. O QUE O BARRAMENTO ENTREGOU — medido em 24/08/2026 ═══════════ */
-  var APARELHOS = [
-    { id: "bt-a",    tipo: "Bluetooth", nome: "TP-Link UB500",    sementeDoCaminho: "3-1.2",   cor: "#bd93f9", classe: "bt",      usb: 2, mA: 500 },
-    { id: "bt-b",    tipo: "Bluetooth", nome: "TP-Link UB500",    sementeDoCaminho: "3-1.1.4", cor: "#bd93f9", classe: "bt",      usb: 2, mA: 500 },
-    { id: "bt-c",    tipo: "Bluetooth", nome: "TP-Link UB500",    sementeDoCaminho: "3-3",     cor: "#bd93f9", classe: "bt",      usb: 2, mA: 500 },
-    { id: "wifi",    tipo: "Wi-Fi",     nome: "Archer T3U",       sementeDoCaminho: "4-1.1.2", cor: "#ff5555", classe: "wifi",    usb: 3, mA: 504 },
-    { id: "webcam",  tipo: "Webcam",    nome: "Logitech C920",    sementeDoCaminho: "3-4",     cor: "#8be9fd", classe: "webcam",  usb: 2, mA: 500 },
-    { id: "teclado", tipo: "Teclado",   nome: "Receptor 2,4 GHz", sementeDoCaminho: "3-1.4",   cor: "#ffb86c", classe: "teclado", usb: 2, mA: 100 },
-    { id: "mouse",   tipo: "Mouse",     nome: "Receptor 2,4 GHz", sementeDoCaminho: "1-3",     cor: "#f1fa8c", classe: "mouse",   usb: 2, mA:  98 },
-    { id: "hub",     tipo: "Hub",       nome: "TP-Link UH700",    sementeDoCaminho: "3-1",     cor: "#6272a4", classe: "hub",     usb: 3, mA: 100 }
-  ];
+  /* ══ 1. O ARRANJO QUE ESTA PÁGINA DESENHA ════════════════════════════
+     O exemplo abaixo é a leitura de 24/08/2026 de um gabinete só, e é o
+     que se vê enquanto ninguém entregar outra. O produto entrega a desta
+     máquina por `window.hefestoArranjo`, lá embaixo, e o cabeçalho diz
+     qual das duas está na tela. Quem escreve este bloco é
+     `interface/pagina_do_mapa.CENSO_DE_EXEMPLO`.                        */
+  var EXEMPLO = {
+    "quando": "leitura de exemplo · 24/08/2026",
+    "aparelhos": [
+      {"id": "bt-a", "tipo": "Bluetooth", "nome": "TP-Link UB500", "sementeDoCaminho": "3-1.2", "cor": "#bd93f9", "classe": "bt", "usb": 2, "mA": 500},
+      {"id": "bt-b", "tipo": "Bluetooth", "nome": "TP-Link UB500", "sementeDoCaminho": "3-1.1.4", "cor": "#bd93f9", "classe": "bt", "usb": 2, "mA": 500},
+      {"id": "bt-c", "tipo": "Bluetooth", "nome": "TP-Link UB500", "sementeDoCaminho": "3-3", "cor": "#bd93f9", "classe": "bt", "usb": 2, "mA": 500},
+      {"id": "wifi", "tipo": "Wi-Fi", "nome": "Archer T3U", "sementeDoCaminho": "4-1.1.2", "cor": "#ff5555", "classe": "wifi", "usb": 3, "mA": 504},
+      {"id": "webcam", "tipo": "Webcam", "nome": "Logitech C920", "sementeDoCaminho": "3-4", "cor": "#8be9fd", "classe": "webcam", "usb": 2, "mA": 500},
+      {"id": "teclado", "tipo": "Teclado", "nome": "Receptor 2,4 GHz", "sementeDoCaminho": "3-1.4", "cor": "#ffb86c", "classe": "teclado", "usb": 2, "mA": 100},
+      {"id": "mouse", "tipo": "Mouse", "nome": "Receptor 2,4 GHz", "sementeDoCaminho": "1-3", "cor": "#f1fa8c", "classe": "mouse", "usb": 2, "mA": 98},
+      {"id": "hub", "tipo": "Hub", "nome": "TP-Link UH700", "sementeDoCaminho": "3-1", "cor": "#6272a4", "classe": "hub", "usb": 3, "mA": 100}
+    ],
+    "faces": [
+      {"nome": "Frente do gabinete", "forma": "coluna", "perto": true, "regiao": "pc", "portas": [{"n": "1", "usb": 2, "onde": "pc", "par": "2"}, {"n": "2", "usb": 2, "onde": "pc", "par": "1"}]},
+      {"nome": "Traseira", "forma": "grade-tras", "regiao": "pc", "donaDaFaixaPc": true, "portas": [{"n": "3", "usb": 3, "onde": "pc", "par": "4"}, {"n": "4", "usb": 3, "onde": "pc", "par": "3"}, {"n": "5", "usb": 3, "onde": "pc", "par": "6"}, {"n": "6", "usb": 3, "onde": "pc", "par": "5"}, {"n": "7", "usb": 2, "onde": "pc", "par": "8"}, {"n": "8", "usb": 2, "onde": "pc", "par": "7"}]},
+      {"nome": "Hub, no alto do rack", "forma": "fileira", "alto": true, "regiao": "hub", "portas": [{"n": "9", "usb": 3, "onde": "hub", "pos": 1, "par": "10"}, {"n": "10", "usb": 3, "onde": "hub", "pos": 2, "par": "9"}, {"n": "11", "usb": 3, "onde": "hub", "pos": 3, "par": "12"}, {"n": "12", "usb": 3, "onde": "hub", "pos": 4, "par": "11"}, {"n": "13", "usb": 3, "onde": "hub", "pos": 5, "par": "14"}, {"n": "14", "usb": 3, "onde": "hub", "pos": 6, "par": "13"}, {"n": "15", "usb": 3, "onde": "hub", "pos": 7, "filho": {"n": "15a", "usb": 3, "onde": "hub", "pos": 9, "esticada": true, "cabo": "extensor de 1 m, declarado por você"}}]}
+    ],
+    "mapa": {"1": "1-3", "4": "3-1", "5": "3-3", "6": "3-4", "9": "3-1.2", "11": "4-1.1.2", "13": "3-1.4", "15a": "3-1.1.4"},
+    "leituras": {"antes": {"rotulo": "20h15 — antes de você mexer", "caminho": {"mouse": "1-3", "hub": "3-1", "bt-c": "3-3", "webcam": "3-4", "bt-a": "3-1.2", "wifi": "4-1.1.2", "teclado": "3-1.4", "bt-b": "3-1.1.4"}}, "agora": {"rotulo": "22h50 — depois dos seus movimentos", "caminho": {"teclado": "1-3", "webcam": "1-4", "mouse": "1-6", "hub": "3-1", "bt-c": "3-1.1.1", "bt-b": "3-1.1.4", "bt-a": "3-1.2", "wifi": "4-2"}}},
+    "controles": [
+      {"nome": "Jogador 1", "mic": true, "onde": "bt-a"},
+      {"nome": "Jogador 2", "mic": true, "onde": "bt-a"},
+      {"nome": "Jogador 3", "mic": true, "onde": "bt-b"},
+      {"nome": "Jogador 4", "mic": true, "onde": "bt-b"}
+    ]
+  };
 
-  /* ══ 2. AS FACES — declaradas por ela, na foto numerada ══════════════ */
-  var FACES = [
-    { nome: "Frente do gabinete", forma: "coluna", perto: true, regiao: "pc",
-      portas: [ { n: "1", usb: 2, onde: "pc", par: "2" }, { n: "2", usb: 2, onde: "pc", par: "1" } ] },
-    { nome: "Traseira", forma: "grade-tras", regiao: "pc", donaDaFaixaPc: true,
-      portas: [ { n: "3", usb: 3, onde: "pc", par: "4" }, { n: "4", usb: 3, onde: "pc", par: "3" },
-                { n: "5", usb: 3, onde: "pc", par: "6" }, { n: "6", usb: 3, onde: "pc", par: "5" },
-                { n: "7", usb: 2, onde: "pc", par: "8" }, { n: "8", usb: 2, onde: "pc", par: "7" } ] },
-    { nome: "Hub, no alto do rack", forma: "fileira", alto: true, regiao: "hub",
-      portas: [ { n: "9",  usb: 3, onde: "hub", pos: 1, par: "10" }, { n: "10", usb: 3, onde: "hub", pos: 2, par: "9"  },
-                { n: "11", usb: 3, onde: "hub", pos: 3, par: "12" }, { n: "12", usb: 3, onde: "hub", pos: 4, par: "11" },
-                { n: "13", usb: 3, onde: "hub", pos: 5, par: "14" }, { n: "14", usb: 3, onde: "hub", pos: 6, par: "13" },
-                { n: "15", usb: 3, onde: "hub", pos: 7,
-                  filho: { n: "15a", usb: 3, onde: "hub", pos: 9, esticada: true,
-                           cabo: "extensor de 1 m, declarado por você" } } ] }
-  ];
+  /* `fonte` é o arranjo em cena: nasce no exemplo acima e é trocado
+     inteiro por `window.hefestoArranjo(dado)`. `CAMPOS_DO_ARRANJO` é o
+     que uma entrega tem de trazer para ser aceita. */
+  var CAMPOS_DO_ARRANJO = ["quando", "aparelhos", "faces", "mapa", "leituras"];
+  var fonte = EXEMPLO;
+  var APARELHOS = fonte.aparelhos;
+
+  /* ══ 2. AS FACES — quantas entradas cada face do gabinete tem ════════
+     Isto não se mede: nenhuma leitura de `/sys` sabe em que face do metal
+     o buraco fica. Quem declara é quem olha o gabinete. Ver o rodapé.   */
+  var FACES = fonte.faces;
 
   /* ══ 2.1 O MAPA DECLARADO: entrada -> caminho de barramento ══════════
      Esta é a virada de modelo que faz a re-identificação existir. O mapa NÃO
@@ -374,23 +390,14 @@
      caminho. Assim, quando ela troca um aparelho de lugar, o caminho dele
      muda, o mapa continua valendo, e o produto reconhece sozinho quem foi
      para onde — sem ela declarar nada de novo.                             */
-  var MAPA = {
-    "1": "1-3", "4": "3-1", "5": "3-3", "6": "3-4",
-    "9": "3-1.2", "11": "4-1.1.2", "13": "3-1.4", "15a": "3-1.1.4"
-  };
+  var MAPA = fonte.mapa;
 
-  /* ══ 2.2 AS DUAS LEITURAS, medidas na MeowSystem em 24/08/2026 ═══════
-     A de 20h15 e a de 22h50, depois de ela fazer os movimentos. São dado
-     real: é a mesma comparação que o produto faria com duas leituras de
-     sysfs separadas por um "Reexaminar".                                   */
-  var LEITURAS = {
-    antes: { rotulo: "20h15 — antes de você mexer",
-      caminho: { "mouse": "1-3", "hub": "3-1", "bt-c": "3-3", "webcam": "3-4",
-                 "bt-a": "3-1.2", "wifi": "4-1.1.2", "teclado": "3-1.4", "bt-b": "3-1.1.4" } },
-    agora: { rotulo: "22h50 — depois dos seus movimentos",
-      caminho: { "teclado": "1-3", "webcam": "1-4", "mouse": "1-6", "hub": "3-1",
-                 "bt-c": "3-1.1.1", "bt-b": "3-1.1.4", "bt-a": "3-1.2", "wifi": "4-2" } }
-  };
+  /* ══ 2.2 AS DUAS LEITURAS ════════════════════════════════════════════
+     Duas leituras de `/sys` separadas por um "Reexaminar": é assim que o
+     produto sabe quem mudou de lugar. No exemplo são as de 20h15 e 22h50
+     de 24/08/2026; com o censo vivo são as que a máquina de quem abriu
+     entregou.                                                           */
+  var LEITURAS = fonte.leituras;
 
   /* O MAPA MOSTRA SEMPRE A MESA DE AGORA.
      A primeira versão abria na leitura antiga para dar o "antes e depois", e
@@ -1030,13 +1037,8 @@
   var MIGRACAO = { economia: "bateria", balanceado: "tudo", max: "tudo",
                    auto: "tudo", "": "tudo", custom: "escolho" };
 
-  var CONTROLES = [
-    { nome: "Jogador 1", mic: true,  onde: "bt-a" },
-    { nome: "Jogador 2", mic: true,  onde: "bt-a" },
-    { nome: "Jogador 3", mic: true,  onde: "bt-b" },
-    { nome: "Jogador 4", mic: true,  onde: "bt-b" }
-  ];
-  var quantos = 4;
+  var CONTROLES = fonte.controles;
+  var quantos = CONTROLES.length;
 
   function custo(c) { return c.mic ? CUSTO_COM_MIC : CUSTO_SEM_MIC; }
   function adaptadores() {
@@ -1481,6 +1483,57 @@
       pintar(); return;
     }
   });
+
+  /* ══ A PORTA PARA O CENSO DE QUEM ABRE — 11/09/2026 ══════════════════
+     Até aqui esta página só sabia desenhar UM gabinete: o que estava digitado
+     no JavaScript dela. `hefestoArranjo` é por onde o produto entrega a
+     leitura da máquina de quem abriu, e a página se repinta inteira com ela.
+     Ver `interface/pagina_do_mapa.py` e `interface/arranjo_desta_maquina.py`. */
+  function controlesSobre(aparelhos, base) {
+    /* A fileira de controles é SIMULADOR — os botões 1..4 ao lado dela são a
+       pergunta "e se fossem quatro?". O censo vivo não a traz; ela se espalha
+       pelos adaptadores que a máquina de quem abre tiver. */
+    var bts = aparelhos.filter(function (a) { return a.classe === "bt"; });
+    return base.map(function (c, i) {
+      return { nome: c.nome, mic: c.mic, onde: bts.length ? bts[i % bts.length].id : null };
+    });
+  }
+
+  function aplicarArranjo(f) {
+    fonte = f;
+    APARELHOS = f.aparelhos;
+    FACES = f.faces;
+    MAPA = f.mapa;
+    /* O "Voltar" do reexame restaura ESTE mapa. Deixá-lo com o do exemplo
+       devolveria a pessoa a um gabinete que não é o dela, com um clique. */
+    MAPA_ORIGINAL = Object.assign({}, MAPA);
+    LEITURAS = f.leituras;
+    leituraAtual = "agora";
+    leituraAnterior = "antes";
+    CONTROLES = f.controles || controlesSobre(APARELHOS, EXEMPLO.controles);
+    quantos = CONTROLES.length;
+  }
+
+  function dizerDeQuando() {
+    /* O cabeçalho nasce dizendo o exemplo, no HTML, para a página ser honesta
+       mesmo sem JavaScript nenhum. Aqui ele passa a dizer de quando é o que
+       está na tela. */
+    var el = document.getElementById("de-quando");
+    if (el) el.textContent = fonte.quando;
+  }
+
+  window.hefestoArranjo = function (dado) {
+    var falta = CAMPOS_DO_ARRANJO.filter(function (c) { return !dado || !dado[c]; });
+    if (falta.length) {
+      /* RECUSAR É METADE DO TRABALHO: meio arranjo desenharia um gabinete sem
+         entradas, e isso se lê como "não tenho nada ligado". */
+      throw new Error("arranjo incompleto, falta: " + falta.join(", "));
+    }
+    aplicarArranjo(dado);
+    dizerDeQuando();
+    pintar();
+    return "ok";
+  };
 
   pintar();
 })();
