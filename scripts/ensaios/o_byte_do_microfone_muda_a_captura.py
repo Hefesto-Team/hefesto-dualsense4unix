@@ -8,9 +8,17 @@ ganho da FONTE no PipeWire (MIC-VOLUME-01), e a docstring dele afirma que *"o
 DualSense não expõe registrador de ganho de microfone em transporte nenhum"*.
 O mapa (`audio.microfone.volume@dualsense`) e o kernel desta máquina dizem o
 contrário: `common[6]` (`mic_volume`, `0x0 - 0x40`), autorizado por flag0
-`0x40`, com porta no produto (`set_audio_volumes(microphone=…)`) e **zero
-chamadores** — por decisão datada (SOM-SEMPRE-01, 06/09). Duas afirmações da
-casa se contradizem, e ela decidiu ligar o byte. **Antes de ligar, medir.**
+`0x40`, com porta no produto (`set_audio_volumes(microphone=…)`) e, até este
+ensaio, **zero chamadores** — por decisão datada (SOM-SEMPRE-01, 06/09). Duas
+afirmações da casa se contradizem, e ela decidiu ligar o byte. **Antes de
+ligar, medir.**
+
+**MEDIDO EM 09/09/2026, e a resposta foi «obedece»:** *"Deu certo. funciona"*
+(`docs/data/ensaios.csv`, `folha-mic-volume-o-byte-age-cabo-0909`, no CABO).
+O byte tem DOIS chamadores desde então — o gesto (`mic.volume.set`) e o perfil
+(`apply_profile_mic`) —, e a docstring do `mic.volume.set` que dizia que o
+registrador não existe foi corrigida. O que este instrumento ainda decide é o
+lado que ninguém mediu: o RÁDIO.
 
 O DESENHO — e a sacada é medir o número, não o adjetivo
 --------------------------------------------------------
@@ -35,8 +43,27 @@ uma variação de voz entre duas gravações. Um resultado entre 1,2 e 1,5 é
 E o negativo (`--sem-bit`): `0x40` sem o flag0 `0x40`. Se o pico subir sem o
 bit, a autorização não vale nada.
 
-O daemon NÃO toca neste byte (AUDIO-OWNER-01 apaga os bits de áudio que não
-são dele, e o microfone nunca é), então uma escrita basta e não há martelo.
+O DAEMON PASSOU A TOCAR NESTE BYTE EM 09/09/2026 — e isto muda como se roda
+este instrumento
+-------------------------------------------------------------------------
+Este bloco dizia *"o daemon NÃO toca neste byte (AUDIO-OWNER-01 apaga os bits
+de áudio que não são dele, e o microfone nunca é), então uma escrita basta e
+não há martelo"*. **Caducou na mesma semana, por esta medição.** Ela mandou
+ligar o byte, e a MIC-VOLUME-02 ligou: `set_microphone_volume` toma a posse do
+`common[6]` quando ela mexe no deslizante (`mic.volume.set`) ou quando um
+perfil com `mic.volume` é aplicado. A partir daí o `_build_common` manda
+aquele byte, com o flag0 `0x40`, em **todo report** — e a escrita deste
+instrumento é desfeita pelo keepalive seguinte.
+
+Como se roda depois disso, e é a armadilha de sempre (*o instrumento pode
+estar brigando com o produto*):
+
+* **numa sessão em que ninguém mexeu no volume do microfone daquele controle**
+  o byte continua sem dono e este instrumento manda sozinho, como antes;
+* se alguém mexeu, devolva a posse primeiro — `release_microphone_volume` no
+  serviço de saída — ou reconecte o controle. Sem isso, medir aqui é medir a
+  disputa, não o aparelho.
+
 O valor fica no firmware até o controle reconectar — o instrumento devolve
 `0x40` (o teto) no fim, e `--deixar N` deixa outro.
 
