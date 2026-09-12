@@ -582,3 +582,146 @@ def test_o_jargao_saiu_das_duas_telas(caminho: str) -> None:
     # campo que a ordem dela preservou.
     assert 'data-hef="editor.estilo"' in html
     assert ">Estilo de Jogo:</span>" in html
+
+
+# ---------------------------------------------------------------------------
+# 6. A COLUNA DA LISTA — a mesma língua do campo, a um palmo dele
+# ---------------------------------------------------------------------------
+def test_a_coluna_fala_a_lingua_do_campo(maquina_dela: pathlib.Path) -> None:
+    """`procedência · nome · código`, e o executável nunca quando há nome.
+
+    **A TELA DIZIA DUAS COISAS SOBRE O MESMO PERFIL.** O campo do editor já
+    respondia «Heroic» e a coluna, a um palmo dele, dizia «Só neste programa» —
+    e a coluna é onde ela passa a maior parte do tempo olhando.
+
+    A forma é o item 12 da segunda lista dela (foto 9): *"aqui por exemplo
+    deveria aparecer o nome e o codigo não só o codigo e não deveria   # noqa-acento: cita ela
+    aparecer o nome do programa"*.
+
+    MORDIDA: devolva `base` sempre em `_quando_usar` e a coluna volta a dizer
+    «Só neste programa» sobre o Elden Ring — o mesmo texto para os 25 perfis de
+    jogo dela, que é o defeito que esta régua fecha.
+    """
+    def coluna(match: Any) -> str:
+        return a10._quando_usar(match, "Só neste programa")
+
+    # A Steam tem número, e ele é o que ela confere na loja.
+    assert coluna(MatchCriteria(window_class=["steam_app_1245620"])) == (
+        "Steam · ELDEN RING · 1245620")
+    # O jogo do lançador NÃO tem número público — e o "código" dele seria o
+    # basename do executável, que é o que a foto manda nunca mostrar.
+    assert coluna(MatchCriteria(window_class=["gotg.exe"])) == (
+        "Heroic · Marvel's Guardians of the Galaxy")
+    assert ".exe" not in coluna(MatchCriteria(window_class=["gotg.exe"]))
+    # O que o catálogo não conhece mostra O QUE TEM, sem inventar nome.
+    assert coluna(MatchCriteria(process_name=["mk1.exe"])) == (
+        f"{jl.LANCADOR_DIRETO} · mk1.exe")
+    # Um número de jogo que não está nesta máquina continua valendo.
+    assert coluna(MatchCriteria(window_class=["steam_app_9999999"])) == (
+        "Steam · 9999999")
+    # «Navegação» não tem jogo — e a coluna não inventa um.
+    assert coluna(sm.SIMPLE_MATCH_PRESETS["browser"]) == "Navegação"
+
+
+def test_a_coluna_nao_engole_a_disputa_nem_a_frase_do_produto(
+    maquina_dela: pathlib.Path,
+) -> None:
+    """As duas frases do produto que FICAM, e as duas ficam por conteúdo.
+
+    A do catch-all não é um rótulo, é a DISPUTA — *"Sempre — 2 disputam, este
+    vence"* —, e ela responde a queixa mais antiga desta casa. A da regra que a
+    tela não sabe descrever é a válvula do R-12: inventar uma procedência ali
+    seria o mesmo defeito que o cadeado do campo existe para impedir.
+
+    MORDIDA: tire o `or procedencia == PROCEDENCIA_DE_QUALQUER_JOGO` de
+    `_quando_usar` e a coluna troca a disputa inteira por duas palavras.
+    """
+    disputa = "Sempre — 2 disputam, este vence"
+    assert a10._quando_usar(MatchAny(), disputa) == disputa
+
+    fino = MatchCriteria(window_title_regex="Elden Ring.*",
+                         process_name=["eldenring.exe"])
+    assert a10._quando_usar(fino, "Só neste programa") == "Só neste programa"
+
+
+def test_a_coluna_traduzida_chega_as_duas_portas_da_lista(
+    maquina_dela: pathlib.Path, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """O `blocos` e a lista `perfis.linha.quando` saem da MESMA tradução.
+
+    O pintor distribui as três listas pela ordem do DOCUMENTO; traduzir só numa
+    das portas põe a coluna de um perfil na linha de outro.
+
+    MORDIDA: tire o `_com_a_procedencia` do `pacote()` e as duas portas voltam
+    a dizer «Só neste programa» sobre um perfil do Heroic.
+    """
+    _o_disco_tem(monkeypatch,
+                 Profile(name="GOTG", priority=90,
+                         match=MatchCriteria(window_class=["gotg.exe"])),
+                 Profile(name="Elden Ring", priority=85,
+                         match=MatchCriteria(
+                             window_class=["steam_app_1245620"])))
+
+    fora = a10.pacote(_ctx())
+
+    assert fora["perfis.linha.quando"] == [
+        "Heroic · Marvel's Guardians of the Galaxy",
+        "Steam · ELDEN RING · 1245620"]
+    corpo = fora["blocos"][a10.SELETOR_DA_LISTA]
+    for frase in fora["perfis.linha.quando"]:
+        # O TEXTO **E** O `title`: a coluna tem `white-space:nowrap`, e a
+        # afordância que `test_a_janela_estreita_nao_engole_o_desenho` aceita
+        # para o corte é a frase inteira guardada no `title`.
+        assert f'title="{frase}">{frase}</td>' in corpo
+
+
+def test_a_lupa_acha_o_jogo_pelo_nome_que_a_coluna_passou_a_mostrar(
+    maquina_dela: pathlib.Path, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A tradução vem ANTES do filtro — senão a lupa mede a frase de ontem.
+
+    Ordem dela: *"achar rápido o nome de um jogo"*. Com a tradução  # noqa-acento: cita ela
+    depois do filtro, digitar «Guardians» não acharia a linha que mostra
+    «Guardians», e digitar «Só neste» acharia todas.
+
+    MORDIDA: mova o `_com_a_procedencia` para depois do `_filtrada` e isto
+    reprova com a lista vazia.
+    """
+    _o_disco_tem(monkeypatch,
+                 Profile(name="GOTG", priority=90,
+                         match=MatchCriteria(window_class=["gotg.exe"])),
+                 Profile(name="Elden Ring", priority=85,
+                         match=MatchCriteria(
+                             window_class=["steam_app_1245620"])))
+    monkeypatch.setattr(a10, "_PROCURA", "guardians", raising=False)
+
+    fora = a10.pacote(_ctx())
+
+    assert fora["perfis.linha.nome"] == ["GOTG"]
+
+
+def test_o_clique_no_campo_arrasta_a_coluna_junto(
+    maquina_dela: pathlib.Path, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """**O CLIQUE, e é ele que fecha a queixa:** trocar o lançador no campo e a
+    coluna da MESMA linha acompanhar, no tique seguinte.
+
+    Enquanto as duas frases tinham donos diferentes, era possível mudar uma e
+    não a outra — e foi assim que a tela passou o dia dizendo «Só neste
+    programa» ao lado de «Heroic», sobre o mesmo perfil.
+
+    MORDIDA: tire o `_com_a_procedencia` do `pacote()` e a coluna fica
+    congelada na frase do produto enquanto o campo troca.
+    """
+    prof = Profile(name="Guardioes", priority=80, match=MatchAny())
+    _o_disco_tem(monkeypatch, prof)
+    _aberto_no_editor(monkeypatch, prof)
+    monkeypatch.setattr(a10, "_editor_de",
+                        lambda _p: {"jogo": "gotg.exe", "ambiente_recado": ""})
+
+    antes = a10.pacote(_ctx())["perfis.linha.quando"]
+    a10.editor_ambiente(_ctx(), _escolher("Heroic"), PonteDeMentira())
+    depois = a10.pacote(_ctx())["perfis.linha.quando"]
+
+    assert antes == ["Sempre"]
+    assert depois == ["Heroic · Marvel's Guardians of the Galaxy"]

@@ -621,6 +621,18 @@ PROCEDENCIA_DE_QUALQUER_JOGO = "Qualquer jogo"
 #: duas formas atrás (ver `forma_da_procedencia`).
 PROCEDENCIA_DA_STEAM = "Steam"
 
+#: O QUE SEPARA AS PARTES DA COLUNA «Funciona em» — ``Steam · ELDEN RING ·
+#: 1245620``. Ele mora aqui, junto das palavras, porque tem DOIS escritores que
+#: não podem se importar: o gerador do desenho (`interface/aba10.py`, que lê o
+#: repositório no import e por isso nunca entra no caminho do produto) e o
+#: pacote vivo (`pacotes/a10_perfis.py`). Enquanto os dois o digitarem, um dia
+#: um deles muda e a régua de forma não pega — ela compara a MARCAÇÃO das duas
+#: linhas, não o texto de dentro.
+#:
+#: **É O PONTO MÉDIO, e não o `•` do `monta.SEPARADOR`**: aquele é o separador
+#: do rótulo do CONTROLE (`P1 • Cosmic Red • USB`) e vem com marcação dentro.
+SEPARADOR_DA_PROCEDENCIA = " · "
+
 #: As duas que NÃO são lançador e existem em toda máquina — inclusive numa
 #: recém-instalada, sem Steam, sem Heroic e sem Lutris. É a ordem dela de
 #: 11/09/2026: *"a ideia é que todas as features mesmo do app funcionem  (noqa-acento)
