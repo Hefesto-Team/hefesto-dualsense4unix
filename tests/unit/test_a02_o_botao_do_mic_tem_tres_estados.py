@@ -177,22 +177,38 @@ class TestOGeradorPinta:
         Foi por isso — entre outras — que o `.mudo-i.on` caiu em 06/09.
         """
         fonte = self._fonte()
-        assert "mic-captando" in fonte
-        assert "@keyframes mic-captando" in fonte
         trecho = fonte[fonte.index("O 🎙 EM TRÊS ESTADOS"):]
         trecho = trecho[: trecho.index('"""')]
         assert "var(--green)" in trecho
         assert "var(--red)" not in trecho
 
-    def test_quem_pediu_menos_movimento_ainda_ve_o_estado(self) -> None:
-        """MORDIDA: apague o bloco de `prefers-reduced-motion`.
+    def test_o_terceiro_estado_nao_depende_de_movimento(self) -> None:
+        """Os três se distinguem PARADOS — decisão dela, 12/09/2026, opção (c).
 
-        Sem ele, quem desligou animação no sistema perde o terceiro estado
-        inteiro: o botão fica igual ao «gravando», e a informação some para
-        exatamente quem mais precisa de um sinal estável.
+        **ESTA RÉGUA COBRAVA A ANIMAÇÃO, E TERIA REPROVADO A DECISÃO DELA.** Ela
+        exigia `@keyframes mic-captando` e um ramo `prefers-reduced-motion` com
+        `animation:none` — isto é, exigia a IMPLEMENTAÇÃO de ontem, não o que a
+        tela precisa dizer. A piscada saiu porque *a barra de nível, a dois
+        centímetros, já mostra o mesmo fato*, e duas animações para um fato só
+        competem entre si.
+
+        O QUE SE MEDE AGORA É O ATO, e ele não mudou: o «captando» continua
+        distinto do «no ar» e do «mudo` sem depender de movimento nenhum — o
+        fundo esverdeado é o que os separa, e ele está sempre lá. Quem pediu
+        menos movimento no sistema vê exatamente a mesma tela que todo mundo,
+        que era a metade boa do ramo que saiu.
+
+        MORDIDA: tire o `background` da regra do «captando» e ele fica idêntico
+        ao «no ar» — o terceiro estado some, que é o defeito que esta régua
+        existe para pegar. Devolva a animação e ela reprova também: informação
+        de estado não pode voltar a morar no movimento.
         """
         fonte = self._fonte()
         trecho = fonte[fonte.index("O 🎙 EM TRÊS ESTADOS"):]
         trecho = trecho[: trecho.index('"""')]
-        assert "prefers-reduced-motion" in trecho
-        assert "animation:none" in trecho
+        assert "background:rgba(80,250,123,.14)" in trecho, (
+            "o «captando» perdeu o fundo que o separa do «no ar» — os dois "
+            "estados viraram um só")
+        assert "animation:" not in trecho and "@keyframes" not in trecho, (
+            "o estado do microfone voltou a depender de movimento; a decisão "
+            "dela de 12/09 é verde FIXO, porque quem se move é a barra ao lado")
