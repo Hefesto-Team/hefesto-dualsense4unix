@@ -738,10 +738,15 @@ def test_a_aba_perfis_responde_o_nome_do_jogo_do_heroic(
     #: O APÓSTROFO NÃO É ESCAPADO, e é o `_atr` que manda: escapar o que o
     #: serializador do navegador não escapa faria a tela reescrever o bloco a
     #: cada 500 ms para sempre. `DON'T SCREAM` está no catálogo desta casa.
+    # **O `label` DEIXOU DE REPETIR O LANÇADOR EM 11/09/2026** — C4-FUNCIONA-EM.
+    # Quem responde *"de onde vem este jogo?"* passou a ser o campo de CIMA
+    # («Funciona em:»), e repetir «(Heroic)» em cada linha de uma lista que só
+    # tem jogos do Heroic é ruído. O jogo da Steam ganhou o número com o
+    # separador da casa, que é o item 12 da segunda lista dela.
+    # O `value` NÃO MUDOU, e é ele que o campo grava.
     assert ('<option value="gotg.exe" '
-            'label="Marvel\'s Guardians of the Galaxy (Heroic)"></option>'
-            ) in html
-    assert '<option value="3357650" label="PRAGMATA (appid 3357650)">' in html
+            'label="Marvel\'s Guardians of the Galaxy"></option>') in html
+    assert '<option value="3357650" label="PRAGMATA · 3357650">' in html
 
     # 4. A FORMA que o Salvar grava para o que a lista ofereceu
     assert a10._forma_do_que_ela_escolheu("gotg.exe") == "janela"
