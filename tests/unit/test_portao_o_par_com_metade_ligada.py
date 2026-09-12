@@ -924,6 +924,34 @@ _CITACOES_PENDENTES: frozenset[str] = frozenset({
     # `:1616` — as três citações do `data-controle` daquela aba, que já
     # apontavam para linhas erradas antes desta leva e só agora caíram numa que
     # a régua consegue ancorar).
+    #
+    # F7-O-NOME-ACESSIVEL (11/09/2026) — AS QUATRO QUE O BLOCO DO NOME
+    # ACESSÍVEL DESLOCOU. A cura entrou dentro da `DICA_DA_CASA`, que mora na
+    # metade de cima de `hefesto_vivo.py`: **tudo abaixo dela desceu 200
+    # linhas**, e as quatro citações são de arquivo que a sprint declara em
+    # `nao_toca:` — `interface/pacotes/` está com seis frentes dentro AGORA,
+    # aplicando mudança de texto. A âncora de cada uma CONTINUA EXISTINDO.
+    #
+    # O NÚMERO CERTO JÁ ESTÁ MEDIDO **POR SÍMBOLO**, nunca por aritmética —
+    # quem for dono do arquivo troca e apaga a linha daqui (o
+    # `test_a_lista_de_pendentes_nao_vira_paisagem` cobra):
+    #   a03_gatilhos.py:1479 `hefesto_vivo.py:2111`           -> `:2311` (`_fita`)
+    #   a06_navegacao.py:2710 `hefesto_vivo.py:3107`          -> `:3307` (`_recusou_dizendo`)
+    #   a09_sistema.py:1827 `interface/hefesto_vivo.py:3080`  -> `:3280` (`_deu_certo`)
+    #   ponte.py:277 `interface/hefesto_vivo.py:2652`         -> `:2988-2989`
+    #
+    # A DE `ponte.py` MERECE NOTA, e ela é um achado: o endereço **já estava
+    # errado** antes desta leva. Os dois pontos de extensão que a prosa promete
+    # são `ponte.escolher_arquivo = …` e `ponte.salvar_arquivo = …`, e na base
+    # `bbd61c35` eles moravam em `:2788-2789` — a citação apontava para um `#:`
+    # de outro bloco, 136 linhas acima. A régua não a pegava porque a linha não
+    # estava em branco; o deslocamento de hoje a fez cair numa que está. *Uma
+    # citação errada pode atravessar a régua enquanto o acaso a mantiver sobre
+    # texto.*
+    "interface/pacotes/a03_gatilhos.py::hefesto_vivo.py:2111",
+    "interface/pacotes/a06_navegacao.py::hefesto_vivo.py:3107",
+    "interface/pacotes/a09_sistema.py::interface/hefesto_vivo.py:3080",
+    "interface/pacotes/ponte.py::interface/hefesto_vivo.py:2652",
 })
 
 
