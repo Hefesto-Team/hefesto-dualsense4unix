@@ -132,6 +132,7 @@ from hefesto_dualsense4unix.profiles.simple_match import (
     PROCEDENCIA_DA_NAVEGACAO,
     PROCEDENCIA_DA_STEAM,
     PROCEDENCIA_DE_QUALQUER_JOGO,
+    SEPARADOR_DA_PROCEDENCIA,
     oferta_do_funciona_em,
 )
 
@@ -1571,6 +1572,112 @@ def _jogo_da_procedencia(procedencia: str, texto: str) -> Any:
     return None
 
 
+def _com_a_procedencia(lista: list[dict[str, Any]],
+                       todos: list[Any]) -> list[dict[str, Any]]:
+    """A coluna «Funciona em» de cada linha, traduzida — ver `_quando_usar`.
+
+    **ANTES DO FILTRO E DA ORDEM, e a ordem das três é o contrato.** A lupa
+    procura DENTRO do `quando` (é o que acha o jogo pelo appid, e é ordem dela:
+    *"achar rápido o nome de um jogo"*), e ordenar por essa coluna ordena
+    o texto que ela LÊ. Traduzir depois faria as duas medirem a frase de ontem —
+    e digitar «ELDEN RING» não acharia a linha que mostra «ELDEN RING».
+
+    **UMA TRADUÇÃO PARA AS DUAS PORTAS.** O `blocos` (o `<tbody>` pronto) e as
+    três listas `perfis.linha.*` saem da MESMA `lista`; traduzir só numa é o
+    defeito que o pintor não perdoa — ele distribui as listas pela ordem do
+    documento, e duas frases diferentes põem a coluna de um perfil na linha de
+    outro.
+
+    O PERFIL VEM PELO NOME, que é o que a linha carrega. Quem não for achado
+    fica com a frase do produto: uma linha sem perfil no disco é uma linha que
+    esta função não tem como traduzir, e calar é melhor que adivinhar.
+    """
+    por_nome = {str(getattr(p, "name", "")): p for p in todos}
+    fora: list[dict[str, Any]] = []
+    for linha in lista:
+        prof = por_nome.get(str(linha.get("perfil") or linha.get("nome") or ""))
+        if prof is None:
+            fora.append(linha)
+            continue
+        nova = dict(linha)
+        nova["quando"] = _quando_usar(getattr(prof, "match", None),
+                                      str(linha.get("quando") or ""))
+        fora.append(nova)
+    return fora
+
+
+def _nome_e_codigo(chave: str) -> tuple[str, str]:
+    """``(nome do jogo, código)`` para o que o perfil guarda — item 12 dela.
+
+    A queixa é da foto 9, palavras dela: *"aqui por exemplo deveria
+    aparecer o nome e o codigo não só o codigo e não deveria  (noqa-acento) cita ela
+    aparecer o nome do programa"*.
+
+    O CÓDIGO SÓ EXISTE NA STEAM, e é isso que a divisão diz: o appid é o número
+    que ela confere na loja e que o produto inteiro compartilha. Um jogo de
+    lançador não tem número público — o "código" dele seria o basename do
+    executável (``gotg.exe``), que é exatamente o que a foto manda **nunca**
+    mostrar. Então ele sai só com o nome.
+
+    E QUANDO O CATÁLOGO NÃO SABE, o que volta é a chave CRUA no lugar do
+    código: é o que o perfil tem, e a coluna mostra o que tem em vez de ficar
+    vazia. Inventar um nome seria a tela afirmando um jogo que ela não tem.
+
+    NUNCA LEVANTA — isto é PINTURA, uma vez por linha, a cada tique.
+    """
+    from hefesto_dualsense4unix.profiles.simple_match import normalize_appid
+
+    if not chave:
+        return ("", "")
+    appid = normalize_appid(chave)
+    if appid is not None:
+        return (_nomes_dos_jogos().get(appid, ""), appid)
+    try:
+        from hefesto_dualsense4unix.integrations.jogos_locais import jogo_da_janela
+
+        achado = jogo_da_janela(chave, _ofertas_de_jogos())
+    except Exception:
+        achado = None
+    if achado is None:
+        return ("", chave)
+    return (str(getattr(achado, "nome", "") or ""), "")
+
+
+def _quando_usar(match: Any, base: str) -> str:
+    """A coluna «Funciona em» na MESMA língua do campo do editor.
+
+    **A TELA DIZIA DUAS COISAS SOBRE O MESMO PERFIL — 11/09/2026.** O campo
+    passou a responder *de onde o jogo vem* e a coluna, a um palmo dele,
+    continuava com o vocabulário do produto: a linha escolhida dizia «Só neste
+    programa» enquanto o editor ao lado dizia «Heroic». A coluna é onde ela
+    passa a maior parte do tempo olhando.
+
+    **O TRADUTOR É O MESMO, e isto não é uma segunda tabela:**
+    `_procedencia_e_recado` → `simple_match.procedencia_do_match`, a mesma
+    função que pinta o `<select>`. Duas traduções para a mesma pergunta
+    divergiriam no primeiro lançador novo.
+
+    AS DUAS VEZES EM QUE O TEXTO DO PRODUTO FICA, e as duas são por conteúdo:
+
+    * **«Qualquer jogo»** — a frase de `rotulo_quando_usar` não é um rótulo, é
+      a DISPUTA (*"Sempre — 2 disputam, este vence"*), e ela responde a queixa
+      mais antiga desta casa. Trocá-la pela procedência apagaria o único sinal
+      que a tela dá sobre qual dos catch-all vence;
+    * **a regra que a tela não sabe descrever** — título de janela, lista de
+      classes, `MatchManual`. O produto já tem a frase honesta («Só neste
+      programa», «Só no manual»), e inventar uma procedência aqui seria o
+      mesmo R-12 pelo avesso que o cadeado do campo existe para impedir.
+    """
+    procedencia, _recado = _procedencia_e_recado(match)
+    if not procedencia or procedencia == PROCEDENCIA_DE_QUALQUER_JOGO:
+        return base
+    from hefesto_dualsense4unix.profiles.simple_match import simple_extra
+
+    nome, codigo = _nome_e_codigo(simple_extra(match) if match is not None else "")
+    return SEPARADOR_DA_PROCEDENCIA.join(
+        p for p in (procedencia, nome, codigo) if p)
+
+
 def _procedencia_e_recado(match: Any, recado_do_produto: Any = "") -> tuple[str, str]:
     """``(procedência, recado)`` do campo «Funciona em:» — e nunca os dois cheios.
 
@@ -1871,7 +1978,7 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
     # `lista`. Aplicar o filtro só numa delas é o defeito que a §6 da sprint
     # descreve — o pintor distribui as três listas pela ordem do DOCUMENTO, e
     # duas ordens diferentes põem o nome de um perfil na linha de outro.
-    lista = _ordenada(_filtrada(bruto.get("lista") or []))
+    lista = _ordenada(_filtrada(_com_a_procedencia(bruto.get("lista") or [], todos)))
     editor = bruto.get("editor") or {}
     fora = {
         "perfis.conta": bruto.get("conta", "—"),

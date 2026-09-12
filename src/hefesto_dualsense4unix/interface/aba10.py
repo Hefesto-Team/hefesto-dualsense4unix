@@ -45,6 +45,7 @@ from hefesto_dualsense4unix.profiles.simple_match import (  # noqa: E402
     PROCEDENCIA_DA_NAVEGACAO,
     PROCEDENCIA_DA_STEAM,
     PROCEDENCIA_DE_QUALQUER_JOGO,
+    SEPARADOR_DA_PROCEDENCIA,
     oferta_do_funciona_em,
 )
 
@@ -1382,30 +1383,70 @@ LANCADORES_DO_DESENHO = [PROCEDENCIA_DA_STEAM, "Heroic", "Lutris", "RetroArch",
 #: «Navegação» na frente, «Qualquer jogo» no fim.
 AMBIENTES = oferta_do_funciona_em(LANCADORES_DO_DESENHO)
 
-#: A PROCEDÊNCIA QUE O EDITOR DO DESENHO MOSTRA. É a tradução honesta do perfil
-#: que ele abre — `PERFIS[0]` é *Mortal Kombat*, cujo "Quando usar" diz
-#: `Jogo · mk1.exe`: uma regra por nome de programa, que não está no catálogo de
-#: lançador nenhum. **«Instalado aqui» é a resposta para isso**, e marcar
-#: «Steam» aqui seria o desenho afirmando, sobre o MESMO perfil, duas
-#: procedências diferentes em dois widgets da mesma tela.
-PROCEDENCIA_DO_DESENHO = LANCADOR_DIRETO
 #: OS RÓTULOS SAEM DO MOTOR — ver o comentário do import, no alto. Eram quinze
 #: palavras digitadas aqui, e a coincidência com o motor não era construção.
 ESTILOS = [e.rotulo for e in ESTILOS_DO_MOTOR]
-PERFIS = [("Mortal Kombat", 90, "Jogo · mk1.exe", True),
-          ("Elden Ring", 85, "Jogo da Steam · 1245620", False),
-          ("Orpheus", 82, "Jogo · mgba", False),
-          ("Pragmata", 80, "Jogo da Steam · 1358160", False),
-          ("Don't Scream", 78, "Jogo da Steam · 2380050", False),
-          ("Reanimal", 76, "Jogo · reanimal.exe", False),
-          ("Faith", 74, "Jogo · faith.exe", False),
-          ("Wendigo Blue", 72, "Jogo · wendigo.exe", False),
-          ("Duskfade", 70, "Jogo · duskfade.exe", False),
-          ("Mina the Hollower", 68, "Jogo · mina.exe", False),
-          ("Terror (os dez)", 60, "Estilo de Jogo · Terror", False),
-          ("Luta", 58, "Estilo de Jogo · Luta", False),
-          ("Navegação", 40, "Todos — 4 disputam", False),
-          ("Universal", 0, "Todos — quando nenhum casa", False)]
+#: A COLUNA «Funciona em» FALA A LÍNGUA DO CAMPO — C4-FUNCIONA-EM, 11/09/2026.
+#:
+#: **A TELA DIZIA DUAS COISAS SOBRE O MESMO PERFIL.** O campo do editor passou a
+#: responder *de onde o jogo vem* e esta coluna, a um palmo dele, continuava com
+#: o jargão: a linha escolhida dizia «Jogo · mk1.exe» enquanto o editor ao lado
+#: dizia «Instalado aqui». E a coluna é onde ela passa a maior parte do tempo.
+#:
+#: A FORMA É `procedência · nome · código`, e é o item 12 da segunda lista dela
+#: (foto 9): *"aqui por exemplo deveria aparecer o nome e o codigo  (noqa-acento) cita ela
+#: não só o codigo e não deveria aparecer o nome do programa"*.  (noqa-acento) cita ela
+#:
+#: **O CÓDIGO SÓ APARECE ONDE ELE EXISTE** — o appid da Steam. Um jogo de
+#: lançador não tem número público, e o "código" dele seria o basename do
+#: executável, que é o que a foto manda nunca mostrar; ele sai só com o nome.
+#: A linha `Instalado aqui · faith.exe` é o RESIDUAL, e está aqui de propósito:
+#: é o que a coluna mostra quando o catálogo não conhece a chave — o que o
+#: perfil tem, sem inventar e sem ficar vazia.
+#:
+#: AS DUAS ÚLTIMAS NÃO SÃO PROCEDÊNCIA: «Sempre» é a frase da DISPUTA
+#: (`profiles_actions.rotulo_quando_usar`), e ela fica porque responde *qual dos
+#: catch-all vence*, que é a queixa mais antiga desta casa. As duas do meio
+#: («Só neste programa») são a regra que a tela não sabe descrever — título de
+#: janela e lista de classes —, e a frase honesta do produto fica.
+#:
+#: FATO SUBSTITUÍDO: as duas últimas diziam "Todos — …", e o produto nunca
+#: escreveu essa palavra nesta coluna (`_MATCH_LABELS["any"]` é "Sempre" desde
+#: sempre). O desenho contradizia a tela viva, e ninguém tinha visto.
+#:
+#: **E OS NOMES DE EXEMPLO VÃO NA CAIXA DA CASA**, não na da loja: a régua da
+#: maiúscula decorativa reprovou `ELDEN RING`, `PRAGMATA` e
+#: `ORPHEUS: TO HELL AND BACK` aqui, e ela está certa — a ordem dela de
+#: 30/08/2026 é a PRIMEIRA letra, e isto aqui é prosa NOSSA, escrita à mão.
+#: **A tela VIVA continua mostrando a caixa que a biblioteca dela tem** (o
+#: `.acf` da Steam grava `ELDEN RING`), e isso não é prosa nossa: é o nome que
+#: ela confere na loja, e reescrevê-lo seria a tela corrigindo o dado dela.
+PERFIS = [("Mortal Kombat", 90, "Steam · Mortal Kombat 1 · 1971870", True),
+          ("Elden Ring", 85, "Steam · Elden Ring · 1245620", False),
+          ("Orpheus", 82, "RetroArch · Orpheus: To Hell and Back", False),
+          ("Pragmata", 80, "Steam · Pragmata · 1358160", False),
+          ("Don't Scream", 78, "Steam · Don't Scream · 2380050", False),
+          ("Reanimal", 76, "Heroic · Reanimal", False),
+          ("Faith", 74, "Instalado aqui · faith.exe", False),
+          ("Wendigo Blue", 72, "Lutris · Wendigo Blue", False),
+          ("Duskfade", 70, "Heroic · Duskfade", False),
+          ("Mina the Hollower", 68, "Instalado aqui · mina.exe", False),
+          ("Terror (os dez)", 60, "Só neste programa", False),
+          ("Luta", 58, "Só neste programa", False),
+          ("Navegação", 40, "Sempre — 4 disputam", False),
+          ("Universal", 0, "Sempre — quando nenhum casa", False)]
+
+#: A PROCEDÊNCIA QUE O EDITOR DO DESENHO MOSTRA — **e ela SAI DA LINHA, não é
+#: digitada**. O editor abre o `PERFIS[0]`, e a coluna «Funciona em» daquela
+#: mesma linha já diz de onde o jogo dele vem: a procedência é a primeira parte.
+#:
+#: DERIVAR É A CURA DE UM DEFEITO QUE ACONTECEU DUAS VEZES NO MESMO DIA, e nos
+#: dois sentidos: com a coluna em `Jogo · mk1.exe` e o campo em «Steam», e
+#: depois com a coluna em `Steam · …` e o campo em «Instalado aqui». **O
+#: desenho afirmando duas procedências diferentes sobre o MESMO perfil, em dois
+#: widgets a um palmo um do outro** — que é exatamente a queixa que esta sprint
+#: veio fechar na tela viva. Enquanto os dois forem escritos, eles divergem.
+PROCEDENCIA_DO_DESENHO = PERFIS[0][2].split(SEPARADOR_DA_PROCEDENCIA)[0]
 
 #: A PRIORIDADE DO PERFIL QUE O EDITOR DO DESENHO ABRE — o primeiro da lista.
 #: Ela é o número ao lado do trilho E a largura do cheio, e os dois saem daqui

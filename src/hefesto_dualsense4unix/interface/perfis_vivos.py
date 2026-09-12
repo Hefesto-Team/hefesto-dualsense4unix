@@ -577,6 +577,15 @@ class Janela:
         # chegava (`Jogo da Steam`) não casava com `<option>` nenhuma. Uma
         # bancada que fotografa a aba com um campo vazio é um instrumento que
         # responde sobre outra coisa que não o produto.
+        # E A COLUNA JUNTO COM O CAMPO — 11/09/2026, a segunda metade da mesma
+        # cura. Sem ela esta bancada fotografaria a linha dizendo «Só neste
+        # programa» ao lado de um editor que diz «Heroic»: as DUAS afirmações
+        # sobre o mesmo perfil, que é exatamente o defeito que a C4 fechou.
+        # O tradutor é o do produto (`a10_perfis._quando_usar`), nunca uma
+        # segunda gramática escrita aqui.
+        pacote["lista"] = a10_perfis._com_a_procedencia(
+            list(pacote.get("lista") or []), self.perfis)
+
         editor = dict(pacote.get("editor") or {})
         if editor:
             # **O PERFIL É O QUE O EDITOR DIZ QUE ABRIU, e não o `editado=` que
