@@ -1,4 +1,4 @@
-# Hefesto - Dualsense4Unix — esconde da API js legada os nós de Motion Sensors.
+# Hefesto - DualSense4Unix — esconde da API js legada os nós de Motion Sensors.
 # KERNEL-07 (estudo 2026-07-18 §P6).
 #
 # O QUE FAZ: o joydev do kernel cria um /dev/input/jsN para CADA nó de

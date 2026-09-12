@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# doctor.sh — diagnóstico de saúde do Hefesto - Dualsense4Unix.
+# doctor.sh — diagnóstico de saúde do Hefesto - DualSense4Unix.
 #
 # Verifica daemon, serviço, socket IPC, regras udev (incluindo a consistência do
 # nome de unit do hotplug), uinput, a gravabilidade do nó de LED do DualSense

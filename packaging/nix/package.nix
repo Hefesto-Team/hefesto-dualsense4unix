@@ -1,4 +1,4 @@
-## packaging/nix/package.nix — derivation Nix do Hefesto - Dualsense4Unix.
+## packaging/nix/package.nix — derivation Nix do Hefesto - DualSense4Unix.
 ## v3.4.0 (FEAT-PACKAGING-NIX-01).
 ##
 ## Carregada pelo flake.nix via callPackage. Mantida em arquivo separado

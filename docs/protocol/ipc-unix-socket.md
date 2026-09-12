@@ -523,7 +523,7 @@ autoswitch por janela, hotkey PS+D-pad):
 
 ## Erros
 
-Código padrão JSON-RPC 2.0. Convenções do Hefesto - Dualsense4Unix:
+Código padrão JSON-RPC 2.0. Convenções do Hefesto - DualSense4Unix:
 
 - `-32001`: daemon não conectado ao controle.
 - `-32002`: perfil não encontrado.

@@ -1,5 +1,5 @@
 [Unit]
-Description=Abre a GUI do Hefesto - Dualsense4Unix ao conectar o DualSense (hotplug USB)
+Description=Abre a GUI do Hefesto - DualSense4Unix ao conectar o DualSense (hotplug USB)
 After=graphical-session.target
 PartOf=graphical-session.target
 

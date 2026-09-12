@@ -94,7 +94,7 @@ def test_battery_sem_hardware():
 def test_status_roda_sem_daemon():
     result = runner.invoke(app, ["status"])
     assert result.exit_code == 0
-    assert "Hefesto - Dualsense4Unix" in result.stdout or "Status" in result.stdout
+    assert "Hefesto - DualSense4Unix" in result.stdout or "Status" in result.stdout
 
 
 def test_daemon_install_service_dry_command_help():

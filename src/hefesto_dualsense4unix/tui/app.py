@@ -1,4 +1,4 @@
-"""Textual app principal do Hefesto - Dualsense4Unix.
+"""Textual app principal do Hefesto - DualSense4Unix.
 
 `hefesto-dualsense4unix tui` abre essa app. Tela inicial (`MainScreen`) mostra:
   - Cabeçalho com nome + versão.
@@ -24,6 +24,7 @@ from textual.widgets import DataTable, Footer, Header, Label, Static
 
 from hefesto_dualsense4unix import __version__
 from hefesto_dualsense4unix.tui.widgets import BatteryMeter, StickPreview, TriggerBar
+from hefesto_dualsense4unix.utils import identidade
 
 
 @dataclass
@@ -119,7 +120,7 @@ class MainScreen(Screen[None]):
         yield Header(show_clock=False)
         with Vertical():
             yield Label(
-                f"[bold cyan]Hefesto - Dualsense4Unix[/] [dim]v{__version__}[/] — "
+                f"[bold cyan]{identidade.atual().nome_longo}[/] [dim]v{__version__}[/] — "
                 "Gerenciador DualSense para Linux",
                 id="title",
             )
@@ -294,7 +295,7 @@ class HefestoApp(App[None]):
     }
     """
 
-    TITLE = "Hefesto - Dualsense4Unix"
+    TITLE = identidade.atual().nome_longo
     SUB_TITLE = f"v{__version__}"
     BINDINGS: ClassVar[list[BindingType]] = [
         Binding("ctrl+c", "quit", "Sair"),

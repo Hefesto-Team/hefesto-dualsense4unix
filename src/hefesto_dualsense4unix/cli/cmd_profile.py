@@ -41,8 +41,9 @@ from hefesto_dualsense4unix.profiles.schema import (
     TriggersConfig,
 )
 from hefesto_dualsense4unix.profiles.slug import find_by_slug, slugify
+from hefesto_dualsense4unix.utils import identidade
 
-app = typer.Typer(name="profile", help="Gerencia perfis Hefesto - Dualsense4Unix.", no_args_is_help=True)  # noqa: E501
+app = typer.Typer(name="profile", help="Gerencia perfis Hefesto - DualSense4Unix.", no_args_is_help=True)  # noqa: E501
 console = Console()
 
 
@@ -83,7 +84,7 @@ def cmd_list() -> None:
         console.print("[dim]nenhum perfil encontrado[/dim]")
         return
 
-    table = Table(title="Perfis Hefesto - Dualsense4Unix")
+    table = Table(title=f"Perfis {identidade.atual().nome_longo}")
     table.add_column("Nome", style="cyan")
     table.add_column("Prioridade", justify="right")
     table.add_column("Match", style="magenta")

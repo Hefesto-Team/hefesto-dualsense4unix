@@ -1,4 +1,4 @@
-# Contribuindo com o Hefesto - Dualsense4Unix
+# Contribuindo com o Hefesto - DualSense4Unix
 
 Obrigado pelo interesse em contribuir. Este é um projeto pessoal com ciclo de desenvolvimento próprio, mas contribuições externas são bem-vindas desde que sigam os protocolos descritos aqui.
 
@@ -6,7 +6,7 @@ Obrigado pelo interesse em contribuir. Este é um projeto pessoal com ciclo de d
 
 ## Natureza do projeto
 
-Hefesto - Dualsense4Unix é um **projeto pessoal** mantido em regime de anonimato pelo autor. O fluxo interno de desenvolvimento usa um pipeline de sprints automatizadas com auto-merge em `main` sem PR formal — esse é o modo normal de operação.
+Hefesto - DualSense4Unix é um **projeto pessoal** mantido em regime de anonimato pelo autor. O fluxo interno de desenvolvimento usa um pipeline de sprints automatizadas com auto-merge em `main` sem PR formal — esse é o modo normal de operação.
 
 **Contribuições externas de pessoas desconhecidas passam por revisão manual antes do merge.** Não há prazo garantido de resposta, mas toda PR bem documentada será lida.
 

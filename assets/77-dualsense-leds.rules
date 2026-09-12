@@ -1,4 +1,4 @@
-# Hefesto - Dualsense4Unix — acesso de escrita aos LEDs do DualSense via sysfs.
+# Hefesto - DualSense4Unix — acesso de escrita aos LEDs do DualSense via sysfs.
 # FEAT-DSX-LIGHTBAR-SYSFS-01.
 #
 # O QUE FAZ: torna graváveis (pelo usuário do desktop) os nós de LED que o driver

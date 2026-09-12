@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # install-host-udev.sh — Instala regras udev + modules-load (uinput, uhid) do
-# Hefesto - Dualsense4Unix no sistema hospedeiro.
+# Hefesto - DualSense4Unix no sistema hospedeiro.
 #
 # Pode ser executado de 3 formas (todas idempotentes):
 #
@@ -265,7 +265,7 @@ RULES=(
 )
 
 # Verificar se TODAS as rules existem na origem.
-echo "Hefesto - Dualsense4Unix — instalação de regras udev"
+echo "Hefesto - DualSense4Unix — instalação de regras udev"
 echo ""
 echo "Origem das regras:    ${RULES_SRC}"
 if [[ -n "${MODLOAD_SRC}" ]]; then

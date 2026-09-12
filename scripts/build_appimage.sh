@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Gera AppImage do Hefesto - Dualsense4Unix via python-appimage (opcional).
+# Gera AppImage do Hefesto - DualSense4Unix via python-appimage (opcional).
 #
 # Pré-requisitos:
 #   sudo apt install libfuse2 librsvg2-bin
@@ -106,7 +106,7 @@ echo "Versão detectada: ${VERSION}"
 
 echo "[3/4] Gerando AppImage com Python ${PYTHON_VERSION}..."
 # --name não pode ter espaços (vira posicionais separados sem aspas).
-# Forma ident sem espaços; display brand "Hefesto - Dualsense4Unix" fica
+# Forma ident sem espaços; display brand "Hefesto - DualSense4Unix" fica
 # no .desktop e na janela GTK.
 python-appimage build app \
     --python-version "$PYTHON_VERSION" \

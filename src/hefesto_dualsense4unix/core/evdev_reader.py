@@ -1325,7 +1325,7 @@ class EvdevReader(_EvdevReconnectLoop):
     atual (thread-safe). `stop()` encerra limpo.
     """
 
-    # Mapeamento de evdev keycode -> nome canônico no domínio Hefesto - Dualsense4Unix.
+    # Mapeamento de evdev keycode -> nome canônico no domínio Hefesto - DualSense4Unix.
     #
     # Botões com keycode evdev estável no kernel hid_playstation:
     # cross, circle, triangle, square, l1, r1, l2_btn, r2_btn,

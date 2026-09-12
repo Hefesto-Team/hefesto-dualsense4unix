@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- AppStream metadata — Hefesto - Dualsense4Unix -->
+<!-- AppStream metadata — Hefesto - DualSense4Unix -->
 <!-- Valide com: appstreamcli validate (opcao no-net) flatpak/io.github.hefesto_team.hefesto_dualsense4unix.metainfo.xml -->
 <component type="desktop-application">
   <id>io.github.hefesto_team.hefesto_dualsense4unix</id>
@@ -14,7 +14,7 @@
     <id>br.andrefarias.Hefesto</id>
   </replaces>
 
-  <name>Hefesto - Dualsense4Unix</name>
+  <name>Hefesto - DualSense4Unix</name>
   <summary>Gerenciador DualSense para Linux</summary>
 
   <!-- Metadados de lançamento -->
@@ -317,7 +317,7 @@
 
   <!-- Descrição PT-BR (principal) -->
   <description>
-    <p>O Hefesto - Dualsense4Unix é um daemon Linux para configuração avançada do controle DualSense (PS5).
+    <p>O Hefesto - DualSense4Unix é um daemon Linux para configuração avançada do controle DualSense (PS5).
        Permite ajustar gatilhos adaptativos, vibração, barra de luz e emulação de mouse
        diretamente no Linux, sem necessidade de Wine ou emuladores.</p>
     <p>Funcionalidades principais:</p>
@@ -331,7 +331,7 @@
       <li>Suporte a USB e Bluetooth</li>
     </ul>
     <!-- Descrição EN (para lojas internacionais) -->
-    <p xml:lang="en">Hefesto - Dualsense4Unix is a Linux daemon for advanced DualSense (PS5) controller
+    <p xml:lang="en">Hefesto - DualSense4Unix is a Linux daemon for advanced DualSense (PS5) controller
        configuration. It lets you adjust adaptive triggers, rumble, lightbar and mouse
        emulation natively on Linux.</p>
     <p xml:lang="en">Main features:</p>

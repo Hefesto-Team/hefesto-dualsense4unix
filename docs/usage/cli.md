@@ -1,4 +1,4 @@
-# CLI Hefesto - Dualsense4Unix — referência de subcomandos
+# CLI Hefesto - DualSense4Unix — referência de subcomandos
 
 Esta é a referência canônica da CLI `hefesto-dualsense4unix` (Typer). Cobre os
 subcomandos disponíveis após a sprint **FEAT-CLI-PARITY-01** (paridade

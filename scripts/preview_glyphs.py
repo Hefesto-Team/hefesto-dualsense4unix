@@ -19,6 +19,7 @@ import sys
 _RAIZ_TELA = str(pathlib.Path(__file__).resolve().parents[1] / "src")
 if _RAIZ_TELA not in sys.path:
     sys.path.insert(0, _RAIZ_TELA)
+from hefesto_dualsense4unix.utils import identidade
 from hefesto_dualsense4unix.utils.tela_de_mentira import (
     garantir_tela_de_mentira,
 )
@@ -36,7 +37,7 @@ GLYPHS = [
     "stick_l", "stick_r", "mic",
 ]
 
-TITULO = "Hefesto - Dualsense4Unix — Preview Glyphs SVG"
+TITULO = f"{identidade.atual().nome_longo} — Preview Glyphs SVG"
 COLUNAS = 5
 TAMANHO = 48  # pixels de cada glyph na grade
 

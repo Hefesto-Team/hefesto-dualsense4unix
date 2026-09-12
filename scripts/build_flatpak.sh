@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# build_flatpak.sh — Constrói e empacota o Hefesto - Dualsense4Unix como Flatpak
+# build_flatpak.sh — Constrói e empacota o Hefesto - DualSense4Unix como Flatpak
 #
 # Uso:
 #   ./scripts/build_flatpak.sh [--install] [--bundle]

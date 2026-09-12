@@ -868,7 +868,7 @@ class IpcHandlersMixin:
             boot/reconnect). PERFIL-03: este handler é gesto MANUAL da
             usuária (GUI/CLI) — só os origins "manual" persistem a intenção.
           - Adicionalmente, escrevemos `active_profile.txt` — o marker que
-            `cli/cmd_profile.py:402` (`profile save --from-active`) lê para
+            `cli/cmd_profile.py:403` (`profile save --from-active`) lê para
             clonar o perfil ativo. Fato substituído (ONDA0-Z5/T14): o
             consumidor NÃO é o antigo subcomando de leitura citado aqui até
             23/08 — ele nunca existiu na CLI, ver `utils/session.py:9-14`.

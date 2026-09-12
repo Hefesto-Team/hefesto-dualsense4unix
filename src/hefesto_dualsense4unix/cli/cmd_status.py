@@ -14,6 +14,7 @@ from rich.console import Console
 from rich.table import Table
 
 from hefesto_dualsense4unix.cli.ipc_client import IpcClient, IpcError
+from hefesto_dualsense4unix.utils import identidade
 
 console = Console()
 
@@ -51,7 +52,7 @@ def status_cmd() -> None:
         console.print("[yellow]daemon offline — mostrando leitura direta do hardware[/yellow]")
         data = _fallback_hardware_read()
 
-    table = Table(title="Hefesto - Dualsense4Unix — Status")
+    table = Table(title=f"{identidade.atual().nome_longo} — Status")
     table.add_column("Campo", style="cyan")
     table.add_column("Valor")
     for key in ("connected", "transport", "active_profile", "battery_pct"):

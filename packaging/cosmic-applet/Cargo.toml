@@ -33,7 +33,7 @@ edition = "2021"
 # check_anonymity.sh (não procura e-mail) nem o check_test_data.sh (só varre
 # tests/) enxergam este arquivo.
 authors = ["Vitoria Maria <[REDACTED]>"]
-description = "Applet nativo COSMIC para gatilhos, perfis e bateria do DualSense (Hefesto - Dualsense4Unix)"
+description = "Applet nativo COSMIC para gatilhos, perfis e bateria do DualSense (Hefesto - DualSense4Unix)"
 license = "MIT"
 homepage = "https://github.com/Hefesto-Team/hefesto-dualsense4unix"
 repository = "https://github.com/Hefesto-Team/hefesto-dualsense4unix"

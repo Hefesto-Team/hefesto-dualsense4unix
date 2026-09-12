@@ -1,4 +1,4 @@
-//! Applet COSMIC do Hefesto - Dualsense4Unix.
+//! Applet COSMIC do Hefesto - DualSense4Unix.
 //!
 //! UI fina: um botão de ícone no painel cujo glifo reflete o estado do daemon
 //! (offline = ícone "indisponível"; bateria < 15% = ícone de alerta; conectado
@@ -436,7 +436,7 @@ impl HefestoApplet {
 
         // Cabeçalho.
         content =
-            content.push(padded_control(text::title4("Hefesto - Dualsense4Unix")).padding([8, 16]));
+            content.push(padded_control(text::title4("Hefesto - DualSense4Unix")).padding([8, 16]));
         content = content.push(padded_control(divider::horizontal::default()));
 
         // Bloco de status.

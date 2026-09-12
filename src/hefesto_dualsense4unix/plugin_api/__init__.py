@@ -1,4 +1,4 @@
-"""plugin_api — API publica para plugins do Hefesto - Dualsense4Unix.
+"""plugin_api — API publica para plugins do Hefesto - DualSense4Unix.
 
 Exports canonicos:
   - Plugin: ABC base para todos os plugins.

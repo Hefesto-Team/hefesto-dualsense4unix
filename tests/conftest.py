@@ -2562,7 +2562,7 @@ def _nenhum_uinput_de_verdade() -> Iterator[None]:
 
     **O defeito, medido em 20/08/2026, e ele saiu da máquina dela.** Ela relatou
     janelas saindo de tela cheia sozinhas e suspeitou de tecla presa. O kernel
-    contava outra história: **1289 nós `Hefesto - Dualsense4Unix Virtual
+    contava outra história: **1289 nós `Hefesto - DualSense4Unix Virtual
     Keyboard` criados naquele dia**, 51 nos últimos trinta minutos, cada um
     vivendo cerca de 0,4 ms. Eram meus: cada `pytest -q` cria centenas deles, e a
     suíte rodou quinze vezes naquela sessão.

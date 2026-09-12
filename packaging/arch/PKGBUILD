@@ -1,7 +1,7 @@
 # Maintainer: Vitoria Maria <[REDACTED]>
 # Contributor: Andre Farias <noreply@example.com>
 #
-# PKGBUILD para o Hefesto - Dualsense4Unix (gerenciador DualSense para
+# PKGBUILD para o Hefesto - DualSense4Unix (gerenciador DualSense para
 # Linux). FEAT-PACKAGING-ARCH-01.
 #
 # Strategy: o pacote consolida deps Python via `pip install --root --prefix

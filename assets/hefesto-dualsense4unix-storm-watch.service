@@ -1,5 +1,5 @@
 [Unit]
-Description=Hefesto - Dualsense4Unix: registra o storm USB (-71) do DualSense num log dedicado
+Description=Hefesto - DualSense4Unix: registra o storm USB (-71) do DualSense num log dedicado
 Documentation=man:journalctl(1)
 After=default.target
 

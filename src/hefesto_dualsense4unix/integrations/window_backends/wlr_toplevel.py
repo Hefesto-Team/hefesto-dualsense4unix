@@ -26,7 +26,7 @@ Se o binário não está no PATH ou não responde, `get_active_window_info`
 retorna `None` e o caller (autoswitch via cascade) degrada silenciosamente.
 
 BUG-COSMIC-WLR-BACKEND-REGRESSION-01 (v3.1.0) — re-portado do v2.4.1 após o
-rebrand Hefesto → Hefesto - Dualsense4Unix ter removido o arquivo no commit
+rebrand Hefesto → Hefesto - DualSense4Unix ter removido o arquivo no commit
 de massa-rename. A justificativa de então dizia que sem este backend o
 autoswitch ficava inoperante em COSMIC puro; a medição de 02/09/2026 mostra
 que ele já estava inoperante ali — o compositor nunca respondeu a este

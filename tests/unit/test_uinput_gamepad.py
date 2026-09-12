@@ -113,7 +113,13 @@ def _install_fake_evdev(monkeypatch: pytest.MonkeyPatch) -> type[_FakeUInput]:
 def test_constantes_xbox360() -> None:
     assert XBOX360_VENDOR == 0x045E
     assert XBOX360_PRODUCT == 0x028E
-    assert "Hefesto - Dualsense4Unix" in DEVICE_NAME
+    # A GRAFIA AQUI É A VELHA DE PROPÓSITO — `F6-O-NOME-TEM-UM-DONO`, 11/09/2026.
+    # O nome do produto em TEXTO virou `DualSense4Unix`, com o `S` do DualSense;
+    # o nome deste nó NÃO, porque o kernel o publica e alguém de fora casa por
+    # ele: jogos sob Proton por substring, e o compositor guarda configuração por
+    # nome de dispositivo. Trocar a caixa não dá erro — apaga a amarração que a
+    # pessoa já salvou, calado. `scripts/check_a_grafia_do_nome.py` isenta a forma.
+    assert "(Hefesto - Dualsense4Unix virtual)" in DEVICE_NAME
 
 
 def test_button_map_cobre_face_buttons() -> None:
