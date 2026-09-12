@@ -2691,6 +2691,27 @@ def fechar_definicoes(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any
         perfil.ativo((ctx.state or {}).get("active_profile")))}
 
 
+@gesto("06-navegacao.html", "fechar-ponto")
+def fechar_ponto(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
+    """O fechar e o "Cancelar" do *Estilo Point-and-click*. Mesmo ato do irmão.
+
+    ELE É UM SEGUNDO NOME E NÃO UM SEGUNDO COMPORTAMENTO, e a razão de existir
+    é de ENDEREÇO: o piloto recusa gesto que não esteja registrado, e pendurar
+    esta tela no `fechar-definicoes` faria o relato do clique nomear a pop-up
+    errada — quem for triar um desfecho leria "definições" sobre um botão da
+    tela do estilo. O ATO é o mesmo porque as duas telas dividem a mesma trava:
+    elas escrevem o MESMO campo do perfil (`Profile.button_actions`), e uma
+    escolha pendente numa é uma escolha pendente na outra.
+
+    A MORDIDA está em `test_a_06_o_ponto_guarda_o_que_ela_escolhe.py`: troque o
+    corpo por `return None` e o caso do "Cancelar" reprova, porque a linha que
+    ela abandonou volta a ser oferecida ao "Guardar" seguinte.
+    """
+    _largar_o_que_ela_mexeu()
+    return {"mesa": _linhas_dos_botoes(
+        perfil.ativo((ctx.state or {}).get("active_profile")))}
+
+
 @gesto("06-navegacao.html", "tecla-escrita")
 def tecla_escrita(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
     """Ela mexeu num dos oito campos de *Teclas do teclado*. NÃO grava nada.
@@ -3361,19 +3382,171 @@ def padrao_definicoes(ctx: Contexto, o: dict[str, Any],
         f"{quais}.")}
 
 
-#: OS OITO QUE CONTINUAM SEM DONO, com o motivo MEDIDO de cada um — o
+@gesto("06-navegacao.html", "guardar-ponto", grava="gravar_e_reaplicar")
+def guardar_ponto(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
+    """"Guardar" do *Estilo Point-and-click*. Escreve `Profile.button_actions`.
+
+    ELE PASSOU A TER DONO EM 11/09/2026, F2-POINT-AND-CLICK, e o que o segurava
+    era um FATO que a medição derrubou. O `SEM_GESTO` dizia: *"'Estilo de Jogo'
+    não existe em campo, widget ou preset nenhum do produto"*. Isso continua
+    verdade sobre um campo chamado "estilo" — e é a pergunta errada. As sete
+    linhas desta tela não perguntam que ESTILO o perfil tem: elas perguntam **o
+    que cada peça do controle faz**, que é exatamente o que
+    `Profile.button_actions` guarda desde 01/09/2026, por decisão dela
+    (*"ganha campo"*). Seis das sete são botões de `acoes.BOTOES`, com o mesmo
+    id que a tela de Definições já grava; a sétima não é botão em lugar nenhum
+    do produto — ver o `PONTO_MAPA` do gerador.
+
+    É A MESMA TABELA VISTA POR UMA JANELA MENOR, e é por isso que ele **junta em
+    vez de substituir**: a forma que o piloto recolhe aqui é recortada pelo `id`
+    da pop-up e traz SEIS linhas. Um `Guardar` que gravasse só o que recebeu
+    apagaria as outras dezesseis escolhas do perfil sem uma palavra — o
+    apagador com rótulo de "Guardar", que esta casa já pagou uma vez nesta
+    mesma aba (02/09/2026).
+
+    E VOLTAR AO DE FÁBRICA É TIRAR DO PERFIL, não gravar o valor de fábrica:
+    `button_actions` guarda DIFERENÇA, e `None` quer dizer "herda". Gravar o
+    padrão congelaria o padrão VELHO no dia em que o produto mudasse o dele.
+
+    A TRAVA CONTRA O DESENHO é a mesma do irmão, com uma diferença que importa:
+    o desenho desta tela **não é o de fábrica** — ele crava a receita do estilo,
+    e ela difere do de fábrica em três das seis linhas (o círculo e os dois
+    cliques do touchpad, medido em 11/09/2026 contra `acoes.padrao()`). Logo um
+    clique nos 100 ms entre a página carregar e o primeiro tique pintar
+    (`hefesto_vivo.TIQUE_MS`) gravaria TRÊS trocas que ela não pediu. A trava é
+    por isso mais larga que a de lá: sem nenhuma linha em `_MEXENDO`, qualquer
+    divergência entre a forma e o que o perfil guarda quer dizer *o piloto ainda
+    não falou*, e o gesto recusa dizendo.
+
+    O QUE SE PERDE É NOMEADO, e só o desta tela: `resolver()` devolve os botões
+    que ninguém atende hoje, e a frase fala apenas dos que ESTE clique escreveu
+    — nomear os outros dezesseis seria o gesto respondendo sobre o que não fez.
+    """
+    nome = _perfil_ativo_ou_recusa(ctx)
+    forma = o.get("forma")
+    if not isinstance(forma, dict) or not forma:
+        raise RuntimeError(
+            "não consegui ler as linhas da tela. O botão precisa do "
+            "`data-hef-forma` para o piloto recolher os campos — se ele sumiu do "
+            "desenho, o Guardar não tem o que gravar.")
+
+    escolhas: dict[str, str] = {}
+    nao_reconhecidas: list[str] = []
+    for botao, rotulo in forma.items():
+        if botao not in acoes.BOTOES:
+            # A LINHA SEM ENDEREÇO CAI AQUI, e cair é o certo: *deslizar o dedo
+            # no touchpad* não é botão do produto. O que o gerador não endereça,
+            # este laço não inventa.
+            continue
+        token = acoes.token_do_rotulo(str(rotulo))
+        if token is None:
+            nao_reconhecidas.append(f"{_nome_do_botao(botao)}={rotulo!r}")
+            continue
+        escolhas[botao] = token
+    if nao_reconhecidas:
+        raise ValueError(
+            "estas linhas trazem uma opção que o produto não conhece: "
+            + ", ".join(nao_reconhecidas)
+            + ". A lista da tela e a do produto saem do mesmo lugar "
+              "(`core/acoes_de_botao.ACOES`) — se divergiram, foi o desenho que "
+              "andou sem o gerador.")
+    if not escolhas:
+        raise RuntimeError(
+            "não consegui ler as linhas desta tela: nenhuma delas disse de que "
+            "botão é. O `data-linha` de cada lista vem do gerador — sem ele o "
+            "Guardar não tem o que gravar.")
+
+    loader = perfil._com_o_src()
+    prof = loader.load_profile(nome)
+    # O QUE A TELA PINTADA MOSTRARIA, montado do DISCO e não do `ctx`: a
+    # comparação tem de ser contra a verdade que o "Guardar" está prestes a
+    # trocar, e não contra o retrato que o daemon mandou há um tique.
+    mostra = _linhas_dos_botoes({"button_actions": prof.button_actions,
+                                 "key_bindings": prof.key_bindings})
+    divergem = [b for b, token in escolhas.items()
+                if mostra.get(f"{PREFIXO_DA_ACAO}{b}") != acoes.rotulo(token)]
+    if divergem and not _MEXENDO:
+        # A FRASE NÃO DIZ «AINDA NÃO», e a escolha é do portão da confissão
+        # (`check_a_tela_nao_confessa.py`): `ainda` é o advérbio da dívida — ele
+        # promete que a coisa vem, e promessa só se faz sobre trabalho NOSSO.
+        # A primeira redação desta recusa dizia *"estas linhas ainda não
+        # mostram…"* e o portão a pegou no mesmo dia em que ela nasceu. O que
+        # a pessoa precisa saber é o mesmo e cabe sem a promessa: o que está na
+        # tela não é o que o perfil guarda, e a saída é esperar e repetir.
+        raise RuntimeError(
+            f"não guardei: o que estas linhas mostram não é o que o perfil "
+            f"“{nome}” guarda — "
+            + ", ".join(_nome_do_botao(b) for b in sorted(divergem))
+            + ". Espere a tabela se preencher e tente de novo.")
+
+    de_fabrica = acoes.padrao()
+    diferentes = {b: t for b, t in escolhas.items() if de_fabrica.get(b) != t}
+    congelado = _o_desenho_congelado(diferentes)
+    for botao in congelado:
+        del diferentes[botao]
+    aviso = _frase_do_congelado(congelado) if congelado else ""
+
+    novo: dict[str, str] = dict(prof.button_actions or {})
+    for botao in escolhas:
+        if botao in congelado:
+            continue
+        if botao in diferentes:
+            novo[botao] = diferentes[botao]
+        else:
+            novo.pop(botao, None)
+    novo_ou_nada = novo or None
+    if prof.button_actions == novo_ou_nada:
+        _largar_o_que_ela_mexeu()
+        raise RuntimeError(
+            f"não havia o que guardar — o perfil “{nome}” já faz exatamente o "
+            "que estas linhas mostram. Está guardado. Para mudar alguma coisa, "
+            "troque a linha e clique aqui de novo."
+            + (f" E {aviso}" if aviso else ""))
+    perdidos = atalhos_que_param_de_valer(
+        {"key_bindings": getattr(prof, "key_bindings", None) or {},
+         "button_actions": novo_ou_nada})
+    perfil.gravar_e_reaplicar(
+        prof.model_copy(update={"button_actions": novo_ou_nada}), ctx, p)
+    _largar_o_que_ela_mexeu()
+
+    _, _, sem_dono = acoes.resolver(novo_ou_nada)
+    recados = []
+    if perdidos:
+        recados.append(
+            "guardei, e estes atalhos que você escreveu na janela antiga param "
+            "de valer neste perfil: "
+            + ", ".join(f"{_nome_do_botao(b)} = {_atalho_em_palavras(t)}"
+                        for b, t in perdidos)
+            + ". O perfil ainda os guarda no arquivo, mas o que passa a valer é "
+              "o que estas listas mostram.")
+    daqui = [b for b in sem_dono if b in escolhas]
+    if daqui:
+        recados.append(
+            "guardei o que o produto sabe fazer, e estas linhas ficaram sem "
+            "quem as atenda: " + ", ".join(_nome_do_botao(b) for b in daqui)
+            + ". Elas estão no perfil e não acendem nada hoje — é feature que "
+              "falta, não erro seu.")
+    if aviso:
+        recados.append(aviso)
+    if recados:
+        raise RuntimeError(" ".join(recados))
+
+
+#: OS SEIS QUE CONTINUAM SEM DONO, com o motivo MEDIDO de cada um — o
 #: inventário honesto do que falta, no lugar de um botão que responde calado. O
 #: piloto os recusa PELO NOME (`[gesto sem dono] 06-navegacao.html · <nome>`), e
-#: por isso as chaves aqui são os nomes que ele vai imprimir, um por um: os dois
-#: `bignum` sem dono viram quatro linhas (`-menos` e `-mais`), porque são quatro
-#: botões.
+#: por isso as chaves aqui são os nomes que ele vai imprimir, um por um.
 #:
-#: ERAM QUATORZE, depois TREZE. O `teclado` saiu na segunda leva — o que o
-#: segurava não era falta de método, era o piloto não mandar o valor de um
-#: `<select>`. O `padrao-definicoes` saiu na TERCEIRA, e o que o segurava era
-#: um FATO ERRADO escrito aqui: que gravar perfil não tinha método. Tinha, e o
-#: `a10_perfis` já o usava. As duas saídas têm a mesma forma — o que prendia o
-#: botão não era o produto, era o que estava escrito sobre ele.
+#: ERAM QUATORZE, depois TREZE, e hoje são SEIS. O `teclado` saiu na segunda
+#: leva — o que o segurava não era falta de método, era o piloto não mandar o
+#: valor de um `<select>`. O `padrao-definicoes` saiu na TERCEIRA, e o que o
+#: segurava era um FATO ERRADO escrito aqui: que gravar perfil não tinha método.
+#: Tinha, e o `a10_perfis` já o usava. O `guardar-ponto` saiu na QUARTA
+#: (11/09/2026), e o que o segurava era uma PERGUNTA errada: a entrada mediu que
+#: "Estilo de Jogo" não tem campo, e a tela não pergunta o estilo — pergunta o
+#: que cada peça faz, que tem campo desde 01/09. As três saídas têm a mesma
+#: forma — o que prendia o botão não era o produto, era o que estava escrito
+#: sobre ele.
 #:
 #: -------------------------------------------------------------------------
 #: `mouse.emulation.restore` NÃO virou botão, e a segunda leva reconfirmou a
@@ -3451,14 +3624,30 @@ SEM_GESTO = {
     # ("Abrir a Steam", "Sair do modo jogo", "Escolher um programa…"), os dois
     # papéis de eixo pedidos a um botão, e os gatilhos L2/R2, que são espelho do
     # cross e do triangle. O gesto grava o resto e LEVANTA nomeando esses.
+    # `guardar-ponto` SAIU DAQUI em 11/09/2026 (F2-POINT-AND-CLICK), e é a
+    # quarta saída com a MESMA forma das três anteriores: **o que prendia o
+    # botão não era o produto, era o que estava escrito sobre ele.** A entrada
+    # dizia que *"'Estilo de Jogo' não existe em campo, widget ou preset nenhum
+    # do produto"*, e continua verdade — só que a tela não pergunta o estilo.
+    # Ela pergunta o que cada peça FAZ, e isso tem campo desde 01/09
+    # (`Profile.button_actions`): seis das sete linhas são botões de
+    # `acoes.BOTOES`, com o id que a tela de Definições já grava. Ver
+    # `guardar_ponto`.
+    #
+    # A SÉTIMA CONTINUA SEM DESTINO, e ela está DITA no gerador em vez de aqui,
+    # porque é falta de ENDEREÇO e não de dono: *deslizar o dedo no touchpad*
+    # não é botão em `BOTOES`, e quem move o cursor por ali é o próprio mouse
+    # virtual (`uinput_mouse.emit_touchpad_move`). Ela não tem `data-gesto`, e
+    # por isso não é um gesto sem dono — é uma linha sem endereço.
     "guardar-remapeamento": "o remapeamento botão-por-botão não tem sequer campo "
-                            "no perfil, quanto mais método de IPC",
+                            "no perfil, quanto mais método de IPC — e o motor "
+                            "também não existe: medido em 11/09/2026, o único "
+                            "lugar que traduziria nome de botão antes de o jogo "
+                            "ver é o `forward_buttons` do vpad "
+                            "(`daemon/subsystems/coop.py`), e ele só alcança os "
+                            "controles SECUNDÁRIOS — o primário não passa por "
+                            "ali. Ver a sprint F1-REMAPEAR",
     "padrao-remapeamento": "idem, ao contrário",
-    "guardar-ponto": "'Estilo de Jogo' não existe em campo, widget ou preset "
-                     "nenhum do produto — está escrito em "
-                     "`app/actions/perfis_web.py`, que já mediu isto para a aba "
-                     "Perfis. O `point_and_click` que existe é um PERFIL em "
-                     "disco, não um estilo, e gravar perfil não tem método",
 }
 
 
