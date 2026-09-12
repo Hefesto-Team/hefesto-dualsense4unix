@@ -2045,11 +2045,15 @@ BOTOES_SEM_DONO: dict[str, str] = {
 #: sendo máscara do produto"* e que ele ficava cinza com a razão na dica. A
 #: máscara nasceu hoje, por ordem dela, e o chip acende como os outros dois —
 #: o resto do achado (o `uniq` e o dono do gesto) segue valendo.
-_MASCARA_SAIU_DOS_SEM_DONO = (
-    "gamepad.mask.set recebe `uniq` e o gesto `mascara` tem dono desde "
-    "03/09/2026; e o Nintendo Pro, que era o que sobrava do achado antigo, "
-    "virou máscara de verdade em 07/09/2026 — o chip acende como os outros dois."
-)
+#: ERA UM LITERAL DE MÓDULO ATÉ 11/09/2026, e ninguém o chamava: prosa de
+#: 04/09 guardada como string. Um literal de pacote é exatamente o que a régua
+#: das palavras banidas vigia, porque é por ele que o texto CHEGA à tela pelo
+#: tique — e este trazia `gamepad.mask.set` e `uniq` na frase. Como comentário
+#: ele diz a mesma coisa a quem lê o código e não pode escorregar para a tela.
+#:
+#:   `gamepad.mask.set` recebe `uniq` e o gesto `mascara` tem dono desde
+#:   03/09/2026; e o Nintendo Pro, que era o que sobrava do achado antigo,
+#:   virou máscara de verdade em 07/09/2026 — o chip acende como os outros dois.
 
 
 def _painel() -> Any:
