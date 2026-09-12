@@ -9,11 +9,15 @@ import re
 
 import onde
 # `MESA` SAIU DO IMPORT em 02/09/2026, e a razão é a mesma que mudou a régua da
-# promessa: os cartões deixaram de contar controle. `CONECTADOS` FICA, e agora
-# só como ESTADO DE PARTIDA: o texto do "?" ("a resposta vale igual para os N")
-# ganhou endereço em 03/09/2026 e o pacote o repinta com a mesa VIVA a cada
-# tique — ver `dl.quantos_html`. Enquanto o número saía daqui e ficava, a tela
-# dela dizia "os 2 (1 no cabo, 1 no rádio)" a dois centímetros de um cabeçalho
+# promessa: os cartões deixaram de contar controle. `CONECTADOS` FICA, e só como
+# ESTADO DE PARTIDA — hoje ele não escreve uma palavra desta aba.
+#
+# O TEXTO DO "?" DEIXOU DE CONTAR CONTROLE EM 11/09/2026 (A2-002, aprovada por
+# ela): a frase *"a resposta vale igual para os N (x no cabo, y no rádio)"*
+# repetia o cabeçalho a dois centímetros, que é o dono do número. Com ela saiu o
+# endereço `lanc-quantos` — ver o registro em `desenho_dos_lancadores`, onde a
+# constante e a função moravam. Entre 03/09 e hoje o número era vivo; antes
+# disso a tela dela dizia "os 2 (1 no cabo, 1 no rádio)" ao lado de um cabeçalho
 # que dizia "1 controle: 1 USB · 0 BT".
 #
 # `cor_da_zona` entrou em 03/09/2026 e serve à RÉGUA, não ao desenho: é ele que
@@ -525,23 +529,17 @@ MIOLO = f'''
       <div class="quadro-topo">
         <span class="quadro-titulo">De onde os seus jogos vêm</span>
         <span class="ajuda">?<span class="dica">
-          O Hefesto não é só para a Steam. Ele casa o perfil pelo <b>nome do processo</b> e pela
-          <b>janela</b> — o jogo pode vir de onde quiser.<br><br>
-          Esta aba procura os lançadores e emuladores instalados, diz <b>se os controles chegam
-          lá</b>, o que impede quando não chegam, e conserta o que dá para consertar sozinho.<br><br>
-          O que impede é do <b>lançador</b>, nunca do controle — é a linha de inicialização, a
-          exceção do Steam Input, a permissão de aparelho. Por isso a resposta vale igual para
-          <span data-campo="{dl.QUANTOS}" data-hef-alvo="html">{dl.quantos_html(N_CTRL, N_USB, N_BT)}</span>, e por isso a fita lá em cima está
-          esmaecida aqui: não há o que escolher por controle.<br><br>
-          <b>Detectar o jogo que está aberto</b> é o caminho curto: abra o jogo de onde for,
-          volte aqui e clique — o perfil nasce com a regra certa, sem digitar nada.
+          Esta aba procura os lançadores instalados nesta máquina. O perfil casa pelo
+          <b>nome do processo</b> e pela <b>janela</b> — o jogo pode vir de qualquer um deles.<br><br>
+          O que impede um jogo de receber o controle é do <b>lançador</b>, nunca do controle.<br><br>
+          <b>Detectar o jogo aberto</b> é o caminho curto: abra o jogo, volte aqui e clique.
         </span></span>
         <span class="conta" data-campo="lanc-conta" data-hef-alvo="html">{dl.conta_html(QUADRO.achados, QUADRO.impedidos)}</span>
       </div>
       <div class="quadro-corpo">
 
         <div class="acoes" style="margin-top:0;margin-bottom:12px">
-          <button class="btn roxo" data-gesto="detectar">Detectar o jogo que está aberto</button>
+          <button class="btn roxo" data-gesto="detectar">Detectar o jogo aberto</button>
           <button class="btn" data-gesto="procurar">Procurar de novo</button>
           <a class="btn" href="#{dl.TELA_DO_NOVO}" data-gesto="{dl.ADICIONAR}">{dl.ADICIONAR_NOVO_ROTULO}</a>
         </div>
