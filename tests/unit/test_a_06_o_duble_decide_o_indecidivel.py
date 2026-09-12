@@ -363,7 +363,20 @@ def test_todo_valor_do_duble_existe_como_opcao(monkeypatch, publicado):
     """
     cravados, declarados = _no_mundo_de(monkeypatch, publicado)
     onde_estou = "publicada" if publicado else "da bancada"
-    conferidos = 0
+    # A CONTA É POR ENDEREÇO, E NÃO POR ELEMENTO — 11/09/2026,
+    # F2-POINT-AND-CLICK. Ela contava elementos, e isso valia enquanto cada
+    # endereço aparecesse UMA vez na página. O *Estilo Point-and-click* passou a
+    # mostrar seis das linhas de *o que cada botão faz* pelo MESMO `data-campo`
+    # da tela de Definições — é o mesmo campo do perfil, e um segundo endereço
+    # seria a segunda verdade sobre um dado. Contando elementos, a régua
+    # reprovava a MELHORA: `39 != 33`, que é a forma exata do defeito que esta
+    # casa já pagou onze vezes em 26/08.
+    #
+    # O QUE NÃO AFROUXOU: cada ELEMENTO continua sendo conferido no laço abaixo
+    # (a lista dele tem de oferecer o valor que o pacote manda), e é por isso
+    # que a mudança é de contagem e não de cobertura — os seis novos são
+    # verificados, e só não são contados duas vezes.
+    conferidos: set[str] = set()
     for campo in cravados:
         if campo.alvo != "valor":
             continue
@@ -380,7 +393,7 @@ def test_todo_valor_do_duble_existe_como_opcao(monkeypatch, publicado):
                 f"{campo.endereco}: na página {onde_estou} o dublê manda "
                 f"{valor!r} e a barra vai de {minimo} a {maximo} — o navegador "
                 "apara sem dizer nada, e a tela passa a AFIRMAR outro número.")
-            conferidos += 1
+            conferidos.add(campo.endereco)
             continue
         if _e_campo_de_texto(publicado, campo.chave):
             # O CAMPO DE TEXTO ACEITA QUALQUER STRING — não há lista a
@@ -388,7 +401,7 @@ def test_todo_valor_do_duble_existe_como_opcao(monkeypatch, publicado):
             # `el.value = t` direto. O que se confere aqui é que o endereço
             # EXISTE naquela página, que é a metade que valia para as outras
             # duas formas também.
-            conferidos += 1
+            conferidos.add(campo.endereco)
             continue
         oferece = _opcoes_da_pagina(publicado, campo.chave)
         assert oferece is not None, (
@@ -399,7 +412,7 @@ def test_todo_valor_do_duble_existe_como_opcao(monkeypatch, publicado):
             f"e a lista oferece {sorted(oferece)} — o `escrever()` devolveria 0 "
             "em silêncio, e o que ficaria na tela é a `<option selected>` que o "
             "desenho crava. O campo não para: ele passa a AFIRMAR o contrário.")
-        conferidos += 1
+        conferidos.add(campo.endereco)
     # O NÚMERO DEIXOU DE SER DIGITADO — 06/09/2026. Estava `== 24`, com a conta
     # escrita ao lado ("as 21 linhas de botão, a 'Função do teclado' e as DUAS
     # barras"). Quando o botão PS entrou na lista do produto (ONDA5-06-01/02) a
@@ -421,8 +434,8 @@ def test_todo_valor_do_duble_existe_como_opcao(monkeypatch, publicado):
         "campos de tecla — meia tela é pior que nenhuma: o Guardar dela grava "
         "só o que achou e cala sobre o resto.")
     esperados = len(BOTOES) + 3 + com_tecla
-    assert conferidos == esperados, (
-        f"conferi {conferidos} linhas na página {onde_estou} e a aba tem "
+    assert len(conferidos) == esperados, (
+        f"conferi {len(conferidos)} endereço(s) na página {onde_estou} e a aba tem "
         f"{esperados} (as {len(BOTOES)} linhas de botão, a 'Função do teclado', "
         f"as DUAS barras de velocidade e {com_tecla} campo(s) de tecla) — se o "
         "número caiu, uma linha perdeu o endereço e saiu da conferência sem "

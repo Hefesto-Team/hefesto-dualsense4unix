@@ -2305,7 +2305,25 @@ FILEIRA = '''
 #: quem move o cursor por ali é `uinput_mouse.emit_touchpad_move`, o próprio
 #: mouse virtual, não uma escolha por peça. Dar-lhe um `data-campo` inventaria
 #: um botão que o `resolver()` não conhece; está no relato da frente, com o que
-#: seria preciso.
+#: seria preciso. É a ÚNICA que ainda usa a segunda coluna.
+#:
+#: A SEGUNDA COLUNA DEIXOU DE SER O QUE A LINHA CRAVA nas seis endereçadas, e
+#: quem mandou foi a régua `test_a_06_o_duble_decide_o_indecidivel`. **Um
+#: endereço, um valor cravado.** Com `acao-touchpad_left_press` cravando
+#: `Backspace` na tela de Definições e `Botão esquerdo` aqui, o mesmo campo
+#: aparecia no documento com DOIS valores — e a régua que separa PRODUTO de
+#: MOCKUP lendo a tela ficava sem como decidir sobre um deles: um dublê que
+#: discorde do desenho ainda coincide com a outra metade, e o campo fica
+#: indecidível para sempre. As seis passaram a cravar `_PADRAO_DOS_BOTOES`, a
+#: mesma coisa que a tela irmã, e o que a pessoa vê continua sendo o perfil —
+#: a pintura chega em 100 ms e escreve nas duas de uma vez.
+#:
+#: O QUE ISSO CUSTOU, e está no relato da frente: a receita do estilo — *o
+#: touchpad e o ✕ como botão esquerdo, o ○ como direito* — vivia SÓ aqui, como
+#: `<option selected>` de HTML, onde código nenhum a alcança. Ela não some do
+#: produto porque nunca esteve nele; o que ela perde é o último lugar em que
+#: estava escrita. Se ela quiser *aplicar o estilo com um clique*, a receita
+#: precisa virar dado com dono — e isso é decisão dela.
 #: E AS DUAS LINHAS DE CLIQUE DO TOUCHPAD GANHARAM A MARCA no mesmo dia, e não
 #: por gosto: a régua `test_a_marca_esta_nas_tres_regioes_do_touchpad_e_so_nelas`
 #: cobra a marca de TODA linha de região do touchpad que tenha endereço, e o
@@ -2620,7 +2638,7 @@ TELA_PONTO = f'''
       <div class="moldura">
         <table class="tab">
           <tr><th>Botão do controle</th><th>O que ele faz neste estilo</th></tr>
-{chr(10).join(f'          <tr><td class="b">{b}</td><td>{drop(ACOES_UNI, f, gesto=LINHA_DE_BOTAO, linha=i, campo=f"{PREFIXO_DA_ACAO}{i}") if i else drop(ACOES_UNI, f)}</td></tr>' for b, f, i in PONTO_MAPA)}
+{chr(10).join(f'          <tr><td class="b">{b}</td><td>{drop(ACOES_UNI, _PADRAO_DOS_BOTOES[i], gesto=LINHA_DE_BOTAO, linha=i, campo=f"{PREFIXO_DA_ACAO}{i}") if i else drop(ACOES_UNI, f)}</td></tr>' for b, f, i in PONTO_MAPA)}
         </table>
       </div>
       <!-- AS DICAS AQUI SÃO AS `_ESTILO`, e a diferença é uma só: elas NÃO
