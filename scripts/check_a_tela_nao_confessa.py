@@ -176,8 +176,13 @@ FATOS: dict[str, str] = {
     "sem ela o Hefesto não consegue escrever nos controles":
         "LIMITE DE UM PRÉ-REQUISITO EXTERNO, nomeado por ela como legal em "
         "07/09/2026 — explica para que serve o módulo do kernel",
-    # SAIU DA TABELA EM 11/09/2026, e não porque a declaração estivesse errada:
-    # a FRASE deixou de existir. Estava aqui
+    # DUAS DECLARAÇÕES SAÍRAM AQUI EM 11/09/2026, e nenhuma porque estivesse
+    # errada: as duas FRASES deixaram de existir na tela, cada uma por uma
+    # frente diferente da onda da língua — e foi o próprio portão que cobrou as
+    # duas retiradas. Ele confere nos dois sentidos, e *uma declaração que
+    # sobrevive à frase envelhece calada*.
+    #
+    # A PRIMEIRA era
     #
     #     "o Hefesto não transforma o clique dele em tecla"
     #       CONFLITO DE FUNÇÃO, e a frase nomeia a condição na mesma oração
@@ -188,12 +193,13 @@ FATOS: dict[str, str] = {
     # *"o clique dele não vira tecla"*: o mesmo fato, com o sujeito no lugar
     # certo — quem não transforma o clique não somos nós por escolha, é o
     # touchpad, que já tem outro dono. Sem o "o Hefesto não", a peneira nem a
-    # pega, e a declaração não tem mais o que declarar. Foi o próprio portão
-    # que cobrou a retirada: *"uma declaração que sobrevive à frase envelhece
-    # calada"*.
-    "O Hefesto não é só para a Steam":
-        "AFIRMAÇÃO POSITIVA sobre o alcance do produto — a peneira a pega pela "
-        "forma, e ela é o oposto de uma confissão — 07/09/2026",
+    # pega.
+    #
+    # A SEGUNDA era *"O Hefesto não é só para a Steam"*, AFIRMAÇÃO POSITIVA
+    # sobre o alcance do produto, declarada em 07/09/2026 porque a peneira a
+    # pegava pela forma. O `?` da aba Lançadores perdeu os dois parágrafos que
+    # definiam a aba por negação (A2-002, aprovada por ela), e a frase foi
+    # junto.
 }
 
 
