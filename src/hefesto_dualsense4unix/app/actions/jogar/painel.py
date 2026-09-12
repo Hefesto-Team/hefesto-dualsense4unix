@@ -653,10 +653,12 @@ class Aviso(NamedTuple):
 #: medição que a fecharia (dois DualSense num jogo de co-op local, no cabo e no
 #: rádio) é bancada dela, na MESA-DE-QUATRO-01. A frase diz de quem é a conta,
 #: que é o que se sabe.
+#: **ELA ENCOLHEU COM A IRMÃ — 11/09/2026, proposta A3-007, aprovada por ela.**
+#: A oração de quem conta é a mesma de ``aba01.NATIVO_E_OS_JOGADORES``, e as
+#: duas mudaram na mesma linha porque a régua cobra a mesma oração nas duas.
 FRASE_DO_MODO_NATIVO = (
-    "Conexão Nativa com {quantos} controles ligados: neste modo o Hefesto não "
-    "cria um controle para cada pessoa — quem conta os jogadores é o jogo, "
-    "pelos controles que ele enxerga."
+    "Conexão Nativa com {quantos} controles ligados: quem conta os jogadores "
+    "passa a ser o jogo."
 )
 
 #: O SELO DA LINHA ACIMA. ``MODO`` é a palavra do glossário

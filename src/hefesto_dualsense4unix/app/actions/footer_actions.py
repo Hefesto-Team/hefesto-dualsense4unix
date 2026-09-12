@@ -512,8 +512,20 @@ class FooterActionsMixin(ProfileWriterMixin):
         sido entregue.
 
         O ``_jogo_aberto`` tem UM escritor: `home_actions._render_home`
-        (`:1339`), e ele **só roda com a aba Início à vista** — o poller checa a
-        página corrente antes de trabalhar (`home_actions.py:2654-2658`).
+        (`:1339`), e ele **só roda com a aba Início à vista** — quem o chama é
+        o tique `home_actions._refresh_home_tab`, que desiste antes de
+        trabalhar se a aba não estiver instalada.
+
+        A ÂNCORA ERA UM PAR DE NÚMEROS DE LINHA E VIROU O SÍMBOLO —
+        11/09/2026. Cinco linhas de comentário postas naquele arquivo (a dica
+        do cadeado, A3-014) empurraram o alvo e a âncora caiu em linha em
+        branco; o portão `citacoes-no-codigo` pegou. O nome da função não anda
+        quando o arquivo cresce.
+
+        E O NÚMERO VELHO NÃO SE ESCREVE AQUI, nem para contar a história: a
+        régua varre o COMENTÁRIO, e citá-lo faria desta explicação a primeira
+        ocorrência do defeito que ela descreve — que é a armadilha de prosa
+        que esta casa já pagou quatro vezes em uma semana.
         Consequência: clicar no "Aplicar" a partir da aba Lightbar, ou nos
         primeiros 2 s da janela, deixava o flag em ``False`` e o diálogo **não
         aparecia** — a transição saía direto, com o jogo aberto. É exatamente o

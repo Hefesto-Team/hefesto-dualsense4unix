@@ -355,9 +355,15 @@ def test_nenhuma_das_duas_frases_afirma_o_que_ninguem_mediu() -> None:
     o resultado dela.
     """
     dicas = {chave: dica for chave, _modo, _rot, dica in aba01.INTERRUPTOR}
+    # A ORAÇÃO DE QUEM CONTA SE LÊ, NÃO SE DIGITA — 11/09/2026. Esta régua
+    # cravava a oração de ontem e teria reprovado a melhora que ela aprovou
+    # (A3-007: a frase encolheu, a oração ficou). O dono da oração é
+    # `aba01.NATIVO_E_OS_JOGADORES`, e é dele que ela sai — assim a régua
+    # mede o ATO (as duas dizerem de quem é a conta) e não a redação de um dia.
+    conta = aba01.NATIVO_E_OS_JOGADORES.rstrip(".").lower()
     for frase in (dicas["desligado"], painel.FRASE_DO_MODO_NATIVO):
         baixo = frase.lower()
         assert "o jogo vê dois" not in baixo, (
             f"a tela afirmou o resultado da §5, que ninguém mediu: {frase!r}")
-        assert "quem conta os jogadores é o jogo" in baixo, (
+        assert conta in baixo, (
             f"a frase deixou de dizer de quem é a conta: {frase!r}")

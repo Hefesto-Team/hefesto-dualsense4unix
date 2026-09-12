@@ -449,12 +449,11 @@ CSS = CSS_GLIFO + CSS_LUZINHAS + """
      CONTROLES-VERDADE-01, 06/09/2026. O dono da frase é
      `controller_card.texto_motion`, e nada dela é digitado aqui.
 
-     O QUE ELA SUBSTITUI É UM NÚMERO DE CATÁLOGO. A dica do interruptor de
-     Giroscópio, três elementos ao lado, afirma *"No cabo são 250,0 Hz exatos"*
-     — o mesmo número para todo controle e todo momento, com o controle dela
-     parado ou fluindo. O `paridade-gtk-html.csv:55` já nomeava isso, e é a
-     única linha desta família sem segunda metade: dívida viva, sem pergunta
-     pendente.
+     O QUE ELA SUBSTITUIU FOI UM NÚMERO DE CATÁLOGO, e em 11/09/2026 ele saiu
+     da tela de vez (A3-032 e A3-033, aprovadas por ela): a dica do interruptor
+     de Giroscópio, três elementos ao lado, afirmava a taxa do cabo — o mesmo
+     número para todo controle e todo momento, com o controle dela parado ou
+     fluindo. O `paridade-gtk-html.csv:55` já nomeava isso.
 
      E NÃO É A LINHA DA VERDADE. Ela foi a primeira escolha desta sprint e a
      medição a derrubou: a linha de `controller_card.py:1729` SAIU DA TELA DA
@@ -488,17 +487,30 @@ CSS = CSS_GLIFO + CSS_LUZINHAS + """
      segunda linha não faria o cabeçalho crescer — faria o texto vazar.
 
      SEM FRASE, ESCONDE — e é o contrato, não economia de pixel. O alvo
-     `atributo` do piloto REMOVE o `title` quando o valor é vazio
-     (`hefesto_vivo.escrever`, ramo `atributo`), e o `:not([title])` abaixo faz
-     o vão voltar a ser vão. É o mesmo mecanismo da marca da degradação, que
-     esta faixa já usa dois elementos acima.
+     `atributo` do piloto REMOVE o `aria-label` quando o valor é vazio
+     (`hefesto_vivo.escrever`, ramo `atributo`), e o `.no-jogo{display:none}`
+     abaixo faz o vão voltar a ser vão.
+
+     O INTERRUPTOR ERA O `title` ATÉ 11/09/2026, e ele NÃO SERVIA MAIS: a
+     `DICA_DA_CASA` colhe todo `title` do DOM vivo para `data-hef-dica` e apaga
+     o atributo, então `[title]` não casava na janela dela — a linha nascia
+     invisível com a página publicada intacta. O `aria-label` não vira dica,
+     ninguém o colhe, e ele é a MESMA frase que o leitor de tela anuncia.
 
      E ELA SÓ APARECE NO CARD ABERTO. A linha FECHADA é a mais apertada da mesa
      — `VAO_ANTES_P3` são 103,2px com as duas leituras —, e um texto elástico
      ali comeria a largura da bateria, que é uma só para as quatro linhas. */
   .faixa .no-jogo{display:none}
-  .faixa .no-jogo > .no-jogo-t{overflow:hidden;text-overflow:ellipsis;
-    white-space:nowrap;display:block}
+  /* O DE DENTRO NÃO RECORTA MAIS — 11/09/2026, e é o que a A3-050 obrigou.
+     O corte e as reticências subiram para o de FORA, porque a afordância que
+     esta casa exige de um texto cortado (`test_a_janela_estreita_nao_engole_o
+     _desenho`) tem de estar no elemento que corta ou no que é cortado — e
+     quem carrega a frase inteira agora é o `aria-label` do de fora. Com o
+     recorte aqui dentro, o de dentro cortava A SI MESMO e não tinha onde
+     guardar o que sumia: medido em janela de 940px, 95px de frase engolidos.
+     `inline` é obrigatório: `text-overflow` só desenha as reticências sobre
+     conteúdo EM LINHA do bloco que transborda. */
+  .faixa .no-jogo > .no-jogo-t{display:inline}
   /* os gatilhos: número EM CIMA da barra, como no original.
      O `margin-top:auto` SAIU, e ele era a causa do maior buraco da tela.
      Enquanto L2/R2 moravam dentro da moldura do giroscópio, aquele `auto`
@@ -1196,15 +1208,31 @@ NA_COR_DA_PECA = {"cross", "l2", "r2"}   # os que o original pinta na cor do pl�
 # e foi o que aconteceu aqui, com `KeyError: 'cabo'`. É a mesma cura dos cinco
 # pontos da costura da ONDA B: quem COMPARA transporte lê o `transporte` cru;
 # quem MOSTRA lê a palavra do dono.
-TAXA_DO_GIRO = {
-    "usb": "No cabo são 250,0 Hz exatos, e três fontes independentes concordam: "
-           "o relógio do host, o relógio do controle e o descritor USB "
-           "(bInterval = 6).",
-    "bt":  "No rádio não há taxa típica. Medido em cinco janelas de 8 a 10 s no "
-           "mesmo controle: a média foi de 38 a 392 Hz entre janelas "
-           "consecutivas, sem que nada mudasse. Os 1000 Hz que o SDL declara "
-           "para Bluetooth não aparecem em janela nenhuma.",
-}
+# A TAXA SAIU DO `title` DO INTERRUPTOR — 11/09/2026, propostas A3-032 e
+# A3-033, aprovadas por ela. Ela era um NÚMERO DE CATÁLOGO no ponteiro do
+# mouse: o mesmo para todo controle e todo momento, ao lado da linha que já
+# diz a taxa VIVA deste controle (`giro-no-jogo`, três elementos à esquerda).
+# E a metade do rádio confessava dívida nossa — *"os 1000 Hz que o SDL declara
+# não aparecem em janela nenhuma"* —, que é o que a decisão dela de 07/09
+# proíbe na tela.
+#
+# A MEDIÇÃO NÃO SE PERDEU, e é por isso que ela pode sair daqui: as três
+# fontes do cabo e as cinco janelas do rádio estão na canônica
+# (`docs/protocol/dualsense-referencia-canonica.md`, §5), que é onde se
+# procura "o que o aparelho faz de verdade".
+
+
+#: O NÚMERO DA MESA POR EXTENSO — 11/09/2026, A3-029 e A3-040, aprovadas por
+#: ela. As duas frases dizem *"os quatro"*, e "quatro" é `len(MESA)` escrito em
+#: palavra: digitá-lo seria a tela contando uma coisa e a mesa tendo outra, que
+#: é o defeito que esta casa persegue. A forma é a do `aba08._POR_EXTENSO` — o
+#: gerador PARA quando a mesa cresce para um número que ninguém sabe dizer, em
+#: vez de publicar a palavra errada.
+_POR_EXTENSO = {1: "um", 2: "dois", 3: "três", 4: "quatro", 5: "cinco", 6: "seis"}
+if len(MESA) not in _POR_EXTENSO:
+    raise SystemExit(f"ERRO: a mesa tem {len(MESA)} lugares e este gerador só "
+                     f"sabe dizer {sorted(_POR_EXTENSO)} por extenso.")
+QUANTOS_NA_MESA = _POR_EXTENSO[len(MESA)]
 
 
 def num(v):
@@ -1306,8 +1334,7 @@ def luz_do_jogador(c):
 # em 238 de 238 amostras, e um retângulo que nunca mostra nada lê como quebrado.
 # O rótulo é o do produto (`sensor_widgets`: "Sem toque" / "N toque"), no mesmo
 # canto onde a moldura de baixo já põe o hexadecimal.
-DICA_TOQUE = ("O ponto marca onde o dedo está. Sem toque não há ponto — o DualSense "
-              "só publica posição enquanto alguém encosta na superfície.")
+DICA_TOQUE = "O ponto marca onde o dedo está. Sem toque, não há ponto."
 
 # A CENA DA LINHA DO GIROSCÓPIO NO DESENHO — CONTROLES-VERDADE-01, 06/09/2026.
 #
@@ -1322,9 +1349,9 @@ DICA_TOQUE = ("O ponto marca onde o dedo está. Sem toque não há ponto — o D
 # deviam LER* —, e o §1 da sprint manda não repetir: "importe a constante do
 # dono e compare com ela".
 #
-# 250 Hz É A TAXA DO CABO, e ela não é chutada: `TAXA_DO_GIRO` neste mesmo
-# arquivo já a traz, medida por três fontes independentes. A cena do mockup é a
-# do P1, que está no cabo.
+# 250 Hz É A TAXA DO CABO, e ela não é chutada: são três fontes independentes
+# (o relógio do host, o do controle e o descritor USB), na canônica §5. A cena
+# do mockup é a do P1, que está no cabo.
 _CENA_DO_GIRO = {"player": 1, "is_primary": True, "transport": "usb"}
 _CENA_GLOBAL_DO_GIRO = {
     "rumble_ff": {"per_vpad": [{"player": 1, "motion_streaming": True,
@@ -1339,10 +1366,8 @@ GIRO_NO_JOGO_DO_DESENHO = texto_motion(_CENA_DO_GIRO, _CENA_GLOBAL_DO_GIRO) or "
 # (`profiles/schema.py`, cinco booleanos) e o daemon o aplica, logo o aceso pode
 # divergir do derivado e a tela não teria como saber. O vizinho de cima é o
 # contrário: a barra de luz é LIDA (`lightbar_rgb`, `lightbar_source:"sysfs"`).
-DICA_LED_JOGADOR = ("As cinco lâmpadas do controle, no padrão do jogador "
-                    "(1 no meio para o P1, as das pontas para o P2, e assim por "
-                    "diante). É DERIVADO do número do jogador, não lido do "
-                    "aparelho — o daemon publica o número, não o que está aceso.")
+DICA_LED_JOGADOR = ("As cinco lâmpadas do controle, no padrão do jogador: 1 no "
+                    "meio para o P1, as das pontas para o P2, e assim por diante.")
 
 # `DE_QUEM_E_A_LUZ` SAIU DAQUI — 04/09/2026, decisão [02]. Ele é importado do
 # PACOTE (`a02_controles.DICA_DA_LUZ`), no topo deste arquivo, porque o `title`
@@ -1354,12 +1379,10 @@ DICA_LED_JOGADOR = ("As cinco lâmpadas do controle, no padrão do jogador "
 # a máscara é por controle e mora na aba Jogar, com três opções e SEM aviso.
 # Esta aba lê — e o `title` diz onde se muda, que é a única coisa que faltava
 # a quem chega aqui procurando o seletor.
-DE_ONDE_VEM_A_MASCARA = ("O que o jogo vê deste controle. A escolha é por controle e "
-                         "mora na aba Jogar — DualSense, Xbox 360 ou Nintendo Pro. "
-                         "Aqui é leitura.")
+DE_ONDE_VEM_A_MASCARA = ("O que o jogo vê deste controle. Para trocar, vá à aba "
+                         "Jogar.")
 
-ABRE_O_CARD = ("Clique para abrir o card deste controle — os outros fecham. "
-               "É o mesmo gesto de escolhê-lo na fita lá em cima.")
+ABRE_O_CARD = "Clique para abrir este controle — os outros fecham."
 
 #: A dica do assento SEM controle, e ela é a mesma frase que o `lugar_vazio()`
 #: carregava antes de 07/09/2026 — palavra por palavra. O cartão do lugar vazio
@@ -1406,17 +1429,19 @@ def sensores_da_peca(c):
     e o de sempre) nenhum deles casa, e o botão fica exatamente como está
     desenhado; o `off` só aparece depois de ela desligar um.
 
-    A TAXA DO GIROSCÓPIO VIVE AQUI AGORA. Ela era uma LEITURA na linha
-    (`Giroscópio 250 Hz`), e a leitura saiu — decisão dela no mesmo turno:
-    *"se der problema de espaço remover Giroscópio, Hefesto e vê como (na real
-    remove eles)"*. O número é medido e responde por transporte, então ele desce
-    para o `title` do interruptor do mesmo controle: nada a mais na tela, e a
-    medição não vira lápide. Quem a quiser por extenso tem a canônica
-    (`docs/protocol/dualsense-referencia-canonica.md`, §5).
+    A TAXA DO GIROSCÓPIO NÃO MORA MAIS AQUI — 11/09/2026, A3-032 e A3-033,
+    aprovadas por ela. Ela esteve na linha (`Giroscópio 250 Hz`), de onde saiu
+    por decisão dela, e depois neste `title`, de onde sai agora: era um número
+    de CATÁLOGO — igual para todo controle e todo momento — ao lado da taxa
+    VIVA que o `giro-no-jogo` publica neste mesmo cabeçalho. A medição está na
+    canônica (`docs/protocol/dualsense-referencia-canonica.md`, §5).
     """
-    hz_por_que = TAXA_DO_GIRO[str(c["transporte"]).lower()]
-    return f'''          <span class="sensores-peca">
-            <button class="sw" data-gesto="sensor" data-sensor="giroscopio" data-campo="giro-ligado" data-hef-alvo="classe" data-hef-classe="off" data-hef-quando="DESLIGADO" title="Ligado: o jogo recebe o giro deste controle. {hz_por_que}"><span class="p"></span>Giroscópio</button>
+    # SEM `f` — a última chave deste bloco saiu com a taxa de catálogo
+    # (A3-032/A3-033, 11/09/2026), e `ruff` reprova um `f` que não interpola
+    # nada. O argumento `c` fica: ele é a assinatura do dono, e a próxima
+    # peça deste par volta a lê-lo.
+    return '''          <span class="sensores-peca">
+            <button class="sw" data-gesto="sensor" data-sensor="giroscopio" data-campo="giro-ligado" data-hef-alvo="classe" data-hef-classe="off" data-hef-quando="DESLIGADO" title="Ligado: o jogo recebe o giro deste controle."><span class="p"></span>Giroscópio</button>
             <button class="sw" data-gesto="sensor" data-sensor="acelerometro" data-campo="accel-ligado" data-hef-alvo="classe" data-hef-classe="off" data-hef-quando="DESLIGADO" title="Ligado: o jogo recebe a inclinação e o chacoalhar deste controle."><span class="p"></span>Acelerômetro</button>
           </span>'''
 
@@ -1566,15 +1591,28 @@ def identidade(c, *, bat, carga=None, meio=""):
                há gamepad virtual a que perguntar, e a máscara Xbox não TEM
                giroscópio.
 
+               O `title` SAIU — 11/09/2026, A3-050, aprovada por ela: ele era
+               uma CÓPIA EXATA do texto ao lado, e passar o mouse mostrava o
+               que ela acabou de ler. O que ele fazia além da dica — dizer se
+               há frase, e portanto se o vão aparece — passou para o
+               `aria-label`, que NÃO vira dica e ainda é a afordância que esta
+               casa exige de um texto que o `ellipsis` pode cortar.
+
+               E ISSO CUROU UM DEFEITO DO MESMO DIA: desde o TOOLTIP-C1 a
+               `DICA_DA_CASA` COLHE todo `title` do DOM vivo para
+               `data-hef-dica` e apaga o atributo — então o `[title]` da folha
+               deixava de casar no produto e esta linha nascia invisível na
+               janela dela, com a página publicada intacta.
+
                DOIS ELEMENTOS, UM ENDEREÇO SÓ, e é a gramática que o selo do
                microfone desta mesma faixa já usa: o `achar()` do piloto visita
                os dois com o MESMO valor e cada um decide pelo próprio alvo — o
-               de fora veste o `title` (a frase inteira), o de dentro recebe o
-               texto, que o `ellipsis` corta se o vão apertar. Dois `data-campo` diferentes para o mesmo fato
+               de fora veste o `aria-label` (a frase inteira), o de
+               dentro recebe o texto, que o `ellipsis` corta se o vão apertar. Dois `data-campo` diferentes para o mesmo fato
                é o que a casa persegue: eles poderiam DIVERGIR na tela.
 
                E O DE FORA É QUEM ESCONDE. Sem frase, o alvo `atributo` remove o
-               `title` e o `:not([title])` da folha apaga o elemento inteiro —
+               `aria-label` e a folha apaga o elemento inteiro —
                ver o bloco `O GIROSCÓPIO NO JOGO` no CSS. O silêncio é a
                resposta certa e o dono é quem a dá: sem espelho vivo, acusar
                "sem giroscópio" em todo card seria ruído crônico. Um vão elástico vazio no
@@ -1583,7 +1621,7 @@ def identidade(c, *, bat, carga=None, meio=""):
                O TEXTO DO ARQUIVO É A CENA DO MOCKUP, e ele fica: é o que ela
                olha na página parada. O produto o troca no primeiro tique. -->
           <span class="no-jogo" data-campo="giro-no-jogo" data-hef-alvo="atributo"
-                data-hef-atributo="title" title="{GIRO_NO_JOGO_DO_DESENHO}"><span
+                data-hef-atributo="aria-label" aria-label="{GIRO_NO_JOGO_DO_DESENHO}"><span
                 class="no-jogo-t" data-campo="giro-no-jogo">{GIRO_NO_JOGO_DO_DESENHO}</span></span>
 {sensores_da_peca(c)}
           <!-- A BATERIA GANHOU ENDEREÇO EM 01/09/2026, e até aqui ela era a
@@ -1616,7 +1654,7 @@ def resumo_fechado(mic_mudo):
     do jogador é a segunda palavra da linha. Era o único item que não dizia nada
     que a linha já não dissesse, e custava ~100px da largura da bateria.
     """
-    porque = ("Calado no firmware do controle — a luz vermelha do plástico está apagada."
+    porque = ("Microfone calado: a luz vermelha do controle está apagada."
               if mic_mudo else "Capturando: o som que entra por este controle chega ao PC.")
     return (f'<span class="div so-fechado">·</span>\n'
             f'          <span class="leia so-fechado" title="{porque}">Microfone '
@@ -1849,10 +1887,9 @@ def selo_do_microfone(mic_mudo, *, estilo=""):
 #
 # "REINICIANDO O HEFESTO" FICA: continua verdade, e é a saída de quem não quer
 # digitar nada.
-DICA_MIC_MUDO = ("Calar no firmware do controle — apaga a luz vermelha do plástico. "
-                 "A partir daqui quem manda no mudo é o Hefesto, e o botão do "
-                 "controle para de valer. Esta tela não devolve o comando: quem "
-                 "devolve é hefesto-dualsense4unix mic release, ou reiniciar o "
+DICA_MIC_MUDO = ("Cala o microfone e apaga a luz vermelha do controle. A partir "
+                 "daqui quem manda no mudo é o Hefesto, e o botão do controle "
+                 "para de valer. Para devolvê-lo ao controle, reinicie o "
                  "Hefesto.")
 # **A DICA DO ♪ DIZ O PREÇO — decisão dela, 04/09/2026 [06].** A pergunta era se
 # o alto-falante ganharia um "Devolver", e a resposta é a mesma que ela deu ao
@@ -1891,12 +1928,9 @@ DICA_OUVIR_JUNTO = ("O som do PC sai no alto-falante deste controle e continua "
                     "saindo na TV. Serve para jogar acompanhado: cada um ouve "
                     "no próprio controle.")
 
-DICA_ALTO_MUDO = ("Manda zero ao alto-falante do controle, sem perder o volume "
-                  "guardado. A partir da primeira escrita quem guarda o volume "
-                  "deste alto-falante é o Hefesto — o controle não o devolve. "
-                  "Quem larga é hefesto-dualsense4unix speaker release: ele "
-                  "devolve o controle, não o valor — o alto-falante fica com o "
-                  "último volume que o Hefesto mandou.")
+DICA_ALTO_MUDO = ("Cala o alto-falante do controle, sem perder o volume "
+                  "guardado. A partir daqui quem guarda esse volume é o "
+                  "Hefesto.")
 
 
 # ---------------------------------------------------------------------------
@@ -2025,13 +2059,11 @@ def ponto_de_interrogacao(campo, razao=""):
 # nunca foi ajustado por outro caminho. Este é o escritor que faltava.
 ROTULO_VOL_MIC = "Volume do microfone deste controle"
 DICA_VOL_MIC = ("Arraste para escolher quanto do microfone deste controle chega ao "
-                "PC — de 0 a 100. É o ganho da FONTE no sistema, e não o mudo do "
-                "plástico: não apaga a luz vermelha e não tira o botão do controle. "
-                "Grava na hora.")
+                "PC. Não é o mudo: a luz vermelha fica acesa e o botão do "
+                "controle continua valendo. Grava na hora.")
 ROTULO_VOL_ALTO = "Volume do alto-falante deste controle"
-DICA_VOL_ALTO = ("Arraste para escolher o volume do alto-falante deste controle. O "
-                 "DualSense não devolve este número — o primeiro arrasto é o que faz o "
-                 "Hefesto passar a saber qual ele é, e é ele que destrava o ♪.")
+DICA_VOL_ALTO = ("Arraste para escolher o volume do alto-falante deste controle. "
+                 "O primeiro arrasto é o que destrava o ♪.")
 
 # OS DOIS TEXTOS DO MODO DO MICROFONE — e o do "Virtual" MENTIA, medido.
 #
@@ -2060,13 +2092,11 @@ DICA_VOL_ALTO = ("Arraste para escolher o volume do alto-falante deste controle.
 # O QUE O TEXTO NOVO FAZ: diz o que ESTE botão faz, e manda para o botão que
 # faz a outra metade. **Não confessa dívida** — regra dela, 07/09/2026: o que
 # falta mora no mapa, nunca na tela.
-DICA_MIC_VIRTUAL = ("Guarda que o microfone deste controle passa pelo Hefesto. "
-                    "Pelo rádio é assim que ele ganha um canal só dele; pelo cabo "
-                    "a escolha fica guardada e vale quando ele voltar para o "
-                    "rádio. Quem põe o microfone no ar é o 🎙 logo acima.")
-DICA_MIC_NATIVO = ("Guarda que o microfone deste controle entra sozinho, sem o "
-                   "Hefesto no meio. Vale nos dois transportes, e é o que o "
-                   "sistema já faz quando ninguém escolhe nada.")
+DICA_MIC_VIRTUAL = ("O microfone deste controle passa pelo Hefesto: pelo rádio, "
+                    "é assim que ele ganha um canal só dele. Quem o põe no ar é "
+                    "o 🎙 acima.")
+DICA_MIC_NATIVO = ("O microfone deste controle entra sozinho, sem o Hefesto no "
+                   "meio. É o que vale quando ninguém escolhe nada.")
 
 # ---------------------------------------------------------------------------
 # OS QUATRO BOTÕES QUE DIZIAM "ESTE É O ESCOLHIDO" SEM LER NADA — 03/09/2026
@@ -2373,9 +2403,9 @@ def bloco(c, *, bat, carga=None, glifos_on, l2, r2, touch, sticks,
             <div class="rot rot-linha">Microfone
               {selo_do_mic}
               <span class="ajuda" style="display:inline-block;vertical-align:-3px">?<span class="dica">
-                A barra mostra o som <b>entrando agora</b>. O <b>🎙</b> cala no
-                <b>firmware</b> e apaga a luz vermelha do plástico.<br><br>
-                O <b>modo</b>, logo abaixo, diz por onde o som do microfone chega ao PC.
+                A barra mostra o som <b>entrando agora</b>. O <b>🎙</b> cala o
+                microfone e apaga a luz vermelha do controle.<br><br>
+                Os <b>dois botões abaixo</b> dizem por onde esse som chega ao PC.
               </span></span>
               <!-- O MODO DO MICROFONE — pedido dela, 30/08: *"tá faltando o Modo do
                    Mic: Virtual, Desativado e Nativo"*.
@@ -2504,11 +2534,9 @@ def bloco(c, *, bat, carga=None, glifos_on, l2, r2, touch, sticks,
           <div class="moldura leituras" data-bloco="giroscopio">
             <div class="rot">Giroscópio
               <span class="ajuda" style="display:inline-block;vertical-align:-3px">?<span class="dica" style="left:auto;right:22px">
-                Leitura viva do aparelho, dez vezes por segundo. Nada aqui se clica.<br><br>
-                O <b>giroscópio</b> mede o quanto o controle gira, em graus por segundo.
-                O <b>acelerômetro</b> mede a inclinação e o chacoalhar, em g — parado
-                numa superfície plana a soma dos três eixos dá <b>1 g</b>, que é a gravidade,
-                e é por isso que um deles fica perto de 1 e os outros perto de 0.<br><br>
+                Leitura viva do controle.<br><br>
+                O <b>giroscópio</b> mede o quanto ele gira, em graus por segundo;
+                o <b>acelerômetro</b> mede a inclinação, em g.<br><br>
                 Um traço no lugar do número quer dizer que a leitura ainda não chegou.
               </span></span>
             </div>
@@ -2963,8 +2991,9 @@ CSS += f"""
      `O GIROSCÓPIO NO JOGO` lá em cima. As duas regras são irmãs de propósito:
      quem apagar uma sem a outra deixa ou um vão elástico vazio no cabeçalho, ou
      a frase presa na linha fechada, que não tem largura para ela. */
-  {_aberto(" .faixa .no-jogo[title]")}{{display:block;flex:1 1 0;min-width:0;
-    color:var(--texto-mudo);font-weight:400;cursor:help}}
+  {_aberto(" .faixa .no-jogo[aria-label]")}{{display:block;flex:1 1 0;min-width:0;
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+    color:var(--texto-mudo);font-weight:400}}
   /* O LUGAR VAZIO NÃO ABRE, POR REGRA — ver o bloco de `_fechado_de_vez`. As
      quatro regras desfazem, uma a uma, o que as quatro do `_aberto` fariam: a
      altura do cartão, a moldura da faixa, o corpo que apareceria e o número do
@@ -3058,20 +3087,13 @@ CSS += f"""
 MIOLO = f'''
     <div class="quadro estica">
       <div class="quadro-topo">
-        <span class="quadro-titulo">Dispositivos Conectados</span>
+        <span class="quadro-titulo">Dispositivos conectados</span>
         <span class="ajuda">?<span class="dica">
-          Os <b>{len(MESA)} controles conectados agora</b>. O escolhido abre com a
-          leitura viva do aparelho; os outros ficam numa <b>linha</b>, com quem eles são, o
-          que o jogo vê, o microfone e a bateria.<br><br>
-          <b>Clique na linha de um controle para abri-lo</b> — os outros fecham. Escolhê-lo
-          na <b>fita</b> lá em cima faz exatamente a mesma coisa: é o mesmo gesto, e os
-          ajustes desta aba vão para ele. O chip <b>Todos</b> abre os {len(MESA)}, e aí a
-          caixa rola.<br><br>
-          A <b>borda</b> tem a cor do plástico, aberto ou fechado — é como você sabe qual é
-          qual com vários ligados; o <b>fundo lilás</b> diz qual está escolhido.<br><br>
-          O <b>giroscópio</b> e o <b>acelerômetro</b> são de cada controle, e por isso o
-          interruptor de cada um está na <b>linha dele</b>. O botão acima é o único que vale
-          para <b>todos de uma vez</b>: ele calibra os {len(MESA)} numa passada.
+          Os <b>controles conectados agora</b>.<br><br>
+          <b>Clique num deles para abri-lo</b> — os outros fecham; escolhê-lo na
+          <b>fita</b> lá em cima faz o mesmo.<br><br>
+          A <b>borda</b> tem a cor do controle, e o <b>fundo lilás</b> diz qual está
+          escolhido. <b>Todos</b> abre os {QUANTOS_NA_MESA} de uma vez.
         </span></span>
         <!-- OS DOIS BOTÕES VOLTARAM AO CANTO SUPERIOR DIREITO — decisão dela,
              31/08/2026: *"A posição deles volta pro canto superior direito."*
@@ -3084,7 +3106,7 @@ MIOLO = f'''
           <a class="btn" href="calibrar-sensores.html"
              title="Calibra o giroscópio e o acelerômetro de todos os controles conectados, com todos parados numa superfície plana.">Calibrar sensores de movimento</a>
           <a class="btn" href="mapa-do-controle.html"
-             title="Abre o mapa do controle: cada peça do DualSense com o nome, o glifo e o que o Hefesto lê dela.">Mapa do controle</a>
+             title="Abre o mapa do controle: cada peça, com o nome e o que o Hefesto lê dela.">Mapa do controle</a>
         </span>
       </div>
       <div class="quadro-corpo">
@@ -3235,7 +3257,7 @@ LEGENDA = f'''<div class="nota">
 # ela lê o que está escrito na tela.
 TERMOS_DA_TELA = (
     "Liberar", "Sons do jogo", "No controle e na TV", "Só no controle",
-    "Calibrar sensores de movimento", "Mapa do controle", "Dispositivos Conectados",
+    "Calibrar sensores de movimento", "Mapa do controle", "Dispositivos conectados",
     "Sem toque", "Tocando", "LED do jogador", "Barra de luz", "Touchpad",
     "Microfone", "Alto-falante", "Gatilhos", "Giroscópio",
     "Acelerômetro", "Virtual", "Nativo",
@@ -3380,10 +3402,10 @@ def fita_clicavel(doc, mesa=None):
         if 'title="' in resto:
             resto = re.sub(
                 r'title="[^"]*"',
-                'title="Clique para abrir o card dele — a borda é a cor do plástico."',
+                'title="Clique para abrir este controle. A borda tem a cor dele."',
                 resto, count=1)
         else:
-            resto += f' title="Abre os {len(MESA)} cards de uma vez — e aí a caixa rola."'
+            resto += f' title="Abre os {QUANTOS_NA_MESA} de uma vez."'
         novo = f'<label for="{rid}" class="chip{classe}"{resto}>{dentro}</label>'
         linhas[k] = linha.replace(s, novo)
     if achados != len(ids):
@@ -3737,8 +3759,10 @@ def _conferir(doc):
     exigir('.ctl[data-conectado="nao"] .barra-luz' in folha,
            "a barra de luz do lugar vazio voltou a acender com a cor do mockup")
 
-    # 1. "Conectados" virou "Dispositivos Conectados".
-    exigir(">Dispositivos Conectados</span>" in corpo, "o título novo sumiu")
+    # 1. "Conectados" virou "Dispositivos conectados" — e a maiúscula do meio
+    #    caiu em 11/09/2026 (A3-026, aprovada por ela: *"ambos minusculo sem
+    #    iniciar de forma capitular"*).  <!-- noqa-acento: citação literal dela -->
+    exigir(">Dispositivos conectados</span>" in corpo, "o título novo sumiu")
     exigir(">Conectados</span>" not in corpo, "o título antigo voltou")
 
     # 2. O "Desativado" do microfone saiu. *"remove o desligado (fica desligado

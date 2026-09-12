@@ -124,10 +124,7 @@ BATERIA = {"p1": 100, "p2": 64, "p3": 41, "p4": 87}
 #: (``tests/unit/test_o_coop_vive_na_conexao_nativa.py``), que cobra a mesma
 #: oração de quem conta nas duas — é a escolha que ``MARCA_DO_PRIMARIO`` e
 #: ``SERVICO_DESLIGADO`` já fizeram, e pelo mesmo motivo.
-NATIVO_E_OS_JOGADORES = (
-    "Aqui ele não cria um controle para cada pessoa — quem conta os jogadores "
-    "é o jogo, pelos controles que ele enxerga."
-)
+NATIVO_E_OS_JOGADORES = "quem conta os jogadores passa a ser o jogo."
 
 #: O INTERRUPTOR — **HEFESTO LIGADO / DESLIGADO**, decisão dela de 31/08/2026.
 #:
@@ -172,8 +169,8 @@ NATIVO_E_OS_JOGADORES = (
 #: é por ele que `controles_vivos.INTERRUPTOR` acende, trava e aplica.
 INTERRUPTOR = [
     ("ligado", "gamepad", "Ligado",
-     "O Hefesto fica no meio: ele acende as luzes, faz o controle vibrar, dá um "
-     "jogador para cada controle e escolhe como o jogo vê o aparelho."),
+     "O Hefesto acende a luz, faz o controle vibrar, numera os jogadores e "
+     "escolhe como o jogo vê o controle."),
     # O TEXTO ENCOLHEU — decisão dela, 31/08/2026, e ela deu a regra em duas frases:
     #
     #     "o modo nativo já existe ali (…) e se eu quiser desligar modo hefesto
@@ -205,7 +202,7 @@ INTERRUPTOR = [
     # (`painel.aviso_do_modo_nativo`) só acende com DOIS ou mais controles, que
     # é quando a pergunta existe.
     ("desligado", "native", "Desligado",
-     "Modo Nativo: o Hefesto sai do meio e o jogo fala direto com o controle. "
+     "Modo Nativo: o jogo fala direto com o controle, e "
      + NATIVO_E_OS_JOGADORES),
 ]
 #: Em qual posição a cena nasce.
@@ -297,21 +294,19 @@ HEFESTO_LIGADO = True
 MODOS = [
     {"chave": "dualsense", "rot": "Sony DualSense", "modo": "",
      "sem_dono": False,
-     "dica": "O jogo desenha os botões do PlayStation. É o primeiro que o "
-             "Hefesto tenta."},
+     "dica": "O jogo desenha os botões do PlayStation."},
     {"chave": "xbox", "rot": "Xbox", "modo": "",
      "sem_dono": False,
      "dica": "O jogo desenha os botões do Xbox — o formato que todo jogo "
-             "entende. É o segundo que o Hefesto tenta."},
+             "entende."},
     {"chave": "steam", "rot": "Steam Input", "modo": "",
      "sem_dono": False,
-     "dica": "A Steam entrega a entrada, e os seus ajustes vencem os do jogo. "
-             "Trocar para cá exige reabrir a Steam e o jogo — por isso é o "
-             "último que o Hefesto tenta."},
+     "dica": "A Steam entrega a entrada, e os ajustes que você fez nela "
+             "vencem os do jogo. Mudar para cá exige reabrir a Steam e o "
+             "jogo."},
     {"chave": "navegacao", "rot": "Navegação", "modo": "desktop",
      "sem_dono": False,
-     "dica": "O controle vira teclado e mouse do computador. O PS+R3 ainda não "
-             "para aqui."},
+     "dica": "O controle vira teclado e mouse do computador."},
 ]
 #: O MODO ACESO. `ponte_escada.ESCADA[0]` é `Ponte(KIND_GAMEPAD,
 #: MASCARA_DUALSENSE)`, que é este chip — a cena acende o que o produto acenderia.
@@ -1503,9 +1498,9 @@ MIOLO = f'''
         <span class="linha-rot">Status</span>
 {_INTERRUPTOR}
         <span class="ajuda">?<span class="dica">
-          <b>Ligado</b> — o Hefesto fica no meio: luz, vibração, gatilho e o número do jogador são por conta dele.<br><br>
-          <b>Desligado</b> — o Hefesto sai do meio e o jogo fala direto com o controle. {NATIVO_E_OS_JOGADORES}<br><br>
-          Isto não encerra o serviço. Para isso, a aba <b>Sistema</b>.
+          <b>Ligado</b> — o Hefesto cuida da luz, da vibração, do gatilho e do número do jogador.<br><br>
+          <b>Desligado</b> — o jogo fala direto com o controle, e {NATIVO_E_OS_JOGADORES}<br><br>
+          Isto não para o serviço: para isso, a aba <b>Sistema</b>.
         </span></span>
       </div>
     </div>
@@ -1521,9 +1516,9 @@ MIOLO = f'''
              outro diriam a mesma coisa duas vezes. De quebra, os rótulos das
              duas seções ficaram idênticos — texto puro dos dois lados. -->
         <span class="ajuda">?<span class="dica">
-          Vale <b>quando o jogo abrir</b>. O que muda entre os quatro é <b>como o jogo desenha os botões</b> — luz, vibração, gatilho, giroscópio e áudio são por conta do Hefesto em todos.<br><br>
-          Ele <b>tenta na ordem em que estão aqui e para quando acerta</b>; depois não pergunta mais para aquele jogo.<br><br>
-          <b>Segurando PS + R3</b> você pula para o próximo sem largar o controle.
+          Vale <b>no próximo jogo que abrir</b>. O que muda é <b>como o jogo desenha os botões</b> — luz, vibração, gatilho, giroscópio e som são do Hefesto em todos.<br><br>
+          O Hefesto <b>tenta na ordem desta lista</b> e para no primeiro que der certo.<br><br>
+          <b>PS + R3</b> pula para o próximo.
         </span></span>
         <!-- ---------- O CADEADO DA TROCA AUTOMÁTICA, NO CANTO ----------
              08/09/2026, pedido dela olhando a aba: *"esse não trocar de perfil.
@@ -1575,7 +1570,7 @@ MIOLO = f'''
              modo é estado do processo — existe um só (`app/actions/mode_transition.py`),
              e por isso ele não podia descer para o cartão junto com a máscara. -->
 
-        <div class="hef-modo so-ligado" title="Esta seção só aparece com o Hefesto LIGADO.">
+        <div class="hef-modo so-ligado">
           <div class="escada">
 {_MODOS}
           </div>
@@ -1583,10 +1578,10 @@ MIOLO = f'''
 
         <!-- O OUTRO LADO DO INTERRUPTOR. Mesma altura da seção de cima (rótulo +
              36px), para a tela não pular quando ela vai e volta. -->
-        <div class="hef-modo so-desligado" title="Esta seção só aparece com o Hefesto DESLIGADO.">
+        <div class="hef-modo so-desligado">
           <div class="escada">
             <span class="degrau on fixo"
-                  title="O Hefesto sai do meio e o jogo fala direto com o controle. Vale no próximo jogo que abrir.">Modo Nativo <span class="sep">·</span> <span class="mud">o DualSense da forma como veio ao mundo</span></span>
+                  title="O jogo fala direto com o controle. Vale no próximo jogo que abrir.">Modo Nativo <span class="sep">·</span> <span class="mud">o controle sem o Hefesto no meio</span></span>
           </div>
         </div>
 
@@ -1652,16 +1647,16 @@ MIOLO = f'''
     <!-- ---------- UM BLOCO SÓ: Conectado agora | Atenção ---------- -->
     <div class="quadro">
       <div class="quadro-topo">
-        <span class="quadro-titulo">O Controle é visto como:</span>
+        <span class="quadro-titulo">O controle é visto como:</span>
         <!-- AS DUAS DICAS VIRARAM UMA — 31/08/2026, quando ela mandou o rótulo
              "O jogo vê cada controle como:" subir para o título. Com o rótulo
              fora, dois `?` a três linhas um do outro diriam a mesma coisa duas
              vezes: é o mesmo movimento que o `?` dos modos já tinha feito. -->
         <span class="ajuda">?<span class="dica">
-          A máscara é <b>por controle</b>: cada um pode aparecer de um jeito para o jogo, e o que muda é <b>o desenho dos botões na tela</b>.<br><br>
+          A máscara é <b>por controle</b> e muda só <b>o desenho dos botões no jogo</b>.<br><br>
           <b>DualSense</b> — △ ○ ✕ ▢. &nbsp; <b>Xbox 360</b> — Y B A X. &nbsp; <b>Nintendo Pro</b> — X A B Y, com ZL/ZR e − +.<br><br>
-          O controle na sua mão continua o mesmo: luz, gatilho, giroscópio e áudio seguem por conta do Hefesto em qualquer máscara.<br><br>
-          Clicar num cartão leva a fita de cima para ele. O detalhe de cada um está na aba <b>Controles</b>.
+          O controle na sua mão continua o mesmo.<br><br>
+          Clicar num cartão escolhe esse controle lá em cima.
         </span></span>
       </div>
       <div class="quadro-corpo">
@@ -1748,7 +1743,7 @@ MIOLO = f'''
             <span>●</span>
             <span>Vai mudar para <b data-campo="pendente-alvo">{PENDENTE}</b> quando você clicar em <b>Aplicar</b></span>
           </div>
-          <button class="btn" data-gesto="reconectar">Reconectar Controles</button>
+          <button class="btn" data-gesto="reconectar">Reconectar controles</button>
           <!-- A FAIXA DO RECIBO — JOGAR-02 §3, 09/09/2026, e ela é a mesma
                peça que a `05-vibracao` ganhou com a 05-Q4 dela: *"a frase entra
                na faixa que já existe (…) nada se mexe dentro das colunas"*.
@@ -2214,11 +2209,11 @@ def _conferir(doc):
     # 3. OS TRÊS RÓTULOS QUE ELA TROCOU, e o antigo não pode ter sobrado.
     for novo, velho in (("<span class=\"linha-rot\">Status</span>", ">Hefesto</span>"),
                         (">Modo</span>", ">Quando o jogo abrir<"),
-                        (">O Controle é visto como:</span>", ">Conectado agora<")):
+                        (">O controle é visto como:</span>", ">Conectado agora<")):
         exigir(novo in corpo, f"o rótulo novo sumiu: {novo!r}")
         exigir(velho not in corpo, f"o rótulo antigo voltou: {velho!r}")
     # e o rótulo interno não pode ter ficado junto com o título novo
-    exigir(corpo.count("O Controle é visto como:") == 1,
+    exigir(corpo.count("O controle é visto como:") == 1,
            "o rótulo interno das máscaras voltou (o texto aparece 2×)")
     exigir("O jogo vê cada controle como" not in corpo,
            "o título anterior voltou — ela o trocou em 31/08")

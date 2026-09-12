@@ -15,23 +15,23 @@ legais, medidas no mesmo dia:
 
     "o Hefesto não consegue nomear o que o sistema não nomeia"   limite do Linux
     "sem ela o Hefesto não consegue escrever nos controles"      explica o módulo
-    "o Hefesto não está entregando o controle ao jogo agora"     estado de agora
     "o Hefesto não volta a perguntar"                            comportamento
 
 
 A PARTE DIFÍCIL, e por que a régua NÃO é um `grep` de frases proibidas
 ----------------------------------------------------------------------
-As duas famílias têm a MESMA forma. Estas três estão na tela hoje e as três
+As duas famílias têm a MESMA forma. Estas duas estão na tela hoje e as duas
 são legítimas::
 
-    "O lugar está reservado e o jogo ainda não recebeu este controle"
+    "O jogo ainda não recebeu este controle"
     "Um traço no lugar do número quer dizer que a leitura ainda não chegou"
-    "O PS+R3 ainda não para aqui"
 
-Eram QUATRO até 11/09/2026: a dica do «Acrescentar entrada» dizia *"o menor
-número que ainda não existe em face nenhuma"*, e ela saiu da tela por
-aprovação dela — a regra de unicidade é do motor, e quem clica não escolhe o
-número.
+Eram QUATRO até 11/09/2026, e as duas que saíram caíram no mesmo dia, cada uma
+por uma aprovação dela: a dica do «Acrescentar entrada» dizia *"o menor número
+que ainda não existe em face nenhuma"* — a regra de unicidade é do motor, e
+quem clica não escolhe o número —, e a dica dos modos dizia *"O PS+R3 ainda não
+para aqui"*, que saiu quando ela mandou encurtar as dicas. Nenhuma das duas foi
+tirada por esta peneira: as duas eram legítimas e continuariam podendo ficar.
 
 O que separa não é a palavra — é **de quem é o sujeito**. Quando o sujeito é o
 jogo, a leitura ou o número, `ainda não` é estado do mundo. Quando o sujeito
@@ -162,16 +162,20 @@ FATOS: dict[str, str] = {
     "a leitura ainda não chegou":
         "o sujeito é A LEITURA do aparelho. Estado de agora: o traço diz que o "
         "dado não veio ainda, não que não venha — 07/09/2026",
-    # SAIU DA TABELA EM 11/09/2026, e a régua foi quem cobrou: a frase deixou
-    # a tela por aprovação dela, e declaração que sobrevive à frase envelhece
-    # calada. A razão de 07/09 (*"o sujeito é O NÚMERO"*) continua registrada
-    # no bloco de exemplos deste docstring, onde não vira contrato.
-    "O PS+R3 ainda não para aqui":
-        "o sujeito é O ATALHO, e a frase diz ONDE ele age — o limite de escopo "
-        "de um gesto, não capacidade por entregar — 07/09/2026",
-    "o Hefesto não está entregando o controle ao jogo agora":
-        "ESTADO DE AGORA, nomeado por ela como legal em 07/09/2026 — a escolha "
-        "vale assim que ele voltar a entregar",
+    # TRÊS DECLARAÇÕES SAÍRAM DAQUI EM 11/09/2026, e nenhuma porque estivesse
+    # errada: as três frases deixaram a tela por aprovação dela, e foi esta
+    # régua que cobrou as três retiradas — ela confere nos DOIS sentidos, e
+    # *uma classificação que sobrevive à frase envelhece calada*.
+    #
+    #   · *"o menor número que ainda não existe em face nenhuma"* — o sujeito
+    #     era O NÚMERO, fato de aritmética sobre o que o botão faz (07/09).
+    #   · *"O PS+R3 ainda não para aqui"* — o sujeito era O ATALHO, e a frase
+    #     dizia ONDE ele age (07/09). Saiu com a A3-011: ela mandou encurtar as
+    #     dicas dos modos.
+    #   · *"o Hefesto não está entregando o controle ao jogo agora"* — estado
+    #     de agora, que ela mesma nomeou como legítimo em 07/09. A A3-018
+    #     reescreveu a ressalva da máscara, que repetia a entrega duas vezes na
+    #     mesma frase.
     "o Hefesto não volta a perguntar":
         "COMPORTAMENTO, nomeado por ela como legal em 07/09/2026 — a frase diz "
         "o que o botão faz",
