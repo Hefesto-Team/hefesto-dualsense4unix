@@ -1278,7 +1278,7 @@ MIOLO = f'''
           </div>
           <div class="risco"></div>
           <div class="col-log">
-            <div class="log" data-id="{_id("registro-texto")}" data-campo="{_id("registro-texto")}" data-hef-rolar="fim">[23:41:02] daemon pronto · {N} controles · {N} gamepads virtuais · uinput ok
+            <div class="log" data-id="{_id("registro-texto")}" data-campo="{_id("registro-texto")}" data-hef-rolar="fim">[23:41:02] daemon pronto · {N} controles · {N} gamepads virtuais · controle virtual ok
 [23:41:02] {" · ".join(f'p{c["jogador"]} {c["via"].lower()}' for c in MESA)} · fw 0x0356 nos {N} · cor de fábrica só no cabo ({", ".join(f'p{c["jogador"]}' for c in USB)})
 [23:41:07] exame: steam input desligado em 2 jogos · proton 9.0-4 fixado em 3
 [23:41:09] perfil "Mortal Kombat" aplicado aos {N} · gatilho L2 escrito, sem leitura de volta</div>
@@ -1355,7 +1355,7 @@ LEGENDA = f'''<div class="nota">
     <li><b>A palavra dela, 28/08</b> (<code>D-O-GAMEPAD-VIRTUAL-SAI-DA-INTERFACE</code>):
       <i>"some da interface; o controle já tá certinho hoje. aquilo foi pra outro momento que não
       faz sentido na interface hoje."</i> Saiu o bloco inteiro — as cinco linhas de estado
-      (<i>Gamepad virtual (uinput)</i>, <i>Nó do gamepad virtual</i>, <i>Aparelhos físicos</i>,
+      (<i>Gamepad virtual (<code>uinput</code>)</i>, <i>Nó do gamepad virtual</i>, <i>Aparelhos físicos</i>,
       <i>Código do fabricante</i>, <i>Controles detectados</i>), os quatro chips
       <code>P1</code>..<code>P4</code> e o diagraminha da cadeia.</li>
     <li><b>E no lugar dele, o que ela mandou:</b> <i>"colocar Teto da Vibração (que na verdade é
