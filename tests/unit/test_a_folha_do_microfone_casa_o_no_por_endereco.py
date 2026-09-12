@@ -7,12 +7,13 @@ sistema não publica um microfone para este controle"* sobre um controle que tem
 o nó publicado. O aparelho é dela, na mesa. O que se prova aqui é a parte que
 já enganou esta casa, e as quatro famílias são estas:
 
-1. **O NÓ CASADO PELO NÚMERO.** O `os_nos_de_som_por_controle` procura a
-   descrição «Microfone do Controle N», e o N é o ASSENTO — que muda quando um
-   controle entra ou sai. Medido na mesa em 09/09/2026: o mesmo
-   `hefesto_mic_<hex6>` foi dado ao controle do CABO numa corrida e ao do
-   RÁDIO na seguinte, sem nada ter mudado no áudio. A folha casa por ENDEREÇO,
-   pelo dono da pergunta no produto (`canal_do_microfone.nome_do_canal`).
+1. **O NÓ CASADO PELO NÚMERO.** Medido na mesa em 09/09/2026, quando o
+   `os_nos_de_som_por_controle` procurava a descrição «Microfone do Controle N»:
+   o mesmo `hefesto_mic_<hex6>` foi dado ao controle do CABO numa corrida e ao
+   do RÁDIO na seguinte, sem nada ter mudado no áudio — o N anda com a mesa. **O
+   censo foi curado em 12/09/2026** (TRES-CONTAS-PARA-UM-NUMERO-01 §6): os dois
+   casam pelo NOME de dentro. A folha já casava por ENDEREÇO, pelo dono da
+   pergunta no produto (`canal_do_microfone.nome_do_canal`).
 2. **O BYTE NA POSIÇÃO ERRADA, ou o bit esquecido.** `common[6]` com o flag0
    `0x40`; um `[5]` mediria o alto-falante achando que mede o microfone.
 3. **A FRASE QUE AFIRMA SOBRE O QUE NÃO MEDIU.** A linha 6 dizia *"o daemon

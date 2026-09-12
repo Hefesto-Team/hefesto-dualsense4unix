@@ -26,16 +26,33 @@ cada nó que APARECEU ou SUMIU. É o teste de *tirar o cabo de um e o nó dele
 continuar na lista* — ela tira, o instrumento diz o que a lista fez.
 
 Os nomes dos nós são decisão dela de 09/09/2026 (*"4a"*): «Alto-falante do
-Controle N» · «Microfone do Controle N». O instrumento procura por esses, e
-também pelo `nome_do_sink(uniq)` do produto (`integrations/alto_falante_bt`),
-para não dar NÃO EXISTE a um nó que exista com o nome de dentro.
+Controle N» · «Microfone do Controle N». Esses rótulos são o que ELA lê; o
+instrumento **não casa por eles**.
 
-ELE PODE ATRIBUIR O NÓ AO CONTROLE ERRADO — medido em 09/09/2026, e o defeito
-é conhecido: o casamento é pelo TEXTO do `Description`, cujo N é o
-`numero_do_assento` (a posição entre os conectados). Entre duas corridas com a
-mesa mudando, o mesmo nó trocou de dono. A cura tem dona:
-`docs/process/sprints/2026-09-09-TRES-CONTAS-PARA-UM-NUMERO-01-o-assento-do-som-e-o-controle-N-da-tela.md`,
-§6 — casar por propriedade de posse do nó, nunca por prosa de rótulo.
+O DONO DO NÓ SE PERGUNTA PELO NOME DE DENTRO, NUNCA PELA PROSA (12/09/2026)
+--------------------------------------------------------------------------
+TRES-CONTAS-PARA-UM-NUMERO-01 §6. Até 11/09 este instrumento decidia de quem
+era o nó comparando o TEXTO do `Description`, cujo N é o número do assento.
+Medido em 09/09: entre duas corridas, com a mesa mudando, **o mesmo nó virtual
+passou a ser atribuído a outro controle** — o número andou, o texto andou junto,
+e o censo seguiu o texto.
+
+A ressalva dela fecha a questão, e é sobre PRODUTO:
+
+    *"aí é foda pq a ideia não é termos nada focado pro meu caso apenas, mas
+    como produto que possa funcionar com outra pessoa."*  (noqa-acento: dela)
+
+O rótulo é prosa em português: muda com tradução, muda quando o assento anda, e
+some se alguém renomear o nó à mão. A âncora é o que o daemon ESCREVE e não muda
+de forma — o NOME de dentro do nó, que carrega o endereço do controle:
+
+    `alto_falante_bt.nome_do_sink(uniq)`      → `hefesto_som_<hex6>`
+    `canal_do_microfone.nome_do_canal(uniq)`  → `hefesto_mic_<hex6>`
+
+Os dois vêm do produto, por `uniq`. A metade da saída já casava assim desde que
+nasceu; a da ENTRADA recebia `""` no lugar do nome e por isso só tinha a prosa.
+Renomeie o `Description` de um nó à mão e o censo continua acertando o dono — se
+ele errar, ele voltou a ler prosa.
 
 USO
     os_nos_de_som_por_controle.py
@@ -62,8 +79,34 @@ from comum import CABO, cabecalho_do_instrumento, resumo
 from escrita_pelo_broker import alvos_da_mesa, mascarar
 from microfone_no_cabo import placas_de_dualsense
 
-NOME_DO_ALTO_FALANTE = "Alto-falante do Controle"
-NOME_DO_MICROFONE = "Microfone do Controle"
+
+def _rotulo_do_produto(qual: str) -> str:
+    """«Alto-falante do Controle» / «Microfone do Controle», do DONO da constante.
+
+    Estavam digitados aqui, os dois. Um rótulo digitado num instrumento é a forma
+    de régua falsa que esta casa já nomeou onze vezes: ela mede o que ALGUÉM
+    escreveu, não o que o produto publica — mude o rótulo no produto e o censo
+    passa a dizer «NÃO EXISTE» a um nó que está lá.
+
+    Só entra na FRASE que ela lê (a coluna de faltas). Quem decide o dono do nó é
+    `_casa`, pelo nome de dentro.
+    """
+    try:
+        if qual == "saida":
+            from hefesto_dualsense4unix.integrations import alto_falante_bt as dono
+            return str(dono.NOME_DO_ALTO_FALANTE_DO_CONTROLE)
+        from hefesto_dualsense4unix.integrations import dualsense_bt_audio as mic
+        return str(mic.NOME_DO_MICROFONE_DO_CONTROLE)
+    except Exception:
+        return ""
+
+
+def _falta(qual: str, numero: int, nome_de_dentro: str) -> str:
+    """A frase da coluna de faltas: o rótulo que ela lê E o nome que o censo procurou."""
+    rotulo = _rotulo_do_produto(qual)
+    pedacos = [f"«{rotulo} {numero}»" if rotulo else "", f"({nome_de_dentro})" if nome_de_dentro else ""]
+    alvo = " ".join(p for p in pedacos if p)
+    return f"sem {alvo}" if alvo else "sem o nó (controle sem identidade legível)"
 
 
 def pactl(*argv: str) -> str:
@@ -132,7 +175,8 @@ class NoDoControle:
     faltas: list[str] = field(default_factory=list)
 
 
-def _nome_de_dentro(mac: str) -> str:
+def _nome_do_sink_de_dentro(mac: str) -> str:
+    """`hefesto_som_<hex6>` deste controle, PERGUNTADO ao produto."""
     try:
         from hefesto_dualsense4unix.integrations import alto_falante_bt
     except ImportError:
@@ -143,15 +187,49 @@ def _nome_de_dentro(mac: str) -> str:
         return ""
 
 
-def _casa(descricao: str, nome: str, rotulo: str, numero: int, nome_de_dentro: str) -> bool:
-    alvo = f"{rotulo} {numero}"
-    return alvo in descricao or alvo in nome or (bool(nome_de_dentro) and nome_de_dentro in nome)
+def _nome_da_fonte_de_dentro(mac: str) -> str:
+    """`hefesto_mic_<hex6>` deste controle, PERGUNTADO ao dono do canal.
+
+    O par do `_nome_do_sink_de_dentro`, e ele FALTAVA — era por isso que a
+    metade da entrada só tinha o texto do `Description` para casar.
+    """
+    try:
+        from hefesto_dualsense4unix.integrations import canal_do_microfone
+    except ImportError:
+        return ""
+    try:
+        return canal_do_microfone.nome_do_canal(mac) or ""
+    except Exception:
+        return ""
+
+
+def _casa(nome: str, nome_de_dentro: str) -> bool:
+    """O nó é DESTE controle? Pelo nome de dentro, nunca pelo rótulo.
+
+    Casa por igualdade, não por substring: `hefesto_mic_c311f0` não pode casar
+    com um `hefesto_mic_c311f01` que não é dele — é a mesma armadilha que
+    `SourceVirtualPipeWire._modulos_da_source` já paga com casamento por token.
+
+    Sem nome de dentro (controle sem identidade legível) a resposta é NÃO. O
+    censo prefere dizer «NÃO EXISTE» a atribuir o nó de alguém ao vizinho: a
+    ausência é resposta, o dono errado é mentira.
+    """
+    return bool(nome_de_dentro) and nome == nome_de_dentro
 
 
 def _numero_pelo_daemon() -> dict[str, int]:
-    """`uniq -> número do jogador`, lido do daemon VIVO; vazio quando ele não responde.
+    """`uniq -> «Controle N»`, lido do daemon VIVO; vazio quando ele não responde.
 
-    O número do nó é o do ASSENTO (P1..P4), como na tela — não a ordem do hidraw.
+    **É O `player_slot`, e só ele — TRES-CONTAS-PARA-UM-NUMERO-01, 12/09/2026.**
+    Este dicionário lia `player`, `jogador`, `assento` ou `slot`, o primeiro que
+    aparecesse numa varredura em profundidade do estado. Eram até QUATRO campos
+    para a pergunta que tem UM dono: o `player_slot` é o número que o cartão
+    imprime (`app/actions/base.numero_do_controle`) e é o que o daemon usa para
+    batizar o nó. `player` é outra pergunta — *"este controle está jogando
+    agora, e como quem?"* —, e fora do co-op ele é `1` para todos.
+
+    O número aqui é só para a TABELA e para a ordenação; quem decide o dono do
+    nó é `_casa`, pelo nome de dentro.
     """
     try:
         from hefesto_dualsense4unix.app import ipc_bridge
@@ -164,8 +242,13 @@ def _numero_pelo_daemon() -> dict[str, int]:
         item = pilha.pop()
         if isinstance(item, dict):
             uniq = item.get("uniq")
-            numero = item.get("player") or item.get("jogador") or item.get("assento") or item.get("slot")
-            if isinstance(uniq, str) and isinstance(numero, int) and numero > 0:
+            numero = item.get("player_slot")
+            if (
+                isinstance(uniq, str)
+                and isinstance(numero, int)
+                and not isinstance(numero, bool)
+                and numero > 0
+            ):
                 numeros[uniq.lower()] = numero
             pilha.extend(item.values())
         elif isinstance(item, list):
@@ -184,26 +267,27 @@ def censo(aparelhos: list) -> list[NoDoControle]:
     for posicao, a in enumerate(ordenados, start=1):
         numero = numeros.get(a.mac.lower(), posicao)
         no = NoDoControle(mac=mascarar(a.mac), transporte=a.transporte)
-        nome_de_dentro = _nome_de_dentro(a.mac)
+        sink_de_dentro = _nome_do_sink_de_dentro(a.mac)
+        fonte_de_dentro = _nome_da_fonte_de_dentro(a.mac)
         placa = placas.get(a.hidraw)
         for s in sinks:
-            nome, desc = s.get("Name", ""), s.get("Description", "")
+            nome = s.get("Name", "")
             if placa is not None and s.get("alsa.card") == placa.numero and nome.startswith("alsa_output"):
                 no.sink_fisico = nome
-            if _casa(desc, nome, NOME_DO_ALTO_FALANTE, numero, nome_de_dentro):
+            if _casa(nome, sink_de_dentro):
                 no.alto_falante_virtual = nome
         for f in fontes:
-            nome, desc = f.get("Name", ""), f.get("Description", "")
+            nome = f.get("Name", "")
             if placa is not None and f.get("alsa.card") == placa.numero and nome.startswith("alsa_input"):
                 no.fonte_fisica = nome
-            if _casa(desc, nome, NOME_DO_MICROFONE, numero, ""):
+            if _casa(nome, fonte_de_dentro):
                 no.microfone_virtual = nome
         if no.alto_falante_virtual and any(no.alto_falante_virtual in m for m in modulos):
             no.fonte = "mix"
         if not no.alto_falante_virtual:
-            no.faltas.append(f"sem «{NOME_DO_ALTO_FALANTE} {numero}»")
+            no.faltas.append(_falta("saida", numero, sink_de_dentro))
         if not no.microfone_virtual:
-            no.faltas.append(f"sem «{NOME_DO_MICROFONE} {numero}»")
+            no.faltas.append(_falta("entrada", numero, fonte_de_dentro))
         if a.transporte == CABO and not no.sink_fisico:
             no.faltas.append("sem placa USB de saída (cabo de só-carga?)")
         resultado.append(no)

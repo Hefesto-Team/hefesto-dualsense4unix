@@ -53,12 +53,14 @@ Do PRODUTO, sem uma linha de cópia:
 Daqui, e só isto: o desenho da folha, o martelo, o medidor de pico e a linha
 do caderno.
 
-**O NÓ SE CASA POR ENDEREÇO, NUNCA POR NÚMERO.** O `os_nos_de_som_por_controle`
-casa o mic virtual pela DESCRIÇÃO («Microfone do Controle N»), e o N é o
-assento — que muda quando um controle entra ou sai. Medido nesta mesa em
-09/09/2026: o mesmo nó `hefesto_mic_<hex6>` foi atribuído ao controle do CABO
-numa corrida e ao do RÁDIO na seguinte, sem nada ter mudado no áudio. Aqui a
-pergunta *"de que controle é este nó"* tem UM dono, e é o do produto:
+**O NÓ SE CASA POR ENDEREÇO, NUNCA POR NÚMERO.** Medido nesta mesa em
+09/09/2026, quando o `os_nos_de_som_por_controle` ainda casava o mic virtual pela
+DESCRIÇÃO («Microfone do Controle N»): o mesmo nó `hefesto_mic_<hex6>` foi
+atribuído ao controle do CABO numa corrida e ao do RÁDIO na seguinte, sem nada
+ter mudado no áudio — o N é o número do controle, e ele anda. **O censo foi
+curado em 12/09/2026** (TRES-CONTAS-PARA-UM-NUMERO-01 §6) e hoje os dois casam
+igual, pelo nome de dentro. Aqui a pergunta *"de que controle é este nó"* sempre
+teve UM dono, e é o do produto:
 `fontes_de_captura.sufixo_do_canal_do_mic` / `canal_do_microfone.nome_do_canal`.
 
 A MESA É DE DOIS, E O CABO É O CONTROLE POSITIVO
