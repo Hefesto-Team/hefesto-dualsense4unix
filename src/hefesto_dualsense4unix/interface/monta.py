@@ -792,9 +792,9 @@ def _endereco_do_chip(pref: str, inerte: bool) -> str:
     05/09/2026: o `paginas/02-controles.html` publicado traz três `<label
     for="c-…">`, e o DOM vivo, passados 1,6 s, trazia três `<span>`.
 
-    O `aba08.py:3537` já tinha escrito o conserto: *"para o chip da fita clicar
-    de verdade, o `monta.fita()` precisa emitir `<label>` em vez de `<span>` —
-    é uma linha lá, e vale para as dez abas."*
+    O `aba08.py:1615` já tinha escrito o diagnóstico: *"o chip da fita é um
+    `<span>` do esqueleto, e um `<span>` não vira alvo de clique sem tocar o
+    `monta.py`"* — uma linha aqui, e ela vale para as dez abas.
 
     O `for=` NÃO SAI DAQUI, e é o limite desta função: ele casa com um `<input
     type="radio">` que só a `02-controles` tem, e escrevê-lo nas outras nove
