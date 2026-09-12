@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Onde eu ponho isto?</title>
+<title>Hefesto — o mapa das entradas</title>
 <style>
   :root {
     /* Paleta Drácula — os tokens de scripts/paleta_da_casa.py, byte a byte.
@@ -53,6 +53,12 @@
   .topo h1 { margin: 0; font-size: var(--text-xl); font-weight: 600; letter-spacing: -.01em; }
   .topo h1 em { color: var(--color-accent); font-style: normal; }
   .topo .nota { color: var(--color-ink-faint); font-size: var(--text-sm); margin-left: auto; }
+  /* A DATA NÃO PODE SER `.nota` — 11/09/2026. A folha do produto apaga toda
+     `.nota` (bilhete de projeto), e aqui isso deixava a página afirmando
+     «o arranjo de agora» sobre uma leitura congelada. A data é DADO da
+     página, então tem classe própria, que a folha do produto não esconde. */
+  .topo .quando { color: var(--color-ink-faint); font-size: var(--text-sm); margin-left: auto;
+                  font-family: var(--font-dado); }
 
   /* ─── os três modos ─────────────────────────────────────── */
   .modos { display: flex; flex-wrap: wrap; gap: var(--space-2xs); margin-top: var(--space-md); }
@@ -281,7 +287,7 @@
               border:1px solid var(--border-forte);background:var(--panel);
               color:var(--texto-suave);font-size:12px">← Voltar</a>
     <h1><em>Conexões</em> — o mapa dos seus objetos</h1>
-    <p class="nota">mockup · 24/08/2026 · medido na MeowSystem</p>
+    <p class="quando">leitura de exemplo · 24/08/2026</p>
   </header>
 
   <div class="modos" id="modos"></div>
@@ -300,14 +306,14 @@
 
   <section class="secao">
     <h2>Os controles — onde cada um rende 100%</h2>
-    <p class="sub">Bluetooth tem 1600 vezes de falar por segundo, <b>por adaptador</b>, e todos os controles daquele adaptador dividem isso. Não falta banda: falta vez. É esta conta que decide se todos os controles funcionam com tudo ligado.</p>
+    <p class="sub">Cada adaptador Bluetooth atende 1600 envios por segundo, divididos entre os controles ligados nele. É esta conta que decide se todos funcionam ao mesmo tempo.</p>
     <div class="moldura">
       <div class="adaptadores" id="adaptadores"></div>
       <div class="legenda" style="margin-top:1rem">
         <span>Controle com microfone: <b style="color:var(--color-ink)">276,7</b>/s</span>
         <span>sem microfone: <b style="color:var(--color-ink)">260,4</b>/s</span>
         <span class="selo medido">medido</span>
-        <span><code style="font-family:var(--font-dado)">integrations/dualsense_bt_audio.py</code>, A/B de 25/07/2026</span>
+        <span>medido aqui em 25/07/2026</span>
       </div>
     </div>
   </section>
@@ -1152,10 +1158,10 @@
 
     /* os modos */
     document.getElementById("modos").innerHTML =
-        '<button class="modo" data-modo="mesa" aria-pressed="' + (modo === "mesa") + '">Como está o meu arranjo</button>'
-      + '<button class="modo destaque" data-modo="ideal" aria-pressed="' + (modo === "ideal") + '">Me mostre os arranjos</button>'
-      + '<button class="modo" data-modo="mao" aria-pressed="' + (modo === "mao") + '">Estou com algo na mão</button>'
-      + '<button class="modo" id="reexaminar" aria-pressed="false" style="margin-left:auto">Reexaminar o arranjo</button>';
+        '<button class="modo" data-modo="mesa" aria-pressed="' + (modo === "mesa") + '">Como está hoje</button>'
+      + '<button class="modo destaque" data-modo="ideal" aria-pressed="' + (modo === "ideal") + '">O que mudar</button>'
+      + '<button class="modo" data-modo="mao" aria-pressed="' + (modo === "mao") + '">Tenho algo na mão</button>'
+      + '<button class="modo" id="reexaminar" aria-pressed="false" style="margin-left:auto">Examinar de novo</button>';
 
     /* o painel */
     var painel = document.getElementById("painel"), html = "";
@@ -1257,10 +1263,10 @@
       var pend = receita(op).filter(function (m) { return !m.semNumero; }).length;
       var sem = semEntrada();
       html = '<p class="chamada">' + (pend
-        ? "Encontrei <span class=\"grande\">" + pend + "</span> coisa" + (pend > 1 ? "s" : "") + " que vale mudar de lugar."
+        ? "<span class=\"grande\">" + pend + "</span> coisa" + (pend > 1 ? "s" : "") + " para mudar de lugar."
         : "Este arranjo é o melhor que eu conheço.") + "</p>"
         + '<p style="margin:0;font-size:var(--text-sm);color:var(--color-ink-quiet)">'
-        + (pend ? 'Clique em <b style="color:var(--color-ok)">Me mostre os arranjos</b> para ver o que mover, na ordem, e por quê.'
+        + (pend ? 'Clique em <b style="color:var(--color-ok)">O que mudar</b> para ver o que mover, na ordem, e por quê.'
                 : "Se o controle ainda engasgar, a causa não é a disposição — olhe a conta de vezes de falar, abaixo.")
         + "</p>"
         + '<p style="margin:.5rem 0 0;font-size:var(--text-xs);color:var(--color-ink-faint)">'
@@ -1346,13 +1352,13 @@
         }).join("")
       + "</div>"
       + '<p class="ctl-nota">' + pa.resumo
-      + ' <b>Nenhum deles muda a conta do rádio</b> — gatilho, vibração, barra de luz, giroscópio e touchpad andam no mesmo canal e não somam pacote. O que eles mudam é a <b>bateria</b>, e o preço disso <span class="selo derivado">não medido</span> nesta casa: nenhum dos 178 ensaios cronometrou consumo por feature.</p>'
+      + ' <b>Nenhum deles muda a conta do rádio</b> — gatilho, vibração, barra de luz, giroscópio e touchpad andam no mesmo canal e não somam pacote. O que eles gastam é bateria.</p>'
       + '<div class="linha-mic"><b>Quem usa microfone</b>'
       + CONTROLES.slice(0, quantos).map(function (c) {
           return '<button class="escolha" data-mic-de="' + c.nome + '" aria-pressed="' + c.mic + '">'
             + (c.mic ? "\u2611 " : "\u2610 ") + c.nome + "</button>";
         }).join("")
-      + '<span class="mic-porque">Uma caixinha por controle <b>que está ligado</b> — controle que nunca esteve aqui não tem onde ser gravado, e marcar algo que o produto esquece é a definição do defeito que esta leva mata. Fica fora do perfil de propósito: o microfone é o único que <b>capta a sala</b>, e o único que muda a conta do rádio — <b>276,7</b> em vez de 260,4 vezes de falar por segundo. Nasce desligado, e só você o liga.</span>'
+      + '<span class="mic-porque">Uma caixinha por controle ligado. O microfone é o único que capta a sala e o único que pesa no rádio — 276,7 envios por segundo em vez de 260,4. Nasce desligado; só você o liga.</span>'
       + "</div>";
 
     pc.ads.forEach(function (a) {
@@ -1386,8 +1392,7 @@
             + " (" + Math.round(pico / SLOTS * 100) + "%)."
             + (pc.sobra > 0 ? " Ainda caberiam <b>mais " + pc.sobra + "</b> com microfone." : "");
         })()
-      + '<br><span class="selo derivado">derivado</span> A conta vem de uma medição de <b>um</b> controle. '
-      + "Quatro no rádio ao mesmo tempo <b>nunca foi medido nesta casa</b> — o maior ensaio já feito foi de dois."
+      + '<br><span class="selo derivado">derivado</span> A conta vale por controle. Com quatro no rádio, o número é estimado.'
       + "</div>";
 
     /* o que ela precisa MOVER de adaptador, e como */
