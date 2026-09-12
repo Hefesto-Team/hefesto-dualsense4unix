@@ -332,11 +332,15 @@ def test_os_cinco_gestos_dizem_a_causa_certa(pac, nome) -> None:
 def test_o_clique_sem_coluna_continua_dizendo_que_nao_tem_alvo(pac, nome) -> None:
     """O PAR da régua acima: sem coluna, a frase de sempre, inteira.
 
-    SEM ESTE CASO O PASSO 1 PODE APAGAR O QUE CURA. A frase *"o clique não
-    disse em qual controle — e sem alvo a mesa inteira tremeria"* nasceu para o
-    clique solto, e é ela que ensina o que fazer. As duas recusas existem porque
-    são dois fatos diferentes; uma régua que só medisse a nova deixaria a antiga
-    sumir sem ninguém ver.
+    SEM ESTE CASO O PASSO 1 PODE APAGAR O QUE CURA. A recusa do clique solto é
+    a que ENSINA o que fazer — *"use a barra dentro da coluna do controle que
+    você quer mudar"* —, e a do controle que caiu é outro fato. Uma régua que só
+    medisse a nova deixaria a antiga sumir sem ninguém ver.
+
+    ELA MEDIA A METADE QUE SAIU — 11/09/2026. Até hoje digitava *"não disse em
+    qual controle"*, e essa metade era o produto relatando o próprio defeito de
+    leitura: a leva de língua aprovada por ela (A4-064, 069, 070 e 072) deixou
+    só a instrução. O que se mede é o ATO — a recusa manda usar a COLUNA.
 
     MORDIDA: em `a05_vibracao._uniq`, troque o `if str(o.get("controle") or "")`
     por `if True` — este caso reprova nos cinco, porque o clique sem coluna
@@ -348,8 +352,9 @@ def test_o_clique_sem_coluna_continua_dizendo_que_nao_tem_alvo(pac, nome) -> Non
         _gesto(pac, nome)(_ctx(pac), clique, p)
 
     frase = str(recusa.value)
-    assert "não disse em qual controle" in frase, (
-        f"{nome} perdeu a frase do clique solto: {frase!r}")
+    assert "dentro da coluna" in frase, (
+        f"{nome} perdeu a instrução do clique solto — sem ela a recusa não diz "
+        f"o que fazer: {frase!r}")
     assert "se desligou" not in frase, (
         f"{nome} diz que um controle caiu, e o clique não nomeou nenhum: "
         f"{frase!r}")

@@ -69,5 +69,5 @@ feat-giroscopio,Giroscópio,gyro,sensor,sensores,giroscopio,feat-giroscopio,7.5,
 feat-acelerometro,Acelerômetro,accel,sensor,sensores,acelerometro,feat-acelerometro,7.5,29.46,120.5,101.51,ALTA,"Mede a aceleração do CONTROLE INTEIRO, como o giroscópio. 8192 LSB/g, mais ou menos 4 g.",0,-,-
 feat-bateria,Bateria,-,sensor,energia,bateria,feat-bateria,40.86,31.04,87.28,50.4,ALTA,"As DUAS TIRAS DO LIGHTBAR são o medidor, e é o que o aparelho faz: cheias em 100%, apagadas em 0%, piscando vermelho quando está acabando. Decisão dela, 27/08.",0,-,-
 corpo,Corpo,casco|chassi,superficie,chassi,-,corpo,7.5,29.46,120.5,101.51,ALTA,"O casco. As DUAS empunhaduras são paths próprios dentro dele, e são elas que os motores destacam.",0,-,casca
-feat-rumble-esquerdo,Motor de vibração esquerdo,motor forte,saida,vibracao,rumble_esquerdo,feat-rumble-esquerdo,7.44,29.46,44.08,101.17,ALTA,Contrapeso maior — soa grosso. No código do produto é `strong`.,0,-,-
-feat-rumble-direito,Motor de vibração direito,motor leve,saida,vibracao,rumble_direito,feat-rumble-direito,83.99,29.46,120.5,101.24,ALTA,Contrapeso menor — soa fino. No código do produto é `weak`.,0,-,-
+feat-rumble-esquerdo,Motor de vibração esquerdo,motor forte,saida,vibracao,rumble_esquerdo,feat-rumble-esquerdo,7.44,29.46,44.08,101.17,ALTA,Contrapeso maior — soa grosso.,0,-,-
+feat-rumble-direito,Motor de vibração direito,motor leve,saida,vibracao,rumble_direito,feat-rumble-direito,83.99,29.46,120.5,101.24,ALTA,Contrapeso menor — soa fino.,0,-,-

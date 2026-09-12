@@ -62,6 +62,7 @@ from hefesto_dualsense4unix.interface.pacotes.a03_gatilhos import (  # noqa: E40
     PREFIXO_DA_DICA_DO_MODO,
     PREFIXO_DA_DICA_DO_PRONTO,
     SEM_APARELHO_AQUI,
+    SEPARADOR_DOS_MEUS,
     TRAVESSAO,
     _cabeca_do_controle,
     _escapar,
@@ -731,7 +732,7 @@ LITERAL_P1 = {
 CENA = {
     "p1": {"esq": (ROT["Machine"], MEUS[0], None),
            "dir": (ROT["Bow"], MEUS[0], None)},
-    "p2": {"esq": (ROT["SemiAutoGun"], "Stop hard",
+    "p2": {"esq": (ROT["SemiAutoGun"], "Trava seca",
                    [("Início", 3), ("Fim", 6), ("Força", 5)]),
            "dir": (ROT["Rigid"], PRONTOS[0], [("Posição", 5), ("Força", 200)])},
     # O P3 E O P4 SÃO LUGAR VAZIO — decisão dela, 31/08/2026: *"os demais 3 e o 4
@@ -872,7 +873,8 @@ def _op_pronto(n, escolhido):
 def opcoes_pronto(escolhido):
     fora = [_op_vazio(escolhido)] + [_op_pronto(n, escolhido) for n in PRONTOS]
     dentro = [_op_pronto(n, escolhido) for n in MEUS]
-    return ("\n".join(fora) + '\n                <option disabled>──── Meus efeitos ────</option>\n'
+    return ("\n".join(fora)
+            + f'\n                <option disabled>{SEPARADOR_DOS_MEUS}</option>\n'
             + "\n".join(dentro))
 
 
@@ -1044,11 +1046,11 @@ def coluna(c):
           <div class="guardar">
             <input class="nome-efeito" type="text" data-linha="nome-do-efeito"
                    maxlength="60" placeholder="Nome"
-                   title="Dê um nome e o par L2+R2 desta coluna entra em Meus efeitos, para você escolher em qualquer perfil. Em branco, o botão só guarda no perfil deste controle.">
+                   title="Com um nome, o par L2+R2 entra em Meus efeitos e serve a qualquer perfil. Em branco, fica só no perfil deste controle.">
             <button class="btn roxo" data-gesto="guardar" data-hef-forma="@controle"
-                    title="Guarda esse efeito: o L2 e o R2 desta coluna vão para o perfil, só deste controle. Com um nome ao lado, o par também entra em Meus efeitos.">Guardar</button>
+                    title="Guarda o L2 e o R2 desta coluna no perfil deste controle. Com um nome ao lado, o par também entra em Meus efeitos.">Guardar</button>
             <button class="btn roxo" data-gesto="{GESTO_DE_TODOS}" data-hef-forma="@controle"
-                    title="Põe o L2 e o R2 desta coluna em todos os controles ligados e guarda o efeito no perfil como o de todo mundo — um controle que você ligar depois já nasce com ele. Some o ajuste próprio que cada controle tinha nesses dois gatilhos.">Em todos</button>
+                    title="Põe o L2 e o R2 desta coluna em todos os controles, agora e nos que você ligar depois. Apaga o ajuste próprio que cada um tinha nesses dois gatilhos.">Em todos</button>
           </div>
         </div>'''
 
@@ -1195,8 +1197,8 @@ CSS = CSS.replace("repeat(N_COLS,", f"repeat({len(MESA)},")
 #: AS DICAS DAS DUAS DOBRAS. Elas moram aqui e não na f-string porque a
 #: f-string do `ROTULOS` sai UMA VEZ, mas a do `bloco()` sai por controle — e
 #: um texto de tela repetido em dois lugares é o defeito que esta casa nomeia.
-DICA_DE_ABRIR = "Abrir os ajustes deste gatilho. Só um dos dois fica aberto por vez."
-DICA_DE_FECHAR = "Fechar os ajustes. Modo e Efeito pronto continuam à vista."
+DICA_DE_ABRIR = "Abre os ajustes deste gatilho. Só um fica aberto por vez."
+DICA_DE_FECHAR = "Fecha os ajustes."
 
 ROTULOS = f'''        <div class="rotulos">
           <div class="rot-linha-1"><span class="sec-rot">Controle</span></div>
@@ -1246,18 +1248,14 @@ ROTULOS = f'''        <div class="rotulos">
 MIOLO = f'''
     <div class="quadro">
       <div class="quadro-topo">
-        <span class="quadro-titulo">Seleção de Gatilho</span>
+        <span class="quadro-titulo">Gatilhos</span>
         <span class="ajuda">?<span class="dica">
-          O L2 e o R2 do DualSense têm um motorzinho dentro que <b>opõe força à sua mão</b>.
-          É o que faz um gatilho parecer o freio de um carro e outro parecer uma metralhadora.<br><br>
-          <b>Uma coluna por controle, e os {len(MESA)} ao mesmo tempo.</b> Cada coluna escreve no
-          controle do chip que a encabeça — não há o que escolher lá em cima, e é por isso que a
-          fita está esmaecida. Escolher um modo já manda o efeito para <b>aquele</b> controle, e
-          quem está com ele na mão sente na hora.<br><br>
-          <b>A descrição de cada modo está na lista</b> — passe o mouse por ela antes de soltar
-          o botão, porque soltar já manda.<br><br>
-          <b>Esta tela mostra o que o Hefesto escreveu no gatilho.</b> A confirmação é o que
-          você sente na mão — é assim que se prova um efeito adaptativo.
+          O L2 e o R2 têm um motor dentro que <b>empurra a sua mão de volta</b>: é o que faz
+          um gatilho parecer freio de carro e outro, metralhadora.<br><br>
+          <b>Uma coluna por controle.</b> Escolher um modo já manda o efeito, e quem está com
+          <b>aquele</b> controle na mão sente na hora.<br><br>
+          <b>O DualSense não devolve o modo em que está:</b> o que você sente na mão é a
+          confirmação.
         </span></span>
       </div>
       <div class="quadro-corpo">
@@ -1378,7 +1376,7 @@ LEGENDA = f'''<div class="nota">
   <h2>O que NÃO mudou</h2>
   <ul>
     <li>Os <b>19 modos</b> e seus textos, o <b>efeito pronto</b> com "Meus efeitos" na mesma lista,
-        as <b>barras de ajuste</b>, o <b>título "Seleção de Gatilho"</b> e o botão de guardar
+        as <b>barras de ajuste</b>, o <b>título do quadro</b> e o botão de guardar
         um por coluna.</li>
     <li><b>Os glifos são os do mapa</b> — <code>assets/glyphs/l2.svg</code> e <code>r2.svg</code>,
         a 36px, que é o piso medido para a palavra dentro deles chegar aos 10px de tipo desta casa.</li>
