@@ -329,9 +329,15 @@ def test_o_selo_segue_os_reparaveis_e_nao_os_faltantes(desenho):
         "o cartão acusa impedimento por causa de um jogo que o produto não toca")
     assert 'data-gesto="consertar"' not in desenho.acoes_html(cartao), (
         "o `Consertar` está aceso e não há nada que ele possa consertar")
-    assert "intocável" in cartao.carimbo, (
-        "o jogo intocável sumiu da tela — ele fica sem o atalho para sempre e "
-        "ninguém saberia")
+    # A PALAVRA MUDOU EM 11/09/2026 — A2-020, aprovada por ela: o carimbo dizia
+    # «linha intocável — só reparo manual» e passou a dizer «linha editada à
+    # mão», que é a MESMA palavra que a linha do jogo já usava dois centímetros
+    # abaixo. O que a régua cobra continua sendo o ATO — o jogo que o produto
+    # não toca aparece no carimbo, com o número —, e por isso ela mede o número
+    # e o estado, não a palavra que nós escolhemos.
+    assert "1 jogo" in cartao.carimbo and "à mão" in cartao.carimbo, (
+        f"o jogo que o produto não toca sumiu da tela ({cartao.carimbo!r}) — "
+        "ele fica sem o atalho para sempre e ninguém saberia")
 
 
 def test_o_nome_do_jogo_e_escapado(desenho):
@@ -746,10 +752,12 @@ def test_todo_cartao_tem_botao_nos_tres_estados_e_o_do_ausente_e_outro(desenho):
                 # mantém a PÁGINA ESTÁTICA intacta: ela nasce de
                 # `cartoes(None)`, e um botão a mais aqui seria mudança de
                 # desenho — que só entra pelo `--publicar`, ato dela.
-                assert desenho.ADICIONAR_ROTULO not in html, (
-                    f"o cartão {cartao.chave!r} em {estado!r} oferece "
-                    f"«{desenho.ADICIONAR_ROTULO}» antes de o produto ter "
-                    f"procurado — e isso muda a página publicada")
+                for rotulo in (desenho.ADICIONAR_ROTULO,
+                               desenho.APONTAR_ROTULO):
+                    assert rotulo not in html, (
+                        f"o cartão {cartao.chave!r} em {estado!r} oferece "
+                        f"«{rotulo}» antes de o produto ter procurado — e isso "
+                        f"muda a página publicada")
             else:
                 # 10/09/2026 — O CARTÃO ACHADO OFERECE OS DOIS. Aqui estava o
                 # contrário (`ADICIONAR_ROTULO not in html`), e ele valeu
@@ -757,16 +765,28 @@ def test_todo_cartao_tem_botao_nos_tres_estados_e_o_do_ausente_e_outro(desenho):
                 # `off`. Ela pediu o botão *"no Máximo"* justamente onde ele
                 # não chegava: os SEIS cartões dela estão localizados.
                 #
-                # A MORDIDA: tire o `localizar` do ramo achado de
+                # A MORDIDA: tire o `apontar` do ramo achado de
                 # `cartao_sem_censo` (ou de `cartao_da_steam`) e esta linha
                 # cai nomeando o cartão — nunca num só, que é o ponto cego que
                 # esta aba já pagou em 08/09.
-                assert desenho.ADICIONAR_ROTULO in html, (
+                #
+                # 11/09/2026 — E O RÓTULO AQUI É OUTRO (A2-022, aprovada por
+                # ela): o cartão que diz `LOCALIZADO` oferece «Apontar outro
+                # caminho», não «Localizar este lançador». O gesto é o MESMO;
+                # só o rótulo segue o estado. Selo e botão mandando coisas
+                # contrárias era exatamente o que o desenho de 08/09 construiu
+                # para não acontecer.
+                assert desenho.APONTAR_ROTULO in html, (
                     f"o cartão {cartao.chave!r} em {estado!r} (selo "
                     f"{cartao.selo!r}) não oferece "
-                    f"«{desenho.ADICIONAR_ROTULO}» — se o que o Hefesto achou "
+                    f"«{desenho.APONTAR_ROTULO}» — se o que o Hefesto achou "
                     f"não é o que ela quer, não há por onde trocar, e a recusa "
                     f"do botão global volta a mandar clicar no vazio")
+                assert desenho.ADICIONAR_ROTULO not in html, (
+                    f"o cartão {cartao.chave!r} em {estado!r} diz "
+                    f"{cartao.selo!r} no selo e «{desenho.ADICIONAR_ROTULO}» "
+                    f"no botão — lidos de cima para baixo, os dois se "
+                    f"contradizem")
 
     # E O DA STEAM, NOMEADO. A régua acima já o cobre por percorrer os cartões;
     # esta linha existe para a MENSAGEM: foi a Steam que ficou de fora, e uma
@@ -842,13 +862,30 @@ def test_os_dois_botoes_do_registro_dizem_coisas_diferentes(desenho):
         f"os dois botões voltaram a dizer a mesma coisa ({do_cartao!r}): um é "
         f"«ele está aqui, te mostro onde» e o outro é «tem um que você não "
         f"conhece». Ela pediu um sinônimo justamente para separá-los.")
-    assert do_cartao == "Localizar este Lançador", (
+    # A MAIÚSCULA DECORATIVA CAIU EM 11/09/2026 — A2-005 e A2-021, e ela
+    # aprovou: *"ok aprovadíssimo todas. Manda ver."*  # noqa-acento: citação dela
+    #
+    # O «L» no meio da frase
+    # não era palavra dela: a mesma aba já escrevia «Localizar um lançador» em
+    # minúscula no título da tela de registro, e duas grafias para uma palavra é
+    # o que o item 4 da §2 do índice proíbe. As palavras não mudaram.
+    assert do_cartao == "Localizar este lançador", (
         f"o rótulo do botão do cartão é {do_cartao!r}, e a decisão dela é "
-        f"'Localizar este Lançador' — a palavra do SELO daquele cartão")
-    assert global_ == "Adicionar novo Lançador", (
+        f"'Localizar este lançador' — a palavra do SELO daquele cartão")
+    assert global_ == "Adicionar novo lançador", (
         f"o rótulo do botão global é {global_!r}, e a decisão dela é "
-        f"'Adicionar novo Lançador' — com o «novo», que é o que o separa do "
+        f"'Adicionar novo lançador' — com o «novo», que é o que o separa do "
         f"outro")
+    # E O TERCEIRO RÓTULO, que é o MESMO botão no cartão que já foi localizado —
+    # A2-022, 11/09/2026. Selo e botão diziam coisas contrárias: `LOCALIZADO` em
+    # cima, «Localizar» embaixo. O ato ali é corretivo, e o rótulo passa a
+    # dizê-lo. **Mesmo gesto, mesma gravação — só o rótulo segue o estado.**
+    assert desenho.APONTAR_ROTULO == "Apontar outro caminho", (
+        f"o rótulo do cartão LOCALIZADO é {desenho.APONTAR_ROTULO!r}, e a "
+        f"decisão dela é 'Apontar outro caminho'")
+    assert len({do_cartao, global_, desenho.APONTAR_ROTULO}) == 3, (
+        "dois dos três rótulos de registro voltaram a dizer a mesma coisa — "
+        "cada um responde por um estado diferente do cartão")
 
     # A LÍNGUA. O projeto é em português e há portão que reprova inglês na tela;
     # aqui a régua alcança o rótulo ANTES de ele chegar à página publicada.
@@ -1307,8 +1344,12 @@ def test_voltar_a_perguntar_recusa_dizendo_quando_o_arquivo_nao_aceita(
     """
     from hefesto_dualsense4unix.app.actions import launch_wrapper_dialog as lwd
 
+    # O QUE A RÉGUA CASA MUDOU EM 11/09/2026 — A2-044, aprovada por ela. A
+    # recusa dizia o nome do arquivo no disco (`launch_dialog_dismissed.json`) e
+    # a palavra «dispensados», que são NOSSAS; o que ela precisa saber é o
+    # ESTADO em que a coisa ficou. A régua passa a casar o estado.
     monkeypatch.setattr(lwd, "remove_dismissed_appid", lambda a: False)
-    with pytest.raises(RuntimeError, match="dispensados"):
+    with pytest.raises(RuntimeError, match="lembrete continua desligado"):
         _gesto("voltar-a-perguntar")(ctx, {"v": "4242"}, None)
 
 
@@ -1344,9 +1385,13 @@ def test_a_ponte_confirmada_volta_ao_carimbo(desenho):
     carimbo = desenho.carimbo_da_steam(com)
     assert "3 jogos já sabem por onde entrar" in carimbo, (
         f"a ponte confirmada sumiu do carimbo: {carimbo!r}")
-    assert "intocável" in carimbo, (
-        "o carimbo calou sobre o jogo que o produto decidiu não tocar — é "
-        "assim que ele fica sem o atalho para sempre sem ninguém saber")
+    # A PALAVRA MUDOU EM 11/09/2026 — A2-020: «linha editada à mão» no lugar de
+    # «linha intocável — só reparo manual». A régua cobra o ATO: o jogo que o
+    # produto decidiu não tocar tem de estar no carimbo, com o número.
+    assert "1 jogo" in carimbo and "à mão" in carimbo, (
+        f"o carimbo calou sobre o jogo que o produto decidiu não tocar "
+        f"({carimbo!r}) — é assim que ele fica sem o atalho para sempre sem "
+        f"ninguém saber")
 
 
 def _disco_dublado(monkeypatch, *, dispensados=("4242",), pontes=3,
@@ -1722,43 +1767,20 @@ def test_o_texto_de_ajuda_nao_conta_controle_por_conta_propria():
         f"dela ao lado de um cabeçalho que lê o aparelho.")
 
 
-def test_o_quantos_do_ajuda_sai_da_mesa_viva_e_nao_do_mockup(a07, desenho):
-    """Mesas diferentes, frases diferentes — e a do mockup não é privilegiada.
-
-    UMA CONSTANTE PASSARIA no teste de cima (ela também não tem dígito nu, se
-    alguém a puser dentro do span). O que a desmascara é VARIAR a mesa: o valor
-    emitido tem de mudar com ela, e tem de fechar com o que o cabeçalho diz.
-    """
-    import pacotes
-
-    def frase(mesa):
-        contexto = pacotes.Contexto(state={"active_profile": "regua"},
-                                    mesa=mesa, conectados=[], estados={})
-        return a07.pacote(contexto)[desenho.QUANTOS]
-
-    # A MESA VIVA TRAZ `transporte`, E A CONTA LÊ ELE — ONDA4-S10, 06/09/2026.
-    # Estas mesas de mentira tinham só `via`, a palavra que a TELA escreve, e a
-    # conta somava por ela: bastava a palavra mudar (a decisão D-05 dela) para a
-    # frase do "?" dizer *"0 no cabo, 2 no rádio"* com os dois no cabo — calado.
-    # `mesa_viva.mesa_do_estado` publica as duas chaves lado a lado; a de
-    # mentira aqui passa a ter as duas também, senão ela mede uma mesa que o
-    # produto não produz.
-    um_no_cabo = [{"pref": "p1", "jogador": 1, "via": "USB", "transporte": "usb"}]
-    dois = [{"pref": "p1", "jogador": 1, "via": "USB", "transporte": "usb"},
-            {"pref": "p2", "jogador": 2, "via": "BT", "transporte": "bt"}]
-
-    assert frase(um_no_cabo) == "o <b>1</b> (1 no cabo, 0 no rádio)", (
-        f"com UM controle no cabo o '?' diz {frase(um_no_cabo)!r} — e o "
-        f"cabeçalho, na mesma tela, diz '1 controle: 1 USB · 0 BT'")
-    assert frase(dois) == "os <b>2</b> (1 no cabo, 1 no rádio)"
-    assert frase(um_no_cabo) != frase(dois), (
-        "a frase não mudou com a mesa — ela é constante, e uma constante aqui "
-        "é a mesa do mockup com outro nome")
-    # A CONTA FECHA SEMPRE: cabo + rádio = o total que a frase anuncia.
-    for mesa in (um_no_cabo, dois, []):
-        n, usb, bt = (int(x) for x in re.findall(r"\d+", frase(mesa)))
-        assert usb + bt == n == len(mesa), (
-            f"a frase não fecha para {len(mesa)} controle(s): {frase(mesa)!r}")
+# A RÉGUA DO `quantos` SAIU EM 11/09/2026 — e saiu com a superfície que ela
+# vigiava. `test_o_quantos_do_ajuda_sai_da_mesa_viva_e_nao_do_mockup` cobrava que
+# o trecho do "?" *"a resposta vale igual para os N (x no cabo, y no rádio)"*
+# viesse da mesa VIVA, e não do `monta.CONECTADOS` do gerador — defeito real,
+# medido na janela dela em 03/09/2026.
+#
+# **A FRASE INTEIRA SAIU** (A2-002, aprovada por ela): ela repetia o cabeçalho a
+# dois centímetros, que é o dono do número. Com ela saíram o `lanc-quantos`, o
+# `quantos_html` e o `quantos_da_mesa`, e não há mais o que medir aqui.
+#
+# A LEI CONTINUA VIVA E COM RÉGUA: *quem conta lê o TRANSPORTE, nunca a palavra
+# da tela* — `test_a_palavra_do_transporte_tem_um_dono_so.py` a cobra nas
+# superfícies que restaram. E o `?` desta aba continua vigiado pelo teste logo
+# acima, que reprova QUALQUER dígito nu ali dentro.
 
 
 # --------------------------------------------------------------------------

@@ -266,9 +266,12 @@ def test_nao_perguntar_recusa_dizendo_quando_o_disco_engole(a07, monkeypatch):
     """
     from hefesto_dualsense4unix.app.actions import launch_wrapper_dialog as lwd
 
+    # O QUE A RÉGUA CASA MUDOU EM 11/09/2026 — A2-045, aprovada por ela: a
+    # recusa dizia «lista de dispensados» e o nome do arquivo no disco, que são
+    # NOSSOS. Agora diz o estado e a consequência inteira, que é o que ela lê.
     monkeypatch.setattr(lwd, "add_dismissed_appid", lambda a: None)
     monkeypatch.setattr(lwd, "load_dismissed_appids", set)
-    with pytest.raises(RuntimeError, match="dispensados"):
+    with pytest.raises(RuntimeError, match="vai voltar no próximo jogo"):
         _gesto("nao-perguntar")(_ctx(), {"v": "4242"}, None)
 
 
@@ -375,7 +378,10 @@ def test_a_confirmacao_expirada_nao_fecha_a_steam(a07, monkeypatch):
 
     monkeypatch.setattr(slo, "with_steam_closed", _nunca)
     a07._desarmar()
-    with pytest.raises(RuntimeError, match="segundos"):
+    # O NÚMERO DE SEGUNDOS SAIU DA FRASE EM 11/09/2026 — A2-056, aprovada por
+    # ela: ele não muda o que ela faz, que é clicar de novo. A régua casa o
+    # FATO da expiração, que é o que ela mede.
+    with pytest.raises(RuntimeError, match="Passou do tempo"):
         _gesto(a07.FECHAR)(_ctx(), {"v": a07.CONFIRMO}, None)
 
 

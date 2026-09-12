@@ -174,9 +174,16 @@ def test_a_steam_que_nao_abre_recusa_dizendo(a07, ctx, monkeypatch, desenho):
     with pytest.raises(RuntimeError) as erro:
         a07.abrir_lancador(ctx, {"gesto": desenho.ABRIR, "v": desenho.STEAM}, None)
     frase = str(erro.value)
-    assert "steam" in frase.lower() and "xdg-open" in frase, (
-        f"a recusa não diz o que faltou: {frase!r}. Sem os dois nomes ela não "
-        f"tem como conferir por que o botão não abriu.")
+    # O `xdg-open` E O `PATH` SAÍRAM DA FRASE EM 11/09/2026 — A2-040, aprovada
+    # por ela: eles não dizem nada a quem lê, e o que fazer não muda com eles.
+    # A régua passa a cobrar o que a recusa TEM de dizer — o que o produto não
+    # conseguiu, o que fazer agora, e que nada mudou.
+    assert "steam" in frase.lower() and "menu" in frase.lower(), (
+        f"a recusa não diz o que fazer: {frase!r}. Sem o caminho de saída ela "
+        f"fica olhando um botão que não abriu nada.")
+    assert "nada foi alterado" in frase.lower(), (
+        f"a recusa não diz que nada mudou: {frase!r} — é a metade que impede "
+        f"quem clicou de procurar um estrago que não houve.")
 
 
 def test_o_clique_sem_qual_lancador_e_recusa_e_nao_palpite(a07, ctx, espia,

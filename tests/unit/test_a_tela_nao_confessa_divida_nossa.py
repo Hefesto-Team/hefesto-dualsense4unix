@@ -157,21 +157,32 @@ def test_a_peneira_nao_acusa_a_voz_da_pessoa_nem_a_afirmacao_positiva(
         f"positiva — obrigar a declarar isto esvazia a tabela de sentido")
 
 
-def test_a_afirmacao_positiva_e_pega_pela_forma_e_declarada_pela_tabela(portao) -> None:
+def test_a_afirmacao_positiva_e_pega_pela_forma_e_so_a_tabela_a_absolve(portao) -> None:
     """*"O Hefesto não é só para a Steam"* é o oposto de uma confissão — e a
     peneira a pega assim mesmo, porque ela casa por FORMA e não por sentido.
 
     **ISSO NÃO É UM DEFEITO DA PENEIRA; é o desenho dela.** Nenhuma expressão
     regular lê sentido, e uma que tentasse erraria para o outro lado — deixando
     passar a confissão escrita com jeito. O que a régua faz é obrigar a
-    DECLARAR, e declarar esta custa uma linha e ensina a quem vier: a pergunta
-    a responder é *de quem é o sujeito*.
+    DECLARAR, e declarar custa uma linha e ensina a quem vier: a pergunta a
+    responder é *de quem é o sujeito*.
+
+    **A FRASE SAIU DA TELA EM 11/09/2026** — A2-002, aprovada por ela: o `?` da
+    aba Lançadores perdeu os dois parágrafos que definiam a aba por negação. E
+    a linha que a declarava saiu no MESMO commit, porque o portão confere nos
+    dois sentidos: declaração que sobrevive à frase envelhece calada, e a
+    próxima pessoa a lê como se a confissão continuasse lá.
+
+    O EXEMPLO FICA, e agora ensina a outra metade: no dia em que esta frase
+    voltar à tela, a peneira a pega e a tabela não a absolve — que é
+    exatamente a frição que a ordem dela pede.
     """
     frase = "O Hefesto não é só para a Steam."
     assert portao._forma(frase), "a peneira deixou de casar por forma"
-    assert any(k.lower() in frase.lower() for k in portao.FATOS), (
-        "a frase é pega pela forma e não está declarada em FATOS — o portão "
-        "reprovaria a tela de hoje")
+    assert not any(k.lower() in frase.lower() for k in portao.FATOS), (
+        "a frase saiu da tela em 11/09/2026 e a declaração dela tinha de sair "
+        "junto — uma linha em FATOS sobre uma frase que a tela não tem mais é "
+        "a declaração que envelhece calada, e o portão reprova por isso")
 
 
 def test_morde_a_limpeza_vem_antes_do_casamento(portao) -> None:
