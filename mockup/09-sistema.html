@@ -1431,37 +1431,35 @@
       <div class="quadro-topo">
         <span class="quadro-titulo">Sistema</span>
         <span class="ajuda">?<span class="dica">
-          Esta aba é sobre a <b>máquina</b>, não sobre um controle: o serviço que fala com os
-          2, os gamepads virtuais que ele cria para os jogos, o exame do que costuma brigar
-          com controle nesta máquina, e os gestos raros.<br><br>
-          Por isso a fita lá em cima está apagada — nada aqui muda de controle para controle.
+          Esta aba é sobre o computador, não sobre um controle. Por isso a fita de controles
+          está apagada aqui.
         </span></span>
       </div>
       <div class="quadro-corpo">
 
         <!-- ---------- O HEFESTO · PERFIL DE BATERIA ---------- -->
         <div class="sec-rot sr-par2">
-          <span>O serviço <span class="ajuda">?<span class="dica">O serviço é o Hefesto rodando em segundo plano. Ele é quem fala com os controles — sem ele, o Linux vê 2 gamepads comuns e nada mais.<br><br><b>Parar o serviço não é desligar o Hefesto na aba Jogar</b>: lá ele continua rodando e só sai do meio do jogo; aqui ele deixa de rodar.<br><br><b>Reiniciar</b> resolve a maioria dos travamentos e não perde nenhum ajuste seu, em nenhum dos 2.<br><br><b>Retomar</b> só acende quando o serviço está pausado. A pausa fica gravada em disco e <b>sobrevive a desligar o computador</b>: sem este botão, ele renasce pausado.</span></span></span><span></span>
-          <span>Perfil de Bateria <span class="ajuda">?<span class="dica">O que fica ligado em todos os controles, e quanto isso custa de bateria. As abas continuam mandando no que fazem — nenhum ajuste seu é apagado.<br><br><b>Tudo ligado</b> — nada é limitado; o que o jogo pedir chega inteiro.<br><b>Bateria longa</b> — põe teto na vibração: 30% da força.<br><b>Eu escolho</b> — você decide item a item, aba por aba.<br><br>É o perfil <b>geral</b>: vale para os 2 controles. Cada um pode sobrepô-lo na linha dele.</span></span></span>
+          <span>O serviço <span class="ajuda">?<span class="dica">O Hefesto rodando por trás. Sem ele, o Linux vê 2 gamepads comuns e nada mais. Parar aqui não é o mesmo que desligar o Hefesto na aba Jogar: lá ele só sai do meio do jogo.</span></span></span><span></span>
+          <span>Perfil de Bateria <span class="ajuda">?<span class="dica">Quanto os controles podem gastar de bateria. Vale para os 2, e cada um pode ter o seu na aba Conexões. Nenhum ajuste seu é apagado.</span></span></span>
         </div>
         <div class="par2">
 
           <div class="bloco2">
             <div class="col-est">
-            <div class="est ok" data-id="hefesto-estado"><span class="g" data-campo="hefesto-estado-g">✓</span><span class="rot">O serviço está</span><span class="val" data-campo="hefesto-estado" title="Ligado">Ligado</span></div>
-            <div class="est warn" title="A pausa fica gravada em disco e sobrevive a desligar o computador. O botão Retomar, ao lado, é a saída — até 27/08/2026 só o terminal saía dela." data-id="hefesto-pausa"><span class="g" data-campo="hefesto-pausa-g">!</span><span class="rot">Pausado</span><span class="val" data-campo="hefesto-pausa" title="Sim, e volta pausado">Sim, e volta pausado</span></div>
+            <div class="est ok" data-id="hefesto-estado"><span class="g" data-campo="hefesto-estado-g">✓</span><span class="rot">Serviço</span><span class="val" data-campo="hefesto-estado" title="Ligado">Ligado</span></div>
+            <div class="est warn" title="O botão Retomar, ao lado, tira o serviço da pausa." data-id="hefesto-pausa"><span class="g" data-campo="hefesto-pausa-g">!</span><span class="rot">Pausado</span><span class="val" data-campo="hefesto-pausa" title="Sim — e continua depois de reiniciar">Sim — e continua depois de reiniciar</span></div>
             <div class="est ok" data-id="hefesto-troca-de-perfil"><span class="g" data-campo="hefesto-troca-de-perfil-g">✓</span><span class="rot">Trocar de perfil ao abrir o jogo</span><span class="val" data-campo="hefesto-troca-de-perfil" data-hef-alvo="html" title="Ligado">Ligado</span></div>
-            <div class="est info" data-id="hefesto-ambiente"><span class="g" data-campo="hefesto-ambiente-g">◆</span><span class="rot">Como ele enxerga a janela</span><span class="val" data-campo="hefesto-ambiente" title="Wayland · COSMIC">Wayland · COSMIC</span></div>
+            <div class="est info" title="É por ele que o Hefesto descobre qual janela está na frente." data-id="hefesto-ambiente"><span class="g" data-campo="hefesto-ambiente-g">◆</span><span class="rot">Ambiente gráfico</span><span class="val" data-campo="hefesto-ambiente" title="Wayland · COSMIC">Wayland · COSMIC</span></div>
               <div class="est ok" data-id="hefesto-autostart"><span class="g" data-campo="hefesto-autostart-g">✓</span><span class="rot">Ligar junto com o computador</span>
                 <span class="chave on" data-gesto="autostart" data-campo="hefesto-autostart" data-hef-alvo="classe" data-hef-classe="on"></span></div>
             </div>
             <div class="risco"></div>
             <div class="col-acao">
-            <div class="acao"><button class="btn verde" data-campo="retomar-razao" data-hef-alvo="classe" data-hef-classe="apagado" data-hef-atributo="aria-disabled" data-gesto="retomar" title="Tira o serviço da pausa agora. Só acende com a pausa ativa — e ela sobrevive a desligar o computador.">Retomar</button><span class="ajuda porque" tabindex="0">?<span class="dica" data-campo="retomar-razao" data-hef-alvo="html"><i class="nada"></i></span></span></div>
-            <button class="btn so-avulso" title="Aparece no lugar do «Reiniciar o serviço» quando o serviço está de pé por fora do sistema: ali reiniciar não funciona, porque quem está rodando não é o do sistema. Este botão pede que ele saia e sobe o jeito certo — nada do que você ajustou se perde." data-gesto="corrigir-modo" data-campo="corrigir-modo-quando" data-hef-alvo="classe" data-hef-classe="mostra">Corrigir modo de execução</button>
-            <div class="acao"><button class="btn" data-campo="reiniciar-razao" data-hef-alvo="classe" data-hef-classe="apagado" data-hef-atributo="aria-disabled" data-gesto="reiniciar" title="Para e liga de novo. Resolve a maioria dos travamentos e não perde nenhum ajuste seu.">Reiniciar o serviço</button><span class="ajuda porque" tabindex="0">?<span class="dica" data-campo="reiniciar-razao" data-hef-alvo="html"><i class="nada"></i></span></span></div>
+            <div class="acao"><button class="btn verde" data-campo="retomar-razao" data-hef-alvo="classe" data-hef-classe="apagado" data-hef-atributo="aria-disabled" data-gesto="retomar" title="Tira o serviço da pausa.">Retomar</button><span class="ajuda porque" tabindex="0">?<span class="dica" data-campo="retomar-razao" data-hef-alvo="html"><i class="nada"></i></span></span></div>
+            <button class="btn so-avulso" title="O serviço está de pé por fora do sistema, e ali reiniciar não funciona. Este botão o faz sair e subir do jeito certo. Nada do que você ajustou se perde." data-gesto="corrigir-modo" data-campo="corrigir-modo-quando" data-hef-alvo="classe" data-hef-classe="mostra">Corrigir o serviço</button>
+            <div class="acao"><button class="btn" data-campo="reiniciar-razao" data-hef-alvo="classe" data-hef-classe="apagado" data-hef-atributo="aria-disabled" data-gesto="reiniciar" title="Para e liga de novo. Resolve a maioria dos travamentos, e nenhum ajuste seu se perde.">Reiniciar o serviço</button><span class="ajuda porque" tabindex="0">?<span class="dica" data-campo="reiniciar-razao" data-hef-alvo="html"><i class="nada"></i></span></span></div>
             <button class="btn" title="Manda o serviço reler os atalhos do controle e reescrever os arquivos de ambiente que a Steam usa para lançar os jogos; no fim, relê o que esta aba mostra. Leva alguns segundos, e o botão avisa enquanto trabalha." data-gesto="atualizar" data-hef-em-voo="Atualizando…">Atualizar</button>
-            <button class="btn vermelho" title="O Hefesto deixa de rodar e os 2 viram gamepads comuns do Linux. Não é o interruptor Hefesto da aba Jogar, que só o tira do meio do jogo. Pergunta antes, dizendo o que se perde." data-gesto="desligar">Parar o serviço</button>
+            <button class="btn vermelho" title="O Hefesto deixa de rodar e os 2 viram gamepads comuns do Linux. Pergunta antes, dizendo o que se perde." data-gesto="desligar">Parar o serviço</button>
             </div>
           </div>
 
@@ -1487,10 +1485,10 @@
                  do `<select>` que saiu, então a conta do portão dos dois blocos não
                  muda de valor — só de forma. -->
             <div class="seg bat-perfis" data-id="bateria-perfil"><button class="on" data-gesto="perfil-da-mesa" data-v="tudo_ligado" data-campo="bateria-perfil" data-hef-alvo="classe" data-hef-classe="on" data-hef-quando="tudo_ligado" title="Tudo ligado: nada é limitado. Vale para os 2 controles — cada um pode sobrepô-lo na linha dele.">Tudo ligado</button><button class="" data-gesto="perfil-da-mesa" data-v="bateria_longa" data-campo="bateria-perfil" data-hef-alvo="classe" data-hef-classe="on" data-hef-quando="bateria_longa" title="Bateria longa: vibração em 30% da força. Vale para os 2 controles — cada um pode sobrepô-lo na linha dele.">Bateria longa</button><button class="" data-gesto="perfil-da-mesa" data-v="eu_escolho" data-campo="bateria-perfil" data-hef-alvo="classe" data-hef-classe="on" data-hef-quando="eu_escolho" title="Eu escolho: nada é limitado. Vale para os 2 controles — cada um pode sobrepô-lo na linha dele.">Eu escolho</button></div>
-            <div class="est info" title="O que este perfil limita hoje, em todos os controles. O degrau vem de RUMBLE_POLICY_MULT, no daemon — nenhum número escrito nesta tela." data-id="bateria-impoe"><span class="g" data-campo="bateria-impoe-g">◆</span><span class="rot">O que ele impõe</span><span class="val" data-campo="bateria-impoe" title="Nada é limitado">Nada é limitado</span></div>
-            <div class="est info" title="É o teto geral. Cada controle pode sobrepô-lo na linha dele, e o campo de lá diz qual dos dois está valendo." data-id="bateria-vale-para"><span class="g" data-campo="bateria-vale-para-g">◆</span><span class="rot">Vale para</span><span class="val" data-campo="bateria-vale-para" title="Os 2 controles">Os 2 controles</span></div>
-            <div class="est info" title="Onde o teto do perfil age de verdade hoje. Sai de LINHAS_DO_TETO, no produto — nenhum nome escrito nesta tela." data-id="bateria-frase"><span class="g" data-campo="bateria-frase-g">◆</span><span class="rot">O teto alcança</span><span class="val" data-campo="bateria-frase" title="Vibração">Vibração</span></div>
-            <div class="est info" title="Estes ficam livres do teto do perfil. Quando um ganhar limite próprio, ele sai desta lista sozinho." data-id="bateria-frase-pendentes"><span class="g" data-campo="bateria-frase-pendentes-g">◆</span><span class="rot">Ainda sem teto</span><span class="val" data-campo="bateria-frase-pendentes" title="Gatilhos, barra de luz, microfone por rádio e giroscópio">Gatilhos, luz, microfone e giroscópio</span></div>
+            <div class="est info" title="O que este perfil limita hoje, em todos os controles." data-id="bateria-impoe"><span class="g" data-campo="bateria-impoe-g">◆</span><span class="rot">Limite</span><span class="val" data-campo="bateria-impoe" title="Nada é limitado">Nada é limitado</span></div>
+            <div class="est info" title="É o limite geral. Cada controle pode ter o seu na aba Conexões, e o campo de lá diz qual está valendo." data-id="bateria-vale-para"><span class="g" data-campo="bateria-vale-para-g">◆</span><span class="rot">Vale para</span><span class="val" data-campo="bateria-vale-para" title="Os 2 controles">Os 2 controles</span></div>
+            <div class="est info" title="Onde o limite do perfil age hoje." data-id="bateria-frase"><span class="g" data-campo="bateria-frase-g">◆</span><span class="rot">Com limite</span><span class="val" data-campo="bateria-frase" title="Vibração">Vibração</span></div>
+            <div class="est info" title="Estes ficam livres do limite do perfil." data-id="bateria-frase-pendentes"><span class="g" data-campo="bateria-frase-pendentes-g">◆</span><span class="rot">Sem limite</span><span class="val" data-campo="bateria-frase-pendentes" title="Gatilhos, barra de luz, microfone por rádio e giroscópio">Gatilhos, luz, microfone e giroscópio</span></div>
             <!-- O VÃO DE 58px, E POR QUE ELE ERA O DEFEITO — 31/08/2026.
                  Palavra dela: *"aqui em perfil da bateria essa seção tá muito feia
                  e distoante do resto da página, tá destacando negativamente"*.
@@ -1521,7 +1519,7 @@
 
         <!-- ---------- SAÚDE DO SISTEMA + PREPARAR OS JOGOS ---------- -->
         <div class="sec-rot sr-exame sec-alta">
-          <span>O exame de hoje <span class="ajuda">?<span class="dica">Um exame do que costuma brigar com os controles nesta máquina. Cada linha diz <b>o que está</b>; o <b>?</b> ao lado dela diz o que foi visto, por que importa e o que fazer.<br><br>O selo carrega <b>símbolo e cor</b> juntos, para quem não distingue verde de laranja ler o estado pelo desenho.<br><br>Os três botões à direita <b>já rodaram sozinhos neste exame</b> — é por isso que os achados falam no passado ("estava ligado em 2 jogos, desliguei"). O botão serve para <b>refazer</b>, quando você mexeu em alguma coisa e quer conferir de novo.</span></span>
+          <span>O exame de hoje <span class="ajuda">?<span class="dica">O que costuma brigar com os controles neste computador. Passe o mouse numa linha para ler o que foi visto e o que fazer. Os consertos já rodaram; os botões ao lado servem para repetir.</span></span>
             <span class="conta" data-id="exame-contagem" data-campo="exame-contagem" data-hef-alvo="html">8 linhas <span class="sep">·</span> nenhum aviso</span></span>
           <span></span>
           <span>Preparar os jogos</span>
@@ -1532,7 +1530,7 @@
             <div class="saude">
               <span class="selo ok"><span class="sg">✓</span>OK</span>
               <span class="txt"><span>Regra de permissão dos controles instalada</span></span>
-              <span class="ajuda">?<span class="dica" style="left:auto;right:22px"><b>O que eu vi:</b> a regra <b>70-hefesto.rules</b> está em /etc/udev/rules.d e foi lida pelo sistema.<br><br><b>Por que importa:</b> sem ela o Hefesto não consegue escrever nos controles, e gatilho, luz e vibração ficam mudos nos quatro.<br><br><b>O que fazer:</b> nada — está no lugar.</span></span>
+              <span class="ajuda">?<span class="dica" style="left:auto;right:22px"><b>O que eu vi:</b> a regra <b>70-hefesto.rules</b> está em /etc/udev/rules.d e foi lida pelo sistema.<br><br><b>Por que importa:</b> sem ela o Hefesto não consegue escrever nos controles, e gatilho, luz e vibração ficam mudos.<br><br><b>O que fazer:</b> nada — está no lugar.</span></span>
             </div>
             <div class="saude">
               <span class="selo ok"><span class="sg">✓</span>OK</span>
@@ -1578,7 +1576,7 @@
   <rect x="19" y="13" width="3" height="6" rx="1.5" fill="none" stroke="currentColor" stroke-width="2"/>
   <rect x="27" y="13" width="3" height="6" rx="1.5" fill="none" stroke="currentColor" stroke-width="2"/>
 </svg></span><span>Um gamepad virtual por jogador (co-op)</span></span>
-              <span class="ajuda">?<span class="dica" style="left:auto;right:22px"><b>O que eu vi:</b> o co-op está ligado e o Hefesto criou <b>2</b> gamepads virtuais, um para cada controle.<br><br><b>Por que importa:</b> é o que dá um jogador a cada pessoa em vez de todo mundo mexer no mesmo boneco. É também por isso que <code>/dev/input/js*</code> tem 6 nós para 4 aparelhos.<br><br><b>O que fazer:</b> nada — é assim que o jogo local funciona.</span></span>
+              <span class="ajuda">?<span class="dica" style="left:auto;right:22px"><b>O que eu vi:</b> o co-op está ligado e o Hefesto criou <b>2</b> gamepads virtuais, um para cada controle.<br><br><b>Por que importa:</b> é o que dá um jogador a cada pessoa em vez de todo mundo mexer no mesmo boneco.<br><br><b>O que fazer:</b> nada — é assim que o jogo local funciona.</span></span>
             </div>
             <div class="saude">
               <span class="selo nt"><span class="sg">i</span>NOTA</span>
@@ -1594,23 +1592,23 @@
           </div>
           <div class="risco"></div>
           <div class="col-acao">
-            <button class="btn" title="Sem senha e sem fechar nada: arruma o áudio dos 2 controles, desliga o Steam Input onde ele atrapalha e põe a linha de inicialização nos jogos instalados, com cópia de segurança. O exame já rodou isto — o botão refaz." data-gesto="refazer-consertos">Refazer os consertos automáticos</button>
-            <button class="btn" title="Trava de novo o Proton que você validou nos jogos escolhidos — e diz o motivo em português quando não dá." data-gesto="refazer-proton">Refazer a fixação do Proton</button>
-            <button class="btn" title="Mostra, jogo por jogo, a sobreposição Vulkan pendurada por dentro, e só então tira. Guarda cópia do arquivo e devolve aqui mesmo. Já medimos tirar no jogo que engasgava e o engasgo continuou — não prometo que resolve." data-gesto="procurar-camadas">Tirar a sobreposição Vulkan</button>
+            <button class="btn" title="Arruma o áudio dos 2 controles, desliga o Steam Input onde ele atrapalha e põe a linha de inicialização nos jogos. Sem senha e sem fechar nada, e com cópia de segurança." data-gesto="refazer-consertos">Refazer os consertos automáticos</button>
+            <button class="btn" title="Trava de novo o Proton que você validou nos jogos escolhidos. Quando não dá, diz o motivo." data-gesto="refazer-proton">Refazer a fixação do Proton</button>
+            <button class="btn" title="Mostra, jogo por jogo, a sobreposição Vulkan pendurada por dentro, e só então tira. Guarda cópia do arquivo. Tirar pode não resolver o engasgo." data-gesto="procurar-camadas">Tirar a sobreposição Vulkan</button>
           </div>
         </div>
 
         <!-- ---------- AVANÇADO + DETALHES ---------- -->
         <div class="sec-rot sr-avancado sec-alta">
-          <span>Avançado <span class="ajuda">?<span class="dica">Gestos raros. <b>Restaurar de fábrica</b> devolve o perfil de fábrica e pergunta antes — os seus perfis salvos continuam onde estão.<br><br><b>Aplicar aos jogos da Steam</b> põe a linha de inicialização do Hefesto em todos os jogos instalados de uma vez. Pergunta antes, porque precisa fechar a Steam por uns 20 segundos — e com um jogo aberto ele não mexe em nada.<br><br>O painel ao lado é a saída crua do Hefesto: é daqui que você copia quando for relatar um problema.</span></span></span><span></span>
+          <span>Avançado <span class="ajuda">?<span class="dica">Gestos raros. O painel ao lado é a saída crua do Hefesto: copie daqui para relatar um problema.</span></span></span><span></span>
           <span>Detalhes técnicos</span>
         </div>
         <div class="avancado">
           <div class="lista">
-            <button class="btn vermelho" title="Devolve o perfil de fábrica. Pergunta antes, e os seus perfis salvos continuam onde estão." data-gesto="restaurar-de-fabrica">Restaurar de fábrica</button>
-            <button class="btn" title="Põe a linha de inicialização do Hefesto em TODOS os jogos instalados, preservando as opções que você já tem e deixando cópia de segurança ao lado de cada arquivo. Pergunta antes, e precisa fechar a Steam por uns 20 segundos." data-gesto="aplicar-aos-jogos">Aplicar aos jogos da Steam</button>
-            <div class="acao"><button class="btn" data-campo="ver-plugins-razao" data-hef-alvo="classe" data-hef-classe="apagado" data-hef-atributo="aria-disabled" data-gesto="ver-plugins" title="Lista os plugins do daemon e relê. Hoje só o terminal alcança isso.">Ver os plugins carregados</button><span class="ajuda porque" tabindex="0">?<span class="dica" data-campo="ver-plugins-razao" data-hef-alvo="html"><i class="nada"></i></span></span></div>
-            <button class="btn" title="Joga as últimas 80 linhas do registro técnico no painel ao lado." data-gesto="ver-detalhes">Ver detalhes</button>
+            <button class="btn vermelho" title="Devolve o perfil de fábrica. Pergunta antes, e os seus perfis salvos ficam onde estão." data-gesto="restaurar-de-fabrica">Restaurar de fábrica</button>
+            <button class="btn" title="Põe a linha de inicialização do Hefesto em todos os jogos instalados, sem perder as opções que você já tem e com cópia de segurança. Pergunta antes: precisa fechar a Steam por uns 20 segundos." data-gesto="aplicar-aos-jogos">Aplicar aos jogos da Steam</button>
+            <div class="acao"><button class="btn" data-campo="ver-plugins-razao" data-hef-alvo="classe" data-hef-classe="apagado" data-hef-atributo="aria-disabled" data-gesto="ver-plugins" title="Lista os plugins do serviço e relê.">Ver os plugins</button><span class="ajuda porque" tabindex="0">?<span class="dica" data-campo="ver-plugins-razao" data-hef-alvo="html"><i class="nada"></i></span></span></div>
+            <button class="btn" title="Põe as últimas 80 linhas do registro técnico no painel ao lado." data-gesto="ver-detalhes">Ver detalhes</button>
           </div>
           <div class="risco"></div>
           <div class="col-log">
@@ -1783,7 +1781,7 @@
 
   <h2>A regra da maiúscula, escrita para as outras abas seguirem</h2>
   <ul>
-    <li><b>Valor de campo começa com maiúscula:</b> <i>Ligado</i>, <i>Sim, e volta pausado</i>,
+    <li><b>Valor de campo começa com maiúscula:</b> <i>Ligado</i>, <i>Sim — e continua depois de reiniciar</i>,
       <i>Nada é limitado</i>, <i>Os 2 controles</i>. Ele é uma <b>resposta</b> a um rótulo, não a
       continuação da frase dele — quem lê a coluna de valores sozinha lê uma lista de respostas.</li>
     <li><b>O que não é valor de campo fica em minúscula:</b> a contagem no rótulo de uma seção

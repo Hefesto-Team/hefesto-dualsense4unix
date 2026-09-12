@@ -44,10 +44,12 @@ N = len(CONECTADOS)
 LUGARES = len(MESA)
 USB = [c for c in CONECTADOS if c["via"] == "USB"]
 BT = [c for c in CONECTADOS if c["via"] == "BT"]
-#: Nós de `/dev/input/js*`: cada DualSense publica DOIS (o gamepad e os sensores
-#: de movimento — é o `uniq` que os colapsa num aparelho só, em
-#: `emulation_actions._chave_do_aparelho`), e cada gamepad virtual publica um.
-NOS = 2 * N + N
+#: A CONTA DOS NÓS DE `/dev/input/js*` SAIU DA TELA — 11/09/2026, A1-032. Ela
+#: era `2 * N + N` (cada DualSense publica DOIS — o gamepad e os sensores de
+#: movimento —, e cada gamepad virtual publica um) e aparecia na nota do co-op.
+#: Caminho de kernel na tela é da mesma família de `uinput` e `hidraw`, que o
+#: glossário proíbe, e a frase acima já explicava o co-op inteiro. A conta
+#: continua viva onde ela tem dono: `emulation_actions._chave_do_aparelho`.
 
 
 #: MEDIDO no Chrome (1920×1080) com o `olhar.py` desta pasta, 28/08/2026 — e é
@@ -992,7 +994,7 @@ ACHADOS = [
     saude("OK", "✓", "Regra de permissão dos controles instalada",
           "<b>O que eu vi:</b> a regra <b>70-hefesto.rules</b> está em /etc/udev/rules.d e foi lida pelo sistema."
           "<br><br><b>Por que importa:</b> sem ela o Hefesto não consegue escrever nos controles, e gatilho, luz e "
-          "vibração ficam mudos nos quatro."
+          "vibração ficam mudos."
           "<br><br><b>O que fazer:</b> nada — está no lugar."),
     saude("OK", "✓", "O serviço sobe sozinho no login",
           "<b>O que eu vi:</b> a unidade <b>hefesto.service</b> está habilitada para o seu usuário."
@@ -1018,7 +1020,7 @@ ACHADOS = [
     saude("NOTA", "i", "Um gamepad virtual por jogador (co-op)",
           f"<b>O que eu vi:</b> o co-op está ligado e o Hefesto criou <b>{N}</b> gamepads virtuais, um para cada controle."
           "<br><br><b>Por que importa:</b> é o que dá um jogador a cada pessoa em vez de todo mundo mexer no mesmo "
-          f"boneco. É também por isso que <code>/dev/input/js*</code> tem {NOS} nós para {2 * N} aparelhos."
+          "boneco."
           "<br><br><b>O que fazer:</b> nada — é assim que o jogo local funciona.",
           glifos=("led-jogador",)),
     saude("NOTA", "i", "Proton fixado em 9.0-4 para 3 jogos",
@@ -1078,55 +1080,29 @@ MEIO = len(ACHADOS) // 2 + len(ACHADOS) % 2
 # quebraria a pintura do produto — o vocabulário da TELA e o endereço do DADO
 # são coisas separadas, e é por isso que esta mudança cabe num arquivo só.
 D_SERVICO = ('<span class="ajuda">?<span class="dica">'
-             f'O serviço é o Hefesto rodando em segundo plano. Ele é quem fala com os '
-             f'controles — sem ele, o Linux vê {N} gamepads comuns e nada mais.<br><br>'
-             '<b>Parar o serviço não é desligar o Hefesto na aba Jogar</b>: lá ele continua '
-             'rodando e só sai do meio do jogo; aqui ele deixa de rodar.<br><br>'
-             f'<b>Reiniciar</b> resolve a maioria dos travamentos e não perde nenhum ajuste seu, '
-             f'em nenhum dos {N}.<br><br>'
-             '<b>Retomar</b> só acende quando o serviço está pausado. A pausa fica gravada em '
-             'disco e <b>sobrevive a desligar o computador</b>: sem este botão, ele renasce pausado.'
+             f'O Hefesto rodando por trás. Sem ele, o Linux vê {N} gamepads comuns e nada '
+             'mais. Parar aqui não é o mesmo que desligar o Hefesto na aba Jogar: lá ele só '
+             'sai do meio do jogo.'
              '</span></span>')
 
-# O QUE CADA PERFIL FAZ, DERIVADO. Nenhum rótulo e nenhum número digitados: os
-# três nomes vêm de `ROTULOS_DOS_PERFIS`, o teto de `TETO_POR_PERFIL` +
-# `RUMBLE_POLICY_MULT`, e a lista do que ele ainda não alcança de
-# `LINHAS_DO_TETO`. No dia em que a barra de luz ganhar ponto de aplicação, ela
-# sai da frase sozinha — nas duas telas, porque as duas leem o mesmo dono.
-_LINHAS_DA_DICA = "".join(
-    f'<b>{ROT_PERFIL[p]}</b> — '
-    + (f'põe teto na vibração: {forca_do_perfil(p)}.' if forca_do_perfil(p)
-       else ('você decide item a item, aba por aba.' if p == ORC["PERFIS"][-1]
-             else 'nada é limitado; o que o jogo pedir chega inteiro.'))
-    + '<br>'
-    for p in ORC["PERFIS"])
-
+# O QUE CADA PERFIL FAZ SAIU DAQUI — 11/09/2026, A1-003. As três linhas eram
+# derivadas de `ROTULOS_DOS_PERFIS` + `RUMBLE_POLICY_MULT` e saíam IDÊNTICAS no
+# `title` dos três botões três centímetros abaixo (`_botoes_bateria`, linha
+# 969): a dica repetia a tela. A derivação não se perdeu — ela continua viva no
+# dono, que é quem pinta os botões.
 D_BATERIA = ('<span class="ajuda">?<span class="dica">'
-             'O que fica ligado em todos os controles, e quanto isso custa de bateria. As abas '
-             'continuam mandando no que fazem — nenhum ajuste seu é apagado.<br><br>'
-             + _LINHAS_DA_DICA +
-             '<br>É o perfil <b>geral</b>: vale para os '
-             f'{N} controles. Cada um pode sobrepô-lo na linha dele.'
+             'Quanto os controles podem gastar de bateria. Vale para os '
+             f'{N}, e cada um pode ter o seu na aba Conexões. Nenhum ajuste seu é apagado.'
              '</span></span>')
 
 D_EXAME = ('<span class="ajuda">?<span class="dica">'
-           'Um exame do que costuma brigar com os controles nesta máquina. Cada linha diz '
-           '<b>o que está</b>; o <b>?</b> ao lado dela diz o que foi visto, por que importa e o '
-           'que fazer.<br><br>'
-           'O selo carrega <b>símbolo e cor</b> juntos, para quem não distingue verde de '
-           'laranja ler o estado pelo desenho.<br><br>'
-           'Os três botões à direita <b>já rodaram sozinhos neste exame</b> — é por isso que os '
-           'achados falam no passado ("estava ligado em 2 jogos, desliguei"). O botão serve para '
-           '<b>refazer</b>, quando você mexeu em alguma coisa e quer conferir de novo.'
+           'O que costuma brigar com os controles neste computador. Passe o mouse numa linha '
+           'para ler o que foi visto e o que fazer. Os consertos já rodaram; os botões ao lado '
+           'servem para repetir.'
            '</span></span>')
 
 D_AVANCADO = ('<span class="ajuda">?<span class="dica">'
-              'Gestos raros. <b>Restaurar de fábrica</b> devolve o perfil de fábrica e pergunta '
-              'antes — os seus perfis salvos continuam onde estão.<br><br>'
-              '<b>Aplicar aos jogos da Steam</b> põe a linha de inicialização do Hefesto em '
-              'todos os jogos instalados de uma vez. Pergunta antes, porque precisa fechar a '
-              'Steam por uns 20 segundos — e com um jogo aberto ele não mexe em nada.<br><br>'
-              'O painel ao lado é a saída crua do Hefesto: é daqui que você copia quando for '
+              'Gestos raros. O painel ao lado é a saída crua do Hefesto: copie daqui para '
               'relatar um problema.'
               '</span></span>')
 
@@ -1177,10 +1153,8 @@ MIOLO = f'''
       <div class="quadro-topo">
         <span class="quadro-titulo">Sistema</span>
         <span class="ajuda">?<span class="dica">
-          Esta aba é sobre a <b>máquina</b>, não sobre um controle: o serviço que fala com os
-          {N}, os gamepads virtuais que ele cria para os jogos, o exame do que costuma brigar
-          com controle nesta máquina, e os gestos raros.<br><br>
-          Por isso a fita lá em cima está apagada — nada aqui muda de controle para controle.
+          Esta aba é sobre o computador, não sobre um controle. Por isso a fita de controles
+          está apagada aqui.
         </span></span>
       </div>
       <div class="quadro-corpo">
@@ -1194,20 +1168,20 @@ MIOLO = f'''
 
           <div class="bloco2">
             <div class="col-est">
-{est("O serviço está", "Ligado", "ok", "✓", ident=_id("hefesto-estado"))}
-{est("Pausado", "Sim, e volta pausado", "warn", "!", dica="A pausa fica gravada em disco e sobrevive a desligar o computador. O botão Retomar, ao lado, é a saída — até 27/08/2026 só o terminal saía dela.", ident=_id("hefesto-pausa"))}
+{est("Serviço", "Ligado", "ok", "✓", ident=_id("hefesto-estado"))}
+{est("Pausado", "Sim — e continua depois de reiniciar", "warn", "!", dica="O botão Retomar, ao lado, tira o serviço da pausa.", ident=_id("hefesto-pausa"))}
 {est("Trocar de perfil ao abrir o jogo", "Ligado", "ok", "✓", ident=_id("hefesto-troca-de-perfil"), alvo="html")}
-{est("Como ele enxerga a janela", "Wayland · COSMIC", "info", "◆", ident=_id("hefesto-ambiente"))}
+{est("Ambiente gráfico", "Wayland · COSMIC", "info", "◆", dica="É por ele que o Hefesto descobre qual janela está na frente.", ident=_id("hefesto-ambiente"))}
               <div class="est {AUTOSTART_CLS}" data-id="{_id("hefesto-autostart")}"><span class="g" data-campo="{_id("hefesto-autostart")}-g">{AUTOSTART_G}</span><span class="rot">Ligar junto com o computador</span>
                 <span class="chave{AUTOSTART_CHAVE}" data-gesto="{_gesto("autostart")}" data-campo="{_id("hefesto-autostart")}" data-hef-alvo="classe" data-hef-classe="on"></span></div>
             </div>
             <div class="risco"></div>
             <div class="col-acao">
-{item_cinza("Retomar", "Tira o serviço da pausa agora. Só acende com a pausa ativa — e ela sobrevive a desligar o computador.", "retomar", cls="verde")}
-{item_escondido("Corrigir modo de execução", "Aparece no lugar do «Reiniciar o serviço» quando o serviço está de pé por fora do sistema: ali reiniciar não funciona, porque quem está rodando não é o do sistema. Este botão pede que ele saia e sobe o jeito certo — nada do que você ajustou se perde.", "corrigir-modo", CAMPO_DO_MODO_AVULSO)}
-{item_cinza("Reiniciar o serviço", "Para e liga de novo. Resolve a maioria dos travamentos e não perde nenhum ajuste seu.", "reiniciar")}
+{item_cinza("Retomar", "Tira o serviço da pausa.", "retomar", cls="verde")}
+{item_escondido("Corrigir o serviço", "O serviço está de pé por fora do sistema, e ali reiniciar não funciona. Este botão o faz sair e subir do jeito certo. Nada do que você ajustou se perde.", "corrigir-modo", CAMPO_DO_MODO_AVULSO)}
+{item_cinza("Reiniciar o serviço", "Para e liga de novo. Resolve a maioria dos travamentos, e nenhum ajuste seu se perde.", "reiniciar")}
 {item(ROTULO_ATUALIZAR, DICA_ATUALIZAR, gesto=_gesto("atualizar"), em_voo=EM_VOO_ATUALIZAR)}
-{item("Parar o serviço", f"O Hefesto deixa de rodar e os {N} viram gamepads comuns do Linux. Não é o interruptor Hefesto da aba Jogar, que só o tira do meio do jogo. Pergunta antes, dizendo o que se perde.", "btn vermelho", gesto=_gesto("desligar"))}
+{item("Parar o serviço", f"O Hefesto deixa de rodar e os {N} viram gamepads comuns do Linux. Pergunta antes, dizendo o que se perde.", "btn vermelho", gesto=_gesto("desligar"))}
             </div>
           </div>
 
@@ -1233,10 +1207,10 @@ MIOLO = f'''
                  do `<select>` que saiu, então a conta do portão dos dois blocos não
                  muda de valor — só de forma. -->
             <div class="seg bat-perfis" data-id="{_id("bateria-perfil")}">{_botoes_bateria()}</div>
-{est("O que ele impõe", impoe(PERFIL_DA_MESA), "info", "◆", dica="O que este perfil limita hoje, em todos os controles. O degrau vem de RUMBLE_POLICY_MULT, no daemon — nenhum número escrito nesta tela.", ident=_id("bateria-impoe"))}
-{est("Vale para", f"Os {N} controles", "info", "◆", dica="É o teto geral. Cada controle pode sobrepô-lo na linha dele, e o campo de lá diz qual dos dois está valendo.", ident=_id("bateria-vale-para"))}
-{est("O teto alcança", _frase(ALCANCA), "info", "◆", ident=CAMPO_DO_ALCANCE, dica="Onde o teto do perfil age de verdade hoje. Sai de LINHAS_DO_TETO, no produto — nenhum nome escrito nesta tela.")}
-{est("Ainda sem teto", _frase(PENDENTES), "info", "◆", ident=CAMPO_DOS_PENDENTES, inteiro=_frase(PENDENTES, curto=False), dica="Estes ficam livres do teto do perfil. Quando um ganhar limite próprio, ele sai desta lista sozinho.")}
+{est("Limite", impoe(PERFIL_DA_MESA), "info", "◆", dica="O que este perfil limita hoje, em todos os controles.", ident=_id("bateria-impoe"))}
+{est("Vale para", f"Os {N} controles", "info", "◆", dica="É o limite geral. Cada controle pode ter o seu na aba Conexões, e o campo de lá diz qual está valendo.", ident=_id("bateria-vale-para"))}
+{est("Com limite", _frase(ALCANCA), "info", "◆", ident=CAMPO_DO_ALCANCE, dica="Onde o limite do perfil age hoje.")}
+{est("Sem limite", _frase(PENDENTES), "info", "◆", ident=CAMPO_DOS_PENDENTES, inteiro=_frase(PENDENTES, curto=False), dica="Estes ficam livres do limite do perfil.")}
             <!-- O VÃO DE 58px, E POR QUE ELE ERA O DEFEITO — 31/08/2026.
                  Palavra dela: *"aqui em perfil da bateria essa seção tá muito feia
                  e distoante do resto da página, tá destacando negativamente"*.
@@ -1284,9 +1258,9 @@ MIOLO = f'''
           </div>
           <div class="risco"></div>
           <div class="col-acao">
-{item("Refazer os consertos automáticos", f"Sem senha e sem fechar nada: arruma o áudio dos {N} controles, desliga o Steam Input onde ele atrapalha e põe a linha de inicialização nos jogos instalados, com cópia de segurança. O exame já rodou isto — o botão refaz.", "btn", gesto=_gesto("refazer-consertos"))}
-{item("Refazer a fixação do Proton", "Trava de novo o Proton que você validou nos jogos escolhidos — e diz o motivo em português quando não dá.", gesto=_gesto("refazer-proton"))}
-{item("Tirar a sobreposição Vulkan", "Mostra, jogo por jogo, a sobreposição Vulkan pendurada por dentro, e só então tira. Guarda cópia do arquivo e devolve aqui mesmo. Já medimos tirar no jogo que engasgava e o engasgo continuou — não prometo que resolve.", gesto=_gesto("procurar-camadas"))}
+{item("Refazer os consertos automáticos", f"Arruma o áudio dos {N} controles, desliga o Steam Input onde ele atrapalha e põe a linha de inicialização nos jogos. Sem senha e sem fechar nada, e com cópia de segurança.", "btn", gesto=_gesto("refazer-consertos"))}
+{item("Refazer a fixação do Proton", "Trava de novo o Proton que você validou nos jogos escolhidos. Quando não dá, diz o motivo.", gesto=_gesto("refazer-proton"))}
+{item("Tirar a sobreposição Vulkan", "Mostra, jogo por jogo, a sobreposição Vulkan pendurada por dentro, e só então tira. Guarda cópia do arquivo. Tirar pode não resolver o engasgo.", gesto=_gesto("procurar-camadas"))}
           </div>
         </div>
 
@@ -1297,10 +1271,10 @@ MIOLO = f'''
         </div>
         <div class="avancado">
           <div class="lista">
-{item("Restaurar de fábrica", "Devolve o perfil de fábrica. Pergunta antes, e os seus perfis salvos continuam onde estão.", "btn vermelho", gesto=_gesto("restaurar-de-fabrica"))}
-{item("Aplicar aos jogos da Steam", "Põe a linha de inicialização do Hefesto em TODOS os jogos instalados, preservando as opções que você já tem e deixando cópia de segurança ao lado de cada arquivo. Pergunta antes, e precisa fechar a Steam por uns 20 segundos.", gesto=_gesto("aplicar-aos-jogos"))}
-{item_cinza("Ver os plugins carregados", "Lista os plugins do daemon e relê. Hoje só o terminal alcança isso.", "ver-plugins")}
-{item("Ver detalhes", "Joga as últimas 80 linhas do registro técnico no painel ao lado.", gesto=_gesto("ver-detalhes"))}
+{item("Restaurar de fábrica", "Devolve o perfil de fábrica. Pergunta antes, e os seus perfis salvos ficam onde estão.", "btn vermelho", gesto=_gesto("restaurar-de-fabrica"))}
+{item("Aplicar aos jogos da Steam", "Põe a linha de inicialização do Hefesto em todos os jogos instalados, sem perder as opções que você já tem e com cópia de segurança. Pergunta antes: precisa fechar a Steam por uns 20 segundos.", gesto=_gesto("aplicar-aos-jogos"))}
+{item_cinza("Ver os plugins", "Lista os plugins do serviço e relê.", "ver-plugins")}
+{item("Ver detalhes", "Põe as últimas 80 linhas do registro técnico no painel ao lado.", gesto=_gesto("ver-detalhes"))}
           </div>
           <div class="risco"></div>
           <div class="col-log">
@@ -1423,7 +1397,7 @@ LEGENDA = f'''<div class="nota">
 
   <h2>A regra da maiúscula, escrita para as outras abas seguirem</h2>
   <ul>
-    <li><b>Valor de campo começa com maiúscula:</b> <i>Ligado</i>, <i>Sim, e volta pausado</i>,
+    <li><b>Valor de campo começa com maiúscula:</b> <i>Ligado</i>, <i>Sim — e continua depois de reiniciar</i>,
       <i>Nada é limitado</i>, <i>Os {N} controles</i>. Ele é uma <b>resposta</b> a um rótulo, não a
       continuação da frase dele — quem lê a coluna de valores sozinha lê uma lista de respostas.</li>
     <li><b>O que não é valor de campo fica em minúscula:</b> a contagem no rótulo de uma seção

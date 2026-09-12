@@ -13,7 +13,8 @@ de bateria e o exame de saúde.
 AS DUAS MORDIDAS, e as duas são as do piloto da aba Controles:
 
     --sem-ponte           desliga a ponte: a tela tem de ficar na cena FIXA do
-                          mockup ("Ligado", "Sim, e volta pausado", "Os 4
+                          mockup ("Ligado", "Sim — e continua depois de
+                          reiniciar", "Os 4
                           controles", "8 linhas"). Se ela mostrar a máquina
                           dela, o dado não está vindo do Python.
     --arranca-enderecos   apaga os `data-id` que o `aba09.py` escreve: a pintura
