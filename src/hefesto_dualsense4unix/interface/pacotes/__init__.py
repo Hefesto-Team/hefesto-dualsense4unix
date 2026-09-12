@@ -1285,6 +1285,12 @@ from . import (  # noqa: E402
     a08_conexoes,  # noqa: F401
     a09_sistema,  # noqa: F401
     a10_perfis,  # noqa: F401
+    # A `a11` NÃO É UMA ABA — é a página AVULSA da calibração dos sensores
+    # (`calibrar-sensores.html`), que abre por fora das dez, por um botão da
+    # Controles. Ela entra aqui pela MESMA razão que as dez: o fecho de import
+    # do `portao_a_casa_sabe_e_o_produto_nao_faz` lê o AST, e um nome montado
+    # pelo `_carregar_tudo()` não aparece ali. F3-CALIBRAR, 11/09/2026.
+    a11_calibrar_sensores,  # noqa: F401
     rodape,  # noqa: F401
 )
 

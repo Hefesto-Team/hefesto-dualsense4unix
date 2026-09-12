@@ -433,9 +433,37 @@ BOOTSTRAP = r"""
     // não o ato de reescrevê-lo. Quem nasce sem selo (um nó recriado por uma
     // troca de bloco) ganha o dele no tique seguinte, como sempre ganhou.
     if(el.dataset.hefVisto !== '1'){ el.dataset.hefVisto = '1'; }
+    // ESCREVE E DEPOIS RELÊ, como o `cor`, o `plastico` e o `atributo` — e a
+    // razão aqui é a MESMA que aqueles três já pagaram: **o CSSOM normaliza**.
+    //
+    // MEDIDO NESTE MOTOR em 11/09/2026 (F3-CALIBRAR), com a página de
+    // calibração e a bancada PARADA::
+    //
+    //     escreve "5.0%"   →  el.style.width devolve "5%"     (o `.0` some)
+    //     escreve "22.0%"  →  el.style.width devolve "22%"
+    //     escreve "0.4%"   →  el.style.width devolve "0.4%"    (casa)
+    //
+    // Com a comparação ANTES da escrita, os dois primeiros nunca casam: o
+    // piloto reescrevia a mesma largura e somava +1 **a cada tique, para
+    // sempre**, em toda barra cuja largura desse número redondo. E o pior é
+    // que ISSO NÃO É SAMBA — o DOM não muta, porque a declaração serializada é
+    // a mesma: `--conta-mutacoes 40` dava ZERO com 69 valores por tique. O
+    // contador de pinturas é O instrumento com que esta casa prova que um
+    // endereço existe, e ele estava inflado sem que a régua do samba pudesse
+    // ver.
+    //
+    // QUEM PAGA: todo eixo de `mesa_viva._barra_bipolar`, que emite
+    // `f"{largura:.1f}"` — as barras de giro e acelerômetro da `02-controles`,
+    // as da calibração, e qualquer barra futura com uma casa decimal. A cura
+    // aqui cobre TODOS os chamadores; curá-la num pacote cobriria um.
+    //
+    // E ELA TAMBÉM CURA O VALOR INVÁLIDO: uma largura que o CSSOM RECUSA (o
+    // travessão de um lugar sem dono, `—%`) não muda nada e agora conta 0, em
+    // vez de contar uma pintura que não aconteceu a cada tique.
     if(alvo === 'largura'){
-      if(el.style.width !== t + '%'){ el.style.width = t + '%'; return 1; }
-      return 0;
+      const antes = el.style.width;
+      el.style.width = t + '%';
+      return el.style.width === antes ? 0 : 1;
     }
     // O ALVO `altura` — O DÉCIMO PRIMEIRO, e ele é o gêmeo vertical do
     // `largura`. Nasceu em 05/09/2026 para as ONDAS SONORAS da aba 02: as
@@ -487,9 +515,14 @@ BOOTSTRAP = r"""
         return !!(el.matches && el.matches(':active'));
       }catch(e){ return false; }
     }
+    // O GÊMEO VERTICAL DO `largura`, e ele vai junto pela mesma medição — ver
+    // o bloco daquele alvo. Cobrir um e deixar o outro é a correção pela metade
+    // que esta casa persegue: a normalização do CSSOM não distingue eixo, e a
+    // primeira barra de altura com uma casa decimal repetiria o defeito inteiro.
     if(alvo === 'altura'){
-      if(el.style.height !== t + '%'){ el.style.height = t + '%'; return 1; }
-      return 0;
+      const antes = el.style.height;
+      el.style.height = t + '%';
+      return el.style.height === antes ? 0 : 1;
     }
     if(alvo === 'fundo'){
       if(el.style.background !== t){ el.style.background = t; return 1; }
