@@ -1084,7 +1084,23 @@ CSS = CSS_GLIFO + CSS_LUZINHAS + """
      os 14 que faltavam. Não é altura inventada — é a mesma faixa do chip da
      fita (28 a 30px) que esta aba já usa no `.mascara .chip`, e as duas
      fileiras continuam IGUAIS entre si, que é o que ela pediu. */
-  .rota{display:flex;gap:5px;margin-top:5px}
+  /* A FILEIRA QUEBRA EM VEZ DE CORTAR — decisão dela, 12/09/2026, opção (b) de
+     três. O que ela comprou está medido: com `flex:1` e `white-space:nowrap` os
+     botões NÃO encolhem abaixo do próprio rótulo, então a fileira transborda a
+     coluna e a coluna a corta. Medido em janela de 1120px: o «Só no controle»
+     sai pela borda direita, com o rótulo pela metade.
+
+     POR QUE NÃO ENCOLHER O TEXTO: a saída fácil seria tirar o `nowrap` e deixar
+     o `ellipsis` comer o rótulo. Isso troca um botão cortado por um botão
+     ilegível — e há régua desta casa que reprova texto engolido sem afordância
+     (`test_a_janela_estreita_nao_engole_o_desenho`, artigo 2). Rótulo de botão
+     não tem onde guardar a metade que sumiu.
+
+     O PREÇO É ALTURA, E SÓ ONDE APERTA: abaixo de ~1140px a terceira desce para
+     uma segunda linha e o card cresce 35px (30 do botão + 5 do vão). Na largura
+     do desenho — e na janela dela, que é 1918 — nada quebra e nada muda: a
+     conta de `ALTURA_DO_CARD` continua valendo porque ela é medida ali. */
+  .rota{display:flex;flex-wrap:wrap;gap:5px;margin-top:5px}
   .rota button{flex:1;height:30px;border-radius:5px;font-size:10.5px;white-space:nowrap;font-family:inherit;
     border:1px solid var(--border-forte);background:var(--panel);color:var(--texto-mudo);cursor:pointer}
   .rota button.on{border-color:var(--purple);background:var(--sel-bg);color:var(--fg);font-weight:600}
@@ -2433,8 +2449,14 @@ def bloco(c, *, bat, carga=None, glifos_on, l2, r2, touch, sticks,
             </div>
             {onda(mic_v, mic_mudo, "mic")}
             {linha_de_volume("mic-porque")}
-              <span class="trilho"><span class="cheio" style="width:{mic_vol}%"></span><input class="puxa-vol" type="range" min="0" max="100" step="1" value="{mic_vol}" data-gesto="volume" data-volume="microfone" aria-label="{ROTULO_VOL_MIC}" title="{DICA_VOL_MIC}"></span>
-              <span class="n">{mic_vol}</span>
+              <!-- O VOLUME DO MICROFONE GANHA ENDEREÇO, 12/09/2026: é a
+                   METADE QUE FALTOU da decisão dela de 02/09 (item 16), que
+                   endereçou o alto-falante desta mesma coluna e deixou este
+                   deslizante no número do DESENHO. Dono do valor e razão dos
+                   dois alvos num endereço só: `a02_controles.volume_do_microfone`. -->
+              <span class="trilho"><span class="cheio" data-campo="mic-barra"
+                data-hef-alvo="largura" style="width:{mic_vol}%"></span><input class="puxa-vol" type="range" min="0" max="100" step="1" value="{mic_vol}" data-gesto="volume" data-volume="microfone" data-campo="mic-barra" data-hef-alvo="valor" aria-label="{ROTULO_VOL_MIC}" title="{DICA_VOL_MIC}"></span>
+              <span class="n" data-campo="mic-num">{mic_vol}</span>
               <button class="mudo-i" data-gesto="mudo" data-mudo="microfone" data-campo="mic-botao-estado" data-hef-alvo="atributo" data-hef-atributo="{ATRIBUTO_DA_LUZ_DO_MIC}" title="{DICA_MIC_MUDO}">🎙</button>
               {ponto_de_interrogacao("mic-porque")}
             </div>
@@ -3065,23 +3087,36 @@ CSS += f"""
      *"CSS de elemento que ninguém mais escreve é promessa esperando alguém
      tropeçar nela"*.
 
-     O PISCANDO É O MESMO VERDE, não uma cor nova: o que muda é o FUNDO
-     pulsando, porque piscar a borda de um botão de 22px some no olho — medido
-     no desenho. `prefers-reduced-motion` o deixa aceso e firme, que continua
-     dizendo a verdade (está no ar), só sem o guia visual do movimento. */
+     ELE NÃO PISCA MAIS — decisão dela, 12/09/2026, escolhendo a opção (c) de
+     três: **verde FIXO enquanto está captando.** A razão é de desenho e ela a
+     comprou inteira: *a barra de nível está a dois centímetros mostrando o
+     mesmo fato*, e duas animações para um fato só competem entre si — a que
+     carrega informação é a barra, que se move com a voz. O botão diz o ESTADO,
+     e estado não pulsa.
+
+     O QUE ISTO NÃO CUSTOU: nada. Os três estados continuam distintos sem
+     movimento — mudo é neutro, no ar é borda e letra verdes, captando é isso
+     MAIS o fundo esverdeado. A distinção nunca morou na animação.
+
+     E O VALOR NÃO É NOVO: `.14` é exatamente o que o ramo
+     `prefers-reduced-motion` já pintava para quem pede menos movimento. A
+     escolha dela promoveu esse ramo a único, em vez de inventar um terceiro
+     tom — quem já via a tela assim continua vendo a mesma coisa.
+
+     **A DECLARAÇÃO DO QUADRO E O RAMO DE MENOS MOVIMENTO SAÍRAM JUNTO**, e é a
+     regra que o `.solta` deixou: *"CSS de elemento que ninguém mais escreve é
+     promessa esperando alguém tropeçar nela"*. Uma animação sem quem a acione
+     é a mesma promessa, com outro nome.
+
+     E ESTE PARÁGRAFO NÃO SOLETRA O QUE SAIU, de propósito: a régua irmã varre
+     este mesmo bloco procurando a palavra do movimento, e um comentário que a
+     escrevesse viraria a primeira ocorrência do que ele veio dizer que não
+     existe mais. Esta casa já pagou por isso quatro vezes em uma semana. */
   .mudo-i[{ATRIBUTO_DA_LUZ_DO_MIC}="{MIC_GRAVANDO}"],
   .mudo-i[{ATRIBUTO_DA_LUZ_DO_MIC}="{MIC_CAPTANDO}"]{{
     border-color:var(--green);color:var(--green)}}
   .mudo-i[{ATRIBUTO_DA_LUZ_DO_MIC}="{MIC_CAPTANDO}"]{{
-    animation:mic-captando 1.2s ease-in-out infinite}}
-  @keyframes mic-captando{{
-    0%,100%{{background:var(--panel)}}
-    50%{{background:rgba(80,250,123,.22)}}
-  }}
-  @media (prefers-reduced-motion: reduce){{
-    .mudo-i[{ATRIBUTO_DA_LUZ_DO_MIC}="{MIC_CAPTANDO}"]{{
-      animation:none;background:rgba(80,250,123,.14)}}
-  }}
+    background:rgba(80,250,123,.14)}}
 """
 
 MIOLO = f'''
@@ -3891,8 +3926,13 @@ def _conferir(doc):
     #     —, e é ela que garante que o anel e o retângulo nunca discordem. Por
     #     isso a conta de baixo é `alvos.count(alvo)`, e não `1`: perder UMA das
     #     duas continua reprovando com o nome.
+    #     E O DESLIZANTE DO MICROFONE ENTROU NA LISTA — 12/09/2026. Ele era o
+    #     único volume da coluna sem endereço nenhum, e por isso o número e a
+    #     barra ficavam no valor do DESENHO para sempre; a régua não o via
+    #     porque uma lista só cobra o que está escrita nela.
     for campo, alvos in (("bateria-barra", ("largura",)),
                          ("alto-barra", ("largura", "valor")),
+                         ("mic-barra", ("largura", "valor")),
                          ("luz-cor", ("cor", "cor")), ("touch-ponto", ("classe",))):
         tags = re.findall(r'<[^>]*data-campo="' + re.escape(campo) + r'"[^>]*>', corpo)
         exigir(len(tags) == len(MESA) * len(alvos),

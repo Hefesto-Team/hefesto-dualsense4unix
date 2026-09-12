@@ -1346,6 +1346,44 @@ def sink_do_cache(uniq: str) -> str:
     return str(getattr(lida, "sink_do_controle", "") or "") if lida else ""
 
 
+def volume_do_microfone(audio: Any) -> int | None:
+    """O volume da captura deste controle, 0 a 100, ou ``None`` — *não sei*.
+
+    **UM DONO PARA O NÚMERO E PARA A BARRA**, que é o mesmo arranjo do
+    `alto-num`/`alto-barra`: dois arredondamentos para o mesmo fato é o defeito
+    que faz dois campos do mesmo bloco discordarem na tela.
+
+    O VALOR VEM DO ESTADO, NUNCA DO `pactl`. `audio.volume_captura` é escrito
+    por `canal_do_microfone_loop`, numa thread, a cada dois segundos; quem
+    perguntasse aqui rodaria um subprocesso por controle a cada tique da
+    pintura. A regra está escrita no daemon, no bloco do `audio`, e vale igual
+    deste lado.
+
+    ``None`` É DE PRIMEIRA CLASSE e sai em três casos honestos: o laço ainda
+    não perguntou (a chave nem aparece), este controle não tem fonte de captura
+    (o do rádio antes de a ponte subir), ou o `pactl` não respondeu. Chutar zero
+    pintaria "microfone no mínimo" sobre um microfone que ninguém leu.
+
+    OS DOIS ALVOS NUM ENDEREÇO SÓ (`largura` na barra pintada, `valor` no
+    deslizante) são o arranjo que o `alto-barra` já usa logo abaixo: os dois
+    mostram o MESMO volume, um como largura e o outro como posição do polegar.
+    Dois `data-campo` para o mesmo número seriam duas verdades a sincronizar.
+
+    O TETO É 100 PORQUE O TRILHO VAI DE ZERO A CEM: o `pactl` devolve por cento
+    e admite passar de 100 (super-amplificação), e o `<input type="range" max="100">`
+    desta tela não tem como representar nem produzir isso. Um número acima do
+    que a barra alcança faria o texto e o polegar dizerem coisas diferentes
+    sobre o mesmo volume — que é exatamente o que este dono único existe para
+    impedir.
+    """
+    if not isinstance(audio, dict):
+        return None
+    lido = audio.get("volume_captura")
+    if not isinstance(lido, int) or isinstance(lido, bool):
+        return None
+    return max(0, min(100, lido))
+
+
 def no_do_alto_falante(uniq: str) -> str:
     """O ``.monitor`` do sink deste controle, ou ``""`` quando não se sabe.
 
@@ -2182,6 +2220,10 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
         tem_leitor = isinstance(c.get("inputs"), dict)
         e = c.get("inputs") or {}
         a = c.get("audio") or {}
+        # LIDO UMA VEZ, USADO NOS DOIS CAMPOS — ver `volume_do_microfone`. O
+        # número e a barra são o MESMO fato, e lê-lo duas vezes é como dois
+        # campos do mesmo bloco começam a divergir.
+        mic_volume = volume_do_microfone(a)
         # O ALTO-FALANTE TEM UM DONO SÓ, e ele mora no motor. Esta linha era
         # `sp = c.get("speaker") or {}`, e o `or {}` escondia DOIS defeitos:
         #
@@ -2396,6 +2438,24 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
             # leu este microfone — a mesma disciplina do terceiro estado do ♪.
             "mic-botao-estado": mesa_viva.estado_do_botao_do_mic(
                 a.get("luz_do_mic")),
+            # O VOLUME DO MICROFONE — 12/09/2026, e é a METADE QUE FALTOU da
+            # decisão dela de 02/09 (item 16): *"o número E a barra. Hoje os
+            # dois estão congelados no desenho: com o volume em 40, a tela
+            # continua mostrando 100"*. Aquela cura endereçou o alto-falante
+            # (`alto-num`/`alto-barra`, vinte linhas abaixo) e deixou o
+            # deslizante de CIMA, na MESMA coluna, com o defeito inteiro de pé
+            # — medido em 12/09: nem o `<span class="n">` nem o `.cheio` tinham
+            # `data-campo`, e o produto mostrava o `80` do desenho para sempre.
+            #
+            # OS DOIS DESFECHOS SÃO OS MESMOS DO ALTO-FALANTE, e cada um pela
+            # razão que já está escrita lá: o número diz `—` quando ninguém leu
+            # (separa "zero" de "não sei"), e a barra vai a ZERO — `largura` é
+            # um dos `ALVOS_QUE_O_TRAVESSAO_NAO_ATENDE`, e `width: "—%"` o
+            # CSSOM descarta calado, somando +1 pintura por tique para sempre.
+            "mic-num": (
+                mic_volume if mic_volume is not None else mesa_viva.SEM_LEITOR
+            ),
+            "mic-barra": mic_volume if mic_volume is not None else 0,
             # O `mic-modo` SAIU DAQUI EM 01/09/2026, e ele APAGAVA DOIS BOTÕES.
             # O endereço `data-campo="mic-modo"` não era uma folha: era o
             # `<span class="rota mic-modo">` que ENVOLVE o Virtual e o Nativo. O
@@ -3901,8 +3961,14 @@ def volume(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
 
     **SÃO DOIS MÉTODOS, E NÃO É DETALHE** — é a metade medida da D-12. O
     `mic.volume.set` mexe no ganho da FONTE no PipeWire (é literalmente *"o
-    canal específico dele"*) e **não toca no firmware**: não apaga a luz
-    vermelha e não tira o botão físico do controle. O `speaker.set {volume}`
+    canal específico dele"*) e, desde 12/09/2026 (MIC-VOLUME-02), também no
+    registrador `common[6]` do aparelho — mas **não no mudo do firmware**: não
+    apaga a luz vermelha e não tira o botão físico do controle.
+
+    **ESTE PARÁGRAFO JÁ DISSE "não toca no firmware", E ERA VERDADE ATÉ 12/09.**
+    O fato foi SUBSTITUÍDO, não anotado ao lado: manter as duas versões vivas
+    obrigaria a próxima pessoa a escolher entre elas. O que a frase queria
+    dizer continua de pé, e é a metade que sobrou. O `speaker.set {volume}`
     escreve no registrador do aparelho. Somar os dois num método só *"faria a
     interface prometer uma coisa e entregar outra"* — a docstring do daemon.
 
