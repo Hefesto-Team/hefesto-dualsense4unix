@@ -1,4 +1,4 @@
-# Hefesto — Dualsense4Unix · Applet COSMIC
+# Hefesto — DualSense4Unix · Applet COSMIC
 
 Applet **nativo do COSMIC** (Rust + [libcosmic]) que aparece em
 **Configurações → Painel → Miniaplicativos** e fala com o daemon Python do
@@ -87,7 +87,7 @@ applet COSMIC).
 
 1. Abra **Configurações → Painel** (ou **Dock**) → **Miniaplicativos**
    (*Add applet*).
-2. Procure por **"Hefesto - Dualsense4Unix"** e clique em **Adicionar**.
+2. Procure por **"Hefesto - DualSense4Unix"** e clique em **Adicionar**.
 3. O ícone aparece no painel. Clique para abrir o popover.
 
 > Se não aparecer logo, faça logout/login (o COSMIC relê os `.desktop` de

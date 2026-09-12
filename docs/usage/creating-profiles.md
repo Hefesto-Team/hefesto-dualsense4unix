@@ -354,7 +354,7 @@ xdotool getactivewindow getwindowname       # título atual
 xdotool getactivewindow getwindowpid        # pid → readlink /proc/<pid>/exe
 ```
 
-O segundo valor de `WM_CLASS` é o que o Hefesto - Dualsense4Unix usa. Apps Qt/GTK podem ter `instance` e `class` idênticos; outros divergem (Steam aparece como `Steam` no campo `class`).
+O segundo valor de `WM_CLASS` é o que o Hefesto - DualSense4Unix usa. Apps Qt/GTK podem ter `instance` e `class` idênticos; outros divergem (Steam aparece como `Steam` no campo `class`).
 
 ## Criando via CLI
 

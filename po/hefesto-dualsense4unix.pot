@@ -1,5 +1,5 @@
 # SOME DESCRIPTIVE TITLE.
-# Copyright (C) YEAR Hefesto - Dualsense4Unix project
+# Copyright (C) YEAR Hefesto - DualSense4Unix project
 # This file is distributed under the same license as the hefesto-dualsense4unix package.
 # FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
 #
@@ -381,7 +381,7 @@ msgid "Aplicar e fechar"
 msgstr ""
 
 #: src/hefesto_dualsense4unix/app/tray.py:218
-msgid "Hefesto - Dualsense4Unix (carregando...)"
+msgid "Hefesto - DualSense4Unix (carregando...)"
 msgstr ""
 
 #: src/hefesto_dualsense4unix/app/tray.py:222
@@ -393,7 +393,7 @@ msgid "Perfis"
 msgstr ""
 
 #: src/hefesto_dualsense4unix/app/tray.py:239
-msgid "Sair do Hefesto - Dualsense4Unix"
+msgid "Sair do Hefesto - DualSense4Unix"
 msgstr ""
 
 #: src/hefesto_dualsense4unix/app/tray.py:445
@@ -403,12 +403,12 @@ msgstr ""
 
 #: src/hefesto_dualsense4unix/app/tray.py:492
 #, python-format
-msgid "Hefesto - Dualsense4Unix - perfil: %s"
+msgid "Hefesto - DualSense4Unix - perfil: %s"
 msgstr ""
 
 #: src/hefesto_dualsense4unix/app/tray.py:494
 #, python-format
-msgid "Hefesto - Dualsense4Unix - %d perfis"
+msgid "Hefesto - DualSense4Unix - %d perfis"
 msgstr ""
 
 #: src/hefesto_dualsense4unix/app/mesa.py:111
@@ -588,7 +588,7 @@ msgid ""
 msgstr ""
 
 #: src/hefesto_dualsense4unix/gui/main.glade:96
-msgid "Hefesto - Dualsense4Unix"
+msgid "Hefesto - DualSense4Unix"
 msgstr ""
 
 #. Tamanho/peso saem da escala tipográfica (.hefesto-titulo

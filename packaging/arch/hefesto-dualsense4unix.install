@@ -16,7 +16,7 @@ post_install() {
     cat <<MSG
 
 ================================================================
-  Hefesto - Dualsense4Unix v${1%-*} instalado em /usr/.
+  Hefesto - DualSense4Unix v${1%-*} instalado em /usr/.
 
   Para subir o daemon como servico do usuario:
     systemctl --user enable --now hefesto-dualsense4unix.service
@@ -44,7 +44,7 @@ post_upgrade() {
 }
 
 pre_remove() {
-    echo ">>> Parando servicos do Hefesto - Dualsense4Unix (se ativos)..."
+    echo ">>> Parando servicos do Hefesto - DualSense4Unix (se ativos)..."
     systemctl --user stop hefesto-dualsense4unix.service 2>/dev/null || true
     systemctl --user disable hefesto-dualsense4unix.service 2>/dev/null || true
 

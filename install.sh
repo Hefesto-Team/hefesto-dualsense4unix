@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# install.sh — instala Hefesto - Dualsense4Unix no ambiente do usuário.
+# install.sh — instala Hefesto - DualSense4Unix no ambiente do usuário.
 #
 # Formatos (--format=FMT, ou prompt interativo; default: native):
 #   native     venv editável + atalho (instalação de desenvolvimento, atual).
@@ -1331,7 +1331,7 @@ format_appimage() {
     cat > "${DESKTOP_TARGET}" <<DESKTOP
 [Desktop Entry]
 Type=Application
-Name=Hefesto - Dualsense4Unix
+Name=Hefesto - DualSense4Unix
 GenericName=DualSense Controller
 Comment=Gerenciador DualSense para Linux
 Exec=${target} --gui
@@ -1660,7 +1660,7 @@ if [[ "${FORMAT}" != "native" ]]; then
         exit 0
     fi
     printf '\n─────────────────────────────────────────\n'
-    printf ' Hefesto - Dualsense4Unix instalado (%s)\n' "${FORMAT}"
+    printf ' Hefesto - DualSense4Unix instalado (%s)\n' "${FORMAT}"
     printf ' Obs.: desligar do Steam Input, preparo dos jogos da Steam e os\n'
     printf ' passos de plataforma (Proton pinado, BT no máximo, cmdline) só\n'
     printf ' valem no formato "native" (padrão).\n'
@@ -2857,7 +2857,7 @@ else
     cat > "${DESKTOP_TARGET}" <<DESKTOP
 [Desktop Entry]
 Type=Application
-Name=Hefesto - Dualsense4Unix
+Name=Hefesto - DualSense4Unix
 GenericName=DualSense Controller
 Comment=Gerenciador DualSense para Linux
 Exec=${_EXEC_LINE}
@@ -4015,7 +4015,7 @@ if [[ "${DRY_RUN:-0}" -eq 1 ]]; then
 fi
 printf '\n'
 printf '─────────────────────────────────────────\n'
-printf ' Hefesto - Dualsense4Unix instalado\n'
+printf ' Hefesto - DualSense4Unix instalado\n'
 printf '─────────────────────────────────────────\n'
 printf ' Abrir:       hefesto-dualsense4unix-gui\n'
 printf ' Desinstalar: ./uninstall.sh\n'

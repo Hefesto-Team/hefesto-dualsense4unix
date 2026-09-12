@@ -1,4 +1,4 @@
-# Hefesto - Dualsense4Unix — DualSense PURE-HID no nível USB (OPT-IN / escalada).
+# Hefesto - DualSense4Unix — DualSense PURE-HID no nível USB (OPT-IN / escalada).
 # FEAT-DSX-DEFINITIVE-FIX-01 §7.5 · quirk DELAY_CTRL_MSG é a ALTERNATIVA (ver guia).
 #
 # O QUE FAZ: desliga as interfaces de ÁUDIO USB do DualSense (classe 01: Audio

@@ -356,7 +356,7 @@ class UinputMouseDevice:
             rx, ry: stick direito (0-255) — vira REL_WHEEL/REL_HWHEEL.
             l2, r2: trigger analógico (0-255) — acima de TRIGGER_PRESS_THRESHOLD
                     conta como botão pressionado (L2→cross, R2→triangle).
-            buttons: conjunto canônico Hefesto - Dualsense4Unix pressionado agora.
+            buttons: conjunto canônico Hefesto - DualSense4Unix pressionado agora.
             now: timestamp monotônico opcional (injetável em testes). Default
                  usa `time.monotonic()`.
         """
@@ -377,7 +377,7 @@ class UinputMouseDevice:
     def _resolve_emulated_set(
         self, buttons: frozenset[str], l2: int, r2: int
     ) -> frozenset[str]:
-        """Converte botões Hefesto - Dualsense4Unix + triggers analógicos em set canônico emulado.
+        """Converte botões Hefesto - DualSense4Unix + triggers analógicos em set canônico emulado.
 
         L2 analógico acima de TRIGGER_PRESS_THRESHOLD injeta 'cross' virtual.
         R2 análogo injeta 'triangle'. Se usuário também apertou cross/triangle

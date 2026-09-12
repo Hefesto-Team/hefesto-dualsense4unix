@@ -1,4 +1,4 @@
-## RPM spec para o Hefesto - Dualsense4Unix.
+## RPM spec para o Hefesto - DualSense4Unix.
 ## v3.4.0 (FEAT-PACKAGING-FEDORA-01).
 ##
 ## Estrategia: empacotamento Python 3 padrao (pyproject.toml + hatchling
@@ -84,7 +84,7 @@ Recommends:     wvkbd
 Suggests:       onboard
 
 %description
-Hefesto - Dualsense4Unix is a user-level Linux daemon that enables the
+Hefesto - DualSense4Unix is a user-level Linux daemon that enables the
 DualSense (PS5) adaptive triggers, with automatic per-window profile
 switching, RGB lightbar, rumble, Xbox 360 controller emulation via
 uinput, and a 9-tab GTK3 GUI (Status, Triggers, Lightbar, Rumble,

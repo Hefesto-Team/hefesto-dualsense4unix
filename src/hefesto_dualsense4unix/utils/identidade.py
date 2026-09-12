@@ -87,13 +87,27 @@ class Identidade:
 
 #: O APP. Cada literal aqui é o que estava cravado no código antes deste módulo
 #: existir — mudar qualquer um muda a máquina dela.
+#:
+#: A GRAFIA DO NOME DIVIDE ESTA LISTA EM DUAS, e a divisão é medida
+#: (`F6-O-NOME-TEM-UM-DONO`, 11/09/2026):
+#:
+#: * ``nome_longo`` é TEXTO — é como o produto se apresenta, e a grafia certa é
+#:   ``DualSense4Unix``, com o ``S`` do DualSense. Ele carrega o travessão
+#:   porque é a string EXATA que a barra da janela mostra e que o ``<h1>`` das
+#:   dez páginas já dizia; quem mostra o nome LÊ daqui, não digita.
+#: * ``wm_class`` continua ``Hefesto-Dualsense4Unix``, com ``s`` minúsculo, e
+#:   isso NÃO é esquecimento: ele é o elo que o ``StartupWMClass=`` do
+#:   ``.desktop`` já instalado na máquina dela casa LETRA POR LETRA, o valor que
+#:   o daemon gravou em ``last_class`` e o que os perfis de jogo guardam em
+#:   ``window_class``. Trocar a caixa some com o ícone da dock e mata o perfil
+#:   por janela — calado, que é o defeito que esta casa mais paga.
 HEFESTO = Identidade(
     slug="hefesto-dualsense4unix",
     app_id="hefesto-dualsense4unix",
     wm_instance="hefesto-dualsense4unix",
     wm_class="Hefesto-Dualsense4Unix",
     nome="Hefesto",
-    nome_longo="Hefesto - Dualsense4Unix",
+    nome_longo="Hefesto — DualSense4Unix",
     icone="hefesto-dualsense4unix",
     unit_daemon="hefesto-dualsense4unix.service",
     entrypoint_gui="hefesto-dualsense4unix-gui",

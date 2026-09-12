@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Validador estrito de acentuação PT-BR para o repositório Hefesto - Dualsense4Unix.
+Validador estrito de acentuação PT-BR para o repositório Hefesto - DualSense4Unix.
 
 Varre arquivos de código, scripts e documentação em busca de palavras
 escritas sem o acento canônico (ex.: ``funcao`` em vez de ``função``,

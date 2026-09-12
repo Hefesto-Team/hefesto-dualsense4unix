@@ -1,4 +1,4 @@
-"""hefesto_dualsense4unix.gui.widgets — widgets GTK3 reutilizaveis do Hefesto - Dualsense4Unix.
+"""hefesto_dualsense4unix.gui.widgets — widgets GTK3 reutilizaveis do Hefesto - DualSense4Unix.
 
 Exportacoes disponiveis:
   BUTTON_GLYPH_LABELS — mapa PT-BR de nomes canonicos de botoes.

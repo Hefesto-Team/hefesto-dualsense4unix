@@ -39,7 +39,7 @@
 
 ## Arquitetura em dois níveis
 
-O DualSense aceita via HID apenas **10 modos low-level** + array de **7 forces** (bytes 0–255). Os "19 modos" documentados no DSX Paliverse são **presets de alto nível**: combinações específicas de `(mode, forces)` com semântica reconhecível (Galloping, Machine, Bow, etc.). Hefesto - Dualsense4Unix implementa os dois níveis:
+O DualSense aceita via HID apenas **10 modos low-level** + array de **7 forces** (bytes 0–255). Os "19 modos" documentados no DSX Paliverse são **presets de alto nível**: combinações específicas de `(mode, forces)` com semântica reconhecível (Galloping, Machine, Bow, etc.). Hefesto - DualSense4Unix implementa os dois níveis:
 
 - `hefesto_dualsense4unix.core.controller.IController.set_trigger(side, mode, forces)` — low-level direto.
 - `hefesto_dualsense4unix.core.trigger_effects.TriggerEffect` + factories (`galloping(...)`, `machine(...)`, etc.) — high-level, traduzem para `(mode, forces)`.

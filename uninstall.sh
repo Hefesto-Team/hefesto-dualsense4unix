@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# uninstall.sh - WIPE do Hefesto - Dualsense4Unix.
+# uninstall.sh - WIPE do Hefesto - DualSense4Unix.
 # Remove artefatos do install nativo, o applet COSMIC, .deb (apt remove),
 # Flatpak, AppImage em ~/Aplicativos, .venv, caches Python, runtime e dados.
 #
@@ -201,7 +201,7 @@ uso() {
     cat <<'FIM'
 Uso: ./uninstall.sh [opções]
 
-Remove o Hefesto - Dualsense4Unix (serviços, binários, regras udev, módulos
+Remove o Hefesto - DualSense4Unix (serviços, binários, regras udev, módulos
 DKMS, drop-ins). Por padrão PRESERVA sua configuração e seus perfis.
 
 Opções:
@@ -1640,5 +1640,5 @@ if [[ -d "${HOME}/.local/share/hefesto-dualsense4unix" ]] \
 fi
 
 printf '\n─────────────────────────────────────────\n'
-printf ' Hefesto - Dualsense4Unix desinstalado (wipe completo)\n'
+printf ' Hefesto - DualSense4Unix desinstalado (wipe completo)\n'
 printf '─────────────────────────────────────────\n\n'

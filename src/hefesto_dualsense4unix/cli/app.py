@@ -1,4 +1,4 @@
-"""CLI Typer do Hefesto - Dualsense4Unix.
+"""CLI Typer do Hefesto - DualSense4Unix.
 
 Subcomandos implementados em W1.3:
   - `hefesto-dualsense4unix version`
@@ -199,7 +199,7 @@ def player_leds(
 
 @app.command()
 def tui() -> None:
-    """Abre a TUI Textual do Hefesto - Dualsense4Unix."""
+    """Abre a TUI Textual do Hefesto - DualSense4Unix."""
     from hefesto_dualsense4unix.tui.app import run_tui
 
     run_tui()

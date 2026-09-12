@@ -19,7 +19,7 @@ Consulte `CHANGELOG.md` para o estado atual.
 **Não abra issue pública** para vulnerabilidades de segurança. Use disclosure responsável por e-mail:
 
 - **Contato:** `andre.dsbf@gmail.com`
-- **Assunto sugerido:** `[Hefesto - Dualsense4Unix SEC] <resumo curto>`
+- **Assunto sugerido:** `[Hefesto - DualSense4Unix SEC] <resumo curto>`
 
 Inclua no relatório:
 

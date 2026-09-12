@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Portão de glifos do Hefesto - Dualsense4Unix: reprova emoji, preserva UI textual.
+"""Portão de glifos do Hefesto - DualSense4Unix: reprova emoji, preserva UI textual.
 
 O critério vem do ADR-011 (``docs/adr/011-glyphs-vs-emojis.md``) e não de uma
 lista de faixas escrita à mão:

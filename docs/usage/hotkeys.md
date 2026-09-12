@@ -1,6 +1,6 @@
 # Hotkeys do DualSense
 
-O Hefesto - Dualsense4Unix reconhece atalhos nativos do DualSense detectados pelo daemon via
+O Hefesto - DualSense4Unix reconhece atalhos nativos do DualSense detectados pelo daemon via
 `HotkeyManager`. Todos os atalhos respeitam o buffer de 150 ms (V3-2) para
 distinguir combos de toques isolados.
 

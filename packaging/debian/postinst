@@ -21,7 +21,7 @@ case "$1" in
 
         # NÃO habilita o servico systemd automaticamente — opt-in.
         echo ""
-        echo "Hefesto - Dualsense4Unix instalado com sucesso."
+        echo "Hefesto - DualSense4Unix instalado com sucesso."
         echo ""
         echo "Todas as dependencias Python estao bundladas em"
         echo "  /opt/hefesto-dualsense4unix/venv/"

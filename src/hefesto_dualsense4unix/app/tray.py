@@ -211,11 +211,11 @@ class AppTray:
         ns = indicator_cls._hefesto_ns
         self._indicator_ns = ns
         self._indicator.set_status(ns.IndicatorStatus.ACTIVE)
-        self._indicator.set_title("Hefesto - Dualsense4Unix")
+        self._indicator.set_title(identidade.atual().nome_longo)
 
         self._menu = Gtk.Menu()
 
-        self._status_item = Gtk.MenuItem(label=_("Hefesto - Dualsense4Unix (carregando...)"))
+        self._status_item = Gtk.MenuItem(label=_("Hefesto - DualSense4Unix (carregando...)"))
         self._status_item.set_sensitive(False)
         self._menu.append(self._status_item)
 
@@ -236,7 +236,7 @@ class AppTray:
 
         self._menu.append(Gtk.SeparatorMenuItem())
 
-        quit_item = Gtk.MenuItem(label=_("Sair do Hefesto - Dualsense4Unix"))
+        quit_item = Gtk.MenuItem(label=_("Sair do Hefesto - DualSense4Unix"))
         quit_item.connect("activate", lambda _w: self.on_quit())
         self._menu.append(quit_item)
 
@@ -326,7 +326,7 @@ class AppTray:
             ),
         )
         notify(
-            summary="Hefesto - Dualsense4Unix",
+            summary=identidade.atual().nome_longo,
             body=(
                 "Tray icon indisponivel no COSMIC. "
                 "Habilite o applet 'Area de status' no cosmic-panel "
@@ -340,7 +340,7 @@ class AppTray:
         if flag_path is not None:
             with contextlib.suppress(OSError):
                 flag_path.write_text(
-                    "Hefesto - Dualsense4Unix tray warning shown.\n", encoding="utf-8"
+                    "Hefesto - DualSense4Unix tray warning shown.\n", encoding="utf-8"
                 )
 
     def stop(self) -> None:
@@ -489,9 +489,9 @@ class AppTray:
                 None,
             )
             label = (
-                _("Hefesto - Dualsense4Unix - perfil: %s") % active
+                _("Hefesto - DualSense4Unix - perfil: %s") % active
                 if active
-                else _("Hefesto - Dualsense4Unix - %d perfis") % len(profiles)
+                else _("Hefesto - DualSense4Unix - %d perfis") % len(profiles)
             )
             self._status_item.set_label(label + controllers_suffix)
 

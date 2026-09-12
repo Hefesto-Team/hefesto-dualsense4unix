@@ -1,4 +1,4 @@
-"""Hefesto - Dualsense4Unix — gerenciador DualSense para Linux."""
+"""Hefesto - DualSense4Unix — gerenciador DualSense para Linux."""
 
 from importlib.metadata import PackageNotFoundError, version
 
@@ -17,7 +17,7 @@ def _check_pydantic_v2() -> None:
     """Avisa se pydantic < 2 está instalado (BUG-DEB-SMOKE-PYDANTIC-V2-NOBLE-01).
 
     Ubuntu 22.04 (Jammy) e 24.04 (Noble) ainda empacotam python3-pydantic 1.x
-    no apt. Hefesto - Dualsense4Unix usa API v2 (ConfigDict) e falhará em runtime. Warning
+    no apt. Hefesto - DualSense4Unix usa API v2 (ConfigDict) e falhará em runtime. Warning
     ImportWarning aqui orienta o usuário antes do crash.
     """
     try:
@@ -32,7 +32,7 @@ def _check_pydantic_v2() -> None:
         import warnings
 
         warnings.warn(
-            f"pydantic {pv_str} detectado; Hefesto - Dualsense4Unix requer pydantic >= 2.0. "
+            f"pydantic {pv_str} detectado; Hefesto - DualSense4Unix requer pydantic >= 2.0. "
             "Instale via: pip install --user 'pydantic>=2'.",
             ImportWarning,
             stacklevel=2,

@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 [project]
 name = "hefesto-dualsense4unix"
 version = "0.9.4.5"
-description = "Hefesto - Dualsense4Unix: Linux adaptive trigger daemon for DualSense controllers"
+description = "Hefesto - DualSense4Unix: Linux adaptive trigger daemon for DualSense controllers"
 readme = "README.md"
 requires-python = ">=3.10"
 license = "MIT"

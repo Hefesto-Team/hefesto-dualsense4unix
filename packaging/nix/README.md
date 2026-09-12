@@ -75,7 +75,7 @@ Adicionar ao `configuration.nix` ou `flake.nix` da maquina:
 
           # Habilita o servico systemd user.
           systemd.user.services.hefesto-dualsense4unix = {
-            description = "Hefesto - Dualsense4Unix daemon";
+            description = "Hefesto - DualSense4Unix daemon";
             wantedBy = [ "default.target" ];
             serviceConfig = {
               ExecStart = "${hefesto.packages.${pkgs.system}.default}/bin/hefesto-dualsense4unix daemon start --foreground";
@@ -98,7 +98,7 @@ Adicionar ao `configuration.nix` ou `flake.nix` da maquina:
   ];
 
   systemd.user.services.hefesto-dualsense4unix = {
-    Unit.Description = "Hefesto - Dualsense4Unix daemon";
+    Unit.Description = "Hefesto - DualSense4Unix daemon";
     Install.WantedBy = [ "default.target" ];
     Service = {
       ExecStart = "${inputs.hefesto.packages.${pkgs.system}.default}/bin/hefesto-dualsense4unix daemon start --foreground";

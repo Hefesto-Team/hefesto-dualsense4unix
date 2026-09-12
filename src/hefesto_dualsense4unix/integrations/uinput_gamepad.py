@@ -326,7 +326,7 @@ def normalize_flavor(flavor: str | None) -> str:
         return DEFAULT_FLAVOR
     return resolver_flavor(flavor) or DEFAULT_FLAVOR
 
-# Mapeamento canonico Hefesto - Dualsense4Unix (HOTFIX-2) -> evdev constant usado no uinput.
+# Mapeamento canonico Hefesto - DualSense4Unix (HOTFIX-2) -> evdev constant usado no uinput.
 # Layout Xbox: cross=A, circle=B, square=X, triangle=Y.
 BUTTON_TO_UINPUT: dict[str, str] = {
     "cross": "BTN_A",
