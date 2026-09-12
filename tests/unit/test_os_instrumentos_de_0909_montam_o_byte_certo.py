@@ -291,7 +291,62 @@ def test_o_loopback_e_lido_dos_modulos_curtos():
     assert nos.loopbacks(saida) == ["source=x.monitor sink=hefesto_controle_1"]
 
 
-def test_os_nomes_dos_nos_sao_os_que_ela_decidiu():
+def test_os_nomes_dos_nos_sao_perguntados_ao_produto():
+    """Os dois rótulos estavam DIGITADOS no censo. Agora ele pergunta ao dono.
+
+    TRES-CONTAS-PARA-UM-NUMERO-01 §6 (12/09/2026). Esta régua afirmava
+    `nos.NOME_DO_ALTO_FALANTE == "Alto-falante do Controle"` — ela comparava
+    duas digitações, a do instrumento e a dela mesma, e nenhuma das duas era o
+    produto. Mude o rótulo em `integrations/` e o par continuava verde enquanto
+    o censo passava a dizer «NÃO EXISTE» a um nó que está na lista dela.
+
+    MORDIDA: volte a digitar o rótulo em `_rotulo_do_produto` e este teste
+    continua verde — mas então mude a constante no produto e ele reprova, que é
+    o que a versão anterior não sabia fazer.
+    """
+    from hefesto_dualsense4unix.integrations.alto_falante_bt import (
+        NOME_DO_ALTO_FALANTE_DO_CONTROLE,
+    )
+    from hefesto_dualsense4unix.integrations.dualsense_bt_audio import (
+        NOME_DO_MICROFONE_DO_CONTROLE,
+    )
+
     nos = _instrumento("os_nos_de_som_por_controle")
-    assert nos.NOME_DO_ALTO_FALANTE == "Alto-falante do Controle"
-    assert nos.NOME_DO_MICROFONE == "Microfone do Controle"
+    assert nos._rotulo_do_produto("saida") == NOME_DO_ALTO_FALANTE_DO_CONTROLE
+    assert nos._rotulo_do_produto("entrada") == NOME_DO_MICROFONE_DO_CONTROLE
+
+
+def test_o_censo_casa_o_no_pelo_nome_de_dentro_e_nunca_pela_prosa():
+    """Renomeie o `Description` à mão e o censo continua acertando o dono.
+
+    TRES-CONTAS-PARA-UM-NUMERO-01 §6, e a ressalva dela é o que decide:
+
+        *"aí é foda pq a ideia não é termos nada focado pro meu caso apenas,
+        mas como produto que possa funcionar com outra pessoa."*
+        <!-- noqa-acento: citação literal dela, palavra por palavra -->
+
+    Medido em 09/09 na mesa dela: o mesmo `hefesto_mic_<hex6>` foi atribuído ao
+    controle do CABO numa corrida e ao do RÁDIO na seguinte, sem nada ter mudado
+    no áudio — o assento andou, o texto do `Description` andou junto, e o censo
+    seguiu o texto. A âncora passou a ser o NOME do nó, que o daemon escreve a
+    partir do endereço.
+
+    MORDIDA: faça `_casa` voltar a aceitar o texto do `Description` (ou casar por
+    substring do nome) e a última asserção cai.
+    """
+    from hefesto_dualsense4unix.integrations import canal_do_microfone
+
+    nos = _instrumento("os_nos_de_som_por_controle")
+    do_cabo = canal_do_microfone.nome_do_canal("aa:bb:cc:00:00:11")
+    do_radio = canal_do_microfone.nome_do_canal("aa:bb:cc:00:00:22")
+    assert do_cabo and do_radio and do_cabo != do_radio
+
+    # o nó do CABO, com o `Description` que o assento do RÁDIO produziria
+    assert nos._casa(do_cabo, do_cabo) is True
+    assert nos._casa(do_radio, do_cabo) is False
+    # prosa não casa com nada, nem a que descreve o próprio nó
+    assert nos._casa("Microfone do Controle 1", do_cabo) is False
+    # e sem nome de dentro (controle sem identidade legível) a resposta é NÃO
+    assert nos._casa(do_cabo, "") is False
+    # nem por substring: um vizinho com um dígito a mais não é o dono
+    assert nos._casa(do_cabo + "1", do_cabo) is False
