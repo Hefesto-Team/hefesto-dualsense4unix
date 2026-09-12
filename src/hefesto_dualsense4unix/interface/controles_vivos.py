@@ -142,6 +142,14 @@ RAIZ = AQUI.parents[2]
 import mesa_viva  # noqa: E402
 import monta  # noqa: E402  (o gerador do mockup, usado como BIBLIOTECA)
 
+
+def _a01():  # noqa: ANN202
+    """O pacote da aba 01, importado TARDE — ele puxa o produto inteiro."""
+    from pacotes import a01_jogar
+
+    return a01_jogar
+
+
 import aba02  # noqa: E402  isort:skip
 
 PAGINA = RAIZ / "src" / "hefesto_dualsense4unix" / "interface" / "paginas" / "02-controles.html"  # noqa-acento (`paginas` e o nome da PASTA; caminho nao leva acento)
@@ -1250,8 +1258,12 @@ class Janela:
         mesa = mesa_viva.mesa_do_estado(state, self.leitor_de_cor.conhecidos(), alvo=self.alvo)
         if not mesa:
             self._mesa_ausente(
-                "Nenhum controle ligado agora. Conecte um pelo cabo ou pelo "
-                "rádio — ele aparece sozinho, sem recarregar esta tela.",
+                # A FRASE TEM UM DONO SÓ — `a01_jogar.MESA_VAZIA`. Esta era a
+                # TERCEIRA cópia digitada dela, e ela sobreviveu ao fecho de
+                # 04/09 porque a régua (`test_a01_a_mesa_vazia_fala.py`) só
+                # olhava o `jogar_vivo`. Achada em 11/09 ao aplicar a A3-017,
+                # que encurtou a frase: a cópia ficaria falando sozinha.
+                _a01().MESA_VAZIA,
                 bolinha="○",
                 cor="var(--orange)",
                 conta=" 0 controles: ",

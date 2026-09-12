@@ -2406,10 +2406,14 @@ class HomeActionsMixin(WidgetAccessMixin):
         lock_check = Gtk.CheckButton(
             label="Trava o perfil ativo"
         )
+        # A PALAVRA MUDOU NOS DOIS DONOS — 11/09/2026, proposta A3-014,
+        # aprovada por ela. O rótulo ao lado já diz «Trava o perfil ativo», e
+        # *"congela a troca automática"* era a terceira palavra para a mesma
+        # coisa na mesma linha. A gêmea é `a01_jogar.CADEADO_DICA`, e
+        # `test_a_palavra_do_cadeado_e_a_que_ela_ja_leu` cobra as duas iguais.
         lock_check.set_tooltip_text(
-            "Congela a troca automática: o perfil que você deixou ativo continua "
-            "valendo mesmo ao abrir qualquer jogo. "
-            "Desmarque para o Hefesto voltar a escolher o perfil por você."
+            "O perfil ativo continua valendo mesmo quando você abre outro "
+            "jogo. Desmarque para o Hefesto voltar a escolher sozinho."
         )
         lock_check.connect("toggled", self._on_home_autoswitch_lock_toggled)
         self._home_autoswitch_lock = lock_check
@@ -3307,7 +3311,10 @@ class HomeActionsMixin(WidgetAccessMixin):
             # próxima renderização reconverge com o estado real.
             if resultado is None:
                 self._status_toast(
-                    "home", "O Hefesto está desligado — o cadeado não foi aplicado."
+                    # «cadeado» era o segundo nome da caixa que o rótulo ao
+                    # lado chama de «Trava» — A3-022, 11/09/2026. A gêmea é
+                    # `a01_jogar.CADEADO_RECUSA`.
+                    "home", "O Hefesto está desligado: a trava não foi aplicada."
                 )
             else:
                 self._status_toast(

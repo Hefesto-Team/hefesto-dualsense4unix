@@ -2047,14 +2047,14 @@
         <span class="linha-rot">Status</span>
         <label class="hef-pos ligado" for="hef-ligado" data-gesto="hefesto" data-modo="gamepad"
                data-campo="hef-posicao" data-hef-alvo="classe" data-hef-quando="ligado"
-               title="O Hefesto fica no meio: ele acende as luzes, faz o controle vibrar, dá um jogador para cada controle e escolhe como o jogo vê o aparelho."><span class="pino"></span>Ligado</label>
+               title="O Hefesto acende a luz, faz o controle vibrar, numera os jogadores e escolhe como o jogo vê o controle."><span class="pino"></span>Ligado</label>
         <label class="hef-pos desligado" for="hef-desligado" data-gesto="hefesto" data-modo="native"
                data-campo="hef-posicao" data-hef-alvo="classe" data-hef-quando="desligado"
-               title="Modo Nativo: o Hefesto sai do meio e o jogo fala direto com o controle. Aqui ele não cria um controle para cada pessoa — quem conta os jogadores é o jogo, pelos controles que ele enxerga."><span class="pino"></span>Desligado</label>
+               title="Modo Nativo: o jogo fala direto com o controle, e quem conta os jogadores passa a ser o jogo."><span class="pino"></span>Desligado</label>
         <span class="ajuda">?<span class="dica">
-          <b>Ligado</b> — o Hefesto fica no meio: luz, vibração, gatilho e o número do jogador são por conta dele.<br><br>
-          <b>Desligado</b> — o Hefesto sai do meio e o jogo fala direto com o controle. Aqui ele não cria um controle para cada pessoa — quem conta os jogadores é o jogo, pelos controles que ele enxerga.<br><br>
-          Isto não encerra o serviço. Para isso, a aba <b>Sistema</b>.
+          <b>Ligado</b> — o Hefesto cuida da luz, da vibração, do gatilho e do número do jogador.<br><br>
+          <b>Desligado</b> — o jogo fala direto com o controle, e quem conta os jogadores passa a ser o jogo.<br><br>
+          Isto não para o serviço: para isso, a aba <b>Sistema</b>.
         </span></span>
       </div>
     </div>
@@ -2070,9 +2070,9 @@
              outro diriam a mesma coisa duas vezes. De quebra, os rótulos das
              duas seções ficaram idênticos — texto puro dos dois lados. -->
         <span class="ajuda">?<span class="dica">
-          Vale <b>quando o jogo abrir</b>. O que muda entre os quatro é <b>como o jogo desenha os botões</b> — luz, vibração, gatilho, giroscópio e áudio são por conta do Hefesto em todos.<br><br>
-          Ele <b>tenta na ordem em que estão aqui e para quando acerta</b>; depois não pergunta mais para aquele jogo.<br><br>
-          <b>Segurando PS + R3</b> você pula para o próximo sem largar o controle.
+          Vale <b>no próximo jogo que abrir</b>. O que muda é <b>como o jogo desenha os botões</b> — luz, vibração, gatilho, giroscópio e som são do Hefesto em todos.<br><br>
+          O Hefesto <b>tenta na ordem desta lista</b> e para no primeiro que der certo.<br><br>
+          <b>PS + R3</b> pula para o próximo.
         </span></span>
         <!-- ---------- O CADEADO DA TROCA AUTOMÁTICA, NO CANTO ----------
              08/09/2026, pedido dela olhando a aba: *"esse não trocar de perfil.
@@ -2110,7 +2110,7 @@
              linha de título sem quebrar o quadro na única máquina em que ela
              aparece — a que tem o detector cego. Os dois seguem no mesmo bloco,
              a um palmo um do outro. -->
-        <label class="cadeado" title="Congela a troca automática: o perfil que você deixou ativo continua valendo mesmo ao abrir qualquer jogo. Desmarque para o Hefesto voltar a escolher o perfil por você.">
+        <label class="cadeado" title="O perfil ativo continua valendo mesmo quando você abre outro jogo. Desmarque para o Hefesto voltar a escolher sozinho.">
           <input type="checkbox" data-gesto="cadeado"
                  data-campo="cadeado" data-hef-alvo="marcado">
           <span>Trava o perfil ativo</span>
@@ -2124,29 +2124,29 @@
              modo é estado do processo — existe um só (`app/actions/mode_transition.py`),
              e por isso ele não podia descer para o cartão junto com a máscara. -->
 
-        <div class="hef-modo so-ligado" title="Esta seção só aparece com o Hefesto LIGADO.">
+        <div class="hef-modo so-ligado">
           <div class="escada">
             <span class="degrau on" data-degrau="dualsense" data-gesto="modo-dualsense"
                   data-campo="modo-aceso" data-hef-alvo="classe" data-hef-quando="dualsense"
-                  title="O jogo desenha os botões do PlayStation. É o primeiro que o Hefesto tenta.">Sony DualSense</span>
+                  title="O jogo desenha os botões do PlayStation.">Sony DualSense</span>
             <span class="degrau" data-degrau="xbox" data-gesto="modo-xbox"
                   data-campo="modo-aceso" data-hef-alvo="classe" data-hef-quando="xbox"
-                  title="O jogo desenha os botões do Xbox — o formato que todo jogo entende. É o segundo que o Hefesto tenta.">Xbox</span>
+                  title="O jogo desenha os botões do Xbox — o formato que todo jogo entende.">Xbox</span>
             <span class="degrau" data-degrau="steam" data-gesto="modo-steam"
                   data-campo="modo-aceso" data-hef-alvo="classe" data-hef-quando="steam"
-                  title="A Steam entrega a entrada, e os seus ajustes vencem os do jogo. Trocar para cá exige reabrir a Steam e o jogo — por isso é o último que o Hefesto tenta.">Steam Input</span>
+                  title="A Steam entrega a entrada, e os ajustes que você fez nela vencem os do jogo. Mudar para cá exige reabrir a Steam e o jogo.">Steam Input</span>
             <span class="degrau" data-degrau="navegacao" data-gesto="modo-navegacao" data-modo="desktop"
                   data-campo="modo-aceso" data-hef-alvo="classe" data-hef-quando="navegacao"
-                  title="O controle vira teclado e mouse do computador. O PS+R3 ainda não para aqui.">Navegação</span>
+                  title="O controle vira teclado e mouse do computador.">Navegação</span>
           </div>
         </div>
 
         <!-- O OUTRO LADO DO INTERRUPTOR. Mesma altura da seção de cima (rótulo +
              36px), para a tela não pular quando ela vai e volta. -->
-        <div class="hef-modo so-desligado" title="Esta seção só aparece com o Hefesto DESLIGADO.">
+        <div class="hef-modo so-desligado">
           <div class="escada">
             <span class="degrau on fixo"
-                  title="O Hefesto sai do meio e o jogo fala direto com o controle. Vale no próximo jogo que abrir.">Modo Nativo <span class="sep">·</span> <span class="mud">o DualSense da forma como veio ao mundo</span></span>
+                  title="O jogo fala direto com o controle. Vale no próximo jogo que abrir.">Modo Nativo <span class="sep">·</span> <span class="mud">o controle sem o Hefesto no meio</span></span>
           </div>
         </div>
 
@@ -2212,16 +2212,16 @@
     <!-- ---------- UM BLOCO SÓ: Conectado agora | Atenção ---------- -->
     <div class="quadro">
       <div class="quadro-topo">
-        <span class="quadro-titulo">O Controle é visto como:</span>
+        <span class="quadro-titulo">O controle é visto como:</span>
         <!-- AS DUAS DICAS VIRARAM UMA — 31/08/2026, quando ela mandou o rótulo
              "O jogo vê cada controle como:" subir para o título. Com o rótulo
              fora, dois `?` a três linhas um do outro diriam a mesma coisa duas
              vezes: é o mesmo movimento que o `?` dos modos já tinha feito. -->
         <span class="ajuda">?<span class="dica">
-          A máscara é <b>por controle</b>: cada um pode aparecer de um jeito para o jogo, e o que muda é <b>o desenho dos botões na tela</b>.<br><br>
+          A máscara é <b>por controle</b> e muda só <b>o desenho dos botões no jogo</b>.<br><br>
           <b>DualSense</b> — △ ○ ✕ ▢. &nbsp; <b>Xbox 360</b> — Y B A X. &nbsp; <b>Nintendo Pro</b> — X A B Y, com ZL/ZR e − +.<br><br>
-          O controle na sua mão continua o mesmo: luz, gatilho, giroscópio e áudio seguem por conta do Hefesto em qualquer máscara.<br><br>
-          Clicar num cartão leva a fita de cima para ele. O detalhe de cada um está na aba <b>Controles</b>.
+          O controle na sua mão continua o mesmo.<br><br>
+          Clicar num cartão escolhe esse controle lá em cima.
         </span></span>
       </div>
       <div class="quadro-corpo">
@@ -2249,11 +2249,11 @@
                  a tela diria, não uma legenda de mentira. -->
             <div class="mesa-notas" data-campo="mesa-frase"
                  data-hef-alvo="classe" data-hef-classe="ha">
-              <span class="mesa-nota" data-campo="mesa-frase">Nenhum controle ligado agora. Conecte um pelo cabo ou pelo rádio — ele aparece sozinho, sem recarregar esta tela.</span>
+              <span class="mesa-nota" data-campo="mesa-frase">Nenhum controle ligado. Conecte um pelo cabo ou pelo rádio: ele aparece aqui sozinho.</span>
             </div>
             <div class="mesa-notas" data-campo="mascara-ressalva"
                  data-hef-alvo="classe" data-hef-classe="ha">
-              <span class="mesa-nota" data-campo="mascara-ressalva">Guardada por controle: o Hefesto não está entregando o controle ao jogo agora, e a escolha vale assim que ele voltar a entregar.</span>
+              <span class="mesa-nota" data-campo="mascara-ressalva">Guardada neste controle. Ela passa a valer quando o Hefesto voltar a entregá-lo ao jogo.</span>
             </div>
             <div class="pecas" data-lista="cartoes">
               <div class="cartao alvo"
@@ -2548,7 +2548,7 @@
       <text style="dominant-baseline: central; fill: rgb(200, 204, 218); font-family: Zrnic; font-size: 11px; font-weight: 700; text-anchor: middle; white-space: pre;" x="15.971" y="17.025">R</text>
     </g>
 </svg>
-                <span class="rotulo"><span class="fabricante">Sony <span class="pt">•</span> </span><b data-campo="jogador-espera" data-hef-alvo="classe" data-hef-classe="espera" title="O lugar está reservado e o jogo ainda não recebeu este controle. O número fica forte quando ele entrar na partida."><span data-campo="jogador">Player 1</span></b><br><span data-campo="identidade">Cosmic Red <span class="pt">•</span> USB</span><sup class="degradou" data-campo="degradou-cartao" data-hef-alvo="atributo" data-hef-atributo="title">*</sup><span class="e-primario" data-campo="marcador-principal" data-hef-alvo="classe" data-hef-classe="ha" title="É este controle que o Hefesto ouve para navegar o computador, e é dele que ele lê os botões. Quem é o primário quem decide é o serviço."> <span class="pt">•</span> primário</span><br><span class="bat"><svg class="gl" width="13" height="13" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+                <span class="rotulo"><span class="fabricante">Sony <span class="pt">•</span> </span><b data-campo="jogador-espera" data-hef-alvo="classe" data-hef-classe="espera" title="O jogo ainda não recebeu este controle. O número acende quando ele entrar na partida."><span data-campo="jogador">Player 1</span></b><br><span data-campo="identidade">Cosmic Red <span class="pt">•</span> USB</span><sup class="degradou" data-campo="degradou-cartao" data-hef-alvo="atributo" data-hef-atributo="title">*</sup><span class="e-primario" data-campo="marcador-principal" data-hef-alvo="classe" data-hef-classe="ha" title="É por este controle que o Hefesto navega o computador. Quem o escolhe é o serviço."> <span class="pt">•</span> primário</span><br><span class="bat"><svg class="gl" width="13" height="13" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
 
   <rect x="3" y="10" width="22" height="12" rx="2" fill="none" stroke="currentColor" stroke-width="2"/>
   <path d="M27,14 v4" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>
@@ -2855,7 +2855,7 @@
       <text style="dominant-baseline: central; fill: rgb(200, 204, 218); font-family: Zrnic; font-size: 11px; font-weight: 700; text-anchor: middle; white-space: pre;" x="15.971" y="17.025">R</text>
     </g>
 </svg>
-                <span class="rotulo"><span class="fabricante">Sony <span class="pt">•</span> </span><b data-campo="jogador-espera" data-hef-alvo="classe" data-hef-classe="espera" title="O lugar está reservado e o jogo ainda não recebeu este controle. O número fica forte quando ele entrar na partida."><span data-campo="jogador">Player 2</span></b><br><span data-campo="identidade">Starlight Blue <span class="pt">•</span> BT</span><sup class="degradou" data-campo="degradou-cartao" data-hef-alvo="atributo" data-hef-atributo="title">*</sup><span class="e-primario" data-campo="marcador-principal" data-hef-alvo="classe" data-hef-classe="ha" title="É este controle que o Hefesto ouve para navegar o computador, e é dele que ele lê os botões. Quem é o primário quem decide é o serviço."> <span class="pt">•</span> primário</span><br><span class="bat"><svg class="gl" width="13" height="13" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+                <span class="rotulo"><span class="fabricante">Sony <span class="pt">•</span> </span><b data-campo="jogador-espera" data-hef-alvo="classe" data-hef-classe="espera" title="O jogo ainda não recebeu este controle. O número acende quando ele entrar na partida."><span data-campo="jogador">Player 2</span></b><br><span data-campo="identidade">Starlight Blue <span class="pt">•</span> BT</span><sup class="degradou" data-campo="degradou-cartao" data-hef-alvo="atributo" data-hef-atributo="title">*</sup><span class="e-primario" data-campo="marcador-principal" data-hef-alvo="classe" data-hef-classe="ha" title="É por este controle que o Hefesto navega o computador. Quem o escolhe é o serviço."> <span class="pt">•</span> primário</span><br><span class="bat"><svg class="gl" width="13" height="13" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
 
   <rect x="3" y="10" width="22" height="12" rx="2" fill="none" stroke="currentColor" stroke-width="2"/>
   <path d="M27,14 v4" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>
@@ -3163,7 +3163,7 @@
       <text style="dominant-baseline: central; fill: rgb(200, 204, 218); font-family: Zrnic; font-size: 11px; font-weight: 700; text-anchor: middle; white-space: pre;" x="15.971" y="17.025">R</text>
     </g>
 </svg>
-                <span class="rotulo"><span class="fabricante">Sony <span class="pt">•</span> </span><b data-campo="jogador-espera" data-hef-alvo="classe" data-hef-classe="espera" title="O lugar está reservado e o jogo ainda não recebeu este controle. O número fica forte quando ele entrar na partida."><span data-campo="jogador">—</span></b><br><span data-campo="identidade">—</span><sup class="degradou" data-campo="degradou-cartao" data-hef-alvo="atributo" data-hef-atributo="title">*</sup><span class="e-primario" data-campo="marcador-principal" data-hef-alvo="classe" data-hef-classe="ha" title="É este controle que o Hefesto ouve para navegar o computador, e é dele que ele lê os botões. Quem é o primário quem decide é o serviço."> <span class="pt">•</span> primário</span><br><span class="bat"><svg class="gl" width="13" height="13" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+                <span class="rotulo"><span class="fabricante">Sony <span class="pt">•</span> </span><b data-campo="jogador-espera" data-hef-alvo="classe" data-hef-classe="espera" title="O jogo ainda não recebeu este controle. O número acende quando ele entrar na partida."><span data-campo="jogador">—</span></b><br><span data-campo="identidade">—</span><sup class="degradou" data-campo="degradou-cartao" data-hef-alvo="atributo" data-hef-atributo="title">*</sup><span class="e-primario" data-campo="marcador-principal" data-hef-alvo="classe" data-hef-classe="ha" title="É por este controle que o Hefesto navega o computador. Quem o escolhe é o serviço."> <span class="pt">•</span> primário</span><br><span class="bat"><svg class="gl" width="13" height="13" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
 
   <rect x="3" y="10" width="22" height="12" rx="2" fill="none" stroke="currentColor" stroke-width="2"/>
   <path d="M27,14 v4" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>
@@ -3471,7 +3471,7 @@
       <text style="dominant-baseline: central; fill: rgb(200, 204, 218); font-family: Zrnic; font-size: 11px; font-weight: 700; text-anchor: middle; white-space: pre;" x="15.971" y="17.025">R</text>
     </g>
 </svg>
-                <span class="rotulo"><span class="fabricante">Sony <span class="pt">•</span> </span><b data-campo="jogador-espera" data-hef-alvo="classe" data-hef-classe="espera" title="O lugar está reservado e o jogo ainda não recebeu este controle. O número fica forte quando ele entrar na partida."><span data-campo="jogador">—</span></b><br><span data-campo="identidade">—</span><sup class="degradou" data-campo="degradou-cartao" data-hef-alvo="atributo" data-hef-atributo="title">*</sup><span class="e-primario" data-campo="marcador-principal" data-hef-alvo="classe" data-hef-classe="ha" title="É este controle que o Hefesto ouve para navegar o computador, e é dele que ele lê os botões. Quem é o primário quem decide é o serviço."> <span class="pt">•</span> primário</span><br><span class="bat"><svg class="gl" width="13" height="13" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+                <span class="rotulo"><span class="fabricante">Sony <span class="pt">•</span> </span><b data-campo="jogador-espera" data-hef-alvo="classe" data-hef-classe="espera" title="O jogo ainda não recebeu este controle. O número acende quando ele entrar na partida."><span data-campo="jogador">—</span></b><br><span data-campo="identidade">—</span><sup class="degradou" data-campo="degradou-cartao" data-hef-alvo="atributo" data-hef-atributo="title">*</sup><span class="e-primario" data-campo="marcador-principal" data-hef-alvo="classe" data-hef-classe="ha" title="É por este controle que o Hefesto navega o computador. Quem o escolhe é o serviço."> <span class="pt">•</span> primário</span><br><span class="bat"><svg class="gl" width="13" height="13" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
 
   <rect x="3" y="10" width="22" height="12" rx="2" fill="none" stroke="currentColor" stroke-width="2"/>
   <path d="M27,14 v4" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>
@@ -3537,7 +3537,7 @@
             <span>●</span>
             <span>Vai mudar para <b data-campo="pendente-alvo">Sony DualSense</b> quando você clicar em <b>Aplicar</b></span>
           </div>
-          <button class="btn" data-gesto="reconectar">Reconectar Controles</button>
+          <button class="btn" data-gesto="reconectar">Reconectar controles</button>
           <!-- A FAIXA DO RECIBO — JOGAR-02 §3, 09/09/2026, e ela é a mesma
                peça que a `05-vibracao` ganhou com a 05-Q4 dela: *"a frase entra
                na faixa que já existe (…) nada se mexe dentro das colunas"*.
