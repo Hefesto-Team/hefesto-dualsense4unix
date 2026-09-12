@@ -160,27 +160,33 @@ def _forma(mod, perfil_dict, **trocas) -> dict[str, str]:
     return fora
 
 
-def _tres_que_o_estilo_troca(mod) -> dict[str, str]:
-    """As linhas desta tela em que a receita do estilo difere do de fábrica.
+def _trocas_que_o_produto_atende(mod) -> dict[str, str]:
+    """Uma escolha diferente do de fábrica para cada linha que tem atendente.
 
-    PERGUNTADAS, não digitadas: a receita mora nas `<option selected>` da
-    página publicada e o de fábrica em `acoes_de_botao.padrao()`. Digitar
-    "círculo e os dois cliques do touchpad" faria esta régua envelhecer no dia
-    em que o produto mudasse o padrão de um deles — calada.
+    PERGUNTADA AO MOTOR, nunca digitada: o de fábrica sai de
+    `acoes_de_botao.padrao()`, a lista de `acoes_de_botao.ACOES`, e o que o
+    produto não atende hoje de `SEM_ATENDENTE`. Uma régua que digitasse
+    "Botão direito no círculo" envelheceria calada no dia em que o produto
+    mudasse o padrão daquela linha.
+
+    OS DOIS EIXOS FICAM DE FORA, e é o motor que o diz: `resolver()` os pula
+    (mover o cursor e rolar não são evento de botão). Uma troca neles iria ao
+    perfil e não chegaria a device nenhum — e este arquivo mede o caminho
+    inteiro, não meio dele.
     """
     from hefesto_dualsense4unix.core import acoes_de_botao as acoes
 
-    tela = _recorte(_publicado(), TELA)
+    fabrica = acoes.padrao()
     fora: dict[str, str] = {}
-    for bloco in re.findall(r"<select[^>]*data-linha=\"([^\"]+)\"[^>]*>(.*?)</select>",
-                            tela, re.S):
-        botao, corpo = bloco
-        escolhido = re.search(r"<option selected>([^<]+)</option>", corpo)
-        if escolhido is None:
+    for botao in _linhas_da_tela():
+        if botao in (acoes.EIXO_ESQUERDO, acoes.EIXO_DIREITO):
             continue
-        rotulo = escolhido.group(1)
-        if acoes.rotulo(acoes.padrao()[botao]) != rotulo:
-            fora[botao] = rotulo
+        alvo = next(
+            t for t in acoes.ACOES
+            if t != fabrica[botao] and t not in acoes.SEM_ATENDENTE
+            and not t.startswith("__"))
+        fora[botao] = acoes.rotulo(alvo)
+    assert fora, "nenhuma linha desta tela tem atendente — a régua perdeu o alvo"
     return fora
 
 
@@ -301,11 +307,7 @@ def test_a_escolha_dela_chega_ao_perfil_e_ao_device(bancada):
 
     ctx, mod, disco = bancada
     p = _PonteMuda()
-    trocas = _tres_que_o_estilo_troca(mod)
-    assert trocas, (
-        "a receita desta tela virou igual ao de fábrica em todas as linhas — "
-        "este caso perdeu o que medir, e é sinal de que o padrão do produto "
-        "mudou debaixo do desenho")
+    trocas = _trocas_que_o_produto_atende(mod)
     for botao, rotulo in trocas.items():
         mod.linha_de_botao(ctx, {"linha": botao, "valor": rotulo}, p)
     mod.guardar_ponto(ctx, {"forma": _forma(mod, disco["regua"].model_dump(),
@@ -333,7 +335,7 @@ def test_a_tela_volta_a_mostrar_o_que_gravou(bancada):
     """
     ctx, mod, disco = bancada
     p = _PonteMuda()
-    trocas = _tres_que_o_estilo_troca(mod)
+    trocas = _trocas_que_o_produto_atende(mod)
     for botao, rotulo in trocas.items():
         mod.linha_de_botao(ctx, {"linha": botao, "valor": rotulo}, p)
     mod.guardar_ponto(ctx, {"forma": _forma(mod, disco["regua"].model_dump(),
@@ -375,7 +377,7 @@ def test_o_guardar_junta_e_nao_substitui(bancada):
     disco["regua"] = disco["regua"].model_copy(
         update={"button_actions": {de_fora: outro}})
 
-    trocas = _tres_que_o_estilo_troca(mod)
+    trocas = _trocas_que_o_produto_atende(mod)
     for botao, rotulo in trocas.items():
         mod.linha_de_botao(ctx, {"linha": botao, "valor": rotulo}, p)
     mod.guardar_ponto(ctx, {"forma": _forma(mod, disco["regua"].model_dump(),
@@ -399,7 +401,7 @@ def test_voltar_uma_linha_ao_de_fabrica_tira_do_perfil(bancada):
 
     ctx, mod, disco = bancada
     p = _PonteMuda()
-    trocas = _tres_que_o_estilo_troca(mod)
+    trocas = _trocas_que_o_produto_atende(mod)
     for botao, rotulo in trocas.items():
         mod.linha_de_botao(ctx, {"linha": botao, "valor": rotulo}, p)
     mod.guardar_ponto(ctx, {"forma": _forma(mod, disco["regua"].model_dump(),
@@ -434,7 +436,7 @@ def test_a_tela_que_ainda_nao_falou_nao_grava(bancada):
     ctx, mod, disco = bancada
     p = _PonteMuda()
     do_desenho = dict(_forma(mod, disco["regua"].model_dump()))
-    do_desenho.update(_tres_que_o_estilo_troca(mod))
+    do_desenho.update(_trocas_que_o_produto_atende(mod))
     with pytest.raises(RuntimeError) as erro:
         mod.guardar_ponto(ctx, {"forma": do_desenho}, p)
     assert "tente de novo" in str(erro.value)
@@ -488,7 +490,7 @@ def test_o_cancelar_larga_a_escolha_pendente(bancada):
     """
     ctx, mod, _disco = bancada
     p = _PonteMuda()
-    botao, rotulo = next(iter(_tres_que_o_estilo_troca(mod).items()))
+    botao, rotulo = next(iter(_trocas_que_o_produto_atende(mod).items()))
     mod.linha_de_botao(ctx, {"linha": botao, "valor": rotulo}, p)
     assert mod._MEXENDO, "o `linha-de-botao` não anotou a escolha dela"
     mod.fechar_ponto(ctx, {}, p)

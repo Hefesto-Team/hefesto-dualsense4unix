@@ -3408,15 +3408,14 @@ def guardar_ponto(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     `button_actions` guarda DIFERENÇA, e `None` quer dizer "herda". Gravar o
     padrão congelaria o padrão VELHO no dia em que o produto mudasse o dele.
 
-    A TRAVA CONTRA O DESENHO é a mesma do irmão, com uma diferença que importa:
-    o desenho desta tela **não é o de fábrica** — ele crava a receita do estilo,
-    e ela difere do de fábrica em três das seis linhas (o círculo e os dois
-    cliques do touchpad, medido em 11/09/2026 contra `acoes.padrao()`). Logo um
-    clique nos 100 ms entre a página carregar e o primeiro tique pintar
-    (`hefesto_vivo.TIQUE_MS`) gravaria TRÊS trocas que ela não pediu. A trava é
-    por isso mais larga que a de lá: sem nenhuma linha em `_MEXENDO`, qualquer
-    divergência entre a forma e o que o perfil guarda quer dizer *o piloto ainda
-    não falou*, e o gesto recusa dizendo.
+    A TRAVA CONTRA O DESENHO é a mesma do irmão e um pouco mais larga, e a
+    largura não custa nada: lá ela só dispara quando a forma inteira está no de
+    fábrica; aqui, sem NENHUMA linha em `_MEXENDO`, **qualquer** divergência
+    entre a forma e o que o perfil guarda já quer dizer *o piloto ainda não
+    falou* — nos 100 ms entre a página carregar e o primeiro tique pintar
+    (`hefesto_vivo.TIQUE_MS`) a tela é o desenho, e gravar o desenho é gravar
+    escolha que ninguém fez. Com `_MEXENDO` cheio, a forma é escolha dela e o
+    gesto grava, inclusive quando ela devolve tudo ao de fábrica.
 
     O QUE SE PERDE É NOMEADO, e só o desta tela: `resolver()` devolve os botões
     que ninguém atende hoje, e a frase fala apenas dos que ESTE clique escreveu
