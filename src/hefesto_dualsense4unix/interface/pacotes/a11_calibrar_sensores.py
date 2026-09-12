@@ -153,4 +153,10 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
         "colunas": colunas,
         "cobertura": {"pintados": sum(len(v) for v in colunas.values()) + 1,
                       "sem_dono": len(SEM_DONO)},
+        # O NOME do órfão, e não só a contagem — 11/09/2026. A `cobertura`
+        # dizia *quantos*, e `test_o_perfil_chega_na_tela` pergunta *quais*:
+        # sem esta chave a página entrava na régua com a contagem cheia e a
+        # lista vazia, que é uma dívida sem endereço. Os outros dez pacotes já
+        # devolvem as duas coisas.
+        "sem_dono": {chave: "" for chave in SEM_DONO},
     }

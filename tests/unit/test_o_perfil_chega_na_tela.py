@@ -327,6 +327,15 @@ def test_nenhuma_aba_declara_orfao_que_tem_dono(ctx_com):
         # lista — sem isso a dívida vira fantasma.
         "07-lancadores.html": ["criar-perfil"],
         "09-sistema.html": ["plugins"],
+        # A PÁGINA DA CALIBRAÇÃO ENTROU EM 11/09/2026, com a F3-CALIBRAR, e o
+        # órfão dela é o botão «Começar». Foi perguntado antes de entrar, que é
+        # o que esta régua exige: **o daemon não tem método de calibração** —
+        # não é a tela que esqueceu de ligar o fio, é que não há a que ligar. O
+        # resto da página fechou (os cartões passaram a mostrar os controles de
+        # quem abre, com a leitura de cada um), e o `Começar` fica com a razão
+        # escrita na §5 da sprint, que é sprint própria e pede o aparelho na
+        # mesa.
+        "calibrar-sensores.html": ["calibrar"],
     }, (
         f"os órfãos mudaram: {orfaos}. Cada um aqui é um valor que a tela mostra "
         f"como travessão — e a lição de 01/09 é que doze deles tinham dono e "
