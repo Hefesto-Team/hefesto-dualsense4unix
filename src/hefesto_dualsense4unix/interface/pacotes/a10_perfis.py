@@ -121,10 +121,26 @@ from typing import Any
 from hefesto_dualsense4unix.app import gui_prefs as _prefs
 from hefesto_dualsense4unix.app.actions import perfis_web as _tela
 
+# AS PROCEDÊNCIAS SÃO DO PRODUTO, e não desta tela — C4-FUNCIONA-EM, 11/09/2026.
+# `simple_match` é quem sabe traduzir «de onde o jogo vem» nas seis formas de
+# casamento, e é a mesma função que o Salvar de qualquer outra porta usaria.
+# Digitar as palavras aqui seria a segunda verdade sobre o que cada opção
+# significa — o mesmo argumento que o `editor_ambiente` já carrega para o
+# `from_simple_choice`.
+from hefesto_dualsense4unix.integrations.jogos_locais import LANCADOR_DIRETO
+from hefesto_dualsense4unix.profiles.simple_match import (
+    PROCEDENCIA_DA_NAVEGACAO,
+    PROCEDENCIA_DA_STEAM,
+    PROCEDENCIA_DE_QUALQUER_JOGO,
+    SEPARADOR_DA_PROCEDENCIA,
+    oferta_do_funciona_em,
+)
+
 from . import (
     PONTO_DO_ROTULO,
     SEM_NINGUEM_AQUI,
     TODOS_OS_LUGARES,
+    TRAVESSAO,
     Contexto,
     perfil,
     registrar,
@@ -1086,6 +1102,15 @@ SELETOR_DA_LISTA = 'tbody[data-hef="perfis.lista"]'
 #: A biblioteca dela tem 33 jogos hoje e pode ter 300 amanhã.
 SELETOR_DOS_JOGOS = 'datalist[data-hef="editor.jogo.lista"]'
 
+#: O CAMPO «FUNCIONA EM:» — C4-FUNCIONA-EM, 11/09/2026.
+#:
+#: Ele virou `blocos` pela MESMA razão que a lista dos jogos: as opções são os
+#: lançadores que ESTA máquina tem, e um `<select>` cujo número de `<option>`
+#: muda com o disco não tem endereço para a opção que ainda não existe. O
+#: desenho traz a máquina de exemplo (`aba10.LANCADORES_DO_DESENHO`); quem
+#: instalou hoje pode não ter nenhum, e o campo tem de sair certo assim mesmo.
+SELETOR_DO_AMBIENTE = 'select[data-hef="editor.ambiente"]'
+
 #: QUANTOS JOGOS A LISTA OFERECE, no máximo. **É teto de SEGURANÇA, não de
 #: gosto**, e a razão é medida noutro lugar desta mesma aba: a tira do desfecho
 #: estourou porque `lista_de_jogos` não tinha teto (ver a linha 359 do CSV da
@@ -1293,8 +1318,13 @@ def _html_da_lista(lista: list[dict[str, Any]], vazia: str,
         for x in lista)
 
 
-def _html_dos_jogos() -> str:
+def _html_dos_jogos(procedencia: str = "") -> str:
     """As `<option>` do `<datalist>` — os jogos DESTA máquina, do disco dela.
+
+    **E DAQUELE LANÇADOR, desde 11/09/2026** (C4-FUNCIONA-EM, §3): com
+    `procedencia` cheia a lista traz só os jogos de onde o campo de cima diz
+    que o jogo vem. Sem ela — e nas duas procedências que não são lançador —
+    a lista sai inteira, que é o que ela sempre foi. Ver `_PROCEDENCIAS_SEM_JOGO`.
 
     PERFIL-MODO-01, Passo 3 (06/09/2026). A linha 378 do CSV da paridade dizia
     do lado HTML: *"NADA. O `<input>` é texto livre"* — e a nota explicava o
@@ -1338,6 +1368,48 @@ def _html_dos_jogos() -> str:
     duas vezes por segundo, sobre a biblioteca dela. Uma exceção lendo um
     `.desktop` estragado derrubaria a aba inteira por causa de uma sugestão.
     """
+    jogos = _ofertas_de_jogos()
+    if procedencia and procedencia not in _PROCEDENCIAS_SEM_JOGO:
+        # **A LISTA SEGUE O CAMPO DE CIMA** — §3 da C4-FUNCIONA-EM. Escolhido
+        # «Heroic», o campo de baixo oferece os jogos DO HEROIC, e é isso que
+        # ela pediu que a mudança servisse para: *"Isso deveria ajudar a
+        # identificar mais rápido o nome do jogo depois"*.
+        jogos = [j for j in jogos if _procedencia_do_jogo(j) == procedencia]
+    linhas = [
+        f'<option value="{_atr(jogo.valor)}" label="{_atr(_linha_do_jogo(jogo))}">'
+        f'</option>'
+        for jogo in jogos
+    ]
+    return "".join(linhas[:TETO_DA_LISTA_DE_JOGOS])
+
+
+#: AS DUAS PROCEDÊNCIAS QUE NÃO FILTRAM A LISTA DE BAIXO, e a razão é a saída
+#: que `editor_jogo` documenta: com o perfil em «Qualquer jogo», digitar o nome
+#: de um jogo é como ela DIZ que aquele perfil é daquele jogo — o gesto grava a
+#: regra inteira e o campo de cima mostra o resultado no tique seguinte.
+#: Esvaziar a lista aqui fecharia essa porta e prenderia o perfil onde está,
+#: que é o IMPASSE que aquele gesto nasceu para desfazer.
+_PROCEDENCIAS_SEM_JOGO = frozenset(
+    {PROCEDENCIA_DA_NAVEGACAO, PROCEDENCIA_DE_QUALQUER_JOGO})
+
+
+def _ofertas_de_jogos() -> list[Any]:
+    """Os jogos DESTA máquina, das duas origens — a leitura que dois campos usam.
+
+    Ela era o miolo de `_html_dos_jogos` e saiu para fora em 11/09/2026 porque
+    ganhou um SEGUNDO leitor: o campo «Funciona em:» conta daqui quais
+    procedências esta máquina tem (`_procedencias_da_maquina`). Uma segunda
+    leitura seria abrir os `.acf` e o `pga.db` duas vezes por tique.
+
+    O CATÁLOGO É O DO PRODUTO, não uma segunda leitura: `_nomes_dos_jogos()` é
+    memoizado pela assinatura da biblioteca da Steam, e `jogos_de_janela()` pelo
+    caderno das três origens de fora dela — então dez tiques por segundo não
+    abrem 33 `.acf` dez vezes por segundo.
+
+    NUNCA LEVANTA, pela mesma razão de `_jogo_reconhecido`: isto é PINTURA, a
+    duas vezes por segundo, sobre a biblioteca dela. Uma exceção lendo um
+    `.desktop` estragado derrubaria a aba inteira por causa de uma sugestão.
+    """
     try:
         from hefesto_dualsense4unix.integrations.jogos_locais import (
             JogoLocal,
@@ -1350,18 +1422,305 @@ def _html_dos_jogos() -> str:
         # caderno que `nomes_das_janelas` usa para o rótulo, então as duas
         # chamadas do mesmo tique custam UMA leitura de disco.
         de_janela = jogos_de_janela()
-        jogos = ofertas_do_campo_do_jogo(
+        return list(ofertas_do_campo_do_jogo(
             [JogoLocal(appid=appid, nome=nome, fonte="steam")
              for appid, nome in nomes.items()],
-            de_janela)
+            de_janela))
     except Exception:
-        return ""
-    linhas = [
-        f'<option value="{_atr(jogo.valor)}" label="{_atr(jogo.rotulo)}">'
-        f'</option>'
-        for jogo in jogos
-    ]
-    return "".join(linhas[:TETO_DA_LISTA_DE_JOGOS])
+        return []
+
+
+def _procedencia_do_jogo(jogo: Any) -> str:
+    """De onde vem ESTE jogo — o nome que o campo «Funciona em:» mostra.
+
+    `JogoLocal.lancador` já responde isso para as duas origens de fora da Steam
+    («Heroic», «Lutris», e `LANCADOR_DIRETO` para o jogo que veio do menu). A
+    Steam sai VAZIA de lá — ela *"é a fonte que já tinha nome próprio nos dois
+    rótulos"* —, e é a única tradução que sobra para esta função fazer.
+    """
+    return str(getattr(jogo, "lancador", "") or "") or PROCEDENCIA_DA_STEAM
+
+
+def _linha_do_jogo(jogo: Any) -> str:
+    """O que a LINHA da lista do campo «Nome do Jogo» diz — item 12 da lista dela.
+
+    ``ELDEN RING · 1245620``, e nunca ``eldenring.exe``. A queixa é da foto 9:
+    a linha trazia o número sozinho, que não diz nada a ninguém — *"hoje:
+    1245620 · falta: ELDEN RING · 1245620"*.
+
+    **É FORMATO DESTA TELA, e não `JogoLocal.rotulo`** — e a diferença não é
+    capricho. Aquele é o rótulo GERAL do produto e escreve ``"ELDEN RING (appid
+    1245620)"`` / ``"Guardians of the Galaxy (Heroic)"``, porque ele responde
+    sozinho *"de onde vem este jogo?"*. **Aqui essa pergunta JÁ está respondida
+    no campo de cima**: repetir «(Heroic)» em cada uma das linhas de uma lista
+    que só tem jogos do Heroic é ruído, e o contexto que ele carrega esta tela
+    tem e ele não.
+
+    O JOGO DE LANÇADOR SAI SÓ COM O NOME, e é o que a ordem dela cobra: o
+    "código" dele é o basename do executável (``gotg.exe``), que é exatamente o
+    que a foto 9 diz para NUNCA mostrar. Onde não há código público, a linha é
+    o nome — e é ele que ela procura.
+    """
+    appid = str(getattr(jogo, "appid", "") or "")
+    nome = str(getattr(jogo, "nome", "") or "")
+    return f"{nome} · {appid}" if appid else nome
+
+
+#: A ORDEM EM QUE O CAMPO «Funciona em:» LISTA OS LANÇADORES. Ela é da TELA, e
+#: é declarada porque a alternativa não serve: `_ofertas_de_jogos` está ordenada
+#: por NOME DE JOGO, então deduzir a ordem dos lançadores dela faria o campo se
+#: reordenar sozinho no dia em que ela instalasse um jogo cujo nome começa com
+#: outra letra — um `<select>` que troca de ordem entre dois tiques é um campo
+#: em que não se clica.
+#:
+#: A Steam na frente porque é a maior biblioteca (25 dos 27 perfis dela);
+#: depois a ordem do censo (`censo_dos_lancadores._LEITORES`); e o residual por
+#: último, porque ele é o que sobra e não um lançador.
+#:
+#: **Quem não estiver aqui entra assim mesmo, no fim**, em ordem alfabética: um
+#: lançador novo no censo não pode sumir do campo por não ter sido nomeado
+#: aqui. A régua `test_o_funciona_em_oferece_lancador` cobra o contrário —
+#: que todo nome DESTA lista o censo saiba ler.
+ORDEM_DOS_LANCADORES = (PROCEDENCIA_DA_STEAM, "Heroic", "Lutris", "RetroArch",
+                        "Dolphin", "mGBA")
+
+
+def _procedencias_da_maquina() -> list[str]:
+    """Os lançadores que ESTA máquina tem — a lista que o campo oferece.
+
+    **NÃO É DIGITADA**, e é a metade da §2 da sprint que mais importa: a lista
+    sai do que o catálogo achou no disco, e um lançador que a máquina não tem
+    não aparece. Numa instalação sem Steam, sem Heroic e sem Lutris esta função
+    devolve ``[]`` — e `simple_match.oferta_do_funciona_em` monta o campo com
+    «Navegação» e «Qualquer jogo» e nada mais, que é a ordem dela de 11/09/2026
+    sobre o produto funcionar para qualquer pessoa.
+
+    **CONTA-SE PELO JOGO, e não pelo programa instalado**, e a diferença é
+    medida: `censo_dos_lancadores` acha o Lutris dela e lê a biblioteca VAZIA.
+    Oferecer «Lutris» num campo cujo campo de baixo não teria uma linha é
+    oferecer uma escolha que só leva à recusa `MSG_JANELA_SEM_CLASSE`. O que o
+    campo promete é *"escolha de onde o jogo vem e eu te mostro os jogos"* —
+    então quem entra é quem tem jogo com endereço.
+    """
+    achadas = {_procedencia_do_jogo(j) for j in _ofertas_de_jogos()}
+    conhecidas = [n for n in ORDEM_DOS_LANCADORES if n in achadas]
+    return conhecidas + sorted(achadas - set(ORDEM_DOS_LANCADORES))
+
+
+def _lancador_da_chave(chave: str) -> str:
+    """De qual lançador vem o jogo com ESTA `wm_class` (ou nome de programa).
+
+    É a ponte que `simple_match.procedencia_do_match` pede, e ela mora aqui
+    porque é leitura de disco: `profiles/` é o esquema, e um módulo de esquema
+    que importasse `integrations/` obrigaria toda régua dele a ter a biblioteca
+    dela na mão.
+
+    **O RESIDUAL É «Instalado aqui», e nunca o campo travado.** Uma chave que o
+    catálogo não conhece — ``guard``, ``Hefesto-Dualsense4Unix``, os dois
+    medidos no disco dela em 11/09/2026 — é um perfil que ELA escreveu, que
+    funciona, e que a §5 manda continuar válido e mostrado. `LANCADOR_DIRETO` é
+    a palavra que o produto já tem para isso (*"de lugar nenhum, está no
+    menu"*), e é a mesma que a lista do campo de baixo escreve. Travar o campo
+    aqui seria tirar dela o gesto sobre um perfil que nada tem de errado.
+
+    NUNCA LEVANTA — a queda também é o residual, pelo mesmo motivo: um `.desktop`
+    estragado não pode travar o seletor de um perfil que está certo.
+    """
+    try:
+        from hefesto_dualsense4unix.integrations.jogos_locais import jogo_da_janela
+
+        achado = jogo_da_janela(chave, _ofertas_de_jogos())
+    except Exception:
+        return LANCADOR_DIRETO
+    return _procedencia_do_jogo(achado) if achado is not None else LANCADOR_DIRETO
+
+
+def _jogo_da_procedencia(procedencia: str, texto: str) -> Any:
+    """O jogo DESTA procedência que este texto nomeia — ou ``None``.
+
+    Casa pelo ENDEREÇO (o que o campo grava: o appid, a `wm_class`) e, se não
+    achar, pelo NOME. **É o que faz trocar de lançador não perder o jogo**: um
+    perfil de *Guardians of the Galaxy* pela Epic que ela passe para a GOG tem
+    o mesmo nome nas duas lojas e endereços diferentes — traduzir por aqui é o
+    produto decidindo a forma técnica sozinho, que é o §4 inteiro.
+
+    **IGUALDADE, NUNCA PEDAÇO.** `casa_com_o_que_ela_digitou` procura por
+    trecho e é o certo para a lista suspensa, onde ela vê as linhas e escolhe;
+    aqui não há escolha nenhuma para fazer — ``"mad king"`` casaria com dois
+    jogos dela e o gesto gravaria um deles calado. Quando a igualdade não
+    responde, quem responde é ela, na lista de baixo (`MSG_ESCOLHA_O_JOGO`).
+
+    NUNCA LEVANTA: sem catálogo a resposta é ``None``, e o caminho de recusa
+    segue o mesmo.
+    """
+    try:
+        from hefesto_dualsense4unix.integrations.jogos_locais import chave_de_busca
+
+        alvo = chave_de_busca(texto)
+        if not alvo:
+            return None
+        candidatos = [j for j in _ofertas_de_jogos()
+                      if _procedencia_do_jogo(j) == procedencia]
+        # O ENDEREÇO PRIMEIRO, O NOME DEPOIS — e a ordem é o contrato: o que o
+        # campo grava é o endereço, então ele é a resposta mais específica.
+        for de_qual in ("valor", "nome"):
+            for jogo in candidatos:
+                if chave_de_busca(str(getattr(jogo, de_qual, ""))) == alvo:
+                    return jogo
+    except Exception:
+        return None
+    return None
+
+
+def _com_a_procedencia(lista: list[dict[str, Any]],
+                       todos: list[Any]) -> list[dict[str, Any]]:
+    """A coluna «Funciona em» de cada linha, traduzida — ver `_quando_usar`.
+
+    **ANTES DO FILTRO E DA ORDEM, e a ordem das três é o contrato.** A lupa
+    procura DENTRO do `quando` (é o que acha o jogo pelo appid, e é ordem dela:
+    *"achar rápido o nome de um jogo"*), e ordenar por essa coluna ordena
+    o texto que ela LÊ. Traduzir depois faria as duas medirem a frase de ontem —
+    e digitar «ELDEN RING» não acharia a linha que mostra «ELDEN RING».
+
+    **UMA TRADUÇÃO PARA AS DUAS PORTAS.** O `blocos` (o `<tbody>` pronto) e as
+    três listas `perfis.linha.*` saem da MESMA `lista`; traduzir só numa é o
+    defeito que o pintor não perdoa — ele distribui as listas pela ordem do
+    documento, e duas frases diferentes põem a coluna de um perfil na linha de
+    outro.
+
+    O PERFIL VEM PELO NOME, que é o que a linha carrega. Quem não for achado
+    fica com a frase do produto: uma linha sem perfil no disco é uma linha que
+    esta função não tem como traduzir, e calar é melhor que adivinhar.
+    """
+    por_nome = {str(getattr(p, "name", "")): p for p in todos}
+    fora: list[dict[str, Any]] = []
+    for linha in lista:
+        prof = por_nome.get(str(linha.get("perfil") or linha.get("nome") or ""))
+        if prof is None:
+            fora.append(linha)
+            continue
+        nova = dict(linha)
+        nova["quando"] = _quando_usar(getattr(prof, "match", None),
+                                      str(linha.get("quando") or ""))
+        fora.append(nova)
+    return fora
+
+
+def _nome_e_codigo(chave: str) -> tuple[str, str]:
+    """``(nome do jogo, código)`` para o que o perfil guarda — item 12 dela.
+
+    A queixa é da foto 9, palavras dela: *"aqui por exemplo deveria
+    aparecer o nome e o codigo não só o codigo e não deveria  (noqa-acento) cita ela
+    aparecer o nome do programa"*.
+
+    O CÓDIGO SÓ EXISTE NA STEAM, e é isso que a divisão diz: o appid é o número
+    que ela confere na loja e que o produto inteiro compartilha. Um jogo de
+    lançador não tem número público — o "código" dele seria o basename do
+    executável (``gotg.exe``), que é exatamente o que a foto manda **nunca**
+    mostrar. Então ele sai só com o nome.
+
+    E QUANDO O CATÁLOGO NÃO SABE, o que volta é a chave CRUA no lugar do
+    código: é o que o perfil tem, e a coluna mostra o que tem em vez de ficar
+    vazia. Inventar um nome seria a tela afirmando um jogo que ela não tem.
+
+    NUNCA LEVANTA — isto é PINTURA, uma vez por linha, a cada tique.
+    """
+    from hefesto_dualsense4unix.profiles.simple_match import normalize_appid
+
+    if not chave:
+        return ("", "")
+    appid = normalize_appid(chave)
+    if appid is not None:
+        return (_nomes_dos_jogos().get(appid, ""), appid)
+    try:
+        from hefesto_dualsense4unix.integrations.jogos_locais import jogo_da_janela
+
+        achado = jogo_da_janela(chave, _ofertas_de_jogos())
+    except Exception:
+        achado = None
+    if achado is None:
+        return ("", chave)
+    return (str(getattr(achado, "nome", "") or ""), "")
+
+
+def _quando_usar(match: Any, base: str) -> str:
+    """A coluna «Funciona em» na MESMA língua do campo do editor.
+
+    **A TELA DIZIA DUAS COISAS SOBRE O MESMO PERFIL — 11/09/2026.** O campo
+    passou a responder *de onde o jogo vem* e a coluna, a um palmo dele,
+    continuava com o vocabulário do produto: a linha escolhida dizia «Só neste
+    programa» enquanto o editor ao lado dizia «Heroic». A coluna é onde ela
+    passa a maior parte do tempo olhando.
+
+    **O TRADUTOR É O MESMO, e isto não é uma segunda tabela:**
+    `_procedencia_e_recado` → `simple_match.procedencia_do_match`, a mesma
+    função que pinta o `<select>`. Duas traduções para a mesma pergunta
+    divergiriam no primeiro lançador novo.
+
+    AS DUAS VEZES EM QUE O TEXTO DO PRODUTO FICA, e as duas são por conteúdo:
+
+    * **«Qualquer jogo»** — a frase de `rotulo_quando_usar` não é um rótulo, é
+      a DISPUTA (*"Sempre — 2 disputam, este vence"*), e ela responde a queixa
+      mais antiga desta casa. Trocá-la pela procedência apagaria o único sinal
+      que a tela dá sobre qual dos catch-all vence;
+    * **a regra que a tela não sabe descrever** — título de janela, lista de
+      classes, `MatchManual`. O produto já tem a frase honesta («Só neste
+      programa», «Só no manual»), e inventar uma procedência aqui seria o
+      mesmo R-12 pelo avesso que o cadeado do campo existe para impedir.
+    """
+    procedencia, _recado = _procedencia_e_recado(match)
+    if not procedencia or procedencia == PROCEDENCIA_DE_QUALQUER_JOGO:
+        return base
+    from hefesto_dualsense4unix.profiles.simple_match import simple_extra
+
+    nome, codigo = _nome_e_codigo(simple_extra(match) if match is not None else "")
+    return SEPARADOR_DA_PROCEDENCIA.join(
+        p for p in (procedencia, nome, codigo) if p)
+
+
+def _procedencia_e_recado(match: Any, recado_do_produto: Any = "") -> tuple[str, str]:
+    """``(procedência, recado)`` do campo «Funciona em:» — e nunca os dois cheios.
+
+    Procedência vazia quer dizer o que o `ambiente_travado` do produto sempre
+    quis dizer: **esta tela não sabe descrever esta regra**, o campo vai travado
+    com a frase do que ela é, e o `match` do disco fica intacto. Não há estado
+    novo aqui — há a MESMA válvula do R-12, falando a língua nova.
+
+    **ELA É O ÚNICO DONO DA PERGUNTA**, e por isso a pintura e os dois gestos
+    (`editor_ambiente`, `editor_jogo`) a chamam em vez de lerem
+    `editor["ambiente_travado"]`. Ler o booleano do produto travaria a
+    «Navegação»: `browser` está em `perfis_web.FORA_DO_DESENHO`, então o produto
+    responde *"não sei mostrar"* sobre um preset que a tela nova SABE mostrar
+    desde hoje — e ela ganharia uma opção que o gesto ao lado recusaria.
+    """
+    from hefesto_dualsense4unix.profiles.simple_match import procedencia_do_match
+
+    procedencia = procedencia_do_match(match, _lancador_da_chave)
+    if procedencia:
+        return (procedencia, "")
+    return ("", str(recado_do_produto or ""))
+
+
+def _html_do_ambiente(opcoes: list[str], atual: str) -> str:
+    """As `<option>` do «Funciona em:» — a lista desta máquina, pronta.
+
+    ELA VIAJA PELO `blocos`, como a lista de perfis e a dos jogos, e pela mesma
+    razão escrita em `_html_da_lista`: **um bloco cujo número de filhos muda com
+    o dado não tem endereço para o filho que ainda não existe.** O desenho tem
+    os lançadores de uma máquina de exemplo; a máquina de quem instalou hoje
+    pode não ter nenhum.
+
+    O TRAVESSÃO VEM JUNTO E DESABILITADO, igual ao do desenho: é onde o
+    `escrever()` do piloto pousa o `—` de um perfil cuja regra a tela não sabe
+    mostrar. Sem ele o `el.value = '—'` não casa nada, o campo fica com a opção
+    do MOCKUP — a tela afirmando uma regra que não é — e o contador de pinturas
+    soma +1 por tique para sempre. Medido no DOM vivo em 04/09/2026.
+    """
+    linhas = [f'<option value="{_atr(TRAVESSAO)}" disabled>{_texto(TRAVESSAO)}'
+              f'</option>']
+    linhas += [f'<option{" selected" if o == atual else ""}>{_texto(o)}</option>'
+               for o in opcoes]
+    return "".join(linhas)
 
 
 def _valendo(ctx: Contexto, todos: list[Any] | None = None) -> str:
@@ -1619,7 +1978,7 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
     # `lista`. Aplicar o filtro só numa delas é o defeito que a §6 da sprint
     # descreve — o pintor distribui as três listas pela ordem do DOCUMENTO, e
     # duas ordens diferentes põem o nome de um perfil na linha de outro.
-    lista = _ordenada(_filtrada(bruto.get("lista") or []))
+    lista = _ordenada(_filtrada(_com_a_procedencia(bruto.get("lista") or [], todos)))
     editor = bruto.get("editor") or {}
     fora = {
         "perfis.conta": bruto.get("conta", "—"),
@@ -1923,14 +2282,46 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
     # alto desta função), e é isso que a marca promete a ela: a linha marcada é
     # a que os campos da direita e os nove botões vão mexer.
     escolhido_na_lista = str(getattr(alvo, "name", "") or escolhido)
+
+    # «FUNCIONA EM:» PASSA A DIZER DE ONDE O JOGO VEM — C4-FUNCIONA-EM,
+    # 11/09/2026, desenho DELA. As três chaves saem DAQUI e não do laço acima,
+    # e é uma sobrescrita de propósito: `perfis_web` continua servindo o
+    # vocabulário do PRODUTO («Jogo da Steam», «Jogo (pela janela)»), que é o
+    # que o `editor_jogo` consulta para saber a forma e o que a coluna da lista
+    # escreve. **A tradução é da TELA**, e por isso ela mora na tela — o
+    # `MatchCriteria` do disco não muda uma vírgula (§4 da sprint).
+    #
+    # E ELA TRAVA MENOS QUE O PRODUTO, em um caso: `browser` está em
+    # `perfis_web.FORA_DO_DESENHO` e chega aqui com `ambiente_travado=True`.
+    # Como «Navegação» a tela nova SABE mostrá-lo — então quem decide é
+    # `_procedencia_e_recado`, e o recado do produto só entra quando ela
+    # também não sabe.
+    procedencia, recado = _procedencia_e_recado(
+        getattr(alvo, "match", None), editor.get("ambiente_recado"))
+    fora["editor.ambiente"] = procedencia
+    fora["editor.ambiente.travado"] = not procedencia
+    fora["editor.ambiente.recado"] = recado
+
     fora["blocos"] = {
         SELETOR_DA_LISTA: _html_da_lista(
             lista, str(bruto.get("lista_vazia") or ""), escolhido_na_lista),
+        # O CAMPO «FUNCIONA EM:» — a lista sai do CENSO, nunca digitada. Um
+        # lançador que a máquina não tem não aparece, e numa instalação sem
+        # nenhum sobram «Navegação» e «Qualquer jogo» — sem linha vazia e sem
+        # erro. Ver `_procedencias_da_maquina` e `oferta_do_funciona_em`.
+        SELETOR_DO_AMBIENTE: _html_do_ambiente(
+            oferta_do_funciona_em(_procedencias_da_maquina(), procedencia),
+            procedencia),
         # A LISTA DOS JOGOS DESTA MÁQUINA — PERFIL-MODO-01, Passo 3. Ela sai
         # SEMPRE, inclusive vazia: uma biblioteca que encolheu (jogo
         # desinstalado) tem de apagar a sugestão que já não existe, e um
         # `if nomes:` deixaria o `<datalist>` com o catálogo de ontem.
-        SELETOR_DOS_JOGOS: _html_dos_jogos(),
+        #
+        # E ELA SEGUE O CAMPO DE CIMA desde 11/09/2026: escolhido «Heroic», só
+        # os jogos do Heroic. É o efeito que ela pediu com todas as letras —
+        # *"Isso deveria ajudar a identificar mais rápido o nome do
+        # jogo depois"*.
+        SELETOR_DOS_JOGOS: _html_dos_jogos(procedencia),
     }
     fora["cobertura"] = {"pintados": len(fora) + len(lista) * 3, "sem_dono": 0}
     return fora
@@ -2780,29 +3171,72 @@ def editor_ambiente(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] 
       nenhum atrás. `from_simple_choice` devolve `MatchAny()` para chave
       desconhecida, sem reclamar (`simple_match.py:248`): escolher "Estilo de
       Jogo" gravaria um catch-all no lugar da regra do jogo dela, em silêncio.
+
+    **E O CAMPO PASSOU A DIZER DE ONDE O JOGO VEM — C4-FUNCIONA-EM,
+    11/09/2026, desenho DELA.** O que chega agora é uma PROCEDÊNCIA
+    («Navegação», «Steam», «Heroic», «Qualquer jogo»…), e quem a traduz na
+    forma técnica é `simple_match.forma_da_procedencia` — o produto, sozinho,
+    com o que o lançador entrega. A recusa do "Estilo de Jogo" deixou de ser
+    necessária pelo caminho mais simples: ele **saiu deste campo** e ficou no
+    campo próprio, uma linha abaixo.
+
+    **A GUARDA NOVA É A DA FORMA PRESERVADA, e ela não é zelo.** Se a
+    procedência escolhida é a MESMA que o campo já mostrava, o gesto não grava
+    nada. Sem isso, um perfil em «Instalado aqui» cuja regra é por
+    `process_name` (``guard``, medido no disco dela) seria reescrito como
+    `window_class` por um gesto que não mudou nada na tela — trocar um dado
+    por outro que *"casa por acaso"* é o R-12 que esta casa já pagou. Quem
+    quiser mudar de verdade muda a opção, e aí a reescrita é o que ela pediu.
     """
-    from hefesto_dualsense4unix.profiles.simple_match import from_simple_choice
+    from hefesto_dualsense4unix.profiles.simple_match import (
+        MSG_ESCOLHA_O_JOGO,
+        forma_da_procedencia,
+        from_simple_choice,
+    )
 
     if not _so_mudou(o):
         return None
     rotulo = str(o.get("valor") or o.get("rotulo") or "").strip()
     nome = _perfil_do_editor(ctx)
-    chave = PRESET_DO_ROTULO.get(rotulo)
-    if chave is None:
-        raise RuntimeError(
-            f"“{rotulo}” não é uma regra que o perfil saiba guardar. O produto "
-            f"conhece {', '.join(sorted(PRESET_DO_ROTULO))} — “Estilo de Jogo” "
-            f"está desenhado e não tem campo nem preset atrás dele.")
     prof = _com_o_que_esta_valendo(nome, ctx)
     editor = _editor_de(prof)
-    if editor.get("ambiente_travado"):
-        raise RuntimeError(str(editor.get("ambiente_recado") or ""))
+    agora, recado = _procedencia_e_recado(
+        getattr(prof, "match", None), editor.get("ambiente_recado"))
+    if not agora:
+        raise RuntimeError(recado)
+    if rotulo == agora:
+        return None
+    if rotulo in (TRAVESSAO, ""):
+        raise RuntimeError(
+            f"“{TRAVESSAO}” não é uma procedência — ele é o que a tela mostra "
+            f"quando não sabe descrever a regra do perfil. Escolha de onde o "
+            f"jogo vem.")
+    # «Navegação» e «Qualquer jogo» NÃO TÊM JOGO, e mandar o texto do campo de
+    # baixo junto não muda nada — `from_simple_choice` não lê `custom_name`
+    # nesses dois presets. Zerá-lo aqui é dizer isso em código, e não deixar a
+    # próxima pessoa procurar por que o valor não chega a lugar nenhum.
+    jogo = "" if rotulo in _PROCEDENCIAS_SEM_JOGO else str(editor.get("jogo") or "")
+    achado = _jogo_da_procedencia(rotulo, jogo) if jogo else None
+    if achado is not None:
+        # O ENDEREÇO PASSA A SER O DAQUELA PROCEDÊNCIA — é aqui que o produto
+        # decide a forma sozinho: o mesmo jogo pela Steam é um `steam_app_<id>`
+        # e pelo Heroic é uma `wm_class`, e ela não vê nenhuma das duas.
+        jogo = achado.valor
+    elif rotulo not in _PROCEDENCIAS_SEM_JOGO and rotulo != PROCEDENCIA_DA_STEAM:
+        # A STEAM É A EXCEÇÃO, e ela é medida: o número de um jogo que ela
+        # ainda vai comprar VALE (é o que `MSG_FORA_DA_MAQUINA` existe para
+        # dizer), então exigir que ele esteja no catálogo local recusaria um
+        # perfil legítimo. Nos lançadores não há número — há a chave da janela,
+        # que só existe com o jogo instalado —, e aí a lista é o caminho.
+        raise RuntimeError(MSG_ESCOLHA_O_JOGO.format(procedencia=rotulo))
+    chave = forma_da_procedencia(
+        rotulo, jogo,
+        forma_do_catalogo=str(getattr(achado, "forma", "") or ""))
     _pergunta_antes_de_rebaixar(prof, chave)
     # O NOME DO JOGO VEM DO DISCO, e não do campo ao lado: o `<input>` pode ter
     # texto que ela digitou e ainda não confirmou (o `change` só dispara quando
     # o foco sai). Ler o disco é ler o que o perfil de fato tem.
-    prof.match = from_simple_choice(chave, editor.get("jogo") or "",
-                                    regra_do_disco=prof.match)
+    prof.match = from_simple_choice(chave, jogo, regra_do_disco=prof.match)
     _gravar(prof, ctx, p)
     return _dizer(f"“{prof.name}” agora vale em: {rotulo}")
 
@@ -3101,13 +3535,26 @@ def editor_jogo(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | No
     nome = _perfil_do_editor(ctx)
     prof = _com_o_que_esta_valendo(nome, ctx)
     editor = _editor_de(prof)
-    if editor.get("ambiente_travado"):
-        raise RuntimeError(str(editor.get("ambiente_recado") or ""))
+    # A TRAVA É A DA TELA NOVA, e não o booleano do produto — 11/09/2026. Ler
+    # `ambiente_travado` aqui recusaria editar o jogo de um perfil em
+    # «Navegação» (`browser` está em `perfis_web.FORA_DO_DESENHO`), que é uma
+    # procedência que o campo de cima passou a oferecer. Um gesto que recusa o
+    # que o campo ao lado oferece é a tela brigando consigo mesma.
+    _procedencia, recado = _procedencia_e_recado(
+        getattr(prof, "match", None), editor.get("ambiente_recado"))
+    if not _procedencia:
+        raise RuntimeError(recado)
     # AS TRÊS FORMAS COM CAMPO LIVRE, e a terceira entrou em 06/09/2026: com o
     # seletor já em "Jogo (pela janela)", a escolha DELA manda — sem a "janela"
     # nesta tupla, editar o campo de um perfil de janela o reescreveria como
     # `process_name`, que é outro dado e casa por acaso. É o mesmo argumento do
     # parágrafo "E ele SÓ decide quando o seletor não estava numa das duas".
+    #
+    # **A CONSULTA CONTINUA SENDO AO VOCABULÁRIO DO PRODUTO, e é de propósito:**
+    # o que precisa ser preservado aqui é a FORMA que o perfil já tem
+    # (`process_name` contra `wm_class`), e quem a nomeia é `AMBIENTE_DO_PRESET`.
+    # A procedência acima responde outra pergunta — *de onde o jogo vem* —, e
+    # duas das suas opções («Heroic», «Instalado aqui») cabem nas duas formas.
     chave = PRESET_DO_ROTULO.get(str(editor.get("ambiente") or ""))
     if chave not in ("game", "steam_game", "janela"):
         chave = _forma_do_que_ela_escolheu(texto)

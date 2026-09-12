@@ -52,6 +52,9 @@ from hefesto_dualsense4unix.profiles.schema import (
     Profile,
     ProfileModeConfig,
 )
+from hefesto_dualsense4unix.profiles.simple_match import (
+    PROCEDENCIA_DE_QUALQUER_JOGO,
+)
 
 PAGINA = "10-perfis.html"  # (noqa-acento) nome de arquivo
 
@@ -192,10 +195,17 @@ def _prioridade(ctx: Contexto, ponte: Any) -> None:
 
 
 def _ambiente(ctx: Contexto, ponte: Any) -> None:
-    # "Todos" E NÃO "Jogo": o "Jogo" exige o nome do programa no campo ao lado
-    # (`simple_match.MSG_JOGO_SEM_NOME`), e o perfil deste dublê não o tem. A
-    # recusa seria do casamento, não do funil de gravação que esta régua mede.
-    a10_perfis.editor_ambiente(ctx, {"valor": "Todos", "evento": "change"}, ponte)
+    # «QUALQUER JOGO» E NÃO UM LANÇADOR: um lançador exige o jogo no campo ao
+    # lado (`simple_match.MSG_ESCOLHA_O_JOGO`), e o perfil deste dublê não o
+    # tem. A recusa seria do casamento, não do funil de gravação que esta régua
+    # mede.
+    #
+    # O RÓTULO SAI DA CONSTANTE, e não é mais a palavra "Todos": em 11/09/2026
+    # o campo passou a dizer DE ONDE O JOGO VEM (C4-FUNCIONA-EM), por ordem
+    # dela. Digitar a palavra aqui faria esta régua medir um rótulo que a tela
+    # não oferece mais — e ela não é sobre o rótulo, é sobre o funil.
+    a10_perfis.editor_ambiente(
+        ctx, {"valor": PROCEDENCIA_DE_QUALQUER_JOGO, "evento": "change"}, ponte)
 
 
 def _jogo(ctx: Contexto, ponte: Any) -> None:

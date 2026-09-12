@@ -70,7 +70,19 @@ DELA = ("já é o perfil que está valendo",
         "escolha um perfil na lista primeiro",
         "o perfil precisa de um nome",
         "gravar este por cima apagaria o dele",
-        "não é uma regra que o perfil saiba guardar",
+        # A QUINTA MUDOU EM 11/09/2026, e a troca é a entrega: era *"«X» não é
+        # uma regra que o perfil saiba guardar"*, a recusa do rótulo sem preset
+        # atrás. O campo «Funciona em:» passou a dizer DE ONDE O JOGO VEM
+        # (C4-FUNCIONA-EM, ordem dela), e as duas recusas que sobram são
+        # outras: escolher o travessão — que não é uma procedência, é o que a
+        # tela mostra quando não sabe descrever a regra — e trocar para um
+        # lançador sem o jogo no campo de baixo.
+        "não é uma procedência",
+        # **ESTA ENTRA PELO SÍMBOLO, e não pelas palavras**: a frase mora no
+        # PRODUTO (`simple_match.MSG_ESCOLHA_O_JOGO`), porque ela é sobre o
+        # casamento e não sobre esta tela, e o que este arquivo tem é o `raise`
+        # que a levanta. Digitar as palavras aqui mediria a cópia, e não o ato.
+        "MSG_ESCOLHA_O_JOGO",
         "escolha um Estilo de Jogo na lista",
         "está fora da faixa que o perfil aceita",
         "a prioridade tem de ser um número")

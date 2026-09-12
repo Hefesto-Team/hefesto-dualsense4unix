@@ -8,7 +8,7 @@ rascunho** — dispensa três delas: gravar UM campo não pode rebaixar
 ``match`` e ``priority`` juntos, que era o caminho do defeito de 27/07 (o
 ``Pragmata`` era regra de jogo com prioridade 100 e amanheceu catch-all).
 
-**Esta continuava aberta e alcançável em UM clique.** Escolher "Todos" no
+**Esta continuava aberta e alcançável em UM clique.** Escolher o catch-all no
 seletor de um perfil de jogo gravava o catch-all calado: o perfil que valia só
 no Elden Ring passava a valer para tudo, sem aviso, e sem caminho de volta pela
 tela (a regra antiga não fica em lugar nenhum que o editor mostre).
@@ -32,6 +32,24 @@ import pytest
 
 from hefesto_dualsense4unix.interface.pacotes import Contexto, a10_perfis
 from hefesto_dualsense4unix.profiles import loader
+from hefesto_dualsense4unix.profiles.simple_match import (
+    PROCEDENCIA_DA_NAVEGACAO,
+    PROCEDENCIA_DE_QUALQUER_JOGO,
+)
+
+# O RÓTULO DO CATCH-ALL DEIXOU DE SER "Todos" — C4-FUNCIONA-EM, 11/09/2026.
+# O campo «Funciona em:» passou a dizer DE ONDE O JOGO VEM, por ordem dela, e
+# o catch-all virou «Qualquer jogo». **Esta régua não é sobre o rótulo** — é
+# sobre a guarda que impede apagar a regra do jogo dela em um clique —, então
+# ela pergunta ao produto qual é a palavra em vez de digitá-la: uma régua que
+# digita o que devia LER desliga no dia em que a palavra muda, e foi assim que
+# onze delas reprovaram a melhora em 26/08/2026.
+#
+# E A "OUTRA ESCOLHA" É «Navegação», e não «Steam»: o dublê destas réguas casa
+# por nome de programa (`eldenring.exe`), e escolher «Steam» com esse texto no
+# campo ao lado é recusado pelo casamento (`MSG_STEAM_APPID_INVALIDO`) — a
+# recusa seria de outra coisa que não a guarda do rebaixamento. «Navegação» é
+# uma troca que grava no primeiro clique, que é o que se mede.
 
 #: A MESA — endereço MASCARADO (octetos 4 e 5 zerados).
 MESA = [
@@ -113,7 +131,7 @@ def _escolher(rotulo: str) -> dict[str, Any]:
 def test_o_primeiro_clique_recusa_dizendo_o_que_se_perde(
     monkeypatch: pytest.MonkeyPatch, gravados: list[Any],
 ) -> None:
-    """A frase nomeia o perfil, o que ele É HOJE, e o que "Todos" apaga.
+    """A frase nomeia o perfil, o que ele É HOJE, e o que «Qualquer jogo» apaga.
 
     MORDIDA: tire a chamada a ``_pergunta_antes_de_rebaixar`` do
     ``editor_ambiente`` (que é como o gesto era até 03/09) e este teste reprova
@@ -125,7 +143,8 @@ def test_o_primeiro_clique_recusa_dizendo_o_que_se_perde(
     a10_perfis._ESCOLHIDO = "Elden Ring"
 
     with pytest.raises(RuntimeError) as erro:
-        a10_perfis.editor_ambiente(_ctx(), _escolher("Todos"), PonteDeMentira())
+        a10_perfis.editor_ambiente(
+            _ctx(), _escolher(PROCEDENCIA_DE_QUALQUER_JOGO), PonteDeMentira())
 
     frase = str(erro.value)
     assert "Elden Ring" in frase, f"a recusa não nomeia o perfil: {frase!r}"
@@ -154,12 +173,13 @@ def test_o_segundo_clique_grava(
     ponte = PonteDeMentira()
 
     with pytest.raises(RuntimeError):
-        a10_perfis.editor_ambiente(_ctx(), _escolher("Todos"), ponte)
-    a10_perfis.editor_ambiente(_ctx(), _escolher("Todos"), ponte)
+        a10_perfis.editor_ambiente(_ctx(), _escolher(PROCEDENCIA_DE_QUALQUER_JOGO), ponte)
+    a10_perfis.editor_ambiente(_ctx(), _escolher(PROCEDENCIA_DE_QUALQUER_JOGO), ponte)
 
     assert len(gravados) == 1, "o segundo clique não gravou"
     assert isinstance(gravados[0].match, MatchAny), (
-        f"a regra gravada foi {gravados[0].match!r} e ela escolheu 'Todos'")
+        f"a regra gravada foi {gravados[0].match!r} e ela escolheu "
+        f"«{PROCEDENCIA_DE_QUALQUER_JOGO}»")
 
 
 def test_o_armamento_vence_com_o_prazo(
@@ -176,13 +196,13 @@ def test_o_armamento_vence_com_o_prazo(
     ponte = PonteDeMentira()
 
     with pytest.raises(RuntimeError):
-        a10_perfis.editor_ambiente(_ctx(), _escolher("Todos"), ponte)
+        a10_perfis.editor_ambiente(_ctx(), _escolher(PROCEDENCIA_DE_QUALQUER_JOGO), ponte)
 
     agora = a10_perfis.time.monotonic()
     monkeypatch.setattr(a10_perfis.time, "monotonic",
                         lambda: agora + a10_perfis.SEGUNDOS_PARA_CONFIRMAR + 0.1)
     with pytest.raises(RuntimeError):
-        a10_perfis.editor_ambiente(_ctx(), _escolher("Todos"), ponte)
+        a10_perfis.editor_ambiente(_ctx(), _escolher(PROCEDENCIA_DE_QUALQUER_JOGO), ponte)
     assert gravados == [], "o armamento vencido ainda gravou"
 
 
@@ -199,11 +219,11 @@ def test_o_armamento_e_por_perfil(
 
     a10_perfis._ESCOLHIDO = "Elden Ring"
     with pytest.raises(RuntimeError):
-        a10_perfis.editor_ambiente(_ctx(), _escolher("Todos"), ponte)
+        a10_perfis.editor_ambiente(_ctx(), _escolher(PROCEDENCIA_DE_QUALQUER_JOGO), ponte)
 
     a10_perfis._ESCOLHIDO = "Pragmata"
     with pytest.raises(RuntimeError) as erro:
-        a10_perfis.editor_ambiente(_ctx(), _escolher("Todos"), ponte)
+        a10_perfis.editor_ambiente(_ctx(), _escolher(PROCEDENCIA_DE_QUALQUER_JOGO), ponte)
     assert "Pragmata" in str(erro.value)
     assert gravados == [], "o armamento de um perfil liberou o outro"
 
@@ -214,18 +234,29 @@ def test_quem_ja_e_catch_all_nao_e_perguntado(
     """A guarda protege o que se PERDE — e um catch-all não perde nada.
 
     Perguntar aqui seria ruído, e ruído treina a pessoa a confirmar sem ler.
+
+    **E ELE TAMBÉM NÃO GRAVA, desde 11/09/2026** — a segunda metade é nova e é
+    do C4-FUNCIONA-EM: escolher a procedência que o campo JÁ mostra não é uma
+    mudança, e reescrever a regra por um gesto que não mudou nada é como um
+    perfil por `process_name` viraria um por `wm_class` sozinho. O que esta
+    régua mede continua sendo o que ela sempre mediu: **não houve pergunta**.
     """
     _o_disco_tem(monkeypatch, _catch_all("meu_perfil"))
     a10_perfis._ESCOLHIDO = "meu_perfil"
 
-    a10_perfis.editor_ambiente(_ctx(), _escolher("Todos"), PonteDeMentira())
-    assert len(gravados) == 1, "o gesto perguntou sobre um perfil que já vale sempre"
+    # Sem `pytest.raises`: uma exceção aqui é a pergunta, e ela é o defeito.
+    a10_perfis.editor_ambiente(
+        _ctx(), _escolher(PROCEDENCIA_DE_QUALQUER_JOGO), PonteDeMentira())
+    assert gravados == [], (
+        "o perfil já valia sempre e o gesto reescreveu a regra assim mesmo")
+    assert a10_perfis._ARMADO_REBAIXAR is None, (
+        "o gesto armou a pergunta sobre um perfil que já vale sempre")
 
 
 def test_as_outras_escolhas_nao_perguntam(
     monkeypatch: pytest.MonkeyPatch, gravados: list[Any],
 ) -> None:
-    """"Steam", "Jogo" e "Jogo da Steam" continuam gravando no primeiro clique.
+    """As outras procedências continuam gravando no primeiro clique.
 
     A guarda é sobre PERDER o alvo, não sobre trocá-lo. Uma guarda que pegasse
     toda troca de regra viraria dois cliques para tudo — e a decisão dela de
@@ -234,16 +265,17 @@ def test_as_outras_escolhas_nao_perguntam(
     _o_disco_tem(monkeypatch, _de_jogo("Elden Ring"))
     a10_perfis._ESCOLHIDO = "Elden Ring"
 
-    a10_perfis.editor_ambiente(_ctx(), _escolher("Steam"), PonteDeMentira())
-    assert len(gravados) == 1, "trocar para 'Steam' passou a exigir confirmação"
+    a10_perfis.editor_ambiente(_ctx(), _escolher(PROCEDENCIA_DA_NAVEGACAO), PonteDeMentira())
+    assert len(gravados) == 1, (
+        f"trocar para «{PROCEDENCIA_DA_NAVEGACAO}» passou a exigir confirmação")
 
 
 def test_a_guarda_desarma_quando_ela_escolhe_outra_coisa(
     monkeypatch: pytest.MonkeyPatch, gravados: list[Any],
 ) -> None:
-    """Armar "Todos", desistir e escolher "Steam" não deixa o armamento de pé.
+    """Armar o catch-all, desistir e escolher outra coisa não deixa o armamento.
 
-    Sem isto, a próxima escolha de "Todos" — em qualquer momento dos oito
+    Sem isto, a próxima escolha de «Qualquer jogo» — em qualquer momento dos oito
     segundos, e sobre o mesmo perfil — gravaria sem perguntar, e a pergunta que
     a autorizou falava de outro gesto.
     """
@@ -252,8 +284,8 @@ def test_a_guarda_desarma_quando_ela_escolhe_outra_coisa(
     ponte = PonteDeMentira()
 
     with pytest.raises(RuntimeError):
-        a10_perfis.editor_ambiente(_ctx(), _escolher("Todos"), ponte)
-    a10_perfis.editor_ambiente(_ctx(), _escolher("Steam"), ponte)
+        a10_perfis.editor_ambiente(_ctx(), _escolher(PROCEDENCIA_DE_QUALQUER_JOGO), ponte)
+    a10_perfis.editor_ambiente(_ctx(), _escolher(PROCEDENCIA_DA_NAVEGACAO), ponte)
 
     with pytest.raises(RuntimeError):
-        a10_perfis.editor_ambiente(_ctx(), _escolher("Todos"), ponte)
+        a10_perfis.editor_ambiente(_ctx(), _escolher(PROCEDENCIA_DE_QUALQUER_JOGO), ponte)

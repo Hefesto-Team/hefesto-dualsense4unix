@@ -101,9 +101,14 @@ def test_a_lista_traz_o_appid_no_value_e_o_nome_no_rotulo() -> None:
     escrever o NOME no campo, e `from_simple_choice("steam_game", …)` quer o
     número.
     """
+    # **O RÓTULO MUDOU DE FORMA EM 11/09/2026, e o `value` NÃO** — é o item 12
+    # da segunda lista dela (foto 9): *"hoje: 1245620 · falta: ELDEN RING ·
+    # 1245620"*. O que esta régua guarda é o `value`, que é o que o campo
+    # grava; o `label` é o que ela LÊ, e ele passou a dizer nome e número com
+    # o separador da casa, sem a palavra `appid` colada no meio.
     html = a10_perfis._html_dos_jogos()
-    assert '<option value="851100" label="Sea of Stars (appid 851100)">' in html
-    assert '<option value="1245620" label="ELDEN RING (appid 1245620)">' in html
+    assert '<option value="851100" label="Sea of Stars · 851100">' in html
+    assert '<option value="1245620" label="ELDEN RING · 1245620">' in html
     # A ORDEM É ALFABÉTICA pelo NOME, que é o que ela procura — não pelo appid.
     assert html.index("1245620") < html.index("851100"), (
         "a lista saiu na ordem do appid — ela procura pelo NOME do jogo")
@@ -148,7 +153,7 @@ def test_o_nome_do_jogo_dela_nunca_vira_marcacao() -> None:
         f"atributo foi fechado por um caractere que veio do disco")
     por_appid = {o["value"]: o["label"] for o in leitor.opcoes}
     for jogo in CATALOGO:
-        assert por_appid[jogo.appid] == f"{jogo.nome} (appid {jogo.appid})", (
+        assert por_appid[jogo.appid] == f"{jogo.nome} · {jogo.appid}", (
             f"o rótulo de `{jogo.appid}` chegou cortado: "
             f"{por_appid[jogo.appid]!r}")
 
