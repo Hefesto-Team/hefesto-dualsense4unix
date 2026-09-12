@@ -1041,7 +1041,16 @@
      reticências são o que sobra quando ele encolhe até o limite — e o `title` do
      valor guarda a frase inteira, para não perder informação no corte. */
   .est{min-width:0}
-  .est .val{color:var(--fg);font-weight:600;white-space:nowrap;margin-left:auto;
+  /* O `nowrap` SAIU EM 11/09/2026, e quem o derrubou foi uma fala aprovada
+     por ela: a linha do Pausado passou de «Sim, e volta pausado» para «Sim — e
+     continua depois de reiniciar», 16 caracteres mais longa, e ela estourou a
+     caixa em 72 px NO PRÓPRIO TAMANHO DO DESENHO — não numa janela estreita.
+     Com `nowrap` a saída era reticências, e reticências no tamanho cheio é
+     texto escondido sem que nada tenha ficado apertado. Quebrar em duas linhas
+     mostra a frase inteira; as linhas curtas, que são quase todas, continuam
+     numa linha só porque cabem. O `ellipsis` fica para quem encolher de
+     verdade, e o `title` continua guardando a frase. */
+  .est .val{color:var(--fg);font-weight:600;margin-left:auto;
             text-align:right;min-width:0;overflow:hidden;text-overflow:ellipsis}
   .est .g{flex:0 0 14px;text-align:center;font-size:11px;font-weight:700}
   .est.ok .g{color:var(--green)} .est.ok .val{color:var(--green)}

@@ -651,17 +651,22 @@ _VOLTAR_NO_PRODUTO = """\
 #: `test_nenhuma_troca_de_palavra_mudou_a_frase` logo abaixo é quem exige isso,
 #: e é o que impede esta lista de virar a porta dos fundos da igualdade.
 _A_PALAVRA_QUE_SAIU: tuple[tuple[str, str], ...] = (
+    # QUATRO PARES SAÍRAM DAQUI EM 11/09/2026, e a régua mandou: *"perdão morto,
+    # APAGUE o par"*. Eles não morreram porque a palavra voltou — morreram
+    # porque a PÁGINA foi reescrita. A PAGINAS-ESPECIAIS-B1 mudou as frases
+    # inteiras por aprovação dela («Como está hoje» no lugar de «Como está o meu
+    # arranjo», a lição do adaptador refeita), e um perdão que descreve uma
+    # frase que não existe mais deixa a próxima pessoa procurando o que não há.
+    # Conferido antes de sair: a palavra banida NÃO voltou à tela desta página —
+    # o que sobra dela são nomes de classe CSS e um `data-modo`, que são
+    # endereço de código e não texto que alguém lê.
     ("— o mapa da sua mesa", "— o mapa dos seus objetos"),
-    ("se a mesa cheia funciona com tudo ligado.",
-     "se todos os controles funcionam com tudo ligado."),
     ('porque: "entrada direta, mas na altura da mesa"',
      'porque: "entrada direta, mas na altura da escrivaninha"'),
     ("Bom quando desmontar a mesa custa caro.",
      "Bom quando desmontar o arranjo custa caro."),
     ('out.push("os dongles ficam na altura da mesa, não no alto do rack")',
      'out.push("os dongles ficam na altura da escrivaninha, não no alto do rack")'),
-    ('">Como está a minha mesa</button>', '">Como está o meu arranjo</button>'),
-    (">Reexaminar a mesa</button>", ">Reexaminar o arranjo</button>"),
     ("pode não caber na sua mesa — escolha o que cabe.",
      "pode não caber na sua escrivaninha — escolha o que cabe."),
     ("</span> e a sua mesa fica no melhor arranjo que este hardware permite.",
@@ -671,8 +676,6 @@ _A_PALAVRA_QUE_SAIU: tuple[tuple[str, str], ...] = (
      '"Este arranjo é o melhor que eu conheço."'),
     ('"Esta é a mesa de agora — "', '"Este é o arranjo de agora — "'),
     (">Controles na mesa:</span>", ">Controles ligados:</span>"),
-    ("Uma caixinha por controle <b>que está na mesa</b> —",
-     "Uma caixinha por controle <b>que está ligado</b> —"),
 )
 
 _PORQUE_A_PALAVRA_SAIU = (

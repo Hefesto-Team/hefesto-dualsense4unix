@@ -333,10 +333,18 @@ def test_a_frase_nova_diz_o_que_o_produto_faz() -> None:
     A dispensa é gravada com o ARRANJO, e a linha volta sozinha quando o arranjo
     muda. As DUAS dicas passam a dizer isso — a do ⊘ e a da quinta linha.
     """
-    from hefesto_dualsense4unix.interface import aba08, onde
+    from hefesto_dualsense4unix.interface import onde
+    from hefesto_dualsense4unix.interface.pacotes import a08_conexoes
 
     html = onde.pagina("08-conexoes.html").read_text(encoding="utf-8")
-    assert html.count(aba08.ORDEM_IGNORADA_VOLTA) >= 2
+    # A RÉGUA CONTAVA A FRASE INTEIRA ATÉ 11/09/2026, e a A1-066 a quebrou sem
+    # tocar numa linha daqui: as duas frases têm sujeitos de GÊNEROS diferentes
+    # («a linha volta sozinha» · «o aviso volta sozinho»), e a constante única
+    # obrigava uma das duas a errar a concordância. Nasceu `VOLTA_QUANDO` com a
+    # metade que é a mesma nas duas, e é ela que esta régua conta — o que se
+    # mede é *as duas dicas dizerem quando a linha volta*, não a palavra com
+    # que cada uma o diz.
+    assert html.count(a08_conexoes.VOLTA_QUANDO) >= 2
     assert "A linha fica apagada aqui" not in html
 
 
