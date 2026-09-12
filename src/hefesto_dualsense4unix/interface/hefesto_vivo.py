@@ -1737,6 +1737,14 @@ BOOTSTRAP = r"""
 #: 1 px a cada 150 ms). Aqui a contagem começa na ENTRADA do elemento e só se
 #: reinicia quando o elemento MUDA. A dica abre com a mão em cima, não com a mão
 #: parada.
+#:
+#: O PREÇO DA COLHEITA FOI PAGO EM 11/09/2026 — F7, no mesmo dia em que a C1 o
+#: declarou: o `title` era também o NOME ACESSÍVEL do elemento, e esvaziá-lo
+#: emudecia **2.020** deles nas treze páginas (90 de HTML e 1.930 `<title>` de
+#: desenho). O bloco do nome acessível, logo abaixo, veste `aria-label` **só em
+#: quem ficaria sem nome** — e a régua é
+#: `tests/unit/test_o_nome_acessivel_sobrevive_a_dica_da_casa.py`, que mede no
+#: DOM vivo porque no fonte publicado o `title` continua inteiro.
 DICA_DA_CASA = r"""
 (function(){
   if(window.__hefDica && window.__hefDica.instalada) return 'ja';
@@ -1763,6 +1771,185 @@ DICA_DA_CASA = r"""
 
   var E = {alvo: null, texto: '', tempo: 0, x: 0, y: 0, aberta: false, abriu: 0};
 
+  // O NOME ACESSÍVEL — F7, 11/09/2026, e ele é a DÍVIDA QUE A COLHEITA CRIOU.
+  //
+  // A colheita abaixo tira o `title` do DOM vivo para o popup do compositor não
+  // ter de que nascer. Só que o `title` não era só a dica: quando o elemento
+  // não tem outro rótulo, ele é também o NOME que um leitor de tela anuncia.
+  // Sem ele, um botão de ícone vira *«botão»* — e a queixa de quem não enxerga
+  // é a mesma dela, com outro nome: o produto deixa de se explicar.
+  //
+  // **MEDIDO NO DOM VIVO das treze páginas publicadas, com esta camada de pé:**
+  // 693 `title` colhidos com texto, e destes 388 já tinham nome por outra via
+  // (357 pelo próprio conteúdo, 31 por `aria-label` que a aba escreveu) e 215
+  // estão em `span`/`div`/`label` — casca sem papel, que nome nenhum alcança.
+  // **90 ficavam mudos**: 52 botões de ícone, 14 deslizantes, 12 campos de
+  // digitar, 12 listas. Mais **1.930 `<title>` de SVG**, nenhum com outra via.
+  //
+  // A REGRA É UMA SÓ, E ELA É NEGATIVA: veste `aria-label` **só em quem ficaria
+  // sem nome**. Um `aria-label` por cima de um botão que já diz «Aplicar» faz o
+  // leitor de tela ler duas vezes — é pior do que não fazer nada, e é por isso
+  // que `tem_nome()` abaixo é tão detalhado quanto a conta do HTML-AAM.
+  //
+  // E A DESCRIÇÃO FICOU DE FORA, declarada: nos 388 que já têm nome o `title`
+  // era a DESCRIÇÃO, e ela não volta aqui. A dica da casa continua mostrando a
+  // frase a quem vê; devolvê-la a quem não vê pede `aria-description`, que é
+  // outra sprint e outro suporte de motor.
+  var PAPEL_SEM_NOME = {presentation: 1, none: 1, generic: 1};
+  //: Quem aceita um nome acessível SEM papel declarado. A lista é a do
+  //: HTML-AAM, podada ao que existe nestas dez abas — `div` e `span` ficam de
+  //: fora de propósito: o papel deles é genérico, e o ARIA proíbe nomeá-lo.
+  var TAG_QUE_ACEITA_NOME = {a: 1, button: 1, input: 1, select: 1, textarea: 1,
+    summary: 1, img: 1, area: 1, iframe: 1, meter: 1, progress: 1, output: 1,
+    details: 1, dialog: 1, fieldset: 1, optgroup: 1, option: 1, audio: 1,
+    video: 1, th: 1, table: 1, svg: 1};
+  //: Quem tira o nome do PRÓPRIO CONTEÚDO — o botão que diz «Aplicar» dentro.
+  var TAG_NOME_DO_CONTEUDO = {a: 1, button: 1, summary: 1, th: 1, td: 1,
+    option: 1, optgroup: 1, legend: 1};
+  var PAPEL_NOME_DO_CONTEUDO = {button: 1, link: 1, tab: 1, menuitem: 1,
+    menuitemcheckbox: 1, menuitemradio: 1, option: 1, checkbox: 1, radio: 1,
+    switch: 1, heading: 1, treeitem: 1, gridcell: 1, cell: 1, columnheader: 1,
+    rowheader: 1, tooltip: 1};
+  //: QUEM VESTIMOS, e o valor que vestimos. É um `WeakMap` e não um atributo
+  //: novo no DOM: `data-hef-*` é território de endereço desta casa, e um
+  //: marcador a mais ali seria mais uma coisa para as réguas tropeçarem. O
+  //: valor guardado é o que permite largar a posse sem briga — se a aba
+  //: escrever outro `aria-label` por cima, o nosso deixa de ser nosso.
+  var NOSSOS = (typeof WeakMap === 'function') ? new WeakMap() : null;
+
+  // O TEXTO QUE NOMEIA, e ele NÃO é o `textContent` cru. Duas podas, e as duas
+  // são medidas: um `<title>` de SVG está DENTRO do elemento e não é texto de
+  // tela — contá-lo faria todo botão de ícone passar por botão com rótulo, que
+  // é exatamente o botão que perde o nome aqui; e uma subárvore com
+  // `aria-hidden` não conta para nome nenhum, por definição.
+  function texto_que_nomeia(no, fundo){
+    if(!no || fundo > 12) return '';
+    if(no.nodeType === 3) return no.nodeValue || '';
+    if(no.nodeType !== 1) return '';
+    if(no.namespaceURI === SVG
+       && (no.localName === 'title' || no.localName === 'desc')) return '';
+    if(no.getAttribute && no.getAttribute('aria-hidden') === 'true') return '';
+    var s = '', f = no.firstChild;
+    while(f){ s += texto_que_nomeia(f, fundo + 1); f = f.nextSibling; }
+    return s;
+  }
+  function rotulo_de_formulario(el){
+    if(el.id){
+      var id = (window.CSS && CSS.escape) ? CSS.escape(el.id) : el.id;
+      var l = document.querySelector('label[for="' + id + '"]');
+      if(l && texto_que_nomeia(l, 0).trim()) return true;
+    }
+    var p = el.parentElement, n = 0;
+    while(p && n < 8){
+      if(p.localName === 'label' && texto_que_nomeia(p, 0).trim()) return true;
+      p = p.parentElement; n += 1;
+    }
+    return false;
+  }
+  // JÁ TEM NOME? A conta do HTML-AAM na ordem dela: o que vem ANTES do `title`
+  // é nome; o que vem depois não salva ninguém. O `placeholder` é o caso que
+  // decide sozinho — ele vem DEPOIS do `title`, e rotular por `placeholder` é
+  // falha conhecida de acessibilidade; então um campo que só tem `placeholder`
+  // conta como MUDO aqui, e ganha o `aria-label`.
+  function tem_nome(el){
+    if(String(el.getAttribute('aria-label') || '').trim()) return true;
+    var lb = String(el.getAttribute('aria-labelledby') || '').trim();
+    if(lb){
+      var ids = lb.split(/\s+/);
+      for(var i = 0; i < ids.length; i++){
+        var o = document.getElementById(ids[i]);
+        if(o && texto_que_nomeia(o, 0).trim()) return true;
+      }
+    }
+    var tag = el.localName;
+    var papel = String(el.getAttribute('role') || '').trim().toLowerCase();
+    if(tag === 'img' || tag === 'area') return el.hasAttribute('alt');
+    if(tag === 'input'){
+      var t = String(el.getAttribute('type') || 'text').toLowerCase();
+      if(t === 'button' || t === 'submit' || t === 'reset'){
+        return !!String(el.getAttribute('value') || '').trim();
+      }
+      if(t === 'image') return !!String(el.getAttribute('alt') || '').trim();
+      return rotulo_de_formulario(el);
+    }
+    if(tag === 'select' || tag === 'textarea' || tag === 'meter'
+       || tag === 'progress') return rotulo_de_formulario(el);
+    if(tag === 'option' && String(el.getAttribute('label') || '').trim()){
+      return true;
+    }
+    if(papel ? PAPEL_NOME_DO_CONTEUDO[papel] : TAG_NOME_DO_CONTEUDO[tag]){
+      return !!texto_que_nomeia(el, 0).trim();
+    }
+    return false;
+  }
+  function aceita_nome(el){
+    var papel = String(el.getAttribute('role') || '').trim().toLowerCase();
+    if(papel) return !PAPEL_SEM_NOME[papel];
+    return !!TAG_QUE_ACEITA_NOME[el.localName];
+  }
+  //: O NOSSO `aria-label`, e só ele, pode ser trocado ou tirado depois.
+  function e_nosso(el){
+    if(!NOSSOS || !NOSSOS.has(el)) return false;
+    return el.getAttribute('aria-label') === NOSSOS.get(el);
+  }
+  function vestir_nome(el, t){
+    if(!el || !t || !el.getAttribute) return;
+    if(!aceita_nome(el) || tem_nome(el)) return;
+    el.setAttribute('aria-label', t);
+    if(NOSSOS) NOSSOS.set(el, t);
+  }
+  // O NOME QUE TROCA DE TEXTO. O alvo `atributo` do piloto escreve `title` nas
+  // dicas vivas (a carga da bateria, a taxa do giroscópio) e a camada desvia
+  // esse texto para `data-hef-dica`; o nome tem de ir junto, ou o leitor de
+  // tela fica com a frase do instante em que a página carregou. Só mexe no que
+  // é nosso: um `aria-label` que a aba escreveu manda mais que este.
+  function trocar_nome(el, t){
+    if(!el || !e_nosso(el)) return;
+    if(t){ el.setAttribute('aria-label', t); NOSSOS.set(el, t); }
+    else { el.removeAttribute('aria-label'); NOSSOS.delete(el); }
+  }
+  // NO DESENHO O NOME É DO DONO DO `<title>`, e há dois casos medidos:
+  //
+  // * **o ícone** — um `<svg class="gl">` de 18 px com UM `<title>` e nada
+  //   dentro: 222 nas treze páginas. Ele ganha `role="img"`, que é o papel que
+  //   ele já tinha de fato;
+  // * **a zona de um desenho** — os 1.708 `<g>`, `<path>`, `<circle>` e
+  //   `<rect>` que dão nome a cada pedaço do DualSense. Aqui o papel NÃO se
+  //   mexe: `role="img"` torna a subárvore apresentacional, e num desenho com
+  //   zonas ele engoliria os 1.708 nomes de dentro para pôr um só por fora.
+  //
+  // E O ÍCONE QUE REPETE O TEXTO DO LADO SAI DA ÁRVORE — 63 dos 222. Quando a
+  // frase vizinha já diz «Cruz», um `aria-label` de «Cruz» no desenho ao lado
+  // faz o leitor ler duas vezes. Decorativo ao lado de quem já nomeia é
+  // `aria-hidden`, e a conta é do DOM: o nome aparece no texto do pai.
+  function eco_no_vizinho(svg, t){
+    var pai = svg.parentElement;
+    if(!pai) return false;
+    var fora = texto_que_nomeia(pai, 0).trim().toLowerCase();
+    if(!fora) return false;
+    return fora.indexOf(String(t).trim().toLowerCase()) >= 0;
+  }
+  function vestir_nome_do_desenho(dono, t){
+    if(!dono || !t || !dono.getAttribute) return;
+    if(String(dono.getAttribute('aria-label') || '').trim()) return;
+    if(String(dono.getAttribute('aria-labelledby') || '').trim()) return;
+    if(dono.getAttribute('aria-hidden') === 'true') return;
+    if(dono.localName === 'svg'){
+      if(eco_no_vizinho(dono, t)){
+        dono.setAttribute('aria-hidden', 'true');
+        return;
+      }
+      // UM `<title>` SÓ é a assinatura do ícone: o desenho com zonas tem
+      // dezenas, e ele não pode virar `img`.
+      if(!dono.getAttribute('role')
+         && dono.querySelectorAll('title').length <= 1){
+        dono.setAttribute('role', 'img');
+      }
+    }
+    dono.setAttribute('aria-label', t);
+    if(NOSSOS) NOSSOS.set(dono, t);
+  }
+
   // A COLHEITA — E ELA É O QUE FAZ O POPUP DO SISTEMA NÃO NASCER.
   //
   // MEDIDO em 11/09/2026, e derrubou a primeira forma desta camada: tirar o
@@ -1786,8 +1973,15 @@ DICA_DA_CASA = r"""
     for(var i = 0; i < lista.length; i++){
       var el = lista[i];
       if(el === caixa) continue;
-      el.setAttribute('data-hef-dica', String(el.getAttribute('title') || '').trim());
+      var d = String(el.getAttribute('title') || '').trim();
+      el.setAttribute('data-hef-dica', d);
       el.removeAttribute('title');
+      // O NOME ANTES DO `title` SAIR NÃO MUDA NADA, e depois muda: `tem_nome`
+      // não olha para o `title`, então a ordem aqui é indiferente — o que não
+      // é indiferente é a ordem DOS DOIS LAÇOS. Este roda antes do laço do
+      // SVG, e por isso `texto_que_nomeia` tem de podar o `<title>` de
+      // desenho: nesta linha ele ainda tem texto dentro do botão de ícone.
+      vestir_nome(el, d);
       n += 1;
     }
     // NO SVG A DICA É UM FILHO, NÃO UM ATRIBUTO — `interface/monta.py` já pagou
@@ -1799,8 +1993,10 @@ DICA_DA_CASA = r"""
     for(var j = 0; j < tt.length; j++){
       var t = tt[j];
       if(t.namespaceURI !== SVG) continue;
-      t.setAttribute('data-hef-dica', String(t.textContent || '').trim());
+      var st = String(t.textContent || '').trim();
+      t.setAttribute('data-hef-dica', st);
       t.textContent = '';
+      vestir_nome_do_desenho(t.parentElement, st);
       n += 1;
     }
     return n;
@@ -1822,6 +2018,7 @@ DICA_DA_CASA = r"""
       var t = String(el.getAttribute('title') || '').trim();
       el.setAttribute('data-hef-dica', t);
       el.removeAttribute('title');
+      vestir_nome(el, t);
       return t ? t : '';
     }
     return null;
@@ -1832,8 +2029,10 @@ DICA_DA_CASA = r"""
     while(f){
       if(f.nodeType === 1 && f.localName === 'title' && f.namespaceURI === SVG){
         if(!f.hasAttribute('data-hef-dica')){
-          f.setAttribute('data-hef-dica', String(f.textContent || '').trim());
+          var ft = String(f.textContent || '').trim();
+          f.setAttribute('data-hef-dica', ft);
           f.textContent = '';
+          vestir_nome_do_desenho(el, ft);
         }
         var s = String(f.getAttribute('data-hef-dica') || '').trim();
         if(s) return {no: f, texto: s};
@@ -1947,6 +2146,7 @@ DICA_DA_CASA = r"""
     // um valor vivo (a taxa do giroscópio, a carga da bateria) congelaria no
     // texto do instante em que abriu.
     trocar: function(el, t){
+      trocar_nome(el, String(t || ''));
       if(E.alvo && E.alvo.el === el){
         E.texto = String(t);
         if(E.aberta) caixa.textContent = E.texto;
