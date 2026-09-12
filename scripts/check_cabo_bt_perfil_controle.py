@@ -195,15 +195,17 @@ DO_APARELHO: dict[str, tuple[str, ...]] = {
 #:   pedindo que a linha saia. Sem isso a lista vira propaganda no dia seguinte
 #:   à primeira cura — é a mesma régua do `divida-fechada` do
 #:   `check_paridade_gtk_html.py`.
-A_DIVIDA_CONHECIDA: dict[str, tuple[str, str]] = {
-    "volume": (
-        "2026-09-09-MIC-VOLUME-02-o-byte-do-aparelho-medido-e-ligado-ao-campo.md",
-        "o trilho MEXE hoje, mas na fonte do PipeWire — o byte do aparelho "
-        "(`audio.microfone.volume`, output 0x02 common[6]) não é escrito por "
-        "decisão tomada, e ninguém mediu se ele faz algo. A bancada de "
-        "MIC-VOLUME-02 decide: byte que o aparelho não obedece não ganha campo",
-    ),
-}
+#: **A LISTA ESTÁ VAZIA DESDE 09/09/2026, e a linha que saiu é o registro.** Ela
+#: tinha UMA entrada, o `volume`, com esta razão: *"o trilho MEXE hoje, mas na
+#: fonte do PipeWire — o byte do aparelho (`audio.microfone.volume`, output 0x02
+#: common[6]) não é escrito por decisão tomada, e ninguém mediu se ele faz
+#: algo"*. A bancada dela mediu (*"Deu certo. funciona"*, `docs/data/ensaios.csv`,
+#: `folha-mic-volume-o-byte-age-cabo-0909`), ela mandou ligar o byte
+#: (`D-0909-O-VOLUME-DO-MIC-LIGA-O-BYTE-DO-APARELHO`) e a MIC-VOLUME-02 ligou:
+#: o gesto e o perfil escrevem o `common[6]` por `uniq`. **A linha sai porque
+#: esta régua manda ela sair** — foi a metade "dívida que FECHOU" desta mordida
+#: que reprovou a leva e cobrou o fecho, exatamente como desenhada.
+A_DIVIDA_CONHECIDA: dict[str, tuple[str, str]] = {}
 
 #: ONDE CADA FEATURE MORA NO PERFIL — `(campo do Profile, campo do
 #: ControllerOverrides)`.

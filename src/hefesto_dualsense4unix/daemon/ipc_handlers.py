@@ -1134,9 +1134,9 @@ class IpcHandlersMixin:
         A causa é a ORDEM DAS CAMADAS do merge, não a escrita. ``set_led``
         escreve no hardware E grava o valor em ``_desired_default``
         (``_record_desired_locked`` com alvo ``None``,
-        ``core/backend_pydualsense.py:2589``); o ``reassert_resolved_outputs``
+        ``core/backend_pydualsense.py:2657``); o ``reassert_resolved_outputs``
         logo abaixo re-resolve por controle, e o ``_merged_desired_for_key``
-        (``core/backend_pydualsense.py:6172``) põe a camada AUTOMÁTICA do slot
+        (``core/backend_pydualsense.py:6382``) põe a camada AUTOMÁTICA do slot
         (COR-03) EM CIMA do default — a paleta repinta por cima da cor que
         acabou de sair. O caminho por-``uniq`` SEMPRE funcionou pelo mesmo
         motivo, ao contrário: ``apply_output_for`` grava em ``_desired_by_uniq``,
@@ -6179,12 +6179,23 @@ class IpcHandlersMixin:
 
         **Por que ele é universal**, que era o pedido dela — *"independente de
         saber se tá via bt ou via cabo, o app deve ser inteligente pra saber
-        qual caminho usar"*: o DualSense não expõe registrador de ganho de
-        microfone em transporte nenhum. O que existe nos dois casos é uma fonte
-        no sistema, e quem a encontra é
+        qual caminho usar"*: o que existe nos dois transportes é uma fonte de
+        captura no sistema, e quem a encontra é
         `integrations/audio_control.fonte_de_captura_do_controle` — no cabo, o
         source ALSA do controle; no rádio, o source publicado pela ponte de
         áudio. Quem chama não escolhe caminho.
+
+        **FATO SUBSTITUÍDO EM 09/09/2026.** Esta docstring dizia que *"o
+        DualSense não expõe registrador de ganho de microfone em transporte
+        nenhum"*, e era com essa frase que ela justificava mexer SÓ na fonte do
+        sistema. **O registrador existe**: é o `common[6]`, que o
+        `hid-playstation` desta máquina NOMEIA (`mic_volume`, `0x0 - 0x40`), e
+        a bancada dela mediu a captura mudando com ele no cabo — *"Deu certo.
+        funciona"* (`docs/data/ensaios.csv`,
+        `folha-mic-volume-o-byte-age-cabo-0909`). O que a frase tinha de certo
+        continua de pé e é o que sustenta a UNIVERSALIDADE: a fonte no sistema é
+        o degrau que vale nos dois transportes, e o byte do aparelho é medido só
+        no cabo. Por isso os dois, e nesta ordem.
 
         **`sem_fonte` não é falha, é resposta.** Por Bluetooth, sem a ponte de
         pé, não existe fonte de captura nenhuma (medido em 16/08/2026: `pactl
@@ -6290,6 +6301,27 @@ class IpcHandlersMixin:
         if not fonte:
             return {"status": "sem_fonte", "fonte": None, "volume": None}
         ok = definir_volume_da_captura(volume, fonte=fonte)
+        # O SEGUNDO DEGRAU DO MESMO CAMPO — MIC-VOLUME-02 (09/09/2026), decisão
+        # dela (`D-0909-O-VOLUME-DO-MIC-LIGA-O-BYTE-DO-APARELHO`, *"3-c"*).
+        # Acima está o ganho da FONTE no sistema; aqui, o `common[6]` do
+        # aparelho, que a bancada dela mediu obedecendo no cabo — *"Deu certo.
+        # funciona"* (`docs/data/ensaios.csv`,
+        # `folha-mic-volume-o-byte-age-cabo-0909`). Um campo, dois degraus, para
+        # o número da tela ser o que a pessoa ouve do outro lado.
+        #
+        # ELE VEM DEPOIS DA FONTE, E SÓ QUANDO A FONTE ACONTECEU: o `sem_fonte`
+        # acima devolve ANTES de chegar aqui, de propósito. `sem_fonte` é o que
+        # deixa o controle deslizante INSENSÍVEL na tela, e escrever o byte do
+        # aparelho por baixo de um controle cinza seria a tela prometendo nada e
+        # o aparelho mudando de ganho — o mesmo engano, do outro lado.
+        aparelho = None
+        escritor = getattr(self.controller, "set_microphone_volume", None)
+        if callable(escritor):
+            try:
+                aparelho = bool(escritor(volume, uniq=uniq))
+            except Exception as exc:  # pragma: no cover - defensivo
+                aparelho = False
+                logger.warning("mic_volume_aparelho_falhou", err=str(exc))
         if ok:
             # PERFIL-GUARDA-O-MIC-01 (18/08/2026): idem `mic.set` e
             # `speaker.set` — ajuste MANUAL dela não pode ser pisado pelo
@@ -6306,6 +6338,14 @@ class IpcHandlersMixin:
             # idêntico a um que acertou o controle escolhido — e é justamente a
             # diferença entre mexer no microfone dela e no de outra pessoa.
             "por_uniq": por_uniq,
+            # O SEGUNDO DEGRAU, respondido — MIC-VOLUME-02. `True` = o
+            # `common[6]` daquele controle recebeu o byte; `False` = não havia
+            # handle para escrever; `None` = o backend não tem a porta (dublê,
+            # ou daemon instalado mais velho que esta janela). **É DIAGNÓSTICO,
+            # não recado de tela**: a tela não confessa dívida nossa (decisão
+            # dela, 07/09) e um "só metade aplicou" no controle deslizante seria
+            # exatamente isso. Quem precisa deste campo é o log e quem depura.
+            "aparelho": aparelho,
         }
 
     async def _handle_mouse_emulation_set(

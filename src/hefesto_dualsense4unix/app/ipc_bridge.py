@@ -1407,11 +1407,18 @@ def mic_volume_set(volume: int, uniq: str | None = None) -> bool:
                      apaga luz nenhuma.
     ===============  ====================================================
 
-    **Por que ele é universal.** O DualSense não expõe registrador de ganho de
-    microfone — nem no cabo nem no rádio. O que existe nos dois casos é uma
-    FONTE no sistema, e é nela que este pedido mexe. Por isso o mesmo controle
-    deslizante vale nos dois transportes sem que ela precise saber qual está
-    valendo, que era exatamente o pedido.
+    **Por que ele é universal.** O que existe nos dois transportes é uma FONTE
+    de captura no sistema, e é nela que este pedido mexe primeiro. Por isso o
+    mesmo controle deslizante vale nos dois transportes sem que ela precise
+    saber qual está valendo, que era exatamente o pedido.
+
+    **FATO SUBSTITUÍDO EM 09/09/2026 (MIC-VOLUME-02).** Esta linha dizia que *"o
+    DualSense não expõe registrador de ganho de microfone — nem no cabo nem no
+    rádio"*. **Expõe**: é o `common[6]`, nomeado pelo `hid-playstation`
+    (`mic_volume`, `0x0 - 0x40`), e a bancada dela mediu a captura mudando com
+    ele no cabo. O daemon passou a escrevê-lo no mesmo pedido, por `uniq`, logo
+    depois da fonte — quem chama daqui continua não escolhendo caminho, e ganhou
+    o segundo degrau de graça.
 
     **A ressalva honesta, e ela é do rádio.** Por Bluetooth o DualSense não
     expõe placa de áudio (medido em 16/08: `pactl list cards` traz só as duas
