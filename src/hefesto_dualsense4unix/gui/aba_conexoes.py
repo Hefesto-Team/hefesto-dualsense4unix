@@ -1012,18 +1012,17 @@ def gesto_valido(objeto: Mapping[str, Any]) -> bool:
 #: mesmos gestos em botões sem tooltip —, e por isso moram aqui, no lado Python
 #: dela, e não em `mapa_da_mesa.py`. O gerador do mockup e o piloto leem daqui:
 #: eram duas grafias até 01/09/2026.
-DICA_NOVA_ENTRADA = (
-    "Acrescenta a esta face o menor número que ainda não existe em face "
-    "nenhuma — os números são do GABINETE, e dois buracos diferentes não podem "
-    "levar o mesmo."
-)
+#: ENCOLHEU EM 11/09/2026, aprovado por ela: a regra de unicidade é do motor,
+#: e quem clica não escolhe o número. A dica passa a dizer o ATO.
+DICA_NOVA_ENTRADA = "Cria uma entrada nova nesta face, com o próximo número livre."
 #: A PALAVRA "mesa" SAIU DA TELA em 05/09/2026, ordem dela. Aqui ela dizia ONDE
 #: o hub entra, e o lugar certo não é o móvel: é o MAPA — o que este botão
 #: acrescenta é uma linha no desenho, não um objeto na sala.
+#: E ENCOLHEU JUNTO, no mesmo dia e pela mesma razão: «descritor USB» é o nome
+#: do kernel, e quem lê a dica só precisa saber que o sistema não vê o cabo.
 DICA_NOVO_HUB = (
-    "Acrescenta um hub ou uma extensão ao mapa e pergunta em que entrada ele "
-    "está ligado. Cabo passivo não tem descritor USB: nenhuma leitura do "
-    "sistema o enxerga, e por isso quem o declara é você."
+    "Acrescenta um hub ou uma extensão. O sistema não os enxerga — quem diz "
+    "onde estão é você."
 )
 
 

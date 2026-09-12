@@ -159,9 +159,10 @@ ESPERA_O_APLICAR = (
 #: nesta aba faz OUTRA coisa (*"Vale agora: envia a configuração aos controles
 #: na hora. NÃO grava"*), sobre um desenho que o clique dela já gravou.
 #: PROVISÓRIO — decisão dela.
-GRAVA_NO_CLIQUE = (
-    "Cada mudança aqui já foi gravada, no clique. Não há nada a aplicar depois."
-)
+#:
+#: ENCOLHEU EM 11/09/2026, aprovado por ela: a segunda oração era a primeira ao
+#: contrário — quem leu que já foi gravado já sabe que não há o que aplicar.
+GRAVA_NO_CLIQUE = "Tudo aqui é gravado no clique."
 
 #: As letras que uma entrada por extensão pode receber, na ordem. Vinte e seis
 #: extensões numa entrada só é mais do que qualquer gabinete comporta, e o
