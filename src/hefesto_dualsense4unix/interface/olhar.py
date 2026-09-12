@@ -178,13 +178,18 @@ NOME_DA_PROVA = "PROVA-DA-FOTO.txt"
 #: `test_o_retratista_fotografa_a_vista_pedida.py` o roda contra páginas de
 #: medida conhecida.
 #:
-#: AS DUAS FAMÍLIAS DE PÁGINA, e ele precisa saber medir as duas: as dez ABAS
-#: moram numa `.janela`; as páginas AVULSAS que abrem por fora dela (o mapa do
-#: controle, a calibração) moram numa `.cx`. Antes ele só conhecia a primeira e
+#: AS TRÊS FAMÍLIAS DE PÁGINA, e ele precisa saber medir as três: as dez ABAS
+#: moram numa `.janela`; o mapa do controle e a calibração moram numa `.cx`; e
+#: o `mapa-das-portas` mora numa `.pagina`. Antes ele só conhecia a primeira e
 #: ESTOURAVA na segunda, com `Cannot read properties of null` — que ao menos é
 #: um erro barulhento. O caso perigoso é o silencioso, e por isso o `erro`
 #: abaixo devolve o motivo em vez de um número inventado: seletor que casou
 #: ZERO elemento é ERRO, nunca medida.
+#:
+#: A TERCEIRA ENTROU EM 11/09/2026, e o comentário aqui dizia que as avulsas
+#: eram DUAS: `olhar.py mapa-das-portas.html --publicado` recusava com *"nem
+#: .janela nem .cx nesta página"* — o retratista desta casa não conseguia
+#: fotografar uma das três avulsas que ele mesmo nomeia, lá em cima.
 #:
 #: O `1080` ESTAVA DIGITADO no `passa_da_dobra`, e era a segunda cópia da
 #: altura da vista — 11/09/2026. Com a vista de 840 ele diria "passa 0 da
@@ -207,8 +212,9 @@ NOME_DA_PROVA = "PROVA-DA-FOTO.txt"
 #: medida, que é o defeito que esta casa mais paga.
 MEDIDA_NA_VISTA = """() => {
   const d = document.documentElement;
-  const cx = document.querySelector('.janela') || document.querySelector('.cx');
-  if (!cx) return {erro: 'nem .janela nem .cx nesta página — não há o que medir'};
+  const cx = document.querySelector('.janela') || document.querySelector('.cx')
+          || document.querySelector('.pagina');
+  if (!cx) return {erro: 'nem .janela, nem .cx, nem .pagina nesta página — não há o que medir'};
   const j = cx.getBoundingClientRect();
   return {caixa: cx.className, larg: Math.round(j.width), alt: Math.round(j.height),
           vista: `${window.innerWidth}x${window.innerHeight}`,
@@ -345,7 +351,8 @@ def _retratar(navegador, alvo: pathlib.Path, saida: pathlib.Path,
         # PÁGINA INTEIRA: o viewport de 1080 cortava tudo o que nasce abaixo da
         # dobra, e era justamente o que ela precisava ver.
         saida.parent.mkdir(parents=True, exist_ok=True)
-        moldura = pg.query_selector(".janela") or pg.query_selector(".cx")
+        moldura = (pg.query_selector(".janela") or pg.query_selector(".cx")
+                   or pg.query_selector(".pagina"))
         if vista is not None:
             # A VISTA PEDIDA: nem recorte, nem página inteira — o que a vista
             # mostra. É o único enquadramento que responde *"como fica
