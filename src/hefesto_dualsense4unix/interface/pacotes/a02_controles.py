@@ -3961,8 +3961,14 @@ def volume(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
 
     **SÃO DOIS MÉTODOS, E NÃO É DETALHE** — é a metade medida da D-12. O
     `mic.volume.set` mexe no ganho da FONTE no PipeWire (é literalmente *"o
-    canal específico dele"*) e **não toca no firmware**: não apaga a luz
-    vermelha e não tira o botão físico do controle. O `speaker.set {volume}`
+    canal específico dele"*) e, desde 12/09/2026 (MIC-VOLUME-02), também no
+    registrador `common[6]` do aparelho — mas **não no mudo do firmware**: não
+    apaga a luz vermelha e não tira o botão físico do controle.
+
+    **ESTE PARÁGRAFO JÁ DISSE "não toca no firmware", E ERA VERDADE ATÉ 12/09.**
+    O fato foi SUBSTITUÍDO, não anotado ao lado: manter as duas versões vivas
+    obrigaria a próxima pessoa a escolher entre elas. O que a frase queria
+    dizer continua de pé, e é a metade que sobrou. O `speaker.set {volume}`
     escreve no registrador do aparelho. Somar os dois num método só *"faria a
     interface prometer uma coisa e entregar outra"* — a docstring do daemon.
 
