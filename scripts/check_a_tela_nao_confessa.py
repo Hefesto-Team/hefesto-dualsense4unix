@@ -21,13 +21,17 @@ legais, medidas no mesmo dia:
 
 A PARTE DIFÍCIL, e por que a régua NÃO é um `grep` de frases proibidas
 ----------------------------------------------------------------------
-As duas famílias têm a MESMA forma. Estas quatro estão na tela hoje e as quatro
+As duas famílias têm a MESMA forma. Estas três estão na tela hoje e as três
 são legítimas::
 
     "O lugar está reservado e o jogo ainda não recebeu este controle"
     "Um traço no lugar do número quer dizer que a leitura ainda não chegou"
-    "o menor número que ainda não existe em face nenhuma"
     "O PS+R3 ainda não para aqui"
+
+Eram QUATRO até 11/09/2026: a dica do «Acrescentar entrada» dizia *"o menor
+número que ainda não existe em face nenhuma"*, e ela saiu da tela por
+aprovação dela — a regra de unicidade é do motor, e quem clica não escolhe o
+número.
 
 O que separa não é a palavra — é **de quem é o sujeito**. Quando o sujeito é o
 jogo, a leitura ou o número, `ainda não` é estado do mundo. Quando o sujeito
@@ -158,9 +162,10 @@ FATOS: dict[str, str] = {
     "a leitura ainda não chegou":
         "o sujeito é A LEITURA do aparelho. Estado de agora: o traço diz que o "
         "dado não veio ainda, não que não venha — 07/09/2026",
-    "o menor número que ainda não existe em face nenhuma":
-        "o sujeito é O NÚMERO. Fato de aritmética, descrevendo o que o botão "
-        "faz — 07/09/2026",
+    # SAIU DA TABELA EM 11/09/2026, e a régua foi quem cobrou: a frase deixou
+    # a tela por aprovação dela, e declaração que sobrevive à frase envelhece
+    # calada. A razão de 07/09 (*"o sujeito é O NÚMERO"*) continua registrada
+    # no bloco de exemplos deste docstring, onde não vira contrato.
     "O PS+R3 ainda não para aqui":
         "o sujeito é O ATALHO, e a frase diz ONDE ele age — o limite de escopo "
         "de um gesto, não capacidade por entregar — 07/09/2026",

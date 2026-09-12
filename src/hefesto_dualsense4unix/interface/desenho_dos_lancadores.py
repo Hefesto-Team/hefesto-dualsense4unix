@@ -1045,15 +1045,24 @@ DIZ_NAO_ACHEI = (
 #: para isso que ela pediu o sinônimo — dois botões com a mesma frase na mesma
 #: tela fazem quem lê procurar a diferença que a tela não mostra.
 #:
-#: A PALAVRA «NOVO» É DELA, e ela é o que distingue: o que entra por aqui não
-#: tem cartão nenhum na aba. E «emulador» saiu do rótulo sem perder o público
-#: que ela nomeou — a dica da tela de registro nomeia os dois casos, e o exemplo
-#: que ela mostra (`Ryujinx`) é justamente um emulador.
+#: A PALAVRA «NOVO» ERA DELA, e distinguia: o que entra por aqui não tem cartão
+#: nenhum na aba. **Ela caducou em 11/09/2026** — ver logo abaixo. E «emulador»
+#: saiu do rótulo sem perder o público que ela nomeou — a dica da tela de
+#: registro nomeia os dois casos, e o exemplo que ela mostra (`Ryujinx`) é
+#: justamente um emulador.
 #:
-#: **A MAIÚSCULA DECORATIVA CAIU EM 11/09/2026 — A2-005, aprovada por ela**,
-#: pela mesma razão de :data:`ADICIONAR_ROTULO`: «Lançador» no meio da frase não
-#: é nome próprio.
-ADICIONAR_NOVO_ROTULO = "Adicionar novo lançador"
+#: OS DOIS PASSARAM A DIZER O MESMO — 11/09/2026, aprovado por ela. O botão
+#: dizia *"Adicionar novo Lançador"* e a tela que ele abre dizia *"Localizar
+#: um lançador"*: dois nomes para a mesma tela, e ainda com maiúscula
+#: decorativa no botão. Os dois passam a ser «Adicionar um lançador».
+#:
+#: DUAS PROPOSTAS APROVADAS SE ENCONTRARAM AQUI, e esta é a que ficou. A
+#: A2-005 pedia só a minúscula (*"Adicionar novo lançador"*) e dava o título
+#: da tela por «mantido» — ela olhou o botão sozinho. A B1 olhou os DOIS
+#: endereços e viu o nome duplo. A minúscula que a A2 pediu está dentro desta,
+#: e a regra desta casa decide o resto: *quando a cura conhece a causa, ela
+#: cobre todos os chamadores*.
+ADICIONAR_NOVO_ROTULO = "Adicionar um lançador"
 
 # ---------------------------------------------------------------------------
 # O SELETOR DO SISTEMA — LANCADOR-LOCALIZAR-01, 10/09/2026, decisão dela
@@ -1087,8 +1096,16 @@ PROCURAR_O_ARQUIVO = "procurar-o-arquivo"
 #: linha: o gesto, a recusa e a régua não dependem do rótulo.
 PROCURAR_O_ARQUIVO_ROTULO = "Escolher o arquivo…"
 
-#: O TÍTULO DA CAIXA DE REGISTRO, e ele não é o rótulo de nenhum dos dois
-#: botões — de propósito.
+#: O TÍTULO DA CAIXA DE REGISTRO, e ele é o rótulo do botão GLOBAL — desde
+#: 11/09/2026, aprovado por ela: um nome por tela.
+#:
+#: O QUE CADUCOU E O QUE FICOU. Até 11/09 este título era neutro
+#: (*"Localizar um lançador"*) justamente para não ser o rótulo de NENHUM dos
+#: dois botões, e o parágrafo abaixo diz por quê. A decisão dela de 11/09 é
+#: mais forte para o botão global — botão e destino com nomes diferentes fazem
+#: quem clica duvidar de onde chegou. **O que a medição de 08/09 travava
+#: continua travado:** a palavra «novo» saiu do título, e é ela, não a
+#: diferença pela diferença, que contradizia a linha de baixo.
 #:
 #: A CAIXA É UMA E OS CAMINHOS SÃO DOIS (ver :func:`tela_do_registro_html`).
 #: Enquanto os dois botões diziam a mesma frase, dar o rótulo de um deles ao
@@ -1104,7 +1121,7 @@ PROCURAR_O_ARQUIVO_ROTULO = "Escolher o arquivo…"
 #: de gravar e **recusa o que não acha**. Nada entra aqui sem ser localizado,
 #: venha do botão do cartão ou do botão global. A linha logo abaixo do título
 #: (:data:`NOVO_PARA_QUEM`) é quem diz de qual dos dois se trata.
-TELA_DO_NOVO_TITULO = "Localizar um lançador"
+TELA_DO_NOVO_TITULO = "Adicionar um lançador"
 
 #: O gesto de TIRAR. *O que se acrescenta se tira* — sem ele a lista dela vira
 #: lixo permanente, e um cartão que ela não consegue remover é pior que a

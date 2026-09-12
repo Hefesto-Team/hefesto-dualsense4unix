@@ -215,8 +215,11 @@ def _controle(c):
 
 def main():
     quem = monta.CONECTADOS
-    n = len(quem)
-    plural = "dos dois" if n == 2 else f"dos {n}"
+    # O PLURAL SAIU DA FRASE — 11/09/2026, aprovado por ela. A linha dizia
+    # «dos dois controles» e caía em «dos 1 controles» com um controle só na
+    # mesa: a contagem era do desenho, não de quem lê. «todos os controles
+    # conectados» é verdade com um, com dois e com quatro, e não tem número
+    # a errar.
     html = f'''<!doctype html>
 <html lang="pt-BR">
 <head>
@@ -233,9 +236,9 @@ def main():
          `mapa.py`, e pelo mesmo motivo: uma página avulsa não sabe quem a chamou. -->
     <a class="voltar" href="02-controles.html"
        onclick="if (document.referrer) {{ history.back(); return false }}"
-       title="Volta para a aba de onde você veio.">← Voltar</a>
+       title="Volta para a aba anterior.">← Voltar</a>
     <h1><span class="p">Calibrar sensores de movimento</span></h1>
-    <div class="sub">O giroscópio e o acelerômetro {plural} controles conectados, numa passada só.</div>
+    <div class="sub">O giroscópio e o acelerômetro de todos os controles conectados, de uma vez.</div>
   </div>
 
   <div class="corpo">
@@ -290,7 +293,7 @@ def main():
 '''
     saida = onde.pagina("calibrar-sensores.html")
     saida.write_text("\n".join(l.rstrip() for l in html.split("\n")))
-    print(f"calibrar-sensores.html: {n} controle(s) conectado(s) · 3 estados clicáveis")
+    print(f"calibrar-sensores.html: {len(quem)} controle(s) conectado(s) · 3 estados clicáveis")
 
 
 if __name__ == "__main__":

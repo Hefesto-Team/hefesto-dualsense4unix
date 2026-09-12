@@ -1410,7 +1410,7 @@
         <div class="acoes" style="margin-top:0;margin-bottom:12px">
           <button class="btn roxo" data-gesto="detectar">Detectar o jogo aberto</button>
           <button class="btn" data-gesto="procurar">Procurar de novo</button>
-          <a class="btn" href="#novo-lancador" data-gesto="adicionar-lancador">Adicionar novo lançador</a>
+          <a class="btn" href="#novo-lancador" data-gesto="adicionar-lancador">Adicionar um lançador</a>
         </div>
 
         <div class="lancadores">
@@ -1549,7 +1549,7 @@
 <div class="tela-nova" id="novo-lancador">
   <div class="tn-cx">
     <div class="tn-topo">
-      <span class="tn-tit">Localizar um lançador</span>
+      <span class="tn-tit">Adicionar um lançador</span>
       <span class="ajuda">?<span class="dica">
         Diga o comando, o caminho do programa (é assim que entra um AppImage
         solto) ou o nome do atalho — os três exemplos estão no campo. Confiro no
@@ -1606,7 +1606,7 @@
   <ul>
     <li><b>O selo diz <code>NÃO LOCALIZADO</code></b>, e não mais <code>NÃO ACHEI</code> — palavra dela. O valor mudou num lugar só (<code>desenho_dos_lancadores.SELOS</code>); as dezenas de menções em comentário ficaram, porque contam o que aconteceu num dia. E as réguas que digitavam a palavra passaram a <b>ler</b> o selo.</li>
     <li><b>Todo cartão que não localizou oferece <code>Localizar este lançador</code></b> — os seis, a Steam inclusive. Ele não instala nada: ele abre a tela onde <b>você diz onde o lançador está</b>, que é o que faz o cartão acender. No cartão que <i>achou</i>, o botão continua sendo <code>Abrir o lançador</code>: são dois estados, dois botões.</li>
-    <li><b>E há um botão para acrescentar o que o Hefesto não conhece</b> — <code>Adicionar novo lançador</code>, pedido dela <i>"pra devs mais experimentais"</i>. Ele é o outro ato, e por isso a outra palavra: <i>localizar</i> é para o cartão que já está na tela, <i>adicionar novo</i> é para o que não tem cartão nenhum. O que você declara mora no <code>maquina.json</code> e passa pelo <b>mesmo procurador</b> dos de fábrica; o que não está no disco <b>não é guardado</b>, e o recado diz o que foi procurado. O que se acrescenta se tira, pelo <code>Tirar daqui</code>.</li>
+    <li><b>E há um botão para acrescentar o que o Hefesto não conhece</b> — <code>Adicionar um lançador</code>, pedido dela <i>"pra devs mais experimentais"</i>. Ele é o outro ato, e por isso a outra palavra: <i>localizar</i> é para o cartão que já está na tela, <i>adicionar novo</i> é para o que não tem cartão nenhum. O que você declara mora no <code>maquina.json</code> e passa pelo <b>mesmo procurador</b> dos de fábrica; o que não está no disco <b>não é guardado</b>, e o recado diz o que foi procurado. O que se acrescenta se tira, pelo <code>Tirar daqui</code>.</li>
     <li><b>A Epic e a GOG ficam dentro do Heroic</b> — palavra dela, e o rótulo daquele cartão já dizia <code>Heroic (Epic · GOG)</code> desde que ele nasceu. É por ali que o jogo das duas lojas entra nesta máquina.</li>
   </ul>
 
