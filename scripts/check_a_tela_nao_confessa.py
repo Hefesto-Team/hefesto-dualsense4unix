@@ -704,6 +704,22 @@ SEM_LETRA: dict[str, str] = {
     # O gesto pergunta, o daemon recusa com um `motivo`, e o gesto põe esse
     # motivo no cartão sem uma palavra própria. Quem escreve a frase é o
     # `daemon/ipc_handlers.py` e o motor que ele chama.
+    # -- A C4 TROUXE TRÊS, em 11/09/2026, e as três têm dono fora dos pacotes --
+    # O campo «Funciona em:» passou a oferecer os lançadores, e as recusas dele
+    # vêm de dois lugares que a peneira não alcança de dentro do pacote:
+    # `profiles/simple_match.MSG_ESCOLHA_O_JOGO`, que é uma frase com buraco
+    # («Escolha o jogo na lista de baixo — “{procedencia}” mostra os jogos que
+    # vêm de lá pelo nome»), e o `ambiente_recado` que `app/actions/perfis_web`
+    # monta para a procedência que a tela não sabe mostrar. **Nenhuma das duas
+    # confessa dívida nossa**: a primeira diz o passo que falta, a segunda é
+    # estado do perfil que está no disco. Conferidas lendo as duas fontes.
+    "a10_perfis.py:editor_ambiente ← MSG_ESCOLHA_O_JOGO.format(procedencia=rotulo)":
+        "a frase de `profiles/simple_match`, com o nome do lançador no buraco",
+    "a10_perfis.py:editor_ambiente ← recado":
+        "o `ambiente_recado` que `app/actions/perfis_web` monta, repassado "
+        "inteiro",
+    "a10_perfis.py:editor_jogo ← recado":
+        "idem, no campo do jogo",
     "a01_jogar.py:mascara_do_controle ← motivo":
         "a recusa do `gamepad.mask.set`, palavra por palavra do daemon",
     "a02_controles.py:mudo ← frase":
@@ -726,10 +742,6 @@ SEM_LETRA: dict[str, str] = {
     "a09_sistema.py:_systemctl ← f'{recusa}{(f': {detalhe}' if detalhe else '.')}'":
         "a recusa do systemd mais o detalhe que ele mesmo dá — as duas metades "
         "vêm de fora, e o `f''` só as costura",
-    "a10_perfis.py:editor_ambiente ← str(editor.get('ambiente_recado') or '')":
-        "o recado do editor de ambiente, escrito em `app/actions` do perfil",
-    "a10_perfis.py:editor_jogo ← str(editor.get('ambiente_recado') or '')":
-        "idem, pelo caminho do jogo",
     "a06_navegacao.py:guardar_definicoes ← ' '.join(recados)":
         "os recados juntados de várias gravações; cada um nasce no seu dono",
     "a02_controles.py:mudo ← acao.dica":
