@@ -1994,8 +1994,7 @@
              diz — o que a aba É, e por que a fita do topo não vale nela. -->
         <span class="ajuda">?<span class="dica">
           O jogo pede uma vibração, e esta aba decide quanto dela chega a cada controle.<br><br>
-          <b>O endereço do ajuste é a coluna, não a fita</b> — os quatro estão sempre à vista,
-          então a fita do topo fica esmaecida de propósito.
+          <b>Ajuste na coluna do controle</b>: a fita do topo não escolhe nada aqui.
         </span></span>
       </div>
       <div class="quadro-corpo">
@@ -2024,32 +2023,40 @@
               <span class="ajuda" style="display:inline-block;vertical-align:-3px">?<span class="dica">
                 Quanto da vibração que o jogo pede chega ao controle.<br><br>
                 <b>Economia</b> 30% · <b>Balanceado</b> 100%, como o jogo pediu ·
-                <b>Máximo</b> 150%, mais forte do que ele pediu.<br><br>
-                O Perfil de Bateria pode impor um teto: esta escolha continua valendo, só não passa dele.<br><br>
+                <b>Máximo</b> 150%, mais forte.<br><br>
+                O Perfil de Bateria pode impor um teto: a escolha continua valendo, só não passa dele.<br><br>
                 <!-- O MECANISMO DO AUTO MUDOU DE CASA — 05-Q4 dela, 06/09/2026.
                      Ele era a segunda metade de `a05_vibracao.FRASE_DA_MESA_EM_AUTO`,
                      de 331 caracteres, escrita para o CARTÃO — uma caixa que
                      CRESCE. A faixa embaixo da grade reserva UMA linha e corta o
                      resto (medido: 189 caracteres é o último que cabe), então a
                      frase ficou com o FATO e o CONSERTO e o porquê veio para cá,
-                     que é onde há espaço para ele. -->
-                Com a <b>força geral</b> em Auto, a força escolhida numa coluna fica
-                guardada e não chega ao motor: o Auto muda com a bateria a cada
-                instante, e uma força por controle contra um número que se move faria
-                esse controle vibrar de um jeito imprevisível.
+                     que é onde há espaço para ele.
+
+                     E O PORQUÊ SAIU DAQUI EM 11/09/2026 (A4-058, aprovado por
+                     ela): ele JUSTIFICAVA a regra contra uma alternativa que
+                     ninguém propôs. O fato — a escolha fica guardada e não
+                     chega ao motor — é o que ela precisa, e é o que fica. -->
+                Com a <b>força geral</b> em Auto, a escolha de cada coluna fica
+                guardada e não chega ao motor.
               </span></span></span></div>
             <div><span class="sec-rot">Personalizado</span></div>
             <div><span class="sec-rot">Motor esquerdo
               <span class="ajuda">?<span class="dica">
-                <b>Motor de vibração esquerdo</b> (motor forte). Contrapeso maior — soa grosso. No código do produto é `strong`.<br><br>Cada punho tem UM motor e cada um recebe UM valor — não existe "leve" e "forte" para cada. O da esquerda tem <b>contrapeso maior</b> e soa grosso; o da direita, contrapeso menor, soa fino.<br><br>
-                Desligue um lado e o jogo deixa de fazer aquele punho tremer — o outro
-                continua. Serve para quem sente enjoo com o motor pesado, e para bancada.<br><br>
-                A barra ao lado diz com que força esse motor entra no
-                <b>Testar</b>, de 0 a 255.
+                <!-- O PUNHO NO LUGAR DO NOME DA PEÇA — 11/09/2026, aprovado por ela.
+                      O `nome`/`apelido`/`nota` do CSV continuam donos do `title`
+                      do interruptor (`_coluna`) e do `mapa-do-controle`; aqui a
+                      frase é a que ela leu e aprovou, e ela fala do PUNHO, que é
+                      o que a mão procura. O registro do "não existe leve e forte
+                      para cada" mora na `.nota` desta página, que é onde ele
+                      deve morar. -->
+                <b>Motor do punho esquerdo</b>: contrapeso maior, som grosso.<br><br>
+                Desligue um lado e aquele punho para de tremer; o outro continua.<br><br>
+                A barra ao lado é a força desse motor no <b>Testar</b>.
               </span></span></span></div>
             <div><span class="sec-rot">Motor direito
               <span class="ajuda">?<span class="dica">
-                <b>Motor de vibração direito</b> (motor leve). Contrapeso menor — soa fino. No código do produto é `weak`.
+                <b>Motor do punho direito</b>: contrapeso menor, som fino.
               </span></span></span></div>
             <!-- A DICA DESTE `?` ABRE PARA A DIREITA, e o número é medido — 06/09/2026.
                  Ela carregava `style="left:auto;right:22px"`, que é o arranjo das
@@ -2066,9 +2073,8 @@
                  direita e cabe: x=505, fim em 835, dentro de 370..1550. -->
             <div><span class="sec-rot">Testar agora
               <span class="ajuda" style="display:inline-block;vertical-align:-3px">?<span class="dica">
-                <b>Testar</b> faz aquele controle tremer meio segundo com os valores das
-                barras daquela coluna; <b>Parar</b> corta a vibração dele agora e devolve
-                a mão ao jogo.<br><br>
+                <b>Testar</b> treme este controle por meio segundo, com os valores das
+                barras da coluna. <b>Parar</b> corta e devolve a vibração ao jogo.<br><br>
                 <!-- A NOTA DOS VALORES QUE PASSAM VOLTOU PARA CÁ — 05-Q2 dela,
                      05/09/2026: *"As duas na dica."* Ela é a única frase desta
                      aba que explica um resultado que a PRÓPRIA TELA produz (por
@@ -2080,7 +2086,7 @@
                      (`DICA_DOS_VALORES_QUE_PASSAM`) — essa metade da razão de
                      04/09 não caducou. Uma vez só na página: a régua 16 do
                      gerador conta. -->
-                Os valores acima ainda passam pela intensidade escolhida ali em cima antes de chegar ao controle.
+                Esses valores ainda passam pelo degrau da coluna.
               </span></span></span></div>
             <!-- O RÓTULO "Estado" SAIU EM 05/09/2026, com a faixa inteira —
                  ver `SEM_A_FAIXA_DE_ESTADO`. O `?` dele terminava confessando
@@ -2396,21 +2402,21 @@
             <div class="rot-ctrl" data-hef="identidade">P1 <span class="pt">•</span> Cosmic Red
               <span class="pt">•</span> USB</div>
             <div class="seg"><button class="" data-campo="degrau" data-hef-alvo="classe" data-hef-quando="economia" data-papel="forca" data-forca="economia">Economia</button><button class="" data-campo="degrau" data-hef-alvo="classe" data-hef-quando="balanceado" data-papel="forca" data-forca="balanceado">Balanceado</button><button class="on" data-campo="degrau" data-hef-alvo="classe" data-hef-quando="max" data-papel="forca" data-forca="max">Máximo</button></div>
-            <div class="motor mult"><span></span><input class="trilho arrasta" type="range" min="0" max="200" step="10" value="150" data-papel="intensidade" data-campo="mult-pos" data-hef-alvo="valor" title="Arraste para escolher quanto da vibração que o jogo pede chega a este controle — de 0 a 200%. Grava na hora, no perfil ativo, só para ele."><span class="num" data-campo="mult">150%</span><span class="teto mx" data-campo="mult-teto" data-hef-alvo="classe">Máx</span></div>
-            <div class="motor mult" data-campo="motor-e-pedido" data-hef-alvo="atributo" data-hef-atributo="title"><button class="lado on" data-hef="lado" data-lado="e" data-hef-rotulo="o nome do motor" title="Motor de vibração esquerdo — Contrapeso maior — soa grosso. No código do produto é `strong`."><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Motor de vibração esquerdo</title>
+            <div class="motor mult"><span></span><input class="trilho arrasta" type="range" min="0" max="200" step="10" value="150" data-papel="intensidade" data-campo="mult-pos" data-hef-alvo="valor" title="Quanto da vibração chega a este controle — 0 a 200%. Grava na hora, só para ele."><span class="num" data-campo="mult">150%</span><span class="teto mx" data-campo="mult-teto" data-hef-alvo="classe">Máx</span></div>
+            <div class="motor mult" data-campo="motor-e-pedido" data-hef-alvo="atributo" data-hef-atributo="title"><button class="lado on" data-hef="lado" data-lado="e" data-hef-rotulo="o nome do motor" title="Motor de vibração esquerdo — Contrapeso maior — soa grosso."><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Motor de vibração esquerdo</title>
 
   <path d="M20,4 h-6 q-3,0 -4,3 l-3,10 q-2,7 2,11 q4,4 8,1 q3,-2 3,-7 z"
         fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
   <path d="M25,9 q4,7 0,14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
   <path d="M29,5 q6,11 0,22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-</svg></button><input class="trilho arrasta" type="range" min="0" max="100" step="1" value="50" data-papel="motor" data-campo="barra-e" data-hef-alvo="valor" data-lado="e" title="Arraste para escolher quanto da vibração que o jogo pede chega a motor de vibração esquerdo — de 0 a 100%. Ela MULTIPLICA o degrau da coluna: 100% deixa como o degrau pediu, 0 deixa este motor mudo neste perfil. Grava na hora, no perfil ativo, só para este controle."><span class="num" data-campo="barra-e-pct">50</span><span class="teto">%</span></div>
-            <div class="motor mult" data-campo="motor-d-pedido" data-hef-alvo="atributo" data-hef-atributo="title"><button class="lado on" data-hef="lado" data-lado="d" data-hef-rotulo="o nome do motor" title="Motor de vibração direito — Contrapeso menor — soa fino. No código do produto é `weak`."><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Motor de vibração direito</title>
+</svg></button><input class="trilho arrasta" type="range" min="0" max="100" step="1" value="50" data-papel="motor" data-campo="barra-e" data-hef-alvo="valor" data-lado="e" title="Quanto da vibração chega a este punho — 0 a 100% do degrau da coluna. Em 0, este motor fica mudo. Grava na hora, só para este controle."><span class="num" data-campo="barra-e-pct">50</span><span class="teto">%</span></div>
+            <div class="motor mult" data-campo="motor-d-pedido" data-hef-alvo="atributo" data-hef-atributo="title"><button class="lado on" data-hef="lado" data-lado="d" data-hef-rotulo="o nome do motor" title="Motor de vibração direito — Contrapeso menor — soa fino."><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Motor de vibração direito</title>
 
   <path d="M12,4 h6 q3,0 4,3 l3,10 q2,7 -2,11 q-4,4 -8,1 q-3,-2 -3,-7 z"
         fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
   <path d="M7,10 q-3,6 0,12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
   <path d="M3,7 q-4,9 0,18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-</svg></button><input class="trilho arrasta" type="range" min="0" max="100" step="1" value="100" data-papel="motor" data-campo="barra-d" data-hef-alvo="valor" data-lado="d" title="Arraste para escolher quanto da vibração que o jogo pede chega a motor de vibração direito — de 0 a 100%. Ela MULTIPLICA o degrau da coluna: 100% deixa como o degrau pediu, 0 deixa este motor mudo neste perfil. Grava na hora, no perfil ativo, só para este controle."><span class="num" data-campo="barra-d-pct">100</span><span class="teto">%</span></div>
+</svg></button><input class="trilho arrasta" type="range" min="0" max="100" step="1" value="100" data-papel="motor" data-campo="barra-d" data-hef-alvo="valor" data-lado="d" title="Quanto da vibração chega a este punho — 0 a 100% do degrau da coluna. Em 0, este motor fica mudo. Grava na hora, só para este controle."><span class="num" data-campo="barra-d-pct">100</span><span class="teto">%</span></div>
             <div class="acoes-col">
               <!-- "Testar", não "Testar por 500 ms" — decisão dela, 30/08:
                    *"ali vai ser só Testar; se o user quiser parar vai clicar em Parar"*.
@@ -2737,21 +2743,21 @@
             <div class="rot-ctrl" data-hef="identidade">P2 <span class="pt">•</span> Starlight Blue
               <span class="pt">•</span> BT</div>
             <div class="seg"><button class="" data-campo="degrau" data-hef-alvo="classe" data-hef-quando="economia" data-papel="forca" data-forca="economia">Economia</button><button class="" data-campo="degrau" data-hef-alvo="classe" data-hef-quando="balanceado" data-papel="forca" data-forca="balanceado">Balanceado</button><button class="" data-campo="degrau" data-hef-alvo="classe" data-hef-quando="max" data-papel="forca" data-forca="max">Máximo</button></div>
-            <div class="motor mult"><span></span><input class="trilho arrasta" type="range" min="0" max="200" step="10" value="100" data-papel="intensidade" data-campo="mult-pos" data-hef-alvo="valor" title="Arraste para escolher quanto da vibração que o jogo pede chega a este controle — de 0 a 200%. Grava na hora, no perfil ativo, só para ele."><span class="num" data-campo="mult">100%</span><span class="teto mx" data-campo="mult-teto" data-hef-alvo="classe">Máx</span></div>
-            <div class="motor mult off" data-campo="motor-e-pedido" data-hef-alvo="atributo" data-hef-atributo="title"><button class="lado" data-hef="lado" data-lado="e" data-hef-rotulo="o nome do motor" title="Motor de vibração esquerdo — Contrapeso maior — soa grosso. No código do produto é `strong`."><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Motor de vibração esquerdo</title>
+            <div class="motor mult"><span></span><input class="trilho arrasta" type="range" min="0" max="200" step="10" value="100" data-papel="intensidade" data-campo="mult-pos" data-hef-alvo="valor" title="Quanto da vibração chega a este controle — 0 a 200%. Grava na hora, só para ele."><span class="num" data-campo="mult">100%</span><span class="teto mx" data-campo="mult-teto" data-hef-alvo="classe">Máx</span></div>
+            <div class="motor mult off" data-campo="motor-e-pedido" data-hef-alvo="atributo" data-hef-atributo="title"><button class="lado" data-hef="lado" data-lado="e" data-hef-rotulo="o nome do motor" title="Motor de vibração esquerdo — Contrapeso maior — soa grosso."><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Motor de vibração esquerdo</title>
 
   <path d="M20,4 h-6 q-3,0 -4,3 l-3,10 q-2,7 2,11 q4,4 8,1 q3,-2 3,-7 z"
         fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
   <path d="M25,9 q4,7 0,14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
   <path d="M29,5 q6,11 0,22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-</svg></button><input class="trilho arrasta" type="range" min="0" max="100" step="1" value="0" data-papel="motor" data-campo="barra-e" data-hef-alvo="valor" data-lado="e" title="Arraste para escolher quanto da vibração que o jogo pede chega a motor de vibração esquerdo — de 0 a 100%. Ela MULTIPLICA o degrau da coluna: 100% deixa como o degrau pediu, 0 deixa este motor mudo neste perfil. Grava na hora, no perfil ativo, só para este controle."><span class="num" data-campo="barra-e-pct">0</span><span class="teto">%</span></div>
-            <div class="motor mult" data-campo="motor-d-pedido" data-hef-alvo="atributo" data-hef-atributo="title"><button class="lado on" data-hef="lado" data-lado="d" data-hef-rotulo="o nome do motor" title="Motor de vibração direito — Contrapeso menor — soa fino. No código do produto é `weak`."><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Motor de vibração direito</title>
+</svg></button><input class="trilho arrasta" type="range" min="0" max="100" step="1" value="0" data-papel="motor" data-campo="barra-e" data-hef-alvo="valor" data-lado="e" title="Quanto da vibração chega a este punho — 0 a 100% do degrau da coluna. Em 0, este motor fica mudo. Grava na hora, só para este controle."><span class="num" data-campo="barra-e-pct">0</span><span class="teto">%</span></div>
+            <div class="motor mult" data-campo="motor-d-pedido" data-hef-alvo="atributo" data-hef-atributo="title"><button class="lado on" data-hef="lado" data-lado="d" data-hef-rotulo="o nome do motor" title="Motor de vibração direito — Contrapeso menor — soa fino."><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Motor de vibração direito</title>
 
   <path d="M12,4 h6 q3,0 4,3 l3,10 q2,7 -2,11 q-4,4 -8,1 q-3,-2 -3,-7 z"
         fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
   <path d="M7,10 q-3,6 0,12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
   <path d="M3,7 q-4,9 0,18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-</svg></button><input class="trilho arrasta" type="range" min="0" max="100" step="1" value="100" data-papel="motor" data-campo="barra-d" data-hef-alvo="valor" data-lado="d" title="Arraste para escolher quanto da vibração que o jogo pede chega a motor de vibração direito — de 0 a 100%. Ela MULTIPLICA o degrau da coluna: 100% deixa como o degrau pediu, 0 deixa este motor mudo neste perfil. Grava na hora, no perfil ativo, só para este controle."><span class="num" data-campo="barra-d-pct">100</span><span class="teto">%</span></div>
+</svg></button><input class="trilho arrasta" type="range" min="0" max="100" step="1" value="100" data-papel="motor" data-campo="barra-d" data-hef-alvo="valor" data-lado="d" title="Quanto da vibração chega a este punho — 0 a 100% do degrau da coluna. Em 0, este motor fica mudo. Grava na hora, só para este controle."><span class="num" data-campo="barra-d-pct">100</span><span class="teto">%</span></div>
             <div class="acoes-col">
               <!-- "Testar", não "Testar por 500 ms" — decisão dela, 30/08:
                    *"ali vai ser só Testar; se o user quiser parar vai clicar em Parar"*.
@@ -3077,21 +3083,21 @@
 </svg></div>
             <div class="rot-ctrl" data-hef="identidade">P3 <span class="pt">•</span> Desconectado</div>
             <div class="seg"><button class="" data-campo="degrau" data-hef-alvo="classe" data-hef-quando="economia" data-papel="forca" data-forca="economia">Economia</button><button class="" data-campo="degrau" data-hef-alvo="classe" data-hef-quando="balanceado" data-papel="forca" data-forca="balanceado">Balanceado</button><button class="" data-campo="degrau" data-hef-alvo="classe" data-hef-quando="max" data-papel="forca" data-forca="max">Máximo</button></div>
-            <div class="motor mult"><span></span><input class="trilho arrasta" type="range" min="0" max="200" step="10" value="0" data-papel="intensidade" data-campo="mult-pos" data-hef-alvo="valor" title="Arraste para escolher quanto da vibração que o jogo pede chega a este controle — de 0 a 200%. Grava na hora, no perfil ativo, só para ele."><span class="num" data-campo="mult">—</span><span class="teto mx" data-campo="mult-teto" data-hef-alvo="classe">Máx</span></div>
-            <div class="motor mult off" data-campo="motor-e-pedido" data-hef-alvo="atributo" data-hef-atributo="title"><button class="lado" data-hef="lado" data-lado="e" data-hef-rotulo="o nome do motor" title="Motor de vibração esquerdo — Contrapeso maior — soa grosso. No código do produto é `strong`."><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Motor de vibração esquerdo</title>
+            <div class="motor mult"><span></span><input class="trilho arrasta" type="range" min="0" max="200" step="10" value="0" data-papel="intensidade" data-campo="mult-pos" data-hef-alvo="valor" title="Quanto da vibração chega a este controle — 0 a 200%. Grava na hora, só para ele."><span class="num" data-campo="mult">—</span><span class="teto mx" data-campo="mult-teto" data-hef-alvo="classe">Máx</span></div>
+            <div class="motor mult off" data-campo="motor-e-pedido" data-hef-alvo="atributo" data-hef-atributo="title"><button class="lado" data-hef="lado" data-lado="e" data-hef-rotulo="o nome do motor" title="Motor de vibração esquerdo — Contrapeso maior — soa grosso."><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Motor de vibração esquerdo</title>
 
   <path d="M20,4 h-6 q-3,0 -4,3 l-3,10 q-2,7 2,11 q4,4 8,1 q3,-2 3,-7 z"
         fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
   <path d="M25,9 q4,7 0,14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
   <path d="M29,5 q6,11 0,22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-</svg></button><input class="trilho arrasta" type="range" min="0" max="100" step="1" value="0" data-papel="motor" data-campo="barra-e" data-hef-alvo="valor" data-lado="e" title="Arraste para escolher quanto da vibração que o jogo pede chega a motor de vibração esquerdo — de 0 a 100%. Ela MULTIPLICA o degrau da coluna: 100% deixa como o degrau pediu, 0 deixa este motor mudo neste perfil. Grava na hora, no perfil ativo, só para este controle."><span class="num" data-campo="barra-e-pct">—</span><span class="teto">%</span></div>
-            <div class="motor mult off" data-campo="motor-d-pedido" data-hef-alvo="atributo" data-hef-atributo="title"><button class="lado" data-hef="lado" data-lado="d" data-hef-rotulo="o nome do motor" title="Motor de vibração direito — Contrapeso menor — soa fino. No código do produto é `weak`."><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Motor de vibração direito</title>
+</svg></button><input class="trilho arrasta" type="range" min="0" max="100" step="1" value="0" data-papel="motor" data-campo="barra-e" data-hef-alvo="valor" data-lado="e" title="Quanto da vibração chega a este punho — 0 a 100% do degrau da coluna. Em 0, este motor fica mudo. Grava na hora, só para este controle."><span class="num" data-campo="barra-e-pct">—</span><span class="teto">%</span></div>
+            <div class="motor mult off" data-campo="motor-d-pedido" data-hef-alvo="atributo" data-hef-atributo="title"><button class="lado" data-hef="lado" data-lado="d" data-hef-rotulo="o nome do motor" title="Motor de vibração direito — Contrapeso menor — soa fino."><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Motor de vibração direito</title>
 
   <path d="M12,4 h6 q3,0 4,3 l3,10 q2,7 -2,11 q-4,4 -8,1 q-3,-2 -3,-7 z"
         fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
   <path d="M7,10 q-3,6 0,12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
   <path d="M3,7 q-4,9 0,18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-</svg></button><input class="trilho arrasta" type="range" min="0" max="100" step="1" value="0" data-papel="motor" data-campo="barra-d" data-hef-alvo="valor" data-lado="d" title="Arraste para escolher quanto da vibração que o jogo pede chega a motor de vibração direito — de 0 a 100%. Ela MULTIPLICA o degrau da coluna: 100% deixa como o degrau pediu, 0 deixa este motor mudo neste perfil. Grava na hora, no perfil ativo, só para este controle."><span class="num" data-campo="barra-d-pct">—</span><span class="teto">%</span></div>
+</svg></button><input class="trilho arrasta" type="range" min="0" max="100" step="1" value="0" data-papel="motor" data-campo="barra-d" data-hef-alvo="valor" data-lado="d" title="Quanto da vibração chega a este punho — 0 a 100% do degrau da coluna. Em 0, este motor fica mudo. Grava na hora, só para este controle."><span class="num" data-campo="barra-d-pct">—</span><span class="teto">%</span></div>
             <div class="acoes-col">
               <!-- "Testar", não "Testar por 500 ms" — decisão dela, 30/08:
                    *"ali vai ser só Testar; se o user quiser parar vai clicar em Parar"*.
@@ -3417,21 +3423,21 @@
 </svg></div>
             <div class="rot-ctrl" data-hef="identidade">P4 <span class="pt">•</span> Desconectado</div>
             <div class="seg"><button class="" data-campo="degrau" data-hef-alvo="classe" data-hef-quando="economia" data-papel="forca" data-forca="economia">Economia</button><button class="" data-campo="degrau" data-hef-alvo="classe" data-hef-quando="balanceado" data-papel="forca" data-forca="balanceado">Balanceado</button><button class="" data-campo="degrau" data-hef-alvo="classe" data-hef-quando="max" data-papel="forca" data-forca="max">Máximo</button></div>
-            <div class="motor mult"><span></span><input class="trilho arrasta" type="range" min="0" max="200" step="10" value="0" data-papel="intensidade" data-campo="mult-pos" data-hef-alvo="valor" title="Arraste para escolher quanto da vibração que o jogo pede chega a este controle — de 0 a 200%. Grava na hora, no perfil ativo, só para ele."><span class="num" data-campo="mult">—</span><span class="teto mx" data-campo="mult-teto" data-hef-alvo="classe">Máx</span></div>
-            <div class="motor mult off" data-campo="motor-e-pedido" data-hef-alvo="atributo" data-hef-atributo="title"><button class="lado" data-hef="lado" data-lado="e" data-hef-rotulo="o nome do motor" title="Motor de vibração esquerdo — Contrapeso maior — soa grosso. No código do produto é `strong`."><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Motor de vibração esquerdo</title>
+            <div class="motor mult"><span></span><input class="trilho arrasta" type="range" min="0" max="200" step="10" value="0" data-papel="intensidade" data-campo="mult-pos" data-hef-alvo="valor" title="Quanto da vibração chega a este controle — 0 a 200%. Grava na hora, só para ele."><span class="num" data-campo="mult">—</span><span class="teto mx" data-campo="mult-teto" data-hef-alvo="classe">Máx</span></div>
+            <div class="motor mult off" data-campo="motor-e-pedido" data-hef-alvo="atributo" data-hef-atributo="title"><button class="lado" data-hef="lado" data-lado="e" data-hef-rotulo="o nome do motor" title="Motor de vibração esquerdo — Contrapeso maior — soa grosso."><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Motor de vibração esquerdo</title>
 
   <path d="M20,4 h-6 q-3,0 -4,3 l-3,10 q-2,7 2,11 q4,4 8,1 q3,-2 3,-7 z"
         fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
   <path d="M25,9 q4,7 0,14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
   <path d="M29,5 q6,11 0,22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-</svg></button><input class="trilho arrasta" type="range" min="0" max="100" step="1" value="0" data-papel="motor" data-campo="barra-e" data-hef-alvo="valor" data-lado="e" title="Arraste para escolher quanto da vibração que o jogo pede chega a motor de vibração esquerdo — de 0 a 100%. Ela MULTIPLICA o degrau da coluna: 100% deixa como o degrau pediu, 0 deixa este motor mudo neste perfil. Grava na hora, no perfil ativo, só para este controle."><span class="num" data-campo="barra-e-pct">—</span><span class="teto">%</span></div>
-            <div class="motor mult off" data-campo="motor-d-pedido" data-hef-alvo="atributo" data-hef-atributo="title"><button class="lado" data-hef="lado" data-lado="d" data-hef-rotulo="o nome do motor" title="Motor de vibração direito — Contrapeso menor — soa fino. No código do produto é `weak`."><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Motor de vibração direito</title>
+</svg></button><input class="trilho arrasta" type="range" min="0" max="100" step="1" value="0" data-papel="motor" data-campo="barra-e" data-hef-alvo="valor" data-lado="e" title="Quanto da vibração chega a este punho — 0 a 100% do degrau da coluna. Em 0, este motor fica mudo. Grava na hora, só para este controle."><span class="num" data-campo="barra-e-pct">—</span><span class="teto">%</span></div>
+            <div class="motor mult off" data-campo="motor-d-pedido" data-hef-alvo="atributo" data-hef-atributo="title"><button class="lado" data-hef="lado" data-lado="d" data-hef-rotulo="o nome do motor" title="Motor de vibração direito — Contrapeso menor — soa fino."><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Motor de vibração direito</title>
 
   <path d="M12,4 h6 q3,0 4,3 l3,10 q2,7 -2,11 q-4,4 -8,1 q-3,-2 -3,-7 z"
         fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
   <path d="M7,10 q-3,6 0,12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
   <path d="M3,7 q-4,9 0,18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-</svg></button><input class="trilho arrasta" type="range" min="0" max="100" step="1" value="0" data-papel="motor" data-campo="barra-d" data-hef-alvo="valor" data-lado="d" title="Arraste para escolher quanto da vibração que o jogo pede chega a motor de vibração direito — de 0 a 100%. Ela MULTIPLICA o degrau da coluna: 100% deixa como o degrau pediu, 0 deixa este motor mudo neste perfil. Grava na hora, no perfil ativo, só para este controle."><span class="num" data-campo="barra-d-pct">—</span><span class="teto">%</span></div>
+</svg></button><input class="trilho arrasta" type="range" min="0" max="100" step="1" value="0" data-papel="motor" data-campo="barra-d" data-hef-alvo="valor" data-lado="d" title="Quanto da vibração chega a este punho — 0 a 100% do degrau da coluna. Em 0, este motor fica mudo. Grava na hora, só para este controle."><span class="num" data-campo="barra-d-pct">—</span><span class="teto">%</span></div>
             <div class="acoes-col">
               <!-- "Testar", não "Testar por 500 ms" — decisão dela, 30/08:
                    *"ali vai ser só Testar; se o user quiser parar vai clicar em Parar"*.

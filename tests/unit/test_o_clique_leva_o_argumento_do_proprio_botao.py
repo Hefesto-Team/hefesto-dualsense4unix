@@ -183,7 +183,10 @@ def test_a_vibracao_recusa_sem_alvo_e_trabalha_com_ele(ctx, nome):
     assert fn is not None
 
     sem = {"gesto": nome, "texto": "x", "valor": "", "controle": "", "uniq": ""}
-    with pytest.raises(RuntimeError, match="não disse em qual controle"):
+    # O `match` ERA "não disse em qual controle" — a metade que a leva de língua
+    # tirou em 11/09/2026 (A4-064, aprovada por ela): o produto relatava o
+    # próprio defeito de leitura. O que sobra é a instrução, e é ela o ato.
+    with pytest.raises(RuntimeError, match="dentro da coluna"):
         fn(ctx, sem, PonteDeMentira())
 
     p = PonteDeMentira()
