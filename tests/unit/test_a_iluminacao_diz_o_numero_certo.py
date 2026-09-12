@@ -199,6 +199,26 @@ def test_a_barra_recebe_numero_e_a_caixa_recebe_texto():
 # ---------------------------------------------------------------------------
 # 4. a fileira dos quatro números
 # ---------------------------------------------------------------------------
+def _dica_do_botao(fileira: str, n: int) -> str:
+    """O `title` do botão daquele número, sem digitar a frase inteira.
+
+    ELE NASCEU EM 11/09/2026, e a razão é a de sempre: duas réguas deste arquivo
+    digitavam a dica letra por letra (*"O Starlight Blue É o Player 2"*,
+    *"Dar o Player 2"*), e a leva de língua aprovada por ela (A4-039 e A4-040)
+    encurtou as duas. Régua que digita o texto que mede reprova a melhora em vez
+    do defeito. O que se mede aqui é QUAL das duas dicas o botão recebeu — a de
+    "este número é dele" ou a da troca —, que é o ato.
+    """
+    achado = re.search(rf'data-player="{n}" title="([^"]*)"', fileira)
+    assert achado, f"o botão {n} não saiu na fileira: {fileira}"
+    return achado.group(1)
+
+
+def _nome_na_mesa(controle: dict) -> str:
+    """O nome com que a MESA chama aquele controle — não se digita aqui."""
+    return next(c["nome"] for c in MESA if c["uniq"] == controle["uniq"])
+
+
 def test_a_fileira_marca_o_numero_de_quem_e(colunas):
     """O `on` é do número DESTE controle, e ele é vivo.
 
@@ -208,7 +228,9 @@ def test_a_fileira_marca_o_numero_de_quem_e(colunas):
     """
     cols = colunas()
     fileira = cols[DO_CABO["uniq"]]["players"]
-    assert 'data-player="2" title="O Starlight Blue É o Player 2' in fileira
+    dois = _dica_do_botao(fileira, 2)
+    assert _nome_na_mesa(DO_CABO) in dois and "Os dois trocam" not in dois, (
+        f"o botão do número DESTE controle recebeu a dica da troca: {dois!r}")
     assert cols[DO_CABO["uniq"]]["players"].count('class="on"') == 1
     assert 'class="on" data-gesto="player" data-player="1"' in cols[DO_RADIO["uniq"]]["players"]
 
@@ -275,8 +297,9 @@ def test_com_a_mesa_cheia_nenhum_numero_fica_fora(colunas):
     from pacotes import a04_iluminacao as pac
 
     fileira = colunas()[DO_RADIO["uniq"]]["players"]
-    assert 'data-player="2" title="Dar o Player 2' in fileira, (
-        "com DOIS na mesa o número 2 tem dono e a dica é a da troca.")
+    dois = _dica_do_botao(fileira, 2)
+    assert "Os dois trocam" in dois and _nome_na_mesa(DO_CABO) in dois, (
+        f"com DOIS na mesa o número 2 tem dono e a dica é a da troca: {dois!r}")
     assert fileira.count("fora") == 2, (
         f"só o 3 e o 4 passam de uma mesa de dois: {fileira}")
     assert pac.fora_da_mesa() not in fileira.split('data-player="3"')[0], (

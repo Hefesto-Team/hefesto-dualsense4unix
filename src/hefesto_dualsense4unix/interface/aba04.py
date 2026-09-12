@@ -218,9 +218,8 @@ TONS = [tom_da_casa(h) for h in CRUS_DA_GUIA]
 
 def TITULO_DA_CASA(i: int) -> str:  # noqa: N802 - constante de molde, não classe
     """A frase de cada casa da guia. As oito primeiras são cor de número."""
-    quem = (f"Cor automática do Player {i} — usar aqui pinta"
-            if i <= 8 else "Pinta")
-    return f"{quem} a barra deste controle, e não muda o número dele."
+    quem = f"Cor do Player {i}. " if i <= 8 else ""
+    return f"{quem}Pinta a barra, não muda o número."
 
 #: O EXEMPLO DA TROCA SAIU DAQUI — 03/09/2026. Ele era `TEM_O_1`/`QUER_O_1`,
 #: derivado da `MESA` do desenho, e alimentava a dica do "Jogador" e a legenda do
@@ -1383,8 +1382,7 @@ def coluna(c):
             </span>
             '''
     reenvio = ' data-gesto="reenviar"'
-    dica_do_hex = ('\n                  title="Manda esta cor ao controle de novo'
-                   ' — a mesma que já está escrita aqui."')
+    dica_do_hex = '\n                  title="Manda esta cor ao controle de novo."'
     largura_de_partida = f' style="width:{b}%"' if ligado else ""
     puxador = (f'<input class="puxador" type="range" min="0" max="100" step="1"'
                f' value="{b if ligado else 0}" data-gesto="brilho" data-campo="brilho-pct"'
@@ -1538,9 +1536,9 @@ MIOLO = f'''
              das barras foi para "Cor", o de gravar foi para o rodapé (que já tem
              `title` nos quatro botões desde hoje). -->
         <span class="ajuda">?<span class="dica">
-          A <b>barra de luz</b> é a faixa que acende dos dois lados do touchpad, e é a
-          identidade de cada controle: você olha e sabe de quem é.<br><br>
-          O plástico é físico e pode se repetir; a <b>luz</b> é o que nunca se repete.
+          A <b>barra de luz</b> é a faixa acesa dos dois lados do touchpad: é como
+          você sabe de quem é cada controle.<br><br>
+          O plástico pode se repetir; a <b>luz</b> nunca.
         </span></span>
         <!-- O INTERRUPTOR DO AUTOMÁTICO — D-13, decisão dela de 04/09/2026:
              *"Um interruptor no topo da aba Iluminação."*
@@ -1568,13 +1566,11 @@ MIOLO = f'''
           <span>Cores automáticas por controle</span>
         </label>
         <span class="ajuda esq">?<span class="dica">
-          Ligado, cada controle acende a <b>cor do número dele</b> e recebe o número
-          automaticamente — inclusive os controles de outras marcas.<br><br>
-          Ao <b>desligar</b>, a cor que cada controle tem agora é <b>gravada no perfil</b>
-          na hora. Assim nenhuma se perde e nenhuma se repete: sem isso, o próximo
-          controle a chegar cairia na cor global e ficaria igual ao vizinho.<br><br>
-          Isto é do <b>perfil</b>: vale para todos os controles dele, e viaja quando
-          você troca de perfil.
+          Ligado, cada controle recebe um número e acende a <b>cor dele</b> —
+          inclusive os de outras marcas.<br><br>
+          Ao <b>desligar</b>, a cor de agora fica <b>gravada no perfil</b>, para nenhuma
+          se perder.<br><br>
+          É do <b>perfil</b>: viaja quando você troca de perfil.
         </span></span>
       </div>
       <div class="quadro-corpo">
@@ -1591,10 +1587,9 @@ MIOLO = f'''
             <div class="cel-des">
               <div class="sec-rot">Controle
                 <span class="ajuda">?<span class="dica">
-                  A barra acende na cor do <b>número</b>. A borda da moldura é a cor do
+                  A barra acende na cor do <b>número</b>; a borda da moldura é a cor do
                   <b>plástico</b>, e as cinco luzinhas acima do touchpad dizem o número.<br><br>
-                  Cada coluna é um controle e se ajusta sozinha — por isso a fita do topo
-                  fica esmaecida aqui: não há um escolhido, estão os quatro.
+                  Cada coluna é um controle: a fita do topo não escolhe nada aqui.
                 </span></span></div>
             </div>
             <!-- A LINHA DO MODELO GANHOU NOME — 30/08/2026, pedido dela:
@@ -1618,13 +1613,11 @@ MIOLO = f'''
                        número digitado aqui envelhece calado a cada poda — "os oito
                        primeiros" é estrutura (`player_slot_color(1..8)`), "os demais"
                        nunca mente. -->
-                  Sem escolha à mão, cada barra fica na <b>cor do número</b> do controle.<br><br>
-                  Os <b>oito primeiros</b> quadradinhos são as cores do produto — uma por
-                  número de jogador (1 azul, 2 vermelho, 3 verde, 4 rosa, 5 amarelo,
-                  6 ciano, 7 laranja, 8 roxo). Os demais são tons a mais, que não
-                  pertencem a número nenhum.<br><br>
-                  Escolher um tom aqui pinta a barra <b>daquele controle</b> e <b>não muda o
-                  número dele</b>. O código embaixo é a cor exata que vai para o aparelho.
+                  Sem escolha à mão, a barra fica na <b>cor do número</b> do controle.<br><br>
+                  Os <b>oito primeiros</b> quadradinhos são as cores dos jogadores 1 a 8;
+                  os demais são tons a mais.<br><br>
+                  Escolher um tom pinta a barra e <b>não muda o número</b>. O código
+                  embaixo é a cor que vai ao aparelho.
                 </span></span>
               </div>
             </div>
@@ -1632,12 +1625,9 @@ MIOLO = f'''
             <div>
               <div class="sec-rot">Jogador
                 <span class="ajuda">?<span class="dica">
-                  O player é quem este controle é: o número do cabeçalho, o dos cards
-                  da aba <b>Controles</b>, e o das cinco luzinhas brancas acima do
-                  touchpad.<br><br>
-                  <b>Isto não escolhe o que você está vendo</b> — os {len(MESA)} estão na tela. Isto
-                  <b>dá</b> um número ao controle da coluna. O <b>anelzinho</b> de cada botão é
-                  a cor do plástico de quem tem aquele número hoje.<br><br>
+                  <b>Dá</b> o número do jogador a este controle — o das cinco luzinhas
+                  acima do touchpad. O <b>anelzinho</b> de cada botão é a cor do plástico
+                  de quem tem aquele número hoje.<br><br>
                   <!-- A FRASE PAROU DE NOMEAR CONTROLE — 03/09/2026, a lei dela.
                        Ela dizia *"pôr o Starlight Blue no 1 faz o Cosmic Red virar
                        2"*: os dois nomes do MOCKUP, numa coluna de RÓTULOS que é
@@ -1646,12 +1636,9 @@ MIOLO = f'''
                        regra em vez do exemplo. Quem nomeia os dois de verdade é a
                        dica de cada botão da fileira (`um_botao_de_player`), que o
                        pacote reescreve a cada tique com a mesa viva. -->
-                  Dar a este controle um número que já é de outro faz <b>os dois trocarem de
-                  lugar</b>: quem tem aquele número hoje fica com o deste. Nunca fica um
-                  número repetido, nunca fica um controle sem número — por isso a fileira
-                  oferece os números que já estão em uso, e não os oito.<br><br>
-                  Um jogo em co-op pode mandar o seu próprio número por cima — e aí quem
-                  manda nas luzinhas é o jogo, não esta escolha.
+                  Dar um número que já é de outro faz <b>os dois trocarem</b>: ninguém
+                  repete e ninguém fica sem.<br><br>
+                  Um jogo em co-op pode mandar o próprio número por cima.
                 </span></span>
               </div>
             </div>
