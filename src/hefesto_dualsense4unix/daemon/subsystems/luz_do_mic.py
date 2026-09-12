@@ -393,7 +393,7 @@ async def _fora_do_laco(daemon: Any, fn: Any, *args: Any) -> Any:
     pior caso, 9 s, se lê como a máquina dela travando.
 
     A queda para a chamada direta existe porque `_run_blocking` exige o
-    executor montado (`daemon/lifecycle.py:4951` afirma isso), e um daemon
+    executor montado (`daemon/lifecycle.py:4975` afirma isso), e um daemon
     dublado ou meio subido não o tem. Bloquear um teste é aceitável; derrubar
     a luz por causa dele não é.
     """

@@ -330,7 +330,11 @@ def test_a_fita_da_bancada_so_tem_estrutura() -> None:
     página estática não conhece. Aqui o que se cobra é a AUSÊNCIA de chip de
     controle: quem os põe é o produto, no tique.
     """
-    bloco = re.search(r'<div class="fita.*?</div>', _bancada(), re.S)
+    # AS ASPAS SÃO A CURA, e a razão está em `test_aba03_a_identidade_vem_de_cima`:
+    # o prefixo `class="fita` passou a casar com o `.fita-linha` que a
+    # ALTURA-DA-VISTA-01 pôs em volta, e o recorte pegava o embrulho — com zero
+    # chip dentro, que foi como esta régua reprovou dizendo que a fita esvaziou.
+    bloco = re.search(r'<div class="fita(?: inerte)?".*?</div>', _bancada(), re.S)
     assert bloco, "não achei a fita na página — a régua ficaria verde sobre nada"
     chips = _chips(bloco.group(0))
     assert len(chips) == 1 and "Todos" in chips[0], (

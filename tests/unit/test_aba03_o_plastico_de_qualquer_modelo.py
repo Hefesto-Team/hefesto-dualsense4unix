@@ -269,8 +269,12 @@ def test_a_bancada_nao_crava_cor_que_o_produto_nao_alcance(a03):
     from hefesto_dualsense4unix.interface import onde
 
     doc = onde.pagina(PAGINA).read_text(encoding="utf-8")
-    i = doc.index('<div class="fita')
-    depois = doc.index("</div>", doc.index('class="fita', i)) + len("</div>")
+    # A ÂNCORA LEVA AS ASPAS — ver a nota em `test_aba03_a_identidade_vem_de_cima`:
+    # sem elas o prefixo casa com o `.fita-linha` que embrulha a fita, e o
+    # recorte acaba antes de a fita começar.
+    achou = re.search(r'<div class="fita(?: inerte)?"', doc)
+    assert achou, "a fita do esqueleto sumiu da página"
+    depois = doc.index("</div>", achou.start()) + len("</div>")
 
     for casa in re.finditer(r"--plastico\s*:", doc[depois:]):
         posicao = casa.start() + depois

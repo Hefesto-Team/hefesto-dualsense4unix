@@ -54,22 +54,39 @@ CAMPOS = (
 #: aqui de propósito: a cura fácil seria somar 59 a tudo, e somar nelas
 #: QUEBRARIA duas referências que estavam certas.
 ANCORAS: tuple[tuple[str, str], ...] = (
-    (":1478-1479", "VALID_FLAG1_MIC_MUTE_LED_CONTROL_ENABLE"),
-    (":1521-1527", "common[8] = int(mic_led) & 0xFF"),
-    (":1313-1340", "def set_microphone_led"),
-    (":4553", "def set_mic_led"),
-    (":4560-4561", "report[11] no rádio"),
-    (":4562-4566", "CORRIGIDO em 15/08/2026"),
-    (":1586-1587", "build_bt_report"),
-    (":1648-1655", "self.device.write"),
-    (":2969-2982", "should_reclaim_on_wake"),
-    (":361-374", "def _escrever_led_do_mic"),
-    (":829", "_audio_status"),
+    (":1546-1547", "VALID_FLAG1_MIC_MUTE_LED_CONTROL_ENABLE"),
+    (":1589-1595", "common[8] = int(mic_led) & 0xFF"),
+    (":1357-1384", "def set_microphone_led"),
+    (":4621", "def set_mic_led"),
+    (":4628-4629", "report[11] no rádio"),
+    (":4630-4634", "CORRIGIDO em 15/08/2026"),
+    (":1654-1655", "build_bt_report"),
+    (":1716-1723", "self.device.write"),
+    (":3037-3050", "should_reclaim_on_wake"),
+    (":414-427", "def _escrever_led_do_mic"),
+    (":873", "_audio_status"),
 )
 
 #: Os endereços que a auditoria aposentou. Se um deles voltar à célula, ou a
 #: deriva voltou, ou alguém somou 59 no lugar errado.
 APOSENTADOS = (
+    # AS ONZE DE BAIXO SE APOSENTARAM EM 12/09/2026, e a causa tem nome:
+    # a MIC-VOLUME-02 deu dono ao `common[6]` e empurrou o
+    # `backend_pydualsense.py` — 68 linhas abaixo do ponto de inserção,
+    # 44 acima dele. **A deriva NÃO é uma só**, e é por isso que cada par
+    # foi remedido pela ÂNCORA, uma a uma, e não por uma soma única: somar
+    # 68 em tudo teria quebrado as três que estavam acima do corte.
+    ":1478-1479",
+    ":1521-1527",
+    ":1313-1340",
+    ":4553",
+    ":4560-4561",
+    ":4562-4566",
+    ":1586-1587",
+    ":1648-1655",
+    ":2969-2982",
+    ":361-374",
+    ":829",
     ":1252-1253",
     ":1286-1287",
     ":1095-1115",
