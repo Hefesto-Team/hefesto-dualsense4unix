@@ -73,7 +73,9 @@ from hefesto_dualsense4unix.app.actions import perfis_web  # noqa: E402
 # O RÓTULO DA TABELA «AJUSTE PRÓPRIO» VEM DO DONO — 11/09/2026. Ver
 # `mesa_de_agora`: a junção que o PRODUTO usa mora em `a10_perfis`, e uma cópia
 # aqui seria a terceira gramática do mesmo rótulo.
+from hefesto_dualsense4unix.interface import pacotes  # noqa: E402
 from hefesto_dualsense4unix.interface.pacotes import a10_perfis  # noqa: E402
+from hefesto_dualsense4unix.profiles import simple_match  # noqa: E402
 
 AQUI = pathlib.Path(__file__).resolve().parent
 sys.path.insert(0, str(AQUI))
@@ -240,9 +242,14 @@ window.HEF = (function(){
     n += dica(q('[data-hef="editor.prioridade.dica"]'), e.prioridade_dica);
     const amb = q('[data-hef="editor.ambiente"]');
     // O TERCEIRO ESTADO DO SELETOR. Perfil que a tela não sabe mostrar não abre
-    // dizendo "Todos": o seletor vai TRAVADO com a frase. Abrir mentindo é o
-    // defeito R-12 pelo avesso, e o estrago dele já aconteceu nesta casa.
-    if(e.ambiente !== null) n += val(amb, e.ambiente);
+    // dizendo «Qualquer jogo»: o seletor vai TRAVADO com a frase. Abrir
+    // mentindo é o defeito R-12 pelo avesso, e o estrago dele já aconteceu
+    // nesta casa.
+    // O TRAVESSÃO QUANDO A TELA NÃO SABE MOSTRAR, e não o silêncio: sem
+    // escrita nenhuma o `<select>` fica na PRIMEIRA opção da lista, e o campo
+    // passa a AFIRMAR uma procedência que o perfil não tem. É a mesma escolha
+    // do `escrever()` do piloto, que troca vazio por `—` antes de escrever.
+    n += val(amb, e.ambiente !== null ? e.ambiente : '\u2014');
     n += trava(amb, e.ambiente_travado);
     n += dica(amb, e.ambiente_recado);
     n += val(q('[data-hef="editor.jogo"]'), e.jogo);
@@ -300,8 +307,37 @@ window.HEF = (function(){
     }
   }
 
+  // O CAMPO «FUNCIONA EM:» — C4-FUNCIONA-EM, 11/09/2026, e ele TEM de ser
+  // remontado. Ele deixou de oferecer as seis formas técnicas e passou a
+  // oferecer DE ONDE O JOGO VEM: «Navegação», os lançadores que ESTA máquina
+  // tem, e «Qualquer jogo». Num `<select>` escrever um valor que nenhuma
+  // `<option>` oferece deixa o campo EM BRANCO — foi assim que esta bancada
+  // ficou com o «Funciona em:» vazio no primeiro retrato depois da mudança.
+  //
+  // NADA DE `innerHTML` COM TEXTO, e a disciplina deste arquivo continua de
+  // pé: cada opção nasce por `createElement` + `textContent`. Os nomes dos
+  // lançadores vêm do disco dela (o censo), e um deles com `<` seria marcação.
+  function remontaAmbiente(m){
+    const amb = q('[data-hef="editor.ambiente"]');
+    if(!amb) return 'sem-campo';
+    while(amb.firstChild) amb.removeChild(amb.firstChild);
+    // O TRAVESSÃO PRIMEIRO E DESABILITADO: é onde a pintura pousa o `—` de um
+    // perfil cuja regra a tela não sabe mostrar. Sem ele o valor não casa
+    // nada e o campo volta a ficar em branco, que é o defeito acima.
+    const tr = document.createElement('option');
+    tr.value = m.travessao; tr.textContent = m.travessao; tr.disabled = true;
+    amb.appendChild(tr);
+    for(const nome of (m.ambientes || [])){
+      const o = document.createElement('option');
+      o.textContent = nome;
+      amb.appendChild(o);
+    }
+    return 'ok';
+  }
+
   ligarGestos();
   return {pinta:pinta, remonta:remonta, remontaGuarda:remontaGuarda, eco:eco,
+          remontaAmbiente:remontaAmbiente,
           quem:function(){ return document.title + '|' + qa('[data-hef-perfil]').length; }};
 })();
 'HEF-PRONTO'
@@ -374,6 +410,10 @@ class Janela:
         self.pronto = False
         self.chaves: tuple = ()
         self.chaves_da_guarda: tuple = ()
+        #: A lista de procedências que o «Funciona em:» está oferecendo. Ela
+        #: muda quando um lançador aparece ou some do disco — e só então o
+        #: `<select>` é remontado. Ver `remontaAmbiente`, no BOOTSTRAP.
+        self.ambientes: tuple = ()
         self.custos: list[float] = []
         self.custos_disco: list[float] = []
         self.custos_tela: list[float] = []
@@ -525,6 +565,44 @@ class Janela:
             editado=self._perfil_editado(),
         )
 
+        # «FUNCIONA EM:» FALA A LÍNGUA DA TELA — C4-FUNCIONA-EM, 11/09/2026.
+        #
+        # `perfis_web` serve o vocabulário do PRODUTO («Jogo da Steam», «Jogo
+        # (pela janela)»), e o campo passou a oferecer DE ONDE O JOGO VEM. Quem
+        # traduz é `a10_perfis`, que é o pacote do produto para esta aba — a
+        # cura mora num lugar só, e esta bancada a CHAMA em vez de repeti-la.
+        #
+        # **E ELA PRECISA ESTAR AQUI**, não só no piloto: o primeiro retrato
+        # depois da mudança saiu com o campo EM BRANCO, porque o valor que
+        # chegava (`Jogo da Steam`) não casava com `<option>` nenhuma. Uma
+        # bancada que fotografa a aba com um campo vazio é um instrumento que
+        # responde sobre outra coisa que não o produto.
+        editor = dict(pacote.get("editor") or {})
+        if editor:
+            # **O PERFIL É O QUE O EDITOR DIZ QUE ABRIU, e não o `editado=` que
+            # se mandou.** Sem escolha na lista, `_perfil_editado()` devolve
+            # `None` e `pacote_da_aba` CAI no perfil ativo — então perguntar
+            # àquele `None` pela regra devolvia "não sei mostrar" sobre um
+            # perfil que a tela estava mostrando inteiro, e o campo abria na
+            # primeira opção da lista. Medido nesta bancada em 11/09/2026: o
+            # «Funciona em:» de um `steam_app_1358160` dizia «Navegação».
+            procedencia, recado = a10_perfis._procedencia_e_recado(
+                getattr(self._perfil_do_editor(editor), "match", None),
+                editor.get("ambiente_recado"))
+            editor["ambiente"] = procedencia or None
+            editor["ambiente_travado"] = not procedencia
+            editor["ambiente_recado"] = recado
+            pacote["editor"] = editor
+        ambientes = simple_match.oferta_do_funciona_em(
+            a10_perfis._procedencias_da_maquina(),
+            str(editor.get("ambiente") or ""))
+        if tuple(ambientes) != self.ambientes:
+            self.ponte.dizer("HEF.remontaAmbiente",
+                             {"ambientes": ambientes,
+                              "travessao": pacotes.TRAVESSAO})
+            self.ambientes = tuple(ambientes)
+            print(f"[remonta funciona-em] {' · '.join(ambientes)}")
+
         t1 = time.perf_counter()
         chaves = tuple(linha["perfil"] for linha in pacote["lista"])
         if chaves != self.chaves:
@@ -557,6 +635,18 @@ class Janela:
             except OSError:
                 pass
         return True
+
+    def _perfil_do_editor(self, editor: dict[str, Any]) -> Any:
+        """O perfil que o EDITOR está mostrando, pelo nome que ele próprio traz.
+
+        Irmão do `_perfil_editado`, e existe porque aquele responde outra
+        pergunta: *"em qual linha ela clicou?"* — e sem clique nenhum ele é
+        `None`, enquanto a tela continua mostrando o perfil ativo. Quem sabe
+        qual perfil está na direita é o pacote, e ele diz no `editor["nome"]`.
+        """
+        alvo = str(editor.get("nome") or "")
+        return next((p for p in self.perfis
+                     if str(getattr(p, "name", "")) == alvo), None)
 
     def _perfil_editado(self) -> Any:
         if not self.escolhido:

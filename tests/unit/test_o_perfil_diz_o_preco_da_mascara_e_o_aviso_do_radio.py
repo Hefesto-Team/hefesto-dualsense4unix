@@ -75,6 +75,7 @@ from hefesto_dualsense4unix.interface import onde
 from hefesto_dualsense4unix.interface.pacotes import Contexto, a10_perfis
 from hefesto_dualsense4unix.profiles import loader
 from hefesto_dualsense4unix.profiles.schema import MatchCriteria, Profile
+from hefesto_dualsense4unix.profiles.simple_match import PROCEDENCIA_DA_NAVEGACAO
 
 PAGINA = "10-perfis.html"
 
@@ -334,8 +335,18 @@ def _jogo(ctx: Contexto, ponte: Any) -> None:
 
 
 def _ambiente(ctx: Contexto, ponte: Any) -> None:
-    a10_perfis.editor_ambiente(ctx, {"valor": "Jogo", "evento": "change"},
-                               ponte)
+    # «NAVEGAÇÃO» E NÃO "Jogo" — C4-FUNCIONA-EM, 11/09/2026: o campo passou a
+    # dizer DE ONDE O JOGO VEM, e "Jogo" era o jargão que ela mandou tirar.
+    #
+    # **E TEM DE SER UMA PROCEDÊNCIA DIFERENTE DA QUE O PERFIL JÁ TEM**: o
+    # dublê desta régua é um perfil da Steam (`disco_de_steam`), e escolher
+    # «Steam» nele não grava nada — é a guarda que impede um gesto que não
+    # mudou nada na tela de reescrever a forma no disco. «Navegação» é uma
+    # troca de verdade, e não passa pela pergunta do rebaixamento (ela só
+    # existe para o catch-all). O que se mede aqui continua sendo o funil de
+    # gravação, não o rótulo.
+    a10_perfis.editor_ambiente(
+        ctx, {"valor": PROCEDENCIA_DA_NAVEGACAO, "evento": "change"}, ponte)
 
 
 @pytest.mark.parametrize("gesto,nome_do_gesto", [
