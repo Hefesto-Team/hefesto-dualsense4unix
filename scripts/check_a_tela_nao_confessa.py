@@ -176,10 +176,21 @@ FATOS: dict[str, str] = {
     "sem ela o Hefesto não consegue escrever nos controles":
         "LIMITE DE UM PRÉ-REQUISITO EXTERNO, nomeado por ela como legal em "
         "07/09/2026 — explica para que serve o módulo do kernel",
-    "o Hefesto não transforma o clique dele em tecla":
-        "CONFLITO DE FUNÇÃO, e a frase nomeia a condição na mesma oração "
-        "(*enquanto o touchpad for o mouse do computador*). A escolha fica "
-        "guardada e volta a valer quando isso mudar — 07/09/2026",
+    # SAIU DA TABELA EM 11/09/2026, e não porque a declaração estivesse errada:
+    # a FRASE deixou de existir. Estava aqui
+    #
+    #     "o Hefesto não transforma o clique dele em tecla"
+    #       CONFLITO DE FUNÇÃO, e a frase nomeia a condição na mesma oração
+    #       (*enquanto o touchpad for o mouse do computador*) — 07/09/2026
+    #
+    # e as A5-020 e A5-025, aprovadas por ela, reescreveram os dois lugares em
+    # que ela aparecia (`aba06.D_DEFINICOES` e `aba06.MARCA_DO_TOUCHPAD`) para
+    # *"o clique dele não vira tecla"*: o mesmo fato, com o sujeito no lugar
+    # certo — quem não transforma o clique não somos nós por escolha, é o
+    # touchpad, que já tem outro dono. Sem o "o Hefesto não", a peneira nem a
+    # pega, e a declaração não tem mais o que declarar. Foi o próprio portão
+    # que cobrou a retirada: *"uma declaração que sobrevive à frase envelhece
+    # calada"*.
     "O Hefesto não é só para a Steam":
         "AFIRMAÇÃO POSITIVA sobre o alcance do produto — a peneira a pega pela "
         "forma, e ela é o oposto de uma confissão — 07/09/2026",

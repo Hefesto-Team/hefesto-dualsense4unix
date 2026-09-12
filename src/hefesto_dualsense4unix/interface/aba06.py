@@ -1074,8 +1074,8 @@ REMAP = [
 ACOES_GESTO = [
     ("Navegação Interna", ["Suspender mouse e teclado", "Próximo perfil", "Perfil anterior",
                            "Sair do modo jogo"]),
-    ("Modo de conexão", ["Sobe um degrau no Modo de conexão"]),
-    ("Modo Steam", ["Abre e foca a Steam"]),
+    ("Modo", ["Próximo Modo"]),
+    ("Modo Steam", ["Abrir a Steam"]),
     ("Executar Comando", ["Religar o controle"]),
     ("", ["— Nada —"]),
 ]
@@ -1323,8 +1323,8 @@ COMBOS = [
     (1, ("ps", "options"), "Suspender mouse e teclado"),
     (2, ("ps", "dpad_up"), "Próximo perfil"),
     (3, ("ps", "dpad_down"), "Perfil anterior"),
-    (4, ("ps", "stick_r"), "Sobe um degrau no Modo de conexão"),
-    (5, ("ps",), "Abre e foca a Steam"),
+    (4, ("ps", "stick_r"), "Próximo Modo"),
+    (5, ("ps",), "Abrir a Steam"),
 ]
 
 # ---------------------------------------------------------------------------
@@ -1772,10 +1772,9 @@ _PADRAO_DOS_BOTOES = {b: rotulo_da_acao(a)
 #: O TEXTO CURTO FICA NA COLUNA e o inteiro no `title`: a decisão diz, com todas
 #: as letras, que a marca cabe na coluna do nome e não custa linha nova.
 MARCA_DO_TOUCHPAD = (
-    '<span class="marca-nao-dispara" title="O touchpad do controle continua '
-    "sendo o mouse do computador nesta máquina, e enquanto for assim o Hefesto "
-    "não transforma o clique dele em tecla. A escolha fica guardada no perfil e "
-    'volta a valer no dia em que o touchpad deixar de ser o ponteiro.">'
+    '<span class="marca-nao-dispara" title="O touchpad é o ponteiro do '
+    "computador nesta máquina; enquanto for assim, o clique dele não vira "
+    'tecla. A escolha fica guardada.">'
     "não dispara</span>")
 
 BOTOES = [
@@ -1871,13 +1870,12 @@ SEM_TROCA = REMAP[-1][1][0]
 #:     teclado**. É a armadilha que a D3 nomeou — a fita de cima oferece um
 #:     controle, e estes três valem para a máquina.
 D_QUANDO = ajuda(
-    "Vale para <b>este perfil</b>. Enquanto estiver em <b>Nunca</b>, o controle "
+    "Vale para <b>este perfil</b>. <b>Desligado</b>, o controle "
     "é só gamepad e nada desta aba chega ao PC.",
     vivas=("modo-portao",))
 D_TECLADO = ajuda(
-    "Liga o que o controle <b>digita</b>: os atalhos da tabela à direita, o teclado "
-    "na tela e as três regiões do touchpad.<br><br>"
-    "Passou a viajar no <b>perfil</b>, como o mouse vizinho já viajava.",
+    "Liga o que o controle <b>digita</b>: os atalhos das telas de botões, o teclado "
+    "na tela e as três regiões do touchpad. Vale para este perfil.",
     vivas=("teclado-osk", ENDERECO_DA_RESSALVA))
 D_MOUSE = ajuda(
     "Os <b>mapeamentos pré-prontos</b> de mouse. Trocar aqui reescreve as linhas "
@@ -1897,9 +1895,8 @@ D_MOUSE = ajuda(
 #: ninguém. São cinco cópias do endereço onde deviam ser três — e as duas de
 #: sobra ficariam ao lado dos únicos dois campos desta aba que não escrevem.
 D_VEL_TXT = (
-    f"Uma velocidade só, porque é um número só no Hefesto: o <b>analógico "
-    f"esquerdo</b> e o <b>touch</b> do touchpad andam pelo mesmo ajuste.<br><br>"
-    f"De {MOUSE_SPEED_MIN} a {MOUSE_SPEED_MAX}. O padrão do Hefesto é "
+    f"Vale para o <b>analógico esquerdo</b> e para o <b>touchpad</b>. "
+    f"De {MOUSE_SPEED_MIN} a {MOUSE_SPEED_MAX}; o padrão é "
     f"{DEFAULT_MOUSE_SPEED}.")
 #: A SEGUNDA FRASE SAIU — 07/09/2026, e é ordem dela sobre a tela inteira:
 #:
@@ -1918,8 +1915,8 @@ D_VEL_TXT = (
 #: capacidade nossa por entregar. O portão que guarda os dois casos é
 #: `scripts/check_a_tela_nao_confessa.py`.
 D_ROL_TXT = (
-    f"Rola com o <b>analógico direito</b>.<br><br>"
-    f"De {SCROLL_SPEED_MIN} a {SCROLL_SPEED_MAX}. O padrão do Hefesto é "
+    f"Vale para o <b>analógico direito</b>. "
+    f"De {SCROLL_SPEED_MIN} a {SCROLL_SPEED_MAX}; o padrão é "
     f"{DEFAULT_SCROLL_SPEED}.")
 D_VEL = ajuda(D_VEL_TXT, vivas=(ENDERECO_DA_RESSALVA,))
 D_ROL = ajuda(D_ROL_TXT, vivas=(ENDERECO_DA_RESSALVA,))
@@ -1927,20 +1924,13 @@ D_ROL = ajuda(D_ROL_TXT, vivas=(ENDERECO_DA_RESSALVA,))
 D_VEL_ESTILO = ajuda(D_VEL_TXT)
 D_ROL_ESTILO = ajuda(D_ROL_TXT)
 D_INTERNA = ajuda(
-    "Navegar <b>a janela do Hefesto</b> com o controle — abas, botões e listas.<br><br>"
-    f"Com os {len(MESA)} controles ligados, cada jogador anda no seu próprio card "
-    "e o <b>X de cada um grava no controle dele</b> — sem disputar o card do "
-    "vizinho.<br><br>"
-    "É outra coisa que o cursor do PC: esse é <b>um só</b>, e sai do controle do "
-    f"Player {NAVEGA}.")
+    "Navegar o Hefesto com o controle — abas, botões e listas.<br><br>"
+    "O cursor do PC é outra coisa: é <b>um só</b>, e sai do controle marcado "
+    "«Navega o PC».")
 # UMA linha só: ela, 27/08 — "o seletor de modo steam tá trocado com ativar modo
 # steam Deck. Esses dois botões tem que ser Unificados. Deixa Só Modo Steam."
 D_STEAM = ajuda(
-    "O controle passa a navegar a <b>Steam</b> do jeito que navega num Steam Deck: "
-    "o Modo Jogo responde ao d-pad e aos botões, sem mouse.<br><br>"
-    "O terceiro degrau grava a escolha para a <b>próxima vez</b> — a Steam abre "
-    "direto em Modo Jogo, sem ninguém clicar. Esse degrau vale para a máquina, "
-    "não só para este perfil.")
+    "Serve para navegar a <b>Steam</b> sem mouse, com o d-pad e os botões.")
 
 # O interruptor que substituiu "Quando vira mouse e teclado" — e, com ele, os dois
 # botões que ficavam sob a tabela do mouse. Ela, 27/08: "Status do Modo: ao clicar
@@ -2043,25 +2033,20 @@ VALEM_PARA = (
 #: de média importância vira tooltip"*. O que é importante o bastante para
 #: ocupar linha é o que se PERDE, e isso mora na tira sob a tabela.
 D_DEFINICOES = ajuda(
-    f"As <b>{len(BOTOES)} linhas</b> de cada botão do controle: <b>o que ele faz</b> "
-    "— mouse, tecla ou programa, tudo na mesma lista.<br><br>"
-    "A lista de botões sai de <b>docs/data/pecas-do-dualsense.csv</b>, o mesmo mapa "
-    "que nomeia as peças do desenho.<br><br>"
-    "<b>O botão PS faz as duas coisas.</b> Ele continua sendo a saída de "
-    f"emergência — os {len(COMBOS)} gestos desta aba saem dele, e segurá-lo "
-    "alterna o modo jogo —, e a tecla que você escolher para ele acontece "
-    "<b>junto</b>: no toque curto, sem combo e fora do jogo. Escolher "
-    "<b>— Nada —</b> cala as duas.<br><br>"
-    "<b>As três regiões do touchpad estão marcadas.</b> Enquanto o touchpad do "
-    "controle for o mouse do computador, o Hefesto não transforma o clique dele "
-    "em tecla — a escolha fica guardada no perfil e volta a valer no dia em que "
-    "isso mudar.<br><br>"
+    f"As <b>{len(BOTOES)} linhas</b> de cada botão: <b>o que ele faz</b> "
+    "— mouse, tecla ou programa, na mesma lista.<br><br>"
+    "O <b>PS</b> faz duas coisas: continua sendo a saída de emergência — os "
+    f"{len(COMBOS)} gestos desta aba saem dele — e a tecla que você escolher "
+    "acontece <b>junto</b>, no toque curto e fora do jogo. Escolher "
+    "<b>— Nada —</b> cala o toque no PS: ele deixa de digitar e deixa de abrir "
+    "a Steam; os gestos continuam.<br><br>"
+    "Enquanto o touchpad for o ponteiro do computador, o clique dele não vira "
+    "tecla — as três regiões ficam marcadas e a escolha fica guardada.<br><br>"
     + VALEM_PARA)
 D_REMAPEAMENTO = ajuda(
     f"As mesmas <b>{len(BOTOES)} linhas</b>, na mesma ordem, dizendo outra coisa: "
-    "<b>para qual outro botão</b> cada um passa a valer.<br><br>"
-    "É troca de botão por botão, e ela vale antes de o jogo ver. O que cada botão "
-    "<b>faz</b> se escolhe na tela <b>Definições Controle e Mouse</b>, ao lado.<br><br>"
+    "<b>para qual outro botão</b> cada um passa a valer. O que cada botão "
+    "<b>faz</b> se escolhe na tela <b>Definições Controle e Mouse</b>.<br><br>"
     + VALEM_PARA)
 
 #: AS TRÊS PALAVRAS DA "Função do teclado", e elas são o CONTRATO do gesto.
@@ -2143,13 +2128,11 @@ ATIVACAO_DIR = [
     ("Velocidade de cursor", D_VEL,
      trilho(DEFAULT_MOUSE_SPEED, MOUSE_SPEED_MIN, MOUSE_SPEED_MAX,
             "vel-cursor", "vel-cursor",
-            f"Arraste para escolher a velocidade do cursor — de "
-            f"{MOUSE_SPEED_MIN} a {MOUSE_SPEED_MAX}. Vale na hora.")),
+            "Vale na hora.")),
     ("Velocidade da rolagem", D_ROL,
      trilho(DEFAULT_SCROLL_SPEED, SCROLL_SPEED_MIN, SCROLL_SPEED_MAX,
             "vel-rolagem", "vel-rolagem",
-            f"Arraste para escolher a velocidade da rolagem — de "
-            f"{SCROLL_SPEED_MIN} a {SCROLL_SPEED_MAX}. Vale na hora.")),
+            "Vale na hora.")),
     ("Modo Steam", D_STEAM, simples([
         "Desligado",
         "Ligado — o controle navega a Steam como num Steam Deck",
@@ -2260,11 +2243,17 @@ ESTADOS = '''
 # tabelas em duas telas separadas "as duas tabelas" deixou de ser o que este
 # botão alcança. Cada tela ganhou o seu "Voltar ao padrão", que zera só a tabela
 # dela; o daqui devolve a ABA INTEIRA, e a frase agora lista o que ele apaga.
-FILEIRA = f'''
+#
+# E A FRASE PAROU DE LISTAR CINCO COISAS — 11/09/2026, A5-019, aprovada por
+# ela: a medição de 10/09 mostrou que o «Confirmar» não tem dono no pacote, e a
+# pergunta prometia apagar as opções de ativação, os gestos e as 22 linhas das
+# duas telas. Ela agora diz o que o botão faz de verdade — e, sem os `{…}` da
+# contagem, este bloco deixou de ser `f`.
+FILEIRA = '''
             <div class="acoes quatro grupo-padrao">
               <a class="btn roxo" href="#definicoes-mouse">Definições Controle e Mouse</a>
               <a class="btn roxo" href="#remapeamento">Remapeamento dos botões</a>
-              <a class="btn roxo" href="#point-and-click">Configurar o estilo Point-and-click</a>
+              <a class="btn roxo" href="#point-and-click">Estilo Point-and-click</a>
               <!-- O RÁDIO VEM ANTES de tudo o que reage a ele: o `~` do CSS só
                    enxerga irmão POSTERIOR. É a mesma armadilha que o interruptor
                    da aba Jogar documenta, e a mesma cura. -->
@@ -2272,9 +2261,8 @@ FILEIRA = f'''
               <label for="conf-padrao" class="btn btn-padrao">Voltar ao padrão</label>
               <label for="conf-padrao" class="veu" title="Fecha sem mudar nada."></label>
               <div class="confirma">
-                <span>Devolver a aba <b>Navegação</b> inteira ao de fábrica — as opções
-                  de ativação, os {len(COMBOS)} gestos e as {len(BOTOES)} linhas das duas
-                  telas de botões?</span>
+                <span>Devolver ao de fábrica a velocidade do cursor e a da rolagem?
+                  As telas de botões e os gestos não são tocados.</span>
                 <!-- O ENDEREÇO VAI NO "Confirmar", nunca no "Voltar ao padrão":
                      o de cima só ABRE a pergunta (é `<label for>` do mesmo
                      checkbox, e funciona), e marcá-lo faria o piloto acusar de
@@ -2433,9 +2421,9 @@ TELA_DEFINICOES = tela_de_botoes(
     # (o ↺ de cada linha de "Teclas do teclado"). Uma pergunta que apaga tudo
     # sem dizer que há um caminho de uma linha é a tela escondendo a opção
     # barata.
-    f"Devolver ao de fábrica as {len(BOTOES)} linhas de <b>o que cada botão faz</b>? "
-    "Isto apaga também os <b>atalhos de teclado</b> que este perfil guarda — "
-    "inclusive os que você escreveu na janela antiga e esta lista não sabe "
+    f"Devolver ao de fábrica as {len(BOTOES)} linhas? "
+    "Isto apaga também os <b>atalhos de teclado</b> deste perfil — "
+    "inclusive os de antes, que esta lista não sabe "
     "mostrar. Para voltar <b>uma linha só</b>, use o ↺ dela em "
     "<b>Teclas do teclado</b>. O <b>Remapeamento dos botões</b> não é tocado.",
     guardar="guardar-definicoes", padrao="padrao-definicoes",
@@ -2498,17 +2486,13 @@ def _exemplo_de_tecla(token):
 
 
 D_TECLAS = ajuda(
-    "Escreva a tecla que o botão deve digitar. Vale <b>qualquer combinação</b> "
-    "— não só as da lista de <b>Definições Controle e Mouse</b>.<br><br>"
+    "Escreva a tecla que o botão deve digitar — vale <b>qualquer combinação</b>."
+    "<br><br>"
     f"Exemplos: <b>{_exemplo_de_tecla('KEY_LEFTALT+KEY_TAB')}</b>, "
     f"<b>{_exemplo_de_tecla('KEY_LEFTCTRL+KEY_LEFTSHIFT+KEY_F')}</b>, "
-    f"<b>{_exemplo_de_tecla('KEY_LEFTMETA')}</b>, "
-    f"<b>{_exemplo_de_tecla('KEY_F5')}</b>.<br><br>"
-    "<b>Campo em branco</b> quer dizer que o botão não digita nada.<br><br>"
-    f"Só estes {len(_DOMINIO_DO_TECLADO)} botões aparecem aqui porque são os "
-    "únicos em que o Hefesto guarda uma tecla escrita; nos outros o que vale é "
-    "o que a lista de <b>Definições Controle e Mouse</b> escolhe.<br><br>"
-    "O <b>↺</b> devolve <b>só aquela linha</b> ao de fábrica.")
+    f"<b>{_exemplo_de_tecla('KEY_F5')}</b>. "
+    "<b>Campo em branco</b>: o botão não digita nada.<br><br>"
+    "O <b>↺</b> devolve a linha ao de fábrica.")
 
 #: A LINHA DA TELA DE TECLAS. O `data-campo` é `tecla-<botão>` e **não há
 #: `data-linha`**: a `forma` que o piloto recolhe usa `data-linha || data-campo`
@@ -2573,10 +2557,6 @@ TELA_PONTO = f'''
     <div class="tn-topo">
       <span class="tn-tit">Estilo Point-and-click</span>
       {ajuda(
-        "Um <b>Estilo de Jogo</b>, como o FPS e o Corrida. O perfil escolhe usá-lo; "
-        "o que ele faz é escrito <b>aqui</b>.<br><br>"
-        "Enquanto ele estiver valendo, estas linhas mandam — as da aba voltam "
-        "quando o estilo sai.<br><br>"
         "Serve para jogo de <b>apontar e clicar</b>, que espera mouse e não entende "
         "controle: <b>o touchpad vira o ponteiro</b>, e o toque vira o clique.")}
       <a class="tn-x" href="#" title="Fechar">×</a>
@@ -2626,42 +2606,32 @@ def at_linha(rot, dica, campo):
 
 
 D_MESA = ajuda(
-    f"Os {len(MESA)} controles ligados, cada um na cor do seu plástico, com as "
-    "cinco lâmpadas no padrão do número dele e a barra de luz na cor automática "
-    "daquele número.<br><br>"
-    f"<b>O cursor do PC é um só.</b> Mouse, teclado e os {len(COMBOS)} gestos saem "
-    f"do controle do <b>Player {NAVEGA}</b> — é o controle que o Hefesto lê por "
-    "inteiro; os outros chegam ao jogo pelo gamepad virtual e não mexem no "
-    "cursor.<br><br>"
-    "Quem escolhe o alvo de um ajuste é a <b>fita do topo</b>, e só ela — estes "
-    "cartões são leitura.")
+    "Os controles ligados agora, cada um na cor do seu plástico.<br><br>"
+    f"<b>O cursor do PC é um só:</b> mouse, teclado e os {len(COMBOS)} gestos saem "
+    "do controle marcado «Navega o PC» aqui embaixo. Os outros chegam ao jogo e "
+    "não mexem no cursor.<br><br>"
+    "O alvo de um ajuste se escolhe na <b>fita do topo</b>; estes cartões são "
+    "leitura.")
 
 D_GESTOS = ajuda(
-    "São combinações que valem <b>sem largar o controle</b>, a qualquer momento, "
+    "Combinações que valem <b>sem largar o controle</b>, a qualquer momento — "
     "mesmo com o jogo aberto.<br><br>"
-    "Apertar os dois botões em até <b>0,15 s</b> conta como combo — mais devagar, "
-    "o Hefesto entende como dois toques separados.<br><br>"
-    f"O número de cada linha marca a peça no desenho do <b>Player {NAVEGA}</b>; "
-    "passe o ponteiro por uma linha e ela acende. Acende só ali porque é só ali "
-    "que o gesto existe.<br><br>"
+    "Segure os dois <b>juntos</b> por <b>0,15 s</b>. Um toque rápido demais não "
+    "vira combo: solta o PS sozinho, e o PS sozinho abre a Steam.<br><br>"
     "<b>Ressalva:</b> o <b>PS + R3</b> e o <b>PS + Options</b> são as duas saídas "
-    "de emergência quando o jogo não responde — trocar o que eles fazem tira "
-    "essa saída. Os cinco degraus do <b>Modo de conexão</b> se escolhem na aba "
-    "<b>Jogar</b>, e aqui não se repetem.")
+    "de emergência quando o jogo não responde.")
 
 MIOLO = f'''
     <div class="quadro">
       <div class="quadro-topo">
         <span class="quadro-titulo">Navegação</span>
         {ajuda(
-          "Serve para navegar o computador sem largar o controle — e para os jogos que "
-          "só entendem mouse e teclado.<br><br>"
-          "Precisa de <b>uinput</b> e de uma regra <b>udev</b>; o instalador já deixa os "
-          "dois prontos. Se a linha de estado abaixo estiver vermelha, é isso que falta."
+          "Usa o controle como mouse e teclado do computador — e nos jogos que "
+          "só entendem mouse e teclado."
           "<br><br><b>Combinações:</b> junte teclas com &quot;+&quot; (ex.: Alt + Tab). Nenhum "
-          "atalho de fábrica digita letra — para escrever texto, abra o teclado na tela "
+          "atalho digita letra: para escrever texto, abra o teclado na tela "
           "com o <b>L3</b>.")}
-        <a class="porta" href="mapa-do-controle.html" title="Abre o mapa do controle — as {len(PECAS)} peças do aparelho com nome, apelido e glifo, e as cores de fábrica para ver clicando. É de lá que saem as {len(BOTOES)} linhas das duas telas de botões desta aba: o mesmo docs/data/pecas-do-dualsense.csv.">Banco de provas: o mapa do controle&nbsp;↗</a>
+        <a class="porta" href="mapa-do-controle.html" title="As {len(PECAS)} peças do controle, com nome e cor de fábrica, para ver clicando.">Mapa do controle&nbsp;↗</a>
       </div>
       <div class="quadro-corpo">
 
@@ -2692,7 +2662,7 @@ MIOLO = f'''
           </div>
           <div class="combos">
             <table class="tab">
-              <tr><th>Combinação no controle</th><th>O que faz</th></tr>
+              <tr><th>Combinação</th><th>O que faz</th></tr>
 {chr(10).join(linha_combo(n, p, f) for n, p, f in COMBOS)}
             </table>
           </div>
@@ -2993,7 +2963,25 @@ def _conferir(doc):
     # mensagem que ele devia imprimir nunca saiu. Na mordida isso é
     # indistinguível de uma régua que não pegou nada. Já tinha acontecido na aba
     # Controles hoje, com `index` em vez de `find` — mesma família, mesma cura.
-    for pedaco in corpo.split('class="nav-ctl vazia"')[1:]:
+    #
+    # E O RECORTE É A FILEIRA, NUNCA O MIOLO — 11/09/2026, e o defeito era
+    # estrutural: o ÚLTIMO lugar vazio não tem um `class="nav-ctl` depois dele,
+    # então `split(..., 1)[0]` devolvia daquele cartão até o FIM da aba. A
+    # régua lia as dicas da tela de baixo como se fossem o cartão do P4, e
+    # reprovou a A5-012 — aprovada por ela — porque a dica da «Navegação
+    # Interna» diz «Navega o PC» a mil linhas dali. O ato que ela mede continua
+    # o mesmo, e agora ela o mede onde ele acontece: dentro da fileira.
+    _fileira = corpo.split('<div class="nav-mesa">', 1)
+    if len(_fileira) != 2 or '<div class="combos">' not in _fileira[1]:
+        # RÉGUA QUE NÃO ACHA O QUE MEDE NÃO É RÉGUA VERDE — ela PARA. Um
+        # `exigir` aqui viraria uma falha entre outras; o que aconteceu foi que
+        # a fileira mudou de marca e esta conferência deixou de ter alvo.
+        raise SystemExit(
+            "ERRO em 06-navegacao: a régua não achou a fileira `.nav-mesa` "
+            "entre o começo dela e o `.combos` — refaça o recorte antes de "
+            "confiar na conferência dos endereços por lugar")
+    _fileira = _fileira[1].split('<div class="combos">', 1)[0]
+    for pedaco in _fileira.split('class="nav-ctl vazia"')[1:]:
         bloco = pedaco.split('class="nav-ctl', 1)[0]
         exigir("Só a janela" not in bloco and "Navega o PC" not in bloco,
                "um lugar vazio diz o que ele navega — e ele não navega nada")
@@ -3018,16 +3006,6 @@ def _conferir(doc):
     #    ELA MEDE A SAÍDA, e não a função: uma régua que chamasse `controle()`
     #    duas vezes e comparasse os dois retornos passaria mesmo que o MIOLO
     #    deixasse de usá-la. O recorte é a fileira `.nav-mesa` inteira.
-    _fileira = corpo.split('<div class="nav-mesa">', 1)
-    if len(_fileira) != 2 or '<div class="combos">' not in _fileira[1]:
-        # RÉGUA QUE NÃO ACHA O QUE MEDE NÃO É RÉGUA VERDE — ela PARA. Um
-        # `exigir` aqui viraria uma falha entre outras; o que aconteceu foi que
-        # a fileira mudou de marca e esta conferência deixou de ter alvo.
-        raise SystemExit(
-            "ERRO em 06-navegacao: a régua não achou a fileira `.nav-mesa` "
-            "entre o começo dela e o `.combos` — refaça o recorte antes de "
-            "confiar na conferência dos endereços por lugar")
-    _fileira = _fileira[1].split('<div class="combos">', 1)[0]
     _lugares = _fileira.split('<div class="nav-ctl')[1:]
     exigir(len(_lugares) == len(MESA),
            f"a régua dos endereços achou {len(_lugares)} lugares na fileira, e "
