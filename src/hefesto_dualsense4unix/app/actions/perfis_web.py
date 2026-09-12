@@ -369,16 +369,16 @@ def _texto_da_conta(quantos: int) -> str:
 
 
 def _texto_do_ajuste(com_ajuste: int, total: int) -> str:
-    """``"3 de 4 controles com ajuste próprio neste perfil"``.
+    """``"3 de 4 controles com ajuste próprio"``.
 
     Sem mesa (daemon parado ou nenhum controle) o número seria inventado: o
     total é a quantidade de controles PRESENTES, e ninguém a sabe. Devolve o
     traço, que é o "não sei" honesto desta casa.
     """
     if total <= 0:
-        return "— controles com ajuste próprio neste perfil"
+        return "— controles com ajuste próprio"
     peca = "controle" if total == 1 else "controles"
-    return f"{com_ajuste} de {total} {peca} com ajuste próprio neste perfil"
+    return f"{com_ajuste} de {total} {peca} com ajuste próprio"
 
 
 def _id_visivel(uniq: str) -> str:
@@ -478,7 +478,7 @@ def _pacote_do_editor(profile: Any) -> dict[str, Any]:
         # nada do perfil, e um `f""` sem campo enganaria quem lesse esperando
         # ver o número aqui.
         "prioridade_dica": (
-            "Quando dois perfis servem ao mesmo tempo, o de número maior entra."
+            "Quando dois perfis servem ao mesmo tempo, entra o de número maior."
         ),
         "ambiente": ambiente,
         "ambiente_travado": ambiente is None,

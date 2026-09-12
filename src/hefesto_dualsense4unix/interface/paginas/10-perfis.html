@@ -930,8 +930,9 @@
      em que mandou tirar o verde dos nomes: *"coloca essa na cor ver[de] e o
      Definições também"*. E é coerente com a regra que ela desenhou: o verde
      saiu de quem NOMEIA UMA LINHA (rótulo de campo, cabeçalho de coluna) e
-     ficou em quem ABRE UM BLOCO — são dois, `Perfis Salvos` e `Definições`, e
-     eles é que dizem onde a pessoa está. */
+     ficou em quem ABRE UM BLOCO — são dois, `Perfis salvos` e `Editar`, e
+     eles é que dizem onde a pessoa está. (Os dois rótulos mudaram de caixa e
+     de palavra em 11/09/2026, A5-033 e A5-041; a decisão do VERDE é a mesma.) */
   .sec-rot{font-size:12px;font-weight:700;color:var(--rot-campo);
            margin-bottom:10px;display:flex;align-items:center;gap:6px;height:15px}
   /* A LISTA LÊ COMO TABELA: cabeçalho com fundo próprio e linhas zebradas. Quem
@@ -1915,7 +1916,7 @@
           vibração, som, sensores e máscara — e o traz de volta quando aquele jogo abre.
         </span></span>
         <span class="conta"><span data-hef="perfis.conta">14 perfis</span> <span class="sep">·</span>
-          <span data-hef="perfis.com-ajuste">3 de 4 controles com ajuste próprio neste perfil</span></span>
+          <span data-hef="perfis.com-ajuste">3 de 4 controles com ajuste próprio</span></span>
       </div>
       <!-- O DESFECHO DO ÚLTIMO GESTO — ver `.desfecho` no CSS para a razão.
            SÃO DOIS ENDEREÇOS PARA UM VALOR, e não é redundância: a CAIXA usa o
@@ -1935,14 +1936,14 @@
 
           <div>
             <div class="moldura">
-              <div class="sec-rot">Perfis Salvos<button type="button" class="icone-rot lupa" title="Procurar um perfil pelo nome, pela prioridade ou pelo jogo." aria-label="Procurar um perfil"><svg viewBox="0 0 12 12" width="11" height="11" aria-hidden="true"><circle cx="5.2" cy="5.2" r="3.4" fill="none" stroke="currentColor" stroke-width="1.3"/><path d="M7.8 7.8 L10.6 10.6" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg></button><input type="text" class="procura" data-hef="perfis.procura" data-hef-alvo="valor" data-hef-vivo="procurar" placeholder="procurar" aria-label="Procurar um perfil" value=""><button type="button" class="icone-rot" data-hef-gesto="recarregar" title="Relê a lista do disco. Não descarta o que está no editor ao lado." aria-label="Relê a lista do disco. Não descarta o que está no editor ao lado."><svg viewBox="0 0 12 12" width="11" height="11" aria-hidden="true"><path d="M9.8 6a3.8 3.8 0 1 1-1.2-2.8" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><path d="M9.4 1.3v2.6H6.8" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg></button><span class="fora-da-busca" data-hef="perfis.procura.conta" data-hef-alvo="classe"><span data-hef="perfis.procura.conta"></span></span></div>
+              <div class="sec-rot">Perfis salvos<button type="button" class="icone-rot lupa" title="Procura pelo nome, pela prioridade ou pelo jogo." aria-label="Procurar um perfil"><svg viewBox="0 0 12 12" width="11" height="11" aria-hidden="true"><circle cx="5.2" cy="5.2" r="3.4" fill="none" stroke="currentColor" stroke-width="1.3"/><path d="M7.8 7.8 L10.6 10.6" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg></button><input type="text" class="procura" data-hef="perfis.procura" data-hef-alvo="valor" data-hef-vivo="procurar" placeholder="procurar" aria-label="Procurar um perfil" value=""><button type="button" class="icone-rot" data-hef-gesto="recarregar" title="Relê a lista de perfis. Não mexe no editor ao lado." aria-label="Relê a lista de perfis. Não mexe no editor ao lado."><svg viewBox="0 0 12 12" width="11" height="11" aria-hidden="true"><path d="M9.8 6a3.8 3.8 0 1 1-1.2-2.8" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><path d="M9.4 1.3v2.6H6.8" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg></button><span class="fora-da-busca" data-hef="perfis.procura.conta" data-hef-alvo="classe"><span data-hef="perfis.procura.conta"></span></span></div>
               <div class="lista">
               <div class="rolo">
               <table class="tab" data-hef="perfis.larguras" data-hef-alvo="atributo"
                      data-hef-atributo="data-larguras" data-tabela="10-perfis.lista"
                      data-larguras="">
                 <colgroup><col data-coluna="nome"><col data-coluna="prioridade"><col data-coluna="quando"></colgroup>
-                <thead><tr><th data-coluna="nome" title="Duplo clique para ordenar por esta coluna; de novo, inverte.">Nome<span class="ordena" data-hef="perfis.ordem.nome" data-hef-alvo="atributo" data-hef-atributo="data-ordem" data-hef-gesto="ordenar" data-coluna="nome"></span><span class="puxador" data-hef-gesto="largura-da-coluna" data-tabela="10-perfis.lista" data-coluna="nome" data-px="0" role="separator" aria-label="Arraste para mudar a largura da coluna"></span></th><th class="pri" data-coluna="prioridade" title="Duplo clique para ordenar por esta coluna; de novo, inverte.">Priorização<span class="ordena" data-hef="perfis.ordem.prioridade" data-hef-alvo="atributo" data-hef-atributo="data-ordem" data-hef-gesto="ordenar" data-coluna="prioridade"></span><span class="puxador" data-hef-gesto="largura-da-coluna" data-tabela="10-perfis.lista" data-coluna="prioridade" data-px="0" role="separator" aria-label="Arraste para mudar a largura da coluna"></span></th><th data-coluna="quando" title="Duplo clique para ordenar por esta coluna; de novo, inverte.">Quando usar<span class="ordena" data-hef="perfis.ordem.quando" data-hef-alvo="atributo" data-hef-atributo="data-ordem" data-hef-gesto="ordenar" data-coluna="quando"></span></th></tr></thead>
+                <thead><tr><th data-coluna="nome" title="Duplo clique ordena por esta coluna; de novo, inverte.">Nome<span class="ordena" data-hef="perfis.ordem.nome" data-hef-alvo="atributo" data-hef-atributo="data-ordem" data-hef-gesto="ordenar" data-coluna="nome"></span><span class="puxador" data-hef-gesto="largura-da-coluna" data-tabela="10-perfis.lista" data-coluna="nome" data-px="0" role="separator" aria-label="Arraste para mudar a largura da coluna"></span></th><th class="pri" data-coluna="prioridade" title="Duplo clique ordena por esta coluna; de novo, inverte.">Prioridade<span class="ordena" data-hef="perfis.ordem.prioridade" data-hef-alvo="atributo" data-hef-atributo="data-ordem" data-hef-gesto="ordenar" data-coluna="prioridade"></span><span class="puxador" data-hef-gesto="largura-da-coluna" data-tabela="10-perfis.lista" data-coluna="prioridade" data-px="0" role="separator" aria-label="Arraste para mudar a largura da coluna"></span></th><th data-coluna="quando" title="Duplo clique ordena por esta coluna; de novo, inverte.">Funciona em<span class="ordena" data-hef="perfis.ordem.quando" data-hef-alvo="atributo" data-hef-atributo="data-ordem" data-hef-gesto="ordenar" data-coluna="quando"></span></th></tr></thead>
                 <tbody data-hef="perfis.lista">
                 <tr class="ativo" data-hef-perfil="Mortal Kombat" aria-selected="true" title=""><td data-hef="perfis.linha.nome" data-hef-gesto="selecionar">Mortal Kombat</td><td class="pri" data-hef="perfis.linha.prioridade">90</td><td class="quando" data-hef="perfis.linha.quando" title="Jogo · mk1.exe">Jogo · mk1.exe</td></tr>
                 <tr class="" data-hef-perfil="Elden Ring" aria-selected="false" title=""><td data-hef="perfis.linha.nome" data-hef-gesto="selecionar">Elden Ring</td><td class="pri" data-hef="perfis.linha.prioridade">85</td><td class="quando" data-hef="perfis.linha.quando" title="Jogo da Steam · 1245620">Jogo da Steam · 1245620</td></tr>
@@ -1964,8 +1965,8 @@
               </div>
               <div class="botoes">
                 <button class="btn" data-hef-gesto="duplicar" title="Copia o perfil inteiro para o editor, com &quot;(cópia)&quot; no nome.">Duplicar</button>
-                <button class="btn" data-hef-gesto="novo" title="Perfil em branco, já com a regra do jogo aberto agora — venha ele de onde vier.">Novo</button>
-                <button class="btn vermelho" data-hef-gesto="remover" data-hef="perfis.remover" title="Apaga do disco. Pergunta antes.">Remover</button>
+                <button class="btn" data-hef-gesto="novo" title="Perfil em branco. Com um jogo da Steam aberto, ele nasce valendo só para esse jogo; sem isso, vale para tudo.">Novo</button>
+                <button class="btn vermelho" data-hef-gesto="remover" data-hef="perfis.remover" title="Apaga o perfil. Pergunta antes.">Remover</button>
               </div>
             </div>
           </div>
@@ -1991,7 +1992,7 @@
 
                    E É O QUE TORNA OS GESTOS HONESTOS: sem isto, ligar o campo Nome
                    faria ela renomear um perfil olhando para o nome de outro. -->
-              <div class="sec-rot">Definições<button type="button" class="icone-rot" data-hef-gesto="voltar-a-de-ontem" title="Desfaz um perfil salvo por engano: cada gravação já guarda a anterior." aria-label="Desfaz um perfil salvo por engano: cada gravação já guarda a anterior."><svg viewBox="0 0 12 12" width="11" height="11" aria-hidden="true"><path d="M2.2 6a3.8 3.8 0 1 0 1.2-2.8" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><path d="M2.6 1.3v2.6h2.6" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg></button></div>
+              <div class="sec-rot">Editar<button type="button" class="icone-rot" data-hef-gesto="voltar-a-de-ontem" title="Volta o perfil à gravação anterior." aria-label="Volta o perfil à gravação anterior."><svg viewBox="0 0 12 12" width="11" height="11" aria-hidden="true"><path d="M2.2 6a3.8 3.8 0 1 0 1.2-2.8" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><path d="M2.6 1.3v2.6h2.6" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg></button></div>
               <div class="campos">
 
               <div class="campo">
@@ -2001,7 +2002,7 @@
               </div>
               <div class="campo">
                 <span>Prioridade:</span>
-                <span class="val" data-hef="editor.prioridade.dica" title="Quando dois perfis servem ao mesmo tempo, o de número maior entra. O Universal fica em zero, para nunca atropelar ninguém e nunca deixar o controle sem nada.">
+                <span class="val" data-hef="editor.prioridade.dica" title="Quando dois perfis servem ao mesmo tempo, entra o de número maior. O Universal fica em zero: ele só entra quando nenhum outro serve.">
                   <!-- `data-hef-alvo="largura"` — 02/09/2026, e sem ele a barra
                        MENTIA de duas formas ao mesmo tempo. O pintor cai no
                        ramo padrão (`el.textContent = t`, `hefesto_vivo.py:170`)
@@ -2096,11 +2097,11 @@
                          value="Mortal Kombat 1"><span class="exige" data-hef="editor.jogo.exige" data-hef-alvo="classe"><span class="dica" data-hef="editor.jogo.exigencia" data-hef-alvo="html"></span></span>
                   <datalist id="jogos-desta-maquina" data-hef="editor.jogo.lista"></datalist>
                   <span class="rot" data-hef="editor.jogo.rotulo" data-hef-alvo="classe"><span class="al" data-hef="editor.jogo.alerta" data-hef-alvo="classe" data-hef-classe="alerta"><span data-hef="editor.jogo.rotulo"></span></span></span>
-                  <button class="btn roxo" data-hef-gesto="detectar" title="Pega o jogo que está rodando atrás desta janela e monta a regra — funciona com jogo de qualquer lugar, não só da Steam.">Detectar</button>
+                  <button class="btn roxo" data-hef-gesto="detectar" title="Usa o jogo que está aberto agora e monta a regra — de qualquer lugar, não só da Steam.">Detectar</button>
                 </span>
               </div>
               <div class="campo">
-                <span title="Pré-aplica um perfil inteiro: escolhendo FPS, o gatilho, a luz, a vibração e a máscara já vêm resolvidos. Os catorze de fábrica não se editam; o Personalizado usa o que você ajustou nas abas.">Estilo de Jogo:</span>
+                <span title="Pré-aplica de uma vez o gatilho, a vibração e a cor da luz. Os catorze de fábrica não se editam; o Personalizado usa o que você ajustou nas abas.">Estilo de Jogo:</span>
                 <span class="val"><select class="destaque" data-hef="editor.estilo" data-hef-gesto="editor.estilo" data-hef-alvo="valor">
                 <option value="" selected>—</option>
                 <option>FPS</option>
@@ -2126,9 +2127,9 @@
                        data-larguras="">
                   <colgroup><col data-coluna="controle"><col data-coluna="status"><col data-coluna="id"></colgroup>
                   <thead><tr>
-                    <th title="Controle — o perfil não guarda uma configuração: guarda uma por controle. Esta tabela mostra, para cada controle, quais ajustes ele tem só para si e quais usa do perfil.">Controle<span class="puxador" data-hef-gesto="largura-da-coluna" data-tabela="10-perfis.guarda" data-coluna="controle" data-px="0" role="separator" aria-label="Arraste para mudar a largura da coluna"></span></th>
-                    <th class="gd-pecas" title="Aceso: este perfil guarda um ajuste só deste controle. Apagado: ele usa o do perfil, igual aos outros. São os sete ajustes que o perfil sabe guardar por controle — luz, gatilhos, vibração, alto-falante, microfone, sensores e máscara.">Status<span class="puxador" data-hef-gesto="largura-da-coluna" data-tabela="10-perfis.guarda" data-coluna="status" data-px="0" role="separator" aria-label="Arraste para mudar a largura da coluna"></span></th>
-                    <th class="gd-id" title="O endereço de rádio do controle. É por ele que o perfil reconhece a peça — e ele não muda quando você troca o cabo pelo rádio, então o que você deixou hoje volta amanhã.">ID da peça</th>
+                    <th title="O perfil guarda um ajuste por controle. Aqui você vê quais são só deste controle e quais vêm do perfil.">Controle<span class="puxador" data-hef-gesto="largura-da-coluna" data-tabela="10-perfis.guarda" data-coluna="controle" data-px="0" role="separator" aria-label="Arraste para mudar a largura da coluna"></span></th>
+                    <th class="gd-pecas" title="Aceso: este perfil guarda um ajuste só deste controle. Apagado: ele usa o do perfil. São sete: luz, gatilhos, vibração, alto-falante, microfone, sensores e máscara.">Status<span class="puxador" data-hef-gesto="largura-da-coluna" data-tabela="10-perfis.guarda" data-coluna="status" data-px="0" role="separator" aria-label="Arraste para mudar a largura da coluna"></span></th>
+                    <th class="gd-id" title="O endereço de rádio do controle: é por ele que o perfil o reconhece, no cabo e no rádio.">ID da peça</th>
                   </tr></thead>
                   <tbody data-hef="guarda.linhas">
                   <tr data-hef-uniq="p1" data-hef="guarda.vazio" data-hef-alvo="classe" data-hef-classe="fora">
@@ -2278,7 +2279,7 @@
                     <td class="gd-id" data-hef="guarda.id">AA:BB:CC:00:00:02</td>
                   </tr>
                   <tr data-hef-uniq="p3" data-hef="guarda.vazio" data-hef-alvo="classe" data-hef-classe="fora" class="fora"
-                      title="Nenhum controle neste lugar. O perfil guarda o que está aqui pelo ID da peça: quando o P3 voltar, ele encontra o que você deixou.">
+                      title="Este lugar está vazio. O que você ajusta fica guardado com o controle: quando ele voltar, encontra o que você deixou.">
                     <td class="gd-nome">
                       <span class="pl" data-hef="guarda.plastico" data-hef-alvo="cor"
                             style="color:transparent"></span>
@@ -2352,7 +2353,7 @@
                     <td class="gd-id" data-hef="guarda.id">AA:BB:CC:00:00:03</td>
                   </tr>
                   <tr data-hef-uniq="p4" data-hef="guarda.vazio" data-hef-alvo="classe" data-hef-classe="fora" class="fora"
-                      title="Nenhum controle neste lugar. O perfil guarda o que está aqui pelo ID da peça: quando o P4 voltar, ele encontra o que você deixou.">
+                      title="Este lugar está vazio. O que você ajusta fica guardado com o controle: quando ele voltar, encontra o que você deixou.">
                     <td class="gd-nome">
                       <span class="pl" data-hef="guarda.plastico" data-hef-alvo="cor"
                             style="color:transparent"></span>
@@ -2431,9 +2432,9 @@
 
               </div>
               <!-- OS TRÊS VIRARAM UM — 11/09/2026, ordem dela. O `Recarregar` foi
-                   para o rótulo `Perfis Salvos` (ele relê a LISTA, e a lista é a
+                   para o rótulo `Perfis salvos` (ele relê a LISTA, e a lista é a
                    tabela da esquerda) e o `Voltar à de ontem` para o rótulo
-                   `Definições` — *"tem que arrumar outro canto pra deixar ele ao  (noqa-acento) citação
+                   `Editar` — *"tem que arrumar outro canto pra deixar ele ao  (noqa-acento) citação
                    invés de botão como os demais"*. Sobrou UM botão neste canto, e  (noqa-acento) citação
                    a classe `um-so` o faz ocupar a largura inteira em vez de um
                    terço com dois vãos vazios ao lado.
@@ -2682,7 +2683,7 @@
       <code>a10_perfis</code>, com o que leu dos controles — a mesma leitura da fita do topo.
       Sem cor lida, a barra <b>some</b>: campo sem informação não mostra nada.</li>
     <li><b>O cabeçalho conta os controles</b>: 14 perfis e
-      3 de 4 controles com ajuste próprio neste perfil.</li>
+      3 de 4 controles com ajuste próprio.</li>
     <li><b>A linha diz DUAS coisas, e elas não são a mesma.</b> A <b>cor verde e a barra
       verde</b> dizem <b>está valendo agora</b>; o <b>fundo roxo e a barra roxa</b> dizem
       <b>é esta que o editor ao lado está mostrando</b> — a que os nove botões vão mexer.

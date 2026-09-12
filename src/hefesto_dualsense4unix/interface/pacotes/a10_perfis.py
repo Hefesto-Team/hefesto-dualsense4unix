@@ -199,7 +199,7 @@ ESPERANDO_O_ESQUEMA: frozenset[str] = frozenset()
 
 
 #: COMO A TELA CHAMA O QUE O PERFIL GUARDA — `match.type` no disco, uma frase
-#: na coluna "Quando usar". A tradução mora aqui e não no JS: é vocabulário do
+#: na coluna "Funciona em". A tradução mora aqui e não no JS: é vocabulário do
 #: produto, e o desenho dela já fixou as palavras.
 QUANDO = {"criteria": "Jogo", "any": "Todos — quando nenhum casa",
           "manual": "Só quando eu escolher"}
@@ -313,9 +313,9 @@ COLUNAS_DA_LISTA = ("nome", "prioridade", "quando")
 
 #: COMO A TELA CHAMA CADA UMA. Os três rótulos são os do cabeçalho da tabela, e
 #: a frase do desfecho os repete — dizer *"ordenado por quando"* sobre uma
-#: coluna escrita `Quando usar` é a tela falando de uma coluna que não existe.
-_NOME_DA_COLUNA = {"nome": "Nome", "prioridade": "Priorização",
-                   "quando": "Quando usar"}
+#: coluna escrita `Funciona em` é a tela falando de uma coluna que não existe.
+_NOME_DA_COLUNA = {"nome": "Nome", "prioridade": "Prioridade",
+                   "quando": "Funciona em"}
 
 
 def _sem_acento(texto: str) -> str:
@@ -329,7 +329,7 @@ def _sem_acento(texto: str) -> str:
 
     ELE LEVANTA EM VEZ DE DEVOLVER VAZIO, e por isso a  # (noqa-acento) valor
     guarda: `slugify("—")`
-    é `ValueError`, e a coluna "Quando usar" traz travessão em todo perfil sem
+    é `ValueError`, e a coluna "Funciona em" traz travessão em todo perfil sem
     regra. Um `except` que devolve `""` é a resposta certa: um valor que não
     tem letra nenhuma não casa com busca nenhuma, e não é erro.
     """
@@ -346,8 +346,8 @@ def _casa(linha: dict[str, Any], termo: str) -> bool:
     O QUE CASA, e é a frase dela — *"nome de perfil, e demais configs dos  # (noqa-acento) cita ela
     perfis… achar rápido o nome de um jogo"*:  # (noqa-acento) citação literal dela
 
-    1. as TRÊS células da linha — `Nome`, `Priorização`, `Quando usar`. O nome
-       do jogo mora no `Quando usar`, e é o alvo declarado dela;
+    1. as TRÊS células da linha — `Nome`, `Prioridade`, `Funciona em`. O nome
+       do jogo mora no `Funciona em`, e é o alvo declarado dela;
     2. o `title` da linha, que é a disputa (`explicacao_da_disputa`).
 
     **E NÃO ABRE UM `.json` SEQUER.** Ela pediu  # (noqa-acento) cita ela
@@ -1580,7 +1580,7 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
 
     E ELA SABE MAIS QUE O QUE ESTE PACOTE TINHA: a coluna "Quando usar" diz *"Só
     neste programa"* onde eu escrevia *"Jogo"*; ela traz `com_ajuste` ("0 de 2
-    controles com ajuste próprio neste perfil"), a `guarda` dos overrides por
+    controles com ajuste próprio"), a `guarda` dos overrides por
     controle, os `travados` e o `editor` inteiro. Cada uma dessas frases é texto
     de tela que alguém escreveu com ela, e reescrevê-las por fora seria a
     segunda verdade.

@@ -306,7 +306,7 @@ def test_a_tabela_da_guarda_nomeia_os_controles_da_mesa() -> None:
         "mockup voltam à tela de um lugar sem controle")
     # E O CABEÇALHO CONTA OS DOIS: só o primeiro tem ajuste próprio.
     assert fora["perfis.com-ajuste"] == (
-        "1 de 2 controles com ajuste próprio neste perfil")
+        "1 de 2 controles com ajuste próprio")
 
 
 def test_o_rotulo_da_guarda_e_o_mesmo_do_monta() -> None:

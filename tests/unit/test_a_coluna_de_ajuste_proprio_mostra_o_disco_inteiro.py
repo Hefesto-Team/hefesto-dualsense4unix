@@ -285,11 +285,19 @@ def test_o_cabecalho_e_a_dica_da_linha_contam_o_mesmo_numero() -> None:
     # têm cada um a sua tabela, e uma régua que lesse a de qualquer um dos dois
     # deixaria de ver um erro que os dois cometessem juntos. O `sete` entrou em
     # 08/09/2026, com a `mascara` (MASCARA-NO-PERFIL-01).
+    #
+    # A FORMA DA FRASE MUDOU EM 11/09/2026 (A5-047, aprovada por ela): a dica
+    # dizia *"São os sete ajustes que o perfil sabe guardar por controle — …"* e
+    # passou a dizer *"São sete: …"* — a oração que repetia a primeira metade
+    # saiu, e a palavra `ajustes` com ela, porque a lista de nomes que vem a
+    # seguir já diz o que são. **O NÚMERO, que é o que esta régua mede, não
+    # mudou de lugar**: continua por extenso, na dica do cabeçalho. O que se
+    # cobra aqui é o número; a forma da frase é dela.
     extenso = {1: "um", 2: "dois", 3: "três", 4: "quatro", 5: "cinco",
                6: "seis", 7: "sete"}
     quantas = len(perfis_web.SECOES_POR_CONTROLE)
     esperado = extenso.get(quantas, str(quantas))
-    assert f"São os {esperado} ajustes" in html, (
+    assert f"São {esperado}:" in html, (
         f"o esquema guarda {quantas} seções por controle e a dica do cabeçalho "
         f"não diz `{esperado}` — a linha ao lado já conta o número do esquema "
         f"(`{quantas} de {quantas} ajustes só deste controle`), e as duas frases "
