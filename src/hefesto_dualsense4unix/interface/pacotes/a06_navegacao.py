@@ -598,9 +598,13 @@ def _a_ressalva_dos_globais(ctx: Contexto) -> str:
 #: **Jogar**. Reusar o módulo também não dá: `mouse_actions.py` importa GTK no
 #: topo, e os pacotes são puros de propósito.
 RAZAO_DO_PORTAO = (
-    "O mouse e o teclado só se ligam fora do jogo: jogando, o controle é do "
-    "jogo, e ligar o mouse aqui derrubaria o controle virtual e os jogadores "
-    "do co-op no meio da partida. O degrau se troca na aba Jogar.")
+    # SEM MARCAÇÃO, e é o canal que manda: esta MESMA frase sai por dois
+    # caminhos — a dica viva `modo-portao` (que aceita HTML) e o
+    # `RuntimeError` do gesto, que `hefesto_vivo._depositar` põe na tela por
+    # `textContent`. Um `<b>` aqui apareceria como `<b>` no cartão dela. O
+    # negrito da proposta A5-026 cai por isso, e só por isso.
+    "O mouse e o teclado só se ligam fora do jogo — ligar agora derrubaria o "
+    "controle no meio da partida. O Modo se troca na aba Jogar.")
 
 
 def _a_razao_do_portao(estado: dict[str, Any]) -> str:
@@ -1528,9 +1532,8 @@ def _o_que_o_ps_faz(p: dict[str, Any]) -> str:
                 "Dentro de um jogo ele não faz nenhuma das duas.")
     if escolha == acoes.TOKEN_STEAM:
         return ""
-    return (f"<b>O {nome} ainda não faz “{rotulo}”:</b> hoje ele só sabe digitar "
-            "teclas e abrir o teclado na tela. A escolha fica guardada no "
-            "perfil — é feature que falta, não erro seu.")
+    return (f"O <b>{nome}</b> digita teclas e abre o teclado na tela. "
+            f"A escolha “{rotulo}” fica guardada no perfil.")
 
 
 def _aviso_da_tabela(p: dict[str, Any]) -> str:
@@ -1557,17 +1560,14 @@ def _aviso_da_tabela(p: dict[str, Any]) -> str:
     mudos, teimosos = _linhas_que_nao_acendem(p)
     if mudos:
         partes.append(
-            "<b>Não acendem nada hoje:</b> "
+            "<b>Guardadas no perfil, e sem efeito hoje:</b> "
             + ", ".join(_nome_do_botao(b) for b in mudos)
-            + ". A escolha fica guardada no perfil — é feature que falta, não "
-              "erro seu.")
+            + ".")
     if teimosos:
         partes.append(
-            "<b>“— Nada —” ainda não cala estes:</b> "
+            "O <b>“— Nada —”</b> não cala estes: "
             + ", ".join(_nome_do_botao(b) for b in teimosos)
-            + ". Eles continuam digitando o de fábrica, porque o Hefesto ainda "
-              "não sabe distinguir “este botão não é do mouse” de “este botão "
-              "foi calado”.")
+            + ". Eles continuam digitando o de fábrica.")
     perdidos = atalhos_que_param_de_valer(p)
     if perdidos:
         quais = ", ".join(f"{_nome_do_botao(b)} = {_atalho_em_palavras(t)}"
@@ -2024,13 +2024,15 @@ def _guardar_no_perfil(ctx: Contexto, **campos: Any) -> str:
     """
     nome = str((ctx.state or {}).get("active_profile") or "").strip()
     if not nome:
-        return ("mudei agora, e não guardei para amanhã: não há perfil ativo. "
-                "Escolha um na aba Perfis e o Hefesto passa a lembrar disto.")
+        return ("mudei agora, mas não guardei: não há perfil ativo. "
+                "Escolha um na aba Perfis.")
     loader = perfil._com_o_src()
     try:
         prof = loader.load_profile(nome)
     except Exception:
-        return (f"mudei agora, e não guardei para amanhã: não consegui abrir o "
+        # A MESMA ABERTURA DA IRMÃ DE CIMA (A5-027): a figura *"para amanhã"*
+        # sai das DUAS, ou a mesma tela diz a mesma coisa de dois jeitos.
+        return (f"mudei agora, mas não guardei: não consegui abrir o "
                 f"perfil “{nome}” para gravar.")
 
     mudanca: dict[str, Any] = {}
@@ -2065,8 +2067,8 @@ def _numero_da_barra(o: dict[str, Any], oque: str) -> int:
     bruto = str(o.get("valor") or "").strip()
     if not bruto:
         raise RuntimeError(
-            f"a barra não mandou número nenhum, e {oque} ficou como estava. "
-            "Arraste o cursor dela em vez de clicar no rótulo ao lado.")
+            f"{oque} ficou como estava. "
+            "Arraste o cursor da barra em vez de clicar no rótulo ao lado.")
     try:
         return round(float(bruto))
     except ValueError as erro:
@@ -3214,22 +3216,16 @@ def guardar_definicoes(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     # *"espere a tabela se preencher e clique de novo"*, e trocar a linha nunca
     # chegava ao Guardar: o tique reescrevia a escolha em ≤1,5 s. Agora chega.
     if novo is None and prof.button_actions and not _MEXENDO:
-        # A CONTA DIZ QUANTAS SOBRARAM, e não "as 21", quando o desenho
-        # congelado tirou alguma da forma: dizer "as 21 estão no de fábrica"
-        # logo ao lado de "não guardei a linha do L3" seria a mesma tela
-        # afirmando duas coisas que não cabem juntas.
-        quantas = (f"as {len(acoes.BOTOES) - len(congelado)} linhas restantes "
-                   "da tela estão" if congelado
-                   else f"as {len(acoes.BOTOES)} linhas da tela estão todas")
+        # A CONTA SAIU — A5-032, aprovada por ela em 11/09/2026. Ela dizia "as
+        # 21 linhas" (ou "as 20 restantes", quando o desenho congelado tirava
+        # alguma da forma), e a frase de agora não afirma número nenhum: "a
+        # tela está no de fábrica" vale nos dois casos, e era só para os dois
+        # caberem juntos que a conta existia.
         raise RuntimeError(
-            f"não guardei: {quantas} no de fábrica, e o "
+            "não guardei: a tela está no de fábrica e o "
             f"perfil “{nome}” guarda "
-            f"{len(prof.button_actions)} escolha(s) sua(s). Gravar isto as "
-            "apagaria. A tela leva meio segundo para mostrar o que o perfil "
-            "guarda; se você clicou antes disso, o que estava na tela era o "
-            "desenho, e não a sua escolha. Espere a tabela se preencher — para "
-            "voltar tudo ao de fábrica de propósito, use o “Voltar ao padrão” "
-            "ao lado."
+            f"{len(prof.button_actions)} escolha(s) sua(s) — gravar isto as "
+            "apagaria. Espere a tabela se preencher e tente de novo."
             + (f" E {aviso}" if aviso else ""))
     # O QUE ESTE CLIQUE VAI FAZER PARAR DE VALER, contado ANTES da gravação —
     # 04/09/2026, e é a metade dita do defeito §3-1. Depois do

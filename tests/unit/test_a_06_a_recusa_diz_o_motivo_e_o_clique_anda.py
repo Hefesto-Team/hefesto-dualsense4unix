@@ -242,7 +242,14 @@ def test_a_barra_sem_numero_reprova_e_nao_manda_nada() -> None:
     from pacotes import a06_navegacao as mod
 
     ponte = _Ponte()
-    with pytest.raises(RuntimeError, match="não mandou número nenhum"):
+    # O RECORTE MUDOU DE METADE — 11/09/2026, A5-028, aprovada por ela. A frase
+    # abria com *"a barra não mandou número nenhum, e …"*, que é o que o CÓDIGO
+    # viu; a de hoje abre pelo que ela precisa — *"{campo} ficou como estava"* —
+    # e ensina o gesto na segunda oração. A régua passa a cobrar as DUAS coisas
+    # que a recusa tem de dizer: que nada mudou, e o que fazer em vez disso.
+    with pytest.raises(RuntimeError, match="ficou como estava"):
+        mod.vel_cursor(_ctx(speed=6), {"gesto": "vel-cursor"}, ponte)
+    with pytest.raises(RuntimeError, match="Arraste o cursor da barra"):
         mod.vel_cursor(_ctx(speed=6), {"gesto": "vel-cursor"}, ponte)
     assert ponte.chamadas == [], (
         "a barra sem número chegou a falar com o daemon — o pedido em branco "

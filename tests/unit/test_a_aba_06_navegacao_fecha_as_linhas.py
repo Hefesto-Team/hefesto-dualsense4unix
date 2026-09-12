@@ -338,7 +338,15 @@ def test_a_dica_da_tela_de_botoes_diz_por_que_o_ps_fica_fora():
         f"produto: {texto!r}")
     # AS DUAS METADES, cada uma pelo pedaço que a nomeia. Cobrar a frase inteira
     # travaria a redação; cobrar só "PS" passaria com o parágrafo antigo.
-    faltam = [p for p in ("PS", "saída de emergência", "modo jogo", "junto")
+    #
+    # `"modo jogo"` SAIU DA LISTA — 11/09/2026, e ele nunca foi uma das duas
+    # metades: o docstring acima diz quais são (a tecla escolhida e a saída de
+    # emergência), e esta palavra era pedaço de uma TERCEIRA afirmação — *"e
+    # segurá-lo alterna o modo jogo"* —, que a medição de 10/09 classificou como
+    # DESATUALIZADA e que a A5-020, aprovada por ela, tirou da dica. Cobrar aqui
+    # a palavra de uma frase que o produto não faz mais é a régua obrigando a
+    # tela a mentir para ficar verde.
+    faltam = [p for p in ("PS", "saída de emergência", "junto")
               if p not in texto]
     assert not faltam, (
         f"a dica não conta as duas coisas que o PS faz — falta {faltam} em: "
@@ -481,10 +489,18 @@ def test_o_que_o_nada_nao_cala_e_dito_e_o_produto_e_quem_decide(aba, monkeypatch
     aviso = _carga(aba, NO_DESKTOP, {"button_actions": calados},
                    monkeypatch)["aviso-da-tabela"]
     # A FRASE CERTA, e não qualquer frase: um nome que aparecesse só na linha
-    # de "não acendem nada" diria o CONTRÁRIO — que o botão calou. A régua
+    # dos que ficam sem efeito diria o CONTRÁRIO — que o botão calou. A régua
     # recorta o `<div>` que fala de não-calar e cobra ali.
+    #
+    # OS DOIS RECORTES MUDARAM DE PALAVRA — 11/09/2026, A5-030 e A5-031,
+    # aprovadas por ela: as duas frases confessavam dívida nossa (*"é feature
+    # que falta, não erro seu"*, *"o Hefesto ainda não sabe distinguir…"*), que
+    # é o que a ordem dela de 07/09 proíbe na tela. O ATO que a régua mede é o
+    # mesmo — uma tira diz quem continua digitando, a outra diz quem fica
+    # guardado sem efeito —, e o recorte passa a ser o pedaço de cada frase que
+    # NOMEIA esse ato, não a confissão que saiu.
     dita = next((x for x in re.findall(r"<div>(.*?)</div>", aviso)
-                 if "ainda não cala" in x), "")
+                 if "não cala estes" in x), "")
     for botao in ainda_falam:
         assert humanize_button(botao) in dita, (
             f"{botao} continua emitindo com a tela em “— Nada —” e a tira não "
@@ -497,7 +513,7 @@ def test_o_que_o_nada_nao_cala_e_dito_e_o_produto_e_quem_decide(aba, monkeypatch
         # E O CONTRÁRIO TAMBÉM: quem continua falando não pode aparecer na
         # frase que promete silêncio.
         calou = next((x for x in re.findall(r"<div>(.*?)</div>", aviso)
-                      if "Não acendem nada hoje" in x), "")
+                      if "sem efeito hoje" in x), "")
         for botao in ainda_falam:
             assert humanize_button(botao) not in calou, (
                 f"{botao} continua emitindo e a tira o põe entre os que não "
