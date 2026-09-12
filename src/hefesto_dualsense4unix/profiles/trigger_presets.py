@@ -15,7 +15,7 @@ Uso tipico:
         VIBRATION_POSITION_LABELS,
     )
     valores = FEEDBACK_POSITION_PRESETS["rampa_crescente"]  # [0, 1, 2, ...]
-    label   = FEEDBACK_POSITION_LABELS["rampa_crescente"]   # "Rampa crescente"
+    label   = FEEDBACK_POSITION_LABELS["rampa_crescente"]   # "Endurece no fim"
 """
 from __future__ import annotations
 
@@ -53,12 +53,12 @@ VIBRATION_POSITION_PRESETS: dict[str, list[int]] = {
 # ---------------------------------------------------------------------------
 
 FEEDBACK_POSITION_LABELS: dict[str, str] = {
-    "rampa_crescente":   "Rampa crescente",
-    "rampa_decrescente": "Rampa decrescente",
-    "plateau_central":   "Plateau central",
-    "stop_hard":         "Stop hard",
-    "stop_macio":        "Stop macio",
-    "linear_medio":      "Linear médio",
+    "rampa_crescente":   "Endurece no fim",
+    "rampa_decrescente": "Solta no fim",
+    "plateau_central":   "Pico no meio",
+    "stop_hard":         "Trava seca",
+    "stop_macio":        "Trava macia",
+    "linear_medio":      "Peso igual",
     "custom":            "Personalizar",
 }
 

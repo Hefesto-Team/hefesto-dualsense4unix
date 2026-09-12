@@ -461,9 +461,14 @@ def test_sem_perfil_ativo_o_gesto_diz_o_que_o_controle_novo_perde(pac, disco) ->
     assert p.enviados, "o gesto recusou ANTES de mandar — o aparelho ficou sem"
     assert not gravados, "gravou sem perfil ativo"
     frase = str(erro.value)
-    assert "perfil" in frase and "controle novo" in frase, (
-        f"a frase não conta a metade que dói: {frase!r}. Sem perfil não há "
-        f"seção global, e é a seção global que o controle novo herda.")
+    # ELA DIGITAVA "controle novo" ATÉ 11/09/2026, e a leva de língua aprovada
+    # por ela (A4-036) trocou a oração por *"não vale para os próximos"* — o
+    # mesmo fato, sem a explicação da seção global, que é desenho nosso. O que
+    # se mede é o ATO: a recusa diz que falta perfil E manda onde escolher um.
+    assert "perfil" in frase and "aba Perfis" in frase, (
+        f"a frase não conta a metade que dói nem diz o conserto: {frase!r}. Sem "
+        f"perfil não há seção global, e é a seção global que um controle ligado "
+        f"depois herda.")
 
 
 def test_a_coluna_vazia_recusa_dizendo(pac, disco) -> None:
