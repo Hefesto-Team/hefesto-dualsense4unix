@@ -180,9 +180,13 @@ FATOS: dict[str, str] = {
         "CONFLITO DE FUNÇÃO, e a frase nomeia a condição na mesma oração "
         "(*enquanto o touchpad for o mouse do computador*). A escolha fica "
         "guardada e volta a valer quando isso mudar — 07/09/2026",
-    "O Hefesto não é só para a Steam":
-        "AFIRMAÇÃO POSITIVA sobre o alcance do produto — a peneira a pega pela "
-        "forma, e ela é o oposto de uma confissão — 07/09/2026",
+    # A LINHA *"O Hefesto não é só para a Steam"* SAIU EM 11/09/2026, e saiu
+    # com a frase: o `?` da aba Lançadores perdeu os dois parágrafos que
+    # definiam a aba por negação (A2-002, aprovada por ela). Ela era AFIRMAÇÃO
+    # POSITIVA sobre o alcance do produto, declarada em 07/09/2026 porque a
+    # peneira a pegava pela forma. **A declaração sai junto por ordem deste
+    # próprio portão** — ele confere nos dois sentidos, e uma linha que
+    # sobrevive à frase envelhece calada.
 }
 
 

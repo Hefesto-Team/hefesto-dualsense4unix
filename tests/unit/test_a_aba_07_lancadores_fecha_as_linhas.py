@@ -250,7 +250,11 @@ def test_o_gesto_recusa_dizendo_quando_a_area_nao_confirma(
     with pytest.raises(RuntimeError) as caiu:
         a07.copiar_a_linha(ctx, {"v": "steam"}, None)
     frase = str(caiu.value)
-    assert "Ctrl+C" in frase and "cartão" in frase, (
+    # O QUE A RÉGUA PROCURA MUDOU EM 11/09/2026 — A2-057, aprovada por ela: a
+    # recusa dizia «área de transferência» (o mecanismo) e nomeava o cartão;
+    # agora diz «copiar» (o ato) e aponta o lugar — *"logo acima deste botão"*.
+    # O que ela cobra é o mesmo: a segunda saída, com a tecla.
+    assert "Ctrl+C" in frase and "acima deste botão" in frase, (
         f"a recusa não manda ela para a linha à mostra: {frase!r}. Uma recusa "
         f"que só diz 'não consegui' deixa a pessoa onde o defeito a deixava.")
 
