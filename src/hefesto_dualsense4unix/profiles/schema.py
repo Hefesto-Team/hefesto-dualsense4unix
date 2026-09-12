@@ -1045,23 +1045,28 @@ class ControllerMicOverride(BaseModel):
     guarda é ``ProfileManager.apply_mic``, reusado VERBATIM — não há segunda
     cópia da regra aqui.
 
+    O SEGUNDO QUE ENTROU — ``volume``, e ele tem DOIS DEGRAUS
+    ---------------------------------------------------------
+    **FATO SUBSTITUÍDO EM 03/09/2026, e completado em 09/09.** Esta seção
+    listava o ``volume`` entre os campos DE FORA, primeiro porque o applier
+    *"não chamava"* a primitiva por peça (falso desde 03/09 pela manhã) e
+    depois porque faltava a palavra dela. As duas coisas caíram: ela mandou
+    abrir (*"manda a ver em tudo que falta por favor"*), o campo existe logo
+    abaixo, e ``Daemon.apply_profile_mic`` resolve a fonte com
+    ``audio_control.fonte_de_captura_do_uniq(uniq)`` quando há ``uniq`` — **sem
+    queda** para a rota global, que mandaria o ganho ao microfone do vizinho.
+    Manter a recusa escrita aqui ao lado de um campo aberto obrigaria a próxima
+    pessoa a escolher entre duas afirmações da mesma classe.
+
+    E desde 09/09/2026 o campo chega ao APARELHO, não só à fonte do sistema:
+    ``set_microphone_volume`` escreve o ``common[6]`` daquele controle
+    (MIC-VOLUME-02, decisão dela ``D-0909-O-VOLUME-DO-MIC-LIGA-O-BYTE-DO-
+    APARELHO``, depois de a bancada medir o byte obedecendo no cabo —
+    ``docs/data/ensaios.csv``, ``folha-mic-volume-o-byte-age-cabo-0909``). Um
+    campo, dois degraus, e os dois por ``uniq``.
+
     O QUE FICA DE FORA, e cada um por uma MEDIÇÃO
     ----------------------------------------------
-    - ``volume``. **FATO SUBSTITUÍDO EM 03/09/2026** — esta linha dizia que o
-      applier *"não chama"* a primitiva por peça, e isso deixou de ser verdade
-      no mesmo dia. ``Daemon.apply_profile_mic`` resolve a fonte com
-      ``audio_control.fonte_de_captura_do_uniq(uniq)`` quando há ``uniq``, e
-      **não cai** para a rota global quando ele não resolve — sem fonte daquele
-      controle ninguém escreve e ninguém diz "aplicado".
-      ``fonte_de_captura_do_controle()``, que devolve a PRIMEIRA fonte da
-      lista, ficou sendo o que a seção GLOBAL usa, e ali está certo: o global
-      não tem dono.
-
-      **O QUE SEGURA O CAMPO HOJE NÃO É MEDIÇÃO, É DECISÃO.** Abrir a borda
-      muda o que o perfil dela aceita no disco, e com dois DualSense no cabo há
-      DUAS placas de som (MIC-DA-MESA-CHEIA-01, 20/08/2026) — quem decide se
-      cada peça passa a guardar o seu ganho é ela. Enquanto não disser, a
-      recusa fica, e a razão na mensagem é esta.
     - ``button_toggles_system``. O interruptor é UM por máquina:
       ``hotkey.mic_button_loop`` lê ``daemon.config.mic_button_toggles_system``
       (``daemon/subsystems/hotkey.py:1173``) e não consulta ``uniq`` nenhum.
@@ -1106,6 +1111,12 @@ class ControllerMicOverride(BaseModel):
     #: A FAIXA É A DA SEÇÃO GLOBAL, e é lida dela, não digitada aqui: uma
     #: segunda definição de 0..100 envelheceria no dia em que a primeira
     #: mudasse.
+    #:
+    #: DOIS DEGRAUS DESDE 09/09/2026 (MIC-VOLUME-02): a fonte de captura no
+    #: PipeWire **e** o `common[6]` do aparelho, este último pela régua única
+    #: `core/backend_pydualsense.byte_do_volume_do_microfone` (teto `0x40`). O
+    #: que o disco guarda continua sendo a PORCENTAGEM — o byte é derivado, e
+    #: persistir byte faria o perfil dela envelhecer junto com o protocolo.
     volume: int | None = Field(default=None, ge=0, le=100)
 
     @model_validator(mode="before")

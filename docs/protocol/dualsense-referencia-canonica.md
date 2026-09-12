@@ -703,7 +703,14 @@ em `:1514`, diz que a faixa aceita parece ser `[0x3d..0x64]`.)
 > | campo | onde é escrito | grau |
 > |---|---|---|
 > | volume, `common[5]` | o laço dos quatro bytes de áudio — `_AUDIO_COMMON_OFFSETS` em `core/backend_pydualsense.py:322-324` | **ALTA** — lido no código |
-> | pré-amp, `common[37]` | `core/backend_pydualsense.py:1504-1511`, com o `VALID_FLAG1_AUDIO_CONTROL2_ENABLE` em `:1508-1510`; o valor padrão `0x2` é o `SP_PREAMP_GAIN_PADRAO` em `core/ds_output_report.py:184` | **ALTA** — lido no código |
+> | pré-amp, `common[37]` | `core/backend_pydualsense.py:1572-1579`, com o `VALID_FLAG1_AUDIO_CONTROL2_ENABLE` em `:1576-1578`; o valor padrão `0x2` é o `SP_PREAMP_GAIN_PADRAO` em `core/ds_output_report.py:184` | **ALTA** — lido no código |
+<!-- ENDEREÇOS REAPONTADOS em 09/09/2026: a MIC-VOLUME-02 acrescentou a régua
+     `byte_do_volume_do_microfone` e os dois métodos de posse do `common[6]` ao
+     `backend_pydualsense.py`, e as citações de áudio desceram ~57 linhas. As
+     AFIRMAÇÕES não mudaram — só onde elas abrem. O mapa do reaponte foi o diff
+     HEAD->árvore, linha por linha, e o símbolo prometido foi conferido dentro
+     de cada faixa nova: reaponte por aritmética foi o que já pôs `:789` no meio
+     de um docstring. -->
 <!-- ENDEREÇOS REAPONTADOS em 01/09/2026: MIC-DA-MESA-ELEICAO-01 acrescentou
      a leitura disciplinada do byte de áudio e o contador de bordas ao
      `backend_pydualsense.py`, e as citações de áudio desceram ~59 linhas.
@@ -713,7 +720,7 @@ em `:1514`, diz que a faixa aceita parece ser `[0x3d..0x64]`.)
      `backend_pydualsense.py`, e as três citações de áudio desceram ~21 linhas.
      As AFIRMAÇÕES não mudaram — só onde elas abrem. -->
 
-> | rota, `common[7]` bits 4-5 | `core/backend_pydualsense.py:378-408` (`_byte_da_rota`) | **MEDIDO** — com a orelha dela em 02/08, rota 3 audível, rota 0 sem fone inaudível |
+> | rota, `common[7]` bits 4-5 | `core/backend_pydualsense.py:422-452` (`_byte_da_rota`) | **MEDIDO** — com a orelha dela em 02/08, rota 3 audível, rota 0 sem fone inaudível |
 >
 > *(Os endereços das duas primeiras linhas foram REAPONTADOS em 13/08/2026: eles
 > apontavam para `:780-782`, `:783-790`/`:789` e `:2695`, que a refatoração do

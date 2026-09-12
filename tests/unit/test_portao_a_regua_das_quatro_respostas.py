@@ -49,11 +49,43 @@ def regua():
 
 
 def test_a_tela_de_hoje_passa(regua, capsys):
-    """O estado de agora é VERDE — com a dívida do `volume` declarada."""
+    """O estado de agora é VERDE — e SEM dívida declarada nenhuma.
+
+    ATÉ 09/09/2026 esta régua exigia aqui o nome `volume` na saída: era a única
+    dívida declarada, e ela tinha de sair NOMEADA em vez de em silêncio. A
+    dívida fechou (MIC-VOLUME-02: a bancada dela mediu o `common[6]`
+    obedecendo, ela mandou ligar o byte, e o gesto e o perfil o escrevem por
+    `uniq`), então o que se cobra agora é o CONTADOR em zero — e quem guarda a
+    propriedade de "dívida aberta sai nomeada" é o teste logo abaixo, com uma
+    dívida de mentira, porque hoje não existe nenhuma de verdade para ler.
+    """
     assert regua.main() == 0
     saida = capsys.readouterr().out
     assert "VERDE" in saida
-    assert "volume" in saida  # a dívida sai NOMEADA, nunca em silêncio
+    assert "0 em dívida declarada" in saida
+
+
+def test_divida_aberta_sai_nomeada_e_nao_reprova(regua, monkeypatch, capsys):
+    """A dívida DECLARADA fica verde, mas nunca fica calada.
+
+    Nasceu em 12/09/2026, quando a última dívida de verdade fechou: sem ela, a
+    propriedade que o `test_a_tela_de_hoje_passa` cobrava parou de ter sujeito, e
+    uma propriedade sem sujeito é uma régua desligada em silêncio.
+
+    A dívida de mentira é construída pelo caminho real e não por monkeypatch da
+    saída: o gesto `mudo` passa a responder por uma chave do mapa que NÃO
+    aciona, e é declarado. O portão tem de ficar verde E dizer o nome.
+    """
+    monkeypatch.setitem(regua.DO_APARELHO, "mudo", ("luz.lightbar.brilho",))
+    monkeypatch.setitem(
+        regua.A_DIVIDA_CONHECIDA, "mudo",
+        ("2026-01-01-DE-MENTIRA.md", "dívida de mentira, só para provar que a "
+                                     "declarada sai nomeada"))
+    assert regua.main() == 0
+    saida = capsys.readouterr().out
+    assert "1 em dívida declarada" in saida
+    assert "dívida: mudo" in saida
+    assert "2026-01-01-DE-MENTIRA.md" in saida
 
 
 def test_toda_feature_da_tela_esta_classificada(regua):
@@ -110,8 +142,11 @@ def test_o_gesto_responde_pela_pior_das_chaves(regua):
     assert regua._pior(["sim", regua.NAO]) == regua.NAO
     assert regua._pior(["sim", "com ressalva"]) == "com ressalva"
     assert regua._pior([]) == "sem linha"
-    # o `volume` da 02 é o caso vivo: o alto-falante responde `sim` e o
-    # microfone responde a negativa, que é o que a tabela imprime.
+    # o `volume` da 02 é o caso vivo de DUAS chaves num gesto. Até 09/09/2026 ele
+    # era também o caso vivo da PIOR delas: o alto-falante respondia `sim` e o
+    # microfone a negativa. A MIC-VOLUME-02 fechou essa metade (o `common[6]`
+    # passou a ser escrito), então hoje o gesto responde inteiro — o que se trava
+    # aqui é o PAR, que é o que faz a régua olhar as duas.
     assert regua.DO_APARELHO["volume"] == ("audio.microfone.volume",
                                            "audio.alto_falante.volume")
 

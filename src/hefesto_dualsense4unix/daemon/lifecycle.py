@@ -3362,12 +3362,22 @@ class Daemon:
         `mic.set` e `mic.volume.set` mantêm no IPC — juntá-las faria o produto
         prometer uma coisa e entregar outra):
 
-        - `volume` é o ganho da FONTE de captura no PipeWire (camada 1). É o
-          que torna a feature universal, que era o pedido dela: o DualSense não
-          expõe registrador de ganho de microfone em transporte nenhum, e o que
-          existe no cabo e no rádio é uma fonte no sistema.
+        - `volume` tem DOIS DEGRAUS desde 09/09/2026 (MIC-VOLUME-02, decisão
+          dela `D-0909-O-VOLUME-DO-MIC-LIGA-O-BYTE-DO-APARELHO`): o ganho da
+          FONTE de captura no PipeWire (camada 1) **e** o `common[6]` do
+          aparelho, por `set_microphone_volume`. É a fonte no sistema que torna
+          a feature universal — ela existe no cabo e no rádio —, e é o byte do
+          aparelho que faz o número da tela ser o que a pessoa ouve do outro
+          lado. **FATO SUBSTITUÍDO:** esta linha dizia que *"o DualSense não
+          expõe registrador de ganho de microfone em transporte nenhum"*; o
+          `hid-playstation` desta máquina NOMEIA o campo (`mic_volume`,
+          `0x0 - 0x40`) e a bancada dela mediu a captura mudando com ele, no
+          cabo (`docs/data/ensaios.csv`,
+          `folha-mic-volume-o-byte-age-cabo-0909`).
           `sem_fonte` NÃO é falha — por Bluetooth sem a ponte de áudio de pé não
           existe fonte de captura nenhuma, e dizer "aplicado" ali seria mentir.
+          **E o byte do aparelho só sai quando a fonte saiu**, de propósito: um
+          "aplicado" pela metade é o que faz esta casa remedir o mesmo defeito.
         - `muted` é o mudo do FIRMWARE do controle (camada 3), o único que apaga
           a luz vermelha do microfone e o único que tira o botão físico dela
           enquanto vigora.
@@ -3419,6 +3429,20 @@ class Daemon:
                     logger.debug("profile_mic_sem_fonte", origin=origin, uniq=uniq)
                 elif definir_volume_da_captura(int(volume), fonte=fonte):
                     escreveu = True
+                    # O SEGUNDO DEGRAU DO MESMO CAMPO — MIC-VOLUME-02
+                    # (09/09/2026), decisão dela (`D-0909-O-VOLUME-DO-MIC-LIGA-
+                    # O-BYTE-DO-APARELHO`). **A cura cobre TODOS os chamadores,
+                    # e este é o segundo**: ligar o byte só no `mic.volume.set`
+                    # faria o gesto dela valer e o PERFIL dela não — o número
+                    # voltaria ao disco, seria reaplicado, e metade dele ficaria
+                    # pelo caminho na próxima troca de janela. Esta casa já pagou
+                    # esse preço duas vezes num dia só.
+                    aparelho = getattr(
+                        getattr(self, "controller", None),
+                        "set_microphone_volume", None)
+                    if callable(aparelho):
+                        with contextlib.suppress(Exception):
+                            aparelho(int(volume), uniq=uniq)
                     logger.info(
                         "profile_mic_volume_applied",
                         volume=int(volume),
