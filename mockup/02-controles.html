@@ -1849,7 +1849,23 @@
      os 14 que faltavam. Não é altura inventada — é a mesma faixa do chip da
      fita (28 a 30px) que esta aba já usa no `.mascara .chip`, e as duas
      fileiras continuam IGUAIS entre si, que é o que ela pediu. */
-  .rota{display:flex;gap:5px;margin-top:5px}
+  /* A FILEIRA QUEBRA EM VEZ DE CORTAR — decisão dela, 12/09/2026, opção (b) de
+     três. O que ela comprou está medido: com `flex:1` e `white-space:nowrap` os
+     botões NÃO encolhem abaixo do próprio rótulo, então a fileira transborda a
+     coluna e a coluna a corta. Medido em janela de 1120px: o «Só no controle»
+     sai pela borda direita, com o rótulo pela metade.
+
+     POR QUE NÃO ENCOLHER O TEXTO: a saída fácil seria tirar o `nowrap` e deixar
+     o `ellipsis` comer o rótulo. Isso troca um botão cortado por um botão
+     ilegível — e há régua desta casa que reprova texto engolido sem afordância
+     (`test_a_janela_estreita_nao_engole_o_desenho`, artigo 2). Rótulo de botão
+     não tem onde guardar a metade que sumiu.
+
+     O PREÇO É ALTURA, E SÓ ONDE APERTA: abaixo de ~1140px a terceira desce para
+     uma segunda linha e o card cresce 35px (30 do botão + 5 do vão). Na largura
+     do desenho — e na janela dela, que é 1918 — nada quebra e nada muda: a
+     conta de `ALTURA_DO_CARD` continua valendo porque ela é medida ali. */
+  .rota{display:flex;flex-wrap:wrap;gap:5px;margin-top:5px}
   .rota button{flex:1;height:30px;border-radius:5px;font-size:10.5px;white-space:nowrap;font-family:inherit;
     border:1px solid var(--border-forte);background:var(--panel);color:var(--texto-mudo);cursor:pointer}
   .rota button.on{border-color:var(--purple);background:var(--sel-bg);color:var(--fg);font-weight:600}
@@ -2007,23 +2023,36 @@
      *"CSS de elemento que ninguém mais escreve é promessa esperando alguém
      tropeçar nela"*.
 
-     O PISCANDO É O MESMO VERDE, não uma cor nova: o que muda é o FUNDO
-     pulsando, porque piscar a borda de um botão de 22px some no olho — medido
-     no desenho. `prefers-reduced-motion` o deixa aceso e firme, que continua
-     dizendo a verdade (está no ar), só sem o guia visual do movimento. */
+     ELE NÃO PISCA MAIS — decisão dela, 12/09/2026, escolhendo a opção (c) de
+     três: **verde FIXO enquanto está captando.** A razão é de desenho e ela a
+     comprou inteira: *a barra de nível está a dois centímetros mostrando o
+     mesmo fato*, e duas animações para um fato só competem entre si — a que
+     carrega informação é a barra, que se move com a voz. O botão diz o ESTADO,
+     e estado não pulsa.
+
+     O QUE ISTO NÃO CUSTOU: nada. Os três estados continuam distintos sem
+     movimento — mudo é neutro, no ar é borda e letra verdes, captando é isso
+     MAIS o fundo esverdeado. A distinção nunca morou na animação.
+
+     E O VALOR NÃO É NOVO: `.14` é exatamente o que o ramo
+     `prefers-reduced-motion` já pintava para quem pede menos movimento. A
+     escolha dela promoveu esse ramo a único, em vez de inventar um terceiro
+     tom — quem já via a tela assim continua vendo a mesma coisa.
+
+     **A DECLARAÇÃO DO QUADRO E O RAMO DE MENOS MOVIMENTO SAÍRAM JUNTO**, e é a
+     regra que o `.solta` deixou: *"CSS de elemento que ninguém mais escreve é
+     promessa esperando alguém tropeçar nela"*. Uma animação sem quem a acione
+     é a mesma promessa, com outro nome.
+
+     E ESTE PARÁGRAFO NÃO SOLETRA O QUE SAIU, de propósito: a régua irmã varre
+     este mesmo bloco procurando a palavra do movimento, e um comentário que a
+     escrevesse viraria a primeira ocorrência do que ele veio dizer que não
+     existe mais. Esta casa já pagou por isso quatro vezes em uma semana. */
   .mudo-i[data-mic-luz="gravando"],
   .mudo-i[data-mic-luz="captando"]{
     border-color:var(--green);color:var(--green)}
   .mudo-i[data-mic-luz="captando"]{
-    animation:mic-captando 1.2s ease-in-out infinite}
-  @keyframes mic-captando{
-    0%,100%{background:var(--panel)}
-    50%{background:rgba(80,250,123,.22)}
-  }
-  @media (prefers-reduced-motion: reduce){
-    .mudo-i[data-mic-luz="captando"]{
-      animation:none;background:rgba(80,250,123,.14)}
-  }
+    background:rgba(80,250,123,.14)}
 
 </style>
 <style data-campo="plastico-css" data-hef-alvo="html">
