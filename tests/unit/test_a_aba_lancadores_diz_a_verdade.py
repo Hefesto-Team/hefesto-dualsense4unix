@@ -829,12 +829,23 @@ def test_os_dois_botoes_do_registro_dizem_coisas_diferentes(desenho):
     cartão que não localizou diz `NÃO LOCALIZADO`, então o botão dele diz
     «Localizar». Selo e botão passam a falar a mesma palavra.
 
-    **POR QUE ESTA RÉGUA PODE DIGITAR as duas frases:** ela é a DONA da decisão
-    — o lugar onde a palavra dela fica registrada, para que trocá-la exija
-    passar por ela. Toda régua que apenas PRECISA do rótulo lê a constante.
+    **POR QUE ESTA RÉGUA PODE DIGITAR a frase do CARTÃO:** ela é a DONA da
+    decisão — o lugar onde a palavra dela fica registrada, para que trocá-la
+    exija passar por ela. Toda régua que apenas PRECISA do rótulo lê a
+    constante.
+
+    **O RÓTULO GLOBAL DEIXOU DE SER DIGITADO — 11/09/2026.** Ele era
+    *"Adicionar novo Lançador"* por decisão dela de 08/09, e esta régua o
+    digitava. Ela aprovou, em 11/09, que **o botão e o título da tela que ele
+    abre digam a mesma coisa**: os dois passam a ser «Adicionar um lançador».
+    A decisão de 08/09 não se apaga — o que ela pedia (dois botões com palavras
+    diferentes, «novo» separando os atos) continua medido aqui; o que caducou é
+    a FRASE, e com ela a maiúscula decorativa. Então a régua parou de digitar o
+    texto e passou a medir o ATO: o rótulo global é o nome da tela que ele abre.
 
     A MORDIDA: dê o mesmo texto aos dois rótulos e a primeira linha reprova;
-    devolva «Launcher» a qualquer um deles e a segunda reprova.
+    devolva «Launcher» a qualquer um deles e a da língua reprova; dê ao botão
+    global um nome que não seja o da tela e a última reprova.
     """
     do_cartao = desenho.ADICIONAR_ROTULO
     global_ = desenho.ADICIONAR_NOVO_ROTULO
@@ -845,10 +856,10 @@ def test_os_dois_botoes_do_registro_dizem_coisas_diferentes(desenho):
     assert do_cartao == "Localizar este Lançador", (
         f"o rótulo do botão do cartão é {do_cartao!r}, e a decisão dela é "
         f"'Localizar este Lançador' — a palavra do SELO daquele cartão")
-    assert global_ == "Adicionar novo Lançador", (
-        f"o rótulo do botão global é {global_!r}, e a decisão dela é "
-        f"'Adicionar novo Lançador' — com o «novo», que é o que o separa do "
-        f"outro")
+    assert global_ == desenho.TELA_DO_NOVO_TITULO, (
+        f"o botão global diz {global_!r} e a tela que ele abre se chama "
+        f"{desenho.TELA_DO_NOVO_TITULO!r}. Decisão dela de 11/09/2026: um nome "
+        f"por tela — quem clica tem de chegar onde o botão prometeu")
 
     # A LÍNGUA. O projeto é em português e há portão que reprova inglês na tela;
     # aqui a régua alcança o rótulo ANTES de ele chegar à página publicada.
@@ -879,15 +890,28 @@ def test_o_titulo_da_tela_de_registro_nao_contradiz_o_botao_que_a_abriu(desenho)
     `test_o_registro_nao_grava_o_que_nao_esta_no_disco`). Nada entra ali sem ser
     localizado, venha de onde vier.
 
-    A MORDIDA: faça `TELA_DO_NOVO_TITULO = ADICIONAR_NOVO_ROTULO` e esta régua
-    reprova; a linha de baixo continua dizendo o nome do cartão, e a tela volta
-    a se contradizer.
+    **O QUE A RÉGUA MEDIA, E O QUE ELA MEDE AGORA — 11/09/2026.** Ela exigia que
+    o título não fosse o rótulo de NENHUM dos dois botões, e em 11/09 ela
+    aprovou que o botão global e o título digam a mesma coisa. O que a régua
+    guardava não era a diferença pela diferença: era **a palavra «novo» em cima
+    de um cartão que já existe**. Essa é a contradição medida em 08/09, e é ela
+    que continua travada aqui — junto com a diferença em relação ao rótulo do
+    CARTÃO, que é o caminho em que a contradição aparecia.
+
+    A MORDIDA: ponha «novo» no `TELA_DO_NOVO_TITULO` e a primeira linha reprova;
+    faça `TELA_DO_NOVO_TITULO = ADICIONAR_ROTULO` e a segunda reprova — a linha
+    de baixo continua dizendo o nome do cartão, e a tela volta a se contradizer.
     """
     titulo = desenho.TELA_DO_NOVO_TITULO
-    assert titulo not in (desenho.ADICIONAR_ROTULO, desenho.ADICIONAR_NOVO_ROTULO), (
-        f"o título da caixa é o rótulo de um dos dois botões ({titulo!r}). A "
-        f"caixa é UMA e chega-se a ela por dois caminhos — metade das aberturas "
-        f"mostraria um título que contradiz a linha logo abaixo.")
+    assert "novo" not in titulo.lower(), (
+        f"o título da caixa é {titulo!r}. A caixa é UMA e chega-se a ela por "
+        f"dois caminhos: aberta pelo botão de um cartão que JÁ existe, um "
+        f"título com «novo» contradiz a linha logo abaixo, que diz o nome "
+        f"daquele cartão.")
+    assert titulo != desenho.ADICIONAR_ROTULO, (
+        f"o título da caixa é o rótulo do botão do CARTÃO ({titulo!r}) — o "
+        f"caminho em que ele é aberto sobre um cartão existente. Metade das "
+        f"aberturas mostraria um título que não é o do botão que as abriu.")
     assert titulo in desenho.tela_do_registro_html(), (
         "o título não chegou à marcação da tela de registro")
 
