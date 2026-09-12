@@ -456,8 +456,9 @@ EDICOES: tuple[Edicao, ...] = (
         porque=(
             "11/09/2026, `PAGINAS-ESPECIAIS-B1`, por aprovação dela: os quatro "
             "botões dizem o que fazem em duas ou três palavras, e a palavra «mesa» "
-            "sai dos dois que a carregavam. O `data-modo` NÃO muda: "  # (noqa-acento)
-            "\"mao\" é endereço, e trocá-lo quebra o `julgar` que o lê."  # (noqa-acento)
+            "sai dos dois que a carregavam. O `data-modo` NÃO muda: "
+            "\"mao\" é endereço, e trocá-lo quebra o "  # (noqa-acento): valor
+            "`julgar`, que o casa por igualdade de string."
         ),
     ),
     Edicao(
