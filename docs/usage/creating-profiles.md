@@ -147,10 +147,12 @@ a posse** dos bytes de áudio do report de saída.
 - `button_toggles_system` é **obrigatório** dentro da seção: diz se o botão de
   microfone do próprio controle muta o microfone **do sistema**, e não só o do
   controle. Seção sem ele é recusada no load.
-- `volume` é **0-100, por cento** — e não 0-255 como o do alto-falante. Ele é o
-  ganho da fonte de captura no sistema, por isso vale igual no cabo e no rádio;
-  o DualSense não expõe registrador de ganho de microfone. `"volume": 180` aqui
-  é recusado no load.
+- `volume` é **0-100, por cento** — e não 0-255 como o do alto-falante. Ele vale
+  igual no cabo e no rádio porque o primeiro degrau é o ganho da fonte de
+  captura no sistema, que existe nos dois. Desde 09/09/2026 ele tem um **segundo
+  degrau**: o registrador de ganho do próprio aparelho (`common[6]`), medido
+  obedecendo no cabo. `"volume": 180` aqui é recusado no load — a porcentagem é
+  o que o arquivo guarda, e o byte é derivado dela.
 - `muted` fala com o mudo do **firmware**, o mesmo que apaga o LED vermelho.
 - Os dois ausentes significam **não tocar**; o perfil sem a seção não tem
   opinião sobre o microfone.
