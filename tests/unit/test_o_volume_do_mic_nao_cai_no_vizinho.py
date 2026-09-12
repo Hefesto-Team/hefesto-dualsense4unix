@@ -495,9 +495,16 @@ def test_a_frase_do_sem_fonte_fala_a_lingua_da_tela() -> None:
     for banida in ("mesa", "pactl", "pipewire", "hidraw", "uniq", "mic bt",
                    "source", "daemon", "terminal", "comando"):
         assert banida not in frase, f"a frase de tela diz `{banida}`"
-    assert "cabo" in frase and "rádio" in frase, (
-        "a frase não diz onde procurar em cada transporte, que é a única coisa "
-        "que ela tem a dizer de útil")
+    # O DIAGNÓSTICO POR TRANSPORTE SAIU — 11/09/2026, A3-054, aprovada por ela:
+    # *no rádio é o canal que não está de pé, no cabo é a placa de som* é o
+    # NOSSO mecanismo, e ela não pode agir sobre nenhum dos dois. Esta linha
+    # cobrava `cabo` e `rádio` DIGITADOS e teria reprovado a melhora.
+    #
+    # O QUE SOBRA DE MEDÍVEL É A PROMESSA: o clique não mexeu em nada. Sem ela,
+    # quem lê fica sem saber se o ajuste entrou pela metade.
+    assert "nada foi mudado" in frase, (
+        "a frase deixou de dizer que nada foi mudado — quem lesse ficaria sem "
+        "saber se o ajuste entrou pela metade")
 
 
 # ---------------------------------------------------------------------------
