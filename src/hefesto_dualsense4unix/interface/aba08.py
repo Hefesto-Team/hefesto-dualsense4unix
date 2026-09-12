@@ -1755,17 +1755,15 @@ MAPEAR_UMA_A_UMA = "Mapear Entrada a Entrada"
 
 #: O botão que sobrou dos quatro do Check-up, já na seção das entradas.
 #:
-#: A PALAVRA "PORTAS" É DELA, e ela colide com a `D-A-PALAVRA-ENTRADA` (24/08),
-#: que fixou **entrada** para não confundir com porta de rede. A colisão está
-#: ANOTADA e não resolvida por mim: quem escolheu "porta" aqui foi ela, no mesmo
-#: turno em que mandou o botão descer.
-#:
-#: O SEGUNDO ARGUMENTO CAIU EM 11/09/2026, e ele era *"a seção de destino já
-#: hospeda o link «Banco de provas: o mapa das portas» — a palavra já vive
-#: ali"*. Esse link passou a dizer **"Ver o mapa das entradas"**, aprovado por
-#: ela. Então «portas» está aqui sozinha, e a colisão continua ANOTADA e não
-#: resolvida por mim: o rótulo é dela e só ela o troca.
-EXAMINAR_PORTAS = "Examinar Portas"
+#: A COLISÃO FECHOU EM 11/09/2026 — A1-046, e ela aprovou. O nome era
+#: "Examinar Portas" e colidia com a `D-A-PALAVRA-ENTRADA` (24/08), que fixou
+#: **entrada** para não confundir com porta de rede. A mesma seção ENSINA que a
+#: tela deixou de dizer *porta* e passou a dizer *Entrada*, e o botão ao lado
+#: continuava dizendo Portas. Medido no texto visível: **35 ocorrências de
+#: "entrada" contra 4 de "porta"**, e as 4 eram este botão, o link do mapa e a
+#: frase que os condenava. O `data-gesto` NÃO muda — `examinar-portas` é
+#: endereço de contrato, não vocabulário de tela.
+EXAMINAR_PORTAS = "Examinar Entradas"
 
 #: A DICA DO CAMPO DE NOME — e ela mudou de casa em 04/09/2026, com a tabela:
 #: quem a escreve na tela viva é `a08_conexoes._html_dos_adaptadores`, então o
@@ -1958,11 +1956,11 @@ def viz_bloco(nome, escolha, pergunta=False, linha=0):
     lê é `a08_conexoes.pacote()`, que pinta o nome e guarda a ordem — a posição
     é a ponte entre o desenho e a mesa dela.
     """
-    d = ("O sistema entrega o nome cru e não sabe o que é. Com o nome, o Hefesto sabe o que dá "
-         "para desligar e o que não dá. “Outro” abre um campo para você escrever."
+    d = ("O sistema não sabe o que é este rádio. Com o nome, o Hefesto sabe o que dá para "
+         "desligar. «Outro» abre um campo para você escrever."
          if pergunta else
-         "O que é este rádio. Mudar a resposta aqui já é corrigi-la. “Outro” abre um campo "
-         "para você escrever o nome.")
+         "O que é este rádio. Mudar aqui já corrige. «Outro» abre um campo para você escrever "
+         "o nome.")
     c = "pronto pergunta" if pergunta else "pronto"
     # A TERCEIRA LINHA DO BLOCO — 04/09/2026: ONDE aquele rádio está, com o aviso
     # de vizinhança colado quando há um. Os dois donos são do produto
@@ -2012,11 +2010,10 @@ BORDA_NEUTRA = ("A borda é <b>neutra</b> porque a cor deste controle <b>não fo
                 "Uma borda colorida aqui seria uma cor que ninguém leu — e o desenho "
                 "continua na cor que o resto do Hefesto já conhece.")
 
-LUZ_NO_CABO = ("Só funciona com o controle no rádio: a cura é derrubar a conexão Bluetooth "
-               "para você apertar PS. Este controle está no cabo, onde a barra de luz não "
-               "depende de reconexão nenhuma.")
-LUZ_NO_RADIO = ("Derruba este controle do rádio para você apertar PS e a barra de luz voltar "
-                "a obedecer. Enquanto ele espera o PS, o mesmo botão vira “Cancelar”.")
+LUZ_NO_CABO = ("Só funciona com o controle no rádio. Este está no cabo, onde a barra de luz "
+               "não depende de reconexão.")
+LUZ_NO_RADIO = ("Desliga este controle do rádio. Aperte PS para ele voltar, e a barra de luz "
+                "volta a obedecer.")
 
 # A PALAVRA DA UNIDADE É **TURNO**, e não "fatia" nem "faixa"
 # (`D-A-FATIA-DO-RADIO-VIRA-TURNO`, 28/08). Ela pediu "faixas"; a colisão é
@@ -2044,9 +2041,8 @@ LUZ_NO_RADIO = ("Derruba este controle do rádio para você apertar PS e a barra
 # `data-campo="mic-dica"` com alvo `atributo`, então segue o transporte VIVO em
 # vez de congelar o da cena.
 MIC_LIGADO_DICA = (
-    "Se o microfone deste controle existe. Desligado, nenhum programa o enxerga — nem o jogo, "
-    "nem a chamada de voz. <b>Por onde</b> ele chega não é escolha: quem decide é o transporte, "
-    "e a linha ao lado diz qual é.")
+    "Liga o microfone deste controle. Desligado, nenhum programa o ouve — nem o jogo, nem a "
+    "chamada. Por onde ele chega quem decide é o cabo ou o rádio; a linha ao lado diz qual.")
 #: O `?` DO BLOCO DO MICROFONE, segunda metade — e ela deixou de DECIDIR em
 #: 04/09/2026. A frase dizia *"Decide se o botão físico … cala só ele ou o
 #: computador inteiro"*, e a tela oferecia a escolha por controle enquanto o
@@ -2060,14 +2056,14 @@ MIC_LIGADO_DICA = (
 #: que é um ato só. Não há duas rotas com dois comportamentos a escolher.
 BOTAO_DICA = (
     "O botão físico do microfone faz o mesmo que o desta tela: liga o microfone "
-    "<b>e</b> o canal dele. O que ele cala é <b>um ajuste da máquina</b>, não "
-    "deste controle — a linha ao lado diz qual está valendo.")
+    "<b>e</b> o canal dele. O que ele cala vale para o computador todo, não só "
+    "para este controle.")
 
 #: A MESMA COISA EM UMA LINHA, para o `title` da leitura. O `?` do bloco explica;
 #: o hover da linha responde "o que é isto que estou lendo".
 BOTAO_DICA_CURTA = (
-    "O que o botão físico do microfone cala. É um ajuste da MÁQUINA, um só para "
-    "todos os controles — o Hefesto o lê do serviço a cada tique.")
+    "O que o botão físico do microfone cala. É um ajuste do computador, um só "
+    "para todos os controles.")
 
 #: A DICA DO GESTO, e ela é a MESMA nos três estados de propósito.
 #:
@@ -2075,7 +2071,7 @@ BOTAO_DICA_CURTA = (
 #: os outros"*, e no estado "Todos" ela mentia duas vezes: a linha já estava
 #: aberta, e o que o clique faz ali é FECHAR as outras três. Esta frase é
 #: verdadeira nos dois casos, porque descreve o RESULTADO e não o movimento.
-SO_ESTE_DICA = ("Deixa só este controle aberto — os outros fecham.")
+SO_ESTE_DICA = ("Deixa só este controle aberto; os outros fecham.")
 
 
 def teto_dica(c):
@@ -2426,7 +2422,7 @@ def linha_do_controle(c):
                      title="{dica_linha}">
               <span class="gc-nome" data-campo="nome" data-hef-alvo="html">{vale(rotulo(c), nome_do_lugar_vazio(c))}</span>
               <span class="gc-resumo">
-                <span title="{"A borda deste controle é a cor lida do aparelho." if (conectado and not no_radio) else "A cor deste controle não foi lida — a borda fica neutra."}">Vê como <b>{vale(c["mascara"])}</b></span>
+                <span title="{"A borda é a cor lida deste aparelho." if (conectado and not no_radio) else "A cor deste controle não foi lida — a borda fica neutra."}">Vê como <b>{vale(c["mascara"])}</b></span>
                 <span data-campo="mic-dica" data-hef-alvo="atributo" data-hef-atributo="title" title="{vale(mic_dica)}">Microfone <b data-campo="mic-existe">{vale("Ligado")}</b>, <span data-campo="mic-caminho" data-hef-alvo="html">{vale(caminho_do_mic(c))}</span></span>
                 <span title="A bateria vem da aba Controles, que é quem a lê do aparelho.">Bateria <b data-campo="bateria">{vale(f'{da_controles["bat"]}%')}</b></span>
               </span>
@@ -2436,20 +2432,20 @@ def linha_do_controle(c):
               <label class="gc-seta so" for="gc-{c["pref"]}" data-gesto="alvo"
                      title="{SO_ESTE_DICA}">só este</label>
               <label class="gc-seta fecha" for="gc-todos" data-gesto="todos"
-                     title="Fecha — a fita volta para “Todos”, e os {len(CONECTADOS)} controles abrem juntos.">▴</label>
+                     title="Fecha. A fita volta para «Todos» e os {len(CONECTADOS)} abrem juntos.">▴</label>
             </div>
             <div class="gc-corpo">
               {desenho_do_controle(c, luz)}
               <span class="gc-bloco">
                 <span class="rot">{glifo("mic", ativo=True, tam=16)} Microfone e botões
                   <span class="ajuda">?<span class="dica">{MIC_LIGADO_DICA}<br><br>{BOTAO_DICA}</span></span></span>
-                {sel(["Ligado", "Desligado"], "Ligado", gesto="mic-existe", campo="mic-existe", dica="Se o microfone deste controle existe. Desligado, nenhum programa o enxerga — nem o jogo, nem a chamada de voz.")}
+                {sel(["Ligado", "Desligado"], "Ligado", gesto="mic-existe", campo="mic-existe", dica="Liga o microfone deste controle. Desligado, nenhum programa o ouve.")}
                 <span class="leitura" data-campo="mic-escopo" title="{BOTAO_DICA_CURTA}">{vale(BOTAO_DO_MIC)}</span>
               </span>
               <span class="gc-bloco barra">
-                <span class="rot">{glifo("rumble_esquerdo", ativo=True, tam=16)} Teto da vibração
+                <span class="rot">{glifo("rumble_esquerdo", ativo=True, tam=16)} Limite da vibração
                   <span class="ajuda">?<span class="dica" data-campo="teto-explica" data-hef-alvo="html">{vale(teto_dica(c))}</span></span></span>
-                {sel(opcoes_teto, campo_teto, gesto="teto-da-vibracao", campo="teto-da-vibracao", dica="O teto da vibração deste controle. O global manda e o do controle sobrepõe — o “?” ao lado diz qual dos dois está valendo agora.")}
+                {sel(opcoes_teto, campo_teto, gesto="teto-da-vibracao", campo="teto-da-vibracao", dica="O limite deste controle. Ele vence o limite geral — o ? ao lado diz qual está valendo.")}
               </span>
               {bloco_da_luz}
             </div>
@@ -3400,15 +3396,10 @@ MIOLO = f'''
       <div class="quadro-topo">
         <label class="quadro-titulo" for="cx8-2">Check-up</label>
         <span class="ajuda">?<span class="dica">
-          Um exame da <b>sala</b>: em que entradas os aparelhos estão, quanta energia elas
-          dão, e quem mais está falando no rádio perto do seu adaptador.<br><br>
-          É a resposta para "por que o controle no rádio engasga <b>aqui</b> e não engasga na
-          casa de outra pessoa".<br><br>
-          O exame <b>não muda nada sozinho</b>. Quando ele acha algo, aparece ao lado uma
-          ordem de serviço dizendo <b>o que mover para onde</b>.<br><br>
-          As duas perguntas que <b>só você</b> pode responder — a altura do dongle e se tem
-          gente entre ele e o sofá — mudaram de lugar em 28/08: elas moram no
-          <b>{MAPEAR_ENTRADAS}</b>, que é a janela onde você já declara a sala.
+          Um exame da sala: em que entradas os aparelhos estão, quanta energia elas dão e
+          quem mais está falando no rádio perto do seu adaptador. Ele não muda nada sozinho:
+          quando acha algo, aparece ao lado uma ordem de serviço dizendo o que mover para
+          onde.
         </span></span>
         <!-- O CARIMBO GANHOU ENDEREÇO em 02/09/2026. Ele dizia "há 3 minutos"
              desde que o mockup nasceu, e nunca soube nada: nenhum pacote
@@ -3551,22 +3542,10 @@ MIOLO = f'''
       <div class="quadro-topo">
         <label class="quadro-titulo" for="cx8-1">Gestão de Controles</label>
         <span class="ajuda">?<span class="dica">
-          Uma linha por controle <b>ligado</b>, e só eles. O que a <b>fita do topo</b> aponta vem
-          aberto; clicar em outro abre ele e fecha os demais, e a fita acompanha. Clicar no que
-          já está aberto volta para <b>Todos</b>, com os {len(CONECTADOS)} abertos.<br><br>
-          <b>A linha fechada</b> diz quem é o controle e resume o que importa: o que o jogo
-          <b>vê como</b> (a máscara, que se escolhe na aba <b>Jogar</b>), o <b>microfone</b> e a
-          <b>bateria</b>. Máscara e bateria são leitura aqui — quem as governa é outra aba.<br><br>
-          <b>A borda</b> é a cor do plástico que o Hefesto <b>leu do aparelho</b>. Quando a
-          leitura não aconteceu, a borda fica <b>neutra</b> — porque uma borda colorida seria
-          uma cor que ninguém leu. <b>O desenho segue a mesma leitura</b>: ele é o modelo que
-          o mapa dela cataloga para aquele controle, e sem leitura fica cinza junto com a
-          borda. <b>A barra de luz</b> não é a cor do plástico: é a cor canônica do
-          <i>jogador</i> (<code>core/led_control.player_slot_color</code>).<br><br>
-          <b>O microfone segue o transporte</b>, e isso não é escolha: pelo cabo ele vem pela
-          placa de áudio do próprio aparelho; pelo rádio, pela ponte do Hefesto. As
-          {num(CUSTO_DO_MIC)} turnos que ele custa no rádio são <b>consequência</b>, e aparecem
-          na régua de Desempenho.
+          Uma linha por controle ligado. A linha fechada diz o que o jogo vê como, o microfone
+          e a bateria — as três são leitura aqui; quem as governa é outra aba. A borda e o
+          desenho usam a cor lida do aparelho; sem leitura, ficam neutros. A barra de luz não
+          é essa cor: é a cor do jogador.
         </span></span>
         <span class="conta" data-campo="conta-gestao" data-hef-alvo="html">{CONTA_DA_GESTAO}</span>
       </div>
@@ -3643,17 +3622,12 @@ MIOLO = f'''
       <div class="quadro-topo">
         <label class="quadro-titulo" for="cx8-3">Rádio e Adaptadores</label>
         <span class="ajuda">?<span class="dica">
-          <b>{MAPEAR_ENTRADAS}</b> abre o desenho do seu gabinete e numera as entradas —
-          depois disso o Hefesto para de dizer "porta 3-2.1" e passa a dizer "Entrada 9". É lá
-          que ficam, desde 28/08, as duas perguntas que <b>só você</b> pode responder: se o
-          dongle fica acima da cabeça de quem joga sentado, e se tem gente entre ele e o
-          sofá.<br><br>
-          <b>{MAPEAR_UMA_A_UMA}</b> é um toque por aparelho: você pluga, ele aprende.
-          Enquanto isso corre, o que você aperta não vaza para o jogo aberto.<br><br>
-          Os <b>rádios vizinhos</b> são tudo que fala em 2,4 GHz perto do seu adaptador. O
-          sistema entrega o nome cru; quem sabe o que é, é você.
+          «{MAPEAR_ENTRADAS}» numera as entradas do seu gabinete — depois disso a tela diz
+          «Entrada 9» em vez de «porta 3-2.1». «{MAPEAR_UMA_A_UMA}» é um toque por aparelho:
+          você pluga, ele aprende. Os rádios vizinhos são tudo que fala em 2,4 GHz perto do
+          seu adaptador; o sistema não sabe o que são, e você sabe.
         </span></span>
-        <a class="porta" href="mapa-das-portas.html" title="Abre o mapa das portas — o banco de provas deste quadro: as entradas do seu gabinete, os arranjos possíveis com o porquê de cada um, e a conta das {num(TETO)} fatias por adaptador. É o desenho do motor que já roda em integrations/arranjo_da_mesa.py.">Ver o mapa das entradas&nbsp;↗</a>
+        <a class="porta" href="mapa-das-portas.html" title="Abre o mapa das entradas do seu gabinete: os arranjos possíveis, com o porquê de cada um, e a conta dos {num(TETO)} turnos por adaptador.">O mapa das entradas&nbsp;↗</a>
       </div>
       <div class="quadro-corpo">
         <div class="duas-colunas">
@@ -3702,8 +3676,8 @@ MIOLO = f'''
             {monta_ressalva("hub-em-comum")}
             {monta_ressalva("gabinete-contagens")}
             <div class="acoes empurra">
-              <a class="btn" href="#mapear-entradas" title="Abre o desenho do seu gabinete e numera as entradas. É lá que ficam as duas perguntas que só você pode responder: a altura do dongle e se tem gente entre ele e o sofá.">{MAPEAR_ENTRADAS}</a>
-              <button class="btn" data-gesto="examinar-portas" title="Refaz o exame das entradas — energia e rádio — e repinta os selos, as linhas e as ordens de serviço do Check-up.">{EXAMINAR_PORTAS}</button>
+              <a class="btn" href="#mapear-entradas" title="Abre o desenho do seu gabinete e numera as entradas. É lá que você responde a altura do dongle e se tem gente entre ele e o sofá.">{MAPEAR_ENTRADAS}</a>
+              <button class="btn" data-gesto="examinar-portas" title="Refaz o exame das entradas — energia e rádio — e repinta o Check-up.">{EXAMINAR_PORTAS}</button>
             </div>
           </div>
 
@@ -3736,26 +3710,14 @@ MIOLO = f'''
         <div class="sub-secao">
           <div class="capa">
             <span class="rot"><b style="color:var(--texto-suave)">Desempenho</b>
-              <span class="pt">•</span> O rádio de cada adaptador, em turnos</span>
+              <span class="pt">•</span> Quanto do rádio de cada adaptador está em uso</span>
             <span class="ajuda">?<span class="dica">
-              O rádio Bluetooth de cada adaptador tem <b>{num(TETO)} turnos</b> de tempo para dividir
-          entre tudo que fala nele. Cada controle come <b>{num(CUSTO_SEM_MIC)}</b>; com o
-          microfone pelo rádio, <b>{num(CUSTO_COM_MIC)}</b> — {num(CUSTO_DO_MIC)} a mais.<br><br>
-          Hoje <b>{len(NO_RADIO)} dos {len(MESA)}</b> controles estão no rádio:
-          <b>{num(TOTAL_NO_RADIO)}</b>. As <b>vagas tracejadas</b> são os {len(NO_CABO)} que estão
-          no cabo — se os {len(MESA)} viessem para o mesmo adaptador, seriam
-          <b>{num(TODOS_COM_MIC)} das {num(TETO)}</b>. O microfone segue o transporte, então isso
-          é o preço de quem vem para o rádio — e ele está aqui para você ver.<br><br>
-          <b>De onde vêm os números:</b> os {num(TETO)} turnos são especificação do Bluetooth
-          Classic (625 µs cada) e <b>nunca foram medidas aqui</b>; os {num(CUSTO_SEM_MIC)} e os
-          {num(CUSTO_COM_MIC)} são o A/B desta bancada de 25/07/2026, com <b>um</b> controle — a
-          soma de {len(MESA)} é derivada, e o maior ensaio de rádio desta casa foi de dois. Os
-          quatro moram em <code>integrations/radio_da_mesa.py</code>, e esta tela os lê de
-          lá.<br><br>
-              <b>O teto da vibração não mora mais aqui:</b> o dropdown dos três perfis mudou-se
-              para a aba <b>{ABA_DO_TETO_GLOBAL}</b>, onde se chama <b>{CASA_DO_TETO_GLOBAL}</b> —
-              ele decide o que custa <b>bateria</b>, e esta régua mede o <b>rádio</b>. Cada
-              controle continua podendo sobrepô-lo na linha dele, na <b>Gestão de Controles</b>.
+              O rádio de cada adaptador tem {num(TETO)} turnos de tempo para dividir entre tudo
+          que fala nele. Cada controle come {num(CUSTO_SEM_MIC)}; com o microfone pelo rádio,
+          {num(CUSTO_COM_MIC)}. Hoje {len(NO_RADIO)} dos {len(MESA)}
+          {_plural(len(NO_RADIO), "está", "estão")} no rádio: {num(TOTAL_NO_RADIO)}. As vagas
+          tracejadas são os que estão no cabo — se os {len(MESA)} viessem para o mesmo
+          adaptador, seriam {num(TODOS_COM_MIC)} das {num(TETO)}.
             </span></span>
           </div>
 

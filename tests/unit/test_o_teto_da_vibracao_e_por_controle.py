@@ -1141,8 +1141,13 @@ def test_a_recusa_sem_endereco_fala_do_teto_e_nao_do_microfone(pac, gesto, tela)
     frase = str(erro.value)
     assert "PONTE" not in frase and "ponte" not in frase, (
         f"a recusa do teto fala da ponte do microfone: {frase!r}")
-    assert "perfil" in frase, (
-        f"a recusa não diz onde o teto seria guardado: {frase!r}")
+    # O QUE SE MEDE É O ASSUNTO DA RECUSA, e não a palavra "perfil" —
+    # 11/09/2026, A1-073. A frase dizia *"não há chave no perfil para guardar a
+    # força só dele"*, e `perfil` é o nome do arquivo onde NÓS guardamos: ela
+    # tirou o mecanismo e deixou a consequência. O que separa esta recusa da do
+    # microfone continua medido: aquela fala de PONTE, esta fala de FORÇA.
+    assert "força" in frase, (
+        f"a recusa do teto não fala da força deste controle: {frase!r}")
 
 
 def test_o_select_do_piloto_nao_conta_pintura_sobre_valor_que_nao_e_opcao() -> None:

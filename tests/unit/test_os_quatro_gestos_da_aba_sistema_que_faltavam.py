@@ -180,7 +180,12 @@ def test_o_corrigir_modo_recusa_fora_do_modo_improvisado(
         monkeypatch.setattr(a09, "_status_do_daemon", lambda _s, e=estado: e)
         with pytest.raises(RuntimeError) as erro:
             a09.corrigir_modo(_ctx(), {"gesto": "corrigir-modo"}, PonteDeMentira())
-        assert "modo improvisado" in str(erro.value), (estado, erro.value)
+        # A RÉGUA LÊ A FRASE, NÃO A DIGITA — 11/09/2026, A1-036. Ela cobrava a
+        # palavra "modo improvisado", que é vocabulário desta casa e saiu da
+        # tela por decisão dela; a régua que digita o texto reprova a melhora
+        # em vez do defeito. O dono da frase é `a09.NADA_A_CORRIGIR`, e o que
+        # se mede aqui é o ATO: fora do modo avulso, o gesto RECUSA.
+        assert str(erro.value) == a09.NADA_A_CORRIGIR, (estado, erro.value)
 
 
 def test_o_corrigir_modo_pede_ao_avulso_que_saia_e_sobe_a_unit(
@@ -722,7 +727,12 @@ class TestNaTelaViva:
         visto = na_tela["com-o-modo"]["corrigir"]
         assert visto is not None, "o botão sumiu da página"
         assert visto["visivel"] is True, visto
-        assert visto["rotulo"] == "Corrigir modo de execução", visto
+        # O RÓTULO MUDOU POR DECISÃO DELA — 11/09/2026, A1-012: *"modo de
+        # execução"* é vocabulário de quem construiu, e o que acontece no
+        # clique é o serviço sair e subir do jeito certo. O `data-gesto`
+        # (`corrigir-modo`) NÃO mudou: é endereço de contrato, e é por ele que
+        # o roteiro acha o botão — este `assert` confere que achou o certo.
+        assert visto["rotulo"] == "Corrigir o serviço", visto
 
     def test_ele_entra_no_lugar_do_reiniciar_e_nao_ao_lado(
             self, na_tela: dict) -> None:

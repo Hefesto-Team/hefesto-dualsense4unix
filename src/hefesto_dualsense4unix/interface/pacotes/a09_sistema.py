@@ -766,6 +766,21 @@ APELIDO_NA_TELA: dict[str, str] = {
 }
 
 
+def _plural(quantos: int, singular: str, plural: str) -> str:
+    """Uma das duas palavras, pela contagem. ``0`` usa o plural, como em
+    português.
+
+    POR QUE ELE NASCEU AQUI — 11/09/2026, A1-038/039/040. Três recados desta
+    aba escreviam `conserto(s) automático(s)`, `jogo(s)` e
+    `plugin(s) carregado(s)`. **O plural entre parênteses não existe em língua
+    nenhuma além da nossa** e não tem como ser traduzido: em inglês são duas
+    formas, em russo são três. A casa já resolvia isso em `aba08._plural` e em
+    `integrations.ordens_da_mesa._plural`; o que faltava era esta camada ter o
+    seu.
+    """
+    return singular if quantos == 1 else plural
+
+
 def _lista_em_portugues(nomes: list[str]) -> str:
     """`a`, `b` e `c` — com "e" antes do último. Vazio devolve vazio."""
     if not nomes:
@@ -1693,7 +1708,7 @@ def _trava(ctx: Contexto, nome: str,
 #: A ÚNICA TRAVA DA CAMADA DO PRODUTO QUE ESTE ARQUIVO **NÃO** OBEDECE, e ela é
 #: nomeada aqui em vez de ignorada em silêncio — 03/09/2026.
 #:
-#: `aba_sistema.travas()` (`gui/aba_sistema.py:604`) tranca `ver-plugins` E
+#: `aba_sistema.travas()` (`gui/aba_sistema.py:619`) tranca `ver-plugins` E
 #: `ver-detalhes` com a mesma frase: *"O serviço está desligado — não há o que
 #: perguntar a ele."* Para o `ver-plugins` a frase é exata: ele fala com o
 #: daemon por IPC (`plugin.reload` + `plugin.list`), e um daemon parado não
@@ -1977,7 +1992,7 @@ def _systemctl(verbo: str) -> None:
     rc = getattr(r, "returncode", -1) if r is not None else -1
     if rc != 0:
         detalhe = str(getattr(r, "stderr", "") or "").strip() if r is not None else ""
-        recusa = _daemon._SYSTEMCTL_FAIL_MSG.get(verbo, "Não consegui falar com o systemd")
+        recusa = _daemon._SYSTEMCTL_FAIL_MSG.get(verbo, "Não consegui falar com o sistema")
         raise RuntimeError(f"{recusa}{f': {detalhe}' if detalhe else '.'}")
     # O CACHE DE 2s SAI DO CAMINHO. Sem isto o interruptor só se mexeria no tique
     # seguinte à expiração da faixa lenta — até dois segundos depois do clique —,
@@ -2016,8 +2031,8 @@ def autostart(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     ligado = _tela.autostart_ligado(_autostart())
     if ligado is None:
         raise RuntimeError(
-            "Não consegui perguntar ao systemd se o serviço liga sozinho — e "
-            "sem saber o estado de agora, o interruptor não adivinha.")
+            "Não consegui saber se o serviço liga sozinho, então o interruptor "
+            "não se mexe.")
     _systemctl("disable" if ligado else "enable")
 
 
@@ -2356,10 +2371,9 @@ def desligar(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
             # systemd — por isso a frase não fala em `rc`. Ver
             # :func:`ativar_o_servico`.
             raise RuntimeError(
-                "Não liguei o serviço, e o systemd nem chegou a ser chamado: "
-                "ou esta máquina não tem a unit instalada (o instalador nunca "
-                "rodou aqui), ou já há um Hefesto vivo fora do systemd — e "
-                "nesse caso subir a unit criaria um segundo.")
+                "Não liguei o serviço. Ou esta máquina não tem o Hefesto "
+                "instalado pelo sistema, ou já há um Hefesto rodando por fora "
+                "— e subir outro criaria um segundo.")
         return {"blocos": blocos_dos_botoes(_de_pe(ctx))}
     if not _confirmado(o, DESLIGAR):
         return {"blocos": blocos_dos_botoes(True)}
@@ -2466,9 +2480,21 @@ def _o_avulso_saiu(pid: int) -> bool:
     return not is_alive(pid)
 
 
+#: A RECUSA DO «Corrigir o serviço» QUANDO NÃO HÁ O QUE CORRIGIR — e ela tem
+#: NOME desde 11/09/2026, A1-036.
+#:
+#: A frase dizia *"O serviço não está em modo improvisado — não há modo a
+#: corrigir agora"*, e "modo improvisado" só existe no vocabulário desta casa.
+#: A régua que a cobrava digitava justamente essa palavra
+#: (`test_o_corrigir_modo_recusa_fora_do_modo_improvisado`), então trocar o
+#: texto a derrubava — é a forma de defeito em que a régua mede a PALAVRA e não
+#: o ATO. Com nome, a régua LÊ daqui e a próxima troca de texto não a quebra.
+NADA_A_CORRIGIR = "O serviço já sobe pelo sistema — não há o que corrigir."
+
+
 @gesto("09-sistema.html", "corrigir-modo", grava="_systemctl")
 def corrigir_modo(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
-    """"Corrigir modo de execução" — a saída de quem caiu no modo improvisado.
+    """"Corrigir o serviço" — a saída de quem caiu no modo improvisado.
 
     A LINHA **L315** DO CSV, e ela era a metade que faltava de um par. O HTML já
     RECONHECE `online_avulso` desde 03/09 — a linha "O serviço está" escreve
@@ -2512,14 +2538,12 @@ def corrigir_modo(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
     o que a janela antiga já dizia.
     """
     if _status_do_daemon(ctx.state) != "online_avulso":
-        raise RuntimeError(
-            "O serviço não está em modo improvisado — não há modo a corrigir "
-            "agora.")
+        raise RuntimeError(NADA_A_CORRIGIR)
     pid = _matriz()._read_daemon_pid()
     if pid is not None and not _o_avulso_saiu(pid):
         raise RuntimeError(
-            f"{_daemon.MIGRAR_NAO_DEU} O Hefesto improvisado não saiu quando "
-            "pedi — ele pode estar no meio de alguma coisa.")
+            f"{_daemon.MIGRAR_NAO_DEU} O Hefesto que roda por fora não saiu "
+            "quando pedi — ele pode estar no meio de alguma coisa.")
     if not ativar_o_servico():
         raise RuntimeError(_daemon.MIGRAR_NAO_DEU)
     _LENTO.clear()
@@ -2704,9 +2728,8 @@ def refazer_proton(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
         steam_viva = slo.steam_running
     if steam_viva():
         raise RuntimeError(
-            "A Steam está aberta — feche-a e clique de novo. Não travo o Proton "
-            "com a Steam viva porque ela regrava o arquivo ao sair e a mudança "
-            "seria perdida.")
+            "A Steam está aberta — feche-a e clique de novo. Com ela aberta a "
+            "mudança seria perdida ao sair.")
     carga = _para_o_painel(_daemon.format_proton_lock_result(travar()))
     carga["blocos"] = blocos_dos_botoes(_de_pe(ctx))
     return carga
@@ -2799,8 +2822,9 @@ def _frase_do_que_vai_mudar(jogos: list[str] | None) -> str:
         falta = f" ({len(CONSERTOS) - quantos} não está nesta instalação)"
     else:
         falta = ""
-    linhas = [f"Vou rodar {quantos} conserto(s) automático(s){falta}, sem pedir "
-              "senha e sem fechar nada."]
+    linhas = [f"Vou rodar {quantos} "
+              f"{_plural(quantos, 'conserto automático', 'consertos automáticos')}"
+              f"{falta}, sem pedir senha e sem fechar nada."]
     if jogos is None:
         linhas.append("  Não consegui olhar quais jogos estão com o Steam Input "
                       "ligado — o resto continua valendo.")
@@ -2808,7 +2832,8 @@ def _frase_do_que_vai_mudar(jogos: list[str] | None) -> str:
         linhas.append("  Nenhum jogo com Steam Input ligado fora da sua lista de "
                       "exceções. Nada a desligar aí.")
     else:
-        linhas.append(f"  Steam Input ligado em {len(jogos)} jogo(s): "
+        linhas.append(f"  Steam Input ligado em {len(jogos)} "
+                      f"{_plural(len(jogos), 'jogo', 'jogos')}: "
                       + ", ".join(jogos) + ".")
     linhas.append("  Clique de novo para confirmar.")
     return "\n".join(linhas)
@@ -3004,7 +3029,9 @@ def ver_plugins(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
         motivo = ("os plugins estão ligados e não há nenhum no diretório"
                   if releu else "os plugins não estão habilitados neste daemon")
         return _para_o_painel(f"Nenhum plugin carregado — {motivo}.")
-    linhas = [f"{len(itens)} plugin(s) carregado(s)" + ("" if releu else " · a releitura falhou")]
+    linhas = [f"{len(itens)} "
+              + _plural(len(itens), "plugin carregado", "plugins carregados")
+              + ("" if releu else " · a releitura falhou")]
     for it in itens:
         d = it if isinstance(it, dict) else {}
         nome = str(d.get("name") or d.get("nome") or "?")
