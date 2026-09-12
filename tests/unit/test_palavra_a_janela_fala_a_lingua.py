@@ -180,9 +180,12 @@ def test_gatilhos_nao_mostram_jargao_em_ingles() -> None:
 # reconhecer o modo que um guia em inglês cita. A decisão dela em 31/07 trocou
 # o lado — os parênteses saem, pela regra R2 do `docs/process/CLEAN-ROOM.md` —
 # e a regra inversa passou a morar em `test_gatilho_palavra_rotulos.py`, que
-# tem a exceção nomeada `PENDENCIA_DE_PALAVRA` para os dois rótulos cuja
-# palavra ainda é decisão dela ("Arco" e "Arma" sozinhos são ambíguos).
-# Repetir a cobrança aqui, sem a exceção, brigaria com aquele portão.
+# tinha a exceção nomeada `PENDENCIA_DE_PALAVRA` para os dois rótulos cuja
+# palavra era decisão dela ("Arco" e "Arma" sozinhos são ambíguos).
+#
+# A EXCEÇÃO FECHOU EM 11/09/2026: na leva de língua ela aprovou "Arco de flecha"
+# e "Disparo" sem os parênteses, e `PENDENCIA_DE_PALAVRA` é um conjunto vazio.
+# A cobrança continua morando lá, agora sobre os dezenove.
 
 
 def test_o_arquivo_de_gatilhos_nao_guarda_mais_o_texto_antigo() -> None:
