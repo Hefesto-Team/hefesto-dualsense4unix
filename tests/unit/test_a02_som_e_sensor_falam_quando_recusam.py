@@ -361,19 +361,30 @@ class TestOsQuatroBotoesDeSensor:
         assert str(erro.value) == recado
         assert p.chamadas, "levantou a ressalva sem ter chamado o daemon"
 
-    def test_o_daemon_calado_diz_a_terceira_causa(self) -> None:
-        """A que aconteceu na máquina dela: o instalado é mais velho que a tela.
+    def test_o_calado_nao_confessa_divida_nossa(self) -> None:
+        """`_corpo(None)` é o serviço que não respondeu — e a frase é curta.
 
-        `_corpo(None)` é o daemon que não respondeu, e a frase tem de listar a
-        causa que ACONTECE — em 04/09 ela leu no cartão uma recusa que citava
-        duas causas, e nenhuma era a verdadeira.
+        **A TERCEIRA CAUSA SAIU — 11/09/2026, A3-056, aprovada por ela.** Ela
+        dizia *"o Hefesto instalado é mais velho que esta janela e ainda não
+        conhece `sensor.set`"*: um método de IPC na tela, e a tela confessando
+        dívida nossa — o que a decisão dela de 07/09 proíbe (*a dívida fica no
+        mapa, nunca na tela*). Esta régua cravava aquela redação e teria
+        reprovado a melhora em vez do defeito.
+
+        O QUE SOBRA DE MEDÍVEL são as duas causas sobre as quais ela PODE
+        agir, e a palavra com que a tela chama o serviço.
         """
         p = PonteQueDevolveOCorpo({})
         p.corpo = None  # type: ignore[assignment]
         with pytest.raises(RuntimeError) as erro:
             _gesto("sensor")(_ctx(**_com_sensores()),
                              {"uniq": UNIQ, "sensor": "giroscopio"}, p)
-        assert "mais velho que esta janela" in str(erro.value), erro.value
+        frase = str(erro.value)
+        assert "não confirmou" in frase and "parou" in frase, frase
+        assert "daemon" not in frase.lower(), (
+            f"a tela voltou a chamar o Hefesto de «daemon»: {frase!r}")
+        assert "sensor.set" not in frase and "esta janela" not in frase, (
+            f"a tela voltou a confessar dívida nossa: {frase!r}")
 
     def test_o_daemon_tem_o_metodo_de_sensor(self) -> None:
         """A premissa da CHAMADA, remedida a cada execução — o estopim invertido.

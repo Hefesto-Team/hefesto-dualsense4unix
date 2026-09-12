@@ -948,10 +948,9 @@ PALAVRA_DA_LUZ: dict[str | None, str] = {
 #: cabeçalho do `interface/aba02.py` escreve a lei, e a seta aponta para cá).
 #: Ela era um literal do gerador, e o `title` do campo passou a ser PINTADO:
 #: com duas cópias, a viva e a do desenho divergiriam na primeira edição.
-DICA_DA_LUZ = ("Este é o código da cor do JOGADOR, não a do plástico — quem "
-               "escolhe é o produto, pela mesma tabela que acende as cinco "
-               "lâmpadas (core/led_control.py::player_slot_color). Ele não é "
-               "digitado aqui: sai da tabela, e muda no dia em que ela mudar.")
+DICA_DA_LUZ = ("Este é o código da cor do jogador, não a cor do controle. "
+               "Quem a escolhe é o Hefesto, pela mesma tabela que acende as "
+               "cinco lâmpadas.")
 
 
 def luz_palavra(rotulo: str | None, base: tuple[int, ...] | None) -> str:
@@ -1712,10 +1711,8 @@ def selo_composto(a: dict[str, Any]) -> str:
 #: cabeçalho do `interface/aba02.py`, e o gerador a importa daqui para o
 #: `title`. Enquanto ela era literal do gerador, o botão apagado dizia uma
 #: coisa no desenho e o `?` diria outra na tela viva.
-DICA_ALTO_SEM_POSSE = ("Apagado porque o volume deste alto-falante ainda é "
-                       "desconhecido: o DualSense não o publica, e o daemon "
-                       "recusa calar sem ele. Arraste o volume ao lado uma vez "
-                       "e ele destrava.")
+DICA_ALTO_SEM_POSSE = ("O ♪ só funciona depois de o volume ser ajustado uma "
+                       "vez. Arraste o volume ao lado.")
 
 #: "NÃO HÁ O QUE DIZER", dito de um jeito que a folha da casa sabe APAGAR.
 #:
@@ -2847,7 +2844,7 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
 #                               O rascunho também não os conhece:
 #                               `ipc_draft_applier.py` não tem uma ocorrência de
 #                               giro, sensor ou accel.
-#   Calibrar / Mapa do Controle são `<a href>`, navegação — não IPC.
+#   Calibrar / Mapa do controle são `<a href>`, navegação — não IPC.
 #
 # O QUE SAIU DESTA LISTA EM 04/09/2026:
 #
@@ -3075,16 +3072,13 @@ _PERFIL_E_ESTADO_NAO_E_AVISO = "Perfil ativo"
 #: e que aparelho nenhum reivindica. Esta régua pegou o buraco na primeira
 #: execução, com o `if not chave` que eu tinha escrito aqui deixando passar.
 SOM_SEM_ENDERECO = (
-    "o ajuste chegou ao controle agora, mas o perfil recusou guardá-lo só "
-    "para esta peça: "
+    "o ajuste chegou ao controle, mas o perfil não consegue guardá-lo só "
+    "para este controle: "
 )
 
 SOM_SEM_VOLUME_PARA_GUARDAR = (
-    "a rota deste alto-falante foi escrita no controle, mas o perfil ainda "
-    "não sabe o volume dele — e o Hefesto não guarda alto-falante sem volume, "
-    "porque uma seção sem número manda ZERO ao firmware e tranca o "
-    "alto-falante. Arraste o volume deste alto-falante uma vez e a rota passa "
-    "a ser lembrada junto."
+    "A escolha chegou ao controle, mas o perfil só a lembra junto com o "
+    "volume. Arraste o volume deste alto-falante uma vez."
 )
 
 
@@ -3456,19 +3450,18 @@ def mudo(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
         # agora`, que é o mesmo pedido dito ao contrário.
         corpo = _corpo(p.mic_canal_set_detalhado(agora, uniq=uniq))
         if corpo is None:
-            # A TERCEIRA CAUSA ENTROU NA FRASE PORQUE ELA ACONTECEU — medida na
-            # máquina dela em 04/09/2026, com o clique de verdade nesta tela: o
-            # daemon INSTALADO é mais velho que esta janela e não conhece
-            # `mic.canal.set` (o método é da ONDA1-D1, e o `install.sh` não
-            # rodou desde então). A resposta some, o `_corpo` devolve `None`, e
-            # a frase que ela leu no cartão listava duas causas — nenhuma delas
-            # a verdadeira. Uma frase de recusa que não contém o caso que
-            # acontece manda a pessoa procurar o defeito no lugar errado.
+            # A TERCEIRA CAUSA SAIU DA FRASE — 11/09/2026, A3-056, aprovada por
+            # ela. Ela entrou aqui em 04/09 porque ACONTECEU (o instalado era
+            # mais velho que esta janela e não conhecia `mic.canal.set`), e saiu
+            # por duas razões dela: a tela não confessa dívida nossa (07/09) e
+            # não nomeia método de IPC. O caso continua real — e o lugar dele é
+            # o mapa, não o cartão dela.
+            #
+            # E A PALAVRA É «HEFESTO»: `daemon` é o nome interno dele, e as duas
+            # apareciam na mesma frase como se fossem duas coisas.
             raise RuntimeError(
-                "o daemon não confirmou o mudo do microfone — ou o Hefesto "
-                "está parado, ou este controle se desligou, ou o Hefesto "
-                "instalado é mais velho que esta janela e ainda não sabe "
-                "ligar o microfone e o canal dele num ato só")
+                "o Hefesto não confirmou o mudo do microfone: ou ele parou, "
+                "ou este controle se desligou")
         # QUAL METADE FALTOU, na frase do dono. `frase_do_ato_do_microfone`
         # devolve `None` quando as duas aconteceram, e o motivo do daemon
         # quando não — é ele que separa *"o canal foi eleito e o firmware ficou
@@ -3582,7 +3575,7 @@ def mudo(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
         if not p.speaker_set(muted=pedido_mudo, uniq=uniq,
                              **_volume_conhecido(dele)):
             raise RuntimeError(
-                "o daemon não confirmou o mudo do alto-falante. Se o volume "
+                "o Hefesto não confirmou o mudo do alto-falante. Se o volume "
                 "deste controle ainda é desconhecido, ele recusa de propósito: "
                 "calar antes de saber o volume tranca o alto-falante em zero")
         # O SOM CONFIRMA, e o ♪ é um dos quatro em que a GTK o toca. Calar
@@ -3697,8 +3690,8 @@ def rota(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
             if not p.speaker_set(rota=de_volta, uniq=uniq,
                                  **_volume_conhecido(ctx.por_uniq(uniq))):
                 raise RuntimeError(
-                    "o daemon não confirmou a volta da rota do alto-falante — "
-                    "ou o Hefesto está parado, ou este controle se desligou")
+                    "o Hefesto não confirmou a volta da rota do alto-falante: "
+                    "ou ele parou, ou este controle se desligou")
             lembrar["rota"] = de_volta
         _lembrar_do_som(ctx, uniq, speaker=lembrar)
         _confirmar_com_som(ctx, uniq)
@@ -3734,8 +3727,8 @@ def rota(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     if not p.speaker_set(rota=byte_da_rota, uniq=uniq,
                          **_volume_conhecido(ctx.por_uniq(uniq))):
         raise RuntimeError(
-            "o daemon não confirmou a rota do alto-falante — ou o Hefesto está "
-            "parado, ou este controle se desligou")
+            "o Hefesto não confirmou a rota do alto-falante: ou ele parou, ou "
+            "este controle se desligou")
     # O SOM CONFIRMA A ROTA NOVA, e é o gesto em que ele diz mais: os dois
     # estados prometem som no controle, e o som é o que responde *"por onde ele
     # sai agora"* sem uma palavra na tela. A GTK o toca nos dois estados
@@ -3775,9 +3768,7 @@ VOLUME_MIN, VOLUME_MAX = 0, 100
 #: quarta é a palavra que descreveria o conjunto dos controles — que sai da
 #: tela por decisão dela.
 TEXTO_MIC_SEM_FONTE = (
-    "O sistema não publica um microfone para este controle: no rádio, é o "
-    "canal do microfone que ainda não está de pé; no cabo, é a placa de som "
-    "que não apareceu. Nada foi mudado."
+    "O sistema não vê um microfone neste controle. Nada foi mudado."
 )
 
 #: O ESTADO DE CADA INTERRUPTOR DE SENSOR, na língua da TELA.
@@ -3810,11 +3801,8 @@ SENSOR_LIGADO, SENSOR_DESLIGADO = "LIGADO", "DESLIGADO"
 #: qual é o oposto — e adivinhar errado deixa o clique dela sem efeito visível
 #: nenhum, que é o silêncio que a queixa 8 nomeia.
 SEM_LEITURA_DE_SENSOR = (
-    "o Hefesto ainda não disse se este sensor está ligado ou desligado, e "
-    "alternar sem saber o estado atual seria chutar qual é o oposto. O "
-    "interruptor lê `sensores.giroscopio_ligado` do daemon, publicado ao lado "
-    "do bloco de entradas deste controle — sem ele, ou o Hefesto está parado, "
-    "ou este controle ainda não tem leitor de entradas."
+    "o Hefesto ainda não disse se este sensor está ligado, e o interruptor "
+    "não sabe para que lado ir."
 )
 
 
@@ -3888,10 +3876,8 @@ def sensor(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     corpo = _corpo(p.sensor_set_detalhado(**{qual: not agora}, uniq=uniq))
     if corpo is None:
         raise RuntimeError(
-            "o daemon não confirmou o interruptor do sensor — ou o Hefesto "
-            "está parado, ou este controle se desligou, ou o Hefesto "
-            "instalado é mais velho que esta janela e ainda não conhece "
-            "`sensor.set`")
+            "o Hefesto não confirmou o interruptor do sensor: ou ele parou, "
+            "ou este controle se desligou")
     frase = frase_do_interruptor_de_sensor(corpo)
     if frase:
         raise RuntimeError(frase)
@@ -3969,8 +3955,8 @@ def volume(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
             raise RuntimeError(TEXTO_MIC_SEM_FONTE)
         if corpo is None or corpo.get("status") != "ok":
             raise RuntimeError(
-                "o daemon não confirmou o volume do microfone — ou o Hefesto "
-                "está parado, ou este controle se desligou")
+                "o Hefesto não confirmou o volume do microfone: ou ele parou, "
+                "ou este controle se desligou")
         # A CONFISSÃO, NA FRASE DO PRODUTO. `frase_do_alvo_do_mic` é a dona dos
         # três estados e devolve `""` para `True` e para `None` — *"não sei"
         # não é "não honrei", e inventar a confissão por ausência de notícia
@@ -3997,8 +3983,8 @@ def volume(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
         registrador = volume_do_percentual(pedido)
         if not p.speaker_set(volume=registrador, uniq=uniq):
             raise RuntimeError(
-                "o daemon não confirmou o volume do alto-falante — ou o Hefesto "
-                "está parado, ou este controle se desligou")
+                "o Hefesto não confirmou o volume do alto-falante: ou ele "
+                "parou, ou este controle se desligou")
         # O SOM CONFIRMA — e ESTE é o arrasto que o pedia. O número que ela
         # acabou de escolher é o que NÓS mandamos: não há leitura de volta hoje,
         # e sem o som ela arrasta sem ter como saber que a mudança valeu.
