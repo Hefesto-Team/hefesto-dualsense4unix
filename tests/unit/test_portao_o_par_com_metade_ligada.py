@@ -951,7 +951,21 @@ _CITACOES_PENDENTES: frozenset[str] = frozenset({
     "interface/pacotes/a03_gatilhos.py::hefesto_vivo.py:2111",
     "interface/pacotes/a06_navegacao.py::hefesto_vivo.py:3107",
     "interface/pacotes/a09_sistema.py::interface/hefesto_vivo.py:3080",
-    "interface/pacotes/ponte.py::interface/hefesto_vivo.py:2652",
+    # A DE `ponte.py` SAIU DAQUI — 11/09/2026, F3-CALIBRAR, e ela saiu
+    # CURADA, não escondida. A nota de 06/09 logo acima previa isto com
+    # todas as letras: *"uma citação errada pode atravessar a régua
+    # enquanto o acaso a mantiver sobre texto"* — e o acaso desta leva ia
+    # fazer exatamente isso, pousando o `:2652` de volta numa linha com
+    # letras. Em vez de aceitar o silêncio, a prosa foi reapontada POR
+    # SÍMBOLO: os dois pontos de extensão são `ponte.escolher_arquivo` e
+    # `ponte.salvar_arquivo`, e eles moram em `hefesto_vivo.py:3021-3022`.
+    #
+    # A DE `a10_perfis.py` ENTRA NO LUGAR, e é da primeira família
+    # (endereço deslocado): o `_recusou_dizendo` que ela cita desceu com o
+    # comentário que o alvo `largura` ganhou hoje. O arquivo citante é de
+    # OUTRA POSSE nesta leva — três frentes estão em `a10_perfis.py` agora —
+    # e a âncora continua existindo; só o número mudou.
+    "interface/pacotes/a10_perfis.py::hefesto_vivo.py:3107",
 })
 
 

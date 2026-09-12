@@ -60,7 +60,16 @@
   #e-pronto:checked  ~ .passos .passo:nth-child(3) .n{
     border-color:var(--purple);color:var(--fg)}
 
-  .mesa{display:flex;gap:11px}
+  /* `.controles` E NÃO `.mesa` — 11/09/2026. A palavra é banida em texto de
+     tela (decisão dela, 06/09) e o nome da classe não chega a lê-la, mas este
+     bloco passou a ser o alvo que o produto TROCA a cada mudança de bancada, e
+     o seletor vive escrito no pacote: `[data-bloco="controles"]`. Um endereço
+     novo nasce na língua de hoje. */
+  .controles{display:flex;gap:11px}
+  /* SEM CONTROLE NENHUM não é cartão vazio: é uma frase. Ver `SEM_CONTROLE`. */
+  .vazio{flex:1;padding:22px 14px;text-align:center;border-radius:9px;
+         border:1px dashed var(--border-forte);background:var(--panel);
+         color:var(--texto-mudo);font-size:13px;line-height:19px}
   .ctr{flex:1;border:2px solid var(--plastico,var(--border-forte));border-radius:9px;
        background:var(--panel);padding:11px 12px 12px;display:flex;
        flex-direction:column;gap:8px;min-width:0}
@@ -77,15 +86,15 @@
   .ds-svg{width:74px;height:auto;flex:0 0 74px}
   .selo{margin-left:auto;flex:0 0 auto;font-size:11px;padding:2px 8px;border-radius:6px;
         border:1px solid var(--border-forte);color:var(--texto-mudo);white-space:nowrap}
-  #e-medindo:checked ~ .mesa .selo{border-color:var(--orange);color:var(--orange)}
-  #e-pronto:checked  ~ .mesa .selo{border-color:var(--green);color:var(--green)}
+  #e-medindo:checked ~ .controles .selo{border-color:var(--orange);color:var(--orange)}
+  #e-pronto:checked  ~ .controles .selo{border-color:var(--green);color:var(--green)}
   .selo .t2,.selo .t3{display:none}
-  #e-medindo:checked ~ .mesa .selo .t1,
-  #e-medindo:checked ~ .mesa .selo .t3,
-  #e-pronto:checked  ~ .mesa .selo .t1,
-  #e-pronto:checked  ~ .mesa .selo .t2{display:none}
-  #e-medindo:checked ~ .mesa .selo .t2,
-  #e-pronto:checked  ~ .mesa .selo .t3{display:inline}
+  #e-medindo:checked ~ .controles .selo .t1,
+  #e-medindo:checked ~ .controles .selo .t3,
+  #e-pronto:checked  ~ .controles .selo .t1,
+  #e-pronto:checked  ~ .controles .selo .t2{display:none}
+  #e-medindo:checked ~ .controles .selo .t2,
+  #e-pronto:checked  ~ .controles .selo .t3{display:inline}
 
   .leitura{border-top:1px solid var(--border-sutil);padding-top:7px;
            display:flex;flex-direction:column;gap:5px}
@@ -93,13 +102,27 @@
   .lin > .r{flex:0 0 80px;color:var(--texto-mudo)}
   .lin > .v{flex:0 0 52px;text-align:right;color:var(--texto-suave)}
   .lin > .g{flex:1;height:4px;border-radius:2px;background:var(--border-sutil);
-            position:relative;overflow:hidden}
-  .lin > .g > i{position:absolute;top:0;bottom:0;left:50%;width:2px;
-                background:var(--comment);transform:translateX(-1px)}
+            position:relative;overflow:hidden;color:var(--border-forte)}
   /* NO REPOUSO A BARRA É UM RISCO NO MEIO, e é isso que a tela precisa mostrar:
-     o eixo parado marca o CENTRO. É a mesma leitura da aba Controles, com a
-     mesma forma — o que muda aqui é que ela responde a uma pergunta só. */
-  #e-pronto:checked ~ .mesa .lin > .g > i{background:var(--green)}
+     o eixo parado marca o CENTRO. O risco deixou de ser um `<i>` e virou
+     `::after` em 11/09/2026, e a troca é o que abriu lugar para a LEITURA: o
+     `<i>` era o único filho do trilho, e pintá-lo com o valor vivo apagaria o
+     centro. Pseudoelemento não disputa espaço com ninguém e o CSS continua
+     sendo o dono dele.
+
+     A BARRA BIPOLAR SÃO DUAS METADES, e a gramática é a da aba Controles
+     (`aba02.py`, o bloco `.eixo .v`), pela mesma razão medida lá: o produto
+     sabe escrever `width` (alvo `largura`) e `color` (alvo `cor`), e NÃO tem
+     alvo de POSIÇÃO. Com um elemento só, a barra de um eixo negativo cresceria
+     para o lado errado. A cor sobe para o trilho e desce por `currentColor` —
+     um valor só, num elemento só. */
+  .lin > .g::after{content:"";position:absolute;top:0;bottom:0;left:50%;width:2px;
+                   background:var(--comment);transform:translateX(-1px);z-index:1}
+  .lin > .g > i{position:absolute;top:0;bottom:0;border-radius:2px;
+                background:currentColor}
+  .lin > .g > i.neg{right:50%}
+  .lin > .g > i.pos{left:50%}
+  #e-pronto:checked ~ .controles .lin > .g::after{background:var(--green)}
 
   .barra{height:6px;border-radius:3px;background:var(--border-sutil);overflow:hidden}
   .barra > i{display:block;height:100%;width:0;background:var(--purple)}
@@ -108,6 +131,11 @@
 
   .rodape{display:flex;align-items:center;gap:13px}
   .rodape .barra{flex:1}
+  /* A CONTA DE QUEM ESTÁ AQUI, e ela fica ao lado do botão de propósito: é a
+     última coisa que a tela diz antes de ela apertar «Começar». Ver
+     `contagem()` — com zero controles esta linha fica VAZIA, e quem fala é o
+     lugar dos cartões. */
+  .quantos{font-size:12px;color:var(--texto-mudo);white-space:nowrap}
   .btn{height:34px;padding:0 15px;border-radius:8px;font-size:13px;cursor:pointer;
        border:1px solid var(--border-forte);background:var(--panel);color:var(--texto-suave);
        display:inline-flex;align-items:center;text-decoration:none;white-space:nowrap}
@@ -166,7 +194,10 @@
       </label>
     </div>
 
-    <div class="mesa">
+    <!-- OS CONTROLES DE QUEM ABRE, e o bloco inteiro tem endereço: o tique o
+         remonta a cada mudança de bancada, pelo MESMO gerador que escreveu
+         isto aqui. Ver `pacotes/a11_calibrar_sensores.py`. -->
+    <div class="controles" data-bloco="controles">
           <div class="ctr" style="--plastico:#ae335a"
                data-controle="p1">
             <div class="ctr-topo">
@@ -549,12 +580,12 @@
               <span class="selo"><span class="t1">Parado</span><span class="t2">Medindo…</span><span class="t3">Calibrado</span></span>
             </div>
             <div class="leitura">
-              <div class="lin" data-eixo="giro-x"><span class="r">Giroscópio</span><span class="v">+0.2</span><span class="g"><i></i></span></div>
-              <div class="lin" data-eixo="giro-y"><span class="r"></span><span class="v">-0.1</span><span class="g"><i></i></span></div>
-              <div class="lin" data-eixo="giro-z"><span class="r"></span><span class="v">+0.0</span><span class="g"><i></i></span></div>
-              <div class="lin" data-eixo="accel-x"><span class="r">Acelerômetro</span><span class="v">+0.105</span><span class="g"><i></i></span></div>
-              <div class="lin" data-eixo="accel-y"><span class="r"></span><span class="v">+0.976</span><span class="g"><i></i></span></div>
-              <div class="lin" data-eixo="accel-z"><span class="r"></span><span class="v">+0.170</span><span class="g"><i></i></span></div>
+              <div class="lin" data-eixo="giro-x"><span class="r">Giroscópio</span><span class="v" data-campo="giro-x">—</span><span class="g" data-campo="giro-x-cor" data-hef-alvo="cor" style="color:var(--border-forte)"><i class="neg" data-campo="giro-x-neg" data-hef-alvo="largura" style="width:0%"></i><i class="pos" data-campo="giro-x-pos" data-hef-alvo="largura" style="width:0%"></i></span></div>
+              <div class="lin" data-eixo="giro-y"><span class="r"></span><span class="v" data-campo="giro-y">—</span><span class="g" data-campo="giro-y-cor" data-hef-alvo="cor" style="color:var(--border-forte)"><i class="neg" data-campo="giro-y-neg" data-hef-alvo="largura" style="width:0%"></i><i class="pos" data-campo="giro-y-pos" data-hef-alvo="largura" style="width:0%"></i></span></div>
+              <div class="lin" data-eixo="giro-z"><span class="r"></span><span class="v" data-campo="giro-z">—</span><span class="g" data-campo="giro-z-cor" data-hef-alvo="cor" style="color:var(--border-forte)"><i class="neg" data-campo="giro-z-neg" data-hef-alvo="largura" style="width:0%"></i><i class="pos" data-campo="giro-z-pos" data-hef-alvo="largura" style="width:0%"></i></span></div>
+              <div class="lin" data-eixo="accel-x"><span class="r">Acelerômetro</span><span class="v" data-campo="accel-x">—</span><span class="g" data-campo="accel-x-cor" data-hef-alvo="cor" style="color:var(--border-forte)"><i class="neg" data-campo="accel-x-neg" data-hef-alvo="largura" style="width:0%"></i><i class="pos" data-campo="accel-x-pos" data-hef-alvo="largura" style="width:0%"></i></span></div>
+              <div class="lin" data-eixo="accel-y"><span class="r"></span><span class="v" data-campo="accel-y">—</span><span class="g" data-campo="accel-y-cor" data-hef-alvo="cor" style="color:var(--border-forte)"><i class="neg" data-campo="accel-y-neg" data-hef-alvo="largura" style="width:0%"></i><i class="pos" data-campo="accel-y-pos" data-hef-alvo="largura" style="width:0%"></i></span></div>
+              <div class="lin" data-eixo="accel-z"><span class="r"></span><span class="v" data-campo="accel-z">—</span><span class="g" data-campo="accel-z-cor" data-hef-alvo="cor" style="color:var(--border-forte)"><i class="neg" data-campo="accel-z-neg" data-hef-alvo="largura" style="width:0%"></i><i class="pos" data-campo="accel-z-pos" data-hef-alvo="largura" style="width:0%"></i></span></div>
             </div>
           </div>
           <div class="ctr" style="--plastico:#7eb8d4"
@@ -939,12 +970,12 @@
               <span class="selo"><span class="t1">Parado</span><span class="t2">Medindo…</span><span class="t3">Calibrado</span></span>
             </div>
             <div class="leitura">
-              <div class="lin" data-eixo="giro-x"><span class="r">Giroscópio</span><span class="v">-0.1</span><span class="g"><i></i></span></div>
-              <div class="lin" data-eixo="giro-y"><span class="r"></span><span class="v">+0.3</span><span class="g"><i></i></span></div>
-              <div class="lin" data-eixo="giro-z"><span class="r"></span><span class="v">+0.1</span><span class="g"><i></i></span></div>
-              <div class="lin" data-eixo="accel-x"><span class="r">Acelerômetro</span><span class="v">+0.088</span><span class="g"><i></i></span></div>
-              <div class="lin" data-eixo="accel-y"><span class="r"></span><span class="v">+0.981</span><span class="g"><i></i></span></div>
-              <div class="lin" data-eixo="accel-z"><span class="r"></span><span class="v">+0.152</span><span class="g"><i></i></span></div>
+              <div class="lin" data-eixo="giro-x"><span class="r">Giroscópio</span><span class="v" data-campo="giro-x">—</span><span class="g" data-campo="giro-x-cor" data-hef-alvo="cor" style="color:var(--border-forte)"><i class="neg" data-campo="giro-x-neg" data-hef-alvo="largura" style="width:0%"></i><i class="pos" data-campo="giro-x-pos" data-hef-alvo="largura" style="width:0%"></i></span></div>
+              <div class="lin" data-eixo="giro-y"><span class="r"></span><span class="v" data-campo="giro-y">—</span><span class="g" data-campo="giro-y-cor" data-hef-alvo="cor" style="color:var(--border-forte)"><i class="neg" data-campo="giro-y-neg" data-hef-alvo="largura" style="width:0%"></i><i class="pos" data-campo="giro-y-pos" data-hef-alvo="largura" style="width:0%"></i></span></div>
+              <div class="lin" data-eixo="giro-z"><span class="r"></span><span class="v" data-campo="giro-z">—</span><span class="g" data-campo="giro-z-cor" data-hef-alvo="cor" style="color:var(--border-forte)"><i class="neg" data-campo="giro-z-neg" data-hef-alvo="largura" style="width:0%"></i><i class="pos" data-campo="giro-z-pos" data-hef-alvo="largura" style="width:0%"></i></span></div>
+              <div class="lin" data-eixo="accel-x"><span class="r">Acelerômetro</span><span class="v" data-campo="accel-x">—</span><span class="g" data-campo="accel-x-cor" data-hef-alvo="cor" style="color:var(--border-forte)"><i class="neg" data-campo="accel-x-neg" data-hef-alvo="largura" style="width:0%"></i><i class="pos" data-campo="accel-x-pos" data-hef-alvo="largura" style="width:0%"></i></span></div>
+              <div class="lin" data-eixo="accel-y"><span class="r"></span><span class="v" data-campo="accel-y">—</span><span class="g" data-campo="accel-y-cor" data-hef-alvo="cor" style="color:var(--border-forte)"><i class="neg" data-campo="accel-y-neg" data-hef-alvo="largura" style="width:0%"></i><i class="pos" data-campo="accel-y-pos" data-hef-alvo="largura" style="width:0%"></i></span></div>
+              <div class="lin" data-eixo="accel-z"><span class="r"></span><span class="v" data-campo="accel-z">—</span><span class="g" data-campo="accel-z-cor" data-hef-alvo="cor" style="color:var(--border-forte)"><i class="neg" data-campo="accel-z-neg" data-hef-alvo="largura" style="width:0%"></i><i class="pos" data-campo="accel-z-pos" data-hef-alvo="largura" style="width:0%"></i></span></div>
             </div>
           </div>
     </div>
@@ -952,6 +983,13 @@
     <div class="rodape">
       <button class="btn fazer"><span class="t1">Começar</span><span class="t2">Medindo…</span><span class="t3">Calibrar de novo</span></button>
       <div class="barra"><i></i></div>
+      <!-- O ALVO É `html` E NÃO O TEXTO, e a razão é medida NESTA tela: com
+           zero controles a `contagem()` devolve vazio, e o alvo padrão escreve
+           o TRAVESSÃO no lugar de um valor vazio — um `—` solto ao lado do
+           botão, anunciando a ausência de uma frase que a página tirou de
+           propósito. É o mesmo defeito que a aba Lançadores mediu em 11/09, e
+           a casa já decidiu a cura: o alvo `html` trata vazio como vazio. -->
+      <span class="quantos" data-campo="quantos" data-hef-alvo="html">2 controles conectados</span>
       <a class="btn" href="02-controles.html">Fechar</a>
     </div>
 
