@@ -1758,8 +1758,13 @@ MAPEAR_UMA_A_UMA = "Mapear Entrada a Entrada"
 #: A PALAVRA "PORTAS" É DELA, e ela colide com a `D-A-PALAVRA-ENTRADA` (24/08),
 #: que fixou **entrada** para não confundir com porta de rede. A colisão está
 #: ANOTADA e não resolvida por mim: quem escolheu "porta" aqui foi ela, no mesmo
-#: turno em que mandou o botão descer, e a seção de destino já hospeda o link
-#: *"Banco de provas: o mapa das portas"* — a palavra já vive ali.
+#: turno em que mandou o botão descer.
+#:
+#: O SEGUNDO ARGUMENTO CAIU EM 11/09/2026, e ele era *"a seção de destino já
+#: hospeda o link «Banco de provas: o mapa das portas» — a palavra já vive
+#: ali"*. Esse link passou a dizer **"Ver o mapa das entradas"**, aprovado por
+#: ela. Então «portas» está aqui sozinha, e a colisão continua ANOTADA e não
+#: resolvida por mim: o rótulo é dela e só ela o troca.
 EXAMINAR_PORTAS = "Examinar Portas"
 
 #: A DICA DO CAMPO DE NOME — e ela mudou de casa em 04/09/2026, com a tabela:
@@ -2763,7 +2768,7 @@ CENSO = [
                                           f' — {ADAPTADORES[0]["modelo"]}'),
     ("Teclado",             "3-4", "4",   "o receptor do teclado que o exame desta aba cita"),
     ("Câmera",              "3-5", None,  "a webcam, plugada agora e ainda sem lugar"),
-    ("Não identificado",    "4-1", "5",   "o kernel declinou de classificar (classe ff)"),
+    ("Não identificado",    "4-1", "5",   "o sistema não diz o que é"),
 ]
 
 #: O que está na mão dela — o primeiro tempo do gesto de dois tempos. É o
@@ -3151,7 +3156,7 @@ TELA_MAPEAR = f'''
     <div class="tn-corpo">
       <div class="tn-frase">{MAPA["EXPLICACAO"]}</div>
       <div class="moldura">
-        <div class="mm-rot-linha"><span class="mm-rot" title="Tudo que o censo do barramento achou, menos os hubs-raiz. O hub de bancada FICA: o cabo dele ocupa uma entrada da traseira. O que já tem lugar continua na lista e continua clicável — é assim que você o move de uma entrada para outra.">{MAPA["ROTULO_APARELHOS"]}</span></div>
+        <div class="mm-rot-linha"><span class="mm-rot" title="Tudo o que está ligado ao computador. O que já tem lugar continua na lista: clique nele para mudar de entrada.">{MAPA["ROTULO_APARELHOS"]}</span></div>
         <!-- O ENDEREÇO CHEGOU EM 03/09/2026 (`IDENTIDADE-VEM-DE-CIMA-01`). O
              pacote já trocava esta lista inteira desde 01/09, mas por SELETOR
              CSS, pela chave `blocos` — e um bloco sem `data-campo` é invisível
@@ -3175,7 +3180,7 @@ TELA_MAPEAR = f'''
         </div>
 
         <div class="mm-sala">
-          <div class="mm-rot-linha"><span class="mm-rot" title="Estas duas mudaram-se da aba para cá em 28/08, e aqui elas preenchem um vazio real: a janela do desenho não guardava um único fato que só você tem. Sem resposta não é o mesmo que “Não sei”: enquanto você não responder, o Hefesto sabe que ninguém disse; “Não sei” é você dizendo que olhou e não sabe.">O que só você sabe</span></div>
+          <div class="mm-rot-linha"><span class="mm-rot" title="Duas coisas que nenhuma leitura do sistema alcança. Não responder não é o mesmo que “Não sei”: “Não sei” é você dizendo que olhou.">O que só você sabe</span></div>
 {pergunta_da_sala(SALA["_PERGUNTA_DA_ALTURA"], SALA["_DICA_DA_ALTURA"],
                   RESPOSTAS_DA_ALTURA, "Sim", "sala-altura")}
 {pergunta_da_sala(SALA["_PERGUNTA_DA_VISADA"], SALA["_DICA_DA_VISADA"],
@@ -3292,7 +3297,7 @@ def cerimonia(ident, pergunta, contador, quem, botoes, dica):
       </div>
     </div>
     <div class="tn-rod">
-      <a class="btn" href="#" title="Avança um passo sem gravar e sem cobrar depois. No fim e na fase em pé ele não tem efeito visível — e mesmo assim fica no mesmo lugar, em todos os passos.">{CALIB["ROTULO_NAO_SEI"]}</a>
+      <a class="btn" href="#" title="Pula esta entrada, sem gravar nada e sem perguntar de novo.">{CALIB["ROTULO_NAO_SEI"]}</a>
       <a class="btn" href="#" title="Fecha a janela na hora, sem confirmação e sem resumo. Nada se perde: cada resposta já foi ao disco.">{CALIB["ROTULO_JA_CHEGA"]}</a>
     </div>
   </div>
@@ -3308,9 +3313,9 @@ TELA_SENTADA = cerimonia(
     f'{SEM_LUGAR[0][0]} <span class="pt">·</span> <code>{SEM_LUGAR[0][1]}</code>',
     "".join(
         f'<a class="btn{" foco" if i == 0 else ""}" '
-        f'href="#mapear-entrada-a-entrada-fim" title="Cria uma entrada numerada '
-        f'nova nesta face para este aparelho e para tudo que pende dele, e grava '
-        f'no disco na hora — sem IPC, funciona com o Hefesto desligado.">{f}</a>'
+        f'href="#mapear-entrada-a-entrada-fim" title="Cria uma entrada nesta face '
+        f'para este aparelho e para o que estiver pendurado nele. '
+        f'Gravado na hora.">{f}</a>'
         for i, f in enumerate(CALIB["FACES"])),
     "A pergunta é sobre a <b>entrada</b>, não sobre o aparelho: mesmo quando o kernel "
     "não diz o que é a coisa, você sabe em que buraco ela está.<br><br>"
@@ -3648,7 +3653,7 @@ MIOLO = f'''
           Os <b>rádios vizinhos</b> são tudo que fala em 2,4 GHz perto do seu adaptador. O
           sistema entrega o nome cru; quem sabe o que é, é você.
         </span></span>
-        <a class="porta" href="mapa-das-portas.html" title="Abre o mapa das portas — o banco de provas deste quadro: as entradas do seu gabinete, os arranjos possíveis com o porquê de cada um, e a conta das {num(TETO)} fatias por adaptador. É o desenho do motor que já roda em integrations/arranjo_da_mesa.py.">Banco de provas: o mapa das portas&nbsp;↗</a>
+        <a class="porta" href="mapa-das-portas.html" title="Abre o mapa das portas — o banco de provas deste quadro: as entradas do seu gabinete, os arranjos possíveis com o porquê de cada um, e a conta das {num(TETO)} fatias por adaptador. É o desenho do motor que já roda em integrations/arranjo_da_mesa.py.">Ver o mapa das entradas&nbsp;↗</a>
       </div>
       <div class="quadro-corpo">
         <div class="duas-colunas">
