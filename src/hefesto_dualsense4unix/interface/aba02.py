@@ -3082,9 +3082,9 @@ MIOLO = f'''
              precisou dos 24px dos lugares vazios para caber. -->
         <span class="sensores">
           <a class="btn" href="calibrar-sensores.html"
-             title="Calibra o giroscópio e o acelerômetro dos {len(CONECTADOS)} controles conectados numa passada só, com todos parados numa superfície plana.">Calibrar Sensores de Movimento</a>
+             title="Calibra o giroscópio e o acelerômetro de todos os controles conectados, com todos parados numa superfície plana.">Calibrar sensores de movimento</a>
           <a class="btn" href="mapa-do-controle.html"
-             title="Abre o mapa do controle: cada peça do DualSense com o nome, o glifo e o que o Hefesto lê dela.">Mapa do Controle</a>
+             title="Abre o mapa do controle: cada peça do DualSense com o nome, o glifo e o que o Hefesto lê dela.">Mapa do controle</a>
         </span>
       </div>
       <div class="quadro-corpo">
@@ -3105,7 +3105,9 @@ MIOLO = f'''
 # Ela vive AQUI, que é onde esta casa guarda lápide: comentário não chega a
 # tela nenhuma (é a mesma isenção que `aba01.py` já tem no
 # `test_a_frase_que_ela_baniu_nao_chega_a_tela.py`). Na tela ficou só o que a
-# ordem PRODUZIU — o rótulo `Calibrar Sensores de Movimento`, que está lá.
+# ordem PRODUZIU — o rótulo do Calibrar, que está lá. (A maiúscula decorativa
+# dele caiu em 11/09/2026, aprovada por ela: `Calibrar sensores de movimento`,
+# que é como o título da página que ele abre já se escrevia.)
 
 LEGENDA = f'''<div class="nota">
   <h2>O que mudou em 11/09</h2>
@@ -3148,7 +3150,7 @@ LEGENDA = f'''<div class="nota">
   <h2>Os sensores desceram para cada controle; o Calibrar ficou e cresceu</h2>
   <ul>
     <li><b>O giroscópio e o acelerômetro são estado de cada peça</b>, e por isso o interruptor de cada um está agora na <b>linha do controle</b>, nas {len(MESA)}. Eles estavam no topo do quadro, valendo para todos — e um interruptor global com {len(MESA)} controles ligados <b>mente sobre {len(MESA) - 1} deles</b>.</li>
-    <li><b>O Calibrar ficou onde estava, e passou a valer para todos os controles</b> — sua decisão de 29/08: <i>"se conseguirmos fazer funcionar poderíamos deixar ele lá e ele mapearia os {len(MESA)} controles ao mesmo tempo"</i>. <b>Em 31/08 ele mudou de nome e ganhou um irmão</b>, por ordem sua: <i>"o botão Mapa do Controle que abre a interface do mapa do Controle"</i>. <span class="marca">Calibrar Sensores de Movimento</span> diz <b>o que se calibra</b> — o escopo continua no ponteiro. Os dois <b>chegaram a ir para o fim do quadro</b> e você os mandou voltar: <i>"a posição deles volta pro canto superior direito"</i>. E o Calibrar abre uma <b>página nova</b> (<code>calibrar-sensores.html</code>) com o procedimento em três passos e os controles conectados lado a lado.</li>
+    <li><b>O Calibrar ficou onde estava, e passou a valer para todos os controles</b> — sua decisão de 29/08: <i>"se conseguirmos fazer funcionar poderíamos deixar ele lá e ele mapearia os {len(MESA)} controles ao mesmo tempo"</i>. <b>Em 31/08 ele mudou de nome e ganhou um irmão</b>, por ordem sua: <i>"o botão Mapa do Controle que abre a interface do mapa do Controle"</i>. <span class="marca">Calibrar sensores de movimento</span> diz <b>o que se calibra</b> (a maiúscula decorativa caiu em <b>11/09</b>, por sua aprovação — o título da página que ele abre já era assim) — o escopo continua no ponteiro. Os dois <b>chegaram a ir para o fim do quadro</b> e você os mandou voltar: <i>"a posição deles volta pro canto superior direito"</i>. E o Calibrar abre uma <b>página nova</b> (<code>calibrar-sensores.html</code>) com o procedimento em três passos e os controles conectados lado a lado.</li>
     <li><b>O par custa {num(LARG_PAR_SENSORES)} px, e só coube porque duas leituras saíram.</b> A linha mais apertada é a do <b>P3</b>, o nome mais longo dos quatro: ela tinha <b>{num(VAO_ANTES_P3)} px</b> livres, e o par pede {num(LARG_PAR_SENSORES)} mais o vão. Saíram <span class="marca">Hefesto on</span> ({num(CUSTO_HEFESTO_ON)} px, e dizia a mesma coisa nas {len(MESA)} linhas) e <span class="marca">Giroscópio em rajadas</span> ({num(CUSTO_GIRO_RAJADAS)} px), que juntas devolvem {num(CUSTO_HEFESTO_ON + CUSTO_GIRO_RAJADAS)} — <b>mais</b> do que o par ocupa. Depois da troca a mesma linha do P3 tem <b>{num(VAO_DEPOIS_P3)} px</b> livres ({num(VAO_DEPOIS_P3 - VAO_ANTES_P3)} a mais do que antes) e a do card aberto, {num(VAO_DEPOIS_P1)}.</li>
     <li><b>Você desempatou o "vê como", em 31/08 — e em duas frases.</b> A legenda de 30/08 deixou a contradição aberta: você tinha escrito <i>"remover Giroscópio, Hefesto e vê como"</i> e, no dia anterior, que <i>"a linha fechada mantém o resumo de hoje — máscara, microfone, bateria"</i>. Agora: <i>"remover o vê como de todos os controles"</i> e, logo depois, <i>"era o texto Vê como mas o nome da máscara fica"</i>. <b>Sai o rótulo, fica o dado.</b> A primeira volta tirou o span inteiro e levou a máscara junto — era ler o pedido pela metade. De onde ela vem continua no ponteiro, para quem passar o mouse.</li>
     <li><b>E o que saiu não é o que entrou, embora tenham a mesma palavra.</b> Saiu a <b>leitura</b> <span class="marca">Giroscópio 250 Hz</span>; entrou o <b>interruptor</b> de giroscópio. O número medido não virou lápide: ele está no ponteiro do interruptor, e responde por transporte — <b>250,0 Hz exatos</b> no cabo, <b>em rajadas</b> no rádio.</li>
@@ -3233,7 +3235,7 @@ LEGENDA = f'''<div class="nota">
 # ela lê o que está escrito na tela.
 TERMOS_DA_TELA = (
     "Liberar", "Sons do jogo", "No controle e na TV", "Só no controle",
-    "Calibrar sensores de movimento", "Mapa do Controle", "Dispositivos Conectados",
+    "Calibrar sensores de movimento", "Mapa do controle", "Dispositivos Conectados",
     "Sem toque", "Tocando", "LED do jogador", "Barra de luz", "Touchpad",
     "Microfone", "Alto-falante", "Gatilhos", "Giroscópio",
     "Acelerômetro", "Virtual", "Nativo",
@@ -4001,13 +4003,17 @@ def _conferir(doc):
     # 6. OS DOIS BOTÕES, e eles apontam para páginas que EXISTEM. Um botão que
     #    abre o nada é pior que nenhum botão.
     for destino, rot in (("calibrar-sensores.html", "Calibrar sensores de movimento"),
-                         ("mapa-do-controle.html", "Mapa do Controle")):
+                         ("mapa-do-controle.html", "Mapa do controle")):
         exigir(f'href="{destino}"' in corpo, f"o botão {rot!r} sumiu")
         exigir(onde.pagina(destino).exists(),
                f"o botão {rot!r} aponta para {destino}, que NÃO existe na bancada")
     exigir("Calibrar sensores da mesa" not in corpo, "o nome antigo do Calibrar voltou")
-    exigir(">Calibrar Sensores de Movimento</a>" in corpo,
-           "o rótulo do Calibrar não é o que ela escreveu")
+    # O RÓTULO PERDEU A MAIÚSCULA DECORATIVA em 11/09/2026, aprovado por ela:
+    # o título da tela que este botão abre já se escrevia em minúsculas, e o
+    # botão dizia outra coisa. A régua continua digitando a frase porque ela é
+    # a DONA da palavra dela — trocar o rótulo tem de passar por aqui.
+    exigir(">Calibrar sensores de movimento</a>" in corpo,
+           "o rótulo do Calibrar não é o que ela aprovou")
     # E ELES MORAM NO CABEÇALHO, não no fim — *"a posição deles volta pro canto
     # superior direito."* Já estiveram nos dois lugares nesta mesma sessão.
     topo = corpo.split('<div class="quadro-corpo">', 1)[0]
