@@ -61,6 +61,7 @@ existe: a frase banida derruba o tique em vez de chegar à tela.
 from __future__ import annotations
 
 import ast
+import re
 from pathlib import Path
 
 from hefesto_dualsense4unix.interface.frases_que_ela_baniu import (
@@ -347,3 +348,73 @@ def test_o_stripper_nao_engole_a_dica_nem_inventa_tamanho() -> None:
         "sobrou palavra fora da dica: ou o CSS, ou o comentário, ou o "
         "`<code>` está chegando à leitura."
     )
+
+
+# ---------------------------------------------------------------------------
+# 4. A LISTA NÃO SE DIGITA — ela se mede contra o glossário
+# ---------------------------------------------------------------------------
+#: O arquivo que MANDA. A tupla do módulo é a cópia que o produto instalado
+#: carrega, porque o pacote não leva `docs/` junto e um módulo que lesse este
+#: arquivo em execução quebraria na máquina dela.
+GLOSSARIO = RAIZ / "docs" / (
+    "A-LINGUA-DESTA-CASA-o-glossario-que-a-tela-e-o-codigo-falam.md")
+
+#: Onde a lista mora dentro do glossário. O trecho vai até a primeira das duas
+#: proibições em forma de FRASE — elas não têm forma de palavra e não entram na
+#: tupla, que casa por borda.
+ABRE = "**Proibido em texto de tela:**"
+FECHA = "qualquer frase que mande"
+
+
+def _do_glossario() -> tuple[str, ...]:
+    """As proibições em forma de PALAVRA, lidas do arquivo que manda.
+
+    O termo vem entre crase ou entre aspas, que é como o glossário escreve os
+    dois registros: crase para o identificador (`uinput`), aspas para a palavra
+    de língua ("mesa", "linha de comando"). Ler as duas formas é o que impede a
+    lista de depender de quem a digitou ter escolhido a mesma.
+    """
+    texto = GLOSSARIO.read_text(encoding="utf-8")
+    inicio = texto.find(ABRE)
+    assert inicio >= 0, (
+        f"não achei {ABRE!r} em {GLOSSARIO.name} — a lista mudou de lugar, e "
+        "uma régua que não acha o dono mede a cópia contra ela mesma")
+    fim = texto.find(FECHA, inicio)
+    assert fim > inicio, (
+        f"não achei o fim da lista ({FECHA!r}) — sem ele esta régua leria o "
+        "resto do documento como se fosse proibição")
+    miolo = texto[inicio + len(ABRE):fim]
+    achadas = re.findall(r"`([^`]+)`|\"([^\"]+)\"", miolo)
+    return tuple(dict.fromkeys(a or b for a, b in achadas))
+
+
+def test_a_lista_do_produto_e_a_do_glossario_nos_dois_sentidos() -> None:
+    """As duas listas são a MESMA — e a checagem vale nos dois sentidos.
+
+    **O DEFEITO QUE ISTO FECHA, medido em 11/09/2026:** a tupla tinha TRÊS
+    palavras e o glossário proibia ONZE. Só a de língua tinha régua, e foi por
+    essa fresta que `uinput` chegou à dica da Navegação e ficou lá.
+
+    O SENTIDO INVERSO não é simetria de enfeite: uma palavra que o produto
+    recusa e o glossário não nomeia manda a próxima pessoa reescrever um texto
+    sem saber por quê — e ninguém acha a razão, porque ela não está escrita
+    onde a casa combinou escrever.
+
+    MORDE: tire uma palavra da tupla e esta linha reprova; acrescente uma que o
+    glossário não tem e ela reprova do outro lado.
+    """
+    do_glossario = set(_do_glossario())
+    do_produto = set(PALAVRAS_BANIDAS)
+    assert len(do_glossario) >= 11, (
+        f"li {len(do_glossario)} proibições no glossário e ele tem ao menos "
+        f"onze — a leitura quebrou, e uma lista curta passa por completa: "
+        f"{sorted(do_glossario)}")
+    assert do_glossario - do_produto == set(), (
+        f"o glossário proíbe {sorted(do_glossario - do_produto)} e o produto "
+        f"não recusa. Enquanto a palavra não estiver em `PALAVRAS_BANIDAS` "
+        f"nenhuma régua a vê — foi assim que `uinput` sobreviveu na dica da "
+        f"Navegação.")
+    assert do_produto - do_glossario == set(), (
+        f"o produto recusa {sorted(do_produto - do_glossario)} e o glossário "
+        f"não nomeia. Escreva a palavra na linha «{ABRE}», com a razão: quem "
+        f"for reescrever o texto precisa achar o porquê onde a casa combinou.")

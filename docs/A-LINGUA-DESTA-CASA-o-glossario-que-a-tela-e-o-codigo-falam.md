@@ -55,8 +55,22 @@ se acrescenta aqui antes de entrar na tela.
 
 **Proibido em texto de tela:** `env`, `vdf`, `uinput`, `hidraw`, `MAC`, `uniq`,
 `wrapper_used`, `dedup`, "mesa", "janela do aplicativo", "linha de comando",
+`reconciliad`, `compactada`,
 qualquer frase que mande a pessoa procurar um botão ou uma janela que não
 existe, e qualquer alarme sem medição (`frases_que_ela_baniu.py`).
+
+**ESTA LINHA É O DONO DA LISTA — 11/09/2026, F5-A-REGUA-LE-O-GESTO.** Até esta
+data ela era prosa: `frases_que_ela_baniu.PALAVRAS_BANIDAS` tinha três palavras
+e o glossário tinha onze proibições, e foi por essa fresta que `uinput`
+sobreviveu na dica da Navegação. Agora as duas listas se medem uma contra a
+outra, **nos dois sentidos**, em
+`tests/unit/test_a_palavra_mesa_nao_chega_a_tela.py`. Palavra nova entra AQUI
+primeiro; a tupla do módulo é a cópia que o produto instalado carrega, porque o
+pacote não leva `docs/` junto. As duas últimas são raiz e não palavra inteira —
+`reconciliad` cobre *reconciliados* e *reconciliadas* sem tocar o verbo
+`reconciliar`, que é português vivo em código e em prosa (decisão dela, 09/09,
+JOGAR-02 §5). Os dois trechos de FRASE proibida continuam sem forma de palavra,
+e por isso ficam de fora da conta.
 
 ## 4. A casa (não aparece na tela)
 

@@ -250,3 +250,204 @@ def test_toda_divida_declarada_diz_o_endereco_e_a_data(portao) -> None:
             f"a dívida {frase!r} não diz o endereço de quem a tira")
         assert "/2026" in razao, (
             f"a dívida {frase!r} não diz a data em que foi medida")
+
+
+# ---------------------------------------------------------------------------
+# 4. O TERCEIRO CANAL — o recado que o gesto LEVANTA
+# ---------------------------------------------------------------------------
+# TRÊS AGENTES O ACHARAM SOZINHOS em 11/09/2026 (LINGUA-A2, A4 e A5), cada um na
+# sua aba e sem se falarem: o portão lia as páginas e as `Fala`, e o recado que
+# POUSA no cartão dela chega por outro caminho — `raise RuntimeError` dentro do
+# gesto, montado em execução. Ele não falhava em reconhecer a frase; ele não
+# olhava ali.
+def test_o_canal_do_recado_continua_sendo_o_raise(portao) -> None:
+    """A PREMISSA DA LEITURA, medida e não afirmada.
+
+    O portão lê `raise RuntimeError` porque o piloto trata esse levantamento
+    como *"o produto recusou, e a frase vai para a TELA"* — ele faz `str(erro)`
+    e deposita no cartão. Se esse contrato mudar, a leitura passa a medir um
+    canal morto, e é melhor esta linha reprovar do que o portão ficar verde
+    sobre nada.
+    """
+    fonte = (RAIZ / "src/hefesto_dualsense4unix/interface/hefesto_vivo.py"
+             ).read_text(encoding="utf-8")
+    assert 'self._depositar(uniq, str(erro), "recusa")' in fonte, (
+        "o piloto deixou de mandar `str(erro)` ao cartão — o canal que este "
+        "portão lê mudou de forma, e a leitura tem de mudar junto")
+
+
+def test_a_regua_le_os_recados_da_arvore_de_hoje(portao) -> None:
+    """Ela lê o canal inteiro, e RECUSA achar pouco.
+
+    Régua que acha zero recado termina verde sobre nada — é a mesma recusa que
+    o `olhar.py --todas` já carrega. O piso é generoso de propósito: ele existe
+    para pegar caminho mudado e pasta vazia, não para congelar um número.
+    """
+    lidos, mudos = portao._recados()
+    assert len(lidos) > 150, (
+        f"li {len(lidos)} recados de gesto nos pacotes e eles são quase "
+        f"duzentos — o caminho mudou, e uma régua que não acha o canal não o "
+        f"mede")
+    inteiros = [t for _o, t in lidos if portao.VALOR_DE_EXECUCAO not in t]
+    assert len(inteiros) > 50, (
+        f"só {len(inteiros)} recados foram montados sem buraco — a "
+        f"reconstrução parou de resolver constante e f-string, e o portão "
+        f"passou a ler menos do que lia")
+    assert len(mudos) < len(lidos) // 4, (
+        f"{len(mudos)} de {len(lidos)} recados ficaram sem uma letra — a "
+        f"reconstrução regrediu")
+
+
+def test_morde_a_frase_do_raise_e_montada_do_fonte(portao, tmp_path) -> None:
+    """MORDE: a régua monta a frase como o fonte a escreve.
+
+    O pacote de mentira traz as três formas que os gestos usam — a constante do
+    módulo, a f-string e a soma. Tire a resolução de `ast.Name` de `_montar` e a
+    primeira vira buraco; tire a de `ast.JoinedStr` e a segunda também.
+    """
+    import ast
+
+    alvo = tmp_path / "a99_dublê.py"
+    alvo.write_text(
+        'RAZAO = "o Hefesto ainda não sabe abrir este lançador"\n'
+        'def gesto(x):\n'
+        '    raise RuntimeError(f"{x}: {RAZAO}")\n'
+        'def outro():\n'
+        '    raise RuntimeError("começo " + RAZAO)\n',
+        encoding="utf-8")
+    arvore = ast.parse(alvo.read_text(encoding="utf-8"))
+    montadas = []
+    for fn in ast.walk(arvore):
+        if not isinstance(fn, ast.FunctionDef):
+            continue
+        local = portao._dentro(fn, alvo)
+        for no in ast.walk(fn):
+            if isinstance(no, ast.Raise) and isinstance(no.exc, ast.Call):
+                montadas.append(portao._montar(no.exc.args[0], alvo, local))
+    assert len(montadas) == 2
+    for texto, _inteiro in montadas:
+        assert "o Hefesto ainda não sabe abrir este lançador" in texto, (
+            f"a régua não montou a frase do fonte: {texto!r}")
+        assert portao._forma(texto), (
+            "a peneira não acusou a frase montada — o canal seria lido e "
+            "ninguém saberia")
+    assert montadas[0][1] is False, (
+        "a régua disse que montou a frase INTEIRA, e o `{x}` só existe "
+        "rodando — quem lê o verde acharia que a frase toda passou por peneira")
+    assert montadas[1][1] is True, (
+        "a soma de dois literais é reconstruível por inteiro, e a régua "
+        "declarou o contrário")
+
+
+def test_morde_o_buraco_nao_deixa_a_peneira_atravessar(portao, tmp_path) -> None:
+    """**A ARMADILHA QUE O BURACO EVITA, e ela é sutil.**
+
+    `f"ainda {quantos} não chegaram"` não é confissão nenhuma: o `ainda` e o
+    `não` estão em orações diferentes, separados por um valor. Um marcador de
+    espaço em branco no lugar do valor faria a peneira casar por cima dele e
+    acusar uma frase que ninguém escreveu — e uma régua que inventa acusação
+    esvazia a tabela tão depressa quanto uma que cala.
+
+    MORDE: troque `VALOR_DE_EXECUCAO` por `" "` e esta linha reprova.
+    """
+    import ast
+
+    alvo = tmp_path / "a98_dublê.py"
+    alvo.write_text(
+        'def gesto(quantos):\n'
+        '    raise RuntimeError(f"ainda {quantos} não chegaram")\n',
+        encoding="utf-8")
+    arvore = ast.parse(alvo.read_text(encoding="utf-8"))
+    fn = next(n for n in ast.walk(arvore) if isinstance(n, ast.FunctionDef))
+    no = next(n for n in ast.walk(fn) if isinstance(n, ast.Raise))
+    texto, _inteiro = portao._montar(no.exc.args[0], alvo, portao._dentro(fn, alvo))
+    assert not portao._forma(texto), (
+        f"a peneira atravessou o buraco e inventou uma confissão: {texto!r}")
+
+
+@pytest.fixture
+def so_o_terceiro_canal(portao, monkeypatch):
+    """O `main` medindo SÓ o canal do recado — as outras duas fontes caladas.
+
+    **ISTO NÃO É ASSEIO, E A MEDIÇÃO É DESTE DIA.** A primeira escrita destas
+    mordidas cobrava `rc=1` sem calar nada, e as três passavam com a cura
+    ARRANCADA: ao trocar `_recados` por um dublê, as quinze linhas de `FATOS`
+    que só aparecem no canal do recado viravam órfãs, e o `rc=1` vinha dessa
+    outra peneira. *Três mordidas verdes sobre um portão desligado* — a mesma
+    forma de instrumento falso que esta casa persegue.
+    """
+    monkeypatch.setattr(portao, "_paginas", lambda: [])
+    monkeypatch.setattr(portao, "_falas", lambda: [])
+    monkeypatch.setattr(portao, "FATOS", {})
+    monkeypatch.setattr(portao, "A_DIVIDA", {})
+    monkeypatch.setattr(portao, "SEM_LETRA", {})
+    monkeypatch.setattr(portao, "_recados", lambda: ([], []))
+    return monkeypatch
+
+
+def test_morde_main_reprova_o_recado_que_confessa(portao, so_o_terceiro_canal) -> None:
+    """MORDE: tire `lidos` do `main` e o canal volta a ser cego.
+
+    É a mordida do defeito de origem — o que três agentes acharam sozinhos em
+    11/09/2026. O dublê põe uma confissão no canal do recado e cobra `rc=1`;
+    com a leitura arrancada do `main`, ela passa verde, que foi o estado do
+    mundo até hoje.
+    """
+    assert portao.main() == 0, (
+        "o `main` reprovou com as três fontes caladas — a mordida abaixo "
+        "mediria outra peneira")
+    so_o_terceiro_canal.setattr(
+        portao, "_recados",
+        lambda: ([("dublê/a99.py:7", "Ainda não sei fazer isto por aqui")], []))
+    assert portao.main() == 1, (
+        "o `main` não leu o recado do gesto — o canal que pousa no cartão dela "
+        "continua fora da peneira")
+
+
+def test_morde_main_cobra_o_recado_que_nao_conseguiu_ler(
+        portao, so_o_terceiro_canal) -> None:
+    """O que a régua não alcança NÃO passa calado — ela diz que não conseguiu.
+
+    Um portão que lê a maior parte e cala o resto é pior que um que não lê
+    nada: quem vê o verde conclui que a tela inteira passou. A frase sem uma
+    letra de prosa cai em `SEM_LETRA`, com o dono escrito, ou reprova.
+    """
+    muda = ("a99_dublê.py:gesto ← motivo", "dublê/a99.py:9")
+    so_o_terceiro_canal.setattr(portao, "_recados", lambda: ([], [muda]))
+    assert portao.main() == 1, (
+        "o `main` passou sobre um recado que a régua não conseguiu ler — o "
+        "ponto cego voltou a ser silencioso")
+    so_o_terceiro_canal.setattr(
+        portao, "SEM_LETRA", {muda[0]: "a recusa do daemon, palavra por palavra"})
+    assert portao.main() == 0, (
+        "declarar o dono não bastou — a tabela não está sendo consultada, e "
+        "então ela é enfeite")
+
+
+def test_morde_a_tabela_sem_letra_nao_pode_ficar_orfa(
+        portao, so_o_terceiro_canal) -> None:
+    """A terceira tabela também vale nos DOIS sentidos.
+
+    Uma linha que sobrevive ao código vira ponto cego com aparência de cuidado
+    — é a mesma razão de `FATOS` e `A_DIVIDA`.
+    """
+    so_o_terceiro_canal.setattr(
+        portao, "SEM_LETRA",
+        {"a99_dublê.py:gesto ← motivo": "um dono que o fonte não tem mais"})
+    assert portao.main() == 1, (
+        "o `main` passou com `SEM_LETRA` declarando um recado que o fonte não "
+        "tem — a declaração envelhece calada")
+
+
+def test_todo_recado_sem_letra_diz_de_quem_e_a_frase(portao) -> None:
+    """Cada linha da terceira tabela tem de nomear o DONO, não pedir desculpa.
+
+    Sem o dono a linha é uma licença; com ele é um endereço — quem quiser ler a
+    frase sabe onde ela mora, e quem quiser fechar o ponto cego sabe o que
+    alcançar.
+    """
+    for chave, razao in portao.SEM_LETRA.items():
+        assert " ← " in chave, (
+            f"a chave {chave!r} não diz `arquivo:gesto ← expressão`")
+        assert len(razao) > 20, (
+            f"o recado {chave!r} não diz de quem é a frase")
