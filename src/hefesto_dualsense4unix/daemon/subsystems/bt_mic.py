@@ -156,6 +156,7 @@ import threading
 from typing import TYPE_CHECKING, Any
 
 from hefesto_dualsense4unix.core.sysfs_leds import norm_mac
+from hefesto_dualsense4unix.daemon.subsystems.base import numero_do_assento_na_mesa
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 
 if TYPE_CHECKING:
@@ -399,8 +400,19 @@ class BtMicSubsystem:
     name = "bt_mic"
 
     def __init__(
-        self, *, gerenciador: Any = None, registro: RegistroDePedidosDeCanal | None = None
+        self,
+        *,
+        gerenciador: Any = None,
+        registro: RegistroDePedidosDeCanal | None = None,
+        daemon: Any = None,
     ) -> None:
+        #: O `Daemon`, e é por ele que o «Controle N» do nó chega ao mesmo
+        #: número do cartão — ver `numero_do_assento` e
+        #: `subsystems/base.slot_de_sessao`. Entra o DAEMON e não o registro
+        #: porque a fiação do `identity_registry` (`lifecycle._wire_identity_
+        #: registry`) acontece DEPOIS deste `start()`: guardar o registro por
+        #: valor congelaria `None` para a sessão inteira.
+        self._daemon: Any = daemon
         self._gerenciador_injetado = gerenciador
         self._gerenciador: Any = None
         self._thread: threading.Thread | None = None
@@ -690,39 +702,34 @@ class BtMicSubsystem:
         return frozenset(vivos)
 
     def numero_do_assento(self, uniq: str) -> int | None:
-        """P1..P4 deste controle — a POSIÇÃO na mesa, `None` quando não dá.
+        """O «Controle N» deste controle — o MESMO que a tela imprime no cartão.
 
-        É o número que ela lê no card, e por isso a fonte é a MESMA lista que
-        desenha os cards, filtrada do MESMO jeito: `_conectados_da_mesa`.
+        **NÃO CONTA NADA AQUI, e é isso que mudou em 12/09/2026**
+        (TRES-CONTAS-PARA-UM-NUMERO-01). Quem responde é
+        `subsystems/base.numero_do_assento_na_mesa`, que pergunta o
+        `player_slot` ao dono dele — o `identity_registry` — e só então aplica a
+        regra da casa. A conta própria que vivia aqui era a TERCEIRA de três
+        para o mesmo rótulo, e era a que mentia na lista de som dela: «Microfone
+        do Controle 2» no aparelho que o cartão chamava de P1, medido às 22h de
+        09/09 com os quatro na mesa.
 
-        **NÃO é o `index` do item, e a correção é de 09/09/2026.** O `index` do
-        `describe_controllers()` é a posição em `list(self._handles)` — a lista
-        de HANDLES ABERTOS, que conta os desligados. Ler o `index` dava assento
-        a quem não está na mesa e roubava o assento 1 de quem está; a régua é
-        `test_um_controle_desligado_nao_ocupa_assento`. Quem numera os cards
-        dela também não lê o `index`: `interface/hefesto_vivo._contexto` filtra
-        por `connected` e enumera o que sobra.
+        A mesa continua sendo a dos CONECTADOS (`_conectados_da_mesa`), e a
+        INVARIANTE continua: `numero_do_assento(u) is not None` se e somente se
+        `u in uniqs_na_mesa()`. Um controle desligado não ganha nome nem quando
+        o registro guarda um lugar na fila para ele.
 
-        **NÃO é `resolve_player_numbers`, e a diferença é medida:** aquele é o
-        número que o JOGO vê, e com o co-op desligado ele responde `1` para
-        todos os controles conectados (`coop.resolve_player_numbers`). Batizar
-        os nós por ele poria quatro «Microfone do Controle 1» na lista dela —
-        um rótulo repetido que mente sobre qual é qual.
+        **CONTINUA NÃO SENDO `resolve_player_numbers`:** aquele é o número que o
+        JOGO vê, e com o co-op desligado ele responde `1` para todos — quatro
+        «Microfone do Controle 1» na lista dela.
 
-        A decisão dela de 09/09 diz *"o número é o assento (P1..P4), como na
-        tela"*, e aceita explicitamente que ele siga o ASSENTO e não o
-        aparelho.
-
-        **A INVARIANTE que isto fecha:** `numero_do_assento(u) is not None`
-        se e somente se `u in uniqs_na_mesa()`.
+        Sem daemon, sem registro fiado, ou controle que ainda não estreou na
+        fila, a regra da casa cai no `index + 1` — o mesmo número que o cartão
+        mostra nessa mesma situação. `None` é *"não sei"*, e o rótulo nasce sem
+        número.
         """
-        chave = norm_mac(str(uniq)) or ""
-        if len(chave) != _UNIQ_HEX:
-            return None
-        for posicao, item in enumerate(self._conectados_da_mesa(), start=1):
-            if (norm_mac(str(item.get("uniq") or "")) or "") == chave:
-                return posicao
-        return None
+        return numero_do_assento_na_mesa(
+            self._conectados_da_mesa(), uniq, daemon=self._daemon
+        )
 
     async def start(self, ctx: DaemonContext) -> None:
         """Sobe a thread de reconciliação. Idempotente.

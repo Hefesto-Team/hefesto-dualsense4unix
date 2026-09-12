@@ -3727,7 +3727,15 @@ class Daemon:
         from hefesto_dualsense4unix.daemon.context import DaemonContext
         from hefesto_dualsense4unix.daemon.subsystems.bt_mic import BtMicSubsystem
 
-        bm = BtMicSubsystem()
+        # `daemon=self` É O QUE FAZ O NÓ TER O NÚMERO DO CARTÃO — TRES-CONTAS-
+        # PARA-UM-NUMERO-01 (12/09/2026). O «Controle N» de «Microfone do
+        # Controle N» sai de `subsystems/base.numero_do_assento_na_mesa`, que
+        # pede o `player_slot` ao `identity_registry` — e quem tem o registro é
+        # o daemon. **Entra o daemon e não o registro** porque
+        # `_wire_identity_registry()` roda DEPOIS deste `_safe_start`: passar
+        # `self.identity_registry` aqui congelaria `None`, e o nó nasceria com a
+        # conta velha pela sessão inteira.
+        bm = BtMicSubsystem(daemon=self)
         if not bm.is_enabled(self.config):
             return
 
@@ -3772,7 +3780,11 @@ class Daemon:
             AltoFalanteSubsystem,
         )
 
-        af = AltoFalanteSubsystem()
+        # `daemon=self`: o MESMO motivo do `_start_bt_mic` acima — o «Controle
+        # N» de «Alto-falante do Controle N» vem do `identity_registry`, pelo
+        # daemon, e a leitura é tardia porque a fiação do registro é posterior a
+        # este `_safe_start`.
+        af = AltoFalanteSubsystem(daemon=self)
         if not af.is_enabled(self.config):
             return
 

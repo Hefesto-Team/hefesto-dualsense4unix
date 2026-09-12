@@ -580,8 +580,14 @@ def test_a_fonte_de_cada_controle_chega_ao_no(monkeypatch: pytest.MonkeyPatch) -
 
 
 # ---------------------------------------------------------------------------
-# 7. O ASSENTO — e a régua que trava as DUAS implementações da mesma regra
+# 7. O «CONTROLE N» DO NÓ — e as TRÊS contas que viraram UMA (12/09/2026)
 # ---------------------------------------------------------------------------
+
+#: Quatro endereços SEM o prefixo de vpad, porque o registro de identidade
+#: recusa `02:fe:…` por decisão (D9: o vpad jamais é "Controle N") — e é o
+#: registro de VERDADE que responde daqui para baixo. Máscara da casa nos
+#: octetos 4 e 5.
+_OS_QUATRO = ("aabbcc000011", "aabbcc000012", "aabbcc000013", "aabbcc000014")
 
 
 def _mesa(*itens: tuple[str, bool]) -> list[dict[str, Any]]:
@@ -589,6 +595,56 @@ def _mesa(*itens: tuple[str, bool]) -> list[dict[str, Any]]:
         {"uniq": uniq, "connected": ligado, "index": i}
         for i, (uniq, ligado) in enumerate(itens)
     ]
+
+
+def _backend(mesa: list[dict[str, Any]]) -> Any:
+    return type("B", (), {"describe_controllers": staticmethod(lambda: mesa)})()
+
+
+def _registro_com_a_fila(chegada: tuple[str, ...]) -> Any:
+    """O `identity_registry` DE VERDADE, com a fila de chegada dada.
+
+    **Não é dublê, e é de propósito.** Um dublê de registro seria mais frouxo
+    que o produto em três pontos que importam aqui: ele recusa `uniq` vazio,
+    recusa MAC de vpad (D9) e devolve a COLOCAÇÃO entre os PRESENTES, não o
+    lugar cru na fila. O de verdade não faz I/O de disco enquanto ninguém chama
+    `load()`, então a régua continua hermética.
+
+    `slot_for(uniq)` com `assign=True` é o que DÁ o lugar na fila — é assim que
+    o tique do daemon o dá. A ordem das chamadas é a ordem de chegada.
+    """
+    from hefesto_dualsense4unix.daemon.subsystems.identity import (
+        ControllerIdentityRegistry,
+    )
+
+    registro = ControllerIdentityRegistry()
+    for uniq in chegada:
+        registro.slot_for(uniq)
+    return registro
+
+
+def _payload_do_ipc(mesa: list[dict[str, Any]], daemon: Any) -> list[dict[str, Any]]:
+    """As entradas de `controllers` como o IPC as publica — com `player_slot`.
+
+    Quem carimba é o PRODUTO: `IpcHandlersMixin._player_slot_for`, chamado sem
+    instância porque ele só lê `self.daemon`. Redigitar `slot_for(…,
+    assign=False)` aqui faria a régua medir a minha cópia da leitura em vez da
+    do daemon — a forma de instrumento falso que esta casa já nomeou.
+    """
+    from types import SimpleNamespace
+
+    from hefesto_dualsense4unix.daemon.ipc_handlers import IpcHandlersMixin
+
+    quem_le = SimpleNamespace(daemon=daemon)
+    saida = []
+    for item in mesa:
+        entrada = dict(item)
+        entrada["player_slot"] = IpcHandlersMixin._player_slot_for(
+            quem_le,  # type: ignore[arg-type]
+            entrada.get("uniq") or None,
+        )
+        saida.append(entrada)
+    return saida
 
 
 @pytest.mark.parametrize(
@@ -601,23 +657,22 @@ def _mesa(*itens: tuple[str, bool]) -> list[dict[str, Any]]:
     ],
 )
 def test_o_assento_do_alto_falante_e_o_mesmo_do_microfone(mesa: Any) -> None:
-    """DUAS implementações da mesma regra, e é isto que impede a divergência.
+    """Os dois rótulos aparecem na MESMA lista de som dela — e dizem o mesmo N.
 
-    A de entrada mora em `daemon/subsystems/bt_mic.py`, que não está na posse
-    desta sprint; a de saída teve de ser escrita ao lado. **Os dois rótulos
-    aparecem na MESMA lista de som dela**, e um dizer 2 enquanto o outro diz 3
-    sobre o mesmo aparelho é a lista mentindo.
+    «Alto-falante do Controle N» e «Microfone do Controle N», lado a lado: um
+    dizer 2 enquanto o outro diz 3 sobre o mesmo aparelho é a lista mentindo.
 
-    O caso que mais engana é o segundo: o handle DESLIGADO. Ele vem em
-    `describe_controllers()` com `index` próprio, e contar por `index` dá
-    assento a quem não está na mesa.
+    **ISTO JÁ FOI DUAS IMPLEMENTAÇÕES DA MESMA REGRA**, uma em cada subsystem, e
+    esta régua era o que as segurava. Desde 12/09/2026 as duas chamam
+    `subsystems/base.numero_do_assento_na_mesa` — a régua fica porque o par tem
+    de continuar amarrado se alguém reescrever um dos dois lados.
 
-    MORDIDA: conte por `index` (ou pare de filtrar `connected`) em
-    `AltoFalanteSubsystem.numero_do_assento` e o segundo caso reprova.
+    MORDIDA: faça `AltoFalanteSubsystem.numero_do_assento` voltar a contar
+    (`enumerate` dos conectados) e o segundo caso reprova.
     """
     from hefesto_dualsense4unix.daemon.subsystems.bt_mic import BtMicSubsystem
 
-    backend = type("B", (), {"describe_controllers": staticmethod(lambda: mesa)})()
+    backend = _backend(mesa)
     saida = AltoFalanteSubsystem()
     saida._backend = backend
     entrada = BtMicSubsystem()
@@ -777,61 +832,132 @@ def test_o_cabo_continua_sendo_cabo_nas_duas_grafias() -> None:
     assert rota.motivo == som.MOTIVO_NO_SEM_PLACA_NO_CABO
 
 
-def test_o_terceiro_numerador_do_mesmo_rotulo_esta_medido_e_confinado() -> None:
-    """HÁ TRÊS contas para o mesmo «Controle N», e a terceira nasceu em 09/09.
+def test_as_tres_contas_do_mesmo_rotulo_viraram_uma() -> None:
+    """HAVIA TRÊS contas para o mesmo «Controle N». Sobrou uma — 12/09/2026.
 
-    Achado pelo conferente da SOM-POR-CONTROLE-01. A sprint declarou DUAS
-    implementações do assento (`AltoFalanteSubsystem` e `BtMicSubsystem`) e
-    escreveu a régua que as amarra — o teste logo acima. **A terceira já
-    existia**, e é a da casa:
+    TRES-CONTAS-PARA-UM-NUMERO-01, e o defeito que a originou foi medido na mesa
+    DELA em 09/09 às 22h, com os quatro DualSense ligados::
 
-        `app/actions/base.numero_do_controle`   `player_slot`, senão `index+1`
-        `daemon/ipc_handlers.py:609`            a MESMA regra, copiada para o
-                                                daemon porque `base.py` importa
-                                                `gi`; há portão que compara as
-                                                duas sobre o payload REAL de
-                                                quatro controles
-        `*.numero_do_assento` (09/09)           posição entre os CONECTADOS
+        pactl list sources → Description: Microfone do Controle 2  ← o daemon
+        a tela             → P1 • White • cabo                     ← o cartão
 
-    **A DIVERGÊNCIA ESTÁ MEDIDA, e é esta:** com o P1 desligado, a conta da casa
-    chama o P2 de **Controle 2** (o `player_slot` dele é estável e sobrevive a
-    desconectar) e a conta nova o chama de **Controle 1** (ele é o primeiro
-    conectado). O portão `test_mesa_cheia_11_a_janela_conta_quatro` já mediu que
-    a escolha importa: no payload real de quatro, `player_slot` é `[4,1,3,2]` e
-    `player` é `[1,2,3,4]` — listas DIFERENTES.
+    Dois números para o mesmo aparelho, em duas janelas ao mesmo tempo — o
+    defeito que o `numero_do_controle` foi criado para matar (COR-01/D6).
 
-    **POR QUE NÃO CUREI AGORA, e a razão é de posse:** `numero_do_assento` não
-    pode simplesmente chamar a regra da casa, porque `describe_controllers()`
-    não devolve `player_slot` — ele vem do registro, pelo `slot_resolver`, e
-    ligar o subsistema ao registro são as MESMAS três linhas de `daemon/` que a
-    SOM-POR-CONTROLE-01 declarou fora da posse dela. Curar por metade daria um
-    quarto número.
+    **A CAUSA NÃO ERA DESCONEXÃO DE NINGUÉM, e é isto que esta régua fixa:** o
+    `player_slot` é a ordem da FILA DE CHEGADA e a conta velha era a ordem dos
+    HANDLES. Com os quatro na mesa as duas listas são diferentes — `[4,1,3,2]`
+    contra `[1,2,3,4]` —, e é o MESMO par de listas que o portão
+    `test_mesa_cheia_11_a_janela_conta_quatro` mediu no payload real dela.
 
-    **NÃO É DEFEITO VIVO HOJE, e este teste é a guarda de que continue assim:**
-    quem batiza o nó no PipeWire é o daemon, e a app só lê. Vira defeito no dia
-    em que a tela mostrar o número dela ao lado do nó que o daemon nomeou — dois
-    números para o mesmo aparelho na mesma janela é exatamente o defeito que o
-    `numero_do_controle` foi criado para matar (*"Controle 1" no card e
-    *"Sony 3" no cabeçalho*, COR-01/D6).
+    AS TRÊS CONTAS, medidas aqui uma contra a outra sobre a MESMA mesa:
 
-    Este teste FIXA a divergência onde ela está. Se ela mudar — para qualquer
-    lado — alguém mexeu numa das três contas e tem de decidir as três juntas.
+        `app/actions/base.numero_do_controle`         a da TELA (importa `gi`)
+        `daemon/ipc_handlers._numero_de_exibicao`     a MESMA, do lado do daemon
+        `*.numero_do_assento`                         a dos NÓS DE SOM
 
-    MORDIDA: faça `numero_do_assento` contar por `index` e o assento do P2 vira
-    2 aqui; faça-o preferir `player_slot` e vira 2 também, mas pelo caminho
-    certo — e aí esta linha sai, com a sprint fechada.
+    A terceira deixou de ser uma conta: ela pergunta o `player_slot` ao dono —
+    o `identity_registry` — e entrega a entrada à regra da casa.
+
+    MORDIDA: tire o `daemon=self._daemon` de um dos dois `numero_do_assento` (ou
+    faça `base.numero_do_assento_na_mesa` ignorar o registro) e os nós voltam a
+    dizer `[1,2,3,4]` contra o `[4,1,3,2]` do cartão.
     """
-    from hefesto_dualsense4unix.app import audio_saida
+    from hefesto_dualsense4unix.app.actions.base import numero_do_controle
+    from hefesto_dualsense4unix.daemon.ipc_handlers import _numero_de_exibicao
+    from hefesto_dualsense4unix.daemon.subsystems.bt_mic import BtMicSubsystem
 
-    mesa = _mesa((_UNIQ_P1, False), (_UNIQ_P2, True))
-    saida = AltoFalanteSubsystem()
-    saida._backend = type(
-        "B", (), {"describe_controllers": staticmethod(lambda: mesa)}
-    )()
-    do_p2 = next(e for e in mesa if e["uniq"] == _UNIQ_P2)
+    p1, p2, p3, p4 = _OS_QUATRO
+    # a fila de chegada NÃO é a ordem dos handles: é ela que dá o `[4,1,3,2]`.
+    registro = _registro_com_a_fila((p2, p4, p3, p1))
+    daemon = type("D", (), {"identity_registry": registro})()
 
-    # a conta NOVA: primeiro conectado
-    assert saida.numero_do_assento(_UNIQ_P2) == 1
-    # a conta DA CASA: a posição real dele na lista (sem `player_slot`, cai no
-    # `index + 1`, que é o que a janela imprime no título do card)
-    assert audio_saida.assento_do_controle(do_p2) == "p2"
+    mesa = _mesa((p1, True), (p2, True), (p3, True), (p4, True))
+    backend = _backend(mesa)
+    saida = AltoFalanteSubsystem(daemon=daemon)
+    saida._backend = backend
+    entrada = BtMicSubsystem(daemon=daemon)
+    entrada._backend = backend
+
+    publicado = _payload_do_ipc(mesa, daemon)
+    assert [e["player_slot"] for e in publicado] == [4, 1, 3, 2], (
+        "a fila de chegada não chegou ao payload; sem ela esta régua não mede "
+        f"divergência nenhuma: {[e['player_slot'] for e in publicado]}"
+    )
+
+    for entry in publicado:
+        uniq = entry["uniq"]
+        da_tela = numero_do_controle(entry)
+        do_daemon = _numero_de_exibicao(entry)
+        do_no_de_saida = saida.numero_do_assento(uniq)
+        do_no_de_entrada = entrada.numero_do_assento(uniq)
+        assert da_tela == do_daemon == do_no_de_saida == do_no_de_entrada, (
+            f"as contas discordam sobre {uniq}: tela={da_tela} "
+            f"daemon={do_daemon} alto-falante={do_no_de_saida} "
+            f"microfone={do_no_de_entrada}"
+        )
+
+
+def test_a_entrada_que_ja_traz_o_slot_nao_e_perguntada_de_novo() -> None:
+    """Quem já carimbou o `player_slot` na entrada é o dono; o nó respeita.
+
+    O caminho de produção é o contrário — `describe_controllers()` NÃO devolve
+    `player_slot`, e é por isso que `base.numero_do_assento_na_mesa` vai pedi-lo
+    ao registro. Mas quem passar a esta função uma entrada JÁ publicada (a do
+    payload do IPC) não pode ter o valor dela atropelado: um segundo caminho de
+    leitura sobre o mesmo campo é como nasce a divergência que esta sprint
+    fechou.
+
+    MORDIDA: tire o `if not isinstance(entrada.get("player_slot"), int)` de
+    `base.numero_do_assento_na_mesa` e o 7 abaixo volta a ser 1.
+    """
+    from hefesto_dualsense4unix.daemon.subsystems.bt_mic import BtMicSubsystem
+
+    p1 = _OS_QUATRO[0]
+
+    class _RegistroQueMente:
+        def slot_for(self, uniq: str, **_kw: Any) -> int:
+            return 99
+
+    daemon = type("D", (), {"identity_registry": _RegistroQueMente()})()
+    mesa = [{"uniq": p1, "connected": True, "index": 0, "player_slot": 7}]
+    sub = BtMicSubsystem(daemon=daemon)
+    sub._backend = _backend(mesa)
+
+    assert sub.numero_do_assento(p1) == 7
+
+
+def test_o_controle_desligado_nao_ganha_nome_mesmo_com_lugar_na_fila() -> None:
+    """A INVARIANTE que a cura não podia perder: número só para quem está na mesa.
+
+    `slot_for(uniq, assign=False)` responde a COLOCAÇÃO que um AUSENTE teria se
+    voltasse — é a promessa dele, e é o que faz o cartão nascer certo no tique de
+    hotplug. Um nó de som publicado por essa resposta poria na lista dela um
+    «Microfone do Controle N» de um controle que não está lá, e que ninguém
+    consegue desligar.
+
+    MORDIDA: faça `base.numero_do_assento_na_mesa` varrer `_controles_da_mesa()`
+    em vez dos conectados (ou peça o slot antes de achar o item) e o P1 desligado
+    ganha nome.
+    """
+    from hefesto_dualsense4unix.daemon.subsystems.bt_mic import BtMicSubsystem
+
+    p1, p2, p3, p4 = _OS_QUATRO
+    registro = _registro_com_a_fila((p1, p2, p3, p4))
+    daemon = type("D", (), {"identity_registry": registro})()
+    assert registro.slot_for(p1, assign=False) is not None, (
+        "o registro perdeu o lugar do P1; sem lugar não há o que esta régua morde"
+    )
+
+    mesa = _mesa((p1, False), (p2, True), (p3, True), (p4, True))
+    sub = BtMicSubsystem(daemon=daemon)
+    sub._backend = _backend(mesa)
+
+    assert sub.numero_do_assento(p1) is None, (
+        "um controle DESLIGADO ganhou nome de nó na lista de som dela"
+    )
+    for uniq in (p2, p3, p4):
+        tem_nome = sub.numero_do_assento(uniq) is not None
+        assert tem_nome == (uniq in sub.uniqs_na_mesa()), (
+            f"as duas leituras discordam sobre {uniq}"
+        )
