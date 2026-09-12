@@ -508,12 +508,21 @@ def test_meio_ato_vira_a_frase_do_dono_no_cartao() -> None:
 
 
 def test_daemon_calado_continua_dizendo_daemon_calado() -> None:
-    """`None` é o daemon que não respondeu, e a frase dele é outra."""
+    """`None` é o serviço que não respondeu, e a frase dele é outra.
+
+    **A PALAVRA DA TELA É «HEFESTO» — 11/09/2026, A3-056, aprovada por ela.**
+    `daemon` é o nome INTERNO do Hefesto, e as duas apareciam na MESMA frase
+    como se fossem duas coisas. Esta régua cravava *"Hefesto está parado"*, a
+    redação de ontem, e teria reprovado a troca em vez do defeito.
+    """
     p = PonteEstrita(mic_canal_set_detalhado=None)
     with pytest.raises(RuntimeError) as erro:
         a02.mudo(_ctx({"audio": {"mic_mudo": True}}),
                  {"uniq": UNIQ, "mudo": "microfone"}, p)
-    assert "Hefesto está parado" in str(erro.value)
+    frase = str(erro.value)
+    assert "não confirmou" in frase and "parou" in frase, frase
+    assert "daemon" not in frase.lower(), (
+        f"a tela voltou a chamar o Hefesto de «daemon»: {frase!r}")
 
 
 # ===========================================================================
@@ -1064,39 +1073,32 @@ def test_a_dica_do_som_nao_manda_para_janela_nenhuma() -> None:
     proíbe em texto de tela *"qualquer frase que mande a pessoa procurar um
     botão ou uma janela que não existe"*.
 
-    **OS VERBOS SÃO LIDOS, NUNCA DIGITADOS.** Uma régua que escrevesse
-    `"speaker release"` dentro de si daria verde no dia em que a porta trocasse
-    de verbo — mediria o próprio texto, que é a assinatura dos seis
-    instrumentos falsos de 05/09.
+    **E O COMANDO DE TERMINAL SAIU DAS DUAS — 11/09/2026, A3-043 e A3-044,
+    aprovadas por ela.** Até aqui esta régua cobrava `"speaker release"` e
+    `"mic release"` DIGITADOS dentro das dicas, e teria reprovado exatamente a
+    melhora que ela pediu: *uma linha de comando não é texto de tela* — é a
+    primeira proibição da língua desta casa. O que se mede agora é o ATO: a
+    dica não manda ninguém para uma janela nem para um terminal, e a saída que
+    sobra no 🎙 é a que ela pode executar com o mouse.
 
     MORDE: devolva o texto velho (`"a volta é pela janela do aplicativo"`) e a
-    primeira asserção reprova achando a palavra `janela` na dica; troque a
-    saída por um verbo que a porta não aceita e a segunda reprova.
+    primeira asserção reprova achando a palavra `janela`; devolva o
+    `hefesto-dualsense4unix speaker release` e a segunda reprova.
     """
-    from hefesto_dualsense4unix.cli.cmd_mic import _ACOES_FIRMWARE
-    from hefesto_dualsense4unix.cli.cmd_speaker import _ACOES
-
     for nome, dica in (("🎙", a02_gerador.DICA_MIC_MUDO),
                        ("♪", a02_gerador.DICA_ALTO_MUDO)):
         assert "janela" not in dica.lower(), (
             f"a dica do {nome} continua mandando para uma janela: {dica!r}")
+        assert "hefesto-dualsense4unix" not in dica, (
+            f"a dica do {nome} voltou a pôr uma linha de comando na tela — "
+            f"a língua desta casa a proíbe em texto de tela: {dica!r}")
 
-    # E A SAÍDA NOMEADA TEM DE EXISTIR na porta que a nomeia.
-    assert "release" in _ACOES, (
-        "`speaker release` saiu da porta — a régua mediria um verbo morto")
-    assert "release" in _ACOES_FIRMWARE, (
-        "`mic release` saiu da porta — a régua mediria um verbo morto")
-    assert "speaker release" in a02_gerador.DICA_ALTO_MUDO, (
-        "a dica do ♪ voltou a terminar em beco: a devolução existe "
-        "(`speaker.set {release: true}` no IPC) e a dica não a nomeia")
-    assert "mic release" in a02_gerador.DICA_MIC_MUDO, (
-        "a dica do 🎙 não nomeia a única saída que existe fora desta tela")
-    # O PREÇO CONTINUA ESCRITO — a decisão 02-Q6 dela é *"fica fora, com
-    # aviso"*, e o aviso é esta dica. `speaker release` devolve o CONTROLE, não
-    # o valor, e isso vai dito porque é o que separa "largar" de "desfazer".
-    assert "não o valor" in a02_gerador.DICA_ALTO_MUDO, (
-        "a dica do ♪ deixou de dizer que a devolução não traz o volume de "
-        "volta — quem lesse esperaria o número de antes")
+    # A SAÍDA QUE SOBRA É A QUE ELA PODE EXECUTAR, e ela continua escrita: o
+    # 🎙 tira o botão do controle das mãos de quem o segura, e quem lê precisa
+    # saber como devolvê-lo sem digitar nada.
+    assert "reinicie o Hefesto" in a02_gerador.DICA_MIC_MUDO, (
+        "a dica do 🎙 deixou de dizer como devolver o botão ao controle — é a "
+        "única saída que existe fora desta tela, e ela é um clique")
 
 
 def test_nenhum_botao_de_som_promete_botao_nesta_tela() -> None:
@@ -1355,9 +1357,13 @@ def test_o_transporte_nao_aparece_duas_vezes_no_cabecalho() -> None:
 # A LINHA DO GIROSCÓPIO NA TELA — o Chrome do sistema, headless
 # --------------------------------------------------------------------------
 #: O QUE A PÁGINA RESPONDE SOBRE A LINHA DO GIROSCÓPIO. A régua acende e apaga o
-#: `title` pelo MESMO caminho do produto (o alvo `atributo` do piloto escreve e
-#: REMOVE esse atributo), e não por uma classe posta à mão — medir uma classe
-#: que o produto não escreve mediria este arquivo.
+#: `aria-label` pelo MESMO caminho do produto (o alvo `atributo` do piloto
+#: escreve e REMOVE esse atributo), e não por uma classe posta à mão — medir uma
+#: classe que o produto não escreve mediria este arquivo.
+#:
+#: O ATRIBUTO ERA O `title` ATÉ 11/09/2026 (A3-050, aprovada por ela): ele era
+#: uma cópia exata do texto ao lado, e a `DICA_DA_CASA` colhe todo `title` do
+#: DOM vivo — então o antigo `[title]` da folha nem casava no produto.
 A_LINHA_DO_GIRO_NA_TELA = r"""
 ((A_MAIS_LARGA) => {
   const card = document.querySelector('.ctl.card[data-controle]');
@@ -1370,12 +1376,13 @@ A_LINHA_DO_GIRO_NA_TELA = r"""
   const com = {display: getComputedStyle(v).display, caixa: cx(v),
                texto: (v.textContent || '').trim()};
   // O QUE O PRODUTO FAZ QUANDO NÃO HÁ O QUE DIZER: o alvo `atributo` remove o
-  // `title`. A folha tem de apagar o elemento inteiro a partir daí.
+  // `aria-label`. A folha tem de apagar o elemento inteiro a partir daí.
   const titulo = v.getAttribute('title');
-  v.removeAttribute('title');
+  const marca = v.getAttribute('aria-label');
+  v.removeAttribute('aria-label');
   const sem = {display: getComputedStyle(v).display,
                alt_da_faixa: faixa.getBoundingClientRect().height};
-  v.setAttribute('title', titulo);
+  v.setAttribute('aria-label', marca);
   // E ELA NÃO PODE VAZAR — com A FRASE MAIS LARGA QUE O DONO SABE MONTAR, que
   // entra por argumento em vez de ser inventada aqui.
   //
@@ -1388,9 +1395,12 @@ A_LINHA_DO_GIRO_NA_TELA = r"""
   //
   // E `'x'.repeat(400)` NÃO SERVE DE SONDA: uma corrida de caracteres sem
   // espaço não tem onde quebrar, então ela fica numa linha com ou sem a cura.
+  // A ALTURA SE MEDE NO DE FORA — 11/09/2026. O recorte subiu para ele (A3-050),
+  // e o de dentro voltou a ser `inline`: `scrollHeight` de um elemento em linha
+  // é 0, e uma régua que o lesse daria verde sobre qualquer quebra.
   const t = v.querySelector('.no-jogo-t');
   const antes = t.textContent;
-  const uma_linha = t.getBoundingClientRect().height;
+  const uma_linha = v.getBoundingClientRect().height;
   t.textContent = A_MAIS_LARGA;
   // O VÃO APERTADO É O CASO QUE IMPORTA, e sem ele a régua não mede nada: com
   // os 410px que o cabeçalho tem hoje a frase mais larga do dono cabe INTEIRA,
@@ -1401,12 +1411,12 @@ A_LINHA_DO_GIRO_NA_TELA = r"""
   const largura_do_vao = v.getBoundingClientRect().width;
   v.style.flex = '0 0 120px';
   const esticado = {faixa: cx(faixa), no_jogo: cx(v), texto: cx(t),
-                    linhas: t.scrollHeight / (uma_linha || 1),
+                    linhas: v.scrollHeight / (uma_linha || 1),
                     vao_de_hoje: largura_do_vao,
                     alt_da_faixa: faixa.getBoundingClientRect().height};
   v.style.flex = '';
   t.textContent = antes;
-  return {com, sem, esticado, alt_com, titulo,
+  return {com, sem, esticado, alt_com, titulo, rotulo: marca,
           um_endereco_so: card.querySelectorAll('[data-campo="giro-no-jogo"]').length};
 })
 """
@@ -1502,8 +1512,20 @@ def test_a_frase_e_o_hover_sao_um_endereco_so(
     """
     assert giro_na_tela["um_endereco_so"] == 2, (
         f"a linha do giroscópio tem {giro_na_tela['um_endereco_so']} elementos "
-        f"com o endereço `giro-no-jogo`; são dois — o que veste o `title` e o que "
-        f"recebe o texto")
-    assert giro_na_tela["titulo"] == giro_na_tela["com"]["texto"], (
-        "o `title` e o texto do desenho divergiram: os dois saem do MESMO "
-        "valor, e no produto os dois vêm do mesmo tique")
+        f"com o endereço `giro-no-jogo`; são dois — o que veste o "
+        f"`data-no-jogo` e o que recebe o texto")
+    # E O HOVER NÃO REPETE O QUE ESTÁ ESCRITO — 11/09/2026, A3-050, aprovada
+    # por ela. Esta linha cobrava `title == texto`, ou seja, cobrava a CÓPIA
+    # EXATA que ela mandou tirar: passar o mouse mostrava o que ela acabou de
+    # ler. O que sobra de medível é a ausência dela.
+    assert giro_na_tela["titulo"] is None, (
+        f"a linha do giroscópio voltou a ter um `title` "
+        f"({giro_na_tela['titulo']!r}) repetindo o texto que está ao lado dele")
+    # E A FRASE INTEIRA CONTINUA ALCANÇÁVEL. O `ellipsis` pode cortá-la numa
+    # janela estreita, e a casa exige que o cortado siga legível
+    # (`test_a_janela_estreita_nao_engole_o_desenho`, artigo 2). Quem a guarda
+    # agora é o `aria-label` — que não abre popup nenhum e ainda é o nome que
+    # o leitor de tela anuncia.
+    assert giro_na_tela["rotulo"] == giro_na_tela["com"]["texto"], (
+        f"o `aria-label` não é a frase do texto: "
+        f"{giro_na_tela['rotulo']!r} contra {giro_na_tela['com']['texto']!r}")
