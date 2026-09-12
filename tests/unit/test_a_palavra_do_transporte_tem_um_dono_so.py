@@ -217,18 +217,15 @@ def test_o_gerador_nao_escreve_a_bancada_como_efeito_de_import() -> None:
         "aprovado no disco, com o estado vivo da mesa dentro")
 
 
-def test_o_quantos_da_lancadores_nao_se_mexe_quando_a_palavra_muda(monkeypatch) -> None:
-    """A mesma mordida na segunda conta — a frase do "?" da aba Lançadores."""
-    _, mesa = _mesa("usb", "bt")
-    antes = a07_lancadores.quantos_da_mesa(mesa)
-    assert "1 no cabo" in antes and "1 no rádio" in antes, antes
-
-    monkeypatch.setitem(_pacotes.VIA_DO_TRANSPORTE, "usb", SENTINELA)
-    _, depois = _mesa("usb", "bt")
-    frase = a07_lancadores.quantos_da_mesa(depois)
-    assert "1 no cabo" in frase and "1 no rádio" in frase, (
-        f"o '?' da Lançadores contou pela palavra da tela: {frase!r}. O "
-        "cabeçalho, no mesmo quadro, continuaria dizendo '1 USB · 1 BT'")
+# A SEGUNDA CONTA SAIU EM 11/09/2026 — junto com a frase que ela vigiava.
+# `test_o_quantos_da_lancadores_nao_se_mexe_quando_a_palavra_muda` mordia o "?"
+# da aba Lançadores, que dizia *"a resposta vale igual para os N (x no cabo, y
+# no rádio)"*. Aquela oração saiu por decisão dela (A2-002): ela repetia o
+# cabeçalho a dois centímetros, que é o dono do número — e com ela saiu o
+# `a07_lancadores.quantos_da_mesa`.
+#
+# A LEI NÃO MUDOU, e as superfícies que sobraram continuam medidas logo abaixo:
+# **quem conta lê o `transporte`, nunca a `via`**, que é a palavra da tela.
 
 
 # ---------------------------------------------------------------------------

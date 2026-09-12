@@ -602,8 +602,11 @@ def test_o_cartao_localizado_nao_oferece_conserto_e_o_flatpak_muda_de_pergunta(
         f"o cartão «Dolphin · mGBA» tem selo {emuladores.selo!r} — a tela diz "
         f"que está tudo no lugar — e oferece {rotulos}. Uma cura oferecida onde "
         f"a tela não declarou defeito nenhum lê-se como cura de coisa nenhuma.")
-    assert d.ADICIONAR_ROTULO in rotulos, (
-        f"o cartão achado não oferece «{d.ADICIONAR_ROTULO}»: {rotulos}")
+    # O RÓTULO DO CARTÃO ACHADO É OUTRO DESDE 11/09/2026 — A2-022, aprovada por
+    # ela: `LOCALIZADO` no selo e «Localizar» no botão se contradiziam, lidos de
+    # cima para baixo. O gesto é o MESMO; só o rótulo segue o estado.
+    assert d.APONTAR_ROTULO in rotulos, (
+        f"o cartão achado não oferece «{d.APONTAR_ROTULO}»: {rotulos}")
     assert cartoes["flatpak"].jogos == (
         "3 lançadores por aqui, e o controle entra em todos"), (
         f"o cartão «Flatpak» não mudou de pergunta: {cartoes['flatpak'].jogos!r}")

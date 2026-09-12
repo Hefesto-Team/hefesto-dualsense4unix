@@ -155,6 +155,7 @@ prontuário só sai do lugar quando ela clica em "Ver o que impede".
 from __future__ import annotations
 
 import dataclasses
+import logging
 import re
 import threading
 import time
@@ -164,6 +165,18 @@ from typing import Any
 from hefesto_dualsense4unix.interface import desenho_dos_lancadores as desenho
 
 from . import Contexto, perfil, registrar
+
+#: O DIAGNÓSTICO QUE SAIU DA TELA — 11/09/2026, A2-041/042/043.
+#:
+#: As três recusas de `data-v` ausente contavam, NA TELA DELA, a marcação da
+#: página: o nome do gesto, o `data-v`, o `appid`, a chave do cartão. Isso é o
+#: que quem CONSERTA precisa ler; quem clicou precisa saber que nada mudou.
+#: **São dois textos, e eram um só** — a recusa chega a ela pelo caminho do
+#: `RuntimeError`/`ValueError` (`hefesto_vivo`), não a um terminal.
+#:
+#: O diagnóstico não se perdeu: ele vem para cá, no mesmo commit em que saiu do
+#: cartão.
+_LOG = logging.getLogger(__name__)
 
 #: De quanto em quanto tempo a vigia repergunta ao disco. 20 s é o compromisso:
 #: a linha de inicialização só muda quando a Steam a regrava (ao sair) ou quando
@@ -1012,9 +1025,10 @@ def _este_clique_confirma(nome: str, o: dict[str, Any]) -> bool:
     armado = _armado_agora() == nome
     _desarmar(nome)
     if not armado:
+        # O NÚMERO DE SEGUNDOS NÃO MUDA O QUE ELA FAZ — A2-056, 11/09/2026.
+        # 96 → 63.
         raise RuntimeError(
-            f"Passaram-se mais de {int(SEGUNDOS_PARA_CONFIRMAR)} segundos desde "
-            "a pergunta — não fechei nada. Clique de novo para começar.")
+            "Passou do tempo e não fechei nada. Clique de novo para começar.")
     return True
 
 
@@ -1447,30 +1461,15 @@ def _texto(x: object) -> str:
     return str(x).replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
 
 
-def quantos_da_mesa(mesa: list[dict[str, Any]]) -> str:
-    """O trecho do "?" que conta controle, com a mesa VIVA em vez do mockup.
-
-    A MESMA FONTE DO CABEÇALHO, e é o ponto inteiro: `ctx.mesa` é a leitura que
-    `pacotes.topo` usa para escrever `1 controle: 1 USB · 0 BT`. Enquanto o "?"
-    lia `monta.CONECTADOS` — a mesa do DESENHO, derivada no import do gerador —
-    os dois números viviam no mesmo quadro dizendo coisas diferentes.
-
-    O `BT` SAI POR SUBTRAÇÃO, e não por uma segunda contagem: `n - usb` não pode
-    somar diferente do total, e um transporte novo (ou um `transporte` vazio)
-    cai no lado do rádio em vez de sumir da conta. Duas somas independentes é
-    como a tela ganha um "2 controles: 1 USB · 0 BT" que não fecha.
-
-    **QUEM CONTA LÊ O TRANSPORTE, NUNCA A PALAVRA** — ONDA4-S10, 06/09/2026, e
-    é a mesma cura de `mesa_viva.texto_da_contagem`. Esta soma comparava
-    `c["via"] == "USB"`; a `via` é o que a TELA escreve, e a partir de D-05 ela
-    pode dizer `cabo`. Contar pela palavra é como a frase do "?" passaria a
-    dizer *"os 2 (0 no cabo, 2 no rádio)"* com os dois no cabo — errado, calado,
-    e sem uma régua vermelha. `transporte` é a chave crua que
-    `mesa_viva.mesa_do_estado` publica ao lado da palavra.
-    """
-    n = len(mesa)
-    usb = sum(1 for c in mesa if str(c.get("transporte") or "").strip().lower() == "usb")
-    return desenho.quantos_html(n, usb, n - usb)
+# `quantos_da_mesa` SAIU EM 11/09/2026 — A2-002, aprovada por ela, e saiu com a
+# frase que ela alimentava. O "?" do quadro dizia *"a resposta vale igual para
+# os N (x no cabo, y no rádio)"*; essa oração REPETIA o cabeçalho a dois
+# centímetros, que é o dono do número.
+#
+# O QUE ELA CURAVA CONTINUA CURADO EM OUTRO LUGAR, e a lição não se perde: quem
+# conta LÊ O TRANSPORTE, nunca a palavra da tela (ONDA4-S10, 06/09/2026) —
+# `mesa_viva.texto_da_contagem` é quem escreve o cabeçalho, e a régua daquela
+# lei mede as superfícies que restaram.
 
 
 def fita_html(mesa: list[dict[str, Any]]) -> str:
@@ -1593,11 +1592,13 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
     """
     carga = _resposta(VIGIA.agora(), ctx.state)
     valores = carga["mesa"]
-    # O "?" TAMBÉM CONTAVA CONTROLE, e ninguém tinha olhado para ele: a cura de
-    # 02/09 tirou o número dos CARTÕES e deixou o do texto de ajuda, que saía de
-    # `monta.CONECTADOS` — a mesa do desenho, congelada no HTML. Ver
-    # :func:`quantos_da_mesa`.
-    valores[desenho.QUANTOS] = quantos_da_mesa(ctx.mesa)
+    # O "?" CONTAVA CONTROLE E DEIXOU DE CONTAR — 11/09/2026, A2-002, aprovada
+    # por ela. A cura de 02/09 tirou o número dos CARTÕES e deixou o do texto de
+    # ajuda; a de 03/09 deu-lhe endereço e alimentou-o da mesa VIVA. Agora a
+    # frase inteira saiu: ela repetia o cabeçalho a dois centímetros, que é o
+    # dono do número. Com ela saíram o `lanc-quantos`, o `quantos_html` e o
+    # `quantos_da_mesa` — **um endereço emitido sem elemento na página é o
+    # piloto pintando no vazio**, e por isso os três saem juntos.
     fora: dict[str, Any] = dict(valores)
     fora["blocos"] = dict(carga["blocos"])
     # A FITA SÓ SAI DAQUI QUANDO O PILOTO NÃO A ESCREVE — 06/09/2026. Com
@@ -1838,9 +1839,11 @@ def detectar(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
 
     appid, quando = a_escada_do_jogo(ctx.state)
     if appid is None:
+        # *"DE ONDE FOR"* É A MENSAGEM DA ABA INTEIRA, não desta recusa —
+        # A2-055, 11/09/2026. 89 → 67.
         raise RuntimeError(
-            "Não achei jogo nenhum aberto agora. Abra o jogo de onde for, "
-            "volte aqui e clique de novo.")
+            "Nenhum jogo aberto agora. Abra o jogo, volte aqui e clique de "
+            "novo.")
     lida = VIGIA.agora()
     tem = lida is not None and str(appid) in lida.com_wrapper
     nome = f"<b>{desenho._e(slo.rotulo_do_jogo(appid))}</b>"
@@ -1858,10 +1861,12 @@ def _appid_do_clique(o: dict[str, Any], nome: str) -> str:
     """O appid que o botão da linha mandou. Vazio é RECUSA, nunca palpite."""
     appid = str(o.get("v") or "").strip()
     if not appid:
+        _LOG.warning(
+            "%s: clique sem `data-v`. Cada linha da lista manda o appid ali — "
+            "se ele sumiu do desenho, o botão agiria sobre um jogo escolhido "
+            "por acaso.", nome)
         raise ValueError(
-            f"{nome}: o clique não disse qual jogo. Cada linha da lista manda "
-            f"`data-v` com o appid — se ele sumiu do desenho, o botão agiria "
-            f"sobre um jogo escolhido por acaso.")
+            "O clique não disse de qual jogo se trata. Nada foi alterado.")
     return appid
 
 
@@ -1915,10 +1920,11 @@ def voltar_a_perguntar(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, An
 
     appid = _appid_do_clique(o, "voltar-a-perguntar")
     if not lwd.remove_dismissed_appid(appid):
+        # O NOME DO ARQUIVO NO DISCO É NOSSO — A2-044, 11/09/2026. O que ela
+        # precisa saber é o ESTADO em que a coisa ficou. 158 → 78.
         raise RuntimeError(
-            "Não consegui tirar este jogo da lista de dispensados. O arquivo "
-            "`launch_dialog_dismissed.json` não aceitou a escrita — o lembrete "
-            "continua desligado para ele.")
+            "Não consegui voltar a perguntar por este jogo — o lembrete "
+            "continua desligado.")
     VIGIA.esquecer()
     return _resposta(VIGIA.ler(), ctx.state)
 
@@ -1952,10 +1958,10 @@ def nao_perguntar(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
     appid = _appid_do_clique(o, "nao-perguntar")
     lwd.add_dismissed_appid(appid)
     if appid not in lwd.load_dismissed_appids():
+        # IDEM — A2-045, e a consequência fica inteira. 176 → 101.
         raise RuntimeError(
-            "Não consegui guardar este jogo na lista de dispensados. O arquivo "
-            "`launch_dialog_dismissed.json` não aceitou a escrita — o aviso vai "
-            "voltar no próximo jogo aberto sem o atalho.")
+            "Não consegui desligar o lembrete para este jogo — ele vai voltar "
+            "no próximo jogo aberto sem o atalho.")
     VIGIA.esquecer()
     return _resposta(VIGIA.ler(), ctx.state)
 
@@ -2070,22 +2076,29 @@ def abrir_lancador(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
 
     qual = str(o.get("v") or "").strip()
     if not qual:
+        _LOG.warning(
+            "abrir-lancador: clique sem `data-v`. Cada botão manda a chave do "
+            "cartão ali — sem ela o gesto abriria um lançador escolhido por "
+            "acaso.")
         raise ValueError(
-            "abrir-lancador: o clique não disse qual lançador. Cada botão "
-            "manda `data-v` com a chave do cartão — sem ela o gesto abriria um "
-            "lançador escolhido por acaso.")
+            "O clique não disse de qual lançador se trata. Nada foi alterado.")
     if qual != desenho.STEAM:
+        # A TELA NÃO CONFESSA DÍVIDA NOSSA — A2-039, 11/09/2026, aprovada por
+        # ela. A frase dizia *"Ainda não sei abrir"* e *"só sabe … por
+        # enquanto"*: duas confissões numa frase só, que é a forma exata que ela
+        # proibiu em 07/09 (*"O app tem que funcionar e não mostrar na tela que
+        # o app não presta."*). O CONSELHO já estava lá; o que sai é a desculpa
+        # em volta. 197 → 114.
         nomes = {x.chave: x.nome for x in desenho.SEM_FONTE}
         raise RuntimeError(
-            f"Ainda não sei abrir o {nomes.get(qual, qual)}. O Hefesto só sabe "
-            "abrir a Steam por enquanto — abra este lançador como você já abre, "
-            "que o perfil casa pelo nome do processo e pela janela do mesmo "
-            "jeito.")
+            f"Abra o {nomes.get(qual, qual)} como você já abre — o perfil "
+            "entra do mesmo jeito, pelo nome do processo e pela janela.")
     if not slo.reopen_steam():
+        # O `xdg-open` E O `PATH` SAÍRAM — A2-040: eles não dizem nada a quem
+        # lê, e o que fazer não muda com eles. 144 → 85.
         raise RuntimeError(
-            "Não achei como abrir a Steam nesta máquina: nem o comando `steam` "
-            "nem o `xdg-open` estão no PATH. Abra-a pelo seu menu — nada aqui "
-            "foi alterado.")
+            "Não achei como abrir a Steam nesta máquina. Abra-a pelo seu "
+            "menu — nada foi alterado.")
     return None
 
 
@@ -2233,10 +2246,11 @@ def copiar_a_linha(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
     from hefesto_dualsense4unix.integrations import steam_launch_options as slo
 
     if not para_a_area_de_transferencia(slo.WRAPPER_LAUNCH):
+        # «ÁREA DE TRANSFERÊNCIA» É O MECANISMO; «COPIAR» É O ATO — A2-057,
+        # 11/09/2026. 152 → 87.
         raise RuntimeError(
-            "Não consegui pôr a linha na área de transferência. Ela está à "
-            "mostra no cartão, logo acima deste botão: selecione e copie com "
-            "Ctrl+C. Nada foi alterado.")
+            "Não consegui copiar. A linha está logo acima deste botão: "
+            "selecione e copie com Ctrl+C.")
     return {**_resposta(VIGIA.agora(), ctx.state), "recado": COPIADO}
 
 
@@ -2654,22 +2668,24 @@ def _recusa_de_quem_ja_tem_cartao(chave: str, nome: str,
         tem = _botoes_do_cartao_agora(chave)
     abertura = f"{nome} já tem cartão nesta aba"
 
-    if desenho.ADICIONAR_ROTULO in tem:
-        # A ORAÇÃO «e o Hefesto não achou onde ele está» SAIU EM 10/09/2026, e
-        # ela teria virado mentira no mesmo commit: o «Localizar este Lançador»
-        # passou a aparecer TAMBÉM no cartão LOCALIZADO, e ali o Hefesto achou.
-        # O que sobra vale nos dois estados — é o cartão que aponta onde o
-        # lançador está, e digitar aqui criaria um segundo com o mesmo nome.
-        return (f"{abertura}, e é por ele que se aponta onde este lançador "
-                f"está. Use o «{desenho.ADICIONAR_ROTULO}» do cartão de "
-                f"{nome} — assim o que você me disser entra na busca daquele "
-                f"cartão, em vez de criar um segundo com o mesmo nome.")
+    # OS DOIS RÓTULOS DO MESMO BOTÃO — 11/09/2026, A2-022: o cartão não
+    # localizado diz «Localizar este lançador» e o localizado diz «Apontar outro
+    # caminho». A frase cita o que ESTÁ lá, e por isso pergunta por ambos — na
+    # ordem em que o cartão os oferece.
+    for aponta in (desenho.ADICIONAR_ROTULO, desenho.APONTAR_ROTULO):
+        if aponta in tem:
+            # O NOME APARECIA TRÊS VEZES EM 245 CARACTERES — A2-051,
+            # 11/09/2026. 245 → 166.
+            return (f"{abertura}. Use o «{aponta}» do cartão dele — assim o "
+                    f"que você disser entra na busca daquele cartão, em vez "
+                    f"de criar um segundo.")
 
     tirar = desenho.acao_de_tirar(chave).rotulo
     if tirar in tem:
-        return (f"{abertura}, e ele já está apontado. Para apontar outro, use "
-                f"o «{tirar}» do cartão dele primeiro — o cartão volta a "
-                f"perguntar onde ele está, e a sua resposta entra ali.")
+        # A2-052, 11/09/2026: 194 → 144.
+        return (f"{abertura}, e ele já está apontado. Use o «{tirar}» do "
+                f"cartão dele primeiro — depois ele volta a perguntar onde "
+                f"está.")
 
     # O TERCEIRO RAMO PERDEU O BECO — 10/09/2026. Ele dizia *"Se o que ele
     # achou não é o que você quer, me diga — hoje o cartão não tem por onde
@@ -2682,9 +2698,10 @@ def _recusa_de_quem_ja_tem_cartao(chave: str, nome: str,
     # da Steam que não conseguiu ler a biblioteca, e a leitura que LEVANTOU.
     # Nesses três não há botão a apontar, e inventar um é o defeito de origem
     # desta função — a tela mandando clicar onde não há nada.
-    return (f"{abertura}, e o que você digitar aqui criaria um segundo cartão "
-            f"com o mesmo nome. Quem responde por {nome} nesta máquina é o "
-            f"cartão dele, nesta mesma aba.")
+    # A SEGUNDA FRASE ERA A PRIMEIRA AO CONTRÁRIO — A2-053, 11/09/2026.
+    # 180 → 96.
+    return (f"{abertura} — o que você digitar aqui criaria um segundo com o "
+            f"mesmo nome.")
 
 
 def _o_que_ela_digitou(o: dict[str, Any]) -> tuple[str, str]:
@@ -2738,17 +2755,18 @@ def adicionar_lancador(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, An
         return _resposta(VIGIA.agora(), ctx.state)
 
     if not alvo:
+        # OS TRÊS EXEMPLOS ESTÃO NO `placeholder` DO CAMPO que ela acabou de
+        # deixar em branco — A2-046, 11/09/2026. A recusa os repetia pela
+        # terceira vez na mesma tela (a outra é o `?`). 233 → 105.
         raise ValueError(
-            "Diga onde ele está: o comando (`ryujinx`), o caminho do programa "
-            "(`/opt/Ryujinx/Ryujinx`) ou o nome do atalho "
-            "(`org.ryujinx.Ryujinx`). É o que eu preciso para achá-lo. Ou "
-            f"clique em «{desenho.PROCURAR_O_ARQUIVO_ROTULO}» e aponte o "
-            "atalho com o mouse.")
+            "Diga onde ele está — os exemplos estão no campo. Ou clique em "
+            f"«{desenho.PROCURAR_O_ARQUIVO_ROTULO}» e aponte com o mouse.")
     if len(alvo) > _MAXIMO_DA_AGULHA:
+        # «LINHA DE INICIALIZAÇÃO» SAIU — A2-047: nesta aba a palavra nomeia
+        # OUTRA coisa (o atalho do Hefesto na linha do jogo). 126 → 74.
         raise ValueError(
-            f"São {len(alvo)} caracteres, e o teto é {_MAXIMO_DA_AGULHA}. O que "
-            "eu preciso é do comando ou do nome do atalho, não da linha de "
-            "inicialização inteira.")
+            f"São {len(alvo)} caracteres, e o teto é {_MAXIMO_DA_AGULHA}. Diga "
+            "só o comando ou o nome do atalho.")
     # O RECIBO VEM ANTES DA LEITURA, e a ORDEM é cura: `_guardar_onde_ele_esta`
     # chama `VIGIA.esquecer()`, e num `{**_resposta(VIGIA.ler(), …), "recado":
     # …}` o Python avalia o `**` PRIMEIRO — a aba sairia pintada com a busca
@@ -2767,11 +2785,14 @@ def _achar_o_que_ela_digitou(alvo: str) -> tuple[str, str, str]:
     """
     achado = onde_isso_esta(alvo)
     if not achado[0]:
+        # QUASE INTEIRA DE PROPÓSITO — A2-054, 11/09/2026. Esta recusa passa a
+        # ser o ÚNICO dono do fato *"onde eu procurei"*, que saiu do `?` e do
+        # corpo do cartão: é aqui que ele serve, porque é aqui que a busca
+        # falhou. 172 → 161.
         raise RuntimeError(
             f"Não achei {alvo!r} nesta máquina. Procurei o comando no `PATH` e "
             f"o atalho `{alvo.rsplit('/', 1)[-1]}.desktop` nas pastas de "
-            f"aplicativos. Confira o caminho e tente de novo — nada foi "
-            f"guardado.")
+            f"aplicativos. Confira e tente de novo; nada foi guardado.")
     return achado
 
 
@@ -2803,9 +2824,10 @@ def _guardar_onde_ele_esta(p: Any, rotulo: str, alvo: str,
 
     chave = para_quem or chave_do_rotulo(rotulo)
     if not chave:
+        # O «ENDEREÇO INTERNO DO CARTÃO» É A NOSSA CHAVE — A2-048, 11/09/2026:
+        # ela não a escolhe nem a vê. 112 → 64.
         raise ValueError(
-            "Diga como ele se chama. O nome é o que aparece no topo do cartão, "
-            "e é dele que sai o endereço interno do cartão.")
+            "Diga como ele se chama — é o nome que aparece no topo do cartão.")
     if not para_quem and chave in de_fabrica:
         raise RuntimeError(_recusa_de_quem_ja_tem_cartao(chave, de_fabrica[chave]))
 
@@ -2853,9 +2875,11 @@ def _guardar_onde_ele_esta(p: Any, rotulo: str, alvo: str,
     # pixel, e pixel é decisão dela. Enquanto ela não vê, o produto para de
     # descartar calado — que é a metade que não precisa de aprovação nenhuma.
     if para_quem and rotulo and nome and rotulo.strip().casefold() != nome.casefold():
-        recado += (f" O nome que você digitou, «{rotulo.strip()}», não entrou: "
-                   f"este cartão já se chama {nome}, e o que o botão dele "
-                   f"acrescenta é ONDE procurar.")
+        # A CAIXA-ALTA DE ÊNFASE CAIU — A2-049, 11/09/2026: «ONDE» gritando no
+        # meio da frase é a mesma maiúscula decorativa que saiu dos dois
+        # rótulos, num lugar em que ela grita mais. 129 → 105.
+        recado += (f" O nome «{rotulo.strip()}» não entrou: este cartão já se "
+                   f"chama {nome}, e o botão dele só acrescenta onde procurar.")
 
     return recado
 
@@ -2907,11 +2931,13 @@ def _achar_o_que_ela_apontou(alvo: str) -> tuple[str, str, str]:
     achado = onde_isso_esta(alvo)
     if not achado[0]:
         pastas = ", ".join(str(x) for x in _pastas_de_atalhos_para_a_frase())
+        # A DESCRIÇÃO DA BUSCA SAIU E O CAMINHO A SEGUIR FICOU — A2-050,
+        # 11/09/2026: a lista de pastas já está na variável, e é ela que serve.
+        # 224 → 163.
         raise RuntimeError(
-            f"Este arquivo está fora das pastas em que eu procuro, e por isso "
-            f"eu nunca o reencontraria: {alvo}. Eu procuro atalhos "
-            f"`.desktop` em {pastas or 'nenhuma pasta de aplicativos'} — e "
-            f"programas pelo comando, no `PATH`. Nada foi guardado.")
+            f"Este arquivo está fora das pastas em que eu procuro, e eu não o "
+            f"reencontraria: {alvo}. Escolha um atalho de "
+            f"{pastas or 'uma pasta de aplicativos'}. Nada foi guardado.")
     return achado
 
 
@@ -2994,15 +3020,19 @@ def esquecer_lancador(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any
     """
     qual = str(o.get("v") or "").strip()
     if not qual:
+        _LOG.warning(
+            "esquecer-lancador: clique sem `data-v`. Cada botão manda a chave "
+            "do cartão ali — sem ela eu apagaria a declaração de um lançador "
+            "escolhido por acaso.")
         raise ValueError(
-            "esquecer-lancador: o clique não disse qual. Cada botão manda "
-            "`data-v` com a chave do cartão — sem ela eu apagaria a declaração "
-            "de um lançador escolhido por acaso.")
+            "O clique não disse de qual lançador se trata. Nada foi tirado.")
     declarados = {x.chave: x.nome for x in _declarados()}
     if qual not in declarados:
+        # «APONTOU», E NÃO «DECLAROU» — A2-058, 11/09/2026: «declarar» é a
+        # palavra do `maquina.json`; «apontar» é a palavra dos botões desta aba.
         raise RuntimeError(
-            "Não há nada a tirar deste cartão: ele é de fábrica e você não "
-            "declarou nada sobre ele.")
+            "Não há nada a tirar: este cartão é de fábrica e você não apontou "
+            "nada nele.")
 
     ok, motivo = _ok_e_motivo(p.machine_declare({"lancadores": {qual: None}}))
     if not ok:
