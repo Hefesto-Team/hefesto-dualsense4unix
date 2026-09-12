@@ -1,6 +1,6 @@
 # Métricas Prometheus
 
-O daemon Hefesto - Dualsense4Unix expõe métricas no formato Prometheus text exposition via HTTP
+O daemon Hefesto - DualSense4Unix expõe métricas no formato Prometheus text exposition via HTTP
 em `127.0.0.1:<metrics_port>/metrics`. Por padrão o endpoint está **desligado**;
 é necessário habilitá-lo explicitamente.
 

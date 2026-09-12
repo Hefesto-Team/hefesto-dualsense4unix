@@ -91,6 +91,11 @@ from gi.repository import GLib, Gtk, WebKit2  # noqa: E402
 
 from hefesto_dualsense4unix.app import theme as tema  # noqa: E402
 from hefesto_dualsense4unix.interface.folha_da_casa import FOLHA_DA_CASA  # noqa: E402
+from hefesto_dualsense4unix.utils import identidade as _identidade  # noqa: E402
+
+#: O DONO DO NOME. A barra da janela LÊ daqui — ver
+#: :mod:`hefesto_dualsense4unix.utils.identidade`.
+_CASA = _identidade.atual()
 
 #: As quatro armadilhas, em código. Cada uma custou uma sessão desta casa, e a
 #: forma de não as redescobrir é elas viajarem com o módulo que as paga — não
@@ -419,7 +424,7 @@ class JanelaDaAba:
         ao_falhar: Callable[[str], None] | None = None,
         ao_morrer_a_pagina: Callable[[str], None] | None = None,
         oculta: bool = False,
-        titulo: str = "Hefesto — DualSense4Unix",
+        titulo: str = _CASA.nome_longo,
         subtitulo: str = "",
         canal: str = CANAL_PADRAO,
         folha: str | None = FOLHA_DA_CASA,

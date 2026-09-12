@@ -399,7 +399,7 @@ Se já está em v3.2.0+ e o problema persiste, abra issue com o output de
 > não é a sua instalação — é a promessa antiga, e ela foi retirada. Registro em
 > `docs/process/sprints/2026-08-07-LINGUA-DO-PRODUTO-01-o-convite-a-traduzir-era-falso.md`.
 
-A partir da v3.4.0 o Hefesto - Dualsense4Unix tem catálogo EN baseline
+A partir da v3.4.0 o Hefesto - DualSense4Unix tem catálogo EN baseline
 (`po/en.po`) e PT-BR identidade (`po/pt_BR.po`). Os sintomas abaixo são
 defeitos **de carregamento do catálogo** — reais, medidos e curados — e
 continuam valendo:

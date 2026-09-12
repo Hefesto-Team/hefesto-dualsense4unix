@@ -1,6 +1,6 @@
-# Hefesto - Dualsense4Unix via Flatpak
+# Hefesto - DualSense4Unix via Flatpak
 
-Este documento explica como instalar e usar o Hefesto - Dualsense4Unix empacotado como Flatpak,
+Este documento explica como instalar e usar o Hefesto - DualSense4Unix empacotado como Flatpak,
 destinado principalmente a usuários do Pop!_OS COSMIC e outras distribuições que
 adotam o Flatpak como formato canônico de distribuição de aplicativos.
 
@@ -113,14 +113,14 @@ Após a instalação, desconecte e reconecte o controle DualSense.
 
 ---
 
-## Executar o Hefesto - Dualsense4Unix
+## Executar o Hefesto - DualSense4Unix
 
 ```bash
 flatpak run io.github.hefesto_team.hefesto_dualsense4unix
 ```
 
 Ou pelo lançador de aplicativos do sistema (Menu de aplicativos / COSMIC Store
-exibe o Hefesto - Dualsense4Unix após instalação).
+exibe o Hefesto - DualSense4Unix após instalação).
 
 ---
 
@@ -153,7 +153,7 @@ como processo filho da GUI** (sem `--install-service`). O ciclo de vida é:
 3. Ao fechar a janela principal, o daemon filho é encerrado junto.
 
 Para manter o daemon ativo com a janela fechada na área de notificação (tray),
-o Hefesto - Dualsense4Unix usa o portal `org.freedesktop.portal.Background` para solicitar
+o Hefesto - DualSense4Unix usa o portal `org.freedesktop.portal.Background` para solicitar
 permissão de execução em segundo plano ao compositor.
 
 **Limitação conhecida**: o daemon Flatpak não é gerenciado pelo systemd do
@@ -279,7 +279,7 @@ O manifest `flatpak/io.github.hefesto_team.hefesto_dualsense4unix.yml` declara a
    via D-Bus (`--talk-name=org.bluez.*`). Se o DualSense via BT não for detectado,
    execute `flatpak override --user --talk-name=org.bluez.* io.github.hefesto_team.hefesto_dualsense4unix`.
 
-4. **Flathub**: o Hefesto - Dualsense4Unix não está publicado no Flathub ainda. A instalação é
+4. **Flathub**: o Hefesto - DualSense4Unix não está publicado no Flathub ainda. A instalação é
    via bundle local ou build a partir do código-fonte.
 
 5. **Teclado na tela: só `wvkbd`, e ele vem embutido** (desde 10/08/2026). O

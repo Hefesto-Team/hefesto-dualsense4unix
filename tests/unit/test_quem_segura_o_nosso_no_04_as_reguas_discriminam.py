@@ -400,7 +400,7 @@ def test_r1_o_espelho_xbox_do_nosso_vpad_nao_e_o_nosso_vpad(mesa: Mesa) -> None:
 
     O Steam Input espelha CADA controle que enxerga, o nosso vpad inclusive, e
     os espelhos se chamam `Microsoft X-Box 360 pad 0`/`1`. O nosso vpad de
-    uinput se chama `Microsoft X-Box 360 pad (Hefesto - Dualsense4Unix
+    uinput se chama `Microsoft X-Box 360 pad (Hefesto - DualSense4Unix
     virtual)`: os três começam com a MESMA palavra.
 
     MORDIDA: trocar o `!=` exato de `_candidatos` por `startswith("Microsoft

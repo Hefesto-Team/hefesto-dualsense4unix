@@ -72,7 +72,7 @@ cp "$HERE/assets/appimage/Hefesto-Dualsense4Unix.png" "$APPDIR/hefesto-dualsense
 cat > "$APPDIR/usr/share/applications/hefesto-dualsense4unix.desktop" <<DESKTOP
 [Desktop Entry]
 Type=Application
-Name=Hefesto - Dualsense4Unix
+Name=Hefesto - DualSense4Unix
 GenericName=DualSense Controller
 Comment=Daemon de gatilhos adaptativos para DualSense no Linux
 Exec=hefesto-dualsense4unix-gui
@@ -154,7 +154,7 @@ install -Dm755 -t "$APPDIR/usr/share/hefesto-dualsense4unix/scripts/" \
 echo "[4/6] Criando AppRun (entrypoint da GUI)..."
 cat > "$APPDIR/AppRun" <<'APPRUN'
 #!/bin/bash
-# AppRun do Hefesto - Dualsense4Unix GUI AppImage.
+# AppRun do Hefesto - DualSense4Unix GUI AppImage.
 # Resolve paths relativos ao próprio bundle e exporta as envs que GTK/PyGObject
 # precisam para encontrar typelibs, gdk-pixbuf loaders, etc.
 

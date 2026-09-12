@@ -1,4 +1,4 @@
-"""Helpers de diálogo GTK reutilizáveis para a GUI do Hefesto - Dualsense4Unix.
+"""Helpers de diálogo GTK reutilizáveis para a GUI do Hefesto - DualSense4Unix.
 
 Todos os diálogos são modais e síncronos, adequados para uso na thread
 principal GTK. Nenhum acessa IPC diretamente.

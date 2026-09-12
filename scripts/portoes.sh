@@ -297,6 +297,18 @@ rapido|janela-nao-confessa|py|scripts/check_a_janela_nao_confessa.py
 # reprova é a caixa alta NOVA.
 rapido|maiuscula-decorativa|py|scripts/check_a_maiuscula_decorativa.py
 rapido|maiuscula-decorativa-morde|pytest|tests/unit/test_portao_a_maiuscula_decorativa_morde.py
+# A GRAFIA DO NOME — 11/09/2026, `F6-O-NOME-TEM-UM-DONO`. O produto se chama
+# `DualSense4Unix`, com o `S` do DualSense, e `utils/identidade.py` escrevia o
+# `S` em minúscula — 427 linhas de 174 arquivos. A grafia errada TRAVAVA uma
+# cura já medida: a barra da janela nasceu com o nome DIGITADO porque ler do
+# dono poria a grafia errada na tela dela. Duas peneiras, e uma sozinha daria
+# verde sobre o defeito da outra — a grafia, e o DONO (a moldura digitando o
+# nome reprova mesmo com a grafia certa). Identificador técnico não se troca:
+# `wm_class`, app-id do Flatpak e os três nós uinput ficam com a grafia velha,
+# cada um com a razão medida na docstring. Cura idempotente para a costura:
+# `scripts/aplicar_a_grafia_do_nome.sh`.
+rapido|grafia-do-nome|py|scripts/check_a_grafia_do_nome.py
+rapido|grafia-do-nome-morde|pytest|tests/unit/test_portao_a_grafia_do_nome_morde.py
 rapido|ruff|bin|ruff check src/ tests/
 completo|shellcheck|bin|shellcheck -S error scripts/*.sh scripts/ci/*.sh install.sh uninstall.sh
 completo|referencias-docs|py|scripts/validar-referencias-docs.py --all

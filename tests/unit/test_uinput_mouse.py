@@ -93,7 +93,13 @@ def test_constantes_default_coerentes():
     assert MOUSE_EXPO == 1.6
     assert MOUSE_PX_PER_SEC_STEP == 125.0
     assert DEFAULT_POLL_HZ == 60
-    assert "Hefesto - Dualsense4Unix" in DEVICE_NAME
+    # A GRAFIA AQUI É A VELHA DE PROPÓSITO — `F6-O-NOME-TEM-UM-DONO`, 11/09/2026.
+    # O nome do produto em TEXTO virou `DualSense4Unix`, com o `S` do DualSense;
+    # o nome deste nó NÃO, porque o kernel o publica e alguém de fora casa por
+    # ele: jogos sob Proton por substring, e o compositor guarda configuração por
+    # nome de dispositivo. Trocar a caixa não dá erro — apaga a amarração que a
+    # pessoa já salvou, calado. `scripts/check_a_grafia_do_nome.py` isenta a forma.
+    assert DEVICE_NAME == "Hefesto - Dualsense4Unix Virtual Mouse+Keyboard"
 
 
 def test_button_map_canonico():

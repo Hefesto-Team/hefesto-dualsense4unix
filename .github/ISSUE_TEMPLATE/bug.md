@@ -7,7 +7,7 @@ labels: ["type:bug", "status:ready"]
 ## Ambiente
 - Distro + versão:
 - Kernel: `uname -r`
-- Versão Hefesto - Dualsense4Unix: `hefesto-dualsense4unix --version`
+- Versão Hefesto - DualSense4Unix: `hefesto-dualsense4unix --version`
 - Transporte (USB/BT):
 - Controle (DualSense / DualSense Edge):
 

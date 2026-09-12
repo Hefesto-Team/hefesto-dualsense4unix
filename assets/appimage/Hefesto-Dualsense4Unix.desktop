@@ -1,7 +1,7 @@
 [Desktop Entry]
 Type=Application
 Name=Hefesto-Dualsense4Unix
-GenericName=Hefesto - Dualsense4Unix
+GenericName=Hefesto - DualSense4Unix
 Comment=Gerenciador DualSense para Linux
 Exec=hefesto-dualsense4unix
 Icon=Hefesto-Dualsense4Unix

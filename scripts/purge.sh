@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# purge.sh — descontaminação TOTAL do Hefesto - Dualsense4Unix.
+# purge.sh — descontaminação TOTAL do Hefesto - DualSense4Unix.
 #
 # Remove TODAS as formas de instalação que possam ter sido misturadas no mesmo
 # host (nativo + .deb + Flatpak + AppImage + applet COSMIC), incluindo rastros
@@ -39,7 +39,7 @@ uso() {
     cat <<'FIM'
 Uso: scripts/purge.sh [opções]
 
-Descontaminação TOTAL do Hefesto - Dualsense4Unix: remove todas as formas de
+Descontaminação TOTAL do Hefesto - DualSense4Unix: remove todas as formas de
 instalação que possam ter sido misturadas no mesmo host (nativo + .deb +
 Flatpak + AppImage + applet COSMIC). Por padrão PRESERVA a config do usuário
 (perfis/sessão/preferências) e faz um backup dela antes.
@@ -184,7 +184,7 @@ main() {
         run bash "${ROOT_DIR}/scripts/disable_steam_input.sh" --apply || true
     fi
     printf '\n─────────────────────────────────────────\n'
-    printf ' Hefesto - Dualsense4Unix: descontaminação concluída.\n'
+    printf ' Hefesto - DualSense4Unix: descontaminação concluída.\n'
     if [[ "${WITH_CONFIG}" -eq 0 ]]; then
         printf ' Perfis preservados (~/.config/hefesto + backup criado).\n'
     fi

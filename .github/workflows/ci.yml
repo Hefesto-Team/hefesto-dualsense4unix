@@ -107,6 +107,13 @@ jobs:
       # na interface."* Duas peneiras, o texto e a FOLHA — o `CABO` não estava
       # escrito em lugar nenhum, quem gritava era uma linha de CSS.
       - run: python3 scripts/check_a_maiuscula_decorativa.py
+      # A grafia do nome — 11/09/2026, `F6-O-NOME-TEM-UM-DONO`. O `S` é do
+      # DualSense, e `utils/identidade.py` o escrevia em minúscula em 427
+      # linhas de 186 arquivos. Duas peneiras: a grafia, e o DONO — a moldura
+      # que DIGITA o nome reprova mesmo com a grafia certa, porque o nome
+      # digitado em dois lugares é a próxima divergência esperando acontecer.
+      - run: python3 scripts/check_a_grafia_do_nome.py
+      - run: python3 -m pytest tests/unit/test_portao_a_grafia_do_nome_morde.py -q
 
   acentuacao:
     name: Acentuação PT-BR estrita (py${{ matrix.python }})
@@ -540,7 +547,7 @@ jobs:
           # propósito: em runner sem essa chave o sysctl não existe, e aí o
           # bloqueio também não.
           sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0 || true
-      - name: Instalar Hefesto - Dualsense4Unix em modo dev
+      - name: Instalar Hefesto - DualSense4Unix em modo dev
         run: pip install -e ".[dev]"
       - name: Verificar tamanho de HID captures
         run: |
@@ -867,7 +874,7 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y libhidapi-dev libhidapi-hidraw0 libudev-dev libxi-dev
-      - name: Instalar Hefesto - Dualsense4Unix em modo dev
+      - name: Instalar Hefesto - DualSense4Unix em modo dev
         run: pip install -e ".[dev]"
       - name: Mypy
         run: mypy src/hefesto_dualsense4unix
@@ -900,7 +907,7 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y libhidapi-dev libhidapi-hidraw0 libudev-dev libxi-dev
-      - name: Instalar Hefesto - Dualsense4Unix em modo dev
+      - name: Instalar Hefesto - DualSense4Unix em modo dev
         run: pip install -e ".[dev]"
       - name: Preparar venv esperado pelo run.sh
         run: |

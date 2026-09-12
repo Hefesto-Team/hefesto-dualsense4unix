@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# build_deb.sh — Gera pacote .deb para o Hefesto - Dualsense4Unix com venv bundlado.
+# build_deb.sh — Gera pacote .deb para o Hefesto - DualSense4Unix com venv bundlado.
 #
 # BUG-DEB-DEPS-VENV-BUNDLED-01: a estratégia anterior dependia de pacotes
 # python3-* do apt que em Ubuntu 22.04 (Jammy) entregam versões antigas

@@ -1,4 +1,4 @@
-"""Aplicação do tema Drácula ao Hefesto - Dualsense4Unix via Gtk.CssProvider.
+"""Aplicação do tema Drácula ao Hefesto - DualSense4Unix via Gtk.CssProvider.
 
 Prioridade GTK_STYLE_PROVIDER_PRIORITY_APPLICATION (600) sobrepõe o tema
 do sistema (PRIORITY_THEME = 200) sem vazar para outras janelas GTK.

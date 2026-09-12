@@ -1,4 +1,4 @@
-"""Paths XDG do Hefesto - Dualsense4Unix, via `platformdirs`.
+"""Paths XDG do Hefesto - DualSense4Unix, via `platformdirs`.
 
 Centraliza config / data / cache / runtime paths. `ensure_dir=True`
 cria o diretório se não existir.

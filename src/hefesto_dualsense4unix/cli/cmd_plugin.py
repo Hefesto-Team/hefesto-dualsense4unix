@@ -19,7 +19,7 @@ from rich.table import Table
 
 app = typer.Typer(
     name="plugin",
-    help="Gerencia plugins do daemon Hefesto - Dualsense4Unix.",
+    help="Gerencia plugins do daemon Hefesto - DualSense4Unix.",
     no_args_is_help=True,
 )
 

@@ -1,4 +1,4 @@
-# Nix flake — Hefesto - Dualsense4Unix.
+# Nix flake — Hefesto - DualSense4Unix.
 # v3.4.0 (FEAT-PACKAGING-NIX-01).
 #
 # Uso (NixOS, nix-shell, qualquer plataforma com nix):
@@ -10,7 +10,7 @@
 # Ou de qualquer maquina com nix instalado, direto do GitHub:
 #   nix run github:Hefesto-Team/hefesto-dualsense4unix -- version
 {
-  description = "Hefesto - Dualsense4Unix: Linux adaptive trigger daemon for the PS5 DualSense controller";
+  description = "Hefesto - DualSense4Unix: Linux adaptive trigger daemon for the PS5 DualSense controller";
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
@@ -51,7 +51,7 @@
             mypy
           ];
           shellHook = ''
-            echo "Hefesto - Dualsense4Unix dev shell"
+            echo "Hefesto - DualSense4Unix dev shell"
             echo "Python: $(python3 --version)"
             echo "Compile catalogos i18n: bash scripts/i18n_compile.sh"
             echo "Run baseline: pytest tests/unit -q"

@@ -98,7 +98,7 @@ find "$PYTHON_SRC" -type f -name "*.py" \
         --keyword=N_ \
         --from-code=UTF-8 \
         --add-comments=TRANSLATORS \
-        --copyright-holder="Hefesto - Dualsense4Unix project" \
+        --copyright-holder="Hefesto - DualSense4Unix project" \
         --package-name="$DOMAIN" \
         --package-version="3.4.0" \
         --msgid-bugs-address="[REDACTED]" \

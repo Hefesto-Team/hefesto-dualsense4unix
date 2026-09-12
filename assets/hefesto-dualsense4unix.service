@@ -1,5 +1,5 @@
 [Unit]
-Description=Hefesto - Dualsense4Unix DualSense adaptive trigger daemon
+Description=Hefesto - DualSense4Unix DualSense adaptive trigger daemon
 # BUG-DEB-AUTOSTART-WANTEDBY-DEFAULT-01: o daemon usa /dev/hidraw e evdev,
 # não depende de DISPLAY/Wayland/X11. Ancorar em default.target garante
 # autostart resiliente em qualquer DE (GNOME/KDE/Sway/i3) e elimina race

@@ -47,7 +47,7 @@ SIGTERM_POLL_INTERVAL_SEC = 0.05
 
 # Defesa em profundidade contra reciclagem de PID: antes de enviar SIGTERM ao
 # predecessor declarado no pid file, confirmamos que o processo correspondente
-# ainda pertence ao Hefesto - Dualsense4Unix (daemon ou GUI). Cobrimos dois padrões canônicos:
+# ainda pertence ao Hefesto - DualSense4Unix (daemon ou GUI). Cobrimos dois padrões canônicos:
 #   - daemon: `comm` == "hefesto" (entry point instalado).
 #   - GUI:    `comm` == "python3" e cmdline contém "hefesto" — hoje o caminho
 #             é `python3 <árvore>/scripts/abrir_interface.py` (06/09/2026: era
@@ -101,7 +101,7 @@ def _read_proc_cmdline(pid: int) -> str | None:
 
 
 def _is_hefesto_dualsense4unix_process(pid: int) -> bool:
-    """Confirma se o PID corresponde a um processo do Hefesto - Dualsense4Unix.
+    """Confirma se o PID corresponde a um processo do Hefesto - DualSense4Unix.
 
     Defesa contra reciclagem de PID: o kernel pode reatribuir o PID a outro
     processo do mesmo usuário (firefox, script pessoal) após crash do daemon.
@@ -156,7 +156,7 @@ def _terminate_predecessor(pid: int) -> None:
 
     Defesa em profundidade (AUDIT-FINDING-SINGLE-INSTANCE-PID-RECYCLE-01):
     antes de sinalizar, confirma via `/proc/<pid>/comm` e `/proc/<pid>/cmdline`
-    que o processo ainda é do Hefesto - Dualsense4Unix. Se o PID foi reciclado pelo kernel para
+    que o processo ainda é do Hefesto - DualSense4Unix. Se o PID foi reciclado pelo kernel para
     outro processo do mesmo usuário, trata o pid file como órfão e retorna sem
     enviar nenhum sinal.
     """
@@ -210,7 +210,7 @@ def acquire_or_takeover(name: str) -> int:
             logger.info("single_instance_takeover_iniciado",
                         name=name, predecessor_pid=predecessor)
             # `_terminate_predecessor` valida internamente se o PID é realmente
-            # do Hefesto - Dualsense4Unix via `_is_hefesto_dualsense4unix_process`; PIDs reciclados viram no-op  # noqa: E501
+            # do Hefesto - DualSense4Unix via `_is_hefesto_dualsense4unix_process`; PIDs reciclados viram no-op  # noqa: E501
             # (pid file tratado como órfão, sem SIGTERM ao alheio).
             _terminate_predecessor(predecessor)
         else:

@@ -186,12 +186,16 @@ def main() -> int:
     # trás foi a barra da janela, que é o primeiro lugar em que o produto
     # se apresenta.
     #
-    # O NOME É DIGITADO E NÃO LIDO DO DONO, e isso é dívida declarada: o
-    # `utils/identidade.py` grafa `Dualsense4Unix` (s minúsculo) em 306
-    # lugares de 110 arquivos. Ler de lá hoje poria a grafia errada na
-    # barra — a cura da grafia é frente própria, e quando ela fechar estas
-    # duas linhas passam a ler do dono.
-    barra.set_title("Hefesto — DualSense4Unix")
+    # A DÍVIDA FECHOU — `F6-O-NOME-TEM-UM-DONO`, 11/09/2026. Esta linha e a
+    # irmã dela na ponte da tela nasceram com o nome DIGITADO porque
+    # `utils/identidade.py` escrevia o `S` do DualSense em minúscula, em 427
+    # linhas de 174 arquivos, e ler do dono poria a grafia errada na barra
+    # dela. A grafia foi curada e o dono passou a carregar a string EXATA que
+    # a barra mostra — travessão incluído. Agora a barra LÊ. Quem digitar de
+    # novo é barrado por `scripts/check_a_grafia_do_nome.py`.
+    from hefesto_dualsense4unix.utils import identidade
+
+    barra.set_title(identidade.atual().nome_longo)
     barra.set_subtitle("a interface nova · mockup no motor de verdade")
     janela.set_titlebar(barra)
 

@@ -13,7 +13,7 @@ Função `get_active_window_info()` mantém compatibilidade com a API legada de
 `pid`, `exe_basename`.
 
 BUG-COSMIC-WLR-BACKEND-REGRESSION-01 (v3.1.0): re-introduz o cascade
-portal → wlrctl perdido no rebrand Hefesto → Hefesto - Dualsense4Unix.
+portal → wlrctl perdido no rebrand Hefesto → Hefesto - DualSense4Unix.
 O portal XDG é canônico onde existe (GNOME 46+); o `WlrctlBackend` cobre o
 bloco wlroots (Sway, Hyprland, niri, river) via
 `wlr-foreign-toplevel-management-unstable-v1`.

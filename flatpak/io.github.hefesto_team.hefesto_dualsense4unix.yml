@@ -1,4 +1,4 @@
-# Manifest Flatpak — Hefesto - Dualsense4Unix
+# Manifest Flatpak — Hefesto - DualSense4Unix
 # App ID: io.github.hefesto_team.hefesto_dualsense4unix
 #   IDENTIDADE-01 (25/08/2026): era `br.andrefarias.Hefesto`, do tempo em que o
 #   repositório vivia numa conta pessoal. A forma nova é a que o Flathub exige
@@ -45,7 +45,7 @@ finish-args:
   # Acesso a todos os dispositivos: hidraw (DualSense) + uinput (emulação de mouse/gamepad)
   # Nota: --device=input não basta para /dev/hidraw*; usar --device=all
   - --device=all
-  # Socket IPC do daemon Hefesto - Dualsense4Unix em $XDG_RUNTIME_DIR/hefesto-dualsense4unix/
+  # Socket IPC do daemon Hefesto - DualSense4Unix em $XDG_RUNTIME_DIR/hefesto-dualsense4unix/
   - --filesystem=xdg-run/hefesto-dualsense4unix:create
   # Perfis e configurações em ~/.config/hefesto-dualsense4unix/
   # Dentro do sandbox: ~/.var/app/io.github.hefesto_team.hefesto_dualsense4unix/config/hefesto-dualsense4unix/
@@ -85,7 +85,7 @@ finish-args:
   - --talk-name=org.freedesktop.portal.*
 
 modules:
-  # Módulo 1: todas as dependências Python do Hefesto - Dualsense4Unix num único pip install.
+  # Módulo 1: todas as dependências Python do Hefesto - DualSense4Unix num único pip install.
   #
   # Por que consolidado: o wheel `hefesto-dualsense4unix` é instalado com
   # `--no-deps` no módulo 3 (para evitar recursão de resolver do pip sobre
@@ -228,7 +228,7 @@ modules:
     cleanup:
       - /share/man
 
-  # Módulo 3: Hefesto - Dualsense4Unix — instalação do wheel local com --no-deps
+  # Módulo 3: Hefesto - DualSense4Unix — instalação do wheel local com --no-deps
   - name: hefesto
     buildsystem: simple
     build-commands:

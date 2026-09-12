@@ -7,7 +7,7 @@ Modelo pubsub simples:
     é descartado (política `drop_oldest`) e emite log.warning uma vez por
     subscriber congestionado no ciclo.
 
-Tópicos canônicos do domínio Hefesto - Dualsense4Unix (constantes em `EventTopic`):
+Tópicos canônicos do domínio Hefesto - DualSense4Unix (constantes em `EventTopic`):
   - `state.update`       — novo `ControllerState` completo.
   - `button.down` / `button.up` — mudanças de botão.
   - `battery.change`     — bateria mudou segundo debounce (ver ADR-008).
