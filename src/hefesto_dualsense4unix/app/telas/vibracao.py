@@ -160,7 +160,7 @@ def degraus_da_forca() -> tuple[str, ...]:
 #: esta frase faz e aquela não é o ENSINO PREVENTIVO — a outra só aparece
 #: quando o teto já cortou, e por isso nunca ensinou que o teto existe.
 DICA_DO_TETO_DA_MESA = (
-    "O Perfil de Bateria pode impor um teto: esta escolha continua valendo, "
+    "O Perfil de Bateria pode impor um teto: a escolha continua valendo, "
     "só não passa dele."
 )
 
@@ -169,8 +169,7 @@ DICA_DO_TETO_DA_MESA = (
 #: blocos estão na MESMA tabela, mais perto ainda, e a relação entre eles não
 #: estava dita em lugar nenhum antes de 03/09/2026.
 DICA_DOS_VALORES_QUE_PASSAM = (
-    "Os valores acima ainda passam pela intensidade escolhida ali em cima "
-    "antes de chegar ao controle."
+    "Esses valores ainda passam pelo degrau da coluna."
 )
 
 

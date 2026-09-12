@@ -1100,9 +1100,7 @@ def _minha_vez() -> int:
 #: desta casa existem para que um MAC não saia numa frase de tela — e a frase
 #: que ela substituiu (`o controle d4:2f:… não está na mesa agora`) o citava.
 FRASE_DO_CONTROLE_QUE_SAIU = (
-    "este controle se desligou entre o clique e agora. Sem o lugar dele na "
-    "lista do Hefesto não há como mirar só nele — e mandar assim faria "
-    "todos tremerem. Espere ele voltar e clique de novo.")
+    "este controle se desligou. Espere ele voltar e clique de novo.")
 
 
 def _uniq(o: dict[str, Any]) -> str:
@@ -1263,14 +1261,12 @@ def _mirar(ctx: Contexto, o: dict[str, Any], p: Any) -> str:
     uniq = _uniq(o)
     if not uniq:
         raise RuntimeError(
-            "o clique não disse em qual controle — e sem alvo todos "
-            "tremeriam. Clique o botão dentro da coluna do controle que você "
-            "quer sentir.")
+            "Clique o botão dentro da coluna do controle que você quer "
+            "sentir.")
     if not p.chamar("controller.target.set", index=_indice(ctx, uniq)):
         raise RuntimeError(
-            "o Hefesto não aceitou mirar este controle, e sem mira a vibração "
-            "iria para todos — então nada foi mandado. Veja se ele "
-            "está rodando, na aba Sistema, e tente de novo.")
+            "o Hefesto não aceitou mirar este controle, e nada foi mandado. "
+            "Veja se ele está rodando, na aba Sistema.")
     return uniq
 
 
@@ -1381,7 +1377,7 @@ FRASE_DA_MESA_EM_AUTO = (
 #: para ela descobrir o quê, olhando três botões.
 FRASE_DO_QUE_A_COLUNA_MOSTRA = (
     "esta coluna vai continuar mostrando %s: a sua escolha é igual à força "
-    "geral, e só o que difere dela fica guardado no controle."
+    "geral."
 )
 
 #: A FRASE DO `Auto` QUE DEVOLVE A COLUNA AO AJUSTE GERAL. O `%s` é o degrau que
@@ -1721,10 +1717,9 @@ def _gravar_a_forca(ctx: Contexto, p: Any, uniq: str, policy: str | None,
     chave = _chave_no_perfil(uniq)
     if not chave:
         raise RuntimeError(
-            "este controle não tem endereço fixo de doze hexa, e sem ele não há "
-            "chave no perfil para guardar a força só dele. Um controle sem "
-            "endereço estável muda de nome a cada conexão, e a escolha cairia "
-            "num aparelho diferente do que você está vendo.")
+            "este controle não tem um endereço fixo, e sem ele o perfil não "
+            "sabe guardar a força só dele — amanhã ela cairia em outro "
+            "aparelho.")
 
     loader = _perfil._com_o_src()
     try:
@@ -1794,13 +1789,12 @@ def forca(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
     degrau = str(o.get("forca") or "")
     if not degrau:
         raise RuntimeError(
-            "este clique não disse qual degrau — tente de novo em cima de um "
-            f"dos botões ({_degraus_que_a_tela_oferece()}).")
+            "Clique em cima de um dos degraus: "
+            f"{_degraus_que_a_tela_oferece()}.")
     uniq = _uniq(o)
     if not uniq:
         raise RuntimeError(
-            "o clique não disse em qual controle — e a força agora é de cada "
-            "um. Clique o degrau dentro da coluna do controle que você quer "
+            "Clique o degrau dentro da coluna do controle que você quer "
             "mudar.")
     return _aplicar_a_forca(ctx, p, uniq, degrau)
 
@@ -1837,14 +1831,11 @@ def intensidade(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | No
     uniq = _uniq(o)
     if not uniq:
         raise RuntimeError(
-            "o arraste não disse em qual controle — a intensidade agora é de "
-            "cada um. Use a barra dentro da coluna do controle que você quer "
-            "mudar.")
+            "Use a barra dentro da coluna do controle que você quer mudar.")
     bruto = str(o.get("valor") or "").strip()
     if not bruto:
         raise RuntimeError(
-            "a barra não mandou número nenhum. Arraste o cursor dela em vez de "
-            "clicar no rótulo ao lado.")
+            "Arraste o cursor da barra, em vez de clicar no número ao lado.")
     try:
         pontos = round(float(bruto))
     except ValueError as erro:
@@ -1899,20 +1890,16 @@ def motor(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     uniq = _uniq(o)
     if not uniq:
         raise RuntimeError(
-            "o arraste não disse em qual controle — cada controle tem as suas "
-            "duas barras de motor. Use a barra dentro da coluna do controle que "
-            "você quer mudar.")
+            "Use a barra dentro da coluna do controle que você quer mudar.")
     lado = str(o.get("lado") or "")
     motor_do_lado = _tela.LADO_PARA_MOTOR.get(lado)
     if not motor_do_lado:
         raise RuntimeError(
-            "este arraste não disse qual punho — tente de novo na barra do "
-            "motor esquerdo ou na do direito.")
+            "Use a barra do motor esquerdo ou a do direito.")
     bruto = str(o.get("valor") or "").strip()
     if not bruto:
         raise RuntimeError(
-            "a barra não mandou número nenhum. Arraste o cursor dela em vez de "
-            "clicar no rótulo ao lado.")
+            "Arraste o cursor da barra, em vez de clicar no número ao lado.")
     try:
         pontos = round(float(bruto))
     except ValueError as erro:
@@ -1933,7 +1920,7 @@ def motor(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     if str(resposta.get("status") or "") != "ok":
         raise RuntimeError(
             str(resposta.get("motivo")
-                or "o Hefesto não aceitou gravar esta barra, e não disse por quê"))
+                or "o Hefesto não gravou esta barra. Tente de novo."))
     # E O TESTE VIVO SEGUE O ARRASTE — o "ao vivo" que ela pediu. Depois da
     # gravação, nunca antes: o que ela sente tem de ser o que ficou gravado.
     #

@@ -1061,9 +1061,8 @@ def _trilho_arrastavel(valor, teto, campo):
     mover o polegar dele.
     """
     return _trilho(valor, teto, PASSO, campo, "intensidade",
-                   f'Arraste para escolher quanto da vibração que o jogo pede'
-                   f' chega a este controle — de 0 a {teto}%. Grava na hora, no'
-                   f' perfil ativo, só para ele.')
+                   f'Quanto da vibração chega a este controle — 0 a {teto}%.'
+                   f' Grava na hora, só para ele.')
 
 
 def _trilho(valor, teto, passo, campo, papel, titulo, extra=""):
@@ -1253,11 +1252,13 @@ def _barra_de_motor(valor, sigla, m, ligado, botao, vazio=False):
     cena põe os dois de acordo.
     """
     campo = f"barra-{sigla}"
-    titulo = (f'Arraste para escolher quanto da vibração que o jogo pede chega'
-              f' a {m["nome"].lower()} — de 0 a {TETO_DO_MOTOR}%. Ela MULTIPLICA'
-              f' o degrau da coluna: {TETO_DO_MOTOR}% deixa como o degrau pediu,'
-              f' 0 deixa este motor mudo neste perfil. Grava na hora, no perfil'
-              f' ativo, só para este controle.')
+    # A FRASE DEIXOU DE SER MONTADA POR PEDAÇO — 11/09/2026, aprovada por ela.
+    # Ela colava `m["nome"].lower()` depois de `a` e saía sem artigo ("chega a
+    # motor de vibração esquerdo"); o punho é o que a pessoa procura na mão, e
+    # não depende de o nome da peça caber na regência.
+    titulo = (f'Quanto da vibração chega a este punho — 0 a {TETO_DO_MOTOR}% do'
+              f' degrau da coluna. Em 0, este motor fica mudo. Grava na hora, só'
+              f' para este controle.')
     trilho = _trilho(valor, TETO_DO_MOTOR, PASSO_DO_MOTOR, campo, "motor",
                      titulo, extra=f' data-lado="{sigla}"')
     return (f'<div class="motor mult{"" if ligado else " off"}"'
@@ -1736,8 +1737,7 @@ MIOLO = f'''
              diz — o que a aba É, e por que a fita do topo não vale nela. -->
         <span class="ajuda">?<span class="dica">
           O jogo pede uma vibração, e esta aba decide quanto dela chega a cada controle.<br><br>
-          <b>O endereço do ajuste é a coluna, não a fita</b> — os quatro estão sempre à vista,
-          então a fita do topo fica esmaecida de propósito.
+          <b>Ajuste na coluna do controle</b>: a fita do topo não escolhe nada aqui.
         </span></span>
       </div>
       <div class="quadro-corpo">
@@ -1766,7 +1766,7 @@ MIOLO = f'''
               <span class="ajuda" style="display:inline-block;vertical-align:-3px">?<span class="dica">
                 Quanto da vibração que o jogo pede chega ao controle.<br><br>
                 <b>Economia</b> 30% · <b>Balanceado</b> 100%, como o jogo pediu ·
-                <b>Máximo</b> 150%, mais forte do que ele pediu.<br><br>
+                <b>Máximo</b> 150%, mais forte.<br><br>
                 {DICA_DO_TETO_DA_MESA}<br><br>
                 <!-- O MECANISMO DO AUTO MUDOU DE CASA — 05-Q4 dela, 06/09/2026.
                      Ele era a segunda metade de `a05_vibracao.FRASE_DA_MESA_EM_AUTO`,
@@ -1774,24 +1774,32 @@ MIOLO = f'''
                      CRESCE. A faixa embaixo da grade reserva UMA linha e corta o
                      resto (medido: 189 caracteres é o último que cabe), então a
                      frase ficou com o FATO e o CONSERTO e o porquê veio para cá,
-                     que é onde há espaço para ele. -->
-                Com a <b>força geral</b> em Auto, a força escolhida numa coluna fica
-                guardada e não chega ao motor: o Auto muda com a bateria a cada
-                instante, e uma força por controle contra um número que se move faria
-                esse controle vibrar de um jeito imprevisível.
+                     que é onde há espaço para ele.
+
+                     E O PORQUÊ SAIU DAQUI EM 11/09/2026 (A4-058, aprovado por
+                     ela): ele JUSTIFICAVA a regra contra uma alternativa que
+                     ninguém propôs. O fato — a escolha fica guardada e não
+                     chega ao motor — é o que ela precisa, e é o que fica. -->
+                Com a <b>força geral</b> em Auto, a escolha de cada coluna fica
+                guardada e não chega ao motor.
               </span></span></span></div>
             <div><span class="sec-rot">Personalizado</span></div>
             <div><span class="sec-rot">{ESQ["rot"]}
               <span class="ajuda">?<span class="dica">
-                <b>{ESQ["nome"]}</b> ({ESQ["apelido"]}). {ESQ["nota"]}<br><br>Cada punho tem UM motor e cada um recebe UM valor — não existe "leve" e "forte" para cada. O da esquerda tem <b>contrapeso maior</b> e soa grosso; o da direita, contrapeso menor, soa fino.<br><br>
-                Desligue um lado e o jogo deixa de fazer aquele punho tremer — o outro
-                continua. Serve para quem sente enjoo com o motor pesado, e para bancada.<br><br>
-                A barra ao lado diz com que força esse motor entra no
-                <b>Testar</b>, de 0 a 255.
+                <!-- O PUNHO NO LUGAR DO NOME DA PEÇA — 11/09/2026, aprovado por ela.
+                      O `nome`/`apelido`/`nota` do CSV continuam donos do `title`
+                      do interruptor (`_coluna`) e do `mapa-do-controle`; aqui a
+                      frase é a que ela leu e aprovou, e ela fala do PUNHO, que é
+                      o que a mão procura. O registro do "não existe leve e forte
+                      para cada" mora na `.nota` desta página, que é onde ele
+                      deve morar. -->
+                <b>Motor do punho esquerdo</b>: contrapeso maior, som grosso.<br><br>
+                Desligue um lado e aquele punho para de tremer; o outro continua.<br><br>
+                A barra ao lado é a força desse motor no <b>Testar</b>.
               </span></span></span></div>
             <div><span class="sec-rot">{DIR["rot"]}
               <span class="ajuda">?<span class="dica">
-                <b>{DIR["nome"]}</b> ({DIR["apelido"]}). {DIR["nota"]}
+                <b>Motor do punho direito</b>: contrapeso menor, som fino.
               </span></span></span></div>
             <!-- A DICA DESTE `?` ABRE PARA A DIREITA, e o número é medido — 06/09/2026.
                  Ela carregava `style="left:auto;right:22px"`, que é o arranjo das
@@ -1808,9 +1816,8 @@ MIOLO = f'''
                  direita e cabe: x=505, fim em 835, dentro de 370..1550. -->
             <div><span class="sec-rot">Testar agora
               <span class="ajuda" style="display:inline-block;vertical-align:-3px">?<span class="dica">
-                <b>Testar</b> faz aquele controle tremer meio segundo com os valores das
-                barras daquela coluna; <b>Parar</b> corta a vibração dele agora e devolve
-                a mão ao jogo.<br><br>
+                <b>Testar</b> treme este controle por meio segundo, com os valores das
+                barras da coluna. <b>Parar</b> corta e devolve a vibração ao jogo.<br><br>
                 <!-- A NOTA DOS VALORES QUE PASSAM VOLTOU PARA CÁ — 05-Q2 dela,
                      05/09/2026: *"As duas na dica."* Ela é a única frase desta
                      aba que explica um resultado que a PRÓPRIA TELA produz (por
