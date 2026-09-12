@@ -800,7 +800,7 @@ def test_o_efeito_com_nome_nasce_e_volta(a03, tmp_path, monkeypatch):
     opcoes = a03.html_das_opcoes_de_pronto()
     assert f'value="{a03.PREFIXO_DO_MEU}Recuo do MK"' in opcoes, (
         f"o efeito salvo não entrou no campo de escolha:\n{opcoes}")
-    assert "──── Meus efeitos ────" in opcoes
+    assert a03.SEPARADOR_DOS_MEUS in opcoes
     assert isinstance(volta, dict) and volta.get("blocos"), (
         "o gesto não devolveu a lista nova — ela só veria o nome no tique "
         "seguinte, e um botão que parece não fazer nada é clicado duas vezes")
@@ -830,7 +830,7 @@ def test_a_lista_nao_promete_efeito_que_nao_existe(a03):
     (*"Ali é só exemplo"*).
     """
     opcoes = a03.html_das_opcoes_de_pronto()
-    assert "──── Meus efeitos ────" not in opcoes, (
+    assert a03.SEPARADOR_DOS_MEUS not in opcoes, (
         f"a lista trouxe o separador sem nenhum efeito salvo:\n{opcoes}")
     assert "Recuo do MK" not in opcoes, (
         "os dois nomes de EXEMPLO do desenho vazaram para o produto — a lista "

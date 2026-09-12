@@ -513,6 +513,12 @@ def test_a_falha_de_disco_diz_as_duas_metades(pac, monkeypatch) -> None:
                             PonteDeMentira())
     frase = str(erro.value).lower()
     assert "aparelho" in frase and "perfil" in frase, frase
-    assert "disco cheio" in frase, (
-        f"a razão de baixo sumiu da frase — quem lê fica sem o que consertar: "
-        f"{frase}")
+    # A RAZÃO DE BAIXO SAIU DA FRASE — 11/09/2026, aprovado por ela (A4-034).
+    # `disco cheio` é o texto cru de um `OSError`, e o cartão dela não é lugar de
+    # mensagem de sistema operacional. ELA NÃO SE PERDE: o `raise ... from erro`
+    # a mantém na cadeia, que é onde quem depura a lê — e é isso que se mede.
+    assert isinstance(erro.value.__cause__, OSError), (
+        "a razão de baixo saiu da frase E da cadeia — assim ela some de vez, e "
+        "quem depura fica sem o que aconteceu")
+    assert "disco cheio" not in frase, (
+        f"o texto cru do OSError voltou ao cartão dela: {frase}")

@@ -132,7 +132,7 @@ PRESETS: tuple[TriggerPresetSpec, ...] = (
         # DECISÃO DELA, 07/08/2026 (resposta 6): "Arco" sozinho é ambíguo em
         # português (arco de círculo, arco elétrico). O `name` em inglês fica —
         # ele é contrato de disco, IPC e DSX, e o perfil dela o lê.
-        "Bow", "Arco de flecha (Bow)",
+        "Bow", "Arco de flecha",
         params=(
             TriggerParamSpec("start", "Início", 0, 8, 1),
             TriggerParamSpec("end", "Fim", 1, 9, 7),
@@ -197,7 +197,7 @@ PRESETS: tuple[TriggerPresetSpec, ...] = (
         # DECISÃO DELA, 07/08/2026 (resposta 6): "Arma" não separava este modo
         # de "Arma automática" nem de "Arma semi-automática" — três botões da
         # mesma grade começavam pela mesma palavra.
-        "Weapon", "Disparo (Weapon)",
+        "Weapon", "Disparo",
         params=(_start(0, 9, 2), _end(1, 9, 5), _force(0, 255, 200)),
         description="Disparo de arma padrão.",
     ),

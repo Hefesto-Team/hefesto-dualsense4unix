@@ -475,7 +475,7 @@ MODOS_COM_CURVA = (MODO_DA_CURVA, MODO_DA_VIBRACAO)
 DICA_DO_MODO = {
  "Off": "Sem resistência nenhuma — o gatilho fica solto, como num controle comum.",
  "Rigid": "Trava dura do começo ao fim do curso. Serve para freio de carro e para arma travada.",
- "SimpleRigid": "A mesma trava dura, com um só ponto de ajuste em vez de dez.",
+ "SimpleRigid": "Trava dura, com um só ponto de ajuste em vez de dez.",
  "Pulse": "Um solavanco num ponto do curso e depois solta — o coice de um tiro único.",
  "PulseA": "Pulso com a subida mais suave: a força cresce antes do estalo.",
  "PulseB": "Pulso com a descida mais suave: o estalo vem e a força cai devagar.",
@@ -484,7 +484,7 @@ DICA_DO_MODO = {
  "Galloping": "Batidas ritmadas enquanto o gatilho está apertado — cavalo correndo, motor pegando.",
  "SemiAutoGun": "Uma trava, um estalo, e o gatilho volta. Um tiro por aperto.",
  "AutoGun": "Vibra continuamente enquanto está apertado — rajada.",
- "Machine": "Batidas rápidas e fortes enquanto apertado. É o padrão do Estilo FPS.",
+ "Machine": "Batidas rápidas e fortes enquanto apertado.",
  "Feedback": "Solto até certo ponto do curso, e daí em diante duro. O ponto é ajustável.",
  "Weapon": "Trava, solta no estalo e fica leve até o fim — espingarda.",
  "Vibration": "Treme o gatilho na frequência escolhida, sem opor força.",
@@ -600,7 +600,7 @@ def dica_do_pronto(modo_chave: str) -> str:
     campo passar a oferecer as onze, a dica nomeia as duas sozinha.
     """
     agora = _rotulo_do_modo(modo_chave)
-    fim = "Um efeito seu põe o modo com que ele foi guardado."
+    fim = "Um efeito seu volta ao modo com que foi guardado."
     destinos = destinos_do_campo_de_pronto(modo_chave)
     if not destinos:
         # SEM CURVA A OFERECER NÃO HÁ TROCA A ANUNCIAR. É o caminho que só se
@@ -612,9 +612,8 @@ def dica_do_pronto(modo_chave: str) -> str:
         return (f"Este gatilho está em «{agora}», e o campo mostra as curvas "
                 f"deste modo: escolher uma aplica as dez posições dela na hora, "
                 f"sem trocar o modo. {fim}")
-    return (f"Este gatilho está em «{agora}». Escolher uma curva pronta TROCA o "
-            f"modo dele para {para} na hora — é um clique, e já vai ao "
-            f"controle. {fim}")
+    return (f"Está em «{agora}». Escolher uma curva troca o modo para "
+            f"{para}, na hora. {fim}")
 
 
 def _tabela_da_curva(modo: str) -> tuple[dict[str, list[int]], dict[str, str]]:
@@ -795,6 +794,17 @@ CHAVE_DOS_MEUS = "gatilhos_meus_efeitos"
 #: opção. Sem ele, um efeito chamado `stop_hard` sequestraria a curva do
 #: produto — e o clique aplicaria outra coisa sem nada na tela dizendo.
 PREFIXO_DO_MEU = "meu:"
+
+#: O SEPARADOR DE GRUPO DA LISTA DE EFEITOS PRONTOS. Ele dizia
+#: `──── Meus efeitos ────`, e os oito traços de caixa saíram em 11/09/2026 por
+#: aprovação dela (A4-002): são desenho dentro de texto — um leitor de tela os
+#: soletra e nenhum tradutor sabe se os mantém.
+#:
+#: ELE É CONSTANTE PORQUE TRÊS LUGARES O ESCREVIAM: esta lista, o gerador
+#: `aba03.opcoes_pronto` e a régua que conta se ele nasce sem efeito salvo. Uma
+#: régua que DIGITA o texto que mede reprova a próxima melhora de língua em vez
+#: do defeito — é a família que esta casa mais paga.
+SEPARADOR_DOS_MEUS = "Meus efeitos"
 
 
 def meus_efeitos() -> dict[str, Any]:
@@ -1045,7 +1055,7 @@ def _do_lado(cfg: dict[str, Any], specs: Any) -> dict[str, Any]:
 #: aprovou — está no HTML publicado desde 26/08. O dono passa a ser este
 #: módulo, e o gerador a lê daqui: escrita nos dois, ela divergiria no dia em
 #: que alguém mexesse num só.
-SEM_AJUSTE = "Este modo não tem o que ajustar."
+SEM_AJUSTE = "Sem ajustes."
 
 
 #: O AVISO DO QUE NÃO COUBE SAIU — decisão dela, 02/09/2026, e ela publicou a
@@ -1448,7 +1458,8 @@ def html_das_opcoes_de_pronto(modo: str = MODO_DA_CURVA) -> str:
                       f'{_escapar(str(rotulos[chave]))}</option>')
     meus = meus_efeitos()
     if meus:
-        linhas.append('                <option disabled>──── Meus efeitos ────</option>')
+        linhas.append(f'                <option disabled>'
+                      f'{SEPARADOR_DOS_MEUS}</option>')
         for nome in sorted(meus):
             linhas.append(
                 f'                <option value="{PREFIXO_DO_MEU}{_escapar(nome)}">'
@@ -2201,9 +2212,8 @@ def _exigir_controle(o: dict[str, Any], gesto_: str) -> str:
     lugar = str(o.get("controle") or "").strip()
     if lugar:
         raise RuntimeError(
-            f"{gesto_}: não há controle no lugar {lugar.upper()} — esta coluna "
-            f"está vazia. Um gatilho é de um aparelho; sem aparelho não há onde "
-            f"aplicar. Ligue um controle neste lugar e ele pega o efeito.")
+            f"não há controle no lugar {lugar.upper()}. Ligue um aqui e ele "
+            f"pega o efeito.")
     raise ValueError(f"{gesto_}: o clique não disse em qual controle")
 
 
@@ -2335,10 +2345,8 @@ def _padroes(nome: str) -> list[int]:
     specs = _specs()
     if specs is None:
         raise RuntimeError(
-            "modo: não consegui abrir `app/actions/trigger_specs.py`, e sem ele "
-            "não sei quais ajustes este modo tem. Mandar `params` vazio faria o "
-            "daemon aplicar um efeito sem zona ativa — o gatilho ficaria solto e "
-            "a tela diria que aplicou.")
+            "modo: não consegui ler os ajustes deste modo, e aplicá-lo assim "
+            "deixaria o gatilho solto. Nada foi mandado.")
     spec = specs.get_spec(nome)
     if spec is None:
         raise ValueError(
@@ -2360,7 +2368,7 @@ def _curva(chave: str) -> tuple[list[int], str]:
     tp = _prontos()
     if tp is None:
         raise RuntimeError(
-            "efeito pronto: não consegui abrir `profiles/trigger_presets.py`.")
+            "efeito pronto: não consegui ler as curvas. Nada foi mandado.")
     for modo_, resolver in ((MODO_DA_CURVA, tp.resolve_feedback_preset),
                             (MODO_DA_VIBRACAO, tp.resolve_vibration_preset)):
         valores = resolver(chave)
@@ -2626,18 +2634,16 @@ def _guardar_no_perfil(ctx: Contexto | None, p: Any, uniq: str, disco: str,
     try:
         prof = perfil._com_o_src().load_profile(nome)
     except Exception:
-        return (f"o efeito FOI para o aparelho, mas não consegui ABRIR o perfil "
-                f"{nome!r} para guardá-lo. Ele vale até a próxima troca de perfil "
-                f"— no dia seguinte o gatilho volta a ser o de antes.")
+        return (f"o efeito foi para o aparelho, mas não entrou no perfil "
+                f"{nome}. Ele vale até você trocar de perfil.")
     try:
         novo = _com_os_gatilhos(prof, uniq, {disco: cfg})
         if novo is not None:
             _gravar_so_o_gatilho(novo, p)
     except Exception as erro:
         raise RuntimeError(
-            f"o efeito FOI para o aparelho, mas não consegui guardá-lo no "
-            f"perfil {nome!r}: {erro}. Ele vale até a próxima troca de perfil — "
-            f"no dia seguinte o gatilho volta a ser o de antes.") from erro
+            f"o efeito foi para o aparelho, mas não entrou no perfil "
+            f"{nome}. Ele vale até você trocar de perfil.") from erro
     # GRAVOU (ou não havia o que gravar): NADA A DIZER. A tela responde com a
     # piscada verde de ~1,5 s, que é "deu certo" SEM palavra nova — a decisão
     # dela na `03-Q4`. O `""` é a forma dessa escolha, e é a mesma de
@@ -2871,7 +2877,7 @@ def _conferir_o_desfecho(lado: str, modo_: str, ok: bool, motivo: str,
         # O TRADUTOR NÃO PODE DERRUBAR O GESTO nem calar o defeito. Sem ele a
         # frase é crua, e crua ainda diz mais que silêncio — é a mesma escolha
         # que `_na_lingua_da_tela` já faz com o motivo do daemon.
-        frase = f"{assunto} — o daemon respondeu, e nenhum controle recebeu."
+        frase = f"{assunto} — o Hefesto respondeu, e nenhum controle recebeu."
     raise RuntimeError(frase)
 
 
@@ -2921,7 +2927,7 @@ def modo(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
     ok, motivo, recibo = _aplicar(p, lado, chave, _padroes(chave), uniq, ctx)
     if not ok:
         raise RuntimeError(_na_lingua_da_tela(motivo, chave)
-                           or f"o daemon não aplicou o modo {chave!r}")
+                           or f"o Hefesto não aplicou o modo «{_rotulo_do_modo(chave)}»")
     return {"recado": recibo}
 
 
@@ -2971,16 +2977,14 @@ def pronto(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
         meia = _meia_do_efeito(meus_efeitos().get(nome), lado)
         if meia is None:
             raise RuntimeError(
-                f"'{nome}' não guardou nada para este gatilho. Um efeito seu é o "
-                f"par L2+R2, e o lado que estava sem modo na hora de guardar não "
-                f"entrou — escolha-o no outro gatilho, ou guarde de novo com os "
-                f"dois ajustados.")
+                f"«{nome}» não tem nada para este gatilho: quando ele foi "
+                f"guardado, só o outro lado estava ajustado.")
         modo_salvo = str(meia.get("mode") or "Off")
         params = [int(v) for v in (meia.get("params") or [])]
         ok, motivo, recibo = _aplicar(p, lado, modo_salvo, params, uniq, ctx)
         if not ok:
             raise RuntimeError(_na_lingua_da_tela(motivo, modo_salvo)
-                               or f"o daemon não aplicou o seu efeito {nome!r}")
+                               or f"o Hefesto não aplicou o efeito «{nome}»")
         return {"recado": recibo}
     if chave in ("", "custom", TRAVESSAO):
         raise ValueError(
@@ -3000,7 +3004,8 @@ def pronto(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
         # recusa é ele, e é dele que saem os rótulos `Posição 0..9` que a recusa
         # vai nomear.
         raise RuntimeError(_na_lingua_da_tela(motivo, modo_da_curva)
-                           or f"o daemon não aplicou a curva {chave!r}")
+                           or f"o Hefesto não aplicou a curva "
+                             f"«{_tabela_da_curva(modo_da_curva)[1].get(chave, chave)}»")
     return {"recado": recibo}
 
 
@@ -3046,16 +3051,12 @@ def ajuste(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
     forma = o.get("forma")
     if not isinstance(forma, dict) or not forma:
         raise RuntimeError(
-            "não consegui ler a coluna deste controle. A barra precisa do "
-            "`data-hef-forma` para o piloto recolher os campos — sem ele não sei "
-            "em que modo o gatilho está, e o daemon lê a lista de ajustes "
-            "INTEIRA: mandar um número solto trocaria os outros pelos padrões.")
+            "não consegui ler os ajustes desta coluna, e mandar um só trocaria "
+            "os outros. Nada foi mandado.")
     modo_ = str(forma.get(f"modo-chave-{sigla}") or "").strip()
     if not modo_ or modo_ == TRAVESSAO:
         raise RuntimeError(
-            "este gatilho não tem modo escolhido, e um ajuste é de um modo — é "
-            "ele que diz quantos parâmetros existem e o que cada um significa. "
-            "Escolha um modo primeiro.")
+            "este gatilho ainda não tem modo. Escolha um modo primeiro.")
     params = _ajustes_da_coluna(forma, sigla, modo_)
     try:
         i = int(str(o.get("i") or "").strip())
@@ -3081,7 +3082,7 @@ def ajuste(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
     ok, motivo, recibo = _aplicar(p, lado, modo_, params, uniq, ctx)
     if not ok:
         raise RuntimeError(_na_lingua_da_tela(motivo, modo_)
-                           or f"o daemon não aplicou o ajuste no modo {modo_!r}")
+                           or f"o Hefesto não aplicou o ajuste no modo «{_rotulo_do_modo(modo_)}»")
     return {"recado": recibo}
 
 
@@ -3126,9 +3127,7 @@ def ajuste(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
                            "params": _ajustes_da_coluna(forma, sigla, modo_)}
     if not dos_lados:
         raise RuntimeError(
-            "a coluna não trouxe modo nenhum. Os dois `<select>` de modo são "
-            "`modo-chave-e` e `modo-chave-d` — se eles mudaram de endereço, o "
-            "Guardar deixou de achar o que guardar.")
+            "não consegui ler o modo desta coluna. Nada foi guardado.")
     return dos_lados
 
 
@@ -3154,9 +3153,7 @@ def _o_par_da_coluna(forma: dict[str, Any]) -> dict[str, dict[str, Any]]:
                            "params": _ajustes_da_coluna(forma, sigla, modo_)}
     if not dos_lados:
         raise RuntimeError(
-            "a coluna não trouxe modo nenhum. Os dois `<select>` de modo são "
-            "`modo-chave-e` e `modo-chave-d` — se eles mudaram de endereço, o "
-            "Guardar deixou de achar o que guardar.")
+            "não consegui ler o modo desta coluna. Nada foi guardado.")
     return dos_lados
 
 
@@ -3230,10 +3227,7 @@ def em_todos(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
     forma = o.get("forma")
     if not isinstance(forma, dict) or not forma:
         raise RuntimeError(
-            "não consegui ler a coluna deste controle. O botão precisa do "
-            "`data-hef-forma` para o piloto recolher os campos — e sem eles não "
-            "sei qual efeito pôr em todos, porque o daemon não devolve o modo "
-            "do gatilho.")
+            "não consegui ler o efeito desta coluna. Nada foi mandado.")
     dos_lados = _o_par_da_coluna(forma)
 
     #: OS `uniq` DE QUEM ESTÁ NA MESA — é sob eles que o rascunho lembra o que
@@ -3269,18 +3263,15 @@ def em_todos(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
         # perfil não há seção global, e é a seção global que o terceiro controle
         # herda. Some na próxima troca de perfil, e a frase diz isso.
         raise RuntimeError(
-            "o efeito FOI para os controles ligados, mas não há perfil ativo "
-            "agora — e o que faz um controle novo já nascer com ele é o perfil. "
-            "Escolha um perfil na aba Perfis e clique de novo.")
+            "o efeito foi para os controles ligados, mas sem perfil ativo ele "
+            "não vale para os próximos. Escolha um perfil na aba Perfis.")
     loader = perfil._com_o_src()
     try:
         prof = loader.load_profile(nome)
     except Exception as erro:
         raise RuntimeError(
-            f"o efeito FOI para os controles ligados, mas não consegui ABRIR o "
-            f"perfil {nome!r} para guardá-lo. Ele vale até a próxima troca de "
-            f"perfil — e um controle que você ligar depois não vai pegá-lo "
-            f"({erro}).") from erro
+            f"o efeito foi para os controles ligados, mas não entrou no perfil "
+            f"{nome}. Um controle que você ligar depois não vai pegá-lo.") from erro
     novo = _com_os_gatilhos_de_todos(prof, dos_lados)
     if novo is not None:
         _gravar_so_o_gatilho(novo, p)
@@ -3390,9 +3381,7 @@ def guardar(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
     forma = o.get("forma")
     if not isinstance(forma, dict) or not forma:
         raise RuntimeError(
-            "não consegui ler a coluna deste controle. O botão precisa do "
-            "`data-hef-forma` para o piloto recolher os campos — sem ele não há "
-            "o que guardar, porque o daemon não devolve o modo do gatilho.")
+            "não consegui ler o efeito desta coluna. Nada foi guardado.")
 
     dos_lados = _o_par_da_coluna(forma)
 
@@ -3417,9 +3406,8 @@ def guardar(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
             # efeito que ESTÁ no disco — a pior forma de recibo.
             return {"blocos": _blocos_do_pronto(ctx)}
         raise RuntimeError(
-            "não há perfil ativo agora, e o efeito do gatilho é do perfil — não "
-            "da máquina. Escolha um perfil na aba Perfis, ou dê um nome ao "
-            "efeito para guardá-lo em 'Meus efeitos'.")
+            "sem perfil ativo não há onde guardar. Escolha um perfil na aba "
+            "Perfis, ou dê um nome ao efeito para guardá-lo em Meus efeitos.")
 
     loader = perfil._com_o_src()
     prof = loader.load_profile(nome)

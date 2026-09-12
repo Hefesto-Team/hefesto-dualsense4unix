@@ -114,16 +114,21 @@ PALAVRA_QUE_VAZOU = "Feedback"
 # tela e fica na língua dela.
 TERMOS_DO_DSX = ("Rigid", "Bow", "Galloping", "Machine", "Weapon")
 
-# Os dois rótulos que seguem carregando o termo em inglês. Até 06/08 isso era
+# Os rótulos que ainda carregam o termo em inglês. Até 06/08 isso era
 # PENDÊNCIA — "Arco" é ambíguo em português (arco de círculo, arco elétrico) e
 # "Arma" não separava de "Arma automática" nem de "Arma semi-automática".
 #
 # NOTA DATADA — 07/08/2026: deixou de ser pendência e virou DECISÃO DELA
 # (resposta 6 do painel): "Arco de flecha (Bow)" e "Disparo (Weapon)". O termo
-# em inglês FICA nos dois, de propósito, para ela reconhecer o modo num guia de
-# jogo em inglês. O nome da constante é preservado porque é o que a sprint e as
-# páginas de processo citam; o que mudou é o dono da escolha.
-PENDENCIA_DE_PALAVRA = frozenset({"Bow", "Weapon"})
+# em inglês FICAVA nos dois, de propósito, para ela reconhecer o modo num guia
+# de jogo em inglês.
+#
+# NOTA DATADA — 11/09/2026: ELA VOLTOU ATRÁS, e o conjunto FECHOU EM ZERO. Na
+# leva de língua (A4-013 e A4-014) os dois rótulos passaram a "Arco de flecha" e
+# "Disparo", sem parênteses. O que a decisão de 07/08 comprou — a desambiguação
+# — continua de pé: é o "de flecha" e o "Disparo", e não o termo em inglês.
+# Com a isenção vazia, o portão logo abaixo passa a cobrar os DEZENOVE.
+PENDENCIA_DE_PALAVRA: frozenset[str] = frozenset()
 
 
 def test_os_dezenove_names_sao_exatamente_os_de_hoje() -> None:
@@ -202,14 +207,18 @@ def test_nenhum_rotulo_repete_na_tela_o_nome_do_modo_em_ingles() -> None:
 
 
 def test_a_pendencia_de_palavra_nao_cresce_nem_envelhece() -> None:
-    """São DUAS, nomeadas — e desde 07/08 é decisão dela que elas fiquem.
+    """O conjunto é VAZIO desde 11/09/2026 — e um nome novo aqui é um buraco.
 
-    O portão continua estreito pelo mesmo motivo de antes: acrescentar um nome
-    aqui dispensa um rótulo de estar em português sem ninguém decidir nada.
+    Foram DUAS de 07/08 a 11/09 ("Bow" e "Weapon"), por decisão dela; na leva de
+    língua ela aprovou tirar o termo em inglês dos dois rótulos, e a isenção
+    fechou. O portão continua estreito pelo mesmo motivo de antes: acrescentar
+    um nome aqui dispensa um rótulo de estar em português sem ninguém decidir
+    nada.
     """
-    assert sorted(PENDENCIA_DE_PALAVRA) == ["Bow", "Weapon"], (
-        "só 'Bow' e 'Weapon' carregam o termo em inglês no rótulo, por decisão "
-        "dela de 07/08; acrescentar nome aqui é abrir buraco no portão"
+    assert sorted(PENDENCIA_DE_PALAVRA) == [], (
+        "a isenção de palavra fechou em 11/09/2026 e os dezenove rótulos "
+        "respondem pelo mesmo limite; acrescentar nome aqui é abrir buraco no "
+        "portão sem decisão dela"
     )
     por_nome = {spec.name: spec.label for spec in PRESETS}
     ja_curados = {
