@@ -91,6 +91,19 @@ def bancada() -> str:
     return caminho.read_text(encoding="utf-8")
 
 
+# A ÂNCORA É `class="fita"`, COM AS ASPAS, e não o prefixo `class="fita` —
+# 12/09/2026. A ALTURA-DA-VISTA-01 embrulhou a fita numa linha nova
+# (`<div class="fita-linha">`, que carrega marca, fita, contagem e perfil
+# ativo), e o prefixo passou a casar com o EMBRULHO: o recorte começava no
+# `.fita-linha` e terminava no primeiro `</div>` de dentro dele, muito antes
+# da fita acabar. O resultado é o pior tipo — a régua parou de pular a fita
+# que ela mandava pular, e acusou os chips do esqueleto como se fossem cor
+# cravada desta aba. *A régua digitava um prefixo e devia ler o elemento.*
+# `monta.fita()` escreve `<div class="fita"` ou `<div class="fita inerte"`,
+# e é isso que este padrão casa — nunca um nome de classe que só começa igual.
+_A_FITA = re.compile(r'<div class="fita(?: inerte)?"')
+
+
 def _pacote(a03, mesa, conectados):
     """O pacote inteiro para aquela mesa, com o perfil injetado pela porta.
 
@@ -120,8 +133,9 @@ def _depois_da_fita(doc: str) -> int:
     aqui, com nome e razão, e não um `if` escondido no laço: **isenção sem razão
     é ponto cego com nome bonito.**
     """
-    i = doc.index('<div class="fita')
-    return doc.index("</div>", doc.index('class="fita', i)) + len("</div>")
+    achou = _A_FITA.search(doc)
+    assert achou, "a fita do esqueleto sumiu da página"
+    return doc.index("</div>", achou.start()) + len("</div>")
 
 
 def _chips(a03, r, mesa) -> dict[str, str]:
