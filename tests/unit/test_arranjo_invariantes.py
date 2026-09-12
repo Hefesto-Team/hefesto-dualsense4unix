@@ -46,8 +46,8 @@ import ast
 import math
 import re
 from collections.abc import Iterator
+from typing import Any
 from pathlib import Path
-from typing import NamedTuple
 
 import pytest
 
@@ -545,9 +545,13 @@ def test_a_regua_da_copia_sabe_recusar() -> None:
 #:   ao lado: abre com duplo clique e não tem para onde navegar.
 #: * ``src/hefesto_dualsense4unix/interface/paginas/mapa-das-portas.html`` — **a
 #:   cópia do produto**, versionada e viva. É para ela que a ``08-conexoes.html``
-#:   publicada aponta, e é a que a GUI carrega no ``WebKit2.WebView``. Não é
-#:   gerada: ninguém em ``src/hefesto_dualsense4unix/interface/`` a escreve,
-#:   então a igualdade abaixo é mantível.
+#:   publicada aponta, e é a que a GUI carrega no ``WebKit2.WebView``.
+#:   **ELA PASSOU A SER GERADA EM 11/09/2026** — `interface/pagina_do_mapa.py`
+#:   a escreve, lendo a origem congelada e aplicando as `EDICOES`. A linha
+#:   que estava aqui dizia o contrário (*"não é gerada: ninguém a escreve"*)
+#:   e era a premissa da igualdade DECLARADA que este arquivo mantinha; ela
+#:   sai porque virou mentira, e o que entra no lugar é melhor: a igualdade
+#:   deixou de ser declarada e passou a ser CALCULADA.
 #: * ``mockup/mapa-das-portas.html`` — **a referência do desenho**, a bancada.
 #:
 #: OS DOIS ENDEREÇOS MUDARAM, e a régua não tinha ido junto — corrigido em
@@ -588,139 +592,61 @@ _CAMINHOS_DO_MOCKUP_DO_ARRANJO = (
 _CASAS_VERSIONADAS = (_ORIGEM_CONGELADA, _COPIA_DO_PRODUTO)
 
 
-class _Divergencia(NamedTuple):
-    """Um pedaço em que a cópia do produto PODE diferir da origem congelada.
+# ══ A IGUALDADE DEIXOU DE SER DECLARADA E PASSOU A SER CALCULADA ═══════
+#
+# ATÉ 11/09/2026 ESTE ARQUIVO GUARDAVA A LISTA DAS DIVERGÊNCIAS: um botão de
+# voltar, catorze trocas de palavra, e a promessa de que fora dali as duas casas
+# eram byte a byte iguais. A lista funcionou — ela pegou divergência de verdade
+# mais de uma vez — e tinha um teto: **quem escrevia na página tinha de escrever
+# aqui também**, e as duas escritas moram em arquivos diferentes. Foi assim que a
+# leva da língua reescreveu nove frases da página e este arquivo ficou vermelho
+# sozinho, com treze pedaços divergindo e uma lista que falava de outros onze.
+#
+# O QUE MUDOU: a cópia do produto NASCE de `interface/pagina_do_mapa.py`, que lê
+# a origem congelada e aplica as `EDICOES` — cada uma com a data e o motivo, no
+# mesmo arquivo em que a mudança é escrita. A régua não precisa mais de uma lista
+# própria: ela RODA o gerador e compara. Divergir em silêncio deixou de ser uma
+# coisa que se pode fazer sem querer.
+#
+# POR QUE ISTO NÃO É AFROUXAR: o que a igualdade declarada prometia — *"fora do
+# que está declarado, as duas casas são idênticas"* — continua valendo palavra
+# por palavra, e agora é CONSTRUÍDO em vez de conferido. O que se perdeu foi a
+# chance de escrever uma declaração e esquecer de levar a mudança à página.
 
-    Nasceu do mesmo desconforto que o ``SERVE_UM_LADO_SO`` do
-    ``test_install_serve_os_dois_lados_da_cerca.py``: uma lacuna sem dono vira
-    paisagem. Aqui a lacuna não é "esta parte não é medida" — é "esta parte é
-    medida como EXATAMENTE este bloco". Nada mais se esconde dentro dela, e
-    mexer no botão obriga a redeclarar, com data nova.
+
+def _o_que_o_gerador_escreve() -> str:
+    """A página do produto como `pagina_do_mapa` a escreve, agora.
+
+    Importada aqui dentro e não no topo: o import roda `_bloco_do_censo`, que LÊ
+    a origem congelada do disco. No topo, uma árvore sem aquele arquivo
+    derrubaria a coleta do módulo INTEIRO — e as trinta invariantes do motor, que
+    não têm nada com esta página, sumiriam do sumário sem uma linha de erro.
     """
+    from hefesto_dualsense4unix.interface import pagina_do_mapa
 
-    na_origem: str
-    no_produto: str
-    porque: str
+    return pagina_do_mapa.pagina()
 
 
-#: O botão de voltar, e por que ele NÃO pode ir para a origem congelada.
-#:
-#: Medido em 31/08/2026: a pasta da sprint tem três arquivos — ``fumaca.js``,
-#: ``LEIA.md`` e o mockup. **Não há ``08-conexoes.html`` ali**, e o ``LEIA.md``
-#: diz que aquele arquivo se abre com duplo clique, autocontido. Copiar o botão
-#: para lá entregaria um botão que não vai a lugar nenhum — pior do que não ter
-#: botão. As duas cópias, portanto, NÃO PODEM ser byte-idênticas, e a régua que
-#: exigia isso estava pedindo o impossível.
-_VOLTAR_NA_ORIGEM = '  <header class="topo">\n'
-_VOLTAR_NO_PRODUTO = """\
-  <header class="topo" style="position:relative;padding-left:132px">
-    <!-- O BOTÃO DE VOLTAR — 30/08/2026, pergunta dela: "ok temos um botão pra vir
-         pra cá. Mas e o botão pra voltar?". Não havia nenhum href de saída nesta
-         página. O destino não é chute: `grep -l mapa-das-portas.html layout/*.html`
-         devolve UMA aba, a Conexões. -->
-    <a href="08-conexoes.html" title="Volta para a aba Conexões, que é de onde este mapa se abre."
-       style="position:absolute;left:0;top:2px;display:inline-flex;align-items:center;gap:6px;
-              padding:5px 11px;border-radius:7px;text-decoration:none;
-              border:1px solid var(--border-forte);background:var(--panel);
-              color:var(--texto-suave);font-size:12px">← Voltar</a>
-"""
+def _edicoes() -> tuple[Any, ...]:
+    from hefesto_dualsense4unix.interface import pagina_do_mapa
 
-#: A PALAVRA "mesa" SAIU DA TELA — 05/09/2026, ordem dela, e esta é a segunda
-#: razão pela qual as duas casas não podem ser iguais.
-#:
-#: Ela mandou, em duas partes: *"não é pra ter mesa em nada da interface"* e,
-#: corrigindo a primeira leva, *"muda o termo pra objeto e sinônimos nesses
-#: casos"*. A cópia do produto é TELA — ela a abre pelo link da aba Conexões —,
-#: logo a palavra tinha de sair de lá.
-#:
-#: A ORIGEM CONGELADA NÃO PODE RECEBER A TROCA, e o motivo é medido, não de
-#: gosto: ela é a **especificação executável do motor**. O
-#: `tests/fixtures/motor_do_arranjo_do_mockup.js` EXTRAI o `<script>` dela e
-#: roda 120 cenários em `node`; o JSON de ouro que sai daí é a prova de
-#: equivalência do porte em Python, e
-#: `test_o_ouro_ainda_e_o_que_o_mockup_diz_hoje` reprova se o ouro se afastar
-#: dela. Reescrever o texto ali reescreveria o ouro — e apagaria o registro de
-#: como o motor falava em 24/08/2026, que é o que aquela pasta datada é.
-#:
-#: A DUAS FRASES DO MOTOR (as de "altura da mesa") divergem TAMBÉM no Python, e
-#: lá a divergência tem a sua própria declaração, com a sua própria mordida:
-#: `DIVERGENCIA_DA_PALAVRA_MESA`, em
-#: `tests/unit/test_arranjo_da_mesa_bate_com_o_mockup.py`.
-#:
-#: **Nenhuma destas pode mudar mais do que a palavra** — o
-#: `test_nenhuma_troca_de_palavra_mudou_a_frase` logo abaixo é quem exige isso,
-#: e é o que impede esta lista de virar a porta dos fundos da igualdade.
-_A_PALAVRA_QUE_SAIU: tuple[tuple[str, str], ...] = (
-    # QUATRO PARES SAÍRAM DAQUI EM 11/09/2026, e a régua mandou: *"perdão morto,
-    # APAGUE o par"*. Eles não morreram porque a palavra voltou — morreram
-    # porque a PÁGINA foi reescrita. A PAGINAS-ESPECIAIS-B1 mudou as frases
-    # inteiras por aprovação dela («Como está hoje» no lugar de «Como está o meu
-    # arranjo», a lição do adaptador refeita), e um perdão que descreve uma
-    # frase que não existe mais deixa a próxima pessoa procurando o que não há.
-    # Conferido antes de sair: a palavra banida NÃO voltou à tela desta página —
-    # o que sobra dela são nomes de classe CSS e um `data-modo`, que são
-    # endereço de código e não texto que alguém lê.
-    ("— o mapa da sua mesa", "— o mapa dos seus objetos"),
-    ('porque: "entrada direta, mas na altura da mesa"',
-     'porque: "entrada direta, mas na altura da escrivaninha"'),
-    ("Bom quando desmontar a mesa custa caro.",
-     "Bom quando desmontar o arranjo custa caro."),
-    ('out.push("os dongles ficam na altura da mesa, não no alto do rack")',
-     'out.push("os dongles ficam na altura da escrivaninha, não no alto do rack")'),
-    ("pode não caber na sua mesa — escolha o que cabe.",
-     "pode não caber na sua escrivaninha — escolha o que cabe."),
-    ("</span> e a sua mesa fica no melhor arranjo que este hardware permite.",
-     "</span> e o seu arranjo fica no melhor que este hardware permite."),
-    ('">Ver como a mesa estava ', '">Ver como o arranjo estava '),
-    ('"Esta mesa está no melhor arranjo que eu conheço."',
-     '"Este arranjo é o melhor que eu conheço."'),
-    ('"Esta é a mesa de agora — "', '"Este é o arranjo de agora — "'),
-    (">Controles na mesa:</span>", ">Controles ligados:</span>"),
-)
+    return tuple(pagina_do_mapa.EDICOES)
 
-_PORQUE_A_PALAVRA_SAIU = (
-    "05/09/2026 — a palavra “mesa” saiu da tela por ordem dela (*\"muda o termo "
-    "pra objeto e sinônimos nesses casos\"*). A cópia do produto é tela; a "
-    "origem congelada é a especificação executável de onde o `fumaca.js` "
-    "extrai o motor para produzir o ouro de 120 cenários, e reescrevê-la "
-    "reescreveria a prova de equivalência do porte."
-)
 
-#: A lista inteira das divergências justificadas: o botão de voltar (31/08/2026)
-#: e as catorze trocas de palavra (05/09/2026).
-_DIVERGENCIAS_DECLARADAS = (
-    _Divergencia(
-        na_origem=_VOLTAR_NA_ORIGEM,
-        no_produto=_VOLTAR_NO_PRODUTO,
-        porque=(
-            "30/08/2026 — o botão de voltar, que ela pediu com estas palavras: "
-            '"ok temos um botão pra vir pra cá. Mas e o botão pra voltar?". Ele '
-            "aponta para `08-conexoes.html`, que existe ao lado da cópia do "
-            "produto e NÃO existe na pasta da sprint (só `fumaca.js`, `LEIA.md` "
-            "e o mockup). Levá-lo para a origem congelada criaria link quebrado."
-        ),
-    ),
-    *(
-        _Divergencia(na_origem=antes, no_produto=depois, porque=_PORQUE_A_PALAVRA_SAIU)
-        for antes, depois in _A_PALAVRA_QUE_SAIU
-    ),
-)
+#: Toda `porque` de edição tem de trazer a DATA. É o que separa uma mudança
+#: decidida de uma mudança que alguém fez e ninguém sabe quando — e é a única
+#: coisa que uma lista de perdões não consegue provar sozinha.
+_DATA_NA_RAZAO = re.compile(r"\b\d{2}/\d{2}/\d{4}\b")
+
+#: OS PESOS DO MOTOR, lidos das regras em vez de digitados. São eles que decidem
+#: em que entrada cada aparelho fica; uma edição que mexesse num deles mudaria a
+#: RESPOSTA da página sem mudar uma palavra da tela.
+_PESO_DA_REGRA = re.compile(r"\{\s*n:\s*(-?\d+),\s*quando:")
+
 
 #: Link relativo para outra página, que é o único tipo que este mockup usa.
 #: Âncora, `http(s):` e `mailto:` ficam de fora porque não são arquivo no disco.
 _LINK_RELATIVO_DO_MOCKUP = re.compile(r'href="(?!https?:|//|#|mailto:)([^"#?]+\.html)"')
-
-
-def _descontar_o_declarado(produto: str) -> str:
-    """A cópia do produto com cada divergência declarada trocada pela da origem.
-
-    Separado do teste de propósito: assim a régua pode ser mordida sem tocar em
-    arquivo nenhum — ver ``test_a_regua_da_igualdade_sabe_recusar``.
-    """
-    reduzido = produto
-    for divergencia in _DIVERGENCIAS_DECLARADAS:
-        reduzido = reduzido.replace(divergencia.no_produto, divergencia.na_origem, 1)
-    return reduzido
 
 
 def test_o_mockup_carrega_os_mesmos_numeros_que_o_python() -> None:
@@ -757,54 +683,154 @@ def test_o_mockup_carrega_os_mesmos_numeros_que_o_python() -> None:
 
 
 def test_as_duas_casas_versionadas_do_mockup_nao_andam_sozinhas() -> None:
-    """Corrigir nos DOIS foi a palavra dela, e esta linha é o que a mantém viva.
+    """Corrigir nos DOIS foi a palavra dela, e agora é o gerador quem corrige.
 
     A origem congelada é a especificação executável do motor; a cópia do produto
-    é o que ela abre. Se as duas divergirem em silêncio, o ``fumaca.js`` e o
-    porte em Python passam a descrever uma tela que não é a que ela vê — que é o
-    defeito das duas versões vivas, escrito de outro jeito.
+    é o que ela abre; a bancada é o que ela olha antes de aprovar. Se elas
+    divergirem em silêncio, o `fumaca.js` e o porte em Python passam a descrever
+    uma tela que não é a que ela vê.
 
-    A igualdade desconta as divergências DECLARADAS, e só elas. Cada uma tem de
-    estar presente na cópia do produto, ausente da origem, e aparecer uma vez
-    só: o que sobrar depois do desconto tem de bater byte a byte.
+    A régua não compara mais texto contra uma lista de perdões: ela RODA
+    `pagina_do_mapa.pagina()` e cobra que as duas casas escritas sejam o que ele
+    escreve. Uma mudança feita direto no HTML — a mão inteira que esta página
+    sempre teve — reprova aqui, nomeando o comando que a devolve ao lugar.
     """
     raiz = _FONTE_DO_MOTOR.parents[3]
-    textos = {}
-    for caminho in _CASAS_VERSIONADAS:
+    esperado = _o_que_o_gerador_escreve()
+    for caminho in (_COPIA_DO_PRODUTO, _REFERENCIA_DO_DESENHO):
         arquivo = raiz / caminho
         assert arquivo.exists(), (
             f"{caminho} não está nesta árvore — mas é versionado. Sem ele a "
             "igualdade passaria por vacuidade, que é o pior estado de um portão")
-        textos[caminho] = arquivo.read_text(encoding="utf-8")
+        assert arquivo.read_text(encoding="utf-8") == esperado, (
+            f"{caminho} não é o que `interface/pagina_do_mapa.py` escreve.\n"
+            "Esta página é GERADA desde 11/09/2026 — mexer no HTML à mão é a\n"
+            "mão que a fez divergir treze vezes da origem congelada.\n"
+            "FAÇA ASSIM:\n"
+            "  1. escreva a mudança como uma `Edicao` em `pagina_do_mapa.EDICOES`,\n"
+            "     com a data e o motivo;\n"
+            "  2. `python3 -m hefesto_dualsense4unix.interface.pagina_do_mapa`;\n"
+            "  3. `scripts/check_o_desenho_aprovado.py --publicar mapa-das-portas.html`.")
 
-    origem = textos[_ORIGEM_CONGELADA]
-    produto = textos[_COPIA_DO_PRODUTO]
 
-    for divergencia in _DIVERGENCIAS_DECLARADAS:
-        assert produto.count(divergencia.no_produto) == 1, (
-            "a divergência declarada não aparece exatamente uma vez em "
-            f"{_COPIA_DO_PRODUTO} — declaração e arquivo se separaram.\n"
-            f"  motivo declarado: {divergencia.porque}")
-        assert divergencia.no_produto not in origem, (
-            f"o pedaço declarado como exclusivo do produto apareceu em "
-            f"{_ORIGEM_CONGELADA}. Se ele passou a valer lá, a declaração é que "
-            "tem de sair — e o link tem de existir naquela pasta.\n"
-            f"  motivo declarado: {divergencia.porque}")
-        assert origem.count(divergencia.na_origem) == 1, (
-            f"o pedaço que a origem tem no lugar da divergência sumiu de "
-            f"{_ORIGEM_CONGELADA}; a declaração ficou velha.\n"
-            f"  motivo declarado: {divergencia.porque}")
+def test_toda_edicao_do_gerador_acha_o_seu_alvo_uma_vez() -> None:
+    """Edição que erra o alvo é edição que não aconteceu — e cala.
 
-    assert _descontar_o_declarado(produto) == origem, (
-        "as duas casas versionadas de mapa-das-portas.html divergiram fora do "
-        "que está declarado — corrigir numa e não na outra é o defeito que esta "
-        "régua mata.\n"
-        f"  origem congelada: {_ORIGEM_CONGELADA}\n"
-        f"  cópia do produto: {_COPIA_DO_PRODUTO}\n"
-        "FAÇA UMA das duas:\n"
-        "  1. LEVE a mesma correção para a outra casa; ou\n"
-        "  2. DECLARE em `_DIVERGENCIAS_DECLARADAS`, com data e com o motivo de "
-        "a outra casa não poder receber aquele pedaço.")
+    `str.replace` de um pedaço que não existe devolve o texto intacto e não
+    levanta nada. É por isso que cada `antes` é cobrado na ORIGEM e cada `depois`
+    no PRODUTO: uma edição que envelheceu some da página sem um sinal, e a
+    próxima pessoa lê a declaração como se ela ainda valesse.
+    """
+    raiz = _FONTE_DO_MOTOR.parents[3]
+    origem = (raiz / _ORIGEM_CONGELADA).read_text(encoding="utf-8")
+    produto = (raiz / _COPIA_DO_PRODUTO).read_text(encoding="utf-8")
+    edicoes = _edicoes()
+    assert edicoes, "nenhuma edição — a régua passaria por vacuidade"
+    for numero, edicao in enumerate(edicoes, 1):
+        assert origem.count(edicao.antes) == 1, (
+            f"edição {numero}: o pedaço aparece {origem.count(edicao.antes)} "
+            f"vez(es) na origem congelada, e tem de aparecer UMA.\n"
+            f"  motivo declarado: {edicao.porque}")
+        assert produto.count(edicao.depois) == 1, (
+            f"edição {numero}: o que ela escreve aparece "
+            f"{produto.count(edicao.depois)} vez(es) na cópia do produto. "
+            "Ou a página não foi regerada, ou duas edições escrevem a mesma "
+            f"coisa.\n  motivo declarado: {edicao.porque}")
+        assert _DATA_NA_RAZAO.search(edicao.porque), (
+            f"edição {numero} não diz QUANDO foi decidida: {edicao.porque!r}. "
+            "Uma razão sem data é uma razão que ninguém consegue conferir "
+            "depois — e é a porta por onde uma mudança sem dono entra.")
+
+
+def test_nenhuma_edicao_mexe_nos_pesos_do_motor() -> None:
+    """O que a página DECIDE é o que a origem decide — medido nos pesos.
+
+    Esta é a metade que a igualdade de texto nunca cobriu direito: uma edição
+    pode trocar uma frase sem mexer em nada, e pode trocar um `n: 100` por um
+    `n: 10` sem mudar uma palavra da tela. A segunda mudaria a entrada que o
+    mapa escolhe para cada aparelho — e o ouro de 120 cenários, que nasce da
+    ORIGEM, continuaria verde.
+
+    Os pesos saem das duas casas por leitura, nunca digitados aqui: uma lista de
+    números copiada para dentro de uma régua é a régua medindo a si mesma.
+    """
+    raiz = _FONTE_DO_MOTOR.parents[3]
+    origem = _PESO_DA_REGRA.findall((raiz / _ORIGEM_CONGELADA).read_text(encoding="utf-8"))
+    produto = _PESO_DA_REGRA.findall((raiz / _COPIA_DO_PRODUTO).read_text(encoding="utf-8"))
+    assert len(origem) >= 10, (
+        f"li {len(origem)} pesos na origem congelada, e a tabela de regras tem "
+        "mais que isso — o seletor ficou cego e a régua passaria por vacuidade")
+    assert produto == origem, (
+        "os pesos das regras do produto não são os da origem congelada. "
+        "Alguma edição mexeu no que a página DECIDE, não no que ela diz — e o "
+        f"ouro do `fumaca.js` não veria.\n  origem:  {origem}\n  produto: {produto}")
+
+
+def test_a_regua_da_igualdade_sabe_recusar() -> None:
+    """A MORDIDA: um byte fora do lugar derruba a comparação.
+
+    O dublê é do tamanho do problema. Se a régua só soubesse dizer "são iguais",
+    ela passaria igual no dia em que alguém editasse o HTML à mão — que é
+    exatamente o gesto que ela existe para impedir.
+    """
+    raiz = _FONTE_DO_MOTOR.parents[3]
+    esperado = _o_que_o_gerador_escreve()
+    produto = (raiz / _COPIA_DO_PRODUTO).read_text(encoding="utf-8")
+    assert produto == esperado
+
+    # 1. uma letra a mais na página reprova
+    assert produto.replace("</html>", "</html> ") != esperado
+
+    # 2. e uma edição ARRANCADA do gerador também: sem ela, o que o gerador
+    #    escreve deixa de ser o que está no disco
+    from hefesto_dualsense4unix.interface import pagina_do_mapa
+
+    inteiras = pagina_do_mapa.EDICOES
+    for fora in range(len(inteiras)):
+        pagina_do_mapa.EDICOES = inteiras[:fora] + inteiras[fora + 1:]
+        try:
+            sem_uma = pagina_do_mapa.pagina()
+        finally:
+            pagina_do_mapa.EDICOES = inteiras
+        assert sem_uma != produto, (
+            f"arrancar a edição {fora + 1} não mudou a página — ela não faz nada, "
+            f"e uma edição que não muda nada é um perdão morto: {inteiras[fora].porque}")
+
+
+def test_a_palavra_que_ela_baniu_nao_esta_na_tela_do_mapa() -> None:
+    """A palavra saiu da TELA, e é na tela que se mede — não numa lista de pares.
+
+    Ordem dela, 05/09/2026: *"não é pra ter mesa em nada da interface"*, e a
+    correção do mesmo dia: *"muda o termo pra objeto e sinônimos nesses casos"*.
+
+    Até 11/09 esta régua conferia uma LISTA DE PARES — `("… a mesa …", "… o
+    arranjo …")` —, e a lista morreu quando a leva da língua reescreveu as
+    frases inteiras: os pares passaram a descrever texto que não existia mais.
+    Medir o RESULTADO não envelhece: a pergunta é *"uma pessoa lê a palavra?"*, e
+    quem responde é o dono do que o produto esconde.
+
+    A ORIGEM CONGELADA NÃO ENTRA, e é o ponto: ela ainda diz a palavra, e tem de
+    dizer — é o registro de como o motor falava em 24/08/2026, e o `fumaca.js`
+    extrai o `<script>` dela para produzir o ouro.
+    """
+    from hefesto_dualsense4unix.interface.frases_que_ela_baniu import (
+        texto_visivel_no_produto,
+    )
+
+    raiz = _FONTE_DO_MOTOR.parents[3]
+    banida = re.compile(r"\bmesas?\b", re.I)
+    na_origem = banida.findall(
+        texto_visivel_no_produto((raiz / _ORIGEM_CONGELADA).read_text(encoding="utf-8")))
+    assert na_origem, (
+        "a origem congelada não diz mais a palavra — ou ela foi reescrita (e "
+        "não podia ser), ou este leitor parou de ver o texto da tela. Nos dois "
+        "casos a régua abaixo estaria medindo o nada")
+    for caminho in (_COPIA_DO_PRODUTO, _REFERENCIA_DO_DESENHO):
+        visivel = texto_visivel_no_produto((raiz / caminho).read_text(encoding="utf-8"))
+        achados = banida.findall(visivel)
+        assert not achados, (
+            f"{caminho}: {len(achados)} ocorrência(s) da palavra que ela baniu "
+            f"chegam aos olhos de quem abre — {sorted(set(achados))}")
 
 
 def test_nenhum_botao_do_mockup_vai_a_lugar_nenhum() -> None:
@@ -828,67 +854,6 @@ def test_nenhum_botao_do_mockup_vai_a_lugar_nenhum() -> None:
                 f"lado ({mockup.parent}). Um botão que não vai a lugar nenhum é "
                 "pior do que não ter botão")
     assert links, "nenhum link relativo foi medido — a régua passaria por vacuidade"
-
-
-def test_a_regua_da_igualdade_sabe_recusar() -> None:
-    """Régua que só sabe passar não é régua — esta reprova o que não foi declarado.
-
-    O dublê é do tamanho do problema: uma mudança de UMA letra fora do pedaço
-    declarado tem de sobreviver ao desconto e derrubar a comparação.
-    """
-    origem = "a\n" + _VOLTAR_NA_ORIGEM + "b\n"
-    produto = "a\n" + _VOLTAR_NO_PRODUTO + "b\n"
-    assert _descontar_o_declarado(produto) == origem
-
-    # o desconto NÃO pode engolir uma segunda verdade que viajou de carona
-    contrabando = produto.replace("b\n", "B\n")
-    assert _descontar_o_declarado(contrabando) != origem
-
-    # e nem apagar o que ele não conhece: sem a divergência, nada muda
-    assert _descontar_o_declarado(origem) == origem
-
-
-def test_nenhuma_troca_de_palavra_e_porta_dos_fundos() -> None:
-    """Cada par de `_A_PALAVRA_QUE_SAIU` tira a palavra, e nada além disso passa.
-
-    Esta é a régua da régua. `_DIVERGENCIAS_DECLARADAS` é a única liberdade que
-    a igualdade byte a byte tem, e uma lista de perdões que ninguém confere é a
-    porta dos fundos: bastaria declarar `("<html", "<XXX")` para qualquer
-    divergência atravessar calada.
-
-    AS TRÊS EXIGÊNCIAS, e a primeira versão desta régua PROMETIA UMA QUARTA QUE
-    É FALSA. Ela exigia que o resto da frase ficasse idêntico, e não fica: o
-    português concorda com o substantivo, então *"o mapa da sua mesa"* vira *"o
-    mapa dos seus objetos"* — artigo e possessivo mudam junto, obrigados. Uma
-    régua que exige o impossível ou é apagada ou é afrouxada, e as duas saídas
-    são piores do que exigir o que é verdade:
-
-    1. o lado da origem DIZ a palavra e o do produto NÃO — é disso que a lista
-       trata, e um par que não fale de "mesa" não tem o que fazer aqui;
-    2. cada par é curto. É o que impede o perdão de engolir estrutura: um par
-       de duas linhas troca uma frase, um par de duzentas esconde um `<div>`;
-    3. cada par DISPARA nos dois arquivos. Perdão que não é usado é perdão
-       morto — a frase já mudou de outro jeito, e a entrada tem de sair.
-    """
-    for antes, depois in _A_PALAVRA_QUE_SAIU:
-        assert "mesa" in antes, f"par que não é sobre a palavra: {antes!r}"
-        assert "mesa" not in depois, f"o par manteve a palavra: {depois!r}"
-        assert len(antes) <= 90 and len(depois) <= 90, (
-            "par longo demais para ser uma troca de palavra — um perdão desse "
-            f"tamanho esconde estrutura:\n  origem:  {antes!r}\n  produto: {depois!r}"
-        )
-
-    raiz = _FONTE_DO_MOTOR.parents[3]
-    origem, produto = (raiz / c for c in _CASAS_VERSIONADAS)
-    if not (origem.exists() and produto.exists()):  # pragma: no cover
-        return
-    texto_origem = origem.read_text(encoding="utf-8")
-    texto_produto = produto.read_text(encoding="utf-8")
-    for antes, depois in _A_PALAVRA_QUE_SAIU:
-        assert antes in texto_origem, (
-            f"a origem congelada já não diz {antes!r} — perdão morto, APAGUE o par")
-        assert depois in texto_produto, (
-            f"a cópia do produto já não diz {depois!r} — perdão morto, APAGUE o par")
 
 
 # ══ 9. A MOTOR-5: A ABA CONSOME, E NÃO RECALCULA ═════════════════════════
@@ -947,6 +912,17 @@ _A_COPIA_DECLARADA: dict[str, str] = {
         "reprova a geração no dia em que o produto trocar qualquer uma destas "
         "frases, e é isso que a impede de virar segunda verdade. O que o produto "
         "PINTA vem do motor, por `mapa_da_mesa.veredito_do_quadrado`."
+    ),
+    "interface/pagina_do_mapa.py": (
+        "O GERADOR DA PÁGINA, e a frase está lá como ALVO de uma troca, não como "
+        "regra. Ele escreve `mapa-das-portas.html` lendo a origem congelada e "
+        "aplicando as `EDICOES`; uma delas troca a palavra que ela baniu dentro "
+        "de uma razão do motor, e para trocar é preciso nomear o que se troca. "
+        "A CÓPIA NÃO PODE ENVELHECER EM SILÊNCIO — que é o que esta varredura "
+        "existe para impedir: o gerador exige que cada `antes` apareça UMA vez "
+        "na origem e sai com `SystemExit` quando não aparece. No dia em que a "
+        "origem disser outra coisa, o gerador PARA; nenhuma outra cópia desta "
+        "casa tem essa garantia."
     ),
 }
 
