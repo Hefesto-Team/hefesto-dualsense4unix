@@ -20,8 +20,8 @@ faz as chamadas de verdade.
 
 A REGRA QUE MAIS PESA AQUI: A AUSÊNCIA DE DADO É UM VALOR
 ---------------------------------------------------------
-Com o serviço desligado, o mockup diz *"O serviço está **Ligado**"*, *"Pausado:
-**Sim, e volta pausado**"*, *"**Os 4** controles"* — são literais do desenho
+Com o serviço desligado, o mockup diz *"Serviço: **Ligado**"*, *"Pausado:
+**Sim — e continua depois de reiniciar**"*, *"**Os 4** controles"* — são literais do desenho
 (``src/hefesto_dualsense4unix/interface/aba09.py``), e a tela nova que os deixasse à mostra
 estaria **afirmando o estado do desenho**. É o defeito mais caro possível nesta
 aba. Toda função deste módulo devolve, no lugar do branco, **o que faltou**:
@@ -308,9 +308,11 @@ def linha_da_pausa(state: object) -> Linha:
     (``daemon/ipc_handlers.py:2140``) e os dois únicos leitores em ``app/`` são
     a aba inicial e a Emulação — **esta aba nunca o leu**.
 
-    E o texto diz **o que a pausa é**: ela fica gravada em disco e sobrevive a
-    desligar o computador. Sem essa frase, "Pausado: Sim" lê como estado do
-    momento, e a pessoa desliga o computador esperando que passe.
+    E O VALOR DIZ **O QUE A PAUSA É** — 11/09/2026, A1-007/008. Sem isso,
+    "Pausado: Sim" lê como estado do momento, e a pessoa desliga o computador
+    esperando que passe. Até esta data quem carregava o recado era a DICA, com
+    144 caracteres sobre disco e desligamento; dito no VALOR, a dica encolheu
+    para o que ela não diz — onde fica a saída.
     """
     if not isinstance(state, dict) or "paused" not in state:
         return Linha(
@@ -319,11 +321,10 @@ def linha_da_pausa(state: object) -> Linha:
         )
     if state.get("paused"):
         return Linha(
-            "Sim, e volta pausado",
+            "Sim — e continua depois de reiniciar",
             AVISO,
             GLIFO_AVISO,
-            "A pausa fica gravada em disco e sobrevive a desligar o "
-            "computador. O botão Retomar, ao lado, é a saída.",
+            "O botão Retomar, ao lado, tira o serviço da pausa.",
         )
     return Linha("Não", OK, GLIFO_OK, "O serviço está despachando as entradas normalmente.")
 
