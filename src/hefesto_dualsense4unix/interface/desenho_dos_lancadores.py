@@ -100,7 +100,19 @@ from hefesto_dualsense4unix.integrations import sandbox_dos_lancadores as _caixa
 
 SELOS = {
     "ok": "CHEGAM",
-    "warn": "NÃO CHEGAM",
+    #: **«COM IMPEDIMENTO» DESDE 11/09/2026 — A2-007, e ela aprovou**: *"ok
+    #: aprovadíssimo todas. Manda ver."*  # noqa-acento: citação literal dela
+    #:
+    #: ELE DIZIA «NÃO CHEGAM», e a contagem do topo (:func:`conta_html`) já
+    #: chamava o mesmo fato de *"N com impedimentos"* — duas palavras para uma
+    #: coisa só, a dois centímetros uma da outra, e quem lê tinha de traduzir
+    #: uma na outra. É a mesma cura que em 09/09 trocou «encontrados» por
+    #: «localizados» no topo.
+    #:
+    #: E HÁ UM SEGUNDO MOTIVO: sem nenhum caminho do produto que produza o
+    #: `ok`/`CHEGAM`, «NÃO CHEGAM» virou um negativo sem positivo — não há
+    #: contra o que lê-lo.
+    "warn": "COM IMPEDIMENTO",
     "off": "NÃO LOCALIZADO",
     "nao_sei": "NÃO SEI",
     #: **O POSITIVO DO PAR — 09/09/2026, LANCADORES-ZERO-01 §5.2**, e a palavra
@@ -355,8 +367,12 @@ SEM_LISTA = "<!-- ainda não há lista para este cartão -->"
 #: razão do de cima, e diz o que o travessão não dizia: a lista tem QUATRO
 #: origens (falta o atalho · linha intocável · você tirou · você dispensou), e
 #: vazia significa que nenhuma delas tem item — não que ninguém olhou.
-LISTA_VAZIA = ("Nenhum jogo com pendência, e nenhum que você tenha tirado ou "
-               "dispensado.")
+#:
+#: **ENCURTADA EM 11/09/2026 — A2-018, aprovada por ela.** As duas metades
+#: continuam inteiras; o que saiu foi a sintaxe torcida de *"nenhum que você
+#: tenha tirado ou dispensado"*, que é a construção que mais custa a quem
+#: traduz. 72 → 58 caracteres.
+LISTA_VAZIA = "Nada pendente, e você não tirou nem dispensou nenhum jogo."
 
 
 def acoes_html(lanc: Lancador) -> str:
@@ -512,21 +528,23 @@ def tela_do_registro_html(para_quem: str = NOVO_SEM_ALVO) -> str:
     :data:`TELA_DO_NOVO_TITULO`. Esta caixa é UMA, e chega-se a ela por dois
     caminhos; titulá-la com a palavra de um deles faria a metade das aberturas
     mostrar um título que contradiz a linha logo abaixo.
+
+    **O «?» ENCURTOU EM 11/09/2026 — A2-033, aprovada por ela: 403 → 165.** O
+    parágrafo do meio era a dica do campo escrita em prosa — o `placeholder`
+    logo abaixo já mostra `ryujinx · /opt/Ryujinx/Ryujinx ·
+    org.ryujinx.Ryujinx` —, e o de cima descrevia como o produto PROCURA, que é
+    mecânica e é dita de novo pela recusa de `_achar_o_que_ela_digitou`, no
+    momento em que o fato serve. O que sobrou é o que ela precisa antes de
+    digitar: o que vale, e que o produto confere antes de guardar.
     """
     return f'''<div class="tela-nova" id="{TELA_DO_NOVO}">
   <div class="tn-cx">
     <div class="tn-topo">
       <span class="tn-tit">{_e(TELA_DO_NOVO_TITULO)}</span>
       <span class="ajuda">?<span class="dica">
-        O Hefesto procura cada lançador de dois jeitos: o atalho
-        <code>.desktop</code> nas pastas de aplicativos e o comando no
-        <code>PATH</code>. Diga qualquer um dos dois e ele passa a procurar
-        também o seu.<br><br>
-        Vale o <b>comando</b> (<code>ryujinx</code>), o <b>caminho inteiro</b> de
-        um programa (<code>/opt/Ryujinx/Ryujinx</code>, e é assim que entra um
-        AppImage solto) ou o <b>nome do atalho</b>
-        (<code>org.ryujinx.Ryujinx</code>).<br><br>
-        O que você escrever é conferido no disco antes de ser guardado.
+        Diga o comando, o caminho do programa (é assim que entra um AppImage
+        solto) ou o nome do atalho — os três exemplos estão no campo. Confiro no
+        disco antes de guardar.
       </span></span>
       <a class="tn-x" href="#" title="Fechar">&times;</a>
     </div>
@@ -613,43 +631,19 @@ def linhas_de_jogos(itens: list[JogoNaLista], vazio: str = "") -> str:
     return "".join(linhas)
 
 
-#: O ENDEREÇO DA FRASE DO "?" QUE CONTA CONTROLE. Ele mora aqui pela mesma
-#: razão de :data:`ABRIR`: o gerador o escreve no `data-campo` e o pacote o
-#: emite na carga — digitá-lo duas vezes é como um endereço fica órfão.
-QUANTOS = "lanc-quantos"
-
-
-def quantos_html(n_ctrl: int, n_usb: int, n_bt: int) -> str:
-    """*"os **2** (1 no cabo, 1 no rádio)"* — o trecho do "?" que conta controle.
-
-    POR QUE ELE EXISTE, e é a última bolsa de mockup desta aba. Os CARTÕES
-    pararam de contar controle em 02/09/2026 (*"Contar controle aqui era
-    responder com um número que a pergunta não tem"*), e a régua do gerador
-    passou a reprovar um cartão que prometesse para um número. **O texto do
-    `?` ficou de fora da cura** — e o próprio `aba07.py` deixou dito, no
-    import: *"`CONECTADOS` fica — ele ainda responde pelo texto do '?'"*.
-
-    O QUE ISSO PÔS NA TELA DELA, medido em 03/09/2026 no WebKit da janela, com
-    UM DualSense no cabo:
-
-        cabeçalho (lido do aparelho)   ``● 1 controle: 1 USB · 0 BT``
-        o "?" logo abaixo, no mesmo quadro
-                                       ``…vale igual para os 2 (1 no cabo,
-                                         1 no rádio)…``
-
-    O `2` não vinha do aparelho: vinha de `monta.CONECTADOS`, a mesa do
-    DESENHO, derivada no import do gerador e congelada no HTML. É a mesma forma
-    da fita que dizia `P1 · Cosmic Red · USB` sobre um White — e a lei dela é a
-    mesma: *"se no topo tá mostrando controle white player 1, então cada aba
-    vai usar os controles lá de cima. Não mistura com a info dos mockups."*
-
-    AS PALAVRAS SÃO AS DELA, e só o ARTIGO se dobra ao número: com um controle
-    na mesa, *"para os 1"* seria trocar uma mentira por um erro de português.
-    Nada mais mudou de redação — o que mudou é de onde saem os três números.
-    """
-    artigo = "o" if n_ctrl == 1 else "os"
-    return (f"{artigo} <b>{n_ctrl}</b> ({n_usb} no cabo, "
-            f"{n_bt} no rádio)")
+# O ENDEREÇO `lanc-quantos` E A FUNÇÃO `quantos_html` SAÍRAM EM 11/09/2026, e
+# saíram JUNTOS com o trecho do "?" que os consumia — A2-002, aprovada por ela.
+#
+# O QUE ELES FORAM, e o custo está pago: o "?" do quadro dizia *"a resposta vale
+# igual para os 2 (1 no cabo, 1 no rádio)"*, e até 03/09 aquele `2` vinha de
+# `monta.CONECTADOS` — a mesa do DESENHO, congelada no HTML, ao lado de um
+# cabeçalho que LIA o aparelho. A cura daquele dia foi dar-lhe endereço e
+# alimentá-lo da mesa viva (`a07_lancadores.quantos_da_mesa`).
+#
+# POR QUE ELES SAEM AGORA: a frase inteira saiu. Ela **repetia o cabeçalho a
+# dois centímetros** (`2 controles: 1 USB · 1 BT`), que é o dono do número — e
+# um endereço sem consumidor faz o piloto pintar num `data-campo` que a página
+# não tem. Os três saem juntos ou nenhum sai.
 
 
 def conta_html(achados: int, impedidos: int) -> str:
@@ -874,10 +868,14 @@ def procurados(declarados: tuple[SemCenso, ...] = ()) -> tuple[SemCenso, ...]:
 #: janela, então um jogo aberto de lá entra pelo mesmo caminho de qualquer
 #: outro. Quem precisa da dívida a encontra no mapa de canais, que é onde ela
 #: mora.
-DIZ_SEM_FONTE = (
-    "<b>O perfil casa pelo nome do processo e pela janela.</b> Um jogo aberto "
-    "por aqui entra pelo mesmo caminho de qualquer outro."
-)
+#:
+#: **A SEGUNDA ORAÇÃO SAIU EM 11/09/2026 — A2-012, aprovada por ela.** Ela era
+#: a primeira dita de novo (*"um jogo aberto por aqui entra pelo mesmo caminho
+#: de qualquer outro"* é o que *"casa pelo nome do processo e pela janela"* já
+#: diz), e o custo era de CINCO VEZES: na tela dela a frase ocupa cinco
+#: cartões empilhados.
+#: 118 → 50 caracteres, cinco vezes.
+DIZ_SEM_FONTE = "<b>O perfil casa pelo nome do processo e pela janela.</b>"
 
 #: A frase de quem PROCUROU E ACHOU — **VAZIA DESDE 11/09/2026, ordem dela**:
 #: *"remove as frases do achei esse lançador aqui"*.  <!-- noqa-acento: citação literal dela -->
@@ -898,26 +896,10 @@ DIZ_SEM_FONTE = (
 #: tendo a quem perguntar.
 DIZ_ACHEI = ""
 
-#: A frase de quem PROCUROU E NÃO ACHOU.
-#:
-#: **ELA DIZ «NÃO LOCALIZEI» DESDE 08/09/2026**, e a razão é a mesma do selo: a
-#: palavra dela foi *"ao invés de não achei"*, e a tela dizia a frase que ela
-#: recusou em DOIS lugares — o selo, em maiúsculas, e a primeira oração daqui.
-#: Trocar só o selo deixaria a mesma tela com as duas grafias, uma ao lado da
-#: outra. **O NOME DA CONSTANTE FICA**: ele nomeia o ESTADO ("procurei e não
-#: achei"), que não mudou, e é lido por réguas que perguntam pelo estado.
-#:
-#: Ela nomeia as duas buscas, porque uma
-#: instalação fora das duas (um AppImage solto, um script no `~/bin`) existe e
-#: esta frase não pode afirmar que o lançador não está na máquina — só que o
-#: produto não o achou por onde sabe procurar.
-DIZ_NAO_ACHEI = (
-    "<b>Não localizei este lançador nesta máquina.</b> Procurei o atalho "
-    "<code>.desktop</code> nas pastas de aplicativos e o comando no "
-    "<code>PATH</code>. Instalado de outro jeito (um AppImage solto, por "
-    "exemplo) ele não aparece aqui — e o perfil continua casando pelo nome do "
-    "processo e pela janela."
-)
+# A FRASE DE QUEM PROCUROU E NÃO ACHOU (`DIZ_NAO_ACHEI`) MUDOU DE LUGAR EM
+# 11/09/2026, e a mudança é mecânica, não de gosto: com a A2-013 ela passou a
+# CITAR o botão do cartão, e citar é ler :data:`ADICIONAR_ROTULO` — que em
+# Python tem de existir antes. Ela mora logo abaixo daquele rótulo.
 
 #: O que o cartão da Steam mostra enquanto a primeira leitura não voltou.
 #: **Nunca um número** — um número que ainda não foi lido é um número inventado.
@@ -1006,7 +988,54 @@ ADICIONAR = "adicionar-lancador"
 #: cartão passa a acender. O botão do cartão que ACHOU continua sendo «Abrir o
 #: lançador»: são dois estados, dois botões, e trocar o rótulo dos dois faria o
 #: cartão aceso oferecer um registro que já existe.
-ADICIONAR_ROTULO = "Localizar este Lançador"
+#: **A MAIÚSCULA DECORATIVA CAIU EM 11/09/2026 — A2-021, aprovada por ela.** O
+#: «L» no meio da frase não era palavra dela: a mesma aba já escrevia «Localizar
+#: um lançador» em minúscula no título da tela de registro
+#: (:data:`TELA_DO_NOVO_TITULO`), e duas grafias para uma palavra é o que o item
+#: 4 da §2 do índice proíbe — *"Esse tipo de coisa não pode se repetir na
+#: interface."*  # noqa-acento: citação literal dela
+ADICIONAR_ROTULO = "Localizar este lançador"
+
+#: O RÓTULO DO MESMO BOTÃO NO CARTÃO QUE JÁ FOI LOCALIZADO — 11/09/2026,
+#: **A2-022, aprovada por ela**.
+#:
+#: O DEFEITO QUE ELE MATA: o selo dizia `LOCALIZADO` e o botão logo abaixo
+#: mandava **localizar**. Lidos de cima para baixo — que é como o rótulo do
+#: cartão não localizado foi construído em 08/09 — os dois se contradiziam.
+#:
+#: **MESMO GESTO, MESMA GRAVAÇÃO: SÓ O RÓTULO SEGUE O ESTADO**, como já fazem
+#: «Não usar neste jogo»/«Voltar a usar» e «Voltar a perguntar»/«Não perguntar
+#: para este jogo». O ato aqui é CORRETIVO — *"o que ele achou não é o que eu
+#: quero"* —, e o rótulo passa a dizê-lo.
+APONTAR_ROTULO = "Apontar outro caminho"
+
+#: A frase de quem PROCUROU E NÃO ACHOU.
+#:
+#: **ELA DIZ «NÃO LOCALIZEI» DESDE 08/09/2026**, e a razão é a mesma do selo: a
+#: palavra dela foi *"ao invés de não achei"*, e a tela dizia a frase que ela
+#: recusou em DOIS lugares — o selo, em maiúsculas, e a primeira oração daqui.
+#: Trocar só o selo deixaria a mesma tela com as duas grafias, uma ao lado da
+#: outra. **O NOME DA CONSTANTE FICA**: ele nomeia o ESTADO ("procurei e não
+#: achei"), que não mudou, e é lido por réguas que perguntam pelo estado.
+#:
+#: **ENCURTADA EM 11/09/2026 — A2-013, aprovada por ela.** Eram 262 caracteres
+#: que explicavam a MECÂNICA em vez do efeito: as duas buscas estão ditas outras
+#: DUAS vezes na mesma aba — o `?` da tela de registro e a recusa de
+#: :func:`~...a07_lancadores._achar_o_que_ela_digitou`, que é o momento em que o
+#: fato serve. O que faltava à frase era justamente o que FAZER, e é o que ela
+#: diz agora. 262 → 112.
+#:
+#: ELA CONTINUA SEM AFIRMAR QUE O LANÇADOR NÃO ESTÁ NA MÁQUINA — *"onde sei
+#: procurar"* é o mesmo cuidado da frase longa (um AppImage solto, um script no
+#: `~/bin`), em cinco palavras.
+#:
+#: O RÓTULO É LIDO, NUNCA DIGITADO: esta frase manda clicar num botão, e um
+#: texto digitado aqui envelheceria calado no dia em que o rótulo mudasse — que
+#: foi o dia de hoje.
+DIZ_NAO_ACHEI = (
+    "<b>Não localizei este lançador onde sei procurar.</b> Se ele está aqui, "
+    f"use «{ADICIONAR_ROTULO}» e me mostre onde."
+)
 
 #: O RÓTULO DO BOTÃO GLOBAL — o que nasce vazio, para o que o Hefesto não
 #: conhece de fábrica.
@@ -1020,7 +1049,11 @@ ADICIONAR_ROTULO = "Localizar este Lançador"
 #: tem cartão nenhum na aba. E «emulador» saiu do rótulo sem perder o público
 #: que ela nomeou — a dica da tela de registro nomeia os dois casos, e o exemplo
 #: que ela mostra (`Ryujinx`) é justamente um emulador.
-ADICIONAR_NOVO_ROTULO = "Adicionar novo Lançador"
+#:
+#: **A MAIÚSCULA DECORATIVA CAIU EM 11/09/2026 — A2-005, aprovada por ela**,
+#: pela mesma razão de :data:`ADICIONAR_ROTULO`: «Lançador» no meio da frase não
+#: é nome próprio.
+ADICIONAR_NOVO_ROTULO = "Adicionar novo lançador"
 
 # ---------------------------------------------------------------------------
 # O SELETOR DO SISTEMA — LANCADOR-LOCALIZAR-01, 10/09/2026, decisão dela
@@ -1461,21 +1494,24 @@ def lista_de_jogos(lida: Leitura) -> str:
     itens += [JogoNaLista(appid=a, rotulo=r, porque=p)
               for a, r, p in lida.intocaveis]
     itens += [
-        JogoNaLista(appid=a, rotulo=r, porque="você tirou este jogo",
+        # «VOCÊ TIROU», E NÃO «VOCÊ TIROU ESTE JOGO» — A2-029, 11/09/2026: a
+        # linha já nomeia o jogo dois dedos à esquerda. 20 → 10.
+        JogoNaLista(appid=a, rotulo=r, porque="você tirou",
                     gesto="voltar-a-usar", botao="Voltar a usar")
         for a, r in lida.recusados
     ]
     itens += [
+        # IDEM — A2-029/A2-030: o nome do jogo está na mesma linha. 44 → 30.
         JogoNaLista(appid=a, rotulo=r,
-                    porque="você mandou não perguntar mais por este jogo",
+                    porque="você mandou não perguntar mais",
                     gesto="voltar-a-perguntar", botao="Voltar a perguntar")
         for a, r in lida.dispensados
     ]
     return linhas_de_jogos(itens, vazio=LISTA_VAZIA)
 
 
-def acao_de_localizar(chave: str) -> Acao:
-    """O botão «Localizar este Lançador» de UM cartão — e ele é o MESMO nos SEIS.
+def acao_de_localizar(chave: str, rotulo: str = ADICIONAR_ROTULO) -> Acao:
+    """O botão de apontar o caminho de UM cartão — e ele é o MESMO nos SEIS.
 
     ELE NASCEU EM DOIS LUGARES E FALTOU NUM DELES. Em 08/09/2026 o botão do
     estado NÃO LOCALIZADO foi escrito dentro de :func:`cartao_sem_censo`, que
@@ -1497,8 +1533,14 @@ def acao_de_localizar(chave: str) -> Acao:
     O `href` É O QUE ABRE A TELA, e ele é mecânico: a `.tela-nova` aparece por
     `:target` (`monta.CSS_POPUP`), e **só uma âncora muda o fragmento** — ver
     :attr:`Acao.href`.
+
+    **O RÓTULO É PARÂMETRO DESDE 11/09/2026 — A2-022**, e o gesto NÃO é: o
+    cartão que já foi localizado diz :data:`APONTAR_ROTULO` e o que não foi diz
+    :data:`ADICIONAR_ROTULO`, mas os dois mandam o mesmo `data-gesto` para a
+    mesma tela e gravam no mesmo lugar. Só o rótulo segue o estado — um segundo
+    gesto seria um segundo caminho para o mesmo disco.
     """
-    return Acao(ADICIONAR_ROTULO, "", ADICIONAR, chave, href=f"#{TELA_DO_NOVO}")
+    return Acao(rotulo, "", ADICIONAR, chave, href=f"#{TELA_DO_NOVO}")
 
 
 def acao_de_tirar(chave: str) -> Acao:
@@ -1604,9 +1646,13 @@ def cartao_da_steam(lida: Leitura | None) -> Lancador:
         # A FRASE É DA SENTINELA, e não minha: ela já nomeia o jogo, já diz o
         # que ele perdeu e já diz o que vai acontecer. "1 jogo com problema" é
         # exatamente o texto que deixou o Pragmata quebrado a noite inteira.
+        # E AS DUAS PALAVRAS PROIBIDAS SAÍRAM EM 11/09/2026 — A2-014, aprovada
+        # por ela. «wrapper» é inglês numa aba cujo termo é «atalho de
+        # inicialização», e *"na linha de comando"* é a outra palavra do
+        # glossário para o mesmo lugar. O que sobra é o fato inteiro.
         diz = _e(lida.frase) or (
-            f"<b>Sem wrapper</b> — {_plural(falta, 'jogo', 'jogos')} sem o "
-            "atalho de inicialização do Hefesto na linha de comando.")
+            f"<b>{_plural(falta, 'jogo', 'jogos')} sem o atalho de "
+            "inicialização do Hefesto.</b>")
         acoes: tuple[Acao, ...] = (
             Acao("Consertar", "verde", "consertar", STEAM),
             Acao("Ver o que impede", "", "ver-o-que-impede", STEAM), abrir)
@@ -1702,7 +1748,12 @@ def cartao_da_steam(lida: Leitura | None) -> Lancador:
     #
     # DEPOIS DO QUE ELA FAZ, ANTES DO QUE ELA DESFAZ: localizar de novo é ato
     # CORRETIVO, e ato corretivo não disputa a primeira posição com o «Abrir».
-    acoes = (*acoes, acao_de_localizar(STEAM))
+    #
+    # E O RÓTULO AQUI É O DO ESTADO LOCALIZADO (:data:`APONTAR_ROTULO`) — este
+    # ramo só se alcança com a Steam achada ou com a biblioteca lida, e mandar
+    # «Localizar» num cartão que diz `LOCALIZADO` é a contradição que a A2-022
+    # fechou.
+    acoes = (*acoes, acao_de_localizar(STEAM, APONTAR_ROTULO))
 
     # O TIRAR VAI POR ÚLTIMO nos dois estados bons, e por último de propósito: o
     # que ela desfaz nunca disputa a primeira posição com o que ela FAZ.
@@ -1743,8 +1794,15 @@ def carimbo_da_steam(lida: Leitura) -> str:
         partes.append(f"{_plural(lida.pontes, 'jogo já sabe', 'jogos já sabem')} "
                       "por onde entrar")
     if lida.intocaveis:
+        # «LINHA EDITADA À MÃO», E NÃO «LINHA INTOCÁVEL — SÓ REPARO MANUAL» —
+        # A2-020, 11/09/2026, aprovada por ela. «intocável» é a NOSSA decisão,
+        # não o fato; e a própria aba já chama este estado de «linha editada à
+        # mão» na linha do jogo, dois centímetros abaixo
+        # (`a07_lancadores._porque`). *"só reparo manual"* mandava fazer algo
+        # sem dizer como — e o «Copiar a linha», que só nasce neste estado, é o
+        # como. 48 → 33.
         partes.append(f"{_plural(len(lida.intocaveis), 'jogo', 'jogos')} com a "
-                      "linha intocável — só reparo manual")
+                      "linha editada à mão")
     return " · ".join(partes)
 
 
@@ -1809,6 +1867,9 @@ def cartao_sem_censo(item: SemCenso, onde: str | None,
     # razão inteira, e a razão de ele ser uma FUNÇÃO e não uma linha aqui, está
     # em :func:`acao_de_localizar` — foi por ser linha que ele faltou na Steam.
     localizar = (acao_de_localizar(item.chave),)
+    # E O MESMO BOTÃO COM O RÓTULO DO OUTRO ESTADO — A2-022, 11/09/2026. Ver
+    # :data:`APONTAR_ROTULO`: mesmo gesto, mesma tela, mesma gravação.
+    apontar = (acao_de_localizar(item.chave, APONTAR_ROTULO),)
     # E O TIRAR, SÓ ONDE HÁ O QUE TIRAR: o cartão que ELA ensinou. Nos de
     # fábrica que ela nunca tocou não há declaração a esquecer, e um botão que
     # não tem o que fazer é o botão que finge.
@@ -1871,7 +1932,7 @@ def cartao_sem_censo(item: SemCenso, onde: str | None,
         chave=item.chave, nome=item.nome, selo="localizado",
         jogos=resumo or "—",
         diz=DIZ_ACHEI,
-        acoes=abrir + localizar + tirar, presente=True)
+        acoes=abrir + apontar + tirar, presente=True)
 
 
 def cartoes(lida: Leitura | None) -> list[Lancador]:
@@ -1946,6 +2007,7 @@ __all__ = [
     "ADICIONAR_NOVO_ROTULO",
     "ADICIONAR_ROTULO",
     "AINDA_LENDO",
+    "APONTAR_ROTULO",
     "A_STEAM",
     "CLASSE_DA_GRADE",
     "COPIAR",
@@ -1966,7 +2028,6 @@ __all__ = [
     "NOVO_SEM_ALVO",
     "PROCURAR_O_ARQUIVO",
     "PROCURAR_O_ARQUIVO_ROTULO",
-    "QUANTOS",
     "REMOVER",
     "REMOVER_ROTULO",
     "SELETOR_DA_GRADE",
@@ -2004,7 +2065,6 @@ __all__ = [
     "lista_de_jogos",
     "medir_no_disco",
     "procurados",
-    "quantos_html",
     "resposta_do_flatpak",
     "selo_html",
     "steam_input_html",
