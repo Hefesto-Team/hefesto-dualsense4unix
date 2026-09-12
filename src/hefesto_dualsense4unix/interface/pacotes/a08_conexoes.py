@@ -137,7 +137,13 @@ _DISPENSADAS: dict[str, str] = {}
 #: linha do Check-up dizia *"elas voltam em **Ver as ordens ignoradas**"*, e o
 #: botão saiu da tela em 31/08 — a frase mandava ela procurar um botão que não
 #: existe.
-ORDEM_IGNORADA_VOLTA = "volta sozinha se o arranjo dos cabos mudar"
+#: A CONDIÇÃO SEM SUJEITO — 11/09/2026, A1-066. As duas frases que a citam têm
+#: sujeitos de gêneros diferentes: aqui é a ORDEM (feminina) e no ⊘ é o
+#: CONSELHO (masculino). Guardar a condição sozinha deixa cada uma concordar
+#: com o seu sem que a frase seja digitada duas vezes.
+VOLTA_QUANDO = "se você mudar os cabos"
+
+ORDEM_IGNORADA_VOLTA = f"volta sozinha {VOLTA_QUANDO}"
 
 #: OS DOIS VERBOS DO ⊘ — decisão **08-Q5** dela, 05/09/2026: *"A recomendação
 #: calada continua no lugar dela, em cinza, e o mesmo botão desfaz."*
@@ -151,8 +157,8 @@ ORDEM_IGNORADA_VOLTA = "volta sozinha se o arranjo dos cabos mudar"
 #: **A LISTA VAI EM TODO TIQUE, inclusive com a linha falando** — é a mesma
 #: regra do botão cinza da ONDA0-F: a chave que só aparece quando há o que
 #: dizer deixa na tela a tinta do tique anterior.
-DICA_DO_IGNORAR = ("Ignora ESTE conselho enquanto os cabos estiverem assim. "
-                   f"A recomendação fica em cinza nesta lista e {ORDEM_IGNORADA_VOLTA}.")
+DICA_DO_IGNORAR = ("Ignora este conselho. Ele fica em cinza na lista e volta "
+                   f"sozinho {VOLTA_QUANDO}.")
 
 #: O SEGUNDO VERBO, palavra dela na 08-Q5: *"o mesmo botão desfaz"*.
 DICA_DO_DESFAZER = "Traz esta recomendação de volta para a lista."
@@ -2063,8 +2069,8 @@ SEM_NOME = "Sem nome"
 #: nome"*. `contenteditable` é o que o mockup sabe fazer sem uma linha de
 #: JavaScript; o DUPLO clique é gesto do produto, e é ele que a dica promete.
 RENOMEAR_DICA = (
-    "Dê um duplo clique para dar um nome seu a este adaptador — “Sala”, "
-    "“Extra”. É por ele que o resto da tela passa a chamá-lo."
+    "Duplo clique para dar um nome a este adaptador — «Sala», «Extra». "
+    "O resto da tela passa a usá-lo."
 )
 
 #: O cabeçalho da tabela dos adaptadores. Ele viaja JUNTO com as linhas porque o
@@ -2343,14 +2349,12 @@ def caminho_do_microfone(via: str) -> str:
 #: feito"*. A frase do custo entra derivada, logo abaixo.
 _DICA_DO_MIC = {
     "bt": (
-        "O microfone deste controle chega <b>pelo rádio</b>: o DualSense não tem "
-        "A2DP nem HFP, então o áudio vem em Opus dentro do relatório HID e o "
-        "Hefesto publica uma fonte de captura do PipeWire com ele."
+        "O microfone deste controle chega <b>pelo rádio</b>, pela ponte do "
+        "Hefesto — o DualSense não tem canal de áudio Bluetooth próprio."
     ),
     "usb": (
         "O microfone deste controle chega <b>pelo cabo</b>, pela placa de áudio "
-        "USB do próprio aparelho — o PipeWire a publica sozinho (medido em "
-        "15/08/2026)."
+        "do próprio aparelho."
     ),
 }
 
@@ -3293,10 +3297,17 @@ def html_da_regua_do_radio(
             if usado + com_mic > teto:
                 break
             usado += com_mic
-            quem = str(c.get("nome") or "") or f'Player {c["jogador"]}'
+            # O APOSTO ENTRE TRAVESSÕES E O IMPERFEITO DO SUBJUNTIVO SAÍRAM —
+            # 11/09/2026, A1-059: *"duas construções que o tradutor automático
+            # erra e a leitora relê"*. Sem nome de plástico lido, o parêntese
+            # guarda só o transporte — repetir "Player 1 (Player 1, …)" seria
+            # dizer o mesmo duas vezes na mesma frase.
+            quem = str(c.get("nome") or "")
+            dentro_do_parentese = (f'{quem}, hoje no {c["via"]}' if quem
+                                   else f'hoje no {c["via"]}')
             blocos.append(
                 f'<span class="bloco vaga" style="width:{com_mic / teto * 100:.2f}%"'
-                f' title="Se o {quem} do Player {c["jogador"]} — hoje no {c["via"]} — viesse '
+                f' title="Se o Player {c["jogador"]} ({dentro_do_parentese}) vier '
                 f'para este rádio com o microfone ligado: +{num(com_mic)} turnos.">'
                 f'+1 · {num(usado)}</span>')
         total = sum(com_mic if c.get("mic") else sem_mic for c in dentro)
@@ -3304,10 +3315,9 @@ def html_da_regua_do_radio(
         linhas.append(
             f'        <div class="pista">\n'
             f'          <span class="quem"{dica}>{p["nome"]}</span>\n'
-            f'          <span class="trilho" title="{palavra(fracao)} — {num(total)} das '
-            f'{num(teto)} turnos ({fracao * 100:.0f}%). As três palavras são do produto '
-            f'(integrations/radio_da_mesa.py) e falam só de OCUPAÇÃO: rádio cheio tem volta, '
-            f'basta tirar um controle daqui.">\n'
+            f'          <span class="trilho" title="{palavra(fracao)} — {num(total)} dos '
+            f'{num(teto)} turnos ({fracao * 100:.0f}%). Rádio cheio tem volta: basta tirar '
+            f'um controle daqui.">\n'
             f'            {"".join(blocos)}\n'
             f'          </span>\n'
             f'          <span class="num">{num(total)} <i>de {num(teto)}</i></span>\n'
@@ -3330,7 +3340,7 @@ def html_da_regua_do_radio(
         + ("\n".join(legenda) + "\n" if legenda else "")
         + f'            <span><i style="background:var(--orange)"></i>O microfone de cada um '
           f'— +{num(com_mic - sem_mic)}</span>\n'
-          f'            <span><i class="vaga"></i>Cada controle do cabo, se viesse '
+          f'            <span><i class="vaga"></i>Cada controle que vier do cabo '
           f'— +{num(com_mic)}</span>\n'
           '          </div>')
 
@@ -4434,8 +4444,8 @@ def alvo(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     indice = _indice(ctx, uniq)
     if indice is None:
         raise RuntimeError(
-            "alvo: este controle não está na lista do daemon — sem posição, "
-            "mirar o 0 trocaria o controle debaixo da mão dela")
+            "Este controle não está na lista do serviço — sem ele, o alvo "
+            "cairia noutro controle.")
     p.chamar("controller.target.set", index=indice)
 
 
@@ -4548,8 +4558,8 @@ def _sem_endereco() -> str:
         # NÃO É CÓPIA DA FRASE DELE — é a minha, e diz a mesma coisa em outras
         # palavras. Repetir a dele aqui criaria a segunda verdade que a regra do
         # fato errado existe para matar.
-        return ("mic-existe: este controle não tem endereço de doze hexa, e sem "
-                "ele não há chave no maquina.json para guardar a ponte")
+        return ("Este controle não tem endereço fixo, e sem ele não há onde "
+                "guardar a ponte do microfone.")
 
 
 def _slot(o: dict[str, Any], quantos: int, quem: str) -> int:
@@ -4762,10 +4772,8 @@ def teto_da_vibracao(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
         # qual o `_sem_endereco` existe separado da frase do cabo: dois motivos
         # diferentes pedem frases diferentes.
         raise RuntimeError(
-            "este controle não tem endereço fixo de doze hexa, e sem ele não há "
-            "chave no perfil para guardar a força só dele. Um controle sem "
-            "endereço estável muda de nome a cada conexão, e a escolha cairia "
-            "num aparelho diferente do que você está vendo.")
+            "Este controle não tem endereço fixo, e sem ele a força só dele "
+            "não tem onde ser guardada — a escolha cairia noutro aparelho.")
 
     escolha = str(o.get("valor") or o.get("rotulo") or "").strip()
     # A LISTA É A DA TELA, nunca três literais: `politica_do_rotulo` a lê de
@@ -4883,8 +4891,8 @@ def renomear_adaptador(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     caminho = str(o.get("caminho") or "").strip()
     if not caminho:
         raise ValueError(
-            "renomear-adaptador: o clique não disse em qual adaptador — sem o "
-            "caminho de barramento eu daria o seu nome ao rádio errado")
+            "O clique não disse em qual adaptador — o nome iria para o rádio "
+            "errado.")
     novo = str(o.get("texto") or o.get("valor") or "").strip()
     if not novo or novo == SEM_NOME:
         raise ValueError(
@@ -5122,10 +5130,8 @@ def ignorar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     ordem = _ORDENS_NA_TELA[posicao]
     if ordem is None:
         raise RuntimeError(
-            "ignorar: esta linha é uma CONFERÊNCIA, não uma ordem de serviço — "
-            "ela responde \"está certo?\" e não há o que dispensar. Só as "
-            "linhas 'Mudança recomendada' se calam, e elas aparecem depois de "
-            "\"Examinar Portas\".")
+            "Esta linha é uma conferência, não um conselho — não há o que "
+            "dispensar. Só as mudanças recomendadas se calam.")
     chave, arranjo = str(ordem.chave), str(ordem.arranjo)
     # O ESTADO SE PERGUNTA AO MESMO DONO QUE A TELA PERGUNTA — ver
     # :func:`_ordem_calada`.
@@ -5203,8 +5209,8 @@ def escolher_aparelho(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     caminho = str(o.get("caminho") or "").strip()
     if not caminho:
         raise ValueError(
-            "o clique não disse qual aparelho — sem o caminho do kernel, dois "
-            "adaptadores iguais seriam o mesmo botão.")
+            "O clique não disse qual aparelho — dois adaptadores iguais "
+            "seriam o mesmo botão.")
     _logica_do_mapa().escolher(caminho)
 
 
@@ -5369,9 +5375,8 @@ def luz_nao_acende(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     transporte = str(dele.get("transport") or "").lower()
     if transporte and transporte != "bt":
         raise RuntimeError(
-            "este controle está no cabo, e no cabo a barra de luz não depende "
-            "de reconexão nenhuma. A cura é do rádio: derrubar a conexão para "
-            "você apertar PS.")
+            "Este controle está no cabo, e no cabo a barra de luz não depende "
+            "de reconexão.")
 
     resultado = radio.desconectar(uniq)
     if not resultado.caiu:
