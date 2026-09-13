@@ -74,7 +74,7 @@ def _documento(publicado: bool) -> str:
 
 
 def _listas_da_troca(publicado: bool) -> dict[str, dict[str, Any]]:
-    """`{data-linha: {gesto, campo, apagada, opcoes}}` da tela "Trocar os botões"."""
+    """`{data-linha: {gesto, campo, apagada, rotulos}}` da tela "Trocar os botões"."""
     tela = _documento(publicado).split('id="remapeamento"', 1)[1].split(
         'class="tela-nova"', 1)[0]
     fora: dict[str, dict[str, Any]] = {}
@@ -88,7 +88,7 @@ def _listas_da_troca(publicado: bool) -> dict[str, dict[str, Any]]:
             "gesto": gesto.group(1) if gesto else "",
             "campo": campo.group(1) if campo else "",
             "apagada": re.search(r"\sdisabled(\s|$)", attrs) is not None,
-            "opcoes": [o.strip() for o in _OPCAO.findall(m.group("miolo"))],
+            "rotulos": [o.strip() for o in _OPCAO.findall(m.group("miolo"))],
         }
     return fora
 
@@ -108,15 +108,15 @@ def test_as_seis_nascem_apagadas_e_as_dezesseis_trocam(publicado: bool) -> None:
             f"a linha {botao!r} da troca voltou a ser clicável — escolher algo nela "
             "é recusado, fica na lista e segura todo Guardar sem dizer qual")
         assert lista["gesto"] == "" and lista["campo"] == "", (botao, lista)
-        assert lista["opcoes"] == [SEM_TROCA], (
-            f"a linha apagada {botao!r} oferece {lista['opcoes']} — o estado real "
+        assert lista["rotulos"] == [SEM_TROCA], (
+            f"a linha apagada {botao!r} oferece {lista['rotulos']} — o estado real "
             "dela é sempre sem troca")
     for botao in remap.REMAPEAVEIS:
         lista = listas[botao]
         assert not lista["apagada"], f"a linha {botao!r}, que a troca alcança, apagou"
         assert lista["gesto"] == "linha-de-troca", (botao, lista)
         assert lista["campo"] == f"{PREFIXO_DA_TROCA}{botao}", (botao, lista)
-        assert len(lista["opcoes"]) > 1, (botao, lista)
+        assert len(lista["rotulos"]) > 1, (botao, lista)
 
 
 # ---------------------------------------------------------------------------
