@@ -121,9 +121,11 @@ def _sem_nada_armado():
     """O consentimento não atravessa dois testes. `_ARMADO` é do módulo."""
     a09._ARMADO.clear()
     a09._LENTO.clear()
+    a09._PAINEL[0] = None
     yield
     a09._ARMADO.clear()
     a09._LENTO.clear()
+    a09._PAINEL[0] = None
 
 
 def _confirma(gesto: str) -> dict[str, object]:
@@ -329,13 +331,25 @@ def test_o_aplicar_aos_jogos_nao_fecha_a_steam_no_primeiro_clique(
     assert a09.CONFIRMA in str(fora["blocos"]), fora["blocos"]
     # A FRASE DA PERGUNTA É A DO DONO, palavra por palavra. Uma segunda cópia
     # aqui se afastaria dela no primeiro dia em que alguém mexesse numa das duas.
+    #
+    # O LUGAR MUDOU EM 13/09/2026 (TELA-CALADA-03): ela ia por `recado`, e a
+    # aba 09 não tem onde um recado pouse — medido no piloto, o primeiro clique
+    # não mostrava nada. Agora vai ao painel de registro, requebrada na largura
+    # dele; por isso o que se compara é a sequência de palavras.
     esperada = " ".join(_daemon.DaemonActionsMixin._STEAM_APPLY_CORPO.split())
-    assert fora["recado"] == esperada
+    assert "recado" not in fora, fora
+    assert esperada in " ".join(fora["mesa"][a09.REGISTRO].split())
 
 
 def test_o_segundo_clique_aplica_o_atalho_a_todos_os_jogos(
-        monkeypatch: pytest.MonkeyPatch) -> None:
-    """E o recibo é o do produto, com o número que ele contou."""
+        monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]) -> None:
+    """E o recibo é o do produto, com o número que ele contou.
+
+    O RECIBO SAIU DA TELA EM 13/09/2026 (TELA-CALADA-03), pela palavra dela:
+    *"essas frases de status (…) não deveria estar aparecendo"*. Ele continua
+    sendo o do produto e continua escrito — no diário da janela. O segundo
+    clique devolve só os rótulos dos botões.
+    """
     visto = _com_a_steam(monkeypatch)
     a09.aplicar_aos_jogos(
         _ctx(), {"gesto": "aplicar-aos-jogos", "texto": "Aplicar aos jogos da Steam"},
@@ -343,9 +357,11 @@ def test_o_segundo_clique_aplica_o_atalho_a_todos_os_jogos(
     fora = a09.aplicar_aos_jogos(_ctx(), _confirma("aplicar-aos-jogos"),
                                 PonteDeMentira())
     assert visto["fechou"] == [True] and visto["aplicou"] == [True]
-    assert fora["recado"] == _daemon.format_apply_wrapper_result(
-        {"applied": 3, "skipped": 0, "errors": 0})
-    assert "3 jogo(s)" in fora["recado"], fora["recado"]
+    assert set(fora) == {"blocos"}, fora
+    diario = capsys.readouterr().err
+    assert _daemon.format_apply_wrapper_result(
+        {"applied": 3, "skipped": 0, "errors": 0}) in diario, diario
+    assert "3 jogo(s)" in diario, diario
 
 
 def test_o_jogo_aberto_recusa_com_a_frase_do_dono(

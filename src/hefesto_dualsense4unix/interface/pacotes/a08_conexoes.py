@@ -27,6 +27,7 @@ import contextlib
 import dataclasses as _dataclasses
 import html
 import re
+import sys
 import time
 from typing import TYPE_CHECKING, Any
 
@@ -2487,8 +2488,17 @@ def dica_da_luz(via: str, nascimento: Any = None, mesa_suja: bool | None = None)
 
 
 # ---------------------------------------------------------------------------
-# A ESPERA PELO PS — a contagem, o Cancelar e o recado que sobrevive
+# A ESPERA PELO PS — a contagem e o Cancelar
 # ---------------------------------------------------------------------------
+#
+# O RECADO DO FIM SAIU DA TELA — TELA-CALADA-03, 13/09/2026. Até aqui a frase
+# com que a espera acaba (`FRASE_NAO_CAIU`, `frase_nao_voltou`) SOBREVIVIA na
+# linha de ressalva do cartão, pela razão do ELO-MUDO-01: sem ela "não voltou"
+# viraria silêncio. A palavra dela vence essa razão — *"essas frases de status
+# (…) não deveria estar aparecendo"*, *"em todas as abas da interface"*. A régua
+# que fica é a da sprint: **a instrução do segundo tempo FICA** (o «▲ Aperte PS
+# · procurando…» com a contagem, e o «Cancelar»), **o recibo do fim SAI**. O fim
+# não some calado: vai ao diário da janela, com a frase do dono, uma vez só.
 #
 # O DESENHO PROMETIA E O PRODUTO NÃO ENTREGAVA. O `title` do botão diz, com
 # todas as letras: *"Enquanto ele espera o PS, o mesmo botão vira 'Cancelar'"*.
@@ -2521,18 +2531,17 @@ _ESPERAS: dict[str, _EsperaNaTela] = {}
 
 
 class _EsperaNaTela:
-    """Uma espera pelo PS, com o relógio por fora e o recado por dentro.
+    """Uma espera pelo PS, com o relógio por fora.
 
-    `espera` é o dono (:class:`secao_controles.EsperaPeloPS`); `recado` é a
-    frase do fim, que **sobrevive** ao fim da espera de propósito — sem ela
-    "não voltou" viraria silêncio, que é o defeito que o ELO-MUDO-01 nomeou.
+    `espera` é o dono (:class:`secao_controles.EsperaPeloPS`). A frase do fim
+    NÃO fica guardada para a tela desde 13/09/2026 — ver o cabeçalho desta
+    seção: :meth:`correr` a leva ao diário no instante em que a espera acaba.
     """
 
     def __init__(self, espera: Any, agora: float) -> None:
         self.espera = espera
         #: O instante do último segundo já contado.
         self.desde = float(agora)
-        self.recado = ""
 
     @property
     def contando(self) -> bool:
@@ -2550,8 +2559,11 @@ class _EsperaNaTela:
             self.espera.tique()
             if self.espera.acabou:
                 break
-        if self.espera.acabou:
-            self.recado = str(self.espera.porque or "")
+        porque = str(self.espera.porque or "") if self.espera.acabou else ""
+        if porque:
+            # UMA VEZ SÓ: o `return` do topo não deixa uma espera acabada chegar
+            # aqui de novo. O Cancelar não tem frase (`porque` vazio) e não fala.
+            print(f"[relato] {PAGINA} · luz-nao-acende: {porque}", file=sys.stderr)
 
 
 def _agora() -> float:
@@ -2590,7 +2602,6 @@ def cancelar_a_espera(uniq: str) -> bool:
     if dele is None or not dele.contando:
         return False
     dele.espera.cancelar()
-    dele.recado = ""
     return True
 
 
@@ -2600,27 +2611,21 @@ def esperando(uniq: str) -> bool:
     return dele is not None and dele.contando
 
 
-def _correr_as_esperas(presentes: set[str], agora: float | None = None) -> None:
+def _correr_as_esperas(agora: float | None = None) -> None:
     """Um passo do relógio, UMA vez por tique, para todas as esperas vivas.
 
-    `presentes` são os `uniq` que o daemon está publicando AGORA, e eles servem
-    para UMA coisa: **apagar o recado de quem voltou**. "Não voltou em 60s" é
-    verdade no instante em que é escrita e vira mentira assim que o controle
-    reaparece — e um recado que envelhece na tela é a mesma família do desenho
-    que promete o que o produto não faz. Os outros dois desfechos que falam
-    (`nao_caiu`) continuam verdadeiros, e ficam até o próximo clique.
+    A ESPERA QUE ACABOU SAI DO DEPÓSITO no mesmo passo — 13/09/2026. Ela ficava
+    para guardar o recado do fim, e o parâmetro `presentes` existia para apagar
+    esse recado quando o controle voltava ("não voltou" com o controle de volta
+    na lista seria a tela afirmando o que já não é verdade). Sem recado na tela
+    não há o que guardar nem o que apagar: a linha volta a :func:`_sem_valor` e
+    o botão a «A luz não acende» no mesmo tique.
     """
-    perfil._com_o_src()
-    from hefesto_dualsense4unix.app.actions.config.secao_controles import (
-        ESPERA_NAO_VOLTOU,
-    )
-
     quando = _agora() if agora is None else agora
     for chave, dele in list(_ESPERAS.items()):
         dele.correr(quando)
-        if (not dele.contando and dele.recado and chave in presentes
-                and dele.espera.estado == ESPERA_NAO_VOLTOU):
-            dele.recado = ""
+        if not dele.contando and _ESPERAS.get(chave) is dele:
+            _ESPERAS.pop(chave, None)
 
 
 def texto_do_botao_da_luz(uniq: str = "") -> str:
@@ -2653,22 +2658,22 @@ def linha_da_espera(uniq: str) -> str:
     contagem dele, palavra por palavra. O que este arquivo escolhe é a ORDEM e
     o separador — o pedido primeiro, o relógio depois.
 
-    Fora da espera devolve o recado do fim, e sem recado devolve
-    :func:`_sem_valor`, que faz a `.ressalva` SUMIR em vez de virar um `—`.
+    Fora da espera devolve :func:`_sem_valor`, que faz a `.ressalva` SUMIR em
+    vez de virar um `—` — **inclusive quando a espera acabou falando**. Até
+    13/09/2026 este ramo devolvia o recado do fim; ele saiu da tela pela
+    TELA-CALADA-03 e vai ao diário (:meth:`_EsperaNaTela.correr`).
     """
     dele = _ESPERAS.get(norm_mac(uniq) or "")
-    if dele is None:
+    if dele is None or not dele.contando:
         return _sem_valor()
-    if dele.contando:
-        perfil._com_o_src()
-        from hefesto_dualsense4unix.app.actions.config.secao_controles import (
-            FRASE_APERTE_PS,
-            frase_da_procura,
-        )
+    perfil._com_o_src()
+    from hefesto_dualsense4unix.app.actions.config.secao_controles import (
+        FRASE_APERTE_PS,
+        frase_da_procura,
+    )
 
-        return (f"▲ {html.escape(FRASE_APERTE_PS)} · "
-                f"{html.escape(frase_da_procura(dele.espera.restantes))}")
-    return html.escape(dele.recado) if dele.recado else _sem_valor()
+    return (f"▲ {html.escape(FRASE_APERTE_PS)} · "
+            f"{html.escape(frase_da_procura(dele.espera.restantes))}")
 
 
 #: COMO A TELA LÊ O `mic_button_toggles_system` — **D-12, 04/09/2026**, e ela
@@ -3877,12 +3882,7 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
     # cartão: chamá-lo por controle entregaria N tiques por segundo ao dono numa
     # mesa de N, e a contagem correria mais rápido quanto mais cheia a mesa.
     #
-    # A LISTA VAI JUNTO por uma razão só, e ela está no docstring: quem VOLTOU
-    # perde o recado de "não voltou". Sem isto a frase envelheceria na tela — e
-    # uma tela que afirma o que já não é verdade é o mesmo defeito que esta
-    # sprint veio fechar, do outro lado.
-    _correr_as_esperas({norm_mac(str(c.get("uniq") or "")) or ""
-                        for c in ctx.conectados})
+    _correr_as_esperas()
 
     colunas = {}
     for c in ctx.conectados:
@@ -3954,8 +3954,9 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
             # espera o mesmo botão diz "Cancelar". Ver :func:`texto_do_botao_da_luz`.
             "luz-texto": texto_do_botao_da_luz(uniq),
             # A LINHA DA ESPERA — o pedido do PS com a contagem enquanto ela
-            # corre, e o recado do fim depois. Em repouso ela não ocupa nada
-            # (`monta.ressalva`). Ver :func:`linha_da_espera`.
+            # corre, e NADA depois (o recado do fim saiu da tela em 13/09/2026).
+            # Fora da espera ela não ocupa nada (`monta.ressalva`). Ver
+            # :func:`linha_da_espera`.
             "luz-espera": linha_da_espera(uniq),
             # O `title` DA LINHA DO MICROFONE — ver :func:`dica_do_microfone`. O
             # `+16,3 turnos` era digitado no desenho; agora é derivado das
