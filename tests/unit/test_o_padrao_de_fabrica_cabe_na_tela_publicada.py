@@ -71,6 +71,14 @@ def _listas(caminho: pathlib.Path) -> dict[str, tuple[list[str], str]]:
     fora: dict[str, tuple[list[str], str]] = {}
     html = caminho.read_text(encoding="utf-8")
     for m in _SELECT.finditer(html):
+        # SÓ AS LINHAS DE "o que cada botão faz" — 13/09/2026, F1-REMAPEAR. A tela
+        # "Trocar os botões" da mesma página passou a marcar as 22 listas dela
+        # com `data-linha`, e o valor delas é o DESTINO da troca, não uma ação:
+        # sem o recorte, a última lista de cada botão vencia e todo padrão virava
+        # `None`. Na página de antes, as 28 listas com `data-linha` eram todas
+        # deste gesto.
+        if 'data-gesto="linha-de-botao"' not in m.group("attrs"):
+            continue
         alvo = _LINHA.search(m.group("attrs"))
         if not alvo:
             continue

@@ -186,6 +186,17 @@ _CLASSIFICACAO: dict[str, SecaoPorApplier | SecaoDireta] = {
             "sempre."
         )
     ),
+    "remapeamento": SecaoDireta(
+        razao=(
+            "F1-REMAPEAR (13/09/2026). `apply_remapeamento` resolve a troca "
+            "(`core/remapeamento_de_botao.resolver`) e a DEPOSITA no `store` do "
+            "gerente — nada é escrito no controle nem em device. Quem obedece "
+            "são os dois `forward_buttons` (`gamepad.dispatch_gamepad` e "
+            "`coop.CoopManager.forward_all`), que leem o `store` por tique. Não "
+            "é applier injetado porque o `store` é o que TODAS as rotas de "
+            "ativação já passam, inclusive a do boot, que monta o gerente à mão."
+        )
+    ),
     "controllers": SecaoDireta(
         razao=(
             "Mapa ADITIVO de overrides por controle físico: `apply` o resolve "
