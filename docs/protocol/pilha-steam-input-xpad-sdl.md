@@ -17,6 +17,8 @@ DEPOIS que ele sai do driver e ANTES de o jogo lê-lo.**
   **A seção 6-bis é de outra natureza, e foi acrescentada em 12/08/2026:** ela é
   bancada, com a Steam **aberta**, escrita no `hidraw`, `btmon` no ar e o olho
   dela como aceite. Cada linha de lá tem ensaio em `docs/data/ensaios.csv`.
+  **A seção 5-bis, de 13/09/2026, é sonda só-leitura** com o vpad vivo: nenhuma
+  biblioteca abriu `hidraw`, e nenhum contêiner da Steam foi iniciado.
 - **Documentos irmãos:** a
   [referência canônica do DualSense](dualsense-referencia-canonica.md) (o
   aparelho da Sony), a
@@ -50,7 +52,8 @@ errada por confundir "documentação de comunidade" com "fato".
 Esta seção não é formalidade. A armadilha nº 1 desta casa é *medir contra a
 biblioteca errada*: em 01/08 o gamepad virtual foi medido contra a `libSDL2` do
 sistema e concluiu-se que ele não entregava nada — a biblioteca que os jogos
-usam entrega tudo.
+usam entrega tudo. Aconteceu de novo em 10/09, com o giroscópio do vpad (seção
+5-bis).
 
 | camada | de onde vem o código citado | o que roda na máquina dela |
 |---|---|---|
@@ -661,8 +664,8 @@ o degrau anterior deixou passar.
 
 **Quem ganha o ambiente.** O degrau 4 vem **depois** do 3: a Steam monta o
 ambiente do processo e o wrapper roda dentro dele, sobrescrevendo com `env(1)`
-as variáveis que exporta. Logo, para as **seis** variáveis da `ENV_ALLOWLIST`
-(`daemon/launch_env.py:80-87`), **o wrapper vence a Steam**. Para qualquer
+as variáveis que exporta. Logo, para as **sete** variáveis da
+`ENV_ALLOWLIST` em `daemon/launch_env.py:82-90`, **o wrapper vence a Steam**. Para qualquer
 outra — e `SDL_GAMECONTROLLER_ALLOW_STEAM_VIRTUAL_GAMEPAD` é uma delas, porque
 **não está na allowlist** — vale o que a Steam pôs. **GRAU: ALTA** para o
 mecanismo (`env(1)` e a allowlist por NOME de variável em
@@ -783,6 +786,113 @@ Enquanto ele não vier, o grau desta seção é **NÃO MEDIDO**, e a frase hones
 comentário do driver e 15 ms no default, e **entrega** 11,2 ms — medido três
 vezes em 07/08. É a mesma família de defeito com um segundo aparelho e um número
 real. Isso torna a hipótese plausível; **não** a prova aqui.
+
+---
+
+## 5-bis. Os sensores do vpad por versão de SDL — o zero que era da biblioteca
+
+**Acrescentada em 13/09/2026** pela
+[SENSORES-NO-JOGO-02](../process/sprints/2026-09-13-SENSORES-NO-JOGO-02-o-giroscopio-que-o-jogo-nao-ve-em-modo-virtual.md).
+É a armadilha da 0.2 pela segunda vez: a bancada de 10/09 mediu o giroscópio do
+vpad contra a `libSDL2` do sistema e concluiu que o jogo recebia zero em Modo
+Virtual. As bibliotecas que os jogos da Steam carregam entregam.
+
+**A régua desta seção.** Sonda só-leitura no host, com o vpad P1 vivo e só o
+controle do rádio na mesa: `SDL_JOYSTICK_HIDAPI=0` e `SDL_HIDAPI_LIBUSB=0` em
+toda corrida, nenhum `hidraw` aberto, nenhum `EVIOCGRAB`, nenhum contêiner do
+Steam Linux Runtime iniciado. O instrumento é
+`scripts/ensaios/o_jogo_para_de_ver_o_giro.py --so-medir`, que acha as
+bibliotecas na instalação e lê a revisão de cada uma por `SDL_GetRevision`. As
+linhas de fonte são do `libsdl-org/SDL`, na tag citada em cada linha.
+
+### 5-bis.1 O que cada biblioteca entrega
+
+Dois segundos por biblioteca, `SDL_ACCELEROMETER_AS_JOYSTICK=0`, no nó do vpad.
+**GRAU: MEDIDO AQUI, 13/09/2026.**
+
+| biblioteca | revisão (`SDL_GetRevision`) | o HIDAPI lista o vpad? | `HasSensor` pelo evdev | giros distintos |
+|---|---|---|---|---|
+| libSDL2 2.30.0, sistema Ubuntu | `Ubuntu 2.30.0+dfsg-1ubuntu3.1` | não | sim, só com a dica em 0 | 162 |
+| libSDL2 2.32.10, scout (`ubuntu12_32/steam-runtime`) | `SteamRT 2.32.10+dfsg-4+steamrt1.1+srt1` | não | sim | 144 |
+| libSDL2 2.32.10, `sdl2-classic` do sniper e do soldier | `SteamRT 2.32.10+dfsg-4+steamrt3.1` e `+steamrt2.1` | não | sim | 141 e 143 |
+| SDL3 3.4.14, sniper, SLR 4 e soldier | `SteamRT 3.4.14+ds-1+steamrt3.1`, `+steamrt4.1` e `+steamrt2.1` | sim | sim | 134 a 157 |
+| sdl2-compat 2.32.70, sniper, SLR 4 e soldier | `SteamRT 2.32.70+ds-1~steamrt3.2`, `~steamrt4.1` e `~steamrt2.2` | sim | sim | 126 a 149 |
+
+Na mesma corrida, o nó «Motion Sensors» do vpad, lido direto, entregou 116
+valores distintos de giro em 1 s. O `hidraw` do vpad é `0660` com a permissão
+da sessão; o do físico, em Virtual, `0600`.
+
+### 5-bis.2 A dica, nos dois sentidos
+
+`HasSensor(GYRO)` e giros distintos em 2 s, no vpad. **GRAU: MEDIDO AQUI,
+13/09/2026.**
+
+| biblioteca | sem a variável | `=1` | `=0` |
+|---|---|---|---|
+| libSDL2 2.30.0, sistema | False, 0 | False, 0 | True, 162 |
+| libSDL2 2.32.10, scout | True, 145 | False, 0 | True, 150 |
+
+A leitura: `=0` cura a 2.30.0 e é inócua na 2.32.10, no SDL3 e no sdl2-compat
+(5-bis.1). Um `=1` que chegasse ao jogo por outro caminho quebraria até a
+2.32.10; o wrapper vence o ambiente da Steam para as variáveis da allowlist
+(seção 4), e por isso o `0` entra em toda variante do `compose_env`. **Por que
+a 2.32.10 sem a variável se comporta como `=0`** não foi lido no fonte: **NÃO
+MEDIDO**.
+
+### 5-bis.3 Por que a SDL2 clássica não lista o vpad no HIDAPI
+
+- `hidapi/linux/hid.c:601-630` (`release-2.30.0`; `diff` vazio contra
+  `release-2.32.10`): o `hid_enumerate` só aceita o `hidraw` de barramento USB
+  que tenha ancestral `usb_device`. O vpad `uhid` mora em
+  `/sys/devices/virtual/misc/uhid/` e sai da lista. **ALTA** para o código;
+  **MEDIDO AQUI** o endereço.
+- `hidapi/linux/hid.c:553-556` (`release-2.30.0`): `access(R_OK|W_OK)` antes de
+  listar. É por isso que o físico em Virtual, `0600`, também some da SDL2
+  clássica. **ALTA.**
+- SDL3: `hidapi/linux/hid.c:799-807` (`release-3.4.0`) aceita os `uhid` de
+  barramento USB. **ALTA.** E o filtro `SDL_HIDAPI_ENUMERATE_ONLY_CONTROLLERS`
+  vem ligado: com ele o 3.4.14 lista 2 nós, os dois DualSense; desligado, 17
+  entradas em 6 nós. **MEDIDO AQUI.**
+- O sdl2-compat devolve o registro na forma da SDL2, sem `bus_type`. **MEDIDO
+  AQUI.**
+
+### 5-bis.4 Como o movimento chega sem HIDAPI, e o patch da Ubuntu
+
+- `joystick/SDL_gamecontroller.c:2117-2121` (`release-2.30.0`): o nome terminado
+  em « Motion Sensors» é recusado como controle. **ALTA.**
+- `joystick/linux/SDL_sysjoystick.c:487-506` (`release-2.30.0`): o mesmo nó
+  entra como sensor; `:1528-1580` casa o sensor ao joystick pelo `EVIOCGUNIQ`, e
+  `:1405-1442` liga o par ao abrir. **ALTA.**
+- O patch `avoid-opening-non-joystick-devices` da Ubuntu (LP #2085140, igual ao
+  upstream `release-2.30.12`): o `IsSensor` de
+  `joystick/linux/SDL_sysjoystick.c:347-358` (`release-2.30.12`) passa a exigir
+  a classe udev ACCELEROMETER, e `core/linux/SDL_udev.c:426-430` da 2.30 converte
+  `ID_INPUT_ACCELEROMETER` em JOYSTICK enquanto `SDL_ACCELEROMETER_AS_JOYSTICK`
+  estiver em 1. O nó de movimento nunca entra na lista de sensores, e o jogo
+  ouve `HasSensor=False`. **ALTA** para o código; **MEDIDO AQUI** a entrada
+  `2.30.0+dfsg-1ubuntu3.1` no `changelog.Debian.gz` do pacote.
+- O subsistema de joystick chama exatamente `SDL_hid_enumerate(0, 0)`
+  (`joystick/hidapi/SDL_hidapijoystick.c:1102-1104`, `release-2.30.0`), e o
+  registro traz os três ints de interface antes de `next`
+  (`include/SDL_hidapi.h:112-121`; no SDL3, também o `bus_type`, em
+  `include/SDL3/SDL_hidapi.h:146-154`). Uma struct sem eles para a lista no
+  primeiro item — foi o que o ensaio fez até 13/09. **ALTA.**
+
+### 5-bis.5 O que isto NÃO mede
+
+- o HIDAPI **ligado** no SDL3 e no sdl2-compat, que abre o `hidraw` do vpad pelo
+  driver PS5 e escreve efeitos ao abrir;
+- o contêiner do Steam Linux Runtime por dentro, onde o SDL enumera por outro
+  caminho;
+- o vpad que nasce com o jogo já aberto (co-op, troca de máscara, reconexão) na
+  2.32.10 — pelo fonte, o callback do udev exige a classe JOYSTICK, e ele
+  nasceria sem giroscópio;
+- quatro vpads, o cabo, o caminho do Proton e **qual SDL cada jogo carrega de
+  fato**. No estudo de 13/09, nenhum jogo instalado nesta máquina trazia
+  `libSDL2` ou `libSDL3` próprio: o ganho da dica fica para quem embute uma
+  2.30.x.
+
+**GRAU: NÃO MEDIDO** nas quatro. É a linha 10 da seção 7.
 
 ---
 
@@ -1126,6 +1236,7 @@ Uma variável por linha, que é como se ataca isto.
 | 7 | **que report** a Steam manda nos 98 pacotes da rajada, e algum deles pede a barra apagada? | decodificar o payload das capturas em `/tmp/hefesto-probe-lightbar/` — o parser escrito em 12/08 não venceu o formato do `btmon` | 6-bis.2 |
 | 8 | **o que decide qual controle** a Steam repinta depois de perder a cor? | repetir a escrita por `hidraw` nos três e observar qual volta ao padrão dela | 6-bis.5 |
 | 9 | a **volta** do ensaio da lightbar: subir os controles com a Steam viva na probe, **de propósito**, e ver o defeito voltar | o mesmo desenho de 6-bis.2, com o braço sujo provocado | 6-bis |
+| 10 | o giroscópio do vpad **no jogo**, com a biblioteca que o jogo carrega: HIDAPI ligado no SDL3 e no sdl2-compat, o contêiner do sniper por dentro, o vpad que nasce com o jogo aberto na 2.32.10, e qual SDL cada jogo carrega (`/proc/<pid>/maps`) | a MESA-DE-QUATRO-01, com o jogo aberto | 5-bis |
 
 Os itens 1, 2 e 6 saem **do mesmo comando**, custam trinta segundos e fecham
 três linhas de uma vez. É o melhor negócio desta tabela.
@@ -1154,6 +1265,11 @@ em devolver.
 - `SDL_steam_virtual_gamepad.c` — `https://github.com/libsdl-org/SDL/blob/main/src/joystick/SDL_steam_virtual_gamepad.c`
 - `usb_ids.h`, `controller_list.h` — mesmo diretório `src/joystick/` do SDL
 - `SDL_gamecontroller.c` (SDL2) — `https://github.com/libsdl-org/SDL/blob/SDL2/src/joystick/SDL_gamecontroller.c`
+- `hidapi/linux/hid.c`, `joystick/linux/SDL_sysjoystick.c`, `core/linux/SDL_udev.c`,
+  `joystick/SDL_gamecontroller.c`, `joystick/hidapi/SDL_hidapijoystick.c` e
+  `include/SDL_hidapi.h` (SDL2, seção 5-bis) — `https://github.com/libsdl-org/SDL/tree/release-2.30.0`,
+  e as mesmas nas tags `release-2.30.12` e `release-2.32.10`
+- `hidapi/linux/hid.c` e `include/SDL3/SDL_hidapi.h` (SDL3, seção 5-bis) — `https://github.com/libsdl-org/SDL/tree/release-3.4.0`
 - `winebus.sys` — `https://github.com/ValveSoftware/wine/blob/proton_10.0/dlls/winebus.sys/main.c`
   e `.../dlls/winebus.sys/unixlib.h`
 
@@ -1167,6 +1283,8 @@ em devolver.
 
 - `~/.steam/debian-installation/ubuntu12_32/steamclient.so`
 - `~/.steam/debian-installation/steamrt64/libSDL3.so.0`
+- as libSDL dos runtimes da Steam medidas na seção 5-bis, e o
+  `changelog.Debian.gz` do pacote `libsdl2-2.0-0` da Ubuntu (13/09/2026)
 - `Proton 10.0/files/lib/wine/x86_64-windows/winebus.sys` e o script `proton`
   dos Protons 10.0 e 11.0
 

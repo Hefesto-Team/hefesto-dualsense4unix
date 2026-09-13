@@ -25,11 +25,18 @@ nao_toca:
 
 > **ESTADO 2026-09-10: feita** — medido na bancada: os dois sensores chegam
 > íntegros ao vpad nos dois transportes (250 relatórios/s, 222 valores
-> distintos de giro), e **o jogo recebe ZERO em Modo Virtual** — o SDL abre
+> distintos de giro), e em Modo Virtual **a libSDL2 2.30.0 do sistema** abre
 > o vpad por evdev e responde `HasSensor=False`, não é decimação. Em Modo
 > Nativo o mesmo instrumento recebe 96 amostras de giro e 586 de
 > acelerômetro. O laudo é
 > [OS SENSORES ATÉ O JOGO](../2026-09-09-OS-SENSORES-ATE-O-JOGO-o-que-a-bancada-mediu.md).
+>
+> **FATO SUBSTITUÍDO em 13/09/2026** —
+> [SENSORES-NO-JOGO-02](2026-09-13-SENSORES-NO-JOGO-02-o-giroscopio-que-o-jogo-nao-ve-em-modo-virtual.md):
+> esta nota atribuía ao jogo o zero em Modo Virtual. O zero é da 2.30.0 da
+> Ubuntu, que o ensaio carregava e que nenhum jogo da Steam carrega; nas
+> bibliotecas dos runtimes da Steam o mesmo vpad expõe e entrega os dois
+> sensores pelo evdev.
 
 **A dúvida é dela, 08/09/2026:** *"tambem tenho duvidas se a função giroscopio e acelerometro funcionam de fato."* <!-- noqa-acento: citação literal dela, palavra por palavra -->
 E, na mesma noite, a pergunta que a NADA-MOCKADO-01 guarda: *"e serão
@@ -58,13 +65,16 @@ Medido em 04/09 com SDL 2.30 headless, um DualSense no cabo
 | o que o SDL abre | `/dev/hidraw` do FÍSICO, por HIDAPI — **`tem_giro=true`, 192 valores distintos em 2 s** | `event21`/`event25` — **por evdev** |
 | o `hidraw` do vpad | não existe | `0660` + ACL, 249 relatórios/s — **e o SDL não o abriu** |
 
-**A tabela registra o que o SDL abriu, não se o giro chegou por ali.** E o
-próprio ensaio da casa diz que o SDL **não lê** o nó evdev «Motion Sensors»
-(`scripts/ensaios/o_jogo_para_de_ver_o_giro.py`, item 4). Logo, a hipótese mais
-forte que ninguém escreveu como célula: **em Virtual, um jogo SDL abre o vpad
+**A tabela registra o que o SDL abriu, não se o giro chegou por ali.** A
+hipótese que esta sprint levou à bancada: **em Virtual, um jogo SDL abre o vpad
 por evdev e NÃO recebe giroscópio** — apesar de o vpad estar entregando os
-bytes certos no report HID. Se for isso, o degrau 2 está íntegro e o produto
-não entrega, que é exatamente a forma do defeito do touchpad.
+bytes certos no report HID. A bancada de 10/09 a confirmou só na libSDL2 2.30.0
+do sistema.
+
+**FATO SUBSTITUÍDO em 13/09/2026** (SENSORES-NO-JOGO-02): este parágrafo se
+apoiava no ensaio, que dizia que o SDL não lia o nó evdev «Motion Sensors». O
+SDL o casa ao gamepad da mesma peça pelo `uniq`, e nas bibliotecas dos runtimes
+da Steam o vpad aberto por evdev expõe e entrega os dois sensores.
 
 **E as máscaras decidem sozinhas metade da resposta**, antes de qualquer
 bancada (`integrations/ponte_escada.py`, cabeçalho; `virtual_pad._try_uhid`,

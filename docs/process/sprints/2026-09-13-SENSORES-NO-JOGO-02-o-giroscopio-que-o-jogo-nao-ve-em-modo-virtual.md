@@ -1,6 +1,6 @@
 ---
 sprint: SENSORES-NO-JOGO-02
-estado: aberta
+estado: feita
 onda: A-TERCEIRA-LISTA-DELA
 posse:
   SENSORES-NO-JOGO-02:
@@ -34,6 +34,18 @@ nao_toca:
 ---
 
 # SENSORES-NO-JOGO-02 — o giroscópio que o jogo não vê em Modo Virtual
+
+> **ESTADO 2026-09-13: feita** — o env do jogo leva
+> `SDL_ACCELEROMETER_AS_JOYSTICK=0` em toda variante do `compose_env`, com o
+> nome nos dois lados da allowlist e na cópia do ensaio de ambiente; o ensaio
+> mede contra a biblioteca que o jogo carrega (`--lib`, ou as dos runtimes
+> achadas na instalação da Steam), com a struct da enumeração certa e
+> conferida contra um piso de `/sys/class/hidraw`; o fato errado saiu do laudo
+> de 09/09, da SENSORES-NO-JOGO-01, da auditoria de 11/09, de
+> `core/virtual_motion.py` e da entrega de 10/09; e a pilha ganhou a seção
+> 5-bis. As nove bibliotecas dos runtimes expõem o giroscópio do vpad; as
+> quatro mordidas reprovaram. A entrega está em
+> `docs/process/agentes/2026-09-13/SENSORES-NO-JOGO-02-opus.md`.
 
 > **ROTA ESCRITA PELO ESTUDO — 13/09/2026.** O estudo inteiro, com as sondas e
 > os endereços de fonte, fica fora do git:

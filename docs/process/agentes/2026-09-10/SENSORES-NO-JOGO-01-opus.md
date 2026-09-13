@@ -1,20 +1,29 @@
 # SENSORES-NO-JOGO-01 — opus
 
 Bancada de 10/09/2026, reservada e liberada. Dois DualSense na mesa (P1 no
-cabo, P2 no rádio), SDL 2.30.0. **Nenhuma janela nasceu na tela dela** — o
-ensaio é SDL headless com `SDL_VIDEODRIVER=dummy`.
+cabo, P2 no rádio), a libSDL2 2.30.0 do sistema. **Nenhuma janela nasceu na
+tela dela** — o ensaio é SDL headless com `SDL_VIDEODRIVER=dummy`.
+
+> **FATO SUBSTITUÍDO em 13/09/2026** —
+> [SENSORES-NO-JOGO-02](../../sprints/2026-09-13-SENSORES-NO-JOGO-02-o-giroscopio-que-o-jogo-nao-ve-em-modo-virtual.md).
+> Todo zero desta entrega é da libSDL2 2.30.0 do sistema Ubuntu, que o ensaio
+> carregava pelo loader e que nenhum jogo da Steam carrega. Nas bibliotecas dos
+> runtimes da Steam o mesmo vpad expõe e entrega os dois sensores pelo evdev,
+> com o nó «Motion Sensors» casado ao gamepad pelo `uniq`; a 2.30.0 passa a
+> entregar com `SDL_ACCELEROMETER_AS_JOYSTICK=0`. As frases que diziam o
+> contrário foram trocadas abaixo.
 
 ## O que mudou
 
-**A pergunta dela tem resposta, e ela é ruim: em Modo Virtual o jogo não
-recebe giroscópio nem acelerômetro.** E o defeito é pior do que a sprint
-supunha — não é decimação, é recusa: o SDL abre o vpad por **evdev** e
-responde ao jogo `HasSensor(GYRO)=False`. Um jogo que pergunta antes de usar
-nem chega a ler.
+**A resposta desta bancada vale para a libSDL2 2.30.0 do sistema: em Modo
+Virtual ela não entrega giroscópio nem acelerômetro.** E não é decimação, é
+recusa: a 2.30.0 abre o vpad por **evdev** e responde `HasSensor(GYRO)=False`.
+Um jogo que carregasse essa biblioteca e perguntasse antes de usar nem chegaria
+a ler.
 
 O controle positivo, o mesmo instrumento no mesmo aparelho minutos depois:
 
-| o que o jogo pergunta | **Virtual** (máscara DualSense) | **Nativo** |
+| o que a 2.30.0 respondeu | **Virtual** (máscara DualSense) | **Nativo** |
 | --- | --- | --- |
 | por onde o SDL abriu | `/dev/input/eventNN` — evdev | `/dev/hidraw5` — HIDAPI |
 | `HasSensor(GYRO)` / `(ACCEL)` | **False** / **False** | True / True |
@@ -26,8 +35,8 @@ e os dois físicos.
 **E o degrau 2 está íntegro, medido hoje** (era o passo 6 da sprint, o
 *"ainda NÃO reconferido no aparelho depois da cura"* de 19/08): o `hidraw` do
 vpad do cabo entrega **250 relatórios/s, 64 B, 222 valores distintos de giro e
-1.241 de acelerômetro em 5 s**. **O dado está lá; o caminho até o jogo é que
-não existe.**
+1.241 de acelerômetro em 5 s**. **O dado está lá; é a 2.30.0 que não o
+entrega.**
 
 Dois arquivos:
 
@@ -45,15 +54,16 @@ Dois arquivos:
   4. **máscara de endereço na saída** (octetos 4 e 5 zerados) — o ensaio existe
      para ter a saída colada num documento, e documento é arquivo versionado.
 
-**Uma afirmação minha caiu no meio do trabalho, e o controle é que a derrubou.**
-Eu escrevi no cabeçalho do ensaio que a causa era *"o hidapi do SDL não enumera
-o vpad"* — `SDL_hid_enumerate` devolve 1 dos 8 `hidraw` da máquina e nenhum dos
-dois vpads. **Em Nativo aquela mesma chamada continuou devolvendo só aquele um,
-enquanto o SDL tinha `/dev/hidraw5` ABERTO por HIDAPI.** O `SDL_hid_enumerate`
-público não é a enumeração que o subsistema de joystick usa. A frase foi
-substituída pelo que está medido, a função foi renomeada para
-`o_hidapi_publico_do_sdl_ve` e a docstring dela agora diz, com a medição ao
-lado, que ela **não** é causa de nada.
+**Uma afirmação minha caiu no meio do trabalho, e a leitura que a substituiu
+também caiu.** Eu escrevi no cabeçalho do ensaio que a causa era *"o hidapi do
+SDL não enumera o vpad"* — `SDL_hid_enumerate` devolvia 1 dos 8 `hidraw` da
+máquina e nenhum dos dois vpads. Em Nativo aquela mesma chamada continuou
+devolvendo só aquele um enquanto o SDL tinha `/dev/hidraw5` aberto por HIDAPI,
+e eu concluí que a chamada pública era outra enumeração. **FATO SUBSTITUÍDO em
+13/09/2026:** o "só um" era defeito da struct do ensaio, sem os três ints de
+interface, que parava a lista no primeiro item. A chamada é a do subsistema de
+joystick, e a SDL2 clássica de fato não lista o vpad, por falta de pai USB. A
+função hoje se chama `o_hidapi_da_biblioteca_enumera`.
 
 ## Qual mordida prova
 
@@ -92,7 +102,7 @@ Com a cura DEVOLVIDA — e o número de controle ao lado, na mesma janela:
 | --- | --- | --- |
 | report (janela de motion do vpad) | 101 valores distintos de giro | **1** — os seis bytes zerados |
 | evdev (`EVIOCGRAB` no nó do físico) | 1.517 eventos, livre | **0 eventos**, `grabado=True` |
-| o que o SDL vê | 0 | 0 |
+| o que a 2.30.0 vê | 0 | 0 |
 
 **A mesa ficou como estava:** o religar devolveu 85 e 84 valores distintos de
 giro nos dois nós, conferidos numa leitura à parte depois; `native_mode` voltou
@@ -116,7 +126,9 @@ antes do controle positivo.
   dela é gesto dela.
 * **A causa dentro do SDL.** Está medido o COMPORTAMENTO; o porquê de o SDL não
   pegar o `hidraw` do vpad, que está `0660` e abre sem esforço, não está — e é
-  a primeira pergunta de quem for curar.
+  a primeira pergunta de quem for curar. Respondida em 13/09/2026 pela
+  SENSORES-NO-JOGO-02: o `hid_enumerate` da SDL2 clássica descarta o `hidraw`
+  USB sem pai `usb_device`.
 * **Não rodei a suíte** (é de quem coordena) nem toquei em `src/`,
   `docs/data/mapa-controles.csv` ou `docs/data/ensaios.csv` — os três são
   `nao_toca` desta sprint.
@@ -162,15 +174,16 @@ perdida do próximo.
 ## O que sobrou para o próximo
 
 1. **Nasce a sprint de produto que a §4 da sprint previa**, e as duas metades
-   da condição estão medidas: vpad íntegro e zero no jogo. Ela tem de
-   responder, nesta ordem: (a) por que o SDL não abre o `hidraw` do vpad por
+   da condição estão medidas: vpad íntegro e zero na 2.30.0 do sistema. Ela tem
+   de responder, nesta ordem: (a) por que o SDL não abre o `hidraw` do vpad por
    HIDAPI; (b) se não houver caminho por HIDAPI, como o movimento chega ao jogo
-   em Virtual — o nó "Motion Sensors" do vpad existe e publica, mas o SDL o
-   pula por desenho.
+   em Virtual. **FATO SUBSTITUÍDO em 13/09/2026:** esta linha dizia que o SDL
+   deixava o nó «Motion Sensors» de fora; ele o casa ao gamepad pelo `uniq`.
 2. **As células, para a MESA-DE-QUATRO-01 escrever no mapa** — estão na §8 do
    laudo, com a ressalva que não pode se perder: `movimento.giroscopio@dualsense`
    e `movimento.acelerometro@dualsense` alcançam `O JOGO RECEBEU` **só em Modo
-   Nativo**; as quatro chaves `.jogo` param no vpad nos dois transportes.
+   Nativo**; as quatro chaves `.jogo` param no vpad nos dois transportes, na
+   2.30.0 do sistema.
 3. **Os DOIS vpads desta mesa chegam com o mesmo rótulo, "(Hefesto P1)"**, com
    `uniq` diferentes, estando o P2 conectado como índice 1. Um jogo vê dois
    controles dizendo-se P1. Não editei: é `src/`, e é `nao_toca` aqui.

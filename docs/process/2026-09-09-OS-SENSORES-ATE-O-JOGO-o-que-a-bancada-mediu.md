@@ -1,14 +1,24 @@
 # Os sensores até o JOGO — o que a bancada mediu
 
 **Bancada de 10/09/2026**, dois DualSense na mesa (P1 no cabo, P2 no rádio),
-SDL 2.30.0, daemon em Virtual com máscara DualSense. Instrumento:
-`scripts/ensaios/o_jogo_para_de_ver_o_giro.py`.
+**a libSDL2 2.30.0 do sistema Ubuntu**, daemon em Virtual com máscara
+DualSense. Instrumento: `scripts/ensaios/o_jogo_para_de_ver_o_giro.py`.
 
 A dúvida que encomendou isto é dela, 08/09/2026:
 
 *"tambem tenho duvidas se a função giroscopio e acelerometro funcionam de fato."* <!-- noqa-acento: citação literal dela, palavra por palavra -->
 
 E a irmã dela: *"e serão reconhecidos in game?"*
+
+> **FATO SUBSTITUÍDO em 13/09/2026** —
+> [SENSORES-NO-JOGO-02](sprints/2026-09-13-SENSORES-NO-JOGO-02-o-giroscopio-que-o-jogo-nao-ve-em-modo-virtual.md).
+> Todo zero em Modo Virtual deste laudo é da libSDL2 2.30.0 do sistema, que o
+> ensaio carregava pelo loader do host e que nenhum jogo da Steam carrega. As
+> bibliotecas dos runtimes da Steam — a 2.32.10 do scout, o SDL3 3.4.14 e o
+> sdl2-compat 2.32.70 do sniper, do SLR 4 e do soldier — expõem e entregam o
+> giroscópio e o acelerômetro do mesmo vpad, pelo evdev. O que este laudo mediu
+> no vpad, no nó de movimento e no interruptor continua valendo; as frases que
+> diziam o contrário foram trocadas abaixo.
 
 ---
 
@@ -17,13 +27,14 @@ E a irmã dela: *"e serão reconhecidos in game?"*
 **Funcionam. Até o vpad, os dois, nos dois transportes — e isso está medido
 hoje, não herdado.**
 
-**Não chegam ao jogo em Modo Virtual.** E o defeito é pior do que a sprint
-supunha: não é que o jogo receba pouco, ou receba tarde. **O SDL responde ao
-jogo que o controle não tem giroscópio.** Um jogo que pergunta antes de usar
-nem chega a ler.
+**Em Modo Virtual, a libSDL2 2.30.0 do sistema não os entrega.** Não é que
+receba pouco, ou tarde: **a 2.30.0 responde que o controle não tem
+giroscópio.** As bibliotecas que os jogos da Steam carregam entregam (a nota de
+13/09, acima).
 
 **Em Modo Nativo chegam.** Mesmo instrumento, mesmo aparelho, minutos de
-diferença. É essa diferença que diz que o problema tem endereço.
+diferença. É essa diferença que diz que o problema tem endereço — e o endereço,
+medido em 13/09, é a biblioteca.
 
 ---
 
@@ -32,7 +43,7 @@ diferença. É essa diferença que diz que o problema tem endereço.
 O mesmo controle, o mesmo instrumento, a mesma mesa, com o modo trocado no
 meio e devolvido no fim:
 
-| o que o jogo pergunta | **Virtual** (máscara DualSense) | **Nativo** |
+| o que a 2.30.0 do sistema respondeu | **Virtual** (máscara DualSense) | **Nativo** |
 | --- | --- | --- |
 | por onde o SDL abriu | `/dev/input/eventNN` — **evdev** | `/dev/hidraw5` — **HIDAPI** |
 | `HasSensor(GYRO)` | **False** | True |
@@ -41,7 +52,7 @@ meio e devolvido no fim:
 | acelerômetro, distintas em 3 s | **0** | 586 |
 | `hidraw` do FÍSICO | `0600` — o daemon o esconde do jogo | `0660` |
 
-Em Virtual o zero valeu para os **quatro** nós que o SDL abriu: os dois vpads
+Em Virtual o zero valeu para os **quatro** nós que a 2.30.0 abriu: os dois vpads
 (o do cabo e o do rádio) e os dois físicos.
 
 ---
@@ -58,7 +69,7 @@ Foi por isso que o controle foi medido **na mesma janela**, um degrau abaixo:
 | nó evdev "Motion Sensors" de cada peça | 1.300–1.500 eventos por segundo, **63 a 112 valores DISTINTOS de giro** |
 | `hidraw` do vpad do cabo | **250 relatórios/s**, 64 B, **222 valores distintos de giro** e 1.241 de acelerômetro em 5 s |
 
-**O dado está lá. O caminho até o jogo é que não existe.**
+**O dado está lá. É a 2.30.0 do sistema que não o entrega.**
 
 ---
 
@@ -68,8 +79,8 @@ Foi por isso que o controle foi medido **na mesma janela**, um degrau abaixo:
 | --- | --- | --- |
 | 1 | Nativo · cabo | **controle POSITIVO, e passou.** HIDAPI no `hidraw` do físico, `HasSensor=True`, 96 amostras distintas de giro e 586 de acelerômetro em 3 s |
 | 2 | Nativo · rádio | **não medido** — a peça do rádio caiu da mesa sozinha antes deste passo (ver §5) |
-| 3 | Virtual · DualSense · **cabo** | **ZERO.** O SDL abriu o vpad por evdev; `HasSensor(GYRO)` e `HasSensor(ACCEL)` = **False** |
-| 4 | Virtual · DualSense · **rádio** | **ZERO**, idêntico, medido enquanto a peça ainda estava na mesa |
+| 3 | Virtual · DualSense · **cabo** | **ZERO na 2.30.0 do sistema.** Ela abriu o vpad por evdev; `HasSensor(GYRO)` e `HasSensor(ACCEL)` = **False** |
+| 4 | Virtual · DualSense · **rádio** | **ZERO na 2.30.0**, idêntico, medido enquanto a peça ainda estava na mesa |
 | 5 | Virtual · Xbox 360 | **não rodado** — ver §6, e a razão não é preguiça |
 | 6 | degrau 2, reconferido | **ÍNTEGRO no cabo.** 250 relatórios/s com 222 valores distintos de giro. Fecha o *"ainda NÃO reconferido no aparelho depois da cura"* de 19/08. No rádio, não alcançado |
 | 7 | `O JOGO REAGIU` | **é dela.** Nenhuma régua lê o estado de um jogo sob Proton |
@@ -84,24 +95,25 @@ Foi por isso que o controle foi medido **na mesma janela**, um degrau abaixo:
 | --- | --- | --- |
 | **report** (a janela de motion do vpad) | 101 valores distintos de giro | **1** — os seis bytes zerados, valor constante |
 | **evdev** (o `EVIOCGRAB` no nó do físico) | 1.517 eventos, livre | **0 eventos**, `grabado=True` |
-| **o que o SDL vê** | 0 | 0 |
+| **o que a 2.30.0 vê** | 0 | 0 |
 
 A resposta do daemon foi `{"report": "aplicado", "evdev": "held"}`, e o religar
 devolveu tudo: 85 e 84 valores distintos de giro nos dois nós, conferidos
 depois. **A mesa ficou como estava.**
 
 A leitura: **os dois braços do interruptor fazem exatamente o que prometem.**
-O que não se pode medir é o efeito deles no jogo — porque no jogo já não havia
+O que não se mediu é o efeito deles no jogo — porque na 2.30.0 já não havia
 nada a desligar.
 
 ---
 
 ## §5 — O que caiu do enunciado
 
-**A mordida da §5 da sprint não é medível hoje.** Ela pedia: *"em Virtual,
+**A mordida da §5 da sprint não foi medível na 2.30.0.** Ela pedia: *"em Virtual,
 `sensor.set` desligar o giroscópio → as amostras do SDL param no mesmo
-minuto"*. **Não há amostra do SDL a parar** — são zero com o sensor ligado. A
-mordida existe e está medida, mas um degrau abaixo (§4).
+minuto"*. **Na 2.30.0 não há amostra a parar** — são zero com o sensor ligado. A
+mordida existe e está medida, mas um degrau abaixo (§4); com a biblioteca que o
+jogo carrega ela volta a ser medível, e é da MESA-DE-QUATRO-01.
 
 **A §2 da sprint supunha decimação, e a bancada mediu recusa.** O texto dizia
 que o vpad entrega *"~37 % dos eventos do físico"* e perguntava se era
@@ -120,38 +132,41 @@ dela é gesto dela.
 **O controle negativo da máscara Xbox (passo 5) não rodou.** Ele existe para
 pegar um instrumento que ache giro onde não há — *"instrumento que acha giro na
 máscara Xbox está olhando para outro nó"*. Hoje ele seria vazio: o instrumento
-já reporta **zero e `HasSensor=False` para todos os quatro nós**, físicos
+já reporta, na 2.30.0, **zero e `HasSensor=False` para todos os quatro nós**, físicos
 inclusive, com a máscara DualSense. Não há giro a atribuir ao nó errado.
 Trocar a máscara da máquina dela para confirmar um zero que já é zero paga um
 preço real — ela está usando a máquina — por nenhuma informação nova.
 **Fica declarado, não escondido.**
 
-**A causa dentro do SDL não está medida.** A tentação é dizer *"o hidapi do SDL
-não enumera o vpad"* — `SDL_hid_enumerate` devolve um dispositivo dos oito
-`hidraw` da máquina, e nenhum dos dois vpads, que estão `0660` e abrem sem
-esforço. **Isso não sustenta a conclusão, e o controle em Nativo derrubou a
-ideia:** aquela mesma chamada continuou devolvendo só aquele um enquanto o SDL
-tinha `/dev/hidraw5` ABERTO por HIDAPI. O `SDL_hid_enumerate` público não é a
-enumeração que o subsistema de joystick usa.
-
-O que sobra medido é o comportamento; o porquê é a primeira pergunta de quem
-for curar.
+**A causa dentro do SDL foi medida em 13/09/2026** (SENSORES-NO-JOGO-02), e o
+parágrafo que ficava aqui caiu inteiro. O `SDL_hid_enumerate` do ensaio devolvia
+um só dispositivo porque a struct dele não tinha os três ints de interface, e a
+lista parava no primeiro item; com a struct certa, a chamada é a mesma do
+subsistema de joystick, e a SDL2 clássica não lista o vpad porque o
+`hid_enumerate` dela descarta o `hidraw` USB sem pai `usb_device`. Sem HIDAPI o
+movimento viaja pelo evdev, e só a 2.30.0 da Ubuntu não o casa ao gamepad — a
+menos que receba `SDL_ACCELEROMETER_AS_JOYSTICK=0`, que o wrapper passou a
+entregar. O fonte e as medições estão na seção 5-bis da
+[pilha](../protocol/pilha-steam-input-xpad-sdl.md).
 
 ---
 
 ## §7 — O que isto desbloqueia
 
 A §4 da sprint previa o desfecho: *"se o passo 3 der ZERO por evdev e o vpad
-estiver íntegro: nasce uma sprint de produto"*. **É o caso, e as duas metades
-estão medidas** — o vpad íntegro (§2) e o zero no jogo (§1).
+estiver íntegro: nasce uma sprint de produto"*. **Foi o caso na 2.30.0 do
+sistema** — o vpad íntegro (§2) e o zero dessa biblioteca (§1) —, e a sprint
+nasceu: [SENSORES-NO-JOGO-02](sprints/2026-09-13-SENSORES-NO-JOGO-02-o-giroscopio-que-o-jogo-nao-ve-em-modo-virtual.md).
 
-A sprint de produto tem de responder, nesta ordem:
+As duas perguntas que ela recebeu, respondidas em 13/09/2026:
 
 1. **por que o SDL não abre o `hidraw` do vpad por HIDAPI**, sendo ele `0660` e
-   legível — é a pergunta que decide se a cura é barata ou cara;
+   legível — a SDL2 clássica descarta o `hidraw` USB sem pai USB, e o vpad
+   `uhid` não tem pai USB; o SDL3 e o sdl2-compat o listam;
 2. se não houver caminho por HIDAPI, **como o movimento chega ao jogo em
-   Virtual** — o nó "Motion Sensors" do vpad existe e publica, mas o SDL o pula
-   por desenho, e quem o lê são `evtest` e emuladores com backend evdev.
+   Virtual** — pelo evdev: o SDL casa o nó "Motion Sensors" ao gamepad da mesma
+   peça pelo `uniq`, em toda biblioteca medida menos a 2.30.0 da Ubuntu sem a
+   dica.
 
 E há uma decisão que é dela, já registrada na §2 da sprint e que a bancada não
 muda: **em máscara Xbox 360 e Nintendo Pro não há onde pôr o movimento** — o
@@ -167,16 +182,18 @@ partir daqui. Esta sprint declara `nao_toca` os dois CSV.
 
 | chave | transporte | até onde foi | o que se viu |
 | --- | --- | --- | --- |
-| `movimento.giroscopio.jogo@dualsense` | cabo | **O APARELHO OBEDECEU** (não alcança `O JOGO RECEBEU`) | vpad entrega 250 relatórios/s com 222 valores distintos; o SDL abre por evdev e responde `HasSensor=False` — **o jogo recebe zero** |
-| `movimento.giroscopio.jogo@dualsense` | rádio | **O APARELHO OBEDECEU** (não alcança `O JOGO RECEBEU`) | idêntico ao cabo no que o SDL vê: evdev, `HasSensor=False`, zero |
-| `movimento.acelerometro.jogo@dualsense` | cabo | **O APARELHO OBEDECEU** (não alcança `O JOGO RECEBEU`) | 1.241 valores distintos no `hidraw` do vpad; zero no SDL, `HasSensor=False` |
+| `movimento.giroscopio.jogo@dualsense` | cabo | **O APARELHO OBEDECEU** (não alcança `O JOGO RECEBEU`) | vpad entrega 250 relatórios/s com 222 valores distintos; a libSDL2 2.30.0 do sistema abre por evdev e responde `HasSensor=False`. Nas bibliotecas dos runtimes da Steam o vpad expõe e entrega (sonda de 13/09, só o rádio) |
+| `movimento.giroscopio.jogo@dualsense` | rádio | **O APARELHO OBEDECEU** (não alcança `O JOGO RECEBEU`) | idêntico ao cabo no que a 2.30.0 vê: evdev, `HasSensor=False`, zero; nas bibliotecas da Steam o vpad expõe e entrega (sonda de 13/09) |
+| `movimento.acelerometro.jogo@dualsense` | cabo | **O APARELHO OBEDECEU** (não alcança `O JOGO RECEBEU`) | 1.241 valores distintos no `hidraw` do vpad; zero na 2.30.0, `HasSensor=False`; nas bibliotecas da Steam o acelerômetro chega (sonda de 13/09) |
 | `movimento.acelerometro.jogo@dualsense` | rádio | **O APARELHO OBEDECEU** (não alcança `O JOGO RECEBEU`) | idem |
 | `movimento.giroscopio@dualsense` | cabo | **O JOGO RECEBEU** — em Modo NATIVO | 96 valores distintos por HIDAPI, `HasSensor=True` |
 | `movimento.acelerometro@dualsense` | cabo | **O JOGO RECEBEU** — em Modo NATIVO | 586 valores distintos por HIDAPI, `HasSensor=True` |
 
-**A ressalva que não pode se perder na transcrição:** as duas últimas linhas
-valem **só em Modo Nativo**. Em Virtual as mesmas duas chaves entregam à
-interface e param no vpad.
+**As ressalvas que não podem se perder na transcrição:** as duas últimas linhas
+valem **só em Modo Nativo**; e as quatro de cima dizem o que a libSDL2 2.30.0
+do sistema respondeu. A sonda de 13/09 viu as bibliotecas dos runtimes da Steam
+entregarem os dois sensores do vpad a um consumidor SDL — o que ainda não é
+`O JOGO RECEBEU`, que pede o processo de um jogo.
 
 ---
 
@@ -203,4 +220,8 @@ faltava:
   o mesmo nome, "(Hefesto P1)"; casar por nome poria o dado de uma peça ao lado
   do veredito da outra;
 * **máscara de endereço na saída.** O ensaio existe para ter a saída colada num
-  documento, e documento é arquivo versionado.
+  documento, e documento é arquivo versionado;
+* **a biblioteca que o jogo carrega** (13/09/2026): `--lib`, ou as dos runtimes
+  da Steam achadas na instalação, cada uma num processo, com a revisão e a dica
+  no veredito; e a struct da enumeração com os três ints de interface,
+  conferida contra um piso de `/sys/class/hidraw`.

@@ -262,11 +262,14 @@ continua livre e publicando, ao lado do espelho"*. O `EVIOCGRAB` de
 evdev direto, nos DOIS modos"*. **O que a máscara decide é o caminho do vpad, e
 só ele.**
 
-**E esse nó tem alcance medido, na mesma página, para a afirmação não crescer
-mais do que deve:** o SDL **não enumera** o nó de movimento —
-`SDL_NumJoysticks` devolve só os controles, e o nó carrega
-`ID_INPUT_ACCELEROMETER`, que o SDL pula. Quem lê por ali é o **consumidor evdev
-direto** (`evtest`, emuladores). **Degrau das duas chaves de movimento que andam
+**E esse nó tem alcance medido, para a afirmação não crescer mais do que deve.**
+**FATO SUBSTITUÍDO em 13/09/2026**
+([SENSORES-NO-JOGO-02](sprints/2026-09-13-SENSORES-NO-JOGO-02-o-giroscopio-que-o-jogo-nao-ve-em-modo-virtual.md)):
+esta página dizia que o SDL deixava o nó de movimento de fora. Ele não o abre
+como controle, mas o casa como sensor do gamepad da MESMA peça pelo `uniq`:
+quem abre o físico por evdev lê o nó do físico, e o jogo que abre o vpad lê o do
+vpad. Fora do SDL, quem lê o nó é o **consumidor evdev direto** (`evtest`,
+emuladores). **Degrau das duas chaves de movimento que andam
 por `evdev` — `movimento.giroscopio` e `movimento.acelerometro`: `MONTOU` nos
 dois transportes; dentro do jogo, em qualquer máscara, não medido.**
 
@@ -515,8 +518,9 @@ nesse nó**, e nenhum resultado do J1 diz coisa alguma sobre as três.
 **E quem responde por elas responde só em parte, o que também tem de ficar
 escrito.** O **J2** mede o que um consumidor **SDL** recebe — e SDL é o que quase
 todo jogo é. O consumidor **evdev direto** daquele nó (`evtest`, emuladores)
-**não tem gesto nesta lista**, e a §5 diz a causa medida: o SDL não enumera o nó
-de movimento. Fica como buraco declarado, não como gesto prometido.
+**não tem gesto nesta lista**, e a §5 diz o alcance: o SDL casa o nó ao gamepad
+da mesma peça, e quem o lê fora do SDL não tem instrumento aqui. Fica como
+buraco declarado, não como gesto prometido.
 
 **O gesto:** com o jogo aberto e a máscara DualSense, rode
 `scripts/ensaios/o_jogo_segura_o_nosso_no.py`. Se o inode do nosso vpad
