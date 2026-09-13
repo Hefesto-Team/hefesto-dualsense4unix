@@ -118,57 +118,52 @@ def _o_marcador_diz(monkeypatch: pytest.MonkeyPatch, nome: str | None) -> None:
 # --------------------------------------------------------------------------
 # 1. O EMBRULHO — sem ele nada disto chega à tela
 # --------------------------------------------------------------------------
-def test_o_desfecho_vai_no_embrulho_que_a_pintura_le() -> None:
-    """``{"mesa": {…}}``, e não o dicionário achatado.
+def test_a_tira_recebe_vazio_e_a_frase_vai_no_relato() -> None:
+    """A TIRA NÃO FALA MAIS — 13/09/2026, pedido dela.
 
-    O ``pintar`` do piloto lê ``p.blocos``, ``p.mesa``, ``p.colunas`` e
-    ``p.vazios``. Uma chave na RAIZ não casa com nenhum laço: **zero escrito,
-    zero erro**.
+    O gesto continua montando a frase (é o relato do que ele fez), mas ela viaja
+    em ``relato``, que o ``pintar`` não lê — ele só lê ``p.blocos``, ``p.mesa``,
+    ``p.colunas`` e ``p.vazios`` —, e o endereço da tira recebe vazio.
 
-    MORDIDA: devolva ``{"perfis.desfecho": frase}`` em ``_dizer`` (que é a forma
-    que parece certa e não pinta nada) e este teste reprova.
+    MORDIDA: devolva ``{"mesa": {"perfis.desfecho": frase}}`` em ``_dizer``, que
+    é como era, e este teste reprova.
     """
     carga = a10_perfis._dizer("Perfil ativado: Pragmata")
-    assert set(carga) == {"mesa"}, (
-        f"a carga do desfecho saiu como {sorted(carga)}. O `pintar` só lê "
-        f"`blocos`, `mesa`, `colunas` e `vazios` — o resto cai no vazio.")
-    assert carga["mesa"][DESFECHO] == "Perfil ativado: Pragmata"
+    assert set(carga) == {"mesa", "relato"}, sorted(carga)
+    assert carga["mesa"][DESFECHO] == "", (
+        f"a tira voltou a falar: {carga['mesa'][DESFECHO]!r}")
+    assert carga["relato"] == "Perfil ativado: Pragmata"
 
 
-def test_o_desfecho_tambem_fica_guardado_para_o_tique_seguinte() -> None:
-    """A pintura imediata é o "agora"; o tique é o que o mantém trinta segundos.
+def test_a_tira_nao_guarda_frase_para_o_tique_seguinte() -> None:
+    """Sem guardado, nenhum tique acende a tira depois do gesto.
 
-    Sem o guardado, a frase apareceria e o PRÓXIMO tique — 500 ms depois — a
-    apagaria com o valor vazio do pacote. Ela leria um lampejo.
+    MORDIDA: volte o ``_anotar`` a guardar ``(frase, time.monotonic())`` e o
+    tique seguinte pintaria a frase por trinta segundos — este teste reprova.
     """
     a10_perfis._dizer("Perfil removido: Sackboy")
-    assert a10_perfis._desfecho_para_a_tela() == "Perfil removido: Sackboy"
+    assert a10_perfis._desfecho_para_a_tela() == ""
 
 
-def test_o_desfecho_vence_e_a_tira_apaga(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Trinta segundos, e o relógio é MONOTÔNICO — o mesmo prazo da tarja.
-
-    Um desfecho que ficasse para sempre viraria a tela afirmando um ato velho: o
-    "Perfil removido" de meia hora atrás ao lado de uma lista já mudada.
-    """
+def test_o_desfecho_vai_para_o_diario_da_janela(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """A frase sai da tela e fica no ``interface.log``, para quem depura."""
     a10_perfis._dizer("Lista recarregada · 33 perfis")
-    agora = a10_perfis.time.monotonic()
-    monkeypatch.setattr(a10_perfis.time, "monotonic",
-                        lambda: agora + a10_perfis.SEGUNDOS_DO_DESFECHO + 0.1)
-    assert a10_perfis._desfecho_para_a_tela() == "", (
-        "o desfecho não venceu — a tira ficaria acesa com uma notícia velha")
+    assert "[desfecho] 10-perfis.html · Lista recarregada · 33 perfis" in (
+        capsys.readouterr().err)
 
 
-def test_o_pacote_emite_o_desfecho_no_endereco_da_tira(
+def test_o_pacote_emite_a_tira_vazia(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """A tira é pintada pelo tique, como o rótulo do Remover — não pelo JS."""
+    """O tique também não acende a tira, mesmo logo depois de um gesto."""
     _o_disco_tem(monkeypatch, "Pragmata", "Sackboy")
     _o_marcador_diz(monkeypatch, None)
     a10_perfis._dizer("Perfil removido: Sackboy")
 
     fora = a10_perfis.pacote(_ctx())
-    assert fora[DESFECHO] == "Perfil removido: Sackboy"
+    assert fora[DESFECHO] == ""
 
 
 # --------------------------------------------------------------------------
@@ -200,9 +195,8 @@ def test_o_ativar_diz_o_que_o_lock_manual_comeu(
     carga = a10_perfis.ativar(_ctx(ativo="Sackboy"), {"texto": "Ativar"}, ponte)
 
     esperado = mensagem_de_ativacao("Pragmata", corpo)
-    assert carga["mesa"][DESFECHO] == esperado, (
-        f"o desfecho saiu {carga['mesa'][DESFECHO]!r} e o produto diz "
-        f"{esperado!r}")
+    assert carga["relato"] == esperado, (
+        f"o relato saiu {carga['relato']!r} e o produto diz {esperado!r}")
     assert "menos" in esperado, (
         "a frase do produto deixou de nomear o que ficou de fora — a régua "
         "está medindo contra um alvo que mudou")
@@ -287,8 +281,9 @@ def test_o_recarregar_devolve_a_lista_relida(
     assert a10_perfis.SELETOR_DA_LISTA in carga["blocos"], (
         f"o `recarregar` não devolveu o bloco da lista: {sorted(carga)}")
     assert "Elden Ring" in carga["blocos"][a10_perfis.SELETOR_DA_LISTA]
-    assert carga["mesa"][DESFECHO] == "Lista recarregada · 3 perfis", (
-        f"o desfecho saiu {carga['mesa'][DESFECHO]!r}")
+    assert carga["relato"] == "Lista recarregada · 3 perfis", (
+        f"o relato saiu {carga['relato']!r}")
+    assert carga["mesa"][DESFECHO] == "", "a tira voltou a falar"
 
 
 def test_o_recarregar_nao_fala_com_o_daemon(
@@ -325,9 +320,9 @@ def test_o_recarregar_traz_o_desfecho_novo_e_nao_o_do_gesto_anterior(
 
     carga = a10_perfis.recarregar(_ctx(), {}, PonteDeMentira())
 
-    assert carga["mesa"][DESFECHO] == "Lista recarregada · 1 perfis", (
-        f"o `recarregar` pintou {carga['mesa'][DESFECHO]!r} — o desfecho do "
-        f"gesto anterior.")
+    assert carga["relato"] == "Lista recarregada · 1 perfis", (
+        f"o `recarregar` relatou {carga['relato']!r} — o desfecho do gesto "
+        f"anterior.")
 
 
 # --------------------------------------------------------------------------
@@ -352,7 +347,8 @@ def test_o_remover_anota_a_frase_da_janela_estavel(
     # O primeiro clique ARMA e levanta — a pergunta mora no rótulo do botão.
     with pytest.raises(RuntimeError):
         a10_perfis.remover(_ctx(), {}, ponte)
-    a10_perfis.remover(_ctx(), {}, ponte)
+    resposta = a10_perfis.remover(_ctx(), {}, ponte)
 
     assert apagados == ["Sackboy"]
-    assert a10_perfis._desfecho_para_a_tela() == "Perfil removido: Sackboy"
+    assert resposta["relato"] == "Perfil removido: Sackboy"
+    assert a10_perfis._desfecho_para_a_tela() == "", "a tira voltou a falar"

@@ -306,7 +306,8 @@ def test_o_estilo_grava_gatilho_vibracao_e_uma_cor_por_unidade(
     assert prof.leds.lightbar == (0, 0, 0), (
         "o estilo escreveu uma cor na seção GLOBAL — é a cor que os quatro "
         "herdariam, e a regra dela é que nenhum controle repete a cor de outro")
-    assert resposta is not None and "FPS" in resposta["mesa"]["perfis.desfecho"]
+    assert resposta is not None and "FPS" in resposta["relato"]
+    assert resposta["mesa"]["perfis.desfecho"] == "", "a tira voltou a falar"
 
 
 def test_nenhuma_unidade_recebe_a_cor_de_outra(disco: dict[str, Any]) -> None:
@@ -396,7 +397,7 @@ def test_personalizado_nao_mexe_em_nada(disco: dict[str, Any]) -> None:
     assert not disco["salvos"], "o `Personalizado` gravou alguma coisa"
     assert disco["perfil"] is era
     assert resposta is not None
-    assert "não mexe em nada" in resposta["mesa"]["perfis.desfecho"]
+    assert "não mexe em nada" in resposta["relato"]
 
 
 def test_um_estilo_que_o_produto_nao_conhece_recusa(disco: dict[str, Any]) -> None:
@@ -434,7 +435,7 @@ def test_mesa_vazia_ainda_ajusta_gatilho_e_vibracao(disco: dict[str, Any]) -> No
     assert prof.rumble.policy == estilos_de_jogo.POR_ROTULO["Corrida"].vibracao
     assert not (prof.controllers or {})
     assert resposta is not None
-    assert "nenhum controle ligado" in resposta["mesa"]["perfis.desfecho"]
+    assert "nenhum controle ligado" in resposta["relato"]
 
 
 def test_o_estilo_saiu_da_lista_de_travados() -> None:

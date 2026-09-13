@@ -106,6 +106,7 @@ que escreve tem de avisar o daemon depois (`profile.switch` para reaplicar,
 """
 from __future__ import annotations
 
+import sys
 import time
 from collections.abc import Callable
 from typing import Any
@@ -544,7 +545,11 @@ def _com_a_carona(frase: str) -> str:
 
 
 def _dizer(frase: str, **campos: Any) -> dict[str, Any]:
-    """Anota o desfecho E o devolve para a tela AGORA, sem esperar o tique.
+    """Relata o desfecho do gesto e devolve, na hora, os campos que ele corrige.
+
+    DESDE 13/09/2026 A FRASE NÃO VAI PARA A TELA: ela sai em `relato` e no
+    diário da janela, e a tira recebe vazio (ver o fim desta função). O que
+    segue descreve o caminho dos `campos`, que continua valendo.
 
     `campos` SÃO OS ENDEREÇOS QUE O GESTO CORRIGE NA HORA, e eles viajam no
     mesmo embrulho — 04/09/2026, decisão [04] do PO. O caso que os pediu é o do
@@ -583,22 +588,26 @@ def _dizer(frase: str, **campos: Any) -> dict[str, Any]:
         frase = f"{frase} · {_CARONA_PENDENTE}" if frase else _CARONA_PENDENTE
         _CARONA_PENDENTE = ""
     _anotar(frase)
-    return {"mesa": {"perfis.desfecho": frase, **campos}}
+    # A TIRA NÃO FALA MAIS — 13/09/2026. Pedido dela, duas vezes:
+    # "essa frase de interface que aparece na aba perfil nao devia aparecer nunca"  # (noqa-acento)
+    # "essas frases de status que aparecem no rodapé isso não deveria estar aparecendo"
+    # A frase continua sendo montada — é o relato do que o gesto fez, e as
+    # réguas o conferem —, mas viaja em `relato`, que o `pintar` não lê, e o
+    # endereço da tira recebe vazio.
+    return {"mesa": {"perfis.desfecho": "", **campos}, "relato": frase}
 
 
 def _anotar(frase: str) -> None:
-    """Guarda o desfecho do gesto, para o tique seguinte levá-lo à tela.
+    """Leva o desfecho do gesto ao diário da janela — e não mais à tela.
 
-    ELE NÃO ESCREVE NO DOM, e não pode: os gestos rodam em thread
-    (`hefesto_vivo._gesto`, `trabalhar()`), e só o laço do GTK toca a página. O
-    caminho é o mesmo do `_rotulo_do_remover` — o estado mora no Python e a
-    pintura o busca a cada 100 ms.
-
-    FRASE VAZIA APAGA. É o que faz um gesto que não tem notícia limpar a notícia
-    do anterior, em vez de deixar a tela afirmando um desfecho velho.
+    ATÉ 13/09/2026 ele guardava a frase para o tique seguinte pintá-la na tira
+    por trinta segundos. A tira saiu da tela por pedido dela (ver `_dizer`);
+    o desfecho continua escrito, no `interface.log`, para quem depura.
     """
     global _DESFECHO
-    _DESFECHO = (frase, time.monotonic()) if frase else None
+    _DESFECHO = None
+    if frase:
+        print(f"[desfecho] {PAGINA} · {frase}", file=sys.stderr)
 
 
 def _desfecho_para_a_tela() -> str:
@@ -3946,12 +3955,14 @@ def recarregar(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
     # correção é sobrescrever a chave depois — um dono, um valor, e o tique
     # seguinte encontra o mesmo.
     _anotar(frase)
-    carga["perfis.desfecho"] = frase
+    carga["perfis.desfecho"] = ""
     # A CARGA VAI NO EMBRULHO DA PINTURA — ver `_dizer`. O `blocos` é chave de
     # contrato e fica na RAIZ (o `pintar` o lê de `p.blocos`); o resto é `mesa`.
+    # A frase vai em `relato`, que não pinta: a tira não fala desde 13/09.
     return {"blocos": carga.get("blocos") or {},
             "mesa": {k: v for k, v in carga.items()
-                     if k != "blocos" and not isinstance(v, dict)}}
+                     if k != "blocos" and not isinstance(v, dict)},
+            "relato": frase}
 
 
 @gesto("10-perfis.html", "procurar")
@@ -4023,10 +4034,11 @@ def ordenar(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
         frase = "Ordem de sempre: o perfil que está valendo em primeiro"
     carga = pacote(ctx)
     _anotar(frase)
-    carga["perfis.desfecho"] = frase
+    carga["perfis.desfecho"] = ""
     return {"blocos": carga.get("blocos") or {},
             "mesa": {k: v for k, v in carga.items()
-                     if k != "blocos" and not isinstance(v, dict)}}
+                     if k != "blocos" and not isinstance(v, dict)},
+            "relato": frase}
 
 
 @gesto("10-perfis.html", "largura-da-coluna")
@@ -4073,7 +4085,7 @@ def largura_da_coluna(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any
             # viajam — o roteiro reescreve o `<col>` com ele. Sem isto, uma
             # coluna que ela arrastou abaixo do piso ficaria na tela com a
             # largura que o disco RECUSOU até o próximo tique.
-            "perfis.desfecho": f"Coluna com {ficou} pixels"}
+            "relato": f"Coluna com {ficou} pixels"}
 
 
 def _editor_de(prof: Any) -> dict[str, Any]:

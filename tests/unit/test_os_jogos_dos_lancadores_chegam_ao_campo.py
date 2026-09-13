@@ -814,5 +814,6 @@ def test_o_botao_detectar_nomeia_o_jogo_do_heroic_que_acabou_de_gravar(
     # O CAMPO se corrige com o endereço, e não com o nome: é ele que grava.
     assert fora["mesa"]["editor.jogo"] == "gotg.exe"
     # E A FRASE nomeia o jogo, que é a queixa dela de 11/09/2026.
-    frase = str(fora["mesa"].get("perfis.desfecho") or "")
+    # Desde 13/09/2026 a frase viaja em `relato`: a tira da aba não fala mais.
+    frase = str(fora.get("relato") or "")
     assert frase.endswith("· Marvel's Guardians of the Galaxy"), frase
