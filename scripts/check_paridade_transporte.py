@@ -2746,7 +2746,7 @@ _MEDIDAS_QUE_NAO_SAO_DAQUI: tuple[str, ...] = (
     '21 linhas',
     '21.026',
     '225 células',
-    '225 linhas',
+    '230 linhas',
     '26 colunas',
     '264 linhas',
     '27.828',

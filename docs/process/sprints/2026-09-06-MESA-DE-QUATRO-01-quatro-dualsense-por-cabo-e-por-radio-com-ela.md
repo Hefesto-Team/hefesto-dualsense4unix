@@ -34,8 +34,11 @@ nao_toca:
 > arranjos sem escrever (07/09) e em 08/09 seis passadas escrevendo deram
 > silêncio nas seis, **ainda sem linha no caderno**. A conferência dela de 08/09
 > fechou `7 ✓ / 0 falta`. O documento de `cria:` ainda não existe — nasce da hora
-> dela. **O giroscópio não tem linha neste roteiro:** é a
-> [SENSORES-NO-JOGO-01](2026-09-08-SENSORES-NO-JOGO-01-o-giroscopio-e-o-acelerometro-provados-ate-o-jogo.md).
+> dela. **O giroscópio com o jogo aberto é desta bancada:** a
+> [SENSORES-NO-JOGO-01](2026-09-08-SENSORES-NO-JOGO-01-o-giroscopio-e-o-acelerometro-provados-ate-o-jogo.md)
+> levou a prova até o vpad, e o que falta — o jogo aberto receber e reagir — é
+> daqui, como diz a dona da linha `sensor` na régua da quinta pergunta
+> (RESTOS-DA-ONDA-TRES-01, 13/09).
 > **Nota de 13/09/2026, antes de escrever as células `movimento.*.jogo` do mapa:**
 > o zero em Modo Virtual do laudo de 09/09 era da libSDL2 2.30.0 do sistema, que
 > nenhum jogo da Steam carrega. As bibliotecas dos runtimes entregam os dois
