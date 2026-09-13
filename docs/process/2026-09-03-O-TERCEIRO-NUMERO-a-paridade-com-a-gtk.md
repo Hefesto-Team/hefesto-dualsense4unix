@@ -81,8 +81,8 @@ O dado mora em **[`docs/data/paridade-gtk-html.csv`](../data/paridade-gtk-html.c
 <!-- TABELA-DA-PARIDADE -->
 | aba | feats | IGUAL | DIFER | FALTA | SO_HTML | ? | paridade |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| 01-jogar | 42 | 13 | 23 | 1 | 4 | 1 | 31% |
-| 02-controles | 50 | 16 | 25 | 5 | 4 | 0 | 32% |
+| 01-jogar | 42 | 12 | 23 | 2 | 4 | 1 | 29% |
+| 02-controles | 50 | 16 | 24 | 6 | 4 | 0 | 32% |
 | 03-gatilhos | 31 | 15 | 9 | 1 | 5 | 1 | 48% |
 | 04-iluminacao | 35 | 9 | 12 | 6 | 7 | 1 | 26% |
 | 05-vibracao | 31 | 13 | 11 | 4 | 3 | 0 | 42% |
@@ -91,7 +91,7 @@ O dado mora em **[`docs/data/paridade-gtk-html.csv`](../data/paridade-gtk-html.c
 | 08-conexoes | 49 | 22 | 22 | 3 | 2 | 0 | 45% |
 | 09-sistema | 38 | 12 | 18 | 2 | 6 | 0 | 32% |
 | 10-perfis | 50 | 14 | 20 | 7 | 9 | 0 | 28% |
-| TODAS | 396 | 144 | 161 | 29 | 58 | 4 | 36% |<!-- /TABELA-DA-PARIDADE -->
+| TODAS | 396 | 143 | 160 | 31 | 58 | 4 | 36% |<!-- /TABELA-DA-PARIDADE -->
 
 A tabela é **gerada da contagem do CSV** e conferida pelo portão (regra
 `numero-publicado`): quem mexer no dado e não regerar esta seção é barrado
@@ -578,3 +578,24 @@ vizinha, «O modo/máscara escolhidos entram no perfil», continua `DIFERENTE`, 
 
 **A MORDIDA:** com a tabela devolvida à contagem velha, o portão reprova em
 `numero-publicado` nomeando `01-jogar` e `TODAS`.
+
+## Nota de verificação — 13/09/2026, a marca da degradação sai das abas 01 e 02
+
+`A-MARCA-DA-DEGRADACAO-01`. As linhas **`01-jogar` · "Banner de degradação do vpad"**
+(`IGUAL`) e **`02-controles` · "Badge de degradação do gamepad virtual"**
+(`DIFERENTE`) viraram **`FALTA_NO_HTML`**, e a tabela acima foi **recontada do
+CSV**: `01-jogar` vai de `13 IGUAL · 1 FALTA · 31%` para `12 · 2 · 29%`,
+`02-controles` de `25 DIFER · 5 FALTA` para `24 · 6`, e `TODAS` de
+`144 · 161 · 29 · 36%` para `143 · 160 · 31 · 36%`.
+
+**A razão:** a terceira lista dela manda as frases de aviso pararem de aparecer
+nas abas ([o índice](sprints/2026-09-13-A-TERCEIRA-LISTA-DELA-INDICE.md)), e a
+marca era uma: o asterisco com o motivo da queda no `title`. No WebKit ele nunca
+acendia, porque a camada de dicas tira o `title` e `.degradou[title]` não casava.
+A decisão de 04/09 que o desenhou, `D-02C-DEGRADACAO-VPAD`, ficou `caduca` em
+`docs/data/decisoes-dela.csv`. A GTK continua mostrando a tarja. O sinal das duas
+linhas passou a ser o símbolo da GTK, `AUSENTE` do lado HTML, e as
+autoconferências de `aba01.py` e `aba02.py` recusam a marca de volta.
+
+**A MORDIDA:** com a tabela devolvida à contagem velha, o portão reprova em
+`numero-publicado` nomeando `01-jogar`, `02-controles` e `TODAS`.

@@ -86,7 +86,7 @@ a sprint diz isso em vez de inventar trabalho.
 | id | o que ela decidiu | marca | a sprint |
 | --- | --- | --- | --- |
 | **02-Q6** | *"Fica fora, com aviso"* — devolver o volume do alto-falante | **DESENHO** | [ONDA5-02-02](sprints/2026-09-05-ONDA5-02-02-a-borda-do-som-em-duas-cores-e-as-duas-dicas-que-mandam-para-uma-janela-sem-lancador.md) — e o aviso apontava para uma janela sem lançador desde 01/09 |
-| **02-Q7** | a marca do que a máscara degrada fica na palavra, com o motivo no hover | **DESENHO** | **FEITA** — `src/hefesto_dualsense4unix/interface/aba02.py:827-829` e `src/hefesto_dualsense4unix/interface/pacotes/a02_controles.py:2147` |
+| **02-Q7** | a marca do que a máscara degrada fica na palavra, com o motivo no hover | **DESENHO** | **FEITA** — `src/hefesto_dualsense4unix/interface/aba02.py:827-829` e `src/hefesto_dualsense4unix/interface/pacotes/a02_controles.py:2147` · **CADUCOU em 13/09/2026**: a marca saiu da tela pela `A-MARCA-DA-DEGRADACAO-01`, porque a terceira lista dela tira as frases de aviso das abas |
 | **02-Q8** | *"Esse erro não deveria acontecer. Deveria ser só pro controle em questao."* <!-- noqa-acento: citação literal dela --> | **DEFEITO** | [ONDA5-02-01](sprints/2026-09-05-ONDA5-02-01-o-microfone-do-vizinho-e-a-porta-que-ficou-aberta.md) — e a regra que ela pede já estava escrita um arquivo ao lado |
 | **02-Q9** | *"Com cor diferente"* — borda VERDE se ligado, ÂMBAR se mudo | **DESENHO** | [ONDA5-02-02](sprints/2026-09-05-ONDA5-02-02-a-borda-do-som-em-duas-cores-e-as-duas-dicas-que-mandam-para-uma-janela-sem-lancador.md) |
 | **02-Q10** | *"Continua com colchetes"* — o clique do analógico | **DESENHO** | **FEITA** — o que sobra é um comentário que ainda pede a palavra dela, e ele é o Passo 5 da ONDA5-02-01 |
