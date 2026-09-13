@@ -34,10 +34,12 @@ Os três ramos do cartão da Steam têm régua própria, com a de estado da
 TELA-CALADA-02: `test_o_cartao_da_steam_nao_narra.
 test_os_tres_ramos_que_narravam_viram_rotulo_de_estado`.
 
-O PASSEIO NO PILOTO OCULTO pelas dez abas, com `sem_cor=True` e a sonda da mesa
-dublada, está na entrega da sprint (`docs/process/agentes/2026-09-13/
-FRASES-E-DICAS-02-opus.md`), com a saída e as fotos: ele abre WebKit e fala com
-o daemon vivo, e a suíte não faz nenhum dos dois.
+O PASSEIO NO PILOTO OCULTO pelas dez abas, com `sem_cor=True`, está na entrega
+da sprint (`docs/process/agentes/2026-09-13/FRASES-E-DICAS-02-opus.md`), com a
+saída e as fotos: ele abre WebKit e fala com o daemon vivo, e a suíte não faz
+nenhum dos dois. A sonda da mesa saiu do produto nesta sprint, então o passeio
+não tem onde dublar o controle segurado; quem o dubla é esta régua, na sonda de
+verdade (`sinal_da_barra.limpo_para_conectar`), passando pelo tique inteiro.
 
 NADA AQUI TOCA A MÁQUINA DELA: o `conftest.py` desvia `HOME` e os `XDG_*`, a
 sonda é dublada e a mesa é de mentira, na faixa sintética `aa:bb:cc`.
@@ -48,6 +50,7 @@ import html
 import pathlib
 import re
 import sys
+from html.parser import HTMLParser
 from typing import Any
 
 import pytest
@@ -308,3 +311,69 @@ def test_nenhuma_pagina_traz_aviso_fora_do_interrogacao(arquivo: pathlib.Path) -
     trechos = {nome: visivel[max(0, visivel.find(t) - 60):visivel.find(t) + 80]
                for nome, t in _ancoras().items() if nome in achadas}
     assert not achadas, f"{arquivo.parent.name}/{arquivo.name}: {trechos}"
+
+
+# --------------------------------------------------------------------------
+# 08 — a coluna da ordem que a página CRAVA antes do primeiro tique
+# --------------------------------------------------------------------------
+#: Os elementos sem etiqueta de fecho: não abrem nível.
+_VAZIOS = frozenset({"area", "base", "br", "col", "embed", "hr", "img", "input",
+                     "link", "meta", "source", "track", "wbr"})
+
+#: As classes do cartão da ordem que saíram da coluna visível em 13/09/2026: o
+#: imperativo, a linha do ganho, a marca de procedência e o cartão de cura.
+CLASSES_QUE_SAIRAM_DA_COLUNA = frozenset({"faca", "ganho", "proc", "cura"})
+
+
+class _ClassesDoCampo(HTMLParser):
+    """As classes de tudo o que mora DENTRO do elemento de um `data-campo`."""
+
+    def __init__(self, campo: str) -> None:
+        super().__init__(convert_charrefs=True)
+        self.campo = campo
+        self.fundo = 0
+        self.achou = False
+        self.classes: list[str] = []
+
+    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        atributos = dict(attrs)
+        if self.fundo:
+            self.classes += (atributos.get("class") or "").split()
+            if tag not in _VAZIOS:
+                self.fundo += 1
+        elif atributos.get("data-campo") == self.campo and tag not in _VAZIOS:
+            self.achou = True
+            self.fundo = 1
+
+    def handle_endtag(self, tag: str) -> None:
+        if self.fundo and tag not in _VAZIOS:
+            self.fundo -= 1
+
+
+def _campo_da_ordem() -> str:
+    """O endereço da coluna, lido do gerador da 08 sem importá-lo."""
+    fonte = (INTERFACE / "aba08.py").read_text(encoding="utf-8")
+    achado = re.search(r'^CAMPO_DA_ORDEM = "([^"]+)"$', fonte, flags=re.M)
+    assert achado, "o gerador da 08 perdeu `CAMPO_DA_ORDEM`: a régua ficaria cega"
+    return achado.group(1)
+
+
+@pytest.mark.parametrize("arquivo", [p for p in _paginas() if p.name.startswith("08-")],
+                         ids=lambda p: f"{p.parent.name}/{p.name}")
+def test_a_coluna_da_ordem_cravada_na_08_nao_traz_imperativo_nem_ganho(
+        arquivo: pathlib.Path) -> None:
+    """A §D da sprint vale também para o que a página crava antes do primeiro tique.
+
+    O imperativo e o ganho cravados no desenho são prosa do mockup, sem âncora
+    de dono, e a régua de cima não os via. MEDIDO NA VALIDAÇÃO, 13/09/2026: com o
+    `div.faca` e o `div.ganho` de volta no gerador da 08, sem o cartão de cura
+    (que traz o «O que fazer» e morde lá em cima), e a página regerada, as 76
+    réguas da coluna passavam. Esta lê a CLASSE, que é o endereço do desenho.
+    """
+    leitor = _ClassesDoCampo(_campo_da_ordem())
+    leitor.feed(arquivo.read_text(encoding="utf-8"))
+    assert leitor.achou and leitor.classes, (
+        f"{arquivo.parent.name}/{arquivo.name}: a régua não achou a coluna da ordem")
+    voltaram = sorted(CLASSES_QUE_SAIRAM_DA_COLUNA & set(leitor.classes))
+    assert not voltaram, (
+        f"{arquivo.parent.name}/{arquivo.name}: a coluna da ordem crava {voltaram}")

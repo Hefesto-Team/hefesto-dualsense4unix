@@ -583,7 +583,6 @@ class TestOVereditoVemDoPayloadEChegaAoCard:
             _maquina_pendente=None,
             _edit_target_uniq=None,
             _cor_do_plastico_leitor=lambda _u: None,
-            _mesa_limpa_leitor=lambda: False,
         )
         painel = sc._PainelDosControles(host)
         caixa = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
