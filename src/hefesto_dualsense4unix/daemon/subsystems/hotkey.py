@@ -936,7 +936,7 @@ def build_profile_cycle_callback(daemon: DaemonProtocol, direction: int) -> Any:
         # travadas (inclusive `audio`) e portanto aplica o volume do perfil que
         # entra"*) não se cumpria. Este é o gesto que ela usa DENTRO do jogo.
         # `getattr` pelo mesmo motivo que `ProfileManager._categorias_travadas`
-        # (`profiles/manager.py:562-565`): dublês de teste e stores parciais
+        # (`profiles/manager.py:563-574`): dublês de teste e stores parciais
         # continuam funcionando, e "não sei listar" vira "nada a restaurar".
         travadas_antes = getattr(daemon.store, "manual_override_categories", ()) or ()
         lock_antes = getattr(daemon.store, "_manual_profile_lock_until", 0.0)

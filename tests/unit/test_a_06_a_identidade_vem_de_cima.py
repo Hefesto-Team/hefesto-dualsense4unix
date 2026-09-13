@@ -177,9 +177,14 @@ def test_a_fita_e_as_duas_dicas_tem_endereco(bancada):
         "a fita da 06 perdeu o endereço — e `hefesto_vivo._fita`, o dono "
         "compartilhado dela, DESISTE quando um controle da mesa não tem cor "
         "lida, que é o caso do rádio hoje")
-    assert bancada.count('data-campo="quem-navega"') == 2, (
-        "as duas dicas das telas de botões voltaram a nomear o controle do "
-        "desenho no meio do texto")
+    # ERA UMA DICA A MAIS ATÉ 13/09/2026 (F1-REMAPEAR): a da tela "Trocar os
+    # botões" dizia *"Valem para o controle que navega o PC"*, e a troca passou a
+    # valer nos quatro controles — a frase errada saiu da dica, e o endereço
+    # saiu com ela. A régua continua cobrando o que cobrava: a dica que nomeia o
+    # controle tem endereço, e o nome do desenho não fica cravado no texto.
+    assert bancada.count('data-campo="quem-navega"') == 1, (
+        "a dica da tela de Definições perdeu o endereço de quem navega, ou a "
+        "frase voltou à dica da troca de botões, onde ela é falsa")
 
 
 def test_nenhum_title_nomeia_o_controle(bancada):

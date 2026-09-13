@@ -142,6 +142,8 @@ NAO_E_DO_APARELHO: dict[str, str] = {
     "tecla-escrita": "digita uma tecla no campo — é da tela",
     "teclado": "abre o teclado virtual — é da tela",
     "linha-de-botao": "escolhe a linha do botão a remapear — é da tela",
+    "linha-de-troca": "escolhe o destino de uma linha da troca de botões — é da tela",
+    "fechar-troca": "fecha um painel da própria tela",
     "acao-do-gesto": "escolhe a ação de um gesto — é do perfil",
     "navegacao-interna": "liga a navegação dentro do Hefesto — é da tela",
     "vel-cursor": "a velocidade do cursor — é da emulação de mouse, global (decisão dela)",

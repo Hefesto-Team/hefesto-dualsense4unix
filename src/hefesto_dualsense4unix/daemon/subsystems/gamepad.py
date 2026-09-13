@@ -2453,6 +2453,18 @@ def _avisar_troca_de_modo(daemon: DaemonProtocol) -> None:
         avisar_troca_de_modo(daemon)
 
 
+# F1-REMAPEAR (13/09/2026): o import da troca de botões mora AQUI, e não no
+# topo, de propósito. No topo ele empurrava as funções que o mapa de canais
+# (`docs/data/mapa-controles.csv`, que não é desta sprint) cita por número de
+# linha. O nome só é lido quando o tique roda, então a posição não muda nada.
+from hefesto_dualsense4unix.core.remapeamento_de_botao import (  # noqa: E402
+    ativo as remapeamento_ativo,
+)
+from hefesto_dualsense4unix.core.remapeamento_de_botao import (  # noqa: E402
+    traduzir as traduzir_remapeamento,
+)
+
+
 def dispatch_gamepad(
     daemon: DaemonProtocol, state: Any, buttons_pressed: frozenset[str]
 ) -> None:
@@ -2481,19 +2493,29 @@ def dispatch_gamepad(
     # bruto passa intacto. 0/0 (o padrão) é passagem direta, byte a byte igual
     # ao que era antes. getattr defensivo: daemon/store de teste sem o campo
     # degradam para "sem deadzone" em vez de derrubar o dispatch.
-    limiar_l, limiar_r = getattr(
-        getattr(daemon, "store", None), "udp_trigger_thresholds", (0, 0)
-    )
+    store = getattr(daemon, "store", None)
+    limiar_l, limiar_r = getattr(store, "udp_trigger_thresholds", (0, 0))
     try:
+        l2 = state.l2_raw if state.l2_raw >= limiar_l else 0
+        r2 = state.r2_raw if state.r2_raw >= limiar_r else 0
+        botoes = buttons_pressed
+        # F1-REMAPEAR (13/09/2026): a troca botão a botão do perfil entra AQUI,
+        # logo antes do `forward_buttons`, e só muda o que o JOGO vê. O PS, os
+        # gestos, o atalho e o teclado e o mouse emulados leem o
+        # `buttons_pressed` original no laço do daemon. O `if` é a régua de
+        # custo: sem troca o jogo recebe o MESMO objeto, sem alocar nada.
+        troca = remapeamento_ativo(store)
+        if troca:
+            botoes, l2, r2 = traduzir_remapeamento(buttons_pressed, l2, r2, troca)
         device.forward_analog(
             lx=state.raw_lx,
             ly=state.raw_ly,
             rx=state.raw_rx,
             ry=state.raw_ry,
-            l2=state.l2_raw if state.l2_raw >= limiar_l else 0,
-            r2=state.r2_raw if state.r2_raw >= limiar_r else 0,
+            l2=l2,
+            r2=r2,
         )
-        device.forward_buttons(buttons_pressed)
+        device.forward_buttons(botoes)
         # FEAT-VPAD-FF-PASSTHROUGH-01: drena o FF (rumble do jogo) do vpad e
         # repassa ao controle físico. getattr defensivo: fakes/devices sem
         # pump_ff degradam sem crash.

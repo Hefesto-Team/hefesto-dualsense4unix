@@ -149,6 +149,7 @@ import time
 from typing import Any
 
 from hefesto_dualsense4unix.core import acoes_de_botao as acoes
+from hefesto_dualsense4unix.core import remapeamento_de_botao as remap
 from hefesto_dualsense4unix.core.keyboard_mappings import (
     PADRAO_QUE_A_TELA_PUBLICADA_NAO_DIZ,
 )
@@ -287,6 +288,45 @@ PREFIXO_DA_ACAO = "acao-"  # (noqa-acento) prefixo de endereço, não é prosa
 #: texto que reusasse aquela chave APAGARIA a escolha da lista dentro da mesma
 #: forma, sem uma palavra — o "Guardar" leria o texto onde esperava um rótulo.
 PREFIXO_DA_TECLA = "tecla-"  # (noqa-acento) prefixo de endereço, não é prosa
+
+#: O PREFIXO DAS LINHAS DA TELA "Trocar os botões" — F1-REMAPEAR, 13/09/2026.
+#: Um por botão de `core/remapeamento_de_botao.REMAPEAVEIS`: só a linha que a
+#: troca alcança ganha endereço de pintura. É OUTRO PREFIXO pela mesma razão do
+#: `tecla-`: as linhas de *o que cada botão faz* já ocupam `acao-<botão>`, e o
+#: mesmo endereço para dois dados seria a segunda verdade que esta casa persegue.
+PREFIXO_DA_TROCA = "troca-"  # (noqa-acento) prefixo de endereço, não é prosa
+
+#: O "sem troca" da tela, com o texto exato da `<option>` que o gerador crava.
+SEM_TROCA = "— Sem troca —"
+
+#: O RÓTULO DE CADA DESTINO → o id do botão no motor. O rótulo é o que a
+#: `<option>` diz, e ele sai de `docs/data/pecas-do-dualsense.csv` pelo gerador
+#: (`aba06.REMAP`); este dicionário é a TRADUÇÃO de volta, e o gerador PARA a
+#: geração se os dois divergirem (`aba06.py`, logo abaixo do `SEM_TROCA` dele) —
+#: é assim que a lista digitada não diverge da fonte, que é a razão da decisão
+#: D-O-REMAPEAMENTO-BOTAO-A-BOTAO-ENTRA.
+ROTULOS_DA_TROCA: dict[str, str] = {
+    "Triângulo": "triangle",
+    "Círculo": "circle",
+    "Quadrado": "square",
+    "Cruz": "cross",
+    "L1": "l1",
+    "R1": "r1",
+    "L2": "l2",
+    "R2": "r2",
+    "L3 (clique)": "l3",
+    "L3 (direção)": acoes.EIXO_ESQUERDO,
+    "R3 (clique)": "r3",
+    "R3 (direção)": acoes.EIXO_DIREITO,
+    "D-pad Cima": "dpad_up",
+    "D-pad Direita": "dpad_right",
+    "D-pad Baixo": "dpad_down",
+    "D-pad Esquerda": "dpad_left",
+    "Share": "create",
+    "Options": "options",
+    "Touchpad (clique)": remap.DESTINO_TOUCHPAD,
+    "PS": remap.BOTAO_PS,
+}
 
 #: O `<select>` da "Função do teclado" e as suas `<option>`, lidos do HTML.
 #: Duas expressões e não uma: recortar o bloco primeiro é o que impede casar
@@ -1074,7 +1114,7 @@ def _linhas_dos_botoes(p: dict[str, Any]) -> dict[str, str]:
 # `_persist_key_bindings_to_draft` protege o que a lista não mostra. **Aqui é o
 # contrário**: o "Voltar ao padrão" desta tela zera `key_bindings` inteiro, e o
 # "Guardar" faz `apply_button_actions` reescrever o conjunto todo a partir do de
-# fábrica (`profiles/manager.py:629`, `core/acoes_de_botao.resolver`, que nunca
+# fábrica (`profiles/manager.py:630`, `core/acoes_de_botao.resolver`, que nunca
 # consulta `profile.key_bindings`). Copiar a frase de lá seria a tela afirmando
 # o oposto do que este produto faz — e é a família de defeito que esta casa
 # persegue acima de todas.
@@ -1211,7 +1251,7 @@ def atalhos_que_param_de_valer(p: dict[str, Any]) -> list[tuple[str, str]]:
     """Os `key_bindings` do perfil que o "Guardar" desta tela faz parar de valer.
 
     **É A METADE VISÍVEL DO DEFEITO §3-1**, e o defeito é do produto, não desta
-    aba: `apply_button_actions` (`profiles/manager.py:629`) roda DEPOIS do
+    aba: `apply_button_actions` (`profiles/manager.py:630`) roda DEPOIS do
     `apply_keyboard` e chama `teclado.set_bindings(...)` com o conjunto INTEIRO
     que `acoes_de_botao.resolver()` deriva — e `resolver()` parte de
     `acoes.padrao()` e **nunca consulta `profile.key_bindings`**. Logo, um perfil com
@@ -1225,7 +1265,7 @@ def atalhos_que_param_de_valer(p: dict[str, Any]) -> list[tuple[str, str]]:
     que não se perde é ruído.
 
     A RESSALVA QUE A FRASE CARREGA, e ela é medida: sem device de mouse vivo o
-    `apply_button_actions` sai antes (`manager.py:629`) e nada é reescrito. Por
+    `apply_button_actions` sai antes (`manager.py:707-710`) e nada é reescrito. Por
     isso a tira diz *"quando o mouse virtual estiver de pé"* em vez de prometer
     o desastre em todo caso.
 
@@ -1690,6 +1730,62 @@ def _o_que_a_tabela_mostra(p: dict[str, Any]) -> dict[str, str]:
     return linhas
 
 
+#: O QUE ELA ESCOLHEU NA TELA "Trocar os botões" E NÃO GUARDOU: `troca-<botão>`
+#: → o rótulo no `<select>`. É a MESMA trava do `_MEXENDO`, pela mesma decisão
+#: dela de 02/09 (*"param de ser repintadas enquanto ela está mexendo, até
+#: guardar ou sair"*), num dicionário PRÓPRIO: com um só, uma linha pendente
+#: numa tela desligaria a trava do "Guardar" da outra, e o "Guardar" de uma
+#: largaria o que ela escolheu na outra.
+_TROCANDO: dict[str, str] = {}
+
+#: Quando a troca foi pintada pela última vez — ver `PAUSA_DE_OUTRA_ABA`.
+_ULTIMA_TROCA = 0.0
+
+
+def _rotulo_do_destino(botao: str) -> str:
+    """O id de destino → o texto da `<option>`. Sem rótulo, o id cru."""
+    for rotulo, alvo in ROTULOS_DA_TROCA.items():
+        if alvo == botao:
+            return rotulo
+    return botao
+
+
+def _linhas_da_troca(p: dict[str, Any] | None) -> dict[str, str]:
+    """As linhas que a troca alcança, com o destino que o PERFIL guarda.
+
+    `Profile.remapeamento` guarda só o que troca (`None` é "sem troca
+    nenhuma"), então uma linha ausente é o "— Sem troca —" da tela.
+    """
+    mapa = (p or {}).get("remapeamento") or {}
+    return {
+        f"{PREFIXO_DA_TROCA}{botao}": (
+            _rotulo_do_destino(str(mapa[botao])) if mapa.get(botao) else SEM_TROCA)
+        for botao in remap.REMAPEAVEIS
+    }
+
+
+def _o_que_a_troca_mostra(p: dict[str, Any] | None) -> dict[str, str]:
+    """As linhas da troca: o perfil, com as que ela está mexendo por cima.
+
+    Mesmo desenho de `_o_que_a_tabela_mostra`, e pelas mesmas razões: a pintura
+    CONCORDA com o que ela escolheu em vez de parar, a linha que o perfil
+    passou a dizer sai da trava sozinha, e cinco segundos sem tique querem
+    dizer que ela saiu da aba.
+    """
+    global _ULTIMA_TROCA
+
+    agora = time.monotonic()
+    if _TROCANDO and _ULTIMA_TROCA and agora - _ULTIMA_TROCA > PAUSA_DE_OUTRA_ABA:
+        _TROCANDO.clear()
+    _ULTIMA_TROCA = agora
+    linhas = _linhas_da_troca(p)
+    for campo in list(_TROCANDO):
+        if campo not in linhas or linhas[campo] == _TROCANDO[campo]:
+            del _TROCANDO[campo]
+    linhas.update(_TROCANDO)
+    return linhas
+
+
 @registrar("06-navegacao.html")
 def pacote(ctx: Contexto) -> dict[str, Any]:
     st = ctx.state
@@ -1808,6 +1904,9 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
     # E ELAS PARAM DE SER REPINTADAS ENQUANTO ELA ESTÁ MEXENDO — decisão dela,
     # 02/09/2026. Ver `_o_que_a_tabela_mostra`.
     mesa.update(_o_que_a_tabela_mostra(p))
+    # AS LINHAS DA TELA "Trocar os botões" — F1-REMAPEAR, 13/09/2026. Do perfil
+    # dela, com a mesma trava de quem está mexendo. Ver `_o_que_a_troca_mostra`.
+    mesa.update(_o_que_a_troca_mostra(p))
     # A LISTA "Função do teclado" SÓ É REESCRITA QUANDO O DAEMON FALOU, e a
     # ausência da chave é o que impede a mentira: sem o bloco
     # `keyboard_emulation` (daemon mudo, ou config inacessível — o `state_full`
@@ -3531,12 +3630,214 @@ def guardar_ponto(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
         raise RuntimeError(" ".join(recados))
 
 
-#: OS SEIS QUE CONTINUAM SEM DONO, com o motivo MEDIDO de cada um — o
+# ---------------------------------------------------------------------------
+# A TELA "Trocar os botões" — F1-REMAPEAR, 13/09/2026.
+#
+# OS DOIS GESTOS DO RODAPÉ GANHARAM DONO porque o MOTOR nasceu:
+# `core/remapeamento_de_botao.py` (a regra), `Profile.remapeamento` (o campo,
+# global no perfil — D-0809-A-NAVEGACAO-E-GLOBAL-NO-PERFIL) e a tradução logo
+# antes dos dois `forward_buttons` (`gamepad.dispatch_gamepad` e
+# `coop.CoopManager.forward_all`). A decisão de que entra é dela
+# (D-O-REMAPEAMENTO-BOTAO-A-BOTAO-ENTRA); o ponto de entrada foi escolhido por
+# quem coordena, por delegação, e está escrito na sprint F1-REMAPEAR.
+#
+# O MOLDE É O DA TELA DE DEFINIÇÕES, peça por peça: a linha anota o que ela
+# escolheu (`linha-de-troca`), o fechar larga (`fechar-troca`), o "Guardar"
+# recolhe a `forma` e grava com `perfil.gravar_e_reaplicar`, e a trava contra o
+# apagador é a mesma — a tela no desenho por 100 ms não é escolha dela.
+# ---------------------------------------------------------------------------
+def _destino_do_rotulo(rotulo: str) -> str | None:
+    """O texto da `<option>` → o id de destino. `None` é o "— Sem troca —".
+
+    RÓTULO QUE A TABELA NÃO CONHECE É CLIQUE INVÁLIDO (`ValueError`): ele só
+    chega aqui se o desenho andou sem o gerador, e o gerador para a geração
+    quando a lista dele e `ROTULOS_DA_TROCA` divergem.
+    """
+    texto = str(rotulo or "").strip()
+    if texto == SEM_TROCA:
+        return None
+    if texto not in ROTULOS_DA_TROCA:
+        raise ValueError(
+            f"a opção {texto!r} não está na tabela da troca de botões — a lista "
+            "da tela e `a06_navegacao.ROTULOS_DA_TROCA` saem do mesmo mapa das "
+            "peças; se divergiram, foi o desenho que andou sem o gerador.")
+    return ROTULOS_DA_TROCA[texto]
+
+
+def _nome_na_troca(botao: str) -> str:
+    """O nome da linha como a tela "Trocar os botões" o escreve."""
+    rotulo = _rotulo_do_destino(botao)
+    return rotulo if rotulo != botao else _nome_do_botao(botao)
+
+
+def _frase_da_troca(exc: remap.RemapeamentoRecusadoError) -> str:
+    """A recusa do motor, com os nomes que ela lê na tela."""
+    if exc.motivo == remap.MOTIVO_COLISAO:
+        *origens, destino = exc.botoes
+        return (
+            "não guardei: " + " e ".join(_nome_na_troca(b) for b in origens)
+            + f" passam a ser o mesmo botão, {_nome_na_troca(destino)} — cada "
+              "botão do jogo recebe uma linha só.")
+    nomes = ", ".join(_nome_na_troca(b) for b in exc.botoes)
+    if exc.motivo == remap.MOTIVO_PS:
+        return (f"não guardei: o PS não se troca, nem troca outro botão ({nomes})"
+                " — os gestos desta aba começam nele, e ele é a saída de "
+                "emergência.")
+    if exc.motivo == remap.MOTIVO_FORA:
+        return (f"não guardei: {nomes} — a direção dos analógicos e o clique do "
+                "touchpad ficam fora da troca de botões.")
+    return f"não guardei: a troca traz um botão desconhecido ({nomes})."
+
+
+@gesto("06-navegacao.html", "linha-de-troca")
+def linha_de_troca(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
+    """Ela trocou UMA linha da tela "Trocar os botões". NÃO grava nada.
+
+    Irmão de `linha_de_botao`: anota a escolha em `_TROCANDO` para a pintura do
+    tique seguinte concordar com a tela, e o ponto de gravação continua sendo o
+    "Guardar".
+
+    O QUE NÃO PODE SER TROCADO É RECUSADO NA HORA, pelo motor: o PS nos dois
+    lados, e a direção dos analógicos e o clique do touchpad. A linha não entra
+    na trava, e a pintura a devolve ao que o perfil guarda. Dois botões para o
+    mesmo destino NÃO são recusados aqui, e é de propósito: trocar o ✕ e depois
+    o △ para o mesmo ○, a caminho de mudar o ✕ de novo, é o jeito normal de
+    mexer numa tabela — a colisão é do "Guardar".
+    """
+    botao = (str(o.get("linha") or "").strip()
+             or str(o.get("campo") or "").removeprefix(PREFIXO_DA_TROCA))
+    if botao not in acoes.BOTOES:
+        raise ValueError(
+            f"linha-de-troca: o clique não disse qual botão (veio {botao!r}). O "
+            "`data-linha` de cada `<select>` é o id do botão, e ele vem do "
+            "gerador.")
+    rotulo = str(o.get("valor") or o.get("rotulo") or "").strip()
+    destino = _destino_do_rotulo(rotulo)
+    if destino is None and botao not in remap.REMAPEAVEIS:
+        # A LINHA SEM ENDEREÇO VOLTOU AO "— Sem troca —": não há o que anotar
+        # nem onde pintar.
+        return None
+    if destino is not None:
+        try:
+            remap.resolver({botao: destino})
+        except remap.RemapeamentoRecusadoError as exc:
+            raise RuntimeError(_frase_da_troca(exc)) from None
+    campo = f"{PREFIXO_DA_TROCA}{botao}"
+    do_perfil = _linhas_da_troca(perfil.ativo((ctx.state or {}).get("active_profile")))
+    if do_perfil.get(campo) == rotulo:
+        _TROCANDO.pop(campo, None)
+    else:
+        _TROCANDO[campo] = rotulo
+    return {"mesa": {campo: rotulo}}
+
+
+@gesto("06-navegacao.html", "fechar-troca")
+def fechar_troca(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
+    """O fechar e o "Cancelar" da troca: LARGAM o que ela não guardou.
+
+    Mesmo ato de `fechar_definicoes`, noutro nome — o piloto recusa gesto que
+    não está registrado, e o relato do clique nomeia a pop-up certa. Devolve as
+    linhas do perfil na hora, sem esperar o tique.
+    """
+    _TROCANDO.clear()
+    return {"mesa": _linhas_da_troca(
+        perfil.ativo((ctx.state or {}).get("active_profile")))}
+
+
+@gesto("06-navegacao.html", "guardar-remapeamento", grava="gravar_e_reaplicar")
+def guardar_remapeamento(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
+    """"Guardar" da tela "Trocar os botões". Escreve `Profile.remapeamento`.
+
+    DE ONDE VEM O QUE ELE GRAVA: da `forma` que o piloto recolhe no `id` da
+    pop-up (`data-hef-forma="remapeamento"`), chaveada pelo `data-linha` de cada
+    lista. O que não é botão (o `quem-navega` de outra dica, se houver) é
+    pulado, como no irmão.
+
+    GRAVA O MAPA INTEIRO, e não diferença sobre o que o perfil guarda: a tela
+    mostra as 22 linhas, e cada "— Sem troca —" é uma linha sem troca. `{}` vira
+    `None`, e o save omite a chave.
+
+    AS RECUSAS SÃO DO MOTOR (`remap.resolver`) e chegam com os nomes da tela;
+    NADA É GRAVADO nelas.
+
+    A TRAVA CONTRA O APAGADOR é a de `guardar_definicoes`: a forma inteira sem
+    troca, com o perfil guardando trocas e nenhuma linha em `_TROCANDO`, é a
+    tela nos 100 ms antes do primeiro tique — gravar isso apagaria a escolha
+    dela com o botão dizendo "Guardar".
+    """
+    nome = _perfil_ativo_ou_recusa(ctx)
+    forma = o.get("forma")
+    if not isinstance(forma, dict) or not forma:
+        raise RuntimeError(
+            "não consegui ler as linhas da tela. O botão precisa do "
+            "`data-hef-forma` para o piloto recolher os campos — se ele sumiu do "
+            "desenho, o Guardar não tem o que gravar.")
+    declarado: dict[str, str] = {}
+    for botao, rotulo in forma.items():
+        if botao not in acoes.BOTOES:
+            continue
+        destino = _destino_do_rotulo(str(rotulo))
+        if destino is not None:
+            declarado[botao] = destino
+    try:
+        novo = remap.resolver(declarado) or None
+    except remap.RemapeamentoRecusadoError as exc:
+        raise RuntimeError(_frase_da_troca(exc)) from None
+
+    loader = perfil._com_o_src()
+    prof = loader.load_profile(nome)
+    atual = prof.remapeamento or None
+    if atual == novo:
+        _TROCANDO.clear()
+        raise RuntimeError(
+            f"não havia o que guardar — o perfil “{nome}” já troca exatamente o "
+            "que a tabela mostra. Está guardado.")
+    if novo is None and atual and not _TROCANDO:
+        raise RuntimeError(
+            f"não guardei: a tela está sem troca nenhuma e o perfil “{nome}” "
+            f"guarda {len(atual)} troca(s) — gravar isto as apagaria. Espere a "
+            "tabela se preencher e tente de novo.")
+    perfil.gravar_e_reaplicar(prof.model_copy(update={"remapeamento": novo}), ctx, p)
+    _TROCANDO.clear()
+
+
+@gesto("06-navegacao.html", "padrao-remapeamento", grava="gravar_e_reaplicar")
+def padrao_remapeamento(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
+    """"Confirmar" do "Voltar ao padrão" da troca: `remapeamento = None`.
+
+    A pergunta da tela diz o que ele apaga e o que não toca — *"Devolver as 22
+    linhas ao — Sem troca —? As Definições Controle e Mouse não são tocadas."* —,
+    e ele faz exatamente isso: zera SÓ `Profile.remapeamento`.
+
+    JÁ SEM TROCA É RECUSA DIZENDO, como no irmão: gravar de novo faria o daemon
+    reaplicar um perfil idêntico no meio de uma partida, sem efeito.
+    """
+    nome = _perfil_ativo_ou_recusa(ctx)
+    loader = perfil._com_o_src()
+    prof = loader.load_profile(nome)
+    if not prof.remapeamento:
+        _TROCANDO.clear()
+        raise RuntimeError(
+            f"não havia o que voltar — o perfil “{nome}” não troca botão "
+            "nenhum. Não gravei nada e não incomodei o daemon.")
+    perfil.gravar_e_reaplicar(prof.model_copy(update={"remapeamento": None}), ctx, p)
+    _TROCANDO.clear()
+    return {"mesa": _linhas_da_troca({})}
+
+
+#: OS QUATRO QUE CONTINUAM SEM DONO, com o motivo MEDIDO de cada um — o
 #: inventário honesto do que falta, no lugar de um botão que responde calado. O
 #: piloto os recusa PELO NOME (`[gesto sem dono] 06-navegacao.html · <nome>`), e
 #: por isso as chaves aqui são os nomes que ele vai imprimir, um por um.
 #:
-#: ERAM QUATORZE, depois TREZE, e hoje são SEIS. O `teclado` saiu na segunda
+#: ERAM SEIS ATÉ 13/09/2026: `guardar-remapeamento` e `padrao-remapeamento`
+#: saíram com a F1-REMAPEAR, porque o motor nasceu — ver os dois gestos logo
+#: acima. FATO SUBSTITUÍDO no mesmo dia: a entrada deles dizia que o
+#: `forward_buttons` do co-op *"só alcança os controles SECUNDÁRIOS — o primário
+#: não passa por ali"*. Passa: `lifecycle` → `_dispatch_gamepad_emulation` →
+#: `gamepad.dispatch_gamepad` → `device.forward_buttons`, desde `da9b4921`.
+#:
+#: ERAM QUATORZE, depois TREZE, depois SEIS. O `teclado` saiu na segunda
 #: leva — o que o segurava não era falta de método, era o piloto não mandar o
 #: valor de um `<select>`. O `padrao-definicoes` saiu na TERCEIRA, e o que o
 #: segurava era um FATO ERRADO escrito aqui: que gravar perfil não tinha método.
@@ -3638,15 +3939,9 @@ SEM_GESTO = {
     # não é botão em `BOTOES`, e quem move o cursor por ali é o próprio mouse
     # virtual (`uinput_mouse.emit_touchpad_move`). Ela não tem `data-gesto`, e
     # por isso não é um gesto sem dono — é uma linha sem endereço.
-    "guardar-remapeamento": "o remapeamento botão-por-botão não tem sequer campo "
-                            "no perfil, quanto mais método de IPC — e o motor "
-                            "também não existe: medido em 11/09/2026, o único "
-                            "lugar que traduziria nome de botão antes de o jogo "
-                            "ver é o `forward_buttons` do vpad "
-                            "(`daemon/subsystems/coop.py`), e ele só alcança os "
-                            "controles SECUNDÁRIOS — o primário não passa por "
-                            "ali. Ver a sprint F1-REMAPEAR",
-    "padrao-remapeamento": "idem, ao contrário",
+    #
+    # `guardar-remapeamento` e `padrao-remapeamento` SAÍRAM DAQUI em 13/09/2026
+    # (F1-REMAPEAR) — ver o cabeçalho deste dicionário.
 }
 
 
@@ -3706,8 +4001,17 @@ SEM_GESTO = {
 #: TUPLA, e não dicionário: o piloto faz `set(getattr(mod, "SEM_ECO", ()))` e as
 #: seis abas que declaram usam tupla. O motivo mora no comentário, que é onde
 #: ele cabe inteiro — `SEM_ECO` sem razão escrita é lápide para esconder defeito.
+#:
+#: OS QUATRO DA TROCA DE BOTÕES ENTRAM PELAS MESMAS DUAS RAZÕES — F1-REMAPEAR,
+#: 13/09/2026. `guardar-remapeamento` e `padrao-remapeamento` gravam no perfil,
+#: e o `state_full` não publica `remapeamento` (nem o mapa ativo, que mora no
+#: `store` e não viaja no estado): a prova deles é o arquivo, em
+#: `test_migra_navegacao_13_o_remapeamento_botao_a_botao.py`. `linha-de-troca` e
+#: `fechar-troca` não têm assunto no daemon — mexem só no que a pintura faz.
 SEM_ECO = ("guardar-definicoes", "padrao-definicoes",
-           "linha-de-botao", "fechar-definicoes")
+           "linha-de-botao", "fechar-definicoes",
+           "guardar-remapeamento", "padrao-remapeamento",
+           "linha-de-troca", "fechar-troca")
 
 
 PONTE = {"chamar"}

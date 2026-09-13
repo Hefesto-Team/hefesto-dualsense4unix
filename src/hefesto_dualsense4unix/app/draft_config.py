@@ -577,6 +577,13 @@ class DraftConfig(BaseModel):
     # junto; a regra do outro perfil, não (R-11).
     source_button_actions: Any | None = None
     source_teclado_emulado: bool | None = None
+    # F1-REMAPEAR (13/09/2026): o TERCEIRO que o Salvar apagaria, e pela mesma
+    # razão dos dois de cima — `Profile.remapeamento` nasceu hoje, quem o
+    # escreve é a aba 06 direto no disco, e `to_profile` reconstrói o perfil do
+    # zero. Sem esta passagem, todo "Salvar Perfil" da aba Perfis zeraria a
+    # troca de botões que ela acabou de guardar. Passthrough, fora do gate
+    # `mesmo_perfil`: é configuração dela, não regra de identidade.
+    source_remapeamento: dict[str, str] | None = None
 
     source_name: str | None = None
 
@@ -676,6 +683,7 @@ class DraftConfig(BaseModel):
             source_ponte=profile.ponte,
             source_button_actions=profile.button_actions,
             source_teclado_emulado=profile.teclado_emulado,
+            source_remapeamento=profile.remapeamento,
             source_name=profile.name,
         )
 
@@ -868,6 +876,7 @@ class DraftConfig(BaseModel):
             # OS DOIS QUE O SALVAR APAGAVA — ver o bloco dos campos.
             button_actions=self.source_button_actions,
             teclado_emulado=self.source_teclado_emulado,
+            remapeamento=self.source_remapeamento,
             mouse=mouse_cfg,
             mic=mic_cfg,
             speaker=speaker_cfg,

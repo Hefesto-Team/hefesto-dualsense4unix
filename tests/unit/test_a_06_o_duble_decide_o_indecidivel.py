@@ -151,8 +151,23 @@ def _button_actions() -> dict[str, str]:
     return fora
 
 
+def _remapeamento() -> dict[str, str]:
+    """Uma troca para CADA linha que a troca alcança — F1-REMAPEAR, 13/09/2026.
+
+    A tela "Trocar os botões" ganhou dezesseis endereços, e o desenho crava
+    "— Sem troca —" nos dezesseis. Um dublê sem troca concordaria com o desenho
+    em todos — dezesseis indecidíveis. A troca aqui é uma RODA sobre
+    `REMAPEAVEIS` (cada botão passa a ser o seguinte): nenhum destino se repete,
+    então o motor a aceita, e toda linha discorda do desenho.
+    """
+    from hefesto_dualsense4unix.core.remapeamento_de_botao import REMAPEAVEIS
+
+    return {b: REMAPEAVEIS[(i + 1) % len(REMAPEAVEIS)]
+            for i, b in enumerate(REMAPEAVEIS)}
+
+
 PERFIL = {"name": "Dublê da Navegação", "button_actions": _button_actions(),
-          "key_bindings": {"l1": ["KEY_F11"]}}
+          "key_bindings": {"l1": ["KEY_F11"]}, "remapeamento": _remapeamento()}
 
 
 def _no_mundo_de(monkeypatch, publicado: bool):
@@ -433,13 +448,25 @@ def test_todo_valor_do_duble_existe_como_opcao(monkeypatch, publicado):
         f"a página {onde_estou} tem {com_tecla} dos {len(DOMINIO_DO_TECLADO)} "
         "campos de tecla — meia tela é pior que nenhuma: o Guardar dela grava "
         "só o que achou e cala sobre o resto.")
-    esperados = len(BOTOES) + 3 + com_tecla
+    # E AS LINHAS DA TROCA DE BOTÕES — 13/09/2026, F1-REMAPEAR. A tela "Trocar os
+    # botões" ganhou um endereço por linha que a troca alcança, e a conta pergunta
+    # ao dono da lista (`remapeamento_de_botao.REMAPEAVEIS`) em vez de digitar o
+    # número — pelo mesmo motivo do `com_tecla` acima, e com a mesma trava de
+    # meia tela.
+    from hefesto_dualsense4unix.core.remapeamento_de_botao import REMAPEAVEIS
+
+    com_troca = sum(1 for b in REMAPEAVEIS
+                    if _opcoes_da_pagina(publicado, f"troca-{b}") is not None)
+    assert com_troca in (0, len(REMAPEAVEIS)), (
+        f"a página {onde_estou} pinta {com_troca} das {len(REMAPEAVEIS)} linhas "
+        "da troca de botões — o Guardar dela gravaria só o que achou.")
+    esperados = len(BOTOES) + 3 + com_tecla + com_troca
     assert len(conferidos) == esperados, (
         f"conferi {len(conferidos)} endereço(s) na página {onde_estou} e a aba tem "
         f"{esperados} (as {len(BOTOES)} linhas de botão, a 'Função do teclado', "
-        f"as DUAS barras de velocidade e {com_tecla} campo(s) de tecla) — se o "
-        "número caiu, uma linha perdeu o endereço e saiu da conferência sem "
-        "reprovar nada.")
+        f"as DUAS barras de velocidade, {com_tecla} campo(s) de tecla e "
+        f"{com_troca} linha(s) da troca de botões) — se o número caiu, uma linha "
+        "perdeu o endereço e saiu da conferência sem reprovar nada.")
 
 
 def test_os_sete_campos_de_texto_dizem_o_que_o_duble_diz(sob_o_duble):

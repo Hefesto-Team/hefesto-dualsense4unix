@@ -1485,6 +1485,22 @@ class Profile(BaseModel):
     # `acoes_de_botao` é quem os separa. Aposentar um em favor do outro é
     # trabalho com dono e não se faz junto com o nascimento do campo.
     button_actions: dict[str, str] | None = None
+    # F1-REMAPEAR (13/09/2026): a troca botão a botão — *"L1 passa a ser R1"* —,
+    # o que o JOGO vê de cada botão. Decisão dela, 29/08/2026
+    # (D-O-REMAPEAMENTO-BOTAO-A-BOTAO-ENTRA): *"ENTRA, E VIRA SPRINT PRÓPRIA."*
+    # GLOBAL no perfil, não por controle (D-0809-A-NAVEGACAO-E-GLOBAL-NO-PERFIL):
+    # vale nos quatro controles.
+    #
+    # - None = sem troca nenhuma. `{}` vira None na validação, e o save OMITE a
+    #   chave quando None (`loader._payload_do_perfil`): um binário anterior a
+    #   esta sprint tem `extra="forbid"` e recusaria o perfil INTEIRO.
+    # - {"cross": "circle"} = apertar o ✕ o jogo vê o ○; os outros passam intactos.
+    #
+    # POR QUE NÃO É O `button_actions` ACIMA: aquele fala a língua de TECLA e
+    # MOUSE (o desktop); este fala botão → BOTÃO, e mora antes do gamepad
+    # virtual. A regra inteira — PS travado, colisão, o que a troca alcança — é
+    # de `core/remapeamento_de_botao.resolver`, e o validador abaixo só a chama.
+    remapeamento: dict[str, str] | None = None
     # FEAT-POINT-AND-CLICK-01: seção opcional de emulação de mouse.
     # - None = ativar o perfil não toca no estado da emulação (comportamento v1).
     # - Preenchida = ativar o perfil liga/desliga a emulação com as velocidades
@@ -1563,8 +1579,15 @@ class Profile(BaseModel):
         downgrade.
         """
         dados = handler(self)
-        if isinstance(dados, dict) and dados.get("ponte") is None:
-            dados.pop("ponte", None)
+        # `remapeamento` ENTRA NA MESMA OMISSÃO — F1-REMAPEAR, 13/09/2026, e
+        # pela mesma razão: o campo nasceu hoje, e um hefesto de ontem recusaria
+        # o perfil inteiro ao ver a chave, mesmo `null`. Aqui no esquema, e não
+        # só no save, porque o dump sai também pelo estado do IPC e pela
+        # exportação.
+        if isinstance(dados, dict):
+            for opcional in ("ponte", "remapeamento"):
+                if dados.get(opcional) is None:
+                    dados.pop(opcional, None)
         return dados
 
     @field_validator("name")
@@ -1616,6 +1639,24 @@ class Profile(BaseModel):
                     f"`core/acoes_de_botao.ACOES`."
                 )
         return value
+
+    @field_validator("remapeamento")
+    @classmethod
+    def _validate_remapeamento(
+        cls, value: dict[str, str] | None
+    ) -> dict[str, str] | None:
+        """A troca que o produto sabe fazer, limpa — ou a recusa nomeando.
+
+        A REGRA É DO MOTOR (`core/remapeamento_de_botao.resolver`) e não se
+        repete aqui: o PS travado, a linha fora do alcance e dois botões para o
+        mesmo destino são recusa, e a troca de um botão por ele mesmo some.
+        Vazio vira `None`, que é o que faz o save omitir a chave.
+        """
+        if value is None:
+            return None
+        from hefesto_dualsense4unix.core.remapeamento_de_botao import resolver
+
+        return resolver(value) or None
 
     @field_validator("key_bindings")
     @classmethod
