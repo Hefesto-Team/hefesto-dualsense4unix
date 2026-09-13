@@ -51,6 +51,25 @@ def _socket_path(runtime: Path) -> Path:
     return runtime / "hefesto-dualsense4unix" / "hefesto-dualsense4unix.sock"
 
 
+#: O Game Mode do wrapper pede Performance ao `system76-power` (ou por `busctl`
+#: e `dbus-send`) e devolve o perfil anterior quando o jogo sai. Com o PATH da
+#: máquina, cada teste daqui falava com o daemon de energia real — medido em
+#: 13/09/2026 com um `system76-power` de mentira que só registra: o wrapper
+#: pediu `profile`. Estes três ficam na frente do PATH e não respondem; quem
+#: mede o Game Mode é `test_hefesto_launch_game_mode.py`, com os dublês dele.
+_GAME_MODE_MUDO = ("system76-power", "busctl", "dbus-send")
+
+
+def _path_sem_game_mode(runtime: Path) -> str:
+    mudos = runtime / "game-mode-mudo"
+    mudos.mkdir(exist_ok=True)
+    for nome in _GAME_MODE_MUDO:
+        falso = mudos / nome
+        falso.write_text("#!/bin/sh\nexit 1\n", encoding="utf-8")
+        falso.chmod(0o755)
+    return f"{mudos}:{os.environ.get('PATH', '/usr/bin:/bin')}"
+
+
 def _run_wrapper(
     *,
     runtime: Path,
@@ -60,7 +79,7 @@ def _run_wrapper(
     timeout: float = 15.0,
 ) -> subprocess.CompletedProcess[str]:
     env = {
-        "PATH": os.environ.get("PATH", "/usr/bin:/bin"),
+        "PATH": _path_sem_game_mode(runtime),
         "HOME": os.environ.get("HOME", "/tmp"),
         "XDG_RUNTIME_DIR": str(runtime),
         "XDG_STATE_HOME": str(state_home),
@@ -134,6 +153,25 @@ def runtime():
     base = _runtime_dir()
     yield base
     shutil.rmtree(base, ignore_errors=True)
+
+
+def test_o_wrapper_testado_nao_alcanca_o_game_mode_da_maquina(runtime, tmp_path):
+    """Os três transportes do Game Mode resolvem para os dublês mudos, não os da máquina.
+
+    MORDIDA: devolva o PATH da máquina a `_run_wrapper` e rode esta régua com
+    dublês que só registram na frente do PATH — ela reprova, e o daemon de
+    energia real não é chamado.
+    """
+    result = _run_wrapper(
+        runtime=runtime,
+        state_home=tmp_path,
+        appid=None,
+        args=["sh", "-c", 'for n in system76-power busctl dbus-send; do command -v "$n"; done'],
+    )
+    achados = result.stdout.split()
+    mudos = f"{runtime / 'game-mode-mudo'}/"
+    assert len(achados) == len(_GAME_MODE_MUDO), result.stdout
+    assert all(a.startswith(mudos) for a in achados), achados
 
 
 def test_daemon_vivo_exporta_as_envs_materializadas(runtime, tmp_path):
