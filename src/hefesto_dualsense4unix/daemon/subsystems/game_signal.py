@@ -132,8 +132,17 @@ def classify(
        `steam`, `steamwebhelper` e `reaper` vivos são a ÁRVORE da Steam, não
        um jogo — o cliente sem jogo nenhum já escreveu lightbar e player-LEDs
        com o daemon defendendo a cor dele. A agulha exige `SteamLaunch
-       AppId=`, que só existe no launch de um jogo; e `appid <= 0` é recusado
-       aqui, porque um appid zero não identifica jogo nenhum.
+       AppId=<dígitos>`, que a Steam põe no launch de um jogo E no avaliador
+       do install script dele (`reaper SteamLaunch AppId=<id> Install=1`); a
+       varredura devolve None para o avaliador
+       (`steam_launch_options.e_avaliador_do_install_script`). E `appid <= 0`
+       é recusado aqui, porque um appid zero não identifica jogo nenhum.
+
+       NOTA DATADA — 13/09/2026 (JOGO-SEM-EXCLUSIVIDADE-01): esta frase dizia
+       que `SteamLaunch AppId=` «só existe no launch de um jogo». O log da
+       Steam e o journal derrubaram o fato: o avaliador rodou antes do wrapper
+       e pôs a autoridade em `game` 4 a 5 s cedo, em 6 de 6 aberturas de um
+       jogo com install script.
 
     Sem NENHUMA evidência: `daemon` exige `window_healthy` (evidência
     POSITIVA de detector são — desktop vazio/alt-tab observado, não
