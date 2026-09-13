@@ -143,3 +143,93 @@ e também escrevia no diário; o que mudou é a tela.
 * **A SISTEMA-BOTOES-01** põe `armou` na carga dos «Confirma?»; o lado do piloto está aqui.
 * **Na costura:** `hefesto_vivo.py` é de muitas sprints desta leva, e as páginas 04 e 05
   mudam em outras — regerar, nunca mesclar à mão.
+
+## O que a validação refez e corrigiu
+
+Agente valida/corrige, na mesma árvore e na mesma branch, sobre `81007827`.
+
+**Os dois nomes para a SISTEMA-BOTOES-01, conferidos no código:** a chave da carga é
+**`armou`** (`hefesto_vivo.CHAVE_DO_CLIQUE_QUE_SO_ARMOU`), e a classe da piscada de
+recusa é **`hef-recusou`** (`folha_da_casa.FOLHA_DA_CASA`). Um gesto que devolve
+`{"armou": True}` pousa sem piscada nenhuma.
+
+### O que foi refeito
+
+| o quê | como | resultado |
+| --- | --- | --- |
+| posse | `git diff --name-only 249af1f6..HEAD` contra o frontmatter | 23 arquivos na posse, nas páginas geradas, na entrega e na sprint; os 5 de fora têm a razão escrita acima, e as três citações pendentes batem por símbolo nas linhas 587, 1373 e 1501 do piloto |
+| nenhum botão novo | `<button` e `data-gesto=` nas dez páginas publicadas e nas dez do `mockup/`, base contra branch | idênticos nas vinte (04: 60 botões e 66 gestos; 05: 32 e 0) |
+| réguas | 48 arquivos, um processo por arquivo: os 17 da entrega e mais 31 que leem o que a sprint mudou (os símbolos que saíram, `a04_iluminacao`, a guia de tons) | um vermelho, o achado 1; depois da correção, os 48 verdes |
+| tela | driver próprio no rascunho: piloto `--oculta` com Xvfb próprio, lar de mentira e um controle sintético; a base, extraída por `git archive 249af1f6` | a tabela da tela, abaixo |
+| mordidas | doze, cada uma por substituição exata, devolvida por cópia, com o md5 do arquivo e o do `git diff` inteiro conferidos | as doze reprovaram, e as doze voltaram iguais |
+| disco dela | md5 de `~/.config/hefesto-dualsense4unix/profiles/` antes e depois de cada corrida | igual em todas |
+
+### Os achados
+
+1. **CORRIGIDO — a casa tomada da aba 04 perdeu o nome do dono.** A cura trocou a dica
+   do tom tomado por `titulo_da_casa(i)`, e a casa com X passou a dizer «Cor do Player 2.
+   Pinta a barra, não muda o número.» — falso numa casa que não pinta nada.
+   `test_fecha_iluminacao_01_duas_pecas_nunca_tem_a_mesma_cor.py::TestOGestoDaAba::test_a_guia_desenha_o_x_exatamente_no_que_o_gesto_recusa`
+   reprovou; ela não estava entre as réguas rodadas. A nota do código dizia «o nome do
+   dono continua no X, pela cor», e caiu: o X é preto com borda branca desde 09/09
+   (`test_o_x_e_preto_com_borda_branca_e_nao_a_cor_do_dono`). A cura: a dica da casa
+   tomada diz só o nome do dono, que é estado, sem a regra colada. As páginas não mudam,
+   porque o gerador desenha a guia sem casa tomada. Régua nova:
+   `test_a_casa_tomada_diz_de_quem_e_sem_a_regra`.
+2. **CORRIGIDO (faltava régua) — o clique sem dono passou a piscar a recusa, e nada o
+   cobria.** O `_pousou(voo, False)` no ramo sem dono é mudança da cura, fora da letra do
+   §I. No piloto, o «Guardar» do remapeamento da 06, declarado sem dono em
+   `a06_navegacao`: na base `btn roxo → btn roxo hef-em-voo → btn roxo`; na branch
+   `… → btn roxo hef-recusou → btn roxo`, 1500 ms depois. Fica: o piloto já o conta como
+   recusa (`self.recusados`), e o §0 manda responder pelo sinal do botão. Régua nova:
+   `test_o_clique_sem_dono_pisca_a_recusa`. **O alcance, para o olho dela:** lendo o
+   seletor do ouvinte contra os donos registrados, os botões declarados sem dono são dez
+   na 06, um na 08 (`novo-hub`) e um na 01 (o degrau `modo-steam`) — os doze passam a
+   piscar laranja quando clicados.
+3. **ANOTADO, não corrigido — `docs/data/paridade-gtk-html.csv:323`.** A entrega trocou o
+   `sinal` dessa linha, e a coluna do que o HTML faz continua dizendo «O que traz notícia
+   fala no cartão; a recusa vira recado», que caducou com a TELA-CALADA-01 e com esta
+   sprint. Fora da posse; soma-se às linhas 92 e 185 já listadas para quem coordena.
+
+### A tela, antes e depois (piloto oculto, clique pelo ouvinte de verdade)
+
+| gesto | base `249af1f6` | branch |
+| --- | --- | --- |
+| 04 · ponteiro no «2» `.fora` | `#hef-dica`: «Player 2 — Esse número é maior do que a quantidade de controles ligados.» | `#hef-dica`: «Player 2» |
+| 04 · clique no «2» | 1 recado em grade, laranja, sobre o desenho do P1; a frase no texto visível; o botão volta do voo sem sinal | 0 recado; a frase fora do texto, das dicas e dos `title`; `fora hef-recusou`, contorno `rgb(255, 184, 108)`, apagado 1500 ms depois |
+| 01 · o cadeado recusando | recado sobre o cartão do P1 | 0 recado; `hef-recusou` por 1500 ms |
+| 05 · repouso | 1 `data-hef-recados` | 0 |
+
+Fotos, nesta pasta: o clique no «2» refeito pelo driver da validação saiu **igual byte a
+byte** às duas da entrega (mesmo md5), então elas ficam como estão —
+`ANTES-04-o-clique-no-2.png` e `DEPOIS-04-o-clique-no-2.png`; e as novas,
+`VALIDA-ANTES-04-a-dica-do-2.png` e `VALIDA-DEPOIS-04-a-dica-do-2.png`,
+`VALIDA-ANTES-01-o-cadeado.png` e `VALIDA-DEPOIS-01-o-cadeado.png`.
+
+### As doze mordidas
+
+| mordida | reprovou |
+| --- | --- |
+| a · `_recusou_dizendo` volta a pôr a frase num `.hef-recado`, depois do diário | 12: `test_a_recusa_nao_poe_frase_na_tela[04]`, `[02]`, `[01]`, `test_a_recusa_so_escreve_no_diario` e oito de `test_a_recusa_chega_ao_cartao` |
+| b · `voltouDoVoo` sem `'hef-recusou'` | 5: a piscada nas três abas e duas de `test_o_recado_de_sucesso_pousa_no_cartao` |
+| c · a piscada não se apaga | 4: a piscada nas três abas e `test_o_clique_que_so_arma_nao_pisca` |
+| d · a frase de volta à dica do `.fora` | 5: a frase na tela da 04, `test_o_numero_fora_diz_so_o_numero` e três de `test_a_iluminacao_diz_o_numero_certo` |
+| e · a 05 publicada declara `data-hef-recados` | `test_a_aba_05_nao_declara_lugar_de_recado[publicado]` |
+| f · `aba05.MIOLO` declara `data-hef-recados`, e o gerador roda | o gerador recusa, rc=1: «a faixa voltou a declarar lugar de recado» |
+| g · `so_armou = False` | `test_o_clique_que_so_arma_nao_pisca` |
+| h · o sem dono pousa com `_pousou(voo)` | `test_o_clique_sem_dono_pisca_a_recusa` |
+| i · o diário sem o prefixo `[gesto falhou]` | 5: o diário nas três abas, `test_a_recusa_so_escreve_no_diario` e a premissa de `test_a_tela_nao_confessa_divida_nossa` |
+| j · a folha sem `.hef-recusou` | `test_a_folha_veste_a_recusa_sem_esconder_nada` |
+| k · a regra colada de volta à casa tomada | `test_a_casa_tomada_diz_de_quem_e_sem_a_regra` |
+| l · a casa tomada sem o nome, como estava na entrega | a régua nova e a régua do X |
+
+**Portões:** `bash scripts/portoes.sh` depois do `git add -A`, com esta seção e a
+correção dentro — TODOS VERDES.
+
+### O que a validação não verificou
+
+* O aparelho, a tela instalada e o olho dela: tudo no piloto oculto, com controle
+  sintético e ponte dublada.
+* Os ensaios que liam o recado, o da posse e os três de fora: não rodados.
+* A suíte inteira.
+* A dica da casa tomada no piloto com dois controles na mesa: lida só no pacote.
