@@ -1,6 +1,6 @@
 ---
 sprint: LIGHTBAR-NA-STEAM-01
-estado: aberta
+estado: feita
 onda: A-TERCEIRA-LISTA-DELA
 posse:
   LIGHTBAR-NA-STEAM-01:
@@ -32,6 +32,8 @@ nao_toca:
 ---
 
 # LIGHTBAR-NA-STEAM-01 — a luz dentro da Steam, as guardas que se autoaplicavam, e as features que talvez não cheguem ao jogo
+
+> **ESTADO 2026-09-13: feita** — o §I.1 e o §I.2 construídos no backend, com dublê: `replay_retained_game_outputs` deixou de entregar a luz retida sob 'daemon' e passou a descartá-la dizendo no journal o que descartou; a camada GAME só recebe luz escrita com a autoridade já em 'game' ou 'unknown'. Os logs de retenção, de descarte e o novo `game_output_replicado` carregam `cor`, `players` e `autoridade`, com os nomes de campo do `gatilho_da_cor_escrito`. O §I.3: seis citações do mapa e quatro de comentário de código reapontadas por símbolo, `html/specs.html` regenerado. O §I.4 (a alternativa larga) não foi feito. A mordida arrancou a cura três vezes e as três reprovaram. A entrega está em `docs/process/agentes/2026-09-13/LIGHTBAR-NA-STEAM-01-opus.md`.
 
 A palavra dela está no índice: *«ler sobre como descobrimos como funcionava a
 escrita do lightbar dentro da steam e como fizemos os guards funcionarem lá pra
