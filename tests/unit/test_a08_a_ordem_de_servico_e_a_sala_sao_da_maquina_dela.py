@@ -114,7 +114,7 @@ def test_a_ordem_de_servico_e_da_maquina_dela() -> None:
     """O card traz o de→para da ordem viva, e NADA do mockup.
 
     A COLUNA ENXUGOU EM 13/09/2026 — FRASES-E-DICAS-02. Até aqui este teste
-    exigia no card o imperativo (`acao`) e a linha do ganho, inclusive a que
+    exigia no card o imperativo da ordem e a linha do ganho, inclusive a que
     confessa que o ganho não foi medido. A ordem dela de 13/09
     (`docs/process/sprints/2026-09-13-A-TERCEIRA-LISTA-DELA-INDICE.md`, §0 item
     4: «Tirar e enxugar pode») e a §D da sprint tiram os dois da coluna visível;

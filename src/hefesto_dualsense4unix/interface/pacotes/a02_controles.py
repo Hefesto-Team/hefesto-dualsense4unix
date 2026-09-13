@@ -1168,8 +1168,8 @@ def _ler_a_camada_1(entradas: tuple[tuple[str, int | None], ...],
 #: segue o transporte), e o do controle desligado no cabo.
 _SONO: dict[str, str] = {}
 
-#: O drop-in 54 está no lugar? `None` = ninguém perguntou ainda, e `None` é o
-#: que faz a dica não afirmar nem um nem outro.
+#: O drop-in 54 está no lugar? `None` = ninguém perguntou ainda. A dica do canal
+#: parou de lê-lo em 13/09/2026 (FRASES-E-DICAS-02): ela diz só o estado.
 _REGRA_DO_SONO: list[bool | None] = [None]
 
 
@@ -1207,11 +1207,6 @@ def _ler_o_sono(lido: dict[str, Any]) -> dict[str, str]:
 def sono_do_canal(uniq: str) -> str:
     """`"acordado"`, `"dormindo"` ou `""` para UM controle — do cache."""
     return _SONO.get(uniq, "") if uniq else ""
-
-
-def regra_do_sono() -> bool | None:
-    """O drop-in 54 está instalado? `None` enquanto ninguém tiver perguntado."""
-    return _REGRA_DO_SONO[0]
 
 
 def _camada_1(entradas: tuple[tuple[str, int | None], ...],
@@ -1944,8 +1939,8 @@ def modo_do_mic(endereco: str) -> str:
     """Qual dos dois botões do modo do microfone está aceso.
 
     A REGRA É A DA GTK, e é uma linha só lá: `meu.get("microfone") is True`
-    (`app/actions/config/secao_controles.py:876`), que alimenta o
-    `set_active(bool(ligado))` do interruptor (`:584`). `True` e só `True` é
+    (`app/actions/config/secao_controles.py:956`), que alimenta o
+    `set_active(bool(ligado))` do interruptor (`:662`). `True` e só `True` é
     Virtual; ausência e `False` deixam a ponte no chão do mesmo jeito, e as duas
     são Nativo — que é por que desligar grava `None` e não `False`.
 
