@@ -214,6 +214,12 @@ primeiro plano, na branch corrigida: 483, 417, 499, 496 (mais 2 xfailed), 477
 `validar-citacoes-de-linha.py --all` (3289 citações) e o `ruff` nos quatro
 arquivos Python da sprint.
 
+### Os portões
+
+`bash scripts/portoes.sh`, completo, sobre `340c4246`, depois do `git add -A`:
+**TODOS VERDES — 60 portões.** Esta seção entrou depois, e `acentuacao`,
+`anonimato` e `referencias-docs` rodaram de novo sobre ela.
+
 ### O que fica, sem cura aqui
 
 * **Achado 3: a docstring não tem régua** (V5). Nenhum arquivo de teste da posse
