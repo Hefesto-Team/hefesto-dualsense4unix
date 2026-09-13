@@ -2363,35 +2363,42 @@ CSS_DAS_MEDIDAS = f"""
 # Quem morde o gerador de propósito — que é o protocolo desta casa: *"arranque a
 # cura, veja reprovar, devolva"* — recebia `rc=1` com a mensagem certa **e a
 # página mordida gravada por cima do desenho dela**. O `rc=1` lê-se como "não
-# fez nada", e não era: `mockup/04-iluminacao.html` ficava com o gesto proibido
-# dentro. Medido: md5 `eadea08e…` virou `50e79f6f…` numa recusa.
+# fez nada", e não era: md5 `eadea08e…` virou `50e79f6f…` numa recusa. E o
+# `--publicar` seguinte copia `mockup/` para `paginas/`, que é o que o
+# `WebKit2.WebView` renderiza.
 #
-# O PREÇO SE PAGA NO PASSO SEGUINTE, e é caro: `--publicar` copia `mockup/` para
-# `paginas/`, que é o que o `WebKit2.WebView` renderiza. Uma mordida esquecida
-# no disco chega à tela dela pelo comando seguinte, sem ninguém ver.
+# A CURA DE 07/09 RESTAURAVA DEPOIS, e só aqui; as outras nove seguiram com a
+# forma. A validação da RESTOS-DA-ONDA-DOIS-01 mediu o preço na 06, em
+# 13/09/2026: com a autoconferência reprovando, o `--publicar` seguinte publicou
+# a página recusada.
 #
-# O CONSERTO NÃO ESCONDE A SAÍDA RECUSADA: ela é parqueada ao lado, com sufixo
-# `.recusado`, porque quem mordeu quer olhar o que saiu. O que volta ao lugar é
-# só o desenho aprovado.
+# A CURA DE 13/09/2026 (A-MARCA-DA-DEGRADACAO-01) CONFERE ANTES, e nas dez. A
+# página nasce numa bancada PROVISÓRIA — o desvio `HEFESTO_BANCADA` de
+# `onde.py`, com as páginas vizinhas copiadas, porque a tira de abas e algumas
+# réguas perguntam se elas existem — e só é copiada para a bancada de verdade
+# depois de passar. Recusada, a saída fica no provisório
+# (`$TMPDIR/hefesto-prova-NN-*`) para quem quiser olhar, e a bancada não muda um
+# byte. A régua das dez, com a sabotagem, é
+# `tests/unit/test_a_marca_que_nunca_acende_e_o_gerador_que_confere.py`.
 #
-# AS OUTRAS NOVE ABAS TÊM A MESMA FORMA (`monta()` e depois `_conferir()`), e
-# esta guarda ainda não está nelas — está escrito aqui para quem for fechá-las.
+# O LUGAR CERTO DESTE BLOCO É `onde.py`, dono único da escrita; ele fica repetido
+# nos dez `__main__` porque aquele arquivo não era desta sprint.
 if __name__ == "__main__":
+    import os
+    import pathlib
     import shutil
+    import tempfile
 
-    _pagina = onde.pagina("04-iluminacao.html")
-    _antes = _pagina.read_bytes() if _pagina.exists() else None
+    _real = onde.saida()
+    _prova = pathlib.Path(tempfile.mkdtemp(prefix="hefesto-prova-04-"))
+    for _vizinha in _real.glob("*.html"):
+        shutil.copy2(_vizinha, _prova / _vizinha.name)
+    os.environ[onde._DESVIO] = str(_prova)
     n = monta("04-iluminacao", "Iluminação", MIOLO, CSS + CSS_DAS_MEDIDAS,
               legenda=LEGENDA)
-    try:
-        _conferir(_pagina.read_text())
-    except BaseException:
-        if _antes is not None:
-            shutil.copyfile(_pagina, _pagina.with_suffix(".html.recusado"))
-            _pagina.write_bytes(_antes)
-            print(f"a saída recusada ficou em {_pagina.name}.recusado; "
-                  f"{_pagina.name} voltou ao desenho aprovado", file=sys.stderr)
-        raise
+    _conferir(onde.pagina("04-iluminacao.html").read_text())
+    shutil.copyfile(_prova / "04-iluminacao.html", _real / "04-iluminacao.html")
+    shutil.rmtree(_prova)
     print(f"04-iluminacao: OK, {n} divs · {len(monta_.CONECTADOS)} conectado(s) "
           f"+ {len(MESA) - len(monta_.CONECTADOS)} lugar(es) vazio(s) · "
           f"números {NUMEROS} · respiro 5px, a divisória no meio do vão")

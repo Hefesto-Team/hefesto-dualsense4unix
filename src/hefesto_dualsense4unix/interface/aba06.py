@@ -3826,4 +3826,20 @@ def _gerar() -> None:
 
 
 if __name__ == "__main__":
+    import os
+    import pathlib
+    import shutil
+    import tempfile
+
+    # CONFERE ANTES DE ESCREVER — 13/09/2026. A página nasce numa bancada
+    # PROVISÓRIA e só vai para a de verdade se passar; a razão e a régua estão
+    # no fim do `aba04.py`. Era aqui que a validação da RESTOS-DA-ONDA-DOIS-01
+    # viu a página recusada chegar ao `--publicar`.
+    _real = onde.saida()
+    _prova = pathlib.Path(tempfile.mkdtemp(prefix="hefesto-prova-06-"))
+    for _vizinha in _real.glob("*.html"):
+        shutil.copy2(_vizinha, _prova / _vizinha.name)
+    os.environ[onde._DESVIO] = str(_prova)
     _gerar()
+    shutil.copyfile(_prova / "06-navegacao.html", _real / "06-navegacao.html")
+    shutil.rmtree(_prova)
