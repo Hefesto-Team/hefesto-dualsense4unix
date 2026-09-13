@@ -242,3 +242,63 @@ os dois arquivos dão `36 passed`.
 5. `storm_doctor`, `prontuario_dos_jogos` e o `--status` do vigia seguem lendo
    só `UseSteamControllerConfig`.
 6. A corrida da evidência E3 do §R continua aberta.
+
+## O que a validação refez e corrigiu
+
+Terceiro agente da sprint, na mesma árvore e na mesma branch, sem confiar no
+relato acima. Aparelho: não usei. O disco dela foi só LIDO, com md5 conferido.
+
+**Posse.** Os oito arquivos de `249af1f6..adb3dbb0` cabem no `posse`/`cria` da
+sprint mais a entrega. Nenhuma página gerada mudou: **277 botões e 337
+`data-gesto`** nas páginas publicadas, antes e depois, página por página. Nenhuma
+frase nova chega à tela. **Tela:** sem foto, porque nenhum HTML mudou e a única
+diferença visível (a aba «No jogo» sem jogo durante o avaliador) só existe com
+um avaliador vivo, que só nasce abrindo um jogo.
+
+**As mordidas, refeitas por script** — sabotagem aplicada só com o trecho achado
+exatamente uma vez, régua rodada, arquivo devolvido e comparado byte a byte com a
+cópia de antes (11 de 11 idênticos):
+
+| cura arrancada | com a cura arrancada |
+| --- | --- |
+| M1 a exclusão em `steam_game_running_appid` | 4 failed — `['jogo_vivo'] == ['primeiro_degrau']`, a linha das 05:00:20 |
+| M2 a preferência do jogo na camada 4 | 1 failed (avaliador com pid menor) |
+| M3 a nova varredura da camada 2 (confiar na foto do avaliador) | 1 failed |
+| M4 o ramo do `"0"` | 5 failed |
+| M5 a lista lida como vazia | 3 failed |
+| M6 configset ilegível vira `continue` | 1 failed |
+| M7 a chamada `--desligar-fora-da-lista` no vigia | 1 failed |
+| M8 `steam_game_running` deixa de contar o avaliador (acrescentada) | 2 failed |
+| M9 `Install=1` procurado na cmdline inteira (acrescentada) | 1 failed |
+| M10 a lista estrita trocada por `ler_allowlist` (acrescentada) | 1 failed |
+| M11 desligar grava `"1"` — a segunda régua tem de barrar (acrescentada) | 8 failed |
+
+**O achado do topo, remedido.** Pelo parser da ponte, no `localconfig.vdf` dela:
+os quatro jogos da queixa estão em `"0"` na árvore `UserLocalConfigStore/apps` e
+sem a chave nas outras duas; o backup de 13/09 01:16:20 diz o mesmo. O
+`console_log` tem o avaliador às 01:29:30 e `Created virtual controller` às
+01:29:43 e às 01:30:56 (e de novo às 01:32:56, 01:35:15, 05:00:19 e 05:01:50). O
+`--dry-run` devolveu exatamente a lista do relato: sete `ja_desligado`, quatro
+`desligado` (1672970, 1828690, 2958790, 3449040) e 413090 desconhecido. O md5 do
+vdf e a listagem da pasta dele saíram idênticos.
+
+**Corrigido** (`fix(steam)`): o fato que a medição derrubou ficou em dois
+lugares que a implementação escreveu. A docstring do teste da lista dizia que a
+chave «não existe ali», e a do `steam_input_ponte.py` apresentava o `"0"` como a
+cura sem dizer que ele já estava lá quando a Steam criou o controle virtual. Os
+dois passaram a dizer o fato medido.
+
+**Revisto e deixado como está:**
+
+* O `resultado=` da janela é ancorado (`^\[steam-input\] resultado=`), então a
+  linha nova não passa pela do vigia.
+* `discover_vdfs` devolve o caminho resolvido, e é dele que sai a pasta das
+  configs.
+* Com o avaliador na foto, a varredura roda a cada pergunta enquanto ele vive.
+  São segundos, e com o jogo de pé a camada 2 volta a valer.
+* `app/actions/base.py` (relançar o jogo, fora da posse): pedido nos segundos do
+  avaliador, o appid sai `None` e a Steam fecha sem reabrir o jogo. Não medi, e
+  o gesto só é oferecido com jogo na frente.
+
+**Não verifiquei:** a cmdline viva do avaliador em `/proc`; nada no aparelho; a
+suíte inteira (regra da leva).

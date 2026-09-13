@@ -6,7 +6,9 @@ A própria Steam liga o Steam Input POR JOGO sem escrever
 `autosave` no `configset_controller_ps5.vdf` e pasta `<appid>/`. Medido em
 13/09: em toda abertura de um jogo assim a Steam criou controle virtual, e o
 jogo passou a ver o espelho do Steam Input em vez da máscara da aba Jogar. O
-vigia, o doctor e o prontuário só leem a chave do vdf, que não existe ali.
+vigia, o doctor e o prontuário só leem a chave do vdf — e nos jogos medidos ela
+já estava em `"0"` na árvore viva quando a Steam criou o controle virtual: se o
+`"0"` vence a configuração por jogo, só o aparelho responde.
 
 A lista do Hefesto passa a valer nos dois sentidos, e este arquivo trava:
 
