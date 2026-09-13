@@ -1585,18 +1585,28 @@
      fluxo, a linha pousa no meio da fileira, onde o lugar vazio não desenha
      nada (o chip invisível logo acima guarda o vão), e o botão não anda.
 
+     SÓ COM TODOS OS LUGARES APAGADOS — a validação da mesma sprint. A frase
+     acende também com MAIS controles que lugares, e aí os quatro estão
+     cheios: pousada por cima deles, no Chrome a 1228 e 1300, ela cobria o
+     chip «DualSense» da máscara do P2 e do P3, e o clique nela caía nesse
+     chip. Com um lugar cheio a linha fica acima da fileira, como antes, e o
+     botão desce os 27 px do quinto controle: é o estado que mudou, e não o
+     tique que samba.
+
      A LINHA APAGADA continua `display:none`: nada dela existe na cena que ela
-     aprovou. O fundo é o do quadro, para a borda dos cartões não cortar a
-     frase. E ela não pega clique, porque com mais controles que lugares a
-     mesma linha pousa sobre cartões cheios, que continuam clicáveis por baixo.
-     As duas linhas dividem o lugar: a ressalva da máscara sai vazia em todo
-     modo desde a JOGAR-A-FAIXA-QUE-PULA-01, então só a da mesa acende. */
+     aprovou. Por cima, o fundo é o do quadro, para a borda dos cartões não
+     cortar a frase. As duas linhas dividem o lugar: a ressalva da máscara sai
+     vazia em todo modo desde a JOGAR-A-FAIXA-QUE-PULA-01, então só a da mesa
+     acende. */
   .quadro-corpo > div:has(> .pecas){position:relative}
   .mesa-notas:not(.ha){display:none}
-  .mesa-notas{position:absolute;left:0;right:0;top:50%;transform:translateY(-50%);
-              z-index:1;margin:0;text-align:center;pointer-events:none}
-  .mesa-nota{color:var(--orange);font-size:12px;line-height:16px;
-             background:var(--panel);padding:0 8px}
+  .mesa-notas{margin:0 0 6px}
+  .mesa-nota{color:var(--orange);font-size:12px;line-height:16px}
+  .quadro-corpo > div:not(:has(> .pecas [data-conectado]:not([data-conectado="nao"]))) > .mesa-notas{
+    position:absolute;left:0;right:0;top:50%;transform:translateY(-50%);
+    z-index:1;margin:0;text-align:center}
+  .quadro-corpo > div:not(:has(> .pecas [data-conectado]:not([data-conectado="nao"]))) > .mesa-notas > .mesa-nota{
+    background:var(--panel);padding:0 8px}
   /* O CHIP QUE O PRODUTO NÃO SABE MONTAR — D-03 dela: *"cinza antes, com a
      razão na dica"*. Ele continua clicável de propósito (o gesto recusa DIZENDO
      o nome e as que existem); o que muda é a tela em REPOUSO parar de o mostrar
@@ -2368,10 +2378,13 @@
             <!-- ---------- AS DUAS LINHAS POR CIMA DOS LUGARES ----------
                  04/09/2026. Nenhuma das duas ocupa um pixel na cena que ela
                  aprovou: as duas nascem SEM a classe `ha`, e `.mesa-notas
-                 :not(.ha)` é `display:none`. Quando o produto tem o que dizer,
-                 a linha pousa POR CIMA da fileira, fora do fluxo — desde
-                 13/09/2026 (RECONECTAR-SAMBA-02), porque acima dela empurrava
-                 o «Reconectar controles» 27 px para baixo.
+                 :not(.ha)` é `display:none`. Quando o produto tem o que dizer
+                 e os quatro lugares estão apagados, a linha pousa POR CIMA da
+                 fileira, fora do fluxo — desde 13/09/2026
+                 (RECONECTAR-SAMBA-02), porque acima dela empurrava o
+                 «Reconectar controles» 27 px para baixo. Com um lugar cheio
+                 (mais controles que lugares) ela fica acima, para não cobrir a
+                 máscara de um cartão cheio.
 
                  UM `data-campo`, DOIS ELEMENTOS: o de fora leva
                  `data-hef-alvo="classe"` (existe ou não) e o de dentro não leva
