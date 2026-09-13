@@ -363,6 +363,17 @@ FILEIRA_VAZIA = "<!-- nada a oferecer neste cartão -->"
 #: ela aprovou, onde o contêiner nasce vazio.
 SEM_LISTA = "<!-- ainda não há lista para este cartão -->"
 
+#: O CORPO DO CARTÃO DA STEAM ENQUANTO A PRIMEIRA LEITURA NÃO VOLTOU — e ele
+#: NÃO É UMA FRASE, pela mesma razão de :data:`SEM_LISTA`.
+#:
+#: TELA-CALADA-02, 13/09/2026. Aqui morava *«Estou lendo a sua biblioteca da
+#: Steam…»*, uma notícia de fundo em primeira pessoa — e a palavra dela sobre as
+#: frases de status é *"em todas as abas da interface"*. Quem já diz que a
+#: leitura está em curso é o canto do cartão (:data:`AINDA_LENDO`, no
+#: `steam-jogos`). Um `""` aqui viraria travessão no `escrever()` do BOOTSTRAP;
+#: o comentário não é vazio, e o navegador o renderiza como nada.
+SEM_FRASE = "<!-- a primeira leitura da Steam ainda não voltou -->"
+
 #: A frase da lista de jogos VAZIA do cartão da Steam. Ela existe pela mesma
 #: razão do de cima, e diz o que o travessão não dizia: a lista tem QUATRO
 #: origens (falta o atalho · linha intocável · você tirou · você dispensou), e
@@ -1412,8 +1423,11 @@ class Leitura:
     #: dado frio. Uma `Leitura` montada à mão — e a régua desta aba monta várias
     #: — não declara nada, e aí só os de fábrica viram cartão.
     declarados: tuple[SemCenso, ...] = ()
-    #: a frase da sentinela, que já nomeia o jogo e já diz o que vai acontecer.
-    frase: str = ""
+    #: **O CAMPO `frase` SAIU — TELA-CALADA-02, 13/09/2026.** Ele trazia a frase
+    #: da sentinela para o corpo do cartão, que a pintava a cada tique sem
+    #: clique. O corpo passou a dizer só a contagem (:func:`cartao_da_steam`), e
+    #: um campo que ninguém lê seria a vigia montando, a cada volta, uma frase
+    #: para ninguém.
     #: A LINHA DE INICIALIZAÇÃO do Hefesto — o que o botão «Copiar a linha»
     #: copia e o que o bloco à mostra exibe. Ela é `steam_launch_options.
     #: WRAPPER_LAUNCH`, e vem por aqui porque o desenho não importa o produto.
@@ -1631,7 +1645,8 @@ def cartao_da_steam(lida: Leitura | None) -> Lancador:
     if lida is None:
         return Lancador(
             chave=STEAM, nome="Steam", selo="nao_sei", jogos=AINDA_LENDO,
-            diz="Estou lendo a sua biblioteca da Steam…",
+            # O CORPO CALA ENQUANTO LÊ — TELA-CALADA-02. Ver :data:`SEM_FRASE`.
+            diz=SEM_FRASE,
             acoes=(abrir, criar), fora=SEM_LISTA, tem_lista=True)
     if lida.onde_esta_a_steam == "" and not lida.viu_a_biblioteca:
         # PROCUREI E NÃO ACHEI, e a frase é a MESMA dos outros cinco
@@ -1660,16 +1675,24 @@ def cartao_da_steam(lida: Leitura | None) -> Lancador:
 
     falta = len(lida.reparaveis)
     if falta:
-        # A FRASE É DA SENTINELA, e não minha: ela já nomeia o jogo, já diz o
-        # que ele perdeu e já diz o que vai acontecer. "1 jogo com problema" é
-        # exatamente o texto que deixou o Pragmata quebrado a noite inteira.
-        # E AS DUAS PALAVRAS PROIBIDAS SAÍRAM EM 11/09/2026 — A2-014, aprovada
-        # por ela. «wrapper» é inglês numa aba cujo termo é «atalho de
-        # inicialização», e *"na linha de comando"* é a outra palavra do
-        # glossário para o mesmo lugar. O que sobra é o fato inteiro.
-        diz = _e(lida.frase) or (
-            f"<b>{_plural(falta, 'jogo', 'jogos')} sem o atalho de "
-            "inicialização do Hefesto.</b>")
+        # O CORPO DIZ O ESTADO, E NÃO A HISTÓRIA — TELA-CALADA-02, 13/09/2026.
+        #
+        # Até aqui ia a frase inteira da sentinela, a cada tique e sem clique:
+        # *"2 jogos nunca receberam as Opções de Inicialização do Hefesto na
+        # Steam: … Feche a Steam e eu reponho."* Ela colou essa frase ao pedir
+        # que as frases de status saíssem *"em todas as abas da interface"*.
+        #
+        # O QUE NÃO SE PERDEU: o NOME de cada jogo está na lista do cartão, dois
+        # dedos abaixo (`lista_de_jogos`, com o motivo e o «Não usar neste
+        # jogo»); o selo `COM IMPEDIMENTO` e o «Consertar» continuam; e a frase
+        # da sentinela continua sendo a RECUSA do «Consertar», que é quando ela
+        # responde a um clique.
+        #
+        # «SEM O ATALHO», E NÃO «SEM O ATALHO DE INICIALIZAÇÃO DO HEFESTO»: a
+        # régua da sprint é de até seis palavras, e a linha de cada jogo na
+        # lista já diz «nunca recebeu o atalho» — a mesma palavra curta, na
+        # mesma tela (`a07_lancadores._porque`).
+        diz = f"<b>{_plural(falta, 'jogo', 'jogos')} sem o atalho</b>"
         acoes: tuple[Acao, ...] = (
             Acao("Consertar", "verde", "consertar", STEAM),
             Acao("Ver o que impede", "", "ver-o-que-impede", STEAM), abrir)

@@ -204,7 +204,7 @@ def test_os_botoes_que_a_pintura_traz_existem_no_html_pintado(a07, ctx, desenho)
     lida = desenho.Leitura(
         com_wrapper=("1",),
         reparaveis=(("2", "Um jogo", "nunca recebeu o atalho"),),
-        instalados=3, frase="alguma frase")
+        instalados=3)
     html = desenho.Quadro(lancadores=desenho.cartoes(lida)).valores()["steam-acoes"]
     for nome in ("consertar", "ver-o-que-impede"):
         assert f'data-gesto="{nome}"' in html, (
@@ -1113,8 +1113,7 @@ def test_a_moldura_do_cartao_segue_o_selo_que_o_produto_mediu(a07, ctx, desenho,
 
     quebrada = desenho.cartoes(desenho.Leitura(
         com_wrapper=("1",), instalados=2,
-        reparaveis=(("2", "Um jogo", "nunca recebeu o atalho"),),
-        frase="alguma frase"))
+        reparaveis=(("2", "Um jogo", "nunca recebeu o atalho"),)))
     html_warn = a07._pintura(quebrada)["blocos"][desenho.SELETOR_DA_GRADE]
     assert f'class="lanc {desenho.MOLDURA["warn"]}" data-lancador="steam"' in (
         html_warn), (
@@ -1141,7 +1140,7 @@ def test_o_valor_pintado_e_o_valor_da_grade_sao_a_mesma_coisa(a07, desenho):
     `acoes_html`) e este teste reprova nomeando o campo.
     """
     lida = desenho.Leitura(
-        com_wrapper=("1",), instalados=3, frase="alguma frase",
+        com_wrapper=("1",), instalados=3,
         reparaveis=(("2", "Um jogo", "nunca recebeu o atalho"),),
         recusados=(("9", "Outro jogo"),),
         onde_estao=(("heroic", "/x/h.desktop"), ("lutris", "")))
@@ -1266,7 +1265,7 @@ def test_a_marcacao_volta_igual_do_dom(a07, desenho, nome):
     do `_a`) e este teste reprova nomeando o trecho.
     """
     lida = desenho.Leitura(
-        com_wrapper=("1",), instalados=3, frase="alguma frase",
+        com_wrapper=("1",), instalados=3,
         reparaveis=((f"2{nome}", nome, "nunca recebeu o atalho"),),
         recusados=(("9", nome),),
         dispensados=(("7", nome),),
@@ -2533,7 +2532,7 @@ def test_o_consertar_da_steam_continua_onde_ha_o_que_consertar(desenho):
     sabe proibir não mede nada.*
     """
     lida = desenho.Leitura(
-        com_wrapper=("1",), instalados=3, frase="alguma frase",
+        com_wrapper=("1",), instalados=3,
         reparaveis=(("2", "Um jogo", "nunca recebeu o atalho"),))
     steam = next(c for c in desenho.cartoes(lida) if c.chave == desenho.STEAM)
 

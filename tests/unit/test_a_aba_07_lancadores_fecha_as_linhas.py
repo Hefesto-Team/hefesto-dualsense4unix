@@ -292,8 +292,12 @@ def test_a_aba_nao_escreve_uma_segunda_frase_do_aviso(a07):
     janelas do mesmo produto falarem línguas diferentes, que é exatamente o que
     a opção *"duas frases, uma por tela"* fazia — e ela foi recusada.
 
-    ELA LÊ AS DUAS PONTAS: o texto que a aba põe na tela tem de ser, palavra
-    por palavra, o que a função dona devolve.
+    **O CONTRATO MUDOU EM 13/09/2026 — TELA-CALADA-02.** A palavra dela sobre
+    as frases de status é *"em todas as abas da interface"*, e o cartão deixou
+    de pintar a frase do dono a cada tique: escreve o rótulo de estado
+    `a07.JOGO_ABERTO_SEM_O_ATALHO`. A régua passou a cobrar as duas metades do
+    que sobrou da decisão acima: o dono continua decidindo SE acende, e a aba
+    continua sem uma SEGUNDA REDAÇÃO da frase dele — nem inteira, nem pedaço.
     """
     from hefesto_dualsense4unix.app.actions import home_actions as ha
 
@@ -301,10 +305,11 @@ def test_a_aba_nao_escreve_uma_segunda_frase_do_aviso(a07):
     aviso, _ = a07.aviso_do_jogo_aberto(state, None)
     assert aviso, "o aviso do jogo aberto sumiu da aba"
     dono = ha.wrapper_banner_text(state) or ""
-    assert dono and a07._texto(dono) in aviso, (
-        f"a aba escreveu um aviso que não é o da função dona. O dono diz "
-        f"{dono!r} e a tela mostra {aviso!r} — duas frases para o mesmo fato "
-        f"envelhecem separadas.")
+    assert dono, "o dono deixou de acender — a régua mediria o silêncio"
+    assert a07._texto(dono) not in aviso and "Reponho" not in aviso, (
+        f"a frase do dono voltou ao cartão, a cada tique: {aviso!r}")
+    assert a07.JOGO_ABERTO_SEM_O_ATALHO in aviso, (
+        f"o cartão acendeu sem o rótulo de estado: {aviso!r}")
 
 
 # --------------------------------------------------------------------------

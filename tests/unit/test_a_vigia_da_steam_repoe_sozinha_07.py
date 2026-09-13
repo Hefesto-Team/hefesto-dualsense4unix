@@ -18,9 +18,12 @@ A MORDIDA DE CADA TESTE está na docstring dele. As três que mais importam:
 * troque o `cdw.passada(completa=False)` por uma cópia local da decisão (ou por
   `completa=True`) e o `test_o_tique_e_o_do_dono_e_barato` reprova — o tique
   caro abriria o `localconfig.vdf` a cada 45 s com a Steam viva;
-* digite o intervalo (`45`) ou a duração da notícia em vez de perguntar ao
-  `carona_do_wrapper`, e o `test_o_relogio_e_perguntado_ao_dono` reprova — é a
-  régua que digita, que esta casa paga desde 26/08.
+* digite o intervalo (`45`) em vez de perguntar ao `carona_do_wrapper`, e o
+  `test_o_relogio_e_perguntado_ao_dono` reprova — é a régua que digita, que
+  esta casa paga desde 26/08.
+
+A NOTÍCIA NO CARTÃO SAIU EM 13/09/2026 (TELA-CALADA-02): a frase do que a vigia
+repôs vai ao `[relato]` do stderr, e o cartão diz o estado relido.
 
 NADA AQUI TOCA A MÁQUINA DELA. A vigia SÓ arma com `HEFESTO_CARONA_WRAPPER`
 religado por escrito (o `conftest.py` o desliga em todo teste, porque este
@@ -31,7 +34,6 @@ from __future__ import annotations
 
 import pathlib
 import sys
-import time
 from typing import Any
 
 import pytest
@@ -57,13 +59,14 @@ def cdw() -> Any:
 
 @pytest.fixture(autouse=True)
 def _vigia_limpa(a07: Any) -> Any:
-    """Nenhum caso herda a vigia do anterior — nem a notícia."""
+    """Nenhum caso herda a vigia do anterior.
+
+    A NOTÍCIA GUARDADA SAIU EM 13/09/2026 (TELA-CALADA-02): a frase da vigia vai
+    ao `[relato]` do stderr, e não há mais estado de tela a limpar entre casos.
+    """
     a07.VIGIA_DA_STEAM.desarmar()
-    a07.VIGIA_DA_STEAM._noticia = ""
-    a07.VIGIA_DA_STEAM._quando = 0.0
     yield
     a07.VIGIA_DA_STEAM.desarmar()
-    a07.VIGIA_DA_STEAM._noticia = ""
 
 
 @pytest.fixture()
@@ -214,7 +217,8 @@ def test_o_tique_que_repoe_para_e_esquece_a_leitura(
 
 
 def test_a_vigia_repoe_quando_a_steam_fecha_e_se_desarma(
-    a07: Any, cdw: Any, monkeypatch: pytest.MonkeyPatch, carona_ligada: None
+    a07: Any, cdw: Any, monkeypatch: pytest.MonkeyPatch, carona_ligada: None,
+    capsys: pytest.CaptureFixture[str],
 ) -> None:
     """A vigia VIVE NO TEMPO: adia, adia, e repõe quando a Steam sai.
 
@@ -246,7 +250,9 @@ def test_a_vigia_repoe_quando_a_steam_fecha_e_se_desarma(
 
     assert a07.VIGIA_DA_STEAM.armada() is False
     assert len(voltas) == 3
-    assert "PRAGMATA" in a07.VIGIA_DA_STEAM.noticia()
+    # A FRASE VAI AO RELATO, E NÃO AO CARTÃO — TELA-CALADA-02, 13/09/2026.
+    erro = capsys.readouterr().err
+    assert "[relato]" in erro and "PRAGMATA" in erro
 
 
 def test_uma_vigia_por_vez(
@@ -272,36 +278,41 @@ def test_uma_vigia_por_vez(
 def test_o_relogio_e_perguntado_ao_dono(
     a07: Any, cdw: Any, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """Mudar `INTERVALO_DA_VIGIA_S` no dono muda a vigia E a notícia.
+    """Mudar `INTERVALO_DA_VIGIA_S` no dono muda a vigia.
 
-    É a régua que PERGUNTA: um `45` digitado aqui (ou uma terceira duração de
-    tela inventada para a notícia) envelheceria calado no dia em que o dono
-    mudasse o compromisso.
+    É a régua que PERGUNTA: um `45` digitado aqui envelheceria calado no dia em
+    que o dono mudasse o compromisso.
 
-    MORDIDA: troque `self.intervalo()` por um número literal em qualquer dos
-    dois usos e este teste reprova.
+    A METADE DA NOTÍCIA SAIU EM 13/09/2026 (TELA-CALADA-02): o mesmo relógio
+    decidia quanto tempo a frase da vigia ficava no cartão, e a frase deixou de
+    ir ao cartão. Sobra um uso do relógio, e é ele que se mede.
+
+    MORDIDA: troque `self.intervalo()` por um número literal e este teste
+    reprova.
     """
     assert a07.VIGIA_DA_STEAM.intervalo() == float(cdw.INTERVALO_DA_VIGIA_S)
 
     monkeypatch.setattr(cdw, "INTERVALO_DA_VIGIA_S", 7)
     assert a07.VIGIA_DA_STEAM.intervalo() == 7.0
 
-    a07.VIGIA_DA_STEAM._anotar("reposta em 1 jogo")
-    a07.VIGIA_DA_STEAM._quando = time.monotonic() - 6.0
-    assert a07.VIGIA_DA_STEAM.noticia() == "reposta em 1 jogo"
-    a07.VIGIA_DA_STEAM._quando = time.monotonic() - 8.0
-    assert a07.VIGIA_DA_STEAM.noticia() == ""
-
 
 # ---------------------------------------------------------------------------
-# A NOTÍCIA NA TELA — o cartão da Steam diz o que a vigia fez
+# A NOTÍCIA FORA DA TELA — o cartão da Steam diz o estado, não o que a vigia fez
 # ---------------------------------------------------------------------------
-def test_a_noticia_da_vigia_vai_para_o_cartao_da_steam(a07: Any) -> None:
-    """A frase do dono aparece no corpo do cartão, e some sozinha.
+def test_a_noticia_da_vigia_nao_vai_mais_para_o_cartao_da_steam(
+    a07: Any, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """A frase do dono vai ao `[relato]` do stderr; o cartão fica como estava.
 
-    MORDIDA: tire a `noticia` do `com_o_que_o_daemon_diz` e este teste reprova
-    — o reparo da vigia viraria um cartão que muda sozinho enquanto ela olha
-    outra coisa, e ela nunca saberia que o Hefesto cumpriu.
+    **O CONTRATO SE INVERTEU EM 13/09/2026 — TELA-CALADA-02.** Este teste se
+    chamava `test_a_noticia_da_vigia_vai_para_o_cartao_da_steam` e exigia a
+    frase no corpo do cartão. A palavra dela sobre as frases de status é *"em
+    todas as abas da interface"*; quem mostra que o Hefesto cumpriu é o cartão
+    relido (o `VIGIA.esquecer()` do tique), e a frase fica no diário da janela.
+    A régua completa dos quatro canais é `test_o_cartao_da_steam_nao_narra.py`.
+
+    MORDIDA: some a frase anotada à `cabeca` de `com_o_que_o_daemon_diz` e
+    este teste reprova.
     """
     from hefesto_dualsense4unix.interface import desenho_dos_lancadores as d
 
@@ -311,8 +322,9 @@ def test_a_noticia_da_vigia_vai_para_o_cartao_da_steam(a07: Any) -> None:
     a07.VIGIA_DA_STEAM._anotar("Reposta a Opção de Inicialização do Hefesto em "
                                "1 jogo da Steam: PRAGMATA.")
     depois = a07.com_o_que_o_daemon_diz(list(antes), None, None)
-    assert "PRAGMATA" in depois[0].diz
-    assert depois[0].diz.endswith(antes[0].diz)
+    assert "PRAGMATA" not in depois[0].diz
+    assert depois == antes
+    assert "PRAGMATA" in capsys.readouterr().err
 
 
 def test_a_noticia_nao_acende_o_botao_de_dispensar(a07: Any) -> None:

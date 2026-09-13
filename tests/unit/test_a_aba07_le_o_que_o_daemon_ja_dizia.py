@@ -119,24 +119,39 @@ def test_o_aviso_e_a_decisao_da_gtk_e_nao_uma_copia(a07, monkeypatch):
     """
     from hefesto_dualsense4unix.app.actions import home_actions as ha
 
+    # O QUE ESTA RÉGUA CASA MUDOU EM 13/09/2026 — TELA-CALADA-02. O cartão
+    # deixou de escrever a frase do dono e escreve um rótulo de estado
+    # (`a07.JOGO_ABERTO_SEM_O_ATALHO`); por isso o dublê já não aparece no
+    # texto. O que a régua cobra continua: quem decide SE acende é o dono — o
+    # dublê que diz "não" apaga o aviso num `state` que o acenderia.
     monkeypatch.setattr(ha, "wrapper_banner_text", lambda s: "FRASE DA GTK")
-    html, _ = a07.aviso_do_jogo_aberto(SEM_WRAPPER, None)
-    assert "FRASE DA GTK" in html, (
+    html, _ = a07.aviso_do_jogo_aberto({}, None)
+    assert a07.JOGO_ABERTO_SEM_O_ATALHO in html, (
         "o aviso não veio de `home_actions.wrapper_banner_text` — o pacote "
         "está decidindo por conta própria se o jogo passou pelo wrapper")
+    monkeypatch.setattr(ha, "wrapper_banner_text", lambda s: "")
+    assert a07.aviso_do_jogo_aberto(SEM_WRAPPER, None) == ("", ""), (
+        "o dono disse que não há aviso e o pacote acendeu assim mesmo")
 
 
 def test_o_aviso_usa_o_texto_dela_sem_redigitar(a07):
-    """O texto é o `WRAPPER_MISSING_TEXT` da GTK, palavra por palavra.
+    """O cartão escreve o RÓTULO de estado, e não uma segunda redação da frase.
 
-    A MORDIDA: reescreva a frase no pacote e este teste reprova. Texto de tela
-    é dela; uma segunda redação para o mesmo fato é o defeito que a decisão 14
-    dela nomeou (*"uma frase, um dono"*).
+    **O CONTRATO MUDOU EM 13/09/2026 — TELA-CALADA-02.** Até aqui esta régua
+    exigia o `WRAPPER_MISSING_TEXT` da GTK, palavra por palavra, dentro do
+    cartão. A palavra dela sobre as frases de status é *"em todas as abas da
+    interface"*: a frase saiu, e o cartão diz `a07.JOGO_ABERTO_SEM_O_ATALHO`.
+    O que sobra da decisão 14 (*"uma frase, um dono"*) é a outra metade: a aba
+    não redige a frase do dono — nem inteira, nem um pedaço dela.
+
+    A MORDIDA: devolva `_texto(texto)` ao retorno de `aviso_do_jogo_aberto` e
+    este teste reprova.
     """
     from hefesto_dualsense4unix.app.actions import home_actions as ha
 
     html, _ = a07.aviso_do_jogo_aberto(SEM_WRAPPER, None)
-    assert ha.WRAPPER_MISSING_TEXT in html
+    assert ha.WRAPPER_MISSING_TEXT not in html
+    assert a07.JOGO_ABERTO_SEM_O_ATALHO in html
 
 
 def test_sem_jogo_aberto_o_aviso_nao_acende(a07):
@@ -179,7 +194,10 @@ def test_o_aviso_e_o_botao_de_dispensar_chegam_ao_cartao(a07, desenho):
 
     steam = _cartao_da_steam(a07, desenho, desenho.Leitura(com_wrapper=("1",)),
                              SEM_WRAPPER)
-    assert ha.WRAPPER_MISSING_TEXT in steam.diz
+    # O QUE CHEGA AO CARTÃO É O RÓTULO — TELA-CALADA-02, 13/09/2026: a frase
+    # longa do dono saiu do corpo, e o estado ficou.
+    assert a07.JOGO_ABERTO_SEM_O_ATALHO in steam.diz
+    assert ha.WRAPPER_MISSING_TEXT not in steam.diz
     marcacao = desenho.acoes_html(steam)
     assert 'data-gesto="nao-perguntar"' in marcacao, (
         "o aviso acendeu e não veio com o botão que o dispensa — ela ficaria "
@@ -283,7 +301,7 @@ def _com_reparavel(a07, desenho, monkeypatch, *, steam_aberta=True,
     """A leitura de um disco com UM jogo a repor, e os portões do censo."""
     lida = desenho.Leitura(com_wrapper=("1",),
                            reparaveis=(("2", "Um jogo", "perdeu"),),
-                           instalados=3, frase="alguma frase")
+                           instalados=3)
     monkeypatch.setattr(a07, "PORTOES",
                         a07._Portoes(jogo_aberto=jogo_aberto,
                                      steam_aberta=steam_aberta))
