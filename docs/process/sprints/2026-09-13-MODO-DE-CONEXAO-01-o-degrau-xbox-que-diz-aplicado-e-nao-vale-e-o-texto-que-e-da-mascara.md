@@ -1,0 +1,83 @@
+---
+sprint: MODO-DE-CONEXAO-01
+estado: aberta
+onda: A-TERCEIRA-LISTA-DELA
+posse:
+  MODO-DE-CONEXAO-01:
+    # PROVISÓRIA — o ESTUDO escreve a posse real antes de qualquer implementação.
+    - src/hefesto_dualsense4unix/interface/aba01.py
+    - src/hefesto_dualsense4unix/interface/pacotes/a01_jogar.py
+    - src/hefesto_dualsense4unix/app/actions/jogar/painel.py
+    - docs/process/sprints/2026-09-13-MODO-DE-CONEXAO-01-o-degrau-xbox-que-diz-aplicado-e-nao-vale-e-o-texto-que-e-da-mascara.md
+bancada: false
+depois_de: []
+nao_toca:
+  - src/hefesto_dualsense4unix/interface/hefesto_vivo.py
+  - src/hefesto_dualsense4unix/interface/topo.html
+---
+
+# MODO-DE-CONEXAO-01 — o degrau Xbox que diz «aplicado» e não vale, e o texto que é da máscara
+
+## A palavra dela — 13/09/2026, à tarde
+
+> *"o modo de conexão do conexão da aba jogar nao ta funcionando.  o texto do modo do xbox tá errado aquilo é o texto da mascara do xbox"* <!-- noqa-acento: citação literal dela -->
+
+Chegou com a onda 3 da [terceira lista](2026-09-13-A-TERCEIRA-LISTA-DELA-INDICE.md)
+em voo, e segue o processo dela (§0 do índice): esta sprint nasce antes de
+qualquer agente, e são no máximo três agentes.
+
+## §E — O que quem coordena já leu e mediu (só leitura)
+
+1. **O diário da janela instalada** (`~/.local/state/hefesto-dualsense4unix/interface.log`,
+   a janela aberta às 13:44): sete `modo-xbox → aplicado`, o relato
+   `pendente: ● Vai mudar para: Xbox`, e `aplicar` e `salvar` aplicados. O
+   gesto diz que aplicou; ela diz que o modo não mudou.
+2. **O que o degrau faz:** o «Xbox» é `Ponte(KIND_GAMEPAD, MASCARA_XBOX)` em
+   `painel.CHIPS_DA_ESCADA`. O gesto `modo_xbox` despacha
+   `_plano(MODE_GAMEPAD, "xbox")` e grava a escolha no perfil ativo
+   (`_gravar_o_modo_do_chip`).
+3. **A ordem da máscara** (`external_mask.mascara_efetiva`, MASCARA-NO-PERFIL-01,
+   08/09): primeiro `controllers[uniq].mascara` do perfil ativo, depois
+   `mode.gamepad_flavor`, depois o padrão. **Hipótese, ainda não medida:** o
+   degrau escreve o segundo, e a máscara escolhida no cartão vence.
+4. **A luz da fileira** (`modo-aceso` em `a01_jogar`) lê
+   `mascara_do_aparelho(state)`, a máscara do aparelho: com o cartão em
+   DualSense, o «Xbox» nunca acende.
+5. **O texto:** `aba01.MODOS` dá ao «Xbox» *«O jogo desenha os botões do Xbox —
+   o formato que todo jogo entende.»* e ao «Sony DualSense» *«O jogo desenha os
+   botões do PlayStation.»*. As duas dizem como o jogo desenha os botões, que é o
+   assunto dos chips de máscara dos cartões. O comentário acima de `MODOS` diz
+   que a ordem em que o Hefesto tenta «mora na dica de cada modo», e nenhuma das
+   quatro dicas publicadas a diz.
+6. **A decisão dela de 31/08**, citada em `aba01.py`: *«Modo Hefesto se Ligado
+   Abre as seções de Modo, Steam Input, Xbox, Sony DualSense, Point And Click.
+   (…) E em Baixo temos a parte das Mascaras dos Controles.»* <!-- noqa-acento: citação literal dela -->
+   Na tela dela, modo e máscara são duas camadas.
+
+## §2 — As perguntas do ESTUDO, nesta ordem
+
+1. **O que o clique muda de verdade.** Com dublê de perfil e de daemon, sem
+   tocar no dela: o vpad nasce Xbox com a máscara do cartão escolhida? E sem
+   ela? O mesmo para «Sony DualSense», «Steam Input» e «Navegação».
+2. **O que o degrau É, frente à máscara do cartão, pelas decisões registradas.**
+   São elas:
+   * a D-5 de 14–15/08 (máscara do jogador, com a do jogo como padrão herdado);
+   * a de 03/09, «É uma máscara por controle»;
+   * a MASCARA-NO-PERFIL-01;
+   * a de 31/08, citada acima;
+   * as decisões da aba Jogar de 04/09.
+
+   Escrever a regra que decide entre três: o degrau vale sobre a máscara do
+   cartão; a máscara do cartão vale sobre o degrau; ou o degrau escreve a
+   máscara dos cartões.
+3. **O texto de cada degrau:** o que o MODO muda (o caminho que o Hefesto usa e a
+   ordem em que tenta), sem repetir o que a máscara diz. Nenhuma frase de aviso,
+   e nada que as decisões e o produto não sustentem.
+4. **A cura, a posse real e as réguas:** uma régua clica o degrau com a máscara
+   do cartão escolhida e confere o que o jogo recebe; outra impede o texto da
+   máscara na dica do modo.
+
+## §0 — O processo
+
+ESTUDO (só leitura) → quem coordena escreve aqui a rota e a posse → IMPLEMENTA →
+VALIDA/CORRIGE. Nada de botão novo; tirar e enxugar pode.
