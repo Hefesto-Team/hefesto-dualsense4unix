@@ -731,7 +731,12 @@ CSS = """
      fecha em 530 de conteúdo para 530 de espaço útil, que é o par `ALTURA,
      MIOLO_H` escrito no topo deste arquivo. O número já estava certo; o que
      faltava era a caixa obedecer a ele. */
-  .col-log{display:flex;flex-direction:column;min-height:0;position:relative}
+  /* O PISO MORA NA CÉLULA — 13/09/2026, validação da SISTEMA-BOTOES-01. Com três
+     botões a `.lista` mede 102px, e o `min-height:110px` do `.log`, filho
+     absoluto, vazava 8px abaixo da fileira: os dois quadros deixaram de fechar na
+     mesma linha. Na célula do grid o piso mede a FILEIRA, a lista estica junto, e
+     com quatro botões ou mais quem manda continua sendo ela. */
+  .col-log{display:flex;flex-direction:column;min-height:110px;position:relative}
   .col-log > .log{position:absolute;top:0;right:0;bottom:0;left:0}
   /* A CAIXA ACOMPANHA O IRMÃO — TELA-TRES-01 §1, pedido dela de 08/09/2026:
      "em sistema aumentar a altura do detalhes técnicos pra ficar igual ao
