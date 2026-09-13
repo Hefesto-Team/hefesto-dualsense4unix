@@ -176,7 +176,10 @@ def _frase(fora: Any) -> str:
     """
     if not isinstance(fora, dict):
         return ""
-    return str((fora.get("mesa") or {}).get(DESFECHO) or "")
+    # A NOTÍCIA MUDOU DE CHAVE EM 13/09/2026: a tira não fala mais, e o relato
+    # do gesto viaja em `relato`, que o `pintar` não lê.
+    assert not (fora.get("mesa") or {}).get(DESFECHO), "a tira voltou a falar"
+    return str(fora.get("relato") or "")
 
 
 # --------------------------------------------------------------------------

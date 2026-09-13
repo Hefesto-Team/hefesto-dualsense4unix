@@ -432,7 +432,7 @@ def test_escolher_o_lancador_grava_a_forma_que_ele_entrega(
     resposta = a10.editor_ambiente(_ctx(), _escolher("Heroic"), PonteDeMentira())
 
     assert resposta is not None
-    assert "Heroic" in resposta["mesa"]["perfis.desfecho"]
+    assert "Heroic" in resposta["relato"]
     # O DISCO, LIDO DE VOLTA — e é o arquivo de verdade, no lar de mentira da
     # suíte. Nada aqui inspeciona o objeto em memória.
     do_disco = _do_disco(prof)
