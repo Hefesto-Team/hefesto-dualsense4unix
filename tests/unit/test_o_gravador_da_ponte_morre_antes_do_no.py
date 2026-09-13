@@ -43,6 +43,19 @@ AS RÉGUAS E AS MORDIDAS (cada uma medida na entrega da sprint)
 
 E duas portas do órfão que o estudo nomeou: a ponte que não sobe e o gravador
 sem `stdout`.
+
+AS TRÊS QUE A VALIDAÇÃO ACRESCENTOU (13/09/2026). Quatro mordidas passavam com
+as réguas acima todas verdes, e cada uma arrancava um pedaço da rota:
+
+* R7 — com o laço vivo, parado no hidraw, o `descer` colhe o gravador e NÃO
+  fecha o `stdout` dele. MORDIDA: fechar o `stdout` sem olhar se o leitor
+  parou, no primeiro ou no último fechamento de
+  `filho_de_som.derrubar_leitor_de_pipe`.
+* R8 — o `stop` desce as pontes FORA do event loop. MORDIDA: `ponte.descer()`
+  direto no `stop`, no lugar do `asyncio.gather` de `asyncio.to_thread`.
+* R9 — a fonte que volta sem PCM e com processo tem o processo derrubado pelo
+  subsystem. MORDIDA: tirar o `derrubar_leitor_de_pipe` do ramo `if fonte is
+  None` de `AltoFalanteSubsystem._casar_as_pontes`.
 """
 
 from __future__ import annotations
@@ -539,6 +552,180 @@ def test_r6_o_alimentador_com_o_bombeador_morto_e_colhido_depressa(
     assert proc.poll() is not None, f"o alimentador (pid {proc.pid}) ficou vivo"
     assert ms < 100.0, f"fechar o canal levou {ms:.0f} ms com o bombeador já morto"
     assert proc.returncode == -signal.SIGPIPE, f"morreu com {proc.returncode}"
+
+
+# ---------------------------------------------------------------------------
+# R7, R8 e R9 — as mordidas que passavam sem régua (validação, 13/09/2026)
+# ---------------------------------------------------------------------------
+
+
+def _hidraw_que_trava() -> tuple[int, int]:
+    """Um hidraw cuja escrita BLOQUEIA: o cano está cheio e ninguém lê.
+
+    Devolve `(leitura, escrita)`. A ponte recebe a escrita e o laço para no
+    `write` do report — o único jeito de ter o LEITOR do gravador vivo, e fora
+    do `read`, enquanto o `descer` corre.
+    """
+    leitura, escrita = os.pipe()
+    os.set_blocking(escrita, False)
+    for tamanho in (4096, 1):
+        with contextlib.suppress(BlockingIOError):
+            while True:
+                os.write(escrita, b"\0" * tamanho)
+    os.set_blocking(escrita, True)
+    return leitura, escrita
+
+
+def _wchan_da_thread(thread: Any) -> str:
+    try:
+        with open(f"/proc/self/task/{thread.native_id}/wchan", encoding="ascii") as arquivo:
+            return arquivo.read().strip()
+    except (OSError, TypeError):
+        return ""
+
+
+def test_r7_o_descer_nao_fecha_o_cano_debaixo_do_laco_vivo(
+    ponte_real: None, dubles: list[subprocess.Popen[bytes]]
+) -> None:
+    """O laço está vivo, parado no hidraw: o `stdout` do gravador NÃO fecha.
+
+    Fechar o `stdout` com o laço vivo devolve o número do fd ao kernel, e o
+    próximo `open` de qualquer parte do daemon o recebe debaixo do `read` do
+    laço — o cuidado que a docstring do `descer` já guarda para o hidraw. O
+    `descer` colhe o gravador pelo KILL, deixa o cano aberto e devolve `False`,
+    porque a corrida ainda não acabou.
+
+    MORDIDA (medida na validação): em `filho_de_som.derrubar_leitor_de_pipe`,
+    fechar o `stdout` sem olhar se o leitor parou — no primeiro fechamento ou
+    no último.
+    """
+    leitura, escrita = _hidraw_que_trava()
+    ponte, proc = _ponte(dubles, abrir_hidraw=lambda: escrita)
+    thread = ponte._thread
+    assert thread is not None
+    try:
+        _esperar_o_cano_encher(proc.pid)
+        comeco = time.monotonic()
+        while time.monotonic() - comeco < 5.0:
+            wchan = _wchan_da_thread(thread)
+            if wchan == "anon_pipe_write":
+                break
+            if wchan in ("", "0") and time.monotonic() - comeco > 0.5:
+                break
+            time.sleep(0.01)
+
+        desceu = ponte.descer(esperar_s=0.2)
+
+        assert thread.is_alive(), "o laço saiu sozinho — a régua não mediu o leitor vivo"
+        assert desceu is False, "a corrida viva não pode se declarar descida"
+        assert proc.poll() is not None, f"o gravador (pid {proc.pid}) ficou vivo"
+        assert proc.stdout is not None and not proc.stdout.closed, (
+            "o `descer` fechou o `stdout` do gravador com o laço ainda vivo — o fd "
+            "volta ao kernel debaixo do `read` dele"
+        )
+    finally:
+        # Esvazia o hidraw: o `write` do laço volta, ele vê o `parar` e sai,
+        # fechando o fd DELE. Só então a ponta de leitura fecha.
+        os.set_blocking(leitura, False)
+        prazo = time.monotonic() + 5.0
+        while thread.is_alive() and time.monotonic() < prazo:
+            with contextlib.suppress(BlockingIOError):
+                os.read(leitura, 65536)
+            time.sleep(0.005)
+        os.close(leitura)
+        ponte.descer(esperar_s=1.0)
+
+
+def test_r8_o_stop_desce_as_pontes_fora_do_event_loop(
+    ponte_real: None, dubles: list[subprocess.Popen[bytes]]
+) -> None:
+    """O gravador que demora a morrer não segura o event loop do daemon.
+
+    O teimoso só cai no KILL, um segundo depois do TERM. Com o `descer` dentro
+    do loop, o daemon passaria esse segundo sem atender ninguém no
+    desligamento — e com quatro controles, quatro segundos.
+
+    MORDIDA (medida na validação): trocar o `asyncio.gather` de
+    `asyncio.to_thread(ponte.descer)` por um `ponte.descer()` direto no `stop`.
+    """
+    ponte, proc = _ponte_na_queda(dubles, codigo=DUBLE_TEIMOSO)
+    saidas: list[int | None] = []
+    ger = _gerenciador_com_o_no_de_pe(proc, saidas)
+    sub = mod.AltoFalanteSubsystem(gerenciador=ger, fonte_de_controles=lambda: [])
+    sub._gerenciador = ger
+    sub._pontes[P1] = ponte
+
+    async def _medir() -> tuple[float, float]:
+        batidas: list[float] = []
+        chega = asyncio.Event()
+
+        async def _batedor() -> None:
+            while not chega.is_set():
+                batidas.append(time.monotonic())
+                await asyncio.sleep(0.01)
+
+        tarefa = asyncio.create_task(_batedor())
+        await asyncio.sleep(0.05)
+        comeco = time.monotonic()
+        await sub.stop()
+        fim = time.monotonic()
+        chega.set()
+        await tarefa
+        # O FIM ENTRA NA SÉRIE: com o loop preso, nenhuma batida acontece
+        # depois do começo, e o silêncio só aparece contra o fim.
+        serie = sorted([t for t in batidas if t <= fim] + [fim])
+        maior = max(serie[i + 1] - serie[i] for i in range(len(serie) - 1))
+        return fim - comeco, maior
+
+    duracao, maior_silencio = asyncio.run(_medir())
+
+    assert proc.returncode == -signal.SIGKILL, (
+        f"morreu com {proc.returncode} — o teimoso não foi o caso medido"
+    )
+    assert duracao >= 0.8, f"o `stop` levou {duracao:.2f} s — o gravador não demorou a morrer"
+    assert maior_silencio < 0.3, (
+        f"o event loop ficou {maior_silencio * 1000:.0f} ms sem bater durante o "
+        "`stop` — o `descer` das pontes correu dentro dele"
+    )
+    assert saidas and saidas[0] is not None
+
+
+def test_r9_a_fonte_sem_saida_no_subsystem_e_colhida(
+    ponte_real: None,
+    dubles: list[subprocess.Popen[bytes]],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A fonte voltou sem PCM, mas COM processo: o subsystem o derruba ali mesmo.
+
+    `fonte_do_monitor_do_no` já colhe o gravador sem `stdout` antes de voltar;
+    o ramo `if fonte is None` de `_casar_as_pontes` é a segunda trava, para toda
+    fonte que devolva `(None, processo, motivo)`. Sem ponte, ninguém mais
+    derrubaria aquele processo.
+
+    MORDIDA (medida na validação): tirar o `derrubar_leitor_de_pipe(gravador)`
+    desse ramo.
+    """
+    abrir = _lancador(DUBLE_OCIOSO, dubles, sem_saida=True)
+
+    def _fonte_que_devolve_o_processo(_id_do_no: str, **_kw: Any) -> tuple[Any, Any, str]:
+        return None, abrir(["pw-record"]), "o gravador subiu sem `stdout`"
+
+    monkeypatch.setattr(af, "fonte_do_monitor_do_no", _fonte_que_devolve_o_processo)
+
+    class _Controle:
+        uniq = P1
+        caminho = "/dev/hidraw-de-mentira"
+        transporte = "bluetooth"
+
+    sub = mod.AltoFalanteSubsystem(fonte_de_controles=lambda: [])
+    sub._casar_as_pontes([_Controle()])
+
+    assert sub._pontes == {}
+    assert len(dubles) == 1, "o processo nem foi lançado — a régua não mede nada"
+    assert dubles[0].poll() is not None, (
+        "a fonte voltou sem PCM e o processo dela ficou vivo — sem ponte, ninguém "
+        "mais o derruba"
+    )
 
 
 # ---------------------------------------------------------------------------
