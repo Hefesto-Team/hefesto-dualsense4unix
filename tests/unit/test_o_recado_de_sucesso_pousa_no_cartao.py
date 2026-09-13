@@ -75,6 +75,11 @@ avesso, e as esperas por condição da FLAKE-DO-PISCA continuam as mesmas:
    rótulo que a página publicar;
 7. **ele volta sozinho**, e volta INTEIRO — com os filhos que tinha.
 
+E A RECUSA SAIU DA TELA NO MESMO DIA (FRASES-E-DICAS-01): as réguas que a
+usavam como o outro lado da comparação — o tom, o recibo que sobrevivia aos
+tiques, os dois prazos — passaram a medir a piscada de recusa no botão e
+nenhuma frase na tela.
+
 A MORDIDA: devolva o depósito de tom ``sucesso`` em ``_deu_certo_dizendo`` e
 os casos 1 a 5 reprovam; apague o ``em_voo(alvo)`` do ouvinte e o botão fica
 igual durante os dois segundos de espera. E A DO TEMPO: devolva os marcos de
@@ -194,6 +199,9 @@ function(){
       em_voo: b.classList.contains('hef-em-voo'),
       // A PISCADA DO "DEU CERTO" — 05/09/2026, decisão dela na `03-Q4`.
       deu_certo: b.classList.contains('hef-deu-certo'),
+      // A PISCADA DA RECUSA — 13/09/2026, FRASES-E-DICAS-01: a recusa saiu do
+      // cartão e passou a responder no botão.
+      recusou: b.classList.contains('hef-recusou'),
       // A COR VEM DO CSSOM, e não da classe — mesma razão do `cor` dos recados
       // acima: a classe diz que a regra foi ESCRITA, o CSSOM diz que ela PEGOU.
       // Sem isto, arrancar o `!important` da folha deixa a régua verde e o olho
@@ -406,14 +414,14 @@ def medido() -> dict:
     # socket, não achava daemon, e o cartão recebia a frase laranja. É o mesmo
     # arranjo do `test_a_recusa_chega_ao_cartao`, do outro lado do desfecho.
     guardado = (hv.mesa_viva.estado_do_daemon, hv.ponte.mic_canal_set_detalhado,
-                hv.SEGUNDOS_DO_RECADO_DE_SUCESSO,
                 hv.pacotes.GESTOS.get(chave))
-    #: O VALOR DO PRODUTO, lido ANTES de a régua o encolher. É o que dá dono à
-    #: decisão dela: sem ele, trocar `6.0` por `600.0` deixaria os testes verdes,
-    #: porque a fixture sobrescreve a constante antes de qualquer medição.
+    #: O VALOR DO PRODUTO, lido do módulo. Até 13/09/2026 aqui se liam também os
+    #: dois prazos do recado (6 s o recibo, 30 s a recusa), que saíram com o
+    #: canal na FRASES-E-DICAS-01; o que sobra é saber se eles voltaram.
     do_produto = {
-        "sucesso": float(hv.SEGUNDOS_DO_RECADO_DE_SUCESSO),
-        "recusa": float(hv.SEGUNDOS_DO_RECADO),
+        "prazos_do_recado": [n for n in ("SEGUNDOS_DO_RECADO",
+                                         "SEGUNDOS_DO_RECADO_DE_SUCESSO")
+                             if hasattr(hv, n)],
         # A PISCADA É DELA E TEM DONO: sem ler o valor do produto aqui, trocar
         # 1500 por 15 deixaria a régua verde, porque ela só mede "acendeu" e
         # "apagou". O número entra na MENSAGEM de erro, que é onde ele serve.
@@ -429,7 +437,6 @@ def medido() -> dict:
     hv.ponte.mic_canal_set_detalhado = (  # type: ignore[assignment]
         lambda *a, **k: {"status": "ok", "canal_feito": True,
                          "firmware_pedido": True})
-    hv.SEGUNDOS_DO_RECADO_DE_SUCESSO = VENCE_EM_S
 
     args = argparse.Namespace(
         oculta=True, segundos=0.0, passear=False, parada=900, foto="",
@@ -632,7 +639,7 @@ def medido() -> dict:
 
     def fim() -> None:
         fora["desfechos"] = {k: list(v) for k, v in piloto.desfechos.items()}
-        fora["deposito"] = {k: [v[0], v[2]] for k, v in piloto._recados.items()}
+        fora["deposito"] = sorted(getattr(piloto, "_recados", {}))
         Gtk.main_quit()
 
     GLib.timeout_add(400, comecar)
@@ -675,7 +682,7 @@ def medido() -> dict:
         piloto.pronto = False
         piloto.tela.janela.destroy()
         (hv.mesa_viva.estado_do_daemon, hv.ponte.mic_canal_set_detalhado,
-         hv.SEGUNDOS_DO_RECADO_DE_SUCESSO, velho) = guardado
+         velho) = guardado
         if velho is None:
             hv.pacotes.GESTOS.pop(chave, None)
         else:
@@ -833,9 +840,12 @@ def test_a_piscada_nao_acende_na_recusa(medido: dict) -> None:
     botao = com_a_recusa["botao"]
     assert botao and not botao["deu_certo"], (
         f"o gesto levantou e o campo piscou verde mesmo assim: {botao}")
-    tons = [r["tom"] for r in com_a_recusa["recados"]]
-    assert "recusa" in tons or "erro" in tons, (
-        f"a recusa não chegou ao cartão — o outro lado da mesma medição: {tons}")
+    # O OUTRO LADO DA MESMA MEDIÇÃO era a recusa no cartão, com o tom dela. Desde
+    # 13/09/2026 (FRASES-E-DICAS-01) ela pisca no botão, e o cartão fica como
+    # estava.
+    assert botao["recusou"], (
+        f"o gesto levantou e o botão não piscou a recusa: {botao}")
+    assert com_a_recusa["recados"] == [], com_a_recusa["recados"]
 
 
 def test_o_pisca_nao_move_a_tela(medido: dict) -> None:
@@ -882,8 +892,9 @@ def test_a_frase_do_dono_nao_pousa_em_cartao_nenhum(medido: dict) -> None:
         f"o gesto que deu certo pôs recado na tela: {_r(pouso)!r}")
 
 
-def test_o_aviso_sobrevive_aos_tiques(medido: dict) -> None:
-    """A tela repinta a cada 100 ms e troca blocos inteiros.
+def test_nenhuma_frase_volta_nos_tiques(medido: dict) -> None:
+    """ERA `test_o_aviso_sobrevive_aos_tiques` — 13/09/2026. A tela repinta a cada
+    100 ms e troca blocos inteiros.
 
     Um recibo que só existisse no instante do clique não seria visto por
     ninguém — é a mesma razão pela qual este canal é um DEPÓSITO e não um evento.
@@ -896,8 +907,11 @@ def test_o_aviso_sobrevive_aos_tiques(medido: dict) -> None:
     segundo**, com a repintura correndo por cima o tempo todo: é o mesmo
     "sobreviveu aos tiques" que ela sempre mediu.
     """
-    assert _frases(_leitura(medido, "depois-do-pouso")), (
-        "o recibo sumiu com a repintura, e não por vencimento")
+    # O CONTRATO VIROU O AVESSO EM 13/09/2026 (FRASES-E-DICAS-01): a recusa não
+    # é mais depositada, e o que se cobra é que a repintura não traga frase
+    # nenhuma de volta — nem a da recusa, depois do gesto lento inteiro.
+    assert _frases(_leitura(medido, "depois-do-pouso")) == [], (
+        "a repintura trouxe uma frase à tela depois da recusa")
 
 
 # --------------------------------------------------------------------------
@@ -912,11 +926,10 @@ def test_a_recusa_tem_o_tom_dela_e_o_sucesso_nao_tem_no(medido: dict) -> None:
     o desenho de um tom só (cor e borda iguais, lidas do CSSOM), e nenhum nó de
     tom `sucesso` nas fotos dos dois pousos de sucesso.
     """
-    (recusa,) = _r(_leitura(medido, "com-a-recusa"))
-    assert recusa["tom"] == "recusa", recusa
-    assert recusa["cor"] == recusa["borda"], (
-        f"a recusa perdeu o desenho de um tom só — cor {recusa['cor']} e borda "
-        f"{recusa['borda']}")
+    # E A RECUSA SAIU DO CARTÃO NO MESMO DIA (FRASES-E-DICAS-01): o nó de tom
+    # `recusa` também não existe mais. A cor dela mora no botão, e é a folha da
+    # casa que a pinta (`test_a_recusa_pisca_no_botao`).
+    assert _r(_leitura(medido, "com-a-recusa")) == []
     for marco in ("depois-do-sucesso", "com-a-frase-do-dono"):
         fotos = _r(_leitura(medido, marco))
         assert not [r for r in fotos if r["tom"] == "sucesso"], (
@@ -929,10 +942,12 @@ def test_o_mesmo_cartao_troca_de_tom(medido: dict) -> None:
     A chave é o controle, não o desfecho. Sem refazer o estilo quando o tom
     muda, o aviso trocaria de frase e ficaria verde dizendo que recusou.
     """
-    (recusa,) = _r(_leitura(medido, "com-a-recusa"))
-    assert recusa["chave"] == CHAVE_P1, recusa
-    assert recusa["tom"] == "recusa", (
-        "o nó reaproveitado ficou com o tom do desfecho anterior")
+    # O NÓ DO CARTÃO SAIU EM 13/09/2026 (FRASES-E-DICAS-01), e a pergunta mudou
+    # de lugar sem mudar de forma: o MESMO botão, que acabou de piscar verde no
+    # clique da frase do dono, pisca a recusa — e não fica com a cor anterior.
+    botao = _leitura(medido, "com-a-recusa")["botao"]
+    assert botao and botao["recusou"] and not botao["deu_certo"], (
+        f"o botão reaproveitado ficou com a cor do desfecho anterior: {botao}")
 
 
 # --------------------------------------------------------------------------
@@ -996,18 +1011,18 @@ def test_nao_ha_recibo_a_vencer(medido: dict) -> None:
             f"que deu certo não escreve na tela.")
 
 
-def test_o_prazo_do_sucesso_e_menor_que_o_da_recusa(medido: dict) -> None:
-    """Os dois números são decisão dela, e o produto tem de carregá-los.
+def test_os_prazos_do_recado_sairam_com_o_canal(medido: dict) -> None:
+    """ERA `test_o_prazo_do_sucesso_e_menor_que_o_da_recusa` — 13/09/2026.
 
-    A recusa é uma coisa a resolver e fica os 30 s que ela decidiu; o sucesso é
-    um recibo, e a informação inteira dele se esgota na leitura.
+    Os dois números eram decisão dela (30 s a recusa, 02/09; 6 s o recibo, a
+    D-01) e o produto os carregava. Os dois mediam o tempo de uma FRASE na tela,
+    e a frase saiu: o sucesso na TELA-CALADA-01, a recusa na FRASES-E-DICAS-01
+    (o índice da leva, `2026-09-13-A-TERCEIRA-LISTA-DELA-INDICE.md`, linha 19).
+    Um prazo sem canal é dado morto, e a régua cobra que ele não volte calado.
     """
-    p = medido["produto"]
-    assert p["recusa"] == 30.0, (
-        f"o prazo da recusa saiu de 30 s (decisão dela, 02/09): {p['recusa']}")
-    assert 0 < p["sucesso"] < p["recusa"], (
-        f"o recibo vive {p['sucesso']} s contra {p['recusa']} s da recusa — "
-        f"um recibo que dura tanto quanto o problema vira estado.")
+    assert medido["produto"]["prazos_do_recado"] == [], (
+        f"voltaram ao piloto prazos de frase na tela: "
+        f"{medido['produto']['prazos_do_recado']}")
 
 
 # --------------------------------------------------------------------------

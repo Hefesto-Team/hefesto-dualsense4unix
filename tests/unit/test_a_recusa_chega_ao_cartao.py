@@ -1,5 +1,22 @@
 #!/usr/bin/env python3
-"""A RECUSA DO PRODUTO CHEGA AO CARTÃO — medida na JANELA, não no terminal.
+"""A RECUSA DO PRODUTO CHEGAVA AO CARTÃO — e desde 13/09/2026 não chega mais.
+
+**O CONTRATO MUDOU EM 13/09/2026** (FRASES-E-DICAS-01), e esta régua mudou junto
+em vez de ser apagada: o roteiro no tempo é o mesmo, e as perguntas viraram o
+avesso. A palavra dela está no índice da leva
+(`docs/process/sprints/2026-09-13-A-TERCEIRA-LISTA-DELA-INDICE.md`, linha 19):
+a caixa laranja da foto era uma recusa pousada no cartão, e ela mandou esse tipo
+de frase parar de aparecer. O clique recusado responde pela piscada de recusa
+no botão (`test_a_recusa_pisca_no_botao`), e a frase vai ao diário da janela.
+Hoje a régua cobra que, em cada parada do roteiro — logo depois do clique, seis
+tiques depois, depois de o bloco ser trocado, no segundo e no terceiro clique,
+com o controle fora da mesa e de volta, e depois do prazo que valia —, **a tela
+não tenha recado nenhum nem a frase da recusa**.
+
+A MORDIDA DE HOJE: devolva o piloto de `249af1f6` (o depósito e a pintura do
+recado) e as paradas voltam a mostrar a frase — as réguas de 1 a 5 reprovam.
+
+O QUE SEGUE É A HISTÓRIA do contrato de 02/09/2026, medido na JANELA:
 
 POR QUE ESTA RÉGUA EXISTE, e a data é 02/09/2026. O contrato desta casa é
 explícito: `RuntimeError` num gesto quer dizer *"o produto recusou, e a frase
@@ -53,7 +70,7 @@ defeito. A cura é reuso: a chave passou a ser o `uniq` normalizado
 (`core/sysfs_leds.norm_mac`, o dono que esta casa já tinha do endereço) e a
 coluna é resolvida no instante da pintura, contra a mesa daquele tique.
 
-A MORDIDA, e são SETE — uma por item. **Devolva por CÓPIA (`cp`), nunca por
+A MORDIDA DE 02/09, e eram SETE — uma por item. **Devolva por CÓPIA (`cp`), nunca por
 `git checkout --`** — isso já custou trabalho quatro vezes nesta casa. Os
 números são os MEDIDOS em 02/09/2026, com o arquivo de DOZE testes:
 
@@ -133,10 +150,9 @@ CHAVE_P1 = "aabbcc000001"
 #: conteúdo para o controle sair da mesa e voltar.
 MESA = {"estado": ESTADO}
 
-#: QUANTO O AVISO VIVE NESTA MEDIÇÃO. O produto usa 30 s (decisão dela); aqui a
-#: constante encolhe para a régua poder ver a frase VENCER sem ficar meio minuto
-#: parada. É a constante do produto que muda, e não uma segunda regra escrita
-#: para o teste — a régua mede o mesmo caminho.
+#: QUANTO O ROTEIRO ESPERA NA ÚLTIMA PARADA. Até 13/09/2026 era o prazo
+#: encolhido da frase na tela (o produto usava 30 s); o prazo saiu com o canal, e
+#: o número ficou como a espera da parada que antes via a frase VENCER.
 VENCE_EM_S = 8.0
 
 #: A FRASE QUE O ATO DO MICROFONE DEVOLVE quando falha pela metade. Ela é uma
@@ -162,12 +178,16 @@ LER_A_TELA = r"""
   }
   return JSON.stringify({
     recados: recados,
+    // A FRASE NO TEXTO VISÍVEL — 13/09/2026: sem recado, a pergunta é se ela
+    // chegou à tela por qualquer outro caminho.
+    frase_na_tela: (document.body ? (document.body.innerText || '') : '')
+      .indexOf(__FRASE__) >= 0,
     // A CONTA DA RÉGUA DO MOCKUP, no mesmo instante: os três vocabulários de
     // endereço que o `LER_CAMPOS` varre. O aviso não pode mexer neste número.
     enderecos: document.querySelectorAll('[data-campo],[data-papel],[data-hef]').length,
   });
 })()
-"""
+""".replace("__FRASE__", json.dumps(RECUSA_DO_ATO))
 
 #: O CLIQUE, no 🎙 do cartão do p1 — e é o botão do produto, com o `data-gesto`
 #: que a página publicada traz. Clicar por coordenada é a armadilha que esta casa
@@ -251,13 +271,10 @@ def medido() -> dict:
     # do ramo que este arquivo existe para medir. É a forma exata do defeito que
     # a nota logo abaixo persegue: **um vizinho verde sobre um dublê que ele não
     # escreveu**. O nome novo devolve a régua ao caminho que ela promete.
-    guardado = (hv.mesa_viva.estado_do_daemon, hv.ponte.mic_canal_set_detalhado,
-                hv.SEGUNDOS_DO_RECADO)
-    #: O VALOR DO PRODUTO, lido ANTES de a régua o encolher. É o que dá dono à
-    #: decisão 19 dela (*"~30 s e desaparece"*): sem ele, trocar `30.0` por
-    #: `3.0` ou por `300.0` deixaria os testes todos verdes, porque a fixture
-    #: sobrescreve a constante antes de qualquer medição.
-    fora_do_produto = float(hv.SEGUNDOS_DO_RECADO)
+    guardado = (hv.mesa_viva.estado_do_daemon, hv.ponte.mic_canal_set_detalhado)
+    #: O PRAZO DA FRASE NO PRODUTO — até 13/09/2026 lido e encolhido aqui; desde
+    #: a FRASES-E-DICAS-01 a pergunta é se ele ainda existe.
+    fora_do_produto = hasattr(hv, "SEGUNDOS_DO_RECADO")
     MESA["estado"] = ESTADO
     hv.mesa_viva.estado_do_daemon = lambda *a, **k: MESA["estado"]  # type: ignore[assignment]
     # `status: "incompleto"` COM MOTIVO é o que o daemon responde quando o ato
@@ -266,7 +283,6 @@ def medido() -> dict:
     hv.ponte.mic_canal_set_detalhado = lambda *a, **k: {  # type: ignore[assignment]
         "status": "incompleto", "canal_feito": False, "firmware_pedido": True,
         "motivo": RECUSA_DO_ATO}
-    hv.SEGUNDOS_DO_RECADO = VENCE_EM_S
 
     args = argparse.Namespace(
         oculta=True, segundos=0.0, passear=False, parada=900, foto="",
@@ -355,7 +371,7 @@ def medido() -> dict:
         piloto.ponte.perguntar(LER_A_TELA, ler("depois-de-um-sair"))
         fora["mesa-de-um-so"] = [f"{c['pref']}:{c['uniq']}"
                                  for c in piloto._mesa_de_agora]
-        fora["chaves-do-deposito"] = sorted(piloto._recados)
+        fora["chaves-do-deposito"] = sorted(getattr(piloto, "_recados", {}))
         MESA["estado"] = ESTADO
         GLib.timeout_add(1300, voltou_a_mesa)
         return False
@@ -419,10 +435,10 @@ def medido() -> dict:
         piloto.pronto = False
         piloto.tela.janela.destroy()
         # E OS TRÊS SÍMBOLOS DE MÓDULO VOLTAM. Ver a nota na instalação deles.
-        (hv.mesa_viva.estado_do_daemon, hv.ponte.mic_canal_set_detalhado,
-         hv.SEGUNDOS_DO_RECADO) = guardado
+        (hv.mesa_viva.estado_do_daemon,
+         hv.ponte.mic_canal_set_detalhado) = guardado
         MESA["estado"] = ESTADO
-    fora["segundos-do-produto"] = fora_do_produto
+    fora["prazo-no-produto"] = fora_do_produto
     assert "depois-de-vencer" in fora, (
         f"o roteiro não chegou ao fim — o que voltou foi {sorted(fora)}")
     return fora
@@ -431,6 +447,17 @@ def medido() -> dict:
 def _frases(leitura: object) -> list[str]:
     assert isinstance(leitura, dict), leitura
     return [r["texto"] for r in leitura["recados"]]
+
+
+def _muda(medido: dict, rotulo: str) -> None:
+    """A parada do roteiro sem recado e sem a frase da recusa — ou a reprova."""
+    leitura = medido[rotulo]
+    assert isinstance(leitura, dict), f"{rotulo}: {leitura!r}"
+    assert _frases(leitura) == [], (
+        f"{rotulo}: a tela tem recado {_frases(leitura)!r} — a recusa voltou a "
+        f"pousar no cartão, que é a caixa que ela mandou parar de aparecer")
+    assert not leitura["frase_na_tela"], (
+        f"{rotulo}: a frase da recusa está no texto visível por outro caminho")
 
 
 # --------------------------------------------------------------------------
@@ -445,198 +472,149 @@ def test_o_gesto_recusou_dizendo(medido: dict) -> None:
     classe, frase = desfechos["02-controles.html:mudo"]
     assert classe == "recusou dizendo", (classe, frase)
     assert frase.startswith("RuntimeError:"), frase
+    # A FRASE É A DO DONO, e é ela que as paradas abaixo procuram na tela: o
+    # dublê devolveu `RECUSA_DO_ATO`, e o gesto a repassa.
+    assert RECUSA_DO_ATO in frase, frase
 
 
 # --------------------------------------------------------------------------
-# 1. a frase chega ao DOM
+# 1. a frase NÃO chega ao DOM
 # --------------------------------------------------------------------------
-def test_a_frase_da_recusa_chega_ao_dom(medido: dict) -> None:
-    """Ao DOM que ela olha — não ao `desfechos`, não ao `stderr`."""
-    assert _frases(medido["antes"]) == [], (
-        "a tela já tinha recado antes do clique — a medição não vale")
-    frases = _frases(medido["logo-depois"])
-    assert len(frases) == 1, (
-        f"depois do clique recusado a tela mostra {frases!r}. Um botão que "
-        f"aceita o clique e não diz nada é o defeito mais caro desta casa: o "
-        f"segundo clique parece o primeiro.")
-    # A FRASE É A DO DONO, E NÃO UMA DAQUI — 04/09/2026, S-05. Até hoje esta
-    # linha casava um pedaço do `RuntimeError` fixo do gesto; o ato do
-    # microfone traz a frase do DAEMON, que diz QUAL das duas metades faltou, e
-    # o gesto a repassa por `frase_do_ato_do_microfone`. O que a régua cobra
-    # agora é o ATRAVESSAR — a frase que o dublê devolveu chegou ao DOM.
-    assert RECUSA_DO_ATO in frases[0], frases[0]
+def test_a_frase_da_recusa_nao_chega_ao_dom(medido: dict) -> None:
+    """ERA `test_a_frase_da_recusa_chega_ao_dom` — o contrato mudou em 13/09/2026.
+
+    Exigia a frase no DOM que ela olha, e não só no `desfechos` e no `stderr`.
+    O `desfechos` e o diário continuam com ela; o DOM, não.
+    """
+    _muda(medido, "antes")
+    _muda(medido, "logo-depois")
 
 
 # --------------------------------------------------------------------------
-# 2. no cartão daquele controle, e não no do vizinho
+# 2. em cartão nenhum
 # --------------------------------------------------------------------------
-def test_a_frase_pousa_no_cartao_de_quem_foi_clicado(medido: dict) -> None:
+def test_a_frase_nao_pousa_em_cartao_nenhum(medido: dict) -> None:
+    """ERA `test_a_frase_pousa_no_cartao_de_quem_foi_clicado` — 13/09/2026.
+
+    Na mesa de quatro, a recusa de um no cartão do vizinho era pior que recusa
+    nenhuma, e esta régua conferia o cartão certo. Sem recado não há cartão a
+    conferir: a resposta ao clique mora no botão que foi clicado.
+    """
     leitura = medido["logo-depois"]
     assert isinstance(leitura, dict)
-    recado = leitura["recados"][0]
-    assert recado["chave"] == CHAVE_P1, (
-        f"o recado foi endereçado a {recado['chave']!r}; o clique foi no "
-        f"controle {CHAVE_P1} (o `uniq` normalizado, e não a coluna `p1`)")
-    assert recado["dentro_de"] == "p1", (
-        f"a frase está dentro de {recado['dentro_de']!r} — na mesa de quatro, a "
-        f"recusa de um controle no cartão do vizinho é pior que recusa nenhuma")
+    assert [r["dentro_de"] for r in leitura["recados"]] == [], leitura["recados"]
 
 
 # --------------------------------------------------------------------------
-# 3. sobrevive à repintura — aos tiques e à troca de bloco
+# 3. nada volta — nem nos tiques, nem na troca de bloco
 # --------------------------------------------------------------------------
-def test_o_aviso_sobrevive_aos_tiques(medido: dict) -> None:
-    """~6 repinturas depois do clique a frase continua na tela."""
-    frases = _frases(medido["depois-de-seis-tiques"])
-    assert len(frases) == 1 and "microfone" in frases[0], (
-        f"a frase sumiu na repintura: {frases!r}. Uma frase que só existe no "
-        f"instante do clique não é vista por ninguém.")
+def test_nada_volta_nos_tiques(medido: dict) -> None:
+    """ERA `test_o_aviso_sobrevive_aos_tiques` — 13/09/2026.
+
+    ~6 repinturas depois do clique a frase tinha de continuar na tela, porque o
+    tique a repunha do depósito. Sem depósito, a repintura não traz nada.
+    """
+    _muda(medido, "depois-de-seis-tiques")
 
 
-def test_o_aviso_volta_quando_a_pintura_troca_o_bloco(medido: dict) -> None:
-    """A pintura troca blocos inteiros — o aviso tem de renascer no tique."""
+def test_nada_volta_quando_a_pintura_troca_o_bloco(medido: dict) -> None:
+    """ERA `test_o_aviso_volta_quando_a_pintura_troca_o_bloco` — 13/09/2026.
+
+    A pintura troca blocos inteiros, e o aviso tinha de renascer no tique. A
+    simulação da troca continua valendo como prova de que o bloco foi trocado.
+    """
     assert medido["matei-o-cartao"] == "0", (
-        f"a simulação não levou o aviso embora ({medido['matei-o-cartao']!r}) — "
-        f"sem isso este teste passa sobre nada")
-    frases = _frases(medido["depois-da-troca-de-bloco"])
-    assert len(frases) == 1 and "microfone" in frases[0], (
-        f"o aviso não voltou depois de o bloco ser trocado: {frases!r}. É o "
-        f"tique que o recria, lendo o depósito — sem isso ele morre com o "
-        f"primeiro bloco que a pintura substituir.")
+        f"a simulação não trocou o bloco ({medido['matei-o-cartao']!r}) — sem "
+        f"isso este teste passa sobre nada")
+    _muda(medido, "depois-da-troca-de-bloco")
 
 
 # --------------------------------------------------------------------------
-# 4. o SEGUNDO clique responde — que é o defeito de origem desta frente
+# 4. o segundo e o terceiro clique também não falam
 # --------------------------------------------------------------------------
-def test_o_segundo_clique_tambem_responde_na_tela(medido: dict) -> None:
-    """O enunciado desta frente em uma linha: *o segundo clique de um gesto
-    continua sem resposta nenhuma na tela dela*. Aqui ele responde."""
+def test_o_segundo_clique_tambem_nao_fala(medido: dict) -> None:
+    """ERA `test_o_segundo_clique_tambem_responde_na_tela` — 13/09/2026.
+
+    O enunciado de 02/09 era *o segundo clique de um gesto continua sem resposta
+    nenhuma na tela dela*. Ele continua curado, por outra peça: o botão pisca a
+    recusa em cada clique (`test_a_recusa_pisca_no_botao`). Aqui se cobra que a
+    frase não volte com o segundo clique.
+    """
     assert medido["segundo-clique"] == "cliquei", medido["segundo-clique"]
-    frases = _frases(medido["depois-do-segundo-clique"])
-    assert len(frases) == 1 and "microfone" in frases[0], (
-        f"o segundo clique deixou a tela em {frases!r}. Um segundo clique que "
-        f"parece o primeiro é o botão que responde calado — e é ele que faz "
-        f"quem clica concluir que funcionou.")
+    _muda(medido, "depois-do-segundo-clique")
 
 
-# --------------------------------------------------------------------------
-# 4b. A PINTURA É NA HORA — com o tique parado, só o clique pode repor a frase
-# --------------------------------------------------------------------------
-def test_a_frase_aparece_no_clique_e_nao_no_proximo_tique(medido: dict) -> None:
-    """O meio segundo até o próximo tique basta para ela clicar de novo.
+def test_o_clique_nao_pinta_frase_na_hora(medido: dict) -> None:
+    """ERA `test_a_frase_aparece_no_clique_e_nao_no_proximo_tique` — 13/09/2026.
 
-    POR QUE A MEDIÇÃO PARA O TIQUE: porque sem parar ela não mede nada. A
-    entrega "deposita a frase E pinta na hora" foi vendida como item próprio e
-    atravessou a auditoria de 02/09 SEM RÉGUA — arrancar o `self._js(...)` de
-    `_recusou_dizendo` deixava os oito testes verdes, porque a leitura aos
-    700 ms já pegava a repintura de 500 ms. Medido dentro da página com
-    `MutationObserver`, a diferença é real: **2 ms com a pintura imediata, ~300
-    ms sem ela**. Aqui a régua a torna binária: com o tique parado, a única
-    coisa que pode repor a frase é o clique.
+    Com o tique parado, só o clique podia repor a frase — era a prova da pintura
+    na hora. A mesma medição agora prova o avesso: com o tique parado e a tela
+    zerada, o clique recusado não pinta frase nenhuma.
     """
     assert medido["terceiro-clique"] == "cliquei", medido["terceiro-clique"]
-    assert medido["apaguei-os-recados"] == "0", (
-        f"a tela não foi zerada antes do clique ({medido['apaguei-os-recados']!r})"
-        f" — sem isso esta régua passa sobre uma frase que já estava lá")
-    frases = _frases(medido["sem-tique-depois-do-clique"])
-    assert len(frases) == 1 and "microfone" in frases[0], (
-        f"com o tique parado a tela ficou em {frases!r}. A recusa só apareceria "
-        f"na próxima repintura — e meio segundo de silêncio basta para ela "
-        f"clicar de novo achando que o primeiro clique não pegou, que é o "
-        f"defeito de origem deste canal e não um detalhe de acabamento.")
+    assert medido["apaguei-os-recados"] == "0", medido["apaguei-os-recados"]
+    _muda(medido, "sem-tique-depois-do-clique")
 
 
 # --------------------------------------------------------------------------
-# 4c. O RECADO É DO CONTROLE, E NÃO DA COLUNA — e isso só aparece no TEMPO
+# 4c. nenhum controle guarda recado — nem o que sai, nem o que volta
 # --------------------------------------------------------------------------
-def test_o_recado_e_do_endereco_e_nao_da_posicao(medido: dict) -> None:
-    """O controle que recusou SAI da mesa e o vizinho herda a coluna 1.
+def test_o_piloto_nao_guarda_recado_de_controle_nenhum(medido: dict) -> None:
+    """ERA `test_o_recado_e_do_endereco_e_nao_da_posicao` — 13/09/2026.
 
-    O DEFEITO QUE ESTA RÉGUA IMPEDE, medido em 02/09/2026 na base: o depósito
-    era `{pref: frase}` e `mesa_viva.mesa_do_estado` enumera os conectados de 1
-    A CADA TIQUE (*"o `pref` continua sendo a POSIÇÃO … e `jogador` continua
-    sendo a IDENTIDADE"*). Com dois controles na mesa, recusa no 🎙 do `p1` (o
-    do cabo), o do cabo saindo: o cartão de quem FICOU passava a mostrar, por
-    até 30 s, uma frase que termina em *"ou este controle saiu da mesa"* —
-    sobre outro controle. É o `test_a_frase_pousa_no_cartao_de_quem_foi_clicado`
-    um nível acima: ali o endereçamento é conferido num INSTANTE, e num instante
-    a coluna ainda é de quem foi clicado.
+    O controle que recusou SAI da mesa e o vizinho herda a coluna 1. A régua
+    cobrava que a recusa ficasse no depósito pelo ENDEREÇO (`uniq`), e não pela
+    posição — a lição continua escrita no piloto, onde o depósito morava. Sem
+    depósito, a pergunta é se algum recado sobrou.
     """
     assert medido["mesa-de-um-so"] == [f"p1:{UNIQ_P2}"], (
         f"a mesa do piloto não trocou de dono ({medido['mesa-de-um-so']!r}) — "
         f"sem a troca esta régua passa sobre nada")
-    assert medido["chaves-do-deposito"] == [CHAVE_P1], (
-        f"o depósito guardou {medido['chaves-do-deposito']!r}; a chave tem de "
-        f"ser o endereço do controle que recusou, e ele não mudou")
-    # SEM CARTÃO, SEM TELA — 13/09/2026. Aqui se exigia a frase na tarja de
-    # rodapé, e a tarja saiu por pedido dela: *"essas frases de status que
-    # aparecem no rodapé isso não deveria estar aparecendo"*. O aviso continua no
-    # depósito (a asserção acima) e volta ao cartão quando o controle volta (a
-    # régua seguinte); enquanto ele está fora, a tela não diz nada.
-    leitura = medido["depois-de-um-sair"]
-    assert isinstance(leitura, dict)
-    recados = leitura["recados"]
-    assert recados == [], (
-        f"o controle que recusou saiu da mesa e a tela ainda mostra {recados!r}. "
-        f"Dentro do cartão de {UNIQ_P2} é a recusa de um controle acusando "
-        f"outro; fora de cartão é a tarja de rodapé que ela mandou tirar.")
+    assert medido["chaves-do-deposito"] == [], (
+        f"o piloto guardou recado para {medido['chaves-do-deposito']!r}")
+    _muda(medido, "depois-de-um-sair")
 
 
-def test_o_aviso_volta_ao_cartao_quando_o_controle_volta(medido: dict) -> None:
-    """E o endereço é o que o traz de volta ao lugar certo."""
-    leitura = medido["depois-de-o-controle-voltar"]
-    assert isinstance(leitura, dict)
-    recado = leitura["recados"][0]
-    assert recado["chave"] == CHAVE_P1, recado
-    assert recado["dentro_de"] == "p1", (
-        f"o controle voltou à mesa e o aviso dele ficou em {recado['dentro_de']!r}. "
-        f"O depósito guarda o endereço; quem resolve a coluna é a mesa do tique, "
-        f"e por isso o aviso reencontra o cartão sem ninguém reendereçá-lo.")
+def test_nada_volta_quando_o_controle_volta(medido: dict) -> None:
+    """ERA `test_o_aviso_volta_ao_cartao_quando_o_controle_volta` — 13/09/2026."""
+    _muda(medido, "depois-de-o-controle-voltar")
 
 
 # --------------------------------------------------------------------------
-# 5. e vence — é aviso, não estado
+# 5. não há o que vencer
 # --------------------------------------------------------------------------
-def test_o_aviso_vence_e_some(medido: dict) -> None:
-    """Decisão dela: *"a frase de recusa SOME depois de um tempo (…) ~30 s"*.
+def test_nada_ha_a_vencer(medido: dict) -> None:
+    """ERA `test_o_aviso_vence_e_some` — 13/09/2026.
 
-    A LEITURA VEM DEPOIS DO SEGUNDO CLIQUE de propósito: ele renova o depósito,
-    e sem essa renovação a régua chegava aqui com o DOM já vazio pela troca de
-    bloco — verde sobre nada.
+    A decisão dela era *"a frase de recusa SOME depois de um tempo (…) ~30 s"*.
+    A frase deixou de aparecer, e a leitura depois do prazo antigo é o último
+    instante em que ela ainda estaria.
     """
-    frases = _frases(medido["depois-de-vencer"])
-    assert frases == [], (
-        f"passados {VENCE_EM_S:.0f} s a tela ainda mostra {frases!r}. Aviso que "
-        f"não vence virou estado, e a tela passa a afirmar uma recusa velha.")
+    _muda(medido, "depois-de-vencer")
 
 
-def test_o_prazo_do_produto_e_o_que_ela_decidiu(medido: dict) -> None:
-    """E o PRAZO tem dono — não só o mecanismo.
+def test_o_prazo_saiu_com_o_canal(medido: dict) -> None:
+    """ERA `test_o_prazo_do_produto_e_o_que_ela_decidiu` — 13/09/2026.
 
-    O MECANISMO estava guardado e o VALOR não: a fixture encolhe
-    `SEGUNDOS_DO_RECADO` para poder ver a frase vencer sem ficar meio minuto
-    parada, e com isso trocar `30.0` por `3.0` ou por `300.0` deixava a régua
-    inteira verde. Era a única coisa deste canal que veio direto de uma decisão
-    dela — *"a frase de recusa SOME depois de um tempo — ~30 s e desaparece. É
-    aviso, não estado."* (02/09/2026) — e a única sem ninguém a cobrar.
-
-    O valor abaixo é lido do módulo ANTES de a fixture o encolher.
+    O prazo tinha dono — *"a frase de recusa SOME depois de um tempo — ~30 s e
+    desaparece. É aviso, não estado."* (02/09/2026) — e contava a vida de uma
+    frase na tela. A frase saiu da tela pela palavra dela no índice da leva
+    (`2026-09-13-A-TERCEIRA-LISTA-DELA-INDICE.md`, linha 19), e o prazo foi
+    junto. A régua cobra que ele não volte calado.
     """
-    assert medido["segundos-do-produto"] == 30.0, (
-        f"o produto faz a recusa viver {medido['segundos-do-produto']} s; ela "
-        f"decidiu ~30 s. Este número não é de acabamento — é o que separa um "
-        f"aviso de um estado, e mudá-lo é decisão dela, não de quem passa aqui.")
+    assert medido["prazo-no-produto"] is False, (
+        "voltou ao piloto o prazo da frase de recusa na tela")
 
 
 # --------------------------------------------------------------------------
 # 6. o instrumento não entra na conta da régua do mockup
 # --------------------------------------------------------------------------
 def test_o_aviso_nao_conta_como_campo_da_pagina(medido: dict) -> None:
-    """Se o aviso tivesse `data-campo`, a régua mediria o próprio instrumento."""
+    """Nada que a recusa faça pode mexer na conta de endereços da página."""
     antes, com_aviso = medido["antes"], medido["logo-depois"]
     assert isinstance(antes, dict) and isinstance(com_aviso, dict)
     assert antes["enderecos"] == com_aviso["enderecos"], (
         f"a página tinha {antes['enderecos']} endereços de pintura e passou a "
-        f"ter {com_aviso['enderecos']} com o aviso na tela. O `LER_CAMPOS` varre "
-        f"`data-campo`/`data-papel`/`data-hef`: o aviso não pode carregar "
-        f"nenhum dos três, ou a régua do mockup passa a contá-lo como campo.")
+        f"ter {com_aviso['enderecos']} depois da recusa. O `LER_CAMPOS` varre "
+        f"`data-campo`/`data-papel`/`data-hef`, e a régua do mockup passaria a "
+        f"contar o que a recusa pôs na página.")

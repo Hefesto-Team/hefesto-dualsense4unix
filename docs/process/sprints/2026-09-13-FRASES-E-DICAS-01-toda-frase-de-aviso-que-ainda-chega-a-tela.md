@@ -1,6 +1,6 @@
 ---
 sprint: FRASES-E-DICAS-01
-estado: aberta
+estado: feita
 onda: A-TERCEIRA-LISTA-DELA
 posse:
   FRASES-E-DICAS-01:
@@ -38,6 +38,8 @@ nao_toca:
 ---
 
 # FRASES-E-DICAS-01 — a recusa sai da tela, e o número fora diz só o número
+
+> **ESTADO 2026-09-13: feita** — `docs/process/agentes/2026-09-13/FRASES-E-DICAS-01-opus.md`
 
 > **ROTA CORRIGIDA — 13/09/2026, depois do estudo, e ela vence o que vier
 > abaixo.** A sprint nasceu uma só; o estudo mediu posse larga demais para um

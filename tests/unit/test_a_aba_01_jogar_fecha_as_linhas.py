@@ -1185,11 +1185,12 @@ def no_webkit() -> dict:
 
     def leu_sem_resposta() -> bool:
         piloto.ponte.perguntar(_LER_O_CADEADO, ler("sem-resposta"))
-        # O DEPÓSITO É LIDO AQUI, e não no fim — a chave é o `uniq`, e a caixa
-        # não mora em coluna de controle nenhuma: as duas recusas pousam na
-        # MESMA chave (a tarja de rodapé), e a terceira apagaria esta.
-        fora["recados-sem-resposta"] = {
-            k: [v[0], v[2]] for k, v in piloto._recados.items()}
+        # O DESFECHO É LIDO AQUI, e não no fim — a chave é `página:gesto`, e a
+        # recusa seguinte escreveria por cima desta. Até 13/09/2026 aqui se lia
+        # o depósito de recados do piloto, que saiu com a FRASES-E-DICAS-01: a
+        # recusa não vai mais à tela, e a frase fica no `desfechos` e no diário.
+        fora["desfecho-sem-resposta"] = list(
+            piloto.desfechos.get("01-jogar.html:cadeado", ()))
         GLib.timeout_add(da_piscada_ms + 500, levanta)
         return False
 
@@ -1206,7 +1207,6 @@ def no_webkit() -> dict:
 
     def fim() -> bool:
         fora["desfechos"] = {k: list(v) for k, v in piloto.desfechos.items()}
-        fora["recados"] = {k: [v[0], v[2]] for k, v in piloto._recados.items()}
         Gtk.main_quit()
         return False
 
@@ -1300,19 +1300,18 @@ def test_o_cadeado_nao_pisca_sobre_o_que_nao_foi_guardado(no_webkit: dict) -> No
         "a caixa piscou VERDE com o serviço sem responder — o verde é o recibo "
         "de uma escrita que não aconteceu")
 
-    # E A RECUSA FALA: `RuntimeError` é o contrato do piloto para *o produto
-    # recusou, e a frase VAI PARA A TELA*.
-    #
-    # ONDE ELA POUSA, MEDIDO E NÃO SUPOSTO: no cartão do controle que a FITA
-    # desta aba tem escolhido. A caixa não mora em coluna de controle nenhuma,
-    # então o ouvinte cai no `window.__hef.alvoPadrao`, que a `01` preenche
-    # (`hefesto_vivo`, `carga["alvo"]` — só as abas cuja fita ESCOLHE o fazem).
-    # O depósito é lido NO INSTANTE desta etapa porque a chave é uma só: a
-    # recusa seguinte escreveria por cima desta.
-    frases = [v[0] for v in no_webkit["recados-sem-resposta"].values()]
-    assert aba.CADEADO_RECUSA in frases, (
-        f"a recusa não chegou à tela — o que está depositado é {frases}. Um "
-        f"gesto que não pisca e não fala é o clique que some calado")
+    # E A RECUSA FALA — NO DIÁRIO, desde 13/09/2026. `RuntimeError` é o
+    # contrato do piloto para *o produto recusou*. Até a FRASES-E-DICAS-01 a
+    # frase ia ao cartão do controle que a fita escolhia, e esta régua a lia no
+    # depósito de recados; ela saiu da tela (o índice da leva,
+    # `2026-09-13-A-TERCEIRA-LISTA-DELA-INDICE.md`, linha 19), e a caixa
+    # responde pela piscada de recusa. O desfecho é lido NO INSTANTE desta
+    # etapa porque a chave é uma só: a recusa seguinte escreveria por cima.
+    classe, frase = no_webkit["desfecho-sem-resposta"]
+    assert classe == "recusou dizendo" and aba.CADEADO_RECUSA in frase, (
+        f"o gesto não recusou com a frase do dono — o desfecho foi "
+        f"{classe!r}: {frase!r}. Um gesto que não pisca e não diz nada ao "
+        f"diário é o clique que some calado")
 
     assert no_webkit["clique-3"] == "cliquei", no_webkit["clique-3"]
     assert not no_webkit["levantou"]["verde"], (

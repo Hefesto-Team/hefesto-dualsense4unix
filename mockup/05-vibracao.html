@@ -1534,19 +1534,17 @@
      geral`) e some logo depois; nada se mexe dentro das colunas"*.
 
      VERDE É A COR QUE ESTA CASA JÁ USA PARA O QUE DEU CERTO, e não uma quinta
-     invenção: `hefesto_vivo.COR_DO_SUCESSO` lê o MESMO `--green` da paleta
-     para a tarja de sucesso das dez abas, e o `--green` já está declarado no
-     `topo.html`. E não pode ser o `alerta`: laranja sobre um clique que GRAVOU
-     ensina que o botão falha, que é o defeito que a D-01 fechou em 04/09.
+     invenção: o `--green` já está declarado no `topo.html`. E não pode ser o
+     `alerta`: laranja sobre um clique que GRAVOU ensina que o botão falha, que
+     é o defeito que a D-01 fechou em 04/09.
 
-     ELE VESTE UM NÓ QUE O PILOTO CRIA, e não uma linha do `html_do_estado`:
-     quem escreve o recado é `hefesto_vivo.pintar_recados`, e o
-     `data-hef-recados` do `#vib-estado` (logo abaixo, no miolo) é o endereço
-     que diz a ele onde pousar. Enquanto o piloto não ler esse atributo — a
-     metade que NÃO é desta posse, relatada com a forma exata em
-     `docs/process/agentes/2026-09-06/ONDA5-05-03.md` — esta regra veste um
-     elemento que a página ainda não recebe. Está declarado aqui de propósito:
-     as duas metades nascem juntas ou a primeira a chegar fica sem par. */
+     ESTA REGRA NÃO TEM MAIS NÓ A VESTIR — 13/09/2026, FRASES-E-DICAS-01. Ela
+     vestia o recado que o piloto pousava nesta faixa pelo endereço que o
+     `#vib-estado` declarava, e o piloto deixou de pôr frase na tela: o sucesso
+     na TELA-CALADA-01 (*"em todas as abas da interface"*), a recusa nesta. O
+     endereço saiu do miolo; a regra fica porque o tom `recibo` ainda é nome do
+     pacote (`a05_vibracao.TOM_DO_RECIBO`), que não é desta posse. Ela não
+     pinta pixel nenhum. */
   .vib-estado .est.recibo{color:var(--green)}
   .vib-estado .est.recibo .sinal{color:var(--green)}
 
@@ -3596,38 +3594,17 @@
              `p.blocos` (`hefesto_vivo.py:213`), porque o NÚMERO de linhas muda
              com o estado e não há endereço para uma linha que ainda não existe.
              Campo a campo, a linha que não se aplica viraria `—`. -->
-        <!-- O `data-hef-recados` É O TERCEIRO LUGAR DO RECADO — 05-Q4 dela,
-             06/09/2026: *"a frase entra na faixa que já existe sob a grade (…)
-             nada se mexe dentro das colunas"*.
-
-             O PILOTO CONHECE DOIS LUGARES HOJE — o cartão do controle e a
-             tarja de rodapé (`hefesto_vivo.pintar_recados`) —, e os dois
-             ficaram: a RECUSA continua no cartão, em laranja, por 30 s. O que
-             este atributo declara é para onde vai o SUCESSO **desta página**,
-             e por isso ele carrega o tom em vez de um booleano: um endereço
-             que engolisse os dois mudaria a recusa junto, que a 05-Q4 não pede.
-
-             POR QUE A DECLARAÇÃO É DA PÁGINA e não do piloto: a faixa só existe
-             aqui. Cravar `#vib-estado` dentro do piloto seria o piloto único
-             sabendo o nome de um elemento de uma aba — a mesma dívida que o
-             `.fita` de dois donos já cobra em `07-lancadores`.
-
-             O CUSTO QUE ELE REMOVE FOI MEDIDO E ESTÁ NO PILOTO
-             (`hefesto_vivo.py`, o comentário do `ESTILO_NA_GRADE`): um recado
-             dentro de um `[data-controle]` de linhas fixas empurrava o desenho
-             do controle 65 px para baixo, e a cura foi tirá-lo do fluxo — ele
-             parou de empurrar e passou a COBRIR o topo do desenho por 6 s a
-             cada clique. Fora da coluna, não faz nem uma coisa nem outra.
-
-             SÃO DOIS ATRIBUTOS, e é o par que o alvo `classe` do piloto já usa
-             (`data-hef-classe` / `data-hef-quando`): um diz QUAL tom pousa
-             aqui, o outro diz COM QUE CLASSES. Assim o piloto não precisa
-             conhecer a palavra `recibo` nem o desenho da linha de estado — a
-             página, que é dona dos dois, declara os dois. Um alvo composto num
-             atributo só seria a terceira maneira desta casa dizer a mesma
-             coisa, e é o argumento que o `data-hef-atributo` já registrou. -->
-        <div class="vib-estado" id="vib-estado"
-             data-hef-recados="sucesso" data-hef-recado-classe="est recibo"></div>
+        <!-- A FAIXA DEIXOU DE SER LUGAR DE RECADO — 13/09/2026,
+             FRASES-E-DICAS-01. Ela declarava, por dois atributos, que o recado
+             de SUCESSO desta página pousava aqui e com que classes (a 05-Q4
+             dela, 06/09/2026). O piloto parou de pôr frase na tela: o sucesso
+             na TELA-CALADA-01 (*"em todas as abas da interface"*), e a recusa
+             nesta, pela caixa laranja da foto que está no índice da leva
+             (`docs/process/sprints/2026-09-13-A-TERCEIRA-LISTA-DELA-INDICE.md`).
+             Um endereço que ninguém lê é dado morto, e os dois saíram. A faixa
+             continua sendo o lugar do ESTADO, e o que ela diz vem do bloco
+             logo acima. -->
+        <div class="vib-estado" id="vib-estado"></div>
       </div>
     </div>
 
