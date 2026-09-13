@@ -44,6 +44,8 @@ from __future__ import annotations
 import contextlib
 import html
 import re
+import sys
+import textwrap
 import threading
 import time
 from typing import Any
@@ -313,6 +315,67 @@ def _para_o_painel(texto: str) -> dict[str, Any]:
     """
     _PAINEL[0] = texto
     return {"mesa": {REGISTRO: texto}}
+
+
+def _limpar_o_painel() -> None:
+    """O painel volta ao repouso no próximo tique — a pergunta do clique 1 SAI.
+
+    TELA-CALADA-03, 13/09/2026, e a palavra é dela: *"essas frases de status
+    que aparecem no rodapé isso não deveria estar aparecendo"* — *"em todas as
+    abas da interface"*. A régua que sai disso tem duas metades: **a pergunta
+    de um gesto em dois tempos fica** (sem ela o segundo clique não tem
+    instrução) e **o recibo depois do gesto sai**.
+
+    O SEGUNDO CLIQUE CHAMA ISTO ANTES DE AGIR, e não depois: o ato pode levar
+    vinte segundos (a Steam fechando) ou sessenta (dois scripts), e durante esse
+    tempo o painel continuaria dizendo "clique de novo para confirmar" sobre um
+    consentimento que já foi dado. O tique seguinte pinta o repouso.
+    """
+    _PAINEL[0] = None
+
+
+def _relatar_o_recibo(gesto_: str, frase: str) -> None:
+    """O recibo do segundo clique vai ao diário da janela, e não à tela.
+
+    A FRASE CONTINUA SENDO A DO DONO (`format_fix_safe_result`,
+    `format_proton_lock_result`, `format_apply_wrapper_result`,
+    `frase_do_resultado`) e continua sendo produzida — quem depura lê no
+    `interface.log`. O desenho da linha é o mesmo que a TELA-CALADA-01 dá ao
+    recado de sucesso do piloto: `[relato] <página> · <gesto>: <frase>`.
+    """
+    if frase:
+        print(f"[relato] {PAGINA} · {gesto_}: {frase}", file=sys.stderr)
+
+
+#: A INSTRUÇÃO DO SEGUNDO TEMPO. Ela JÁ ERA desta aba — a última linha do que o
+#: clique 1 de «Refazer os consertos automáticos» escreve —, e passou a ter DOIS
+#: leitores em 13/09/2026, com a pergunta do «Aplicar aos jogos da Steam».
+#: Digitada nos dois, as duas se afastariam na primeira mudança.
+CLIQUE_DE_NOVO = "Clique de novo para confirmar."
+
+#: A LARGURA EM QUE A PERGUNTA DA STEAM É QUEBRADA, em caracteres — MEDIDA.
+#:
+#: O painel é `white-space:pre`: linha que não cabe NÃO QUEBRA, ela sai pela
+#: direita. Medido no piloto oculto em 13/09/2026: a caixa tem 838 px de largura
+#: útil e 134 px de altura, e uma linha de 136 caracteres mediu 852 px — cabem
+#: uns 133 por linha e seis linhas à vista. A pergunta do dono tem três
+#: parágrafos de 101, 131 e 187 caracteres; o terceiro saía da caixa. Quebrada
+#: em 120 ela ocupa quatro linhas, e com a instrução cabe INTEIRA sem rolar.
+#: Nenhuma palavra muda: `textwrap` só troca espaço por quebra.
+LARGURA_DA_PERGUNTA = 120
+
+
+def _pergunta_da_steam() -> str:
+    """A pergunta do clique 1 de «Aplicar aos jogos da Steam», para o painel.
+
+    O CORPO É O DO DONO, palavra por palavra —
+    `DaemonActionsMixin._STEAM_APPLY_CORPO`, o mesmo do diálogo da janela
+    antiga. As quebras de parágrafo viram espaço e o texto é requebrado na
+    largura do painel (ver :data:`LARGURA_DA_PERGUNTA`); a instrução do segundo
+    tempo é a que esta aba já escreve (:data:`CLIQUE_DE_NOVO`).
+    """
+    corpo = " ".join(_daemon.DaemonActionsMixin._STEAM_APPLY_CORPO.split())
+    return f"{textwrap.fill(corpo, LARGURA_DA_PERGUNTA)}\n\n{CLIQUE_DE_NOVO}"
 
 
 def _versao() -> str:
@@ -1333,11 +1396,26 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
         # vazio é dizer "não há modo a corrigir que eu tenha visto" — deixar de
         # emitir deixaria o botão ACESO da volta anterior, oferecendo um
         # conserto sobre um estado que ninguém leu.
+        #
+        # E O PAINEL E O EXAME SAEM DAQUI TAMBÉM — TELA-CALADA-03, 13/09/2026.
+        # Este ramo emitia os botões e deixava o resto da aba com o DESENHO:
+        # medido no piloto oculto com a camada levantando, o painel mostrava
+        # `[23:41:09] perfil "Mortal Kombat" aplicado aos 2 …`, o exame as oito
+        # linhas do mockup (*"Steam Input estava ligado em 2 jogos"*) e a
+        # contagem *"8 linhas · nenhum aviso"*. Um registro técnico inventado é
+        # a pior mentira desta aba — ele parece a prova. O painel continua com
+        # o que ela PEDIU (a pergunta de um gesto armado, o «Ver detalhes»), e
+        # sem pedido nenhum diz o travessão; o exame não diz nada, porque
+        # ninguém o leu.
+        nada = str(_monta().NADA_A_DIZER)
         return {"sem_dono": {"tela": {"sem_dono": True, "oque": str(erro)}},
                 "blocos": blocos_dos_botoes(_de_pe(ctx)),
                 CAMPO_DO_MODO_AVULSO: (
                     MODO_A_CORRIGIR
                     if _status_do_daemon(ctx.state) == "online_avulso" else ""),
+                REGISTRO: _no_painel(None),
+                "exame-contagem": nada,
+                "exame-lista": nada,
                 **razoes_do_cinza(ctx),
                 "cobertura": {"pintados": 0, "sem_dono": 1}}
 
@@ -1456,7 +1534,7 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
 #     {'mesa': {'a': 1}, 'colunas': {}}
 #
 # O piloto tem o mecanismo (`hefesto_vivo.BOOTSTRAP`, o laço sobre `p.blocos`),
-# e a `a08_conexoes.py:1773` já o usa para o mapa do gabinete — que portanto
+# e a `a08_conexoes.py:1774` já o usa para o mapa do gabinete — que portanto
 # TAMBÉM não chega à tela. O conserto é uma linha em `pacotes/__init__.py`, que
 # é território compartilhado e não é meu; está no relatório desta frente.
 #
@@ -2573,14 +2651,22 @@ def aplicar_aos_jogos(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any
     da janela antiga fazia — `DaemonActionsMixin._STEAM_APPLY_CORPO`, palavra
     por palavra —, e ela sai de lá hoje justamente para não haver duas.
 
-    AS QUEBRAS DE PARÁGRAFO VIRAM ESPAÇO porque um recado é uma linha, não uma
-    caixa. É a mesma conversão que `a07_lancadores.deixar_tudo_pronto` faz com
-    o `_STEAM_READY_CORPO`, e nenhuma palavra dela muda no caminho.
+    A PERGUNTA VAI AO PAINEL DE REGISTRO — TELA-CALADA-03, 13/09/2026. Ela ia
+    por `recado`, e desde `71c69c57` esta aba não tem cartão nem faixa onde um
+    recado pouse: medido no piloto oculto, o primeiro clique virava o botão em
+    «Confirma?» e a tela não dizia uma palavra sobre o que ia acontecer. Agora
+    ela vai para onde os primeiros cliques de «Refazer os consertos
+    automáticos» e de «Tirar a sobreposição Vulkan» já escrevem
+    (:func:`_pergunta_da_steam`), e chega pelo PACOTE — não depende do canal de
+    recado, que a TELA-CALADA-01 cala para o sucesso.
 
     OS TRÊS DESFECHOS DO MOTOR ESTÃO COBERTOS, e nenhuma frase é minha: a
     recusa da janela (`format_steam_janela_recusa` — jogo aberto, a Steam não
     fechou, resposta inesperada) e o resultado (`format_apply_wrapper_result` —
-    quantos jogos mudaram, quantos ficaram, quantos falharam).
+    quantos jogos mudaram, quantos ficaram, quantos falharam). **O resultado
+    saiu da tela em 13/09/2026** (é recibo, e a régua dela tira recibo): ele vai
+    ao diário da janela por :func:`_relatar_o_recibo`, e o segundo clique
+    devolve só os rótulos. A recusa continua levantando.
     """
     from hefesto_dualsense4unix.integrations import steam_launch_options as slo
 
@@ -2588,14 +2674,17 @@ def aplicar_aos_jogos(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any
     if aplicar is None:
         raise RuntimeError(_daemon.frase_sem_aplicacao_em_massa())
     if not _confirmado(o, "aplicar-aos-jogos"):
-        return {"blocos": blocos_dos_botoes(_de_pe(ctx)),
-                "recado": " ".join(_daemon.DaemonActionsMixin._STEAM_APPLY_CORPO.split())}
+        carga = _para_o_painel(_pergunta_da_steam())
+        carga["blocos"] = blocos_dos_botoes(_de_pe(ctx))
+        return carga
+    _limpar_o_painel()
     janela, resultado = slo.with_steam_closed(aplicar)
     recusa = _daemon.format_steam_janela_recusa(janela)
     if recusa is not None:
         raise RuntimeError(recusa)
-    return {"blocos": blocos_dos_botoes(_de_pe(ctx)),
-            "recado": _daemon.format_apply_wrapper_result(resultado)}
+    _relatar_o_recibo("aplicar-aos-jogos",
+                      _daemon.format_apply_wrapper_result(resultado))
+    return {"blocos": blocos_dos_botoes(_de_pe(ctx))}
 
 
 @gesto("09-sistema.html", "restaurar-de-fabrica", grava="gravar_e_reaplicar")
@@ -2686,11 +2775,13 @@ def refazer_proton(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
     `config.vdf` ao sair, e a edição seria perdida. Um botão que "aplicasse" e
     perdesse a aplicação é o botão que responde calado com outro nome.
 
-    O RECIBO VAI PARA O PAINEL DE REGISTRO, que é onde esta aba já põe o que os
-    botões respondem (`ver-plugins`, `ver-detalhes`). Na janela antiga é um
-    toast; aqui não há toast, e jogar fora o `format_proton_lock_result` seria
-    perder exatamente o que ele diz — quantos jogos foram travados, ou por quê
-    não deu.
+    O RECIBO SAIU DO PAINEL — TELA-CALADA-03, 13/09/2026. Este parágrafo dizia
+    que ele ia para o painel de registro, *"e jogar fora o
+    `format_proton_lock_result` seria perder exatamente o que ele diz"*. A
+    segunda metade continua valendo, e é por ela que a frase não é jogada fora:
+    ela vai ao diário da janela (:func:`_relatar_o_recibo`). A primeira caducou
+    pela palavra dela — *"essas frases de status (…) não deveria estar
+    aparecendo"* —, e o segundo clique devolve só os rótulos e limpa o painel.
 
     **FATO ERRADO, SUBSTITUÍDO — 06/09/2026.** Esta linha dizia *"NÃO É CLICADO
     POR RÉGUA NENHUMA: `("09-sistema.html", "refazer-proton")` já está em
@@ -2709,6 +2800,7 @@ def refazer_proton(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
     """
     if not _confirmado(o, "refazer-proton"):
         return {"blocos": blocos_dos_botoes(_de_pe(ctx))}
+    _limpar_o_painel()
     import importlib
 
     try:
@@ -2730,9 +2822,9 @@ def refazer_proton(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
         raise RuntimeError(
             "A Steam está aberta — feche-a e clique de novo. Com ela aberta a "
             "mudança seria perdida ao sair.")
-    carga = _para_o_painel(_daemon.format_proton_lock_result(travar()))
-    carga["blocos"] = blocos_dos_botoes(_de_pe(ctx))
-    return carga
+    _relatar_o_recibo("refazer-proton",
+                      _daemon.format_proton_lock_result(travar()))
+    return {"blocos": blocos_dos_botoes(_de_pe(ctx))}
 
 
 # ---------------------------------------------------------------------------
@@ -2745,7 +2837,8 @@ def refazer_proton(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
 # OS DOIS SEGUEM O MESMO DESENHO, e ele é o que o rótulo de cada um promete:
 #
 #     clique 1 → MEDE (e não muda nada) → escreve o achado no painel → ARMA
-#     clique 2 → AGE, com o que o clique 1 mediu → escreve o recibo no painel
+#     clique 2 → limpa o painel → AGE, com o que o clique 1 mediu → o recibo
+#                vai ao diário da janela (TELA-CALADA-03, 13/09/2026)
 #
 # **O CLIQUE 1 É READ-ONLY DE PROPÓSITO**, e isso não é zelo: é o que faz a
 # `--prova-gesto` desta casa poder clicá-los sem mexer na máquina dela. Ela
@@ -2835,7 +2928,7 @@ def _frase_do_que_vai_mudar(jogos: list[str] | None) -> str:
         linhas.append(f"  Steam Input ligado em {len(jogos)} "
                       f"{_plural(len(jogos), 'jogo', 'jogos')}: "
                       + ", ".join(jogos) + ".")
-    linhas.append("  Clique de novo para confirmar.")
+    linhas.append(f"  {CLIQUE_DE_NOVO}")
     return "\n".join(linhas)
 
 
@@ -2857,7 +2950,9 @@ def refazer_consertos(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any
     produto, `daemon_actions.format_fix_safe_result`, que separa o que rodou do
     que foi ADIADO (o caminho mais comum, porque ela clica no Hefesto justamente
     enquanto joga). Nenhuma frase nova de tela nasce aqui: as duas metades do
-    recibo são do dono.
+    recibo são do dono. **Desde 13/09/2026 (TELA-CALADA-03) o recibo não vai
+    mais à tela:** ele vai ao diário da janela, o painel volta ao repouso e a
+    pergunta do clique 1 sai junto.
 
     NÃO PEDE SENHA, e isso é do produto, não promessa minha: os dois scripts
     são de espaço de usuário. O quirk anti-storm — o único `sudo` que a janela
@@ -2873,6 +2968,7 @@ def refazer_consertos(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any
         carga["blocos"] = blocos_dos_botoes(_de_pe(ctx))
         return carga
 
+    _limpar_o_painel()
     import subprocess
 
     # O NÚMERO É O DO CLIQUE 1. Se ele não existir (o gesto chegou confirmado
@@ -2904,12 +3000,12 @@ def refazer_consertos(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any
                 relatorio["steam_input"] = (proc.returncode,
                                             (proc.stdout or "") + (proc.stderr or ""))
     # A FAIXA LENTA É ZERADA, e não é enfeite: o exame do cartão ao lado acabou
-    # de mudar de valor, e mostrar o de até 2 s atrás ao lado do recibo é a tela
-    # dizendo "pronto" sobre números que ninguém releu.
+    # de mudar de valor, e mostrar o de até 2 s atrás depois do conserto é a
+    # tela afirmando números que ninguém releu.
     _LENTO.clear()
-    carga = _para_o_painel(_daemon.format_fix_safe_result(relatorio))
-    carga["blocos"] = blocos_dos_botoes(_de_pe(ctx))
-    return carga
+    _relatar_o_recibo("refazer-consertos",
+                      _daemon.format_fix_safe_result(relatorio))
+    return {"blocos": blocos_dos_botoes(_de_pe(ctx))}
 
 
 #: O QUE O CENSO DO CLIQUE 1 DE `procurar-camadas` ACHOU:
@@ -2946,10 +3042,11 @@ def procurar_camadas(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]
     o achado e **não arma** — não há segundo tempo a oferecer. O que o clique 2
     vai fazer está escrito na última linha do que o clique 1 mostrou.
 
-    O CLIQUE 2 age em todos os prefixos e devolve `frase_do_resultado`, também
-    do dono. `forcar=True` é a regra dela de 09/08/2026: o clique é gesto
-    explícito e a vontade da tela prevalece; só o gancho de lançamento respeita
-    a memória sem perguntar.
+    O CLIQUE 2 limpa o painel e age em todos os prefixos. `frase_do_resultado`,
+    também do dono, é recibo — e desde 13/09/2026 (TELA-CALADA-03) vai ao diário
+    da janela, não à tela. `forcar=True` é a regra dela de 09/08/2026: o clique
+    é gesto explícito e a vontade da tela prevalece; só o gancho de lançamento
+    respeita a memória sem perguntar.
 
     RECUSA COM JOGO ABERTO, e a razão é do produto: o Wine mantém o registro do
     prefixo em MEMÓRIA e o regrava ao sair, então escrever agora seria trabalho
@@ -2980,6 +3077,7 @@ def procurar_camadas(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]
 
     from hefesto_dualsense4unix.integrations import steam_launch_options as slo
 
+    _limpar_o_painel()
     if slo.steam_game_running():
         raise RuntimeError(
             "Tem jogo aberto — feche-o e clique de novo. Com o jogo vivo o "
@@ -2988,10 +3086,9 @@ def procurar_camadas(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]
     devolver = not _CAMADAS.get("tirar", True)
     resultados = cv.curar_todos(religar=devolver, forcar=True)
     _CAMADAS.clear()
-    carga = _para_o_painel(
-        _emulacao.frase_do_resultado(resultados, devolver=devolver))
-    carga["blocos"] = blocos_dos_botoes(_de_pe(ctx))
-    return carga
+    _relatar_o_recibo("procurar-camadas",
+                      _emulacao.frase_do_resultado(resultados, devolver=devolver))
+    return {"blocos": blocos_dos_botoes(_de_pe(ctx))}
 
 
 @gesto("09-sistema.html", "ver-plugins")

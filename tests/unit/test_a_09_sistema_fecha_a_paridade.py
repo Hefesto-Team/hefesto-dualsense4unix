@@ -630,8 +630,13 @@ def test_o_primeiro_clique_do_consertos_mede_e_nao_mexe(a09, ctx, monkeypatch):
     assert "Clique de novo" in painel, painel
 
 
-def test_o_segundo_clique_do_consertos_roda_os_dois_scripts(a09, ctx, monkeypatch):
+def test_o_segundo_clique_do_consertos_roda_os_dois_scripts(a09, ctx, monkeypatch,
+                                                           capsys):
     """Clique 2: os dois scripts do produto, e o recibo é do DONO.
+
+    O RECIBO SAIU DO PAINEL EM 13/09/2026 (TELA-CALADA-03): é recibo, e a régua
+    dela tira recibo da tela. Continua sendo o do dono e continua escrito — no
+    diário da janela —, e o painel volta ao repouso.
 
     MORDIDA: troquei `CONSERTOS` por uma tupla vazia. Reprovou dizendo que
     nenhum script rodou — e o `format_fix_safe_result` respondeu *"Não encontrei
@@ -653,8 +658,11 @@ def test_o_segundo_clique_do_consertos_roda_os_dois_scripts(a09, ctx, monkeypatc
         assert comando[0] == "bash" and comando[1].endswith(relpath.split("/")[-1])
         assert comando[2:] == args, comando
     # O RECIBO É O DO PRODUTO, e não uma frase desta régua nem do gesto.
-    assert carga["mesa"][a09.REGISTRO] == a09._daemon.format_fix_safe_result(
-        {"ran": 2, "missing": 0, "steam_input": (0, ""), "steam_input_jogos": []})
+    assert set(carga) == {"blocos"}, carga
+    assert a09._PAINEL[0] is None, "a pergunta do clique 1 ficou no painel"
+    assert a09._daemon.format_fix_safe_result(
+        {"ran": 2, "missing": 0, "steam_input": (0, ""), "steam_input_jogos": []},
+    ) in capsys.readouterr().err
     assert not a09._LENTO, (
         "a faixa lenta sobreviveu ao conserto: o exame do cartão ao lado acabou "
         "de mudar de valor, e mostrar o de até 2 s atrás ao lado do recibo é a "

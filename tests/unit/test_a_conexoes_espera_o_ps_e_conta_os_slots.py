@@ -26,9 +26,13 @@ O QUE ESTA RÉGUA COBRA, e nenhuma delas passa por acaso
    (`_BlocoDaLuz._chegou_o_gesto`): `caiu` falso significa "não achei" ou "não
    consegui falar com o `bluetoothd`", e nos dois mandar apertar PS é gastar o
    gesto dela por uma coisa que não aconteceu.
-4. **O recado sobrevive à espera** — sem ele "não voltou" viraria silêncio, que
-   é o defeito que o ELO-MUDO-01 nomeou — **e morre quando o controle volta**,
-   porque uma frase que envelhece na tela é o mesmo defeito do outro lado.
+4. **O fim da espera não fala na tela** — MUDOU DE CONTRATO EM 13/09/2026
+   (TELA-CALADA-03). Até ali o recado do fim sobrevivia à espera, pela razão do
+   ELO-MUDO-01 (*sem ele "não voltou" viraria silêncio*), e morria quando o
+   controle voltava. A palavra dela vence essa razão: *"essas frases de status
+   (…) não deveria estar aparecendo"*, *"em todas as abas da interface"*. A
+   instrução do segundo tempo (o PS com a contagem) fica; a frase do fim vai ao
+   diário da janela, uma vez só.
 5. **Nenhuma frase nasce na interface.** As sete que a tela mostra são
    comparadas contra o DONO em `app/`, e não redigitadas aqui.
 6. **Os três endereços existem na página que o produto renderiza.** Campo sem
@@ -176,7 +180,7 @@ def test_o_relogio_conta_segundos_e_nao_tiques(a08, dono) -> None:
     """
     a08.comecar_a_espera(UNIQ, agora=0.0, sonda=lambda: set())
     for i in range(1, 11):
-        a08._correr_as_esperas(set(), agora=i / 10.0)
+        a08._correr_as_esperas(agora=i / 10.0)
     dele = a08._ESPERAS[CHAVE]
     assert dele.espera.restantes == dono.ESPERA_PELO_PS_S - 1, (
         f"dez pinturas num segundo comeram "
@@ -185,9 +189,9 @@ def test_o_relogio_conta_segundos_e_nao_tiques(a08, dono) -> None:
 
 def test_a_espera_termina_no_tempo_do_dono(a08, dono) -> None:
     a08.comecar_a_espera(UNIQ, agora=0.0, sonda=lambda: set())
-    a08._correr_as_esperas(set(), agora=float(dono.ESPERA_PELO_PS_S) - 1)
+    a08._correr_as_esperas(agora=float(dono.ESPERA_PELO_PS_S) - 1)
     assert a08.esperando(UNIQ), "a espera acabou ANTES dos segundos do dono"
-    a08._correr_as_esperas(set(), agora=float(dono.ESPERA_PELO_PS_S))
+    a08._correr_as_esperas(agora=float(dono.ESPERA_PELO_PS_S))
     assert not a08.esperando(UNIQ), "a espera passou dos segundos do dono"
 
 
@@ -218,44 +222,56 @@ def test_o_segundo_clique_cancela_sem_falar_com_o_radio(
 
 
 # ---------------------------------------------------------------------------
-# 4 · O recado do fim — ele sobrevive, e morre quando deixa de ser verdade
+# 4 · O fim da espera — ele não fala na tela, e vai ao diário
+#
+# MUDOU DE CONTRATO EM 13/09/2026 (TELA-CALADA-03). Os três casos que moravam
+# aqui cobravam o recado do fim NA LINHA DO CARTÃO: `nao_voltou` sobrevivendo à
+# espera, morrendo quando o controle voltava, e `nao_caiu` com a frase do dono.
+# A palavra dela tirou a frase da tela — ver o item 4 do cabeçalho. O que se
+# cobra agora é a outra metade de cada um: a frase continua sendo a do DONO, e
+# ela chega ao diário da janela UMA vez.
 # ---------------------------------------------------------------------------
 
 
-def test_o_recado_de_nao_voltou_sobrevive_a_espera(a08, dono) -> None:
+def test_o_fim_de_nao_voltou_nao_fala_na_tela_e_vai_ao_diario(
+        a08, dono, capsys) -> None:
     a08.comecar_a_espera(UNIQ, agora=0.0, sonda=lambda: set())
-    a08._correr_as_esperas(set(), agora=float(dono.ESPERA_PELO_PS_S))
+    a08._correr_as_esperas(agora=float(dono.ESPERA_PELO_PS_S))
     assert not a08.esperando(UNIQ)
-    assert a08.linha_da_espera(UNIQ) == dono.frase_nao_voltou(dono.ESPERA_PELO_PS_S), (
-        "a frase do fim não é a do dono — e ela tem DUAS orações de propósito: "
-        "sem a segunda a pessoa lê 'não voltou' como 'perdi o pareamento'")
-
-
-def test_o_recado_morre_quando_o_controle_volta(a08, dono) -> None:
-    a08.comecar_a_espera(UNIQ, agora=0.0, sonda=lambda: set())
-    a08._correr_as_esperas(set(), agora=float(dono.ESPERA_PELO_PS_S))
-    assert a08.linha_da_espera(UNIQ) != a08._sem_valor()
-    a08._correr_as_esperas({CHAVE}, agora=float(dono.ESPERA_PELO_PS_S) + 1)
     assert a08.linha_da_espera(UNIQ) == a08._sem_valor(), (
-        '"Não voltou" com o controle de volta na lista é a tela afirmando o que '
-        "já não é verdade")
+        "a espera acabou e a linha do cartão continuou falando")
+    diario = capsys.readouterr().err
+    assert dono.frase_nao_voltou(dono.ESPERA_PELO_PS_S) in diario, (
+        "a frase do fim não chegou ao diário — ou não é a do dono, que tem DUAS "
+        f"orações de propósito: {diario!r}")
 
 
-def test_o_que_nao_caiu_do_radio_diz_a_frase_do_dono(a08, dono) -> None:
-    """Nunca viu sumir → `nao_caiu`, e a frase é a do dono."""
+def test_o_fim_vai_ao_diario_uma_vez_so(a08, dono, capsys) -> None:
+    """Dez tiques depois do fim, UMA linha — o diário não vira dez por segundo."""
+    a08.comecar_a_espera(UNIQ, agora=0.0, sonda=lambda: set())
+    for i in range(10):
+        a08._correr_as_esperas(agora=float(dono.ESPERA_PELO_PS_S) + i)
+    frase = dono.frase_nao_voltou(dono.ESPERA_PELO_PS_S)
+    assert capsys.readouterr().err.count(frase) == 1
+
+
+def test_o_que_nao_caiu_do_radio_vai_ao_diario_com_a_frase_do_dono(
+        a08, dono, capsys) -> None:
+    """Nunca viu sumir → `nao_caiu`: a frase é a do dono, e fica fora do cartão."""
     a08.comecar_a_espera(UNIQ, agora=0.0, sonda=lambda: {CHAVE})
-    a08._correr_as_esperas(set(), agora=float(dono.ESPERA_PELO_PS_S))
-    assert a08.linha_da_espera(UNIQ) == dono.FRASE_NAO_CAIU
+    a08._correr_as_esperas(agora=float(dono.ESPERA_PELO_PS_S))
+    assert a08.linha_da_espera(UNIQ) == a08._sem_valor()
+    assert dono.FRASE_NAO_CAIU in capsys.readouterr().err
 
 
 def test_o_controle_que_volta_sai_da_espera_sem_recado(a08, dono) -> None:
     presentes = [{CHAVE}]
     a08.comecar_a_espera(UNIQ, agora=0.0, sonda=lambda: presentes[0])
-    a08._correr_as_esperas(set(), agora=1.0)
+    a08._correr_as_esperas(agora=1.0)
     presentes[0] = set()            # caiu
-    a08._correr_as_esperas(set(), agora=2.0)
+    a08._correr_as_esperas(agora=2.0)
     presentes[0] = {CHAVE}          # ela apertou PS
-    a08._correr_as_esperas(set(), agora=3.0)
+    a08._correr_as_esperas(agora=3.0)
     assert not a08.esperando(UNIQ), "o controle voltou e a espera continuou contando"
     assert a08.linha_da_espera(UNIQ) == a08._sem_valor(), (
         "voltar não é notícia ruim; a linha não tem o que dizer")
@@ -464,7 +480,7 @@ def _carga_da_luz(a08, pac, esperando_agora: bool, transporte: str = "bt") -> di
         # carga tinha voltado a ser a de repouso).
         agora = a08._agora()
         a08.comecar_a_espera(UNIQ, agora=agora, sonda=lambda: set())
-        a08._correr_as_esperas(set(), agora=agora + 1)
+        a08._correr_as_esperas(agora=agora + 1)
     ctx = pac.Contexto(state={"controllers": [cru]}, mesa=[eu], conectados=[cru],
                        estados={})
     return dict(pac.normalizar(a08.pacote(ctx), {UNIQ: "p1"}))
