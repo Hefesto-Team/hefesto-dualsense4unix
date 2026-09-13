@@ -55,8 +55,8 @@ Python. O ensaio isolado do §V (opcional) não foi feito. A rota seguida é a d
 
 **Um fato medido nesta sprint, e ele muda como se usa o dono:** o PDEATHSIG é
 da **thread** que lançou, não do processo. Um dublê ocioso lançado de uma
-thread curta, com o `prctl`, morreu com rc −9 meio segundo depois de a thread
-terminar. Sem o `prctl`, continuou vivo. Os dois filhos de vida longa nascem
+thread curta, com o `prctl`, morreu com rc −9 2,1 ms depois de a thread
+terminar (tempo remedido na validação). Sem o `prctl`, continuou vivo. Os dois filhos de vida longa nascem
 das threads de reconciliação (`hefesto-som-sup` e `hefesto-btmic-sup`), que
 vivem tanto quanto eles. A consequência está no cabeçalho do dono: no `stop`,
 quando a `hefesto-som-sup` termina, o `pw-record` já leva SIGKILL antes do
@@ -144,3 +144,82 @@ documento(s) e 9 planilha(s)`. Nenhuma célula de planilha andou.
   cita `_sink_proprio_vivo` numa linha de `alto_falante_bt.py` que desceu cerca
   de 45 linhas. É registro de `docs/process/`, fora do oráculo e fora da posse,
   e não foi reapontado.
+
+## O que a validação refez e corrigiu
+
+Agente VALIDA/CORRIGE, mesma árvore e mesma branch. Commits `e29f552e`
+(docstring) e `9d8b002e` (réguas), mais este registro.
+
+**As travas.** O servidor de som dela teve os mesmos quatro PIDs do começo ao
+fim — `pipewire` 1939658 e 1939660, `wireplumber` 1939659, `pipewire-pulse`
+1939661, nascidos às 17:26:32 —, com `timeout 3 pactl info` em rc=0 nas duas
+pontas. Foi a única pergunta à sessão dela. Réguas, lotes vizinhos e portões
+rodaram com `PULSE_SERVER`, `PIPEWIRE_REMOTE`, `PIPEWIRE_RUNTIME_DIR`,
+`PULSE_RUNTIME_PATH`, `PULSE_CLIENTCONFIG` (`autospawn = no`) e
+`DBUS_SESSION_BUS_ADDRESS` apontados para o rascunho, com uma guarda que sai se
+o desvio não pegou. Nenhum dublê vivo e nenhum órfão no fim.
+
+**O achado: quatro mordidas passavam com as réguas todas verdes**, e as quatro
+arrancavam exatamente o que a rota manda conferir. O código estava certo;
+nenhuma régua o pinava.
+
+| mordida | o que se arrancou | antes | depois |
+| --- | --- | --- | --- |
+| M8 | `derrubar_leitor_de_pipe` fecha o `stdout` sem olhar o leitor, no primeiro fechamento | 12 passed | R7 reprova: `o descer fechou o stdout do gravador com o laço ainda vivo` |
+| M8b | o mesmo, no último fechamento | 12 passed | R7 reprova, a mesma frase |
+| M9 | `ponte.descer()` direto no `stop`, no lugar do `gather` de `to_thread` | 12 passed | R8 reprova: `o event loop ficou 1011 ms sem bater` |
+| M11 | o `derrubar_leitor_de_pipe` do ramo `if fonte is None` de `_casar_as_pontes` | 12 passed | R9 reprova: `a fonte voltou sem PCM e o processo dela ficou vivo` |
+
+As três réguas novas moram no mesmo arquivo. A R7 prende o laço no `write` de
+um hidraw de cano cheio, e com isso o leitor fica vivo durante o `descer`: o
+gravador tem de morrer pelo KILL com o cano ainda aberto, e o `descer` devolve
+`False`. A R8 bate a cada 10 ms no event loop enquanto o `stop` desce um
+teimoso que leva 1 s. A R9 dá ao subsystem uma fonte que devolve
+`(None, processo, motivo)`.
+
+**As outras mordidas, refeitas.** Onze sabotagens por troca exata de texto, com
+a cura devolvida por `git checkout --`, `git diff` conferido vazio e nenhum
+sobrevivente depois:
+
+- M1 a M7 são as mesmas da tabela das sete mordidas, em «Qual mordida prova»,
+  e reprovaram igual. Com as réguas
+  novas, a M1 derruba 8 e a M2 derruba 3, porque R7 e R8 também dependem do KILL.
+- M10, o `descer` tirado do ramo da ponte que não sobe: reprova
+  `test_a_ponte_que_nao_sobe_colhe_o_gravador`.
+- M12, o nome `_morrer_com_o_pai` tirado de `nivel_do_microfone` sem quebrar o
+  `abrir_fluxo`: reprova o medidor com `AttributeError`.
+- M13a, `fonte_do_monitor_do_no` voltando ao `Popen` cru: reprova R5
+  `[gravador]`. M13b, `_lancar_processo` voltando ao `Popen` cru: reprova R5
+  `[alimentador]`.
+
+A régua com as nove verdes rodou três vezes seguidas, sem oscilar.
+
+**Conferido lendo, sem mudança.**
+
+- **Quem lança.** `fonte_do_monitor_do_no` só é chamada por `_casar_as_pontes`,
+  que só roda na `hefesto-som-sup`. O alimentador com `fonte` só nasce de
+  `BtMicSubsystem._abrir_os_canais_do_cabo`, na `hefesto-btmic-sup`. A
+  `PonteMicBluetooth` abre o canal sem `fonte`, e portanto sem processo.
+  Nenhum chamador de hoje lança leitor de uma thread curta.
+- **O PDEATHSIG por thread, remedido.** Pelo dono, numa thread curta, o dublê
+  morreu com rc −9 2,1 ms depois de a thread terminar. Sem o `prctl`, ficou
+  vivo 2 s. Lançado da thread principal, ficou vivo.
+- **A tela.** As páginas publicadas têm 276 `<button>` e 354 `data-gesto` na
+  base e na ponta, e nenhum arquivo de tela entrou no diff. O `ComoMorreu` só
+  vai para o `logger`.
+- **A posse.** Os oito arquivos do diff cabem em `posse`/`cria`, na entrega e
+  na sprint.
+- **O oráculo.** `scripts/validar-citacoes-de-linha.py --all` dá
+  `OK: 3288 citação(ões)`.
+
+**Corrigido.** A docstring de `AltoFalanteSubsystem.stop` dizia que a ordem de
+antes era «a mesma ordem da queda». Não era: na queda a ponte já descia antes
+do nó. O comum às duas era o nó sair com o gravador vivo, e é isso que o texto
+diz agora (`e29f552e`). Nesta entrega, «meio segundo» virou os 2,1 ms medidos.
+
+**Os vizinhos.** Os 76 arquivos de `tests/unit` que citam os arquivos da posse
+rodaram em seis lotes: 1515 passaram e 1 reprovou. O que reprovou foi
+`test_o_no_de_som_nao_nasce_sumidouro.py::test_a_guarda_recusa_a_escrita_e_deixa_a_leitura_passar`,
+que lê `pactl list sinks short` do servidor de verdade. Com o som desviado, ele
+reprova igual na base `9639f1df` extraída no rascunho: quem reprova é o desvio,
+não a branch. Não o rodei contra a sessão dela.
