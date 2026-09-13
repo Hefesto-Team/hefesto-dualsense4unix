@@ -793,10 +793,10 @@ class AltoFalanteSubsystem:
         **A ORDEM É A CURA — SOM-TRAVA-NA-QUEDA-01, 13/09/2026.** Até esta data
         o ``gerenciador.parar()`` vinha PRIMEIRO: os nós saíam com o
         ``pw-record`` de cada ponte ainda vivo, lendo o monitor de um nó que
-        acabava de sumir, e as pontes só desciam depois. É a mesma ordem da
-        queda que travou a sessão de som dela duas vezes no dia. Agora: parar a
-        reconciliação, descer as pontes (que colhem os gravadores) e só então
-        tirar os nós.
+        acabava de sumir, e as pontes só desciam depois. É o mesmo estado que a
+        queda deixava quando a sessão de som dela travou duas vezes no dia: o
+        nó fora e o gravador vivo. Agora: parar a reconciliação, descer as
+        pontes (que colhem os gravadores) e só então tirar os nós.
         """
         self._parar.set()
         thread = self._thread
