@@ -425,3 +425,77 @@ def test_o_state_full_publica_o_caminho_que_acende_o_chip() -> None:
         assert aba._estado_da_tela(cheio)["modo-aceso"] == caminho, (
             f"o chip de modo não acendeu o caminho {caminho!r} publicado"
         )
+
+
+# ---------------------------------------------------------------------------
+# ACRESCENTADA NA SEGUNDA VALIDAÇÃO — 13/09/2026
+# ---------------------------------------------------------------------------
+# As três bancadas desta sprint trocam `session.save_gamepad_caminho` por um
+# dublê, e nenhuma régua lia a flag do caminho no boot. Medido: arrancar do
+# `Daemon.run` a leitura de `load_gamepad_caminho`, ou gravar o caminho dentro da
+# flag velha, passava com todas as réguas verdes.
+
+#: As escritas REAIS da sessão, guardadas no import — antes de o `_bancada`
+#: trocá-las pelos dublês.
+_SALVAR_EMULACAO_REAL = session.save_gamepad_emulation
+_SALVAR_CAMINHO_REAL = session.save_gamepad_caminho
+
+
+class _ParouNoTecladoError(Exception):
+    """O boot chegou ao restore do teclado: o do caminho já tinha passado."""
+
+
+def test_o_caminho_escolhido_volta_com_o_boot_e_a_flag_velha_nao_muda(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """§I, `utils/session.py`: o caminho persiste AO LADO da flag, que o boot lê.
+
+    Três metades: só o gesto manual persiste (a R-07 do liga/desliga); o
+    `gamepad_emulation.flag` sai byte a byte igual; e o `Daemon.run` REAL devolve
+    à config o caminho que ela escolheu.
+
+    MORDE: tirar do `run` a leitura de `load_gamepad_caminho` (o boot nasce sem o
+    caminho), gravar o caminho dentro do `gamepad_emulation.flag` (a flag velha
+    muda de formato) ou persistir fora do gesto manual.
+    """
+    from hefesto_dualsense4unix.testing import FakeController
+
+    monkeypatch.setattr(session, "save_gamepad_caminho", _SALVAR_CAMINHO_REAL)
+    pasta = xdg_paths.config_dir(ensure=True)
+    velha = pasta / "gamepad_emulation.flag"
+    nova = pasta / "gamepad_caminho.flag"
+    try:
+        _SALVAR_EMULACAO_REAL(True, "dualsense")
+        bytes_da_velha = velha.read_bytes()
+        nova.unlink(missing_ok=True)
+        d = SimpleNamespace(config=SimpleNamespace(gamepad_caminho=None))
+
+        gp._guardar_o_caminho(d, "xbox", origin="profile")  # type: ignore[arg-type]
+        assert d.config.gamepad_caminho == "xbox"
+        assert session.load_gamepad_caminho() is None, "um perfil persistiu o caminho dela"
+
+        gp._guardar_o_caminho(d, "xbox", origin="manual")  # type: ignore[arg-type]
+        assert session.load_gamepad_caminho() == "xbox", "o gesto dela não persistiu"
+        assert velha.read_bytes() == bytes_da_velha, "a flag velha mudou de formato"
+        assert session.load_gamepad_emulation() == (True, "dualsense")
+
+        def _parar(*_a: Any, **_k: Any) -> None:
+            raise _ParouNoTecladoError
+
+        monkeypatch.setattr(session, "load_keyboard_preference", _parar)
+        daemon = lifecycle.Daemon(controller=FakeController(transport="usb"))
+        try:
+            with pytest.raises(_ParouNoTecladoError):
+                asyncio.run(daemon.run())
+        finally:
+            for nome in ("_executor", "_external_executor"):
+                pool = getattr(daemon, nome, None)
+                if pool is not None:
+                    pool.shutdown(wait=False)
+        assert daemon.config.gamepad_caminho == "xbox", "o boot não leu o caminho dela"
+        if not daemon._native_mode:
+            assert (daemon.config.gamepad_emulation_enabled, daemon.config.gamepad_flavor) == (
+                True, "dualsense"), "o boot passou a ler a flag velha de outro jeito"
+    finally:
+        velha.unlink(missing_ok=True)
+        nova.unlink(missing_ok=True)
