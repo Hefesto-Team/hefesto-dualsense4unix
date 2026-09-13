@@ -10,7 +10,7 @@ POR QUE ESTA RÉGUA EXISTE, e o motivo é um erro de MEDIÇÃO, não de código 
 
     Três réguas chamavam esse valor de *"o chip Perfil ativo"* e provavam nele
     uma cura do marcador órfão. Ficavam verdes sem tocar em nada que ela veja: o
-    chip é ``<span class="pa-nome" data-campo="perfil">`` (linha 1035 das duas
+    chip é ``<span class="pa-nome" data-campo="perfil">`` (o mesmo nas duas
     páginas), mora no ``topo.html`` — que é das DEZ abas — e quem o pinta é
     ``pacotes.topo()``, com ``ctx.state.get("active_profile")`` CRU.
 

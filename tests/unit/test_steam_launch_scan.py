@@ -117,7 +117,7 @@ def test_execcondition_das_units_nao_casa(proc_falso):
 
 
 def test_running_e_appid_nunca_discordam(proc_falso):
-    """Invariante de construção: se casou, há appid para extrair."""
+    """Se casou, há appid — fora o avaliador do install script (13/09/2026)."""
     for mapa in (
         {"1": ISCA_PGREP, "2": REAPER},
         {"1": REAPER},

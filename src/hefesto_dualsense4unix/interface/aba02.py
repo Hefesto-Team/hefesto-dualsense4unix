@@ -1182,8 +1182,8 @@ CSS = CSS_GLIFO + CSS_LUZINHAS + """
 #
 #   data-gesto="mudo" · data-mudo="microfone"   QUEM atende · SOBRE O QUÊ
 #
-# A razão é medida no piloto: `hefesto_vivo.py:202` monta o nome do gesto como
-# `d.gesto || d.hefGesto || d.papel || 'clique'`. Um botão marcado só com
+# A razão é medida no piloto: `hefesto_vivo.py:1373` monta o nome do gesto como
+# `d.gesto || d.hefGesto || d.papel || doRodape || 'clique'`. Um botão marcado só com
 # `data-mudo` chega ao despachante chamando-se **`clique`** — os oito botões de
 # som e sensor da aba disputariam UM nome, e o gesto teria de adivinhar qual
 # deles foi pelo texto. O `data-gesto` é o endereço de QUEM atende; o

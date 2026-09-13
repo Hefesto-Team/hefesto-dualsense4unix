@@ -1534,7 +1534,7 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
 #     {'mesa': {'a': 1}, 'colunas': {}}
 #
 # O piloto tem o mecanismo (`hefesto_vivo.BOOTSTRAP`, o laço sobre `p.blocos`),
-# e a `a08_conexoes.py:1774` já o usa para o mapa do gabinete — que portanto
+# e a `a08_conexoes.py:3781` já o usa para o mapa do gabinete — que portanto
 # TAMBÉM não chega à tela. O conserto é uma linha em `pacotes/__init__.py`, que
 # é território compartilhado e não é meu; está no relatório desta frente.
 #
