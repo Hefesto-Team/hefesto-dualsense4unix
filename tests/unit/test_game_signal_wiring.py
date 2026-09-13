@@ -184,7 +184,7 @@ async def test_gather_falhando_degrada_para_unknown_sem_derrubar_o_tick(
     assert daemon.display_authority == "unknown"
     # Fail-safe honra o MESMO callback de abertura de gate da transição
     # `daemon->game|unknown` (NUMA-02): a queda para `unknown` por I/O
-    # quebrado também precisa devolver as réplicas retidas.
+    # quebrado também chama o replay (desde LIGHTBAR-NA-STEAM-01, descarta o retido).
     assert ctrl.replay_calls == 1
 
 

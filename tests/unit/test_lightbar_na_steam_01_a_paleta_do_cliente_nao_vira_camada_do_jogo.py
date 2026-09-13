@@ -22,16 +22,23 @@ retenção e continua.
 AS MORDIDAS: devolver a entrega no replay faz o merge responder (64, 0, 0) e o
 padrão `-x-x-`; tirar `cor`, `players` ou `autoridade` dos logs apaga a prova
 que o journal precisa para separar a paleta do SDL de pintura legítima de jogo.
+
+O PREÇO, fixado de propósito (§R da sprint): o vpad deduplica por valor dentro
+da sessão uhid (`_queue_replica`), então a paleta que o cliente regravar igual
+depois do sinal também não chega; só um valor NOVO do jogo vira camada GAME.
 """
 from __future__ import annotations
 
+import struct
 from types import SimpleNamespace
 from typing import Any
 
+import pytest
 import structlog
 from pydualsense.pydualsense import DSAudio, DSLight, DSTrigger
 
 from hefesto_dualsense4unix.core import backend_pydualsense as bp
+from hefesto_dualsense4unix.integrations import uhid_gamepad
 
 MAC_1 = "AA:BB:CC:00:00:01"
 UNIQ_1 = "aabbcc000001"
@@ -296,3 +303,153 @@ class TestOJournalDizOValorEAAutoridade:
 
         replicas = _eventos(registros, "game_output_replicado")
         assert replicas[0]["autoridade"] == "sem_provider"
+
+    def test_o_descarte_no_close_diz_o_que_foi_descartado(self) -> None:
+        """O terceiro log que a cura encheu: a sessão que fecha sem o jogo ter
+        tocado o controle diz no journal qual paleta morreu com ela."""
+        ctl, _no, _ = _controle_com_perfil(_Autoridade("daemon"))
+        ctl.set_game_output_for(MAC_1, led=COR_DA_PALETA, player_leds=PADRAO_DA_PALETA)
+
+        with structlog.testing.capture_logs() as registros:
+            assert ctl.end_game_session_for(MAC_1) is True
+
+        fechados = _eventos(registros, "game_output_retido_descartado_no_close")
+        assert len(fechados) == 1
+        assert fechados[0]["uniq"] == UNIQ_1
+        assert fechados[0]["cor"] == COR_DA_PALETA
+        assert fechados[0]["players"] == PADRAO_DA_PALETA
+        assert fechados[0]["autoridade"] == "daemon"
+        assert ctl._retained_game_outputs == {}
+
+
+# ---------------------------------------------------------------------------
+# O preço pelo caminho inteiro: o vpad uhid entregando ao backend de verdade
+# ---------------------------------------------------------------------------
+
+
+def _blueprint() -> dict[str, Any]:
+    return {
+        "descriptor": bytes([0x05, 0x01, 0x09, 0x05, 0xA1, 0x01]),
+        "features": {
+            0x05: bytes([0x05]) + bytes(40),
+            0x09: bytes([0x09]) + bytes.fromhex("010000ccbbaa") + bytes(13),
+            0x20: bytes([0x20]) + bytes(63),
+        },
+    }
+
+
+def _evento(tipo: int) -> bytes:
+    return struct.pack("<I", tipo) + bytes(8)
+
+
+def _report_de_luz(rgb: tuple[int, int, int], padrao: tuple[bool, ...]) -> bytes:
+    """UHID_OUTPUT com um 0x02 que acende a lightbar e o LED de jogador."""
+    corpo = bytearray(47)
+    corpo[1] = (
+        uhid_gamepad._LIGHTBAR_CONTROL_ENABLE
+        | uhid_gamepad._PLAYER_INDICATOR_CONTROL_ENABLE
+    )
+    corpo[43] = sum(1 << i for i, aceso in enumerate(padrao) if aceso)
+    corpo[44:47] = bytes(rgb)
+    relatorio = bytes([0x02]) + bytes(corpo)
+    tamanho = uhid_gamepad.HID_MAX_DESCRIPTOR_SIZE
+    evento = struct.pack("<I", uhid_gamepad.UHID_OUTPUT)
+    evento += relatorio.ljust(tamanho, b"\0")[:tamanho]
+    evento += struct.pack("<HB", len(relatorio), 1)
+    return evento
+
+
+class _Relogio:
+    def __init__(self) -> None:
+        self.t = 0.0
+
+    def __call__(self) -> float:
+        return self.t
+
+
+def _uhid_falso(monkeypatch: pytest.MonkeyPatch) -> list[bytes]:
+    """`/dev/uhid` de mentira: os `os.*` do módulo dublados, nada abre de fato.
+
+    Chamado DEPOIS de o backend nascer, para o dublê não alcançar o construtor.
+    """
+    leituras: list[bytes] = []
+    monkeypatch.setattr(uhid_gamepad.os, "open", lambda *_a, **_k: 4242)
+    monkeypatch.setattr(uhid_gamepad.os, "close", lambda _fd: None)
+    monkeypatch.setattr(uhid_gamepad.os, "set_blocking", lambda _fd, _b: None)
+    monkeypatch.setattr(uhid_gamepad.os, "write", lambda _fd, data: len(data))
+
+    def _read(_fd: int, _size: int) -> bytes:
+        if not leituras:
+            raise BlockingIOError
+        return leituras.pop(0)
+
+    monkeypatch.setattr(uhid_gamepad.os, "read", _read)
+    return leituras
+
+
+class TestOPrecoPeloVpad:
+    def test_a_paleta_regravada_igual_nao_volta_e_a_cor_nova_do_jogo_chega(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """O caminho do incidente, com o vpad uhid na frente do backend.
+
+        O cliente Steam segura o vpad a sessão inteira: a paleta que ele pinta
+        sob 'daemon' fica retida, e o replay a descarta. Regravada IGUAL depois
+        do sinal, o dedup por valor do vpad (`_queue_replica`) a derruba antes
+        do backend, e a cor do perfil fica. É o mesmo filtro que cobra o preço
+        do §R: o LED de jogador que um jogo escrever antes do sinal e repetir
+        igual depois também não volta. Um valor NOVO do jogo chega e vence
+        (REPLICA-03). Mordida: com a entrega de volta no replay, o merge
+        responde a paleta logo depois da regravação.
+        """
+        autoridade = _Autoridade("daemon")
+        ctl, _no, _ = _controle_com_perfil(autoridade)
+        leituras = _uhid_falso(monkeypatch)
+        relogio = _Relogio()
+        pad = uhid_gamepad.UhidDualSense(
+            player=1,
+            blueprint=_blueprint(),
+            time_fn=relogio,
+            sleep_fn=lambda _s: None,
+            lightbar_sink=lambda r, g, b: ctl.set_game_output_for(MAC_1, led=(r, g, b)),
+            player_led_sink=lambda bits: ctl.set_game_output_for(
+                MAC_1, player_leds=bits
+            ),
+        )
+        assert pad.start() is True
+        leituras += [_evento(uhid_gamepad.UHID_START), _evento(uhid_gamepad.UHID_OPEN)]
+        pad.pump_ff()
+        relogio.t = uhid_gamepad._GAME_REPLICA_GRACE_S + 0.5
+
+        # O cliente pinta o vpad sem jogo nenhum: chega ao backend e fica RETIDO.
+        leituras.append(_report_de_luz(COR_DA_PALETA, PADRAO_DA_PALETA))
+        pad.pump_ff()
+        assert ctl._retained_game_outputs[UNIQ_1] == {
+            "led": COR_DA_PALETA,
+            "player_leds": PADRAO_DA_PALETA,
+        }
+
+        autoridade.valor = "game"
+        ctl.replay_retained_game_outputs()
+
+        # A MESMA paleta de novo, na mesma sessão, já sob 'game'.
+        relogio.t += 1.0
+        leituras.append(_report_de_luz(COR_DA_PALETA, PADRAO_DA_PALETA))
+        pad.pump_ff()
+        with ctl._io_lock:
+            merged = ctl._merged_desired_for_key(MAC_1)
+        assert merged.led == COR_DO_PERFIL, "a paleta do cliente voltou como jogo"
+        assert merged.player_leds == PADRAO_DO_PERFIL
+        assert UNIQ_1 not in ctl._game_output_by_uniq
+        assert pad.lightbar_replicas == 1, "o vpad deixou passar a regravação igual"
+
+        # Uma cor NOVA do jogo atravessa o dedup e vira camada GAME; o padrão
+        # igual ao da paleta continua barrado — é o preço, à vista.
+        relogio.t += 1.0
+        leituras.append(_report_de_luz(COR_DO_JOGO, PADRAO_DA_PALETA))
+        pad.pump_ff()
+        with ctl._io_lock:
+            merged = ctl._merged_desired_for_key(MAC_1)
+        assert merged.led == COR_DO_JOGO
+        assert merged.player_leds == PADRAO_DO_PERFIL
+        pad.stop()
