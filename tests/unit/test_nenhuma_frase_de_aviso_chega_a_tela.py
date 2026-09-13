@@ -22,6 +22,11 @@ o aviso da mesa suja (a constante saiu de `secao_controles`) e o trecho da cor
 não lida (a literal saiu de `monta.py` e de `a03_gatilhos.py`; a da aba 09 é da
 SISTEMA-BOTOES-01 e fica fora desta régua, como o «O que fazer» da 09).
 
+MAIS DUAS ENTRARAM NA FRASES-E-DICAS-03 (13/09/2026), também como FRASE QUE
+SAIU, porque nenhuma tem constante de dono: a razão do nascimento na dica da luz
+da 08 (a frase vem montada do daemon, e a reserva `FRASE_NASCEU_CONDENADO` saiu)
+e a narração depois do travessão no sufixo das exceções do Steam Input, na 07.
+
 AS DUAS METADES, com pontos cegos diferentes de propósito:
 
 1. **o que os pacotes ESCREVEM por tique** — é onde as frases moravam, e a
@@ -67,6 +72,15 @@ AVISO_QUE_SAIU = "outro programa está segurando controle"
 #: O TRECHO QUE SAIU das dicas da cor da fita e da aba 03, 13/09/2026.
 COR_QUE_SAIU = "não foi lida"
 
+#: O MIOLO DA RAZÃO DO NASCIMENTO que saiu da dica da luz, 13/09/2026. Comum às
+#: duas redações que chegavam à tela: a do daemon (`sinal_da_barra`, montada na
+#: hora) e a reserva que saiu de `secao_controles`.
+RAZAO_QUE_SAIU = "a barra não obedece"
+
+#: A NARRAÇÃO DO SUFIXO DO STEAM INPUT, que saiu em 13/09/2026: o travessão
+#: depois da contagem das exceções. Morde qualquer redação nova depois dele.
+NARRACAO_QUE_SAIU = "jogo(s) —"
+
 #: A âncora que só vale na 08: o «O que fazer» da aba Sistema é de outra sprint.
 SO_NA_08 = "o prefixo da cura"
 
@@ -90,6 +104,8 @@ def _ancoras() -> dict[str, str]:
     return {
         "o aviso da mesa suja": AVISO_QUE_SAIU,
         "a cor não lida": COR_QUE_SAIU,
+        "a razão do nascimento": RAZAO_QUE_SAIU,
+        "a narração do sufixo": NARRACAO_QUE_SAIU,
         "a confissão do desenho": str(CONFISSAO_ABERTURA),
         "o ganho não medido": str(NAO_MEDI),
         "o canal dormindo": str(cc.DICA_CANAL_DORMINDO),
@@ -120,7 +136,8 @@ def test_a_regua_acha_cada_ancora_e_deixa_o_estado_passar() -> None:
         assert trecho, f"a âncora {nome!r} veio vazia do dono — a régua ficaria cega"
         assert nome in _achadas(f"… {trecho} …", com_a_cura=True), nome
     for estado in ("Canal de áudio dormindo", "Galactic Purple", "uma coisa",
-                   "Fora dos caminhos conhecidos", "Ligado em 2 jogos"):
+                   "Fora dos caminhos conhecidos", "Ligado em 2 jogos",
+                   "Desligado — tudo certo · Exceção por jogo: 1 jogo(s)"):
         assert _achadas(estado, com_a_cura=True) == [], estado
 
 
@@ -143,20 +160,38 @@ def test_a_dica_da_luz_nao_avisa_com_outro_programa_segurando_o_controle(
     """A sonda de verdade dublada em SUSPEITA, e a dica continua sem o aviso.
 
     As duas portas: a função e o tique inteiro (`pacote()`), que é quem a chama
-    com o carimbo de nascimento de cada controle.
+    para cada controle. A razão do nascimento tem régua própria, logo abaixo.
     """
     from hefesto_dualsense4unix.integrations import sinal_da_barra as sb
     from hefesto_dualsense4unix.interface.pacotes import a08_conexoes as p
 
     monkeypatch.setattr(sb, "limpo_para_conectar",
                         lambda *a, **k: (sb.CONFIANCA_SUSPEITA, "dublê", (4242,)))
-    condenado = {"pede_reconexao": True, "porque": "nasceu com outro processo no nó"}
     for via in ("bt", "usb", ""):
-        for nascimento in (None, condenado):
-            dica = p.dica_da_luz(via, nascimento)
-            assert not _achadas(dica), (via, nascimento, dica)
+        dica = p.dica_da_luz(via)
+        assert not _achadas(dica), (via, dica)
     dicas = [coluna.get("luz-dica", "") for coluna in p.pacote(_ctx())["colunas"].values()]
     assert dicas and all(dicas), f"o tique não escreveu a dica da luz: {dicas!r}"
+    assert not [d for d in dicas if _achadas(d)], dicas
+
+
+def test_a_dica_da_luz_nao_traz_a_razao_do_nascimento() -> None:
+    """Os dois controles chegam condenados no estado, e o tique não escreve a razão.
+
+    FRASES-E-DICAS-03, 13/09/2026. O carimbo de cada controle traz o miolo que a
+    tela mostrava. MORDIDA: devolva a razão à `dica_da_luz` e o `nascimento` à
+    chamada dela no `pacote()`, e esta régua reprova nos dois controles.
+    """
+    from hefesto_dualsense4unix.interface.pacotes import a08_conexoes as p
+
+    ctx = _ctx()
+    for controle in ctx.conectados:
+        controle["nascimento"] = {
+            "pede_reconexao": True,
+            "porque": ("nasceu com 1 processo(s) segurando o nó do controle — nesta "
+                       f"condição {RAZAO_QUE_SAIU}, e só a reconexão devolve")}
+    dicas = [coluna.get("luz-dica", "") for coluna in p.pacote(ctx)["colunas"].values()]
+    assert len(dicas) == 2 and all(dicas), dicas
     assert not [d for d in dicas if _achadas(d)], dicas
 
 
@@ -281,6 +316,31 @@ def test_a_dica_do_canal_e_rotulo_de_estado() -> None:
         assert not _achadas(dica), dica
         assert "PipeWire" not in dica and "medido" not in dica, dica
         assert sono in dica and _e_rotulo_de_estado(dica), dica
+
+
+# --------------------------------------------------------------------------
+# 07 — o sufixo das exceções do Steam Input
+# --------------------------------------------------------------------------
+def test_o_sufixo_das_excecoes_conta_e_nao_narra(monkeypatch: pytest.MonkeyPatch) -> None:
+    """A linha do Steam Input pelo caminho do produto, nos três estados da exceção.
+
+    FRASES-E-DICAS-03, 13/09/2026. A contagem fica, porque a 07 não mostra a
+    lista das exceções em outro lugar. MORDIDA: devolva a narração depois do
+    travessão em `emulation_actions.markup_status_steam_input`, e esta régua
+    reprova nos três estados.
+    """
+    from hefesto_dualsense4unix.app.actions import emulation_actions as ea
+    from hefesto_dualsense4unix.interface.pacotes import a07_lancadores as p7
+
+    monkeypatch.setattr(ea.EmulationActionsMixin, "_steam_input_is_on",
+                        staticmethod(lambda: False))
+    for efetiva in (True, False, None):
+        monkeypatch.setattr(ea.EmulationActionsMixin, "_steam_input_excecao_status",
+                            staticmethod(lambda e=efetiva: ([990000011], e)))
+        frase, _ligado = p7._o_que_a_steam_poe_no_meio()
+        visivel = _sem_etiqueta(frase)
+        assert "Exceção por jogo: 1 jogo(s)" in visivel, (efetiva, visivel)
+        assert not _achadas(visivel), (efetiva, visivel)
 
 
 # --------------------------------------------------------------------------
