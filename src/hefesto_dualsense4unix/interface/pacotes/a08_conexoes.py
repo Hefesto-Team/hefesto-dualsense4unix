@@ -2231,10 +2231,10 @@ def trava_da_luz(via: str) -> str:
     return LUZ_LIVRE if (via or "").strip().lower() == "bt" else LUZ_TRAVADA
 
 
-def dica_da_luz(via: str, nascimento: Any = None) -> str:
+def dica_da_luz(via: str) -> str:
     """A dica do botão "A luz não acende" — a do PRODUTO, e nunca vazia.
 
-    **TRÊS COISAS QUE A TELA NÃO DIZIA, e as três têm dono no produto:**
+    **TRÊS COISAS QUE A TELA NÃO DIZIA, e só a primeira FICOU:**
 
     1. **por que o botão está apagado.** O `title` do desenho é congelado: o
        primeiro cartão diz *"Este controle está no cabo"* e o segundo diz o que
@@ -2246,21 +2246,23 @@ def dica_da_luz(via: str, nascimento: Any = None) -> str:
        Ele era anexado à dica quando outro programa segurava nó de controle, e
        era aviso com instrução: a ordem dela de 13/09 tira frase de aviso da
        tela em toda forma, `title` incluído. A dica fica com o que o botão faz;
-    3. **a RAZÃO de a cura ser oferecida** — `frase_do_nascimento`, o carimbo
-       que o daemon põe na conexão (`SINAL-NO-NASCIMENTO-01`). Só a condenação
-       fala: ausência, `limpa` e `nao_sei` calam, cada um por um motivo medido
-       no dono. O `nascimento` chega por controle no `state_full`
-       (`ipc_handlers.py:3632`) e pacote nenhum o lia.
+    3. **a RAZÃO de a cura ser oferecida — que SAIU em 13/09/2026**
+       (FRASES-E-DICAS-03). `frase_do_nascimento` colava, depois do que o botão
+       faz, o carimbo que o daemon põe na conexão (`SINAL-NO-NASCIMENTO-01`):
+       *«▲ nasceu com 1 processo(s) segurando o nó do controle — …»*. Era estado
+       dito como aviso, e a mesma ordem o tira da dica. A função e a frase de
+       reserva saíram do dono; o carimbo `nascimento` continua no `state_full`,
+       para o diagnóstico.
 
-    **NENHUMA FRASE NASCE AQUI.** O que este arquivo faz é a junção — a mesma
-    que `secao_controles._card_do_controle` faz do lado da janela estável — e a
-    ordem: o que o botão faz primeiro, a razão de ele estar sendo oferecido
-    depois. O `▲` da razão já vem do dono.
+    **NENHUMA FRASE NASCE AQUI.** A dica é a do dono, pedida com os três campos
+    que `trava_da_luz` já respondeu — a mesma junção que
+    `secao_controles._card_do_controle` faz do lado da janela estável. A ordem
+    de 13/09 que tirou o aviso e a razão está no índice da terceira lista,
+    `docs/process/sprints/2026-09-13-A-TERCEIRA-LISTA-DELA-INDICE.md`.
     """
     perfil._com_o_src()
     from hefesto_dualsense4unix.app.actions.config.secao_controles import (
         dica_do_botao,
-        frase_do_nascimento,
     )
 
     # `dica_do_botao` pergunta ao objeto três coisas (`adotado`, `no_cabo`,
@@ -2270,9 +2272,7 @@ def dica_da_luz(via: str, nascimento: Any = None) -> str:
     no_radio = trava_da_luz(via) == LUZ_LIVRE
     dados = _dataclasses.make_dataclass(
         "ControleDaLuz", ["adotado", "no_cabo", "uniq"])(True, not no_radio, "x")
-    dica = dica_do_botao(dados)
-    razao = frase_do_nascimento(nascimento) if no_radio else None
-    return f"{dica} {razao}" if razao else dica
+    return dica_do_botao(dados)
 
 
 # ---------------------------------------------------------------------------
@@ -3727,10 +3727,10 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
             # :func:`dica_da_luz`. O `title` do desenho é congelado: o cartão da
             # esquerda explica o cabo e o da direita explica o rádio, e os dois
             # continuam explicando isso quando o controle troca de transporte.
-            # Junto vem a RAZÃO do carimbo de nascimento, que tem dono no
-            # produto. O aviso da mesa suja saiu em 13/09/2026 (ver a função).
-            "luz-dica": dica_da_luz(str(c.get("transport") or ""),
-                                    c.get("nascimento")),
+            # O aviso da mesa suja e a razão do carimbo de nascimento saíram da
+            # dica em 13/09/2026 (ver a função): ela diz só o que o botão faz, e
+            # o `nascimento` do `state_full` fica para o diagnóstico.
+            "luz-dica": dica_da_luz(str(c.get("transport") or "")),
             # O RÓTULO DO BOTÃO, e é ele que cumpre a promessa do `title`: na
             # espera o mesmo botão diz "Cancelar". Ver :func:`texto_do_botao_da_luz`.
             "luz-texto": texto_do_botao_da_luz(uniq),

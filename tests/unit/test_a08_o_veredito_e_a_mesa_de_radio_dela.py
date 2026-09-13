@@ -48,8 +48,8 @@ só ele:
                                                    vizinhos_tem_endereco`
  7   (caducou em 13/09/2026 — o aviso da mesa      `..._nao_anexa_o_aviso_
      suja saiu da dica, FRASES-E-DICAS-02)         da_mesa_suja`
- 8   `razao = None` em `dica_da_luz`               `..._a_razao_do_nascimento_
-                                                   so_fala_na_condenacao`
+ 8   (caducou em 13/09/2026 — a razão do           `..._a_razao_do_nascimento_
+     nascimento saiu da dica, FRASES-E-DICAS-03)   nao_chega_a_dica`
  9   `"Custa +16,3 turnos"` digitado no lugar      `..._o_custo_do_mic_no_
      da frase derivada                             radio_nao_e_digitado`
 10   o `<select data-gesto="mic-escopo">` de       `..._e_leitura_e_nao_
@@ -584,22 +584,32 @@ def test_a_dica_da_luz_nao_anexa_o_aviso_da_mesa_suja(monkeypatch) -> None:  # t
         f"mesa suja voltou a ser anexado: {suja!r}")
 
 
-def test_a_razao_do_nascimento_so_fala_na_condenacao() -> None:
-    """Ausência, `limpa` e `nao_sei` calam; só a condenação escreve.
+def test_a_razao_do_nascimento_nao_chega_a_dica() -> None:
+    """A RAZÃO DO NASCIMENTO SAIU DA DICA — FRASES-E-DICAS-03, 13/09/2026.
 
-    A razão vem PRONTA do daemon (`sinal_da_barra.Carimbo.porque`): a tela não
-    reescreve diagnóstico, e é isso que mantém uma frase só para as duas
-    superfícies.
+    CONTRATO QUE MUDOU: até esta data a condenação escrevia a razão depois do
+    que o botão faz. A ordem dela de 13/09
+    (`docs/process/sprints/2026-09-13-A-TERCEIRA-LISTA-DELA-INDICE.md`) tira da
+    tela frase de aviso em toda forma, `title` incluído: a dica fica com o que o
+    botão faz, e o carimbo `nascimento` fica no `state_full`, para o diagnóstico.
+
+    PASSA PELO TIQUE: os dois controles desta mesa chegam condenados no estado,
+    e o `pacote()` escreve para cada um só a dica do dono.
     """
+    from hefesto_dualsense4unix.app.actions.config.secao_controles import (
+        DICA_NO_CABO,
+        DICA_NO_RADIO,
+    )
+
     p = _pacote()
     porque = "Esta conexão nasceu com outro programa segurando o controle"
-    condenado = p.dica_da_luz("bt", {"pede_reconexao": True, "porque": porque})
-    assert porque in condenado, (
-        "a razão do carimbo de nascimento não chegou à dica — o botão oferece "
-        "uma cura sem dizer por que ela se aplica a ESTA conexão")
-    for calado in (None, {}, {"pede_reconexao": False, "porque": porque}):
-        assert porque not in p.dica_da_luz("bt", calado), (
-            f"o nascimento {calado!r} não condena e a tela acusou mesmo assim")
+    ctx = _ctx()
+    for controle in ctx.conectados:
+        controle["nascimento"] = {"pede_reconexao": True, "porque": porque}
+    dicas = [coluna.get("luz-dica", "") for coluna in p.pacote(ctx)["colunas"].values()]
+    assert sorted(dicas) == sorted([DICA_NO_CABO, DICA_NO_RADIO]), (
+        "com os dois controles condenados, a dica da luz deixou de ser só a do "
+        f"dono — a razão do carimbo de nascimento voltou à tela: {dicas!r}")
 
 
 def test_o_botao_da_luz_tem_a_dica_e_a_trava_em_nos_diferentes() -> None:

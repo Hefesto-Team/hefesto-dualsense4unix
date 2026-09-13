@@ -1,6 +1,6 @@
 ---
 sprint: FRASES-E-DICAS-03
-estado: aberta
+estado: feita
 onda: A-TERCEIRA-LISTA-DELA
 posse:
   FRASES-E-DICAS-03:
@@ -27,6 +27,8 @@ nao_toca:
 ---
 
 # FRASES-E-DICAS-03 — a razão do nascimento, o chip de dois donos e o sufixo do Steam Input
+
+> **ESTADO 2026-09-13: feita** — a dica do «A luz não acende» diz só o que o botão faz, o chip «Perfil ativo» tem um dono só e diz o mesmo nome nas dez abas, e o sufixo das exceções do Steam Input conta sem narrar. Sem página regerada e sem botão novo. [A entrega](../agentes/2026-09-13/FRASES-E-DICAS-03-opus.md)
 
 Nasceu na costura da onda 1 (13/09/2026). São três achados que as validações
 deixaram abertos só por posse. A palavra dela e a regra estão na

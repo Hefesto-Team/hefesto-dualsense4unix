@@ -1921,7 +1921,7 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
         #: `"true"`, e as duas réguas desta casa que traduzem o declarado dizem,
         #: por escrito, que erram nesse par.
         ENDERECO_DO_AUTOMATICO: "sim" if automatico_do_perfil(p) else "",
-        "perfil": ctx.state.get("active_profile") or "",
+        #: `perfil` saiu em 13/09/2026: o chip é das dez, dono `pacotes.topo()`.
         "sem_dono": {},
         #: O ANTES/DEPOIS DO RODAPÉ, com a mesa VIVA — ver `secao_da_troca`.
         #: Ele pousa por `document.querySelector`, então numa página que ainda

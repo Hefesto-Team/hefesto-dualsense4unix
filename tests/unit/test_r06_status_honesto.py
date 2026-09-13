@@ -123,6 +123,13 @@ class TestStatusDaAba:
         assert "Desligado — tudo certo" in markup
         assert "xceção" not in markup
 
+    # NOTA DATADA — 13/09/2026 (FRASES-E-DICAS-03). Os três casos abaixo
+    # cobravam o estado da exceção NARRADO na linha, depois de um travessão. A
+    # ordem dela de 13/09, no índice da terceira lista
+    # (`docs/process/sprints/2026-09-13-A-TERCEIRA-LISTA-DELA-INDICE.md`),
+    # deixa na tela só estado: a linha conta as exceções e cala o resto. A
+    # distinção deste arquivo — configurada não é efetiva — continua MEDIDA
+    # pela leitura (`_steam_input_excecao_status`), e é ela que os três cobram.
     def test_excecao_configurada_e_efetiva(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
@@ -130,21 +137,24 @@ class TestStatusDaAba:
             monkeypatch, appids=[2111190], exposicao={"/dev/hidraw0": True}
         )
         assert "Exceção por jogo: 1 jogo(s)" in markup
-        assert "controle liberado agora" in markup
+        assert "controle liberado agora" not in markup
+        assert ea.EmulationActionsMixin._steam_input_excecao_status() == ([2111190], True)
 
     def test_excecao_configurada_mas_o_fisico_segue_escondido(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """Era exatamente este estado — configurada e sem efeito — que a GUI
-        não sabia contar."""
+        não sabia contar. A leitura continua sabendo; a tela só conta."""
         markup = self._refresh(
             monkeypatch, appids=[2111190], exposicao={"/dev/hidraw0": False}
         )
         assert "Exceção por jogo: 1 jogo(s)" in markup
-        assert "só valendo durante o jogo" in markup
+        assert "só valendo durante o jogo" not in markup
+        assert ea.EmulationActionsMixin._steam_input_excecao_status() == ([2111190], False)
 
     def test_sem_fisico_visivel_nao_afirma_nada(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         markup = self._refresh(monkeypatch, appids=[2111190], exposicao={})
-        assert "sem controle físico visível" in markup
+        assert "sem controle físico visível" not in markup
+        assert ea.EmulationActionsMixin._steam_input_excecao_status() == ([2111190], None)
