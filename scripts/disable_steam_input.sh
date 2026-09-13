@@ -176,7 +176,11 @@ steam_running() {
 # direto: a recusa não pode depender de quem chama lembrar de checar.
 #
 # O `pgrep -f` é seguro aqui: a string `SteamLaunch AppId=` só aparece em
-# cmdline de launch REAL da Steam. O falso-positivo histórico
+# cmdline de lançamento REAL da Steam — o do jogo e, ANTES dele, o do avaliador
+# do install script (`reaper SteamLaunch AppId=<id> Install=1`, medido em
+# 13/09/2026). Contar o avaliador AQUI é o certo: fechar a Steam no meio dele
+# aborta o lançamento. Quem não o conta é a autoridade de exibição
+# (`steam_launch_options.steam_game_running_appid`). O falso-positivo histórico
 # (BUG-STEAM-DETECT-EARLYOOM-FALSE-POSITIVE-01) era com NOMES de processo.
 #
 # 12/08/2026 — o `[ ]` e o `[0-9]` NÃO são enfeite, e a frase acima só é
@@ -296,6 +300,18 @@ ligar_ponte_da_allowlist() {
     fi
     local saida
     saida="$(python3 "${PONTE_PY}" --ligar 2>&1)" || true
+    printf '%s\n' "${saida}" | while IFS= read -r linha; do
+        [[ -n "${linha}" ]] && printf '%s\n' "${linha}"
+    done
+    # JOGO-SEM-EXCLUSIVIDADE-01 (13/09/2026) — O OUTRO SENTIDO DA LISTA, no
+    # mesmo instante. A própria Steam liga o Steam Input POR JOGO sem escrever
+    # `UseSteamControllerConfig` (a configuração do jogo mora em
+    # `Steam Controller Configs/<conta>/config/`), e o jogo passa a ver o
+    # espelho dela em vez da máscara da aba Jogar. A awk de `_transform_vdf` só
+    # troca chave que existe; é a ponte que grava `"0"` em cada jogo
+    # configurado FORA da lista. Bandeira separada do `--ligar`: uma falha de
+    # um lado não cala o outro.
+    saida="$(python3 "${PONTE_PY}" --desligar-fora-da-lista 2>&1)" || true
     printf '%s\n' "${saida}" | while IFS= read -r linha; do
         [[ -n "${linha}" ]] && printf '%s\n' "${linha}"
     done

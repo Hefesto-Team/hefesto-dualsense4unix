@@ -1,6 +1,6 @@
 ---
 sprint: JOGO-SEM-EXCLUSIVIDADE-01
-estado: aberta
+estado: feita
 onda: A-TERCEIRA-LISTA-DELA
 posse:
   JOGO-SEM-EXCLUSIVIDADE-01:
@@ -34,6 +34,8 @@ nao_toca:
 
 # JOGO-SEM-EXCLUSIVIDADE-01 — nenhum jogo foge do modo e da máscara da aba Jogar
 
+> **ESTADO 2026-09-13: feita** — o avaliador do install script deixou de ser jogo vivo (`steam_game_running_appid` devolve None para `Install=1`; `steam_game_running` continua contando), e a lista do Steam Input passou a valer nos dois sentidos: `steam_input_ponte.py --desligar-fora-da-lista`, chamado pelo vigia junto do `--ligar`. **Achado que pesa na costura:** lido sem escrever, o `localconfig.vdf` dela já tem `UseSteamControllerConfig "0"` na árvore viva nos quatro jogos da queixa desde pelo menos 11/09, e o log da Steam de 13/09 01:29 e 01:30 mostra o controle virtual do Sackboy criado mesmo assim — o passo 2 não muda o disco desses quatro. A entrega está em `docs/process/agentes/2026-09-13/JOGO-SEM-EXCLUSIVIDADE-01-opus.md`.
+
 A palavra dela está no índice: o Sackboy *«não tá respeitando o modo e a máscara
 setado na aba jogar… diferente do resto dos jogos»*, talvez também Pragmata e
 Mullet Mad Jack, e *«nenhum jogo tem que ter esse tipo de exclusividade em
@@ -61,15 +63,18 @@ lidos. **São duas exclusividades, e as duas moram FORA da interface:**
    docstring de `classify` afirma que `SteamLaunch AppId=` «só existe no launch
    de um jogo» — **fato que a medição derrubou**.
 2. **Steam Input ligado POR JOGO pela própria Steam**, fora da lista do Hefesto e
-   fora de `UseSteamControllerConfig`: a pasta `config/<appid>/` em
+   por cima de `UseSteamControllerConfig "0"`: a pasta `config/<appid>/` em
    `Steam Controller Configs/<conta>/` e o `configset_controller_ps5.vdf` com
    `autosave` — no Sackboy, no Pragmata, no Mullet Mad Jack e no DON'T SCREAM, e
    em nenhum dos outros cinco lidos. Em toda abertura do Sackboy em 13/09 a Steam
    criou controle virtual (`Created virtual controller at slot`), inclusive
    depois da troca para Xbox; nas do Future Knight, do Pro Jank Footy e do Avatar,
    nenhum. O jogo vê o espelho do Steam Input, não a máscara da Jogar. **O vigia,
-   o doctor e o prontuário só leem `UseSteamControllerConfig`**, que não existe
-   nesses jogos: são cegos a isto.
+   o doctor e o prontuário só leem `UseSteamControllerConfig`**, e ela já está
+   em `"0"` nesses quatro jogos, na árvore viva (`UserLocalConfigStore/apps`),
+   em todo backup do vdf de 11/09 a 13/09: são cegos a isto. (Medido pela
+   implementação em 13/09; a leitura «a chave não existe» olhou as árvores
+   `apps` que não a guardam.)
 
 O estudo inteiro fica na pasta do lote `1309-terceira`.
 
@@ -130,7 +135,9 @@ O estudo inteiro fica na pasta do lote `1309-terceira`.
 * O formato dos `configset_*.vdf` não é documentado.
 
 **Só o aparelho responde (MESA-DE-QUATRO-01):** se o "0" vence a configuração
-autosave (a próxima abertura do Sackboy sem `Created virtual controller`); se o
+autosave (a próxima abertura do Sackboy sem `Created virtual controller`) — e o
+disco já responde contra: o `"0"` estava lá quando a Steam criou o controle
+virtual do Sackboy às 01:29 e às 01:30 de 13/09; se o
 Sackboy passa a mostrar a máscara da Jogar; se o DON'T SCREAM e o Mullet continuam
 com controle; se a escada arma pelo primeiro degrau e confirma por silêncio.
 
