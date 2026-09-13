@@ -910,7 +910,8 @@ DIZ_ACHEI = ""
 # A FRASE DE QUEM PROCUROU E NÃO ACHOU (`DIZ_NAO_ACHEI`) MUDOU DE LUGAR EM
 # 11/09/2026, e a mudança é mecânica, não de gosto: com a A2-013 ela passou a
 # CITAR o botão do cartão, e citar é ler :data:`ADICIONAR_ROTULO` — que em
-# Python tem de existir antes. Ela mora logo abaixo daquele rótulo.
+# Python tem de existir antes. Ela mora logo abaixo daquele rótulo. Desde
+# 13/09/2026 ela é rótulo de estado e não cita mais o botão; ficou onde estava.
 
 #: O que o cartão da Steam mostra enquanto a primeira leitura não voltou.
 #: **Nunca um número** — um número que ainda não foi lido é um número inventado.
@@ -1040,13 +1041,20 @@ APONTAR_ROTULO = "Apontar outro caminho"
 #: procurar"* é o mesmo cuidado da frase longa (um AppImage solto, um script no
 #: `~/bin`), em cinco palavras.
 #:
-#: O RÓTULO É LIDO, NUNCA DIGITADO: esta frase manda clicar num botão, e um
-#: texto digitado aqui envelheceria calado no dia em que o rótulo mudasse — que
-#: foi o dia de hoje.
-DIZ_NAO_ACHEI = (
-    "<b>Não localizei este lançador onde sei procurar.</b> Se ele está aqui, "
-    f"use «{ADICIONAR_ROTULO}» e me mostre onde."
-)
+#: **VIROU RÓTULO DE ESTADO EM 13/09/2026 — FRASES-E-DICAS-02, §I.5.** A frase
+#: de 11/09 falava em primeira pessoa e mandava usar o botão do cartão; a ordem
+#: dela de 13/09, no índice da terceira lista, tira instrução e narração da
+#: tela. O selo já diz NÃO LOCALIZADO e o botão ao lado já é a saída; o corpo
+#: diz só onde o produto não achou. Até seis palavras, sem primeira pessoa e
+#: sem mando — a régua `_e_rotulo_de_estado` de
+#: `tests/unit/test_o_cartao_da_steam_nao_narra.py`.
+DIZ_NAO_ACHEI = "<b>Fora dos caminhos conhecidos</b>"
+
+#: O corpo do cartão da Steam quando a biblioteca existe e não abriu — o mesmo
+#: dia e a mesma régua. Ele dizia, em primeira pessoa, que não conseguiu ler, o
+#: erro cru e que nada foi alterado. O erro continua em `Leitura.erros`, e o
+#: «Procurar de novo» continua no cartão.
+DIZ_NAO_LI = "<b>Biblioteca da Steam ilegível</b>"
 
 #: O RÓTULO DO BOTÃO GLOBAL — o que nasce vazio, para o que o Hefesto não
 #: conhece de fábrica.
@@ -1649,9 +1657,8 @@ def cartao_da_steam(lida: Leitura | None) -> Lancador:
             diz=SEM_FRASE,
             acoes=(abrir, criar), fora=SEM_LISTA, tem_lista=True)
     if lida.onde_esta_a_steam == "" and not lida.viu_a_biblioteca:
-        # PROCUREI E NÃO ACHEI, e a frase é a MESMA dos outros cinco
-        # (:data:`DIZ_NAO_ACHEI`) de propósito: ela já nomeia as duas buscas e
-        # já ressalva a instalação fora delas. Uma segunda redação para o mesmo
+        # PROCUREI E NÃO ACHEI, e o rótulo é o MESMO dos outros cinco
+        # (:data:`DIZ_NAO_ACHEI`) de propósito: uma segunda redação para o mesmo
         # fato seria texto de tela que ela não decidiu, e duas frases que
         # envelhecem separadas — o defeito que a decisão 14 dela nomeou
         # ("uma frase, um dono").
@@ -1667,8 +1674,7 @@ def cartao_da_steam(lida: Leitura | None) -> Lancador:
     if lida.erros:
         return Lancador(
             chave=STEAM, nome="Steam", selo="nao_sei", jogos="—",
-            diz=("<b>Não consegui ler a biblioteca da Steam</b> — "
-                 f"{_e(lida.erros[0])}. Nada foi alterado."),
+            diz=DIZ_NAO_LI,
             acoes=(Acao("Procurar de novo", "", "procurar", STEAM), abrir, criar,
                    *tirar),
             fora=SEM_LISTA, tem_lista=True)
@@ -2056,6 +2062,7 @@ __all__ = [
     "DESLIGAR_STEAM_INPUT_ROTULO",
     "DIZ_ACHEI",
     "DIZ_NAO_ACHEI",
+    "DIZ_NAO_LI",
     "DIZ_SEM_FONTE",
     "EMBUTIDOS",
     "JOGO_NAO_FUNCIONA",

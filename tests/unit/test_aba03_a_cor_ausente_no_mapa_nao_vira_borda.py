@@ -167,12 +167,20 @@ def test_a_dica_acompanha_a_cor(a03):
         f"o NOME do modelo é identidade LIDA, e ele fica: {sem_hex!r}. Não ter "
         f"o hexadecimal não é não saber qual controle está na mesa.")
 
+    # A SEGUNDA AUSÊNCIA PAROU DE SE EXPLICAR — FRASES-E-DICAS-02, 13/09/2026.
+    # Até aqui a dica de quem ninguém leu tinha de dizer "lida". A ordem dela de
+    # 13/09 (`docs/process/sprints/2026-09-13-A-TERCEIRA-LISTA-DELA-INDICE.md`)
+    # tira da tela a confissão sobre um estado nosso. As duas ausências seguem
+    # separadas: a do acabamento diz o que o modelo É; a não lida diz o nome, ou
+    # nada.
     nao_lida = a03.chip_do_controle(2, "", "BT", "")
     assert AFIRMA_A_COR not in nao_lida, (
         f"o chip sem leitura de cor continua afirmando a borda: {nao_lida!r}")
-    assert "lida" in nao_lida, (
-        f"a dica não separa 'ninguém leu' de 'o mapa não tem hex': "
-        f"{nao_lida!r}. As duas ausências se consertam de formas diferentes.")
+    assert "title=" not in nao_lida, (
+        f"o chip sem cor lida e sem nome ganhou dica: {nao_lida!r}")
+    com_nome = a03.chip_do_controle(2, "Midnight Black", "BT", "")
+    assert 'title="Midnight Black"' in com_nome, (
+        f"o chip sem cor lida tem de dizer só o nome na dica: {com_nome!r}")
     assert "hexadecimal" not in nao_lida, (
         f"a dica de quem não teve a cor lida culpa o mapa: {nao_lida!r}")
 

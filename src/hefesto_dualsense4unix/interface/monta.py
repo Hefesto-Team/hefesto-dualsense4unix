@@ -902,9 +902,9 @@ def fita(ativo: str = "todos", inerte: bool = False, titulo: str | None = None,
        `SystemExit` — e no rádio a cor do plástico NUNCA chega (o mapa diz:
        `identidade.cor_do_aparelho`, `radio_aciona = não`). Com um controle no
        BT, a fita viva morria a cada tique e a tela ficava com os dois chips do
-       mockup para sempre. Sem cor lida o chip perde a borda colorida e o
-       `title` diz por quê — é a regra dela: *"se não tá mostrando agora, não
-       tem info pra mostrar no produto"*.
+       mockup para sempre. Sem cor lida o chip perde a borda colorida — é a
+       regra dela: *"se não tá mostrando agora, não tem info pra mostrar no
+       produto"*. (O `title` que dizia por quê saiu em 13/09/2026: ver o laço.)
 
     O TEXTO DO CHIP SAI DE `rotulo(c, "curta")`, e não de um f-string próprio:
     a gramática do rótulo já tinha dono, e ter uma segunda cópia aqui é
@@ -931,8 +931,8 @@ def fita(ativo: str = "todos", inerte: bool = False, titulo: str | None = None,
         on = " on" if ativo == c["pref"] else ""
         # A VERSÃO DESTA FITA É DA FRENTE DO RÁDIO, e ela venceu a minha na
         # integração de 03/09/2026 por três coisas que a minha não tinha: o
-        # `identidade_do_chip` (que evita o `P2 • BT • BT`), a dica que DIZ que a
-        # cor não foi lida, e a queda do recuo da primeira linha — esta última é
+        # `identidade_do_chip` (que evita o `P2 • BT • BT`), a dica sobre a cor
+        # (encolhida em 13/09/2026, ver abaixo), e a queda do recuo da primeira linha — esta última é
         # medida, não estilo: com o recuo, a fita se repintava dez vezes por
         # segundo sem nada ter mudado.
         #
@@ -962,13 +962,18 @@ def fita(ativo: str = "todos", inerte: bool = False, titulo: str | None = None,
         # tiques) — e não existe colorway `""` no SVG.
         slug = str(c.get("cor") or "")
         pintado = f' style="--plastico:{cor_da_zona(slug)}"' if slug else ""
-        porque = ("a borda é a cor do plástico" if slug else
-                  "a cor do plástico deste controle não foi lida")
-        dica = f"{nome} — {porque}" if nome else porque
+        # A COR NÃO LIDA DIZ O NOME, OU NADA — FRASES-E-DICAS-02, 13/09/2026. A
+        # dica confessava que a cor do plástico não tinha sido lida: confissão
+        # sobre um estado nosso numa dica flutuante, que a ordem dela de 13/09
+        # tira da tela. Com a cor lida a dica continua dizendo de onde vem a
+        # borda; sem ela fica o nome, e sem nome o chip não tem dica própria.
+        porque = "a borda é a cor do plástico" if slug else ""
+        dica = " — ".join(x for x in (nome, porque) if x)
+        titulo = f' title="{dica}"' if dica else ""
         chips.append(
             f'<label class="chip{" plastico" if slug else ""}{on}" data-campo="fita-chip"'
             + _endereco_do_chip(str(c["pref"]), inerte)
-            + f'{pintado} title="{dica}">'
+            + f'{pintado}{titulo}>'
             + rotulo_do_chip({**c, "nome": nome}) + "</label>")
     # SEM O RECUO DA PRIMEIRA LINHA, e isto é medição, não estilo. Quem monta a
     # página põe o recuo (`RECUO_DA_FITA`); quem pinta a tela viva joga esta

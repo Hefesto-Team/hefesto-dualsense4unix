@@ -96,10 +96,6 @@ from hefesto_dualsense4unix.app.widgets.controller_card import (
     CANAL_SONS_DO_JOGO,
     CANAL_TODO_O_PC,
     DICA_AUDIO_SEM_ENDERECO,
-    DICA_CANAL_ACORDADO,
-    DICA_CANAL_DORMINDO,
-    DICA_CANAL_E_PADRAO,
-    DICA_CANAL_SEM_A_REGRA,
     L2_R2_THRESHOLD,
     ROTA_DO_CANAL,
     TEXTO_AUDIO_SEM_ENDERECO,
@@ -1818,7 +1814,7 @@ def porques_do_som(entry: Any) -> dict[str, str]:
 #
 #   `selo_do_som`         a prioridade de `_aplicar_selo_do_som` na GTK
 #   `sufixo_do_canal`     o sufixo de `_titulo_do_speaker`
-#   `dica_do_canal`       as frases de `_frases_do_canal`
+#   `dica_do_canal`       o rótulo de estado do canal (as frases saíram em 13/09)
 #
 # HOUVE UM QUARTO, e ele saiu da tela em 07/09/2026 — ver o bloco "O QUARTO
 # SELO SAIU DA TELA", algumas telas abaixo. Os três que ficam falam de ESTADO
@@ -1862,26 +1858,19 @@ def sufixo_do_canal(sono: str) -> str:
     return f"· {sono}" if sono else ""
 
 
-def dica_do_canal(sono: str, regra: bool | None) -> str:
-    """O porquê do canal: o estado, e se ele é o PADRÃO. `""` sem leitura.
+def dica_do_canal(sono: str) -> str:
+    """O rótulo de ESTADO do canal — ``"Canal de áudio dormindo"``. `""` sem leitura.
 
-    A frase do padrão é condicionada à regra estar instalada, e a condição é a
-    metade que importa — ver o bloco `A TERCEIRA LEITURA DA MESMA VOLTA`.
-    `None` não afirma nem um nem outro: ninguém perguntou ainda.
-
-    A QUEBRA É `<br><br>` E NÃO `\\n\\n` porque o destino é `innerHTML` — o alvo
-    `html` do piloto. A GTK usa `\\n\\n` no `set_tooltip_text`, que é outro
-    meio; a frase é a mesma, e as duas vêm do mesmo dono.
+    **ERA UMA FRASE LONGA ATÉ 13/09/2026 — FRASES-E-DICAS-02, §I.4.** A dica
+    juntava as frases do cartão da janela GTK (`controller_card.DICA_CANAL_*`):
+    o canal suspenso no servidor de som, o que foi medido com a orelha dela, e
+    a regra que falta com a instrução de rodar o instalador de novo. Era
+    jargão, medição e instrução numa dica flutuante, e a ordem dela de 13/09
+    deixa na tela só estado e ajuda. Fica o estado, com a palavra do dono
+    (`audio_saida.estado_do_canal`, a mesma do sufixo do rótulo). A regra
+    continua lida em :func:`_camada_1` e deixou de ir à tela.
     """
-    if not sono:
-        return ""
-    frases = [DICA_CANAL_DORMINDO if sono == audio_saida.CANAL_DORMINDO
-              else DICA_CANAL_ACORDADO]
-    if regra is True:
-        frases.append(DICA_CANAL_E_PADRAO)
-    elif regra is False:
-        frases.append(DICA_CANAL_SEM_A_REGRA)
-    return "<br><br>".join(frases)
+    return f"Canal de áudio {sono}" if sono else ""
 
 
 # ---------------------------------------------------------------------------
@@ -2821,8 +2810,7 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
                 "alto-selo": (selo_do_som(saida_muda_do_entry(c), sono_do_canal(uniq))
                               or NADA_A_DIZER),
                 "alto-canal": sufixo_do_canal(sono_do_canal(uniq)) or NADA_A_DIZER,
-                "alto-canal-porque": (dica_do_canal(sono_do_canal(uniq), regra_do_sono())
-                                      or NADA_A_DIZER),
+                "alto-canal-porque": dica_do_canal(sono_do_canal(uniq)) or NADA_A_DIZER,
             }),
         }
     # OS VALORES QUE VALEM PARA A PÁGINA INTEIRA, e não por card. Os três nasceram

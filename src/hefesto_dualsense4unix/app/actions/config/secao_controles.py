@@ -190,13 +190,14 @@ DICA_NO_CABO = (
     "cura não existe no cabo, e por isso o botão fica apagado aqui."
 )
 
-#: O que se acrescenta à dica quando outro programa está segurando nó de
-#: controle AGORA. É AVISO, nunca trava: a mesa dela vive com a Steam aberta, e
-#: o experimento que fecha a célula do mapa PRECISA do gesto com ela aberta.
-AVISO_DA_MESA_SUJA = (
-    "Atenção: outro programa está segurando controle agora, e nessa condição a "
-    "conexão nova nasce travada igual. Feche-o antes para o gesto valer."
-)
+# O AVISO DA MESA SUJA SAIU DA DICA — FRASES-E-DICAS-02, 13/09/2026. Aqui
+# morava `AVISO_DA_MESA_SUJA`, anexado à dica do botão quando outro programa
+# segurava nó de controle: *"Atenção: … Feche-o antes para o gesto valer."* Era
+# aviso com instrução, e a ordem dela de 13/09 tira frase de aviso da tela em
+# toda forma, `title` incluído (`sprints/2026-09-13-A-TERCEIRA-LISTA-DELA-
+# INDICE.md`, a mensagem de abertura: *"esse tipo de info segue aparecendo nas
+# abas"*). A dica fica com o que o clique faz. O botão continua clicável com a
+# Steam aberta, que é o que o experimento da célula do mapa precisa.
 
 #: Os quatro fins possíveis da espera. Nenhum é acento — são chaves de máquina.
 ESPERA_PROCURANDO = "procurando"
@@ -260,7 +261,7 @@ def frase_do_nascimento(nascimento: Any) -> str | None:
       crônico ensina a ignorar o card no dia em que ele acusa;
     * ``nao_sei`` — é o terceiro estado honesto do módulo (Modo Nativo, diário
       rotacionado). Um alarme sem medição atrás treina a pessoa a ignorar
-      alarmes, que é o defeito que a `_mesa_suja` já evita logo acima.
+      alarmes.
     """
     if not isinstance(nascimento, dict):
         return None
@@ -284,16 +285,16 @@ def pode_derrubar(dados: Any) -> bool:
     )
 
 
-def dica_do_botao(dados: Any, mesa_suja: bool = False) -> str:
+def dica_do_botao(dados: Any) -> str:
     """A dica do botão, e ela nunca é vazia.
 
     No cabo diz por que está apagado; no rádio diz o que o clique faz e o que
-    ele NÃO faz. Com a mesa suja, o aviso vem junto — anexado, nunca no lugar:
-    a pessoa continua precisando saber o que o botão faz.
+    ele NÃO faz. O aviso da mesa suja não entra mais — ver a nota logo acima de
+    :data:`ESPERA_PROCURANDO`.
     """
     if not pode_derrubar(dados):
         return DICA_NO_CABO
-    return f"{DICA_NO_RADIO} {AVISO_DA_MESA_SUJA}" if mesa_suja else DICA_NO_RADIO
+    return DICA_NO_RADIO
 
 
 def uniq_normalizado(mac: Any) -> str:
@@ -733,10 +734,6 @@ class _PainelDosControles:
         #: (`app/widgets/external_card.py`) é território de outra frente, e um
         #: campo novo lá obrigaria as duas a mexerem no mesmo arquivo.
         self._mic_declarado: dict[str, bool] = {}
-        #: Outro programa está segurando nó de controle agora? `None` = ainda
-        #: não perguntei, ou a sonda não pôde responder — e "não sei" NÃO vira
-        #: aviso: um alarme sem medição atrás ensina a ignorar alarmes.
-        self._mesa_suja: bool | None = None
         #: `{uniq: veredito}` — como a CONEXÃO de cada controle nasceu, do campo
         #: `nascimento` do payload por controle (SINAL-NO-NASCIMENTO-01/E2).
         #: Vive fora do `DadosDoControle` pela mesma razão do `_mic_declarado`:
@@ -890,7 +887,6 @@ class _PainelDosControles:
         }
         self._desenhar(self._cards_da_mesa(adotados, externos))
         self._perguntar_as_cores(adotados)
-        self._perguntar_pela_mesa()
 
     def _cards_da_mesa(
         self, adotados: list[dict[str, Any]], externos: list[dict[str, Any]]
@@ -1070,28 +1066,11 @@ class _PainelDosControles:
                 card.repintar_o_nome_da_cor(cor.nome)
         return False
 
-    def _perguntar_pela_mesa(self) -> None:
-        """Alguém está segurando nó de controle agora? Fora do tique, e uma vez.
-
-        A resposta muda só a DICA do botão da luz — nunca a sensibilidade dele.
-        A regra dela é literal (*"sempre visível mas só acionável quando tiver
-        no rádio"*), e há um segundo motivo medido: o experimento que fecha a
-        célula do mapa de canais precisa do gesto rodando **com a Steam
-        aberta** (BARRA-MUDA-01 §6). Um produto que recusasse aí tornaria a
-        própria medição impossível.
-        """
-        leitor = getattr(self._host, "_mesa_limpa_leitor", None)
-        if leitor is None and self._e_bancada_de_retrato():
-            return
-        run_in_thread(leitor or _pergunta_da_mesa, self._chegou_a_mesa)
-
-    def _chegou_a_mesa(self, resultado: Any) -> bool:
-        """Guarda o veredito e reescreve as dicas dos botões que já estão na tela."""
-        self._mesa_suja = resultado if isinstance(resultado, bool) else None
-        for bloco in self._luzes.values():
-            with contextlib.suppress(Exception):
-                bloco.reler_a_dica(bool(self._mesa_suja))
-        return False
+    # A SONDA DA MESA SUJA SAIU DAQUI — FRASES-E-DICAS-02, 13/09/2026. Ela
+    # perguntava, fora do tique, se outro programa segurava nó de controle, e a
+    # resposta só servia para anexar o aviso à dica do botão da luz. O aviso
+    # saiu da tela (ver a nota ao lado de `DICA_NO_CABO`), e uma sonda que varre
+    # `/proc` para alimentar uma frase que ninguém mostra é trabalho por nada.
 
     # -- desenho -----------------------------------------------------------
 
@@ -1169,7 +1148,6 @@ class _PainelDosControles:
         try:
             bloco = _BlocoDaLuz(
                 dados,
-                mesa_suja=bool(self._mesa_suja),
                 nascimento=self._nascimentos.get(uniq_normalizado(dados.uniq)),
                 ao_derrubar=getattr(self._host, "_luz_derrubador", None)
                 or _derrubar_o_controle,
@@ -1314,7 +1292,6 @@ class _BlocoDaLuz:
         self,
         dados: DadosDoControle,
         *,
-        mesa_suja: bool,
         nascimento: Any = None,
         ao_derrubar: Callable[[str], Any],
         ao_voltar: Callable[[], None],
@@ -1340,7 +1317,7 @@ class _BlocoDaLuz:
 
         self.botao = Gtk.Button(label=TEXTO_DO_BOTAO)
         self.botao.set_sensitive(pode_derrubar(dados))
-        self.botao.set_tooltip_text(dica_do_botao(dados, mesa_suja))
+        self.botao.set_tooltip_text(dica_do_botao(dados))
         self.botao.connect("clicked", self._ao_clicar)
         self.caixa.pack_start(self.botao, False, False, 0)
 
@@ -1381,11 +1358,6 @@ class _BlocoDaLuz:
         with contextlib.suppress(Exception):
             corpo.reorder_child(self.caixa, max(0, len(antes) - 2))
         self._corpo = corpo
-
-    def reler_a_dica(self, mesa_suja: bool) -> None:
-        """A sonda da mesa respondeu depois do desenho — a dica acompanha."""
-        with contextlib.suppress(Exception):
-            self.botao.set_tooltip_text(dica_do_botao(self.dados, mesa_suja))
 
     def encerrar(self) -> None:
         """Desarma o tique. Chamado antes de o card ser destruído."""
@@ -1564,31 +1536,6 @@ def _derrubar_o_controle(uniq: str) -> Any:
     from hefesto_dualsense4unix.integrations.gesto_de_reconexao import desconectar
 
     return desconectar(uniq)
-
-
-def _pergunta_da_mesa() -> bool | None:
-    """Alguém está segurando nó de controle agora? `None` = não sei.
-
-    As três respostas são de propósito, e a terceira é a que importa: um
-    "não sei" não pode virar aviso, porque alarme sem medição atrás ensina a
-    ignorar alarme.
-    """
-    try:
-        from hefesto_dualsense4unix.integrations.sinal_da_barra import (
-            CONFIANCA_LIMPA,
-            CONFIANCA_SUSPEITA,
-            limpo_para_conectar,
-        )
-    except ImportError:
-        return None
-    try:
-        confianca, _porque, _pids = limpo_para_conectar()
-    except Exception:  # best-effort: a janela não pode cair por causa disto
-        logger.debug("config_luz_mesa_nao_respondeu", exc_info=True)
-        return None
-    if confianca == CONFIANCA_SUSPEITA:
-        return True
-    return False if confianca == CONFIANCA_LIMPA else None
 
 
 # ---------------------------------------------------------------------------

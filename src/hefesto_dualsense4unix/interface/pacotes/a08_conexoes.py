@@ -183,21 +183,10 @@ _EXAME_PEDIDO: bool = False
 #: nome", que é a ausência de notícia lida como fato.
 _DONGLES: Any = None
 
-#: A ÚLTIMA SONDA DA MESA SUJA, e ela é `(quando, resposta)`. A resposta é a de
-#: `secao_controles._pergunta_da_mesa()` — `True`/`False`/`None`, e o `None` é
-#: "não consegui olhar", que NUNCA vira aviso.
-#:
-#: POR QUE UM CACHE DE 2 s E NÃO O DO PRODUTO: a sonda já tem um cache de 5 s
-#: para a lista de PIDs da Steam (`escritor_cru.VALIDADE_DO_VEREDITO_S`), mas a
-#: varredura de `/proc/<pid>/fd` roda **a cada chamada** quando a Steam está de
-#: pé. Medido com a Steam fechada: 67 ms na primeira e 0,0 ms depois. Com ela
-#: aberta o custo é o da varredura, e um tique de 500 ms o pagaria duas vezes
-#: por segundo. Dois segundos é curto o bastante para ela fechar a Steam e ver a
-#: dica mudar, e longo o bastante para não pendurar a varredura no tique.
-_MESA_SUJA: tuple[float, bool | None] | None = None
-
-#: Quanto vale a sonda da mesa suja, em segundos. Ver :data:`_MESA_SUJA`.
-VALIDADE_DA_MESA_SUJA_S = 2.0
+# A SONDA DA MESA SUJA SAIU DESTA ABA — FRASES-E-DICAS-02, 13/09/2026. Ela
+# alimentava só o aviso anexado à dica do botão da luz, e o aviso saiu da tela
+# (`secao_controles`, a nota ao lado de `DICA_NO_CABO`). A varredura de
+# `/proc/<pid>/fd` que ela pagava a cada dois segundos saiu do tique junto.
 
 
 def _declaracao(recarregar: bool = False) -> Any:
@@ -263,33 +252,6 @@ def _dongles(recarregar: bool = False) -> Any:
         except Exception:
             return None
     return _DONGLES
-
-
-def _mesa_suja() -> bool | None:
-    """Alguém está segurando nó de controle AGORA? `None` = não consegui olhar.
-
-    O DONO DA PERGUNTA É `secao_controles._pergunta_da_mesa`, e as três
-    respostas são de propósito — a terceira é a que importa: um "não sei" não
-    vira aviso, *"porque alarme sem medição atrás ensina a ignorar alarme"*.
-
-    O CACHE É DAQUI E O MOTIVO ESTÁ EM :data:`_MESA_SUJA`: a sonda é a única
-    coisa desta aba que responde a algo que ela pode MUDAR no meio da sessão
-    (fechar a Steam), então não cabe na regra do "lê uma vez e o botão renova".
-    """
-    global _MESA_SUJA
-    agora = time.monotonic()
-    if _MESA_SUJA is not None and (agora - _MESA_SUJA[0]) < VALIDADE_DA_MESA_SUJA_S:
-        return _MESA_SUJA[1]
-    resposta: bool | None = None
-    with contextlib.suppress(Exception):
-        perfil._com_o_src()
-        from hefesto_dualsense4unix.app.actions.config.secao_controles import (
-            _pergunta_da_mesa,
-        )
-
-        resposta = _pergunta_da_mesa()
-    _MESA_SUJA = (agora, resposta)
-    return resposta
 
 
 #: O CENSO DO BARRAMENTO, lido UMA vez e renovado pelo "Examinar Portas" — a
@@ -1132,96 +1094,13 @@ def _dica_da_linha(item: Any) -> str:
         return ""
 
 
-#: A CLASSE DA MARCA DE PROCEDÊNCIA. Ela é uma só nas duas casas onde a marca
-#: aparece — o `?` do card e a linha do ganho —, e a folha de estilo desta aba
-#: (`aba08.py`) é quem a pinta de cinza.
-#:
-#: **NA PÁGINA PUBLICADA ELA AINDA NÃO TEM COR**, e isso é declarado e não
-#: esquecido: a regra `.proc` nasceu na BANCADA nesta leva e o produto só a
-#: recebe no `--publicar`. Até lá a marca sai na cor do texto — legível, e
-#: dizendo a mesma coisa. O que NÃO se pode fazer é segurar a marca esperando a
-#: folha: a informação é o que ela decide, e a cor é como ela é servida.
-_CLASSE_DA_PROCEDENCIA = "proc"
-
-
-def _marca_da_procedencia(linha: Any) -> str:
-    """`[derivado da conta]` — e VAZIO quando a frase foi medida aqui.
-
-    **DECISÃO [04] DO PO, 04/09/2026:** *"Só nas frases que NÃO foram medidas
-    aqui. A marca aparece exatamente quando ela muda a decisão dela, e some
-    quando não muda."*
-
-    A JANELA ESTÁVEL IMPRIME AS TRÊS (`secao_exame._linha_da_ordem`), e a
-    diferença não é descuido: lá a marca mora numa `Gtk.Label` que ocupa a
-    largura do card; aqui ela divide um balão de 330 px com duas frases. Três
-    marcas seriam o dobro de cinza a atravessar para chegar ao texto.
-
-    **NENHUMA PALAVRA NASCE AQUI.** As três saem de
-    `ordens_da_mesa.TEXTO_DO_SELO`, que é o dono — o mesmo mapa que a janela
-    estável lê. Um selo que este mapa não conhece sai CRU, e de propósito: uma
-    procedência nova tem de aparecer na tela como coisa estranha, não sumir.
-
-    `fonte` NÃO ENTRA, pela razão que `secao_exame._linha_da_ordem` já mediu:
-    ela é um caminho desta árvore (`docs/protocol/…`), e quem usa o produto não
-    tem esta árvore.
-    """
-    selo = str(getattr(linha, "selo", "") or "")
-    if not selo:
-        return ""
-    perfil._com_o_src()
-    from hefesto_dualsense4unix.gui.aba_conexoes import _e
-    from hefesto_dualsense4unix.integrations.ordens_da_mesa import (
-        MEDIDO_AQUI,
-        TEXTO_DO_SELO,
-    )
-    from hefesto_dualsense4unix.utils.i18n import _
-
-    if selo == MEDIDO_AQUI:
-        return ""
-    palavra = str(TEXTO_DO_SELO.get(selo, selo))
-    return (f' <span class="{_CLASSE_DA_PROCEDENCIA}">'
-            f"[{_e(_(palavra))}]</span>")
-
-
-def _dica_da_ordem(ordem: Any) -> str:
-    """O `?` do card da ordem: *O que eu vi aqui* e *Por que importa*.
-
-    AS DUAS FRASES SÃO DA ORDEM, e os rótulos são de
-    `exame_da_mesa.ROTULOS_DA_ORDEM` — os MESMOS que o card do GTK escreve
-    (`secao_exame._card_da_ordem:715`) e os mesmos que o `?` de cada linha desta
-    tela já usa (:func:`_dica_da_linha`). Nenhuma palavra nasce aqui.
-
-    A TERCEIRA FICA DE FORA porque o card já a mostra por extenso, na linha
-    `Ganho esperado:` que `html_da_ordem` emite. Repeti-la no `?` seria a mesma
-    frase duas vezes no mesmo cartão — a decisão 9 dela, aplicada ao card.
-
-    **O SELO DE PROCEDÊNCIA ENTROU — 04/09/2026, decisão [04] do PO:** *"Só nas
-    frases que NÃO foram medidas aqui."* O que estava escrito neste lugar dizia
-    que ele *"continua fora … um `[medido]` em cinza no fim de cada uma
-    competiria com o texto que ela foi ler"* — e a medição que sustentava a
-    frase continua certa: são DUAS frases num balão de 330 px. O que mudou é a
-    regra: `medido aqui` fica IMPLÍCITO e não é escrito, então o balão só ganha
-    tinta quando a frase é conta ou vem de terceiro — que é exatamente quando a
-    marca muda a decisão dela. Ver :func:`_marca_da_procedencia`.
-    """
-    perfil._com_o_src()
-    from hefesto_dualsense4unix.gui.aba_conexoes import _e
-    from hefesto_dualsense4unix.integrations.exame_da_mesa import ROTULOS_DA_ORDEM
-    from hefesto_dualsense4unix.utils.i18n import _
-
-    partes = [
-        f"<b>{_e(_(str(rotulo)))}:</b> "
-        f"{_e(_(str(getattr(linha, 'texto', '') or '')))}"
-        f"{_marca_da_procedencia(linha)}"
-        for rotulo, linha in zip(ROTULOS_DA_ORDEM[:2], ordem.linhas[:2], strict=True)
-        if getattr(linha, "texto", "")]
-    if not partes:
-        return ""
-    # O `style` É O DO DESENHO, e não um enfeite: esta dica mora na coluna da
-    # DIREITA, e sem ele a caixa de 330px nasce para fora da janela. É o mesmo
-    # `left:auto;right:22px` que o gerador crava no `?` deste card.
-    return ('<span class="ajuda">?<span class="dica" style="left:auto;right:22px">'
-            + "<br><br>".join(partes) + "</span></span>")
+# A MARCA DE PROCEDÊNCIA E O `?` DO CARTÃO DA ORDEM SAÍRAM — FRASES-E-DICAS-02,
+# 13/09/2026. Os dois moravam no cartão da ordem da coluna da direita: a marca
+# `[derivado da conta]` na linha do ganho (decisão [04] do PO, 04/09) e o `?`
+# com *O que eu vi aqui* e *Por que importa* ao lado do imperativo. O
+# imperativo (`div.faca`) e o ganho (`div.ganho`) saíram da coluna visível, e o
+# `?` que já traz o mesmo conteúdo é o da linha do exame à esquerda
+# (:func:`_dica_da_linha`, endereço `exame-calada`). Ver :func:`_html_da_ordem`.
 
 
 def _ordem_na_tela() -> Any:
@@ -1283,69 +1162,48 @@ def _dono_sabe_desenhar_a_ordem() -> bool:
 
 
 def _card_da_ordem(ordem: Any) -> str:
-    """O card de UMA ordem: o imperativo, o `?`, o de→para e o ganho.
+    """O card de UMA ordem na coluna da direita: só o de→para, quando há destino.
 
     SEGUNDA GRAFIA COM DATA DE MORTE — ver :func:`_dono_sabe_desenhar_a_ordem`.
-    As classes são as do desenho dela (`.ordem`, `.faca`, `.receita`, `.caixa`,
-    `.seta`, `.ganho`), as mesmas que o dono emite; o que muda é que aqui a
-    `Ordem` é lida pelos campos que ela TEM.
+    As classes são as do desenho dela (`.ordem`, `.receita`, `.caixa`, `.seta`),
+    as mesmas que o dono emite; o que muda é que aqui a `Ordem` é lida pelos
+    campos que ela TEM.
+
+    **O IMPERATIVO E O GANHO SAÍRAM DA VISTA — FRASES-E-DICAS-02, 13/09/2026.**
+    O card mostrava, sem clique, a `acao` da ordem (`div.faca`) e a linha
+    `Ganho esperado:` (`div.ganho`), inclusive quando ela dizia que o ganho não
+    foi medido. As duas são instrução e confissão sobre um estado, e a ordem
+    dela de 13/09 deixa na tela só estado e ajuda. O conteúdo não se perdeu: o
+    `?` da linha do exame à esquerda traz *Por que importa · Ganho esperado · O
+    que fazer* (:func:`_dica_da_linha`).
+
+    NOTA QUE CADUCOU NA MESMA DATA: aqui estava escrito *"O GANHO VAI SEMPRE,
+    inclusive quando ele confessa que não foi medido"*, citando
+    `secao_exame._card_da_ordem`. A citação não era palavra dela; a regra de
+    13/09 é, e ela vence.
 
     A RECEITA SÓ APARECE COM DESTINO, e é o que o dono não faz: ele emite as
     duas caixas sempre, e com `destino` vazio a tela mostraria `—  →  —`. Nas
     DUAS ordens desta máquina o `destino` é `''` — a regra achou o problema e
-    não achou entrada livre nomeável para onde mandar (`SEM_DESTINO`). Um
-    de→para de travessão para travessão é ruído com cara de diagnóstico.
+    não achou entrada livre nomeável para onde mandar (`SEM_DESTINO`) —, e sem
+    destino o card não existe: devolve `""`.
 
     O QUE VAI NA CAIXA DA ESQUERDA é o `alvo.caminho` — o endereço de barramento
     (`3-1.2`), que é *"a palavra comum entre este módulo, o censo e o mapa"*
-    (`gui.aba_conexoes.html_dos_adaptadores`). A "Entrada 3" do desenho é o
-    número do MAPA DELA, e só existe depois que ela desenhar as entradas — o que
-    a própria `acao` desta ordem diz com todas as letras.  (noqa-acento: campo)
-
-    O GANHO VAI SEMPRE, inclusive quando ele confessa que não foi medido: *"AS
-    TRÊS, SEMPRE — inclusive a que confessa que o ganho não foi medido"*
-    (`secao_exame._card_da_ordem`). Esconder a terceira linha custaria uma linha
-    de tela e a confiança inteira.
+    (`gui.aba_conexoes.html_dos_adaptadores`).
     """
     perfil._com_o_src()
     from hefesto_dualsense4unix.gui.aba_conexoes import TRACO, _e
-    from hefesto_dualsense4unix.utils.i18n import _
 
-    partes = [f'<div class="faca">{_e(_(str(ordem.acao)))}{_dica_da_ordem(ordem)}</div>']
     destino = str(getattr(ordem, "destino", "") or "")
-    if destino:
-        de = str(getattr(getattr(ordem, "alvo", None), "caminho", "") or TRACO)
-        partes.append(
+    if not destino:
+        return ""
+    de = str(getattr(getattr(ordem, "alvo", None), "caminho", "") or TRACO)
+    return ('<div class="ordem">'
             f'<div class="receita"><span class="caixa">{_e(de)}</span>'
             f'<span class="seta">→</span>'
-            f'<span class="caixa alvo">{_e(destino)}</span></div>')
-    ganho = str(getattr(ordem.ganho_esperado, "texto", "") or "")
-    if ganho:
-        # O RÓTULO É O TERCEIRO DE `ROTULOS_DA_ORDEM` — "Ganho esperado" —, o
-        # mesmo que o card do GTK e o `--exame` do terminal escrevem. Ele está
-        # digitado no desenho desta aba, e digitá-lo aqui de novo seria a
-        # terceira grafia da mesma palavra.
-        from hefesto_dualsense4unix.integrations.exame_da_mesa import ROTULOS_DA_ORDEM
+            f'<span class="caixa alvo">{_e(destino)}</span></div></div>')
 
-        # E A MARCA DE PROCEDÊNCIA VAI AQUI TAMBÉM — decisão [04]. Nesta mesa a
-        # terceira linha é `DERIVADO_DA_CONTA` nas duas ordens abertas, então a
-        # marca aparece: é o card confessando que o ganho foi CALCULADO e não
-        # medido, no mesmo lugar em que ele o promete.
-        partes.append(
-            f'<div class="ganho"><span>{_e(_(str(ROTULOS_DA_ORDEM[2])))}:</span> '
-            f"{_e(_(ganho))}{_marca_da_procedencia(ordem.ganho_esperado)}</div>")
-    return f'<div class="ordem">{"".join(partes)}</div>'
-
-
-#: O PREFIXO DA CURA e o teto de cards da coluna. Os dois têm dono no produto:
-#: a palavra é `secao_exame.PREFIXO_DA_CURA` (lida no ato, nunca copiada), e o
-#: teto é o do DESENHO — a coluna da direita tem UM card de ordem, e quatro
-#: cards de cura é a altura da coluna do exame ao lado.
-#:
-#: QUATRO É O QUE A MÁQUINA PODE RENDER: são cinco conferências e uma delas
-#: (`energia_das_portas`) não escreve cura. A janela estável não tem teto porque
-#: a zona dela cresce; aqui a seção divide altura com as outras duas do quadro.
-_TETO_DE_CURAS = 4
 
 #: OS OUTROS DOIS TETOS DO DESENHO — decisão **08-Q7**, 06/09/2026. Eles moram
 #: aqui, ao lado do primeiro, porque o `+N` é conta do PRODUTO e o número é do
@@ -1384,55 +1242,6 @@ def _monta() -> Any:
     from hefesto_dualsense4unix.interface import monta
 
     return monta
-
-
-def _card_da_cura(item: Any) -> str:
-    """O card de uma conferência que tem CURA e não tem ordem — decisão [03].
-
-    **DECISÃO [03] DO PO, 04/09/2026:** *"Cartão de cura na coluna da direita."*
-    Até hoje a cura das conferências só existia dentro do `?` de cada linha
-    (:func:`_dica_da_linha`), e quem não passasse o mouse não descobria o que
-    fazer. A janela estável esteve nesse mesmo estado e saiu dele em 25/08 —
-    `secao_exame._card_da_cura`, cuja nota diz por quê com todas as letras: *"a
-    cura de quatro das cinco conferências chegava à tela SÓ dentro de um
-    tooltip"*.
-
-    **SEM SELO DE PROCEDÊNCIA, e é regra do dono, não economia:** *"uma cura de
-    conferência não traz selo … porque não há medição por trás dela dizendo de
-    onde vem o conselho. Pôr um selo aqui seria dar ao raciocínio a roupa da
-    medição, que é o que o selo existe para impedir."* É a contramão exata da
-    decisão [04], e as duas convivem porque falam de coisas diferentes: a ORDEM
-    sabe de onde veio cada frase; a cura de conferência, não.
-
-    A CLASSE É `ordem cura`, e o primeiro nome não é enfeite: `.ordem` é a única
-    moldura que a página PUBLICADA já sabe desenhar. Enquanto a folha da bancada
-    não for publicada, o card de cura nasce com a moldura do card de ordem — que
-    é o parecido certo, e não um bloco solto sem borda.
-
-    A PÍLULA É A MESMA DA LINHA DO EXAME — a palavra e a classe saem de
-    `gui.aba_conexoes.SELO_DO_ESTADO`, o dono do mapa. O card fala do MESMO
-    achado que a linha da esquerda, e duas gramáticas para o mesmo estado é como
-    o verde volta a conviver com o vermelho. **Ela não é o selo de procedência**,
-    que é o que o parágrafo acima recusa: uma diz o ESTADO do achado, a outra
-    diria de onde veio a frase.
-    """
-    perfil._com_o_src()
-    from hefesto_dualsense4unix.app.actions.config.secao_exame import PREFIXO_DA_CURA
-    from hefesto_dualsense4unix.gui.aba_conexoes import _e
-    from hefesto_dualsense4unix.utils.i18n import _
-
-    classe, palavra = _selo_do_estado(str(getattr(item, "estado", "") or ""))
-    cura = str(getattr(item, "cura", "") or "")
-    porque = str(getattr(item, "porque", "") or "")
-    # O TEXTO VAI DENTRO DE UM `<span>`, e não solto: `.ordem .faca` é `display:
-    # flex` com `gap:8px`, então cada filho inline vira um ITEM da flexbox — um
-    # `<b>` no meio da frase abriria oito pixels de vão de cada lado dele.
-    # Medido na foto de 04/09, antes desta linha existir.
-    corpo = [f'<div class="faca"><span class="selo {classe}">{_e(_(palavra))}</span>'
-             f"<span>{_e(_(str(PREFIXO_DA_CURA)) + _(cura))}</span></div>"]
-    if porque:
-        corpo.append(f'<div class="ganho"><span></span>{_e(_(porque))}</div>')
-    return f'<div class="ordem cura">{"".join(corpo)}</div>'
 
 
 #: A FRASE DO `+N`, e ela tem UM dono nesta casa — este.
@@ -1513,25 +1322,32 @@ def _o_que_nao_coube(itens: list[Any], vizinhos: list[Any]) -> dict[str, str]:
 
 
 def _html_da_ordem(vivos: list[Any] | None = None) -> str:
-    """A coluna da direita inteira: a ordem, as curas e o que não coube.
+    """A coluna da direita inteira: o de→para da ordem, ou a frase de nada a mudar.
 
-    TRÊS DECISÕES DO PO MORAM NESTA FUNÇÃO, e é de propósito que elas moram
-    juntas: a coluna é UM endereço (`data-campo="ordem"`, alvo `html`), e quem
-    decide o que cabe nela tem de ver as três listas ao mesmo tempo.
+    **A COLUNA ENXUGOU EM 13/09/2026 — FRASES-E-DICAS-02, §D.** Até aqui ela
+    desenhava três coisas, cada uma de uma decisão do PO de 04/09
+    (`docs/process/2026-09-04-O-PO-DECIDE-as-54-e-os-sete-conflitos.md`):
 
-    * **[03]** o cartão de cura, abaixo da ordem — :func:`_card_da_cura`;
-    * **[04]** o selo de procedência nas frases não medidas aqui;
-    * **[07]** o `+N` quando há mais ordem aberta do que card.
+    * **[03]** o cartão de cura abaixo da ordem, com *"O que fazer: …"* à
+      vista, sem clique;
+    * **[04]** a marca de procedência na linha do ganho;
+    * **[07]** o `+N` quando havia mais ordem aberta do que card.
 
-    A ORDEM DOS CARDS É A DO PRODUTO, e a razão está escrita em
-    `secao_exame._desenhar_o_que_fazer`: *"As ordens vêm antes das curas de
-    conferência: uma ordem sabe de onde veio cada frase dela, e uma cura de
-    conferência não. O que afirma mais vem primeiro."*
+    O cartão da ordem e o de cura eram instrução e confissão sobre um estado,
+    visíveis sem clique, e a ordem dela de 13/09 tira isso da tela
+    (`sprints/2026-09-13-A-TERCEIRA-LISTA-DELA-INDICE.md`). Nada se perdeu: o
+    `?` de cada linha do exame à esquerda traz *Por que importa · Ganho
+    esperado · O que fazer* (:func:`_dica_da_linha`). O que fica é ESTADO: o
+    de→para quando a ordem tem destino, com o `+N` das ordens que não couberam,
+    e a frase do dono quando não há ordem nenhuma.
 
     `vivos` É A MESMA LISTA QUE PINTOU A TIRA, e recebê-la é o que impede as duas
-    metades da seção de discordarem: se esta função relesse o exame, a coluna da
-    direita poderia falar de um achado que a coluna da esquerda não mostra. Sem
-    ela — o padrão — só o card da ordem sai, que é o que esta função fazia antes.
+    metades da seção de discordarem sobre quantas ordens estão abertas. Sem ela —
+    o padrão — só o card sai.
+
+    COLUNA SEM CARD É `monta.NADA_A_DIZER`, e não `""`: o `escrever()` do piloto
+    troca vazio por `—` antes de olhar o alvo, e a coluna ganharia um travessão
+    solto. É o caso das duas ordens desta máquina, que não têm destino.
 
     ---
 
@@ -1560,28 +1376,20 @@ def _html_da_ordem(vivos: list[Any] | None = None) -> str:
     """
     perfil._com_o_src()
     from hefesto_dualsense4unix.gui import aba_conexoes as _tela
-    from hefesto_dualsense4unix.integrations.exame_da_mesa import ESTADO_CERTO
 
     ordem = _ordem_na_tela()
-    partes = [_tela.html_da_ordem(None) if ordem is None else _card_da_ordem(ordem)]
+    if ordem is None:
+        return str(_tela.html_da_ordem(None))
+    card = _card_da_ordem(ordem)
+    if not card:
+        return str(_monta().NADA_A_DIZER)
     if vivos is None:
-        return partes[0]
-    # AS ORDENS ABERTAS QUE NÃO COUBERAM — decisão [07]. `_ordem_na_tela` mostra
-    # a PRIMEIRA e o desenho tem UM card; nesta mesa o exame de 03/09 devolveu
-    # DUAS, e a segunda não aparecia em lugar nenhum.
+        return card
+    # AS ORDENS ABERTAS QUE NÃO COUBERAM — decisão [07], e só quando há card:
+    # um `+N` debaixo de uma coluna vazia contaria o que não coube num lugar que
+    # não mostra nada.
     abertas = sum(1 for i in vivos if getattr(i, "ordem", None) is not None)
-    partes.append(_sobraram(abertas, 1, "recomendação", "recomendações"))
-    # AS CURAS DAS CONFERÊNCIAS — decisão [03]. A REGRA DOS TRÊS FILTROS É DO
-    # DONO (`secao_exame._desenhar_o_que_fazer`), lida linha a linha: sem ordem
-    # (a ordem já tem card), COM cura (não há o que dizer sem ela) e o estado
-    # diferente de CERTO — uma conferência que passou não pede conserto.
-    curas = [i for i in vivos
-             if getattr(i, "ordem", None) is None
-             and str(getattr(i, "cura", "") or "")
-             and str(getattr(i, "estado", "")) != ESTADO_CERTO]
-    partes += [_card_da_cura(i) for i in curas[:_TETO_DE_CURAS]]
-    partes.append(_sobraram(len(curas), _TETO_DE_CURAS, "cura", "curas"))
-    return "".join(p for p in partes if p)
+    return card + _sobraram(abertas, 1, "recomendação", "recomendações")
 
 
 def _carimbo_do_exame() -> str:
@@ -1798,6 +1606,13 @@ def _bancada() -> Any:
 PALAVRA_DA_CONTA = {0: "nada", 1: "uma coisa", 2: "duas coisas", 3: "três coisas",
                     4: "quatro coisas", 5: "cinco coisas"}
 
+#: O RÓTULO DA LINHA DA CONTA — FRASES-E-DICAS-02, 13/09/2026. A linha abria com
+#: a confissão em primeira pessoa (`mapa_da_mesa.CONFISSAO_ABERTURA`) e listava
+#: os itens no `title`; a ordem dela de 13/09 tira confissão da tela. Fica o
+#: ESTADO — a contagem, por extenso — e os itens continuam no `?` do topo da
+#: tela do mapa (`aba08.CONFISSAO_EM_DICA`), que é ajuda. O gerador lê daqui.
+ROTULO_DA_CONTA = "Sem conferir neste desenho:"
+
 
 def palavra_da_conta(quantas: int) -> str:
     """`3` → "três coisas". Fora da tabela, o número cru — nunca uma palavra errada.
@@ -1815,8 +1630,10 @@ def _confissao_do_mapa() -> dict[str, str]:
     """Os campos da confissão — o que o desenho DELA não consegue conferir.
 
     O DONO DAS FRASES É `mapa_da_mesa.confissao_do_desenho`, o mesmo que a
-    janela do desenho redesenha a cada mudança. Aqui elas só ganham a moldura do
-    HTML: a conta por extenso na linha e os itens no `title`.
+    janela do desenho redesenha a cada mudança. Aqui só a CONTA vai à tela, por
+    extenso, depois de :data:`ROTULO_DA_CONTA`. **Os itens saíram do `title` em
+    13/09/2026** (FRASES-E-DICAS-02): eram confissão em primeira pessoa numa
+    dica flutuante, e continuam no `?` do topo da tela do mapa, que é ajuda.
 
     O DEFEITO QUE ISTO FECHA, medido nesta bancada em 03/09/2026: a
     `.mm-conf-linha` está FORA do bloco `.mm-faces` que o pacote troca, então
@@ -1855,33 +1672,8 @@ def _confissao_do_mapa() -> dict[str, str]:
         # ainda não tiver a regra do `sumido`, o que ela lê é "nada" — que é
         # verdade — em vez de um travessão.
         return {"confissao-nada": "sim", "confissao-conta": palavra_da_conta(0)}
-    # O `\n` DE VERDADE, e não o `&#10;` do gerador: aquele é uma entidade HTML,
-    # e o gerador a escreve porque o texto dele entra CRU dentro de `title="…"`
-    # no arquivo. Aqui o valor viaja como JSON e o piloto o põe por
-    # `setAttribute`, onde entidade nenhuma é interpretada — um `&#10;` chegaria
-    # à dica dela escrito com todas as letras.
-    abertura = _abertura_da_confissao()
     return {"confissao-nada": "",
-            "confissao-conta": palavra_da_conta(len(itens)),
-            "confissao-dica": "\n".join([abertura, *(f"· {t}" for t in itens)])}
-
-
-def _abertura_da_confissao() -> str:
-    """*"O que eu não consegui conferir neste desenho:"* — a frase do produto.
-
-    Ela é de `mapa_da_mesa.CONFISSAO_ABERTURA`, a mesma constante que a janela
-    do desenho escreve em cima da lista e que o gerador lê para o `title` do
-    mockup. Digitá-la aqui seria a segunda grafia da abertura, e a primeira
-    coisa que uma segunda grafia perde é a revisão dela.
-    """
-    with contextlib.suppress(Exception):
-        perfil._com_o_src()
-        from hefesto_dualsense4unix.app.widgets.mapa_da_mesa import (
-            CONFISSAO_ABERTURA,
-        )
-
-        return str(CONFISSAO_ABERTURA)
-    return ""
+            "confissao-conta": palavra_da_conta(len(itens))}
 
 
 def _html_do_mapa() -> str:
@@ -2439,7 +2231,7 @@ def trava_da_luz(via: str) -> str:
     return LUZ_LIVRE if (via or "").strip().lower() == "bt" else LUZ_TRAVADA
 
 
-def dica_da_luz(via: str, nascimento: Any = None, mesa_suja: bool | None = None) -> str:
+def dica_da_luz(via: str, nascimento: Any = None) -> str:
     """A dica do botão "A luz não acende" — a do PRODUTO, e nunca vazia.
 
     **TRÊS COISAS QUE A TELA NÃO DIZIA, e as três têm dono no produto:**
@@ -2450,11 +2242,10 @@ def dica_da_luz(via: str, nascimento: Any = None, mesa_suja: bool | None = None)
        de transporte. A cor já obedecia (`trava_da_luz`, 03/09); a frase, não.
        `secao_controles.dica_do_botao` decide as duas juntas, e é ela quem passa
        a escrever;
-    2. **o AVISO DA MESA SUJA.** Quando outro programa está segurando nó de
-       controle agora, a conexão nova nasce travada igual — e a cura que o botão
-       oferece não pega. A janela estável ANEXA o aviso à dica, nunca no lugar:
-       a pessoa continua precisando saber o que o botão faz. Aqui não havia
-       nada; ela clicava, não funcionava, e não havia segunda frase;
+    2. **o AVISO DA MESA SUJA — que SAIU em 13/09/2026** (FRASES-E-DICAS-02).
+       Ele era anexado à dica quando outro programa segurava nó de controle, e
+       era aviso com instrução: a ordem dela de 13/09 tira frase de aviso da
+       tela em toda forma, `title` incluído. A dica fica com o que o botão faz;
     3. **a RAZÃO de a cura ser oferecida** — `frase_do_nascimento`, o carimbo
        que o daemon põe na conexão (`SINAL-NO-NASCIMENTO-01`). Só a condenação
        fala: ausência, `limpa` e `nao_sei` calam, cada um por um motivo medido
@@ -2465,9 +2256,6 @@ def dica_da_luz(via: str, nascimento: Any = None, mesa_suja: bool | None = None)
     que `secao_controles._card_do_controle` faz do lado da janela estável — e a
     ordem: o que o botão faz primeiro, a razão de ele estar sendo oferecido
     depois. O `▲` da razão já vem do dono.
-
-    `mesa_suja` é `True`/`False`/`None`, e o `None` **não** vira aviso: alarme
-    sem medição atrás ensina a ignorar alarme.
     """
     perfil._com_o_src()
     from hefesto_dualsense4unix.app.actions.config.secao_controles import (
@@ -2482,7 +2270,7 @@ def dica_da_luz(via: str, nascimento: Any = None, mesa_suja: bool | None = None)
     no_radio = trava_da_luz(via) == LUZ_LIVRE
     dados = _dataclasses.make_dataclass(
         "ControleDaLuz", ["adotado", "no_cabo", "uniq"])(True, not no_radio, "x")
-    dica = dica_do_botao(dados, mesa_suja=bool(mesa_suja is True))
+    dica = dica_do_botao(dados)
     razao = frase_do_nascimento(nascimento) if no_radio else None
     return f"{dica} {razao}" if razao else dica
 
@@ -3871,12 +3659,6 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
     # do daemon e não sabe o nome do plástico.
     da_mesa = {str(m.get("uniq") or ""): m for m in ctx.mesa}
 
-    # A SONDA DA MESA SUJA, UMA VEZ POR TIQUE e não uma por controle: ela
-    # responde sobre a MÁQUINA ("alguém está segurando nó de controle agora?"),
-    # não sobre um aparelho. Chamá-la dentro do laço varreria `/proc` uma vez
-    # por cartão para receber a mesma resposta.
-    mesa_suja = _mesa_suja()
-
     # UM PASSO DO RELÓGIO DA ESPERA, UMA VEZ POR TIQUE — ver a seção "A ESPERA
     # PELO PS". Ele vem antes do laço porque a espera é do RELÓGIO, não do
     # cartão: chamá-lo por controle entregaria N tiques por segundo ao dono numa
@@ -3945,11 +3727,10 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
             # :func:`dica_da_luz`. O `title` do desenho é congelado: o cartão da
             # esquerda explica o cabo e o da direita explica o rádio, e os dois
             # continuam explicando isso quando o controle troca de transporte.
-            # Junto vêm o AVISO DA MESA SUJA (quando outro programa segura nó de
-            # controle agora) e a RAZÃO do carimbo de nascimento — os dois com
-            # dono no produto e zero leitor no HTML até hoje.
+            # Junto vem a RAZÃO do carimbo de nascimento, que tem dono no
+            # produto. O aviso da mesa suja saiu em 13/09/2026 (ver a função).
             "luz-dica": dica_da_luz(str(c.get("transport") or ""),
-                                    c.get("nascimento"), mesa_suja),
+                                    c.get("nascimento")),
             # O RÓTULO DO BOTÃO, e é ele que cumpre a promessa do `title`: na
             # espera o mesmo botão diz "Cancelar". Ver :func:`texto_do_botao_da_luz`.
             "luz-texto": texto_do_botao_da_luz(uniq),

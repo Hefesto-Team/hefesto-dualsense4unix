@@ -1703,11 +1703,13 @@ def test_a_steam_fora_das_tres_buscas_nao_apaga_a_biblioteca_lida(desenho):
 
     # E O VDF ILEGÍVEL TAMBÉM É PROVA DE QUE ELA EXISTE — um erro de leitura
     # não pode virar "não achei", que é a resposta de quem não tem o arquivo.
+    # O RÓTULO VIROU ESTADO EM 13/09/2026 (FRASES-E-DICAS-02): a frase que
+    # narrava o erro saiu da tela, e a régua pergunta ao dono dos dois rótulos em
+    # vez de digitar um deles.
     quebrada = desenho.Leitura(erros=("o vdf sumiu",), onde_estao=(("steam", ""),))
-    assert "Não consegui ler a biblioteca da Steam" in (
-        desenho.cartao_da_steam(quebrada).diz), (
-        "um vdf ilegível virou 'não achei este lançador' — some a mensagem que "
-        "ela precisa ler")
+    diz = desenho.cartao_da_steam(quebrada).diz
+    assert desenho.DIZ_NAO_LI in diz and desenho.DIZ_NAO_ACHEI not in diz, (
+        f"um vdf ilegível virou 'não achei este lançador': {diz!r}")
 
 
 def test_o_cartao_da_steam_nao_achada_mantem_os_enderecos_da_pagina(desenho):

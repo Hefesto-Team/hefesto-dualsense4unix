@@ -263,30 +263,29 @@ class TestOSufixoDoCanal:
 
 
 class TestADicaDoCanal:
-    """As frases são as do dono, e a do PADRÃO depende da REGRA estar no lugar."""
+    """A dica diz o ESTADO do canal, e só ele.
+
+    VIROU RÓTULO EM 13/09/2026 — FRASES-E-DICAS-02. Até aqui a dica juntava a
+    frase do dono (`controller_card.DICA_CANAL_*`) com a da regra do sono — «é o
+    padrão» ou «a regra … NÃO está instalada … Rode o install.sh» — e o estudo
+    a mediu na tela com «SUSPENSO no PipeWire». A ordem dela de 13/09
+    (`docs/process/sprints/2026-09-13-A-TERCEIRA-LISTA-DELA-INDICE.md`) tira da
+    tela o que avisa ou instrui sobre um estado: fica o estado.
+    """
 
     def test_sem_leitura_nao_ha_frase(self) -> None:
-        assert mod.dica_do_canal("", True) == ""
+        assert mod.dica_do_canal("") == ""
 
-    def test_a_regra_instalada_diz_que_e_o_padrao(self) -> None:
-        dita = mod.dica_do_canal(audio_saida.CANAL_ACORDADO, True)
-        assert DICA_CANAL_ACORDADO in dita and DICA_CANAL_E_PADRAO in dita
-
-    def test_a_cura_arrancada_e_denunciada(self) -> None:
-        """Com o drop-in 54 fora do lugar, a tela DIZ — o sintoma é silencioso."""
-        dita = mod.dica_do_canal(audio_saida.CANAL_DORMINDO, False)
-        assert DICA_CANAL_DORMINDO in dita and DICA_CANAL_SEM_A_REGRA in dita
-
-    def test_ninguem_perguntou_nao_afirma_nem_um_nem_outro(self) -> None:
-        """`None` é "ninguém perguntou": nem "é o padrão", nem "falta a regra".
-
-        Um nó pode estar acordado por acaso com a cura fora do lugar; chamar
-        isso de padrão seria a tela dando por curado o que só está de pé agora.
-        """
-        dita = mod.dica_do_canal(audio_saida.CANAL_ACORDADO, None)
-        assert dita == DICA_CANAL_ACORDADO
-        assert DICA_CANAL_E_PADRAO not in dita
-        assert DICA_CANAL_SEM_A_REGRA not in dita
+    @pytest.mark.parametrize(
+        "sono", [audio_saida.CANAL_ACORDADO, audio_saida.CANAL_DORMINDO])
+    def test_a_dica_e_o_estado_lido_e_nada_mais(self, sono: str) -> None:
+        """MORDE: devolva `DICA_CANAL_DORMINDO` ao `dica_do_canal` da 02."""
+        dita = mod.dica_do_canal(sono)
+        assert sono in dita
+        for frase in (DICA_CANAL_ACORDADO, DICA_CANAL_DORMINDO,
+                      DICA_CANAL_E_PADRAO, DICA_CANAL_SEM_A_REGRA):
+            assert frase not in dita, f"a dica do canal voltou a narrar: {dita!r}"
+        assert "PipeWire" not in dita and "medido" not in dita
 
 
 # ---------------------------------------------------------------------------
@@ -401,7 +400,11 @@ class TestOsSelosNoCartao:
         card = _card(_entrada())
         assert card["alto-selo"] == TEXTO_SELO_CANAL_DORMINDO
         assert card["alto-canal"] == "· dormindo"
-        assert DICA_CANAL_SEM_A_REGRA in card["alto-canal-porque"]
+        # O TERCEIRO CAMPO É O RÓTULO DO ESTADO desde 13/09/2026 — ver
+        # `TestADicaDoCanal`. A regra do sono fora do lugar não chega à dica.
+        assert card["alto-canal-porque"] == mod.dica_do_canal(
+            audio_saida.CANAL_DORMINDO)
+        assert DICA_CANAL_SEM_A_REGRA not in card["alto-canal-porque"]
 
     def test_a_saida_muda_acende_pelo_payload(self, sono_lido) -> None:
         """A camada 1 chega pelo `speaker.saida_muda`, lida pelo dono."""

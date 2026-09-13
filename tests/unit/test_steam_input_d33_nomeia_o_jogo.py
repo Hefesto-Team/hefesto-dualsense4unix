@@ -19,6 +19,10 @@ da própria Steam:
 O que este arquivo trava, nas três: o appid aparece SEMPRE, o nome do jogo
 aparece quando a Steam tem o `appmanifest` em disco, nome nenhum é inventado
 quando não tem, e a palavra "conflito" não volta.
+
+**A MENSAGEM 2 CONTA EM VEZ DE NOMEAR desde 13/09/2026** (FRASES-E-DICAS-02):
+ela virou rótulo curto no cartão da Steam — ver `TestLinhaDaAbaEmulacao`. As
+mensagens 1 e 3 seguem nomeando.
 """
 from __future__ import annotations
 
@@ -245,11 +249,22 @@ class TestLinhaDaAbaEmulacao:
         base.update(kwargs)
         return markup_status_steam_input(**base)  # type: ignore[arg-type]
 
-    def test_nomeia_o_jogo_e_larga_a_palavra_conflito(self) -> None:
+    def test_conta_os_jogos_e_larga_a_palavra_conflito(self) -> None:
+        """A LINHA CONTA OS JOGOS — FRASES-E-DICAS-02, 13/09/2026.
+
+        Até aqui ela nomeava cada jogo com o appid e seguia com a frase do
+        próximo ciclo. Esta função só alimenta o cartão da Steam na aba
+        Lançadores — a janela GTK saiu (`D-0609-GTK-LEVA-INTEIRA`) —, e a ordem
+        dela de 13/09 (`docs/process/sprints/2026-09-13-A-TERCEIRA-LISTA-DELA-INDICE.md`)
+        quer ali rótulo curto de estado: a régua é
+        `test_o_cartao_da_steam_nao_narra._e_rotulo_de_estado`, e o nome com o
+        appid não cabe nela. A palavra "conflito" continua fora.
+        """
         markup = self._markup()
-        assert "Sackboy: A Big Adventure (appid 1599660)" in markup
+        assert "Ligado em 1 jogo" in markup
+        assert "appid" not in markup
         assert "conflita" not in markup
-        assert "próximo ciclo" in markup
+        assert "próximo ciclo" not in markup
 
     def test_chave_global_nao_finge_ter_jogo(self) -> None:
         markup = self._markup(jogos=[])
@@ -272,8 +287,10 @@ class TestLinhaDaAbaEmulacao:
     def test_nome_com_e_comercial_nao_quebra_o_markup(self) -> None:
         """Pango engasga com `&` cru — e um jogo chamado "Rick & Morty" existe."""
         markup = self._markup(jogos=["Sam & Max (appid 321)"])
-        assert "&amp;" in markup
-        assert "Sam & Max" not in markup
+        # O NOME NÃO ENTRA MAIS NA LINHA desde 13/09/2026 (ver o teste acima): o
+        # `&` cru não tem por onde chegar ao Pango.
+        assert "Sam" not in markup
+        assert "&" not in markup
 
     def test_o_bloco_de_excecoes_do_r06_continua_no_lugar(self) -> None:
         markup = self._markup(on=False, jogos=[], excecoes=[2111190], efetiva=True)

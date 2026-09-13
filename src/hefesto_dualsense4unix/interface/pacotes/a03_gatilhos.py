@@ -1693,6 +1693,12 @@ def chip_do_controle(jogador: int, nome: str, via: str, plastico: str,
 
     É a metade que faltava da regra dela: *sem cor lida, sem cor na tela* — e,
     quando não há, dizer POR QUE não há.
+
+    **A SEGUNDA AUSÊNCIA PAROU DE SE EXPLICAR — FRASES-E-DICAS-02, 13/09/2026.**
+    A dica de quem ninguém leu confessava que a cor ainda não tinha sido lida:
+    confissão sobre um estado nosso numa dica flutuante, e a ordem dela de 13/09
+    a tira da tela. Ela diz só o nome — e, sem nome, o `<span>` não tem dica.
+    A do acabamento fica: ela diz o que o modelo É, não o que nós não fizemos.
     """
     cor = cor_de_borda(plastico)
     classe = "chip plastico" if conectado else "chip vazio"
@@ -1707,11 +1713,11 @@ def chip_do_controle(jogador: int, nome: str, via: str, plastico: str,
                 "O acabamento deste modelo não cabe num hexadecimal, e a borda "
                 "fica neutra.")
     else:
-        dica = (f"{nome} — a cor do plástico deste controle ainda não foi lida"
-                if nome else
-                "A cor do plástico deste controle ainda não foi lida.")
+        # A COR NÃO LIDA DIZ O NOME, OU NADA — FRASES-E-DICAS-02, 13/09/2026.
+        dica = nome
     estilo = f' style="--plastico:{cor}"' if cor_no_chip and cor else ""
-    return (f'<span class="{classe}"{estilo} title="{dica}">'
+    titulo = f' title="{dica}"' if dica else ""
+    return (f'<span class="{classe}"{estilo}{titulo}>'
             f"{miolo_do_chip(jogador, nome, via, conectado)}</span>")
 
 
