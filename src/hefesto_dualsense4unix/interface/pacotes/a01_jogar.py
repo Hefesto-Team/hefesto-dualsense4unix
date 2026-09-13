@@ -18,6 +18,7 @@ interruptor, e é por isso que o botão da Jogar funciona hoje.
 from __future__ import annotations
 
 import html
+import sys
 from typing import Any
 
 from . import Contexto, degradacao_de, jogador_de, registrar
@@ -679,10 +680,12 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
     # quem quiser mostrá-las; esta função parou de emitir os quatro endereços
     # porque a página parou de ter onde pousá-los.
 
-    # A FAIXA LARANJA. Os dois endereços saem daqui SEMPRE — inclusive vazios —
-    # porque o que estava cravado na página é uma frase, e uma frase só se apaga
-    # escrevendo por cima. Ver `_faixa_do_pendente`.
-    frase, alvo = _faixa_do_pendente(ctx.state)
+    # A FAIXA LARANJA NÃO FALA MAIS — 13/09/2026, JOGAR-A-FAIXA-QUE-PULA-01 §3.2.
+    # A pendência continua medida pela dona (`_faixa_do_pendente`) e vai para o
+    # diário da janela; a tela recebe VAZIO nos três endereços. Os três seguem
+    # saindo em TODO tique, porque o que estava cravado na página é uma frase,
+    # e uma frase só se apaga escrevendo por cima.
+    _relatar_a_pendencia(_faixa_do_pendente(ctx.state)[0])
 
     fora: dict[str, Any] = {
         # A FRASE DA MESA e a RESSALVA DA MÁSCARA — as duas saem SEMPRE,
@@ -701,14 +704,12 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
         "cartoes": cartoes,
         # O INTERRUPTOR E A FILEIRA, VIVOS — 03/09/2026. Ver `_estado_da_tela`.
         **_estado_da_tela(ctx.state),
-        "pendente": frase,
-        "pendente-alvo": alvo,
-        # A FAIXA SÓ EXISTE COM PENDÊNCIA. Sem isto ela virava um travessão
-        # solto na caixa tracejada, porque o piloto escreve `—` no lugar de um
-        # valor vazio — medido em 02/09/2026. O espaço continua reservado
-        # (`visibility`, não `display`): "muda tudo ao clicar" é queixa dela, e
-        # a legenda desta aba promete que a tela não pula.
-        "pendente-ha": "1" if frase else "",
+        "pendente": "",
+        "pendente-alvo": "",
+        # O INTERRUPTOR DA FAIXA FICA APAGADO, e é ele que esconde a caixa
+        # tracejada: sem `.ha` o travessão que o piloto escreve no vazio não
+        # aparece (medido em 02/09/2026). O espaço continua reservado.
+        "pendente-ha": "",
         # OS CONTROLES QUE O HEFESTO SÓ VÊ — EXTERNOS-01. Ver
         # :func:`_html_dos_externos`.
         "externos": _html_dos_externos(ctx),
@@ -1560,7 +1561,22 @@ def _cadeado_cego(state: dict[str, Any]) -> str:
 
 
 def _ressalva_da_mascara(state: dict[str, Any]) -> str:
-    """A linha da máscara quando ela ainda não tem efeito — ``""`` quando tem.
+    """A linha da máscara fora do modo jogo — ``""`` em TODO estado desde 13/09/2026.
+
+    NOTA DATADA — 13/09/2026, JOGAR-A-FAIXA-QUE-PULA-01 §3.1. Até hoje ela
+    devolvia `RESSALVA_DA_MASCARA` em Modo Nativo e na Navegação, e a frase era
+    pintada a cada tique, até sem máscara nenhuma escolhida. A palavra dela
+    sobre as frases de status — *"em todas as abas da interface"* (TELA-CALADA-01)
+    — a tirou da tela. O FATO que ela dizia continua verdadeiro e continua com
+    régua (`test_a01_a_mascara_vale_sempre_que_pode`): `gamepad.mask.set` grava
+    sem gate de modo, e o chip do CARTÃO acende a escolha pelo `por_aparelho`
+    do daemon (`ipc_handlers._mascaras_por_aparelho`). O argumento abaixo,
+    *"esta tela deixava clicar e ficava calada"*, era de antes de o chip ser por
+    controle (03/09): hoje é o chip que responde ao clique.
+
+    ELA CONTINUA SENDO A DONA DA LINHA, e não um literal no `pacote()`: o
+    endereço `mascara-ressalva` segue na página, e a frase volta mudando UMA
+    função. O que vem abaixo é o raciocínio de 04/09, e fica como registro.
 
     A QUEIXA É DELA, e é a primeira da lista de 04/09: *"independente do modo a
     mascara deve funcionar ali sempre."*
@@ -1586,14 +1602,7 @@ def _ressalva_da_mascara(state: dict[str, Any]) -> str:
     (`painel.MODOS_LIGADOS` tem `gamepad` e `desktop`): uma frase que dissesse
     "ligue o Hefesto" mandaria ligar o que já está ligado.
     """
-    if not state:
-        return ""
-    from hefesto_dualsense4unix.app.actions.mode_transition import MODE_GAMEPAD
-
-    modo = _painel().modo_vivo(state)
-    if modo is None or modo == MODE_GAMEPAD:
-        return ""
-    return RESSALVA_DA_MASCARA
+    return ""
 
 
 def _estado_da_tela(state: dict[str, Any]) -> dict[str, str]:
@@ -1991,6 +2000,34 @@ def _faixa_do_pendente(state: dict[str, Any]) -> tuple[str, str]:
         resto = frase[len(marca):]
         frase = marca + resto[:1].upper() + resto[1:]
     return frase, ", ".join(rotulos)
+
+
+#: A última pendência que foi ao diário — para escrever a linha quando ela
+#: MUDA, e não dez vezes por segundo.
+_PENDENCIA_RELATADA = ""
+
+
+def _relatar_a_pendencia(frase: str) -> None:
+    """Leva a pendência ao diário da janela — e não mais à tela.
+
+    13/09/2026, JOGAR-A-FAIXA-QUE-PULA-01 §3.2, MEDIDO NO CÓDIGO E EM DUBLÊ, não
+    no aparelho: o chip da fileira manda `gamepad.emulation.set` com
+    `origin="manual"` (`painel.plano_do_modo`); a trava de jogo aberto nunca
+    segura essa origem (`gamepad._recriacao_bloqueada_por_jogo`,
+    `ORIGENS_GESTO_DELA`); o daemon grava o `flavor` assim que o vpad novo
+    nasce; e `_estado_da_tela` acende o chip com ele no tique seguinte. **O chip
+    mostra a escolha**, e a sprint decidiu por esse ramo: a faixa não acende.
+
+    Uma pendência que PERSISTE é o daemon que não alcançou o pedido, e isso é
+    assunto de quem depura: vai para o `interface.log`, na forma do
+    `[desfecho]` da aba 10 (`a10_perfis._anotar`).
+    """
+    global _PENDENCIA_RELATADA
+    if frase == _PENDENCIA_RELATADA:
+        return
+    _PENDENCIA_RELATADA = frase
+    if frase:
+        print(f"[relato] {PAGINA} · pendente: {frase}", file=sys.stderr)
 
 
 # ---------------------------------------------------------------------------
@@ -2713,6 +2750,8 @@ def reconectar(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | Non
 #: pedido NÃO chegou.** É a faixa laranja (`_faixa_do_pendente`) — até agora um
 #: clique que não pegava não deixava rastro nenhum, porque `_aplicar` engole o
 #: retorno de propósito (`ACHADO_DO_TIMEOUT`).
+#: NOTA DATADA — 13/09/2026, JOGAR-A-FAIXA-QUE-PULA-01: o rastro continua, mas
+#: no DIÁRIO da janela (`_relatar_a_pendencia`), e não mais na tela.
 OS_DOIS_DA_LISTA_DOS_DEZESSEIS: dict[str, str] = {
     "hefesto": (
         "aplicou e não havia o que mudar: a prova clica a posição Ligado e o "

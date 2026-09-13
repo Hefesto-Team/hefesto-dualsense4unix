@@ -26,6 +26,13 @@ O QUE A RÉGUA COBRA, e cada item é uma forma de a cura morrer calada:
 * a frase é a do produto (`relancar.texto_do_pendente`), não uma cópia — a
   régua troca a função e cobra que o pacote a siga;
 * o rótulo é a palavra que ela LEU na tela, que chega no clique.
+
+NOTA DATADA — 13/09/2026, JOGAR-A-FAIXA-QUE-PULA-01 §3.2: a frase SAIU DA
+TELA. Medido no código e em dublê: o chip da fileira pede com
+`origin="manual"`, a trava de jogo aberto não segura essa origem, e o chip
+acende o `flavor` que o daemon grava — o chip já mostra a escolha. A regra da
+pendência continua aqui, medida na dona (`_faixa_do_pendente`); a frase vai ao
+diário da janela, e os três endereços do `pacote()` saem vazios.
 """
 from __future__ import annotations
 
@@ -86,9 +93,16 @@ def _mesa_limpa() -> Any:
 
 
 def faixa(state: dict[str, Any]) -> tuple[str, str]:
-    """Os dois endereços, como o pacote os entrega à pintura."""
-    fora = aba.pacote(Contexto(state=state, mesa=[], conectados=[], estados={}))
-    return fora["pendente"], fora["pendente-alvo"]
+    """A pendência como a DONA a mede — `_faixa_do_pendente`.
+
+    CONTRATO TROCADO — 13/09/2026, JOGAR-A-FAIXA-QUE-PULA-01 §3.2. Até hoje
+    este ajudante lia `pendente` e `pendente-alvo` do `pacote()`, que eram a
+    frase na tela. A frase saiu da tela e vai ao diário da janela
+    (`_relatar_a_pendencia`); a regra de QUANDO há pendência não mudou, e é ela
+    que as réguas abaixo medem. Quem cobra a tela vazia é
+    `test_o_reconectar_nao_muda_de_lugar.py`.
+    """
+    return aba._faixa_do_pendente(state)
 
 
 # ---------------------------------------------------------------------------

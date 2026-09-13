@@ -30,6 +30,10 @@ cuidado (*"cinza antes, com a razão na dica"*):
                                     pior.
     o Nintendo Pro                → CINZA. Ele nunca pode. É o caso em que o
                                     cinza é a verdade.
+
+NOTA DATADA — 13/09/2026, JOGAR-A-FAIXA-QUE-PULA-01 §3.1: a RESSALVA saiu da
+tela (*"em todas as abas da interface"*, TELA-CALADA-01). O motor que ela
+anunciava continua trancado aqui; o que mudou de contrato é a metade 2.
 """
 from __future__ import annotations
 
@@ -110,23 +114,29 @@ def test_o_gesto_da_mascara_nao_tem_gate_de_modo() -> None:
 
 
 # ---------------------------------------------------------------------------
-# 2. A RESSALVA — a tela deixa de ficar calada fora do modo jogo
+# 2. A RESSALVA — CONTRATO TROCADO EM 13/09/2026: a frase saiu da tela
 # ---------------------------------------------------------------------------
 @pytest.mark.parametrize("estado", [VIVO_NATIVO, VIVO_NAVEGACAO])
-def test_fora_do_modo_jogo_a_tela_diz_que_a_escolha_ficou_guardada(
+def test_fora_do_modo_jogo_a_escolha_fica_guardada_sem_frase_na_tela(
         estado: dict[str, Any]) -> None:
-    """Os DOIS modos sem vpad — e a Navegação é o que engana.
+    """Os DOIS modos sem vpad — e a frase que os anunciava saiu da tela.
 
-    Na Navegação o interruptor está em **Ligado** (`painel.MODOS_LIGADOS` tem
-    `gamepad` e `desktop`), e mesmo assim não há gamepad virtual. Uma cura que
-    só olhasse o Modo Nativo deixaria metade da queixa dela de pé.
+    CONTRATO TROCADO — 13/09/2026, JOGAR-A-FAIXA-QUE-PULA-01 §3.1. Até hoje
+    esta régua se chamava `test_fora_do_modo_jogo_a_tela_diz_que_a_escolha_
+    ficou_guardada` e cobrava `RESSALVA_DA_MASCARA` em Modo Nativo e na
+    Navegação, pintada a cada tique. A palavra dela sobre as frases de status,
+    *"em todas as abas da interface"* (TELA-CALADA-01), a tirou. O que responde
+    ao clique é o chip do cartão, que acende a escolha pelo `por_aparelho` do
+    daemon; e a escolha continua GRAVADA em qualquer modo, que é o que a
+    metade 1 e a metade 4 deste arquivo trancam.
 
-    A MORDIDA: troque o `if modo is None or modo == MODE_GAMEPAD: return ""`
-    por `return ""` e a tela volta a aceitar o clique em silêncio.
+    A MORDIDA: devolva `return RESSALVA_DA_MASCARA` no fim de
+    `_ressalva_da_mascara` e esta régua reprova nos dois modos.
     """
     fora = aba.pacote(_ctx(estado))
-    assert fora["mascara-ressalva"] == aba.RESSALVA_DA_MASCARA, (
-        f"a tela ficou calada fora do modo jogo: {fora['mascara-ressalva']!r}")
+    assert fora["mascara-ressalva"] == "", (
+        f"a ressalva voltou a ser pintada fora do modo jogo: "
+        f"{fora['mascara-ressalva']!r}")
 
 
 def test_no_modo_jogo_a_ressalva_nao_existe() -> None:
