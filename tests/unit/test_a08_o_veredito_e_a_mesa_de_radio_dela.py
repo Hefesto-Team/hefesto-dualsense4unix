@@ -46,8 +46,8 @@ só ele:
                                                    adaptadores_tem_endereco`
  6   o `<i class="vaviso">` DEPOIS do `.onde`      `..._a_coluna_onde_dos_
                                                    vizinhos_tem_endereco`
- 7   `dica_do_botao(dados)` sem `mesa_suja`        `..._anexa_o_aviso_da_
-                                                   mesa_suja`
+ 7   (caducou em 13/09/2026 — o aviso da mesa      `..._nao_anexa_o_aviso_
+     suja saiu da dica, FRASES-E-DICAS-02)         da_mesa_suja`
  8   `razao = None` em `dica_da_luz`               `..._a_razao_do_nascimento_
                                                    so_fala_na_condenacao`
  9   `"Custa +16,3 turnos"` digitado no lugar      `..._o_custo_do_mic_no_
@@ -550,25 +550,29 @@ def test_a_dica_da_luz_segue_o_transporte() -> None:
         "sobre um controle cujo transporte ninguém leu é um pedido no escuro")
 
 
-def test_a_dica_da_luz_anexa_o_aviso_da_mesa_suja() -> None:
-    """Mesa suja ANEXA, nunca substitui — e o "não sei" cala.
+def test_a_dica_da_luz_nao_anexa_o_aviso_da_mesa_suja(monkeypatch) -> None:  # type: ignore[no-untyped-def]
+    """A mesa suja NÃO muda a dica — FRASES-E-DICAS-02, 13/09/2026.
 
-    A janela estável anexa de propósito: a pessoa continua precisando saber o
-    que o botão faz. E `None` (a sonda não pôde responder) NÃO vira aviso —
-    alarme sem medição atrás ensina a ignorar alarme.
+    CONTRATO QUE MUDOU: até esta data a dica ANEXAVA o aviso da mesa suja, com
+    instrução. A ordem dela de 13/09 tira frase de aviso da tela em toda forma,
+    `title` incluído (`docs/process/sprints/2026-09-13-A-TERCEIRA-LISTA-DELA-
+    INDICE.md`, a mensagem de abertura). A dica fica com o que o botão faz.
+
+    O DUBLÊ É A SONDA DE VERDADE respondendo SUSPEITA — outro programa
+    segurando o nó. Se alguém religar a pergunta pela mesa à dica, as duas
+    respostas deixam de ser iguais, com as palavras que forem.
     """
-    from hefesto_dualsense4unix.app.actions.config.secao_controles import (
-        AVISO_DA_MESA_SUJA,
-        DICA_NO_RADIO,
-    )
+    from hefesto_dualsense4unix.app.actions.config.secao_controles import DICA_NO_RADIO
+    from hefesto_dualsense4unix.integrations import sinal_da_barra as sb
 
     p = _pacote()
-    suja = p.dica_da_luz("bt", mesa_suja=True)
-    assert AVISO_DA_MESA_SUJA in suja and DICA_NO_RADIO in suja, (
-        "o aviso da mesa suja substituiu a dica em vez de se juntar a ela")
-    assert AVISO_DA_MESA_SUJA not in p.dica_da_luz("bt", mesa_suja=None), (
-        "a sonda respondeu 'não sei' e a tela acusou mesmo assim")
-    assert AVISO_DA_MESA_SUJA not in p.dica_da_luz("bt", mesa_suja=False)
+    limpa = p.dica_da_luz("bt")
+    monkeypatch.setattr(sb, "limpo_para_conectar",
+                        lambda *a, **k: (sb.CONFIANCA_SUSPEITA, "dublê", (4242,)))
+    suja = p.dica_da_luz("bt")
+    assert suja == limpa == DICA_NO_RADIO, (
+        "a dica da luz mudou com outro programa segurando controle — o aviso da "
+        f"mesa suja voltou a ser anexado: {suja!r}")
 
 
 def test_a_razao_do_nascimento_so_fala_na_condenacao() -> None:

@@ -30,7 +30,6 @@ from hefesto_dualsense4unix.app.actions.mode_transition import (
 from hefesto_dualsense4unix.app.draft_config import DraftConfig
 from hefesto_dualsense4unix.app.ipc_bridge import _get_executor, call_async, run_in_thread
 from hefesto_dualsense4unix.integrations.hotkey_daemon import DEFAULT_BUFFER_MS
-from hefesto_dualsense4unix.integrations.steam_launch_options import juntar_rotulos
 from hefesto_dualsense4unix.integrations.uinput_gamepad import (
     DEVICE_NAME,
     DUALSENSE_EDGE_NAME,
@@ -435,26 +434,27 @@ def markup_status_steam_input(
     saiu porque não é conflito nenhum: é uma regra do Hefesto contra uma
     escolha dela, e quem perde é sempre a escolha dela.
 
+    **O RAMO LIGADO VIROU RÓTULO CURTO EM 13/09/2026 — FRASES-E-DICAS-02.** A
+    janela GTK desta linha saiu em 06/09 (`D-0609-GTK-LEVA-INTEIRA`), e quem a
+    mostra hoje é o cartão da Steam na aba Lançadores, a cada tique e sem
+    clique. A frase longa — o nome de cada jogo, o que o Hefesto faria no
+    próximo ciclo e por quê — era narração, e a ordem dela de 13/09 deixa na
+    tela só estado: *Ligado em N jogos*, ou o ajuste global. A palavra
+    "conflito" continua fora, e o «Desligar o Steam Input» do cartão continua
+    sendo a saída.
+
     `jogos` são rótulos JÁ traduzidos (`rotulo_do_jogo`), porque traduzir lê o
-    disco e isto aqui roda no laço da interface. Lista vazia com ``on`` verdade
-    = a chave GLOBAL da Steam, que não pertence a jogo nenhum.
+    disco e isto aqui roda no laço da interface; desde 13/09 só a QUANTIDADE vai
+    à tela. Lista vazia com ``on`` verdade = a chave GLOBAL da Steam, que não
+    pertence a jogo nenhum.
     """
     if on is None:
         markup = f'<span foreground="#8b8fa8">{STEAM_NAO_ENCONTRADA}</span>'
     elif on:
         if jogos:
-            sujeito = (
-                "esse jogo não está" if len(jogos) == 1 else "esses jogos não estão"
-            )
-            corpo = (
-                f"Ligado para {juntar_rotulos(jogos)} — o Hefesto desliga no "
-                f"próximo ciclo, porque {sujeito} na sua lista de exceções"
-            )
+            corpo = f"Ligado em {len(jogos)} {'jogo' if len(jogos) == 1 else 'jogos'}"
         else:
-            corpo = (
-                "Ligado no ajuste global da Steam — vale para todo jogo, e o "
-                "Hefesto desliga no próximo ciclo"
-            )
+            corpo = "Ligado no ajuste global da Steam"
         markup = f'<span foreground="#ffb86c">{html.escape(corpo)}</span>'
     else:
         markup = '<span foreground="#50fa7b">Desligado — tudo certo</span>'

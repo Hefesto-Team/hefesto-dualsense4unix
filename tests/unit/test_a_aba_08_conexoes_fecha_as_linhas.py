@@ -15,12 +15,16 @@ As decisões cobertas, todas de `docs/process/2026-09-04-O-PO-DECIDE-as-54-e-os-
 * **[07]** o `+N` no fim de cada lista;
 * **[08]** a frase do rodapé do Mapa, trocada pela verdade.
 
+**[03] E [04] CAÍRAM EM 13/09/2026** (FRASES-E-DICAS-02) — a nota está na seção
+deles, e a régua agora mede que não voltam.
+
 E o defeito da §3 desta aba: **o campo de nome do adaptador promete e não
 guarda.**
 """
 
 from __future__ import annotations
 
+import dataclasses
 import re
 
 import pytest
@@ -87,98 +91,60 @@ def cena():
 
 
 # ---------------------------------------------------------------------------
-# [04] O SELO DE PROCEDÊNCIA — só nas frases que NÃO foram medidas aqui
+# [04] O SELO DE PROCEDÊNCIA e [03] O CARTÃO DE CURA — CAÍRAM EM 13/09/2026
 # ---------------------------------------------------------------------------
-def test_a_marca_de_procedencia_cala_no_medido_aqui(pacote) -> None:
-    """`medido aqui` é o implícito, e o implícito não ocupa pixel.
-
-    MORDE: um `_marca_da_procedencia` que devolvesse a marca sempre poria três
-    marcas de cinza num balão de 330 px — que é a medição pela qual esta marca
-    tinha ficado FORA até hoje.
-    """
-    from hefesto_dualsense4unix.integrations.ordens_da_mesa import (
-        MEDIDO_AQUI,
-        Linha,
-    )
-
-    assert pacote._marca_da_procedencia(Linha(texto="x", selo=MEDIDO_AQUI)) == ""
-
-
-def test_a_marca_de_procedencia_diz_a_palavra_do_dono(pacote) -> None:
-    """A palavra sai de `ordens_da_mesa.TEXTO_DO_SELO` — nunca digitada aqui."""
-    from hefesto_dualsense4unix.integrations.ordens_da_mesa import (
-        DERIVADO_DA_CONTA,
-        TEXTO_DO_SELO,
-        Linha,
-    )
-
-    saiu = pacote._marca_da_procedencia(Linha(texto="x", selo=DERIVADO_DA_CONTA))
-    assert TEXTO_DO_SELO[DERIVADO_DA_CONTA] in saiu
-    assert saiu.startswith(" <span")
-
-
-def test_a_dica_da_ordem_marca_so_a_frase_derivada(pacote, cena) -> None:
-    """As DUAS frases do `?`, e a marca só na segunda.
-
-    A CENA É LIDA, não afirmada: o teste pergunta ao objeto qual selo cada linha
-    tem e conta as marcas — uma régua que contasse "1" sem olhar os selos
-    passaria com a cena trocada.
-    """
-    from hefesto_dualsense4unix.integrations.ordens_da_mesa import (
-        MEDIDO_AQUI,
-        TEXTO_DO_SELO,
-    )
-
-    ordem = cena[0].ordem
-    dica = pacote._dica_da_ordem(ordem)
-    esperadas = sum(1 for linha in ordem.linhas[:2] if linha.selo != MEDIDO_AQUI)
-    assert dica.count('class="proc"') == esperadas
-    assert TEXTO_DO_SELO[MEDIDO_AQUI] not in dica
-
-
-# ---------------------------------------------------------------------------
-# [03] O CARTÃO DE CURA + [07] O `+N`
-# ---------------------------------------------------------------------------
+# FRASES-E-DICAS-02. A §D da sprint tira da coluna visível o imperativo e o
+# ganho da ordem, e com eles saem o `?` do card (onde a marca de procedência
+# morava) e o cartão de cura, que era «O que fazer: …» visível sem clique. A
+# base é a ordem dela de 13/09 no índice da terceira lista
+# (`docs/process/sprints/2026-09-13-A-TERCEIRA-LISTA-DELA-INDICE.md`, §0 item
+# 4: «Tirar e enxugar pode»). A cura e as frases da ordem continuam no `?` da
+# linha do exame (`_dica_da_linha`). As réguas de antes mediam o que saiu; esta
+# mede que não volta.
 def _coluna(pacote, cena) -> str:
     """A coluna da direita como o produto a emite, com a cena na mão."""
     pacote._ORDENS_NA_TELA = tuple(i.ordem for i in cena)
     return pacote._html_da_ordem(cena)
 
 
-def test_a_coluna_desenha_um_cartao_por_cura_de_conferencia(pacote, cena) -> None:
-    """Decisão [03] — e a regra dos três filtros é a do dono.
-
-    O NÚMERO SAI DA CENA, e não de um literal: o teste refaz o filtro de
-    `secao_exame._desenhar_o_que_fazer` (sem ordem · com cura · estado diferente
-    de CERTO) e exige esse tanto de cards. Com a cena trocada, o número muda
-    junto — que é o que separa uma régua de um carimbo.
-    """
-    from hefesto_dualsense4unix.integrations.exame_da_mesa import ESTADO_CERTO
-
-    quantas = sum(1 for i in cena
-                  if i.ordem is None and i.cura and i.estado != ESTADO_CERTO)
-    assert quantas, "a cena precisa ter ao menos uma cura, senão o teste não mede nada"
-    assert _coluna(pacote, cena).count('class="ordem cura"') == quantas
+def _com_destino(cena, destino: str):  # type: ignore[no-untyped-def]
+    """A mesma cena, com toda ordem apontando para `destino`."""
+    return [dataclasses.replace(i, ordem=dataclasses.replace(i.ordem, destino=destino))
+            if i.ordem is not None else i for i in cena]
 
 
-def test_o_cartao_de_cura_traz_a_cura_e_nao_traz_selo(pacote, cena) -> None:
-    """A cura na tela, e SEM procedência — regra do dono, não economia.
+def test_a_coluna_nao_traz_cura_imperativo_nem_procedencia(pacote, cena) -> None:
+    """A cena tem cura, imperativo e frase derivada — e nada disso sai na coluna.
 
-    `secao_exame._card_da_cura`: *"uma cura de conferência não traz selo de
-    procedência, porque não há medição por trás dela dizendo de onde vem o
-    conselho."*
+    O QUE A CENA TEM É LIDO, não afirmado: sem uma cura de conferência e sem um
+    selo diferente de `medido aqui`, esta régua ficaria verde sobre nada.
+
+    MORDE: devolva o cartão de cura ou o `div.faca` a `_html_da_ordem`.
     """
     from hefesto_dualsense4unix.app.actions.config.secao_exame import PREFIXO_DA_CURA
 
     from hefesto_dualsense4unix.integrations.exame_da_mesa import ESTADO_CERTO
+    from hefesto_dualsense4unix.integrations.ordens_da_mesa import (
+        MEDIDO_AQUI,
+        TEXTO_DO_SELO,
+    )
 
-    item = next(i for i in cena
-                if i.ordem is None and i.cura and i.estado != ESTADO_CERTO)
-    card = pacote._card_da_cura(item)
-    assert PREFIXO_DA_CURA in card
-    assert item.cura in card
-    assert item.porque in card
-    assert 'class="proc"' not in card
+    curas = [i.cura for i in cena
+             if i.ordem is None and i.cura and i.estado != ESTADO_CERTO]
+    ordens = [i.ordem for i in cena if i.ordem is not None]
+    derivados = {linha.selo for o in ordens for linha in o.linhas} - {MEDIDO_AQUI}
+    assert curas and ordens and derivados, (
+        "a cena precisa ter cura, ordem e frase derivada, senão não mede nada")
+    for destino in ("", "Entrada 9"):
+        coluna = _coluna(pacote, _com_destino(cena, destino))
+        assert 'class="ordem cura"' not in coluna and 'class="proc"' not in coluna
+        proibidas = [PREFIXO_DA_CURA, *curas,
+                     *(TEXTO_DO_SELO[s] for s in derivados),
+                     *(o.acao for o in ordens),
+                     *(o.ganho_esperado.texto for o in ordens)]
+        for frase in proibidas:
+            assert frase not in coluna, (
+                f"{frase!r} voltou à coluna da direita (destino {destino!r})")
 
 
 def test_o_mais_n_conta_a_ordem_que_nao_coube(pacote, cena) -> None:
@@ -186,9 +152,12 @@ def test_o_mais_n_conta_a_ordem_que_nao_coube(pacote, cena) -> None:
 
     O DESENHO TEM UM CARD e esta cena tem DUAS ordens abertas; a diferença é o
     que a linha diz. O número sai da cena.
+
+    COM DESTINO desde 13/09/2026: o card enxugou até o de→para (ver acima), e
+    uma ordem sem destino não desenha card — nem o `+N` que o acompanha.
     """
     abertas = sum(1 for i in cena if i.ordem is not None)
-    coluna = _coluna(pacote, cena)
+    coluna = _coluna(pacote, _com_destino(cena, "Entrada 9"))
     assert f"+{abertas - 1} " in coluna
     assert 'class="mais"' in coluna
 

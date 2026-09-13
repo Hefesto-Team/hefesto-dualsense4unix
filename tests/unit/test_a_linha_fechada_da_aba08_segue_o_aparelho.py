@@ -127,14 +127,18 @@ def test_os_enderecos_novos_existem_na_bancada() -> None:
         # A CONFISSÃO DO DESENHO
         'data-campo="confissao-nada" data-hef-alvo="classe" '
         'data-hef-classe="sumido" data-hef-quando="sim"',
-        'data-campo="confissao-dica" data-hef-alvo="atributo" '
-        'data-hef-atributo="title"',
         'data-campo="confissao-conta"',
     )
     for endereco in esperados:
         assert endereco in html, (
             f"o endereço `{endereco}` não está na bancada da 08 — sem ele o "
             f"produto não tem onde escrever, e a tela volta ao desenho")
+    # A DICA DA CONFISSÃO SAIU EM 13/09/2026 — FRASES-E-DICAS-02. A abertura
+    # dela confessava numa dica flutuante o que o desenho não conferiu, e a ordem
+    # dela de 13/09 (`docs/process/sprints/2026-09-13-A-TERCEIRA-LISTA-DELA-INDICE.md`)
+    # a tira da tela. Fica a contagem.
+    assert 'data-campo="confissao-dica"' not in html, (
+        "a dica da confissão voltou à bancada da 08")
 
 
 def test_o_resumo_do_mic_e_o_select_dividem_o_mesmo_endereco() -> None:
@@ -342,10 +346,10 @@ def test_a_confissao_conta_as_lacunas_da_bancada(monkeypatch: Any) -> None:
             f"{campos['confissao-conta']!r}")
         assert campos["confissao-nada"] == "", (
             "há o que confessar e a linha se apagaria")
-        # E OS ITENS CHEGAM, um por linha do `title`.
-        assert campos["confissao-dica"].count("\n") == quantas, (
-            f"a dica não trouxe as {quantas} lacunas: "
-            f"{campos['confissao-dica']!r}")
+        # A DICA COM OS ITENS SAIU EM 13/09/2026 — ver
+        # `test_os_enderecos_novos_existem_na_bancada`. Fica a contagem.
+        assert "confissao-dica" not in campos, (
+            f"a confissão voltou a mandar a dica: {campos!r}")
 
 
 def test_sem_lacuna_a_linha_da_confissao_some(monkeypatch: Any) -> None:
