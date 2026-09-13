@@ -136,8 +136,8 @@ def lancar_leitor(argv: Sequence[str]) -> subprocess.Popen[bytes]:
 class ComoMorreu:
     """Como o filho morreu — para o diário, nunca para a tela.
 
-    ``codigo`` é o ``returncode``: negativo é o sinal que o derrubou (``-13``
-    é SIGPIPE, ``-9`` é SIGKILL), ``None`` é que ele NÃO foi colhido.
+    O primeiro campo é o ``returncode``: negativo é o sinal que o derrubou
+    (``-13`` é SIGPIPE, ``-9`` é SIGKILL), ``None`` é que ele NÃO foi colhido.
     """
 
     codigo: int | None
