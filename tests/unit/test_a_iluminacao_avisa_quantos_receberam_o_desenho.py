@@ -401,16 +401,19 @@ def test_sem_o_aviso_o_gesto_continua_calado(a04, pac, indice):
 
 
 # ---------------------------------------------------------------------------
-# 5. O CANAL É O VERDE DE SEIS SEGUNDOS
+# 5. O CANAL É A CHAVE `recado`, QUE O PILOTO LEVA AO DIÁRIO
 # ---------------------------------------------------------------------------
-def test_o_canal_e_o_verde_de_seis_segundos(a04, pac):
-    """A chave e o relógio, os dois pelo dono — a sprint pede os dois.
+def test_o_canal_e_a_chave_que_o_piloto_leva_ao_diario(a04, pac):
+    """ERA `test_o_canal_e_o_verde_de_seis_segundos` — o contrato mudou em 13/09/2026.
 
-    `recado` é a chave que o piloto colhe e RETIRA da carga antes da pintura
-    (ela não é endereço de campo nenhum), e o relógio do sucesso é
-    `SEGUNDOS_DO_RECADO_DE_SUCESSO`. Digitar 6,0 aqui seria a segunda cópia da
-    decisão dela; o que a régua exige é que a chave devolvida seja a que aquele
-    canal lê.
+    A chave e o relógio eram cobrados pelo dono: `recado` é a chave que o
+    piloto colhe e RETIRA da carga antes da pintura (ela não é endereço de
+    campo nenhum), e o relógio do recado verde era
+    `SEGUNDOS_DO_RECADO_DE_SUCESSO` (6,0 s, D-01, 04/09/2026). O RELÓGIO SAIU
+    com o canal: o sucesso deixou de ir à tela na TELA-CALADA-01 (*"em todas as
+    abas da interface"*), e o depósito inteiro saiu na FRASES-E-DICAS-01. A
+    frase do aviso dos N continua sendo devolvida pela chave, e vai ao diário
+    da janela como `[relato] …`.
     """
     from hefesto_dualsense4unix.interface import hefesto_vivo as hv
 
@@ -418,6 +421,6 @@ def test_o_canal_e_o_verde_de_seis_segundos(a04, pac):
     assert a04._o_recado("") is None
     assert "recado" in hv.CHAVES_QUE_O_VIVO_RECUSA, (
         "a chave do recado deixou de ser podada da carga de pintura")
-    assert hv.SEGUNDOS_DO_RECADO_DE_SUCESSO == 6.0, (
-        "o relógio do recado verde mudou — a sprint pede os 6 s, e o número "
-        "é dela (D-01, 04/09/2026)")
+    assert not hasattr(hv, "SEGUNDOS_DO_RECADO_DE_SUCESSO"), (
+        "o relógio do recado verde voltou ao piloto — sem canal de frase na "
+        "tela, um prazo de frase é dado morto")

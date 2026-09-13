@@ -14,10 +14,11 @@ Esta régua cobra as três, no piloto do produto, com a janela OCULTA:
    `.hef-recado` em lugar nenhum — nem na faixa da 01 (o recibo do
    «Reconectar»), nem no cartão da 02 — e a frase vai ao diário da janela como
    `[relato] <página> · <gesto>: <frase>`;
-2. **a recusa fica, e só na página em que nasceu.** Recusa no 🎙 do p1 da 02,
-   navega para a 03 (que tem o cartão do MESMO controle): zero recado na 03. De
-   volta à 02 dentro dos 30 s, ela está lá — o filtro é da página, não uma
-   borracha na navegação;
+2. **a recusa também não fica — 13/09/2026, FRASES-E-DICAS-01.** Até ali ela
+   ficava 30 s no cartão, e só na página em que nascera. A caixa laranja da foto
+   dela no índice da leva (`2026-09-13-A-TERCEIRA-LISTA-DELA-INDICE.md`, linha
+   19) era essa recusa, e ela saiu: recusa no 🎙 do p1 da 02, navega para a 03,
+   volta à 02 — zero recado nas três leituras, e o piloto sem depósito;
 3. **o rodapé não devolve recado.** `rodape._recado` relata e devolve `None`;
    quem repõe o atalho da Steam é a carona, não a frase.
 
@@ -31,8 +32,8 @@ AS MORDIDAS:
 * devolva o depósito de tom `sucesso` em `Piloto._deu_certo_dizendo` →
   reprovam os casos do sucesso (a faixa da 01, o cartão da 02 e o unitário do
   depósito);
-* tire o filtro de página de `_recados_para_a_tela` → reprova
-  `test_a_recusa_nao_segue_para_a_aba_seguinte`;
+* devolva o depósito da recusa em `Piloto._recusou_dizendo` (o piloto de
+  `249af1f6`) → reprovam os três casos da recusa;
 * devolva `{"recado": frase}` em `rodape._recado` → reprova o unitário do
   rodapé.
 """
@@ -242,7 +243,9 @@ def medido() -> dict:
     def leu_a_01() -> bool:
         ler_a_tela("01-depois")
         fora["01-desfecho"] = desfecho(chave_01)
-        fora["01-deposito"] = sorted(piloto._recados)
+        # O DEPÓSITO SAIU EM 13/09/2026 (FRASES-E-DICAS-01): lido pelo nome, a
+        # ausência dele é o mesmo que um depósito vazio.
+        fora["01-deposito"] = sorted(getattr(piloto, "_recados", {}))
         GLib.timeout_add(300, lambda: abrir(PAGINA_02, na_02))
         return False
 
@@ -256,7 +259,7 @@ def medido() -> dict:
     def leu_o_sucesso_da_02() -> bool:
         ler_a_tela("02-depois-do-sucesso")
         fora["02-desfecho-sucesso"] = desfecho(chave_02)
-        fora["02-deposito-sucesso"] = sorted(piloto._recados)
+        fora["02-deposito-sucesso"] = sorted(getattr(piloto, "_recados", {}))
         GLib.timeout_add(300, a_recusa_da_02)
         return False
 
@@ -275,7 +278,7 @@ def medido() -> dict:
     # ---- 3. a 03: o cartão do MESMO controle, e a recusa não vem ---------
     def na_03() -> bool:
         ler_a_tela("03-depois-de-navegar")
-        fora["03-deposito"] = sorted(piloto._recados)
+        fora["03-deposito"] = sorted(getattr(piloto, "_recados", {}))
         GLib.timeout_add(300, lambda: abrir(PAGINA_02, de_volta_na_02))
         return False
 
@@ -400,42 +403,48 @@ def test_a_frase_do_sucesso_vai_ao_diario(medido: dict) -> None:
 # --------------------------------------------------------------------------
 # 2. a recusa fica — e só na página em que nasceu
 # --------------------------------------------------------------------------
-def test_a_recusa_continua_no_cartao_de_quem_foi_clicado(medido: dict) -> None:
-    """A recusa é o único aviso de que o clique NÃO valeu, e ela fica."""
+def test_a_recusa_nao_pousa_no_cartao_de_quem_foi_clicado(medido: dict) -> None:
+    """ERA `test_a_recusa_continua_no_cartao_de_quem_foi_clicado` — 13/09/2026.
+
+    A recusa era o único aviso na tela de que o clique NÃO valeu, e ficava 30 s
+    no cartão. Pela FRASES-E-DICAS-01 ela saiu da tela: quem avisa é a piscada
+    de recusa no botão (`test_a_recusa_pisca_no_botao`), e a frase vai ao diário.
+    """
     leitura = _leitura(medido, "02-com-a-recusa")
-    assert [(r["chave"], r["dentro_de"], r["tom"]) for r in leitura["recados"]] == [
-        (CHAVE_P1, "p1", "recusa")], leitura["recados"]
-    assert FRASES["recusa"] in leitura["recados"][0]["texto"], leitura["recados"]
+    assert leitura["recados"] == [], leitura["recados"]
+    assert not leitura["vistas"]["recusa"], (
+        "a frase da recusa chegou ao texto da 02 por outro caminho")
 
 
 def test_a_recusa_nao_segue_para_a_aba_seguinte(medido: dict) -> None:
     """A 03 tem o cartão do MESMO controle — e a recusa da 02 não pousa nele.
 
-    As duas primeiras asserções dão dente à terceira: a página é a 03, o cartão
-    do p1 está nela, e a recusa continua no depósito. Sem o filtro de página,
-    o tique a entregaria a esse cartão por até 30 s.
+    As duas primeiras asserções dão dente à terceira: a página é a 03 e o cartão
+    do p1 está nela. ATÉ 13/09/2026 a terceira exigia a recusa no depósito, para
+    o zero provar o filtro de página; desde a FRASES-E-DICAS-01 o depósito não
+    existe, e o zero prova mais que o filtro — a recusa não vai a aba nenhuma.
     """
     leitura = _leitura(medido, "03-depois-de-navegar")
     assert leitura["aba"] == PAGINA_03, leitura["aba"]
     assert leitura["tem_p1"], "a 03 sem o cartão do p1 — a régua passaria sobre nada"
-    assert medido["03-deposito"] == [CHAVE_P1], (
-        f"a recusa saiu do depósito ({medido['03-deposito']!r}) — sem ela lá, "
-        f"o zero abaixo não prova o filtro")
+    assert medido["03-deposito"] == [], (
+        f"a recusa foi depositada ({medido['03-deposito']!r}) — ela voltaria à "
+        f"tela no tique seguinte")
     assert leitura["recados"] == [], (
         f"a recusa nascida na 02 reapareceu na 03: {leitura['recados']!r}")
     assert not leitura["vistas"]["recusa"], leitura
 
 
-def test_a_recusa_volta_quando_ela_volta_a_pagina(medido: dict) -> None:
-    """O filtro é da página, não uma borracha na navegação.
+def test_a_recusa_nao_volta_quando_ela_volta_a_pagina(medido: dict) -> None:
+    """ERA `test_a_recusa_volta_quando_ela_volta_a_pagina` — 13/09/2026.
 
-    Dentro dos 30 s dela, a recusa continua sendo daquela página: quem volta à
-    02 a encontra no cartão do p1, como deixou.
+    Dentro dos 30 s dela, a recusa continuava sendo daquela página, e quem
+    voltava à 02 a reencontrava no cartão do p1. Desde a FRASES-E-DICAS-01 não
+    há recusa guardada a reencontrar.
     """
     leitura = _leitura(medido, "02-de-volta")
     assert leitura["aba"] == PAGINA_02, leitura["aba"]
-    assert [(r["chave"], r["dentro_de"]) for r in leitura["recados"]] == [
-        (CHAVE_P1, "p1")], leitura["recados"]
+    assert leitura["recados"] == [], leitura["recados"]
 
 
 # --------------------------------------------------------------------------

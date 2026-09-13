@@ -846,6 +846,24 @@ _JANELA = 3
 #:    `utils/repo_files.py`, mortas pela BG-BASES-01). Não há número novo para
 #:    escrever: o conserto é a prosa dizer que o endereço é de antes da cura.
 _CITACOES_PENDENTES: frozenset[str] = frozenset({
+    # FRASES-E-DICAS-01 (13/09/2026) — AS TRÊS QUE O CANAL DE RECADO DESLOCOU.
+    # O recado saiu do piloto, e `hefesto_vivo.py` perdeu linhas acima das três
+    # âncoras. As três JÁ estavam fora do símbolo que prometem desde antes desta
+    # sprint (a régua só as via porque caíam em linha com texto); agora caem em
+    # linha vazia. Os citantes são de outra posse, e `a10_perfis.py` está no
+    # `nao_toca:` da sprint.
+    #
+    # O NÚMERO CERTO JÁ ESTÁ MEDIDO, por SÍMBOLO — quem for dono do arquivo troca
+    # e apaga a linha daqui (o `test_a_lista_de_pendentes_nao_vira_paisagem` cobra):
+    #   aba02.py:1185       `hefesto_vivo.py:202` -> `:1373`
+    #     (`d.gesto || d.hefGesto || d.papel || doRodape || 'clique'`)
+    #   a10_perfis.py:967   `hefesto_vivo.py:256` -> `:587`
+    #     (o `el.value = t` dentro do `escrever`)
+    #   a10_perfis.py:3009  `hefesto_vivo.py:228` -> `:1501`
+    #     (o `valor:` que o ouvinte manda com o `value` do campo)
+    "interface/aba02.py::hefesto_vivo.py:202",
+    "interface/pacotes/a10_perfis.py::hefesto_vivo.py:228",
+    "interface/pacotes/a10_perfis.py::hefesto_vivo.py:256",
     # VINTE E SETE SAÍRAM DAQUI EM 10/09/2026, de uma vez: a leva do som
     # (SOM-FIADO-01) deslocou `backend_pydualsense.py`, `lifecycle.py` e
     # `a02_controles.py`, e reapontar TUDO por SÍMBOLO — nunca por aritmética —

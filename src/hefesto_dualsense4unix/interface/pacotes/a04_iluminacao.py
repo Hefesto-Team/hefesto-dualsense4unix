@@ -622,8 +622,12 @@ def fileira_de_tons(escolhida: str, tomadas: dict[str, dict[str, str]],
         estilo = f"background:{monta.tom_da_casa(cru)}"
         if dono:
             estilo += f";--dono:{dono.get('plastico') or 'var(--comment)'}"
-        titulo = (f"{dono.get('nome')} já está neste tom — duas peças nunca "
-                  f"ficam da mesma cor." if dono else titulo_da_casa(i))
+        # A DICA DO TOM TOMADO DIZ SÓ O NOME DO TOM — 13/09/2026,
+        # FRASES-E-DICAS-01, §I.5. Ela dizia de quem era o tom e colava a regra
+        # (*duas peças nunca ficam da mesma cor*), que é aviso: o X na cor do
+        # plástico do dono já é o estado, e a frase é a mesma forma que a sprint
+        # tira da tela. O nome do dono continua no X, pela cor.
+        titulo = titulo_da_casa(i)
         # O TOM COM X NÃO É GESTO — 09/09/2026, e é a palavra dela sendo
         # cumprida: *"um X na cor selecionada por mim de forma que me IMPEÇA de
         # setar alguma cor de um coleguinha"*. <!-- noqa-acento: citação dela -->
@@ -993,24 +997,17 @@ def _cor_do_plastico(slug: str) -> str:
         return ""
 
 
-def fora_da_mesa() -> str:
-    """A frase com que o produto RECUSA um número acima da mesa.
-
-    DONO ÚNICO, e é por isso que ela é importada em vez de digitada:
-    `app/ipc_bridge._MOTIVOS_NUMERO["numero_fora_da_mesa"]` já é a frase que a
-    janela mostra quando `identity_number_set` recusa. Digitá-la aqui seria a
-    segunda cópia de um texto de tela — e texto de tela é DELA; duas cópias são
-    duas frases que podem divergir sem ninguém ver.
-
-    O NOME É PRIVADO NO OUTRO MÓDULO e mesmo assim é ele que se lê: a
-    alternativa era CLICAR para saber o motivo, que é exatamente o defeito que
-    esta leitura existe para fechar. O import é TARDIO pela mesma razão que o
-    do `hex_to_rgb` nos gestos — o pacote é carregado pelo gerador, que não
-    tem daemon nem ponte.
-    """
-    from hefesto_dualsense4unix.app.ipc_bridge import _MOTIVOS_NUMERO
-
-    return _MOTIVOS_NUMERO["numero_fora_da_mesa"]
+# A FUNÇÃO QUE COLAVA A RECUSA NA DICA SAIU — 13/09/2026, FRASES-E-DICAS-01.
+#
+# Ela lia `app/ipc_bridge._MOTIVOS_NUMERO["numero_fora_da_mesa"]` e a dica do
+# número `.fora` a repetia, então a mesma frase de recusa chegava à tela por duas
+# portas: a dica flutuante, e a caixa laranja que o piloto pousava no cartão
+# quando o clique recusava — a da foto que está no índice da leva
+# (`docs/process/sprints/2026-09-13-A-TERCEIRA-LISTA-DELA-INDICE.md`, linha 19).
+# A dica passou a dizer só o número, e o cinza `.fora` diz o resto: ele já é o
+# vocabulário do estado (a §D da sprint, que cita o comentário do desenho da aba
+# 04 sobre o `.fora`). A frase CONTINUA sendo a recusa, com o dono de sempre na
+# ponte; ela só deixou de chegar à tela e vai ao diário da janela.
 
 
 def um_botao_de_player(nome: str, meu: int, n: int,
@@ -1032,7 +1029,7 @@ def um_botao_de_player(nome: str, meu: int, n: int,
         livre          ninguém tem este número      sem anel
         tomado         e eu sei a cor do dono       anel cheio, na cor do plástico
         tomado, sem cor  o dono está aqui, a cor não chegou  anel TRACEJADO
-        fora da mesa   não há controles bastante    apagado, e a dica diz por quê
+        fora da mesa   não há controles bastante    apagado, e a dica diz o número
 
     O terceiro caía no primeiro, e a diferença viajava só no `title`.
 
@@ -1070,16 +1067,20 @@ def um_botao_de_player(nome: str, meu: int, n: int,
     if n == meu:
         dica = f"O {nome} é o Player {n} hoje."
     elif fora:
-        dica = f"Player {n} — {fora_da_mesa()}."
+        # SÓ O NÚMERO — 13/09/2026, FRASES-E-DICAS-01: ver a nota logo acima
+        # desta função. O cinza e o `aria-disabled` dizem que ele não cabe.
+        dica = f"Player {n}"
     elif dono is None:
         dica = f"Player {n} — livre."
     else:
         dica = (f"Dar o {n} ao {nome}: o {dono['nome']} fica com o {meu}. "
                 f"Os dois trocam.")
-    #: O BOTÃO CONTINUA CLICÁVEL, e isso é escolha. `disabled` calaria a recusa:
-    #: quem clicar mesmo assim tem de ouvir o motivo, que é a regra desta casa
-    #: (*"vira botão que recusa dizendo"*). `aria-disabled` diz o estado a quem
-    #: lê a tela por leitor, e a classe `fora` é o que os olhos leem.
+    #: O BOTÃO CONTINUA CLICÁVEL, e isso é escolha. `disabled` calaria o clique
+    #: inteiro: quem clicar mesmo assim tem de receber resposta. **Desde
+    #: 13/09/2026 a resposta é a piscada de recusa no próprio botão, e o motivo
+    #: vai ao diário da janela** — a frase não chega mais à tela
+    #: (FRASES-E-DICAS-01). `aria-disabled` diz o estado a quem lê a tela por
+    #: leitor, e a classe `fora` é o que os olhos leem.
     marca = " ".join(x for x in ("on" if n == meu else "", "fora" if fora else "") if x)
     #: MONTADO FORA DA `f-string`, e não por gosto: `f'{"a\"b" if x else ""}'`
     #: é SyntaxError em 3.10 e 3.11, e o `pyproject` pede `>=3.10`. A venv desta
@@ -2284,8 +2285,10 @@ def _escrever_a_cor(ctx: Contexto, p: Any, uniq: str,
     **FATO SUBSTITUÍDO — 04/09/2026.** Estas linhas diziam que *"o único canal
     que esta tela tem é o `_recusou_dizendo`, e ele só carrega `RuntimeError`"*,
     com um RELATO pedindo um canal de aviso. **O canal existe:** a ONDA0-P o
-    entregou com a D-01, e um gesto que devolve `{"recado": …}` pousa no MESMO
-    cartão com tom de sucesso e vida de 6 s — o `brilho` desta aba já o usa.
+    entregou com a D-01, e um gesto que devolve `{"recado": …}` pousava no MESMO
+    cartão com tom de sucesso e vida de 6 s — o `brilho` desta aba o usa. Desde
+    13/09/2026 essa frase vai ao diário da janela e não à tela (TELA-CALADA-01 e
+    FRASES-E-DICAS-01).
 
     **E MESMO ASSIM ELE NÃO SERVE AQUI**, e a razão não é de infraestrutura:
     este caminho **não sabe qual dos dois desfechos aconteceu**. Quem lê o corpo
@@ -2882,7 +2885,9 @@ def brilho(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
     pedia por escrito *"um canal de AVISO (nem recusa nem silêncio)"*, e a
     ONDA0-P o entregou com a D-01: um gesto que devolve `{"recado": …}` deposita
     no MESMO cartão com tom de sucesso e vida de 6 s. É o que ele faz agora —
-    e o pedido some do relato porque foi atendido.
+    e o pedido some do relato porque foi atendido. Desde 13/09/2026 a frase vai
+    ao diário da janela, e não mais ao cartão (TELA-CALADA-01 e
+    FRASES-E-DICAS-01).
 
     :return: `{"recado": …}` quando o número foi guardado e a barra não pôde
         mudar; `None` no caminho feliz, em que o cartão diz a frase padrão.
@@ -3133,8 +3138,9 @@ def auto_cores(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | Non
     este mesmo gesto acabou de gravar, controle a controle. O que ele pinta é o
     que já estava aceso.
 
-    :return: `{"recado": …}` — o cartão verde da D-01, dizendo qual das duas
-        metades aconteceu.
+    :return: `{"recado": …}` — a frase que diz qual das duas metades
+        aconteceu. Ela ia ao cartão verde da D-01; desde 13/09/2026 vai ao
+        diário da janela.
     """
     if _so_abriu_o_seletor(o):
         return None
@@ -3407,9 +3413,11 @@ def _cobrar_a_frase_do_desenho(ctx: Contexto, uniq: str,
     *"nada na tela avisava"* — reaparecendo do lado HTML, um degrau adiante.
 
     Então o desfecho FELIZ deixa de ser mudo: quem tem aviso devolve a frase
-    inteira do dono, e o chamador a manda ao canal de recado verde (6,0 s,
-    `hefesto_vivo.SEGUNDOS_DO_RECADO_DE_SUCESSO`). Sem aviso a devolução é `""`
-    — o silêncio de antes, e a piscada continua sendo quem responde.
+    inteira do dono, e o chamador a manda na carga como `{"recado": …}`. Desde
+    13/09/2026 essa frase vai ao diário da janela e não à tela (TELA-CALADA-01;
+    o relógio verde de 6,0 s que esta nota citava saiu com o canal, na
+    FRASES-E-DICAS-01). Sem aviso a devolução é `""` — o silêncio de antes, e a
+    piscada continua sendo quem responde.
 
     :return: a frase do dono quando ela carrega o aviso dos N; `""` quando não.
     """
@@ -3449,10 +3457,10 @@ def player(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
     relativa, e mora na aba Início. Dizer "este controle é o 2" foi o comando
     que faltou ao projeto até 25/07.
 
-    A FUNÇÃO DEVOLVE `(ok, motivo)`, e o motivo já vem traduzido para frase de
-    tela (`_MOTIVOS_NUMERO`): "O jogo está aberto", "Esse número é maior do que
-    a quantidade de controles ligados". Levantar com ele é o que faz o botão
-    RECUSAR DIZENDO em vez de falhar calado.
+    A FUNÇÃO DEVOLVE `(ok, motivo)`, e o motivo já vem traduzido em frase
+    (`_MOTIVOS_NUMERO`). Levantar com ele é o que faz o botão RECUSAR em vez de
+    falhar calado: desde 13/09/2026 (FRASES-E-DICAS-01) o botão pisca a recusa e
+    a frase vai ao diário da janela, sem chegar à tela.
 
     **ELE ERA MEIO GESTO ATÉ 04/09/2026**, e a metade que faltava é a que ela
     olha: `identity.number.set` troca o NÚMERO EXIBIDO, e as cinco lâmpadas do

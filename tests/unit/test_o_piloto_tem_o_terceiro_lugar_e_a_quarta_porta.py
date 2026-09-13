@@ -11,7 +11,9 @@ podia escrevê-los: ``hefesto_vivo.py`` está no ``nao_toca`` de todas.
    declarando o mesmo tom, um ``querySelector`` escolheria o primeiro do
    documento — a tela decidindo por ordem de marcação. O piloto **recusa os
    dois**, diz quais são em ``window.__hef.faixasDemais`` e cai no comportamento
-   de sempre.
+   de sempre. **SAIU EM 13/09/2026** (FRASES-E-DICAS-01): o recado saiu da tela,
+   e com ele os três lugares. A régua da peça 1 passou a cobrar o avesso — a
+   página que declara um lugar, ou dois, não recebe recado nenhum.
 
 2. **A QUARTA PORTA — ``data-hef-vivo``.** O ouvinte tinha três portas
    (``change``, ``click``, ``blur``) e nas três quem responde é o gesto de
@@ -36,8 +38,8 @@ A JANELA É OCULTA. Ela tem UMA tela.
 
 AS MORDIDAS, uma por peça (as três estão escritas nas docstrings dos testes):
 
-* tire o ``data-hef-recados`` e o recado volta ao cartão; ponha DOIS e a régua
-  reprova nomeando os dois;
+* devolva o piloto de antes (``249af1f6``) e a faixa declarada volta a
+  receber o recado — a peça 1 reprova;
 * ligue ``data-hef-vivo`` ao gesto que grava e a régua reprova nomeando o gesto;
   arranque a quarta porta e o ``input`` volta a não fazer nada;
 * ponha um ``data-campo`` dentro do ``<svg>`` de uma coluna ``p2`` e leia o
@@ -175,6 +177,7 @@ LER_OS_DOIS_BOTOES = r"""
   for(const pref of ['p1', 'p2']){
     const b = document.querySelector('[data-controle="' + pref + '"] [data-mudo="microfone"]');
     fora[pref] = b ? {deu_certo: b.classList.contains('hef-deu-certo'),
+                      recusou: b.classList.contains('hef-recusou'),
                       em_voo: b.classList.contains('hef-em-voo')} : null;
   }
   return JSON.stringify(fora);
@@ -475,12 +478,11 @@ def medido() -> dict:
         # AS TRÊS PORTAS DE HOJE NÃO MUDARAM: um `change` no MESMO elemento, que
         # carrega os dois atributos, continua despachando o `data-hef-gesto`.
         fora["chamados-antes-do-change"] = list(chamados)
-        # O DEPÓSITO E A TELA ZERAM ANTES DO `change` — 13/09/2026. O clique
-        # passou a RECUSAR (TELA-CALADA-01), e a recusa vive 30 s: sem zerar,
-        # a de `clique-3` ainda estaria na tela aqui, e a asserção de que o
-        # `change` depositou passaria sobre um recado velho. O recibo de
-        # sucesso, que vivia 6 s, já tinha vencido quando esta fase chegava.
-        piloto._recados.clear()
+        # A TELA ZERA ANTES DO `change`. Até 13/09/2026 zerava também o
+        # depósito de recados do piloto, que saiu com a FRASES-E-DICAS-01; e a
+        # prova de que o `change` seguiu o caminho do clique deixou de ser o
+        # recado na tela e passou a ser o CARIMBO DE VOO que só esse caminho dá
+        # (ver `test_as_tres_portas_de_hoje_nao_mudaram`).
         piloto.ponte.perguntar(
             "for(const el of document.querySelectorAll('.hef-recado')) el.remove();"
             " String(document.querySelectorAll('.hef-recado').length)",
@@ -582,7 +584,7 @@ def medido() -> dict:
         fora["gestos"] = [
             {"gesto": g.get("gesto"), "vivo": g.get("vivo", ""),
              "voo": g.get("voo", ""), "evento": g.get("evento", ""),
-             "controle": g.get("controle", "")}
+             "controle": g.get("controle", ""), "campo": g.get("campo", "")}
             for g in piloto.gestos]
         fora["chamados_finais"] = list(chamados)
         Gtk.main_quit()
@@ -637,73 +639,55 @@ def _r(leitura: object) -> list[dict]:
 # --------------------------------------------------------------------------
 # 1. o terceiro lugar — a página declara onde o recado pousa
 # --------------------------------------------------------------------------
-def test_sem_o_atributo_o_recado_continua_no_cartao(medido: dict) -> None:
-    """A MORDIDA da peça 1, primeira metade: sem `data-hef-recados`, nada muda.
+#
+# O CONTRATO VIROU O AVESSO EM 13/09/2026 (FRASES-E-DICAS-01). As três réguas
+# desta seção exigiam o recado no cartão, na faixa declarada e de volta ao
+# cartão com duas faixas. O recado saiu da tela pela palavra dela no índice da
+# leva (`2026-09-13-A-TERCEIRA-LISTA-DELA-INDICE.md`, linha 19), e o roteiro
+# ficou: o mesmo clique recusado, com zero, uma e duas faixas declaradas, e a
+# pergunta é se alguma das três leituras mostra recado.
+def test_sem_o_atributo_nenhum_recado_no_cartao(medido: dict) -> None:
+    """ERA `test_sem_o_atributo_o_recado_continua_no_cartao` — 13/09/2026.
 
-    É a régua de regressão das dez abas. Nenhuma das dez páginas publicadas traz
-    o atributo — publicar é ato dela —, então o comportamento de hoje tem de ser
-    byte a byte o de ontem: cartão, e tarja para quem não tem cartão.
+    Sem `data-hef-recados` o recado pousava no cartão. Hoje o clique recusado
+    não deixa recado em lugar nenhum; a resposta dele é a piscada de recusa no
+    botão (`test_a_recusa_pisca_no_botao`).
     """
+    assert medido["clique-1"] == "cliquei", (
+        f"o clique no 🎙 do p1 não aconteceu — a régua passaria sobre nada: "
+        f"{medido['clique-1']!r}")
     recados = _r(medido["sem-faixa"])
-    assert recados, (
-        "o clique no 🎙 do p1 não deixou recado nenhum na tela — sem recado não "
-        f"há lugar a medir. O que chegou: {medido['clique-1']!r}")
-    assert [r["texto"] for r in recados] == [FRASE_DO_RECADO], recados
-    assert recados[0]["lugar"] in ("grade", "fluxo"), (
-        f"sem faixa declarada o recado tinha de pousar no CARTÃO, e pousou em "
-        f"{recados[0]['lugar']!r} (pai {recados[0]['pai']!r})")
+    assert recados == [], recados
+    assert FRASE_DO_RECADO not in json.dumps(medido["sem-faixa"]), (
+        "a frase da recusa chegou à leitura da tela por outro caminho")
 
 
-def test_com_uma_faixa_o_recado_pousa_nela(medido: dict) -> None:
-    """A peça 1: a página declara o lugar, e o recado vai para lá.
+def test_com_uma_faixa_nenhum_recado_pousa_nela(medido: dict) -> None:
+    """ERA `test_com_uma_faixa_o_recado_pousa_nela` — 13/09/2026.
 
-    E QUEM PINTA É A PÁGINA: o `data-hef-recado-classe` diz com que classes o
-    recado se veste. Uma caixa com borda do piloto ao lado das linhas da faixa
-    seriam dois desenhos para a mesma linha.
+    A página declarava o lugar e o recado ia para lá, vestido pelas classes do
+    `data-hef-recado-classe`. Uma faixa declarada hoje é endereço de um canal
+    que não existe, e ela fica vazia.
     """
     assert medido["faixas-1"] == "1", (
         f"a régua não conseguiu declarar UMA faixa: {medido['faixas-1']!r}")
-    recados = _r(medido["com-uma-faixa"])
-    assert recados, "o recado sumiu quando a faixa apareceu"
-    r = recados[0]
-    assert r["lugar"] == "faixa", (
-        f"o recado não pousou na faixa declarada: lugar={r['lugar']!r}, "
-        f"pai={r['pai']!r}")
-    assert r["pai"] == "regua-faixa-0", (
-        f"o recado pousou fora do container declarado: {r['pai']!r}")
-    assert "est" in r["classe"] and "recibo" in r["classe"], (
-        f"a faixa manda as classes pelo `data-hef-recado-classe`, e o recado "
-        f"veste {r['classe']!r}")
+    assert _r(medido["com-uma-faixa"]) == [], medido["com-uma-faixa"]
 
 
-def test_dois_lugares_iguais_a_pagina_perde_os_dois(medido: dict) -> None:
-    """A MORDIDA da peça 1, segunda metade: DOIS containers, e a régua nomeia.
+def test_com_dois_lugares_nenhum_recado_e_nada_a_recusar(medido: dict) -> None:
+    """ERA `test_dois_lugares_iguais_a_pagina_perde_os_dois` — 13/09/2026.
 
-    Um `querySelector` escolheria o primeiro do documento — a tela decidindo por
-    ordem de marcação, que é o defeito da lista plana (T-04). O piloto recusa os
-    dois e volta ao cartão, que é o comportamento sem atributo nenhum.
-
-    ARRANQUE A CURA — troque a recusa por `document.querySelector(…)` — e o
-    recado volta a pousar na primeira faixa, com `faixas_demais` vazio: esta
-    régua reprova nas duas asserções.
+    Com dois containers declarando o mesmo tom o piloto recusava os dois,
+    nomeava-os em `faixasDemais` e voltava ao cartão. Sem canal, não há faixa a
+    escolher nem a recusar: `faixasDemais` fica vazio, e recado nenhum aparece.
     """
     assert medido["faixas-2"] == "2", (
         f"a régua não conseguiu declarar DUAS faixas: {medido['faixas-2']!r}")
     leitura = medido["com-duas-faixas"]
     assert isinstance(leitura, dict), leitura
-    demais = leitura["faixas_demais"]
-    # O TOM É `recusa` DESDE 13/09/2026 — ver a nota do `POR_AS_FAIXAS`.
-    assert "recusa" in demais, (
-        "com dois containers declarando o mesmo tom o piloto tinha de RECUSAR "
-        f"os dois e dizer quais são; `faixasDemais` veio {demais!r}")
-    assert sorted(demais["recusa"]) == ["regua-faixa-0", "regua-faixa-1"], (
-        f"a recusa não nomeou os dois: {demais['recusa']!r}")
-    recados = _r(leitura)
-    assert recados, "o recado sumiu com as duas faixas"
-    assert recados[0]["lugar"] in ("grade", "fluxo"), (
-        f"com dois lugares declarados o recado tinha de voltar ao cartão, e "
-        f"pousou em {recados[0]['lugar']!r} (pai {recados[0]['pai']!r}) — a "
-        f"tela escolheu por ordem do documento")
+    assert leitura["faixas_demais"] == {}, (
+        f"o piloto ainda escolhe faixa de recado: {leitura['faixas_demais']!r}")
+    assert _r(leitura) == [], leitura["recados"]
 
 
 # --------------------------------------------------------------------------
@@ -850,14 +834,16 @@ def test_as_tres_portas_de_hoje_nao_mudaram(medido: dict) -> None:
     # E ELE SEGUIU O CAMINHO DO CLIQUE INTEIRO, não só o despacho. O elemento
     # carrega um `data-vivo` de ruído — um atributo que nenhuma página tem, e
     # que o ouvinte manda ao Python junto com o dataset. Se a marca do vivo não
-    # nascesse vazia na carga, este clique cairia no caminho do gesto vivo:
-    # sem voo, e com o `recado` RECUSADO por ser chave de aviso. O recado na
-    # tela é o que separa os dois caminhos.
-    leitura = medido["depois-do-change"]
-    assert isinstance(leitura, dict), leitura
-    assert [r["texto"] for r in _r(leitura)] == [FRASE_DO_RECADO], (
-        f"o `change` não depositou o recado do gesto — ele caiu no caminho do "
-        f"gesto vivo por causa de um `data-vivo` no dataset: {_r(leitura)!r}")
+    # nascesse vazia na carga, este clique cairia no caminho do gesto vivo, que
+    # não veste voo. O CARIMBO DE VOO separa os dois caminhos desde 13/09/2026:
+    # até ali era o recado na tela, que saiu com a FRASES-E-DICAS-01.
+    do_change = [g for g in medido["gestos"]
+                 if g["gesto"] == GESTO_DO_CLIQUE and g["campo"] == "regua-jogo"]
+    assert do_change, (
+        f"o `change` do campo não chegou ao Python: {medido['gestos']!r}")
+    assert all(g["vivo"] == "" and g["voo"] for g in do_change), (
+        f"o `change` caiu no caminho do gesto vivo por causa de um `data-vivo` "
+        f"no dataset — ele chegou sem voo: {do_change!r}")
 
 
 # --------------------------------------------------------------------------
@@ -888,6 +874,10 @@ def test_o_botao_que_recusou_nao_pisca_verde_pelo_vizinho(medido: dict) -> None:
     assert not lido["p1"]["deu_certo"], (
         "o botão do p1 piscou VERDE depois de o produto ter RECUSADO: o pouso "
         "leu o desfecho que o vizinho escreveu na mesma chave")
+    # E ELE PISCOU A RECUSA, que é o desfecho DELE — 13/09/2026,
+    # FRASES-E-DICAS-01. Sem isto, um pouso que não piscasse nada passaria aqui.
+    assert lido["p1"]["recusou"] and not lido["p2"]["recusou"], (
+        f"a piscada de recusa não é a do desfecho de cada botão: {lido!r}")
     assert not lido["p1"]["em_voo"], (
         "o botão do p1 continua 'trabalhando' — o pouso não chegou, e a "
         "medição acima não vale")
