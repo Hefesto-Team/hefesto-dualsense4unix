@@ -427,7 +427,7 @@ class _Alimentador:
             )
             logger.debug(
                 "canal_do_mic_alimentador_colhido",
-                extra={"uniq": self.uniq, "codigo": como.codigo, "por": como.por,
+                extra={"uniq": self.uniq, "rc": como.codigo, "por": como.por,
                        "ms": como.ms},
             )
         elif bomba is not None and bomba.is_alive():
