@@ -1585,8 +1585,26 @@
      Um `::before` com o mesmo X mais grosso por baixo também funcionaria e
      custaria um pseudo-elemento a mais em 14 botões por coluna, vezes quatro
      colunas — 56 nós contra zero. */
+  /* O X É UM QUADRADO CENTRADO, E NÃO UMA MOLDURA RECUADA — DICA-DA-COR-01,
+     13/09/2026. A `COR-X-01` mediu a COR do X e deu verde; a LARGURA ninguém
+     mediu. O recuo de 5 px dos quatro lados amarrava o X à largura da pílula,
+     que é a coisa mais estreita desta tela, e ele saía uma TIRA. Medido no
+     `WebKit2.WebView`, na página publicada, com dois controles pintados:
+
+         vista 1212x809 (como a janela abre)  .tom 16,5 x 26  X  4,5 x 14
+         vista 1918x840 (a TV dela)           .tom 26,1 x 26  X 14,0 x 14
+
+     A LARGURA TEM TETO DE 12 PX, e o `100% - 2px` impede o X e o contorno
+     branco de vazarem da pílula se ela encolher. A ALTURA VEM DE
+     `aspect-ratio`, e não do mesmo `min()`: os dois `100%` respondem a caixas
+     diferentes (26 de altura, 14 de largura), e com `min()` nos dois eixos o X
+     saía 8,94 x 12 — medido na entrega de 10/09 (`65838cf4`).
+
+     Quem morde: `tests/unit/test_o_x_do_vizinho_e_quadrado.py`. */
   .guia .tom.tomado::after{
-    content:"";position:absolute;inset:5px;
+    content:"";position:absolute;
+    left:50%;top:50%;transform:translate(-50%,-50%);
+    width:min(12px,calc(100% - 2px));height:auto;aspect-ratio:1;
     background:
       linear-gradient(to top left,transparent 45%,#000 45%,#000 55%,transparent 55%),
       linear-gradient(to top right,transparent 45%,#000 45%,#000 55%,transparent 55%);
