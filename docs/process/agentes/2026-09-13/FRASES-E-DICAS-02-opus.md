@@ -160,3 +160,129 @@ pela citação do mapa de canais — ver o primeiro item de «O que sobrou».
   estava.
 * **09:** a cor não lida e «O que fazer: nada.» da aba Sistema são da
   SISTEMA-BOTOES-01.
+
+## O que a validação refez e corrigiu
+
+VALIDA/CORRIGE, 13/09/2026, sobre `1a97df8f`. Correções em `b6984301`.
+
+**POSSE.** Os 26 arquivos da implementação cabem na posse, nas páginas geradas
+e na entrega, menos os fora da posse que a seção de cima já justifica. A
+validação acrescentou dois: `docs/data/mapa-controles.csv`, linha 23, porque o
+`citacoes-de-linha` reprovava (ver o achado 4), e `html/specs.html`, regerado
+por `scripts/gerar-mapa.py` porque o `mapa-de-canais` reprovou depois dessa
+edição. O diff dele são os dois números da citação e o selo do rodapé (data,
+commit e branch), que o gerador escreve.
+
+**AS REGRAS DELA, contadas nas páginas.** `<button>` nas dez publicadas: 254 em
+`249af1f6`, 254 agora; `data-gesto`: 337 e 337; o mesmo no `mockup/`. Na 08 o
+`.ajuda` foi de 24 para 23 (o `?` do cartão da ordem, que saiu com o
+`div.faca`) e o `title` de 126 para 122. No DOM do piloto, botões e gestos por
+aba iguais antes e depois. Os textos novos que chegam à tela são rótulo de
+estado: «Sem conferir neste desenho: uma coisa.», «Canal de áudio dormindo»,
+«Fora dos caminhos conhecidos», «Biblioteca da Steam ilegível», «Ligado em 2
+jogos».
+
+### As mordidas, refeitas com o código de antes
+
+Cada uma devolveu à árvore os pedaços de `249af1f6` (o `git diff` aplicado ao
+contrário, pedaço a pedaço), rodou a régua, voltou por `git checkout --` e
+conferiu `git status --short` vazio.
+
+| | o que voltou | reprovou |
+| --- | --- | --- |
+| M1 | `secao_controles.py` inteiro e a sonda da 08 | a régua nova pelo `pacote()` e `test_a_dica_do_radio_e_so_o_que_o_botao_faz` — 2 de 9 |
+| M2 | `confissao-dica` com a abertura | 2 de 2 |
+| M3 | a coluna inteira (faca, `?`, ganho, procedência, cartão de cura) | 4 de 20 |
+| M3a | só o cartão da ordem | 4 de 20 |
+| M3b | só o cartão de cura | 3 de 20 |
+| M4a · M4b | a dica da fita · a do chip da 03 | 2 de 3 · 2 de 3 |
+| M5 · M5b | a 02 inteira · só a frase SUSPENSO, com a assinatura nova | 5 de 8 · 3 de 8 |
+| M6 · M6b · M6c | os dois ramos · só o do erro · só `DIZ_NAO_ACHEI` | 2 de 2 · 2 de 2 · 1 de 2 |
+| M7 | o ramo ligado que nomeia e narra | 3 de 26 |
+| M8a · M8b · M8c | o gerador da 08 com a cor não lida · com a confissão · com a coluna inteira | 1 de 20 · 2 de 21 · 1 de 76 |
+| **M8d** | **o gerador da 08 só com o `div.faca` e o `div.ganho`** | **0 de 76 — ver o achado 1** |
+| M9 | o `?` da linha do exame sem «O que fazer» | 2 de 2 |
+
+Todas as curas de volta: verdes.
+
+### Os achados
+
+1. **CORRIGIDO — o imperativo e o ganho cravados na 08 passavam.** A prosa do
+   mockup não tem âncora de dono, e a régua das páginas só pegava o cartão de
+   cura, pelo «O que fazer». Entrou
+   `test_a_coluna_da_ordem_cravada_na_08_nao_traz_imperativo_nem_ganho`, que
+   lê as classes da coluna da ordem nas duas páginas 08. Mordida: M8d outra vez,
+   1 de 22; e só a marca `proc` cravada no de→para, 1 de 2.
+2. **CORRIGIDO — uma régua da mordida M1 não morde a volta fiel.**
+   `test_a_dica_da_luz_nao_anexa_o_aviso_da_mesa_suja` fica verde com o código
+   de `249af1f6`: a sonda morava no tique, e a chamada direta a `dica_da_luz`
+   nunca a aciona. A docstring passou a dizer o alcance e a apontar a régua que
+   passa pelo `pacote()`, que reprovou.
+3. **CORRIGIDO — dublê sem leitor.** `_mesa_limpa_leitor` saiu do card da luz em
+   `tests/unit/test_a_luz_nao_acende_o_botao_do_card.py`. O de
+   `tests/unit/test_o_interruptor_do_microfone_na_aba_configuracoes.py` fica:
+   fora da posse, e não muda resultado nenhum.
+4. **CORRIGIDO — o `citacoes-de-linha`.** A 02 encolheu 17 linhas. Na linha 23
+   do mapa de canais, `mic_modo` passou de `:4119` para `:4102` e a docstring
+   citada ao lado de `:4164` para `:4147`, as duas medidas pelo símbolo e pelo
+   texto, não por conta.
+5. **CORRIGIDO — prosa.** A docstring da régua nova dizia que o passeio dublava
+   a sonda da mesa; a sonda saiu, e quem dubla é a própria régua.
+6. **NÃO CORRIGIDO — a razão ▲ na dica da luz.** Com a seção aberta, o hover
+   do botão diz, depois do que ele faz: «▲ nasceu com 1 processo(s) segurando o
+   nó do controle — nesta condição a barra não obedece, e só a reconexão
+   devolve». É `frase_do_nascimento`, fora do §I desta sprint e com linha
+   própria na paridade. Fica como pergunta para quem coordena.
+7. **NÃO CORRIGIDO, FORA DA POSSE — citações de linha deslocadas.** Das 294
+   citações `arquivo:linha` das planilhas de `249af1f6` que apontam para os oito
+   arquivos de `src/` desta sprint, 185 caem hoje noutra linha — 79 na 08, 59 na
+   02 e 29 em `secao_controles.py`, quase todas em
+   `docs/data/paridade-gtk-html.csv`. O portão só cobra a que promete símbolo, e
+   a planilha é de todas as sprints da leva.
+
+### A tela, no piloto oculto
+
+Xvfb próprio (`:80`), `sem_cor=True`,
+`HEFESTO_DUALSENSE4UNIX_SKIP_PRESET_SEED=1`, o daemon vivo dela. Nenhum
+`data-gesto` foi clicado: os cliques foram nos rótulos das seções da 08
+(«Gestão de Controles» e «Rádio e Adaptadores»). O ANTES é o `src/` e a
+página 08 de `249af1f6` postos na árvore por `git checkout 249af1f6 --` e
+devolvidos por `git checkout HEAD --`, com `git status` vazio. A árvore extraída
+no rascunho não carregou no WebKit (`ERRO DE CARGA: carregou OUTRA página:
+título ''`), e a causa não foi medida.
+
+**Achados das âncoras nas dez abas: 25 antes, 3 depois.** Os três são os da
+seção de cima (a nota da 08 que cita o PipeWire e o «O que fazer: nada.» da 09).
+
+| onde | antes | depois |
+| --- | --- | --- |
+| 08, hover do botão da luz | «… Atenção: outro programa está segurando controle agora …» — **sem dublê: a Steam dela segurava o nó** | o que o botão faz, e a razão ▲ (achado 6) |
+| 08, coluna da ordem | imperativo, «Não medi o ganho nesta máquina.» e o cartão «O que fazer: Abra …» | vazia; com destino dublado, `3-1.1.1 → Entrada 9` e «+1 recomendação não coube aqui» |
+| 08, `.ajuda` com «O que fazer» | 2 | 2 |
+| 08, linha da conta | «O que eu não consegui conferir neste desenho: uma coisa.» | «Sem conferir neste desenho: uma coisa.» |
+| 02, hover do canal | «O canal de áudio deste controle está SUSPENSO no PipeWire …» | «Canal de áudio dormindo» |
+| 03, hover do chip | «Cosmic Red — a cor do plástico deste controle ainda não foi lida» | «Cosmic Red» |
+| fita, dez abas | «a cor do plástico deste controle não foi lida» | sem dica |
+| 07, leitura dublada | «Não localizei este lançador …» · «Não consegui ler a biblioteca da Steam — o vdf sumiu. Nada foi alterado.» · «Ligado para appid … — o Hefesto desliga no próximo ciclo …» | «Fora dos caminhos conhecidos» · «Biblioteca da Steam ilegível» · «Ligado em 2 jogos» |
+
+Isso fecha dois itens de «O que NÃO verifiquei»: os três ramos da 07 na tela
+(com a leitura dublada) e a coluna com destino. E corrige um: o controle
+segurado não precisou de dublê.
+
+Perfis: iguais por md5 (159 arquivos) depois de cada uma das doze corridas. Os
+dois Xvfb que apareceram em `:81` eram de pytest de outras árvores, conferido
+pelo processo pai, e não foram tocados.
+
+### Réguas e portões
+
+Os 15 arquivos do núcleo: 378 passed antes das correções e 380 depois.
+`scripts/check_o_desenho_aprovado.py` e
+`scripts/validar-citacoes-de-linha.py --all`: OK. A corrida dos portões roda
+com esta seção no índice, e o resultado vai na mensagem do commit.
+
+### O que a validação não verificou
+
+* O sufixo do Steam Input com exceção por jogo.
+* A linha da conta dentro do mapa das entradas aberto: lida no DOM, sem abrir o
+  mapa.
+* Aparelho, cabo e rádio; a janela instalada; a suíte inteira.
