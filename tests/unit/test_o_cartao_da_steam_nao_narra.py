@@ -347,3 +347,62 @@ def test_a_pagina_nasce_com_o_corpo_calado(arquivo):
         f"{arquivo.parent.name}/{arquivo.name} nasce narrando: "
         f"{_visivel(achado.group(1))!r}")
     assert "Estou lendo" not in texto
+
+
+# --------------------------------------------------------------------------
+# FRASES-E-DICAS-02 — os três ramos que ainda narravam, 13/09/2026
+# --------------------------------------------------------------------------
+@pytest.fixture()
+def frase_do_steam_input_ligado(a07, monkeypatch):
+    """O Steam Input LIGADO em dois jogos, lido pelo caminho do produto.
+
+    A frase é a que `_o_que_a_steam_poe_no_meio` pergunta ao dono
+    (`emulation_actions.markup_status_steam_input`) — nunca uma digitada aqui.
+    """
+    from hefesto_dualsense4unix.app.actions import emulation_actions as ea
+
+    monkeypatch.setattr(ea.EmulationActionsMixin, "_steam_input_is_on",
+                        staticmethod(lambda: True))
+    monkeypatch.setattr(ea.EmulationActionsMixin, "_steam_input_appids_ligados",
+                        staticmethod(lambda: [JOGO_A[0], JOGO_B[0]]))
+    monkeypatch.setattr(ea.EmulationActionsMixin, "_steam_input_excecao_status",
+                        staticmethod(lambda: ([], None)))
+    frase, ligado = a07._o_que_a_steam_poe_no_meio()
+    assert ligado is True and frase, "o dublê não ligou o Steam Input"
+    return frase
+
+
+def test_os_tres_ramos_que_narravam_viram_rotulo_de_estado(
+        desenho, frase_do_steam_input_ligado):
+    """Não localizada · biblioteca ilegível · Steam Input ligado: cada linha é estado.
+
+    A PALAVRA DELA, 13/09/2026, no índice da terceira lista: frase de status
+    *"segue aparecendo nas abas"*. Os três ramos que a TELA-CALADA-02 não
+    alcançou falavam em primeira pessoa (*"Não localizei … me mostre onde"*,
+    *"Não consegui ler …"*) ou narravam o que o Hefesto faria no próximo ciclo.
+
+    OS TRÊS SAEM DO CAMINHO DO PRODUTO: `cartao_da_steam` com a `Leitura` de
+    cada estado. O terceiro vai no ramo de impedimento, porque é ali que a linha
+    do Steam Input divide o corpo com outro rótulo curto.
+
+    MORDIDA (rodada, saída na entrega da FRASES-E-DICAS-02): devolva a frase de
+    11/09 a `DIZ_NAO_ACHEI`, a frase do erro ao ramo `lida.erros`, ou a frase
+    longa ao ramo ligado de `markup_status_steam_input`, e este teste reprova
+    naquele ramo.
+    """
+    ramos = {
+        "não localizada": desenho.Leitura(onde_estao=(("steam", ""),)),
+        "biblioteca ilegível": desenho.Leitura(erros=("o vdf sumiu",),
+                                               onde_estao=(("steam", ""),)),
+        "Steam Input ligado": desenho.Leitura(
+            reparaveis=((JOGO_A[0], JOGO_A[1], "nunca recebeu o atalho"),),
+            steam_input=frase_do_steam_input_ligado, steam_input_ligado=True),
+    }
+    for nome, lida in ramos.items():
+        linhas = _linhas(desenho.cartao_da_steam(lida).diz)
+        assert linhas, f"o ramo {nome!r} ficou sem corpo — vazio vira travessão"
+        narram = [x for x in linhas if not _e_rotulo_de_estado(x)]
+        assert not narram, f"o ramo {nome!r} narra: {narram!r}"
+    ligado = _linhas(desenho.cartao_da_steam(ramos["Steam Input ligado"]).diz)
+    assert len(ligado) == 2, (
+        f"a linha do Steam Input sumiu do cartão junto com a narração: {ligado!r}")

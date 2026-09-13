@@ -64,7 +64,6 @@ from typing import Any
 import pytest
 
 from hefesto_dualsense4unix.app.actions.config.secao_controles import (
-    AVISO_DA_MESA_SUJA,
     DICA_NO_CABO,
     DICA_NO_RADIO,
     ESPERA_CANCELADA,
@@ -193,14 +192,21 @@ class TestSoAcionavelNoRadio:
         assert "PS" in dica
         assert "não reconecta sozinho" in dica
 
-    def test_a_mesa_suja_avisa_sem_apagar_o_que_o_botao_faz(self) -> None:
-        """O aviso é ANEXADO. Trocar a dica esconderia o que o clique faz."""
-        dica = dica_do_botao(NO_RADIO, mesa_suja=True)
-        assert DICA_NO_RADIO in dica
-        assert AVISO_DA_MESA_SUJA in dica
+    def test_a_dica_do_radio_e_so_o_que_o_botao_faz(self) -> None:
+        """FRASES-E-DICAS-02, 13/09/2026: o aviso da mesa suja saiu da dica.
 
-    def test_a_mesa_limpa_nao_inventa_aviso(self) -> None:
-        assert dica_do_botao(NO_RADIO, mesa_suja=False) == DICA_NO_RADIO
+        CONTRATO QUE MUDOU: até esta data a dica ANEXAVA um aviso com instrução
+        quando outro programa segurava nó de controle. A ordem dela de 13/09
+        tira frase de aviso da tela em toda forma, `title` incluído; a dica
+        ficou com o que o clique faz, e a função não pergunta mais pela mesa.
+        A régua com a sonda dublada mora em
+        `test_a08_o_veredito_e_a_mesa_de_radio_dela` e em
+        `test_nenhuma_frase_de_aviso_chega_a_tela`.
+        """
+        import inspect
+
+        assert list(inspect.signature(dica_do_botao).parameters) == ["dados"]
+        assert dica_do_botao(NO_RADIO) == DICA_NO_RADIO
 
 
 # ---------------------------------------------------------------------------
@@ -307,7 +313,6 @@ class TestNenhumaFraseLeALampada:
             FRASE_NAO_CAIU,
             DICA_NO_RADIO,
             DICA_NO_CABO,
-            AVISO_DA_MESA_SUJA,
             frase_nao_voltou(60),
             frase_da_procura(38),
             FRASE_NASCEU_CONDENADO,
@@ -400,7 +405,6 @@ def _bloco_num_card(
     from hefesto_dualsense4unix.app.widgets.external_card import ExternalCard
 
     opcoes: dict[str, Any] = {
-        "mesa_suja": False,
         "ao_derrubar": lambda _alvo: None,
         "ao_voltar": lambda: None,
         # `None` = "não agendei nada": o `_parar_o_tique` não vai pedir ao

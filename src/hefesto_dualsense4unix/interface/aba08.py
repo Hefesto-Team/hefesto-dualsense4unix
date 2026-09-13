@@ -2318,10 +2318,9 @@ def linha_do_controle(c):
     # *"a dica continua a do desenho, e isso é dívida declarada … um segundo
     # campo para o `title` pede outro elemento"* — estava certo, e o outro
     # elemento é o `<i class="ltrava">` abaixo: ele fica com a CLASSE e o botão
-    # fica com a DICA. O que a dica ganha não é só seguir o transporte: vêm
-    # junto o AVISO DA MESA SUJA (quando outro programa segura nó de controle
-    # agora, a cura não pega) e a RAZÃO do carimbo de nascimento — os dois com
-    # dono no produto e zero leitor no HTML até hoje. Ver
+    # fica com a DICA. O que a dica ganha não é só seguir o transporte: vem
+    # junto a RAZÃO do carimbo de nascimento, que tem dono no produto (o aviso
+    # da mesa suja também vinha, e saiu em 13/09/2026). Ver
     # `a08_conexoes.dica_da_luz`.
     # SEM APARELHO A TRAVA NASCE SOLTA, como a de quem está no rádio: a trava é
     # do transporte, e um lugar vazio não tem transporte que a acenda.
@@ -2403,6 +2402,12 @@ def linha_do_controle(c):
     # aparelho não há o que mirar, e a frase é a que o ramo vazio já dizia.
     dica_linha = (f"{SO_ESTE_DICA} A fita do topo passa a apontar para ele."
                   if conectado else "Nenhum controle neste lugar.")
+    # A BORDA NEUTRA PAROU DE SE EXPLICAR — FRASES-E-DICAS-02, 13/09/2026. O
+    # `title` do resumo confessava, sem aparelho no cabo, que a cor não tinha
+    # sido lida; é confissão sobre um estado nosso, e a ordem dela de 13/09 a
+    # tira da tela. Com a cor lida a dica fica; sem ela, o `<span>` não tem dica.
+    dica_da_borda = (' title="A borda é a cor lida deste aparelho."'
+                     if (conectado and not no_radio) else "")
     # O ÚNICO CAMPO QUE NÃO RECEBE O TRAVESSÃO É O `<select>` DO MICROFONE, e a
     # razão é do widget, não da decisão: as opções são `Ligado`/`Desligado`, um
     # `<select>` marca sempre uma, e não há terceira que diga *"não sei"*.
@@ -2422,7 +2427,7 @@ def linha_do_controle(c):
                      title="{dica_linha}">
               <span class="gc-nome" data-campo="nome" data-hef-alvo="html">{vale(rotulo(c), nome_do_lugar_vazio(c))}</span>
               <span class="gc-resumo">
-                <span title="{"A borda é a cor lida deste aparelho." if (conectado and not no_radio) else "A cor deste controle não foi lida — a borda fica neutra."}">Vê como <b>{vale(c["mascara"])}</b></span>
+                <span{dica_da_borda}>Vê como <b>{vale(c["mascara"])}</b></span>
                 <span data-campo="mic-dica" data-hef-alvo="atributo" data-hef-atributo="title" title="{vale(mic_dica)}">Microfone <b data-campo="mic-existe">{vale("Ligado")}</b>, <span data-campo="mic-caminho" data-hef-alvo="html">{vale(caminho_do_mic(c))}</span></span>
                 <span title="A bateria vem da aba Controles, que é quem a lê do aparelho.">Bateria <b data-campo="bateria">{vale(f'{da_controles["bat"]}%')}</b></span>
               </span>
@@ -2869,8 +2874,10 @@ LACUNAS = ["LACUNA_POSICAO", "LACUNA_VELOCIDADE", "LACUNA_ESPECIE"]
 # redação nova. Ele passa a viver em DUAS superfícies de hover:
 #   · `CONFISSAO_EM_DICA`  — na dica do `?` do `.tn-topo`, junto com o que já
 #     estava lá (é o pedido literal dela), em HTML;
-#   · `CONFISSAO_EM_TITLE` — no `title` da linha que ficou no corpo, em texto
-#     puro, que é o que o hover nativo aceita.
+#   · `CONFISSAO_EM_TITLE` — no `title` da linha que ficou no corpo. **SAIU EM
+#     13/09/2026** (FRASES-E-DICAS-02): era confissão em primeira pessoa numa
+#     dica flutuante. A linha ficou com a contagem, e a lista inteira continua
+#     no `?`, que é ajuda.
 #
 # POR QUE NAS DUAS, E NÃO UMA APONTANDO PARA A OUTRA: uma dica que responde
 # "olhe noutro lugar" cobra um segundo gesto e ensina menos que uma que
@@ -2884,8 +2891,6 @@ LACUNAS = ["LACUNA_POSICAO", "LACUNA_VELOCIDADE", "LACUNA_ESPECIE"]
 _CONFISSAO_ITENS = [f"· {MAPA['CONFISSAO'][k]}" for k in LACUNAS]
 CONFISSAO_EM_DICA = ("<b>" + html.escape(MAPA["CONFISSAO_ABERTURA"]) + "</b><br>"
                      + "<br>".join(html.escape(i) for i in _CONFISSAO_ITENS))
-CONFISSAO_EM_TITLE = "&#10;".join(
-    html.escape(t) for t in [MAPA["CONFISSAO_ABERTURA"], *_CONFISSAO_ITENS])
 
 #: A CONTA, por extenso — e ela é o que a linha do corpo entrega DE GRAÇA, sem
 #: hover nenhum. É dado derivado (`len(LACUNAS)`), não frase de tela: por isso
@@ -2916,15 +2921,15 @@ if len(LACUNAS) not in _POR_EXTENSO:
 #:     GTK — lá a linha não é desenhada quando `confissao_do_desenho` devolve
 #:     vazio. O `data-hef-quando` compara por IGUALDADE de propósito: sem ele o
 #:     alvo vira booleano e o sumiço acenderia justo quando há confissão;
-#:   · `confissao-dica`  no `<span>`, alvo `atributo`/`title`: os itens da mesa
-#:     dela, um por linha;
+#:   · `confissao-dica` — os itens da mesa dela no `title` do `<span>`. **SAIU
+#:     EM 13/09/2026** (FRASES-E-DICAS-02), junto com a abertura em primeira
+#:     pessoa: a linha passou a dizer o ESTADO, `a08_conexoes.ROTULO_DA_CONTA`
+#:     mais a contagem, e os itens continuam no `?` do topo;
 #:   · `confissao-conta` no `<b>`: a palavra por extenso.
 CONFISSAO_NA_TELA = (
     f'<div class="mm-conf-linha" data-campo="confissao-nada" '
     f'data-hef-alvo="classe" data-hef-classe="sumido" data-hef-quando="sim">'
-    f'<span data-campo="confissao-dica" data-hef-alvo="atributo" '
-    f'data-hef-atributo="title" title="{CONFISSAO_EM_TITLE}">'
-    f'{MAPA["CONFISSAO_ABERTURA"]} '
+    f'<span>{_pacote08.ROTULO_DA_CONTA} '
     f'<b data-campo="confissao-conta">{_POR_EXTENSO[len(LACUNAS)]}</b>.'
     f'</span></div>')
 
@@ -3475,43 +3480,19 @@ MIOLO = f'''
 
           <div class="lado-d">
             <div class="col-ordem" data-campo="{CAMPO_DA_ORDEM}" data-hef-alvo="html">
+            <!-- A COLUNA ENXUGOU — FRASES-E-DICAS-02, 13/09/2026. O imperativo, o
+                 `?` do cartão e a linha do ganho saíram da vista, e o cartão de
+                 cura (decisão [03] do PO) saiu inteiro: eram instrução e
+                 confissão sobre um estado, sem clique. O `?` de cada linha do
+                 exame à esquerda traz o mesmo conteúdo. Fica o de→para, que é
+                 o que o produto pinta quando a ordem tem destino — ver
+                 `a08_conexoes._html_da_ordem`. -->
             <div class="ordem">
-              <div class="faca">Mova o adaptador Bluetooth da Entrada 3 para a Entrada 9
-                <span class="ajuda">?<span class="dica" style="left:auto;right:22px">
-                  <b>O que eu vi:</b> o adaptador Bluetooth está na <b>Entrada 3</b> e o
-                  receptor do teclado na <b>Entrada 4</b> — as duas saem do mesmo controlador
-                  USB 3.0.<br><br>
-                  <b>Por que importa:</b> USB 3.0 gera ruído exatamente na faixa de 2,4 GHz,
-                  que é a faixa do Bluetooth. É a causa mais comum de engasgo no rádio, e não
-                  aparece em log nenhum.
-                </span></span>
-              </div>
               <div class="receita">
                 <span class="caixa" title="Entrada 3 — traseira do gabinete, USB 3.0. É a que divide o controlador com o receptor do teclado.">Entrada 3 <span class="pt">•</span> USB 3.0</span>
                 <span class="seta">→</span>
                 <span class="caixa alvo" title="Entrada 9 — traseira do gabinete, USB 2.0, num controlador que só ela usa.">Entrada 9 <span class="pt">•</span> USB 2.0</span>
               </div>
-              <div class="ganho"><span>Ganho esperado:</span> sai do controlador do teclado e do
-                ruído do USB 3.0 — e {"são " + str(len(NO_RADIO)) + " controles" if len(NO_RADIO) != 1
-                else "é 1 controle"} dependendo desse rádio. <span class="proc">[derivado da conta]</span></div>
-            </div>
-            <!-- O CARTÃO DE CURA — decisão [03] do PO, 04/09/2026: *"Cartão de
-                 cura na coluna da direita."* Até hoje a cura das conferências
-                 só existia dentro do `?` de cada linha, e quem não passasse o
-                 mouse não descobria o que fazer. A janela estável saiu deste
-                 mesmo estado em 25/08 (`secao_exame._card_da_cura`).
-
-                 ELE NÃO TEM SELO DE PROCEDÊNCIA, e é regra do dono: *"uma cura
-                 de conferência não traz selo … porque não há medição por trás
-                 dela dizendo de onde vem o conselho"*. É a contramão da [04] ao
-                 lado, e as duas convivem porque falam de coisas diferentes.
-
-                 A CURA DESTE CARD É A DA QUARTA LINHA do exame ao lado — os
-                 rádios vizinhos por nomear —, e não uma inventada: quem pinta
-                 na tela viva lê `exame_da_mesa.Item.cura`. -->
-            <div class="ordem cura">
-              <div class="faca"><span class="selo info">NOTA</span><span>O que fazer: nomeie os {len(POR_NOMEAR)} rádios que faltam na tabela de <b>Rádio e adaptadores</b>.</span></div>
-              <div class="ganho"><span></span>{len(RADIOS_VIZINHOS)} fontes de rádio perto. {len(JA_NOMEADOS)} você já nomeou.</div>
             </div>
             </div>
           </div>

@@ -112,7 +112,12 @@ def _nome_escrito(chip: str, c: dict[str, Any]) -> str:
     meio é o que separa "o chip diz o nome certo" de "a string está lá em algum
     lugar", que é a diferença entre uma régua e um instrumento falso.
     """
-    dentro = chip[chip.index(">", chip.index("title=")) + 1: chip.rindex("</label>")]
+    # O MIOLO COMEÇA NO FIM DA ETIQUETA, e não depois do `title`: desde 13/09/2026
+    # (FRASES-E-DICAS-02) o chip sem nome e sem cor não tem dica nenhuma, e a
+    # régua que procurava o `title=` para achar o miolo parava de ler.
+    abre = re.search(r"<label\b[^>]*>", chip)
+    assert abre, chip
+    dentro = chip[abre.end(): chip.rindex("</label>")]
     partes = [_so_o_texto(p) for p in dentro.split(monta.SEPARADOR.strip())]
     partes = [p for p in partes if p]
     # O MEIO É POSIÇÃO, NÃO FILTRO. Filtrar "o que não for `P2` nem `BT`"
@@ -254,14 +259,30 @@ def test_a_cor_nao_lida_nao_derruba_a_fita() -> None:
     assert "--plastico:;" not in html and '--plastico:"' not in html, html
 
 
-def test_o_chip_sem_cor_diz_por_que_nao_tem_borda() -> None:
-    """A borda que some tem de se explicar no `title`, não sumir calada.
+def test_o_chip_sem_cor_diz_o_nome_ou_nada() -> None:
+    """A borda que some não se explica na dica: a dica diz o nome, ou não existe.
 
-    MORDIDA: devolva o `title` fixo *"a borda é a cor do plástico"* e este
-    teste reprova — a frase promete uma borda que não está lá.
+    INVERTEU EM 13/09/2026 — FRASES-E-DICAS-02. Até aqui este teste exigia que o
+    chip sem cor dissesse no `title` que a cor do plástico não tinha sido lida.
+    A ordem dela de 13/09
+    (`docs/process/sprints/2026-09-13-A-TERCEIRA-LISTA-DELA-INDICE.md`) tira da
+    tela a confissão sobre um estado nosso, e a dica flutuante é tela. Continua
+    valendo a metade de antes: sem cor, a dica não promete a borda do plástico.
+
+    MORDIDA: devolva a frase da cor não lida ao `porque` de `monta.fita` e este
+    teste reprova.
     """
     html = monta.fita(ativo="p1", mesa=MESA_DELA)
-    assert "a cor do plástico deste controle não foi lida" in html, html
+    cabo, radio = (
+        [c for c in _chips(html) if f'P{item["jogador"]} ' in c]
+        for item in MESA_DELA)
+    assert cabo and radio, html
+    assert "title=" not in radio[0], (
+        "o chip sem cor e sem nome ganhou dica — sem nome não há o que dizer:\n  "
+        + radio[0])
+    assert "não foi lida" not in html, html
+    assert f'title="{MESA_DELA[0]["nome"]}' in cabo[0], (
+        "o chip com cor lida perdeu o nome na dica:\n  " + cabo[0])
 
 
 def test_o_chip_nao_diz_o_transporte_duas_vezes() -> None:

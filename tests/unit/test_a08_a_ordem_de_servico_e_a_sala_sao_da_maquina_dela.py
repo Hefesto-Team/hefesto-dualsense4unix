@@ -111,9 +111,17 @@ class _DeclaracaoFalsa:
 # 1. A ORDEM DE SERVIÇO — a mentira mais cara desta aba
 # ---------------------------------------------------------------------------
 def test_a_ordem_de_servico_e_da_maquina_dela() -> None:
-    """O card traz o imperativo da ordem viva, e NADA do mockup."""
+    """O card traz o de→para da ordem viva, e NADA do mockup.
+
+    A COLUNA ENXUGOU EM 13/09/2026 — FRASES-E-DICAS-02. Até aqui este teste
+    exigia no card o imperativo (`acao`) e a linha do ganho, inclusive a que
+    confessa que o ganho não foi medido. A ordem dela de 13/09
+    (`docs/process/sprints/2026-09-13-A-TERCEIRA-LISTA-DELA-INDICE.md`, §0 item
+    4: «Tirar e enxugar pode») e a §D da sprint tiram os dois da coluna visível;
+    o `?` da linha do exame guarda os dois — ver o teste abaixo.
+    """
     p = _pacote()
-    ordem = _uma_ordem()
+    ordem = _uma_ordem(destino="Entrada 9")
     antes = p._ORDENS_NA_TELA
     try:
         p._ORDENS_NA_TELA = (None, ordem, None)
@@ -121,33 +129,46 @@ def test_a_ordem_de_servico_e_da_maquina_dela() -> None:
     finally:
         p._ORDENS_NA_TELA = antes
 
-    assert ordem.acao in card, (
-        f"o card não traz o imperativo da ordem viva. Saiu: {card[:200]!r}")
+    assert ordem.destino in card, (
+        f"o card não traz o destino da ordem viva. Saiu: {card[:200]!r}")
     assert FRASE_DO_MOCKUP not in card, (
         "a frase cravada no mockup voltou ao card — é uma INSTRUÇÃO para ela "
         "mexer no gabinete, sobre entradas que a máquina dela pode não ter")
-    assert "Não medi o ganho nesta máquina." in card, (
-        "o `ganho_esperado` sumiu do card. AS TRÊS LINHAS, SEMPRE — inclusive a "
-        "que confessa que o ganho não foi medido (`secao_exame._card_da_ordem`)")
+    for fora in (ordem.acao, ordem.ganho_esperado.texto):
+        assert fora not in card, (
+            f"{fora!r} voltou à coluna visível — ele mora no `?` da linha do "
+            f"exame desde 13/09/2026")
 
 
 def test_o_card_traz_as_duas_frases_da_ordem_no_interrogacao() -> None:
-    """O `?` é *O que eu vi aqui* e *Por que importa*, com os rótulos do dono."""
-    from hefesto_dualsense4unix.integrations.exame_da_mesa import ROTULOS_DA_ORDEM
+    """O `?` que fica é o da linha do exame, e ele traz o que saiu do card.
+
+    MUDOU DE `?` EM 13/09/2026 — FRASES-E-DICAS-02. Até aqui o card da ordem
+    tinha o próprio `?` (`_dica_da_ordem`), com *O que eu vi aqui* e *Por que
+    importa*. O card enxugou até o de→para, e o `?` que contém o imperativo e o
+    ganho é o da linha do exame (`_dica_da_linha`): *Por que importa*, *Ganho
+    esperado* e *O que fazer*. *O que eu vi aqui* é o texto da própria linha.
+    """
+    from hefesto_dualsense4unix.app.actions.config.secao_exame import PREFIXO_DA_CURA
+    from hefesto_dualsense4unix.integrations.exame_da_mesa import (
+        ESTADO_ATENCAO,
+        ROTULOS_DA_ORDEM,
+        Item,
+    )
 
     p = _pacote()
     ordem = _uma_ordem()
-    dica = p._dica_da_ordem(ordem)
+    item = Item(chave=ordem.chave, rotulo="A", estado=ESTADO_ATENCAO,
+                porque=ordem.o_que_eu_vi.texto, cura=ordem.acao, ordem=ordem)
+    dica = p._dica_da_linha(item)
 
-    for rotulo, linha in zip(ROTULOS_DA_ORDEM[:2], ordem.linhas[:2], strict=True):
+    for rotulo, linha in zip(ROTULOS_DA_ORDEM[1:], ordem.linhas[1:], strict=True):
         assert f"<b>{rotulo}:</b>" in dica, (
-            f"o `?` do card perdeu o rótulo {rotulo!r}, que é de "
+            f"o `?` da linha perdeu o rótulo {rotulo!r}, que é de "
             "`exame_da_mesa.ROTULOS_DA_ORDEM`")
         assert linha.texto in dica, f"o `?` perdeu a frase {linha.texto!r}"
-
-    assert ordem.ganho_esperado.texto not in dica, (
-        "o ganho está no `?` E na linha `Ganho esperado:` do card — a mesma "
-        "frase duas vezes no mesmo cartão é a decisão 9 dela desfeita")
+    assert PREFIXO_DA_CURA in dica and ordem.acao in dica, (
+        f"o `?` da linha perdeu o que fazer, que saiu do card: {dica!r}")
 
 
 def test_sem_destino_o_card_nao_desenha_um_de_para_de_travessoes() -> None:
