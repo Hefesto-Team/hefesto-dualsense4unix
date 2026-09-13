@@ -157,6 +157,7 @@ from __future__ import annotations
 import dataclasses
 import logging
 import re
+import sys
 import threading
 import time
 from collections.abc import Callable
@@ -721,7 +722,11 @@ def _ler_do_disco() -> desenho.Leitura:
         pontes=pontes,
         onde_estao=onde_estao,
         declarados=declarados,
-        frase=sw.frase_do_aviso(censo),
+        # A FRASE DA SENTINELA SAIU DA `Leitura` — TELA-CALADA-02, 13/09/2026.
+        # Ela ia inteira para o corpo do cartão a cada tique, sem clique, e a
+        # palavra dela é *"em todas as abas da interface"*. O corpo diz a
+        # contagem (`desenho_dos_lancadores.cartao_da_steam`); a frase continua
+        # sendo a RECUSA do «Consertar», que a pede ao dono na hora do gesto.
         # A LINHA É A CONSTANTE DO MOTOR, e não uma segunda redação: é a MESMA
         # que o botão "Copiar opções para os jogos" da janela velha copia
         # (`daemon_actions.compose_launch` devolve `WRAPPER_LAUNCH` e nada mais)
@@ -792,8 +797,12 @@ def aviso_do_jogo_aberto(
     que já tem dono — e a cópia envelheceria calada no dia em que o daemon
     ganhasse um quarto valor.
 
-    O TEXTO É O DELA, VERBATIM (`home_actions.WRAPPER_MISSING_TEXT`), e sai da
-    própria função — nada é redigitado aqui.
+    **O TEXTO DEIXOU DE SER O DA JANELA VELHA — TELA-CALADA-02, 13/09/2026.**
+    O cartão escreve :data:`JOGO_ABERTO_SEM_O_ATALHO`, um rótulo de estado; a
+    frase longa (`home_actions.WRAPPER_MISSING_TEXT`) continua do dono e não é
+    redigitada aqui. Os dois parágrafos de baixo contam como ela era, e ficam
+    porque a decisão `07-Q2` que eles registram continua valendo para quem
+    ainda a mostra.
 
     **A FRASE MUDOU EM 06/09/2026 (ONDA5-07-03), e a palavra é dela.** Ela
     terminava em *"Copie as opções na aba Sistema."*, e a aba Sistema da
@@ -885,7 +894,27 @@ def aviso_do_jogo_aberto(
         )
         if acao != lwd.DECISION_PROMPT:
             return "", ""
-    return f"<b>{_texto(texto)}</b><br>", appid
+    return f"<b>{_texto(JOGO_ABERTO_SEM_O_ATALHO)}</b><br>", appid
+
+
+#: O RÓTULO DO JOGO ABERTO SEM O ATALHO — TELA-CALADA-02, 13/09/2026.
+#:
+#: ATÉ AQUI O CARTÃO RECEBIA A FRASE INTEIRA DA JANELA VELHA
+#: (`home_actions.WRAPPER_MISSING_TEXT`, 28 palavras, com *"Reponho o atalho no
+#: próximo Aplicar…"*), a cada tique e sem clique. A palavra dela sobre as frases
+#: de status é *"em todas as abas da interface"*, e a régua da sprint deixa
+#: ficar só rótulo de ESTADO: até seis palavras, sem primeira pessoa, sem
+#: instrução.
+#:
+#: POR QUE NÃO SILÊNCIO, e foi medido na foto do piloto: o botão «Não perguntar
+#: para este jogo» pende deste aviso. Sem nada escrito, o botão aparece no cartão
+#: sem dizer SOBRE O QUÊ não perguntar — um botão que não se explica sozinho. O
+#: rótulo diz o estado que o botão dispensa, e nada mais.
+#:
+#: A DECISÃO CONTINUA SENDO DO DONO: quem diz SE acende é
+#: `home_actions.wrapper_banner_text` (e a dispensa, e o modo). Muda só o que se
+#: escreve quando acende.
+JOGO_ABERTO_SEM_O_ATALHO = "Jogo aberto sem o atalho"
 
 
 def calados(lida: desenho.Leitura | None) -> set[str]:
@@ -1090,8 +1119,6 @@ class _VigiaDaSteam:
         self._thread: threading.Thread | None = None
         self._parar = threading.Event()
         self._trava = threading.Lock()
-        self._noticia = ""
-        self._quando = 0.0
 
     # -- o estado -----------------------------------------------------------
     def armada(self) -> bool:
@@ -1168,44 +1195,25 @@ class _VigiaDaSteam:
             if not self.tique():
                 return
 
-    # -- a notícia ----------------------------------------------------------
+    # -- o relato -----------------------------------------------------------
     def _anotar(self, frase: str) -> None:
-        if not frase:
-            return
-        self._noticia = frase
-        self._quando = time.monotonic()
+        """Leva o que a vigia fez ao diário da janela — e não mais ao cartão.
 
-    def noticia(self) -> str:
-        """O que a vigia fez, enquanto a notícia vale. Vazio = nada a dizer.
+        **A NOTÍCIA SAIU DO CARTÃO — TELA-CALADA-02, 13/09/2026.** Até aqui a
+        frase do dono (`carona_do_wrapper.passada`, com os jogos nomeados)
+        entrava no corpo do cartão da Steam por UMA volta da vigia, somada à
+        cabeça em :func:`com_o_que_o_daemon_diz`. É notícia de fundo, sem
+        clique, e a palavra dela sobre as frases de status é *"em todas as abas
+        da interface"*.
 
-        POR QUE ELA EXISTE: sem uma palavra, o reparo da vigia seria um cartão
-        que muda sozinho enquanto ela olha outra coisa — e ela nunca saberia
-        que o Hefesto cumpriu. A janela velha diz isso num toast do rodapé
-        (`_carona_toast`); aqui a mesma frase entra no corpo do cartão da
-        Steam, que é o lugar onde a recusa também aparece.
-
-        A FRASE É A DO DONO, montada por `carona_do_wrapper.passada` — a mesma
-        que a GTK mostra, com os jogos nomeados. Nada é redigitado aqui.
-
-        E O RELÓGIO TAMBÉM É DELE: a notícia dura UMA volta da vigia
-        (:meth:`intervalo`). Um número novo aqui seria a terceira duração de
-        tela desta casa sem dono; a volta da vigia é o único relógio que este
-        episódio já tem.
-
-        NUNCA LEVANTA: quem chama é a PINTURA, duas vezes por segundo. Uma
-        exceção aqui derrubaria a aba inteira por causa de uma frase.
+        QUEM DIZ QUE O HEFESTO CUMPRIU É O PRÓPRIO CARTÃO: `VIGIA.esquecer()`,
+        no :meth:`tique`, o repinta com o estado reposto — o selo e a contagem
+        mudam sozinhos. A frase continua escrita no diário da janela
+        (`interface.log`), no formato do relato das outras abas, para quem
+        depura.
         """
-        if not self._noticia:
-            return ""
-        try:
-            vale = self.intervalo()
-        except Exception:  # pragma: no cover - a carona sumiu do disco
-            self._noticia = ""
-            return ""
-        if time.monotonic() - self._quando >= vale:
-            self._noticia = ""
-            return ""
-        return self._noticia
+        if frase:
+            print(f"[relato] {PAGINA} · vigia-da-steam: {frase}", file=sys.stderr)
 
 
 #: A vigia é do MÓDULO, pela mesma razão da :data:`VIGIA`: o pacote é recriado
@@ -1286,14 +1294,14 @@ def com_o_que_o_daemon_diz(
 ) -> list[desenho.Lancador]:
     """O cartão da Steam com o AVISO VIVO e os botões que o estado permite.
 
-    QUATRO COISAS ENTRAM AQUI, e nenhuma delas é regra nova:
+    TRÊS COISAS ENTRAM AQUI, e nenhuma delas é regra nova:
 
-    0. **a notícia da vigia da Steam** — o que ela repôs sozinha depois de a
-       Steam fechar, na frase do `carona_do_wrapper` (ver
-       :meth:`_VigiaDaSteam.noticia`). Ela vem PRIMEIRO porque é a resposta ao
-       clique dela: o aviso do jogo aberto é permanente, a notícia passa;
-    1. **o aviso do jogo aberto sem o wrapper** — a decisão e o texto são de
-       `home_actions.wrapper_banner_text` (ver :func:`aviso_do_jogo_aberto`);
+    0. **A NOTÍCIA DA VIGIA SAIU — TELA-CALADA-02, 13/09/2026.** Ela entrava
+       aqui por uma volta da vigia, antes do aviso; agora vai ao `[relato]` do
+       stderr (:meth:`_VigiaDaSteam._anotar`);
+    1. **o rótulo do jogo aberto sem o atalho** — a decisão de acender é de
+       `home_actions.wrapper_banner_text`, e o texto é
+       :data:`JOGO_ABERTO_SEM_O_ATALHO` (ver :func:`aviso_do_jogo_aberto`);
     2. **"Não perguntar para este jogo"** — o botão que escreve na lista que a
        GTK já lia e que a interface nova só sabia DESFAZER. Até hoje o par
        estava pela metade aqui: `voltar-a-perguntar` existia desde 02/09 e
@@ -1323,11 +1331,11 @@ def com_o_que_o_daemon_diz(
     # mais o que confirmar.
     steam = lancadores[0]
     aviso, appid = aviso_do_jogo_aberto(state, lida)
-    noticia = VIGIA_DA_STEAM.noticia()
-    # DUAS VARIÁVEIS, e não uma: o botão "Não perguntar" pende do AVISO (e do
-    # appid dele), nunca da notícia. Somar as duas numa só faria a notícia da
-    # vigia acender um botão que não tem sobre o que agir.
-    cabeca = (f"<b>{_texto(noticia)}</b><br>" if noticia else "") + aviso
+    # A NOTÍCIA DA VIGIA SAIU DA CABEÇA — TELA-CALADA-02, 13/09/2026. Ela era
+    # somada aqui por uma volta da vigia; agora vai ao `[relato]` do stderr
+    # (:meth:`_VigiaDaSteam._anotar`), e quem mostra que o atalho voltou é o
+    # cartão relido. A cabeça é só o rótulo do jogo aberto.
+    cabeca = aviso
     acoes = steam.acoes
     if aviso and appid:
         acoes = (*acoes, desenho.Acao(DISPENSAR, "", "nao-perguntar", appid))
