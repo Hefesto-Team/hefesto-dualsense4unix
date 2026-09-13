@@ -61,7 +61,11 @@ AS TRÊS CURAS, e cada uma morde sozinha:
 6. **o tique mudo repinta o último estado bom por uma folga medida**
    (`hefesto_vivo.FolgaDoServicoMudo`) — troque `st = self._folga.mudo(e)` por
    `st = {}` no `_tique`: a régua do WebKit reprova com os lugares apagados
-   dentro da folga.
+   dentro da folga;
+7. **por cima SÓ dos lugares apagados** — achado da validação: tire o
+   `:not(:has(…))` das duas regras de `.mesa-notas` em `aba01.py`, regere e
+   publique: a frase do quinto controle cobre o chip da máscara de dois cartões
+   cheios, e a régua dela reprova.
 """
 from __future__ import annotations
 
@@ -317,17 +321,25 @@ CLIQUE_NO_CHIP_ESCONDIDO = "(a) => { " + APAGAR_OS_QUATRO + """
   return saida;
 }"""
 
-#: A MESMA LINHA COM MAIS CONTROLES QUE LUGARES: os quatro cheios e a frase acesa
-#: por cima deles. Quem recebe o clique no meio dela tem de ser o cartão.
-QUEM_PEGA_O_MEIO_DA_FRASE = "(a) => { " + (
-    "for (const el of document.querySelectorAll('[data-controle]'))"
+#: A MESMA LINHA COM MAIS CONTROLES QUE LUGARES: os quatro cheios e a frase do
+#: quinto acesa, com o texto que o pacote escreve. Devolve o que ela cobre de
+#: clicável e visível num cartão cheio.
+O_QUE_A_FRASE_DO_QUINTO_COBRE = "(a) => { " + (
+    "for (const el of document.querySelectorAll('.pecas [data-controle]'))"
     " { el.dataset.conectado = 'sim'; el.classList.remove('off'); } "
 ) + ACENDER_A_FRASE + """
-  const n = document.querySelector('.mesa-notas[data-campo="mesa-frase"]');
-  const r = n.getBoundingClientRect();
-  const em = document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2);
-  return {altura: r.height, pega: !!em && (em === n || n.contains(em)),
-          no_ponto: em ? em.tagName + '.' + em.className : ''};
+  const s = document.querySelector('.mesa-notas[data-campo="mesa-frase"] .mesa-nota');
+  s.textContent = a.frase;
+  const r = s.getBoundingClientRect();
+  const cobre = [];
+  for (const g of document.querySelectorAll('.pecas [data-controle] [data-gesto]')) {
+    const rg = g.getBoundingClientRect();
+    if (getComputedStyle(g).visibility === 'hidden' || !rg.width || !rg.height) continue;
+    if (rg.left < r.right && r.left < rg.right && rg.top < r.bottom && r.top < rg.bottom)
+      cobre.push(g.closest('[data-controle]').dataset.controle + ' · `' + g.dataset.gesto
+                 + '` ("' + g.textContent.trim().slice(0, 20) + '")');
+  }
+  return {altura: r.height, cobre: cobre};
 }"""
 
 
@@ -422,19 +434,30 @@ def test_o_clique_no_chip_escondido_nao_devolve_o_chip() -> None:
         "controle voltou a oferecer a escolha: " + ", ".join(pegam))
 
 
-def test_a_frase_por_cima_nao_rouba_o_clique_dos_cartoes() -> None:
-    """Com mais controles que lugares a mesma linha pousa sobre cartões cheios.
+@pytest.mark.parametrize("largura", LARGURAS)
+def test_a_frase_do_quinto_controle_nao_cobre_cartao_cheio(largura: int) -> None:
+    """Com mais controles que lugares a frase acende sobre quatro cartões CHEIOS.
 
-    Eles continuam clicáveis por baixo dela: o ponto do meio da frase é do
-    cartão, e não da frase.
+    POR CIMA DELES, ELA COBRIA A MÁSCARA — achado da validação desta sprint, em
+    13/09/2026: no Chrome a 1228 e 1300, e no piloto oculto, a frase do quinto
+    controle pousava sobre o chip «DualSense» do P2 e do P3, e o clique nela
+    caía nesse chip. Por cima só dos lugares apagados; com um lugar cheio, a
+    linha fica acima da fileira.
+
+    A FRASE É A DO DONO (`a01_jogar._frase_da_mesa`, com cinco controles): um
+    texto digitado aqui mediria a caixa de outra frase.
     """
+    cinco = [{"uniq": f"aa:bb:cc:00:00:0{n}", "connected": True} for n in range(1, 6)]
+    frase = aba._frase_da_mesa(Contexto(state={**VIVO_DUALSENSE, "controllers": cinco},
+                                        mesa=[], conectados=cinco, estados={}))
+    assert frase, "com cinco controles o pacote não escreveu a frase — a régua mediria nada"
     [(_, m)] = _medir_no_chrome(
-        LARGURAS[0], (("os quatro cheios e a frase acesa", "(a) => 0"),),
-        {"vazio": LUGAR_VAZIO}, QUEM_PEGA_O_MEIO_DA_FRASE)
-    assert m["altura"] > 0, f"a frase não acendeu — a régua mediria nada: {m}"
-    assert not m["pega"], (
-        f"a frase por cima dos cartões recebe o clique ({m['no_ponto']}) — o "
-        f"cartão embaixo dela deixou de ser clicável")
+        largura, (("os quatro cheios e a frase do quinto", "(a) => 0"),),
+        {"frase": frase}, O_QUE_A_FRASE_DO_QUINTO_COBRE)
+    assert m["altura"] > 0, f"{largura}px: a frase do quinto não acendeu — a régua mediria nada"
+    assert not m["cobre"], (
+        f"{largura}px: a frase do quinto controle cobre o que se clica num cartão "
+        f"cheio — " + ", ".join(m["cobre"]))
 
 
 # ---------------------------------------------------------------------------
