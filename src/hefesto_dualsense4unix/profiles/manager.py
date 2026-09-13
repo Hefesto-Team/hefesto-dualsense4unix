@@ -2069,8 +2069,8 @@ def secao_do_modo_com_o_caminho(
 
     * ``kind="gamepad"`` grava o ``caminho`` quando há um, e **não toca**
       ``gamepad_flavor`` — o modo não escreve a máscara (§D.1 da sprint);
-    * os outros modos zeram ``gamepad_flavor`` e ``caminho`` — *"JSON limpo, sem
-      sobras"*, a poda que `secao_do_modo` já fazia com a máscara;
+    * os outros modos zeram só o ``caminho``: a máscara padrão fica. A poda de
+      antes (*"JSON limpo"*) a apagava a cada Navegação do PS + R3 (13/09);
     * os demais campos que já estavam na seção são PRESERVADOS.
 
     RECONSTRUÍDO, e não `model_copy`ado: `model_copy` do pydantic v2 não
@@ -2086,7 +2086,7 @@ def secao_do_modo_com_o_caminho(
         if escolhido is not None:
             campos["caminho"] = escolhido
     else:
-        campos["gamepad_flavor"] = None
+        # A máscara padrão não é do modo, e a Navegação não a apaga (§D.1).
         campos["caminho"] = None
     return ProfileModeConfig(**campos)  # type: ignore[arg-type]
 

@@ -261,3 +261,30 @@ def test_o_cartao_do_p2_recria_so_o_p2_pelo_ciclo_forcado_do_coop() -> None:
     assert _vpad_do(P2).flavor == "xbox"
     assert d._gamepad_device is p1_antes and not p1_antes.parado, "recriou o P1"
     assert _vpad_do(P3) is p3_antes, "recriou o P3, que não escolheu nada"
+
+
+def test_o_chip_de_modo_leva_os_secundarios_ao_caminho_novo() -> None:
+    """O modo é um para todos (08/09); a máscara é por controle.
+
+    ACRESCENTADA NA VALIDAÇÃO — 13/09/2026, na mesma bancada do co-op REAL. Medido:
+    arrancar o `caminho=` do `CoopManager._spawn_player`, ou a comparação de canal
+    de `external_mask.vpad_ficou_para_tras`, passava com todas as réguas verdes.
+    Com o jogo aberto e o cartão do P2 em Xbox 360, o chip «Xbox» (origem manual)
+    leva o P1 e o P3 ao canal comum vestindo DualSense; o P2, que já estava nele,
+    não é recriado.
+
+    MORDE: qualquer uma das duas curas arrancada — o P3 fica no `uhid`.
+    """
+    d = _mesa_com_o_jogo_aberto()
+    _cartao(d, P2, "xbox")
+    p2_antes, p3_antes = _vpad_do(P2), _vpad_do(P3)
+    assert (p2_antes.backend, p3_antes.backend) == ("uinput", "uhid"), "premissa"
+
+    desfecho = d.set_gamepad_emulation_desfecho(True, origin="manual", caminho="xbox")
+
+    assert desfecho == gp.EMU_APLICADO
+    assert (d._gamepad_device.backend, d._gamepad_device.flavor) == ("uinput", "dualsense")
+    p3 = _vpad_do(P3)
+    assert p3 is not p3_antes and p3_antes.parado, "o P3 ficou no canal antigo"
+    assert (p3.backend, p3.flavor) == ("uinput", "dualsense"), "o P3 trocou de máscara"
+    assert _vpad_do(P2) is p2_antes, "recriou o P2 sem ele mudar de canal"

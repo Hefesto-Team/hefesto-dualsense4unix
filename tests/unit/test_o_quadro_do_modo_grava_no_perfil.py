@@ -346,9 +346,14 @@ def test_a_regra_do_modo_ficou_no_dono_compartilhado() -> None:
     janela estável faz: «none» remove, a máscara só vale no modo jogo, e nada de
     máscara inventada (ESCOLHA-DELA-VENCE-01/E1).
 
-    MORDIDA: apague o `if kind != "gamepad": campos["gamepad_flavor"] = None` e
-    a segunda asserção reprova, com a máscara sobrando num perfil que já não usa
-    o gamepad virtual.
+    AJUSTADA À REGRA DELA — MODO-DE-CONEXAO-01, 13/09/2026 (na validação). ANTES
+    a segunda asserção cobrava a poda: fora do modo jogo o `gamepad_flavor` era
+    zerado. AGORA cobra que ele FICA — o item 2 da regra dela na sprint: «A
+    MÁSCARA vem por cima, independente do modo». Com o PS + R3 gravando a cada aperto, a volta
+    pela Navegação apagava a máscara padrão do perfil em silêncio, medido.
+
+    MORDIDA: devolva a poda (`campos["gamepad_flavor"] = None` no ramo que não é
+    gamepad de `manager.secao_do_modo_com_o_caminho`) e a segunda asserção reprova.
     """
     assert perfil.secao_do_modo(None, perfis_web.MODO_SEM_OPINIAO) is None, (
         "«Não mexer no modo» deixou de remover a seção — o rótulo promete que "
@@ -356,9 +361,9 @@ def test_a_regra_do_modo_ficou_no_dono_compartilhado() -> None:
     atual = ProfileModeConfig(kind="gamepad", gamepad_flavor="dualsense")
     virou = perfil.secao_do_modo(atual, "native")
     assert virou is not None and virou.kind == "native"
-    assert virou.gamepad_flavor is None, (
-        "o `gamepad_flavor` sobreviveu fora do modo jogo — é sobra no `.json`, "
-        "e é justamente a sobra que fez a janela estável exigir Xbox")
+    assert virou.gamepad_flavor == "dualsense", (
+        "o modo apagou a máscara padrão do perfil — a máscara não é do modo, e "
+        "a volta do PS + R3 pela Navegação a perdia a cada ciclo")
     do_zero = perfil.secao_do_modo(None, "gamepad")
     assert do_zero is not None and do_zero.gamepad_flavor is None, (
         "a regra inventou uma máscara — `None` quer dizer «mantém a atual»")
