@@ -284,10 +284,10 @@ class RegistroDePedidosDeCanal:
 
         Não é o mesmo que dizer `False`: `False` é *"me cale"* e vence um
         aplicativo gravando; esquecer é *"não tenho opinião"*, e aí o
-        comportamento de 06/09/2026 volta inteiro. Quem chama é a perda da
-        eleição — a luz do ex-dono apaga, e o microfone dele tem de sair do ar
-        junto, senão o contrato *"aceso = este mic está no ar"* passa a mentir
-        do outro lado.
+        comportamento de 06/09/2026 volta inteiro. Quem chama é o microfone que
+        saiu do ar DE FATO (o canal sumiu, o controle caiu): a luz dele apaga e
+        o microfone sai junto. Perder o padrão para outro controle NÃO chama
+        mais — os quatro ficam no ar juntos (OS-QUATRO-NO-AR-01).
         """
         chave = norm_mac(str(uniq)) or ""
         with self._lock:
@@ -519,11 +519,18 @@ class BtMicSubsystem:
     def esquecer_a_palavra(self, uniq: str) -> bool:
         """Ela deixa de ter dito qualquer coisa sobre este microfone.
 
-        Quem chama é a perda da eleição, pelo mesmo gancho: o ex-dono do canal
-        tem a luz apagada por `_apagar_a_luz_de_quem_perdeu_o_canal`, e o
-        microfone dele tem de sair do ar no mesmo gesto. Sem isto o LED diria
-        *"saí do ar"* com o `0x32` ainda ligado — a mesma mentira de segunda
-        geração que aquele laço existe para matar, do lado de dentro.
+        Quem chama é o microfone que saiu do ar DE FATO, pelo mesmo gancho: o
+        canal dele sumiu ou o controle saiu da mesa
+        (`hotkey._conferir_quem_saiu_do_ar`), e a luz dele apaga no mesmo gesto.
+        Sem isto o LED diria *"saí do ar"* com o `0x32` ainda ligado — a mentira
+        de segunda geração pelo lado de dentro.
+
+        **PERDER O PADRÃO NÃO CHAMA MAIS — 13/09/2026 (OS-QUATRO-NO-AR-01).**
+        Até aqui quem chamava era a perda da eleição, e ligar o microfone de um
+        segundo controle tirava o primeiro do ar: medido em 10/09/2026 com dois
+        DualSense no rádio, `bt_mic_palavra_dela_esquecida` e depois
+        `bt_mic_pedido ligar=False` no hidraw do primeiro. Os quatro ficam no ar
+        juntos; só a fonte padrão do sistema é de um.
 
         **E a SEXTA PORTA também entra por aqui** (08/09/2026): o ato que a
         eleição RECUSA devolve o registro ao que ele era, e quando ele não era

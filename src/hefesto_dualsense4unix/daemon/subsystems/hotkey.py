@@ -1079,11 +1079,11 @@ def canal_do_microfone(uniq: str | None) -> dict[str, Any] | None:
 def _ler_o_canal(uniq: str) -> dict[str, Any]:
     """As três respostas do PipeWire sobre UM controle. Bloqueante.
 
-    `canal_ativo` compara a fonte DESTE controle com a fonte ativa do sistema,
-    e as duas leituras vêm dos donos que já existem — `fonte_de_captura_do_uniq`
-    (o casamento por dispositivo USB, o mesmo do `mic.volume.set`) e
-    `fonte_ativa` (que já sabe recusar `auto_null` e `.monitor`). Escrever uma
-    terceira régua aqui daria ao selo uma verdade diferente da do gesto.
+    `canal_ativo` aqui compara a fonte DESTE controle com a fonte ativa do
+    sistema, pelos donos de sempre (`fonte_de_captura_do_uniq`, `fonte_ativa`);
+    o laço o acende também para quem o ATO pôs no ar sem ser o padrão — ver
+    `_ler_o_canal_deste` (OS-QUATRO-NO-AR-01). Escrever uma terceira régua aqui
+    daria ao selo uma verdade diferente da do gesto.
     """
     from hefesto_dualsense4unix.integrations.audio_control import (
         fonte_de_captura_do_uniq,
@@ -1161,13 +1161,13 @@ async def canal_do_microfone_loop(daemon: DaemonProtocol) -> None:
             if daemon._is_stopping():
                 return
             with contextlib.suppress(Exception):
-                _CANAL_POR_UNIQ[uniq] = await daemon._run_blocking(_ler_o_canal, uniq)
+                _CANAL_POR_UNIQ[uniq] = await _ler_o_canal_deste(daemon, uniq)
         # Controle que saiu da mesa perde a leitura: publicar o canal de quem
         # não está mais aqui é o nono caso desta casa de nomear um controle
         # fora da mesa.
         for fora in [u for u in _CANAL_POR_UNIQ if u not in uniqs]:
             _CANAL_POR_UNIQ.pop(fora, None)
-
+        await _conferir_quem_saiu_do_ar(daemon, uniqs)
 
 
 async def mic_button_loop(daemon: DaemonProtocol) -> None:
@@ -1741,6 +1741,11 @@ async def _eleger_ou_devolver(
     # gesto de um controle pode tirar o microfone de OUTRO, e depois da
     # chamada não há mais como saber quem era. Ver o bloco da luz no fim.
     dono_antes = eleitor.eleito
+    # QUEM ESTÁ NO AR, EM ORDEM DE CHEGADA — OS-QUATRO-NO-AR-01 (13/09/2026).
+    # Ser o padrão do sistema é de um só; estar no ar é de cada controle. Ver
+    # `MicrofonesNoAr`.
+    no_ar = _no_ar_da_sessao(daemon)
+    fora_do_padrao = not _mesmo_controle(eleitor.eleito, uniq)
     if mudo:
         # SÓ QUEM ESTÁ COM O MICROFONE PODE DEVOLVÊ-LO (auditoria 02/09/2026).
         #
@@ -1760,7 +1765,15 @@ async def _eleger_ou_devolver(
         # "melhor fonte" e trocaria o padrão do sistema dela sem que ela tivesse
         # elegido nada — na bancada de hoje isso não aparece só porque não há
         # fonte elegível, o que é sorte, não cura.
-        if eleitor.eleito != uniq:
+        #
+        # E SÓ É RECUSA PARA QUEM NÃO ESTÁ NO AR — OS-QUATRO-NO-AR-01
+        # (13/09/2026). Com os quatro no ar juntos, quem aperta o botão sem ser
+        # o padrão pode estar no ar no canal DELE: aí o toque o tira do ar, e
+        # isso é o gesto certo, não recusa (o ramo `fora_do_padrao` abaixo). A
+        # recusa fica para quem não está no ar nem é o padrão. A comparação é
+        # NORMALIZADA: a tela manda `aa:bb:…` e o plástico `aabb…`, e o eleito
+        # que desligava pelo plástico recebia a recusa de quem não elegeu.
+        if fora_do_padrao and not no_ar.esta(uniq):
             # A RECUSA CHEGA À TELA — MIC-RECUSA-NA-TELA-01 (02/09/2026).
             # Este ramo voltava só com o `logger.info` abaixo: o jogador que
             # apertou o botão via a luz apagar, o microfone continuar no
@@ -1826,9 +1839,17 @@ async def _eleger_ou_devolver(
         # ANOTADO porque `_run_blocking` devolve `Any` e este método passou a
         # DEVOLVER o resultado (MICROFONE-UM-ATO-01): sem a anotação o `Any`
         # vazaria para o ato inteiro e o mypy pararia de conferir as metades.
-        resultado: ResultadoDaEleicao = await daemon._run_blocking(
-            eleitor.devolver_o_microfone
-        )
+        resultado: ResultadoDaEleicao
+        if fora_do_padrao:
+            # FORA DO PADRÃO E NO AR: O TOQUE O TIRA DO AR, E SÓ A ELE —
+            # OS-QUATRO-NO-AR-01 (13/09/2026). A palavra dele já foi dita
+            # `False` (`_metade_do_canal`), a luz apaga no fim deste método, e
+            # o padrão do sistema não é tocado: nenhum `set-default-source`.
+            resultado = ResultadoDaEleicao(ok=True)
+        else:
+            # O PADRÃO PASSA AO ÚLTIMO QUE CONTINUA NO AR, e só sem ninguém no
+            # ar ele volta à máquina. Ver `_passar_o_padrao_ou_devolver`.
+            resultado = await _passar_o_padrao_ou_devolver(daemon, eleitor, no_ar, uniq)
         # A LUZ FICA ACESA QUANDO A DEVOLUÇÃO É RECUSADA — decisão dela, e ela
         # não é nova: o contrato do LED é *"aceso = este mic está no ar"*
         # (01/09/2026). Se o produto não conseguiu devolver, o padrão do
@@ -1864,7 +1885,9 @@ async def _eleger_ou_devolver(
         # guarda acima), então a posse de pé é a luz acesa, e a posse caída é a
         # luz apagada — e o `state_full` não pode mais dizer `eleito: …011` com
         # `ativo: mic_de_um_terceiro` e o LED aceso ao mesmo tempo.
-        aceso = eleitor.eleito == uniq
+        aceso = _mesmo_controle(eleitor.eleito, uniq)
+        if not aceso:
+            no_ar.saiu(uniq)
     else:
         # A LISTA DA ELEIÇÃO É CALCULADA AQUI, e não antes do `if` (auditoria
         # de 02/09/2026). Ela era, e o ramo `mudo` não a usava mais desde que a
@@ -1878,6 +1901,10 @@ async def _eleger_ou_devolver(
             eleitor.eleger_o_controle, uniq, conectados
         )
         aceso = bool(resultado.ok)
+        # ENTRA NO AR SÓ O ATO CONFERIDO: a eleição recusada desfaz a palavra
+        # (`_metade_do_canal`), e quem não entrou não pode herdar o padrão.
+        if resultado.ok:
+            no_ar.entrou(uniq)
     logger.info(
         "mic_da_mesa_eleicao",
         uniq=uniq,
@@ -1951,6 +1978,14 @@ async def _apagar_a_luz_de_quem_perdeu_o_canal(
     qualquer coisa — a decisão volta ao ouvinte da source, que é o
     comportamento de 06/09. Não é `dizer_no_ar(False)`: ela não pediu para ser
     calada, ela só deixou de ser a dona do canal.
+
+    **E QUEM CONTINUA NO AR NÃO PERDE NADA — 13/09/2026 (OS-QUATRO-NO-AR-01).**
+    O parágrafo acima tratava *"perder o padrão"* como *"sair do ar"*, e era
+    essa a porta por onde ligar o segundo microfone desligava o primeiro. Os
+    quatro ficam no ar juntos; esta função só apaga a luz e esquece a palavra
+    do ex-dono que já NÃO está em `MicrofonesNoAr` — o que o canal sumindo
+    tirou de lá (`_conferir_quem_saiu_do_ar`), ou a posse que nasceu fora do
+    ato.
     """
     # OS TRÊS ENDEREÇOS SE NORMALIZAM ANTES DE SE COMPARAREM — 10/09/2026, e o
     # defeito é de FORMA, não de lógica. Medido na bancada dela com o DualSense
@@ -1977,6 +2012,21 @@ async def _apagar_a_luz_de_quem_perdeu_o_canal(
     if dono_antes is None or antes == tocou:
         return
     if eleito_agora == antes:
+        return
+    # PERDER O PADRÃO NÃO É SAIR DO AR — OS-QUATRO-NO-AR-01 (13/09/2026). O
+    # ex-dono que continua no ar fica com a luz e com a palavra: o canal DELE
+    # continua publicado, e só a fonte padrão do sistema passou a outro. Medido
+    # em 10/09/2026 com dois DualSense no rádio: sem esta guarda, ligar o
+    # segundo microfone escrevia `bt_mic_pedido ligar=False` no primeiro.
+    # Quem tira do ar de fato é `_conferir_quem_saiu_do_ar`, e ele tira a
+    # palavra e a luz juntas — o mesmo par desta função.
+    if _no_ar_da_sessao(daemon).esta(dono_antes):
+        logger.info(
+            "mic_da_mesa_ex_dono_continua_no_ar",
+            ex_dono=dono_antes,
+            por=quem_tocou,
+            eleito_agora=eleitor.eleito,
+        )
         return
     logger.info(
         "mic_da_mesa_luz_do_ex_dono_apagada",
@@ -2100,6 +2150,225 @@ def _uniqs_conectados(daemon: DaemonProtocol) -> list[str]:
     return out
 
 
+# ---------------------------------------------------------------------------
+# OS QUATRO NO AR — OS-QUATRO-NO-AR-01 (13/09/2026)
+# ---------------------------------------------------------------------------
+
+
+def _mesmo_controle(a: str | None, b: str | None) -> bool:
+    """Os dois endereços são o MESMO controle? Compara normalizado.
+
+    A tela entrega `aa:bb:…` e a borda do plástico `aabb…`. Comparar as duas
+    grafias cruas é a família do defeito de 10/09/2026, o controle que perdia o
+    canal para si mesmo. Vazio nunca é o mesmo que nada.
+    """
+    if not a or not b:
+        return False
+    return (norm_mac(a) or a) == (norm_mac(b) or b)
+
+
+class MicrofonesNoAr:
+    """Quem está com o microfone NO AR agora — por controle, em ordem de chegada.
+
+    **O DESENHO, e ele é de quem coordena, por delegação dela.** Estar no ar é
+    de cada controle, os quatro juntos; a fonte padrão do sistema é de um só, e
+    é o último que ela ligou e continua no ar. A resposta dela à pergunta de
+    13/09/2026 está citada no topo da sprint.
+
+    **POR QUE NÃO MORA NO `EleitorDeMicrofone`.** A eleição decide UMA coisa —
+    quem é o padrão (`integrations/eleicao_de_microfone`, CANAL-POR-CONTROLE-01)
+    —, e a pergunta *"quem está no ar"* não é dela. Guardá-la lá juntaria de
+    novo as duas coisas que aquela sprint separou.
+
+    **POR QUE NÃO É A PALAVRA DO REGISTRO** (`bt_mic.RegistroDePedidosDeCanal`).
+    A palavra é o PEDIDO, e a ponte de rádio obedece a ele antes de a eleição
+    responder; esta lista é a PÓS-CONDIÇÃO — só entra quem o ato conferiu — e
+    tem ORDEM, que é o que decide para quem o padrão passa. As duas andam
+    juntas por construção: entrar é o ato feito, sair é o ato de desligar ou o
+    canal sumindo de fato, e nos dois a palavra muda no mesmo gesto.
+
+    Vive na SESSÃO do daemon e não vai ao disco: *"nada novo vai ao disco"* é o
+    critério da sprint, e um microfone não pode voltar ao ar num boot sem gesto.
+    Só a corrotina do laço do daemon a toca — o gesto e o laço do canal —, então
+    não há lock.
+    """
+
+    #: Quantas leituras SEGUIDAS sem canal publicado tiram um microfone do ar.
+    #: Uma não basta: é a janela da reconexão de rádio, em que a ponte velha cai
+    #: e a nova sobe no mesmo nó (`bt_mic._aplicar_a_palavra_dela`). Com o laço
+    #: do canal a cada `CANAL_TTL_S`, duas são dois segundos de ausência medida.
+    LEITURAS_SEM_CANAL_ATE_SAIR: int = 2
+
+    def __init__(self) -> None:
+        self._ordem: list[str] = []
+        self._sem_canal: dict[str, int] = {}
+
+    @staticmethod
+    def _chave(uniq: str) -> str:
+        return norm_mac(uniq) or uniq
+
+    def entrou(self, uniq: str) -> None:
+        """O ato conferiu: `uniq` está no ar, e é o mais novo."""
+        chave = self._chave(uniq)
+        self._ordem = [u for u in self._ordem if self._chave(u) != chave]
+        self._ordem.append(uniq)
+        self._sem_canal.pop(chave, None)
+
+    def saiu(self, uniq: str) -> bool:
+        """`uniq` saiu do ar. Devolve se ele estava."""
+        chave = self._chave(uniq)
+        antes = len(self._ordem)
+        self._ordem = [u for u in self._ordem if self._chave(u) != chave]
+        self._sem_canal.pop(chave, None)
+        return len(self._ordem) != antes
+
+    def esta(self, uniq: str | None) -> bool:
+        if not uniq:
+            return False
+        chave = self._chave(uniq)
+        return any(self._chave(u) == chave for u in self._ordem)
+
+    def todos(self) -> list[str]:
+        """Os que estão no ar, do mais velho ao mais novo. Cópia."""
+        return list(self._ordem)
+
+    def do_mais_novo_ao_mais_velho(self, exceto: str) -> list[str]:
+        """Os candidatos a herdar o padrão de `exceto`, na ordem em que herdam."""
+        chave = self._chave(exceto)
+        return [u for u in reversed(self._ordem) if self._chave(u) != chave]
+
+    def anotar_leitura(self, uniq: str, publicado: bool | None) -> bool:
+        """Uma leitura do canal de `uniq`. `True` = ele saiu do ar DE FATO agora.
+
+        `None` é *"não sei"* e não conta para nada — nem para sair, nem para
+        zerar a conta de quem já faltou uma vez.
+        """
+        chave = self._chave(uniq)
+        if publicado is None:
+            return False
+        if publicado:
+            self._sem_canal.pop(chave, None)
+            return False
+        vezes = self._sem_canal.get(chave, 0) + 1
+        self._sem_canal[chave] = vezes
+        return vezes >= self.LEITURAS_SEM_CANAL_ATE_SAIR
+
+
+def _no_ar_da_sessao(daemon: Any) -> MicrofonesNoAr:
+    """Quem está no ar nesta SESSÃO do daemon. Um só, pelo molde de `_eleitor`."""
+    no_ar = getattr(daemon, "_microfones_no_ar", None)
+    if not isinstance(no_ar, MicrofonesNoAr):
+        no_ar = MicrofonesNoAr()
+        daemon._microfones_no_ar = no_ar
+    return no_ar
+
+
+async def _passar_o_padrao_ou_devolver(
+    daemon: DaemonProtocol, eleitor: Any, no_ar: MicrofonesNoAr, uniq: str
+) -> ResultadoDaEleicao:
+    """O padrão sai de `uniq`: passa ao último ligado que continua no ar.
+
+    Só sem ninguém no ar — ou com todos recusados pela eleição — ele volta à
+    máquina por `devolver_o_microfone`, que é o caminho de antes desta sprint
+    (a melhor fonte que não é controle; nunca o `.monitor` da saída).
+
+    **QUEM HERDA PASSA PELA ELEIÇÃO DE SEMPRE**, `eleger_o_controle`, com a
+    releitura do ativo e as recusas dela: um candidato que o WirePlumber não
+    honra não vira padrão, e o próximo tenta. Nenhuma régua nova sobre o
+    `pactl` nasce aqui.
+    """
+    candidatos = no_ar.do_mais_novo_ao_mais_velho(uniq)
+    if candidatos:
+        conectados = _uniqs_conectados(daemon)
+        for candidato in candidatos:
+            passado: ResultadoDaEleicao = await daemon._run_blocking(
+                eleitor.eleger_o_controle, candidato, conectados
+            )
+            logger.info(
+                "mic_da_mesa_padrao_passado",
+                de=uniq,
+                para=candidato,
+                ok=bool(passado.ok),
+                motivo=passado.motivo,
+            )
+            if passado.ok:
+                return passado
+    devolvido: ResultadoDaEleicao = await daemon._run_blocking(
+        eleitor.devolver_o_microfone
+    )
+    return devolvido
+
+
+async def _ler_o_canal_deste(daemon: DaemonProtocol, uniq: str) -> dict[str, Any]:
+    """`_ler_o_canal` numa thread — e o `canal_ativo` de quem está NO AR.
+
+    `canal_ativo` é a face do selo que diz *"o som dele chega ao PC pelo canal
+    dele"* (`interface/pacotes/a02_controles._faces_do_microfone`, pela D-12).
+    Ela só acendia para a fonte padrão do sistema, e com dois no ar o selo do
+    que não é o padrão dizia MUDO sobre um microfone no ar — medido nesta
+    sprint, antes da cura. Acende agora também para quem o ato pôs no ar e
+    tem o canal PUBLICADO: sem `fonte` lida, continua apagada.
+    """
+    lido: dict[str, Any] = await daemon._run_blocking(_ler_o_canal, uniq)
+    if lido.get("fonte") and _no_ar_da_sessao(daemon).esta(uniq):
+        lido["canal_ativo"] = True
+    return lido
+
+
+async def _conferir_quem_saiu_do_ar(daemon: DaemonProtocol, uniqs: list[str]) -> list[str]:
+    """Tira do ar quem saiu DE FATO — o canal sumiu, ou o controle saiu da mesa.
+
+    É o §1.3 da sprint: a luz apaga e a palavra é esquecida quando o canal
+    DAQUELE controle saiu do ar, e nunca porque outro virou o padrão. Os outros
+    no ar não são tocados.
+
+    Roda no fim de cada volta do `canal_do_microfone_loop`, com as leituras que
+    a volta acabou de fazer. Um canal lido como publicado é prova de que está
+    de pé; sem ele, a pergunta vai ao dono (`eleicao_de_microfone.
+    canal_publicado`), que separa *"não há"* de *"não sei"*. Só duas faltas
+    seguidas tiram do ar (`MicrofonesNoAr.LEITURAS_SEM_CANAL_ATE_SAIR`).
+
+    Nunca levanta: é o laço do canal, e ele alimenta a tela a cada dois segundos.
+    """
+    no_ar = _no_ar_da_sessao(daemon)
+    if not no_ar.todos():
+        return []
+    try:
+        from hefesto_dualsense4unix.integrations.eleicao_de_microfone import (
+            canal_publicado,
+        )
+
+        mesa = recado_do_microfone.mesa_de_agora(daemon)
+        sairam: list[str] = []
+        for uniq in no_ar.todos():
+            # Mesa `None` ou vazia é instrumento cego: "não sei" nunca vira "saiu".
+            na_mesa = any(_mesmo_controle(uniq, m) for m in mesa) if mesa else None
+            lido = next(
+                (v for k, v in _CANAL_POR_UNIQ.items() if _mesmo_controle(k, uniq)), None
+            )
+            publicado: bool | None
+            if na_mesa is False:
+                publicado = False
+            elif isinstance(lido, dict) and lido.get("fonte"):
+                publicado = True
+            else:
+                resposta = await daemon._run_blocking(canal_publicado, uniq, list(uniqs))
+                publicado = resposta if isinstance(resposta, bool) else None
+            if not no_ar.anotar_leitura(uniq, publicado):
+                continue
+            no_ar.saiu(uniq)
+            esquecer_a_palavra(uniq)
+            acender = getattr(daemon.controller, "set_mic_led", None)
+            if na_mesa is not False and callable(acender):
+                await daemon._run_blocking(_acender, acender, False, uniq)
+            logger.info("mic_da_mesa_saiu_do_ar_de_fato", uniq=uniq, na_mesa=na_mesa)
+            sairam.append(uniq)
+        return sairam
+    except Exception as exc:
+        logger.warning("mic_da_mesa_conferencia_do_ar_falhou", err=str(exc))
+        return []
+
+
 class HotkeySubsystem:
     """Subsystem sentinela para hotkey no registry.
 
@@ -2138,6 +2407,7 @@ __all__ = [
     "AtoDoMicrofone",
     "HotkeySubsystem",
     "MetadeDoAto",
+    "MicrofonesNoAr",
     "acao_do_ps_do_perfil",  # (noqa-acento) nome de função
     "avisar_troca_de_modo",
     "build_next_bridge_callback",

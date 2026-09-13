@@ -50,7 +50,7 @@ A receita completa das TRÊS pontas foi cumprida: a lista aqui,
 
 POR QUE `HotkeySubsystem` NÃO ESTÁ NA LISTA — e não é esquecimento:
 
-* `HotkeySubsystem` (`hotkey.py:2103`) é uma **lápide, não um órfão**: os dois
+* `HotkeySubsystem` (`hotkey.py:2372`) é uma **lápide, não um órfão**: os dois
   métodos são `noop` declarados, e a hotkey já está viva no `run()` desde
   sempre, por FUNÇÃO — `lifecycle.py:914` (`start_hotkey_manager`) e `:916`
   (`start_mic_hotkey`). Registrá-lo não acende nada; só acrescenta duas linhas

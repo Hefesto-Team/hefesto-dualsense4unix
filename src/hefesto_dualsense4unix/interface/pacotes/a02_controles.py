@@ -1645,7 +1645,7 @@ def recado_da_rota(uniq: str) -> str:
 #   mic_mudo             o PLÁSTICO. O bit que vem em todo report de entrada.
 #   mic_mudo_desejado    o que NÓS pedimos. `None` = a posse é do kernel, e
 #                        aí o desejo não existe — não é "não sei".
-#   canal_ativo          a fonte deste controle é a fonte ATIVA do sistema.
+#   canal_ativo          o canal deste controle está NO AR (padrão, ou posto pelo ato).
 #   canal_mudo           essa fonte está muda no PipeWire.
 #
 # `mic_da_mesa.eleito` **NÃO ENTRA**, e a razão é medida: a D1 o viu MENTINDO —

@@ -438,9 +438,10 @@ def test_perder_a_eleicao_esquece_a_palavra_e_nao_a_nega(subsystem, registro) ->
     o comportamento de 06/09/2026, que é a resposta certa para *"ninguém disse
     nada"*.
 
-    E o par com o LED é o ponto: `_apagar_a_luz_de_quem_perdeu_o_canal` apaga a
-    luz do ex-dono, e sem esta linha o plástico diria *"saí do ar"* com o 0x32
-    ainda ligado — a mentira de segunda geração pelo lado de dentro.
+    E o par com o LED é o ponto: quem sai do ar DE FATO perde a luz, e sem esta
+    linha o plástico diria *"saí do ar"* com o 0x32 ainda ligado — a mentira de
+    segunda geração pelo lado de dentro. Desde 13/09/2026 (OS-QUATRO-NO-AR-01)
+    perder só o PADRÃO não chama esquecer: os quatro ficam no ar juntos.
     """
     subsystem.no_ar(P1, True)
     assert registro.no_ar() == {"aabbcc000001": True}
@@ -455,12 +456,20 @@ def test_perder_a_eleicao_esquece_a_palavra_e_nao_a_nega(subsystem, registro) ->
     )
 
 
-def test_a_luz_do_ex_dono_e_a_palavra_dele_caem_no_mesmo_gesto(gancho, registro) -> None:  # type: ignore[no-untyped-def]
-    """O laço da luz e o do microfone são o MESMO — medido pelo produto.
+def test_perder_o_padrao_nao_apaga_a_luz_nem_a_palavra_do_ex_dono(gancho, registro) -> None:  # type: ignore[no-untyped-def]
+    """O laço da luz e o do microfone continuam o MESMO — e agora os dois FICAM.
 
-    ARRANQUE o `esquecer_a_palavra(dono_antes)` de
+    FATO SUBSTITUÍDO (13/09/2026, OS-QUATRO-NO-AR-01). Esta régua se chamava
+    `test_a_luz_do_ex_dono_e_a_palavra_dele_caem_no_mesmo_gesto` e cobrava que
+    o P1 perdesse a luz e a palavra quando o P2 ganhava o padrão. Era o
+    um-de-cada-vez que a sprint desfez: os quatro ficam no ar juntos, e só a
+    fonte padrão do sistema é de um. O par luz-palavra continua valendo — quem
+    sai do ar de fato perde os dois juntos, e isso está em
+    `test_os_quatro_microfones_ficam_no_ar.py`.
+
+    ARRANQUE a guarda `_no_ar_da_sessao(daemon).esta(dono_antes)` de
     `_apagar_a_luz_de_quem_perdeu_o_canal` e esta régua REPROVA: a luz do P1
-    apaga e o microfone dele continua no ar.
+    apaga e a palavra dele some.
     """
     d = _DaemonDeMentira()
     d.controller.describe_controllers = lambda: [  # type: ignore[method-assign]
@@ -469,14 +478,14 @@ def test_a_luz_do_ex_dono_e_a_palavra_dele_caem_no_mesmo_gesto(gancho, registro)
     ]
     asyncio.run(hotkey.ligar_o_microfone(d, P1, ligado=True))
     assert registro.no_ar() == {"aabbcc000001": True}
-    # O P2 aperta o botão DELE e ganha o canal. O P1 não tocou em nada.
+    # O P2 aperta o botão DELE e ganha o padrão. O P1 não tocou em nada.
     asyncio.run(hotkey.ligar_o_microfone(d, P2, ligado=True))
-    assert (False, P1) in d.controller.leds, (
-        f"a luz do ex-dono não apagou: {d.controller.leds}"
+    assert (False, P1) not in d.controller.leds, (
+        f"a luz do ex-dono apagou sem ele sair do ar: {d.controller.leds}"
     )
-    assert registro.no_ar() == {"aabbcc000002": True}, (
-        "o P1 perdeu a luz e continuou com o microfone no ar — o LED passou a "
-        f"mentir do lado de dentro: {registro.no_ar()}"
+    assert registro.no_ar() == {"aabbcc000001": True, "aabbcc000002": True}, (
+        "ligar o microfone do P2 tirou o do P1 do ar: "
+        f"{registro.no_ar()}"
     )
 
 
