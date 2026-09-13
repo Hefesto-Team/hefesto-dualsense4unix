@@ -1,6 +1,6 @@
 ---
 sprint: RESTOS-DA-ONDA-TRES-01
-estado: aberta
+estado: feita
 onda: A-TERCEIRA-LISTA-DELA
 posse:
   RESTOS-DA-ONDA-TRES-01:
@@ -25,6 +25,17 @@ nao_toca:
 ---
 
 # RESTOS-DA-ONDA-TRES-01 — a guarda que a paridade não viu, a docstring da GUI, a dona do sensor e a ressalva da biblioteca
+
+> **ESTADO 2026-09-13: feita** — a docstring de `physical_nodes_exposure` diz
+> que só o `doctor.sh` consulta, e a razão da declaração no `casa-sabe` diz o
+> mesmo (a declaração continua necessária); a linha 57 da paridade foi medida de
+> novo e passou a `DIFERENTE`, com o sinal na folha que apaga
+> (`data-apagado="sem-alvo"`) e a tabela do TERCEIRO NÚMERO recontada; a dona do
+> `sensor` é a MESA-DE-QUATRO-01, e a régua da quinta pergunta ganhou o caso da
+> dona que a razão nomeia; as duas células `movimento.*.jogo@dualsense` ganharam
+> a ressalva da biblioteca na `nota`, com o `specs.html` e o LEIA-PRIMEIRO
+> regerados. A entrega está em
+> `docs/process/agentes/2026-09-13/RESTOS-DA-ONDA-TRES-01-opus.md`.
 
 Os validadores da onda 3 da [terceira lista](2026-09-13-A-TERCEIRA-LISTA-DELA-INDICE.md)
 deixaram quatro achados fora da posse das sprints deles. Nenhum muda a tela, e

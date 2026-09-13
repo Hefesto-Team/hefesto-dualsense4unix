@@ -82,7 +82,7 @@ O dado mora em **[`docs/data/paridade-gtk-html.csv`](../data/paridade-gtk-html.c
 | aba | feats | IGUAL | DIFER | FALTA | SO_HTML | ? | paridade |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
 | 01-jogar | 42 | 14 | 22 | 1 | 4 | 1 | 33% |
-| 02-controles | 50 | 16 | 24 | 6 | 4 | 0 | 32% |
+| 02-controles | 50 | 16 | 25 | 5 | 4 | 0 | 32% |
 | 03-gatilhos | 31 | 15 | 9 | 1 | 5 | 1 | 48% |
 | 04-iluminacao | 35 | 9 | 12 | 6 | 7 | 1 | 26% |
 | 05-vibracao | 31 | 13 | 11 | 4 | 3 | 0 | 42% |
@@ -91,7 +91,7 @@ O dado mora em **[`docs/data/paridade-gtk-html.csv`](../data/paridade-gtk-html.c
 | 08-conexoes | 49 | 22 | 22 | 3 | 2 | 0 | 45% |
 | 09-sistema | 38 | 12 | 18 | 2 | 6 | 0 | 32% |
 | 10-perfis | 50 | 14 | 20 | 7 | 9 | 0 | 28% |
-| TODAS | 396 | 145 | 159 | 30 | 58 | 4 | 37% |<!-- /TABELA-DA-PARIDADE -->
+| TODAS | 396 | 145 | 160 | 29 | 58 | 4 | 37% |<!-- /TABELA-DA-PARIDADE -->
 
 A tabela é **gerada da contagem do CSV** e conferida pelo portão (regra
 `numero-publicado`): quem mexer no dado e não regerar esta seção é barrado
@@ -525,3 +525,30 @@ de existir. A tabela acima foi **recontada do CSV**: `09-sistema` vai de
 `D-OS-PLUGINS-APARECEM-ONDE-AGEM` (26/08/2026) — *os plugins não ganham seção
 própria; a infraestrutura se mostra pelo efeito, não pelo nome*. O `porque` da
 linha guarda o veredito de antes, com a data.
+
+## Nota de verificação — 13/09/2026, a guarda sem endereço (linha 57)
+
+`RESTOS-DA-ONDA-TRES-01`. A linha **`02-controles` · Guarda "sem endereço"** saiu
+de `FALTA_NO_HTML` e foi para **`DIFERENTE`**, e a tabela acima foi **recontada
+do CSV**: `02-controles` vai de `24 DIFER · 6 FALTA` para `25 · 5`, e `TODAS` de
+`159 · 30` para `160 · 29`. A paridade (`IGUAL / total`) não se mexe.
+
+**A régua de `DIFERENTE` firmada em 06/09 é o que sustenta a troca.** Sem
+endereço, o lado HTML dá a mesma resposta por outro caminho, com endereço: as duas
+molduras de som recebem `data-apagado="sem-alvo"` (em `a02_controles.py`, o campo
+`alto-apagado` e a `microfone_apagado`), a folha da 02 esmaece o que manda som, o
+gesto recusa pelo endereço, e a razão fica no `?` da linha de volume. O que sobra
+de diferença é o **caminho** (peça esmaecida e gesto recusado, e não peça
+insensível) e o **aviso**, que a tela não tem: a §D da RESTOS-DA-ONDA-DOIS-01 diz
+«sem frase nova».
+
+**Não é cura desta sprint: é um fato velho sendo substituído.** A metade visível
+nasceu em 06/09 por um endereço que casava `[title]` e nunca acendeu no WebKit; a
+RESTOS-DA-ONDA-DOIS-01 curou e publicou a 02 em 13/09, e a linha continuou
+dizendo `FALTA_NO_HTML` e citando o endereço morto. **O sinal trocou junto:**
+`_pecas_que_escrevem_som` é símbolo da GTK e só cobra ausência; a linha agora
+vigia `data-apagado="sem-alvo"` na folha de `interface/aba02.py`, que é o que
+apaga.
+
+**A MORDIDA:** com a tabela devolvida à contagem velha, o portão reprova em
+`numero-publicado` nomeando `02-controles` e `TODAS`.
