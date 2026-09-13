@@ -833,7 +833,7 @@ def physical_nodes_exposure(
     no `steam_input_apps.txt`) e "EFETIVA" (o hidraw do físico é de fato
     legível pelo uid da usuária agora). A allowlist ficou inerte por meses
     justamente porque ninguém media a segunda; um status honesto precisa das  # (noqa-acento)
-    duas, e é isto que a GUI e o `doctor.sh` passam a consultar.
+    duas. Quem consulta é o `doctor.sh`; a interface deixou de consultar em 13/09/2026.
 
     Espelho read-only de `restore_all_physical` (mesma varredura, mesmo
     validador, mesmo critério de exposição), sem root, sem mutar nada e sem
