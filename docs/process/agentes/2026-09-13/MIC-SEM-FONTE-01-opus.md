@@ -125,3 +125,98 @@ sobre um controle que tem endereço. A cura por `data-apagado` não depende do
   escolhido no nó ALSA não viaja para o `hefesto_mic_<hex6>` quando o canal do
   cabo sobe.
 * **As fotos de `docs/usage/assets/`** não foram regeradas: é da costura.
+
+## O que a validação refez e corrigiu
+
+Validação de 13/09/2026, na mesma branch e sem confiar no relato. Os roteiros
+ficam no rascunho, fora do git: `v_mordidas.py` e `v_piloto.py`.
+
+**POSSE.** `git diff --name-only e1c7d96b..HEAD` lista os três arquivos da
+posse, as duas páginas 02, a sprint, a entrega com as fotos e dois arquivos
+fora da posse: `docs/data/mapa-controles.csv` e `html/specs.html`. A razão foi
+remedida. Com o mapa da base e o `a02_controles.py` curado,
+`scripts/validar-citacoes-de-linha.py --all` reprova («a faixa não contém
+`mic_modo`»). Com o `specs.html` da base e o mapa curado,
+`scripts/gerar-mapa.py --check` reprova. No `specs.html`, o diff por palavra é
+só o carimbo e os mesmos dois números.
+
+**AS REGRAS DELA.** Regerar e publicar a 02 sobre o HEAD não muda um byte. Nas
+duas páginas, na base e na branch: 43 `<button>`, 55 `data-gesto`, 70 `title`,
+15 `<input>` e 525 `data-campo`. No DOM, depois do arrasto e do clique, não há
+nenhum `.hef-recado`, e `TEXTO_MIC_SEM_FONTE` não está no texto visível, nem no
+`title`, nem no `data-hef-dica`. A frase só vai ao diário `[gesto falhou]`.
+
+**AS MORDIDAS, REFEITAS.** Em cada uma, a contagem do trecho trocado foi
+conferida, o arquivo foi devolvido por `git checkout HEAD` e a árvore voltou
+limpa.
+
+| | cura arrancada | régua |
+| --- | --- | --- |
+| V1 | `microfone_apagado` não pergunta a fonte | 2 failed |
+| V2 | a da ROTA: o gerador da base e a fonte dentro do `som-sem-endereco`, com a 02 regerada e publicada | 8 failed |
+| V2b | só a tag da moldura do microfone volta ao `som-sem-endereco` | 7 failed |
+| V3 | a fonte vai para o `som-sem-endereco` (o alto-falante do rádio apagaria) | 2 failed |
+| V4 | com a fonte publicada, o microfone apaga igual | 2 failed |
+| V5 | a chave ausente apaga | 1 failed |
+| V6 | o cinza de todos sai da primeira entrada do estado | 1 failed (a mesa mista) |
+| V7 | o 🎙 entra no seletor do `sem-fonte` | 1 failed |
+| **V7b** | `[data-apagado] .vol`: apaga a linha onde o 🎙 mora | **1 passed**, achado |
+| **V7c** | `[data-apagado^="sem"] .mudo-i` | **1 passed**, achado |
+| V8 | o `.trilho` sai da regra de opacidade | 1 failed |
+| V9 | a página publicada volta à base | 6 failed |
+| V10 | §4.5: o `raise` de `TEXTO_MIC_SEM_FONTE` sai do gesto | 1 failed em `test_o_volume_do_mic_nao_cai_no_vizinho.py` |
+| V11 | fora da posse: o mapa volta à base | `validar-citacoes-de-linha` com rc=1 |
+
+**O ACHADO, CORRIGIDO EM `98f7cd59`.** `test_sem_fonte_so_o_deslizante_apaga`
+procurava `.mudo-i` e `.rota` no texto do alvo e só casava duas grafias do
+atributo. A V7b passava verde, e no piloto oculto deixava o 🎙 do P2 com
+opacidade efetiva de 0,45 (o trilho ficava a 0,2): o botão que pede o canal
+aparecia cinza com a régua verde. Agora a régua exige que toda regra que casa
+um `data-apagado` diferente de só `sem-alvo` termine em `.trilho`, `.n` ou
+`.puxa-vol`. Contra ela, V7, V7b, V7c e V8 reprovam, e com a cura dá 48 passed.
+
+**A TELA, NO PILOTO OCULTO.** O `v_piloto.py` usa o mesmo lar de mentira, o
+`SKIP_PRESET_SEED=1` e o estado e a ponte dublados. Ele mede a opacidade
+EFETIVA, que é o produto dos ancestrais, porque `getComputedStyle(filho).opacity`
+não enxerga a linha. Os perfis dela ficaram iguais por md5 depois de cada uma
+das cinco corridas.
+
+| cartão P2 (rádio, aberto) | ANTES (base) | DEPOIS | V7b | ROTA arrancada |
+| --- | --- | --- | --- | --- |
+| `data-apagado` da moldura do microfone | ausente | `sem-fonte` | `sem-fonte` | ausente |
+| trilho e número (efetiva) | 1 | 0,45 | 0,2 | 1 |
+| cursor do deslizante | `pointer` | `not-allowed` | `not-allowed` | `pointer` |
+| 🎙 (efetiva e cursor) | 1, `pointer` | 1, `pointer` | **0,45**, `pointer` | 1, `pointer` |
+| Virtual e Nativo (efetiva) | 1 | 1 | 1 | 1 |
+| alto-falante (trilho e ♪) | 1 | 1 | 1 | 1 |
+| P1 e P3, no cabo | acesos | acesos | acesos | acesos |
+
+* **O CLIQUE NO 🎙 DO P2, COM O DESLIZANTE CINZA, CHEGA AO GESTO.** O
+  `mic_canal_set_detalhado` dublado recebeu o `uniq` do rádio, e o botão fez
+  `hef-em-voo`, depois `hef-recusou`, e voltou. O cinza não tranca a saída.
+* **O CABO SEM PLACA** (`canal_fonte` nulo no P3, no cabo): o P3 apaga igual ao
+  rádio, e o P1 fica aceso.
+* **A ROTA ARRANCADA NO DOM** confirma o que foi medido acima: nenhuma das duas
+  molduras apaga, e a frase de endereço vai para o `data-hef-dica` das duas.
+
+Recorte do bloco do microfone do P2: `MIC-SEM-FONTE-01-VALIDACAO-antes-depois-v7b.png`
+(da esquerda para a direita: ANTES, DEPOIS, V7b).
+
+**RÉGUAS VIZINHAS.** Rodei 137 arquivos de `tests/unit` que citam os arquivos ou
+os símbolos mudados, em três partes: 2313 passed, 1 xfailed, 1 skipped e 2
+vermelhos. Nenhum dos dois vem da branch:
+
+* `test_leia_primeiro_nao_digita_numero_a_mao.py::test_o_documento_confere_com_a_medicao_de_agora`
+  reprova também com os arquivos da base. O `docs/data/LEIA-PRIMEIRO.md` diz
+  2.259.564 bytes para o `specs.html`, a base mede 2.259.563 e a branch mede
+  2.259.578, por causa do carimbo regerado. O número se regrava na costura,
+  depois do último `specs.html`, com
+  `check_paridade_transporte.py --leia-primeiro --escrever`.
+* `test_o_lexico_da_aba_configuracoes.py::test_nenhum_paragrafo_de_apoio_novo_na_pagina`
+  é intermitente dos dois lados. Em quatro pares alternados, o HEAD deu 3 passed
+  e 1 failed, e a base também. As frases são da topologia USB viva (adaptadores
+  e hub), e nada desta branch chega ao que a régua importa.
+
+**O QUE FICOU SEM CURA.** A guarda sem endereço do ALTO-FALANTE continua morta
+no WebKit (`[title]` com a TOOLTIP-C1), como está na seção anterior. A ROTA
+manda mexer só no microfone.
