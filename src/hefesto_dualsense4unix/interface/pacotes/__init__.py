@@ -977,7 +977,7 @@ def _dica_do_exportar(ativo: str) -> str:
 #     chave                GTK  HTML   veredito
 #     player_slot            6     1   <- a assinatura: `jogador_de`
 #     player                10     7
-#     vpad_motivo            1     0   <- SÓ A GTK LÊ: `degradacao_de`
+#     vpad_motivo            1     0   <- SÓ A GTK LÊ, e de propósito desde 13/09
 #     nascimento             2     0   <- SÓ A GTK LÊ: sem dono ainda (ver abaixo)
 #     connected              6     0      não é perda: `ctx.conectados` já filtrou
 #     serial/modelo/…        —     —      nasceram nesta onda (ROTA-A)
@@ -1135,30 +1135,6 @@ def identidade_de(
     if not str(c.get("transport") or "").strip():
         return "—"
     return palavra_do_transporte(c.get("transport")) or "—"
-
-
-def degradacao_de(c: dict[str, Any]) -> str:
-    """A frase "Emulação degradada (uinput): …", ou ``""`` quando não há.
-
-    DUAS CHAVES, e o levantamento acima mostrou que o HTML não lia NENHUMA das
-    duas em conjunto: ``vpad_backend`` (que a aba Controles lê sozinho) e
-    ``vpad_motivo`` (que nenhum pacote lia). Sozinho, o backend não separa
-    "degradou" de "é uinput por design" — a máscara Xbox é uinput e não é
-    defeito nenhum.
-
-    **DELEGA para ``app/widgets/controller_card.texto_degradacao``**, que é o
-    dono da regra na GTK e traduz o motivo técnico para a frase leiga
-    (``MOTIVOS_DEGRADACAO_LEIGOS``). Reescrever a tabela aqui criaria uma
-    segunda lista de motivos, que envelheceria calada no primeiro motivo novo
-    que o daemon publicasse. O import é LAZY e não custa GTK: aquele módulo só
-    puxa ``gi`` dentro de uma função, bem depois.
-
-    ``""`` e não ``None``: o valor vai para um ``data-campo``, e a pintura
-    escreve string.
-    """
-    from hefesto_dualsense4unix.app.widgets.controller_card import texto_degradacao
-
-    return texto_degradacao(c) or ""
 
 
 def normalizar(pacote: dict[str, Any], para_pref: dict[str, str] | None = None) -> dict[str, Any]:

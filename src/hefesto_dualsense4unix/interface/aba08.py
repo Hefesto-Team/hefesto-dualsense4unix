@@ -3841,6 +3841,18 @@ LEGENDA = f'''<div class="nota">
 # leem o HTML JÁ GRAVADO, que é ato de geração.
 # ---------------------------------------------------------------------------
 if __name__ == "__main__":
+    import os
+    import shutil
+    import tempfile
+
+    # CONFERE ANTES DE ESCREVER — 13/09/2026. A página nasce numa bancada
+    # PROVISÓRIA e só vai para a de verdade se passar (a cópia é a última
+    # linha deste bloco); a razão e a régua estão no fim do `aba04.py`.
+    _real = onde.saida()
+    _prova = pathlib.Path(tempfile.mkdtemp(prefix="hefesto-prova-08-"))
+    for _vizinha in _real.glob("*.html"):
+        shutil.copy2(_vizinha, _prova / _vizinha.name)
+    os.environ[onde._DESVIO] = str(_prova)
     n = monta("08-conexoes", "Conexões", MIOLO, CSS, legenda=LEGENDA)
 
     # ---------------------------------------------------------------------------
@@ -4181,3 +4193,5 @@ if __name__ == "__main__":
     print(f"08-conexoes: OK, {n} divs · 4 telas novas "
           f"(1 do desenho + {3} da cerimônia) · 3 seções exclusivas · "
           f"{len(CONECTADOS)} na mesa + {len(_FORA)} desconectado(s)")
+    shutil.copyfile(_prova / "08-conexoes.html", _real / "08-conexoes.html")
+    shutil.rmtree(_prova)

@@ -21,7 +21,7 @@ import html
 import sys
 from typing import Any
 
-from . import Contexto, degradacao_de, jogador_de, registrar
+from . import Contexto, jogador_de, registrar
 
 #: O ENDEREÇO DA RESSALVA DO CADEADO — 07/09/2026, achado pela conferência desta
 #: leva.
@@ -152,22 +152,22 @@ DA_PAGINA: tuple[str, ...] = (
 #: faria os dois significados brigarem no mesmo pixel. O defeito só apareceria
 #: quando ela editasse a fita com um controle que não é o primário, que é tarde.
 #:
-#: `degradou-cartao` É A MARCA DA EMULAÇÃO DEGRADADA — Passo 4, linha 32 do CSV,
-#: e a gramática é a do cartão da **02** (decisão dela de 04/09: *"uma marca na
-#: palavra e o motivo no hover"*): UM campo com alvo `atributo`, que põe o
-#: `title` quando há motivo e o REMOVE quando não há — a folha apaga a marca por
-#: `[title]`. Com a marca numa classe e o motivo noutro campo daria para pintar
-#: marca sem explicação, que é ruído com cara de dado.
+#: `degradou-cartao` SAIU — 13/09/2026, A-MARCA-DA-DEGRADACAO-01. Era a marca da
+#: emulação degradada (Passo 4 da JOGAR-O-QUE-FALTA-01): um `<sup>*</sup>` com a
+#: frase de `controller_card.texto_degradacao` no `title`, na gramática do cartão
+#: da 02 (decisão [07] de 04/09, *"uma marca na palavra e o motivo no hover"*).
 #:
-#: **A CONTA É POR CONTROLE E JÁ HAVIA UMA POR PÁGINA.** `painel.AVISOS_DA_TELA`
-#: traz `vpad_degradation_text`, que lê `gamepad_emulation.backend` da MÁQUINA e
-#: já chega à coluna Atenção desde 03/09 — medido nesta árvore. O que faltava é
-#: o outro lado: `vpad_backend` + `vpad_motivo` **daquele aparelho**, que é o
-#: que `pacotes.degradacao_de` responde e que a varredura de 02/09 registrou
-#: como *"`vpad_motivo` — GTK 1, HTML 0, SÓ A GTK LÊ"*.
+#: **ELA NUNCA ACENDEU**, medido na validação da RESTOS-DA-ONDA-DOIS-01: a folha
+#: a mostrava por `[title]`, e a camada de dicas do piloto leva o `title` para
+#: `data-hef-dica`. **E ACESA SERIA AVISO NUMA DICA**, que a terceira lista dela
+#: tira da tela. O daemon continua publicando `vpad_backend` e `vpad_motivo`, e
+#: diz a queda para `uinput` no diário (`vpad_degradado`) — *"o layout não
+#: informa os nossos defeitos"*, palavra dela de 07/09 citada em `aba01.py`.
+#: Quem cobra que a marca não volte é
+#: `tests/unit/test_a_marca_que_nunca_acende_e_o_gerador_que_confere.py`.
 POR_CARTAO: tuple[str, ...] = ("plastico", "desenho", "jogador", "jogador-espera",
                                "bateria", "identidade", "mascara-cartao",
-                               "marcador-principal", "degradou-cartao")
+                               "marcador-principal")
 
 #: QUANTOS `aviso-item` A COLUNA TEM. **Este é o dono do número**, e o gerador o
 #: lê daqui (`aba01.py` importa esta constante) — a direção é essa e não a
@@ -667,12 +667,12 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
             # no arquivo e o produto só decide se ela aparece. Ver
             # `_e_o_primario`.
             "marcador-principal": _e_o_primario(c),
-            # A MARCA DA EMULAÇÃO DEGRADADA — Passo 4. O texto é INTEIRO do dono
-            # (`controller_card.texto_degradacao`, por `pacotes.degradacao_de`),
-            # e ele já sabe as duas condições que separam "degradou" de "é
-            # uinput por desenho". Reescrevê-las aqui seria a segunda lista de
-            # motivos desta casa.
-            "degradou-cartao": degradacao_de(c),
+            # A MARCA DA EMULAÇÃO DEGRADADA SAIU DAQUI — 13/09/2026. O cartão
+            # não emite mais `degradou-cartao`, e a razão está na nota do
+            # `POR_CARTAO`. O daemon continua publicando `vpad_backend` e
+            # `vpad_motivo` no estado e dizendo a queda no diário
+            # (`vpad_degradado`); o que parou foi a tela repetir o aviso num
+            # `title` que o WebKit nunca deixou acender.
         }
 
     # A COLUNA ATENÇÃO NÃO É MAIS PINTADA NESTA ABA — 07/09/2026, ordem dela. As

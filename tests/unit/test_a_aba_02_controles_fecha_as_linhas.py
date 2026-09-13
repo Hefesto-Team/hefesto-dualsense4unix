@@ -585,31 +585,11 @@ def test_a_ponte_expoe_o_que_esta_aba_declara() -> None:
 
 
 # ===========================================================================
-# 7. A DEGRADAÇÃO DA MÁSCARA — decisão [07]
+# 7. A DEGRADAÇÃO DA MÁSCARA SAIU — 13/09/2026, A-MARCA-DA-DEGRADACAO-01
 # ===========================================================================
-def test_o_motivo_da_degradacao_chega_ao_card() -> None:
-    """O ajudante existia e NENHUM dos dez pacotes o chamava.
-
-    MORDE: tire o `mascara-degradou` do pintor e a marca some da tela — o card
-    volta a mostrar "DualSense" sem dizer que a emulação caiu para uinput.
-    """
-    from hefesto_dualsense4unix.interface import pacotes
-
-    entry = {"vpad_backend": "uinput", "vpad_motivo": "sem_uhid"}
-    esperado = pacotes.degradacao_de(entry)
-    assert esperado, "o dono não devolveu motivo — a régua mediria o vazio"
-    assert _card(entry)["mascara-degradou"] == esperado
-
-
-def test_sem_degradacao_o_campo_vai_vazio_e_a_marca_some() -> None:
-    """`uinput` sem motivo é a máscara Xbox POR DESENHO, e não é defeito.
-
-    O vazio é o que faz o piloto REMOVER o `title`, e é o `[title]` da folha
-    que apaga a marca. Um valor qualquer aqui acenderia um asterisco sobre um
-    controle que está inteiro.
-    """
-    assert _card({"vpad_backend": "uinput", "vpad_motivo": None})[
-        "mascara-degradou"] == ""
+# As duas réguas que cobravam `mascara-degradou` no card viraram a que cobra a
+# AUSÊNCIA dele, em
+# `tests/unit/test_a_marca_que_nunca_acende_e_o_gerador_que_confere.py`.
 
 
 # ===========================================================================
@@ -648,14 +628,6 @@ O_QUE_O_NAVEGADOR_DESENHA = r"""
   botao.click();
   linha.removeAttribute('data-porque');
 
-  // A MARCA DA DEGRADAÇÃO, pelo mesmo caminho: o `title` é o que o produto
-  // escreve, e a folha decide a marca a partir dele.
-  const sup = card.querySelector('.degradou');
-  const marca_sem = cs(sup);
-  sup.setAttribute('title', 'motivo de prova');
-  const marca_com = cs(sup);
-  sup.removeAttribute('title');
-
   // OS DOIS ANÉIS. O de fora é a borda do card (o plástico); o de dentro é o
   // elemento próprio, e a régua o pinta pelo mesmo `style.color` que o alvo
   // `cor` do piloto escreve.
@@ -681,7 +653,6 @@ O_QUE_O_NAVEGADOR_DESENHA = r"""
     botao_antes: antes, botao_depois: depois, clique_recebido: recebeu,
     botao_tem_disabled: botao.hasAttribute('disabled'),
     porque_sem: porque_sem, porque_com: porque_com,
-    marca_sem: marca_sem, marca_com: marca_com,
     casco: casco, anel_apagado: anel_apagado, anel_aceso: anel_aceso,
     anel_dentro: anel_dentro,
     // OS DOIS ELEMENTOS DO MESMO ENDEREÇO, que é o que impede o anel e o
@@ -747,18 +718,6 @@ def test_o_botao_de_som_apaga_e_ainda_assim_responde(desenhado: dict[str, Any]) 
         "nada a explicar é ruído com cara de dado")
     assert desenhado["porque_com"]["display"] != "none", (
         "o `?` não apareceu com o botão apagado — a razão ficou inalcançável")
-
-
-def test_a_marca_da_degradacao_so_aparece_com_motivo(desenhado: dict[str, Any]) -> None:
-    """Sem `title` a marca não ocupa nada; com ele, ela aparece.
-
-    MORDE: comente `.degradou{display:none}` e a primeira asserção reprova —
-    um asterisco laranja nasce em todo card, sobre controles que estão
-    inteiros.
-    """
-    assert desenhado["marca_sem"]["display"] == "none"
-    assert desenhado["marca_com"]["display"] != "none"
-    assert desenhado["marca_com"]["cursor"] == "help"
 
 
 def test_o_casco_fica_fora_e_a_luz_viva_dentro(desenhado: dict[str, Any]) -> None:

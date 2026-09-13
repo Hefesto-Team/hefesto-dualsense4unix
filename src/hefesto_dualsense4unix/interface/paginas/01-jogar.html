@@ -1633,18 +1633,18 @@
      dela deixaria de mostrar o que ela aprovou. */
   .cartao .e-primario{display:none;color:var(--texto-mudo);cursor:help}
   .cartao .e-primario.ha{display:inline}
-  /* ---------- A MARCA DA EMULAÇÃO DEGRADADA — a mesma da aba 02 ----------
-     Decisão dela, 04/09/2026: *"uma marca na palavra e o motivo no hover"*. O
-     bloco é o gêmeo de `aba02.py`, e a cópia é do ESTILO, não do dado: o texto
-     inteiro vem de `pacotes.degradacao_de`, que delega ao dono da regra na GTK.
+  /* ---------- A MARCA DA EMULAÇÃO DEGRADADA SAIU — 13/09/2026 ----------
+     Eram duas regras: `.cartao .degradou` nascia `display:none` e
+     `.cartao .degradou[title]` a mostrava. NO WEBKIT A SEGUNDA NUNCA CASOU: a
+     camada de dicas do piloto leva todo `title` para `data-hef-dica` e o
+     remove do elemento, então o asterisco ficou apagado desde que nasceu, e
+     acendendo seria aviso numa dica — que a terceira lista dela tira da tela.
 
-     UM CAMPO SÓ FAZ AS DUAS COISAS, e é por isso que o alvo é `atributo`: sem
-     motivo o piloto REMOVE o `title` e esta regra apaga a marca junto. Com uma
-     classe para a marca e um segundo campo para o motivo, daria para pintar
-     marca sem explicação — ruído com cara de dado. */
-  .cartao .degradou{display:none;margin-left:1px;font-size:9px;line-height:1;
-                    color:var(--orange);cursor:help;vertical-align:2px}
-  .cartao .degradou[title]{display:inline-block}
+     A LIÇÃO FICA PARA A PRÓXIMA REGRA: pintura não se decide por `[title]`
+     nesta casa. Quem precisa de «existe / não existe» usa um atributo próprio
+     escrito pelo alvo `atributo`, como o `data-apagado` das molduras de som
+     da aba 02. A régua é
+     `tests/unit/test_a_marca_que_nunca_acende_e_o_gerador_que_confere.py`. */
   /* A FAIXA SEM PENDÊNCIA SOME, E O ESPAÇO FICA. `visibility` e não `display`:
      "muda tudo ao clicar" é queixa dela, e a legenda desta aba promete que o
      espaço é reservado para a tela não pular. Sem esta regra a caixa tracejada
@@ -2699,7 +2699,7 @@
       <text style="dominant-baseline: central; fill: rgb(200, 204, 218); font-family: Zrnic; font-size: 11px; font-weight: 700; text-anchor: middle; white-space: pre;" x="15.971" y="17.025">R</text>
     </g>
 </svg>
-                <span class="rotulo"><span class="fabricante">Sony <span class="pt">•</span> </span><b data-campo="jogador-espera" data-hef-alvo="classe" data-hef-classe="espera" title="O jogo ainda não recebeu este controle. O número acende quando ele entrar na partida."><span data-campo="jogador">Player 1</span></b><br><span data-campo="identidade">Cosmic Red <span class="pt">•</span> USB</span><sup class="degradou" data-campo="degradou-cartao" data-hef-alvo="atributo" data-hef-atributo="title">*</sup><span class="e-primario" data-campo="marcador-principal" data-hef-alvo="classe" data-hef-classe="ha" title="É por este controle que o Hefesto navega o computador. Quem o escolhe é o serviço."> <span class="pt">•</span> primário</span><br><span class="bat"><svg class="gl" width="13" height="13" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+                <span class="rotulo"><span class="fabricante">Sony <span class="pt">•</span> </span><b data-campo="jogador-espera" data-hef-alvo="classe" data-hef-classe="espera" title="O jogo ainda não recebeu este controle. O número acende quando ele entrar na partida."><span data-campo="jogador">Player 1</span></b><br><span data-campo="identidade">Cosmic Red <span class="pt">•</span> USB</span><span class="e-primario" data-campo="marcador-principal" data-hef-alvo="classe" data-hef-classe="ha" title="É por este controle que o Hefesto navega o computador. Quem o escolhe é o serviço."> <span class="pt">•</span> primário</span><br><span class="bat"><svg class="gl" width="13" height="13" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
 
   <rect x="3" y="10" width="22" height="12" rx="2" fill="none" stroke="currentColor" stroke-width="2"/>
   <path d="M27,14 v4" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>
@@ -3006,7 +3006,7 @@
       <text style="dominant-baseline: central; fill: rgb(200, 204, 218); font-family: Zrnic; font-size: 11px; font-weight: 700; text-anchor: middle; white-space: pre;" x="15.971" y="17.025">R</text>
     </g>
 </svg>
-                <span class="rotulo"><span class="fabricante">Sony <span class="pt">•</span> </span><b data-campo="jogador-espera" data-hef-alvo="classe" data-hef-classe="espera" title="O jogo ainda não recebeu este controle. O número acende quando ele entrar na partida."><span data-campo="jogador">Player 2</span></b><br><span data-campo="identidade">Starlight Blue <span class="pt">•</span> BT</span><sup class="degradou" data-campo="degradou-cartao" data-hef-alvo="atributo" data-hef-atributo="title">*</sup><span class="e-primario" data-campo="marcador-principal" data-hef-alvo="classe" data-hef-classe="ha" title="É por este controle que o Hefesto navega o computador. Quem o escolhe é o serviço."> <span class="pt">•</span> primário</span><br><span class="bat"><svg class="gl" width="13" height="13" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+                <span class="rotulo"><span class="fabricante">Sony <span class="pt">•</span> </span><b data-campo="jogador-espera" data-hef-alvo="classe" data-hef-classe="espera" title="O jogo ainda não recebeu este controle. O número acende quando ele entrar na partida."><span data-campo="jogador">Player 2</span></b><br><span data-campo="identidade">Starlight Blue <span class="pt">•</span> BT</span><span class="e-primario" data-campo="marcador-principal" data-hef-alvo="classe" data-hef-classe="ha" title="É por este controle que o Hefesto navega o computador. Quem o escolhe é o serviço."> <span class="pt">•</span> primário</span><br><span class="bat"><svg class="gl" width="13" height="13" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
 
   <rect x="3" y="10" width="22" height="12" rx="2" fill="none" stroke="currentColor" stroke-width="2"/>
   <path d="M27,14 v4" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>
@@ -3314,7 +3314,7 @@
       <text style="dominant-baseline: central; fill: rgb(200, 204, 218); font-family: Zrnic; font-size: 11px; font-weight: 700; text-anchor: middle; white-space: pre;" x="15.971" y="17.025">R</text>
     </g>
 </svg>
-                <span class="rotulo"><span class="fabricante">Sony <span class="pt">•</span> </span><b data-campo="jogador-espera" data-hef-alvo="classe" data-hef-classe="espera" title="O jogo ainda não recebeu este controle. O número acende quando ele entrar na partida."><span data-campo="jogador">—</span></b><br><span data-campo="identidade">—</span><sup class="degradou" data-campo="degradou-cartao" data-hef-alvo="atributo" data-hef-atributo="title">*</sup><span class="e-primario" data-campo="marcador-principal" data-hef-alvo="classe" data-hef-classe="ha" title="É por este controle que o Hefesto navega o computador. Quem o escolhe é o serviço."> <span class="pt">•</span> primário</span><br><span class="bat"><svg class="gl" width="13" height="13" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+                <span class="rotulo"><span class="fabricante">Sony <span class="pt">•</span> </span><b data-campo="jogador-espera" data-hef-alvo="classe" data-hef-classe="espera" title="O jogo ainda não recebeu este controle. O número acende quando ele entrar na partida."><span data-campo="jogador">—</span></b><br><span data-campo="identidade">—</span><span class="e-primario" data-campo="marcador-principal" data-hef-alvo="classe" data-hef-classe="ha" title="É por este controle que o Hefesto navega o computador. Quem o escolhe é o serviço."> <span class="pt">•</span> primário</span><br><span class="bat"><svg class="gl" width="13" height="13" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
 
   <rect x="3" y="10" width="22" height="12" rx="2" fill="none" stroke="currentColor" stroke-width="2"/>
   <path d="M27,14 v4" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>
@@ -3622,7 +3622,7 @@
       <text style="dominant-baseline: central; fill: rgb(200, 204, 218); font-family: Zrnic; font-size: 11px; font-weight: 700; text-anchor: middle; white-space: pre;" x="15.971" y="17.025">R</text>
     </g>
 </svg>
-                <span class="rotulo"><span class="fabricante">Sony <span class="pt">•</span> </span><b data-campo="jogador-espera" data-hef-alvo="classe" data-hef-classe="espera" title="O jogo ainda não recebeu este controle. O número acende quando ele entrar na partida."><span data-campo="jogador">—</span></b><br><span data-campo="identidade">—</span><sup class="degradou" data-campo="degradou-cartao" data-hef-alvo="atributo" data-hef-atributo="title">*</sup><span class="e-primario" data-campo="marcador-principal" data-hef-alvo="classe" data-hef-classe="ha" title="É por este controle que o Hefesto navega o computador. Quem o escolhe é o serviço."> <span class="pt">•</span> primário</span><br><span class="bat"><svg class="gl" width="13" height="13" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+                <span class="rotulo"><span class="fabricante">Sony <span class="pt">•</span> </span><b data-campo="jogador-espera" data-hef-alvo="classe" data-hef-classe="espera" title="O jogo ainda não recebeu este controle. O número acende quando ele entrar na partida."><span data-campo="jogador">—</span></b><br><span data-campo="identidade">—</span><span class="e-primario" data-campo="marcador-principal" data-hef-alvo="classe" data-hef-classe="ha" title="É por este controle que o Hefesto navega o computador. Quem o escolhe é o serviço."> <span class="pt">•</span> primário</span><br><span class="bat"><svg class="gl" width="13" height="13" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
 
   <rect x="3" y="10" width="22" height="12" rx="2" fill="none" stroke="currentColor" stroke-width="2"/>
   <path d="M27,14 v4" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>

@@ -204,35 +204,10 @@ def test_o_nao_sei_da_mesa_e_o_mesmo_texto_das_duas_bandas() -> None:
     assert pacotes.NOME_SEM_LEITURA == mesa_viva.COR_DESCONHECIDA
 
 
-# ---------------------------------------------------------------------------
-# A leitura de DUAS chaves que o HTML tinha perdido inteira
-# ---------------------------------------------------------------------------
-class TestDegradacaoDe:
-    def test_uinput_com_motivo_acende_a_frase_leiga(self) -> None:
-        dito = pacotes.degradacao_de(
-            {"vpad_backend": "uinput", "vpad_motivo": "uhid_indisponivel"}
-        )
-        assert dito == (
-            "Emulação degradada (uinput): o modo completo não está disponível "
-            "neste sistema"
-        )
-
-    def test_uinput_sem_motivo_e_a_mascara_xbox_e_nao_defeito(self) -> None:
-        assert pacotes.degradacao_de({"vpad_backend": "uinput", "vpad_motivo": None}) == ""
-
-    def test_uhid_nao_diz_nada(self) -> None:
-        assert pacotes.degradacao_de({"vpad_backend": "uhid", "vpad_motivo": "sem_uhid"}) == ""
-
-    def test_delega_e_nao_copia_a_tabela_de_motivos(self) -> None:
-        """Se a GTK trocar a frase, esta função tem de trocar junto.
-
-        Uma cópia da tabela aqui seria uma segunda lista de motivos, que
-        envelheceria calada no primeiro motivo novo do daemon.
-        """
-        from hefesto_dualsense4unix.app.widgets import controller_card
-
-        entrada = {"vpad_backend": "uinput", "vpad_motivo": "sem_uhid"}
-        assert pacotes.degradacao_de(entrada) == controller_card.texto_degradacao(entrada)
+# A LEITURA DE `vpad_motivo` SAIU DAQUI — 13/09/2026, A-MARCA-DA-DEGRADACAO-01.
+# `pacotes.degradacao_de` só servia à marca da emulação degradada das abas 01 e
+# 02, e a marca saiu. A frase continua com dono e régua na GTK
+# (`controller_card.texto_degradacao`, em `tests/unit/test_status_cards.py`).
 
 
 # ---------------------------------------------------------------------------

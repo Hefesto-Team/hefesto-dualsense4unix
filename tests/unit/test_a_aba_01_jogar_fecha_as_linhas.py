@@ -714,45 +714,9 @@ def test_a_palavra_do_primario_e_a_que_ela_ja_leu() -> None:
         f"devia ser texto que ela já leu")
 
 
-def test_a_marca_da_degradacao_tem_as_duas_condicoes() -> None:
-    """Passo 4 — backend degradado **E** motivo. Uma só acende alarme sobre nada.
-
-    Linha 32 do CSV: *"o `backend` não é lido pelo pacote da 01;
-    `pacotes.degradacao_de` existe e não é chamada por esta aba"*.
-
-    **O DONO DECIDE, e a régua prova que esta aba PERGUNTA a ele.** A máscara
-    Xbox é `uinput` POR DESENHO (motivo `None`) e não é degradação nenhuma;
-    controle sem gamepad virtual próprio idem. Reescrever essas duas condições
-    aqui seria a segunda lista de motivos desta casa.
-
-    A MORDIDA: com o motivo vazio o campo tem de vir `""` — e o alvo `atributo`
-    do piloto REMOVE o `title`, que é o que apaga a marca.
-    """
-    base = {"uniq": P1, "connected": True, "player_slot": 1, "player": 1,
-            "transport": "usb"}
-    degradado = {**base, "vpad_backend": "uinput",
-                 "vpad_motivo": "uhid_indisponivel"}
-
-    fora = aba.pacote(_ctx([degradado]))
-    marca = (fora["cartoes"] or {})[P1]["degradou-cartao"]
-    assert marca, "a marca não acendeu com backend degradado E motivo"
-
-    # DUAS CONDIÇÕES, E CADA UMA SOZINHA É SILÊNCIO.
-    so_backend = {**base, "vpad_backend": "uinput"}
-    assert aba.pacote(_ctx([so_backend]))["cartoes"][P1]["degradou-cartao"] == "", (
-        "a marca acendeu com o backend `uinput` e SEM motivo — é a máscara Xbox "
-        "por desenho, e alarme sem medição é o que ela baniu em 31/08")
-    so_motivo = {**base, "vpad_motivo": "uhid_indisponivel"}
-    assert aba.pacote(_ctx([so_motivo]))["cartoes"][P1]["degradou-cartao"] == "", (
-        "a marca acendeu sem o backend degradado")
-
-    # E A FRASE É INTEIRA DO DONO — não uma segunda tradução do motivo.
-    from hefesto_dualsense4unix.app.widgets.controller_card import texto_degradacao
-
-    assert marca == texto_degradacao(degradado), (
-        "a frase da marca se afastou da do dono (`controller_card."
-        "texto_degradacao`) — duas traduções do mesmo motivo é o defeito que "
-        "o `_do_exame` já custou a esta aba")
+# O PASSO 4 SAIU — 13/09/2026, A-MARCA-DA-DEGRADACAO-01. A régua que cobrava a
+# marca da emulação degradada no cartão virou a que cobra a AUSÊNCIA dela, em
+# `tests/unit/test_a_marca_que_nunca_acende_e_o_gerador_que_confere.py`.
 
 
 def test_o_servico_calado_diz_e_para_de_afirmar() -> None:
