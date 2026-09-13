@@ -76,6 +76,23 @@ Decisão dela, 14/08/2026: receita por appid dentro do produto deixa todo jogo
 novo desprotegido. O que entra aqui é o MECANISMO; quais jogos entram na lista
 é config da máquina dela (`steam_input_apps.txt`).
 
+O OUTRO SENTIDO — JOGO-SEM-EXCLUSIVIDADE-01 (13/09/2026)
+--------------------------------------------------------
+A lista passou a valer nos dois sentidos: dentro dela, ligado (`--ligar`);
+fora dela, desligado (`--desligar-fora-da-lista`). O que se mediu em 13/09: a
+própria Steam liga o Steam Input POR JOGO sem escrever
+`UseSteamControllerConfig` — ela guarda a configuração do jogo em
+``<raiz>/steamapps/common/Steam Controller Configs/<conta>/config/``
+(entradas com `autosave` nos `configset_*.vdf` e pastas `<appid>/`), cria o
+controle virtual ao abrir o jogo, e o jogo passa a ver o espelho do Steam
+Input em vez da máscara da aba Jogar. Nenhuma das duas réguas daqui via isso.
+
+A bandeira nova lê essa árvore e grava `"0"` em `apps/<appid>` para cada jogo
+configurado que está FORA da lista. Sem lista de jogos: a detecção é a
+assinatura em disco. A leitura falha fechada — configset ou lista ilegível
+não escreve nada — e o nome de um `configset_*.vdf` (que pode carregar o id
+de um aparelho) nunca sai deste módulo.
+
 100% stdlib, como os vizinhos: o guarda o roda com o `python3` do sistema, sem
 venv.
 """
@@ -161,6 +178,25 @@ JOGO_DESCONHECIDO = "jogo_desconhecido_neste_vdf"
 REGUAS_DIVERGEM = "reguas_divergem"
 ARVORE_DESCONHECIDA = "arvore_viva_desconhecida"
 SANDBOX = "sandbox"
+
+# --- o outro sentido (JOGO-SEM-EXCLUSIVIDADE-01) ---------------------------
+
+#: Os jogos configurados fora da lista foram desligados (ou seriam, em
+#: `dry_run`).
+PONTE_DESLIGADA = "desligado"
+JA_DESLIGADO = "ja_desligado"
+#: A configuração por jogo da Steam não se deixou ler: nada é escrito naquele
+#: vdf. Não diz qual arquivo, de propósito — o nome pode carregar id de aparelho.
+CONFIG_ILEGIVEL = "configuracao_por_jogo_ilegivel"
+#: A lista de exceções existe e não se deixou ler: nada é escrito em vdf
+#: nenhum, porque ler a lista vazia desligaria justamente os jogos dela.
+LISTA_ILEGIVEL = "lista_de_excecoes_ilegivel"
+
+#: Onde a Steam guarda a configuração de Steam Input POR JOGO, a partir da raiz
+#: da instalação. O `<conta>` embaixo dela é o mesmo do `userdata/<conta>`.
+_PASTA_DAS_CONFIGS = ("steamapps", "common", "Steam Controller Configs")
+_AUTOSAVE = "autosave"
+_APPID_RE = re.compile(r"[0-9]+")
 
 
 @dataclass(frozen=True)
@@ -317,12 +353,12 @@ def conferir_reguas(texto: str, arvores: Sequence[ArvoreApps]) -> str | None:
     return None
 
 
-def _linha_ligada(cru: str) -> str:
-    """A mesma linha, com o valor trocado para `LIGADO`."""
+def _linha_com_valor(cru: str, valor: str) -> str:
+    """A mesma linha, com o valor trocado para `valor`."""
     m = _LINHA_CHAVE_RE.match(cru)
     if m is None:  # pragma: no cover - só chega aqui linha que o parser casou
         return cru
-    return m.group("prefixo") + LIGADO + m.group("sufixo")
+    return m.group("prefixo") + valor + m.group("sufixo")
 
 
 def ligar_no_texto(
@@ -341,6 +377,27 @@ def ligar_no_texto(
     escrito quando as réguas divergem ou a árvore viva não se prova — nesse
     caso TODOS os appids saem pulados, com o motivo.
     """
+    return _garantir_no_texto(texto, appids, LIGADO)
+
+
+def desligar_no_texto(
+    texto: str, appids: Sequence[str]
+) -> tuple[str, list[str], list[tuple[str, str]]]:
+    """Garante `UseSteamControllerConfig = 0` para `appids`. Função PURA.
+
+    O espelho de `ligar_no_texto` (JOGO-SEM-EXCLUSIVIDADE-01): os mesmos três
+    casos, as mesmas duas réguas e a mesma recusa de inventar bloco de app que
+    o arquivo desconhece. Um valor que não é `"0"` (o `"1"` e o `"2"`) vira
+    `"0"`.
+    """
+    return _garantir_no_texto(texto, appids, DESLIGADO)
+
+
+def _garantir_no_texto(
+    texto: str, appids: Sequence[str], alvo_valor: str
+) -> tuple[str, list[str], list[tuple[str, str]]]:
+    """O corpo comum de `ligar_no_texto` e `desligar_no_texto`."""
+    ja_esta = JA_LIGADO if alvo_valor == LIGADO else JA_DESLIGADO
     alvos = [str(a).strip() for a in appids if str(a).strip()]
     if not alvos:
         return texto, [], []
@@ -373,12 +430,14 @@ def ligar_no_texto(
         atual = viva.chaves.get(appid)
         if atual is not None:
             valor, idx = atual
-            if valor.strip() != DESLIGADO:
-                pulados.append((appid, JA_LIGADO))
+            # Ligar respeita qualquer valor que não seja `"0"` (o `"1"` também
+            # é ligado); desligar só respeita o próprio `"0"`.
+            if (valor.strip() != DESLIGADO) == (alvo_valor == LIGADO):
+                pulados.append((appid, ja_esta))
                 continue
             corpo = linhas[idx].rstrip("\r\n")
             eol = linhas[idx][len(corpo):] or "\n"
-            trocas[idx] = _linha_ligada(corpo) + eol
+            trocas[idx] = _linha_com_valor(corpo, alvo_valor) + eol
             ligados.append(appid)
             continue
         bloco = viva.blocos.get(appid)
@@ -386,7 +445,7 @@ def ligar_no_texto(
             abre, fecha = bloco
             recuo, eol = _recuo_de(linhas, abre)
             insercoes.setdefault(fecha, []).append(
-                f'{recuo}\t"{CHAVE}"\t\t"{LIGADO}"{eol}'
+                f'{recuo}\t"{CHAVE}"\t\t"{alvo_valor}"{eol}'
             )
             ligados.append(appid)
             continue
@@ -397,7 +456,7 @@ def ligar_no_texto(
         insercoes.setdefault(viva.fim, []).extend([
             f'{recuo}\t"{appid}"{eol}',
             f"{recuo}\t{{{eol}",
-            f'{recuo}\t\t"{CHAVE}"\t\t"{LIGADO}"{eol}',
+            f'{recuo}\t\t"{CHAVE}"\t\t"{alvo_valor}"{eol}',
             f"{recuo}\t}}{eol}",
         ])
         ligados.append(appid)
@@ -420,16 +479,18 @@ def _recuo_de(linhas: Sequence[str], idx: int) -> tuple[str, str]:
 
 
 def conferir_escrita(
-    original: str, novo: str, ligados: Sequence[str]
+    original: str, novo: str, ligados: Sequence[str], *, valor: str = LIGADO
 ) -> str | None:
     """SEGUNDA passada, independente da que escreveu. Motivo do erro, ou `None`.
 
     Relê o texto PRODUZIDO com a régua estrutural e exige três coisas: a árvore
-    viva continua provável, todo appid que dizemos ter ligado está de fato em
-    `"2"` nela, e a contagem bruta subiu exatamente o número de chaves novas.
+    viva continua provável, todo appid que dizemos ter tocado está de fato em
+    `valor` nela (`"2"` para a ponte, `"0"` para o outro sentido), e a contagem
+    bruta subiu exatamente o número de chaves novas.
     Escrever e acreditar no próprio relatório é o defeito do censo que passou a
     noite verde com o jogo dela quebrado.
     """
+    falha = "nao_ligou" if valor == LIGADO else "nao_desligou"
     arvores = ler_arvores(novo)
     divergencia = conferir_reguas(novo, arvores)
     if divergencia is not None:
@@ -441,9 +502,9 @@ def conferir_escrita(
     viva_antes = arvore_viva(antes)
     tinham_chave = set(viva_antes.chaves) if viva_antes is not None else set()
     for appid in ligados:
-        valor = viva.chaves.get(appid)
-        if valor is None or valor[0].strip() != LIGADO:
-            return f"nao_ligou:{appid}"
+        achado = viva.chaves.get(appid)
+        if achado is None or achado[0].strip() != valor:
+            return f"{falha}:{appid}"
     novas = len([a for a in ligados if a not in tinham_chave])
     if contar_chave_cru(novo) - contar_chave_cru(original) != novas:
         return REGUAS_DIVERGEM
@@ -710,6 +771,235 @@ def garantir_ponte(
 
 
 # --------------------------------------------------------------------------
+# O outro sentido: fora da lista, desligado (JOGO-SEM-EXCLUSIVIDADE-01)
+# --------------------------------------------------------------------------
+
+
+def appids_com_autosave(texto: str) -> set[str] | None:
+    """Os appids que um `configset_*.vdf` guarda com `autosave`. Função PURA.
+
+    O formato não é documentado pela Steam. O que se mediu em 13/09/2026::
+
+        "controller_config"
+        {
+            "<appid>"
+            {
+                "autosave"      "1"
+            }
+        }
+
+    Entradas com `template` ou `workshop` e chaves não numéricas ficam de fora.
+    Texto vazio é "nada configurado". Qualquer outra forma — chave solta na
+    raiz, nome sem bloco, bloco sem nome, linha que não se entende, chaves
+    desbalanceadas, mais de uma raiz — devolve None: não entender é não
+    escrever.
+    """
+    pilha: list[str] = []
+    pendente: str | None = None
+    raizes = 0
+    achados: set[str] = set()
+    for cru in texto.splitlines():
+        linha = cru.strip()
+        if not linha:
+            continue
+        if linha == "{":
+            if pendente is None:
+                return None
+            if not pilha:
+                raizes += 1
+            pilha.append(pendente)
+            pendente = None
+            continue
+        if pendente is not None:
+            return None
+        if linha == "}":
+            if not pilha:
+                return None
+            pilha.pop()
+            continue
+        par = _PAR_RE.match(cru)
+        if par is not None:
+            if not pilha:
+                return None
+            if (
+                len(pilha) == 2
+                and par.group("chave").lower() == _AUTOSAVE
+                and _APPID_RE.fullmatch(pilha[1])
+            ):
+                achados.add(pilha[1])
+            continue
+        so_chave = _SO_CHAVE_RE.match(cru)
+        if so_chave is None:
+            return None
+        pendente = so_chave.group(1)
+    if pilha or pendente is not None or raizes > 1:
+        return None
+    return achados
+
+
+def pasta_das_configs_por_jogo(vdf: Path) -> Path | None:
+    """Onde a Steam guarda a configuração por jogo da conta DESTE vdf.
+
+    ``<raiz>/userdata/<conta>/config/localconfig.vdf`` corresponde a
+    ``<raiz>/steamapps/common/Steam Controller Configs/<conta>/config``.
+    Layout que não é esse devolve None.
+    """
+    partes = vdf.parts
+    if len(partes) < 5 or partes[-4] != "userdata" or partes[-2] != "config":
+        return None
+    return vdf.parents[3].joinpath(*_PASTA_DAS_CONFIGS, partes[-3], "config")
+
+
+def configuracao_por_jogo(pasta: Path) -> set[str] | None:
+    """Os appids que a Steam configurou POR JOGO nesta pasta, ou None.
+
+    Um appid entra quando tem entrada com `autosave` em algum `configset_*.vdf`
+    OU pasta `<appid>/` própria. Pasta que não existe é "nada configurado".
+    Listagem ou configset que não se deixa ler devolve None — e o motivo NÃO
+    sai daqui: o nome do arquivo pode carregar o id de um aparelho.
+    """
+    try:
+        if not pasta.exists():
+            return set()
+        filhos = sorted(pasta.iterdir())
+    except OSError:
+        return None
+    achados: set[str] = set()
+    for filho in filhos:
+        nome = filho.name
+        try:
+            if _APPID_RE.fullmatch(nome):
+                if filho.is_dir():
+                    achados.add(nome)
+                continue
+            if not (nome.startswith("configset_") and nome.endswith(".vdf")):
+                continue
+            texto = filho.read_text(encoding="utf-8")
+        except (OSError, ValueError):
+            return None
+        do_arquivo = appids_com_autosave(texto)
+        if do_arquivo is None:
+            return None
+        achados |= do_arquivo
+    return achados
+
+
+def _ler_allowlist_estrita(config_home: Path | None = None) -> list[str] | None:
+    """A lista de exceções, ou None quando ela EXISTE e não se deixa ler.
+
+    `ler_allowlist` devolve lista vazia em qualquer falha, e para ligar isso é
+    inofensivo. Para desligar é o contrário: uma lista lida vazia por engano
+    desligaria justamente os jogos que ela pôs lá.
+    """
+    caminho = steam_input_allowlist_path(config_home)
+    try:
+        if not caminho.exists():
+            return []
+        return parse_steam_input_allowlist(caminho.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return None
+
+
+def garantir_fora_da_lista_desligado(
+    home: Path | None = None,
+    vdfs: Sequence[Path] | None = None,
+    *,
+    allowlist: Sequence[str] | None = None,
+    config_home: Path | None = None,
+    dry_run: bool = False,
+) -> tuple[str, list[dict[str, str]]]:
+    """Grava `"0"` em todo jogo que a Steam configurou por jogo FORA da lista.
+
+    Devolve ``(status, detalhe)``, com o mesmo formato de detalhe de
+    `garantir_ponte`. Os jogos da lista não são tocados aqui: quem os liga é o
+    `--ligar`. Mesma ordem de portões da ponte — nada a fazer, jogo aberto,
+    Steam aberta — e a mesma escrita: backup ao lado, `tmp` + `replace`, e a
+    segunda régua conferindo o texto antes de trocar o arquivo.
+    """
+    detalhe: list[dict[str, str]] = []
+    if allowlist is not None:
+        lista: list[str] | None = [str(a).strip() for a in allowlist if str(a).strip()]
+    else:
+        lista = _ler_allowlist_estrita(config_home)
+    if lista is None:
+        detalhe.append({"vdf": "", "appid": "", "desfecho": LISTA_ILEGIVEL})
+        return PONTE_INCERTA, detalhe
+    na_lista = set(lista)
+
+    planos: list[tuple[Path, str, list[str]]] = []
+    houve_incerteza = False
+    houve_erro = False
+    for vdf in vdfs if vdfs is not None else discover_vdfs(home):
+        if is_sandboxed_layout(vdf):
+            detalhe.append({"vdf": str(vdf), "appid": "", "desfecho": SANDBOX})
+            continue
+        pasta = pasta_das_configs_por_jogo(vdf)
+        configurados = configuracao_por_jogo(pasta) if pasta is not None else None
+        if configurados is None:
+            detalhe.append({"vdf": str(vdf), "appid": "", "desfecho": CONFIG_ILEGIVEL})
+            houve_incerteza = True
+            continue
+        alvos = sorted(a for a in configurados if a not in na_lista)
+        if not alvos:
+            continue
+        try:
+            original = vdf.read_text(encoding="utf-8")
+        except (OSError, ValueError) as exc:
+            detalhe.append({"vdf": str(vdf), "appid": "", "desfecho": str(exc)})
+            houve_erro = True
+            continue
+        novo, desligados, pulados = desligar_no_texto(original, alvos)
+        for appid, motivo in pulados:
+            detalhe.append({"vdf": str(vdf), "appid": appid, "desfecho": motivo})
+            if motivo in (REGUAS_DIVERGEM, ARVORE_DESCONHECIDA):
+                houve_incerteza = True
+        if not desligados:
+            continue
+        problema = conferir_escrita(original, novo, desligados, valor=DESLIGADO)
+        if problema is not None:
+            detalhe.append({"vdf": str(vdf), "appid": "", "desfecho": problema})
+            houve_incerteza = True
+            continue
+        planos.append((vdf, novo, desligados))
+
+    if not planos:
+        if houve_erro:
+            return PONTE_ERRO, detalhe
+        if houve_incerteza:
+            return PONTE_INCERTA, detalhe
+        return PONTE_NADA, detalhe
+    if not dry_run and steam_game_running():
+        return PONTE_ADIADA_JOGO, detalhe
+    if not dry_run and steam_running():
+        return PONTE_ADIADA_STEAM, detalhe
+
+    desligou = False
+    for vdf, novo, desligados in planos:
+        if not dry_run:
+            try:
+                backup = vdf.with_name(
+                    vdf.name + f".bak.steam-input-fora-da-lista-{int(time.time())}"
+                )
+                shutil.copy2(vdf, backup)
+                tmp = vdf.with_name(vdf.name + ".hefesto-fora-da-lista-tmp")
+                tmp.write_text(novo, encoding="utf-8")
+                shutil.copymode(vdf, tmp)
+                tmp.replace(vdf)
+            except OSError as exc:
+                detalhe.append({"vdf": str(vdf), "appid": "", "desfecho": str(exc)})
+                houve_erro = True
+                continue
+        desligou = True
+        for appid in desligados:
+            detalhe.append(
+                {"vdf": str(vdf), "appid": appid, "desfecho": PONTE_DESLIGADA}
+            )
+    if desligou:
+        return PONTE_DESLIGADA, detalhe
+    return PONTE_ERRO, detalhe
+
+
+# --------------------------------------------------------------------------
 # CLI — o guarda consome `--ligar`; `--estado` (JSON) é para a GUI e o doctor.
 # --------------------------------------------------------------------------
 
@@ -719,6 +1009,7 @@ def garantir_ponte(
 _SAIDA = {
     PONTE_NADA: 0,
     PONTE_LIGADA: 0,
+    PONTE_DESLIGADA: 0,
     PONTE_ADIADA_JOGO: 3,
     PONTE_ADIADA_STEAM: 3,
     PONTE_INCERTA: 4,
@@ -742,8 +1033,18 @@ def main(argv: list[str] | None = None) -> int:
         action="store_true",
         help="liga o Steam Input dos jogos da lista (exige a Steam fechada)",
     )
+    grupo.add_argument(
+        "--desligar-fora-da-lista",
+        action="store_true",
+        help=(
+            "desliga o Steam Input dos jogos que a Steam configurou por jogo e "
+            "estão fora da lista (exige a Steam fechada)"
+        ),
+    )
     parser.add_argument(
-        "--dry-run", action="store_true", help="não escreve nada (com --ligar)"
+        "--dry-run",
+        action="store_true",
+        help="não escreve nada (com --ligar ou --desligar-fora-da-lista)",
     )
     parser.add_argument(
         "--vdf",
@@ -767,6 +1068,16 @@ def main(argv: list[str] | None = None) -> int:
             # acabou de ser ligado — mentirinha pequena, da família da que fez
             # a janela cantar "Steam Input desligado" sobre um no-op.
             print(f"[steam-input-ponte] {estado.frase()}")
+        return _SAIDA.get(status, 1)
+
+    if args.desligar_fora_da_lista:
+        status, detalhe = garantir_fora_da_lista_desligado(
+            vdfs=args.vdf, dry_run=args.dry_run
+        )
+        print(f"[steam-input-fora-da-lista] resultado={status}")
+        for item in detalhe:
+            alvo = item["appid"] or item["vdf"] or "-"
+            print(f"[steam-input-fora-da-lista] {alvo}: {item['desfecho']}")
         return _SAIDA.get(status, 1)
 
     estado = estado_da_ponte(vdfs=args.vdf)

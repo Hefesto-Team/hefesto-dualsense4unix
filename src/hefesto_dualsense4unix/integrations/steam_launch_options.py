@@ -921,7 +921,11 @@ def steam_running() -> bool:
 
 
 #: Agulha que identifica a cmdline de launch da Steam. `reaper SteamLaunch
-#: AppId=<id>` embrulha todo jogo lançado pela Steam (Proton E nativo).
+#: AppId=<id>` embrulha todo jogo lançado pela Steam (Proton E nativo) — e
+#: também o AVALIADOR DO INSTALL SCRIPT desse jogo, que a Steam roda ANTES dele
+#: (`reaper SteamLaunch AppId=<id> Install=1 -- …`). Ver
+#: `e_avaliador_do_install_script`: a agulha continua casando os dois, e quem
+#: pergunta QUAL jogo está aberto separa um do outro.
 #:
 #: **O `\d` final não é enfeite — é o que separa o jogo das ISCAS.** Auditoria de
 #: 12/08/2026: a substring solta `"SteamLaunch AppId="` casa a cmdline de quem
@@ -942,13 +946,43 @@ def steam_running() -> bool:
 #: jogo" no meio da partida.
 #:
 #: Exigir um dígito depois do `=` derruba as duas iscas (elas terminam a string
-#: no `=`) e torna `running()`/`appid()` consistentes por construção: se casou,
-#: há appid para extrair.
+#: no `=`): se casou, há appid para extrair. A única discordância DESENHADA
+#: entre `running()` e `appid()` é o avaliador do install script (13/09/2026):
+#: ele segura a Steam aberta e não é jogo.
 #:
 #: Risco residual, idêntico ao do `pgrep -f` que isto substituiu e não removível
 #: por regex: qualquer cmdline que apenas MENCIONE `SteamLaunch AppId=<dígito>`
 #: casa. É o mesmo contrato de antes, não uma regressão.
 _STEAM_LAUNCH_RE = re.compile(r"SteamLaunch AppId=\d")
+
+#: O mesmo prefixo, inteiro: onde terminam os argumentos do `reaper` que vêm
+#: ANTES do `--`.
+_STEAM_LAUNCH_APPID_RE = re.compile(r"SteamLaunch AppId=\d+")
+
+#: O token que a Steam acrescenta ao `reaper` quando o que ele embrulha é o
+#: avaliador do install script, e não o jogo.
+_TOKEN_DO_INSTALL_SCRIPT = "Install=1"
+
+
+def e_avaliador_do_install_script(cmd: str) -> bool:
+    """A cmdline é o avaliador do install script da Steam, e não um jogo?
+
+    JOGO-SEM-EXCLUSIVIDADE-01 (13/09/2026). Todo jogo com install script
+    (EOS, redistribuíveis) faz a Steam rodar, ANTES do jogo, um
+    ``reaper SteamLaunch AppId=<id> Install=1 -- …`` — a mesma agulha do
+    lançamento. Medido no log da Steam e no journal: esse processo subia a
+    autoridade de exibição para `game` 4 a 5 s antes do ping do wrapper, e o
+    lançamento caía no ramo `jogo_vivo` em 6 de 6 aberturas de um jogo, sem
+    escada, sem `.env` por jogo e sem confirmação por silêncio.
+
+    É por ASSINATURA, sem lista de jogos: o token é procurado só entre os
+    argumentos do próprio `reaper` (antes do `--`), nunca nos do jogo.
+    """
+    achado = _STEAM_LAUNCH_APPID_RE.search(cmd)
+    if achado is None:
+        return False
+    argumentos_do_reaper = cmd[achado.end():].split(" -- ", 1)[0]
+    return _TOKEN_DO_INSTALL_SCRIPT in argumentos_do_reaper.split()
 
 #: DAEMON-ACORDADO-01/BG-03 (25/08/2026): quanto vale uma varredura de `/proc`
 #: antes de valer a pena varrer de novo. A PERF-PROC-SCAN-01 trocou o `pgrep`
@@ -1125,10 +1159,16 @@ def _steam_launch_cmdline(*, agora: float | None = None) -> str | None:
     if foto is not None and foto[1] is not None:
         cmd = _cmdline_of(foto[1])
         if _STEAM_LAUNCH_RE.search(cmd):
-            return cmd
-        # O jogo daquela foto acabou. A hora fica (é dela que a camada 3 mede);
-        # o pid sai, senão reconfirmaríamos um morto a cada tique.
-        _ultima_varredura = foto = (foto[0], None)
+            if not e_avaliador_do_install_script(cmd):
+                return cmd
+            # JOGO-SEM-EXCLUSIVIDADE-01: o pid da foto é o avaliador do install
+            # script, que vem ANTES do jogo e pode conviver com ele. Confiar
+            # nele esconderia o jogo que nasceu ao lado: varre de novo.
+            foto = None
+        else:
+            # O jogo daquela foto acabou. A hora fica (é dela que a camada 3
+            # mede); o pid sai, senão reconfirmaríamos um morto a cada tique.
+            _ultima_varredura = foto = (foto[0], None)
 
     # 3) Negativo ainda fresco: não varre `/proc` de novo.
     if foto is not None and (agora - foto[0]) < VALIDADE_DA_VARREDURA_S:
@@ -1142,13 +1182,25 @@ def _steam_launch_cmdline(*, agora: float | None = None) -> str | None:
         # transformaria uma falha de leitura em cinco segundos de "não há
         # jogo", que é a mentira que a casa proíbe (ausência ≠ negativo).
         return None
+    #    O jogo vence o avaliador do install script, qualquer que seja a ordem
+    #    dos pids; o avaliador sozinho continua sendo resposta (ele segura a
+    #    Steam aberta — ver `steam_game_running`).
+    avaliador: tuple[int, str] | None = None
     for entry in entries:
         if not entry.isdigit():
             continue
         cmd = _cmdline_of(entry)
-        if _STEAM_LAUNCH_RE.search(cmd):
-            _ultima_varredura = (agora, int(entry))
-            return cmd
+        if not _STEAM_LAUNCH_RE.search(cmd):
+            continue
+        if e_avaliador_do_install_script(cmd):
+            if avaliador is None:
+                avaliador = (int(entry), cmd)
+            continue
+        _ultima_varredura = (agora, int(entry))
+        return cmd
+    if avaliador is not None:
+        _ultima_varredura = (agora, avaliador[0])
+        return avaliador[1]
     _ultima_varredura = (agora, None)
     return None
 
@@ -1160,6 +1212,11 @@ def steam_game_running() -> bool:
     jogo (progresso não salvo perdido) — o fluxo de migrate/strip RECUSA em vez
     de derrubar. Detecção pelo processo lançador `reaper SteamLaunch AppId=<id>`
     que embrulha todo jogo lançado pela Steam (Proton E nativo).
+
+    **O avaliador do install script CONTA aqui** (JOGO-SEM-EXCLUSIVIDADE-01,
+    13/09/2026): ele não é jogo para a autoridade de exibição
+    (`steam_game_running_appid`), mas fechar a Steam no meio dele aborta o
+    lançamento — e esta é a pergunta de quem pensa em fechá-la.
 
     A detecção em si mora em `_steam_launch_cmdline` desde PERF-PROC-SCAN-01
     (12/08/2026) — mesma semântica de antes, sem forkar `pgrep`.
@@ -1199,9 +1256,14 @@ def steam_game_running_appid() -> int | None:
 
     BG-03 (25/08/2026): é ela que o poll loop chama, e é por ela que a
     varredura completa deixa de sair a cada 2 s.
+
+    JOGO-SEM-EXCLUSIVIDADE-01 (13/09/2026): o avaliador do install script
+    devolve None. Esta é a evidência E4 do sinal de jogo
+    (`game_signal.classify`), e contá-lo punha o lançamento no ramo
+    `jogo_vivo` antes de o jogo existir — ver `e_avaliador_do_install_script`.
     """
     cmd = _steam_launch_cmdline()
-    if cmd is None:
+    if cmd is None or e_avaliador_do_install_script(cmd):
         return None
     achado = re.search(r"SteamLaunch AppId=(\d+)", cmd)
     return int(achado.group(1)) if achado else None
