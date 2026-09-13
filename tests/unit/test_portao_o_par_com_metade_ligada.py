@@ -846,24 +846,9 @@ _JANELA = 3
 #:    `utils/repo_files.py`, mortas pela BG-BASES-01). Não há número novo para
 #:    escrever: o conserto é a prosa dizer que o endereço é de antes da cura.
 _CITACOES_PENDENTES: frozenset[str] = frozenset({
-    # FRASES-E-DICAS-01 (13/09/2026) — AS TRÊS QUE O CANAL DE RECADO DESLOCOU.
-    # O recado saiu do piloto, e `hefesto_vivo.py` perdeu linhas acima das três
-    # âncoras. As três JÁ estavam fora do símbolo que prometem desde antes desta
-    # sprint (a régua só as via porque caíam em linha com texto); agora caem em
-    # linha vazia. Os citantes são de outra posse, e `a10_perfis.py` está no
-    # `nao_toca:` da sprint.
-    #
-    # O NÚMERO CERTO JÁ ESTÁ MEDIDO, por SÍMBOLO — quem for dono do arquivo troca
-    # e apaga a linha daqui (o `test_a_lista_de_pendentes_nao_vira_paisagem` cobra):
-    #   aba02.py:1185       `hefesto_vivo.py:202` -> `:1373`
-    #     (`d.gesto || d.hefGesto || d.papel || doRodape || 'clique'`)
-    #   a10_perfis.py:967   `hefesto_vivo.py:256` -> `:587`
-    #     (o `el.value = t` dentro do `escrever`)
-    #   a10_perfis.py:3009  `hefesto_vivo.py:228` -> `:1501`
-    #     (o `valor:` que o ouvinte manda com o `value` do campo)
-    "interface/aba02.py::hefesto_vivo.py:202",
-    "interface/pacotes/a10_perfis.py::hefesto_vivo.py:228",
-    "interface/pacotes/a10_perfis.py::hefesto_vivo.py:256",
+    # AS TRÊS DA FRASES-E-DICAS-01 SAÍRAM DAQUI NA COSTURA (13/09/2026): quem
+    # coordena reapontou `aba02.py` e os dois docstrings de `a10_perfis.py` pelo
+    # símbolo que cada um cita no `hefesto_vivo.py`.
     # VINTE E SETE SAÍRAM DAQUI EM 10/09/2026, de uma vez: a leva do som
     # (SOM-FIADO-01) deslocou `backend_pydualsense.py`, `lifecycle.py` e
     # `a02_controles.py`, e reapontar TUDO por SÍMBOLO — nunca por aritmética —
@@ -899,13 +884,9 @@ _CITACOES_PENDENTES: frozenset[str] = frozenset({
     # CORRIGIDAS no lugar (`core/rumble.py`, `a02_controles.py` e duas em
     # `a08_conexoes.py`): fora do `nao_toca:`, o número se reescreve.
     "interface/pacotes/a06_navegacao.py::core/acoes_de_botao.py:285",
-    # FRASES-E-DICAS-02 (13/09/2026) — A QUE A SAÍDA DA SONDA DA MESA SUJA
-    # DESLOCOU. `a09_sistema.py` é `nao_toca:` daquela sprint. A linha citada já
-    # não caía no que o comentário promete (em `249af1f6` ela era `def _bancada`);
-    # o que ele promete — a 08 mandando `blocos` para o mapa do gabinete — mora
-    # hoje em `a08_conexoes.py:3781`. Quem tiver a 09 troca o número e apaga
-    # esta linha.
-    "interface/pacotes/a09_sistema.py::a08_conexoes.py:1774",
+    # A DA FRASES-E-DICAS-02 SAIU DAQUI NA COSTURA (13/09/2026): quem coordena
+    # reapontou `a09_sistema.py` para `a08_conexoes.py:3781`, o `"blocos"` do
+    # mapa do gabinete.
     # ONDA3-MOTOR-01 (06/09/2026) — AS SEIS QUE A CURA DO `— Nada —` E DA
     # HERANÇA DE `key_bindings` DESLOCOU. O deslocamento é de **+22 linhas** em
     # `profiles/manager.py` e em `integrations/uinput_mouse.py`, medido linha a
