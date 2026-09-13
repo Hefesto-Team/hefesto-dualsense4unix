@@ -285,9 +285,14 @@ def test_os_dois_gestos_nao_perderam_o_nome_ao_virar_icone() -> None:
     html = onde.pagina("10-perfis.html").read_text(encoding="utf-8")
     from hefesto_dualsense4unix.interface import pacotes
 
+    assert 'class="icone-rot" data-hef-gesto="recarregar"' in html, (
+        "o gesto `recarregar` não é mais um ícone do rótulo")
+    # O `voltar-a-de-ontem` SAIU DA TELA em 13/09/2026 — a ordem dela de 11/09
+    # era removê-lo, e o ícone dele era lido como o recarregar duplicado. O
+    # dono no pacote fica: é o mesmo desfazer da linha de comando.
+    assert 'data-hef-gesto="voltar-a-de-ontem"' not in html, (
+        "o `voltar-a-de-ontem` voltou à página 10")
     for nome in ("recarregar", "voltar-a-de-ontem"):
-        assert f'class="icone-rot" data-hef-gesto="{nome}"' in html, (
-            f"o gesto `{nome}` não é mais um ícone do rótulo")
         assert pacotes.gesto_da_pagina(a10_perfis.PAGINA, nome) is not None, (
             f"o gesto `{nome}` perdeu o dono no pacote")
 

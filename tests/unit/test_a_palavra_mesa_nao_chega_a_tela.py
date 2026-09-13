@@ -267,9 +267,10 @@ def test_o_primeiro_trecho_banido_consulta_as_duas_listas() -> None:
 
     O DIA CHEGOU em 06/09/2026: as dezesseis frases de `app/` foram curadas no
     dono e `hefesto_vivo._json` trocou `frase_banida_em` por esta, de modo que o
-    funil de execução recusa as duas coisas. Enquanto as dezesseis viviam, ligá-lo
-    trocaria uma palavra feia por uma JANELA MORTA — e é por isso que a ordem
-    importava, não a pressa.
+    funil de execução passou a olhar as duas coisas. Ele levantava, e em
+    13/09/2026 a JANELA MORTA que este parágrafo temia aconteceu: uma frase de
+    `integrations/` e o diário do daemon ainda diziam palavras da lista. Desde
+    então o funil denuncia no diário da janela e continua pintando.
     """
     assert primeiro_trecho_banido("nada demais aqui") is None
     assert primeiro_trecho_banido("na mesa inteira") == "mesa"

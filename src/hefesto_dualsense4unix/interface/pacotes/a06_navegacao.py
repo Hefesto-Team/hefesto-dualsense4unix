@@ -321,7 +321,7 @@ def _o_que_a_pagina_oferece() -> frozenset[str]:
     ABERTO e sem trocar de aba. O arquivo muda, o selo muda, o pacote passa a
     emitir a palavra nova — e o DOM carregado ainda é o antigo, então a escrita
     volta a ser descartada até o próximo carregamento. Trocar de aba já
-    recarrega (`hefesto_vivo.py:2308`), e reabrir também. Ler o DOM em vez do
+    recarrega (`hefesto_vivo.py:4571`), e reabrir também. Ler o DOM em vez do
     arquivo exigiria uma pergunta ao piloto que o `Contexto` não tem.
     """
     global _OFERTAS

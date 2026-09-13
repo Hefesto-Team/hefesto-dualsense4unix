@@ -1042,6 +1042,11 @@ BOOTSTRAP = r"""
       const faixa = demais[tom]
         ? null
         : document.querySelector('[data-hef-recados~="' + tom + '"]');
+      // A TARJA DE RODAPÉ SAIU — 13/09/2026, pedido dela: *"essas frases de
+      // status que aparecem no rodapé isso não deveria estar aparecendo"*, *"em
+      // todas as abas da interface"*. Recado sem cartão e sem faixa não tem
+      // mais lugar na tela; a recusa continua no diário da janela.
+      if(!faixa && !cartao){ vivas.pop(); continue; }
       const pai = faixa || cartao || document.body;
       let el = document.querySelector('.hef-recado[data-hef-recado="' + chave + '"]');
       // A PINTURA TROCA BLOCOS INTEIROS — a fita, a tabela de perfis, o mapa do
@@ -3978,9 +3983,14 @@ class Piloto:
             if n > 0:
                 self.pinturas.setdefault(self.pagina, []).append(n)
 
+        # A CARGA SERIALIZA ANTES DE A TRAVA SUBIR — 13/09/2026. A ordem era a
+        # inversa: a trava subia, o `_json` levantava logo depois, o `contou`
+        # nunca vinha, e todo tique seguinte voltava no `if self._pintura_no_ar`.
+        # A janela ficava com o HTML publicado — a lista de exemplo do desenho,
+        # o "2 controles" — até ser fechada. Treze vezes no diário dela.
+        pedido = PEDIR_A_PINTURA.replace("CARGA", _json(carga))
         self._pintura_no_ar = True
-        self.ponte.perguntar(PEDIR_A_PINTURA.replace("CARGA", _json(carga)),
-                             contou)
+        self.ponte.perguntar(pedido, contou)
         # A CARGA DESTE TIQUE fica guardada: é ela — e não o código-fonte do
         # pacote — que diz o que o produto DECLAROU pintar nesta aba agora. Ler
         # daqui é o que separa esta régua das anteriores, que perguntavam se o
@@ -4664,29 +4674,36 @@ class Piloto:
 
 
 def _json(obj: Any) -> str:
-    """Serializa para o WebView — e RECUSA o que ela mandou tirar da tela.
+    """Serializa para o WebView — e DENUNCIA o que ela mandou tirar da tela.
 
     Este é o funil: **todo** valor que chega ao `WebKit2.WebView` passa aqui, a
     pintura e a resposta de gesto. Por isso a guarda de execução das frases
     banidas mora neste ponto e não em cada aba — uma guarda por aba seriam dez
     guardas a divergir, e a décima primeira aba nasceria sem nenhuma.
 
-    POR QUE ELA LEVANTA em vez de limpar: as três frases são constantes
-    LITERAIS que já estiveram no produto (`frases_que_ela_baniu`). Código que as
-    produz é defeito, não gosto — e limpar produziria uma frase mutilada na tela
-    dela, que é pior que o vermelho. O OITAVO CONFLITO de 04/09/2026 nasceu
-    exatamente de uma proibição que sabia recusar, mas recusava no LUGAR ERRADO:
-    ela lia o HTML estático, e a coluna Atenção é escrita em execução.
+    ELA NÃO LEVANTA MAIS — 13/09/2026. Levantava, e o levante acontecia dentro
+    do `_tique`: a janela parava de pintar pelo resto da sessão e ficava com o
+    HTML de exemplo do desenho. Ela viu "Terror (os dez)", "Luta" e "Navegação"
+    no lugar dos perfis dela, e "2 controles" com um só na mão. O gatilho era
+    uma frase da aba 08 e o diário do daemon na 09. Uma palavra feia na tela é
+    defeito do dono da frase; a janela congelada é defeito da casa inteira.
+    Quem impede a frase de EXISTIR continua sendo a guarda de fonte e a de
+    página (`test_a_frase_que_ela_baniu_nao_chega_a_tela`).
     """
     import json
 
     # E O FUNIL PASSOU A OLHAR AS DUAS LISTAS — costura da ONDA E, 06/09/2026.
     #
     # Ele chamava só `frase_banida_em`, e isso foi decidido — não esquecido — no
-    # dia em que a palavra "mesa" saiu da tela: `_json` LEVANTA, e é por ele que
-    # todo valor passa a caminho do WebView. Enquanto DEZESSEIS frases de `app/`
-    # ainda diziam a palavra, ligá-lo aqui trocaria uma palavra feia por uma
-    # JANELA MORTA — e `app/` era o `nao_toca` de quem mediu.
+    # dia em que a palavra "mesa" saiu da tela: `_json` levantava, e é por ele
+    # que todo valor passa a caminho do WebView. Enquanto DEZESSEIS frases de
+    # `app/` ainda diziam a palavra, ligá-lo aqui trocaria uma palavra feia por
+    # uma JANELA MORTA — e `app/` era o `nao_toca` de quem mediu.
+    #
+    # A CONDIÇÃO NÃO BASTOU — 13/09/2026. Curar `app/` não alcançou
+    # `integrations/exame_da_mesa.py` nem o diário do daemon que a aba 09
+    # mostra, e a janela morreu exatamente como este bloco previa. Por isso o
+    # funil passou a denunciar em vez de levantar.
     #
     # As dezesseis foram curadas no dono nesta mesma costura, e a condição que a
     # `A-PALAVRA-MESA-SAI-01` deixou escrita está cumprida. `primeiro_trecho_banido`
@@ -4698,15 +4715,17 @@ def _json(obj: Any) -> str:
 
     saida = json.dumps(obj, ensure_ascii=False, default=str)
     banida = primeiro_trecho_banido(saida)
-    if banida is not None:
-        raise ValueError(
-            f"um texto banido ia para a tela dela: {banida!r}. "
-            "Ela, 31/08/2026: NENHUM ALARME SEM MEDIÇÃO — as três frases "
-            "alarmavam sobre número que ensaio nenhum deste repositório mede. "
-            "A coluna Atenção pode dizer o ESTADO MEDIDO; não pode profetizar "
-            "consequência. Ver `interface/frases_que_ela_baniu.py`."
-        )
+    if banida is not None and banida not in _BANIDAS_JA_DENUNCIADAS:
+        _BANIDAS_JA_DENUNCIADAS.add(banida)
+        print(f"[texto banido] {banida!r} foi para a tela. A frase é defeito do "
+              "dono dela — ver `interface/frases_que_ela_baniu.py`.",
+              file=sys.stderr)
     return saida
+
+
+#: As palavras que o funil já denunciou nesta janela. Uma linha por palavra, e
+#: não uma por tique: o diário da janela não pode virar dez linhas por segundo.
+_BANIDAS_JA_DENUNCIADAS: set[str] = set()
 
 
 def main() -> None:

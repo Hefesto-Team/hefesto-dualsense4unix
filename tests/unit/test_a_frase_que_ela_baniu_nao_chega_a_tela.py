@@ -17,7 +17,8 @@ Atenção pode dizer o ESTADO MEDIDO; não pode profetizar consequência.
 
 Esta régua tem as três metades que faltavam:
   1. a lista mora em UM lugar e as duas guardas a LEEM;
-  2. a guarda de EXECUÇÃO existe e recusa;
+  2. a guarda de EXECUÇÃO existe e denuncia no diário — ela recusava até
+     13/09/2026, e recusar dentro do tique congelava a janela inteira;
   3. a guarda estática continua de pé.
 
 **A TERCEIRA GUARDA ENTROU EM 06/09/2026 (ONDA5-01-02), e as duas de cima
@@ -41,8 +42,6 @@ import io
 import re
 import tokenize
 from pathlib import Path
-
-import pytest
 
 from hefesto_dualsense4unix.interface.frases_que_ela_baniu import (
     FRASES_BANIDAS,
@@ -165,18 +164,60 @@ def test_a_lista_tem_as_tres_e_a_busca_e_por_substring() -> None:
     assert frase_banida_em("Modo Nativo ligado · Ponte com o jogo desligada") is None
 
 
-def test_o_funil_de_execucao_recusa_a_frase() -> None:
-    """A METADE QUE FALTAVA: o caminho de RUNTIME, não o HTML estático."""
+def test_o_funil_de_execucao_denuncia_a_frase_e_nao_mata_a_janela(capsys) -> None:
+    """O caminho de RUNTIME DENUNCIA e pinta — 13/09/2026.
+
+    Ele levantava, e o levante acontecia DENTRO do tique: a pintura nunca
+    pousava, a trava `_pintura_no_ar` ficava de pé e a janela passava o resto da
+    sessão com o HTML de exemplo do desenho — a lista de perfis de mentira, o
+    "2 controles". Treze vezes no diário da janela entre 12/09 e 13/09, pela aba
+    08 e pela 09. Quem impede a frase de EXISTIR são as guardas de fonte e de
+    página deste arquivo; esta só a nomeia no diário.
+
+    A MORDIDA: devolva o `raise` ao `_json` e a chamada do meio levanta.
+    """
     import sys
 
     sys.path.insert(0, str(INTERFACE))
     import hefesto_vivo as hv
 
+    hv._BANIDAS_JA_DENUNCIADAS.clear()
     assert hv._json({"mesa": {"aviso-texto": ["tudo certo"]}})
-    with pytest.raises(ValueError) as erro:
-        hv._json({"colunas": {"aviso-texto": ["Alguns jogos derrubam o controle"]}})
-    assert "derrubam o controle" in str(erro.value)
-    assert "NENHUM ALARME SEM MEDIÇÃO" in str(erro.value)
+    capsys.readouterr()
+    saida = hv._json({"colunas": {"aviso-texto": ["Alguns jogos derrubam o controle"]}})
+    assert "derrubam o controle" in saida
+    assert "derrubam o controle" in capsys.readouterr().err
+
+
+def test_a_trava_da_pintura_so_sobe_depois_da_carga_serializada() -> None:
+    """A outra metade do congelamento: a ORDEM dentro do `_tique`.
+
+    Com a trava antes do `_json`, qualquer falha ao serializar deixa
+    `_pintura_no_ar` de pé para sempre, e todo tique seguinte volta sem pintar.
+
+    A MORDIDA: troque as duas linhas de lugar e esta régua reprova.
+    """
+    arvore = ast.parse((INTERFACE / "hefesto_vivo.py").read_text(encoding="utf-8"))
+    sobe: list[int] = []
+    serializa: list[int] = []
+    for no in ast.walk(arvore):
+        if not (isinstance(no, ast.FunctionDef) and no.name == "_tique"):
+            continue
+        sobe = [n.lineno for n in ast.walk(no)
+                if isinstance(n, ast.Assign)
+                and isinstance(n.value, ast.Constant) and n.value.value is True
+                and any(isinstance(t, ast.Attribute) and t.attr == "_pintura_no_ar"
+                        for t in n.targets)]
+        serializa = [n.lineno for n in ast.walk(no)
+                     if isinstance(n, ast.Call) and isinstance(n.func, ast.Name)
+                     and n.func.id == "_json"]
+        if sobe:
+            break
+    assert sobe and serializa, (
+        "o `_tique` perdeu a trava ou o `_json` — a régua mediria o nada")
+    assert max(serializa) < min(sobe), (
+        f"a trava sobe na linha {min(sobe)} e a carga serializa na "
+        f"{max(serializa)}: uma falha ao serializar congela a janela")
 
 
 def test_a_guarda_estatica_continua_de_pe_e_le_a_lista() -> None:

@@ -519,14 +519,14 @@ def vizinhanca_das_portas(
     nada_declarado = altura_da_antena is None and linha_de_visada is None
     if nada_declarado:
         cura = (
-            "Veja a seção A mesa, logo abaixo: declare a altura da antena e "
+            "Abra “Rádio e Adaptadores”, logo abaixo: declare a altura da antena e "
             "a linha de visada para o exame explicar o alcance em vez de só "
             "medi-lo, ou mude um dos dois aparelhos para uma porta mais "
             "longe."
         )
     else:
         cura = (
-            "Veja a seção A mesa, logo abaixo, e mude um dos dois para uma "
+            "Abra “Rádio e Adaptadores”, logo abaixo, e mude um dos dois para uma "
             "porta mais longe."
         )
     return Item(
