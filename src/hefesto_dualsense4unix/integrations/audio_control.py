@@ -111,7 +111,7 @@ class AudioControl:
             else:
                 return False
         except Exception as exc:
-            logger.warning("audio_fonte_padrao_falhou", err=str(exc))
+            _avisar("audio_fonte_padrao_falhou", exc)
             return False
         return "dualsense" in (saida or "").lower()
 
@@ -145,7 +145,7 @@ class AudioControl:
                 self._run(["pactl", "set-source-mute", "@DEFAULT_SOURCE@", "toggle"])
                 self._last_known_muted = self._query_pactl_muted()
         except Exception as exc:
-            logger.warning("audio_toggle_falhou", backend=backend, err=str(exc))
+            _avisar("audio_toggle_falhou", exc, backend=backend)
         return self._last_known_muted
 
     # ------------------------------------------------------------------
@@ -184,7 +184,7 @@ class AudioControl:
         digno de conserto é que a próxima pessoa a reabrir aquela porta herdaria
         uma leitura que responde sobre o idioma do shell, não sobre o aparelho.
         """
-        return subprocess.run(
+        return _rodar_pelo_recuo(
             argv,
             timeout=SUBPROCESS_TIMEOUT_SEC,
             check=False,
@@ -254,7 +254,7 @@ def fonte_de_captura_do_controle() -> str | None:
     Read-only: só lista. Nunca escreve.
     """
     try:
-        saida = subprocess.run(
+        saida = _rodar_pelo_recuo(
             ["pactl", "list", "short", "sources"],
             capture_output=True,
             text=True,
@@ -267,7 +267,7 @@ def fonte_de_captura_do_controle() -> str | None:
             env={**os.environ, "LC_ALL": "C"},
         ).stdout
     except (OSError, subprocess.SubprocessError) as exc:
-        logger.warning("audio_fonte_do_controle_falhou", err=str(exc))
+        _avisar("audio_fonte_do_controle_falhou", exc)
         return None
     for linha in (saida or "").splitlines():
         partes = linha.split("\t")
@@ -298,7 +298,7 @@ def _texto_do_pactl(argv: list[str]) -> str | None:
     áudio" sobre um sistema que tinha uma (medido em 15/08/2026).
     """
     try:
-        return subprocess.run(
+        return _rodar_pelo_recuo(
             argv,
             capture_output=True,
             text=True,
@@ -307,7 +307,7 @@ def _texto_do_pactl(argv: list[str]) -> str | None:
             env={**os.environ, "LC_ALL": "C"},
         ).stdout
     except (OSError, subprocess.SubprocessError) as exc:
-        logger.warning("audio_fonte_do_uniq_falhou", err=str(exc))
+        _avisar("audio_fonte_do_uniq_falhou", exc)
         return None
 
 
@@ -467,7 +467,7 @@ def definir_volume_da_captura(volume_pct: int, *, fonte: str | None) -> bool:
         return False
     pct = max(0, min(100, int(volume_pct)))
     try:
-        r = subprocess.run(
+        r = _rodar_pelo_recuo(
             ["pactl", "set-source-volume", alvo, f"{pct}%"],
             capture_output=True,
             text=True,
@@ -476,7 +476,7 @@ def definir_volume_da_captura(volume_pct: int, *, fonte: str | None) -> bool:
             env={**os.environ, "LC_ALL": "C"},
         )
     except (OSError, subprocess.SubprocessError) as exc:
-        logger.warning("audio_volume_captura_falhou", err=str(exc), fonte=alvo)
+        _avisar("audio_volume_captura_falhou", exc, fonte=alvo)
         return False
     if r.returncode != 0:
         logger.warning(
@@ -505,7 +505,7 @@ def volume_da_captura(*, fonte: str | None) -> int | None:
     if not alvo:
         return None
     try:
-        saida = subprocess.run(
+        saida = _rodar_pelo_recuo(
             ["pactl", "get-source-volume", alvo],
             capture_output=True,
             text=True,
@@ -521,11 +521,100 @@ def volume_da_captura(*, fonte: str | None) -> int | None:
     return int(achado.group(1)) if achado else None
 
 
+# ---------------------------------------------------------------------------
+# O RECUO DO SERVIDOR — SOM-RECUO-01 (13/09/2026)
+#
+# NO FIM DO MÓDULO de propósito: o mapa cita linhas deste arquivo, e código
+# novo enfiado lá em cima envelhece as citações.
+# ---------------------------------------------------------------------------
+
+
+class PactlEmRecuoError(subprocess.SubprocessError):
+    """O servidor de som está em recuo: a pergunta NÃO saiu.
+
+    Filha de ``subprocess.SubprocessError`` de propósito: toda função deste
+    módulo já transforma essa família no «não sei» dela (``None``, ``False`` ou
+    o último estado conhecido). A recusa chega a cada uma pela mesma porta que
+    o prazo estourado já usava — só que na hora, e não depois de 2 s.
+    """
+
+
+def _rodar_pelo_recuo(
+    argv: list[str],
+    *,
+    timeout: float,
+    env: dict[str, str],
+    capture_output: bool = True,
+    text: Literal[True] = True,
+    check: bool = False,
+) -> subprocess.CompletedProcess[str]:
+    """``subprocess.run`` com o recuo do SERVIDOR na frente de todo ``pactl``.
+
+    **O DEFEITO:** com o ``pipewire-pulse`` sem atender ninguém, cada pergunta
+    deste módulo esperava os 2 s de :data:`SUBPROCESS_TIMEOUT_SEC` na fila do
+    mesmo servidor em que o som e o microfone já estouravam os deles — os
+    números do journal estão em ``dualsense_bt_audio.RecuoDoPactl``.
+
+    O recuo é ``dualsense_bt_audio.PACTL``, o mesmo do som e do microfone: o
+    servidor é um só. Em recuo, levanta :class:`PactlEmRecuoError` sem rodar
+    nada; um prazo estourado entra no recuo; rc=0 o zera. **rc≠0 não zera:**
+    ``Connection refused`` também sai com rc≠0, e não prova que o servidor
+    voltou.
+
+    **O ``wpctl`` fica FORA, e é de propósito.** Ele fala o protocolo nativo do
+    PipeWire, e não o ``pipewire-pulse`` que travou — medido por quem coordena
+    em 13/09: o ``pw-cli``, do mesmo protocolo, respondia enquanto o ``pactl
+    info`` dava rc=124. Pôr o ``wpctl`` no recuo calaria um caminho que atendia.
+
+    O ``PACTL`` é lido NA HORA, dentro da função: a régua troca o do módulo por
+    um de relógio de mentira, e uma cópia no topo congelaria o de antes.
+    """
+    if argv[:1] != ["pactl"]:
+        return subprocess.run(
+            argv, capture_output=capture_output, text=text, timeout=timeout,
+            check=check, env=env,
+        )
+    from hefesto_dualsense4unix.integrations.dualsense_bt_audio import PACTL
+
+    if PACTL.mudo():
+        raise PactlEmRecuoError(
+            f"pactl em recuo por {PACTL.espera_s:.0f} s: {' '.join(argv[1:3])} não saiu"
+        )
+    try:
+        proc = subprocess.run(
+            argv, capture_output=capture_output, text=text, timeout=timeout,
+            check=check, env=env,
+        )
+    except subprocess.TimeoutExpired:
+        PACTL.estourou()
+        raise
+    # `getattr` e não `.returncode`: dois dublês da suíte devolvem só `stdout`
+    # (`test_mic_da_mesa_cheia_01.py`, `test_o_volume_do_mic_nao_cai_no_vizinho.py`),
+    # e uma resposta sem rc continua sendo resposta — só um rc≠0 declarado não zera.
+    if getattr(proc, "returncode", 0) == 0:
+        PACTL.respondeu()
+    return proc
+
+
+def _avisar(evento: str, exc: BaseException, **campos: object) -> None:
+    """A falha de verdade vira ``warning``; a pergunta que o recuo segurou, ``debug``.
+
+    Sem isto a cura só trocaria centenas de esperas de 2 s por centenas de
+    avisos instantâneos no journal. O servidor parado já é dito uma vez, por
+    estouro, em ``pactl_mudo``.
+    """
+    if isinstance(exc, PactlEmRecuoError):
+        logger.debug(evento, err=str(exc), **campos)
+    else:
+        logger.warning(evento, err=str(exc), **campos)
+
+
 __all__ = [
     "DEBOUNCE_SEC",
     "SUBPROCESS_TIMEOUT_SEC",
     "AudioControl",
     "Backend",
+    "PactlEmRecuoError",
     "definir_volume_da_captura",
     "fonte_de_captura_do_controle",
     "fonte_de_captura_do_uniq",

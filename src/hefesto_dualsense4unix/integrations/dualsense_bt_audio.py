@@ -2002,6 +2002,17 @@ class RecuoDoPactl:
     deixa o servidor sem atender — não se reproduz com dublê. Reiniciar só o
     ``pipewire-pulse`` não devolveu o `pactl`; reiniciar ``pipewire``,
     ``pipewire-pulse`` e ``wireplumber`` juntos devolveu.
+
+    **UM RECUO SÓ, PORQUE O SERVIDOR É UM SÓ (SOM-RECUO-01, 13/09/2026).** O
+    microfone ganhou este recuo e o som e o volume ficaram de fora — lido no
+    journal do daemon dela, de 01:53:30 a 02:42:30: **291**
+    ``som_load_module_falhou`` a cada 10 s e **715** ``audio_fonte_do_uniq_falhou``
+    (2 s de prazo cada) ao lado de **232** ``bt_mic_load_module_falhou``, todos
+    na fila do mesmo ``pipewire-pulse``. Hoje ``alto_falante_bt`` e
+    ``audio_control`` anotam o prazo AQUI e esperam AQUI: um prazo estourado
+    pelo som cala o microfone no ciclo seguinte, e vice-versa. Os eventos
+    perderam o ``bt_mic_`` que tinham ao nascer (``pactl_mudo`` /
+    ``pactl_voltou``) porque quem estourou pode ter sido qualquer um dos três.
     """
 
     def __init__(self, *, relogio: Callable[[], float] = time.monotonic) -> None:
@@ -2025,7 +2036,7 @@ class RecuoDoPactl:
                 self._espera_s = min(RECUO_TETO_S, self._espera_s * 2)
             self._ate = self._relogio() + self._espera_s
             espera = self._espera_s
-        logger.warning("bt_mic_pactl_mudo", espera_s=espera)
+        logger.warning("pactl_mudo", espera_s=espera)
 
     def respondeu(self) -> None:
         """O `pactl` respondeu: o recuo acaba."""
@@ -2034,12 +2045,43 @@ class RecuoDoPactl:
             self._espera_s = 0.0
             self._ate = 0.0
         if estava:
-            logger.info("bt_mic_pactl_voltou")
+            logger.info("pactl_voltou")
 
     def mudo(self) -> bool:
         """True enquanto o recuo não venceu."""
         with self._lock:
             return self._relogio() < self._ate
+
+    def perguntar(
+        self, runner: Callable[[list[str]], str | None], argv: list[str]
+    ) -> str | None:
+        """Uma pergunta ao servidor, contando a ESTE recuo o que houve com ela.
+
+        Dono único do contrato, com duas vias até ele: o ``_rodar`` de produção
+        anota o prazo sozinho e devolve ``None``; um runner injetado LEVANTA
+        ``subprocess.TimeoutExpired``, que é como a régua dubla o servidor mudo.
+        Só uma resposta que não seja ``None`` zera o recuo — ``None`` é falha, e
+        falha não prova que o servidor voltou.
+        """
+        try:
+            saida = runner(argv)
+        except subprocess.TimeoutExpired:
+            self.estourou()
+            return None
+        if saida is not None:
+            self.respondeu()
+        return saida
+
+    def zerar(self) -> None:
+        """Volta ao estado de nascença SEM dizer que o servidor voltou.
+
+        Existe para a suíte (``_recuo_do_pactl_zerado`` em `tests/conftest.py`):
+        um prazo real estourado num teste não pode pôr em recuo o teste
+        seguinte, e ``respondeu()`` escreveria no log uma volta que não houve.
+        """
+        with self._lock:
+            self._espera_s = 0.0
+            self._ate = 0.0
 
 
 #: O recuo do PROCESSO, e ser um só é a razão de existir: cada volta do
@@ -2064,22 +2106,13 @@ def _com_recuo(
 ) -> Callable[[list[str]], str | None]:
     """O `runner` de uma source, contando ao recuo o que aconteceu com cada pergunta.
 
-    Duas vias chegam ao mesmo recuo: o `_rodar` de produção anota o prazo ele
-    mesmo e devolve `None`, como sempre; um runner injetado LEVANTA
-    `subprocess.TimeoutExpired`, que é como a régua dubla o servidor mudo. Só
-    uma resposta que não seja `None` zera o recuo — `None` é falha, e falha não
-    prova que o servidor voltou.
+    O contrato mora em :meth:`RecuoDoPactl.perguntar`. O `PACTL` é lido na hora
+    de cada pergunta, e não na construção: a régua o troca por um de relógio de
+    mentira depois de a source nascer.
     """
 
     def _perguntar(argv: list[str]) -> str | None:
-        try:
-            saida = runner(argv)
-        except subprocess.TimeoutExpired:
-            PACTL.estourou()
-            return None
-        if saida is not None:
-            PACTL.respondeu()
-        return saida
+        return PACTL.perguntar(runner, argv)
 
     return _perguntar
 

@@ -99,10 +99,10 @@ import shutil
 import subprocess
 import threading
 import time
-from collections.abc import Callable, Sequence
+from collections.abc import Callable, Iterable, Iterator, Sequence
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from hefesto_dualsense4unix.core import ds_output_report as rep
 from hefesto_dualsense4unix.core.ds_output_report import (
@@ -1101,8 +1101,8 @@ def propriedades_do_sink(descricao: str) -> str:
 def _rodar(argv: list[str]) -> str | None:
     """Roda um comando curto e devolve o stdout (None em qualquer falha).
 
-    Nunca ``shell=True`` (invariante do projeto) e sempre com timeout — um
-    ``pactl`` pendurado num PipeWire morto não pode segurar o nó.
+    Nunca ``shell=True`` e sempre com prazo: um ``pactl`` pendurado não segura o
+    nó, e o prazo estourado põe o SERVIDOR em recuo (:func:`_o_recuo`).
 
     ``LC_ALL=C`` porque o ``pactl`` desta máquina TRADUZ, e esta casa já
     respondeu *"nenhum controle com placa de áudio"* sobre um sistema que tinha
@@ -1114,15 +1114,15 @@ def _rodar(argv: list[str]) -> str | None:
         proc = subprocess.run(
             argv,
             timeout=_TIMEOUT_PACTL_S,
-            capture_output=True,
-            text=True,
-            check=False,
+            capture_output=True, text=True, check=False,
             env={**os.environ, "LC_ALL": "C"},
         )
-    except (OSError, subprocess.SubprocessError):
+    except (OSError, subprocess.SubprocessError) as exc:
+        _anotar_o_prazo(argv, exc)
         return None
     if proc.returncode != 0:
         return None
+    _anotar_a_resposta(argv)
     return proc.stdout
 
 
@@ -1167,7 +1167,7 @@ class SinkVirtualPipeWire:
         self.descricao = descricao or descricao_do_alto_falante(uniq)
         self.taxa_hz = taxa_hz
         self.canais = canais
-        self.runner = runner or _rodar
+        self.runner = _com_o_recuo(runner or _rodar)
         #: Para onde este nó entrega, e a frase quando não entrega. ``None`` é
         #: *"ninguém resolveu a rota"* e vale como recusa — nunca como "entrega
         #: em algum lugar". Ver :meth:`iniciar`.
@@ -1208,8 +1208,8 @@ class SinkVirtualPipeWire:
         if not self.nome:
             logger.info("som_sem_identidade", uniq=self.uniq)
             return False
-        if shutil.which("pactl") is None:
-            logger.info("som_sem_pactl")
+        # Sem `pactl`, com o servidor em recuo, ou com a sondagem sem resposta: nada sai.
+        if not _o_servidor_atende(self.runner, self.nome):
             return False
         saida = self.runner(
             [
@@ -1252,7 +1252,7 @@ class SinkVirtualPipeWire:
         rota = self.rota
         if rota is None or not rota.tem_rota:
             return
-        for argv in argv_das_rotas(self.nome, rota):
+        for argv in _enquanto_o_servidor_atende(argv_das_rotas(self.nome, rota)):
             saida = self.runner(list(argv))
             linhas = [ln.strip() for ln in (saida or "").splitlines() if ln.strip()]
             if not linhas or not linhas[-1].isdigit():
@@ -1289,7 +1289,7 @@ class SinkVirtualPipeWire:
         aqui o que se pediu como se fosse o que está valendo é o hábito que já
         fez esta tela parecer mentirosa quando ela nunca mentiu.
         """
-        if self._module_id is None:
+        if self._module_id is None or _o_recuo().mudo():
             return None
         saida = self.runner(["pactl", "list", "sinks", "short"])
         for linha in (saida or "").splitlines():
@@ -2379,6 +2379,8 @@ def sink_do_controle(
 
     if not uniq:
         return ""
+    if _o_recuo().mudo():  # o servidor em recuo: o «não sei» vem sem esperar o prazo
+        return ""
     ler = runner if runner is not None else _rodar
     curtos = ler(["pactl", "list", "sinks", "short"]) or ""
     # O NÓ QUE ESTA CASA PUBLICA CONTA COMO PLACA — 10/09/2026, queixa dela.
@@ -2424,6 +2426,8 @@ def monitor_da_saida_padrao(
     loopback com origem vazia é o mesmo defeito do ``paplay --device=`` que
     este produto já pagou — o comando é aceito e o som vai para outro lugar.
     """
+    if _o_recuo().mudo():  # o servidor em recuo: a mesma recusa, sem esperar o prazo
+        return ""
     ler = runner if runner is not None else _rodar
     padrao = (ler(["pactl", "get-default-sink"]) or "").strip()
     if not padrao or padrao.startswith("@"):
@@ -2551,6 +2555,114 @@ def descricao_do_alto_falante(uniq: str) -> str:
     if numero is None:
         return NOME_DO_ALTO_FALANTE_DO_CONTROLE
     return f"{NOME_DO_ALTO_FALANTE_DO_CONTROLE} {numero}"
+
+
+# ---------------------------------------------------------------------------
+# O RECUO DO SERVIDOR — SOM-RECUO-01 (13/09/2026)
+#
+# NO FIM DO MÓDULO de propósito: o mapa e o `docs/data/ensaios.csv` citam
+# linhas deste arquivo, e código novo enfiado lá em cima envelhece as citações.
+# ---------------------------------------------------------------------------
+
+if TYPE_CHECKING:
+    from hefesto_dualsense4unix.integrations.dualsense_bt_audio import RecuoDoPactl
+
+#: A SONDAGEM do som: a pergunta mais barata que o ``pipewire-pulse`` responde,
+#: e a mesma com que quem coordena mediu o travamento de 13/09/2026 (``pactl
+#: info`` com rc=124). Só sai quando um recuo VENCEU sem resposta desde então —
+#: ver :func:`_o_servidor_atende`.
+_SONDAGEM = ("pactl", "info")
+
+
+def _o_recuo() -> RecuoDoPactl:
+    """O recuo do SERVIDOR de som — o MESMO objeto do microfone, lido na hora.
+
+    **Ser o mesmo é a cura.** O servidor é um só: um recuo só do microfone
+    deixava o som batendo na mesma porta a cada 10 s (os números estão em
+    ``dualsense_bt_audio.RecuoDoPactl``). Um prazo estourado aqui cala o
+    microfone no ciclo seguinte, e o dele cala este.
+
+    Lido NA HORA, nunca copiado para um global deste módulo: a régua troca o
+    ``dualsense_bt_audio.PACTL`` por um de relógio de mentira, e um ``from …
+    import PACTL`` no topo congelaria o objeto de antes.
+    """
+    from hefesto_dualsense4unix.integrations import dualsense_bt_audio
+
+    return dualsense_bt_audio.PACTL
+
+
+def _e_pactl(argv: Sequence[str]) -> bool:
+    """O recuo é do servidor de som: só o ``pactl`` entra nele."""
+    return bool(argv) and argv[0] == "pactl"
+
+
+def _anotar_o_prazo(argv: Sequence[str], exc: BaseException) -> None:
+    """O `_rodar` viu uma exceção: se foi o PRAZO de um `pactl`, o recuo fica sabendo."""
+    if _e_pactl(argv) and isinstance(exc, subprocess.TimeoutExpired):
+        _o_recuo().estourou()
+
+
+def _anotar_a_resposta(argv: Sequence[str]) -> None:
+    """Um `pactl` saiu com rc=0: o servidor atende, e o recuo acaba."""
+    if _e_pactl(argv):
+        _o_recuo().respondeu()
+
+
+def _com_o_recuo(
+    runner: Callable[[list[str]], str | None],
+) -> Callable[[list[str]], str | None]:
+    """O `runner` de um nó, contando ao recuo do servidor o que houve com cada pergunta.
+
+    O contrato mora em ``RecuoDoPactl.perguntar``, e o recuo é o de
+    :func:`_o_recuo`, lido a cada pergunta.
+    """
+
+    def _perguntar(argv: list[str]) -> str | None:
+        return _o_recuo().perguntar(runner, argv)
+
+    return _perguntar
+
+
+def _o_servidor_atende(runner: Callable[[list[str]], str | None], nome: str) -> bool:
+    """Pode sair um `load-module` agora? O mesmo desenho do microfone.
+
+    Três recusas, nesta ordem: sem ``pactl`` no sistema; o recuo em curso (nem
+    se pergunta); e, com um recuo VENCIDO sem resposta desde então, a
+    :data:`_SONDAGEM` que não respondeu. Sem recuo nenhum não há sondagem: o
+    caminho de todo dia não ganha pergunta a mais.
+
+    **O `parar()` NÃO passa por aqui, e é decisão:** o microfone deixa o módulo
+    para ``VarredorDeCanaisOrfaos`` quando o servidor está mudo, e o som não
+    tem varredor. Um ``module-null-sink`` deixado para trás é o fantasma de
+    07/09/2026, e o prazo do descarregamento se paga uma vez por queda, não por
+    ciclo.
+    """
+    if shutil.which("pactl") is None:
+        logger.info("som_sem_pactl")
+        return False
+    recuo = _o_recuo()
+    if recuo.mudo():
+        logger.debug("som_pactl_mudo_nao_carrego", sink=nome, espera_s=recuo.espera_s)
+        return False
+    if recuo.espera_s > 0 and runner(list(_SONDAGEM)) is None:
+        logger.debug("som_sondagem_sem_resposta", sink=nome, espera_s=recuo.espera_s)
+        return False
+    return True
+
+
+def _enquanto_o_servidor_atende(
+    comandos: Iterable[tuple[str, ...]],
+) -> Iterator[tuple[str, ...]]:
+    """Os comandos da rota, um a um, até um prazo estourado pôr o servidor em recuo.
+
+    O nó já subiu quando a rota começa. Um `module-loopback` que estoura o prazo
+    não pode ser seguido pelo segundo, que esperaria mais 5 s na mesma fila.
+    """
+    for argv in comandos:
+        if _o_recuo().mudo():
+            logger.debug("som_rota_espera_o_pactl", argv=" ".join(argv))
+            return
+        yield argv
 
 
 __all__ = [

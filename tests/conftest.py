@@ -2854,7 +2854,10 @@ def _nenhum_modulo_de_som_de_verdade() -> Iterator[None]:
     fixture só fecha a porta de quem NÃO injetou nada.
     """
     try:
-        from hefesto_dualsense4unix.integrations import alto_falante_bt
+        from hefesto_dualsense4unix.integrations import (
+            alto_falante_bt,
+            dualsense_bt_audio,
+        )
     except ModuleNotFoundError as erro:  # pragma: no cover — job leve do CI
         # Mesma razão da `_nenhum_sysfs_vivo_na_varredura_de_vpad`: o portão
         # "A casa sabe" roda com só o pytest instalado e nunca importa o
@@ -2868,15 +2871,57 @@ def _nenhum_modulo_de_som_de_verdade() -> Iterator[None]:
         yield
         return
 
-    real = alto_falante_bt._rodar
+    # OS DOIS `_rodar` QUE CARREGAM MÓDULO (SOM-RECUO-01, 13/09/2026). Até esta
+    # data só o do alto-falante tinha guarda, e o do microfone tem a mesma
+    # porta: `SourceVirtualPipeWire.__init__` resolve `runner or _rodar`, então
+    # uma source construída num teste sem `runner` carregava `module-pipe-source`
+    # no servidor dela — e `descarregar_modulo` sem `runner` descarregava.
+    reais = {modulo: modulo._rodar for modulo in (alto_falante_bt, dualsense_bt_audio)}
+    for modulo, real in reais.items():
+        modulo._rodar = _sem_escrever_no_som(real)
+    try:
+        yield
+    finally:
+        for modulo, real in reais.items():
+            modulo._rodar = real
+
+
+def _sem_escrever_no_som(
+    real: Callable[[list[str]], str | None],
+) -> Callable[[list[str]], str | None]:
+    """O `_rodar` de um módulo de som com a ESCRITA recusada e a leitura passando."""
 
     def _sem_escrever(argv: list[str]) -> str | None:
         if any(verbo in argv for verbo in _VERBOS_QUE_ESCREVEM_NO_SOM):
             return None
         return real(argv)
 
-    alto_falante_bt._rodar = _sem_escrever  # type: ignore[assignment]
+    return _sem_escrever
+
+
+@pytest.fixture(autouse=True)
+def _recuo_do_pactl_zerado() -> Iterator[None]:
+    """O recuo do `pactl` nasce ZERADO em cada teste (SOM-RECUO-01, 13/09/2026).
+
+    `dualsense_bt_audio.PACTL` é um singleton do PROCESSO, e a suíte roda num
+    processo só: um `pactl` que estoura o prazo de verdade num teste — ou um
+    teste que chama `PACTL.estourou()` sem trocar o objeto — deixaria o som, o
+    microfone e o volume dos testes seguintes respondendo «não sei» sem
+    perguntar nada. Vermelho por ordem de execução, que se lê como defeito do
+    teste que reprovou.
+
+    Zera NO LUGAR (`zerar()`), sem trocar o objeto: quem copiou a referência por
+    `from … import PACTL` enxerga o mesmo zero.
+    """
+    try:
+        from hefesto_dualsense4unix.integrations import dualsense_bt_audio
+    except ModuleNotFoundError as erro:  # pragma: no cover — job leve do CI
+        if (erro.name or "").split(".")[0] != "hefesto_dualsense4unix":
+            raise
+        yield
+        return
+    dualsense_bt_audio.PACTL.zerar()
     try:
         yield
     finally:
-        alto_falante_bt._rodar = real  # type: ignore[assignment]
+        dualsense_bt_audio.PACTL.zerar()
