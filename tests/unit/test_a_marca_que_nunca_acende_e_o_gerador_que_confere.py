@@ -165,8 +165,8 @@ import onde as por_nome
 from hefesto_dualsense4unix.interface import onde as por_pacote
 for modulo in {id(por_nome): por_nome, id(por_pacote): por_pacote}.values():
     def gravar_e_recusar(nome, doc, original=modulo.gravar):
-        original(nome, doc + "\\n<!-- escrita sabotada pela regua -->")
-        raise SystemExit("sabotagem da regua: a conferencia recusou " + nome)
+        original(nome, doc + "\\n<!-- escrita sabotada pela régua -->")
+        raise SystemExit("sabotagem da régua: a conferência recusou " + nome)
     modulo.gravar = gravar_e_recusar
 sys.argv = [str(gerador)]
 runpy.run_path(str(gerador), run_name="__main__")
@@ -216,7 +216,7 @@ def test_a_recusa_nao_chega_a_bancada(gerador: str, tmp_path: pathlib.Path) -> N
         [sys.executable, "-c", SABOTAGEM, str(INTERFACE / gerador)],
         capture_output=True, text=True, timeout=300,
         env=_ambiente(bancada, provisorio), cwd=str(RAIZ))
-    assert r.returncode != 0 and "sabotagem da regua" in r.stderr, (
+    assert r.returncode != 0 and "sabotagem da régua" in r.stderr, (
         f"`{gerador}` não passou pela escrita sabotada (rc={r.returncode}) — a "
         f"régua não mediu nada:\n{r.stderr.strip()[-800:]}")
     assert _md5(bancada) == antes, (
