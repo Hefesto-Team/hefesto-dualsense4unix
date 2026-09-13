@@ -1,6 +1,6 @@
 ---
 sprint: RECONECTAR-SAMBA-02
-estado: aberta
+estado: feita
 onda: A-TERCEIRA-LISTA-DELA
 posse:
   RECONECTAR-SAMBA-02:
@@ -22,6 +22,14 @@ nao_toca:
 
 # RECONECTAR-SAMBA-02 — o botão que ainda muda de lugar e de formato na janela dela
 
+> **ESTADO 2026-09-13: feita** — entrega em
+> [agentes/2026-09-13/RECONECTAR-SAMBA-02-opus.md](../agentes/2026-09-13/RECONECTAR-SAMBA-02-opus.md).
+> O chip do lugar vazio guarda o vão (`visibility:hidden`), a frase da mesa pousa
+> por cima da fileira, e o tique mudo repinta o último estado bom por três tiques
+> (`hefesto_vivo.FolgaDoServicoMudo`). No piloto oculto, sobre `e1c7d96b`, o botão
+> ia de y 463 a 402 com o serviço mudo e a 429 com a lista vazia; com a cura, 462
+> nos dois.
+
 A palavra dela está no índice: *«reconectar controles segue dando pau… falo do
 posicionamento e formato dele. ele segue sambando.»*
 
@@ -37,7 +45,8 @@ posicionamento e formato dele. ele segue sambando.»*
      `data-conectado="nao"`, a regra S-04 de `aba01.py` tira os chips com
      `display:none`, a fileira de cartões cai de 129 para 67 px e **o botão sobe
      62 px**, voltando no tique seguinte. O diário dela tem `[daemon mudo] timed
-     out` em 07, 09, 12 e 13/09;
+     out` em 09, 10, 12 e 13/09 (os de 07/09 são `[Errno 2]` e `[Errno 104]`, o
+     serviço reiniciando);
    * **zero controles** — a frase da mesa vazia entra NO FLUXO, acima dos
      cartões, e desce o botão 27 px (saldo de −35 px).
 3. **O comentário acima da regra S-04 afirma o contrário** («a altura da fileira
@@ -56,6 +65,13 @@ O estudo inteiro fica na pasta do lote `1309-terceira`.
 **ATENÇÃO: os números acima são de ANTES da costura da ALTURA-DA-VISTA-01**, que
 tira a faixa do cabeçalho das dez páginas. Remeça sobre a base em que a sua árvore
 nasceu.
+
+**REMEDIDO em 13/09/2026, sobre `e1c7d96b`, antes da cura.** Piloto oculto (vista de
+1212x809), dublê de `DaemonMudo` com `TimeoutError` na causa: o botão sobe **61 px**
+(y 463 → 402, cartão 128 → 67) e, com a lista vazia, o saldo é de **34 px** para
+cima (463 → 429). No Chrome, na página publicada, a 1228 e 1300: 464 → 403 e
+464 → 430. O diário tem 17 tiques `timed out` em 15 corridas; das 14 que voltaram,
+13 duraram um tique e uma durou três.
 
 ## §D — Decisões (quem coordena, por delegação)
 
