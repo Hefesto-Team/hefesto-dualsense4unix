@@ -208,8 +208,8 @@ daemon. Os perfis dela conferidos por md5 antes e depois: idênticos.
   no fonte.
 * **As bibliotecas de 32 bits** dos runtimes: o python é de 64.
 * **`tests/unit/test_hefesto_launch_wrapper.py` depois da mudança.** Rodei-o uma
-  vez na base, antes de ver o Game Mode (item 3 abaixo); o `case` novo está
-  coberto pela régua nova e por `test_launch_env.py`.
+  vez na base, antes de ver o Game Mode (item 3 abaixo). A validação o rodou
+  depois da mudança, com o Game Mode na sombra: verde.
 * **A suíte inteira**, que é de quem coordena.
 * **As outras sprints de 13/09** além do cabeçalho de posse das duas que citam
   os meus arquivos — JOGO-SEM-EXCLUSIVIDADE-01 e LIGHTBAR-NA-STEAM-01, que
@@ -230,19 +230,84 @@ daemon. Os perfis dela conferidos por md5 antes e depois: idênticos.
    * `docs/process/agentes/2026-09-04/ONDA1-D3.md`, o item 1 das afirmações
      caídas;
    * `docs/process/agentes/2026-09-11/AUDITORIA-SOM-GIRO-01-opus.md` e a §1 de
-     `docs/process/sprints/2026-09-11-AUDITORIA-SOM-GIRO-01-todas-as-features-por-controle-e-dentro-do-jogo.md`.
+     `docs/process/sprints/2026-09-11-AUDITORIA-SOM-GIRO-01-todas-as-features-por-controle-e-dentro-do-jogo.md`;
+   * `docs/process/2026-09-05-A-MASCARA-NAO-CUSTA-FEATURE-o-principio-e-o-que-ele-cobra.md`,
+     o fim da §3.3: diz que o SDL não enumera o nó e que o canal serve a um
+     `evtest`, não a um jogo de Steam (achado pela validação);
+   * `docs/process/sprints/2026-09-05-ONDA-CINCO-INDICE.md`, o item do
+     giroscópio sob a máscara Xbox: a mesma frase (achado pela validação).
 2. **O mapa e o `specs.html`** (`nao_toca`): as células
    `movimento.giroscopio.jogo@dualsense` e `movimento.acelerometro.jogo@dualsense`
    precisam da ressalva de biblioteca antes de a MESA-DE-QUATRO-01 escrevê-las.
    As medições com a `chave` estão acima.
-3. **`tests/unit/test_hefesto_launch_wrapper.py` roda o wrapper com o `PATH` da
-   máquina.** Com `system76-power` instalado aqui, o Game Mode do wrapper pede
-   Performance a cada teste e devolve o perfil anterior ~2 s depois — a suíte
-   mexe no perfil de energia dela. A régua nova roda com `PATH` mínimo; a
-   antiga ficou como estava.
+3. **CURADO PELA VALIDAÇÃO** (seção abaixo): `tests/unit/test_hefesto_launch_wrapper.py`
+   rodava o wrapper com o `PATH` da máquina, e o Game Mode dele falava com o
+   `system76-power` real a cada teste.
 4. **`quem_o_jogo_abre.py` decide `wrapper_rodou` pela `PROTON_DISABLE_HIDRAW`**,
    que não sai em Modo Nativo: com o jogo em Nativo ele acusaria o wrapper de
    não ter rodado. As duas variáveis que saem em toda variante dariam o sinal
    certo. Fora do §I.
 5. **O runtime `SteamLinuxRuntime/`, sem sufixo**, traz outra cópia da 2.32.10 e
    fica fora do padrão de busca do ensaio — é a mesma versão do scout, que entra.
+6. **Um vermelho herdado, fora da posse:**
+   `tests/unit/test_a_aba_03_gatilhos_fecha_as_linhas.py::test_o_piloto_le_a_chave_recado_e_a_tira_da_pintura`
+   procura `"recado" in resposta` em `interface/hefesto_vivo.py`, e a base
+   `e1c7d96b` já não tem a string (a recusa saiu da tela em `a6ad8505`). Os dois
+   arquivos são idênticos à base nesta branch.
+
+## O que a validação refez e corrigiu
+
+Agente VALIDA/CORRIGE, na mesma árvore e na mesma branch. As sondas repetiram a
+régua do implementador — `--so-medir`, `SDL_JOYSTICK_HIDAPI=0` e
+`SDL_HIDAPI_LIBUSB=0`, sem `EVIOCGRAB`, sem daemon, sem contêiner —, com o vpad P1
+vivo pelo rádio. Os perfis dela, conferidos por md5 antes e depois: idênticos.
+
+### Refeito, e conferiu
+
+* **Posse:** os 13 arquivos do diff cabem no `posse:`/`cria:` mais esta entrega.
+* **Tela:** nenhuma página tocada; nas 31 páginas publicadas, 361 `data-gesto` e
+  277 `<button` em `e1c7d96b` e na branch.
+* **As três mordidas da dica**, cada lado arrancado e devolvido com md5
+  conferido, agora com `test_hefesto_launch_wrapper.py` junto: `compose_env`
+  derruba 11; a allowlist, 3; o `case`, 3; devolvida, 49 verdes.
+* **A struct:** sem os três ints, `rc=3` — a 2.32.10 do scout lista 1 nó contra
+  um piso de 4, e o SDL3 3.4.14 do sniper sai «NÃO MEDIDA» com `rc=-11`.
+  Devolvida: `rc=0`, 4 de 4 e 17 entradas em 6 nós. Os deslocamentos da
+  docstring conferem: `next` no 72 nas duas, `bus_type` no 68.
+* **A biblioteca:** a 2.30.0 do sistema sem a variável dá `HasSensor=False` e 0
+  giros nos dois controles abertos por evdev, e o veredito nomeia a
+  biblioteca, a revisão e «padrão (1)»; com a dica em 0, `True` e 137 giros.
+* **A frase caída:** as quatro formas da §V voltam vazias fora das citações
+  datadas. Formas vizinhas acharam duas ocorrências fora da posse que a lista
+  do item 1 não tinha; estão lá agora.
+* **Réguas vizinhas:** os 119 arquivos de `tests/unit` que citam os arquivos ou
+  os símbolos mudados, em quatro lotes, com o Game Mode na sombra: 448, 486, 600
+  e 608 verdes, e um vermelho — o herdado do item 6.
+
+### Corrigido
+
+1. **O `--so-medir` prometia não abrir `hidraw`, e a promessa não tinha régua.**
+   Tirar o `env.update(_SO_LEITURA)`, ou o `--so-medir` do comando do filho,
+   passava em todo teste — e a corrida seguinte abriria o controle pelo driver
+   PS5, que escreve ao abrir. A régua
+   `test_o_so_medir_da_a_cada_biblioteca_um_ambiente_que_nao_abre_hidraw`
+   confere os dois processos de cada biblioteca; as duas arrancadas reprovam.
+2. **A struct só mordia com o aparelho na mesa.**
+   `test_a_struct_da_enumeracao_poe_o_next_onde_a_biblioteca_o_poe` confere os
+   deslocamentos; sem os três ints, reprova.
+3. **`test_hefesto_launch_wrapper.py` falava com o daemon de energia real.**
+   Medido com dublês que só registram, na frente do `PATH`: uma corrida do
+   arquivo pediu `system76-power profile` 20 vezes. O `enter_game_mode` roda
+   em todo lançamento, sem depender do `SteamAppId`, e com o perfil em
+   `balanced` ou `battery` pede `performance` e devolve depois. `_run_wrapper`
+   passou a pôr dublês mudos na frente do `PATH`, e
+   `test_o_wrapper_testado_nao_alcanca_o_game_mode_da_maquina` guarda: com o
+   `PATH` da máquina devolvido ela reprova, e o registro volta a 20 chamadas;
+   com a cura, 0.
+
+### O que a validação não refez
+
+* As nove bibliotecas: refeitas só a 2.32.10 do scout, o SDL3 3.4.14 do sniper e
+  a 2.30.0 do sistema; a 2.32.10 com `=1` também não.
+* Tudo o que a seção «O que NÃO verifiquei» já declara: o jogo, o cabo, as
+  bibliotecas de 32 bits e o HIDAPI ligado.
