@@ -101,8 +101,11 @@ Na M1, a R4 `[tocando]` reprovou com o gravador **são**: ele morre no TERM, mas
 o `descer` de antes não dá `wait`, e o nó sai sem que alguém o tenha colhido. É
 leitura, e o instante exato não foi medido.
 
-Portões: `bash scripts/portoes.sh` completo, depois do `git add -A` desta
-entrega. O resultado está no fim desta seção de fechamento, no commit.
+Portões: `bash scripts/portoes.sh` completo, depois do `git add -A`. A primeira
+corrida deu `REPROVOU: 1 vermelho(s) de 60 -> acentuacao`, com duas grafias de
+«código» sem acento, uma na docstring de `ComoMorreu` e outra na chave do
+diário do alimentador. Corrigidas em `14c74427`. A segunda corrida deu
+`TODOS VERDES — 60 portões.` em 380 s.
 `scripts/validar-citacoes-de-linha.py --all`: `OK: 3288 citação(ões) … em 21
 documento(s) e 9 planilha(s)`. Nenhuma célula de planilha andou.
 
