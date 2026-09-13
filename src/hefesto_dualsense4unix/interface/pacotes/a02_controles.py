@@ -1325,6 +1325,42 @@ def no_do_microfone(entry: Any) -> str:
     return str(fonte) if isinstance(fonte, str) and fonte else ""
 
 
+#: OS DOIS CINZAS DA MOLDURA DO MICROFONE — MIC-SEM-FONTE-01, 13/09/2026. São
+#: VALOR DE ATRIBUTO (`data-apagado`), nunca frase: a folha da página lê cada um
+#: e decide o que apaga, e nenhum dos dois chega à tela como texto.
+MIC_SEM_ALVO = "sem-alvo"
+MIC_SEM_FONTE = "sem-fonte"
+
+
+def microfone_apagado(entry: Any) -> str:
+    """O cinza da moldura do MICROFONE deste controle, ou ``""`` quando ela acende.
+
+    O deslizante do microfone de um controle no rádio arrastava, e só DEPOIS o
+    daemon respondia `sem_fonte` — com a resposta já no tique anterior, em
+    `canal_fonte` nulo (§1 e §2 da sprint MIC-SEM-FONTE-01). Três respostas:
+
+    * ``MIC_SEM_ALVO`` — sem endereço (`uniq_do_entry`): todo comando de som
+      iria para o controle primário. É a guarda da linha 57 da paridade;
+    * ``MIC_SEM_FONTE`` — o daemon DISSE a fonte, e ela é nula: o deslizante não
+      tem nó onde escrever. O 🎙 continua aceso, porque é ele que pede o canal;
+    * ``""`` — há fonte, ou o daemon ainda não perguntou. Chave ausente é "não
+      sei" (`ipc_handlers` só publica depois da primeira volta do laço do
+      canal), e apagar sobre ela afirmaria o que ninguém mediu.
+
+    O ENDEREÇO É SÓ DO MICROFONE: a fonte de captura não diz nada sobre o
+    alto-falante, que toca pelo rádio desde 10/09. Pôr esta pergunta no
+    `som-sem-endereco`, que veste as duas molduras, apagaria o som que funciona.
+    """
+    if uniq_do_entry(entry) is None:
+        return MIC_SEM_ALVO
+    if no_do_microfone(entry):
+        return ""
+    blocos = (entry.get("audio") if isinstance(entry, dict) else None,
+              _bloco_do_speaker(entry))
+    disse = any(isinstance(b, dict) and "canal_fonte" in b for b in blocos)
+    return MIC_SEM_FONTE if disse else ""
+
+
 def sink_do_cache(uniq: str) -> str:
     """O sink de SAÍDA deste controle, do cache da camada 1. ``""`` = não sei.
 
@@ -2770,9 +2806,9 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
                 **porques_do_som(c),
                 # A METADE VISÍVEL DA GUARDA SEM ENDEREÇO — linha 57. Os dois
                 # `?` acima já dizem POR QUÊ; o que falta é o que a GTK faz
-                # ANTES do clique: apagar as peças que MANDAM som. Um campo só,
-                # nos DOIS blocos (o `achar()` do piloto visita os dois com o
-                # mesmo valor), e o alvo `atributo` REMOVE o atributo quando o
+                # ANTES do clique: apagar as peças que MANDAM som. Desde 13/09
+                # este campo veste só a moldura do ALTO-FALANTE (a do microfone
+                # lê `mic-apagado`, abaixo), e o alvo `atributo` REMOVE o atributo quando o
                 # endereço aparece — a volta acontece sozinha, sem a guarda ter
                 # de lembrar quem ela apagou.
                 #
@@ -2788,6 +2824,9 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
                 "som-sem-endereco": (
                     "" if uniq_do_entry(c) is not None else TEXTO_AUDIO_SEM_ENDERECO
                 ),
+                # O CINZA DO MICROFONE TEM ENDEREÇO PRÓPRIO — MIC-SEM-FONTE-01.
+                # Ver `microfone_apagado`: sem endereço OU com a fonte nula.
+                "mic-apagado": microfone_apagado(c),
                 # QUAL GAMEPAD VIRTUAL ESTE CONTROLE ALIMENTA — linha 45, e a
                 # frase inteira é do dono (`dica_do_titulo`), inclusive o "ainda
                 # não alimenta gamepad virtual nenhum" e o nome REAL do vpad

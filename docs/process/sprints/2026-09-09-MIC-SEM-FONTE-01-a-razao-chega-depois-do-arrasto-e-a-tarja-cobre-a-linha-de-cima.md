@@ -1,6 +1,6 @@
 ---
 sprint: MIC-SEM-FONTE-01
-estado: aberta
+estado: feita
 posse:
   MIC-SEM-FONTE-01:
     - src/hefesto_dualsense4unix/interface/pacotes/a02_controles.py
@@ -41,6 +41,11 @@ nao_toca:
   - src/hefesto_dualsense4unix/integrations/audio_control.py
   - src/hefesto_dualsense4unix/interface/hefesto_vivo.py
 ---
+
+> **ESTADO 2026-09-13: feita** — [entrega](../agentes/2026-09-13/MIC-SEM-FONTE-01-opus.md):
+> a moldura do microfone ganha o endereço próprio `mic-apagado`, e o deslizante
+> de um controle com `canal_fonte` nulo apaga antes do arrasto, sem frase; o
+> alto-falante, o botão do microfone e os modos ficam acesos.
 
 > **ROTA CORRIGIDA — 13/09/2026, e ela vence o corpo abaixo** (triagem das
 > abertas). **A metade da TARJA morreu:** a
