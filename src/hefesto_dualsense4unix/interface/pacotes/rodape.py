@@ -32,7 +32,8 @@ Decisão dela, `07-Q1`: *"Deve aplicar automaticamente como era no gtk"* — e o
 desenho é dela desde 16/08: *"nem precisa ter um botão na gui, mas ele se auto
 corrigir ao clicarmos em aplicar ou salvar o perfil seja dentro ou fora da guia
 de perfis."* Quem repõe é `perfil.com_a_carona()`, atrás do `carona.ligada()`
-do dono, e a notícia (quando há) volta como `{"recado": …}`.
+do dono. A notícia (quando há) vai ao diário da janela e não à tela — desde
+13/09/2026, ver `_recado`.
 
 =========  =======  ==========================================================
 gesto      carona?  a razão
@@ -60,6 +61,7 @@ condição em que escrever a linha da Steam é jogar o reparo fora.
 from __future__ import annotations
 
 import pathlib
+import sys
 from typing import Any
 
 from . import Contexto, gesto, perfil
@@ -67,25 +69,29 @@ from . import Contexto, gesto, perfil
 PAGINA = "*"
 
 
-def _recado(frase: str) -> dict[str, Any] | None:
-    """A notícia da carona para o cartão — e `None` quando não há notícia.
+def _recado(frase: str) -> None:
+    """A notícia da carona vai ao DIÁRIO da janela — e não mais à tela.
 
-    O CANAL JÁ EXISTIA e o contrato é do piloto: *"Um gesto que devolva
-    `{"recado": "…"}` manda a própria frase para o cartão, e ela vence esta"*
-    (`interface/hefesto_vivo.py:154-157`). O `recado` sai da carga antes da
-    pintura — ele não é endereço de página nenhuma.
+    ATÉ 13/09/2026 ELA IA AO CARTÃO, como `{"recado": …}` pelo canal de sucesso
+    do piloto (a D-01). Ela mandou tirar, com a foto deste rodapé: *"essas
+    frases de status que aparecem no rodapé isso não deveria estar
+    aparecendo"*, *"em todas as abas da interface"* (TELA-CALADA-01). Medido no
+    piloto oculto antes da cura: o «Aplicar» com um jogo sem o atalho escrevia
+    a frase na faixa da 01, no cartão do P1 da 02 — onde ela já chegava vinda
+    da 01 — e na faixa da 05.
 
-    O SILÊNCIO É O CASO COMUM, DE PROPÓSITO. Sem nada a repor, a carona devolve
-    frase vazia e este gesto volta a `None`: o "deu certo" é o campo piscando em
-    VERDE por ~1,5 s (decisão dela, `03-Q4`), **sem palavra nova na tela**. A
-    carona só fala quando tem notícia.
+    QUEM REPÕE O ATALHO É A CARONA, NÃO A FRASE: os três gestos continuam
+    chamando `perfil.com_a_carona()` e o `localconfig.vdf` continua consertado.
+    O que muda é só a notícia, que sai no `interface.log` como `[relato]`. O
+    "deu certo" na tela é a piscada verde de ~1,5 s no botão (decisão dela,
+    `03-Q4`).
 
-    UM LUGAR SÓ para os três gestos do rodapé: a terceira cópia de um `if` é a
-    que esquece o `strip()` ou devolve `{"recado": ""}` — que o piloto trataria
-    como carga vazia, e não como silêncio.
+    UM LUGAR SÓ para os três gestos do rodapé: a terceira cópia de um `print` é
+    a que esquece o `strip()` e relata uma linha vazia.
     """
     frase = frase.strip()
-    return {"recado": frase} if frase else None
+    if frase:
+        print(f"[relato] rodapé · carona: {frase}", file=sys.stderr)
 
 
 def _draft_do_ativo(nome: str, ctx: Contexto | None = None) -> Any:
@@ -351,7 +357,7 @@ def _o_que_e_da_mesa_inteira(draft: Any, ctx: Contexto) -> Any:
 # Três linhas iguais e nenhum `if`: quem decide é a função dona, e um segundo
 # `or ""` aqui seria a terceira leitura de uma pergunta que já tem resposta.
 @gesto("*", "aplicar")
-def aplicar(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
+def aplicar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     """O botão verde. Manda o perfil ativo aos controles, sem gravar.
 
     `profile.apply_draft` é o método, e o payload é o `to_ipc_dict()` do draft —
@@ -368,11 +374,12 @@ def aplicar(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
             "aplicar: não há perfil ativo para mandar aos controles. "
             "Escolha um na aba Perfis.")
     p.apply_draft_detalhado(draft.to_ipc_dict())
-    return _recado(perfil.com_a_carona())
+    _recado(perfil.com_a_carona())
+    return None
 
 
 @gesto("*", "salvar", grava="save_profile")
-def salvar(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
+def salvar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     """Grava o que está valendo no perfil ATIVO, no disco dela.
 
     A JANELA ESTÁVEL PERGUNTA O NOME — `on_save_profile` abre um diálogo. Aqui
@@ -396,7 +403,8 @@ def salvar(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
     atual = load_profile(nome)
     save_profile(draft.to_profile(nome, priority=atual.priority),
                  origem="interface-nova")
-    return _recado(perfil.com_a_carona())
+    _recado(perfil.com_a_carona())
+    return None
 
 
 @gesto("*", "exportar")
@@ -438,7 +446,7 @@ def exportar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
 
 
 @gesto("*", "importar")
-def importar(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
+def importar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     """Carrega um perfil de um `.json` que ela escolhe.
 
     O SELETOR É DO SISTEMA, e por isso vem INJETADO: o WebView não abre
@@ -489,7 +497,8 @@ def importar(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
     destino.write_text(_json.dumps(dados, ensure_ascii=False, indent=2),
                        encoding="utf-8")
     print(f"[importar] {novo.name!r} → {destino}")
-    return _recado(perfil.com_a_carona())
+    _recado(perfil.com_a_carona())
+    return None
 
 
 PISO_DA_ABA = 4

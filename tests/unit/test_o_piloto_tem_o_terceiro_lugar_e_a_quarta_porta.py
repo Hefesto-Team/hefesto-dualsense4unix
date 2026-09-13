@@ -184,6 +184,13 @@ LER_OS_DOIS_BOTOES = r"""
 #: AS FAIXAS QUE A PÁGINA DECLARARIA. Nenhuma das dez publicadas traz o
 #: atributo — publicar é ato dela —, então a régua o escreve, que é o mesmo que
 #: a `ONDA5-05-03` fez no `#vib-estado` da bancada.
+#:
+#: O TOM DA FAIXA PASSOU A SER `recusa` EM 13/09/2026 (TELA-CALADA-01). Até
+#: então a régua declarava `sucesso` e clicava um gesto que devolvia recado; o
+#: sucesso deixou de ser depositado por pedido dela (*"em todas as abas da
+#: interface"*), e o único tom que ainda atravessa o canal é a recusa. O que
+#: esta régua mede — a página declara o lugar, e dois lugares iguais perdem os
+#: dois — é do BOOTSTRAP, e não do tom.
 POR_AS_FAIXAS = r"""
 (function(quantas){
   for(const v of document.querySelectorAll('.regua-faixa')) v.remove();
@@ -191,7 +198,7 @@ POR_AS_FAIXAS = r"""
     const d = document.createElement('div');
     d.className = 'regua-faixa';
     d.id = 'regua-faixa-' + i;
-    d.setAttribute('data-hef-recados', 'sucesso');
+    d.setAttribute('data-hef-recados', 'recusa');
     d.setAttribute('data-hef-recado-classe', 'est recibo');
     document.body.appendChild(d);
   }
@@ -290,9 +297,12 @@ def medido() -> dict:
     MESA["estado"] = ESTADO
     hv.mesa_viva.estado_do_daemon = lambda *a, **k: MESA["estado"]  # type: ignore[assignment]
 
+    # O CLIQUE RECUSA DESDE 13/09/2026 (TELA-CALADA-01): o recado de sucesso
+    # deixou de ser depositado, e a recusa é o tom que ainda chega às faixas e
+    # ao cartão. A frase é a mesma; o caminho passou a ser o `RuntimeError`.
     def clique_que_diz(ctx, o, p):
         chamados.append(f"clique:{GESTO_DO_CLIQUE}")
-        return {"recado": FRASE_DO_RECADO}
+        raise RuntimeError(FRASE_DO_RECADO)
 
     def vivo_que_le(ctx, o, p):
         """A leitura: devolve carga de pintura, e nada mais.
@@ -465,6 +475,16 @@ def medido() -> dict:
         # AS TRÊS PORTAS DE HOJE NÃO MUDARAM: um `change` no MESMO elemento, que
         # carrega os dois atributos, continua despachando o `data-hef-gesto`.
         fora["chamados-antes-do-change"] = list(chamados)
+        # O DEPÓSITO E A TELA ZERAM ANTES DO `change` — 13/09/2026. O clique
+        # passou a RECUSAR (TELA-CALADA-01), e a recusa vive 30 s: sem zerar,
+        # a de `clique-3` ainda estaria na tela aqui, e a asserção de que o
+        # `change` depositou passaria sobre um recado velho. O recibo de
+        # sucesso, que vivia 6 s, já tinha vencido quando esta fase chegava.
+        piloto._recados.clear()
+        piloto.ponte.perguntar(
+            "for(const el of document.querySelectorAll('.hef-recado')) el.remove();"
+            " String(document.querySelectorAll('.hef-recado').length)",
+            anotar("zerou-antes-do-change"))
         piloto.ponte.perguntar(
             campo_vivo(VIVO, GESTO_DO_CLIQUE, "change", "abc"),
             anotar("porta-change"))
@@ -672,11 +692,12 @@ def test_dois_lugares_iguais_a_pagina_perde_os_dois(medido: dict) -> None:
     leitura = medido["com-duas-faixas"]
     assert isinstance(leitura, dict), leitura
     demais = leitura["faixas_demais"]
-    assert "sucesso" in demais, (
+    # O TOM É `recusa` DESDE 13/09/2026 — ver a nota do `POR_AS_FAIXAS`.
+    assert "recusa" in demais, (
         "com dois containers declarando o mesmo tom o piloto tinha de RECUSAR "
         f"os dois e dizer quais são; `faixasDemais` veio {demais!r}")
-    assert sorted(demais["sucesso"]) == ["regua-faixa-0", "regua-faixa-1"], (
-        f"a recusa não nomeou os dois: {demais['sucesso']!r}")
+    assert sorted(demais["recusa"]) == ["regua-faixa-0", "regua-faixa-1"], (
+        f"a recusa não nomeou os dois: {demais['recusa']!r}")
     recados = _r(leitura)
     assert recados, "o recado sumiu com as duas faixas"
     assert recados[0]["lugar"] in ("grade", "fluxo"), (

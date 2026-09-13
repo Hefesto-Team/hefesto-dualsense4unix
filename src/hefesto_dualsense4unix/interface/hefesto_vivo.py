@@ -149,6 +149,12 @@ SEGUNDOS_DO_RECADO = 30.0
 #: *"foi"*, e ela se esgota na leitura. Um recibo que fica meio minuto no cartão
 #: vira estado, e a palavra dela sobre este canal é a de 02/09: **é aviso, não
 #: estado**.
+#:
+#: **SEM QUEM DEPOSITE DESDE 13/09/2026** (TELA-CALADA-01): o piloto não põe
+#: mais recado de sucesso na tela — *"em todas as abas da interface"*, pedido
+#: dela. O número fica porque o depósito ainda poda pelo tom e duas réguas o
+#: citam; tirá-lo é trabalho que cruza a posse desta sprint, e está relatado
+#: na entrega dela.
 SEGUNDOS_DO_RECADO_DE_SUCESSO = 6.0
 
 #: A FRASE QUE O PILOTO DIZIA QUANDO O GESTO NÃO TRAZIA UMA — MORTA em
@@ -2894,13 +2900,16 @@ class Piloto:
         #: com a D-01 em 04/09/2026. Um dicionário SEPARADO para o sucesso seria
         #: a segunda cópia da mesma regra (a poda, a tradução `uniq → pref`, a
         #: sobrevivência à repintura), e a segunda divergiria — é o mesmo
-        #: argumento que fez a recusa ter um canal só para as dez abas.
+        #: argumento que fez a recusa ter um canal só para as dez abas. Desde
+        #: 13/09/2026 só a recusa é depositada (TELA-CALADA-01).
+        #:
+        #: A QUARTA CASA É A PÁGINA DO CLIQUE — 13/09/2026, TELA-CALADA-01. A
+        #: recusa é daquela aba e só nela aparece; ver `_recados_para_a_tela`.
         #:
         #: E A CHAVE CONTINUA UMA POR CONTROLE, de propósito: o último ato daquele
-        #: aparelho é o que a coluna dele mostra. Uma recusa seguida de um
-        #: sucesso no mesmo botão não pode deixar as duas frases na tela, uma
-        #: dizendo o contrário da outra.
-        self._recados: dict[str, tuple[str, float, str]] = {}
+        #: aparelho é o que a coluna dele mostra. Duas recusas seguidas no mesmo
+        #: controle não deixam as duas frases na tela.
+        self._recados: dict[str, tuple[str, float, str, str]] = {}
         #: A SÉRIE MAIS NOVA DE CADA CAMPO VIVO — `{identidade: série}`.
         #:
         #: É a metade Python do *"um gesto vivo em voo por elemento"*. O JS
@@ -3213,8 +3222,9 @@ class Piloto:
         # O RECADO É ENDEREÇADO AQUI, PELO MESMO `uniq` que o gesto recebe, e
         # não pelo `pref`: a coluna troca de dono entre o clique e o tique
         # seguinte. Ver `self._recados`. Sem `uniq` resolvido (gesto de mesa, ou
-        # clique sobre uma coluna que já esvaziou) a chave é vazia, e o aviso
-        # vira tarja de rodapé — que é honesto: não há cartão de quem dizer.
+        # clique sobre uma coluna que já esvaziou) a chave é vazia e não há
+        # cartão de quem dizer: desde que a tarja de rodapé saiu (13/09/2026), a
+        # recusa sem cartão fica no diário da janela.
         alvo = norm_mac(str(o.get("uniq") or "")) or ""
 
         # EM THREAD, e não no laço do GTK. MEDIDO em 01/09/2026, com o daemon
@@ -3370,24 +3380,30 @@ class Piloto:
         print(f"[gesto falhou] {pagina} · {nome}: {erro}", file=sys.stderr)
         if not isinstance(erro, RuntimeError):
             return False
-        self._depositar(uniq, str(erro), "recusa")
+        self._depositar(uniq, str(erro), "recusa", pagina)
         return False
 
-    # -- o canal de SUCESSO (D-01) ----------------------------------------
-    def _depositar(self, uniq: str, frase: str, tom: str) -> None:
+    # -- o canal do recado ---------------------------------------------------
+    def _depositar(self, uniq: str, frase: str, tom: str, pagina: str) -> None:
         """Guarda um aviso e o põe na tela NA HORA. É o canal, e ele é um só.
 
         NA HORA, e não no próximo tique. Meio segundo entre o clique e a resposta
         basta para ela clicar de novo achando que o primeiro não pegou — que é o
         defeito de origem, não um detalhe de acabamento.
 
-        A RECUSA E O SUCESSO ATRAVESSAM AQUI, os dois, e é essa a peça: o lugar
-        (a coluna de quem ela clicou), a sobrevivência à repintura, a tradução
-        `uniq → pref` no instante da pintura e a poda por tempo já existiam para
-        a recusa e não podiam ser escritos de novo para o sucesso. A D-01 em uma
-        linha é *"como a recusa"* — e "como" quer dizer *o mesmo caminho*.
+        SÓ A RECUSA ATRAVESSA AQUI DESDE 13/09/2026 (TELA-CALADA-01). Até então
+        o sucesso com notícia passava pelo mesmo caminho — a D-01, *"como a
+        recusa"* — e ela mandou tirar: *"essas frases de status que aparecem no
+        rodapé isso não deveria estar aparecendo"*, *"em todas as abas da
+        interface"*. O sucesso vai ao diário (`_deu_certo_dizendo`). O `tom`
+        fica na tupla porque o BOOTSTRAP pinta pelo tom e a página declara a
+        faixa por tom.
+
+        A PÁGINA É A DO CLIQUE, e não a de agora: o gesto corre em thread e pode
+        levar 9,5 s, e ela pode ter trocado de aba no meio. A recusa é daquela
+        página — ver `_recados_para_a_tela`.
         """
-        self._recados[uniq] = (frase, time.monotonic(), tom)
+        self._recados[uniq] = (frase, time.monotonic(), tom, pagina)
         self._js(f"window.__hef && window.__hef.pintar("
                  f"{_json({'recados': self._recados_para_a_tela()})})")
 
@@ -3434,14 +3450,25 @@ class Piloto:
 
             *"nada muda de lugar e nenhuma palavra nova entra na tela"*
 
-        **A regra que isso escreve:** *quando o gesto só repete o que ela acabou
-        de fazer, a tela pisca; quando ele tem NOTÍCIA, a tela fala.* O canal
-        continua sendo um só — o que muda é que ele para de falar sobre o que não
-        tem o que dizer. Quem pisca é o `voltouDoVoo`, no pouso.
+        A regra que isso escrevia — *"quando ele tem NOTÍCIA, a tela fala"* —
+        caducou em 13/09/2026 (nota abaixo). Quem pisca continua sendo o
+        `voltouDoVoo`, no pouso, e agora a piscada é a resposta inteira do
+        sucesso na tela.
 
         ELE NÃO SUBSTITUI O `_deu_certo`, ele o EMBRULHA — e isso é de propósito:
         `_deu_certo` é o caminho da carga de volta (`plugin.list`, "Ver
         detalhes"), tem régua própria e não precisa saber que existe recado.
+
+        **A METADE DO SUCESSO DA D-01 CADUCOU EM 13/09/2026** — TELA-CALADA-01,
+        pela palavra dela, com a foto do rodapé: *"essas frases de status que
+        aparecem no rodapé isso não deveria estar aparecendo"*, *"em todas as
+        abas da interface"*. O recado de sucesso chegava por três portas — o
+        cartão, as faixas `data-hef-recados` da 01 e da 05, e a aba seguinte —,
+        e as três passavam por um depósito de tom `sucesso` feito aqui. **A frase
+        continua vindo do dono e continua saindo da carga**; o que mudou é o
+        destino: o diário da janela, como `[relato] <página> · <gesto>: <frase>`
+        (o desenho que a aba 10 ganhou no mesmo dia, `a10_perfis._anotar`).
+        **A metade da recusa continua valendo inteira** — `_recusou_dizendo`.
         """
         frase = ""
         if isinstance(resposta, dict):
@@ -3451,7 +3478,7 @@ class Piloto:
             if "recado" in resposta:
                 resposta = {k: v for k, v in resposta.items() if k != "recado"}
         if frase:
-            self._depositar(uniq, frase, "sucesso")
+            print(f"[relato] {pagina} · {nome}: {frase}", file=sys.stderr)
         return self._deu_certo(pagina, nome, resposta)
 
     def _a_pagina_morreu(self, motivo: str) -> None:
@@ -3475,7 +3502,8 @@ class Piloto:
         print(f"[página morreu] {motivo} — a pintura pausou até a página voltar",
               file=sys.stderr)
         self.pronto = False
-        self._recados[""] = (FRASE_DA_PAGINA_QUE_MORREU, time.monotonic(), "recusa")
+        self._recados[""] = (FRASE_DA_PAGINA_QUE_MORREU, time.monotonic(), "recusa",
+                             self.pagina)
 
     def _recados_para_a_tela(self) -> list[dict[str, str]]:
         """As frases de recusa ainda vivas, a poda das vencidas, e o CARTÃO de
@@ -3509,20 +3537,28 @@ class Piloto:
         para curar.
         """
         agora = time.monotonic()
-        for chave, (_frase, quando, tom) in list(self._recados.items()):
-            # CADA TOM TEM O SEU PRAZO, e os dois são decisão dela: a recusa
-            # vive os 30 s de 02/09; o sucesso é um recibo e vive 6 s. A conta
-            # continua sendo UMA — o que muda é o número que ela compara.
+        for chave, (_frase, quando, tom, _pagina) in list(self._recados.items()):
+            # CADA TOM TEM O SEU PRAZO: a recusa vive os 30 s de 02/09. O
+            # relógio do sucesso fica enquanto o tom existir na tupla, mas desde
+            # 13/09/2026 ninguém deposita sucesso (ver `_deu_certo_dizendo`).
             if agora - quando >= (SEGUNDOS_DO_RECADO_DE_SUCESSO
                                   if tom == "sucesso" else SEGUNDOS_DO_RECADO):
                 del self._recados[chave]
         onde_esta = {norm_mac(str(c.get("uniq") or "")) or "": str(c.get("pref") or "")
                      for c in self._mesa_de_agora}
+        # SÓ OS DA PÁGINA DE AGORA — 13/09/2026, TELA-CALADA-01. Até aqui o
+        # aviso acompanhava a troca de aba, e uma recusa da 02 reaparecia no
+        # cartão do mesmo controle na 03 por até 30 s: ela olhava uma aba e lia
+        # o desfecho de um clique de outra. O depósito NÃO se apaga na
+        # navegação — quem volta à aba de origem dentro do prazo reencontra a
+        # recusa onde a deixou. Medido no piloto oculto por
+        # `test_a_tela_nao_narra_o_gesto_que_deu_certo`.
         return [{"chave": chave,
                  "cartao": onde_esta.get(chave, "") if chave else "",
                  "texto": frase,
                  "tom": tom}
-                for chave, (frase, _quando, tom) in sorted(self._recados.items())]
+                for chave, (frase, _quando, tom, pagina) in sorted(self._recados.items())
+                if pagina == self.pagina]
 
     # O `_ipc` CRU MORREU em 01/09/2026. Ele abria o socket à mão e montava o
     # JSON-RPC — reescrevendo o que o `app/ipc_bridge.py` já faz há meses, com
@@ -3952,9 +3988,13 @@ class Piloto:
 
         # O RECADO DA RECUSA VIAJA EM TODO TIQUE, e é isto que o faz sobreviver
         # à repintura: a lista CHEIA recria o aviso se a pintura de blocos tiver
-        # levado o cartão embora — e se ela trocou de aba, o aviso a acompanha,
-        # porque é dela e não da página. A lista VAZIA é o que apaga o que
-        # venceu; sem ela a frase ficaria na tela para sempre.
+        # levado o cartão embora. A lista VAZIA é o que apaga o que venceu; sem
+        # ela a frase ficaria na tela para sempre.
+        #
+        # FATO SUBSTITUÍDO EM 13/09/2026 (TELA-CALADA-01): esta nota dizia que,
+        # se ela trocasse de aba, o aviso a acompanhava. Acompanhava — e uma
+        # recusa da 02 aparecia no cartão do mesmo controle na 03. Agora a lista
+        # traz só os avisos da página de agora (`_recados_para_a_tela`).
         carga["recados"] = self._recados_para_a_tela()
 
         def contou(valor: Any, erro: Any) -> None:

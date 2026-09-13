@@ -282,7 +282,10 @@ def test_o_canal_do_recado_continua_sendo_o_raise(portao) -> None:
     """
     fonte = (RAIZ / "src/hefesto_dualsense4unix/interface/hefesto_vivo.py"
              ).read_text(encoding="utf-8")
-    assert 'self._depositar(uniq, str(erro), "recusa")' in fonte, (
+    # SEM O FECHO DO PARÊNTESE desde 13/09/2026: o depósito ganhou a PÁGINA do
+    # clique como quarto argumento (TELA-CALADA-01, a recusa fica só na aba em
+    # que nasceu). A premissa lida é a mesma — `str(erro)` vai ao depósito.
+    assert 'self._depositar(uniq, str(erro), "recusa"' in fonte, (
         "o piloto deixou de mandar `str(erro)` ao cartão — o canal que este "
         "portão lê mudou de forma, e a leitura tem de mudar junto")
 
