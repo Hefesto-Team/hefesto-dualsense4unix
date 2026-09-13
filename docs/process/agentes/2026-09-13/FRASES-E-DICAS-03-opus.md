@@ -173,3 +173,95 @@ o arquivo, o `git diff` saiu idêntico e a linha voltou a terminar na contagem.
 
 **PORTÕES:** a corrida completa roda com esta entrega no índice, depois do
 `git add -A`, e o resultado vai na mensagem do commit.
+
+## O que a validação refez e corrigiu
+
+VALIDA/CORRIGE, 13/09/2026, sobre `d49fa227`. Correções em `e38cb76f`. O python
+é o da venv dela com o `PYTHONPATH` desta árvore (import conferido em
+`…-opus/src`). Perfis iguais por md5 (159 arquivos) depois de cada uma das quatro
+corridas do piloto.
+
+**POSSE.** Os 21 arquivos do diff cabem no `posse:`, no `cria:`, na entrega e nas
+fotos dela, menos os dois testes que a seção de cima declara. A razão deles se lê
+no diff: `dica_da_luz` perdeu o segundo parâmetro, que o teste da 08 passava, e o
+R-06 exigia a narração que saiu. A validação mexeu só em dois arquivos da posse.
+
+**AS REGRAS DELA, contadas.** `<button>` nas dez páginas publicadas: 254 em
+`e1c7d96b` e 254 agora; `data-gesto`: 361 e 361; o mesmo no `mockup/`. Nenhum HTML
+no diff. No DOM do piloto, botões e gestos por aba iguais nas quatro corridas. As
+três mudanças na tela são de tirar: nenhum texto novo chega a ela.
+
+### As mordidas, refeitas com o código de `e1c7d96b`
+
+Cada uma guardou os bytes e o `git diff`, sabotou, conferiu que a sabotagem entrou
+(contagem do trecho), rodou a régua, devolveu e conferiu bytes e `git diff`
+idênticos. Todas voltaram verdes.
+
+| | cura arrancada | reprovou |
+| --- | --- | --- |
+| M1 | `a08_conexoes.py` e `secao_controles.py` de `e1c7d96b` | 4 de 4 |
+| M1b | só o `pacote()` da 08 cola o «porque» do carimbo na dica do rádio, com o dono curado | 2 de 4, as duas do caminho do tique |
+| M1c | só `secao_controles.py` de `e1c7d96b`, com a 08 curada | 2 de 4, `TestARazaoSaiuDoCard` |
+| M2 | `"perfil"` de volta só na 03 | 1 de 3, nomeando `03-gatilhos.html` |
+| M3 | `"perfil"` de volta só na 04 | 1 de 3, nomeando `04-iluminacao.html` |
+| M4 | `emulation_actions.py` de `e1c7d96b` | 5 de 6 |
+| **M4b** | **a narração volta com dois-pontos no lugar do travessão** | **1 de 6 antes da correção, só a D-33; 2 de 6 depois — ver o achado 1** |
+
+### Os achados
+
+1. **CORRIGIDO — a régua do sufixo só conhecia o travessão.**
+   `test_o_sufixo_das_excecoes_conta_e_nao_narra` ficava verde com a narração
+   devolvida depois de dois-pontos: a âncora é «jogo(s) —». Agora a linha visível
+   tem de ser uma só nos três estados da exceção e terminar na contagem. Mordida:
+   M4b, que passou a reprovar nela; M4, 5 de 6 como antes.
+2. **CORRIGIDO — a docstring de `dica_da_luz` citava um símbolo que não existe.**
+   `secao_controles._card_do_controle` não aparece em nenhum outro lugar da árvore;
+   quem pede a dica do lado da janela GTK é o `_BlocoDaLuz`. O nome veio da base,
+   mas no parágrafo que a implementação reescreveu. Uma linha trocada por uma: a
+   08 segue com as 5307 linhas que a 09 cita por número.
+3. **NÃO CORRIGIDO, FORA DA POSSE — a citação que esta sprint deslocou.** Das
+   onze citações por número a `secao_controles.py` em `src/`, `tests/` e
+   `scripts/`, só a da docstring do modo do microfone em `a02_controles.py` estava
+   certa em `e1c7d96b` (a linha 956, a atribuição de `_mic_declarado`). A
+   atribuição está hoje na linha 924. A 02 é `nao_toca:`; confirma o item 2 de «O
+   que sobrou».
+4. **NÃO CORRIGIDO, FORA DA POSSE — o `paridade-gtk-html` fica verde por prosa.** O
+   sinal `frase_do_nascimento` da linha 297 da planilha, `PRESENTE` no escopo da
+   08, só existe hoje na nota datada da docstring. Tirar o nome da nota poria o
+   portão vermelho sem cura nesta posse; a planilha é `nao_toca:`. Confirma o item
+   1 de «O que sobrou».
+5. **O vermelho anterior, confirmado.**
+   `test_o_piloto_le_a_chave_recado_e_a_tira_da_pintura` reprova igual em
+   `e1c7d96b`: o `hefesto_vivo.py` tem o mesmo md5 na base, no `HEAD` e no disco, e
+   não traz o trecho `"recado" in resposta`; o teste também não mudou.
+
+### A tela, no piloto oculto
+
+Xvfb da guarda, `sem_cor`, `HEFESTO_DUALSENSE4UNIX_SKIP_PRESET_SEED=1`, o daemon
+vivo dela e um DualSense pelo rádio. O ANTES são os cinco arquivos de `src/` de
+`e1c7d96b` postos na árvore e devolvidos, com bytes e `git diff` conferidos. Os
+cliques foram no `a.aba` das dez abas e no rótulo «Gestão de Controles»; o
+ponteiro passou sobre «A luz não acende» e o `#hef-dica` foi lido. Nenhum
+`data-gesto` clicado.
+
+| onde | antes | depois |
+| --- | --- | --- |
+| chip «Perfil ativo» | «—» na 03 e na 04, o nome nas outras oito | o mesmo nome nas dez |
+| 08, `#hef-dica` | o que o botão faz, e «▲ nasceu com 1 processo(s) segurando o nó do controle — …», lido do daemon sem dublê | só o que o botão faz |
+| 07, com a exceção dublada no estado efetivo | «Desligado — tudo certo · Exceção por jogo: 1 jogo(s) — controle liberado agora» | «Desligado — tudo certo · Exceção por jogo: 1 jogo(s)» |
+
+### Réguas e portões
+
+As 152 réguas vizinhas, achadas por `git grep` dos cinco arquivos e dos símbolos
+tocados, em oito lotes: 2312 passed, 3 skipped, 1 xfailed e 1 failed, que é o
+achado 5. Mais nove que leem o chip e o carimbo do nascimento: 135 passed. Depois
+das correções, as duas réguas mexidas: 58 passed; `ruff` limpo. Os geradores da
+03, da 04, da 07 e da 08 regeraram as páginas sem diff. A corrida dos portões roda
+com esta seção no índice, e o resultado vai na mensagem do commit.
+
+### O que a validação não verificou
+
+* Uma exceção de verdade no Steam Input: só a leitura dublada, e na tela só o
+  estado efetivo.
+* A dica da luz por cabo, na tela: havia um DualSense só, pelo rádio.
+* A janela GTK, o aparelho, a suíte inteira e o olho dela.
