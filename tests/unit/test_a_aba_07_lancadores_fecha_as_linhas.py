@@ -76,6 +76,39 @@ def a07():
     return a07_lancadores
 
 
+@pytest.fixture(autouse=True)
+def _a_maquina_nao_entra_na_regua(monkeypatch):
+    """Nenhum teste daqui depende de haver jogo da Steam aberto na máquina.
+
+    O VAZAMENTO, MEDIDO EM 13/09/2026: o gesto `copiar_a_linha` devolve
+    `_resposta(VIGIA.agora(), …)`, e a vigia sem dado dispara a thread
+    `hefesto-lancadores`. Ela roda o `_ler_do_disco` de verdade, cujo censo
+    pergunta `steam_game_running()` ao `/proc` real e grava `PORTOES`, global do
+    módulo — medido, a gravação caiu DOIS testes depois do clique. Daí em diante
+    `jogo_aberto=True` escondia o «Desligar o Steam Input» e o «Deixar tudo
+    pronto», e quatro testes reprovavam só porque a máquina estava jogando;
+    `test_a_leitura_do_disco_leva_o_steam_input_ate_o_cartao` lia o `/proc` sem
+    thread nenhuma.
+
+    O DUBLÊ VAI NOS DOIS LUGARES, e os dois foram medidos: a sentinela guarda a
+    própria cópia de `steam_game_running` (`from .steam_launch_options import`),
+    e um dublê só em `steam_launch_options` deixa os mesmos quatro vermelhos com
+    o jogo aberto. Quem precisa de outro valor sobrescreve no próprio teste.
+
+    O QUE NÃO ENTROU, porque foi medido e não mordeu: devolver `PORTOES` e o
+    cache da vigia ao padrão a cada teste, e esperar a thread da vigia terminar.
+    Com o dublê no lugar os dois não mudaram resultado nenhum — nem neste
+    arquivo sozinho, nem com um arquivo anterior sujando o módulo (o
+    `_ler_do_disco` dublado do quarto teste já regrava `PORTOES`).
+    """
+    from hefesto_dualsense4unix.integrations import sentinela_do_wrapper as sw
+    from hefesto_dualsense4unix.integrations import steam_launch_options as slo
+
+    for dono in (slo, sw):
+        monkeypatch.setattr(dono, "steam_game_running", lambda: False)
+        monkeypatch.setattr(dono, "steam_running", lambda: False)
+
+
 @pytest.fixture(scope="module")
 def linha_do_motor() -> str:
     """A linha de inicialização, PERGUNTADA ao dono — nunca digitada aqui.
