@@ -1507,12 +1507,20 @@
      vazia traz o `<span class="nada">` por dentro, e a exclusão a protege. Esta
      aba não tem nenhuma hoje — a regra é para a que vier.
 
-     `display:none` E NÃO `visibility:hidden`: o cartão é `flex` em coluna com
-     `gap:7px`, e um chip invisível guardaria o vão de 28px de uma escolha que
-     não existe. A ALTURA DA FILEIRA NÃO CAI: `.pecas` é grade e os quatro
-     cartões esticam para a linha, que continua medida pelos cheios. */
+     `visibility:hidden` E NÃO `display:none` — 13/09/2026, RECONECTAR-SAMBA-02.
+     FATO ERRADO, SUBSTITUÍDO: aqui se dizia que a altura da fileira não caía,
+     porque os cartões esticam para a linha medida pelos cheios. Só vale com UM
+     lugar cheio. Sem nenhum — o serviço que não respondeu a tempo, ou a lista
+     de controles vazia —, a grade perdia o que lhe dava altura: no Chrome, na
+     página publicada, a 1228 e 1300 de largura, o cartão caía de 129 para 68 px
+     e o «Reconectar controles» subia 61 px (o mesmo no piloto), voltando no
+     tique seguinte. Era o botão sambando na janela dela.
+     Invisível, o chip não se desenha nem recebe clique — o `elementFromPoint`
+     no centro dele cai na `.mascara` —, mas guarda o vão: com os quatro lugares
+     vazios o botão fica a 1 px de onde estava. Nenhuma altura cravada: quem
+     mede a fileira continua sendo o próprio chip. */
   [data-controle][data-conectado="nao"]:not(.vazia) .mascara .chip{
-    display:none !important}
+    visibility:hidden !important}
 
   /* O CABEÇALHO DAS DUAS COLUNAS TEM UMA ALTURA SÓ. O da esquerda ganhou o
      ícone de ajuda (17px) e o da direita é só texto (14,4px): sem isto a
@@ -1569,21 +1577,26 @@
      A frase da mesa (D-07 dela: *"uma frase por cima dos lugares apagados"*) e
      a ressalva da máscara (a queixa 1 dela).
 
-     `display:none` E NÃO `visibility:hidden`, ao contrário da faixa laranja
-     logo abaixo — e a diferença é o que cada uma promete. A faixa reserva o
-     espaço porque ela APARECE E SOME no uso normal (ela clica, a pendência
-     nasce, o daemon alcança, ela some), e a tela não pode pular a cada clique.
-     Estas duas mudam com o ESTADO DA MÁQUINA — um controle que entra, um modo
-     que muda —, e reservar 2 linhas em toda tela normal para o estado vazio
-     custaria 36 dos 40 px de folga do miolo (502 de 542, pela conta da legenda
-     desta aba) sem mostrar nada 99% do tempo.
+     POR CIMA, E NÃO ACIMA — 13/09/2026, RECONECTAR-SAMBA-02. A primeira volta
+     as pôs no FLUXO, acima dos cartões: acesa, a frase empurrava a fileira e
+     tudo o que vem depois dela, e o «Reconectar controles» descia 27 px —
+     medido no Chrome, na página publicada, a 1228 e 1300 de largura. Era o
+     botão mudando de lugar quando a lista de controles chega vazia. Fora do
+     fluxo, a linha pousa no meio da fileira, onde o lugar vazio não desenha
+     nada (o chip invisível logo acima guarda o vão), e o botão não anda.
 
-     O ORÇAMENTO ESTÁ MEDIDO e o pior caso cabe: as duas juntas só acontecem com
-     a mesa VAZIA e fora do modo jogo — e aí os quatro cartões estão apagados,
-     que é o estado com mais folga da aba. */
+     A LINHA APAGADA continua `display:none`: nada dela existe na cena que ela
+     aprovou. O fundo é o do quadro, para a borda dos cartões não cortar a
+     frase. E ela não pega clique, porque com mais controles que lugares a
+     mesma linha pousa sobre cartões cheios, que continuam clicáveis por baixo.
+     As duas linhas dividem o lugar: a ressalva da máscara sai vazia em todo
+     modo desde a JOGAR-A-FAIXA-QUE-PULA-01, então só a da mesa acende. */
+  .quadro-corpo > div:has(> .pecas){position:relative}
   .mesa-notas:not(.ha){display:none}
-  .mesa-notas{margin:0 0 6px}
-  .mesa-nota{color:var(--orange);font-size:12px;line-height:16px}
+  .mesa-notas{position:absolute;left:0;right:0;top:50%;transform:translateY(-50%);
+              z-index:1;margin:0;text-align:center;pointer-events:none}
+  .mesa-nota{color:var(--orange);font-size:12px;line-height:16px;
+             background:var(--panel);padding:0 8px}
   /* O CHIP QUE O PRODUTO NÃO SABE MONTAR — D-03 dela: *"cinza antes, com a
      razão na dica"*. Ele continua clicável de propósito (o gesto recusa DIZENDO
      o nome e as que existem); o que muda é a tela em REPOUSO parar de o mostrar
@@ -2355,9 +2368,10 @@
             <!-- ---------- AS DUAS LINHAS POR CIMA DOS LUGARES ----------
                  04/09/2026. Nenhuma das duas ocupa um pixel na cena que ela
                  aprovou: as duas nascem SEM a classe `ha`, e `.mesa-notas
-                 :not(.ha)` é `display:none`. Elas crescem para baixo quando o
-                 produto tem o que dizer, como a segunda linha da coluna
-                 Atenção já faz.
+                 :not(.ha)` é `display:none`. Quando o produto tem o que dizer,
+                 a linha pousa POR CIMA da fileira, fora do fluxo — desde
+                 13/09/2026 (RECONECTAR-SAMBA-02), porque acima dela empurrava
+                 o «Reconectar controles» 27 px para baixo.
 
                  UM `data-campo`, DOIS ELEMENTOS: o de fora leva
                  `data-hef-alvo="classe"` (existe ou não) e o de dentro não leva

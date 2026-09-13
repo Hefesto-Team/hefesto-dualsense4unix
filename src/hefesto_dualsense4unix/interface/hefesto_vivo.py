@@ -2628,6 +2628,75 @@ def _pagina_da_uri(uri: str | None) -> str:
     return uri.rstrip("/").split("/")[-1].split("?")[0].split("#")[0]
 
 
+#: QUANTOS TIQUES MUDOS SEGUIDOS AINDA REPINTAM O ÚLTIMO ESTADO BOM — ver
+#: `FolgaDoServicoMudo`, que diz de onde o número saiu.
+MUDOS_SEGUIDOS_QUE_VOLTARAM = 3
+
+
+def _o_servico_so_demorou(erro: BaseException) -> bool:
+    """O tique mudo foi DEMORA (`TimeoutError`), e não serviço fora do ar?
+
+    `mesa_viva.estado_do_daemon` embrulha todo `OSError` num `DaemonMudo` e
+    guarda a causa no `__cause__`: o `timed out` é `TimeoutError` (o
+    `socket.timeout` é o mesmo tipo desde o Python 3.10); socket inexistente,
+    conexão recusada ou fechada são outros `OSError`. O `TimeoutError` direto
+    vale igual, que é como um dublê o levanta.
+    """
+    return (isinstance(erro, TimeoutError)
+            or isinstance(erro.__cause__, TimeoutError))
+
+
+class FolgaDoServicoMudo:
+    """O estado que o tique pinta quando o serviço não respondeu — RECONECTAR-SAMBA-02.
+
+    O DEFEITO, medido no piloto oculto (WebKit, vista de 1212x809) com dublê de
+    `TimeoutError`, em 13/09/2026: o tique mudo pintava `{}`, os quatro lugares
+    viravam vazios, a fileira de cartões caía de 128 para 67 px e o «Reconectar
+    controles» subia 61 px — e voltava no tique seguinte, quando o serviço
+    respondia. É o botão que segue sambando, na queixa dela do índice da leva.
+
+    O QUE A FOLGA SEGURA: o serviço que DEMOROU repinta o último estado bom
+    enquanto os mudos seguidos não passarem de `MUDOS_SEGUIDOS_QUE_VOLTARAM`. O
+    seguinte pinta a verdade, `{}`, e o estado guardado é descartado: depois de a
+    tela dizer que o serviço calou, estado velho não volta a ser pintado sem uma
+    resposta nova.
+
+    O QUE ELA NÃO SEGURA: o serviço que não está lá (socket inexistente, conexão
+    recusada ou fechada), que não é demora e se pinta na hora; e o tique mudo
+    antes de qualquer resposta boa, que não tem o que repintar.
+
+    O NÚMERO SAI DO DIÁRIO DELA (`interface.log`, 28 janelas de 07 a 13/09/2026,
+    lido sem escrever). De 09 a 13/09 houve 17 tiques `[daemon mudo] timed out`
+    em 15 corridas; das 14 seguidas de um tique que respondeu, 13 tiveram UM
+    tique e uma teve TRÊS (12/09, na aba Controles). Com três de folga, nenhuma
+    corrida que voltou apagaria os lugares — e é por isso que o número é o
+    ÚLTIMO mudo que ainda repinta, e não o primeiro que diz a verdade: a corrida
+    que deu o número tem de caber inteira, senão a cura reabre o pulo nela. As
+    onze seguidas de 07/09 eram `[Errno 2]` e `[Errno 104]`, o serviço
+    reiniciando: fora do ar é fato, e se pinta na hora.
+    """
+
+    def __init__(self, folga: int = MUDOS_SEGUIDOS_QUE_VOLTARAM) -> None:
+        self.folga = folga
+        #: Quantos tiques mudos seguidos desde a última resposta boa.
+        self.seguidos = 0
+        self._ultimo_bom: dict[str, Any] | None = None
+
+    def respondeu(self, estado: dict[str, Any]) -> None:
+        """O serviço respondeu: zera a conta e guarda o estado para a folga."""
+        self.seguidos = 0
+        self._ultimo_bom = estado
+
+    def mudo(self, erro: BaseException) -> dict[str, Any]:
+        """O estado a pintar neste tique mudo: o último bom, ou a verdade (`{}`)."""
+        self.seguidos += 1
+        if (self._ultimo_bom is not None and self.seguidos <= self.folga
+                and _o_servico_so_demorou(erro)):
+            return self._ultimo_bom
+        self._ultimo_bom = None
+        return {}
+
+
 class Piloto:
     #: OS DOIS TETOS DA LEITURA DOS CONTROLES QUE O HEFESTO SÓ VÊ — EXTERNOS-01,
     #: 06/09/2026. **Os dois números são os da janela antiga**, e nenhum se
@@ -2770,6 +2839,8 @@ class Piloto:
         self._pintura_no_ar = False
         #: Quantos tiques ainda pular por causa do custo do último.
         self._pular = 0
+        #: O que o tique pinta quando o serviço não respondeu — ver a classe.
+        self._folga = FolgaDoServicoMudo()
         #: O custo das DUAS VIAGENS de IPC, separado do custo total do tique. É
         #: o que responde "quem come o orçamento" sem adivinhação.
         self.custo_do_ipc: list[float] = []
@@ -3640,10 +3711,19 @@ class Piloto:
             # travessão pelo molde. Ela mediu que o pacote nunca era chamado
             # neste caminho, e por isso a metade dela não chegava à tela.
             #
-            # `{}` E NÃO O ÚLTIMO ESTADO: um estado velho pintado como se fosse
-            # de agora é exatamente o que esta linha existe para não fazer.
+            # O ÚLTIMO ESTADO BOM, MAS SÓ POR UMA FOLGA MEDIDA — 13/09/2026,
+            # RECONECTAR-SAMBA-02. Aqui era `{}` já no primeiro tique mudo, e era
+            # isso que fazia o «Reconectar controles» sambar: os quatro lugares
+            # apagavam, a fileira de cartões caía e o botão subia 61 px (piloto
+            # oculto, dublê de `TimeoutError`), voltando no tique seguinte. No
+            # diário dela, quase toda corrida de `timed out` é de UM tique. A
+            # regra de não pintar estado velho como se fosse de agora continua
+            # de pé DEPOIS da folga — quanto ela dura, e por quê, está em
+            # `FolgaDoServicoMudo`. O `[daemon mudo]` do diário fica.
             print(f"[daemon mudo] {e}", file=sys.stderr)
-            st = {}
+            st = self._folga.mudo(e)
+        else:
+            self._folga.respondeu(st)
 
         try:
             ctx, para_pref = self._contexto(st)
