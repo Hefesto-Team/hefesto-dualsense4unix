@@ -1,6 +1,6 @@
 ---
 sprint: MODO-DE-CONEXAO-01
-estado: aberta
+estado: feita
 onda: A-TERCEIRA-LISTA-DELA
 posse:
   MODO-DE-CONEXAO-01:
@@ -60,6 +60,14 @@ nao_toca:
 ---
 
 # MODO-DE-CONEXAO-01 — o degrau Xbox que diz «aplicado» e não vale, e o texto que é da máscara
+
+> **ESTADO 2026-09-13: feita** — o chip de modo e o PS + R3 escolhem o CAMINHO
+> (`mode.caminho`), e a máscara do cartão fica como estava; a máscara do cartão
+> passa a valer com o vpad de pé; o PS + R3 grava no perfil ativo na hora; e as
+> dicas do modo pararam de falar da máscara. Quatro réguas novas, cada uma com a
+> mordida medida. O que só o jogo aberto responde continua na §B, da
+> MESA-DE-QUATRO-01, e as linhas de `docs/data/` são da costura. A entrega está em
+> `docs/process/agentes/2026-09-13/MODO-DE-CONEXAO-01-opus.md`.
 
 ## A palavra dela — 13/09/2026, à tarde
 

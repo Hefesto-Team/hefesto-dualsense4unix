@@ -1760,8 +1760,11 @@ class ProfileManager:
             )
             if not alinhar_o_modo:
                 return carimbado
+            # MODO-DE-CONEXAO-01 (13/09/2026): o carimbo segue guardando a ponte
+            # como sempre guardou; o `mode` alinhado recebe o CAMINHO dela, e a
+            # máscara padrão do perfil fica como estava.
             return alinhar_o_modo_com_a_ponte(
-                carimbado, kind=kind, gamepad_flavor=gamepad_flavor
+                carimbado, kind=kind, caminho=gamepad_flavor
             )
 
         salvo = self._gravar_no_perfil_do_appid(
@@ -1782,7 +1785,7 @@ class ProfileManager:
         return salvo
 
     def alinhar_o_modo_do_appid(
-        self, appid: object, *, kind: str, gamepad_flavor: object = None
+        self, appid: object, *, kind: str, caminho: object = None
     ) -> Profile | None:
         """Grava no `mode` do perfil a ponte de pé, SEM carimbar. None = sem perfil.
 
@@ -1803,7 +1806,7 @@ class ProfileManager:
         salvo = self._gravar_no_perfil_do_appid(
             appid,
             lambda profile: alinhar_o_modo_com_a_ponte(
-                profile, kind=kind, gamepad_flavor=gamepad_flavor
+                profile, kind=kind, caminho=caminho
             ),
             origem="ponte_de_pe",
             evento="ponte_de_pe_sem_perfil",
@@ -1815,7 +1818,7 @@ class ProfileManager:
             appid=str(appid),
             profile=salvo.name,
             kind=kind,
-            gamepad_flavor=salvo.mode.gamepad_flavor if salvo.mode else None,
+            caminho=salvo.mode.caminho if salvo.mode else None,
         )
         return salvo
 
@@ -2010,9 +2013,16 @@ def carimbar_ponte(
 
 
 def alinhar_o_modo_com_a_ponte(
-    profile: Profile, *, kind: str, gamepad_flavor: object = None
+    profile: Profile, *, kind: str, caminho: object = None
 ) -> Profile:
     """Devolve uma CÓPIA do perfil com o `mode` igual à ponte de pé. Não grava.
+
+    NOTA DATADA — MODO-DE-CONEXAO-01, 13/09/2026. Esta função escrevia a ponte
+    em ``mode.gamepad_flavor``, a MÁSCARA, e deixou de escrever: o gesto dela
+    anda por CAMINHOS (a regra dela de 13/09, citada na sprint), e o que volta
+    ao perfil é ``mode.caminho``. A máscara padrão que o perfil já tinha fica
+    intocada — reescrevê-la mudaria em silêncio o que o jogo vê. A regra da
+    seção mora em :func:`secao_do_modo_com_o_caminho`, a mesma do chip.
 
     A MÁSCARA DO GESTO VOLTA PARA O PERFIL (29/08/2026). O carimbo só preenche
     o SILÊNCIO do perfil — `launch_env.arm_launch_profile` o lê apenas quando
@@ -2040,11 +2050,107 @@ def alinhar_o_modo_com_a_ponte(
     que o próximo load recusa — o perfil dela deixando de abrir por causa de
     uma máscara. Aqui ele morre na borda, como no `carimbar_ponte` acima.
     """
-    flavor = normalizar_gamepad_flavor(gamepad_flavor) if kind == "gamepad" else None
-    atual = profile.mode
+    secao = secao_do_modo_com_o_caminho(profile.mode, kind=kind, caminho=caminho)
+    return profile.model_copy(update={"mode": secao})
+
+
+def secao_do_modo_com_o_caminho(
+    atual: ProfileModeConfig | None, *, kind: str, caminho: object = None
+) -> ProfileModeConfig:
+    """A seção `mode` depois de o MODO mudar — o ESCRITOR ÚNICO do caminho.
+
+    MODO-DE-CONEXAO-01, 13/09/2026. Um dono, três chamadores: o chip de modo da
+    aba Jogar (`interface/pacotes/perfil.secao_do_modo`), o PS + R3
+    (:func:`gravar_o_modo_no_perfil_ativo`) e o alinhamento da escada
+    (:func:`alinhar_o_modo_com_a_ponte`). Dois escritores para o mesmo campo é
+    como o que ela escolhe numa porta some quando ela mexe na outra.
+
+    A regra:
+
+    * ``kind="gamepad"`` grava o ``caminho`` quando há um, e **não toca**
+      ``gamepad_flavor`` — o modo não escreve a máscara (§D.1 da sprint);
+    * os outros modos zeram ``gamepad_flavor`` e ``caminho`` — *"JSON limpo, sem
+      sobras"*, a poda que `secao_do_modo` já fazia com a máscara;
+    * os demais campos que já estavam na seção são PRESERVADOS.
+
+    RECONSTRUÍDO, e não `model_copy`ado: `model_copy` do pydantic v2 não
+    revalida, e um `kind` fora da faixa viraria um arquivo que o próximo load
+    recusa.
+    """
+    from hefesto_dualsense4unix.integrations.virtual_pad import normalizar_caminho
+
     campos: dict[str, object] = {} if atual is None else atual.model_dump()
-    campos.update({"kind": kind, "gamepad_flavor": flavor})
-    return profile.model_copy(update={"mode": ProfileModeConfig(**campos)})  # type: ignore[arg-type]
+    campos["kind"] = kind
+    if kind == "gamepad":
+        escolhido = normalizar_caminho(caminho)
+        if escolhido is not None:
+            campos["caminho"] = escolhido
+    else:
+        campos["gamepad_flavor"] = None
+        campos["caminho"] = None
+    return ProfileModeConfig(**campos)  # type: ignore[arg-type]
+
+
+def nome_do_perfil_que_grava(do_daemon: object) -> str | None:
+    """Em que perfil uma escolha do MOMENTO vai ser gravada — `None` quando nenhum.
+
+    A regra é a da A-PERNA-QUE-FALTA-01 (11/09/2026), escrita no daemon em
+    `IpcHandlersMixin._perfil_que_grava`, e desde 13/09/2026 ela mora AQUI: o PS +
+    R3 também grava no perfil ativo (MODO-DE-CONEXAO-01, §D.4), e o gesto não
+    passa pelo handler. Duas pernas: o nome que o daemon sabe
+    (`store.active_profile`, que o chamador lê e passa em ``do_daemon``) e, sem
+    ele, o resolvedor do boot (`utils/session.resolve_boot_profile`) — só se o
+    perfil CARREGAR.
+
+    NUNCA LEVANTA: quem chama é rota de escrita de um gesto dela.
+    """
+    if isinstance(do_daemon, str) and do_daemon:
+        return do_daemon
+    try:
+        from hefesto_dualsense4unix.profiles.loader import load_profile as _carregar
+        from hefesto_dualsense4unix.utils.session import resolve_boot_profile
+
+        do_disco = resolve_boot_profile()
+        if not isinstance(do_disco, str) or not do_disco:
+            return None
+        _carregar(do_disco)  # só a confirmação; quem grava recarrega
+    except Exception as exc:
+        logger.debug("perfil_que_grava_sem_perna_de_disco", err=str(exc))
+        return None
+    return do_disco
+
+
+def gravar_o_modo_no_perfil_ativo(
+    nome: str | None, *, kind: str, caminho: object = None
+) -> Profile | None:
+    """O PS + R3 grava o modo no perfil ATIVO, na hora. None = não gravou.
+
+    MODO-DE-CONEXAO-01, §D.4 (13/09/2026), pela palavra dela: *"inclusive o
+    ps +r3 e isso fica setado no perfil"*. Até aqui o gesto só deixava rastro
+    depois de 180 s de jogo aberto, e no perfil do JOGO; agora ele grava no
+    perfil que está valendo logo que o aparelho confirma, sem esperar e sem
+    precisar de jogo — como o clique no chip. O carimbo por jogo da escada
+    (19/08) continua separado.
+
+    NADA MUDOU, NADA SE GRAVA: o `.json` dela não ganha uma versão idêntica a
+    cada aperto repetido.
+    """
+    if not nome:
+        return None
+    profile = load_profile(nome)
+    antes = profile.mode
+    depois = secao_do_modo_com_o_caminho(antes, kind=kind, caminho=caminho)
+    if antes is not None and antes.model_dump() == depois.model_dump():
+        return profile
+    novo = profile.model_copy(update={"mode": depois})
+    save_profile(novo, origem="ps_r3")
+    logger.info(
+        "modo_do_gesto_gravado_no_perfil",
+        profile=novo.name,
+        kind=kind,
+        caminho=depois.caminho,
+    )
+    return novo
 
 
 def _estado_da_secao(valor: object) -> str:

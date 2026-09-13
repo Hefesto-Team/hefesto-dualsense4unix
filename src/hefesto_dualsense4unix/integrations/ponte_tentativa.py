@@ -179,6 +179,10 @@ from dataclasses import dataclass
 from typing import Any
 
 from hefesto_dualsense4unix.integrations import ponte_escada
+from hefesto_dualsense4unix.integrations.virtual_pad import (
+    CAMINHO_DUALSENSE,
+    CAMINHO_XBOX,
+)
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 
 logger = get_logger(__name__)
@@ -222,12 +226,18 @@ FIM_ESCADA_ACABOU = "escada_acabou"
 FIM_DEGRAU_CARO = "degrau_caro"
 FIM_OUTRA_TENTATIVA = "outra_tentativa"
 
-#: As máscaras que o GESTO consegue aplicar ao vivo. É a interseção honesta
+#: Os CAMINHOS que o GESTO consegue aplicar ao vivo. É a interseção honesta
 #: entre a `ESCADA` e o que `hotkey._aplicar_ponte` sabe construir — e a
 #: ausência de `native` aqui não é esquecimento: entrar em Modo Nativo pelo
 #: gesto mataria o próprio gesto (não há porta de volta pelo controle), e isso
 #: já estava escrito em `build_next_bridge_callback`.
-MASCARAS_AO_VIVO = frozenset({ponte_escada.MASCARA_DUALSENSE, ponte_escada.MASCARA_XBOX})
+#:
+#: FATO SUBSTITUÍDO — MODO-DE-CONEXAO-01, 13/09/2026. Esta constante se chamava
+#: `MASCARAS_AO_VIVO`, e o gesto trocava a MÁSCARA do vpad: com máscara no cartão
+#: do P1 todo aperto pedia uma máscara que o cartão vencia, e o ciclo parava em
+#: cinco pulsos vermelhos. Os dois degraus ao vivo da `ESCADA` são os dois
+#: caminhos da tela («Sony DualSense» e «Xbox»), e é caminho que o gesto aplica.
+CAMINHOS_AO_VIVO = frozenset({CAMINHO_DUALSENSE, CAMINHO_XBOX})
 
 
 @dataclass
@@ -275,8 +285,9 @@ class Passo:
     #: O degrau que o gesto deve aplicar, ou None quando o laço não tem
     #: nenhum ao vivo para oferecer — e aí o gesto faz o que sempre fez.
     degrau: ponte_escada.Degrau | None
-    #: A máscara a aplicar, quando há uma. Vocabulário de `hotkey`.
-    mascara: str | None
+    #: O CAMINHO a aplicar, quando há um. Vocabulário de `hotkey`. Era
+    #: `mascara` até 13/09/2026 (MODO-DE-CONEXAO-01): o gesto troca o caminho.
+    caminho: str | None
     #: O preço do próximo degrau, de `ponte_escada.como_subir`.
     preco: str | None
     motivo: str
@@ -399,11 +410,18 @@ def gesto_deixou_de_pe(
     daemon: Any,
     *,
     appid: int | None,
-    mascara: str | None,
+    caminho: str | None,
     jogo_vivo: bool,
     agora: float | None = None,
 ) -> GestoDela | None:
     """Momento 2b: a ponte que o gesto dela deixou de pé. None = nada anotado.
+
+    NOTA DATADA — MODO-DE-CONEXAO-01, 13/09/2026. O registro guardava a MÁSCARA
+    que o gesto pôs de pé, e o tique a alinhava em ``mode.gamepad_flavor`` do
+    perfil do jogo. O gesto passou a andar por CAMINHOS, grava o caminho no
+    perfil ATIVO na hora (`hotkey._gravar_o_modo_do_gesto`), e o que este
+    registro leva ao perfil do jogo depois do silêncio é o caminho também
+    (`manager.alinhar_o_modo_com_a_ponte`). A máscara não passa mais por aqui.
 
     Chamado pelo `hotkey` DEPOIS de conferir a máscara viva — a disciplina da
     MASCARA-01: o retorno do applier vale `True` para três desfechos, e anotar
@@ -415,7 +433,7 @@ def gesto_deixou_de_pe(
       perfil de jogo nenhum tem o que aprender com isso;
     - **sem appid**: o jogo não veio pelo wrapper, então não há perfil de jogo
       para receber a máscara. Escrever no perfil errado é pior que não escrever;
-    - **máscara fora das duas** (`mouse_teclado`, e o que mais o ciclo ganhar):
+    - **caminho fora dos dois** (`mouse_teclado`, e o que mais o ciclo ganhar):
       não é degrau da `ESCADA` e não é ponte de gamepad. Gravar
       `mode.kind="desktop"` no perfil de um jogo porque ela passou por ali
       seria uma decisão de produto que ninguém pediu;
@@ -423,14 +441,14 @@ def gesto_deixou_de_pe(
       (`avancar_por_gesto` + `tique`), e dois donos para a mesma pergunta é
       como esta casa fabrica duas verdades.
     """
-    if not jogo_vivo or appid is None or mascara not in MASCARAS_AO_VIVO:
+    if not jogo_vivo or appid is None or caminho not in CAMINHOS_AO_VIVO:
         return None
     if em_curso(daemon) is not None:
         return None
     gesto = _anotar_o_gesto(
         daemon,
         appid=appid,
-        ponte=ponte_escada.Ponte(ponte_escada.KIND_GAMEPAD, mascara),
+        ponte=ponte_escada.Ponte(ponte_escada.KIND_GAMEPAD, caminho),
         momento=_agora(agora),
     )
     logger.info(
@@ -598,7 +616,7 @@ def avancar_por_gesto(
     reinicia (ela reclamou; os três minutos recomeçam) e o contador de gestos
     sobe. Depois disso, o próximo degrau:
 
-    - **alcançável ao vivo** (uma das duas máscaras): devolvido para o gesto
+    - **alcançável ao vivo** (um dos dois caminhos): devolvido para o gesto
       aplicar. Quem CONFIRMA que ele subiu é `degrau_subiu`, depois de olhar o
       aparelho — o retorno do applier não prova nada (MASCARA-01);
     - **caro** (exige reabrir o jogo ou fechar a Steam): AVISA, GUARDA e
@@ -607,7 +625,7 @@ def avancar_por_gesto(
     - **inexistente** (a escada acabou, ou só sobraram caros): a tentativa é
       encerrada e o gesto volta ao `CICLO_DE_PONTES`.
 
-    Quando `mascara` é `None`, o gesto volta ao `CICLO_DE_PONTES` de sempre.
+    Quando `caminho` é `None`, o gesto volta ao `CICLO_DE_PONTES` de sempre.
     Ele nunca fica sem resposta — e desde 29/08/2026 ele nunca fica sem
     TROCA, que é o que o fazia divergir entre um jogo carimbado e um sem.
     """
@@ -636,11 +654,11 @@ def avancar_por_gesto(
         if degrau is None:
             break
         preco = ponte_escada.como_subir(degrau, jogo_vivo=jogo_vivo)
-        mascara = degrau.ponte.mascara
+        caminho = degrau.ponte.mascara
         alcancavel = (
             degrau.ao_vivo
             and degrau.ponte.kind == ponte_escada.KIND_GAMEPAD
-            and mascara in MASCARAS_AO_VIVO
+            and caminho in CAMINHOS_AO_VIVO
         )
         if alcancavel:
             logger.info(
@@ -654,7 +672,7 @@ def avancar_por_gesto(
             )
             return Passo(
                 degrau=degrau,
-                mascara=mascara,
+                caminho=caminho,
                 preco=preco,
                 motivo=PASSO_PULOU if pulados else PASSO_SUBIU,
                 pulados=tuple(pulados),
@@ -714,7 +732,7 @@ def avancar_por_gesto(
     )
     return Passo(
         degrau=pulados[-1] if pulados else None,
-        mascara=None,
+        caminho=None,
         preco=None,
         motivo=PASSO_ESCADA_ACABOU,
         pulados=tuple(pulados),
@@ -950,6 +968,7 @@ def _tique_do_gesto(daemon: Any, *, jogo_vivo: bool, momento: float) -> Tique:
 __all__ = [
     "ATRIBUTO_DA_TENTATIVA",
     "ATRIBUTO_DO_GESTO",
+    "CAMINHOS_AO_VIVO",
     "COMECO_DEGRAU_CARO",
     "COMECO_ESCADA_ACABOU",
     "COMECO_FORA_DA_ESCADA",
@@ -962,7 +981,6 @@ __all__ = [
     "FIM_ESCADA_ACABOU",
     "FIM_JOGO_FECHOU",
     "FIM_OUTRA_TENTATIVA",
-    "MASCARAS_AO_VIVO",
     "PASSO_ESCADA_ACABOU",
     "PASSO_PULOU",
     "PASSO_SUBIU",

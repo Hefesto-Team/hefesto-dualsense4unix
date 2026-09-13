@@ -2076,6 +2076,33 @@ def _deve_promover_backend(
     return True
 
 
+def _guardar_o_caminho(
+    daemon: DaemonProtocol, caminho: str | None, *, origin: OrigemEmulacao
+) -> None:
+    """Anota o CAMINHO que ficou valendo. MODO-DE-CONEXAO-01, 13/09/2026.
+
+    Só quando o chamador escolheu um (o chip de modo, o PS + R3, a seção `mode`
+    de um perfil): quem não manda caminho — a CLI, o boot, o autoswitch sem
+    opinião — não apaga o que estava. É a mesma disciplina do `flavor`: gravado
+    DEPOIS de o aparelho alcançar o pedido, nunca antes (o bloqueio da R-04 sai
+    antes daqui, e a config não avança sobre uma troca recusada).
+
+    Só o gesto manual PERSISTE, pela R-07 que já governa o liga/desliga logo
+    abaixo: um perfil trocando de caminho não vira a escolha dela em disco.
+    """
+    from hefesto_dualsense4unix.integrations.virtual_pad import normalizar_caminho
+
+    escolhido = normalizar_caminho(caminho)
+    if escolhido is None:
+        return
+    daemon.config.gamepad_caminho = escolhido
+    if origin == "manual":
+        with contextlib.suppress(Exception):
+            from hefesto_dualsense4unix.utils.session import save_gamepad_caminho
+
+            save_gamepad_caminho(escolhido)
+
+
 def start_gamepad_emulation(
     daemon: DaemonProtocol,
     flavor: str | None = None,
@@ -2107,8 +2134,17 @@ def start_gamepad_emulation_desfecho(
     flavor: str | None = None,
     *,
     origin: OrigemEmulacao,
+    caminho: str | None = None,
 ) -> str:
     """Cria o gamepad virtual com a máscara `flavor` e DIZ o que aconteceu.
+
+    MODO-DE-CONEXAO-01 (13/09/2026): `caminho` é o MODO de conexão
+    (`virtual_pad.CAMINHO_DUALSENSE` · `CAMINHO_XBOX`), e ele NÃO é a máscara.
+    ``None`` = o chamador não opina, e vale o que já estava escolhido
+    (`config.gamepad_caminho`) ou, sem escolha nenhuma, o que sai da máscara.
+    A idempotência compara (máscara efetiva, canal): trocar de caminho com a
+    mesma máscara RECRIA o vpad no outro canal — era o `ja_estava` desta função
+    que fazia o chip «Xbox» dizer «aplicado» sem mudar nada.
 
     VERDADE-01: devolve o vocabulário `EMU_*` — `"aplicado"`, `"ja_estava"`,
     `"bloqueado_por_jogo"` ou `"falhou"`. Os três primeiros deixam a emulação
@@ -2148,7 +2184,13 @@ def start_gamepad_emulation_desfecho(
     )
     from hefesto_dualsense4unix.daemon.subsystems.external_mask import mascara_efetiva
     from hefesto_dualsense4unix.integrations.uinput_gamepad import normalize_flavor
-    from hefesto_dualsense4unix.integrations.virtual_pad import make_virtual_pad
+    from hefesto_dualsense4unix.integrations.virtual_pad import (
+        caminho_do_vpad,
+        caminho_resolvido,
+        make_virtual_pad,
+        normalizar_caminho,
+        quer_uhid,
+    )
 
     key = normalize_flavor(
         flavor if flavor is not None else getattr(daemon.config, "gamepad_flavor", None)
@@ -2163,6 +2205,14 @@ def start_gamepad_emulation_desfecho(
     # `_flavor()`), que é o defeito de 22/08 do Sackboy pelo avesso.
     identity = primary_identity(daemon)
     mascara_do_p1 = mascara_efetiva(identity, key)
+    # MODO-DE-CONEXAO-01 (13/09/2026) — O TERCEIRO TERMO, E ELE NÃO É MÁSCARA.
+    # O caminho pedido é o do chamador; sem ele, o que ela já escolheu. O canal
+    # (`uhid` ou `uinput`) sai do PAR caminho + máscara efetiva
+    # (`virtual_pad.quer_uhid`), num dono só para o P1 e os secundários.
+    caminho_pedido = normalizar_caminho(caminho) or normalizar_caminho(
+        getattr(daemon.config, "gamepad_caminho", None)
+    )
+    uhid_pedido = quer_uhid(caminho_pedido, mascara_do_p1)
 
     if steam_input_vpad_suspenso(daemon):
         # Alguém pediu o vpad sobre uma suspensão herdada: ele volta AGORA e a
@@ -2202,9 +2252,28 @@ def start_gamepad_emulation_desfecho(
         # TODO Aplicar, que é exatamente a recriação que a R-04 mediu como
         # "abri o jogo e o controle morreu no meio da partida". Sem esta linha
         # a corrente ligada vira churn de vpad; é o coração do risco.
-        if getattr(existing, "flavor", None) == mascara_do_p1 and (
-            not _deve_promover_backend(daemon, existing, mascara_do_p1, origin)
+        #
+        # E O CANAL ENTRA NA COMPARAÇÃO — MODO-DE-CONEXAO-01, 13/09/2026. Só a
+        # máscara decidia o `ja_estava`, e o chip «Xbox» com o cartão do P1 em
+        # DualSense caía aqui: a máscara efetiva não muda, a função voltava
+        # ANTES de gravar nada, o piloto escrevia «aplicado» e o jogo seguia
+        # recebendo o mesmo aparelho. O canal é comparado, e não o nome do
+        # caminho: com máscara Xbox 360 os dois caminhos dão o mesmo vpad, e
+        # recriá-lo seria arrancar o controle do jogo por nada.
+        # A promoção uinput→uhid (VPAD-02) só vale para quem PEDE o uhid: o
+        # uinput do caminho Xbox não é degradação, é a escolha dela.
+        mesmo_canal = (
+            quer_uhid(caminho_do_vpad(existing), mascara_do_p1) == uhid_pedido
+        )
+        if (
+            getattr(existing, "flavor", None) == mascara_do_p1
+            and mesmo_canal
+            and not (
+                uhid_pedido
+                and _deve_promover_backend(daemon, existing, mascara_do_p1, origin)
+            )
         ):
+            _guardar_o_caminho(daemon, caminho, origin=origin)
             return EMU_JA_ESTAVA
         # R-04: daqui para baixo o vpad VIVO seria destruído e recriado. Com o
         # jogo segurando a autoridade de exibição isso arranca o controle da
@@ -2217,6 +2286,9 @@ def start_gamepad_emulation_desfecho(
             origin=origin,
             motivo=(
                 f"troca_de_mascara:{getattr(existing, 'flavor', None)}->{mascara_do_p1}"
+                if getattr(existing, "flavor", None) != mascara_do_p1
+                else "troca_de_caminho:"
+                f"{caminho_resolvido(caminho_pedido, mascara_do_p1)}"
             ),
         ):
             # A emulação SEGUE ativa (com a máscara ANTERIOR) — por isso o bool
@@ -2269,6 +2341,8 @@ def start_gamepad_emulation_desfecho(
         player=numero_do_nome_do_primario(daemon),
         allow_uhid=controller_allows_uhid(daemon),
         calibration_0x05=read_primary_calibration(daemon),
+        # MODO-DE-CONEXAO-01: o caminho decide o canal junto com a máscara.
+        caminho=caminho_pedido,
         **make_primary_replica_sinks(daemon),
     )
     if device is None:
@@ -2290,7 +2364,9 @@ def start_gamepad_emulation_desfecho(
     # e a máscara que o vpad VESTE é a efetiva. Perguntar pela do jogo acusaria
     # degradação num P1 marcado como xbox numa sessão dualsense (uinput por
     # design, não degradação) e calaria o aviso no caso inverso.
-    if mascara_do_p1 == "dualsense" and getattr(device, "backend", None) == "uinput":
+    # MODO-DE-CONEXAO-01: e só quem PEDIU o uhid degrada — `uhid_pedido` já traz
+    # a máscara DualSense dentro. O caminho Xbox em uinput é a escolha dela.
+    if uhid_pedido and getattr(device, "backend", None) == "uinput":
         # VPAD-05 — fallback NUNCA silencioso: além do motivo que a factory já
         # logou, o degrau vira contador no store (doctor) e o `state_full` expõe
         # `gamepad_emulation.degraded`/`degraded_motivo` para a GUI. getattr
@@ -2311,6 +2387,9 @@ def start_gamepad_emulation_desfecho(
     start_motion_reader(daemon, device)
     daemon.config.gamepad_emulation_enabled = True
     daemon.config.gamepad_flavor = key
+    # MODO-DE-CONEXAO-01: o caminho, e não a máscara do chip. `key` segue sendo a
+    # máscara da sessão — o chip de modo não a manda mais.
+    _guardar_o_caminho(daemon, caminho, origin=origin)
     _set_controller_grab(daemon, True)
     # R-07 (auditoria 23/07): SÓ gesto manual persiste a preferência em disco.
     # A regra já estava escrita em dois lugares deste mesmo módulo/eixo —
@@ -2346,6 +2425,7 @@ def start_gamepad_emulation_desfecho(
         "gamepad_emulation_started",
         flavor=key,
         mascara_do_p1=mascara_do_p1,
+        caminho=caminho_resolvido(caminho_pedido, mascara_do_p1),
         identity=identity,
     )
     return EMU_APLICADO

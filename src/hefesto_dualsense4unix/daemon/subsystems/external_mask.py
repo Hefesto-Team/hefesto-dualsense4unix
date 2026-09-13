@@ -737,6 +737,13 @@ def mascara_efetiva(identity: str | None, flavor_do_jogo: object) -> str:
        pela config do daemon;
     3. o padrão, quando nem um nem outro disse nada.
 
+    NOTA DATADA NO DEGRAU 2 — MODO-DE-CONEXAO-01, 13/09/2026. O degrau continua
+    LIDO, e deixou de ser ESCRITO pelo modo: até aqui o chip de modo da aba
+    Jogar e o PS + R3 mandavam a máscara (`gamepad.emulation.set {flavor}`) e
+    gravavam ``mode.gamepad_flavor`` — e por isso o chip «Xbox» dizia
+    «aplicado» sem mudar nada quando o cartão tinha máscara, porque o degrau 1
+    vence este. O modo agora é o CAMINHO (``mode.caminho``), um eixo à parte.
+
     **CORREÇÃO DE FATO — 09/09/2026.** Esta docstring dizia *"a ordem mora
     AQUI"*, e isso é falso pela metade que mais importa: **esta função não
     executa o degrau 1.** Ela lê o registro, que é um CACHE — quem executa o
@@ -774,8 +781,26 @@ def mascara_efetiva(identity: str | None, flavor_do_jogo: object) -> str:
     return normalize_flavor(None)
 
 
+def mesma_identidade(a: str | None, b: str | None) -> bool:
+    """Os dois endereços são o MESMO aparelho? Pela chave canônica do registro.
+
+    MODO-DE-CONEXAO-01 (13/09/2026): o `gamepad.mask.set` recebe o `uniq` que a
+    tela manda, e o daemon conhece o P1 pelo `primary_uniq` do backend. Comparar
+    as strings cruas faria `AA:BB:…` e `aabb…` serem dois controles — a mesma
+    canonização que numera e mascara (`ExternalMaskRegistry._key`) responde.
+    """
+    chave_a = ExternalMaskRegistry._key(a)
+    chave_b = ExternalMaskRegistry._key(b)
+    return chave_a is not None and chave_b is not None and chave_a[0] == chave_b[0]
+
+
 def vpad_ficou_para_tras(
-    flavor_do_vpad: object, identity: str | None, flavor_do_jogo: object
+    flavor_do_vpad: object,
+    identity: str | None,
+    flavor_do_jogo: object,
+    *,
+    vpad: object = None,
+    caminho: object = None,
 ) -> bool:
     """O gamepad virtual deste jogador está com a máscara ERRADA? (recriá-lo)
 
@@ -800,8 +825,25 @@ def vpad_ficou_para_tras(
     O que NÃO é caso desta função: um vpad sem ``flavor`` legível
     (``None``/dublê) conta como ficado para trás, como já contava — a comparação
     do co-op sempre foi contra ``getattr(vpad, "flavor", None)``.
+
+    E O CANAL TAMBÉM — MODO-DE-CONEXAO-01, 13/09/2026. O modo de conexão deixou
+    de ser a máscara: com a mesma máscara, o caminho Xbox é o vpad `uinput` e o
+    DualSense é o `uhid`. Quando o chamador passa o ``vpad`` e o ``caminho``
+    pedido, um vpad no canal errado também ficou para trás. A comparação é
+    pelo CANAL (:func:`~hefesto_dualsense4unix.integrations.virtual_pad.quer_uhid`),
+    e não pelo nome do caminho: com máscara Xbox 360 os dois caminhos dão o
+    mesmo aparelho, e recriá-lo seria arrancar o controle do jogo por nada. Um
+    vpad que caiu no `uinput` por falta de `uhid` nasceu com o caminho
+    DualSense pendurado, e por isso não entra em laço de recriação.
     """
-    return flavor_do_vpad != mascara_efetiva(identity, flavor_do_jogo)
+    mascara = mascara_efetiva(identity, flavor_do_jogo)
+    if flavor_do_vpad != mascara:
+        return True
+    if vpad is None:
+        return False
+    from hefesto_dualsense4unix.integrations.virtual_pad import caminho_do_vpad, quer_uhid
+
+    return quer_uhid(caminho_do_vpad(vpad), mascara) != quer_uhid(caminho, mascara)
 
 
 __all__ = [
@@ -814,6 +856,7 @@ __all__ = [
     "ExternalMaskRegistry",
     "mascara_efetiva",
     "mascaras_validas",
+    "mesma_identidade",
     "normalizar_mascara",
     "registro_de_mascaras",
     "vpad_ficou_para_tras",

@@ -1921,6 +1921,15 @@ def reconciliar_pendente(janela: Any) -> dict[str, str]:
         janela, "_modo_vigente_do_daemon", None
     ):
         pendente.pop("modo")
+    # O TERCEIRO CAMPO — MODO-DE-CONEXAO-01, 13/09/2026. O chip de modo da aba
+    # Jogar pede um CAMINHO (`"dualsense"` · `"xbox"`), e ele se compara com o
+    # caminho vivo que o daemon publica — nunca com a máscara. Comparado com a
+    # máscara, o chip «Xbox» com o cartão em DualSense deixava na linha um
+    # «Vai mudar para: Xbox» que não sumia nunca.
+    if "caminho" in pendente and pendente["caminho"] == getattr(
+        janela, "_caminho_vigente_do_daemon", None
+    ):
+        pendente.pop("caminho")
     if "mascara" in pendente and pendente["mascara"] == getattr(
         janela, "_mascara_vigente_do_daemon", None
     ):

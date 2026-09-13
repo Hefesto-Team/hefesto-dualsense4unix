@@ -785,6 +785,7 @@ def _modo_da_ponte(ponte: ponte_escada.Ponte) -> Any:
     vocabulário novo. Import local pelo mesmo motivo dos vizinhos: manter
     `daemon -> profiles` fora do topo deste módulo.
     """
+    from hefesto_dualsense4unix.integrations.virtual_pad import normalizar_caminho
     from hefesto_dualsense4unix.profiles.schema import (
         ProfileModeConfig,
         normalizar_gamepad_flavor,
@@ -795,8 +796,16 @@ def _modo_da_ponte(ponte: ponte_escada.Ponte) -> Any:
         # `carimbar_ponte` atravessa na ida. Uma máscara que o esquema não
         # conhece vira None, e `None` é "sem opinião de máscara" — nunca uma
         # máscara inventada.
+        #
+        # MODO-DE-CONEXAO-01 (13/09/2026): o carimbo arma a máscara que sempre
+        # armou E o caminho do mesmo nome. É o mesmo aparelho de antes — a
+        # máscara DualSense no caminho DualSense é o uhid, a Xbox no caminho
+        # Xbox é o uinput —, agora com o caminho dito em voz alta, para o chip
+        # da aba Jogar acender o degrau que o lançamento subiu.
         return ProfileModeConfig(
-            kind="gamepad", gamepad_flavor=normalizar_gamepad_flavor(ponte.mascara)
+            kind="gamepad",
+            gamepad_flavor=normalizar_gamepad_flavor(ponte.mascara),
+            caminho=normalizar_caminho(ponte.mascara),  # type: ignore[arg-type]
         )
     return ProfileModeConfig(kind="native")
 
@@ -1032,8 +1041,11 @@ def tique_da_escada(
             # SÓ o `mode`, sem carimbo — a escada parou no degrau caro e o
             # degrau de pé ia evaporar com a tentativa. Carimbar aqui mataria o
             # caminho para o degrau seguinte; ver `alinhar_o_modo_do_appid`.
+            # MODO-DE-CONEXAO-01 (13/09/2026): o degrau ao vivo que ela subiu é
+            # um CAMINHO, e é o caminho que o `mode` recebe — a máscara padrão
+            # do perfil não é reescrita pela escada.
             salvo = gerente.alinhar_o_modo_do_appid(
-                resultado.appid, kind=ponte.kind, gamepad_flavor=ponte.mascara
+                resultado.appid, kind=ponte.kind, caminho=ponte.mascara
             )
         else:
             # `POR_SILENCIO`/`POR_GESTO` são byte a byte os `CONFIRMADA_POR_*`

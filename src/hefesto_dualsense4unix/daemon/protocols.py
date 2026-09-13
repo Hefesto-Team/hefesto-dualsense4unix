@@ -197,8 +197,13 @@ class DaemonProtocol(Protocol):
         flavor: str | None = None,
         *,
         origin: Literal["manual", "profile"],
+        caminho: str | None = None,
     ) -> bool:
-        """Liga/desliga o gamepad virtual e define a máscara (FEAT-DSX-GAMEPAD-FLAVOR-01)."""
+        """Liga/desliga o gamepad virtual e define a máscara (FEAT-DSX-GAMEPAD-FLAVOR-01).
+
+        `caminho` (MODO-DE-CONEXAO-01, 13/09/2026) é o MODO de conexão —
+        `"dualsense"` ou `"xbox"` —, separado da máscara; `None` não mexe nele.
+        """
         ...
 
     def set_coop_enabled(

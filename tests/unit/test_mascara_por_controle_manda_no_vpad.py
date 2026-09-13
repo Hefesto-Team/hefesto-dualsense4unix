@@ -288,7 +288,13 @@ def test_o_uhid_e_vetado_para_quem_escolheu_xbox_numa_sessao_dualsense(
 
     pad = make_virtual_pad("dualsense", identity=UNIQ_P1, allow_uhid=True)
 
-    assert recebido == ["xbox"]
+    # AJUSTADA — MODO-DE-CONEXAO-01, 13/09/2026. ANTES conferia que o `_try_uhid`
+    # recebia `"xbox"` e recusava sozinho. AGORA o gate do canal mora ANTES dele
+    # (`virtual_pad.quer_uhid`, o par caminho + máscara EFETIVA), e o `_try_uhid`
+    # nem é chamado para a máscara Xbox. A mordida é a mesma: se a resolução da
+    # máscara voltasse a vir DEPOIS do gate, `quer_uhid` veria a `"dualsense"` da
+    # sessão e o espião receberia uma chamada.
+    assert recebido == []
     assert pad is not None
     assert pad.flavor == "xbox"
     # Uinput com máscara xbox NÃO é degradação: nada de `fallback_motivo`.
@@ -466,7 +472,9 @@ def test_arrancar_o_ficou_para_tras_faz_o_churn_aparecer(
     # contra o valor global, que é o código de antes de 29/08/2026.
     monkeypatch.setattr(
         "hefesto_dualsense4unix.daemon.subsystems.external_mask.vpad_ficou_para_tras",
-        lambda flavor_do_vpad, identity, flavor_do_jogo: (
+        # `**_kw`: desde a MODO-DE-CONEXAO-01 o co-op manda também o `vpad` e o
+        # `caminho` — a comparação arrancada os ignora, como a de antes.
+        lambda flavor_do_vpad, identity, flavor_do_jogo, **_kw: (
             flavor_do_vpad != flavor_do_jogo
         ),
     )

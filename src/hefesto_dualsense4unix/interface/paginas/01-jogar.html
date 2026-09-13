@@ -2218,8 +2218,7 @@
              outro diriam a mesma coisa duas vezes. De quebra, os rótulos das
              duas seções ficaram idênticos — texto puro dos dois lados. -->
         <span class="ajuda">?<span class="dica">
-          Vale <b>no próximo jogo que abrir</b>. O que muda é <b>como o jogo desenha os botões</b> — luz, vibração, gatilho, giroscópio e som são do Hefesto em todos.<br><br>
-          O Hefesto <b>tenta na ordem desta lista</b> e para no primeiro que der certo.<br><br>
+          Como o controle chega ao jogo. O Hefesto <b>tenta na ordem desta lista</b> e para no primeiro que der certo.<br><br>
           <b>PS + R3</b> pula para o próximo.
         </span></span>
         <!-- ---------- O CADEADO DA TROCA AUTOMÁTICA, NO CANTO ----------
@@ -2276,13 +2275,13 @@
           <div class="escada">
             <span class="degrau on" data-degrau="dualsense" data-gesto="modo-dualsense"
                   data-campo="modo-aceso" data-hef-alvo="classe" data-hef-quando="dualsense"
-                  title="O jogo desenha os botões do PlayStation.">Sony DualSense</span>
+                  title="O Hefesto entrega o controle ao jogo pelo canal próprio do DualSense.">Sony DualSense</span>
             <span class="degrau" data-degrau="xbox" data-gesto="modo-xbox"
                   data-campo="modo-aceso" data-hef-alvo="classe" data-hef-quando="xbox"
-                  title="O jogo desenha os botões do Xbox — o formato que todo jogo entende.">Xbox</span>
+                  title="O Hefesto entrega o controle ao jogo pelo canal comum, o mesmo do controle de Xbox.">Xbox</span>
             <span class="degrau" data-degrau="steam" data-gesto="modo-steam"
                   data-campo="modo-aceso" data-hef-alvo="classe" data-hef-quando="steam"
-                  title="A Steam entrega a entrada, e os ajustes que você fez nela vencem os do jogo. Mudar para cá exige reabrir a Steam e o jogo.">Steam Input</span>
+                  title="A Steam entrega os comandos ao jogo; a luz, os gatilhos e o número do jogador ficam com o Hefesto.">Steam Input</span>
             <span class="degrau" data-degrau="navegacao" data-gesto="modo-navegacao" data-modo="desktop"
                   data-campo="modo-aceso" data-hef-alvo="classe" data-hef-quando="navegacao"
                   title="O controle vira teclado e mouse do computador.">Navegação</span>
@@ -3925,7 +3924,7 @@
       teria custado um erro na régua da aba que <b>é a referência das outras nove</b>. O que
       está lá é <code>:has()</code>, que não é mecanismo novo aqui: o esqueleto já abre e fecha
       as seções da <b>Conexões</b> com ele.</li>
-    <li><b>A linha laranja tracejada não acende mais na tela</b> (13/09): o clique troca o modo na hora e o chip mostra a escolha. O espaço dela continua reservado, e o <b>Reconectar controles</b> fica encostado à direita, em uma linha, qualquer que seja a largura.</li>
+    <li><b>A linha laranja tracejada não acende mais na tela</b> (13/09): o clique troca o modo na hora. O espaço dela continua reservado, e o <b>Reconectar controles</b> fica encostado à direita, em uma linha, qualquer que seja a largura.</li>
     <li><b>A carga de cada bateria é o único dado inventado desta aba</b> — 100, 64, 41 e 87%. Bateria é estado do momento, e o mockup mostra um momento; todo o resto (cor, nome, transporte, jogador, desenho) sai de arquivo.</li>
     <li><b>O recibo do rodapé nomeia o perfil</b> — é onde a mudança vai cair, que era a informação que faltava e te custou semanas.</li>
   </ul>
@@ -3938,12 +3937,9 @@
       (<code>ligado = modo in {gamepad, desktop}</code>) o interruptor fica apagado dos dois
       lados quando você escolhe a Navegação: a tela não estaria mentindo, estaria muda — e mudo
       é pior, porque parece defeito.</li>
-    <li><b>Fixar um modo pela tela ainda não existe</b>, e vale para os três degraus reais:
-      <span class="marca">"a escada existe e SOBE sozinha, mas ninguém a fixa pela tela: não há
-      método de IPC que diga 'use este degrau'"</span>. Clicar em <b>Sony DualSense</b>, <b>Xbox</b>
-      ou <b>Steam Input</b> hoje não muda nada no daemon — quem muda é o <b>PS + R3</b> na sua
-      mão. Os dois que faltam (Point And Click e Navegação como degrau) são mais um passo além
-      disso.</li>
+    <li><b>O Steam Input não se fixa pela tela</b>: não há método de IPC que o ligue, e ele só
+      sobrevive com a Steam fechada. <b>Sony DualSense</b> e <b>Xbox</b> se fixam — cada clique
+      escolhe o caminho, com o jogo aberto, e o <b>PS + R3</b> na sua mão faz o mesmo.</li>
     <li><b>A máscara Nintendo Pro não existe hoje</b>, e entra assim mesmo — isto é mockup, e
       mockup desenha o produto que vai existir. O catálogo do produto
       (<code>integrations/uinput_gamepad.py</code>, <code>FLAVORS</code>) tem <b>duas</b>
