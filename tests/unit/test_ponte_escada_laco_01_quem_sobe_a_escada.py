@@ -234,24 +234,43 @@ class _FakeStore:
 
 
 class _DaemonDoGesto:
+    """AJUSTADO À REGRA DELA — MODO-DE-CONEXAO-01, 13/09/2026.
+
+    O gesto pede o CAMINHO no campo dele (`caminho=`, com `flavor=None`), e a
+    ponte de pé é lida do `config.gamepad_caminho`. ANTES este dublê vestia no
+    vpad a máscara pedida em `flavor`; AGORA ele guarda o caminho e deixa a
+    máscara como estava. A trilha ganhou a quarta posição, o caminho.
+    """
+
     def __init__(self, *, flavor: str = "dualsense", aplica: bool = True) -> None:
         self.controller = SimpleNamespace()
         self.store = _FakeStore()
         self.display_authority = "game"
+        self.config = SimpleNamespace(gamepad_caminho=None)
+        self._mascara = flavor
         self._gamepad_device: Any = _FakeDevice(flavor)
         self._aplica = aplica
-        self.pedidos: list[tuple[bool, str | None, str]] = []
+        self.pedidos: list[tuple[bool, str | None, str, str | None]] = []
 
     async def _run_blocking(self, fn: Any, *args: Any) -> Any:
         return fn(*args)
 
     def set_gamepad_emulation(
-        self, enabled: bool, flavor: str | None = None, *, origin: str = "manual"
+        self,
+        enabled: bool,
+        flavor: str | None = None,
+        *,
+        origin: str = "manual",
+        caminho: str | None = None,
     ) -> bool:
-        self.pedidos.append((enabled, flavor, origin))
+        self.pedidos.append((enabled, flavor, origin, caminho))
         if not self._aplica:
             return False
-        self._gamepad_device = _FakeDevice(flavor or "dualsense") if enabled else None
+        if enabled:
+            self.config.gamepad_caminho = caminho or self.config.gamepad_caminho
+            self._gamepad_device = _FakeDevice(flavor or self._mascara)
+        else:
+            self._gamepad_device = None
         return True
 
     def set_mouse_emulation(self, enabled: bool, *, origin: str = "profile") -> bool:
@@ -290,7 +309,7 @@ class TestOGesto:
 
         await hotkey_sub.build_next_bridge_callback(d)()  # type: ignore[arg-type]
 
-        assert d.pedidos == [(True, "xbox", "manual")]
+        assert d.pedidos == [(True, None, "manual", "xbox")]
         tentativa = pt.em_curso(d)
         assert tentativa is not None
         assert tentativa.degrau == pe.ESCADA[1], "a escada não avançou"
@@ -309,7 +328,7 @@ class TestOGesto:
 
         await hotkey_sub.build_next_bridge_callback(d)()  # type: ignore[arg-type]
 
-        assert d.pedidos == [(True, "xbox", "manual")], "o gesto tem de obedecer"
+        assert d.pedidos == [(True, None, "manual", "xbox")], "o gesto tem de obedecer"
 
     @pytest.mark.asyncio
     async def test_a_escada_nao_avanca_quando_a_mascara_nao_sobe(self) -> None:
@@ -374,7 +393,7 @@ class TestOGesto:
             "premissa: depois de `xbox`, o ciclo livre é `mouse_teclado`"
         )
         # O degrau caro foi PULADO, não subido: nenhuma linha pede `native`.
-        assert d.pedidos == [(False, None, "manual")], (
+        assert d.pedidos == [(False, None, "manual", None)], (
             "o aperto dela foi comido, ou o gesto entrou em Modo Nativo"
         )
         assert pt.em_curso(d) is None, "a tentativa tinha de ser encerrada"
@@ -405,8 +424,8 @@ class TestOGesto:
         await gesto()  # type: ignore[operator]
 
         assert d.pedidos == [
-            (False, None, "manual"),  # xbox -> mouse_teclado, no MESMO aperto
-            (True, "dualsense", "manual"),  # mouse_teclado -> dualsense
+            (False, None, "manual", None),  # xbox -> mouse_teclado, no MESMO aperto
+            (True, None, "manual", "dualsense"),  # mouse_teclado -> dualsense
         ], "ficou presa no degrau caro, ou comeu um aperto"
 
     @pytest.mark.asyncio
@@ -425,7 +444,7 @@ class TestOGesto:
         await hotkey_sub.build_next_bridge_callback(d)()  # type: ignore[arg-type]
 
         assert pt.em_curso(d) is None
-        assert d.pedidos == [(True, "xbox", "manual")], "o gesto tem de obedecer"
+        assert d.pedidos == [(True, None, "manual", "xbox")], "o gesto tem de obedecer"
 
     def test_o_degrau_do_steam_input_nunca_e_subido_pelo_gesto(self) -> None:
         """Ele exige fechar a Steam, reabrir a Steam e reabrir o jogo — e
@@ -435,8 +454,9 @@ class TestOGesto:
 
         O invariante não mudou em 30/08; mudou o nome do desfecho. Antes o
         laço PARAVA nele (`PASSO_PAROU`); agora o PULA e a escada acaba —
-        `mascara is None` nos dois casos, que é o que garante que o gesto
-        nunca aplica Steam Input.
+        `caminho is None` nos dois casos, que é o que garante que o gesto
+        nunca aplica Steam Input. (O campo do `Passo` chamava-se `mascara` até
+        a MODO-DE-CONEXAO-01, 13/09/2026: o gesto anda por caminhos.)
         """
         d = _DaemonDoGesto(flavor="dualsense")
         _abrir_tentativa(d, pe.ESCADA[2])  # o degrau anterior ao Steam Input
@@ -444,7 +464,7 @@ class TestOGesto:
         passo = pt.avancar_por_gesto(d, jogo_vivo=True, agora=1.0)
 
         assert passo is not None
-        assert passo.mascara is None, "o gesto ia aplicar o Steam Input"
+        assert passo.caminho is None, "o gesto ia aplicar o Steam Input"
         assert passo.motivo == pt.PASSO_ESCADA_ACABOU
         assert [d.ponte.chave for d in passo.pulados] == [
             "gamepad/dualsense+steam_input"

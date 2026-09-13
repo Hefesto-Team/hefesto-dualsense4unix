@@ -720,6 +720,9 @@ class CoopManager:
         # força a recriação com a máscara nova. Só efetiva no ciclo cheio (o
         # `set_gamepad_emulation` chama `sync(force=True)` após trocar o flavor).
         desired_flavor = self._flavor()
+        # MODO-DE-CONEXAO-01 (13/09/2026): o CAMINHO também. Com a mesma máscara,
+        # o secundário que ficou no canal antigo é recriado no novo — e só ele.
+        desired_caminho = self._caminho()
 
         for mac in list(self._players):
             player = self._players[mac]
@@ -743,7 +746,11 @@ class CoopManager:
                 logger.warning("coop_player_vpad_morto_respawn", identity=mac)
                 self._teardown_player(mac)
             elif player.vpad is not None and vpad_ficou_para_tras(
-                getattr(player.vpad, "flavor", None), mac, desired_flavor
+                getattr(player.vpad, "flavor", None),
+                mac,
+                desired_flavor,
+                vpad=player.vpad,
+                caminho=desired_caminho,
             ):
                 # MÁSCARA-POR-JOGADOR-01 (29/08/2026): `desired_flavor` deixou
                 # de ser um VALOR e passou a ser FUNÇÃO do aparelho. Sem esta
@@ -819,6 +826,13 @@ class CoopManager:
 
         cfg = getattr(self._daemon, "config", None)
         return normalize_flavor(getattr(cfg, "gamepad_flavor", None))
+
+    def _caminho(self) -> str | None:
+        """O caminho escolhido (MODO-DE-CONEXAO-01), ou ``None`` = ninguém escolheu."""
+        from hefesto_dualsense4unix.integrations.virtual_pad import normalizar_caminho
+
+        cfg = getattr(self._daemon, "config", None)
+        return normalizar_caminho(getattr(cfg, "gamepad_caminho", None))
 
     def _next_player_index(self) -> int:
         """Menor índice de jogador livre (≥2).
@@ -1137,6 +1151,9 @@ class CoopManager:
             # GYRO-01: 0x05 do físico DESTE jogador calibra o motion espelhado
             # (None para externos/sem MAC → canônico, fail-safe).
             calibration_0x05=calib,
+            # MODO-DE-CONEXAO-01: o caminho escolhido vale para todos os
+            # jogadores — o modo é um para todos (08/09), a máscara é por controle.
+            caminho=self._caminho(),
             # REPLICA-03: o output do jogo (gatilhos/lightbar/player-LED)
             # replica no físico DESTE jogador; CLOSE devolve perfil/paleta.
             **self._make_player_replica_sinks(player.identity),

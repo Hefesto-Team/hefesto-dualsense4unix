@@ -67,8 +67,11 @@ O QUE CONTINUA EM ABERTO, e é honesto dizer
   funciona hoje; o que não existe é o **PS + R3** parar nela. Por isso ela é o
   único item de :func:`chips_sem_degrau`, e por isso :func:`chips_sem_degrau`
   **não serve** para pintar "sem dono".
-* **Fixar um degrau pela tela** continua sem método de IPC: clicar em Sony
-  DualSense, Xbox ou Steam Input não muda nada no daemon. Quem muda é o PS+R3.
+* **Steam Input não se fixa pela tela**: não há método de IPC que o ligue, e o
+  degrau só sobrevive com a Steam fechada. **Sony DualSense** e **Xbox** se
+  fixam, e cada um é um CAMINHO (MODO-DE-CONEXAO-01, 13/09/2026): o chip manda
+  `gamepad.emulation.set {caminho}` e o **PS + R3** é o mesmo modo pelo
+  controle.
 """
 from __future__ import annotations
 
@@ -84,6 +87,11 @@ from hefesto_dualsense4unix.app.actions.mode_transition import (
     plan_mode_transition,
 )
 from hefesto_dualsense4unix.integrations import ponte_escada
+from hefesto_dualsense4unix.integrations.virtual_pad import (
+    CAMINHO_DUALSENSE,
+    CAMINHO_XBOX,
+    normalizar_caminho,
+)
 
 #: O que se escreve no lugar de um valor que o produto não tem como responder.
 #: É um traço, e não um zero: zero é uma medida, e esta tela não mediu nada.
@@ -220,6 +228,32 @@ def hefesto_ligado(state: dict[str, Any] | None) -> bool | None:
     return ligado_por_modo(modo_vivo(state))
 
 
+def caminho_vivo(state: dict[str, Any] | None) -> str | None:
+    """O CAMINHO de pé agora — ``None`` quando não se sabe. MODO-DE-CONEXAO-01.
+
+    É o leitor que acende o chip de modo da fileira, e ele não lê a máscara: até
+    13/09/2026 a tela acendia o chip por `home_actions.mascara_do_aparelho`, que
+    no `uinput` cai no `flavor` da sessão — e com o cartão do P1 em Xbox 360 o
+    chip «Sony DualSense» ficava aceso com o jogo vendo Xbox 360.
+
+    O dono do valor é o daemon (`gamepad_emulation.caminho` do `state_full`). Um
+    daemon de antes da cura não publica o campo: aí só o `backend` `uhid` responde
+    por si, e o `uinput` sozinho não separa o Xbox escolhido do DualSense que
+    degradou — ``None``, e a tela não acende nada que ninguém leu.
+    """
+    if not isinstance(state, dict):
+        return None
+    gamepad = state.get("gamepad_emulation")
+    if not isinstance(gamepad, dict):
+        return None
+    publicado = normalizar_caminho(gamepad.get("caminho"))
+    if publicado is not None:
+        return publicado
+    if gamepad.get("backend") == "uhid":
+        return CAMINHO_DUALSENSE
+    return None
+
+
 # ---------------------------------------------------------------------------
 # O INTERRUPTOR — do clique dela até o disco
 # ---------------------------------------------------------------------------
@@ -314,7 +348,7 @@ def porque_nao_aplica(chave: str) -> str:
 
 
 def plano_do_modo(
-    chave: str, mascara: str | None = None
+    chave: str, mascara: str | None = None, caminho: str | None = None
 ) -> list[tuple[str, dict[str, Any]]] | None:
     """A sequência de IPC do clique — DELEGADA, sem uma linha de regra própria.
 
@@ -322,11 +356,11 @@ def plano_do_modo(
     define o que cada modo É continua sendo
     :func:`~hefesto_dualsense4unix.app.actions.mode_transition.plan_mode_transition`;
     escrever a ordem das chamadas aqui criaria o segundo dono que o HARM-01
-    enterrou.
+    enterrou. ``caminho`` é o de :attr:`Chip.caminho` (MODO-DE-CONEXAO-01).
     """
     if chave not in ESCRITOR_DOS_MODOS:
         return None
-    return plan_mode_transition(chave, mascara)
+    return plan_mode_transition(chave, mascara, caminho)
 
 
 class Lembranca(NamedTuple):
@@ -403,6 +437,12 @@ class Chip(NamedTuple):
     #: **Navegação** tem: ela não é degrau da escada e mesmo assim tem dono, e
     #: é este campo que separa "não é degrau" de "não tem dono".
     modo: str | None = None
+    #: o CAMINHO que este chip escolhe — MODO-DE-CONEXAO-01, 13/09/2026. Só o
+    #: «Sony DualSense» e o «Xbox» têm: são os dois degraus ao vivo da escada, e
+    #: o clique manda `gamepad.emulation.set {caminho}`. Até 13/09 o chip
+    #: mandava a MÁSCARA da `ponte` (`flavor`), e com máscara no cartão ele dizia
+    #: «aplicado» sem mudar nada. O «Steam Input» não tem: não há IPC que o ligue.
+    caminho: str | None = None
 
     @property
     def indice(self) -> int:
@@ -469,11 +509,13 @@ CHIPS_DA_ESCADA: tuple[Chip, ...] = (
         "dualsense",
         "Sony DualSense",
         ponte_escada.Ponte(ponte_escada.KIND_GAMEPAD, ponte_escada.MASCARA_DUALSENSE),
+        caminho=CAMINHO_DUALSENSE,
     ),
     Chip(
         "xbox",
         "Xbox",
         ponte_escada.Ponte(ponte_escada.KIND_GAMEPAD, ponte_escada.MASCARA_XBOX),
+        caminho=CAMINHO_XBOX,
     ),
     Chip(
         "steam",
@@ -1115,6 +1157,7 @@ __all__ = [
     "aviso_do_grab_dobrado",
     "aviso_do_modo_nativo",
     "avisos_do_estado",
+    "caminho_vivo",
     "chips_sem_degrau",
     "chips_sem_dono",
     "degrau_vivo",

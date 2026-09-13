@@ -1621,21 +1621,23 @@ def _estado_da_tela(state: dict[str, Any]) -> dict[str, str]:
       não se sabe. Ele é DERIVADO de propósito (Ligado é ``gamepad`` **ou**
       ``desktop``): comparar um botão só deixaria a tela muda na Navegação, e
       mudo é pior que errado porque parece defeito;
-    * `home_actions.mascara_do_aparelho` — a máscara que o JOGO vê agora, com a
-      diferença entre a explícita e a deduzida do ``backend``, e ``None`` quando
-      não dá para saber.
+    * `painel.caminho_vivo` — o CAMINHO que o daemon publica
+      (`gamepad_emulation.caminho`), e ``None`` quando não dá para saber.
 
     O CHIP ACESO É O INVERSO DO `_plano_do_chip`, e sai da MESMA tabela
     (`painel.CHIPS_DA_ESCADA`): um chip com ``modo`` é um modo do produto (a
-    **Navegação**), os outros são MÁSCARAS do modo ``gamepad``. Escrever aqui um
+    **Navegação**), os outros são CAMINHOS do modo ``gamepad``. Escrever aqui um
     ``if chave == "dualsense"`` seria a segunda cópia de uma tradução que já tem
     dono — a mesma que o gesto usa para o caminho de ida.
 
-    O STEAM INPUT NUNCA ACENDE, e é a mesma guarda do gesto: ele nomeia a ponte
-    do DualSense com ``steam_input=True``, e sem a guarda ele empataria com o
-    chip **Sony DualSense** pela máscara. Quem fixa um degrau é o PS+R3, e não
-    há IPC que o diga — acendê-lo por dedução seria a tela afirmando uma escolha
-    que ninguém fez.
+    FATO SUBSTITUÍDO — MODO-DE-CONEXAO-01, 13/09/2026: o chip acendia pela
+    MÁSCARA (`home_actions.mascara_do_aparelho`), e ela mentia com máscara no
+    cartão — no `uinput` ela cai no `flavor` da sessão, e com o cartão do P1 em
+    Xbox 360 o «Sony DualSense» ficava aceso. O chip de modo não lê a máscara.
+
+    O STEAM INPUT NUNCA ACENDE: ele não tem caminho (`Chip.caminho` é ``None``),
+    e não há IPC que o diga — acendê-lo por dedução seria a tela afirmando uma
+    escolha que ninguém fez.
 
     DAEMON CALADO NÃO PINTA NADA, e esta é a armadilha desta função: `mode_of_
     state({})` devolve **desktop** — ele só devolve ``None`` para um
@@ -1646,13 +1648,10 @@ def _estado_da_tela(state: dict[str, Any]) -> dict[str, str]:
     if not state:
         return {"hef-posicao": "", "modo-aceso": ""}
 
-    from hefesto_dualsense4unix.app.actions.home_actions import mascara_do_aparelho
-    from hefesto_dualsense4unix.integrations import ponte_escada
-
     painel = _painel()
     ligado = painel.hefesto_ligado(state)
     modo = painel.modo_vivo(state)
-    mascara = mascara_do_aparelho(state)
+    caminho = painel.caminho_vivo(state)
 
     aceso = ""
     for chip in painel.CHIPS_DA_ESCADA:
@@ -1661,10 +1660,7 @@ def _estado_da_tela(state: dict[str, Any]) -> dict[str, str]:
                 aceso = str(chip.chave)
                 break
             continue
-        ponte = chip.ponte
-        if ponte is None or ponte.steam_input or ponte.kind != ponte_escada.KIND_GAMEPAD:
-            continue
-        if modo == "gamepad" and mascara and ponte.mascara == mascara:
+        if modo == "gamepad" and caminho and chip.caminho == caminho:
             aceso = str(chip.chave)
             break
 
@@ -1674,7 +1670,8 @@ def _estado_da_tela(state: dict[str, Any]) -> dict[str, str]:
     # cartões, e dois controles com escolhas diferentes acendiam o mesmo chip.
     # Agora ela sai por cartão (ver `_mascara_do_cartao`); o que fica aqui é o
     # que de fato é da máquina — a posição do interruptor e o chip da fileira.
-    # A `mascara` acima continua sendo lida: é ela que decide o `modo-aceso`.
+    # Quem decide o `modo-aceso` é o `caminho` acima, nunca a máscara
+    # (MODO-DE-CONEXAO-01, 13/09/2026).
     return {
         # AS PALAVRAS SÃO AS DO DESENHO (`aba01.INTERRUPTOR`), e é o `data-hef-
         # quando` de cada rótulo que decide qual acende — o Python manda o
@@ -1820,9 +1817,10 @@ _ROTULO: dict[str, str] = {}
 def _lembrar(campo: str, valor: str, rotulo: str) -> None:
     """Anota o que ela acabou de pedir. Escritor ÚNICO dos dois dicionários.
 
-    `campo` é `"modo"` ou `"mascara"`, que são as duas chaves de
-    `home_actions.reconciliar_pendente` — as mesmas da janela estável. Escrever
-    um terceiro nome aqui faria a reconciliação passar batido por ele.
+    `campo` é `"modo"`, `"caminho"` ou `"mascara"`, que são as chaves de
+    `home_actions.reconciliar_pendente` — o `"caminho"` entrou lá e aqui no
+    mesmo dia (MODO-DE-CONEXAO-01, 13/09/2026). Escrever um nome que a
+    reconciliação não conhece faria ela passar batido por ele.
     """
     if not valor:
         return
@@ -1849,8 +1847,16 @@ def _lembrar(campo: str, valor: str, rotulo: str) -> None:
 #: o clique escolhe *o que ativar o perfil vai ligar*; aqui ele TROCA o modo
 #: agora, e a gravação é o que faz a escolha sobreviver à próxima ativação.
 #: Por isso ela vem DEPOIS de `_aplicar` e nunca levanta.
-def _gravar_o_modo(ctx: Contexto, kind: str, flavor: str | None = None) -> str:
+def _gravar_o_modo(
+    ctx: Contexto,
+    kind: str,
+    flavor: str | None = None,
+    caminho: str | None = None,
+) -> str:
     """Leva o modo clicado à seção `mode` do perfil ativo. Nunca levanta.
+
+    O chip de modo manda o ``caminho`` e nunca o ``flavor`` (MODO-DE-CONEXAO-01,
+    13/09/2026): o modo não escreve a máscara do perfil.
 
     O NOME DE VOLTA É PARA A RÉGUA, não para a tela: ele diz qual perfil recebeu
     a escolha (``""`` quando não houve escrita), e é o que a mordida do Passo 1
@@ -1863,8 +1869,11 @@ def _gravar_o_modo(ctx: Contexto, kind: str, flavor: str | None = None) -> str:
     """
     from . import perfil as _perfil
 
-    return _perfil.gravar_o_modo_no_ativo(getattr(ctx, "state", None),
-                                          kind, flavor)
+    # O `caminho` só vai quando veio: quem já dubla o escritor com a assinatura
+    # de antes (o interruptor, a Navegação) não passa a quebrar por ele.
+    return _perfil.gravar_o_modo_no_ativo(
+        getattr(ctx, "state", None), kind, flavor,
+        **({"caminho": caminho} if caminho else {}))
 
 
 def _gravar_o_modo_do_chip(ctx: Contexto, chave: str) -> str:
@@ -1872,18 +1881,21 @@ def _gravar_o_modo_do_chip(ctx: Contexto, chave: str) -> str:
 
     É a mesma leitura de `_lembrar_do_chip`, e ela não se repete por acaso: um
     chip com ``modo`` **é** um modo do produto (a Navegação); os outros são
-    MÁSCARAS do mesmo modo ``gamepad`` (`_plano_do_chip`). Escrever aqui um
+    CAMINHOS do mesmo modo ``gamepad`` (`_plano_do_chip`). Escrever aqui um
     ``if chave == "xbox"`` seria a terceira cópia dessa tradução nesta aba.
+
+    FATO SUBSTITUÍDO — MODO-DE-CONEXAO-01, 13/09/2026: esta função gravava a
+    MÁSCARA da ponte do chip em ``mode.gamepad_flavor``, e o perfil ativo passava
+    a dizer `xbox` com o jogo recebendo o DualSense. Ela grava o caminho.
     """
     chip = next((c for c in _painel().CHIPS_DA_ESCADA if c.chave == chave), None)
     if chip is None:
         return ""
     if chip.modo:
         return _gravar_o_modo(ctx, str(chip.modo))
-    ponte = chip.ponte
-    if ponte is None or not ponte.mascara:
+    if not chip.caminho:
         return ""
-    return _gravar_o_modo(ctx, "gamepad", str(ponte.mascara))
+    return _gravar_o_modo(ctx, "gamepad", caminho=str(chip.caminho))
 
 
 def _rotulo_de(campo: str, valor: str) -> str:
@@ -1894,10 +1906,9 @@ def _rotulo_de(campo: str, valor: str) -> str:
     `painel.CHIPS_DA_ESCADA`, que é o dono dos rótulos da fileira — digitá-los
     aqui seria a segunda cópia da palavra dela.
     """
-    if campo == "mascara":
+    if campo == "caminho":
         for chip in _painel().CHIPS_DA_ESCADA:
-            ponte = chip.ponte
-            if ponte is not None and ponte.mascara == valor:
+            if chip.caminho == valor:
                 return str(chip.rotulo)
     return valor
 
@@ -1938,6 +1949,9 @@ def _pendencia(state: dict[str, Any]) -> dict[str, str]:
     lembrete = SimpleNamespace(
         _escolha_pendente=dict(_ESCOLHA) or None,
         _modo_vigente_do_daemon=mode_of_state(state),
+        # MODO-DE-CONEXAO-01: o chip de modo pede um CAMINHO, e é com o caminho
+        # vivo que ele se compara — nunca com a máscara.
+        _caminho_vigente_do_daemon=_painel().caminho_vivo(state),
         _mascara_vigente_do_daemon=mascara_do_aparelho(state),
     )
     sobra: dict[str, str] = dict(reconciliar_pendente(lembrete) or {})
@@ -1989,9 +2003,14 @@ def _faixa_do_pendente(state: dict[str, Any]) -> tuple[str, str]:
     sobra = _pendencia(state)
     if not sobra:
         return "", ""
-    rotulos = [_ROTULO.get(c, sobra[c]) for c in ("modo", "mascara") if c in sobra]
+    rotulos = [_ROTULO.get(c, sobra[c])
+               for c in ("modo", "caminho", "mascara") if c in sobra]
+    # O CAMINHO É UM MODO na frase: «Vai mudar para: Xbox» nomeia o chip que ela
+    # clicou, e o `texto_do_pendente` só conhece os dois eixos de antes.
+    eixo_do_modo = next((c for c in ("modo", "caminho") if c in sobra), None)
     frase = texto_do_pendente(
-        modo=_ROTULO.get("modo", sobra.get("modo")) if "modo" in sobra else None,
+        modo=(_ROTULO.get(eixo_do_modo, sobra[eixo_do_modo])
+              if eixo_do_modo else None),
         mascara=(_ROTULO.get("mascara", sobra.get("mascara"))
                  if "mascara" in sobra else None),
     )
@@ -2014,9 +2033,14 @@ def _relatar_a_pendencia(frase: str) -> None:
     no aparelho: o chip da fileira manda `gamepad.emulation.set` com
     `origin="manual"` (`painel.plano_do_modo`); a trava de jogo aberto nunca
     segura essa origem (`gamepad._recriacao_bloqueada_por_jogo`,
-    `ORIGENS_GESTO_DELA`); o daemon grava o `flavor` assim que o vpad novo
-    nasce; e `_estado_da_tela` acende o chip com ele no tique seguinte. **O chip
-    mostra a escolha**, e a sprint decidiu por esse ramo: a faixa não acende.
+    `ORIGENS_GESTO_DELA`); e a sprint decidiu por esse ramo: a faixa não acende.
+
+    FATO SUBSTITUÍDO — MODO-DE-CONEXAO-01, 13/09/2026. Aqui se dizia que o chip
+    mostrava a escolha, e com máscara no cartão ele não mostrava: o chip mandava a
+    máscara, o daemon respondia `ja_estava` sem gravar nada, e a tela acendia
+    pela máscara. Desde a cura o chip manda o CAMINHO, o daemon o grava
+    depois de o vpad alcançá-lo (`gamepad._guardar_o_caminho`), e
+    `_estado_da_tela` acende pelo caminho publicado (`painel.caminho_vivo`).
 
     Uma pendência que PERSISTE é o daemon que não alcançou o pedido, e isso é
     assunto de quem depura: vai para o `interface.log`, na forma do
@@ -2118,7 +2142,9 @@ def _painel() -> Any:
     return painel
 
 
-def _plano(chave: str, mascara: str | None = None) -> list[tuple[str, dict[str, Any]]]:
+def _plano(
+    chave: str, mascara: str | None = None, caminho: str | None = None
+) -> list[tuple[str, dict[str, Any]]]:
     """A sequência de IPC daquele modo — DELEGADA, sem uma linha de regra aqui.
 
     `painel.plano_do_modo` devolve `None` quando o botão não tem escritor, e o
@@ -2127,7 +2153,7 @@ def _plano(chave: str, mascara: str | None = None) -> list[tuple[str, dict[str, 
     """
     painel = _painel()
     plano: list[tuple[str, dict[str, Any]]] | None = painel.plano_do_modo(
-        chave, mascara)
+        chave, mascara, **({"caminho": caminho} if caminho else {}))
     if plano is None:
         raise RuntimeError(painel.porque_nao_aplica(chave))
     return plano
@@ -2265,19 +2291,23 @@ def _hefesto_o_modo(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
 
 
 def _plano_do_chip(chave: str) -> list[tuple[str, dict[str, Any]]]:
-    """A sequência daquele chip da fileira — a máscara sai do PRODUTO.
+    """A sequência daquele chip da fileira — o CAMINHO sai do PRODUTO.
 
-    `painel.CHIPS_DA_ESCADA` é quem guarda qual ponte cada chip nomeia
-    (`Ponte(KIND_GAMEPAD, MASCARA_DUALSENSE)` para o "Sony DualSense", `…XBOX`
-    para o "Xbox"). Digitar `"dualsense"` aqui seria a segunda cópia de um valor
-    que já tem dono — e que muda de lugar quando a `ESCADA` mudar.
+    `painel.CHIPS_DA_ESCADA` é quem guarda qual caminho cada chip escolhe
+    (`Chip.caminho`: `"dualsense"` para o "Sony DualSense", `"xbox"` para o
+    "Xbox"). Digitar `"dualsense"` aqui seria a segunda cópia de um valor que já
+    tem dono.
 
-    DOIS CAMINHOS, e a diferença é a que `painel` documenta: um chip com `modo`
+    DOIS EIXOS, e a diferença é a que `painel` documenta: um chip com `modo`
     (a **Navegação**) É um modo do produto e vai por ele; os outros são
-    MÁSCARAS do mesmo modo `gamepad`, e vão pelo `flavor` do plano.
+    CAMINHOS do mesmo modo `gamepad`, e vão pelo `caminho` do plano.
+
+    FATO SUBSTITUÍDO — MODO-DE-CONEXAO-01, 13/09/2026: o plano levava a MÁSCARA
+    da ponte do chip (`flavor`), que no daemon é só o padrão da máscara — com
+    máscara no cartão do P1 o daemon respondia `ja_estava` e o piloto escrevia
+    «aplicado» sobre nada. A máscara não sai mais daqui.
     """
     from hefesto_dualsense4unix.app.actions.mode_transition import MODE_GAMEPAD
-    from hefesto_dualsense4unix.integrations import ponte_escada
 
     chip = next((c for c in _painel().CHIPS_DA_ESCADA if c.chave == chave), None)
     if chip is None:
@@ -2285,23 +2315,26 @@ def _plano_do_chip(chave: str) -> list[tuple[str, dict[str, Any]]]:
     if chip.modo:
         # A Navegação: `apply_mode('desktop')`, os três IPCs em ordem.
         return _plano(chip.modo)
-    ponte = chip.ponte
-    if ponte is None or ponte.kind != ponte_escada.KIND_GAMEPAD or ponte.steam_input:
+    if not chip.caminho:
         raise RuntimeError(BOTOES_SEM_DONO.get(f"modo-{chave}", "sem dono no produto"))
-    return _plano(MODE_GAMEPAD, ponte.mascara)
+    return _plano(MODE_GAMEPAD, caminho=chip.caminho)
 
 
 def _lembrar_do_chip(chave: str, o: dict[str, Any]) -> None:
     """Anota o que o chip clicado pediu, no EIXO dele — e só nele.
 
     UM CHIP MEXE NUM EIXO SÓ, e é o que o `_plano_do_chip` já diz: a Navegação
-    **é** um modo (`chip.modo`), os outros são MÁSCARAS do mesmo modo `gamepad`
-    (`chip.ponte.mascara`). Anotar `modo=gamepad` junto com a máscara poria na
+    **é** um modo (`chip.modo`), os outros são CAMINHOS do mesmo modo `gamepad`
+    (`chip.caminho`). Anotar `modo=gamepad` junto com o caminho poria na
     faixa a palavra do CHIP ("Xbox") sob o rótulo do INTERRUPTOR ("Ligado") —
     duas coisas com nomes diferentes na tela dela, coladas numa linha só.
 
+    FATO SUBSTITUÍDO — MODO-DE-CONEXAO-01, 13/09/2026: o chip anotava a MÁSCARA
+    no campo `"mascara"`, comparado com a máscara viva — com o cartão do P1 em
+    DualSense, «● Vai mudar para: Xbox» nunca sumia. Ele anota o `"caminho"`.
+
     Qual eixo é de cada chip sai de `painel.CHIPS_DA_ESCADA`, e não de um `if`
-    por nome: é o mesmo lugar de onde `_plano_do_chip` tira a ponte.
+    por nome: é o mesmo lugar de onde `_plano_do_chip` tira o caminho.
     """
     chip = next((c for c in _painel().CHIPS_DA_ESCADA if c.chave == chave), None)
     if chip is None:
@@ -2310,25 +2343,24 @@ def _lembrar_do_chip(chave: str, o: dict[str, Any]) -> None:
     if chip.modo:
         _lembrar("modo", chip.modo, rotulo)
         return
-    ponte = chip.ponte
-    if ponte is not None and ponte.mascara:
-        _lembrar("mascara", str(ponte.mascara), rotulo)
+    if chip.caminho:
+        _lembrar("caminho", str(chip.caminho), rotulo)
 
 
 @gesto("01-jogar.html", "modo-dualsense", grava="gravar_o_modo_no_ativo")
 def modo_dualsense(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
-    """"Sony DualSense": o jogo desenha os botões do PlayStation.
+    """"Sony DualSense": o Hefesto entrega o controle pelo canal do DualSense.
 
-    É a máscara `054c:0df2`, e ela é o PRIMEIRO degrau que o produto tenta —
-    `ponte_escada.ESCADA[0]`. A razão está contada no cabeçalho de lá: **dez**
-    linhas do `mapa-controles.csv` só chegam ao jogo por `uhid` (giroscópio,
-    acelerômetro, touchpad, bateria, o jack de áudio, o rumble por FF…), e a
-    máscara Xbox não tem onde pôr nenhuma delas. *"Errar para DualSense custa um
-    aperto de botão; errar para Xbox custa dez linhas do mapa, e custa em
-    silêncio."*
+    É o CAMINHO `uhid` — o relatório do DualSense, por onde voltam do jogo
+    gatilho, luz e LED de jogador —, e ele é o PRIMEIRO degrau que o produto
+    tenta, `ponte_escada.ESCADA[0]`. A razão está contada no cabeçalho de lá:
+    **dez** linhas do `mapa-controles.csv` só chegam ao jogo por `uhid`.
 
     O modo continua sendo `gamepad`: o que muda entre este chip e o "Xbox" é o
-    `flavor`, não o modo. É por isso que o plano tem os mesmos dois passos.
+    CAMINHO, não o modo nem a máscara. A máscara é do cartão de cada controle
+    (MODO-DE-CONEXAO-01, 13/09/2026): com máscara Xbox 360 no cartão este
+    caminho fica escolhido e aceso, e o aparelho sai no canal comum — o `uhid`
+    só se constrói com máscara DualSense (`virtual_pad.quer_uhid`).
     """
     _aplicar(p, _plano_do_chip("dualsense"))
     _lembrar_do_chip("dualsense", o)
@@ -2337,17 +2369,17 @@ def modo_dualsense(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
 
 @gesto("01-jogar.html", "modo-xbox", grava="gravar_o_modo_no_ativo")
 def modo_xbox(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
-    """"Xbox": o formato que todo jogo entende — o SEGUNDO que o Hefesto tenta.
+    """"Xbox": o canal comum, o do controle de Xbox — o SEGUNDO que o Hefesto tenta.
 
     ESTE CHIP NASCEU EM 31/08/2026 E É UMA DÍVIDA PAGA: `Ponte(gamepad, xbox)` é
     degrau da `ESCADA` desde 19/08 e **nenhum chip o nomeava** — era o que
     `painel.degraus_sem_chip()` denunciava. A escada automática passava por ele
     e a tela não tinha onde mostrá-lo.
 
-    O preço dele está medido e não se esconde: `045e:028e` é `uinput`, o pacote
-    do Xbox 360 é fixo desde 2005, e quem escolhe esta máscara *"escolhe rumble
-    por evdev que funciona em tudo e paga com as cinco features"*
-    (`docs/protocol/pilha-steam-input-xpad-sdl.md` §1.5).
+    É o CAMINHO `uinput` (MODO-DE-CONEXAO-01, 13/09/2026), e ele NÃO escolhe a
+    máscara: com o cartão do P1 em DualSense o jogo continua vendo o DualSense,
+    agora pelo canal comum. Até 13/09 este chip mandava a máscara Xbox 360, e com
+    máscara no cartão dizia «aplicado» sem mudar nada — a queixa dela.
     """
     _aplicar(p, _plano_do_chip("xbox"))
     _lembrar_do_chip("xbox", o)

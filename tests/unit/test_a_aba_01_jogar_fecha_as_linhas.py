@@ -966,9 +966,16 @@ def test_o_modo_clicado_entra_no_perfil_ativo(tmp_path, monkeypatch) -> None:
     assert lido == "gamepad", (
         f"a aba 10 continua vendo {lido!r} depois de o chip Xbox ser clicado na "
         f"01 — a escolha dela não atravessou as duas telas")
+    # AJUSTADA À REGRA DELA — MODO-DE-CONEXAO-01, 13/09/2026. ANTES conferia que
+    # o chip «Xbox» gravava a MÁSCARA (`mode.gamepad_flavor == "xbox"`), e era
+    # essa a metade do defeito: o perfil ativo dizia `xbox` com o jogo recebendo
+    # o DualSense. AGORA confere o CAMINHO, e que a máscara ficou intocada — o
+    # modo não escreve a máscara (§D.1 da sprint).
     modo = loader.load_profile(nome).mode
-    assert modo is not None and modo.gamepad_flavor == "xbox", (
-        f"a máscara não entrou na seção `mode`: {modo!r}")
+    assert modo is not None and modo.caminho == "xbox", (
+        f"o caminho não entrou na seção `mode`: {modo!r}")
+    assert modo.gamepad_flavor is None, (
+        f"o chip de modo escreveu a máscara do perfil: {modo!r}")
 
 
 def test_a_escrita_no_perfil_nunca_levanta(monkeypatch) -> None:

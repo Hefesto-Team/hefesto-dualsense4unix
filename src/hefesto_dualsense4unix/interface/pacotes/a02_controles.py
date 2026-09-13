@@ -3106,7 +3106,7 @@ def _volume_conhecido(dele: dict[str, Any]) -> dict[str, Any]:
 #:
 #: `mic.button_toggles_system` é UM por MÁQUINA: quem o lê é
 #: `hotkey.mic_button_loop`, em `daemon.config.mic_button_toggles_system`, sem
-#: consultar `uniq` nenhum (`daemon/subsystems/hotkey.py:1234`). O esquema o
+#: consultar `uniq` nenhum (`daemon/subsystems/hotkey.py:1308`). O esquema o
 #: RECUSA por peça (`ControllerMicOverride._o_que_ainda_nao_tem_caminho_por_peca`)
 #: — e a régua da casa é `test_perfil_por_controle_o_campo_espera_o_caminho.py`,
 #: nos dois sentidos. Guardá-lo por controle faria quatro controles gravarem
@@ -3572,9 +3572,9 @@ def mudo(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
         #
         # O QUE O DAEMON DESTA ÁRVORE RESPONDE, medido em 06/09/2026: o corpo
         # de `mic.canal.set` NÃO traz `por_uniq` — quem o traz é o
-        # `mic.volume.set` (`daemon/ipc_handlers.py:6165`). O ato do microfone
+        # `mic.volume.set` (`daemon/ipc_handlers.py:6197`). O ato do microfone
         # monta a resposta em `AtoDoMicrofone.como_corpo`
-        # (`daemon/subsystems/hotkey.py:1388`), e lá o campo não existe. Então
+        # (`daemon/subsystems/hotkey.py:1458`), e lá o campo não existe. Então
         # `alvo_honrado` devolve `None` aqui, esta linha fica CALADA contra o
         # daemon de hoje, e o silêncio é o certo: quem cobre o alvo errado
         # neste caminho é a metade do CANAL, que recusa dizendo quando a
@@ -3681,7 +3681,7 @@ def rota(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     *"o speaker do controle faz os barulhos da espada do Link enquanto na tela
     tem o som normal do jogo"*. É o `OUTPUT_PATH_SEL` = 2: canal esquerdo para o
     fone/TV, direito para o alto-falante do controle. O `speaker.set` leva a
-    `rota` (`ipc_handlers.py:5591`) e a GUI estável manda exatamente isto
+    `rota` (`ipc_handlers.py:5814`) e a GUI estável manda exatamente isto
     (`controller_card.py:4273`).
 
     "TODO O SOM DO PC" SÃO DUAS CAMADAS, E A SEGUNDA NÃO É IPC. O

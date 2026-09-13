@@ -101,9 +101,14 @@ VIVO_DUALSENSE: dict[str, Any] = {
     "connected": True, "native_mode": False, "paused": False,
     "gamepad_emulation": {"enabled": True, "flavor": "dualsense", "backend": "uhid"},
 }
+#: AJUSTADO À REGRA DELA — MODO-DE-CONEXAO-01, 13/09/2026: o daemon publica o
+#: CAMINHO, e é por ele que o chip de modo acende. O `backend` `uhid` do estado
+#: DualSense já responde por si; o `uinput` sozinho não separa o Xbox escolhido
+#: do DualSense degradado, e por isso o estado Xbox traz o campo.
 VIVO_XBOX: dict[str, Any] = {
     "connected": True, "native_mode": False, "paused": False,
-    "gamepad_emulation": {"enabled": True, "flavor": "xbox", "backend": "uinput"},
+    "gamepad_emulation": {"enabled": True, "flavor": "xbox", "backend": "uinput",
+                          "caminho": "xbox"},
 }
 VIVO_NATIVO: dict[str, Any] = {
     "connected": True, "native_mode": True, "paused": False,
@@ -497,10 +502,16 @@ def test_a_pendencia_nao_acende_a_faixa_e_vai_ao_diario(
 
 
 def test_o_chip_xbox_pede_com_origem_manual() -> None:
-    """§3.2, primeiro elo: sem `manual` o daemon leria reconciliação e poderia recusar."""
+    """§3.2, primeiro elo: sem `manual` o daemon leria reconciliação e poderia recusar.
+
+    AJUSTADA À REGRA DELA — MODO-DE-CONEXAO-01, 13/09/2026. ANTES conferia que o
+    chip pedia `flavor: "xbox"` — a MÁSCARA, que o cartão do controle vencia e
+    o daemon respondia `ja_estava`. AGORA confere que ele pede o `caminho`, e a
+    origem `manual` continua sendo o elo que esta régua trava.
+    """
     plano = aba._plano_do_chip("xbox")
     pedidos = [p for m, p in plano if m == "gamepad.emulation.set"]
-    assert pedidos == [{"enabled": True, "origin": "manual", "flavor": "xbox"}], plano
+    assert pedidos == [{"enabled": True, "origin": "manual", "caminho": "xbox"}], plano
 
 
 def test_a_trava_do_jogo_aberto_nao_segura_o_gesto_dela() -> None:
@@ -520,7 +531,13 @@ def test_a_trava_do_jogo_aberto_nao_segura_o_gesto_dela() -> None:
 
 
 def test_o_chip_acende_o_flavor_que_o_daemon_grava() -> None:
-    """§3.2, terceiro elo: o chip lê o `flavor`, e a pendência some quando ele chega."""
+    """§3.2, terceiro elo: o chip lê o que o daemon publica, e a pendência some quando chega.
+
+    AJUSTADA À REGRA DELA — MODO-DE-CONEXAO-01, 13/09/2026. ANTES o chip lia o
+    `flavor` — a máscara —, e o nome do teste ficou dessa época; AGORA ele lê o
+    `caminho` publicado (`painel.caminho_vivo`), e é o estado Xbox com o campo
+    que apaga a pendência do clique «Xbox».
+    """
     assert aba._estado_da_tela(VIVO_DUALSENSE)["modo-aceso"] == "dualsense"
     assert aba._estado_da_tela(VIVO_XBOX)["modo-aceso"] == "xbox"
     aba.modo_xbox(_ctx(VIVO_DUALSENSE), {"texto": "Xbox"}, PonteDeMentira())

@@ -171,7 +171,7 @@ def _apply_via_ipc(rgb: tuple[int, int, int], brightness: int | None) -> bool:
     BUG-CLI-BRIGHTNESS-UNIDADE-01 (25/07): a CLI expõe `--brightness` em
     PORCENTAGEM (0-100, `min=0, max=100` no typer) e mandava o número cru; o
     handler `led.set` valida FRAÇÃO (`0.0 <= brightness <= 1.0`,
-    `ipc_handlers.py:482`). O resultado eram dois erros silenciosos:
+    `ipc_handlers.py:1459`). O resultado eram dois erros silenciosos:
     `--brightness 50` fazia o IPC recusar e o comando caía no fallback de
     hardware sem dizer nada, e `--brightness 1` passava na validação como
     `1.0` — ou seja, era aplicado como **100%**, o oposto do pedido.
