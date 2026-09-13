@@ -52,7 +52,7 @@ MODES: tuple[str, ...] = (MODE_DESKTOP, MODE_GAMEPAD, MODE_NATIVE)
 
 
 def plan_mode_transition(
-    mode_id: str, flavor: str | None = None
+    mode_id: str, flavor: str | None = None, caminho: str | None = None
 ) -> list[tuple[str, dict[str, Any]]]:
     """Sequência de chamadas IPC que leva o sistema ao modo ``mode_id``.
 
@@ -100,6 +100,13 @@ def plan_mode_transition(
 
     O ``mouse.emulation.restore`` não leva ``origin``: ele restaura a
     preferência persistida, que é reconciliação por definição.
+
+    O PASSO GAMEPAD CARREGA O CAMINHO — MODO-DE-CONEXAO-01, 13/09/2026. O chip
+    de modo da aba Jogar mandava ``flavor``, que no daemon é só o padrão da
+    MÁSCARA: com máscara escolhida no cartão ele respondia «aplicado» e o jogo
+    seguia recebendo o mesmo aparelho. O modo é o ``caminho`` (``"dualsense"`` ·
+    ``"xbox"``), e ele vai no seu próprio campo. ``flavor`` continua existindo
+    para quem escolhe MÁSCARA por aqui; os dois não se confundem mais.
     """
     if mode_id == MODE_NATIVE:
         return [("native.mode.set", {"enabled": True, "origin": "manual"})]
@@ -107,6 +114,8 @@ def plan_mode_transition(
         ligar: dict[str, Any] = {"enabled": True, "origin": "manual"}
         if flavor:
             ligar["flavor"] = flavor
+        if caminho:
+            ligar["caminho"] = caminho
         return [
             ("native.mode.set", {"enabled": False, "origin": "manual"}),
             ("gamepad.emulation.set", ligar),
@@ -160,6 +169,7 @@ def apply_mode(
     mode_id: str,
     *,
     flavor: str | None = None,
+    caminho: str | None = None,
     on_done: Callable[[Any], bool],
     on_fail: Callable[[Exception], bool],
 ) -> None:
@@ -169,7 +179,7 @@ def apply_mode(
     `reported_step_index`); as demais são preparo ou consequência. Todas levam
     ``MODE_IPC_TIMEOUT_S``.
     """
-    steps = plan_mode_transition(mode_id, flavor)
+    steps = plan_mode_transition(mode_id, flavor, caminho)
     reported = reported_step_index(steps)
     for idx, (method, params) in enumerate(steps):
         if idx == reported:

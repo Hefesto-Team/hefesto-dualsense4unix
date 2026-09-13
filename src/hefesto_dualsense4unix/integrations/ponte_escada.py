@@ -17,6 +17,8 @@ três peças já têm dono.
     Ponte(kind, mascara, steam_input)
       kind        = `mode.kind` do perfil        (profiles/schema.py)
       mascara     = `mode.gamepad_flavor`        (profiles/schema.py)
+                    — desde 13/09/2026 é o CAMINHO: `mode.caminho`, e sem
+                    ele o `gamepad_flavor` (MODO-DE-CONEXAO-01, nota na `Ponte`)
       steam_input = está no `steam_input_apps.txt`?  (a allowlist dela)
 
 O que faltava não era vocabulário: era o registro de que **esta** tupla foi
@@ -258,6 +260,14 @@ class Ponte:
     `steam_input` é "está no `steam_input_apps.txt`". Nenhum campo novo, e
     NENHUMA persistência aqui: esta é a forma de TRABALHO da escada; a forma
     de ARQUIVO é o `PonteConfirmada` do perfil, e ter uma só gaveta é o ponto.
+
+    NOTA DATADA — MODO-DE-CONEXAO-01, 13/09/2026. Nos degraus de gamepad, o
+    campo `mascara` NOMEIA O CAMINHO de conexão (`"dualsense"` · `"xbox"`), e
+    não a máscara que o jogo vê: a regra dela de 13/09 separou os dois, e os
+    dois degraus ao vivo desta escada são os dois chips «Sony DualSense» e
+    «Xbox» da aba Jogar. `ponte_do_perfil` o lê de `mode.caminho` e, sem ele,
+    de `mode.gamepad_flavor`, como antes. O nome do campo ficou para o carimbo
+    (`PonteConfirmada.gamepad_flavor`) continuar comparável campo a campo.
     """
 
     kind: str
@@ -374,7 +384,14 @@ def ponte_do_perfil(profile: Any, *, na_allowlist: bool) -> Ponte | None:
     kind = getattr(mode, "kind", None)
     if kind not in (KIND_GAMEPAD, KIND_NATIVE, KIND_DESKTOP):
         return None
-    mascara = getattr(mode, "gamepad_flavor", None) if kind == KIND_GAMEPAD else None
+    # MODO-DE-CONEXAO-01 (13/09/2026): os degraus ao vivo são CAMINHOS, e o
+    # perfil que escolheu um o diz em `mode.caminho`. Sem escolha, o degrau sai
+    # da máscara padrão, como saía — nenhum perfil muda de degrau no dia da cura.
+    mascara = (
+        (getattr(mode, "caminho", None) or getattr(mode, "gamepad_flavor", None))
+        if kind == KIND_GAMEPAD
+        else None
+    )
     if mascara is not None and mascara not in (MASCARA_DUALSENSE, MASCARA_XBOX):
         mascara = None
     return Ponte(kind=str(kind), mascara=mascara, steam_input=bool(na_allowlist))

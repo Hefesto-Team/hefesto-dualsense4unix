@@ -70,23 +70,42 @@ class _FakeStore:
 
 
 class _Daemon:
-    """Daemon dublado. Não toca aparelho, não toca disco, não toca perfil."""
+    """Daemon dublado. Não toca aparelho, não toca disco, não toca perfil.
+
+    AJUSTADO À REGRA DELA — MODO-DE-CONEXAO-01, 13/09/2026. O gesto passou a
+    pedir o CAMINHO no campo dele (`caminho=`), com `flavor=None`, e a ponte de
+    pé passou a ser lida do `config.gamepad_caminho` que o daemon escreve depois
+    de o vpad alcançar o pedido. ANTES este dublê trocava a máscara do vpad pelo
+    `flavor` pedido; AGORA ele guarda o caminho na config e deixa a máscara como
+    estava — que é o que o daemon faz.
+    """
 
     def __init__(self, flavor: str) -> None:
         self.controller = SimpleNamespace()
         self.store = _FakeStore()
         self.display_authority = "game"
+        self.config = SimpleNamespace(gamepad_caminho=None)
+        self._mascara = flavor
         self._gamepad_device: Any = _FakeDevice(flavor)
-        self.pedidos: list[tuple[bool, str | None, str]] = []
+        self.pedidos: list[tuple[bool, str | None, str, str | None]] = []
 
     async def _run_blocking(self, fn: Any, *args: Any) -> Any:
         return fn(*args)
 
     def set_gamepad_emulation(
-        self, enabled: bool, flavor: str | None = None, *, origin: str = "manual"
+        self,
+        enabled: bool,
+        flavor: str | None = None,
+        *,
+        origin: str = "manual",
+        caminho: str | None = None,
     ) -> bool:
-        self.pedidos.append((enabled, flavor, origin))
-        self._gamepad_device = _FakeDevice(flavor or "dualsense") if enabled else None
+        self.pedidos.append((enabled, flavor, origin, caminho))
+        if enabled:
+            self.config.gamepad_caminho = caminho or self.config.gamepad_caminho
+            self._gamepad_device = _FakeDevice(flavor or self._mascara)
+        else:
+            self._gamepad_device = None
         return True
 
     def set_mouse_emulation(self, enabled: bool, *, origin: str = "profile") -> bool:

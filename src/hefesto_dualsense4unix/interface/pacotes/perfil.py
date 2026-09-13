@@ -412,8 +412,17 @@ def com_a_carona(frase: str = "") -> str:
 #: bem-sucedida em tarja de recusa"*.
 
 
-def secao_do_modo(atual: Any, kind: str, flavor: str | None = None) -> Any:
+def secao_do_modo(
+    atual: Any, kind: str, flavor: str | None = None, caminho: str | None = None
+) -> Any:
     """O `ProfileModeConfig` que o perfil passa a ter, ou ``None`` para remover.
+
+    O CAMINHO — MODO-DE-CONEXAO-01, 13/09/2026. O chip de modo da aba Jogar grava
+    ``caminho`` e NÃO toca ``gamepad_flavor``: até hoje ele gravava a máscara, e
+    era por isso que o perfil ativo dizia `xbox` com o jogo recebendo o
+    DualSense. A regra do caminho tem UM escritor, e ele é do daemon também —
+    `profiles.manager.secao_do_modo_com_o_caminho`, a mesma que o PS + R3 usa.
+    ``flavor`` continua aqui para quem escolhe MÁSCARA por esta porta.
 
     A REGRA NÃO É MINHA e não se digita duas vezes — ela é a de
     `profiles_actions._mode_section_from_editor`, que é o dono na janela GTK.
@@ -437,21 +446,20 @@ def secao_do_modo(atual: Any, kind: str, flavor: str | None = None) -> Any:
     recusa — o perfil dela deixando de abrir por causa de um clique.
     """
     from hefesto_dualsense4unix.app.actions.perfis_web import MODO_SEM_OPINIAO
+    from hefesto_dualsense4unix.profiles.manager import secao_do_modo_com_o_caminho
     from hefesto_dualsense4unix.profiles.schema import ProfileModeConfig
 
     if kind == MODO_SEM_OPINIAO:
         return None
-    campos: dict[str, Any] = {} if atual is None else dict(atual.model_dump())
-    campos["kind"] = kind
-    if kind != "gamepad":
-        campos["gamepad_flavor"] = None
-    elif flavor:
-        campos["gamepad_flavor"] = flavor
-    return ProfileModeConfig(**campos)
+    secao = secao_do_modo_com_o_caminho(atual, kind=kind, caminho=caminho)
+    if kind != "gamepad" or not flavor:
+        return secao
+    return ProfileModeConfig(**{**secao.model_dump(), "gamepad_flavor": flavor})
 
 
 def gravar_o_modo_no_ativo(state: Any, kind: str,
-                           flavor: str | None = None) -> str:
+                           flavor: str | None = None,
+                           caminho: str | None = None) -> str:
     """Grava a escolha de modo/máscara na seção `mode` do perfil que está VALENDO.
 
     Devolve o NOME do perfil escrito, ou ``""`` quando não houve escrita — sem
@@ -529,7 +537,7 @@ def gravar_o_modo_no_ativo(state: Any, kind: str,
         loader = _com_o_src()
         prof = loader.load_profile(nome)
         antes = getattr(prof, "mode", None)
-        depois = secao_do_modo(antes, kind, flavor)
+        depois = secao_do_modo(antes, kind, flavor, caminho)
         if _mesma_secao(antes, depois):
             return ""
         prof.mode = depois

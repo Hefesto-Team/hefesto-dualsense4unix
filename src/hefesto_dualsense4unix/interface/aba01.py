@@ -251,10 +251,11 @@ HEFESTO_LIGADO = True
 #: no 3, numerar pela posição na tela (e a legenda passar a mentir), ou tirar os
 #: números. **Ela escolheu tirar.**
 #:
-#: A ORDEM NÃO SE PERDEU: ela mora na dica de cada modo ("é o primeiro que o
-#: Hefesto tenta", "é o segundo", "é o último") e na dica do quadro "Quando o
-#: jogo abrir" — que é para onde ela subiu quando o interruptor saiu do quadro
-#: (31/08, à tarde); até ali ela morava no rótulo "Modo", lá dentro.
+#: A ORDEM NÃO SE PERDEU: ela mora no «?» do quadro Modo (*"O Hefesto tenta na
+#: ordem desta lista"*), que é para onde ela subiu quando o interruptor saiu do
+#: quadro (31/08, à tarde); até ali ela morava no rótulo "Modo", lá dentro.
+#: FATO SUBSTITUÍDO — 13/09/2026 (MODO-DE-CONEXAO-01): aqui se dizia que a ordem
+#: morava também na dica de cada modo; a LINGUA-A3 a tirou das dicas em 11/09.
 #: O que saiu foi o número, que era a única peça que podia divergir do produto
 #: sem ninguém notar — e tinha divergido.
 #:
@@ -289,21 +290,30 @@ HEFESTO_LIGADO = True
 #: giroscópio, áudio e o número do jogador seguem por conta do Hefesto nos quatro
 #: — e isso se diz UMA vez, na dica do quadro, não quatro vezes aqui.
 #:
+#: NOTA DATADA — MODO-DE-CONEXAO-01, 13/09/2026. A queixa dela: *"o texto do modo
+#: do xbox tá errado aquilo é o texto da mascara do xbox"*. Como o jogo desenha  # (noqa-acento): citação literal dela
+#: os botões é assunto da MÁSCARA, e ele mora no «?» do cartão de cada controle.
+#: As dicas dos modos dizem o CAMINHO — por onde o Hefesto entrega o controle ao
+#: jogo —, e o «?» do quadro perdeu três metades: o «Vale no próximo jogo que
+#: abrir» (os dois valem com o jogo aberto, palavra dela do mesmo dia), o
+#: «como o jogo desenha os botões» e a lista de features «do Hefesto em todos»,
+#: que não tem medição hoje. Os textos são os do §D.9 da sprint.
+#:
 #: E ELAS ENCOLHERAM: as cinco dicas somavam 1.147 caracteres e passaram a somar
 #: 396. A dica que ocupa meia tela não é lida — é fechada.
 MODOS = [
     {"chave": "dualsense", "rot": "Sony DualSense", "modo": "",
      "sem_dono": False,
-     "dica": "O jogo desenha os botões do PlayStation."},
+     "dica": "O Hefesto entrega o controle ao jogo pelo canal próprio do "
+             "DualSense."},
     {"chave": "xbox", "rot": "Xbox", "modo": "",
      "sem_dono": False,
-     "dica": "O jogo desenha os botões do Xbox — o formato que todo jogo "
-             "entende."},
+     "dica": "O Hefesto entrega o controle ao jogo pelo canal comum, o mesmo "
+             "do controle de Xbox."},
     {"chave": "steam", "rot": "Steam Input", "modo": "",
      "sem_dono": False,
-     "dica": "A Steam entrega a entrada, e os ajustes que você fez nela "
-             "vencem os do jogo. Mudar para cá exige reabrir a Steam e o "
-             "jogo."},
+     "dica": "A Steam entrega os comandos ao jogo; a luz, os gatilhos e o "
+             "número do jogador ficam com o Hefesto."},
     {"chave": "navegacao", "rot": "Navegação", "modo": "desktop",
      "sem_dono": False,
      "dica": "O controle vira teclado e mouse do computador."},
@@ -1547,8 +1557,7 @@ MIOLO = f'''
              outro diriam a mesma coisa duas vezes. De quebra, os rótulos das
              duas seções ficaram idênticos — texto puro dos dois lados. -->
         <span class="ajuda">?<span class="dica">
-          Vale <b>no próximo jogo que abrir</b>. O que muda é <b>como o jogo desenha os botões</b> — luz, vibração, gatilho, giroscópio e som são do Hefesto em todos.<br><br>
-          O Hefesto <b>tenta na ordem desta lista</b> e para no primeiro que der certo.<br><br>
+          Como o controle chega ao jogo. O Hefesto <b>tenta na ordem desta lista</b> e para no primeiro que der certo.<br><br>
           <b>PS + R3</b> pula para o próximo.
         </span></span>
         <!-- ---------- O CADEADO DA TROCA AUTOMÁTICA, NO CANTO ----------
@@ -1960,7 +1969,7 @@ LEGENDA = f'''<div class="nota">
       teria custado um erro na régua da aba que <b>é a referência das outras nove</b>. O que
       está lá é <code>:has()</code>, que não é mecanismo novo aqui: o esqueleto já abre e fecha
       as seções da <b>Conexões</b> com ele.</li>
-    <li><b>A linha laranja tracejada não acende mais na tela</b> (13/09): o clique troca o modo na hora e o chip mostra a escolha. O espaço dela continua reservado, e o <b>Reconectar controles</b> fica encostado à direita, em uma linha, qualquer que seja a largura.</li>
+    <li><b>A linha laranja tracejada não acende mais na tela</b> (13/09): o clique troca o modo na hora. O espaço dela continua reservado, e o <b>Reconectar controles</b> fica encostado à direita, em uma linha, qualquer que seja a largura.</li>
     <li><b>A carga de cada bateria é o único dado inventado desta aba</b> — 100, 64, 41 e 87%. Bateria é estado do momento, e o mockup mostra um momento; todo o resto (cor, nome, transporte, jogador, desenho) sai de arquivo.</li>
     <li><b>O recibo do rodapé nomeia o perfil</b> — é onde a mudança vai cair, que era a informação que faltava e te custou semanas.</li>
   </ul>
@@ -1973,12 +1982,9 @@ LEGENDA = f'''<div class="nota">
       (<code>ligado = modo in {{gamepad, desktop}}</code>) o interruptor fica apagado dos dois
       lados quando você escolhe a Navegação: a tela não estaria mentindo, estaria muda — e mudo
       é pior, porque parece defeito.</li>
-    <li><b>Fixar um modo pela tela ainda não existe</b>, e vale para os três degraus reais:
-      <span class="marca">"a escada existe e SOBE sozinha, mas ninguém a fixa pela tela: não há
-      método de IPC que diga 'use este degrau'"</span>. Clicar em <b>Sony DualSense</b>, <b>Xbox</b>
-      ou <b>Steam Input</b> hoje não muda nada no daemon — quem muda é o <b>PS + R3</b> na sua
-      mão. Os dois que faltam (Point And Click e Navegação como degrau) são mais um passo além
-      disso.</li>
+    <li><b>O Steam Input não se fixa pela tela</b>: não há método de IPC que o ligue, e ele só
+      sobrevive com a Steam fechada. <b>Sony DualSense</b> e <b>Xbox</b> se fixam — cada clique
+      escolhe o caminho, com o jogo aberto, e o <b>PS + R3</b> na sua mão faz o mesmo.</li>
     <li><b>A máscara Nintendo Pro não existe hoje</b>, e entra assim mesmo — isto é mockup, e
       mockup desenha o produto que vai existir. O catálogo do produto
       (<code>integrations/uinput_gamepad.py</code>, <code>FLAVORS</code>) tem <b>duas</b>

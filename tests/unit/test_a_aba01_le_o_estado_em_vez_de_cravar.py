@@ -65,10 +65,15 @@ VIVO_NAVEGACAO: dict[str, Any] = {
     "paused": False,
     "controllers": [{"uniq": "aa", "connected": True, "player_slot": 1}],
 }
+#: AJUSTADO À REGRA DELA — MODO-DE-CONEXAO-01, 13/09/2026. O daemon passou a
+#: publicar o CAMINHO (`gamepad_emulation.caminho`), e é por ele que o chip de
+#: modo acende; com a máscara da sessão em `xbox` e ninguém escolhendo caminho, o
+#: caminho publicado é `xbox` (`virtual_pad.caminho_resolvido`). ANTES o chip
+#: acendia pela máscara, e este estado não precisava do campo.
 VIVO_GAMEPAD_XBOX: dict[str, Any] = {
     "connected": True,
     "native_mode": False,
-    "gamepad_emulation": {"enabled": True, "flavor": "xbox"},
+    "gamepad_emulation": {"enabled": True, "flavor": "xbox", "caminho": "xbox"},
     "paused": False,
 }
 VIVO_NATIVO: dict[str, Any] = {
@@ -290,16 +295,23 @@ def test_a_leitura_e_do_produto_e_nao_uma_copia(monkeypatch: Any) -> None:
     originais intactas — e é por isso que a régua as TROCA, em vez de comparar
     valores. É a mesma forma da régua da faixa laranja.
     """
+    # AJUSTADA À REGRA DELA — MODO-DE-CONEXAO-01, 13/09/2026. ANTES trocava
+    # `home_actions.mascara_do_aparelho` e cobrava que o chip de modo seguisse a
+    # MÁSCARA — que era o defeito: com o cartão em Xbox 360 o chip «Sony
+    # DualSense» acendia. AGORA troca `painel.caminho_vivo` e cobra que o chip
+    # siga o CAMINHO; e a máscara trocada não pode acender chip de modo nenhum.
     from hefesto_dualsense4unix.app.actions import home_actions
 
     monkeypatch.setattr(painel, "hefesto_ligado", lambda _s: False)
     monkeypatch.setattr(painel, "modo_vivo", lambda _s: "gamepad")
-    monkeypatch.setattr(home_actions, "mascara_do_aparelho", lambda _s: "xbox")
+    monkeypatch.setattr(painel, "caminho_vivo", lambda _s: "xbox")
+    monkeypatch.setattr(home_actions, "mascara_do_aparelho", lambda _s: "dualsense")
     fora = aba.pacote(_ctx(VIVO_NAVEGACAO))
     assert fora["hef-posicao"] == "desligado", (
         "o pacote deixou de usar `painel.hefesto_ligado` — a posição virou cópia")
     assert fora["modo-aceso"] == "xbox", (
-        "o pacote deixou de usar `painel.modo_vivo` + `mascara_do_aparelho`")
+        "o pacote deixou de usar `painel.modo_vivo` + `painel.caminho_vivo` — ou "
+        "voltou a acender o chip de modo pela máscara")
 
 
 def test_a_mascara_do_cartao_tem_a_MESA_por_dona() -> None:  # noqa: N802

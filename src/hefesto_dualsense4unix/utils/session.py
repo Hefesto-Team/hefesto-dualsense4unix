@@ -527,6 +527,47 @@ def load_gamepad_preference() -> tuple[bool | None, str | None]:
         return None, None
 
 
+#: MODO-DE-CONEXAO-01 (13/09/2026): o CAMINHO que ela escolheu (o chip de modo
+#: da aba Jogar, o PS + R3) mora num arquivo AO LADO do
+#: `gamepad_emulation.flag`, e não dentro dele: o formato daquele é o que o boot
+#: lê há semanas (`load_gamepad_emulation`), e um segundo campo ali seria um
+#: boot antigo lendo `dualsense\nxbox` como máscara. Ausente = ninguém escolheu.
+_GAMEPAD_CAMINHO_FLAG_FILE = "gamepad_caminho.flag"
+
+
+def save_gamepad_caminho(caminho: str | None) -> None:
+    """Persiste o caminho escolhido; vazio apaga o arquivo. Best-effort.
+
+    Só gesto manual chega aqui (`gamepad._guardar_o_caminho`, a mesma R-07 do
+    liga/desliga): um perfil trocando de caminho não vira a escolha dela.
+    """
+    try:
+        alvo = config_dir(ensure=True) / _GAMEPAD_CAMINHO_FLAG_FILE
+        if caminho and caminho.strip():
+            alvo.write_text(f"{caminho.strip()}\n", encoding="utf-8")
+        else:
+            alvo.unlink(missing_ok=True)
+        logger.debug("gamepad_caminho_salvo", caminho=caminho)
+    except Exception as exc:
+        logger.debug("gamepad_caminho_save_failed", err=str(exc))
+
+
+def load_gamepad_caminho() -> str | None:
+    """O caminho gravado, cru, ou ``None``. Quem valida é o daemon.
+
+    Cru de propósito: a lista dos caminhos tem dono
+    (`integrations/virtual_pad.normalizar_caminho`), e este módulo de utilidades
+    não importa o de integrações.
+    """
+    try:
+        alvo = config_dir() / _GAMEPAD_CAMINHO_FLAG_FILE
+        if not alvo.exists():
+            return None
+        return alvo.read_text(encoding="utf-8").strip() or None
+    except Exception:
+        return None
+
+
 def load_gamepad_emulation() -> tuple[bool, str | None]:
     """Retorna (ligado, flavor) do gamepad virtual da sessão anterior.
 

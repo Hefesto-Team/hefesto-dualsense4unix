@@ -134,6 +134,47 @@ RumblePolicy = Literal["economia", "balanceado", "max", "auto", "custom"]
 RUMBLE_POLICIES: tuple[str, ...] = get_args(RumblePolicy)
 
 
+# ---------------------------------------------------------------------------
+# O CAMINHO — MODO-DE-CONEXAO-01, 13/09/2026
+# ---------------------------------------------------------------------------
+# Funções de MÓDULO, e não métodos, de propósito: `apply_profile_mode` e
+# `_modo_seria_destrutivo` são exercidos por réguas que os chamam sobre daemons
+# dublados (`lifecycle.Daemon.apply_profile_mode(dublê, …)`), e um método novo
+# no `self` quebraria cada um desses dublês por um detalhe de leitura.
+def _caminho_da_secao(mode: Any) -> str | None:
+    """O caminho que a seção `mode` de um perfil pede, ou ``None`` = sem opinião."""
+    from hefesto_dualsense4unix.integrations.virtual_pad import normalizar_caminho
+
+    return normalizar_caminho(getattr(mode, "caminho", None))
+
+
+def _caminho_vivo(daemon: Any) -> str | None:
+    """O caminho em que o vpad do P1 está AGORA — ``None`` sem vpad."""
+    from hefesto_dualsense4unix.integrations.virtual_pad import caminho_resolvido
+
+    device = getattr(daemon, "_gamepad_device", None)
+    if device is None:
+        return None
+    return caminho_resolvido(
+        getattr(getattr(daemon, "config", None), "gamepad_caminho", None),
+        getattr(device, "flavor", None),
+    )
+
+
+def _canal_mudaria(daemon: Any, caminho: str | None) -> bool:
+    """Pedir `caminho` agora trocaria o CANAL do vpad do P1 (uhid ↔ uinput)?"""
+    from hefesto_dualsense4unix.integrations.virtual_pad import (
+        caminho_do_vpad,
+        quer_uhid,
+    )
+
+    device = getattr(daemon, "_gamepad_device", None)
+    if device is None or caminho is None:
+        return False
+    mascara = getattr(device, "flavor", None)
+    return quer_uhid(caminho_do_vpad(device), mascara) != quer_uhid(caminho, mascara)
+
+
 @dataclass
 class DaemonConfig:
     poll_hz: int = DEFAULT_POLL_HZ
@@ -161,6 +202,13 @@ class DaemonConfig:
     # (Histórico: era "xbox" desde SPRINT-GAME-RUMBLE-01, de antes da máscara
     # dualsense vibrar — superado pela validação da Onda Harmonia.)
     gamepad_flavor: str = "dualsense"
+    # MODO-DE-CONEXAO-01 (13/09/2026) — O CAMINHO, ao lado da máscara e separado
+    # dela: `"dualsense"` (o canal próprio do DualSense, vpad uhid) ou `"xbox"`
+    # (o canal comum, vpad uinput). `None` = ninguém escolheu, e o caminho sai da
+    # máscara como saía antes (`virtual_pad.caminho_resolvido`). Quem escreve é
+    # `gamepad._guardar_o_caminho`, depois de o aparelho alcançar o pedido; o
+    # boot relê a escolha dela de `gamepad_caminho.flag`.
+    gamepad_caminho: str | None = None
     # FEAT-DSX-COOP-LOCAL-01 — co-op local: cada controle físico vira um jogador
     # (P1, P2, …) com seu próprio gamepad virtual, em vez do modo "N controles, 1
     # player" (broadcast). Só tem efeito com a emulação de gamepad ligada + 2+
@@ -874,6 +922,12 @@ class Daemon:
             if gp_flavor:
                 self.config.gamepad_flavor = gp_flavor
             self.config.mouse_emulation_enabled = False
+        # MODO-DE-CONEXAO-01: o CAMINHO que ela escolheu volta com o boot, lido
+        # do arquivo ao lado da flag (o formato da flag não mudou).
+        from hefesto_dualsense4unix.integrations.virtual_pad import normalizar_caminho
+        from hefesto_dualsense4unix.utils.session import load_gamepad_caminho
+
+        self.config.gamepad_caminho = normalizar_caminho(load_gamepad_caminho())
         # EMULACAO-NO-JOGO-01: restaura a PREFERÊNCIA de teclado emulado. Ao lado
         # do mouse e do gamepad de propósito — é a superfície que faltava (o
         # teclado era o único dos três sem flag em disco, e por isso o único que
@@ -1584,8 +1638,13 @@ class Daemon:
         flavor: str | None = None,
         *,
         origin: OrigemEmulacao,
+        caminho: str | None = None,
     ) -> bool:
         """Liga/desliga o gamepad virtual e define a máscara. Usado pelo IPC.
+
+        MODO-DE-CONEXAO-01 (13/09/2026): `caminho` é o MODO de conexão, e é o
+        que o chip da aba Jogar e o PS + R3 mandam. Quem não o manda (a CLI, com
+        o `--flavor` que continua sendo máscara) não mexe no caminho.
 
         Fachada de `set_gamepad_emulation_desfecho` — o bool diz **ativo (ou
         parado) ao final**, nunca "aplicou o pedido". VERDADE-01 (18/08): era
@@ -1617,7 +1676,7 @@ class Daemon:
         )
 
         desfecho = self.set_gamepad_emulation_desfecho(
-            enabled, flavor, origin=origin
+            enabled, flavor, origin=origin, caminho=caminho
         )
         if enabled:
             return desfecho in DESFECHOS_EMULACAO_ATIVA
@@ -1634,6 +1693,7 @@ class Daemon:
         flavor: str | None = None,
         *,
         origin: OrigemEmulacao,
+        caminho: str | None = None,
     ) -> str:
         """O mesmo pedido de `set_gamepad_emulation`, dizendo o que ACONTECEU.
 
@@ -1699,7 +1759,7 @@ class Daemon:
                 # a cada força — ruído de escrita sem mudança nenhuma).
                 device_antes = self._gamepad_device
                 desfecho = start_gamepad_emulation_desfecho(
-                    self, flavor=flavor, origin=origin
+                    self, flavor=flavor, origin=origin, caminho=caminho
                 )
                 ok = desfecho in (EMU_APLICADO, EMU_JA_ESTAVA)
                 # SPRINT-GAME-RUMBLE-01: repropaga a máscara recém-aplicada aos
@@ -1731,6 +1791,45 @@ class Daemon:
             # Desligar é sempre alcançado (o stop é idempotente): o desfecho só
             # separa "parei o vpad que existia" de "já não havia vpad nenhum".
             return EMU_DESLIGADO if tinha_device else EMU_JA_ESTAVA
+
+    def vestir_a_mascara_do_aparelho(self, uniq: str) -> str:
+        """A máscara que o cartão acabou de gravar passa a valer COM O VPAD DE PÉ.
+
+        MODO-DE-CONEXAO-01, §D.6 (13/09/2026). Medido pelo estudo da sprint: o
+        `gamepad.mask.set` gravava o registro e o perfil e **não recriava o
+        vpad** — o cartão acendia «Xbox 360» e o jogo continuava recebendo o
+        DualSense; e reativar o perfil também não recriava, porque
+        `apply_profile_mode` compara o `mode.gamepad_flavor`, não a máscara
+        efetiva. Nada aplicava a máscara do cartão com o jogo aberto, e a regra
+        dela é *"eles precisam funcionar durante o jogo"*.
+
+        O ATO MORA AQUI, e o handler só o chama: a máscara é gesto dela, logo
+        `origin="manual"` — a origem que a trava R-04 deixa passar com o jogo
+        aberto. O P1 é o vpad desta classe (`start_gamepad_emulation_desfecho`,
+        que compara a máscara efetiva e só recria se ela mudou); os outros são
+        do co-op, e o ciclo FORÇADO recria só quem ficou para trás
+        (`external_mask.vpad_ficou_para_tras`).
+
+        Devolve o desfecho `EMU_*` do P1, ``"coop"`` para um secundário, ou
+        ``""`` quando não há vpad de pé — e aí nada é ligado: escolher máscara
+        não liga o Hefesto.
+        """
+        from hefesto_dualsense4unix.daemon.subsystems.external_mask import (
+            mesma_identidade,
+        )
+        from hefesto_dualsense4unix.daemon.subsystems.gamepad import primary_identity
+
+        if not (
+            self.config.gamepad_emulation_enabled and self._gamepad_device is not None
+        ):
+            return ""
+        if mesma_identidade(uniq, primary_identity(self)):
+            return self.set_gamepad_emulation_desfecho(True, origin="manual")
+        from hefesto_dualsense4unix.daemon.subsystems.coop import get_coop_manager
+
+        with contextlib.suppress(Exception):
+            get_coop_manager(self).sync(force=True)
+        return "coop"
 
     def set_coop_enabled(
         self,
@@ -2538,10 +2637,22 @@ class Daemon:
                 self.set_native_mode(False, reapply=False, origin="profile")
             flavor = getattr(mode, "gamepad_flavor", None)
             flavor_atual = getattr(self._gamepad_device, "flavor", None)
+            # MODO-DE-CONEXAO-01 (13/09/2026): a seção `mode` também diz o
+            # CAMINHO, e ele é pedido pela mesma porta da máscara. `None` é "sem
+            # opinião de caminho", como `flavor` `None` é "sem opinião de
+            # máscara": não troca e não apaga o que ela escolheu.
+            caminho = _caminho_da_secao(mode)
             adiada_por_jogo = False
-            if not gamepad_on or (flavor is not None and flavor != flavor_atual):
+            if (
+                not gamepad_on
+                or (flavor is not None and flavor != flavor_atual)
+                or (caminho is not None and caminho != _caminho_vivo(self))
+            ):
                 adiada_por_jogo = self._pedir_mascara_do_perfil(
-                    flavor, profile=profile, origin=origin
+                    flavor,
+                    profile=profile,
+                    origin=origin,
+                    **({"caminho": caminho} if caminho is not None else {}),
                 )
             else:
                 # Este perfil não pede troca nenhuma (a máscara vigente já é a
@@ -2743,7 +2854,12 @@ class Daemon:
         return estado
 
     def _pedir_mascara_do_perfil(
-        self, flavor: str | None, *, profile: Any | None, origin: str
+        self,
+        flavor: str | None,
+        *,
+        profile: Any | None,
+        origin: str,
+        caminho: str | None = None,
     ) -> bool:
         """Pede ao vpad a máscara do perfil. True = ADIADA porque há jogo aberto.
 
@@ -2780,7 +2896,10 @@ class Daemon:
             "gesto_de_perfil" if origin == "manual" else "profile"
         )
         desfecho = self.set_gamepad_emulation_desfecho(
-            True, flavor, origin=origem_emulacao
+            True,
+            flavor,
+            origin=origem_emulacao,
+            **({"caminho": caminho} if caminho is not None else {}),
         )
         if desfecho != EMU_BLOQUEADO_POR_JOGO:
             self._gravar_mascara_do_perfil(flavor)
@@ -2839,6 +2958,13 @@ class Daemon:
           máscara VIVA virou a pedida. O desfecho basta não ser
           `bloqueado_por_jogo` para chegar aqui, e `falhou` e
           `recusado_steam_input` também passam nesse filtro.
+
+        NOTA DATADA — MODO-DE-CONEXAO-01, 13/09/2026. Esta gravação continua
+        valendo para a MÁSCARA do perfil, e só para ela. Até hoje o chip de
+        modo da aba Jogar mandava a máscara e fazia a flag guardar o que era,
+        na verdade, o MODO — e com máscara no cartão ele não mudava nada. O
+        modo virou o CAMINHO (`mode.caminho`), com arquivo próprio
+        (`utils/session.save_gamepad_caminho`), e não passa por aqui.
         """
         if not flavor:
             return
@@ -2987,7 +3113,15 @@ class Daemon:
         if kind == "gamepad":
             flavor = getattr(mode, "gamepad_flavor", None)
             flavor_atual = getattr(self._gamepad_device, "flavor", None)
-            return bool(gamepad_on and flavor is not None and flavor != flavor_atual)
+            # MODO-DE-CONEXAO-01: trocar de CANAL também recria o vpad do P1.
+            # Trocar só o nome do caminho, com o mesmo canal, não recria nada.
+            return bool(
+                gamepad_on
+                and (
+                    (flavor is not None and flavor != flavor_atual)
+                    or _canal_mudaria(self, _caminho_da_secao(mode))
+                )
+            )
         # kind None (reversão), "desktop" e "native" derrubam o que estiver de pé.
         return bool(gamepad_on or self._native_mode)
 

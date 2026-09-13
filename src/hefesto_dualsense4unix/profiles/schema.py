@@ -660,7 +660,37 @@ class ProfileModeConfig(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     kind: Literal["desktop", "gamepad", "native"]
+    #: A MÁSCARA PADRÃO do perfil — como o jogo vê o controle de quem não
+    #: escolheu máscara no cartão (degrau 2 de `external_mask.mascara_efetiva`).
+    #: NOTA DATADA — MODO-DE-CONEXAO-01, 13/09/2026: até aqui o chip de modo da
+    #: aba Jogar e o PS + R3 escreviam neste campo, e era esse o defeito — o
+    #: modo trocava a máscara. Ele continua LIDO; quem o escreve é a máscara.
     gamepad_flavor: MascaraDeGamepad | None = None
+    #: O CAMINHO — MODO-DE-CONEXAO-01, 13/09/2026. É o MODO de conexão que ela
+    #: escolhe pelo chip da aba Jogar ou pelo PS + R3: ``"dualsense"`` (o canal
+    #: próprio do DualSense, o vpad `uhid`) ou ``"xbox"`` (o canal comum, o vpad
+    #: `uinput`). ``None`` = ninguém escolheu, e o caminho sai da máscara, como
+    #: saía antes (`virtual_pad.caminho_resolvido`) — nenhum perfil existente
+    #: muda de aparelho no dia da cura. Campo NOVO de propósito, e não o
+    #: `gamepad_flavor` reaproveitado: reaproveitá-lo mudaria em silêncio a
+    #: máscara dos jogos que ela já alinhou (§D.1 da sprint).
+    caminho: Literal["dualsense", "xbox"] | None = None
+
+    @model_serializer(mode="wrap")
+    def _sem_caminho_a_chave_nem_aparece(
+        self, handler: SerializerFunctionWrapHandler
+    ) -> Any:
+        """Perfil sem caminho escolhido sai do dump IDÊNTICO ao que era.
+
+        A mesma cura do ``rota``/``fonte`` e do ``ponte``, pela mesma razão: com
+        ``extra="forbid"`` um hefesto ANTIGO recusa o perfil inteiro ao ver uma
+        chave que não conhece, e ``"caminho": null`` em todo save transformaria
+        "voltar uma versão" em "todos os perfis quebrados".
+        """
+        dados = handler(self)
+        if isinstance(dados, dict) and dados.get("caminho") is None:
+            dados.pop("caminho", None)
+        return dados
 
 
 #: PONTE-CONFIRMADA-01 (19/08/2026) — COMO a ponte foi confirmada.
@@ -1069,7 +1099,7 @@ class ControllerMicOverride(BaseModel):
     ----------------------------------------------
     - ``button_toggles_system``. O interruptor é UM por máquina:
       ``hotkey.mic_button_loop`` lê ``daemon.config.mic_button_toggles_system``
-      (``daemon/subsystems/hotkey.py:1173``) e não consulta ``uniq`` nenhum.
+      (``daemon/subsystems/hotkey.py:1243``) e não consulta ``uniq`` nenhum.
       Guardá-lo por peça faria quatro controles gravarem quatro opiniões sobre
       um interruptor só.
 

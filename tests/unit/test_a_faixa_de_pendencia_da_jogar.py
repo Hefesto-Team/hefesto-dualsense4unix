@@ -54,15 +54,21 @@ from pacotes import Contexto
 from pacotes import a01_jogar as aba
 
 #: O daemon dela em 02/09/2026 às 04:20, nas quatro chaves que esta faixa lê.
+#: AJUSTADO — MODO-DE-CONEXAO-01, 13/09/2026: o daemon publica o CAMINHO, e é com
+#: ele que o chip de modo se reconcilia. O `backend` `uhid` já respondia por si
+#: (`painel.caminho_vivo`); o `uinput` sozinho não separa o Xbox escolhido do
+#: DualSense degradado, e por isso o estado Xbox traz o campo.
 VIVO_DUALSENSE: dict[str, Any] = {
     "connected": True,
     "native_mode": False,
-    "gamepad_emulation": {"enabled": True, "flavor": "dualsense", "backend": "uhid"},
+    "gamepad_emulation": {"enabled": True, "flavor": "dualsense", "backend": "uhid",
+                          "caminho": "dualsense"},
 }
 VIVO_XBOX: dict[str, Any] = {
     "connected": True,
     "native_mode": False,
-    "gamepad_emulation": {"enabled": True, "flavor": "xbox", "backend": "uinput"},
+    "gamepad_emulation": {"enabled": True, "flavor": "xbox", "backend": "uinput",
+                          "caminho": "xbox"},
 }
 VIVO_NATIVO: dict[str, Any] = {
     "connected": True,
@@ -240,14 +246,19 @@ def test_sem_o_texto_do_clique_o_rotulo_sai_do_painel() -> None:
 
 
 def test_um_chip_mexe_num_eixo_so() -> None:
-    """A Navegação é um MODO; DualSense e Xbox são MÁSCARAS do mesmo modo.
+    """A Navegação é um MODO; DualSense e Xbox são CAMINHOS do mesmo modo.
 
-    Anotar `modo=gamepad` junto com a máscara poria na faixa a palavra do CHIP
+    Anotar `modo=gamepad` junto com o caminho poria na faixa a palavra do CHIP
     sob o rótulo do INTERRUPTOR — dois nomes diferentes na tela dela, colados.
+
+    AJUSTADA À REGRA DELA — MODO-DE-CONEXAO-01, 13/09/2026. ANTES conferia que o
+    chip «Xbox» anotava o eixo `mascara`, comparado com a máscara viva — e com o
+    cartão do P1 em DualSense a pendência nunca morria. AGORA confere o eixo
+    `caminho`, e que a máscara não é anotada.
     """
     ctx = Contexto(state=VIVO_DUALSENSE, mesa=[], conectados=[], estados={})
     aba.modo_xbox(ctx, {"texto": "Xbox"}, PonteDeMentira())
-    assert set(aba._ESCOLHA) == {"mascara"}
+    assert set(aba._ESCOLHA) == {"caminho"}
     aba._ESCOLHA.clear()
     aba._ROTULO.clear()
     aba.modo_navegacao(ctx, {"texto": "Navegação"}, PonteDeMentira())

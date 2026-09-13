@@ -17,6 +17,7 @@ Dois blocos:
 """
 from __future__ import annotations
 
+from types import SimpleNamespace
 from typing import Any
 
 import pytest
@@ -190,17 +191,34 @@ class _FakeDaemon:
         self.mouse_origem: list[str] = []
         self.teclado: list[bool] = []
         self.supressao: list[bool | None] = []
+        # MODO-DE-CONEXAO-01 (13/09/2026): o caminho vivo mora na config, escrito
+        # só DEPOIS de o vpad alcançar o pedido — é o que `ponte_atual` lê.
+        self.config = SimpleNamespace(gamepad_caminho=None)
 
     async def _run_blocking(self, fn: Any, *args: Any) -> Any:
         return fn(*args)
 
     def set_gamepad_emulation(
-        self, enabled: bool, flavor: str | None = None, *, origin: str = "manual"
+        self,
+        enabled: bool,
+        flavor: str | None = None,
+        *,
+        origin: str = "manual",
+        caminho: str | None = None,
     ) -> bool:
-        self.trilha.append(("gamepad", enabled, flavor, origin))
+        # A TRILHA GANHOU O CAMINHO — MODO-DE-CONEXAO-01. Antes a 3ª posição era
+        # o alvo do gesto, e ele ia como MÁSCARA; agora a máscara vai `None` (o
+        # gesto não a troca) e o alvo vai na 5ª, como caminho.
+        self.trilha.append(("gamepad", enabled, flavor, origin, caminho))
         if not self._aplica:
             return False
-        self._gamepad_device = _FakeDevice(flavor or PONTE_DUALSENSE) if enabled else None
+        if not enabled:
+            self._gamepad_device = None
+            return True
+        if self._gamepad_device is None or flavor:
+            self._gamepad_device = _FakeDevice(flavor or PONTE_DUALSENSE)
+        if caminho:
+            self.config.gamepad_caminho = caminho
         return True
 
     def set_mouse_emulation(
@@ -246,11 +264,18 @@ def test_proxima_ponte_da_a_volta() -> None:
 @pytest.mark.asyncio
 async def test_gesto_troca_a_mascara_com_origin_manual() -> None:
     """MORDE o item 3: só `origin="manual"` atravessa o gate R-04 com o jogo
-    aberto. Com origin="profile" a troca é RECUSADA e o gesto vira nada."""
+    aberto. Com origin="profile" a troca é RECUSADA e o gesto vira nada.
+
+    AJUSTADA À REGRA DELA — MODO-DE-CONEXAO-01, 13/09/2026. ANTES conferia que o
+    gesto pedia a MÁSCARA `xbox` (`flavor`). AGORA confere que ele pede o CAMINHO
+    `xbox` e deixa a máscara em `None`: *"a máscara do vpad não muda em aperto
+    nenhum"* (§D.5 da sprint). A origem manual continua sendo a mordida.
+    """
     d = _FakeDaemon(flavor=PONTE_DUALSENSE)
     await build_next_bridge_callback(d)()  # type: ignore[arg-type]
     chamadas = [t for t in d.trilha if t[0] == "gamepad"]
-    assert chamadas == [("gamepad", True, PONTE_XBOX, "manual")]
+    assert chamadas == [("gamepad", True, None, "manual", PONTE_XBOX)]
+    assert d._gamepad_device.flavor == PONTE_DUALSENSE, "o gesto trocou a máscara"
 
 
 @pytest.mark.asyncio
@@ -289,7 +314,7 @@ async def test_ponte_mouse_teclado_derruba_o_vpad_e_solta_a_supressao() -> None:
     é a supressão que gateia o dispatch de mouse/teclado no poll loop."""
     d = _FakeDaemon(flavor=PONTE_XBOX)
     await build_next_bridge_callback(d)()  # type: ignore[arg-type]
-    assert ("gamepad", False, None, "manual") in d.trilha
+    assert ("gamepad", False, None, "manual", None) in d.trilha
     assert d.supressao == [False]
     assert d.mouse == [True]
     assert d.teclado == [True]

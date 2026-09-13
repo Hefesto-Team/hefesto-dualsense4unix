@@ -58,6 +58,94 @@ logger = get_logger(__name__)
 #: não subisse travava o controle por 2 segundos.
 UHID_BIND_TIMEOUT_S = 0.5
 
+# ---------------------------------------------------------------------------
+# O CAMINHO — MODO-DE-CONEXAO-01, 13/09/2026
+# ---------------------------------------------------------------------------
+# A regra é dela, em três mensagens seguidas, e está citada com a digitação
+# dela na sprint (`docs/process/sprints/2026-09-13-MODO-DE-CONEXAO-01-…`,
+# § A regra dela): o MODO é a base, e o PS + R3 é o mesmo modo; a MÁSCARA vem
+# por cima, é como o jogo vê a entrada, e independe do modo; os dois valem com
+# o jogo aberto; e o que o PS + R3 escolhe fica gravado no perfil.
+#
+# SÃO DOIS EIXOS, e esta factory já decidia os dois sem nomear o primeiro: a
+# MÁSCARA é o par VID/PID que o jogo vê; o CAMINHO é o canal por onde o
+# controle chega — o `uhid` (o relatório do DualSense, por onde voltam
+# gatilho, luz e LED de jogador) ou o `uinput` (o canal comum, o do controle de
+# Xbox e o piso de compatibilidade). Até 13/09 o caminho saía da máscara, e por
+# isso o chip «Xbox» só mudava alguma coisa quando ninguém tinha escolhido
+# máscara no cartão.
+#
+# O `uhid` só se constrói com máscara DualSense: *"o `hid_playstation` só faz
+# bind em VID/PID da Sony"* (`_try_uhid`). Com outra máscara os dois caminhos
+# dão o mesmo aparelho, e o caminho escolhido fica guardado assim mesmo — a
+# falta do canal é dívida no mapa, nunca frase na tela (§D.2 da sprint).
+CAMINHO_DUALSENSE = "dualsense"
+CAMINHO_XBOX = "xbox"
+CAMINHOS: tuple[str, ...] = (CAMINHO_DUALSENSE, CAMINHO_XBOX)
+
+
+def normalizar_caminho(valor: object) -> str | None:
+    """O caminho reconhecido, ou ``None`` — e ``None`` é *"ninguém escolheu"*.
+
+    ESTRITA, ao contrário do `normalize_flavor`: um valor desconhecido não vira
+    caminho nenhum por default. Quem recusa em voz alta é o portão do IPC.
+    """
+    if isinstance(valor, str):
+        limpo = valor.strip().lower()
+        if limpo in CAMINHOS:
+            return limpo
+    return None
+
+
+def caminho_resolvido(caminho: object, mascara: object) -> str:
+    """O caminho que vale: o escolhido, ou — sem escolha — o que sai da máscara.
+
+    O SEGUNDO RAMO É O PRODUTO DE ANTES DE 13/09, e é de propósito (§D.1 da
+    sprint): *"perfil sem `caminho`: o caminho sai de onde sai hoje (a máscara
+    dualsense dá uhid; as outras, uinput), para nenhum jogo mudar no dia da
+    cura"*.
+    """
+    escolhido = normalizar_caminho(caminho)
+    if escolhido is not None:
+        return escolhido
+    return CAMINHO_DUALSENSE if mascara == "dualsense" else CAMINHO_XBOX
+
+
+def quer_uhid(caminho: object, mascara: object) -> bool:
+    """Este par (caminho, máscara) pede o vpad `uhid`?
+
+    As duas metades, juntas: o caminho DualSense E a máscara DualSense. É a
+    única pergunta que decide o backend, e mora aqui para o P1
+    (`gamepad.start_gamepad_emulation_desfecho`) e os secundários
+    (`external_mask.vpad_ficou_para_tras`) não a responderem cada um do seu jeito.
+    """
+    return mascara == "dualsense" and caminho_resolvido(caminho, mascara) == CAMINHO_DUALSENSE
+
+
+def caminho_do_vpad(vpad: object) -> str | None:
+    """O caminho em que ESTE vpad nasceu — ``None`` quando ele não sabe dizer.
+
+    A factory pendura o caminho no pad que devolve. Um vpad sem o atributo
+    (dublê de régua, ou um pad de antes desta cura) só responde pelo backend:
+    `uhid` é o caminho DualSense; `uinput` sozinho não diz se foi escolhido ou
+    degradado, e aí a resposta honesta é ``None`` — o chamador resolve pela
+    máscara, que é o produto de antes.
+    """
+    escolhido = normalizar_caminho(getattr(vpad, "caminho", None))
+    if escolhido is not None:
+        return escolhido
+    if getattr(vpad, "backend", None) == "uhid":
+        return CAMINHO_DUALSENSE
+    return None
+
+
+def _pendurar_o_caminho(pad: object, caminho: str) -> None:
+    """Grava no pad o caminho em que ele nasceu. Best-effort: nunca derruba."""
+    try:
+        pad.caminho = caminho  # type: ignore[attr-defined]
+    except (AttributeError, TypeError):
+        logger.debug("vpad_sem_lugar_para_o_caminho", caminho=caminho)
+
 
 @runtime_checkable
 class VirtualPad(Protocol):
@@ -165,8 +253,16 @@ def make_virtual_pad(
     player: int = 1,
     allow_uhid: bool = True,
     calibration_0x05: bytes | None = None,
+    caminho: str | None = None,
 ) -> VirtualPad | None:
     """Cria e **starta** o vpad do jogador `player`. None = nenhum backend subiu.
+
+    MODO-DE-CONEXAO-01 (13/09/2026): `caminho` é o MODO que ela escolheu
+    (`CAMINHO_DUALSENSE` · `CAMINHO_XBOX`, ou ``None`` = ninguém escolheu). O
+    uhid só é tentado com o caminho DualSense **e** a máscara efetiva DualSense
+    (:func:`quer_uhid`); o caminho Xbox vai direto ao uinput, e isso não é
+    degradação — é a escolha dela. O pad devolvido carrega o caminho em que
+    nasceu (`pad.caminho`), que é o que o laço do co-op compara.
 
     Prefere o uhid quando tudo se alinha (máscara DualSense + /dev/uhid usável +
     permissão do chamador em `allow_uhid`); qualquer tropeço cai no
@@ -223,8 +319,13 @@ def make_virtual_pad(
     from hefesto_dualsense4unix.integrations.uinput_gamepad import UinputGamepad
 
     key = mascara_efetiva(identity, flavor)
+    resolvido = caminho_resolvido(caminho, key)
     motivo: str | None = None
-    if allow_uhid:
+    if not quer_uhid(caminho, key):
+        # O caminho Xbox, ou uma máscara que o uhid não veste: uinput por
+        # escolha, sem `motivo` — o `state_full` não o chama de degradado.
+        pass
+    elif allow_uhid:
         uhid, motivo = _try_uhid(
             key,
             rumble_sink=rumble_sink,
@@ -237,8 +338,9 @@ def make_virtual_pad(
             calibration_0x05=calibration_0x05,
         )
         if uhid is not None:
+            _pendurar_o_caminho(uhid, resolvido)
             return uhid
-    elif key == "dualsense":
+    else:
         motivo = "uhid_vetado_pelo_chamador"
         logger.info("vpad_uhid_vetado_pelo_chamador_usando_uinput", player=player)
     pad = UinputGamepad.for_flavor(key, rumble_sink=rumble_sink)
@@ -249,6 +351,7 @@ def make_virtual_pad(
         pad.fallback_motivo = motivo
     if not pad.start():
         return None
+    _pendurar_o_caminho(pad, resolvido)
     return pad
 
 
@@ -325,4 +428,15 @@ def _try_uhid(
     return pad, None
 
 
-__all__ = ["UHID_BIND_TIMEOUT_S", "VirtualPad", "make_virtual_pad"]
+__all__ = [
+    "CAMINHOS",
+    "CAMINHO_DUALSENSE",
+    "CAMINHO_XBOX",
+    "UHID_BIND_TIMEOUT_S",
+    "VirtualPad",
+    "caminho_do_vpad",
+    "caminho_resolvido",
+    "make_virtual_pad",
+    "normalizar_caminho",
+    "quer_uhid",
+]

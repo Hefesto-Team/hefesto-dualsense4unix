@@ -76,6 +76,28 @@ def _config_que_viaja(cfg: object) -> dict[str, Any]:
     return fora
 
 
+def _caminho_publicado(daemon: object) -> str | None:
+    """O CAMINHO de pé, na forma que a tela lê — MODO-DE-CONEXAO-01, 13/09/2026.
+
+    O escolhido (`config.gamepad_caminho`) ou, sem escolha, o que sai da máscara
+    que o vpad do P1 veste — o produto de antes, pela regra de
+    `virtual_pad.caminho_resolvido`, escrita uma vez, lá. Sem vpad a máscara é a
+    da sessão. ``None`` só sem config legível (um daemon dublado sem nada).
+    """
+    from hefesto_dualsense4unix.integrations.virtual_pad import caminho_resolvido
+
+    cfg = getattr(daemon, "config", None)
+    if cfg is None:
+        return None
+    device = getattr(daemon, "_gamepad_device", None)
+    mascara = (
+        getattr(device, "flavor", None)
+        if device is not None
+        else getattr(cfg, "gamepad_flavor", None)
+    )
+    return caminho_resolvido(getattr(cfg, "gamepad_caminho", None), mascara)
+
+
 def _mascaras_por_aparelho(handlers: object) -> dict[str, str]:
     """`{uniq: máscara efetiva}` para cada controle conectado agora.
 
@@ -2990,6 +3012,13 @@ class IpcHandlersMixin:
                 # quem não escolheu — a herança é a semântica do registro, não
                 # uma segunda regra escrita aqui.
                 "por_aparelho": _mascaras_por_aparelho(self),
+                # O CAMINHO — MODO-DE-CONEXAO-01, 13/09/2026. É por ele que o
+                # chip de modo da aba Jogar acende, e não pela máscara: com o
+                # cartão do P1 em Xbox 360 o chip «Sony DualSense» ficava aceso
+                # porque a tela lia a máscara e caía no `flavor` da sessão. O
+                # `backend` abaixo não separa o Xbox escolhido do DualSense que
+                # degradou para `uinput`; este campo separa.
+                "caminho": _caminho_publicado(self.daemon),
             }
             # UHID-04: backend do vpad primário VIVO ("uhid" = DualSense Edge real
             # 0x0df2, "uinput" = Xbox/fallback). O botão de Launch Options escolhe a
@@ -3015,9 +3044,21 @@ class IpcHandlersMixin:
                 # "uhid_start_falhou", "uhid_bind_falhou",
                 # "uhid_vetado_pelo_chamador").
                 with contextlib.suppress(Exception):
+                    # MODO-DE-CONEXAO-01: e só quem PEDIU o canal do DualSense
+                    # degrada. O caminho Xbox em `uinput` é a escolha dela.
+                    from hefesto_dualsense4unix.integrations.virtual_pad import (
+                        caminho_do_vpad,
+                        quer_uhid,
+                    )
+
                     degraded = bool(
                         getattr(gp_dev, "flavor", None) == "dualsense"
                         and getattr(gp_dev, "backend", None) == "uinput"
+                        and quer_uhid(
+                            caminho_do_vpad(gp_dev)
+                            or getattr(daemon_cfg, "gamepad_caminho", None),
+                            "dualsense",
+                        )
                     )
                     result["gamepad_emulation"]["degraded"] = degraded
                     if degraded:
@@ -5273,21 +5314,12 @@ class IpcHandlersMixin:
         aqui derrubaria o gesto inteiro por causa de um arquivo de sessão, que é
         a doença que o `nome_do_ativo` da interface já trata do outro lado.
         """
-        do_daemon = getattr(self.store, "active_profile", None)
-        if isinstance(do_daemon, str) and do_daemon:
-            return do_daemon
-        try:
-            from hefesto_dualsense4unix.profiles.loader import load_profile
-            from hefesto_dualsense4unix.utils.session import resolve_boot_profile
+        # A REGRA MUDOU DE CASA, NÃO DE CONTEÚDO — MODO-DE-CONEXAO-01, 13/09/2026.
+        # O PS + R3 passou a gravar no perfil ativo e não passa por este mixin;
+        # uma segunda cópia das duas pernas ali seria a próxima a divergir.
+        from hefesto_dualsense4unix.profiles.manager import nome_do_perfil_que_grava
 
-            do_disco = resolve_boot_profile()
-            if not isinstance(do_disco, str) or not do_disco:
-                return None
-            load_profile(do_disco)  # só a confirmação; quem grava recarrega
-        except Exception as exc:
-            logger.debug("perfil_que_grava_sem_perna_de_disco", err=str(exc))
-            return None
-        return do_disco
+        return nome_do_perfil_que_grava(getattr(self.store, "active_profile", None))
 
     async def _handle_rumble_motores_set(self, params: dict[str, Any]) -> dict[str, Any]:
         """`rumble.motores.set` — a barra de CADA motor, no perfil (VIBRACAO-POR-MOTOR-01).
@@ -6550,7 +6582,8 @@ class IpcHandlersMixin:
             perfil, gravado, motivo = self._mascara_no_perfil(uniq, None)
             return {"status": "ok", "uniq": uniq, "flavor": None,
                     "mudou": bool(limpou), "perfil": perfil,
-                    "gravado": gravado, "motivo": motivo}
+                    "gravado": gravado, "motivo": motivo,
+                    "vestiu": self._vestir_a_mascara_na_hora(uniq)}
 
         flavor = normalizar_mascara(bruto)
         if flavor is None:
@@ -6563,7 +6596,30 @@ class IpcHandlersMixin:
         perfil, gravado, motivo = self._mascara_no_perfil(uniq, flavor)
         return {"status": "ok", "uniq": uniq, "flavor": flavor,
                 "mudou": bool(mudou), "perfil": perfil,
-                "gravado": gravado, "motivo": motivo}
+                "gravado": gravado, "motivo": motivo,
+                "vestiu": self._vestir_a_mascara_na_hora(uniq)}
+
+    def _vestir_a_mascara_na_hora(self, uniq: str) -> str | None:
+        """Pede ao daemon que o vpad DAQUELE controle vista a máscara agora.
+
+        MODO-DE-CONEXAO-01, §D.6 (13/09/2026). As duas escritas acima gravam; sem
+        esta terceira, nada recriava o vpad vivo, e o cartão acendia «Xbox 360»
+        com o jogo recebendo o DualSense. O ATO é do daemon
+        (`Daemon.vestir_a_mascara_do_aparelho`) e este handler só o chama —
+        depois de gravar, para o vpad nascer já com a escolha dela.
+
+        ``None`` quando o daemon não tem o ato (um dublê antigo, o daemon fora);
+        nunca levanta: a escolha já está gravada, e uma falha ao recriar não
+        transforma o gesto dela em recusa.
+        """
+        ato = getattr(self.daemon, "vestir_a_mascara_do_aparelho", None)
+        if not callable(ato):
+            return None
+        try:
+            return str(ato(uniq))
+        except Exception as exc:
+            logger.warning("gamepad_mascara_nao_vestiu", uniq=uniq, err=str(exc))
+            return None
 
     def _mascara_no_perfil(
         self, alvo: str, mascara: str | None
@@ -6686,18 +6742,47 @@ class IpcHandlersMixin:
                     f"gamepad.emulation.set: máscara desconhecida {flavor!r} — "
                     f"aceito: {aceitos}"
                 )
+        # O CAMINHO — MODO-DE-CONEXAO-01, 13/09/2026. É o que o chip de modo da
+        # aba Jogar manda desde a cura (`mode_transition.plan_mode_transition`),
+        # e ele NÃO é máscara: o `flavor` acima continua sendo a máscara, e é
+        # por ele que a CLI fala. Recusa em voz alta pela mesma lição do
+        # `flavor`: um nome desconhecido virar caminho por default é troca
+        # silenciosa de aparelho.
+        caminho = params.get("caminho")
+        if caminho is not None:
+            from hefesto_dualsense4unix.integrations.virtual_pad import (
+                CAMINHOS,
+                normalizar_caminho,
+            )
+
+            if normalizar_caminho(caminho) is None:
+                raise ValueError(
+                    f"gamepad.emulation.set: caminho desconhecido {caminho!r} — "
+                    f"aceito: {', '.join(CAMINHOS)}"
+                )
+            caminho = normalizar_caminho(caminho)
         if self.daemon is None:
             raise ValueError("daemon não disponível para alterar o gamepad virtual")
 
+        # O `caminho` só vai quando veio: quem não o manda (a CLI, o applet)
+        # continua chamando o setter com a assinatura de sempre.
         ok = self.daemon.set_gamepad_emulation(
-            enabled=enabled, flavor=flavor, origin=origem_do_pedido(params)
+            enabled=enabled,
+            flavor=flavor,
+            origin=origem_do_pedido(params),
+            **({"caminho": caminho} if caminho is not None else {}),
         )
         active_flavor = getattr(self.daemon.config, "gamepad_flavor", None)
-        return {
+        resposta: dict[str, Any] = {
             "status": "ok" if ok else "failed",
             "enabled": enabled and ok,
             "flavor": active_flavor,
         }
+        # O caminho volta a quem o pediu; quem não o manda recebe a resposta de
+        # sempre.
+        if caminho is not None:
+            resposta["caminho"] = _caminho_publicado(self.daemon)
+        return resposta
 
     async def _handle_coop_set(self, params: dict[str, Any]) -> dict[str, Any]:
         """Liga o co-op local; RECUSA desligar (FEAT-DSX-COOP-LOCAL-01).

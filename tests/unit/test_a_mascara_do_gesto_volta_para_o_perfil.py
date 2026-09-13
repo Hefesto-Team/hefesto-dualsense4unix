@@ -77,6 +77,12 @@ class _Daemon:
     `set_gamepad_emulation` do gesto e o `apply_profile_mode` do arming. Uma
     mesa só é o que permite medir a sequência inteira — gesto, tique, e o
     lançamento seguinte — sem trocar de dublê no meio.
+
+    AJUSTADO À REGRA DELA — MODO-DE-CONEXAO-01, 13/09/2026. O gesto pede o
+    CAMINHO (`caminho=`, com `flavor=None`), e o arming aplica o `mode.caminho`.
+    ANTES este dublê trocava `config.gamepad_flavor` — a máscara — a cada
+    pedido; AGORA ele guarda `config.gamepad_caminho` e só troca a máscara
+    quando alguém a pede de fato, que é o que o daemon faz.
     """
 
     def __init__(self, *, flavor: str = "dualsense") -> None:
@@ -89,11 +95,11 @@ class _Daemon:
         )
         self.display_authority = "game"
         self.config = SimpleNamespace(
-            gamepad_emulation_enabled=True, gamepad_flavor=flavor
+            gamepad_emulation_enabled=True, gamepad_flavor=flavor, gamepad_caminho=None
         )
         self._gamepad_device: Any = SimpleNamespace(backend="uhid", flavor=flavor)
         self._coop_manager = None
-        self.pedidos: list[tuple[bool, str | None, str]] = []
+        self.pedidos: list[tuple[bool, str | None, str, str | None]] = []
         self.aplicados: list[Any] = []
 
     # --- o lado do gesto ---
@@ -101,12 +107,22 @@ class _Daemon:
         return fn(*args)
 
     def set_gamepad_emulation(
-        self, enabled: bool, flavor: str | None = None, *, origin: str = "manual"
+        self,
+        enabled: bool,
+        flavor: str | None = None,
+        *,
+        origin: str = "manual",
+        caminho: str | None = None,
     ) -> bool:
-        self.pedidos.append((enabled, flavor, origin))
+        self.pedidos.append((enabled, flavor, origin, caminho))
         if enabled:
-            self.config.gamepad_flavor = flavor
-            self._gamepad_device = SimpleNamespace(backend="uhid", flavor=flavor)
+            if flavor is not None:
+                self.config.gamepad_flavor = flavor
+            self.config.gamepad_caminho = caminho or self.config.gamepad_caminho
+            self._gamepad_device = SimpleNamespace(
+                backend="uinput" if caminho == "xbox" else "uhid",
+                flavor=self.config.gamepad_flavor,
+            )
         else:
             self._gamepad_device = None
         return True
@@ -130,6 +146,7 @@ class _Daemon:
         self.aplicados.append(mode)
         if getattr(mode, "kind", None) == "gamepad":
             self.config.gamepad_flavor = mode.gamepad_flavor
+            self.config.gamepad_caminho = getattr(mode, "caminho", None)
             self._gamepad_device = SimpleNamespace(
                 backend="uhid", flavor=mode.gamepad_flavor
             )
@@ -197,7 +214,7 @@ class TestOGestoDelaChegaAoPerfil:
 
         d = _Daemon(flavor="dualsense")
         await hotkey_sub.build_next_bridge_callback(d)()  # type: ignore[arg-type]
-        assert d.pedidos == [(True, "xbox", "manual")], "o gesto tem de obedecer"
+        assert d.pedidos == [(True, None, "manual", "xbox")], "o gesto tem de obedecer"
 
         gesto = pt.gesto_em_curso(d)
         assert gesto is not None, "o gesto dela não deixou rastro"
@@ -209,12 +226,17 @@ class TestOGestoDelaChegaAoPerfil:
         le.tique_da_escada(d, agora=gesto.ultimo_gesto + pe.SILENCIO_CONFIRMA_SEC - 1)
         meio = _no_disco()
         assert meio.mode is not None and meio.mode.gamepad_flavor == "dualsense"
+        assert meio.mode.caminho is None
 
         le.tique_da_escada(d, agora=gesto.ultimo_gesto + pe.SILENCIO_CONFIRMA_SEC + 1)
 
+        # AJUSTADA À REGRA DELA — MODO-DE-CONEXAO-01, 13/09/2026. ANTES o `xbox`
+        # do gesto voltava em `mode.gamepad_flavor`, a MÁSCARA; AGORA volta em
+        # `mode.caminho`, e a máscara padrão do perfil fica como ela deixou.
         depois = _no_disco()
         assert depois.mode is not None
-        assert depois.mode.gamepad_flavor == "xbox", "a máscara do gesto não voltou"
+        assert depois.mode.caminho == "xbox", "o caminho do gesto não voltou"
+        assert depois.mode.gamepad_flavor == "dualsense", "o gesto reescreveu a máscara"
         assert depois.ponte is not None
         assert depois.ponte.gamepad_flavor == "xbox", "o carimbo velho ficou"
         assert depois.ponte.confirmada_por == CONFIRMADA_POR_GESTO
@@ -273,7 +295,9 @@ class TestOGestoDelaChegaAoPerfil:
         assert resultado is not None
         assert resultado["armado"] is True
         assert resultado["ponte"] == "gamepad/xbox"
-        assert outro.config.gamepad_flavor == "xbox", "armou a máscara de novo errada"
+        # AJUSTADA — MODO-DE-CONEXAO-01: ANTES `config.gamepad_flavor`, a máscara;
+        # AGORA o caminho que o arming aplicou.
+        assert outro.config.gamepad_caminho == "xbox", "armou o caminho de novo errado"
         assert resultado["escada"] == pt.COMECO_PRODUTO_JA_SABE
 
     @pytest.mark.asyncio
@@ -292,10 +316,11 @@ class TestOGestoDelaChegaAoPerfil:
         d = _Daemon(flavor="dualsense")
         await hotkey_sub.build_next_bridge_callback(d)()  # type: ignore[arg-type]
 
-        assert d.pedidos == [(True, "xbox", "manual")], "o gesto tem de obedecer"
+        assert d.pedidos == [(True, None, "manual", "xbox")], "o gesto tem de obedecer"
         assert pt.gesto_em_curso(d) is None
         le.tique_da_escada(d, agora=time.monotonic() + 1e6)
         assert _no_disco().mode.gamepad_flavor == "dualsense"  # type: ignore[union-attr]
+        assert _no_disco().mode.caminho is None  # type: ignore[union-attr]
 
     @pytest.mark.asyncio
     async def test_jogo_fechado_no_meio_nao_carimba_nada(
@@ -319,6 +344,7 @@ class TestOGestoDelaChegaAoPerfil:
         assert pt.gesto_em_curso(d) is None
         depois = _no_disco()
         assert depois.mode is not None and depois.mode.gamepad_flavor == "dualsense"
+        assert depois.mode.caminho is None
         assert depois.ponte is not None
         assert depois.ponte.confirmada_em == _perfil_dela().ponte.confirmada_em  # type: ignore[union-attr]
 
@@ -330,14 +356,15 @@ class TestOGestoDelaChegaAoPerfil:
 
         Gravar `mode.kind="desktop"` no perfil de um jogo porque ela passou por
         ali seria uma decisão de produto que ninguém pediu. MORDE a recusa por
-        `mascara not in MASCARAS_AO_VIVO`.
+        `caminho not in CAMINHOS_AO_VIVO` (era `MASCARAS_AO_VIVO` até a
+        MODO-DE-CONEXAO-01, 13/09/2026).
         """
         save_profile(_perfil_dela(), origem="teste")
         d = _Daemon(flavor="xbox")  # o próximo do ciclo é mouse+teclado
 
         await hotkey_sub.build_next_bridge_callback(d)()  # type: ignore[arg-type]
 
-        assert d.pedidos == [(False, None, "manual")], "premissa: foi para o desktop"
+        assert d.pedidos == [(False, None, "manual", None)], "premissa: foi para o desktop"
         assert pt.gesto_em_curso(d) is None
         le.tique_da_escada(d, agora=time.monotonic() + 1e6)
         assert _no_disco().mode.kind == "gamepad"  # type: ignore[union-attr]
@@ -413,14 +440,16 @@ class TestODegrauCaroNaoCustaAPartida:
         await hotkey_sub.build_next_bridge_callback(d)()  # type: ignore[arg-type]
 
         # O aperto TROCA — é o ciclo livre, o mesmo de qualquer jogo carimbado.
-        assert d.pedidos == [(False, None, "manual")], "o aperto dela foi comido"
+        assert d.pedidos == [(False, None, "manual", None)], "o aperto dela foi comido"
         assert pt.em_curso(d) is None, "a tentativa tinha de ser encerrada"
 
         le.tique_da_escada(d)
 
         gravado = _no_disco()
         assert gravado.mode is not None
-        assert gravado.mode.gamepad_flavor == "xbox", "o degrau de pé evaporou"
+        # AJUSTADA — MODO-DE-CONEXAO-01: ANTES `mode.gamepad_flavor`; AGORA o
+        # degrau de pé chega ao perfil como `mode.caminho`.
+        assert gravado.mode.caminho == "xbox", "o degrau de pé evaporou"
 
     @pytest.mark.asyncio
     async def test_o_degrau_caro_nao_carimba_e_a_escada_continua_aberta(
@@ -486,7 +515,7 @@ class TestODegrauCaroNaoCustaAPartida:
                 f"{adiante:.0f}s depois do degrau caro, o produto carimbou "
                 f"sozinho o degrau que ela recusou: {depois.ponte}"
             )
-            assert depois.mode is not None and depois.mode.gamepad_flavor == "xbox", (
+            assert depois.mode is not None and depois.mode.caminho == "xbox", (
                 "o alinhamento do mode não sobreviveu ao tique seguinte — "
                 "alinhar NÃO é confirmar, e o mode é o que vale no próximo "
                 "lançamento"
@@ -501,7 +530,7 @@ class TestODegrauCaroNaoCustaAPartida:
         assert resultado is not None
         assert pe.ESCADA[2].ponte.kind == pe.KIND_NATIVE, "premissa do teste"
         assert resultado["ponte"] == "gamepad/xbox", "o degrau dela não voltou"
-        assert outro.config.gamepad_flavor == "xbox"
+        assert outro.config.gamepad_caminho == "xbox"
         assert resultado["escada"] == pt.COMECO_PERFIL_MANDA
         tentativa = pt.em_curso(outro)
         assert tentativa is not None, "a escada fechou num jogo sem carimbo"
@@ -539,7 +568,7 @@ class TestODegrauCaroNaoCustaAPartida:
 
         gravado = _no_disco()
         assert gravado.mode is not None
-        assert gravado.mode.gamepad_flavor == "xbox"
+        assert gravado.mode.caminho == "xbox"
         assert gravado.ponte is None
 
 
