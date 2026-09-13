@@ -964,7 +964,7 @@ def _uma_vez_so(alvo: str) -> tuple[str, ...]:
     """Os endereços a OMITIR deste tique. Vazio = pinte tudo.
 
     O PROBLEMA, medido em 01/09/2026 lendo o `escrever()` do piloto
-    (`hefesto_vivo.py:256`): com `data-hef-alvo="valor"` a pintura faz
+    (`hefesto_vivo.py:587`): com `data-hef-alvo="valor"` a pintura faz
     `el.value = t` sempre que o valor difere. O tique é de 100 ms
     (`hefesto_vivo.py:112`). Na segunda tecla que ela digita, o campo já difere
     do que está no disco — e meio segundo depois a pintura o devolve ao valor
@@ -1781,7 +1781,7 @@ def _valendo(ctx: Contexto, todos: list[Any] | None = None) -> str:
     **FATO ERRADO, SUBSTITUÍDO — 02/09/2026.** Aqui estava escrito que o nome
     cru ia também *"para o chip 'Perfil ativo'"*, e que a cura o levava ao
     travessão. **O chip não passa por aqui, e continua nomeando o órfão.** Ele
-    é `<span class="pa-nome" data-campo="perfil">` (`10-perfis.html:1035`, nas
+    é `<span class="pa-nome" data-campo="perfil">` (o chip «Perfil ativo», nas
     duas páginas), do `topo.html`, que é das dez abas — e quem o pinta é
     `pacotes.topo()`, com `ctx.state.get("active_profile")` CRU. Medido pelo
     caminho do piloto (`pacote_da_pagina` → `normalizar` → `topo` com
@@ -2024,7 +2024,7 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
         # endereço em página nenhuma**: `data-(campo|papel|hef)="ativo"` dá ZERO
         # ocorrências em `interface/paginas/10-perfis.html` e zero em
         # `mockup/10-perfis.html`. O chip que ela lê é
-        # `<span class="pa-nome" data-campo="perfil">` (linha 1035 das duas), e
+        # `<span class="pa-nome" data-campo="perfil">` (o do `topo.html`), e
         # quem o pinta é `pacotes.topo()` — o dono das dez abas.
         #
         # O CUSTO DE TER EXISTIDO foi uma cura declarada sobre uma tela que não
@@ -3006,7 +3006,7 @@ def editor_nome(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | No
     O VALOR VEM DE `valor`, E NÃO DE `texto` — foi a causa nomeada na primeira
     leva: *"o ouvinte manda `texto: alvo.textContent`, que num `<input>` é
     vazio"*. Desde 01/09 o clique traz o `value` do campo
-    (`hefesto_vivo.py:228`) e o piloto escuta `change` além de `click`, que é o
+    (`hefesto_vivo.py:1501`) e o piloto escuta `change` além de `click`, que é o
     único evento que um campo de texto dispara com o valor novo.
 
     POR QUE RENOMEAR NA HORA, e não guardar num rascunho: decisão dela de
