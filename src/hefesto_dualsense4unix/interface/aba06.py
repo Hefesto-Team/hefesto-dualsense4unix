@@ -1812,7 +1812,7 @@ _PADRAO_DOS_BOTOES = {b: rotulo_da_acao(a)
 #:
 #: O TEXTO CURTO FICA NA COLUNA e o inteiro no `title`: a decisão diz, com todas
 #: as letras, que a marca cabe na coluna do nome e não custa linha nova.
-#: A DICA ENCOLHEU PELA METADE — 11/09/2026, aprovado por ela. Ela aparece
+#: A DICA ENCOLHEU PELA METADE — 11/09/2026, aprovado por ela. Ela aparecia
 #: NOVE vezes na tela (3 linhas × 3 pop-ups), e as 245 letras da versão antiga
 #: explicavam o mecanismo duas vezes. O que ela precisa saber cabe em duas
 #: orações: por que não dispara, e que a escolha não se perde.
@@ -2384,7 +2384,7 @@ FILEIRA = '''
 #: comentário dela diz por quê — *"é ela que pega a marca posta na tela certa e
 #: na LINHA errada"*. Até aqui as duas escapavam por não terem endereço; dar-lhes
 #: endereço sem dar-lhes a marca seria a tela voltando a PROMETER um clique que o
-#: produto não dispara, agora numa terceira tela. O texto é o mesmo dos outros
+#: produto não dispara, agora numa terceira tela. O texto era o dos outros
 #: nove lugares — decisão do PO de 04/09/2026 sobre a D-15 dela —, e não uma
 #: frase nova.
 #:
@@ -2606,7 +2606,7 @@ TELA_REMAPEAMENTO = tela_de_botoes(
     "remapeamento", "Trocar os botões", D_REMAPEAMENTO,
     "Passa a ser",
     chr(10).join(
-        f'          <tr><td class="b">{b}</td>'
+        f'          <tr><td class="b">{b.removesuffix(MARCA_DO_TOUCHPAD)}</td>'
         f'<td>{_lista_da_troca(i)}</td></tr>'
         for b, i in BOTOES),
     f"Devolver as {len(BOTOES)} linhas ao <b>{SEM_TROCA}</b>? "
@@ -3417,6 +3417,17 @@ def _conferir(doc):
     exigir(_pintadas == len(_REMAPEAVEIS),
            f"a troca de botões pinta {_pintadas} linhas, e a troca alcança "
            f"{len(_REMAPEAVEIS)}")
+    # 4-ter-bis. A MARCA DO TOUCHPAD FICA SÓ ONDE A ESCOLHA É GUARDADA —
+    #    RESTOS-DA-ONDA-DOIS-01, 13/09/2026. A dica da marca termina em «A
+    #    escolha fica guardada.», e na troca a lista ao lado está apagada e não
+    #    guarda escolha nenhuma: as três linhas do touchpad da troca saem sem a
+    #    marca, e as das Definições, onde a frase é verdadeira, ficam com ela.
+    exigir("marca-nao-dispara" not in _troca,
+           "a tela da troca voltou a marcar o touchpad com «não dispara», e a "
+           "dica promete uma escolha guardada ao lado de uma lista apagada")
+    exigir(_tela("definicoes-mouse").count('class="marca-nao-dispara"')
+           == len(TOUCH_REGIOES),
+           "as Definições perderam a marca «não dispara» de uma região do touchpad")
     # 4-quater. E O "Guardar" DO ESTILO TEM DE PEDIR A FORMA — 11/09/2026. Sem
     #    `data-hef-forma`, o piloto manda só o valor do elemento CLICADO, e o
     #    Guardar é outro elemento: ele volta a não ter o que gravar, que é

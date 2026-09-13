@@ -1215,7 +1215,7 @@ MIOLO = f'''
 {item_escondido("Corrigir o serviço", "O serviço está de pé por fora do sistema, e ali reiniciar não funciona. Este botão o faz sair e subir do jeito certo. Nada do que você ajustou se perde.", "corrigir-modo", CAMPO_DO_MODO_AVULSO)}
 {item_cinza("Reiniciar o serviço", "Para e liga de novo. Resolve a maioria dos travamentos, e nenhum ajuste seu se perde.", "reiniciar")}
 {item(ROTULO_ATUALIZAR, DICA_ATUALIZAR, gesto=_gesto("atualizar"), em_voo=EM_VOO_ATUALIZAR)}
-{item("Parar o serviço", f"O Hefesto deixa de rodar e os {N} viram gamepads comuns do Linux. Pergunta antes, dizendo o que se perde.", "btn vermelho", gesto=_gesto("desligar"))}
+{item("Parar o serviço", "O Hefesto deixa de rodar e os controles viram gamepads comuns do Linux. Pergunta antes, dizendo o que se perde.", "btn vermelho", gesto=_gesto("desligar"))}
             </div>
           </div>
 

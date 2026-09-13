@@ -11,6 +11,14 @@ medir a segunda pergunta, não deduzi-la da primeira.
   root, sem falar com o broker — quem chama roda como ela e é a permissão DELA
   que decide);
 - a aba Emulação passa a dizer as duas coisas na mesma linha.
+
+NOTA DATADA — 13/09/2026 (RESTOS-DA-ONDA-DOIS-01). A segunda metade caducou em
+duas etapas: a FRASES-E-DICAS-03 tirou a efetiva da tela, e sem ela nada vivo
+lia o valor — a janela GTK desta linha saiu em 06/09 (`D-0609-GTK-LEVA-INTEIRA`),
+e o cartão da Steam na aba 07 só o passava a `markup_status_steam_input`, que o
+ignorava. A leitura da interface virou `_steam_input_excecoes` (só a lista) e
+parou de varrer os hidraw. A primeira metade continua: quem mede o físico
+exposto é `physical_nodes_exposure`, e o `doctor.sh` pergunta a ele.
 """
 
 from __future__ import annotations
@@ -96,7 +104,9 @@ class TestStatusDaAba:
         appids: list[int],
         exposicao: dict[str, bool],
         conflito: bool | None = False,
-    ) -> str:
+    ) -> tuple[str, list[int]]:
+        """O markup da linha e os `uid` com que alguém varreu os hidraw."""
+        varridas: list[int] = []
         monkeypatch.setattr(ea, "run_in_thread", lambda fn, on_success: on_success(fn()))
         monkeypatch.setattr(
             ea.EmulationActionsMixin, "_steam_input_is_on", staticmethod(lambda: conflito)
@@ -107,54 +117,63 @@ class TestStatusDaAba:
         )
         monkeypatch.setattr(
             "hefesto_dualsense4unix.broker.hidraw_broker.physical_nodes_exposure",
-            lambda uid, **k: exposicao,
+            lambda uid, **k: varridas.append(uid) or exposicao,
         )
         label = _LabelFalso()
         _Aba(label)._refresh_steam_input_status()
-        return label.markup
+        return label.markup, varridas
 
     def test_sem_allowlist_a_linha_nao_muda(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        markup = self._refresh(monkeypatch, appids=[], exposicao={"/dev/hidraw0": True})
+        markup, varridas = self._refresh(
+            monkeypatch, appids=[], exposicao={"/dev/hidraw0": True}
+        )
         # PALAVRA-01: o rótulo era "desligado (ok)" — minúsculo no meio da
         # frase dela e com jargão ("per-app"). O que ela lê agora e o que
         # este teste trava é a frase em português.
         assert "Desligado — tudo certo" in markup
         assert "xceção" not in markup
+        assert varridas == []
 
     # NOTA DATADA — 13/09/2026 (FRASES-E-DICAS-03). Os três casos abaixo
     # cobravam o estado da exceção NARRADO na linha, depois de um travessão. A
     # ordem dela de 13/09, no índice da terceira lista
     # (`docs/process/sprints/2026-09-13-A-TERCEIRA-LISTA-DELA-INDICE.md`),
-    # deixa na tela só estado: a linha conta as exceções e cala o resto. A
-    # distinção deste arquivo — configurada não é efetiva — continua MEDIDA
-    # pela leitura (`_steam_input_excecao_status`), e é ela que os três cobram.
+    # deixa na tela só estado: a linha conta as exceções e cala o resto.
+    #
+    # NOTA DATADA — 13/09/2026 (RESTOS-DA-ONDA-DOIS-01). Eles cobravam também
+    # que a leitura (`_steam_input_excecao_status`) distinguisse configurada de
+    # efetiva, varrendo os hidraw. Nada vivo lia a efetiva, e a leitura virou
+    # `_steam_input_excecoes`. Os três estados do físico ficam, e agora cobram
+    # o contrário: a mesma contagem nos três, e nenhuma varredura.
     def test_excecao_configurada_e_efetiva(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        markup = self._refresh(
+        markup, varridas = self._refresh(
             monkeypatch, appids=[2111190], exposicao={"/dev/hidraw0": True}
         )
-        assert "Exceção por jogo: 1 jogo(s)" in markup
+        assert markup.endswith("Exceção por jogo: 1 jogo(s)</span>"), markup
         assert "controle liberado agora" not in markup
-        assert ea.EmulationActionsMixin._steam_input_excecao_status() == ([2111190], True)
+        assert ea.EmulationActionsMixin._steam_input_excecoes() == [2111190]
+        assert varridas == []
 
     def test_excecao_configurada_mas_o_fisico_segue_escondido(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """Era exatamente este estado — configurada e sem efeito — que a GUI
-        não sabia contar. A leitura continua sabendo; a tela só conta."""
-        markup = self._refresh(
+        não sabia contar. A tela só conta, e a leitura não pergunta mais."""
+        markup, varridas = self._refresh(
             monkeypatch, appids=[2111190], exposicao={"/dev/hidraw0": False}
         )
-        assert "Exceção por jogo: 1 jogo(s)" in markup
+        assert markup.endswith("Exceção por jogo: 1 jogo(s)</span>"), markup
         assert "só valendo durante o jogo" not in markup
-        assert ea.EmulationActionsMixin._steam_input_excecao_status() == ([2111190], False)
+        assert varridas == []
 
     def test_sem_fisico_visivel_nao_afirma_nada(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        markup = self._refresh(monkeypatch, appids=[2111190], exposicao={})
+        markup, varridas = self._refresh(monkeypatch, appids=[2111190], exposicao={})
+        assert markup.endswith("Exceção por jogo: 1 jogo(s)</span>"), markup
         assert "sem controle físico visível" not in markup
-        assert ea.EmulationActionsMixin._steam_input_excecao_status() == ([2111190], None)
+        assert varridas == []

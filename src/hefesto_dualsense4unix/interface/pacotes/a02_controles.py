@@ -98,7 +98,7 @@ from hefesto_dualsense4unix.app.widgets.controller_card import (
     DICA_AUDIO_SEM_ENDERECO,
     L2_R2_THRESHOLD,
     ROTA_DO_CANAL,
-    TEXTO_AUDIO_SEM_ENDERECO,
+    # (a frase «sem endereço» saiu da moldura do alto-falante em 13/09/2026)
     TEXTO_SELO_CANAL_DORMINDO,
     TEXTO_SELO_SAIDA_MUDA,
     _markup_xy,
@@ -1327,7 +1327,7 @@ def no_do_microfone(entry: Any) -> str:
 
 #: OS DOIS CINZAS DA MOLDURA DO MICROFONE — MIC-SEM-FONTE-01, 13/09/2026. São
 #: VALOR DE ATRIBUTO (`data-apagado`), nunca frase: a folha da página lê cada um
-#: e decide o que apaga, e nenhum dos dois chega à tela como texto.
+#: e decide o que apaga, e nenhum chega à tela como texto; `sem-alvo` serve às duas molduras.
 MIC_SEM_ALVO = "sem-alvo"
 MIC_SEM_FONTE = "sem-fonte"
 
@@ -1349,7 +1349,7 @@ def microfone_apagado(entry: Any) -> str:
 
     O ENDEREÇO É SÓ DO MICROFONE: a fonte de captura não diz nada sobre o
     alto-falante, que toca pelo rádio desde 10/09. Pôr esta pergunta no
-    `som-sem-endereco`, que veste as duas molduras, apagaria o som que funciona.
+    `alto-apagado`, o cinza da outra moldura, apagaria o som que funciona.
     """
     if uniq_do_entry(entry) is None:
         return MIC_SEM_ALVO
@@ -2807,10 +2807,10 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
                 # A METADE VISÍVEL DA GUARDA SEM ENDEREÇO — linha 57. Os dois
                 # `?` acima já dizem POR QUÊ; o que falta é o que a GTK faz
                 # ANTES do clique: apagar as peças que MANDAM som. Desde 13/09
-                # este campo veste só a moldura do ALTO-FALANTE (a do microfone
-                # lê `mic-apagado`, abaixo), e o alvo `atributo` REMOVE o atributo quando o
-                # endereço aparece — a volta acontece sozinha, sem a guarda ter
-                # de lembrar quem ela apagou.
+                # (RESTOS-DA-ONDA-DOIS-01) é o `data-apagado` da moldura do
+                # ALTO-FALANTE, na forma do `mic-apagado` abaixo: o `title` de
+                # antes a camada da dica levava para `data-hef-dica`, e a guarda
+                # nunca acendeu no WebKit. Vazio REMOVE o atributo.
                 #
                 # ELE NÃO REUSA `alto-porque`, e a diferença é medida: aquele
                 # campo também acende no estado SEM POSSE, e ali o deslizante é
@@ -2821,8 +2821,8 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
                 # ondas e os rótulos contam o que o daemon publicou sobre ESTE
                 # controle, e continuam verdadeiros sem endereço nenhum. Quem
                 # mente sem endereço é o COMANDO.
-                "som-sem-endereco": (
-                    "" if uniq_do_entry(c) is not None else TEXTO_AUDIO_SEM_ENDERECO
+                "alto-apagado": (
+                    "" if uniq_do_entry(c) is not None else MIC_SEM_ALVO
                 ),
                 # O CINZA DO MICROFONE TEM ENDEREÇO PRÓPRIO — MIC-SEM-FONTE-01.
                 # Ver `microfone_apagado`: sem endereço OU com a fonte nula.
