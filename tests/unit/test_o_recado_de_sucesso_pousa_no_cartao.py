@@ -57,25 +57,29 @@ pergunta avulsa só os pegaria se chegasse dentro da janela deles, que é o
 defeito inteiro. O que é estado que FICA (a frase no cartão, o botão de volta)
 é perguntado até aparecer.
 
-AS SETE COISAS QUE ESTA RÉGUA COBRA:
+AS SETE COISAS QUE ESTA RÉGUA COBRAVA — E AS CINCO PRIMEIRAS MUDARAM DE CONTRATO
+EM 13/09/2026 (TELA-CALADA-01). Pela palavra dela, *"essas frases de status que
+aparecem no rodapé isso não deveria estar aparecendo"*, *"em todas as abas da
+interface"*, o gesto que deu certo não põe frase na tela — nem a do dono do
+assunto: ela vai ao diário da janela. A régua do contrato novo é
+``test_a_tela_nao_narra_o_gesto_que_deu_certo``; aqui os itens 1 a 5 viraram o
+avesso, e as esperas por condição da FLAKE-DO-PISCA continuam as mesmas:
 
-1. **a frase de sucesso chega ao DOM** — não ao ``desfechos``, não ao ``stderr``;
-2. **ela pousa no cartão DAQUELE controle**, como a recusa;
-3. **ela é VERDE**, e a recusa continua laranja: dois desfechos, dois tons, um
-   canal só;
-4. **a frase do DONO DO ASSUNTO vence a do piloto** — é onde a D-12 pousa
-   (*"o microfone ligou, mas o canal dele está mudo no sistema"*), e o ``recado``
-   não vaza para a pintura como se fosse endereço de página;
-5. **ela vence mais cedo que a recusa** — recibo é aviso, não estado;
+1. **a frase de sucesso NÃO chega ao DOM** (até 13/09 chegava);
+2. **ela não pousa em cartão nenhum** (até 13/09 pousava no do controle);
+3. **não há nó verde** — a recusa continua no tom dela, com um tom só;
+4. **a frase do DONO DO ASSUNTO também não entra**, e o ``recado`` continua
+   sem vazar para a pintura como se fosse endereço de página;
+5. **não há recibo a vencer** — nem no pouso, nem depois do prazo;
 6. **o botão fica em voo enquanto o gesto está no ar**, com a classe e com o
    rótulo que a página publicar;
 7. **ele volta sozinho**, e volta INTEIRO — com os filhos que tinha.
 
-A MORDIDA: troque ``_deu_certo_dizendo`` por ``_deu_certo`` na chamada do
-``_gesto`` e o cartão fica mudo depois de um gesto que deu certo; apague o
-``em_voo(alvo)`` do ouvinte e o botão fica igual durante os dois segundos de
-espera. E A DO TEMPO: devolva os marcos de tempo fixo e rode sob a carga acima
-— reprova; com as esperas por condição, verde sob a mesma carga.
+A MORDIDA: devolva o depósito de tom ``sucesso`` em ``_deu_certo_dizendo`` e
+os casos 1 a 5 reprovam; apague o ``em_voo(alvo)`` do ouvinte e o botão fica
+igual durante os dois segundos de espera. E A DO TEMPO: devolva os marcos de
+tempo fixo e rode sob a carga acima — reprova; com as esperas por condição,
+verde sob a mesma carga.
 """
 from __future__ import annotations
 
@@ -533,8 +537,9 @@ def medido() -> dict:
 
     def com_a_frase_do_dono() -> None:
         # A FRASE DO DONO DO ASSUNTO, pelo retorno do gesto. É a forma da D-12.
-        # O `_depositar` pinta NA HORA e antes do pouso, então a foto do pouso
-        # já traz a frase no cartão.
+        # Até 13/09/2026 o `_depositar` a pintava NA HORA e antes do pouso, e a
+        # foto do pouso a trazia no cartão. Desde a TELA-CALADA-01 o sucesso não
+        # deposita: a foto do pouso é a prova de que o cartão ficou como estava.
         por_gesto(lambda ctx, o, p: {"recado": FRASE_DO_DONO,
                                      "mesa": {"perfil-ativo": "regua"}})
         piloto.ponte.perguntar(_clicar_no_mic("clique-2"), anotar("clique-2"))
@@ -851,24 +856,30 @@ def test_o_pisca_nao_move_a_tela(medido: dict) -> None:
         f"borda ocupa: antes={antes['caixa']} durante={piscando['caixa']}")
 
 
-def test_a_frase_pousa_no_cartao_de_quem_foi_clicado(medido: dict) -> None:
-    """Como a recusa: na coluna do controle em que ela clicou.
+def test_a_frase_do_dono_nao_pousa_em_cartao_nenhum(medido: dict) -> None:
+    """A PERGUNTA FOI INVERTIDA EM 13/09/2026 — TELA-CALADA-01.
 
-    Na mesa de quatro, o sucesso de um no cartão do vizinho é pior que sucesso
-    nenhum — é a tela afirmando, sobre um aparelho, um ato que foi de outro.
+    Ela era `test_a_frase_pousa_no_cartao_de_quem_foi_clicado` e exigia a frase
+    de sucesso no cartão do p1. A palavra dela, com a foto do rodapé: *"essas
+    frases de status que aparecem no rodapé isso não deveria estar
+    aparecendo"*, *"em todas as abas da interface"*. O gesto que devolve
+    `{"recado": …}` continua dando certo e continua piscando; a frase vai ao
+    diário da janela, e o cartão fica como estava.
 
-    A LEITURA MUDOU EM 05/09/2026, E A MEDIÇÃO NÃO. Ela lia o
-    `depois-do-sucesso`, que é o gesto CALADO — e desde a `03-Q4` ele não
-    deposita frase nenhuma, ele pisca. A pergunta *"em que cartão pousa uma
-    frase de sucesso"* continua inteira: o que mudou é onde há uma frase de
-    sucesso para medir, e é o `com-a-frase-do-dono`, o gesto que devolve
-    `{"recado": …}`.
+    A FOTO É A DO POUSO (o vigia da FLAKE-DO-PISCA), e é por isso que a primeira
+    asserção vale: a piscada acesa nela prova que o gesto DEU CERTO, e o zero de
+    recados que vem depois não é o de um clique que não chegou.
+
+    O endereço por `uniq` que esta régua guardava continua medido — do lado da
+    recusa, em `test_o_mesmo_cartao_troca_de_tom` e em
+    `test_a_recusa_chega_ao_cartao`.
     """
-    (r,) = _r(_leitura(medido, "com-a-frase-do-dono"))
-    assert r["dentro_de"] == "p1", r
-    assert r["chave"] == CHAVE_P1, (
-        f"o aviso foi endereçado por {r['chave']!r} — a chave é o `uniq` "
-        f"normalizado, porque a COLUNA troca de dono e o endereço não.")
+    pouso = _leitura(medido, "com-a-frase-do-dono")
+    assert pouso["botao"] and pouso["botao"]["deu_certo"], (
+        f"o gesto com a frase do dono não piscou verde no pouso — sem o "
+        f"sucesso, o zero abaixo mediria outra coisa: {pouso['botao']}")
+    assert _r(pouso) == [], (
+        f"o gesto que deu certo pôs recado na tela: {_r(pouso)!r}")
 
 
 def test_o_aviso_sobrevive_aos_tiques(medido: dict) -> None:
@@ -892,23 +903,24 @@ def test_o_aviso_sobrevive_aos_tiques(medido: dict) -> None:
 # --------------------------------------------------------------------------
 # 2. o tom — dois desfechos, duas cores, um canal só
 # --------------------------------------------------------------------------
-def test_o_sucesso_e_verde_e_a_recusa_e_laranja(medido: dict) -> None:
-    """Os dois tons do cartão, e eles não mudaram.
+def test_a_recusa_tem_o_tom_dela_e_o_sucesso_nao_tem_no(medido: dict) -> None:
+    """ERA `test_o_sucesso_e_verde_e_a_recusa_e_laranja` — 13/09/2026.
 
-    A leitura do lado do sucesso passou do `depois-do-sucesso` para o
-    `com-a-frase-do-dono` em 05/09/2026, pela razão escrita em
-    `test_a_frase_pousa_no_cartao_de_quem_foi_clicado`: o sucesso CALADO não
-    deposita mais, e um sucesso com NOTÍCIA continua depositando igual.
+    Os dois tons se comparavam no mesmo cartão, lado a lado. Desde a
+    TELA-CALADA-01 o sucesso não deposita (*"em todas as abas da interface"*),
+    e não há nó verde a comparar: o que sobra medir é a recusa no tom dela, com
+    o desenho de um tom só (cor e borda iguais, lidas do CSSOM), e nenhum nó de
+    tom `sucesso` nas fotos dos dois pousos de sucesso.
     """
-    (sucesso,) = _r(_leitura(medido, "com-a-frase-do-dono"))
     (recusa,) = _r(_leitura(medido, "com-a-recusa"))
-    assert sucesso["tom"] == "sucesso", sucesso
     assert recusa["tom"] == "recusa", recusa
-    assert sucesso["cor"] != recusa["cor"], (
-        f"os dois desfechos saíram da mesma cor ({sucesso['cor']}) — quem olha "
-        f"o cartão não distingue 'deu certo' de 'recusei'.")
-    assert sucesso["borda"] != recusa["borda"], (
-        "a borda não acompanhou o tom; o aviso fica com a cara do outro")
+    assert recusa["cor"] == recusa["borda"], (
+        f"a recusa perdeu o desenho de um tom só — cor {recusa['cor']} e borda "
+        f"{recusa['borda']}")
+    for marco in ("depois-do-sucesso", "com-a-frase-do-dono"):
+        fotos = _r(_leitura(medido, marco))
+        assert not [r for r in fotos if r["tom"] == "sucesso"], (
+            f"{marco}: há nó de sucesso na tela — {fotos!r}")
 
 
 def test_o_mesmo_cartao_troca_de_tom(medido: dict) -> None:
@@ -926,12 +938,19 @@ def test_o_mesmo_cartao_troca_de_tom(medido: dict) -> None:
 # --------------------------------------------------------------------------
 # 3. a frase do dono do assunto vence a do piloto — é onde a D-12 pousa
 # --------------------------------------------------------------------------
-def test_a_frase_do_dono_vence(medido: dict) -> None:
+def test_a_frase_do_dono_nao_chega_a_tela(medido: dict) -> None:
+    """ERA `test_a_frase_do_dono_vence` — invertida em 13/09/2026.
+
+    Ela exigia que a frase devolvida pelo gesto fosse a que o cartão mostrava.
+    Pela palavra dela (*"em todas as abas da interface"*, TELA-CALADA-01), a
+    frase de um gesto que deu certo não entra na tela: vai ao diário da janela.
+    O texto continua sendo do dono do assunto — quem o leva ao diário é o
+    piloto, e `test_a_tela_nao_narra_o_gesto_que_deu_certo` cobra a linha
+    `[relato]`.
+    """
     frases = _frases(_leitura(medido, "com-a-frase-do-dono"))
-    assert frases == [FRASE_DO_DONO], (
-        f"o piloto ignorou a frase que o gesto devolveu e disse a dele: "
-        f"{frases}. O piloto é o CANAL; o texto é de quem sabe — é assim que a "
-        f"D-12 chega à tela.")
+    assert FRASE_DO_DONO not in frases and frases == [], (
+        f"a frase do gesto que deu certo chegou à tela: {frases}")
 
 
 def test_o_recado_nao_vira_endereco_de_pagina(medido: dict) -> None:
@@ -949,24 +968,32 @@ def test_o_recado_nao_vira_endereco_de_pagina(medido: dict) -> None:
 
 
 # --------------------------------------------------------------------------
-# 4. o recibo vence, e vence antes da recusa
+# 4. não há recibo a vencer — nem no pouso, nem depois do prazo
 # --------------------------------------------------------------------------
-def test_o_recibo_vence_e_some(medido: dict) -> None:
-    """A frase de sucesso sai do cartão sozinha — e ELA ESTAVA LÁ antes.
+def test_nao_ha_recibo_a_vencer(medido: dict) -> None:
+    """ERA `test_o_recibo_vence_e_some` — o contrato mudou em 13/09/2026.
 
-    A LEITURA MUDOU DE LUGAR EM 13/09/2026 (FLAKE-DO-PISCA), e a razão é uma
-    mordida: desde 05/09 esta régua lia o cartão depois do sucesso CALADO, que
-    não deposita frase nenhuma. Com o prazo do recibo em 600 s, ela passava —
-    verde sobre um recibo eterno. Agora ela lê o cartão depois da frase do DONO,
-    que deposita, e a espera é pela condição (a frase sair) com teto.
+    A FLAKE-DO-PISCA, no mesmo dia, tinha dado dente a esta régua: ela passara a
+    exigir que o recibo ESTIVESSE no cartão antes de conferir que ele vencia,
+    porque com o prazo em 600 s ela dava verde sobre um recibo eterno. A
+    TELA-CALADA-01 tira o recibo da tela (*"em todas as abas da interface"*), e
+    o recibo eterno deixa de poder existir: o que se mede agora é a AUSÊNCIA, nos
+    dois instantes em que ele apareceria — a foto do pouso e a leitura depois do
+    prazo encolhido desta medição.
+
+    O VERDE SOBRE O VAZIO continua vigiado: a piscada acesa no pouso prova que o
+    gesto com a frase do dono deu certo, então o zero é de um sucesso que não
+    falou, e não de um clique que não chegou.
     """
-    assert _frases(_leitura(medido, "com-a-frase-do-dono")), (
-        "não houve recibo no cartão para vencer — sem ele esta régua passaria "
-        "sobre o vazio")
-    frases = _frases(_leitura(medido, "depois-de-vencer"))
-    assert frases == [], (
-        f"o recibo continuou na tela depois de vencer: {frases}. A palavra dela "
-        f"sobre este canal é de 02/09: é aviso, não estado.")
+    pouso = _leitura(medido, "com-a-frase-do-dono")
+    assert pouso["botao"] and pouso["botao"]["deu_certo"], (
+        "o gesto com a frase do dono não piscou verde no pouso — sem o sucesso, "
+        "esta régua passaria sobre o vazio")
+    for marco in ("com-a-frase-do-dono", "depois-de-vencer"):
+        frases = _frases(_leitura(medido, marco))
+        assert frases == [], (
+            f"há recibo na tela em `{marco}`: {frases}. Desde 13/09 o gesto "
+            f"que deu certo não escreve na tela.")
 
 
 def test_o_prazo_do_sucesso_e_menor_que_o_da_recusa(medido: dict) -> None:

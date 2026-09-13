@@ -847,14 +847,15 @@ def _ctx_do_rodape() -> Any:
 
 
 def test_o_salvar_do_rodape_repoe_o_atalho_de_inicializacao(
-    biblioteca: Path, steam_fechada: None, disco: Path
+    biblioteca: Path, steam_fechada: None, disco: Path,
+    capsys: pytest.CaptureFixture[str],
 ) -> None:
     """«Salvar Perfil» do rodapé — FORA da guia de perfis, na interface NOVA.
 
     Até 06/09 este gesto gravava o perfil dela e deixava o jogo sem enxergar o
     controle: o perfil entrava, o atalho de inicialização continuava comido.
 
-    MORDIDA: arranque o `return _recado(perfil.com_a_carona())` do fim de
+    MORDIDA: arranque o `_recado(perfil.com_a_carona())` do fim de
     `rodape.salvar` e a primeira asserção reprova — o Pragmata continua com a
     linha que comeu o atalho.
     """
@@ -867,14 +868,19 @@ def test_o_salvar_do_rodape_repoe_o_atalho_de_inicializacao(
     resposta = rodape.salvar(_ctx_do_rodape(), {}, MagicMock())
 
     assert _tem_wrapper(biblioteca, PRAGMATA)
-    # E a NOTÍCIA chega ao cartão pelo canal do piloto, sem palavra do rodapé.
-    assert resposta is not None and PRAGMATA in resposta["recado"]
+    # A NOTÍCIA NÃO VOLTA MAIS À TELA — 13/09/2026, TELA-CALADA-01, pedido dela:
+    # *"essas frases de status que aparecem no rodapé isso não deveria estar
+    # aparecendo"*. Até aqui esta linha exigia o `recado` na resposta; agora o
+    # gesto devolve `None` e a frase vai ao diário da janela.
+    assert resposta is None, resposta
+    assert PRAGMATA in capsys.readouterr().err
     # O gesto dela continua fazendo o que fazia: a carona é efeito colateral.
     assert (disco / "pragmata.json").exists()
 
 
 def test_o_aplicar_verde_do_rodape_repoe_o_atalho(
-    biblioteca: Path, steam_fechada: None, disco: Path
+    biblioteca: Path, steam_fechada: None, disco: Path,
+    capsys: pytest.CaptureFixture[str],
 ) -> None:
     """O botão verde «Aplicar» da interface nova — o irmão do `on_apply_draft`."""
     from hefesto_dualsense4unix.interface.pacotes import rodape
@@ -886,7 +892,10 @@ def test_o_aplicar_verde_do_rodape_repoe_o_atalho(
     resposta = rodape.aplicar(_ctx_do_rodape(), {}, ponte)
 
     assert _tem_wrapper(biblioteca, PRAGMATA)
-    assert resposta is not None and PRAGMATA in resposta["recado"]
+    # SEM `recado` DESDE 13/09/2026 (TELA-CALADA-01): a notícia vai ao diário
+    # da janela, e não à tela — ver o irmão do «Salvar», logo acima.
+    assert resposta is None, resposta
+    assert PRAGMATA in capsys.readouterr().err
     # A carona NUNCA substitui o gesto: o perfil foi mesmo aos controles.
     assert ponte.apply_draft_detalhado.call_count == 1
 
