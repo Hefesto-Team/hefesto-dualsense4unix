@@ -62,22 +62,45 @@ leva das frases, e mandou numa mensagem só:
 * **Um portão estava vermelho no `dev` empurrado** (`citacoes-no-codigo`): curado
   na costura desta leva.
 
+**A costura da onda 1 (13/09, tarde)** — as seis voltaram «corrigida», com os
+portões verdes e nenhum botão novo:
+
+* **Sackboy:** a cura é o passo 1 da JOGO-SEM-EXCLUSIVIDADE-01. O avaliador do
+  install script fazia a escada armar `jogo_vivo` em vez do primeiro degrau
+  (journal das 05:00:20). O passo 2 (o «0» por jogo fora da lista) entra por
+  coerência com a lista, mas não muda os quatro jogos da queixa, que já estavam
+  em «0». O vigia já força o `SteamController_PSSupport` global em «0», então os
+  quatro que ele ainda grava (1672970, 1828690, 2958790, 3449040) não mudam de
+  comportamento. O console da Steam mostrou o controle virtual criado com o «0»
+  no lugar; se a Steam ainda o cria no jogo, quem responde é a MESA-DE-QUATRO-01.
+* **A luz** não era guarda caída: o replay entregava ao jogo a paleta que o
+  cliente Steam deixa no vpad. Agora descarta, e o journal diz cor, padrão e
+  autoridade.
+* **O giroscópio chega ao jogo** nas bibliotecas dos runtimes da Steam; o zero do
+  laudo era da libSDL2 do sistema. A cura cabe sem aparelho e entra na onda 2.
+* **Três achados** ficaram abertos só por posse e viraram sprint: a
+  FRASES-E-DICAS-03 e a F1-REMAPEAR-02. E as citações das planilhas que a leva
+  deslocou são a última coisa (CITACOES-DAS-PLANILHAS-01).
+
 ## §2 — As sprints e a ordem
 
 | sprint | o pedido | onda |
 | --- | --- | --- |
 | costura: ALTURA-DA-VISTA-01 · SENSORES-NO-JOGO-01 · TOUCHPAD-NO-3DS-01 | as três entregas que a triagem liberou; a ALTURA primeiro, porque o `topo.html` entra nas dez páginas | quem coordena, antes da onda 1 |
-| [FRASES-E-DICAS-01](2026-09-13-FRASES-E-DICAS-01-toda-frase-de-aviso-que-ainda-chega-a-tela.md) | a caixa laranja e a frase da Steam: o recado sai da tela; o número fora diz só «Player N» | 1 |
-| [FRASES-E-DICAS-02](2026-09-13-FRASES-E-DICAS-02-as-dicas-e-as-linhas-que-avisam-viram-estado.md) | as dicas e as linhas que avisam nas abas 02, 03, 07 e 08 viram estado | 1 |
-| [JOGO-SEM-EXCLUSIVIDADE-01](2026-09-13-JOGO-SEM-EXCLUSIVIDADE-01-nenhum-jogo-foge-do-modo-e-da-mascara-da-aba-jogar.md) | o install script que fingia jogo vivo; o Steam Input por jogo fora da lista | 1 |
-| [LIGHTBAR-NA-STEAM-01](2026-09-13-LIGHTBAR-NA-STEAM-01-a-luz-dentro-da-steam-e-as-guardas-que-se-autoaplicavam.md) | a cor retida do cliente Steam deixa de virar camada do jogo; a telemetria diz o valor | 1 |
-| [F1-REMAPEAR](2026-09-11-F1-REMAPEAR-as-vinte-e-duas-linhas-e-o-motor-que-nao-existe.md) | o motor do remapeamento que a aba 06 já desenha | 1 |
-| [VAO-DO-ESQUELETO-01](2026-09-11-VAO-DO-ESQUELETO-01-a-faixa-vazia-de-tres-paginas-e-a-decisao-de-27-08.md) | o salto de 2 px da fita e o «Mortal Kombat» do chip (absorve o §4.1 da PERFIS-TIRA) | 1 |
-| SENSORES-NO-JOGO-02 | o giroscópio que não chega ao jogo em Modo Virtual | 1: só o estudo |
-| [SISTEMA-BOTOES-01](2026-09-13-SISTEMA-BOTOES-01-cada-botao-da-aba-sistema-faz-o-que-diz.md) | cada botão da aba Sistema (absorve as §3 e §4 da TELA-CALADA-04) | 2, depois da FRASES-01 |
-| [RECONECTAR-SAMBA-02](2026-09-13-RECONECTAR-SAMBA-02-o-botao-que-ainda-muda-de-lugar-na-janela-dela.md) | o pulo vertical: o tique mudo, os chips e a frase da mesa vazia | 2, depois da FRASES-01 |
-| [MIC-SEM-FONTE-01](2026-09-09-MIC-SEM-FONTE-01-a-razao-chega-depois-do-arrasto-e-a-tarja-cobre-a-linha-de-cima.md) | o microfone cinza antes do arrasto | 2, depois das duas FRASES |
-| [DICA-DA-COR-01](2026-09-09-DICA-DA-COR-01-o-aviso-sai-da-janelinha-do-gtk-e-o-x-ganha-pixel.md) | só o X do tom tomado | 2, depois da FRASES-01 |
+| [FRASES-E-DICAS-01](2026-09-13-FRASES-E-DICAS-01-toda-frase-de-aviso-que-ainda-chega-a-tela.md) | a caixa laranja e a frase da Steam: o recado sai da tela; o número fora diz só «Player N» | 1 · costurada |
+| [FRASES-E-DICAS-02](2026-09-13-FRASES-E-DICAS-02-as-dicas-e-as-linhas-que-avisam-viram-estado.md) | as dicas e as linhas que avisam nas abas 02, 03, 07 e 08 viram estado | 1 · costurada |
+| [JOGO-SEM-EXCLUSIVIDADE-01](2026-09-13-JOGO-SEM-EXCLUSIVIDADE-01-nenhum-jogo-foge-do-modo-e-da-mascara-da-aba-jogar.md) | o install script que fingia jogo vivo; o Steam Input por jogo fora da lista | 1 · costurada |
+| [LIGHTBAR-NA-STEAM-01](2026-09-13-LIGHTBAR-NA-STEAM-01-a-luz-dentro-da-steam-e-as-guardas-que-se-autoaplicavam.md) | a cor retida do cliente Steam deixa de virar camada do jogo; a telemetria diz o valor | 1 · costurada |
+| [F1-REMAPEAR](2026-09-11-F1-REMAPEAR-as-vinte-e-duas-linhas-e-o-motor-que-nao-existe.md) | o motor do remapeamento que a aba 06 já desenha | 1 · costurada |
+| [VAO-DO-ESQUELETO-01](2026-09-11-VAO-DO-ESQUELETO-01-a-faixa-vazia-de-tres-paginas-e-a-decisao-de-27-08.md) | o salto da fita e o «Mortal Kombat» do chip (absorve o §4.1 da PERFIS-TIRA) | 1 · costurada |
+| [SENSORES-NO-JOGO-02](2026-09-13-SENSORES-NO-JOGO-02-o-giroscopio-que-o-jogo-nao-ve-em-modo-virtual.md) | o ensaio que mirava a biblioteca errada, e a dica do acelerômetro no env do jogo | 1: o estudo · 2: implementa |
+| [SISTEMA-BOTOES-01](2026-09-13-SISTEMA-BOTOES-01-cada-botao-da-aba-sistema-faz-o-que-diz.md) | cada botão da aba Sistema (absorve as §3 e §4 da TELA-CALADA-04) | 2 |
+| [RECONECTAR-SAMBA-02](2026-09-13-RECONECTAR-SAMBA-02-o-botao-que-ainda-muda-de-lugar-na-janela-dela.md) | o pulo vertical: o tique mudo, os chips e a frase da mesa vazia | 2 |
+| [MIC-SEM-FONTE-01](2026-09-09-MIC-SEM-FONTE-01-a-razao-chega-depois-do-arrasto-e-a-tarja-cobre-a-linha-de-cima.md) | o microfone cinza antes do arrasto | 2 |
+| [DICA-DA-COR-01](2026-09-09-DICA-DA-COR-01-o-aviso-sai-da-janelinha-do-gtk-e-o-x-ganha-pixel.md) | só o X do tom tomado | 2 |
+| [FRASES-E-DICAS-03](2026-09-13-FRASES-E-DICAS-03-a-razao-do-nascimento-o-chip-de-dois-donos-e-o-sufixo-do-steam-input.md) | a razão do nascimento na dica da 08, o «—» do chip na 03 e na 04, o sufixo do Steam Input na 07 | 2 |
+| [F1-REMAPEAR-02](2026-09-13-F1-REMAPEAR-02-as-seis-linhas-que-a-troca-nao-alcanca-e-o-ps-do-boot.md) | as seis listas que sempre recusam ficam apagadas; o PS do perfil no boot | 2 |
+| [CITACOES-DAS-PLANILHAS-01](2026-09-13-CITACOES-DAS-PLANILHAS-01-os-enderecos-que-a-leva-deslocou.md) | as citações de linha das planilhas que a leva deslocou | 3, depois da onda 2 costurada |
 | TELA-CALADA-04 · PERFIS-TIRA-BUSCA-ATIVO-01 | — | absorvidas |
 | FONE-01 | — | caducou: pediria deslizante novo |
 | MESA-DE-QUATRO-01 · LUZ-NO-RADIO-01 · OS-GESTOS-QUE-SO-ELA-PODE-FAZER | as provas de aparelho de toda a leva | bancada, com ela |
