@@ -82,6 +82,7 @@ from __future__ import annotations
 
 import csv
 import pathlib
+import re
 import sys
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
@@ -177,7 +178,7 @@ A_PROVA_QUE_FALTA: dict[str, tuple[str, str, str]] = {
     ),
     "sensor": (
         "grande",
-        "2026-09-08-SENSORES-NO-JOGO-01-o-giroscopio-e-o-acelerometro-provados-ate-o-jogo.md",
+        "2026-09-06-MESA-DE-QUATRO-01-quatro-dualsense-por-cabo-e-por-radio-com-ela.md",
         "`movimento.giroscopio@dualsense` está em MONTOU nos dois. Medido em 13/09: o zero "
         "em Modo Virtual era da libSDL2 2.30.0 do sistema; nas bibliotecas dos runtimes da "
         "Steam o vpad expõe os dois sensores, e o SDL pareia o nó «Motion Sensors» pelo "
@@ -233,6 +234,26 @@ A_PROVA_QUE_FALTA: dict[str, tuple[str, str, str]] = {
     # no caderno, e a régua cobrou a saída destas duas linhas na mesma corrida —
     # que é a mordida 2 fazendo o trabalho dela.
 }
+
+#: A DONA QUE A RAZÃO NOMEIA — 13/09/2026, RESTOS-DA-ONDA-TRES-01.
+#:
+#: A razão do `sensor` passou a dizer que o que falta «é da MESA-DE-QUATRO-01»,
+#: e a coluna da dona ficou na SENSORES-NO-JOGO-01, que já estava feita. As duas
+#: metades da mesma linha discordavam, e a régua passava: ela só perguntava se a
+#: dona existia no disco. Quando a razão diz «é da <SPRINT>», a dona é essa.
+_DONA_NA_RAZAO = re.compile(r"[Éé] da ([A-Z][A-Z0-9]*(?:-[A-Z0-9]+)*-\d{2})\b")
+
+
+def dona_que_a_razao_nomeia(razao: str) -> str | None:
+    """A sprint que a razão diz ser dona do resto («é da X»), ou ``None``."""
+    achado = _DONA_NA_RAZAO.search(razao)
+    return achado.group(1) if achado else None
+
+
+def a_dona_e_a_sprint(dona: str, sprint: str) -> bool:
+    """O arquivo da dona é o da sprint: ``AAAA-MM-DD-<SPRINT>-…md``."""
+    forma = rf"\d{{4}}-\d{{2}}-\d{{2}}-{re.escape(sprint)}(?:-|\.md$)"
+    return re.match(forma, dona) is not None
 
 #: QUANTAS CÉLULAS DO MAPA INTEIRO JÁ CHEGARAM AO JOGO — medido em 09/09/2026,
 #: nas 311 linhas × 2 transportes: **ZERO**.
@@ -448,18 +469,22 @@ def main() -> int:
             print(f"  {gesto} — tire a linha de `A_PROVA_QUE_FALTA`")
         return 1
 
-    # 2. o vocabulário do custo, e a dona que tem de existir
+    # 2. o vocabulário do custo, a dona que tem de existir, e a que a razão nomeia
     ruins = []
-    for gesto, (custo, dona, _razao) in sorted(A_PROVA_QUE_FALTA.items()):
+    for gesto, (custo, dona, razao) in sorted(A_PROVA_QUE_FALTA.items()):
         if custo not in CUSTOS:
             ruins.append(f"  {gesto}: custo {custo!r} fora do vocabulário "
                          f"({', '.join(CUSTOS)})")
         if not _sprint_existe(dona):
             ruins.append(f"  {gesto}: a dona `{dona}` não está em "
                          f"docs/process/sprints/")
+        nomeada = dona_que_a_razao_nomeia(razao)
+        if nomeada is not None and not a_dona_e_a_sprint(dona, nomeada):
+            ruins.append(f"  {gesto}: a razão diz que o resto é da {nomeada}, "
+                         f"e a dona é `{dona}`")
     if ruins:
-        print(f"VERMELHO: {len(ruins)} declaração(ões) sem custo válido ou sem "
-              f"dona no disco:")
+        print(f"VERMELHO: {len(ruins)} declaração(ões) sem custo válido, sem "
+              f"dona no disco ou com dona que a razão não nomeia:")
         print("\n".join(ruins))
         return 1
 

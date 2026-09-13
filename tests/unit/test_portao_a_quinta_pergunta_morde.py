@@ -16,7 +16,8 @@ como «funciona» é a mentira mais cara desta casa*.
 1. a prova parou e ninguém declarou a falta;
 2. a falta declarada cuja prova já CHEGOU — vira propaganda se ficar;
 3. a declaração para um gesto que a tela já não oferece;
-4. custo fora do vocabulário, ou dona que não está no disco;
+4. custo fora do vocabulário, dona que não está no disco, ou dona que não é a
+   sprint que a razão nomeia;
 5. o teto do degrau de ENTRADA: uma célula subiu ao jogo e a constante não;
 6. o degrau MUDOU NO MAPA — para baixo a régua acusa a falta nova, para cima
    ela acusa a declaração velha;
@@ -126,6 +127,43 @@ def test_morde_a_dona_que_nao_esta_no_disco(regua, monkeypatch, capsys):
                         (custo, "2026-01-01-NAO-EXISTE.md", razao))
     assert regua.main() == 1
     assert "não está em docs/process/sprints" in capsys.readouterr().out
+
+
+def test_morde_a_dona_que_nao_e_a_que_a_razao_nomeia(regua, monkeypatch, capsys):
+    """MORDIDA 4c — a razão diz de quem é o resto, e a coluna da dona segue.
+
+    O caso de 13/09/2026: a razão do `sensor` passou a dizer que o que falta «é
+    da MESA-DE-QUATRO-01», e a coluna continuou na SENSORES-NO-JOGO-01, já
+    feita. As duas metades da mesma linha discordavam, e a 4b passava, porque a
+    dona velha existe no disco. Aqui a razão do `mudo` ganha outra sprint e a
+    dona fica a de hoje.
+    """
+    custo, dona, razao = regua.A_PROVA_QUE_FALTA["mudo"]
+    monkeypatch.setitem(regua.A_PROVA_QUE_FALTA, "mudo",
+                        (custo, dona, f"{razao}; o registro é da MIC-VOLUME-02"))
+    assert regua.main() == 1
+    saida = capsys.readouterr().out
+    assert "mudo" in saida
+    assert "MIC-VOLUME-02" in saida
+    assert "a razão diz" in saida
+
+
+def test_toda_razao_que_nomeia_a_dona_concorda_com_a_coluna(regua):
+    """A 4c lida no inventário de HOJE, e não só no dublê.
+
+    Sem esta, uma razão que deixasse de nomear a sprint faria a 4c passar sobre
+    nada: ela conferiria a regra num caso inventado, e nenhum real.
+    """
+    nomeiam = {gesto: regua.dona_que_a_razao_nomeia(razao)
+               for gesto, (_custo, _dona, razao) in regua.A_PROVA_QUE_FALTA.items()}
+    assert nomeiam["sensor"] == "MESA-DE-QUATRO-01", (
+        "a razão do sensor deixou de dizer de quem é o resto")
+    for gesto, sprint in nomeiam.items():
+        if sprint is None:
+            continue
+        _custo, dona, _razao = regua.A_PROVA_QUE_FALTA[gesto]
+        assert regua.a_dona_e_a_sprint(dona, sprint), (
+            f"{gesto}: a razão nomeia {sprint} e a dona é {dona}")
 
 
 def test_morde_a_celula_que_subiu_ao_jogo_sem_o_teto_descer(regua, monkeypatch,
