@@ -957,9 +957,10 @@ _CITACOES_PENDENTES: frozenset[str] = frozenset({
     # estava em branco; o deslocamento de hoje a fez cair numa que está. *Uma
     # citação errada pode atravessar a régua enquanto o acaso a mantiver sobre
     # texto.*
-    "interface/pacotes/a03_gatilhos.py::hefesto_vivo.py:2111",
-    "interface/pacotes/a06_navegacao.py::hefesto_vivo.py:3107",
-    "interface/pacotes/a09_sistema.py::interface/hefesto_vivo.py:3080",
+    # AS DE `a03_gatilhos.py`, `a06_navegacao.py`, `a09_sistema.py` E
+    # `a10_perfis.py` SAÍRAM DAQUI NA COSTURA DE 13/09/2026: quem coordena
+    # reapontou cada uma pelo símbolo (`_fita`, `_recusou_dizendo`,
+    # `_deu_certo`), e a de `ponte.py` de novo pelos dois pontos de extensão.
     # A DE `ponte.py` SAIU DAQUI — 11/09/2026, F3-CALIBRAR, e ela saiu
     # CURADA, não escondida. A nota de 06/09 logo acima previa isto com
     # todas as letras: *"uma citação errada pode atravessar a régua
@@ -974,7 +975,6 @@ _CITACOES_PENDENTES: frozenset[str] = frozenset({
     # comentário que o alvo `largura` ganhou hoje. O arquivo citante é de
     # OUTRA POSSE nesta leva — três frentes estão em `a10_perfis.py` agora —
     # e a âncora continua existindo; só o número mudou.
-    "interface/pacotes/a10_perfis.py::hefesto_vivo.py:3107",
 })
 
 

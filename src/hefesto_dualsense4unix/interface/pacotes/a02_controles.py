@@ -1975,8 +1975,8 @@ def modo_do_mic(endereco: str) -> str:
     """Qual dos dois botões do modo do microfone está aceso.
 
     A REGRA É A DA GTK, e é uma linha só lá: `meu.get("microfone") is True`
-    (`app/actions/config/secao_controles.py:956`), que alimenta o
-    `set_active(bool(ligado))` do interruptor (`:662`). `True` e só `True` é
+    (`app/actions/config/secao_controles.py:924`), que alimenta o
+    `set_active(bool(ligado))` do interruptor (`:642`). `True` e só `True` é
     Virtual; ausência e `False` deixam a ponte no chão do mesmo jeito, e as duas
     são Nativo — que é por que desligar grava `None` e não `False`.
 

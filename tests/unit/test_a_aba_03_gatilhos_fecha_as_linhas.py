@@ -611,8 +611,12 @@ def test_o_piloto_le_a_chave_recado_e_a_tira_da_pintura():
     """O contrato dos dois lados: o pacote ESCREVE `recado`, o piloto o LÊ.
 
     Esta régua existe porque as duas metades vivem em arquivos diferentes e uma
-    troca de nome numa delas some em silêncio — o `escrever()` procuraria um
-    `data-campo="recado"` que não existe, e o recibo nunca chegaria ao cartão.
+    troca de nome numa delas some em silêncio.
+
+    O DESTINO MUDOU EM 13/09/2026 (FRASES-E-DICAS-01): o `recado` não pousa mais
+    no cartão. O piloto o lê e o escreve no diário da janela (`[relato]`), e a
+    chave segue fora da pintura por estar em `CHAVES_QUE_O_VIVO_RECUSA`. A régua
+    procurava a grafia antiga do corte, que saiu com o canal de tela.
 
     MORDIDA: renomear a chave num dos dois lados reprova aqui.
     """
@@ -620,7 +624,9 @@ def test_o_piloto_le_a_chave_recado_e_a_tira_da_pintura():
     assert 'resposta.get("recado")' in fonte, (
         "o piloto deixou de ler a chave `recado` que os gestos desta aba "
         "devolvem")
-    assert '"recado" in resposta' in fonte, (
+    recusadas = next((linha for linha in fonte.splitlines()
+                      if linha.startswith("CHAVES_QUE_O_VIVO_RECUSA = (")), "")
+    assert '"recado"' in recusadas, (
         "o piloto deixou de TIRAR o `recado` da carga antes da pintura — ele "
         "não é endereço de página nenhuma")
 
