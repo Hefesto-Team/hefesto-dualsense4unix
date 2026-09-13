@@ -855,14 +855,9 @@ _CITACOES_PENDENTES: frozenset[str] = frozenset({
     # fazer: não deixar a lápide envelhecer calada.
     "app/actions/config/moldura.py::test_config_a_janela_na_tela.py:262",
     "app/actions/trigger_specs.py::app/widgets/segmented_selector.py:168-180",
-    # TELA-CALADA-01 (13/09/2026) — A QUE O RODAPÉ CALADO DESLOCOU. O
-    # `_recado` do `rodape.py` ganhou docstring nova e o módulo ganhou
-    # `import sys`, e o `rodape.py:114` que o docstring de
-    # `a10_perfis.editor_nome` cita (o Salvar do rodapé lendo o que vale no
-    # daemon) desceu junto com o `_draft_do_ativo`, que é a âncora de verdade.
-    # `a10_perfis.py` está no `nao_toca:` da sprint; quem o tocar reaponta pelo
-    # SÍMBOLO `_draft_do_ativo` e apaga esta linha.
-    "interface/pacotes/a10_perfis.py::rodape.py:114",
+    # `a10_perfis.py::rodape.py:114` SAIU DAQUI NO MESMO DIA (13/09/2026): a
+    # TELA-CALADA-01 a deixou pendente por posse, e quem tem a aba Perfis
+    # reapontou o docstring de `editor_nome` pelo SÍMBOLO, `rodape._draft_do_ativo`.
     # `trigger_specs.py::profiles/schema.py:161` SAIU DAQUI — 07/09/2026, e ela
     # era da primeira família (endereço deslocado). O `_validate_mode` desceu
     # para a linha 220 nesta leva; o comentário agora o NOMEIA, e por isso a
