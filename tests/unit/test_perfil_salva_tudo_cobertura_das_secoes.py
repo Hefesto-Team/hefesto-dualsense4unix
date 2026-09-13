@@ -75,6 +75,19 @@ ISENTOS: dict[str, str] = {
         "decisão dela de 01/09 (*'a versão antiga não segue disponível'*) torna "
         "improvável, mas quem a reverter tem de reler esta linha."
     ),
+    "remapeamento": (
+        "F1-REMAPEAR (13/09/2026). A isenção é do INSTRUMENTO, pela mesma razão "
+        "do `button_actions`: o irmão deste portão dirige a JANELA GTK, e este "
+        "campo não tem superfície lá — quem o escreve é a interface nova, nos "
+        "gestos `guardar-remapeamento` e `padrao-remapeamento` da aba Navegação "
+        "(`interface/pacotes/a06_navegacao.py`). O rascunho o TRANSPORTA "
+        "(`DraftConfig.source_remapeamento`), porque `to_profile` reconstrói o "
+        "perfil do zero e sem o transporte todo Salvar da aba Perfis apagaria a "
+        "troca. ELE TEM RÉGUA COM MORDIDA: "
+        "`test_migra_navegacao_13_o_remapeamento_botao_a_botao.py` cobre o motor, "
+        "o campo omitido quando vazio, o depósito na ativação, os dois "
+        "`forward_buttons`, o transporte do Salvar e os quatro gestos da tela."
+    ),
     "version": (
         "constante do esquema (`Literal[1] = 1`). Não é configuração dela, não "
         "há gesto que a mude e o pydantic recusa qualquer outro valor no load "

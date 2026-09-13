@@ -912,7 +912,7 @@ class IpcHandlersMixin:
             MANUAL_PROFILE_LOCK_SEC,
         )
         # `getattr` pelo mesmo motivo que `ProfileManager._categorias_travadas`
-        # (`profiles/manager.py:562-565`): dublês de teste e stores parciais
+        # (`profiles/manager.py:563-574`): dublês de teste e stores parciais
         # continuam funcionando, e "não sei listar" vira "nada a restaurar".
         travadas_antes = getattr(self.store, "manual_override_categories", ()) or ()
         lock_antes = getattr(self.store, "_manual_profile_lock_until", 0.0)

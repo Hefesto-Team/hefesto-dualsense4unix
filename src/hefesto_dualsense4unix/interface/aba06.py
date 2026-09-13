@@ -51,8 +51,19 @@ from monta import TITULOS_DA_FITA  # noqa: E402
 # escritas do mesmo rótulo é como o desenho e o produto divergem calados.
 from pacotes.a06_navegacao import (  # noqa: E402
     ENDERECO_DA_RESSALVA,
+    PREFIXO_DA_TROCA,
+    ROTULOS_DA_TROCA,
     chips_da_fita,
     rotulo_de_quem_navega,
+)
+from pacotes.a06_navegacao import SEM_TROCA as _SEM_TROCA_DO_PACOTE  # noqa: E402
+
+#: O QUE A TROCA DE BOTÕES ALCANÇA — F1-REMAPEAR, 13/09/2026. Só essas linhas da
+#: tela "Trocar os botões" ganham o endereço da pintura; as outras seis (a
+#: direção dos dois analógicos, o PS e as três regiões do touchpad) levam só o
+#: gesto e a linha, e o motor as recusa pelo nome.
+from hefesto_dualsense4unix.core.remapeamento_de_botao import (  # noqa: E402
+    REMAPEAVEIS as _REMAPEAVEIS,
 )
 #: O PREFIXO DO ENDEREÇO DE CADA LINHA de *o que cada botão faz*, do dono — o
 #: pacote, que é quem EMITE a chave a cada tique. Ele era digitado aqui (`acao-`
@@ -1108,8 +1119,11 @@ def drop(grupos, escolhido, classe="campo-linha", gesto="", linha="", campo=""):
     continua de pé: **o ponto de gravação é o "Guardar"**, e este gesto não
     grava nada.
 
-    As duas outras telas continuam sem `gesto` **e** sem `campo`, e é a mesma
-    razão de sempre: os "Guardar" delas não têm dono no produto.
+    FATO SUBSTITUÍDO (13/09/2026, F1-REMAPEAR): aqui estava escrito que *"as
+    duas outras telas continuam sem `gesto` e sem `campo`"*, porque os
+    "Guardar" delas não tinham dono. As duas ganharam dono — o do Estilo
+    Point-and-click em 11/09 e o da troca de botões em 13/09 —, e as duas
+    passaram a levar `gesto`, `linha` e `campo` pela mesma razão das 21 daqui.
 
     FATO SUBSTITUÍDO (02/09/2026): aqui estava escrito que as 49 listas ficam
     "sem nome" porque só o Guardar importa. **Sem nome elas nunca são pintadas**,
@@ -1118,9 +1132,10 @@ def drop(grupos, escolhido, classe="campo-linha", gesto="", linha="", campo=""):
     publicada: as 21 opções cravadas são exatamente `acoes_de_botao.padrao()`, e
     o Guardar gravava `button_actions = None`, apagando em silêncio o que ela
     tivesse escolhido. As 21 linhas de *o que cada botão faz* passaram a levar
-    `campo`; as duas outras telas continuam sem, porque os gestos delas
-    (`guardar-remapeamento`, `guardar-ponto`) não têm dono no produto — pintar
-    um formulário que ninguém grava seria a metade errada da cura.
+    `campo`. As duas outras telas ficaram sem enquanto os gestos delas
+    (`guardar-ponto`, `guardar-remapeamento`) não tinham dono — pintar um
+    formulário que ninguém grava seria a metade errada da cura —, e passaram a
+    ter quando o dono nasceu (11/09 e 13/09/2026).
     """
     partes = []
     for rot, ops in grupos:
@@ -1855,6 +1870,20 @@ BOTOES = [
 ]
 SEM_TROCA = REMAP[-1][1][0]
 
+# A LISTA DA TELA E A TRADUÇÃO DO PACOTE SÃO A MESMA — F1-REMAPEAR, 13/09/2026.
+# O rótulo de cada destino sai do mapa das peças, aqui; o pacote traduz o
+# rótulo de volta para o id do botão (`a06_navegacao.ROTULOS_DA_TROCA`). Se um
+# nome mudar no CSV, a geração PARA — senão o "Guardar" recusaria como clique
+# inválido uma opção que a tela oferece.
+_ROTULOS_DO_DESENHO = {o for _g, ops in REMAP[:-1] for o in ops}
+if set(ROTULOS_DA_TROCA) != _ROTULOS_DO_DESENHO or _SEM_TROCA_DO_PACOTE != SEM_TROCA:
+    raise SystemExit(
+        "ERRO: a lista de destinos da tela 'Trocar os botões' divergiu de "
+        "`pacotes/a06_navegacao.ROTULOS_DA_TROCA` — a mais no desenho: "
+        f"{sorted(_ROTULOS_DO_DESENHO - set(ROTULOS_DA_TROCA))}; a menos: "
+        f"{sorted(set(ROTULOS_DA_TROCA) - _ROTULOS_DO_DESENHO)}; sem troca: "
+        f"{SEM_TROCA!r} x {_SEM_TROCA_DO_PACOTE!r}")
+
 # ---------------------------------------------------------------------------
 # AS OPÇÕES DE ATIVAÇÃO — cada rótulo é a palavra dela na fala [11].
 # ---------------------------------------------------------------------------
@@ -2003,7 +2032,10 @@ STATUS_MODO = ('<label class="tog" data-gesto="modo" data-campo="rato-ligado"'
 # `D_PADRAO` dizia ("o que este botão apaga") passou a viver onde ele morde, na
 # frase de confirmação de cada "Voltar ao padrão".
 # ---------------------------------------------------------------------------
-#: QUEM NAVEGA, DITO NAS DUAS DICAS — e o rótulo é um CAMPO, não uma frase.
+#: QUEM NAVEGA, DITO NA DICA DAS DEFINIÇÕES — e o rótulo é um CAMPO, não uma
+#: frase. Eram DUAS dicas até 13/09/2026: a da troca de botões perdeu esta frase
+#: na F1-REMAPEAR, porque a troca vale nos quatro controles (ver
+#: `D_REMAPEAMENTO`).
 #:
 #: Ele dizia `P1 Cosmic Red USB` cravado, nas duas telas. É identidade de
 #: aparelho no meio de um texto de ajuda, e por isso continuava nomeando o
@@ -2056,11 +2088,16 @@ D_DEFINICOES = ajuda(
     "Enquanto o touchpad for o ponteiro do computador, o clique dele não vira "
     "tecla — as três regiões ficam marcadas e a escolha fica guardada.<br><br>"
     + VALEM_PARA)
+#: A DICA DA TROCA PERDEU O `VALEM_PARA` — F1-REMAPEAR, 13/09/2026. Ele diz
+#: *"Valem para o controle que navega o PC"*, e isso é verdade sobre as
+#: Definições (mouse e teclado saem só do primário) e FALSO sobre a troca: ela é
+#: global no perfil (D-0809-A-NAVEGACAO-E-GLOBAL-NO-PERFIL) e entra antes do
+#: `forward_buttons` dos quatro controles. Tirar a frase errada é o mínimo; uma
+#: frase nova dizendo onde a troca vale é texto de tela, e fica no relato.
 D_REMAPEAMENTO = ajuda(
     f"As mesmas <b>{len(BOTOES)} linhas</b>, na mesma ordem, dizendo outra coisa: "
     "<b>para qual outro botão</b> cada um passa a valer. O que cada botão "
-    "<b>faz</b> se escolhe na tela <b>Definições Controle e Mouse</b>.<br><br>"
-    + VALEM_PARA)
+    "<b>faz</b> se escolhe na tela <b>Definições Controle e Mouse</b>.")
 
 #: AS TRÊS PALAVRAS DA "Função do teclado", e elas são o CONTRATO do gesto.
 #:
@@ -2381,16 +2418,18 @@ def tela_de_botoes(ident, titulo, dica, coluna, linhas, confirma, guardar, padra
     de ela desistir. Eles não aparecem como "sem dono" porque agora TÊM dono —
     `a06_navegacao.fechar_definicoes`.
 
-    A tela que passa `fechar=""` continua sem os nomes, e é o caso da de
-    remapeamento: lá não há trava a soltar, porque o `Guardar` dela não tem
-    dono no produto (ver `SEM_GESTO`).
+    FATO SUBSTITUÍDO (13/09/2026, F1-REMAPEAR): aqui estava escrito que a tela
+    de remapeamento passava `fechar=""` porque o `Guardar` dela não tinha dono.
+    Ganhou dono, e a trava das linhas dela também — ela passa
+    `fechar="fechar-troca"`, pelo mesmo motivo da tela de definições.
 
     O `aviso` É A TIRA SOB A TABELA — 04/09/2026, decisão do PO (§2 `06[04]`).
-    Só a tela de Definições a recebe, e a razão é a mesma que dá o `data-campo`
-    às 21 listas de lá e não às da outra: o que a tira nomeia é o que o
-    "Guardar" DESTA tela substitui, e o "Guardar" da outra não tem dono no
-    produto. Uma tira que avisasse sobre um botão que não grava nada seria a
-    tela inventando um risco.
+    Só a tela de Definições a recebe: o que a tira nomeia são os atalhos de
+    teclado que o "Guardar" DESTA tela substitui sem mostrá-los. FATO
+    SUBSTITUÍDO (13/09/2026): a razão escrita aqui era que o "Guardar" da outra
+    tela não tinha dono. Tem, e a tira continua só aqui por outra razão, que é a
+    de agora: o "Guardar" da troca grava exatamente as linhas que a tabela
+    mostra, e não há nada escondido que ele apague.
 
     O `extra` É UM BOTÃO A MAIS NO RODAPÉ — 06/09/2026, NAVEGACAO-TECLAS-01. Só
     a tela de Definições o recebe, e ele leva à tela "Teclas do teclado". Ele
@@ -2498,14 +2537,36 @@ TELA_DEFINICOES = tela_de_botoes(
     fechar="fechar-definicoes", aviso=AVISO_DA_TABELA,
     extra='      <a class="btn" href="#teclas-do-teclado">Teclas do teclado</a>')
 
+#: OS DOIS GESTOS DAS LINHAS DA TROCA — F1-REMAPEAR, 13/09/2026. O molde é o
+#: da tela de Definições (`LINHA_DE_BOTAO`, `fechar-definicoes`): a linha diz
+#: ao Python que ela está mexendo, e o fechar larga o que ela não guardou. Os
+#: donos moram em `pacotes/a06_navegacao.py`.
+LINHA_DE_TROCA = "linha-de-troca"
+FECHAR_TROCA = "fechar-troca"
+
+
+def _campo_da_troca(botao):
+    """O endereço de pintura da linha — só para o que a troca alcança.
+
+    As seis linhas que o motor recusa (`remapeamento_de_botao.FORA_DO_ALCANCE` e
+    o PS) ficam sem: nada as pinta, porque o perfil nunca guarda troca nelas. Um
+    endereço ali mostraria "— Sem troca —" para sempre, igual ao desenho — o
+    campo que régua nenhuma decide.
+    """
+    return f"{PREFIXO_DA_TROCA}{botao}" if botao in _REMAPEAVEIS else ""
+
+
 TELA_REMAPEAMENTO = tela_de_botoes(
     "remapeamento", "Trocar os botões", D_REMAPEAMENTO,
     "Passa a ser",
-    chr(10).join(f'          <tr><td class="b">{b}</td><td>{drop(REMAP, SEM_TROCA)}</td></tr>'
-                 for b, _ in BOTOES),
+    chr(10).join(
+        f'          <tr><td class="b">{b}</td>'
+        f'<td>{drop(REMAP, SEM_TROCA, gesto=LINHA_DE_TROCA, linha=i, campo=_campo_da_troca(i))}</td></tr>'
+        for b, i in BOTOES),
     f"Devolver as {len(BOTOES)} linhas ao <b>{SEM_TROCA}</b>? "
     "As <b>Definições Controle e Mouse</b> não são tocadas.",
-    guardar="guardar-remapeamento", padrao="padrao-remapeamento")
+    guardar="guardar-remapeamento", padrao="padrao-remapeamento",
+    fechar=FECHAR_TROCA)
 
 # ---------------------------------------------------------------------------
 # A TELA "Teclas do teclado" — 06/09/2026, NAVEGACAO-TECLAS-01.
@@ -3161,10 +3222,15 @@ def _conferir(doc):
     exigir('<style id="plastico-vivo"></style>' in doc,
            "a folha viva do plástico sumiu — sem ela o casco do desenho fica "
            "no colorway do mockup, que nenhum campo alcança")
-    exigir(doc.count('data-campo="quem-navega"') == 2,
-           "as duas dicas das telas de botões perderam o "
-           '`data-campo="quem-navega"` — elas voltam a nomear o controle do '
-           "desenho no meio do texto")
+    # ERAM DUAS DICAS ATÉ 13/09/2026 (F1-REMAPEAR): a da troca de botões dizia
+    # que a troca vale só para quem navega o PC, e ela passou a valer nos quatro
+    # controles — a frase saiu, e o endereço com ela. A decisão que esta linha
+    # guarda continua inteira: a dica que nomeia o controle tem endereço.
+    exigir(doc.count('data-campo="quem-navega"') == 1,
+           "a dica da tela de Definições perdeu o "
+           '`data-campo="quem-navega"` — ela volta a nomear o controle do '
+           "desenho no meio do texto (ou a frase voltou à dica da troca de "
+           "botões, onde ela é falsa)")
     exigir('data-campo="fita-chips" data-hef-alvo="html"' in doc,
            "a fita perdeu o endereço — e `hefesto_vivo._fita` DESISTE quando um "
            "controle da mesa não tem cor lida, que é o caso do rádio hoje")
@@ -3260,14 +3326,32 @@ def _conferir(doc):
     # 4-bis. E O "SAIR" TEM NOME. O `×` e o `Cancelar` fecham a pop-up pelo
     #    `:target` sozinhos; o que eles NÃO faziam era avisar o Python, e é nesse
     #    instante que as escolhas pendentes têm de ser largadas. São DOIS em cada
-    #    uma das telas que têm trava a soltar — a de definições e a do estilo —,
-    #    e ZERO na de remapeamento, cujo Guardar continua sem dono.
+    #    uma das três telas que têm trava a soltar — a de definições, a do estilo
+    #    e, desde 13/09/2026 (F1-REMAPEAR), a da troca de botões.
     for _ident, _nome_do_gesto in (("definicoes-mouse", "fechar-definicoes"),
-                                   ("point-and-click", "fechar-ponto")):
+                                   ("point-and-click", "fechar-ponto"),
+                                   ("remapeamento", FECHAR_TROCA)):
         exigir(_tela(_ident).count(f'data-gesto="{_nome_do_gesto}"') == 2,
                f"o `×` e o `Cancelar` da tela {_ident} perderam o "
                f"`data-gesto=\"{_nome_do_gesto}\"` — a trava das linhas ficaria "
                "presa depois de ela desistir")
+    # 4-ter. A TROCA DE BOTÕES TEM AS 22 LINHAS FALANDO E AS QUE A TROCA ALCANÇA
+    #    PINTADAS — F1-REMAPEAR, 13/09/2026. Sem o gesto a escolha não chega ao
+    #    Python e a pintura a desfaz; sem o `data-linha` o "Guardar" não sabe de
+    #    que botão é cada lista; sem o `data-campo` a tela mostra o desenho com o
+    #    perfil guardando outra coisa — e o "Guardar" apagaria a escolha dela.
+    _troca = _tela("remapeamento")
+    exigir(_troca.count(f'data-gesto="{LINHA_DE_TROCA}"') == len(BOTOES),
+           f"as {len(BOTOES)} linhas da troca de botões perderam o "
+           f"`data-gesto=\"{LINHA_DE_TROCA}\"`")
+    exigir(sorted(_re.findall(r'data-gesto="' + LINHA_DE_TROCA + r'" data-linha="([^"]+)"',
+                              _troca)) == sorted(_BOTOES_DO_PRODUTO),
+           "o `data-linha` das listas da troca não é a lista de botões do "
+           "produto — o Guardar descartaria a linha sem endereço em silêncio")
+    _pintadas = _troca.count('data-campo="' + PREFIXO_DA_TROCA)
+    exigir(_pintadas == len(_REMAPEAVEIS),
+           f"a troca de botões pinta {_pintadas} linhas, e a troca alcança "
+           f"{len(_REMAPEAVEIS)}")
     # 4-quater. E O "Guardar" DO ESTILO TEM DE PEDIR A FORMA — 11/09/2026. Sem
     #    `data-hef-forma`, o piloto manda só o valor do elemento CLICADO, e o
     #    Guardar é outro elemento: ele volta a não ter o que gravar, que é

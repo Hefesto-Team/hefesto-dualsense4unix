@@ -2043,6 +2043,10 @@ class CoopManager:
         """
         self._recolher_os_cedidos()
         self._promote_pending()
+        # F1-REMAPEAR (13/09/2026): a mesma troca do primário
+        # (`gamepad.dispatch_gamepad`), lida UMA vez por tique do `store` do
+        # daemon — o remapeamento é global no perfil e vale nos quatro.
+        troca = remapeamento_ativo(getattr(self._daemon, "store", None))
         for player in list(self._players.values()):
             if player.vpad is None:
                 continue  # aguardando confirmação de grab
@@ -2054,15 +2058,18 @@ class CoopManager:
                 continue
             try:
                 snap = player.reader.snapshot()
+                botoes, l2, r2 = snap.buttons_pressed, snap.l2_raw, snap.r2_raw
+                if troca:
+                    botoes, l2, r2 = traduzir_remapeamento(botoes, l2, r2, troca)
                 player.vpad.forward_analog(
                     lx=snap.lx,
                     ly=snap.ly,
                     rx=snap.rx,
                     ry=snap.ry,
-                    l2=snap.l2_raw,
-                    r2=snap.r2_raw,
+                    l2=l2,
+                    r2=r2,
                 )
-                player.vpad.forward_buttons(snap.buttons_pressed)
+                player.vpad.forward_buttons(botoes)
                 # FEAT-VPAD-FF-PASSTHROUGH-01: rumble do jogo deste jogador.
                 # getattr defensivo: fakes/vpads sem pump_ff degradam sem crash.
                 pump = getattr(player.vpad, "pump_ff", None)
@@ -2082,6 +2089,19 @@ class CoopManager:
 
     # Alias semântico para o shutdown do daemon.
     stop_all = disable
+
+
+# F1-REMAPEAR (13/09/2026): o import da troca de botões mora AQUI, depois da
+# classe, e não no topo, de propósito. No topo ele empurrava os métodos que o
+# mapa de canais (`docs/data/mapa-controles.csv`, que não é desta sprint) cita
+# por número de linha. O `forward_all` só lê o nome quando o tique roda, então a
+# posição não muda nada.
+from hefesto_dualsense4unix.core.remapeamento_de_botao import (  # noqa: E402
+    ativo as remapeamento_ativo,
+)
+from hefesto_dualsense4unix.core.remapeamento_de_botao import (  # noqa: E402
+    traduzir as traduzir_remapeamento,
+)
 
 
 def _numeros_sem_vpad(
