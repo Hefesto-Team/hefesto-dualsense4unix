@@ -283,7 +283,15 @@ class TestRetencaoNaoSobreviveAoClose:
     `_retained_game_outputs` (dict por UNIQ, não por sessão) e vaza pelo
     `replay_retained_game_outputs()` para a PRÓXIMA sessão de jogo real
     deste controle — o "player 3 verde" acendendo antes de o jogo escrever
-    qualquer coisa."""
+    qualquer coisa.
+
+    Nota de 13/09/2026 (LIGHTBAR-NA-STEAM-01): o replay deixou de entregar a
+    luz retida — ele a descarta e só diz no journal o que descartou. Estes
+    testes travam a REGRA (a retenção morre com a sessão que a gerou), não o
+    sintoma: quem morde a purga é a asserção sobre `_retained_game_outputs`;
+    o `player_calls == []` depois do replay passa a valer por duas razões.
+    A regra nova tem régua própria em
+    `test_lightbar_na_steam_01_a_paleta_do_cliente_nao_vira_camada_do_jogo.py`."""
 
     def test_close_purga_a_retencao_do_cliente(self) -> None:
         node = _FakeNode()
