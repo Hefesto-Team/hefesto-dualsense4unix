@@ -85,7 +85,6 @@ NAO_E_DO_APARELHO: dict[str, str] = {
                           "`.desktop` — é da máquina, e nada aqui toca o "
                           "controle",
     "ver-detalhes": "joga o registro técnico no painel — é leitura",
-    "ver-plugins": "lista os plugins do daemon — é leitura",
     # ---- máquina e serviço: nada disso passa pelo controle ----
     "hefesto": "liga e desliga o MODO do produto — é do serviço",
     "desligar": "para o serviço — é systemd",

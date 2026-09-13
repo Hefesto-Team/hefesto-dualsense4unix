@@ -106,8 +106,9 @@ GESTOS: dict[str, str] = {
     "dentro de uma janela de `with_steam_closed`. É a metade que APLICA o que "
     "o «Copiar a linha» da aba Lançadores só entrega na área de transferência; "
     "mora nesta aba por decisão dela (`D-0609-STEAM-DIVIDIDO`).",
-    "ver-plugins": "IPC `plugin.list`/`plugin.reload` (daemon/ipc_server.py:184-185). "
-    "Só a CLI chama (`cli/cmd_plugin.py`). Não há botão no produto de hoje.",
+    # «Ver os plugins» SAIU — SISTEMA-BOTOES-01, 13/09/2026, pela decisão dela
+    # D-OS-PLUGINS-APARECEM-ONDE-AGEM (`docs/data/decisoes-dela.csv`): plugin
+    # não ganha seção própria. A CLI e o IPC ficam.
     "ver-detalhes": "`daemon_actions.on_daemon_view_logs:2387` — e ele mostra "
     "OUTRA coisa: o `systemctl status`, não as últimas linhas de registro que "
     "o desenho pediu.",
@@ -641,9 +642,9 @@ def travas(leitura: Leitura) -> dict[str, str]:
     if not de_pe:
         presas["desligar"] = "O serviço já está desligado."
         presas["reiniciar"] = "O serviço está desligado — não há o que reiniciar."
-    for gesto in ("ver-plugins", "ver-detalhes"):
-        if not de_pe:
-            presas[gesto] = "O serviço está desligado — não há o que perguntar a ele."
+    # O `ver-plugins` saiu desta conta com o botão (SISTEMA-BOTOES-01, 13/09).
+    if not de_pe:
+        presas["ver-detalhes"] = "O serviço está desligado — não há o que perguntar a ele."
     return presas
 
 

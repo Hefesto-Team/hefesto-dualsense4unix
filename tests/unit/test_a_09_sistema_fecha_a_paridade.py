@@ -34,8 +34,9 @@ O QUE CADA BLOCO COBRA, e a MORDIDA de cada um está no docstring do teste:
    eram literal congelado do desenho;
 3. **o exame tem as OITO fontes da janela antiga**, e as duas condicionais
    entram quando falam;
-4. **`ver-plugins` recusa dizendo, e `ver-detalhes` NÃO** — a única trava da
-   camada do produto que este pacote desobedece, e ela é declarada;
+4. **`ver-detalhes` NÃO obedece à trava** — a única da camada do produto que
+   este pacote desobedece, e ela é declarada (o `ver-plugins`, que recusava
+   dizendo, saiu da aba em 13/09/2026 — SISTEMA-BOTOES-01);
 5. **`atualizar` relê a aba**, que é a metade que o botão de mesmo nome faz na
    janela antiga.
 """
@@ -419,46 +420,28 @@ def test_um_achado_condicional_que_levanta_nao_come_o_exame(a09, monkeypatch):
 # ---------------------------------------------------------------------------
 # 4. A TRAVA QUE VALE, E A ÚNICA QUE NÃO VALE
 # ---------------------------------------------------------------------------
-def test_ver_plugins_recusa_com_o_servico_desligado(a09, ctx):
-    """Com o daemon parado, o clique RECUSA DIZENDO — e a frase é do produto.
+def test_ver_os_plugins_saiu_da_aba_com_a_trava_dele(a09):
+    """«Ver os plugins» SAIU — SISTEMA-BOTOES-01, 13/09/2026.
 
-    Sem a trava, `plugin.reload` e `plugin.list` iam a um daemon que não está
-    lá, o gesto voltava calado e o painel continuava com o texto do último
-    pedido: quem clicou concluiria que a lista de agora é aquela.
+    ERAM DUAS RÉGUAS: `test_ver_plugins_recusa_com_o_servico_desligado` e
+    `test_ver_plugins_passa_com_o_servico_de_pe`, e mediam a trava do gesto. O
+    gesto saiu pela decisão dela D-OS-PLUGINS-APARECEM-ONDE-AGEM
+    (`docs/data/decisoes-dela.csv`): plugin não ganha seção própria. O que se
+    cobra é a saída inteira — sem dono no pacote, sem trava e sem dono na
+    camada do produto. A CLI e o IPC do daemon ficam.
 
-    A FRASE NÃO SE DIGITA AQUI. Ela é a de `aba_sistema.travas()`, perguntada ao
-    dono no próprio teste — digitá-la faria esta régua reprovar a melhora no dia
-    em que ela reescrevesse o texto.
-
-    MORDIDA: apaguei as três linhas do `_trava` em `ver_plugins`. Reprovou
-    dizendo que o gesto chamou `plugin.reload` com o serviço desligado.
+    MORDIDA: devolva `"ver-plugins"` à conta de `aba_sistema.travas()`.
     """
+    import pacotes
+
     from hefesto_dualsense4unix.gui import aba_sistema as tela
 
     a09._JANELA_ANTIGA[:] = [JanelaDeMentira(status="offline")]
     a09._LENTO.clear()
-    import pacotes
-
     parado = pacotes.Contexto(state={}, mesa=[], conectados=[], estados={})
-    ponte = PonteDeMentira()
-    with pytest.raises(RuntimeError) as erro:
-        a09.ver_plugins(parado, {}, ponte)
-    esperada = tela.travas(a09._leitura(parado))["ver-plugins"]
-    assert str(erro.value) == esperada
-    assert ponte.chamadas == [], (
-        f"o gesto falou com o daemon parado: {ponte.chamadas}")
-
-
-def test_ver_plugins_passa_com_o_servico_de_pe(a09, ctx):
-    """E a trava não pode trancar o que está de pé — senão ela é um botão morto
-    com outro nome.
-
-    MORDIDA: troquei o `if motivo:` por `if True:`. Reprovou aqui.
-    """
-    ponte = PonteDeMentira(plugins=[{"name": "um", "disabled": False}])
-    carga = a09.ver_plugins(ctx, {}, ponte)
-    assert [m for m, _ in ponte.chamadas] == ["plugin.reload", "plugin.list"]
-    assert "um" in carga["mesa"][a09.REGISTRO]
+    assert pacotes.gesto_da_pagina("09-sistema.html", "ver-plugins") is None
+    assert "ver-plugins" not in tela.travas(a09._leitura(parado))
+    assert "ver-plugins" not in tela.GESTOS
 
 
 def test_ver_detalhes_nao_obedece_a_trava_e_a_divergencia_e_declarada(a09):

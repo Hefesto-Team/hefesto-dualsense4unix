@@ -737,8 +737,6 @@ SEM_LETRA: dict[str, str] = {
         "a recusa do `systemctl restart`, como o systemd a devolve",
     "a09_sistema.py:retomar ← motivo":
         "a recusa de retomar o serviço, idem",
-    "a09_sistema.py:ver_plugins ← motivo":
-        "a recusa da leitura dos plugins, idem",
     "a09_sistema.py:_systemctl ← f'{recusa}{(f': {detalhe}' if detalhe else '.')}'":
         "a recusa do systemd mais o detalhe que ele mesmo dá — as duas metades "
         "vêm de fora, e o `f''` só as costura",

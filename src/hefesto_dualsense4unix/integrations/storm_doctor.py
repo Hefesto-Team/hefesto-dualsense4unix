@@ -665,10 +665,15 @@ def check_wireplumber(dropin_dir: Path | None = None) -> tuple[str, str]:
     # que roda EXATAMENTE esse script está três linhas abaixo, na mesma tela
     # ("Aplicar correções" → `on_storm_fix_safe`, que chama o
     # `scripts/fix_wireplumber_default_source.sh --install`).
+    # O BOTÃO SAIU DO CAMINHO — SISTEMA-BOTOES-01, 13/09/2026. Nenhum botão se
+    # chama "Aplicar correções", e o «Refazer os consertos automáticos» deixou
+    # de rodar o `--install` (DROPIN-AMBIGUO-01: é o gesto contrário ao de
+    # ligar o mic). Quem repõe o drop-in é a instalação: o `install.sh` o roda
+    # por padrão (`WITH_WIREPLUMBER_FIX=1`).
     return INFO, (
         "o ajuste de áudio do Hefesto não está instalado — sem ele o controle "
         "pode virar o microfone padrão do sistema sozinho. "
-        f"{PREFIXO_DA_CURA}clique 'Aplicar correções' na aba Sistema."
+        f"{PREFIXO_DA_CURA}{gesto_de_atualizar()}."
     )
 
 

@@ -142,7 +142,8 @@ class TestOPacoteEmiteARazao:
         fora = a09.razoes_do_cinza(ctx)
         assert fora[f"retomar{a09.SUFIXO_DA_RAZAO}"], fora
         assert fora[f"reiniciar{a09.SUFIXO_DA_RAZAO}"] == ""
-        assert fora[f"ver-plugins{a09.SUFIXO_DA_RAZAO}"] == ""
+        # O `ver-plugins` saiu da aba em 13/09/2026 (SISTEMA-BOTOES-01).
+        assert f"ver-plugins{a09.SUFIXO_DA_RAZAO}" not in fora
 
     def test_com_o_servico_parado_os_tres_tem_razao(
             self, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -419,7 +420,7 @@ class TestODesenhoCarregaAPeca:
 #: quebraria — e foi o vão de 58px que ela apontou em 31/08.
 LER_A_TELA = r"""
 (function(){
-  const alvos = ['retomar','reiniciar','ver-plugins'];
+  const alvos = ['retomar','reiniciar'];  // o 'ver-plugins' saiu em 13/09/2026
   const botoes = {};
   for(const g of alvos){
     const b = document.querySelector('[data-gesto="' + g + '"]');
