@@ -24,9 +24,15 @@ caminho de verdade. Cada uma é um jeito diferente de ele mentir:
 3. **O PILOTO REALMENTE PINTA.** `_deu_certo` com um dicionário na mão manda
    `pintar(...)` para a página; com `None`, não manda nada.
 
-A MORDIDA: troque o `return {...}` de `ver_plugins` por `return None` — o item 3
-reprova dizendo que nada foi para a tela. Troque `REGISTRO` por qualquer outro
-nome — o item 1 reprova dizendo que a página não tem esse endereço.
+A MORDIDA: troque o `return {...}` de `ver_detalhes` por `return None` — o
+item 1 reprova dizendo que nada foi para a tela. Troque `REGISTRO` por qualquer
+outro nome — o item 1 reprova dizendo que a página não tem esse endereço.
+
+O «Ver os plugins» SAIU DA ABA EM 13/09/2026 (SISTEMA-BOTOES-01), pela decisão
+dela D-OS-PLUGINS-APARECEM-ONDE-AGEM, e as duas réguas dele saíram junto:
+`test_ver_plugins_mostra_os_nomes_que_o_daemon_respondeu` e
+`test_ver_plugins_sem_plugin_diz_qual_dos_dois_silencios_e`. Quem cobra a
+saída é `test_cada_botao_da_aba_sistema_faz_o_que_diz`.
 """
 from __future__ import annotations
 
@@ -91,10 +97,7 @@ def _enderecos_da_carga(carga: dict) -> list[str]:
 # --------------------------------------------------------------------------
 # 1. o endereço existe na página que o produto renderiza
 # --------------------------------------------------------------------------
-@pytest.mark.parametrize(
-    ("gesto", "resposta"),
-    [("ver-plugins", [{"name": "exemplo", "disabled": False, "profile_match": "*"}]),
-     ("ver-detalhes", None)])
+@pytest.mark.parametrize(("gesto", "resposta"), [("ver-detalhes", None)])
 def test_o_endereco_que_o_gesto_devolve_existe_na_pagina(pac, ctx, gesto, resposta):
     """Devolver endereço que a página não tem é pintar ZERO, calado.
 
@@ -123,45 +126,6 @@ def test_o_endereco_que_o_gesto_devolve_existe_na_pagina(pac, ctx, gesto, respos
 # --------------------------------------------------------------------------
 # 2. o conteúdo é o do produto, e não uma frase nossa
 # --------------------------------------------------------------------------
-def test_ver_plugins_mostra_os_nomes_que_o_daemon_respondeu(pac, ctx):
-    """A lista da tela é a do `plugin.list`, com o estado de cada um."""
-    fn = pac.gesto_da_pagina("09-sistema.html", "ver-plugins")
-    p = PonteDeMentira(resposta=[
-        {"name": "turbo", "disabled": False, "profile_match": "Mortal Kombat"},
-        {"name": "eco", "disabled": True, "profile_match": None},
-    ])
-    texto = fn(ctx, {}, p)["mesa"]["registro-texto"]
-
-    assert p.chamadas == ["plugin.reload", "plugin.list"], (
-        f"chamou {p.chamadas}. RELER e então LISTAR: invertidas, a tela mostra "
-        f"o estado de antes de reler.")
-    assert "turbo" in texto and "eco" in texto, f"os nomes não chegaram: {texto!r}"
-    assert "Mortal Kombat" in texto, "o perfil a que o plugin se casa não chegou"
-    assert "desligado" in texto, "o plugin desligado apareceu como ligado"
-    assert "2 plugin" in texto, f"a contagem não bate com a resposta: {texto!r}"
-
-
-def test_ver_plugins_sem_plugin_diz_qual_dos_dois_silencios_e(pac, ctx):
-    """`[]` é ambíguo no daemon, e a tela tem de desfazer a ambiguidade.
-
-    `_handle_plugin_list` devolve `[]` tanto com o subsistema DESLIGADO quanto
-    com ele ligado e o diretório vazio (`ipc_handlers.py:5370-5373`). Um
-    "Nenhum plugin carregado" seco faria as duas parecerem a mesma coisa — e
-    quem tem plugin no disco concluiria que o arquivo dele está errado.
-    """
-    fn = pac.gesto_da_pagina("09-sistema.html", "ver-plugins")
-
-    desligado = fn(ctx, {}, PonteDeMentira(resposta=[], aceita=False))
-    ligado_vazio = fn(ctx, {}, PonteDeMentira(resposta=[], aceita=True))
-
-    a = desligado["mesa"]["registro-texto"]
-    b = ligado_vazio["mesa"]["registro-texto"]
-    assert a != b, ("os dois silêncios do daemon chegaram à tela como a MESMA "
-                    f"frase: {a!r}")
-    assert "não estão habilitados" in a, a
-    assert "não há nenhum no diretório" in b, b
-
-
 def test_ver_detalhes_leva_o_journal_para_o_painel(pac, ctx, monkeypatch):
     """As linhas do painel são as do `journalctl`, e a unit tem dono.
 
@@ -237,7 +201,7 @@ def test_o_piloto_manda_a_resposta_para_a_pagina():
             self.scripts.append(script)
 
     piloto = PilotoDeMentira()
-    piloto._deu_certo("09-sistema.html", "ver-plugins",
+    piloto._deu_certo("09-sistema.html", "ver-detalhes",
                       {"mesa": {"registro-texto": "duas linhas\ne outra"}})
     assert piloto.scripts, (
         "o gesto devolveu carga e o piloto não mandou nada para a página. É o "

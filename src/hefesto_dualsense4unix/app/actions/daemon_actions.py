@@ -2794,8 +2794,12 @@ class DaemonActionsMixin(WidgetAccessMixin):
         return (result.stdout or "").strip().splitlines()[:1][0] if result.stdout.strip() else ""
 
     def _systemctl_status_text(self, unit: str) -> str:
+        # `-n 0` — SISTEMA-BOTOES-01, 13/09/2026: sem ele o `status` emenda as
+        # últimas linhas do diário do daemon, com o `uniq=` inteiro do
+        # controle, e o painel em repouso da aba Sistema as mostrava sem
+        # ninguém clicar. As linhas do diário são do «Ver detalhes».
         result = self._invoke_systemctl(
-            ["status", unit, "--no-pager"], capture=True, check=False
+            ["status", unit, "--no-pager", "-n", "0"], capture=True, check=False
         )
         if result is None:
             return "(systemctl indisponível)"

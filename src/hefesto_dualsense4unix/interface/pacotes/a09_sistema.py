@@ -48,6 +48,7 @@ import sys
 import textwrap
 import threading
 import time
+from pathlib import Path
 from typing import Any
 
 # OS IMPORTS SÃO DE MÓDULO — o portão do `casa-sabe` segue o fecho de IMPORT a
@@ -247,8 +248,12 @@ CAMPO_DO_MODO_AVULSO = "corrigir-modo-quando"
 #: quem lê o pacote num relato entender o que ela responde.
 MODO_A_CORRIGIR = "sim"
 
-#: O TÍTULO DO CHIP SEM COR LIDA. Ele não nomeia tom nenhum — é a regra dela:
-#: *campo sem informação não mostra nada*.
+#: O CHIP SEM COR LIDA NÃO CONFESSA MAIS — SISTEMA-BOTOES-01, 13/09/2026. Aqui
+#: morava `SEM_COR_LIDA`, *"A cor do plástico deste controle não foi lida."*, no
+#: `title` do chip: confissão sobre um estado nosso numa dica flutuante, que a
+#: ordem dela de 13/09 tira da tela (o índice da leva, linha 19). O molde é o da
+#: fita comum (`monta.fita`, FRASES-E-DICAS-02): com a cor lida a dica diz o nome
+#: e de onde vem a borda; sem ela fica o nome, e sem nome, nada.
 #:
 #: FATO ERRADO, SUBSTITUÍDO (03/09/2026). Esta nota dizia *"pelo rádio a cor do
 #: plástico NÃO CHEGA, e quem diz isso é o mapa de canais
@@ -265,10 +270,8 @@ MODO_A_CORRIGIR = "sim"
 #: rádio ANÔNIMO parecia correto a quem olhasse. Ele não é: a cor é legível, e a
 #: mesa a lê.
 #:
-#: A ausência que este título cobre continua existindo (o leitor ainda não
-#: respondeu, ou respondeu `None`) — o que ela NÃO é mais é uma sentença do
-#: transporte.
-SEM_COR_LIDA = "A cor do plástico deste controle não foi lida."
+#: A ausência continua existindo (o leitor ainda não respondeu, ou respondeu
+#: `None`) — o que ela NÃO é mais é uma sentença do transporte.
 
 #: O QUE O ÚLTIMO "Ver …" PÔS NO PAINEL. `None` = ninguém pediu nada ainda.
 #:
@@ -282,6 +285,35 @@ SEM_COR_LIDA = "A cor do plástico deste controle não foi lida."
 #: Uma lista de um elemento porque quem escreve são os gestos, que rodam noutra
 #: thread; o que se troca é o conteúdo, nunca o nome.
 _PAINEL: list[str | None] = [None]
+
+#: A PERGUNTA QUE ESTÁ NO PAINEL: `{"gesto", "texto", "fica"}`. Vazio = o painel
+#: não tem pergunta de gesto em dois tempos.
+#:
+#: A PERGUNTA ENVELHECE — SISTEMA-BOTOES-01, 13/09/2026, a §4 da TELA-CALADA-04.
+#: Medido pela TELA-CALADA-03: aos 20 s o consentimento vence, o botão volta ao
+#: rótulo do desenho e o painel continuava dizendo «Clique de novo para
+#: confirmar» até o próximo clique — e o mesmo se ela armasse OUTRO gesto. O
+#: tique seguinte a tira (:func:`_a_pergunta_venceu`).
+#:
+#: O PREÇO QUE A ENTREGA DE LÁ APONTOU era o censo das camadas sumir junto. Ele
+#: não se paga: `fica` é o que sobra quando a pergunta sai — o censo, sem a
+#: instrução do segundo tempo. Nos outros gestos o texto inteiro é pergunta, e
+#: sobra o repouso.
+_PERGUNTA: dict[str, Any] = {}
+
+
+def _a_pergunta_venceu() -> None:
+    """Tira a pergunta do painel quando o gesto dela deixou de estar armado.
+
+    SÓ TIRA O QUE AINDA É ELA: se outro pedido («Ver detalhes») já escreveu por
+    cima, o painel é desse pedido, e a pergunta sai só da memória.
+    """
+    dono = _PERGUNTA.get("gesto")
+    if not dono or _armado_agora() == dono:
+        return
+    if _PAINEL[0] == _PERGUNTA.get("texto"):
+        _PAINEL[0] = _PERGUNTA.get("fica")
+    _PERGUNTA.clear()
 
 
 def _no_painel(repouso: Any) -> str:
@@ -298,6 +330,7 @@ def _no_painel(repouso: Any) -> str:
     Um registro técnico inventado é a pior espécie de mentira desta aba: ele
     parece a prova.
     """
+    _a_pergunta_venceu()
     guardado = _PAINEL[0]
     if guardado is not None:
         return guardado
@@ -306,14 +339,21 @@ def _no_painel(repouso: Any) -> str:
 
 
 
-def _para_o_painel(texto: str) -> dict[str, Any]:
+def _para_o_painel(texto: str, pergunta_de: str = "",
+                   fica: str | None = None) -> dict[str, Any]:
     """Guarda o texto E devolve a carga que o piloto escreve na hora.
 
     AS DUAS COISAS JUNTAS, e por isso uma função em vez de dois passos: separá-las
     é convidar o gesto a devolver sem guardar, e um gesto assim pisca na tela e
     some no tique seguinte — o defeito exato que `_PAINEL` existe para matar.
+
+    `pergunta_de` MARCA O TEXTO COMO A PERGUNTA DAQUELE GESTO, e `fica` é o que
+    sobra quando ela vencer. Ver :data:`_PERGUNTA`.
     """
     _PAINEL[0] = texto
+    _PERGUNTA.clear()
+    if pergunta_de:
+        _PERGUNTA.update(gesto=pergunta_de, texto=texto, fica=fica)
     return {"mesa": {REGISTRO: texto}}
 
 
@@ -332,6 +372,7 @@ def _limpar_o_painel() -> None:
     consentimento que já foi dado. O tique seguinte pinta o repouso.
     """
     _PAINEL[0] = None
+    _PERGUNTA.clear()
 
 
 def _relatar_o_recibo(gesto_: str, frase: str) -> None:
@@ -376,6 +417,61 @@ def _pergunta_da_steam() -> str:
     """
     corpo = " ".join(_daemon.DaemonActionsMixin._STEAM_APPLY_CORPO.split())
     return f"{textwrap.fill(corpo, LARGURA_DA_PERGUNTA)}\n\n{CLIQUE_DE_NOVO}"
+
+
+#: A CHAVE DO CLIQUE QUE SÓ ARMA — gêmea de
+#: `hefesto_vivo.CHAVE_DO_CLIQUE_QUE_SO_ARMOU` (FRASES-E-DICAS-01, 13/09/2026).
+#: O piloto é script e não se importa daqui; quem segura as duas iguais é
+#: `tests/unit/test_cada_botao_da_aba_sistema_faz_o_que_diz.py`. Com ela na
+#: carga, o botão que virou «Confirma?» pousa sem piscar verde: nada foi feito.
+ARMOU = "armou"
+
+#: Os `title` do DESENHO, lidos da página na primeira vez. Vazio = nunca lido.
+_DICAS: dict[str, str] = {}
+
+
+def _dica_do_desenho(gesto_: str) -> str:
+    """O `title` que o DESENHO dá àquele botão — LIDO da página, como o rótulo.
+
+    As mesmas duas fontes e a mesma ordem de :func:`_rotulo_do_desenho`: o
+    publicado primeiro, a bancada depois. Devolve `""` quando não achou.
+    """
+    if not _DICAS:
+        for publicado in (True, False):
+            try:
+                doc = _onde.pagina(PAGINA, publicado=publicado).read_text(
+                    encoding="utf-8")
+            except Exception:  # pragma: no cover - página fora do disco
+                continue
+            for tag in re.findall(r"<button\b[^>]*>", doc):
+                nome = re.search(r'data-gesto="([^"]+)"', tag)
+                dica = re.search(r'title="([^"]*)"', tag)
+                if nome and dica:
+                    _DICAS.setdefault(nome.group(1),
+                                      html.unescape(dica.group(1)).strip())
+    return _DICAS.get(gesto_, "")
+
+
+def _pergunta_do_botao(gesto_: str) -> str:
+    """A pergunta do clique 1 de Parar, Restaurar e Proton — nenhuma palavra nova.
+
+    SISTEMA-BOTOES-01, 13/09/2026. Os três armavam SEM dizer nada, e o `title`
+    publicado de cada um promete o contrário («Pergunta antes, dizendo o que se
+    perde», «Quando não dá, diz o motivo»). A pergunta é esse `title`, requebrado
+    na largura do painel, mais a instrução que esta aba já escreve.
+    """
+    dica = _dica_do_desenho(gesto_)
+    if not dica:
+        return CLIQUE_DE_NOVO
+    return f"{textwrap.fill(dica, LARGURA_DA_PERGUNTA)}\n\n{CLIQUE_DE_NOVO}"
+
+
+def _so_armou(de_pe: bool, carga: dict[str, Any] | None = None) -> dict[str, Any]:
+    """A carga do clique que ARMOU: os rótulos, a pergunta e a chave :data:`ARMOU`."""
+    fora = dict(carga or {})
+    fora["blocos"] = blocos_dos_botoes(de_pe)
+    fora[ARMOU] = True
+    return fora
 
 
 def _versao() -> str:
@@ -771,6 +867,11 @@ def _repouso_do_painel(state: dict[str, Any] | None,
     decisão 10 mandou aparecer estava no painel e fora da vista. Invertida, o
     fim é a identidade, e o `systemctl status` fica a uma rolada acima.
 
+    O DIÁRIO SAIU DO REPOUSO — SISTEMA-BOTOES-01, 13/09/2026, a §3 da
+    TELA-CALADA-04. As linhas do journal traziam o `uniq=` inteiro do controle,
+    e o funil do piloto acusava `[texto banido] 'uniq'` a cada abertura da aba.
+    `_systemctl_status_text` pede `-n 0`; o diário é do «Ver detalhes».
+
     A `mesa` É A FITA DO TOPO, e ela entra por aqui só para atravessar até
     :func:`_linha_de_identidade` — nada nesta função a lê. Tem valor padrão
     porque a faixa lenta a repassa e as réguas chamam as duas de um argumento
@@ -1125,7 +1226,7 @@ def _frase(fn: Any, state: Any) -> str | None:
 # FATO ERRADO, SUBSTITUÍDO (03/09/2026): este parágrafo atribuía a guarda
 # permanente ao TRANSPORTE — *"pelo rádio a cor NUNCA chega, e quem diz isso é
 # o mapa de canais (`identidade.cor_do_aparelho`, `radio_aciona = não`)"*. O
-# mapa diz `("sim", "sim")`; ver a nota de `SEM_COR_LIDA`. O que segura a cor
+# mapa diz `("sim", "sim")`; ver a nota do chip sem cor, antes de `_PAINEL`. O que segura a cor
 # não é o rádio: é a THREAD — `LeitorDeCor.perguntar` bloqueia, e até ela voltar
 # o item de mesa nasce sem `cor`. É espera, não sentença, e é por isso que a
 # guarda tinha de olhar a MESA VAZIA e não a cor ausente.
@@ -1221,8 +1322,10 @@ def _um_chip(c: dict[str, Any], escolhido: str = "") -> str:
     ponto = ' <span class="pt">•</span> '
     aceso = " on" if escolhido and str(c.get("pref") or "") == escolhido else ""
     if not cor:
-        return (f'<label class="chip{aceso}" data-campo="{CAMPO_DO_CHIP}"'
-                f' title="{html.escape(SEM_COR_LIDA)}">'
+        # SEM COR LIDA, SEM DICA — ver a nota do chip sem cor, antes de
+        # `_PAINEL`. O `nome` não serve aqui: sem leitura a mesa manda «Não
+        # sei», que é a ausência escrita como nome.
+        return (f'<label class="chip{aceso}" data-campo="{CAMPO_DO_CHIP}">'
                 f"P{jogador}{ponto}{via}</label>")
     return (f'<label class="chip plastico{aceso}" data-campo="{CAMPO_DO_CHIP}"'
             f' style="--plastico:{html.escape(_cor_da_zona(cor))}"'
@@ -1598,9 +1701,16 @@ def _linha_do_exame(achado: dict[str, Any]) -> str:
     nota de lá diz o mesmo — *"a frase INTEIRA continua no `title` do valor (…)
     é ele que segura a informação"*. Quebrar a linha em duas mudaria a altura do
     quadro, que é desenho, e desenho é decisão dela.
+
+    O «O QUE FAZER» NÃO CHEGA MAIS À TELA — SISTEMA-BOTOES-01, 13/09/2026. Ele é
+    instrução do `doctor`, e a linha da `WirePlumber` mandava clicar em
+    «Aplicar correções» na aba Sistema, um botão que não existe. A frase é
+    cortada no texto E no `title`, em `PREFIXO_DA_CURA` lido do dono
+    (`storm_doctor`); o que fica é o estado. A régua do doctor continua exigindo
+    o prefixo na string, que é o terminal.
     """
     cls = html.escape(str(achado.get("cls") or "nt"))
-    txt = str(achado.get("txt") or "")
+    txt = str(achado.get("txt") or "").split(_exame.PREFIXO_DA_CURA, 1)[0].rstrip()
     return (f'<div class="saude"><span class="selo {cls}">'
             f'<span class="sg">{html.escape(str(achado.get("g") or ""))}</span>'
             f'{html.escape(str(achado.get("selo") or ""))}</span>'
@@ -1646,7 +1756,11 @@ SUFIXO_DA_RAZAO = "-razao"
 #: :data:`TRAVA_QUE_NAO_VALE_AQUI`, com a medição de cada um. Pintar de cinza um
 #: botão que este arquivo deixa clicar seria a tela dizendo o contrário do que o
 #: produto faz — que é o defeito que a peça inteira existe para matar.
-BOTOES_CINZAS = ("retomar", "reiniciar", "ver-plugins")
+#:
+#: VIRARAM DOIS EM 13/09/2026: o «Ver os plugins» saiu da aba
+#: (SISTEMA-BOTOES-01), pela decisão dela D-OS-PLUGINS-APARECEM-ONDE-AGEM
+#: (`docs/data/decisoes-dela.csv`) — plugin não ganha seção própria.
+BOTOES_CINZAS = ("retomar", "reiniciar")
 
 #: O QUE JÁ EXISTE NO DESENHO E AINDA NÃO NO PRODUTO — a QUARTA espécie desta
 #: página, e ela é de RELÓGIO, não de mecanismo. 04/09/2026.
@@ -1750,8 +1864,8 @@ def _trava(ctx: Contexto, nome: str,
 
     A CONTA É DA CAMADA DO PRODUTO — `aba_sistema.travas(leitura)` — e ela já
     estava escrita, medida e ligada até a penúltima camada quando esta frente
-    começou: cobre `retomar`, `desligar`, `reiniciar`, `ver-plugins` e
-    `ver-detalhes`, com o motivo em português pronto para o tooltip. O que
+    começou: cobre `retomar`, `desligar`, `reiniciar` e `ver-detalhes`, com o
+    motivo em português pronto para o tooltip. O que
     faltava era alguém chamá-la.
 
     ELA NÃO PINTA O BOTÃO DE CINZA, E ISSO ESTÁ DECLARADO. O desenho não tem
@@ -1786,11 +1900,10 @@ def _trava(ctx: Contexto, nome: str,
 #: A ÚNICA TRAVA DA CAMADA DO PRODUTO QUE ESTE ARQUIVO **NÃO** OBEDECE, e ela é
 #: nomeada aqui em vez de ignorada em silêncio — 03/09/2026.
 #:
-#: `aba_sistema.travas()` (`gui/aba_sistema.py:619`) tranca `ver-plugins` E
-#: `ver-detalhes` com a mesma frase: *"O serviço está desligado — não há o que
-#: perguntar a ele."* Para o `ver-plugins` a frase é exata: ele fala com o
-#: daemon por IPC (`plugin.reload` + `plugin.list`), e um daemon parado não
-#: responde. Para o `ver-detalhes` ela é FALSA neste produto:
+#: `aba_sistema.travas()` tranca o `ver-detalhes` com a frase *"O serviço está
+#: desligado — não há o que perguntar a ele."* (ela era dividida com o
+#: `ver-plugins`, para quem era exata, e ele saiu da aba em 13/09/2026). Para o
+#: `ver-detalhes` ela é FALSA neste produto:
 #:
 #:     o `ver-detalhes` daqui NÃO pergunta ao daemon. Ele roda
 #:     `journalctl --user -u <unit> -n 80`, que lê o JOURNAL do systemd — um
@@ -1923,9 +2036,9 @@ def atualizar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     afirmava ter feito. Nenhum byte havia saído. E ele não fica cinza para
     avisar — `atualizar` não está em `BOTOES_CINZAS`, de propósito (ver lá).
 
-    O PADRÃO É DO IRMÃO A 650 LINHAS DAQUI: `ver_plugins` lê o retorno do
-    `plugin.reload` e o usa na frase. `_ok_e_motivo` é o que torna isto seguro
-    contra o dublê da régua — o docstring dele diz por quê, e não é enfeite.
+    O PADRÃO ERA O DO `ver_plugins` (que saiu da aba em 13/09/2026): ler o
+    retorno e usá-lo. `_ok_e_motivo` é o que torna isto seguro contra o dublê
+    da régua — o docstring dele diz por quê, e não é enfeite.
 
     `_LENTO.clear()` ACONTECE NOS DOIS DESFECHOS, e é escolha: uma recusa na
     tela ao lado de cinco leituras caras de até 2 s atrás seria a tela dizendo
@@ -2228,8 +2341,8 @@ DESTRUTIVOS = ("desligar", "restaurar-de-fabrica", "refazer-consertos",
 #: `procurar-camadas` era de DESENHO: o `title` promete *"Mostra, jogo por jogo,
 #: a sobreposição Vulkan (…), e só então tira"* — TRÊS tempos, e dois cliques
 #: cobrem dois. O que faltava era onde MOSTRAR, e o painel de registro desta
-#: mesma faixa é onde esta aba já põe o que os botões respondem (`ver-plugins`,
-#: `ver-detalhes`, `refazer-proton`). O primeiro clique escreve o censo lá e o
+#: mesma faixa é onde esta aba já põe o que os botões respondem (`ver-detalhes`,
+#: `refazer-proton`). O primeiro clique escreve o censo lá e o
 #: segundo age — três tempos, zero pixel novo, nenhuma decisão de desenho dela.
 SEM_MOTOR: dict[str, str] = {
     # VAZIA DESDE 06/09/2026, e o número foi 5 -> 3 -> 1 -> 0 em quatro dias.
@@ -2372,8 +2485,16 @@ def _de_pe(ctx: Contexto) -> bool:
     return _status_do_daemon(ctx.state) in _tela.DE_PE
 
 
-def _confirmado(o: dict[str, Any], gesto_: str) -> bool:
+def _confirmado(o: dict[str, Any], gesto_: str,
+                antes_de_armar: Any = None) -> bool:
     """Este clique é a CONFIRMAÇÃO? Quando não é, ARMA o botão e devolve `False`.
+
+    `antes_de_armar` É A RECUSA DO CLIQUE 1 — SISTEMA-BOTOES-01, 13/09/2026. Uma
+    função que levanta quando o gesto não tem como dar certo AGORA (a Steam
+    aberta, no Proton). Ela roda depois de desarmar o que estava armado e antes
+    de armar este: nada fica armado sobre um segundo tempo impossível. É o
+    precedente de :func:`procurar_camadas`, *"nada a oferecer, logo nada a
+    armar"*.
 
     OS DOIS GUARDAS, e eles são independentes:
 
@@ -2387,7 +2508,8 @@ def _confirmado(o: dict[str, Any], gesto_: str) -> bool:
     `a07_lancadores.fechar_a_steam_e_repor`.
 
     FORA DO PRAZO ELE LEVANTA, em vez de agir ou de rearmar calado: a frase vai
-    para a tarja pelo caminho do `RuntimeError`, e o tique seguinte repõe o
+    ao diário pelo caminho do `RuntimeError` (e o botão pisca a recusa — a
+    tarja saiu em 13/09/2026, FRASES-E-DICAS-01), e o tique seguinte repõe o
     rótulo do desenho. Rearmar calado deixaria a tela dizendo "Confirma?" sobre
     um consentimento que já tinha vencido.
     """
@@ -2401,6 +2523,8 @@ def _confirmado(o: dict[str, Any], gesto_: str) -> bool:
                 "desde a pergunta — não fiz nada. Clique de novo para começar.")
         return True
     _ARMADO.clear()
+    if antes_de_armar is not None:
+        antes_de_armar()
     _ARMADO.update(gesto=gesto_, ate=time.monotonic() + segundos_para_confirmar())
     return False
 
@@ -2441,6 +2565,12 @@ def desligar(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
     O QUE ELE DEVOLVE é o `blocos:` dos cinco rótulos, para a troca ser
     instantânea: sem isso a palavra do botão só mudaria no tique seguinte, e
     quem clicou concluiria que não pegou.
+
+    O CLIQUE 1 PERGUNTA — SISTEMA-BOTOES-01, 13/09/2026. Ele armava sem uma
+    palavra, e piscava verde; o `title` publicado promete *"Pergunta antes,
+    dizendo o que se perde"*. Agora o painel diz esse `title` e
+    :data:`CLIQUE_DE_NOVO` (:func:`_pergunta_do_botao`), a carga leva
+    :data:`ARMOU`, e o clique 2 limpa o painel antes de agir.
     """
     if not _de_pe(ctx):
         _ARMADO.clear()
@@ -2454,7 +2584,9 @@ def desligar(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
                 "— e subir outro criaria um segundo.")
         return {"blocos": blocos_dos_botoes(_de_pe(ctx))}
     if not _confirmado(o, DESLIGAR):
-        return {"blocos": blocos_dos_botoes(True)}
+        return _so_armou(True, _para_o_painel(_pergunta_do_botao(DESLIGAR),
+                                              pergunta_de=DESLIGAR))
+    _limpar_o_painel()
     _systemctl("stop")
     _matriz()._user_stopped_daemon = True
     return {"blocos": blocos_dos_botoes(False)}
@@ -2674,9 +2806,8 @@ def aplicar_aos_jogos(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any
     if aplicar is None:
         raise RuntimeError(_daemon.frase_sem_aplicacao_em_massa())
     if not _confirmado(o, "aplicar-aos-jogos"):
-        carga = _para_o_painel(_pergunta_da_steam())
-        carga["blocos"] = blocos_dos_botoes(_de_pe(ctx))
-        return carga
+        return _so_armou(_de_pe(ctx), _para_o_painel(
+            _pergunta_da_steam(), pergunta_de="aplicar-aos-jogos"))
     _limpar_o_painel()
     janela, resultado = slo.with_steam_closed(aplicar)
     recusa = _daemon.format_steam_janela_recusa(janela)
@@ -2743,7 +2874,11 @@ def restaurar_de_fabrica(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, 
     if asset is None:
         raise RuntimeError(_rodape.frase_do_preset_ausente())
     if not _confirmado(o, "restaurar-de-fabrica"):
-        return {"blocos": blocos_dos_botoes(_de_pe(ctx))}
+        # O CLIQUE 1 PERGUNTA — 13/09/2026, ver `desligar`.
+        return _so_armou(_de_pe(ctx), _para_o_painel(
+            _pergunta_do_botao("restaurar-de-fabrica"),
+            pergunta_de="restaurar-de-fabrica"))
+    _limpar_o_painel()
     cru = json.loads(asset.read_text(encoding="utf-8"))
     cru["name"] = NOME_DO_PADRAO
     prof = Profile.model_validate(cru)
@@ -2797,10 +2932,16 @@ def refazer_proton(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
     nome de uma porta porque a escrita chega por `travar()`, que é um
     `getattr(pin, "lock_proton_for_all_games")` — a árvore não vê o nome. A
     assinatura fica em `FORA_DA_ARVORE`, na régua.
+
+    **A STEAM ABERTA RECUSA NO CLIQUE 1 — SISTEMA-BOTOES-01, 13/09/2026.** Ela
+    só era conferida no clique 2, depois de armar e piscar verde: na máquina
+    dela, com a Steam aberta (medido), o botão era morto — armava calado e
+    recusava calado. Agora :func:`_porque_o_proton_nao_trava` roda antes de
+    armar e de novo antes de agir, e cobre também a instalação sem o
+    `proton-pin.conf` (por pacote), que fazia `lock_proton_for_all_games`
+    levantar `FileNotFoundError` no clique 2. O clique que arma pergunta com o
+    `title` publicado (:func:`_pergunta_do_botao`).
     """
-    if not _confirmado(o, "refazer-proton"):
-        return {"blocos": blocos_dos_botoes(_de_pe(ctx))}
-    _limpar_o_painel()
     import importlib
 
     try:
@@ -2808,23 +2949,51 @@ def refazer_proton(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
             "hefesto_dualsense4unix.integrations.proton_pin")
     except ImportError:
         pin = None
-    travar = getattr(pin, "lock_proton_for_all_games", None)
+    travar: Any = getattr(pin, "lock_proton_for_all_games", None)
+
+    def _recusa_se_nao_da() -> None:
+        motivo = _porque_o_proton_nao_trava(pin, travar)
+        if motivo:
+            raise RuntimeError(motivo)
+
+    if not _confirmado(o, "refazer-proton", antes_de_armar=_recusa_se_nao_da):
+        return _so_armou(_de_pe(ctx), _para_o_painel(
+            _pergunta_do_botao("refazer-proton"), pergunta_de="refazer-proton"))
+    _limpar_o_painel()
+    _recusa_se_nao_da()
+    _relatar_o_recibo("refazer-proton",
+                      _daemon.format_proton_lock_result(travar()))
+    return {"blocos": blocos_dos_botoes(_de_pe(ctx))}
+
+
+def _porque_o_proton_nao_trava(pin: Any, travar: Any) -> str | None:
+    """Por que a fixação do Proton não pode acontecer AGORA — ou `None`.
+
+    As frases são as que a janela antiga já dizia no mesmo gesto
+    (`daemon_actions._proton_lock_worker`). Sem `proton-pin.conf` o motor
+    levanta (`proton_pin._load_conf`), e isso é a mesma falta que o motor
+    ausente: esta instalação não tem o Proton pinado.
+    """
+    sem_o_pin = ("Esta instalação ainda não tem o Proton pinado — "
+                 f"{_daemon.como_atualizar_esta_instalacao()}.")
     if travar is None:
-        raise RuntimeError(
-            "Esta instalação ainda não tem o Proton pinado — "
-            f"{_daemon.como_atualizar_esta_instalacao()}.")
+        return sem_o_pin
+    onde_mora = getattr(pin, "default_pin_conf_path", None)
+    try:
+        conf = onde_mora() if onde_mora is not None else None
+    except Exception:
+        conf = None
+    if conf is None or not Path(conf).is_file():
+        return sem_o_pin
     steam_viva = getattr(pin, "steam_running", None)
     if steam_viva is None:
         from hefesto_dualsense4unix.integrations import steam_launch_options as slo
 
         steam_viva = slo.steam_running
     if steam_viva():
-        raise RuntimeError(
-            "A Steam está aberta — feche-a e clique de novo. Com ela aberta a "
-            "mudança seria perdida ao sair.")
-    _relatar_o_recibo("refazer-proton",
-                      _daemon.format_proton_lock_result(travar()))
-    return {"blocos": blocos_dos_botoes(_de_pe(ctx))}
+        return ("A Steam está aberta — feche-a e clique de novo. Com ela aberta a "
+                "mudança seria perdida ao sair.")
+    return None
 
 
 # ---------------------------------------------------------------------------
@@ -2870,9 +3039,16 @@ def refazer_proton(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
 #: O QUIRK ANTI-STORM NÃO ENTRA, e a razão é da janela antiga: escrevê-lo a
 #: quente é `sudo` num parâmetro de módulo, e este botão promete não pedir
 #: senha. A versão persistente já é padrão do instalador.
+#:
+#: O `--install` DO WIREPLUMBER SAIU — SISTEMA-BOTOES-01, 13/09/2026. Medido
+#: no ramo `install)` de `scripts/fix_wireplumber_default_source.sh`: ele apaga
+#: a marca do gesto do microfone, reinstala o drop-in 51, reelege a fonte
+#: padrão e REINICIA o WirePlumber da sessão — e o próprio script o chama de
+#: gesto CONTRÁRIO ao de ligar o mic (DROPIN-AMBIGUO-01). Um botão que promete
+#: não fechar nada não reescreve a política de microfone da máquina. Quem repõe
+#: o drop-in é a instalação (`install.sh`, `WITH_WIREPLUMBER_FIX=1`).
 CONSERTOS: tuple[tuple[str, list[str]], ...] = (
     ("scripts/disable_steam_input.sh", ["--apply-quiet"]),
-    ("scripts/fix_wireplumber_default_source.sh", ["--install"]),
 )
 
 #: O TEMPO DE ESPERA DE CADA SCRIPT, e ele é o da janela antiga (`:1270`).
@@ -2964,9 +3140,8 @@ def refazer_consertos(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any
         except Exception:
             jogos = None
         _ANTES_DO_CONSERTO["jogos"] = jogos
-        carga = _para_o_painel(_frase_do_que_vai_mudar(jogos))
-        carga["blocos"] = blocos_dos_botoes(_de_pe(ctx))
-        return carga
+        return _so_armou(_de_pe(ctx), _para_o_painel(
+            _frase_do_que_vai_mudar(jogos), pergunta_de="refazer-consertos"))
 
     _limpar_o_painel()
     import subprocess
@@ -3025,8 +3200,8 @@ def procurar_camadas(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]
     ERA UM CLIQUE MORTO, e o que o segurava estava escrito: *"o botão promete
     MOSTRAR o achado ENTRE procurar e tirar, e isso é uma tela que ainda não
     existe"*. **Ela existe** — é o painel de registro desta mesma faixa, onde o
-    `ver-plugins`, o `ver-detalhes` e o `refazer-proton` já põem o que
-    responderam. Nenhum pixel novo, nenhuma decisão de desenho.
+    `ver-detalhes` e o `refazer-proton` já põem o que responderam. Nenhum pixel
+    novo, nenhuma decisão de desenho.
 
     O CLIQUE 1 OLHA (o censo do `system.reg` de cada prefixo, ~1 s, read-only) e
     escreve `emulation_actions.frase_do_censo` no painel — jogo por jogo, com o
@@ -3066,14 +3241,16 @@ def procurar_camadas(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]
             # o desenho da janela antiga já recusava.
             _ARMADO.clear()
             carga = _para_o_painel(corpo)
-        else:
-            proximo = ("tirar" if tem_tirar else "devolver")
-            fim = ("Clique de novo para TIRAR."
-                   if proximo == "tirar"
-                   else "Clique de novo para DEVOLVER o que eu tinha tirado.")
-            carga = _para_o_painel(f"{corpo}\n\n{fim}")
-        carga["blocos"] = blocos_dos_botoes(_de_pe(ctx))
-        return carga
+            carga["blocos"] = blocos_dos_botoes(_de_pe(ctx))
+            return carga
+        proximo = ("tirar" if tem_tirar else "devolver")
+        fim = ("Clique de novo para TIRAR."
+               if proximo == "tirar"
+               else "Clique de novo para DEVOLVER o que eu tinha tirado.")
+        # QUANDO A PERGUNTA VENCE, O CENSO FICA e só a instrução sai — ver
+        # `_PERGUNTA` (13/09/2026).
+        return _so_armou(_de_pe(ctx), _para_o_painel(
+            f"{corpo}\n\n{fim}", pergunta_de="procurar-camadas", fica=corpo))
 
     from hefesto_dualsense4unix.integrations import steam_launch_options as slo
 
@@ -3091,51 +3268,11 @@ def procurar_camadas(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]
     return {"blocos": blocos_dos_botoes(_de_pe(ctx))}
 
 
-@gesto("09-sistema.html", "ver-plugins")
-def ver_plugins(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
-    """Relê os plugins do disco e ESCREVE a lista no painel de registro.
-
-    O daemon atende os dois métodos desde sempre (`ipc_server.py:184-185`); o
-    que faltava era o caminho de volta, e ele nasceu em 01/09/2026 — um gesto
-    pode devolver a mesma carga que a pintura consome, e o piloto a escreve.
-
-    A ORDEM É RELER E DEPOIS LISTAR, e não o contrário: o botão promete *"Lista
-    os plugins do daemon e relê"*, e listar antes de reler mostraria o estado
-    VELHO — quem clicou depois de mexer num plugin leria a lista de antes e
-    concluiria que o arquivo dele não foi visto.
-
-    QUANDO NÃO HÁ PLUGINS a página diz isso com todas as letras, e diz o
-    porquê: `_handle_plugin_list` devolve `[]` tanto quando o subsistema está
-    desligado quanto quando ele está ligado e vazio. Um "Nenhum plugin" seco
-    faria as duas situações parecerem a mesma.
-
-    A TRAVA ENTROU EM 03/09/2026, e ela é a mesma de `retomar` e `reiniciar`:
-    `aba_sistema.travas()` responde *"O serviço está desligado — não há o que
-    perguntar a ele."* Com o serviço parado os dois métodos vão a um daemon que
-    não está lá; sem a trava, o clique voltava calado e o painel continuava com
-    o texto do último pedido — quem clicou concluiria que a lista de agora é
-    aquela. O motivo é da camada do produto, não uma frase minha.
-    """
-    motivo = _trava(ctx, "ver-plugins")
-    if motivo:
-        raise RuntimeError(motivo)
-    releu = p.chamar("plugin.reload")
-    lista = p.resultado("plugin.list")
-    itens = lista if isinstance(lista, list) else []
-    if not itens:
-        motivo = ("os plugins estão ligados e não há nenhum no diretório"
-                  if releu else "os plugins não estão habilitados neste daemon")
-        return _para_o_painel(f"Nenhum plugin carregado — {motivo}.")
-    linhas = [f"{len(itens)} "
-              + _plural(len(itens), "plugin carregado", "plugins carregados")
-              + ("" if releu else " · a releitura falhou")]
-    for it in itens:
-        d = it if isinstance(it, dict) else {}
-        nome = str(d.get("name") or d.get("nome") or "?")
-        estado = "desligado" if d.get("disabled") else "ligado"
-        casa = str(d.get("profile_match") or "todos os perfis")
-        linhas.append(f"  {nome} · {estado} · {casa}")
-    return _para_o_painel("\n".join(linhas))
+# O «Ver os plugins» SAIU DA ABA — SISTEMA-BOTOES-01, 13/09/2026. Os plugins
+# vêm desligados por padrão e nenhuma tela os liga, então o botão só podia dizer
+# que estavam desligados; e a decisão dela D-OS-PLUGINS-APARECEM-ONDE-AGEM
+# (`docs/data/decisoes-dela.csv`) diz que plugin não ganha seção própria. A CLI
+# (`cli/cmd_plugin.py`) e os métodos IPC do daemon ficam.
 
 
 @gesto("09-sistema.html", "ver-detalhes")
@@ -3209,10 +3346,11 @@ def ver_detalhes(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
 #: `pacotes.perfil.gravar_e_reaplicar`, o dono dos três tempos —, e por isso
 #: eles estão aqui: esta lista é o que a ABA faz chegar à ponte, não o que o
 #: arquivo digita.
-PONTE = {"chamar", "chamar_detalhado", "machine_declare", "profile_switch",
-         "resultado"}
+#: `resultado`, `plugin.reload` e `plugin.list` SAÍRAM EM 13/09/2026 com o
+#: «Ver os plugins».
+PONTE = {"chamar", "chamar_detalhado", "machine_declare", "profile_switch"}
 METODOS = {"daemon.resume", "daemon.reload", "launch_env.refresh",
-           "machine.declare", "plugin.reload", "plugin.list"}
+           "machine.declare"}
 
 
 PAGINA = "09-sistema.html"
@@ -3267,12 +3405,6 @@ PROVAS = [
     {"pagina": PAGINA, "gesto": "perfil-da-mesa", "clique": {"v": "eu_escolho"},  # (noqa-acento) id
      "chama": [("machine_declare",
                 [{"orcamento": {"teto": _teto_do_perfil("eu_escolho")}}], {})]},
-    # RELER E DEPOIS LISTAR, nesta ordem — e a ordem é o que a prova cobra.
-    # Listar antes de reler mostraria o estado velho, e quem clicou depois de
-    # mexer num plugin leria a lista de antes.
-    {"pagina": PAGINA, "gesto": "ver-plugins", "clique": {},  # (noqa-acento) id
-     "chama": [("chamar", ["plugin.reload"], {}),
-               ("resultado", ["plugin.list"], {})]},
 ]
 
 #: OS TRÊS CUJO EFEITO O `state_full` NÃO MOSTRA, e cada um por um motivo:
@@ -3297,4 +3429,4 @@ PROVAS = [
 #: era. Nenhum dos dois é clicado pela prova automática: os dois estão em
 #: `hefesto_vivo.PERIGOSOS`.
 SEM_ECO = ("atualizar", "autostart", "perfil-da-mesa", "reiniciar", "retomar",
-           "ver-plugins", "ver-detalhes")
+           "ver-detalhes")

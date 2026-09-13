@@ -192,8 +192,14 @@ def test_a_fita_viva_nao_traz_um_nome_do_mockup() -> None:
 def test_o_controle_sem_cor_nao_ganha_cor_inventada() -> None:
     """Campo sem informação não mostra nada — regra dela.
 
-    Pelo rádio a cor do plástico não chega. O chip perde a borda colorida e o
-    `title` diz por quê; o que ele NÃO faz é escolher um tom para preencher.
+    Pelo rádio a cor do plástico não chega. O chip perde a borda colorida; o
+    que ele NÃO faz é escolher um tom para preencher.
+
+    O `title` QUE DIZIA POR QUÊ SAIU — 13/09/2026, SISTEMA-BOTOES-01. Ele era
+    *"A cor do plástico deste controle não foi lida."*, confissão sobre um
+    estado nosso numa dica flutuante, e a ordem dela de 13/09 tira esse tipo de
+    frase da tela (índice da leva, linha 19). O chip sem cor fica sem dica, como
+    a fita comum (`monta.fita`, FRASES-E-DICAS-02).
     """
     saida = a09_sistema._html_da_fita(MESA_DELA)
     chips = re.findall(r'<label class="chip[^"]*" data-campo="fita-chip"[^>]*>', saida)
@@ -203,7 +209,8 @@ def test_o_controle_sem_cor_nao_ganha_cor_inventada() -> None:
         "o controle do rádio ganhou uma cor que ninguém leu")
     assert "plastico" not in chips[1].split("data-campo")[0], (
         "o chip sem cor manteve a classe `plastico` e continua com a borda colorida")
-    assert "não foi lida" in chips[1]
+    assert "title=" not in chips[1], (
+        f"o chip sem cor voltou a ter dica — a confissão saiu da tela: {chips[1]}")
 
 
 def test_o_chip_sem_leitura_nao_diz_nao_sei_nem_travessao() -> None:

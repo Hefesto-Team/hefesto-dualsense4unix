@@ -1287,7 +1287,7 @@ MIOLO = f'''
           </div>
           <div class="risco"></div>
           <div class="col-acao">
-{item("Refazer os consertos automáticos", f"Arruma o áudio dos {N} controles, desliga o Steam Input onde ele atrapalha e põe a linha de inicialização nos jogos. Sem senha e sem fechar nada, e com cópia de segurança.", "btn", gesto=_gesto("refazer-consertos"))}
+{item("Refazer os consertos automáticos", "Desliga o Steam Input onde ele atrapalha. Sem senha e sem fechar nada, e com cópia de segurança.", "btn", gesto=_gesto("refazer-consertos"))}
 {item("Refazer a fixação do Proton", "Trava de novo o Proton que você validou nos jogos escolhidos. Quando não dá, diz o motivo.", gesto=_gesto("refazer-proton"))}
 {item("Tirar a sobreposição Vulkan", "Mostra, jogo por jogo, a sobreposição Vulkan pendurada por dentro, e só então tira. Guarda cópia do arquivo. Tirar pode não resolver o engasgo.", gesto=_gesto("procurar-camadas"))}
           </div>
@@ -1302,7 +1302,6 @@ MIOLO = f'''
           <div class="lista">
 {item("Restaurar de fábrica", "Devolve o perfil de fábrica. Pergunta antes, e os seus perfis salvos ficam onde estão.", "btn vermelho", gesto=_gesto("restaurar-de-fabrica"))}
 {item("Aplicar aos jogos da Steam", "Põe a linha de inicialização do Hefesto em todos os jogos instalados, sem perder as opções que você já tem e com cópia de segurança. Pergunta antes: precisa fechar a Steam por uns 20 segundos.", gesto=_gesto("aplicar-aos-jogos"))}
-{item_cinza("Ver os plugins", "Lista os plugins do serviço e relê.", "ver-plugins")}
 {item("Ver detalhes", "Põe as últimas 80 linhas do registro técnico no painel ao lado.", gesto=_gesto("ver-detalhes"))}
           </div>
           <div class="risco"></div>
@@ -1790,7 +1789,9 @@ if "var(--rot-campo)" in _R_ROT.group(0):
 #    E O CAMPO DERIVA DO GESTO: sem isto, um `data-campo` digitado à mão
 #    endereçaria uma razão que o pacote nunca escreve, e o botão nasceria
 #    congelado no desenho — que é o defeito que a peça existe para matar.
-_CINZAS = ("retomar", "reiniciar", "ver-plugins")
+#    O «Ver os plugins» SAIU EM 13/09/2026 (SISTEMA-BOTOES-01), pela decisão
+#    dela D-OS-PLUGINS-APARECEM-ONDE-AGEM: ficam dois.
+_CINZAS = ("retomar", "reiniciar")
 for _g in _CINZAS:
     _campo = f"{_g}{SUFIXO_DA_RAZAO}"
     _btn = re.search(
