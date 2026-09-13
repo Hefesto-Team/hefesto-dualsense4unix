@@ -1133,21 +1133,19 @@ RECARREGA = ('<svg viewBox="0 0 12 12" width="11" height="11" aria-hidden="true"
              'stroke-width="1.3" stroke-linecap="round" '
              'stroke-linejoin="round"/></svg>')
 
-DESFAZ = ('<svg viewBox="0 0 12 12" width="11" height="11" aria-hidden="true">'
-          '<path d="M2.2 6a3.8 3.8 0 1 0 1.2-2.8" fill="none" '
-          'stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>'
-          '<path d="M2.6 1.3v2.6h2.6" fill="none" stroke="currentColor" '
-          'stroke-width="1.3" stroke-linecap="round" '
-          'stroke-linejoin="round"/></svg>')
+# O `voltar-a-de-ontem` SAIU DA TELA — 13/09/2026. A ordem acima mandava
+# removê-lo; ele tinha virado um ícone espelhado do recarregar, ao lado de
+# «Editar», e ela leu os dois como o mesmo botão:
+#     "e o botao atualizar tá aparecendo duplicado na interface"  # (noqa-acento) citação literal dela
+# O gesto continua no pacote — é o mesmo desfazer da linha de comando.
 
 
 def icone_do_rotulo(gesto: str, desenho: str, dica: str) -> str:
     """Um ícone clicável no título de um bloco — o invólucro novo de um botão.
 
     **O NOME DO GESTO NÃO MUDA, e é a metade que a §3 da sprint cobra.**
-    `data-hef-gesto="recarregar"` e `data-hef-gesto="voltar-a-de-ontem"` são os
-    mesmos de quando eram botões: o `recarregar` levou até 31/08 para ganhar
-    dono e não vai perdê-lo por troca de invólucro.
+    `data-hef-gesto="recarregar"` é o mesmo de quando era botão: ele levou até
+    31/08 para ganhar dono e não vai perdê-lo por troca de invólucro.
 
     **A DICA VAI JUNTO, PALAVRA POR PALAVRA.** Um ícone sem dica é uma função
     que ninguém acha — é o custo inteiro de trocar palavra por desenho, e ele se
@@ -1961,9 +1959,7 @@ MIOLO = f'''
 
                    E É O QUE TORNA OS GESTOS HONESTOS: sem isto, ligar o campo Nome
                    faria ela renomear um perfil olhando para o nome de outro. -->
-              <div class="sec-rot">Editar{icone_do_rotulo(
-                  "voltar-a-de-ontem", DESFAZ,
-                  "Volta o perfil à gravação anterior.")}</div>
+              <div class="sec-rot">Editar</div>
               <div class="campos">
 
               <div class="campo">
@@ -2888,9 +2884,7 @@ def _conferir(html: str) -> None:
     # dica palavra por palavra, e o ícone fora da fileira de botões.
     for gesto_, canto, dica_ in (
             ("recarregar", "Perfis salvos",
-             "Relê a lista de perfis. Não mexe no editor ao lado."),
-            ("voltar-a-de-ontem", "Editar",
-             "Volta o perfil à gravação anterior.")):
+             "Relê a lista de perfis. Não mexe no editor ao lado."),):
         icone = re.search(rf'<button type="button" class="icone-rot" '
                           rf'data-hef-gesto="{gesto_}"[^>]*>', html)
         exigir(icone is not None,
@@ -2911,6 +2905,10 @@ def _conferir(html: str) -> None:
            "um dos dois voltou a ser botão na fileira do rodapé — a fileira de "
            "TRÊS virou UM, e é isso que faz o layout ficar mais limpo sem "
            "acrescentar altura nenhuma")
+    exigir('data-hef-gesto="voltar-a-de-ontem"' not in html,
+           "o `voltar-a-de-ontem` voltou à tela — a ordem dela de 11/09 foi "
+           "removê-lo, e o ícone dele ao lado de «Editar» era lido como o "
+           "recarregar duplicado")
     # O ALVO DO CLIQUE TEM TAMANHO. Um `<svg>` de 11px é o DESENHO; ela clica
     # isto com o mouse, e 11px de alvo é um alvo que ela erra.
     regra_icone = re.search(r"\.icone-rot\{[^}]*\}", html)

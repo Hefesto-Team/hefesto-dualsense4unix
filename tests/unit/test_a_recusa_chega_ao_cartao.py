@@ -568,18 +568,18 @@ def test_o_recado_e_do_endereco_e_nao_da_posicao(medido: dict) -> None:
     assert medido["chaves-do-deposito"] == [CHAVE_P1], (
         f"o depósito guardou {medido['chaves-do-deposito']!r}; a chave tem de "
         f"ser o endereço do controle que recusou, e ele não mudou")
+    # SEM CARTÃO, SEM TELA — 13/09/2026. Aqui se exigia a frase na tarja de
+    # rodapé, e a tarja saiu por pedido dela: *"essas frases de status que
+    # aparecem no rodapé isso não deveria estar aparecendo"*. O aviso continua no
+    # depósito (a asserção acima) e volta ao cartão quando o controle volta (a
+    # régua seguinte); enquanto ele está fora, a tela não diz nada.
     leitura = medido["depois-de-um-sair"]
     assert isinstance(leitura, dict)
-    frases = _frases(leitura)
-    assert len(frases) == 1 and "microfone" in frases[0], (
-        f"o aviso sumiu quando a mesa mudou: {frases!r}. Ele é dela e vence "
-        f"pelo relógio — não pela ida e volta de um controle.")
-    recado = leitura["recados"][0]
-    assert recado["dentro_de"] == "", (
-        f"a frase ficou dentro do cartão {recado['dentro_de']!r}, que agora é de "
-        f"{UNIQ_P2} — o controle que recusou já saiu da mesa. A recusa de um "
-        f"controle no cartão de outro é a tela AFIRMANDO o que não é, e é pior "
-        f"que recusa nenhuma: ela acusa quem não fez nada.")
+    recados = leitura["recados"]
+    assert recados == [], (
+        f"o controle que recusou saiu da mesa e a tela ainda mostra {recados!r}. "
+        f"Dentro do cartão de {UNIQ_P2} é a recusa de um controle acusando "
+        f"outro; fora de cartão é a tarja de rodapé que ela mandou tirar.")
 
 
 def test_o_aviso_volta_ao_cartao_quando_o_controle_volta(medido: dict) -> None:

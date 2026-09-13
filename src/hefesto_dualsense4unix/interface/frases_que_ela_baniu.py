@@ -392,9 +392,11 @@ def frase_banida_em(texto: str) -> str | None:
     """O primeiro trecho banido presente em ``texto``, ou ``None``.
 
     ELA NÃO CONSULTA :data:`PALAVRAS_BANIDAS`, e isso foi medido, não esquecido.
-    Esta função é o que `hefesto_vivo._json` chama, e o `_json` **levanta** —
-    ele é o funil por onde todo valor passa a caminho do WebView. Duas coisas o
-    fariam quebrar a tela dela hoje:
+    Esta função era o que `hefesto_vivo._json` chamava quando o `_json`
+    **levantava** — ele é o funil por onde todo valor passa a caminho do
+    WebView. Desde 13/09/2026 o funil chama `primeiro_trecho_banido` e só
+    DENUNCIA: levantando, ele congelava a janela inteira. Duas coisas o fariam
+    quebrar a tela dela em 06/09:
 
     * a chave ``"mesa"`` do próprio pacote, que sete pacotes emitem a cada
       tique (``{"mesa": {campo: valor}}``);
