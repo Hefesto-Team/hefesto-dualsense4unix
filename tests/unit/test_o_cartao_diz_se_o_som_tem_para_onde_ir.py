@@ -723,14 +723,22 @@ class TestOMicrofoneSemFonte:
 
         MORDE: ponha `.mudo-i` ou `.rota` num seletor que case o `sem-fonte`, ou
         tire o `.trilho` da regra de opacidade.
+
+        O ALVO É UMA LISTA DO QUE PODE APAGAR, e não uma lista do que não pode
+        (validação, 13/09/2026). Procurar só `.mudo-i` e `.rota` no alvo deixava
+        passar `[data-apagado] .vol`, que apaga a LINHA onde o 🎙 mora, e o
+        seletor de prefixo `[data-apagado^="sem"]`: as duas sabotagens
+        passaram verdes. Toda regra que casa um `data-apagado` que não seja só o
+        `sem-alvo` tem de terminar numa peça do deslizante.
         """
+        so_sem_alvo = re.compile(r'(?<!:not\()\[data-apagado="sem-alvo"\]')
         casa_sem_fonte = [
             (seletor, declaracao)
             for seletor, declaracao in _regras_do_microfone(_bancada())
-            if '[data-apagado="sem-fonte"]' in seletor or "[data-apagado]" in seletor]
+            if "data-apagado" in seletor and not so_sem_alvo.search(seletor)]
         assert casa_sem_fonte, "a folha não tem regra para o microfone sem fonte"
         for seletor, _declaracao in casa_sem_fonte:
-            alvo = seletor.rsplit("]", 1)[-1]
-            assert ".mudo-i" not in alvo and ".rota" not in alvo, seletor
+            alvo = seletor.rsplit("]", 1)[-1].split()
+            assert alvo and alvo[-1] in {".trilho", ".n", ".puxa-vol"}, seletor
         assert any(".trilho" in s and "opacity" in d for s, d in casa_sem_fonte)
         assert any(".puxa-vol" in s and "not-allowed" in d for s, d in casa_sem_fonte)
