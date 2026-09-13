@@ -163,7 +163,7 @@ class TestAusenciaSeDeclara:
 
     def test_a_tela_diz_onde_procurou(self) -> None:
         """O cinza seco fazia a pessoa concluir que não tem Steam instalada."""
-        markup = markup_status_steam_input(None, [], [], None)
+        markup = markup_status_steam_input(None, [], [])
         assert STEAM_NAO_ENCONTRADA in markup
         assert "procurei em" in markup
         assert "Flatpak" in markup and "Snap" in markup

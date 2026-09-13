@@ -1000,6 +1000,24 @@ _NAO_E_PROMESSA: dict[str, str] = {
         "GET_REPORT num controle ocioso estoura o timeout de 5 s do hidp com "
         "EIO. Religá-la seria a regressão, não a cura."
     ),
+    "broker/hidraw_broker.py::physical_nodes_exposure": (
+        "13/09/2026, RESTOS-DA-ONDA-DOIS-01 — FERRAMENTA DE DIAGNÓSTICO desde "
+        "hoje. O chamador em produção era "
+        "`EmulationActionsMixin._steam_input_excecao_status`, que a aba 07 "
+        "chamava a cada leitura do cartão da Steam só para medir o `efetiva`, "
+        "e o `efetiva` já não chegava à tela desde a FRASES-E-DICAS-03. A "
+        "sprint tirou a varredura, e a nota datada está na docstring de "
+        "`EmulationActionsMixin._steam_input_excecoes`. Quem continua "
+        "chamando é o `_censo_de_fisicos` de `scripts/doctor.sh`, num heredoc "
+        "Python, e o comentário dele diz por quê: é o MESMO critério de físico "
+        "que o broker usa, e duas réguas para a mesma pergunta já produziram "
+        "alarme falso nesta casa. A docstring da função ainda diz que «a GUI» "
+        "a consulta; isso caducou hoje. Evidência: "
+        "`tests/unit/test_r06_status_honesto.py::TestExposicaoDoFisico` a "
+        "exercita, e `tests/unit/test_os_restos_da_onda_dois.py::"
+        "test_a_07_a_leitura_do_steam_input_nao_varre_hidraw` reprova se a 07 "
+        "voltar a chamá-la."
+    ),
     "integrations/kernel_cmdline.py::plan_cmdline": (
         "RECLASSIFICADA em 26/08/2026, e esta entrada SUBSTITUI uma que morava "
         "em `_SEM_CAMINHO_HOJE` afirmando um FATO ERRADO: que *'enquanto o "

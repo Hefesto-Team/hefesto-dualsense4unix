@@ -543,13 +543,15 @@ def test_a_tela_diz_coisas_diferentes_com_o_steam_input_ligado_e_desligado(
     """
     from hefesto_dualsense4unix.app.actions import emulation_actions as ea
 
-    def _dublê(ligado, jogos=(), excecoes=(), efetiva=None):
+    # O `efetiva` SAIU DO DUBLÊ em 13/09/2026 (RESTOS-DA-ONDA-DOIS-01): a 07 lê
+    # só a lista das exceções (`_steam_input_excecoes`) e não varre mais hidraw.
+    def _dublê(ligado, jogos=(), excecoes=()):
         monkeypatch.setattr(ea.EmulationActionsMixin, "_steam_input_is_on",
                             staticmethod(lambda: ligado))
         monkeypatch.setattr(ea.EmulationActionsMixin, "_steam_input_appids_ligados",
                             staticmethod(lambda: list(jogos)))
-        monkeypatch.setattr(ea.EmulationActionsMixin, "_steam_input_excecao_status",
-                            staticmethod(lambda: (list(excecoes), efetiva)))
+        monkeypatch.setattr(ea.EmulationActionsMixin, "_steam_input_excecoes",
+                            staticmethod(lambda: list(excecoes)))
         return a07._o_que_a_steam_poe_no_meio()
 
     ligado, e_ligado = _dublê(True, jogos=["9990001"])
@@ -561,8 +563,8 @@ def test_a_tela_diz_coisas_diferentes_com_o_steam_input_ligado_e_desligado(
     # AS PALAVRAS SÃO DO DONO, e a régua PERGUNTA a ele em vez de digitar: um
     # literal aqui daria verde no dia em que a frase dele mudasse e a tela
     # ficasse com a antiga.
-    assert "Desligado" in ea.markup_status_steam_input(False, [], [], None)
-    assert desligado in ea.markup_status_steam_input(False, [], [], None), (
+    assert "Desligado" in ea.markup_status_steam_input(False, [], [])
+    assert desligado in ea.markup_status_steam_input(False, [], []), (
         "a frase do estado desligado não é a do dono — esta aba redigiu a sua")
     assert ligado.startswith("<b>") and ligado.endswith("</b>"), (
         "o estado LIGADO perdeu a ênfase: `.lanc-diz b` é o laranja da aba, e "

@@ -422,7 +422,6 @@ def markup_status_steam_input(
     on: bool | None,
     jogos: Sequence[str],
     excecoes: Sequence[int],
-    efetiva: bool | None,
 ) -> str:
     """Markup da linha "Steam Input" da aba Emulação — pura, testável sem GTK.
 
@@ -465,8 +464,9 @@ def markup_status_steam_input(
         # dela no índice da terceira lista
         # (`docs/process/sprints/2026-09-13-A-TERCEIRA-LISTA-DELA-INDICE.md`)
         # deixa na tela só estado, e a mais nova vence. A contagem fica porque a
-        # aba 07 não mostra a lista das exceções em outro lugar; `efetiva` segue
-        # na assinatura e não vai mais à tela.
+        # aba 07 não mostra a lista das exceções em outro lugar. E o `efetiva`
+        # SAIU DA ASSINATURA no mesmo dia (RESTOS-DA-ONDA-DOIS-01): nada vivo o
+        # lia, e a 07 varria os hidraw a cada leitura só para passá-lo aqui.
         markup += (
             f' <span foreground="#8b8fa8">· Exceção por jogo: '
             f'{len(excecoes)} jogo(s)</span>'
@@ -1897,39 +1897,38 @@ class EmulationActionsMixin(WidgetAccessMixin):
         return achados
 
     @staticmethod
-    def _steam_input_excecao_status() -> tuple[list[int], bool | None]:
-        """(appids da allowlist, exceção EFETIVA agora) — R-06 item 3.
+    def _steam_input_excecoes() -> list[int]:
+        """Os appids da lista de exceções do Steam Input — R-06 item 3.
 
         "Configurada" e "efetiva" são coisas diferentes e a confusão entre elas
         é o que deixou a allowlist inerte por meses: o appid estava no arquivo,
         o guard de VDF o respeitava, e mesmo assim o daemon seguia escondendo o
         hidraw do controle físico — o jogo não via DualSense nenhum. Aqui:
 
-        - **configurada** = appids em `steam_input_apps.txt`;
-        - **efetiva** = TODO hidraw de DualSense físico está legível por ESTE
-          uid agora (é a permissão da usuária que decide, e a GUI roda como
-          ela). `None` quando não há físico visível no sysfs — não dá para
-          afirmar nem negar, e mentir aqui seria repetir o erro original.
+        - **configurada** = appids em `steam_input_apps.txt`, o que esta
+          função devolve;
+        - **efetiva** = TODO hidraw de DualSense físico legível por ESTE uid
+          agora. Quem mede é `broker.hidraw_broker.physical_nodes_exposure`, e
+          o `doctor.sh` continua perguntando a ele.
+
+        NOTA DATADA, 13/09/2026 (RESTOS-DA-ONDA-DOIS-01). Esta função chamava-se
+        `_steam_input_excecao_status` e devolvia as duas, varrendo os hidraw a
+        cada leitura. A efetiva saiu da tela na FRASES-E-DICAS-03, e nada vivo a
+        lia: o refresh GTK desta aba perdeu a janela em 06/09
+        (`D-0609-GTK-LEVA-INTEIRA`), e nenhuma classe do `src/` herda este mixin;
+        o cartão da Steam na aba 07 só a passava a `markup_status_steam_input`,
+        que a ignorava. A varredura saiu daqui.
         """
-        from hefesto_dualsense4unix.broker.hidraw_broker import (
-            physical_nodes_exposure,
-        )
         from hefesto_dualsense4unix.daemon.launch_env import steam_input_appids
 
-        appids = sorted(steam_input_appids())
-        exposicao: dict[str, bool] = {}
-        with contextlib.suppress(Exception):
-            exposicao = physical_nodes_exposure(os.getuid())
-        if not exposicao:
-            return appids, None
-        return appids, all(exposicao.values())
+        return sorted(steam_input_appids())
 
     def _refresh_steam_input_status(self) -> None:
         label = self._get("emulation_steam_input_status_label")
         if label is None:
             return
 
-        def _check() -> tuple[bool | None, list[str], list[int], bool | None]:
+        def _check() -> tuple[bool | None, list[str], list[int]]:
             from hefesto_dualsense4unix.integrations.steam_launch_options import (
                 rotulo_do_jogo,
             )
@@ -1944,9 +1943,10 @@ class EmulationActionsMixin(WidgetAccessMixin):
                 if on
                 else []
             )
-            return (on, jogos, *self._steam_input_excecao_status())
+            # A CONTAGEM DAS EXCEÇÕES, e só ela — ver `_steam_input_excecoes`.
+            return (on, jogos, self._steam_input_excecoes())
 
-        def _on_ok(dados: tuple[bool | None, list[str], list[int], bool | None]) -> bool:
+        def _on_ok(dados: tuple[bool | None, list[str], list[int]]) -> bool:
             label.set_markup(markup_status_steam_input(*dados))
             return False
 

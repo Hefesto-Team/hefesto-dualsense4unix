@@ -244,7 +244,6 @@ class TestLinhaDaAbaEmulacao:
             "on": True,
             "jogos": ["Sackboy: A Big Adventure (appid 1599660)"],
             "excecoes": [],
-            "efetiva": None,
         }
         base.update(kwargs)
         return markup_status_steam_input(**base)  # type: ignore[arg-type]
@@ -300,14 +299,15 @@ class TestLinhaDaAbaEmulacao:
         durante o jogo», «sem controle físico visível»). A ordem dela de 13/09
         (`docs/process/sprints/2026-09-13-A-TERCEIRA-LISTA-DELA-INDICE.md`)
         deixa na tela só estado. A contagem fica: a aba 07 não mostra a lista
-        das exceções em outro lugar. Os três valores de `efetiva` dão a mesma
-        linha, e é isso que prova que nenhum deles volta a narrar.
+        das exceções em outro lugar.
+
+        NOTA DATADA — 13/09/2026 (RESTOS-DA-ONDA-DOIS-01): os três valores de
+        `efetiva` davam a mesma linha, e era isso que provava que nenhum voltava
+        a narrar. O `efetiva` saiu da assinatura, porque nada vivo o lia: não há
+        mais valor a passar, e a linha termina na contagem.
         """
-        linhas = {self._markup(on=False, jogos=[], excecoes=[2111190], efetiva=e)
-                  for e in (True, False, None)}
-        assert len(linhas) == 1, linhas
-        markup = linhas.pop()
-        assert "· Exceção por jogo: 1 jogo(s)</span>" in markup, markup
+        markup = self._markup(on=False, jogos=[], excecoes=[2111190])
+        assert markup.endswith("· Exceção por jogo: 1 jogo(s)</span>"), markup
         assert "—" not in markup.split("Exceção por jogo")[1], markup
 
 

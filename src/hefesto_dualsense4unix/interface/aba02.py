@@ -974,12 +974,12 @@ CSS = CSS_GLIFO + CSS_LUZINHAS + """
      controle, com o título deste na frente. Foi o estrago medido em 04/08/2026,
      e a GTK impede ANTES do clique enquanto esta tela só recusava DEPOIS.
 
-     O CINZA E A RAZÃO VÊM DO MESMO CAMPO: o alvo `atributo` põe o `title` na
-     MOLDURA quando não há endereço e o REMOVE quando ele aparece, e a folha
-     apaga as peças por `[title]`. É a forma do `.degradou[title]` desta mesma
-     aba, e ela é o que impede um bloco apagado sem explicação — que seria um
-     defeito do mesmo tamanho do que a guarda cura: ela leria "o produto
-     quebrou".
+     O CINZA VEM DE UM ENDEREÇO PRÓPRIO, `data-apagado`, e não mais do `title`
+     — 13/09/2026, RESTOS-DA-ONDA-DOIS-01. A folha casava `[title]`, e a camada
+     da dica da casa (TOOLTIP-C1) leva todo `title` do DOM vivo para
+     `data-hef-dica`: no WebKit a guarda do alto-falante nunca acendeu, e a
+     frase ia para a dica sem cinza nenhum. A razão de o bloco apagar continua
+     no `?` da linha de volume (`mic-porque`, `alto-porque`).
 
      **O SELETOR É PRESO AO `data-bloco`, e isso não é zelo:** a moldura do LED
      do jogador tem um `title` FIXO no desenho, e um `.moldura[title]` solto
@@ -991,9 +991,9 @@ CSS = CSS_GLIFO + CSS_LUZINHAS + """
      sem endereço nenhum. E é `opacity`, não `display`: apagar tiraria a altura
      e o card mudaria de tamanho conforme a mesa.
 
-     A MOLDURA DO MICROFONE TEM ENDEREÇO PRÓPRIO desde 13/09/2026
-     (MIC-SEM-FONTE-01): o campo `mic-apagado` escreve `data-apagado`, e não o
-     `title`. O valor `sem-alvo` é esta mesma guarda; o `sem-fonte` apaga só o
+     AS DUAS MOLDURAS TÊM O SEU: `mic-apagado` (MIC-SEM-FONTE-01) e
+     `alto-apagado` (RESTOS-DA-ONDA-DOIS-01) escrevem `data-apagado`. O valor
+     `sem-alvo` é esta guarda nas duas; o `sem-fonte`, só do microfone, apaga o
      DESLIZANTE, e é o que o cartão sabe antes do arrasto quando o daemon diz
      que o controle não tem fonte de captura. O botão do microfone e os modos
      ficam acesos nesse estado: é o botão que pede o canal, e apagá-lo
@@ -1002,14 +1002,14 @@ CSS = CSS_GLIFO + CSS_LUZINHAS + """
   .moldura[data-bloco="microfone"][data-apagado="sem-alvo"] .rota,
   .moldura[data-bloco="microfone"][data-apagado="sem-fonte"] .vol .trilho,
   .moldura[data-bloco="microfone"][data-apagado="sem-fonte"] .vol .n,
-  .moldura[data-bloco="alto-falante"][title] .vol,
-  .moldura[data-bloco="alto-falante"][title] .rota{opacity:.45}
+  .moldura[data-bloco="alto-falante"][data-apagado="sem-alvo"] .vol,
+  .moldura[data-bloco="alto-falante"][data-apagado="sem-alvo"] .rota{opacity:.45}
   .moldura[data-bloco="microfone"][data-apagado="sem-alvo"] .mudo-i,
   .moldura[data-bloco="microfone"][data-apagado] .puxa-vol,
   .moldura[data-bloco="microfone"][data-apagado="sem-alvo"] .rota button,
-  .moldura[data-bloco="alto-falante"][title] .mudo-i,
-  .moldura[data-bloco="alto-falante"][title] .puxa-vol,
-  .moldura[data-bloco="alto-falante"][title] .rota button{cursor:not-allowed}
+  .moldura[data-bloco="alto-falante"][data-apagado="sem-alvo"] .mudo-i,
+  .moldura[data-bloco="alto-falante"][data-apagado="sem-alvo"] .puxa-vol,
+  .moldura[data-bloco="alto-falante"][data-apagado="sem-alvo"] .rota button{cursor:not-allowed}
 
   /* ---------- A MARCA DA EMULAÇÃO DEGRADADA (decisão [07]) ----------
      Decisão dela, 04/09/2026: *"uma marca na palavra e o motivo no hover"*.
@@ -2498,7 +2498,7 @@ def bloco(c, *, bat, carga=None, glifos_on, l2, r2, touch, sticks,
 
           </div>
           <div class="moldura" style="margin-top:9px" data-bloco="alto-falante"
-               data-campo="som-sem-endereco" data-hef-alvo="atributo" data-hef-atributo="title">
+               data-campo="alto-apagado" data-hef-alvo="atributo" data-hef-atributo="data-apagado">
             <div class="rot">Alto-falante
               {sufixo_do_canal(c)}
               <span class="selo-som" data-campo="alto-selo" data-hef-alvo="html">{NADA_A_DIZER}</span>

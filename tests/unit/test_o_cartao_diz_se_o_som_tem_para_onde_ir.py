@@ -41,8 +41,13 @@ AS MORDIDAS, todas feitas e devolvidas antes deste arquivo ser commitado:
 
 **O MICROFONE SEM FONTE** (MIC-SEM-FONTE-01, 13/09/2026) tem a seção 8, e as
 mordidas dela estão na entrega da sprint: tire a pergunta da fonte de
-``microfone_apagado``; devolva a moldura do microfone ao ``som-sem-endereco``
-com a fonte dentro dele; ponha o botão do microfone no seletor do ``sem-fonte``.
+``microfone_apagado``; devolva a moldura do microfone ao endereço da outra com a
+fonte dentro dele; ponha o botão do microfone no seletor do ``sem-fonte``.
+
+**O ALTO-FALANTE SEM ENDEREÇO** (RESTOS-DA-ONDA-DOIS-01, 13/09/2026) deixou o
+``title`` da moldura pelo ``alto-apagado``, na forma do microfone: a camada da
+dica da casa levava o ``title`` para ``data-hef-dica``, e a guarda nunca acendeu
+no WebKit. A prova no piloto oculto está em ``test_os_restos_da_onda_dois.py``.
 """
 from __future__ import annotations
 
@@ -90,7 +95,7 @@ MESA = [{"pref": "p1", "jogador": 1, "uniq": UNIQ, "nome": "Régua",
 #: Os quatro endereços que a BANCADA tem e a página publicada ainda não —
 #: publicar é ato dela. Sem forçá-los, a régua mediria a espera pela publicação
 #: em vez da cura, e daria verde com o pacote apagado.
-DA_BANCADA = frozenset({"som-sem-endereco", "card-vpad", "alto-selo",
+DA_BANCADA = frozenset({"alto-apagado", "card-vpad", "alto-selo",
                         "alto-canal", "alto-canal-porque"})
 
 
@@ -336,21 +341,26 @@ class TestAGuardaSemEndereco:
         assert DICA_AUDIO_SEM_ENDERECO not in porques.values()
 
     def test_o_cartao_apaga_as_pecas_que_mandam_som(self) -> None:
-        """A metade VISÍVEL: o campo que veste o `title` da moldura do alto-falante.
+        """A metade VISÍVEL: o `data-apagado` da moldura do alto-falante.
 
-        A do microfone lê `mic-apagado` desde 13/09/2026 — ver a seção 8.
+        A do microfone lê `mic-apagado` desde 13/09/2026 — ver a seção 8. A do
+        alto-falante escrevia o `title` da moldura até o mesmo dia, e a camada da
+        dica da casa o levava para `data-hef-dica`: no WebKit a folha nunca o
+        casou (RESTOS-DA-ONDA-DOIS-01, com a prova no piloto em
+        `test_os_restos_da_onda_dois.py`). Agora é valor de atributo, sem frase.
 
-        MORDE: tire o `som-sem-endereco` do pacote e este caso reprova.
+        MORDE: tire o `alto-apagado` do pacote e este caso reprova.
         """
-        assert _card(_entrada(uniq=None))["som-sem-endereco"] == (
-            TEXTO_AUDIO_SEM_ENDERECO)
+        card = _card(_entrada(uniq=None))
+        assert card["alto-apagado"] == mod.MIC_SEM_ALVO
+        assert TEXTO_AUDIO_SEM_ENDERECO not in card.values()
 
     def test_com_endereco_o_campo_volta_vazio_e_a_guarda_solta(self) -> None:
-        """Vazio faz o piloto REMOVER o `title`, e a folha devolve as peças.
+        """Vazio faz o piloto REMOVER o `data-apagado`, e a folha devolve as peças.
 
         A volta acontece sozinha — a guarda não precisa lembrar quem apagou.
         """
-        assert _card(_entrada())["som-sem-endereco"] == ""
+        assert _card(_entrada())["alto-apagado"] == ""
 
     def test_a_leitura_fica_ligada(self) -> None:
         """Sem endereço, o que o daemon publicou sobre ESTE controle continua.
@@ -535,7 +545,7 @@ class TestOQuartoSeloSaiuDaTela:
         rota = FATOS["audio.alto_falante.rota@dualsense"]["radio"]
         assert isinstance(rota, dict) and rota["aciona"] == "sim"
         card = _card(_entrada(transport="bt"))
-        assert card["som-sem-endereco"] == ""
+        assert card["alto-apagado"] == ""
         assert card["alto-porque"] == mod.DICA_ALTO_SEM_POSSE
 
 
@@ -654,11 +664,11 @@ class TestOMicrofoneSemFonte:
         """A mordida da ROTA CORRIGIDA, na metade do pacote.
 
         MORDE: tire a pergunta da fonte de `microfone_apagado` (o microfone
-        acende) ou ponha a fonte no `som-sem-endereco` (o alto-falante apaga).
+        acende) ou ponha a fonte no `alto-apagado` (o alto-falante apaga).
         """
         card = _card(_com_fonte(None, transport="bt"))
         assert card["mic-apagado"] == mod.MIC_SEM_FONTE
-        assert card["som-sem-endereco"] == ""
+        assert card["alto-apagado"] == ""
 
     def test_com_fonte_o_microfone_acende(self) -> None:
         """A metade contrária: apagar o microfone do cabo seria pior que o defeito."""
@@ -675,7 +685,7 @@ class TestOMicrofoneSemFonte:
         """A guarda de antes continua, e o endereço vence a fonte."""
         card = _card(_com_fonte("alsa_input.usb-regua", uniq=None))
         assert card["mic-apagado"] == mod.MIC_SEM_ALVO
-        assert card["som-sem-endereco"] == TEXTO_AUDIO_SEM_ENDERECO
+        assert card["alto-apagado"] == mod.MIC_SEM_ALVO
 
     def test_a_mesa_mista_apaga_so_os_dois_do_radio(self) -> None:
         """POR CONTROLE: um teste de um controle só passaria com a leitura global.
@@ -691,7 +701,7 @@ class TestOMicrofoneSemFonte:
                  "mascara": "DualSense"}
                 for n, (pref, uniq, via, _fonte) in enumerate(MISTA, start=1)]
         cards = _cards(entradas, mesa)
-        visto = {uniq: (cards[uniq]["mic-apagado"], cards[uniq]["som-sem-endereco"])
+        visto = {uniq: (cards[uniq]["mic-apagado"], cards[uniq]["alto-apagado"])
                  for _pref, uniq, _via, _fonte in MISTA}
         assert visto == {
             MISTA[0][1]: ("", ""), MISTA[1][1]: (mod.MIC_SEM_FONTE, ""),
@@ -699,12 +709,13 @@ class TestOMicrofoneSemFonte:
 
     @pytest.mark.parametrize("publicado", [False, True])
     def test_a_moldura_do_microfone_tem_endereco_proprio(self, publicado: bool) -> None:
-        """Na bancada e no publicado: o microfone lê `mic-apagado`, o alto-falante não.
+        """Na bancada e no publicado: cada moldura de som lê o seu `data-apagado`.
 
-        Sem a página publicada o pacote nem emite o campo (`_so_se_a_pagina_tiver`),
-        e a cura ficaria só no código.
+        O microfone lê `mic-apagado` (MIC-SEM-FONTE-01) e o alto-falante lê
+        `alto-apagado` (RESTOS-DA-ONDA-DOIS-01). Sem a página publicada o pacote
+        nem emite o campo (`_so_se_a_pagina_tiver`), e a cura ficaria só no código.
 
-        MORDE: devolva a moldura do microfone ao `som-sem-endereco`.
+        MORDE: devolva a moldura de uma das duas ao endereço da outra.
         """
         doc = onde.pagina(PAGINA, publicado=publicado).read_text(encoding="utf-8")
         mics = re.findall(r'<div class="moldura"[^>]*data-bloco="microfone"[^>]*>', doc)
@@ -714,9 +725,11 @@ class TestOMicrofoneSemFonte:
         for tag in mics:
             assert 'data-campo="mic-apagado"' in tag, tag
             assert 'data-hef-atributo="data-apagado"' in tag, tag
-            assert "som-sem-endereco" not in tag, tag
+            assert "alto-apagado" not in tag, tag
         for tag in altos:
-            assert 'data-campo="som-sem-endereco"' in tag, tag
+            assert 'data-campo="alto-apagado"' in tag, tag
+            assert 'data-hef-atributo="data-apagado"' in tag, tag
+            assert "mic-apagado" not in tag, tag
 
     def test_sem_fonte_so_o_deslizante_apaga(self) -> None:
         """O botão do microfone pede o canal: apagá-lo trancaria a única saída.

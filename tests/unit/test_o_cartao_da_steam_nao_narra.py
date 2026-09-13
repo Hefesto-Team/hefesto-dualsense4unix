@@ -365,8 +365,8 @@ def frase_do_steam_input_ligado(a07, monkeypatch):
                         staticmethod(lambda: True))
     monkeypatch.setattr(ea.EmulationActionsMixin, "_steam_input_appids_ligados",
                         staticmethod(lambda: [JOGO_A[0], JOGO_B[0]]))
-    monkeypatch.setattr(ea.EmulationActionsMixin, "_steam_input_excecao_status",
-                        staticmethod(lambda: ([], None)))
+    monkeypatch.setattr(ea.EmulationActionsMixin, "_steam_input_excecoes",
+                        staticmethod(lambda: []))
     frase, ligado = a07._o_que_a_steam_poe_no_meio()
     assert ligado is True and frase, "o dublê não ligou o Steam Input"
     return frase
