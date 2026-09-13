@@ -1004,18 +1004,18 @@ CSS = """
      dela deixaria de mostrar o que ela aprovou. */
   .cartao .e-primario{display:none;color:var(--texto-mudo);cursor:help}
   .cartao .e-primario.ha{display:inline}
-  /* ---------- A MARCA DA EMULAÇÃO DEGRADADA — a mesma da aba 02 ----------
-     Decisão dela, 04/09/2026: *"uma marca na palavra e o motivo no hover"*. O
-     bloco é o gêmeo de `aba02.py`, e a cópia é do ESTILO, não do dado: o texto
-     inteiro vem de `pacotes.degradacao_de`, que delega ao dono da regra na GTK.
+  /* ---------- A MARCA DA EMULAÇÃO DEGRADADA SAIU — 13/09/2026 ----------
+     Eram duas regras: `.cartao .degradou` nascia `display:none` e
+     `.cartao .degradou[title]` a mostrava. NO WEBKIT A SEGUNDA NUNCA CASOU: a
+     camada de dicas do piloto leva todo `title` para `data-hef-dica` e o
+     remove do elemento, então o asterisco ficou apagado desde que nasceu, e
+     acendendo seria aviso numa dica — que a terceira lista dela tira da tela.
 
-     UM CAMPO SÓ FAZ AS DUAS COISAS, e é por isso que o alvo é `atributo`: sem
-     motivo o piloto REMOVE o `title` e esta regra apaga a marca junto. Com uma
-     classe para a marca e um segundo campo para o motivo, daria para pintar
-     marca sem explicação — ruído com cara de dado. */
-  .cartao .degradou{display:none;margin-left:1px;font-size:9px;line-height:1;
-                    color:var(--orange);cursor:help;vertical-align:2px}
-  .cartao .degradou[title]{display:inline-block}
+     A LIÇÃO FICA PARA A PRÓXIMA REGRA: pintura não se decide por `[title]`
+     nesta casa. Quem precisa de «existe / não existe» usa um atributo próprio
+     escrito pelo alvo `atributo`, como o `data-apagado` das molduras de som
+     da aba 02. A régua é
+     `tests/unit/test_a_marca_que_nunca_acende_e_o_gerador_que_confere.py`. */
   /* A FAIXA SEM PENDÊNCIA SOME, E O ESPAÇO FICA. `visibility` e não `display`:
      "muda tudo ao clicar" é queixa dela, e a legenda desta aba promete que o
      espaço é reservado para a tela não pular. Sem esta regra a caixa tracejada
@@ -1312,9 +1312,9 @@ def cartao(c, bateria=None):
     **E A CENA QUE ELA APROVOU NÃO MUDA UM PIXEL.** O que entra no lugar vazio
     ou nasce escondido pelo próprio CSS do ``off`` (a ``pele``, a marca
     "Sony •"), ou já é ``display:none`` em repouso nos quatro cartões (o
-    ``degradou``, sem ``title``; o ``e-primario``, sem a classe ``ha``), ou é um
-    ``<span>`` inline sem estilo em volta do mesmo travessão. As duas regras que
-    seguram isso estão no CSS, junto de ``.cartao.off``.
+    ``e-primario``, sem a classe ``ha``), ou é um ``<span>`` inline sem estilo
+    em volta do mesmo travessão. As duas regras que seguram isso estão no CSS,
+    junto de ``.cartao.off``.
 
     **QUEM TIRA O ``off`` É O PILOTO**, no passo ``1c``, quando o controle
     chega — e é aí que o cartão do P3 fica idêntico ao do P1, marca e número
@@ -1365,7 +1365,7 @@ def cartao(c, bateria=None):
                 <i class="pele" data-campo="plastico" data-hef-alvo="cor" style="color:{monta.cor_da_zona(c["cor"])}"></i>
                 <div class="peca-topo">
                 {_desenho(c)}
-                <span class="rotulo"><span class="fabricante">Sony <span class="pt">•</span> </span><b data-campo="jogador-espera" data-hef-alvo="classe" data-hef-classe="espera" title="{ESPERA_DICA}"><span data-campo="jogador">{jogador}</span></b><br><span data-campo="identidade">{identidade}</span><sup class="degradou" data-campo="degradou-cartao" data-hef-alvo="atributo" data-hef-atributo="title">*</sup><span class="e-primario" data-campo="marcador-principal" data-hef-alvo="classe" data-hef-classe="ha" title="{PRIMARIO_DICA}"> <span class="pt">•</span> {MARCA_DO_PRIMARIO}</span><br><span class="bat">{_BATERIA_GLIFO} <span data-campo="bateria">{carga}</span></span></span>
+                <span class="rotulo"><span class="fabricante">Sony <span class="pt">•</span> </span><b data-campo="jogador-espera" data-hef-alvo="classe" data-hef-classe="espera" title="{ESPERA_DICA}"><span data-campo="jogador">{jogador}</span></b><br><span data-campo="identidade">{identidade}</span><span class="e-primario" data-campo="marcador-principal" data-hef-alvo="classe" data-hef-classe="ha" title="{PRIMARIO_DICA}"> <span class="pt">•</span> {MARCA_DO_PRIMARIO}</span><br><span class="bat">{_BATERIA_GLIFO} <span data-campo="bateria">{carga}</span></span></span>
                 </div>
                 <div class="mascara">
 {_chips_de_mascara(c["mascara"] if conectado else None)}
@@ -2573,24 +2573,23 @@ def _conferir(doc):
            "o número de cartões com a classe `alvo` mudou — o marcador do "
            "primário não pode andar junto com o alvo de edição da fita")
 
-    # 13. A MARCA DA EMULAÇÃO DEGRADADA — Passo 4, linha 32 do CSV, e a
-    #     gramática é a do cartão da 02: UM campo com alvo `atributo`, que põe o
-    #     `title` quando há motivo e o remove quando não há.
-    degradou = corpo.count('data-campo="degradou-cartao" '
-                           'data-hef-alvo="atributo" data-hef-atributo="title"')
-    #     E SÃO OS QUATRO LUGARES desde 07/09/2026 (era `monta.CONECTADOS`):
-    #     degradação é estado do aparelho, e o aparelho que entra no P3 pode
-    #     degradar tanto quanto o do P1.
-    exigir(degradou == len(MESA),
-           f"esperava {len(MESA)} marcas de emulação degradada "
-           f"endereçadas, achei {degradou}")
-    #     E NENHUMA NASCE COM `title`: a marca só existe quando há motivo, e um
-    #     `title` cravado no desenho acenderia um alarme sobre um controle que
-    #     ninguém mediu — alarme sem medição é o que ela baniu em 31/08.
-    for pedaco in corpo.split('class="degradou"')[1:]:
-        exigir("title=" not in pedaco.split(">", 1)[0],
-               "a marca de degradação nasce com o motivo cravado — ela acenderia "
-               "no desenho sobre um controle que ninguém mediu")
+    # 13. A MARCA DA EMULAÇÃO DEGRADADA SAIU — 13/09/2026, A-MARCA-DA-DEGRADACAO-01.
+    #     Ela nunca acendeu no WebKit (a folha a mostrava por `[title]`, e a
+    #     camada de dicas do piloto tira o `title`), e acesa seria aviso numa
+    #     dica. A régua cobra os DOIS lados, porque cada um volta sozinho: o
+    #     cartão sem o `<sup>` e sem o endereço, e as folhas sem a regra
+    #     `.degradou` e sem seletor nenhum por `[title]`. Comentário não conta:
+    #     a nota que explica a saída cita os dois nomes.
+    exigir('class="degradou"' not in corpo and "degradou-cartao" not in corpo,
+           "a marca da emulação degradada voltou ao cartão — ela nunca acende "
+           "no WebKit, e acesa seria frase de aviso numa dica")
+    folhas = re.sub(r"/\*.*?\*/", "",
+                    "".join(re.findall(r"<style[^>]*>(.*?)</style>", doc, re.S)),
+                    flags=re.S)
+    exigir(".degradou" not in folhas and "[title" not in folhas,
+           "voltou regra de pintura que decide por `[title]` (ou a `.degradou`): "
+           "a camada de dicas tira o `title` do elemento, e no WebKit o "
+           "seletor nunca casa")
 
     # 14. OS CONTROLES QUE O HEFESTO SÓ VÊ — EXTERNOS-01 (06/09/2026), linha 16
     #     do CSV. UM endereço, com o alvo `html`, e nascendo VAZIO.
@@ -2676,8 +2675,22 @@ def _conferir(doc):
 
 
 if __name__ == "__main__":
+    import os
+    import shutil
+    import tempfile
+
+    # CONFERE ANTES DE ESCREVER — 13/09/2026. A página nasce numa bancada
+    # PROVISÓRIA e só vai para a de verdade se passar; a razão e a régua estão
+    # no fim do `aba04.py`.
+    _real = onde.saida()
+    _prova = pathlib.Path(tempfile.mkdtemp(prefix="hefesto-prova-01-"))
+    for _vizinha in _real.glob("*.html"):
+        shutil.copy2(_vizinha, _prova / _vizinha.name)
+    os.environ[onde._DESVIO] = str(_prova)
     n = montar("01-jogar", "Jogar", MIOLO, CSS, legenda=LEGENDA)
     _conferir(onde.pagina("01-jogar.html").read_text())
+    shutil.copyfile(_prova / "01-jogar.html", _real / "01-jogar.html")
+    shutil.rmtree(_prova)
     print(f"01-jogar: OK, {n} divs · mesa de {len(monta.CONECTADOS)} conectado(s) "
           f"+ {len(MESA) - len(monta.CONECTADOS)} lugar(es) vazio(s) · "
           f"máscaras {frase_das_mascaras()} · as 5 decisões dela conferidas")

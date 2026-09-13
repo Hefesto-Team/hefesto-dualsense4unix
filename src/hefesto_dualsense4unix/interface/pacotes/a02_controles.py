@@ -131,7 +131,6 @@ from hefesto_dualsense4unix.core.speaker_scale import (
 from . import (
     NOME_SEM_LEITURA,
     Contexto,
-    degradacao_de,
     identidade_de,
     registrar,
 )
@@ -144,7 +143,8 @@ from . import (
 # **26 funções públicas de módulo** — 5.951 linhas de texto de tela que a GTK já
 # provou —, e a interface nova alcançava **duas** (`rotulo_lightbar`, pela aba
 # Iluminação, e `texto_degradacao`, pelo `pacotes/__init__.py`). Esta aba, que é
-# a mais servida das dez, chamava **zero**.
+# a mais servida das dez, chamava **zero**. (O `texto_degradacao` deixou de ser
+# alcançado em 13/09/2026, quando a marca da degradação saiu das abas 01 e 02.)
 #
 # CADA UM DOS CINCO NOMES ACIMA SUBSTITUI UMA REGRA REESCRITA AQUI, e três delas
 # estavam ERRADAS. O que cada um cura está escrito no ponto de uso; o resumo:
@@ -2738,23 +2738,23 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
                 # ressalva do transporte (que saiu, porque era dívida NOSSA).
                 "alto-ressalva": recado_da_rota(uniq) or NADA_A_DIZER,
                 "mic-modo-aceso": modo_do_mic(norm_mac(uniq) or ""),
-                # A DEGRADAÇÃO DA MÁSCARA — decisão [07], 04/09/2026: *"uma
-                # marca na palavra e o motivo no hover"*.
+                # A DEGRADAÇÃO DA MÁSCARA SAIU DA TELA — 13/09/2026,
+                # A-MARCA-DA-DEGRADACAO-01. Era `mascara-degradou`: o asterisco
+                # colado ao nome da máscara, com a frase de
+                # `controller_card.texto_degradacao` no `title` (a decisão [07]
+                # de 04/09/2026, *"uma marca na palavra e o motivo no hover"*).
                 #
-                # O AJUDANTE JÁ EXISTIA E NENHUM DOS DEZ PACOTES O CHAMAVA:
-                # `pacotes.degradacao_de` delega a `controller_card.
-                # texto_degradacao`, que é o dono da regra na GTK e o dono da
-                # tradução do motivo técnico para frase leiga
-                # (`MOTIVOS_DEGRADACAO_LEIGOS`). Não faltava código — faltava
-                # onde pousar a frase.
+                # ELA NUNCA ACENDEU NO PRODUTO, medido na validação da
+                # RESTOS-DA-ONDA-DOIS-01: a folha a mostrava por
+                # `.degradou[title]`, e a camada de dicas do piloto leva o
+                # `title` para `data-hef-dica`. E ACESA SERIA AVISO NUMA DICA,
+                # que a terceira lista dela tira da tela. A queda para `uinput`
+                # que ninguém escolheu fica no diário do daemon
+                # (`vpad_degradado`), e desde a MODO-DE-CONEXAO-01 o canal comum
+                # é caminho escolhido, não queda.
                 #
-                # UM CAMPO SÓ FAZ AS DUAS COISAS, e é por isso que o alvo é
-                # `atributo` e não `classe`: o `<sup>` do gerador nasce
-                # `display:none` e a folha o mostra por `[title]`. Com a marca
-                # numa classe e o motivo noutro campo, seria possível pintar
-                # uma marca sem motivo — e uma marca sem explicação é ruído com
-                # cara de dado, que é o que o `?` da ONDA0-F já recusa.
-                "mascara-degradou": degradacao_de(c),
+                # O pacote não emite mais o campo, e quem cobra que ele não volte é
+                # `tests/unit/test_a_marca_que_nunca_acende_e_o_gerador_que_confere.py`.
                 # A LINHA DA VERDADE — "o que chega ao jogo".
                 # CONTROLES-VERDADE-01, 06/09/2026, e é a entrega central desta
                 # sprint: *"numa mesa de quatro, o cartão é o único lugar onde

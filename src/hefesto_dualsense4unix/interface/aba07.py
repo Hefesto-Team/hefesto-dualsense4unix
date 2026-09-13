@@ -734,6 +734,19 @@ if _SEM_OBRIGATORIOS:
 # módulo e cobra que o arquivo não tenha mudado.
 # ---------------------------------------------------------------------------
 if __name__ == "__main__":
+    import os
+    import pathlib
+    import shutil
+    import tempfile
+
+    # CONFERE ANTES DE ESCREVER — 13/09/2026. A página nasce numa bancada
+    # PROVISÓRIA e só vai para a de verdade se passar (a cópia é a última
+    # linha deste bloco); a razão e a régua estão no fim do `aba04.py`.
+    _real = onde.saida()
+    _prova = pathlib.Path(tempfile.mkdtemp(prefix="hefesto-prova-07-"))
+    for _vizinha in _real.glob("*.html"):
+        shutil.copy2(_vizinha, _prova / _vizinha.name)
+    os.environ[onde._DESVIO] = str(_prova)
     n = monta("07-lancadores", "Lançadores", MIOLO, CSS, legenda=LEGENDA)
 
     # ---------------------------------------------------------------------------
@@ -834,3 +847,5 @@ if __name__ == "__main__":
           f"{len(_ESPERADOS) * len(dl.SUFIXOS)} endereços em {len(_ESPERADOS)} cartões · "
           f"{len(_CONGELADOS)} chip(s) do desenho fora da fita, "
           f"0 dos {len(_MODELOS)} modelos do mapa cravados na página")
+    shutil.copyfile(_prova / "07-lancadores.html", _real / "07-lancadores.html")
+    shutil.rmtree(_prova)

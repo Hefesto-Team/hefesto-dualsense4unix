@@ -1847,9 +1847,23 @@ def _conferir(doc):
 # `tests/unit/test_a_palavra_do_transporte_tem_um_dono_so.py::
 # test_o_gerador_nao_escreve_a_bancada_como_efeito_de_import`.
 if __name__ == "__main__":
+    import os
+    import shutil
+    import tempfile
+
+    # CONFERE ANTES DE ESCREVER — 13/09/2026. A página nasce numa bancada
+    # PROVISÓRIA e só vai para a de verdade se passar; a razão e a régua estão
+    # no fim do `aba04.py`.
+    _real = onde.saida()
+    _prova = pathlib.Path(tempfile.mkdtemp(prefix="hefesto-prova-03-"))
+    for _vizinha in _real.glob("*.html"):
+        shutil.copy2(_vizinha, _prova / _vizinha.name)
+    os.environ[onde._DESVIO] = str(_prova)
     n = monta("03-gatilhos", "Gatilhos", MIOLO, CSS + CSS_DA_CENA,
               legenda=LEGENDA)
     _conferir(onde.pagina("03-gatilhos.html").read_text())
+    shutil.copyfile(_prova / "03-gatilhos.html", _real / "03-gatilhos.html")
+    shutil.rmtree(_prova)
     print(f"03-gatilhos: OK, {n} divs · {len(monta_.CONECTADOS)} conectado(s) "
           f"+ {len(MESA) - len(monta_.CONECTADOS)} lugar(es) vazio(s) · "
           f"{len(MODOS)} modos · coluna {ALT_COLUNA}px de {TETO_DA_GRADE} "

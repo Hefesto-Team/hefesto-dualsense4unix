@@ -1984,4 +1984,18 @@ def escrever_a_bancada():
 
 
 if __name__ == "__main__":
+    import os
+    import shutil
+    import tempfile
+
+    # CONFERE ANTES DE ESCREVER — 13/09/2026. A página nasce numa bancada
+    # PROVISÓRIA e só vai para a de verdade se passar; a razão e a régua estão
+    # no fim do `aba04.py`.
+    _real = onde.saida()
+    _prova = pathlib.Path(tempfile.mkdtemp(prefix="hefesto-prova-09-"))
+    for _vizinha in _real.glob("*.html"):
+        shutil.copy2(_vizinha, _prova / _vizinha.name)
+    os.environ[onde._DESVIO] = str(_prova)
     escrever_a_bancada()
+    shutil.copyfile(_prova / "09-sistema.html", _real / "09-sistema.html")
+    shutil.rmtree(_prova)

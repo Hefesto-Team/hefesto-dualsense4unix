@@ -3005,8 +3005,23 @@ def _conferir(html: str) -> None:
 # `controles_vivos.py` passaram a importá-las; a `aba04` e a `aba05` a ganharam
 # na costura do mesmo dia, e esta é a irmã delas.
 if __name__ == "__main__":
+    import os
+    import pathlib
+    import shutil
+    import tempfile
+
+    # CONFERE ANTES DE ESCREVER — 13/09/2026. A página nasce numa bancada
+    # PROVISÓRIA e só vai para a de verdade se passar; a razão e a régua estão
+    # no fim do `aba04.py`.
+    _real = onde.saida()
+    _prova = pathlib.Path(tempfile.mkdtemp(prefix="hefesto-prova-10-"))
+    for _vizinha in _real.glob("*.html"):
+        shutil.copy2(_vizinha, _prova / _vizinha.name)
+    os.environ[onde._DESVIO] = str(_prova)
     n = monta("10-perfis", "Perfis", MIOLO, CSS, legenda=LEGENDA)
     _conferir(onde.pagina("10-perfis.html").read_text(encoding="utf-8"))
+    shutil.copyfile(_prova / "10-perfis.html", _real / "10-perfis.html")
+    shutil.rmtree(_prova)
     # O NÚMERO SAI DO CSS, não de um literal aqui: ele já mentiu duas vezes hoje —
     # a coluna mudou de 82 para 87 e para 86 enquanto ela ajustava os rótulos, e a
     # linha de saída continuou anunciando o valor velho. O que tem dono não se digita.

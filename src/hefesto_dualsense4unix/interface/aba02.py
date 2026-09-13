@@ -1011,21 +1011,21 @@ CSS = CSS_GLIFO + CSS_LUZINHAS + """
   .moldura[data-bloco="alto-falante"][data-apagado="sem-alvo"] .puxa-vol,
   .moldura[data-bloco="alto-falante"][data-apagado="sem-alvo"] .rota button{cursor:not-allowed}
 
-  /* ---------- A MARCA DA EMULAÇÃO DEGRADADA (decisão [07]) ----------
-     Decisão dela, 04/09/2026: *"uma marca na palavra e o motivo no hover"*.
+  /* ---------- A MARCA DA EMULAÇÃO DEGRADADA SAIU — 13/09/2026 ----------
+     Era a decisão [07] de 04/09/2026, *"uma marca na palavra e o motivo no
+     hover"*: `.degradou` nascia `display:none` e `.degradou[title]` a
+     mostrava quando o piloto escrevia o motivo no `title`.
 
-     UM CAMPO SÓ FAZ AS DUAS COISAS, e é por isso que o alvo é `atributo`: sem
-     motivo o piloto REMOVE o `title` (o ramo `vazio || t === '—'`), e a regra
-     abaixo apaga a marca junto. Com uma classe para a marca e um segundo campo
-     para o motivo, seria possível pintar uma marca sem explicação — que é
-     exatamente o ruído com cara de dado que o `?` da folha recusa.
+     NO WEBKIT ELA NUNCA ACENDEU, medido na validação da RESTOS-DA-ONDA-DOIS-01:
+     a camada de dicas do piloto leva todo `title` para `data-hef-dica` e o
+     remove do elemento, e o seletor não casava. É a forma que a guarda do
+     alto-falante já curou nesta aba com `data-apagado`. E acesa ela seria
+     aviso numa dica, que a terceira lista dela tira da tela — então a marca
+     saiu inteira, sem troca de seletor.
 
-     A COR É `--orange`, a mesma da tarja de recusa desta janela: degradação não
-     é erro (o controle funciona) e não é normal (o jogo vê menos do que
-     poderia), e o laranja é a palavra que esta casa já usa para esse meio. */
-  .degradou{display:none;margin-left:1px;font-size:9px;line-height:1;
-            color:var(--orange);cursor:help;vertical-align:2px}
-  .degradou[title]{display:inline-block}
+     PINTURA NÃO SE DECIDE POR `[title]` NESTA CASA. A régua é
+     `tests/unit/test_a_marca_que_nunca_acende_e_o_gerador_que_confere.py`,
+     que lê as folhas das dez páginas. */
   /* O POLEGAR DOS DOIS DESLIZANTES — D-08 dela, 04/09/2026. Ele é INVISÍVEL de
      propósito: o knob que se vê é o `.vol .cheio::after` que ela aprovou, e um
      polegar nativo por cima desenharia o segundo. O que este `<input>` traz é o
@@ -1586,25 +1586,25 @@ def identidade(c, *, bat, carga=None, meio=""):
                máscara passa o mouse. É a mesma economia que ela mandou fazer nos
                tooltips do resto da janela — o rótulo sai, a explicação continua
                alcançável. -->
-          <!-- A MARCA DA EMULAÇÃO DEGRADADA — decisão dela, 04/09/2026:
-               *"uma marca na palavra e o motivo no hover"*.
+          <!-- A MARCA DA EMULAÇÃO DEGRADADA SAIU DAQUI — 13/09/2026,
+               A-MARCA-DA-DEGRADACAO-01. Era um `sup` com asterisco colado ao
+               nome da máscara, endereçado `mascara-degradou` com alvo
+               `atributo` sobre o `title`, que a folha só mostrava por
+               `.degradou[title]` — a decisão [07] de 04/09/2026, *"uma marca
+               na palavra e o motivo no hover"*.
 
-               O AJUDANTE QUE MONTA O MOTIVO JÁ EXISTIA (`pacotes.degradacao_de`,
-               que delega ao dono da regra na GTK) e NENHUM dos dez pacotes o
-               chamava: `vpad_backend` sozinho não separa "degradou" de "é uinput
-               por desenho" — a máscara Xbox é uinput e não é defeito nenhum. Não
-               faltava código; faltava onde pousar a frase.
+               ELA NUNCA ACENDEU: a camada de dicas do piloto tira o `title`
+               do elemento, e o seletor não casava no WebKit. E acesa seria
+               aviso numa dica, que a terceira lista dela tira da tela.
 
-               UM CAMPO, UM ELEMENTO, AS DUAS COISAS: o alvo `atributo` REMOVE o
-               `title` quando o motivo é vazio, e a folha apaga a marca por
-               `[title]`. Com a marca numa classe e o motivo noutro campo daria
-               para pintar uma marca sem explicação.
+               O FATO NÃO SE PERDEU. O daemon continua publicando
+               `vpad_backend` e `vpad_motivo` no estado, e diz a queda para
+               `uinput` no diário (`vpad_degradado`). Desde a MODO-DE-CONEXAO-01
+               o canal comum é caminho escolhido, não queda.
 
-               O ASTERISCO É TEXTO E FICA NO ARQUIVO, e é de propósito: o que o
-               produto pinta é só o motivo. Uma marca cujo GLIFO viesse do
-               produto sumiria da página parada, e o desenho dela deixaria de
-               mostrar o que ela aprovou. -->
-          <span class="leia" title="{DE_ONDE_VEM_A_MASCARA}"><b data-campo="mascara">{c["mascara"]}</b><sup class="degradou" data-campo="mascara-degradou" data-hef-alvo="atributo" data-hef-atributo="title">*</sup></span>{meio}
+               O `title` DO `.leia` FICA: ele diz de onde vem a máscara, que é
+               o que o controle faz, e não um aviso sobre ele. -->
+          <span class="leia" title="{DE_ONDE_VEM_A_MASCARA}"><b data-campo="mascara">{c["mascara"]}</b></span>{meio}
           <!-- O GIROSCÓPIO NO JOGO — "fluindo para o jogo (~N Hz)".
                CONTROLES-VERDADE-01, 06/09/2026. O número que responde *"o
                giroscópio está chegando ao jogo AGORA?"* não existia deste lado:
@@ -1994,8 +1994,8 @@ def linha_de_volume(campo, razao=""):
     mesmo botão receber também a classe `apagado`. Então quem recebe o endereço
     é a LINHA: o alvo `atributo` põe `data-porque` nela quando há razão e o
     REMOVE quando não há (o ramo `vazio || t === '—'` do piloto), e o CSS
-    apaga o botão de dentro. É a mesma forma do `.degradou[title]` desta aba, e
-    ela existe pelo mesmo motivo: um campo que precisa dizer duas coisas.
+    apaga o botão de dentro. É a mesma forma do `data-apagado` das molduras de
+    som desta aba, e existe pelo mesmo motivo: um campo que diz duas coisas.
 
     **UM CAMPO PARA A LINHA E PARA A DICA.** Os dois elementos levam o MESMO
     `data-campo`, e o `achar()` do piloto os visita com o mesmo valor no mesmo
@@ -3056,8 +3056,8 @@ CSS += f"""
      SÃO DOIS ESTADOS PINTADOS, e o que havia era um e meio: MUDO pintava
      `--red` e ATIVO ficava com a mesma cara de "não sei". O `--red` é a cor da
      FALHA nesta casa, e um alto-falante calado por escolha dela não é falha; o
-     âmbar é a palavra que esta janela já usa para o meio-termo — é a razão
-     escrita do `--orange` da marca de degradação, no bloco `.degradou`.
+     âmbar é a palavra que esta janela já usa para o meio-termo — a mesma
+     `--orange` do `.selo-som`, com a razão escrita no bloco dele.
 
      O TERCEIRO ESTADO NÃO SE DESENHA: sem `data-som` o botão fica com o
      `.mudo-i` de base, que é o cinza de "ninguém leu o alto-falante deste
@@ -4178,15 +4178,43 @@ def _conferir(doc):
         exigir(corpo.count(nome) == corpo.count(f'<span data-campo="peca">{nome}</span>'),
                f"o nome de plástico `{nome}` aparece no miolo sem endereço")
 
+    # A MARCA DA EMULAÇÃO DEGRADADA SAIU — 13/09/2026, A-MARCA-DA-DEGRADACAO-01.
+    # Os dois lados, porque cada um volta sozinho: o `<sup>` ao lado da máscara
+    # e as regras da folha. Comentário não conta — a nota que explica a saída
+    # cita os dois nomes.
+    exigir('class="degradou"' not in corpo and "mascara-degradou" not in corpo,
+           "a marca da emulação degradada voltou ao lado da máscara — ela nunca "
+           "acende no WebKit, e acesa seria frase de aviso numa dica")
+    _folhas = re.sub(r"/\*.*?\*/", "",
+                     "".join(re.findall(r"<style[^>]*>(.*?)</style>", doc, re.S)),
+                     flags=re.S)
+    exigir(".degradou" not in _folhas and "[title" not in _folhas,
+           "voltou regra de pintura que decide por `[title]` (ou a `.degradou`): "
+           "a camada de dicas tira o `title` do elemento, e no WebKit o "
+           "seletor nunca casa")
+
     if falhas:
         raise SystemExit("ERRO em 02-controles — decisão dela desfeita:\n  "
                          + "\n  ".join(f"- {f}" for f in falhas))
 
 
 if __name__ == "__main__":
+    import os
+    import pathlib
+    import shutil
+    import tempfile
+
     # ANTES DE ESCREVER, e não depois: um gerador que grava e só então reclama
     # já deixou a tela errada no disco para quem abrir o arquivo.
     a_legenda_nao_promete_o_que_a_tela_nao_tem(LEGENDA, MIOLO)
+    # CONFERE ANTES DE ESCREVER — 13/09/2026. A página nasce numa bancada
+    # PROVISÓRIA e só vai para a de verdade se passar; a razão e a régua estão
+    # no fim do `aba04.py`.
+    _real = onde.saida()
+    _prova = pathlib.Path(tempfile.mkdtemp(prefix="hefesto-prova-02-"))
+    for _vizinha in _real.glob("*.html"):
+        shutil.copy2(_vizinha, _prova / _vizinha.name)
+    os.environ[onde._DESVIO] = str(_prova)
     n = monta("02-controles", "Controles", MIOLO, CSS, legenda=LEGENDA)
     # A SAÍDA É A BANCADA (`mockup/`) — 31/08/2026, quando o fluxo inverteu.
     # Este caminho não dizia "layout": era `parent.parent`, e por isso o censo
@@ -4197,6 +4225,8 @@ if __name__ == "__main__":
     SAIDA.write_text(
         posicao_por_regra(cor_do_plastico_por_regra(fita_clicavel(SAIDA.read_text()))))
     _conferir(SAIDA.read_text())
+    shutil.copyfile(SAIDA, _real / "02-controles.html")
+    shutil.rmtree(_prova)
     print(f"02-controles: OK, {n} divs · {len(CONECTADOS)} conectado(s) "
           f"+ {VAZIOS} lugar(es) vazio(s) — 1 card de {PARA_O_CARD}px, "
           f"{FECHADOS} linha(s) de {ALTURA_FECHADA} e {VAZIOS} de {ALTURA_VAZIA}; "

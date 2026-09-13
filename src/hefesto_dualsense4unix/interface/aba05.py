@@ -2435,10 +2435,24 @@ def _conferir(doc):
 # esta guarda desde que `jogar_vivo.py` e `controles_vivos.py` passaram a
 # importá-las; as outras oito não.
 if __name__ == "__main__":
+    import os
+    import shutil
+    import tempfile
+
+    # CONFERE ANTES DE ESCREVER — 13/09/2026. A página nasce numa bancada
+    # PROVISÓRIA e só vai para a de verdade se passar; a razão e a régua estão
+    # no fim do `aba04.py`.
+    _real = onde.saida()
+    _prova = pathlib.Path(tempfile.mkdtemp(prefix="hefesto-prova-05-"))
+    for _vizinha in _real.glob("*.html"):
+        shutil.copy2(_vizinha, _prova / _vizinha.name)
+    os.environ[onde._DESVIO] = str(_prova)
     n = monta("05-vibracao", "Vibração", MIOLO,
               CSS + CSS_DAS_MEDIDAS + FOLHA_DOS_28,
               legenda=LEGENDA)
     _conferir(onde.pagina("05-vibracao.html").read_text())
+    shutil.copyfile(_prova / "05-vibracao.html", _real / "05-vibracao.html")
+    shutil.rmtree(_prova)
     print(f"05-vibracao: OK, {n} divs · {len(CONECTADOS)} conectado(s) "
           f"+ {len(MESA) - len(CONECTADOS)} lugar(es) vazio(s) · motores do mapa: "
           f'{ESQ["id"]} / {DIR["id"]}')
