@@ -30,9 +30,17 @@ A MORDIDA, e as três formas de arrancar
   a allowlist não tem);
 * tire o `case` do wrapper → o espelho e a travessia reprovam (o processo
   embrulhado lê «ausente»).
+
+E duas do ENSAIO, que sem estas réguas só mordiam com o aparelho na mesa:
+
+* tire os três ints de `_CAMPOS_ATE_A_INTERFACE` → a régua da struct reprova
+  (o `next` cai no 56);
+* tire o `env.update(_SO_LEITURA)`, ou o `--so-medir` do comando do filho → a
+  régua do só-leitura reprova (a biblioteca abriria `hidraw`).
 """
 from __future__ import annotations
 
+import ctypes
 import importlib.util
 import json
 import os
@@ -250,3 +258,65 @@ def test_o_ensaio_do_giro_mede_com_a_dica_que_o_jogo_recebe() -> None:
     o_ensaio_mede = ensaio.VALOR_QUE_O_JOGO_RECEBE
     assert ensaio.DICA_DO_ACELEROMETRO == _DICA
     assert o_ensaio_mede == o_jogo_recebe
+
+
+def test_a_struct_da_enumeracao_poe_o_next_onde_a_biblioteca_o_poe() -> None:
+    """O `next` do `SDL_hid_device_info` mora no deslocamento 72, na SDL2 e no SDL3.
+
+    Sem os três ints de interface ele caía no 56: a SDL2 devolvia a lista parada
+    no primeiro item, e o SDL3 lia lixo e matava o processo. A conferência do
+    ensaio contra o piso de `/sys/class/hidraw` só morde com o aparelho na mesa;
+    esta morde sem ele.
+    """
+    if ctypes.sizeof(ctypes.c_void_p) != 8:
+        pytest.skip("os deslocamentos medidos são os de 64 bits")
+    ensaio = _carregar_ensaio("o_jogo_para_de_ver_o_giro.py")
+    assert ensaio._InfoHid.next.offset == 72
+    assert ensaio._InfoHid3.bus_type.offset == 68
+    assert ensaio._InfoHid3.next.offset == 72
+
+
+def test_o_so_medir_da_a_cada_biblioteca_um_ambiente_que_nao_abre_hidraw(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """`--so-medir` promete que biblioteca nenhuma abre `hidraw` nem nasce com tela.
+
+    O driver PS5 do HIDAPI escreve efeitos ao abrir o controle. A promessa mora
+    em dois lugares: no ambiente que o pai passa e na opção que o filho recebe,
+    porque o filho refaz o próprio ambiente a partir dela. Os dois processos de
+    cada biblioteca são conferidos, e só o de enumerar desliga o filtro do SDL3.
+    """
+    for nome in ("DISPLAY", "WAYLAND_DISPLAY"):
+        monkeypatch.setenv(nome, "de-mentira")
+    monkeypatch.setenv("SDL_JOYSTICK_HIDAPI", "1")
+    monkeypatch.delenv("SDL_HIDAPI_ENUMERATE_ONLY_CONTROLLERS", raising=False)
+    ensaio = _carregar_ensaio("o_jogo_para_de_ver_o_giro.py")
+    lib = tmp_path / "libSDL3.so.0"
+    lib.write_bytes(b"")
+    chamadas: dict[str, tuple[list[str], dict[str, str]]] = {}
+
+    def _run(comando: list[str], *, env: dict[str, str], **_: Any) -> SimpleNamespace:
+        papel = comando[comando.index("--processo") + 1]
+        chamadas[papel] = (comando, env)
+        carga: dict[str, Any] = {"hid": []}
+        if papel == "controles":
+            carga = {"versao": "0", "revisao": "", "controles": []}  # noqa-acento: chave de dado do ensaio
+        return SimpleNamespace(returncode=0, stdout=json.dumps(carga), stderr="")
+
+    monkeypatch.setattr(
+        ensaio, "subprocess",
+        SimpleNamespace(run=_run, TimeoutExpired=subprocess.TimeoutExpired),
+    )
+    medida = ensaio.medir_uma_biblioteca(
+        lib, [], segundos=0.1, so_medir=True, dica=ensaio.VALOR_QUE_O_JOGO_RECEBE
+    )
+    assert "erro" not in medida, medida
+    assert sorted(chamadas) == ["controles", "enumerar"]
+    for papel, (comando, env) in chamadas.items():
+        assert "--so-medir" in comando, f"o filho «{papel}» refaria o ambiente com HIDAPI"
+        assert env.get("SDL_JOYSTICK_HIDAPI") == "0", papel
+        assert env.get("SDL_HIDAPI_LIBUSB") == "0", papel
+        assert not {"DISPLAY", "WAYLAND_DISPLAY"} & set(env), papel
+        assert env.get(_DICA) == "0", papel
+    assert chamadas["enumerar"][1].get(ensaio.FILTRO_SO_CONTROLES) == "0"
+    assert ensaio.FILTRO_SO_CONTROLES not in chamadas["controles"][1]
