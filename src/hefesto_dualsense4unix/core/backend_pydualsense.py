@@ -1850,15 +1850,15 @@ class PyDualSenseController(IController):
         # NUMA-02 (retain-latest): réplicas de EXIBIÇÃO recebidas sob
         # autoridade 'daemon' — 1 valor por (uniq, categoria), sempre o MAIS
         # recente (bounded por construção: só 'led'/'player_leds' por MAC).
-        # `replay_retained_game_outputs()` entrega tudo 1x na abertura do
-        # gate — a escrita ÚNICA de player-LED que jogos fazem (FATO 0) não
-        # pode se perder na latência ~2s do sinal. Drop sem retenção é
-        # vetado pela síntese da Onda N. Correção pós-auditoria: também
-        # purgado por `end_game_session_for` no fim da MESMA sessão que o
-        # gerou — sem isso, o valor sobrevive ao UHID_CLOSE (é um dict por
-        # uniq, não por sessão) e vaza para a PRÓXIMA sessão de jogo real
-        # deste controle via `replay_retained_game_outputs`, mesmo sem
-        # nenhuma relação com quem escreveu o valor original.
+        # LIGHTBAR-NA-STEAM-01 (13/09/2026): o valor retido NUNCA vira camada
+        # GAME — `replay_retained_game_outputs()` o DESCARTA na abertura do
+        # gate e só diz no journal o que descartou. Era a paleta de jogador
+        # do SDL escrita pelo CLIENTE Steam, e o gatilho da cor a reafirmava
+        # no lugar da cor do perfil (16 escritas medidas de 07 a 13/09).
+        # A retenção fica pela telemetria e pela defesa (NUMA-03), e continua
+        # purgada por `end_game_session_for` no fim da MESMA sessão que a
+        # gerou (é um dict por uniq, não por sessão: sem a purga, o journal
+        # da abertura seguinte culparia uma sessão sem relação nenhuma).
         self._retained_game_outputs: dict[str, dict[str, Any]] = {}
         # Log `game_output_retido_sem_jogo` 1x por episódio (re-armado no
         # replay — episódio = um período contínuo de autoridade 'daemon').
@@ -6042,11 +6042,20 @@ class PyDualSenseController(IController):
         NUMA-02 (retain-latest): sob autoridade 'daemon' (evidência positiva
         de NÃO-jogo — no incidente 14:42, o escritor era o CLIENTE Steam) a
         réplica de exibição é RETIDA: não popula a camada GAME, não escreve
-        hardware; `replay_retained_game_outputs()` entrega o valor mais
-        recente 1x na abertura do gate. A telemetria `uhid_replica_ativa`
-        do vpad segue intacta (é emitida antes de chegar aqui). Réplica
-        retida = prova de escritor ativo ⇒ dispara a defesa de exibição,
-        rate-limitada (NUMA-03).
+        hardware. Desde LIGHTBAR-NA-STEAM-01 (13/09/2026) o retido não volta
+        mais: a camada GAME só recebe luz escrita com a autoridade JÁ em
+        'game' ou 'unknown', e `replay_retained_game_outputs()` descarta o
+        que ficou retido. A telemetria `uhid_replica_ativa` do vpad segue
+        intacta (é emitida antes de chegar aqui). Réplica retida = prova de
+        escritor ativo ⇒ dispara a defesa de exibição, rate-limitada
+        (NUMA-03).
+
+        O journal diz o VALOR e a AUTORIDADE nos dois ramos, com os nomes de
+        campo do `gatilho_da_cor_escrito` (`cor`, `players`): o retido em
+        `game_output_retido_sem_jogo` (1x por episódio) e o aplicado em
+        `game_output_replicado` (1x por categoria por sessão). É o que separa
+        a paleta de jogador do SDL de pintura legítima de jogo sem aparelho
+        na mão.
         """
         alvo = self._key_to_uniq(uniq)
         if alvo is None:
@@ -6073,6 +6082,7 @@ class PyDualSenseController(IController):
                         "game_output_retido_sem_jogo",
                         uniq=alvo,
                         campos=sorted(fields),
+                        **self._luz_para_o_journal(fields),
                     )
                     self._retained_log_armed = False
                 agora = time.monotonic()
@@ -6087,8 +6097,18 @@ class PyDualSenseController(IController):
             return True
         with self._io_lock:
             layer = self._game_output_by_uniq.setdefault(alvo, _DesiredOutput())
+            # 1x por categoria por sessão — a cadência do `uhid_replica_ativa`:
+            # a camada nasce vazia e só some no `end_game_session_for`.
+            novas = sorted(name for name in fields if getattr(layer, name) is None)
             for name, value in fields.items():
                 setattr(layer, name, value)
+            if novas:
+                logger.info(
+                    "game_output_replicado",
+                    uniq=alvo,
+                    campos=novas,
+                    **self._luz_para_o_journal(fields),
+                )
             key = self._key_for_uniq(alvo)
             handle = self._handles.get(key) if key is not None else None
             node = self._sysfs.get(key) if key is not None else None
@@ -6101,25 +6121,80 @@ class PyDualSenseController(IController):
         return True
 
     def replay_retained_game_outputs(self) -> None:
-        """Entrega as réplicas RETIDAS na abertura do gate (NUMA-02).
+        """Abertura do gate (NUMA-02): a luz RETIDA sob 'daemon' é DESCARTADA.
 
-        Chamado pelo lifecycle na transição `daemon→game|unknown`: cada valor
-        retido (o MAIS recente por (uniq, categoria)) é entregue exatamente
-        1x pelo caminho normal (`set_game_output_for`) — a escrita única de
-        player-LED que jogos fazem (FATO 0) atravessa a latência ~2s do
-        sinal sem se perder. Risco aceito na síntese: o último valor pode
-        ser do CLIENTE Steam, mas cliente e jogo compartilham a numeração do
-        Steam Input e o jogo sobrescreve em seguida. Re-arma o log
-        `game_output_retido_sem_jogo` (episódio novo). Falha em um controle
-        não aborta os demais.
+        Chamado pelo lifecycle na transição `daemon→game|unknown`. Até
+        13/09/2026 cada valor retido era entregue 1x pelo caminho normal
+        (`set_game_output_for`), para a escrita única de player-LED que jogos
+        fazem (FATO 0) atravessar a latência ~2s do sinal — com o risco,
+        aceito na síntese, de o último valor ser do CLIENTE Steam.
+
+        LIGHTBAR-NA-STEAM-01 mediu o risco acontecendo: dezesseis escritas do
+        gatilho da cor, de 07 a 13/09, pintaram exatamente os pares cor e
+        padrão da paleta de jogador do SDL. A réplica entregue aqui virava
+        camada GAME, o topo do merge, e a guarda reafirmava com fidelidade a
+        cor fosca da Steam no lugar da cor do perfil.
+
+        A regra que vale é a de 12/08, escrita em
+        `docs/protocol/pilha-steam-input-xpad-sdl.md`: *"no modo nativo
+        devolvemos o controle pra steam e no modo conexão também, todo o resto
+        é o hefesto"*. A cor que o cliente deixou no vpad antes do jogo não
+        vira camada do jogo — a camada GAME só recebe luz escrita com a
+        autoridade JÁ em 'game' ou 'unknown'.
+
+        O que sobra aqui: descartar, dizer no journal o VALOR e a AUTORIDADE
+        do descarte (`game_output_retido_descartado_na_abertura`) e re-armar o
+        log `game_output_retido_sem_jogo` (episódio novo). Os gatilhos crus
+        nunca passam por retenção (`set_game_trigger_for` não tem gate) e
+        seguem chegando ao físico. O preço, declarado: a escrita única de
+        player-LED que um jogo fizer ANTES de o sinal virar 'game' se perde;
+        o que o jogo escreve sob 'game' continua vencendo (REPLICA-03).
         """
         with self._io_lock:
             retidos = self._retained_game_outputs
             self._retained_game_outputs = {}
             self._retained_log_armed = True
-        for alvo, campos in retidos.items():
-            with contextlib.suppress(Exception):
-                self.set_game_output_for(alvo, **campos)
+            descartes = [
+                (alvo, sorted(campos), self._luz_para_o_journal(campos))
+                for alvo, campos in retidos.items()
+            ]
+        for alvo, campos, luz in descartes:
+            logger.info(
+                "game_output_retido_descartado_na_abertura",
+                uniq=alvo,
+                campos=campos,
+                **luz,
+            )
+
+    def _autoridade_de_exibicao(self) -> str:
+        """A autoridade de exibição como o journal a escreve — não decide nada.
+
+        LIGHTBAR-NA-STEAM-01: quem decide continua sendo `_game_wins()`; isto
+        só dá nome ao que o provider responde. 'sem_provider' = nenhum
+        provider injetado (o gate fica aberto, fail-safe do NUMA-02);
+        'provider_falhou' = ele levantou. Mesmo contrato do provider: sem
+        I/O, chamável sob `_io_lock`.
+        """
+        provider = self._game_authority_provider
+        if provider is None:
+            return "sem_provider"
+        try:
+            return str(provider())
+        except Exception:
+            return "provider_falhou"
+
+    def _luz_para_o_journal(self, campos: dict[str, Any]) -> dict[str, Any]:
+        """`cor`, `players` e `autoridade` de uma réplica de exibição, para o log.
+
+        Os nomes são os do `gatilho_da_cor_escrito`, de propósito: quem cruza o
+        journal casa a cor retida, descartada ou replicada com a que o gatilho
+        pintou, sem traduzir campo.
+        """
+        return {
+            "cor": campos.get("led"),
+            "players": campos.get("player_leds"),
+            "autoridade": self._autoridade_de_exibicao(),
+        }
 
     def end_game_session_for(self, uniq: str) -> bool:
         """Fim da sessão de jogo do controle `uniq`: devolve perfil/paleta/co-op.
@@ -6141,6 +6216,11 @@ class PyDualSenseController(IController):
         PRÓXIMA sessão de jogo real deste controle, totalmente não
         relacionada à que escreveu o valor (o "player 3 verde" acendendo
         antes de o jogo escrever qualquer coisa).
+
+        Nota de 13/09/2026 (LIGHTBAR-NA-STEAM-01): o replay deixou de
+        entregar a luz retida — ele a descarta. A purga continua, e o que ela
+        protege agora é o journal: sem ela, o descarte da abertura seguinte
+        diria o valor de uma sessão sem relação nenhuma com o jogo que abriu.
         """
         alvo = self._key_to_uniq(uniq)
         if alvo is None:
@@ -6162,6 +6242,7 @@ class PyDualSenseController(IController):
                     "game_output_retido_descartado_no_close",
                     uniq=alvo,
                     campos=sorted(retido),
+                    **self._luz_para_o_journal(retido),
                 )
             return True  # o jogo nunca tocou este controle
         logger.info(
