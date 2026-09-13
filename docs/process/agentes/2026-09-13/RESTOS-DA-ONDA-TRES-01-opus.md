@@ -110,3 +110,127 @@ mudou.
 5. **Registros que ainda falam da ressalva como pendente:** o item 2 de «O que
    sobrou» da entrega da SENSORES-NO-JOGO-02 e o item 3 da entrega da
    SENSORES-NO-JOGO-03. São registro, e não mexi.
+
+## O que a validação refez e corrigiu
+
+VALIDA/CORRIGE, opus. Mesma árvore e mesma branch; a correção é o commit
+`b05e5114`. O python é o da venv da árvore principal com o `PYTHONPATH` desta
+árvore, e o import foi conferido em `…-opus/src`.
+
+### A posse e as páginas
+
+* `git diff --name-only a34ec006..HEAD` dá os dez arquivos do `posse` e esta
+  entrega. Nada fora.
+* Nenhuma página publicada mudou: nenhum arquivo de `mockup/`,
+  `interface/paginas/` ou `html/painel.html` no diff. Nos HTML versionados, 693
+  `data-gesto` (17 arquivos) e 666 `<button` (32 arquivos), iguais em
+  `a34ec006` e na branch. Sem foto, porque a tela não muda.
+
+### As mordidas, refeitas
+
+Cada uma sabota, roda a régua e devolve por `git checkout HEAD --`. Antes e
+depois de cada roteiro, `git status --short` vazio e o `sha256` de
+`git diff HEAD` igual ao do diff vazio.
+
+| | cura arrancada | a régua | reprovou? |
+| --- | --- | --- | --- |
+| V1 | a tabela do TERCEIRO NÚMERO na contagem velha | `check_paridade_gtk_html.py` rc=1, `numero-publicado` em `02-controles` e `TODAS` | sim |
+| V1b | a linha 57 da base, com a tabela nova | rc=1, `numero-publicado` nas duas linhas | sim |
+| V1c | as nove regras `data-apagado="sem-alvo"` da folha da 02 trocadas | rc=1, `sinal-sumiu` na linha 57 | sim |
+| **V1d** | **só as cinco regras do ALTO-FALANTE trocadas**, o microfone intacto | **rc=0, verde** | **não — achado 1** |
+| V2 | a dona velha do `sensor`, com a régua nova | script rc=1 («a razão diz que o resto é da MESA-DE-QUATRO-01»); pytest 6 failed, 13 passed | sim |
+| V2b | a régua da base, com a dona velha | rc=0: sem o caso novo a régua não via | (controle) |
+| V2c | a régua nova com a leitura da razão cega (o regex nunca casa) | script rc=0; pytest 2 failed: a mordida 4c e a irmã do inventário | sim |
+| V3 | o `specs.html` da base com o CSV novo | `gerar-mapa.py --check` rc=1; `--leia-primeiro` rc=1 (`bytes:html/specs.html`) | sim |
+| V3b | o CSV da base com o `specs.html` novo | `--check` rc=1 | sim |
+| V3c | o LEIA-PRIMEIRO da base com o CSV e o `specs.html` novos | `--leia-primeiro` rc=1, quatro `numero-caduco` | sim |
+| V4 | a declaração de `physical_nodes_exposure` fora de `_NAO_E_PROMESSA` | 1 failed, `test_toda_promessa_solta_esta_classificada` | sim |
+| **V5** | **a docstring da base de volta** («a GUI e o `doctor.sh` passam a consultar») | casa-sabe, restos da onda dois, R-06 e o veredito das três superfícies: **94 passed** | **não — achado 3** |
+
+**V1d, medido na história:** o `aba02.py` de `b791d234`, a árvore em que a guarda
+do alto-falante nunca acendia, já tinha quatro `data-apagado="sem-alvo"`, todos
+do microfone (MIC-SEM-FONTE-01, `053a346c`), e nenhuma regra do alto-falante. Com
+aquele arquivo e o sinal do implementador, a paridade dá **rc=0** (V1g). O sinal
+passava sobre o defeito que a linha descreve.
+
+### Os fatos, conferidos
+
+* **A linha 57, contra os dois lados.** GTK: `_pecas_que_escrevem_som` e
+  `_update_guarda_de_audio` deixam as peças insensíveis, põem a
+  `DICA_AUDIO_SEM_ENDERECO` nas duas molduras e mostram o `_audio_aviso`. HTML:
+  `alto-apagado` e `microfone_apagado` escrevem `data-apagado`, a folha esmaece o
+  volume e a rota e põe `cursor:not-allowed`, `porques_do_som` leva a mesma
+  `DICA_AUDIO_SEM_ENDERECO` ao `?`, e o gesto `volume` levanta `ValueError` sem
+  `uniq`. `DIFERENTE` cabe na régua firmada em 06/09: a mesma resposta por outro
+  caminho, com endereço, e sem o aviso.
+* **A citação «§2 `02[04]`»** do bloco DECIDIDO existe: é a pergunta 04 da
+  tabela `02-controles` na §2 do O-PO-DECIDE, «O botão apaga e a dica diz por
+  quê. É a D-03 aplicada a esta aba.» A notação é aba[pergunta], e a tabela a
+  escreve em colunas; por isso o `grep` literal volta vazio. Fecha o item do
+  «não verifiquei» acima.
+* **A docstring, contra quem chama hoje.** `git grep physical_nodes_exposure`: a
+  única chamada viva fora dos testes é o `_censo_de_fisicos` de
+  `scripts/doctor.sh`. A menção em `emulation_actions._steam_input_excecoes` é
+  docstring e já diz o mesmo. Confere.
+* **A dona do sensor, contra a razão.** A razão diz «é da MESA-DE-QUATRO-01». A
+  SENSORES-NO-JOGO-01 está `feita` e diz no topo que o passo do jogo reagindo é
+  da MESA-DE-QUATRO-01, e a seção «O que só a MESA-DE-QUATRO-01 responde» da
+  SENSORES-NO-JOGO-02 inclui o jogo reagindo à mira. Confere.
+* **A ressalva, contra a SENSORES-NO-JOGO-02.** Os números batem com a tabela
+  das nove bibliotecas da entrega (126 a 157 giros, 314 a 342 acelerômetros) e
+  com a 2.30.0 sem a variável (`False, 0`). **Mas a tabela das nove foi medida
+  com `SDL_ACCELEROMETER_AS_JOYSTICK=0` e o HIDAPI do SDL desligado** (a
+  entrega, «O ensaio contra as nove bibliotecas»; a pilha, 5-bis.1 e a régua da
+  5-bis), e a nota dava os números sem a condição, logo depois da 2.30.0 no
+  padrão. Lida assim, a nota dizia que as nove entregam em qualquer ambiente, e
+  a 5-bis.2 mede o contrário para a 2.32.10 com a dica em 1. Achado 2.
+* **Outras linhas das planilhas.** Em todo `docs/data/*.csv`, por
+  `physical_nodes_exposure`, `_steam_input_excecao_status`, `som-sem-endereco`,
+  `_pecas_que_escrevem_som`, «recebe zero», «2.30», «Modo Virtual»,
+  `SENSORES-NO-JOGO-0[123]` e «a GUI e o»: só as duas notas desta sprint. «a GUI
+  e o» casa na bateria, com outra frase.
+
+### Corrigido, em `b05e5114`
+
+1. **O sinal da linha 57** passa a ser a regra do alto-falante,
+   `.moldura[data-bloco="alto-falante"][data-apagado="sem-alvo"]`, com o mesmo
+   escopo. Com a borda de palavra do `prosa_do_codigo.agulha`, a forma sem o
+   `.moldura` não casaria. O `porque` da linha e a nota de 13/09 do TERCEIRO
+   NÚMERO dizem por que o solto não serve. Mordidas: V1d' (só o alto-falante
+   trocado) e V1f (o `aba02.py` de `b791d234`) dão **rc=1** em `sinal-sumiu`; o
+   mesmo arquivo com o sinal solto, V1g, dá rc=0. Veredito e contagem não mudam.
+2. **A condição da ressalva** nas duas notas: «com o HIDAPI do SDL desligado» na
+   sonda, e «com a dica em 0» nas nove; na do giroscópio, também o controle que
+   a própria entrega mediu, a 2.32.10 do scout sem a variável entregando 145.
+   Vereditos intactos. `specs.html` e LEIA-PRIMEIRO regerados, com `--check`,
+   `--leia-primeiro` e o `check_paridade_transporte.py` inteiro em rc=0.
+
+### Réguas vizinhas
+
+Os 151 arquivos de `tests/unit` que citam algum arquivo mudado, em seis lotes em
+primeiro plano, na branch corrigida: 483, 417, 499, 496 (mais 2 xfailed), 477
+(mais 4 skipped) e 348 passed. Nenhum vermelho. E também:
+`check_paridade_gtk_html.py`, `check_ate_onde_a_prova_chegou.py`,
+`validar-citacoes-de-linha.py --all` (3289 citações) e o `ruff` nos quatro
+arquivos Python da sprint.
+
+### O que fica, sem cura aqui
+
+* **Achado 3: a docstring não tem régua** (V5). Nenhum arquivo de teste da posse
+  é lugar para essa pergunta, e a sprint tem `cria: []`. Quem segura o
+  comportamento é `test_a_07_a_leitura_do_steam_input_nao_varre_hidraw`.
+* **A metade do microfone, no gerador.** Com só as quatro regras `sem-alvo` do
+  microfone trocadas no `aba02.py` (V1e), a paridade e o
+  `test_o_cartao_diz_se_o_som_tem_para_onde_ir.py` passam (48 passed). O sinal
+  novo vigia a metade que faltava; a do microfone é da MIC-SEM-FONTE-01, cujas
+  réguas leem a página publicada, e aqui nada foi regerado nem publicado.
+* **MESA-DE-QUATRO-01, cabeçalho de 08/09:** «O giroscópio não tem linha neste
+  roteiro: é a SENSORES-NO-JOGO-01». A nota de 13/09, logo abaixo, já diz como
+  a bancada escreve as células. O arquivo é de outra sprint.
+* **O LEIA-PRIMEIRO publica «`nota` (225 linhas)»**, item 1 acima. Medido agora:
+  230 de 311 linhas.
+
+### O que a validação não verificou
+
+* A tela e o aparelho: nenhum piloto, nenhuma sonda, nenhuma página regerada.
+* A suíte inteira, por ordem do despacho.
