@@ -363,8 +363,18 @@ def test_o_mapa_do_haptico_traz_os_dois_candidatos_e_o_place_holder(
             "viajam juntos, senão a divergência some e sobra uma falsa certeza"
         )
     ref = linha["radio_codigo_ref"]
-    assert "dualsense_bt_audio.py:225" in ref and "BLOCO_HAPTICS" in ref, (
-        "o `radio_codigo_ref` do háptico deixou de apontar para o place holder"
+    # A linha é LIDA do fonte, não digitada: a CITACOES-DAS-PLANILHAS-01
+    # (13/09/2026) reapontou a citação para onde a constante mora hoje, e o
+    # número escrito aqui era o de 03/09.
+    onde = next(
+        no.lineno
+        for no in ast.walk(ast.parse(BT_AUDIO.read_text(encoding="utf-8")))
+        if isinstance(no, ast.Assign)
+        and any(isinstance(a, ast.Name) and a.id == "BLOCO_HAPTICS" for a in no.targets)
+    )
+    assert f"dualsense_bt_audio.py:{onde}" in ref and "BLOCO_HAPTICS" in ref, (
+        "o `radio_codigo_ref` do háptico deixou de apontar para o place holder "
+        f"(`BLOCO_HAPTICS` mora em `dualsense_bt_audio.py:{onde}`)"
     )
 
 
