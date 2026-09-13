@@ -223,6 +223,11 @@ async def test_tres_apertos_andam_pelos_caminhos_e_cada_um_fica_no_perfil(
             f"aperto {aperto}: o perfil ativo ficou em {gravado!r}, e o gesto "
             "grava na hora — sem esperar silêncio nem jogo"
         )
+        # ACRESCENTADA NA VALIDAÇÃO — 13/09/2026. A volta passa pela Navegação,
+        # e a poda de antes apagava aqui a máscara padrão do perfil.
+        assert gravado.gamepad_flavor == "dualsense", (
+            f"aperto {aperto}: o gesto apagou a máscara padrão do perfil: {gravado!r}"
+        )
 
     vermelhas = [seq for seq in luzes if seq and seq[0][0] == hotkey.COR_AVISO_RISCO]
     assert not vermelhas, (

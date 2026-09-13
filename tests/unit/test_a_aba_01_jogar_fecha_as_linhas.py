@@ -1028,9 +1028,13 @@ def test_a_secao_do_modo_e_a_regra_do_dono() -> None:
     antes = ProfileModeConfig(kind="gamepad", gamepad_flavor="xbox")
     assert _perfil.secao_do_modo(antes, "none") is None
 
-    # FORA DO MODO JOGO A MÁSCARA É ZERADA — "JSON limpo, sem sobras".
+    # AJUSTADA À REGRA DELA — MODO-DE-CONEXAO-01, 13/09/2026 (na validação).
+    # ANTES: fora do modo jogo a máscara era zerada ("JSON limpo, sem sobras").
+    # AGORA: a máscara não é do modo — com o PS + R3 gravando a cada aperto, a
+    # volta pela Navegação apagava a máscara padrão do perfil em silêncio.
     fora = _perfil.secao_do_modo(antes, "native")
-    assert fora is not None and fora.gamepad_flavor is None
+    assert fora is not None and fora.gamepad_flavor == "xbox", (
+        "o modo apagou a máscara padrão do perfil — a máscara não é do modo")
 
     # E DENTRO DELE, SEM ESCOLHA, O DISCO É PRESERVADO.
     fica = _perfil.secao_do_modo(antes, "gamepad")

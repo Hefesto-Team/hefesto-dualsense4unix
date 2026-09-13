@@ -430,9 +430,9 @@ def secao_do_modo(
 
     * ``"none"`` → ``None``: *"a seção é REMOVIDA do perfil salvo"*. Um perfil
       sem `mode` não mexe no modo do sistema quando entra;
-    * ``gamepad_flavor`` só vale com ``kind == "gamepad"``; nos outros grava
-      ``None`` — *"JSON limpo, sem sobras"*, a mesma poda de
-      `manager.alinhar_o_modo_com_a_ponte`.
+    * ``gamepad_flavor`` só VALE com ``kind == "gamepad"``, e nos outros modos
+      fica como estava: a máscara não é do modo. A poda *"JSON limpo"* caiu em
+      13/09 (MODO-DE-CONEXAO-01, `manager.secao_do_modo_com_o_caminho`).
 
     **A MÁSCARA NUNCA É INVENTADA, e é a cicatriz de ESCOLHA-DELA-VENCE-01/E1:**
     havia um ``or "xbox"`` no Salvar da janela estável, e bastava salvar um
