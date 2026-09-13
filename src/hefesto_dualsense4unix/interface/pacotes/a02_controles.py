@@ -2774,9 +2774,9 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
                 # exatamente o desfecho certo para "não perguntei".
                 #
                 # `None` VIRA VAZIO, E O VAZIO ESCONDE A LINHA: o alvo
-                # `atributo` do elemento de fora remove o `title` e a folha o
-                # apaga por `:not([title])`. Ver o bloco `A LINHA DA VERDADE` no
-                # `interface/aba02.py`. Uma linha vazia num card de quatro é
+                # `atributo` do elemento de fora remove o `aria-label`, e a folha
+                # só o mostra por `[aria-label]`. Ver o bloco `O GIROSCÓPIO NO
+                # JOGO` do `interface/aba02.py`. Uma linha vazia num card de quatro é
                 # ruído, e este card não tem pixel para ruído.
                 "giro-no-jogo": texto_motion(
                     c, getattr(ctx, "state", None) or {}) or "",
