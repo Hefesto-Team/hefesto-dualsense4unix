@@ -540,7 +540,7 @@ def _tela_publicada() -> str:
 
 
 def test_a_pagina_publicada_da_endereco_as_linhas(aba: Any) -> None:
-    """Lida da PÁGINA: 22 linhas falando, 16 pintadas, e toda opção traduzível."""
+    """Lida da PÁGINA: 22 linhas, 16 falando e pintadas, e toda opção traduzível."""
     from hefesto_dualsense4unix.core.acoes_de_botao import BOTOES
 
     tela = _tela_publicada()
@@ -551,7 +551,12 @@ def test_a_pagina_publicada_da_endereco_as_linhas(aba: Any) -> None:
     linhas = [re.search(r'data-linha="([^"]+)"', a).group(1)  # type: ignore[union-attr]
               for a, _ in listas]
     assert len(set(linhas)) == len(linhas) and set(linhas) == set(BOTOES)
-    assert all('data-gesto="linha-de-troca"' in a for a, _ in listas)
+    # SÓ AS DEZESSEIS QUE A TROCA ALCANÇA FALAM — 13/09/2026, F1-REMAPEAR-02. As
+    # seis de fora nascem apagadas e sem gesto; quem as confere é
+    # `test_as_seis_linhas_fora_da_troca_ficam_apagadas.py`.
+    falando = [linha for (a, _), linha in zip(listas, linhas, strict=True)
+               if 'data-gesto="linha-de-troca"' in a]
+    assert sorted(falando) == sorted(remap.REMAPEAVEIS), falando
     pintadas = [m.group(1) for m in
                 (re.search(r'data-campo="troca-([^"]+)"', a) for a, _ in listas) if m]
     assert len(pintadas) == len(remap.REMAPEAVEIS)

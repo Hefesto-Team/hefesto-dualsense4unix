@@ -59,9 +59,9 @@ from pacotes.a06_navegacao import (  # noqa: E402
 from pacotes.a06_navegacao import SEM_TROCA as _SEM_TROCA_DO_PACOTE  # noqa: E402
 
 #: O QUE A TROCA DE BOTÕES ALCANÇA — F1-REMAPEAR, 13/09/2026. Só essas linhas da
-#: tela "Trocar os botões" ganham o endereço da pintura; as outras seis (a
-#: direção dos dois analógicos, o PS e as três regiões do touchpad) levam só o
-#: gesto e a linha, e o motor as recusa pelo nome.
+#: tela "Trocar os botões" ganham o gesto e o endereço da pintura; as outras
+#: seis (a direção dos dois analógicos, o PS e as três regiões do touchpad)
+#: nascem APAGADAS desde a F1-REMAPEAR-02 — só a linha e o "— Sem troca —".
 from hefesto_dualsense4unix.core.remapeamento_de_botao import (  # noqa: E402
     REMAPEAVEIS as _REMAPEAVEIS,
 )
@@ -654,6 +654,16 @@ CSS = CSS_GLIFO + """
     color:var(--fg);cursor:pointer}
   .campo-linha:hover{border-color:var(--purple)}
   .disputa .campo-linha{border-color:var(--orange);color:var(--orange)}
+  /* ---- AS SEIS LINHAS QUE A TROCA NÃO ALCANÇA — F1-REMAPEAR-02, 13/09/2026 ----
+     A direção dos dois analógicos, o PS e as três regiões do touchpad: o motor
+     as recusa, e a lista delas nasce apagada. A cara é a do apagado da casa
+     (`.btn.apagado` e `.seg button:disabled` do `monta.CSS_FOLHA`): borda
+     sutil, texto mudo, cursor de recusa. O `:hover` repete a borda porque a
+     regra da linha acende o roxo, e um apagado que acende no ponteiro promete
+     o clique que não existe. */
+  .campo-linha:disabled{border-color:var(--border-sutil);color:var(--texto-mudo);
+    cursor:not-allowed}
+  .campo-linha:disabled:hover{border-color:var(--border-sutil)}
 
   /* ---- O CAMPO DE TEXTO DA TELA "Teclas do teclado" ----
      Ele herda a forma do `.campo-linha` (a mesma altura, a mesma borda, o mesmo
@@ -1101,7 +1111,8 @@ ACOES_GESTO = [
 ]
 
 
-def drop(grupos, escolhido, classe="campo-linha", gesto="", linha="", campo=""):
+def drop(grupos, escolhido, classe="campo-linha", gesto="", linha="", campo="",
+         apagado=False):
     """Um <select> de verdade em TODA linha — nenhum travado (falas [55], [57], [91]).
 
     O `gesto` NOMEIA o campo para o piloto (ver `simples`), e é o que faz o
@@ -1136,6 +1147,11 @@ def drop(grupos, escolhido, classe="campo-linha", gesto="", linha="", campo=""):
     (`guardar-ponto`, `guardar-remapeamento`) não tinham dono — pintar um
     formulário que ninguém grava seria a metade errada da cura —, e passaram a
     ter quando o dono nasceu (11/09 e 13/09/2026).
+
+    O `apagado` TRAVA A LISTA — 13/09/2026, F1-REMAPEAR-02 — e é a exceção, com
+    dono, ao "nenhum travado" do título: as seis linhas que a troca de botões
+    não alcança (`_lista_da_troca`). Elas continuam `<select>` na linha e
+    mostram o estado real; a razão de travar está no docstring de lá.
     """
     partes = []
     for rot, ops in grupos:
@@ -1154,7 +1170,8 @@ def drop(grupos, escolhido, classe="campo-linha", gesto="", linha="", campo=""):
     # (`hefesto_vivo.py`: `el.dataset.linha || el.dataset.campo`), então os dois
     # convivem sem disputa.
     c = f' data-campo="{campo}" data-hef-alvo="valor"' if campo else ""
-    return f'<select class="{classe}"{g}{ln}{c}>{"".join(partes)}</select>'
+    ap = " disabled" if apagado else ""
+    return f'<select class="{classe}"{g}{ln}{c}{ap}>{"".join(partes)}</select>'
 
 
 def simples(ops, classe="escolha-at", gesto="", campo="", escolhido=""):
@@ -2556,12 +2573,41 @@ def _campo_da_troca(botao):
     return f"{PREFIXO_DA_TROCA}{botao}" if botao in _REMAPEAVEIS else ""
 
 
+def _lista_da_troca(botao):
+    """A lista de UMA linha da troca: a que troca, ou a apagada.
+
+    AS SEIS QUE O MOTOR RECUSA NASCEM APAGADAS — F1-REMAPEAR-02, 13/09/2026.
+    Até aqui elas eram listas clicáveis como as outras dezesseis: escolher algo
+    nelas era recusado na hora, a lista continuava mostrando a escolha recusada,
+    e ela ia na `forma` — todo "Guardar" seguinte era recusado, e desde a
+    FRASES-E-DICAS-01 a recusa não tem frase que diga qual linha segura o botão.
+
+    QUEM DECIDIU foi quem coordena, por delegação (§D da sprint F1-REMAPEAR-02),
+    e a regra é a do apagado que ela deu na 06-Q1 — a palavra está citada no
+    bloco do portão de modo da folha desta aba e em
+    `docs/process/2026-09-05-AS-QUARENTA-E-UMA-DECISOES-DELA.md`: *"o switch
+    fica apagado (não clicável) MAS mostra o estado real"*. O estado real destas seis é sempre
+    "— Sem troca —", porque o perfil nunca guarda troca nelas — então é a única
+    opção. Sem `data-gesto` (não há escolha a anotar) e sem `data-campo` (não há
+    o que pintar); o `data-linha` fica, porque a `forma` do "Guardar" continua
+    sabendo de todas as linhas.
+
+    `disabled`, E NÃO SÓ TINTA: uma lista com `pointer-events:none` ainda
+    recebe o foco pelo teclado e muda de valor pelas setas — e a escolha
+    voltaria à `forma` pelo caminho que o ponteiro não vê.
+    """
+    if botao in _REMAPEAVEIS:
+        return drop(REMAP, SEM_TROCA, gesto=LINHA_DE_TROCA, linha=botao,
+                    campo=_campo_da_troca(botao))
+    return drop([("", [SEM_TROCA])], SEM_TROCA, linha=botao, apagado=True)
+
+
 TELA_REMAPEAMENTO = tela_de_botoes(
     "remapeamento", "Trocar os botões", D_REMAPEAMENTO,
     "Passa a ser",
     chr(10).join(
         f'          <tr><td class="b">{b}</td>'
-        f'<td>{drop(REMAP, SEM_TROCA, gesto=LINHA_DE_TROCA, linha=i, campo=_campo_da_troca(i))}</td></tr>'
+        f'<td>{_lista_da_troca(i)}</td></tr>'
         for b, i in BOTOES),
     f"Devolver as {len(BOTOES)} linhas ao <b>{SEM_TROCA}</b>? "
     "As <b>Definições Controle e Mouse</b> não são tocadas.",
@@ -3340,14 +3386,33 @@ def _conferir(doc):
     #    Python e a pintura a desfaz; sem o `data-linha` o "Guardar" não sabe de
     #    que botão é cada lista; sem o `data-campo` a tela mostra o desenho com o
     #    perfil guardando outra coisa — e o "Guardar" apagaria a escolha dela.
+    #    AS SEIS QUE A TROCA NÃO ALCANÇA NASCEM APAGADAS — F1-REMAPEAR-02,
+    #    13/09/2026: a conta é 16 listas com gesto e 6 apagadas, e as duas
+    #    metades somam os botões do produto. Uma apagada que volte a ter gesto,
+    #    ou uma das dezesseis que perca o dela, reprova aqui.
     _troca = _tela("remapeamento")
-    exigir(_troca.count(f'data-gesto="{LINHA_DE_TROCA}"') == len(BOTOES),
-           f"as {len(BOTOES)} linhas da troca de botões perderam o "
-           f"`data-gesto=\"{LINHA_DE_TROCA}\"`")
+    _fora_da_troca = sorted(set(_BOTOES_DO_PRODUTO) - set(_REMAPEAVEIS))
+    _com_gesto = _troca.count(f'data-gesto="{LINHA_DE_TROCA}"')
+    exigir(_com_gesto == len(_REMAPEAVEIS),
+           f"a troca de botões tem {_com_gesto} listas com "
+           f"`data-gesto=\"{LINHA_DE_TROCA}\"`, e a troca alcança {len(_REMAPEAVEIS)}")
     exigir(sorted(_re.findall(r'data-gesto="' + LINHA_DE_TROCA + r'" data-linha="([^"]+)"',
-                              _troca)) == sorted(_BOTOES_DO_PRODUTO),
-           "o `data-linha` das listas da troca não é a lista de botões do "
-           "produto — o Guardar descartaria a linha sem endereço em silêncio")
+                              _troca)) == sorted(_REMAPEAVEIS),
+           "o `data-linha` das listas com gesto da troca não é o que o motor "
+           "alcança — o Guardar descartaria a linha sem endereço em silêncio")
+    _apagadas = _re.findall(
+        r'<select class="campo-linha" data-linha="([^"]+)" disabled>(.*?)</select>',
+        _troca)
+    exigir(sorted(_linha for _linha, _ops in _apagadas) == _fora_da_troca,
+           f"as listas apagadas da troca são {sorted(a for a, _o in _apagadas)}, e "
+           f"as que o motor recusa são {_fora_da_troca} — uma lista clicável "
+           "numa linha que a troca não alcança segura todo Guardar sem dizer qual")
+    exigir(all(_re.findall(r"<option[^>]*>(.*?)</option>", _ops) == [SEM_TROCA]
+               for _linha, _ops in _apagadas),
+           f"uma lista apagada da troca oferece mais que {SEM_TROCA!r} — o estado "
+           "real dessas linhas é sempre sem troca")
+    exigir(_troca.count("<select") == len(_REMAPEAVEIS) + len(_fora_da_troca),
+           "a troca de botões tem lista que não é nem das dezesseis nem das seis")
     _pintadas = _troca.count('data-campo="' + PREFIXO_DA_TROCA)
     exigir(_pintadas == len(_REMAPEAVEIS),
            f"a troca de botões pinta {_pintadas} linhas, e a troca alcança "

@@ -288,7 +288,7 @@ async def restore_last_profile(daemon: DaemonProtocol) -> None:
     """
     from functools import partial
 
-    from hefesto_dualsense4unix.profiles.manager import ProfileManager
+    from hefesto_dualsense4unix.profiles.manager import ProfileManager, _canal_do_ps
     from hefesto_dualsense4unix.utils.session import (
         load_last_profile,
         resolve_boot_profile,
@@ -359,15 +359,13 @@ async def restore_last_profile(daemon: DaemonProtocol) -> None:
     # restore pode rodar antes/depois do keyboard subir e após reconexão
     # (device recriado); resolver na ativação cobre todos os casos.
     #
-    # BUG-BOOT-RESTORE-FLIPS-EMULATION-01: mouse_applier=None no restore de
-    # propósito. O estado de emulação (mouse/gamepad) no boot é governado
-    # pelos FLAGS persistidos (lifecycle.py restaura antes desta chamada),
-    # não pela seção mouse do perfil. Com o applier injetado, um last_profile
-    # com mouse.enabled (ex.: point_and_click, que vira last_profile por mero
-    # autoswitch) rodava set_mouse_emulation(True) DEPOIS do gamepad já
-    # restaurado — matava o gamepad, apagava gamepad_emulation.flag e invertia
-    # a escolha persistida da usuária a cada boot. O perfil ainda aplica
-    # triggers/LEDs/teclado; só a emulação fica com os flags.
+    # BUG-BOOT-RESTORE-FLIPS-EMULATION-01: mouse_applier=None no restore de propósito. O estado
+    # de emulação (mouse/gamepad) no boot é governado pelos FLAGS persistidos (lifecycle.py
+    # restaura antes desta chamada), não pela seção mouse do perfil. Com o applier injetado, um
+    # last_profile com mouse.enabled (ex.: point_and_click, que vira last_profile por mero
+    # autoswitch) rodava set_mouse_emulation(True) DEPOIS do gamepad já restaurado — matava o
+    # gamepad, apagava gamepad_emulation.flag e invertia a escolha persistida da usuária a cada
+    # boot. O perfil ainda aplica triggers/LEDs/teclado; só a emulação fica com os flags.
     manager = ProfileManager(
         controller=daemon.controller,
         store=daemon.store,
@@ -387,12 +385,10 @@ async def restore_last_profile(daemon: DaemonProtocol) -> None:
         # razão do mouse — gamepad/nativo/co-op no boot vêm dos flags
         # persistidos (utils.session), não do perfil.
         mode_applier=None,
-        # FEAT-RUMBLE-POLICY-PROFILE-01: aqui o applier VAI injetado —
-        # diferente de mouse/mode, a política de rumble NÃO tem flag
-        # persistido próprio (reseta a "balanceado" a cada boot), então o
-        # perfil é a única fonte para restaurá-la; aplicá-la só ajusta a
-        # config (não cria/destrói devices — sem o risco do
-        # BUG-BOOT-RESTORE-FLIPS-EMULATION-01).
+        # FEAT-RUMBLE-POLICY-PROFILE-01: aqui o applier VAI injetado — diferente de mouse/mode,
+        # a política de rumble NÃO tem flag persistido próprio (reseta a "balanceado" a cada
+        # boot), então o perfil é a única fonte para restaurá-la; aplicá-la só ajusta a config
+        # (não cria/destrói devices — sem o risco do BUG-BOOT-RESTORE-FLIPS-EMULATION-01).
         rumble_policy_applier=getattr(
             daemon, "apply_profile_rumble_policy", None
         ),
@@ -413,6 +409,10 @@ async def restore_last_profile(daemon: DaemonProtocol) -> None:
         # o restauro vai com `origin="system"`, e a exceção MIC-GRAVACAO-01 só
         # deixa o mudo do firmware passar em troca EXPLÍCITA de perfil.
         mic_applier=getattr(daemon, "apply_profile_mic", None),
+        # F1-REMAPEAR-02 (13/09/2026): o canal do PS vai no boot, o MESMO `_canal_do_ps` que
+        # `gerente_do_daemon` passa às outras rotas. Sem ele a escolha do perfil para o PS só
+        # chegava ao `ps_solo` na primeira troca de perfil. Memória no hotkey, sem device.
+        ps_action_sink=_canal_do_ps(daemon),
     )
     try:
         await daemon._run_blocking(

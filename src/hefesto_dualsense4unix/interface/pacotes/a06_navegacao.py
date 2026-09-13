@@ -3772,6 +3772,20 @@ def guardar_remapeamento(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
             "não consegui ler as linhas da tela. O botão precisa do "
             "`data-hef-forma` para o piloto recolher os campos — se ele sumiu do "
             "desenho, o Guardar não tem o que gravar.")
+    # AS SEIS LINHAS QUE A TROCA NÃO ALCANÇA SÓ PASSAM COM "— Sem troca —" —
+    # F1-REMAPEAR-02, 13/09/2026. A página as entrega apagadas e com essa única
+    # opção; uma forma que traga outra coisa nelas veio de uma página velha. A
+    # guarda vem ANTES do motor porque ele deixa passar a troca por si mesmo (o
+    # PS para "PS"), e ela continua sendo recusa; a recusa do motor fica logo
+    # abaixo, para o que a guarda não vê.
+    fora = tuple(b for b in acoes.BOTOES
+                 if b in forma and b not in remap.REMAPEAVEIS
+                 and str(forma[b] or "").strip() != SEM_TROCA)
+    if fora:
+        recusa = (remap.RemapeamentoRecusadoError(remap.MOTIVO_PS, (remap.BOTAO_PS,))
+                  if remap.BOTAO_PS in fora
+                  else remap.RemapeamentoRecusadoError(remap.MOTIVO_FORA, fora))
+        raise RuntimeError(_frase_da_troca(recusa))
     declarado: dict[str, str] = {}
     for botao, rotulo in forma.items():
         if botao not in acoes.BOTOES:
