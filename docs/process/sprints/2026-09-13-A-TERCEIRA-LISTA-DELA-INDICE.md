@@ -117,4 +117,11 @@ portões verdes e nenhum botão novo:
   na branch `voo/<SPRINT>-opus`. Conferir com `git cherry onda/1309 voo/<SPRINT>-opus`.
 * **O ONDE PARAMOS do dia:**
   `docs/process/2026-09-13-ONDE-PARAMOS-a-tela-que-parou-de-narrar-e-os-quatro-microfones-no-ar.md`.
+* **As ondas:**
+  * a onda 1 nasceu de `249af1f6`, com o lote `1309-onda1`. Os resultados de
+    cada agente estão em `RESULTADOS-onda1.json`, e o estudo da SENSORES-02 ao
+    lado;
+  * a onda 2 nasceu de `e1c7d96b`, com o lote `1309-onda2`;
+  * a entrega de 09/09 da DICA-DA-COR ficou arquivada na branch
+    `voo/DICA-DA-COR-01-opus-de-0909` e não se costura.
 * Esta tabela é atualizada a cada onda, no mesmo commit que muda o estado.
