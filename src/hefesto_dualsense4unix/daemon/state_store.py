@@ -757,9 +757,9 @@ class StateStore:
         NÃO é descuido, é contrato: o único consumidor de decisão é
         `game_signal.classify` (via `Daemon._gather_game_signal_inputs`), onde
         `healthy=False` sem evidência de jogo classifica a autoridade de
-        exibição como `unknown` em vez de `daemon` — e a transição
-        `daemon -> unknown` dispara `replay_retained_game_outputs()`, que
-        REPINTA a lightbar com o que o jogo deixou retido. Fazer esta flag
+        exibição como `unknown` em vez de `daemon` — e sob `unknown` o gate da
+        camada GAME abre: a luz que o cliente Steam escrever no vpad vira camada
+        do jogo (LIGHTBAR-NA-STEAM-01 só tirou o retido do replay). Fazer a flag
         decair aqui mudaria, em silêncio, a cor do controle dela no desktop.
         Quem responde "o detector enxerga AGORA?" é `window_detect_seeing()`,
         que decai e não decide nada. Trocar o consumidor do `game_signal` de

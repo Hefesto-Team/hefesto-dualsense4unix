@@ -119,3 +119,86 @@ fecharam todos verdes.
 - `_retained_game_outputs` agora serve só à telemetria e ao disparo da defesa
   (NUMA-03). Se o journal mostrar que ninguém precisa do valor descartado, uma
   sprint futura pode enxugá-lo.
+
+## O que a validação refez e corrigiu
+
+Agente VALIDA/CORRIGE, 13/09/2026, mesma árvore e mesma branch. O daemon dela
+não foi tocado, nenhum IPC, nenhuma janela: a sprint não mexe em `interface/`, e
+as dez páginas publicadas têm os mesmos 254 `<button` e 337 `data-gesto` em
+`249af1f6` e na branch. Esta árvore não tem `.venv`: o pytest rodou com o python
+da venv dela e o `PYTHONPATH` do `.envrc-voo`, e o import foi conferido apontando
+para o `src/` DESTA árvore.
+
+### As mordidas, refeitas
+
+Cada sabotagem por script: cópia antes, prova de que o arquivo mudou, md5
+idêntico ao devolver.
+
+| arrancado | resultado |
+| --- | --- |
+| A — a entrega de volta no replay | 4 failed, as quatro do relato; com a régua nova do vpad, 5 |
+| o gate de `_game_wins` sempre aberto | 7 failed — o dublê de autoridade fecha o gate de verdade |
+| B — os campos fora do `game_output_retido_sem_jogo` | 1 failed |
+| C — os campos fora do `game_output_replicado` | 2 failed |
+| os campos fora do `game_output_retido_descartado_na_abertura` | 1 failed |
+| `players` virando `None` | 3 failed |
+| os campos fora do `game_output_retido_descartado_no_close` | **11 passed — não mordia** (achado 1) |
+| o dedup por valor do vpad (`_queue_replica` e o do `_flush_replicas`) | 1 failed, a régua nova do preço |
+| uma citação do mapa de volta a `:6346` | `validar-citacoes-de-linha.py --all` reprova: «a faixa não contém `_key_to_uniq`» |
+
+### Achados
+
+1. **O log de descarte no close carregava `cor`, `players` e `autoridade` sem
+   régua.** Esta entrega afirma os três logs; arrancar os campos do terceiro
+   deixava os 11 verdes. Curado com
+   `test_o_descarte_no_close_diz_o_que_foi_descartado` — arrancando, `KeyError: 'cor'`.
+2. **O preço do §R é maior do que a seção de cima diz, e ganhou régua.** O vpad
+   deduplica por valor dentro da sessão uhid (`_queue_replica`, em
+   `integrations/uhid_gamepad.py`; o `_replica_last` só zera no fim da sessão).
+   Com o retido descartado, não se perde só a escrita única ANTES do sinal: o
+   mesmo valor regravado depois dele, na mesma sessão, nem chega ao backend. É
+   também o que segura a cura quando o cliente Steam regrava a paleta igual já
+   sob 'game'. `TestOPrecoPeloVpad` monta o `UhidDualSense` com `os.*` dublado,
+   entrega ao `PyDualSenseController` e fixa as três respostas: a paleta fica
+   retida; regravada igual, não volta; uma cor NOVA do jogo vira camada GAME,
+   com o padrão igual ao da paleta ainda barrado.
+3. **O fato velho fora da posse foi substituído nos QUATRO lugares** (regra da
+   casa: fato errado sai de todos os lugares onde aparece). A seção de cima
+   listou três; o quarto é o comentário de
+   `test_gather_falhando_degrada_para_unknown_sem_derrubar_o_tick`, em
+   `tests/unit/test_game_signal_wiring.py`, que dizia que o replay «precisa
+   devolver as réplicas retidas». Os quatro atribuíam a mudança de cor à
+   repintura com o retido. O mecanismo foi reescrito e a conclusão de cada um
+   continua de pé: sob 'unknown' ou 'game' o gate da camada GAME abre, e a luz
+   que o cliente escrever no vpad vira camada do jogo. Mesmo número de linhas
+   em cada trecho (nenhuma citação deslocada), nenhuma asserção mudou, e a
+   decisão da JANELA-CEGA-01 (o `healthy` como trinco) ficou intacta.
+
+### Os arquivos fora da posse
+
+| arquivo | razão medida |
+| --- | --- |
+| `daemon/ipc_handlers.py`, `daemon/subsystems/luz_do_mic.py`, `daemon/subsystems/recado_do_microfone.py`, `integrations/radio_da_mesa.py` | só o número de uma citação ao backend, conferido por símbolo: `2440` é o `def _merged_desired_for_key`, `6389` o `describe_controllers`, `6427-6441` vai do `def _key_to_uniq` ao `return normalized` |
+| `daemon/state_store.py`, `tests/unit/test_janela_cega_01_o_detector_que_adoece.py`, `tests/unit/test_sinal_de_jogo_perfil_por_titulo.py`, `tests/unit/test_game_signal_wiring.py` | achado 3, só prosa; nenhuma sprint de 13/09 os nomeia no frontmatter |
+
+Nenhum está em `nao_toca:`. **Para a costura:** `luz_do_mic.py` aparece no
+frontmatter da OS-QUATRO-NO-AR-01, e o `mapa-controles.csv` no da
+JOGO-SEM-EXCLUSIVIDADE-01 e no da MIC-O-CANAL-DO-OUTRO-01. O conflito possível é
+de uma linha em cada (a citação da `luz_do_mic.py`; as linhas 69, 114 e 122 do
+mapa), e as duas réguas de citação nomeiam o que ficar podre depois.
+
+O commit desta validação só existe com `bash scripts/portoes.sh` verde, rodado
+depois do `git add -A`.
+
+### O que a validação não verificou
+
+- Nada no aparelho nem no journal real: as perguntas da MESA-DE-QUATRO-01
+  seguem abertas.
+- A corrida entre `_game_wins()` e `_autoridade_de_exibicao()`: o provider é
+  consultado duas vezes sob o `_io_lock`, e quem muda o sinal é outra thread.
+  Um flip entre as duas leituras faria o journal dizer `autoridade=game` num
+  `game_output_retido_sem_jogo`. Só a telemetria erraria, a decisão não; não
+  medi nem curei.
+- Se algum jogo depende da escrita de LED de jogador feita antes do sinal.
+- A transição `daemon -> unknown` com o `Daemon` inteiro e o backend real.
+- A suíte inteira (ordem da leva: só arquivos pontuais).
