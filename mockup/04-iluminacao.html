@@ -1175,9 +1175,11 @@
 
      E OS BOTÕES ACEITAVAM O CLIQUE. Os dez endereços dessa coluna levantam
      `ValueError: … o clique não disse em qual controle`, e
-     `hefesto_vivo._recusou_dizendo` só leva `RuntimeError` à tela: dez botões
+     `hefesto_vivo._recusou_dizendo` só levava `RuntimeError` à tela: dez botões
      que engoliam o toque sem uma letra. Escondê-los é o que fecha isso — o que
-     não existe não pode aceitar clique, e não precisa de frase nova.
+     não existe não pode aceitar clique, e não precisa de frase nova. (Desde
+     13/09/2026 nenhuma recusa chega à tela como frase: as duas exceções vão ao
+     diário e o botão pisca — a docstring de `_recusou_dizendo` diz por quê.)
 
      `!important` NÃO É ÊNFASE: a cor do plástico e a largura da barra são
      `style=` INLINE, escritos pelo gerador, e regra externa não os vence sem
@@ -1597,8 +1599,11 @@
      A LARGURA TEM TETO DE 12 PX, e o `100% - 2px` impede o X e o contorno
      branco de vazarem da pílula se ela encolher. A ALTURA VEM DE
      `aspect-ratio`, e não do mesmo `min()`: os dois `100%` respondem a caixas
-     diferentes (26 de altura, 14 de largura), e com `min()` nos dois eixos o X
-     saía 8,94 x 12 — medido na entrega de 10/09 (`65838cf4`).
+     diferentes (a largura e a altura por dentro da pílula), e com `min()` nos
+     dois eixos o X saía 8,94 x 12 na pílula de 10,94 px que a janela tinha a
+     1222 px — medido na entrega de 10/09 (`65838cf4`). A pílula de hoje é mais
+     larga (14,5 px por dentro a 1212 px), e o `aspect-ratio` é o que segura o
+     quadrado se ela voltar a ficar mais estreita que o teto.
 
      Quem morde: `tests/unit/test_o_x_do_vizinho_e_quadrado.py`. */
   .guia .tom.tomado::after{
@@ -1740,7 +1745,9 @@
      seria um segundo vocabulário para o mesmo fato.
      O CURSOR CAI PARA `default` porque `pointer` é uma promessa: ele diz "isto
      responde ao clique" antes de qualquer dica ser lida. O botão CONTINUA
-     clicável de propósito — quem insistir ouve a recusa em vez de nada. */
+     clicável de propósito — quem insistir vê o botão piscar a recusa em vez de
+     nada; a frase do daemon vai ao diário, e não à tela (13/09/2026, a
+     docstring de `hefesto_vivo._recusou_dizendo`). */
   .players button.fora{border-color:var(--border-forte);color:var(--linha);
                        cursor:default}
   /* O ANEL É O DONO DO NÚMERO, na cor do plástico dele — e é ele que diz com
