@@ -1,6 +1,6 @@
 ---
 sprint: FRASES-E-DICAS-02
-estado: aberta
+estado: feita
 onda: A-TERCEIRA-LISTA-DELA
 posse:
   FRASES-E-DICAS-02:
@@ -31,6 +31,8 @@ nao_toca:
 ---
 
 # FRASES-E-DICAS-02 — as dicas e as linhas que avisam viram estado
+
+> **ESTADO 2026-09-13: feita** — [a entrega](../agentes/2026-09-13/FRASES-E-DICAS-02-opus.md)
 
 Nasceu em 13/09/2026 da partição da
 [FRASES-E-DICAS-01](2026-09-13-FRASES-E-DICAS-01-toda-frase-de-aviso-que-ainda-chega-a-tela.md),
