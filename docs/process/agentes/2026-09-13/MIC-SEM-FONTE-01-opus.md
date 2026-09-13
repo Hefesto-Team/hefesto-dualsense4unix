@@ -159,8 +159,8 @@ limpa.
 | V4 | com a fonte publicada, o microfone apaga igual | 2 failed |
 | V5 | a chave ausente apaga | 1 failed |
 | V6 | o cinza de todos sai da primeira entrada do estado | 1 failed (a mesa mista) |
-| V7 | o 🎙 entra no seletor do `sem-fonte` | 1 failed |
-| **V7b** | `[data-apagado] .vol`: apaga a linha onde o 🎙 mora | **1 passed**, achado |
+| V7 | o [mic] entra no seletor do `sem-fonte` | 1 failed |
+| **V7b** | `[data-apagado] .vol`: apaga a linha onde o [mic] mora | **1 passed**, achado |
 | **V7c** | `[data-apagado^="sem"] .mudo-i` | **1 passed**, achado |
 | V8 | o `.trilho` sai da regra de opacidade | 1 failed |
 | V9 | a página publicada volta à base | 6 failed |
@@ -169,7 +169,7 @@ limpa.
 
 **O ACHADO, CORRIGIDO EM `98f7cd59`.** `test_sem_fonte_so_o_deslizante_apaga`
 procurava `.mudo-i` e `.rota` no texto do alvo e só casava duas grafias do
-atributo. A V7b passava verde, e no piloto oculto deixava o 🎙 do P2 com
+atributo. A V7b passava verde, e no piloto oculto deixava o [mic] do P2 com
 opacidade efetiva de 0,45 (o trilho ficava a 0,2): o botão que pede o canal
 aparecia cinza com a régua verde. Agora a régua exige que toda regra que casa
 um `data-apagado` diferente de só `sem-alvo` termine em `.trilho`, `.n` ou
@@ -186,12 +186,12 @@ das cinco corridas.
 | `data-apagado` da moldura do microfone | ausente | `sem-fonte` | `sem-fonte` | ausente |
 | trilho e número (efetiva) | 1 | 0,45 | 0,2 | 1 |
 | cursor do deslizante | `pointer` | `not-allowed` | `not-allowed` | `pointer` |
-| 🎙 (efetiva e cursor) | 1, `pointer` | 1, `pointer` | **0,45**, `pointer` | 1, `pointer` |
+| [mic] (efetiva e cursor) | 1, `pointer` | 1, `pointer` | **0,45**, `pointer` | 1, `pointer` |
 | Virtual e Nativo (efetiva) | 1 | 1 | 1 | 1 |
-| alto-falante (trilho e ♪) | 1 | 1 | 1 | 1 |
+| alto-falante (trilho e botão de calar) | 1 | 1 | 1 | 1 |
 | P1 e P3, no cabo | acesos | acesos | acesos | acesos |
 
-* **O CLIQUE NO 🎙 DO P2, COM O DESLIZANTE CINZA, CHEGA AO GESTO.** O
+* **O CLIQUE NO [mic] DO P2, COM O DESLIZANTE CINZA, CHEGA AO GESTO.** O
   `mic_canal_set_detalhado` dublado recebeu o `uniq` do rádio, e o botão fez
   `hef-em-voo`, depois `hef-recusou`, e voltou. O cinza não tranca a saída.
 * **O CABO SEM PLACA** (`canal_fonte` nulo no P3, no cabo): o P3 apaga igual ao
