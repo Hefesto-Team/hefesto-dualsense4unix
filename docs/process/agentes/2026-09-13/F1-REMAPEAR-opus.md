@@ -289,3 +289,92 @@ arquivos saiu IGUAL depois.
   `entrada.bruta` do DualSense ganharam um passo entre a entrada e o gamepad
   virtual (a troca do perfil). Medido só no degrau MONTOU, com dublê, sem
   transporte.
+
+## O que a validação refez e corrigiu
+
+Agente VALIDA/CORRIGE, 13/09/2026, na mesma branch, sobre `27783824`. A
+correção é o commit `78cf7ad4`.
+
+**QUATRO RÉGUAS VIZINHAS ESTAVAM VERMELHAS, e a entrega não as rodou.** As
+"réguas afetadas" acima são 14 arquivos. As que leem a página 06, o pacote e o
+esquema do perfil são mais de 300, e rodadas em três lotes (52, 195 e 144
+arquivos) quatro casos reprovavam só nesta branch. Os mesmos arquivos passam
+no `249af1f6`, medido num `git archive` da base fora da árvore.
+
+| régua | o que era | a cura |
+| --- | --- | --- |
+| `test_a_06_a_tecla_livre_chega_ao_perfil.py::test_o_botao_ps_esta_na_lista_uma_vez_so` | contava `data-linha="ps"` na página inteira, e achou 2 | a conta recorta o gesto `linha-de-botao` |
+| `test_o_padrao_de_fabrica_cabe_na_tela_publicada.py`, dois casos | `_listas` lia todo `<select>` com `data-linha`; a lista da troca vem depois, o "— Sem troca —" dela vencia a ação, e todo padrão virava `None` | o mesmo recorte; na base, as 28 listas com `data-linha` eram todas desse gesto |
+| `test_toda_secao_de_perfil_tem_quem_a_aplique.py::test_todo_campo_do_perfil_esta_classificado` | `remapeamento` sem classificação | `SecaoDireta`, com a razão: o depósito no `store` |
+
+**O PRODUTO NÃO TINHA O DEFEITO DAS TRÊS PRIMEIRAS.** O piloto recolhe a
+`forma` de cada «Guardar» só dentro do contêiner que o `data-hef-forma` nomeia
+(`hefesto_vivo.py`, `document.getElementById(pedido)`): a forma das Definições
+nunca vê as listas da troca. Quem lia a página inteira eram as réguas.
+
+**DOIS FATOS ERRADOS, substituídos:** o comentário de `Profile.remapeamento`
+apontava `loader._payload_do_perfil` como quem omite a chave, e quem a omite é o
+serializador `_sem_ponte_a_chave_nem_aparece`; e o
+`check_cabo_bt_perfil_controle.py` descrevia `linha-de-botao` como *"a linha do
+botão a remapear"*, quando o gesto da troca é o `linha-de-troca`.
+
+Fora da `posse:`, nesta correção: as três réguas, pela razão da tabela. O
+`check_cabo_bt_perfil_controle.py` já estava na lista da entrega.
+
+### As mordidas, refeitas
+
+Roteiro próprio (`val_mordidas.py`, no rascunho), com cache de bytecode vazio a
+cada corrida: as oito da entrega e mais sete. A árvore saiu idêntica (o mesmo
+`git diff HEAD` antes e depois, status vazio).
+
+| mordida | reprovou |
+| --- | --- |
+| M1 a M8, as da entrega | as oito, com as mensagens que a entrega transcreve |
+| V9 o PS destravado no `resolver` | sim, `DID NOT RAISE` nos dois lados |
+| V10 o serializador deixa de omitir `remapeamento` | **não na régua da sprint**; sim em `test_quem_e_quem_02_o_campo_novo_nao_quebra_o_perfil_de_ontem.py::test_a_generalizacao_nao_muda_o_arquivo_de_hoje`, seis casos |
+| V11 um terceiro chamador de `traduzir`, no `hotkey.py` | sim, `test_a_troca_mora_em_dois_lugares_so` |
+| V12 o `fechar_troca` sem largar a trava | sim |
+| V13 o tique sem `_o_que_a_troca_mostra` | sim, 0 de 16 linhas |
+| V14 `guardar-remapeamento` de volta ao `SEM_GESTO` | sim |
+| V15 o gerador sem o `data-campo` da troca | sim, a autoconferência para a geração |
+
+A V10 não acusa defeito de cura. O `save_profile` também omite `None` pelo
+`loader` (`_secoes_de_topo_omitidas_quando_none`), então
+`test_perfil_sem_troca_nao_grava_a_chave` mede o arquivo e não o dump. Quem prende
+o serializador é a régua do QUEM-E-QUEM-02, a mesma que reprovou na primeira
+volta desta entrega.
+
+### A tela
+
+- **Foto e clique num Chrome headless**, a página de `249af1f6` (lida por `git
+  show`) contra a da branch. As 22 listas são as mesmas, e a dica perdeu só a
+  frase de quem navega. Antes: nenhuma lista com gesto, e o «Guardar» mandava
+  uma `forma` de uma chave só. Depois: 22 listas com gesto e com linha, 16 com
+  campo; escolher Círculo na linha da Cruz e Cruz na do PS manda os dois
+  `linha-de-troca`, e o «Guardar» manda uma `forma` de 22 chaves.
+- **O clique no WebKitGTK, que a entrega não fez:** `hefesto_vivo.py --oculta
+  --abre 06 --segundos 10 --prova-clique linha-de-troca,fechar-troca`, com
+  `HEFESTO_DUALSENSE4UNIX_SKIP_PRESET_SEED=1`, deu `gestos: 2 · aplicados: 2 ·
+  sem dono: 0`, sem Traceback. Os dois gestos não gravam, e o md5 dos 159
+  arquivos de perfil dela saiu igual.
+- **Nenhum botão novo**, contado nas duas páginas 06: `data-gesto` foi de 71 a
+  95 (22 `linha-de-troca` e 2 `fechar-troca`, em listas e links que já
+  existiam); `<button` 12, `class="btn` 15, `<select` 63, `<a ` 37 e `title=`
+  44, iguais. O gerador, rodado de novo, reproduz a página byte a byte.
+
+### O que fica, sem cura aqui
+
+- **Os recados novos.** Os quatro gestos recusam com frase: a colisão, o PS, a
+  linha fora do alcance, o botão ou o rótulo desconhecido, a linha sem botão, a
+  forma ilegível, o igual ao perfil, o apagador e o padrão já sem troca. Sobre
+  esta base essas frases ainda pousam no cartão. O canal é do piloto, que esta
+  sprint não toca, e a FRASES-E-DICAS-01, da mesma onda, o tira da tela: a
+  recusa vira piscada e a frase vai só ao diário. O `raise` é o que faz a recusa
+  existir, e sem ele o clique recusado passaria por certo. **Para quem costura:**
+  depois da FRASES-01, medir que nenhuma dessas frases chega à 06.
+- **A escolha recusada fica na lista.** As seis linhas sem endereço de pintura
+  continuam mostrando a opção recusada, e ela vai na `forma`: medido no clique,
+  `forma["ps"]` saiu `"Cruz"`. Todo «Guardar» seguinte é recusado até ela devolver
+  aquela linha ao "— Sem troca —", e depois da FRASES-01 essa recusa não terá
+  texto. A cura (dar endereço às seis e pintá-las sempre sem troca) muda o
+  gerador, a autoconferência e duas réguas, e fica para quem coordena decidir.
