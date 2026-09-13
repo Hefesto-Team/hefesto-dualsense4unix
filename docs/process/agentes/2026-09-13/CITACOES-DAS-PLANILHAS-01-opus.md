@@ -11,7 +11,7 @@ código, nenhuma tela, nenhum botão.
 | arquivo | o que mudou |
 | --- | --- |
 | `docs/data/paridade-gtk-html.csv` | 1170 números de linha |
-| `docs/data/mapa-controles.csv` | 439 números de linha |
+| `docs/data/mapa-controles.csv` | 437 números de linha |
 | `docs/data/decisoes-dela.csv` | 20 números de linha |
 | `html/specs.html` | regerado por `scripts/gerar-mapa.py`; `--check` confere |
 | `docs/data/LEIA-PRIMEIRO.md` | três números, por `scripts/check_paridade_transporte.py --leia-primeiro --escrever` |
@@ -28,7 +28,7 @@ python3 $R/reapontar.py --check      # só conta; rc=1 se há o que reapontar
 python3 $R/reapontar.py --escrever   # reaponta; depois gerar-mapa.py e --leia-primeiro --escrever
 ```
 
-Ao lado dele ficam `ancoras.json` (a âncora de cada uma das 1629 reapontadas,
+Ao lado dele ficam `ancoras.json` (a âncora de cada uma das 1627 reapontadas,
 pela posição nova) e `relatorio.tsv` (uma ocorrência por linha, com a
 categoria, o motivo e a âncora).
 
@@ -66,16 +66,17 @@ primeira corrida:
 
 **A CONTAGEM, antes e depois**, sobre as citações que resolvem nesta árvore:
 
-| planilha | citações | conferiam | reapontadas | sem âncora | conferem depois |
-| --- | --- | --- | --- | --- | --- |
-| paridade-gtk-html | 1899 | 340 | 1170 | 389 | 1510 |
-| mapa-controles | 1450 | 934 | 439 | 77 | 1373 |
-| decisoes-dela | 39 | 16 | 20 | 3 | 36 |
-| **total** | **3388** | **1290** | **1629** | **469** | **2919** |
+| planilha | citações | conferiam | reapontadas | sem âncora | nota datada | conferem depois |
+| --- | --- | --- | --- | --- | --- | --- |
+| paridade-gtk-html | 1899 | 340 | 1170 | 389 | 0 | 1510 |
+| mapa-controles | 1450 | 933 | 437 | 76 | 4 | 1370 |
+| decisoes-dela | 39 | 16 | 20 | 3 | 0 | 36 |
+| **total** | **3388** | **1289** | **1627** | **468** | **4** | **2916** |
 
-Das 1629: 1404 por linha única, 138 pelas duas pontas, 87 pelo bloco inteiro.
+Das 1627: 1402 por linha única, 138 pelas duas pontas, 87 pelo bloco inteiro.
+A coluna «nota datada» é da validação (trava 6, na seção do fim).
 
-**POR QUE 1629 E NÃO 185.** A validação da FRASES-E-DICAS-02 contou o que oito
+**POR QUE 1627 E NÃO 185.** A validação da FRASES-E-DICAS-02 contou o que oito
 arquivos de `src/` deslocaram numa sprint. O roteiro conta o que cada citação
 andou desde o commit em que foi escrita, em todo arquivo citado — a paridade
 nasceu em `548c0fbc` (03/09) e 771 das reapontadas vêm de lá. Nos três arquivos
@@ -154,7 +155,7 @@ na mensagem do commit.
 
 ## O que NÃO verifiquei
 
-* **As 1629 uma a uma.** Dez pelo símbolo e trinta pela prosa. A proporção de
+* **As 1627 uma a uma.** Dez pelo símbolo e trinta pela prosa. A proporção de
   «fora do lugar já na origem» (4 de 30) é de amostra, não de contagem.
 * **As 205 citações de página `.html` da paridade depois da costura.** As
   páginas publicadas são regeradas por quem coordena; toda citação a elas tem de
@@ -182,7 +183,7 @@ na mensagem do commit.
   386 no mapa, 4 nas decisões, 1 na paridade. Entre elas o `:373` de
   `plataforma.probe.retry@dualsense`, que a F1-REMAPEAR-02 diz nunca ter sido o
   laço de reconexão.
-* **As 469 sem âncora**, abaixo. A §R declarou o preço: âncora repetida não se
+* **As 468 sem âncora**, abaixo. A §R declarou o preço: âncora repetida não se
   chuta. Legenda: `sumiu` (a linha não existe mais no arquivo) · `repete N×` ·
   `branco` (linha em branco ou só pontuação) · `início`/`fim` (a ponta da faixa)
   · `bloco` (o bloco inteiro também não serve) · `miolo` (a faixa mudou de
@@ -252,7 +253,6 @@ na mensagem do commit.
  274  src/hefesto_dualsense4unix/core/backend_pydualsense.py:2082 ×2 — repete 43× · «try:»
  276  scripts/bt_health_watchdog.sh:165 ×2 — repete 18× · «fi»
  286  assets/dkms/hid-playstation/hid-playstation.c:1579-1596 — fim: branco · bloco sumiu · «if (hdev->bus == BUS_USB && report->id == DS_INPUT_REPORT_USB && … }»
- 292  app/mic_monitor.py:235 — sumiu · «``alsa_output.usb-Sony_Interactive_Entertainment_DualSense_Wireless_C…»
  301  src/hefesto_dualsense4unix/integrations/uinput_gamepad.py:261 — sumiu · «caps[ecodes.EV_FF] = [»
 
 # paridade-gtk-html.csv
@@ -646,3 +646,111 @@ na mensagem do commit.
  396  src/hefesto_dualsense4unix/interface/paginas/10-perfis.html:1466 — repete 4× · «<path d="M26,7 Q32,16 26,25" fill="none" stroke="currentColor" stroke…»
  397  src/hefesto_dualsense4unix/interface/paginas/10-perfis.html:1465 — repete 4× · «<path d="M22,11 Q26,16 22,21" fill="none" stroke="currentColor" strok…»
 ```
+
+## O que a validação refez e corrigiu
+
+Validação de 13/09/2026, na mesma branch, sem partir do relato. Os conferentes
+são meus e não importam o roteiro:
+
+```
+V=/tmp/claude-1000/-mnt-Apate-Desenvolvimento-hefesto-dualsense4unix/8fc26f69-7ade-42a1-9497-63eac702dfb8/scratchpad/CITACOES-DAS-PLANILHAS-01/valida
+python3 $V/conferir.py <árvore> 5000   # as reapontadas contra o git log -S literal
+python3 $V/vizinhos.py <árvore>        # a vizinhança de cada linha única
+python3 $V/completude.py <árvore>      # as que ficaram paradas deviam ficar?
+python3 $V/mordidas.py                 # M1-M6
+```
+
+**REFEITO, E DEU O MESMO:**
+
+* **Posse:** o diff cabe no frontmatter, mais a entrega e a sprint. Tirando os
+  dígitos, as três planilhas e o LEIA-PRIMEIRO são byte a byte os de `b791d234`.
+* **As reapontadas, todas:** a origem pelo `git log -S` literal, a linha lida
+  lá, igual à de hoje no número novo. 1626 iguais. Das três que não batem, duas
+  são as da linha 23 (`POR_SIMBOLO`) e a terceira é cegueira do `-S`: o commit
+  da nota de 03/09 somou e tirou o mesmo texto, e a contagem não mudou. Nenhuma
+  cai em linha em branco nem em texto que se repete hoje.
+* **A vizinhança:** das 1404 de linha única (antes da cura), 10 não têm nenhum
+  vizinho em comum com a origem. Uma é a linha 23 por símbolo; as outras nove,
+  pelo texto, são linhas próprias (chave de dicionário, `def`, constante,
+  comentário) que mudaram de bloco. A prosa dessas nove não foi lida.
+* **A completude:** das citações de linha única que NÃO mudaram, nenhuma devia
+  ter andado — 758 conferem, 203 sumiram, 72 são brancas, 149 se repetem.
+* **Botões:** 512 antes e 512 depois (as 20 páginas publicadas e o
+  `specs.html`); `data-gesto` 708 e 708. Nenhuma página de aba foi tocada, e
+  por isso não há foto.
+
+**ACHADOS E CURAS:**
+
+1. **A NOTA DATADA FOI REESCRITA — corrigido.** Na linha 138 do mapa
+   (`luz.led_jogador.escrita_hefesto@dualsense`, `radio_codigo_ref`), a nota
+   «ENDEREÇOS REAPONTADOS em 03/09/2026: liam `core/sysfs_leds.py:228` (…) e
+   `core/backend_pydualsense.py:787, :1899` (…)» teve dois números levados a
+   `:245` e `:831`. O número de dentro dela é o que a célula dizia NAQUELE DIA:
+   é registro, não endereço. E ficou pior do que estava. `:831, :1899`
+   misturava hoje com 03/09, e `:831` hoje é um comentário, não o `sendReport`
+   (que está em `:944`). A âncora do `:787` nem era a da nota: veio de
+   `d5924b5f`, a primeira vez que o mesmo texto apareceu, noutra célula. Os dois
+   números voltaram aos de `b791d234`, e o roteiro ganhou a **trava 6**
+   (`NOTA_DATADA`): o trecho de uma nota «REAPONTAD… em DD/MM/AAAA:» não anda.
+   Ela segura 4 citações: as duas daqui e duas que o acaso tinha deixado paradas
+   (`integrations/audio_control.py:314`, na linha 23, que conferia; e
+   `app/mic_monitor.py:235`, na 292, que estava sem âncora). Os trechos
+   `— OUTRA MEDIÇÃO:` foram lidos: são uma segunda medição do mesmo código, e as
+   reapontadas de dentro deles andam com o código, como devem.
+2. **UMA RÉGUA DIGITAVA O NÚMERO — corrigido, fora da posse.**
+   `tests/unit/test_vibracao_e_gatilho_no_radio_o_caminho_escrito.py` exigia o
+   texto `dualsense_bt_audio.py:225` na célula do háptico, e a reapontada certa
+   (`BLOCO_HAPTICS = 0x12` mora em `:296`) o deixou vermelho. Medido alternado:
+   com os cinco arquivos de `b791d234` no lugar ele passa; com os da branch,
+   reprova. A implementação rodou 18 dos 100 arquivos de teste que citam as
+   planilhas, e este não estava entre eles. A cura lê a linha da constante pela
+   árvore de sintaxe, que é o que o teste vizinho já faz, em vez de digitá-la.
+   É o único arquivo fora da posse, e está aqui pela razão medida: sem ele a
+   branch entrega um vermelho que só ela tem.
+3. **SEM AS ÂNCORAS GRAVADAS, O ROTEIRO ESTRAGA — corrigido no roteiro.** Sem o
+   `ancoras.json`, o `--check` sobre esta árvore acusa 16 citações CERTAS: o
+   número novo já tinha existido na planilha com outro sentido, e a história
+   dele manda andar (`a02_controles.py:544` → `:2300`, pela origem `548c0fbc`).
+   Um `--escrever` ali estragaria as 16, e o arquivo mora em `/tmp`. O roteiro
+   passou a recusar com rc=2 quando o arquivo não existe; `--sem-ancoras` é só
+   para a primeira corrida de uma árvore. As duas âncoras da nota datada saíram
+   do `ancoras.json`, que ficou com 1627 entradas.
+4. **NÃO CORRIGIDO, E NÃO É DA BRANCH.**
+   `test_o_lexico_da_aba_configuracoes.py::test_nenhum_paragrafo_de_apoio_novo_na_pagina`
+   reprovou aqui, e reprova igual com os arquivos de `b791d234` no lugar. As
+   frases vêm da topologia USB viva, e a entrega da MIC-SEM-FONTE-01 já o
+   mediu intermitente dos dois lados.
+5. **O CANÁRIO DE `$HOME` NÃO É DESTA BRANCH.** Na segunda passada dos lotes,
+   o `CANARIO-FS-01` acusou escrita no `~/.config` real (o perfil ativo, a
+   sessão e o histórico do perfil). Às 13:39:42 o daemon vivo registrou
+   `profile_activated … origin=manual`, com a janela do Hefesto em foco segundos
+   antes, e os mesmos testes da primeira passada (13:12) não deixaram rastro.
+   É o uso dela, não a suíte. Nada foi restaurado, e o piloto não foi aberto.
+
+**AS MORDIDAS, REFEITAS COM OUTRAS CITAÇÕES.** No fim, o md5 das três
+planilhas, do roteiro e das âncoras é o mesmo de antes, e o `git diff --stat`
+também.
+
+| | o que estragou | roteiro `--check` | `validar-citacoes-de-linha.py --all` |
+| --- | --- | --- | --- |
+| M1 | desfez uma reapontada: paridade:18, `home_actions.py:1641` de volta a `:1427` | rc=1, acusa `:1427 -> 1641` | rc=0 — cego |
+| M2 | trocou por vizinho uma que conferia: decisões:40, `O-REDESENHO-as-dez-abas.md:698` → `:699` | rc=1, acusa `:699 -> 698` | rc=0 — cego |
+| M3 | trocou por vizinho a PONTA de uma faixa reapontada: mapa:8, `backend_pydualsense.py:430-458` → `:431-458` | rc=1, acusa `431-458 -> 430-458` | rc=0 — cego |
+| M4 | arrancou a trava do miolo, numa cópia do roteiro | rc=1, as duas faixas de sempre (mapa:113 e mapa:220) | — |
+| M5 | arrancou a trava 6, numa cópia | rc=1, acusa `sysfs_leds.py:228 -> 245` e `backend_pydualsense.py:787 -> 831` | — |
+| M6 | tirou o arquivo de âncoras | rc=2, recusa; com `--sem-ancoras`, rc=1 e 16 acusadas | — |
+| M7 | pôs `:295` no lugar de `:296` na célula do háptico | o teste do item 2 reprova nomeando `:296` | — |
+
+**RÉGUAS VIZINHAS**, com as planilhas curadas: os 100 arquivos de `tests/unit`
+que citam as três planilhas, o `specs.html` ou o LEIA-PRIMEIRO, em quatro lotes:
+1805 passed, 1 xfailed, 1 skipped e o vermelho do item 4. Os scripts:
+`scripts/gerar-mapa.py --check`, `scripts/check_paridade_transporte.py` (com e
+sem `--leia-primeiro`), `scripts/check_paridade_gtk_html.py` e
+`scripts/validar-citacoes-de-linha.py --all` (3288 conferidas): rc=0. O
+`--check` do roteiro curado: rc=0, «OK: nenhuma citação a reapontar».
+
+**O QUE A VALIDAÇÃO NÃO VERIFICOU:** a costura, que só existe depois do
+cherry-pick (a trava 3 e as âncoras gravadas não foram exercitadas numa HEAD com
+os números velhos); a prosa das nove linhas sem vizinho em comum; e as 205
+citações de página `.html`, que só se contam depois de quem coordena regerar as
+dez.
