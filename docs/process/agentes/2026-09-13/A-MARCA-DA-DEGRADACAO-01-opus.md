@@ -194,3 +194,114 @@ Réguas pontuais na árvore curada:
    «citada em `a01_jogar.py`»; na base ela estava citada em `aba01.py` (e em
    `a02_controles.py`), não no pacote da 01. Agora a nota do `POR_CARTAO` também
    a cita.
+
+## O que a validação refez e corrigiu
+
+VALIDA/CORRIGE, 13/09/2026, na mesma branch, sem confiar no relato. Nada foi
+aberto na tela dela: os geradores, a publicação e as mordidas rodaram em `.sh`
+com `set -uo pipefail`, um `export` por variável, o lar desviado (`HOME` e os
+cinco `XDG_*` no rascunho), `HEFESTO_DUALSENSE4UNIX_SKIP_PRESET_SEED=1`, o
+`TMPDIR` no rascunho e uma guarda que sai com `exit 1` se o `HOME` não for o
+lar ou se o `XDG_RUNTIME_DIR` for o da sessão dela. O piloto não foi aberto.
+
+### Refeito
+
+**A posse.** O diff contra `9639f1df` cabe no `posse:` mais as quatro páginas
+geradas, as três réguas que exigiam a marca, a entrega e a sprint. Ficam fora
+dois arquivos, cada um com a razão medida: a régua nova (a mordida da escrita
+antes da conferência não cabia em régua nenhuma, e as dez sabotagens dela
+reprovam, ver abaixo) e o ensaio da Jogar, que esta validação corrigiu.
+
+**Os botões e os gestos**, contados fora de comentário HTML nas dez páginas
+publicadas e nas dez da bancada, na base e na branch:
+
+| | base `9639f1df` | branch |
+| --- | --- | --- |
+| `<button` (vinte páginas, dez por pasta) | 253 por pasta | 253 por pasta |
+| `data-gesto` | 346 por pasta | 346 por pasta |
+| nomes de gesto perdidos ou novos, aba a aba | — | nenhum |
+| `class="degradou"` | 8 por pasta (4 na 01, 4 na 02) | 0 |
+
+A contagem da entrega dizia 55 `data-gesto` na 02: é a conta bruta, com os
+comentários. Fora deles são 47 antes e 47 depois.
+
+**As mordidas**, todas com a âncora exigida exatamente uma vez (sabotagem que
+não acha onde morder aborta, em vez de passar calada), e cada uma devolvida com
+`git checkout` e conferida com `git diff` limpo:
+
+| # | mordida | o que se viu |
+| --- | --- | --- |
+| M1a | o `<sup>` de volta ao gerador da 01 | gerador **rc=1** («a marca da emulação degradada voltou ao cartão…»); `mockup/01` com o mesmo md5 antes e depois |
+| M1b | o `<sup>` de volta e o item 13 do `_conferir` calado, regerada e publicada | **2 failed**: `test_a_pagina_nao_tem_a_marca[01-jogar.html-bancada]` e `[01-jogar.html-publicado]` |
+| M2 | o `<sup>` de volta ao gerador da 02 | gerador **rc=1**; `mockup/02` com o mesmo md5 |
+| M3a | a 06 grava a página alterada e recusa, **com a cura** | gerador **rc=1**; `mockup/06` com o mesmo md5; a recusada ficou no provisório com a marca da mordida; o `--publicar 06` seguinte: «0 mudou de fato» |
+| M3b | a mesma recusa com o `aba06.py` inteiro da base | gerador **rc=1**; o md5 de `mockup/06` **mudou**; o `--publicar 06` seguinte: «1 mudou de fato» — o defeito da V2a reproduzido |
+| M3c | só o `aba06.py` da base | `test_a_recusa_nao_chega_a_bancada[aba06.py]` **1 failed**, pela asserção do md5; devolvido, 1 passed |
+| M3d | só o `aba02.py` da base (a forma do `SAIDA`, que grava duas vezes) | `test_a_recusa_nao_chega_a_bancada[aba02.py]` **1 failed**, pela asserção do md5 |
+| M4a | `"degradou-cartao"` de volta ao `a01_jogar.pacote` | `test_o_cartao_da_01_nao_emite_a_marca` **1 failed** |
+| M4b | `"mascara-degradou"` de volta ao card da 02 | `test_o_card_da_02_nao_emite_a_marca` **1 failed** |
+| M5 | `.mordida-da-validacao[title]` na folha da **05**, regerada e publicada | `test_nenhuma_folha_das_dez_decide_pintura_por_title` **2 failed** (bancada e publicado), apontando a `05-vibracao.html` |
+
+**O inventário dos `[title]`, reconferido.** Nenhuma folha `<style>` das vinte
+páginas tem `[title`. O que sobra nas páginas é prosa dentro de comentário (2
+na 01, 13 na 02). No resto de `interface/`, os dois `[title]` de
+`hefesto_vivo.py` (`nao_toca`) são JavaScript da camada de dicas — `colher()`
+lê o atributo e o leva para `data-hef-dica`, e `varrer()` só pergunta se ainda
+há algum a colher —, e nenhum decide pintura. Nenhum seletor de pintura por
+`[title]` ficou.
+
+**Os dez geradores, lidos um a um.** Toda escrita de página passa por
+`onde.pagina()` ou `onde.gravar()`, que resolvem o desvio na chamada, e o
+`SAIDA` da 02 é calculado dentro do `__main__`, depois do desvio: nenhuma
+escrita escapa da bancada provisória.
+
+**As réguas.** As quatro da sprint: 155 passed. As vizinhas — os 127 arquivos
+de `tests/unit` que citam `aba01`, `aba02`, `a01_jogar`, `a02_controles`,
+`_conferir`, `desenho_aprovado`, `autoconfer`, `degradou`, `degradacao_de`,
+`texto_degradacao` ou `vpad_motivo` —, em nove lotes de quinze, em série:
+**2283 passed e 1 failed**. O vermelho é
+`test_as_fotos_acompanham_a_versao.py::test_as_fotos_nao_ficam_atras_do_codigo_da_tela`,
+e **ele já existe na base**: numa árvore destacada de `9639f1df` (removida
+depois) a mesma régua dá 1 failed com «a interface mudou em f903d2b e as fotos
+de `docs/usage/assets` são de cd6a836». As fotos da documentação são de quem
+coordena, no fecho.
+
+**As fotos**, pelo Playwright headless, sem `--doc`: a base (o `mockup/` de
+`9639f1df`, que é byte a byte o publicado da base nas duas abas) e o publicado
+da branch. As duas abas saíram com o **mesmo md5** antes e depois, e lidas elas
+mostram os quatro cartões da 01 e os cards da 02 sem asterisco nenhum: sem
+`title` o `<sup>` nascia `display:none`.
+
+### Corrigido
+
+Commit `2e500dd0`:
+
+1. **O último leitor da marca.** `scripts/ensaios/a_jogar_diz_quem_e_o_primario.py`
+   (fora da posse) ainda procurava `[data-campo="degradou-cartao"]`, prometia na
+   docstring medir a marca e imprimia `degradou=` em toda cena — com a marca fora
+   do cartão, o ensaio responderia `None` sobre um endereço que não existe mais.
+   A leitura, as duas chaves do JavaScript e a coluna do relato saíram; a
+   docstring e a cena 3 dizem que a marca saiu. O `§D.1` manda tirar as réguas
+   que exigem a marca, e esta era uma delas. Conferido com `py_compile` e com
+   `node --check` sobre o JavaScript do ensaio; o ensaio não foi rodado.
+2. **Um `[title]` morto em prosa.** O comentário de `giro-no-jogo` em
+   `interface/pacotes/a02_controles.py` dizia que a folha apaga a linha por
+   `:not([title])`. O interruptor é o `aria-label` desde 11/09 (a regra
+   `.faixa .no-jogo[aria-label]` de `aba02.py`), e o bloco que ele nomeava não
+   existe com aquele nome. Reescrito no lugar, com o mesmo número de linhas.
+
+### O que a validação não verificou, ou deixou
+
+* **O WebKit do produto** e o evento `vpad_degradado` do daemon: não abri o
+  piloto nem toquei no daemon dela.
+* **Duas menções históricas à marca ficaram**, porque são registro datado e não
+  leitor: o parágrafo da docstring do `cartao()` em `aba01.py` que conta os sete
+  campos que nasceram só no ramo de cima, e o comentário de 04/09 em
+  `tests/unit/portao_a_casa_sabe_e_o_produto_nao_faz.py` sobre a saída de
+  `degradacao_de` da lista.
+* **As citações da planilha.** Além do `sinal-sumiu`, as colunas de endereço
+  das linhas 32 e 54 de `docs/data/paridade-gtk-html.csv` apontam para onde a
+  marca estava: a de `pacotes/__init__.py` apontava `def degradacao_de` e hoje
+  cai em `def normalizar`; as de `a01_jogar.py` e `a02_controles.py` caem nas
+  notas datadas; a de `aba02.py` cai no `.leia` já sem o `<sup>`. O validador de
+  citações não reprova, porque as linhas existem. É de quem é dono da planilha.
