@@ -40,6 +40,23 @@ página publicada traz, e a leitura é do DOM.
 
 A JANELA É OCULTA. Ela tem UMA tela.
 
+O TEMPO É CONDIÇÃO, NÃO RELÓGIO — FLAKE-DO-PISCA, 13/09/2026. Os marcos do
+roteiro eram ``GLib.timeout_add`` de tempo FIXO (700 ms, 2200 ms, o prazo mais
+400), e sob carga o produto atravessa essas janelas mais devagar que o relógio.
+Medido com ``stress-ng --cpu 64`` em 16 núcleos: **4 voltas reprovadas em 20**,
+sempre as mesmas três réguas — o gesto ainda em voo aos 700 ms, e a piscada
+ainda acesa aos 2,9 s porque o pouso veio tarde (o primeiro pouso chegou a
+levar 2,6 s). Produto sem defeito nenhum. Com as esperas, alternada com a
+versão velha sob a mesma carga, nenhuma reprova. E sem carga nenhuma, um gesto
+1,6 s mais lento reprova a versão velha nas mesmas três e deixa esta verde.
+
+Agora cada marco ESPERA PELA CONDIÇÃO dele, com teto (``TETO_S``) e com a frase
+do que não chegou (``_leitura``). O voo e a piscada são estados de PASSAGEM, e
+quem os fotografa é o vigia (``_VIGIA``), no instante em que o botão muda — a
+pergunta avulsa só os pegaria se chegasse dentro da janela deles, que é o
+defeito inteiro. O que é estado que FICA (a frase no cartão, o botão de volta)
+é perguntado até aparecer.
+
 AS SETE COISAS QUE ESTA RÉGUA COBRA:
 
 1. **a frase de sucesso chega ao DOM** — não ao ``desfechos``, não ao ``stderr``;
@@ -57,7 +74,8 @@ AS SETE COISAS QUE ESTA RÉGUA COBRA:
 A MORDIDA: troque ``_deu_certo_dizendo`` por ``_deu_certo`` na chamada do
 ``_gesto`` e o cartão fica mudo depois de um gesto que deu certo; apague o
 ``em_voo(alvo)`` do ouvinte e o botão fica igual durante os dois segundos de
-espera.
+espera. E A DO TEMPO: devolva os marcos de tempo fixo e rode sob a carga acima
+— reprova; com as esperas por condição, verde sob a mesma carga.
 """
 from __future__ import annotations
 
@@ -105,12 +123,44 @@ VENCE_EM_S = 3.0
 #: não tem "durante", e o estado em voo é justamente o que se vê DURANTE.
 GESTO_LENTO_S = 1.6
 
+#: QUANTO DO GESTO LENTO CORRE ANTES DE A RÉGUA LER O BOTÃO — meio segundo de
+#: repintura por cima do botão em voo. É PISO, e não marco: a leitura acontece
+#: DENTRO do gesto (ver `o_gesto_lento`), então a carga pode atrasá-la e não
+#: pode fazê-la cair depois do pouso.
+MEIO_DO_VOO_S = 0.5
+
+#: O PASSO DA ESPERA POR CONDIÇÃO. A pergunta seguinte só sai DEPOIS de a
+#: anterior voltar, então sob carga elas não se empilham.
+PASSO_MS = 50
+
+#: O TETO DE CADA ESPERA — generoso de propósito, e continua sendo régua: um
+#: gesto que nunca pousa, uma piscada que nunca apaga ou uma frase que nunca
+#: vence reprovam dizendo QUAL marco não chegou.
+TETO_S = 10.0
+
+#: O TETO DA PRIMEIRA ESPERA, a da página de pé: carregar a `02` e instalar a
+#: ponte é o passo mais pesado do roteiro, e é o que a carga mais atrasa.
+TETO_DA_PAGINA_S = 30.0
+
+#: O TETO DO ROTEIRO INTEIRO. Com o produto quebrado cada espera pode gastar o
+#: seu teto, e a reprova tem de sair nomeando o marco — não morrer no relógio
+#: de parede com "o roteiro não chegou ao fim".
+TETO_DO_ROTEIRO_S = 120.0
+
+#: QUANTO A PISCADA PODE PASSAR DE `MS_DA_PISCADA`, no relógio da página. O
+#: `setTimeout` que a apaga nunca dispara ANTES; sob carga dispara depois —
+#: medido sob `stress-ng --cpu 64`, até 79 ms além.
+FOLGA_DA_PISCADA_MS = 1500
+
 #: A FRASE QUE O DONO DO ASSUNTO MANDA. É a forma da D-12, e ela chega pelo
 #: retorno do gesto — o piloto não a inventa nem a conhece.
 FRASE_DO_DONO = "o microfone ligou, mas o canal dele está mudo no sistema"
 
-LER_A_TELA = r"""
-(function(){
+#: A LEITURA DO DOM, e ela é UMA para os dois instrumentos: a pergunta avulsa
+#: (`LER_A_TELA`) e a foto que o vigia tira no instante da mudança. Duas
+#: leituras escritas à mão divergiriam, e a régua compararia coisas diferentes.
+_LEITURA = r"""
+function(){
   const recados = [];
   for(const el of document.querySelectorAll('.hef-recado')){
     const cartao = el.closest('[data-controle],[data-uniq]');
@@ -127,7 +177,10 @@ LER_A_TELA = r"""
     });
   }
   const b = document.querySelector('[data-controle="p1"] [data-mudo="microfone"]');
-  return JSON.stringify({
+  return {
+    // O RELÓGIO DA PÁGINA, o mesmo do `setTimeout` que apaga a piscada. É ele
+    // que mede quanto ela durou: o do Python somaria o atraso da pergunta.
+    t: performance.now(),
     recados: recados,
     // A CONTA DA RÉGUA DO MOCKUP, no mesmo instante: o aviso não pode mexer no
     // número de endereços da página.
@@ -156,21 +209,90 @@ LER_A_TELA = r"""
                                    alt: Math.round(r.height)}; })(
                b.getBoundingClientRect()),
     } : null,
-  });
-})()
+  };
+}
 """
+
+LER_A_TELA = "(function(){ return JSON.stringify((" + _LEITURA + ")()); })()"
+
+#: O VIGIA DO BOTÃO — a peça que tira a régua do relógio (FLAKE-DO-PISCA).
+#:
+#: O VOO E A PISCADA SÃO ESTADOS DE PASSAGEM. Uma pergunta avulsa só os pega se
+#: chegar dentro da janela deles, e sob carga ela chega fora: aos 700 ms o gesto
+#: ainda voava, aos 2,9 s a piscada ainda estava acesa. Esperar "mais tempo" só
+#: troca a janela que falha.
+#:
+#: O `MutationObserver` entrega a mudança num microtask logo depois do script
+#: que a fez — antes de qualquer outra tarefa da página, o `setTimeout` que
+#: apaga a piscada incluído. Então a foto do pouso SEMPRE pega a piscada que o
+#: pouso acendeu, com a carga que for.
+#:
+#: SÓ ANOTA QUANDO O BOTÃO MUDA: a repintura mexe no documento dez vezes por
+#: segundo, e a assinatura barata evita uma leitura cheia por tique. E ele
+#: confere a PONTE neste documento — o `pronto` do piloto é do documento em que
+#: ele instalou, e uma carga nova de página a leva embora.
+_VIGIA = r"""
+function(ler){
+  if(!(window.__hef && window.__hef.voltouDoVoo)) return 'sem ponte';
+  const seletor = '[data-controle="p1"] [data-mudo="microfone"]';
+  if(!document.querySelector(seletor)) return 'sem botão';
+  if(window.__reguaTrilha) return 'vigiando';
+  const trilha = window.__reguaTrilha = [];
+  let visto = null;
+  function anotar(){
+    const b = document.querySelector(seletor);
+    const assinatura = b
+      ? b.className + '|' + (b.getAttribute('data-hef-voo') || '') + '|' + b.innerHTML
+      : '';
+    if(assinatura === visto) return;
+    visto = assinatura;
+    trilha.push(ler());
+  }
+  new MutationObserver(anotar).observe(document.documentElement,
+    {subtree: true, childList: true, attributes: true, characterData: true});
+  anotar();
+  return 'vigiando';
+}
+"""
+
+VIGIAR_O_BOTAO = "JSON.stringify((" + _VIGIA + ")(" + _LEITURA + "))"
 
 #: O CLIQUE, no 🎙 do cartão do p1 — o botão do produto, com o `data-mudo` que a
 #: página publicada traz. Clicar por coordenada é a armadilha que esta casa já
-#: pagou duas vezes.
-CLICAR_NO_MIC = r"""
-(function(){
+#: pagou duas vezes. O MARCO entra na trilha ANTES do clique, e é por ele que a
+#: espera separa o voo deste clique do voo do anterior.
+_CLICAR_NO_MIC = r"""
+function(marco){
   const b = document.querySelector('[data-controle="p1"] [data-mudo="microfone"]');
   if(!b) return 'NAO ACHEI O BOTAO DO MICROFONE NO CARTAO DO P1';
+  if(!window.__reguaTrilha) return 'SEM O VIGIA — o clique não teria marco na trilha';
+  window.__reguaTrilha.push({marco: marco, t: performance.now()});
   b.click();
   return 'cliquei';
-})()
+}
 """
+
+#: AS FOTOS DE UM CLIQUE: da marca dele até a marca do próximo.
+_TRILHA_DESDE = r"""
+function(marco){
+  const trilha = window.__reguaTrilha || [];
+  let i = trilha.length - 1;
+  while(i >= 0 && trilha[i].marco !== marco) i -= 1;
+  if(i < 0) return JSON.stringify(null);
+  let fim = i + 1;
+  while(fim < trilha.length && trilha[fim].marco === undefined) fim += 1;
+  return JSON.stringify(trilha.slice(i + 1, fim));
+}
+"""
+
+
+def _clicar_no_mic(marco: str) -> str:
+    return "(" + _CLICAR_NO_MIC + ")(" + json.dumps(marco) + ")"
+
+
+def _trilha_desde(marco: str) -> str:
+    return "(" + _TRILHA_DESDE + ")(" + json.dumps(marco) + ")"
+
 
 #: O RÓTULO EM VOO QUE UMA PÁGINA PUBLICARIA. A `09` publicará
 #: `data-hef-em-voo="Reaplicando…"`; aqui a régua o escreve no botão da `02`,
@@ -184,6 +306,49 @@ PUBLICAR_O_ROTULO = r"""
   return b.innerHTML;
 })()
 """
+
+
+def _pouso(trilha: object) -> dict | None:
+    """A foto em que o 🎙 SAIU do voo depois de ter entrado nele — ou nada ainda.
+
+    É a condição de quase todo marco deste roteiro, e é a que a sprint nomeia:
+    *o campo sair de `hef-em-voo`*. A foto é do INSTANTE do pouso, tirada pelo
+    vigia no mesmo passo em que o `voltouDoVoo` tirou a classe — e é por isso
+    que ela traz a piscada acesa sem depender de a pergunta chegar a tempo.
+
+    O QUE SE LÊ É O CARIMBO (`data-hef-voo`), e não a classe: os dois entram no
+    mesmo passo e saem no mesmo passo. Medido por mordida em 13/09/2026 —
+    lendo a classe, arrancá-la do ouvinte reprovava DOZE réguas (as de frase
+    inclusive, que nada têm com o voo); lendo o carimbo, reprova só a do voo.
+    """
+    voou = False
+    for foto in trilha if isinstance(trilha, list) else []:
+        botao = foto.get("botao")
+        if botao is None:
+            continue
+        if botao["voo"]:
+            voou = True
+        elif voou:
+            return foto
+    return None
+
+
+def _apagou(trilha: object) -> dict | None:
+    """A foto em que a piscada do pouso apagou, com quanto ela durou.
+
+    As duas pontas da duração são do relógio da PÁGINA — o do `setTimeout` que
+    apaga. Sem piscada no pouso não há o que apagar, e a espera vence no teto:
+    a régua irmã já reprova o pouso que não piscou.
+    """
+    fotos = trilha if isinstance(trilha, list) else []
+    pouso = _pouso(fotos)
+    if pouso is None or not pouso["botao"]["deu_certo"]:
+        return None
+    for foto in fotos[fotos.index(pouso) + 1:]:
+        botao = foto.get("botao")
+        if botao is not None and not botao["deu_certo"]:
+            return dict(foto, piscada_ms=round(foto["t"] - pouso["t"]))
+    return None
 
 
 #: O PERFIL ATIVO PRECISA EXISTIR NO DISCO — 05/09/2026. Desde que a aba 02
@@ -210,7 +375,7 @@ def _perfil_ativo_no_disco() -> None:
 
 @pytest.fixture(scope="module")
 def medido() -> dict:
-    """Abre o piloto DE VERDADE, oculto, e roda o roteiro de tempo."""
+    """Abre o piloto DE VERDADE, oculto, e roda o roteiro — marco a marco, por condição."""
     gi = pytest.importorskip("gi", reason="a GUI precisa do PyGObject do sistema")
     gi.require_version("Gtk", "3.0")
     gi.require_version("WebKit2", "4.1")
@@ -220,6 +385,7 @@ def medido() -> dict:
         pytest.skip("sem sessão gráfica — o WebKit não abre")
 
     import argparse
+    import threading
     import time as _time
 
     import hefesto_vivo as hv
@@ -269,7 +435,16 @@ def medido() -> dict:
         sem_cravado=False, sem_selo=False,
     )
     piloto = hv.Piloto(args)
-    fora: dict[str, object] = {"produto": do_produto}
+    #: O QUE NÃO CHEGOU, por marco — é daqui que `_leitura` tira a reprova.
+    faltou: dict[str, str] = {}
+    #: QUANTO CADA ESPERA LEVOU, para quem for recalibrar um teto.
+    esperas_s: dict[str, float] = {}
+    fora: dict[str, object] = {"produto": do_produto, "faltou": faltou,
+                               "esperas_s": esperas_s}
+    # O ROTEIRO PARA DE PERGUNTAR QUANDO A FIXTURE FECHA. Uma espera pendente
+    # que acordasse depois do `destroy` perguntaria a uma janela que já não
+    # existe — dentro do laço do PRÓXIMO teste de GUI do mesmo processo.
+    no_ar = {"sim": True}
 
     def ler(rotulo: str):
         def _leu(valor, erro):
@@ -290,93 +465,176 @@ def medido() -> dict:
         """
         hv.pacotes.GESTOS[chave] = fn
 
-    def antes_do_clique() -> bool:
+    def esperar(marco: str, pergunta: str, achar, depois, o_que: str,
+                teto_s: float = TETO_S) -> None:
+        """UMA espera por condição: pergunta, e só segue quando `achar` achar.
+
+        `achar` recebe a resposta já lida do JSON e devolve o que guardar no
+        marco — ou `None`, para perguntar de novo. No teto o roteiro SEGUE, e o
+        marco fica em `faltou` com a frase do que não chegou: as outras réguas
+        continuam medindo o que é delas, e a deste marco reprova dizendo o quê.
+        """
+        comeco = _time.monotonic()
+
+        def perguntar() -> bool:
+            if no_ar["sim"]:
+                piloto.ponte.perguntar(pergunta, respondeu)
+            return False
+
+        def respondeu(valor, erro) -> None:
+            if not no_ar["sim"]:
+                return
+            leitura = None
+            if erro is None and valor is not None:
+                try:
+                    leitura = json.loads(str(valor))
+                except ValueError:
+                    leitura = None
+            achado = None if leitura is None else achar(leitura)
+            gasto = _time.monotonic() - comeco
+            if achado is not None:
+                fora[marco] = achado
+                esperas_s[marco] = round(gasto, 2)
+                depois()
+            elif gasto >= teto_s:
+                visto = f"ERRO {erro}" if erro is not None else repr(leitura)
+                faltou[marco] = (f"{o_que} — não chegou em {teto_s:.0f} s; a "
+                                 f"última leitura foi …{visto[-500:]}")
+                depois()
+            else:
+                GLib.timeout_add(PASSO_MS, perguntar)
+
+        perguntar()
+
+    def comecar() -> bool:
+        piloto._ir(args.abre)
         # A PÁGINA TEM DE ESTAR PRONTA, e não "já deve ter carregado": sem o
         # bootstrap o `el.click()` acha o botão sem ouvinte que responda — o
         # clique some, calado. Já custou uma medição a esta casa.
-        if not piloto.pronto:
-            return True
+        esperar("vigia", VIGIAR_O_BOTAO,
+                lambda v: v if v == "vigiando" and piloto.pronto else None,
+                o_sucesso_calado,
+                "a página 02 de pé, com a ponte do piloto e o 🎙 do p1",
+                teto_s=TETO_DA_PAGINA_S)
+        return False
+
+    def o_sucesso_calado() -> None:
         piloto.ponte.perguntar(LER_A_TELA, ler("antes"))
-        piloto.ponte.perguntar(CLICAR_NO_MIC, anotar("clique-1"))
-        GLib.timeout_add(700, depois_do_sucesso)
-        return False
+        piloto.ponte.perguntar(_clicar_no_mic("clique-1"), anotar("clique-1"))
+        esperar("depois-do-sucesso", _trilha_desde("clique-1"), _pouso,
+                a_piscada_apaga, "o 🎙 pousar (o carimbo `data-hef-voo` sair) depois do clique 1")
 
-    def depois_do_sucesso() -> bool:
-        piloto.ponte.perguntar(LER_A_TELA, ler("depois-do-sucesso"))
-        GLib.timeout_add(2200, sobreviveu)
-        return False
+    def a_piscada_apaga() -> None:
+        # A PISCADA DO POUSO APAGA SOZINHA, com a repintura correndo por cima
+        # o tempo todo.
+        esperar("depois-de-muitos-tiques", _trilha_desde("clique-1"), _apagou,
+                com_a_frase_do_dono,
+                "a piscada do clique 1 acender no pouso e apagar sozinha")
 
-    def sobreviveu() -> bool:
-        # ~22 tiques de 100 ms depois do clique: a repintura correu por cima.
-        piloto.ponte.perguntar(LER_A_TELA, ler("depois-de-muitos-tiques"))
-        GLib.timeout_add(int(VENCE_EM_S * 1000) + 400, venceu)
-        return False
-
-    def venceu() -> bool:
-        piloto.ponte.perguntar(LER_A_TELA, ler("depois-de-vencer"))
-        GLib.timeout_add(300, com_a_frase_do_dono)
-        return False
-
-    def com_a_frase_do_dono() -> bool:
+    def com_a_frase_do_dono() -> None:
         # A FRASE DO DONO DO ASSUNTO, pelo retorno do gesto. É a forma da D-12.
+        # O `_depositar` pinta NA HORA e antes do pouso, então a foto do pouso
+        # já traz a frase no cartão.
         por_gesto(lambda ctx, o, p: {"recado": FRASE_DO_DONO,
                                      "mesa": {"perfil-ativo": "regua"}})
-        piloto.ponte.perguntar(CLICAR_NO_MIC, anotar("clique-2"))
-        GLib.timeout_add(700, leu_a_frase_do_dono)
-        return False
+        piloto.ponte.perguntar(_clicar_no_mic("clique-2"), anotar("clique-2"))
+        esperar("com-a-frase-do-dono", _trilha_desde("clique-2"), _pouso,
+                a_frase_vence, "o 🎙 pousar (o carimbo `data-hef-voo` sair) depois do clique 2")
 
-    def leu_a_frase_do_dono() -> bool:
-        piloto.ponte.perguntar(LER_A_TELA, ler("com-a-frase-do-dono"))
-        GLib.timeout_add(int(VENCE_EM_S * 1000) + 400, agora_a_recusa)
-        return False
+    def a_frase_vence() -> None:
+        # E O 🎙 EM REPOUSO ANTES DO PRÓXIMO CLIQUE: o gesto da frase também
+        # pisca, e sem frase no cartão a espera terminaria na hora — a recusa
+        # pousaria com a piscada do clique 2 ainda acesa e pareceria piscar
+        # verde. Medido por mordida em 13/09/2026; o relógio fixo de antes
+        # escondia isto esperando 3,4 s.
+        esperar("depois-de-vencer", LER_A_TELA,
+                lambda leitura: leitura if (
+                    not _frases(leitura) and leitura["botao"]
+                    and not leitura["botao"]["deu_certo"]) else None,
+                agora_a_recusa,
+                f"a frase do dono sair do cartão ({VENCE_EM_S:.0f} s de prazo "
+                f"nesta medição), com o 🎙 em repouso",
+                teto_s=VENCE_EM_S + TETO_S)
 
-    def agora_a_recusa() -> bool:
+    def agora_a_recusa() -> None:
         # E A RECUSA, PARA COMPARAR OS DOIS TONS no mesmo cartão e no mesmo dia.
         def recusa(ctx, o, p):
             raise RuntimeError("o daemon não confirmou o mudo do microfone")
 
         por_gesto(recusa)
-        piloto.ponte.perguntar(CLICAR_NO_MIC, anotar("clique-3"))
-        GLib.timeout_add(700, leu_a_recusa)
-        return False
+        piloto.ponte.perguntar(_clicar_no_mic("clique-3"), anotar("clique-3"))
+        esperar("com-a-recusa", _trilha_desde("clique-3"), _pouso,
+                o_gesto_lento,
+                "o 🎙 pousar (o carimbo `data-hef-voo` sair) depois do clique 3, o que recusa")
 
-    def leu_a_recusa() -> bool:
-        piloto.ponte.perguntar(LER_A_TELA, ler("com-a-recusa"))
-        GLib.timeout_add(300, o_gesto_lento)
-        return False
-
-    def o_gesto_lento() -> bool:
+    def o_gesto_lento() -> None:
         # O ESTADO EM VOO, e ele só existe DURANTE. Um gesto instantâneo não tem
         # "durante": o `daemon.reload` do produto leva 9,5 s, e é essa espera que
         # a decisão dela manda anunciar.
-        por_gesto(lambda ctx, o, p: (_time.sleep(GESTO_LENTO_S), None)[1])
+        #
+        # A LEITURA MORA DENTRO DO GESTO, e é o que a torna imune à carga: o
+        # pouso só é agendado quando o gesto volta, e o gesto só volta depois de
+        # a leitura voltar. As duas atravessam a mesma fila até a página, na
+        # ordem — a foto é DURANTE o voo por construção, não por relógio.
+        def lento(ctx, o, p):
+            leu = threading.Event()
+
+            def ler_no_voo() -> bool:
+                def _leu(valor, erro):
+                    ler("no-meio-do-voo")(valor, erro)
+                    leu.set()
+
+                if no_ar["sim"]:
+                    piloto.ponte.perguntar(LER_A_TELA, _leu)
+                return False
+
+            _time.sleep(MEIO_DO_VOO_S)
+            GLib.idle_add(ler_no_voo)
+            if not leu.wait(TETO_S):
+                faltou["no-meio-do-voo"] = (
+                    f"a leitura do botão durante o gesto lento — não voltou em "
+                    f"{TETO_S:.0f} s")
+            _time.sleep(max(0.0, GESTO_LENTO_S - MEIO_DO_VOO_S))
+
+        por_gesto(lento)
         piloto.ponte.perguntar(PUBLICAR_O_ROTULO, anotar("rotulo-original"))
-        piloto.ponte.perguntar(CLICAR_NO_MIC, anotar("clique-4"))
-        GLib.timeout_add(500, no_meio_do_voo)
-        return False
+        piloto.ponte.perguntar(_clicar_no_mic("clique-4"), anotar("clique-4"))
+        esperar("pouso-do-lento", _trilha_desde("clique-4"), _pouso,
+                depois_do_pouso,
+                "o 🎙 pousar (o carimbo `data-hef-voo` sair) depois do gesto lento",
+                teto_s=GESTO_LENTO_S + 2 * TETO_S)
 
-    def no_meio_do_voo() -> bool:
-        piloto.ponte.perguntar(LER_A_TELA, ler("no-meio-do-voo"))
-        GLib.timeout_add(int(GESTO_LENTO_S * 1000) + 700, pousou)
-        return False
+    def depois_do_pouso() -> None:
+        # O QUE SE LÊ AQUI É ESTADO QUE FICA — o botão fora do voo, o rótulo
+        # devolvido, a recusa viva por 30 s. Por isso o meio segundo
+        # abaixo é PISO e não marco: a carga só pode atrasá-lo, e atrasar não
+        # muda nenhuma destas leituras. É a repintura correndo por cima do botão
+        # que acabou de voltar.
+        #
+        # E O `fim()` MORA NA RESPOSTA, não num relógio depois da pergunta: um `fim()`
+        # agendado podia fechar o laço antes de a leitura voltar, e o marco
+        # sumia com a janela.
+        def ler_e_fechar(valor, erro) -> None:
+            ler("depois-do-pouso")(valor, erro)
+            fim()
 
-    def pousou() -> bool:
-        piloto.ponte.perguntar(LER_A_TELA, ler("depois-do-pouso"))
-        GLib.timeout_add(500, fim)
-        return False
+        def perguntar() -> bool:
+            if no_ar["sim"]:
+                piloto.ponte.perguntar(LER_A_TELA, ler_e_fechar)
+            return False
 
-    def fim() -> bool:
+        GLib.timeout_add(500, perguntar)
+
+    def fim() -> None:
         fora["desfechos"] = {k: list(v) for k, v in piloto.desfechos.items()}
         fora["deposito"] = {k: [v[0], v[2]] for k, v in piloto._recados.items()}
         Gtk.main_quit()
-        return False
 
-    GLib.timeout_add(400, lambda: piloto._ir(args.abre))
-    GLib.timeout_add(2000, antes_do_clique)
+    GLib.timeout_add(400, comecar)
     # O RELÓGIO DE SEGURANÇA GUARDA O SEU `id` e é desarmado no `finally`: um
     # `timeout_add` pendente depois da fixture dispara DENTRO do laço do PRÓXIMO
     # teste de GUI do mesmo processo. Já matou onze medições de um vizinho.
-    guarda = GLib.timeout_add(60000, Gtk.main_quit)
+    guarda = GLib.timeout_add(int(TETO_DO_ROTEIRO_S * 1000), Gtk.main_quit)
     try:
         # O LAÇO REENTRA ATÉ O ROTEIRO ACABAR, e isto NÃO é zelo — é um defeito
         # MEDIDO em 04/09/2026. Rodada sozinha, esta régua fecha em 17,7 s e
@@ -388,22 +646,23 @@ def medido() -> dict:
         #
         # Um `timeout_add` não morre com o `main_quit`, então reentrar no laço
         # retoma o roteiro exatamente de onde ele estava. O relógio de parede é
-        # o teto real, e ele é o mesmo de antes.
+        # o teto real: `TETO_DO_ROTEIRO_S`.
         #
         # A CONDIÇÃO É A ÚLTIMA ETAPA DO ROTEIRO, E ISSO CUSTOU UMA MEDIÇÃO —
         # 04/09/2026, na integração desta leva. Ela era `"depois-do-pouso" not
-        # in fora`, que é a PENÚLTIMA: quem preenche `desfechos` é o `fim()`,
-        # agendado 500 ms DEPOIS do `pousou()`. Rodada sozinha a janela dava
-        # tempo; rodada no lote, o `main_quit` do vizinho caía exatamente nesses
-        # 500 ms, o laço via a condição satisfeita e voltava sem `desfechos` —
-        # `KeyError`, reprodutível, e o produto sem defeito nenhum.
+        # in fora`, que é a PENÚLTIMA: quem preenche `desfechos` é o `fim()`.
+        # Rodada sozinha a janela dava tempo; rodada no lote, o `main_quit` do
+        # vizinho caía exatamente entre as duas, o laço via a condição
+        # satisfeita e voltava sem `desfechos` — `KeyError`, reprodutível, e o
+        # produto sem defeito nenhum.
         #
         # Esperar pelo penúltimo passo de um roteiro é esperar por quase tudo, e
         # "quase tudo" é o que falha só quando há vizinho.
-        limite = _time.monotonic() + 60.0
+        limite = _time.monotonic() + TETO_DO_ROTEIRO_S
         while "desfechos" not in fora and _time.monotonic() < limite:
             Gtk.main()
     finally:
+        no_ar["sim"] = False
         GLib.source_remove(guarda)
         # E O PILOTO TAMBÉM PARA: o tique é um `timeout_add` que se reagenda
         # para sempre, e deixá-lo vivo faria esta janela pintar por cima de todo
@@ -418,11 +677,25 @@ def medido() -> dict:
             hv.pacotes.GESTOS[chave] = velho
         MESA["estado"] = ESTADO
     assert "desfechos" in fora, (
-        f"o roteiro não chegou ao fim — o que voltou foi {sorted(fora)}. "
-        f"O último passo é o `fim()`, e é ele que guarda os `desfechos`: "
-        f"esperar por qualquer passo anterior deixa a régua verde sobre uma "
-        f"medição pela metade.")
+        f"o roteiro não chegou ao fim — o que voltou foi {sorted(fora)}, e o "
+        f"que não chegou foi {faltou}. O último passo é o `fim()`, e é ele que "
+        f"guarda os `desfechos`: esperar por qualquer passo anterior deixa a "
+        f"régua verde sobre uma medição pela metade.")
     return fora
+
+
+def _leitura(medido: dict, marco: str) -> dict:
+    """A foto de um marco do roteiro — ou a reprova dizendo o que não chegou.
+
+    Cada marco é uma espera por condição com teto. Quando o teto vence, a foto
+    não existe, e `medido[marco]` daria um `KeyError` que não diz nada: aqui
+    sai, no lugar dele, a frase do que o produto não fez.
+    """
+    falta = medido["faltou"].get(marco)
+    assert falta is None, f"o marco `{marco}` não chegou: {falta}"
+    assert marco in medido, (
+        f"o roteiro não passou pelo marco `{marco}`: {sorted(medido)}")
+    return medido[marco]
 
 
 def _r(leitura: object) -> list[dict]:
@@ -438,14 +711,16 @@ def _frases(leitura: object) -> list[str]:
 # 0. o gesto deu certo — senão não há o que medir
 # --------------------------------------------------------------------------
 def test_o_gesto_aplicou(medido: dict) -> None:
+    assert _leitura(medido, "vigia") == "vigiando"
     assert medido["clique-1"] == "cliquei", medido["clique-1"]
     assert medido["desfechos"].get("02-controles.html:mudo"), medido["desfechos"]
 
 
 def test_a_tela_estava_muda_antes(medido: dict) -> None:
     """A LINHA DE BASE. Sem ela, uma página que já tivesse um aviso passaria."""
-    assert _frases(medido["antes"]) == [], (
-        f"a página já tinha aviso antes do clique: {_frases(medido['antes'])}")
+    antes = _leitura(medido, "antes")
+    assert _frases(antes) == [], (
+        f"a página já tinha aviso antes do clique: {_frases(antes)}")
 
 
 # --------------------------------------------------------------------------
@@ -470,8 +745,13 @@ def test_o_sucesso_calado_pisca_e_nao_fala(medido: dict) -> None:
     AS DUAS ASSERÇÕES, e nenhuma vale sozinha: o botão com a classe (a tela
     respondeu) e o DOM sem frase (a palavra saiu). Sem a segunda, o Passo 4
     poderia entrar com o ``"Pronto."`` ainda na tela e esta régua não veria.
+
+    A FOTO É DO INSTANTE DO POUSO desde 13/09/2026 (FLAKE-DO-PISCA), e o DOM
+    sem frase é conferido duas vezes: no pouso e quando a piscada apaga, um
+    segundo e meio de repintura depois. Uma frase que só o tique trouxesse
+    apareceria na segunda.
     """
-    botao = medido["depois-do-sucesso"]["botao"]
+    botao = _leitura(medido, "depois-do-sucesso")["botao"]
     assert botao and botao["deu_certo"], (
         "o gesto deu certo e o campo não piscou — é o defeito que a D-01 fecha, "
         f"na forma que ela escolheu na 03-Q4: {botao}")
@@ -490,18 +770,25 @@ def test_o_sucesso_calado_pisca_e_nao_fala(medido: dict) -> None:
     # pagou exatamente este preço em 04/09, quando o `cursor` saiu `pointer` e
     # não `progress` porque as dez páginas declaram `cursor` nos botões. É a
     # mesma classe de defeito, medida, no mesmo arquivo.
-    antes = medido["antes"]["botao"]
+    antes = _leitura(medido, "antes")["botao"]
     assert botao["borda"] != antes["borda"] or botao["contorno_larg"] != antes["contorno_larg"], (
         "a classe entrou e a tela não mudou de cor — o `!important` da folha "
         f"não pegou: antes={antes['borda']}/{antes['contorno_larg']} "
         f"durante={botao['borda']}/{botao['contorno_larg']}")
-    assert _frases(medido["depois-do-sucesso"]) == [], (
-        "o gesto não trouxe notícia e a tela falou mesmo assim — a palavra nova "
-        f"é o que a decisão dela tirou: {_frases(medido['depois-do-sucesso'])}")
+    # A SEGUNDA FOTO SÓ ENTRA SE CHEGOU: a piscada que não apaga é da régua
+    # irmã, e não deste "não fala".
+    marcos = ["depois-do-sucesso"]
+    if "depois-de-muitos-tiques" not in medido["faltou"]:
+        marcos.append("depois-de-muitos-tiques")
+    for marco in marcos:
+        frases = _frases(_leitura(medido, marco))
+        assert frases == [], (
+            "o gesto não trouxe notícia e a tela falou mesmo assim — a palavra "
+            f"nova é o que a decisão dela tirou ({marco}): {frases}")
 
 
 def test_a_piscada_apaga_sozinha(medido: dict) -> None:
-    """~2,9 s depois do clique a classe saiu, e o `data-hef-voo` não ficou.
+    """A classe saiu sozinha, durou o que o produto diz, e o `data-hef-voo` não ficou.
 
     Um campo que ficasse verde para sempre afirmaria um clique de dez minutos
     atrás — a mesma doença do botão que fica em voo, que o piloto já nomeia.
@@ -510,12 +797,23 @@ def test_a_piscada_apaga_sozinha(medido: dict) -> None:
     piscada, o pouso seguinte acharia DOIS elementos com o mesmo número e
     devolveria o rótulo errado a um deles. É por isso que a retirada agendada
     procura pela CLASSE, e o número sai antes.
+
+    A DURAÇÃO É DO RELÓGIO DA PÁGINA desde 13/09/2026 (FLAKE-DO-PISCA). Até ali
+    esta régua lia o botão 2,9 s depois do clique — e sob carga o pouso vinha
+    tarde e a piscada ainda estava acesa, sem defeito nenhum. O `setTimeout`
+    nunca apaga ANTES do número; uma piscada mais curta é a repintura
+    arrancando o nó, e uma bem mais longa é o número errado.
     """
-    botao = medido["depois-de-muitos-tiques"]["botao"]
+    apagou = _leitura(medido, "depois-de-muitos-tiques")
+    botao = apagou["botao"]
+    ms = medido["produto"]["piscada_ms"]
     assert botao and not botao["deu_certo"], (
-        f"a piscada não apagou sozinha em {medido['produto']['piscada_ms']} ms: {botao}")
+        f"a piscada não apagou sozinha em {ms} ms: {botao}")
     assert botao["voo"] == "", (
         f"o número do voo ficou para trás no elemento: {botao}")
+    assert ms - 100 <= apagou["piscada_ms"] <= ms + FOLGA_DA_PISCADA_MS, (
+        f"a piscada durou {apagou['piscada_ms']} ms no relógio da página, e o "
+        f"`MS_DA_PISCADA` é {ms} ms (folga de carga: {FOLGA_DA_PISCADA_MS} ms)")
 
 
 def test_a_piscada_nao_acende_na_recusa(medido: dict) -> None:
@@ -523,12 +821,14 @@ def test_a_piscada_nao_acende_na_recusa(medido: dict) -> None:
 
     É a régua do Passo 2: sem o desfecho no pouso, o `voltouDoVoo` piscaria
     verde em cima de um cartão laranja — a tela dizendo as duas coisas de uma
-    vez sobre o mesmo clique.
+    vez sobre o mesmo clique. A foto é do instante do pouso, e é nele que a
+    piscada acenderia.
     """
-    botao = medido["com-a-recusa"]["botao"]
+    com_a_recusa = _leitura(medido, "com-a-recusa")
+    botao = com_a_recusa["botao"]
     assert botao and not botao["deu_certo"], (
         f"o gesto levantou e o campo piscou verde mesmo assim: {botao}")
-    tons = [r["tom"] for r in medido["com-a-recusa"]["recados"]]
+    tons = [r["tom"] for r in com_a_recusa["recados"]]
     assert "recusa" in tons or "erro" in tons, (
         f"a recusa não chegou ao cartão — o outro lado da mesma medição: {tons}")
 
@@ -542,8 +842,8 @@ def test_o_pisca_nao_move_a_tela(medido: dict) -> None:
     grossa, que empurraria o vizinho. A comparação é do MESMO elemento, antes do
     clique e com a piscada acesa, na mesma unidade.
     """
-    antes = medido["antes"]["botao"]
-    piscando = medido["depois-do-sucesso"]["botao"]
+    antes = _leitura(medido, "antes")["botao"]
+    piscando = _leitura(medido, "depois-do-sucesso")["botao"]
     assert antes and piscando, (antes, piscando)
     assert piscando["deu_certo"], "a foto do 'durante' não pegou a piscada acesa"
     assert antes["caixa"] == piscando["caixa"], (
@@ -564,7 +864,7 @@ def test_a_frase_pousa_no_cartao_de_quem_foi_clicado(medido: dict) -> None:
     sucesso para medir, e é o `com-a-frase-do-dono`, o gesto que devolve
     `{"recado": …}`.
     """
-    (r,) = _r(medido["com-a-frase-do-dono"])
+    (r,) = _r(_leitura(medido, "com-a-frase-do-dono"))
     assert r["dentro_de"] == "p1", r
     assert r["chave"] == CHAVE_P1, (
         f"o aviso foi endereçado por {r['chave']!r} — a chave é o `uniq` "
@@ -580,11 +880,12 @@ def test_o_aviso_sobrevive_aos_tiques(medido: dict) -> None:
     ELA MEDE O RECIBO DA RECUSA desde 05/09/2026, e a razão é a mesma da irmã
     acima: o sucesso calado não deposita mais nada, então não há recibo dele a
     sobreviver. A recusa deposita, dura 30 s, e atravessa os tiques da mesma
-    forma — o depósito é um só. **O `com-a-recusa` é lido 700 ms depois do
-    clique e o `depois-do-pouso` uns 3 s depois**, com a repintura correndo por
-    cima o tempo todo: é o mesmo "sobreviveu aos tiques" que ela sempre mediu.
+    forma — o depósito é um só. **O `com-a-recusa` é a foto do pouso da recusa,
+    e o `depois-do-pouso` vem depois do gesto lento inteiro e de mais meio
+    segundo**, com a repintura correndo por cima o tempo todo: é o mesmo
+    "sobreviveu aos tiques" que ela sempre mediu.
     """
-    assert _frases(medido["depois-do-pouso"]), (
+    assert _frases(_leitura(medido, "depois-do-pouso")), (
         "o recibo sumiu com a repintura, e não por vencimento")
 
 
@@ -599,8 +900,8 @@ def test_o_sucesso_e_verde_e_a_recusa_e_laranja(medido: dict) -> None:
     `test_a_frase_pousa_no_cartao_de_quem_foi_clicado`: o sucesso CALADO não
     deposita mais, e um sucesso com NOTÍCIA continua depositando igual.
     """
-    (sucesso,) = _r(medido["com-a-frase-do-dono"])
-    (recusa,) = _r(medido["com-a-recusa"])
+    (sucesso,) = _r(_leitura(medido, "com-a-frase-do-dono"))
+    (recusa,) = _r(_leitura(medido, "com-a-recusa"))
     assert sucesso["tom"] == "sucesso", sucesso
     assert recusa["tom"] == "recusa", recusa
     assert sucesso["cor"] != recusa["cor"], (
@@ -616,7 +917,7 @@ def test_o_mesmo_cartao_troca_de_tom(medido: dict) -> None:
     A chave é o controle, não o desfecho. Sem refazer o estilo quando o tom
     muda, o aviso trocaria de frase e ficaria verde dizendo que recusou.
     """
-    (recusa,) = _r(medido["com-a-recusa"])
+    (recusa,) = _r(_leitura(medido, "com-a-recusa"))
     assert recusa["chave"] == CHAVE_P1, recusa
     assert recusa["tom"] == "recusa", (
         "o nó reaproveitado ficou com o tom do desfecho anterior")
@@ -626,7 +927,7 @@ def test_o_mesmo_cartao_troca_de_tom(medido: dict) -> None:
 # 3. a frase do dono do assunto vence a do piloto — é onde a D-12 pousa
 # --------------------------------------------------------------------------
 def test_a_frase_do_dono_vence(medido: dict) -> None:
-    frases = _frases(medido["com-a-frase-do-dono"])
+    frases = _frases(_leitura(medido, "com-a-frase-do-dono"))
     assert frases == [FRASE_DO_DONO], (
         f"o piloto ignorou a frase que o gesto devolveu e disse a dele: "
         f"{frases}. O piloto é o CANAL; o texto é de quem sabe — é assim que a "
@@ -640,8 +941,8 @@ def test_o_recado_nao_vira_endereco_de_pagina(medido: dict) -> None:
     que não existe em página nenhuma — e a régua do mockup passaria a contar o
     próprio instrumento como endereço.
     """
-    antes = medido["antes"]["enderecos"]
-    depois = medido["com-a-frase-do-dono"]["enderecos"]
+    antes = _leitura(medido, "antes")["enderecos"]
+    depois = _leitura(medido, "com-a-frase-do-dono")["enderecos"]
     assert antes == depois, (
         f"o número de endereços da página mudou de {antes} para {depois} — o "
         f"aviso está sendo contado pela régua do mockup como campo da página.")
@@ -651,10 +952,21 @@ def test_o_recado_nao_vira_endereco_de_pagina(medido: dict) -> None:
 # 4. o recibo vence, e vence antes da recusa
 # --------------------------------------------------------------------------
 def test_o_recibo_vence_e_some(medido: dict) -> None:
-    assert _frases(medido["depois-de-vencer"]) == [], (
-        f"o recibo continuou na tela depois de vencer: "
-        f"{_frases(medido['depois-de-vencer'])}. A palavra dela sobre este "
-        f"canal é de 02/09: é aviso, não estado.")
+    """A frase de sucesso sai do cartão sozinha — e ELA ESTAVA LÁ antes.
+
+    A LEITURA MUDOU DE LUGAR EM 13/09/2026 (FLAKE-DO-PISCA), e a razão é uma
+    mordida: desde 05/09 esta régua lia o cartão depois do sucesso CALADO, que
+    não deposita frase nenhuma. Com o prazo do recibo em 600 s, ela passava —
+    verde sobre um recibo eterno. Agora ela lê o cartão depois da frase do DONO,
+    que deposita, e a espera é pela condição (a frase sair) com teto.
+    """
+    assert _frases(_leitura(medido, "com-a-frase-do-dono")), (
+        "não houve recibo no cartão para vencer — sem ele esta régua passaria "
+        "sobre o vazio")
+    frases = _frases(_leitura(medido, "depois-de-vencer"))
+    assert frases == [], (
+        f"o recibo continuou na tela depois de vencer: {frases}. A palavra dela "
+        f"sobre este canal é de 02/09: é aviso, não estado.")
 
 
 def test_o_prazo_do_sucesso_e_menor_que_o_da_recusa(medido: dict) -> None:
@@ -675,8 +987,8 @@ def test_o_prazo_do_sucesso_e_menor_que_o_da_recusa(medido: dict) -> None:
 # 5. o botão em voo — a decisão `09` [03]
 # --------------------------------------------------------------------------
 def test_o_botao_diz_que_esta_trabalhando(medido: dict) -> None:
-    antes = medido["antes"]["botao"]
-    voando = medido["no-meio-do-voo"]["botao"]
+    antes = _leitura(medido, "antes")["botao"]
+    voando = _leitura(medido, "no-meio-do-voo")["botao"]
     assert antes and voando, "não achei o botão do microfone no cartão do p1"
     assert not antes["em_voo"], "o botão já nasceu em voo — não há o que medir"
     assert voando["em_voo"], (
@@ -692,7 +1004,7 @@ def test_o_rotulo_publicado_entra_no_lugar(medido: dict) -> None:
     O texto continua sendo dela — o piloto só o troca. Sem o atributo, o botão
     ganha o sinal da classe e nenhuma palavra inventada.
     """
-    voando = medido["no-meio-do-voo"]["botao"]
+    voando = _leitura(medido, "no-meio-do-voo")["botao"]
     assert "Calando" in voando["texto"], (
         f"o rótulo em voo não entrou: {voando['texto']!r}")
 
@@ -704,8 +1016,8 @@ def test_o_botao_volta_sozinho_e_volta_inteiro(medido: dict) -> None:
     casa têm `<span>` dentro, e devolver só o `textContent` os achataria — o
     botão voltaria da espera diferente de como entrou.
     """
-    antes = medido["antes"]["botao"]
-    depois = medido["depois-do-pouso"]["botao"]
+    antes = _leitura(medido, "antes")["botao"]
+    depois = _leitura(medido, "depois-do-pouso")["botao"]
     assert not depois["em_voo"], (
         "o botão ficou 'trabalhando' depois de o gesto voltar — um botão que "
         "afirma um trabalho que ninguém está fazendo é pior que o silêncio")
