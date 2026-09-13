@@ -2256,7 +2256,7 @@ def dica_da_luz(via: str) -> str:
 
     **NENHUMA FRASE NASCE AQUI.** A dica é a do dono, pedida com os três campos
     que `trava_da_luz` já respondeu — a mesma junção que
-    `secao_controles._card_do_controle` faz do lado da janela estável. A ordem
+    `secao_controles._BlocoDaLuz` faz do lado da janela GTK. A ordem
     de 13/09 que tirou o aviso e a razão está no índice da terceira lista,
     `docs/process/sprints/2026-09-13-A-TERCEIRA-LISTA-DELA-INDICE.md`.
     """

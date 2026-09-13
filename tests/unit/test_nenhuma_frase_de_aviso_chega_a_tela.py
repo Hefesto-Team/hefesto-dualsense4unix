@@ -328,12 +328,17 @@ def test_o_sufixo_das_excecoes_conta_e_nao_narra(monkeypatch: pytest.MonkeyPatch
     lista das exceções em outro lugar. MORDIDA: devolva a narração depois do
     travessão em `emulation_actions.markup_status_steam_input`, e esta régua
     reprova nos três estados.
+
+    A ÂNCORA SÓ CONHECE O TRAVESSÃO. Medido pela validação: a narração devolvida
+    com dois-pontos no lugar dele passava aqui. Por isso a linha visível também
+    tem de ser UMA só nos três estados, e terminar na contagem.
     """
     from hefesto_dualsense4unix.app.actions import emulation_actions as ea
     from hefesto_dualsense4unix.interface.pacotes import a07_lancadores as p7
 
     monkeypatch.setattr(ea.EmulationActionsMixin, "_steam_input_is_on",
                         staticmethod(lambda: False))
+    linhas: set[str] = set()
     for efetiva in (True, False, None):
         monkeypatch.setattr(ea.EmulationActionsMixin, "_steam_input_excecao_status",
                             staticmethod(lambda e=efetiva: ([990000011], e)))
@@ -341,6 +346,10 @@ def test_o_sufixo_das_excecoes_conta_e_nao_narra(monkeypatch: pytest.MonkeyPatch
         visivel = _sem_etiqueta(frase)
         assert "Exceção por jogo: 1 jogo(s)" in visivel, (efetiva, visivel)
         assert not _achadas(visivel), (efetiva, visivel)
+        linhas.add(visivel.rstrip())
+    assert len(linhas) == 1, f"o estado da exceção voltou a mudar a linha: {sorted(linhas)!r}"
+    (linha,) = linhas
+    assert linha.endswith("Exceção por jogo: 1 jogo(s)"), linha
 
 
 # --------------------------------------------------------------------------
