@@ -556,7 +556,8 @@ class DraftConfig(BaseModel):
     # round-trip mais favorável possível (mesmo nome, todo passthrough
     # valendo): `button_actions={"circle": "KEY_ESC"}` entrava e saía `None`;
     # `teclado_emulado=True` entrava e saía `None`. Os dois são campos do
-    # `Profile` (`schema.py:1506` e `:1527`) e os dois nomes apareciam ZERO
+    # `Profile` (`Profile.button_actions` e `Profile.teclado_emulado`, em
+    # `profiles/schema.py`) e os dois nomes apareciam ZERO
     # vezes neste arquivo — o `Profile(...)` de `to_profile` simplesmente não
     # os emitia, então cada Salvar zerava um campo que ninguém tinha tocado.
     #
