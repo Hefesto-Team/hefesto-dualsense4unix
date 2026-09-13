@@ -1,6 +1,6 @@
 ---
 sprint: RESTOS-DA-ONDA-DOIS-01
-estado: aberta
+estado: feita
 onda: A-TERCEIRA-LISTA-DELA
 posse:
   RESTOS-DA-ONDA-DOIS-01:
@@ -27,6 +27,8 @@ nao_toca:
 ---
 
 # RESTOS-DA-ONDA-DOIS-01 — o alto-falante sem endereço, o touchpad na troca, a varredura sem leitor e o número do Parar
+
+> **ESTADO 2026-09-13: feita** — [a entrega](../agentes/2026-09-13/RESTOS-DA-ONDA-DOIS-01-opus.md).
 
 Nasceu na costura da onda 2 (13/09/2026). São quatro achados que as validações
 mediram e deixaram abertos só por posse. A regra é a do

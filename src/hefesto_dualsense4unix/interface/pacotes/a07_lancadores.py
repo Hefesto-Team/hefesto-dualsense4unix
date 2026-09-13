@@ -606,8 +606,8 @@ def _o_que_a_steam_poe_no_meio() -> tuple[str, bool | None]:
         jogos = ([rotulo_do_jogo(a)
                   for a in EmulationActionsMixin._steam_input_appids_ligados()]
                  if ligado else [])
-        excecoes, efetiva = EmulationActionsMixin._steam_input_excecao_status()
-        bruto = markup_status_steam_input(ligado, jogos, excecoes, efetiva)
+        excecoes = EmulationActionsMixin._steam_input_excecoes()
+        bruto = markup_status_steam_input(ligado, jogos, excecoes)
     except Exception:
         return "", None
     # O `unescape` DESFAZ O ESCAPE DO DONO (ele chama `html.escape` no ramo

@@ -196,6 +196,22 @@ def _botao_da_linha(tr: str) -> str:
     return campo.group(1) if campo else ""
 
 
+def _sem_a_troca(doc: str) -> str:
+    """O documento sem a tela "Trocar os botões".
+
+    A MARCA SAIU DA TROCA — 13/09/2026, RESTOS-DA-ONDA-DOIS-01. A dica dela diz
+    «A escolha fica guardada.», e na troca a lista ao lado das três regiões está
+    apagada e não guarda escolha nenhuma. As duas réguas abaixo continuam
+    cobrando a marca em toda outra tela; quem cobra que ela NÃO esteja na troca é
+    `test_os_restos_da_onda_dois.py`, junto com a autoconferência do gerador.
+    """
+    antes, achou, depois = doc.partition('id="remapeamento"')
+    assert achou, "a tela 'Trocar os botões' sumiu do desenho"
+    _troca, fim, resto = depois.partition('class="tela-nova"')
+    assert fim, "a tela 'Trocar os botões' deixou de ter uma tela depois dela"
+    return antes + resto
+
+
 def test_a_marca_esta_nas_tres_regioes_do_touchpad_e_so_nelas():
     """A marca acompanha as três linhas do touchpad, e nenhuma outra.
 
@@ -218,7 +234,7 @@ def test_a_marca_esta_nas_tres_regioes_do_touchpad_e_so_nelas():
     """
     from hefesto_dualsense4unix.app.actions.input_actions import REGIOES_DO_TOUCHPAD
 
-    doc = _bancada()
+    doc = _sem_a_troca(_bancada())
     # A CONTA É POR CÉLULA, e ela se descobre sozinha. A primeira coluna é a
     # MESMA em toda tela que lista botões — o gerador cola a marca no rótulo
     # dentro de `BOTOES`, então cada região aparece como uma célula IDÊNTICA em
@@ -296,7 +312,7 @@ def test_a_marca_nao_encosta_em_linha_que_dispara():
     from hefesto_dualsense4unix.app.actions.input_actions import REGIOES_DO_TOUCHPAD
     from hefesto_dualsense4unix.core import acoes_de_botao as acoes
 
-    doc = _bancada()
+    doc = _sem_a_troca(_bancada())
     for linha in re.findall(r"<tr>(.*?)</tr>", doc, re.S):
         alvo = re.search(r'data-linha="([^"]+)"', linha)
         if alvo is None or alvo.group(1) not in acoes.BOTOES:
