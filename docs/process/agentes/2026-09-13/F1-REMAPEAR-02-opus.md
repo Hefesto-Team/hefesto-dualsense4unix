@@ -199,3 +199,124 @@ parágrafo, é a que o commit leva.
   DualSense — a ação que o perfil dá ao PS passou a chegar ao atendente do
   `ps_solo` também no boot. Medido só no degrau MONTOU, com dublê, sem
   transporte.
+
+## O que a validação refez e corrigiu
+
+Agente VALIDA/CORRIGE, 13/09/2026, na mesma branch, sobre `a0c367eb`. **Nenhuma
+correção de código**: a validação não achou defeito na cura, e o único commit
+dela é esta seção.
+
+**A posse.** `git diff --name-only e1c7d96b..HEAD`: os três arquivos de produto e
+as quatro réguas cabem na `posse:` e na `cria:` da sprint; o resto são as duas
+páginas 06 geradas, a própria sprint, esta entrega e as duas fotos dela.
+
+**Nenhum botão novo**, recontado nas duas páginas publicadas e nas duas do
+`mockup/`, contra `git show e1c7d96b`: `<button` 12 e 12, `<select` 63 e 63,
+`<a ` 37 e 37, `class="btn` 21 e 21, `title=` 46 e 46, `<input` 13 e 13;
+`data-gesto` foi de 95 a 89, e a única diferença por nome é `linha-de-troca`,
+de 22 a 16. As seis listas não ganharam `title`. O `mockup/06-navegacao.html` e
+a página publicada são idênticos byte a byte.
+
+**A citação.** A frase do apagado existe onde a entrega diz: na linha da 06-Q1
+de `docs/process/2026-09-05-AS-QUARENTA-E-UMA-DECISOES-DELA.md` e no bloco do
+portão de modo da folha de `aba06.py`.
+
+### As mordidas, refeitas
+
+Roteiro próprio no rascunho, com o cache de bytecode vazio a cada pytest e a
+sabotagem conferida pelo sha256 antes de rodar: as quatro da entrega e mais
+cinco. A árvore saiu idêntica, com `git diff HEAD` de 0 bytes e status vazio
+antes e depois.
+
+| mordida | reprovou |
+| --- | --- |
+| V1 o gerador deixa o PS clicável | sim, a autoconferência para a geração |
+| V2 a página publicada perde o `disabled` do PS | sim, dois casos da régua das seis |
+| V3 a linha do R3 (direção) volta a ser a da base, com gesto e 21 opções | sim, três casos: dois da régua das seis e `test_a_pagina_publicada_da_endereco_as_linhas` |
+| V4 o `ps_action_sink` sai do boot | sim, os três casos |
+| V5 o boot passa `_canal_do_ps(None)`: o canal existe e não entrega | sim, dois casos; o terceiro só confere que há canal, e passa, como devia |
+| V6 o piloto pousa a frase da recusa na 06 | sim, `test_a_recusa_nao_poe_frase_na_tela[06]` |
+| V7 o «Guardar» engole a colisão (`return None` no lugar do `raise`) | sim, três casos da 06: o desfecho saiu `aplicou`, o botão vestiu `hef-deu-certo`, e o diário ficou sem a frase |
+| V8 a guarda das seis sai do «Guardar» | sim, as duas trocas por si mesmo |
+| V9 a folha perde a regra `.campo-linha:disabled` | sim, `test_a_folha_veste_a_lista_apagada_como_o_apagado_da_casa` |
+
+A V5 e a V7 são as que a entrega não fez, e as duas perguntam se a régua mede o
+ato e não a forma. A V5 prova que a régua do boot olha a ENTREGA ao
+`definir_acao_do_ps`, e não só a presença do argumento. A V7 prova que o caso da
+06 na régua da recusa exercita a colisão de verdade: sem a recusa, o botão
+pousa verde e a régua acusa.
+
+### A tela
+
+- **Chrome headless**, a página de `e1c7d96b` lida por `git show` contra a da
+  branch, com o `BOOTSTRAP` do piloto. Antes: 22 listas com gesto, o clique de
+  ponteiro chegando nas 22 e o foco entrando no PS. Depois: 16 com gesto e 6
+  `disabled`, com cursor `not-allowed`, texto `rgb(154, 158, 184)` e borda
+  `rgb(52, 55, 70)`; o clique de ponteiro recusado nas seis; o foco não entra no
+  PS; e a `forma` do «Guardar» com 22 chaves e as seis em «— Sem troca —». As
+  fotos conferem com as duas desta entrega: a diferença visível é só o cinza
+  das seis.
+- **O WebKitGTK, que a entrega deixou em «O que NÃO verifiquei».** Um roteiro no
+  rascunho abre o `hefesto_vivo.Piloto` oculto, com o `HOME` e os quatro `XDG_*`
+  desviados para um lar-espelho (a forma do `tests/conftest.py`), e com os
+  gestos `linha-de-troca` e `guardar-remapeamento` trocados por espiões; o do
+  «Guardar» levanta, então nada grava. Com a pop-up aberta pelo link real, as
+  seis saem `disabled` e `:disabled`, com cursor `not-allowed`, a mesma cor e a
+  mesma borda do Chrome e uma opção só. A Cruz recebe o foco e o PS não. O
+  `change` da Cruz chegou ao espião (`linha=cross`, «Círculo»), e o clique e o
+  `change` sintéticos do PS não chegaram. A `forma` do «Guardar» chegou com 22
+  chaves e as seis em «— Sem troca —».
+- **O piloto pela linha de comando, oculto**: `hefesto_vivo.py --oculta --abre 06
+  --segundos 12 --prova-clique linha-de-troca,fechar-troca --foto`, com
+  `HEFESTO_DUALSENSE4UNIX_SKIP_PRESET_SEED=1`, deu `gestos: 2 · aplicados: 2 ·
+  sem dono: 0` e 119 tiques na 06, sem Traceback. Os perfis dela foram copiados
+  antes, e o md5 dos 159 arquivos saiu igual depois das duas corridas no WebKit.
+- **O foco que a entrega deixou aberto**: nenhuma página nem piloto move o foco
+  por JS (procurado `.focus()`, `tabIndex` e lista de focáveis em `src/`), e os
+  pilotos que escrevem `el.disabled` endereçam por `data-campo`, que as seis não
+  têm. Nada religa as seis. Como a navegação pelo controle anda sobre elas não
+  foi medido.
+
+### As réguas vizinhas
+
+Os 106 arquivos de `tests/` que citam a página 06, o `aba06`, o
+`a06_navegacao`, o `restore_last_profile`, o `_canal_do_ps`, o
+`ps_action_sink`, a `campo-linha`, os gestos da troca, o motor, o canal do PS
+ou a piscada da recusa, em quatro lotes: `380 passed`; `538 passed, 4 xfailed`;
+`430 passed`; `297 passed, 7 skipped`. Nenhum vermelho, e por isso nada a medir
+contra a base. As quatro réguas da sprint juntas: `73 passed`.
+
+### O que fica, sem cura aqui
+
+- **O «não dispara» das três linhas do touchpad na tela da troca.** A célula do
+  botão é a mesma das Definições e leva a marca com a dica *"… o clique dele não
+  vira tecla. A escolha fica guardada."*. Na troca, a lista ao lado está apagada
+  e não guarda escolha nenhuma. A marca já estava em `e1c7d96b`, o §D manteve a
+  linha como está, e tirá-la só da troca muda a célula que as duas telas
+  dividem. Fica para quem coordena.
+- **`docs/data/mapa-controles.csv`, chave `plataforma.probe.retry@dualsense`**:
+  cita `daemon/connection.py:373` para o laço de reconexão. Na base essa linha já
+  era o `store=daemon.store` de dentro do `restore_last_profile`; depois da
+  sprint é o `daemon, "_keyboard_device", None` do mesmo bloco. Nenhuma das duas
+  fala do retry de probe, a régua de citações não a acusa, e o CSV não é desta
+  sprint. O «não mudou de tamanho» desta entrega vale para o total e para as
+  linhas depois do bloco; dentro de `restore_last_profile` as linhas andaram.
+
+### Os portões
+
+`git add -A && bash scripts/portoes.sh`, esperado pelo PID e conferido com `ps`
+que a corrida era desta árvore (as outras vivas eram de três árvores de outras
+sprints): `TODOS VERDES — 60 portões.`, com o cabeçalho dizendo o `PYTHONPATH`
+desta árvore. À parte, `ruff check src/ tests/`: `All checks passed!`; e `mypy`
+em `connection.py`, `a06_navegacao.py` e `manager.py`, com cache vazio:
+`Success: no issues found in 3 source files`. Depois do verde, esta seção
+ganhou só este parágrafo, e os portões rodaram de novo sobre ela.
+
+### O que a validação não verificou
+
+- O aparelho e o daemon vivo: o boot continua provado só com dublê.
+- O clique de ponteiro de verdade sobre as seis no WebKitGTK: lá o clique foi
+  sintético, e o de ponteiro foi só no Chrome.
+- Como a navegação pelo controle anda sobre a tela da troca.
+- As outras frases de recusa da troca, clicadas na 06.
+- A suíte inteira, por ordem do despacho.
