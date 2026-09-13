@@ -671,8 +671,8 @@ def test_o_retomar_recusa_quando_nao_ha_pausa(a09, ctx):
 
     A conta é da camada do produto — `aba_sistema.travas()` —, que já estava
     escrita e ligada até a penúltima camada: ela cobre `retomar`, `desligar`,
-    `reiniciar`, `ver-plugins` e `ver-detalhes`, com o motivo pronto para o
-    tooltip. Faltava alguém chamá-la.
+    `reiniciar` e `ver-detalhes`, com o motivo pronto para o tooltip (o
+    `ver-plugins` saiu da aba em 13/09/2026). Faltava alguém chamá-la.
 
     **A MORDIDA:** apague a checagem do `_trava` em `retomar`. Executada:
 
