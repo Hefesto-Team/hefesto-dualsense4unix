@@ -52,8 +52,9 @@ de cima e de baixo do chip da fita lê dele:
             padding-bottom:calc(7px - var(--borda-do-chip))}
 ```
 
-Os 7 px são o chip vivo do plástico (2 + 5): **nenhuma aba que escolhe muda um
-pixel**; o chip de borda 1 ganha 1 px de ar em cima e embaixo. O ar horizontal
+Os 7 px são o chip vivo do plástico (2 + 5): **a linha das abas que escolhem não
+muda um pixel**; todo chip de borda 1 — inclusive o «Todos» das dez abas, que
+passa de 28 a 30 — ganha 1 px de ar em cima e embaixo. O ar horizontal
 não mudou. O `padding` é só da `.fita`: o `.mascara .chip` da 01 e o chip das
 colunas da 03 não foram tocados. O comentário da regra de 08/09 que dizia
 «a largura vem de `.fita.inerte .chip.plastico` (1px)» foi corrigido para a
@@ -207,3 +208,94 @@ do `678b8964`. Trocado o verbo, a segunda corrida é a que fecha esta entrega.
    com o nome do exemplo** — fechou aqui. O arquivo dela não é desta posse.
 4. **O vão das três abas (01, 03, 08)** segue de pé por decisão; ele só se cura
    com conteúdo, que é outra fila.
+
+## O que a validação refez e corrigiu
+
+Agente VALIDA/CORRIGE, mesma árvore e mesma branch, a partir de `54063e23`. O
+python é o da venv dela com o `PYTHONPATH` desta árvore (import conferido em
+`…-opus/src`). Os perfis foram copiados antes, e o md5 conferido depois de cada
+corrida do piloto: 159 arquivos, intactos nas três.
+
+### O que se confirmou, remedido do zero
+
+* **As vinte páginas são as do gerador:** regerar e publicar sobre `54063e23`
+  deixou a árvore limpa.
+* **O salto, no Chrome**, com as páginas de `249af1f6` e da branch extraídas por
+  `git archive` (vista 1918x840; a branch também em 1212x809):
+
+  | estado da fita | base: linha / `y` do `.miolo` | branch |
+  | --- | --- | --- |
+  | como publicado | 52 e 111 (01, 02, 08) · 51 e 110 (sete) | 52 e 111 nas dez |
+  | sem cor lida | 51 e 110 nas dez | 52 e 111 |
+  | só «Todos» | 51 e 110 nas dez | 52 e 111 |
+  | com cor lida | 52 (01, 02, 08) · 51 (sete) | 52 e 111 |
+
+* **A cura escrita na sprint caiu mesmo:** injetada na base, a 07 fica em 51,
+  «sem cor» e «só Todos» seguem em 51, e seis fitas inertes ficam com bordas de
+  1 e de 2 px.
+* **O clique, no piloto oculto:** 11 cliques no `a.aba` da tira, daemon vivo,
+  um DualSense pelo rádio. Base (a árvore inteira de `249af1f6`): linhas
+  `[51, 52]`, `y` `[110, 111]`, chip inerte `1px:28`. Branch: linhas `[52]`,
+  `y` `[111]`, chip inerte `1px:30`. As fotos da 03 foram lidas nas duas pontas,
+  e as duas estão pintadas.
+* **Nenhum botão novo:** 254 `<button>` e 337 `data-gesto` nas dez publicadas,
+  antes e depois, página a página; a contagem de `title` também não mudou. O diff
+  das páginas é CSS, comentário e o «—»: nenhuma frase nova chega à tela.
+
+### As mordidas, refeitas
+
+Cada mordida confere na página publicada que a sabotagem entrou, roda a régua e
+devolve por `git checkout`, regerando e publicando. Nas quatro a árvore voltou
+limpa, idêntica ao commit.
+
+| mordida | régua | resultado |
+| --- | --- | --- |
+| M1 · sem `.fita .chip{padding-top/bottom}` | `test_a_fita_nao_salta_ao_trocar_de_aba.py` | 3 failed, 1 passed · 52 em 01/02/08, 51 nas sete |
+| M2 · o nome do exemplo de volta ao chip | `test_a_aba_perfis_segue_o_perfil_que_vale.py` + `test_regua_de_tela_a_aba_controles.py` | 21 failed · as vinte páginas e a cena fixa |
+| M3 · `pacotes.topo` sem o nome do ativo | `test_a_aba_perfis_segue_o_perfil_que_vale.py` | 1 failed · `test_o_pintor_nomeia_o_perfil_que_vale` |
+| M4 · a cura da sprint (2 px no chip inerte) | `test_a_fita_nao_salta_ao_trocar_de_aba.py` + `test_a_fita_inerte_nao_acende_ninguem.py` | 3 failed · a espessura única e as duas da regra de 08/09 |
+
+### O que corrigi
+
+1. **«Nenhuma aba que escolhe muda um pixel» era falso, e estava em dois
+   lugares.** A linha não muda, mas o «Todos» das abas que escolhem passa de 28
+   a 30 px (Chrome, chip a chip). Substituído no comentário do `topo.html`,
+   com as dez regeradas e publicadas, e no §1 desta entrega.
+2. **`gui/ponte_da_tela.py`, comentário do `CROMO_DA_JANELA`.** Dizia que a
+   linha do alvo tem 51 px em sete abas e 52 em três, e esta cura tornou isso
+   falso. Reescrito com o mesmo número de linhas, para nenhuma citação por
+   linha se deslocar. O 143 não muda.
+
+### Arquivos fora da posse, e a razão
+
+* `tests/unit/test_regua_de_tela_a_aba_controles.py` (do implementador): a cena
+  fixa cobrava o literal que a cura tirou. A M2 prova que a régua segue
+  mordendo: com o literal de volta ela reprova.
+* `src/hefesto_dualsense4unix/gui/ponte_da_tela.py` (desta validação): só
+  comentário, com um fato que esta cura derrubou. Nenhuma sprint do lote
+  1309-onda1 tem o arquivo na posse — conferido no frontmatter da F1-REMAPEAR,
+  FRASES-E-DICAS-01, FRASES-E-DICAS-02, JOGO-SEM-EXCLUSIVIDADE-01 e
+  LIGHTBAR-NA-STEAM-01.
+* os quatro PNG desta pasta: as fotos da entrega.
+
+### O que não corrigi, e por quê
+
+**O «—» da 03 e da 04 com um perfil valendo** (item 1 acima) está confirmado
+nas duas pontas: em `249af1f6` a 03 e a 04 já pintavam «—» enquanto as outras
+oito pintavam o nome. É anterior a esta sprint. Os dois arquivos da cura têm dono
+na mesma onda: `pacotes/a03_gatilhos.py` é da FRASES-E-DICAS-02 e
+`pacotes/a04_iluminacao.py`, da FRASES-E-DICAS-01. Curar aqui obrigaria a costura
+a escolher entre duas escritas no mesmo arquivo.
+
+### A armadilha que custou uma corrida
+
+A primeira corrida do piloto «antes» extraiu da base só o `src/` e o
+`docs/data/`. A leitura voltou com 11 medidas de 11, mas a foto da 03 mostrou a
+cena fixa do desenho: a pintura tinha caído num arquivo de `docs/process/` que
+faltava, e a medida não acusou nada. Refeita com a árvore inteira. **Medida de
+piloto só vale com a foto lida.**
+
+### Réguas e portões
+
+Sete réguas pontuais (as duas novas, a ajustada e quatro vizinhas): 81 passed.
+`ruff check src/ tests/`: limpo. `check_o_desenho_aprovado.py`: OK.

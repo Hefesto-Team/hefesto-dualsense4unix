@@ -255,10 +255,10 @@ RECUO_DO_CORPO = 16
 #: 10/09/2026: fita 52 + tira 42 + rodapé 47 + 2 de borda = **143**. Antes da
 #: cura eram 215, com uma faixa de cabeçalho de 60 e um rodapé de 59.
 #:
-#: 52 E NÃO 51, e a escolha é deliberada: a linha do alvo mede 51 px em sete
-#: abas e 52 em três (01, 02 e 08, cujos chips são mais altos). O número aqui é
-#: o MAIOR dos dois, porque o que um gerador assegura tem de ser o caso
-#: APERTADO — assegurar contra 51 deixaria as três de fora por um pixel.
+#: 52 NAS DEZ ABAS desde 13/09/2026 (VAO-DO-ESQUELETO-01): a linha do alvo
+#: tinha 51 px em sete abas e 52 em três, e o chip da fita passou a ter 30 com
+#: borda de 1 ou de 2. Os 52 eram o caso APERTADO que um gerador assegura e
+#: viraram o único caso — `test_a_fita_nao_salta_ao_trocar_de_aba.py` cobra.
 #:
 #: E ELE FOI MEDIDO DEPOIS DE SOMADO, nesta ordem: a primeira volta desta
 #: sprint escreveu 141 somando as partes de cabeça, e a janela devolveu 634 de
