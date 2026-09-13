@@ -522,7 +522,10 @@ def test_o_botao_ps_esta_na_lista_uma_vez_so():
     assert acoes.BOTAO_PS in acoes.BOTOES, (
         "o PS saiu da lista do produto — a decisão dela na 06-Q3 o pôs lá.")
     doc = _bancada()
-    quantas = doc.count(f'data-linha="{acoes.BOTAO_PS}"')
+    # A CONTA É DA TABELA DE "o que cada botão faz" — 13/09/2026, F1-REMAPEAR: a
+    # tela "Trocar os botões" da mesma página tem a SUA linha do PS, com o gesto
+    # `linha-de-troca`. O gesto recorta a tabela que esta régua confere.
+    quantas = doc.count(f'data-gesto="linha-de-botao" data-linha="{acoes.BOTAO_PS}"')
     assert quantas == 1, (
         f"o desenho tem {quantas} linha(s) do PS — a régua da aba apanha duas, "
         "e uma delas teria sido construída por quem não conferiu a outra.")
