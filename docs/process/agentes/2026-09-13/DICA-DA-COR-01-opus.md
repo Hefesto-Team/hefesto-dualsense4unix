@@ -160,3 +160,93 @@ tests/unit/test_fecha_iluminacao_01_duas_pecas_nunca_tem_a_mesma_cor.py
   abrir"* depois da cura. Hoje são 4,5 x 14 antes e 12 x 12 depois, nas duas
   vistas. Ficaram no corpo como medida datada; a ROTA CORRIGIDA e a linha de
   ESTADO dizem o número de hoje.
+
+## O que a validação refez e corrigiu
+
+Refeito por outro agente, na mesma árvore e na mesma branch, sem confiar no
+relato acima.
+
+**A posse.** `git diff --name-only e1c7d96b..HEAD` cabe no `posse`/`cria` da
+sprint, nas duas páginas 04 geradas, na sprint e nesta entrega (o texto e as
+quatro ampliações). Sobra um arquivo, `docs/data/o-que-ainda-aponta-para-a-janela.csv`,
+e a razão foi medida: com a linha da régua arrancada, o
+`scripts/check_nada_aponta_para_a_janela.py` sai `rc=1` com
+*"tests/unit/test_o_x_do_vizinho_e_quadrado.py:55: CITAÇÃO NOVA para a janela
+(gui.ponte_da_tela)"*. Com a linha devolvida (md5 idêntico), sai `rc=0`.
+`TAMANHO_OCULTA` só tem dono em `gui/ponte_da_tela.py`.
+
+**Nenhum botão novo.** Nas duas páginas 04, a de `e1c7d96b` e a da branch têm
+os mesmos 66 `data-gesto`, 60 `<button` e 81 `title`. No DOM pintado com dois
+controles são 63 `data-gesto` e 60 botões, antes e depois. O que muda nas
+páginas é a regra do `::after` e comentário de CSS, que não chega à tela.
+
+**As mordidas, refeitas uma a uma.** Em cada uma: trecho trocado em
+`aba04.CSS`, 04 regerada e `--publicar 04`, régua rodada, trecho devolvido,
+04 regerada e publicada de novo. `md5sum -c` deu SUCESSO nos três arquivos,
+`git diff` saiu vazio e a régua voltou a 11 passed.
+
+| arranquei | a régua |
+| --- | --- |
+| a cura inteira, com `inset:5px` de volta | **4 failed**: quadrado e corpo na janela (4,50 x 14), teto nas duas vistas (14,05 x 14 na dela). É o número do relato |
+| só o `aspect-ratio:1` | **4 failed**: X de 12,00 x **0,00** px, quadrado e corpo nas duas vistas |
+| só o `transform:translate(-50%,-50%)` | **3 failed**: centro nas duas vistas (13,25 / 18 contra 7,25 / 12 na janela), e vaza da pílula na janela |
+| só o teto (`width:calc(100% - 2px)`) | **1 failed**: teto na vista dela, 22,05 x 22,05. Na janela a pílula já limita o X a 12,5 px, dentro da folga |
+
+**A tela.** As fotos foram tiradas num `WebKit2.WebView` offscreen sob `xvfb-run`,
+com a página de `e1c7d96b` (lida por `git show`) e a da branch, o `BOOTSTRAP`
+e a `DICA_DA_CASA` do piloto instalados e a carga do pacote da 04 para dois
+controles sintéticos:
+
+| vista | X antes | X depois |
+| --- | --- | --- |
+| 1212x809 | 4,5 x 14, canto 5 / 5 | 12 x 12, canto 1,25 / 6 (centro 7,25 / 12 = centro da pílula) |
+| 1918x840 | 14,05 x 14, canto 5 / 5 | 12 x 12, canto 6,02 / 6 |
+
+As ampliações a 8x mostram o «I» antes e o X depois, iguais às desta entrega.
+**No clique no tom tomado**, antes e depois: `data-gesto` nulo,
+`aria-disabled="true"`, zero `.hef-recado` e zero `.hef-recusou` 1,5 s depois.
+**Com o ponteiro parado sobre ele** (`mousemove`), a dica da casa abre com
+«P2 (DualSense)» nas duas versões e na mesma caixa (107,8 x 37 em 290 / 380, na
+janela). O X novo não mexe na dica. **O piloto**
+(`HEFESTO_DUALSENSE4UNIX_SKIP_PRESET_SEED=1 hefesto_vivo.py --oculta --abre 04
+--segundos 6`) saiu com `rc=0` e zero `Traceback`. Os 159 arquivos de perfil
+tinham o mesmo md5 da cópia antes e depois da corrida. Havia um controle ligado,
+então não aparece X.
+
+**As réguas vizinhas**, em lotes pontuais: 17 arquivos que leem a 04 (295
+passed, 2 skipped). Depois da correção abaixo, mais 24 (590 passed, 4 xfailed),
+incluindo as três que citam o portão `nada-aponta-para-a-janela`, a
+`test_a_recusa_pisca_no_botao.py` e a própria régua.
+`scripts/validar-citacoes-de-linha.py --all`: 3291 citações, OK.
+
+### O que corrigi — `ee6b4951`
+
+Três comentários de CSS em `aba04.py`, todos na posse. A 04 foi regerada e
+publicada, e só comentário muda:
+
+1. **A nota do `.luz-grade .ctrl.off`** dizia que
+   `hefesto_vivo._recusou_dizendo` «só leva `RuntimeError` à tela». Isso vale
+   no presente para um canal que a onda 1 tirou: hoje as duas exceções vão ao
+   diário e o botão pisca (a docstring de `_recusou_dizendo`). O verbo foi para
+   o passado, e uma frase diz o canal de hoje.
+2. **A nota do `.players button.fora`** dizia «quem insistir ouve a recusa em
+   vez de nada». Agora diz que o botão pisca a recusa e que a frase vai ao
+   diário. As duas notas estavam declaradas pendentes «na posse da
+   DICA-DA-COR-01» na entrega da FRASES-E-DICAS-01
+   (`docs/process/agentes/2026-09-13/FRASES-E-DICAS-01-opus.md`, o item «Prosa
+   fora da posse que ainda descreve o canal que saiu»), e a implementação não
+   as tocou. Os números de linha que aquela entrega cita para elas andaram 18
+   com o comentário do X. Aqui elas são nomeadas pela regra.
+3. **A nota do X** atribuía o `8,94 x 12` de `min()` nos dois eixos a caixas de
+   «26 de altura, 14 de largura», que são as da pílula de hoje. Só que com a
+   pílula de hoje (14,5 px por dentro) os dois `min()` dariam 12. O número foi
+   medido na pílula de 10,94 px de 10/09, a 1222 px, e é o que diz a mensagem
+   de `65838cf4`. A nota agora diz isso.
+
+### O que a validação também não verificou
+
+* A janela mais estreita que 1212 px, em que o `aspect-ratio` passaria a
+  decidir: a régua mede as duas vistas importadas, e nenhuma delas deixa a
+  pílula abaixo do teto.
+* A dica da casa com três ou quatro controles e o olho dela na TV
+  (PROVA-DE-TELA-01).
