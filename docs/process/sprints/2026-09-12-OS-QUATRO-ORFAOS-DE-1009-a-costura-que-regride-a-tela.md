@@ -1,6 +1,6 @@
 ---
 sprint: OS-QUATRO-ORFAOS-DE-1009
-estado: aberta
+estado: feita
 onda: A-FILA-DE-0911
 posse:
   COORDENA:
@@ -13,6 +13,18 @@ nao_toca:
 ---
 
 # Os quatro órfãos de 10/09 — costurados, medidos, e devolvidos à fila
+
+> **ESTADO 13/09/2026: feita** — as dezoito da §7 foram medidas uma a uma pela
+> triagem da terceira lista (`git cherry`, presença do conteúdo linha a linha,
+> gêmeo por assunto e `git merge-tree`). **Três costuradas** na `onda/1309`:
+> ALTURA-DA-VISTA-01, SENSORES-NO-JOGO-01 e TOUCHPAD-NO-3DS-01 — e os dois
+> vermelhos da §3 eram da RÉGUA, medido: sem o cabeçalho, o alvo que ela
+> escolhia passou a embrulhar um svg com dica própria; curada e mordida. **Uma a
+> refazer:** a DICA-DA-COR-01, só o X, na onda 2. **Uma recusada por ela:** a
+> ILUMINACAO-GRADE-01, que não se toca. **Treze já dentro** por outro caminho. A
+> §4 (o olho dela) ficou coberta pela palavra de 13/09 no
+> [índice da terceira lista](2026-09-13-A-TERCEIRA-LISTA-DELA-INDICE.md), e a
+> foto vai no fecho da leva; a §8 é da MESA-DE-QUATRO-01.
 
 **12/09/2026, 02h40.** Ela mandou juntar: *"Sim, junta e reinstala"*, e os
 quatro órfãos estavam na lista. **Eles foram costurados, medidos e retirados** —
