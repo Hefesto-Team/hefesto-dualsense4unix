@@ -899,6 +899,13 @@ _CITACOES_PENDENTES: frozenset[str] = frozenset({
     # CORRIGIDAS no lugar (`core/rumble.py`, `a02_controles.py` e duas em
     # `a08_conexoes.py`): fora do `nao_toca:`, o número se reescreve.
     "interface/pacotes/a06_navegacao.py::core/acoes_de_botao.py:285",
+    # FRASES-E-DICAS-02 (13/09/2026) — A QUE A SAÍDA DA SONDA DA MESA SUJA
+    # DESLOCOU. `a09_sistema.py` é `nao_toca:` daquela sprint. A linha citada já
+    # não caía no que o comentário promete (em `249af1f6` ela era `def _bancada`);
+    # o que ele promete — a 08 mandando `blocos` para o mapa do gabinete — mora
+    # hoje em `a08_conexoes.py:3781`. Quem tiver a 09 troca o número e apaga
+    # esta linha.
+    "interface/pacotes/a09_sistema.py::a08_conexoes.py:1774",
     # ONDA3-MOTOR-01 (06/09/2026) — AS SEIS QUE A CURA DO `— Nada —` E DA
     # HERANÇA DE `key_bindings` DESLOCOU. O deslocamento é de **+22 linhas** em
     # `profiles/manager.py` e em `integrations/uinput_mouse.py`, medido linha a

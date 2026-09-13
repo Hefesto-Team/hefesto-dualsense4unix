@@ -1170,7 +1170,7 @@ def _card_da_ordem(ordem: Any) -> str:
     campos que ela TEM.
 
     **O IMPERATIVO E O GANHO SAÍRAM DA VISTA — FRASES-E-DICAS-02, 13/09/2026.**
-    O card mostrava, sem clique, a `acao` da ordem (`div.faca`) e a linha
+    O card mostrava, sem clique, o imperativo da ordem (`div.faca`) e a linha
     `Ganho esperado:` (`div.ganho`), inclusive quando ela dizia que o ganho não
     foi medido. As duas são instrução e confissão sobre um estado, e a ordem
     dela de 13/09 deixa na tela só estado e ajuda. O conteúdo não se perdeu: o

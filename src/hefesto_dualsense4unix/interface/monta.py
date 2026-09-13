@@ -968,12 +968,12 @@ def fita(ativo: str = "todos", inerte: bool = False, titulo: str | None = None,
         # tira da tela. Com a cor lida a dica continua dizendo de onde vem a
         # borda; sem ela fica o nome, e sem nome o chip não tem dica própria.
         porque = "a borda é a cor do plástico" if slug else ""
-        dica = " — ".join(x for x in (nome, porque) if x)
-        titulo = f' title="{dica}"' if dica else ""
+        dica = " — ".join(str(x) for x in (nome, porque) if x)
+        com_dica = f' title="{dica}"' if dica else ""
         chips.append(
             f'<label class="chip{" plastico" if slug else ""}{on}" data-campo="fita-chip"'
             + _endereco_do_chip(str(c["pref"]), inerte)
-            + f'{pintado}{titulo}>'
+            + f'{pintado}{com_dica}>'
             + rotulo_do_chip({**c, "nome": nome}) + "</label>")
     # SEM O RECUO DA PRIMEIRA LINHA, e isto é medição, não estilo. Quem monta a
     # página põe o recuo (`RECUO_DA_FITA`); quem pinta a tela viva joga esta
