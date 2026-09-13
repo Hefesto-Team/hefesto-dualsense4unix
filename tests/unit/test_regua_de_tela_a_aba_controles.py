@@ -27,7 +27,7 @@ foram achados nesta casa em 29/08/2026, e cada um está preso a uma medição:
     tem de nascer TRAVADO: sem posse do mudo não há o que devolver ao kernel.
 
 (d) A mordida, nas duas metades que o piloto já tinha: sem a ponte a tela fica
-    na cena FIXA do mockup (quatro controles, "Mortal Kombat"); e com os
+    na cena FIXA do mockup (quatro controles, perfil sem nome); e com os
     ``data-*`` arrancados a pintura DESABA. Se qualquer uma das duas não
     acontecer, o dado não estava vindo do Python.
 
@@ -563,15 +563,27 @@ def test_com_a_ponte_a_tela_mostra_a_mesa_e_nao_a_cena_fixa(mesa):
 def test_sem_a_ponte_a_tela_fica_na_cena_fixa_do_mockup():
     """A MORDIDA: uma aba aberta e nunca tocada tem de ser o desenho.
 
-    Quatro controles e "Mortal Kombat" são a cena literal do mockup aprovado. Se
-    esta tela mostrasse a mesa dela, o dado não estaria vindo da ponte — estaria
-    vindo de algum lugar que ninguém declarou.
+    Quatro controles e o chip «Perfil ativo» sem nome são a cena literal do
+    mockup aprovado. Se esta tela mostrasse a mesa dela, o dado não estaria vindo
+    da ponte — estaria vindo de algum lugar que ninguém declarou.
+
+    O CHIP NASCE COM O QUE O PINTOR ESCREVE SEM PERFIL ATIVO — 13/09/2026
+    (VAO-DO-ESQUELETO-01). Até então o desenho trazia o nome de um perfil de
+    exemplo, e ele ficava na tela dela sempre que a pintura não chegava. A
+    régua pergunta o valor ao dono (`pacotes.topo`) em vez de digitá-lo.
     """
+    from hefesto_dualsense4unix.interface import pacotes
+
+    class _SemPerfil:
+        def __init__(self) -> None:
+            self.state: dict[str, Any] = {"active_profile": ""}
+            self.mesa: list[dict[str, Any]] = []
+
     with regua_de_tela.Tela(PAGINA, titulo_esperado="Hefesto") as tela:
         assert tela.contar(".ctl") == 4, (
             "sem ponte a aba tinha de mostrar os quatro controles do desenho"
         )
-        assert tela.ler(".pa-nome") == "Mortal Kombat"
+        assert tela.ler(".pa-nome") == pacotes.topo(_SemPerfil())["perfil"]
         assert not tela.existe(_cartao(0)), (
             "sem ponte a tela mostrou um cartão da mesa de mentira: alguém "
             "pintou sem passar pela ponte."
