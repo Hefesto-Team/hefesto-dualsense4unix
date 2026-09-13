@@ -989,14 +989,24 @@ CSS = CSS_GLIFO + CSS_LUZINHAS + """
      mudo, a rota, o modo do mic). A onda, os rótulos e o selo do microfone
      contam o que o daemon publicou sobre ESTE controle e continuam verdadeiros
      sem endereço nenhum. E é `opacity`, não `display`: apagar tiraria a altura
-     e o card mudaria de tamanho conforme a mesa. */
-  .moldura[data-bloco="microfone"][title] .vol,
-  .moldura[data-bloco="microfone"][title] .rota,
+     e o card mudaria de tamanho conforme a mesa.
+
+     A MOLDURA DO MICROFONE TEM ENDEREÇO PRÓPRIO desde 13/09/2026
+     (MIC-SEM-FONTE-01): o campo `mic-apagado` escreve `data-apagado`, e não o
+     `title`. O valor `sem-alvo` é esta mesma guarda; o `sem-fonte` apaga só o
+     DESLIZANTE, e é o que o cartão sabe antes do arrasto quando o daemon diz
+     que o controle não tem fonte de captura. O botão do microfone e os modos
+     ficam acesos nesse estado: é o botão que pede o canal, e apagá-lo
+     trancaria a única saída. Nenhuma frase acompanha o cinza. */
+  .moldura[data-bloco="microfone"][data-apagado="sem-alvo"] .vol,
+  .moldura[data-bloco="microfone"][data-apagado="sem-alvo"] .rota,
+  .moldura[data-bloco="microfone"][data-apagado="sem-fonte"] .vol .trilho,
+  .moldura[data-bloco="microfone"][data-apagado="sem-fonte"] .vol .n,
   .moldura[data-bloco="alto-falante"][title] .vol,
   .moldura[data-bloco="alto-falante"][title] .rota{opacity:.45}
-  .moldura[data-bloco="microfone"][title] .mudo-i,
-  .moldura[data-bloco="microfone"][title] .puxa-vol,
-  .moldura[data-bloco="microfone"][title] .rota button,
+  .moldura[data-bloco="microfone"][data-apagado="sem-alvo"] .mudo-i,
+  .moldura[data-bloco="microfone"][data-apagado] .puxa-vol,
+  .moldura[data-bloco="microfone"][data-apagado="sem-alvo"] .rota button,
   .moldura[data-bloco="alto-falante"][title] .mudo-i,
   .moldura[data-bloco="alto-falante"][title] .puxa-vol,
   .moldura[data-bloco="alto-falante"][title] .rota button{cursor:not-allowed}
@@ -2404,7 +2414,7 @@ def bloco(c, *, bat, carga=None, glifos_on, l2, r2, touch, sticks,
 
         <div>
           <div class="moldura" data-bloco="microfone"
-               data-campo="som-sem-endereco" data-hef-alvo="atributo" data-hef-atributo="title">
+               data-campo="mic-apagado" data-hef-alvo="atributo" data-hef-atributo="data-apagado">
             <!-- O "LIBERAR" SAIU — 30/08/2026, e o argumento é dela, não meu:
                  *"o botão do Controle sempre controla a interface, por isso não faz
                  sentido o liberar ali"*.

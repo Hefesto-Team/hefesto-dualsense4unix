@@ -38,6 +38,11 @@ AS MORDIDAS, todas feitas e devolvidas antes deste arquivo ser commitado:
   ``test_a_celula_que_vira_apaga_a_ressalva`` reprova;
 * tire o ``[data-bloco]`` do seletor da guarda no gerador —
   ``test_a_guarda_nao_alcanca_a_moldura_do_led`` reprova.
+
+**O MICROFONE SEM FONTE** (MIC-SEM-FONTE-01, 13/09/2026) tem a seção 8, e as
+mordidas dela estão na entrega da sprint: tire a pergunta da fonte de
+``microfone_apagado``; devolva a moldura do microfone ao ``som-sem-endereco``
+com a fonte dentro dele; ponha o botão do microfone no seletor do ``sem-fonte``.
 """
 from __future__ import annotations
 
@@ -97,20 +102,25 @@ def _entrada(**mais: Any) -> dict[str, Any]:
     return {**base, **mais}
 
 
-def _card(entrada: dict[str, Any], *, state: dict[str, Any] | None = None,
-          mesa: list[dict[str, Any]] | None = None) -> dict[str, Any]:
-    """O card que o pacote monta, com os endereços da bancada ligados."""
+def _cards(entradas: list[dict[str, Any]], mesa: list[dict[str, Any]], *,
+           state: dict[str, Any] | None = None) -> dict[str, Any]:
+    """Os cards que o pacote monta, por `uniq`, com os endereços da bancada ligados."""
     from pacotes import Contexto
 
     antes = mod._ENDERECOS
     try:
         mod._ENDERECOS = frozenset(mod._enderecos_da_pagina() | DA_BANCADA)
-        cheio = {"controllers": [entrada], **(state or {})}
-        cards = mod.pacote(Contexto(state=cheio,
-                                    mesa=mesa if mesa is not None else MESA,
-                                    conectados=[entrada]))["cards"]
+        cheio = {"controllers": entradas, **(state or {})}
+        return mod.pacote(Contexto(state=cheio, mesa=mesa,
+                                   conectados=entradas))["cards"]
     finally:
         mod._ENDERECOS = antes
+
+
+def _card(entrada: dict[str, Any], *, state: dict[str, Any] | None = None,
+          mesa: list[dict[str, Any]] | None = None) -> dict[str, Any]:
+    """O card que o pacote monta para UMA entrada."""
+    cards = _cards([entrada], mesa if mesa is not None else MESA, state=state)
     assert len(cards) == 1, f"esperava um card, vieram {len(cards)}"
     return next(iter(cards.values()))
 
@@ -326,7 +336,9 @@ class TestAGuardaSemEndereco:
         assert DICA_AUDIO_SEM_ENDERECO not in porques.values()
 
     def test_o_cartao_apaga_as_pecas_que_mandam_som(self) -> None:
-        """A metade VISÍVEL: o campo que veste o `title` das duas molduras.
+        """A metade VISÍVEL: o campo que veste o `title` da moldura do alto-falante.
+
+        A do microfone lê `mic-apagado` desde 13/09/2026 — ver a seção 8.
 
         MORDE: tire o `som-sem-endereco` do pacote e este caso reprova.
         """
@@ -598,3 +610,127 @@ class TestODesenho:
         assert ('class="card-nome" data-campo="card-vpad" data-hef-alvo="atributo"'
                 ' data-hef-atributo="title"') in doc
         assert "alimenta o gamepad virtual" not in doc.lower()
+
+
+# ---------------------------------------------------------------------------
+# 8. O MICROFONE SEM FONTE — MIC-SEM-FONTE-01, 13/09/2026
+# ---------------------------------------------------------------------------
+# O deslizante do microfone de um controle no rádio arrastava, e só DEPOIS o
+# daemon respondia `sem_fonte`; a resposta já viajava no tique anterior, em
+# `audio.canal_fonte` nulo. A ROTA CORRIGIDA da sprint pede o cinza ANTES do
+# arrasto, num endereço só do microfone, e sem frase nenhuma.
+
+#: A MESA MISTA da §1 da sprint, na faixa forjada: dois no cabo com a fonte
+#: publicada e dois no rádio com a fonte nula.
+MISTA = (
+    ("p1", "aa:bb:cc:00:00:3a", "usb", "alsa_input.usb-regua-00.iec958-stereo"),
+    ("p2", "aa:bb:cc:00:00:7d", "bt", None),
+    ("p3", "aa:bb:cc:00:00:c4", "usb", "hefesto_mic_0000c4"),
+    ("p4", "aa:bb:cc:00:00:e9", "bt", None),
+)
+
+
+def _com_fonte(fonte: str | None, **mais: Any) -> dict[str, Any]:
+    """Uma entrada cujo daemon DISSE a fonte do microfone, nula ou não."""
+    return _entrada(audio={"mic_mudo": False, "canal_fonte": fonte}, **mais)
+
+
+def _regras_do_microfone(doc: str) -> list[tuple[str, str]]:
+    """Cada seletor da moldura do microfone, com a declaração da regra dele."""
+    estilo = "".join(re.findall(r"<style[^>]*>(.*?)</style>", doc, flags=re.S))
+    estilo = re.sub(r"/\*.*?\*/", "", estilo, flags=re.S)
+    pares = []
+    for seletores, declaracao in re.findall(r"([^{}]*)\{([^{}]*)\}", estilo):
+        for seletor in seletores.split(","):
+            if 'data-bloco="microfone"' in seletor:
+                pares.append((" ".join(seletor.split()), declaracao))
+    return pares
+
+
+class TestOMicrofoneSemFonte:
+    """O cinza chega ANTES do arrasto, e só na moldura do microfone."""
+
+    def test_a_fonte_nula_apaga_o_microfone_e_nao_o_alto_falante(self) -> None:
+        """A mordida da ROTA CORRIGIDA, na metade do pacote.
+
+        MORDE: tire a pergunta da fonte de `microfone_apagado` (o microfone
+        acende) ou ponha a fonte no `som-sem-endereco` (o alto-falante apaga).
+        """
+        card = _card(_com_fonte(None, transport="bt"))
+        assert card["mic-apagado"] == mod.MIC_SEM_FONTE
+        assert card["som-sem-endereco"] == ""
+
+    def test_com_fonte_o_microfone_acende(self) -> None:
+        """A metade contrária: apagar o microfone do cabo seria pior que o defeito."""
+        assert _card(_com_fonte("alsa_input.usb-regua"))["mic-apagado"] == ""
+
+    def test_sem_a_chave_nao_ha_cinza(self) -> None:
+        """Chave ausente é "não sei": o laço do canal ainda não perguntou.
+
+        MORDE: faça `microfone_apagado` apagar na ausência da chave.
+        """
+        assert _card(_entrada(audio={"mic_mudo": False}))["mic-apagado"] == ""
+
+    def test_sem_endereco_o_microfone_apaga_inteiro(self) -> None:
+        """A guarda de antes continua, e o endereço vence a fonte."""
+        card = _card(_com_fonte("alsa_input.usb-regua", uniq=None))
+        assert card["mic-apagado"] == mod.MIC_SEM_ALVO
+        assert card["som-sem-endereco"] == TEXTO_AUDIO_SEM_ENDERECO
+
+    def test_a_mesa_mista_apaga_so_os_dois_do_radio(self) -> None:
+        """POR CONTROLE: um teste de um controle só passaria com a leitura global.
+
+        MORDE: responda o cinza pela primeira entrada da mesa, para todos.
+        """
+        entradas = [
+            _entrada(uniq=uniq, player=n, is_primary=n == 1, transport=via,
+                     audio={"mic_mudo": False, "canal_fonte": fonte})
+            for n, (_pref, uniq, via, fonte) in enumerate(MISTA, start=1)]
+        mesa = [{"pref": pref, "jogador": n, "uniq": uniq, "nome": "Régua",
+                 "via": "USB" if via == "usb" else "BT", "cor": "cosmic-red",
+                 "mascara": "DualSense"}
+                for n, (pref, uniq, via, _fonte) in enumerate(MISTA, start=1)]
+        cards = _cards(entradas, mesa)
+        visto = {uniq: (cards[uniq]["mic-apagado"], cards[uniq]["som-sem-endereco"])
+                 for _pref, uniq, _via, _fonte in MISTA}
+        assert visto == {
+            MISTA[0][1]: ("", ""), MISTA[1][1]: (mod.MIC_SEM_FONTE, ""),
+            MISTA[2][1]: ("", ""), MISTA[3][1]: (mod.MIC_SEM_FONTE, "")}
+
+    @pytest.mark.parametrize("publicado", [False, True])
+    def test_a_moldura_do_microfone_tem_endereco_proprio(self, publicado: bool) -> None:
+        """Na bancada e no publicado: o microfone lê `mic-apagado`, o alto-falante não.
+
+        Sem a página publicada o pacote nem emite o campo (`_so_se_a_pagina_tiver`),
+        e a cura ficaria só no código.
+
+        MORDE: devolva a moldura do microfone ao `som-sem-endereco`.
+        """
+        doc = onde.pagina(PAGINA, publicado=publicado).read_text(encoding="utf-8")
+        mics = re.findall(r'<div class="moldura"[^>]*data-bloco="microfone"[^>]*>', doc)
+        altos = re.findall(r'<div class="moldura"[^>]*data-bloco="alto-falante"[^>]*>',
+                           doc)
+        assert mics and len(mics) == len(altos), (len(mics), len(altos))
+        for tag in mics:
+            assert 'data-campo="mic-apagado"' in tag, tag
+            assert 'data-hef-atributo="data-apagado"' in tag, tag
+            assert "som-sem-endereco" not in tag, tag
+        for tag in altos:
+            assert 'data-campo="som-sem-endereco"' in tag, tag
+
+    def test_sem_fonte_so_o_deslizante_apaga(self) -> None:
+        """O botão do microfone pede o canal: apagá-lo trancaria a única saída.
+
+        MORDE: ponha `.mudo-i` ou `.rota` num seletor que case o `sem-fonte`, ou
+        tire o `.trilho` da regra de opacidade.
+        """
+        casa_sem_fonte = [
+            (seletor, declaracao)
+            for seletor, declaracao in _regras_do_microfone(_bancada())
+            if '[data-apagado="sem-fonte"]' in seletor or "[data-apagado]" in seletor]
+        assert casa_sem_fonte, "a folha não tem regra para o microfone sem fonte"
+        for seletor, _declaracao in casa_sem_fonte:
+            alvo = seletor.rsplit("]", 1)[-1]
+            assert ".mudo-i" not in alvo and ".rota" not in alvo, seletor
+        assert any(".trilho" in s and "opacity" in d for s, d in casa_sem_fonte)
+        assert any(".puxa-vol" in s and "not-allowed" in d for s, d in casa_sem_fonte)
