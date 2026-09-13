@@ -1,6 +1,6 @@
 ---
 sprint: FONE-01
-estado: aberta
+estado: caducou
 posse:
   FONE-01:
     - src/hefesto_dualsense4unix/core/backend_pydualsense.py
@@ -15,6 +15,15 @@ nao_toca:
   - src/hefesto_dualsense4unix/profiles/schema.py
   - src/hefesto_dualsense4unix/interface/pacotes/a02_controles.py
 ---
+> **ESTADO 13/09/2026: caducou.** Fechar exigiria o item 4 — um deslizante de
+> fone na aba Controles, que nunca existiu nem na página publicada nem no mockup
+> —, e a ordem dela de 13/09 é «não vamos adicionar botões novos no layout»
+> ([o índice](2026-09-13-A-TERCEIRA-LISTA-DELA-INDICE.md)). Um campo que nenhuma
+> tela escreve só se preencheria editando o JSON à mão. O comportamento de hoje,
+> fone igual ao alto-falante, é o padrão que a própria
+> D-0909-O-FONE-GANHA-CAMPO-PROPRIO escolheu para o campo vazio. A medição da
+> bancada fica no caderno como fato (triagem das abertas, 13/09).
+
 > **A BANCADA RESPONDEU EM 09/09/2026: o fone tem volume PRÓPRIO.** Ela mediu com o fone
 > plugado no controle do cabo: *"O som sem fone sai no auto falante do controle. com fone
 > o slicer funciona porém tem que assumir"*. O `common[4]` varia o fone sozinho, logo

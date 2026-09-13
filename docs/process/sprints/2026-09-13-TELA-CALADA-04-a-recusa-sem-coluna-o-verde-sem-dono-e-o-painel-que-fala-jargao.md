@@ -1,6 +1,6 @@
 ---
 sprint: TELA-CALADA-04
-estado: aberta
+estado: absorvida
 onda: A-FILA-DE-1309
 posse:
   TELA-CALADA-04:
@@ -21,6 +21,17 @@ nao_toca:
 ---
 
 # TELA-CALADA-04 — a recusa sem coluna, o verde sem dono e o painel que fala jargão
+
+> **ESTADO 13/09/2026 (tarde): absorvida**, antes de qualquer agente, pelo
+> estudo da terceira lista dela. As §1 e §2 entram na
+> [FRASES-E-DICAS-01](2026-09-13-FRASES-E-DICAS-01-toda-frase-de-aviso-que-ainda-chega-a-tela.md)
+> — **com duas correções**: a recusa COM coluna também sai do cartão (a caixa da
+> foto dela é essa), e a frase NÃO vai ao `title` (a camada da dica da casa
+> mostra todo `title` como caixa flutuante, e a frase da Steam voltaria por ali).
+> As §3 e §4 entram na
+> [SISTEMA-BOTOES-01](2026-09-13-SISTEMA-BOTOES-01-cada-botao-da-aba-sistema-faz-o-que-diz.md),
+> que escreve o mesmo `a09_sistema.py`. O teste do `cria:` abaixo nasce com outro
+> nome, na FRASES-E-DICAS-01.
 
 **13/09/2026.** O que as entregas da TELA-CALADA-01 e da TELA-CALADA-03 deixaram
 de pé, com o endereço. A palavra dela que move a leva é a mesma:

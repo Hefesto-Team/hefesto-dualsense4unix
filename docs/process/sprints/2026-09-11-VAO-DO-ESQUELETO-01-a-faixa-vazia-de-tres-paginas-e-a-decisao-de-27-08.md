@@ -5,8 +5,12 @@ onda: A-LISTA-DE-0911
 posse:
   VAO-DO-ESQUELETO-01:
     - src/hefesto_dualsense4unix/interface/topo.html
-    - src/hefesto_dualsense4unix/interface/monta.py
-cria: []
+    # 13/09/2026: o `monta.py` saiu da posse — é da FRASES-E-DICAS-02, e o
+    # resíduo daqui é só CSS e um literal do `topo.html`.
+    - docs/process/sprints/2026-09-11-VAO-DO-ESQUELETO-01-a-faixa-vazia-de-tres-paginas-e-a-decisao-de-27-08.md
+cria:
+  - tests/unit/test_a_fita_nao_salta_ao_trocar_de_aba.py
+  - tests/unit/test_a_aba_perfis_segue_o_perfil_que_vale.py
 bancada: false
 # AS DUAS JÁ REIVINDICAM O `topo.html`, e as três não podem correr juntas nele:
 # a ALTURA-DA-VISTA mexe na ALTURA da janela, que é a outra metade desta conta
@@ -14,7 +18,8 @@ bancada: false
 # arquivo é o mesmo, e a §4 aqui espera a palavra dela.
 depois_de:
   - ALTURA-DA-VISTA-01
-  - DICA-DA-COR-01
+  # 13/09/2026: a DICA-DA-COR-01 saiu desta lista — o refazer dela toca só o
+  # `aba04.py`, e não o `topo.html` (triagem das branches entregues).
   # SERIALIZADA PARA DEPOIS DA SEGUNDA LISTA DELA — 11/09/2026, e é o
   # mesmo precedente da lista anterior: a queixa VIVA vem primeiro. As
   # frentes abaixo reescrevem o TEXTO dos arquivos que esta sprint
@@ -28,6 +33,35 @@ nao_toca:
 ---
 
 # VAO-DO-ESQUELETO-01 — a faixa vazia de três páginas, e a decisão dela de 27/08
+
+> **ROTA CORRIGIDA — 13/09/2026, e ela vence o corpo abaixo.** A §4 tem
+> resposta: **o caminho (c), nada muda no layout.** A base é a própria palavra
+> dela nas duas decisões de 27/08 citadas na §4 (o quadro não estica; a altura é
+> única nas dez abas), a escolha dela de 09/09 na ALTURA-DA-VISTA-01 («1 +
+> rodapé»), e a ordem de 13/09 no
+> [índice](2026-09-13-A-TERCEIRA-LISTA-DELA-INDICE.md):
+>
+> *«todas as decisoes ja foram tomadas no passado não precisa de mim pra nada»* <!-- noqa-acento: citação literal dela -->
+>
+> A sobra só se cura com conteúdo, que é outra fila. **O que se executa é o
+> resíduo, e ele tem dois itens no mesmo `topo.html`:**
+>
+> 1. **a página salta 2 px ao trocar de aba**
+>    ([AS DEZ ABAS MAXIMIZADAS](../2026-09-11-AS-DEZ-ABAS-MAXIMIZADAS-o-que-a-foto-acusa.md),
+>    §3.6): o chip de plástico da fita inerte tem borda de 1 px, e a fita mede 52
+>    px nas três abas que escolhem e 50 nas outras sete. A cura é manter 2 px de
+>    borda na cor sutil — só CSS;
+> 2. **o §4.1 da PERFIS-TIRA-BUSCA-ATIVO-01:** o chip «Perfil ativo» nasce «Mortal
+>    Kombat» nas dez páginas — o literal do `pa-nome` no `topo.html`. A página
+>    nasce com «—», o mesmo que o pintor usa quando não há ativo
+>    (`pacotes/__init__.py`).
+>
+> Depois, regerar as dez e `--publicar` as dez. **Remeça antes de qualquer
+> número:** a ALTURA-DA-VISTA-01 foi costurada em 13/09 e tirou a faixa do
+> cabeçalho, e a 01 perdeu a faixa em 13/09. **Mordidas:** a fita mede o mesmo
+> nas dez abas (arrancar a borda → 2 px e reprova); nenhuma página publicada tem
+> nome de perfil no `pa-nome` (devolver → reprova). A régua com teto do vão NÃO
+> nasce aqui.
 
 > **ELA VÊ ANTES DE ALGUÉM EXECUTAR.** Esta sprint nasce MEDIDA e PARADA: o que
 > a GATILHOS-VAO-01 tratava como defeito é, no disco, **uma escolha dela** — e

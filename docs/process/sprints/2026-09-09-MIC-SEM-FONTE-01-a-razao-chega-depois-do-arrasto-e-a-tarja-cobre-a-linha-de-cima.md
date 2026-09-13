@@ -4,9 +4,11 @@ estado: aberta
 posse:
   MIC-SEM-FONTE-01:
     - src/hefesto_dualsense4unix/interface/pacotes/a02_controles.py
-    - src/hefesto_dualsense4unix/interface/hefesto_vivo.py
+    # 13/09/2026 (tarde): `hefesto_vivo.py` e a régua da recusa saíram da
+    # posse — o recado não existe mais depois da FRASES-E-DICAS-01; a moldura
+    # do microfone ganha endereço próprio no gerador.
+    - src/hefesto_dualsense4unix/interface/aba02.py
     - tests/unit/test_o_cartao_diz_se_o_som_tem_para_onde_ir.py
-    - tests/unit/test_a_recusa_chega_ao_cartao.py
 bancada: false
 depois_de:
   # SERIALIZADA PARA DEPOIS DA SEGUNDA LISTA DELA — 11/09/2026, e é o
@@ -27,12 +29,38 @@ depois_de:
   # 13/09/2026: a TELA-CALADA-04 muda a recusa de gesto sem coluna no mesmo
   # `hefesto_vivo.py` — medir a recusa antes dela é medir o canal velho.
   - TELA-CALADA-04
+  # 13/09/2026 (tarde): a FRASES-E-DICAS-01 tira o canal de recado inteiro (a
+  # tarja do título desta sprint deixa de existir), e a FRASES-E-DICAS-02
+  # escreve o mesmo `a02_controles.py`.
+  - FRASES-E-DICAS-01
+  - FRASES-E-DICAS-02
 nao_toca:
   - src/hefesto_dualsense4unix/daemon/ipc_handlers.py
   - src/hefesto_dualsense4unix/daemon/subsystems/bt_mic.py
   - src/hefesto_dualsense4unix/integrations/fontes_de_captura.py
   - src/hefesto_dualsense4unix/integrations/audio_control.py
+  - src/hefesto_dualsense4unix/interface/hefesto_vivo.py
 ---
+
+> **ROTA CORRIGIDA — 13/09/2026, e ela vence o corpo abaixo** (triagem das
+> abertas). **A metade da TARJA morreu:** a
+> [FRASES-E-DICAS-01](2026-09-13-FRASES-E-DICAS-01-toda-frase-de-aviso-que-ainda-chega-a-tela.md)
+> tira o canal de recado da tela, e com ele a pergunta [A]/[B] do cartão fechado
+> — não há recado para pousar em lugar nenhum. **Sobra a metade do cinza:** o
+> botão do microfone de um controle sem fonte publicada fica cinza ANTES do
+> arrasto, lendo `canal_fonte`. Dois fatos de 13/09 mudam o como:
+>
+> 1. o campo `som-sem-endereco` está declarado nas DUAS molduras do cartão
+>    (microfone e alto-falante), e pôr `canal_fonte` nele apagaria também o
+>    alto-falante dos controles no rádio, que toca pelo 0x35 desde 10/09 — **a
+>    moldura do microfone ganha endereço próprio**, que é atributo e não botão; por
+>    isso `aba02.py` entra na posse;
+> 2. **nenhuma frase nova:** o cinza é o estado, e a regra das duas FRASES vale
+>    aqui — `TEXTO_MIC_SEM_FONTE` não vai à dica nem ao `title`.
+>
+> **Mordida:** estado dublado com `canal_fonte` nulo num controle → o microfone
+> dele cinza, o alto-falante dele não; arrancar o endereço próprio → os dois
+> cinzas, e reprova.
 
 > *"mic tá igual e o de som também (esse eu esperava que não fosse funcionar agora)"* <!-- noqa-acento: citação literal dela -->
 >

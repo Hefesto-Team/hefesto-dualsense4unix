@@ -4,11 +4,17 @@ estado: aberta
 posse:
   DICA-DA-COR-01:
     - src/hefesto_dualsense4unix/interface/aba04.py
-    - src/hefesto_dualsense4unix/interface/pacotes/a04_iluminacao.py
-    - src/hefesto_dualsense4unix/interface/topo.html
+    # 13/09/2026: o pacote da 04 e o `topo.html` saíram da posse — o refazer
+    # desta sprint é só o X, no CSS de `aba04.py` (ROTA CORRIGIDA abaixo).
+    - tests/unit/test_o_x_do_vizinho_e_quadrado.py
 cria:
+  # 13/09/2026: o ensaio abaixo não nasce mais (a metade da dica fechou pela
+  # TOOLTIP-C1); fica declarado só porque o corpo antigo o cita.
   - scripts/ensaios/a_dica_da_cor_nao_e_do_gtk.py
-bancada: true
+  - tests/unit/test_o_x_do_vizinho_e_quadrado.py
+# 13/09/2026: o X se mede no WebKit do piloto; a metade que pedia o compositor
+# dela — o pisca da dica — fechou pela TOOLTIP-C1.
+bancada: false
 depois_de:
   # A lista dela de 11/09 vem antes: a ILUMINACAO-PALETA-01 tira três tons
   # e o seletor livre da MESMA guia de `aba04.py`. A dica da cor se escreve
@@ -26,7 +32,23 @@ depois_de:
   # mundo de ontem — e a costura viraria «a última a gravar vence».
   - ESQUELETO-C2
   - LINGUA-A4
+  # 13/09/2026: a FRASES-E-DICAS-01 regera a página 04 e enxuga a dica do tom
+  # tomado no pacote; o X se mede sobre a página que ela deixar.
+  - FRASES-E-DICAS-01
 ---
+
+> **ROTA CORRIGIDA — 13/09/2026, e ela vence tudo abaixo** (triagem das
+> branches entregues). **A entrega `65838cf4` NÃO se costura.** A metade da DICA
+> já está dentro por outro caminho, e maior: a TOOLTIP-C1 (`b2ac44ce`, 11/09)
+> colhe todo `title` para a dica da própria página nas dez abas
+> (`DICA_DA_CASA`, em `hefesto_vivo.py`) — é o «as dez abas de uma vez» da
+> decisão dela. Costurar criaria um segundo mecanismo ao lado, e a branch é
+> anterior à paleta de 11 tons. **A metade do X continua valendo, e é o que se
+> refaz:** `aba04.py` ainda tem `inset:5px` no X do tom tomado, e ele mede 4,17 x
+> 14 px na janela como ela abre (1212 x 809) — uma tira, não um X. A cura: o X
+> centrado e quadrado, com o teto de 12 px da branch como referência, medido no
+> WebKit do piloto; regerar e `--publicar 04`. A mordida devolve o `inset:5px` e
+> vê a régua reprovar.
 
 > **ESTADO 12/09/2026: continua ABERTA, e o motivo não é falta de
 > trabalho.** Ela foi ENTREGUE em `voo/DICA-DA-COR-01-opus` e **não está na costura** —

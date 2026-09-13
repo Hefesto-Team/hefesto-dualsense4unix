@@ -4,16 +4,56 @@ estado: aberta
 onda: A-FILA-DE-0911
 posse:
   F12-NAVEGACAO:
+    - src/hefesto_dualsense4unix/profiles/schema.py
+    - src/hefesto_dualsense4unix/profiles/manager.py
+    - src/hefesto_dualsense4unix/daemon/subsystems/gamepad.py
+    - src/hefesto_dualsense4unix/daemon/subsystems/coop.py
+    - src/hefesto_dualsense4unix/interface/pacotes/a06_navegacao.py
+    - src/hefesto_dualsense4unix/interface/aba06.py
     - docs/process/sprints/2026-09-11-F1-REMAPEAR-as-vinte-e-duas-linhas-e-o-motor-que-nao-existe.md
 cria:
   - src/hefesto_dualsense4unix/core/remapeamento_de_botao.py
+  - tests/unit/test_migra_navegacao_13_o_remapeamento_botao_a_botao.py
 bancada: false
 depois_de: []
 nao_toca:
   - install.sh
+  - docs/data/mapa-controles.csv
+  - src/hefesto_dualsense4unix/interface/hefesto_vivo.py
 ---
 
 # F1-REMAPEAR — as 22 linhas medidas, e o motor que não existe
+
+> **ROTA CORRIGIDA — 13/09/2026, e ela vence o corpo abaixo** (triagem das
+> abertas).
+>
+> * **A tela já está desenhada:** `#remapeamento`, com os 22 seletores, o
+>   «Guardar» e o «Confirmar», na página 06 publicada. Não entra botão novo;
+>   entra o dono dos dois gestos.
+> * **UM FATO DESTA SPRINT CAIU:** o controle primário PASSA por
+>   `forward_buttons` — `lifecycle.py` chama `_dispatch_gamepad_emulation`, que
+>   chama o despacho de `gamepad.py`, que chama `forward_buttons` com os botões
+>   apertados, desde `da9b4921` (27/06). Os secundários passam pelo mesmo
+>   vocabulário em `coop.py`. Substitua o fato aqui e no texto de `SEM_GESTO` em
+>   `a06_navegacao.py`.
+> * **ONDE A TROCA ENTRA — decidido por quem coordena, por delegação** (a palavra
+>   dela de 13/09 no [índice](2026-09-13-A-TERCEIRA-LISTA-DELA-INDICE.md), §0 item
+>   5, e o PROVISÓRIO da MIGRA-NAVEGACAO-13): **logo antes dos dois
+>   `forward_buttons`.** Alcança os quatro controles, muda só o que o jogo vê, e
+>   deixa o PS, os gestos, o atalho de teclado e o teclado e o mouse emulados com
+>   os botões originais. O remapeamento é GLOBAL no perfil
+>   (D-0809-A-NAVEGACAO-E-GLOBAL-NO-PERFIL) e entra por decisão dela
+>   (D-O-REMAPEAMENTO-BOTAO-A-BOTAO-ENTRA), ambas em `docs/data/decisoes-dela.csv`.
+> * **O caminho:** módulo puro (`core/remapeamento_de_botao.py`); campo do perfil
+>   omitido quando vazio; aplicado pelo manager; tradução com dublê nos dois
+>   pontos; a tela com `grava="gravar_e_reaplicar"`, no molde do
+>   `guardar-definicoes` da mesma aba. Confira onde `apply_button_actions`
+>   deposita o estado antes de escolher o dono do mapa ativo. Só a prova dentro do
+>   jogo é de bancada.
+> * **O que morde:** «✕ passa a ser ○» gravado → o `forward_buttons` do dublê
+>   recebe ○, e o PS e o atalho continuam vendo ✕; arrancar a tradução → reprova.
+>   Perfil sem remapeamento → JSON sem o campo. Os dois gestos da 06 deixam
+>   `SEM_GESTO`.
 
 Nasce do §1 de
 [A FILA QUE A ONDA ABRIU](2026-09-11-A-FILA-QUE-A-ONDA-ABRIU-INDICE.md).

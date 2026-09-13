@@ -39,25 +39,57 @@ leva das frases, e mandou numa mensagem só:
 4. **Nada de botão novo.** Tirar e enxugar pode; mexer o mínimo.
 5. **Decisão:** as decisões já estão registradas na casa; quem decide escreve a
    razão e o endereço da decisão antiga que a sustenta.
+6. **As páginas geradas não são posse de ninguém nesta leva.** Toda sprint que
+   muda gerador, pacote cravado ou `topo.html` regera e publica NA PRÓPRIA
+   árvore, para medir e fotografar; na costura, quem coordena regera as dez sobre
+   o código costurado e publica. HTML gerado nunca se mescla à mão.
 
-## §1 — As sprints
+## §1 — O que o estudo respondeu, em uma linha cada
 
-| sprint | o pedido | estado |
+* **A caixa laranja** é a recusa do número acima dos controles ligados, e ainda
+  pousa na aba Iluminação; o canal inteiro de recado sai da tela.
+* **O «Reconectar»** não anda mais para os lados; ainda pula 62 px para cima
+  quando um tique do serviço não responde, e 27 px com zero controles.
+* **O Sackboy** tem duas exclusividades fora da interface: o install script que a
+  casa contava como jogo vivo, e o Steam Input que a própria Steam liga por jogo —
+  o Pragmata e o Mullet Mad Jack têm a segunda.
+* **A aba Sistema:** seis botões funcionam, cinco funcionam em parte, o do Proton
+  não funciona com a Steam aberta, e o «Ver os plugins» não tem como funcionar e
+  sai.
+* **A luz não foi desligada** e nenhuma guarda caiu; o que ela reafirma no jogo é
+  a cor fosca que o cliente Steam deixou no vpad. E o giroscópio não chega ao jogo
+  em Modo Virtual — é o laudo da SENSORES-NO-JOGO-01, que vira sprint de produto.
+* **Um portão estava vermelho no `dev` empurrado** (`citacoes-no-codigo`): curado
+  na costura desta leva.
+
+## §2 — As sprints e a ordem
+
+| sprint | o pedido | onda |
 | --- | --- | --- |
-| FRASES-E-DICAS-01 | a frase da Steam e a caixa laranja da Gatilhos — toda frase de aviso que ainda chega à tela, em qualquer forma | estudo |
-| RECONECTAR-SAMBA-02 | o «Reconectar controles» ainda muda de lugar e de formato na janela dela | estudo |
-| JOGO-SEM-EXCLUSIVIDADE-01 | Sackboy (e talvez Pragmata e Mullet Mad Jack) não seguem o modo e a máscara da aba Jogar | estudo |
-| SISTEMA-BOTOES-01 | cada botão da aba Sistema faz o que diz? funciona? | estudo |
-| LIGHTBAR-NA-STEAM-01 | a luz dentro da Steam, as guardas que se autoaplicavam, e se as outras features chegam ao jogo | estudo |
-| TELA-CALADA-04 | a recusa sem coluna, o verde sem dono, o painel da 09 que fala jargão | aberta (estudo pronto) |
-| as abertas de antes | triagem: costurar o que já foi entregue, executar o que cabe, deixar à bancada o que é de aparelho | estudo |
+| costura: ALTURA-DA-VISTA-01 · SENSORES-NO-JOGO-01 · TOUCHPAD-NO-3DS-01 | as três entregas que a triagem liberou; a ALTURA primeiro, porque o `topo.html` entra nas dez páginas | quem coordena, antes da onda 1 |
+| [FRASES-E-DICAS-01](2026-09-13-FRASES-E-DICAS-01-toda-frase-de-aviso-que-ainda-chega-a-tela.md) | a caixa laranja e a frase da Steam: o recado sai da tela; o número fora diz só «Player N» | 1 |
+| [FRASES-E-DICAS-02](2026-09-13-FRASES-E-DICAS-02-as-dicas-e-as-linhas-que-avisam-viram-estado.md) | as dicas e as linhas que avisam nas abas 02, 03, 07 e 08 viram estado | 1 |
+| [JOGO-SEM-EXCLUSIVIDADE-01](2026-09-13-JOGO-SEM-EXCLUSIVIDADE-01-nenhum-jogo-foge-do-modo-e-da-mascara-da-aba-jogar.md) | o install script que fingia jogo vivo; o Steam Input por jogo fora da lista | 1 |
+| [LIGHTBAR-NA-STEAM-01](2026-09-13-LIGHTBAR-NA-STEAM-01-a-luz-dentro-da-steam-e-as-guardas-que-se-autoaplicavam.md) | a cor retida do cliente Steam deixa de virar camada do jogo; a telemetria diz o valor | 1 |
+| [F1-REMAPEAR](2026-09-11-F1-REMAPEAR-as-vinte-e-duas-linhas-e-o-motor-que-nao-existe.md) | o motor do remapeamento que a aba 06 já desenha | 1 |
+| [VAO-DO-ESQUELETO-01](2026-09-11-VAO-DO-ESQUELETO-01-a-faixa-vazia-de-tres-paginas-e-a-decisao-de-27-08.md) | o salto de 2 px da fita e o «Mortal Kombat» do chip (absorve o §4.1 da PERFIS-TIRA) | 1 |
+| SENSORES-NO-JOGO-02 | o giroscópio que não chega ao jogo em Modo Virtual | 1: só o estudo |
+| [SISTEMA-BOTOES-01](2026-09-13-SISTEMA-BOTOES-01-cada-botao-da-aba-sistema-faz-o-que-diz.md) | cada botão da aba Sistema (absorve as §3 e §4 da TELA-CALADA-04) | 2, depois da FRASES-01 |
+| [RECONECTAR-SAMBA-02](2026-09-13-RECONECTAR-SAMBA-02-o-botao-que-ainda-muda-de-lugar-na-janela-dela.md) | o pulo vertical: o tique mudo, os chips e a frase da mesa vazia | 2, depois da FRASES-01 |
+| [MIC-SEM-FONTE-01](2026-09-09-MIC-SEM-FONTE-01-a-razao-chega-depois-do-arrasto-e-a-tarja-cobre-a-linha-de-cima.md) | o microfone cinza antes do arrasto | 2, depois das duas FRASES |
+| [DICA-DA-COR-01](2026-09-09-DICA-DA-COR-01-o-aviso-sai-da-janelinha-do-gtk-e-o-x-ganha-pixel.md) | só o X do tom tomado | 2, depois da FRASES-01 |
+| TELA-CALADA-04 · PERFIS-TIRA-BUSCA-ATIVO-01 | — | absorvidas |
+| FONE-01 | — | caducou: pediria deslizante novo |
+| MESA-DE-QUATRO-01 · LUZ-NO-RADIO-01 · OS-GESTOS-QUE-SO-ELA-PODE-FAZER | as provas de aparelho de toda a leva | bancada, com ela |
 
-## §2 — Onde está o estado, para sobreviver a uma queda
+## §3 — Onde está o estado, para sobreviver a uma queda
 
 * **A integração:** `/mnt/Apate/Desenvolvimento/hefesto-voo/_integra-1309`, branch
   `onda/1309`. O `dev` dela recebe por fast-forward.
 * **Os lotes:** `/mnt/Apate/Desenvolvimento/hefesto-voo/_lotes/<lote>/args.json`
   e as árvores em `/mnt/Apate/Desenvolvimento/hefesto-voo/hefesto-voo/<SPRINT>-opus`.
+* **Os estudos inteiros e as duas triagens**, fora do git:
+  `/mnt/Apate/Desenvolvimento/hefesto-voo/_lotes/1309-terceira/`.
 * **O que cada agente entregou:** `docs/process/agentes/2026-09-13/<SPRINT>-*.md`
   na branch `voo/<SPRINT>-opus`. Conferir com `git cherry onda/1309 voo/<SPRINT>-opus`.
 * **O ONDE PARAMOS do dia:**

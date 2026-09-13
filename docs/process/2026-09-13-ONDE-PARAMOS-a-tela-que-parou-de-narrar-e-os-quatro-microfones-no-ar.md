@@ -3,8 +3,11 @@
 ## §0 — O estado em uma linha
 
 **`dev` em `e58bfe2b`, instalado às 05:30 com `rc=0` (daemon reiniciado às
-05:29:52, `doctor` sem nenhuma FALHA) · 60 portões verdes · a suíte inteira
-verde nas 24 partes (20.369 testes).** A leva seguinte — a terceira lista dela —
+05:29:52, `doctor` sem nenhuma FALHA) · 60 portões verdes medidos às 05:00, ANTES
+do `e58bfe2b` — esse commit acrescentou uma linha em `a10_perfis.py` e deixou o
+`citacoes-no-codigo` vermelho no `dev` empurrado; a triagem da tarde achou, e a
+citação foi reapontada por símbolo · a suíte inteira verde nas 24 partes (20.369
+testes).** A leva seguinte — a terceira lista dela —
 está em `docs/process/sprints/2026-09-13-A-TERCEIRA-LISTA-DELA-INDICE.md`.
 
 ## §1 — O que ela pediu nesta sessão, com as palavras dela

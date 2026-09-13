@@ -1,6 +1,6 @@
 ---
 sprint: PERFIS-TIRA-BUSCA-ATIVO-01
-estado: aberta
+estado: absorvida
 onda: A-FILA-DE-1309
 posse:
   PERFIS-TIRA-BUSCA-ATIVO-01:
@@ -21,7 +21,14 @@ nao_toca:
 
 # PERFIS-TIRA-BUSCA-ATIVO-01 — a frase que não devia aparecer, a lupa que não filtra, o ↻ em dobro e o perfil que não acompanha
 
-> **ESTADO 13/09/2026: continua ABERTA por um item só, o §4.1.**
+> **ESTADO 13/09/2026 (tarde): absorvida.** O §1 ao §4 fecharam (abaixo). O
+> §4.1 entra na
+> [VAO-DO-ESQUELETO-01](2026-09-11-VAO-DO-ESQUELETO-01-a-faixa-vazia-de-tres-paginas-e-a-decisao-de-27-08.md),
+> que escreve o mesmo `topo.html` e regera as dez páginas no mesmo gesto: o
+> literal tem UMA fonte, o `pa-nome` do `topo.html`, e curar só a página 10 não
+> existe como caminho (triagem das abertas, 13/09).
+>
+> **O que era, antes da absorção — ABERTA por um item só, o §4.1.**
 >
 > * **§1 (a tira) fechou** no commit `fix(tela): a tira da aba Perfis para de
 >   falar`: `perfis.desfecho` recebe vazio em todo gesto, e a frase vai ao
