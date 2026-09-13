@@ -1,6 +1,6 @@
 ---
 sprint: CITACOES-DAS-PLANILHAS-01
-estado: aberta
+estado: feita
 onda: A-TERCEIRA-LISTA-DELA
 posse:
   CITACOES-DAS-PLANILHAS-01:
@@ -27,6 +27,13 @@ nao_toca:
 ---
 
 # CITACOES-DAS-PLANILHAS-01 — os endereços que a leva deslocou
+
+> **ESTADO 2026-09-13: feita** — entrega em
+> [agentes/2026-09-13/CITACOES-DAS-PLANILHAS-01-opus.md](../agentes/2026-09-13/CITACOES-DAS-PLANILHAS-01-opus.md).
+> Das 3388 citações das três planilhas que resolvem nesta árvore, 1290
+> conferiam, 1629 foram reapontadas pela âncora e 469 ficaram sem âncora, na
+> entrega com a linha e o texto. O roteiro e as âncoras gravadas ficam no
+> rascunho da §I.4, para quem coordena rodar depois da costura.
 
 Nasceu na costura da onda 1 (13/09/2026). A validação da FRASES-E-DICAS-02
 contou ([entrega](../agentes/2026-09-13/FRASES-E-DICAS-02-opus.md)): das 294
