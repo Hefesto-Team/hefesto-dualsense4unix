@@ -351,15 +351,22 @@ def test_os_tres_gestos_chegaram_ao_desfecho_pedido(medido: dict) -> None:
 # 1. o sucesso não deposita — nem faixa, nem cartão
 # --------------------------------------------------------------------------
 def test_o_recibo_do_reconectar_nao_escreve_na_faixa_da_01(medido: dict) -> None:
-    """A faixa `data-hef-recados="sucesso"` da 01 existe — e fica muda.
+    """O «Reconectar» deu certo e a 01 inteira fica muda — faixa e cartão.
 
-    A primeira asserção é a que impede o verde sobre nada: se a 01 deixar de
-    declarar a faixa, esta régua não mede mais a porta que ela diz medir.
+    A FAIXA SAIU DA PÁGINA — 13/09/2026, na costura com a
+    JOGAR-A-FAIXA-QUE-PULA-01: o nó `recibo-do-reconectar` empurrava o botão, e
+    a página deixou de declarar lugar de recado. Esta régua exigia a faixa como
+    prova de que media alguma coisa; sem ela, um sucesso depositado cai no
+    FALLBACK do `pintar_recados` — o cartão do P1 —, e por isso a leitura
+    `recados` varre o documento inteiro, não só a faixa. A prova de que ainda
+    mede é a mordida: devolver o `_depositar` do sucesso põe o recibo no cartão
+    e reprova aqui e no depósito.
     """
     depois = _leitura(medido, "01-depois")
     assert depois["aba"] == PAGINA_01, depois["aba"]
-    assert depois["faixas"] >= 1, (
-        "a 01 deixou de declarar a faixa de recado — esta régua mediria nada")
+    assert depois["faixas"] == 0, (
+        "a 01 voltou a declarar faixa de recado — a JOGAR-A-FAIXA-QUE-PULA-01 a "
+        "tirou porque o recibo empurrava o «Reconectar»")
     assert depois["recados"] == [], (
         f"o «Reconectar» deu certo e a tela ganhou recado: {depois['recados']!r}. "
         f"É a frase de status que ela mandou tirar, *em todas as abas*.")

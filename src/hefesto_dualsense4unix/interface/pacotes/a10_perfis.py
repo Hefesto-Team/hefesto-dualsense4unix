@@ -3011,7 +3011,7 @@ def editor_nome(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | No
     POR QUE RENOMEAR NA HORA, e não guardar num rascunho: decisão dela de
     01/09 — *"clicar na cor já deveria aplicar a cor no controle"* —, e esta aba
     não tem "Salvar" próprio (o do rodapé grava o perfil ATIVO a partir do que
-    está valendo no daemon, `rodape.py:114`, e nem olha para este campo). Um
+    está valendo no daemon, `rodape._draft_do_ativo`, e nem olha para este campo). Um
     campo que aceita texto e não guarda nada é o botão que responde calado.
 
     NÃO HÁ `rename` NO PRODUTO — medido: `profiles/loader.py` tem
