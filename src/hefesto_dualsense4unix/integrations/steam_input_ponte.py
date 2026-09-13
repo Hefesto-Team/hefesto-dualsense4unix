@@ -86,6 +86,9 @@ própria Steam liga o Steam Input POR JOGO sem escrever
 (entradas com `autosave` nos `configset_*.vdf` e pastas `<appid>/`), cria o
 controle virtual ao abrir o jogo, e o jogo passa a ver o espelho do Steam
 Input em vez da máscara da aba Jogar. Nenhuma das duas réguas daqui via isso.
+No mesmo dia: nos jogos medidos o `"0"` JÁ estava na árvore viva quando a Steam
+criou o controle virtual. Se o `"0"` vence a configuração por jogo, só o
+aparelho responde (MESA-DE-QUATRO-01).
 
 A bandeira nova lê essa árvore e grava `"0"` em `apps/<appid>` para cada jogo
 configurado que está FORA da lista. Sem lista de jogos: a detecção é a
