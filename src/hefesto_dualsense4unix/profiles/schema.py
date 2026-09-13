@@ -1492,7 +1492,7 @@ class Profile(BaseModel):
     # vale nos quatro controles.
     #
     # - None = sem troca nenhuma. `{}` vira None na validação, e o save OMITE a
-    #   chave quando None (`loader._payload_do_perfil`): um binário anterior a
+    #   chave quando None (`_sem_ponte_a_chave_nem_aparece`, logo abaixo): um binário anterior a
     #   esta sprint tem `extra="forbid"` e recusaria o perfil INTEIRO.
     # - {"cross": "circle"} = apertar o ✕ o jogo vê o ○; os outros passam intactos.
     #
