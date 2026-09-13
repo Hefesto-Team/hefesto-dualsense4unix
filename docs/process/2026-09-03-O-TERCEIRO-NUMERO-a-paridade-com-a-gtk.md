@@ -547,8 +547,11 @@ nasceu em 06/09 por um endereço que casava `[title]` e nunca acendeu no WebKit;
 RESTOS-DA-ONDA-DOIS-01 curou e publicou a 02 em 13/09, e a linha continuou
 dizendo `FALTA_NO_HTML` e citando o endereço morto. **O sinal trocou junto:**
 `_pecas_que_escrevem_som` é símbolo da GTK e só cobra ausência; a linha agora
-vigia `data-apagado="sem-alvo"` na folha de `interface/aba02.py`, que é o que
-apaga.
+vigia a regra que apaga o alto-falante na folha de `interface/aba02.py`,
+`.moldura[data-bloco="alto-falante"][data-apagado="sem-alvo"]`. O
+`data-apagado="sem-alvo"` solto não serve: o microfone já o tinha desde a
+MIC-SEM-FONTE-01, e ele passava no `aba02.py` de `b791d234`, em que a guarda do
+alto-falante nunca acendeu.
 
 **A MORDIDA:** com a tabela devolvida à contagem velha, o portão reprova em
 `numero-publicado` nomeando `02-controles` e `TODAS`.
