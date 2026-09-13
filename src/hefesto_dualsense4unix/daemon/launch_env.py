@@ -86,6 +86,7 @@ ENV_ALLOWLIST = (
     "PROTON_DISABLE_HIDRAW",
     "__GL_SHADER_DISK_CACHE",
     "__GL_SHADER_DISK_CACHE_SKIP_CLEANUP",
+    "SDL_ACCELEROMETER_AS_JOYSTICK",
 )
 
 #: MÁSCARA-01, entrega 3 — METADE SEGURA (07/08/2026): o par VID/PID do
@@ -101,8 +102,7 @@ ENV_ALLOWLIST = (
 #: `_env_for_profile`), e um import de topo criaria a aresta
 #: `daemon -> integrations -> core` só para ler dois inteiros. Quem impede as
 #: duas cópias de divergirem é um teste dedicado
-#: (`tests/unit/test_launch_env_lista_vidpid.py`), não a boa vontade de quem
-#: for editar.
+#: (`tests/unit/test_launch_env_lista_vidpid.py`), não a boa vontade de quem for editar.
 PAR_DUALSENSE_FISICO = (0x054C, 0x0CE6)
 
 #: O gamepad VIRTUAL que o Steam Input cria — Valve, `28de:11ff`.
@@ -1570,6 +1570,15 @@ def compose_env(
     # segue as etiquetas Nintendo e A/B (e X/Y) chegam trocados ao jogo.
     # Inócua para DualSense/Xbox; entra em toda variante, como o preload.
     env["SDL_GAMECONTROLLER_USE_BUTTON_LABELS"] = "0"
+    # SENSORES-NO-JOGO-02 (13/09/2026): sem HIDAPI, o giroscópio e o
+    # acelerômetro chegam ao jogo pelo evdev, com o nó «Motion Sensors» casado
+    # ao gamepad da mesma peça pelo `uniq`. A libSDL2 2.30.x com o patch
+    # LP #2085140 (a da Ubuntu; o upstream a partir da 2.30.12) só casa esse nó
+    # quando o udev dela o classifica como acelerômetro — e com a dica no padrão
+    # 1 ela o classifica como joystick: o jogo ouve `HasSensor=False`. Medido
+    # nas bibliotecas dos runtimes da Steam (2.32.10, SDL3 3.4.14, sdl2-compat
+    # 2.32.70), a dica em 0 é inócua. Entra em toda variante, como a de cima.
+    env["SDL_ACCELEROMETER_AS_JOYSTICK"] = "0"
     return env
 
 

@@ -75,12 +75,14 @@ from pathlib import Path
 ONDE = Path(os.environ.get("XDG_STATE_HOME", Path.home() / ".local/state")) \
     / "hefesto-dualsense4unix" / "quem-abre"
 
-#: As variáveis que DECIDEM o que o jogo enxerga. As três primeiras são nossas
-#: (só existem se o wrapper rodou); as outras são da Steam e do Proton.
+#: As variáveis que DECIDEM o que o jogo enxerga. As quatro primeiras são nossas
+#: (só existem se o wrapper rodou); as outras são da Steam e do Proton. A quarta
+#: decide se a libSDL2 2.30.x casa o giroscópio ao vpad (SENSORES-NO-JOGO-02).
 VARS = (
     "PROTON_DISABLE_HIDRAW",
     "SDL_JOYSTICK_HIDAPI",
     "SDL_GAMECONTROLLER_USE_BUTTON_LABELS",
+    "SDL_ACCELEROMETER_AS_JOYSTICK",
     "SDL_GAMECONTROLLER_IGNORE_DEVICES",
     "SDL_GAMECONTROLLER_ALLOW_STEAM_VIRTUAL_GAMEPAD",
     "SteamAppId",

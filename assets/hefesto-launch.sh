@@ -79,13 +79,13 @@ data = json.loads(buf.decode("utf-8"))
 raise SystemExit(0 if isinstance(data, dict) and "result" in data else 1)
 PYEOF
 
-    # Daemon vivo: só linhas da allowlist passam (arquivo corrompido ou
-    # adulterado não consegue exportar LD_PRELOAD e afins).
+    # Daemon vivo: só a allowlist passa (arquivo adulterado não exporta LD_PRELOAD e afins).
     while IFS= read -r line; do
         case "$line" in
             SDL_GAMECONTROLLER_IGNORE_DEVICES=*) printf '%s\n' "$line" ;;
             SDL_JOYSTICK_HIDAPI=*)               printf '%s\n' "$line" ;;
             SDL_GAMECONTROLLER_USE_BUTTON_LABELS=*) printf '%s\n' "$line" ;;
+            SDL_ACCELEROMETER_AS_JOYSTICK=*)     printf '%s\n' "$line" ;;
             PROTON_DISABLE_HIDRAW=*)             printf '%s\n' "$line" ;;
             __GL_SHADER_DISK_CACHE=*)            printf '%s\n' "$line" ;;
             __GL_SHADER_DISK_CACHE_SKIP_CLEANUP=*) printf '%s\n' "$line" ;;

@@ -12,8 +12,8 @@ outra (a tela) é da aba 02, e não mora aqui.
 
 A MEDIÇÃO QUE DECIDIU O DESENHO — 04/09/2026, um DualSense no cabo
 --------------------------------------------------------------------
-Instrumento: SDL 2.30.0 headless (sem janela), abrindo os controles como um
-jogo abre, mais a leitura direta dos nós evdev e do `hidraw`.
+Instrumento: a libSDL2 2.30.0 do SISTEMA, headless (sem janela), abrindo os
+controles como um jogo abre, mais a leitura direta dos nós evdev e do `hidraw`.
 
 ======================  =============================  =========================
 caminho                 Nativo                         Virtual (uhid)
@@ -33,10 +33,10 @@ o que o SDL abre        ``/dev/hidraw4`` (HIDAPI)      ``event21``/``event25``
 **O que a medição derrubou, e são três frases da sprint que a encomendou:**
 
 1. *"agarrar ESSE nó [Motion Sensors] esconde o giro do jogo sem tocar um
-   botão"* — **falso para o SDL**: ele não enumera o nó de movimento
-   (``SDL_NumJoysticks`` devolve só os controles; o nó carrega
-   ``ID_INPUT_ACCELEROMETER`` e o SDL o pula). O grab alcança o consumidor
-   evdev DIRETO (``evtest``, emuladores que leem o nó), não o SDL;
+   botão"* — **não para o jogo que abriu o VPAD**: o SDL casa o nó de
+   movimento ao gamepad da MESMA peça pelo ``uniq`` (SENSORES-NO-JOGO-02,
+   13/09/2026), e o nó do vpad só o braço do REPORT alcança. O grab no nó do
+   FÍSICO alcança ``evtest``, emuladores e quem abriu o físico;
 2. *"em Virtual o giro já passa pelo vpad — o interruptor já tem metade do
    motor"* — em Virtual **o nó de movimento do FÍSICO continua livre e
    publicando**, ao lado do espelho. Parar o espelho não é metade: é um
