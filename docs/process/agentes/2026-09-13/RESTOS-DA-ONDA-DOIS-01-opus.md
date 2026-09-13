@@ -188,3 +188,147 @@ O vermelho da parte A é
    esta sprint só o `doctor.sh` consulta. Não mexi porque o arquivo é o que o
    instalador copia para fora do checkout; a declaração no `casa-sabe` já diz
    que a frase caducou.
+
+## O que a validação refez e corrigiu
+
+VALIDA/CORRIGE (opus), 13/09/2026, na mesma branch, sobre `82067036`. **Nada foi
+corrigido no código:** as quatro curas estão inteiras, as réguas mordem, e esta
+seção é o único acréscimo. Os roteiros e as saídas ficaram no rascunho da
+validação, fora do git.
+
+### A posse
+
+`git diff --name-only b791d234..HEAD` dá 30 arquivos: 10 da `posse:` e da
+`cria:`, 6 páginas geradas (`mockup/` e `interface/paginas/` 02, 06 e 09), a
+entrega com as 6 fotos, e 7 fora da posse. Os 7 de fora foram medidos, e ficam:
+
+* as versões de `b791d234` dos seis testes de fora e dos dois da posse, rodadas
+  contra o código da branch: **22 failed e 1 error**. Dos de fora, 3 no
+  `test_r06_status_honesto.py`, 2 no `test_a_aba_06_navegacao_fecha_as_linhas.py`,
+  1 em cada um de `test_a_aba_07_lancadores_fecha_as_linhas.py`,
+  `test_nenhuma_frase_de_aviso_chega_a_tela.py` e
+  `test_ambiente_presumido_01_a_steam_dos_quatro_layouts.py`, e o error no
+  `test_o_cartao_da_steam_nao_narra.py`. Toda edição de fora é a régua deixando
+  de passar o `efetiva` ou de cobrar a marca na troca;
+* `portao_a_casa_sabe_e_o_produto_nao_faz.py`: 42 passed na branch; a versão da
+  base contra o código da branch dá 1 failed,
+  `test_toda_promessa_solta_esta_classificada`, nomeando
+  `broker/hidraw_broker.py::physical_nodes_exposure`.
+
+### As regras dela
+
+Contado nas páginas publicadas por `git show`, antes e depois; o `mockup/` saiu
+igual byte a byte ao publicado nas três.
+
+| página | `<button` | `data-gesto` | ` title=` |
+| --- | --- | --- | --- |
+| 02 | 43 → 43 | 55 → 55 | 70 → 70 |
+| 06 | 12 → 12 | 89 → 89 | 44 → **41** |
+| 09 | 18 → 18 | 15 → 15 | 35 → 35 |
+
+No DOM vivo, antes e depois: 40 botões e 48 gestos na 02, 12 e 86 na 06, 18 e 15
+na 09. Nenhuma frase nova chega à tela. O que muda de texto é tirar (a dica da
+moldura do alto-falante e as três marcas da troca) e trocar «os 2» por «os
+controles».
+
+### A tela, no piloto oculto
+
+Roteiros próprios: lar de mentira, Xvfb próprio,
+`HEFESTO_DUALSENSE4UNIX_SKIP_PRESET_SEED=1`, `mesa_viva.estado_do_daemon`
+dublado, e o `ponte.chamar` do piloto trocado por um espião. O ANTES é a branch
+com os quatro arquivos de `b791d234` que a tela lê (as páginas 02, 06 e 09
+publicadas e `a02_controles.py`), devolvidos por `git checkout HEAD` com a
+árvore limpa no fim. Os perfis dela (159 arquivos) saíram iguais por md5 depois
+de cada corrida.
+
+**02, o P2 sem endereço aberto** (P1 no cabo e P3 no rádio, com endereço):
+
+| cartão P2 | ANTES | DEPOIS |
+| --- | --- | --- |
+| `data-apagado` da moldura do alto-falante | ausente | `sem-alvo` |
+| `data-hef-dica` da moldura | «Som desligado: este controle está sem endereço» | ausente |
+| opacidade efetiva da linha do volume e da rota | 1 e 1 | 0,45 e 0,45 |
+| cursor do deslizante, do botão de mudo e da rota | `pointer`, `not-allowed`, `pointer` | `not-allowed` nos três |
+| P1 e P3 | acesos | acesos |
+| **o clique**: `change` no deslizante do alto-falante do P2 | recusa | recusa |
+
+O clique fecha um item do «não verifiquei» acima: o cinza é só tinta, e o gesto
+continua chegando ao Python e recusando pelo endereço. Nos dois lados o
+deslizante fez `hef-em-voo`, `hef-recusou` e voltou; o diário levou
+`[gesto falhou] 02-controles.html · volume: …`; zero `.hef-recado` e zero
+chamada à ponte.
+
+**06, aberta pelo clique no link real de cada pop-up:** ANTES, as três linhas do
+touchpad da troca com a marca, a lista apagada e 11 marcas no documento. DEPOIS,
+nenhuma marca na troca (a lista continua apagada), as três das Definições com a
+marca e a dica inteira, e 8 marcas no documento.
+
+**09, um clique só no Parar**, com um controle na mesa dublê, o `systemctl` da
+janela de mentira e `ativar_o_servico` espião. O painel ANTES diz «… e os 2
+viram gamepads comuns do Linux. …»; o DEPOIS, «… e os controles viram gamepads
+comuns do Linux. …». Nos dois, «Clique de novo para confirmar.» e o rótulo
+«Confirma?»; nenhum `systemctl` anotado, nenhuma ativação, nenhuma chamada à
+ponte.
+
+**Os perfis dela mudaram durante a validação, e não por ela.** O `.historico/`
+de um perfil girou às 13:39:42–13:40:04 e às 13:43:22–13:44:03. As duas janelas
+ficam fora das corridas desta validação: o primeiro pytest desta validação
+começou depois das 13:40:50, e o roteiro da 02 abriu às 13:44:49. Às 13:39:30 havia um
+`abrir_interface.py` aberto por outra sessão.
+
+### As mordidas, refeitas
+
+Um roteiro por mordida: árvore limpa, sabotagem com a contagem do trecho
+conferida, gerador e `--publicar` quando mexe em gerador, a régua, e a devolução
+por `git checkout HEAD` com `git status` vazio depois.
+
+| | cura arrancada | a régua |
+| --- | --- | --- |
+| V0 | nenhuma | 13 passed |
+| V1 | as cinco regras do alto-falante de volta a `[title]`, 02 regerada e publicada | **3 failed**, os mesmos da M1 |
+| V1b | só o `a02_controles.py` da base, página curada | **7 failed**, o do WebKit entre eles: a régua da tela mede a pintura, e não a página |
+| V2a | a marca de volta à troca, só no gerador | o gerador sai com rc=1 («a tela da troca voltou a marcar o touchpad…») |
+| V2b | a marca de volta, a autoconferência calada, 06 publicada | **2 failed** |
+| V2c | a marca some de toda tela, a autoconferência das Definições calada, 06 publicada | **2 failed**: a régua cobra os dois lados |
+| V3 | `a07_lancadores.py` e `emulation_actions.py` da base | **2 failed** |
+| V3b | assinatura nova, e a varredura de volta dentro de `_steam_input_excecoes` | **1 failed**, `test_a_07_a_leitura_do_steam_input_nao_varre_hidraw`: o vigia pega a varredura, não só a assinatura |
+| V4 | o `{N}` de volta ao `title` do Parar, 09 publicada | **3 failed** |
+| V5 | nenhuma: 02, 06 e 09 regeradas e publicadas | «0 mudou de fato» nas três, `git status` vazio |
+
+**A V2a mostrou um limite que não é desta sprint.** Com rc=1 o gerador da 06 já
+tinha escrito o `mockup/`, e o `--publicar` seguinte publicou a página que a
+autoconferência recusou («1 mudou de fato»). A autoconferência para o código de
+saída, não a escrita.
+
+### Réguas
+
+* a régua nova e as oito editadas, mais `test_as_seis_linhas_fora_da_troca_ficam_apagadas.py`
+  e `test_a_guarda_do_card_sem_endereco.py`: 251 passed;
+* réguas vizinhas, os 182 arquivos de `tests/unit` que citam os arquivos ou os
+  símbolos mudados, em seis partes: 372 passed · 654 passed · 583 passed e 4
+  xfailed · 523 passed e 1 xfailed · 429 passed e 7 skipped · 507 passed e 2
+  skipped. **Nenhum vermelho.** Os pulos são de
+  `test_o_pacote_cabe_na_pagina_publicada.py` (páginas sem `select` endereçado)
+  e de `test_os_botoes_tem_dono.py`, nenhum ligado a esta sprint. O intermitente
+  `test_com_mix_a_fileira_acende_o_ouvir_junto` estava na primeira parte e passou;
+* `scripts/validar-citacoes-de-linha.py --all`: OK, 3288 citações;
+  `tests/unit/test_portao_o_par_com_metade_ligada.py`: 16 passed;
+* `ruff check` nos 16 arquivos de código e teste tocados e `mypy` nos três do
+  `src/` que mudaram de assinatura ou import: limpos.
+
+### O que fica, sem cura aqui
+
+1. **A docstring de `physical_nodes_exposure`** (item 8 acima), fora da posse: confirmada.
+2. **O `.degradou[title]` da 01 e da 02** (item 3 acima) é a mesma forma do
+   defeito curado. Não medi no DOM.
+3. **O gerador que escreve antes de conferir** (a V2a), medido só na 06.
+4. **`docs/data/paridade-gtk-html.csv`, linha 57** (item 2 acima), `nao_toca:`.
+
+### O que a validação não verificou
+
+* O aparelho e o daemon vivo: o controle sem endereço continua dublê.
+* O ponteiro de verdade sobre a moldura apagada, e o clique na rota apagada: a
+  docstring do gesto de rota em `a02_controles.py` diz que a camada 1 do som
+  roda `pactl set-default-sink`, e o gesto não foi clicado.
+* O clique 2 do Parar, por regra, e nenhum Parar, Ativar ou Reiniciar de verdade.
+* A suíte inteira, por ordem do despacho.
