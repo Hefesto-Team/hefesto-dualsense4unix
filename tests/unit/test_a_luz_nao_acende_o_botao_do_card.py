@@ -74,13 +74,11 @@ from hefesto_dualsense4unix.app.actions.config.secao_controles import (
     ESPERA_VOLTOU,
     FRASE_APERTE_PS,
     FRASE_NAO_CAIU,
-    FRASE_NASCEU_CONDENADO,
     TEXTO_CANCELAR,
     TEXTO_DO_BOTAO,
     EsperaPeloPS,
     dica_do_botao,
     frase_da_procura,
-    frase_do_nascimento,
     frase_nao_voltou,
     pode_derrubar,
     uniq_normalizado,
@@ -115,8 +113,9 @@ NAO_ADOTADO = DadosDoControle(
 
 ALVO = uniq_normalizado(NO_RADIO.uniq)
 
-#: O veredito do nascimento como ele chega no payload por controle
-#: (`daemon/ipc_handlers._nascimento_para`). SINAL-NO-NASCIMENTO-01/E2.
+#: O veredito do nascimento como ele chega no payload
+#: (`daemon/ipc_handlers._nascimento_para`). SINAL-NO-NASCIMENTO-01/E2. Desde
+#: 13/09/2026 ele só serve para provar que o card NÃO o mostra.
 _CONDENADO: dict[str, Any] = {
     "confianca": "suspeita",
     "porque": (
@@ -125,22 +124,6 @@ _CONDENADO: dict[str, Any] = {
     ),
     "pede_reconexao": True,
     "instancia": "0028",
-    "hw_version": "0x00000811",
-    "firme": True,
-}
-_SA: dict[str, Any] = {
-    "confianca": "limpa",
-    "porque": "nasceu com o nó livre — nenhuma disputa registrada no nascimento",
-    "pede_reconexao": False,
-    "instancia": "0033",
-    "hw_version": "0x00000811",
-    "firme": True,
-}
-_NAO_SEI: dict[str, Any] = {
-    "confianca": "nao_sei",
-    "porque": "o Modo Nativo está ligado — o daemon não sonda quem segura o nó",
-    "pede_reconexao": False,
-    "instancia": "0035",
     "hw_version": "0x00000811",
     "firme": True,
 }
@@ -315,8 +298,6 @@ class TestNenhumaFraseLeALampada:
             DICA_NO_CABO,
             frase_nao_voltou(60),
             frase_da_procura(38),
-            FRASE_NASCEU_CONDENADO,
-            frase_do_nascimento(_CONDENADO) or "",
         ]
         for frase in frases:
             baixa = frase.lower()
@@ -329,44 +310,15 @@ class TestNenhumaFraseLeALampada:
         assert TEXTO_DO_BOTAO == "A luz não acende"
 
 
-class TestARazaoSoFalaQuandoCONDENA:
-    """SINAL-NO-NASCIMENTO-01/E2 — o botão da cura ganha a razão de existir.
-
-    E ela fala num caso só. Os outros três calam, e cada silêncio tem preço
-    medido atrás:
-
-    * sem carimbo, a tela não afirma nada — ausência não é inocência E não é
-      acusação;
-    * "nasceu bem" em todo card é ruído crônico, e ruído crônico ensina a
-      ignorar o card no dia em que ele acusa;
-    * `nao_sei` é o terceiro estado honesto do módulo (Modo Nativo, diário
-      rotacionado). Alarme sem medição atrás treina a pessoa a ignorar alarmes
-      — a mesma regra que já guarda a dica da mesa suja.
-    """
-
-    def test_a_conexao_condenada_leva_a_razao_do_daemon(self) -> None:
-        frase = frase_do_nascimento(_CONDENADO)
-        assert frase is not None
-        assert _CONDENADO["porque"] in frase, (
-            "a tela reescreveu o diagnóstico em vez de repetir o do daemon — "
-            "duas frases para o mesmo fato é a segunda verdade que esta casa paga"
-        )
-
-    def test_a_conexao_sa_nao_ganha_linha(self) -> None:
-        assert frase_do_nascimento(_SA) is None
-
-    def test_o_nao_sei_nao_vira_acusacao(self) -> None:
-        assert frase_do_nascimento(_NAO_SEI) is None
-
-    def test_sem_carimbo_a_tela_nao_afirma_nada(self) -> None:
-        for vazio in (None, {}, "suspeita", 7):
-            assert frase_do_nascimento(vazio) is None
-
-    def test_condenado_sem_frase_ainda_diz_o_que_houve(self) -> None:
-        """O daemon manda a frase pronta; se um dia mandar vazia, o card não
-        pode ficar com um triângulo mudo."""
-        mudo = {**_CONDENADO, "porque": "  "}
-        assert frase_do_nascimento(mudo) == f"▲ {FRASE_NASCEU_CONDENADO}"
+# A RAZÃO DO NASCIMENTO SAIU — FRASES-E-DICAS-03, 13/09/2026. Aqui morava
+# `TestARazaoSoFalaQuandoCONDENA`: a razão que o card mostrava debaixo do botão
+# só falava quando o daemon condenava a conexão (sem carimbo, `limpa` e
+# `nao_sei` calavam). A ordem dela de 13/09
+# (`docs/process/sprints/2026-09-13-A-TERCEIRA-LISTA-DELA-INDICE.md`) tirou a
+# razão da tela, e `frase_do_nascimento` saiu do dono sem leitor vivo: a janela
+# GTK saiu em 06/09 (`D-0609-GTK-LEVA-INTEIRA`). As três regras do silêncio
+# ficam escritas na nota de `secao_controles.py`, no lugar da função. O que este
+# arquivo cobra agora é a AUSÊNCIA — `TestARazaoSaiuDoCard`, abaixo.
 
 
 class TestNormalizacaoDoEndereco:
@@ -522,53 +474,22 @@ class TestOBlocoNaTela:
 
 
 @CABECA
-class TestARazaoNoCard:
-    """A razão na tela, e ela mora debaixo do botão que ela explica."""
+class TestARazaoSaiuDoCard:
+    """O card não ganha linha de razão, nem com a conexão condenada no payload.
 
-    def test_a_conexao_condenada_mostra_a_razao_debaixo_do_botao(self) -> None:
-        bloco, _card, _filhos = _bloco_num_card(NO_RADIO, nascimento=_CONDENADO)
-        filhos_do_bloco = bloco.caixa.get_children()
-        assert filhos_do_bloco.index(bloco.razao) == 1, (
-            "a razão saiu de baixo do botão — ela é o argumento DELE, e longe "
-            "dele vira uma frase solta no meio do card"
-        )
-        assert bloco.razao.get_visible() is True
-        assert _CONDENADO["porque"] in bloco.razao.get_text()
-
-    def test_sem_carimbo_o_card_nao_ganha_linha_nenhuma(self) -> None:
-        """Ausência não é inocência — e também não é acusação."""
-        bloco, _card, _filhos = _bloco_num_card(NO_RADIO)
-        assert bloco.razao.get_visible() is False
-        assert bloco.razao.get_text() == ""
-
-    def test_a_conexao_sa_nao_ganha_linha(self) -> None:
-        bloco, _card, _filhos = _bloco_num_card(NO_RADIO, nascimento=_SA)
-        assert bloco.razao.get_visible() is False
-
-    def test_a_razao_some_na_espera_e_volta_no_fim(self) -> None:
-        """Estado 2 do desenho: só o pedido do PS. A razão é do estado 1."""
-        bloco, _card, _filhos = _bloco_num_card(
-            NO_RADIO,
-            nascimento=_CONDENADO,
-            ao_derrubar=lambda _a: _CaiuDeVerdade(),
-            correr=lambda fn, pronto: pronto(fn()),
-        )
-        assert bloco.razao.get_visible() is True
-        bloco.botao.clicked()
-        assert bloco.razao.get_visible() is False
-        bloco.cancelar.clicked()
-        assert bloco.razao.get_visible() is True
-
-
-@CABECA
-class TestOVereditoVemDoPayloadEChegaAoCard:
-    """A mordida da FIAÇÃO, de ponta a ponta: do campo do daemon ao rótulo.
-
-    Sem ela, as duas metades podem estar certas e desligadas uma da outra — que
-    é exatamente o estado em que esta sprint encontrou o módulo.
+    FRASES-E-DICAS-03, 13/09/2026 — ver a nota acima de
+    `TestNormalizacaoDoEndereco`. MORDIDA: devolva ao `_BlocoDaLuz` a linha da
+    razão debaixo do botão e ao painel o `_nascimentos` que a alimentava, e os
+    dois testes reprovam.
     """
 
-    def test_o_campo_nascimento_do_payload_vira_a_razao_do_card(
+    def test_o_bloco_tem_so_o_botao_e_a_espera(self) -> None:
+        bloco, _card, _filhos = _bloco_num_card(NO_RADIO)
+        assert not hasattr(bloco, "razao")
+        assert bloco.caixa.get_children() == [
+            bloco.botao, bloco.aviso, bloco.contagem, bloco.cancelar, bloco.recado]
+
+    def test_o_nascimento_condenado_do_payload_nao_chega_ao_card(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         from hefesto_dualsense4unix.app.actions.config import (
@@ -611,10 +532,11 @@ class TestOVereditoVemDoPayloadEChegaAoCard:
 
         blocos = list(painel._luzes.values())
         assert blocos, "nenhum bloco da luz foi pendurado"
-        assert _CONDENADO["porque"] in blocos[0].razao.get_text(), (
-            "o veredito chegou no payload e não chegou no card — a "
-            "`A-CASA-SABE-E-O-PRODUTO-NÃO-FAZ` de novo, um elo adiante"
-        )
+        textos = [w.get_text() for w in blocos[0].caixa.get_children()
+                  if isinstance(w, Gtk.Label)]
+        assert not [x for x in textos if _CONDENADO["porque"] in x], (
+            f"o veredito do payload voltou a chegar ao card: {textos!r}")
+        assert not hasattr(painel, "_nascimentos")
 
 
 class _CaiuDeVerdade:

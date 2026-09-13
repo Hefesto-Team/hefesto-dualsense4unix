@@ -2104,7 +2104,7 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
     return {
         "colunas": colunas,
         "blocos": blocos,
-        "perfil": ctx.state.get("active_profile") or "",
+        # `perfil` saiu em 13/09/2026: o chip é das dez, dono `pacotes.topo()`.
         "sem_dono": {},
         "cobertura": {"pintados": pintados, "sem_dono": len(SEM_DONO),
                       # O QUE SAI E NÃO TEM ONDE POUSAR, dito em voz alta. Não é

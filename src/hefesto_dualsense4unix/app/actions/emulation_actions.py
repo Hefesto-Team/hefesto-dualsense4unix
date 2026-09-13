@@ -459,17 +459,17 @@ def markup_status_steam_input(
     else:
         markup = '<span foreground="#50fa7b">Desligado — tudo certo</span>'
     if excecoes:
-        # R-06: a usuária precisa ver se o opt-in dela está VALENDO, não
-        # só se está escrito no arquivo.
-        if efetiva is None:
-            extra = "sem controle físico visível"
-        elif efetiva:
-            extra = "controle liberado agora"
-        else:
-            extra = "só valendo durante o jogo"
+        # R-06 dizia: *a usuária precisa ver se o opt-in dela está VALENDO, não
+        # só se está escrito no arquivo* — e a linha narrava o `efetiva` depois
+        # de um travessão. NOTA DATADA, 13/09/2026 (FRASES-E-DICAS-03): a ordem
+        # dela no índice da terceira lista
+        # (`docs/process/sprints/2026-09-13-A-TERCEIRA-LISTA-DELA-INDICE.md`)
+        # deixa na tela só estado, e a mais nova vence. A contagem fica porque a
+        # aba 07 não mostra a lista das exceções em outro lugar; `efetiva` segue
+        # na assinatura e não vai mais à tela.
         markup += (
             f' <span foreground="#8b8fa8">· Exceção por jogo: '
-            f'{len(excecoes)} jogo(s) — {extra}</span>'
+            f'{len(excecoes)} jogo(s)</span>'
         )
     return markup
 
