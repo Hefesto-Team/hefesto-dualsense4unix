@@ -467,6 +467,9 @@ def test_a_bancada_tem_o_bloco():
          "rumble_ff": {"plays": 0, "nao_nulos": 0, "vpads": 1}})
     assert cena == [], (
         f"a faixa voltou a acender linha permanente no desenho: {cena}")
-    assert 'data-hef-recado-classe="est recibo"></div>' in doc, (
+    # A FAIXA NASCE SEM O PAR DE ATRIBUTOS DO RECADO desde 13/09/2026
+    # (FRASES-E-DICAS-01: o recado saiu da tela), e o fim da tag passou a ser o
+    # `id`. A pergunta é a mesma — a faixa nasce vazia.
+    assert 'id="vib-estado"></div>' in doc, (
         "a faixa não nasce vazia no desenho — o que estiver ali é prosa "
         "cravada, e ela chega à página que ELA olha")

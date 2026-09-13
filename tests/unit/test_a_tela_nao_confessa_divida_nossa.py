@@ -282,12 +282,18 @@ def test_o_canal_do_recado_continua_sendo_o_raise(portao) -> None:
     """
     fonte = (RAIZ / "src/hefesto_dualsense4unix/interface/hefesto_vivo.py"
              ).read_text(encoding="utf-8")
-    # SEM O FECHO DO PARÊNTESE desde 13/09/2026: o depósito ganhou a PÁGINA do
-    # clique como quarto argumento (TELA-CALADA-01, a recusa fica só na aba em
-    # que nasceu). A premissa lida é a mesma — `str(erro)` vai ao depósito.
-    assert 'self._depositar(uniq, str(erro), "recusa"' in fonte, (
-        "o piloto deixou de mandar `str(erro)` ao cartão — o canal que este "
-        "portão lê mudou de forma, e a leitura tem de mudar junto")
+    # A PREMISSA MUDOU EM 13/09/2026, e esta linha reprovou como devia
+    # (FRASES-E-DICAS-01). O piloto deixou de pôr `str(erro)` no cartão: a
+    # recusa pisca no botão, e a frase vai ao DIÁRIO da janela, pela palavra
+    # dela no índice da leva (`2026-09-13-A-TERCEIRA-LISTA-DELA-INDICE.md`,
+    # linha 19). O `raise RuntimeError` continua sendo a frase da recusa, e o
+    # portão continua lendo a língua dela — só que ela não chega mais à tela. A
+    # §R da sprint manda anotar, não apagar; o que se lê agora é o destino.
+    assert 'print(f"[gesto falhou] {pagina} · {nome}: {erro}"' in fonte, (
+        "o piloto deixou de mandar `str(erro)` ao diário — o canal que este "
+        "portão lê mudou de forma de novo, e a leitura tem de mudar junto")
+    assert "self._depositar(" not in fonte, (
+        "o piloto voltou a depositar a frase da recusa — ela voltaria à tela")
 
 
 def test_a_regua_le_os_recados_da_arvore_de_hoje(portao) -> None:

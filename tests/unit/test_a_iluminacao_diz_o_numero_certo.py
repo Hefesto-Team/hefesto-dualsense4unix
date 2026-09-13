@@ -272,14 +272,22 @@ def test_um_numero_acima_da_mesa_nao_se_diz_livre(colunas):
 
     A MORDIDA: troque `n > quantos` por `False` em `um_botao_de_player` e as
     três linhas abaixo reprovam com a dica "— livre." de volta.
+
+    A DICA DIZ SÓ O NÚMERO DESDE 13/09/2026 (FRASES-E-DICAS-01). Até ali ela
+    colava a frase da recusa, e a mesma frase chegava à tela como dica flutuante
+    e como a caixa laranja da foto dela no índice da leva
+    (`2026-09-13-A-TERCEIRA-LISTA-DELA-INDICE.md`, linha 19). O cinza e o
+    `aria-disabled` dizem que o número não cabe.
     """
-    from pacotes import a04_iluminacao as pac
+    from hefesto_dualsense4unix.app.ipc_bridge import _MOTIVOS_NUMERO
 
     fileira = colunas([DO_RADIO])[DO_RADIO["uniq"]]["players"]
-    motivo = pac.fora_da_mesa()
     for n in (2, 3, 4):
-        assert f'data-player="{n}" title="Player {n} — {motivo}."' in fileira, (
-            f"o botão {n} não diz por que o produto o recusaria: {fileira}")
+        assert f'data-player="{n}" title="Player {n}">' in fileira, (
+            f"o botão {n} fora da mesa não diz só o número: {fileira}")
+    assert _MOTIVOS_NUMERO["numero_fora_da_mesa"] not in fileira, (
+        "a frase da recusa voltou à dica do número fora — ela chegaria à tela "
+        "como dica flutuante")
     assert fileira.count('class="fora" aria-disabled="true"') == 3, (
         "os três botões fora da mesa têm de se LER apagados, e não só na dica: "
         "até 03/09 eles eram pixel a pixel iguais ao número aceso.")
@@ -294,7 +302,7 @@ def test_com_a_mesa_cheia_nenhum_numero_fica_fora(colunas):
     também; só o 3 e o 4 passam da conta. Uma cura que apagasse os quatro
     tiraria dela a troca de números, que é o que esta aba existe para fazer.
     """
-    from pacotes import a04_iluminacao as pac
+    from hefesto_dualsense4unix.app.ipc_bridge import _MOTIVOS_NUMERO
 
     fileira = colunas()[DO_RADIO["uniq"]]["players"]
     dois = _dica_do_botao(fileira, 2)
@@ -302,24 +310,26 @@ def test_com_a_mesa_cheia_nenhum_numero_fica_fora(colunas):
         f"com DOIS na mesa o número 2 tem dono e a dica é a da troca: {dois!r}")
     assert fileira.count("fora") == 2, (
         f"só o 3 e o 4 passam de uma mesa de dois: {fileira}")
-    assert pac.fora_da_mesa() not in fileira.split('data-player="3"')[0], (
+    assert _MOTIVOS_NUMERO["numero_fora_da_mesa"] not in fileira, (
         "os números 1 e 2 não podem carregar a frase da recusa.")
 
 
-def test_a_frase_da_recusa_tem_um_dono_so(colunas):
-    """A dica CITA o produto — não é uma segunda cópia de um texto de tela.
+def test_a_frase_da_recusa_nao_tem_copia_na_dica(colunas):
+    """ERA `test_a_frase_da_recusa_tem_um_dono_so` — o contrato mudou em 13/09/2026.
 
-    Texto de tela é dela. Duas cópias da mesma frase são duas frases que podem
-    divergir, e a de baixo é a que o `identity_number_set` já devolve quando
-    recusa. Se alguém digitar a frase à mão aqui, esta régua não acusa — mas
-    quem mudar a frase no `ipc_bridge` faz a dica mudar junto, que é o ponto.
+    A dica CITAVA o produto: a frase com que `identity_number_set` recusa era
+    lida da ponte, para não virar uma segunda cópia de texto de tela. Desde a
+    FRASES-E-DICAS-01 a frase não chega à tela em forma nenhuma — nem como dica
+    —, e a função que a colava saiu do pacote. O dono continua sendo um só, a
+    ponte, e a frase vai ao diário quando o clique recusa.
     """
     from hefesto_dualsense4unix.app.ipc_bridge import _MOTIVOS_NUMERO
     from pacotes import a04_iluminacao as pac
 
-    assert pac.fora_da_mesa() == _MOTIVOS_NUMERO["numero_fora_da_mesa"]
+    assert not hasattr(pac, "fora_da_mesa"), (
+        "voltou ao pacote a função que colava a frase da recusa na dica")
     fileira = colunas([DO_RADIO])[DO_RADIO["uniq"]]["players"]
-    assert _MOTIVOS_NUMERO["numero_fora_da_mesa"] in fileira
+    assert _MOTIVOS_NUMERO["numero_fora_da_mesa"] not in fileira
 
 
 def test_o_gerador_e_o_produto_desenham_o_mesmo_botao():

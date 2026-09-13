@@ -4,6 +4,11 @@ Sobe o piloto do produto (`--oculta`), deixa a pintura correr, deposita uma
 recusa pelo caminho de verdade (`_recusou_dizendo`) e mede se o desenho do
 controle SAIU DO LUGAR. O defeito que isto cobra foi fotografado em 04/09/2026:
 o recado ocupava uma célula do grid e a coluna inteira descia uma casa.
+
+O VEREDITO MUDOU EM 13/09/2026 (FRASES-E-DICAS-01): a recusa saiu da tela e
+vai só ao diário, então o verde é *nenhum recado no cartão e o desenho no mesmo
+lugar*. Um recado que volte a aparecer é VERMELHO, e não mais a condição da
+medição.
 """
 import sys
 import pathlib
@@ -88,14 +93,17 @@ def fim():
         d = _json.loads(estado.get("depois") or "{}")
     except ValueError:
         print("VEREDITO: não deu para ler a medição"); Gtk.main_quit(); return
-    if d.get("recado") == "NAO EXISTE":
-        print("VEREDITO: INCONCLUSIVO — o recado não chegou ao cartão")
+    if d.get("topo") is None:
+        print("VEREDITO: INCONCLUSIVO — sem o desenho do p1 não há o que medir")
+    elif d.get("recado") != "NAO EXISTE":
+        print(f"VEREDITO: VERMELHO — a recusa voltou a pousar no cartão "
+              f"(`{d.get('recado')}`), e ela saiu da tela em 13/09/2026")
     elif a.get("topo") != d.get("topo"):
-        print(f"VEREDITO: VERMELHO — o recado deslocou o desenho "
+        print(f"VEREDITO: VERMELHO — a recusa deslocou o desenho "
               f"{a.get('topo')} -> {d.get('topo')} px")
     else:
         print(f"VEREDITO: VERDE — o desenho ficou em {d.get('topo')} px, "
-              f"e o recado é `{d.get('recado')}`")
+              f"e a recusa não pôs recado no cartão")
     Gtk.main_quit()
 
 GLib.timeout_add(4000, passo_a)

@@ -106,12 +106,30 @@ import re
 #:
 #: A COR TEM DONO e não se digita uma segunda: `--green:#50fa7b`
 #: (`interface/topo.html:34`), com o mesmo fallback que o canal de sucesso já usa.
+#:
+#: E A PISCADA DA RECUSA MORA AO LADO DA VERDE — 13/09/2026, FRASES-E-DICAS-01.
+#: A frase de recusa deixou de pousar no cartão (a caixa laranja da foto que
+#: está no índice da leva, `docs/process/sprints/2026-09-13-A-TERCEIRA-LISTA-
+#: DELA-INDICE.md`, linha 19), e o clique recusado passou a responder pelo SINAL
+#: do botão, sem palavra — a §D da sprint, que reusa a forma da `03-Q4` citada
+#: acima: nada muda de lugar, nenhuma palavra nova entra na tela. A frase fica
+#: no diário da janela (`[gesto falhou] …`).
+#:
+#: A MESMA FORMA E OUTRA COR, e as duas razões são as medidas acima: `outline`
+#: porque não ocupa espaço, `!important` porque a folha de usuário perde para o
+#: autor. O laranja é o `--orange:#ffb86c` do mesmo `topo.html:34` — a cor de
+#: aviso das dez páginas, a mesma que a caixa da recusa vestia.
+#:
+#: DUAS CLASSES E NÃO UMA COM MODIFICADOR: o pouso acende uma e apaga a outra
+#: (`hefesto_vivo.BOOTSTRAP`, `voltouDoVoo`), e a régua lê QUAL acendeu.
 FOLHA_DA_CASA = (
     ".nota{display:none !important}"
     "select{appearance:none;-webkit-appearance:none}"
     ".hef-em-voo{opacity:.6 !important;cursor:progress !important}"
     ".hef-deu-certo{border-color:var(--green,#50fa7b) !important;"
     "outline:1px solid var(--green,#50fa7b) !important}"
+    ".hef-recusou{border-color:var(--orange,#ffb86c) !important;"
+    "outline:1px solid var(--orange,#ffb86c) !important}"
 )
 
 

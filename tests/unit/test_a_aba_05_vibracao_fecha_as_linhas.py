@@ -818,10 +818,12 @@ def test_a_frase_da_faixa_e_recibo_e_nao_alerta(a05, bancada: str) -> None:
     LARANJA SOBRE UM CLIQUE QUE GRAVOU ENSINA QUE O BOTÃO FALHA — é o defeito
     que a D-01 fechou em 04/09/2026, e o `alerta` desta faixa é laranja
     (`--orange`). Verde é a cor que esta casa usa para o que deu certo em todas
-    as dez abas, e `hefesto_vivo.COR_DO_SUCESSO` lê o MESMO `--green`.
+    as dez abas.
 
-    AS DUAS METADES DESTA POSSE ESTÃO AQUI: o nome do tom (o pacote) e a regra
-    que o pinta (o desenho). Sem a segunda, a linha pousa sem cor nenhuma.
+    ERAM TRÊS METADES ATÉ 13/09/2026: o nome do tom (o pacote), a regra que o
+    pinta (o desenho) e o endereço que dizia ao piloto com que classes vestir o
+    recado na faixa. O endereço saiu com o recado (FRASES-E-DICAS-01: o piloto
+    não põe frase na tela), e a régua fica com o tom e a cor.
 
     MORDIDA: em `a05_vibracao`, faça `TOM_DO_RECIBO = _tela.ALERTA`, ou pinte
     `.vib-estado .est.recibo` com `--orange` no `aba05.CSS` — este caso reprova
@@ -835,9 +837,6 @@ def test_a_frase_da_faixa_e_recibo_e_nao_alerta(a05, bancada: str) -> None:
         f"o recibo passou a usar um tom que já tem dono ({a05.TOM_DO_RECIBO!r})"
         f" — o `alerta` é laranja, e alerta sobre um clique que gravou ensina "
         f"que o botão falha")
-    assert (f'data-hef-recado-classe="est {a05.TOM_DO_RECIBO}"' in bancada), (
-        f"a faixa não veste o recado com o tom {a05.TOM_DO_RECIBO!r} — o "
-        f"pacote e o desenho deixaram de falar do mesmo tom")
     regra = f".vib-estado .est.{a05.TOM_DO_RECIBO}"
     assert f"{regra}{{color:var(--green)}}" in bancada, (
         f"o tom do recibo não é verde na folha desta aba ({regra})")
@@ -871,8 +870,15 @@ def test_o_deu_certo_seco_nao_vira_frase(a05, disco) -> None:
         f"A 03-Q4 dela é a piscada verde, sem palavra nova")
 
 
-def test_a_faixa_declara_que_recebe_o_recado(bancada: str) -> None:
-    """O terceiro lugar do recado é a FAIXA, e quem o declara é a página.
+def test_a_faixa_nao_declara_lugar_de_recado(bancada: str) -> None:
+    """ERA `test_a_faixa_declara_que_recebe_o_recado` — 13/09/2026.
+
+    O CONTRATO VIROU O AVESSO NA FRASES-E-DICAS-01: o recado saiu da tela (o
+    índice da leva, `2026-09-13-A-TERCEIRA-LISTA-DELA-INDICE.md`, linha 19), e
+    com ele o terceiro lugar. Uma faixa que ainda o declarasse seria endereço
+    de um canal que não existe. O que segue é a história do contrato de 06/09.
+
+    O terceiro lugar do recado era a FAIXA, e quem o declarava era a página.
 
     O PILOTO CONHECE DOIS LUGARES — o cartão do controle e a tarja de rodapé
     (`hefesto_vivo.pintar_recados`). O terceiro é este, e o endereço tem de ser
@@ -888,18 +894,13 @@ def test_a_faixa_declara_que_recebe_o_recado(bancada: str) -> None:
     atributos está relatado com a forma exata em
     `docs/process/agentes/2026-09-06/ONDA5-05-03.md`.
 
-    MORDIDA: tire o `data-hef-recados` do `<div class="vib-estado">` em
-    `aba05.MIOLO` e regere — a régua 17 do gerador reprova antes desta.
+    MORDIDA DE HOJE: devolva o `data-hef-recados` ao `<div class="vib-estado">`
+    em `aba05.MIOLO` e regere — a régua 17 do gerador reprova antes desta.
     """
     faixa = bancada.split('class="vib-estado"', 1)[-1].split(">", 1)[0]
-    assert 'data-hef-recados="sucesso"' in faixa, (
-        "a faixa deixou de declarar que recebe o recado de sucesso — sem isso "
-        "ele volta a pousar DENTRO da coluna, cobrindo o topo do desenho do "
-        "controle por 6 s a cada clique, e a 05-Q4 dela diz *nada se mexe "
-        "dentro das colunas*")
-    assert "recusa" not in faixa, (
-        "a faixa passou a receber também a recusa — ela continua no cartão, "
-        "laranja e por 30 s, e esta sprint mexe no que deu CERTO")
+    assert "data-hef-recado" not in faixa, (
+        "a faixa voltou a declarar lugar de recado — o canal saiu da tela em "
+        "13/09/2026, e a 05-Q4 dela diz *nada se mexe dentro das colunas*")
 
 
 def test_nenhuma_linha_da_faixa_diz_mesa(a05) -> None:
