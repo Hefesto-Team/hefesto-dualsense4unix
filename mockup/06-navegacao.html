@@ -1527,6 +1527,16 @@
     color:var(--fg);cursor:pointer}
   .campo-linha:hover{border-color:var(--purple)}
   .disputa .campo-linha{border-color:var(--orange);color:var(--orange)}
+  /* ---- AS SEIS LINHAS QUE A TROCA NÃO ALCANÇA — F1-REMAPEAR-02, 13/09/2026 ----
+     A direção dos dois analógicos, o PS e as três regiões do touchpad: o motor
+     as recusa, e a lista delas nasce apagada. A cara é a do apagado da casa
+     (`.btn.apagado` e `.seg button:disabled` do `monta.CSS_FOLHA`): borda
+     sutil, texto mudo, cursor de recusa. O `:hover` repete a borda porque a
+     regra da linha acende o roxo, e um apagado que acende no ponteiro promete
+     o clique que não existe. */
+  .campo-linha:disabled{border-color:var(--border-sutil);color:var(--texto-mudo);
+    cursor:not-allowed}
+  .campo-linha:disabled:hover{border-color:var(--border-sutil)}
 
   /* ---- O CAMPO DE TEXTO DA TELA "Teclas do teclado" ----
      Ele herda a forma do `.campo-linha` (a mesma altura, a mesma borda, o mesmo
@@ -4187,7 +4197,7 @@
   <circle cx="16" cy="16" r="13" fill="none" stroke="currentColor" stroke-width="2"/>
   <circle cx="16" cy="16" r="6" fill="none" stroke="currentColor" stroke-width="1.5"/>
   <text x="13" y="19" font-family="monospace" font-size="7" font-weight="bold" fill="currentColor">L</text>
-</svg><span class="nm">L3</span><span class="rot-gl">Direção</span></span></td><td><select class="campo-linha" data-gesto="linha-de-troca" data-linha="l3_direcao"><optgroup label="Botões"><option>Triângulo</option><option>Círculo</option><option>Quadrado</option><option>Cruz</option></optgroup><optgroup label="Ombros e gatilhos"><option>L1</option><option>R1</option><option>L2</option><option>R2</option></optgroup><optgroup label="Analógicos"><option>L3 (clique)</option><option>L3 (direção)</option><option>R3 (clique)</option><option>R3 (direção)</option></optgroup><optgroup label="Direcional"><option>D-pad Cima</option><option>D-pad Direita</option><option>D-pad Baixo</option><option>D-pad Esquerda</option></optgroup><optgroup label="Sistema"><option>Share</option><option>Options</option><option>Touchpad (clique)</option><option>PS</option></optgroup><option selected>— Sem troca —</option></select></td></tr>
+</svg><span class="nm">L3</span><span class="rot-gl">Direção</span></span></td><td><select class="campo-linha" data-linha="l3_direcao" disabled><option selected>— Sem troca —</option></select></td></tr>
           <tr><td class="b"><span class="gls"><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Analógico Direito</title>
 
   <circle cx="16" cy="16" r="13" fill="none" stroke="currentColor" stroke-width="2"/>
@@ -4199,7 +4209,7 @@
   <circle cx="16" cy="16" r="13" fill="none" stroke="currentColor" stroke-width="2"/>
   <circle cx="16" cy="16" r="6" fill="none" stroke="currentColor" stroke-width="1.5"/>
   <text x="13" y="19" font-family="monospace" font-size="7" font-weight="bold" fill="currentColor">R</text>
-</svg><span class="nm">R3</span><span class="rot-gl">Direção</span></span></td><td><select class="campo-linha" data-gesto="linha-de-troca" data-linha="r3_direcao"><optgroup label="Botões"><option>Triângulo</option><option>Círculo</option><option>Quadrado</option><option>Cruz</option></optgroup><optgroup label="Ombros e gatilhos"><option>L1</option><option>R1</option><option>L2</option><option>R2</option></optgroup><optgroup label="Analógicos"><option>L3 (clique)</option><option>L3 (direção)</option><option>R3 (clique)</option><option>R3 (direção)</option></optgroup><optgroup label="Direcional"><option>D-pad Cima</option><option>D-pad Direita</option><option>D-pad Baixo</option><option>D-pad Esquerda</option></optgroup><optgroup label="Sistema"><option>Share</option><option>Options</option><option>Touchpad (clique)</option><option>PS</option></optgroup><option selected>— Sem troca —</option></select></td></tr>
+</svg><span class="nm">R3</span><span class="rot-gl">Direção</span></span></td><td><select class="campo-linha" data-linha="r3_direcao" disabled><option selected>— Sem troca —</option></select></td></tr>
           <tr><td class="b"><span class="gls"><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>D-pad Cima</title>
 
   <polygon points="16,5 24,16 19,16 19,27 13,27 13,16 8,16" fill="currentColor"/>
@@ -4233,28 +4243,28 @@
   <g transform="translate(16 16) scale(0.99425) translate(-16.0925 -16.0)">
     <path fill="currentColor" d="M 1.348 21.736 C 0.195 22.543 0.408 23.935 3.04 24.805 C 5.671 25.675 8.73 25.855 11.422 25.371 C 11.345 25.371 11.575 25.371 11.422 25.371 L 11.422 22.624 L 8.807 23.513 C 7.807 23.835 6.807 23.916 5.808 23.675 C 5.039 23.432 5.192 22.947 6.115 22.543 L 11.422 20.604 L 11.422 17.616 L 4.039 20.282 C 3.117 20.604 2.193 21.09 1.348 21.736 Z M 19.188 9.619 L 19.188 17.455 C 22.34 19.07 24.801 17.455 24.801 13.254 C 24.801 8.973 23.34 7.034 19.111 5.5 C 16.881 4.692 14.574 3.965 12.267 3.48 L 12.267 26.825 L 17.65 28.521 L 17.65 8.892 C 17.65 8.004 17.65 7.358 18.266 7.599 C 19.111 7.842 19.188 8.731 19.188 9.619 Z M 29.184 19.878 C 26.955 19.07 24.571 18.746 22.263 18.989 C 20.982 19.073 19.78 19.455 18.573 19.878 L 18.573 23.028 L 23.571 21.09 C 24.571 20.766 25.571 20.685 26.57 20.928 C 27.339 21.171 27.185 21.655 26.262 22.059 L 18.573 25.047 L 18.573 28.116 L 29.184 23.997 C 29.954 23.675 30.645 23.27 31.261 22.624 C 31.799 21.817 31.568 20.685 29.184 19.878 Z"/>
   </g>
-</svg><span class="nm">PS</span></span></td><td><select class="campo-linha" data-gesto="linha-de-troca" data-linha="ps"><optgroup label="Botões"><option>Triângulo</option><option>Círculo</option><option>Quadrado</option><option>Cruz</option></optgroup><optgroup label="Ombros e gatilhos"><option>L1</option><option>R1</option><option>L2</option><option>R2</option></optgroup><optgroup label="Analógicos"><option>L3 (clique)</option><option>L3 (direção)</option><option>R3 (clique)</option><option>R3 (direção)</option></optgroup><optgroup label="Direcional"><option>D-pad Cima</option><option>D-pad Direita</option><option>D-pad Baixo</option><option>D-pad Esquerda</option></optgroup><optgroup label="Sistema"><option>Share</option><option>Options</option><option>Touchpad (clique)</option><option>PS</option></optgroup><option selected>— Sem troca —</option></select></td></tr>
+</svg><span class="nm">PS</span></span></td><td><select class="campo-linha" data-linha="ps" disabled><option selected>— Sem troca —</option></select></td></tr>
           <tr><td class="b"><span class="gls"><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Touchpad</title>
 
   <rect x="3" y="8" width="26" height="16" rx="4" ry="4" fill="none" stroke="currentColor" stroke-width="2"/>
   <circle cx="11" cy="16" r="1.5" fill="currentColor"/>
   <circle cx="16" cy="16" r="1.5" fill="currentColor"/>
   <circle cx="21" cy="16" r="1.5" fill="currentColor"/>
-</svg><span class="nm">Touchpad</span><span class="rot-gl">Clique esquerdo</span></span><span class="marca-nao-dispara" title="O touchpad é o ponteiro do computador nesta máquina; enquanto for assim, o clique dele não vira tecla. A escolha fica guardada.">não dispara</span></td><td><select class="campo-linha" data-gesto="linha-de-troca" data-linha="touchpad_left_press"><optgroup label="Botões"><option>Triângulo</option><option>Círculo</option><option>Quadrado</option><option>Cruz</option></optgroup><optgroup label="Ombros e gatilhos"><option>L1</option><option>R1</option><option>L2</option><option>R2</option></optgroup><optgroup label="Analógicos"><option>L3 (clique)</option><option>L3 (direção)</option><option>R3 (clique)</option><option>R3 (direção)</option></optgroup><optgroup label="Direcional"><option>D-pad Cima</option><option>D-pad Direita</option><option>D-pad Baixo</option><option>D-pad Esquerda</option></optgroup><optgroup label="Sistema"><option>Share</option><option>Options</option><option>Touchpad (clique)</option><option>PS</option></optgroup><option selected>— Sem troca —</option></select></td></tr>
+</svg><span class="nm">Touchpad</span><span class="rot-gl">Clique esquerdo</span></span><span class="marca-nao-dispara" title="O touchpad é o ponteiro do computador nesta máquina; enquanto for assim, o clique dele não vira tecla. A escolha fica guardada.">não dispara</span></td><td><select class="campo-linha" data-linha="touchpad_left_press" disabled><option selected>— Sem troca —</option></select></td></tr>
           <tr><td class="b"><span class="gls"><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Touchpad</title>
 
   <rect x="3" y="8" width="26" height="16" rx="4" ry="4" fill="none" stroke="currentColor" stroke-width="2"/>
   <circle cx="11" cy="16" r="1.5" fill="currentColor"/>
   <circle cx="16" cy="16" r="1.5" fill="currentColor"/>
   <circle cx="21" cy="16" r="1.5" fill="currentColor"/>
-</svg><span class="nm">Touchpad</span><span class="rot-gl">Clique direito</span></span><span class="marca-nao-dispara" title="O touchpad é o ponteiro do computador nesta máquina; enquanto for assim, o clique dele não vira tecla. A escolha fica guardada.">não dispara</span></td><td><select class="campo-linha" data-gesto="linha-de-troca" data-linha="touchpad_right_press"><optgroup label="Botões"><option>Triângulo</option><option>Círculo</option><option>Quadrado</option><option>Cruz</option></optgroup><optgroup label="Ombros e gatilhos"><option>L1</option><option>R1</option><option>L2</option><option>R2</option></optgroup><optgroup label="Analógicos"><option>L3 (clique)</option><option>L3 (direção)</option><option>R3 (clique)</option><option>R3 (direção)</option></optgroup><optgroup label="Direcional"><option>D-pad Cima</option><option>D-pad Direita</option><option>D-pad Baixo</option><option>D-pad Esquerda</option></optgroup><optgroup label="Sistema"><option>Share</option><option>Options</option><option>Touchpad (clique)</option><option>PS</option></optgroup><option selected>— Sem troca —</option></select></td></tr>
+</svg><span class="nm">Touchpad</span><span class="rot-gl">Clique direito</span></span><span class="marca-nao-dispara" title="O touchpad é o ponteiro do computador nesta máquina; enquanto for assim, o clique dele não vira tecla. A escolha fica guardada.">não dispara</span></td><td><select class="campo-linha" data-linha="touchpad_right_press" disabled><option selected>— Sem troca —</option></select></td></tr>
           <tr><td class="b"><span class="gls"><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Touchpad</title>
 
   <rect x="3" y="8" width="26" height="16" rx="4" ry="4" fill="none" stroke="currentColor" stroke-width="2"/>
   <circle cx="11" cy="16" r="1.5" fill="currentColor"/>
   <circle cx="16" cy="16" r="1.5" fill="currentColor"/>
   <circle cx="21" cy="16" r="1.5" fill="currentColor"/>
-</svg><span class="nm">Touchpad</span><span class="rot-gl">Clique central</span></span><span class="marca-nao-dispara" title="O touchpad é o ponteiro do computador nesta máquina; enquanto for assim, o clique dele não vira tecla. A escolha fica guardada.">não dispara</span></td><td><select class="campo-linha" data-gesto="linha-de-troca" data-linha="touchpad_middle_press"><optgroup label="Botões"><option>Triângulo</option><option>Círculo</option><option>Quadrado</option><option>Cruz</option></optgroup><optgroup label="Ombros e gatilhos"><option>L1</option><option>R1</option><option>L2</option><option>R2</option></optgroup><optgroup label="Analógicos"><option>L3 (clique)</option><option>L3 (direção)</option><option>R3 (clique)</option><option>R3 (direção)</option></optgroup><optgroup label="Direcional"><option>D-pad Cima</option><option>D-pad Direita</option><option>D-pad Baixo</option><option>D-pad Esquerda</option></optgroup><optgroup label="Sistema"><option>Share</option><option>Options</option><option>Touchpad (clique)</option><option>PS</option></optgroup><option selected>— Sem troca —</option></select></td></tr>
+</svg><span class="nm">Touchpad</span><span class="rot-gl">Clique central</span></span><span class="marca-nao-dispara" title="O touchpad é o ponteiro do computador nesta máquina; enquanto for assim, o clique dele não vira tecla. A escolha fica guardada.">não dispara</span></td><td><select class="campo-linha" data-linha="touchpad_middle_press" disabled><option selected>— Sem troca —</option></select></td></tr>
         </table>
       </div>
 
