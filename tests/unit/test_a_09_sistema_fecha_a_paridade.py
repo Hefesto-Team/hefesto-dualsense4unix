@@ -447,9 +447,10 @@ def test_ver_os_plugins_saiu_da_aba_com_a_trava_dele(a09):
 def test_ver_detalhes_nao_obedece_a_trava_e_a_divergencia_e_declarada(a09):
     """O único gesto desta aba que desobedece a `travas()`, e ele diz por quê.
 
-    `travas()` tranca `ver-plugins` E `ver-detalhes` com a mesma frase — *"O
-    serviço está desligado — não há o que perguntar a ele."* Para o segundo ela
-    é falsa neste produto: o `ver-detalhes` daqui não pergunta ao daemon, ele lê
+    `travas()` tranca o `ver-detalhes` com a frase *"O serviço está desligado —
+    não há o que perguntar a ele."* (dividida com o `ver-plugins` até ele sair
+    da aba, em 13/09/2026). Para o `ver-detalhes` ela é falsa neste produto: o
+    `ver-detalhes` daqui não pergunta ao daemon, ele lê
     o journal do systemd, que sobrevive à queda da unit. Com o serviço parado,
     este é o botão que responde **por que ele caiu**.
 

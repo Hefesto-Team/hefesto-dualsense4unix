@@ -276,7 +276,8 @@ MODO_A_CORRIGIR = "sim"
 #: O QUE O ÚLTIMO "Ver …" PÔS NO PAINEL. `None` = ninguém pediu nada ainda.
 #:
 #: ELE PRECISOU EXISTIR NO DIA EM QUE A PINTURA ALCANÇOU O PAINEL, e a razão é
-#: de relógio: `ver-detalhes` e `ver-plugins` devolvem texto, o piloto o escreve
+#: de relógio: `ver-detalhes` devolve texto (o `ver-plugins` também devolvia, até
+#: sair da aba em 13/09/2026), o piloto o escreve
 #: na hora — e um tique depois o seguinte repintaria o valor de repouso por
 #: cima. As oitenta linhas do registro apareceriam e sumiriam antes de ela
 #: terminar de ler. Guardando o que foi pedido, a pintura passa a repintar **o
