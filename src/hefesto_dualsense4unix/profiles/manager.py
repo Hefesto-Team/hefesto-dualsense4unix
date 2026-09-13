@@ -318,6 +318,7 @@ class ProfileManager:
         self.apply(profile, origin=origin, relatorio=relatorio)
         self.apply_keyboard(profile, relatorio=relatorio)
         self.apply_button_actions(profile, relatorio=relatorio)
+        self.apply_remapeamento(profile, relatorio=relatorio)
         self.apply_emulation(profile, origin=origin, relatorio=relatorio)
         self.store.set_active_profile(profile.name)
         self.store.bump("profile.activated")
@@ -725,6 +726,44 @@ class ProfileManager:
             return
         if relatorio is not None:
             relatorio["button_actions"] = "aplicado"
+
+    def apply_remapeamento(
+        self, profile: Profile, *, relatorio: dict[str, str] | None = None
+    ) -> None:
+        """Deposita a troca botão a botão do perfil no `store` (F1-REMAPEAR).
+
+        QUEM OBEDECE SÃO OS DOIS `forward_buttons` — `gamepad.dispatch_gamepad`
+        (o primário) e `coop.CoopManager.forward_all` (os secundários) —, e os
+        dois leem o mapa do `store` do daemon por tique. Ver o topo de
+        `core/remapeamento_de_botao.py` para por que o `store`, e não um canal
+        novo da fábrica: a rota do boot monta o gerente à mão, e o `store` é o
+        que TODAS as rotas passam.
+
+        O PERFIL SEM TROCA APAGA A DO PERFIL ANTERIOR, e é por isso que o
+        depósito acontece sempre — inclusive com `None`. Sem isso a troca do
+        perfil de ontem continuaria valendo no jogo de hoje.
+
+        UM MAPA QUE O MOTOR RECUSA NÃO DERRUBA A ATIVAÇÃO: o esquema já recusa
+        no load, e só um `model_copy` sem validação chega aqui torto. Nesse caso
+        a troca fica desligada e o journal diz por quê — as luzes, os gatilhos e
+        o resto do perfil dela não pagam por uma linha.
+        """
+        from hefesto_dualsense4unix.core.remapeamento_de_botao import (
+            definir_ativo,
+            resolver,
+        )
+
+        try:
+            mapa = resolver(profile.remapeamento)
+        except ValueError as exc:
+            logger.warning(
+                "remapeamento_recusado", profile=profile.name, err=str(exc))
+            mapa = {}
+            if relatorio is not None:
+                relatorio["remapeamento"] = "falhou"
+        definir_ativo(self.store, mapa or None)
+        if relatorio is not None and "remapeamento" not in relatorio:
+            relatorio["remapeamento"] = "aplicado" if mapa else "de_fabrica"
 
     def apply_keyboard(
         self, profile: Profile, *, relatorio: dict[str, str] | None = None

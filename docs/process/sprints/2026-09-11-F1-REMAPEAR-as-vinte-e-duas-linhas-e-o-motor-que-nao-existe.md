@@ -1,6 +1,6 @@
 ---
 sprint: F1-REMAPEAR
-estado: aberta
+estado: feita
 onda: A-FILA-DE-0911
 posse:
   F12-NAVEGACAO:
@@ -23,6 +23,12 @@ nao_toca:
 ---
 
 # F1-REMAPEAR — as 22 linhas medidas, e o motor que não existe
+
+> **ESTADO 2026-09-13: feita** — [a entrega](../agentes/2026-09-13/F1-REMAPEAR-opus.md).
+> O motor nasceu (`core/remapeamento_de_botao.py`), `Profile.remapeamento` é
+> omitido quando vazio, a ativação deposita o mapa no `store` do daemon, a troca
+> entra logo antes dos dois `forward_buttons`, e os quatro gestos da tela
+> "Trocar os botões" têm dono. A prova dentro do jogo é de bancada.
 
 > **ROTA CORRIGIDA — 13/09/2026, e ela vence o corpo abaixo** (triagem das
 > abertas).
@@ -58,10 +64,12 @@ nao_toca:
 Nasce do §1 de
 [A FILA QUE A ONDA ABRIU](2026-09-11-A-FILA-QUE-A-ONDA-ABRIU-INDICE.md).
 
-**ELA FICA `aberta`, e a razão é o achado.** O enunciado mandava dar gesto a
-cada campo *que tem destino*, e mandava, com todas as letras, **não inventar
-campo novo no perfil por conta própria**. Os 22 não têm destino — e o que falta
-não é um campo: é o lugar no caminho quente, que é decisão dela desde 29/08.
+**ELA FICOU `aberta` ATÉ 13/09/2026, e a razão era o achado.** O enunciado
+mandava dar gesto a cada campo *que tem destino*, e mandava, com todas as
+letras, **não inventar campo novo no perfil por conta própria**. Os 22 não
+tinham destino — e o que faltava não era um campo: era o lugar no caminho
+quente. A ROTA CORRIGIDA respondeu o lugar, por delegação, e o campo nasceu com
+ela.
 
 ---
 
@@ -116,31 +124,27 @@ grep -n remap src/hefesto_dualsense4unix/profiles/schema.py     ->  0
 src/hefesto_dualsense4unix/core/remapeamento_de_botao.py        ->  não existe
 ```
 
-## §2 — O ACHADO DESTA FRENTE: o único lugar que traduziria nome de botão só alcança metade da mesa
+## §2 — OS DOIS `forward_buttons`: o do primário e o do co-op
 
-**É o que esta sprint acrescenta ao que já se sabia.** A `MIGRA-NAVEGACAO-13`
-escreveu que a tradução tem de entrar *"no `forward_buttons` do vpad
-(`daemon/subsystems/coop.py`) ou no leitor de evdev"*, e deixou a escolha para
-ela. Medida a árvore inteira em 11/09/2026, a primeira das duas **não é uma
-escolha completa**:
+**FATO SUBSTITUÍDO — 13/09/2026, pela triagem das abertas.** Esta seção dizia
+que o controle primário não passava por `forward_buttons`, e que uma troca
+ligada ali ficaria muda no controle 1. **Passa.** O `grep` de 11/09 achou só a
+chamada do co-op; a do primário é a mesma função por outro nome de objeto:
 
 ```
-grep -rn "forward_buttons" src/ --include=*.py   (fora das definições)
-  src/hefesto_dualsense4unix/daemon/subsystems/coop.py:2065
+daemon/lifecycle.py            _dispatch_gamepad_emulation(state, buttons_pressed)
+daemon/subsystems/gamepad.py   dispatch_gamepad  -> device.forward_buttons(...)
+daemon/subsystems/coop.py      CoopManager.forward_all -> player.vpad.forward_buttons(...)
 ```
 
-**Um call site, e ele é o dos SECUNDÁRIOS.** `CoopSubsystem.forward_all` roda
-por tique sobre `self._players` — os jogadores 2, 3 e 4, cujo evdev o co-op
-segura e espelha num vpad. O controle PRIMÁRIO não passa por ali: o vpad dele
-(`Daemon._gamepad_device`) é alimentado pelo `PhysicalReportReader`, que
-encaminha **`forward_motion`, `forward_touchpad_click`, `forward_jack` e
-`forward_battery`** — movimento, clique do touchpad, fone e bateria. Botão, não.
+São dois pontos de chamada no mesmo vocabulário, e o do primário existe desde
+`da9b4921` (27/06/2026). O `PhysicalReportReader` encaminha movimento, clique do
+touchpad, fone e bateria — e não é por ele que os botões vão.
 
-**A consequência, dita antes de alguém pagar por ela:** um remapeamento ligado
-só ali funcionaria nos controles 2 a 4 e ficaria **mudo no controle 1** — o que
-ela usa sozinha. É a forma exata do defeito que esta casa mais persegue (a
-ausência de dado, que se lê como *"a mudança não pegou"*), e desta vez ela
-apareceria só com quatro controles na mesa.
+**A consequência é a ROTA CORRIGIDA:** traduzir logo antes dos dois alcança os
+quatro controles, muda só o que o jogo vê, e deixa o PS, os gestos, o atalho de
+teclado e o teclado e o mouse emulados com os botões originais — eles leem o
+`buttons_pressed` do laço, que a troca não toca.
 
 ## §3 — A DECISÃO DELA JÁ EXISTE, e diz o que entra
 
@@ -160,11 +164,10 @@ com um clique.
 
 ## §4 — O QUE SERIA PRECISO, em ordem
 
-1. **A palavra dela sobre ONDE a troca entra.** As duas respostas mudam o
-   produto e a §2 estreitou a pergunta: o `forward_buttons` do co-op vale para o
-   jogo e para os secundários e **não alcança o primário**; o leitor de evdev
-   alcança os quatro e passa a valer também para o desktop e para os cinco
-   gestos — que é mais do que a tela promete.
+1. **ONDE a troca entra** — respondido na ROTA CORRIGIDA de 13/09: logo antes
+   dos dois `forward_buttons` (§2), que alcançam os quatro controles e só o que
+   o jogo vê. O leitor de evdev passaria a valer também para o desktop e para
+   os cinco gestos — mais do que a tela promete.
 2. **Um campo no perfil**, com serialização que OMITE quando vazio (é o
    requisito de compatibilidade que `controllers` e `speaker` já carregam: sem a
    omissão, um binário antigo com `extra="forbid"` recusaria TODO perfil no
@@ -176,7 +179,8 @@ com um clique.
 5. **A tela**: `data-campo`/`data-linha`/`data-gesto` nas 22 linhas e a `forma`
    no "Guardar" — a parte barata, e é a mesma que a F2 fez em meia página.
 
-**A ordem importa e o 1 é dela.** Ligar a tela antes do motor poria 22 escolhas
+**A ordem importa**, e o 1 foi decidido por quem coordena, por delegação, em
+13/09 (ROTA CORRIGIDA). Ligar a tela antes do motor poria 22 escolhas
 no disco que nada obedece — e a tela não pode dizer isso (*a tela nunca confessa
 dívida nossa*, decisão dela de 07/09). Um "Guardar" que grava e cala é o botão
 que responde calado; hoje o piloto pelo menos recusa PELO NOME.
@@ -186,3 +190,7 @@ que responde calado; hoje o piloto pelo menos recusa PELO NOME.
 Uma linha, no inventário do que falta: a entrada `guardar-remapeamento` do
 `a06_navegacao.SEM_GESTO` passou a carregar a medição da §2, para a próxima
 pessoa não remedir o mesmo `grep`. Nenhuma linha da tela mudou.
+
+**13/09/2026:** a entrada saiu do `SEM_GESTO` junto com a de
+`padrao-remapeamento`, quando o motor nasceu, e a medição que ela carregava foi
+substituída na §2.
