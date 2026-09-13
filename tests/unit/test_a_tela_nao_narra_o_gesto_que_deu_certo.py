@@ -356,7 +356,7 @@ def test_o_recibo_do_reconectar_nao_escreve_na_faixa_da_01(medido: dict) -> None
     A FAIXA SAIU DA PÁGINA — 13/09/2026, na costura com a
     JOGAR-A-FAIXA-QUE-PULA-01: o nó `recibo-do-reconectar` empurrava o botão, e
     a página deixou de declarar lugar de recado. Esta régua exigia a faixa como
-    prova de que media alguma coisa; sem ela, um sucesso depositado cai no
+    prova de que a medição valia; sem ela, um sucesso depositado cai no
     FALLBACK do `pintar_recados` — o cartão do P1 —, e por isso a leitura
     `recados` varre o documento inteiro, não só a faixa. A prova de que ainda
     mede é a mordida: devolver o `_depositar` do sucesso põe o recibo no cartão
