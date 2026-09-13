@@ -275,7 +275,7 @@
   .fita.inerte .chip{border-color:var(--border-sutil);background:transparent;
                      color:var(--comment)}
   /* a borda de 2px na cor do plástico é a marca da peça VIVA — some com a fita */
-  .fita.inerte .chip.plastico{border-color:var(--border-sutil);border-width:1px}
+  .fita.inerte .chip.plastico{border-color:var(--border-sutil);--borda-do-chip:1px}
   /* O CHIP MARCADO FICA IGUAL AOS OUTROS QUANDO A FITA NÃO ESCOLHE NADA —
      08/09/2026, pedido dela na aba Gatilhos: *"o player 1 tipo no caso cosmic
      red - cabo, fica sempre selecionado com borda diferente mesmo nas abas que
@@ -309,9 +309,10 @@
      o chip seguiria em NEGRITO, diferente dos irmãos. "Cinza como os demais"
      inclui o peso da letra.
 
-     A LARGURA DA BORDA vem de `.fita.inerte .chip.plastico` (1px), que esta
-     regra não sobrescreve: num chip `plastico on` os dois seletores empatam em
-     (0,4,0) e a cor é a mesma dos dois lados. A fita que ESCOLHE não muda —
+     A LARGURA DA BORDA vem de `.fita.inerte .chip.plastico`, que põe a
+     `--borda-do-chip` em 1px e que esta regra não sobrescreve: num chip
+     `plastico on` os dois seletores empatam em (0,4,0) e a cor é a mesma dos
+     dois lados. A fita que ESCOLHE não muda —
      `.fita.inerte` é a única porta desta regra. */
   .fita.inerte .chip.on{border-color:var(--border-sutil);background:transparent;
                         color:var(--comment);font-weight:400}
@@ -341,13 +342,35 @@
      O `<span class="via">` FICA: ele é o ENDEREÇO da via no rótulo do chip
      (`monta.rotulo_do_chip`), não um gancho de estilo. */
   .chip{
+    --borda-do-chip:1px;
     padding:5px 12px;border-radius:6px;font-size:12px;
-    border:1px solid var(--linha);background:var(--app-bg);color:var(--texto-mudo);
+    border:var(--borda-do-chip) solid var(--linha);background:var(--app-bg);color:var(--texto-mudo);
     cursor:default;
   }
   .chip.on{border-color:var(--purple);background:var(--sel-bg);color:var(--fg);font-weight:600}
   /* a borda grossa é a cor do plástico; o interior diz se está escolhido */
-  .chip.plastico{border-width:2px}
+  .chip.plastico{--borda-do-chip:2px}
+  /* A FITA NÃO SALTA AO TROCAR DE ABA — 13/09/2026, VAO-DO-ESQUELETO-01.
+
+     O DEFEITO: a altura da linha do alvo é a do filho mais alto, e o chip media
+     28 px com a borda de 1 e 30 com a de 2. As três abas que escolhem traziam o
+     chip do plástico com 2 e a linha media 52; as sete de fita inerte, com 1,
+     mediam 51 (o «Perfil ativo», de 29, é quem manda nelas). A barra de abas e
+     o quadro desciam 1 px a cada troca. A sprint mediu 2 px antes de a faixa de
+     cabeçalho sair; remedido depois, com Chrome e com o piloto, é 1.
+
+     A CURA ESCRITA NA SPRINT CAIU AO MEDIR: pôr 2 px na borda do chip inerte
+     devolve a espessura que ela mandou tirar em 08/09 («cinza como os demais»,
+     a regra logo abaixo) e deixa a 07 em 51, porque a fita de lá nasce só com
+     o «Todos». Pelo rádio a cor não se lê e nenhum chip ganha a classe do
+     plástico; com a pintura, a mesma aba muda de 51 para 52 no primeiro tique.
+
+     A CURA É NA CAUSA: a espessura tem um dono, `--borda-do-chip`, e o ar de
+     cima e de baixo lê dele. Borda mais ar somam sempre 7 px, que é o chip
+     vivo do plástico (2 + 5): nenhuma aba que escolhe muda um pixel, e todo
+     chip da fita mede 30 em qualquer estado. O ar horizontal não mudou. */
+  .fita .chip{padding-top:calc(7px - var(--borda-do-chip));
+              padding-bottom:calc(7px - var(--borda-do-chip))}
   /* A COR DO CHIP VEM DA MESA, NÃO DE UMA CLASSE POR MODELO. Eram
      `.c-red` e `.c-blue`, uma classe por plástico — com quatro controles na mesa
      viram quatro, e com os 28 do CSV, vinte e oito. `monta.fita()` escreve a
@@ -2185,7 +2208,14 @@
 
        A fita fica ESMAECIDA aqui: nada nesta aba ajusta por controle.
        O PERFIL ATIVO fica à direita, e é IGUAL nas dez abas: em cada tela ele
-       diz em qual perfil aquela mudança vai cair. -->
+       diz em qual perfil aquela mudança vai cair.
+
+       O NOME DO PERFIL NASCE TRAVESSÃO — 13/09/2026, PERFIS-TIRA-BUSCA-ATIVO-01
+       §4.1, absorvida pela VAO-DO-ESQUELETO-01. O arquivo trazia o perfil do
+       exemplo do desenho, e ele ficava na tela até o primeiro tique de cada
+       aba e sempre que a pintura falhava: ela ativou um perfil e o chip seguiu
+       dizendo outro. O travessão é o que `pacotes.topo()` escreve quando nada
+       está valendo — pintura que falha mostra ausência, nunca um perfil falso. -->
   <div class="fita-linha">
     <div class="logo"><svg width="40" height="40" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Hefesto - DualSense4Unix" xmlns:bx="https://boxy-svg.com">
   <defs>
@@ -2293,7 +2323,7 @@
     <div class="conectado"><span class="bolinha">●</span> <span data-campo="conta">2 controles:</span> <b data-campo="conta-b">1 USB · 1 BT</b></div>
     <div class="perfil-ativo">
       <span class="pa-rot">Perfil ativo</span>
-      <span class="pa-nome" data-campo="perfil">Mortal Kombat</span>
+      <span class="pa-nome" data-campo="perfil">—</span>
       <!-- `tabindex` de 07/09/2026: este `?` está no CABEÇALHO, logo nas dez
            abas, e explica onde o "Salvar Perfil" grava. Sem ele o `<span>` não
            recebe foco e o `el.click()` do controle não o abria em aba nenhuma. -->
