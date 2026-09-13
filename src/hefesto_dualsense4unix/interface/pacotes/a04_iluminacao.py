@@ -622,12 +622,15 @@ def fileira_de_tons(escolhida: str, tomadas: dict[str, dict[str, str]],
         estilo = f"background:{monta.tom_da_casa(cru)}"
         if dono:
             estilo += f";--dono:{dono.get('plastico') or 'var(--comment)'}"
-        # A DICA DO TOM TOMADO DIZ SÓ O NOME DO TOM — 13/09/2026,
-        # FRASES-E-DICAS-01, §I.5. Ela dizia de quem era o tom e colava a regra
-        # (*duas peças nunca ficam da mesma cor*), que é aviso: o X na cor do
-        # plástico do dono já é o estado, e a frase é a mesma forma que a sprint
-        # tira da tela. O nome do dono continua no X, pela cor.
-        titulo = titulo_da_casa(i)
+        # A DICA DO TOM TOMADO DIZ SÓ DE QUEM ELE É — 13/09/2026,
+        # FRASES-E-DICAS-01, §I.5. Ela dizia «<dono> já está neste tom — duas
+        # peças nunca ficam da mesma cor.», e a regra colada é aviso: saiu.
+        # O NOME DO DONO FICA, porque é estado e não há outro lugar que o diga:
+        # o X é preto com borda branca desde 09/09 (a cor do plástico sumia no
+        # tom pastel), e a régua do X cobra o nome na casa
+        # (`test_fecha_iluminacao_01_duas_pecas_nunca_tem_a_mesma_cor`). A frase
+        # da casa livre («Pinta a barra…») não serve: a casa com X não pinta.
+        titulo = str(dono.get("nome") or "") if dono else titulo_da_casa(i)
         # O TOM COM X NÃO É GESTO — 09/09/2026, e é a palavra dela sendo
         # cumprida: *"um X na cor selecionada por mim de forma que me IMPEÇA de
         # setar alguma cor de um coleguinha"*. <!-- noqa-acento: citação dela -->
