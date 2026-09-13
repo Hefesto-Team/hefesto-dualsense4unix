@@ -136,7 +136,24 @@ Réguas pontuais na árvore curada:
   citação de planilha deslocada;
 * `scripts/check_o_desenho_aprovado.py`: OK, 13 páginas, nenhuma atrás;
 * `ruff check` nos arquivos tocados: verde (o aviso de `# noqa` inválido em
-  `a02_controles.py` na linha do «tá carregando tambem» já existia na base).
+  `a02_controles.py` na linha do «tá carregando tambem» já existia na base);
+* as réguas que regeram páginas pelo desvio `HEFESTO_BANCADA`, porque os dez
+  `__main__` mudaram: `test_os_dez_geradores_rodam.py`,
+  `test_a_palavra_do_transporte_tem_um_dono_so.py` e a régua nova, **65
+  passed**; mais nove vizinhas (`test_a_01_jogar_nao_oferece_gesto_em_lugar_vazio`,
+  `test_a_04_iluminacao_o_gesto_esta_onde_deve`,
+  `test_a_linha_de_ressalva_so_nasce_quando_ha`,
+  `test_a_vibracao_nao_tem_clique_que_nao_responde`,
+  `test_o_botao_cinza_diz_a_razao`, `test_os_leitores_do_glade_tem_dono`,
+  `test_o_teto_da_vibracao_e_por_controle`,
+  `test_o_pacote_cabe_na_pagina_publicada`,
+  `test_nenhuma_frase_de_aviso_chega_a_tela`), **119 passed e 10 skipped**;
+* **`bash scripts/portoes.sh`: 59 de 60 verdes.** O único vermelho é
+  `paridade-gtk-html`, pelos dois `sinal-sumiu` das linhas 32 e 54 da
+  planilha, que é `nao_toca` (item 1 de «o que sobrou»). A primeira corrida
+  tinha mais dois vermelhos meus, curados antes desta: o glifo de nota musical
+  nesta entrega (`saida-de-agente`) e a variável `modulo` sem acento no código
+  da sabotagem (`acentuacao`).
 
 ## O que NÃO verifiquei
 
@@ -149,8 +166,8 @@ Réguas pontuais na árvore curada:
 * **O ensaio `scripts/ensaios/a_jogar_diz_quem_e_o_primario.py`** (fora da
   posse), que ainda procura `[data-campo="degradou-cartao"]`: não rodei. Ele tem
   guarda para elemento ausente e deve ler `null`.
-* **A suíte inteira**, por ordem do despacho. O resultado dos portões e das
-  réguas vizinhas regeradas pelo desvio está no fim desta entrega.
+* **A suíte inteira**, por ordem do despacho: só as réguas pontuais listadas
+  em «Qual mordida prova», e os portões.
 
 ## O que sobrou para o próximo
 
