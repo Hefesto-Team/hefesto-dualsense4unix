@@ -25,7 +25,8 @@ nao_toca:
 > **ESTADO 2026-09-13: feita** — entrega em
 > [agentes/2026-09-13/RECONECTAR-SAMBA-02-opus.md](../agentes/2026-09-13/RECONECTAR-SAMBA-02-opus.md).
 > O chip do lugar vazio guarda o vão (`visibility:hidden`), a frase da mesa pousa
-> por cima da fileira, e o tique mudo repinta o último estado bom por três tiques
+> por cima dos lugares apagados (com um lugar cheio, acima da fileira), e o tique
+> mudo repinta o último estado bom por três tiques
 > (`hefesto_vivo.FolgaDoServicoMudo`). No piloto oculto, sobre `e1c7d96b`, o botão
 > ia de y 463 a 402 com o serviço mudo e a 429 com a lista vazia; com a cura, 462
 > nos dois.

@@ -12,11 +12,13 @@ chip: `display:none` → `visibility:hidden`. O comentário que afirmava *"a alt
 fileira não cai"* saiu, e no lugar dele está o número medido (fato errado
 substituído). Nenhuma altura cravada: o chip continua medindo a fileira.
 
-**2. A frase da mesa pousa por cima da fileira** — `aba01.py`, `.mesa-notas`: fora
-do fluxo (`position:absolute` no meio da fileira, com o `div` que abraça a `.pecas`
-virando `position:relative` por `:has(> .pecas)`), fundo do quadro para a borda dos
-cartões não cortar a frase, e `pointer-events:none`. Apagada continua
-`display:none`: a cena aprovada não muda. É a D-07, escolha dela em 04/09 —
+**2. A frase da mesa pousa por cima dos lugares apagados** — `aba01.py`,
+`.mesa-notas`: fora do fluxo (`position:absolute` no meio da fileira, com o `div` que
+abraça a `.pecas` virando `position:relative` por `:has(> .pecas)`), e com o fundo do
+quadro para a borda dos cartões não cortar a frase. Só quando nenhum lugar está
+cheio: com mais controles que lugares ela fica acima da fileira, como na base
+(correção da validação, no fim). Apagada continua `display:none`: a cena aprovada
+não muda. É a D-07, escolha dela em 04/09 —
 *"Uma frase por cima dos lugares apagados."*
 ([AS DEZESSEIS DECISÕES, §D-07](../../2026-09-04-AS-DEZESSEIS-DECISOES-DELA-e-as-sprints-que-nascem.md)).
 Regerado (`aba01.py`) e publicado (`check_o_desenho_aprovado.py --publicar 01`):
@@ -39,9 +41,10 @@ classe `FolgaDoServicoMudo`, dona única do estado. No `_tique`, o `except` do
   teve TRÊS (janela de 12/09 16:32, aba Controles). As 11 seguidas de 07/09 são
   `[Errno 2]`/`[Errno 104]` — serviço reiniciando, não demora.
 
-**4. As réguas.** `tests/unit/test_o_reconectar_nao_muda_de_lugar.py` ganhou 12
+**4. As réguas.** `tests/unit/test_o_reconectar_nao_muda_de_lugar.py` ganhou 13
 casos: as duas cenas do estado no Chrome (1228 e 1300), o clique no centro do chip
-escondido, a frase por cima que não rouba o clique dos cartões, três da
+escondido, a frase do quinto controle que não cobre cartão cheio (nas duas larguras, desde a
+validação), três da
 `FolgaDoServicoMudo` sozinha (mais os três tipos de serviço fora do ar) e três no
 piloto de verdade (WebKit oculto, dublê de `TimeoutError`): dentro da folga os
 lugares seguem cheios, depois dela a tela diz, e o y do botão não anda.
@@ -109,8 +112,8 @@ repositório:
 `coop.sync` e `identity.renumber`): desfecho `aplicou`, e o y não se moveu durante
 o voo nem depois. No centro do chip do lugar vazio, o `elementFromPoint` devolve
 `DIV.mascara` no WebKit (P1 e P3, no mudo e na lista vazia) e no Chrome (os doze
-chips); antes da cura devolvia `BODY`, porque o chip não tinha caixa. No meio da
-frase acesa sobre quatro cartões cheios, o ponto é do cartão.
+chips); antes da cura devolvia `BODY`, porque o chip não tinha caixa. Com cinco
+controles a frase fica acima da fileira e não cobre cartão (ver a validação).
 
 **Perfis:** `~/.config/hefesto-dualsense4unix/profiles/` copiados antes (159
 arquivos) e conferidos por md5 depois das duas corridas do piloto: idênticos.
@@ -180,8 +183,8 @@ entrega e a sprint já escritas — todos verdes.
 * **Quanto tempo a folga dura na máquina dela.** Com o socket real, cada tique mudo
   segura o laço do GTK até 2 s e o seguinte é pulado: três tiques mudos são uns 6 s
   de estado velho antes da verdade. A sonda levantou o erro na hora.
-* **O quinto controle no WebKit.** A frase por cima de quatro cartões cheios foi
-  medida só no Chrome (o clique cai no cartão).
+* **O quinto controle no WebKit** — medido pela validação: a frase cobria a máscara
+  de dois cartões cheios, e foi corrigida (ver abaixo).
 * **As duas linhas acesas juntas.** A ressalva da máscara e a frase da mesa dividem o
   mesmo lugar; hoje a ressalva sai vazia em todo modo, então não se sobrepõem. Se
   alguém a religar, as duas se cobrem.
@@ -213,3 +216,135 @@ entrega e a sprint já escritas — todos verdes.
   de «O que mudou»). Se a costura conflitar, fica o texto da F1 com a citação pelo
   símbolo, e o `test_portao_o_par_com_metade_ligada.py` diz se sobrou endereço
   deslocado.
+
+## O que a validação refez e corrigiu
+
+Agente VALIDA/CORRIGE, 13/09/2026, na mesma árvore e na mesma branch. Rascunho em
+`valida/`, dentro da pasta `RECONECTAR-SAMBA-02/` do scratchpad. Nada no aparelho: o
+serviço e a ponte foram dublês dentro do processo (`estado_do_daemon`,
+`ponte.resultado`, `ponte.chamar`, `ponte.chamar_detalhado` e o `_safe_call` do
+bridge por baixo deles).
+
+### O achado e a correção (`b27b63da`)
+
+**A frase do quinto controle cobria a máscara de dois cartões cheios.** A entrega
+pôs `.mesa-notas` por cima da fileira em TODO estado. A mesma linha acende com mais
+controles que lugares (`a01_jogar._frase_da_mesa`: *«Há 5 controles ligados e esta
+tela mostra 4…»*), e aí os quatro lugares estão cheios. Com o fundo do quadro, a
+frase pousava sobre o chip «DualSense» da máscara do P2 e do P3:
+
+* no piloto oculto (WebKit), com cinco controles no dublê, a caixa da frase cruza a
+  máscara do P2 e a do P3 (`webkit-ramo-cinco.png`);
+* no Chrome, a 1228 e 1300, o clique a 2, 25, 75 e 98 % da largura da frase cai no
+  chip da máscara. Clicar na frase trocava a máscara de um cartão cujo chip ela
+  escondia.
+
+A régua da entrega, `test_a_frase_por_cima_nao_rouba_o_clique_dos_cartoes`, aceitava
+essa cena: ela media só o MEIO da frase, e o meio cai no vão entre dois cartões.
+
+**A correção:** a linha só sai do fluxo quando nenhum lugar da fileira está cheio
+(um `:not(:has(…))` nas duas regras de `.mesa-notas` em `aba01.py`). Com um lugar
+cheio, ela fica acima da fileira, como na base. É o que a D-07 diz, *«uma frase por
+cima dos lugares apagados»*
+([AS DEZESSEIS DECISÕES](../../2026-09-04-AS-DEZESSEIS-DECISOES-DELA-e-as-sprints-que-nascem.md)),
+e com cinco controles não há lugar apagado.
+
+O `pointer-events:none` saiu. Por cima dos lugares apagados não há gesto embaixo da
+frase (o `elementsFromPoint` devolve `.mascara`, `.cartao off` e `.pecas`, nenhum
+`[data-gesto]`), então ele não protegia nada.
+
+**O preço, declarado:** com o quinto controle o botão desce 27 px, como na base (y
+463 → 490 no WebKit). Isso acontece quando um controle entra, e não no tique que
+samba: sem estado, `_frase_da_mesa` devolve `""` e a frase apaga.
+
+A régua nova é `test_a_frase_do_quinto_controle_nao_cobre_cartao_cheio`, a 1228 e
+1300. Ela acende a frase com o texto do pacote sobre os quatro cartões cheios e
+reprova se a caixa dela cruzar um `[data-gesto]` visível de cartão.
+
+### As medidas, refeitas
+
+Piloto oculto (WebKitGTK, vista de 1212 px de largura), y do topo do botão, com a
+sonda da validação. As três colunas são:
+
+* **antes**: a página de `e1c7d96b`, com a folga desligada no processo (o `_tique` da
+  base);
+* **entrega**: `290eb555`;
+* **validação**: `b27b63da`.
+
+| estado | antes | entrega | validação |
+| --- | --- | --- | --- |
+| repouso, 2 controles | 463 | 463 | 463 |
+| 2º tique mudo | **402**, os quatro apagados | 463, P1 e P2 cheios | 463, P1 e P2 cheios |
+| 4º tique mudo em diante | **402** | 462, apagados | 462, apagados |
+| lista vazia, frase acesa | **429** | 462 | 462 |
+| cinco controles, frase acesa | 490, frase acima | 462, **frase sobre P2 e P3** | 490, frase acima, nada coberto |
+
+No Chrome, na página publicada com a folha do piloto, a 1228 e 1300 (antes /
+entrega / validação), o botão nasce em 464 nas três. Os lugares apagados dão 403 /
+463 / 463, a lista vazia 430 / 463 / 463 e os cinco controles 491 / 464 / 491.
+
+As fotos em repouso, antes × validação, têm **0 pixel diferente**. As de cinco
+controles, antes × validação, também.
+
+**O clique:** nas três corridas o «Reconectar controles» foi clicado em repouso, com
+dublê de `coop.sync` e `identity.renumber`. O desfecho foi `aplicou`, a classe
+`hef-deu-certo` acendeu, e o y ficou em 463 durante o voo. No centro do chip de cada
+lugar apagado, o WebKit devolve `DIV.mascara`; na base devolvia `BODY`, porque o chip
+não tinha caixa.
+
+**O N da folga, recontado** com um contador escrito sem ler o da entrega. O diário
+tem 28 `[daemon mudo]`, 17 deles `timed out`, em 15 corridas. Das 14 que têm um tique
+bom provado depois, 13 duraram um tique e uma durou três. O número da entrega se
+confirma.
+
+**Posse.** Os dois arquivos de fora se sustentam:
+
+* `a06_navegacao.py` muda uma linha de comentário. `Piloto._depois_do_gesto` existe e
+  é quem imprime *«DISSE APLICADO E NADA MUDOU»*. A `F1-REMAPEAR-02`, dona do arquivo
+  nesta onda, acrescenta 14 linhas noutro trecho.
+* `test_a_01_jogar_nao_oferece_gesto_em_lugar_vazio.py`: a mordida (e), abaixo, prova
+  que ele reprovava com a cura.
+
+**Botões:** a 01 tem 5 `<button` e 23 `data-gesto`, antes e depois. As dez páginas
+publicadas somam 277 e 361, antes e depois. Nenhuma frase nova: as duas linhas são as
+mesmas do pacote.
+
+### As mordidas, refeitas
+
+Cada uma foi devolvida com `git status` limpo em `b27b63da`.
+
+| mordida | reprovou |
+| --- | --- |
+| (a) `st = self._folga.mudo(e)` → `st = {}` | a do WebKit: *«o serviço demorou 1 tique(s) e os lugares já apagaram»* |
+| (f1) a fronteira da folga, `<=` → `<` | a folga sozinha (*«o 3º tique mudo seguido já apagou os lugares»*) e a do WebKit |
+| (f2) `_o_servico_so_demorou` sempre verdadeiro | os três casos de serviço fora do ar (*«FileNotFoundError ganhou folga»*) |
+| (b) a regra S-04 de volta a `display:none`, regerada e publicada | as duas cenas do Chrome (*«o botão subiu 61 px — y 464.0 → 403.0»*), o chip escondido e a do WebKit (*«subiu 61 px — y 463.0 → 402.0»*) |
+| (c) sem `position:absolute` na frase, regerada e publicada | as duas cenas da lista vazia e a do WebKit (*«desceu 20 px — y 463.0 → 483.0»*) |
+| (d) sem o `:not(:has(…))`, regerada e publicada | a régua nova, nas duas larguras: a frase cobre a máscara do P2 e do P3 |
+| (e) a régua de fora da posse volta a cobrar só a caixa | `test_o_lugar_vazio_nem_desenha_o_gesto` |
+
+**Réguas vizinhas, depois da correção**, em três lotes:
+
+* 46 verdes: a régua da sprint, `test_a_01_jogar_nao_oferece_gesto_em_lugar_vazio`,
+  `test_a01_a_mesa_vazia_fala` e `test_a_linha_de_ressalva_so_nasce_quando_ha`;
+* 188 verdes: catorze arquivos que leem a 01 ou o `aba01.py`, entre eles
+  `test_a_aba_01_jogar_fecha_as_linhas`, `test_a_tela_nao_samba`,
+  `test_o_casamento_das_dez` e `test_portao_o_par_com_metade_ligada`;
+* 214 verdes: onze que dirigem o `_tique` ou calam o serviço, entre eles
+  `test_agora_e_depois_01`, `test_a_recusa_chega_ao_cartao` e
+  `test_os_dez_geradores_rodam`.
+
+**Perfis:** 159 arquivos, com md5 idêntico depois de cada uma das cinco corridas do
+piloto.
+
+**Portões:** `bash scripts/portoes.sh` completo, depois do `git add -A`, com esta
+seção já escrita. Todos verdes.
+
+### O que a validação não verificou
+
+* O aparelho, e quanto a folga dura com o socket real.
+* O olho dela sobre a frase centrada por cima dos quatro lugares apagados
+  (`webkit-fix-vazia.png`), e sobre os 27 px que o botão desce quando o quinto
+  controle entra.
+* O topo com o serviço calado depois da folga: ele ainda mostra como «Perfil ativo» o
+  perfil gravado no disco (`webkit-fix-mudo-depois-da-folga.png`). Na base é igual.
