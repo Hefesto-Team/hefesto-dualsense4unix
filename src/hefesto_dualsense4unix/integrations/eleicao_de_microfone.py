@@ -248,8 +248,16 @@ def esquecer_a_palavra(uniq: str) -> bool:
 
     Não é o mesmo que `dizer_no_ar(uniq, False)`: `False` é *"me cale"* e vence
     um aplicativo gravando; esquecer devolve a decisão ao ouvinte da source.
-    Quem chama é a perda da eleição — ver
-    `daemon/subsystems/hotkey._apagar_a_luz_de_quem_perdeu_o_canal`.
+
+    **QUEM CHAMA MUDOU EM 13/09/2026 (OS-QUATRO-NO-AR-01).** Era a perda da
+    eleição: o controle que deixava de ser o padrão perdia a palavra, e ligar o
+    segundo microfone desligava o primeiro. Hoje perder o padrão não tira
+    ninguém do ar. Quem chama é o microfone que saiu do ar DE FATO — o canal
+    dele sumiu, ou o controle saiu da mesa
+    (`daemon/subsystems/hotkey._conferir_quem_saiu_do_ar`) —, o ex-dono do
+    padrão que já não estava no ar
+    (`daemon/subsystems/hotkey._apagar_a_luz_de_quem_perdeu_o_canal`) e o ato
+    recusado que desfaz a própria palavra (`hotkey._devolver_a_palavra`).
     """
     esquecedor = _ESQUECEDOR_DA_PALAVRA
     if esquecedor is None:
@@ -860,10 +868,57 @@ def recusa_de_quem_nao_elegeu(eleito: str | None) -> ResultadoDaEleicao:
 
 def fontes_de_captura_agora() -> list[str]:
     """As sources de captura de DualSense que o PipeWire publica AGORA."""
+    return _fontes_de_captura_ou_nada() or []
+
+
+def _fontes_de_captura_ou_nada() -> list[str] | None:
+    """Como `fontes_de_captura_agora`, mas `None` quando o `pactl` não respondeu.
+
+    As duas são a MESMA leitura, e é de propósito: `[]` e `None` só se separam
+    para quem precisa decidir se um canal SUMIU — ver `canal_publicado`.
+    """
     rc, saida = _rodar(["pactl", "list", "sources", "short"])
     if rc != 0:
-        return []
+        return None
     return fontes_dualsense(saida)
+
+
+def canal_publicado(uniq: str, conectados: list[str]) -> bool | None:
+    """O canal de captura DESTE controle está publicado agora? `None` = não sei.
+
+    OS-QUATRO-NO-AR-01 (13/09/2026). Com os quatro microfones no ar ao mesmo
+    tempo, *"perder o padrão"* deixou de tirar alguém do ar; o que tira é o
+    canal daquele controle sumir DE FATO — a ponte de rádio caiu e não voltou,
+    ou o controle saiu da mesa. Quem pergunta é
+    `daemon/subsystems/hotkey._conferir_quem_saiu_do_ar`, e a pergunta é a de
+    sempre, pelo dono de sempre (`escolher_fonte`).
+
+    **AS TRÊS RESPOSTAS SÃO TRÊS COISAS:**
+
+    * `True` — há um nó atribuível a este controle;
+    * `False` — o `pactl` respondeu e NÃO há. Só se afirma quando o nome dos
+      nós basta para decidir: todo nó de DualSense publicado carrega identidade
+      no nome (regras 0, 1 e 2), ou o casamento por USB foi montado;
+    * `None` — o `pactl` não respondeu, ou há nó ALSA anônimo e o casamento
+      por USB não saiu. **"Não sei" nunca vira "saiu"**: foram 47 minutos de
+      servidor mudo em 13/09/2026, e um microfone que caísse do ar por falta de
+      resposta seria o produto calando alguém sem gesto nenhum.
+    """
+    from hefesto_dualsense4unix.integrations.fontes_de_captura import identidade_no_nome
+
+    fontes = _fontes_de_captura_ou_nada()
+    if fontes is None:
+        return None
+    if not fontes:
+        return False
+    if escolher_fonte(fontes, uniq, [], None) is not None:
+        return True
+    usb = casamento_usb_agora(list(conectados))
+    if usb is None:
+        if all(identidade_no_nome(fonte) for fonte in fontes):
+            return False
+        return None
+    return escolher_fonte(fontes, uniq, list(conectados), usb) is not None
 
 
 def casamento_usb_agora(uniqs: list[str]) -> CasamentoUSB | None:
@@ -899,6 +954,7 @@ __all__ = [
     "EleitorDeMicrofone",
     "ResultadoDaEleicao",
     "_script_conhece",
+    "canal_publicado",
     "casamento_usb_agora",
     "dizer_no_ar",
     "esquecer_a_palavra",

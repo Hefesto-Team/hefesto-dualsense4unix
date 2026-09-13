@@ -1562,17 +1562,22 @@ def test_a_posse_do_dono_cai_quando_o_gesto_de_outro_tira_o_canal_dele() -> None
 
 
 @pytest.mark.asyncio
-async def test_a_luz_da_j1_apaga_quando_o_gesto_do_j2_tira_o_canal_dela() -> None:
+async def test_a_luz_da_j1_fica_quando_o_gesto_do_j2_da_o_padrao_a_um_terceiro() -> None:
     """O laço do produto + o eleitor do produto, com DOIS controles na mesa.
 
     É a cena inteira: a J1 no ar, o J2 aperta, a escrita PASSA e o WirePlumber
-    reelege um terceiro. Ninguém ficou com o canal — e as três superfícies têm
-    de dizer a mesma coisa: o `state_full` sem dono, o plástico do J2 apagado
-    (ele não ganhou nada) e o plástico da J1 apagado (ela perdeu o que tinha).
+    reelege um terceiro. Ninguém da mesa ficou com o PADRÃO — o `state_full`
+    sem dono, e o plástico do J2 apagado (ele não ganhou nada).
 
-    CURA A ARRANCAR: qualquer metade. Sem o ramo de `eleger_por_uniq` o
-    `eleito` volta a ser a J1; sem a chamada a
-    `_apagar_a_luz_de_quem_perdeu_o_canal` a luz dela fica acesa.
+    FATO SUBSTITUÍDO (13/09/2026, OS-QUATRO-NO-AR-01). Esta régua se chamava
+    `test_a_luz_da_j1_apaga_quando_o_gesto_do_j2_tira_o_canal_dela` e cobrava
+    o plástico da J1 APAGADO. Perder o padrão não é mais sair do ar: o canal
+    DELA continua publicado e no ar, e a luz dela fica. Quem apaga a luz de
+    quem sai do ar de fato é `hotkey._conferir_quem_saiu_do_ar`.
+
+    CURA A ARRANCAR: sem o ramo de `eleger_por_uniq` o `eleito` volta a ser a
+    J1; sem a guarda de `MicrofonesNoAr` em
+    `_apagar_a_luz_de_quem_perdeu_o_canal` a luz dela apaga.
     """
     with pytest.MonkeyPatch.context() as monkey:
         eleitor, pipewire = _eleitor_de_verdade_com_dois(monkey)
@@ -1601,21 +1606,23 @@ async def test_a_luz_da_j1_apaga_quando_o_gesto_do_j2_tira_o_canal_dela() -> Non
         "o produto escreveu e o ativo relido é um terceiro: o canal não é mais "
         f"da J1, e o `state_full` não pode nomeá-la — {depois}"
     )
-    assert backend.leds == {_J1: False, _J2: False}, (
-        "a J1 não tocou em nada e perdeu o canal; o plástico dela não pode "
-        f"continuar afirmando 'estou no ar' — {backend.leds}"
+    assert backend.leds == {_J1: True, _J2: False}, (
+        "a J1 perdeu o padrão, não o ar: o canal dela continua publicado e a "
+        f"luz dela fica; o J2 não ganhou nada — {backend.leds}"
     )
 
 
 @pytest.mark.asyncio
-async def test_a_luz_da_j1_apaga_quando_o_j2_ganha_o_canal_de_verdade() -> None:
-    """A troca de turno que FUNCIONA — e ela tinha o mesmo defeito de luz.
+async def test_a_luz_da_j1_fica_acesa_quando_o_j2_ganha_o_padrao() -> None:
+    """A troca do padrão que FUNCIONA — e as duas luzes ficam acesas.
 
-    O J2 elege e a eleição é CONFERIDA: o canal é dele, e o contrato dela diz
-    *"aceso = este mic está no ar"*. A J1 não está mais no ar. Este laço
-    acendia e apagava só a luz de quem apertou o botão, então o plástico dela
-    ficava aceso ao lado do dele, os dois dizendo a mesma coisa sobre um canal
-    que é de um só.
+    O J2 elege e a eleição é CONFERIDA: o PADRÃO do sistema é dele. O contrato
+    é *"aceso = este mic está no ar"*, e a J1 continua no ar no canal dela.
+
+    FATO SUBSTITUÍDO (13/09/2026, OS-QUATRO-NO-AR-01). Esta régua se chamava
+    `test_a_luz_da_j1_apaga_quando_o_j2_ganha_o_canal_de_verdade` e cobrava
+    `{J1: False, J2: True}`: ela tratava o padrão do sistema como *"o canal"*,
+    que só um podia ter. Os quatro ficam no ar juntos; só o padrão é de um.
     """
     with pytest.MonkeyPatch.context() as monkey:
         eleitor, pipewire = _eleitor_de_verdade_com_dois(monkey)
@@ -1635,8 +1642,9 @@ async def test_a_luz_da_j1_apaga_quando_o_j2_ganha_o_canal_de_verdade() -> None:
     assert blocos[-1]["eleito"] == _J2, (
         f"a eleição do J2 foi conferida e ele é o dono: {blocos[-1]}"
     )
-    assert backend.leds == {_J1: False, _J2: True}, (
-        f"o canal é do J2; só o plástico dele pode estar aceso — {backend.leds}"
+    assert backend.leds == {_J1: True, _J2: True}, (
+        "o padrão é do J2 e a J1 continua no ar: os dois plásticos acesos — "
+        f"{backend.leds}"
     )
 
 
