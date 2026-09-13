@@ -19,7 +19,8 @@ O QUE ELE MEDE, e cada linha é um passo da sprint:
 1. **o marcador "primário" ANDA** — dois controles, um primário; troque o
    primário no dublê e o marcador muda de cartão. E o **alvo de edição da fita
    NÃO se move junto**: os dois significados ficam em pixels diferentes;
-2. **a marca da emulação degradada** aparece com motivo e **some sem ele**;
+2. **a marca da emulação degradada SAIU do cartão em 13/09/2026**
+   (A-MARCA-DA-DEGRADACAO-01), e a leitura dela saiu deste ensaio junto;
 3. **o serviço calado** — com o estado vazio a coluna Atenção DIZ, e os quatro
    cartões param de afirmar;
 4. **o clique no chip Xbox chega ao PERFIL ATIVO**, e o valor é lido de volta
@@ -103,8 +104,9 @@ def cena(*, primario: str = P1, motivo: str | None = "uhid_indisponivel",
     """Um `state_full` de dois controles — o P1 no cabo, o P2 no rádio.
 
     O primeiro argumento diz de quem é o `is_primary`; o `motivo` liga (ou não)
-    a degradação do gamepad virtual do P1. As duas coisas são as que os Passos 3
-    e 4 medem.
+    a degradação do gamepad virtual do P1. O cartão deixou de mostrar a
+    degradação em 13/09/2026, e o `motivo` fica como mesa que muda sem mudar a
+    tela.
     """
     def um(uniq: str, slot: int, transporte: str, carga: int) -> dict[str, object]:
         entrada: dict[str, object] = {
@@ -130,7 +132,6 @@ _FERRAMENTAS = r"""
     return Array.prototype.map.call(
       document.querySelectorAll('.cartao'), function(c){
         const marca = c.querySelector('[data-campo="marcador-principal"]');
-        const sup = c.querySelector('[data-campo="degradou-cartao"]');
         const ident = c.querySelector('[data-campo="identidade"]');
         return {
           lugar: c.dataset.controle || '',
@@ -140,9 +141,6 @@ _FERRAMENTAS = r"""
           // e ele TEM DE ESTAR VISÍVEL quando aceso — a folha é metade da cura.
           primarioVisivel: !!(marca &&
               getComputedStyle(marca).display !== 'none'),
-          // A MARCA DA DEGRADAÇÃO: o alvo `atributo` põe (ou tira) o `title`.
-          degradou: sup ? (sup.getAttribute('title') || '') : null,
-          degradouVisivel: !!(sup && getComputedStyle(sup).display !== 'none'),
           // O ALVO DE EDIÇÃO DA FITA — a OUTRA pergunta, no mesmo cartão.
           alvoDaFita: c.classList.contains('alvo')
         };
@@ -344,7 +342,7 @@ def _uma_volta(*, publicado: bool, foto: str = "",
         GLib.timeout_add(t, _tique)
     t += 700
     GLib.timeout_add(t, _ler("p2-primario"))
-    # A CENA 3 — o backend continua `uinput` e o MOTIVO some. A marca some.
+    # A CENA 3 — o backend continua `uinput` e o MOTIVO some; o cartão não muda.
     t += 500
     GLib.timeout_add(t, _por("sem-motivo", cena(motivo=None)))
     for _ in range(3):
@@ -392,7 +390,7 @@ def _uma_volta(*, publicado: bool, foto: str = "",
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--foto-depois", default="",
-                        help="a BANCADA com o marcador e a marca acesos")
+                        help="a BANCADA com o marcador aceso")
     parser.add_argument("--foto-publicado", default="",
                         help="o que ela vê HOJE: a página publicada, sem os "
                              "dois endereços novos")
@@ -429,8 +427,7 @@ def _relatar(saida: dict[str, object], onde_: str) -> None:
             print(f"   {c['lugar']:>3} · {str(c['identidade'])[:28]:<28} "
                   f"primário={c['primario']!s:<5} "  # (noqa-acento) chave de JSON
                   f"visível={c['primarioVisivel']!s:<5} "  # (noqa-acento) chave de JSON
-                  f"alvo-da-fita={c['alvoDaFita']!s:<5} "
-                  f"degradou={str(c['degradou'])[:44]!r}")
+                  f"alvo-da-fita={c['alvoDaFita']!s}")
         at = bloco.get("atencao") or {}  # (noqa-acento) chave de JSON
         print(f"   Atenção: conta={at.get('conta')!r}")
         pares = zip(at.get("selos") or [], at.get("textos") or [], strict=False)
