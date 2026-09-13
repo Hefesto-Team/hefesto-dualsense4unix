@@ -1,6 +1,6 @@
 ---
 sprint: F1-REMAPEAR-02
-estado: aberta
+estado: feita
 onda: A-TERCEIRA-LISTA-DELA
 posse:
   F1-REMAPEAR-02:
@@ -23,6 +23,11 @@ nao_toca:
 ---
 
 # F1-REMAPEAR-02 — as seis linhas que a troca não alcança e o PS do boot
+
+> **ESTADO 2026-09-13: feita** — [a entrega](../agentes/2026-09-13/F1-REMAPEAR-02-opus.md):
+> as seis listas nascem apagadas, o «Guardar» só as aceita em «— Sem troca —», a
+> colisão da 06 pisca sem frase, e o boot entrega o PS pelo mesmo canal da fábrica
+> (o achado §E.3 foi medido com dublê antes da cura e se confirmou).
 
 Nasceu na costura da onda 1 (13/09/2026). São os dois achados que a
 [F1-REMAPEAR](2026-09-11-F1-REMAPEAR-as-vinte-e-duas-linhas-e-o-motor-que-nao-existe.md)
