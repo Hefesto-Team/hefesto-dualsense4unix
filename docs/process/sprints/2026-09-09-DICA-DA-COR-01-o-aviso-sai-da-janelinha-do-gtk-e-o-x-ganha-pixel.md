@@ -1,6 +1,6 @@
 ---
 sprint: DICA-DA-COR-01
-estado: aberta
+estado: feita
 posse:
   DICA-DA-COR-01:
     - src/hefesto_dualsense4unix/interface/aba04.py
@@ -36,6 +36,14 @@ depois_de:
   # tomado no pacote; o X se mede sobre a página que ela deixar.
   - FRASES-E-DICAS-01
 ---
+
+> **ESTADO 2026-09-13: feita** — o X do tom tomado virou um quadrado centrado
+> com teto de 12 px (`aba04.CSS`, `.guia .tom.tomado::after`), medido no
+> `WebKit2.WebView` com a página publicada: de 4,5 x 14 para 12 x 12 na janela
+> como abre (1212x809), e de 14,0 x 14 para 12 x 12 na vista dela (1918x840).
+> Régua: `tests/unit/test_o_x_do_vizinho_e_quadrado.py`; aba 04 publicada com
+> `--publicar 04`. A entrega está em
+> `docs/process/agentes/2026-09-13/DICA-DA-COR-01-opus.md`.
 
 > **ROTA CORRIGIDA — 13/09/2026, e ela vence tudo abaixo** (triagem das
 > branches entregues). **A entrega `65838cf4` NÃO se costura.** A metade da DICA
