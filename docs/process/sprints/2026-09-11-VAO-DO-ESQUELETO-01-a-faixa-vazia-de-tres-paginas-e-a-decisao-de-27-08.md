@@ -1,6 +1,6 @@
 ---
 sprint: VAO-DO-ESQUELETO-01
-estado: aberta
+estado: feita
 onda: A-LISTA-DE-0911
 posse:
   VAO-DO-ESQUELETO-01:
@@ -33,6 +33,13 @@ nao_toca:
 ---
 
 # VAO-DO-ESQUELETO-01 — a faixa vazia de três páginas, e a decisão dela de 27/08
+
+> **ESTADO 2026-09-13: feita** — [entrega](../agentes/2026-09-13/VAO-DO-ESQUELETO-01-opus.md).
+> O salto remedido era de **1 px** (51 contra 52), não de 2; a cura escrita
+> abaixo (2 px no chip inerte) caiu ao medir e a cura foi na causa: borda mais
+> ar do chip da fita somam 7 px, e a linha do alvo mede 52 nas dez abas, nos
+> quatro estados da fita e no piloto. O chip «Perfil ativo» nasce «—» nas vinte
+> páginas. Layout do vão: caminho (c), nada mudou.
 
 > **ROTA CORRIGIDA — 13/09/2026, e ela vence o corpo abaixo.** A §4 tem
 > resposta: **o caminho (c), nada muda no layout.** A base é a própria palavra
