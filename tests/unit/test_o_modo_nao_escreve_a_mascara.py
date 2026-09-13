@@ -288,3 +288,140 @@ def test_com_o_cartao_em_xbox_360_o_chip_acende_o_escolhido_e_nao_a_mascara() ->
     assert gravado.mode.caminho == "dualsense"
     assert gravado.mode.gamepad_flavor == "dualsense", "a máscara padrão do perfil mudou"
     assert _mascara_do_cartao_no_disco() == "xbox"
+
+
+# ---------------------------------------------------------------------------
+# ACRESCENTADAS NA VALIDAÇÃO — 13/09/2026
+# ---------------------------------------------------------------------------
+# As duas cenas acima dublam a fábrica, leem o caminho por `_caminho_publicado`
+# e nunca reativam um perfil. Medido na validação: arrancar o caminho da fábrica
+# REAL, do bloco `gamepad_emulation` do `state_full` ou de `apply_profile_mode`
+# passava com as quatro réguas novas e as vizinhas verdes. As três abaixo mordem.
+
+#: A fábrica REAL, guardada no import — antes de o `_bancada` trocá-la pelo dublê.
+_FABRICA_REAL = vp.make_virtual_pad
+
+
+@pytest.mark.parametrize(("caminho", "tenta_uhid"), [("xbox", False), ("dualsense", True)])
+def test_a_fabrica_real_decide_o_canal_pelo_caminho(
+    monkeypatch: pytest.MonkeyPatch, caminho: str, tenta_uhid: bool
+) -> None:
+    """Máscara DualSense nos dois casos: só o caminho DualSense tenta o `uhid`.
+
+    MORDE: `make_virtual_pad` voltar a decidir o canal só pela máscara — o caminho
+    Xbox subiria o DualSense Edge pelo `uhid`, e o chip «Xbox» voltaria a não
+    mudar nada no aparelho.
+    """
+    pedidos: list[str] = []
+
+    def _espiao(flavor: str, **_kw: Any) -> tuple[None, str]:
+        pedidos.append(flavor)
+        return None, "uhid_indisponivel"
+
+    monkeypatch.setattr(vp, "_try_uhid", _espiao)
+    # Só o `start`, que abriria o nó do kernel — o molde de
+    # `test_mascara_por_controle_manda_no_vpad._sem_no_de_kernel`.
+    from hefesto_dualsense4unix.integrations.uinput_gamepad import UinputGamepad
+
+    monkeypatch.setattr(UinputGamepad, "start", lambda self: True)
+
+    pad = _FABRICA_REAL("dualsense", identity=P1, allow_uhid=True, caminho=caminho)
+
+    assert pad is not None and pad.flavor == "dualsense", "a máscara não é do caminho"
+    assert bool(pedidos) is tenta_uhid, f"caminho {caminho!r}: `_try_uhid` recebeu {pedidos}"
+    assert vp.caminho_do_vpad(pad) == caminho, "o pad não diz em que caminho nasceu"
+    # O canal comum ESCOLHIDO não é degradação; o DualSense que caiu nele é.
+    assert (getattr(pad, "fallback_motivo", None) is not None) is tenta_uhid
+
+
+def _daemon_do_perfil(vpad: Any) -> tuple[Any, list[dict[str, Any]]]:
+    """Só o que `apply_profile_mode` lê, e um gravador no lugar do pedido ao vpad."""
+    pedidos: list[dict[str, Any]] = []
+    d = SimpleNamespace(
+        config=SimpleNamespace(
+            gamepad_emulation_enabled=True, gamepad_flavor=vpad.flavor, gamepad_caminho=None
+        ),
+        _gamepad_device=vpad,
+        _emu_manual_ts=0.0,
+        _mode_pendente=None,
+        _modo_jogo_padrao=None,
+        _modo_jogo_padrao_log="",
+        _native_mode=False,
+        _mode_from_profile=None,
+    )
+    d._furar_lock_de_emulacao = lambda eixo, agora=None: None
+    d._agendar_modo_adiado = lambda *a, **k: None
+    d._pedir_mascara_do_perfil = lambda flavor, **k: bool(pedidos.append({"flavor": flavor, **k}))
+    d._reavaliar_mascara_adiada = lambda f: None
+    d.set_native_mode = lambda *a, **k: None
+    return d, pedidos
+
+
+def test_o_perfil_sem_caminho_nao_muda_de_aparelho_e_o_com_caminho_muda() -> None:
+    """§D.1: um perfil de antes da cura não tem `mode.caminho` e dá o MESMO aparelho.
+
+    E o perfil que escolheu um caminho o pede ao vpad quando entra.
+
+    MORDE: tirar de `apply_profile_mode` o termo do caminho — o perfil com
+    ``caminho="xbox"`` entra e o vpad segue no `uhid`.
+    """
+    uhid = _Vpad("dualsense", P1, "dualsense")
+    assert uhid.backend == "uhid", "premissa"
+    antigo = Profile(
+        name=PERFIL,
+        match=MatchAny(),
+        mode=ProfileModeConfig(kind="gamepad", gamepad_flavor="dualsense"),
+    )
+    assert "caminho" not in antigo.mode.model_dump(), "o perfil antigo ganhou a chave nova"
+
+    for origem in ("manual", "autoswitch"):
+        d, pedidos = _daemon_do_perfil(uhid)
+        lifecycle.Daemon.apply_profile_mode(d, antigo.mode, profile=antigo, origin=origem)
+        assert pedidos == [], f"{origem}: o perfil sem caminho pediu outro aparelho: {pedidos}"
+
+    com_caminho = antigo.model_copy(
+        update={"mode": ProfileModeConfig(kind="gamepad", gamepad_flavor="dualsense",
+                                          caminho="xbox")}
+    )
+    d, pedidos = _daemon_do_perfil(uhid)
+    lifecycle.Daemon.apply_profile_mode(d, com_caminho.mode, profile=com_caminho, origin="manual")
+    assert [p.get("caminho") for p in pedidos] == ["xbox"], (
+        f"o perfil com caminho entrou e não o pediu ao vpad: {pedidos}"
+    )
+
+
+def test_o_state_full_publica_o_caminho_que_acende_o_chip() -> None:
+    """O chip de modo acende pelo `gamepad_emulation.caminho` do `state_full` REAL.
+
+    As cenas acima leem `_caminho_publicado` direto; a tela lê o handler. Com o
+    vpad no canal comum, só este campo separa o Xbox escolhido do DualSense que
+    degradou — e só o segundo é degradação.
+
+    MORDE: tirar o `"caminho"` do bloco `gamepad_emulation` do
+    `_handle_daemon_state_full` — o chip «Xbox» fica apagado com o vpad no Xbox.
+    """
+    from hefesto_dualsense4unix.testing import FakeController
+
+    class _Handlers(ih.IpcHandlersMixin):
+        def __init__(self, daemon: Any) -> None:
+            self.daemon = daemon  # type: ignore[assignment]
+            self.store = daemon.store
+            self.controller = daemon.controller
+
+    daemon = lifecycle.Daemon(controller=FakeController(transport="usb"))
+    daemon.controller.primary_uniq = P1  # type: ignore[attr-defined]
+    daemon.config.gamepad_emulation_enabled = True
+    daemon.config.gamepad_flavor = "dualsense"
+    for caminho, degradado in (("xbox", False), ("dualsense", True)):
+        daemon._gamepad_device = SimpleNamespace(  # type: ignore[assignment]
+            flavor="dualsense", backend="uinput", caminho=caminho, ff_supported=True,
+            fallback_motivo="uhid_indisponivel",
+        )
+        daemon.config.gamepad_caminho = caminho
+        cheio = asyncio.run(_Handlers(daemon)._handle_daemon_state_full({}))
+        emu = cheio["gamepad_emulation"]
+        assert emu.get("caminho") == caminho, f"o state_full não publicou o caminho: {emu}"
+        assert emu.get("degraded") is degradado, f"caminho {caminho!r}: degraded={emu}"
+        assert aba._estado_da_tela(cheio)["modo-aceso"] == caminho, (
+            f"o chip de modo não acendeu o caminho {caminho!r} publicado"
+        )
