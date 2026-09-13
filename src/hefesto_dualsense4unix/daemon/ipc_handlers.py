@@ -5494,13 +5494,13 @@ class IpcHandlersMixin:
 
         A RESPOSTA DIZ QUAL METADE PEGOU, e essa é a entrega tanto quanto o
         interruptor. A medição de 04/09/2026 (SDL 2.30 headless, um DualSense
-        no cabo) achou o que nenhuma versão do plano previa:
+        no cabo), corrigida pela SENSORES-NO-JOGO-02 (13/09/2026, §1), diz:
 
-        * o SDL **não lê o nó "Motion Sensors"** — ele não o enumera sequer
-          como joystick. Quem o lê é `evtest` e emulador com backend evdev;
-        * o SDL lê o giro pelo **`hidraw`**: em Virtual, do vpad, cujos bytes
-          este daemon escreve; em **Nativo**, do FÍSICO — e ali o daemon não
-          está no caminho, porque o kernel entrega o report direto ao jogo.
+        * o zero em Modo Virtual era da libSDL2 2.30.0 do sistema; nas bibliotecas
+          dos runtimes da Steam o vpad expõe os dois sensores, e o SDL pareia o nó
+          «Motion Sensors» pelo `uniq` — e os bytes do vpad são os deste daemon;
+        * em **Nativo** o giro chega ao SDL pelo **`hidraw`** do FÍSICO — e ali o
+          daemon não está no caminho, porque o kernel entrega o report direto.
 
         Logo, em Nativo o alcance é PARCIAL, e a resposta o diz com todas as
         letras em vez de responder "aplicado" sobre um giro que continua

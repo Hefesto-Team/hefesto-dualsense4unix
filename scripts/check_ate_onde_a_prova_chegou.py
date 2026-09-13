@@ -178,12 +178,12 @@ A_PROVA_QUE_FALTA: dict[str, tuple[str, str, str]] = {
     "sensor": (
         "grande",
         "2026-09-08-SENSORES-NO-JOGO-01-o-giroscopio-e-o-acelerometro-provados-ate-o-jogo.md",
-        "`movimento.giroscopio@dualsense` está em MONTOU nos dois, e o degrau "
-        "que decide é o terceiro: em Virtual o jogo abre o vpad por evdev e a "
-        "hipótese mais forte é que NÃO recebe giroscópio, apesar de os bytes "
-        "certos viajarem no report HID. O touchpad é o precedente no mesmo "
-        "caminho, e é ele que explica por que o destino é o degrau de CIMA: "
-        "lá o repasse está íntegro e o jogo não reage, sem causa desde 16/08",
+        "`movimento.giroscopio@dualsense` está em MONTOU nos dois. Medido em 13/09: o zero "
+        "em Modo Virtual era da libSDL2 2.30.0 do sistema; nas bibliotecas dos runtimes da "
+        "Steam o vpad expõe os dois sensores, e o SDL pareia o nó «Motion Sensors» pelo "
+        "`uniq` (SENSORES-NO-JOGO-02, §1). Falta o jogo aberto receber e reagir, e é da "
+        "MESA-DE-QUATRO-01; o touchpad explica por que o destino é o degrau de CIMA: lá o "
+        "repasse está íntegro e o jogo não reage, sem causa desde 16/08",
     ),
     "mic-modo": (
         "médio",
