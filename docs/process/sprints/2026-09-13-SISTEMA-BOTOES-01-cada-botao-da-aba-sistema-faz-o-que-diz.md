@@ -46,8 +46,9 @@ nao_toca:
 > O clique 1 de Parar, Restaurar, Proton, Consertos e Aplicar pergunta no painel e
 > não pisca; o Proton recusa com a Steam aberta antes de armar; a pergunta vencida
 > sai no tique; o repouso perdeu o diário; o `--install` e o «Ver os plugins» saíram.
-> Sobra medida: o painel ficou 8 px além da lista Avançado (piso de 110 px), e a
-> pergunta da Steam passou a rolar uma linha.
+> A validação pôs o piso de 110 px na célula do grid (a lista Avançado e o painel
+> voltaram a fechar na mesma linha) e tirou o «Ver os plugins» de quatro frases que
+> ainda o davam como vivo. Sobra medida: a pergunta da Steam passou a rolar uma linha.
 
 > **ROTA CORRIGIDA — 13/09/2026, depois do estudo.** Esta sprint ABSORVE as §3
 > e §4 da

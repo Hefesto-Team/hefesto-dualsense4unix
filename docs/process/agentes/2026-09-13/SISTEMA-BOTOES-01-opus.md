@@ -117,22 +117,10 @@ reprovados e 7 aprovados. Os sete aprovados são o que já funcionava:
 
 ## O que sobrou para o próximo
 
-1. **O painel de Detalhes técnicos passou da lista Avançado.** Medido no piloto oculto
-   com `getBoundingClientRect`:
-
-   | | lista Avançado | painel | a pergunta da Steam (6 linhas) |
-   | --- | --- | --- | --- |
-   | antes | 136 px | 136 px | cabe (rola 0) |
-   | depois | 102 px | **110 px** | **rola 8 px** |
-
-   Com três botões a lista mede 102 px, e o `min-height:110px` do `.log` (o piso do
-   `aba09.py`) segura a caixa. Ela passa 8 px da coluna, contra o «ficar igual ao
-   bloco à esquerda» da TELA-TRES-01 §1. A pergunta da Steam deixou de caber inteira:
-   com `data-hef-rolar="fim"` a instrução aparece e a primeira linha sai. A página não
-   rola (`rola_por_dentro` 0). Não mexi: o piso e a medida da pergunta são de outras
-   sprints, e as duas saídas trocam uma perda pela outra.
-   - **Tirar o piso**: painel igual à lista, com a pergunta rolando mais.
-   - **Manter**: é o de agora.
+1. **A pergunta da Steam rola dentro de Detalhes técnicos.** Com três botões a faixa
+   Avançado desceu de 136 px para o piso de 110 px, e a pergunta de 6 linhas deixou de
+   caber inteira: com `data-hef-rolar="fim"` a instrução aparece e a primeira linha sai.
+   O vão de 8 px entre a lista e o painel foi curado na validação (seção abaixo).
 2. **O `title` do Parar diz «os 2»** (o `N` do gerador) e agora vira a pergunta do
    painel. Com um controle na mesa, o número está errado.
 3. **O repouso ainda mostra a árvore de processos** do `systemctl status`, as linhas
@@ -144,3 +132,83 @@ reprovados e 7 aprovados. Os sete aprovados são o que já funcionava:
    que o «O que fazer» da 09 é de outra sprint. Agora a 09 também corta, e quem cobra
    é `test_aba09_o_exame_cortado_guarda_a_frase_inteira.py`. A âncora pode passar a
    valer nas duas.
+
+## O que a validação refez e corrigiu
+
+Papel VALIDA/CORRIGE, na mesma árvore e na mesma branch. Nada foi aceito pelo relato:
+o que está abaixo foi medido de novo.
+
+**Posse.** O diff cabe na posse, nas páginas geradas, na entrega e na sprint, fora os
+cinco arquivos declarados acima. Cada um dos cinco foi devolvido à versão da base
+`e1c7d96b` sobre o código da branch, e os cinco reprovaram: `check_a_tela_nao_confessa.py`
+pela chave órfã do `ver_plugins`, `check_paridade_gtk_html.py` em `numero-publicado`, e
+as três réguas pelas asserções velhas. A razão de cada um está medida.
+
+**Botões.** Na 09 publicada: de 19 para 18 `<button>` e de 16 para 15 `data-gesto`; no
+`mockup/09`, de 19 para 18. As outras nove páginas estão iguais à base. Nenhum botão novo.
+
+**Mordidas.** Refiz as treze do §V e acrescentei quatro. Cada uma arrancou a cura, rodou a
+régua e devolveu pelo `git checkout`, conferida por sha256 e pela árvore limpa. As
+dezessete reprovaram:
+
+| a cura arrancada | o que reprovou |
+| --- | --- |
+| as treze da tabela acima | as mesmas réguas, com os mesmos números |
+| `_so_armou` sem pôr a chave `armou`, com a constante intacta | os cinco cliques 1 sem janela e os seis na tela (11) |
+| o clique 1 do «Aplicar aos jogos» sem marcar a pergunta | a pergunta vencida na tela (1) |
+| `_porque_o_proton_nao_trava` sem conferir a Steam | a recusa de outro botão, os dois cliques do Proton e a recusa na tela (4) |
+| `_dica_do_desenho` devolvendo vazio | as três perguntas que são o `title`, sem janela e na tela, e a largura (7) |
+
+Na mordida do chip sem cor, `test_nenhuma_frase_de_aviso_chega_a_tela.py` passou com a
+confissão de volta: quem a pega na 09 é só `test_aba09_a_fita_vem_de_cima.py`.
+
+**Achado 1, corrigido em `175c2338`: a régua da altura reprovava só na branch.**
+`test_tela_tres_a_altura_e_a_caixa_alta.py` (o pedido dela de 08/09, em
+`docs/process/sprints/2026-09-08-TELA-TRES-01-a-altura-o-selo-e-a-caixa-alta.md` §1)
+reprovou com «a lista termina em 608px e a caixa em 616px» em duas voltas alternadas com
+a base, que passou nas duas. A régua cobra as duas bordas juntas E o piso de 110 px, então
+nenhuma das duas saídas da pergunta de cima passava. A causa: o piso morava no `.log`, um
+filho absoluto que não conta para a fileira. Ele passou à célula do grid (`.col-log` em
+`aba09.py`), e a 09 foi regerada e publicada. Medido no Chrome, na página publicada:
+antes, 136 e 136 px com quatro botões; depois, 110 e 110 px, as duas bordas no mesmo y.
+MORDIDA: `min-height:0` de volta na célula, regerar e publicar, e a régua reprova com os
+mesmos 608 e 616; devolvido idêntico. A pergunta da Steam rola 13 px no Chrome.
+
+**Achado 2, corrigido em `5da9ed83`: quatro frases no presente ainda davam o «Ver os
+plugins» como vivo.** O `html_faz` da linha «Botão cinza por estado» da paridade, as
+docstrings de `test_a_09_sistema_sai_do_desenho.py` e de
+`test_a_09_sistema_fecha_a_paridade.py` (que diziam que `travas()` tranca o
+`ver-plugins`) e a nota de `_PAINEL`. As notas datadas ficam.
+
+**Visto e mantido, com a razão:**
+
+- **O sinal da linha «Ver os plugins carregados» é uma citação em comentário.** O portão
+  aceita por desenho (`ocorre`, em `scripts/check_paridade_gtk_html.py`: «Muitos sinais
+  deste CSV são citações por desenho»). Quem impede o botão de voltar é
+  `test_o_ver_os_plugins_nao_esta_em_pagina_nenhuma`.
+- **O `title` do Parar diz «os 2», e esse `title` agora é a pergunta no painel.** O número
+  é o `N` do gerador e já estava na dica; o §D manda o `title` publicado, sem palavra nova.
+- **A dica «Enxergando» sobre «Trocar de perfil ao abrir o jogo»** aparece antes e depois.
+
+**Tela.** Fotos `--oculta`, no rascunho e fora do repositório, porque as de daemon vivo
+mostram identidade de fábrica. O repouso com o daemon vivo foi fotografado na base
+extraída, na branch e depois da cura da altura. Os cliques seguiram o roteiro da régua
+nova, na base e na branch.
+
+- **Na base:** as linhas do diário no painel, quatro botões no Avançado, e a pergunta
+  vencida da Steam no painel com o rótulo já de volta.
+- **Na branch:** nenhuma linha do diário e três botões. O «Confirma?» do Parar põe no
+  painel o `title` e «Clique de novo para confirmar.». Quando a pergunta vence, o painel
+  volta ao repouso.
+
+**Réguas vizinhas.** 95 arquivos de `tests/unit/` que leem o que a sprint mudou, um
+processo cada: 94 verdes e a da altura (achado 1). Depois da cura, as 32 que leem a 09 ou
+o gerador, todas verdes. Os perfis, 159 arquivos, saíram iguais por md5 depois de cada
+corrida.
+
+**Portões:** `bash scripts/portoes.sh` sobre a árvore com os dois `fix` e esta seção
+escrita, depois do `git add -A`: todos verdes, 60 portões.
+
+**O que a validação não verificou:** o clique na janela com o daemon vivo (só o repouso);
+a rolagem da pergunta da Steam no WebKit depois da cura (medida no Chrome); e nenhum ato
+real, nem de systemd, nem da Steam, nem do Proton, nem dos scripts de conserto.
