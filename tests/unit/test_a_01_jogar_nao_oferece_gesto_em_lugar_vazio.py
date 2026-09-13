@@ -57,7 +57,7 @@ A MORDIDA, e foi feita duas vezes em 07/09/2026:
 
   (i)  devolva o chip clicável ao lugar vazio — troque a regra
        ``[data-controle][data-conectado="nao"]:not(.vazia) .mascara .chip{
-       display:none !important}`` da ``aba01.py`` pela meia cura de 30/08
+       visibility:hidden !important}`` da ``aba01.py`` pela meia cura de 30/08
        (``cursor:default`` e sem ``:hover``). Reprova
        ``test_o_lugar_vazio_nao_oferece_gesto`` nomeando o lugar e o gesto:
        *"p3 · gesto `mascara` (\"DualSense\") continua com caixa 256.8x28 e
@@ -141,6 +141,7 @@ O_QUE_O_NAVEGADOR_DESENHA = r"""
           rotulo: (el.textContent || '').trim().slice(0, 30),
           largura: +r.width.toFixed(1), altura: +r.height.toFixed(1),
           caixa: caixa,
+          desenhado: caixa && cs.visibility !== 'hidden',
           oferecido: caixa && pega && cs.visibility !== 'hidden'
                      && cs.pointerEvents !== 'none',
         });
@@ -240,17 +241,24 @@ def test_o_lugar_vazio_nao_oferece_gesto(medido: dict) -> None:
 
 
 def test_o_lugar_vazio_nem_desenha_o_gesto(medido: dict) -> None:
-    """E não é só o clique: a caixa some.
+    """E não é só o clique: o chip não se desenha.
 
     A METADE QUE `pointer-events:none` SOZINHO NÃO DARIA, e a folha das dez
     abas já escolheu a mesma resposta na S-04: *"um botão cinza num lugar vazio
     ainda promete que ali cabe uma escolha."* Um chip desenhado e inerte é essa
     promessa; sumir é a resposta honesta.
+
+    DESENHADO É CAIXA **E** VISIBILIDADE — 13/09/2026, RECONECTAR-SAMBA-02. Até
+    aqui esta régua cobrava a caixa ZERADA, porque a cura era `display:none` e o
+    chip saía do fluxo junto. Com os quatro lugares vazios isso derrubava a
+    fileira de cartões, e o «Reconectar controles» subia 61 px. O chip passou a
+    `visibility:hidden` — guarda o vão, não se pinta e não recebe clique —, e a
+    pergunta desta régua continua a mesma: o lugar vazio mostra a escolha?
     """
     desenhados = [
         f'{quem} · `{g["gesto"]}` ("{g["rotulo"]}") em {g["largura"]}x{g["altura"]}'
         for quem, d in _lugares(medido["como_nasce"], "nao").items()  # (noqa-acento) o valor
-        for g in d["gestos"] if g["caixa"]
+        for g in d["gestos"] if g["desenhado"]
     ]
     assert not desenhados, (
         "o gesto do lugar vazio está DESENHADO — inerte é melhor que clicável e "
