@@ -23,7 +23,9 @@ na mesa dublê:
 4. **o número fora diz só o número**: o `#hef-dica` do `.fora` diz «Player 2»;
 5. **o clique que só arma não pisca**: um gesto que devolve `{"armou": True}`
    pousa sem `hef-deu-certo` e sem `hef-recusou`;
-6. **a aba 05 não declara lugar de recado**, na bancada e no publicado.
+6. **a aba 05 não declara lugar de recado**, na bancada e no publicado;
+7. **o clique sem dono também pisca a recusa** (sem janela, no `Piloto._gesto`);
+8. **a casa tomada da 04 diz de quem é, sem a regra colada** (sem janela).
 
 O TEMPO É CONDIÇÃO, NÃO RELÓGIO — a lição da FLAKE-DO-PISCA, escrita em
 `test_o_recado_de_sucesso_pousa_no_cartao`: a piscada é estado de PASSAGEM, e
@@ -635,3 +637,63 @@ def test_a_chave_do_clique_que_so_arma_e_armou() -> None:
     import hefesto_vivo as hv
 
     assert hv.CHAVE_DO_CLIQUE_QUE_SO_ARMOU == "armou"
+
+
+class _PilotoDoCliqueSemDono:
+    """O mínimo que `Piloto._gesto` lê num clique sem dono, com o pouso anotado."""
+
+    def __init__(self) -> None:
+        self.gestos: list[dict] = []
+        self.recusados: list[str] = []
+        self.desfechos: dict[str, tuple[str, str]] = {}
+        self.pagina = PAGINA_04
+        self.pousos: list[tuple[str, object]] = []
+
+    def _pousou(self, voo: str, certo: object = None) -> bool:
+        self.pousos.append((voo, certo))
+        return False
+
+
+def test_o_clique_sem_dono_pisca_a_recusa(capsys) -> None:
+    """Ninguém atende o clique: o botão pousa com `False`, a piscada de recusa.
+
+    Visto no piloto oculto na validação desta sprint: o «Guardar» do
+    remapeamento da aba 06, declarado sem dono em `a06_navegacao`, pousou
+    `hef-recusou`; na base ele voltava do voo sem sinal nenhum.
+
+    MORDIDA: troque `self._pousou(voo, False)` por `self._pousou(voo)` no ramo
+    sem dono de `Piloto._gesto` — o pouso vira `None`, e esta régua reprova.
+    """
+    pytest.importorskip("gi", reason="o piloto importa o GTK")
+    import hefesto_vivo as hv
+
+    nome = "gesto-sem-dono-de-prova"
+    falso = _PilotoDoCliqueSemDono()
+    carga = {"gesto": nome, "voo": "7",
+             "pagina": PAGINA_04}  # noqa-acento: chave da carga do piloto
+    hv.Piloto._gesto(falso, carga)
+    assert falso.desfechos == {f"{PAGINA_04}:{nome}": ("sem dono", "")}, falso.desfechos
+    assert falso.pousos == [("7", False)], (
+        f"o clique sem dono pousou {falso.pousos} — sem `False` o botão volta do "
+        f"voo sem a piscada de recusa")
+    assert f"[gesto sem dono] {PAGINA_04} · {nome}" in capsys.readouterr().out
+
+
+def test_a_casa_tomada_diz_de_quem_e_sem_a_regra() -> None:
+    """A dica do tom tomado da 04 é o nome do dono, e a regra colada saiu.
+
+    MORDIDA: devolva «… já está neste tom — duas peças nunca ficam da mesma
+    cor.» ao `titulo` de `a04_iluminacao.fileira_de_tons` e esta régua reprova;
+    troque o nome pela frase da casa livre e reprova também a régua do X, em
+    `test_fecha_iluminacao_01_duas_pecas_nunca_tem_a_mesma_cor`.
+    """
+    from hefesto_dualsense4unix.core.led_control import player_slot_color
+    from hefesto_dualsense4unix.interface.pacotes import a04_iluminacao as a04
+
+    tomado = "#{:02X}{:02X}{:02X}".format(*player_slot_color(2))
+    html = a04.fileira_de_tons(
+        "", {tomado: {"nome": "P2 (DualSense)", "plastico": "#1c1c1c"}})
+    casas = [linha for linha in html.splitlines() if "tomado" in linha]
+    assert len(casas) == 1, html
+    assert 'title="P2 (DualSense)"' in casas[0], casas[0]
+    assert "duas peças" not in html, casas[0]
