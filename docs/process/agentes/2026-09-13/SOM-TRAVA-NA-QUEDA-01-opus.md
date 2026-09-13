@@ -223,3 +223,7 @@ rodaram em seis lotes: 1515 passaram e 1 reprovou. O que reprovou foi
 que lê `pactl list sinks short` do servidor de verdade. Com o som desviado, ele
 reprova igual na base `9639f1df` extraída no rascunho: quem reprova é o desvio,
 não a branch. Não o rodei contra a sessão dela.
+
+**Portões.** `bash scripts/portoes.sh` completo, depois do `git add -A`, sobre
+`caa8a82f` e com o som desviado: `TODOS VERDES — 60 portões.` em 380 s. Nenhuma
+célula de planilha andou.
