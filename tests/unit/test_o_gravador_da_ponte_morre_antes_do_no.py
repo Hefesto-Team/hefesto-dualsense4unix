@@ -537,8 +537,8 @@ def test_r6_o_alimentador_com_o_bombeador_morto_e_colhido_depressa(
     ms = (time.monotonic() - comeco) * 1000.0
 
     assert proc.poll() is not None, f"o alimentador (pid {proc.pid}) ficou vivo"
-    assert proc.returncode == -signal.SIGPIPE, f"morreu com {proc.returncode}"
     assert ms < 100.0, f"fechar o canal levou {ms:.0f} ms com o bombeador já morto"
+    assert proc.returncode == -signal.SIGPIPE, f"morreu com {proc.returncode}"
 
 
 # ---------------------------------------------------------------------------
