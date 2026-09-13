@@ -1,6 +1,6 @@
 ---
 sprint: SENSORES-NO-JOGO-03
-estado: aberta
+estado: feita
 onda: A-TERCEIRA-LISTA-DELA
 posse:
   SENSORES-NO-JOGO-03:
@@ -24,6 +24,14 @@ nao_toca:
 ---
 
 # SENSORES-NO-JOGO-03 — o fato do zero sai dos lugares que ficaram
+
+> **ESTADO 2026-09-13: feita** — a mesma frase certa entrou nos oito lugares:
+> as docstrings de `_reconciliar_grabs` e do `sensor.set` com o mesmo número de
+> linhas (641 e 6950), a razão do `sensor` na régua da quinta pergunta com o
+> veredito igual, e os três documentos vivos; as duas entregas ganharam a nota
+> datada no topo. A busca das formas antigas foi de 23 achados em 12 arquivos a
+> 14 em 6, todos registro ou nota datada. As duas mordidas reprovaram. A entrega
+> está em `docs/process/agentes/2026-09-13/SENSORES-NO-JOGO-03-opus.md`.
 
 Nasceu na costura da onda 2 (13/09/2026). A
 [SENSORES-NO-JOGO-02](2026-09-13-SENSORES-NO-JOGO-02-o-giroscopio-que-o-jogo-nao-ve-em-modo-virtual.md)

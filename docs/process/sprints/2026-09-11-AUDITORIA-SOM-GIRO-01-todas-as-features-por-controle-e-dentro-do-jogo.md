@@ -51,9 +51,13 @@ lançador)?
 **A B é a mais cara e a menos medida desta casa.** A escada de degraus separa
 `O APARELHO OBEDECEU` (a saída chegou ao plástico) de `O JOGO RECEBEU` (o
 processo do jogo abriu o nó do nosso vpad) e de `O JOGO REAGIU`. **O giroscópio
-está em `MONTOU` nos dois transportes** e a hipótese mais forte, já escrita na
-casa, é que **o jogo não recebe giroscópio pelo vpad de evdev**, com o touchpad
-como precedente no mesmo caminho desde 16/08.
+está em `MONTOU` nos dois transportes.** **FATO SUBSTITUÍDO em 13/09/2026:** o
+zero em Modo Virtual era da libSDL2 2.30.0 do sistema; nas bibliotecas dos
+runtimes da Steam o vpad expõe os dois sensores, e o SDL pareia o nó «Motion
+Sensors» pelo `uniq` (a tabela está na
+[SENSORES-NO-JOGO-02](2026-09-13-SENSORES-NO-JOGO-02-o-giroscopio-que-o-jogo-nao-ve-em-modo-virtual.md),
+§1). O jogo aberto recebendo e reagindo continua sem medição, com o touchpad
+como precedente de repasse íntegro sem reação desde 16/08.
 
 ## §2 — DE ONDE SE LÊ, e nada se digita
 

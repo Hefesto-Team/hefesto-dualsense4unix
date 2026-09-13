@@ -341,10 +341,14 @@ afirmações ficaram construídas com cuidado, e não provadas:
   veio nesta carga e toca `interface/aba08.py` — se for despachada, entra em
   **fila** com a ONDA5-08-01, não em paralelo.
 * **O caminho do giroscópio até o jogo sob a máscara Xbox.** O canal próprio
-  existe, mas o SDL não enumera aquele nó — então ele serve a um `evtest`, não a
-  um jogo de Steam. A sprint que nascer disso tem de MEDIR se há rota antes de
-  prometer. Escrever passos sem essa medição seria o defeito que o princípio
-  existe para matar.
+  existe. **FATO SUBSTITUÍDO em 13/09/2026:** o zero em Modo Virtual era da
+  libSDL2 2.30.0 do sistema; nas bibliotecas dos runtimes da Steam o vpad expõe
+  os dois sensores, e o SDL pareia o nó «Motion Sensors» pelo `uniq` (a tabela
+  está na
+  [SENSORES-NO-JOGO-02](2026-09-13-SENSORES-NO-JOGO-02-o-giroscopio-que-o-jogo-nao-ve-em-modo-virtual.md),
+  §1). Sob a máscara Xbox a rota continua sem medição: a sprint que nascer disso
+  tem de MEDIR antes de prometer. Escrever passos sem essa medição seria o
+  defeito que o princípio existe para matar.
 * **A `ONDA5-MIC-VIRTUAL-02`** (o mesmo canal, no rádio) está declarada por ID
   dentro da 01, com o corte e a razão: o cabo tem rede embaixo, o rádio não.
 * **Os três presets órfãos** (navegador, terminal, editor) seguem sem casa por

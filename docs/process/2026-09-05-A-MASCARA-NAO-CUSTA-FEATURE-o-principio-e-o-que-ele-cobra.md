@@ -133,9 +133,13 @@ FÍSICO em qualquer máscara — `grep` por `flavor`/`mascara`/`native_mode` em
 `src/hefesto_dualsense4unix/core/` não devolve um único gate. **O que se perde é
 a AUTORIA do jogo, não a feature.** E os sensores continuam publicados pelo
 kernel no nó "Motion Sensors" do controle físico, livre nos dois modos — a
-tabela medida está no cabeçalho de `core/virtual_motion.py`, junto com o achado
-que derruba metade das promessas fáceis: **o SDL não enumera aquele nó**, então
-o canal existe para um `evtest` ou um emulador e não para um jogo de Steam.
+tabela medida está no cabeçalho de `core/virtual_motion.py`. **FATO SUBSTITUÍDO
+em 13/09/2026:** o zero em Modo Virtual era da libSDL2 2.30.0 do sistema; nas
+bibliotecas dos runtimes da Steam o vpad expõe os dois sensores, e o SDL pareia
+o nó «Motion Sensors» pelo `uniq` (a tabela está na
+[SENSORES-NO-JOGO-02](sprints/2026-09-13-SENSORES-NO-JOGO-02-o-giroscopio-que-o-jogo-nao-ve-em-modo-virtual.md),
+§1). O canal alcança `evtest`, emuladores e o SDL; se ele leva o giro ao jogo
+sob a máscara Xbox continua sem medição.
 
 ### 3.4 O DEFEITO QUE A MEDIÇÃO ACHOU DE LAMBUJA: o produto perde cinco e a tela conta dois
 
@@ -187,7 +191,7 @@ O que isso cobra, linha a linha do §3.3:
 
 | linha | o que o princípio manda fazer |
 | --- | --- |
-| 1 · giroscópio e acelerômetro | O canal próprio EXISTE (nó de evdev do físico, livre nos dois modos). O que falta é medido e está escrito: **o SDL não o enumera** (`core/virtual_motion.py`, achado 1 do cabeçalho). A sprint que nasce aqui MEDE se há caminho até o jogo — e se não houver, a frase honesta diz o que FAZER, não pede desculpa. |
+| 1 · giroscópio e acelerômetro | O canal próprio EXISTE (nó de evdev do físico, livre nos dois modos). **FATO SUBSTITUÍDO em 13/09/2026:** o zero em Modo Virtual era da libSDL2 2.30.0 do sistema; nas bibliotecas dos runtimes da Steam o vpad expõe os dois sensores, e o SDL pareia o nó «Motion Sensors» pelo `uniq` (a tabela está na SENSORES-NO-JOGO-02, §1). A sprint que nasce aqui MEDE se há caminho até o jogo sob a máscara Xbox — e se não houver, a frase honesta diz o que FAZER, não pede desculpa. |
 | 2 · touchpad | Idem, com um canal a mais já construído e já cego à máscara: o touchpad como mouse (`integrations/uinput_mouse.py`, sem um único gate de máscara). |
 | 3, 4, 5 · gatilhos, lightbar e LEDs do jogo | Não há canal próprio: o jogo fala com o vpad ou não fala. **A cura barata e verdadeira é a §5** — parar de dizer que a feature morreu, porque ela não morreu: só o jogo deixou de ser o autor. |
 | bateria e jack | Anúncio, e o anúncio tem dono fora do gamepad (o `state_full`). |

@@ -4,6 +4,17 @@
 branch `voo/AUDITORIA-SOM-GIRO-01-opus`, nascida de `onda/0911` (`779c71f8`,
 conferido contra `git rev-parse --short onda/0911`).
 
+> **FATO SUBSTITUÍDO em 13/09/2026** —
+> [SENSORES-NO-JOGO-02](../../sprints/2026-09-13-SENSORES-NO-JOGO-02-o-giroscopio-que-o-jogo-nao-ve-em-modo-virtual.md).
+> A medição que esta entrega cita do cabeçalho de `core/virtual_motion.py` era
+> da libSDL2 2.30.0 do sistema, e o zero em Modo Virtual era dessa biblioteca;
+> nas bibliotecas dos runtimes da Steam o vpad expõe os dois sensores, e o SDL
+> pareia o nó «Motion Sensors» pelo `uniq` (a tabela está na
+> SENSORES-NO-JOGO-02, §1). No reparo da §5 cai o alcance dado ao nó de
+> movimento: além de `evtest` e emuladores, o SDL o pareia. O degrau segue
+> `MONTOU`, e o jogo segue sem medição. O corpo fica como o registro do que a
+> auditoria viu.
+
 ## O que mudou
 
 **Um documento novo, e nenhuma linha de produto:**

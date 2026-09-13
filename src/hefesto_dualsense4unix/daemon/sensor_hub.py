@@ -415,10 +415,10 @@ class SensorHub:
         """O nó "Motion Sensors" fica GRABADO enquanto houver sensor desligado.
 
         **É a metade que a medição de 04/09/2026 obrigou a existir**, e ela
-        alcança o que o filtro do report não alcança: o consumidor que lê o nó
-        evdev direto (`evtest`, emulador com backend evdev). O SDL não lê esse
-        nó — mede-se em `core/virtual_motion`, no cabeçalho —, então nenhum dos
-        dois braços sozinho é o interruptor: são os dois.
+        alcança o que o filtro do report não alcança: quem lê o nó do FÍSICO (`evtest`,
+        emulador com backend evdev, quem abriu o físico). O zero em Modo Virtual era da libSDL2
+        2.30.0 do sistema; nas bibliotecas dos runtimes da Steam o vpad expõe os dois sensores,
+        e o SDL pareia o nó «Motion Sensors» pelo `uniq`. Nenhum braço sozinho é o interruptor.
 
         POR QUE O NÓ INTEIRO, e não um sensor por vez: giroscópio e
         acelerômetro viajam no MESMO nó (`ABS_RX/RY/RZ` e `ABS_X/Y/Z`,

@@ -5,6 +5,18 @@
 **Bancada:** reservada (`ONDA1-D3 o sensor`), medida com **um** DualSense no cabo
 — o segundo não estava na mesa, e isso está em *O que NÃO verifiquei*.
 
+> **FATO SUBSTITUÍDO em 13/09/2026** —
+> [SENSORES-NO-JOGO-02](../../sprints/2026-09-13-SENSORES-NO-JOGO-02-o-giroscopio-que-o-jogo-nao-ve-em-modo-virtual.md).
+> A sonda desta entrega carregava a libSDL2 2.30.0 do sistema, e o zero em Modo
+> Virtual era dessa biblioteca; nas bibliotecas dos runtimes da Steam o vpad
+> expõe os dois sensores, e o SDL pareia o nó «Motion Sensors» pelo `uniq` (a
+> tabela está na SENSORES-NO-JOGO-02, §1). No item 1 das afirmações abaixo cai
+> a razão dada sobre o SDL: o grab do nó do FÍSICO alcança também quem abriu o
+> físico, e o jogo que abriu o vpad só o braço do report alcança. O item 2 de
+> «O que sobrou» cai inteiro; a hipótese dele, o vpad `uhid` sem pai USB, se
+> confirmou para o HIDAPI da SDL2 clássica (§2 daquela sprint). O corpo fica
+> como o registro do que esta bancada viu.
+
 ---
 
 ## A MEDIÇÃO VEIO PRIMEIRO — e ela derrubou três frases do plano
