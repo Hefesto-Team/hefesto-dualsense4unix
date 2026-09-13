@@ -12,10 +12,10 @@
 > expõe os dois sensores, e o SDL pareia o nó «Motion Sensors» pelo `uniq` (a
 > tabela está na SENSORES-NO-JOGO-02, §1). No item 1 das afirmações abaixo cai
 > a razão dada sobre o SDL: o grab do nó do FÍSICO alcança também quem abriu o
-> físico, e o jogo que abriu o vpad só o braço do report alcança. O item 2 de
-> «O que sobrou» cai inteiro; a hipótese dele, o vpad `uhid` sem pai USB, se
-> confirmou para o HIDAPI da SDL2 clássica (§2 daquela sprint). O corpo fica
-> como o registro do que esta bancada viu.
+> físico, e o jogo que abriu o vpad só o braço do report alcança. O achado do
+> item 2 de «O que sobrou» cai; a hipótese dele, o vpad `uhid` sem pai USB, se
+> confirmou para o HIDAPI da SDL2 clássica e não era a causa do zero (§2 daquela
+> sprint). O corpo fica como o registro do que esta bancada viu.
 
 ---
 

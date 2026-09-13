@@ -140,3 +140,86 @@ portões**, com `citacoes-de-linha`, `citacoes-no-codigo`,
 3. **O mapa e o `specs.html`** seguem em `nao_toca`: as células
    `movimento.giroscopio.jogo@dualsense` e `movimento.acelerometro.jogo@dualsense`
    ainda esperam a ressalva de biblioteca, como a entrega da onda 2 já dizia.
+
+## O que a validação refez e corrigiu
+
+Agente VALIDA/CORRIGE, na mesma árvore e na mesma branch. Nenhum aparelho, daemon
+ou piloto tocado; a tela não muda, e por isso nenhuma foto.
+
+### Refeito, e conferiu
+
+* **Posse:** os dez arquivos de `git diff --name-only b791d234..HEAD` cabem no
+  `posse:` mais esta entrega; os três que a validação tocou também estão nele.
+* **Tela:** nenhuma página tocada. Nas 20 páginas publicadas (`mockup/NN` e
+  `interface/paginas/NN`), 708 `data-gesto` e 506 `<button` na `b791d234` e na
+  branch.
+* **O número de linhas:** 641, 6950 e 529 na base e na branch; `numstat` 4/4,
+  6/6 e 6/6; `ruff check` verde nos três.
+* **O veredito da régua da quinta pergunta:** a da base, posta no disco e
+  devolvida, e a da branch saem `rc=0`; o `diff` das saídas, com e sem
+  `--tabela`, é uma linha em cada, a da razão.
+* **A busca, refeita com expressões próprias** (dezesseis, mais largas que as
+  frases do implementador: pegam «não recebe giroscópio», «não enumera o nó» e
+  «não a um jogo de Steam» em qualquer arquivo versionado, `*.csv` e `*.html`
+  incluídos): **76 achados em 24 arquivos** na `b791d234`, **61 em 19** na
+  branch. Os que sobram, lidos um a um, não afirmam o fato caído: a frase da
+  máscara Xbox e Nintendo, que é verdadeira (em `app/actions/home_actions.py`,
+  `app/widgets/controller_card.py`, `docs/usage/interface.md`, na paridade e em
+  seis documentos que a citam), a do Modo Nativo em `profiles/schema.py`, os
+  corpos sob as notas datadas, as notas FATO SUBSTITUÍDO, a §E desta sprint e
+  os dois registros fora da posse do item 1 acima.
+* **As mordidas**, cada sabotagem devolvida por `git checkout HEAD --` e
+  conferida por `md5` e `git diff` vazio:
+
+  | sabotagem | régua | reprovou? |
+  | --- | --- | --- |
+  | `sensor_hub.py` da base no disco | a busca: 62 em 20, com `sensor_hub.py` nomeado; devolvida, 61 em 19 | sim |
+  | uma linha a mais na docstring do `sensor.set` | `validar-citacoes-de-linha.py --all` `rc=1`, 18 podres; `test_portao_o_par_com_metade_ligada.py` 1 failed, 15 passed; devolvida, 3288 OK e 16 passed | sim |
+  | a razão da base na régua da quinta pergunta | a busca nomeia `check_ate_onde_a_prova_chegou.py` | sim |
+  | a A-MASCARA-NAO-CUSTA-FEATURE da base | a busca: 8 achados no arquivo, com «o SDL não enumera aquele nó» | sim |
+  | uma linha a mais na docstring de `_reconciliar_grabs`, e outra na razão da régua | as duas réguas de citação ficam verdes | **não** |
+
+  A última não reprova, e não é defeito: as 29 citações de `sensor_hub.py`
+  param na linha 339, antes da docstring, e `check_ate_onde_a_prova_chegou.py`
+  não tem citação por linha. O mesmo número de linhas vale nos três arquivos,
+  mas hoje só o do `ipc_handlers.py` tem régua que o segure.
+* **Réguas vizinhas:** os 135 arquivos de `tests/unit` que citam os arquivos ou
+  os símbolos mudados (`sensor_hub`, `ipc_handlers`, `_reconciliar_grabs`,
+  `_handle_sensor_set`, `sensor.set`, a régua da quinta pergunta e os documentos
+  tocados), em quatro lotes: 382, 708, 648 e 662 verdes, 3 `xfailed`, nenhum
+  vermelho.
+
+### Corrigido
+
+1. **A §3.3 da A-MASCARA-NAO-CUSTA-FEATURE dava ao nó do FÍSICO um alcance que
+   ninguém mediu.** «O canal alcança `evtest`, emuladores e o SDL»: o canal
+   daquele parágrafo é o nó do físico, e o vpad carimba um `uniq` próprio
+   (`vpad_mac`, derivado do aparelho e diferente do dele, porque o
+   `hid_playstation` recusa MAC repetido). O SDL que abriu o vpad casa
+   o nó do vpad; o do físico só chega a quem abriu o físico, que é o que o item
+   1 do cabeçalho de `core/virtual_motion.py` diz. A frase passou a dizer isso.
+2. **A nota da AUDITORIA-SOM-GIRO-01-opus repetia o mesmo alcance** («além de
+   `evtest` e emuladores, o SDL o pareia», sobre o nó do físico do reparo da
+   §5). Agora cai a razão dada sobre o SDL, e o nó do físico alcança `evtest`,
+   emuladores e quem abriu o físico.
+3. **A nota da ONDA1-D3 se contradizia:** o item 2 de «O que sobrou» «cai
+   inteiro» e, na mesma frase, a hipótese dele «se confirmou». Cai o achado; a
+   hipótese se confirmou para o HIDAPI da SDL2 clássica e não era a causa do
+   zero — a §2 da SENSORES-NO-JOGO-02 põe a causa na classe udev que a 2.30.0
+   exige do nó, e com a dica em 0 a mesma biblioteca entrega pelo evdev.
+
+### Os portões
+
+`git add -A && bash scripts/portoes.sh`, com o `PYTHONPATH` desta árvore no
+cabeçalho, sobre as três correções e esta seção: **TODOS VERDES — 60 portões**,
+com `citacoes-de-linha`, `citacoes-no-codigo`, `ate-onde-a-prova-chegou` e a
+mordida dele, `referencias-docs`, `anonimato`, `colisao-de-sprints` e
+`acentuacao` entre eles.
+
+### O que a validação não refez
+
+* **O fato no aparelho**, e nada do que «O que NÃO verifiquei» já declara.
+* **A dona do `sensor`** (item 2 de «O que sobrou»): a razão nomeia a
+  MESA-DE-QUATRO-01 e a coluna da dona segue na SENSORES-NO-JOGO-01. Trocar a
+  dona muda a linha que a régua imprime, e o §I.3 manda não mexer no veredito.
+* **A suíte inteira**, que é de quem coordena.

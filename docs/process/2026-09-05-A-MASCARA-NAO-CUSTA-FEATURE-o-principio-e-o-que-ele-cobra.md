@@ -138,8 +138,8 @@ em 13/09/2026:** o zero em Modo Virtual era da libSDL2 2.30.0 do sistema; nas
 bibliotecas dos runtimes da Steam o vpad expõe os dois sensores, e o SDL pareia
 o nó «Motion Sensors» pelo `uniq` (a tabela está na
 [SENSORES-NO-JOGO-02](sprints/2026-09-13-SENSORES-NO-JOGO-02-o-giroscopio-que-o-jogo-nao-ve-em-modo-virtual.md),
-§1). O canal alcança `evtest`, emuladores e o SDL; se ele leva o giro ao jogo
-sob a máscara Xbox continua sem medição.
+§1). O nó do FÍSICO alcança `evtest`, emuladores e quem abriu o físico; se ele
+leva o giro ao jogo sob a máscara Xbox continua sem medição.
 
 ### 3.4 O DEFEITO QUE A MEDIÇÃO ACHOU DE LAMBUJA: o produto perde cinco e a tela conta dois
 

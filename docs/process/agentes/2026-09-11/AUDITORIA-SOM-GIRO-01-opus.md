@@ -10,10 +10,10 @@ conferido contra `git rev-parse --short onda/0911`).
 > da libSDL2 2.30.0 do sistema, e o zero em Modo Virtual era dessa biblioteca;
 > nas bibliotecas dos runtimes da Steam o vpad expõe os dois sensores, e o SDL
 > pareia o nó «Motion Sensors» pelo `uniq` (a tabela está na
-> SENSORES-NO-JOGO-02, §1). No reparo da §5 cai o alcance dado ao nó de
-> movimento: além de `evtest` e emuladores, o SDL o pareia. O degrau segue
-> `MONTOU`, e o jogo segue sem medição. O corpo fica como o registro do que a
-> auditoria viu.
+> SENSORES-NO-JOGO-02, §1). No reparo da §5 cai a razão dada sobre o SDL: ele
+> casa o nó de movimento ao gamepad da mesma peça, e o nó do FÍSICO alcança
+> `evtest`, emuladores e quem abriu o físico. O degrau segue `MONTOU`, e o jogo
+> segue sem medição. O corpo fica como o registro do que a auditoria viu.
 
 ## O que mudou
 
