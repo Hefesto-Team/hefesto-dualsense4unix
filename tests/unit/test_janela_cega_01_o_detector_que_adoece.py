@@ -15,9 +15,9 @@ O que este módulo mede:
    sticky que nunca decai.
 3. `window_detect_healthy` continua NÃO decaindo — de propósito, com teste que
    fixa a decisão: o consumidor dela é `game_signal.classify`, onde
-   `healthy=False` sem evidência de jogo vira autoridade `unknown` e a
-   transição `daemon -> unknown` dispara `replay_retained_game_outputs()`,
-   que repinta a lightbar dela. Mudar isso é leva própria.
+   `healthy=False` sem evidência de jogo vira autoridade `unknown`, e sob
+   `unknown` o gate da camada GAME abre para a luz que o cliente Steam
+   escrever no vpad — a lightbar dela muda. Mudar isso é leva própria.
 4. As SEIS causas de `None` do `XlibBackend` viram seis motivos DISTINTOS em
    `last_failure_reason` — "sem foco X" (normal: app Wayland nativo em foco)
    deixa de ser indistinguível de "backend morto" (grave).
@@ -108,8 +108,8 @@ def test_idade_da_ultima_leitura_util_cresce_enquanto_o_sticky_mente() -> None:
 
 def test_healthy_continua_sendo_trinco_de_mao_unica_de_proposito() -> None:
     """Trava de decisão: `healthy` NÃO pode decair enquanto o consumidor for o
-    `game_signal` — `daemon -> unknown` dispara `replay_retained_game_outputs`
-    e repinta a lightbar dela. Quem decai é `seeing`, que não decide nada."""
+    `game_signal` — sob `unknown` o gate da camada GAME abre e a luz que o
+    cliente escrever no vpad repinta a lightbar dela. Quem decai é `seeing`."""
     store = _semeado()
     store.record_window_detect_read("xlib", "steam", now=0.0)
     store.record_window_detect_read(

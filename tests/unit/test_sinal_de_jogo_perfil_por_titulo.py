@@ -259,10 +259,10 @@ async def test_aba_de_navegador_com_titulo_de_jogo_sobe_a_autoridade(
     Com o título valendo, um regex solto passa a poder declarar "é jogo" a
     partir de uma janela que não é jogo: o `coop_local` dela (prioridade 75,
     `mode: gamepad`, só título) casa uma aba de navegador chamada "Portal 2" e
-    vence o `Navegação` (prioridade 50) na eleição. E a transição
-    `daemon -> game` chama `replay_retained_game_outputs()`, que REPINTA a
-    lightbar com o que o jogo deixou retido — ou seja, o preço aparece na mão
-    dela, não só no journal.
+    vence o `Navegação` (prioridade 50) na eleição. E sob `game` o gate da
+    camada GAME abre: a luz que o cliente Steam escrever no vpad dali em diante
+    vira camada do jogo e vence o perfil (o retido, desde 13/09, é descartado)
+    — ou seja, o preço aparece na mão dela, não só no journal.
 
     Este teste NÃO diz que isso é desejável. Ele existe para que a decisão seja
     explícita: quem for estreitar o critério (exigir que a janela não tenha
