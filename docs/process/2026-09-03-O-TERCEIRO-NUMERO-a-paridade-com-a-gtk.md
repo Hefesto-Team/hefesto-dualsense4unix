@@ -81,7 +81,7 @@ O dado mora em **[`docs/data/paridade-gtk-html.csv`](../data/paridade-gtk-html.c
 <!-- TABELA-DA-PARIDADE -->
 | aba | feats | IGUAL | DIFER | FALTA | SO_HTML | ? | paridade |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| 01-jogar | 42 | 14 | 22 | 1 | 4 | 1 | 33% |
+| 01-jogar | 42 | 13 | 23 | 1 | 4 | 1 | 31% |
 | 02-controles | 50 | 16 | 25 | 5 | 4 | 0 | 32% |
 | 03-gatilhos | 31 | 15 | 9 | 1 | 5 | 1 | 48% |
 | 04-iluminacao | 35 | 9 | 12 | 6 | 7 | 1 | 26% |
@@ -91,7 +91,7 @@ O dado mora em **[`docs/data/paridade-gtk-html.csv`](../data/paridade-gtk-html.c
 | 08-conexoes | 49 | 22 | 22 | 3 | 2 | 0 | 45% |
 | 09-sistema | 38 | 12 | 18 | 2 | 6 | 0 | 32% |
 | 10-perfis | 50 | 14 | 20 | 7 | 9 | 0 | 28% |
-| TODAS | 396 | 145 | 160 | 29 | 58 | 4 | 37% |<!-- /TABELA-DA-PARIDADE -->
+| TODAS | 396 | 144 | 161 | 29 | 58 | 4 | 36% |<!-- /TABELA-DA-PARIDADE -->
 
 A tabela é **gerada da contagem do CSV** e conferida pelo portão (regra
 `numero-publicado`): quem mexer no dado e não regerar esta seção é barrado
@@ -555,3 +555,26 @@ alto-falante nunca acendeu.
 
 **A MORDIDA:** com a tabela devolvida à contagem velha, o portão reprova em
 `numero-publicado` nomeando `02-controles` e `TODAS`.
+
+## Nota de verificação — 13/09/2026, a escolha de máscara deixa de ser do chip do Modo
+
+`MODO-DE-CONEXAO-01`. A linha **`01-jogar` · "A escolha de máscara chega ao daemon
+(o jogo vê o controle como)"** caiu de `IGUAL` para **`DIFERENTE`**, e a tabela
+acima foi **recontada do CSV**: `01-jogar` vai de `14 IGUAL · 22 DIFER · 33%` para
+`13 · 23 · 31%`, e `TODAS` de `145 · 160 · 37%` para `144 · 161 · 36%`. **A
+paridade desce um ponto, e é por decisão dela, não por defeito.**
+
+**A razão:** a regra dela de 13/09 (`D-1309-O-MODO-E-A-BASE-E-A-MASCARA-VEM-POR-CIMA`
+em `docs/data/decisoes-dela.csv`) separa as duas camadas. Os chips «Sony
+DualSense» e «Xbox» escolhem o CAMINHO (`mode.caminho`), e a máscara é do cartão
+de cada controle, por `gamepad.mask.set`. A GTK continua com UM seletor de máscara
+para a máquina. A resposta chega ao daemon dos dois lados por caminhos diferentes,
+e é isso que `DIFERENTE` quer dizer nesta tabela.
+
+**Fato substituído na mesma linha:** o `porque` dizia que a máscara «sai de
+`painel.CHIPS_DA_ESCADA`». Desde a cura, `CHIPS_DA_ESCADA` nomeia caminhos. A linha
+vizinha, «O modo/máscara escolhidos entram no perfil», continua `DIFERENTE`, e o
+`html_faz` dela deixou de dizer que a máscara é zerada fora do modo jogo.
+
+**A MORDIDA:** com a tabela devolvida à contagem velha, o portão reprova em
+`numero-publicado` nomeando `01-jogar` e `TODAS`.
