@@ -378,3 +378,12 @@ volta desta entrega.
   aquela linha ao "— Sem troca —", e depois da FRASES-01 essa recusa não terá
   texto. A cura (dar endereço às seis e pintá-las sempre sem troca) muda o
   gerador, a autoconferência e duas réguas, e fica para quem coordena decidir.
+
+### Os portões
+
+`git add -A && bash scripts/portoes.sh` sobre `a586cb2b`, esperado pelo PID:
+`TODOS VERDES — 60 portões.` Antes, conferido com `ps`: as duas corridas vivas
+eram da árvore da FRASES-E-DICAS-01, não desta. Depois do verde, este
+parágrafo foi o único acréscimo, e a acentuação, os glifos, as referências, a
+saída de agente e o anonimato rodaram de novo sobre ele. A suíte inteira não
+rodou, por ordem do despacho.
