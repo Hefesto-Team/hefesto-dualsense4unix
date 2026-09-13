@@ -2005,24 +2005,39 @@ def fonte_do_monitor_do_no(
 
     O processo volta junto porque quem sobe tem de poder derrubar: um
     `pw-record` órfão continua lendo o monitor depois de a ponte cair.
+
+    **ELE NASCE PRESO AO PAI e o ramo sem `stdout` o COLHE — SOM-TRAVA-NA-
+    QUEDA-01, 13/09/2026.** O lançamento é o do dono único,
+    :func:`~hefesto_dualsense4unix.integrations.filho_de_som.lancar_leitor`,
+    com `PR_SET_PDEATHSIG`: sem ele, um daemon morto por SIGKILL com o gravador
+    ocioso deixava o `pw-record` com `ppid 1`. E um gravador sem `stdout` não
+    tem quem o leia nem quem o derrube: ele é colhido aqui, antes de voltar.
     """
+    from hefesto_dualsense4unix.integrations.filho_de_som import (
+        derrubar_leitor_de_pipe,
+        lancar_leitor,
+    )
+
     if not id_do_no:
         return None, None, "o controle não tem nó de som publicado"
     argv = argv_do_gravador(f"{id_do_no}.monitor")
     if not argv:
         return None, None, "nem `pw-record` nem `parec` nesta máquina"
-    lancar = abrir or (
-        lambda cmd: subprocess.Popen(
-            cmd, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL
-        )
-    )
+    lancar = abrir or lancar_leitor
     try:
         proc = lancar(argv)
     except OSError as erro:
         return None, None, f"não consegui abrir o gravador do monitor: {erro}"
     saida = getattr(proc, "stdout", None)
     if saida is None:
-        return None, proc, "o gravador subiu sem `stdout`"
+        como = derrubar_leitor_de_pipe(proc)
+        logger.info(
+            "som_gravador_sem_saida_colhido",
+            codigo=como.codigo,
+            por=como.por,
+            ms=como.ms,
+        )
+        return None, None, "o gravador subiu sem `stdout`"
     return fonte_de_arquivo(saida.fileno()), proc, ""
 
 
@@ -2071,6 +2086,9 @@ class PonteDeSomPorRadio:
         #: ponte: um gravador órfão continua lendo o monitor do nó depois de a
         #: ponte cair, e o próximo `subir()` acharia a fonte já consumida.
         self._gravador: Any | None = gravador
+        #: Como o gravador morreu no último `descer()` (`filho_de_som.ComoMorreu`),
+        #: para o diário e para a régua. `None` = ainda não desceu com gravador.
+        self.como_morreu_o_gravador: Any | None = None
         #: O SINAL É POR CORRIDA, NUNCA REUSADO — cura de 10/09/2026. Um
         #: `Event` só, com `clear()` no `subir()`, RESSUSCITA a thread da
         #: corrida anterior que ainda não morreu: ela testa `not
@@ -2200,19 +2218,44 @@ class PonteDeSomPorRadio:
         corrida viva ainda usava — e o próximo `open` de qualquer parte do
         daemon receberia esse mesmo número, com os 334 B do report indo para
         dentro dele.
+
+        **O GRAVADOR É COLHIDO AQUI, e não só avisado — SOM-TRAVA-NA-QUEDA-01,
+        13/09/2026.** Até esta data este método só mandava `terminate` ao
+        `pw-record`. Na queda do controle o laço já saiu (a escrita no hidraw
+        foi recusada), ninguém lê o cano, ele enche em 0,34 s, e o SIGTERM fica
+        pendente para sempre: medido no estudo da sprint, este método voltava
+        em 0 ms com o gravador vivo, e o gravador sobrevivia ao nó. Quem
+        derruba agora é
+        :func:`~hefesto_dualsense4unix.integrations.filho_de_som.derrubar_leitor_de_pipe`,
+        na ordem medida: TERM, `join` desta thread com `esperar_s`, o `stdout`
+        fechado SÓ com o laço já parado (SIGPIPE em 1,1 ms), `wait`, KILL,
+        `join` de novo. Com o laço vivo o `stdout` não fecha, pela mesma razão
+        do fd do hidraw acima. Como ele morreu vai para o diário.
         """
+        from hefesto_dualsense4unix.integrations.filho_de_som import (
+            derrubar_leitor_de_pipe,
+        )
+
         parar = self._parar
         if parar is not None:
             parar.set()
         gravador, self._gravador = self._gravador, None
-        if gravador is not None:
-            with contextlib.suppress(Exception):
-                gravador.terminate()
-
         thread = self._thread
+        if gravador is not None:
+            como = derrubar_leitor_de_pipe(gravador, leitor=thread, junta_s=esperar_s)
+            self.como_morreu_o_gravador = como
+            logger.info(
+                "som_radio_gravador_colhido",
+                uniq=self.uniq,
+                codigo=como.codigo,
+                por=como.por,
+                ms=como.ms,
+                insistiu=como.insistiu,
+            )
+
         if thread is None:
             return True
-        if thread.is_alive():
+        if thread.is_alive() and gravador is None:
             thread.join(timeout=esperar_s)
         if thread.is_alive():
             logger.info(

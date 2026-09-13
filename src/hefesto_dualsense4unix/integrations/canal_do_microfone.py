@@ -145,7 +145,6 @@ lido do dono, e quem reconhece continua sendo aquela peça.
 
 from __future__ import annotations
 
-import contextlib
 import logging
 import subprocess
 import threading
@@ -154,6 +153,10 @@ from typing import Any
 from hefesto_dualsense4unix.integrations.dualsense_bt_audio import (
     PRIORIDADE_SESSAO_DA_PONTE,
     SourceVirtualPipeWire,
+)
+from hefesto_dualsense4unix.integrations.filho_de_som import (
+    derrubar_leitor_de_pipe,
+    lancar_leitor,
 )
 from hefesto_dualsense4unix.integrations.fontes_de_captura import (
     MIN_HEX_SUFIXO_BT,
@@ -226,6 +229,12 @@ _LATENCIA_DO_ALIMENTADOR_MS = 40
 #: Quanto se espera o alimentador morrer antes de insistir. Ele é um `parec`
 #: sem estado; não há o que ele precise fechar direito.
 _ESPERA_PELO_FIM_S = 2.0
+
+#: Quanto se espera o bombeador sair depois do TERM, antes de decidir se o cano
+#: pode fechar. O `parec` são morre em milissegundos e o bombeador vê o fim do
+#: cano logo em seguida; o que passa deste prazo é bombeador preso, e aí o cano
+#: não fecha debaixo dele (SOM-TRAVA-NA-QUEDA-01, 13/09/2026).
+_JUNTA_DO_BOMBEADOR_S = 0.5
 
 #: Teto do `pactl` que tira o mudo de fábrica. Um `pactl` pendurado num PipeWire
 #: morto não pode segurar o toque dela no botão do microfone.
@@ -397,37 +406,44 @@ class _Alimentador:
         `Popen.terminate` age sobre o pid deste objeto. Um `pkill -f parec`
         mataria o `parec` da janela dela — e derrubar processo por padrão é
         como esta casa já derrubou o compositor uma vez.
+
+        **A ORDEM É A DO DONO ÚNICO — SOM-TRAVA-NA-QUEDA-01, 13/09/2026.** Até
+        esta data era `terminate` → `wait(2 s)` → `kill`. Com o bombeador já
+        morto (um `OSError` no `escrever`) ninguém lia o cano, ele enchia, o
+        `parec` parava no `write` e o TERM não o alcançava: fechar o canal
+        esperava os 2 s inteiros. Agora o cano fecha assim que se sabe que
+        ninguém lê, e o `write` pendente toma SIGPIPE na hora — ver
+        :func:`~hefesto_dualsense4unix.integrations.filho_de_som.derrubar_leitor_de_pipe`.
         """
         self._parando.set()
         proc = self._proc
-        if proc is not None:
-            try:
-                proc.terminate()
-                proc.wait(timeout=_ESPERA_PELO_FIM_S)
-            except Exception:
-                # O `terminate` não bastou (ou nem chegou). Insiste, e ESPERA de
-                # novo: colher o processo é o que evita deixar um zumbi para
-                # cada canal que ela abre e fecha.
-                matar = getattr(proc, "kill", None)
-                if matar is not None:
-                    with contextlib.suppress(Exception):
-                        matar()
-                        proc.wait(timeout=_ESPERA_PELO_FIM_S)
-            saida = getattr(proc, "stdout", None)
-            if saida is not None:
-                with contextlib.suppress(OSError):
-                    saida.close()
         bomba = self._bomba
-        if bomba is not None and bomba.is_alive():
+        if proc is not None:
+            como = derrubar_leitor_de_pipe(
+                proc,
+                leitor=bomba,
+                junta_s=_JUNTA_DO_BOMBEADOR_S,
+                espera_s=_ESPERA_PELO_FIM_S,
+            )
+            logger.debug(
+                "canal_do_mic_alimentador_colhido",
+                extra={"uniq": self.uniq, "codigo": como.codigo, "por": como.por,
+                       "ms": como.ms},
+            )
+        elif bomba is not None and bomba.is_alive():
             bomba.join(timeout=_ESPERA_PELO_FIM_S)
         self._proc = None
         self._bomba = None
 
 
 def _lancar_processo(argv: list[str]) -> Any:
-    """O `Popen` de verdade. Isolado para a régua trocá-lo por um dublê."""
-    # argv fixo e sem shell: `shell=True` é invariante proibido nesta casa.
-    return subprocess.Popen(argv, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
+    """O `Popen` de verdade, pelo dono único. Isolado para a régua trocá-lo.
+
+    Pelo dono único porque é ele que arma o `PR_SET_PDEATHSIG`: sem isso, o
+    daemon morto por SIGKILL com o `parec` ocioso deixava o alimentador vivo,
+    com `ppid 1`, segurando o nó do cabo dela aberto.
+    """
+    return lancar_leitor(argv)
 
 
 def _rodar_pactl(argv: list[str]) -> bool:
