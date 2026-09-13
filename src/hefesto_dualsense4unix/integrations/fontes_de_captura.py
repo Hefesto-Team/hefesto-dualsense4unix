@@ -245,6 +245,16 @@ def escolher_fonte(
        placa de som, e o um-para-um sozinho lhe daria a placa de outro
        aparelho com a maior confiança do mundo.
 
+    **A IDENTIDADE NO NOME TAMBÉM DIZ NÃO** (MIC-O-CANAL-DO-OUTRO-01,
+    13/09/2026). As regras 0, 1 e 2 sabiam ler de QUEM é um nó e só usavam a
+    leitura para dizer SIM. Medido no journal de 12/09: o controle ``…:ab`` saiu
+    da mesa às 16:35:04, o canal dele ficou órfão no servidor, e às 16:40:06 o
+    ``…:03`` apertou o botão do microfone e foi ELEITO no canal do ``…:ab`` —
+    uma fonte na lista, um controle conectado, e a regra 4 entregou o nó sem
+    perguntar de quem ele era. Um nó cujo nome carrega OUTRO controle
+    (:func:`e_de_outro_controle`) nunca sai daqui pela regra 3 nem pela 4. A
+    cura mora nesta função, então alcança todos os chamadores de uma vez.
+
     Fora disso devolve None — e ``None`` é a resposta certa para o controle no
     RÁDIO, que não publica placa nenhuma (medido 15/08/2026: a placa segue o
     transporte). Exibir o mic do controle errado é pior que não exibir nenhum:
@@ -267,12 +277,17 @@ def escolher_fonte(
             sufixo = sufixo_da_ponte_bt(fonte)
             if sufixo and alvo.endswith(sufixo):
                 return fonte
+    # DAQUI PARA BAIXO, NÓ COM O NOME DE OUTRO CONTROLE NÃO É RESPOSTA. As regras
+    # 3 e 4 não leem nome, e era por essa porta que o canal órfão do vizinho saía.
+    sem_nome_alheio = [f for f in fontes if not e_de_outro_controle(f, uniq)]
     if usb is not None:
-        casada = usb.casar(fontes, uniq)
+        casada = usb.casar(sem_nome_alheio, uniq)
         if casada is not None:
             return casada
     if len(fontes) == 1 and len(uniqs_com_audio) == 1 and uniqs_com_audio[0] == uniq:
         if usb is not None and usb.veta(fontes[0], uniq):
+            return None
+        if not sem_nome_alheio:
             return None
         return fontes[0]
     return None
@@ -352,6 +367,59 @@ def sufixo_do_canal_do_mic(fonte: str) -> str:
     return resto
 
 
+#: Quantos octetos um endereço de rádio tem. É o que separa um MAC inteiro
+#: dentro de um nome ``bluez_input.XX_XX_XX_XX_XX_XX`` de um número qualquer.
+_OCTETOS_DE_UM_MAC = 6
+
+
+def _mac_no_nome_bluez(fonte: str) -> str:
+    """Os doze hex do MAC de um nó ``bluez_*`` — "" se o nome não traz um inteiro.
+
+    Lê por OCTETO, e não por :func:`so_hex` sobre o nome inteiro: o próprio
+    ``bluez_input`` tem ``b`` e ``e`` dentro, e a leitura cega grudaria lixo na
+    frente do endereço — o casamento por acaso que a regra 1 já evita.
+    """
+    baixa = fonte.lower()
+    if not baixa.startswith("bluez"):
+        return ""
+    for pedaco in baixa.split("."):
+        octetos = pedaco.replace(":", "_").split("_")
+        if len(octetos) != _OCTETOS_DE_UM_MAC:
+            continue
+        if all(len(o) == 2 and so_hex(o) == o for o in octetos):
+            return "".join(octetos)
+    return ""
+
+
+def identidade_no_nome(fonte: str) -> str:
+    """O pedaço do endereço que o NOME do nó carrega — "" quando não carrega nada.
+
+    São as três formas que :func:`escolher_fonte` sabe ler para dizer SIM: o
+    canal por controle (regra 0), o MAC inteiro do ``bluez`` (regra 1) e o rabo
+    do MAC da ponte de rádio (regra 2). Nó ALSA, e o nó da ponte sem
+    ``HID_UNIQ`` (``hefesto_dualsense_bt_hidraw3``), não carregam identidade.
+    """
+    return sufixo_do_canal_do_mic(fonte) or sufixo_da_ponte_bt(fonte) or _mac_no_nome_bluez(fonte)
+
+
+def e_de_outro_controle(fonte: str, uniq: str) -> bool:
+    """True quando o NOME do nó diz que ele é de um controle que NÃO é `uniq`.
+
+    MIC-O-CANAL-DO-OUTRO-01. É a mesma leitura das regras 0, 1 e 2, usada para
+    dizer NÃO: ``hefesto_mic_<hex6>`` de outro controle não vira o microfone
+    deste só porque sobrou sozinho na lista.
+
+    Nome sem identidade nunca é "de outro": sobre ele o nome não sabe nada, e
+    quem decide continuam sendo o casamento por USB e o um-para-um. E um `uniq`
+    ilegível não casa com identidade nenhuma — sem endereço não há como dizer
+    que o nó é dele.
+    """
+    identidade = identidade_no_nome(fonte)
+    if not identidade:
+        return False
+    return not so_hex(uniq).endswith(identidade)
+
+
 def so_hex(valor: str) -> str:
     """Só os dígitos hex minúsculos — mesma normalização de MAC do projeto."""
     return "".join(ch for ch in valor.lower() if ch in "0123456789abcdef")
@@ -363,9 +431,11 @@ __all__ = [
     "PREFIXO_SOURCE_CANAL_DO_MIC",
     "PREFIXO_SOURCE_PONTE_BT",
     "CasamentoUSB",
+    "e_de_outro_controle",
     "escolher_fonte",
     "escolher_sink",
     "fontes_dualsense",
+    "identidade_no_nome",
     "sinks_dualsense",
     "so_hex",
     "sufixo_da_ponte_bt",
