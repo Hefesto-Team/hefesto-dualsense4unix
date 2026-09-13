@@ -405,7 +405,15 @@ class BtMicSubsystem:
         gerenciador: Any = None,
         registro: RegistroDePedidosDeCanal | None = None,
         daemon: Any = None,
+        varredor: Any = None,
     ) -> None:
+        #: Quem derruba o canal ÓRFÃO — ver `VarredorDeCanaisOrfaos`. Injetado,
+        #: vale sempre; sem injeção, o de verdade só nasce no `start()` junto com
+        #: o gerenciador de verdade. Um laço dirigido por teste com gerenciador
+        #: de mentira não carregou módulo nenhum no servidor, e não pode varrer
+        #: o servidor de som da máquina onde a suíte roda.
+        self._varredor_injetado = varredor
+        self._varredor: Any = varredor
         #: O `Daemon`, e é por ele que o «Controle N» do nó chega ao mesmo
         #: número do cartão — ver `numero_do_assento` e
         #: `subsystems/base.slot_de_sessao`. Entra o DAEMON e não o registro
@@ -746,6 +754,8 @@ class BtMicSubsystem:
         )
 
         self._gerenciador = self._gerenciador_injetado or GerenciadorMicBluetooth()
+        if self._varredor_injetado is None and self._gerenciador_injetado is None:
+            self._varredor = VarredorDeCanaisOrfaos()
         self._declarados_antes = uniqs_pedidos(self._config)
         self._instalar_o_gancho_da_procura()
         self._parar.clear()
@@ -833,6 +843,8 @@ class BtMicSubsystem:
                 await asyncio.to_thread(thread.join, 2.0)
         self._gerenciador = None
         self._backend = None
+        # Os suspeitos de órfão são desta sessão: a próxima começa a contar do zero.
+        self._varredor = self._varredor_injetado
         # OS CANAIS DO CABO MORREM COM A SESSÃO, e pela mesma razão que os
         # pedidos: cada um carrega um `module-pipe-source` no servidor de áudio
         # e um `parec` lendo o microfone dela. Deixá-los de pé com o daemon
@@ -902,6 +914,10 @@ class BtMicSubsystem:
                 # sem esta linha o pedido dela evaporaria na primeira
                 # reconexão. Ver `_aplicar_a_palavra_dela`.
                 self._aplicar_a_palavra_dela()
+                # E O ÓRFÃO SAI POR ÚLTIMO (MIC-O-CANAL-DO-OUTRO-01): depois do
+                # `reconciliar`, o canal que ele derrubou já saiu da tabela do
+                # dono, e o que ficou no servidor sem ninguém escrevendo é lixo.
+                self._varrer_os_orfaos(nos)
             except Exception as exc:  # nunca derruba a thread
                 logger.debug("bt_mic_reconciliacao_falhou", err=str(exc))
             if self._dormir(gerenciador):
@@ -1016,11 +1032,19 @@ class BtMicSubsystem:
         from hefesto_dualsense4unix.integrations import canal_do_microfone
         from hefesto_dualsense4unix.integrations.dualsense_bt_audio import (
             descricao_do_microfone,
+            pactl_mudo,
         )
         from hefesto_dualsense4unix.integrations.eleicao_de_microfone import (
             casamento_usb_agora,
             fontes_de_captura_agora,
         )
+
+        # COM O SERVIDOR MUDO, NEM SE PERGUNTA (MIC-O-CANAL-DO-OUTRO-01): as duas
+        # leituras abaixo e o `load-module` do canal são três `pactl` na fila de
+        # um servidor que não está atendendo. O recuo diz quando voltar a tentar.
+        if pactl_mudo():
+            logger.debug("bt_mic_canal_do_cabo_espera_o_pactl", uniqs=uniqs)
+            return
         from hefesto_dualsense4unix.integrations.fontes_de_captura import (
             PREFIXO_SOURCE_CANAL_DO_MIC,
             escolher_fonte,
@@ -1088,6 +1112,146 @@ class BtMicSubsystem:
             self._registro.soltar(uniq)
         self._declarados_antes = agora
 
+    # -- o canal ÓRFÃO -----------------------------------------------------
+
+    def _varrer_os_orfaos(self, nos: list[Any]) -> list[str]:
+        """Entrega ao varredor quem QUER canal agora e o que está de pé aqui.
+
+        `querem` é a mesma união que `alvos()` usa — a procura, a declaração e,
+        com a env ligada, todo controle do rádio —, porque um canal só é órfão
+        se ninguém o está pedindo por NENHUMA das três portas. Sem varredor
+        (teste com gerenciador de mentira) não se varre nada.
+        """
+        varredor = self._varredor
+        if varredor is None:
+            return []
+        querem = uniqs_pedidos(self._config) | self._registro.abertos()
+        if habilitado_por_env():
+            do_radio = frozenset((norm_mac(str(getattr(no, "uniq", ""))) or "") for no in nos)
+            querem = querem | (do_radio - {""})
+        return list(varredor.varrer(querem=querem, de_pe=self._nomes_de_pe()))
+
+    def _nomes_de_pe(self) -> frozenset[str]:
+        """Os nós que ESTE processo segura agora — nunca são órfãos.
+
+        Três donos, e os três entram: a tabela de `canal_do_microfone` (o canal
+        por controle, do rádio e do cabo), as pontes vivas (inclusive a que caiu
+        no nome do transporte, que não passa por aquela tabela) e os canais do
+        cabo deste supervisor.
+        """
+        from hefesto_dualsense4unix.integrations import canal_do_microfone
+
+        nomes = set(canal_do_microfone.de_pe().values()) | set(self._canais_do_cabo.values())
+        gerenciador = self._gerenciador
+        try:
+            pontes = gerenciador.pontes if gerenciador is not None else None
+        except Exception:  # best-effort: sem a lista, as tabelas acima continuam valendo
+            logger.debug("bt_mic_pontes_ilegiveis", exc_info=True)
+            pontes = None
+        if isinstance(pontes, dict):
+            for ponte in pontes.values():
+                nome = getattr(ponte, "nome_source", None)
+                if isinstance(nome, str) and nome:
+                    nomes.add(nome)
+        return frozenset(nomes)
+
+
+class VarredorDeCanaisOrfaos:
+    """Derruba o `module-pipe-source` desta casa que ficou no servidor sem dono.
+
+    MIC-O-CANAL-DO-OUTRO-01 (13/09/2026). **O defeito, medido no journal de
+    12/09:** o controle ``…:ab`` saiu da mesa às 16:35:04 e o canal dele
+    (``hefesto_mic_0000ab``) continuou na lista de fontes — depois da saída e
+    depois de três reinícios do daemon. O medidor o abriu às 16:35:50, 16:39:35,
+    16:39:47 e 16:41:59, e a eleição o deu ao ``…:03`` às 16:40:06.
+    `SourceVirtualPipeWire.iniciar` já derrubava órfão com o MESMO nome
+    (MIC-RADIO-ORFAO-01); canal de controle que saiu da mesa não tinha quem o
+    derrubasse.
+
+    **COMO ELE NASCE, e a conta fecha com o journal de 13/09 (01:53 a 02:42):**
+    `pactl` que estoura o prazo devolve ``None`` sem dizer se o servidor carregou
+    o módulo — e ninguém guarda o id de um `load-module` sem resposta. Nesse
+    intervalo o daemon registrou 192 `bt_mic_load_module_falhou`, exatamente o
+    DOBRO dos 96 `bt_mic_canal_nao_subiu`: o canal e o caminho de volta pelo nome
+    do transporte, cada um com a sua tentativa.
+
+    **UM MÓDULO SÓ SAI COM AS QUATRO PROVAS, e cada uma fecha uma porta:**
+
+    1. **não está de pé NESTE processo** (`de_pe`) — o dono dele é outro código
+       daqui, e derrubar pelas costas do dono é o defeito que
+       `PonteMicBluetooth._fechar_a_source` já nomeia;
+    2. **o controle do nome não está pedido** (`querem`) — enquanto está, a
+       próxima subida o derruba pelo nome, que é a cura de 07/09;
+    3. **NINGUÉM ESCREVE NO FIFO DELE** (`alguem_escreve_no_fifo`) — medido na
+       máquina dela em 13/09 com o canal vivo do ``…:03``: o daemon segura o fifo
+       em ``O_WRONLY`` e o ``pipewire-pulse`` em ``O_RDWR``. É esta prova que
+       impede um processo de derrubar o canal vivo de OUTRO processo — o
+       `mic bt` do CLI rodando ao lado do daemon, ou uma suíte rodando na
+       máquina onde o daemon dela está de pé. «Não sei» nunca derruba;
+    4. **a mesma resposta em DUAS varreduras seguidas**, com o mesmo id de
+       módulo — o módulo que outro processo acabou de carregar e ainda não abriu
+       para escrita não cai no meio da própria subida.
+
+    **E COM O SERVIDOR MUDO NÃO SE VARRE NADA** (`RecuoDoPactl`): varrer é mais
+    um `pactl` na fila de um servidor que não está atendendo.
+
+    Os quatro chamáveis são injetáveis para a régua; em produção são `None` e
+    resolvem para `integrations/dualsense_bt_audio`.
+    """
+
+    def __init__(
+        self,
+        *,
+        listar: Any = None,
+        alguem_escreve: Any = None,
+        descarregar: Any = None,
+        mudo: Any = None,
+    ) -> None:
+        self._listar = listar
+        self._alguem_escreve = alguem_escreve
+        self._descarregar = descarregar
+        self._mudo = mudo
+        #: `{module_id: nome}` que a varredura ANTERIOR achou sem dono. É a
+        #: quarta prova: só cai quem aparece aqui e na varredura de agora.
+        self._suspeitos: dict[str, str] = {}
+
+    def varrer(self, *, querem: frozenset[str], de_pe: frozenset[str]) -> list[str]:
+        """Uma varredura. Devolve os NOMES dos módulos derrubados agora."""
+        from hefesto_dualsense4unix.integrations import dualsense_bt_audio as bt
+        from hefesto_dualsense4unix.integrations.fontes_de_captura import identidade_no_nome
+
+        mudo = self._mudo or bt.pactl_mudo
+        if mudo():
+            return []
+        listar = self._listar or bt.modulos_de_captura_da_casa
+        modulos = listar()
+        if modulos is None:
+            return []
+        alguem_escreve = self._alguem_escreve or bt.alguem_escreve_no_fifo
+        sem_dono: dict[str, str] = {}
+        for modulo in modulos:
+            nome = str(getattr(modulo, "nome", ""))
+            module_id = str(getattr(modulo, "module_id", ""))
+            if not nome or not module_id or nome in de_pe:
+                continue
+            identidade = identidade_no_nome(nome)
+            if identidade and any(uniq.endswith(identidade) for uniq in querem):
+                continue
+            if alguem_escreve(str(getattr(modulo, "fifo", ""))) is not False:
+                continue
+            sem_dono[module_id] = nome
+        descarregar = self._descarregar or bt.descarregar_modulo
+        derrubados: list[str] = []
+        for module_id, nome in sorted(sem_dono.items()):
+            if self._suspeitos.get(module_id) != nome:
+                logger.info("bt_mic_canal_orfao_suspeito", source=nome, module_id=module_id)
+                continue
+            if descarregar(module_id):
+                logger.warning("bt_mic_canal_orfao_removido", source=nome, module_id=module_id)
+                derrubados.append(module_id)
+        self._suspeitos = {k: v for k, v in sem_dono.items() if k not in derrubados}
+        return [sem_dono[k] for k in derrubados]
+
 
 __all__ = [
     "ENV_HABILITA",
@@ -1095,6 +1259,7 @@ __all__ = [
     "RECONCILIA_S",
     "BtMicSubsystem",
     "RegistroDePedidosDeCanal",
+    "VarredorDeCanaisOrfaos",
     "habilitado_por_env",
     "uniqs_declarados",
     "uniqs_pedidos",

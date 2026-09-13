@@ -795,7 +795,7 @@ class SourceVirtualPipeWire:
         self.descricao = descricao
         self.taxa_hz = taxa_hz
         self.canais = canais
-        self.runner = runner or _rodar
+        self.runner = _com_recuo(runner or _rodar)
         self.descartes = 0
         self._module_id: str | None = None
         self._fifo: str | None = None
@@ -858,10 +858,10 @@ class SourceVirtualPipeWire:
         """
         if self._module_id is not None:
             return True
-        if shutil.which("pactl") is None:
-            logger.info("bt_mic_sem_pactl")
+        orfaos = _orfaos_se_o_pactl_responde(self)
+        if orfaos is None:  # sem `pactl`, ou o servidor mudo: ver `RecuoDoPactl`
             return False
-        for orfao in self._modulos_do_servidor_com_este_nome():
+        for orfao in orfaos:
             self.runner(["pactl", "unload-module", orfao])
             logger.warning(
                 "bt_mic_source_orfa_removida", source=self.nome, module_id=orfao
@@ -910,9 +910,8 @@ class SourceVirtualPipeWire:
                 os.close(self._fd)
             self._fd = None
         if self._module_id is not None:
-            self.runner(["pactl", "unload-module", self._module_id])
-            logger.info("bt_mic_source_removida", source=self.nome)
-            self._module_id = None
+            # Servidor mudo: o módulo fica para a varredura (`_descarregar_ou_deixar`).
+            self._module_id = _descarregar_ou_deixar(self.runner, self.nome, self._module_id)
         if self._fifo is not None:
             with contextlib.suppress(OSError):
                 os.unlink(self._fifo)
@@ -931,7 +930,7 @@ class SourceVirtualPipeWire:
         aqui o que se pediu como se fosse o que está valendo é o hábito que já
         fez esta tela parecer mentirosa quando ela nunca mentiu.
         """
-        if self._module_id is None:
+        if self._module_id is None or pactl_mudo():
             return None
         saida = self.runner(["pactl", "list", "sources", "short"])
         for linha in (saida or "").splitlines():
@@ -1020,6 +1019,7 @@ def _rodar(argv: list[str]) -> str | None:
             env={**os.environ, "LC_ALL": "C", "LANG": "C"},
         )
     except Exception as exc:
+        _anotar_o_prazo(exc)
         logger.debug("bt_mic_comando_falhou", argv=argv[0], err=str(exc))
         return None
     if proc.returncode != 0:
@@ -1953,6 +1953,293 @@ def descricao_do_microfone(uniq: str) -> str:
         return NOME_DO_MICROFONE_DO_CONTROLE
     return f"{NOME_DO_MICROFONE_DO_CONTROLE} {numero}"
 
+
+# ---------------------------------------------------------------------------
+# O RECUO DO `pactl` e o CANAL ÓRFÃO — MIC-O-CANAL-DO-OUTRO-01 (13/09/2026)
+#
+# NO FIM DO MÓDULO pela mesma razão do bloco acima: o mapa cita linhas deste
+# arquivo, e código novo enfiado lá em cima envelhece as citações.
+# ---------------------------------------------------------------------------
+
+#: O primeiro recuo depois de um `pactl` que estourou o prazo — uma varredura
+#: do supervisor (`daemon/subsystems/bt_mic.RECONCILIA_S`).
+RECUO_PISO_S = 5.0
+
+#: O teto do recuo: com o servidor mudo, UMA sondagem por minuto — ver
+#: :class:`RecuoDoPactl` para o que havia no lugar dela.
+RECUO_TETO_S = 60.0
+
+
+class RecuoDoPactl:
+    """O servidor de som parou de responder: RECUO CRESCENTE, e não laço fixo.
+
+    **O DEFEITO, medido por quem coordena às 02:40 de 13/09/2026** no journal
+    do daemon: o controle do rádio caiu às 01:53:43 (``bt_mic_hidraw_perdido``),
+    o primeiro `pactl` estourou o prazo às 01:53:54, e até 02:40 foram 699
+    prazos estourados e 509 `load-module` sem resposta — o som a cada 10 s, o
+    microfone a cada ~15 s. O ``pipewire-pulse`` ficou 47 minutos sem atender
+    cliente nenhum, e os outros aplicativos de som da máquina junto.
+
+    **A CADÊNCIA DO MICROFONE ERA ESTE ARQUIVO, e a conta fecha:** a cada volta
+    do supervisor a ponte tentava o canal por controle (``list modules`` e
+    ``load-module``, 5 s de prazo cada) e depois o caminho de volta pelo nome do
+    transporte (mais 5 + 5 s). Dois `bt_mic_load_module_falhou` a 10 s um do
+    outro, 15 s até o próximo par — e 192 deles para 96 `bt_mic_canal_nao_subiu`
+    nos últimos 40 minutos daquela janela. Nada disso esperava o servidor voltar.
+
+    **O que isto faz:** um prazo estourado põe o `pactl` em recuo por
+    :data:`RECUO_PISO_S`; cada novo estouro dobra a espera até
+    :data:`RECUO_TETO_S`; QUALQUER resposta zera. Durante o recuo
+    `SourceVirtualPipeWire.iniciar` não carrega módulo, `estado()` responde «não
+    sei» sem perguntar, `parar()` deixa o módulo para a varredura e o supervisor
+    não abre canal de cabo nem varre órfão. Vencido o recuo, a primeira pergunta
+    é o ``list modules short`` que o `iniciar` já fazia: ela é a sondagem, e o
+    `load-module` só sai se ela responder.
+
+    **O QUE ISTO NÃO CURA: a causa do travamento.** A queda do controle é o
+    gatilho medido; a hipótese de quem coordena — descarregar o
+    ``module-pipe-sink``/``module-pipe-source`` logo depois de o controle sumir
+    deixa o servidor sem atender — não se reproduz com dublê. Reiniciar só o
+    ``pipewire-pulse`` não devolveu o `pactl`; reiniciar ``pipewire``,
+    ``pipewire-pulse`` e ``wireplumber`` juntos devolveu.
+    """
+
+    def __init__(self, *, relogio: Callable[[], float] = time.monotonic) -> None:
+        self._relogio = relogio
+        self._lock = threading.Lock()
+        self._espera_s = 0.0
+        self._ate = 0.0
+
+    @property
+    def espera_s(self) -> float:
+        """A espera do recuo em curso — 0 quando o `pactl` está respondendo."""
+        with self._lock:
+            return self._espera_s
+
+    def estourou(self) -> None:
+        """Um `pactl` estourou o prazo: entra em recuo, ou dobra o recuo em curso."""
+        with self._lock:
+            if self._espera_s <= 0:
+                self._espera_s = RECUO_PISO_S
+            else:
+                self._espera_s = min(RECUO_TETO_S, self._espera_s * 2)
+            self._ate = self._relogio() + self._espera_s
+            espera = self._espera_s
+        logger.warning("bt_mic_pactl_mudo", espera_s=espera)
+
+    def respondeu(self) -> None:
+        """O `pactl` respondeu: o recuo acaba."""
+        with self._lock:
+            estava = self._espera_s > 0
+            self._espera_s = 0.0
+            self._ate = 0.0
+        if estava:
+            logger.info("bt_mic_pactl_voltou")
+
+    def mudo(self) -> bool:
+        """True enquanto o recuo não venceu."""
+        with self._lock:
+            return self._relogio() < self._ate
+
+
+#: O recuo do PROCESSO, e ser um só é a razão de existir: cada volta do
+#: supervisor constrói uma `SourceVirtualPipeWire` NOVA, e uma memória por
+#: instância esqueceria o estouro no ciclo seguinte.
+PACTL = RecuoDoPactl()
+
+
+def pactl_mudo() -> bool:
+    """O `pactl` está em recuo agora — nada desta casa deve perguntar nada a ele."""
+    return PACTL.mudo()
+
+
+def _anotar_o_prazo(exc: BaseException) -> None:
+    """O `_rodar` viu uma exceção: se foi o PRAZO, o recuo fica sabendo."""
+    if isinstance(exc, subprocess.TimeoutExpired):
+        PACTL.estourou()
+
+
+def _com_recuo(
+    runner: Callable[[list[str]], str | None],
+) -> Callable[[list[str]], str | None]:
+    """O `runner` de uma source, contando ao recuo o que aconteceu com cada pergunta.
+
+    Duas vias chegam ao mesmo recuo: o `_rodar` de produção anota o prazo ele
+    mesmo e devolve `None`, como sempre; um runner injetado LEVANTA
+    `subprocess.TimeoutExpired`, que é como a régua dubla o servidor mudo. Só
+    uma resposta que não seja `None` zera o recuo — `None` é falha, e falha não
+    prova que o servidor voltou.
+    """
+
+    def _perguntar(argv: list[str]) -> str | None:
+        try:
+            saida = runner(argv)
+        except subprocess.TimeoutExpired:
+            PACTL.estourou()
+            return None
+        if saida is not None:
+            PACTL.respondeu()
+        return saida
+
+    return _perguntar
+
+
+def _orfaos_se_o_pactl_responde(source: SourceVirtualPipeWire) -> list[str] | None:
+    """Os órfãos com o nome desta source — `None` quando não se deve carregar nada.
+
+    Três recusas, nesta ordem: sem `pactl` no sistema; o recuo em curso (nem se
+    pergunta); e a própria pergunta estourando o prazo — a lista de módulos É a
+    sondagem, e sem resposta a ela nenhum `load-module` sai do `iniciar`.
+    """
+    if shutil.which("pactl") is None:
+        logger.info("bt_mic_sem_pactl")
+        return None
+    if pactl_mudo():
+        logger.debug("bt_mic_pactl_mudo_nao_carrego", source=source.nome, espera_s=PACTL.espera_s)
+        return None
+    orfaos = source._modulos_do_servidor_com_este_nome()
+    if pactl_mudo():
+        logger.debug("bt_mic_pactl_mudo_nao_carrego", source=source.nome, espera_s=PACTL.espera_s)
+        return None
+    return orfaos
+
+
+def _descarregar_ou_deixar(
+    runner: Callable[[list[str]], str | None], nome: str, module_id: str
+) -> str | None:
+    """Descarrega o módulo — ou o deixa para a varredura, com o `pactl` mudo.
+
+    Com o servidor mudo o `unload-module` seria mais um prazo de 5 s na fila
+    dele. O módulo que fica já não tem ninguém escrevendo (o fd foi fechado
+    antes), e é exatamente o que `daemon/subsystems/bt_mic.VarredorDeCanaisOrfaos`
+    derruba quando o servidor voltar. Devolve o novo `_module_id`: sempre `None`.
+    """
+    if pactl_mudo():
+        logger.warning("bt_mic_source_ficou_para_a_varredura", source=nome, module_id=module_id)
+        return None
+    runner(["pactl", "unload-module", module_id])
+    logger.info("bt_mic_source_removida", source=nome)
+    return None
+
+
+@dataclass(frozen=True)
+class ModuloDeCaptura:
+    """Um `module-pipe-source` desta casa, do jeito que o servidor o lista."""
+
+    module_id: str
+    nome: str
+    fifo: str
+
+
+def modulos_de_captura_da_casa(
+    runner: Callable[[list[str]], str | None] | None = None,
+) -> list[ModuloDeCaptura] | None:
+    """Os `module-pipe-source` com nome desta casa — `None` se o servidor não respondeu.
+
+    Os DOIS prefixos entram: o do canal por controle e o do nome do transporte,
+    que é o caminho de volta da ponte e nasce órfão pela mesma porta (um
+    `load-module` sem resposta, ver :class:`RecuoDoPactl`). Casa por TOKEN do
+    argumento, como `SourceVirtualPipeWire._modulos_do_servidor_com_este_nome`.
+    """
+    from hefesto_dualsense4unix.integrations.fontes_de_captura import (
+        PREFIXO_SOURCE_CANAL_DO_MIC,
+    )
+
+    if shutil.which("pactl") is None or pactl_mudo():
+        return None
+    saida = _com_recuo(runner or _rodar)(["pactl", "list", "modules", "short"])
+    if saida is None:
+        return None
+    prefixos = (PREFIXO_SOURCE_CANAL_DO_MIC, PREFIXO_SOURCE_PONTE_BT)
+    achados: list[ModuloDeCaptura] = []
+    for linha in saida.splitlines():
+        campos = linha.split("\t")
+        if len(campos) <= _COLUNA_DOS_ARGS or campos[1].strip() != _MODULO_PIPE_SOURCE:
+            continue
+        nome = fifo = ""
+        for token in campos[_COLUNA_DOS_ARGS].split():
+            if token.startswith("source_name="):
+                nome = token.partition("=")[2]
+            elif token.startswith("file="):
+                fifo = token.partition("=")[2]
+        if nome.startswith(prefixos):
+            achados.append(ModuloDeCaptura(module_id=campos[0].strip(), nome=nome, fifo=fifo))
+    return achados
+
+
+#: O modo de acesso dentro das ``flags:`` de um `fdinfo` — o `O_ACCMODE` do Linux.
+_MODO_DE_ACESSO = 0o3
+
+
+def alguem_escreve_no_fifo(caminho: str, *, raiz_proc: str = "/proc") -> bool | None:
+    """Algum processo segura este fifo ABERTO PARA ESCRITA? `None` = não sei.
+
+    **É a prova física do órfão, e ela foi medida antes de ser escrita** — na
+    máquina dela, em 13/09/2026, lendo ``/proc`` com o canal vivo de um controle
+    no rádio::
+
+        o daemon          flags=02104001   O_WRONLY   ← quem enche o nó
+        pipewire-pulse    flags=02104002   O_RDWR     ← o próprio módulo
+
+    Então conta só ``O_WRONLY``: o servidor segura o fifo em ``O_RDWR`` e não é
+    escritor, e a ponte (`_abrir_fifo`) abre em ``O_WRONLY``. Casa pelo destino
+    do link em ``/proc/<pid>/fd``, inclusive com o `` (deleted)`` de quando
+    `parar()` já apagou o caminho.
+
+    **SÓ PROCESSOS DO MESMO USUÁRIO**, os únicos que alcançam o
+    ``$XDG_RUNTIME_DIR`` dele. Os ilegíveis desse usuário são PULADOS, e não
+    viram «não sei»: medido na mesma hora, eram quatro — ``(sd-pam)``, dois
+    ``ssh-agent`` e um ``pw-record`` —, todos não-despejáveis e nenhum rodando
+    código desta casa. Tratá-los como «não sei» desligaria a varredura para
+    sempre. `None` fica para o que impede a pergunta inteira.
+    """
+    if not caminho:
+        return None
+    alvos = {caminho, f"{caminho} (deleted)"}
+    real = os.path.realpath(caminho)
+    alvos |= {real, f"{real} (deleted)"}
+    try:
+        pids = [p for p in os.listdir(raiz_proc) if p.isdigit()]
+    except OSError:
+        return None
+    meu = os.getuid()
+    for pid in pids:
+        base = os.path.join(raiz_proc, pid)
+        try:
+            if os.stat(base).st_uid != meu:
+                continue
+            fds = os.listdir(os.path.join(base, "fd"))
+        except OSError:
+            continue
+        for fd in fds:
+            if _abre_para_escrita(base, fd, alvos):
+                return True
+    return False
+
+
+def _abre_para_escrita(base: str, fd: str, alvos: set[str]) -> bool:
+    """Este fd aponta para um dos `alvos` em ``O_WRONLY``? Ilegível vale não."""
+    try:
+        if os.readlink(os.path.join(base, "fd", fd)) not in alvos:
+            return False
+        with open(os.path.join(base, "fdinfo", fd), encoding="ascii") as info:
+            for linha in info:
+                if linha.startswith("flags:"):
+                    return int(linha.split()[1], 8) & _MODO_DE_ACESSO == os.O_WRONLY
+    except (OSError, ValueError, IndexError):
+        return False
+    return False
+
+
+def descarregar_modulo(
+    module_id: str, runner: Callable[[list[str]], str | None] | None = None
+) -> bool:
+    """`pactl unload-module <id>` — False quando não deu, ou o servidor está mudo."""
+    if not module_id or shutil.which("pactl") is None or pactl_mudo():
+        return False
+    return _com_recuo(runner or _rodar)(["pactl", "unload-module", module_id]) is not None
+
+
 __all__ = [
     "AUDIO_CONTROL_MIC_OFF",
     "AUDIO_CONTROL_MIC_ON",
@@ -1973,26 +2260,35 @@ __all__ = [
     "MIC_OPUS_OFFSET",
     "MIC_TAXA_HZ",
     "NOME_DO_MICROFONE_DO_CONTROLE",
+    "PACTL",
     "PRIORIDADE_SESSAO_DA_PONTE",
+    "RECUO_PISO_S",
+    "RECUO_TETO_S",
     "STATUS_FONE_PLUGADO",
     "STATUS_MIC_MUDO",
     "DecodadorOpus",
     "Diagnostico",
     "EstatisticaMic",
     "GerenciadorMicBluetooth",
+    "ModuloDeCaptura",
     "NoDualSenseBT",
     "OpusIndisponivelError",
     "PonteMicBluetooth",
+    "RecuoDoPactl",
     "SourceVirtualPipeWire",
     "abrir_hidraw_rw",
+    "alguem_escreve_no_fifo",
+    "descarregar_modulo",
     "descricao_do_microfone",
     "diagnosticar",
     "eh_report_de_audio",
     "frame_opus_do_report",
+    "modulos_de_captura_da_casa",
     "montar_pedido_de_mic",
     "nos_dualsense_bluetooth",
     "numero_do_assento",
     "o_microfone_esta_no_ar",
+    "pactl_mudo",
     "propriedades_da_source",
     "registrar_numerador_de_assento",
     "registrar_ouvinte_do_microfone",
