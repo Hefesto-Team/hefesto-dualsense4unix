@@ -25,7 +25,12 @@ na mesa dublê:
    pousa sem `hef-deu-certo` e sem `hef-recusou`;
 6. **a aba 05 não declara lugar de recado**, na bancada e no publicado;
 7. **o clique sem dono também pisca a recusa** (sem janela, no `Piloto._gesto`);
-8. **a casa tomada da 04 diz de quem é, sem a regra colada** (sem janela).
+8. **a casa tomada da 04 diz de quem é, sem a regra colada** (sem janela);
+9. **a colisão da troca de botões da 06** — F1-REMAPEAR-02, 13/09/2026: o
+   «Guardar» da tela "Trocar os botões" com a Cruz e o Quadrado indo para o
+   Círculo é recusado pelo motor, e a recusa segue as regras 1 a 3 — sem frase,
+   com a piscada no botão e a frase no diário. O gesto é o REAL, e o disco é o
+   de mentira da suíte: a recusa acontece antes de qualquer leitura de perfil.
 
 O TEMPO É CONDIÇÃO, NÃO RELÓGIO — a lição da FLAKE-DO-PISCA, escrita em
 `test_o_recado_de_sucesso_pousa_no_cartao`: a piscada é estado de PASSAGEM, e
@@ -39,7 +44,9 @@ AS MORDIDAS, medidas e coladas na entrega da sprint:
 * troque o `'hef-recusou'` do `voltouDoVoo` por `''` → reprova o caso 2;
 * tire o `so_armou` do pouso em `Piloto._gesto` → reprova o caso 5;
 * devolva a frase à dica do `.fora` em `a04_iluminacao.um_botao_de_player` →
-  reprovam os casos 1 (na 04) e 4.
+  reprovam os casos 1 (na 04) e 4;
+* faça `Piloto._recusou_dizendo` pousar a frase na página quando ela for a 06
+  → reprova o caso 1 na 06 (F1-REMAPEAR-02).
 """
 from __future__ import annotations
 
@@ -71,15 +78,36 @@ ESTADO = {
 PAGINA_01 = "01-jogar.html"
 PAGINA_02 = "02-controles.html"
 PAGINA_04 = "04-iluminacao.html"
+PAGINA_06 = "06-navegacao.html"  # (noqa-acento) nome de arquivo
 
-#: OS TRÊS BOTÕES QUE RECUSAM: página, gesto e o seletor do botão do produto.
+#: OS QUATRO BOTÕES QUE RECUSAM: página, gesto e o seletor do botão do produto.
 BOTOES = {
     "04": (PAGINA_04, "player",
            '[data-controle="p1"] .players button.fora[data-player="2"]'),
     "02": (PAGINA_02, "mudo", '[data-controle="p1"] [data-mudo="microfone"]'),
     "01": (PAGINA_01, "cadeado", 'input[data-gesto="cadeado"]'),
+    "06": (PAGINA_06, "guardar-remapeamento",
+           '#remapeamento [data-gesto="guardar-remapeamento"]'),
 }
-CASOS = ("04", "02", "01")
+CASOS = ("04", "02", "01", "06")
+
+#: A COLISÃO DA 06 — duas linhas para o mesmo destino, a recusa que só o
+#: «Guardar» faz (a linha anota; quem confere o mapa inteiro é ele).
+COLISAO_DA_06 = {"cross": "circle", "square": "circle"}
+
+#: ESCREVE AS LINHAS NA MESMA CHAMADA DO CLIQUE: entre duas chamadas o tique
+#: repinta as listas com o que o perfil guarda, e a `forma` perderia a colisão.
+#: Sem `change`, de propósito — nenhum `linha-de-troca` antes do «Guardar».
+ARMAR_AS_LINHAS = r"""
+(function(linhas){
+  return function(){
+    Object.keys(linhas).forEach(function(l){
+      const el = document.querySelector('#remapeamento select[data-linha="' + l + '"]');
+      if(el) el.value = linhas[l];
+    });
+  };
+})(%s)
+"""
 
 #: A FRASE QUE O ATO DO MICROFONE DEVOLVE quando falha pela metade. É frase de
 #: PROVA, a mesma de `test_a_recusa_chega_ao_cartao`: o que se mede é se a frase
@@ -102,7 +130,7 @@ FOLGA_DA_PISCADA_MS = 1500
 #: MUDA (classe ou carimbo de voo) e relê o seletor a cada mutação: a pintura
 #: pode trocar o nó, e uma referência guardada mediria um nó fora do documento.
 VIGIAR_E_CLICAR = r"""
-(function(sel, marco){
+(function(sel, marco, armar){
   const b = document.querySelector(sel);
   if(!b) return 'NAO ACHEI ' + sel;
   window.__reguaTrilhas = window.__reguaTrilhas || {};
@@ -120,9 +148,10 @@ VIGIAR_E_CLICAR = r"""
   new MutationObserver(anotar).observe(document.documentElement,
     {subtree: true, childList: true, attributes: true});
   anotar();
+  if(armar) armar();
   b.click();
   return 'cliquei';
-})(%s, %s)
+})(%s, %s, %s)
 """
 
 LER_A_TRILHA = r"""
@@ -249,12 +278,24 @@ def medido() -> dict:
 
     import hefesto_vivo as hv
     import pacotes.a01_jogar as a01
+    import pacotes.a06_navegacao as a06
     from hefesto_dualsense4unix.app.ipc_bridge import _MOTIVOS_NUMERO
+    from hefesto_dualsense4unix.core import remapeamento_de_botao as remap
 
     #: AS FRASES DOS DONOS, lidas deles: a da ponte para o número fora, a do
-    #: pacote para o cadeado, e a de prova para o ato do microfone.
+    #: pacote para o cadeado, a de prova para o ato do microfone, e a do motor
+    #: com os nomes da tela para a colisão da 06.
+    try:
+        remap.resolver(COLISAO_DA_06)
+    except remap.RemapeamentoRecusadoError as exc:
+        frase_da_06 = a06._frase_da_troca(exc)
+    else:
+        pytest.fail(f"o motor aceitou a colisão {COLISAO_DA_06} — o caso 06 não mede nada")
+    rotulo_de = {destino: rotulo for rotulo, destino in a06.ROTULOS_DA_TROCA.items()}
+    armar = {"06": ARMAR_AS_LINHAS % json.dumps(
+        {linha: rotulo_de[destino] for linha, destino in COLISAO_DA_06.items()})}
     frases = {"04": _MOTIVOS_NUMERO["numero_fora_da_mesa"], "02": RECUSA_DO_MIC,
-              "01": a01.CADEADO_RECUSA}
+              "01": a01.CADEADO_RECUSA, "06": frase_da_06}
 
     # OS DUBLÊS SÃO DEVOLVIDOS NO FIM: `mesa_viva`, `pacotes.ponte` e o registro
     # `GESTOS` são módulos compartilhados do produto, e deixá-los sujos entrega
@@ -354,7 +395,8 @@ def medido() -> dict:
 
     def clicar_e_esperar_a_recusa(caso: str, depois) -> None:
         pagina, gesto, seletor = BOTOES[caso]
-        piloto.ponte.perguntar(VIGIAR_E_CLICAR % (js(seletor), js(caso)),
+        piloto.ponte.perguntar(
+            VIGIAR_E_CLICAR % (js(seletor), js(caso), armar.get(caso, "null")),
                                lambda v, e: fora.__setitem__(f"{caso}-clique", str(v)))
 
         def assentou() -> None:
@@ -392,7 +434,7 @@ def medido() -> dict:
     def o_clique_que_so_arma() -> None:
         hv.pacotes.GESTOS[chave_02] = mudo_que_so_arma
         piloto.ponte.perguntar(
-            VIGIAR_E_CLICAR % (js(BOTOES["02"][2]), js("02-armou")),
+            VIGIAR_E_CLICAR % (js(BOTOES["02"][2]), js("02-armou"), "null"),
             lambda v, e: fora.__setitem__("02-armou-clique", str(v)))
 
         def pousou_e_passou_a_piscada(leitura: dict) -> dict | None:
@@ -420,7 +462,12 @@ def medido() -> dict:
 
     # ---- 01: a recusa sem coluna ------------------------------------------
     def recusa_da_01() -> None:
-        clicar_e_esperar_a_recusa("01", fim)
+        clicar_e_esperar_a_recusa(
+            "01", lambda: abrir(PAGINA_06, BOTOES["06"][2], recusa_da_06))
+
+    # ---- 06: a colisão da troca de botões, pelo gesto real ----------------
+    def recusa_da_06() -> None:
+        clicar_e_esperar_a_recusa("06", fim)
 
     def fim() -> None:
         fora["diario"] = diario.getvalue()
