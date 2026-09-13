@@ -163,11 +163,11 @@ gerador = pathlib.Path(sys.argv[1])
 sys.path.insert(0, str(gerador.parent))
 import onde as por_nome
 from hefesto_dualsense4unix.interface import onde as por_pacote
-for modulo in {id(por_nome): por_nome, id(por_pacote): por_pacote}.values():
-    def gravar_e_recusar(nome, doc, original=modulo.gravar):
+for alvo in {id(por_nome): por_nome, id(por_pacote): por_pacote}.values():
+    def gravar_e_recusar(nome, doc, original=alvo.gravar):
         original(nome, doc + "\\n<!-- escrita sabotada pela régua -->")
         raise SystemExit("sabotagem da régua: a conferência recusou " + nome)
-    modulo.gravar = gravar_e_recusar
+    alvo.gravar = gravar_e_recusar
 sys.argv = [str(gerador)]
 runpy.run_path(str(gerador), run_name="__main__")
 """
