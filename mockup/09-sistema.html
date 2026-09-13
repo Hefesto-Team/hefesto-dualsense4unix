@@ -367,8 +367,9 @@
 
      A CURA É NA CAUSA: a espessura tem um dono, `--borda-do-chip`, e o ar de
      cima e de baixo lê dele. Borda mais ar somam sempre 7 px, que é o chip
-     vivo do plástico (2 + 5): nenhuma aba que escolhe muda um pixel, e todo
-     chip da fita mede 30 em qualquer estado. O ar horizontal não mudou. */
+     vivo do plástico (2 + 5): a linha das abas que escolhem não muda um pixel,
+     e todo chip da fita mede 30 em qualquer estado — o «Todos», de borda 1,
+     ganha 1 px de ar em cima e embaixo nas dez. O ar horizontal não mudou. */
   .fita .chip{padding-top:calc(7px - var(--borda-do-chip));
               padding-bottom:calc(7px - var(--borda-do-chip))}
   /* A COR DO CHIP VEM DA MESA, NÃO DE UMA CLASSE POR MODELO. Eram
