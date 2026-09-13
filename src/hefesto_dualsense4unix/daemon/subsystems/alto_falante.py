@@ -684,6 +684,15 @@ class AltoFalanteSubsystem:
             if uniq and e_radio(str(getattr(c, "transporte", "") or "")):
                 vivos[uniq] = str(getattr(c, "caminho", "") or "")
 
+        from hefesto_dualsense4unix.integrations.filho_de_som import (
+            derrubar_leitor_de_pipe,
+        )
+
+        # A QUEDA: a ponte de quem saiu desce AQUI, e `descer()` colhe o
+        # gravador dela. Esta função roda ANTES de `gerenciador.reconciliar` em
+        # `_reconciliar`, então o `pw-record` já foi colhido quando o nó sai —
+        # e a régua `test_o_gravador_da_ponte_morre_antes_do_no.py` pina a
+        # ordem (SOM-TRAVA-NA-QUEDA-01, 13/09/2026).
         for uniq in [u for u in self._pontes if u not in vivos]:
             ponte = self._pontes.pop(uniq, None)
             if ponte is not None:
@@ -697,6 +706,10 @@ class AltoFalanteSubsystem:
                 continue
             fonte, gravador, motivo = fonte_do_monitor_do_no(nome_do_sink(uniq))
             if fonte is None:
+                # Sem fonte não há ponte, e sem ponte ninguém derrubaria o
+                # processo que subiu: ele é colhido aqui mesmo.
+                if gravador is not None:
+                    derrubar_leitor_de_pipe(gravador)
                 logger.info("som_ponte_sem_fonte", uniq=uniq, motivo=motivo)
                 continue
             # O CAMINHO VAI NO FECHO, e o `functools.partial` diz o tipo: um
@@ -771,16 +784,21 @@ class AltoFalanteSubsystem:
         logger.info("som_subsystem_iniciado")
 
     async def stop(self) -> None:
-        """Derruba os nós. Idempotente.
+        """Derruba as pontes, e SÓ ENTÃO os nós. Idempotente.
 
-        O ``join`` sai do event loop por ``to_thread``: segurar o loop do
-        daemon por uma varredura em curso atrasaria o shutdown inteiro.
+        O ``join`` e o ``descer`` saem do event loop por ``to_thread``: segurar
+        o loop do daemon por uma varredura em curso, ou por um gravador que
+        demora a morrer, atrasaria o shutdown inteiro.
+
+        **A ORDEM É A CURA — SOM-TRAVA-NA-QUEDA-01, 13/09/2026.** Até esta data
+        o ``gerenciador.parar()`` vinha PRIMEIRO: os nós saíam com o
+        ``pw-record`` de cada ponte ainda vivo, lendo o monitor de um nó que
+        acabava de sumir, e as pontes só desciam depois. É a mesma ordem da
+        queda que travou a sessão de som dela duas vezes no dia. Agora: parar a
+        reconciliação, descer as pontes (que colhem os gravadores) e só então
+        tirar os nós.
         """
         self._parar.set()
-        gerenciador = self._gerenciador
-        if gerenciador is not None:
-            with contextlib.suppress(Exception):
-                gerenciador.parar()
         thread = self._thread
         self._thread = None
         if thread is not None:
@@ -788,11 +806,21 @@ class AltoFalanteSubsystem:
                 await asyncio.to_thread(thread.join, 2.0)
         # As pontes MORREM COM O SUBSYSTEM. Cada uma segura um fd de hidraw e
         # um `pw-record`; deixá-las de pé depois do `stop()` é vazar os dois
-        # por controle, e o próximo `start()` abriria um segundo par.
-        for uniq, ponte in list(self._pontes.items()):
-            with contextlib.suppress(Exception):
-                ponte.descer()
+        # por controle, e o próximo `start()` abriria um segundo par. Descem
+        # JUNTAS: o pior caso de uma é o prazo do `join` mais o do `kill`, e em
+        # fila os quatro controles somariam os quatro.
+        pontes = list(self._pontes.items())
+        if pontes:
+            await asyncio.gather(
+                *(asyncio.to_thread(ponte.descer) for _uniq, ponte in pontes),
+                return_exceptions=True,
+            )
+        for uniq, _ponte in pontes:
             self._pontes.pop(uniq, None)
+        gerenciador = self._gerenciador
+        if gerenciador is not None:
+            with contextlib.suppress(Exception):
+                gerenciador.parar()
         from hefesto_dualsense4unix.integrations.alto_falante_bt import (
             registrar_dizedor_da_fonte,
         )

@@ -250,7 +250,6 @@ import math
 import os
 import selectors
 import shutil
-import signal
 import struct
 import subprocess
 import threading
@@ -259,6 +258,9 @@ from collections.abc import Callable, Mapping
 from dataclasses import dataclass, field
 from typing import Any, Protocol
 
+from hefesto_dualsense4unix.integrations.filho_de_som import (
+    morrer_com_o_pai as _morrer_com_o_pai,
+)
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 
 logger = get_logger(__name__)
@@ -490,41 +492,12 @@ def argv_do_medidor(fonte: str, uniq: str = "") -> list[str]:
     return argv
 
 
-def _morrer_com_o_pai() -> None:
-    """Pede ao kernel um SIGKILL neste filho quando o processo pai morrer.
-
-    O `parec` VAZOU ÓRFÃO, e foi medido na máquina dela em 03/09/2026: três
-    gerações diferentes de `parec` sobreviveram aos processos que as lançaram —
-    a última com `PPID=1`, 42 s de vida e o `hefesto.uniq` no `cmdline`. Cada
-    uma segurava a fonte de captura do controle em `RUNNING`, ou seja: **o
-    microfone dela ficava aberto por um processo que ninguém estava lendo.**
-
-    Sem isto, matar o daemon (ou o agente, ou a sessão) não mata o medidor: o
-    `parec` é reparentado ao `init` e continua gravando para um cano que não
-    tem leitor. O `terminate()` do `_FluxoParec` só alcança o caso em que o pai
-    teve chance de rodar o `finally` — morte por `SIGKILL`, `OOM` ou queda da
-    sessão não dá essa chance, e é justamente quando o vazamento acontece.
-
-    `PR_SET_PDEATHSIG` é a única garantia que não depende de o pai colaborar. O
-    `start_new_session=True` seria o OPOSTO do que se quer aqui: ele DESLIGA o
-    filho do grupo do pai, que é como o processo sobrevive ao terminal.
-
-    O `preexec_fn` roda entre o `fork` e o `exec`, no filho. O aviso do ruff
-    (PLW1509) é sobre segurança em programa com threads — aqui a chamada é um
-    único `prctl` sem alocação, que é exatamente o uso que a documentação do
-    CPython admite.
-
-    Em plataforma sem `PR_SET_PDEATHSIG` a função não faz nada e o processo
-    nasce igual: degradar em silêncio é melhor que recusar a medição inteira
-    num sistema que não é Linux.
-    """
-    with contextlib.suppress(Exception):
-        import ctypes
-
-        PR_SET_PDEATHSIG = 1  # noqa: N806 - o nome é do kernel
-        ctypes.CDLL("libc.so.6", use_errno=True).prctl(
-            PR_SET_PDEATHSIG, signal.SIGKILL, 0, 0, 0
-        )
+# `_morrer_com_o_pai` MUDOU DE DONO em 13/09/2026 (SOM-TRAVA-NA-QUEDA-01): ele
+# mora em `integrations/filho_de_som.morrer_com_o_pai`, que os três leitores de
+# som do daemon usam, e chega aqui reexportado pelo import do topo. O `parec`
+# deste medidor foi o primeiro a vazar órfão (03/09/2026, `PPID=1`, 42 s de
+# vida, o microfone dela aberto por um processo que ninguém lia), e a régua
+# `test_o_medidor_de_som_nao_vaza_orfao.py` continua chamando o nome por aqui.
 
 
 def _ambiente_c() -> dict[str, str]:
