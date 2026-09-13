@@ -89,9 +89,9 @@ O dado mora em **[`docs/data/paridade-gtk-html.csv`](../data/paridade-gtk-html.c
 | 06-navegacao | 40 | 15 | 16 | 0 | 9 | 0 | 38% |
 | 07-lancadores | 30 | 15 | 5 | 0 | 9 | 1 | 50% |
 | 08-conexoes | 49 | 21 | 23 | 3 | 2 | 0 | 43% |
-| 09-sistema | 38 | 11 | 18 | 2 | 7 | 0 | 29% |
+| 09-sistema | 38 | 12 | 18 | 2 | 6 | 0 | 32% |
 | 10-perfis | 50 | 14 | 20 | 7 | 9 | 0 | 28% |
-| TODAS | 396 | 143 | 160 | 30 | 59 | 4 | 36% |<!-- /TABELA-DA-PARIDADE -->
+| TODAS | 396 | 144 | 160 | 30 | 58 | 4 | 36% |<!-- /TABELA-DA-PARIDADE -->
 
 A tabela é **gerada da contagem do CSV** e conferida pelo portão (regra
 `numero-publicado`): quem mexer no dado e não regerar esta seção é barrado
@@ -511,3 +511,17 @@ linha que AFIRMA paridade tem de vigiar o que FAZ do lado HTML — passou a ser
 **A MORDIDA:** devolvido o veredito `FALTA_NO_HTML` na linha 384 e reposto o
 sinal velho, o portão reprova em `numero-publicado` nomeando `10-perfis` e
 `TODAS` — que é a prova de que esta tabela não envelhece calada.
+
+## Nota de verificação — 13/09/2026, o «Ver os plugins» sai da aba Sistema
+
+`SISTEMA-BOTOES-01`. O botão saiu da tela, e a linha dele no CSV (sinal
+`D-OS-PLUGINS-APARECEM-ONDE-AGEM`) foi de `SO_NO_HTML` para **`IGUAL`**: nenhum
+dos dois lados lista plugins, e a GTK nunca listou — o que era «só no HTML» deixou
+de existir. A tabela acima foi **recontada do CSV**: `09-sistema` vai de
+`11 IGUAL · 7 SO_HTML · 29%` para `12 · 6 · 32%`, e `TODAS` de `143 · 59` para
+`144 · 58`.
+
+**A razão é decisão dela, e está escrita:** `docs/data/decisoes-dela.csv`, linha
+`D-OS-PLUGINS-APARECEM-ONDE-AGEM` (26/08/2026) — *os plugins não ganham seção
+própria; a infraestrutura se mostra pelo efeito, não pelo nome*. O `porque` da
+linha guarda o veredito de antes, com a data.

@@ -297,8 +297,12 @@ def test_o_tique_repoe_o_rotulo_quando_o_prazo_passa(a09, ctx):
         f"o tique deixou {depois!r} no botão depois de o prazo passar.")
 
 
-def test_armar_o_segundo_repoe_o_primeiro(a09, ctx):
+def test_armar_o_segundo_repoe_o_primeiro(a09, ctx, monkeypatch):
     """Uma pergunta por vez. Dois "Confirma?" na tela seriam duas perguntas.
+
+    A STEAM É DUBLADA DESDE 13/09/2026 (SISTEMA-BOTOES-01): o Proton passou a
+    conferir a Steam no clique 1, e esta régua lia a Steam de quem a roda — na
+    máquina dela, aberta, e o clique recusava em vez de armar.
 
     A MORDIDA: troque o `if gesto == _armado_agora()` de `_rotulo_de_agora` por
     `if _armado_agora()`. Reprova dizendo que os dois botões vestiram a pergunta.
@@ -311,6 +315,9 @@ def test_armar_o_segundo_repoe_o_primeiro(a09, ctx):
     defendida por aquela linha — e uma mordida que não morde é o instrumento
     mentindo sobre o que mede.
     """
+    from hefesto_dualsense4unix.integrations import proton_pin
+
+    monkeypatch.setattr(proton_pin, "steam_running", lambda: False)
     a09.desligar(ctx, _clique("Parar o serviço"), None)
     carga = a09.refazer_proton(ctx, _clique("Refazer a fixação do Proton"), None)
 

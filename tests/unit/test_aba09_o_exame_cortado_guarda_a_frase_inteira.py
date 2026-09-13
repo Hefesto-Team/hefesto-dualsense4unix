@@ -107,12 +107,20 @@ def test_toda_linha_do_exame_leva_a_frase_inteira_no_title(a09, texto: str) -> N
     Cobre as SEIS, e não só as cortadas: qual delas corta depende da largura da
     janela e do tamanho da fonte dela. Uma régua que só cobrisse as cinco de
     hoje ficaria verde no dia em que a sexta crescesse um caractere.
+
+    A FRASE INTEIRA PARA ANTES DO «O QUE FAZER» — 13/09/2026, SISTEMA-BOTOES-01.
+    A instrução do `doctor` não chega mais à tela (mandava clicar num botão que
+    não existe), cortada em `PREFIXO_DA_CURA` no texto e no `title`. O inteiro
+    que esta régua cobra é o do ESTADO.
     """
+    from hefesto_dualsense4unix.integrations.storm_doctor import PREFIXO_DA_CURA
+
     achado = {"selo": "OK", "cls": "ok", "g": GLIFO_OK, "txt": texto}
+    inteiro = texto.split(PREFIXO_DA_CURA, 1)[0].rstrip()
 
     html_da_linha = a09._linha_do_exame(achado)
 
-    assert f'title="{_escapado(texto)}"' in html_da_linha, (
+    assert f'title="{_escapado(inteiro)}"' in html_da_linha, (
         "a linha do exame corta na tela e não guarda a frase inteira em lugar "
         f"nenhum — {texto!r} é o que o doctor devolveu, e a tela mostra só o "
         f"começo.\n\nSaiu: {html_da_linha!r}"
@@ -135,11 +143,14 @@ def test_a_metade_que_a_tela_esconde_e_a_resposta(a09) -> None:
     # As duas metades que a foto mostrou escondidas. Não basta o texto estar no
     # `<span>` — é justamente ele que a folha corta.
     dentro_do_title = saiu.split('title="', 1)[-1].split('"', 1)[0]
-    for metade in ("estão liberados", "O que fazer: nada"):
-        assert _escapado(metade) in dentro_do_title, (
-            f"{metade!r} não está alcançável: a tela para em 'o mic e o fone "
-            "do controle…' e quem lê conclui o contrário do que o exame diz."
-        )
+    assert _escapado("estão liberados") in dentro_do_title, (
+        "'estão liberados' não está alcançável: a tela para em 'o mic e o fone "
+        "do controle…' e quem lê conclui o contrário do que o exame diz."
+    )
+    # A OUTRA METADE ERA «O que fazer: nada», e ela SAIU DA TELA em 13/09/2026
+    # (SISTEMA-BOTOES-01): a instrução do `doctor` é cortada no texto e no
+    # `title`. O estado — «estão liberados» — é a resposta que fica.
+    assert "O que fazer" not in saiu, saiu
 
 
 def test_o_title_e_escapado_como_o_resto(a09) -> None:

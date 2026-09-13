@@ -196,14 +196,22 @@ def test_nenhuma_frase_manda_para_o_terminal_quando_ha_botao(
     )
 
 
-def test_a_frase_do_wireplumber_aponta_o_botao(
+def test_a_frase_do_wireplumber_aponta_o_caminho_que_existe(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """Tirar o comando não basta: sem apontar o botão, sobra um diagnóstico mudo."""
+    """Tirar o comando não basta: sem apontar o caminho, sobra um diagnóstico mudo.
+
+    ERA `test_a_frase_do_wireplumber_aponta_o_botao`, e cobrava *"clique
+    'Aplicar correções' na aba Sistema"*. MUDOU DE CONTRATO EM 13/09/2026
+    (SISTEMA-BOTOES-01): nenhum botão se chama assim, e o «Refazer os consertos
+    automáticos» deixou de rodar o `--install` do WirePlumber — o próprio script
+    o chama de gesto contrário ao de ligar o mic (DROPIN-AMBIGUO-01). Quem repõe
+    o drop-in é a instalação, e o gesto dela é o de `gesto_de_atualizar()`.
+    """
     msg = cenas(tmp_path, monkeypatch)["wireplumber_sem_dropin"]
 
-    assert "'Aplicar correções'" in msg, msg
-    assert "aba Sistema" in msg, msg
+    assert "Aplicar correções" not in msg, msg
+    assert sd.gesto_de_atualizar() in msg, msg
 
 
 def test_a_regua_sabe_recusar() -> None:

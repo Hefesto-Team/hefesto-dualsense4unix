@@ -1,6 +1,6 @@
 ---
 sprint: SISTEMA-BOTOES-01
-estado: aberta
+estado: feita
 onda: A-TERCEIRA-LISTA-DELA
 posse:
   SISTEMA-BOTOES-01:
@@ -41,6 +41,13 @@ nao_toca:
 ---
 
 # SISTEMA-BOTOES-01 — cada botão da aba Sistema faz o que diz, e funciona
+
+> **ESTADO 2026-09-13: feita** — `docs/process/agentes/2026-09-13/SISTEMA-BOTOES-01-opus.md`.
+> O clique 1 de Parar, Restaurar, Proton, Consertos e Aplicar pergunta no painel e
+> não pisca; o Proton recusa com a Steam aberta antes de armar; a pergunta vencida
+> sai no tique; o repouso perdeu o diário; o `--install` e o «Ver os plugins» saíram.
+> Sobra medida: o painel ficou 8 px além da lista Avançado (piso de 110 px), e a
+> pergunta da Steam passou a rolar uma linha.
 
 > **ROTA CORRIGIDA — 13/09/2026, depois do estudo.** Esta sprint ABSORVE as §3
 > e §4 da
