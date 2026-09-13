@@ -8,6 +8,7 @@ posse:
     - docs/data/mapa-controles.csv
     - docs/data/decisoes-dela.csv
     - html/specs.html
+    - docs/data/LEIA-PRIMEIRO.md
     - docs/process/sprints/2026-09-13-CITACOES-DAS-PLANILHAS-01-os-enderecos-que-a-leva-deslocou.md
 cria: []
 bancada: false
@@ -60,6 +61,19 @@ mais.
    `--check` confere.
 3. `scripts/validar-citacoes-de-linha.py --all` e o portão
    `citacoes-no-codigo` seguem verdes.
+4. **O roteiro fica no rascunho, num caminho certo**, porque quem coordena roda
+   de novo depois da costura: a RESTOS-DA-ONDA-DOIS-01 e a SENSORES-NO-JOGO-03
+   deslocam linhas na mesma onda. O caminho é
+   `/tmp/claude-1000/-mnt-Apate-Desenvolvimento-hefesto-dualsense4unix/8fc26f69-7ade-42a1-9497-63eac702dfb8/scratchpad/CITACOES-DAS-PLANILHAS-01/reapontar.py`,
+   com `--check` (só conta) e `--escrever`.
+5. **Os casos já conhecidos:**
+   * `plataforma.probe.retry@dualsense` cita `daemon/connection.py:373`, que
+     nunca foi o laço de reconexão; a âncora do commit de origem não serve, e o
+     caso vai para a entrega (validação da F1-REMAPEAR-02);
+   * a linha 23 do mapa cita `interface/aba02.py:2378` e `:2458`, já fora do
+     lugar antes da onda 2 (validação da MIC-SEM-FONTE-01).
+6. `docs/data/LEIA-PRIMEIRO.md` publica o tamanho do `specs.html`: depois de
+   regerar, `scripts/check_paridade_transporte.py --leia-primeiro --escrever`.
 
 ## §V — Prova
 

@@ -36,6 +36,13 @@ nao_toca:
 > fechou `7 ✓ / 0 falta`. O documento de `cria:` ainda não existe — nasce da hora
 > dela. **O giroscópio não tem linha neste roteiro:** é a
 > [SENSORES-NO-JOGO-01](2026-09-08-SENSORES-NO-JOGO-01-o-giroscopio-e-o-acelerometro-provados-ate-o-jogo.md).
+> **Nota de 13/09/2026, antes de escrever as células `movimento.*.jogo` do mapa:**
+> o zero em Modo Virtual do laudo de 09/09 era da libSDL2 2.30.0 do sistema, que
+> nenhum jogo da Steam carrega. As bibliotecas dos runtimes entregam os dois
+> sensores do vpad
+> ([SENSORES-NO-JOGO-02](2026-09-13-SENSORES-NO-JOGO-02-o-giroscopio-que-o-jogo-nao-ve-em-modo-virtual.md)).
+> A célula se escreve com a biblioteca que o jogo carregou, lida em
+> `/proc/<pid>/maps`.
 
 > **A palavra dela, 06/09/2026:** *"o foco do programa hoje é fazer os 4
 > dualsense funcionar seja via bt ou cabo."* E, sobre quando: a bancada dos

@@ -93,14 +93,16 @@ portões verdes e nenhum botão novo:
 | [LIGHTBAR-NA-STEAM-01](2026-09-13-LIGHTBAR-NA-STEAM-01-a-luz-dentro-da-steam-e-as-guardas-que-se-autoaplicavam.md) | a cor retida do cliente Steam deixa de virar camada do jogo; a telemetria diz o valor | 1 · costurada |
 | [F1-REMAPEAR](2026-09-11-F1-REMAPEAR-as-vinte-e-duas-linhas-e-o-motor-que-nao-existe.md) | o motor do remapeamento que a aba 06 já desenha | 1 · costurada |
 | [VAO-DO-ESQUELETO-01](2026-09-11-VAO-DO-ESQUELETO-01-a-faixa-vazia-de-tres-paginas-e-a-decisao-de-27-08.md) | o salto da fita e o «Mortal Kombat» do chip (absorve o §4.1 da PERFIS-TIRA) | 1 · costurada |
-| [SENSORES-NO-JOGO-02](2026-09-13-SENSORES-NO-JOGO-02-o-giroscopio-que-o-jogo-nao-ve-em-modo-virtual.md) | o ensaio que mirava a biblioteca errada, e a dica do acelerômetro no env do jogo | 1: o estudo · 2: implementa |
-| [SISTEMA-BOTOES-01](2026-09-13-SISTEMA-BOTOES-01-cada-botao-da-aba-sistema-faz-o-que-diz.md) | cada botão da aba Sistema (absorve as §3 e §4 da TELA-CALADA-04) | 2 |
-| [RECONECTAR-SAMBA-02](2026-09-13-RECONECTAR-SAMBA-02-o-botao-que-ainda-muda-de-lugar-na-janela-dela.md) | o pulo vertical: o tique mudo, os chips e a frase da mesa vazia | 2 |
-| [MIC-SEM-FONTE-01](2026-09-09-MIC-SEM-FONTE-01-a-razao-chega-depois-do-arrasto-e-a-tarja-cobre-a-linha-de-cima.md) | o microfone cinza antes do arrasto | 2 |
-| [DICA-DA-COR-01](2026-09-09-DICA-DA-COR-01-o-aviso-sai-da-janelinha-do-gtk-e-o-x-ganha-pixel.md) | só o X do tom tomado | 2 |
-| [FRASES-E-DICAS-03](2026-09-13-FRASES-E-DICAS-03-a-razao-do-nascimento-o-chip-de-dois-donos-e-o-sufixo-do-steam-input.md) | a razão do nascimento na dica da 08, o «—» do chip na 03 e na 04, o sufixo do Steam Input na 07 | 2 |
-| [F1-REMAPEAR-02](2026-09-13-F1-REMAPEAR-02-as-seis-linhas-que-a-troca-nao-alcanca-e-o-ps-do-boot.md) | as seis listas que sempre recusam ficam apagadas; o PS do perfil no boot | 2 |
-| [CITACOES-DAS-PLANILHAS-01](2026-09-13-CITACOES-DAS-PLANILHAS-01-os-enderecos-que-a-leva-deslocou.md) | as citações de linha das planilhas que a leva deslocou | 3, depois da onda 2 costurada |
+| [SENSORES-NO-JOGO-02](2026-09-13-SENSORES-NO-JOGO-02-o-giroscopio-que-o-jogo-nao-ve-em-modo-virtual.md) | o ensaio que mirava a biblioteca errada, e a dica do acelerômetro no env do jogo | 1: o estudo · 2 · costurada |
+| [SISTEMA-BOTOES-01](2026-09-13-SISTEMA-BOTOES-01-cada-botao-da-aba-sistema-faz-o-que-diz.md) | cada botão da aba Sistema (absorve as §3 e §4 da TELA-CALADA-04) | 2 · costurada |
+| [RECONECTAR-SAMBA-02](2026-09-13-RECONECTAR-SAMBA-02-o-botao-que-ainda-muda-de-lugar-na-janela-dela.md) | o pulo vertical: o tique mudo, os chips e a frase da mesa vazia | 2 · costurada |
+| [MIC-SEM-FONTE-01](2026-09-09-MIC-SEM-FONTE-01-a-razao-chega-depois-do-arrasto-e-a-tarja-cobre-a-linha-de-cima.md) | o microfone cinza antes do arrasto | 2 · costurada |
+| [DICA-DA-COR-01](2026-09-09-DICA-DA-COR-01-o-aviso-sai-da-janelinha-do-gtk-e-o-x-ganha-pixel.md) | só o X do tom tomado | 2 · costurada |
+| [FRASES-E-DICAS-03](2026-09-13-FRASES-E-DICAS-03-a-razao-do-nascimento-o-chip-de-dois-donos-e-o-sufixo-do-steam-input.md) | a razão do nascimento na dica da 08, o «—» do chip na 03 e na 04, o sufixo do Steam Input na 07 | 2 · costurada |
+| [F1-REMAPEAR-02](2026-09-13-F1-REMAPEAR-02-as-seis-linhas-que-a-troca-nao-alcanca-e-o-ps-do-boot.md) | as seis listas que sempre recusam ficam apagadas; o PS do perfil no boot | 2 · costurada |
+| [RESTOS-DA-ONDA-DOIS-01](2026-09-13-RESTOS-DA-ONDA-DOIS-01-o-alto-falante-sem-endereco-o-touchpad-na-troca-a-varredura-sem-leitor-e-o-numero-do-parar.md) | a guarda do alto-falante que nunca acendia, a marca do touchpad na troca, a varredura sem leitor na 07, o «os 2» do Parar | 3 |
+| [SENSORES-NO-JOGO-03](2026-09-13-SENSORES-NO-JOGO-03-o-fato-do-zero-sai-dos-lugares-que-ficaram.md) | o fato do zero sai dos oito lugares fora da posse da 02 | 3 |
+| [CITACOES-DAS-PLANILHAS-01](2026-09-13-CITACOES-DAS-PLANILHAS-01-os-enderecos-que-a-leva-deslocou.md) | as citações de linha das planilhas que a leva deslocou | 3; quem coordena roda o roteiro de novo depois da costura |
 | TELA-CALADA-04 · PERFIS-TIRA-BUSCA-ATIVO-01 | — | absorvidas |
 | FONE-01 | — | caducou: pediria deslizante novo |
 | MESA-DE-QUATRO-01 · LUZ-NO-RADIO-01 · OS-GESTOS-QUE-SO-ELA-PODE-FAZER | as provas de aparelho de toda a leva | bancada, com ela |
