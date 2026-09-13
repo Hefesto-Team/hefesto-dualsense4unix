@@ -1,6 +1,6 @@
 ---
 sprint: SOM-TRAVA-NA-QUEDA-01
-estado: aberta
+estado: feita
 onda: A-TERCEIRA-LISTA-DELA
 posse:
   SOM-TRAVA-NA-QUEDA-01:
@@ -24,6 +24,8 @@ nao_toca:
   - docs/data/
   - tests/conftest.py
 ---
+
+> **ESTADO 2026-09-13: feita** — o `pw-record` da ponte deixou de sobreviver à queda. `integrations/filho_de_som.py` é o dono único do `PR_SET_PDEATHSIG` e da ordem que derruba um leitor de cano cheio (TERM, `join`, `stdout` fechado só com o leitor parado, `wait`, KILL), e os três filhos de som passaram a usá-lo: a ponte colhe o gravador no `descer`, o `stop` desce as pontes antes de tirar os nós, e o alimentador do cabo fecha em milissegundos com o bombeador morto. Seis réguas (R1–R6) e duas portas do órfão, com dublê de processo e a mordida de cada uma medida. Sem aparelho e sem servidor de som: a §B fica para a MESA-DE-QUATRO-01. A entrega está em `docs/process/agentes/2026-09-13/SOM-TRAVA-NA-QUEDA-01-opus.md`.
 
 # SOM-TRAVA-NA-QUEDA-01 — o gravador que não morre, e o servidor de som que espera por ele
 
