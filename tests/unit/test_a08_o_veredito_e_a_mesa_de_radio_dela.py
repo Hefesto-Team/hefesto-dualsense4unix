@@ -559,8 +559,17 @@ def test_a_dica_da_luz_nao_anexa_o_aviso_da_mesa_suja(monkeypatch) -> None:  # t
     INDICE.md`, a mensagem de abertura). A dica fica com o que o botão faz.
 
     O DUBLÊ É A SONDA DE VERDADE respondendo SUSPEITA — outro programa
-    segurando o nó. Se alguém religar a pergunta pela mesa à dica, as duas
-    respostas deixam de ser iguais, com as palavras que forem.
+    segurando o nó. Se alguém religar a pergunta pela mesa DENTRO de
+    `dica_da_luz`, as duas respostas deixam de ser iguais, com as palavras que
+    forem.
+
+    O ALCANCE DESTA, MEDIDO NA VALIDAÇÃO DE 13/09/2026: com o código de
+    `249af1f6` devolvido inteiro, ela fica VERDE — ali a sonda morava no tique
+    (`pacote()` perguntava e passava `mesa_suja` à função), e esta chamada
+    direta nunca a aciona. Quem morde essa volta é
+    `test_nenhuma_frase_de_aviso_chega_a_tela.
+    test_a_dica_da_luz_nao_avisa_com_outro_programa_segurando_o_controle`, que
+    passa pelo `pacote()`.
     """
     from hefesto_dualsense4unix.app.actions.config.secao_controles import DICA_NO_RADIO
     from hefesto_dualsense4unix.integrations import sinal_da_barra as sb
