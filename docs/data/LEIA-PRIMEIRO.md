@@ -88,7 +88,7 @@ cabo e rádio respondidos lado a lado na mesma linha. As que importam para decid
   reprova quando a cura é arrancada, e a prova de que alguém arrancou e viu.
 - `provado_em` (74 linhas, data pura) — quando. Cuidado: `mordida_provada_em`
   tem o mesmo sufixo `_em` e **é prosa**, não data.
-- `nota` (225 linhas), `cabo_ressalva` / `radio_ressalva`, `*_evidencia`,
+- `nota` (230 linhas), `cabo_ressalva` / `radio_ressalva`, `*_evidencia`,
   `*_detalhe` — **a prosa**. É onde mora o que salva trabalho, e é o que este
   documento existe para te ajudar a ler **sob demanda, pela chave**.
 
@@ -353,7 +353,7 @@ Um esqueleto que parecesse completo seria pior que nenhum. **Vá à prosa quando
 - a célula tem grau forte (**37 células**) — a ressalva é onde mora a condição
   sob a qual a prova vale;
 - a linha tem ensaio no caderno (**30 linhas**) — o caderno tem o "como";
-- a linha tem `nota` (**225 linhas**) — é onde ficam as notas datadas, e a regra
+- a linha tem `nota` (**230 linhas**) — é onde ficam as notas datadas, e a regra
   da casa é que **decisão medida não se apaga**;
 - os dois lados divergem (**37 linhas**) — leia `assimetria_declarada`, ou saiba
   que ela está vazia em 14 delas.
