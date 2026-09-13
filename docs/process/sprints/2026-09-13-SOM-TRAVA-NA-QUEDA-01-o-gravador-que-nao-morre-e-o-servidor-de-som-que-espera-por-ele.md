@@ -4,18 +4,25 @@ estado: aberta
 onda: A-TERCEIRA-LISTA-DELA
 posse:
   SOM-TRAVA-NA-QUEDA-01:
-    # PROVISÓRIA — o ESTUDO escreve a posse real antes de qualquer implementação.
     - src/hefesto_dualsense4unix/integrations/alto_falante_bt.py
     - src/hefesto_dualsense4unix/daemon/subsystems/alto_falante.py
-    - src/hefesto_dualsense4unix/integrations/dualsense_bt_audio.py
-    - src/hefesto_dualsense4unix/daemon/subsystems/bt_mic.py
+    - src/hefesto_dualsense4unix/integrations/canal_do_microfone.py
+    - src/hefesto_dualsense4unix/integrations/nivel_do_microfone.py
+    - tests/unit/test_o_medidor_de_som_nao_vaza_orfao.py
     - docs/process/sprints/2026-09-13-SOM-TRAVA-NA-QUEDA-01-o-gravador-que-nao-morre-e-o-servidor-de-som-que-espera-por-ele.md
+cria:
+  - src/hefesto_dualsense4unix/integrations/filho_de_som.py
+  - tests/unit/test_o_gravador_da_ponte_morre_antes_do_no.py
 bancada: false
 depois_de: []
 nao_toca:
   - src/hefesto_dualsense4unix/daemon/lifecycle.py
+  - src/hefesto_dualsense4unix/daemon/connection.py
+  - src/hefesto_dualsense4unix/integrations/dualsense_bt_audio.py
+  - src/hefesto_dualsense4unix/daemon/subsystems/bt_mic.py
   - src/hefesto_dualsense4unix/interface/
   - docs/data/
+  - tests/conftest.py
 ---
 
 # SOM-TRAVA-NA-QUEDA-01 — o gravador que não morre, e o servidor de som que espera por ele
@@ -32,7 +39,9 @@ em voo, e segue o processo dela (§0 do
 [índice](2026-09-13-A-TERCEIRA-LISTA-DELA-INDICE.md)): sprint escrita antes de
 qualquer agente, no máximo três agentes.
 
-## §E — O que quem coordena mediu (13/09, só leitura na máquina dela)
+## §E — O que se mediu
+
+### Na máquina dela (quem coordena, 13/09, só leitura)
 
 1. **Duas vezes no mesmo dia, a mesma sequência**, lida no diário do daemon e do
    `pipewire-pulse`:
@@ -45,65 +54,130 @@ qualquer agente, no máximo três agentes.
    | o primeiro `pactl` sem resposta | 01:53:54 | 13:42:07 |
    | o servidor de som parado até o reinício dos três serviços | 47 min | 3 h 44 min |
 
-   À tarde o `pipewire-pulse` logou `mod.pipe-tunnel: out of buffers: Pipe
-   quebrado` às 13:42:01. A Steam ficou sem janela, com um `wpctl` filho preso
-   desde 13:42:02, e o COSMIC ficou com cinco `wpctl set-default` presos de
-   quando ela tentou trocar a saída. O reinício de `pipewire`, `pipewire-pulse` e
-   `wireplumber` às 17:26 curou em um segundo, e a Steam voltou sozinha.
+   A Steam ficou sem janela, com um `wpctl` filho preso desde 13:42:02, e o COSMIC
+   ficou com cinco `wpctl set-default` presos de quando ela tentou trocar a saída.
+   O reinício de `pipewire`, `pipewire-pulse` e `wireplumber` às 17:26 curou em um
+   segundo, e a Steam voltou sozinha.
 2. **A cura instalada não impede o travamento.** A
    [MIC-O-CANAL-DO-OUTRO-01](2026-09-13-MIC-O-CANAL-DO-OUTRO-01-o-no-orfao-o-pactl-que-trava-e-a-voz-picotada.md)
-   (Defeito 3, feita, no `dev` instalado) deu recuo ao `pactl`: o daemon para de
-   perguntar ao servidor mudo. A causa ficou «não medida» lá, e o travamento
-   voltou com ela instalada.
-3. **O suspeito, vivo na máquina às 17:29:** um `pw-record
-   --target=hefesto_som_<hex6>.monitor`, filho do daemon, nascido às 05:29:54 com
-   a ponte do rádio, que sobreviveu à ponte derrubada das 13:42:02. Ele dorme em
-   `anon_pipe_write` (escrevendo num pipe cheio), o daemon ainda segura a ponta de
-   leitura desse pipe, e ele tem `signalfd`.
-4. **O fonte.** `PonteDeSomPorRadio.descer` (`integrations/alto_falante_bt.py`)
-   só chama `gravador.terminate()`: não fecha o `stdout`, não espera e não mata. O
-   laço que lia o pipe já parou. `fonte_do_monitor_do_no`, no mesmo arquivo, diz
-   na docstring que um `pw-record` órfão continua lendo o monitor depois de a
-   ponte cair. Em `_casar_as_pontes` (`daemon/subsystems/alto_falante.py`) a
-   ponte desce e, no mesmo segundo, o nó é descarregado.
-5. **Hipótese, NÃO medida:** o `pw-record` recebe o SIGTERM pelo `signalfd`, mas o
-   laço dele está parado no `write` do pipe cheio e nunca volta para ler o sinal
-   nem para responder ao servidor. Quando o nó que ele grava é descarregado, o
-   servidor espera a resposta de um cliente que não responde, e para de atender
-   todos. A outra metade possível é o `module-pipe-source` do microfone, que logou
-   `Pipe quebrado` um segundo antes.
+   (Defeito 3) deu recuo ao `pactl`, e o travamento voltou com ela instalada.
+3. **O órfão vivo:** um `pw-record --target=hefesto_som_<hex6>.monitor`, filho do
+   daemon, nascido às 05:29:54 com a ponte do rádio, que sobreviveu à ponte
+   derrubada das 13:42:02. Ele dorme em `anon_pipe_write`, e o daemon ainda segura a
+   ponta de leitura do pipe dele.
+
+### No estudo (instância isolada do PipeWire 1.6.8, sem wireplumber)
+
+O estudo inteiro, com a matriz de cenários, os roteiros da instância isolada, dos
+cenários, do produto e da régua prévia, e os resultados crus, fica no rascunho de
+quem coordena, na pasta da sprint. A sessão dela ficou intacta do
+começo ao fim: os mesmos três PIDs e o canário `pactl info` com rc=0.
+
+4. **O gravador não morre — medido.** O `pw-record` tem uma thread só, recebe o
+   SIGTERM por `signalfd`, e o laço está no `write` do pipe que ninguém lê (enche
+   em cerca de 0,34 s). O SIGTERM fica pendente para sempre. A
+   `PonteDeSomPorRadio` da árvore faz igual na instância: `descer()` volta em 0 ms
+   com o gravador vivo. **Fechar a ponta de leitura** o derruba por SIGPIPE em
+   1,1 ms; um teimoso cai por KILL; sem `wait` fica zumbi.
+5. **O servidor sozinho não trava — medido.** Em 18 cenários (o nó descarregado
+   debaixo do gravador preso, o microfone, o nível, as duas linhas do tempo do
+   diário), `pactl info` e `pw-cli info 0` responderam sempre em 2 a 7 ms. **Fato
+   substituído:** a hipótese que este §E dizia, «o servidor espera um cliente que
+   não responde e para de atender todos», não se sustenta no servidor sozinho.
+6. **Trava quem MUDA um parâmetro do nó do gravador preso — medido.** `pw-cli set`,
+   `pactl set-source-output-volume` e `wpctl set-volume` esperam (rc=124 em 3 s,
+   contra 3 ms com o gravador são), e voltam no milissegundo em que o órfão morre.
+7. **O diário amarra o resto, sem fechar a causa.** De oito quedas com gravador
+   preso em 12 e 13/09, quatro travaram: o órfão parece necessário e não basta. Os
+   três travamentos longos só acabaram quando o órfão perdeu a conexão (a morte do
+   daemon em 12/09; o reinício do `pipewire` duas vezes em 13/09; reiniciar só o
+   pulse não bastou). Em 12/09 16:35:18 o wireplumber registrou `link failed: item
+   deactivated before format was set`. **A leitura mais provável, não medida:** o
+   wireplumber mexe no stream órfão quando o alvo some, fica esperando por ele, e
+   arrasta a sessão.
+8. **O microfone não trava** sozinho nem junto do gravador, e a linha `Pipe
+   quebrado` aparece no diário sem travamento: não é marcador.
+9. **O inventário dos filhos de som do daemon:** o `pw-record` da ponte (só
+   `terminate`, sem `wait`, sem fechar o pipe, sem `PR_SET_PDEATHSIG`); o `parec` do
+   medidor de nível (já certo: `terminate` → `wait` → `kill`, com PDEATHSIG); o
+   `parec` do canal do cabo (`terminate` → `wait(2 s)` → `kill`, sem PDEATHSIG, e
+   preso se o bombeador morrer). Os `pactl` são `run` com prazo e colhidos.
+10. **As quatro portas do órfão:** a queda; a ponte que não sobe
+    (`fonte_do_monitor_do_no` já lançou o gravador e `subir()` falha); a fonte sem
+    `stdout` (o processo nunca é derrubado); e a morte do daemon, onde
+    `AltoFalanteSubsystem.stop` tira os nós ANTES de descer as pontes.
 
 ## §D — O que está decidido
 
 1. **O servidor de som dela não é bancada.** Todo experimento roda numa instância
-   isolada do PipeWire, com diretório de execução próprio no rascunho, e cada
-   comando confere antes que não fala com a sessão dela. Travar o som dela de novo
-   para medir é o defeito que a sprint existe para matar.
-2. **Quem sobe um processo derruba o processo.** A cura cobre todo filho do daemon
-   que conversa com o servidor de som (gravador, `pactl`, o que o estudo achar),
-   não só este `pw-record`.
-3. **O filho morre antes de o nó sair.** A ordem de desligar é parte da cura, e a
-   régua a confere.
-4. Nada de botão novo, nada de frase na tela: o defeito é do daemon.
+   isolada do PipeWire, e cada comando confere antes que não fala com a sessão
+   dela.
+2. **Quem sobe um processo derruba o processo, e a cura cobre os três filhos de
+   som**, não só o `pw-record`.
+3. **O filho morre antes de o nó sair**, na queda e no desligamento, e a régua
+   confere a ordem.
+4. Nada de botão novo, nada de frase na tela: o defeito é do daemon, e o jeito
+   como o filho morreu vai só para o diário.
+5. **Um dono só (quem coordena, 13/09):** `integrations/filho_de_som.py` guarda o
+   `PR_SET_PDEATHSIG` e o «derrubar um leitor de pipe». Os três filhos passam a
+   usá-lo. O nome `_morrer_com_o_pai` continua em `nivel_do_microfone`,
+   reexportado, porque uma régua o chama por lá.
+6. **O elo do wireplumber fica para a bancada**, não para o código: a cura tira o
+   órfão, que o diário mostra ser necessário ao travamento.
 
-## §2 — As perguntas do ESTUDO, nesta ordem
+## §I — A implementação, por símbolo
 
-1. **Reproduzir fora da sessão dela.** Na instância isolada: um nó igual ao do
-   Hefesto, um `pw-record` lendo o monitor com o `stdout` num pipe que ninguém lê
-   (cheio), SIGTERM nele, e o nó descarregado. O `pw-record` morre? O `pactl info`
-   da instância continua respondendo? O mesmo com o pipe fechado antes do SIGTERM,
-   e com o gravador morto antes do descarregamento. Tempos medidos.
-2. **Separar o microfone.** O `module-pipe-source` do microfone com a ponta de
-   escrita fechada («Pipe quebrado») e descarregado: trava sozinho, ou só junto do
-   gravador?
-3. **O inventário.** Todo processo que o daemon abre contra o servidor de som, com
-   o endereço de quem sobe e de quem derruba, e se a derrubada pode deixar um
-   cliente preso. Inclua o caminho da morte do daemon, que o `lifecycle.py` cita
-   (cada ponte segura um fd de hidraw e um `pw-record`).
-4. **A cura, a posse real e as réguas.** A ordem de desligar, o que fecha o pipe,
-   quanto espera e quando mata; a posse arquivo por arquivo, dizendo se precisa do
-   `lifecycle.py` (hoje da MODO-DE-CONEXAO-01); uma régua com um processo dublê que
-   ignora SIGTERM preso num `write`, e a mordida de cada uma.
+1. **`integrations/filho_de_som.py` (novo):** lançar com `PR_SET_PDEATHSIG` e
+   derrubar um processo leitor de pipe nesta ordem: `terminate`; se quem lê já
+   parou, fechar o `stdout`; `wait` com prazo; `kill` e `wait` se o prazo passar.
+   Devolve como morreu (código de saída e milissegundos) para o diário.
+2. **`PonteDeSomPorRadio.descer`** (`integrations/alto_falante_bt.py`), a ordem
+   medida: `parar.set()` → `terminate` do gravador → `join` da thread com
+   `esperar_s` → se o laço já saiu, fechar o `stdout` (se ainda vive, NÃO fechar:
+   o fd seria reaproveitado debaixo do `read` dele, o cuidado que a docstring já
+   registra para o hidraw) → `wait` → `kill` → `join` de novo → só então fechar o
+   `stdout`. Registrar no diário como o gravador morreu.
+3. **`fonte_do_monitor_do_no`:** lançar pelo dono único (com PDEATHSIG) e, no ramo
+   sem `stdout`, derrubar o processo antes de devolver.
+4. **`AltoFalanteSubsystem`** (`daemon/subsystems/alto_falante.py`): no `stop`,
+   parar a reconciliação, descer as pontes (fora do event loop, colhendo os
+   gravadores) e **só então** `gerenciador.parar()`; em `_casar_as_pontes`, o ramo
+   em que `subir()` falha e o da fonte sem `stdout` também derrubam o processo.
+   A ordem de hoje na queda (pontes antes de `gerenciador.reconciliar`) fica, e a
+   régua a pina.
+5. **`integrations/canal_do_microfone.py`:** `_lancar_processo` pelo dono único;
+   `_Alimentador.parar` na ordem do §I.1, sem esperar 2 s quando o bombeador já
+   morreu.
+6. **`integrations/nivel_do_microfone.py`:** só o import do dono único, com
+   `_morrer_com_o_pai` reexportado.
+7. Nenhum `import` novo no topo dos módulos citados por linha nas planilhas:
+   import tardio dentro da função, como os módulos já fazem. Conferir com
+   `scripts/validar-citacoes-de-linha.py --all`.
+
+## §V — A prova
+
+**As réguas, todas com dublê de processo e sem servidor de som**, em
+`tests/unit/test_o_gravador_da_ponte_morre_antes_do_no.py`. O dublê é Python e
+reproduz o `pw-record` medido: SIGTERM bloqueado, SIGPIPE no padrão, escrevendo até
+o pipe encher, com espera por `/proc/<pid>/wchan == anon_pipe_write`. O molde que
+já morde contra a árvore é o roteiro da régua prévia do estudo.
+
+| régua | afirma | mordida |
+| --- | --- | --- |
+| R1 | o gravador preso morre no `descer`, por SIGPIPE, em até 200 ms | o `descer` de hoje deixa o dublê vivo |
+| R2 | o teimoso (ignora SIGPIPE) morre por KILL em até 1,5 s | tirar o `kill` da cura deixa vivo |
+| R3 | na queda, o gravador já foi colhido quando o nó sai | trocar a ordem entre pontes e `gerenciador.reconciliar` |
+| R4 | no `stop`, o gravador é colhido antes de `gerenciador.parar()` | o `stop` de hoje reprova |
+| R5 | o filho ocioso morre com o pai morto por SIGKILL | tirar o PDEATHSIG deixa o filho com `ppid 1` |
+| R6 | o alimentador do cabo com o bombeador morto é colhido em menos de 100 ms | a ordem de hoje leva 2 s |
+
+**O ensaio fora da suíte (recomendado, não obrigatório):** o roteiro do produto do
+estudo, contra o código curado, na instância isolada do estudo, com as mesmas
+travas; o gravador tem de ser colhido antes de o nó sair e nenhum cliente fica
+esperando. Nunca contra a sessão dela.
+
+`tests/unit/test_o_medidor_de_som_nao_vaza_orfao.py` continua verde. Os portões até
+todos verdes.
 
 ## §B — O que só o aparelho responde (vai para a MESA-DE-QUATRO-01)
 
@@ -112,7 +186,14 @@ pé e um jogo tocando som. Desligar o controle segurando o PS, três vezes, com
 `timeout 3 pactl info` em laço noutro terminal: o servidor responde em todas? A
 Steam continua com janela? E o mesmo com o microfone do controle ligado.
 
+**Se travar de novo ANTES de a cura estar instalada** (gesto de quem coordena, na
+máquina dela): sem reiniciar serviço nenhum, achar o filho do daemon em
+`anon_pipe_write` (`ps -o pid,wchan:22,cmd --ppid <pid do daemon>`), matá-lo por
+PID conferido e cronometrar `timeout 3 pactl info`. Voltar no mesmo segundo prova
+que o órfão segura a sessão; o `journalctl --user -u wireplumber` diz se o elo é o
+wireplumber.
+
 ## §0 — O processo
 
-ESTUDO (só leitura na árvore, experimento só na instância isolada) → quem coordena
-escreve aqui a rota e a posse → IMPLEMENTA → VALIDA/CORRIGE.
+ESTUDO (feito, 13/09) → quem coordena escreveu a rota e a posse (§D, §I, §V) →
+IMPLEMENTA → VALIDA/CORRIGE.
