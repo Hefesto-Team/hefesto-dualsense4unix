@@ -589,7 +589,8 @@ def _dizer(frase: str, **campos: Any) -> dict[str, Any]:
         _CARONA_PENDENTE = ""
     _anotar(frase)
     # A TIRA NÃO FALA MAIS — 13/09/2026. Pedido dela, duas vezes:
-    # "essa frase de interface que aparece na aba perfil nao devia aparecer nunca"  # (noqa-acento)
+    # "essa frase de interface que aparece na aba perfil
+    #  nao devia aparecer nunca"  # (noqa-acento) citação literal dela
     # "essas frases de status que aparecem no rodapé isso não deveria estar aparecendo"
     # A frase continua sendo montada — é o relato do que o gesto fez, e as
     # réguas o conferem —, mas viaja em `relato`, que o `pintar` não lê, e o
