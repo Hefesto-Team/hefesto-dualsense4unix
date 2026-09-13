@@ -896,20 +896,28 @@ CSS = """
   /* A FAIXA FINAL VOLTOU AO `flex` DO `topo.html` — 30/08/2026, e são DOIS
      pedidos dela numa cura só: *"o reconectar controles vai pra direita enquanto
      o 'Vai mudar para Conexão Nativa (Sony)…' extendo pra chegar ao reconectar
-     controles"*.
-
-     A grade de duas colunas que vivia aqui existia para casar a borda do botão
-     com a barra vertical da coluna de avisos. Essa barra deixou de existir (a
-     Atenção deitou), e com ela o motivo. O `topo.html` já tem exatamente o que
-     ela quer, e estava morto sob esta redefinição:
+     controles"*. A base continua sendo a do `topo.html`:
          .faixa-final{display:flex;align-items:center;gap:12px}
-         .faixa-final .pendente{flex:1}
-     O `flex:1` da barra tracejada é o "estende"; a ausência de segunda coluna é
-     o "vai pra direita" — o botão passa a terminar no `right` do quadro, no
-     mesmo x em que terminam a fileira de cartões e a fileira de modos.
-     Medido: a barra vai de 853 para 940px e o botão de x=1271..1431 para
-     x=1356..1516. */
+
+     O LUGAR DO BOTÃO NÃO DEPENDE DE VIZINHO — 13/09/2026, JOGAR-A-FAIXA-QUE-PULA-01.
+     Duas fotos dela no mesmo minuto: *"botoes que mudam de lugar direto"*.  (noqa-acento: citação literal dela)
+     MEDIDO NO PILOTO (WebKit), em 1212, 1228, 1282 e 1300 de largura: parado
+     60 s o botão não se move, e acender ou apagar a pendência também não. O
+     que o empurrava era o recibo do Reconectar pousando NESTA fileira vestido
+     de `.pendente`: 223 px para a esquerda com a frase curta, 301 com a longa,
+     e até a outra ponta com três frases — e INVISÍVEL, porque a faixa sem `.ha`
+     esconde tudo o que veste `.pendente`. O nó saiu do MIOLO. As três regras
+     abaixo tiram a dependência que sobrava: a caixa tracejada cede o espaço
+     inteiro sem nunca empurrar; o botão não encolhe nem quebra linha, vem por
+     último e encosta à direita pela margem automática; e o topo dele não desce
+     se um vizinho mais alto entrar na fileira.
+     O SELETOR É `.btn` E NÃO O `data-gesto`: o endereço do botão escrito na
+     folha conta como segunda ocorrência para as duas réguas que exigem o
+     Reconectar exatamente UMA vez na página — medido na primeira corrida. */
   .faixa-final{border-top:1px solid var(--rot-linha);padding-top:6px;margin-top:8px}
+  .faixa-final .pendente{flex:1 1 0;min-width:0;overflow:hidden}
+  .faixa-final > .btn{flex:none;white-space:nowrap;margin-left:auto;
+                      order:1;align-self:flex-start}
   /* A ATENÇÃO SAIU — 07/09/2026, ordem dela: *"em jogar remover essa seção do
      atenção, nenhum aviso esse — deixar só o reconectar controles."*
      Aqui moravam as seis regras da `.col-atencao`: a faixa deitada de 30/08
@@ -1744,28 +1752,14 @@ MIOLO = f'''
             <span>Vai mudar para <b data-campo="pendente-alvo">{PENDENTE}</b> quando você clicar em <b>Aplicar</b></span>
           </div>
           <button class="btn" data-gesto="reconectar">Reconectar controles</button>
-          <!-- A FAIXA DO RECIBO — JOGAR-02 §3, 09/09/2026, e ela é a mesma
-               peça que a `05-vibracao` ganhou com a 05-Q4 dela: *"a frase entra
-               na faixa que já existe (…) nada se mexe dentro das colunas"*.
-
-               O DEFEITO QUE ELA MATA está no print dela de 08/09: o recibo do
-               «Reconectar Controles» pousava no CARTÃO do controle escolhido e
-               **cobria a identidade do P1 por seis segundos** — o desenho, o
-               nome, o plástico, o transporte e a bateria sumiam. *Um recado
-               que apaga a identidade tira a resposta da pergunta que ele veio
-               responder.*
-
-               SÓ O SUCESSO MUDA DE LUGAR, e é o que o valor `sucesso` declara:
-               a RECUSA continua no cartão, laranja, por 30 s — ela é sobre
-               AQUELE controle, e ali é onde ela pertence. Um endereço que
-               engolisse os dois mudaria a recusa junto, que a §3 não pede.
-
-               A DECLARAÇÃO É DA PÁGINA e não do piloto, pela mesma razão que a
-               05 escreveu: a faixa só existe onde a página a desenha, e cravar
-               um seletor desta aba dentro do piloto único seria a dívida que o
-               `.fita` de dois donos já cobra na `07-lancadores`. -->
-          <div class="recibo-do-reconectar" data-hef-recados="sucesso"
-               data-hef-recado-classe="pendente"></div>
+          <!-- A FAIXA DO RECIBO SAIU — 13/09/2026, JOGAR-A-FAIXA-QUE-PULA-01.
+               Ela nasceu na JOGAR-02 §3 (09/09) para o recibo do Reconectar
+               deixar de cobrir a identidade do P1 no cartão. Medido no piloto:
+               o recado pousava AQUI vestido de `.pendente`, invisível (a faixa
+               sem `.ha` o esconde) e ocupando espaço — era ele que empurrava o
+               botão 223 px, 301 px ou até a outra ponta. Com a TELA-CALADA-01
+               nenhum recado de sucesso é depositado; a recusa continua no
+               cartão, que é onde ela sempre morou. -->
         </div>
 
       </div>
@@ -1939,7 +1933,7 @@ LEGENDA = f'''<div class="nota">
       teria custado um erro na régua da aba que <b>é a referência das outras nove</b>. O que
       está lá é <code>:has()</code>, que não é mecanismo novo aqui: o esqueleto já abre e fecha
       as seções da <b>Conexões</b> com ele.</li>
-    <li><b>A linha laranja tracejada</b> é a prova de que o Aplicar ainda deve. Ela só aparece com escolha pendente — e o espaço dela é reservado, para a tela não pular.</li>
+    <li><b>A linha laranja tracejada não acende mais na tela</b> (13/09): o clique troca o modo na hora e o chip mostra a escolha. O espaço dela continua reservado, e o <b>Reconectar controles</b> fica encostado à direita, em uma linha, qualquer que seja a largura.</li>
     <li><b>A carga de cada bateria é o único dado inventado desta aba</b> — 100, 64, 41 e 87%. Bateria é estado do momento, e o mockup mostra um momento; todo o resto (cor, nome, transporte, jogador, desenho) sai de arquivo.</li>
     <li><b>O recibo do rodapé nomeia o perfil</b> — é onde a mudança vai cair, que era a informação que faltava e te custou semanas.</li>
   </ul>
