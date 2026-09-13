@@ -424,15 +424,19 @@ def secao_do_modo(
     `profiles.manager.secao_do_modo_com_o_caminho`, a mesma que o PS + R3 usa.
     ``flavor`` continua aqui para quem escolhe MÁSCARA por esta porta.
 
-    A REGRA NÃO É MINHA e não se digita duas vezes — ela é a de
-    `profiles_actions._mode_section_from_editor`, que é o dono na janela GTK.
-    A aba Perfis também a aplicava, pelo quadro «Modo», até 11/09/2026:
+    A REGRA NÃO É MINHA e não se digita duas vezes — o dono é
+    `manager.secao_do_modo_com_o_caminho`. FATO SUBSTITUÍDO — 13/09/2026: aqui
+    se dizia que o dono era `profiles_actions._mode_section_from_editor`, o da
+    janela GTK, e as duas cópias deixaram de concordar quando a poda caiu desta
+    porta (MODO-DE-CONEXAO-01, na validação). A da janela GTK ainda poda. A aba
+    Perfis também aplicava a regra, pelo quadro «Modo», até 11/09/2026:
 
     * ``"none"`` → ``None``: *"a seção é REMOVIDA do perfil salvo"*. Um perfil
       sem `mode` não mexe no modo do sistema quando entra;
     * ``gamepad_flavor`` só VALE com ``kind == "gamepad"``, e nos outros modos
       fica como estava: a máscara não é do modo. A poda *"JSON limpo"* caiu em
-      13/09 (MODO-DE-CONEXAO-01, `manager.secao_do_modo_com_o_caminho`).
+      13/09: com o PS + R3 gravando a cada aperto, a volta pela Navegação
+      apagava a máscara padrão do perfil.
 
     **A MÁSCARA NUNCA É INVENTADA, e é a cicatriz de ESCOLHA-DELA-VENCE-01/E1:**
     havia um ``or "xbox"`` no Salvar da janela estável, e bastava salvar um
@@ -441,7 +445,7 @@ def secao_do_modo(
     máscara não passa a exigir uma.
 
     O `ProfileModeConfig` É RECONSTRUÍDO e não `model_copy`ado, pelo motivo
-    escrito em `profiles/manager.py:1999`: `model_copy` do pydantic v2 não
+    escrito em `manager.secao_do_modo_com_o_caminho`: `model_copy` do pydantic v2 não
     revalida, e um `kind` fora da faixa viraria um arquivo que o próximo `load`
     recusa — o perfil dela deixando de abrir por causa de um clique.
     """
