@@ -103,7 +103,7 @@ portões verdes e nenhum botão novo:
 | [RESTOS-DA-ONDA-DOIS-01](2026-09-13-RESTOS-DA-ONDA-DOIS-01-o-alto-falante-sem-endereco-o-touchpad-na-troca-a-varredura-sem-leitor-e-o-numero-do-parar.md) | a guarda do alto-falante que nunca acendia, a marca do touchpad na troca, a varredura sem leitor na 07, o «os 2» do Parar | 3 |
 | [SENSORES-NO-JOGO-03](2026-09-13-SENSORES-NO-JOGO-03-o-fato-do-zero-sai-dos-lugares-que-ficaram.md) | o fato do zero sai dos oito lugares fora da posse da 02 | 3 |
 | [CITACOES-DAS-PLANILHAS-01](2026-09-13-CITACOES-DAS-PLANILHAS-01-os-enderecos-que-a-leva-deslocou.md) | as citações de linha das planilhas que a leva deslocou | 3; quem coordena roda o roteiro de novo depois da costura |
-| [MODO-DE-CONEXAO-01](2026-09-13-MODO-DE-CONEXAO-01-o-degrau-xbox-que-diz-aplicado-e-nao-vale-e-o-texto-que-e-da-mascara.md) | pedido dela de 13/09, à tarde: o modo da aba Jogar diz «aplicado» e não vale, e o texto do Xbox é o da máscara | estudo em paralelo à onda 3; implementa depois |
+| [MODO-DE-CONEXAO-01](2026-09-13-MODO-DE-CONEXAO-01-o-degrau-xbox-que-diz-aplicado-e-nao-vale-e-o-texto-que-e-da-mascara.md) | pedido dela de 13/09, à tarde: o modo da aba Jogar diz «aplicado» e não vale, e o texto do Xbox é o da máscara; e a regra dela, minutos depois: o modo é a base (o chip e o PS + R3), a máscara vem por cima, os dois valem com o jogo aberto e o PS + R3 grava no perfil | junto com a onda 3, por ordem dela: estudo → implementa → valida |
 | TELA-CALADA-04 · PERFIS-TIRA-BUSCA-ATIVO-01 | — | absorvidas |
 | FONE-01 | — | caducou: pediria deslizante novo |
 | MESA-DE-QUATRO-01 · LUZ-NO-RADIO-01 · OS-GESTOS-QUE-SO-ELA-PODE-FAZER | as provas de aparelho de toda a leva | bancada, com ela |

@@ -32,6 +32,17 @@ propósito, porque foi a mistura das duas que produziu a repetição de hoje.
 
 ---
 
+## 13/09/2026
+
+Ela apontou que o modo da aba Jogar diz «aplicado» e não muda, e que o texto do
+«Xbox» é o da máscara. Com o estudo já em voo, deu a regra.
+
+| data | o que ela decidiu | verbatim | prova |
+| --- | --- | --- | --- |
+| 13/09 | **O MODO é a base, e o PS + R3 é o mesmo modo que o chip.** A MÁSCARA vem por cima, independente do modo: é como o jogo vê a entrada. Os dois valem com o jogo aberto, e o que o PS + R3 escolhe fica gravado no perfil | *"o modo é base (ele o ps + r3) aí ap´os o modo de conexão, independente do escolhido anteriormente temos a máscara que é como o jogo se apresenta em termos de inputs apesar do modo de conexão escolhido."* · *"eles precisam funcionar durante o jogo tá bom?"* · *"inclusive o ps +r3 e isso fica setado no perfil"* <!-- noqa-acento: citação literal dela --> | [MODO-DE-CONEXAO-01](sprints/2026-09-13-MODO-DE-CONEXAO-01-o-degrau-xbox-que-diz-aplicado-e-nao-vale-e-o-texto-que-e-da-mascara.md), onde a regra e a cura moram |
+
+---
+
 ## 08/09/2026
 
 Ela abriu o produto INSTALADO, com os quatro DualSense na mesa (P1/P2 no cabo,

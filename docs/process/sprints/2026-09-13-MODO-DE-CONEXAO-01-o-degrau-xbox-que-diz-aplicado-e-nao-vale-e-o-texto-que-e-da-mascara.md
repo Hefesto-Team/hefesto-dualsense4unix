@@ -26,6 +26,30 @@ Chegou com a onda 3 da [terceira lista](2026-09-13-A-TERCEIRA-LISTA-DELA-INDICE.
 em voo, e segue o processo dela (§0 do índice): esta sprint nasce antes de
 qualquer agente, e são no máximo três agentes.
 
+## A regra dela — 13/09/2026, minutos depois (DECIDIDA)
+
+Três mensagens seguidas, com o estudo já em voo:
+
+> *"o modo é base (ele o ps + r3) aí ap´os o modo de conexão, independente do escolhido anteriormente temos a máscara que é como o jogo se apresenta em termos de inputs apesar do modo de conexão escolhido. pode executar ela enquanto os demais trampam ali."* <!-- noqa-acento: citação literal dela -->
+>
+> *"eles precisam funcionar durante o jogo tá bom?"*
+>
+> *"inclusive o ps +r3 e isso fica setado no perfil"*
+
+A regra que sai delas, e o estudo não escolhe mais:
+
+1. **O MODO é a base:** o caminho de conexão (Sony DualSense · Xbox · Steam
+   Input · Navegação). O chip e o **PS + R3** são o MESMO modo, um pela tela e o
+   outro pelo controle.
+2. **A MÁSCARA vem por cima, independente do modo:** é como o jogo vê a
+   entrada, qualquer que seja o modo. O chip de modo não escreve nem lê a
+   máscara, e o texto do modo não fala de como o jogo desenha os botões.
+3. **Os dois valem DURANTE O JOGO**, com o jogo aberto, inclusive o PS + R3.
+4. **O que o PS + R3 escolhe fica gravado no perfil**, como o clique no chip.
+
+E a ordem de execução também é dela: esta sprint roda **junto com a onda 3**,
+não depois.
+
 ## §E — O que quem coordena já leu e mediu (só leitura)
 
 1. **O diário da janela instalada** (`~/.local/state/hefesto-dualsense4unix/interface.log`,
@@ -53,29 +77,39 @@ qualquer agente, e são no máximo três agentes.
    Abre as seções de Modo, Steam Input, Xbox, Sony DualSense, Point And Click.
    (…) E em Baixo temos a parte das Mascaras dos Controles.»* <!-- noqa-acento: citação literal dela -->
    Na tela dela, modo e máscara são duas camadas.
+7. **A tela e o painel confessam o defeito na própria prosa:** a dica do Estilo
+   Navegação em `aba01.py` e o cabeçalho de `painel.py` dizem que escolher
+   DualSense, Xbox ou Steam Input «não muda nada no daemon — quem muda é o PS +
+   R3». O chip e o atalho, que pela regra dela são o mesmo modo, hoje são dois
+   caminhos diferentes. O atalho mora em `daemon/subsystems/hotkey.py`
+   (`build_next_bridge_callback`) e percorre `integrations/ponte_escada.ESCADA`,
+   cujo degrau «Xbox» é `Ponte(gamepad, xbox)`: um degrau de modo que carrega
+   uma máscara dentro.
 
 ## §2 — As perguntas do ESTUDO, nesta ordem
 
-1. **O que o clique muda de verdade.** Com dublê de perfil e de daemon, sem
-   tocar no dela: o vpad nasce Xbox com a máscara do cartão escolhida? E sem
-   ela? O mesmo para «Sony DualSense», «Steam Input» e «Navegação».
-2. **O que o degrau É, frente à máscara do cartão, pelas decisões registradas.**
-   São elas:
+1. **O que o clique e o atalho mudam de verdade.** Com dublê de perfil e de
+   daemon, sem tocar no dela: o que o chip muda, com e sem máscara escolhida no
+   cartão; o que o PS + R3 muda, e se hoje grava no perfil; e se cada troca —
+   chip, atalho e máscara — vale com o vpad já aberto por um jogo.
+2. **O que hoje contradiz a regra dela**, com endereço: onde o modo lê ou
+   escreve máscara (em especial o degrau «Xbox» da escada), e o que o modo
+   «Xbox» passa a ser como caminho de conexão com a máscara separada. As
+   decisões antigas que concordam ou caducam ganham nota datada, não somem:
    * a D-5 de 14–15/08 (máscara do jogador, com a do jogo como padrão herdado);
    * a de 03/09, «É uma máscara por controle»;
    * a MASCARA-NO-PERFIL-01;
    * a de 31/08, citada acima;
    * as decisões da aba Jogar de 04/09.
-
-   Escrever a regra que decide entre três: o degrau vale sobre a máscara do
-   cartão; a máscara do cartão vale sobre o degrau; ou o degrau escreve a
-   máscara dos cartões.
-3. **O texto de cada degrau:** o que o MODO muda (o caminho que o Hefesto usa e a
-   ordem em que tenta), sem repetir o que a máscara diz. Nenhuma frase de aviso,
-   e nada que as decisões e o produto não sustentem.
-4. **A cura, a posse real e as réguas:** uma régua clica o degrau com a máscara
-   do cartão escolhida e confere o que o jogo recebe; outra impede o texto da
-   máscara na dica do modo.
+3. **O texto de cada modo:** o caminho que o Hefesto usa, sem repetir o que a
+   máscara diz. Nenhuma frase de aviso, e nada que as decisões e o produto não
+   sustentem.
+4. **A cura, a posse real e as réguas:** a cura cobre o chip, o PS + R3, a
+   gravação no perfil e a troca com o jogo aberto. Uma régua troca o modo com
+   a máscara do cartão escolhida e confere que a máscara não mudou; outra
+   confere que o PS + R3 grava no perfil; outra impede o texto da máscara na
+   dica do modo. A posse cresce para o daemon e o perfil; o estudo diz arquivo
+   por arquivo e aponta colisão com a onda 3.
 
 ## §0 — O processo
 
