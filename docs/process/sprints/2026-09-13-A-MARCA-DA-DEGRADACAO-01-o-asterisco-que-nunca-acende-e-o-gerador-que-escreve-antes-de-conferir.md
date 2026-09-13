@@ -1,6 +1,6 @@
 ---
 sprint: A-MARCA-DA-DEGRADACAO-01
-estado: aberta
+estado: feita
 onda: A-TERCEIRA-LISTA-DELA
 posse:
   A-MARCA-DA-DEGRADACAO-01:
@@ -30,6 +30,12 @@ nao_toca:
 ---
 
 # A-MARCA-DA-DEGRADACAO-01 — o asterisco que nunca acende, e o gerador que escreve antes de conferir
+
+> **ESTADO 2026-09-13: feita** — [entrega](../agentes/2026-09-13/A-MARCA-DA-DEGRADACAO-01-opus.md):
+> a marca saiu das abas 01 e 02 (gerador, folha, pacote e `pacotes.degradacao_de`),
+> e os dez geradores conferem numa bancada provisória antes de escrever no `mockup/`.
+> Espera a VALIDA/CORRIGE; as linhas 32 e 54 de `docs/data/paridade-gtk-html.csv`
+> ficaram com o sinal que saiu, e são de quem é dono da planilha.
 
 Achados da validação da RESTOS-DA-ONDA-DOIS-01, na onda 3 da
 [terceira lista](2026-09-13-A-TERCEIRA-LISTA-DELA-INDICE.md). Entra **depois da
