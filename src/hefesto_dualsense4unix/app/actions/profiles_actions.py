@@ -4733,7 +4733,7 @@ class ProfilesActionsMixin(CaronaDoWrapperMixin):
 #
 #  * NENHUM caminho vivo passa por aquela linha. Zero classes de `src/` herdam
 #    `ProfilesActionsMixin`; a aba Perfis web toma emprestado UM método por um
-#    `SimpleNamespace` de um atributo só (`interface/pacotes/a10_perfis.py:3011`)
+#    `SimpleNamespace` de um atributo só (`interface/pacotes/a10_perfis.py:novo`)
 #    e nunca compõe o mixin.
 #  * A MÁQUINA INTEIRA SAIU: `_compute_draft_from_active_profile`,
 #    `EstadoIndisponivelError`, `_draft_reload_inflight` e `_draft_reload_for`
