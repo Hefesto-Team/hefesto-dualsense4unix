@@ -272,6 +272,11 @@ da branch. As duas abas saíram com o **mesmo md5** antes e depois, e lidas elas
 mostram os quatro cartões da 01 e os cards da 02 sem asterisco nenhum: sem
 `title` o `<sup>` nascia `display:none`.
 
+**Os portões**, `bash scripts/portoes.sh` completo, duas vezes: no `460e3e4a`
+do implementador e depois dos dois commits desta validação. Nas duas, **59 de
+60 verdes**, e o único vermelho é `paridade-gtk-html` com exatamente os dois
+`sinal-sumiu` das linhas 32 e 54 da planilha, que é `nao_toca`.
+
 ### Corrigido
 
 Commit `2e500dd0`:
