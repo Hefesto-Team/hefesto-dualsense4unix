@@ -299,3 +299,6 @@ piloto só vale com a foto lida.**
 
 Sete réguas pontuais (as duas novas, a ajustada e quatro vizinhas): 81 passed.
 `ruff check src/ tests/`: limpo. `check_o_desenho_aprovado.py`: OK.
+`bash scripts/portoes.sh` completo, depois do `git add -A`, sobre o commit das
+correções (`8584eabd`): **TODOS VERDES — 60 portões**. Refeito sobre esta
+seção antes do commit final.
