@@ -55,7 +55,7 @@ AS TRÊS CURAS, e cada uma morde sozinha:
 4. **o chip do lugar vazio guarda o vão** — volte a regra dele em `aba01.py`
    para `display:none`, regere e publique: as cenas dos lugares apagados e o
    clique no chip escondido reprovam;
-5. **a frase da mesa pousa por cima da fileira**, fora do fluxo — tire o
+5. **a frase da mesa pousa por cima dos lugares apagados**, fora do fluxo — tire o
    `position:absolute` de `.mesa-notas`: a cena da lista vazia reprova, com o
    botão 26 px abaixo e a frase fora da fileira;
 6. **o tique mudo repinta o último estado bom por uma folga medida**
