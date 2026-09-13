@@ -79,16 +79,16 @@ tem, sem tocar arquivo de fora.
 FATO SUBSTITUÍDO — 02/09/2026, corretivo. Aqui estava escrito que **a frase de
 recusa NÃO CHEGA À TELA DELA**, e que toda frase deste arquivo era escrita para
 um dia futuro. **Isso caducou no mesmo dia:** o piloto ganhou
-`_recusou_dizendo` (`hefesto_vivo.py:3107`), e o `except` de `trabalhar()` põe a
+`_recusou_dizendo` (`hefesto_vivo.py:3249`), e o `except` de `trabalhar()` põe a
 frase no cartão pelo `idle_add`, na hora do clique e não no tique seguinte.
 
-O QUE CONTINUA VALENDO, e é o que separa os dois erros: **só o `RuntimeError`
-fala com ela.** `_recusou_dizendo` devolve `False` para tudo o que não for
-`RuntimeError`, e a razão é do contrato — `ValueError` é *clique inválido*, e as
-frases que os pacotes escrevem nele citam nome de arquivo e de constante, que é
-ruído no cartão de quem está com o controle na mão. Logo uma opção de VERDADE
-que caia em `ValueError` é clique morto **e mudo**, e é exatamente o defeito que
-este corretivo fechou.
+O QUE MUDOU EM 13/09/2026 (FRASES-E-DICAS-01): **nenhuma frase de recusa fala
+com ela na tela.** `RuntimeError` e `ValueError` vão ao mesmo diário, e o botão
+pisca `hef-recusou`; o `desfechos` guarda a classe da exceção para o relato. A
+distinção entre *clique inválido* e *o produto recusou* continua valendo para
+quem lê o diário, e uma opção de VERDADE que caia em `ValueError` segue sendo
+defeito: ela pisca a recusa para uma escolha que devia valer, que é o que este
+corretivo fechou.
 
 OS DOIS `return` MUDOS MORRERAM — 02/09/2026, corretivo. O "Guardar" e o "Voltar
 ao padrão" saíam sem gravar, sem chamar e **sem uma palavra** quando não havia o
@@ -114,7 +114,7 @@ mesmo tempo, medidas contra a página que o produto renderiza:
 
 * das TRÊS opções que a tela dela oferece, DUAS viraram clique morto — e uma
   delas era a única forma de desligar o teclado por esta aba. Morto **e mudo,
-  por contrato**: `_recusou_dizendo` (`hefesto_vivo.py:3107`) leva à tela a
+  por contrato**: `_recusou_dizendo` (`hefesto_vivo.py:3249`) levava à tela a
   frase do `RuntimeError` e NÃO a do `ValueError`, porque clique-inválido fala
   com quem programa. Transformar uma opção de verdade em clique-inválido é
   justamente pedir esse silêncio para o clique dela;
@@ -361,7 +361,7 @@ def _o_que_a_pagina_oferece() -> frozenset[str]:
     ABERTO e sem trocar de aba. O arquivo muda, o selo muda, o pacote passa a
     emitir a palavra nova — e o DOM carregado ainda é o antigo, então a escrita
     volta a ser descartada até o próximo carregamento. Trocar de aba já
-    recarrega (`hefesto_vivo.py:4571`), e reabrir também. Ler o DOM em vez do
+    recarrega (`hefesto_vivo.py:4441`, `_ir`), e reabrir também. Ler o DOM em vez do
     arquivo exigiria uma pergunta ao piloto que o `Contexto` não tem.
     """
     global _OFERTAS
@@ -2829,10 +2829,10 @@ def tecla_escrita(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | 
     trava; o `change` que vem depois a atualiza com o texto final.
 
     A RECUSA É `RuntimeError`, e não `ValueError`, de propósito: o
-    `_recusou_dizendo` do piloto (`hefesto_vivo.py:3107`) leva à tela a frase do
-    `RuntimeError` e cala a do `ValueError`, que é a linguagem de quem programa.
-    Uma combinação que ela digitou e o produto não sabe digitar é conversa com
-    ELA — tem de aparecer no cartão, em laranja.
+    `_recusou_dizendo` do piloto (`hefesto_vivo.py:3249`) guarda a classe da
+    exceção no relato, e `ValueError` é a linguagem de quem programa. Desde
+    13/09/2026 nenhuma das duas chega à tela: a combinação que ela digitou e o
+    produto não sabe digitar pisca a recusa no campo (FRASES-E-DICAS-01).
 
     E A ANTERIOR SOBREVIVE À RECUSA, sem ninguém a devolver: este gesto não
     escreve em disco, e ao recusar ele LARGA a trava daquele campo — no tique
