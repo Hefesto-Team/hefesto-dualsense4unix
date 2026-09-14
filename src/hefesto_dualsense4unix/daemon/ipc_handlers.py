@@ -5952,8 +5952,8 @@ class IpcHandlersMixin:
         POR QUE ESTE MÉTODO EXISTE. Em 25/07 o microfone da mantenedora estava
         mudo por TRÊS camadas empilhadas, e a aba Status dizia a verdade o
         tempo todo. Curadas as duas primeiras (o `mute:true` persistido por
-        rota no estado do WirePlumber e o perfil da placa preso no S/PDIF sem
-        sinal, ambas agora no `doctor --fix`), sobrou a terceira: o firmware do
+        rota no estado do WirePlumber e o perfil da placa preso no iec958 —
+        que capta —, ambas agora no `doctor --fix`), sobrou a terceira: o firmware do
         controle. O backend já tinha `set_microphone_mute` desde o
         AUDIO-OWNER-01, mas ele NÃO estava exposto em lugar nenhum — entre os
         31 métodos do IPC havia `speaker.set` e não havia `mic.set`. O único

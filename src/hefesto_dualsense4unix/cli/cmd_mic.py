@@ -29,8 +29,8 @@ diferentes, e cada cura revelava o de baixo. Este módulo agora alcança os trê
 1. **rota do WirePlumber** — `mute:true` persistido por ROTA de placa em
    `~/.local/state/wireplumber/default-routes`, restaurado a cada conexão sem
    nada no log. Cura: `scripts/doctor.sh --fix` (ou `--enable-mic` aqui);
-2. **perfil da placa** — preso em `input:iec958-stereo`, que é S/PDIF e não
-   carrega sinal, porque o WirePlumber marca a entrada analógica indisponível
+2. **perfil da placa** — preso em `input:iec958-stereo` (capta: o «sem sinal» de
+   25/07 era o mudo do firmware), porque o WirePlumber marca a analógica indisponível
    sem fone plugado. Mas o mic EMBUTIDO usa esse caminho (no mixer ALSA o
    controle de captura se chama `Headset`). Cura: `scripts/doctor.sh --fix`;
 3. **firmware do controle** — o mesmo estado que o botão físico de mic alterna
