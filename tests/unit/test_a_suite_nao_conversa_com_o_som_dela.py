@@ -262,8 +262,13 @@ def test_o_censo_acha_os_clientes_de_som_que_ja_se_sabe_que_existem() -> None:
 
 
 def test_todo_cliente_de_som_do_produto_e_dos_scripts_tem_duble() -> None:
-    """MORDIDA: tire `pw-link` de `BINARIOS_DO_SERVIDOR_DE_SOM` e este teste
-    reprova nomeando o binário."""
+    """MORDIDA: tire `pw-record` de `BINARIOS_DO_SERVIDOR_DE_SOM` e este teste
+    reprova nomeando o binário.
+
+    Tirar um nome que só aparece em PROSA não morde, e está certo: medido em
+    13/09/2026, `pw-link` só existe em docstring de `canal_do_microfone.py` —
+    nenhum argv o monta.
+    """
     usados = _nomes_em_src() | _nomes_em_scripts()
     sem_duble = sorted(usados - set(conftest.BINARIOS_DO_SERVIDOR_DE_SOM))
     assert not sem_duble, (
