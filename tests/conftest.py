@@ -2934,11 +2934,11 @@ def chamadas_ao_som_de_mentira() -> list[str]:
 def _texto_do_duble(nome: str, registro: Path) -> str:
     return (
         "#!/bin/sh\n"
-        "# SOM-DE-MENTIRA (tests/conftest.py): sob a suite, este nome nao chega ao\n"
+        "# SOM-DE-MENTIRA (tests/conftest.py): sob a suíte, este nome não chega ao\n"
         "# servidor de som de quem a roda. Anota o argv e sai como um servidor\n"
-        "# que nao atende.\n"
+        "# que não atende.\n"
         f"printf '%s\\n' \"{nome} $*\" >> {shlex.quote(str(registro))} 2>/dev/null\n"
-        f"echo 'SOM-DE-MENTIRA: {nome} sob teste nao chega ao servidor de som' >&2\n"
+        f"echo 'SOM-DE-MENTIRA: {nome} sob teste não chega ao servidor de som' >&2\n"
         "exit 1\n"
     )
 
