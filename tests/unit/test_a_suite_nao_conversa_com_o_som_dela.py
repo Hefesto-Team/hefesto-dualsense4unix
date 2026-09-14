@@ -125,7 +125,7 @@ def test_os_dois_rodar_do_som_nao_chegam_ao_servidor() -> None:
 
 
 def test_um_path_de_sistema_explicito_cai_no_duble() -> None:
-    """Oito arquivos da suíte passam `env={"PATH": "/usr/bin:/bin"}` a um
+    """Vinte arquivos da suíte escrevem `"PATH": "/usr/bin:/bin"` no `env` de um
     subprocesso — esse PATH não herda o desvio da sessão.
 
     MORDIDA: tire o `_instalar_popen_sem_som()` de `_armar_som_de_mentira`.
