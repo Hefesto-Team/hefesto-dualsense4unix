@@ -3534,8 +3534,7 @@ elif [[ "${WITH_WIREPLUMBER_FIX}" -eq 1 ]]; then
                 printf '      ./install.sh --with-wireplumber-disable-mic para tirá-lo de vez\n'
                 ;;
             3)
-                # MIC-PADRAO-NO-CABO-01: sem veredito aqui. A cura do doctor e a
-                # conferência do fim ainda vão rodar, e é a conferência que diz.
+                # MIC-PADRAO-NO-CABO-01: sem veredito aqui — a cura do doctor e a conferência do fim ainda vão rodar.
                 printf '      drop-in do WirePlumber instalado (o veredito do microfone sai no fim deste passo)\n'
                 ;;
             *)
@@ -3565,10 +3564,8 @@ fi
 # existia em `scripts/doctor.sh --fix-mic` e que NINGUÉM chamava: uma instalação
 # limpa entregava o microfone mudo com a cura pronta no repositório.
 #
-# FATO SUBSTITUÍDO (MIC-PADRAO-NO-CABO-01): aqui se lia que o
-# `input:iec958-stereo` do DualSense "é S/PDIF e não carrega sinal". O pico 0
-# de 25/07 foi medido com o mudo do firmware ativo; em 26/07 o iec958 gravou
-# pico 4606, e o analógico, `available: no`, nascia sem porta de captura.
+# FATO SUBSTITUÍDO (MIC-PADRAO-NO-CABO-01): o `input:iec958-stereo` do DualSense não é "S/PDIF sem sinal". O pico 0
+# de 25/07 foi com o mudo do firmware ativo; em 26/07 gravou pico 4606, e o analógico (`available: no`) nascia sem porta.
 #
 # As duas ações deste passo são complementares e não conflitam: o drop-in acima
 # decide QUEM é o microfone padrão do sistema; a cura abaixo garante que o
@@ -3621,18 +3618,23 @@ if command -v pactl >/dev/null 2>&1; then
             printf '      isto NÃO é microfone: o que Discord, chat de jogo ou gravador\n'
             printf '      captarem é o áudio que SAI do PC, não a voz de quem fala — e o\n'
             printf '      medidor de nível mostra sinal, então parece estar funcionando.\n'
-            printf '      Não há comando que resolva sem uma entrada de verdade: conecte o\n'
-            printf '      DualSense (no cabo), um microfone/headset no jack, ou uma webcam\n'
-            printf '      com microfone. A janela do Hefesto avisa enquanto durar.\n'
+            # MIC-PADRAO-NO-CABO-01 (validação): com uma entrada de porta usável NO AR, «conecte o DualSense» é receita que não resolve.
+            _no_ar="$(bash "${ROOT_DIR}/scripts/fix_wireplumber_default_source.sh" --melhor-fonte-elegivel 2>/dev/null || true)"
+            [[ -n "${_no_ar}" ]] || _no_ar="$(bash "${ROOT_DIR}/scripts/fix_wireplumber_default_source.sh" --fonte-se-sustenta "$(pactl list sources short 2>/dev/null | awk 'tolower($2) ~ /^alsa_input\..*dualsense/ { print $2; exit }')" 2>/dev/null || true)"
+            if [[ -n "${_no_ar}" ]]; then
+                printf '      Há uma entrada com porta usável no ar (%s), e o WirePlumber\n' "${_no_ar}"
+                printf '      ainda não a elegeu. A janela do Hefesto avisa enquanto durar.\n'
+            else
+                printf '      Não há comando que resolva sem uma entrada de verdade: conecte o\n'
+                printf '      DualSense (no cabo), um microfone/headset no jack, ou uma webcam\n'
+                printf '      com microfone. A janela do Hefesto avisa enquanto durar.\n'
+            fi
             ;;
         "")
             printf '      microfone: nenhuma fonte padrão eleita (PipeWire parado?)\n'
             ;;
         *)
-            # MIC-PADRAO-NO-CABO-01: «entrada de verdade» saía para QUALQUER nome
-            # que não fosse monitor — inclusive a onboard com as três portas
-            # `not available`, e o DualSense com outra entrada usável ao lado.
-            # O critério é o das duas consultas do wp-fix, que não escrevem nada.
+            # MIC-PADRAO-NO-CABO-01: «entrada de verdade» só com porta usável, e o DualSense só como a ÚNICA (consultas que não escrevem).
             _porta_usavel="$(bash "${ROOT_DIR}/scripts/fix_wireplumber_default_source.sh" --fonte-se-sustenta "${_fonte_agora}" 2>/dev/null || true)"
             if [[ -z "${_porta_usavel}" ]]; then
                 warn "o microfone padrão do sistema (${_fonte_agora}) não tem porta de captura usável — vai gravar silêncio"
@@ -3646,17 +3648,15 @@ if command -v pactl >/dev/null 2>&1; then
                         else
                             warn "o microfone padrão do sistema é o DualSense (${_fonte_agora}), mas há outra entrada com porta usável: ${_outra_entrada}"
                         fi
-                        unset _outra_entrada
                         ;;
                     *)
                         printf '      microfone padrão do sistema: %s (entrada de verdade)\n' "${_fonte_agora}"
                         ;;
                 esac
             fi
-            unset _porta_usavel
             ;;
     esac
-    unset _fonte_agora
+    unset _fonte_agora _no_ar _porta_usavel _outra_entrada
 fi
 
 # ---------------------------------------------------------------------------
