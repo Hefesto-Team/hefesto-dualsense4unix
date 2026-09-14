@@ -7,7 +7,7 @@ não pelo texto do conftest.
 
 O INVENTÁRIO QUE A MOTIVOU, medido em 13/09/2026 antes da cura, com espiões na
 frente do `PATH` e montados por cima de `/usr/bin`: 87 argv chegaram a um
-`pactl` de verdade, de 84 testes em 27 arquivos. Os 87 eram LEITURAS —
+`pactl` de verdade, em 27 arquivos. Os 87 eram LEITURAS —
 `list modules short` em todo boot de `Daemon`, `list sinks short` e
 `get-default-sink` na aba Controles —, e um deles era a régua que existia para
 provar que a leitura passava. O servidor de som dela travou duas vezes naquele

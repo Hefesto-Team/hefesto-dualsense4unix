@@ -2839,7 +2839,7 @@ def binario_do_venv(nome: str) -> Path | None:
 #
 # O INVENTÁRIO, antes desta cura, com espiões na frente do `PATH` e montados
 # por cima de `/usr/bin` (e os sockets de som escondidos): 87 argv chegaram a
-# um `pactl` sem dublê, de 84 testes em 27 arquivos — todos LEITURAS. Oitenta
+# um `pactl` sem dublê, em 27 arquivos — todos LEITURAS. Oitenta
 # eram o `pactl list modules short` que TODO boot de `Daemon` faz; o resto,
 # `list sinks short` e `get-default-sink` da aba Controles — e um deles era a
 # régua que existia para provar que a leitura passava.
