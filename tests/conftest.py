@@ -3060,6 +3060,8 @@ def _desviar_para_o_duble(argumentos: dict[str, Any], duble: Path) -> None:
             argumentos["executable"] = troca
         return
     programa = argumentos.get("args")
+    if programa is None:
+        return  # o `Popen` real reprova sem `args`, com a mensagem dele
     if isinstance(programa, (str, bytes, os.PathLike)):
         troca = _duble_no_lugar_de(programa, caminho, duble)
         if troca is not None:
