@@ -2853,8 +2853,8 @@ def binario_do_venv(nome: str) -> Path | None:
 #      argv em `chamadas.txt` e sai com rc=1, a resposta de um servidor que não
 #      atende. Pega o `shutil.which` do produto, todo subprocesso que herda o
 #      ambiente e os scripts de shell sob teste;
-#   2. o `Popen` — oito arquivos da suíte passam `env={"PATH": "/usr/bin:/bin"}`
-#      a um subprocesso, e esse PATH não herda nada. O `Popen.__init__` da
+#   2. o `Popen` — vinte arquivos da suíte escrevem `"PATH": "/usr/bin:/bin"` no
+#      `env` de um subprocesso, e esse PATH não herda nada. O `Popen.__init__` da
 #      sessão põe o dublê ANTES do primeiro diretório de sistema do PATH que o
 #      teste mandou, e troca pelo dublê o executável que resolveria num
 #      diretório de sistema. O dublê que o PRÓPRIO teste pôs antes do sistema

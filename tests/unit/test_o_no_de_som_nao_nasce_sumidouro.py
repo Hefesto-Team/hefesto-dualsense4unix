@@ -212,13 +212,42 @@ def test_a_suite_nao_carrega_modulo_de_som_no_pipewire_dela(
     A MORDIDA, e ela não toca no som dela: o segundo bloco devolve ao `_rodar`
     um dublê que ACEITA a escrita — o mundo sem a guarda — e o mesmo nó sobe.
     A única diferença entre os dois blocos é a fixture de sessão.
+
+    O ESPIÃO NO `subprocess.run` (validação da A-SUITE-NAO-PERGUNTA-AO-SOM-01,
+    14/09/2026). Com o dublê do SOM-DE-MENTIRA na sessão, um `load-module` que
+    escapasse da guarda também voltava `None` — o dublê responde rc=1 —, e o
+    primeiro bloco passava com a guarda do alto-falante ARRANCADA (medido: 37
+    verdes nos três arquivos que tocam a guarda). O espião responde como um
+    servidor que ACEITA, igual à régua do microfone em
+    `test_o_som_e_o_volume_respeitam_o_recuo.py`, e o veredito deixa de depender
+    do dublê e da máquina.
+
+    MORDIDA: em `_nenhum_modulo_de_som_de_verdade`, deixe o `alto_falante_bt`
+    sem o `_sem_escrever_no_som`, e o primeiro bloco reprova.
     """
+    import subprocess
+
     from hefesto_dualsense4unix.integrations import alto_falante_bt
+    from tests.conftest import _som_de_verdade
+
+    if _som_de_verdade():
+        pytest.skip("HEFESTO_SOM_DE_VERDADE=1: a guarda de escrita está desligada a pedido")
+
+    chegaram: list[list[str]] = []
+
+    def _run(argv: list[str], **_kw: object) -> subprocess.CompletedProcess[str]:
+        chegaram.append(list(argv))
+        return subprocess.CompletedProcess(argv, 0, stdout="123\n", stderr="")
+
+    monkeypatch.setattr(alto_falante_bt.subprocess, "run", _run)
+    monkeypatch.setattr(alto_falante_bt.shutil, "which", lambda _nome: "/usr/bin/pactl")
 
     # Com a guarda de pé (fixture `_nenhum_modulo_de_som_de_verdade`).
     no = alto_falante_bt.SinkVirtualPipeWire(uniq=_UNIQ)
     assert no.iniciar() is False
     assert no.module_id is None
+    escritas = [argv for argv in chegaram if "load-module" in argv]
+    assert escritas == [], f"o `load-module` passou pela guarda: {escritas}"
 
     # A cura ARRANCADA: um `_rodar` que aceita escrever, como seria sem ela.
     monkeypatch.setattr(alto_falante_bt, "_rodar", lambda argv: "123\n")
