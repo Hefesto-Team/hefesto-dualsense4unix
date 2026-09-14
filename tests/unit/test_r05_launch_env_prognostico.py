@@ -71,7 +71,9 @@ class TestPrognosticoDeBackend:
             backends=["uinput"],
             permite_uhid=True,
         )
-        assert "SDL_GAMECONTROLLER_IGNORE_DEVICES" not in env
+        # NOTA DATADA — PS-L3-MASCARA-01, 14/09/2026: o prognóstico conservador
+        # é o Edge 0df2 em uinput, e ele passou a esconder o físico também.
+        assert "SDL_GAMECONTROLLER_IGNORE_DEVICES" in env
         assert "conservador" in motivo
 
     def test_gate_vpad08_veta_o_prognostico(
@@ -88,7 +90,9 @@ class TestPrognosticoDeBackend:
             backends=["uinput"],
             permite_uhid=False,
         )
-        assert "SDL_GAMECONTROLLER_IGNORE_DEVICES" not in env
+        # NOTA DATADA — PS-L3-MASCARA-01, 14/09/2026: o veto continua (o motivo
+        # é conservador, nada de uhid), e o Edge em uinput esconde o físico.
+        assert "SDL_GAMECONTROLLER_IGNORE_DEVICES" in env
         assert "conservador" in motivo
 
     def test_mesmo_flavor_com_vpad_vivo_usa_os_backends_reais(self) -> None:

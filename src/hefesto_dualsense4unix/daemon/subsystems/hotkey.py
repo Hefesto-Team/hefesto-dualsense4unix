@@ -1063,8 +1063,7 @@ def start_hotkey_manager(daemon: DaemonProtocol) -> None:
         ps_long_press_ms=getattr(daemon.config, "ps_long_press_ms", 0),
         next_profile=DEFAULT_COMBO_NEXT,
         prev_profile=DEFAULT_COMBO_PREV,
-        # FEAT-HOTKEY-PONTE-CYCLE-01: PS+R3 = próxima ponte.
-        next_bridge=DEFAULT_COMBO_PONTE,
+        next_bridge=DEFAULT_COMBO_PONTE,  # FEAT-HOTKEY-PONTE-CYCLE-01: PS+R3; o PS+L3 é default
     )
     daemon._hotkey_manager = HotkeyManager(
         on_ps_solo=build_ps_solo_callback(daemon),
@@ -1072,6 +1071,7 @@ def start_hotkey_manager(daemon: DaemonProtocol) -> None:
         on_next=build_profile_cycle_callback(daemon, +1),
         on_prev=build_profile_cycle_callback(daemon, -1),
         on_next_bridge=build_next_bridge_callback(daemon),
+        on_next_mask=build_next_mask_callback(daemon),
         config=hotkey_config,
     )
     logger.info(
@@ -1079,7 +1079,7 @@ def start_hotkey_manager(daemon: DaemonProtocol) -> None:
         ps_button_action=daemon.config.ps_button_action,
         ps_long_press_ms=hotkey_config.ps_long_press_ms,
         next_prev_combos="ps+dpad_up / ps+dpad_down",
-        ponte_combo="ps+r3",
+        ponte_combo="ps+r3", mascara_combo="ps+l3",
     )
 
 
@@ -2439,6 +2439,165 @@ async def _conferir_quem_saiu_do_ar(daemon: DaemonProtocol, uniqs: list[str]) ->
         return []
 
 
+# ---------------------------------------------------------------------------
+# PS-L3-MASCARA-01 — o PS + L3 anda pelas MÁSCARAS (14/09/2026)
+# ---------------------------------------------------------------------------
+# Pedido dela, na grafia dela: *"preciso que o ps+ l3 funcione igual o ps /+ r3 que muda o
+# modo porém para as máscaras. a ideia é que eu nao precise fechar o jogo (noqa-acento)
+# pra ajustar ingame isso e continuar a jogar."* O MODO é a base (PS + R3); a MÁSCARA é
+# como o jogo reconhece o controle, por cima do modo (D-1309-O-MODO-E-A-BASE-E-A-
+# MASCARA-VEM-POR-CIMA). Os dois gestos são as duas fileiras da aba Jogar.
+
+#: A ordem dos chips do cartão na aba Jogar (`interface/monta.MASCARAS`). A
+#: régua confere que o ciclo cobre `external_mask.mascaras_validas()` inteiro:
+#: uma máscara nova não pode ficar fora do gesto sem ninguém ver.
+CICLO_DE_MASCARAS: tuple[str, ...] = ("dualsense", "xbox", "nintendo")
+
+#: A cor de cada máscara na lightbar, da mesma paleta dos modos (`CORES_DO_MODO`).
+#: DualSense e Xbox repetem a cor do modo de mesmo nome, para a barra dizer uma
+#: palavra só; o Nintendo Pro leva o `purple` #bd93f9, o acento da janela — o
+#: vermelho é do aviso de risco (`COR_AVISO_RISCO`).
+CORES_DA_MASCARA: dict[str, tuple[int, int, int]] = {
+    "dualsense": CORES_DO_MODO[PONTE_DUALSENSE],
+    "xbox": CORES_DO_MODO[PONTE_XBOX],
+    "nintendo": (189, 147, 249),
+}
+
+#: Os mesmos pulsos do PS + R3: "isto pode derrubar o controle dentro do jogo".
+_PULSOS_DE_RISCO: list[tuple[tuple[int, int, int], float]] = [
+    (COR_AVISO_RISCO, PULSO_SEG),
+    ((0, 0, 0), PULSO_SEG),
+    (COR_AVISO_RISCO, PULSO_SEG),
+    ((0, 0, 0), PULSO_SEG),
+]
+
+
+def _pulsos_de_falha() -> list[tuple[tuple[int, int, int], float]]:
+    """Os pulsos do "pedi e não consegui", lidos na hora (a régua zera o pulso)."""
+    return [
+        (COR_AVISO_RISCO, PULSO_SEG),
+        ((0, 0, 0), PULSO_SEG),
+        (COR_AVISO_RISCO, PULSO_SEG),
+        ((0, 0, 0), PULSO_SEG),
+        (COR_AVISO_RISCO, PULSO_SEG * 3),
+    ]
+
+
+def mascara_atual(daemon: DaemonProtocol) -> str:
+    """A máscara do jogador 1 AGORA: a que o vpad veste, ou a que ele vestiria.
+
+    Com o vpad de pé, é o `flavor` dele — a prova é o aparelho. Sem vpad (na
+    Navegação), é a do cartão herdando a da sessão (`external_mask.
+    mascara_efetiva`): a que o próximo vpad veste e a que a aba Jogar acende.
+    """
+    from hefesto_dualsense4unix.daemon.subsystems.external_mask import mascara_efetiva
+    from hefesto_dualsense4unix.daemon.subsystems.gamepad import primary_identity
+
+    vivo = getattr(getattr(daemon, "_gamepad_device", None), "flavor", None)
+    if isinstance(vivo, str) and vivo in CICLO_DE_MASCARAS:
+        return vivo
+    sessao = getattr(getattr(daemon, "config", None), "gamepad_flavor", None)
+    return mascara_efetiva(primary_identity(daemon), sessao)
+
+
+def proxima_mascara(atual: str) -> str:
+    """A máscara seguinte no ciclo, com volta. Desconhecida → a primeira."""
+    if atual not in CICLO_DE_MASCARAS:
+        return CICLO_DE_MASCARAS[0]
+    indice = CICLO_DE_MASCARAS.index(atual)
+    return CICLO_DE_MASCARAS[(indice + 1) % len(CICLO_DE_MASCARAS)]
+
+
+def build_next_mask_callback(daemon: DaemonProtocol) -> Any:
+    """Cria o callback do gesto PS + L3: PRÓXIMA MÁSCARA do jogador 1.
+
+    O GESTO É O CHIP DO CARTÃO, pelo controle. Ele chama o MESMO handler que o
+    clique chama (`IpcHandlersMixin._handle_gamepad_mask_set`), no mesmo laço:
+    o registro vivo, o perfil ATIVO (`controllers[uniq].mascara`) e o vpad
+    recriado na hora com origem manual (`Daemon.vestir_a_mascara_do_aparelho`).
+    Um segundo escritor da máscara faria o que ela escolhe numa porta sumir na
+    outra.
+
+    O MODO NÃO MUDA: o caminho fica como estava, e quem o troca é o PS + R3.
+
+    A LUZ: dois pulsos vermelhos ANTES quando há jogo com o controle na mão e o
+    vpad de pé (recriá-lo pode derrubar o handle do jogo, R-04); depois, três
+    piscadas na cor da máscara que ficou (`CORES_DA_MASCARA`). Pedido que o
+    aparelho não alcançou dá os pulsos vermelhos com o longo no fim, como no
+    PS + R3.
+
+    SÓ O JOGADOR 1: o laço de botões do daemon é o do primário, então é dele o
+    cartão que o gesto anda. Sem o MAC do primário não há cartão a gravar, e o
+    gesto recusa pela luz em vez de trocar a máscara da sessão calado.
+    """
+
+    async def _ciclar_mascara() -> None:
+        from hefesto_dualsense4unix.daemon.subsystems.gamepad import primary_identity
+
+        store = getattr(daemon, "store", None)
+        if store is not None and getattr(store, "native_mode_active", False):
+            logger.info("mascara_ciclo_skip_native_mode")
+            return
+        identidade = primary_identity(daemon)
+        tratar = getattr(
+            getattr(daemon, "_ipc_server", None), "_handle_gamepad_mask_set", None
+        )
+        if not identidade or not callable(tratar):
+            logger.warning(
+                "mascara_do_gesto_sem_cartao",
+                identidade=identidade,
+                tem_servidor=callable(tratar),
+            )
+            await _sinalizar_lightbar(daemon, _pulsos_de_falha())
+            return
+
+        atual = mascara_atual(daemon)
+        alvo = proxima_mascara(atual)
+        vpad_antes = getattr(daemon, "_gamepad_device", None) is not None
+        jogo_no_controle = getattr(daemon, "display_authority", "unknown") == "game"
+        logger.info(
+            "mascara_troca_pedida_por_gesto",
+            de=atual,
+            para=alvo,
+            vpad=vpad_antes,
+            jogo_com_autoridade=jogo_no_controle,
+        )
+        if vpad_antes and jogo_no_controle:
+            await _sinalizar_lightbar(daemon, _PULSOS_DE_RISCO)
+
+        resposta: dict[str, Any] | None = None
+        try:
+            resposta = await tratar({"uniq": identidade, "flavor": alvo})
+        except Exception as exc:
+            logger.warning("mascara_do_gesto_falhou", para=alvo, err=str(exc))
+
+        # A PROVA É O APARELHO, como no PS + R3: o vpad que existia tem de
+        # continuar existindo, e vestindo o alvo.
+        vpad_depois = getattr(daemon, "_gamepad_device", None) is not None
+        efetiva = mascara_atual(daemon)
+        if resposta is not None and efetiva == alvo and vpad_depois >= vpad_antes:
+            if store is not None:
+                with contextlib.suppress(Exception):
+                    store.bump("hotkey.mascara.cycled")
+            logger.info(
+                "mascara_trocada_por_gesto",
+                de=atual,
+                para=alvo,
+                perfil=resposta.get("perfil"),
+                gravado=resposta.get("gravado"),
+                motivo=resposta.get("motivo"),
+                vestiu=resposta.get("vestiu"),
+            )
+            _disparar_piscada(daemon, CORES_DA_MASCARA[alvo], modo=f"mascara:{alvo}")
+            return
+        logger.warning(
+            "mascara_nao_subiu", pedida=alvo, efetiva=efetiva, resposta=resposta
+        )
+        await _sinalizar_lightbar(daemon, _pulsos_de_falha())
+
+    return _ciclar_mascara
+
+
 class HotkeySubsystem:
     """Subsystem sentinela para hotkey no registry.
 
@@ -2463,8 +2622,10 @@ class HotkeySubsystem:
 
 __all__ = [
     "CANAL_TTL_S",
+    "CICLO_DE_MASCARAS",
     "CICLO_DE_PONTES",
     "CONFIRMACAO_DO_MUDO_S",
+    "CORES_DA_MASCARA",
     "CORES_DO_MODO",
     "ECO_DO_ATO_S",
     "MIC_SOSSEGO_S",

@@ -164,7 +164,8 @@ o que o controle faz agora e como o jogo o enxerga:
 | PS + D-pad cima / baixo | perfil seguinte / anterior |
 | PS (toque curto) | abre a Steam (configurável) |
 | PS + Options | modo jogo: suspende a emulação de mouse e teclado |
-| PS + R3 | próxima ponte: DualSense → Xbox 360 → mouse+teclado |
+| PS + R3 | próximo modo: Sony DualSense → Xbox → Navegação |
+| PS + L3 | próxima máscara: DualSense → Xbox 360 → Nintendo Pro |
 | L3 / R3 | abre / fecha o teclado na tela |
 | Botão de microfone | muta o microfone do sistema |
 
