@@ -121,8 +121,9 @@ portões verdes e nenhum botão novo:
   `/mnt/Apate/Desenvolvimento/hefesto-voo/_lotes/1309-terceira/`.
 * **O que cada agente entregou:** `docs/process/agentes/2026-09-13/<SPRINT>-*.md`
   na branch `voo/<SPRINT>-opus`. Conferir com `git cherry onda/1309 voo/<SPRINT>-opus`.
-* **O ONDE PARAMOS do dia:**
-  `docs/process/2026-09-13-ONDE-PARAMOS-a-tela-que-parou-de-narrar-e-os-quatro-microfones-no-ar.md`.
+* **Os ONDE PARAMOS do dia:** o da manhã,
+  `docs/process/2026-09-13-ONDE-PARAMOS-a-tela-que-parou-de-narrar-e-os-quatro-microfones-no-ar.md`,
+  e o do fecho da leva, `docs/process/2026-09-13-ONDE-PARAMOS-a-terceira-lista-costurada-o-modo-que-e-caminho-e-o-som-que-nao-trava.md`.
 * **As ondas:**
   * a onda 1 nasceu de `249af1f6`, com o lote `1309-onda1`. Os resultados de
     cada agente estão em `RESULTADOS-onda1.json`, e o estudo da SENSORES-02 ao
