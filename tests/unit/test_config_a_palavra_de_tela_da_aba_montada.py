@@ -151,7 +151,7 @@ def test_o_berco_nao_e_mais_frouxo_que_o_glade() -> None:
     é também uma colheita abaixo do piso, e o total sozinho diria só "sumiu
     texto"; a moldura diz qual seção.
 
-    O PISO É O DA BANCADA FIXA (13/09/2026). Até ali ele valia 186 e media o
+    O PISO É O DA BANCADA FIXA (13/09/2026). Até ali ele valia 186 e contava o
     barramento USB da máquina de quem roda: com dois aparelhos a menos, a suíte
     reprovou 172 contra 186 sobre o mesmo código que tinha fechado verde de
     manhã. E ele valeu 175 até 08/09, deixando passar uma seção cortada a menos
@@ -277,8 +277,9 @@ def test_a_colheita_nao_le_o_sys_nem_pergunta_ao_daemon(
     )
     assert len(colhidos) >= PISO_DA_COLHEITA, (
         f"com os leitores vivos proibidos a aba colheu {len(colhidos)} textos, "
-        f"abaixo do piso de {PISO_DA_COLHEITA}: a bancada do berço depende de "
-        "uma leitura que ela não devia fazer"
+        f"abaixo do piso de {PISO_DA_COLHEITA}. Se as duas réguas de piso acima "
+        "também reprovaram, a aba perdeu texto; se só esta, a bancada do berço "
+        "passa por uma leitura que ela não devia fazer."
     )
 
 
