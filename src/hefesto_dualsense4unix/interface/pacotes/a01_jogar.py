@@ -2890,17 +2890,17 @@ PROVAS = [
     # DESLIGADO é o Modo Nativo, e é UM passo só — decisão dela, 31/08.
     {"pagina": PAGINA, "gesto": "hefesto", "clique": {"modo": "native"},  # (noqa-acento) id
      "chama": [("chamar", ["native.mode.set"], _MANUAL_ON)]},
-    # O CHIP MUDA A MÁSCARA, NÃO O MODO: o `flavor` é a única diferença entre
-    # este e o Xbox logo abaixo. Ele sai de `painel.CHIPS_DA_ESCADA`, não é
-    # digitado no gesto — o que está digitado aqui é a EXPECTATIVA.
+    # O CHIP ESCOLHE O CAMINHO, NÃO A MÁSCARA (MODO-DE-CONEXAO-01, 13/09/2026):
+    # o `caminho` é a única diferença entre este e o Xbox logo abaixo, e sai
+    # de `painel.CHIPS_DA_ESCADA` — o que está digitado aqui é a EXPECTATIVA.
     {"pagina": PAGINA, "gesto": "modo-dualsense", "clique": {},  # (noqa-acento) chave do contrato
      "chama": [("chamar", ["native.mode.set"], _MANUAL_OFF),
                ("chamar", ["gamepad.emulation.set"],
-                {**_MANUAL_ON, "flavor": "dualsense"})]},
+                {**_MANUAL_ON, "caminho": "dualsense"})]},
     {"pagina": PAGINA, "gesto": "modo-xbox", "clique": {},  # (noqa-acento) chave do contrato
      "chama": [("chamar", ["native.mode.set"], _MANUAL_OFF),
                ("chamar", ["gamepad.emulation.set"],
-                {**_MANUAL_ON, "flavor": "xbox"})]},
+                {**_MANUAL_ON, "caminho": "xbox"})]},
     # TRÊS, e o terceiro é o que separa "entrei no modo" de "entrei num modo sem
     # função": `mouse.emulation.restore` liga o mouse conforme a preferência
     # persistida (HARM-06), e vem POR ÚLTIMO de propósito.
