@@ -111,10 +111,17 @@ class TestOQueNaoMuda:
         pode mapeá-lo errado, e esconder o físico deixaria um controle de
         botões trocados como único.
 
-        NOTA DATADA — PS-L3-MASCARA-01, 14/09/2026: medido na libSDL2 2.30 com o
-        daemon vivo, o Edge 0df2 em uinput chega como `ps5` com `a:b0,b:b1,x:b3,
-        y:b2`, o mesmo mapa do uhid. Com cobertura, ele passou a ter IGNORE; o
-        que continua sem IGNORE é a mesa sem um vpad por físico."""
+        NOTA DATADA — PS-L3-MASCARA-01, 14/09/2026, CORRIGIDA em 14/09 pela
+        conferência da TROCA-DENTRO-DO-JOGO-01: a nota dizia "o mesmo mapa do
+        uhid", e a medição não sustenta isso. Na libSDL2 2.30 com o daemon vivo,
+        os dois chegam como `ps5` e com os quatro botões de rosto iguais
+        (`a:b0,b:b1,x:b3,y:b2`), mas o resto sai em índices diferentes: o uhid dá
+        `back:b8,guide:b10,start:b9,leftstick:b11` e o uinput dá
+        `back:b6,guide:b8,start:b7,leftstick:b9` — o Edge em uinput não tem o
+        touchpad nem os botões extras. O que sustenta o IGNORE não é a parecença
+        dos mapas: é o VID/PID. O IGNORE esconde `054c:0ce6`, e os dois vpads são
+        `054c:0df2`, que ele não alcança. Com cobertura, o uinput passou a ter
+        IGNORE; o que continua sem é a mesa sem um vpad por físico."""
         assert IGNORE in _env(["uinput"], 1)
         assert IGNORE in _env(["uhid", "uinput"], 2)
         assert IGNORE not in _env(["uinput"], 2)

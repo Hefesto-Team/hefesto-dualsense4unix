@@ -71,6 +71,14 @@ EXIGEM_RELANCAR: Final[frozenset[str]] = frozenset(
         "modo",
         # "O jogo vê o controle como" — máscara diferente recria o vpad, e o
         # Xbox ainda acrescenta `SDL_JOYSTICK_HIDAPI=0`.
+        #
+        # NOTA DATADA — TROCA-DENTRO-DO-JOGO-01, 14/09/2026: a máscara FICA aqui,
+        # e o PS + L3 não a contradiz. São duas perguntas diferentes: a janela
+        # pergunta "quero garantir que o jogo receba isto" e o gesto é "quero
+        # TENTAR sem fechar o jogo" — pedido dela em 14/09, com a luz avisando o
+        # risco antes de cada troca. As duas metades do motivo continuam
+        # verdadeiras: o vpad é recriado (o jogo pode não aceitar o hotplug) e a
+        # dica do SDL fica congelada na env desde o `exec`.
         "mascara",
         # A caixinha do Steam Input do jogo: escrever no `steam_input_apps.txt`
         # cria uma BORDA em `sync_steam_input_exception`, que faz ungrab e

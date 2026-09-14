@@ -22,6 +22,7 @@ MORDE, e são quatro curas independentes (medidas em 14/09, uma de cada vez):
 """
 from __future__ import annotations
 
+import asyncio
 import functools
 import threading
 from collections.abc import Iterator
@@ -253,7 +254,15 @@ async def test_na_navegacao_o_gesto_guarda_a_mascara_sem_ligar_o_vpad(
 async def test_o_aparelho_que_nao_veste_a_mascara_nao_ganha_a_cor_dela(
     luz: dict[str, list[Any]], monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """A prova é o aparelho: o registro já diz a máscara pedida, o vpad não."""
+    """A prova é o aparelho, e a escolha que não pegou não fica pendurada.
+
+    NOTA DATADA — TROCA-DENTRO-DO-JOGO-01, 14/09/2026: esta régua cobrava que o
+    registro ficasse com a máscara pedida ("premissa: o handler gravou") e só a
+    LUZ dissesse a verdade. Era o retrato da ordem velha — gravar tudo e
+    conferir depois —, e ela deixava a aba Jogar acesa numa máscara que o jogo
+    não estava vendo. Agora o ato veste primeiro: recusado pelo aparelho, o
+    registro VOLTA e o perfil não é tocado.
+    """
     _perfil_com_cartao_dualsense()
     d = _Daemon()
     assert gp.start_gamepad_emulation_desfecho(d, None, origin="profile") == gp.EMU_APLICADO
@@ -266,9 +275,51 @@ async def test_o_aparelho_que_nao_veste_a_mascara_nao_ganha_a_cor_dela(
     await hotkey.build_next_mask_callback(d)()  # type: ignore[arg-type]
 
     assert d._gamepad_device is not None and d._gamepad_device.flavor == "dualsense"
-    assert em.registro_de_mascaras().mask_for(P1) == "xbox", "premissa: o handler gravou"
+    assert em.registro_de_mascaras().mask_for(P1) == "dualsense", (
+        "a escolha que o aparelho recusou ficou pendurada esperando o próximo vpad"
+    )
+    assert _mascara_gravada() == "dualsense", "o perfil recebeu uma máscara que não pegou"
     assert luz["piscadas"] == [], "a cor do Xbox numa barra que continua DualSense"
     assert luz["sequencias"][-1] == hotkey._pulsos_de_falha()
+
+
+@pytest.mark.asyncio
+async def test_dois_apertos_seguidos_andam_duas_casas(
+    luz: dict[str, list[Any]], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """TROCA-DENTRO-DO-JOGO-01 (14/09/2026): o segundo aperto não se perde.
+
+    Com o jogo na mão, o gesto pisca ~0,56 s de aviso antes de trocar. Nessa
+    janela cabia um segundo PS + L3: ele lia a máscara de ANTES — nada havia
+    sido gravado ainda — e mirava o MESMO alvo. Ela apertava duas vezes
+    esperando o Nintendo Pro, ficava no Xbox 360, e o vpad era recriado duas
+    vezes no meio do jogo.
+
+    MORDE: ler `atual = mascara_atual(daemon)` ANTES dos pulsos de risco.
+    """
+    _perfil_com_cartao_dualsense()
+    d = _Daemon()
+    assert gp.start_gamepad_emulation_desfecho(d, None, origin="profile") == gp.EMU_APLICADO
+    d.display_authority = "game"
+
+    async def _demorada(daemon: Any, cores: Any) -> None:
+        """Os pulsos cedem o laço, como os de verdade cedem."""
+        luz["sequencias"].append(list(cores))
+        for _ in range(4):
+            await asyncio.sleep(0)
+
+    monkeypatch.setattr(hotkey, "_sinalizar_lightbar", _demorada)
+    gesto = hotkey.build_next_mask_callback(d)  # type: ignore[arg-type]
+
+    await asyncio.gather(gesto(), gesto())
+
+    assert _mascara_gravada() == "nintendo", "o segundo aperto mirou o mesmo alvo"
+    assert d._gamepad_device is not None
+    assert d._gamepad_device.flavor == "nintendo"
+    assert [cor for cor, _m in luz["piscadas"]] == [
+        hotkey.CORES_DA_MASCARA["xbox"],
+        hotkey.CORES_DA_MASCARA["nintendo"],
+    ]
 
 
 @pytest.mark.asyncio

@@ -259,7 +259,22 @@ class HotkeyManager:
             held_for = (t - self._first_seen_at[combo]) * 1000
             if held_for < self.config.buffer_ms:
                 continue
-            if self._last_fired == combo:
+            # UM GESTO POR APERTO — TROCA-DENTRO-DO-JOGO-01, 14/09/2026.
+            #
+            # Aqui dizia `if self._last_fired == combo`, e só o MESMO combo
+            # ficava travado. Dois combos caem no mesmo aperto o tempo todo:
+            # afundar os dois analógicos com o PS é `{ps, l3, r3}`, que CONTÉM o
+            # `ps+r3` (modo) e o `ps+l3` (máscara). O laço pulava o último que
+            # disparou e disparava o OUTRO, a cada tique — e o daemon lê o
+            # controle a 60 Hz. Medido em 14/09 no HotkeyManager isolado, com
+            # `{ps, l3, r3}` segurado: 25 disparos em 0,4 s, alternando modo e
+            # máscara, cada um recriando o vpad e gravando o perfil. O mesmo
+            # valia para `{ps, dpad_up, r3}` desde antes da máscara existir.
+            #
+            # Enquanto o combo que disparou continuar no aperto, nenhum outro
+            # dispara. Soltar um botão dele destrava (o `_last_fired` some lá em
+            # cima), e o PS + cima repetido a cada toque continua funcionando.
+            if self._last_fired is not None:
                 continue
             self._fire(name, combo)
             self._last_fired = combo

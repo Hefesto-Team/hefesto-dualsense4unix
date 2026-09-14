@@ -231,7 +231,14 @@ perfil ativo (PS-L3-MASCARA-01, 14/09/2026). O modo não muda; quem troca o modo
 é o **PS + R3**.
 
 **O L3 sozinho continua abrindo o teclado na tela** — o mesmo latch de combo do
-R3 segura o L3 até todos os botões serem soltos.
+R3 segura o L3 até todos os botões serem soltos. O latch só pega o L3 quando o
+**PS já está apertado**: afundar o L3 primeiro e o PS depois abre o teclado
+antes de o gesto valer (é assim com o R3 desde sempre; comece pelo PS).
+
+**Um gesto por aperto.** Afundar os dois analógicos com o PS — `PS + L3 + R3` —
+dispara **um** gesto só, e o outro só depois de soltar. Até 14/09/2026 os dois
+combos se revezavam a cada leitura do controle (60 por segundo), trocando modo e
+máscara em rajada.
 
 | Cor da barra (três piscadas) | A máscara que ficou |
 |---|---|
@@ -251,10 +258,33 @@ Edge 0df2 pelo canal próprio (com hidraw) e o modo Xbox dá o mesmo Edge pelo
 canal comum; com **Xbox 360** ou **Nintendo Pro**, os dois modos dão o mesmo
 aparelho — o canal próprio do DualSense só existe com a máscara DualSense.
 
-**O jogo abre pronto para as duas trocas.** A env do lançamento esconde o
-DualSense de plástico sempre que o perfil do jogo não é o Modo Nativo — inclusive
-quando ele abre na Navegação —, porque o jogo lê a env uma vez só, e as trocas
-de modo e de máscara acontecem depois, dentro dele.
+**O jogo abre pronto para as duas trocas.** Fora do Modo Nativo, o jogo vê só o
+controle virtual — com perfil ou sem perfil, inclusive quando abre na Navegação.
+É decisão dela de 14/09/2026 (`D-1409-FORA-DO-NATIVO-O-JOGO-VE-SO-O-VIRTUAL`), e
+existe porque o jogo lê a env UMA vez, no `exec`: as trocas de modo e de máscara
+acontecem depois, dentro dele. O preço, que ela leu antes de escolher: **na
+Navegação o jogo não vê gamepad nenhum** até ela subir um modo.
+
+**Até onde isso chega, e onde não chega:**
+
+* jogos da Steam, com ou sem perfil próprio — o wrapper `hefesto-launch` exporta
+  a env em qualquer um dos dois casos;
+* Heroic, Lutris e os outros lançadores — pela cura por estrada, que copia a
+  mesma env;
+* **não chega** a atalho não-Steam (sem `SteamAppId`) nem a jogo da Steam que
+  ainda não recebeu o wrapper — a Steam só grava as opções de lançamento quando
+  fecha;
+* **Modo Nativo** é a exceção por desenho: lá o controle de plástico É o
+  controle, e escondê-lo deixaria o jogo sem nenhum.
+
+**O que continua dependendo do jogo, e nenhuma env resolve:** trocar a máscara
+recria o controle virtual, então o jogo precisa aceitar um controle que entra no
+lugar de outro. Alguns seguem jogando, outros tratam como jogador novo, e há os
+que só voltam ao normal reabrindo. E a dica `SDL_JOYSTICK_HIDAPI=0`, que sai
+para as máscaras Xbox 360 e Nintendo Pro, fica congelada na abertura: um jogo
+aberto nelas e trocado para DualSense lá dentro recebe o controle pelo caminho
+comum, sem o driver PS5 do SDL — funciona, mas pode vir com botões fora do lugar
+nas bibliotecas mais novas. Reabrir o jogo acerta.
 
 ## Teclado na tela — L3 abre, R3 fecha
 

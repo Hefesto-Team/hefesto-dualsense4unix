@@ -1409,6 +1409,7 @@ def arm_launch_profile(
         identidade=_identidade_do_primario(daemon),
         permite_uhid=_permite_uhid(daemon),
         fisicos=fisicos_pos,
+        vpads_previstos=_vpads_previstos(daemon, fisicos_pos),
     )
     divergencia = divergencia_de_mascara(
         modo_antecipado,
@@ -1521,8 +1522,13 @@ def compose_env(
     - DualSense, em uhid ou em uinput: DISABLE do físico + IGNORE — dedup no
       layout PS. O vpad é o Edge 0df2 nos dois canais (VPAD-06), que o IGNORE
       do 0ce6 não alcança, e o uhid segue com hidraw pleno (NUNCA 0x0DF2 no
-      DISABLE). NOTA DATADA — PS-L3-MASCARA-01, 14/09/2026: o uinput ficava sem
-      IGNORE porque já foi 0ce6; desde o caminho Xbox (13/09) ele é escolha dela.
+      DISABLE). NOTA DATADA — PS-L3-MASCARA-01, 14/09/2026, com a história
+      corrigida na conferência do mesmo dia: o uinput ficava de fora por ser
+      tratado como DEGRADAÇÃO (o `all(b == "uhid")` de 03/08, escrito quando o
+      pior caso era mapeamento menos validado), e não por causa do PID. Desde o
+      caminho Xbox (13/09) o uinput é ESCOLHA dela, e desde a
+      TROCA-DENTRO-DO-JOGO-01 (14/09) a regra não depende mais de qual canal o
+      vpad pegou: fora do Modo Nativo o jogo vê só o virtual.
     - Emulação desligada ou sem vpad vivo: SÓ o preload de shaders.
 
     O preload (`__GL_SHADER_*`) entra em toda variante: é inócuo e é a parte
@@ -1836,10 +1842,21 @@ def _steam_profiles(daemon: DaemonProtocol) -> list[tuple[int, Any]]:
 
 
 def _nativos_fora_da_antecipacao(profiles: Sequence[Any]) -> list[str]:
-    """Nomes dos perfis nativo/desktop que a antecipação por-appid NÃO cobre.
+    """Nomes dos perfis NATIVOS que a antecipação por-appid NÃO cobre.
 
-    Achado MED da revisão adversarial da Fase 2: um perfil `kind=native|
-    desktop` casado por `window_title_regex`/`process_name` (o próprio sprint
+    NOTA DATADA — TROCA-DENTRO-DO-JOGO-01, 14/09/2026: o `desktop` saiu desta
+    lista. Ele entrou aqui em 09/08 pela premissa de que "desktop + IGNORE
+    congelado = ZERO controles", e a decisão dela de 14/09
+    (D-1409-FORA-DO-NATIVO-O-JOGO-VE-SO-O-VIRTUAL) diz o contrário: a Navegação é
+    mouse, o jogo não ver gamepad ali é a intenção, e é o único jeito de o PS + R3
+    funcionar DENTRO do jogo — a env é lida uma vez, no `exec`. Sem esta mudança
+    as duas regras opostas conviviam no mesmo módulo, e um perfil `desktop`
+    casado por título deixava o `default.env` sem IGNORE para sempre, em qualquer
+    modo. O Modo NATIVO continua aqui, e por inteiro: nele o vpad não existe de
+    propósito, e o físico escondido seria o jogo sem controle nenhum.
+
+    Achado MED da revisão adversarial da Fase 2: um perfil `kind=native`
+    casado por `window_title_regex`/`process_name` (o próprio sprint
     UX recomenda "perfil para o launcher" por título) — ou por um
     `window_class` que não seja `steam_app_<id>` — não gera arquivo por appid,
     então o jogo lança pelo `default.env`. Se esse default carrega IGNORE, a
@@ -1849,12 +1866,12 @@ def _nativos_fora_da_antecipacao(profiles: Sequence[Any]) -> list[str]:
     ao menos um perfil assim, o `default.env` OMITE o IGNORE (conservador:
     duplicado > zero controles). Perfil coberto = só `steam_app_*` no
     window_class e nenhum outro critério (o arquivo por-appid antecipa o modo
-    dele). `MatchAny` com modo nativo/desktop conta como arriscado.
+    dele). `MatchAny` com modo nativo conta como arriscado.
     """
     out: list[str] = []
     for profile in profiles:
         kind = getattr(getattr(profile, "mode", None), "kind", None)
-        if kind not in ("native", "desktop"):
+        if kind != "native":
             continue
         match = getattr(profile, "match", None)
         wcs = [str(wc) for wc in getattr(match, "window_class", None) or []]
@@ -1912,12 +1929,19 @@ class ModoAntecipado:
     #: censo da mesa é do estado VIVO, que já vai na mesma linha atrás de
     #: `vivo:`.
     fisicos: int = 0
+    #: A env esconde o físico AGORA para a troca que vem depois, sem vpad de pé.
+    #: TROCA-DENTRO-DO-JOGO-01 (14/09/2026): a Navegação é um degrau do PS + R3,
+    #: e a env é lida UMA vez, no `exec`. Antes isto viajava escondido dentro de
+    #: `backends` com `emulacao=False`, e a linha `estado:` do arquivo dizia o
+    #: contrário do que a env fazia. É um campo porque é um FATO do modo.
+    pronto_para_troca: bool = False
 
     def como_estado(self) -> str:
         """A mesma gramática do `estado:` global, para os dois compararem."""
+        pronto = " pronto_para_troca=True" if self.pronto_para_troca else ""
         return (
             f"native={self.native} emulacao={self.emulacao} "
-            f"mascara={self.mascara} backends={list(self.backends) or '[]'}"
+            f"mascara={self.mascara} backends={list(self.backends) or '[]'}{pronto}"
         )
 
 
@@ -1956,6 +1980,7 @@ def _modo_antecipado(
     permite_uhid: bool = False,
     fisicos: int = 0,
     identidade: str | None = None,
+    vpads_previstos: int = 1,
 ) -> ModoAntecipado | None:
     """O `ModoAntecipado` do perfil, ou None quando ele não tem opinião.
 
@@ -2010,13 +2035,22 @@ def _modo_antecipado(
         # que abriu na Navegação fica com o DualSense de plástico (que o Hefesto
         # graba ao subir um modo de jogo) e o vpad chega como segundo controle.
         # Medido em 14/09: `steam_app_4235410.env` sem IGNORE depois de o PS + R3
-        # parar na Navegação. `emulacao` fica False — agora o perfil não promete
-        # máscara, e a divergência não tem o que medir; `env_do_modo` lê os
-        # `backends` como a promessa da troca.
+        # parar na Navegação.
+        #
+        # DECISÃO DELA — D-1409-FORA-DO-NATIVO-O-JOGO-VE-SO-O-VIRTUAL, 14/09/2026:
+        # fora do Modo Nativo o jogo não vê o DualSense de plástico, com perfil ou
+        # sem perfil. O preço, que ela leu antes de escolher: na Navegação o jogo
+        # fica sem gamepad até ela subir um modo. `emulacao=False` continua sendo
+        # a verdade (não há vpad agora) e quem diz que a env esconde o físico é
+        # `pronto_para_troca`, que a linha `estado:` do arquivo carimba.
         return ModoAntecipado(
             native=False, emulacao=False, mascara=mascara,
-            backends=_backends_da_troca(mascara, mode, permite_uhid),
+            backends=_backends_da_troca(
+                mascara, getattr(mode, "caminho", None), permite_uhid,
+                quantos=vpads_previstos,
+            ),
             motivo="perfil desktop (pronto para o PS + R3)",
+            fisicos=fisicos, pronto_para_troca=True,
         )
     if kind == "gamepad":
         from hefesto_dualsense4unix.integrations.virtual_pad import normalizar_caminho
@@ -2109,12 +2143,14 @@ def _env_for_profile(
 def env_do_modo(modo: ModoAntecipado) -> dict[str, str]:
     """A `env` que materializa um `ModoAntecipado`.
 
-    PS-L3-MASCARA-01 (14/09/2026): um modo sem emulação AGORA mas com `backends`
-    (a Navegação, que o PS + R3 sobe dentro do jogo) materializa a env da troca.
+    TROCA-DENTRO-DO-JOGO-01 (14/09/2026): `pronto_para_troca` é o modo que ainda
+    não tem vpad mas vai ter quando ela subir um modo de jogo lá dentro. A
+    PS-L3-MASCARA-01 dizia isto com um OR sobre `backends`, e o campo explícito
+    é o mesmo fato com nome — a linha `estado:` do arquivo passa a dizê-lo.
     """
     return compose_env(
         native_mode=modo.native,
-        emulation_enabled=modo.emulacao or (not modo.native and bool(modo.backends)),
+        emulation_enabled=modo.emulacao or modo.pronto_para_troca,
         flavor=modo.mascara,
         backends=list(modo.backends),
         fisicos=modo.fisicos,
@@ -2238,21 +2274,25 @@ def materialize_launch_env(daemon: DaemonProtocol) -> None:
     try:
         target = launch_env_dir(ensure=True)
         native, enabled, flavor, backends, fisicos = _snapshot(daemon)
-        estado = (
-            f"native={native} emulacao={enabled} mascara={flavor} "
-            f"backends={backends or '[]'}"
+        modo_vivo = modo_do_estado_vivo(
+            daemon, native=native, enabled=enabled, flavor=flavor,
+            backends=backends, fisicos=fisicos,
         )
+        estado = modo_vivo.como_estado()
         # DEDUP-06: o log de "dedup quebrada" mora AQUI, na borda de
         # materialização (transição de estado) — nunca no state_full de 20 Hz.
         # O `dedup_ok` por jogador que a GUI/doctor consomem sai do IPC.
-        if (
-            not native
-            and enabled
-            and flavor == "dualsense"
-            and backends
-            and any(b != "uhid" for b in backends)
-        ):
-            logger.warning("dedup_broken", motivo="vpad_uinput", backends=backends)
+        #
+        # TROCA-DENTRO-DO-JOGO-01 (14/09/2026): a regra é a MESMA do `dedup_ok`,
+        # e agora é lida do mesmo lugar. Esta cópia decidia por `backend !=
+        # "uhid"` e gritava sobre o caminho Xbox — a escolha DELA — enquanto o
+        # `dedup_status` já a isentava desde a PS-L3-MASCARA-01. Duas cópias da
+        # mesma conta é como esta casa reintroduz um defeito já pago.
+        from hefesto_dualsense4unix.daemon.subsystems.gamepad import dedup_status
+
+        dedup_ok, dedup_motivos = dedup_status(daemon)
+        if not dedup_ok and not native and enabled and backends:
+            logger.warning("dedup_broken", motivos=dedup_motivos, backends=backends)
         # RUMBLE-SEM-DONO-01 (11/08/2026): o mesmo raciocínio do `dedup_broken`
         # acima — o aviso mora na BORDA de materialização, que é o único ponto
         # com o estado real da mesa, e não no state_full de 20 Hz. Sem vpad e
@@ -2272,27 +2312,25 @@ def materialize_launch_env(daemon: DaemonProtocol) -> None:
                 emulacao=enabled,
                 backends=backends,
             )
-        default_env = compose_env(
-            native_mode=native,
-            emulation_enabled=enabled,
-            flavor=flavor,
-            backends=backends,
-            # WRAPPER-EM-TODOS-01: este é o ÚNICO chamador com o estado real da
-            # mesa. NOTA DATADA — 12/08/2026 (IGNORE-NO-FIM-DA-SEQUENCIA-01):
-            # aqui dizia que os demais chamadores "ficam no default 0, que é o
-            # conservador — sem cobertura provada, sem IGNORE". O código sempre
-            # fez o oposto: `fisicos=0` é "NÃO SEI" e "não sei" AUTORIZA o
-            # IGNORE (ver `cobertura_total`). O `_env_for_profile` logo abaixo
-            # passou a receber o número de verdade no ramo dos backends reais;
-            # nos ramos de prognóstico o 0 fica, e agora está escrito lá por quê.
-            fisicos=fisicos,
-        )
+        # TROCA-DENTRO-DO-JOGO-01 (14/09/2026): o `default.env` é o arquivo de
+        # TODO jogo sem perfil próprio, e passou a sair do mesmo tipo de modo que
+        # o arquivo por appid — `modo_do_estado_vivo`. Antes ele copiava o estado
+        # vivo e, sem vpad de pé, abria o jogo com o DualSense de plástico à
+        # vista. Os argumentos abaixo saem todos do modo.
+        # WRAPPER-EM-TODOS-01: este é o ÚNICO chamador com o estado real da mesa,
+        # e o censo dela viaja dentro do modo (`ModoAntecipado.fisicos`). NOTA
+        # DATADA — 12/08/2026 (IGNORE-NO-FIM-DA-SEQUENCIA-01): aqui dizia que os
+        # demais chamadores "ficam no default 0, que é o conservador — sem
+        # cobertura provada, sem IGNORE". O código sempre fez o oposto:
+        # `fisicos=0` é "NÃO SEI" e "não sei" AUTORIZA o IGNORE (ver
+        # `cobertura_total`).
+        default_env = env_do_modo(modo_vivo)
         if "SDL_GAMECONTROLLER_IGNORE_DEVICES" in default_env:
             arriscados = _nativos_fora_da_antecipacao(_load_profiles(daemon))
             if arriscados:
-                # Perfil nativo/desktop fora do alcance da antecipação por
-                # appid: o IGNORE congelado no default.env viraria zero
-                # controles quando o autoswitch ativasse esse perfil (ver
+                # Perfil NATIVO fora do alcance da antecipação por appid: o
+                # IGNORE congelado no default.env viraria zero controles quando
+                # o autoswitch ativasse esse perfil (ver
                 # `_nativos_fora_da_antecipacao`). Duplicado > zero.
                 del default_env["SDL_GAMECONTROLLER_IGNORE_DEVICES"]
                 estado += " ignore_omitido=perfil_nativo_sem_appid"
@@ -2318,6 +2356,7 @@ def materialize_launch_env(daemon: DaemonProtocol) -> None:
                 # Sem ela, o arquivo por appid era o único caminho do produto em
                 # que a cobertura por físico nunca valeu.
                 fisicos=fisicos,
+                vpads_previstos=_vpads_previstos(daemon, fisicos),
             )
             if modo is None:
                 continue
@@ -2440,12 +2479,19 @@ def _mascara_do_primario(daemon: Any, cfg: Any) -> str:
     Com o vpad de pé, a prova é o `flavor` dele; sem vpad, a máscara efetiva.
     """
     sessao = str(getattr(cfg, "gamepad_flavor", "dualsense") or "dualsense")
-    vivo = getattr(getattr(daemon, "_gamepad_device", None), "flavor", None)
-    if isinstance(vivo, str) and vivo:
-        return vivo
     with contextlib.suppress(Exception):
-        from hefesto_dualsense4unix.daemon.subsystems.external_mask import mascara_efetiva
+        # TROCA-DENTRO-DO-JOGO-01 (14/09/2026): o leitor é UM
+        # (`external_mask.mascara_vestida`). Aqui havia uma cópia que aceitava
+        # qualquer string como máscara viva, e no estado de falha ela divergia
+        # da do gesto — a env do jogo e a barra de luz diziam coisas diferentes.
+        from hefesto_dualsense4unix.daemon.subsystems.external_mask import (
+            mascara_efetiva,
+            mascara_vestida,
+        )
 
+        vivo = mascara_vestida(daemon)
+        if isinstance(vivo, str) and vivo:
+            return vivo
         return mascara_efetiva(_identidade_do_primario(daemon), sessao)
     return sessao
 
@@ -2481,15 +2527,99 @@ def _mascara_prevista(
     return str(getattr(mode, "gamepad_flavor", None) or flavor_atual)
 
 
-def _backends_da_troca(mascara: str, mode: Any, permite_uhid: bool) -> tuple[str, ...]:
-    """O canal que o vpad vai ter quando ela subir para um modo de jogo."""
+def _backends_da_troca(
+    mascara: str, caminho: Any, permite_uhid: bool, *, quantos: int = 1
+) -> tuple[str, ...]:
+    """Os canais que os vpads vão ter quando ela subir para um modo de jogo.
+
+    `quantos` é a COBERTURA prometida — um vpad por DualSense físico quando o
+    co-op está ligado, senão um só (TROCA-DENTRO-DO-JOGO-01, 14/09/2026). Sem
+    ele a promessa era sempre de um vpad, e numa mesa de dois o IGNORE saía
+    escondendo os dois físicos com um vpad prometido: o jogador 2 ficava sem
+    controle até o co-op adotá-lo.
+    """
     from hefesto_dualsense4unix.integrations.uhid_gamepad import uhid_available
     from hefesto_dualsense4unix.integrations.virtual_pad import quer_uhid
 
-    canal_proprio = quer_uhid(getattr(mode, "caminho", None), mascara)
-    if canal_proprio and permite_uhid and uhid_available():
-        return ("uhid",)
-    return ("uinput",)
+    canal_proprio = quer_uhid(caminho, mascara)
+    canal = "uhid" if (canal_proprio and permite_uhid and uhid_available()) else "uinput"
+    return (canal,) * max(1, quantos)
+
+
+def _vpads_previstos(daemon: Any, fisicos: int) -> int:
+    """Quantos vpads existirão quando ela subir um modo de jogo.
+
+    Com o co-op LIGADO, um por DualSense físico (é o que o `coop` faz ao subir);
+    desligado, um só — todos os controles alimentam o mesmo vpad, e a mesa é de
+    um jogador. TROCA-DENTRO-DO-JOGO-01 (14/09/2026).
+    """
+    cfg = getattr(daemon, "config", None)
+    if fisicos > 1 and bool(getattr(cfg, "coop_enabled", False)):
+        return fisicos
+    return 1
+
+
+def modo_do_estado_vivo(
+    daemon: Any,
+    *,
+    native: bool,
+    enabled: bool,
+    flavor: str,
+    backends: Sequence[str],
+    fisicos: int,
+) -> ModoAntecipado:
+    """O modo que o `default.env` materializa — o de TODO jogo sem arquivo próprio.
+
+    TROCA-DENTRO-DO-JOGO-01 (14/09/2026). O `default.env` copiava o estado VIVO:
+    sem vpad de pé (a Navegação, ou a emulação caída) ele saía sem IGNORE e sem
+    DISABLE, e o jogo aberto assim via o DualSense de plástico. Como a env é lida
+    UMA vez no `exec`, o PS + R3 dentro do jogo não a alcança: o físico morre
+    grabado e o vpad chega como segundo controle. Era o defeito medido no Future
+    Knight — e o Future Knight só era o jogo com perfil próprio. Na máquina dela,
+    em 14/09, 1 dos 30 perfis tinha `mode`: os outros 29 jogos liam este arquivo.
+
+    DECISÃO DELA (D-1409-FORA-DO-NATIVO-O-JOGO-VE-SO-O-VIRTUAL): fora do Modo
+    Nativo o jogo vê só o controle virtual, com perfil ou sem perfil. Aqui isso é
+    uma regra só, do mesmo tipo que o arquivo por appid usa — o `ModoAntecipado`.
+
+    O Modo Nativo continua entregando o físico, e é por isso que ele é a exceção:
+    lá o vpad não existe de propósito.
+    """
+    fisicos = max(0, int(fisicos))
+    if native:
+        return ModoAntecipado(
+            native=True, emulacao=False, mascara=flavor,
+            backends=tuple(backends), motivo="modo nativo (o jogo vê o físico)",
+            fisicos=fisicos,
+        )
+    if enabled and backends:
+        return ModoAntecipado(
+            native=False, emulacao=True, mascara=flavor,
+            backends=tuple(backends), motivo="estado vivo",
+            fisicos=fisicos,
+        )
+    if enabled:
+        # EMULAÇÃO LIGADA E NENHUM VPAD: isto não é a Navegação, é FALHA (o
+        # `dedup_status` chama de `vpad_ausente` — /dev/uinput e /dev/uhid fora
+        # de alcance). A decisão dela é sobre o que ela ESCOLHE, e ela não
+        # escolheu isto: prometer a troca aqui seria esconder o físico sem ter o
+        # virtual para pôr no lugar, e o jogo abriria sem controle nenhum. Com o
+        # físico à vista ela pelo menos joga. TROCA-DENTRO-DO-JOGO-01, 14/09/2026.
+        return ModoAntecipado(
+            native=False, emulacao=False, mascara=flavor,
+            backends=(), motivo="emulação ligada sem vpad (falha)",
+            fisicos=fisicos,
+        )
+    cfg = getattr(daemon, "config", None)
+    return ModoAntecipado(
+        native=False, emulacao=False, mascara=flavor,
+        backends=_backends_da_troca(
+            flavor, getattr(cfg, "gamepad_caminho", None), _permite_uhid(daemon),
+            quantos=_vpads_previstos(daemon, fisicos),
+        ),
+        motivo="pronto para o PS + R3 (sem vpad agora)",
+        fisicos=fisicos, pronto_para_troca=True,
+    )
 
 
 __all__ = [
@@ -2511,6 +2641,7 @@ __all__ = [
     "env_do_modo",
     "launch_session_appid",
     "materialize_launch_env",
+    "modo_do_estado_vivo",
     "pid_is_alive",
     "ponte_do_lancamento",
     "read_last_exit_marker",

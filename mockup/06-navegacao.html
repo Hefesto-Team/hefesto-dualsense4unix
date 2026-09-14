@@ -1874,7 +1874,7 @@
      coluna, que é mais do que a maior opção da lista pede ("Abrir e fechar o
      teclado na tela", ~200px).
 
-     `.tn-cx` ESCOPA A REGRA: as tabelas da ABA (os cinco combos) continuam com
+     `.tn-cx` ESCOPA A REGRA: as tabelas da ABA (os seis combos) continuam com
      os 176px que ela aprovou — lá não há marca nenhuma a caber. */
   .tn-cx .tab th:first-child,.tn-cx .tab td.b{width:250px}
 
@@ -1883,7 +1883,7 @@
      657px com elas a 22px — REMEDIDO em 06/09/2026, com a 22ª linha (o botão
      PS): eram 634px com 21. No token de 36 as linhas sozinhas passariam de
      750px, e a janela do produto tem 757. A tela não caberia na tela.
-     Na ABA, onde há cinco linhas e não vinte e duas, o token vale: veja
+     Na ABA, onde há seis linhas e não vinte e duas, o token vale: veja
      `.at-linha`. Esta é a única exceção da aba, e ela está aqui declarada em vez
      de espalhada.
      `.tn-cx.larga` (1120px) SAIU em 28/08: existia para caber as duas tabelas
@@ -1898,7 +1898,8 @@
   .gestos:has(.g2:hover) :is(#p1-glifo-ps,#p1-glifo-ps *,#p1-dpad_up > .peca,#p1-glifo-dpad_up,#p1-glifo-dpad_up *){fill:var(--pink)!important;stroke:var(--pink)!important;color:var(--pink)}
   .gestos:has(.g3:hover) :is(#p1-glifo-ps,#p1-glifo-ps *,#p1-dpad_down > .peca,#p1-glifo-dpad_down,#p1-glifo-dpad_down *){fill:var(--pink)!important;stroke:var(--pink)!important;color:var(--pink)}
   .gestos:has(.g4:hover) :is(#p1-glifo-ps,#p1-glifo-ps *,#p1-stick_r > .peca,#p1-glifo-stick_r,#p1-glifo-stick_r *){fill:var(--pink)!important;stroke:var(--pink)!important;color:var(--pink)}
-  .gestos:has(.g5:hover) :is(#p1-glifo-ps,#p1-glifo-ps *){fill:var(--pink)!important;stroke:var(--pink)!important;color:var(--pink)}
+  .gestos:has(.g5:hover) :is(#p1-glifo-ps,#p1-glifo-ps *,#p1-stick_l > .peca,#p1-glifo-stick_l,#p1-glifo-stick_l *){fill:var(--pink)!important;stroke:var(--pink)!important;color:var(--pink)}
+  .gestos:has(.g6:hover) :is(#p1-glifo-ps,#p1-glifo-ps *){fill:var(--pink)!important;stroke:var(--pink)!important;color:var(--pink)}
 
   .porta{margin-left:auto;font-size:11px;line-height:17px;height:17px;
     color:var(--texto-mudo);text-decoration:none;white-space:nowrap}
@@ -2413,7 +2414,7 @@
 
         <!-- ---------- A MESA + OS GESTOS, nas duas mesmas colunas ---------- -->
         <div class="sec-rot sec-dupla">
-          <span>Quem navega, e com qual controle<span class="ajuda" tabindex="0">?<span class="dica">Os controles ligados agora, cada um na cor do seu plástico.<br><br><b>O cursor do PC é um só:</b> mouse, teclado e os 5 gestos saem do controle marcado «Navega o PC» aqui embaixo. Os outros chegam ao jogo e não mexem no cursor.<br><br>O alvo de um ajuste se escolhe na <b>fita do topo</b>; estes cartões são leitura.</span></span></span>
+          <span>Quem navega, e com qual controle<span class="ajuda" tabindex="0">?<span class="dica">Os controles ligados agora, cada um na cor do seu plástico.<br><br><b>O cursor do PC é um só:</b> mouse, teclado e os 6 gestos saem do controle marcado «Navega o PC» aqui embaixo. Os outros chegam ao jogo e não mexem no cursor.<br><br>O alvo de um ajuste se escolhe na <b>fita do topo</b>; estes cartões são leitura.</span></span></span>
           <span>Os gestos do controle<span class="ajuda" tabindex="0">?<span class="dica">Combinações que valem <b>sem largar o controle</b>, a qualquer momento — mesmo com o jogo aberto.<br><br>Segure os dois <b>juntos</b> por <b>0,15 s</b>. Um toque rápido demais não vira combo: solta o PS sozinho, e o PS sozinho abre a Steam.<br><br><b>Ressalva:</b> o <b>PS + R3</b> e o <b>PS + Options</b> são as duas saídas de emergência quando o jogo não responde.</span></span></span>
         </div>
         <div class="moldura">
@@ -3680,7 +3681,7 @@
   <line x1="7" y1="10" x2="25" y2="10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
   <line x1="7" y1="16" x2="25" y2="16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
   <line x1="7" y1="22" x2="25" y2="22" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-</svg><span class="nm">Options</span></span></td><td><select class="campo-linha" data-gesto="acao-do-gesto"><optgroup label="Navegação Interna"><option selected>Suspender mouse e teclado</option><option>Próximo perfil</option><option>Perfil anterior</option><option>Sair do modo jogo</option></optgroup><optgroup label="Modo"><option>Próximo Modo</option></optgroup><optgroup label="Modo Steam"><option>Abrir a Steam</option></optgroup><optgroup label="Executar Comando"><option>Religar o controle</option></optgroup><option>— Nada —</option></select></td></tr>
+</svg><span class="nm">Options</span></span></td><td><select class="campo-linha" data-gesto="acao-do-gesto"><optgroup label="Navegação Interna"><option selected>Suspender mouse e teclado</option><option>Próximo perfil</option><option>Perfil anterior</option><option>Sair do modo jogo</option></optgroup><optgroup label="Modo"><option>Próximo Modo</option></optgroup><optgroup label="Máscara"><option>Próxima Máscara</option></optgroup><optgroup label="Modo Steam"><option>Abrir a Steam</option></optgroup><optgroup label="Executar Comando"><option>Religar o controle</option></optgroup><option>— Nada —</option></select></td></tr>
                 <tr class="g g2"><td class="b"><span class="gls"><span class="mk-n">2</span><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>PS</title>
 
   <g transform="translate(16 16) scale(0.99425) translate(-16.0925 -16.0)">
@@ -3689,7 +3690,7 @@
 </svg> <span class="mais">+</span> <svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>D-pad Cima</title>
 
   <polygon points="16,5 24,16 19,16 19,27 13,27 13,16 8,16" fill="currentColor"/>
-</svg></span></td><td><select class="campo-linha" data-gesto="acao-do-gesto"><optgroup label="Navegação Interna"><option>Suspender mouse e teclado</option><option selected>Próximo perfil</option><option>Perfil anterior</option><option>Sair do modo jogo</option></optgroup><optgroup label="Modo"><option>Próximo Modo</option></optgroup><optgroup label="Modo Steam"><option>Abrir a Steam</option></optgroup><optgroup label="Executar Comando"><option>Religar o controle</option></optgroup><option>— Nada —</option></select></td></tr>
+</svg></span></td><td><select class="campo-linha" data-gesto="acao-do-gesto"><optgroup label="Navegação Interna"><option>Suspender mouse e teclado</option><option selected>Próximo perfil</option><option>Perfil anterior</option><option>Sair do modo jogo</option></optgroup><optgroup label="Modo"><option>Próximo Modo</option></optgroup><optgroup label="Máscara"><option>Próxima Máscara</option></optgroup><optgroup label="Modo Steam"><option>Abrir a Steam</option></optgroup><optgroup label="Executar Comando"><option>Religar o controle</option></optgroup><option>— Nada —</option></select></td></tr>
                 <tr class="g g3"><td class="b"><span class="gls"><span class="mk-n">3</span><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>PS</title>
 
   <g transform="translate(16 16) scale(0.99425) translate(-16.0925 -16.0)">
@@ -3698,7 +3699,7 @@
 </svg> <span class="mais">+</span> <svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>D-pad Baixo</title>
 
   <polygon points="16,27 8,16 13,16 13,5 19,5 19,16 24,16" fill="currentColor"/>
-</svg></span></td><td><select class="campo-linha" data-gesto="acao-do-gesto"><optgroup label="Navegação Interna"><option>Suspender mouse e teclado</option><option>Próximo perfil</option><option selected>Perfil anterior</option><option>Sair do modo jogo</option></optgroup><optgroup label="Modo"><option>Próximo Modo</option></optgroup><optgroup label="Modo Steam"><option>Abrir a Steam</option></optgroup><optgroup label="Executar Comando"><option>Religar o controle</option></optgroup><option>— Nada —</option></select></td></tr>
+</svg></span></td><td><select class="campo-linha" data-gesto="acao-do-gesto"><optgroup label="Navegação Interna"><option>Suspender mouse e teclado</option><option>Próximo perfil</option><option selected>Perfil anterior</option><option>Sair do modo jogo</option></optgroup><optgroup label="Modo"><option>Próximo Modo</option></optgroup><optgroup label="Máscara"><option>Próxima Máscara</option></optgroup><optgroup label="Modo Steam"><option>Abrir a Steam</option></optgroup><optgroup label="Executar Comando"><option>Religar o controle</option></optgroup><option>— Nada —</option></select></td></tr>
                 <tr class="g g4"><td class="b"><span class="gls"><span class="mk-n">4</span><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>PS</title>
 
   <g transform="translate(16 16) scale(0.99425) translate(-16.0925 -16.0)">
@@ -3709,13 +3710,24 @@
   <circle cx="16" cy="16" r="13" fill="none" stroke="currentColor" stroke-width="2"/>
   <circle cx="16" cy="16" r="6" fill="none" stroke="currentColor" stroke-width="1.5"/>
   <text x="13" y="19" font-family="monospace" font-size="7" font-weight="bold" fill="currentColor">R</text>
-</svg><span class="nm">R3</span></span></td><td><select class="campo-linha" data-gesto="acao-do-gesto"><optgroup label="Navegação Interna"><option>Suspender mouse e teclado</option><option>Próximo perfil</option><option>Perfil anterior</option><option>Sair do modo jogo</option></optgroup><optgroup label="Modo"><option selected>Próximo Modo</option></optgroup><optgroup label="Modo Steam"><option>Abrir a Steam</option></optgroup><optgroup label="Executar Comando"><option>Religar o controle</option></optgroup><option>— Nada —</option></select></td></tr>
+</svg><span class="nm">R3</span></span></td><td><select class="campo-linha" data-gesto="acao-do-gesto"><optgroup label="Navegação Interna"><option>Suspender mouse e teclado</option><option>Próximo perfil</option><option>Perfil anterior</option><option>Sair do modo jogo</option></optgroup><optgroup label="Modo"><option selected>Próximo Modo</option></optgroup><optgroup label="Máscara"><option>Próxima Máscara</option></optgroup><optgroup label="Modo Steam"><option>Abrir a Steam</option></optgroup><optgroup label="Executar Comando"><option>Religar o controle</option></optgroup><option>— Nada —</option></select></td></tr>
                 <tr class="g g5"><td class="b"><span class="gls"><span class="mk-n">5</span><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>PS</title>
 
   <g transform="translate(16 16) scale(0.99425) translate(-16.0925 -16.0)">
     <path fill="currentColor" d="M 1.348 21.736 C 0.195 22.543 0.408 23.935 3.04 24.805 C 5.671 25.675 8.73 25.855 11.422 25.371 C 11.345 25.371 11.575 25.371 11.422 25.371 L 11.422 22.624 L 8.807 23.513 C 7.807 23.835 6.807 23.916 5.808 23.675 C 5.039 23.432 5.192 22.947 6.115 22.543 L 11.422 20.604 L 11.422 17.616 L 4.039 20.282 C 3.117 20.604 2.193 21.09 1.348 21.736 Z M 19.188 9.619 L 19.188 17.455 C 22.34 19.07 24.801 17.455 24.801 13.254 C 24.801 8.973 23.34 7.034 19.111 5.5 C 16.881 4.692 14.574 3.965 12.267 3.48 L 12.267 26.825 L 17.65 28.521 L 17.65 8.892 C 17.65 8.004 17.65 7.358 18.266 7.599 C 19.111 7.842 19.188 8.731 19.188 9.619 Z M 29.184 19.878 C 26.955 19.07 24.571 18.746 22.263 18.989 C 20.982 19.073 19.78 19.455 18.573 19.878 L 18.573 23.028 L 23.571 21.09 C 24.571 20.766 25.571 20.685 26.57 20.928 C 27.339 21.171 27.185 21.655 26.262 22.059 L 18.573 25.047 L 18.573 28.116 L 29.184 23.997 C 29.954 23.675 30.645 23.27 31.261 22.624 C 31.799 21.817 31.568 20.685 29.184 19.878 Z"/>
   </g>
-</svg></span></td><td><select class="campo-linha" data-gesto="acao-do-gesto"><optgroup label="Navegação Interna"><option>Suspender mouse e teclado</option><option>Próximo perfil</option><option>Perfil anterior</option><option>Sair do modo jogo</option></optgroup><optgroup label="Modo"><option>Próximo Modo</option></optgroup><optgroup label="Modo Steam"><option selected>Abrir a Steam</option></optgroup><optgroup label="Executar Comando"><option>Religar o controle</option></optgroup><option>— Nada —</option></select></td></tr>
+</svg> <span class="mais">+</span> <svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Analógico Esquerdo</title>
+
+  <circle cx="16" cy="16" r="13" fill="none" stroke="currentColor" stroke-width="2"/>
+  <circle cx="16" cy="16" r="6" fill="none" stroke="currentColor" stroke-width="1.5"/>
+  <text x="13" y="19" font-family="monospace" font-size="7" font-weight="bold" fill="currentColor">L</text>
+</svg><span class="nm">L3</span></span></td><td><select class="campo-linha" data-gesto="acao-do-gesto"><optgroup label="Navegação Interna"><option>Suspender mouse e teclado</option><option>Próximo perfil</option><option>Perfil anterior</option><option>Sair do modo jogo</option></optgroup><optgroup label="Modo"><option>Próximo Modo</option></optgroup><optgroup label="Máscara"><option selected>Próxima Máscara</option></optgroup><optgroup label="Modo Steam"><option>Abrir a Steam</option></optgroup><optgroup label="Executar Comando"><option>Religar o controle</option></optgroup><option>— Nada —</option></select></td></tr>
+                <tr class="g g6"><td class="b"><span class="gls"><span class="mk-n">6</span><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>PS</title>
+
+  <g transform="translate(16 16) scale(0.99425) translate(-16.0925 -16.0)">
+    <path fill="currentColor" d="M 1.348 21.736 C 0.195 22.543 0.408 23.935 3.04 24.805 C 5.671 25.675 8.73 25.855 11.422 25.371 C 11.345 25.371 11.575 25.371 11.422 25.371 L 11.422 22.624 L 8.807 23.513 C 7.807 23.835 6.807 23.916 5.808 23.675 C 5.039 23.432 5.192 22.947 6.115 22.543 L 11.422 20.604 L 11.422 17.616 L 4.039 20.282 C 3.117 20.604 2.193 21.09 1.348 21.736 Z M 19.188 9.619 L 19.188 17.455 C 22.34 19.07 24.801 17.455 24.801 13.254 C 24.801 8.973 23.34 7.034 19.111 5.5 C 16.881 4.692 14.574 3.965 12.267 3.48 L 12.267 26.825 L 17.65 28.521 L 17.65 8.892 C 17.65 8.004 17.65 7.358 18.266 7.599 C 19.111 7.842 19.188 8.731 19.188 9.619 Z M 29.184 19.878 C 26.955 19.07 24.571 18.746 22.263 18.989 C 20.982 19.073 19.78 19.455 18.573 19.878 L 18.573 23.028 L 23.571 21.09 C 24.571 20.766 25.571 20.685 26.57 20.928 C 27.339 21.171 27.185 21.655 26.262 22.059 L 18.573 25.047 L 18.573 28.116 L 29.184 23.997 C 29.954 23.675 30.645 23.27 31.261 22.624 C 31.799 21.817 31.568 20.685 29.184 19.878 Z"/>
+  </g>
+</svg></span></td><td><select class="campo-linha" data-gesto="acao-do-gesto"><optgroup label="Navegação Interna"><option>Suspender mouse e teclado</option><option>Próximo perfil</option><option>Perfil anterior</option><option>Sair do modo jogo</option></optgroup><optgroup label="Modo"><option>Próximo Modo</option></optgroup><optgroup label="Máscara"><option>Próxima Máscara</option></optgroup><optgroup label="Modo Steam"><option selected>Abrir a Steam</option></optgroup><optgroup label="Executar Comando"><option>Religar o controle</option></optgroup><option>— Nada —</option></select></td></tr>
             </table>
           </div>
         </div>
@@ -3904,7 +3916,7 @@
   <div class="tn-cx">
     <div class="tn-topo">
       <span class="tn-tit">Definições Controle e Mouse</span>
-      <span class="ajuda" tabindex="0">?<span class="dica">As <b>22 linhas</b> de cada botão: <b>o que ele faz</b> — mouse, tecla ou programa, na mesma lista.<br><br>O <b>PS</b> faz duas coisas: continua sendo a saída de emergência — os 5 gestos desta aba saem dele — e a tecla que você escolher acontece <b>junto</b>, no toque curto e fora do jogo. Escolher <b>— Nada —</b> cala o toque no PS: ele deixa de digitar e deixa de abrir a Steam; os gestos continuam.<br><br>Enquanto o touchpad for o ponteiro do computador, o clique dele não vira tecla — as três regiões ficam marcadas e a escolha fica guardada.<br><br>Valem para o controle que navega o PC: o <b data-campo="quem-navega">P1 Cosmic Red USB</b>.</span></span>
+      <span class="ajuda" tabindex="0">?<span class="dica">As <b>22 linhas</b> de cada botão: <b>o que ele faz</b> — mouse, tecla ou programa, na mesma lista.<br><br>O <b>PS</b> faz duas coisas: continua sendo a saída de emergência — os 6 gestos desta aba saem dele — e a tecla que você escolher acontece <b>junto</b>, no toque curto e fora do jogo. Escolher <b>— Nada —</b> cala o toque no PS: ele deixa de digitar e deixa de abrir a Steam; os gestos continuam.<br><br>Enquanto o touchpad for o ponteiro do computador, o clique dele não vira tecla — as três regiões ficam marcadas e a escolha fica guardada.<br><br>Valem para o controle que navega o PC: o <b data-campo="quem-navega">P1 Cosmic Red USB</b>.</span></span>
       <a class="tn-x" href="#" title="Fechar" data-gesto="fechar-definicoes">×</a>
     </div>
     <div class="tn-corpo">
@@ -4414,7 +4426,7 @@
     as tabelas em telas separadas <b>"as duas tabelas" deixou de ser o que este
     botão alcança</b>. Cada tela ganhou o seu <i>Voltar ao padrão</i>, que zera só a
     tabela dela e diz o que <b>não</b> toca; o da fileira devolve a <b>aba
-    inteira</b> — ativação, os 5 gestos e as duas telas.</li>
+    inteira</b> — ativação, os 6 gestos e as duas telas.</li>
     <li><b>A régua desta casa não mede pop-up — e a primeira que eu escrevi também
     não mediu.</b> A <code>regua.py</code> carrega o arquivo <b>sem fragmento</b> e a
     <code>regua_estados.py</code> varre só <code>.miolo, .miolo *</code>; a
@@ -4500,7 +4512,7 @@
 
   <h2>O que os quatro controles revelaram, e está na tela</h2>
   <ul>
-    <li><b>Mouse, teclado e os cinco gestos saem de UM controle só.</b> Com um
+    <li><b>Mouse, teclado e os seis gestos saem de UM controle só.</b> Com um
     controle ligado ninguém podia ver isso. O poll loop lê o estado do controle
     <b>primário</b> (<code>daemon/lifecycle.py:4541</code>) e é esse estado que vai
     para o mouse (<code>:4744</code>), para o teclado (<code>:4754</code>) e para o

@@ -71,9 +71,14 @@ DUALSENSE_NAME = "Sony Interactive Entertainment DualSense Wireless Controller"
 # honesta (refutação nº 2 do sprint doc): um vpad uinput 0df2 não tem hidraw —
 # o SDL não usa o driver HIDAPI PS5 nele e cai no matching evdev com um GUID
 # (version 0x3) ausente do gamecontrollerdb; esse mapeamento NUNCA foi validado
-# ao vivo, e por isso as envs materializadas para o wrapper de launch omitem o
-# IGNORE_DEVICES quando qualquer vpad está neste backend degradado (ver
-# `daemon.launch_env.compose_env` — DEDUP-04).
+# ao vivo. NOTA DATADA — TROCA-DENTRO-DO-JOGO-01, 14/09/2026: aqui dizia que por
+# isso "as envs materializadas para o wrapper omitem o IGNORE_DEVICES quando
+# qualquer vpad está neste backend degradado". Não omitem mais. Desde o caminho
+# Xbox (13/09) o uinput é ESCOLHA dela, e desde 14/09 vale a decisão
+# D-1409-FORA-DO-NATIVO-O-JOGO-VE-SO-O-VIRTUAL: fora do Modo Nativo o jogo vê só
+# o virtual, em qualquer canal. O mapeamento evdev deste vpad continua sem
+# validação ao vivo, e isso segue escrito aqui porque é o preço que sobrou (ver
+# `daemon.launch_env.compose_env`).
 DUALSENSE_EDGE_PRODUCT = 0x0DF2
 DUALSENSE_EDGE_NAME = (
     "Sony Interactive Entertainment DualSense Edge Wireless Controller"

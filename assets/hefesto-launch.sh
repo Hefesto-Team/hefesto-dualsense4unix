@@ -16,8 +16,8 @@
 #     pré-existentes no formato `VAR=VAL %command%` viram $1 e o env(1) as
 #     processa como assignment — `exec "$@"` tentaria EXECUTÁ-las (ENOENT).
 #
-# Decisão das envs (fail-safe por construção — pior caso: controle
-# duplicado, NUNCA zero controles nem jogo que não abre):
+# Decisão das envs (fail-safe por construção — o jogo SEMPRE abre; o controle,
+# ver a nota do item 4):
 #   1. $SteamAppId ausente/0 (atalho não-Steam) ................ nenhuma env
 #   2. arquivo materializado ausente ........................... nenhuma env
 #   3. gate de vida: connect()+ping JSON-RPC no socket de PRODUÇÃO por nome
@@ -25,8 +25,15 @@
 #      socket sobrevive a crash, então "o arquivo existe" NÃO é gate) —
 #      daemon morto/stale/timeout ............................. nenhuma env
 #   4. daemon vivo => exporta SÓ as envs da allowlist lidas do arquivo que o
-#      daemon regrava a cada transição (backend REAL por jogador: qualquer
-#      vpad degradado => o próprio arquivo já vem SEM o IGNORE).
+#      daemon regrava a cada transição. NOTA DATADA — TROCA-DENTRO-DO-JOGO-01,
+#      14/09/2026: aqui dizia "qualquer vpad degradado => o arquivo já vem SEM o
+#      IGNORE". A regra agora é a decisão dela
+#      (D-1409-FORA-DO-NATIVO-O-JOGO-VE-SO-O-VIRTUAL): fora do Modo Nativo o
+#      arquivo esconde o DualSense de plástico, em qualquer canal, e o que ainda
+#      derruba o IGNORE é a COBERTURA — um vpad por físico. O "nunca zero
+#      controles" acima vale para o Modo Nativo e para a mesa sem cobertura; na
+#      Navegação, o jogo fica sem gamepad até ela subir um modo, e isso é
+#      escolha dela.
 #
 # Allowlist ESPELHADA em src/hefesto_dualsense4unix/daemon/launch_env.py.
 

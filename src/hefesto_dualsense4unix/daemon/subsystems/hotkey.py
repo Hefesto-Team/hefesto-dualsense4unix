@@ -2490,10 +2490,16 @@ def mascara_atual(daemon: DaemonProtocol) -> str:
     Navegação), é a do cartão herdando a da sessão (`external_mask.
     mascara_efetiva`): a que o próximo vpad veste e a que a aba Jogar acende.
     """
-    from hefesto_dualsense4unix.daemon.subsystems.external_mask import mascara_efetiva
+    from hefesto_dualsense4unix.daemon.subsystems.external_mask import (
+        mascara_efetiva,
+        mascara_vestida,
+    )
     from hefesto_dualsense4unix.daemon.subsystems.gamepad import primary_identity
 
-    vivo = getattr(getattr(daemon, "_gamepad_device", None), "flavor", None)
+    # TROCA-DENTRO-DO-JOGO-01 (14/09/2026): a pergunta "o que o aparelho veste"
+    # tem UM leitor (`external_mask.mascara_vestida`). Aqui havia uma cópia dele,
+    # quase igual à da env — e as duas divergiam no estado de falha.
+    vivo = mascara_vestida(daemon)
     if isinstance(vivo, str) and vivo in CICLO_DE_MASCARAS:
         return vivo
     sessao = getattr(getattr(daemon, "config", None), "gamepad_flavor", None)
@@ -2532,6 +2538,10 @@ def build_next_mask_callback(daemon: DaemonProtocol) -> Any:
     """
 
     async def _ciclar_mascara() -> None:
+        from hefesto_dualsense4unix.daemon.subsystems.external_mask import (
+            escolher_a_mascara,
+            mascara_vestida,
+        )
         from hefesto_dualsense4unix.daemon.subsystems.gamepad import primary_identity
 
         store = getattr(daemon, "store", None)
@@ -2539,22 +2549,27 @@ def build_next_mask_callback(daemon: DaemonProtocol) -> Any:
             logger.info("mascara_ciclo_skip_native_mode")
             return
         identidade = primary_identity(daemon)
-        tratar = getattr(
-            getattr(daemon, "_ipc_server", None), "_handle_gamepad_mask_set", None
-        )
-        if not identidade or not callable(tratar):
-            logger.warning(
-                "mascara_do_gesto_sem_cartao",
-                identidade=identidade,
-                tem_servidor=callable(tratar),
-            )
+        if not identidade:
+            logger.warning("mascara_do_gesto_sem_cartao", identidade=identidade)
             await _sinalizar_lightbar(daemon, _pulsos_de_falha())
             return
+
+        # O AVISO VEM ANTES DA ESCOLHA, E A ESCOLHA É LIDA DEPOIS DELE —
+        # TROCA-DENTRO-DO-JOGO-01, 14/09/2026. Os pulsos de risco duram ~0,56 s e
+        # cedem o laço; enquanto eles piscavam, um segundo PS + L3 lia a máscara
+        # de ANTES (nada tinha sido gravado ainda) e mirava o MESMO alvo. Ela
+        # apertava duas vezes esperando o Nintendo Pro, ficava no Xbox 360, e o
+        # vpad era recriado duas vezes no meio do jogo. Lida DEPOIS dos pulsos, a
+        # segunda troca parte do que a primeira deixou. A leitura e a escrita não
+        # têm `await` entre elas, e é isso que as mantém no mesmo pedaço de laço:
+        # se o ato virar assíncrono um dia, aqui precisa de trava.
+        jogo_no_controle = getattr(daemon, "display_authority", "unknown") == "game"
+        if mascara_vestida(daemon) is not None and jogo_no_controle:
+            await _sinalizar_lightbar(daemon, _PULSOS_DE_RISCO)
 
         atual = mascara_atual(daemon)
         alvo = proxima_mascara(atual)
         vpad_antes = getattr(daemon, "_gamepad_device", None) is not None
-        jogo_no_controle = getattr(daemon, "display_authority", "unknown") == "game"
         logger.info(
             "mascara_troca_pedida_por_gesto",
             de=atual,
@@ -2562,12 +2577,13 @@ def build_next_mask_callback(daemon: DaemonProtocol) -> Any:
             vpad=vpad_antes,
             jogo_com_autoridade=jogo_no_controle,
         )
-        if vpad_antes and jogo_no_controle:
-            await _sinalizar_lightbar(daemon, _PULSOS_DE_RISCO)
 
         resposta: dict[str, Any] | None = None
         try:
-            resposta = await tratar({"uniq": identidade, "flavor": alvo})
+            # O MESMO ATO DO CHIP DA ABA JOGAR, pela mesma porta. Antes isto era
+            # `daemon._ipc_server._handle_gamepad_mask_set`, um método privado de
+            # um handler de socket, achado por string.
+            resposta = escolher_a_mascara(daemon, identidade, alvo)
         except Exception as exc:
             logger.warning("mascara_do_gesto_falhou", para=alvo, err=str(exc))
 
