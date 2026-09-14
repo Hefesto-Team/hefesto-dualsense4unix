@@ -3534,7 +3534,9 @@ elif [[ "${WITH_WIREPLUMBER_FIX}" -eq 1 ]]; then
                 printf '      ./install.sh --with-wireplumber-disable-mic para tirá-lo de vez\n'
                 ;;
             3)
-                printf '      drop-in do WirePlumber instalado (a fonte padrão ainda não é um microfone)\n'
+                # MIC-PADRAO-NO-CABO-01: sem veredito aqui. A cura do doctor e a
+                # conferência do fim ainda vão rodar, e é a conferência que diz.
+                printf '      drop-in do WirePlumber instalado (o veredito do microfone sai no fim deste passo)\n'
                 ;;
             *)
                 printf '      drop-in do WirePlumber instalado + fonte padrão reeleita\n'
@@ -3560,16 +3562,18 @@ else
 fi
 
 # MIC-USB-01, entrega 7 — a cura das camadas 1 e 2 do microfone mudo, que
-# existia em `scripts/doctor.sh --fix-mic` e que NINGUÉM chamava. Medido em
-# 25/07: depois de um uninstall + install completos o perfil da placa voltou
-# sozinho para a entrada digital (`input:iec958-stereo`, que é S/PDIF e não
-# carrega sinal), e uma instalação limpa entregava o microfone mudo com a cura
-# pronta no repositório.
+# existia em `scripts/doctor.sh --fix-mic` e que NINGUÉM chamava: uma instalação
+# limpa entregava o microfone mudo com a cura pronta no repositório.
+#
+# FATO SUBSTITUÍDO (MIC-PADRAO-NO-CABO-01): aqui se lia que o
+# `input:iec958-stereo` do DualSense "é S/PDIF e não carrega sinal". O pico 0
+# de 25/07 foi medido com o mudo do firmware ativo; em 26/07 o iec958 gravou
+# pico 4606, e o analógico, `available: no`, nascia sem porta de captura.
 #
 # As duas ações deste passo são complementares e não conflitam: o drop-in acima
 # decide QUEM é o microfone padrão do sistema; a cura abaixo garante que o
-# microfone FUNCIONA quando escolhido (perfil da placa na entrada analógica e
-# nenhum mute persistido por rota de captura).
+# microfone FUNCIONA quando escolhido (perfil da placa numa entrada com porta de
+# captura e nenhum mute persistido por rota de captura).
 #
 # Não roda com `--with-wireplumber-disable-mic`: ali a source foi desabilitada
 # DE PROPÓSITO, e ressuscitá-la desfaria a escolha da usuária no mesmo passo.
@@ -3580,13 +3584,15 @@ fi
 # WARN continuam saindo — o silêncio é do sucesso, não do problema.
 if [[ "${WITH_WIREPLUMBER_DISABLE_MIC}" -ne 1 ]]; then
     if [[ "${DRY_RUN:-0}" -eq 1 ]]; then
-        _faria "curar o microfone pelo doctor (--fix-mic): pôr o perfil da placa na entrada ANALÓGICA e tirar o mudo persistido por rota de captura"
+        _faria "curar o microfone pelo doctor (--fix-mic): pôr o perfil da placa numa entrada com porta de captura e tirar o mudo persistido por rota de captura"
     elif [[ ! -r "${ROOT_DIR}/scripts/doctor.sh" ]]; then
         warn "scripts/doctor.sh ausente — cura do microfone pulada"
     elif bash "${ROOT_DIR}/scripts/doctor.sh" --fix-mic --quiet; then
         printf '      microfone: camadas 1 e 2 conferidas (doctor.sh --fix-mic)\n'
     else
-        printf '      microfone: cura incompleta — rode: bash scripts/doctor.sh --fix-mic\n'
+        # RECEITA-ERRADA-01: o `--fix-mic` acabou de rodar, e rodá-lo de novo faz
+        # o mesmo. As linhas [FAIL]/[WARN] logo acima dizem o que falta.
+        printf '      microfone: a cura do doctor não fechou tudo — o que falta está nas linhas acima\n'
     fi
 fi
 
@@ -3623,7 +3629,31 @@ if command -v pactl >/dev/null 2>&1; then
             printf '      microfone: nenhuma fonte padrão eleita (PipeWire parado?)\n'
             ;;
         *)
-            printf '      microfone padrão do sistema: %s (entrada de verdade)\n' "${_fonte_agora}"
+            # MIC-PADRAO-NO-CABO-01: «entrada de verdade» saía para QUALQUER nome
+            # que não fosse monitor — inclusive a onboard com as três portas
+            # `not available`, e o DualSense com outra entrada usável ao lado.
+            # O critério é o das duas consultas do wp-fix, que não escrevem nada.
+            _porta_usavel="$(bash "${ROOT_DIR}/scripts/fix_wireplumber_default_source.sh" --fonte-se-sustenta "${_fonte_agora}" 2>/dev/null || true)"
+            if [[ -z "${_porta_usavel}" ]]; then
+                warn "o microfone padrão do sistema (${_fonte_agora}) não tem porta de captura usável — vai gravar silêncio"
+            else
+                case "${_fonte_agora}" in
+                    *[Dd]ual[Ss]ense*)
+                        _outra_entrada="$(bash "${ROOT_DIR}/scripts/fix_wireplumber_default_source.sh" --melhor-fonte-elegivel 2>/dev/null || true)"
+                        if [[ -z "${_outra_entrada}" ]]; then
+                            printf '      microfone padrão do sistema: %s\n' "${_fonte_agora}"
+                            printf '      (o DualSense, porque é a ÚNICA entrada com porta usável agora)\n'
+                        else
+                            warn "o microfone padrão do sistema é o DualSense (${_fonte_agora}), mas há outra entrada com porta usável: ${_outra_entrada}"
+                        fi
+                        unset _outra_entrada
+                        ;;
+                    *)
+                        printf '      microfone padrão do sistema: %s (entrada de verdade)\n' "${_fonte_agora}"
+                        ;;
+                esac
+            fi
+            unset _porta_usavel
             ;;
     esac
     unset _fonte_agora

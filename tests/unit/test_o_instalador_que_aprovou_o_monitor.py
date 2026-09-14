@@ -331,19 +331,35 @@ def _bloco_do_passo(marcador: str) -> str:
 
 
 def _roda_o_passo_10(
-    tmp_path: Path, *, rc_do_wp_fix: int, padrao: str = ONBOARD_DELA
+    tmp_path: Path,
+    *,
+    rc_do_wp_fix: int,
+    padrao: str = ONBOARD_DELA,
+    sustenta: bool = False,
 ) -> subprocess.CompletedProcess[str]:
     """Executa o passo 10 REAL do install, com o wp-fix e o doctor dublados.
 
     O `ROOT_DIR` aponta para uma raiz de mentira em `tmp`, então os dois scripts
-    que o passo chama são os dublês — o único papel deles aqui é devolver o
-    código de saída do cenário. O `pactl` é o dublê do arquivo, e por isso a
-    conferência final do microfone também roda sem tocar o áudio da máquina.
+    que o passo chama são os dublês — o papel deles aqui é devolver o código de
+    saída do cenário e responder as duas consultas da conferência final
+    (MIC-PADRAO-NO-CABO-01): `--fonte-se-sustenta` devolve o nome só quando
+    `sustenta`, e `--melhor-fonte-elegivel` não acha outra. O `pactl` é o dublê
+    do arquivo, e por isso a conferência final também roda sem tocar o áudio da
+    máquina.
     """
     raiz = tmp_path / "raiz"
     (raiz / "scripts").mkdir(parents=True, exist_ok=True)
     wp = raiz / "scripts" / "fix_wireplumber_default_source.sh"
-    wp.write_text(f"#!/bin/sh\nexit {rc_do_wp_fix}\n", encoding="utf-8")
+    consulta = 'printf "%s\\n" "$2"' if sustenta else ":"
+    wp.write_text(
+        "#!/bin/sh\n"
+        'case "$1" in\n'
+        f"  --fonte-se-sustenta) {consulta}; exit 0 ;;\n"
+        "  --melhor-fonte-elegivel) exit 0 ;;\n"
+        "esac\n"
+        f"exit {rc_do_wp_fix}\n",
+        encoding="utf-8",
+    )
     wp.chmod(0o755)
     doctor = raiz / "scripts" / "doctor.sh"
     doctor.write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
@@ -381,25 +397,43 @@ def test_install_trata_o_exit_3_sem_declarar_reeleicao(tmp_path: Path) -> None:
     Agora ela EXECUTA o passo com o wp-fix dublado em cada código de saída e lê
     o que foi para a tela. Que forma o shell usa para despachar deixou de ser
     assunto da régua; o que ela mede é o que ela promete no nome.
+
+    NOTA DATADA 13/09/2026 (MIC-PADRAO-NO-CABO-01). Esta régua exigia, no rc 3,
+    a frase «a fonte padrão ainda não é um microfone». No install de 13/09 com o
+    P1 no cabo ela saiu e, três linhas abaixo, a conferência final disse
+    «entrada de verdade» sobre o DualSense: dois vereditos no mesmo passo. O rc 3
+    agora só diz que o veredito sai no fim, e quem o dá é a conferência final,
+    que também deixou de chamar de «entrada de verdade» a onboard sem porta
+    usável deste cenário.
     """
     monitor = _roda_o_passo_10(tmp_path / "rc3", rc_do_wp_fix=3)
     assert monitor.returncode == 0, monitor.stderr
     # não é falha do drop-in:
     assert "drop-in do WirePlumber instalado" in monitor.stdout, monitor.stdout
     assert "falhou" not in monitor.stdout, monitor.stdout
+    # não é veredito — ele sai no fim:
+    assert "o veredito do microfone sai no fim deste passo" in monitor.stdout, monitor.stdout
+    assert "ainda não é um microfone" not in monitor.stdout, monitor.stdout
     # e não é reeleição:
-    assert "a fonte padrão ainda não é um microfone" in monitor.stdout, monitor.stdout
     assert "reeleita" not in monitor.stdout, (
         "o rc 3 voltou a cair no desfecho genérico e declarou uma eleição que "
         f"não houve: {monitor.stdout}"
     )
+    # o veredito do fim, sobre a onboard com as três portas `not available`:
+    assert "(entrada de verdade)" not in monitor.stdout, monitor.stdout
+    assert "vai gravar silêncio" in monitor.stdout, monitor.stdout
 
     # O contraste que impede o teste de passar por ausência: com rc 0 a frase da
-    # reeleição TEM de aparecer. Sem isto, apagar o texto do install deixaria o
-    # `not in` acima verde para sempre.
-    eleicao = _roda_o_passo_10(tmp_path / "rc0", rc_do_wp_fix=0)
+    # reeleição TEM de aparecer, e uma fonte que se sustenta é entrada de verdade.
+    # Sem isto, apagar o texto do install deixaria os `not in` acima verdes.
+    eleicao = _roda_o_passo_10(
+        tmp_path / "rc0", rc_do_wp_fix=0, padrao=WEBCAM, sustenta=True
+    )
     assert eleicao.returncode == 0, eleicao.stderr
     assert "fonte padrão reeleita" in eleicao.stdout, eleicao.stdout
+    assert f"microfone padrão do sistema: {WEBCAM} (entrada de verdade)" in eleicao.stdout, (
+        eleicao.stdout
+    )
 
 
 def test_nenhum_teste_daqui_toca_o_audio_da_maquina() -> None:

@@ -578,8 +578,25 @@ class TestPortaoParaDeAprovarOSintoma:
         O que fica travado agora é a CONCORDÂNCIA: o check oferece exatamente o
         que a cura elegeria. A decisão antiga não foi apagada — está aqui, com
         a data e o motivo de ter caducado.
+
+        NOTA DATADA 13/09/2026 (MIC-PADRAO-NO-CABO-01, §D.7). A concordância
+        continua sendo o contrato, e por isso o texto do check mudou junto com a
+        cura: com o 51 no lugar a cura não grava o DualSense escolhido por falta
+        de outra entrada, então o check não manda rodar o `--fix-mic` nem
+        oferece o comando que a cura não executa. Sem o 51, os dois continuam
+        oferecendo e elegendo o DualSense.
         """
         cenario.com_dropin(DROPIN_51)
+        res = cenario.roda("check_default_source_monitor")
+        assert "[FAIL]" in res.stdout, res.stdout
+        assert "pactl set-default-source" not in res.stdout, (
+            "com o 51 o check oferece um comando que a cura não executa:\n" + res.stdout
+        )
+        assert "rode: scripts/doctor.sh --fix-mic" not in res.stdout, res.stdout
+        assert "o WirePlumber ainda não a elegeu" in res.stdout, res.stdout
+        assert SRC_ONBOARD not in res.stdout, res.stdout
+
+        (cenario.conf / DROPIN_51).unlink()
         res = cenario.roda("check_default_source_monitor")
         assert f"pactl set-default-source {SRC_DS}" in res.stdout, res.stdout
         assert SRC_ONBOARD not in res.stdout, (
@@ -700,8 +717,17 @@ class TestCuraDaFontePadrao:
         Com o filtro de porta ligado (o `_source_porta_ativa_indisponivel`, que
         existia e não era chamado), a onboard sai da disputa e sobra o mic do
         controle — que é o único microfone de verdade desta máquina.
+
+        NOTA DATADA 13/09/2026 (MIC-PADRAO-NO-CABO-01, §D.7 da sprint, decidido
+        por quem coordena). Este teste rodava COM o drop-in 51 e exigia a
+        gravação do DualSense. A premissa é de 30/07, quando o 51 punha a
+        entrada do controle em 50, abaixo do monitor. Desde a MONITOR-QUE-VENCE-01
+        (08/08) o 51 a põe em 1500, acima de qualquer monitor, e gravar a escolha
+        a empilha no estado do WirePlumber, onde ela vence a webcam plugada
+        depois. O caso com o 51 virou a régua logo abaixo; este ficou SEM o 51,
+        que é onde a gravação ainda é o único jeito de a entrada vencer. A metade
+        que ele provava fica de pé nos dois: a onboard nunca é eleita.
         """
-        cenario.com_dropin(DROPIN_51)
         res = cenario.roda("fix_default_source_monitor")
         assert res.returncode == 0, res.stderr
         eleicoes = [
@@ -711,6 +737,28 @@ class TestCuraDaFontePadrao:
             "a onboard tem as três portas `not available` — elegê-la é eleger "
             f"silêncio, e o WirePlumber devolve o monitor.\n{eleicoes}\n{res.stdout}"
         )
+
+    def test_com_o_51_a_cura_nao_grava_o_dualsense_escolhido_por_falta(
+        self, cenario: Cenario
+    ) -> None:
+        """§D.7 da MIC-PADRAO-NO-CABO-01: com o 51, nada é gravado.
+
+        No install de 13/09 com o P1 no cabo, esta cura leu o monitor de
+        passagem logo depois do restart e gravou o DualSense, que só foi o alvo
+        por não haver outra entrada. Reproduzido com dublês; o passo inteiro está
+        em `tests/unit/test_o_microfone_padrao_no_cabo.py` (R7).
+        """
+        cenario.com_dropin(DROPIN_51)
+        res = cenario.roda("fix_default_source_monitor")
+        assert res.returncode == 0, res.stderr
+        eleicoes = [
+            c for c in cenario.chamadas() if c.startswith("set-default-source")
+        ]
+        assert eleicoes == [], (
+            "com o 51 no lugar a cura gravou o DualSense escolhido por falta de "
+            f"outra entrada — a gravação vence a próxima webcam.\n{res.stdout}"
+        )
+        assert "não gravo" in res.stdout, res.stdout
 
     def test_com_opt_in_a_cura_elege_o_controle(self, cenario: Cenario) -> None:
         cenario._escrever_pactl()
