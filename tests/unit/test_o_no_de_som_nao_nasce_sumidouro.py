@@ -231,23 +231,42 @@ def test_a_suite_nao_carrega_modulo_de_som_no_pipewire_dela(
 
 
 def test_a_guarda_recusa_a_escrita_e_deixa_a_leitura_passar() -> None:
-    """Ler não muda nada dela; só `load-module`/`unload-module` são recusados.
+    """A guarda recusa `load-module`/`unload-module` e entrega a leitura a quem
+    está por baixo dela — e quem está por baixo, aqui, é um ESPIÃO.
 
-    Uma guarda que cortasse TUDO seria fácil e errada: o `estado()` do nó
-    pergunta ao servidor, e há régua que lê. O contrato é o par — a escrita
-    volta `None`, a leitura chega ao `pactl`.
+    Uma guarda que cortasse TUDO no `_rodar` seria fácil e errada: o `estado()`
+    do nó pergunta ao servidor, e há régua que lê com um `runner` próprio. O
+    contrato é o par — a escrita volta `None` sem chegar a ninguém, a leitura
+    chega inteira a quem está por baixo.
+
+    FATO SUBSTITUÍDO (13/09/2026, A-SUITE-NAO-PERGUNTA-AO-SOM-01). Este teste
+    lia `pactl list sinks short` do servidor de som DE VERDADE, com a razão
+    «ler não muda nada dela». Ler trava junto quando o servidor trava — e o
+    dela travou duas vezes naquele dia —, e o veredito passava a depender da
+    máquina. O par medido é o mesmo; o servidor de quem roda saiu da conta, e
+    quem prova que a suíte inteira não o alcança é
+    `test_a_suite_nao_conversa_com_o_som_dela.py`.
+
+    MORDIDA: faça `_sem_escrever_no_som` delegar também as escritas, e a
+    primeira metade reprova; faça-o devolver `None` para tudo, e a segunda.
     """
-    import shutil
+    from tests.conftest import _sem_escrever_no_som
 
-    from hefesto_dualsense4unix.integrations import alto_falante_bt
+    vistos: list[list[str]] = []
 
-    escrita = alto_falante_bt._rodar(
+    def espiao(argv: list[str]) -> str:
+        vistos.append(list(argv))
+        return "97\thefesto_som_0000ab\tPipeWire\ts16le 2ch 48000Hz\tIDLE\n"
+
+    guarda = _sem_escrever_no_som(espiao)
+
+    assert guarda(
         ["pactl", "load-module", "module-null-sink", "sink_name=nao_deve_subir"]
-    )
-    assert escrita is None
+    ) is None
+    assert guarda(["pactl", "unload-module", "97"]) is None
+    assert vistos == [], f"a escrita chegou a quem está por baixo da guarda: {vistos}"
 
-    if shutil.which("pactl") is None:  # pragma: no cover — CI sem servidor
-        pytest.skip("sem `pactl` nesta máquina: não há leitura a delegar")
-    leitura = alto_falante_bt._rodar(["pactl", "list", "sinks", "short"])
+    leitura = guarda(["pactl", "list", "sinks", "short"])
     assert leitura is not None, "a guarda comeu a LEITURA — ela só pode comer escrita"
-    assert "nao_deve_subir" not in leitura
+    assert "hefesto_som_0000ab" in leitura
+    assert vistos == [["pactl", "list", "sinks", "short"]], vistos
