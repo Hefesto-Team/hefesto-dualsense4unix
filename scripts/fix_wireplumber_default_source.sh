@@ -191,10 +191,14 @@ show_status() {
         log "Default Configured Devices (wpctl):"
         wpctl status 2>/dev/null | sed -n '/Default Configured/,$p' | sed -n '1,6p' || true
     fi
+    # MIC-PADRAO-NO-CABO-01: esta linha é LEITURA. Ela dizia `persistido:` logo
+    # depois do restart, e no cabo mostrava o `hefesto_mic_…` que o rádio tinha
+    # guardado horas antes, como se este passo o tivesse gravado. Ela não julga
+    # se o nó está no ar: logo depois do restart a ausência é só o transitório.
     if [[ -f "${STATE_FILE}" ]]; then
-        local persisted
-        persisted="$(grep '^default.configured.audio.source=' "${STATE_FILE}" 2>/dev/null || true)"
-        log "persistido: ${persisted:-(default.configured.audio.source não definido)}"
+        local guardada
+        guardada="$(sed -n 's/^default\.configured\.audio\.source=//p' "${STATE_FILE}" 2>/dev/null | head -n1 || true)"
+        log "preferência de fonte guardada no WirePlumber (lida do estado dele): ${guardada:-(nenhuma)}"
     fi
 }
 
@@ -604,11 +608,22 @@ verify_active_not_dualsense() {
     #
     # E SE O ORÇAMENTO ACABAR COM `auto_null` NA MÃO, isso deixa de ser espera e
     # vira o diagnóstico: não há fonte de captura nenhuma pronta nesta máquina.
+    #
+    # MIC-PADRAO-NO-CABO-01 (13/09/2026) — O MESMO DEFEITO COM OUTRO NÓ. Desde
+    # 06/09 a casa tem um sink virtual (`hefesto_som_*`), módulo do
+    # pipewire-pulse que sobrevive ao restart. Logo depois do restart ele é o
+    # único candidato, o WirePlumber o elege de passagem e o `.monitor` dele
+    # ocupa o lugar do `auto_null`. Com o P1 no cabo o laço saía na primeira
+    # volta com FALHA de MONITOR, e o passo terminava com o DualSense eleito.
+    # Reproduzido com dublês; a régua é `tests/unit/test_o_microfone_padrao_no_cabo.py`.
+    # Por isso o laço espera o monitor passar também. No fim do orçamento, o
+    # último valor é julgado como antes.
     local i cur=""
     for i in $(seq 1 20); do              # ~5s (20 x 250ms)
         cur="$(active_default_source || true)"
         if [[ -n "${cur}" ]] \
            && ! e_o_nada_do_pipewire "${cur}" \
+           && ! is_monitor_source "${cur}" \
            && ! is_dualsense_mic "${cur}"; then
             break
         fi
@@ -913,8 +928,8 @@ promote_source_dualsense() {
     # eleger outra fonte por cima da escolha dela. O que mudou foi só o
     # `--enable-mic`, onde apagar o promotor era desarmar MONITOR-QUE-VENCE-01.
     enable_mic_dualsense "sem-promotor"
-    # Camadas 1 e 2 têm UM dono: o doctor. Promover uma fonte cujo perfil está no
-    # S/PDIF seria promover silêncio — o pior resultado possível para este modo,
+    # Camadas 1 e 2 têm UM dono: o doctor. Promover uma fonte sem porta de
+    # captura seria promover silêncio — o pior resultado possível para este modo,
     # porque a usuária veria "DualSense é o microfone padrão" e pico 0.
     if [[ -x "${ROOT_DIR}/scripts/doctor.sh" ]]; then
         bash "${ROOT_DIR}/scripts/doctor.sh" --fix-mic --quiet || true

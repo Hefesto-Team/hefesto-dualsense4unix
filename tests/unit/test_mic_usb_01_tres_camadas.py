@@ -6,7 +6,9 @@ aba Status dizia a verdade o tempo todo — o medidor era a única coisa
 funcionando. O que faltava era a cura.
 
   camada 1  `"mute":true` persistido por ROTA de placa no estado do WirePlumber;
-  camada 2  perfil da placa preso em `input:iec958-stereo` (S/PDIF, SEM SINAL);
+  camada 2  perfil da placa numa entrada sem porta de captura (o
+            `input:iec958-stereo` capta: pico 4606 em 26/07; o pico 0 de 25/07
+            foi medido com o mudo do firmware ativo);
   camada 3  o mudo no FIRMWARE do controle — o mesmo que o botão físico alterna.
 
 Cobertura, toda pelo caminho PÚBLICO:
@@ -589,7 +591,8 @@ class TestNomeDaSource:
 
 
 #: Recorte fiel de `LC_ALL=C pactl list cards` desta máquina, com o DualSense no
-#: perfil S/PDIF — o estado medido no relato ("gravação de 4 segundos: pico 0").
+#: perfil S/PDIF — o estado do relato ("gravação de 4 segundos: pico 0", com o
+#: mudo do firmware ativo; o mesmo perfil gravou pico 4606 em 26/07).
 _CARDS_SPDIF = """\
 Card #52
 \tName: alsa_card.pci-0000_0c_00.4
@@ -815,7 +818,7 @@ class TestPromocaoDaFonte:
         bloco = texto[inicio : texto.index("\n}\n", inicio)]
         assert "pick_dualsense_source_id" in bloco
         assert "wpctl set-default" in bloco
-        # Promover uma fonte no S/PDIF seria promover silêncio.
+        # Promover uma fonte sem porta de captura seria promover silêncio.
         assert "--fix-mic" in bloco
 
     def test_promocao_ignora_o_monitor_do_sink(self) -> None:
