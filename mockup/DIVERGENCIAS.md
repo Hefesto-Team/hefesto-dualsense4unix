@@ -21,13 +21,4 @@ seção daqui**: a aba deixou de estar em trabalho.
 
 ---
 
-## 06-navegacao.html
-- **14/09/2026** — a sexta linha de gesto: **PS + L3 · Próxima Máscara**, ao lado
-  do PS + R3 (Próximo Modo). O lugar é escolha dela: *"Tem que ficar na aba
-  navegAção."* <!-- noqa-acento: citação literal dela --> Junto, a frase da
-  legenda passou de «os cinco gestos» para «os seis gestos». Esperando o olho
-  dela na aba inteira para `--publicar 06`.
-- **Enquanto não publica:** a aba Navegação instalada mostra cinco linhas e não
-  cita o PS + L3 em lugar nenhum. O gesto FUNCIONA no controle desde a instalação
-  de 14/09 — quem não o lista é a tela. Até publicar, quem quiser conferir o
-  combo lê `docs/usage/hotkeys.md`.
+<!-- Nenhuma aba em trabalho: o produto está igual ao desenho dela. -->
