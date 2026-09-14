@@ -110,7 +110,8 @@ funcionando e conseguir reativar a emulação depois.
 | PS (toque curto) | Ação `[hotkey.ps_button]` — default `steam` |
 | **PS + Options** | Modo jogo on/off — suprime/restaura emulação de mouse/teclado |
 | PS + D-pad ↑/↓ | Troca de perfil (combo sagrado) |
-| **PS + R3** | **Próxima ponte** — DualSense → Xbox 360 → mouse+teclado (ver a seção abaixo) |
+| **PS + R3** | **Próximo modo** — Sony DualSense → Xbox → Navegação (ver a seção abaixo) |
+| **PS + L3** | **Próxima máscara** — DualSense → Xbox 360 → Nintendo Pro (ver a seção abaixo) |
 | **L3 / R3** | Abre / fecha o **teclado na tela** (ver a seção abaixo) |
 
 **Por que não é mais o long-press.** O gesto original era segurar o PS por ~1 s
@@ -219,6 +220,41 @@ controle: o `PS + R3` trocou a ponte dentro do Duskfade na primeira tentativa
 **sem prova de plástico são as cinco cores da piscada** — nenhuma delas foi
 conferida com o olho dela. O roteiro está em
 [PROVA-NO-PLASTICO-01](../process/sprints/2026-08-19-PROVA-NO-PLASTICO-01-o-roteiro-de-quarenta-minutos-com-o-controle-na-mao.md).
+
+## Próxima máscara — combo PS + L3
+
+**Máscara** é como o jogo reconhece o controle, por cima do modo: DualSense,
+Xbox 360 ou Nintendo Pro. O gesto **PS + L3** anda por elas sem fechar o jogo, em
+ciclo — **DualSense → Xbox 360 → Nintendo Pro → DualSense** — e é o mesmo chip
+do cartão do jogador 1 na aba Jogar: a máscara vale na hora e fica gravada no
+perfil ativo (PS-L3-MASCARA-01, 14/09/2026). O modo não muda; quem troca o modo
+é o **PS + R3**.
+
+**O L3 sozinho continua abrindo o teclado na tela** — o mesmo latch de combo do
+R3 segura o L3 até todos os botões serem soltos.
+
+| Cor da barra (três piscadas) | A máscara que ficou |
+|---|---|
+| **rosa** `#ff79c6` | **DualSense** |
+| **verde claro** `#50fa7b` | **Xbox 360** |
+| **roxo** `#bd93f9` | **Nintendo Pro** |
+| **dois pulsos vermelhos**, antes de aplicar | há jogo com o controle na mão: recriar o controle virtual pode derrubá-lo |
+| dois pulsos vermelhos **+ um vermelho longo** | a máscara não chegou ao aparelho, ou não há controle primário |
+
+**Só o jogador 1.** O gesto anda o cartão do controle primário; os outros trocam
+de máscara pelo próprio cartão, na aba Jogar. **Na Navegação** o gesto guarda a
+máscara e não liga o controle virtual: ela vale quando um modo de jogo subir.
+
+**O que o modo muda com cada máscara, medido em 14/09/2026** no daemon vivo, com
+a libSDL2 do sistema: com a máscara **DualSense**, o modo Sony DualSense dá o
+Edge 0df2 pelo canal próprio (com hidraw) e o modo Xbox dá o mesmo Edge pelo
+canal comum; com **Xbox 360** ou **Nintendo Pro**, os dois modos dão o mesmo
+aparelho — o canal próprio do DualSense só existe com a máscara DualSense.
+
+**O jogo abre pronto para as duas trocas.** A env do lançamento esconde o
+DualSense de plástico sempre que o perfil do jogo não é o Modo Nativo — inclusive
+quando ele abre na Navegação —, porque o jogo lê a env uma vez só, e as trocas
+de modo e de máscara acontecem depois, dentro dele.
 
 ## Teclado na tela — L3 abre, R3 fecha
 

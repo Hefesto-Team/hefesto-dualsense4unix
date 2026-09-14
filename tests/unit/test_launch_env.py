@@ -64,24 +64,34 @@ def test_disable_nunca_inclui_o_vpad_0df2():
 
 def test_uinput_degradado_nunca_esconde_o_fisico():
     """Critério (c) — o caso que o desenho original não testava: daemon VIVO
-    com vpad em uinput/0ce6 => SEM IGNORE (duplicado > zero controles)."""
+    com vpad em uinput/0ce6 => SEM IGNORE (duplicado > zero controles).
+
+    NOTA DATADA — PS-L3-MASCARA-01, 14/09/2026: a régua conferia a regra de
+    quando o uinput DualSense era 0ce6. Desde a VPAD-06 ele é o Edge 0df2, que o
+    IGNORE do 0ce6 não alcança, e desde 13/09 ele é o caminho Xbox que ela
+    escolhe; medido na libSDL2 2.30 em 14/09, ele chega como `ps5` com o mapa
+    certo. O nome fica, e o que ela confere agora é o físico escondido."""
     env = compose_env(
         native_mode=False, emulation_enabled=True,
         flavor="dualsense", backends=["uinput"],
     )
-    assert _IGNORE not in env
-    assert _DISABLE not in env
-    assert env["__GL_SHADER_DISK_CACHE"] == "1"  # só o preload inócuo
+    assert _IGNORE in env
+    assert _DISABLE in env
+    assert env["__GL_SHADER_DISK_CACHE"] == "1"
 
 
 def test_coop_com_um_jogador_degradado_derruba_o_ignore():
     """dedup POR JOGADOR: P1 uhid + P2 uinput => o IGNORE congelado deixaria
-    AQUELE jogador com zero controle — então não sai IGNORE nenhum."""
+    AQUELE jogador com zero controle — então não sai IGNORE nenhum.
+
+    NOTA DATADA — PS-L3-MASCARA-01, 14/09/2026: o P2 em uinput é o Edge 0df2 e
+    continua visível com o IGNORE; o que derruba o IGNORE é a COBERTURA (um vpad
+    por físico, `cobertura_total`), e não o canal."""
     env = compose_env(
         native_mode=False, emulation_enabled=True,
         flavor="dualsense", backends=["uhid", "uinput"],
     )
-    assert _IGNORE not in env
+    assert _IGNORE in env
 
 
 def test_xbox_forca_evdev_e_esconde_o_fisico():
@@ -193,7 +203,9 @@ def test_materialize_reflete_degradacao_por_jogador(tmp_path, monkeypatch):
         _fake_daemon(backend="uhid", coop_backends=("uhid", "uinput"))
     )
     env = _env_do_arquivo(tmp_path / "default.env")
-    assert _IGNORE not in env
+    # NOTA DATADA — PS-L3-MASCARA-01, 14/09/2026: o jogador em uinput é o Edge
+    # 0df2, que o IGNORE do 0ce6 não esconde; o arquivo passou a esconder o físico.
+    assert _IGNORE in env
 
 
 def test_materialize_por_appid_e_limpeza_de_rancosos(tmp_path, monkeypatch):

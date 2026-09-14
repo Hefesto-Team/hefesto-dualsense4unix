@@ -29,9 +29,9 @@ Política (V2-4 + V3-2 + FEAT-HOTKEY-STEAM-01):
 
 Vocabulário completo dos gestos:
     PS sozinho          abre/foca a Steam (toque de até 700 ms)
-    PS + cima           perfil seguinte
-    PS + baixo          perfil anterior
-    PS + R3             próxima ponte
+    PS + cima / baixo   perfil seguinte / anterior
+    PS + L3             próxima máscara (a do cartão do jogador 1)
+    PS + R3             próximo modo
     PS + Options        modo jogo
     PS segurado         desligado por padrão (disparava modo-jogo acidental)
 `dpad_left` e `dpad_right` seguem livres.
@@ -140,6 +140,12 @@ DEFAULT_COMBO_GAMEMODE = ("ps", "options")
 # membro fica bloqueado até TODOS serem soltos, não só enquanto o PS está
 # pressionado.
 DEFAULT_COMBO_PONTE = ("ps", "r3")
+# PS-L3-MASCARA-01 (14/09/2026): combo que pede a PRÓXIMA MÁSCARA — como o jogo
+# reconhece o controle, por cima do modo. Pedido dela: *"preciso que o ps+ l3
+# funcione igual o ps /+ r3 que muda o modo porém para as máscaras"*, para
+# ajustar dentro do jogo sem fechá-lo. O L3 tem dono fora do combo (abre o
+# teclado na tela), e é o mesmo latch do R3 que o segura. Tupla vazia desliga.
+DEFAULT_COMBO_MASCARA = ("ps", "l3")
 
 
 @dataclass
@@ -156,6 +162,7 @@ class HotkeyConfig:
     )
     gamemode_toggle: tuple[str, ...] = DEFAULT_COMBO_GAMEMODE
     next_bridge: tuple[str, ...] = DEFAULT_COMBO_PONTE
+    next_mask: tuple[str, ...] = DEFAULT_COMBO_MASCARA
 
 
 @dataclass
@@ -166,8 +173,10 @@ class HotkeyManager:
     on_prev: Any | None = None
     on_ps_solo: Any | None = None
     on_ps_long_press: Any | None = None
-    # FEAT-HOTKEY-PONTE-CYCLE-01: próxima ponte (PS+seta direita).
+    # FEAT-HOTKEY-PONTE-CYCLE-01: próximo modo (PS+R3).
     on_next_bridge: Any | None = None
+    # PS-L3-MASCARA-01: próxima máscara (PS+L3).
+    on_next_mask: Any | None = None
     config: HotkeyConfig = field(default_factory=HotkeyConfig)
 
     _first_seen_at: dict[frozenset[str], float] = field(default_factory=dict)
@@ -207,8 +216,10 @@ class HotkeyManager:
             "prev": self.config.prev_profile,
             # FEAT-EMULATION-GAMEMODE-COMBO-01: default PS+Options.
             "gamemode": self.config.gamemode_toggle,
-            # FEAT-HOTKEY-PONTE-CYCLE-01: default PS+seta direita.
+            # FEAT-HOTKEY-PONTE-CYCLE-01: default PS+R3.
             "ponte": self.config.next_bridge,
+            # PS-L3-MASCARA-01: default PS+L3.
+            "mascara": self.config.next_mask,
         }
         return {
             nome: frozenset(b.lower() for b in tupla)
@@ -225,7 +236,7 @@ class HotkeyManager:
         """Processa snapshot de botões. Retorna nome do evento disparado.
 
         Valores possíveis: `"next"`, `"prev"`, `"gamemode"`, `"ponte"`,
-        `"ps_solo"`, `"ps_long_press"` ou `None`.
+        `"mascara"`, `"ps_solo"`, `"ps_long_press"` ou `None`.
         """
         t = now if now is not None else time.monotonic()
         buttons = frozenset(str(b).lower() for b in pressed)
@@ -418,6 +429,7 @@ class HotkeyManager:
             "prev": self.on_prev,
             "gamemode": self.on_ps_long_press,
             "ponte": self.on_next_bridge,
+            "mascara": self.on_next_mask,
         }
         if name not in despacho:
             return False, None
@@ -467,6 +479,7 @@ class HotkeyManager:
 __all__ = [
     "DEFAULT_BUFFER_MS",
     "DEFAULT_COMBO_GAMEMODE",
+    "DEFAULT_COMBO_MASCARA",
     "DEFAULT_COMBO_NEXT",
     "DEFAULT_COMBO_PONTE",
     "DEFAULT_COMBO_PREV",

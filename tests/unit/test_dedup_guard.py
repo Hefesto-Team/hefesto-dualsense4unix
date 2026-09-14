@@ -105,6 +105,20 @@ class TestDedupStatus:
         assert ok is False
         assert motivos == ["sem_uhid", "jogador_2_uinput"]
 
+    def test_o_caminho_xbox_escolhido_nao_e_degradacao(self) -> None:
+        """PS-L3-MASCARA-01 (14/09/2026): o uinput do caminho Xbox é escolha dela.
+
+        MORDE: tirar o `caminho_do_vpad` do `dedup_status` acende o aviso de
+        degradação sobre o modo que ela escolheu.
+        """
+        daemon = _daemon(backend="uinput", coop=((2, "uinput"),))
+        daemon._gamepad_device.caminho = "xbox"
+        for jogador in daemon._coop_manager._players.values():
+            jogador.vpad.caminho = "xbox"
+        assert dedup_status(daemon) == (True, [])
+        daemon._gamepad_device.caminho = "dualsense"
+        assert dedup_status(daemon) == (False, ["sem_uhid"])
+
 
 class TestFiacaoNoStateFull:
     """O state_full expõe o guard — fonte no ipc_handlers (padrão do repo

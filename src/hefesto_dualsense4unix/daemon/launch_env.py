@@ -1406,6 +1406,7 @@ def arm_launch_profile(
         profile,
         flavor_atual=flavor_pos,
         backends=backends_pos,
+        identidade=_identidade_do_primario(daemon),
         permite_uhid=_permite_uhid(daemon),
         fisicos=fisicos_pos,
     )
@@ -1517,11 +1518,12 @@ def compose_env(
       que o daemon oferece. Antes disso o `nintendo` caía FORA dos dois `if` e
       saía sem IGNORE nenhum: o jogo veria o DualSense físico E o vpad, e o
       sintoma seria "controle dobrado" com a máscara nova no meio.
-    - DualSense com TODOS os vpads em uhid (Edge 0df2 com hidraw real):
-      DISABLE do físico + IGNORE — dedup no layout PS; o vpad segue com
-      hidraw pleno pela whitelist default (NUNCA 0x0DF2 no DISABLE).
-    - DualSense com QUALQUER vpad em uinput (degradado), emulação desligada
-      ou sem vpad vivo: SÓ o preload de shaders. Duplicado > zero controles.
+    - DualSense, em uhid ou em uinput: DISABLE do físico + IGNORE — dedup no
+      layout PS. O vpad é o Edge 0df2 nos dois canais (VPAD-06), que o IGNORE
+      do 0ce6 não alcança, e o uhid segue com hidraw pleno (NUNCA 0x0DF2 no
+      DISABLE). NOTA DATADA — PS-L3-MASCARA-01, 14/09/2026: o uinput ficava sem
+      IGNORE porque já foi 0ce6; desde o caminho Xbox (13/09) ele é escolha dela.
+    - Emulação desligada ou sem vpad vivo: SÓ o preload de shaders.
 
     O preload (`__GL_SHADER_*`) entra em toda variante: é inócuo e é a parte
     "carregamento completo" que o botão da GUI sempre prometeu.
@@ -1563,11 +1565,11 @@ def compose_env(
             env["PROTON_DISABLE_HIDRAW"] = _DISABLE_HIDRAW_VALUE
             if tem_cobertura:
                 env["SDL_GAMECONTROLLER_IGNORE_DEVICES"] = _IGNORE_VALUE
-        elif flavor == "dualsense" and all(b == "uhid" for b in backends):
+        elif flavor == "dualsense":
             env["PROTON_DISABLE_HIDRAW"] = _DISABLE_HIDRAW_VALUE
             if tem_cobertura:
                 env["SDL_GAMECONTROLLER_IGNORE_DEVICES"] = _IGNORE_VALUE
-        # dualsense degradado (algum uinput) => sem IGNORE, de propósito.
+        # PS-L3-MASCARA-01: o DualSense em uinput também esconde o físico.
         if not tem_cobertura:
             logger.info(
                 "launch_env_ignore_omitido_sem_cobertura",
@@ -1636,7 +1638,7 @@ def _snapshot(daemon: DaemonProtocol) -> tuple[bool, bool, str, list[str], int]:
         native = bool(daemon.is_native_mode())
     cfg = getattr(daemon, "config", None)
     enabled = bool(getattr(cfg, "gamepad_emulation_enabled", False))
-    flavor = str(getattr(cfg, "gamepad_flavor", "dualsense") or "dualsense")
+    flavor = _mascara_do_primario(daemon, cfg)  # PS-L3-MASCARA-01: a do cartão
 
     backends: list[str] = []
     primary = getattr(daemon, "_gamepad_device", None)
@@ -1953,6 +1955,7 @@ def _modo_antecipado(
     backends: list[str],
     permite_uhid: bool = False,
     fisicos: int = 0,
+    identidade: str | None = None,
 ) -> ModoAntecipado | None:
     """O `ModoAntecipado` do perfil, ou None quando ele não tem opinião.
 
@@ -1997,19 +2000,41 @@ def _modo_antecipado(
             native=True, emulacao=False, mascara=flavor_atual,
             backends=(), motivo="perfil nativo",
         )
+    # PS-L3-MASCARA-01 (14/09/2026): a máscara que o jogo vai ver é a do CARTÃO do
+    # jogador 1 quando o perfil a guarda — a que a aba Jogar mostra e o PS + L3
+    # troca —, e só sem ela a máscara padrão do perfil.
+    mascara = _mascara_prevista(profile, mode, flavor_atual=flavor_atual, identidade=identidade)
     if kind == "desktop":
+        # A NAVEGAÇÃO NÃO É FIM DE LINHA: é um dos degraus do PS + R3, e a env é
+        # lida UMA vez, no `exec`. Sem o físico escondido desde a partida, o jogo
+        # que abriu na Navegação fica com o DualSense de plástico (que o Hefesto
+        # graba ao subir um modo de jogo) e o vpad chega como segundo controle.
+        # Medido em 14/09: `steam_app_4235410.env` sem IGNORE depois de o PS + R3
+        # parar na Navegação. `emulacao` fica False — agora o perfil não promete
+        # máscara, e a divergência não tem o que medir; `env_do_modo` lê os
+        # `backends` como a promessa da troca.
         return ModoAntecipado(
-            native=False, emulacao=False, mascara=flavor_atual,
-            backends=(), motivo="perfil desktop",
+            native=False, emulacao=False, mascara=mascara,
+            backends=_backends_da_troca(mascara, mode, permite_uhid),
+            motivo="perfil desktop (pronto para o PS + R3)",
         )
     if kind == "gamepad":
-        flavor = str(getattr(mode, "gamepad_flavor", None) or flavor_atual)
-        if flavor == "xbox":
-            # O vpad Xbox é uinput 045e POR DESIGN — o IGNORE é seguro
-            # independente do estado atual (invariante VPAD-06).
+        from hefesto_dualsense4unix.integrations.virtual_pad import normalizar_caminho
+
+        flavor = mascara
+        if flavor in _MASCARAS_SO_EVDEV:
+            # O vpad Xbox e o Nintendo Pro são uinput POR DESIGN — o IGNORE é
+            # seguro independente do estado atual (invariante VPAD-06).
             return ModoAntecipado(
-                native=False, emulacao=True, mascara="xbox",
-                backends=("uinput",), motivo="perfil gamepad xbox",
+                native=False, emulacao=True, mascara=flavor,
+                backends=("uinput",), motivo=f"perfil gamepad {flavor}",
+            )
+        if normalizar_caminho(getattr(mode, "caminho", None)) == "xbox":
+            # PS-L3-MASCARA-01: o caminho Xbox com a máscara DualSense é o Edge
+            # 0df2 em uinput, POR ESCOLHA dela — o IGNORE do 0ce6 não o alcança.
+            return ModoAntecipado(
+                native=False, emulacao=True, mascara=flavor,
+                backends=("uinput",), motivo="perfil gamepad dualsense (caminho xbox)",
             )
         # R-05 (auditoria 23/07): quando o perfil pede uma máscara DIFERENTE da
         # vigente, os `backends` recebidos são os do vpad ATUAL — que é de outro
@@ -2082,10 +2107,14 @@ def _env_for_profile(
 
 
 def env_do_modo(modo: ModoAntecipado) -> dict[str, str]:
-    """A `env` que materializa um `ModoAntecipado`."""
+    """A `env` que materializa um `ModoAntecipado`.
+
+    PS-L3-MASCARA-01 (14/09/2026): um modo sem emulação AGORA mas com `backends`
+    (a Navegação, que o PS + R3 sobe dentro do jogo) materializa a env da troca.
+    """
     return compose_env(
         native_mode=modo.native,
-        emulation_enabled=modo.emulacao,
+        emulation_enabled=modo.emulacao or (not modo.native and bool(modo.backends)),
         flavor=modo.mascara,
         backends=list(modo.backends),
         fisicos=modo.fisicos,
@@ -2280,6 +2309,7 @@ def materialize_launch_env(daemon: DaemonProtocol) -> None:
                 profile,
                 flavor_atual=flavor,
                 backends=backends,
+                identidade=_identidade_do_primario(daemon),
                 # R-05: o prognóstico do backend precisa do MESMO gate que a
                 # factory usa (VPAD-08 — o modo fake não pode plantar um Edge
                 # real no kernel).
@@ -2383,6 +2413,83 @@ def materialize_launch_env(daemon: DaemonProtocol) -> None:
         )
     except Exception:
         logger.warning("launch_env_materialize_falhou", exc_info=True)
+
+
+# ---------------------------------------------------------------------------
+# PS-L3-MASCARA-01 (14/09/2026) — a env segue a máscara do CARTÃO, e o jogo abre
+# pronto para trocar de modo e de máscara dentro dele.
+# ---------------------------------------------------------------------------
+def _identidade_do_primario(daemon: Any) -> str | None:
+    """O MAC do jogador 1 (`gamepad.primary_identity`), ou None. Nunca levanta."""
+    with contextlib.suppress(Exception):
+        from hefesto_dualsense4unix.daemon.subsystems.gamepad import primary_identity
+
+        return primary_identity(daemon)
+    return None
+
+
+def _mascara_do_primario(daemon: Any, cfg: Any) -> str:
+    """A máscara que o jogador 1 VESTE — a que o jogo vê.
+
+    Esta env lia `config.gamepad_flavor`, a máscara da SESSÃO, e o jogo vê a do
+    CARTÃO quando há uma (`external_mask.mascara_efetiva`). Medido na máquina
+    dela em 14/09: sessão `xbox`, cartão `dualsense`, o journal dizendo
+    `mascara_viva=xbox` com o vpad vestindo DualSense, e a env do Sony DualSense
+    saindo com o `SDL_JOYSTICK_HIDAPI=0` do Xbox.
+
+    Com o vpad de pé, a prova é o `flavor` dele; sem vpad, a máscara efetiva.
+    """
+    sessao = str(getattr(cfg, "gamepad_flavor", "dualsense") or "dualsense")
+    vivo = getattr(getattr(daemon, "_gamepad_device", None), "flavor", None)
+    if isinstance(vivo, str) and vivo:
+        return vivo
+    with contextlib.suppress(Exception):
+        from hefesto_dualsense4unix.daemon.subsystems.external_mask import mascara_efetiva
+
+        return mascara_efetiva(_identidade_do_primario(daemon), sessao)
+    return sessao
+
+
+def _mascara_do_cartao(profile: Any, identidade: str | None) -> str | None:
+    """A máscara que o PERFIL guarda no cartão do jogador 1, ou None."""
+    if not identidade:
+        return None
+    from hefesto_dualsense4unix.core.sysfs_leds import norm_mac
+    from hefesto_dualsense4unix.daemon.subsystems.external_mask import normalizar_mascara
+
+    controles = getattr(profile, "controllers", None)
+    if not isinstance(controles, dict):
+        return None
+    chave = norm_mac(identidade)
+    dele = controles.get(chave) if chave else None
+    return normalizar_mascara(getattr(dele, "mascara", None))
+
+
+def _mascara_prevista(
+    profile: Any, mode: Any, *, flavor_atual: str, identidade: str | None
+) -> str:
+    """A máscara que o jogo vai ver quando o perfil valer.
+
+    A ordem é a de `external_mask.mascara_efetiva` (MASCARA-NO-PERFIL-01): o
+    cartão do jogador 1 que o perfil guarda, a máscara padrão do perfil, a
+    vigente. O prognóstico lia só a padrão, e o jogo com cartão DualSense e
+    padrão `xbox` abria com a env do Xbox.
+    """
+    do_cartao = _mascara_do_cartao(profile, identidade)
+    if do_cartao is not None:
+        return do_cartao
+    return str(getattr(mode, "gamepad_flavor", None) or flavor_atual)
+
+
+def _backends_da_troca(mascara: str, mode: Any, permite_uhid: bool) -> tuple[str, ...]:
+    """O canal que o vpad vai ter quando ela subir para um modo de jogo."""
+    from hefesto_dualsense4unix.integrations.uhid_gamepad import uhid_available
+    from hefesto_dualsense4unix.integrations.virtual_pad import quer_uhid
+
+    canal_proprio = quer_uhid(getattr(mode, "caminho", None), mascara)
+    if canal_proprio and permite_uhid and uhid_available():
+        return ("uhid",)
+    return ("uinput",)
 
 
 __all__ = [

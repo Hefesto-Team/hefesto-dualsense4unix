@@ -1539,12 +1539,16 @@ def dedup_status(daemon: DaemonProtocol) -> tuple[bool, list[str]]:
         físico Sony nunca o esconde (invariante VPAD-06) → ok;
       - máscara dualsense: ok SÓ se o vpad do P1 e TODOS os vpads do co-op
         estão em uhid. Motivos: `fallback_motivo` do P1 (ou `sem_uhid`) e
-        `jogador_<N>_uinput` por jogador degradado;
+        `jogador_<N>_uinput` por jogador degradado. NOTA DATADA — PS-L3-MASCARA-01,
+        14/09/2026: o uinput do caminho Xbox é ESCOLHA dela, não degradação, e não
+        entra (o vpad carrega o caminho em que nasceu, `caminho_do_vpad`);
       - emulação ligada SEM device (start falhou): `vpad_ausente`.
 
     Só leitura de atributos — nunca propaga exceção pro `state_full` (getattr
     defensivo em tudo; daemons dublados de teste não têm coop/store).
     """
+    from hefesto_dualsense4unix.integrations.virtual_pad import CAMINHO_XBOX, caminho_do_vpad
+
     cfg = getattr(daemon, "config", None)
     enabled = bool(getattr(cfg, "gamepad_emulation_enabled", False))
     if not enabled:
@@ -1558,7 +1562,7 @@ def dedup_status(daemon: DaemonProtocol) -> tuple[bool, list[str]]:
     if getattr(device, "flavor", None) != "dualsense":
         return True, []
     motivos: list[str] = []
-    if getattr(device, "backend", None) == "uinput":
+    if getattr(device, "backend", None) == "uinput" and caminho_do_vpad(device) != CAMINHO_XBOX:
         motivo = getattr(device, "fallback_motivo", None)
         motivos.append(motivo if isinstance(motivo, str) and motivo else "sem_uhid")
     coop = getattr(daemon, "_coop_manager", None)
@@ -1567,6 +1571,8 @@ def dedup_status(daemon: DaemonProtocol) -> tuple[bool, list[str]]:
         for player in players.values():
             vpad = getattr(player, "vpad", None)
             if vpad is None or getattr(vpad, "backend", None) != "uinput":
+                continue
+            if caminho_do_vpad(vpad) == CAMINHO_XBOX:
                 continue
             indice = getattr(player, "player_index", None)
             rotulo = str(indice) if isinstance(indice, int) else "?"

@@ -109,9 +109,15 @@ class TestOQueNaoMuda:
     def test_vpad_degradado_continua_sem_ignore(self) -> None:
         """Um vpad em uinput com máscara dualsense nunca teve IGNORE — a SDL
         pode mapeá-lo errado, e esconder o físico deixaria um controle de
-        botões trocados como único."""
-        assert IGNORE not in _env(["uinput"], 1)
-        assert IGNORE not in _env(["uhid", "uinput"], 2)
+        botões trocados como único.
+
+        NOTA DATADA — PS-L3-MASCARA-01, 14/09/2026: medido na libSDL2 2.30 com o
+        daemon vivo, o Edge 0df2 em uinput chega como `ps5` com `a:b0,b:b1,x:b3,
+        y:b2`, o mesmo mapa do uhid. Com cobertura, ele passou a ter IGNORE; o
+        que continua sem IGNORE é a mesa sem um vpad por físico."""
+        assert IGNORE in _env(["uinput"], 1)
+        assert IGNORE in _env(["uhid", "uinput"], 2)
+        assert IGNORE not in _env(["uinput"], 2)
 
     def test_modo_nativo_nao_esconde_nada(self) -> None:
         env = compose_env(
