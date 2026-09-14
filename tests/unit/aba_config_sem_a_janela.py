@@ -47,8 +47,8 @@ A suíte do fecho de 13/09 reprovou 172 contra 186, igual em `9639f1df` e em
 código, outra máquina. A queda inteira estava em "Conexões", que lia o
 barramento USB DE VERDADE — o hospedeiro não injetava leitor nenhum, e
 `secao_mesa._PainelDaMesa` cai em `ler_a_mesa()`, `ler_o_barramento()` e
-`listar_entradas()` quando o hospedeiro não traz os seus. Dois aparelhos USB a
-menos na mesa de quem roda, e a régua de redação reprovava o produto.
+`listar_entradas()` quando o hospedeiro não traz os seus. Catorze textos a
+menos sobre o mesmo código, e a régua de redação reprovava o produto.
 
 Desde então `HospedeiroDaAbaConfig` injeta uma bancada de mentira FIXA
 (`APARELHOS_DA_BANCADA`) e fixa também o gabinete, e a diferença entre os
@@ -104,8 +104,9 @@ FRASES_DO_ESPELHO = (
 #: A diferença de colheita entre os dois ambientes — processo solto e suíte —,
 #: e ela é ZERO desde que o berço fixa a bancada. Medido em 13/09/2026: 190 sob
 #: um lar vazio; 190 sob um lar com `gabinete.json` divergente, rádios e mapa
-#: declarados no `maquina.json` e as preferências de janela mexidas; e 190 sob
-#: o `conftest`.
+#: declarados no `maquina.json` e as preferências de janela mexidas; 190 sob um
+#: lar com duas faces desenhadas no mapa (14/09/2026: a frase do mapa troca de
+#: lugar com o resumo, um texto por outro); e 190 sob o `conftest`.
 #:
 #: SUBSTITUI `FRASES_DO_CENSO_DO_GABINETE = 3`, e o nome saiu junto com o
 #: número. Até 13/09 a única diferença medida entre os ambientes eram as três
@@ -362,7 +363,18 @@ def censo_da_bancada() -> censo_do_barramento.Censo:
 
 
 def entradas_da_bancada() -> tuple[entradas_do_gabinete.NoDeEntrada, ...]:
-    """Os nós de entrada da bancada — `listar_entradas` com a raiz trocada."""
+    """Os nós de entrada da bancada — `listar_entradas` com a raiz trocada.
+
+    A RESPOSTA É VAZIA, medido em 14/09/2026: a bancada publica aparelho e
+    interface, mas nenhum nó de buraco (`usb61-port1`), e o retrato das abas
+    também não publicava. É a mesma tupla vazia que a guarda do retrato em
+    `_ler_as_entradas` já devolve com o `_mesa_leitor` de pé — por isso tirar
+    só este leitor deixa as réguas verdes. O que ele segura é a colheita não
+    depender daquela guarda: sem ela e sem ele,
+    `test_a_colheita_nao_le_o_sys_nem_pergunta_ao_daemon` reprova nomeando
+    `listar_entradas`. O `_gabinete_leitor` é o mesmo caso, e reprova nomeando
+    `ler_do_disco`.
+    """
     listar, ler, _existe, real = sysfs_da_bancada()
     return entradas_do_gabinete.listar_entradas(
         raiz_usb=_RAIZ_USB, listar=listar, ler=ler, real=real
@@ -408,10 +420,13 @@ class HospedeiroDaAbaConfig(ConfigActionsMixin):
         self._mesa_leitor = mesa_da_bancada
         #: `secao_mesa._PainelDaMesa._ler_o_censo` — sem ele, `ler_o_barramento()`.
         self._censo_leitor = censo_da_bancada
-        #: `secao_mesa._PainelDaMesa._ler_as_entradas` — sem ele, `listar_entradas()`.
+        #: `secao_mesa._PainelDaMesa._ler_as_entradas` — sem ele E sem a guarda
+        #: do retrato, `listar_entradas()`. Hoje a guarda já dá `()`; ver
+        #: `entradas_da_bancada`.
         self._entradas_leitor = entradas_da_bancada
-        #: `secao_mesa._PainelDaMesa._ler_o_gabinete` — sem ele, `ler_do_disco()`
-        #: sob o `HOME` de quem roda. Vazio é a primeira instalação.
+        #: `secao_mesa._PainelDaMesa._ler_o_gabinete` — sem ele E sem a guarda,
+        #: `ler_do_disco()` sob o `HOME` de quem roda. Vazio é a primeira
+        #: instalação.
         self._gabinete_leitor = dict
         #: `secao_controles._PainelDosControles._perguntar_as_cores` — sem ele,
         #: `ler_pelo_cabo`, que procura o controle em `/sys/class/hidraw`.

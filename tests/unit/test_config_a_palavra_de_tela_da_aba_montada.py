@@ -152,7 +152,7 @@ def test_o_berco_nao_e_mais_frouxo_que_o_glade() -> None:
     texto"; a moldura diz qual seção.
 
     O PISO É O DA BANCADA FIXA (13/09/2026). Até ali ele valia 186 e contava o
-    barramento USB da máquina de quem roda: com dois aparelhos a menos, a suíte
+    barramento USB da máquina de quem roda, e foi assim que a suíte
     reprovou 172 contra 186 sobre o mesmo código que tinha fechado verde de
     manhã. E ele valeu 175 até 08/09, deixando passar uma seção cortada a menos
     da metade — que é o que `test_a_folga_do_piso_tem_tamanho_medido` reprova.

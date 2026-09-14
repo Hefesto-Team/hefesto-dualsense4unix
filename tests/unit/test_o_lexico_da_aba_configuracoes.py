@@ -150,9 +150,9 @@ AINDA_NA_PAGINA: dict[str, str] = {
 #: daemon e sem controle, e só a frase do mapa ainda depende do lar de quem
 #: roda (as faces do `maquina.json`). As outras TRÊS nascem em toda montagem:
 #: a capacidade do microfone, "Não sei quem está no rádio" e "Nenhum controle
-#: ligado agora.". Medido em 13/09, solto: 4 achados num lar vazio e 4 num lar
-#: com rádios, mapa e gabinete declarados (sem faces). O piso fica nos três que
-#: não dependem de lar nenhum.
+#: ligado agora.". Medido em 14/09: 4 achados sob a suíte; num processo solto
+#: com duas faces desenhadas no `maquina.json`, a frase do mapa dá lugar ao
+#: resumo do mapa e dos 4 sobram 3. O piso fica nos três que sobram.
 NUNCA_MENOS_QUE = 3
 
 
