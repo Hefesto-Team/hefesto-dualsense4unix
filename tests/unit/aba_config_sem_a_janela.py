@@ -34,8 +34,8 @@ que o daemon vivo"* (05/09/2026). Por isso o berço declara o interruptor, e por
 isso `FRASES_DO_ESPELHO` existe: a régua
 `test_o_berco_nao_e_mais_frouxo_que_o_glade` cobra as três pelo NOME.
 
-O PISO MEDIA A MÁQUINA — 13/09/2026, sprint `BERCO-SEM-A-BANCADA-01`
---------------------------------------------------------------------
+O PISO CONTAVA A MÁQUINA — 13/09/2026, sprint `BERCO-SEM-A-BANCADA-01`
+----------------------------------------------------------------------
 
 Em 08/09/2026 a mesma aba colhia 189 textos num processo solto e 186 sob a
 suíte — as três frases do censo do gabinete saem de um arquivo que o
