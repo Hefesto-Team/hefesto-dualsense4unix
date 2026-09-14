@@ -305,33 +305,35 @@ _PONTOS_DE_ENTRADA: dict[str, tuple[str, str, str]] = {
     "integrations/sentinela_do_wrapper.py": (
         "install.sh",
         "src/hefesto_dualsense4unix/integrations/sentinela_do_wrapper.py",
-        "install.sh:3367 substitui __SENTINELA__ na unit, cujo ExecStart é "
+        "install.sh:3732 substitui __SENTINELA__ na unit, cujo ExecStart é "
         "`python3 __SENTINELA__ --reparar` "
-        "(assets/hefesto-steam-input-guard.service:29); o doctor.sh:1643 "
-        "também o roda",
+        "(assets/hefesto-steam-input-guard.service:29); o doctor.sh:1921 "
+        "(check_sentinela_wrapper, --censo) também o roda",
     ),
     "integrations/steam_input_ponte.py": (
         "scripts/disable_steam_input.sh",
         "integrations/steam_input_ponte.py",
         "roda como `python3 ${PONTE_PY} --ligar` em "
         "scripts/disable_steam_input.sh:283+298, e esse roteiro é o ExecStart "
-        "de assets/hefesto-steam-input-guard.service:14 (install.sh:3368)",
+        "de assets/hefesto-steam-input-guard.service:14 (install.sh:3733)",
     ),
     "integrations/steam_launch_options.py": (
         "install.sh",
         "src/hefesto_dualsense4unix/integrations/steam_launch_options.py",
-        "install.sh:3395 o roda com `--migrate`; uninstall.sh:1467 o roda para "
-        "tirar o wrapper; doctor.sh:1862 o publica como cura",
+        "install.sh:3778 o roda com `--migrate`; uninstall.sh:1467 o roda para "
+        "tirar o wrapper; doctor.sh:2167 o publica como cura",
     ),
     "integrations/proton_pin.py": (
         "install.sh",
         "src/hefesto_dualsense4unix/integrations/proton_pin.py",
-        "install.sh:3542 e uninstall.sh:1444 o rodam; doctor.sh:3339 também",
+        "install.sh:3950 (--ensure) e uninstall.sh:1444 o rodam; "
+        "doctor.sh:3995 (check_proton_pin, --report) também",
     ),
     "integrations/exame_da_mesa.py": (
         "scripts/doctor.sh",
         "src/hefesto_dualsense4unix/integrations/exame_da_mesa.py",
-        "scripts/doctor.sh:3300 o roda — e o install.sh:3608 roda o doctor",
+        "scripts/doctor.sh:3917 (check_exame_da_mesa) o roda — e o "
+        "install.sh:4025 roda o doctor",
     ),
 }
 

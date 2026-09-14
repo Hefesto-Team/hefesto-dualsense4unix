@@ -1285,18 +1285,8 @@ _sources_com_porta_usavel() {
     done
 }
 
-# MIC-PADRAO-NO-CABO-01, §D.7 da sprint (quem coordena, 13/09/2026). 0 quando o
-# alvo `$1` é a entrada do DualSense escolhida só por FALTA de outra (`$2` =
-# prefere 0) e o drop-in 51 está no lugar. O 51 põe essa entrada acima de
-# qualquer monitor, então monitor como padrão com ela no ar é o WirePlumber que
-# ainda não assentou. Gravar a escolha a empilha no estado do WirePlumber, e ela
-# passa a vencer a webcam plugada depois, que é o que o 51 deixa ganhar.
-# Reproduzido com dublês no install de 13/09 (P1 no cabo), não medido no aparelho.
-_dualsense_por_falta_com_o_51() {
-    [[ "${2:-0}" -eq 0 ]] || return 1
-    [[ "${1,,}" == *dualsense* ]] || return 1
-    [[ -f "${HOME}/.config/wireplumber/wireplumber.conf.d/51-hefesto-dualsense-no-default-source.conf" ]]
-}
+# MIC-PADRAO-NO-CABO-01 §D.7 (quem coordena): 0 = o alvo `$1` é o DualSense só por falta de outra entrada (`$2` = prefere 0) com o 51 no lugar; o WirePlumber o elege sozinho acima de qualquer monitor, e gravado ele venceria a webcam plugada depois (reproduzido com dublês, não medido no aparelho).
+_dualsense_por_falta_com_o_51() { [[ "${2:-0}" -eq 0 && "${1,,}" == *dualsense* && -f "${HOME}/.config/wireplumber/wireplumber.conf.d/51-hefesto-dualsense-no-default-source.conf" ]]; }
 
 check_default_source_monitor() {
     command -v pactl >/dev/null 2>&1 || { info "pactl ausente — não checo a fonte de captura padrão"; return; }
@@ -1352,11 +1342,7 @@ check_default_source_monitor() {
             | _sources_com_porta_usavel "${longo}" \
             | _melhor_source_de_captura "${prefere}")"
     if [[ -n "${alvo}" ]] && _dualsense_por_falta_com_o_51 "${alvo}" "${prefere}"; then
-        # MIC-PADRAO-NO-CABO-01: a cura não grava este alvo (§D.7), então mandar
-        # rodar o --fix-mic aqui seria a RECEITA-ERRADA-01 de novo.
-        fail "a fonte de captura padrão é um MONITOR (${cur}) — o que qualquer app gravar é o áudio de SAÍDA, não a voz; a entrada do DualSense está no ar e o drop-in 51 a põe acima de qualquer monitor, então o WirePlumber ainda não a elegeu"
-        info "  o --fix-mic NÃO grava essa escolha: gravada, ela entra na pilha do WirePlumber e vence a próxima webcam plugada"
-        info "  se o monitor continuar, o mais provável é o 51 não ter sido lido nesta sessão do WirePlumber (ele só é lido quando o WirePlumber inicia)"
+        fail "a fonte de captura padrão é um MONITOR (${cur}) — o que qualquer app gravar é o áudio de SAÍDA, não a voz; a entrada do DualSense está no ar e o drop-in 51 a põe acima de qualquer monitor, então o WirePlumber ainda não a elegeu (o --fix-mic NÃO grava essa escolha, que venceria a próxima webcam plugada; se o monitor continuar, o 51 pode não ter sido lido nesta sessão do WirePlumber, que só o lê ao iniciar)"
     elif [[ -n "${alvo}" ]]; then
         fail "a fonte de captura padrão é um MONITOR (${cur}) — o que qualquer app gravar é o áudio de SAÍDA, não a voz; rode: scripts/doctor.sh --fix-mic"
         info "  cura: pactl set-default-source ${alvo}"
@@ -1434,12 +1420,7 @@ fix_default_source_monitor() {
         info "  esta cura só sabe eleger outra fonte de captura — sem nenhuma, o que resolve é conectar um mic, uma webcam com mic, ou o DualSense"
         return 0
     fi
-    # MIC-PADRAO-NO-CABO-01 (§D.7): no install de 13/09 com o P1 no cabo, era
-    # esta linha que gravava o DualSense lendo o monitor de passagem.
-    if _dualsense_por_falta_com_o_51 "${alvo}" "${prefere}"; then
-        info "  não gravo ${alvo} como fonte padrão: com o drop-in 51 o WirePlumber a elege sozinho acima de qualquer monitor, e gravada ela venceria a próxima webcam plugada"
-        return 0
-    fi
+    _dualsense_por_falta_com_o_51 "${alvo}" "${prefere}" && { info "  não gravo ${alvo} como fonte padrão (§D.7 da MIC-PADRAO-NO-CABO-01): com o drop-in 51 o WirePlumber a elege sozinho acima de qualquer monitor, e gravada ela venceria a próxima webcam plugada"; return 0; }
     if pactl set-default-source "${alvo}" 2>/dev/null; then
         pass "fonte padrão trocada do monitor para a entrada ${alvo} (FONTE-PADRAO-01)"
     else
@@ -1545,15 +1526,9 @@ check_audio_sink_muted() {
 #     reinstalação. Foi diagnosticado à mão uma vez e VOLTOU — a prova de que um
 #     conserto que não é código não é conserto, é adiamento. Por isso ele está
 #     aqui.
-#   camada 2 — PERFIL DA PLACA NUMA ENTRADA SEM PORTA DE CAPTURA. O DualSense
-#     expõe `input:analog-stereo` (`available: no`: a detecção de jack não vê
-#     fone, e forçado ele nasce sem porta e grava silêncio digital) e
-#     `input:iec958-stereo` (`available: yes`). FATO SUBSTITUÍDO
-#     (MIC-PADRAO-NO-CABO-01): esta nota dizia que o iec958 é S/PDIF SEM SINAL.
-#     O pico 0 de 25/07 foi medido com o mudo do firmware ativo; em 26/07 o
-#     iec958 gravou pico 4606, e perto de 30/07 pico 441 num quarto silencioso.
-#     Quem decide é a porta, não o nome do perfil (ver
-#     `_dualsense_perfil_status`).
+#   camada 2 — PERFIL DA PLACA NUMA ENTRADA SEM PORTA DE CAPTURA; decide a porta, não o nome do
+#     perfil (`_dualsense_perfil_status`). FATO SUBSTITUÍDO (MIC-PADRAO-NO-CABO-01): o iec958 não é
+#     "S/PDIF sem sinal" — o pico 0 de 25/07 foi com o mudo do firmware ativo; em 26/07, pico 4606.
 #   camada 3 — o mudo no FIRMWARE do controle. Não é do WirePlumber e não se vê
 #     por aqui: vive no `daemon.state_full` (`audio.mic_mudo`) e agora tem cura
 #     pelo `mic.set` do IPC (`hefesto-dualsense4unix mic unmute`).
