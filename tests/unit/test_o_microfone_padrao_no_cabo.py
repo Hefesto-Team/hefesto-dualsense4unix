@@ -649,6 +649,23 @@ def test_r3_quando_o_monitor_nao_passa_o_passo_nao_da_dois_vereditos(tmp_path: P
     assert f"o microfone padrão do sistema é um MONITOR ({MONITOR_DO_SOM})" in saida, saida
     assert "(entrada de verdade)" not in saida, saida
     assert f"pactl set-default-source {DS_ENTRADA}" not in bancada.argv(), bancada.argv()
+    # A VALIDAÇÃO (14/09): o fim mandava «conecte o DualSense (no cabo)» com a
+    # entrada dele no ar e o doctor dizendo isso uma linha acima. MORDIDA: trocar
+    # o `if [[ -n "${_no_ar}" ]]` do ramo do monitor por `if false`.
+    assert "DualSense (no cabo)" not in saida, saida
+    assert f"Há uma entrada com porta usável no ar ({DS_ENTRADA})" in saida, saida
+
+
+def test_r3_sem_entrada_no_ar_o_monitor_ainda_pede_uma_entrada_de_verdade(tmp_path: Path) -> None:
+    """O contraste da régua acima: sem entrada com porta usável, pedir hardware é a receita certa.
+
+    MORDIDA: trocar o `if [[ -n "${_no_ar}" ]]` do ramo do monitor por `if true`.
+    """
+    bancada = montar_bancada(tmp_path, aparelhos=(), roteiro=[MONITOR_DO_SOM])
+    res = rodar_o_passo(bancada)
+    assert res.returncode == 0, res.stderr
+    assert "Há uma entrada com porta usável no ar" not in res.stdout, res.stdout
+    assert "Não há comando que resolva sem uma entrada de verdade" in res.stdout, res.stdout
 
 
 # ---------------------------------------------------------------------------
