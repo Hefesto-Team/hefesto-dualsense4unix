@@ -5269,16 +5269,16 @@ class IpcHandlersMixin:
 
         Recusar em voz alta é a direção certa do erro: um endereço de forma
         inesperada vira `sem_endereco` com motivo, e não um override fantasma.
-        """
-        from hefesto_dualsense4unix.broker.hidraw_broker import VPAD_UNIQ_PREFIX
-        from hefesto_dualsense4unix.core.sysfs_leds import norm_mac
 
-        chave = norm_mac(alvo)
-        if not chave or len(chave) != 12:
-            return None
-        if chave.startswith(VPAD_UNIQ_PREFIX):
-            return None
-        return chave
+        A REGRA MUDOU DE CASA, NÃO DE CONTEÚDO — TROCA-DENTRO-DO-JOGO-01,
+        14/09/2026: ela mora em `profiles/manager.chave_de_peca_que_grava`, ao
+        lado do gravador do modo e do da máscara, porque agora há gesto que
+        grava sem passar por este mixin. Uma segunda cópia seria a próxima a
+        divergir — e esta é a chave que faz a escolha dela sumir calada.
+        """
+        from hefesto_dualsense4unix.profiles.manager import chave_de_peca_que_grava
+
+        return chave_de_peca_que_grava(alvo)
 
     def _perfil_que_grava(self) -> str | None:
         """Em que perfil uma escolha POR PEÇA vai ser gravada — `None` quando nenhum.
@@ -6563,11 +6563,16 @@ class IpcHandlersMixin:
         **ninguém verificou** se um jogo aceita dois vpads com máscaras
         diferentes ao mesmo tempo. O registro guarda a escolha; se o jogo
         embaralha os jogadores, isso é um aviso na tela, não um defeito nosso.
+
+        A ROTA É A CASCA — TROCA-DENTRO-DO-JOGO-01, 14/09/2026. O ato mora em
+        `external_mask.escolher_a_mascara`, e é o MESMO que o gesto PS + L3
+        chama. Enquanto ele morava aqui, o gesto o alcançava por
+        `daemon._ipc_server._handle_gamepad_mask_set` — um método privado achado
+        por string. Lá também mudou a ORDEM: o perfil só recebe a escolha depois
+        de o aparelho vestir, como o PS + R3 já fazia com o modo.
         """
         from hefesto_dualsense4unix.daemon.subsystems.external_mask import (
-            mascaras_validas,
-            normalizar_mascara,
-            registro_de_mascaras,
+            escolher_a_mascara,
         )
 
         uniq = str(params.get("uniq") or "").strip()
@@ -6576,108 +6581,9 @@ class IpcHandlersMixin:
                 "gamepad.mask.set exige 'uniq' — a máscara é de UM aparelho, e "
                 "sem o endereço dele a escrita iria para o registro errado")
 
-        bruto = params.get("flavor")
-        if bruto is None or str(bruto).strip() == "":
-            limpou = registro_de_mascaras().clear_mask(uniq)
-            perfil, gravado, motivo = self._mascara_no_perfil(uniq, None)
-            return {"status": "ok", "uniq": uniq, "flavor": None,
-                    "mudou": bool(limpou), "perfil": perfil,
-                    "gravado": gravado, "motivo": motivo,
-                    "vestiu": self._vestir_a_mascara_na_hora(uniq)}
-
-        flavor = normalizar_mascara(bruto)
-        if flavor is None:
-            aceitos = ", ".join(sorted(mascaras_validas()))
-            raise ValueError(
-                f"gamepad.mask.set: máscara desconhecida {bruto!r} — "
-                f"aceito: {aceitos}, ou vazio para herdar a do perfil")
-
-        mudou = registro_de_mascaras().set_mask(uniq, flavor)
-        perfil, gravado, motivo = self._mascara_no_perfil(uniq, flavor)
-        return {"status": "ok", "uniq": uniq, "flavor": flavor,
-                "mudou": bool(mudou), "perfil": perfil,
-                "gravado": gravado, "motivo": motivo,
-                "vestiu": self._vestir_a_mascara_na_hora(uniq)}
-
-    def _vestir_a_mascara_na_hora(self, uniq: str) -> str | None:
-        """Pede ao daemon que o vpad DAQUELE controle vista a máscara agora.
-
-        MODO-DE-CONEXAO-01, §D.6 (13/09/2026). As duas escritas acima gravam; sem
-        esta terceira, nada recriava o vpad vivo, e o cartão acendia «Xbox 360»
-        com o jogo recebendo o DualSense. O ATO é do daemon
-        (`Daemon.vestir_a_mascara_do_aparelho`) e este handler só o chama —
-        depois de gravar, para o vpad nascer já com a escolha dela.
-
-        ``None`` quando o daemon não tem o ato (um dublê antigo, o daemon fora);
-        nunca levanta: a escolha já está gravada, e uma falha ao recriar não
-        transforma o gesto dela em recusa.
-        """
-        ato = getattr(self.daemon, "vestir_a_mascara_do_aparelho", None)
-        if not callable(ato):
-            return None
-        try:
-            return str(ato(uniq))
-        except Exception as exc:
-            logger.warning("gamepad_mascara_nao_vestiu", uniq=uniq, err=str(exc))
-            return None
-
-    def _mascara_no_perfil(
-        self, alvo: str, mascara: str | None
-    ) -> tuple[str | None, bool, str | None]:
-        """Grava a máscara de UMA peça no perfil ATIVO (MASCARA-NO-PERFIL-01).
-
-        Devolve ``(nome do perfil, gravou?, motivo de não ter gravado)``. O
-        motivo é `None` quando gravou — e é ele que a tela pode mostrar em vez
-        de um "aplicado" sobre nada.
-
-        A CHAVE É A MESMA DO `rumble.motores.set`, e pela mesma medição:
-        `_chave_de_peca_que_grava` exige doze dígitos hex e recusa o vpad. Um
-        `path:` que por acaso tenha letras hex vira uma chave que motor nenhum
-        casa — para LER isso é inofensivo, para GRAVAR é a escolha dela sumindo
-        calada.
-
-        NADA MUDOU = NÃO REGRAVA. Um `save_profile` troca a data do arquivo e
-        faz o daemon reaplicar o perfil inteiro; no meio de uma partida isso não
-        é de graça, e aqui custaria mais que no motor — a reaplicação passa por
-        `apply_controller_mascaras`, e é justamente ela que pode derrubar vpad.
-
-        A ENTRADA VAZIA SOME DO MAPA, como no rascunho da janela
-        (`app/draft_config._override_vazio`): um `uniq` apontando para `{}` no
-        JSON faria a próxima leitura achar que aquela peça tem opinião, e a
-        coluna "Ajuste próprio" da aba Perfis acenderia sobre nada.
-        """
-        from hefesto_dualsense4unix.profiles.loader import load_profile, save_profile
-        from hefesto_dualsense4unix.profiles.schema import ControllerOverrides
-
-        chave = self._chave_de_peca_que_grava(alvo)
-        if not chave:
-            return None, False, "sem_endereco"
-        # O QUARTO CHAMADOR, e o único que perdia dado dela CALADO — é a razão
-        # de a `A-PERNA-QUE-FALTA-01` existir. Ver `_perfil_que_grava`: com o
-        # store em `None` e os marcadores valendo, o `.json` do perfil ficava
-        # byte-idêntico enquanto a tela acendia o chip.
-        nome = self._perfil_que_grava()
-        if not nome:
-            return None, False, "sem_perfil"
-        perfil = load_profile(nome)
-        atuais = dict(perfil.controllers or {})
-        dele = atuais.get(chave) or ControllerOverrides()
-        if getattr(dele, "mascara", None) == mascara:
-            return nome, False, "sem_mudanca"
-        novo = dele.model_copy(update={"mascara": mascara})
-        if all(
-            getattr(novo, campo, None) is None
-            for campo in ControllerOverrides.model_fields
-        ):
-            atuais.pop(chave, None)
-        else:
-            atuais[chave] = novo
-        save_profile(perfil.model_copy(update={"controllers": atuais or None}))
-        logger.info(
-            "gamepad_mascara_gravada_no_perfil",
-            uniq=chave, perfil=nome, mascara=mascara,
+        return escolher_a_mascara(
+            self.daemon, uniq, params.get("flavor"), store=self.store
         )
-        return nome, True, None
 
     async def _handle_gamepad_emulation_set(
         self, params: dict[str, Any]

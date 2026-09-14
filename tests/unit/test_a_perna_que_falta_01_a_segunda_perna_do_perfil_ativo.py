@@ -73,6 +73,7 @@ from hefesto_dualsense4unix.interface.pacotes import a01_jogar as aba
 from hefesto_dualsense4unix.interface.pacotes import perfil as pac_perfil
 from hefesto_dualsense4unix.interface.pacotes import ponte as pac_ponte
 from hefesto_dualsense4unix.interface.pacotes import rodape
+from hefesto_dualsense4unix.profiles import manager as manager_module
 from hefesto_dualsense4unix.profiles.loader import load_profile, save_profile
 from hefesto_dualsense4unix.profiles.schema import MatchManual, Profile
 from hefesto_dualsense4unix.utils import session as sessao
@@ -248,17 +249,25 @@ def test_com_a_cura_arrancada_o_json_fica_byte_identico(
 ) -> None:
     """A MORDIDA 2, feita por dentro: sem a segunda perna, nada é escrito.
 
-    A arrancada é literal — `_perfil_que_grava` volta a ser o
+    A arrancada é literal — a resolução do perfil volta a ser o
     ``getattr(self.store, "active_profile", None)`` de antes da sprint.
 
     E O QUE ELA PROVA É A FORMA DO DEFEITO: a resposta do daemon não muda de
     ``status``, o registro de sessão guarda a máscara, a tela acende o chip — e
     o arquivo do perfil fica **byte a byte o mesmo**. Calado.
+
+    NOTA DATADA — TROCA-DENTRO-DO-JOGO-01, 14/09/2026: a mordida era feita em
+    ``IpcHandlersMixin._perfil_que_grava``. As duas pernas mudaram de casa em
+    13/09 (`profiles/manager.nome_do_perfil_que_grava`, porque o PS + R3 grava
+    sem passar pelo socket), e em 14/09 a máscara seguiu o mesmo caminho — o
+    PS + L3 também grava sem socket. A mordida agora é na função que as duas
+    rotas leem, e por isso vale para as DUAS: o mixin a chama, e o ato da
+    máscara também.
     """
     monkeypatch.setattr(
-        IpcHandlersMixin,
-        "_perfil_que_grava",
-        lambda self: getattr(self.store, "active_profile", None),
+        manager_module,
+        "nome_do_perfil_que_grava",
+        lambda do_daemon: do_daemon if isinstance(do_daemon, str) and do_daemon else None,
     )
     bytes_antes = a_maquina_dela.read_bytes()
 

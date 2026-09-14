@@ -846,6 +846,138 @@ def vpad_ficou_para_tras(
     return quer_uhid(caminho_do_vpad(vpad), mascara) != quer_uhid(caminho, mascara)
 
 
+def mascara_vestida(daemon: Any, uniq: str | None = None) -> str | None:
+    """A máscara que o vpad DAQUELE aparelho veste AGORA — `None` sem vpad.
+
+    TROCA-DENTRO-DO-JOGO-01 (14/09/2026): este é o leitor ÚNICO da pergunta "o
+    que o aparelho está vestindo". Ela tinha cinco respostas espalhadas — uma no
+    gesto (`hotkey.mascara_atual`), uma na env (`launch_env._mascara_do_primario`),
+    uma no cartão da tela — e no estado de FALHA (o registro já gravado, o vpad
+    ainda na máscara velha) elas divergiam: a barra dizia uma cor, a aba Jogar
+    outra. A prova é o aparelho, e o aparelho responde num lugar só.
+
+    `uniq` omitido (ou o do jogador 1) responde pelo vpad primário; os outros
+    saem do co-op, pela identidade canônica (`mesma_identidade`).
+    """
+    primario = getattr(daemon, "_gamepad_device", None)
+    if uniq is None or mesma_identidade(uniq, _identidade_do_primario(daemon)):
+        flavor = getattr(primario, "flavor", None)
+        return flavor if isinstance(flavor, str) and flavor else None
+    players = getattr(getattr(daemon, "_coop_manager", None), "_players", None)
+    if isinstance(players, dict):
+        for chave, player in players.items():
+            if not mesma_identidade(uniq, str(chave)):
+                continue
+            flavor = getattr(getattr(player, "vpad", None), "flavor", None)
+            return flavor if isinstance(flavor, str) and flavor else None
+    return None
+
+
+def _identidade_do_primario(daemon: Any) -> str | None:
+    """O endereço do jogador 1, sem arrastar o `gamepad` para o import."""
+    return getattr(getattr(daemon, "controller", None), "primary_uniq", None)
+
+
+#: Sentinela de "o chamador não passou store" — `None` é resposta válida (é o
+#: estado da máquina dela que a A-PERNA-QUE-FALTA-01 mediu).
+_SEM_STORE = object()
+
+
+def escolher_a_mascara(
+    daemon: Any, uniq: str, flavor: object, *, store: Any = _SEM_STORE
+) -> dict[str, Any]:
+    """A ESCOLHA DE MÁSCARA DE UM APARELHO — o ato, num lugar só.
+
+    TROCA-DENTRO-DO-JOGO-01 (14/09/2026). O chip do cartão da aba Jogar e o
+    gesto PS + L3 fazem a MESMA coisa, e agora pela mesma porta: até aqui o chip
+    entrava pelo handler do socket (`gamepad.mask.set`) e o gesto alcançava esse
+    handler privado por `daemon._ipc_server._handle_gamepad_mask_set` — um
+    método achado por string, num atributo sem tipo. A casa já tinha recusado
+    isso em 13/09, quando a regra de em que perfil gravar saiu do handler
+    porque *"o gesto não passa pelo handler"* (`profiles/manager.py`).
+
+    A ORDEM É O CONTRATO, e ela mudou — é a do PS + R3, que grava só depois de o
+    aparelho concordar (`hotkey._gravar_o_modo_do_gesto`):
+
+    1. **o registro vivo** recebe a escolha, porque é dele que a fábrica do vpad
+       lê a máscara ao nascer (`mascara_efetiva`). Sem esta escrita ANTES, não
+       há como o aparelho vestir o que ela pediu;
+    2. **o aparelho veste** (`Daemon.vestir_a_mascara_do_aparelho`);
+    3. **o perfil ativo** guarda — SÓ SE o aparelho concordou. Antes o perfil já
+       tinha a máscara nova quando a barra de luz ainda dizia falha, e a aba
+       Jogar acendia um chip que o jogo não estava vendo. Quando o aparelho
+       recusa, o registro VOLTA para o que era: uma escolha que não pegou não
+       fica pendurada esperando o próximo vpad.
+
+    Sem vpad de pé (a Navegação) não há o que conferir, e a escolha vale para o
+    próximo — é o que ela pediu em 13/09 ao escolher máscara com o Hefesto
+    desligado.
+
+    `flavor` vazio LIMPA a escolha (o aparelho volta a herdar a do perfil), como
+    o campo em branco de `ControllerOverrides`.
+
+    Devolve o mesmo dicionário que a rota `gamepad.mask.set` sempre devolveu.
+    """
+    from hefesto_dualsense4unix.profiles.manager import (
+        chave_de_peca_que_grava,
+        gravar_a_mascara_no_perfil_ativo,
+        nome_do_perfil_que_grava,
+    )
+
+    alvo: str | None
+    if flavor is None or str(flavor).strip() == "":
+        alvo = None
+    else:
+        alvo = normalizar_mascara(flavor)
+        if alvo is None:
+            aceitos = ", ".join(sorted(mascaras_validas()))
+            raise ValueError(
+                f"gamepad.mask.set: máscara desconhecida {flavor!r} — "
+                f"aceito: {aceitos}, ou vazio para herdar a do perfil"
+            )
+
+    registro = registro_de_mascaras()
+    anterior = registro.mask_for(uniq)
+    mudou = registro.clear_mask(uniq) if alvo is None else registro.set_mask(uniq, alvo)
+
+    vestiu: str | None = None
+    ato = getattr(daemon, "vestir_a_mascara_do_aparelho", None)
+    if callable(ato):
+        try:
+            vestiu = str(ato(uniq))
+        except Exception as exc:
+            logger.warning("gamepad_mascara_nao_vestiu", uniq=uniq, err=str(exc))
+
+    vestida = mascara_vestida(daemon, uniq)
+    esperada = alvo if alvo is not None else vestida
+    if vestida is not None and esperada is not None and vestida != esperada:
+        # O aparelho não concordou (o gate R-04 recusou, a fábrica falhou). A
+        # escolha não vai para o perfil, e o registro volta ao que era.
+        if anterior is None:
+            registro.clear_mask(uniq)
+        else:
+            registro.set_mask(uniq, anterior)
+        logger.warning(
+            "gamepad_mascara_recusada_pelo_aparelho",
+            uniq=uniq, pedida=alvo, vestida=vestida, vestiu=vestiu,
+        )
+        return {"status": "ok", "uniq": uniq, "flavor": alvo, "mudou": False,
+                "perfil": None, "gravado": False,
+                "motivo": "aparelho_nao_vestiu", "vestiu": vestiu}
+
+    # O `store` do servidor IPC e o do daemon são o mesmo objeto em produção; o
+    # parâmetro existe porque quem chama pelo socket já o tem na mão, e porque
+    # `None` aqui é RESPOSTA (a segunda perna, a do disco, é que responde então).
+    dono = getattr(daemon, "store", None) if store is _SEM_STORE else store
+    nome = nome_do_perfil_que_grava(getattr(dono, "active_profile", None))
+    perfil, gravado, motivo = gravar_a_mascara_no_perfil_ativo(
+        nome, chave=chave_de_peca_que_grava(uniq), mascara=alvo
+    )
+    return {"status": "ok", "uniq": uniq, "flavor": alvo, "mudou": bool(mudou),
+            "perfil": perfil, "gravado": gravado, "motivo": motivo,
+            "vestiu": vestiu}
+
+
 __all__ = [
     "FLAVOR_FIELD",
     "IDENTITY_FIELD",
@@ -854,7 +986,9 @@ __all__ = [
     "MASKS_SCHEMA_VERSION",
     "VERSION_FIELD",
     "ExternalMaskRegistry",
+    "escolher_a_mascara",
     "mascara_efetiva",
+    "mascara_vestida",
     "mascaras_validas",
     "mesma_identidade",
     "normalizar_mascara",

@@ -168,7 +168,7 @@ TOUCH_REGIOES = [f"clique {x.strip()}" for x in
 # :4744), para o teclado (:4754) e para o `hotkey_manager.observe` (:4757). Os
 # secundários do co-op têm UM caminho só, o do gamepad virtual
 # (`daemon/subsystems/coop.py:2057` — `forward_analog`/`forward_buttons`).
-# Logo: com quatro na mesa, mouse, teclado e os cinco gestos saem de um
+# Logo: com quatro na mesa, mouse, teclado e os seis gestos saem de um
 # controle só, o do jogador 1. A aba diz isso na cara em vez de esconder.
 # QUEM NAVEGA SAI DOS CONECTADOS, não da MESA — 31/08/2026, quando a mesa passou
 # a ter dois lugares vazios. Um controle desconectado não navega o PC, e o menor
@@ -1001,7 +1001,7 @@ CSS = CSS_GLIFO + """
      coluna, que é mais do que a maior opção da lista pede ("Abrir e fechar o
      teclado na tela", ~200px).
 
-     `.tn-cx` ESCOPA A REGRA: as tabelas da ABA (os cinco combos) continuam com
+     `.tn-cx` ESCOPA A REGRA: as tabelas da ABA (os seis combos) continuam com
      os 176px que ela aprovou — lá não há marca nenhuma a caber. */
   .tn-cx .tab th:first-child,.tn-cx .tab td.b{width:250px}
 
@@ -1010,7 +1010,7 @@ CSS = CSS_GLIFO + """
      657px com elas a 22px — REMEDIDO em 06/09/2026, com a 22ª linha (o botão
      PS): eram 634px com 21. No token de 36 as linhas sozinhas passariam de
      750px, e a janela do produto tem 757. A tela não caberia na tela.
-     Na ABA, onde há cinco linhas e não vinte e duas, o token vale: veja
+     Na ABA, onde há seis linhas e não vinte e duas, o token vale: veja
      `.at-linha`. Esta é a única exceção da aba, e ela está aqui declarada em vez
      de espalhada.
      `.tn-cx.larga` (1120px) SAIU em 28/08: existia para caber as duas tabelas
@@ -1105,6 +1105,9 @@ ACOES_GESTO = [
     ("Navegação Interna", ["Suspender mouse e teclado", "Próximo perfil", "Perfil anterior",
                            "Sair do modo jogo"]),
     ("Modo", ["Próximo Modo"]),
+    # TROCA-DENTRO-DO-JOGO-01 (14/09/2026): a máscara é o degrau de cima do modo,
+    # e tem gesto próprio desde o PS + L3.
+    ("Máscara", ["Próxima Máscara"]),
     ("Modo Steam", ["Abrir a Steam"]),
     ("Executar Comando", ["Religar o controle"]),
     ("", ["— Nada —"]),
@@ -1357,15 +1360,21 @@ def ajuda(txt, largura="", vivas=()):
             f'<span class="dica"{st}>{corpo}</span></span>')
 
 # ---------------------------------------------------------------------------
-# OS CINCO COMBOS: a linha da tabela e o desenho do Player 1 usam o MESMO
+# OS SEIS COMBOS: a linha da tabela e o desenho do Player 1 usam o MESMO
 # número, e o ponteiro numa linha acende as peças dela no desenho.
+#
+# A SEXTA LINHA É DE 14/09/2026, e o lugar é escolha dela: *"Tem que ficar na
+# aba navegAção."* <!-- noqa-acento: citação literal dela --> O PS + L3 anda
+# pelas máscaras como o PS + R3 anda pelos modos, e os dois ficam lado a lado —
+# analógico esquerdo e direito, uma linha cada.
 # ---------------------------------------------------------------------------
 COMBOS = [
     (1, ("ps", "options"), "Suspender mouse e teclado"),
     (2, ("ps", "dpad_up"), "Próximo perfil"),
     (3, ("ps", "dpad_down"), "Perfil anterior"),
     (4, ("ps", "stick_r"), "Próximo Modo"),
-    (5, ("ps",), "Abrir a Steam"),
+    (5, ("ps", "stick_l"), "Próxima Máscara"),
+    (6, ("ps",), "Abrir a Steam"),
 ]
 
 # ---------------------------------------------------------------------------
@@ -2080,7 +2089,7 @@ VALEM_PARA = (
 #:
 #:     O QUE ELE PASSOU A DIZER é o que ela precisa saber para USAR a linha, e
 #:     não por que ela falta: o PS continua sendo a saída de emergência (os
-#:     cinco gestos desta aba saem dele, e segurá-lo alterna o modo jogo) **e**
+#:     seis gestos desta aba saem dele, e segurá-lo alterna o modo jogo) **e**
 #:     a tecla escolhida acontece junto. A precedência é do motor e está escrita
 #:     em tabela em `daemon/subsystems/hotkey._a_metade_da_maquina`; aqui só se
 #:     diz o que se vê acontecer.
@@ -3046,7 +3055,7 @@ LEGENDA = f'''<div class="nota">
 
   <h2>O que os quatro controles revelaram, e está na tela</h2>
   <ul>
-    <li><b>Mouse, teclado e os cinco gestos saem de UM controle só.</b> Com um
+    <li><b>Mouse, teclado e os seis gestos saem de UM controle só.</b> Com um
     controle ligado ninguém podia ver isso. O poll loop lê o estado do controle
     <b>primário</b> (<code>daemon/lifecycle.py:4541</code>) e é esse estado que vai
     para o mouse (<code>:4744</code>), para o teclado (<code>:4754</code>) e para o

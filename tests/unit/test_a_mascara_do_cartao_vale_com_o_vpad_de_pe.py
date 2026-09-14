@@ -14,8 +14,14 @@ na mesa (a do `test_mascara_por_controle_manda_no_vpad.py`). Dublados só o vpad
 o reader evdev, a descoberta de `/dev/input`, o sysfs de LED, o grab, o launch
 env e as flags de sessão. `display_authority="game"`: o jogo está aberto.
 
-MORDE: tirar do `_handle_gamepad_mask_set` a chamada `_vestir_a_mascara_na_hora`
-— o registro e o perfil gravam, e nenhum vpad é recriado.
+MORDE: tirar de `external_mask.escolher_a_mascara` a chamada
+`vestir_a_mascara_do_aparelho` — o registro grava e nenhum vpad é recriado.
+
+NOTA DATADA — TROCA-DENTRO-DO-JOGO-01, 14/09/2026: a mordida citava
+`_handle_gamepad_mask_set._vestir_a_mascara_na_hora`. O ato saiu do handler do
+socket e virou `external_mask.escolher_a_mascara`, chamado pela rota IPC e pelo
+gesto PS + L3 — antes o gesto alcançava o handler privado por string. O que esta
+régua mede não mudou: o vpad tem de nascer vestindo a escolha dela.
 """
 from __future__ import annotations
 

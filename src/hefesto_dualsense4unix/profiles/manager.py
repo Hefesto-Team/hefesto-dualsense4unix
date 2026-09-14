@@ -2153,6 +2153,83 @@ def gravar_o_modo_no_perfil_ativo(
     return novo
 
 
+def chave_de_peca_que_grava(alvo: str) -> str | None:
+    """A chave sob a qual é SEGURO gravar a escolha de UMA peça, ou `None`.
+
+    A REGRA MUDOU DE CASA, NÃO DE CONTEÚDO — TROCA-DENTRO-DO-JOGO-01,
+    14/09/2026, pelo mesmo motivo que trouxe o `nome_do_perfil_que_grava` para
+    cá em 13/09: o gesto não passa pelo handler do socket, e uma segunda cópia
+    lá seria a próxima a divergir. O texto de origem está em
+    `IpcHandlersMixin._chave_de_peca_que_grava`, que agora chama esta.
+
+    As duas condições, e as duas são verificáveis:
+
+    - **doze dígitos hex** — é o que um MAC é. Um `path:` ou um
+      `usb-0000:00:14.0-3` não passa. `norm_mac` sozinho NÃO serve para gravar
+      (medido em 04/09/2026): ``norm_mac("path:/dev/input/event9")`` devolve
+      ``"adeee9"``, uma chave que parece boa e que peça nenhuma casa;
+    - **não é vpad** (`02fe…`, `broker.hidraw_broker.VPAD_UNIQ_PREFIX`) — o
+      gamepad virtual não é uma peça de plástico.
+    """
+    from hefesto_dualsense4unix.broker.hidraw_broker import VPAD_UNIQ_PREFIX
+    from hefesto_dualsense4unix.core.sysfs_leds import norm_mac
+
+    chave = norm_mac(alvo)
+    if not chave or len(chave) != 12:
+        return None
+    if chave.startswith(VPAD_UNIQ_PREFIX):
+        return None
+    return chave
+
+
+def gravar_a_mascara_no_perfil_ativo(
+    nome: str | None, *, chave: str | None, mascara: str | None
+) -> tuple[str | None, bool, str | None]:
+    """A máscara de UMA peça no perfil ATIVO — a irmã de `gravar_o_modo_no_perfil_ativo`.
+
+    Devolve ``(nome do perfil, gravou?, motivo de não ter gravado)``. O motivo é
+    `None` quando gravou — e é ele que a tela mostra em vez de um "aplicado"
+    sobre nada.
+
+    MASCARA-NO-PERFIL-01 (08/09/2026) escreveu isto dentro do handler do socket;
+    a TROCA-DENTRO-DO-JOGO-01 (14/09/2026) trouxe para cá, junto do modo, porque
+    agora existem DOIS gestos que gravam sem passar pelo socket (o chip da aba
+    Jogar pelo IPC, e o PS + L3 pelo controle).
+
+    NADA MUDOU = NÃO REGRAVA. Um `save_profile` troca a data do arquivo e faz o
+    daemon reaplicar o perfil inteiro; no meio de uma partida isso não é de
+    graça — a reaplicação passa por `apply_controller_mascaras`, e é justamente
+    ela que pode derrubar vpad.
+
+    A ENTRADA VAZIA SOME DO MAPA: um `uniq` apontando para `{}` no JSON faria a
+    próxima leitura achar que aquela peça tem opinião, e a coluna "Ajuste
+    próprio" da aba Perfis acenderia sobre nada.
+    """
+    from hefesto_dualsense4unix.profiles.schema import ControllerOverrides
+
+    if not chave:
+        return None, False, "sem_endereco"
+    if not nome:
+        return None, False, "sem_perfil"
+    perfil = load_profile(nome)
+    atuais = dict(perfil.controllers or {})
+    dele = atuais.get(chave) or ControllerOverrides()
+    if getattr(dele, "mascara", None) == mascara:
+        return nome, False, "sem_mudanca"
+    novo = dele.model_copy(update={"mascara": mascara})
+    if all(
+        getattr(novo, campo, None) is None for campo in ControllerOverrides.model_fields
+    ):
+        atuais.pop(chave, None)
+    else:
+        atuais[chave] = novo
+    save_profile(perfil.model_copy(update={"controllers": atuais or None}))
+    logger.info(
+        "gamepad_mascara_gravada_no_perfil", uniq=chave, perfil=nome, mascara=mascara
+    )
+    return nome, True, None
+
+
 def _estado_da_secao(valor: object) -> str:
     """Normaliza o retorno de um applier de perfil (R-03).
 

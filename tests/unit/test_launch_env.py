@@ -288,7 +288,17 @@ def test_nativo_por_titulo_e_arriscado_e_por_appid_nao():
     assert nomes == ["rdr2"]
 
 
-def test_nativo_matchany_e_desktop_por_processo_tambem_sao_arriscados():
+def test_nativo_matchany_e_arriscado_e_a_navegacao_por_processo_nao_e():
+    """NOTA DATADA — TROCA-DENTRO-DO-JOGO-01, 14/09/2026: o `desktop` saiu da
+    lista por decisão dela (D-1409-FORA-DO-NATIVO-O-JOGO-VE-SO-O-VIRTUAL).
+
+    A Navegação é mouse: o jogo não ver gamepad ali é a intenção, e é o único
+    jeito de o PS + R3 valer DENTRO do jogo — a env é lida uma vez, no `exec`.
+    Enquanto o desktop contava, um perfil de Navegação casado por processo
+    deixava o `default.env` de TODO jogo sem IGNORE, em qualquer modo.
+
+    MORDE: devolver o `desktop` ao filtro faz `navegacao` reaparecer na lista.
+    """
     matchany_nativo = SimpleNamespace(
         name="tudo_nativo", mode=SimpleNamespace(kind="native"), match=SimpleNamespace()
     )
@@ -298,7 +308,7 @@ def test_nativo_matchany_e_desktop_por_processo_tambem_sao_arriscados():
     nomes = launch_env._nativos_fora_da_antecipacao(
         [matchany_nativo, desktop_por_processo]
     )
-    assert nomes == ["tudo_nativo", "navegacao"]
+    assert nomes == ["tudo_nativo"]
 
 
 def test_nativo_com_appid_mais_titulo_continua_arriscado():
