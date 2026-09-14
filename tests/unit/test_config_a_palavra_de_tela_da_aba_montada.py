@@ -49,11 +49,12 @@ _gi.require_version("Gtk", "3.0")
 from gi.repository import Gtk
 
 from tests.unit.aba_config_sem_a_janela import (
-    FRASES_DO_CENSO_DO_GABINETE,
+    FOLGA_DO_AMBIENTE,
     FRASES_DO_ESPELHO,
     PISO_DA_COLHEITA,
     PISO_POR_SECAO,
     SECOES_NO_GLADE,
+    HospedeiroDaAbaConfig,
     aba_config_montada,
     textos_da_arvore,
 )
@@ -88,18 +89,16 @@ def _aba_montada() -> Any:
     restaurado do git — os dois lados deram o mesmo número —, e
     `test_o_berco_nao_e_mais_frouxo_que_o_glade` reprova se ela encolher.
 
-    O NÚMERO SAIU DAQUI EM 08/09/2026: era "199 textos dos dois lados". A
-    colheita de hoje dá 189 num processo solto e 186 sob a suíte, e a única
-    fonte da diferença é o censo do gabinete — ver
-    `aba_config_sem_a_janela.FRASES_DO_CENSO_DO_GABINETE`.
+    O NÚMERO SAIU DAQUI EM 08/09/2026, e o de lá também caducou. Era "199 textos
+    dos dois lados"; virou 189 solto e 186 sob a suíte, pelo censo do gabinete.
+    Desde 13/09/2026 o berço monta sobre uma bancada FIXA e são 190 em todo
+    ambiente medido — ver `aba_config_sem_a_janela.FOLGA_DO_AMBIENTE`.
 
     A RAZÃO QUE ESTAVA ESCRITA AQUI TAMBÉM CAIU: dizia que a colheita cresce
-    com o que está na mesa, porque "Os controles" monta um card por controle.
+    com os controles ligados, porque "Os controles" monta um card por controle.
     Medido em 08/09/2026 com QUATRO DualSense adotados, a seção montou os
     mesmos 8 textos do estado vazio — este berço não tem `_controles_leitor` e
-    o pedido que sobra é assíncrono, então a colheita é tomada antes de haver
-    resposta. Continua certo que cravar IGUALDADE aqui seria errado, mas a
-    razão é outra, e é o censo.
+    o pedido que sobrava era assíncrono. Desde 13/09 ele nem sai.
     """
     return aba_config_montada()
 
@@ -147,14 +146,17 @@ def test_o_berco_nao_e_mais_frouxo_que_o_glade() -> None:
     Três frases a menos, em silêncio, numa régua de REDAÇÃO: ela passaria com a
     frase errada dentro.
 
-    A régua cobra as FRASES e um PISO, e não a igualdade: a mesma aba colhe
-    três textos a MENOS sob a suíte do que num processo solto, porque as três
-    frases do censo do gabinete saem de um arquivo sob o `HOME` e o `conftest`
-    desvia o `HOME`. O piso tem de servir aos dois ambientes, então ele é o do
-    ambiente mais pobre. O que ele NÃO pode ter é folga além dessas três —
-    valeu 175 até 08/09 e deixava passar uma seção cortada a menos da metade,
-    que é o que `test_a_folga_do_piso_tem_tamanho_medido` agora reprova. Ver
-    `aba_config_sem_a_janela.PISO_DA_COLHEITA`.
+    A régua cobra as FRASES, cada MOLDURA e o TOTAL, nesta ordem — a mais
+    específica primeiro, para a mensagem apontar a causa. Uma seção que sobe oca
+    é também uma colheita abaixo do piso, e o total sozinho diria só "sumiu
+    texto"; a moldura diz qual seção.
+
+    O PISO É O DA BANCADA FIXA (13/09/2026). Até ali ele valia 186 e media o
+    barramento USB da máquina de quem roda: com dois aparelhos a menos, a suíte
+    reprovou 172 contra 186 sobre o mesmo código que tinha fechado verde de
+    manhã. E ele valeu 175 até 08/09, deixando passar uma seção cortada a menos
+    da metade — que é o que `test_a_folga_do_piso_tem_tamanho_medido` reprova.
+    Ver `aba_config_sem_a_janela.PISO_DA_COLHEITA`.
     """
     caixa = _aba_montada()
     assert len(caixa.get_children()) == SECOES_NO_GLADE, (
@@ -169,22 +171,24 @@ def test_o_berco_nao_e_mais_frouxo_que_o_glade() -> None:
             "seção pede — a linha some sem levantar, e as três réguas desta "
             "aba passam a medir menos sem nada acusar."
         )
-    assert len(colhidos) >= PISO_DA_COLHEITA, (
-        f"o berço colheu {len(colhidos)} textos, abaixo do piso de "
-        f"{PISO_DA_COLHEITA}: uma seção inteira sumiu. Dê ao "
-        "`BercoDaAbaConfig` o widget que ela pede."
-    )
 
-    # E CADA MOLDURA DE PÉ TEM DE TER CONTEÚDO — 08/09/2026. O total sozinho
-    # não pega o modo de falha real do berço: uma seção que monta OCA deixa as
-    # outras quatro intactas, e o total continua acima do piso.
+    # CADA MOLDURA DE PÉ TEM DE TER CONTEÚDO — 08/09/2026. O modo de falha real
+    # do berço é uma seção que monta OCA: o `montar` levanta, o mixin engole, e
+    # a moldura fica na tela só com o título.
     for moldura in caixa.get_children():
         rotulo = getattr(moldura, "get_label", lambda: None)() or "?"
         quantos = len(textos_da_arvore(moldura))
         assert quantos >= PISO_POR_SECAO, (
             f"a seção {rotulo!r} montou com {quantos} textos — ela subiu oca, "
-            "e o total das outras quatro esconderia isso"
+            "e o total das outras quatro esconderia a causa"
         )
+
+    assert len(colhidos) >= PISO_DA_COLHEITA, (
+        f"o berço colheu {len(colhidos)} textos, abaixo do piso de "
+        f"{PISO_DA_COLHEITA}: uma seção perdeu conteúdo sem esvaziar. Dê ao "
+        "`BercoDaAbaConfig` o widget que ela pede, ou confira se a bancada do "
+        "berço continua sendo a que o piso mediu."
+    )
 
 
 def test_a_folga_do_piso_tem_tamanho_medido() -> None:
@@ -197,15 +201,15 @@ def test_a_folga_do_piso_tem_tamanho_medido() -> None:
     uma seção perdendo 55% do conteúdo passava pelos DOIS pisos, porque 9 ainda
     é folgadamente maior que `PISO_POR_SECAO`.
 
-    O que se cobra aqui é o TAMANHO da folga, e ele tem uma fonte só: o censo do
-    gabinete, que acrescenta `FRASES_DO_CENSO_DO_GABINETE` textos à seção
-    "Conexões" quando o `HOME` é o de verdade e some sob o lar de mentira do
-    `conftest`. Medido nos dois sentidos — 189 solto, 186 sob a suíte, e 186 de
-    novo num processo solto com um lar vazio.
+    O que se cobra aqui é o TAMANHO da folga, e a fonte dela acabou em
+    13/09/2026. Até ali eram as três frases do censo do gabinete, que só
+    apareciam com o `HOME` de verdade; o berço agora fixa o gabinete e a
+    bancada, e a colheita deu 190 num processo solto sob um lar vazio, 190 sob
+    um lar com o produto instalado e declarado, e 190 sob a suíte. A folga é
+    `FOLGA_DO_AMBIENTE`, zero.
 
-    Por que ela não é a igualdade que o arquivo recusa: o teto legítimo é a
-    colheita COM o censo, então a folga pode ser qualquer coisa de 0 a 3
-    conforme quem roda tenha o produto instalado. O que ela não pode é ser 11.
+    Por isso o piso é também o teto: texto novo na aba reprova aqui, e quem o
+    pôs sobe o `PISO_DA_COLHEITA` e diz na nota dele o que entrou.
     """
     colhidos = len(textos_da_arvore(_aba_montada()))
     folga = colhidos - PISO_DA_COLHEITA
@@ -215,13 +219,146 @@ def test_a_folga_do_piso_tem_tamanho_medido() -> None:
         f"faltam {-folga}. Ou sumiu texto da tela, ou o piso subiu sem a "
         "colheita subir junto."
     )
-    assert folga <= FRASES_DO_CENSO_DO_GABINETE, (
+    assert folga <= FOLGA_DO_AMBIENTE, (
         f"a aba colheu {colhidos} textos contra um piso de {PISO_DA_COLHEITA}: "
-        f"{folga} de folga, e o ambiente só explica "
-        f"{FRASES_DO_CENSO_DO_GABINETE} (as frases do censo do gabinete). "
-        "Folga sem fonte é piso comprado — uma seção pode perder metade do "
-        "conteúdo e atravessar. Se a aba ganhou texto, suba o "
+        f"{folga} de folga, e o ambiente explica {FOLGA_DO_AMBIENTE} desde que o "
+        "berço fixa a bancada. Folga sem fonte é piso comprado — uma seção pode "
+        "perder metade do conteúdo e atravessar. Se a aba ganhou texto, suba o "
         "`PISO_DA_COLHEITA` junto e diga na nota dele o que entrou."
+    )
+
+
+def test_a_colheita_nao_le_o_sys_nem_pergunta_ao_daemon(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A régua mede a ABA, e não a máquina de quem roda — BERCO-SEM-A-BANCADA-01.
+
+    A suíte de 13/09/2026 reprovou este arquivo com 172 textos contra 186 sobre
+    o mesmo código que tinha fechado verde de manhã. "Conexões" lia o barramento
+    USB DESTA máquina: o berço não injetava leitor nenhum, e
+    `secao_mesa._PainelDaMesa` cai em `ler_a_mesa()`, `ler_o_barramento()` e
+    `listar_entradas()` quando o hospedeiro não traz os seus — e em
+    `ler_do_disco()` para o gabinete, sob o `HOME` de quem roda.
+
+    Os dublês LEVANTAM, e quem acusa é a lista: `_reler_a_mesa` engole a própria
+    exceção (uma leitura de `/sys` que falha não pode derrubar a troca de aba), e
+    sem a lista a régua passaria com a seção vazia. O pedido ao daemon entra
+    junto, porque é o mesmo desvio que o cala. E a colheita tem de continuar no
+    piso com os dublês de pé: a bancada do berço não passa por nenhum deles.
+
+    MORDIDA: tirar do `HospedeiroDaAbaConfig` os leitores da bancada — reprova
+    nomeando `ler_a_mesa` e os dois `call_async`.
+    """
+    from hefesto_dualsense4unix.app import ipc_bridge
+    from hefesto_dualsense4unix.app.actions.config import secao_controles, secao_mesa
+
+    chamadas: list[str] = []
+
+    def _que_levanta(nome: str) -> Any:
+        def _duble(*_args: Any, **_kwargs: Any) -> Any:
+            chamadas.append(nome)
+            raise AssertionError(f"a colheita chamou {nome}")
+
+        return _duble
+
+    for nome in ("ler_a_mesa", "ler_o_barramento", "listar_entradas", "ler_do_disco"):
+        monkeypatch.setattr(secao_mesa, nome, _que_levanta(nome))
+    # `secao_controles` importa `call_async` no topo; `secao_mesa` e
+    # `secao_orcamento` o buscam em `ipc_bridge` na hora da chamada.
+    monkeypatch.setattr(secao_controles, "call_async", _que_levanta("call_async"))
+    monkeypatch.setattr(ipc_bridge, "call_async", _que_levanta("call_async"))
+
+    colhidos = textos_da_arvore(_aba_montada())
+
+    assert not chamadas, (
+        f"a colheita da aba passou por {chamadas}: ela está lendo a máquina de "
+        "quem roda a suíte, e o piso volta a medir a bancada. Injete o leitor "
+        "que falta em `HospedeiroDaAbaConfig`, no molde dos que já estão lá."
+    )
+    assert len(colhidos) >= PISO_DA_COLHEITA, (
+        f"com os leitores vivos proibidos a aba colheu {len(colhidos)} textos, "
+        f"abaixo do piso de {PISO_DA_COLHEITA}: a bancada do berço depende de "
+        "uma leitura que ela não devia fazer"
+    )
+
+
+def test_a_cor_do_plastico_nao_e_perguntada_ao_aparelho(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Com controle na aba, a cor do plástico vem do berço, e não do `/sys`.
+
+    `secao_controles._PainelDosControles._perguntar_as_cores` pergunta a cada
+    controle novo, e sem `_cor_do_plastico_leitor` quem responde é
+    `cor_do_plastico.ler_pelo_cabo`, que procura o controle em
+    `/sys/class/hidraw`. `test_config_01_a_aba_nasce_vazia` monta este berço com
+    dois controles, e é por ali que se chega aqui.
+
+    O executor roda NA HORA, como no `test_config_selo_de_saude`: esperar que
+    "a thread provavelmente já rodou" mediria o escalonador, não o produto. E a
+    régua confere que o caminho foi percorrido — sem as duas perguntas, ela
+    passaria sem ter olhado.
+
+    MORDIDA: tirar o `_cor_do_plastico_leitor` do berço — reprova nomeando
+    `ler_pelo_cabo` duas vezes.
+    """
+    from hefesto_dualsense4unix.app.actions.config import secao_controles
+
+    chamadas: list[str] = []
+    perguntas: list[str] = []
+
+    def _ler_pelo_cabo_que_levanta(uniq: str) -> Any:
+        chamadas.append("ler_pelo_cabo")
+        raise AssertionError(f"a aba perguntou a cor de {uniq} ao aparelho")
+
+    def _na_hora(fn: Any, ao_chegar: Any, ao_falhar: Any = None) -> None:
+        try:
+            resultado = fn()
+        except Exception as exc:
+            if ao_falhar is not None:
+                ao_falhar(exc)
+            return
+        ao_chegar(resultado)
+
+    original = secao_controles._pergunta_de_cor
+
+    def _pergunta_contada(uniq: str, ler: Any) -> Any:
+        perguntas.append(uniq)
+        return original(uniq, ler)
+
+    monkeypatch.setattr(secao_controles, "ler_pelo_cabo", _ler_pelo_cabo_que_levanta)
+    monkeypatch.setattr(secao_controles, "run_in_thread", _na_hora)
+    monkeypatch.setattr(secao_controles, "_pergunta_de_cor", _pergunta_contada)
+
+    class _ComControles(HospedeiroDaAbaConfig):
+        def __init__(self) -> None:
+            super().__init__()
+            self._controles_leitor = lambda: {
+                "controllers": [
+                    {
+                        "uniq": "aa:bb:cc:00:00:01",
+                        "connected": True,
+                        "transport": "usb",
+                        "player_slot": 1,
+                    },
+                    {
+                        "uniq": "aa:bb:cc:00:00:02",
+                        "connected": True,
+                        "transport": "bt",
+                        "player_slot": 2,
+                    },
+                ]
+            }
+
+    _ComControles().install_config_tab()
+
+    assert len(perguntas) == 2, (
+        f"a seção perguntou a cor de {len(perguntas)} controles, e são dois: a "
+        "régua não percorreu o caminho que ela vigia"
+    )
+    assert not chamadas, (
+        f"a aba montada no berço perguntou a cor ao aparelho: {chamadas}. É "
+        "leitura de `/sys/class/hidraw` da máquina de quem roda — o berço tem de "
+        "trazer o `_cor_do_plastico_leitor`."
     )
 
 

@@ -138,22 +138,22 @@ AINDA_NA_PAGINA: dict[str, str] = {
 #: `test_afordancia_de_dica_na_aba_configuracoes.py:203` já a paga do mesmo
 #: jeito. Sem este piso, quebrar o coletor deixaria o portão verde e mudo.
 #:
-#: O número é baixo de propósito: a aba LÊ O BARRAMENTO REAL da máquina, então
-#: numa bancada sem adaptador nenhum algumas seções não desenham as fileiras que
-#: carregam parágrafo.
-#:
 #: **DESCEU DE 4 PARA 2 EM 26/08/2026, NO MESMO COMMIT QUE PAGOU A LEX-2.** Em
 #: 25/08 a medição nesta árvore era **8 parágrafos únicos, 10 no total**; depois
 #: da LEX-2 são **4 únicos, 4 no total** — três de `PARAGRAFOS_QUE_FICAM` mais a
 #: frase do microfone, que é a última entrada de `AINDA_NA_PAGINA`.
 #:
-#: POR QUE 2 E NÃO 4, que é o que esta bancada acha: só DOIS dos quatro são
-#: incondicionais. A frase de capacidade do microfone e o "Não sei quem está no
-#: rádio" nascem em toda montagem (`montar` nunca pergunta ao daemon); os outros
-#: dois somem sozinhos numa bancada com controle ligado ("Nenhum controle ligado
-#: agora.") ou com as entradas já mapeadas ("Você ainda não mapeou as suas
-#: entradas."). Um piso de 4 reprovaria na máquina DELA, que tem as duas coisas.
-NUNCA_MENOS_QUE = 2
+#: **SUBIU DE 2 PARA 3 EM 13/09/2026 (`BERCO-SEM-A-BANCADA-01`).** O 2 contava
+#: com a aba lendo a máquina de quem roda: um controle ligado apagava "Nenhum
+#: controle ligado agora." e as entradas mapeadas apagavam "Você ainda não
+#: mapeou as suas entradas.". O berço agora monta sobre uma bancada FIXA, sem
+#: daemon e sem controle, e só a frase do mapa ainda depende do lar de quem
+#: roda (as faces do `maquina.json`). As outras TRÊS nascem em toda montagem:
+#: a capacidade do microfone, "Não sei quem está no rádio" e "Nenhum controle
+#: ligado agora.". Medido em 13/09, solto: 4 achados num lar vazio e 4 num lar
+#: com rádios, mapa e gabinete declarados (sem faces). O piso fica nos três que
+#: não dependem de lar nenhum.
+NUNCA_MENOS_QUE = 3
 
 
 def _aba_montada() -> Any:
