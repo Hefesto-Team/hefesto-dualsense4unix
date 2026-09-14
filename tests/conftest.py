@@ -15,7 +15,9 @@ import datetime
 import errno
 import fnmatch
 import hashlib
+import inspect
 import os
+import shlex
 import shutil
 import sys
 import tempfile
@@ -1004,6 +1006,11 @@ def _nascidos_fora_do_berco() -> list[str]:
     lar = lar_de_sessao()
     if lar is not None:
         novos.discard(lar.name)
+    # SOM-DE-MENTIRA: os dublês do som também moram fora do berço de propósito
+    # (eles têm de sobreviver ao fim da sessão), e também são NOSSOS.
+    som = som_de_mentira()
+    if som is not None:
+        novos.discard(som.name)
     return sorted(novos)
 
 
@@ -1429,6 +1436,10 @@ def pytest_sessionstart(session: Any) -> None:
     if not _LAR_REAL:
         _LAR_REAL.append(Path(os.environ.get("HOME") or os.path.expanduser("~")))
     _armar_berco(session)
+    # SOM-DE-MENTIRA: antes da COLETA, pela mesma razão da vigia logo abaixo —
+    # o que roda na importação de um módulo passa por baixo de toda fixture.
+    # Depois do berço, porque é dele que sai o `/tmp` de verdade.
+    _armar_som_de_mentira()
     # FAIXA-NO-BERCO-01: a foto do que JÁ estava sujo. Fora do `if` do canário
     # de propósito — esta régua fica de pé mesmo com aquele desligado, que é a
     # razão de ela existir.
@@ -2815,6 +2826,286 @@ def binario_do_venv(nome: str) -> Path | None:
 
 
 # ---------------------------------------------------------------------------
+# SOM-DE-MENTIRA (13/09/2026) — a suíte não conversa com o som dela, nem para LER
+# ---------------------------------------------------------------------------
+#
+# A-SUITE-NAO-PERGUNTA-AO-SOM-01, achado da validação da SOM-TRAVA-NA-QUEDA-01.
+#
+# A guarda SOM-DELA-01, logo abaixo, recusava só `load-module`/`unload-module`
+# e deixava a leitura passar. O servidor de som dela travou duas vezes em
+# 13/09, e um `pactl` que LÊ fica preso tanto quanto um que escreve: a suíte
+# que pergunta ao servidor dela trava com ele, e o veredito da régua passa a
+# depender da máquina.
+#
+# O INVENTÁRIO, antes desta cura, com espiões na frente do `PATH` e montados
+# por cima de `/usr/bin` (e os sockets de som escondidos): 87 argv chegaram a
+# um `pactl` sem dublê, de 84 testes em 27 arquivos — todos LEITURAS. Oitenta
+# eram o `pactl list modules short` que TODO boot de `Daemon` faz; o resto,
+# `list sinks short` e `get-default-sink` da aba Controles — e um deles era a
+# régua que existia para provar que a leitura passava.
+#
+# A CURA É NA BORDA DO PROCESSO, e não num `_rodar` por módulo: doze arquivos
+# de `src/` montam argv de som, e cobrir executor por executor deixaria o
+# próximo de fora. Duas camadas, as duas armadas no `sessionstart`:
+#
+#   1. o PATH — um diretório com um dublê para cada nome de
+#      `BINARIOS_DO_SERVIDOR_DE_SOM` entra na FRENTE do `PATH`. O dublê anota o
+#      argv em `chamadas.txt` e sai com rc=1, a resposta de um servidor que não
+#      atende. Pega o `shutil.which` do produto, todo subprocesso que herda o
+#      ambiente e os scripts de shell sob teste;
+#   2. o `Popen` — oito arquivos da suíte passam `env={"PATH": "/usr/bin:/bin"}`
+#      a um subprocesso, e esse PATH não herda nada. O `Popen.__init__` da
+#      sessão põe o dublê ANTES do primeiro diretório de sistema do PATH que o
+#      teste mandou, e troca pelo dublê o executável que resolveria num
+#      diretório de sistema. O dublê que o PRÓPRIO teste pôs antes do sistema
+#      continua vencendo — é assim que `doctor.sh` e companhia são medidos.
+#
+# O DIRETÓRIO FICA DEPOIS DA SESSÃO, e não é esquecimento: thread de escopo
+# maior que o teste e `atexit` alheio rodam até o interpretador morrer, e um
+# PATH apontando para um diretório já apagado cai no `/usr/bin` de verdade.
+# Quem o leva embora é a PRÓXIMA sessão, pelo pid morto — o critério do berço.
+#
+# ESCAPE, o mesmo da guarda de escrita e com o mesmo nome:
+# `HEFESTO_SOM_DE_VERDADE=1` desliga as duas camadas e a guarda — para o ensaio
+# de bancada que precisa do servidor, com a orelha dela do outro lado. Ele é
+# lido UMA vez, no `sessionstart`: um `setenv` no meio da sessão não reabre a
+# porta.
+#
+# O QUE ISTO NÃO ALCANÇA, escrito para ninguém confiar demais: biblioteca que
+# fala o protocolo do servidor sem subprocesso (libpulse, GStreamer, o som de
+# evento do GTK), script que REESCREVE o próprio PATH para diretórios de
+# sistema, `shell=True` com caminho absoluto dentro do texto do comando, e
+# script de shell rodado com um `env` que não tem PATH nenhum.
+
+#: Os clientes do servidor de som que ganham dublê. A régua
+#: `test_a_suite_nao_conversa_com_o_som_dela.py` faz o CENSO de `src/`,
+#: `scripts/` e `install.sh`, e reprova o nome usado que não estiver aqui.
+BINARIOS_DO_SERVIDOR_DE_SOM: tuple[str, ...] = (
+    # pulseaudio-utils — é o `pipewire-pulse` quem responde a eles
+    "pactl", "pacmd", "pacat", "parec", "parecord", "paplay", "pamon", "pasuspender",
+    # PipeWire e WirePlumber, pelo protocolo nativo
+    "wpctl", "pw-cli", "pw-dump", "pw-metadata", "pw-record", "pw-play", "pw-cat",
+    "pw-link", "pw-loopback", "pw-top", "pw-mon",
+    # ALSA — `scripts/` usa `arecord`, e o dispositivo padrão pode ser o servidor
+    "arecord", "aplay", "speaker-test",
+)
+
+_SOM_DE_VERDADE_ENV = "HEFESTO_SOM_DE_VERDADE"
+
+#: Prefixo do diretório dos dublês. Carrega o pid pelo mesmo motivo do berço: o
+#: critério de varredura é POSITIVO ("nasceu de uma sessão que morreu").
+_SOM_PREFIXO = "hefesto-som-de-mentira-"
+_SOM_REGISTRO = "chamadas.txt"
+
+#: No máximo um — o diretório desta sessão.
+_SOM_DE_MENTIRA: list[Path] = []
+
+#: Onde mora o cliente de som de VERDADE, em `realpath`. Preenchido no arme.
+_DIRS_DE_SISTEMA_PADRAO: tuple[str, ...] = (
+    "/usr/local/sbin", "/usr/local/bin", "/usr/sbin", "/usr/bin", "/sbin", "/bin",
+)
+_DIRS_DE_SISTEMA: set[str] = set()
+
+#: O `Popen.__init__` de antes da camada 2 — no máximo um.
+_POPEN_INIT_REAL: list[Callable[..., None]] = []
+
+
+def _som_de_verdade() -> bool:
+    return os.environ.get(_SOM_DE_VERDADE_ENV) == "1"
+
+
+def som_de_mentira() -> Path | None:
+    """O diretório dos dublês do som desta sessão, ou None sob o escape."""
+    return _SOM_DE_MENTIRA[0] if _SOM_DE_MENTIRA else None
+
+
+def chamadas_ao_som_de_mentira() -> list[str]:
+    """Uma linha por chamada que chegou a um dublê: ``"<nome> <argv...>"``."""
+    duble = som_de_mentira()
+    if duble is None:
+        return []
+    try:
+        texto = (duble / _SOM_REGISTRO).read_text(encoding="utf-8", errors="replace")
+    except OSError:
+        return []
+    return texto.splitlines()
+
+
+def _texto_do_duble(nome: str, registro: Path) -> str:
+    return (
+        "#!/bin/sh\n"
+        "# SOM-DE-MENTIRA (tests/conftest.py): sob a suite, este nome nao chega ao\n"
+        "# servidor de som de quem a roda. Anota o argv e sai como um servidor\n"
+        "# que nao atende.\n"
+        f"printf '%s\\n' \"{nome} $*\" >> {shlex.quote(str(registro))} 2>/dev/null\n"
+        f"echo 'SOM-DE-MENTIRA: {nome} sob teste nao chega ao servidor de som' >&2\n"
+        "exit 1\n"
+    )
+
+
+def _som_orfaos(raiz: Path) -> list[Path]:
+    """Diretórios de dublê de sessões MORTAS — o critério por pid do berço."""
+    orfaos: list[Path] = []
+    with contextlib.suppress(OSError):
+        for entrada in raiz.iterdir():
+            if not entrada.name.startswith(_SOM_PREFIXO):
+                continue
+            cauda = entrada.name[len(_SOM_PREFIXO):]
+            if not cauda.isdigit() or entrada.is_symlink() or not entrada.is_dir():
+                continue
+            if _pid_vivo(int(cauda)):
+                continue
+            orfaos.append(entrada)
+    return orfaos
+
+
+def _dirs_de_sistema(caminho: str) -> set[str]:
+    """Os diretórios de sistema de sempre, mais todo diretório em que o PATH de
+    ANTES do desvio acha um cliente de som — sem contar o dublê de uma sessão
+    mãe (a suíte que roda pytest em subprocesso)."""
+    dirs = {os.path.realpath(d) for d in _DIRS_DE_SISTEMA_PADRAO}
+    limpo = os.pathsep.join(
+        e for e in caminho.split(os.pathsep)
+        if not os.path.basename(e.rstrip(os.sep)).startswith(_SOM_PREFIXO)
+    )
+    for nome in BINARIOS_DO_SERVIDOR_DE_SOM:
+        achado = shutil.which(nome, path=limpo)
+        if achado:
+            dirs.add(os.path.realpath(os.path.dirname(achado)))
+    return dirs
+
+
+def _armar_som_de_mentira() -> None:
+    """Cria os dublês, põe o diretório na frente do PATH e instala o `Popen`."""
+    if _som_de_verdade() or _SOM_DE_MENTIRA:
+        return
+    raiz = _TMP_REAL[0] if _TMP_REAL else Path(tempfile.gettempdir())
+    for orfao in _som_orfaos(raiz):
+        shutil.rmtree(orfao, ignore_errors=True)
+    destino = raiz / f"{_SOM_PREFIXO}{os.getpid()}"
+    # Já existe? É de uma sessão morta cujo pid o sistema reciclou para nós.
+    shutil.rmtree(destino, ignore_errors=True)
+    registro = destino / _SOM_REGISTRO
+    try:
+        destino.mkdir(mode=0o700)
+        registro.touch()
+        for nome in BINARIOS_DO_SERVIDOR_DE_SOM:
+            duble = destino / nome
+            duble.write_text(_texto_do_duble(nome, registro), encoding="utf-8")
+            duble.chmod(0o755)
+    except OSError:  # pragma: no cover — /tmp sem escrita derruba a suíte antes
+        shutil.rmtree(destino, ignore_errors=True)
+        return
+    antes = os.environ.get("PATH", os.defpath)
+    _DIRS_DE_SISTEMA.update(_dirs_de_sistema(antes))
+    _SOM_DE_MENTIRA.append(destino)
+    os.environ["PATH"] = os.pathsep.join([str(destino), antes]) if antes else str(destino)
+    _instalar_popen_sem_som()
+
+
+def _path_com_o_duble(caminho: str, duble: Path) -> str:
+    """`caminho` com o dublê ANTES do primeiro diretório de sistema.
+
+    Nada muda quando o dublê já vem antes de todo sistema, ou quando o PATH não
+    tem diretório de sistema nenhum — o teste montou um PATH só dele.
+    """
+    alvo = str(duble)
+    entradas = caminho.split(os.pathsep)
+    for i, entrada in enumerate(entradas):
+        if entrada == alvo:
+            return caminho
+        if os.path.realpath(entrada or os.curdir) in _DIRS_DE_SISTEMA:
+            return os.pathsep.join([*entradas[:i], alvo, *entradas[i:]])
+    return caminho
+
+
+def _duble_no_lugar_de(programa: Any, caminho: str, duble: Path) -> str | None:
+    """O dublê que roda no lugar de `programa`, ou None se não há o que trocar.
+
+    Troca só o cliente de som que resolveria num diretório de SISTEMA. O que
+    resolve no dublê da sessão, ou no dublê que o próprio teste montou, fica.
+    """
+    try:
+        texto = os.fsdecode(programa)
+    except (TypeError, ValueError):
+        return None
+    nome = os.path.basename(texto)
+    if nome not in BINARIOS_DO_SERVIDOR_DE_SOM:
+        return None
+    resolvido = texto if os.path.dirname(texto) else shutil.which(texto, path=caminho)
+    if resolvido is None:
+        return None
+    if os.path.realpath(os.path.dirname(resolvido)) not in _DIRS_DE_SISTEMA:
+        return None
+    return str(duble / nome)
+
+
+def _desviar_para_o_duble(argumentos: dict[str, Any], duble: Path) -> None:
+    """Ajusta, no lugar, os argumentos de um `Popen` que alcançaria o servidor."""
+    env = argumentos.get("env")
+    base = os.environ if env is None else env
+    caminho = base.get("PATH") if hasattr(base, "get") else None
+    if isinstance(caminho, str):
+        novo = _path_com_o_duble(caminho, duble)
+        if novo != caminho:
+            argumentos["env"] = {**base, "PATH": novo}
+            caminho = novo
+    else:
+        caminho = os.defpath
+    if argumentos.get("shell"):
+        return
+    if argumentos.get("executable") is not None:
+        troca = _duble_no_lugar_de(argumentos["executable"], caminho, duble)
+        if troca is not None:
+            argumentos["executable"] = troca
+        return
+    programa = argumentos.get("args")
+    if isinstance(programa, (str, bytes, os.PathLike)):
+        troca = _duble_no_lugar_de(programa, caminho, duble)
+        if troca is not None:
+            argumentos["args"] = troca
+        return
+    if not isinstance(programa, (list, tuple)):
+        try:
+            programa = list(programa)
+        except TypeError:
+            return
+        argumentos["args"] = programa
+    if not programa:
+        return
+    troca = _duble_no_lugar_de(programa[0], caminho, duble)
+    if troca is not None:
+        argumentos["args"] = type(programa)([troca, *programa[1:]])
+
+
+def _instalar_popen_sem_som() -> None:
+    """A camada 2: o `Popen.__init__` da sessão desvia quem não herda o PATH."""
+    import functools
+    import subprocess
+
+    if _POPEN_INIT_REAL:
+        return
+    real = subprocess.Popen.__init__
+    assinatura = inspect.signature(real)
+
+    @functools.wraps(real)
+    def _init_sem_som(self: Any, *args: Any, **kwargs: Any) -> None:
+        duble = som_de_mentira()
+        if duble is not None:
+            try:
+                amarrado = assinatura.bind(self, *args, **kwargs)
+            except TypeError:
+                pass  # chamada inválida: o `Popen` real reprova com a mensagem dele
+            else:
+                _desviar_para_o_duble(amarrado.arguments, duble)
+                return real(*amarrado.args, **amarrado.kwargs)
+        return real(self, *args, **kwargs)
+
+    _POPEN_INIT_REAL.append(real)
+    subprocess.Popen.__init__ = _init_sem_som  # type: ignore[method-assign]
+
+
+# ---------------------------------------------------------------------------
 # SOM-DELA-01 (07/09/2026) — a suíte não carrega módulo no PipeWire DELA
 # ---------------------------------------------------------------------------
 #
@@ -2836,11 +3127,18 @@ def binario_do_venv(nome: str) -> Path | None:
 # de desenvolvimento é a máquina DELA, e a suíte não pode mexer no que ela está
 # usando. Lá era a tela; aqui é o som — e ela está com quatro DualSense na mesa.
 #
-# **Só as ESCRITAS são recusadas.** `list`, `info` e `get-default-sink`
-# continuam passando: ler o servidor não muda nada dela, e há teste que lê.
+# **Só as ESCRITAS são recusadas AQUI**, antes de o subprocesso nascer: um nó
+# construído sem runner volta `None` sem mandar argv a ninguém. A LEITURA segue
+# para o `_rodar` de verdade — e desde 13/09 quem a atende é o dublê do
+# SOM-DE-MENTIRA, logo acima.
+#
+# FATO SUBSTITUÍDO (13/09/2026): este bloco dizia que a leitura passava porque
+# ler o servidor não mudava nada dela. A razão caiu no dia em que o servidor
+# dela travou duas vezes e a leitura travou junto.
 #
 # ESCAPE, explícito e com nome: `HEFESTO_SOM_DE_VERDADE=1`, para o ensaio de
-# bancada que PRECISA publicar um nó — com a orelha dela do outro lado.
+# bancada que PRECISA publicar um nó — com a orelha dela do outro lado. Ele
+# desliga esta guarda e as duas camadas do SOM-DE-MENTIRA.
 _VERBOS_QUE_ESCREVEM_NO_SOM = ("load-module", "unload-module")
 
 
@@ -2867,7 +3165,7 @@ def _nenhum_modulo_de_som_de_verdade() -> Iterator[None]:
         yield
         return
 
-    if os.environ.get("HEFESTO_SOM_DE_VERDADE") == "1":
+    if _som_de_verdade():
         yield
         return
 
