@@ -44,7 +44,7 @@ dev = [
     # habilitada e a reformatar blocos de import, quebrando o release v3.8.3 num
     # código que estava limpo na versão anterior. Pin garante build determinístico
     # (CHORE-CI-PIN-RUFF-01). Bump consciente do mantenedor ao subir o ruff.
-    "ruff==0.15.20",
+    "ruff==0.16.7",
     "mypy>=1.7",
     "types-python-xlib",
     # PACOTE-COM-NOME-01: tests/unit/test_release_workflow_nomes_e_portões.py lê
