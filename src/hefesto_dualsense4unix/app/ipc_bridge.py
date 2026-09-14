@@ -1188,8 +1188,8 @@ def mic_set(muted: bool | None, uniq: str | None = None) -> bool:
 
     Esta é a CAMADA 3 do achado de 25/07. As outras duas (o ``mute:true``
     persistido por rota em ``~/.local/state/wireplumber/default-routes`` e o
-    perfil da placa preso em ``input:iec958-stereo``, que é S/PDIF e não carrega
-    sinal nenhum) são do WirePlumber, não do controle, e se curam pelo
+    perfil da placa preso em ``input:iec958-stereo``, que capta: o «sem sinal» de
+    25/07 era o mudo do firmware) são do WirePlumber, não do controle, e se curam pelo
     ``scripts/doctor.sh --fix``. Nenhum ``mic_set`` do mundo as alcança — se o
     medidor continuar parado depois de desmutar aqui, é uma delas.
 

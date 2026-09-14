@@ -180,7 +180,7 @@ class IpcServer(IpcHandlersMixin):
             "speaker.set": self._handle_speaker_set,
             # MIC-USB-01: mudo do microfone no FIRMWARE do controle — a
             # CAMADA 3 das três que deixavam o mic mudo. As camadas 1 e 2
-            # (mute persistido por rota e perfil S/PDIF sem sinal) são do
+            # (mute persistido por rota e perfil iec958, que capta) são do
             # WirePlumber e moram no `doctor --fix`; esta é a única do
             # controle, e até 25/07 só o botão físico a alcançava.
             "mic.set": self._handle_mic_set,

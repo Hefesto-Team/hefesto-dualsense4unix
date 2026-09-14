@@ -361,7 +361,7 @@ por fora — `scripts/doctor.sh --fix-mic`:
 1. `"mute":true` persistido por **rota** em
    `~/.local/state/wireplumber/default-routes`, restaurado a cada conexão sem
    nada no log;
-2. perfil da placa preso em `input:iec958-stereo` (S/PDIF, **sem sinal**) porque
+2. perfil da placa preso em `input:iec958-stereo` (que capta: o «sem sinal» de 25/07 era o mudo do firmware, e em 26/07 ele gravou pico 4606) porque
    o WirePlumber marca a entrada analógica indisponível sem fone plugado — mas o
    microfone embutido usa esse mesmo caminho.
 
