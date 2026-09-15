@@ -1616,9 +1616,39 @@ def _coluna(c, e=None, conectado=None):
         # e `a05_vibracao.SEM_DONO["lado:ligado"]`. Quando ela ganhar fonte, o
         # elemento troca a marca pelo alvo `classe` — como os degraus acabaram
         # de fazer.
+        # O INTERRUPTOR GANHOU FONTE — 14/09/2026, ordem dela com o controle na
+        # mão: *"o motor esquerdo do controle azul não fica ativado e nem se eu
+        # clicar em máximo ele liga. ele deveria ligar se > 0 no slicer dele."*
+        #
+        # O QUE ELE ERA, e o comentário de 03/09 logo acima já prometia esta
+        # troca: `data-hef="lado"` mais a classe `on` CRAVADA pelo desenho. As
+        # duas metades faltavam, e as duas mentiam do mesmo jeito:
+        #
+        #   - não havia PINTURA. A classe era a da cena do mockup — o P2 com o
+        #     esquerdo apagado, para sempre. Medido no daemon dela em 14/09: as
+        #     duas barras do P2 em **100**, e o punho esquerdo apagado na tela;
+        #   - não havia CLIQUE. `data-hef` não está na lista que o ouvinte do
+        #     piloto varre (`hefesto_vivo.manda_do_alvo` casa `data-gesto`,
+        #     `data-papel`, `data-forca`…), então o clique nunca saía do
+        #     navegador — e nenhum gesto `lado` estava registrado do outro lado
+        #     para atendê-lo. Era um botão morto com cara de interruptor.
+        #
+        # A REGRA É DELA E NÃO INVENTA CAMPO: aceso = a barra daquele motor é
+        # maior que zero. O estado não vai ao disco por si — ele é a LEITURA do
+        # valor que já existe (`controllers[uniq].motores`, o mesmo que a barra
+        # ao lado move), e é por isso que ele pôde nascer sem um campo novo no
+        # `profiles/schema.py`. `data-hef-quando="1"` porque o pacote emite
+        # `"1"`/`""`, o mesmo vocabulário booleano do `treme-*` e do `mult-teto`.
+        #
+        # O CLIQUE É O PAR DA BARRA, e não um interruptor com memória própria:
+        # desligar escreve 0 e ligar devolve 100, pelo mesmo `rumble.motores.set`
+        # que o arraste usa. Um campo `ligado` separado do valor seria a segunda
+        # verdade que esta aba passaria a ter de manter em dia — e a primeira vez
+        # que os dois divergissem, a tela diria "ligado" com a barra em zero.
         botao = (f'<button class="lado{" on" if ligado else ""}" '
-                 f'data-hef="lado" data-lado="{sigla}" '
-                 f'data-hef-rotulo="o nome do motor" '
+                 f'data-gesto="lado" data-lado="{sigla}" '
+                 f'data-campo="lado-{sigla}" data-hef-alvo="classe" '
+                 f'data-hef-quando="1" '
                  f'title="{m["nome"]} — {m["nota"]}">'
                  f'{glifo(m["glifo"], ativo=ligado, tam=18)}</button>')
         linhas.append(_barra_de_motor(valor, sigla, m, ligado, botao,

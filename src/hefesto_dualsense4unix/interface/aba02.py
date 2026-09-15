@@ -2379,7 +2379,29 @@ def bloco(c, *, bat, carga=None, glifos_on, l2, r2, touch, sticks,
           </div>
           <div class="moldura led" style="margin-top:9px" title="{DICA_LED_JOGADOR}">
             <div class="rot rot-linha">LED do jogador</div>
-            <div class="lampadas">{luzinhas(c["jogador"])}</div>
+            <!-- AS CINCO LÂMPADAS GANHARAM ENDEREÇO — 14/09/2026, queixa dela:
+                 *"a interface tá dessincronizada com os controles reais (o
+                 player do controle, o led indicativo do player)"*.
+
+                 ELAS ERAM DESENHO CRAVADO. O gerador as escrevia uma vez, com o
+                 `jogador` da CENA do mockup, e nenhum tique as visitava: o
+                 `data-campo` não existia, então o `achar()` do piloto passava ao
+                 largo. Um controle que trocasse de assento — e o assento é da
+                 ORDEM DE CHEGADA, por decisão dela — mostrava o padrão de outro
+                 jogador até a janela ser fechada.
+
+                 O ALVO É `html` E NÃO `classe`, e a razão é o que muda entre um
+                 jogador e outro: não é UMA lâmpada acender, é o DESENHO inteiro
+                 das cinco mudar (`1 | vão | 3 | vão | 1`, com o P1 no meio). Um
+                 alvo `classe` por lâmpada seriam cinco endereços para um valor
+                 só, e as cinco poderiam divergir entre si.
+
+                 QUEM MONTA O HTML É O MESMO `monta.luzinhas` que o gerador usa
+                 — o pacote o chama com o jogador VIVO. Duas receitas para o
+                 mesmo desenho é a segunda verdade que esta casa mata; aqui não
+                 há segunda. -->
+            <div class="lampadas" data-campo="lampadas"
+              data-hef-alvo="html">{luzinhas(c["jogador"])}</div>
           </div>
         </div>
 
@@ -3010,14 +3032,49 @@ CSS_DA_CARGA = "".join(
 
 CSS += f"""
 {CSS_DA_CARGA}  .faixa{{--larg-bateria:{LARG_BATERIA}px}}
-  {_aberto()}{{height:auto;flex:1 0 auto;padding-bottom:12px;
+  /* O CARD ABERTO NÃO ESTICA — 14/09/2026, queixa dela com a foto na mão:
+     *"o tamanho do card completo verticalmente"* está *"o triplo"*.
+
+     ERA `flex:1 0 auto`, e as três linhas abaixo propagavam a esticada para
+     dentro (`.corpo-cx` e `.card-corpo` com `flex:1`). O efeito, MEDIDO na
+     página publicada a 1920x1080, com dois controles ligados e dois lugares
+     vazios: o card ficava com **498px** para um conteúdo que pede **343** — o
+     `.card-corpo` esticado a 438 sobre um mínimo de 271. Os 155px de sobra não
+     iam para lugar nenhum: eles viravam vão dentro das cinco colunas, que é o
+     ar que ela viu na caixa do Microfone e na do Alto-falante.
+
+     E A SOBRA NÃO TINHA DONO: nenhuma das cinco colunas manda na altura —
+     medido escondendo uma a uma, o `.card-corpo` fica em 438 com qualquer uma
+     fora. Quem mandava era o `.quadro-corpo`, de cima para baixo, porque o card
+     era o único filho elástico de um quadro que ocupa a janela.
+
+     O PRECEDENTE É DELA, e é do mesmo defeito um andar acima (`topo.html`,
+     27/08): *"nessa aba encurtar verticalmente o bloco cinza então"* — o último
+     quadro esticava até o rodapé e virava um retângulo vazio. A cura foi a
+     mesma: o elemento fica do tamanho do que tem dentro.
+
+     O QUADRO ENCOLHE JUNTO (`flex:0 1 auto`, logo abaixo), senão a sobra só
+     mudaria de lugar: o card fecharia em 343 e o vão cinza apareceria embaixo
+     dele, dentro do quadro. Medido depois da cura: card **343**, quadro **523**
+     (era 678).
+
+     E O "TODOS" CONTINUA ROLANDO, que é o único estado desta aba que rola: com
+     os quatro cards abertos o conteúdo passa do espaço, o `flex-shrink:1` deixa
+     o quadro voltar ao teto e o `overflow-y:auto` do `.quadro-corpo` faz o
+     resto. Medido: `scrollHeight > clientHeight` no "Todos", como antes. */
+  {_aberto()}{{height:auto;flex:0 0 auto;padding-bottom:12px;
     background:linear-gradient(0deg,var(--sel-bg),var(--sel-bg)),var(--panel)}}
   {_aberto(" > .faixa")}{{flex:0 0 var(--h-acao);margin:10px 14px 0;padding:0 11px;
     border:1px solid var(--border-sutil);border-radius:7px;background:var(--app-bg);
     flex-wrap:wrap;white-space:normal}}
-  {_aberto(" > .corpo-cx")}{{flex:1;height:auto;overflow:visible;visibility:visible;
+  {_aberto(" > .corpo-cx")}{{flex:0 0 auto;height:auto;overflow:visible;visibility:visible;
     display:flex;flex-direction:column}}
-  {_aberto(" > .corpo-cx > .card-corpo")}{{flex:1}}
+  {_aberto(" > .corpo-cx > .card-corpo")}{{flex:0 0 auto}}
+  /* O QUADRO DESTA ABA FICA DO TAMANHO DO QUE TEM DENTRO — a outra metade da
+     cura acima. `flex:0 1 auto` mantém o `flex-shrink` que o "Todos" precisa e
+     tira só o `flex-grow` que criava o vão. A regra de `topo.html` continua
+     valendo para as outras nove abas; esta a estreita para a 02. */
+  .miolo > .quadro.estica{{flex:0 1 auto}}
   {_aberto(" .so-fechado")}{{display:none}}
   /* A LINHA DO GIROSCÓPIO ACENDE COM O CARD, e some sem `title` — ver o bloco
      `O GIROSCÓPIO NO JOGO` lá em cima. As duas regras são irmãs de propósito:

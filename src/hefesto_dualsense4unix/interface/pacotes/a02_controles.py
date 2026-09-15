@@ -128,6 +128,13 @@ from hefesto_dualsense4unix.core.speaker_scale import (
     volume_do_percentual,
 )
 
+# `luzinhas` VEM DO GERADOR DO DESENHO, e é de propósito: é a MESMA função com
+# que o `aba02.py` escreveu as cinco lâmpadas no HTML, e ela deriva o padrão de
+# `core.led_control.player_led_pattern` — o caminho por onde o produto acende as
+# luzes de verdade. Uma segunda receita aqui divergiria da primeira no dia em que
+# alguém mexesse numa delas.
+from hefesto_dualsense4unix.interface.monta import luzinhas
+
 from . import (
     NOME_SEM_LEITURA,
     Contexto,
@@ -2683,6 +2690,32 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
                 # todo campo sem informação. Os três "não sei" do `luz_hex`
                 # mandam vazio pela mesma razão que ele manda travessão.
                 "luz-cor": _cor_da_barra(rotulo_da_luz, base_da_luz),
+                # AS CINCO LÂMPADAS DO JOGADOR — 14/09/2026, e elas eram desenho
+                # cravado até hoje. Queixa dela: *"a interface tá dessincronizada
+                # com os controles reais (o player do controle, o led indicativo
+                # do player)"*.
+                #
+                # O NÚMERO VEM DA MESA, que é quem já resolve o assento: o
+                # `jogador` do item é a posição na fila de chegada
+                # (`mesa_viva.mesa_do_estado` → `daemon.subsystems.identity`), e
+                # é a mesma que o cabeçalho do card imprime como "P1". Ler
+                # `c["player"]` do controle cru daria o mesmo número na maioria
+                # dos tiques e outro justamente quando importa — no replug, em
+                # que a fila anda e o campo do controle ainda não.
+                #
+                # O DESENHO NÃO SE DIGITA: `monta.luzinhas` é a MESMA função com
+                # que o gerador escreveu o HTML da cena, e ela deriva o padrão de
+                # `core.led_control.player_led_pattern`, que é por onde o produto
+                # acende as luzes de verdade. Uma tabela aqui seria a terceira
+                # cópia do padrão do PS5.
+                #
+                # A RESSALVA QUE A DICA DA MOLDURA JÁ CARREGA continua valendo, e
+                # nada nesta linha a fecha: isto é o padrão DERIVADO do assento,
+                # não uma leitura do aparelho. O `state_full` publica o
+                # `player_slot` e não os `player_leds`; um perfil que escreva as
+                # cinco na mão pode divergir do que a tela desenha, e a tela não
+                # tem como saber.
+                "lampadas": luzinhas(int(casa.get("jogador") or 0) or 1),
                 # O CABEÇALHO DO CARD — o que ela viu mentindo em 03/09/2026.
                 #
                 # O `via` JÁ SAÍRA DAQUI em 02/09 por não ter onde pousar, e a

@@ -61,12 +61,15 @@ from . import perfil as _perfil
 #: desenho, o clique chega sem quantidade nenhuma"*. O desenho ganhou o
 #: `<input>` (`aba05._trilho_arrastavel`) e o gesto :func:`intensidade` grava —
 #: no perfil, e só para aquele controle.
-SEM_DONO: dict[str, str] = {
-    "lado:ligado": "Os oito interruptores de punho são DESENHO, e o produto "
-    "concorda por escrito: `app/telas/vibracao.SEM_FONTE['lado:ligado']` — não "
-    "há campo em `profiles/schema.py`, nem método de IPC, nem chave no "
-    "`state_full`. Fecha: MIGRA-VIBRACAO-06.",
-}
+#: **E HOJE É NENHUM — 14/09/2026.** A `lado:ligado` fechou: os oito
+#: interruptores de punho eram DESENHO — sem pintura e sem clique que saísse do
+#: navegador —, e ela mandou ligá-los com a regra escrita: *"ele deveria ligar se
+#: > 0 no slicer dele"*. A cura não precisou do campo que esta linha esperava: o
+#: aceso é a LEITURA da barra daquele motor (a chave `lado-{lado}` da
+#: :func:`pacote`) e o clique é o par dela (o gesto :func:`lado`), pelo mesmo
+#: `rumble.motores.set`. Mantê-la aqui depois de pintada seria dívida fantasma —
+#: a próxima pessoa esperaria por uma cura que já chegou.
+SEM_DONO: dict[str, str] = {}
 
 # **A `barra:motor` FECHOU — 04/09/2026, e as duas metades entraram no mesmo
 # dia, por frentes diferentes.** Ela dizia que faltavam (a) o desenho e (b) *a
@@ -758,6 +761,20 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
             # discordarem na mesma linha.
             plano[f"barra-{lado}"] = str(barras[lado])
             plano[f"barra-{lado}-pct"] = str(barras[lado])
+            # O INTERRUPTOR DE PUNHO, que era DESENHO até 14/09/2026 — ordem
+            # dela: *"ele deveria ligar se > 0 no slicer dele"*.
+            #
+            # ELE NÃO TEM VALOR PRÓPRIO, e é isso que o deixa nascer sem campo
+            # novo: aceso é uma LEITURA da barra que a linha acima acabou de
+            # emitir, e as duas saem do mesmo `barras[lado]`. Uma segunda fonte
+            # — um `ligado` no perfil — seria a segunda verdade desta linha, e a
+            # primeira vez que divergisse a tela diria "ligado" com a barra em
+            # zero.
+            #
+            # `"1"`/`""` é o vocabulário booleano que o alvo `classe` já fala
+            # nesta aba (o `treme-*` logo abaixo e o `mult-teto`), e o `""`
+            # atravessa como o travessão: APAGA a classe.
+            plano[f"lado-{lado}"] = "1" if barras[lado] > 0 else ""
         # O PUNHO QUE TREME — 03/09/2026, e era um FIO SOLTO com as duas pontas
         # já prontas. `app/telas/vibracao.pacote_da_coluna` calcula `treme` por
         # lado desde que nasceu, o CSS que acende o punho existe
@@ -1931,6 +1948,76 @@ def motor(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     # vivo" atrasado em um tique, que é a forma mais convincente de um ajuste
     # parecer que não funciona.
     _refrescar_o_teste(ctx, p, uniq, acabou_de_gravar=(lado, pontos))
+
+
+#: O QUE O INTERRUPTOR DEVOLVE AO LIGAR, e o número é o padrão da casa: 100 é a
+#: barra cheia — o motor entrega o degrau inteiro da coluna, sem multiplicar para
+#: baixo. É o mesmo valor com que a linha nasce quando o perfil não diz nada
+#: (`_barras_dos_motores`), então ligar um motor que ela nunca tocou o deixa
+#: exatamente onde ele já estaria.
+BARRA_CHEIA = 100
+
+
+@gesto("05-vibracao.html", "lado", grava="rumble_motores_set")
+def lado(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
+    """O interruptor de punho: liga e desliga AQUELE motor, naquele controle.
+
+    NASCEU EM 14/09/2026, e a ordem é dela, com o controle na mão: *"ao abrir o
+    vibração o motor esquerdo do controle azul não fica ativado e nem se eu
+    clicar em máximo ele liga. ele deveria ligar se > 0 no slicer dele."*  # noqa-acento: citação literal dela
+
+    OS OITO BOTÕES ERAM DESENHO — dois por controle, quatro colunas —, e a casa
+    sabia: `SEM_DONO["lado:ligado"]` e `app/telas/vibracao.SEM_FONTE` declaravam a
+    dívida dos dois lados desde 02/09, com sprint (`MIGRA-VIBRACAO-06`). O que
+    faltava não era campo no perfil: era ligar o botão ao valor que já existe.
+
+    ELE É O PAR DA BARRA, e não um estado próprio. Desligar escreve `0` na barra
+    daquele motor; ligar devolve :data:`BARRA_CHEIA`. Isso tem três consequências,
+    e as três são o motivo de o desenho poder ser assim:
+
+    1. **nada de campo novo** — `rumble.motores.set` é o mesmo método que o
+       arraste usa, e o perfil guarda o mesmo número;
+    2. **a tela não pode mentir** — o aceso é lido da barra (:func:`pacote`,
+       `lado-{lado}`), então o punho e o trilho nunca discordam;
+    3. **o que ela ajustou não se perde ao desligar**… e este é o preço, dito em
+       vez de escondido: desligar ESQUECE o valor anterior, porque ele virou 0. O
+       caminho que o guardaria é um campo `ligado` por motor no perfil, que é a
+       segunda verdade da consequência 2. **Ligar devolve 100, não o valor de
+       antes.**
+
+    A RECUSA TEM AS MESMAS DUAS FRASES DA BARRA IRMÃ (:func:`motor`) porque são o
+    mesmo fato do ponto de vista dela: um clique fora da coluna de um controle, e
+    um clique num lado que não é esquerdo nem direito.
+    """
+    uniq = _uniq(o)
+    if not uniq:
+        raise RuntimeError(
+            "Use o interruptor dentro da coluna do controle que você quer mudar.")
+    sigla = str(o.get("lado") or "")
+    motor_do_lado = _tela.LADO_PARA_MOTOR.get(sigla)
+    if not motor_do_lado:
+        raise RuntimeError(
+            "Use o interruptor do motor esquerdo ou o do direito.")
+    # O ESTADO DE AGORA SAI DO MESMO LUGAR QUE A TELA LÊ, e não do que o clique
+    # afirma: o navegador manda o `dataset` do botão, e um botão pintado no tique
+    # anterior diria o estado de ontem. `_barras_dos_motores` é o dono da
+    # leitura, e é ele que o :func:`pacote` usa para acender.
+    barras = _barras_dos_motores(ctx.state, uniq)
+    campo = _tela.MOTOR_PARA_BARRA[motor_do_lado]
+    pontos = 0 if barras.get(sigla, 0) > 0 else BARRA_CHEIA
+    ok, corpo = p.rumble_motores_set(**{campo: pontos}, uniq=uniq)
+    if not ok:
+        raise RuntimeError(
+            "o Hefesto não está rodando — ligue na aba Sistema")
+    resposta = corpo if isinstance(corpo, dict) else {}
+    if str(resposta.get("status") or "") != "ok":
+        raise RuntimeError(
+            str(resposta.get("motivo")
+                or "o Hefesto não gravou este motor. Tente de novo."))
+    # O TESTE VIVO SEGUE O INTERRUPTOR pela mesma razão que segue o arraste: se
+    # ela está com o "Testar" de pé, o que a mão sente tem de ser o que acabou de
+    # ser gravado — e o `ctx` deste gesto ainda traz a barra velha.
+    _refrescar_o_teste(ctx, p, uniq, acabou_de_gravar=(sigla, pontos))
 
 
 @gesto("05-vibracao.html", "testar")

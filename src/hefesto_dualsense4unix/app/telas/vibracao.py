@@ -23,7 +23,14 @@ plausível e falso é pior que um traço honesto, porque ela confia nele.
   (``rumble_ff.per_vpad[].rumble_no_fisico``), lido pelo
   ``controller_card.motores_no_fisico`` — que é quem sabe quando o par está
   velho demais para ser dito;
-* **NÃO TEM FONTE:** os oito interruptores de lado. Ver :data:`SEM_FONTE`.
+* **OS OITO INTERRUPTORES DE LADO GANHARAM FONTE — 14/09/2026.** Eles estavam
+  em :data:`SEM_FONTE` desde que esta tela nasceu, com a razão certa: *não há
+  campo de habilitar motor por lado*. A cura de 14/09 não criou o campo — ela
+  leu o que já existia. Ordem dela, com o controle na mão: *"ele deveria ligar se
+  > 0 no slicer dele"*. Aceso passou a ser a LEITURA da barra daquele motor, e o
+  clique, o par que a escreve (`interface/pacotes/a05_vibracao`, chave
+  `lado-{lado}` e gesto `lado`). A `MIGRA-VIBRACAO-06`, que fecharia isto criando
+  o campo, deixa de ser necessária por este caminho.
 
 A tela mostra QUATRO colunas com quatro forças; o produto tem UMA. Pintar o
 valor global nas quatro é a verdade de hoje, e a coluna que mostra o mesmo
@@ -176,11 +183,6 @@ DICA_DOS_VALORES_QUE_PASSAM = (
 #: O QUE A TELA MOSTRA E O PRODUTO NÃO SABE RESPONDER. Cada linha diz onde o
 #: caminho se perde e o que o fecha — é dívida com endereço, não lápide calada.
 SEM_FONTE: dict[str, str] = {
-    "lado:ligado": "NÃO EXISTE EM LINHA NENHUMA. Não há campo de habilitar motor "
-    "por lado em `profiles/schema.py`, nem método de IPC, nem chave no "
-    "`state_full`: o produto liga e desliga a vibração INTEIRA de um controle, "
-    "nunca um punho. Os oito interruptores desta tela são desenho. "
-    "Fecha: MIGRA-VIBRACAO-06.",
     "forca:por-controle": "O degrau é da MESA. `daemon.config.rumble_policy` é um "
     "campo só, lido por três rotas (`ipc_rumble_policy.apply_rumble_policy`, "
     "`subsystems/rumble.reassert_rumble` e `subsystems/gamepad._game_rumble_mult`). "
@@ -214,7 +216,12 @@ DONOS_DOS_GESTOS: dict[str, str] = {
     "barra:motor": "rumble.set {weak, strong} pela ponte `app/ipc_bridge."
     "rumble_set_checked`. O par é da MESA, e os dois valores viajam JUNTOS: não "
     "há como mandar um lado só.",
-    "lado": "SEM DONO — ver SEM_FONTE['lado:ligado'].",
+    "lado": "rumble.motores.set {weak|strong} pela ponte `app/ipc_bridge."
+    "rumble_motores_set` — o MESMO método da barra ao lado, e é isso que o "
+    "faz nascer sem campo próprio: desligar escreve 0 naquele motor e ligar "
+    "devolve 100. Por CONTROLE (leva `uniq`), ao contrário do `barra:motor` "
+    "logo acima. Aceso é a leitura da barra, nunca um estado guardado à parte "
+    "(14/09/2026, ordem dela).",
     "testar": "rumble.set {weak, strong} e, meio segundo depois, rumble.stop — é "
     "o que o `rumble_test_500ms` do produto faz hoje. Global.",
     # FATO SUBSTITUÍDO EM 03/09/2026, e quem o derrubou foi ELA, em uma linha:
