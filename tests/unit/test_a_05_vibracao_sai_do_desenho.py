@@ -263,9 +263,15 @@ def test_o_degrau_aceso_e_o_da_mesa_e_nao_o_do_mockup(regua, cravados,
 #: Os endereços marcados `data-hef-rotulo` nesta aba, e por quê. A lista é
 #: EXAUSTIVA de propósito: a categoria dela só não vira esconderijo enquanto
 #: alguém tiver de escrever aqui o nome de cada marca nova.
+#:
+#: O `lado` SAIU DAQUI EM 14/09/2026, e a saída é o desfecho que a própria
+#: nota do desenho prometia: *"quando ela ganhar fonte, o elemento troca a
+#: marca pelo alvo `classe`"* (`aba05`, linha do interruptor de punho). Ele
+#: ganhou — `data-campo="lado-<sigla>"` com alvo `classe`, pintado pela barra
+#: do motor —, e um endereço que o produto PINTA não pode carregar a marca de
+#: rótulo: o veredito `ROTULO` vem antes de todos os outros ramos do
+#: `_classificar` e apagaria da medição justamente o dado novo.
 ROTULOS = {
-    "lado": "o `<title>` do glifo é o NOME DO MOTOR, de "
-            "docs/data/pecas-do-dualsense.csv — não muda em estado nenhum",
     "testar": "o texto do botão, decidido por ela em 30/08 para NÃO mudar",
     "parar": "o texto do botão, o par do Testar",
 }
@@ -276,17 +282,18 @@ def test_os_oito_rotulos_estao_declarados(regua, vereditos):
 
     A CONTA É POR LUGAR desde 07/09/2026, e não por coluna viva: com a fusão dos
     dois ramos de coluna (`aba05._coluna`) os quatro lugares trazem os mesmos
-    elementos, e são QUATRO marcas em cada um — os dois punhos (`lado`) mais o
-    par `Testar`/`Parar`.
+    elementos. São DUAS marcas em cada um — o par `Testar`/`Parar` — desde que
+    os dois punhos (`lado`) ganharam fonte em 14/09/2026 e saíram da categoria.
     """
     from hefesto_dualsense4unix.interface import aba05
-    esperado = (len(aba05.LADOS) + 2) * len(aba05.MESA)
+    esperado = 2 * len(aba05.MESA)
     marcados = [v for v in vereditos if v.classe == regua.ROTULO]
     assert len(marcados) == esperado, (
-        f"os rótulos desta aba são {esperado} ({len(aba05.LADOS)} lado + "
-        f"testar + parar, em {len(aba05.MESA)} lugares), e a régua contou "
-        f"{len(marcados)}: "
-        f"{sorted((v.campo.dono, v.campo.chave) for v in marcados)}")
+        f"os rótulos desta aba são {esperado} (testar + parar, em "
+        f"{len(aba05.MESA)} lugares), e a régua contou {len(marcados)}: "
+        f"{sorted((v.campo.dono, v.campo.chave) for v in marcados)}. "
+        f"Se `lado` reapareceu aqui, o interruptor de punho perdeu o alvo "
+        f"`classe` que ele ganhou em 14/09/2026 e voltou a ser desenho")
     assert {v.campo.chave for v in marcados} == set(ROTULOS)
 
 

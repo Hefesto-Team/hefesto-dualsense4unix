@@ -241,9 +241,11 @@ def test_nenhuma_aba_declara_orfao_que_tem_dono(ctx_com):
     abaixo e, por extenso, no `SEM_DONO` de `a05_vibracao`.
 
     OS TRÊS QUE FICAM, com a razão no `SEM_DONO` do próprio pacote:
-      * `lado:ligado` — os oito interruptores de punho são desenho, e o produto
-        concorda por escrito em `app/telas/vibracao.SEM_FONTE`: não há campo no
-        esquema, nem método de IPC, nem chave no `state_full`;
+      * `lado:ligado` **SAIU EM 14/09/2026, CURADO** — a dívida dizia que não
+        havia campo, método nem chave, e a última parte era falsa: a BARRA de
+        cada motor já vivia no perfil e o `rumble.motores.set` já a escrevia.
+        Os oito interruptores acendem com `barra > 0` e o clique manda 0 ou 100
+        (`a05_vibracao.lado`);
       * `criar-perfil` — é da aba Perfis, e dois caminhos para o mesmo disco é
         como duas telas passam a discordar;
       * `heroic` — **medido**: o produto PROCURA os seis lançadores
@@ -316,7 +318,10 @@ def test_nenhuma_aba_declara_orfao_que_tem_dono(ctx_com):
         #                         os três modos sempre"*. Um órfão sobre um
         #                         botão que não existe mais não é dívida: é
         #                         fantasma.
-        "05-vibracao.html": ["lado:ligado"],
+        #   `lado:ligado`        saiu em 14/09/2026, CURADO — o botão ganhou
+        #                         `data-gesto` e o valor que o acende, e a aba
+        #                         05 ficou SEM NENHUM órfão. É a primeira das
+        #                         dez a chegar a zero.
         # **`heroic` SAIU EM 09/09/2026, CURADO** — `LANCADORES-ZERO-01`. Ele
         # dizia *"o produto procura os seis e sabe dizer se estão aqui, mas não
         # LÊ a biblioteca de nenhum deles"*, e as três afirmações caíram na
