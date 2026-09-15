@@ -242,10 +242,10 @@ def gesto(pagina: str, nome: str, *,
 #: "Parar".
 #:
 #: A ORDEM DELA, 15/09/2026, com o controle na mão: *"o testar e parar é sobre o
-#: teste naquele momento isso nao interfere in game (noqa-acento: citação literal dela). (…) clicar em parar é só
-#: pra impactar no teste naquele momento e não mutar a vibração in game. em game
-#: se eu quiser desligar a vibração do motor esquerdo zero o slicer"*
-#: (noqa-acento: citação literal dela).
+#: teste naquele momento isso nao interfere in game (noqa-acento: dela). (…)
+#: clicar em parar é só pra impactar no teste naquele momento e não mutar a
+#: vibração in game. em game se eu quiser desligar a vibração do motor esquerdo
+#: zero o slicer"*
 #:
 #: O QUE ESTAVA QUEBRADO: `parar_o_teste()` tinha DOIS chamadores — o botão
 #: "Parar" e o controle que sai da mesa — e nenhum deles é fechar a janela.

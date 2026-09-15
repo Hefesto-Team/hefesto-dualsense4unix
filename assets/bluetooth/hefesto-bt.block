@@ -10,7 +10,7 @@
 #   (PLAT-04 item 3; estudo 2026-07-18-estudo-bt-maximo.md).
 # JustWorksRepairing=confirm — aceita re-pareamento de device que já tem bond,
 #   mas SÓ com confirmação do agente (Onda R; estudo
-#   2026-07-19-estudo-bluez-backport-onda-r.md §4). ATENÇÃO (medido 22/07): o
+#   receita-backport-bluez.md §4). ATENÇÃO (medido 22/07): o
 #   re-pair ENTRANTE aceito por esta opção pode viver só em memória (device
 #   temporário) — a persistência garantida do bond exige o Pair() explícito
 #   (bluetoothctl pair <MAC>); o hefesto-bt-health-watchdog vigia e promove

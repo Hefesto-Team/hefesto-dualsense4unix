@@ -3,7 +3,7 @@
 Defeito medido em 11/08/2026, na auditoria de "o que só existe nesta máquina":
 
 O `install.sh` e o `doctor.sh` mandavam quem estivesse sem o backport rodar
-`git show arquivo/processo-pre-1.0:docs/process/estudos/...` — um ramo que não
+`docs/process/estudos/...` — um ramo que não
 aparece em `git branch -a`. Pior: `install.sh:1638` já citava o documento pelo
 caminho da árvore, **como se ele estivesse aqui**, e ele não estava.
 
@@ -15,7 +15,7 @@ vinha com uma instrução impossível de seguir.
 
 A MORDIDA, provada em 11/08/2026
 ================================
-Renomeado `docs/process/estudos/2026-07-19-estudo-bluez-backport-onda-r.md`,
+Renomeado `docs/usage/receita-backport-bluez.md`,
 `test_a_receita_do_backport_existe_na_arvore` reprova. Trocada a mensagem do
 `install.sh` de volta para `git show arquivo/processo-pre-1.0:`,
 `test_o_install_nao_manda_para_ramo_arquivado` reprova. Idem no `doctor.sh` com
@@ -32,7 +32,7 @@ from tests.conftest import arvore_congelada
 
 #: O documento que o `install.sh` e o `doctor.sh` mandam ler quando falta o
 #: backport. O nome é citado nos dois, então mudá-lo quebra os dois.
-RECEITA = Path("docs/process/estudos/2026-07-19-estudo-bluez-backport-onda-r.md")
+RECEITA = Path("docs/usage/receita-backport-bluez.md")
 
 #: A forma que NÃO pode voltar: instrução que só funciona para quem tem o ramo
 #: arquivado no clone — ou seja, praticamente ninguém numa máquina nova.

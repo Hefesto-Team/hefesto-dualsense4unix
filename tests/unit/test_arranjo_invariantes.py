@@ -535,7 +535,7 @@ def test_a_regua_da_copia_sabe_recusar() -> None:
 #:
 #: AS TRÊS CASAS, medidas em 31/08/2026:
 #:
-#: * ``docs/.../2026-08-24-ABA-CONEXOES/mockup/mapa-das-portas.html`` — **a
+#: * ``mockup/congelados/2026-08-24-mapa-das-portas.html`` — **a
 #:   origem congelada**. O ``LEIA.md`` ao lado diz o que ela é: *"não é
 #:   rascunho: é a especificação executável de quatro sprints, e a única
 #:   descrição existente do motor de arranjo"*. ``arranjo_da_mesa.py:4`` e
@@ -575,7 +575,7 @@ def test_a_regua_da_copia_sabe_recusar() -> None:
 #: ninguém ver. Exigir igualdade com a referência congelada seria portão
 #: gritando falso já no dia seguinte — ela não acompanha o ``layout/``, por
 #: decisão dela —, e portão que grita falso é portão que se desliga.
-_ORIGEM_CONGELADA = "docs/process/sprints/2026-08-24-ABA-CONEXOES/mockup/mapa-das-portas.html"
+_ORIGEM_CONGELADA = "mockup/congelados/2026-08-24-mapa-das-portas.html"
 _COPIA_DO_PRODUTO = ("src/hefesto_dualsense4unix/interface/paginas/mapa-das-portas.html")
 _REFERENCIA_DO_DESENHO = "mockup/mapa-das-portas.html"
 

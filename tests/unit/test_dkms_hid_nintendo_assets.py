@@ -1,7 +1,7 @@
 """Onda T (T2.2/T2.3) — assets DKMS do hid-nintendo patchado.
 
 Desenho e premissas vivem no arquivo de processo, fora da `main`:
-``git show arquivo/processo-pre-1.0:docs/process/estudos/2026-07-20-desenho-onda-t-patch-dkms.md``
+``docs/process/estudos/2026-07-20-desenho-onda-t-patch-dkms.md``
 (e ``…-estudo-premissas-onda-t-hid-nintendo.md``).
 
 Contrato dos assets (falha-sem/passa-com; SEM root, SEM kernel vivo — só

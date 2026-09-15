@@ -48,7 +48,7 @@ groups $USER | grep -E 'input|plugdev'  # opcional, ACL via udev tag uaccess é 
 >   `sudo bash scripts/install_udev.sh --disable-usb-audio`.
 >
 > Detalhe e A/B completo:
-> `arquivo/processo-pre-1.0:docs/process/discoveries/2026-06-26-storm-audio-pesquisa-profunda-quirk-vs-audiooff.md`.
+> `docs/process/discoveries/2026-06-26-storm-audio-pesquisa-profunda-quirk-vs-audiooff.md`.
 
 **Fix**:
 
@@ -959,6 +959,6 @@ desenho foi mostrado, foi *"perfeito"*.
 - [CHANGELOG](../../CHANGELOG.md) — histórico completo
 
 O diário de descobertas e o roadmap interno ficam no arquivo de processo, fora
-da `main` (`git show arquivo/processo-pre-1.0:docs/process/ROADMAP.md`). Essa
+da `main` (`docs/process/ROADMAP.md`). Essa
 tag só existe no fork — se o comando acima disser "unknown revision", veja como
 buscá-la na seção final do [`README.md`](../../README.md).

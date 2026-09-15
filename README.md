@@ -282,9 +282,11 @@ escopo — ver [ADR-009](docs/adr/009-systemd-logind-scope.md).
   [referência canônica](docs/protocol/dualsense-referencia-canonica.md) — o mapa
   dos 47 bytes do report de saída, os modos de gatilho contra a enum oficial da
   Sony, a rota do áudio e os sensores.
-- **Vai mexer no código, ou é um assistente chegando agora?** Comece por
-  [O QUE É VERDADE HOJE](docs/process/2026-08-29-O-QUE-E-VERDADE-HOJE.md) — cinco minutos, o estado medido do projeto e as
-  armadilhas de leitura que mais custam.
+- **Vai mexer no código?** Comece pelo
+  [CONTRIBUTING](.github/CONTRIBUTING.md) e pela
+  [referência canônica](docs/protocol/dualsense-referencia-canonica.md). O
+  diário do projeto — sprints, estudos e decisões — não vive neste
+  repositório; ver a seção *Arquivo de processo* do CONTRIBUTING.
 - **Decisões arquiteturais:** [docs/adr/](docs/adr/)
 - **Histórico de versões:** [CHANGELOG.md](CHANGELOG.md)
 

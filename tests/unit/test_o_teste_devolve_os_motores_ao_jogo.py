@@ -2,9 +2,9 @@
 
 ORDEM DELA, 15/09/2026, com o controle na mão:
 
-    *"o testar e parar é sobre o teste naquele momento isso nao interfere in  (noqa-acento: citação literal dela)
-     game. testar eu ligo o status de vibração pra ver se eu concordo como isso
-     vai funcionar. mas clicar em parar é só pra impactar no teste naquele
+    *"o testar e parar é sobre o teste naquele momento isso nao  (noqa-acento: dela)
+     interfere in game. testar eu ligo o status de vibração pra ver se eu
+     concordo como isso vai funcionar. mas clicar em parar é só pra impactar no teste naquele
      momento e não mutar a vibração in game. em game se eu quiser desligar a
      vibração do motor esquerdo zero o slicer, no direito o mesmo e de forma
      geral eu zero no perfil max min e personalizado."*

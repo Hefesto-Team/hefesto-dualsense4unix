@@ -1,7 +1,7 @@
 """mesa_do_mockup.py — a mesa dela, do jeito que o mockup a declara.
 
 Transcrição das constantes de
-``docs/process/sprints/2026-08-24-ABA-CONEXOES/mockup/mapa-das-portas.html``:
+``mockup/congelados/2026-08-24-mapa-das-portas.html``:
 os oito aparelhos, as três faces, o mapa de 8 entradas de 16 e as duas leituras
 reais de 24/08/2026 (20h15 e 22h50).
 

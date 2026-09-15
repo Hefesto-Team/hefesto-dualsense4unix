@@ -137,6 +137,17 @@ _REGRA = re.compile(
     re.IGNORECASE | re.DOTALL,
 )
 
+#: O TEXTO QUE AFIRMA A FRASE REFUTADA, escrito aqui em vez de lido de um
+#: documento. Até 15/09/2026 o reconhecedor era provado contra a sprint que
+#: mede (`CONTROLE-SONY-MEDIDO-01`, 06/08/2026); ela morava em `docs/process/`,
+#: que saiu do repositório por ordem dela. Uma régua que depende de documento
+#: viajar é uma régua que se desliga sozinha na primeira mudança de casa: o
+#: fato passa a morar na régua.
+_TEXTO_QUE_REFUTA = (
+    "Com a allowlist ligada, o Hefesto sai de cena e deixa de atuar sobre o\n"
+    "controle enquanto o jogo estiver aberto."
+)
+
 #: A escapatória: a frase só pode aparecer ao lado da medição que a derruba.
 #:
 #: *"A INVERSÃO"* — o nome da seção — foi tentado aqui e **reprovado na
@@ -315,14 +326,12 @@ def test_o_escopo_cobra_o_produto_e_poupa_o_registro() -> None:
     assert not any(c.startswith("docs/process/") for c in cobrados)
     assert "CHANGELOG.md" not in cobrados
 
-    sprint = (
-        RAIZ
-        / "docs/process/sprints"
-        / "2026-08-06-CONTROLE-SONY-MEDIDO-01-o-experimento-que-decide-"
-        "metade-da-doutrina.md"
-    )
-    assert sprint.is_file(), "a sprint que mede mudou de nome; o portão perdeu a âncora"
-    assert frases_refutadas_em(sprint.read_text(encoding="utf-8")), (
-        "a sprint deixou de citar a frase que ela derruba — ou o portão parou "
-        "de reconhecê-la, e nesse caso ele não está cobrando nada"
+    # A METADE QUE LIA A SPRINT NO DISCO SAIU EM 15/09/2026, com `docs/process/`
+    # — a pasta deixou de ser versionada por ordem dela. O que ela conferia era
+    # que o RECONHECEDOR ainda reconhece a frase refutada; isso passa a ser
+    # medido contra um texto escrito aqui, que não depende de arquivo nenhum
+    # viajar. A frase é a de 06/08/2026 (CONTROLE-SONY-MEDIDO-01).
+    assert frases_refutadas_em(_TEXTO_QUE_REFUTA), (
+        "o reconhecedor parou de achar a frase que a medição derruba — e nesse "
+        "caso ele não está cobrando nada"
     )

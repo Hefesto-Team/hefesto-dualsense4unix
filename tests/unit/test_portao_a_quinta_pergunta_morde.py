@@ -120,13 +120,12 @@ def test_morde_o_custo_fora_do_vocabulario(regua, monkeypatch, capsys):
     assert "fora do vocabulário" in capsys.readouterr().out
 
 
-def test_morde_a_dona_que_nao_esta_no_disco(regua, monkeypatch, capsys):
-    """MORDIDA 4b — falta sem sprint dona é falta que ninguém vai fechar."""
-    custo, _dona, razao = regua.A_PROVA_QUE_FALTA["mudo"]
-    monkeypatch.setitem(regua.A_PROVA_QUE_FALTA, "mudo",
-                        (custo, "2026-01-01-NAO-EXISTE.md", razao))
-    assert regua.main() == 1
-    assert "não está em docs/process/sprints" in capsys.readouterr().out
+# A MORDIDA 4b SAIU EM 15/09/2026, com o alvo dela. Ela arrancava a existência
+# do arquivo da dona em `docs/process/sprints/`, e a pasta deixou de ser
+# versionada por ordem dela — a régua parou de cobrar do disco o que o
+# repositório não tem. A 4c abaixo continua cobrando o que importa: que a dona
+# escrita na coluna seja a mesma que a RAZÃO nomeia. Essa é a metade que pegou
+# o defeito real de 13/09; a 4b só via nome de arquivo.
 
 
 def test_morde_a_dona_que_nao_e_a_que_a_razao_nomeia(regua, monkeypatch, capsys):

@@ -287,8 +287,7 @@ class DaemonConfig:
     #:
     #: Quem rebate é `interface/pacotes/a05_vibracao._bater_o_coracao_do_teste`,
     #: a cada 1 s enquanto a janela vive. A ordem dela: *"o testar e parar é
-    #: sobre o teste naquele momento isso nao interfere in game"*  (noqa-acento: citação literal dela)
-    #: (noqa-acento: citação literal dela).
+    #: sobre o teste naquele momento isso nao interfere in game"*  (noqa-acento: dela)
     rumble_active_em: float | None = None
     #: MESA-CHEIA-05 (E0, terceira rodada) — o controle que está vibrando POR
     #: NOSSA CONTA neste instante, ou None quando nenhum está.

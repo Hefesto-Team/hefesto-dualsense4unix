@@ -1,0 +1,80 @@
+#!/usr/bin/env bash
+# scripts/hooks/commit-msg — a mensagem de commit não nomeia ferramenta nem
+# atribui autoria a quem não é pessoa desta casa.
+#
+# POR QUE ELE É VERSIONADO, e a razão é medida (15/09/2026): a máquina dela
+# tinha um `commit-msg` GLOBAL fazendo exatamente isto, e ele RODOU 1.179 vezes
+# entre 02 e 04/09. Mesmo assim 30 commits entraram em `dev` com trailer de
+# coautoria. Duas causas, e nenhuma é do gancho:
+#
+#   1. gancho de `commit-msg` NÃO roda em `cherry-pick`, em `rebase`, em
+#      `merge --no-edit` nem sob `--no-verify` — e esta casa integra leva por
+#      cherry-pick;
+#   2. um gancho global mora em UMA máquina. Ele não viaja com o repositório,
+#      então não protege quem clona.
+#
+# Este arquivo cura a (2). A (1) é curada pelo portão `historia-sem-ia`
+# (`scripts/check_a_historia_nao_tem_ia.py`), que varre a história inteira toda
+# vez que alguém roda `bash scripts/portoes.sh` — e essa é a trava de verdade.
+#
+# ELE CORRIGE EM VEZ DE BLOQUEAR, no corpo: a linha sai e o commit segue. No
+# ASSUNTO ele bloqueia, porque assunto é escolha deliberada de quem escreve.
+#
+# ATENÇÃO — `core.hooksPath`: se a máquina tiver essa opção configurada (a dela
+# tem, apontando para `~/.config/git/hooks`), o git IGNORA `.git/hooks` inteiro
+# e este arquivo NÃO roda. O `scripts/instalar-hooks.sh` avisa quando é o caso.
+set -uo pipefail
+
+MSG_FILE="${1:?uso: commit-msg <arquivo-da-mensagem>}"
+[ -f "$MSG_FILE" ] || exit 0
+
+# O nome da ferramenta não se escreve inteiro nem aqui: o sanitizador de
+# coautoria da casa apaga a linha que o traga, e este arquivo viraria a
+# primeira ocorrência do que ele proíbe.
+FERRAMENTA="$(printf '%s' 'cla''ude|anth''ropic|open''ai|chat''gpt|cop''ilot|gem''ini|deep''seek|ai''der|winds''urf|code''ium|tab''nine|gpt-[0-9]')"
+ATRIBUICAO='^[[:space:]]*(co[-_ ]?aut'"$(printf '%s' 'hored')"'[-_ ]?by|assisted[-_ ]?by|paired[-_ ]?with|generated[-_ ]?(by|with)|[A-Za-z]+-session)[[:space:]]*:'
+
+#: As duas pessoas desta casa. Coautoria entre elas é legítima e FICA.
+PESSOAS='vitoriamaria\.sds@gmail\.com|andre\.dsbf@gmail\.com'
+
+ASSUNTO="$(head -1 "$MSG_FILE")"
+if printf '%s' "$ASSUNTO" | grep -qiE "$FERRAMENTA"; then
+    echo "commit-msg: o ASSUNTO nomeia uma ferramenta. Reescreva-o." >&2
+    echo "  Regra desta casa: nenhuma mensagem do repositório nomeia" >&2
+    echo "  assistente, fornecedor ou modelo." >&2
+    exit 1
+fi
+
+LIMPO="$(mktemp)"
+trap 'rm -f "$LIMPO"' EXIT
+CORTADAS=0
+{
+    printf '%s\n' "$ASSUNTO"
+    tail -n +2 "$MSG_FILE" | while IFS= read -r linha; do
+        if printf '%s' "$linha" | grep -qiE "$ATRIBUICAO" \
+           && ! printf '%s' "$linha" | grep -qiE "$PESSOAS"; then
+            CORTADAS=$((CORTADAS + 1))
+            continue
+        fi
+        if printf '%s' "$linha" | grep -qiE "$FERRAMENTA"; then
+            continue
+        fi
+        printf '%s\n' "$linha"
+    done
+} > "$LIMPO"
+
+# Tira as linhas em branco que sobraram no fim.
+while [ -s "$LIMPO" ] && [ -z "$(tail -1 "$LIMPO")" ]; do
+    sed -i '$d' "$LIMPO"
+done
+
+if ! cmp -s "$LIMPO" "$MSG_FILE"; then
+    cp "$LIMPO" "$MSG_FILE"
+    echo "commit-msg: linhas de atribuição ou de ferramenta removidas da mensagem." >&2
+fi
+
+if [ ! -s "$MSG_FILE" ]; then
+    echo "commit-msg: a mensagem ficou VAZIA depois da limpeza." >&2
+    exit 1
+fi
+exit 0

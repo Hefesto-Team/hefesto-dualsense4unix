@@ -68,7 +68,7 @@
 #     unit de terceiros.
 #
 # Onda R (2026-07-19, bluetoothd 5.72 crasha crônico — ver estudo
-# docs/process/estudos/2026-07-19-estudo-bluez-backport-onda-r.md):
+# docs/usage/receita-backport-bluez.md):
 #   --keep-bluez         PRESERVA o backport do bluez (default: RESTAURA as versões
 #                        originais do noble via VERSOES-ANTERIORES.txt do cache).
 #                        Remoção BRUTAL de propósito (reinicia o bluetoothd — a

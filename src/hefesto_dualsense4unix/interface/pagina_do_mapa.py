@@ -35,7 +35,7 @@ uma — a outra é calculada.
 QUEM ESCREVE ONDE
 ------------------
 
-    docs/process/sprints/2026-08-24-ABA-CONEXOES/mockup/mapa-das-portas.html
+    mockup/congelados/2026-08-24-mapa-das-portas.html
               │   congelada: o motor de 24/08, que produz o ouro
               │   `pagina_do_mapa.py`
     mockup/mapa-das-portas.html            ← a BANCADA, o que ela olha
@@ -58,8 +58,7 @@ from hefesto_dualsense4unix.interface import onde
 #: A ESPECIFICAÇÃO EXECUTÁVEL. Congelada por decisão: reescrevê-la reescreveria
 #: o ouro de 120 cenários, e apagaria o registro de como o motor falava em
 #: 24/08/2026 — que é o que aquela pasta datada é.
-ORIGEM = (onde.RAIZ / "docs" / "process" / "sprints" / "2026-08-24-ABA-CONEXOES"
-          / "mockup" / "mapa-das-portas.html")
+ORIGEM = (onde.RAIZ / "mockup" / "congelados" / "2026-08-24-mapa-das-portas.html")
 
 #: Onde o gerador escreve. A BANCADA, nunca o publicado — o produto só recebe
 #: pelo `--publicar`, que é ato dela (`interface/onde.py`).

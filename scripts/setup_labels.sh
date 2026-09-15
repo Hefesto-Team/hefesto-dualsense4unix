@@ -22,7 +22,7 @@ labels=(
     "status:ready|0E8A16|Disponivel pra pegar"
     "status:in-progress|FBCA04|Em execução"
     "status:blocked|E99695|Bloqueada (comentar motivo)"
-    "ai-task|7057FF|Executavel por IA autonoma"
+    "autonoma|7057FF|Executavel sem acompanhamento"
     "needs-device|EEEEEE|Precisa DualSense físico pra testar"
 )
 

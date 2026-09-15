@@ -1,7 +1,7 @@
 """arranjo_da_mesa.py — o motor que decide o arranjo da mesa.
 
 Porte para Python do motor que existia só em JavaScript, dentro de
-``docs/process/sprints/2026-08-24-ABA-CONEXOES/mockup/mapa-das-portas.html`` —
+``mockup/congelados/2026-08-24-mapa-das-portas.html`` —
 1058 linhas de lógica, testadas em 29 estados pela ``fumaca.js`` e em nenhuma
 linha do produto. Sprint ``MOTOR-DO-ARRANJO-01``.
 

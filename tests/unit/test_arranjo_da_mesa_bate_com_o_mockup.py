@@ -56,7 +56,7 @@ def _js(v: object) -> str:
 #: AS PALAVRAS QUE DIVERGIRAM DO ORÁCULO, e a razão de cada uma.
 #:
 #: O oráculo é o mockup CONGELADO de 24/08/2026
-#: (``docs/process/sprints/2026-08-24-ABA-CONEXOES/mockup/mapa-das-portas.html``),
+#: (``mockup/congelados/2026-08-24-mapa-das-portas.html``),
 #: e ele não se reescreve: é o registro de como o motor pensava naquele dia. Em
 #: 05/09/2026 ela mandou tirar a palavra "mesa" da interface —  *"muda o termo
 #: pra objeto e sinônimos nesses casos"* — e as duas frases abaixo mudaram no

@@ -26,7 +26,7 @@ conta de terceiro não é parte deste produto.
 O DADO É VERSIONADO, E ISSO É O PONTO
 --------------------------------------
 A página não recalcula nada: ela RENDERIZA
-``docs/process/dados/frases-de-tela-25-08.json``, que é a enumeração feita em
+``docs/data/frases-de-tela-25-08.json``, que é a enumeração feita em
 25/08 sobre os 27 relatórios da madrugada. Separar os dois é o que permite que a
 lista seja auditável (o JSON entra no diff) e que a página seja descartável.
 
@@ -61,7 +61,7 @@ from carimbo_da_casa import carimbo, sem_carimbo
 from paleta_da_casa import TOKENS
 
 RAIZ = Path(__file__).resolve().parents[1]
-DADO = RAIZ / "docs" / "process" / "dados" / "frases-de-tela-25-08.json"
+DADO = RAIZ / "docs" / "data" / "frases-de-tela-25-08.json"
 SAIDA = RAIZ / PASTA_HTML / "frases-de-tela.html"
 
 #: A ordem da TIRA — como ela vê as abas na janela, e não a alfabética.
@@ -321,7 +321,7 @@ def construir() -> str:
 
     P.append(
         "<footer><p>Gerado por <code>scripts/gerar-frases-de-tela.py</code> a partir de "
-        "<code>docs/process/dados/frases-de-tela-25-08.json</code>. Autocontido: abre "
+        "<code>docs/data/frases-de-tela-25-08.json</code>. Autocontido: abre "
         "com duplo clique, sem servidor e sem rede. O que você marcar fica guardado "
         "neste navegador — pode fechar e voltar.</p></footer>"
     )

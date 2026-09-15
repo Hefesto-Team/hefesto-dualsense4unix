@@ -86,7 +86,7 @@ INSTRUMENTOS = (
                   "mudança traz o que saiu, o que entrou e por quê — e o voto "
                   "fica guardado no navegador dela.",
         "gerador": "scripts/gerar-frases-de-tela.py",
-        "fonte": "docs/process/dados/frases-de-tela-25-08.json",
+        "fonte": "docs/data/frases-de-tela-25-08.json",
     },
 )
 

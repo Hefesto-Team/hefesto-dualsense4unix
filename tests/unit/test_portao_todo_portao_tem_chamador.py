@@ -46,7 +46,9 @@ primeira semana.
 
 from __future__ import annotations
 
+import functools
 import re
+import subprocess
 from pathlib import Path
 
 import pytest
@@ -151,7 +153,8 @@ def portoes_no_disco(raiz: Path | None = None) -> set[str]:
     acreditar que está coberta. Um `check_*.py` que não reprova nada é outro
     defeito, e não é este.
     """
-    alvo = (RAIZ if raiz is None else raiz) / "scripts"
+    base = RAIZ if raiz is None else raiz
+    alvo = base / "scripts"
     achados: set[str] = set()
     if not alvo.is_dir():
         return achados
@@ -160,9 +163,42 @@ def portoes_no_disco(raiz: Path | None = None) -> set[str]:
             continue
         if "__pycache__" in caminho.parts:
             continue
-        if caminho.name.startswith(_FORMAS_DE_PORTAO):
-            achados.add(caminho.relative_to(RAIZ if raiz is None else raiz).as_posix())
+        if not caminho.name.startswith(_FORMAS_DE_PORTAO):
+            continue
+        relativo = caminho.relative_to(base).as_posix()
+        if relativo in _nao_versionados(base):
+            continue
+        achados.add(relativo)
     return achados
+
+
+@functools.lru_cache(maxsize=4)
+def _nao_versionados(base: Path) -> frozenset[str]:
+    """Os `scripts/` que estão no DISCO e não no git.
+
+    MEDIDO EM 15/09/2026: `check_colisao_de_sprints.py` saiu do repositório com
+    o resto dos arquivos de processo (ordem dela) e CONTINUOU no disco dela,
+    que é o ponto de `git rm --cached`. A varredura o via, não achava chamador
+    e reprovava — cobrando um chamador para um arquivo que o repositório já não
+    tem.
+
+    A REGRA QUE ISSO DEIXA: portão desta casa é o que VIAJA. Um script que só
+    existe na máquina de quem o escreveu não protege ninguém, e cobrar dele um
+    chamador é cobrar do que não é nosso.
+    """
+    saida = subprocess.run(
+        ["git", "-C", str(base), "ls-files", "--", "scripts"],
+        capture_output=True, text=True, check=False,
+    )
+    if saida.returncode != 0:
+        return frozenset()
+    versionados = {linha.strip() for linha in saida.stdout.splitlines() if linha.strip()}
+    do_disco = {
+        c.relative_to(base).as_posix()
+        for c in (base / "scripts").rglob("*")
+        if c.is_file() and c.suffix in (".py", ".sh") and "__pycache__" not in c.parts
+    }
+    return frozenset(do_disco - versionados)
 
 
 def _linhas_que_rodam(raiz: Path) -> list[str]:

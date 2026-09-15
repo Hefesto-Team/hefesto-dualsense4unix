@@ -78,4 +78,4 @@ mokutil --sb-state 2>/dev/null || echo "sem Secure Boot"
 ```
 
 Para o BlueZ abaixo de 5.79, a receita do backport está em
-[estudo da Onda R](../process/estudos/2026-07-19-estudo-bluez-backport-onda-r.md).
+[receita-backport-bluez.md](receita-backport-bluez.md).

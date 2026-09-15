@@ -34,7 +34,12 @@ jobs:
   anonymity:
     runs-on: ubuntu-latest
     steps:
+      # `fetch-depth: 0` PORQUE O `historia-sem-ia` VARRE A HISTÓRIA INTEIRA.
+      # O padrão do `actions/checkout` é profundidade 1, e a régua recusa clone
+      # raso em vez de dar verde sobre um commit só.
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - run: bash scripts/check_anonymity.sh
       - run: python3 scripts/check_pecas_do_dualsense.py
       # O irmão do de cima, para a COR: os 28 modelos do
@@ -97,7 +102,7 @@ jobs:
       - run: python3 scripts/check_os_quatro_lugares.py
       - run: python3 scripts/check_identidade_vem_de_cima.py
       - run: python3 scripts/check_a_cor_vem_do_aparelho.py
-      - run: python3 scripts/check_colisao_de_sprints.py
+      - run: python3 scripts/check_a_historia_nao_tem_ia.py
       - run: python3 scripts/check_a_tela_nao_confessa.py
       # A moldura: a barra de título, o `.desktop` e a unit — o que ela lê
       # ANTES de qualquer página, e o que as duas réguas de corpo não alcançam.

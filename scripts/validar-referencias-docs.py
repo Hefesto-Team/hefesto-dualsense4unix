@@ -187,8 +187,11 @@ DIRS_IGNORADOS = frozenset(
 PREFIXOS_IGNORADOS = (
     "docs/history/",
     "docs/research/",
-    "docs/process/agentes/",
-    "docs/process/arquivo/",
+    # `docs/process/` INTEIRA desde 15/09/2026: ela saiu do repositório e ficou
+    # no disco dela (ver `FORA_DO_GIT`). O varredor anda pelo DISCO, não pelo
+    # git — sem esta linha ele continuaria cobrando do que não é mais do
+    # repositório, e acusaria um documento que ninguém mais tem como manter.
+    "docs/process/",
 )
 
 #: Arquivos que existem, mas em OUTRO projeto. Citar `pydualsense.py` é citar a
@@ -227,6 +230,62 @@ EXTERNOS = frozenset(
 #: `README.md` na lista acima perdoaria o desta casa também.
 EXTERNOS_POR_PASTA = ("Pro2/", "SwitchMode/", "SN30ProPlus/", "xpadneo/",
                       "8bitdo-spec/", "tests_kernel/")
+
+#: O QUE MORA NO DISCO E NÃO VIAJA NO GIT — 15/09/2026, ordem dela: *"Remova
+#: tudo. Arquivos de estudo, esses com metalinguagem e afins. Deixa local vou
+#: compartilhar os arquivos com o André."*
+#:
+#: `docs/process/` saiu do repositório e FICOU no disco dela. As **800**
+#: citações que o resto da árvore faz a ela continuam certas — elas dizem de
+#: onde veio cada cura, e quem tem os arquivos as segue. Apagá-las seria apagar
+#: a procedência de 328 arquivos para agradar uma régua.
+#:
+#: A DIFERENÇA PARA AS DUAS LISTAS ACIMA, e ela é o ponto: `EXTERNOS` é de
+#: arquivo que nunca morou aqui (projeto de fora) e `APOSENTADOS` é de arquivo
+#: que morou e SUMIU. Este é de arquivo que morou, continua no disco e deixou
+#: de ser versionado — por isso a guarda dele é outra, e mede o `git ls-files`
+#: em vez do disco: `conferir_fora_do_git()` reprova se um caminho daqui
+#: VOLTAR a ser rastreado. Sem ela, versionar `docs/process/` de novo deixaria
+#: as citações dela sem conferência para sempre.
+FORA_DO_GIT: dict[str, str] = {
+    "docs/process/": (
+        "os arquivos de estudo e de metalinguagem. Saíram do git em 15/09/2026 "
+        "por ordem dela; continuam no disco dela e do André."
+    ),
+}
+
+
+def fora_do_git(texto: str) -> str | None:
+    """A razão de o caminho não viajar no git, ou None se ele viaja."""
+    alvo = texto.lstrip("./")
+    for prefixo, razao in FORA_DO_GIT.items():
+        if alvo.startswith(prefixo) or ("/" + prefixo) in alvo:
+            return razao
+    return None
+
+
+def conferir_fora_do_git(raiz: Path) -> list[str]:
+    """Caminho declarado FORA_DO_GIT não pode voltar a ser rastreado."""
+    import subprocess
+
+    problemas: list[str] = []
+    for prefixo, razao in FORA_DO_GIT.items():
+        saida = subprocess.run(
+            ["git", "-C", str(raiz), "ls-files", "--", prefixo],
+            capture_output=True, text=True, check=False,
+        ).stdout.strip()
+        if saida:
+            quantos = len(saida.splitlines())
+            problemas.append(
+                f"FORA-DO-GIT-RASTREADO: `{prefixo}` está declarado em "
+                f"`FORA_DO_GIT`\n"
+                f"    ({razao})\n"
+                f"    e o git rastreia {quantos} arquivo(s) dentro dele. Ou a\n"
+                "    decisão foi desfeita — e a linha sai daqui, para as\n"
+                "    citações voltarem a ser conferidas —, ou alguém versionou\n"
+                "    de volta o que ela mandou tirar."
+            )
+    return problemas
 
 #: OS ARQUIVOS QUE A CASA APOSENTOU POR DECISÃO — 06/09/2026, sprint `GTK-3`.
 #:
@@ -863,6 +922,11 @@ def candidatos_da_linha(linha: str) -> list[tuple[str, bool]]:
         # histórica datada, e esta casa não apaga registro. Ver `APOSENTADOS`.
         if aposentado(texto) is not None:
             continue
+        # FORA DO GIT: o arquivo existe no disco dela e não é versionado.
+        # A citação continua certa; o que ela aponta mora fora. Ver
+        # `FORA_DO_GIT`.
+        if fora_do_git(texto) is not None:
+            continue
         limpos.append((texto, veio_de_crase))
     return limpos
 
@@ -1044,6 +1108,17 @@ def main(argv: list[str] | None = None) -> int:
         print("")
         print(f"{len(ressuscitados)} arquivo(s) declarado(s) em `APOSENTADOS` "
               "existem nesta árvore.")
+        return 1
+
+    # A MESMA GUARDA PELO OUTRO LADO — ver `conferir_fora_do_git`. O que saiu
+    # do git e voltou a ser rastreado tem de voltar a ser conferido.
+    rastreados = conferir_fora_do_git(raiz)
+    if rastreados:
+        for problema in rastreados:
+            print(problema)
+        print("")
+        print(f"{len(rastreados)} prefixo(s) declarado(s) em `FORA_DO_GIT` "
+              "voltaram a ser rastreados.")
         return 1
 
     sufixos = indexar(raiz)

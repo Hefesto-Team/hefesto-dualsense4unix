@@ -47,33 +47,17 @@ SUDO_INSTALL_RE = re.compile(
 _SEM_TEXTO = {".png", ".svg", ".mo", ".ico", ".gif", ".jpg", ".jpeg", ".webp"}
 
 #: Dispensas — cada uma com a razão pela qual a CITAÇÃO tem de ficar.
+#: AS TRÊS DISPENSAS DE `docs/process/` SAÍRAM EM 15/09/2026, com a pasta. As
+#: três eram estudos e sprints que CITAVAM a forma proibida para registrar onde
+#: ela foi medida ou de onde foi removida; a pasta deixou de ser versionada por
+#: ordem dela, e este portão varre a árvore versionada. O que elas guardavam
+#: continua verdadeiro e fica escrito aqui: o dano do sudo foi medido em
+#: 29/07/2026, o `install.sh` AINDA não tem guarda de tempo de execução para
+#: `EUID==0`, e o README do DKMS parou de ensinar a forma errada em 13/08/2026.
 DISPENSAS: dict[str, str] = {
-    # O estudo de dezessete agentes é onde o defeito foi MEDIDO e escrito.
-    # Sem a citação, some a prova de por que a regra existe.
-    "docs/process/estudos/2026-07-29-mapa-total-o-estudo-de-dezessete-agentes.md": (
-        "é o estudo que MEDIU o dano do sudo; a citação é a prova"
-    ),
     # Este próprio portão precisa escrever a forma proibida para poder caçá-la.
     "tests/unit/test_nenhum_arquivo_manda_rodar_install_com_sudo.py": (
         "é o portão; ele escreve a forma proibida para reconhecê-la"
-    ),
-    # 13/08/2026: o estudo de doze agentes remediu o caso e nomeou o que
-    # CONTINUA aberto — o `install.sh` em si segue sem guarda de tempo de
-    # execução (`install.sh:434` devolve 0 quando `EUID==0`, sem um aviso).
-    # Este portão guarda o TEXTO versionado; aquele buraco é outro, e a citação
-    # é o que impede que ele seja esquecido de novo.
-    "docs/process/estudos/2026-08-13-o-projeto-inteiro-num-mapa-so.md": (
-        "mede o buraco que SOBRA — o install.sh sem guarda de EUID==0; "
-        "a citação é a prova, não a instrução"
-    ),
-    # 13/08/2026: o índice das doze levas registra, na linha da leva 9, que o
-    # README do DKMS **parou de ensinar** a forma errada. A frase cita o que foi
-    # removido para poder dizer que foi removido — é o registro do conserto, o
-    # oposto de uma instrução. Sem a citação, a leva vira "mexeu no README" e
-    # ninguém sabe o que mudou.
-    "docs/process/sprints/2026-08-13-DOZE-LEVAS-01-o-que-ja-foi-feito-hoje-e-nao-se-refaz.md": (
-        "registra que o README PAROU de ensinar a forma errada; a citação é o "
-        "registro do conserto, não a instrução"
     ),
 }
 

@@ -93,6 +93,11 @@ def _texto(caminho: Path) -> str:
         return ""
 
 
+def _conta(valor: object) -> str:
+    """O número, ou o travessão quando a fonte não está nesta árvore."""
+    return "—" if valor is None else str(valor)
+
+
 def censo_de_sprints() -> dict:
     """Quantas sprints há, e quantas dizem estar abertas.
 
@@ -107,6 +112,16 @@ def censo_de_sprints() -> dict:
     carregam a palavra. O julgamento é do batedor de sprints, não daqui, e a
     página diz isso com todas as letras.
     """
+    # AS SPRINTS SAÍRAM DO REPOSITÓRIO — 15/09/2026, ordem dela. Elas ficaram
+    # no disco dela e do André (ver `.gitignore`), e um clone novo não as tem.
+    # ZERO SERIA MENTIRA: a página diria "0 sprints" com a mesma cara com que
+    # diria 741, e quem lesse concluiria que a fila acabou. Quando a pasta não
+    # está, o censo diz que não está.
+    if not SPRINTS.is_dir():
+        return {"fora_do_repositorio": True, "arquivos": None, "diz_aberta": None,
+                "diz_concluida": None, "indices": None, "citadas_na_fila": None,
+                "fora_da_fila": None}
+
     arquivos = sorted(SPRINTS.rglob("*.md"))
     diz_aberta = diz_concluida = indice = 0
     for f in arquivos:
@@ -120,6 +135,7 @@ def censo_de_sprints() -> dict:
             diz_concluida += 1
     citadas = len(set(re.findall(r"(\d{4}-\d{2}-\d{2}-[A-Za-zÀ-ÿ0-9\-]+)", _texto(ORDEM))))
     return {
+        "fora_do_repositorio": False,
         "arquivos": len(arquivos),
         "diz_aberta": diz_aberta,
         "diz_concluida": diz_concluida,
@@ -587,8 +603,8 @@ def monta(rapido: dict, cache: dict) -> str:
     naorodou = [n for n, v in portoes.items() if v.get("ok") is None]
 
     kpis = [
-        _kpi(str(censo["arquivos"]), "arquivos de sprint na árvore", "ac"),
-        _kpi(str(censo["fora_da_fila"]), "não citados no SPRINT_ORDER", "lac"),
+        _kpi(_conta(censo["arquivos"]), "arquivos de sprint na árvore", "ac"),
+        _kpi(_conta(censo["fora_da_fila"]), "não citados no SPRINT_ORDER", "lac"),
         _kpi(str(mapa.get("chaves", "?")), "chaves no mapa de canais", "frio"),
         _kpi(str(mapa.get("assimetrias", "?")), "features que divergem cabo × rádio", "lac"),
         _kpi(str(mapa.get("sem_teste", "?")), "linhas sem teste que morda", "mal"),
@@ -710,12 +726,12 @@ def monta(rapido: dict, cache: dict) -> str:
 
   <h2>As sprints</h2>
   <div class="grade">
-    {_kpi(str(censo['arquivos']), 'arquivos', 'ac')}
-    {_kpi(str(censo['diz_aberta']), 'carregam a palavra ABERTA', 'lac')}
-    {_kpi(str(censo['diz_concluida']), 'carregam CONCLUÍDA ou FECHADA', 'ok')}
-    {_kpi(str(censo['indices']), 'índices', 'quieto')}
-    {_kpi(str(censo['citadas_na_fila']), 'citadas no SPRINT_ORDER', 'frio')}
-    {_kpi(str(censo['fora_da_fila']), 'fora da fila', 'mal')}
+    {_kpi(_conta(censo['arquivos']), 'arquivos', 'ac')}
+    {_kpi(_conta(censo['diz_aberta']), 'carregam a palavra ABERTA', 'lac')}
+    {_kpi(_conta(censo['diz_concluida']), 'carregam CONCLUÍDA ou FECHADA', 'ok')}
+    {_kpi(_conta(censo['indices']), 'índices', 'quieto')}
+    {_kpi(_conta(censo['citadas_na_fila']), 'citadas no SPRINT_ORDER', 'frio')}
+    {_kpi(_conta(censo['fora_da_fila']), 'fora da fila', 'mal')}
   </div>
   <div class="aviso"><p><b>Esta contagem NÃO classifica.</b> Ela conta arquivos e
      conta quantos carregam a palavra — e as duas somas se sobrepõem de propósito:
@@ -808,7 +824,7 @@ def main() -> int:
 
     SAIDA.write_text(pagina, encoding="utf-8")
     censo = rapido["censo"]
-    print(f"{SAIDA.relative_to(RAIZ)}: {censo['arquivos']} sprints, "
+    print(f"{SAIDA.relative_to(RAIZ)}: {_conta(censo['arquivos'])} sprints, "
           f"{rapido['mapa'].get('chaves', '?')} chaves do mapa, "
           f"{_idade(le_cache().get('medido_em'))[0]}")
     return 0

@@ -127,9 +127,9 @@ class CurvaPropria(BaseModel):
         """
         if value is None:
             raise ValueError(
-                "campo de proveniência ausente (None). A regra R3 do "
-                "CLEAN-ROOM.md não admite valor sem origem: veja "
-                "docs/process/CLEAN-ROOM.md"
+                "campo de proveniência ausente (None). A regra R3 desta "
+                "casa não admite curva sem origem: diga QUEM mediu, em QUE "
+                "controle e em QUE data"
             )
         return value
 

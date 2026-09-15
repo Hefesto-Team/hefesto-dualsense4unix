@@ -103,7 +103,11 @@ from check_paridade_transporte import (
 
 RAIZ = pathlib.Path(__file__).resolve().parents[1]
 MAPA = RAIZ / "docs/data/mapa-controles.csv"
-SPRINTS = RAIZ / "docs/process/sprints"
+#: A PASTA DAS SPRINTS SAIU DO REPOSITÓRIO — 15/09/2026, ordem dela. O que
+#: esta régua cobrava dela era só a EXISTÊNCIA do arquivo da dona; a dona
+#: continua nomeada em `A_PROVA_QUE_FALTA`, e a razão que a nomeia continua
+#: conferida (`a_dona_e_a_sprint`, logo acima). O que se perdeu foi conferir
+#: que o arquivo está no disco — e ele não está no repositório de ninguém.
 
 #: O CONTROLE DESTA CASA — a mesma escolha do portão irmão, e pela mesma razão:
 #: o mapa tem uma linha por (chave, controle), e as do `pro` e do `sn30` dizem
@@ -421,10 +425,6 @@ def inventario() -> list[tuple[str, str, str, str, str, bool]]:
     return fora
 
 
-def _sprint_existe(arquivo: str) -> bool:
-    return (SPRINTS / arquivo).exists()
-
-
 def _imprimir_o_inventario(linhas: list[tuple[str, str, str, str, str, bool]]) -> None:
     """A LISTA «o que NÃO funciona», com as CINCO colunas — e não seis réguas.
 
@@ -475,9 +475,6 @@ def main() -> int:
         if custo not in CUSTOS:
             ruins.append(f"  {gesto}: custo {custo!r} fora do vocabulário "
                          f"({', '.join(CUSTOS)})")
-        if not _sprint_existe(dona):
-            ruins.append(f"  {gesto}: a dona `{dona}` não está em "
-                         f"docs/process/sprints/")
         nomeada = dona_que_a_razao_nomeia(razao)
         if nomeada is not None and not a_dona_e_a_sprint(dona, nomeada):
             ruins.append(f"  {gesto}: a razão diz que o resto é da {nomeada}, "

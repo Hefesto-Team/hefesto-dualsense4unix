@@ -234,7 +234,7 @@ Por que path próprio (e não `/app/share/locale/`): o runtime
 sobrescrevendo `/app/share/locale/<lang>/` para vários idiomas
 (incluindo pt_BR). Para sobreviver a essa intercepção, instalamos em
 `/app/share/hefesto-dualsense4unix/locale/`, que o runtime não toca.
-Detalhe técnico em `arquivo/processo-pre-1.0:docs/process/sprints/BUG-FLATPAK-LOCALE-SYMLINK-01.md`.
+Detalhe técnico em `docs/process/sprints/BUG-FLATPAK-LOCALE-SYMLINK-01.md`.
 
 O encanamento de i18n **continua vivo e correto** — catálogos, scripts e os 308
 `translatable="yes"` de `gui/main.glade` estão onde sempre estiveram. O que
