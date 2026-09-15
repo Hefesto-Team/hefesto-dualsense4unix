@@ -2697,6 +2697,119 @@ class FolgaDoServicoMudo:
         return {}
 
 
+class LeitorDoEstado:
+    """O `state_full` lido FORA do laço do GTK — A-TELA-QUE-TRAVA-01, 15/09/2026.
+
+    A QUEIXA DELA, com os dois controles na mesa: *"tem algo muito estranho
+    travando a interface do app. como um todo."*  (noqa-acento: citação dela)
+
+    A CAUSA JÁ ESTAVA ESCRITA DENTRO DO PRÓPRIO TIQUE, na A-TELA-SAMBA-01 de
+    03/09: *"as DUAS VIAGENS de IPC do começo deste método são SÍNCRONAS — elas
+    seguram o laço do GTK inteiro"*. O que aquela leva fez foi PULAR o tique
+    seguinte, que encurta a fila e não desbloqueia nada: enquanto o
+    `estado_do_daemon()` não volta, o laço do GTK não roda, e a janela inteira
+    — rolagem, clique, `:hover`, o cursor de texto — fica parada.
+
+    O NÚMERO, medido no diário dela (`interface.log`, a sessão de 14/09):
+
+    ========  ======  ==========  ===========
+    aba       lentos  IPC médio   IPC pior
+    ========  ======  ==========  ===========
+    01-jogar     244      568 ms     6.016 ms
+    02-controles  55      929 ms     2.665 ms
+    09-sistema     7      678 ms     2.002 ms
+    ========  ======  ==========  ===========
+
+    612 tiques lentos numa sessão, e em 457 deles o IPC é **80% ou mais** do
+    custo. Seis segundos de janela morta é o que ela chama de travar.
+
+    A CURA É DE FORMA, e não de velocidade: a leitura passa a um fio próprio,
+    que lê na mesma cadência de antes (uma por tique) e deixa a resposta num
+    escaninho. O tique pega o que está lá e segue — **nunca espera**. Um daemon
+    que demore seis segundos deixa a tela com dado de seis segundos atrás, que é
+    exatamente o que ela já mostrava enquanto congelava; o que muda é que a
+    janela continua andando.
+
+    A FOLGA CONTINUA CONTANDO RESPOSTAS, E NÃO TIQUES, e é por isso que existe a
+    `self._geracao`: sem ela, uma leitura que falhasse seria entregue a dez
+    tiques por segundo, e os `MUDOS_SEGUIDOS_QUE_VOLTARAM` da
+    `FolgaDoServicoMudo` — três respostas mudas — queimariam em 300 ms. O
+    tique só mexe na folga quando a geração ANDA; entre duas respostas ele
+    repinta o que já tinha.
+
+    O QUE ESTA CLASSE NÃO FAZ: pedir mais depressa. O `intervalo` é o mesmo
+    `TIQUE_MS`, então o daemon recebe o mesmo número de perguntas por segundo
+    que recebia — a mudança é quem espera pela resposta, não quantas são.
+    """
+
+    def __init__(
+        self,
+        ler: Callable[[], dict[str, Any]] | None = None,
+        *,
+        intervalo: float = TIQUE_MS / 1000.0,
+    ) -> None:
+        #: INJETÁVEL de propósito: é o que deixa a régua medir esta classe com
+        #: uma leitura lenta de mentira, sem daemon e sem relógio de parede.
+        self._ler = ler if ler is not None else mesa_viva.estado_do_daemon
+        self._intervalo = intervalo
+        self._trava = threading.Lock()
+        self._estado: dict[str, Any] | None = None
+        self._erro: BaseException | None = None
+        #: Sobe a cada RESPOSTA — boa ou muda. É o que o tique compara.
+        self._geracao = 0
+        self._parar = threading.Event()
+        self._fio: threading.Thread | None = None
+
+    # -- o que o tique chama, e ele nunca bloqueia -------------------------
+    def ultimo(self) -> tuple[dict[str, Any] | None, BaseException | None, int]:
+        """O estado, o erro e a geração de agora. Não espera por ninguém."""
+        with self._trava:
+            return self._estado, self._erro, self._geracao
+
+    # -- o fio -------------------------------------------------------------
+    def comecar(self) -> None:
+        """Semeia UMA leitura e sobe o fio. Chamar duas vezes não sobe dois.
+
+        A SEMEADURA É SÍNCRONA DE PROPÓSITO: ela acontece antes da primeira
+        pintura, com a janela ainda sem nada na frente de ninguém. Sem ela o
+        primeiro tique pintaria `{}` — o estado vazio, que a tela lê como
+        *"perguntei e não há ninguém na mesa"* — e a aba nasceria mentindo por
+        uma fração de segundo.
+        """
+        if self._fio is not None:
+            return
+        self._uma_leitura()
+        self._fio = threading.Thread(
+            target=self._laco, name="hefesto-estado", daemon=True)
+        self._fio.start()
+
+    def parar(self) -> None:
+        """Pede o fim do fio. Ele é `daemon`, então o processo não o espera."""
+        self._parar.set()
+
+    def _uma_leitura(self) -> None:
+        try:
+            st = self._ler()
+        except Exception as erro:  # noqa: BLE001 — o motivo viaja para a folga
+            with self._trava:
+                self._estado, self._erro = None, erro
+                self._geracao += 1
+        else:
+            with self._trava:
+                self._estado, self._erro = st, None
+                self._geracao += 1
+
+    def _laco(self) -> None:
+        # ESPERA PRIMEIRO, E LÊ DEPOIS. `comecar()` acabou de semear uma
+        # leitura; ler de novo na primeira volta daria DUAS perguntas ao daemon
+        # no mesmo instante — a cadência tem de ser a do tique desde a primeira.
+        while not self._parar.is_set():
+            self._parar.wait(self._intervalo)
+            if self._parar.is_set():
+                return
+            self._uma_leitura()
+
+
 class Piloto:
     #: OS DOIS TETOS DA LEITURA DOS CONTROLES QUE O HEFESTO SÓ VÊ — EXTERNOS-01,
     #: 06/09/2026. **Os dois números são os da janela antiga**, e nenhum se
@@ -2841,6 +2954,15 @@ class Piloto:
         self._pular = 0
         #: O que o tique pinta quando o serviço não respondeu — ver a classe.
         self._folga = FolgaDoServicoMudo()
+        #: O `state_full` lido FORA do laço do GTK — A-TELA-QUE-TRAVA-01. O fio
+        #: só sobe em `_instalado`, junto com o timer: uma régua que monte um
+        #: Piloto para ler um atributo não abre socket nenhum.
+        self._estado_vivo = LeitorDoEstado()
+        #: A última geração que o tique consumiu. Enquanto ela não anda, o tique
+        #: repinta o estado que já tinha e NÃO mexe na folga — ver a classe.
+        self._geracao_vista = -1
+        #: O estado que o tique de agora pinta, já passado pela folga.
+        self._st_de_agora: dict[str, Any] = {}
         #: O custo das DUAS VIAGENS de IPC, separado do custo total do tique. É
         #: o que responde "quem come o orçamento" sem adivinhação.
         self.custo_do_ipc: list[float] = []
@@ -3550,6 +3672,11 @@ class Piloto:
         # aqui não funciona: `_tique()` roda logo acima e já a incrementa, então
         # a condição era sempre falsa — a janela ficava viva para sempre, sem
         # tique periódico e sem relato. Medido na primeira execução deste piloto.
+        # O FIO DO ESTADO SOBE ANTES DO PRIMEIRO TIQUE, e a primeira leitura
+        # dele é SÍNCRONA — ver `LeitorDoEstado.comecar`. Sem isso o tique de
+        # abertura pintaria `{}`, que a tela lê como *"não há ninguém na mesa"*.
+        # Chamar duas vezes não sobe dois fios.
+        self._estado_vivo.comecar()
         self._tique()
         if not self.agendado:
             self.agendado = True
@@ -3639,6 +3766,68 @@ class Piloto:
 
         threading.Thread(target=perguntar, daemon=True).start()
 
+    def _da_resposta(
+        self, st: dict[str, Any] | None, erro: BaseException | None
+    ) -> dict[str, Any]:
+        """O estado a pintar a partir de UMA resposta do leitor — boa ou muda.
+
+        SERVIÇO MUDO NÃO É TELA PARADA — costura da ONDA E, 06/09/2026.
+
+        Onde isto morava (dentro do `_tique`, num `except`) o caminho mudo era
+        `return True`: o tique saía sem chamar o pacote, e a aba ficava congelada
+        no que o último tique bem-sucedido pintou. Para quem olha, a tela
+        CONTINUA AFIRMANDO — o interruptor no lugar em que estava, os cartões com
+        bateria e cor de minutos atrás — sobre um serviço que não responde há
+        minutos. É a mesma classe do card que some: o silêncio é indistinguível
+        do caminho feliz.
+
+        A `JOGAR-O-QUE-FALTA-01` construiu a metade que faltava, e ela é o ESTADO
+        VAZIO: com `{}` a aba 01 acende a linha do selo `SERVIÇO` na coluna
+        Atenção, com a frase do dono, e para de afirmar — interruptor, chip e
+        cadeado saem vazios e os cartões recebem o travessão pelo molde.
+
+        O ÚLTIMO ESTADO BOM, MAS SÓ POR UMA FOLGA MEDIDA — 13/09/2026,
+        RECONECTAR-SAMBA-02. Aqui era `{}` já no primeiro tique mudo, e era isso
+        que fazia o «Reconectar controles» sambar: os quatro lugares apagavam, a
+        fileira de cartões caía e o botão subia 61 px (piloto oculto, dublê de
+        `TimeoutError`), voltando no tique seguinte. No diário dela, quase toda
+        corrida de `timed out` é de UM tique. A regra de não pintar estado velho
+        como se fosse de agora continua de pé DEPOIS da folga — quanto ela dura,
+        e por quê, está em `FolgaDoServicoMudo`. O `[daemon mudo]` do diário
+        fica.
+
+        E ELE FICA UMA VEZ POR RESPOSTA — A-TELA-QUE-TRAVA-01, 15/09/2026. Este
+        método só é chamado quando a geração do leitor ANDA, então uma leitura
+        muda sai no diário uma vez, e não dez vezes por segundo.
+        """
+        if erro is not None:
+            print(f"[daemon mudo] {erro}", file=sys.stderr)
+            return self._folga.mudo(erro)
+        bom = st if isinstance(st, dict) else {}
+        self._folga.respondeu(bom)
+        return bom
+
+    def _estado_do_tique(self) -> dict[str, Any]:
+        """O estado que ESTE tique pinta — e ele não espera por ninguém.
+
+        O PORTÃO É A GERAÇÃO, e sem ele a cura da A-TELA-QUE-TRAVA-01 reabriria
+        a RECONECTAR-SAMBA-02 por outra porta: a `FolgaDoServicoMudo` conta
+        MUDOS SEGUIDOS, e com o tique a 100 ms lendo o mesmo `timed out` de uma
+        leitura de 2 s, os três de folga acabariam em 300 ms. Os quatro lugares
+        apagariam, a fileira de cartões cairia e o «Reconectar controles»
+        voltaria a sambar — desta vez sem ninguém ter mexido nele.
+
+        ENTRE DUAS RESPOSTAS O TIQUE REPINTA O QUE JÁ TINHA. Não é estado velho
+        entrando escondido: é o MESMO estado que a janela já mostrava, e a
+        janela continua andando enquanto o daemon pensa — que é a diferença
+        inteira entre isto e o congelamento que ela relatou.
+        """
+        st_lido, erro_lido, geracao = self._estado_vivo.ultimo()
+        if geracao != self._geracao_vista:
+            self._geracao_vista = geracao
+            self._st_de_agora = self._da_resposta(st_lido, erro_lido)
+        return self._st_de_agora
+
     def _tique(self) -> bool:
         if not self.pronto:
             return True
@@ -3692,38 +3881,18 @@ class Piloto:
 
                 self.ponte.perguntar(LER_CAMPOS, mediu)
         t0 = time.perf_counter()
-        try:
-            st = mesa_viva.estado_do_daemon()
-        except Exception as e:
-            # SERVIÇO MUDO NÃO É TELA PARADA — costura da ONDA E, 06/09/2026.
-            #
-            # Aqui era `return True`: o tique saía sem chamar o pacote, e a aba
-            # ficava congelada no que o último tique bem-sucedido pintou. Para
-            # quem olha, a tela CONTINUA AFIRMANDO — o interruptor no lugar em
-            # que estava, os cartões com bateria e cor de minutos atrás — sobre
-            # um serviço que não responde há minutos. É a mesma classe do card
-            # que some: o silêncio é indistinguível do caminho feliz.
-            #
-            # A `JOGAR-O-QUE-FALTA-01` construiu a metade que faltava, e ela é o
-            # ESTADO VAZIO: com `{}` a aba 01 acende a linha do selo `SERVIÇO` na
-            # coluna Atenção, com a frase do dono, e para de afirmar —
-            # interruptor, chip e cadeado saem vazios e os cartões recebem o
-            # travessão pelo molde. Ela mediu que o pacote nunca era chamado
-            # neste caminho, e por isso a metade dela não chegava à tela.
-            #
-            # O ÚLTIMO ESTADO BOM, MAS SÓ POR UMA FOLGA MEDIDA — 13/09/2026,
-            # RECONECTAR-SAMBA-02. Aqui era `{}` já no primeiro tique mudo, e era
-            # isso que fazia o «Reconectar controles» sambar: os quatro lugares
-            # apagavam, a fileira de cartões caía e o botão subia 61 px (piloto
-            # oculto, dublê de `TimeoutError`), voltando no tique seguinte. No
-            # diário dela, quase toda corrida de `timed out` é de UM tique. A
-            # regra de não pintar estado velho como se fosse de agora continua
-            # de pé DEPOIS da folga — quanto ela dura, e por quê, está em
-            # `FolgaDoServicoMudo`. O `[daemon mudo]` do diário fica.
-            print(f"[daemon mudo] {e}", file=sys.stderr)
-            st = self._folga.mudo(e)
-        else:
-            self._folga.respondeu(st)
+        # O TIQUE NÃO ESPERA MAIS PELO DAEMON — A-TELA-QUE-TRAVA-01, 15/09/2026.
+        #
+        # Aqui morava `st = mesa_viva.estado_do_daemon()`, uma chamada SÍNCRONA
+        # de socket dentro do laço do GTK. Enquanto ela não voltava, a janela
+        # inteira ficava parada — e o diário dela de 14/09 tem 612 tiques
+        # lentos, o pior de 6 segundos, com o IPC sendo 80% ou mais do custo em
+        # 457 deles. A leitura mudou de fio; a leitura em si não mudou.
+        #
+        # A FOLGA SÓ ANDA QUANDO A RESPOSTA ANDA. Sem o `self._geracao`, uma
+        # muda seria entregue a dez tiques por segundo e os três mudos de folga
+        # queimariam em 300 ms — ver `LeitorDoEstado`.
+        st = self._estado_do_tique()
 
         try:
             ctx, para_pref = self._contexto(st)
@@ -4448,6 +4617,10 @@ class Piloto:
         if self.relatou:
             return False
         self.relatou = True
+        # O FIO DO ESTADO PARA AQUI. Ele é `daemon`, então o processo não o
+        # espera — mas uma leitura a caminho durante o relato é uma pergunta ao
+        # daemon dela por uma janela que já está indo embora.
+        self._estado_vivo.parar()
         if self.args.foto:
             # `fotografar()` JÁ IMPRIME o caminho — a linha que estava aqui era
             # a segunda, e foi ela que fez o log de 01/09 mostrar dois "foto:"
