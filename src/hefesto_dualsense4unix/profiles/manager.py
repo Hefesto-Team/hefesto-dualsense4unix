@@ -75,19 +75,25 @@ MOTIVO_JOGO_SEM_PERFIL_PROPRIO = "jogo_sem_perfil_proprio"
 
 #: SOM-02/E4: a seção não entrou porque a usuária mexeu NAQUELA categoria na mão
 #: e a trava (`StateStore.manual_override_categories`) está armada. Vocabulário
-#: `ignorado_*` de `daemon.lifecycle`, escrito aqui porque quem o produz é o
-#: manager, não o daemon (e importar o lifecycle no topo deste módulo fecharia
-#: um ciclo). Era literal solto em `apply_speaker`; virou constante quando a
-#: PERFIL-REESCRITO-NA-PARTIDA-01 passou a usá-lo também em `apply`.
-IGNORADO_TRAVA_MANUAL = "ignorado_trava_manual"
+#: `IGNORADO_TRAVA_MANUAL` SAIU — 14/09/2026,
+#: `D-1409-A-TRAVA-MANUAL-SAI-O-PERFIL-APLICA-TUDO`. Era a palavra que o
+#: relatório de ativação usava para dizer *"esta seção do perfil não entrou
+#: porque a trava manual a silenciou"*, e nenhuma seção é silenciada assim
+#: desde a decisão dela. Uma palavra de relatório que nenhum caminho produz é
+#: uma palavra que a próxima pessoa tenta explicar — ver `apply`.
 
-#: PERFIL-REESCRITO-NA-PARTIDA-01 (leva de 05/08), item 4: as categorias de
-#: trava manual que `ProfileManager.apply` de fato SILENCIA — são as que viram
-#: `None` no `OutputSpec` logo abaixo. As outras duas categorias existem e são
-#: consumidas noutros pontos ("audio" em `apply_speaker`, "rumble" fora da
-#: ativação), e reportá-las aqui seria inventar um silêncio que este método não
-#: produziu. O relatório só pode afirmar o que este código fez.
-_CATEGORIAS_SILENCIADAS_NO_APPLY = frozenset({"trigger", "led"})
+#: AS SEÇÕES QUE O `apply` ESCREVE PELO CONTROLLER, e são as duas que o
+#: `apply_output_defaults` leva na mesma volta. Elas existem como conjunto
+#: porque o relatório de ativação precisa nomeá-las: gatilho e luz são escritos
+#: direto no controller (e não por applier injetado), então, sem esta linha,
+#: nunca apareceriam no relatório quando dessem CERTO — a queixa dela sobre a
+#: aba Gatilhos, medida em 22/08.
+#:
+#: O NOME MUDOU COM A DECISÃO: ele dizia "as categorias silenciadas no apply",
+#: de quando o conjunto respondia *"o que a trava manual cala aqui"*. Ele responde outra
+#: pergunta desde 14/09 — *"o que este método escreve"* —, e um nome que descreve
+#: um mecanismo que saiu é a forma mais barata de a próxima pessoa reintroduzi-lo.
+_SECOES_DA_SAIDA = frozenset({"trigger", "led"})
 
 #: ELO-MUDO-02 (23/08/2026): do que o CONTROLLER respondeu para o que o
 #: RELATÓRIO diz. São dois vocabulários e eles não são o mesmo: o
@@ -428,39 +434,48 @@ class ProfileManager:
             if callable(soltar):
                 soltar()
 
-        travadas = self._categorias_travadas()
-        if travadas:
-            logger.info(
-                "profile_apply_respeita_override_manual",
-                profile=profile.name,
-                categorias=sorted(travadas),
-            )
-            # PERFIL-REESCRITO-NA-PARTIDA-01, item 4: o que a trava silencia
-            # entra no RELATÓRIO, e não só no journal. Este método já sabia
-            # quais categorias iria pular — emitia `None` no `OutputSpec` e
-            # seguia — e nada disso chegava a quem pergunta pelo resultado da
-            # ativação: o `profile.switch` respondia "ativado" e a janela não
-            # tinha como dizer à usuária que o gatilho/a cor do perfil não
-            # entraram porque o ajuste de mão dela venceu. Mesmo vocabulário
-            # que o `apply_speaker` já usava para a categoria "audio", agora
-            # numa constante só.
-            if relatorio is not None:
-                for categoria in travadas & _CATEGORIAS_SILENCIADAS_NO_APPLY:
-                    relatorio[categoria] = IGNORADO_TRAVA_MANUAL
-
         left = build_from_name(profile.triggers.left.mode, profile.triggers.left.params)
         right = build_from_name(profile.triggers.right.mode, profile.triggers.right.params)
         settings = _to_led_settings(profile.leds)
         effective = settings.apply_brightness(settings.brightness_level)
         self._configure_auto_player_colors(profile)
-        # `None` num campo do OutputSpec = "não mexe nele" (o backend resolve
-        # por camadas). É assim que a seção travada atravessa a ativação.
+        # O PERFIL APLICA TUDO — decisão dela, 14/09/2026
+        # (`D-1409-A-TRAVA-MANUAL-SAI-O-PERFIL-APLICA-TUDO`).
+        #
+        # Aqui morava o veto da trava manual: `None` no campo do `OutputSpec`
+        # para a categoria carimbada, que é como a seção "travada" atravessava
+        # a ativação sem escrever byte nenhum. Ele nasceu em 23/07 a pedido
+        # dela — *"o sackboy deveria ser trava manual também"* — e ela o revogou
+        # com estas palavras: *"eu tinha pedido pra remover todas as travas
+        # manuais pra esse jogo, madjack e pro pragmata e pro wokong"*, *"e pra
+        # qualquer outro jogo"*, *"isso nao faz sentido mais."*
+        #
+        # POR QUE ELA DEIXOU DE FAZER SENTIDO, e a razão é medida: a trava
+        # protegia o ajuste da mão dela contra o perfil num mundo em que o
+        # ajuste NÃO ia para o perfil. A interface nova grava a cada gesto
+        # (decisão dela D1/D2, *"clicar já aplica e já grava"*), então o que ela
+        # ajusta JÁ ESTÁ no perfil — e o perfil aplicando é exatamente o que
+        # respeita o ajuste dela. A trava passou a proteger o ajuste contra o
+        # arquivo que o guarda.
+        #
+        # O SINTOMA QUE ELA VIU, medido no journal dela em 14/09 às 22:58:34:
+        # ela ajustou luz e gatilho pela interface às 22:56, o perfil foi salvo
+        # com os dois, e ao abrir o Sackboy o `launch_perfil_ativado` trouxe
+        # `{'trigger': 'ignorado_trava_manual', 'led': 'ignorado_trava_manual'}`.
+        # Para ela isso se lê como *"ao iniciar o jogo ele não carrega o perfil
+        # do jogo"* e *"os gatilhos tambem nao tao aplicando"* — e nenhuma das
+        # duas frases fala em trava, porque a trava nunca chegou à tela.
+        #
+        # O QUE CONTINUA PROTEGENDO A ESCOLHA DELA: o `manual_profile_lock`
+        # (`state_store.MANUAL_PROFILE_LOCK_SEC`, 30 s), que é outro mecanismo e
+        # continua de pé — ele guarda a escolha MANUAL DE PERFIL contra o
+        # autoswitch, e não silencia seção nenhuma.
         resultado_da_saida = self.controller.apply_output_defaults(
             OutputSpec(
-                trigger_left=None if "trigger" in travadas else left,
-                trigger_right=None if "trigger" in travadas else right,
-                led=None if "led" in travadas else effective.lightbar,
-                player_leds=None if "led" in travadas else settings.player_leds,
+                trigger_left=left,
+                trigger_right=right,
+                led=effective.lightbar,
+                player_leds=settings.player_leds,
             )
         )
         overrides = _controllers_to_specs(profile.controllers, profile.leds)
@@ -524,10 +539,14 @@ class ProfileManager:
         # aplicados naquele mesmo instante e não estão na lista — quem lê conclui
         # que não entraram, que é exatamente a queixa dela sobre a aba Gatilhos.
         #
-        # `setdefault` e não atribuição: o `IGNORADO_TRAVA_MANUAL` escrito lá em
-        # cima é mais específico e tem de vencer. As chaves são `trigger` e `led`
-        # no singular porque é o vocabulário que a trava já usa — dois nomes para
-        # a mesma seção seria pior que nenhum.
+        # `setdefault` E NÃO ATRIBUIÇÃO, e a razão MUDOU em 14/09/2026 sem que a
+        # linha mudasse: ele existia para preservar o `ignorado_trava_manual` que
+        # o topo do método escrevia, e nenhuma seção é mais silenciada assim
+        # (ver `apply`). Ele fica porque continua certo por outro motivo — quem
+        # chegar aqui com a chave já escrita foi mais específico que este laço —,
+        # e trocá-lo por atribuição seria apagar essa cerca junto com a trava.
+        # As chaves são `trigger` e `led` no singular porque é o vocabulário que o
+        # relatório de ativação já fala nos dois lados.
         #
         # ELO-MUDO-02 (23/08/2026): A PALAVRA VEM DO CONTROLLER, NÃO DAQUI.
         #
@@ -557,21 +576,16 @@ class ProfileManager:
                 resultado_da_saida if isinstance(resultado_da_saida, str) else "",
                 "aplicado",
             )
-            for categoria in sorted(_CATEGORIAS_SILENCIADAS_NO_APPLY):
+            for categoria in sorted(_SECOES_DA_SAIDA):
                 relatorio.setdefault(categoria, palavra)
 
-    def _categorias_travadas(self) -> frozenset[str]:
-        """Categorias de override MANUAL armadas no store agora.
-
-        ONDA-U F1/F2: "trigger" | "led" | "rumble" — e "audio" desde a SOM-02,
-        que é a categoria que o alto-falante consome. Lido por `getattr` de
-        propósito: dublês de teste e o `ProfileManager` sem store continuam
-        funcionando, e o conjunto vazio significa "nada travado".
-        """
-        store = getattr(self, "store", None)
-        if store is None:
-            return frozenset()
-        return frozenset(getattr(store, "manual_override_categories", ()) or ())
+    # `_categorias_travadas` SAIU DAQUI — 14/09/2026,
+    # `D-1409-A-TRAVA-MANUAL-SAI-O-PERFIL-APLICA-TUDO`. Ela devolvia as
+    # categorias carimbadas no store e tinha TRÊS leitores neste arquivo
+    # (`apply`, `apply_speaker`, `apply_mic`); os três deixaram de vetar seção
+    # por trava, e um método sem leitor é promessa sem caminho — o defeito que
+    # o portão `casa-sabe` desta casa existe para acusar. A razão da decisão
+    # está escrita por extenso em `apply`.
 
     @staticmethod
     def _configure_auto_player_colors(profile: Profile) -> None:
@@ -1365,14 +1379,11 @@ class ProfileManager:
         secao = getattr(profile, "speaker", None)
         if self.speaker_applier is None or secao is None:
             return None
-        if "audio" in self._categorias_travadas():
-            resultado["speaker"] = IGNORADO_TRAVA_MANUAL
-            logger.info(
-                "profile_speaker_ignorado_trava_manual",
-                profile=profile.name,
-                origin=origin,
-            )
-            return resultado["speaker"]
+        # O VETO DE `audio` SAIU JUNTO COM OS OUTROS DOIS — 14/09/2026,
+        # `D-1409-A-TRAVA-MANUAL-SAI-O-PERFIL-APLICA-TUDO`. A razão inteira está
+        # em `apply`, e a ordem dela era *"e pra qualquer outro jogo"*: uma cura
+        # que cobrisse só `trigger` e `led` deixaria o alto-falante com a mesma
+        # doença e a próxima pessoa remedindo o mesmo defeito.
         try:
             estado = _estado_da_secao(
                 self.speaker_applier(
@@ -1478,14 +1489,8 @@ class ProfileManager:
             # `muted` acabou de ser silenciado pela guarda acima): nada a
             # escrever, e "nada a escrever" não é uma chamada vazia ao applier.
             return None
-        if "audio" in self._categorias_travadas():
-            resultado["mic"] = IGNORADO_TRAVA_MANUAL
-            logger.info(
-                "profile_mic_ignorado_trava_manual",
-                profile=profile.name,
-                origin=origin,
-            )
-            return resultado["mic"]
+        # O VETO DE `audio` SAIU — 14/09/2026, mesma decisão e mesma razão do
+        # irmão `apply_speaker` logo acima.
         try:
             estado = _estado_da_secao(
                 self.mic_applier(

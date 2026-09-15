@@ -933,14 +933,12 @@ class IpcHandlersMixin:
         from hefesto_dualsense4unix.daemon.state_store import (
             MANUAL_PROFILE_LOCK_SEC,
         )
-        # `getattr` pelo mesmo motivo que `ProfileManager._categorias_travadas`
-        # (`profiles/manager.py:563-574`): dublês de teste e stores parciais
-        # continuam funcionando, e "não sei listar" vira "nada a restaurar".
-        travadas_antes = getattr(self.store, "manual_override_categories", ()) or ()
         lock_antes = getattr(self.store, "_manual_profile_lock_until", 0.0)
-        # Usuário escolheu perfil explícito: libera autoswitch de novo
-        # (BUG-MOUSE-TRIGGERS-01).
-        self.store.clear_manual_trigger_active()
+        # A TRAVA MANUAL SAIU DAQUI — 14/09/2026,
+        # `D-1409-A-TRAVA-MANUAL-SAI-O-PERFIL-APLICA-TUDO`. Este gesto soltava as
+        # quatro categorias antes de aplicar, e guardava as armadas para
+        # rearmá-las se a ativação falhasse. Sem trava não há o que soltar nem o
+        # que devolver; o lock de 30 s logo abaixo continua com as duas metades.
         # Bug C: arma lock manual; autoswitch suprime por
         # MANUAL_PROFILE_LOCK_SEC segundos.
         self.store.mark_manual_profile_lock(
@@ -960,8 +958,6 @@ class IpcHandlersMixin:
             # automática por MANUAL_PROFILE_LOCK_SEC (30 s) sem que gesto nenhum
             # tivesse sido cumprido. Borda aberta pela própria subida do lock
             # (TRAVA-QUE-SOLTA-TARDE-01) e apontada na revisão.
-            for categoria in travadas_antes:
-                self.store.mark_manual_trigger_active(categoria)
             self.store.mark_manual_profile_lock(lock_antes)
             raise
         # Bug B: paridade do marker da CLI legada com session.json.
@@ -1370,10 +1366,8 @@ class IpcHandlersMixin:
             aplicado_em, guardado_em = self._destinos_por_uniq(
                 resultado, str(params["uniq"])
             )
-        # BUG-MOUSE-TRIGGERS-01: usuário aplicou trigger manual via GUI/IPC.
-        # Marca override para o autoswitch não sobrescrever (especialmente
-        # ao ligar emulação de mouse, cujo movimento muda foco de janela).
-        self.store.mark_manual_trigger_active("trigger")
+        # (a trava manual saía daqui — 14/09/2026,
+        #  `D-1409-A-TRAVA-MANUAL-SAI-O-PERFIL-APLICA-TUDO`)
         # MESA-CHEIA-09 (E2): espelho do `led.set` — mesmo nome de campo, mesma
         # semântica de vazio. Era o único comando de saída que respondia
         # `{"status": "ok"}` seco, e a aba Gatilhos dizia "aplicado" em três
@@ -1431,7 +1425,8 @@ class IpcHandlersMixin:
             aplicado_em, guardado_em = self._destinos_por_uniq(
                 resultado, str(params["uniq"])
             )
-        self.store.clear_manual_trigger_active("trigger")
+        # (a trava manual saía daqui — 14/09/2026,
+        #  `D-1409-A-TRAVA-MANUAL-SAI-O-PERFIL-APLICA-TUDO`)
         # MESA-CHEIA-09 (E2): mesmo contrato do `trigger.set` — "Desligar" num
         # controle fora da mesa é GUARDADO, não aplicado.
         return {
@@ -1499,10 +1494,8 @@ class IpcHandlersMixin:
         if callable(reassert):
             reassert()
         # ONDA-U (Causa A): mesma trava de trigger.set — sem ela o
-        # AutoSwitcher reescrevia a cor no próximo tick de troca de foco
-        # ("perfil eterno", U9). Categoria "led" (F1): o fim do "Testar
-        # motores" limpa só "rumble" e esta cor sobrevive.
-        self.store.mark_manual_trigger_active("led")
+        # (a trava manual saía daqui — 14/09/2026,
+        #  `D-1409-A-TRAVA-MANUAL-SAI-O-PERFIL-APLICA-TUDO`)
         # APLICAR-VERDADE-01: `status` segue sempre "ok" (applet, CLI e TUI
         # decidem por ele e passariam a dizer "daemon offline"); a verdade nova
         # é ADITIVA. `aplicado_em` diz em QUE controles a intenção ficou
@@ -1557,8 +1550,8 @@ class IpcHandlersMixin:
         reassert = getattr(self.controller, "reassert_resolved_outputs", None)
         if callable(reassert):
             reassert()
-        # ONDA-U (Causa A): mesma trava de trigger.set (U9), categoria "led".
-        self.store.mark_manual_trigger_active("led")
+        # (a trava manual saía daqui — 14/09/2026,
+        #  `D-1409-A-TRAVA-MANUAL-SAI-O-PERFIL-APLICA-TUDO`)
         # APLICAR-VERDADE-01, mesma decisão do `led.set`: `aplicado_em` é
         # aditivo e `bits` (contrato de quem já lê a resposta) fica intacto.
         return {
@@ -1605,7 +1598,6 @@ class IpcHandlersMixin:
         de decidir no próximo tique de troca de janela — que é exatamente o que
         "voltar ao automático" promete por escrito na tela.
         """
-        self.store.clear_manual_trigger_active("led")
         logger.info("led_auto_release", categoria="led")
         return {"status": "ok", "categoria": "led", "escopo": "o daemon inteiro"}
 
@@ -5034,10 +5026,8 @@ class IpcHandlersMixin:
         # Aplica política antes de enviar ao hardware.
         eff_weak, eff_strong = apply_rumble_policy(self.daemon, weak, strong)
         self.controller.set_rumble(weak=eff_weak, strong=eff_strong)
-        # ONDA-U (Causa A): mesma trava de trigger.set — sem ela o
-        # AutoSwitcher reescrevia o rumble no próximo tick de troca de foco
-        # (U11). Categoria "rumble".
-        self.store.mark_manual_trigger_active("rumble")
+        # (a trava manual saía daqui — 14/09/2026,
+        #  `D-1409-A-TRAVA-MANUAL-SAI-O-PERFIL-APLICA-TUDO`)
         return {
             "status": "ok",
             "desfecho": RUMBLE_APLICADO,
@@ -5114,10 +5104,6 @@ class IpcHandlersMixin:
             # aqui é o que impede o par solto de voltar pela porta do backend.
             with contextlib.suppress(Exception):
                 self.controller.set_rumble(weak=0, strong=0)
-            # Estado idêntico ao `rumble.passthrough`, logo a trava manual segue
-            # o MESMO caminho dele: armá-la aqui deixaria a troca automática de
-            # perfil travada sem fim por um gesto de liberação (ONDA-U, Causa A).
-            self.store.clear_manual_trigger_active("rumble")
             logger.warning(
                 "rumble_stop_soltou_o_par_no_modo_nativo",
                 par_solto=par_solto,
@@ -5142,9 +5128,8 @@ class IpcHandlersMixin:
             # que este gesto já pagou.
             daemon_cfg.rumble_dono_vibrando = None
         self.controller.set_rumble(weak=0, strong=0)
-        # ONDA-U (Causa A): mesma trava de trigger.set (U11), categoria
-        # "rumble".
-        self.store.mark_manual_trigger_active("rumble")
+        # (a trava manual saía daqui — 14/09/2026,
+        #  `D-1409-A-TRAVA-MANUAL-SAI-O-PERFIL-APLICA-TUDO`)
         return {"status": "ok", "desfecho": RUMBLE_PARADO}
 
     async def _handle_rumble_passthrough(self, params: dict[str, Any]) -> dict[str, Any]:
@@ -5182,10 +5167,6 @@ class IpcHandlersMixin:
                 # MESA-CHEIA-05 (E0): sem par fixado não há dono a lembrar.
                 daemon_cfg.rumble_active_uniq = None
             # F1 (auditoria 21/07): limpa SÓ a categoria "rumble" — o fim do
-            # "Testar motores" não pode apagar um LED/gatilho deliberado
-            # aplicado em outra aba (a trava era booleano único e o clear
-            # aqui desarmava tudo).
-            self.store.clear_manual_trigger_active("rumble")
         return {"status": "ok", "passthrough": enabled}
 
     async def _handle_rumble_policy_set(self, params: dict[str, Any]) -> dict[str, Any]:
@@ -5885,8 +5866,6 @@ class IpcHandlersMixin:
         #    `TypeError` é a resposta certa, não um silêncio.
         extras: dict[str, Any] = {} if rota is None else {"rota": rota}
         ok = bool(setter(volume, muted=muted, uniq=uniq, **extras))
-        if ok:
-            self._marcar_audio_manual()
         return {
             "status": "ok" if ok else "sem_controle",
             "speaker": self._speaker_estado(uniq),
@@ -5904,8 +5883,6 @@ class IpcHandlersMixin:
         if not callable(soltar):
             raise ValueError("backend sem suporte a devolução do alto-falante")
         ok = bool(soltar(uniq=uniq))
-        if ok:
-            self._marcar_audio_manual()
         return {
             "status": "ok" if ok else "sem_controle",
             "speaker": self._speaker_estado(uniq),
@@ -5925,22 +5902,12 @@ class IpcHandlersMixin:
             estado = leitor(uniq)
         return estado if isinstance(estado, dict) else None
 
-    def _marcar_audio_manual(self) -> None:
-        """Arma a trava manual da categoria `audio` (SOM-02, decisão da E4).
-
-        Mesma disciplina de `trigger.set`/`led.set`/`rumble.set`: um ajuste
-        MANUAL dela não pode ser pisado pelo autoswitch reaplicando o perfil na
-        próxima troca de janela. A alternativa considerada — deixar o volume
-        fora da trava e fazer o aplicador de perfil rodar só em troca EXPLÍCITA
-        de perfil — deixaria o furo aberto para todo caminho que reaplica perfil
-        sem ser troca explícita. A razão está escrita junto da categoria em
-        `daemon/state_store.py`.
-
-        A devolução da posse também arma: parar de mandar é uma decisão dela
-        tanto quanto mandar, e um perfil reaplicado logo depois retomaria a
-        posse que ela acabou de soltar.
-        """
-        self.store.mark_manual_trigger_active("audio")
+    # A TRAVA DE `audio` SAIU — 14/09/2026,
+    # `D-1409-A-TRAVA-MANUAL-SAI-O-PERFIL-APLICA-TUDO`. Aqui morava o método que
+    # armava a categoria a cada `speaker.set` (volume, mudo e devolução da
+    # posse), para o perfil reaplicado não retomar a posse que ela soltara.
+    # Nenhum caminho lê a trava desde a decisão dela; a razão por extenso está
+    # em `profiles/manager.apply`.
 
     async def _handle_mic_set(self, params: dict[str, Any]) -> dict[str, Any]:
         """`mic.set` — mudo do microfone no FIRMWARE do controle (MIC-USB-01).
@@ -6004,14 +5971,6 @@ class IpcHandlersMixin:
         if not callable(setter):
             raise ValueError("backend sem suporte a mudo de microfone")
         ok = bool(setter(muted, uniq=uniq))
-        if ok:
-            # PERFIL-GUARDA-O-MIC-01 (18/08/2026), exceção MIC-GRAVACAO-01: o
-            # mudo do microfone passa a ARMAR a trava manual de áudio, como o
-            # `speaker.set` já fazia. Sem isto, o perfil sendo reaplicado pelo
-            # autoswitch a cada troca de janela desfaria, em silêncio, o mudo
-            # que ela acabou de pedir — e é o mudo do microfone dela no meio de
-            # uma gravação. A trava é o registro de um gesto DELA.
-            self._marcar_audio_manual()
         estado: Any = None
         leitor = getattr(self.controller, "audio_status_for", None)
         if callable(leitor):
@@ -6093,11 +6052,6 @@ class IpcHandlersMixin:
         from hefesto_dualsense4unix.daemon.subsystems.hotkey import ligar_o_microfone
 
         ato = await ligar_o_microfone(self.daemon, alvo, ligado=ligado)
-        if ato.feito:
-            # PERFIL-GUARDA-O-MIC-01, exceção MIC-GRAVACAO-01: idem `mic.set` —
-            # o ato é um gesto DELA, e o perfil reaplicado na próxima troca de
-            # janela não pode desfazê-lo em silêncio.
-            self._marcar_audio_manual()
         return ato.como_corpo()
 
     def _uniq_do_primario(self) -> str | None:
@@ -6354,13 +6308,6 @@ class IpcHandlersMixin:
             except Exception as exc:  # pragma: no cover - defensivo
                 aparelho = False
                 logger.warning("mic_volume_aparelho_falhou", err=str(exc))
-        if ok:
-            # PERFIL-GUARDA-O-MIC-01 (18/08/2026): idem `mic.set` e
-            # `speaker.set` — ajuste MANUAL dela não pode ser pisado pelo
-            # perfil reaplicado na próxima troca de janela.
-            self._marcar_audio_manual()
-        # O que volta é a LEITURA, não o que mandamos: guardar o valor mandado
-        # como se fosse leitura é o hábito que fez esta tela parecer mentirosa.
         return {
             "status": "ok" if ok else "erro",
             "fonte": fonte,

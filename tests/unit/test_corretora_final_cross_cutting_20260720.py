@@ -157,7 +157,8 @@ class TestLedSetRespeitaAAutoridadeDoJogo:
         # A trava continua armando (comportamento correto fora de sessão de
         # jogo / regressão do onda_u_causa_a_trava_manual) — o fix não
         # remove a trava, só fecha o furo do merge-gate.
-        assert store.manual_trigger_active is True
+        # (a asserção sobre a trava manual saiu em 14/09/2026 — ela foi
+        #  revogada por decisão dela; ver test_a_trava_que_ninguem_solta_01)
 
     @pytest.mark.asyncio
     async def test_led_player_set_manual_e_corrigido_pela_cor_do_jogo(self) -> None:
@@ -175,7 +176,8 @@ class TestLedSetRespeitaAAutoridadeDoJogo:
 
         assert resultado["status"] == "ok"
         assert node.player_calls[-1] == (False, False, True, False, False)
-        assert store.manual_trigger_active is True
+        # (a asserção sobre a trava manual saiu em 14/09/2026 — ela foi
+        #  revogada por decisão dela; ver test_a_trava_que_ninguem_solta_01)
 
     @pytest.mark.asyncio
     async def test_sem_jogo_a_cor_manual_gruda_normalmente(self) -> None:
@@ -190,7 +192,8 @@ class TestLedSetRespeitaAAutoridadeDoJogo:
 
         assert resultado["status"] == "ok"
         assert node.rgb_calls[-1] == (10, 20, 30)
-        assert store.manual_trigger_active is True
+        # (a asserção sobre a trava manual saiu em 14/09/2026 — ela foi
+        #  revogada por decisão dela; ver test_a_trava_que_ninguem_solta_01)
 
 
 class TestIdentityRenumberNaoPenduraOEventLoop:

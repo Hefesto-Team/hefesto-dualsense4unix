@@ -37,7 +37,6 @@ from hefesto_dualsense4unix.cli.ipc_client import IpcClient
 from hefesto_dualsense4unix.core import ds_output_report as rep
 from hefesto_dualsense4unix.daemon.ipc_server import IpcServer
 from hefesto_dualsense4unix.daemon.state_store import (
-    MANUAL_OVERRIDE_CATEGORIES,
     StateStore,
 )
 from hefesto_dualsense4unix.profiles import loader as loader_module
@@ -425,55 +424,23 @@ class TestReleaseNoProtocolo:
         assert res["status"] == "sem_controle"
 
 
-class TestTravaManualAudio:
-    """A quarta categoria — o autoswitch não pisa o ajuste manual dela."""
-
-    def test_audio_e_categoria_valida(self) -> None:
-        assert "audio" in MANUAL_OVERRIDE_CATEGORIES
-        store = StateStore()
-        store.mark_manual_trigger_active("audio")
-        assert store.manual_override_categories == frozenset({"audio"})
-        assert store.manual_trigger_active is True
-
-    def test_categoria_desconhecida_continua_erro(self) -> None:
-        """A porta não virou peneira: só as quatro categorias entram."""
-        store = StateStore()
-        with pytest.raises(ValueError):
-            store.mark_manual_trigger_active("mouse")
-
-    @pytest.mark.asyncio
-    async def test_speaker_set_arma_a_categoria(self, daemon_vivo: Any) -> None:
-        """MORDIDA: sem o `mark_manual_trigger_active("audio")` no handler, o
-        autoswitch reaplica o perfil na próxima troca de janela por cima do
-        volume que ela acabou de ajustar."""
-        env = daemon_vivo
-        assert env.store.manual_override_categories == frozenset()
-        await _chamar(env.socket, "speaker.set", {"volume": 180, "uniq": MAC1})
-        assert env.store.manual_override_categories == frozenset({"audio"})
-
-    @pytest.mark.asyncio
-    async def test_release_tambem_arma(self, daemon_vivo: Any) -> None:
-        """Parar de mandar é decisão dela tanto quanto mandar."""
-        env = daemon_vivo
-        await _chamar(env.socket, "speaker.set", {"release": True, "uniq": MAC1})
-        assert env.store.manual_override_categories == frozenset({"audio"})
-
-    @pytest.mark.asyncio
-    async def test_pedido_recusado_nao_arma(self, daemon_vivo: Any) -> None:
-        """Trava sem ajuste manual por baixo seria trava por engano."""
-        env = daemon_vivo
-        env.fc.aceita = False
-        await _chamar(env.socket, "speaker.set", {"volume": 10})
-        assert env.store.manual_override_categories == frozenset()
-
-    @pytest.mark.asyncio
-    async def test_troca_explicita_de_perfil_libera(self, daemon_vivo: Any) -> None:
-        """A limpeza de sempre continua valendo para a categoria nova."""
-        env = daemon_vivo
-        await _chamar(env.socket, "speaker.set", {"volume": 180, "uniq": MAC1})
-        env.store.clear_manual_trigger_active()
-        assert env.store.manual_override_categories == frozenset()
-
+# A CLASSE `TestTravaManualAudio` SAIU — 14/09/2026,
+# `D-1409-A-TRAVA-MANUAL-SAI-O-PERFIL-APLICA-TUDO`.
+#
+# Ela media a quarta categoria da trava manual, a que a SOM-02/E3 acrescentou: o
+# `speaker.set` (volume, mudo e devolução da posse) armava `audio` para o perfil
+# reaplicado não retomar a posse que ela soltara. Eram seis testes — a categoria
+# válida, a porta que recusa nome desconhecido, as duas formas de armar, o pedido
+# recusado que não arma, e a troca explícita que libera.
+#
+# A TRAVA SAIU INTEIRA por decisão dela, e o `audio` saiu com as outras três: a
+# ordem foi *"e pra qualquer outro jogo"*. A razão, o journal que a mediu e a
+# régua que impede a volta estão em
+# `tests/unit/test_a_trava_que_ninguem_solta_01.py`.
+#
+# O QUE ESTA SUÍTE CONTINUA MEDINDO não mudou uma linha: a devolução da posse do
+# alto-falante é o assunto do arquivo, e ela é um ato do produto com ou sem
+# trava. O que sumiu foi o efeito colateral que o ato tinha no autoswitch.
 
 # ---------------------------------------------------------------------------
 # A ponte da janela

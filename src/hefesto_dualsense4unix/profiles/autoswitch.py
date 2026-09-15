@@ -860,14 +860,21 @@ class AutoSwitcher:
             self._stop_event.set()
 
     def _suppression_active(self) -> bool:
-        """True se alguma fonte de supressão do autoswitch está ativa agora
-        (override de trigger manual ou lock de perfil manual). Espelha os gates
-        de `_activate`; usado pelo run-loop para saber quando o episódio de
-        supressão terminou e reabrir o log (BUG-AUTOSWITCH-LOG-KEY-STUCK-01)."""
+        """True se alguma fonte de supressão do autoswitch está ativa agora.
+
+        Hoje a fonte é UMA — o lock de perfil manual (`MANUAL_PROFILE_LOCK_SEC`,
+        30 s). Ela espelha os gates de `_activate`, e é assim que o run-loop sabe
+        quando o episódio de supressão terminou para reabrir o log
+        (BUG-AUTOSWITCH-LOG-KEY-STUCK-01).
+
+        ERAM DUAS ATÉ 14/09/2026: a trava manual por categoria saiu por decisão
+        dela (`D-1409-A-TRAVA-MANUAL-SAI-O-PERFIL-APLICA-TUDO`), e este espelho
+        tinha de sair junto — um espelho que reporta um gate que `_activate` não
+        tem mais deixaria o run-loop segurando a chave de log de um episódio que
+        nunca começa.
+        """
         if self.store is None:
             return False
-        if self.store.manual_trigger_active:
-            return True
         return self.store.manual_profile_lock_active(time.monotonic())
 
     def _activate(
@@ -905,26 +912,26 @@ class AutoSwitcher:
         # categorias são limpas — o perfil do jogo reescreve tudo mesmo.
         # Reaplicação do perfil ATIVO (o "perfil eterno" da Causa A) e
         # regras de janela comuns seguem suprimidas como sempre.
-        # R-01 (auditoria 23/07): a exceção só vale para a regra PRÓPRIA do
-        # jogo. Antes bastava "a janela em foco é steam_app_*", sem checar se o
-        # perfil candidato casou POR CAUSA dela — e com três catch-all no disco
-        # e nenhum perfil para o Mullet Mad Jack, quem entrava era o `vitoria`
-        # (genérico de desktop). A trava manual era apagada e o genérico pisava
-        # na configuração recém-feita: exatamente o "nunca é respeitado".
-        if self.store is not None and self.store.manual_trigger_active:
-            candidato_de_jogo = perfil_e_regra_de_jogo(profile, info)
-            if candidato_de_jogo and name != self.store.active_profile:
-                self.store.clear_manual_trigger_active()
-                logger.info(
-                    "autoswitch_manual_override_cedeu_ao_jogo",
-                    candidate=name,
-                    wm_class=info.get("wm_class", ""),
-                )
-            else:
-                self._log_suppressed_once(
-                    "autoswitch_suppressed_by_manual_override", name, info
-                )
-                return
+        # A SUPRESSÃO POR TRAVA MANUAL SAIU — 14/09/2026,
+        # `D-1409-A-TRAVA-MANUAL-SAI-O-PERFIL-APLICA-TUDO`.
+        #
+        # Aqui morava o gate `if self.store.manual_trigger_active: … return`,
+        # com a exceção do perfil de jogo (R-01) presa dentro dele: a troca
+        # automática de perfil ficava suspensa enquanto houvesse categoria
+        # carimbada, e só cedia quando o candidato era a regra PRÓPRIA de um
+        # jogo. Ordem dela: *"e pra qualquer outro jogo"*, *"isso nao faz
+        # sentido mais."* — a razão inteira está em `profiles/manager.apply`.
+        #
+        # O QUE A EXCEÇÃO DO JOGO PROTEGIA CONTINUA PROTEGIDO, e por quem já
+        # protegia: o que o R-01 media era um genérico catch-all pisando na
+        # configuração recém-feita, e quem decide QUAL perfil casa continua sendo
+        # a seleção por prioridade — nada disso passava por esta linha.
+        #
+        # O LOCK DE 30 s LOGO ABAIXO FICA. Ele é outro mecanismo, e é o que
+        # guarda a escolha manual de PERFIL (`profile.switch`) contra uma troca
+        # de janela no segundo seguinte. Ele expira sozinho e não silencia seção
+        # nenhuma — a trava que saiu fazia as duas coisas ao contrário: nunca
+        # expirava sem gesto e silenciava seção do perfil.
         # CLUSTER-IPC-STATE-PROFILE-01 (Bug C): respeita lock manual armado
         # por `profile.switch` IPC. Lock dura `MANUAL_PROFILE_LOCK_SEC` (30s)
         # e expira sozinho — não exige reset.

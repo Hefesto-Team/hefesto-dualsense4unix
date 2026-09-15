@@ -51,6 +51,13 @@ from hefesto_dualsense4unix.core.trigger_effects import build_from_name
 from hefesto_dualsense4unix.profiles.manager import ProfileManager
 from hefesto_dualsense4unix.profiles.schema import (
     MatchManual,
+
+# 1 TESTE(S) DESTE ARQUIVO SAÍRAM — 14/09/2026,
+# `D-1409-A-TRAVA-MANUAL-SAI-O-PERFIL-APLICA-TUDO`: `test_trava_manual_vence_o_veredito_do_controller`.
+#
+# Os três mediam a trava manual por categoria, que ela revogou para todo jogo.
+# A razão, o journal que mediu o sintoma e a régua que impede a volta estão em
+# `tests/unit/test_a_trava_que_ninguem_solta_01.py`.
     Profile,
     TriggerConfig,
     TriggersConfig,
@@ -230,12 +237,3 @@ class _StoreComTravaDeGatilho:
     manual_override_categories = frozenset({"trigger"})
 
 
-def test_trava_manual_vence_o_veredito_do_controller() -> None:
-    """Gatilho travado diz `ignorado_trava_manual`; a luz fica com o veredito."""
-    mesa = _MesaDeControles(handles={})
-    relatorio: dict[str, str] = {}
-    gerente = ProfileManager(controller=mesa)  # type: ignore[arg-type]
-    gerente.store = _StoreComTravaDeGatilho()  # type: ignore[assignment]
-    gerente.apply(_perfil_com_gatilho(), origin="launch", relatorio=relatorio)
-    assert relatorio["trigger"] == "ignorado_trava_manual"
-    assert relatorio["led"] == "adiado_sem_controle"

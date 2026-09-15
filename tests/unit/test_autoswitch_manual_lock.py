@@ -34,6 +34,13 @@ from hefesto_dualsense4unix.profiles.schema import (
 from hefesto_dualsense4unix.testing import FakeController
 
 
+# 1 TESTE(S) DESTE ARQUIVO SAÍRAM — 14/09/2026,
+# `D-1409-A-TRAVA-MANUAL-SAI-O-PERFIL-APLICA-TUDO`: `test_activate_lock_independente_de_manual_trigger_active`.
+#
+# Os três mediam a trava manual por categoria, que ela revogou para todo jogo.
+# A razão, o journal que mediu o sintoma e a régua que impede a volta estão em
+# `tests/unit/test_a_trava_que_ninguem_solta_01.py`.
+
 @pytest.fixture
 def isolated_profiles_dir(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     target = tmp_path / "profiles"
@@ -186,43 +193,3 @@ def test_activate_sem_store_nao_quebra(
     assert switcher._current_profile == "shooter"
 
 
-def test_activate_lock_independente_de_manual_trigger_active(
-    isolated_profiles_dir: Path,
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """Lock manual de profile e manual_trigger_active são checks independentes.
-
-    Ambos suprimem `_activate`, mas com logs distintos. Garantimos que cada
-    um sozinho suprime; a ordem de check não interfere no resultado.
-    """
-    save_profile(_mk_profile("shooter"))
-    fc = FakeController()
-    fc.connect()
-    store = StateStore()
-    manager = ProfileManager(controller=fc, store=store)
-
-    activate_calls: list[str] = []
-    monkeypatch.setattr(
-        manager, "activate", lambda name: activate_calls.append(name) or MagicMock()
-    )
-
-    # Apenas trigger active → suprime
-    store.mark_manual_trigger_active()
-    switcher = AutoSwitcher(
-        manager=manager, window_reader=lambda: {}, store=store
-    )
-    switcher._activate("shooter", {"wm_class": "Doom"})
-    assert activate_calls == []
-
-    # Limpa trigger, arma profile lock → suprime
-    store.clear_manual_trigger_active()
-    store.mark_manual_profile_lock(until=999.0)
-    monkeypatch.setattr(
-        "hefesto_dualsense4unix.profiles.autoswitch.time.monotonic",
-        lambda: 0.0,
-    )
-    switcher2 = AutoSwitcher(
-        manager=manager, window_reader=lambda: {}, store=store
-    )
-    switcher2._activate("shooter", {"wm_class": "Doom"})
-    assert activate_calls == []

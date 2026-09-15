@@ -42,94 +42,18 @@ MANUAL_PROFILE_LOCK_SEC: float = 30.0
 # estado dentro de um café, e longo o bastante para não piscar a cada leitura.
 WINDOW_DETECT_BLIND_AFTER_SEC: float = 300.0
 
-# ONDA-U F1/F2 (auditoria 21/07): categorias válidas do override manual —
-# a trava deixou de ser um booleano único para que limpar uma categoria
-# (ex.: fim do "Testar motores" → "rumble") não apague as demais.
+# AS CONSTANTES DA TRAVA MANUAL SAÍRAM — 14/09/2026,
+# `D-1409-A-TRAVA-MANUAL-SAI-O-PERFIL-APLICA-TUDO`.
 #
-# SOM-02 (E3/E4, 29-31/07): entra a QUARTA categoria, `audio` — armada pelo
-# `speaker.set` (volume, mudo e devolução da posse). A razão, escrita aqui
-# porque é aqui que ela vale: é o padrão da casa contra o autoswitch pisar o
-# ajuste manual dela na troca de janela. A alternativa considerada — deixar o
-# áudio fora da trava e fazer o aplicador de perfil rodar SÓ em troca explícita
-# de perfil — deixaria o furo aberto em todo caminho que reaplica o perfil ativo
-# sem ser troca explícita, que é justamente a classe de defeito de "a config que
-# eu deixo nunca é respeitada". A trava é o mecanismo que já existe para isso, e
-# volume é ajuste manual como qualquer outro.
-MANUAL_OVERRIDE_CATEGORIES: frozenset[str] = frozenset(
-    {"trigger", "led", "rumble", "audio"}
-)
-
-# A-TRAVA-QUE-NINGUEM-SOLTA-01 (29/08/2026): TETO DE OCIOSIDADE da trava manual.
+# Eram duas: `MANUAL_OVERRIDE_CATEGORIES` (as quatro categorias que o carimbo
+# aceitava — `trigger`, `led`, `rumble`, `audio`) e
+# `MANUAL_OVERRIDE_STALE_AFTER_SEC` (o teto de seis horas de ociosidade, que era
+# a única porta de saída de `led` e de `audio`). As duas descreviam um mecanismo
+# que ela revogou; o que elas mediam está contado em `profiles/manager.apply`.
 #
-# O QUE ESTAVA MEDIDO, contra o disco, antes desta linha existir:
-#
-#   | categoria | arma em                              | solta em          |
-#   |-----------|--------------------------------------|-------------------|
-#   | `trigger` | ipc_handlers.py `trigger.set`        | `trigger.reset`   |
-#   | `rumble`  | ipc_handlers.py `rumble.set`/`stop`  | `rumble.passthrough` (2 vezes) |
-#   | `led`     | `led.set`, `led.player_set`          | **nada** (†)      |
-#   | `audio`   | `speaker.set` (`_marcar_audio_manual`) | **nada**        |
-#
-# (†) `led` GANHOU O PAR em 06/09/2026 — A-TRAVA-DO-LED-NÃO-SOLTA-01. É o
-# `led.auto_release` (`ipc_handlers`), chamado pelo botão "Automático" da aba
-# Iluminação. A tabela acima fica com a data dela: é o censo que originou este
-# teto, e ele continua sendo a única porta de `audio`. Ver a nota ao fim deste
-# bloco para o que a chegada do par mudou — e o que ela NÃO mudou.
-#
-# Duas das quatro armavam e NADA as soltava. A única saída era ela trocar de
-# perfil na mão (`profile.switch`, a hotkey de ciclo, ou a exceção do perfil de
-# jogo) — um gesto que a pessoa não tem como saber que precisa fazer. O tamanho
-# real do sintoma, medido no journal dela: 4 episódios de
-# `autoswitch_suppressed_by_manual_override` em 7 dias, e a exceção do jogo
-# nunca precisou agir (zero vezes). Não é "trava o produto todo": é armar sem soltar.
-#
-# POR QUE UM TETO, e não um clear novo. O par honesto de `led` é o gesto
-# "Voltar ao automático" da aba Iluminação, e ele HOJE só edita o rascunho
-# (`app/actions/lightbar_actions.py`, `on_lightbar_auto_reset_target`): nenhuma
-# linha dele fala com o daemon. Pendurar o clear ali soltaria a trava enquanto
-# a cor manual AINDA está no hardware (ela só sai no "Aplicar" seguinte) — e
-# trava solta com cor manual viva é exatamente o defeito que o ABAS-05 curou:
-# o autoswitch reescreve a cor que a aba acabou de aplicar. O teto não tem essa
-# aresta porque não dispara por gesto nenhum: ele só mede silêncio.
-#
-# É OCIOSIDADE, NÃO IDADE — e essa é a diferença que o torna seguro. Cada
-# `mark_manual_trigger_active` RENOVA o carimbo da categoria (mesmo contrato de
-# `mark_manual_profile_lock`: "renovado a cada chamada; escolha mais recente
-# vence, não acumula"). Enquanto ela mexe na cor, o teto anda para a frente
-# sozinho. Ele só vence depois de horas em que ela não disse mais nada sobre
-# aquela categoria — e aí a opinião não é mais "o ajuste que eu acabei de
-# fazer", é lastro.
-#
-# O VALOR sai do que o próprio produto já tinha escrito. `AutoSwitcher._activate`
-# descreve o dano da trava eterna nestas palavras: *"um `led.set` de manhã
-# bloqueava o perfil do jogo à noite, sem indicador"*. Seis horas é o maior
-# número que ainda separa "de manhã" de "à noite", e é ordens de grandeza mais
-# longo que a janela de segundos em que o ABAS-05 acontece. **O número é DELA**
-# — ver a pergunta escrita na sprint; a mecânica não muda se ela mudar a linha.
-#
-# O que o teto NÃO faz: escrever byte nenhum. Vencer a trava só devolve ao
-# `AutoSwitcher` o direito de decidir; quem escreve continua sendo a ativação
-# de perfil, com as mesmas regras de sempre.
-#
-# O PAR DE `led` CHEGOU — 06/09/2026, A-TRAVA-DO-LED-NÃO-SOLTA-01 — E O TETO
-# FICA. As duas coisas são verdadeiras ao mesmo tempo, e a distinção importa:
-#
-#   - o parágrafo "POR QUE UM TETO, e não um clear novo" acima continua CERTO
-#     sobre o que ele mediu — o "Voltar ao automático" da JANELA GTK
-#     (`app/actions/lightbar_actions.on_lightbar_auto_reset_target`) só edita o
-#     rascunho, e pendurar o clear ali soltaria a trava com a cor manual ainda
-#     no plástico. Nada mudou lá, e nada foi pendurado lá;
-#   - o que mudou é que a INTERFACE NOVA tem um gesto que ESCREVE: o
-#     "Automático" da aba Iluminação larga o claim da barra e pinta a cor do
-#     slot antes de soltar a trava. Nele não há cor manual pendente, então a
-#     aresta que o parágrafo descreve não existe — e ele é o par honesto que
-#     aquele parágrafo dizia faltar;
-#   - o teto continua sendo a ÚNICA porta de `audio` (a E1 da ÁUDIO-QUE-TRANCA-01
-#     ainda está aberta), e continua sendo a rede de `led` para todo caminho que
-#     arma sem passar por aquele botão — a janela GTK, o `led.player_set`, a
-#     CLI. Gesto e teto são camadas, não alternativas.
-MANUAL_OVERRIDE_STALE_AFTER_SEC: float = 6 * 60 * 60.0
-
+# O TETO SAIU COM A TRAVA, e não sobreviveu a ela: ele existia para que a trava
+# eterna deixasse de ser eterna, e uma trava que não existe não precisa de
+# prazo. `MANUAL_PROFILE_LOCK_SEC`, logo acima, é outro mecanismo e fica.
 
 @dataclass(frozen=True)
 class StoreSnapshot:
@@ -139,7 +63,10 @@ class StoreSnapshot:
     active_profile: str | None
     last_battery_pct: int | None
     counters: dict[str, int]
-    manual_trigger_active: bool = False
+    # `manual_trigger_active` SAIU do snapshot em 14/09/2026 com a trava
+    # que ele reportava (`D-1409-A-TRAVA-MANUAL-SAI-O-PERFIL-APLICA-TUDO`).
+    # Ele nunca teve leitor fora dela: quem perguntava era o `AutoSwitcher`,
+    # pela propriedade irmã, e as duas saíram juntas.
 
 
 class StateStore:
@@ -170,14 +97,6 @@ class StateStore:
         # para reescrever a cor que a aba Lightbar acabara de aplicar); jogo com
         # perfil próprio (steam_app_*) limpa tudo ao ativar (F2, ver
         # AutoSwitcher._activate).
-        # A-TRAVA-QUE-NINGUEM-SOLTA-01: era `set[str]`. Virou dicionário
-        # `categoria -> instante monotonic da ÚLTIMA afirmação` para o teto de
-        # ociosidade (`MANUAL_OVERRIDE_STALE_AFTER_SEC`) ter de onde contar.
-        # As três leituras (`manual_trigger_active`, `manual_override_categories`
-        # e o `snapshot`) continuam vendo o mesmo que viam — `bool({})` e
-        # `frozenset({...})` de um dicionário são as chaves —, e por isso nenhum
-        # chamador precisou mudar.
-        self._manual_override_categories: dict[str, float] = {}
         # FEAT-AUTOSWITCH-LOCK-01 (pedido da mantenedora, 23/07): cadeado
         # explícito da troca automática de perfil. Diferente do lock manual de
         # 30 s acima (que expira) e do pause do daemon (que para toda a
@@ -391,102 +310,29 @@ class StateStore:
             atual = self._udp_trigger_thresholds
             return (atual["left"], atual["right"])
 
-    def mark_manual_trigger_active(self, category: str = "trigger") -> None:
-        """Arma o override manual (`"trigger"` | `"led"` | `"rumble"` | `"audio"`).
-
-        Usado pelo `IpcServer` nos IPCs de aplicação (trigger.set → "trigger",
-        led.set/led.player_set → "led", rumble.set/stop → "rumble",
-        speaker.set → "audio") e pelo `DraftApplier` (categorias das seções
-        aplicadas). Enquanto QUALQUER categoria estiver armada, o `AutoSwitcher`
-        NÃO reaplica o perfil ativo por mudança de janela (respeita override do
-        usuário).
-
-        A-TRAVA-QUE-NINGUEM-SOLTA-01 (29/08): cada chamada RENOVA o carimbo de
-        ociosidade da categoria — mesmo contrato de `mark_manual_profile_lock`
-        ("renovado a cada chamada; a mais recente vence, não acumula"). É o que
-        faz o teto medir *silêncio* e não *idade*: enquanto ela continua
-        mexendo, o teto anda junto e nunca vence.
-        """
-        if category not in MANUAL_OVERRIDE_CATEGORIES:
-            raise ValueError(f"categoria de override desconhecida: {category!r}")
-        with self._lock:
-            self._manual_override_categories[category] = time.monotonic()
-
-    def clear_manual_trigger_active(self, category: str | None = None) -> None:
-        """Limpa o override manual — tudo (None) ou SÓ a `category` dada.
-
-        Tudo: `profile.switch` explícito, hotkey de ciclo e a ativação de
-        perfil de JOGO pelo autoswitch (F2) — os três são "troquei de perfil",
-        onde soltar as três categorias é o que a usuária pediu.
-
-        Categoria única: `rumble.passthrough` limpa só "rumble" (F1 — o fim do
-        "Testar motores" não pode apagar um LED/gatilho deliberado de outra
-        aba) e, desde o ABAS-05 (25/07), `trigger.reset` limpa só "trigger"
-        pela MESMA razão: desligar um gatilho apagava a trava de LED e de
-        vibração e reabria a troca automática para reescrever a cor que a aba
-        Lightbar tinha acabado de aplicar.
-
-        A-TRAVA-DO-LED-NÃO-SOLTA-01 (06/09/2026): `led` ganhou o par que lhe
-        faltava, e ele é o `led.auto_release` — o botão "Automático" da aba
-        Iluminação, que agora fala com o daemon. Ele limpa SÓ `"led"`, pela
-        mesma razão escrita acima, e é o ÚLTIMO ato do gesto: os dois passos
-        anteriores (largar o claim e pintar a cor do slot) passam por um
-        `led.set`, que re-armaria um clear posto antes deles.
-
-        `audio` CONTINUA SEM PAR — é a E1 da ÁUDIO-QUE-TRANCA-01, e o
-        `speaker.set` arma por dois caminhos, inclusive o `release`. Para ela,
-        e para todo caminho de `led` que não passa por aquele botão (a janela
-        GTK, o `led.player_set`, a CLI), o teto de ociosidade
-        (`MANUAL_OVERRIDE_STALE_AFTER_SEC`) segue sendo a rede.
-        """
-        with self._lock:
-            if category is None:
-                self._manual_override_categories.clear()
-            else:
-                self._manual_override_categories.pop(category, None)
-
-    def _purgar_overrides_vencidos(self) -> None:
-        """Descarta as categorias caladas há mais de `..._STALE_AFTER_SEC`.
-
-        Chamado sob `self._lock` já tomado, pelas TRÊS leituras da trava
-        (`manual_trigger_active`, `manual_override_categories` e o `snapshot`).
-        Fica nas leituras, e não num relógio próprio, de propósito: o
-        `StateStore` é estrutura de dado sem thread nem logger, e um teto que só
-        é avaliado quando alguém pergunta não precisa de nenhum dos dois. É o
-        mesmo desenho de `manual_profile_lock_active`, que também compara com
-        `time.monotonic()` na hora da pergunta em vez de manter um temporizador.
-
-        Não escreve no controle e não emite evento: vencer a trava apenas
-        devolve ao `AutoSwitcher` o direito de decidir.
-        """
-        if not self._manual_override_categories:
-            return
-        limite = time.monotonic() - MANUAL_OVERRIDE_STALE_AFTER_SEC
-        vencidas = [
-            categoria
-            for categoria, carimbo in self._manual_override_categories.items()
-            if carimbo <= limite
-        ]
-        for categoria in vencidas:
-            del self._manual_override_categories[categoria]
-
-    def set_native_mode_active(
-        self, active: bool, origin: str | None = None
-    ) -> None:
-        """Liga/desliga o gate do Modo Nativo (FEAT-NATIVE-MODE-01).
-
-        Enquanto ativo com origem MANUAL, autoswitch e hotkey de ciclo NÃO
-        re-aplicam perfil — o controle fica "solto" para o jogo nativo até a
-        usuária desligar. Com origem "profile" (FEAT-PROFILE-MODE-01) o
-        autoswitch CONTINUA observando a janela: ao focar outro app, o perfil
-        seguinte reverte o nativo (senão o modo por-perfil nunca sairia).
-        Setado por `Daemon.set_native_mode`.
-        """
-        with self._lock:
-            self._native_mode_active = bool(active)
-            self._native_mode_origin = origin if active else None
-
-    # --- diagnóstico do detector de janela (FEAT-WINDOW-DETECT-DIAG-01) --
+    # A TRAVA MANUAL POR CATEGORIA SAIU DAQUI — 14/09/2026,
+    # `D-1409-A-TRAVA-MANUAL-SAI-O-PERFIL-APLICA-TUDO`.
+    #
+    # Moravam aqui `mark_manual_trigger_active`, `clear_manual_trigger_active`,
+    # `_purgar_overrides_vencidos` e as duas leituras (`manual_trigger_active` e
+    # `manual_override_categories`): o carimbo por categoria que fazia o perfil
+    # do jogo pular gatilho, luz, vibração e áudio, e o teto de seis horas de
+    # ociosidade que era a única porta de saída de `led` e `audio`.
+    #
+    # ELA REVOGOU O MECANISMO INTEIRO, e a ordem é de produto, não de caso:
+    # *"eu tinha pedido pra remover todas as travas manuais pra esse jogo,
+    # madjack e pro pragmata e pro wokong"*, *"e pra qualquer outro jogo"*,
+    # *"isso nao faz sentido mais."* A razão por extenso está em
+    # `profiles/manager.apply`, junto com o journal que mediu o sintoma.
+    #
+    # O CARIMBO SAIU JUNTO COM O VETO, e não depois: um `mark_*` que nenhum
+    # caminho lê é promessa sem caminho — o portão `casa-sabe` desta casa existe
+    # para acusar exatamente isso, e a próxima pessoa que encontrasse o método
+    # vivo concluiria que a trava ainda decide alguma coisa.
+    #
+    # `mark_manual_profile_lock` / `manual_profile_lock_active` FICAM, logo
+    # abaixo: são outro mecanismo (30 s, escolha manual de PERFIL contra o
+    # autoswitch) e nunca silenciaram seção nenhuma.
 
     def set_window_detect_backend(self, backend: str | None, healthy: bool) -> None:
         """Semeia o diagnóstico do detector na partida do autoswitch.
@@ -690,19 +536,6 @@ class StateStore:
             return self._last_battery_pct
 
     @property
-    def manual_trigger_active(self) -> bool:
-        """True se QUALQUER categoria de override manual está armada.
-
-        A-TRAVA-QUE-NINGUEM-SOLTA-01: categoria calada além do teto de
-        ociosidade não conta — é aqui que a trava de `led`/`audio`, que gesto
-        nenhum solta, deixa de ser eterna. É esta propriedade que o
-        `AutoSwitcher._activate` consulta.
-        """
-        with self._lock:
-            self._purgar_overrides_vencidos()
-            return bool(self._manual_override_categories)
-
-    @property
     def autoswitch_locked(self) -> bool:
         """True quando a troca automática de perfil está congelada (FEAT-AUTOSWITCH-LOCK-01)."""
         with self._lock:
@@ -712,18 +545,6 @@ class StateStore:
         """Liga/desliga o cadeado da troca automática de perfil."""
         with self._lock:
             self._autoswitch_locked = bool(locked)
-
-    @property
-    def manual_override_categories(self) -> frozenset[str]:
-        """Snapshot das categorias armadas (telemetria/decisões finas).
-
-        Purga as vencidas antes de responder, para não haver dois "armadas"
-        diferentes na casa: `ProfileManager` decide o que pular por esta
-        propriedade e o `AutoSwitcher` decide se roda pelo booleano irmão.
-        """
-        with self._lock:
-            self._purgar_overrides_vencidos()
-            return frozenset(self._manual_override_categories)
 
     @property
     def native_mode_active(self) -> bool:
@@ -876,22 +697,15 @@ class StateStore:
 
     def snapshot(self) -> StoreSnapshot:
         with self._lock:
-            # A-TRAVA-QUE-NINGUEM-SOLTA-01: a terceira leitura da trava. Sem a
-            # purga aqui, o `state_full` que a janela lê diria "travado" depois
-            # de o autoswitch já ter voltado a agir.
-            self._purgar_overrides_vencidos()
             return StoreSnapshot(
                 controller=self._controller_state,
                 active_profile=self._active_profile,
                 last_battery_pct=self._last_battery_pct,
                 counters=dict(self._counters),
-                manual_trigger_active=bool(self._manual_override_categories),
             )
 
 
 __all__ = [
-    "MANUAL_OVERRIDE_CATEGORIES",
-    "MANUAL_OVERRIDE_STALE_AFTER_SEC",
     "MANUAL_PROFILE_LOCK_SEC",
     "WINDOW_DETECT_BLIND_AFTER_SEC",
     "StateStore",

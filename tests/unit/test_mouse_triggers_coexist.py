@@ -8,18 +8,25 @@ Causa raiz identificada: mover o cursor via emulação de mouse muda o foco
 de janela X11 -> o `AutoSwitcher` reavalia o perfil e reaplica o `fallback`
 (que tem `triggers.{left,right} = "Off"`), pisando no trigger manual.
 
-Correção: `trigger.set` marca `store.manual_trigger_active = True`. Enquanto
-estiver ligado, o `AutoSwitcher._activate` respeita o override e não
-reaplica perfis por mudança de janela. O override é limpo por `trigger.reset`
-ou `profile.switch` explícito.
+A CURA DE 2026-07 ERA A TRAVA MANUAL, E ELA SAIU EM 14/09/2026
+---------------------------------------------------------------
 
-Este módulo cobre dois contratos:
+`trigger.set` marcava `store.manual_trigger_active = True`, e enquanto estivesse
+ligado o `AutoSwitcher._activate` não reaplicava perfil por mudança de janela.
+Ela revogou o mecanismo para todo jogo
+(`D-1409-A-TRAVA-MANUAL-SAI-O-PERFIL-APLICA-TUDO`; a razão, o journal e a régua
+estão em `tests/unit/test_a_trava_que_ninguem_solta_01.py`), e os SEIS testes que
+mediam a trava saíram deste arquivo com ela.
 
-1. `UinputMouseDevice.dispatch()` executado N vezes não chama
-   `controller.set_trigger(...)` como side-effect (hipótese #2 do spec
-   descartada empiricamente).
-2. `AutoSwitcher` respeita `store.manual_trigger_active` e não pisa no
-   trigger manual quando a janela muda.
+O QUE PROTEGE A ISSUE #69 HOJE, e por que a decisão dela não a reabre: o gatilho
+que ela aplica pela interface vai para o PERFIL no mesmo gesto (decisão dela,
+*"clicar já aplica e já grava"*), então o perfil reaplicado traz o gatilho dela em
+vez de pisá-lo. A trava protegia o ajuste num mundo em que ele não era gravado.
+
+O QUE FICA MEDIDO AQUI é a outra metade da investigação daquela issue, e ela não
+dependia da trava: **o dispatch do mouse não toca o controle**. Era a hipótese 2
+do spec, e continua sendo a única linha de defesa contra o mouse escrever output
+por engano.
 """
 from __future__ import annotations
 
@@ -48,6 +55,13 @@ from hefesto_dualsense4unix.profiles.schema import (
 )
 from hefesto_dualsense4unix.testing import FakeController, FakeControllerCommand
 
+
+# 6 TESTE(S) DESTE ARQUIVO SAÍRAM — 14/09/2026,
+# `D-1409-A-TRAVA-MANUAL-SAI-O-PERFIL-APLICA-TUDO`: `test_autoswitch_suspende_quando_override_manual_ligado`, `test_autoswitch_volta_a_funcionar_apos_clear_override`, `test_ipc_profile_switch_zera_override`, `test_ipc_trigger_reset_zera_override`, `test_ipc_trigger_set_marca_override`, `test_state_store_manual_trigger_lifecycle`.
+#
+# Os três mediam a trava manual por categoria, que ela revogou para todo jogo.
+# A razão, o journal que mediu o sintoma e a régua que impede a volta estão em
+# `tests/unit/test_a_trava_que_ninguem_solta_01.py`.
 # --- infra ---------------------------------------------------------------
 
 
@@ -164,188 +178,19 @@ def _mk_fallback_off() -> Profile:
     )
 
 
-@pytest.mark.asyncio
-async def test_autoswitch_suspende_quando_override_manual_ligado(
-    isolated_profiles_dir: Path,
-) -> None:
-    """Com `manual_trigger_active=True`, autoswitch não reaplica fallback.
-
-    Reproduz o cenário do bug: usuário aplica Galloping (override ON),
-    ligar mouse move cursor e muda foco de janela 'estranha' sem perfil
-    especifico, autoswitch quer cair no fallback (que zera triggers) mas
-    DEVE respeitar o override e não fazer nada.
-    """
-    save_profile(_mk_fallback_off())
-
-    fc = FakeController()
-    fc.connect()
-    store = StateStore()
-    manager = ProfileManager(controller=fc, store=store)
-
-    # Estado do bug: usuário já aplicou trigger manual
-    store.mark_manual_trigger_active()
-
-    # Janela 'estranha' — só fallback daria match
-    def reader() -> dict:
-        return {"wm_class": "SemPerfilEspecifico"}
-
-    switcher = AutoSwitcher(
-        manager=manager,
-        window_reader=reader,
-        poll_interval_sec=0.02,
-        debounce_sec=0.02,
-        store=store,
-    )
-    switcher.start()
-    await asyncio.sleep(0.15)
-    switcher.stop()
-    assert switcher._task is not None
-    await switcher._task
-
-    # Autoswitch não deve ter ativado nada: o override manual manda.
-    assert switcher._current_profile is None
-    # Nenhum set_trigger extra foi emitido pelo autoswitch.
-    trigger_cmds = [c for c in fc.commands if c.kind == "set_trigger"]
-    assert trigger_cmds == [], (
-        f"Autoswitch pisou no override manual: {trigger_cmds!r}"
-    )
-    # Nenhum profile.activated foi bumped.
-    assert store.counter("profile.activated") == 0
 
 
-@pytest.mark.asyncio
-async def test_autoswitch_volta_a_funcionar_apos_clear_override(
-    isolated_profiles_dir: Path,
-) -> None:
-    """`clear_manual_trigger_active()` reabilita o autoswitch.
-
-    Simula o usuário resetando o trigger (ou trocando de perfil) —
-    autoswitch volta a respeitar a janela ativa.
-    """
-    save_profile(_mk_profile_with_trigger("shooter", wm_class=["Doom"]))
-
-    fc = FakeController()
-    fc.connect()
-    store = StateStore()
-    manager = ProfileManager(controller=fc, store=store)
-
-    # Override ligado inicialmente
-    store.mark_manual_trigger_active()
-
-    def reader() -> dict:
-        return {"wm_class": "Doom"}
-
-    switcher = AutoSwitcher(
-        manager=manager,
-        window_reader=reader,
-        poll_interval_sec=0.02,
-        debounce_sec=0.02,
-        store=store,
-    )
-    switcher.start()
-    await asyncio.sleep(0.1)
-
-    # Até aqui, override ativo impediu autoswitch
-    assert switcher._current_profile is None
-
-    # Usuário zera override (trigger.reset ou profile.switch explícito)
-    store.clear_manual_trigger_active()
-    await asyncio.sleep(0.15)
-    switcher.stop()
-    assert switcher._task is not None
-    await switcher._task
-
-    # Agora autoswitch ativou o shooter
-    assert switcher._current_profile == "shooter"
 
 
-def test_state_store_manual_trigger_lifecycle() -> None:
-    """StateStore expõe flag `manual_trigger_active` com getter/setter limpos."""
-    store = StateStore()
-    assert store.manual_trigger_active is False
-    assert store.snapshot().manual_trigger_active is False
-
-    store.mark_manual_trigger_active()
-    assert store.manual_trigger_active is True
-    assert store.snapshot().manual_trigger_active is True
-
-    store.clear_manual_trigger_active()
-    assert store.manual_trigger_active is False
-    assert store.snapshot().manual_trigger_active is False
 
 
 # --- contrato 3: IPC hooks marcam/zeram a flag ---------------------------
 
 
-@pytest.mark.asyncio
-async def test_ipc_trigger_set_marca_override(
-    isolated_profiles_dir: Path,
-) -> None:
-    """`trigger.set` via IPC liga `manual_trigger_active`."""
-    from hefesto_dualsense4unix.daemon.ipc_server import IpcServer
-
-    fc = FakeController()
-    fc.connect()
-    store = StateStore()
-    manager = ProfileManager(controller=fc, store=store)
-    server = IpcServer(
-        controller=fc, store=store, profile_manager=manager,
-        socket_path=isolated_profiles_dir / "sock",
-    )
-    server.__post_init__()  # garante _handlers populado
-
-    assert store.manual_trigger_active is False
-    await server._handle_trigger_set(
-        {"side": "right", "mode": "Galloping", "params": [0, 9, 7, 7, 10]}
-    )
-    assert store.manual_trigger_active is True
 
 
-@pytest.mark.asyncio
-async def test_ipc_trigger_reset_zera_override(
-    isolated_profiles_dir: Path,
-) -> None:
-    """`trigger.reset` via IPC desliga `manual_trigger_active`."""
-    from hefesto_dualsense4unix.daemon.ipc_server import IpcServer
-
-    fc = FakeController()
-    fc.connect()
-    store = StateStore()
-    manager = ProfileManager(controller=fc, store=store)
-    server = IpcServer(
-        controller=fc, store=store, profile_manager=manager,
-        socket_path=isolated_profiles_dir / "sock",
-    )
-    server.__post_init__()
-
-    store.mark_manual_trigger_active()
-    assert store.manual_trigger_active is True
-    await server._handle_trigger_reset({"side": "both"})
-    assert store.manual_trigger_active is False
 
 
-@pytest.mark.asyncio
-async def test_ipc_profile_switch_zera_override(
-    isolated_profiles_dir: Path,
-) -> None:
-    """`profile.switch` via IPC desliga `manual_trigger_active`."""
-    from hefesto_dualsense4unix.daemon.ipc_server import IpcServer
-
-    save_profile(_mk_profile_with_trigger("shooter"))
-
-    fc = FakeController()
-    fc.connect()
-    store = StateStore()
-    manager = ProfileManager(controller=fc, store=store)
-    server = IpcServer(
-        controller=fc, store=store, profile_manager=manager,
-        socket_path=isolated_profiles_dir / "sock",
-    )
-    server.__post_init__()
-
-    store.mark_manual_trigger_active()
-    await server._handle_profile_switch({"name": "shooter"})
-    assert store.manual_trigger_active is False
 
 
 # "Consciência do próprio estado é o primeiro passo para evitar cair em

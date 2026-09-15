@@ -44,6 +44,13 @@ import pytest
 from hefesto_dualsense4unix.integrations import audio_control as ac
 from hefesto_dualsense4unix.profiles.schema import ProfileMicConfig
 
+
+# 1 TESTE(S) DESTE ARQUIVO SAÍRAM — 14/09/2026,
+# `D-1409-A-TRAVA-MANUAL-SAI-O-PERFIL-APLICA-TUDO`: `TestOGestoDelaArmaATravaDeAudio`.
+#
+# Os três mediam a trava manual por categoria, que ela revogou para todo jogo.
+# A razão, o journal que mediu o sintoma e a régua que impede a volta estão em
+# `tests/unit/test_a_trava_que_ninguem_solta_01.py`.
 #: O nome REAL do source no cabo, lido ao vivo em 17/08/2026.
 #:
 #: A versão anterior deste dado era INVENTADA: eu escrevi
@@ -438,59 +445,6 @@ def _host_de_ipc(controller: Any) -> Any:
     return _Host()
 
 
-class TestOGestoDelaArmaATravaDeAudio:
-    """O gesto MANUAL no microfone não pode ser pisado pelo perfil reaplicado.
-
-    Até 18/08/2026 só o `speaker.set` armava a categoria `"audio"`. Com o
-    microfone entrando no sistema de perfis, a assimetria virava defeito: o
-    autoswitch reaplica o perfil ativo a CADA troca de janela, e sem a trava
-    isso desfaria, em silêncio, o mudo ou o volume que ela acabou de pedir —
-    o mudo do microfone dela no meio de uma gravação.
-    """
-
-    @pytest.mark.asyncio
-    async def test_o_jogo_nao_rouba_o_mudo_durante_a_gravacao(self) -> None:
-        """MORDIDA: tire o `self._marcar_audio_manual()` de `_handle_mic_set`
-        e este caso fica vermelho — a trava some e o perfil reaplicado volta a
-        pisar o mudo dela."""
-        host = _host_de_ipc(_MicComEstado())
-        assert host.store.manual_override_categories == frozenset()
-        await host._handle_mic_set({"muted": True})
-        assert host.store.manual_override_categories == frozenset({"audio"}), (
-            "o mudo que ela pediu na mão não armou a trava — o autoswitch "
-            "reaplica o perfil na próxima troca de janela e o desfaz"
-        )
-
-    @pytest.mark.asyncio
-    async def test_pedido_recusado_nao_arma(self) -> None:
-        """Trava sem gesto por baixo seria trava por engano (igual ao speaker)."""
-        host = _host_de_ipc(_MicComEstado(aceita=False))
-        await host._handle_mic_set({"muted": True})
-        assert host.store.manual_override_categories == frozenset()
-
-    @pytest.mark.asyncio
-    async def test_o_volume_do_mic_tambem_arma(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        """MORDIDA: tire o `self._marcar_audio_manual()` de
-        `_handle_mic_volume_set`."""
-        host = _host_de_ipc(_MicComEstado())
-        monkeypatch.setattr(ac, "fonte_de_captura_do_controle", lambda: "src")
-        monkeypatch.setattr(
-            ac, "definir_volume_da_captura", lambda v, *, fonte=None: True
-        )
-        monkeypatch.setattr(ac, "volume_da_captura", lambda *, fonte=None: 70)
-        await host._handle_mic_volume_set({"volume": 70})
-        assert host.store.manual_override_categories == frozenset({"audio"})
-
-    @pytest.mark.asyncio
-    async def test_sem_fonte_nao_arma(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        """`sem_fonte` é resposta, não gesto: nada foi ajustado, nada trava."""
-        host = _host_de_ipc(_MicComEstado())
-        monkeypatch.setattr(ac, "fonte_de_captura_do_controle", lambda: None)
-        res = await host._handle_mic_volume_set({"volume": 70})
-        assert res["status"] == "sem_fonte"
-        assert host.store.manual_override_categories == frozenset()
 
 
 # ---------------------------------------------------------------------------

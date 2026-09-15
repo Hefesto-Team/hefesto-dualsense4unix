@@ -61,6 +61,13 @@ from hefesto_dualsense4unix.profiles.schema import (
 )
 from hefesto_dualsense4unix.testing import FakeController
 
+
+# 4 TESTE(S) DESTE ARQUIVO SAÍRAM — 14/09/2026,
+# `D-1409-A-TRAVA-MANUAL-SAI-O-PERFIL-APLICA-TUDO`: `test_a_reaplicacao_nao_arma_a_trava_manual`, `test_a_trava_armada_na_mao_bloqueia_a_ativacao_seguinte`, `test_applier_nao_arma_a_categoria_audio`, `test_connect_respeita_a_trava_manual_de_audio`.
+#
+# Os três mediam a trava manual por categoria, que ela revogou para todo jogo.
+# A razão, o journal que mediu o sintoma e a régua que impede a volta estão em
+# `tests/unit/test_a_trava_que_ninguem_solta_01.py`.
 # ---------------------------------------------------------------------------
 # Infra
 # ---------------------------------------------------------------------------
@@ -290,21 +297,6 @@ class TestApplierDoDaemon:
 
 
 class TestNaoArmaATravaManual:
-    def test_applier_nao_arma_a_categoria_audio(self) -> None:
-        """O `speaker.set` do IPC arma `audio`; o applier de perfil NÃO pode.
-
-        MORDIDA: pôr um `store.mark_manual_trigger_active("audio")` no applier
-        (ou fazê-lo passar pelo handler do IPC, que o faz) reprova aqui e,
-        pior, no teste seguinte — em produção o sintoma seria mudo: o perfil
-        funcionaria uma vez e nunca mais.
-        """
-        backend = _BackendComAudio()
-        backend.connect()
-        daemon = _daemon(backend)
-
-        daemon.apply_profile_speaker(180, False)
-
-        assert "audio" not in daemon.store.manual_override_categories
 
     def test_segunda_ativacao_do_perfil_ainda_escreve(
         self, isolated_profiles_dir: Path
@@ -335,32 +327,6 @@ class TestNaoArmaATravaManual:
         assert relatorios == ["aplicado", "aplicado", "aplicado"]
         assert [e["volume"] for e in backend.escritas_de_audio] == [180, 180, 180]
 
-    def test_a_trava_armada_na_mao_bloqueia_a_ativacao_seguinte(
-        self, isolated_profiles_dir: Path
-    ) -> None:
-        """A contraprova: a trava MORDE mesmo — por isso o applier não a arma.
-
-        Aqui quem arma é ela (o `speaker.set` do IPC faz exatamente isto), e o
-        autoswitch reaplicando o perfil não pisa o ajuste manual.
-        """
-        save_profile(_perfil("som", speaker={"volume": 180}))
-        backend = _BackendComAudio()
-        backend.connect()
-        daemon = _daemon(backend)
-        manager = ProfileManager(
-            controller=backend,
-            store=daemon.store,
-            speaker_applier=daemon.apply_profile_speaker,
-        )
-
-        manager.activate("som", origin="autoswitch")
-        backend.escritas_de_audio.clear()
-        daemon.store.mark_manual_trigger_active("audio")  # o gesto dela
-        relatorio: dict[str, str] = {}
-        manager.activate("som", origin="autoswitch", relatorio=relatorio)
-
-        assert backend.escritas_de_audio == []
-        assert relatorio["speaker"] == "ignorado_trava_manual"
 
 
 # ---------------------------------------------------------------------------
@@ -637,21 +603,6 @@ class TestReaplicacaoNoConnect:
 
         assert backend.escritas_de_audio == []
 
-    @pytest.mark.asyncio
-    async def test_connect_respeita_a_trava_manual_de_audio(
-        self, isolated_profiles_dir: Path, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        """Se ela mexeu no volume na mão, a reconexão não devolve o campo ao perfil."""
-        save_profile(_perfil("som", speaker={"volume": 180}))
-        backend = _BackendComAudio()
-        daemon = Daemon(controller=backend, config=DaemonConfig())
-        _sem_executor(daemon, monkeypatch)
-        daemon.store.set_active_profile("som")
-        daemon.store.mark_manual_trigger_active("audio")
-
-        await connect_with_retry(daemon)  # type: ignore[arg-type]
-
-        assert backend.escritas_de_audio == []
 
     @pytest.mark.asyncio
     async def test_reaplicacao_roteia_o_uniq_do_controle_que_chegou(
@@ -683,21 +634,6 @@ class TestReaplicacaoNoConnect:
 
         await reapply_speaker_after_connect(_Cru())  # type: ignore[arg-type]
 
-    @pytest.mark.asyncio
-    async def test_a_reaplicacao_nao_arma_a_trava_manual(
-        self, isolated_profiles_dir: Path, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        """Um replug que armasse `audio` faria a PRÓXIMA troca de perfil ser
-        descartada por uma trava que nenhum gesto dela armou."""
-        save_profile(_perfil("som", speaker={"volume": 180}))
-        backend = _BackendComAudio()
-        daemon = Daemon(controller=backend, config=DaemonConfig())
-        _sem_executor(daemon, monkeypatch)
-        daemon.store.set_active_profile("som")
-
-        await reapply_speaker_after_connect(daemon)  # type: ignore[arg-type]
-
-        assert "audio" not in daemon.store.manual_override_categories
 
 
 # ---------------------------------------------------------------------------

@@ -1005,12 +1005,13 @@ def build_profile_cycle_callback(daemon: DaemonProtocol, direction: int) -> Any:
         # `speaker_applier` logo acima (SOM-02/E4: *"limpa as categorias
         # travadas (inclusive `audio`) e portanto aplica o volume do perfil que
         # entra"*) não se cumpria. Este é o gesto que ela usa DENTRO do jogo.
-        # `getattr` pelo mesmo motivo que `ProfileManager._categorias_travadas`
-        # (`profiles/manager.py:563-574`): dublês de teste e stores parciais
-        # continuam funcionando, e "não sei listar" vira "nada a restaurar".
-        travadas_antes = getattr(daemon.store, "manual_override_categories", ()) or ()
+        # A TRAVA MANUAL SAIU DAQUI — 14/09/2026,
+        # `D-1409-A-TRAVA-MANUAL-SAI-O-PERFIL-APLICA-TUDO`. Este gesto (PS +
+        # D-pad, o ciclo de perfil no controle) soltava as quatro categorias
+        # antes de ativar, e as devolvia se a ativação falhasse. Sem trava não há
+        # o que soltar nem o que devolver — o lock de 30 s continua com as duas
+        # metades, logo abaixo.
         lock_antes = getattr(daemon.store, "_manual_profile_lock_until", 0.0)
-        daemon.store.clear_manual_trigger_active()
         daemon.store.mark_manual_profile_lock(
             _time.monotonic() + MANUAL_PROFILE_LOCK_SEC
         )
@@ -1023,12 +1024,10 @@ def build_profile_cycle_callback(daemon: DaemonProtocol, direction: int) -> Any:
                 functools.partial(manager.activate, target, origin="manual")
             )
         except Exception:
-            # Ativação que falhou não é gesto cumprido — devolve a trava E o
-            # lock que ela tinha, como faz o `_handle_profile_switch`. Sem o
-            # lock de volta, um ciclo que falha congelaria a troca automática
-            # por 30 s sem gesto nenhum cumprido.
-            for categoria in travadas_antes:
-                daemon.store.mark_manual_trigger_active(categoria)
+            # Ativação que falhou não é gesto cumprido — devolve o lock que ela
+            # tinha, como faz o `_handle_profile_switch`. Sem o lock de volta, um
+            # ciclo que falha congelaria a troca automática por 30 s sem gesto
+            # nenhum cumprido.
             daemon.store.mark_manual_profile_lock(lock_antes)
             raise
         with contextlib.suppress(Exception):
