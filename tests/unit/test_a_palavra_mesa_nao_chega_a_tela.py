@@ -1,6 +1,6 @@
 """A PALAVRA "mesa" não chega à tela — e a régua tem de impedir a volta.
 
-Ela, 06/09/2026: *"Falei do termo mesa que é horrível. Mas os claudes anteriores
+Ela, 06/09/2026: *"Falei do termo mesa que é horrível. Mas as levas anteriores
 entraram na pira de usar isso em tudo no layout. O termo sai e coloca-se termos
 simples pro user comum. feature fica."*
 

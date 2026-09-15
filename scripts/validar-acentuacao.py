@@ -402,20 +402,11 @@ WHITELIST_PATTERNS: list[str] = [
     r"^tests/fixtures/.*",
     r"^docs/history/.*",
     r"^docs/research/.*",
-    # Saída BRUTA de agente (06/08/2026). Mesmo motivo das mensagens de tag mais
-    # abaixo: é o que foi dito, como foi dito. Corrigir a grafia de uma citação
-    # é falsificá-la, e o valor deste diretório está justamente em ele ser fiel.
-    # O que NÃO é isento ali é segurança — `tests/unit/test_saida_de_agente_
-    # sanitizada.py` varre MAC real e segredo, e o `validar-glifos.py` continua
-    # valendo (o sanitizador normaliza emoji para texto antes de entrar).
-    r"^docs/process/agentes/.*",
-    # `process/arquivo/` (24/08/2026) herda a isenção: é para onde a saída bruta
-    # de agente vai quando deixa de ser alcançável por navegação — o conteúdo é
-    # o mesmo, e o motivo de não corrigir a grafia dele também. Ver
-    # `docs/process/arquivo/README.md`. Sem esta linha, MOVER um relatório o
-    # tornaria subitamente reprovável por um texto que ninguém pode reescrever
-    # sem falsificar o registro.
-    r"^docs/process/arquivo/.*",
+    # AS DUAS ISENÇÕES DE `docs/process/` SAÍRAM EM 15/09/2026, com a pasta.
+    # Elas existiam porque ali morava texto CITADO — o que foi dito, como foi
+    # dito — e corrigir a grafia de uma citação é falsificá-la. A pasta deixou
+    # de ser versionada por ordem dela, e este validador varre a árvore
+    # versionada: isenção sem alvo é paisagem.
     r"^scripts/validar-acentuacao\.py$",
     r"^scripts/check_anonymity\.sh$",
     # O teste do validador usa fixtures com texto sem acento propositalmente.

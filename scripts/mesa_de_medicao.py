@@ -3,12 +3,11 @@
 
 O DEFEITO QUE ESTA PÁGINA EXISTE PARA MATAR NÃO É DE CÓDIGO: É DE MEMÓRIA.
 
-A queixa dela, de 06/09/2026, está transcrita palavra por palavra em
-`docs/process/agentes/2026-09-06/A-VALIDACAO-DOS-QUATRO-01-entrada/
-ESPEC-A-VALIDACAO.md` — aqui ela é referida, não repetida, porque a frase
-nomeia o assistente e nome de assistente não entra em arquivo versionado fora
-de `docs/process/` (portão `anonimato`). Em uma linha: a sessão de quem estava na bancada
-acabava, e com ela ia embora não só o resultado como **o modo de chegar nele**.
+A queixa dela, de 06/09/2026, está transcrita palavra por palavra na entrada da
+A-VALIDACAO-DOS-QUATRO-01, que mora fora deste repositório com o resto dos
+arquivos de processo — aqui ela é referida, não repetida. Em uma linha: a
+sessão de quem estava na bancada acabava, e com ela ia embora não só o
+resultado como **o modo de chegar nele**.
 
 A medição acontecia, o resultado aparecia na conversa, a sessão morria, e no
 dia seguinte ninguém sabia nem o que deu nem **como se chegou lá**. Por isso o
@@ -88,12 +87,12 @@ import paleta_da_casa
 MAPA = RAIZ / "docs/data/mapa-controles.csv"
 PECAS = RAIZ / "docs/data/pecas-do-dualsense.csv"
 CORES = RAIZ / "docs/data/cores-do-dualsense.csv"
-ROTEIRO = RAIZ / "docs/process/sprints"
+ROTEIRO = RAIZ / "docs/usage"
 
 #: O nome do arquivo do roteiro é um PADRÃO, não um caminho cravado: o índice de
 #: sprints renomeia arquivo, e um caminho literal morreria calado no dia da
 #: renomeação — deixando a mesa com as células do mapa e sem a aceitação.
-ROTEIRO_PADRAO = "2026-09-06-MESA-DE-QUATRO-01-*.md"
+ROTEIRO_PADRAO = "roteiro-da-bancada-de-quatro.md"
 
 #: Só DualSense nesta volta (§8 da especificação). O Nintendo Pro e o 8BitDo são
 #: outra frente, e a palavra é dela: *"Quatro controles é o foco. Nenhum externo
@@ -322,11 +321,19 @@ def linhas_do_mapa() -> list[dict[str, str]]:
 
 
 def arquivo_do_roteiro() -> pathlib.Path:
-    """O arquivo da sprint MESA-DE-QUATRO-01, achado pelo padrão."""
+    """O arquivo do roteiro da bancada, achado pelo padrão.
+
+    ELE MUDOU DE CASA EM 15/09/2026. Morava numa sprint de
+    `docs/process/`, e `docs/process/` saiu do repositório por ordem
+    dela — os arquivos de estudo e de metalinguagem ficam no disco
+    dela e do André, fora do git. As 21 linhas são ACEITAÇÃO DO
+    PRODUTO, não processo: vieram para `docs/usage/`, onde quem for
+    medir a mesa as encontra com o repositório recém-clonado.
+    """
     achados = sorted(ROTEIRO.glob(ROTEIRO_PADRAO))
     if not achados:
         raise SystemExit(
-            f"ERRO: nenhuma sprint casa {ROTEIRO_PADRAO} em {ROTEIRO} — as 21 "
+            f"ERRO: nenhum roteiro casa {ROTEIRO_PADRAO} em {ROTEIRO} — as 21 "
             f"linhas da aceitação são metade desta mesa, e sem elas ela mente "
             f"por omissão.")
     return achados[0]

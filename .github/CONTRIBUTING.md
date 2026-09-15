@@ -240,8 +240,9 @@ Fora esses, a regra é a da casa: **português do Brasil, com acentuação
 correta**, em código, comentário, documentação e mensagem de commit. Há portão
 (`scripts/validar-acentuacao.py`).
 
-Registro completo desta decisão, com o que foi medido e o que ficou aberto:
-`docs/process/sprints/2026-08-07-LINGUA-DO-PRODUTO-01-o-convite-a-traduzir-era-falso.md`.
+Registro completo desta decisão — o que foi medido e o que ficou aberto — está
+no arquivo de processo, fora deste repositório (ver a seção **Arquivo de
+processo**, abaixo).
 
 ---
 
@@ -257,15 +258,19 @@ Abra uma issue com o template `question` ou consulte:
 
 ## Arquivo de processo
 
-Sprints, estudos, diário de descobertas, decisões V1/V2/V3 e roadmap interno
-**não ficam na `main`** — são material de processo, preservado inteiro na tag
-`arquivo/processo-pre-1.0`. Todo caminho `docs/process/...` citado em
-comentários, docstrings ou docs deste repositório se resolve por ali:
+Sprints, estudos, entregas, diário de descobertas, decisões e roadmap interno
+**não ficam neste repositório** — nem na `main`, nem na `dev`, nem em tag
+nenhuma. Decisão dela, 15/09/2026: o material de processo é dela e do André, e
+é compartilhado fora do git.
 
-```bash
-git show arquivo/processo-pre-1.0:docs/process/SPRINT_ORDER.md
-git checkout arquivo/processo-pre-1.0 -- docs/process
-```
+Todo caminho `docs/process/...` citado em comentário, docstring ou documento
+daqui é uma **citação de procedência**: ele diz de onde veio aquela cura, e
+quem tem os arquivos a segue. A régua sabe disso — `docs/process/` está
+declarado em `scripts/validar-referencias-docs.py` (`FORA_DO_GIT`) como fonte
+fora desta árvore, ao lado de `xpadneo/` e `sony_gamepad.py`, e há guarda que
+reprova se algum desses caminhos voltar a ser rastreado.
+
+**Se você precisa de um desses arquivos, peça a quem mantém o projeto.**
 
 ---
 

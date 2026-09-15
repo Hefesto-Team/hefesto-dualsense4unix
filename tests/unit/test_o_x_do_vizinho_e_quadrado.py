@@ -27,7 +27,7 @@ AS DUAS VISTAS SÃO IMPORTADAS, nunca digitadas: `ponte_da_tela.TAMANHO_OCULTA`
 maximizada da máquina dela, com cada parcela medida no dono.
 
 A MORDIDA, medida e colada na entrega
-(`docs/process/agentes/2026-09-13/DICA-DA-COR-01-opus.md`): devolva o recuo de
+(a entrega de 13/09/2026 da `DICA-DA-COR-01`): devolva o recuo de
 5 px ao `.guia .tom.tomado::after` em `aba04.CSS`, regere a 04 e
 `scripts/check_o_desenho_aprovado.py --publicar 04` → reprovam quatro casos:
 `test_o_x_e_quadrado` e `test_o_x_tem_corpo` na vista da janela (4,5 x 14), e

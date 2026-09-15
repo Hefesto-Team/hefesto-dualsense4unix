@@ -46,7 +46,7 @@ outra alcança.
 
 A PALAVRA ENTROU AO LADO DAS FRASES — 06/09/2026, A-PALAVRA-MESA-SAI-01:
 
-Ela, 06/09: *"Falei do termo mesa que é horrível. Mas os claudes anteriores
+Ela, 06/09: *"Falei do termo mesa que é horrível. Mas as levas anteriores
 entraram na pira de usar isso em tudo no layout. O termo sai e coloca-se termos
 simples pro user comum. feature fica."*
 

@@ -2,15 +2,16 @@
 # portoes.sh — A LISTA DE PORTÕES DESTA CASA, e ela é UMA SÓ.
 #
 # POR QUE ELE EXISTE, e o defeito é medido: até 25/08/2026 a lista de portões
-# vivia em DOIS lugares — o bloco "Antes de fechar qualquer leva" do `CLAUDE.md`
-# e os jobs do `.github/workflows/ci.yml`. Duas listas para a mesma coisa é o
-# defeito que a regra do fato-errado existe para matar, e ele COBROU: o
-# `validar-caducos.py` roda no CI e NÃO estava no bloco local, e foi assim que
-# um literal caduco atravessou uma leva inteira e só apareceu no vermelho do CI.
+# vivia em DOIS lugares — o bloco "Antes de fechar qualquer leva" do contrato
+# da casa e os jobs do `.github/workflows/ci.yml`. Duas listas para a mesma
+# coisa é o defeito que a regra do fato-errado existe para matar, e ele COBROU:
+# o `validar-caducos.py` roda no CI e NÃO estava no bloco local, e foi assim
+# que um literal caduco atravessou uma leva inteira e só apareceu no vermelho
+# do CI.
 #
-# A partir daqui a lista mora AQUI, em `_LISTA`, versionada e viajando junto com
-# toda árvore de agente. O `CLAUDE.md` não é versionado (`.gitignore:90`), então
-# ele não pode ser a fonte: um worktree de agente nasce sem ele.
+# A partir daqui a lista mora AQUI, em `_LISTA`, versionada e viajando junto
+# com qualquer árvore de trabalho. O contrato da casa NÃO é versionado, então
+# ele não pode ser a fonte: uma árvore nova nasce sem ele.
 #
 # E A LISTA TEM PORTÃO PRÓPRIO: `tests/unit/test_portao_a_lista_de_portoes_e_uma_so.py`
 # compara esta tabela com o que o `ci.yml` roda e REPROVA na divergência. Quem
@@ -168,22 +169,31 @@ completo|mac-por-oui|pytest|tests/unit/test_docs_mac_anonimato.py
 # tem de usar faixa FORJADA (`aa:bb:cc`), não endereço real podado — a máscara
 # da casa preserva o OUI, e o OUI é identidade de fabricante do aparelho dela.
 completo|mac-de-fixture|pytest|tests/unit/test_anonimato_de_fixtures.py
-# 08/09/2026 — A RÉGUA DO SANITIZADOR EXISTIA SEM CHAMADOR.
-# MEDIDO: cinco arquivos de `docs/process/agentes/2026-09-06/` entraram com
-# seis glifos que o sanitizador da casa troca por texto — quatro U+266A (o
-# rótulo do botão do alto-falante) e um U+2713. O sanitizador estava CERTO
-# e a régua estava CERTA: ela acusa os cinco. Nenhum dos dois envelheceu —
-# os dois mudaram pela última vez em 03/09, TRÊS DIAS antes dos arquivos.
-# O que faltava era alguém que a rodasse.
-# POR QUE O `glifos` NÃO PEGA, e não é descuido dele: o `validar-glifos.py`
-# segue o Emoji_Presentation estrito, e esses dois pontos de código têm
-# apresentação de TEXTO — passam por ele e travariam no hook de pre-commit,
-# que usa faixas largas. São critérios diferentes de propósito; quem
-# sanitiza obedece ao MAIS ESTRITO, e só esta régua mede o mais estrito.
-# A LIÇÃO É A DO `mac-por-oui`, dez linhas acima: era teste da SUÍTE, e a
-# suíte roda no FIM. Entre o commit de 06/09 e a reprovação passaram DOIS
-# DIAS. Custa ~2 s.
-completo|saida-de-agente|pytest|tests/unit/test_saida_de_agente_sanitizada.py
+# O `saida-de-agente` SAIU EM 15/09/2026, junto com o seu insumo. A régua
+# varria `docs/process/agentes/` atrás de glifo que o sanitizador da casa troca
+# por texto; a pasta inteira deixou de ser versionada por ordem dela, e régua
+# sem insumo dá verde sobre o vazio — que é pior que portão nenhum.
+# O QUE COBRIA O MESMO RISCO E FICA: o `glifos` (`validar-glifos.py`, critério
+# Emoji_Presentation) sobre a árvore versionada, e o gancho de pre-commit, que
+# usa faixas largas. O que se perdeu foi só o alcance sobre arquivo que não
+# está mais aqui.
+# O PORTÃO DA HISTÓRIA — 15/09/2026, e ele nasce da queixa dela, com o
+# repositório aberto na frente: uma ferramenta aparecia como contribuidora, e
+# *"algo no hook anti ia falhou, isso é regra do projeto original"*. Mais a
+# segunda metade: *"o emaillist lá deveria ser o meu e o do andre apenas (…)
+# isso deveria ser sempre considerado."*
+# POR QUE OS DOIS GUARDAS QUE JÁ EXISTIAM NÃO BASTARAM, medido no mesmo dia:
+#   1. O `commit-msg` GLOBAL dela rodou 1.179 vezes entre 02 e 04/09 e ainda
+#      assim 30 commits entraram em `dev` com trailer de coautoria. Gancho de
+#      `commit-msg` NÃO roda em `cherry-pick`, em `rebase`, em `merge
+#      --no-edit` nem sob `--no-verify` — e esta casa integra leva por
+#      cherry-pick.
+#   2. O passo de auditoria do `anonymity-check.yml` mede o INTERVALO DO PUSH e
+#      sai `0` quando não o resolve ("Nada a auditar"). Intervalo que não
+#      resolve é portão cego.
+# Esta régua varre TODA a história alcançável por `dev`, `main` e `HEAD`, toda
+# vez que alguém roda os portões. Camada rápida: 470 ms em 2.711 commits.
+rapido|historia-sem-ia|py|scripts/check_a_historia_nao_tem_ia.py
 completo|casa-sabe|pytest|tests/unit/portao_a_casa_sabe_e_o_produto_nao_faz.py
 # 25/08/2026: o portão que exige que TODO portão tenha quem o rode não era
 # rodado por esta lista — só pela camada `suite`, que é de quem coordena e
@@ -260,7 +270,9 @@ rapido|identidade-de-cima|py|scripts/check_identidade_vem_de_cima.py
 # NÃO O CALE, e não publique para o silenciar. `--publicar` é a palavra dela, e
 # antecipá-lo entregaria dez abas que ela ainda não olhou.
 rapido|cor-vem-do-aparelho|py|scripts/check_a_cor_vem_do_aparelho.py
-rapido|colisao-de-sprints|py|scripts/check_colisao_de_sprints.py
+# O `colisao-de-sprints` SAIU EM 15/09/2026 pela mesma razão do
+# `saida-de-agente`: ele lia `docs/process/sprints/` para achar duas sprints
+# disputando o mesmo arquivo, e a pasta saiu do repositório.
 rapido|icones|bash|scripts/gerar_icones.sh --check
 rapido|packaging-parity|bash|scripts/check_packaging_parity.sh
 rapido|glifos|py|scripts/validar-glifos.py --all

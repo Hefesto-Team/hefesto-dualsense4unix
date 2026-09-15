@@ -40,7 +40,7 @@ TELA-CALADA-02: `test_o_cartao_da_steam_nao_narra.
 test_os_tres_ramos_que_narravam_viram_rotulo_de_estado`.
 
 O PASSEIO NO PILOTO OCULTO pelas dez abas, com `sem_cor=True`, está na entrega
-da sprint (`docs/process/agentes/2026-09-13/FRASES-E-DICAS-02-opus.md`), com a
+da sprint (a entrega de 13/09/2026 da `FRASES-E-DICAS-02`), com a
 saída e as fotos: ele abre WebKit e fala com o daemon vivo, e a suíte não faz
 nenhum dos dois. A sonda da mesa saiu do produto nesta sprint, então o passeio
 não tem onde dublar o controle segurado; quem o dubla é esta régua, na sonda de

@@ -22,11 +22,12 @@ Duas coisas mudaram desde então e pedem que a regra saia do `CLAUDE.md`:
 
 ## Decisão
 
-Ela, em 21/08/2026, literal:
+Ela, em 21/08/2026 (a frase é dela; uma palavra foi ajustada em 15/09/2026,
+por ordem dela, para não nomear ferramenta):
 
 > *"vamos deixar o projeto menos verboso. provou que uma info tá errada,
 > substituímos ela pela certa em todos os lugares. a ideia é que o dev não morra
-> no caminho ou que a IA não chegue a um milhão de tokens só de ler um único
+> no caminho ou que quem lê não chegue a um milhão de tokens só de ler um único
 > script ou documento."*
 
 Disso saem três regras:

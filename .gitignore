@@ -60,9 +60,10 @@ Task_Final/
 IMPORTANT.md
 *_AI_*.md
 *_agent_*.md
-# Auditorias/varreduras multi-agente: transcripts brutos (.jsonl) e sinteses trazem
-# atribuicao de IA (model-ids, "claude"/"anthropic") — NUNCA versionar. O gate de
-# anonimato isenta docs/process/**, entao o bloqueio aqui e a defesa real.
+# Varredura e auditoria: transcrito bruto (.jsonl) e síntese carregam atribuição
+# de ferramenta (identificador de modelo, nome de fornecedor) — NUNCA versionar.
+# `docs/process/` saiu inteira do repositório em 15/09/2026; estas linhas ficam
+# porque o padrão `*.jsonl` alcança qualquer canto da árvore.
 docs/process/audits/
 *.jsonl
 
@@ -136,7 +137,7 @@ assets/dkms/rtw88-usb/main.h
 # repositório uma cópia que envelhece a cada commit.
 .code-review-graph/
 
-# O TRANSCRITO DA SESSÃO que o `/export` do Claude Code deixa na raiz —
+# O TRANSCRITO DA SESSÃO que o comando de exportação deixa na raiz —
 # 06/09/2026. Ele nasce aqui porque o comando grava no diretório de trabalho, e
 # ela pediu que ficasse na área de trabalho dela: o de 05/09 foi movido para
 # `~/Área de trabalho/hefesto-sessao-2026-09-05.txt`.
@@ -156,3 +157,45 @@ rodando.txt
 # fluxo desta casa é `git add -A && bash scripts/portoes.sh`. Um `.recusado`
 # esquecido no disco entraria no commit como se fosse desenho.
 *.html.recusado
+
+# ---------------------------------------------------------------------------
+# O QUE FICA NO DISCO E NÃO VIAJA NO GIT — 15/09/2026, ordem dela.
+#
+# *"Preciso que reescreva. Remova tudo. Arquivos de estudo, esses com
+# metalinguagem e afins. Deixa local vou compartilhar os arquivos com o André.
+# Inclusive o contrato da casa e afins."*  (a última palavra dela nomeava a
+# ferramenta; ela sai por ordem da mesma frase)
+#
+# NADA FOI APAGADO. Os arquivos continuam onde estão — são dela e do André, e
+# são compartilhados fora do git. O que muda é que o REPOSITÓRIO passa a
+# carregar só o produto: código, teste, régua, documentação de protocolo e de
+# uso. A história de como cada cura foi decidida mora no disco dela.
+#
+# AS 800 CITAÇÕES QUE FICAM não são referência morta: `docs/process/` está
+# declarado em `scripts/validar-referencias-docs.py` (`FORA_DO_GIT`) como
+# fonte fora desta árvore, do mesmo jeito que `xpadneo/` e `sony_gamepad.py`.
+# A procedência de cada cura continua escrita; o que ela aponta mora fora.
+docs/process/
+docs/history/DUVIDAS_V2.md
+docs/history/RESPOSTAS_V1.md
+docs/history/HEFESTO_DECISIONS_V1.md
+docs/history/sprints-canceladas/
+DECISOES.md
+Texto colado.txt
+mockup/TODO-DELA.md
+mockup/PROMPT-PARA-COLAR.md
+
+# O DESPACHO E A COSTURA DE LEVA, e as réguas cujo insumo saiu junto.
+scripts/despachar-agente.sh
+scripts/despachar-onda.sh
+scripts/costurar.sh
+scripts/costurar-onda.sh
+scripts/sanitizar_saida_de_agente.py
+scripts/check_colisao_de_sprints.py
+scripts/workflows/
+.github/ISSUE_TEMPLATE/sprint-task.md
+tests/unit/test_saida_de_agente_sanitizada.py
+tests/unit/test_portao_a_costura_serializa.py
+tests/unit/test_nome_citado_como_sprint_existe.py
+tests/unit/test_portao_o_caminho_morto_nomeia.py
+tests/unit/test_o_portao_le_o_cria_do_frontmatter.py

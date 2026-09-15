@@ -2085,7 +2085,7 @@ _SEM_CAMINHO_HOJE: dict[str, str] = {
     "integrations/arranjo_da_mesa.py::adaptadores_da_mesa": (
         "MEDIDO em 25/08/2026, CORRIGIDO em 26/08/2026: portado byte a byte "
         "do motor que rodava só dentro do mockup "
-        "`2026-08-24-ABA-CONEXOES/mockup/mapa-das-portas.html`, com 114 testes "
+        "`mockup/congelados/2026-08-24-mapa-das-portas.html`, com 114 testes "
         "de equivalência que rodam o original em `node`. "
         "O FATO ERRADO QUE SAIU: esta razão dizia *nenhuma tela o consome "
         "ainda*, e isso deixou de ser verdade em 26/08 — a janela do mapa monta "
@@ -2104,7 +2104,7 @@ _SEM_CAMINHO_HOJE: dict[str, str] = {
     "integrations/arranjo_da_mesa.py::candidatas": (
         "MEDIDO em 25/08/2026, CORRIGIDO em 26/08/2026: portado byte a byte "
         "do motor que rodava só dentro do mockup "
-        "`2026-08-24-ABA-CONEXOES/mockup/mapa-das-portas.html`, com 114 testes "
+        "`mockup/congelados/2026-08-24-mapa-das-portas.html`, com 114 testes "
         "de equivalência que rodam o original em `node`. "
         "O FATO ERRADO QUE SAIU: esta razão dizia *nenhuma tela o consome "
         "ainda*, e isso deixou de ser verdade em 26/08 — a janela do mapa monta "
@@ -2123,7 +2123,7 @@ _SEM_CAMINHO_HOJE: dict[str, str] = {
     "integrations/arranjo_da_mesa.py::consequencias": (
         "MEDIDO em 25/08/2026, CORRIGIDO em 26/08/2026: portado byte a byte "
         "do motor que rodava só dentro do mockup "
-        "`2026-08-24-ABA-CONEXOES/mockup/mapa-das-portas.html`, com 114 testes "
+        "`mockup/congelados/2026-08-24-mapa-das-portas.html`, com 114 testes "
         "de equivalência que rodam o original em `node`. "
         "O FATO ERRADO QUE SAIU: esta razão dizia *nenhuma tela o consome "
         "ainda*, e isso deixou de ser verdade em 26/08 — a janela do mapa monta "
@@ -2142,7 +2142,7 @@ _SEM_CAMINHO_HOJE: dict[str, str] = {
     "integrations/arranjo_da_mesa.py::plano_dos_controles": (
         "MEDIDO em 25/08/2026, CORRIGIDO em 26/08/2026: portado byte a byte "
         "do motor que rodava só dentro do mockup "
-        "`2026-08-24-ABA-CONEXOES/mockup/mapa-das-portas.html`, com 114 testes "
+        "`mockup/congelados/2026-08-24-mapa-das-portas.html`, com 114 testes "
         "de equivalência que rodam o original em `node`. "
         "O FATO ERRADO QUE SAIU: esta razão dizia *nenhuma tela o consome "
         "ainda*, e isso deixou de ser verdade em 26/08 — a janela do mapa monta "
@@ -2161,7 +2161,7 @@ _SEM_CAMINHO_HOJE: dict[str, str] = {
     "integrations/arranjo_da_mesa.py::qualidade": (
         "MEDIDO em 25/08/2026, CORRIGIDO em 26/08/2026: portado byte a byte "
         "do motor que rodava só dentro do mockup "
-        "`2026-08-24-ABA-CONEXOES/mockup/mapa-das-portas.html`, com 114 testes "
+        "`mockup/congelados/2026-08-24-mapa-das-portas.html`, com 114 testes "
         "de equivalência que rodam o original em `node`. "
         "O FATO ERRADO QUE SAIU: esta razão dizia *nenhuma tela o consome "
         "ainda*, e isso deixou de ser verdade em 26/08 — a janela do mapa monta "
@@ -2180,7 +2180,7 @@ _SEM_CAMINHO_HOJE: dict[str, str] = {
     "integrations/arranjo_da_mesa.py::receita": (
         "MEDIDO em 25/08/2026, CORRIGIDO em 26/08/2026: portado byte a byte "
         "do motor que rodava só dentro do mockup "
-        "`2026-08-24-ABA-CONEXOES/mockup/mapa-das-portas.html`, com 114 testes "
+        "`mockup/congelados/2026-08-24-mapa-das-portas.html`, com 114 testes "
         "de equivalência que rodam o original em `node`. "
         "O FATO ERRADO QUE SAIU: esta razão dizia *nenhuma tela o consome "
         "ainda*, e isso deixou de ser verdade em 26/08 — a janela do mapa monta "
@@ -2199,7 +2199,7 @@ _SEM_CAMINHO_HOJE: dict[str, str] = {
     "integrations/arranjo_da_mesa.py::reexame": (
         "MEDIDO em 25/08/2026, CORRIGIDO em 26/08/2026: portado byte a byte "
         "do motor que rodava só dentro do mockup "
-        "`2026-08-24-ABA-CONEXOES/mockup/mapa-das-portas.html`, com 114 testes "
+        "`mockup/congelados/2026-08-24-mapa-das-portas.html`, com 114 testes "
         "de equivalência que rodam o original em `node`. "
         "O FATO ERRADO QUE SAIU: esta razão dizia *nenhuma tela o consome "
         "ainda*, e isso deixou de ser verdade em 26/08 — a janela do mapa monta "
@@ -2218,7 +2218,7 @@ _SEM_CAMINHO_HOJE: dict[str, str] = {
     "integrations/arranjo_da_mesa.py::sem_entrada": (
         "MEDIDO em 25/08/2026, CORRIGIDO em 26/08/2026: portado byte a byte "
         "do motor que rodava só dentro do mockup "
-        "`2026-08-24-ABA-CONEXOES/mockup/mapa-das-portas.html`, com 114 testes "
+        "`mockup/congelados/2026-08-24-mapa-das-portas.html`, com 114 testes "
         "de equivalência que rodam o original em `node`. "
         "O FATO ERRADO QUE SAIU: esta razão dizia *nenhuma tela o consome "
         "ainda*, e isso deixou de ser verdade em 26/08 — a janela do mapa monta "
@@ -2237,7 +2237,7 @@ _SEM_CAMINHO_HOJE: dict[str, str] = {
     "integrations/arranjo_da_mesa.py::variante_por_id": (
         "MEDIDO em 25/08/2026, CORRIGIDO em 26/08/2026: portado byte a byte "
         "do motor que rodava só dentro do mockup "
-        "`2026-08-24-ABA-CONEXOES/mockup/mapa-das-portas.html`, com 114 testes "
+        "`mockup/congelados/2026-08-24-mapa-das-portas.html`, com 114 testes "
         "de equivalência que rodam o original em `node`. "
         "O FATO ERRADO QUE SAIU: esta razão dizia *nenhuma tela o consome "
         "ainda*, e isso deixou de ser verdade em 26/08 — a janela do mapa monta "

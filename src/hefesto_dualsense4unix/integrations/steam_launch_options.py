@@ -1777,8 +1777,8 @@ def remove_appid_from_steam_input_allowlist(
 # --- "não quero o wrapper NESTE jogo" (SENTINELA-WRAPPER-01, 16/08/2026) ----
 # O censo do wrapper (integrations/sentinela_do_wrapper) sabe dizer quais jogos
 # perderam a chamada do `hefesto-launch`. Sabendo disso, ele PRECISA saber
-# também quando a ausência é vontade dela — senão o produto vira um assistente
-# que desfaz a escolha da dona da máquina a cada `./install.sh`.
+# também quando a ausência é vontade dela — senão o produto passa a desfazer
+# a escolha da dona da máquina a cada `./install.sh`.
 #
 # A regra, e ela é dura de propósito: **intenção nunca é inferida**. Uma linha
 # que sumiu é sempre tratada como estrago (a Steam guarda UMA linha por jogo e

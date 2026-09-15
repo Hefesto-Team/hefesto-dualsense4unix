@@ -84,15 +84,6 @@ PISO_DE_ESCAPES = 140
 #: MESMO commit.
 SEM_RAZAO_PINADOS: dict[str, int] = {
     ".github/workflows/ci.yml": 2,
-    "docs/process/estudos/2026-08-06-o-que-so-funciona-na-maquina-dela.md": 2,
-    "docs/process/estudos/2026-08-07-O-QUE-EXISTE-E-NAO-CHEGA-a-cobertura-do-install.md": 3,
-    "docs/process/estudos/2026-08-07-a-economia-de-energia-e-a-bancada.md": 1,
-    "docs/process/sprints/2026-08-06-REGRA-NAO-REGISTRO-01-o-8bitdo-e-um-so-e-o-defeito-e-de-todo-mundo.md": 2,  # noqa: E501
-    "docs/process/sprints/2026-08-07-CONTROLE-INTEIRO-NO-RADIO-01-o-mic-e-o-fone-que-nao-atravessam.md": 2,  # noqa: E501
-    "docs/process/sprints/2026-08-07-INSTALL-QUE-NAO-CARREGA-01-as-descobertas-que-nunca-viraram-codigo.md": 1,  # noqa: E501
-    "docs/process/sprints/2026-08-16-A-MASCARA-QUE-O-PRODUTO-ESCOLHE-01-o-jogo-nao-enxerga-e-a-culpa-nao-e-da-pessoa.md": 1,  # noqa: E501
-    "docs/process/sprints/2026-08-16-SENTINELA-WRAPPER-01-a-steam-guarda-uma-linha-por-jogo-e-comeu-a-nossa.md": 1,  # noqa: E501
-    "docs/process/sprints/2026-08-24-INFRA-DE-EXECUCAO-01-o-registro-do-que-esta-em-voo.md": 2,
     "scripts/gerar-indice-html.py": 1,
     "scripts/gerar-mapa.py": 2,
     "scripts/generate_glyph_active.py": 1,

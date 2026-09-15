@@ -13,8 +13,8 @@ saiu do aparelho: são o desenho, cravado no arquivo em 26/08 e nunca repintado.
 Quem olha a tela lê quatro medidas de um gatilho que está DESLIGADO.
 
 POR QUE NENHUM PORTÃO PEGAVA ISSO, e é a lição-mãe do dia: as réguas desta casa
-contavam se o NOME de um campo aparecia no código do pacote. Foi assim que o
-assistente reportou **77% de paridade** onde o produto entregava 36%, e assim
+contavam se o NOME de um campo aparecia no código do pacote. Foi assim que a
+primeira medição reportou **77% de paridade** onde o produto entregava 36%, e assim
 que a segunda medição do mesmo dia disse **61%** contando `data-campo` em
 arquivo. **Presença de string não é funcionamento.** Um pacote pode nomear o
 campo, montar o valor e escrevê-lo num endereço que não existe na página — e a
@@ -939,7 +939,7 @@ def _declarado_neste_elemento(campo: _Campo, declarado: str,
         # O TOKEN QUE NENHUM MEMBRO DO GRUPO CONHECE. A tela apaga TUDO, e
         # apagado é `''` — o mesmo que este elemento mostraria se o produto
         # tivesse acertado. Colapsar aqui para `''` daria PRODUTO sobre um
-        # grupo inteiramente APAGADO: medido em 02/09/2026, `'maximo'` no lugar  # noqa-acento (token de máquina)
+        # grupo inteiramente APAGADO: medido em 02/09/2026, `'maximo'` no lugar  # (noqa-acento): token de máquina
         # de `'max'` dava os mesmos 4 PRODUTO da tela que acende. Devolvendo o
         # token cru, ele não casa com o vazio da tela e a régua acusa.
         return declarado

@@ -1434,7 +1434,7 @@ _reconhecimento() {
             warn "bluez ${_bz} — abaixo de 5.79, a faixa que esta casa validou"
             printf '      Abaixo de 5.79 há crashes crônicos de input/HIDP (medidos: 6 em 5 dias).\n'
             printf '      A conferência final vai REPROVAR por isto. A cura é um backport, e a\n'
-            printf '      receita está em docs/process/estudos/2026-07-19-estudo-bluez-backport-onda-r.md\n'
+            printf '      receita está em docs/usage/receita-backport-bluez.md\n'
             achou_algo=1
         fi
     fi
@@ -2388,7 +2388,7 @@ install_censo_do_gabinete_host
 # ---------------------------------------------------------------------------
 # 3f. ONDA-R: BlueZ resiliente (backport local — alvo 5.86) — DEFAULT
 # ---------------------------------------------------------------------------
-# Estudo docs/process/estudos/2026-07-19-estudo-bluez-backport-onda-r.md: o
+# Estudo docs/usage/receita-backport-bluez.md: o
 # bluez 5.72-0ubuntu5.5 do noble crashou 6x em 5 dias (heap corruption/SEGV em
 # hidp_add_connection/control_connect_cb — sempre em sessão com controles BT
 # ativos); o 6º crash CHEGOU A COMER um bond recém-pareado. Nenhum SRU do
@@ -2469,7 +2469,7 @@ if [[ "${SKIP_UDEV}" -eq 0 ]] && command -v dpkg-query >/dev/null 2>&1 \
                 # arquivado — e o `install.sh:1638` já citava o documento como se
                 # ele estivesse aqui. Quem levasse o produto para outra máquina
                 # lia uma instrução que não podia seguir.
-                printf '      como gerar: docs/process/estudos/2026-07-19-estudo-bluez-backport-onda-r.md, seção 3, caminho 1\n'
+                printf '      como gerar: docs/usage/receita-backport-bluez.md, seção 3, caminho 1\n'
                 printf '      resumo: dget do .dsc do resolute -> dch --local -> mk-build-deps -ir -> dpkg-buildpackage -us -uc -b\n'
             else
                 # SHA256SUMS por basename (portátil — o arquivo pode ter sido

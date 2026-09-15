@@ -14,7 +14,7 @@
 
 ## A distinção que este documento existe para impedir
 
-Em 03/08 o assistente afirmou à mantenedora:
+Em 03/08 esta casa afirmou à mantenedora:
 
 > *"no BT o DualSense não tem placa de som, logo mic e alto-falante não
 > funcionam."*

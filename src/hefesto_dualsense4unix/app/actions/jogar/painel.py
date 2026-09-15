@@ -837,7 +837,7 @@ def aviso_da_origem_do_modo(state: dict[str, Any] | None) -> str | None:
 
     AS DUAS CHAVES SÃO DO DAEMON, e cada uma tem escritor próprio:
     ``native_mode_origin`` (`daemon/state_store.py:556`) e ``mode_from_profile``
-    (`daemon/lifecycle.py:2490`). O ``native_mode`` entra na conta junto com a
+    (`daemon/lifecycle.py:2643`). O ``native_mode`` entra na conta junto com a
     origem porque a origem SOBREVIVE ao modo no store — sem ele a tela diria
     que o perfil ligou um Nativo que já não está de pé.
 

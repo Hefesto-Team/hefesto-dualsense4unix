@@ -3464,7 +3464,7 @@ check_cmdline_platform() {
 # doctor.md). Tudo READ-ONLY; fecha o ciclo do que a Onda R instala (backport
 # bluez 5.85 + hefesto-bt-agent.service) com visibilidade pro leigo. A causa
 # medida do bond "meio-salvo" (Paired: yes / Bonded: no) é "No agent available
-# for request type 2" (estudo 2026-07-19-estudo-bluez-backport-onda-r.md §4):
+# for request type 2" (estudo receita-backport-bluez.md §4):
 # nenhum agente D-Bus respondeu no momento do pareamento. O check 6 do sprint
 # ("autoridade de exibição unknown presa") JÁ existe (NUMA-05/
 # check_display_authority, mais abaixo) — não duplicado aqui.
@@ -3473,7 +3473,7 @@ check_cmdline_platform() {
 # A faixa de bluez que esta casa aceita tem DOIS limites, não um.
 #
 # PISO 5.79 — abaixo dele, crashes crônicos de input/HIDP (estudo da Onda R,
-#   2026-07-19-estudo-bluez-backport-onda-r.md).
+#   receita-backport-bluez.md).
 #
 # TETO 5.87 — a MENOR versão REJEITADA conhecida. Motivo medido (estudo
 #   docs/process/estudos/2026-08-07-o-defeito-do-bluez-que-ela-lembrou-e-os-
@@ -3554,7 +3554,7 @@ check_bluez_backport_version() {
             warn "bluez ${ver}${origem} >= ${_BZ_TETO} — o 5.87 carrega um uso-depois-de-liberado em dev_disconnected (src/adapter.c: device_is_connected() chamado depois de adapter_remove_connection() liberar o device; commit 5d836f1). A correção 5bc6aa79 está um commit DEPOIS do 5.87 e nenhum lançamento a carregava até 07/08/2026 — se esta versão é o 5.88 ou mais nova, confira se ela já traz o 5bc6aa79 e suba o teto (_BZ_TETO) no doctor.sh. O alvo desta casa é o backport 5.86$(so_no_checkout "(./install.sh, passo 3f)"); o porquê está em docs/process/estudos/2026-08-07-o-defeito-do-bluez-que-ela-lembrou-e-os-outros-cinco.md §D"
             ;;
         old)
-            fail "bluez ${ver}${origem} < 5.79 — crashes crônicos de input/HIDP (heap corruption, 6x/5 dias medidos) documentados; aplique o backport: $(conselho_de_instalacao)$(so_no_checkout "(passo ONDA-R aplica sozinho se os .debs estiverem em ~/.cache/hefesto-dualsense4unix/bluez-backport/; senão, gere-os pela receita em docs/process/estudos/2026-07-19-estudo-bluez-backport-onda-r.md, seção 3, caminho 1)")"
+            fail "bluez ${ver}${origem} < 5.79 — crashes crônicos de input/HIDP (heap corruption, 6x/5 dias medidos) documentados; aplique o backport: $(conselho_de_instalacao)$(so_no_checkout "(passo ONDA-R aplica sozinho se os .debs estiverem em ~/.cache/hefesto-dualsense4unix/bluez-backport/; senão, gere-os pela receita em docs/usage/receita-backport-bluez.md, seção 3, caminho 1)")"
             ;;
         *)
             info "bluez não encontrado (nem daemon em execução, nem pacote) — pulo o check de versão"

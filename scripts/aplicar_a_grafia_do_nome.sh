@@ -22,10 +22,7 @@ cd "$(dirname "$0")/.."
 
 # Os arquivos que NOMEIAM a grafia errada como defeito — a citação não se limpa.
 # Tem de bater com `ISENTOS` de scripts/check_a_grafia_do_nome.py.
-ISENTOS='^(docs/process/agentes/2026-09-11/ESQUELETO-C2-opus\.md'
-ISENTOS+='|docs/process/sprints/2026-09-11-A-FILA-QUE-A-ONDA-ABRIU-INDICE\.md'
-ISENTOS+='|docs/process/sprints/2026-09-11-F6-O-NOME-TEM-UM-DONO-e-a-barra-passa-a-ler\.md'
-ISENTOS+='|scripts/check_a_grafia_do_nome\.py'
+ISENTOS='^(scripts/check_a_grafia_do_nome\.py'
 ISENTOS+='|scripts/aplicar_a_grafia_do_nome\.sh'
 ISENTOS+='|tests/unit/test_portao_a_grafia_do_nome_morde\.py)$'
 

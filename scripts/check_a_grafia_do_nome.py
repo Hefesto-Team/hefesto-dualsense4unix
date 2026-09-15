@@ -105,13 +105,11 @@ _ERRADA = re.compile(
 #: Os arquivos que NOMEIAM a grafia errada como defeito — a citação não se
 #: limpa, pela mesma razão do `noqa-acento`: apagar a grafia errada de dentro
 #: do laudo que a achou destrói o laudo.
+#: OS TRÊS DE `docs/process/` SAÍRAM EM 15/09/2026 — o laudo e as duas sprints
+#: que nomeavam a grafia errada deixaram de ser versionados junto com o resto
+#: dos arquivos de estudo (ver `.gitignore`). A régua varre o `git grep`: o que
+#: não é rastreado não é medido, então a isenção deles virou letra morta.
 ISENTOS: dict[str, str] = {
-    "docs/process/agentes/2026-09-11/ESQUELETO-C2-opus.md":
-        "o laudo que ACHOU o defeito; as duas linhas citam a grafia errada.",
-    "docs/process/sprints/2026-09-11-A-FILA-QUE-A-ONDA-ABRIU-INDICE.md":
-        "a fila que abriu esta frente; o §4 escreve a grafia errada para nomeá-la.",
-    "docs/process/sprints/2026-09-11-F6-O-NOME-TEM-UM-DONO-e-a-barra-passa-a-ler.md":
-        "a sprint desta frente; o laudo cita as duas grafias lado a lado.",
     "scripts/check_a_grafia_do_nome.py":
         "esta régua: a docstring tem de poder escrever o que ela caça.",
     "scripts/aplicar_a_grafia_do_nome.sh":

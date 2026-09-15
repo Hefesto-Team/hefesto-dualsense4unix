@@ -287,9 +287,9 @@ def reassert_rumble(daemon: DaemonProtocol, now: float) -> None:
     # O TETO DE OCIOSIDADE — A-TELA-QUE-TRAVA-02, 15/09/2026, decisão dela.
     #
     # ORDEM DELA, com o controle na mão: *"o testar e parar é sobre o teste
-    # naquele momento isso nao interfere in game (noqa-acento: citação literal dela). (…) clicar em parar é só pra
-    # impactar no teste naquele momento e não mutar a vibração in game."*
-    #   (noqa-acento: citação literal dela)
+    # naquele momento isso nao interfere in game (noqa-acento: dela). (…) clicar
+    # em parar é só pra impactar no teste naquele momento e não mutar a
+    # vibração in game."*
     #
     # O QUE ESTAVA QUEBRADO: o "Testar" da aba Vibração tira os motores do jogo
     # (`rumble.passthrough(False)`) e SÓ o "Parar" os devolvia. Fechar a janela,

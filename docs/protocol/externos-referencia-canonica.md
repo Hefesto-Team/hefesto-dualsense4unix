@@ -1238,7 +1238,7 @@ com o silêncio e com o ciclo de 26 minutos?
 qualquer controle desta mesa (4.3), e **ninguém aqui mexeu nele**.
 
 **P0.** **Só fecha ESCREVENDO no aparelho** (report de saída `0x11` com o
-`hw_control` alterado), logo é protocolo e não experimento de assistente.
+`hw_control` alterado), logo é protocolo e não experimento de bancada.
 Trancar: o Hefesto **não escreve** nesse aparelho, então não há concorrência de
 escritor — mas o driver escreve o valor **uma vez, no probe**, e qualquer
 reconexão o restaura. **Destrancar:** desconectar e reconectar devolve os 4 ms.

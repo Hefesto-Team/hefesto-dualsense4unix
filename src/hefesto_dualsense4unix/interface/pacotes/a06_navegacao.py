@@ -2414,7 +2414,7 @@ def modo(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
     da partida (`daemon/ipc_handlers.py:5032`).
 
     O MOUSE VAI PRIMEIRO de propósito: é ele que tem exclusão mútua com o
-    gamepad virtual (`daemon/lifecycle.py:1359` — ligar o mouse PARA o vpad). Se
+    gamepad virtual (`daemon/lifecycle.py:1487` — ligar o mouse PARA o vpad). Se
     a primeira falhar, a segunda não chega a rodar e o teclado não fica ligado
     sozinho num modo que não é dele.
 

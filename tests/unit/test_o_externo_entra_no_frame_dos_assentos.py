@@ -35,7 +35,7 @@ com dois aparelhos que caem por caminhos diferentes:
 o próprio ponto cego mente:** ela lê o HTML, e não pixels. Que a `.ext-vaga`
 seja `display:contents` está cobrado aqui como REGRA DE CSS presente; que o
 navegador a honre foi medido à parte, no Chrome, e está na entrega
-(`docs/process/agentes/2026-09-06/EXTERNOS-NO-FRAME-opus.md`).
+(a entrega de 06/09/2026 da `EXTERNOS-NO-FRAME`).
 """
 from __future__ import annotations
 

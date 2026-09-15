@@ -17,8 +17,8 @@
 var fs = require("fs");
 var path = require("path");
 
-var HTML = path.join(__dirname, "..", "..", "docs", "process", "sprints",
-                     "2026-08-24-ABA-CONEXOES", "mockup", "mapa-das-portas.html");
+var HTML = path.join(__dirname, "..", "..", "mockup",
+                     "congelados", "2026-08-24-mapa-das-portas.html");
 
 var linhas = fs.readFileSync(HTML, "utf8").split("\n");
 var ini = linhas.findIndex(function (l) { return l.trim() === "(function () {"; });

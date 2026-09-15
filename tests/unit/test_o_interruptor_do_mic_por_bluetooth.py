@@ -52,10 +52,14 @@ import pytest
 
 from hefesto_dualsense4unix.app.widgets import controller_card as cc
 
-#: O estudo que julgou a ponte. Se ele sumir, o motivo da remoção some junto —
-#: e a próxima sessão religa o interruptor achando que foi frescura.
-ESTUDO = Path("docs/process/estudos") / (
-    "2026-08-16-O-PS-PRESO-a-ponte-do-mic-e-o-laco-que-abria-a-steam-sozinho.md"
+#: O MOTIVO DA REMOÇÃO, escrito aqui para não depender de documento nenhum.
+#: Medido em 16/08/2026 (O-PS-PRESO): a ponte do mic segurava o hidraw por
+#: `held_ms=17.6` e abria a Steam sozinha; a hipótese de que a causa era o
+#: áudio caiu na mesma medição. A CONDIÇÃO DE VOLTA é uma só — arbitrar o
+#: hidraw entre o daemon e a ponte. Sem ela, religar o interruptor devolve o
+#: defeito inteiro.
+MOTIVO = (
+    "held_ms=17.6 na ponte do mic; a volta depende de arbitrar o hidraw"
 )
 
 #: Tudo que o interruptor levava consigo. A lista é nominal de propósito: um
@@ -94,7 +98,8 @@ def test_o_card_nao_carrega_mais_nenhuma_peca_do_interruptor(peca: str) -> None:
     assert not hasattr(cc, peca), (
         f"`{peca}` voltou ao card: a ponte de mic por BT prende o botão PS em "
         f"pulsos de ~17 ms e o daemon abre a Steam em laço. Antes de religar "
-        f"qualquer parte disto, leia {ESTUDO} e feche a arbitragem do hidraw."
+        f"qualquer parte disto, o motivo é {MOTIVO} — feche a arbitragem "
+        "do hidraw antes."
     )
 
 
@@ -182,14 +187,15 @@ def test_o_gate_de_ambiente_continua_sendo_o_caminho_a_mao() -> None:
 # ---------------------------------------------------------------------------
 
 
-def test_o_estudo_que_derrubou_o_interruptor_esta_no_lugar() -> None:
-    """Sem o estudo, sobra "alguém tirou" — e a próxima sessão devolve."""
-    caminho = _raiz() / ESTUDO
-
-    assert caminho.is_file(), f"o estudo sumiu: {ESTUDO}"
-    texto = caminho.read_text(encoding="utf-8")
-    assert "held_ms=17.6" in texto, "o número que derrubou a hipótese do áudio saiu"
-    assert "Arbitrar o hidraw" in texto, "a condição de volta saiu do estudo"
+# O TESTE QUE COBRAVA O ESTUDO NO DISCO SAIU EM 15/09/2026, com o estudo. Ele
+# morava em `docs/process/estudos/`, que deixou de ser versionada por ordem
+# dela — os arquivos de estudo ficam no disco dela e do André.
+#
+# O QUE ELE PROTEGIA E NÃO SE PERDEU: o motivo da remoção. Ele está escrito
+# AQUI, no `MOTIVO` no topo, com os dois números que o sustentam (held_ms=17.6 e
+# a condição de volta), e os testes que sobram cobram que nenhuma peça do
+# interruptor volte. A lição: *régua que aponta para documento é régua que
+# depende de o documento viajar* — o fato tem de morar na régua.
 
 
 def test_o_card_diz_no_codigo_como_o_interruptor_volta() -> None:

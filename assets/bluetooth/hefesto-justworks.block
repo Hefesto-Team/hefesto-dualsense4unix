@@ -4,8 +4,8 @@
 # bluez 5.85 (descarta bonds antigos no 1º start — reparear exige que o BlueZ
 # aceite o re-pareamento em vez de rejeitar) e para o bond "meio-salvo" (Paired
 # sem Bonded, causado por "No agent available for request type 2") nunca
-# travar o controle. Estudo docs/process/estudos/2026-07-19-estudo-bluez-
-# backport-onda-r.md §4. Bloco gerenciado pelo install do hefesto: o uninstall
+# travar o controle. Receita em docs/usage/receita-backport-bluez.md §4.
+# Bloco gerenciado pelo install do hefesto: o uninstall
 # remove TUDO entre as sentinelas ">>> hefesto JustWorksRepairing >>>" e
 # "<<< hefesto JustWorksRepairing <<<".
 # O [General] repetido é seguro: o GKeyFile do bluetoothd FUNDE grupos

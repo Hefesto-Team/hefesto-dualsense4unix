@@ -1,0 +1,16 @@
+# .mailmap — AS DUAS PESSOAS DESTA CASA, e mais ninguém.
+#
+# Decisão dela, 15/09/2026: *"o emaillist lá deveria ser o meu e o do andre
+# apenas."* · *"isso deveria ser sempre considerado."*
+#
+# ESTE ARQUIVO É A FONTE, e não uma cópia: `scripts/check_a_historia_nao_tem_ia.py`
+# LÊ daqui a lista de quem pode assinar um commit. Pôr o endereço numa constante
+# de código criaria duas verdades sobre a mesma coisa — o defeito que a regra do
+# fato-errado desta casa existe para matar.
+#
+# A forma é a do git (`gitmailmap(5)`): `Nome <canônico> <alias>`. Acrescentar
+# uma pessoa é acrescentar uma linha aqui, e o portão passa a aceitá-la.
+vitoriamariadb <vitoriamaria.sds@gmail.com>
+AndreBFarias <andre.dsbf@gmail.com>
+AndreBFarias <andre.dsbf@gmail.com> <70702280+AndreBFarias@users.noreply.github.com>
+AndreBFarias <andre.dsbf@gmail.com> <noreply@github.com>

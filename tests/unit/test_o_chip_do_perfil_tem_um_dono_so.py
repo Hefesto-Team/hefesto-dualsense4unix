@@ -3,7 +3,7 @@
 
 FRASES-E-DICAS-03, 13/09/2026. O defeito foi achado pela VAO-DO-ESQUELETO-01 no
 piloto oculto, com um perfil valendo: a 03 e a 04 pintavam «—» e as outras oito
-pintavam o nome (`docs/process/agentes/2026-09-13/VAO-DO-ESQUELETO-01-opus.md`,
+pintavam o nome (a entrega de 13/09/2026 da `VAO-DO-ESQUELETO-01`,
 «O que sobrou», item 1). Remedido no ANTES desta sprint: o mesmo quadro.
 
 A CAUSA ERAM DOIS DONOS PARA UM ENDEREÇO. `pacotes.topo()` pergunta ao dono do

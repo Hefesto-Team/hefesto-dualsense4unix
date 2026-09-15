@@ -1,4 +1,4 @@
-"""Os portões que o `CLAUDE.md` manda rodar continuam LIGADOS no CI.
+"""Os portões que o `scripts/portoes.sh` manda rodar continuam LIGADOS no CI.
 
 Terceiro bloco da PORTÃO-VIVO-01, e o mais barato de todos: preço ZERO hoje.
 
@@ -21,10 +21,10 @@ Essa é a família exata do defeito que a casa já pagou três vezes:
     que o `--check` "é o que o CI roda", e nenhum job o chamava.
 
 A LISTA É DERIVADA, nunca digitada aqui. A fonte é o bloco "Antes de fechar
-qualquer leva" do `CLAUDE.md` — a lista que a casa manda rodar antes de fechar
+qualquer leva" — a lista que a casa manda rodar antes de fechar
 uma leva. Um portão que está lá e não está no CI é uma promessa que só vale na
 máquina de quem lembrar dela; um portão novo entra nesta guarda sozinho, no
-mesmo commit em que entra no `CLAUDE.md`.
+mesmo commit em que entra na tabela `_LISTA` de `scripts/portoes.sh`.
 
 O QUE FICA DE FORA, e por quê. Dos dez comandos do bloco, três não são scripts
 de `scripts/`: `pytest`, `ruff` e `mypy`. Eles ficam fora de propósito, e não por
@@ -100,29 +100,28 @@ import yaml
 
 RAIZ = Path(__file__).resolve().parents[2]
 CI = RAIZ / ".github" / "workflows" / "ci.yml"
-CLAUDE_MD = RAIZ / "CLAUDE.md"
 
-#: A LISTA DE PORTÕES, VERSIONADA — e é a cura que o `_AUSENTE` abaixo pedia
-#: desde 13/08/2026, com todas as letras: *"mova a lista de portões para um
-#: arquivo VERSIONADO e aponte esta guarda para ele"*. Ela chegou em 25/08 como
-#: `scripts/portoes.sh`, e por um motivo que esta guarda já conhecia: o
-#: `CLAUDE.md` é `.gitignore:90`, não chega ao CI **nem à árvore de agente
+#: A LISTA DE PORTÕES, VERSIONADA — e é a cura que esta guarda pedia desde
+#: 13/08/2026, com todas as letras: *"mova a lista de portões para um arquivo
+#: VERSIONADO e aponte esta guarda para ele"*. Ela chegou em 25/08 como
+#: `scripts/portoes.sh`, e por um motivo que a guarda já conhecia: o contrato
+#: da casa não é versionado, não chega ao CI **nem a árvore de trabalho
 #: nenhuma** — `git worktree add` não copia arquivo ignorado.
 #:
 #: A guarda deixa de ser cega no CI: a fonte agora viaja com o repositório.
 PORTOES_SH = RAIZ / "scripts" / "portoes.sh"
 
-#: O cabeçalho que abre o bloco de portões do `CLAUDE.md`. Se ele mudar, esta
-#: guarda tem de saber — daí o teste da âncora logo abaixo.
-CABECALHO = "## Antes de fechar qualquer leva"
+#: A ÂNCORA dentro do arquivo versionado. Se a tabela mudar de nome ou de
+#: forma, esta guarda tem de saber — daí o teste da âncora logo abaixo.
+CABECALHO = "_LISTA()"
 
 #: Quantos scripts o bloco listava quando esta guarda nasceu. É trava de
-#: encolhimento, não meta: existe para que uma reformatação do `CLAUDE.md` não
+#: encolhimento, não meta: existe para que uma reformatação do `portoes.sh` não
 #: esvazie a lista derivada em silêncio, deixando todos os testes deste arquivo
 #: passarem por vacuidade. Sobe quando alguém quiser subi-lo.
 PISO = 7
 
-#: Portão do `CLAUDE.md` que, por decisão registrada, NÃO roda no CI. Vazio em
+#: Portão da tabela que, por decisão registrada, NÃO roda no CI. Vazio em
 #: 12/08/2026 — os sete estão todos lá. A chave é o caminho do script; o valor
 #: é a razão, com data e com o motivo pelo qual o CI não é o lugar dele.
 #: Declarar é honesto e este portão não castiga honestidade — só não deixa a
@@ -130,35 +129,20 @@ PISO = 7
 SO_NA_MAQUINA_DELA: dict[str, str] = {}
 
 
-#: MEDIDO em 13/08/2026, antes do primeiro push desta guarda: o `CLAUDE.md`
-#: está em `.gitignore:90` e NÃO é rastreado pelo git. No runner do CI o
-#: `actions/checkout` não o traz, e sem ele os cinco testes deste arquivo
-#: reprovavam — uma guarda nova derrubaria o `lint-test` no primeiro push, por
-#: um arquivo que só existe na máquina dela.
-#:
-#: `skip` e não `fail`: reprovar ali é acusar o runner de um defeito que é
-#: nosso, e um portão que grita onde não pode ser atendido é desligado na
-#: semana seguinte. Mas o skip é BARULHENTO — a razão vai na mensagem, com a
-#: cura escrita — porque a alternativa (passar calado) é o defeito-mãe desta
-#: casa: a guarda que existe, roda, e não guarda nada.
-#:
-#: A CURA de verdade é decisão dela e está na mesa: versionar a LISTA de
-#: portões num arquivo do repositório (`docs/process/`, por exemplo) e fazer o
-#: `CLAUDE.md` apontar para ele. Aí a guarda funciona no CI sem que a lei da
-#: casa precise ser publicada.
-_AUSENTE = (
-    "CLAUDE.md não existe nesta árvore (está em `.gitignore:90` e não é "
-    "rastreado). No CI ele nunca chega, então esta guarda fica CEGA aqui. "
-    "Para ligá-la de verdade: mova a lista de portões do bloco "
-    f"'{CABECALHO}' para um arquivo VERSIONADO e aponte esta guarda para ele."
-)
+#: A CICATRIZ, e ela está CURADA — fica porque explica o desenho de hoje.
+#: MEDIDO em 13/08/2026: a fonte desta guarda era o contrato da casa, que NÃO é
+#: rastreado pelo git. No runner do CI o `actions/checkout` não o trazia, e sem
+#: ele os cinco testes deste arquivo reprovavam — uma guarda nova derrubaria o
+#: `lint-test` no primeiro push, por um arquivo que só existe na máquina dela.
+#: A cura chegou em 25/08 com o `scripts/portoes.sh`: a fonte passou a viajar
+#: com o repositório, e a guarda passou a medir no CI o que mede aqui.
 
 
 def bloco_de_portoes() -> str:
     """A tabela `_LISTA` do `scripts/portoes.sh` — a fonte versionada.
 
-    ATÉ 25/08/2026 esta função lia o bloco de shell do `CLAUDE.md`, e o
-    `_AUSENTE` abaixo declarava o preço disso: no CI o arquivo não chega, e a
+    ATÉ 25/08/2026 esta função lia o bloco de shell do contrato da casa, e a
+    cicatriz acima declara o preço disso: no CI o arquivo não chega, e a
     guarda ficava cega no único lugar onde ela precisa morder. A cura que
     aquele texto pedia chegou — a lista virou `scripts/portoes.sh`, versionada
     — e esta função aponta para ela.
@@ -182,7 +166,7 @@ def bloco_de_portoes() -> str:
 def portoes_da_casa() -> list[str]:
     """Os scripts de `scripts/` citados no bloco, na ordem em que aparecem.
 
-    Derivado, nunca digitado: portão novo no `CLAUDE.md` entra aqui sozinho.
+    Derivado, nunca digitado: portão novo na tabela entra aqui sozinho.
     """
     #: COMENTÁRIO DE SHELL NÃO É PORTÃO, e isto é defeito MEDIDO em 06/09/2026:
     #: um comentário DENTRO da tabela `_LISTA()` explicava o custo do `bash
@@ -221,7 +205,7 @@ def passos_do_ci() -> list[dict]:
 #: Tokens que podem PRECEDER o script sem tirá-lo da posição de comando: o
 #: interpretador que o executa. Derivado do que o `ci.yml` usa hoje
 #: (`bash scripts/...`, `python3 scripts/...`, `python scripts/...`) mais as
-#: formas que a casa escreve no `CLAUDE.md` (`.venv/bin/python`).
+#: formas que a casa escreve nos seus comandos (`.venv/bin/python`).
 INTERPRETADORES = frozenset(
     {
         "bash",
@@ -318,16 +302,17 @@ def passos_que_rodam(agulha: str) -> list[dict]:
     return [passo for passo in passos_do_ci() if linhas_que_rodam(passo, agulha)]
 
 
-def test_a_ancora_do_claude_md_continua_de_pe() -> None:
-    """Sem esta trava, uma reformatação do `CLAUDE.md` desligaria tudo calada."""
+def test_a_ancora_da_lista_de_portoes_continua_de_pe() -> None:
+    """Sem esta trava, uma reformatação do `portoes.sh` desligaria tudo calada."""
     achados = portoes_da_casa()
     assert len(achados) >= PISO, (
-        f"o bloco '{CABECALHO}' do CLAUDE.md rendeu {len(achados)} scripts, "
+        f"a tabela '{CABECALHO}' de scripts/portoes.sh rendeu "
+        f"{len(achados)} scripts, "
         f"piso {PISO}: {achados}\n"
         "Se o bloco MUDOU DE LUGAR ou de formato, conserte a âncora deste "
         "arquivo (CABECALHO e `bloco_de_portoes`) — sem ela a lista derivada "
         "nasce vazia e todos os testes daqui passam sem olhar nada.\n"
-        "Se um portão SAIU do CLAUDE.md de propósito, baixe o PISO no mesmo "
+        "Se um portão SAIU da tabela de propósito, baixe o PISO no mesmo "
         "commit, para que a queda fique escrita em vez de descoberta."
     )
 
@@ -338,7 +323,7 @@ def test_todo_portao_da_casa_e_invocado_no_ci() -> None:
         if portao in SO_NA_MAQUINA_DELA:
             continue
         assert passos_que_rodam(portao), (
-            f"nenhum passo do ci.yml INVOCA `{portao}`, e o CLAUDE.md manda "
+            f"nenhum passo do ci.yml INVOCA `{portao}`, e o portoes.sh manda "
             "rodá-lo antes de fechar qualquer leva.\n"
             "DEVOLVA o passo ao ci.yml, num `run:`. Comentário não conta: o "
             "portão tem de rodar, não de ser mencionado.\n"
@@ -411,8 +396,8 @@ def test_todo_portao_da_casa_aponta_para_arquivo_que_existe() -> None:
     """Portão que chama script inexistente é portão que reprova por engano."""
     for portao in portoes_da_casa():
         assert (RAIZ / portao).is_file(), (
-            f"o CLAUDE.md manda rodar `{portao}` e esse arquivo não existe "
-            "na árvore. APAGUE a linha do CLAUDE.md, ou devolva o script."
+            f"o portoes.sh manda rodar `{portao}` e esse arquivo não existe "
+            "na árvore. APAGUE a linha da tabela, ou devolva o script."
         )
 
 
@@ -422,7 +407,7 @@ def test_a_lista_de_lacunas_nao_envelhece_calada() -> None:
     for chave, razao in SO_NA_MAQUINA_DELA.items():
         assert chave in derivados, (
             f"{chave!r} está declarado como portão de fora do CI e nem consta "
-            "mais do CLAUDE.md — APAGUE a entrada."
+            "mais da tabela — APAGUE a entrada."
         )
         assert len(razao) > 120, (
             f"a razão de {chave!r} não diz por que o CI não é o lugar dele: {razao!r}"

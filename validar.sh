@@ -7,12 +7,11 @@
 #     registro lá que tal controle ficou x com o teste y clico em avançar, o
 #     novo teste inicia eu relato o estado dos 4 controles"
 #
-# E a razão de a página existir, que é a que decide tudo: a sessão de quem estava na bancada
-# acabava e levava embora não só o resultado como o MODO DE CHEGAR NELE. A frase
-# dela, palavra por palavra, está em
-# docs/process/agentes/2026-09-06/A-VALIDACAO-DOS-QUATRO-01-entrada/ESPEC-A-VALIDACAO.md
-# — aqui ela é referida e não repetida, porque nomeia o assistente, e nome de
-# assistente não entra em arquivo versionado fora de docs/process/.
+# E a razão de a página existir, que é a que decide tudo: a sessão de quem
+# estava na bancada acabava e levava embora não só o resultado como o MODO DE
+# CHEGAR NELE. A frase dela, palavra por palavra, está na entrada da
+# A-VALIDACAO-DOS-QUATRO-01, de 06/09/2026, que mora fora deste repositório
+# com o resto dos arquivos de processo.
 #
 # A JANELA É DELA E PARA ELA. Aqui **não** vale `--oculta`: esta é a única
 # janela desta casa que nasce de propósito na tela dela, porque é ela que vai

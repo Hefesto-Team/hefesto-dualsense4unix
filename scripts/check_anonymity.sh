@@ -53,18 +53,15 @@ EXCLUDE_PATHSPECS=(
     ':!CHANGELOG.md'
     ':!VALIDATOR_BRIEF.md'
     ':!.gitignore'
-    # A LISTA DELA — 01/09/2026. `mockup/TODO-DELA.md` abre com a encomenda
-    # dela, entre aspas: *"faz uma to do list pro claude e pra ele ir fazendo
-    # ponto a ponto comigo"*. É CITAÇÃO LITERAL, e a regra desta casa manda
-    # preservar a palavra dela — reescrevê-la para o portão passar seria trocar
-    # o que ela disse pelo que é conveniente.
+    # AS TRÊS ISENÇÕES QUE SAÍRAM — 15/09/2026. `mockup/TODO-DELA.md`,
+    # `docs/process/**` e `docs/history/**` eram isentos porque carregavam
+    # citação literal dela nomeando um fornecedor. Os três deixaram de ser
+    # versionados por ordem dela — este portão varre o `git grep`, e o que não
+    # é rastreado não é medido. Isenção sem alvo é paisagem: sai.
     #
-    # A isenção é do ARQUIVO, e não do padrão: qualquer outro documento que
-    # mencione um fornecedor continua reprovando. E ela é estreita de propósito
-    # — `mockup/` inteiro não entra.
-    ':!mockup/TODO-DELA.md'
-    ':!docs/process/**'
-    ':!docs/history/**'
+    # Sobraram TRÊS arquivos de `docs/history/` no repositório, e os três
+    # estão limpos: `gh-repo-config.md`, `releases-nao-publicados.md` e o
+    # `.diff` da regressão de glifos.
     ':!tests/fixtures/**'
     ':!tests/unit/test_check_anonymity.py'
     ':!.git/**'
@@ -217,10 +214,10 @@ if [[ -n "$HITS" ]]; then
     echo "$HITS"
     echo "------------------------------------------------"
     echo ""
-    echo "Lembrete: LICENSE, NOTICE, CHANGELOG.md, docs/process/**,"
-    echo "docs/history/** e tests/fixtures/** estão excluídos do check."
-    echo "Decisões de arquitetura com menção de IA devem ficar em"
-    echo "docs/process/ (fora do repo) ou docs/history/ (dentro, ignorado)."
+    echo "Lembrete: LICENSE, NOTICE, CHANGELOG.md e tests/fixtures/**"
+    echo "estão excluídos do check."
+    echo "Nenhum arquivo versionado nomeia fornecedor de ferramenta: o que"
+    echo "carregava essa prosa saiu do repositório em 15/09/2026."
     exit 1
 fi
 

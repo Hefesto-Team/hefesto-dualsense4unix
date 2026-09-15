@@ -2,9 +2,10 @@
 
 **06/09/2026.** Pedido dela: *"pode cuidar da documentação completa do projeto
 também? pra sempre falarmos a mesma língua?"* — e, no mesmo dia, o motivo:
-*"Falei do termo mesa que é horrível. Mas os claudes anteriores entraram na pira
+*"Falei do termo mesa que é horrível. Mas as levas anteriores entraram na pira
 de usar isso em tudo no layout. O termo sai e coloca-se termos simples pro user
-comum. feature fica."* <!-- noqa-acento: citação literal dela -->
+comum. feature fica."* <!-- noqa-acento: citação dela; a palavra que nomeava a
+ferramenta saiu em 15/09/2026, por ordem dela -->
 
 **Uma palavra, um significado, e dois registros:** o que a TELA diz (para ela
 e para qualquer usuária) e o que a CASA diz (código, sprints, commits). Quando

@@ -1,7 +1,6 @@
 [Unit]
 # Onda R: cura do bond "meio-salvo" (Paired: yes / Bonded: no). A causa
-# medida no estudo (docs/process/estudos/2026-07-19-estudo-bluez-backport-
-# onda-r.md §4) é "No agent available for request type 2" — nenhum agente de
+# medida na receita (docs/usage/receita-backport-bluez.md §4) é "No agent available for request type 2" — nenhum agente de
 # pareamento D-Bus registrado no momento em que o BlueZ pede confirmação, e a
 # autenticação nunca completa. Este agente persistente NoInputNoOutput cobre
 # QUALQUER pareamento disparado fora da GUI/daemon do hefesto (bluetoothctl
@@ -9,8 +8,8 @@
 # instalador do Blueman, etc.) — sem depender de uma janela aberta na hora.
 Description=Hefesto — agente de pareamento Bluetooth persistente (NoInputNoOutput)
 # Sem Documentation=: um URI file: precisa ser absoluto (RFC-conforme) e o
-# caminho do estudo (docs/process/estudos/2026-07-19-estudo-bluez-backport-
-# onda-r.md) só existe dentro do checkout do repo — variável por usuário,
+# caminho da receita (docs/usage/receita-backport-bluez.md) só existe dentro
+# do checkout do repo — variável por usuário,
 # nunca instalado em /etc junto com esta unit. `systemd-analyze verify`
 # acusava "Invalid URL, ignoring" com o caminho relativo antigo.
 After=bluetooth.service

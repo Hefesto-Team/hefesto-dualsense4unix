@@ -60,7 +60,7 @@ from hefesto_dualsense4unix.utils.maquina import (
 from tests.unit.test_mapa_a_bancada_de_mentira import bancada_de_agora, mapa_dela
 
 #: Os pares que o mockup dela declara à mão, entrada por entrada
-#: (``2026-08-24-ABA-CONEXOES/mockup/mapa-das-portas.html``:341-350). É a
+#: (``mockup/congelados/2026-08-24-mapa-das-portas.html``:341-350). É a
 #: resposta CERTA, escrita por ela antes de existir código, e é contra ela que a
 #: derivação se mede.
 PARES_DO_MOCKUP: dict[str, str] = {

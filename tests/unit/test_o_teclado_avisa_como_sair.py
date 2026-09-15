@@ -62,7 +62,7 @@ antes de resolver o binário)
 =========================================  ==================================
 
 As quatro foram executadas em 06/09/2026; as saídas estão na entrega
-``docs/process/agentes/2026-09-06/O-TECLADO-QUE-NAO-DIZ-COMO-SAIR-01-opus.md``.
+a entrega de 06/09/2026 da `O-TECLADO-QUE-NAO-DIZ-COMO-SAIR-01`.
 """
 from __future__ import annotations
 

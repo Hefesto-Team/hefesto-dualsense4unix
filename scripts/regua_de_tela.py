@@ -149,6 +149,9 @@ O_QUE_ELE_NAO_FAZ = (
 #: sete defeitos de tela já pagos, cada um virando um caso. E o portão que
 #: pergunta pela régua no `pre-commit` é o `scripts/check_regua_de_tela.py`,
 #: que nomeia este arquivo como a biblioteca com que se escreve a próxima.
+#: FORA DO REPOSITÓRIO desde 15/09/2026 (ordem dela): quem tem o arquivo o
+#: segue por este nome; quem não tem lê a própria docstring deste módulo,
+#: que é autossuficiente. Por isso todo uso daqui é CONDICIONAL.
 O_MANUAL = "docs/process/2026-08-29-A-REGUA-DE-TELA-como-se-prova-a-interface.md"
 
 
@@ -880,7 +883,8 @@ def main(argv: list[str] | None = None) -> int:
         for linha in O_QUE_ELE_NAO_FAZ:
             print(f"  · {linha}")
         print()
-        print(f"Como se escreve a próxima: {O_MANUAL}")
+        if (pathlib.Path(__file__).resolve().parents[1] / O_MANUAL).is_file():
+            print(f"Como se escreve a próxima: {O_MANUAL}")
         return 0
     if args.listar or not args.aba:
         paginas = abas_conhecidas()
