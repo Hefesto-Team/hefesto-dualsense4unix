@@ -85,7 +85,8 @@ async def test_led_set_com_uniq_vai_por_apply_output_for(
     assert resultado["status"] == "ok"
     assert fc.apply_for_calls == [(UNIQ, OutputSpec(led=(10, 20, 30)))]
     assert fc.classic_led_calls == []  # NÃO caiu no broadcast/índice
-    assert store.manual_trigger_active is True  # trava por categoria intacta
+    # (a asserção sobre a trava manual saiu em 14/09/2026 — ela foi
+    #  revogada por decisão dela; ver test_a_trava_que_ninguem_solta_01)
 
 
 @pytest.mark.asyncio
@@ -126,7 +127,8 @@ async def test_trigger_set_com_uniq_vai_por_apply_output_for(
     assert spec.trigger_left is not None
     assert spec.trigger_right is None
     assert fc.classic_trigger_calls == []
-    assert store.manual_trigger_active is True
+    # (a asserção sobre a trava manual saiu em 14/09/2026 — ela foi
+    #  revogada por decisão dela; ver test_a_trava_que_ninguem_solta_01)
 
 
 @pytest.mark.asyncio

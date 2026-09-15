@@ -67,6 +67,13 @@ from hefesto_dualsense4unix.profiles.schema import (
 )
 from tests.unit.test_por_unidade_01_todas_as_abas import (
     BRANCO,
+
+# 1 TESTE(S) DESTE ARQUIVO SAÍRAM — 14/09/2026,
+# `D-1409-A-TRAVA-MANUAL-SAI-O-PERFIL-APLICA-TUDO`: `test_a_trava_manual_de_audio_vence_o_override_da_peca`.
+#
+# Os três mediam a trava manual por categoria, que ela revogou para todo jogo.
+# A razão, o journal que mediu o sintoma e a régua que impede a volta estão em
+# `tests/unit/test_a_trava_que_ninguem_solta_01.py`.
     PRETO,
     _StoreSemTrava,
 )
@@ -384,25 +391,6 @@ def test_o_mudo_da_peca_nao_atravessa_o_autoswitch() -> None:
     assert chamadas == [(None, True, BRANCO, "manual")]
 
 
-def test_a_trava_manual_de_audio_vence_o_override_da_peca() -> None:
-    """Se ela acabou de mexer no microfone na mão, quem manda é ela.
-
-    E o descarte é REGISTRADO com o endereço da peça: sem o relatório, a seção
-    que a trava descartou sumiria sem rastro e a janela mostraria o perfil ativo
-    como se tudo tivesse sido aplicado (é o buraco que o R-03 fechou).
-    """
-    applier, chamadas = _espiao()
-    gerente = _gerente(applier, store=_StoreComTrava())
-    perfil = Profile(
-        name="ela_mexeu_agora",
-        match=MatchAny(),
-        controllers={BRANCO: ControllerOverrides(mic=ControllerMicOverride(muted=True))},
-    )
-
-    relatorio = gerente.apply_controller_mics(perfil, origin="manual")
-
-    assert chamadas == []
-    assert relatorio == {f"mic:{BRANCO}": "ignorado_trava_manual"}
 
 
 def test_o_applier_que_cai_nao_aborta_a_ativacao_e_diz_qual_peca() -> None:

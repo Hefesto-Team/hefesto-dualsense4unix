@@ -1,65 +1,95 @@
-"""A-TRAVA-QUE-NINGUÉM-SOLTA-01 — `led` e `audio` armavam e nada as soltava.
+"""A TRAVA MANUAL SAIU — o perfil aplica tudo, para qualquer jogo.
 
-MEDIDO em 29/08/2026, contra o disco, com
-`grep -rn 'mark_manual_trigger_active\\|clear_manual_trigger_active' src/`:
+DECISÃO DELA, 14/09/2026 (`D-1409-A-TRAVA-MANUAL-SAI-O-PERFIL-APLICA-TUDO`),
+com estas palavras, em três mensagens seguidas:
 
-    | categoria | arma em                                | solta em                  |
-    |-----------|----------------------------------------|---------------------------|
-    | `trigger` | `ipc_handlers.py:1240` (`trigger.set`) | `:1298` (`trigger.reset`) |
-    | `rumble`  | `:4222` e `:4329`                      | `:4302` e `:4370`         |
-    | `led`     | `:1369` e `:1425`                      | **nenhum**                |
-    | `audio`   | `:4674` (`_marcar_audio_manual`)       | **nenhum**                |
+    *"eu tinha pedido pra remover todas as travas manuais pra esse jogo, madjack  # noqa-acento: citação literal dela
+     e pro pragmata e pro wokong"*
+    *"e pra qualquer outro jogo"*
+    *"isso nao faz sentido mais."*  # noqa-acento: citação literal dela
 
-Enquanto QUALQUER categoria está armada o `AutoSwitcher` não reaplica perfil
-por mudança de janela (`profiles/autoswitch.py:904`). Duas das quatro entravam
-e não saíam: a única porta era ela trocar de perfil na mão — um gesto que a
-pessoa não tem como saber que precisa fazer.
+O QUE ESTE ARQUIVO MEDIA ANTES, e por que ele mudou de pergunta em vez de sumir:
+ele era a régua da A-TRAVA-QUE-NINGUÉM-SOLTA-01 (29/08/2026), que mediu o teto de
+ociosidade de seis horas — a única porta de saída de `led` e de `audio`, as duas
+categorias que armavam e que gesto nenhum soltava. Aquela medição continua certa
+sobre o que mediu; o que caducou é o mecanismo inteiro que ela vigiava. Um
+arquivo apagado deixaria a próxima pessoa reintroduzindo a trava sem encontrar
+uma linha sobre o preço dela — então ele fica, medindo a AUSÊNCIA.
 
-**O tamanho do defeito, e ele não é "trava o produto todo":** 4 episódios de
-`autoswitch_suppressed_by_manual_override` em 7 dias no journal dela, e a
-exceção do perfil de jogo (a única saída automática que existia) nunca precisou
-agir — zero vezes.
+O SINTOMA QUE FECHOU A DECISÃO, medido no journal dela em 14/09 às 22:58:34, com
+o Sackboy abrindo e o perfil do jogo entrando:
 
-A CURA é o teto de OCIOSIDADE (`MANUAL_OVERRIDE_STALE_AFTER_SEC`), irmão do
-`MANUAL_PROFILE_LOCK_SEC` que esta casa já usava para o lock do `profile.switch`
-("expira sozinho — não exige reset"). Ociosidade, e não idade: cada
-`mark_manual_trigger_active` renova o carimbo, então enquanto ela mexe o teto
-anda junto.
+    launch_perfil_ativado  appid=1599660  profile='Sackboy™: A Big Adventure'
+      secoes={'trigger': 'ignorado_trava_manual', 'led': 'ignorado_trava_manual',
+              'mode': 'aplicado', 'rumble_policy': 'aplicado', …}
 
-POR QUE ESTA RÉGUA ANDA COM O RELÓGIO. Uma régua que lê a trava UMA VEZ mede um
-instante, não um comportamento — e o comportamento aqui É o tempo. Cada teste
-abaixo percorre uma TRAJETÓRIA de instantes e afirma a curva inteira: quando a
-trava tem de estar firme, quando tem de soltar, e que o gesto continua vencendo
-o relógio.
+Ela tinha ajustado luz e gatilho pela interface às 22:56 — e o perfil foi SALVO
+com os dois, três vezes, `origem=interface-nova` no diário da janela. Dois
+minutos depois o jogo abriu e o produto pulou exatamente as duas seções que ela
+acabara de gravar. Para ela isso se lê como *"ao iniciar o jogo ele não carrega o
+perfil do jogo"* e *"os gatilhos tambem nao tao aplicando"*, e nenhuma das duas  # noqa-acento: citação literal dela
+frases fala em trava — porque a trava nunca chegou à tela.
 
-`led` GANHOU O PAR EM 06/09/2026 (A-TRAVA-DO-LED-NÃO-SOLTA-01): o botão
-"Automático" da aba Iluminação chama `led.auto_release`. A tabela acima fica
-como está — é o censo de 29/08, e é o que motivou o teto. O que muda é o
-alcance desta suíte: **para `led` o teto virou rede, e para `audio` continua
-sendo a única porta.** As duas camadas se somam, e o teto continua valendo para
-todo caminho que arma `led` sem passar por aquele botão — a janela GTK, o
-`led.player_set`, a CLI.
+POR QUE A TRAVA DEIXOU DE FAZER SENTIDO, e a razão é a que sustenta a decisão:
+ela protegia o ajuste da mão dela CONTRA o perfil, num mundo em que o ajuste não
+ia para o perfil. A interface nova grava a cada gesto (decisão dela, *"clicar já
+aplica e já grava"*), então o que ela ajusta já está no arquivo — e o perfil
+aplicando é exatamente o que respeita o ajuste dela. A trava passou a proteger o
+ajuste contra quem o guarda.
 
-A MORDIDA (executada em 29/08, números no relatório da sprint): apague as
-chamadas de `_purgar_overrides_vencidos()` nas três leituras de
-`daemon/state_store.py` e esta suíte fica VERMELHA — a trava volta a ser eterna.
+O QUE ESTA RÉGUA MORDE, e são as duas direções:
+
+1. **o comportamento** — o `ProfileManager.apply` escreve gatilho e luz mesmo com
+   um store que afirme qualquer coisa sobre trava, e o relatório da ativação não
+   traz a palavra `ignorado_trava_manual` para seção nenhuma;
+2. **a volta do mecanismo** — nenhuma linha de `src/` chama `mark_*`/`clear_*`
+   nem lê `manual_override_categories`, e o `StateStore` não tem os métodos.
+
+A SEGUNDA É A QUE IMPEDE A REINTRODUÇÃO EM PEDAÇOS, que é como ela voltaria: um
+`mark_` num handler novo não muda nenhum teste de comportamento no dia em que é
+escrito — ele só cobra o preço meses depois, num jogo que ela abre.
+
+O QUE SAIU JUNTO, e está escrito aqui para quem procurar os arquivos:
+
+* `tests/unit/test_toda_categoria_de_trava_tem_par.py` (06/09/2026, 12 testes) —
+  ele varria `src/` por AST e cobrava que toda categoria de
+  `MANUAL_OVERRIDE_CATEGORIES` tivesse quem a armasse E quem a soltasse. Nasceu
+  da A-TRAVA-DO-LED-NÃO-SOLTA-01, e media o mecanismo inteiro: sem ele, não sobra
+  o que medir. **O censo que o motivou fica no topo deste arquivo.**
+* `tests/unit/test_onda_u_trava_por_categoria.py` (20 testes) — a quebra do
+  booleano único em quatro categorias, para que o fim do "Testar motores" não
+  apagasse um gatilho deliberado de outra aba (ONDA-U/F1).
+* `tests/unit/test_onda_u_causa_a_trava_manual.py` (11 testes) — os caminhos que
+  armavam sem passar pelo `trigger.set`: o "Aplicar" da janela e os handlers de
+  luz e vibração (ONDA-U, Causa A).
+* `tests/unit/test_trava_que_solta_tarde_01.py` (7 testes) — a ORDEM entre soltar
+  a trava e aplicar o perfil, medida ao vivo em 05/08/2026 na máquina dela: os
+  dois gestos explícitos estavam invertidos e o perfil entrava antes de a trava
+  sair.
+* `tests/unit/test_perfil_respeita_trava_manual.py` (6 testes) — **o par exato
+  desta decisão.** Ele guardava o pedido dela de 23/07/2026, *"o sackboy deveria
+  ser trava manual também"*, que é o pedido que ela revogou hoje, pelo mesmo
+  jogo. Os dois lados do mesmo assunto, com sete semanas entre eles.
+* `TestTravaManualAudio`, em `test_som_02_devolucao_da_posse.py` (6 testes) — a
+  quarta categoria, a do `speaker.set`.
+* `test_relatorio_registra_as_categorias_travadas_na_mao`, em
+  `test_perfil_reescrito_na_partida_01.py` — virou o teste da ausência, no mesmo
+  arquivo.
+
+O QUE **NÃO** SAIU, e a régua o afirma para ninguém removê-lo junto:
+`mark_manual_profile_lock` / `manual_profile_lock_active`
+(`state_store.MANUAL_PROFILE_LOCK_SEC`, 30 s). É outro mecanismo — guarda a
+escolha manual de PERFIL contra uma troca de janela no segundo seguinte —, expira
+sozinho e nunca silenciou seção nenhuma.
 """
 from __future__ import annotations
 
-from pathlib import Path
-from types import SimpleNamespace
-from unittest.mock import MagicMock
+import pathlib
+import re
 
 import pytest
 
-from hefesto_dualsense4unix.daemon.state_store import (
-    MANUAL_OVERRIDE_CATEGORIES,
-    MANUAL_OVERRIDE_STALE_AFTER_SEC,
-    StateStore,
-)
-from hefesto_dualsense4unix.profiles import loader as loader_module
-from hefesto_dualsense4unix.profiles.autoswitch import AutoSwitcher
-from hefesto_dualsense4unix.profiles.loader import save_profile
+from hefesto_dualsense4unix.daemon.state_store import StateStore
 from hefesto_dualsense4unix.profiles.manager import ProfileManager
 from hefesto_dualsense4unix.profiles.schema import (
     LedsConfig,
@@ -70,386 +100,185 @@ from hefesto_dualsense4unix.profiles.schema import (
 )
 from hefesto_dualsense4unix.testing import FakeController
 
-TETO = MANUAL_OVERRIDE_STALE_AFTER_SEC
-MINUTO = 60.0
-HORA = 3600.0
+RAIZ = pathlib.Path(__file__).resolve().parents[2]
+SRC = RAIZ / "src" / "hefesto_dualsense4unix"
+
+#: Os nomes do mecanismo que saiu. Procurados como CHAMADA (`nome(`) e como
+#: acesso de atributo (`.nome`), nunca como substring solta: a prosa desta casa
+#: cita o mecanismo em dezenas de comentários datados, e uma régua que contasse
+#: citação reprovaria o registro histórico que ela mesma pede que se escreva.
+MORTOS = ("mark_manual_trigger_active", "clear_manual_trigger_active",
+          "manual_override_categories", "manual_trigger_active")
+
+#: O irmão que FICA. Ele entra na régua para que "limpar o que sobrou da trava"
+#: não o leve junto num varrer de arquivo.
+VIVO = "manual_profile_lock_active"
 
 
-class _Relogio:
-    """Relógio monotônico que ANDA quando mandado — o instrumento desta régua.
+class _ControleQueAnota(FakeController):
+    """O `FakeController` da casa, com o `OutputSpec` guardado.
 
-    Substitui só o `time` visto de dentro de `daemon/state_store`, por
-    `SimpleNamespace`: mexer no módulo `time` global mudaria o relógio do
-    processo inteiro, inclusive o do `AutoSwitcher`, e a régua passaria a medir
-    duas coisas ao mesmo tempo.
+    O dublê da suíte não guarda o spec — ele tem `last_led` e `last_player_leds`,
+    que são o resultado dos setters individuais, e a trava agia UM andar acima
+    deles: ela mandava `None` no campo do `OutputSpec`, e um `None` nunca chega a
+    setter nenhum. Medir pelo `last_led` diria "a luz não mudou" tanto para a
+    trava viva quanto para um perfil sem cor — dois fatos com a mesma cara, que é
+    o que esta casa persegue. O spec é o único lugar onde os dois se separam.
     """
 
-    def __init__(self, inicio: float = 1_000.0) -> None:
-        self.agora = inicio
+    def __init__(self, *a: object, **k: object) -> None:
+        super().__init__(*a, **k)  # type: ignore[arg-type]
+        self.specs: list[object] = []
 
-    def monotonic(self) -> float:
-        return self.agora
-
-    def andar(self, segundos: float) -> float:
-        self.agora += segundos
-        return self.agora
+    def apply_output_defaults(self, spec: object) -> None:
+        self.specs.append(spec)
 
 
-@pytest.fixture()
-def relogio(monkeypatch: pytest.MonkeyPatch) -> _Relogio:
-    r = _Relogio()
-    monkeypatch.setattr(
-        "hefesto_dualsense4unix.daemon.state_store.time",
-        SimpleNamespace(monotonic=r.monotonic),
-    )
-    return r
-
-
-@pytest.fixture
-def isolated_profiles_dir(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
-    target = tmp_path / "profiles"
-    target.mkdir()
-
-    def fake_profiles_dir(ensure: bool = False) -> Path:
-        if ensure:
-            target.mkdir(parents=True, exist_ok=True)
-        return target
-
-    monkeypatch.setattr(loader_module, "profiles_dir", fake_profiles_dir)
-    return target
-
-
-def _perfil(name: str) -> Profile:
+def _perfil_com_gatilho_e_luz() -> Profile:
+    """Um perfil de jogo, com as duas seções que a trava silenciava."""
     return Profile(
-        name=name,
-        match=MatchCriteria(window_class=[f"{name}_class"]),
-        priority=10,
-        leds=LedsConfig(lightbar=(10, 20, 30)),
+        name="jogo-de-prova",
+        match=MatchCriteria(window_class=["steam_app_1599660"]),
+        priority=80,
         triggers=TriggersConfig(
-            left=TriggerConfig(mode="Off"), right=TriggerConfig(mode="Off")
+            left=TriggerConfig(mode="Rigid", params=[5, 200]),
+            right=TriggerConfig(mode="Rigid", params=[5, 200]),
         ),
+        leds=LedsConfig(lightbar=(255, 0, 128)),
     )
 
 
-# --- a trajetória: a trava sem gesto que a solte NÃO é mais eterna ---------
+def _codigo_de_producao() -> list[tuple[pathlib.Path, str]]:
+    return [(p, p.read_text(encoding="utf-8")) for p in sorted(SRC.rglob("*.py"))]
 
 
-@pytest.mark.parametrize("categoria", ["audio", "led"])
-def test_a_trava_sem_par_solta_sozinha_e_a_curva_inteira_confere(
-    relogio: _Relogio, categoria: str
-) -> None:
-    """O caso dela: mexeu no volume (ou na cor), e o relógio devolve a troca.
+def _linhas_de_codigo(texto: str) -> list[tuple[int, str]]:
+    """As linhas que são CÓDIGO: fora de comentário e fora de docstring.
 
-    `audio` é a categoria SEM chamador de `clear_manual_trigger_active` em
-    `src/` — para ela, este teto é a única porta de saída. `led` tem gesto
-    desde 06/09/2026, e continua aqui porque o gesto é UM botão: todo caminho
-    que arma a luz sem passar por ele (a janela GTK, o `led.player_set`, a CLI)
-    ainda depende do relógio.
-
-    A curva afirmada, e não um instante dela: firme no começo, firme na véspera
-    do teto, solta depois. O ponto em `TETO - MINUTO` é o que separa este teste
-    de um que só espera tempo bastante.
+    A varredura é grosseira de propósito — ela não precisa de um parser, precisa
+    não confundir prosa com chamada. Toda linha cujo primeiro caractere não-branco
+    é `#` sai; o resto é olhado por `nome(` e `.nome`, que é a forma que uma
+    chamada tem e uma citação em prosa não.
     """
-    store = StateStore()
-    store.mark_manual_trigger_active(categoria)
+    dentro = False
+    fora: list[tuple[int, str]] = []
+    for n, linha in enumerate(texto.splitlines(), 1):
+        aspas = linha.count('"""') + linha.count("'''")
+        if dentro:
+            if aspas:
+                dentro = False
+            continue
+        if aspas % 2:
+            dentro = True
+            continue
+        if linha.lstrip().startswith("#"):
+            continue
+        fora.append((n, linha))
+    return fora
 
-    trajetoria: list[tuple[float, bool]] = []
-    # Enquanto a opinião dela é recente, a trava tem de estar de pé — inclusive
-    # nos primeiros segundos, que é a janela em que o ABAS-05 acontece.
-    for salto in (0.0, 1.0, 30.0, MINUTO, 10 * MINUTO, HORA, TETO - MINUTO):
-        relogio.agora = 1_000.0 + salto
-        trajetoria.append((salto, store.manual_trigger_active))
-    # Passado o teto de ociosidade, ela está calada há horas: solta.
-    for salto in (TETO + 1.0, TETO + HORA):
-        relogio.agora = 1_000.0 + salto
-        trajetoria.append((salto, store.manual_trigger_active))
 
-    armada_ate_o_teto = [ativa for salto, ativa in trajetoria if salto < TETO]
-    solta_depois = [ativa for salto, ativa in trajetoria if salto > TETO]
-    assert all(armada_ate_o_teto), (
-        f"a trava de {categoria!r} soltou CEDO — trajetória: {trajetoria}"
+# ---------------------------------------------------------------------------
+# 1. O COMPORTAMENTO — o perfil escreve gatilho e luz, e não pula seção
+# ---------------------------------------------------------------------------
+
+@pytest.mark.parametrize("origem", ["launch", "autoswitch", "manual", "boot"])
+def test_o_perfil_aplica_gatilho_e_luz_em_toda_origem(origem: str) -> None:
+    """A queixa dela era com `origin="launch"`; a decisão é para todas.
+
+    As quatro origens entram porque a trava não distinguia nenhuma delas — ela
+    silenciava a seção, viesse o perfil de onde viesse. Uma régua só com `launch`
+    deixaria a reintrodução passar pelo caminho do autoswitch, que é por onde o
+    perfil entra quando ela troca de janela.
+    """
+    fc = _ControleQueAnota()
+    manager = ProfileManager(controller=fc, store=StateStore())
+    relatorio: dict[str, str] = {}
+
+    manager.apply(_perfil_com_gatilho_e_luz(), origin=origem, relatorio=relatorio)
+
+    assert fc.specs, (
+        "a ativação não chamou `apply_output_defaults` — o perfil não escreveu nada"
     )
-    assert not any(solta_depois), (
-        f"a trava de {categoria!r} continua eterna — trajetória: {trajetoria}"
+    spec = fc.specs[-1]
+    assert spec.trigger_left is not None and spec.trigger_right is not None, (
+        f"a seção `triggers` do perfil não chegou ao controle na origem {origem!r}: "
+        f"é o `ignorado_trava_manual` de volta, e é a queixa dela de 14/09 — "
+        f"*«os gatilhos tambem nao tao aplicando»*"  # noqa-acento: citação literal dela
     )
-    assert store.manual_override_categories == frozenset()
-
-
-def test_a_trava_e_de_ociosidade_e_nao_de_idade(relogio: _Relogio) -> None:
-    """Enquanto ela MEXE, o teto anda junto — e é isto que o torna seguro.
-
-    Um teto por IDADE venceria no meio de uma sessão em que ela ainda está
-    ajustando a cor, e o autoswitch reescreveria o que ela acabou de aplicar:
-    o defeito que o ABAS-05 curou. Por OCIOSIDADE isso não pode acontecer —
-    cada reafirmação empurra o vencimento para a frente.
-    """
-    store = StateStore()
-    store.mark_manual_trigger_active("led")
-
-    # Ela reafirma logo ANTES de cada vencimento, doze vezes. O passo sai do
-    # próprio teto (nunca de um número digitado): se ela mudar a constante, o
-    # teste continua medindo a mesma coisa.
-    passo = TETO * 0.8
-    for _ in range(12):
-        relogio.andar(passo)
-        assert store.manual_trigger_active is True
-        store.mark_manual_trigger_active("led")  # o `led.set` seguinte
-
-    decorrido = relogio.agora - 1_000.0
-    assert decorrido > 5 * TETO, f"o relógio nem chegou perto: {decorrido}s"
-    assert store.manual_trigger_active is True
-
-    # Só quando ela se cala é que o teto vence — e conta do ÚLTIMO gesto.
-    relogio.andar(TETO - MINUTO)
-    assert store.manual_trigger_active is True, "contou da PRIMEIRA, não da última"
-    relogio.andar(2 * MINUTO)
-    assert store.manual_trigger_active is False
-
-
-def test_cada_categoria_vence_no_seu_tempo(relogio: _Relogio) -> None:
-    """O teto é POR CATEGORIA — a granularidade do ABAS-05 sobrevive a ele.
-
-    Soltar as quatro de uma vez ao vencer a primeira apagaria um gatilho ou uma
-    vibração deliberada de outra aba, que é a razão escrita da assinatura por
-    categoria em `clear_manual_trigger_active`.
-    """
-    store = StateStore()
-    store.mark_manual_trigger_active("led")  # t0
-    relogio.andar(5 * HORA)
-    store.mark_manual_trigger_active("trigger")  # t0 + 5 h
-
-    relogio.andar(TETO - 4 * HORA)  # led calado há 6 h+; trigger, há 1 h+
-    assert store.manual_override_categories == frozenset({"trigger"}), (
-        "o vencimento de `led` levou `trigger` junto — é a regressão do ABAS-05"
+    assert spec.led is not None, (
+        f"a seção `leds` do perfil não chegou ao controle na origem {origem!r}"
     )
-    assert store.manual_trigger_active is True
-
-    relogio.andar(TETO)
-    assert store.manual_override_categories == frozenset()
-
-
-def test_o_gesto_continua_vencendo_o_relogio(relogio: _Relogio) -> None:
-    """O teto é REDE, não substituto: quem tem gesto solta na hora, como sempre.
-
-    `trigger.reset` e `rumble.passthrough` continuam soltando só a sua categoria
-    no instante do clique, sem esperar teto nenhum.
-    """
-    store = StateStore()
-    for categoria in sorted(MANUAL_OVERRIDE_CATEGORIES):
-        store.mark_manual_trigger_active(categoria)
-
-    relogio.andar(MINUTO)
-    store.clear_manual_trigger_active("trigger")  # o botão "Desligar"
-    assert store.manual_override_categories == frozenset({"led", "rumble", "audio"})
-
-    store.clear_manual_trigger_active("rumble")  # o fim do "Testar motores"
-    assert store.manual_override_categories == frozenset({"led", "audio"})
-
-    # E a saída global (o `profile.switch`) continua limpando tudo na hora.
-    store.clear_manual_trigger_active()
-    assert store.manual_trigger_active is False
-
-
-def test_o_snapshot_nao_diverge_da_trava(relogio: _Relogio) -> None:
-    """As TRÊS leituras da trava contam a mesma história.
-
-    `manual_trigger_active` decide se o autoswitch roda,
-    `manual_override_categories` decide o que o `ProfileManager` pula, e o
-    `snapshot` é o que a janela lê. Sem a purga nas três, o `state_full` diria
-    "travado" depois de o autoswitch já ter voltado a agir — e o diagnóstico
-    seguinte começaria de uma mentira.
-    """
-    store = StateStore()
-    store.mark_manual_trigger_active("audio")
-    assert store.snapshot().manual_trigger_active is True
-
-    relogio.andar(TETO + MINUTO)
-    assert store.snapshot().manual_trigger_active is False
-    assert store.manual_trigger_active is False
-    assert store.manual_override_categories == frozenset()
-
-
-# --- o encontro com o resto do sistema ------------------------------------
-
-
-def test_o_autoswitch_volta_a_agir_depois_do_teto(
-    isolated_profiles_dir: Path,
-    relogio: _Relogio,
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """A prova que importa: o perfil que estava calado ENTRA.
-
-    Medir só o `StateStore` seria "medir o artefato, nunca o encontro dele com
-    o resto do sistema" — o padrão que a ENTREGA-QUE-NÃO-LIGOU-01 nomeia e que
-    já deixou esta trava passar. Aqui quem responde é o `AutoSwitcher._activate`
-    de verdade, com só `audio` armada: a categoria que o volume arma e que
-    nenhum gesto do produto solta.
-    """
-    save_profile(_perfil("shooter"))
-    fc = FakeController()
-    fc.connect()
-    store = StateStore()
-    manager = ProfileManager(controller=fc, store=store)
-
-    ativacoes: list[str] = []
-    monkeypatch.setattr(
-        manager,
-        "activate",
-        # `**_` porque o `AutoSwitcher` passa `origin=` — um duplo de assinatura
-        # estreita transformaria "a trava soltou" em `autoswitch_activate_failed`
-        # e a régua leria a própria falha como se fosse o defeito.
-        lambda name, **_: ativacoes.append(name) or MagicMock(),
+    assert "ignorado_trava_manual" not in relatorio.values(), (
+        f"o relatório da ativação voltou a dizer `ignorado_trava_manual`: "
+        f"{relatorio!r}. Nenhuma seção é silenciada por trava desde 14/09/2026"
     )
-    switcher = AutoSwitcher(manager=manager, window_reader=lambda: {}, store=store)
-
-    store.mark_manual_trigger_active("audio")  # ela encostou no volume
-
-    # Ela joga. A cada troca de janela o autoswitch é chamado e cala a boca —
-    # como tem de calar, porque o ajuste dela é recente.
-    for salto in (0.0, MINUTO, HORA, TETO - MINUTO):
-        relogio.agora = 1_000.0 + salto
-        switcher._activate("shooter", {"wm_class": "Doom"})
-    assert ativacoes == [], f"o autoswitch pisou no ajuste dela: {ativacoes}"
-
-    # Horas depois, sem ela ter dito mais nada sobre áudio, a próxima troca de
-    # janela volta a valer. Nenhum byte foi mandado pelo teto: quem escreve
-    # continua sendo a ativação de perfil.
-    relogio.agora = 1_000.0 + TETO + MINUTO
-    switcher._activate("shooter", {"wm_class": "Doom"})
-    assert ativacoes == ["shooter"]
-
-
-def test_o_manager_para_de_pular_a_secao_depois_do_teto(relogio: _Relogio) -> None:
-    """E o `ProfileManager` volta a aplicar a seção que a trava silenciava.
-
-    É o outro lado da mesma moeda: enquanto `led` está armada, a ativação
-    reporta `ignorado_trava_manual` para a seção de luz (o vocabulário que a
-    PERFIL-REESCRITO-NA-PARTIDA-01 publicou). Vencido o teto, ela some da lista
-    de travadas.
-    """
-    store = StateStore()
-    store.mark_manual_trigger_active("led")
-
-    def travadas() -> frozenset[str]:
-        return frozenset(getattr(store, "manual_override_categories", ()) or ())
-
-    assert "led" in travadas()
-    relogio.andar(TETO + MINUTO)
-    assert travadas() == frozenset()
-
-
-# --- a meta-régua: a régua LÊ, nunca digita -------------------------------
-
-
-def test_a_regua_le_a_constante_em_vez_de_digitar_o_numero() -> None:
-    """O número do teto é DELA, e mudar a linha não pode quebrar esta suíte.
-
-    Onze réguas de 26/08 reprovaram a melhora em vez do defeito pela mesma
-    forma: digitavam o que deviam LER. Esta afirma a FAIXA em que o valor é
-    honesto — longo demais para causar o ABAS-05 (que acontece em segundos) e
-    curto o bastante para não ser "eterno" —, não o valor.
-    """
-    assert TETO > 10 * MINUTO, (
-        "teto curto demais: dispararia dentro da janela do ABAS-05, e o "
-        "autoswitch reescreveria a cor que a aba acabou de aplicar"
-    )
-    assert TETO <= 24 * HORA, "teto de mais de um dia é o defeito, não a cura"
-    assert frozenset({"trigger", "led", "rumble", "audio"}) == MANUAL_OVERRIDE_CATEGORIES
-
-
-def test_o_teto_alcanca_todas_as_categorias(relogio: _Relogio) -> None:
-    """Categoria nova nasce coberta — inclusive a que ninguém lembrar de soltar.
-
-    Percorre `MANUAL_OVERRIDE_CATEGORIES`, a constante, e não uma lista à mão:
-    é o que faz esta régua continuar valendo quando a quinta categoria chegar.
-    """
-    for categoria in sorted(MANUAL_OVERRIDE_CATEGORIES):
-        store = StateStore()
-        relogio.agora = 1_000.0
-        store.mark_manual_trigger_active(categoria)
-        assert store.manual_trigger_active is True, categoria
-        relogio.andar(TETO + MINUTO)
-        assert store.manual_trigger_active is False, (
-            f"a categoria {categoria!r} não é alcançada pelo teto"
+    for secao in ("trigger", "led"):
+        assert relatorio.get(secao) not in (None, "ignorado_trava_manual"), (
+            f"a seção {secao!r} sumiu do relatório da ativação — a ausência de "
+            f"notícia lida como 'não entrou' é o ELO-MUDO-01, e ela custou uma sprint"
         )
 
 
-def test_uma_trava_nunca_armada_nao_inventa_vencimento(relogio: _Relogio) -> None:
-    """Store fresca não tem trava, e o relógio não muda isso."""
-    store = StateStore()
-    assert store.manual_trigger_active is False
-    relogio.andar(10 * TETO)
-    assert store.manual_trigger_active is False
-    assert store.manual_override_categories == frozenset()
+def test_o_store_nao_sabe_mais_travar() -> None:
+    """O dono da trava não a tem, e o irmão de 30 s continua lá.
 
-
-def test_categoria_desconhecida_continua_recusada(relogio: _Relogio) -> None:
-    """O carimbo não afrouxou a validação: só as quatro entram."""
-    store = StateStore()
-    with pytest.raises(ValueError, match="categoria de override desconhecida"):
-        store.mark_manual_trigger_active("giroscopio")
-    assert store.manual_trigger_active is False
-
-
-def test_o_par_de_cada_categoria_esta_declarado() -> None:
-    """O censo que originou a sprint, virado régua — e ele LÊ o `src/`.
-
-    O ARMADILHA-RELÓGIO DESTA RÉGUA DISPAROU EM 06/09/2026, e é o que ele
-    existia para fazer. Ele dizia *"no dia em que a aba Iluminação ligar o
-    'Voltar ao automático' ao daemon, este teste reprova e alguém vem aqui
-    apagar a linha"*. Foi o que aconteceu: a A-TRAVA-DO-LED-NÃO-SOLTA-01 deu
-    a `led` o par que lhe faltava (`led.auto_release`), esta régua reprovou
-    nomeando `led`, e a linha foi apagada.
-
-    O QUE ELA AFIRMA HOJE: `audio` continua sem par — é a E1 da
-    ÁUDIO-QUE-TRANCA-01, e enquanto ela não fechar o teto de ociosidade é a
-    ÚNICA porta daquela categoria, que é a razão de este arquivo existir.
-    Quem vigia o par das outras é
-    `tests/unit/test_toda_categoria_de_trava_tem_par.py`, que percorre
-    `MANUAL_OVERRIDE_CATEGORIES` inteira e traz a lápide viva de `audio` como
-    `xfail(strict=True)`.
+    MORDIDA: devolver `mark_manual_trigger_active` ao `StateStore` reprova aqui
+    antes de qualquer outro teste, que é onde a reintrodução começaria.
     """
-    import ast
-    from pathlib import Path as _Path
-
-    raiz = _Path(__file__).resolve().parents[2] / "src"
-    marcadas: set[str] = set()
-    limpas: set[str] = set()
-    for arquivo in raiz.rglob("*.py"):
-        arvore = ast.parse(arquivo.read_text(encoding="utf-8"))
-        for no in ast.walk(arvore):
-            if not isinstance(no, ast.Call):
-                continue
-            alvo = no.func
-            if not isinstance(alvo, ast.Attribute):
-                continue
-            if alvo.attr not in (
-                "mark_manual_trigger_active",
-                "clear_manual_trigger_active",
-            ):
-                continue
-            for arg in no.args:
-                if isinstance(arg, ast.Constant) and isinstance(arg.value, str):
-                    destino = (
-                        marcadas
-                        if alvo.attr == "mark_manual_trigger_active"
-                        else limpas
-                    )
-                    destino.add(arg.value)
-
-    assert {"trigger", "led", "rumble", "audio"} <= marcadas, (
-        f"alguma categoria deixou de ser armada em src/: {sorted(marcadas)}"
-    )
-    assert {"trigger", "rumble", "led"} <= limpas, (
-        "alguma categoria perdeu o gesto que a solta — o teto passaria a ser a "
-        f"única porta dela também: {sorted(limpas)}"
-    )
-    assert "audio" not in limpas, (
-        "`audio` ganhou um `clear` em src/. Ótimo — é a E1 da "
-        "ÁUDIO-QUE-TRANCA-01 fechando. Agora confira se ele dispara no gesto "
-        "CERTO (o `speaker.set` arma inclusive no `release`), apague a lápide "
-        "viva de `tests/unit/test_toda_categoria_de_trava_tem_par.py`, e "
-        "atualize o texto de `MANUAL_OVERRIDE_STALE_AFTER_SEC` — que a partir "
-        "daí deixa de ser a única porta de qualquer categoria."
+    store = StateStore()
+    for morto in MORTOS:
+        assert not hasattr(store, morto), (
+            f"`StateStore.{morto}` voltou. A trava manual saiu inteira em "
+            f"14/09/2026 por decisão dela — ver o topo deste arquivo"
+        )
+    assert hasattr(store, VIVO), (
+        f"`StateStore.{VIVO}` sumiu. Ele NÃO é a trava manual: é o lock de 30 s "
+        f"da escolha manual de perfil, e a decisão dela não o alcança"
     )
 
+
+# ---------------------------------------------------------------------------
+# 2. A VOLTA DO MECANISMO — nenhuma linha de produção o chama
+# ---------------------------------------------------------------------------
+
+def test_nenhuma_linha_de_producao_arma_a_trava() -> None:
+    """A régua que impede a volta em pedaços.
+
+    Ela olha CHAMADA e ACESSO (`nome(` e `.nome`), e nunca a prosa: os
+    comentários datados que contam por que a trava saiu citam os quatro nomes de
+    propósito, e reprová-los seria a régua proibindo o registro que esta casa
+    exige. É a armadilha que já pegou esta casa três vezes em três dias — *um
+    comentário que descreve o padrão proibido vira a primeira ocorrência dele*.
+    """
+    achados: list[str] = []
+    for caminho, texto in _codigo_de_producao():
+        for numero, linha in _linhas_de_codigo(texto):
+            for morto in MORTOS:
+                if f"{morto}(" in linha or f".{morto}" in linha:
+                    rel = caminho.relative_to(RAIZ).as_posix()
+                    achados.append(f"  {rel}:{numero}  {linha.strip()[:90]}")
+    assert not achados, (
+        "a trava manual voltou ao código de produção:\n"
+        + "\n".join(achados)
+        + "\n\nEla saiu inteira em 14/09/2026 por decisão dela — *«e pra qualquer "
+          "outro jogo»*, *«isso nao faz sentido mais»*. Se um caminho novo precisa "  # noqa-acento: citação literal dela
+          "proteger um ajuste dela contra o perfil, a pergunta a fazer é outra: "
+          "por que o ajuste não está NO perfil?"
+    )
+
+
+def test_as_constantes_da_trava_nao_voltaram() -> None:
+    """As duas constantes que descreviam o mecanismo, e o teto que o prorrogava."""
+    texto = (SRC / "daemon" / "state_store.py").read_text(encoding="utf-8")
+    for numero, linha in _linhas_de_codigo(texto):
+        for constante in ("MANUAL_OVERRIDE_CATEGORIES", "MANUAL_OVERRIDE_STALE_AFTER_SEC"):
+            assert not re.match(rf"\s*{constante}\s*[:=]", linha), (
+                f"`{constante}` voltou a `state_store.py:{numero}`. Ela declarava "
+                f"as categorias da trava e o teto de seis horas que era a única "
+                f"porta de saída de `led` e `audio` — as duas saíram com o "
+                f"mecanismo em 14/09/2026"
+            )
+    assert "MANUAL_PROFILE_LOCK_SEC" in texto, (
+        "`MANUAL_PROFILE_LOCK_SEC` sumiu do `state_store.py`. Ele é o lock de 30 s "
+        "da escolha manual de perfil, e fica"
+    )

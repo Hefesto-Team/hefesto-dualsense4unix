@@ -24,6 +24,13 @@ from hefesto_dualsense4unix.profiles.schema import (
 from hefesto_dualsense4unix.testing import FakeController
 
 
+# 1 TESTE(S) DESTE ARQUIVO SAÍRAM — 14/09/2026,
+# `D-1409-A-TRAVA-MANUAL-SAI-O-PERFIL-APLICA-TUDO`: `test_a_trava_manual_de_audio_vence_o_perfil_no_mic`.
+#
+# Os três mediam a trava manual por categoria, que ela revogou para todo jogo.
+# A razão, o journal que mediu o sintoma e a régua que impede a volta estão em
+# `tests/unit/test_a_trava_que_ninguem_solta_01.py`.
+
 @pytest.fixture
 def isolated_profiles_dir(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     target = tmp_path / "profiles"
@@ -803,27 +810,6 @@ def test_o_jogo_nao_rouba_o_mudo_durante_a_gravacao(isolated_profiles_dir: Path)
     )
 
 
-def test_a_trava_manual_de_audio_vence_o_perfil_no_mic(isolated_profiles_dir: Path):
-    """Ela acabou de mexer no microfone na mão: o perfil não pisa.
-
-    Mesma disciplina do alto-falante (categoria `"audio"` do `StateStore`), e
-    agora com o `mic.set`/`mic.volume.set` armando a trava também.
-
-    MORDIDA: tire o bloco `if "audio" in self._categorias_travadas()` de
-    `apply_mic` e este caso fica vermelho.
-    """
-    save_profile(_mk_profile_com_mic("gravando", volume=70))
-    espiao = _MicEspiao()
-    store = StateStore()
-    store.mark_manual_trigger_active("audio")
-    manager = ProfileManager(
-        controller=FakeController(), store=store, mic_applier=espiao
-    )
-    relatorio: dict[str, str] = {}
-    manager.activate("gravando", origin="autoswitch", relatorio=relatorio)
-
-    assert espiao.chamadas == []
-    assert relatorio.get("mic") == "ignorado_trava_manual"
 
 
 # ---------------------------------------------------------------------------

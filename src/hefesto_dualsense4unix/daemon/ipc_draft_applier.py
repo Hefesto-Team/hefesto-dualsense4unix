@@ -64,19 +64,13 @@ class DraftApplier:
         # ANTES de aplicar, POR CATEGORIA das seções presentes (F1, auditoria
         # 21/07); payload sem seção mapeável (ex.: só `mouse`) arma as três,
         # preservando o incondicional da cura original.
-        secoes_para_categorias = {
-            "leds": {"led"},
-            "triggers": {"trigger"},
-            "rumble": {"rumble"},
-            # Overrides por-controle podem carregar cor/gatilho/rumble.
-            "controllers": {"led", "trigger", "rumble"},
-        }
-        categorias: set[str] = set()
-        for secao, cats in secoes_para_categorias.items():
-            if params.get(secao) is not None:
-                categorias |= cats
-        for categoria in sorted(categorias or {"led", "trigger", "rumble"}):
-            self.store.mark_manual_trigger_active(categoria)
+        # O CARIMBO DE CATEGORIA SAIU — 14/09/2026,
+        # `D-1409-A-TRAVA-MANUAL-SAI-O-PERFIL-APLICA-TUDO`. Aqui o "Aplicar" da
+        # janela traduzia as seções do rascunho em categorias de trava manual e
+        # armava uma a uma, para o perfil reaplicado não pisar o que ela acabara
+        # de aplicar. Nenhum caminho lê a trava desde a decisão dela, e a razão
+        # está em `profiles/manager.apply`: o que ela aplica pela interface já
+        # vai para o perfil, então o perfil é quem guarda o ajuste dela.
         applied: list[str] = []
         # Cada `apply` conta a história dele: zera o registro de falhas antes
         # de começar (o mesmo applier pode ser reusado).

@@ -69,7 +69,6 @@ from hefesto_dualsense4unix.profiles import loader as loader_module
 from hefesto_dualsense4unix.profiles.autoswitch import AutoSwitcher
 from hefesto_dualsense4unix.profiles.loader import save_profile
 from hefesto_dualsense4unix.profiles.manager import (
-    IGNORADO_TRAVA_MANUAL,
     ProfileManager,
 )
 from hefesto_dualsense4unix.profiles.schema import (
@@ -355,25 +354,33 @@ def test_o_lock_de_gesto_manual_continua_vencendo_as_guardas_novas() -> None:
 # ---------------------------------------------------------------------------
 
 
-def test_relatorio_registra_as_categorias_travadas_na_mao(
+def test_o_relatorio_nao_diz_mais_que_uma_secao_foi_travada(
     perfis_isolados: Path,
 ) -> None:
-    """MORDIDA do item 4: o que a trava manual silencia entra no relatório.
+    """O item 4 mudou de resposta em 14/09/2026, e o teste mudou com ele.
 
-    `ProfileManager.apply` já sabia quais categorias iria pular — emitia `None`
-    no `OutputSpec` e seguia. Nada disso chegava a quem pergunta pelo resultado
-    da ativação, e a janela respondia "ativado" sem poder dizer que o gatilho e
-    a cor do perfil não entraram.
+    ELE MEDIA A MORDIDA DO ITEM 4: com `trigger` e `led` carimbados na mão, o
+    relatório da ativação tinha de dizer `ignorado_trava_manual` nas duas — a
+    cura de 05/08 para a janela que respondia "ativado" sem poder contar que o
+    gatilho e a cor do perfil não haviam entrado.
+
+    A TRAVA SAIU INTEIRA por decisão dela (`D-1409-A-TRAVA-MANUAL-SAI-O-PERFIL-
+    APLICA-TUDO`, e a razão está em `tests/unit/test_a_trava_que_ninguem_solta_01`),
+    então nenhuma seção é silenciada assim e a palavra deixou de existir. O item 4
+    continua valendo pelo que ele é — *o relatório conta o que aconteceu com cada
+    seção* —, e é isso que este teste passa a afirmar: a ativação por autoswitch
+    escreve as duas seções e diz que escreveu.
     """
-    manager, store = _bancada([_perfil("sackboy_nativo")])
-    store.mark_manual_trigger_active("trigger")
-    store.mark_manual_trigger_active("led")
+    manager, _store = _bancada([_perfil("sackboy_nativo")])
 
     relatorio: dict[str, str] = {}
     manager.activate("sackboy_nativo", origin="autoswitch", relatorio=relatorio)
 
-    assert relatorio["trigger"] == IGNORADO_TRAVA_MANUAL
-    assert relatorio["led"] == IGNORADO_TRAVA_MANUAL
+    assert relatorio["trigger"] == "aplicado"
+    assert relatorio["led"] == "aplicado"
+    assert "ignorado_trava_manual" not in relatorio.values(), (
+        f"o relatório voltou a falar em trava manual: {relatorio!r}"
+    )
 
 
 def test_sem_trava_o_relatorio_nao_inventa_secao_ignorada(
@@ -402,7 +409,7 @@ def test_sem_trava_o_relatorio_nao_inventa_secao_ignorada(
 
     assert relatorio["trigger"] == "aplicado"
     assert relatorio["led"] == "aplicado"
-    assert IGNORADO_TRAVA_MANUAL not in {relatorio["trigger"], relatorio["led"]}
+    assert "ignorado_trava_manual" not in {relatorio["trigger"], relatorio["led"]}
 
 
 def test_relatorio_do_autoswitch_carrega_o_modo_jogo_padrao(
@@ -456,23 +463,41 @@ def test_log_do_autoswitch_reporta_estados_ignorados(
 
     O filtro só deixava passar `adiado*` — justamente os estados em que a
     ativação "deu certo" sem aplicar a seção ficavam invisíveis no journal.
+
+    O VEÍCULO MUDOU EM 14/09/2026, e o que ele prova não: este teste carimbava a
+    trava manual para produzir um `ignorado_trava_manual` no relatório, e a trava
+    saiu inteira por decisão dela (`D-1409-A-TRAVA-MANUAL-SAI-O-PERFIL-APLICA-
+    TUDO`). O item 5 é sobre o FILTRO do log, não sobre a trava — qualquer
+    `ignorado_*` serve de prova, e o que sobrou no produto é o
+    `IGNORADO_GESTO_DELA` do modo jogo padrão. Trocar o veículo mantém a régua
+    medindo o que ela sempre mediu; mantê-la presa ao veículo morto a mataria
+    junto com ele.
     """
-    manager, store = _bancada([_perfil("navegacao", janela="firefox")])
-    store.mark_manual_trigger_active("trigger")
-    sw = AutoSwitcher(manager=manager, window_reader=lambda: {}, store=store)
-    # A trava suprimiria o `_activate` inteiro (BUG-MOUSE-TRIGGERS-01); aqui
-    # interessa o RELATÓRIO, então o gate de supressão fica fora do caminho.
-    store.clear_manual_trigger_active()
-    manager.store.mark_manual_trigger_active("trigger")
-    sw.store = None
+    manager, store = _bancada(
+        [
+            _perfil("navegacao", janela="firefox"),
+            _perfil("vitoria", catch_all=True),
+        ]
+    )
+    sw = AutoSwitcher(
+        manager=manager,
+        window_reader=lambda: {},
+        store=store,
+        modo_jogo_padrao_applier=lambda **_kw: APLICADO,
+        modo_jogo_padrao_reverter=lambda **_kw: IGNORADO_GESTO_DELA,
+    )
+    sw._tick(dict(JANELA_DO_JOGO), 0.0)
 
     with structlog.testing.capture_logs() as registros:
-        sw._tick({"wm_class": "firefox"}, 0.0)
-        sw._tick({"wm_class": "firefox"}, 5.0)
+        sw._tick({"wm_class": "firefox"}, 10.0)
+        sw._tick({"wm_class": "firefox"}, 20.0)
 
     trocas = [r for r in registros if r["event"] == "profile_autoswitch"]
     assert trocas, "o autoswitch não trocou de perfil"
-    assert f"trigger={IGNORADO_TRAVA_MANUAL}" in trocas[-1]["secoes"]
+    assert f"modo_jogo_padrao={IGNORADO_GESTO_DELA}" in trocas[-1]["secoes"], (
+        "o log do autoswitch voltou a filtrar os `ignorado_*` e a contar só "
+        f"metade do relatório: {trocas[-1]['secoes']!r}"
+    )
     # O campo histórico continua onde estava (é o que a leitura do journal já
     # procura), e continua sendo só o subconjunto dos adiamentos.
     assert trocas[-1]["adiado"] == []

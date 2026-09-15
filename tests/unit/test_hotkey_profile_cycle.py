@@ -173,12 +173,19 @@ async def test_cycle_prev_retrocede(monkeypatch: pytest.MonkeyPatch) -> None:
 
 @pytest.mark.asyncio
 async def test_cycle_arma_lock_e_flasha(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Gesto explícito: libera autoswitch + arma lock manual + flasha o lightbar
-    (senão o autoswitch desfaz a troca no tick seguinte)."""
+    """Gesto explícito: arma o lock manual + flasha o lightbar (senão o
+    autoswitch desfaz a troca no tick seguinte).
+
+    ELE TAMBÉM COBRAVA `d.store.cleared is True` — o gesto soltando a trava
+    manual por categoria antes de ativar. A trava saiu em 14/09/2026 por decisão
+    dela (`D-1409-A-TRAVA-MANUAL-SAI-O-PERFIL-APLICA-TUDO`), e sem ela não há o
+    que soltar. O LOCK continua com as duas metades — é ele que impede o
+    autoswitch de desfazer a troca no tique seguinte, e é ele que este teste
+    guarda.
+    """
     _patch_manager(monkeypatch)
     d = _FakeDaemon(active="a")
     await build_profile_cycle_callback(d, +1)()
-    assert d.store.cleared is True
     assert d.store.locked is not None
     assert d.controller.leds, "lightbar não flashou (sem feedback visível)"
 

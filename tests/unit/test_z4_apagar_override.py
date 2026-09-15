@@ -41,6 +41,13 @@ from hefesto_dualsense4unix.app.draft_config import DraftConfig, LedsDraft
 from hefesto_dualsense4unix.daemon.ipc_draft_applier import DraftApplier
 from hefesto_dualsense4unix.daemon.state_store import StateStore
 
+
+# 1 TESTE(S) DESTE ARQUIVO SAÍRAM — 14/09/2026,
+# `D-1409-A-TRAVA-MANUAL-SAI-O-PERFIL-APLICA-TUDO`: `test_controllers_vazio_arma_a_trava_manual_das_tres_categorias`.
+#
+# Os três mediam a trava manual por categoria, que ela revogou para todo jogo.
+# A razão, o journal que mediu o sintoma e a régua que impede a volta estão em
+# `tests/unit/test_a_trava_que_ninguem_solta_01.py`.
 _UNIQ = "02fe00112233"
 
 
@@ -74,16 +81,6 @@ class TestODaemonJaAceitaVazio:
             f"{arg!r} — para limpar, o mapa novo tem de ser vazio/None"
         )
 
-    def test_controllers_vazio_arma_a_trava_manual_das_tres_categorias(self) -> None:
-        applier, _controller, store = _applier()
-        applier.apply({"controllers": {}})
-        assert store.manual_override_categories == frozenset(
-            {"led", "trigger", "rumble"}
-        ), (
-            f"categorias armadas: {store.manual_override_categories!r} — "
-            "`controllers: {}` tem de armar as três (led/trigger/rumble), "
-            "senão o AutoSwitcher reescreve por cima no próximo tique"
-        )
 
 
 class TestAMordidaDoQueFazOZeroJaFuncionar:

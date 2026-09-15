@@ -51,6 +51,13 @@ from hefesto_dualsense4unix.profiles.schema import (
 from hefesto_dualsense4unix.testing import FakeController
 
 
+# 3 TESTE(S) DESTE ARQUIVO SAÍRAM — 14/09/2026,
+# `D-1409-A-TRAVA-MANUAL-SAI-O-PERFIL-APLICA-TUDO`: `test_reaplica_no_connect_respeita_a_trava_manual`, `test_trava_de_outra_categoria_nao_bloqueia_o_audio`, `test_trava_manual_de_audio_vence_o_perfil`.
+#
+# Os três mediam a trava manual por categoria, que ela revogou para todo jogo.
+# A razão, o journal que mediu o sintoma e a régua que impede a volta estão em
+# `tests/unit/test_a_trava_que_ninguem_solta_01.py`.
+
 @pytest.fixture
 def isolated_profiles_dir(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     target = tmp_path / "profiles"
@@ -473,38 +480,8 @@ def test_nenhuma_escrita_sai_sem_volume(isolated_profiles_dir: Path) -> None:
     assert backend.speaker_state_for() == {"volume": 180, "muted": True}
 
 
-def test_trava_manual_de_audio_vence_o_perfil(isolated_profiles_dir: Path) -> None:
-    """Ela ajustou o volume na mão; o autoswitch reaplicando perfil não pisa.
-
-    MORDIDA: tirar a consulta a `_categorias_travadas()` do `apply_speaker`
-    faz a escrita acontecer e este teste reprova — é a classe de defeito de
-    sempre ("a config que eu deixo nunca é respeitada"), agora no áudio.
-    """
-    save_profile(_mk_profile("som", speaker={"volume": 180}))
-    backend = _BackendComAudio()
-    backend.connect()
-    store = _store_com_audio_travado()
-    relatorio: dict[str, str] = {}
-
-    _manager(backend, store).activate("som", origin="autoswitch", relatorio=relatorio)
-
-    assert backend.escritas_de_audio == []
-    assert relatorio["speaker"] == "ignorado_trava_manual"
 
 
-def test_trava_de_outra_categoria_nao_bloqueia_o_audio(
-    isolated_profiles_dir: Path,
-) -> None:
-    """A trava é POR CATEGORIA: cor travada não silencia o alto-falante."""
-    save_profile(_mk_profile("som", speaker={"volume": 180}))
-    backend = _BackendComAudio()
-    backend.connect()
-    store = StateStore()
-    store.mark_manual_trigger_active("led")
-
-    _manager(backend, store).activate("som", origin="autoswitch")
-
-    assert [e["volume"] for e in backend.escritas_de_audio] == [180]
 
 
 def test_sem_applier_a_secao_e_ignorada_sem_quebrar(
@@ -566,21 +543,6 @@ def test_reaplica_no_connect_so_com_a_secao(isolated_profiles_dir: Path) -> None
     assert backend.escritas_de_audio == []
 
 
-def test_reaplica_no_connect_respeita_a_trava_manual(
-    isolated_profiles_dir: Path,
-) -> None:
-    """Se ela mexeu no volume na mão, nem a reconexão devolve o campo ao perfil."""
-    save_profile(_mk_profile("som", speaker={"volume": 180}))
-    backend = _BackendComAudio()
-    backend.connect()
-    store = StateStore()
-    manager = _manager(backend, store)
-    manager.activate("som")
-    backend.escritas_de_audio.clear()
-    store.mark_manual_trigger_active("audio")
-
-    assert manager.reapply_speaker_on_connect() == "ignorado_trava_manual"
-    assert backend.escritas_de_audio == []
 
 
 def test_reaplica_no_connect_sem_perfil_ativo_nao_escreve(
