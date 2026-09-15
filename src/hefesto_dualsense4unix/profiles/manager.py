@@ -448,7 +448,7 @@ class ProfileManager:
         # dela — *"o sackboy deveria ser trava manual também"* — e ela o revogou
         # com estas palavras: *"eu tinha pedido pra remover todas as travas
         # manuais pra esse jogo, madjack e pro pragmata e pro wokong"*, *"e pra
-        # qualquer outro jogo"*, *"isso nao faz sentido mais."*
+        # qualquer outro jogo"*, *"isso nao faz sentido mais."*  # (noqa-acento): dela
         #
         # POR QUE ELA DEIXOU DE FAZER SENTIDO, e a razão é medida: a trava
         # protegia o ajuste da mão dela contra o perfil num mundo em que o
@@ -463,8 +463,9 @@ class ProfileManager:
         # com os dois, e ao abrir o Sackboy o `launch_perfil_ativado` trouxe
         # `{'trigger': 'ignorado_trava_manual', 'led': 'ignorado_trava_manual'}`.
         # Para ela isso se lê como *"ao iniciar o jogo ele não carrega o perfil
-        # do jogo"* e *"os gatilhos tambem nao tao aplicando"* — e nenhuma das
-        # duas frases fala em trava, porque a trava nunca chegou à tela.
+        # do jogo"* e *"os gatilhos tambem nao tao aplicando"*  # (noqa-acento): dela
+        # — e nenhuma das duas frases fala em trava, porque a trava nunca
+        # chegou à tela.
         #
         # O QUE CONTINUA PROTEGENDO A ESCOLHA DELA: o `manual_profile_lock`
         # (`state_store.MANUAL_PROFILE_LOCK_SEC`, 30 s), que é outro mecanismo e

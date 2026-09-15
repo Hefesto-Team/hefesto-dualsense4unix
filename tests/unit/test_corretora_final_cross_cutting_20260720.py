@@ -139,7 +139,7 @@ class TestLedSetRespeitaAAutoridadeDoJogo:
     @pytest.mark.asyncio
     async def test_led_set_manual_e_corrigido_pela_cor_do_jogo(self) -> None:
         node = _FakeLedNode()
-        server, store, ctl = self._server(node)
+        server, _store, ctl = self._server(node)
         # Sessão de jogo ABERTA: a camada GAME já escreveu verde no merge.
         ctl.set_game_authority_provider(lambda: "game")
         assert ctl.set_game_output_for(MAC_1, led=(0, 255, 0)) is True
@@ -163,7 +163,7 @@ class TestLedSetRespeitaAAutoridadeDoJogo:
     @pytest.mark.asyncio
     async def test_led_player_set_manual_e_corrigido_pela_cor_do_jogo(self) -> None:
         node = _FakeLedNode()
-        server, store, ctl = self._server(node)
+        server, _store, ctl = self._server(node)
         ctl.set_game_authority_provider(lambda: "game")
         assert ctl.set_game_output_for(
             MAC_1, player_leds=(False, False, True, False, False)
@@ -185,7 +185,7 @@ class TestLedSetRespeitaAAutoridadeDoJogo:
         reassert não pode reverter a escrita manual quando não há camada
         GAME nenhuma disputando o merge."""
         node = _FakeLedNode()
-        server, store, ctl = self._server(node)
+        server, _store, ctl = self._server(node)
         ctl.set_game_authority_provider(lambda: "daemon")
 
         resultado = await server._handle_led_set({"rgb": [10, 20, 30]})

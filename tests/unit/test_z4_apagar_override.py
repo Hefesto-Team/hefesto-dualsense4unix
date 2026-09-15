@@ -42,10 +42,11 @@ from hefesto_dualsense4unix.daemon.ipc_draft_applier import DraftApplier
 from hefesto_dualsense4unix.daemon.state_store import StateStore
 
 
-# 1 TESTE(S) DESTE ARQUIVO SAÍRAM — 14/09/2026,
-# `D-1409-A-TRAVA-MANUAL-SAI-O-PERFIL-APLICA-TUDO`: `test_controllers_vazio_arma_a_trava_manual_das_tres_categorias`.
+# UM TESTE DESTE ARQUIVO SAIU — 14/09/2026,
+# `D-1409-A-TRAVA-MANUAL-SAI-O-PERFIL-APLICA-TUDO`:
+# `test_controllers_vazio_arma_a_trava_manual_das_tres_categorias`.
 #
-# Os três mediam a trava manual por categoria, que ela revogou para todo jogo.
+# Ele cobria a trava manual por categoria, que ela revogou para todo jogo.
 # A razão, o journal que mediu o sintoma e a régua que impede a volta estão em
 # `tests/unit/test_a_trava_que_ninguem_solta_01.py`.
 _UNIQ = "02fe00112233"

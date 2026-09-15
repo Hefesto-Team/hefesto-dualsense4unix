@@ -3,10 +3,10 @@
 DECISÃO DELA, 14/09/2026 (`D-1409-A-TRAVA-MANUAL-SAI-O-PERFIL-APLICA-TUDO`),
 com estas palavras, em três mensagens seguidas:
 
-    *"eu tinha pedido pra remover todas as travas manuais pra esse jogo, madjack  # noqa-acento: citação literal dela
-     e pro pragmata e pro wokong"*
+    *"eu tinha pedido pra remover todas as travas manuais pra esse jogo,
+     madjack e pro pragmata e pro wokong"*  (noqa-acento: citação dela)
     *"e pra qualquer outro jogo"*
-    *"isso nao faz sentido mais."*  # noqa-acento: citação literal dela
+    *"isso nao faz sentido mais."*  (noqa-acento: citação literal dela)
 
 O QUE ESTE ARQUIVO MEDIA ANTES, e por que ele mudou de pergunta em vez de sumir:
 ele era a régua da A-TRAVA-QUE-NINGUÉM-SOLTA-01 (29/08/2026), que mediu o teto de
@@ -26,9 +26,9 @@ o Sackboy abrindo e o perfil do jogo entrando:
 Ela tinha ajustado luz e gatilho pela interface às 22:56 — e o perfil foi SALVO
 com os dois, três vezes, `origem=interface-nova` no diário da janela. Dois
 minutos depois o jogo abriu e o produto pulou exatamente as duas seções que ela
-acabara de gravar. Para ela isso se lê como *"ao iniciar o jogo ele não carrega o
-perfil do jogo"* e *"os gatilhos tambem nao tao aplicando"*, e nenhuma das duas  # noqa-acento: citação literal dela
-frases fala em trava — porque a trava nunca chegou à tela.
+acabara de gravar. Para ela isso se lê como *"ao iniciar o jogo ele não carrega
+o perfil do jogo"* e *"os gatilhos tambem nao tao aplicando"*  (noqa-acento: dela)
+— e nenhuma das duas frases fala em trava, porque a trava nunca chegou à tela.
 
 POR QUE A TRAVA DEIXOU DE FAZER SENTIDO, e a razão é a que sustenta a decisão:
 ela protegia o ajuste da mão dela CONTRA o perfil, num mundo em que o ajuste não
@@ -54,8 +54,8 @@ O QUE SAIU JUNTO, e está escrito aqui para quem procurar os arquivos:
 * `tests/unit/test_toda_categoria_de_trava_tem_par.py` (06/09/2026, 12 testes) —
   ele varria `src/` por AST e cobrava que toda categoria de
   `MANUAL_OVERRIDE_CATEGORIES` tivesse quem a armasse E quem a soltasse. Nasceu
-  da A-TRAVA-DO-LED-NÃO-SOLTA-01, e media o mecanismo inteiro: sem ele, não sobra
-  o que medir. **O censo que o motivou fica no topo deste arquivo.**
+  da A-TRAVA-DO-LED-NÃO-SOLTA-01, e vigiava o mecanismo inteiro: sem ele, não
+  sobra o que medir. **O censo que o motivou fica no topo deste arquivo.**
 * `tests/unit/test_onda_u_trava_por_categoria.py` (20 testes) — a quebra do
   booleano único em quatro categorias, para que o fim do "Testar motores" não
   apagasse um gatilho deliberado de outra aba (ONDA-U/F1).
@@ -203,7 +203,7 @@ def test_o_perfil_aplica_gatilho_e_luz_em_toda_origem(origem: str) -> None:
     assert spec.trigger_left is not None and spec.trigger_right is not None, (
         f"a seção `triggers` do perfil não chegou ao controle na origem {origem!r}: "
         f"é o `ignorado_trava_manual` de volta, e é a queixa dela de 14/09 — "
-        f"*«os gatilhos tambem nao tao aplicando»*"  # noqa-acento: citação literal dela
+        f"*«os gatilhos tambem nao tao aplicando»*"  # (noqa-acento): dela
     )
     assert spec.led is not None, (
         f"a seção `leds` do perfil não chegou ao controle na origem {origem!r}"
@@ -261,7 +261,8 @@ def test_nenhuma_linha_de_producao_arma_a_trava() -> None:
         "a trava manual voltou ao código de produção:\n"
         + "\n".join(achados)
         + "\n\nEla saiu inteira em 14/09/2026 por decisão dela — *«e pra qualquer "
-          "outro jogo»*, *«isso nao faz sentido mais»*. Se um caminho novo precisa "  # noqa-acento: citação literal dela
+          "outro jogo»*, *«isso nao faz sentido mais»*. "  # (noqa-acento): dela
+          "Se um caminho novo precisa "
           "proteger um ajuste dela contra o perfil, a pergunta a fazer é outra: "
           "por que o ajuste não está NO perfil?"
     )

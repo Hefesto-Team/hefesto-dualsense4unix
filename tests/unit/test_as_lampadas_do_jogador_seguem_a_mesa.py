@@ -2,8 +2,8 @@
 
 QUEIXA DELA, 14/09/2026, com os dois controles na mesa:
 
-    *"a interface tá dessincronizada com os controles reais. (o player do   # noqa-acento: citação literal dela
-     controle , o led indicativo do player)"*
+    *"a interface tá dessincronizada com os controles reais. (o player do
+     controle , o led indicativo do player)"*  (noqa-acento: citação dela)
 
 O QUE ESTAVA QUEBRADO: o `<div class="lampadas">` da aba Controles não tinha
 `data-campo`. Sem endereço, o `achar()` do piloto passa ao largo dele — o HTML
@@ -95,9 +95,9 @@ def test_cada_assento_tem_o_seu_desenho(jogador: int) -> None:
 
 def test_os_quatro_desenhos_nao_se_repetem() -> None:
     desenhos = {j: _lampadas(j) for j in (1, 2, 3, 4)}
+    acesas = {j: d.count('class="on"') for j, d in desenhos.items()}
     assert len(set(desenhos.values())) == 4, (
-        f"dois assentos desenham as mesmas lâmpadas: "
-        f"{ {j: d.count('class=\"on\"') for j, d in desenhos.items()} }"
+        f"dois assentos desenham as mesmas lâmpadas: {acesas}"
     )
 
 

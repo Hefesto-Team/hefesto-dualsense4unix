@@ -322,8 +322,9 @@ class StateStore:
     # ELA REVOGOU O MECANISMO INTEIRO, e a ordem é de produto, não de caso:
     # *"eu tinha pedido pra remover todas as travas manuais pra esse jogo,
     # madjack e pro pragmata e pro wokong"*, *"e pra qualquer outro jogo"*,
-    # *"isso nao faz sentido mais."* A razão por extenso está em
-    # `profiles/manager.apply`, junto com o journal que mediu o sintoma.
+    # *"isso nao faz sentido mais."*  # (noqa-acento): citação literal dela
+    # A razão por extenso está em `profiles/manager.apply`, junto com o
+    # journal que mediu o sintoma.
     #
     # O CARIMBO SAIU JUNTO COM O VETO, e não depois: um `mark_*` que nenhum
     # caminho lê é promessa sem caminho — o portão `casa-sabe` desta casa existe
@@ -556,6 +557,22 @@ class StateStore:
         """Origem do Modo Nativo ativo: "manual" | "profile" | None (inativo)."""
         with self._lock:
             return self._native_mode_origin
+
+    def set_native_mode_active(
+        self, active: bool, origin: str | None = None
+    ) -> None:
+        """Liga/desliga o gate do Modo Nativo (FEAT-NATIVE-MODE-01).
+
+        Enquanto ativo com origem MANUAL, autoswitch e hotkey de ciclo NÃO
+        re-aplicam perfil — o controle fica "solto" para o jogo nativo até a
+        usuária desligar. Com origem "profile" (FEAT-PROFILE-MODE-01) o
+        autoswitch CONTINUA observando a janela: ao focar outro app, o perfil
+        seguinte reverte o nativo (senão o modo por-perfil nunca sairia).
+        Setado por `Daemon.set_native_mode`.
+        """
+        with self._lock:
+            self._native_mode_active = bool(active)
+            self._native_mode_origin = origin if active else None
 
     @property
     def window_detect_backend(self) -> str | None:

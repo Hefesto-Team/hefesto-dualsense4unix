@@ -30,7 +30,6 @@ por engano.
 """
 from __future__ import annotations
 
-import asyncio
 import sys
 from pathlib import Path
 from unittest.mock import MagicMock
@@ -39,12 +38,8 @@ import pytest
 
 from hefesto_dualsense4unix.core.controller import TriggerEffect
 from hefesto_dualsense4unix.core.trigger_effects import build_from_name
-from hefesto_dualsense4unix.daemon.state_store import StateStore
 from hefesto_dualsense4unix.integrations.uinput_mouse import UinputMouseDevice
 from hefesto_dualsense4unix.profiles import loader as loader_module
-from hefesto_dualsense4unix.profiles.autoswitch import AutoSwitcher
-from hefesto_dualsense4unix.profiles.loader import save_profile
-from hefesto_dualsense4unix.profiles.manager import ProfileManager
 from hefesto_dualsense4unix.profiles.schema import (
     LedsConfig,
     MatchAny,
@@ -56,10 +51,16 @@ from hefesto_dualsense4unix.profiles.schema import (
 from hefesto_dualsense4unix.testing import FakeController, FakeControllerCommand
 
 
-# 6 TESTE(S) DESTE ARQUIVO SAÍRAM — 14/09/2026,
-# `D-1409-A-TRAVA-MANUAL-SAI-O-PERFIL-APLICA-TUDO`: `test_autoswitch_suspende_quando_override_manual_ligado`, `test_autoswitch_volta_a_funcionar_apos_clear_override`, `test_ipc_profile_switch_zera_override`, `test_ipc_trigger_reset_zera_override`, `test_ipc_trigger_set_marca_override`, `test_state_store_manual_trigger_lifecycle`.
+# 6 TESTES DESTE ARQUIVO SAÍRAM — 14/09/2026,
+# `D-1409-A-TRAVA-MANUAL-SAI-O-PERFIL-APLICA-TUDO`:
+# `test_autoswitch_suspende_quando_override_manual_ligado`,
+# `test_autoswitch_volta_a_funcionar_apos_clear_override`,
+# `test_ipc_profile_switch_zera_override`,
+# `test_ipc_trigger_reset_zera_override`,
+# `test_ipc_trigger_set_marca_override`,
+# `test_state_store_manual_trigger_lifecycle`.
 #
-# Os três mediam a trava manual por categoria, que ela revogou para todo jogo.
+# Os 6 mediam a trava manual por categoria, que ela revogou para todo jogo.
 # A razão, o journal que mediu o sintoma e a régua que impede a volta estão em
 # `tests/unit/test_a_trava_que_ninguem_solta_01.py`.
 # --- infra ---------------------------------------------------------------
