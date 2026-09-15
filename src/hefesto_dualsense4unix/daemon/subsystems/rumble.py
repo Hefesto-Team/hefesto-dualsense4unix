@@ -26,6 +26,22 @@ logger = get_logger(__name__)
 # FEAT-RUMBLE-POLICY-01
 AUTO_DEBOUNCE_SEC = 5.0
 
+#: QUANTO UM RUMBLE FIXADO SOBREVIVE SEM NINGUÉM REBATER — A-TELA-QUE-TRAVA-02,
+#: 15/09/2026. Passado o teto, os motores voltam ao JOGO (`rumble_active=None`).
+#:
+#: O NÚMERO É TRÊS, e ele não é chute: quem segura um par fixado rebate a cada
+#: **1 s** (`interface/pacotes/a05_vibracao.SEGUNDOS_ENTRE_BATIMENTOS`), então
+#: três dá **três batimentos** dentro da janela. Um pode se perder — um tique
+#: pulado por pintura no ar, um IPC lento, a máquina engasgando — e o teste não
+#: pisca. Com dois o primeiro perdido já soltaria; com dez a janela que morreu
+#: deixaria o jogo mudo por dez segundos, que é tempo de ela achar que quebrou.
+#:
+#: E ELE É O TETO DA OCIOSIDADE, não da duração: um teste que ela deixa ligado a
+#: tarde inteira com a janela aberta nunca solta, porque o coração bate. Foi o
+#: que ela pediu em 07/09/2026 — *"o botão Testar tem que ficar em estado de
+#: ligado"*  (noqa-acento: citação literal dela).
+TETO_DO_RUMBLE_FIXADO_S = 3.0
+
 #: A escada da intensidade, e o dono único dos três números.
 #:
 #: DECISÃO DELA — 11/08/2026, depois de o preço de cada opção ir para a mesa.
@@ -266,6 +282,50 @@ def reassert_rumble(daemon: DaemonProtocol, now: float) -> None:
     cfg = daemon.config
     active = cfg.rumble_active
     if active is None:
+        _lembrar_dono_vibrando(cfg, None)
+        return
+    # O TETO DE OCIOSIDADE — A-TELA-QUE-TRAVA-02, 15/09/2026, decisão dela.
+    #
+    # ORDEM DELA, com o controle na mão: *"o testar e parar é sobre o teste
+    # naquele momento isso nao interfere in game (noqa-acento: citação literal dela). (…) clicar em parar é só pra
+    # impactar no teste naquele momento e não mutar a vibração in game."*
+    #   (noqa-acento: citação literal dela)
+    #
+    # O QUE ESTAVA QUEBRADO: o "Testar" da aba Vibração tira os motores do jogo
+    # (`rumble.passthrough(False)`) e SÓ o "Parar" os devolvia. Fechar a janela,
+    # trocar de aba ou a janela morrer deixava o jogo mudo — e nada na tela
+    # dizia por quê, porque a tela já não estava lá.
+    #
+    # A JANELA GANHOU AS DUAS METADES DELA (`pacotes.CORACOES` e
+    # `pacotes.LARGADAS`), e esta é a TERCEIRA: a rede para quando a janela
+    # MORRE sem conseguir largar. Quem segura um par fixado rebate a cada
+    # segundo; passado o teto sem rebatimento, os motores voltam ao jogo.
+    #
+    # ELE COBRE TODOS OS CHAMADORES, e é por isso que mora aqui e não na aba: o
+    # `hef test rumble` da CLI fixa pelo MESMO caminho e tinha o MESMO buraco.
+    # É a regra desta casa — *quando a cura conhece a causa, ela cobre TODOS os
+    # chamadores*.
+    #
+    # O `(0, 0)` ENTRA NO TETO, e isto revoga metade de uma decisão medida: a
+    # M2 (`lifecycle.apply_profile_rumble_passthrough`) preserva o silêncio
+    # fixado porque o "Parar" da JANELA GTK significava *silêncio deliberado*.
+    # Aquela janela saiu inteira em 06/09/2026 (`D-0609-GTK-LEVA-INTEIRA`), o
+    # "Parar" de hoje termina em `passthrough(True)` e nunca deixa `(0, 0)` de
+    # pé, e a regra dela de 15/09 é explícita: para calar a vibração no jogo ela
+    # zera o slicer do motor ou o degrau do perfil, nunca o "Parar". Um `(0, 0)`
+    # que ninguém rebate é, hoje, um jogo mudo por acidente. A M2 fica como
+    # está — ela guarda a troca de perfil, que é outro assunto e dura segundos.
+    carimbo = getattr(cfg, "rumble_active_em", None)
+    if isinstance(carimbo, (int, float)) and now - carimbo > TETO_DO_RUMBLE_FIXADO_S:
+        logger.info(
+            "rumble_fixado_solto_por_ociosidade",
+            parado_ha_s=round(now - carimbo, 1),
+            teto_s=TETO_DO_RUMBLE_FIXADO_S,
+            par=active,
+            dono=getattr(cfg, "rumble_active_uniq", None),
+        )
+        cfg.rumble_active = None
+        cfg.rumble_active_em = None
         _lembrar_dono_vibrando(cfg, None)
         return
     weak_raw, strong_raw = active

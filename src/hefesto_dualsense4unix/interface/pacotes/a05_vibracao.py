@@ -24,6 +24,7 @@ existência dele, e a tela a carrega no `title`.
 from __future__ import annotations
 
 import contextlib
+from time import monotonic as _monotonic
 from typing import Any
 
 # O IMPORT É DE MÓDULO, e não de dentro da função — 01/09/2026. O
@@ -912,7 +913,7 @@ def _sem_marcacao(texto: str) -> str:
 # A política é a exceção, e não é descuido meu: ela é DA MESA e o produto sabe
 # disso — `app/actions/rumble_actions.py:978` escreve *"não há IPC de política
 # por unidade, e inventar um seria mecanismo novo"*.
-from . import gesto  # noqa: E402
+from . import coracao, gesto, largada  # noqa: E402
 
 #: O PAR DO TESTE quando ninguém pediu vibração ainda. É o mesmo da janela
 #: estável (`app/actions/rumble_actions.py:1078`, `weak = 160` / `strong =
@@ -997,6 +998,84 @@ def parar_o_teste() -> None:
       estivesse mirado.
     """
     _EM_TESTE[0] = ""
+
+
+#: DE QUANTO EM QUANTO O CORAÇÃO BATE, em segundos. Ele existe para o daemon
+#: saber que a janela ainda está viva segurando os motores — não para mandar
+#: vibração nova. Um batimento por tique (100 ms) seriam dez viagens de IPC por
+#: segundo pelo mesmo assunto; um segundo dá três batimentos dentro do teto de
+#: três do daemon, que é folga para um perder e o teste não piscar.
+SEGUNDOS_ENTRE_BATIMENTOS = 1.0
+
+#: `monotonic` do último batimento. Lista de um elemento pela mesma razão que
+#: `_EM_TESTE`: este módulo não tem estado de classe, e um global mutável
+#: declarado é mais honesto que um `global`.
+_BATEU_EM = [0.0]
+
+
+@coracao
+def _bater_o_coracao_do_teste(ctx: Contexto, p: Any) -> None:
+    """Diz ao daemon, a cada segundo, que a janela ainda segura os motores.
+
+    NASCEU DA ORDEM DELA, 15/09/2026: *"o testar e parar é sobre o teste naquele
+    momento isso nao interfere in game"*  (noqa-acento: citação literal dela). O
+    "Testar" tira os motores do jogo e os devolve no "Parar" — e até hoje NADA
+    mais os devolvia: fechar a janela, trocar de aba ou a janela morrer deixava
+    o jogo mudo até ela voltar aqui e clicar.
+
+    ESTE É O LADO DA JANELA VIVA. O daemon ganhou um teto de ociosidade
+    (`TETO_DO_RUMBLE_FIXADO_S`) que solta o rumble fixado que ninguém rebate; o
+    batimento é o que diz *"ainda estou aqui"* enquanto ela olha. Sem ele o
+    teste soltaria sozinho em três segundos, e ela pediu o contrário em
+    07/09/2026: *"o botão Testar tem que ficar em estado de ligado"*.
+
+    ELE NÃO MANDA VIBRAÇÃO NOVA. O par vem de :func:`_par_das_barras`, o mesmo
+    que o arraste reenvia — então um batimento no meio de um arraste não
+    atropela nada: os dois mandam o mesmo número.
+    """
+    uniq = _EM_TESTE[0]
+    if not uniq:
+        return
+    agora = _monotonic()
+    if agora - _BATEU_EM[0] < SEGUNDOS_ENTRE_BATIMENTOS:
+        return
+    _BATEU_EM[0] = agora
+    # O CONTROLE TEM DE ESTAR NA MESA, e a razão é a mesma de
+    # `_refrescar_o_teste`: um par mandado com o dono ausente cai no alvo de
+    # output DE AGORA, que é outro aparelho.
+    if not any(str(c.get("uniq") or "") == uniq for c in ctx.mesa):
+        parar_o_teste()
+        return
+    weak, strong = _par_das_barras(ctx, uniq)
+    with contextlib.suppress(Exception):
+        p.rumble_set_checked(weak, strong)
+
+
+@largada
+def _largar_o_teste(p: Any) -> None:
+    """Devolve os motores ao jogo. Chamado ao trocar de página e ao fim da janela.
+
+    É A METADE QUE FALTAVA. `parar_o_teste()` tinha dois chamadores — o botão
+    "Parar" e o controle que sai da mesa — e nenhum deles é *fechar a janela*.
+
+    OS DOIS PASSOS SÃO OS DO "PARAR", e na mesma ordem: `rumble.stop` fixa o
+    silêncio e `rumble.passthrough(True)` devolve a mão ao jogo. Parar sozinho
+    deixaria o jogo mudo (SPRINT-GAME-RUMBLE-01), que é exatamente o defeito que
+    esta função existe para fechar.
+
+    **A MARCA CAI PRIMEIRO**, e é de propósito: se a ponte estiver morta (a
+    janela indo embora é justamente quando ela morre), o teste ACABOU de todo
+    jeito, e deixar a marca ligada faria o próximo arraste ressuscitar o tremor.
+    O teto do daemon é a rede para o caso de os dois passos não saírem.
+    """
+    if not _EM_TESTE[0]:
+        return
+    parar_o_teste()
+    _BATEU_EM[0] = 0.0
+    with contextlib.suppress(Exception):
+        p.rumble_stop()
+    with contextlib.suppress(Exception):
+        p.rumble_passthrough(True)
 
 
 def _reduzido_pela_barra(valor: int, pontos: int) -> int:
@@ -2252,4 +2331,26 @@ PROVAS = [
 #:
 #: `forca-mesa` ESTEVE NESTA CONVERSA e não está mais: o gesto saiu em
 #: 05/09/2026 com a linha de mesa.
-SEM_ECO = ("testar", "parar", "forca", "intensidade", "motor")
+#:
+#: **`lado` ENTROU EM 15/09/2026, e o número que o justifica foi medido no
+#: daemon dela com o DualSense azul no cabo.** O interruptor de punho escreve a
+#: MESMA barra que `motor`, pelo mesmo `rumble.motores.set`, então ele herda a
+#: razão dele — mas a medição mostrou a coisa mais exata, e ela vale escrita:
+#:
+#:     rumble.motores.set {forte_pct: 100, uniq: d42f4b0000d8}
+#:       -> {"status": "ok", "perfil": "Sackboy™: A Big Adventure",
+#:           "gravado": false, "forte_pct": 100, "fraco_pct": 100}
+#:     daemon.state_full.rumble_motores  ->  {}
+#:
+#: `rumble_motores` vem VAZIO quando nenhuma peça tem opinião própria — é a
+#: disciplina do próprio mapa, escrita em :func:`_barras_dos_motores`: *"a peça
+#: sem opinião não entra no mapa"*, e o valor dela chega ao lado, em
+#: `rumble_motor_pct_padrao`. Então não há par de campos a comparar, e o
+#: `--prova-no-aparelho` marcava o gesto como *"disse aplicado e nada mudou"* —
+#: uma acusação falsa contra um gesto que fez exatamente o que devia.
+#:
+#: **O QUE ISTO NÃO DISPENSA:** quem prova o `lado` é a leitura de volta em
+#: :func:`_barras_dos_motores` (o mesmo caminho do `motor`) e a régua
+#: `tests/unit/test_o_interruptor_de_punho_liga_de_verdade.py`. `SEM_ECO` cala
+#: UMA régua sobre UM assunto que ela não alcança, e não é dispensa de prova.
+SEM_ECO = ("testar", "parar", "forca", "intensidade", "motor", "lado")
