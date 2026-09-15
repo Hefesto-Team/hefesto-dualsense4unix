@@ -78,7 +78,7 @@ SEM_DONO: dict[str, str] = {}
 #
 # **ELA DECIDIU, E FORA DAS OPÇÕES QUE EU OFERECI:**
 #
-#     "os slcers do botão esquerdo e direito (forte e  # noqa-acento: citação dela
+#     "os slcers do botão esquerdo e direito (forte e  # (noqa-acento): dela
 #      fraco) se multiplicam (interagem com os botões economia, moderado,
 #      máximo, se eu tiver 150% do perfil de vibração e as duas linhas
 #      estiverem 100 entao a vibração dos 2 será 150%, mas se so a do motor
@@ -1962,9 +1962,10 @@ BARRA_CHEIA = 100
 def lado(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     """O interruptor de punho: liga e desliga AQUELE motor, naquele controle.
 
-    NASCEU EM 14/09/2026, e a ordem é dela, com o controle na mão: *"ao abrir o
-    vibração o motor esquerdo do controle azul não fica ativado e nem se eu
-    clicar em máximo ele liga. ele deveria ligar se > 0 no slicer dele."*  # noqa-acento: citação literal dela
+    NASCEU EM 14/09/2026, e a ordem é dela, com o controle na mão:
+    *"ao abrir o vibração o motor esquerdo do controle azul não fica ativado
+     e nem se eu clicar em máximo ele liga. ele deveria ligar se > 0 no
+     slicer dele."*  (noqa-acento: citação literal dela)
 
     OS OITO BOTÕES ERAM DESENHO — dois por controle, quatro colunas —, e a casa
     sabia: `SEM_DONO["lado:ligado"]` e `app/telas/vibracao.SEM_FONTE` declaravam a
@@ -2011,9 +2012,13 @@ def lado(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
             "o Hefesto não está rodando — ligue na aba Sistema")
     resposta = corpo if isinstance(corpo, dict) else {}
     if str(resposta.get("status") or "") != "ok":
+        # O RECADO É O MESMO DO ARRASTE, e de propósito: o interruptor grava a
+        # BARRA daquele motor (0 ou 100), pela mesma porta. Uma segunda
+        # redação para o mesmo desfecho faria a tela falar duas línguas para
+        # o mesmo fato — e a família de recusas foi unificada em 11/09/2026.
         raise RuntimeError(
             str(resposta.get("motivo")
-                or "o Hefesto não gravou este motor. Tente de novo."))
+                or "o Hefesto não gravou esta barra. Tente de novo."))
     # O TESTE VIVO SEGUE O INTERRUPTOR pela mesma razão que segue o arraste: se
     # ela está com o "Testar" de pé, o que a mão sente tem de ser o que acabou de
     # ser gravado — e o `ctx` deste gesto ainda traz a barra velha.

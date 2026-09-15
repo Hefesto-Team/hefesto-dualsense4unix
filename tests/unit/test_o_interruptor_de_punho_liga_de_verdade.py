@@ -2,9 +2,9 @@
 
 ORDEM DELA, 14/09/2026, com os dois controles na mesa e a foto da aba na mão:
 
-    *"ao abrir o vibração o motor esquerdo do controle azul não fica ativado e   # noqa-acento: citação literal dela
+    *"ao abrir o vibração o motor esquerdo do controle azul não fica ativado e
      nem se eu clicar em máximo ele liga. ele deveria ligar se > 0 no slicer
-     dele."*
+     dele."*  (noqa-acento: citação literal dela)
 
 O QUE ESTAVA QUEBRADO, e eram DUAS metades — as duas mentindo do mesmo jeito,
 medidas no daemon dela no mesmo dia:

@@ -62,10 +62,14 @@ from hefesto_dualsense4unix.profiles.schema import (
 from hefesto_dualsense4unix.testing import FakeController
 
 
-# 4 TESTE(S) DESTE ARQUIVO SAÍRAM — 14/09/2026,
-# `D-1409-A-TRAVA-MANUAL-SAI-O-PERFIL-APLICA-TUDO`: `test_a_reaplicacao_nao_arma_a_trava_manual`, `test_a_trava_armada_na_mao_bloqueia_a_ativacao_seguinte`, `test_applier_nao_arma_a_categoria_audio`, `test_connect_respeita_a_trava_manual_de_audio`.
+# 4 TESTES DESTE ARQUIVO SAÍRAM — 14/09/2026,
+# `D-1409-A-TRAVA-MANUAL-SAI-O-PERFIL-APLICA-TUDO`:
+# `test_a_reaplicacao_nao_arma_a_trava_manual`,
+# `test_a_trava_armada_na_mao_bloqueia_a_ativacao_seguinte`,
+# `test_applier_nao_arma_a_categoria_audio`,
+# `test_connect_respeita_a_trava_manual_de_audio`.
 #
-# Os três mediam a trava manual por categoria, que ela revogou para todo jogo.
+# Os 4 mediam a trava manual por categoria, que ela revogou para todo jogo.
 # A razão, o journal que mediu o sintoma e a régua que impede a volta estão em
 # `tests/unit/test_a_trava_que_ninguem_solta_01.py`.
 # ---------------------------------------------------------------------------

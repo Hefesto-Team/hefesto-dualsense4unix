@@ -52,10 +52,11 @@ from hefesto_dualsense4unix.profiles.manager import ProfileManager
 from hefesto_dualsense4unix.profiles.schema import (
     MatchManual,
 
-# 1 TESTE(S) DESTE ARQUIVO SAÍRAM — 14/09/2026,
-# `D-1409-A-TRAVA-MANUAL-SAI-O-PERFIL-APLICA-TUDO`: `test_trava_manual_vence_o_veredito_do_controller`.
+# UM TESTE DESTE ARQUIVO SAIU — 14/09/2026,
+# `D-1409-A-TRAVA-MANUAL-SAI-O-PERFIL-APLICA-TUDO`:
+# `test_trava_manual_vence_o_veredito_do_controller`.
 #
-# Os três mediam a trava manual por categoria, que ela revogou para todo jogo.
+# Ele cobria a trava manual por categoria, que ela revogou para todo jogo.
 # A razão, o journal que mediu o sintoma e a régua que impede a volta estão em
 # `tests/unit/test_a_trava_que_ninguem_solta_01.py`.
     Profile,

@@ -185,6 +185,19 @@ DO_APARELHO: dict[str, tuple[str, ...]] = {
     "reenviar": ("luz.lightbar.cor",),
     "player": ("luz.led_jogador.escrita_hefesto",),
     "auto-cores": ("luz.lightbar.cor", "luz.led_jogador.escrita_hefesto"),
+    # O INTERRUPTOR DE PUNHO da aba Vibração — 14/09/2026, quando ele deixou de
+    # ser desenho (ordem dela: *"ele deveria ligar se > 0 no slicer dele"*).
+    #
+    # SÃO AS DUAS CHAVES, e não uma: o gesto é POR LADO, e cada punho tem a sua
+    # linha no mapa. Declarar só uma faria o portão responder pela metade que
+    # der melhor — a família do número que envelhece calado, que a nota do
+    # `brilho` acima descreve.
+    #
+    # `vibracao.rumble.habilitar` NÃO é a chave deste gesto, e a distinção
+    # importa: ela é o bit de habilitar do report (`parcial` nos dois
+    # transportes). O que este interruptor mexe é a INTENSIDADE daquele motor —
+    # 0 desliga, 100 devolve —, que é o mesmo trilho do `barra:motor` ao lado.
+    "lado": ("vibracao.rumble.esquerdo", "vibracao.rumble.direito"),
 }
 
 #: A DÍVIDA CONHECIDA — o gesto que HOJE não responde as quatro, com a sprint
@@ -233,6 +246,10 @@ NO_PERFIL: dict[str, tuple[str | None, str | None]] = {
     "reenviar": ("leds", "leds"),
     "player": ("leds", "leds"),
     "auto-cores": ("leds", "leds"),
+    # O punho grava em `rumble` e é POR CONTROLE: `rumble.motores.set` leva o
+    # `uniq`, e o valor mora em `controllers[<uniq>].rumble` — o mesmo lugar do
+    # arraste da barra, porque é o mesmo número.
+    "lado": ("rumble", "rumble"),
 }
 
 

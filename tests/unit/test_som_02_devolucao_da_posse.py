@@ -427,7 +427,7 @@ class TestReleaseNoProtocolo:
 # A CLASSE `TestTravaManualAudio` SAIU — 14/09/2026,
 # `D-1409-A-TRAVA-MANUAL-SAI-O-PERFIL-APLICA-TUDO`.
 #
-# Ela media a quarta categoria da trava manual, a que a SOM-02/E3 acrescentou: o
+# Ela vigiava a quarta categoria da trava manual, a que a SOM-02/E3 trouxe: o
 # `speaker.set` (volume, mudo e devolução da posse) armava `audio` para o perfil
 # reaplicado não retomar a posse que ela soltara. Eram seis testes — a categoria
 # válida, a porta que recusa nome desconhecido, as duas formas de armar, o pedido

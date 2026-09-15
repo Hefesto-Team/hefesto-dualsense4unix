@@ -11,7 +11,6 @@ Garante que:
 from __future__ import annotations
 
 from pathlib import Path
-from unittest.mock import MagicMock
 
 import pytest
 
@@ -34,10 +33,11 @@ from hefesto_dualsense4unix.profiles.schema import (
 from hefesto_dualsense4unix.testing import FakeController
 
 
-# 1 TESTE(S) DESTE ARQUIVO SAÍRAM — 14/09/2026,
-# `D-1409-A-TRAVA-MANUAL-SAI-O-PERFIL-APLICA-TUDO`: `test_activate_lock_independente_de_manual_trigger_active`.
+# UM TESTE DESTE ARQUIVO SAIU — 14/09/2026,
+# `D-1409-A-TRAVA-MANUAL-SAI-O-PERFIL-APLICA-TUDO`:
+# `test_activate_lock_independente_de_manual_trigger_active`.
 #
-# Os três mediam a trava manual por categoria, que ela revogou para todo jogo.
+# Ele cobria a trava manual por categoria, que ela revogou para todo jogo.
 # A razão, o journal que mediu o sintoma e a régua que impede a volta estão em
 # `tests/unit/test_a_trava_que_ninguem_solta_01.py`.
 

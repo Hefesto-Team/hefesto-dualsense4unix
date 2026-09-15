@@ -80,7 +80,7 @@ def server_fc(tmp_path: Path) -> tuple[IpcServer, _FakeComApplyFor, StateStore]:
 async def test_led_set_com_uniq_vai_por_apply_output_for(
     server_fc: tuple[IpcServer, _FakeComApplyFor, StateStore],
 ) -> None:
-    server, fc, store = server_fc
+    server, fc, _store = server_fc
     resultado = await server._handle_led_set({"rgb": [10, 20, 30], "uniq": UNIQ})
     assert resultado["status"] == "ok"
     assert fc.apply_for_calls == [(UNIQ, OutputSpec(led=(10, 20, 30)))]
@@ -116,7 +116,7 @@ async def test_player_set_com_uniq_vai_por_apply_output_for(
 async def test_trigger_set_com_uniq_vai_por_apply_output_for(
     server_fc: tuple[IpcServer, _FakeComApplyFor, StateStore],
 ) -> None:
-    server, fc, store = server_fc
+    server, fc, _store = server_fc
     resultado = await server._handle_trigger_set(
         {"side": "left", "mode": "Off", "params": [], "uniq": UNIQ}
     )

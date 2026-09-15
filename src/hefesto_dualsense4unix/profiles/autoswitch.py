@@ -919,11 +919,12 @@ class AutoSwitcher:
         # com a exceção do perfil de jogo (R-01) presa dentro dele: a troca
         # automática de perfil ficava suspensa enquanto houvesse categoria
         # carimbada, e só cedia quando o candidato era a regra PRÓPRIA de um
-        # jogo. Ordem dela: *"e pra qualquer outro jogo"*, *"isso nao faz
-        # sentido mais."* — a razão inteira está em `profiles/manager.apply`.
+        # jogo. Ordem dela: *"e pra qualquer outro jogo"*, e em seguida
+        # *"isso nao faz sentido mais."*  # (noqa-acento): citação literal dela
+        # A razão inteira está em `profiles/manager.apply`.
         #
         # O QUE A EXCEÇÃO DO JOGO PROTEGIA CONTINUA PROTEGIDO, e por quem já
-        # protegia: o que o R-01 media era um genérico catch-all pisando na
+        # protegia: o que o R-01 evitava era um genérico catch-all pisando na
         # configuração recém-feita, e quem decide QUAL perfil casa continua sendo
         # a seleção por prioridade — nada disso passava por esta linha.
         #

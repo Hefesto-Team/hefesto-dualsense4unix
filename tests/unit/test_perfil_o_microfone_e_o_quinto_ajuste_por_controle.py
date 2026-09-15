@@ -68,10 +68,11 @@ from hefesto_dualsense4unix.profiles.schema import (
 from tests.unit.test_por_unidade_01_todas_as_abas import (
     BRANCO,
 
-# 1 TESTE(S) DESTE ARQUIVO SAÍRAM — 14/09/2026,
-# `D-1409-A-TRAVA-MANUAL-SAI-O-PERFIL-APLICA-TUDO`: `test_a_trava_manual_de_audio_vence_o_override_da_peca`.
+# UM TESTE DESTE ARQUIVO SAIU — 14/09/2026,
+# `D-1409-A-TRAVA-MANUAL-SAI-O-PERFIL-APLICA-TUDO`:
+# `test_a_trava_manual_de_audio_vence_o_override_da_peca`.
 #
-# Os três mediam a trava manual por categoria, que ela revogou para todo jogo.
+# Ele cobria a trava manual por categoria, que ela revogou para todo jogo.
 # A razão, o journal que mediu o sintoma e a régua que impede a volta estão em
 # `tests/unit/test_a_trava_que_ninguem_solta_01.py`.
     PRETO,
