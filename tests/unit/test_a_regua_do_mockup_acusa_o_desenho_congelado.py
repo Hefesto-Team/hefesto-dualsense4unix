@@ -270,7 +270,11 @@ def test_a_vibracao_publicada_nao_tem_data_gesto_e_a_regua_sabe():
     texto = _texto("05-vibracao.html")
     do_html = {g.nome for g in regua._gestos_cravados(texto)}
     # O rodapé (`.r-<nome>`) mora no esqueleto das dez e aparece aqui também.
-    assert not (do_html - {"aplicar", "salvar", "importar", "exportar"}), (
+    # O `lado` ENTROU EM 14/09/2026: o interruptor de punho deixou de ser
+    # desenho e virou gesto (`a05_vibracao.lado`), por ordem dela com o controle
+    # na mão. É o caso que o próprio recado abaixo previa.
+    assert not (do_html - {"aplicar", "salvar", "importar", "exportar",
+                           "lado"}), (
         f"a 05-vibracao passou a ter `data-gesto` próprio: {sorted(do_html)}. "
         f"Se isso é intencional, esta régua fica mais fácil — mas o teste tem "
         f"de saber, porque a união com os registrados existe por causa disto.")

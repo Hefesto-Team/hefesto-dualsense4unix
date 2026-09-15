@@ -427,11 +427,18 @@ def test_o_que_falta_esta_declarado(emitidos):
       o desenho era decisão dela. Ela escolheu a **linha de mesa embaixo da
       grade** (decisão [05]), e o gesto é `a05_vibracao.forca_da_mesa`.
 
-    `lado:ligado` é o que sobra, e continua sem existir em linha nenhuma do
-    produto — nem campo no esquema, nem método de IPC, nem chave no `state_full`.
+    **E O ÚLTIMO SAIU EM 14/09/2026 — `lado:ligado`, por ordem dela com os dois
+    controles na mesa.** A dívida dizia que não havia *"nem campo no esquema, nem
+    método de IPC, nem chave no `state_full`"*, e a última parte era a errada: a
+    BARRA de cada motor já vive no perfil e o `rumble.motores.set` já a escreve.
+    O que faltava não era campo — era ligar o botão ao valor que já existe. O
+    interruptor acende com `barra > 0` e o clique manda 0 ou 100.
+
+    **A LISTA FICOU VAZIA, e o teste continua tendo o que morder:** a igualdade
+    abaixo reprova tanto uma dívida NOVA não declarada quanto o retorno desta.
     """
     pacote, _ = emitidos
-    assert set(pacote["sem_dono"]) == {"lado:ligado"}
+    assert set(pacote["sem_dono"]) == set()
     for chave, razao in pacote["sem_dono"].items():
         assert len(razao) > 80, f"{chave} declara sem dizer por quê"
     # E O QUE FECHOU É PINTADO — sem isto, apagar da lista seria indistinguível

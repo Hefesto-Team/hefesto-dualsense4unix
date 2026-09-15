@@ -142,7 +142,15 @@ def test_cada_degrau_diz_quem_ele_e(bancada) -> None:
                 f'data-hef-quando="{chave}"')
         assert alvo in bancada, f"o degrau {chave!r} não tem endereço de classe"
 
-    quandos = re.findall(r'data-hef-quando="([^"]+)"', bancada)
+    # A CONTA É DOS DEGRAUS, e o filtro por `data-campo="degrau"` entrou em
+    # 14/09/2026: o interruptor de punho ganhou fonte nesse dia e usa o MESMO
+    # vocabulário (`data-campo="lado-<sigla>" data-hef-alvo="classe"
+    # data-hef-quando="1"`). Contar todo `data-hef-quando` da página passou a
+    # somar oito botões que não são degrau — e a régua reprovaria a cura em vez
+    # do defeito, que é a forma que esta casa já nomeou.
+    quandos = re.findall(
+        r'data-campo="degrau" data-hef-alvo="classe" data-hef-quando="([^"]+)"',
+        bancada)
     lugares = bancada.count('data-controle="p')
     # A LINHA DE MESA SAIU EM 05/09/2026 — decisão dela. Os degraus vivem só
     # dentro das colunas agora, e a conta é `degraus x LUGARES`.

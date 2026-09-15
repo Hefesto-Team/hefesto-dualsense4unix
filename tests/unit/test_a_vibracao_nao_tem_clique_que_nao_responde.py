@@ -90,7 +90,15 @@ PAGINA = "05-vibracao.html"
 #: `motor-<lado>-pedido` do `title`) são contados no lugar dele, e
 #: `test_nenhum_papel_desta_aba_fica_sem_gesto` continua exigindo que todo
 #: `data-papel` tenha dono.
-ENDERECOS_QUE_SO_PINTAM = ("desenho", "identidade", "lado")
+#: **E HOJE SÃO DOIS — 14/09/2026, e `lado` saiu pela MESMA porta que `motor`:
+#: ele GANHOU GESTO.** A ordem é dela, com os dois controles na mesa: *"ao abrir
+#: o vibração o motor esquerdo do controle azul não fica ativado e nem se eu
+#: clicar em máximo ele liga"*  (noqa-acento: citação literal dela). O botão
+#: trocou o `data-hef` pelo par `data-gesto="lado"` + `data-campo="lado-<sigla>"`
+#: com alvo `classe`, e `a05_vibracao.lado` atende. Não é a régua perdendo um
+#: campo: o endereço que a coluna usa agora é `lado-e`/`lado-d`, contado no lugar
+#: dele, e `test_nenhum_papel_desta_aba_fica_sem_gesto` continua exigindo dono.
+ENDERECOS_QUE_SO_PINTAM = ("desenho", "identidade")
 
 
 @pytest.fixture(scope="module")
@@ -171,8 +179,13 @@ def test_o_gerador_reprova_um_papel_orfao(gerador, bancada: str) -> None:
     ``data-papel="lado"`` de volta, e ``_conferir`` tem de levantar. Se ele
     passar, a régua 11 é enfeite.
     """
-    envenenado = bancada.replace('data-hef="lado"', 'data-papel="lado"', 1)
-    assert envenenado != bancada, 'o desenho não tem mais `data-hef="lado"`'
+    # O VENENO MUDOU DE NOME EM 14/09/2026 — era o `lado`, que ganhou gesto
+    # nesse dia. O `identidade` serve pela mesma razão que o `lado` servia:
+    # nenhum pacote o registra, então um `data-papel` nele é clique sem dono.
+    envenenado = bancada.replace(
+        'data-hef="identidade"', 'data-papel="identidade"', 1)
+    assert envenenado != bancada, (
+        'o desenho não tem mais `data-hef="identidade"`')
     with pytest.raises(SystemExit):
         gerador._conferir(envenenado)
     # E o documento LIMPO passa — senão a reprovação acima seria por outro
