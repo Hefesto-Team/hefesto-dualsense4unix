@@ -5023,6 +5023,12 @@ class IpcHandlersMixin:
         if daemon_cfg is not None:
             daemon_cfg.rumble_active = (weak, strong)
             daemon_cfg.rumble_active_uniq = uniq_do_alvo_de_output(self.controller)
+            # O CARIMBO DO TETO DE OCIOSIDADE — A-TELA-QUE-TRAVA-02, 15/09/2026.
+            # É a hora em que alguém disse "eu ainda estou segurando". Passado
+            # `rumble.TETO_DO_RUMBLE_FIXADO_S` sem um novo, o reassert devolve
+            # os motores ao jogo. Ver a prosa em
+            # `daemon/subsystems/rumble.reassert_rumble`.
+            daemon_cfg.rumble_active_em = time.monotonic()
         # Aplica política antes de enviar ao hardware.
         eff_weak, eff_strong = apply_rumble_policy(self.daemon, weak, strong)
         self.controller.set_rumble(weak=eff_weak, strong=eff_strong)
@@ -5119,6 +5125,11 @@ class IpcHandlersMixin:
             dono_velho = getattr(daemon_cfg, "rumble_active_uniq", None)
             daemon_cfg.rumble_active = (0, 0)
             daemon_cfg.rumble_active_uniq = dono_de_agora
+            # O CARIMBO VALE PARA O SILÊNCIO TAMBÉM — A-TELA-QUE-TRAVA-02.
+            # Um `(0, 0)` fixo que ninguém rebate é um jogo mudo, e a regra dela
+            # de 15/09/2026 é que o "Parar" só para o TESTE: para calar a
+            # vibração no jogo ela zera o slicer do motor ou o degrau do perfil.
+            daemon_cfg.rumble_active_em = time.monotonic()
             # Só quem vibrava por NOSSA conta é resgatado: par nenhum (o jogo
             # dirige) ou par (0,0) (já calado) não abandonam ninguém.
             if par_velho is not None and any(par_velho):

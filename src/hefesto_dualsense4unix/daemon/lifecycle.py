@@ -276,6 +276,20 @@ class DaemonConfig:
     #: continua sendo uma só para a máquina — o que deixa de acontecer é a
     #: migração de dono.
     rumble_active_uniq: str | None = None
+    #: QUANDO ALGUÉM DISSE "AINDA ESTOU SEGURANDO" — A-TELA-QUE-TRAVA-02,
+    #: 15/09/2026. `monotonic` do último `rumble.set`/`rumble.stop`, ou `None`.
+    #:
+    #: Passado `subsystems/rumble.TETO_DO_RUMBLE_FIXADO_S` sem um carimbo novo, o
+    #: `reassert_rumble` devolve os motores ao JOGO. É a rede para a janela que
+    #: MORRE com o "Testar" ligado — até 15/09 isso deixava o jogo sem vibração
+    #: até ela reabrir a aba Vibração e clicar em "Parar", e nada na tela dizia
+    #: por quê, porque a tela já não estava lá.
+    #:
+    #: Quem rebate é `interface/pacotes/a05_vibracao._bater_o_coracao_do_teste`,
+    #: a cada 1 s enquanto a janela vive. A ordem dela: *"o testar e parar é
+    #: sobre o teste naquele momento isso nao interfere in game"*  (noqa-acento: citação literal dela)
+    #: (noqa-acento: citação literal dela).
+    rumble_active_em: float | None = None
     #: MESA-CHEIA-05 (E0, terceira rodada) — o controle que está vibrando POR
     #: NOSSA CONTA neste instante, ou None quando nenhum está.
     #:

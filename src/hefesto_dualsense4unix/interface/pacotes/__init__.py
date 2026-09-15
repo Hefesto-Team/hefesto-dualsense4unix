@@ -235,6 +235,87 @@ def gesto(pagina: str, nome: str, *,
     return dentro
 
 
+#: QUEM SEGURA UM APARELHO DELA ENQUANTO A JANELA ESTÁ ABERTA — 15/09/2026,
+#: A-TELA-QUE-TRAVA-02. Uma aba pode deixar o produto num estado que é DELA
+#: enquanto ela olha, e não do jogo: hoje é um só, o "Testar" da Vibração, que
+#: tira os motores do jogo (`rumble.passthrough(False)`) até ela clicar em
+#: "Parar".
+#:
+#: A ORDEM DELA, 15/09/2026, com o controle na mão: *"o testar e parar é sobre o
+#: teste naquele momento isso nao interfere in game (noqa-acento: citação literal dela). (…) clicar em parar é só
+#: pra impactar no teste naquele momento e não mutar a vibração in game. em game
+#: se eu quiser desligar a vibração do motor esquerdo zero o slicer"*
+#: (noqa-acento: citação literal dela).
+#:
+#: O QUE ESTAVA QUEBRADO: `parar_o_teste()` tinha DOIS chamadores — o botão
+#: "Parar" e o controle que sai da mesa — e nenhum deles é fechar a janela.
+#: Trocar de aba, fechar a janela ou a janela morrer deixava
+#: `rumble_passthrough=False` para sempre, e o jogo ficava mudo sem que nada na
+#: tela dissesse por quê.
+#:
+#: SÃO DUAS METADES, e as duas foram escolha dela entre quatro caminhos:
+#:
+#: * **o CORAÇÃO** (`CORACOES`) — enquanto a janela vive, ela bate a cada tique
+#:   e o daemon sabe que alguém ainda segura. É a aba que decide se há o que
+#:   bater e com que espaçamento; o piloto só bate;
+#: * **a LARGADA** (`LARGADAS`) — ao trocar de página e ao fim da janela, o
+#:   piloto manda largar. Aqui não há espaçamento: largar duas vezes é inócuo,
+#:   não largar é o jogo mudo.
+#:
+#: A terceira metade é do daemon e não mora aqui: um teto de ociosidade solta o
+#: rumble fixado que ninguém rebate — a rede para a janela que MORRE sem
+#: conseguir largar (`daemon/subsystems/rumble.TETO_DO_RUMBLE_FIXADO_S`).
+#:
+#: POR QUE GENÉRICO, e não um desvio por nome de página dentro do piloto: ele é
+#: o dono das DEZ abas e não conhece o assunto de nenhuma. Uma segunda aba que
+#: segure um aparelho amanhã registra aqui e ganha as duas metades de graça —
+#: e, mais importante, quem escreve a aba não precisa lembrar de mexer no
+#: piloto, que é a forma de defeito que o `GESTOS_QUE_MEXEM` acima já nomeia.
+CORACOES: list[Callable[[Contexto, Any], None]] = []
+
+#: Quem devolve ao jogo/à máquina o que a aba segurava. Ver `CORACOES`.
+LARGADAS: list[Callable[[Any], None]] = []
+
+
+def coracao(fn: Callable[[Contexto, Any], None]) -> Callable[[Contexto, Any], None]:
+    """Registra um batimento por tique. A aba decide se há o que bater."""
+    CORACOES.append(fn)
+    return fn
+
+
+def largada(fn: Callable[[Any], None]) -> Callable[[Any], None]:
+    """Registra quem larga o que a aba segurava, ao sair da página ou da janela."""
+    LARGADAS.append(fn)
+    return fn
+
+
+def bater_os_coracoes(ctx: Contexto, p: Any) -> None:
+    """Um batimento de cada aba que segura algo. **Nunca levanta.**
+
+    Ele roda DENTRO do tique, e um tique que levanta para de pintar a aba
+    inteira — trocar um jogo sem vibração por uma tela congelada seria o pior
+    dos dois negócios. O que der errado vai ao diário da janela.
+    """
+    for bate in CORACOES:
+        try:
+            bate(ctx, p)
+        except Exception as erro:  # o tique não morre por isto
+            print(f"[coração] {bate.__name__}: {erro}", file=sys.stderr)
+
+
+def largar_o_que_as_abas_seguram(p: Any) -> None:
+    """Devolve ao jogo/à máquina tudo o que as abas seguravam. **Nunca levanta.**
+
+    Chamado ao TROCAR de página e ao fim da janela. Largar o que já está solto é
+    inócuo; não largar é o jogo mudo até ela voltar à aba e clicar em "Parar".
+    """
+    for larga in LARGADAS:
+        try:
+            larga(p)
+        except Exception as erro:  # a saída não morre por isto
+            print(f"[largada] {larga.__name__}: {erro}", file=sys.stderr)
+
+
 def perigosos() -> set[tuple[str, str]]:
     """Os gestos que mexem na máquina dela — DERIVADOS, nunca digitados.
 

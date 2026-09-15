@@ -3908,6 +3908,12 @@ class Piloto:
         # A MESA DE AGORA fica guardada para o gesto: um clique chega entre dois
         # tiques, e sem ela resolver o `uniq` custaria um IPC a mais por clique.
         self._mesa_de_agora, self._ctx_de_agora = ctx.mesa, ctx
+        # O CORAÇÃO DE QUEM SEGURA UM APARELHO — A-TELA-QUE-TRAVA-02. Enquanto
+        # a janela vive, ele diz ao daemon que alguém ainda está aqui; quando
+        # ela morre sem conseguir largar, o teto de ociosidade do daemon solta.
+        # A aba decide se há o que bater e com que espaçamento (o dela é 1 s);
+        # o piloto só bate, e `bater_os_coracoes` nunca levanta.
+        pacotes.bater_os_coracoes(ctx, ponte)
         try:
             pacote = pacotes.pacote_da_pagina(self.pagina, ctx)
         except Exception as e:
@@ -4607,6 +4613,12 @@ class Piloto:
             # opening file .../paginas/10" e o comando devolveu rc=0.
             self.tela._morrer(f"não existe a página pedida: {alvo.name}")
             return False
+        # O QUE A ABA SEGURAVA VOLTA AO JOGO ANTES DE A PÁGINA IR EMBORA —
+        # A-TELA-QUE-TRAVA-02, 15/09/2026. Ordem dela: *"o testar e parar é
+        # sobre o teste naquele momento isso nao interfere in game"*  # (noqa-acento): dela
+        # O piloto não sabe QUE assunto é — quem sabe é a aba, em
+        # `pacotes.LARGADAS`. Aqui é só o gatilho, e ele é o da travessia.
+        pacotes.largar_o_que_as_abas_seguram(ponte)
         self.view.load_uri(alvo.as_uri())
         return False
 
@@ -4621,6 +4633,11 @@ class Piloto:
         # espera — mas uma leitura a caminho durante o relato é uma pergunta ao
         # daemon dela por uma janela que já está indo embora.
         self._estado_vivo.parar()
+        # E O QUE AS ABAS SEGURAVAM VOLTA AO JOGO — A-TELA-QUE-TRAVA-02. Sem
+        # isto, fechar a janela com o "Testar" ligado deixava o jogo sem
+        # vibração até ela reabrir a aba e clicar em "Parar". Largar o que já
+        # está solto é inócuo; não largar é o jogo mudo.
+        pacotes.largar_o_que_as_abas_seguram(ponte)
         if self.args.foto:
             # `fotografar()` JÁ IMPRIME o caminho — a linha que estava aqui era
             # a segunda, e foi ela que fez o log de 01/09 mostrar dois "foto:"
