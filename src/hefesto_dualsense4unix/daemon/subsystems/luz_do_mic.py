@@ -794,7 +794,7 @@ async def luz_do_mic_loop(daemon: DaemonProtocol) -> None:
                         desinscrever(_TOPICO_DA_BORDA, fila)
             # A DEVOLUÇÃO NO DESLIGAMENTO mora aqui porque o
             # `connection.shutdown` só sabe CANCELAR tasks
-            # (`daemon/connection.py:1383-1384`) — um laço cancelado não repinta e
+            # (`daemon/connection.py:1530-1531`) — um laço cancelado não repinta e
             # não solta nada. O `finally` roda com a cancelação já entregue, e
             # como o `shutdown` chama `cancel()` UMA vez por task, o `await` de
             # dentro de `_devolver` sobrevive; se não sobreviver, a repintura já

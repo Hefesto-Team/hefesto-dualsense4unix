@@ -1483,7 +1483,32 @@ class ProfileManager:
         volume = getattr(secao, "volume", None)
         muted = getattr(secao, "muted", None)
         # MIC-GRAVACAO-01: o mudo só atravessa a troca EXPLÍCITA de perfil.
-        if origin != "manual":
+        #
+        # **E O REPLUG, QUE É O TERCEIRO CASO — SOM-MIC-REPLUG-01, 16/09/2026.**
+        # Ele não é troca de perfil: é o aparelho VOLTANDO, e voltando com o
+        # firmware no default dele — microfone ABERTO, LED apagado. A lição do
+        # mesmo dia, do outro lado do byte de áudio (`SOM-ECO-01`), vale aqui:
+        # *não escrever não é o lado neutro*. Quem pediu mudo e recebe aberto
+        # **fala sem saber que é ouvida**, e o produto foi quem abriu.
+        #
+        # A passagem é ASSIMÉTRICA, e é isso que concilia as duas decisões:
+        #
+        #   muted=True  -> ESCREVE. O firmware voltou aberto; devolver o mudo é
+        #                  desfazer uma escolha que ninguém fez. E ACENDE o LED
+        #                  vermelho, que é sinal visível — o lado seguro tem
+        #                  aviso, o inseguro não tem nenhum.
+        #   muted=False -> não escreve. Já é o default do firmware, então a
+        #                  escrita não mudaria nada — e APAGARIA o LED, que é
+        #                  exatamente o que a AUDIT-FINDING-PROFILE-MIC-LED-
+        #                  RESET-01 proíbe fora de pedido explícito dela.
+        #
+        # Por isso a exceção mora AQUI e não no chamador: a casa exige que a
+        # MIC-GRAVACAO-01 não tenha duas cópias que possam divergir, e um
+        # `reapply_mic_on_connect` que filtrasse por conta própria seria a
+        # segunda cópia.
+        if origin == "replug":
+            muted = True if muted is True else None
+        elif origin != "manual":
             muted = None
         if volume is None and muted is None:
             # Seção que existe só pelo `button_toggles_system` (ou perfil cujo
@@ -1589,6 +1614,68 @@ class ProfileManager:
         if override is not None:
             vista = profile.model_copy(update={"speaker": override})
             estado = self.apply_speaker(vista, origin="system", uniq=uniq)
+        return estado
+
+    def reapply_mic_on_connect(self, uniq: str | None = None) -> str | None:
+        """Devolve o MICROFONE daquela peça quando o controle (re)conecta.
+
+        SOM-MIC-REPLUG-01 — 16/09/2026, a primeira das sete dívidas que a régua
+        das quatro pernas declarou em `volta_no_replug`, e a mais cara delas
+        porque o preço de errar é de PRIVACIDADE, não de conforto::
+
+            perna     o que a régua mediu                estado
+            VOLTA     `mic.muted` sobrevive ao replug?   DÍVIDA (16/09)
+
+        O texto da dívida era: *"o LED do mudo volta (está em `_OUTPUT_FIELDS`),
+        mas o MUDO em si não: `set_microphone_mute` não é chamado por nenhum
+        caminho de adoção nem de reconexão"* — medido por varredura de
+        `reapply`/`on_connect`/`after_connect`, em que só o alto-falante tinha
+        gancho de replug.
+
+        **O QUE ACONTECIA:** ela deixa o microfone MUDO, tira e repõe o cabo (ou
+        o daemon reabre o handle depois de um EIO), e o microfone volta ABERTO —
+        porque o firmware nasce assim e ninguém escreve nada. A pessoa continua
+        achando que está em silêncio. Para um produto de acessibilidade, em que
+        o microfone do controle é o canal de fala de quem o usa, isto é o defeito
+        mais grave desta família: **o silêncio que o produto promete e não
+        entrega**.
+
+        Espelho exato do `reapply_speaker_on_connect`, e de propósito — mesma
+        ordem (global escreve, peça reescreve por cima), mesmo `norm_mac` para
+        canonizar a chave de `controllers`, mesmo best-effort. O que muda é uma
+        coisa só: o `origin` é `"replug"` e não `"system"`, porque é ele que
+        abre a passagem ASSIMÉTRICA do `muted` em `apply_mic` — `True` atravessa,
+        `False` não. A regra mora lá, em cópia única.
+
+        O `volume` atravessa dos dois jeitos e sempre atravessou: ele é ganho de
+        captura, não mexe no LED nem tira o botão físico de ninguém.
+        """
+        nome = getattr(getattr(self, "store", None), "active_profile", None)
+        if not nome:
+            return None
+        try:
+            profile = load_profile(str(nome))
+        except Exception as exc:
+            logger.warning(
+                "profile_mic_reapply_load_failed", name=str(nome), err=str(exc)
+            )
+            return None
+        override = None
+        if uniq:
+            from hefesto_dualsense4unix.core.sysfs_leds import norm_mac
+
+            chave = norm_mac(str(uniq)) or str(uniq)
+            cfg = (getattr(profile, "controllers", None) or {}).get(chave)
+            override = getattr(cfg, "mic", None) if cfg is not None else None
+        global_ = getattr(profile, "mic", None)
+        if override is None and global_ is None:
+            return None
+        estado = None
+        if global_ is not None:
+            estado = self.apply_mic(profile, origin="replug", uniq=uniq)
+        if override is not None:
+            vista = profile.model_copy(update={"mic": override})
+            estado = self.apply_mic(vista, origin="replug", uniq=uniq)
         return estado
 
     def select_for_window(self, window_info: dict[str, object]) -> Profile | None:

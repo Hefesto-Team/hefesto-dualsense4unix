@@ -172,6 +172,48 @@ async def reapply_speaker_after_connect(
         logger.info("speaker_reaplicado_no_connect", estado=estado, uniq=uniq)
 
 
+async def reapply_mic_after_connect(
+    daemon: DaemonProtocol, *, uniq: str | None = None
+) -> None:
+    """Devolve o MUDO do microfone daquela peça no (re)connect.
+
+    SOM-MIC-REPLUG-01, 16/09/2026. Irmã exata da função acima, e ela existe
+    pela mesma razão: o estado do aparelho morre com o cabo. A diferença é o
+    que se perde quando ninguém repõe — no alto-falante, um volume; no
+    microfone, **o silêncio que ela pediu**.
+
+    Sem este gancho, quem deixou o microfone mudo e trocou o cabo volta a ser
+    ouvida sem saber. O firmware nasce com o mic ABERTO, então não escrever não
+    é neutro: é abrir.
+
+    Toda a política mora em `ProfileManager.reapply_mic_on_connect`, e a
+    assimetria que concilia a MIC-GRAVACAO-01 com a proteção do LED vermelho
+    está em `apply_mic`, em cópia única — aqui não há regra nenhuma a repetir.
+
+    Best-effort de ponta a ponta, como a irmã: daemon enxuto sem
+    `store`/`_run_blocking` simplesmente não reaplica, e falha nenhuma derruba
+    o caminho de conexão.
+    """
+    from functools import partial
+
+    from hefesto_dualsense4unix.profiles.manager import ProfileManager
+
+    applier = getattr(daemon, "apply_profile_mic", None)
+    store = getattr(daemon, "store", None)
+    if applier is None or store is None:
+        return
+    manager = ProfileManager(
+        controller=daemon.controller,
+        store=store,
+        mic_applier=applier,
+    )
+    estado = await daemon._run_blocking(
+        partial(manager.reapply_mic_on_connect, uniq)
+    )
+    if estado is not None:
+        logger.info("mic_reaplicado_no_connect", estado=estado, uniq=uniq)
+
+
 def alvos_conectados_de(daemon: DaemonProtocol) -> dict[str, str | None] | None:
     """`{key: uniq}` dos controles conectados AGORA, ou None se ninguém sabe.
 
@@ -228,6 +270,10 @@ async def reaplicar_som_em_todos_os_alvos(daemon: DaemonProtocol) -> None:
     for uniq in uniqs:
         with contextlib.suppress(Exception):
             await reapply_speaker_after_connect(daemon, uniq=uniq)
+        # SOM-MIC-REPLUG-01: o `suppress` é SEPARADO de propósito — o
+        # alto-falante falhar não pode custar o mudo do microfone dela.
+        with contextlib.suppress(Exception):
+            await reapply_mic_after_connect(daemon, uniq=uniq)
 
 
 async def anunciar_bordas_por_alvo(
@@ -267,6 +313,8 @@ async def anunciar_bordas_por_alvo(
     for key in [k for k in agora if k not in antes]:
         with contextlib.suppress(Exception):
             await reapply_speaker_after_connect(daemon, uniq=agora[key])
+        with contextlib.suppress(Exception):
+            await reapply_mic_after_connect(daemon, uniq=agora[key])
 
 
 async def restore_last_profile(daemon: DaemonProtocol) -> None:
@@ -1517,6 +1565,7 @@ __all__ = [
     "armar_gatilho_da_cor_por_numeracao",
     "connect_with_retry",
     "disparar_gatilhos_devidos",
+    "reapply_mic_after_connect",
     "reapply_speaker_after_connect",
     "reconnect",
     "reconnect_loop",
