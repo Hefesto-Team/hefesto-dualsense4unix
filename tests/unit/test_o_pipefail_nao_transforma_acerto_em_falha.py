@@ -95,22 +95,77 @@ def test_o_leitor_do_dkms_existe_e_nao_usa_cano() -> None:
     assert "|" not in sem_ou, f"o leitor voltou a usar cano: {corpo!r}"
 
 
+#: O buffer de um pipe no Linux, e é ELE que decide se há SIGPIPE.
+#:
+#: Enquanto o que o produtor escreve CABE aqui, ele termina sem bloquear e o
+#: `SIGPIPE` nunca chega — mesmo com o leitor saindo cedo. Acima disso o
+#: produtor BLOQUEIA no `write`, o leitor fecha o cano, e o sinal é garantido
+#: por construção, não por escalonamento.
+_BUFFER_DO_PIPE_BYTES = 64 * 1024
+
+#: O produtor deste caso, e o tamanho é medido: `seq 200000` escreve
+#: **1.288.895 bytes**, quase vinte vezes o buffer.
+_LINHAS_DO_PRODUTOR = 200_000
+
+
 def test_o_mecanismo_e_real_e_nao_folclore() -> None:
     """A prova de que a armadilha existe MESMO — no bash desta máquina.
 
     Sem este caso, os dois acima seriam uma proibição por superstição. Se algum
     dia o bash deixar de propagar o 141, ele reprova e avisa que a regra pode
     cair.
+
+    **ESTE CASO ERA INTERMITENTE, e a cura é aritmética — 16/09/2026.**
+
+    Ele reprovou uma vez na suíte inteira (parte-16, `assert 0 == 141`) e passou
+    3/3 rodado isolado, no mesmo minuto. O produtor era
+    ``for i in $(seq 500); do echo l$i; done``, que escreve **2.392 bytes** —
+    e o buffer de um pipe no Linux é de **65.536**. Tudo cabia. O produtor
+    nunca bloqueava, e o ``SIGPIPE`` só chegava se o ``grep -q`` saísse ANTES
+    de os 500 ecos terminarem: **corrida de escalonamento, não mecanismo**.
+    Sob a carga de 24 pytest concorrentes o escalonamento muda, o produtor
+    ganha a corrida, e o caso acusa uma regressão que não existe.
+
+    *Um teste que reprova por escalonamento é um instrumento que mente* — e
+    este mentia justamente sobre a regra que custou dois defeitos em produção,
+    o que faria a próxima pessoa desconfiar da regra certa.
+
+    A cura não muda o que se mede, muda o TAMANHO: com 1,3 MB contra 64 KB de
+    buffer, o produtor TEM de bloquear e o sinal é determinístico. Medido 8/8
+    com a máquina livre e 8/8 com ela ocupada.
+
+    O produtor também deixou de ser laço de shell e virou um COMANDO
+    (``seq``), que é a forma do caso real — ``dkms status | grep``.
     """
     achou = subprocess.run(
         ["bash", "-c",
-         "set -o pipefail; for i in $(seq 500); do echo l$i; done | grep -q l1"],
+         f"set -o pipefail; seq {_LINHAS_DO_PRODUTOR} | grep -q '^1$'"],
         capture_output=True,
     )
     assert achou.returncode == 141, (
         f"o pipeline devolveu {achou.returncode}, não 141 (SIGPIPE). "
         "Se isto mudou de verdade, as duas regras acima podem ser relaxadas — "
         "mas confira antes, porque elas custaram dois defeitos em produção."
+    )
+
+
+def test_o_produtor_estoura_o_buffer_do_pipe_de_proposito() -> None:
+    """O que torna o caso acima DETERMINÍSTICO, medido e não suposto.
+
+    Esta é a régua da régua: se alguém encolher o produtor de volta para umas
+    centenas de linhas, o caso de cima volta a ser uma corrida e a passar por
+    sorte — que foi exatamente o estado de que ele saiu.
+
+    MORDIDA: trocar `_LINHAS_DO_PRODUTOR` por 500 e este caso nomeia os bytes.
+    """
+    saida = subprocess.run(
+        ["bash", "-c", f"seq {_LINHAS_DO_PRODUTOR}"], capture_output=True
+    )
+    bytes_gerados = len(saida.stdout)
+    assert bytes_gerados > _BUFFER_DO_PIPE_BYTES, (
+        f"o produtor gera {bytes_gerados} bytes e o buffer do pipe tem "
+        f"{_BUFFER_DO_PIPE_BYTES}: tudo CABE, o produtor não bloqueia, e o "
+        "SIGPIPE volta a depender de quem o escalonador acorda primeiro"
     )
 
     sem_cano = subprocess.run(
