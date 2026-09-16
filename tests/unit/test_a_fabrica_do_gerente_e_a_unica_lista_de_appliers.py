@@ -158,6 +158,25 @@ _A_MAO_COM_RAZAO: dict[tuple[str, str], Razao] = {
     ),
     (
         "daemon.connection",
+        "reapply_mic_after_connect",
+    ): Razao(
+        appliers=frozenset({"mic_applier"}),
+        motivo=(
+            "16/09/2026 (SOM-MIC-REPLUG-01) — a IRMÃ EXATA da de cima, e pela "
+            "mesma razão: não é rota de ativação, não chama `activate`, chama "
+            "`ProfileManager.reapply_mic_on_connect`, que devolve só o mudo e o "
+            "volume do microfone daquela peça quando o controle volta. Um "
+            "gerente completo aqui daria ao replug o poder de reaplicar o perfil "
+            "inteiro, que é o oposto do que a rota existe para fazer — e no "
+            "microfone isso seria pior que no alto-falante, porque arrastaria "
+            "junto a luz e o gatilho a cada troca de cabo. Ver "
+            "src/hefesto_dualsense4unix/daemon/connection.py, docstring da "
+            "própria função, e a assimetria do `origin=\"replug\"` em "
+            "`ProfileManager.apply_mic`."
+        ),
+    ),
+    (
+        "daemon.connection",
         "restore_last_profile",
     ): Razao(
         appliers=frozenset(_NOMES_DE_APPLIER),
