@@ -94,6 +94,7 @@ from __future__ import annotations
 
 import contextlib
 import ctypes
+import json
 import os
 import shutil
 import subprocess
@@ -1348,18 +1349,80 @@ GRAVADORES_DO_MONITOR: tuple[tuple[str, tuple[str, ...]], ...] = (
     (
         "pw-record",
         ("--target={fonte}", "--rate={taxa}", "--channels={canais}",
-         "--format=s16", "-"),
+         "--format=s16", "-P", "node.name={rotulo}", "-"),
     ),
     (
         "parec",
         ("--device={fonte}", "--rate={taxa}", "--channels={canais}",
-         "--format=s16le", "--raw"),
+         "--format=s16le", "--raw", "--client-name={rotulo}"),
     ),
 )
 
 
+def serial_do_no(nome: str) -> int | None:
+    """O ``object.serial`` do nó chamado ``nome``, ou ``None``.
+
+    SOM-ECO-02 (16/09/2026) — e é o número que faz o ``pw-record`` acertar o
+    alvo. O ``object.serial`` é o mesmo índice que o ``pactl`` publica na
+    coluna 1 de ``list sinks short``: medido nesta máquina, o sink
+    ``hefesto_som_…`` tem ``id=46`` e ``object.serial=75833``, e é o 75833 que
+    o ``pactl`` mostra. **O ``id`` NÃO serve** — ver a tabela em
+    :func:`argv_do_gravador`.
+
+    Aceita o nome do SINK ou o do monitor dele (``<sink>.monitor``): o serial é
+    o do sink nos dois casos, e o ``pw-record`` mirado nele entrega o monitor.
+
+    Best-effort e silenciosa: sem ``pactl``, com o servidor em recuo ou com o nó
+    ausente, devolve ``None`` — e o chamador cai no gravador que acerta pelo
+    NOME. Ausência aqui nunca vira "use a fonte padrão".
+    """
+    if not nome:
+        return None
+    alvo = nome[: -len(".monitor")] if nome.endswith(".monitor") else nome
+    try:
+        proc = subprocess.run(
+            ["pactl", "list", "sinks", "short"],
+            capture_output=True, text=True, timeout=2.0, check=False,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return None
+    if getattr(proc, "returncode", 1) != 0:
+        return None
+    for linha in (proc.stdout or "").splitlines():
+        campos = linha.split("\t")
+        if len(campos) >= 2 and campos[1] == alvo:
+            try:
+                return int(campos[0])
+            except ValueError:
+                return None
+    return None
+
+
+def rotulo_do_gravador(id_do_no: str) -> str:
+    """O nome que damos ao NOSSO nó de gravação. Único por controle.
+
+    SOM-ECO-02 — ele existe para a conferência ter por onde pegar. O PipeWire
+    **não expõe o PID** do processo (medido: `application.process.id` vem
+    `None` para o `pw-record`, e nenhuma outra chave do `pw-dump` carrega o
+    número), então casar o gravador pelo processo é impossível por esse
+    caminho. Casar pelo NOME DO BINÁRIO seria pior: numa mesa de quatro há um
+    `pw-record` por controle, e a conferência devolveria o alvo do vizinho — a
+    mesma família do `casar-no-com-controle-por-rotulo-e-cura-errada`.
+
+    Então o identificador é NOSSO, e carrega o nó do controle: um rótulo por
+    peça, que o `pw-dump` devolve em `node.name`. Medido nos dois gravadores —
+    `pw-record -P node.name=…` e `parec --client-name=…` publicam o mesmo nome.
+    """
+    sufixo = id_do_no.rsplit("_", 1)[-1] if "_" in id_do_no else id_do_no
+    return f"hefesto-ponte-{sufixo}"
+
+
 def argv_do_gravador(
-    fonte: str, *, taxa: int = TAXA_DO_ENCODER, canais: int = CANAIS_DO_ENCODER
+    fonte: str,
+    *,
+    taxa: int = TAXA_DO_ENCODER,
+    canais: int = CANAIS_DO_ENCODER,
+    rotulo: str = "hefesto-ponte",
 ) -> list[str]:
     """O comando que lê PCM cru do monitor de um nó. `[]` se não há tocador.
 
@@ -1367,14 +1430,124 @@ def argv_do_gravador(
     ``shell=True``, invariante do projeto), e ela vai **explícita e não
     vazia**: `--target=` vazio no `pw-record` cai na fonte padrão do sistema, e
     o instrumento leria o som da máquina inteira achando que lia o do nó.
+
+    **A GUARDA ACIMA COBRIA O CASO ERRADO — SOM-ECO-02, 16/09/2026.**
+
+    ``if not fonte`` pega a string VAZIA. Não pega o nome que o PipeWire **não
+    resolve para um nó ativo** — e o resultado é o mesmo, sem aviso nenhum.
+    Medido nesta máquina, com o sink do controle em ``suspended`` (que é o
+    estado normal quando ninguém está tocando som):
+
+        pw-record --target=hefesto_som_…       -> hefesto_mic_…:capture_MONO
+        pw-record --target=hefesto_som_….monitor -> hefesto_mic_…:capture_MONO
+        pw-record --target=46      (o `id`)    -> hefesto_mic_…:capture_MONO
+        pw-record --target=75833   (o serial)  -> hefesto_som_…:monitor_FL   OK
+        parec     --device=hefesto_som_….monitor -> hefesto_som_…:monitor_FL OK
+
+    **O QUE ISSO CUSTOU A ELA:** a fonte padrão desta máquina é o microfone do
+    controle, então a ponte de som pelo rádio vinha lendo a VOZ DELA e mandando
+    ao alto-falante do próprio controle. Era o eco que ela relatou — *"o que eu
+    falo a caixa de som repete e dá eco"* —, com o atraso da ida e volta pela
+    ponte. E era por isso que no CABO não havia eco: no cabo não existe esta
+    ponte. O ``ECHO_CANCEL`` do firmware (`SOM-ECO-01`, hoje de manhã) cancelava
+    só o SEGUNDO salto — o que saía do alto-falante e reentrava no microfone —,
+    e por isso ela mediu *"melhorou mas ainda existe"*.
+
+    A cura é o ARGUMENTO, não o programa: o ``pw-record`` continua sendo o
+    primeiro (é o nativo do PipeWire), agora mirado pelo ``object.serial``. Sem
+    serial, o ``parec`` assume — ele acerta pelo nome, e um gravador que acerta
+    vale mais que a preferência por qual camada ele usa.
+
+    **Isto NÃO basta sozinho**, e a outra metade está em
+    :func:`conferir_o_alvo_do_gravador`: o serial é resolvido antes de o
+    processo subir, e o nó pode sumir no meio. Pedir sem conferir o que veio é a
+    mesma forma do defeito que esta função acabou de curar.
     """
     if not fonte:
         return []
+    serial = serial_do_no(fonte)
     for binario, modelo in GRAVADORES_DO_MONITOR:
-        if shutil.which(binario) is not None:
-            return [binario, *(m.format(fonte=fonte, taxa=taxa, canais=canais)
+        if shutil.which(binario) is None:
+            continue
+        # `pw-record` SÓ com o serial; sem ele, deixa o `parec` assumir.
+        if binario == "pw-record":
+            if serial is None:
+                continue
+            return [binario, *(m.format(fonte=str(serial), taxa=taxa,
+                                        canais=canais, rotulo=rotulo)
                                for m in modelo)]
+        return [binario, *(m.format(fonte=fonte, taxa=taxa, canais=canais,
+                                    rotulo=rotulo)
+                           for m in modelo)]
     return []
+
+
+def conferir_o_alvo_do_gravador(rotulo: str) -> str | None:
+    """A que nó de ORIGEM o gravador chamado `rotulo` se ligou. ``None``=não sei.
+
+    SOM-ECO-02, a metade que morde. O :func:`argv_do_gravador` resolve o
+    ``object.serial`` ANTES de o processo subir, e entre resolver e conectar o
+    nó pode sumir, mudar de serial ou nascer outro com o mesmo nome. Quando o
+    alvo não resolve, o PipeWire liga o gravador à FONTE PADRÃO **sem erro
+    nenhum** — e a fonte padrão da máquina dela é o microfone do controle. Foi
+    assim que a ponte passou a mandar a voz dela ao alto-falante do próprio
+    controle. **Pedir sem conferir o que veio é a forma exata do defeito que
+    esta cura desfaz.**
+
+    O casamento é pelo `rotulo` que NÓS demos ao nó (ver
+    :func:`rotulo_do_gravador`), porque o PipeWire não expõe o PID e o nome do
+    binário se repete por controle.
+
+    A ligação sai do `Link`, e os campos vêm do ``info`` e não do ``props`` —
+    medido no `pw-dump` desta máquina: um Link traz ``input-node-id`` e
+    ``output-node-id`` prontos, e ler pelas PORTAS custaria um segundo
+    cruzamento para chegar ao mesmo lugar.
+
+    ``None`` nunca quer dizer "está certo": sem ``pw-dump``, com ele em recuo ou
+    com a saída ilegível, quem chama trata como **não conferido** e diz isso no
+    journal. Derrubar a ponte por não ter conseguido OLHAR trocaria um defeito
+    raro por um mudo garantido.
+    """
+    if not rotulo:
+        return None
+    try:
+        proc = subprocess.run(
+            ["pw-dump"], capture_output=True, text=True, timeout=3.0, check=False
+        )
+    except (OSError, subprocess.SubprocessError):
+        return None
+    if getattr(proc, "returncode", 1) != 0:
+        return None
+    try:
+        objetos = json.loads(proc.stdout or "[]")
+    except (ValueError, TypeError):
+        return None
+
+    nomes: dict[int, str] = {}
+    meus: set[int] = set()
+    for o in objetos:
+        if o.get("type") != "PipeWire:Interface:Node":
+            continue
+        props = (o.get("info") or {}).get("props") or {}
+        nome = str(props.get("node.name") or "")
+        ident = o.get("id")
+        if not isinstance(ident, int):
+            continue
+        nomes[ident] = nome
+        if nome == rotulo:
+            meus.add(ident)
+    if not meus:
+        return None
+
+    for o in objetos:
+        if o.get("type") != "PipeWire:Interface:Link":
+            continue
+        info = o.get("info") or {}
+        if info.get("input-node-id") in meus:
+            origem = info.get("output-node-id")
+            if isinstance(origem, int):
+                return nomes.get(origem) or None
+    return None
 
 
 @dataclass
@@ -2020,7 +2193,8 @@ def fonte_do_monitor_do_no(
 
     if not id_do_no:
         return None, None, "o controle não tem nó de som publicado"
-    argv = argv_do_gravador(f"{id_do_no}.monitor")
+    rotulo = rotulo_do_gravador(id_do_no)
+    argv = argv_do_gravador(f"{id_do_no}.monitor", rotulo=rotulo)
     if not argv:
         return None, None, "nem `pw-record` nem `parec` nesta máquina"
     lancar = abrir or lancar_leitor
@@ -2038,6 +2212,41 @@ def fonte_do_monitor_do_no(
             ms=como.ms,
         )
         return None, None, "o gravador subiu sem `stdout`"
+
+    # SOM-ECO-02 (16/09/2026) — A CONFERÊNCIA, e ela é a metade que morde.
+    #
+    # `argv_do_gravador` resolve o `object.serial` ANTES de o processo subir, e
+    # entre resolver e conectar o nó pode sumir. Quando o alvo não resolve, o
+    # PipeWire liga o gravador à FONTE PADRÃO **sem erro nenhum** — e a fonte
+    # padrão desta máquina é o microfone do controle. Foi assim que a ponte
+    # passou a mandar a VOZ DELA para o alto-falante do próprio controle.
+    #
+    # Então não basta pedir certo: tem de conferir o que veio. Um gravador
+    # ligado ao nó errado é DERRUBADO aqui — som nenhum é melhor que a voz dela
+    # voltando, e o caminho de cima já sabe seguir sem ponte.
+    #
+    # `None` do conferidor é "não conferido", NUNCA "está certo": sem `pw-link`,
+    # com ele em recuo ou com a saída ilegível, a ponte SOBE e o journal diz que
+    # ninguém olhou. Derrubar a ponte por não ter conseguido olhar trocaria um
+    # defeito raro por um mudo garantido.
+    ligado_a = conferir_o_alvo_do_gravador(rotulo)
+    if ligado_a is None:
+        logger.info("som_gravador_alvo_nao_conferido", no=id_do_no, rotulo=rotulo)
+    elif id_do_no not in ligado_a:
+        logger.warning(
+            "som_gravador_no_alvo_errado",
+            pedido=id_do_no,
+            ligado_a=ligado_a,
+            detalhe=(
+                "o PipeWire deu a fonte padrão no lugar do monitor pedido; "
+                "seguir tocaria essa fonte no alto-falante do controle "
+                "(SOM-ECO-02)"
+            ),
+        )
+        derrubar_leitor_de_pipe(proc)
+        return None, None, (
+            f"o gravador ligou-se a `{ligado_a}` e não ao monitor de `{id_do_no}`"
+        )
     return fonte_de_arquivo(saida.fileno()), proc, ""
 
 
@@ -2769,6 +2978,7 @@ __all__ = [
     "argv_para_ligar_o_mix",
     "argv_para_ligar_o_no",
     "common_de_audio",
+    "conferir_o_alvo_do_gravador",
     "controle_de_audio_035",
     "degrau_para_payload",
     "descricao_do_alto_falante",
@@ -2786,6 +2996,8 @@ __all__ = [
     "propriedades_do_sink",
     "rodar_pactl",
     "rota_do_no",
+    "rotulo_do_gravador",
+    "serial_do_no",
     "sink_do_controle",
     "so_hex",
     "sufixo_do_sink_do_som",
