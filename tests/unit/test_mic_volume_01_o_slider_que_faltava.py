@@ -471,19 +471,27 @@ _SEM_MIC_HOJE: dict[str, tuple[int, str]] = {
     # passaram a injetar o `mic_applier`, e a troca de perfil por JANELA
     # aplica o volume do microfone do perfil. Foi este caso que cobrou a
     # remoção, reprovando no instante em que as linhas entraram.
-    "src/hefesto_dualsense4unix/daemon/connection.py": (
-        1,
-        "18/08/2026 — DECISÃO, não lacuna, e por isso a folga é de UMA das "
-        "duas injeções deste arquivo: `restore_last_profile` injeta o "
-        "applier do microfone (o volume volta no boot), e "
-        "`reapply_speaker_after_connect` NÃO. O gancho de reconexão existe "
-        "porque a posse dos bytes de volume do alto-falante morre com o "
-        "cabo — e o microfone não tem essa perda: o `volume` mora na fonte "
-        "do PipeWire e sobrevive ao replug, e o `muted` é barrado ali de "
-        "qualquer forma pela exceção MIC-GRAVACAO-01, que só o deixa "
-        "passar em `origin=\"manual\"` (reconexão é `origin=\"system\"`). "
-        "Injetá-lo aqui seria uma linha que nunca escreve nada.",
-    ),
+    # 16/09/2026 — a entrada de `daemon/connection.py` SAIU daqui, e com ela
+    # cai um FATO, não só uma lacuna (SOM-MIC-REPLUG-01).
+    #
+    # A razão escrita em 18/08 dizia: *"o microfone não tem essa perda: o
+    # `volume` mora na fonte do PipeWire e sobrevive ao replug, e o `muted` é
+    # barrado ali de qualquer forma pela exceção MIC-GRAVACAO-01 (…) Injetá-lo
+    # aqui seria uma linha que nunca escreve nada."*
+    #
+    # **A primeira metade era verdadeira e a segunda escondia o defeito.** O
+    # `volume` de fato sobrevive — ele é da FONTE do PipeWire. O `muted` não:
+    # ele é do FIRMWARE, morre com o cabo, e o aparelho volta com o microfone
+    # ABERTO. Ler as duas camadas como uma fez a conclusão sair errada, e o
+    # preço era de privacidade: quem deixou o mic mudo e trocou o cabo voltava
+    # a ser ouvida sem saber.
+    #
+    # E "seria uma linha que nunca escreve nada" era circular — o `muted` não
+    # passava porque a reconexão usava `origin="system"`, e usava `"system"`
+    # porque ninguém tinha decidido o que o replug deveria fazer. Decidido em
+    # 16/09: `origin="replug"`, com passagem assimétrica (`True` atravessa e
+    # acende o LED, `False` não, para não apagá-lo). Foi ESTE caso que cobrou
+    # a remoção, reprovando no instante em que a injeção entrou.
 }
 
 

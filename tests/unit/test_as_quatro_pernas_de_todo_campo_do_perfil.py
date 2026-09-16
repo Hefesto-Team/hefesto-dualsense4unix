@@ -161,13 +161,15 @@ _PERNAS: dict[str, dict[str, Resposta]] = {
         ),
     },
     "mic": {
-        VOLTA: Divida(
-            "o LED do mudo volta (está em `_OUTPUT_FIELDS`), mas o MUDO em si "
-            "não: `set_microphone_mute` não é chamado por nenhum caminho de "
-            "adoção nem de reconexão. Medido em 16/09/2026 por varredura de "
-            "`reapply`/`on_connect`/`after_connect` — só o alto-falante tem "
-            "gancho de replug.",
-            desde="2026-09-16",
+        VOLTA: Cumprida(
+            "profiles/manager.py::reapply_mic_on_connect",
+            "SOM-MIC-REPLUG-01: o `muted` volta pelos DOIS caminhos de replug "
+            "do `daemon/connection.py`, e a passagem é assimétrica de propósito "
+            "— `True` atravessa (o firmware voltou aberto e o LED vermelho "
+            "acende, que é sinal visível), `False` não (já é o default, e "
+            "escrevê-lo apagaria o LED). Paga em 16/09/2026, no mesmo dia em "
+            "que foi declarada: o preço de errar aqui é de PRIVACIDADE — quem "
+            "pediu mudo e recebe aberto fala sem saber que é ouvida.",
         ),
         RESISTE: Divida(
             "o `common[7]` carrega o caminho do microfone e é o mesmo byte da "
@@ -308,13 +310,18 @@ _PERNAS: dict[str, dict[str, Resposta]] = {
     "match": {p: NaoSeAplica(_NAO_CHEGA) for p in PERNAS},
 }
 
-#: O PISO DA DÍVIDA, medido em 16/09/2026. Ele só desce.
+#: O PISO DA DÍVIDA, medido em 16/09/2026. **Ele só desce.**
 #:
-#: Sete pernas faltando, e as sete têm nome: o mudo do microfone e a sua defesa,
-#: as duas metades do rumble fora do replug, o override por peça que só volta no
-#: áudio, o alto-falante contra a escrita crua do Proton, e a ponte que só
-#: existe pela Steam.
-DIVIDA_MAXIMA = 7
+#: Nasceu SETE e desceu a SEIS no mesmo dia: o mudo do microfone voltou a
+#: sobreviver ao replug (`SOM-MIC-REPLUG-01`), e o teto veio junto — dívida paga
+#: que não baixa o teto deixa a próxima entrar de graça, e é o teto que impede
+#: esta lista de crescer calada.
+#:
+#: As SEIS que faltam, cada uma com nome: a defesa do `common[7]` contra
+#: escritor de fora, as duas metades do rumble fora do replug, o override por
+#: peça que só volta no áudio, o alto-falante contra a escrita crua do Proton, e
+#: a ponte que só existe pela Steam.
+DIVIDA_MAXIMA = 6
 
 
 def _dividas() -> list[tuple[str, str, Divida]]:
