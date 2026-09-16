@@ -1229,7 +1229,7 @@ class ProfileManager:
         **FATO ERRADO, SUBSTITUÍDO — 03/09/2026.** Esta linha dizia que o
         global *"escreveu em todo mundo (``uniq=None`` = broadcast)"*. Medido:
         ``set_speaker_volume(uniq=None)`` chama ``_handle_for(None)``
-        (``core/backend_pydualsense.py:5197``), que devolve **o handle
+        (``core/backend_pydualsense.py:5656``), que devolve **o handle
         PRIMÁRIO** (``:4611-4623``) — um só, nunca todos. A família de áudio
         inteira compartilha esse ``_handle_for``, e por isso ela não se
         comporta como a barra de luz ou a vibração, que têm broadcast de
@@ -1522,13 +1522,34 @@ class ProfileManager:
         por perfil sem este gancho faria o volume voltar ao do firmware ao
         trocar o cabo, em silêncio.
 
-        **Só reaplica quando o perfil ativo TEM a seção** — sem isso
-        voltaríamos a tomar posse sem pedido a cada replug, que é o defeito
-        que a E4 inteira existe para não cometer. Sem perfil ativo, sem seção
-        ou sem applier: devolve `None` e não escreve nada. Com a trava manual
-        de áudio armada devolve `"ignorado_trava_manual"` (e também não
-        escreve): se ela mexeu no volume na mão, quem manda é ela — a
-        reconexão não é ocasião para o perfil retomar o campo.
+        **Só reaplica quando o perfil ativo TEM opinião sobre aquela peça** —
+        sem isso voltaríamos a tomar posse sem pedido a cada replug, que é o
+        defeito que a E4 inteira existe para não cometer. Sem perfil ativo, sem
+        opinião nenhuma ou sem applier: devolve `None` e não escreve nada. Com
+        a trava manual de áudio armada devolve `"ignorado_trava_manual"` (e
+        também não escreve): se ela mexeu no volume na mão, quem manda é ela —
+        a reconexão não é ocasião para o perfil retomar o campo.
+
+        **"A SEÇÃO" ERA SÓ A GLOBAL, E ISSO ERA O DEFEITO — SOM-ROTA-03,
+        16/09/2026.** Este gancho olhava apenas `profile.speaker`, a seção
+        GLOBAL. Só que o alto-falante é da PEÇA — decisão dela de 10/08 — e os
+        perfis dela guardam o som exclusivamente em
+        `controllers[uniq].speaker`, sem global nenhuma. Medido nos dois
+        perfis dela: `global_speaker: null`, e este gancho devolvendo `None`
+        para todos os uniqs. Efeito: **a escolha dela nunca voltava depois de
+        um replug** — a última palavra ficava sendo a da adoção
+        (`ROTA_PADRAO_DO_SOM`), e o `rota 3 + mudo` que ela gravou para uma
+        peça sumia em silêncio ao trocar o cabo.
+
+        E havia o mesmo defeito com o sinal trocado: quando a global existia,
+        este gancho mandava a GLOBAL para o `uniq` que voltou, ignorando o
+        override daquela peça — o replug pisava o ajuste dela.
+
+        A cura reusa o que já existia e mantém a ordem que `apply` respeita
+        (global na `:992`, peça na `:994`): o override da peça, quando há,
+        entra por último e vence, pela mesma vista `model_copy` que
+        `apply_controller_speakers` monta. Mesma família do PERFIL-MANDA-01 e
+        do SOM-ROTA-02: o desejo dela existia e morria antes do aparelho.
 
         `origin="system"` de propósito: reconexão é o sistema reaplicando o
         que já estava configurado, nunca um gesto novo dela (mesma leitura do
@@ -1544,9 +1565,31 @@ class ProfileManager:
                 "profile_speaker_reapply_load_failed", name=str(nome), err=str(exc)
             )
             return None
-        if getattr(profile, "speaker", None) is None:
+        override = None
+        if uniq:
+            # O MESMO `norm_mac` que o esquema usa para canonizar as chaves de
+            # `controllers` (schema.py:1795). Sem ele a busca falha em SILÊNCIO
+            # para qualquer chamador que passe o MAC com dois-pontos — o mapa
+            # guarda 12 hex, e `aa:bb:…` não bate com `aabb…`. Pego pela régua
+            # desta cura, não por leitura: a primeira versão procurava cru.
+            from hefesto_dualsense4unix.core.sysfs_leds import norm_mac
+
+            chave = norm_mac(str(uniq)) or str(uniq)
+            cfg = (getattr(profile, "controllers", None) or {}).get(chave)
+            override = getattr(cfg, "speaker", None) if cfg is not None else None
+        global_ = getattr(profile, "speaker", None)
+        if override is None and global_ is None:
             return None
-        return self.apply_speaker(profile, origin="system", uniq=uniq)
+        estado = None
+        # A ORDEM É A DE `apply`: o global escreve primeiro e a peça reescreve
+        # por cima. Sem isso o replug devolveria o global a uma peça que tem
+        # opinião própria — o defeito com o sinal trocado.
+        if global_ is not None:
+            estado = self.apply_speaker(profile, origin="system", uniq=uniq)
+        if override is not None:
+            vista = profile.model_copy(update={"speaker": override})
+            estado = self.apply_speaker(vista, origin="system", uniq=uniq)
+        return estado
 
     def select_for_window(self, window_info: dict[str, object]) -> Profile | None:
         """Escolhe o perfil MAIS ESPECÍFICO que case com a janela.

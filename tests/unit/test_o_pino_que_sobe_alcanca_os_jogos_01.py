@@ -28,7 +28,31 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+import pytest
+
 from hefesto_dualsense4unix.integrations import proton_pin as pp
+
+
+@pytest.fixture(autouse=True)
+def _sem_o_portao_da_steam(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Neutraliza o gate de "Steam fechada" — ele não é o que estes casos medem.
+
+    **O DEFEITO QUE ISTO FECHA, e ele era DESTA RÉGUA, medido em 16/09/2026:**
+    `lock_games_to_pinned_proton` recusa quando a Steam está de pé
+    (`_steam_gate`), devolve `status="recusado"` e **não grava o registro**. Os
+    casos abaixo escrevem de verdade (não são `dry_run`), então passavam com a
+    Steam fechada e reprovavam com ela aberta, com `FileNotFoundError` no
+    `lock.json` — cinco reprovações que não diziam nada sobre o produto.
+
+    Foi assim que apareceram: a suíte inteira rodou logo depois de a Steam ser
+    reaberta na máquina dela, no meio da mesma sessão. **Uma régua que muda de
+    resposta conforme um aplicativo esteja aberto não mede o produto, mede a
+    máquina.**
+
+    O portão continua coberto onde ele É o assunto — `test_proton_pin.py` tem
+    os casos dele, com o gate exercido de propósito.
+    """
+    monkeypatch.setattr(pp, "_steam_gate", lambda: None)
 
 PINO_VELHO = "GE-Proton10-34"
 PINO_NOVO = "GE-Proton11-6-x86_64"

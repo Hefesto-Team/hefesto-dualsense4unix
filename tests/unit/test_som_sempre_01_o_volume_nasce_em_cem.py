@@ -316,12 +316,21 @@ def test_vale_para_os_sete_controles_e_nao_so_para_o_primeiro(
 def test_o_controle_que_chega_numa_mesa_ja_online_tambem_nasce_em_cem(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """O caso que o gancho de perfil NÃO cobre, e por isso a cura mora aqui.
+    """Todo controle adotado nasce em 100%, inclusive o 2º numa mesa online.
 
-    `reapply_speaker_after_connect` só corre na TRANSIÇÃO offline→online do
-    daemon (e só quando o perfil ativo tem seção `speaker`). Um segundo
-    controle plugado com o primeiro já conectado não produz transição nenhuma
-    — e era exatamente esse controle que nascia mudo.
+    **FATO ERRADO, SUBSTITUÍDO — 16/09/2026.** Aqui se lia que
+    `reapply_speaker_after_connect` *"só corre na TRANSIÇÃO offline→online do
+    daemon"* e que por isso o segundo controle "nascia mudo". A primeira metade
+    caiu com a BORDA-DE-QUEDA-01: há um ramo POR ALVO
+    (`daemon/connection.py:704` → `anunciar_bordas_por_alvo` →
+    `reapply_speaker_after_connect(uniq=…)`) que cobre a chave nova sem
+    transição agregada. A segunda guarda — exigir a seção `speaker` GLOBAL —
+    era real e foi o defeito da SOM-ROTA-03, curado em
+    `profiles/manager.reapply_speaker_on_connect`.
+
+    O que este caso trava continua de pé e é o que importa: a adoção é o PISO
+    universal. Ela vale para o 1º e para o 7º controle, com perfil ou sem
+    perfil nenhum — e é a única coisa que responde por quem não tem perfil.
 
     MORDIDA: mover a escrita para o gancho de transição do daemon; o segundo
     handle deste teste volta a nascer sem dono.

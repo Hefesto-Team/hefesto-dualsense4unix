@@ -5167,11 +5167,23 @@ class PyDualSenseController(IController):
         (`_volumes_audio` nasce vazio a cada `_open_one`), então "o som sempre
         sai" só pode ser propriedade do momento em que o controle é adotado. É
         também o único ponto UNIVERSAL: vale para o 1º e para o 7º controle,
-        no cabo e no rádio, no boot e no hotplug do meio da sessão — o gancho
-        de perfil `reapply_speaker_after_connect` só corre na TRANSIÇÃO
-        offline→online do daemon e só quando o perfil ativo tem seção
-        `speaker`, de modo que o segundo controle a chegar numa mesa já online
-        nunca era coberto por ele.
+        no cabo e no rádio, no boot e no hotplug do meio da sessão.
+
+        **FATO ERRADO, SUBSTITUÍDO — 16/09/2026.** Aqui se lia que o gancho de
+        perfil *"só corre na TRANSIÇÃO offline→online do daemon"* e que *"o
+        segundo controle a chegar numa mesa já online nunca era coberto por
+        ele"*. A primeira metade caiu com a BORDA-DE-QUEDA-01: há um ramo POR
+        ALVO (`daemon/connection.py:233` → `anunciar_bordas_por_alvo` →
+        `reapply_speaker_after_connect(uniq=…)`) que cobre a chave nova sem
+        transição agregada. O que continuava verdadeiro era a segunda guarda —
+        o gancho exigia a seção `speaker` GLOBAL —, e ela foi o defeito da
+        SOM-ROTA-03: os perfis dela guardam o som só por peça, então o gancho
+        devolvia `None` para todo uniq e a escolha dela nunca voltava do
+        replug. Curado em `profiles/manager.reapply_speaker_on_connect`.
+
+        Esta adoção continua sendo o piso — quem não tem perfil nenhum fica
+        com o som ligado e roteado —, mas ela não é mais a última rede: o
+        gancho agora devolve a opinião da peça por cima dela.
 
         **O PREÇO, e ele é real.** Tomar a posse é irreversível até
         `speaker release` ou até o controle desconectar: enquanto formos donos,
