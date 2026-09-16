@@ -158,12 +158,41 @@ OUTPUT_PATH_SEL_MASK = 0x30
 #: caminho do microfone; escrever meio byte muda o outro meio"* — e o
 #: `_byte_da_rota` só preservava o outro meio quando JÁ havia posse.
 #:
-#: `FORCE_INTERNAL_MIC` (bit0) é a base segura: ele diz ao firmware para usar o
-#: microfone interno, que é o que o DualSense tem quando não há headset. Os
-#: demais bits (cancelamento de eco e de ruído, `INPUT_PATH`) ficam em zero, que
-#: é o neutro deles.
+#: `FORCE_INTERNAL_MIC` (bit0) diz ao firmware para usar o microfone interno,
+#: que é o que o DualSense tem quando não há headset.
+#:
+#: **"OS DEMAIS BITS FICAM EM ZERO, QUE É O NEUTRO DELES" CAIU EM 16/09/2026 —
+#: SOM-ECO-01, e a regressão foi NOSSA, do mesmo dia.** Esta linha dizia isso, e
+#: a base era só o bit0. Zero NÃO é o neutro do bit2: ele é `ECHO_CANCEL`, e
+#: zero o DESLIGA (`docs/protocol/dualsense-referencia-canonica.md:668`).
+#:
+#: Enquanto ninguém escrevia o `common[7]` na adoção, o firmware ficava com o
+#: default DELE — com o cancelamento ligado — e não havia eco. A `SOM-ROTA-02`,
+#: de algumas horas antes, passou a escrever o byte para que o alto-falante
+#: nascesse roteado, e levou o bit2 a zero junto.
+#:
+#: MEDIDO com ela, no RÁDIO, com o jogo FECHADO: a voz dela saía pelo
+#: alto-falante do controle com atraso audível. **No CABO, o mesmo controle e o
+#: mesmo jogo não ecoavam** — foi ela quem apontou isso, e é o que derruba a
+#: hipótese de o jogo ser o culpado: pelo rádio a volta é lenta o bastante para
+#: virar eco, pelo cabo não.
+#:
+#: **A LIÇÃO É A MESMA DA SOM-ROTA-02, VIRADA DO AVESSO.** Lá se aprendeu que
+#: *não escrever não é o lado neutro*; aqui, que **escrever ZERO também não é**.
+#: Byte de firmware com bits de dono desconhecido não tem lado seguro por
+#: omissão: cada bit é uma decisão, e decidir por default é decidir.
+#:
+#: `NOISE_CANCEL` (bit3) fica FORA de propósito: ele mexe na qualidade da
+#: CAPTURA, e ligá-lo por conta própria decidiria por ela uma coisa que ela não
+#: pediu. O eco é defeito; o ruído é gosto.
 AUDIO_CONTROL_FORCE_INTERNAL_MIC = 0x01
-AUDIO_CONTROL_BASE_SEGURA = AUDIO_CONTROL_FORCE_INTERNAL_MIC
+#: `ECHO_CANCEL`, bit2 — o cancelamento de eco do FIRMWARE.
+AUDIO_CONTROL_ECHO_CANCEL = 0x04
+#: `NOISE_CANCEL`, bit3 — fora da base por decisão (ver acima).
+AUDIO_CONTROL_NOISE_CANCEL = 0x08
+AUDIO_CONTROL_BASE_SEGURA = (
+    AUDIO_CONTROL_FORCE_INTERNAL_MIC | AUDIO_CONTROL_ECHO_CANCEL
+)
 
 #: O ganho do pré-amplificador do alto-falante, nos bits 0-2 de `common[37]`.
 #: `0x2` é o valor que o kernel 6.18 escolhe, e é o que a E1 da SOM-ROTA-01
