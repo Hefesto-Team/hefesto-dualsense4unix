@@ -54,22 +54,38 @@ CAMPOS = (
 #: aqui de propósito: a cura fácil seria somar 59 a tudo, e somar nelas
 #: QUEBRARIA duas referências que estavam certas.
 ANCORAS: tuple[tuple[str, str], ...] = (
-    (":1546-1547", "VALID_FLAG1_MIC_MUTE_LED_CONTROL_ENABLE"),
-    (":1589-1595", "common[8] = int(mic_led) & 0xFF"),
-    (":1357-1384", "def set_microphone_led"),
-    (":4621", "def set_mic_led"),
-    (":4628-4629", "report[11] no rádio"),
-    (":4630-4634", "CORRIGIDO em 15/08/2026"),
-    (":1654-1655", "build_bt_report"),
-    (":1716-1723", "self.device.write"),
-    (":3037-3050", "should_reclaim_on_wake"),
-    (":414-427", "def _escrever_led_do_mic"),
-    (":873", "_audio_status"),
+    (":1595-1596", "VALID_FLAG1_MIC_MUTE_LED_CONTROL_ENABLE"),
+    (":1639-1645", "common[8] = int(mic_led) & 0xFF"),
+    (":1407-1434", "def set_microphone_led"),
+    (":4787", "def set_mic_led"),
+    (":4794-4795", "report[11] no rádio"),
+    (":4796-4800", "CORRIGIDO em 15/08/2026"),
+    (":1704-1705", "build_bt_report"),
+    (":1766-1773", "self.device.write"),
+    (":3203-3216", "should_reclaim_on_wake"),
+    (":441-454", "def _escrever_led_do_mic"),
+    (":923", "_audio_status"),
 )
 
 #: Os endereços que a auditoria aposentou. Se um deles voltar à célula, ou a
 #: deriva voltou, ou alguém somou 59 no lugar errado.
 APOSENTADOS = (
+    # AS DUAS DE BAIXO SE APOSENTARAM EM 16/09/2026: a SOM-ROTA-02 deu dono à
+    # rota de saída (`common[7]`) na adoção do controle e acrescentou a
+    # constante `ROTA_PADRAO_DO_SOM` com a medição que a justifica. As duas
+    # foram remedidas pela ÂNCORA, uma a uma — a deriva é +49 na primeira e
+    # +166 na segunda, e somar uma delas na outra apontaria para outra coisa.
+    ":1546-1547",
+    ":4630-4634",
+    ":1589-1595",
+    ":1357-1384",
+    ":4621",
+    ":4628-4629",
+    ":1654-1655",
+    ":1716-1723",
+    ":3037-3050",
+    ":414-427",
+    ":873",
     # AS ONZE DE BAIXO SE APOSENTARAM EM 12/09/2026, e a causa tem nome:
     # a MIC-VOLUME-02 deu dono ao `common[6]` e empurrou o
     # `backend_pydualsense.py` — 68 linhas abaixo do ponto de inserção,

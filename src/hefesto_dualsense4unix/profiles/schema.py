@@ -547,10 +547,23 @@ class ProfileSpeakerConfig(BaseModel):
     ==== ==========================================================
 
     ADITIVO e sem bump de versão, como a seção inteira já é: perfil antigo sem
-    o campo carrega com ``rota=None``, que significa **não tocar no byte** — o
+    o campo carrega com ``rota=None``, que significa **o perfil não opina** — o
     ``common[7]`` guarda a rota de saída E o caminho do microfone, e escrever
     o byte inteiro apagaria o caminho do mic sem ninguém notar
-    (``_byte_da_rota``, SOM-ROTA-01). Sem opinião continua sendo silêncio.
+    (``_byte_da_rota``, SOM-ROTA-01).
+
+    **"SEM OPINIÃO CONTINUA SENDO SILÊNCIO" CAIU EM 16/09/2026 — SOM-ROTA-02.**
+    Esta linha dizia isso, e a premissa era que não escrever fosse o lado
+    neutro. Não é: o default do FIRMWARE é ``SAIDA_ESTEREO_NO_FONE``, e o
+    conector está vazio. Medido com ela do lado do controle — sem rota, nada;
+    com a rota escrita, *"Saiu som"*.
+
+    O que mudou não é este campo, é quem responde quando ele cala: o controle
+    passou a NASCER em ``ROTA_PADRAO_DO_SOM`` («Sons do jogo») na adoção, do
+    mesmo jeito que já nascia com vibração balanceada e gatilho rígido — um
+    ponto de partida até alguém mudar, palavra dela no mesmo dia. Perfil sem
+    rota herda esse nascimento em vez de herdar o fone vazio; perfil COM rota
+    continua mandando, e é ele quem escreve por último.
 
     A rota não pode vir SOZINHA porque a seção inteira exige ``volume``: quem
     escreve o byte é o mesmo ``set_speaker_volume`` que escreve o volume, e é
