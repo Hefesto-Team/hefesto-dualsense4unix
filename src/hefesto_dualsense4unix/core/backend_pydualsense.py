@@ -577,6 +577,29 @@ def _merge_desired(default: _DesiredOutput, override: _DesiredOutput | None) -> 
     )
 
 
+def _sem_os_campos(
+    desired: _DesiredOutput, campos: frozenset[str]
+) -> _DesiredOutput | None:
+    """Cópia de `desired` sem os campos defendidos. None = não sobrou nada.
+
+    PERFIL-MANDA-01: a camada GAME passa por aqui antes de entrar no merge.
+    Devolver `None` quando o perfil defendeu TODOS os campos daquela camada é o
+    que faz `_merged_desired_for_key` pular o `_merge_desired` — um merge com
+    tudo em `None` seria no-op caro chamado a cada resolve, e esta função roda
+    dentro do `_io_lock`.
+    """
+    if not campos:
+        return desired
+    restantes = {
+        nome: getattr(desired, nome)
+        for nome in _OUTPUT_FIELDS
+        if nome not in campos and getattr(desired, nome) is not None
+    }
+    if not restantes:
+        return None
+    return _DesiredOutput(**restantes)
+
+
 def _centered_stick_to_raw(value: Any) -> int:
     """Converte um eixo de stick da pydualsense (centrado em 0) para cru 0-255.
 
@@ -1866,6 +1889,13 @@ class PyDualSenseController(IController):
         # NUMA-03: monotonic da última defesa de exibição (rate-limit da
         # defesa disparada por réplica retida).
         self._defend_last_at: float | None = None
+        # PERFIL-MANDA-01 (16/09/2026): as categorias que o PERFIL já defendeu
+        # do jogo neste controle, para o journal dizer UMA vez por sessão o que
+        # foi recusado — a mesma cadência do `game_output_replicado` e do
+        # `uhid_replica_ativa`. Um jogo escreve luz e gatilho a dezenas de Hz;
+        # sem esta marca o journal dela viraria um tapete e o defeito seguinte
+        # ficaria ilegível. Some no `end_game_session_for`, com a sessão.
+        self._recusa_ao_jogo_logada: dict[str, set[str]] = {}
         # FEAT-DSX-LIGHTBAR-SYSFS-01: mapeia key (serial/MAC/path) -> nó LED do
         # kernel (sysfs) para os controles cuja lightbar/player-LED são graváveis
         # por sysfs. Quando presente, a cor/player vão por essa rota (USB E BT) e
@@ -2486,7 +2516,20 @@ class PyDualSenseController(IController):
         # Steam segurando a sessão uhid sem UHID_CLOSE) é neutralizada no
         # resolve, não defendida — fechar o jogo devolve a paleta em ≤ ~32s.
         if game is not None and self._game_wins():
-            resolved = _merge_desired(resolved, game)
+            # PERFIL-MANDA-01: a camada GAME é o topo do merge SÓ no que ela
+            # não escolheu para este controle. O que tem dono (perfil/usuária)
+            # não cede — é a ordem dela de 16/09/2026, com o jogo aberto na
+            # frente, e o §I.4 da LIGHTBAR-NA-STEAM-01 cumprido.
+            #
+            # O GATE FICA AQUI E TAMBÉM NA ENTRADA (`set_game_output_for`), e
+            # os dois são necessários: este governa o que o RESOLVE devolve (o
+            # reassert, o priming de hotplug, o `0x31` do gatilho da cor pelo
+            # rádio), e o da entrada impede a escrita direta no HID, que não
+            # passa por resolve nenhum. Cobrir um só deixaria a cor dela voltar
+            # a cada evento e o jogo a apagar no quadro seguinte.
+            game = _sem_os_campos(game, self._campos_do_perfil_locked(uniq))
+            if game is not None:
+                resolved = _merge_desired(resolved, game)
         return resolved
 
     def _assentar_mesa_locked(self) -> None:
@@ -2578,10 +2621,106 @@ class PyDualSenseController(IController):
         self._prune_overrides_locked()
 
     def _stamp_owner_locked(self, uniq: str, campos: Any, layer: str) -> None:
-        """Carimba a procedência dos campos escritos. Sob `_io_lock` (R-20)."""
+        """Carimba a procedência dos campos escritos. Sob `_io_lock` (R-20).
+
+        PERFIL-MANDA-01: carimbar um GATILHO com dono dela solta, no mesmo ato,
+        o bloco cru que o jogo pendurou naquele lado. Sem isso a cura ficaria
+        pela metade, e a metade que falta é a que ela viu:
+
+        `_build_common` dá PRECEDÊNCIA ao `_raw_trigger_*` sobre o `DSTrigger`
+        (REPLICA-03, e está certo — o bloco cru carrega 10 parâmetros que o
+        `TriggerEffect` de 7 forças mutilaria). Então, com o jogo já tendo
+        escrito, o efeito dela era gravado no handle e **não saía no fio**: o
+        report continuava montando o bloco do jogo. Foi o que aconteceu às
+        00:25 de 16/09/2026 — o `[gesto] 03-gatilhos.html · aplicar → aplicado`
+        no log da interface, cinco minutos depois de o Sackboy pendurar os dois
+        lados, e nada mudou no gatilho dela.
+
+        O registro em `_game_triggers_by_uniq` sai junto, e é a outra metade: é
+        de lá que o hotplug re-pendura o bloco na reconexão.
+        """
         donos = self._desired_owner_by_uniq.setdefault(uniq, {})
         for campo in campos:
             donos[campo] = layer
+        if layer not in (_LAYER_PROFILE, _LAYER_USER):
+            return
+        lados = [
+            ("left" if campo == "trigger_left" else "right")
+            for campo in campos
+            if campo in ("trigger_left", "trigger_right")
+        ]
+        if not lados:
+            return
+        do_jogo = self._game_triggers_by_uniq.get(uniq)
+        key = self._key_for_uniq(uniq)
+        handle = self._handles.get(key) if key is not None else None
+        for lado in lados:
+            if do_jogo is not None:
+                do_jogo.pop(lado, None)
+            if handle is not None:
+                atributo = "_raw_trigger_left" if lado == "left" else "_raw_trigger_right"
+                with contextlib.suppress(Exception):
+                    setattr(handle, atributo, None)
+        if do_jogo is not None and not do_jogo:
+            self._game_triggers_by_uniq.pop(uniq, None)
+
+    def _pode_defender_locked(self) -> bool:
+        """A defesa de exibição (NUMA-03) já pode repintar? Sob `_io_lock`.
+
+        O rate-limit é o mesmo de antes (`DEFEND_DISPLAY_MIN_INTERVAL_S`); o que
+        mudou em 16/09/2026 é que ele passou a ter DOIS chamadores — a réplica
+        retida sob 'daemon' e a réplica recusada pela PERFIL-MANDA-01. Virou
+        função para não haver duas contas do mesmo relógio: duas cópias da mesma
+        aritmética foi como o `rumble` ganhou duas memórias, e a casa pagou.
+        """
+        agora = time.monotonic()
+        return (
+            self._defend_last_at is None
+            or (agora - self._defend_last_at) >= DEFEND_DISPLAY_MIN_INTERVAL_S
+        )
+
+    def _campos_do_perfil_locked(self, uniq: str | None) -> frozenset[str]:
+        """Os campos DELE que têm dono declarado — o que o jogo não pinta.
+
+        PERFIL-MANDA-01 (16/09/2026), e a ordem é dela, com o Sackboy aberto na
+        frente: *"meu perfil manda"*. Este é o predicado inteiro da regra — o
+        resto da cura só o consulta.
+
+        O QUE CONTA COMO «DELA», e a distinção é o desenho todo: um campo de
+        `_desired_by_uniq` com dono `perfil` ou `usuaria` (o carimbo do R-20).
+        Ou seja, a cor/gatilho que ELA escolheu para ESTE controle — pelo perfil
+        do jogo ou por um gesto na interface, que grava a cada clique. Fica de
+        fora, de propósito e sem carimbo:
+
+          * o `_desired_default` (o broadcast global do perfil), que nasce nos
+            valores de fábrica do schema — defendê-lo faria um perfil que nunca
+            escolheu cor APAGAR a barra dentro do jogo, com `(0, 0, 0)`;
+          * a camada AUTOMÁTICA (COR-03, a cor do número), que é do produto e
+            não dela — defendê-la tiraria a luz de TODO jogo, inclusive de quem
+            nunca configurou nada.
+
+        A MEDIÇÃO QUE FEZ ESTA REGRA NASCER, no journal dela de 16/09/2026: o
+        perfil do Sackboy entrou às 00:18:34 com a cor de cada controle
+        (`(255,255,0)` e `(0,255,128)`) e os gatilhos por controle; dezenove
+        segundos depois, `game_output_replicado autoridade=game` trocou os dois
+        pela paleta de jogador do SDL (`(0,64,0)` e `(32,0,32)`, os mesmos
+        0x40/0x20 que a LIGHTBAR-NA-STEAM-01 identificou), e às 00:20:26 o
+        `uhid_replica_ativa categoria=trigger_left/right` trocou os gatilhos. É
+        o §I.4 daquela sprint — escrito, adiado *"só se a telemetria do passo 2
+        mostrar a paleta chegando já sob `game`"*, e a telemetria mostrou.
+        """
+        if uniq is None:
+            return frozenset()
+        override = self._desired_by_uniq.get(uniq)
+        if override is None:
+            return frozenset()
+        donos = self._desired_owner_by_uniq.get(uniq) or {}
+        return frozenset(
+            campo
+            for campo, dono in donos.items()
+            if dono in (_LAYER_PROFILE, _LAYER_USER)
+            and getattr(override, campo, None) is not None
+        )
 
     def _carimbar_procedencia_locked(
         self,
@@ -6005,7 +6144,31 @@ class PyDualSenseController(IController):
             )
             return False
         lado = "left" if side == "left" else "right"
+        campo = "trigger_left" if lado == "left" else "trigger_right"
         with self._io_lock:
+            # PERFIL-MANDA-01 (16/09/2026): o gatilho que ELA escolheu para este
+            # controle não cede ao do jogo. Medido no journal dela: o perfil do
+            # Sackboy aplicou `SimpleRigid`/`Rigid` por controle às 00:18:34 e o
+            # jogo os trocou às 00:20:26 (`uhid_replica_ativa`).
+            #
+            # A RECUSA É POR LADO, e não pelo controle: um perfil que escolheu
+            # só o L2 continua deixando o jogo pintar o R2 — o vocabulário do
+            # PERFIL-01 é por campo, e defender o par inteiro por causa de um
+            # lado calaria o jogo onde ela não pediu nada.
+            #
+            # NÃO REGISTRAR em `_game_triggers_by_uniq` é parte da cura: quem
+            # está lá é re-pendurado no hotplug e desfeito no fim da sessão. Um
+            # bloco recusado que ficasse registrado voltaria ao controle na
+            # primeira reconexão, que é o pior dos dois mundos.
+            if campo in self._campos_do_perfil_locked(alvo):
+                ja_dito = self._recusa_ao_jogo_logada.setdefault(alvo, set())
+                se_diz = campo not in ja_dito
+                ja_dito.add(campo)
+                if se_diz:
+                    logger.info(
+                        "game_trigger_recusado_o_perfil_manda", uniq=alvo, lado=lado
+                    )
+                return True
             self._game_triggers_by_uniq.setdefault(alvo, {})[lado] = block_b
             key = self._key_for_uniq(alvo)
             handle = self._handles.get(key) if key is not None else None
@@ -6031,6 +6194,14 @@ class PyDualSenseController(IController):
         player_leds: tuple[bool, bool, bool, bool, bool] | None = None,
     ) -> bool:
         """Aplica no físico `uniq` a lightbar/player-LED que o jogo pintou no vpad.
+
+        PERFIL-MANDA-01 (16/09/2026) — A PRIMEIRA PENEIRA, e ela vem antes de
+        tudo: campo com dono declarado para este controle (`perfil`/`usuaria`,
+        o carimbo do R-20) é RECUSADO aqui — não vira camada, não vai ao HID e
+        não é retido. Ordem dela, com o Sackboy aberto: *"meu perfil manda"*.
+        O predicado inteiro está em `_campos_do_perfil_locked`, com a medição
+        que o fez nascer. Recusa dispara a defesa (NUMA-03, rate-limited), que
+        repinta o que o perfil manda.
 
         REPLICA-03: grava a camada GAME do desejado (topo do merge — o
         reassert periódico passa a reafirmar a COR DO JOGO, nunca a paleta
@@ -6070,11 +6241,39 @@ class PyDualSenseController(IController):
             return True
         defender = False
         with self._io_lock:
+            # PERFIL-MANDA-01: o que ela escolheu para ESTE controle não chega
+            # a ser oferecido ao gate — nem vira camada, nem vai ao HID. Recusar
+            # na ENTRADA, e não só no merge, é o que evita a disputa: sem
+            # escrita não há o que desfazer, e a barra não pisca entre a cor
+            # dela e a do jogo a cada quadro.
+            defendidos = self._campos_do_perfil_locked(alvo)
+            recusados = sorted(campo for campo in fields if campo in defendidos)
+            if recusados:
+                recusa = {campo: fields.pop(campo) for campo in recusados}
+                ja_dito = self._recusa_ao_jogo_logada.setdefault(alvo, set())
+                novos = sorted(campo for campo in recusados if campo not in ja_dito)
+                ja_dito.update(recusados)
+                if novos:
+                    logger.info(
+                        "game_output_recusado_o_perfil_manda",
+                        uniq=alvo,
+                        campos=novos,
+                        **self._luz_para_o_journal(recusa),
+                    )
+                # A DEFESA (NUMA-03, rate-limited) repinta o que o perfil manda:
+                # o jogo pode ter pintado ANTES de esta regra existir naquela
+                # sessão, e o aparelho não se corrige sozinho.
+                defender = self._pode_defender_locked()
+            # `fields` vazio = tudo era dela. `wins` nasce False e a saída é a
+            # mesma do gate fechado logo abaixo: nenhuma camada, nenhum HID, e
+            # nada retido — reter o que foi recusado encheria o retido de valor
+            # que nunca será entregue.
+            #
             # Decisão de gate UMA vez, sob o lock — o sinal pode flipar no
             # tick de outro thread e uma réplica não pode ser retida E
             # aplicada ao mesmo tempo.
-            wins = self._game_wins()
-            if not wins:
+            wins = bool(fields) and self._game_wins()
+            if fields and not wins:
                 retido = self._retained_game_outputs.setdefault(alvo, {})
                 retido.update(fields)  # retain-latest: 1 valor por categoria
                 if self._retained_log_armed:
@@ -6085,12 +6284,7 @@ class PyDualSenseController(IController):
                         **self._luz_para_o_journal(fields),
                     )
                     self._retained_log_armed = False
-                agora = time.monotonic()
-                defender = (
-                    self._defend_last_at is None
-                    or (agora - self._defend_last_at)
-                    >= DEFEND_DISPLAY_MIN_INTERVAL_S
-                )
+                defender = self._pode_defender_locked()
         if not wins:
             if defender:
                 self.defend_display()
@@ -6229,6 +6423,11 @@ class PyDualSenseController(IController):
             game = self._game_output_by_uniq.pop(alvo, None)
             triggers = self._game_triggers_by_uniq.pop(alvo, None)
             retido = self._retained_game_outputs.pop(alvo, None)
+            # PERFIL-MANDA-01: a marca do que já foi dito no journal morre com a
+            # sessão. A sessão seguinte diz de novo o que defendeu — é assim que
+            # o `game_output_replicado` e o `uhid_replica_ativa` se comportam, e
+            # uma marca que sobrevivesse faria a próxima sessão parecer muda.
+            self._recusa_ao_jogo_logada.pop(alvo, None)
             key = self._key_for_uniq(alvo)
             handle = self._handles.get(key) if key is not None else None
             node = self._sysfs.get(key) if key is not None else None

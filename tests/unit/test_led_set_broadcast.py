@@ -142,7 +142,7 @@ def _mesa_com_dois_controles(
     ctl._sysfs = {MAC_1: no_1, MAC_2: no_2}
     ctl.set_auto_output_provider(_provider_da_paleta(cores=cores, numeros=numeros))
     # Sem jogo: a camada GAME fica FORA do merge (o gate da Onda N é medido em
-    # `test_o_jogo_continua_vencendo_o_broadcast`, à parte).
+    # `test_o_broadcast_dela_vence_o_jogo`, à parte).
     ctl.set_game_authority_provider(lambda: "daemon")
     store = StateStore()
     store.update_controller_state(
@@ -217,14 +217,23 @@ async def test_caminho_com_uniq_continua_mirando_so_um(tmp_path: Path) -> None:
 
 
 @pytest.mark.asyncio
-async def test_o_jogo_continua_vencendo_o_broadcast(tmp_path: Path) -> None:
-    """O fix cross-cutting U x N (2026-07-20) segue de pé.
+async def test_o_broadcast_dela_vence_o_jogo(tmp_path: Path) -> None:
+    """DECISÃO DELA — 16/09/2026, PERFIL-MANDA-01: *"meu perfil manda"*.
 
-    A camada da usuária entrou ABAIXO da camada GAME de propósito: com uma
-    sessão de jogo aberta, a cor que o jogo pintou tem de vencer o pedido
-    manual no mesmo instante. Falha-sem (cura errada): quem arrancar o
-    `reassert_resolved_outputs` do handler vê a cor manual grudar por cima do
-    jogo — o furo que aquele fix fechou.
+    O QUE ESTE CASO MEDIA ATÉ AQUI, e por quê: pelo fix cross-cutting U x N
+    (20/07/2026) a camada da usuária ficava ABAIXO da camada GAME, de propósito
+    — com uma sessão aberta, a cor que o jogo pintou vencia o pedido manual no
+    mesmo instante. O nome era `test_o_jogo_continua_vencendo_o_broadcast`.
+
+    O QUE MUDOU, e não foi preferência: medido no journal dela em 16/09, a
+    "cor do jogo" que vencia era a paleta de jogador do SDL a 0x40 — dezenove
+    segundos depois de o perfil do Sackboy pintar o amarelo e o verde que ela
+    escolheu. Ela decidiu com o jogo aberto na frente. O que ela pede AGORA,
+    por gesto ou por perfil, vence o que o jogo pinta naquele controle.
+
+    O FIX U x N NÃO SE PERDEU: ele era sobre a cor manual GRUDAR — quem arrancar
+    o `reassert_resolved_outputs` do handler vê o segundo controle ficar sem a
+    cor dela, e é isso que o segundo `assert` continua travando.
     """
     server, ctl, no_1, no_2 = _mesa_com_dois_controles(tmp_path)
     ctl.set_game_authority_provider(lambda: "game")
@@ -234,7 +243,7 @@ async def test_o_jogo_continua_vencendo_o_broadcast(tmp_path: Path) -> None:
 
     await server._handle_led_set({"rgb": list(VERDE)})
 
-    assert no_1.rgb_calls[-1] == (255, 0, 255), "o jogo perdeu o controle dele"
+    assert no_1.rgb_calls[-1] == VERDE, "a cor que ela acabou de pedir cedeu ao jogo"
     assert no_2.rgb_calls[-1] == VERDE, "quem o jogo não usa ficou sem a cor dela"
 
 

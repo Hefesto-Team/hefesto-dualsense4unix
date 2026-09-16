@@ -602,12 +602,40 @@ class TestOsBuracosDaPrimeiraVolta:
 
         Deslocar a cor que o jogo pediu seria mentir sobre o que ele pediu —
         é a mesma razão do R-20 item 2.
+
+        NOTA DATADA — 16/09/2026 (PERFIL-MANDA-01): este caso passou a medir um
+        controle SEM cor dela. Até aqui ele usava o `UNIQS[1]`, que tem override
+        de perfil em `OVERRIDE_DELA`, e por isso media DUAS regras ao mesmo
+        tempo. A decisão dela daquele dia separou as duas: o jogo continua acima
+        do passe da cor única (é isto que este caso trava), e deixou de ficar
+        acima do que ELA escolheu para aquele controle — o irmão logo abaixo.
         """
         _s, ctl, _n = _mesa_de_quatro(tmp_path)
         ctl.set_game_authority_provider(lambda: "game")
-        assert ctl.set_game_output_for(MACS[1], led=player_slot_color(1)) is True
+        assert UNIQS[0] not in OVERRIDE_DELA, "o caso perde o sentido com dono"
 
-        assert ctl.resolved_led_for(UNIQS[1]) == player_slot_color(1)
+        assert ctl.set_game_output_for(MACS[0], led=player_slot_color(1)) is True
+
+        assert ctl.resolved_led_for(UNIQS[0]) == player_slot_color(1)
+
+    def test_a_cor_dela_no_perfil_nao_cede_ao_jogo(self, tmp_path: Path) -> None:
+        """PERFIL-MANDA-01 (16/09/2026), ordem dela: *"meu perfil manda"*.
+
+        O irmão acima e este são o par: o que o jogo pinta continua vencendo o
+        passe da cor única, e para de vencer a cor que ela escolheu para AQUELE
+        controle. `_mesa_de_quatro` põe os overrides pela porta do perfil
+        (`reset_profile_overrides`), que é a que carimba o dono.
+        """
+        _s, ctl, _n = _mesa_de_quatro(tmp_path)
+        ctl.set_game_authority_provider(lambda: "game")
+        # O que ela vê ANTES do jogo — já com o passe da cor única aplicado, que
+        # é quem desloca a cor pedida quando duas peças a disputam. Comparar com
+        # `OVERRIDE_DELA` cru mediria a regra errada.
+        antes = ctl.resolved_led_for(UNIQS[1])
+
+        assert ctl.set_game_output_for(MACS[1], led=(0, 64, 0)) is True
+
+        assert ctl.resolved_led_for(UNIQS[1]) == antes
 
 
 class TestARecusaComAMesaCheia:
