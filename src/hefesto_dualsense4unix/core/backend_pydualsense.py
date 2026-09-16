@@ -366,6 +366,33 @@ _AUDIO_TETOS = (
 #: sozinho se alguém repetir a medição e corrigir a borda em `speaker_scale`.
 VOLUME_PADRAO_DO_SOM: int = volume_do_percentual(100)
 
+#: A ROTA com que o alto-falante NASCE em todo controle adotado (SOM-ROTA-02,
+#: 16/09/2026). Canal esquerdo para o fone/TV, canal direito para o alto-falante
+#: do controle — o botão «Sons do jogo» da aba Controles.
+#:
+#: **POR QUE ELA EXISTE, medido com ela do lado do controle em 16/09/2026.**
+#: O `SOM-SEMPRE-01` punha o volume em 100% na adoção e deixava a rota em
+#: branco de propósito. Só que o default do FIRMWARE é `SAIDA_ESTEREO_NO_FONE`
+#: (0): o volume ia inteiro para o conector de fone, que está vazio. Medido no
+#: daemon vivo, nos dois DualSense no cabo: ``rota=None`` nos dois, volume 102,
+#: e um tom de 880 Hz tocado no sink do controle não produziu som nenhum. Com
+#: ``speaker.set {"rota": 3}`` escrito pelo IPC e o MESMO tom, a resposta dela
+#: foi *"Saiu som"*.
+#:
+#: Ou seja: a decisão dela de 16/08 — *"precisamos setar o som sempre em todos
+#: os controles no 100%"* — não se cumpria, porque 100% mandado para lugar
+#: nenhum é silêncio. **Cura que cobre metade do par não cura.**
+#:
+#: **O VALOR É DECISÃO DELA, 16/09/2026**, entre os três botões da tela: nasce
+#: em «Sons do jogo» e não em «Só no controle» porque a rota 3 calaria a TV
+#: assim que qualquer controle conectasse. É também o valor que a maioria dos
+#: perfis dela já tem gravado, e o caso que ela descreveu com o Zelda.
+#:
+#: Quem tem opinião sobrescreve isto logo em seguida, como já acontece com o
+#: volume: a seção `speaker` do perfil passa a rota dela em
+#: `profiles/manager.apply_speaker`.
+ROTA_PADRAO_DO_SOM: int = rep.SAIDA_L_FONE_R_ALTO_FALANTE
+
 
 def byte_do_volume_do_microfone(percentual: Any) -> int:
     """Porcentagem da tela (0-100) -> `common[6]`, o ganho de captura do aparelho.
@@ -5157,8 +5184,20 @@ class PyDualSenseController(IController):
         com o som ligado, não com o silêncio de antes desta cura.
 
         **O que fica de fora, de propósito**: o volume do MICROFONE
-        (`common[6]`) e a ROTA de saída (`common[7]`, que carrega o
-        caminho do microfone nos outros bits).
+        (`common[6]`).
+
+        **A ROTA SAIU DESTA LISTA EM 16/09/2026 — SOM-ROTA-02.** Ela ficava de
+        fora porque `common[7]` carrega também o caminho do microfone, e mexer
+        no byte sem opinião seria decidir por ela. A bancada derrubou a
+        premissa: o default do FIRMWARE não é neutro, é
+        `SAIDA_ESTEREO_NO_FONE` — **não escrever a rota É escolher o fone**, e
+        o conector está vazio. Os 100% desta cura iam inteiros para lugar
+        nenhum, e o alto-falante nascia mudo em todo controle, toda vez.
+        Medido com ela do lado do controle: mesmo tom, sem rota "não saiu som";
+        com `rota=3` escrita, *"Saiu som"*. Agora nasce em `ROTA_PADRAO_DO_SOM`
+        («Sons do jogo», decisão dela no mesmo dia), e o
+        `OUTPUT_PATH_SEL_MASK` preserva os bits do microfone — que era a razão
+        real de a omissão ter sido prudente, e continua honrada.
 
         **SOBRE O MICROFONE, A RAZÃO TROCOU EM 09/09/2026 e a omissão FICOU.**
         Até 06/09 ele ficava fora porque *"o dono do microfone no Linux é o
@@ -5191,13 +5230,14 @@ class PyDualSenseController(IController):
             handle,
             volume=VOLUME_PADRAO_DO_SOM,
             muted=None,
-            rota=None,
+            rota=ROTA_PADRAO_DO_SOM,
             op="volume_padrao_na_adocao",
         )
         logger.info(
             "volume_padrao_na_adocao",
             key=key,
             volume=VOLUME_PADRAO_DO_SOM,
+            rota=ROTA_PADRAO_DO_SOM,
             ok=escreveu,
         )
         return escreveu

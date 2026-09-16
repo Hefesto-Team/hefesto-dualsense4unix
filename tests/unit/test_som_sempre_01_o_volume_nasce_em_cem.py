@@ -25,7 +25,10 @@ O que estes testes travam:
 1. a adoção de QUALQUER controle toma a posse e escreve 100%;
 2. o "100%" é o da régua ÚNICA — o mesmo número que a barra da aba Status e o
    `speaker volume 100` da linha de comando produzem;
-3. o microfone e a rota continuam SEM DONO (só o que sai do controle é nosso);
+3. o microfone continua SEM DONO (o volume de captura é do kernel);
+   **a ROTA saiu deste item em 16/09/2026** — `SOM-ROTA-02` mediu que não
+   escrevê-la não é neutro, é escolher o fone vazio, e o alto-falante nascia
+   mudo apesar dos 100%;
 4. vale para o 2º, o 4º e o 7º controle, inclusive numa mesa já online;
 5. quem tem opinião — perfil, janela, linha de comando — continua vencendo;
 6. devolver a posse (`speaker release`) NÃO emudece: o firmware conserva os
@@ -40,6 +43,7 @@ import pytest
 
 from hefesto_dualsense4unix.core import ds_output_report as rep
 from hefesto_dualsense4unix.core.backend_pydualsense import (
+    ROTA_PADRAO_DO_SOM,
     VOLUME_PADRAO_DO_SOM,
     PyDualSenseController,
     _PinnedPyDualSense,
@@ -145,25 +149,34 @@ def test_o_fone_vai_junto_porque_ele_manda_por_cima_da_rota() -> None:
     assert handle._volumes_audio[0] == handle._volumes_audio[1]
 
 
-def test_o_microfone_e_a_rota_continuam_sem_dono_na_adocao() -> None:
-    """A posse é POR BYTE, e a adoção só toma os dois que ela precisa.
+def test_o_microfone_continua_sem_dono_na_adocao() -> None:
+    """A posse é POR BYTE, e a adoção toma só os que ela precisa.
 
     `common[6]` é o volume do microfone, cujo dono no Linux é o kernel
-    (AUDIO-OWNER-01); `common[7]` carrega a rota de saída nos bits 4-5 **e o
-    caminho do microfone no resto**, e escrevê-lo pela metade já matou o
-    microfone do controle uma vez (regressão medida em 02/08, SOM-CANAL-01).
-    "O som em 100%" não autoriza tocar em nenhum dos dois.
+    (AUDIO-OWNER-01). "O som em 100%" não autoriza tocar nele.
 
-    MORDIDA: passar `rota=0` ou `microphone=...` na chamada da adoção — a
-    segunda apaga o `FORCE_INTERNAL_MIC` e o microfone do controle para de
-    captar, em silêncio.
+    **A ROTA SAIU DESTE CASO EM 16/09/2026 — SOM-ROTA-02, e a decisão de 16/08
+    não se apaga: ela ganha esta nota.** Este teste dizia
+    `handle._volumes_audio[3] is None`, "a rota carrega o caminho do mic", e a
+    premissa era que não escrever fosse o lado neutro. **Não é.** O default do
+    firmware é `SAIDA_ESTEREO_NO_FONE` — não escrever a rota É escolher o fone,
+    e o conector está vazio. Medido com ela do lado do controle em 16/09: os
+    100% desta cura iam inteiros para lugar nenhum e o alto-falante nascia
+    mudo. Mesmo tom, sem rota: nada; com a rota escrita: *"Saiu som"*.
+
+    A prudência que ditava a omissão continua valendo e virou asserção na régua
+    nova (`test_som_rota_02_...::test_os_bits_do_microfone_sobrevivem`): a
+    escrita usa `OUTPUT_PATH_SEL_MASK` e preserva o `FORCE_INTERNAL_MIC` que a
+    regressão de 02/08 apagou.
+
+    MORDIDA: passar `microphone=...` na chamada da adoção — apaga o
+    `FORCE_INTERNAL_MIC` e o microfone do controle para de captar, em silêncio.
     """
     inst, handle = _backend_com_um_handle()
 
     inst.assumir_volume_padrao_na_adocao("AA:BB:CC:00:00:01", handle)
 
     assert handle._volumes_audio[2] is None, "o volume do microfone é do kernel"
-    assert handle._volumes_audio[3] is None, "a rota carrega o caminho do mic"
 
 
 def test_o_pre_amplificador_entra_na_mesma_posse() -> None:
@@ -376,7 +389,9 @@ def test_o_pedido_explicito_vence_o_padrao_da_adocao() -> None:
     inst.set_speaker_volume(40)
 
     assert handle._volumes_audio[1] == 40
-    assert inst.speaker_state_for() == {"volume": 40, "muted": False}
+    assert inst.speaker_state_for() == {
+        "volume": 40, "muted": False, "rota": ROTA_PADRAO_DO_SOM,
+    }
 
 
 def test_o_mudo_passa_a_funcionar_de_primeira_por_causa_da_adocao() -> None:
@@ -399,6 +414,7 @@ def test_o_mudo_passa_a_funcionar_de_primeira_por_causa_da_adocao() -> None:
     assert inst.speaker_state_for() == {
         "volume": VOLUME_PADRAO_DO_SOM,
         "muted": True,
+        "rota": ROTA_PADRAO_DO_SOM,
     }
     assert inst.set_speaker_volume(muted=False) is True
     assert handle._volumes_audio[1] == VOLUME_PADRAO_DO_SOM
@@ -432,9 +448,14 @@ def test_o_alto_falante_passa_a_aparecer_na_aba_status() -> None:
     assert inst.speaker_state_for() == {
         "volume": VOLUME_PADRAO_DO_SOM,
         "muted": False,
+        "rota": ROTA_PADRAO_DO_SOM,
     }
-    assert "rota" not in (inst.speaker_state_for() or {}), (
-        "a rota continua sendo 'não dá para saber' — a adoção não a escreveu"
+    # SOM-ROTA-02 (16/09/2026): esta asserção dizia `"rota" not in ...`, "a rota
+    # continua sendo 'não dá para saber' — a adoção não a escreveu". Invertida:
+    # é justamente por ninguém a escrever que o alto-falante nascia mudo, e a
+    # aba Status mostrava 100% sobre um controle calado.
+    assert inst.speaker_state_for()["rota"] == ROTA_PADRAO_DO_SOM, (
+        "a aba Status sabe para onde o som está indo"
     )
 
 
@@ -486,7 +507,12 @@ def test_o_report_carrega_os_cem_por_cento_com_o_bit_de_validacao_ligado() -> No
     assert common[0] & 0x10, "o bit de validação do fone"
     assert common[0] & 0x20, "o bit de validação do alto-falante"
     assert common[0] & 0x40 == 0, "o microfone continua do kernel"
-    assert common[0] & 0x80 == 0, "a rota continua sem dono"
+    # SOM-ROTA-02 (16/09/2026): esta linha dizia `== 0`, "a rota continua sem
+    # dono". Invertida com a razão medida — sem o `VALID_FLAG0_AUDIO_PATH`
+    # ligado o firmware IGNORA o `common[7]` e fica no default dele, que é o
+    # fone vazio. O bit aceso é o que faz o alto-falante nascer audível.
+    assert common[0] & 0x80, "a rota tem dono e o firmware pode lê-la"
+    assert (common[7] & 0x30) >> 4 == ROTA_PADRAO_DO_SOM, "«Sons do jogo»"
 
 
 def test_devolver_a_posse_nao_emudece_o_controle() -> None:
