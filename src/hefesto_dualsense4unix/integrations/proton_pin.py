@@ -588,6 +588,7 @@ def build_compat_tool_mapping(
     tool_name: str,
     appids: Sequence[str],
     atropelar_escolha_dela: bool = False,
+    pinos_nossos: Sequence[str] = (),
 ) -> tuple[str, dict[str, dict[str, str]]]:
     """Trava o global (`"0"`) + cada appid em `tool_name`, **sem** atropelar escolha.
 
@@ -621,6 +622,29 @@ def build_compat_tool_mapping(
     produto passa isso hoje; existe para o caso em que ELA peça, explicitamente,
     "troque tudo para o Proton validado" — e aí a palavra é dela.
 
+    ``pinos_nossos`` — O PINO VELHO NÃO É ESCOLHA DELA (16/09/2026), e esta é a
+    diferença entre preservar e ficar parado. MEDIDO na máquina dela no dia em
+    que o pino subiu de ``GE-Proton10-34`` para ``GE-Proton11-6-x86_64``: o lock
+    respondeu *"locked"*, e **os 25 jogos continuaram no Proton velho**, com
+    ``action="preservado"`` em cada um. Estavam ali porque o PRÓPRIO produto os
+    escreveu — os backups do `config.vdf` mostram as entradas em
+    ``GE-Proton10-34`` crescendo install a install desde 19/07 —, e a guarda de
+    19/08 as leu como decisão dela.
+
+    O efeito, dito por inteiro: **subir o pino nunca alcançava jogo nenhum**. Só
+    o global mudava, e a versão nova ficava instalada sem ser usada por
+    ninguém — que foi exatamente o que o pedido do dia (o som do alto-falante
+    dentro do jogo, que só existe do 11-4 em diante) precisava que NÃO
+    acontecesse.
+
+    A cura é fina de propósito: entrada cujo valor está em ``pinos_nossos`` é
+    NOSSA e migra (``action="migrado"``); entrada com qualquer outro valor
+    continua ``preservado``, e o dano de 14/08 — o ``DON'T SCREAM`` em
+    ``proton_11``, cujo microfone morre no outro Proton — segue impossível. O
+    histórico de pinos vive no registro do lock (``pinos_do_hefesto``) e cresce
+    sozinho a cada subida; ``migrar_de`` no CLI é a semente para a primeira,
+    feita quando o registro ainda não conhecia o pino anterior.
+
     `config.vdf` sem bloco Software/Valve/Steam = ValueError (arquivo que não
     é um config.vdf de verdade — melhor explodir que "criar" a árvore).
     """
@@ -648,7 +672,8 @@ def build_compat_tool_mapping(
                 continue
             if entry.name_value == tool_name:
                 continue
-            if appid != "0" and not atropelar_escolha_dela:
+            nossa = entry.name_value in pinos_nossos
+            if appid != "0" and not atropelar_escolha_dela and not nossa:
                 # A entrada existe e aponta para OUTRA ferramenta: é escolha
                 # deliberada dela POR JOGO. Registra e NÃO escreve.
                 #
@@ -674,7 +699,11 @@ def build_compat_tool_mapping(
                 + line_eol
             )
             changes[appid] = {
-                "action": "replaced",
+                # `migrado` é `replaced` com a procedência dita: o valor que
+                # saiu era NOSSO, de um pino anterior. Quem conta separa os
+                # baldes, e o unlock trata os dois igual — os dois voltam ao
+                # `previous_name`, que é o que a usuária tinha antes de nós.
+                "action": "migrado" if nossa and appid != "0" else "replaced",
                 "previous_name": entry.name_value,
             }
         if not replacements and not new_entries:
@@ -815,6 +844,7 @@ def lock_games_to_pinned_proton(
     state_path: Path | None = None,
     home: Path | None = None,
     dry_run: bool = False,
+    migrar_de: Sequence[str] = (),
 ) -> dict[str, object]:
     """Trava global + appids no pin, com gate de Steam fechada e registro.
 
@@ -841,10 +871,19 @@ def lock_games_to_pinned_proton(
             result["status"] = "recusado"
             result["reason"] = refusal
             return result
+    # OS PINOS QUE JÁ FORAM NOSSOS: o histórico do registro mais o que o
+    # chamador semeia. O `tool_name` de hoje entra por completude — se ele
+    # aparecer numa entrada, ela já está certa e nem chega ao ramo da migração.
+    pinos_nossos = tuple(
+        dict.fromkeys([*_pinos_ja_usados(state), *migrar_de, tool_name])
+    )
     try:
         original = vdf.read_text(encoding="utf-8")
         new_text, changes = build_compat_tool_mapping(
-            original, tool_name=tool_name, appids=appids
+            original,
+            tool_name=tool_name,
+            appids=appids,
+            pinos_nossos=pinos_nossos,
         )
     except (OSError, ValueError) as exc:
         result["reason"] = str(exc)
@@ -867,7 +906,9 @@ def lock_games_to_pinned_proton(
         # o estado for gravado mas a escrita do vdf falhar, o vdf fica original
         # e o unlock apenas não acha o que reverter (reverted=0) e limpa o
         # estado — a direção segura da invariante.
-        _merge_lock_state(state, tool_name=tool_name, changes=changes)
+        _merge_lock_state(
+            state, tool_name=tool_name, changes=changes, pinos_nossos=pinos_nossos
+        )
         result["backup"] = str(_write_vdf_with_backup(vdf, new_text))
     except OSError as exc:
         result["reason"] = str(exc)
@@ -876,22 +917,100 @@ def lock_games_to_pinned_proton(
     return result
 
 
+def _pinos_ja_usados(state_path: Path) -> tuple[str, ...]:
+    """Os Protons que ESTE produto já pinou, na ordem em que apareceram.
+
+    É a memória que faz a subida de pino alcançar os jogos (ver
+    `build_compat_tool_mapping`): o que está aqui é nosso, não é escolha dela.
+    Registro ilegível ou antigo (sem a chave) devolve vazio — e aí o lock se
+    comporta como antes, preservando tudo. Falha para o lado seguro.
+    """
+    try:
+        data = json.loads(state_path.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return ()
+    pinos = data.get("pinos_do_hefesto")
+    conhecidos = [p for p in pinos if isinstance(p, str)] if isinstance(pinos, list) else []
+    atual = data.get("tool_name")
+    if isinstance(atual, str) and atual and atual not in conhecidos:
+        # Registro anterior à chave: o `tool_name` gravado por ele É um pino
+        # nosso, e ignorá-lo repetiria o defeito de 16/09 na próxima subida.
+        conhecidos.append(atual)
+    return tuple(dict.fromkeys(conhecidos))
+
+
+def _fundir_marcas(
+    agora: dict[str, dict[str, str]],
+    antes: dict[str, dict[str, str]],
+) -> dict[str, dict[str, str]]:
+    """Funde as marcas do lock POR CAMPO, porque cada campo tem dono diferente.
+
+    O DEFEITO que isto cura, medido em 16/09/2026: a fusão era por ENTRADA
+    (``merged.update(existing)``), e o registro da corrida anterior vencia
+    inteiro. Depois de 24 jogos migrarem de verdade para o pino novo, o registro
+    ainda dizia ``preservado`` para os 24 — a marca da corrida que falhara.
+    **Um registro que descreve a corrida errada não desfaz coisa nenhuma.**
+
+    Quem é dono de quê:
+
+    ``action``
+        a corrida de AGORA. É o que acabou de acontecer com o appid.
+    ``previous_name``
+        a corrida MAIS ANTIGA que o conheceu. É o valor pré-hefesto — o que
+        estava lá antes de este produto encostar — e é ele que desfaz TUDO.
+    ``veio_de``
+        a corrida de AGORA, e só quando ela escreveu. É de onde o appid saiu
+        NESTA subida, e é ele que desfaz UMA subida. Ausente quer dizer "esta
+        corrida não mexeu"; vazio quer dizer "a entrada não existia".
+    """
+    #: As ações que ESCREVERAM no `config.vdf` — as únicas com o que desfazer.
+    escreveram = ("added", "replaced", "migrado")
+    fundidas: dict[str, dict[str, str]] = {}
+    for appid in {*agora, *antes}:
+        desta = agora.get(appid)
+        daquela = antes.get(appid)
+        if desta is None:
+            fundidas[appid] = dict(daquela or {})
+            continue
+        marca = dict(desta)
+        if daquela and daquela.get("previous_name"):
+            marca["previous_name"] = daquela["previous_name"]
+        if desta.get("action") in escreveram:
+            marca["veio_de"] = desta.get("previous_name", "")
+        elif daquela and "veio_de" in daquela:
+            marca["veio_de"] = daquela["veio_de"]
+        fundidas[appid] = marca
+    return fundidas
+
+
 def _merge_lock_state(
-    state_path: Path, *, tool_name: str, changes: dict[str, dict[str, str]]
+    state_path: Path,
+    *,
+    tool_name: str,
+    changes: dict[str, dict[str, str]],
+    pinos_nossos: Sequence[str] = (),
 ) -> None:
     """Persiste o registro do lock SEM sobrescrever previous_name antigos."""
     existing: dict[str, dict[str, str]] = {}
     try:
         data = json.loads(state_path.read_text(encoding="utf-8"))
-        if data.get("tool_name") == tool_name and isinstance(data.get("changes"), dict):
+        # Lê-se o registro ANTERIOR mesmo quando ele é de outro pino: o
+        # `previous_name` pré-hefesto pertence ao APPID, não à versão do Proton.
+        # Enquanto a leitura exigia `tool_name` igual, toda subida de pino
+        # apagava a única pista de como devolver o jogo ao estado de antes.
+        if isinstance(data.get("changes"), dict):
             existing = data["changes"]
     except (OSError, ValueError):
         pass
-    merged = dict(changes)
-    merged.update(existing)  # o registro ORIGINAL vence (pré-hefesto de verdade)
+    merged = _fundir_marcas(changes, existing)
     state_path.parent.mkdir(parents=True, exist_ok=True)
     payload = {
         "tool_name": tool_name,
+        # O histórico NUNCA encolhe: é ele que permite a próxima subida de pino
+        # reconhecer o trabalho desta.
+        "pinos_do_hefesto": list(
+            dict.fromkeys([*_pinos_ja_usados(state_path), *pinos_nossos, tool_name])
+        ),
         "changes": merged,
         "updated_at": int(time.time()),
     }
@@ -907,6 +1026,7 @@ def lock_proton_for_all_games(
     config_vdf: Path | None = None,
     state_path: Path | None = None,
     dry_run: bool = False,
+    migrar_de: Sequence[str] = (),
 ) -> dict[str, object]:
     """Conveniência ZERO-ARG do botão "Travar Proton validado" da GUI (PLAT-01).
 
@@ -931,6 +1051,7 @@ def lock_proton_for_all_games(
         state_path=state_path,
         home=home,
         dry_run=dry_run,
+        migrar_de=migrar_de,
     )
     changes = result.get("changes")
     if isinstance(changes, dict):
@@ -938,9 +1059,18 @@ def lock_proton_for_all_games(
         # produto respeitou. Contar os dois juntos diria "travei 19" numa leva em
         # que 3 ficaram intactos de propósito — e foi assim que o atropelo de
         # 14/08 passou despercebido. Cada balde conta o que ele é.
+        # `migrado` conta à parte pela mesma razão do `preservado`: ele é o
+        # jogo que estava num pino NOSSO antigo e passou para o de hoje. Somá-lo
+        # ao `locked` esconderia justamente o número que prova que a subida de
+        # pino chegou aos jogos — e foi a ausência desse número que deixou o
+        # defeito de 16/09 invisível.
         locked = sum(
             1 for c in changes.values()
-            if isinstance(c, dict) and c.get("action") != "preservado"
+            if isinstance(c, dict) and c.get("action") not in ("preservado", "migrado")
+        )
+        migrados = sum(
+            1 for c in changes.values()
+            if isinstance(c, dict) and c.get("action") == "migrado"
         )
         preservados = sum(
             1 for c in changes.values()
@@ -948,6 +1078,7 @@ def lock_proton_for_all_games(
         )
     else:
         locked = 0
+        migrados = 0
         preservados = 0
     status = result.get("status")
     # T-04 (SISTEMA-O-VIGIA-VIVO-01, 25/08/2026): `status` e `reason` passam
@@ -960,6 +1091,7 @@ def lock_proton_for_all_games(
     # calculada aqui dentro; a ponte é que a jogava fora.
     return {
         "locked": locked,
+        "migrated": migrados,
         "skipped": preservados,
         "errors": 1 if status == "erro" else 0,
         "status": status,
@@ -1205,17 +1337,34 @@ def _cmd_lock(args: argparse.Namespace) -> int:
         if args.appids
         else list_installed_appids()
     )
+    migrar_de = [t.strip() for t in args.migrar_de.split(",") if t.strip()]
     result = lock_games_to_pinned_proton(
         tool_name=conf["name"],
         appids=appids,
         config_vdf=args.config_vdf,
         state_path=args.state,
         dry_run=args.dry_run,
+        migrar_de=migrar_de,
     )
+    # A LINHA DIZ O QUE ACONTECEU, NÃO O QUE FOI MIRADO — 16/09/2026. Ela
+    # imprimia `len(appids)`, o tamanho do ALVO: no dia em que o pino subiu,
+    # anunciou *"locked — 25 jogos + default global"* enquanto os 25 ficavam
+    # onde estavam (`action="preservado"`) e só o global mudava. É a família de
+    # defeito que esta casa persegue há meses: o instrumento dizendo o que não
+    # fez. Agora cada balde sai com o seu nome, e `0` aparece quando é 0.
+    mudancas = result.get("changes")
+    mudancas = mudancas if isinstance(mudancas, dict) else {}
+    baldes: dict[str, int] = {}
+    for c in mudancas.values():
+        if isinstance(c, dict):
+            acao = str(c.get("action", "?"))
+            baldes[acao] = baldes.get(acao, 0) + 1
+    resumo = ", ".join(f"{n} {a}" for a, n in sorted(baldes.items())) or "nada a mudar"
     print(
         f"[proton-pin] lock: {result['status']}"
         + (f" ({result['reason']})" if result["reason"] else "")
-        + f" — {len(appids)} jogos + default global em {result['vdf']}"
+        + f" — {resumo} (de {len(appids)} jogos mirados + o default global)"
+        + f" em {result['vdf']}"
     )
     if result["status"] == "recusado":
         print(
@@ -1301,6 +1450,11 @@ def main(argv: list[str] | None = None) -> int:
                         help="arquivo de estado do lock (default: ~/.local/state/…)")
     parser.add_argument("--appids", default="", metavar="A,B,C",
                         help="appids explícitos p/ --lock (default: jogos instalados)")
+    parser.add_argument("--migrar-de", default="", metavar="TOOL,TOOL",
+                        help="p/ --lock: Protons que ESTE produto pinou antes e "
+                             "que devem migrar para o pino de hoje (o histórico "
+                             "do registro já entra sozinho; isto é a semente da "
+                             "primeira subida)")
     parser.add_argument("--offline", action="store_true",
                         help="--ensure sem rede (só cache; ausente = pendente)")
     parser.add_argument("--dry-run", action="store_true",
