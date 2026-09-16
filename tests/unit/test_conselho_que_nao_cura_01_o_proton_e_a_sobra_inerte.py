@@ -52,12 +52,23 @@ from pathlib import Path
 import pytest
 
 from hefesto_dualsense4unix.integrations import steam_launch_options as slo
+from hefesto_dualsense4unix.integrations.proton_pin import parse_pin_conf as _pin_conf
 
 ROOT = Path(__file__).resolve().parents[2]
 DOCTOR = ROOT / "scripts" / "doctor.sh"
 
-NOME_DO_PIN = "GE-Proton10-34"
-SHA_DO_PIN = "51c580b66a833c73998fe00f0717eeac57197654040a2f2ed5189e3ee68d773d"
+#: O NOME E O SHA DO PINO, LIDOS DO CONF — nunca digitados aqui. Eram literais
+#: (`GE-Proton10-34` e o sha dele) até 16/09/2026, e a subida do pino para o
+#: `GE-Proton11-6-x86_64` derrubou SEIS casos deste arquivo de uma vez: o
+#: cenário montava o diretório com o nome velho e o `doctor.sh` — que lê o
+#: `assets/proton-pin.conf` de verdade — respondia *"Proton pinado AUSENTE"*.
+#: Nenhum defeito de produto; era a régua medindo o mundo de ontem. É a mesma
+#: armadilha do `WRAPPER` logo abaixo: *régua que digita o que devia ler*.
+_CONF_DO_PINO = _pin_conf(
+    (ROOT / "assets" / "proton-pin.conf").read_text(encoding="utf-8")
+)
+NOME_DO_PIN = _CONF_DO_PINO["name"]
+SHA_DO_PIN = _CONF_DO_PINO["sha256"]
 
 #: A chamada do wrapper, LIDA do módulo — nunca digitada aqui: régua que digita
 #: o que devia ler é a armadilha nº 1 desta casa.

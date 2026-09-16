@@ -56,12 +56,31 @@ def test_parse_conf_explode_com_sha256_torto():
 
 
 def test_o_asset_real_do_repo_parseia_e_pina_a_versao_validada():
-    """assets/proton-pin.conf é a fonte da verdade — o contrato do install."""
+    """assets/proton-pin.conf é a fonte da verdade — o contrato do install.
+
+    16/09/2026: o pino subiu de `GE-Proton10-34` para `GE-Proton11-6-x86_64`,
+    pela feature que a versão nova traz — o áudio do alto-falante do controle e
+    as haptics de voice-coil DENTRO do jogo (GE-Proton 11-4 fechou o casamento
+    do `ContainerId` com o MMDevice; o 11-6 refez o caminho pelo `dsound`). A
+    razão do pino não mudou: sem ele um upgrade automático de Proton pode
+    reintroduzir o controle duplicado do winebus.
+
+    O SUFIXO `-x86_64` FAZ PARTE DO NOME, e é a armadilha desta subida: a partir
+    do 11-4 o release publica `GE-Proton11-N-x86_64.tar.gz`, a raiz do tarball é
+    `GE-Proton11-6-x86_64/` e o nome INTERNO do `compatibilitytool.vdf` — o
+    valor que vai ao `CompatToolMapping` — também tem o sufixo. Até o 11-3 não
+    havia nenhum.
+    """
     asset = Path(__file__).resolve().parents[2] / "assets" / "proton-pin.conf"
     conf = pp.parse_pin_conf(asset.read_text(encoding="utf-8"))
-    assert conf["name"] == "GE-Proton10-34"
+    assert conf["name"] == "GE-Proton11-6-x86_64"
     assert "GloriousEggroll/proton-ge-custom" in conf["url"]
-    assert conf["url"].endswith("GE-Proton10-34.tar.gz")
+    # A REGRA, e não a literal: `ensure_pinned_proton` procura o tarball em
+    # `cache/<name>.tar.gz` e `_extract_verified_tarball` exige que a raiz do
+    # tarball seja `<name>/`. Nome e URL fora de par quebram o cache offline e
+    # a extração de uma vez — e é o que aconteceria se alguém copiasse a URL do
+    # release e esquecesse o sufixo no `name`.
+    assert conf["url"].endswith(f"{conf['name']}.tar.gz")
 
 
 # --------------------------------------------------------------------------

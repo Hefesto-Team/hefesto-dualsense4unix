@@ -3923,6 +3923,15 @@ fi
 # config.vdf.bak.hefesto-proton-<ts>; com a Steam/jogo abertos a trava é
 # ADIADA com instrução — mesmo gate dos outros passos que editam vdf).
 # Upgrade é sempre DELIBERADO: editar o proton-pin.conf + rodar o install.
+#
+# 16/09/2026 — O PINO PASSOU A ENTREGAR UMA FEATURE, e não só a evitar uma
+# regressão. A versão pinada virou `GE-Proton11-6-x86_64`, que é onde o som do
+# ALTO-FALANTE do controle e as haptics de voice-coil chegam DENTRO do jogo: o
+# GE-Proton 11-4 fechou o casamento do `ContainerId` do HID com o dispositivo
+# de áudio que o jogo abre, e o 11-6 refez esse caminho pelo `dsound`. Por USB
+# o DualSense é uma placa de som de quatro canais (dois de alto-falante, dois
+# dos atuadores) — o canal sempre esteve lá; faltava o Proton achá-lo. A razão
+# antiga (o winebus, logo acima) continua valendo e é por ela que se PINA.
 step "11c" "Proton pinado: versão validada + trava dos jogos"
 PROTON_PIN_PY="${ROOT_DIR}/src/hefesto_dualsense4unix/integrations/proton_pin.py"
 if [[ "${NO_PROTON_PIN}" -eq 1 ]]; then
