@@ -9,8 +9,9 @@ Morde em quatro alturas:
 
 1. **alcance** — o censo enxerga as duas bibliotecas, não só a padrão;
 2. **reversibilidade** — devolver deixa o registro byte a byte como estava;
-3. **memória da escolha dela** — o que ela religou não é desligado de novo no
-   lançamento seguinte;
+3. **memória da escolha dela** — o que ela devolveu PELO BOTÃO não é desligado
+   de novo no lançamento seguinte, e o que só reapareceu ligado é refeito
+   (decisão dela de 16/09/2026; ver o caso `test_o_que_reapareceu_ligado...`);
 4. **fiação** — o gancho de lançamento, o install e o uninstall chamam mesmo o
    curador; sem isto a cura existe e nunca roda em jogo nenhum.
 """
@@ -176,19 +177,40 @@ def test_o_gancho_nao_desfaz_o_que_ela_devolveu(casa: Path) -> None:
     assert "dword:00000000" in (raiz / "pfx" / "system.reg").read_text(encoding="utf-8")
 
 
-def test_religar_por_fora_tambem_conta_como_escolha(casa: Path) -> None:
-    """Editou o registro à mão? Isso é escolha, não é convite para briga."""
+def test_o_que_reapareceu_ligado_e_desligado_de_novo_pelo_gancho(casa: Path) -> None:
+    """A camada voltou a `00000000` sem passar pelo botão: o gancho REFAZ a cura.
+
+    **ESTE CASO ERA O CONTRÁRIO ATÉ 16/09/2026**, e chamava-se
+    `test_religar_por_fora_tambem_conta_como_escolha`: ele exigia
+    `desligadas == ()` e o registro intacto em `dword:00000000`, porque a regra
+    2 de `aplicar_no_prefixo` lia "camada que nós desligamos, agora ligada"
+    como gesto dela e gravava `manter` para sempre.
+
+    A regra caiu por uma premissa falsa, não por gosto: o `wineserver` regrava
+    o registro que tinha em memória ao sair do prefixo, devolvendo a camada a
+    `dword:00000000` **com o mesmo byte** que uma pessoa editando o arquivo à
+    mão. Era indistinguível, e o empate ia sempre para o lado que aposentava a
+    cura — um prefixo curado uma vez e reaberto uma vez nunca mais era curado,
+    ao contrário do que o docstring do módulo prometia.
+
+    Decisão dela, 16/09/2026, textual: *"Refazer sempre no lançamento; só o
+    botão devolver é permanente. O botão vira a única voz de escolha e o
+    wineserver perde o voto."* Quem quer a camada de volta clica em «devolver»,
+    que já existia e não mudou.
+    """
     raiz = casa / ".steam" / "steam" / "steamapps" / "compatdata" / "222"
     registro = raiz / "pfx" / "system.reg"
     cv.curar_todos(casa)
 
-    # "Ela" religou por fora, sem passar pelo produto.
+    # A camada reaparece LIGADA — wineserver ou mão humana, o registro não diz.
     registro.write_text(
         registro.read_text(encoding="utf-8").replace("dword:00000001", "dword:00000000"),
         encoding="utf-8",
     )
-    assert cv.curar_um_prefixo(raiz, appid="222", home=casa).desligadas == ()
-    assert "dword:00000000" in registro.read_text(encoding="utf-8")
+    assert cv.curar_um_prefixo(raiz, appid="222", home=casa).desligadas == (
+        "EOSOverlayVkLayer-Win64.json",
+    )
+    assert "dword:00000001" in registro.read_text(encoding="utf-8")
 
 
 def test_o_botao_forca_e_vence_a_memoria(casa: Path) -> None:

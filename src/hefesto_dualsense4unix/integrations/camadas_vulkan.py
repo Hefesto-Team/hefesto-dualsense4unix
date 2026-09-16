@@ -117,8 +117,24 @@ enquanto o prefixo está vivo e o regrava ao sair — por isso:
 - o gancho de lançamento escreve ANTES de o Proton subir o `wineserver`
   daquele prefixo, que é o instante certo;
 - se ainda assim um `wineserver` sobrescrever, a mudança se perde e o próximo
-  lançamento a refaz. A cura é idempotente de propósito para que o pior caso
+  lançamento a REFAZ. A cura é idempotente de propósito para que o pior caso
   seja "não pegou desta vez", nunca um prefixo pela metade.
+
+**E O TERCEIRO ITEM SÓ PASSOU A SER VERDADE EM 16/09/2026** — até então era
+promessa que o próprio código desmentia, e o desmentido estava a seiscentas
+linhas daqui. A regra 2 de `aplicar_no_prefixo` ("religar por fora também
+conta como escolha", pedido dela de 09/08/2026) via a camada de volta em
+`dword:00000000` e concluía ESCOLHA DELA, gravando `manter` para sempre. Só
+que o `wineserver` regravando o registro que tinha em memória produz
+exatamente o mesmo byte que alguém religando à mão: **os dois casos são
+INDISTINGUÍVEIS no registro**, e o desempate caía sempre no lado que
+aposentava a cura. Um prefixo curado uma vez e reaberto uma vez nunca mais
+era curado.
+
+Decisão dela, 16/09/2026, textual: *"Refazer sempre no lançamento; só o botão
+devolver é permanente. O botão vira a única voz de escolha e o wineserver
+perde o voto."* A regra 2 caducou — o que sobrou dela está em
+`_e_escolha_dela`, que é quem lê o estado antigo sem obedecer a ele.
 
 Este módulo é **100% stdlib de propósito** (mesmo padrão de `proton_pin` e
 `steam_launch_options`): o `install.sh` o materializa em
@@ -571,6 +587,40 @@ def gravar_estado(
         return
 
 
+#: O `feito` que a regra 2 CADUCA gravava, de 09/08/2026 a 16/09/2026. Nada
+#: mais o escreve; ele sobrevive só no estado já gravado na máquina de quem
+#: usou o produto nesse intervalo — e é por ele que `_e_escolha_dela` separa a
+#: escolha de verdade da inferência que o wineserver forjava.
+_FEITO_CADUCO = "religada-por-fora"
+
+
+def _e_escolha_dela(registro_dela: dict[str, str]) -> bool:
+    """O `manter` deste registro veio de um GESTO dela, ou de uma inferência?
+
+    **É esta função que distingue os dois `manter` do estado já gravado**, e a
+    distinção não precisa de migração nem de adivinhação: o próprio campo
+    `feito` diz quem escreveu a linha.
+
+    - `feito: "religada"` — escreveu o ramo `religar=True`, que só o BOTÃO
+      «devolver» alcança (`interface/pacotes/a09_sistema.py`, gesto
+      `procurar-camadas`, que chama `curar_todos(religar=True, forcar=True)`).
+      Isso é gesto explícito dela e continua valendo para sempre.
+    - `feito: "religada-por-fora"` — escreveu a regra 2, que caducou em
+      16/09/2026 (ver o docstring do módulo). O registro sozinho não sabia
+      diferenciar o `wineserver` de uma pessoa, então essa linha não prova
+      escolha nenhuma e **deixa de travar o gancho de lançamento**.
+
+    O estado antigo não é reescrito por aqui de propósito: a linha caduca
+    simplesmente para de ser obedecida, e o primeiro lançamento que refizer a
+    cura a substitui por `desligada`. Migração que reescreve arquivo do usuário
+    para corrigir o próprio engano é risco sem ganho — o `feito` já carrega a
+    resposta.
+    """
+    if registro_dela.get("escolha") != "manter":
+        return False
+    return registro_dela.get("feito") != _FEITO_CADUCO
+
+
 def _agora() -> str:
     """Carimbo legível, hora local, sem dependência externa."""
     return time.strftime("%Y-%m-%dT%H:%M:%S")
@@ -678,19 +728,36 @@ def aplicar_no_prefixo(
 ) -> Resultado:
     """Desliga (ou religa) as camadas sobrando deste prefixo.
 
-    Três regras, e as três são pedido dela:
+    Duas regras, e as duas são pedido dela:
 
-    1. **A escolha dela vence a automação.** Camada marcada `manter` no estado
-       local nunca é desligada de novo — é o que impede o gancho de lançamento
-       de desfazer, no jogo seguinte, o que ela religou de propósito.
-    2. **Religar por fora também conta como escolha.** Se o registro mostra
-       LIGADA uma camada que NÓS desligamos, alguém a religou sem passar por
-       aqui: a resposta é marcar `manter` e sair, não desligar de novo. Sem
-       esta regra a pessoa que edita o registro à mão brigaria com o produto
-       para sempre.
-    3. **Gesto explícito na interface manda.** `forcar=True` (o botão) limpa o
+    1. **A escolha dela vence a automação, e só ela conta como escolha.**
+       Camada marcada `manter` pelo BOTÃO «devolver» nunca é desligada de novo
+       — é o que impede o gancho de lançamento de desfazer, no jogo seguinte, o
+       que ela devolveu de propósito. Quem decide se um `manter` é dela mesmo é
+       `_e_escolha_dela`, e não o simples fato de a camada estar ligada.
+    2. **Gesto explícito na interface manda.** `forcar=True` (o botão) limpa o
        `manter` e desliga — "a vontade da GUI prevalece", regra dela de
        09/08/2026. O gancho de lançamento nunca força.
+
+    **A REGRA 2 DE 09/08/2026 CADUCOU EM 16/09/2026, e a numeração acima já é a
+    nova.** Ela dizia: *"religar por fora também conta como escolha — se o
+    registro mostra LIGADA uma camada que NÓS desligamos, alguém a religou sem
+    passar por aqui; marque `manter` e saia, não desligue de novo"*. Era pedido
+    dela e foi medida, então fica escrita aqui em vez de sumir.
+
+    O que a derrubou: **a premissa "alguém religou" era falsa na maioria das
+    vezes**. O Wine mantém o registro do prefixo em memória e o regrava ao
+    sair, devolvendo a camada a `dword:00000000` sozinho — byte por byte o
+    mesmo que uma pessoa editando o `system.reg` à mão. A regra lia isso como
+    gesto dela e gravava `manter` PERMANENTE, de modo que o prefixo curado uma
+    vez e reaberto uma vez nunca mais era curado — o contrário do que o
+    docstring do módulo prometia (*"o próximo lançamento a refaz"*).
+
+    Decisão dela, 16/09/2026, textual: *"Refazer sempre no lançamento; só o
+    botão devolver é permanente. O botão vira a única voz de escolha e o
+    wineserver perde o voto."* Quem edita o registro à mão e quer que fique
+    clica em «devolver» — o botão já existe, e nenhuma tela mudou por causa
+    disto.
     """
     estado = ler_estado(home)
     memoria = dict(estado.get(prefixo.appid, {}))
@@ -720,19 +787,14 @@ def aplicar_no_prefixo(
                 continue
             marca = chave_de_estado(camada.chave, camada.caminho_windows)
             registro_dela = memoria.get(marca, {})
-            if not forcar and registro_dela.get("escolha") == "manter":
+            if not forcar and _e_escolha_dela(registro_dela):
                 respeitadas.append(camada.nome_curto)
                 continue
-            if not forcar and registro_dela.get("feito") == "desligada":
-                # Nós desligamos e ela está LIGADA de novo: alguém religou por
-                # fora. Vira escolha, não vira briga.
-                memoria[marca] = {
-                    "feito": "religada-por-fora",
-                    "escolha": "manter",
-                    "quando": _agora(),
-                }
-                respeitadas.append(camada.nome_curto)
-                continue
+            # NÓS DESLIGAMOS E ELA ESTÁ LIGADA DE NOVO: não há como saber se
+            # foi o `wineserver` ou uma pessoa, então refazemos a cura — é a
+            # decisão dela de 16/09/2026, e o caminho de volta é o botão
+            # «devolver». Antes daquela data havia aqui um ramo que marcava
+            # `manter` e saía; ver o docstring desta função.
             alvos[(camada.chave, camada.caminho_windows)] = _DESLIGADA_DWORD
             desligadas.append(camada.nome_curto)
             memoria[marca] = {
@@ -786,7 +848,7 @@ def curar_um_prefixo(
 ) -> Resultado:
     """A entrada do gancho de lançamento: um prefixo, sem enumerar nada.
 
-    Nunca força — a escolha dela sobrevive ao próximo lançamento (regra 3 de
+    Nunca força — a escolha dela sobrevive ao próximo lançamento (regra 2 de
     `aplicar_no_prefixo`). `home` existe só para o teste poder montar uma casa
     inteira em `tmp_path`; em produção fica `None` e o estado sai do XDG.
     """
