@@ -41,8 +41,20 @@ produto — se alguém a adicionar para fazer o teste passar, o teste reprova po
 esse motivo, com essa palavra.
 
 SEM APARELHO: nada aqui pareia, conecta ou escreve em rádio. O ``hcitool`` de
-verdade nunca é chamado — o dublê vem antes no ``PATH``. Medido em 25/08/2026
-com ``/sys/class/bluetooth/`` VAZIO (o hub USB dela fora do barramento).
+verdade nunca é chamado — o dublê vem antes no ``PATH``.
+
+E "sem aparelho" PRECISA SER DECLARADO, não herdado da bancada (16/09/2026).
+Até esta data a frase acima terminava com *"medido em 25/08/2026 com
+``/sys/class/bluetooth/`` VAZIO (o hub USB dela fora do barramento)"* — e era
+essa a única razão de o ``ExameDeMentira`` ficar verde. Trocar o ``PATH`` não
+esconde Bluetooth FÍSICO: ``_bt_adaptadores()`` lê o sysfs, e numa bancada com
+um adaptador plugado ela devolve o adaptador REAL — ``hci1`` aqui — enquanto o
+``busctl`` dublê só sabe falar de ``hci0``. O ``_bt_hospeda_linhagem`` então
+responde NÃO, o bloco inteiro do modo ativo é pulado, e o exame sai sem a linha:
+os três testes da ``TestOExameNaoAprovaOQueNaoOlhou`` reprovavam com
+``assert '[ OK ]' in ''``. Quem declara o sysfs é ``HEFESTO_BT_SYSFS_ROOT``, que
+existe no produto desde 24/08/2026 e que ``test_migracao_bluez_depreciados.py``
+já usava — esta régua é que não tinha ido junto.
 
 ANONIMATO: os endereços são montados com os octetos 4 e 5 zerados, a máscara da
 casa. As faixas ``e0:f6:b5`` e ``e4:17:d8`` vêm das constantes do produto; a de
@@ -686,12 +698,29 @@ class ExameDeMentira:
     Roda UMA função do `doctor.sh` (`source` + chamada), como já faz
     `tests/unit/test_migracao_bluez_depreciados.py`. Nada toca o rádio: o
     `hcitool` dublê responde a link policy que o teste mandar.
+
+    A BANCADA É DECLARADA INTEIRA, e as três declarações são o que faz esta
+    régua medir o `doctor.sh` em vez de medir a máquina de quem a roda:
+
+    1. `HEFESTO_BT_SYSFS_ROOT` — um `/sys/class/bluetooth` de mentira com UM
+       adaptador, `hci0`, que é o mesmo de que o `busctl` dublê fala. Sem ele,
+       `_bt_adaptadores()` devolve os adaptadores FÍSICOS da bancada e o exame
+       nunca chega ao bloco do modo ativo (ver o cabeçalho deste arquivo).
+    2. Um `systemctl` dublê — `check_bt_resilience` sai com `return` logo na
+       primeira linha quando `systemctl` não está no `PATH`, e aí o exame
+       também sai mudo. Com o dublê, o primeiro veredito é o da bancada, e não
+       o dos timers que por acaso estejam de pé na máquina.
+    3. O `busctl`/`hciconfig`/`hcitool` dublês, que já existiam.
     """
 
     def __init__(self, tmp: Path, *, mac: str, nome: str, sniff_no_controle: bool) -> None:
         self.tmp = tmp
         self.fakes = tmp / "fakes"
         self.fakes.mkdir(parents=True, exist_ok=True)
+        #: O `/sys/class/bluetooth` desta bancada: um adaptador só, `hci0`, o
+        #: mesmo de que o `busctl` dublê fala. É o que esconde o rádio físico.
+        self.sysfs_bt = tmp / "sysfs-bt"
+        (self.sysfs_bt / "hci0").mkdir(parents=True, exist_ok=True)
         dev = "/org/bluez/hci0/dev_" + mac.upper().replace(":", "_")
         self._escrever(
             "busctl",
@@ -730,6 +759,18 @@ exit 0
             f"    echo 'Link policy: {politica}'\n"
             "    exit 0\nfi\nexit 0\n",
         )
+        # Sem `systemctl` no `PATH`, `check_bt_resilience` sai na primeira linha
+        # e o exame fica mudo — o mesmo sintoma do sysfs vazando. Aqui ele
+        # responde pela BANCADA, para que o veredito não dependa dos timers que
+        # estejam de pé na máquina de quem roda a suíte.
+        self._escrever(
+            "systemctl",
+            'case "$1 $2" in\n'
+            '  "is-active hefesto-bt-bonds-snapshot.timer"|'
+            '"is-active hefesto-bt-health-watchdog.timer") echo active ;;\n'
+            "  *) exit 1 ;;\n"
+            "esac\nexit 0\n",
+        )
 
     def _escrever(self, nome: str, corpo: str) -> None:
         alvo = self.fakes / nome
@@ -747,13 +788,27 @@ exit 0
                 "PATH": ":".join([str(self.fakes), "/usr/bin", "/bin"]),
                 "HOME": str(self.tmp),
                 "DOCTOR_SH": str(DOCTOR),
+                "HEFESTO_BT_SYSFS_ROOT": str(self.sysfs_bt),
                 "LANG": os.environ.get("LANG", "pt_BR.UTF-8"),
             },
         )
         for linha in proc.stdout.splitlines():
             if "modo ativo p/ Nintendo" in linha:
                 return linha
-        return ""
+        # NADA NÃO É UM VEREDITO, e devolver "" fazia cada teste acusar o
+        # veredito ERRADO: o do clone dizia *"o exame passou a reclamar do
+        # 8BitDo"* quando o exame não tinha dito palavra nenhuma sobre o modo
+        # ativo. Custou a leitura de 16/09/2026 — a mensagem apontava para o
+        # `doctor.sh` e a causa estava na bancada. Aqui ela se nomeia, com a
+        # saída inteira do exame junto.
+        raise AssertionError(
+            "o exame não disse NADA sobre o modo ativo p/ Nintendo — não é "
+            "aprovação nem reclamação, é o bloco inteiro pulado. Confira se a "
+            "bancada está escondendo o rádio físico (`HEFESTO_BT_SYSFS_ROOT`) "
+            "e se há `systemctl` no `PATH` dela.\n"
+            f"--- rc={proc.returncode}\n--- stdout:\n{proc.stdout}\n"
+            f"--- stderr:\n{proc.stderr}"
+        )
 
 
 class TestOExameNaoAprovaOQueNaoOlhou:
@@ -771,8 +826,9 @@ class TestOExameNaoAprovaOQueNaoOlhou:
         exame = ExameDeMentira(
             tmp_path, mac=MAC_DE_OUTRA_SAFRA, nome=NOME_PRO, sniff_no_controle=True
         )
+        # "o exame não falou nada" já é reprovação com nome próprio, dentro do
+        # `linha_do_modo_ativo()` — aqui a linha nunca chega vazia.
         linha = exame.linha_do_modo_ativo()
-        assert linha, "o exame não falou do modo ativo p/ Nintendo"
         assert "[WARN]" in linha, (
             "o exame APROVOU a cura sem ter olhado o controle: há um Pro "
             "Controller conectado e COM sniff, que é exatamente o estado que a "
