@@ -1152,9 +1152,9 @@ class IpcHandlersMixin:
         A causa é a ORDEM DAS CAMADAS do merge, não a escrita. ``set_led``
         escreve no hardware E grava o valor em ``_desired_default``
         (``_record_desired_locked`` com alvo ``None``,
-        ``core/backend_pydualsense.py:2657``); o ``reassert_resolved_outputs``
+        ``core/backend_pydualsense.py:2823``); o ``reassert_resolved_outputs``
         logo abaixo re-resolve por controle, e o ``_merged_desired_for_key``
-        (``core/backend_pydualsense.py:2440``) põe a camada AUTOMÁTICA do slot
+        (``core/backend_pydualsense.py:6714``) põe a camada AUTOMÁTICA do slot
         (COR-03) EM CIMA do default — a paleta repinta por cima da cor que
         acabou de sair. O caminho por-``uniq`` SEMPRE funcionou pelo mesmo
         motivo, ao contrário: ``apply_output_for`` grava em ``_desired_by_uniq``,
@@ -5771,7 +5771,8 @@ class IpcHandlersMixin:
     async def _handle_speaker_set(self, params: dict[str, Any]) -> dict[str, Any]:
         """`speaker.set` — volume/mudo/devolução do alto-falante (D4 + SOM-02).
 
-        Params: ``{volume?: 0-255, muted?: bool, release?: bool, uniq?: str}``.
+        Params: ``{volume?: 0-255, muted?: bool, rota?: 0-3, release?: bool,
+        uniq?: str}``.
         `uniq` escolhe o controle (MAC normalizado); omitido = o primário.
 
         Escrever é o ÚNICO jeito de o volume ser conhecido: o controle não tem

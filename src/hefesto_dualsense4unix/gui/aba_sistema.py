@@ -73,7 +73,7 @@ ENDERECOS: dict[str, str] = {
 #: ``DONOS_DOS_GESTOS`` do piloto da aba Controles: o gesto chega ao Python, e
 #: quem o aplica está escrito aqui — inclusive quando a resposta é "ninguém".
 GESTOS: dict[str, str] = {
-    "retomar": "IPC `daemon.resume` (daemon/ipc_server.py:121 → ipc_handlers.py:2702). "
+    "retomar": "IPC `daemon.resume` (daemon/ipc_server.py:129 → ipc_handlers.py:2702). "
     "O ÚNICO chamador em src/ é `cli/app.py:421` — o terminal. A pausa fica "
     "gravada em disco e sobrevive a desligar o computador; até hoje só o "
     "terminal saía dela.",

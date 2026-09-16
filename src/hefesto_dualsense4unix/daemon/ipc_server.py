@@ -29,8 +29,16 @@ NDJSON UTF-8, uma mensagem por linha. Métodos v1 + extensões:
     coop.set             {enabled: bool}       -> {status, enabled, players}
                          `enabled:false` é RECUSADO ({status: "recusado", motivo})
     coop.sync            {}                    -> {status, players, active}
-    speaker.set          {volume?: 0-255, muted?: bool, release?: bool, uniq?}
+    speaker.set          {volume?: 0-255, muted?: bool, rota?: 0-3,
+                          release?: bool, uniq?}
                          -> {status, speaker}
+                         `rota` é o OUTPUT_PATH_SEL do firmware: 0 estéreo no
+                         fone · 1 mono no fone · 2 L=fone/TV, R=alto-falante
+                         («Sons do jogo») · 3 só no alto-falante. Ela estava
+                         implementada e validada desde a SOM-ROTA-01 e FALTAVA
+                         nesta linha — o contrato mentia por omissão, e foi
+                         preciso ler o handler para descobrir que dava para
+                         pedi-la (16/09/2026).
     mic.set              {muted: bool|null, uniq?} -> {status, audio, mic_mudo_desejado}
     mic.canal.set        {ligado: bool, uniq?}
                          -> {status, uniq, ligado, canal_feito, canal_motivo,
