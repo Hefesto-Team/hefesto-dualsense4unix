@@ -605,8 +605,8 @@ class TestOsBuracosDaPrimeiraVolta:
 
         NOTA DATADA — 16/09/2026 (PERFIL-MANDA-01): este caso passou a medir um
         controle SEM cor dela. Até aqui ele usava o `UNIQS[1]`, que tem override
-        de perfil em `OVERRIDE_DELA`, e por isso media DUAS regras ao mesmo
-        tempo. A decisão dela daquele dia separou as duas: o jogo continua acima
+        de perfil em `OVERRIDE_DELA`, e por isso acabava medindo DUAS regras ao
+        mesmo tempo. A decisão dela daquele dia separou as duas: o jogo continua acima
         do passe da cor única (é isto que este caso trava), e deixou de ficar
         acima do que ELA escolheu para aquele controle — o irmão logo abaixo.
         """
