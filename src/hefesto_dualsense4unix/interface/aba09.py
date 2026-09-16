@@ -1293,7 +1293,7 @@ MIOLO = f'''
           <div class="risco"></div>
           <div class="col-acao">
 {item("Refazer os consertos automáticos", "Desliga o Steam Input onde ele atrapalha. Sem senha e sem fechar nada, e com cópia de segurança.", "btn", gesto=_gesto("refazer-consertos"))}
-{item("Refazer a fixação do Proton", "Trava de novo o Proton que você validou nos jogos escolhidos. Quando não dá, diz o motivo.", gesto=_gesto("refazer-proton"))}
+{item("Refazer a fixação do Proton", "Trava de novo o Proton que você validou nos jogos escolhidos — o que faz o controle vibrar e tocar som dentro do jogo. Quando não dá, diz o motivo.", gesto=_gesto("refazer-proton"))}
 {item("Tirar a sobreposição Vulkan", "Mostra, jogo por jogo, a sobreposição Vulkan pendurada por dentro, e só então tira. Guarda cópia do arquivo. Tirar pode não resolver o engasgo.", gesto=_gesto("procurar-camadas"))}
           </div>
         </div>
