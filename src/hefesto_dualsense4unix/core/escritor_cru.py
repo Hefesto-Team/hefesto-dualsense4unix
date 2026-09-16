@@ -313,6 +313,118 @@ def holders_de_hidraw(
     return holders
 
 
+#: ESCRITOR-CRU-02 (16/09/2026) — o teto da varredura AMPLA.
+#:
+#: O número é medido nesta máquina, não estimado: três voltas sobre **122
+#: processos legíveis e 4.139 fds** deram 12,8 · 10,8 · 9,5 ms. O teto de 0,5 s
+#: é a mesma folga patológica do irmão restrito, e pelo mesmo motivo — o que
+#: importa é nunca travar, não ser rápido.
+ORCAMENTO_DA_VARREDURA_AMPLA_S: float = 0.5
+
+
+def holders_de_hidraw_de_qualquer_um(
+    nos: Iterable[str] | None = None,
+) -> dict[str, list[int]]:
+    """Mapa ``/dev/hidrawN`` -> PIDs de QUALQUER processo que segure o nó.
+
+    ESCRITOR-CRU-02, 16/09/2026 — e ele existe por uma ORDEM DELA:
+
+        *"O app deveria construir tudo independente de qual jogo ou launcher.
+        (…) é um app que será focado pra acessibilidade. Isso não pode se
+        repetir."*
+
+    **O PONTO CEGO, e este módulo o declarava desde que nasceu:** *"Só reconhece
+    a Steam. (…) Um segundo escritor cru — um jogo fora do Steam, outro daemon
+    de controle — passa despercebido. Varrer ``/proc/*/fd`` inteiro seria caro e
+    indiscreto, e a Steam é o escritor que a mesa dela mediu."*
+
+    As três razões foram medidas em 16/09/2026, e **duas caíram**:
+
+    1. **"seria caro" — FALSO nesta máquina.** Varrer TODOS os processos custa
+       9,5 a 12,8 ms (122 legíveis, 4.139 fds), contra os ~6 ms do irmão
+       restrito. A diferença é de milissegundos, e a sonda já é rate-limitada
+       por :data:`VALIDADE_DO_VEREDITO_S` e nunca roda no event loop.
+    2. **"a Steam é o escritor que a mesa dela mediu" — VERDADEIRO E
+       INSUFICIENTE.** A mesa dela é uma; o produto é de outras pessoas. Quem
+       joga por Lutris, Heroic, Flatpak ou execução direta tem um escritor cru
+       que este módulo não enxergava — e "não enxergo" saía como "ninguém
+       segura", que é o erro que a leitura de ``multi_intensity`` já cometia.
+    3. **"indiscreto" — DE PÉ, e por isso a disciplina:** lemos o alvo do
+       symlink e **descartamos na hora** tudo que não começa com
+       ``/dev/hidraw``. Nenhum outro caminho é guardado, logado ou devolvido.
+       O que sai daqui é só *"o PID N segura o hidraw M"*.
+
+    **O QUE ELE CONTINUA NÃO VENDO**, dito aqui antes que custe caro: segurar
+    não é escrever (a mesma honestidade do irmão), e processo de OUTRO usuário
+    fica fora — ``/proc/<pid>/fd`` alheio precisa de root, e subir privilégio
+    para pintar uma barra não é troca que esta casa faça.
+
+    Degrada igual ao irmão: sem ``/proc``, sem permissão ou orçamento estourado,
+    devolve o que juntou. Ausência é "não sondado", **nunca** "ninguém segura".
+    """
+    interesse = {str(n) for n in nos} if nos is not None else None
+    holders: dict[str, list[int]] = {}
+    deadline = time.monotonic() + ORCAMENTO_DA_VARREDURA_AMPLA_S
+    try:
+        pids = os.listdir("/proc")
+    except OSError:
+        return holders
+    for entrada in pids:
+        if not entrada.isdigit():
+            continue
+        fd_dir = f"/proc/{entrada}/fd"
+        try:
+            entries = os.listdir(fd_dir)
+        except OSError:
+            continue  # morreu, ou é de outro usuário: segue degradado
+        for fd in entries:
+            if time.monotonic() > deadline:
+                return holders
+            target = ""
+            with contextlib.suppress(OSError):
+                target = os.readlink(os.path.join(fd_dir, fd))
+            # O DESCARTE É AQUI, e é o que mantém a sonda discreta: tudo que
+            # não é hidraw morre nesta linha, sem ser guardado nem logado.
+            if not target.startswith("/dev/hidraw"):
+                continue
+            if interesse is not None and target not in interesse:
+                continue
+            pids_do_no = holders.setdefault(target, [])
+            pid = int(entrada)
+            if pid not in pids_do_no:
+                pids_do_no.append(pid)
+    return holders
+
+
+def escritores_crus_alheios(
+    nos: Iterable[str] | None = None,
+    *,
+    meu_pid: int | None = None,
+) -> dict[str, list[int]]:
+    """Os nós de :func:`holders_de_hidraw_de_qualquer_um` TIRANDO nós mesmos.
+
+    É a forma que um gatilho de defesa quer: *"além de mim, quem mais segura o
+    hidraw deste controle?"*. O daemon segura o próprio nó — e vê-lo na lista
+    faria toda sonda acusar escritor alheio a cada volta.
+
+    O filtro é por PID, e inclui o processo ATUAL e o pai: o daemon abre o
+    hidraw em mais de um fd (medido: quatro no mesmo PID), e o broker roda em
+    processo próprio. Nada aqui supõe quantos — só que o nosso não conta.
+    """
+    eu = os.getpid() if meu_pid is None else int(meu_pid)
+    try:
+        pai = os.getppid()
+    except OSError:  # pragma: no cover - não acontece em Linux
+        pai = -1
+    nossos = {eu, pai}
+    bruto = holders_de_hidraw_de_qualquer_um(nos)
+    return {
+        no: alheios
+        for no, pids in bruto.items()
+        if (alheios := [p for p in pids if p not in nossos])
+    }
+
+
 @dataclass(frozen=True)
 class Veredito:
     """O que a última sonda viu. Imutável de propósito: é uma FOTO, não estado.
@@ -379,7 +491,26 @@ class SentinelaDeEscritorCru:
         sonda: Sonda | None = None,
         validade_s: float = VALIDADE_DO_VEREDITO_S,
     ) -> None:
-        self._sonda: Sonda = sonda if sonda is not None else holders_de_hidraw
+        #: **ESCRITOR-CRU-02 (16/09/2026): o default deixou de ser só a Steam.**
+        #:
+        #: Era :func:`holders_de_hidraw`, que varre apenas os PIDs do cliente
+        #: Steam. Quem joga por Lutris, Heroic, Flatpak ou execução direta tinha
+        #: um escritor cru INVISÍVEL a esta sentinela — e invisível saía como
+        #: "ninguém segura", que é o verde sobre nada. Ordem dela de 16/09: o
+        #: app independe do lançador.
+        #:
+        #: É :func:`escritores_crus_alheios`, e não a varredura ampla nua, por
+        #: uma razão que a régua trava: **o daemon segura o próprio hidraw**
+        #: (medido: quatro fds no mesmo PID). A varredura nua nos devolveria a
+        #: nós mesmos, a borda dispararia na primeira volta e a sentinela
+        #: passaria a acusar escritor alheio para sempre.
+        #:
+        #: O caminho da JANELA (`ipc_handlers._steam_hidraw_holders`) segue com
+        #: a sonda restrita DE PROPÓSITO: ali a frase da aba Status nomeia a
+        #: Steam, e trocar a sonda trocaria o texto sem ninguém pedir.
+        self._sonda: Sonda = (
+            sonda if sonda is not None else escritores_crus_alheios
+        )
         self._validade_s = float(validade_s)
         self._veredito = Veredito()
         #: A PRIMEIRA sonda não tem foto anterior contra a qual haver borda.
@@ -452,6 +583,7 @@ class SentinelaDeEscritorCru:
 
 __all__ = [
     "MAX_PIDS_DA_STEAM",
+    "ORCAMENTO_DA_VARREDURA_AMPLA_S",
     "ORCAMENTO_DA_VARREDURA_DE_PIDS_S",
     "ORCAMENTO_DA_VARREDURA_S",
     "PGREP_TIMEOUT_S",
@@ -459,7 +591,9 @@ __all__ = [
     "SentinelaDeEscritorCru",
     "Sonda",
     "Veredito",
+    "escritores_crus_alheios",
     "holders_de_hidraw",
+    "holders_de_hidraw_de_qualquer_um",
     "invalidar_pids_da_steam",
     "pids_da_steam",
 ]

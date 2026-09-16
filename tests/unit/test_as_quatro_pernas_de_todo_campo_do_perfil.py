@@ -146,12 +146,31 @@ _PERNAS: dict[str, dict[str, Resposta]] = {
             "vence a global, na mesma ordem que `apply` respeita",
         ),
         RESISTE: Divida(
-            "o GE-Proton 11-6 escreve DIRETO no hidraw do DualSense "
-            "(`hidraw_enable_dualsense_usb_haptics`, `Selecting DualSense USB "
-            "internal speaker`) e a defesa de exibição não enxerga escrita "
-            "crua — ela só tem dois gatilhos, o vpad e a classe LED do sysfs. "
-            "Decisão dela de 16/09: o som do Proton TEM de funcionar junto com "
-            "a luz e o gatilho do perfil; se não dá hoje, é para construir.",
+            "FATO SUBSTITUÍDO em 16/09/2026, e a atribuição estava ERRADA: esta "
+            "linha dizia que «o GE-Proton 11-6 escreve DIRETO no hidraw». Ele "
+            "NÃO escreve — medido por `strings` no "
+            "`files/lib/wine/x86_64-unix/winebus.so` do 11-6, que só expõe "
+            "`hidraw_device_set_output_report` e "
+            "`hid_device_set_feature_report`: é um CANO, repassa o report que o "
+            "processo Windows manda e não compõe nenhum. O script `proton` "
+            "cita hidraw uma vez só, para definir `PROTON_SONY_HIDRAW_XINPUT` "
+            "por appid. Quem escreve são DOIS, e cada um tem cobertura "
+            "diferente: (a) o SDL do jogo, que tem "
+            "`SDL_JOYSTICK_HIDAPI_PS5_PLAYER_LED` no `SDL3.dll` do próprio "
+            "Proton — e este caminho o wrapper já fecha, injetando "
+            "`SDL_GAMECONTROLLER_IGNORE_DEVICES` para o SDL do jogo não ver o "
+            "DualSense real; (b) a Steam Input, pelo "
+            "`wow64_ISteamInput_SteamInput007_SetDualSenseTriggerEffect` do "
+            "`lsteamclient.so`, que escreve os GATILHOS pelo hidraw do cliente "
+            "Steam — e a Steam SEGURA os nós (medido às 15h de 16/09: "
+            "hidraw0 e hidraw6). O que sobra de dívida, e é só isto: o veredito "
+            "do `escritor_cru` licencia UMA reafirmação no fim da sequência "
+            "(GATILHO-DA-COR-01), nunca em regime — repintar durante a partida "
+            "faria a barra piscar entre a cor dela e a do jogo. Se a luz e o "
+            "gatilho dela sobrevivem a uma PARTIDA inteira com o som do Proton "
+            "funcionando é coisa que só ELA pode medir, jogando; a ordem dela "
+            "de 16/09 («o som do Proton TEM de funcionar junto com a luz e o "
+            "gatilho do perfil») fica aberta até essa medição.",
             desde="2026-09-16",
         ),
         INDEPENDE: Cumprida(
