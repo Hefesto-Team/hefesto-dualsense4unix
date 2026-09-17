@@ -53,6 +53,8 @@ se acrescenta aqui antes de entrar na tela.
 | **apagado** (botão cinza que ainda responde) | `.apagado`, `razoes_do_cinza` | "não dá para mexer agora", com a razão no `?`; nunca "está desligado" |
 | **?** (a dica) | `title`, `data-hef-atributo="title"` | a explicação mora aqui; a tela não explica em linha |
 | **dizer as duas metades** | `AS-DUAS-ABAS-FALAM-01` | quando meio ato deu certo, a frase diz o que deu e o que não deu |
+| **chip** (a pílula de fundo cheio no rótulo) | `.selo-ativo`, `.rot .canal`, `.rot .selo-som` da `aba02` | um fato de UMA palavra que se lê de relance; a geometria é UMA declaração para os três, nunca cópia |
+| **acordado** · **dormindo** (o canal do alto-falante) | `audio_saida.CANAL_ACORDADO` / `CANAL_DORMINDO`, tradução do `RUNNING`/`IDLE` do `pactl` | a palavra é do daemon e não se reescreve; a tela só sobe a CAIXA, por `text-transform` |
 
 **Proibido em texto de tela:** `env`, `vdf`, `uinput`, `hidraw`, `MAC`, `uniq`,
 `wrapper_used`, `dedup`, "mesa", "janela do aplicativo", "linha de comando",

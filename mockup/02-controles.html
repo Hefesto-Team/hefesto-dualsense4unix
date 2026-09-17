@@ -1714,10 +1714,24 @@
 
      O contraste do apagado continua o medido (3,47:1 sobre o próprio fundo ->
      9,3:1): a regra é a mesma, só trocou de lado. */
-  .selo-ativo{font-size:9.5px;font-family:'JetBrains Mono',monospace;padding:1px 6px;
-              border-radius:3px;background:var(--border-forte);color:var(--texto-suave);
-              font-weight:600;display:inline-flex;align-items:center;gap:3px;
-              vertical-align:middle;line-height:1.5}
+  /* A GEOMETRIA DO CHIP MORA AQUI, UMA VEZ SÓ, PARA OS TRÊS — 17/09/2026.
+     Ela era DUAS cópias digitadas à mão (este selo e o `.rot .selo-som`, lá
+     embaixo), com as mesmas seis declarações repetidas; o pedido dela de hoje
+     — o sufixo do canal com a cara do chip do microfone, e a citação está no
+     bloco "OS SELOS DO SOM" — pedia a TERCEIRA. Três cópias divergem no
+     primeiro dia em que alguém ajustar uma, e esta casa já pagou onze vezes por
+     régua e por regra que DIGITAM o que deviam LER. Então a cara de chip é UMA
+     declaração com os três seletores, e o que sobra por regra é só o que os
+     SEPARA: a cor de cada estado, o alinhamento e a margem.
+     `tests/unit/test_o_chip_do_alto_falante_tem_a_cara_do_chip_do_microfone.py`
+     lê os três nomes de classe da MARCAÇÃO e cobra que a declaração que os
+     veste seja a mesma. */
+  .selo-ativo,.rot .selo-som,.rot .canal{font-size:9.5px;
+              font-family:'JetBrains Mono',monospace;padding:1px 6px;
+              border-radius:3px;font-weight:600;line-height:1.5}
+  .selo-ativo{background:var(--border-forte);color:var(--texto-suave);
+              display:inline-flex;align-items:center;gap:3px;
+              vertical-align:middle}
   .selo-ativo.on{background:var(--green);color:var(--app-bg)}
   /* O ÍCONE E O RISCO — a segunda metade da escolha dela, para quem não
      distingue cor. O risco é um `::after` do PRÓPRIO glifo, e não do selo: ele
@@ -1819,6 +1833,36 @@
      ALARME, e por isso existe só no estado ruim. Um selo dizendo "acordado" em
      toda sessão normal gastaria pixel para não informar nada.
 
+     O SUFIXO VIROU CHIP EM 17/09/2026, POR ORDEM DELA, e a decisão de cima
+     continua de pé: quem existe só no estado ruim é o ALARME, e ele continua
+     assim. O que mudou é a CARA do sufixo — *"deixar esse acordado com o mesmo
+     estilo do botão que tá MUDO acima"*. Ele era três declarações (peso 400,
+     cinza, uma margem) ao lado de um chip, no mesmo rótulo, e lia como sobra de
+     texto. Agora veste a mesma pílula do selo do microfone, pela declaração
+     agrupada lá de cima.
+
+     A CAIXA NÃO SOBE, E ISSO FOI MEDIDO CONTRA UMA ORDEM DELA DE SEIS DIAS
+     ANTES. A primeira tentativa desta leva pôs `text-transform` no chip do
+     canal, para o par ficar idêntico ao chip do microfone — que diz a palavra
+     dele em caixa alta. O portão `maiuscula-decorativa` reprovou, e ele carrega
+     a palavra dela de 11/09/2026, que cita ESTA palavra pelo nome: *"Leia o
+     cabo e acordado (ambos minusculo sem iniciar de forma capitular). Esse
+     tipo de coisa nao pode se repetir na interface."* <!-- noqa-acento: citação literal dela -->
+
+     AS DUAS ORDENS NÃO SE CONTRADIZEM, e é o que resolve o caso: o que ela
+     pediu hoje foi o ESTILO — a pílula —, e a caixa do chip do microfone não é
+     estilo, é o TEXTO que `mesa_viva.selo_do_mic` devolve. A palavra do canal
+     vem minúscula do daemon e continua minúscula na tela, que é o que ela
+     mandou. Subir a caixa aqui seria a mesma palavra com duas grafias no
+     produto — o defeito que aquele portão existe para matar.
+
+     O CUSTO DE ALTURA É ZERO, e não por analogia com o chip do microfone — que
+     mora num `.rot-linha` flex, onde a conta é outra. É por analogia com o
+     VIZINHO: o alarme já tem esta geometria, neste mesmo rótulo, desde 16/08, e
+     é `vertical-align` INLINE. Em caixa inline o `padding` não entra na altura
+     da linha, e por isso o chip do canal também toma `vertical-align:1px` em
+     vez do `inline-flex` do selo do microfone.
+
      A COR DO SELO É A `--orange`, e não a `--red`: as duas palavras que ele
      pode dizer descrevem estados do SISTEMA que explicam um silêncio, não
      falhas do produto. `--red` nesta casa é a cor da falha, e ela já saiu do ♪
@@ -1834,11 +1878,10 @@
      `.nada` que o pacote manda em TODO tique, a dica vazia, e o `:empty`. O
      marcador é preciso porque `escrever()` troca valor vazio por travessão —
      sem ele, "não há canal a descrever" vira um `—` solto no rótulo. */
-  .rot .canal{font-weight:400;color:var(--texto-mudo);margin-left:2px}
-  .rot .selo-som{font-size:9.5px;font-family:'JetBrains Mono',monospace;
-    padding:1px 6px;border-radius:3px;background:var(--orange);
-    color:var(--app-bg);font-weight:600;vertical-align:1px;line-height:1.5;
-    margin-left:3px}
+  .rot .canal{background:var(--border-forte);color:var(--texto-suave);
+    vertical-align:1px;margin-left:5px}
+  .rot .selo-som{background:var(--orange);color:var(--app-bg);
+    vertical-align:1px;margin-left:3px}
   .rot .canal:has(.nada),.rot .selo-som:has(.nada){display:none}
   .rot .canal:empty,.rot .selo-som:empty{display:none}
 
@@ -2804,7 +2847,7 @@
           <div class="moldura" style="margin-top:9px" data-bloco="alto-falante"
                data-campo="alto-apagado" data-hef-alvo="atributo" data-hef-atributo="data-apagado">
             <div class="rot">Alto-falante
-              <span class="canal" data-campo="alto-canal-porque" data-hef-alvo="atributo" data-hef-atributo="title"><span data-campo="alto-canal" data-hef-alvo="html">· acordado</span></span>
+              <span class="canal" data-campo="alto-canal-porque" data-hef-alvo="atributo" data-hef-atributo="title"><span data-campo="alto-canal" data-hef-alvo="html">acordado</span></span>
               <span class="selo-som" data-campo="alto-selo" data-hef-alvo="html"><i class="nada"></i></span>
               <span class="ajuda" style="display:inline-block;vertical-align:-3px">?<span class="dica">
                 <b>Sons do jogo</b>: só o áudio do jogo, no alto-falante do controle.
@@ -4298,7 +4341,7 @@
           <div class="moldura" style="margin-top:9px" data-bloco="alto-falante"
                data-campo="alto-apagado" data-hef-alvo="atributo" data-hef-atributo="data-apagado">
             <div class="rot">Alto-falante
-              <span class="canal" data-campo="alto-canal-porque" data-hef-alvo="atributo" data-hef-atributo="title"><span data-campo="alto-canal" data-hef-alvo="html">· acordado</span></span>
+              <span class="canal" data-campo="alto-canal-porque" data-hef-alvo="atributo" data-hef-atributo="title"><span data-campo="alto-canal" data-hef-alvo="html">acordado</span></span>
               <span class="selo-som" data-campo="alto-selo" data-hef-alvo="html"><i class="nada"></i></span>
               <span class="ajuda" style="display:inline-block;vertical-align:-3px">?<span class="dica">
                 <b>Sons do jogo</b>: só o áudio do jogo, no alto-falante do controle.
