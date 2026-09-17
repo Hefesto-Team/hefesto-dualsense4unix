@@ -104,8 +104,20 @@ def test_o_desenho_crava_um_aparelho_no_lugar_do_p2(publicado: str) -> None:
 
 
 def test_o_desenho_sabe_pintar_um_lugar_vazio(publicado: str) -> None:
-    """O neutro NÃO é digitado na cura: é o que o `.vazia` do desenho já usa."""
-    assert ".nav-ctl.vazia .ds-svg" in publicado, (
+    """O neutro NÃO é digitado na cura: é o que o `.vazia` do desenho já usa.
+
+    A BUSCA É POR PADRÃO, NÃO POR SELETOR DIGITADO — 17/09/2026. Esta linha
+    procurava a string exata `.nav-ctl.vazia .ds-svg`, e reprovou quando a
+    folha passou a cobrir TAMBÉM a classe `off` que o piloto escreve
+    (`:is(.nav-ctl.vazia, .nav-ctl.off) .ds-svg`, NAV-VAZIO-01). A régua estava
+    medindo a GRAFIA do seletor quando a pergunta dela é outra: *o desenho do
+    lugar vazio tem dono na folha?*
+
+    É a armadilha que esta casa já nomeou onze vezes numa leva só — a régua
+    digitava o que devia LER —, e desta vez ela reprovou uma melhora.
+    """
+    pinta_o_vazio = re.search(r"\.nav-ctl\.(?:vazia|off)[^{]*\.ds-svg", publicado)
+    assert pinta_o_vazio, (
         "a folha do desenho não fala mais do lugar vazio — o `var(--linha)` da "
         "cura deixou de ter dono, e viraria a segunda verdade")
     assert re.search(r"--linha:\s*#", publicado), (

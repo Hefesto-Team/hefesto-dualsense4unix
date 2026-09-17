@@ -80,7 +80,11 @@ def test_o_asset_real_do_repo_parseia_e_pina_a_versao_validada():
     """
     asset = Path(__file__).resolve().parents[2] / "assets" / "proton-pin.conf"
     conf = pp.parse_pin_conf(asset.read_text(encoding="utf-8"))
-    assert conf["name"] == "GE-Proton11-6-x86_64"
+    # 17/09/2026: subiu para o 11-7 a pedido dela. A nota do release diz que a
+    # pilha de áudio/haptics da Sony foi rebaseada "retaining behavior", logo a
+    # feature pela qual o pino existe não se perde; a migração foi simulada
+    # contra cópias do `config.vdf` antes de ser escrita.
+    assert conf["name"] == "GE-Proton11-7-x86_64"
     assert "GloriousEggroll/proton-ge-custom" in conf["url"]
     # A REGRA, e não a literal: `ensure_pinned_proton` procura o tarball em
     # `cache/<name>.tar.gz` e `_extract_verified_tarball` exige que a raiz do

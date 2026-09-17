@@ -3607,7 +3607,7 @@ def mudo(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
         # de `mic.canal.set` NÃO traz `por_uniq` — quem o traz é o
         # `mic.volume.set` (`daemon/ipc_handlers.py:6198`). O ato do microfone
         # monta a resposta em `AtoDoMicrofone.como_corpo`
-        # (`daemon/subsystems/hotkey.py:1542`), e lá o campo não existe. Então
+        # (`daemon/subsystems/hotkey.py:1567`), e lá o campo não existe. Então
         # `alvo_honrado` devolve `None` aqui, esta linha fica CALADA contra o
         # daemon de hoje, e o silêncio é o certo: quem cobre o alvo errado
         # neste caminho é a metade do CANAL, que recusa dizendo quando a
