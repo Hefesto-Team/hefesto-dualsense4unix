@@ -619,8 +619,6 @@ tabela: `controller_list.h:643` mapeia `054c:0df2` para
 
 | # | onde | o que muda para o Edge | efeito sobre o vpad |
 |---|---|---|---|
-| 1 | `SDL_hidapi_ps5.c:443-447` | `enhanced_rumble = true` **sem** consultar a versão de firmware; o `0ce6` só ganha isso com firmware `>= 0x0224` (ou 0, por Bluetooth) | muda o formato do report de vibração — ver 6.3 |
-| 2 | `SDL_hidapi_ps5.c:562-563` | nome vira `"DualSense Edge Wireless Controller"` | jogos que casam por substring `"Wireless Controller"` continuam casando; os que casam a frase inteira, não |
 | 3 | `SDL_hidapi_ps5.c:988-989` | `joystick->nbuttons = 17` em vez de 13 (as quatro paddles) | o SDL **anuncia ao jogo quatro botões que o vpad nunca vai reportar** |
 | 4 | `SDL_hidapi_ps5.c:851-863` | taxa de sensores 1000 Hz por USB em vez de 250 Hz | é a `GYRO-EDGE-RATE-01` — seção 5 |
 
@@ -665,12 +663,9 @@ o degrau anterior deixou passar.
 
 | # | quem | o que faz | fonte |
 |---|---|---|---|
-| 1 | **kernel** | cria os nós: `xpad` para Xbox, `hid-playstation` para Sony, `hidraw` para quem for HID | ALTA |
-| 2 | **daemon deste projeto** | `EVIOCGRAB` no evdev do físico e o `hidraw_broker`; cria o vpad | código desta árvore |
 | 3 | **Steam Input** | lê os controles que enxerga e cria **um espelho `28de:11ff` por controle** em `/dev/uinput` | MEDIDO AQUI, 2.2 |
 | 4 | **wrapper `hefesto-launch`** | exporta as envs materializadas **imediatamente antes** do `exec` do jogo, via `env(1)` | `assets/hefesto-launch.sh` |
 | 5 | **SDL do jogo** | aplica, nesta ordem: nome na blacklist → ramo do espelho do Steam → `_EXCEPT` → `IGNORE_DEVICES` | ALTA, `SDL_gamepad.c:3273-3331` |
-| 6 | **winebus (só Proton)** | decide `hidraw` por `PROTON_DISABLE_HIDRAW` → registro → `PROTON_ENABLE_HIDRAW` → preferência embutida | ALTA, `main.c:543-601` |
 | 7 | **jogo** | escolhe entre o que sobrou, pelos quatro critérios de 2.5 | — |
 
 **Quem ganha o ambiente.** O degrau 4 vem **depois** do 3: a Steam monta o
@@ -1501,24 +1496,53 @@ modo em que a entrada é da Steam, o controle é de quem está jogando e o Hefes
 
 ---
 
+### O QUE FECHOU EM 17/09/2026 — com o PRAGMATA aberto
+
+Quatro linhas desta tabela morreram numa medição só: `tr '\0' '\n' <
+/proc/<pid do jogo>/environ`, com o jogo vivo. É o ensaio que a própria tabela
+pedia para as três primeiras, e ele custou trinta segundos.
+
+| # | a pergunta | a resposta MEDIDA |
+| --- | --- | --- |
+| 1 | a Steam põe `SDL_GAMECONTROLLER_ALLOW_STEAM_VIRTUAL_GAMEPAD=1`? | **SIM** — está no `environ` do processo do jogo |
+| 2 | logo, o `0x28de/0x11ff` no `IGNORE_DEVICES` age ou é redundante? | **AGE.** Não é redundante — a variável está em 1, então o par esconde mesmo pelo caminho SDL |
+| 6 | em que valor a Steam deixa `SDL_HINT_JOYSTICK_ENHANCED_REPORTS`? | **AUSENTE** do `environ`. A Steam não a escreve; o default da biblioteca é que decide |
+| 13 | a queixa do PRAGMATA se cura com `PROTON_SONY_HIDRAW_XINPUT=1`? | **SIM, e com um preço.** A vibração acorda — 28 pedidos com força, o maior (153,153) de 255, em dois minutos, contra ZERO pedido com força em 35 minutos sem ela. **E o giroscópio morre no jogo.** |
+
+**A linha 13 é a que mais ensina, e o preço dela não é trade-off — é defeito
+de arranjo.** O vpad continuou publicando movimento o tempo todo durante a
+sessão sem giroscópio: `motion_streaming=True` nos dois vpads,
+`motion_forwards` acima de 760 mil quadros, os nós `Motion Sensors` do vpad
+(`uniq 02:fe:…`) vivos desde 14:28. Quem parou de entregar movimento ao jogo
+foi o winebus, não o produto.
+
+**E a hipótese concorrente foi medida e CAIU.** O `ALLOW_STEAM_VIRTUAL_GAMEPAD=1`
+da linha 1 levantava a suspeita de que a Steam Input tivesse entrado no meio e
+a variável fosse coincidência. Quatro provas de disco dizem que não: o evento
+`ponte_confirmada` do produto grava `steam_input=False` para o appid 3357650, o
+jogo não está na allowlist de Steam Input da casa, não há `controller_configs`
+para ele, e nenhum vpad foi suspenso por Steam Input no dia.
+
+**O que isso deixa em aberto, e é a pergunta que substitui as quatro:** o
+`PROTON_SONY_HIDRAW_XINPUT` **converte** o device em XInput em vez de
+**acrescentar** um. O jogo usa os DOIS canais — lê entrada pelo HID PS5 e pede
+rumble por XInput —, então existe um estado em que os dois coexistem. Como
+pedi-lo é o que falta medir.
+
 ## 7. O que continua em aberto por falta de medição
 
 Uma variável por linha, que é como se ataca isto.
 
 | # | pergunta | o ensaio que a fecha | seção |
 |---|---|---|---|
-| 1 | a Steam põe `SDL_GAMECONTROLLER_ALLOW_STEAM_VIRTUAL_GAMEPAD=1` no ambiente do jogo? | com o jogo aberto: `tr '\0' '\n' < /proc/<pid>/environ \| grep -i SDL_` — leitura pura, custo zero | 2.4 |
-| 2 | logo, o par `0x28de/0x11ff` no `IGNORE_DEVICES` esconde alguma coisa, ou é redundante? | decorre de (1): se a variável for 1, o par não age pelo caminho SDL | 2.4 |
 | 3 | a taxa real do giroscópio do vpad Edge — 250 ou 1000 para o jogo? | os quatro passos de 5.3, **contra a SDL3 da Steam** | 5 |
 | 4 | de quantos bits de autorização o firmware precisa para vibrar? | bancada, um bit por vez, com o controle na mão dela | 6.5 |
 | 5 | o pedido de rumble do jogo chega ao vpad numa sessão com Steam Input? | o anel de pedidos crus, sessão de jogo real | 6.5 |
-| 6 | em que valor a Steam deixa `SDL_HINT_JOYSTICK_ENHANCED_REPORTS`? | mesmo comando de (1) | 6.5 |
 | 7 | **que report** a Steam manda nos 98 pacotes da rajada, e algum deles pede a barra apagada? | decodificar o payload das capturas em `/tmp/hefesto-probe-lightbar/` — o parser escrito em 12/08 não venceu o formato do `btmon` | 6-bis.2 |
 | 8 | **o que decide qual controle** a Steam repinta depois de perder a cor? | repetir a escrita por `hidraw` nos três e observar qual volta ao padrão dela | 6-bis.5 |
 | 9 | a **volta** do ensaio da lightbar: subir os controles com a Steam viva na probe, **de propósito**, e ver o defeito voltar | o mesmo desenho de 6-bis.2, com o braço sujo provocado | 6-bis |
 | 11 | o que a **classe própria do Edge** muda no motor do jogo — o consumidor do `ebx` da cadeia de `cmp` | desmontar o ramo, ou abrir o jogo com `PROTON_LOG=+hid` | 5-ter.4 |
 | 12 | o `winebus` enumera os nós **evdev** do físico quando o `hidraw` dele está negado/inacessível? | `PROTON_LOG=+hid` com o jogo aberto, contando `udev_add_device` por nó | 5-ter.9 |
-| 13 | a queixa do PRAGMATA se cura com `PROTON_SONY_HIDRAW_XINPUT=1` ou com o Steam Input ligado, como o GE faz para o Monster Hunter Wilds? | abrir o jogo com a variável e sem ela, um gesto de movimento em cada | 5-ter.7 |
 | 10 | o giroscópio do vpad **no jogo**, com a biblioteca que o jogo carrega: HIDAPI ligado no SDL3 e no sdl2-compat, o contêiner do sniper por dentro, o vpad que nasce com o jogo aberto na 2.32.10, e qual SDL cada jogo carrega (`/proc/<pid>/maps`) | a MESA-DE-QUATRO-01, com o jogo aberto | 5-bis |
 
 Os itens 1, 2 e 6 saem **do mesmo comando**, custam trinta segundos e fecham
