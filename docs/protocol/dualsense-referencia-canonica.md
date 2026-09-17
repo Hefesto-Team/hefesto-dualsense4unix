@@ -674,6 +674,66 @@ audio_control (byte 7):
   bits 6-7  INPUT_PATH: 0 ambos, 1 chat, 2 ASR
 ```
 
+
+### O canal SFX, medido: qual canal ALSA alimenta o alto-falante
+
+O `OUTPUT_PATH_SEL` diz o que o FIRMWARE faz com os canais; ele não diz de onde
+os canais vêm. Por USB o DualSense é uma **placa de som de quatro canais**, e o
+mapa canal→destino foi medido com a orelha dela em 16/08/2026, um canal por vez,
+com o nó do PipeWire mantido em `RUNNING` (`docs/data/ensaios.csv`):
+
+| canal ALSA | posição | destino físico | ensaio |
+|---|---|---|---|
+| 0 | `front-left` | fone L — **nada** sem headset | `sfx-canal0-nao-alimenta` |
+| 1 | `front-right` | fone R com headset, **ALTO-FALANTE** sem | `sfx-canal1-e-o-alto-falante` |
+| 2 | `rear-left` | atuador voice-coil (não soou) | `sfx-canal2-nao-alimenta` |
+| 3 | `rear-right` | atuador voice-coil (não soou) | `sfx-canal3-nao-alimenta` |
+
+**O canal SFX é, portanto, o `front-right`** — e o `OUTPUT_PATH_SEL` é a chave
+que decide se ele sai no fone ou no alto-falante. Com headset plugado o fone
+manda por cima da rota (`sfx-o-fone-manda-por-cima`), e as rotas 2 e 3 foram
+exercidas as duas (`sfx-rota2-sem-fone`, `sfx-canal1-e-o-alto-falante`).
+
+ATENÇÃO: **o `front-left` é perdido quando não há headset.** Com um arquivo de
+quatro canais NATIVOS, grave só no `front-left`, ela ouviu só o `front-right`
+(`sfx-so-o-R-chega`). Quem mandar uma mistura estéreo para o sink do controle
+esperando que o alto-falante toque os dois canais está mandando metade para o
+pino do fone. O que acontece com um arquivo de DOIS canais no mesmo sink de
+quatro **está em disputa** — ver a nota de 17/09/2026 em
+`sfx-o-pipewire-e-que-misturava`: ou a conversão 2→4 soma L+R no `front-right`,
+ou o `upmix` `psd` do PipeWire 1.6.8 leva o L aos dois atuadores. As duas
+explicações produzem o mesmo relato, e o caderno não guardou o conteúdo por
+canal do arquivo daquela passada.
+
+### Como um jogo endereça esse canal — no PS5 e sob Proton
+
+No PS5 a porta é dedicada e a API é NDA (acima). **No PC o mecanismo é outro, é
+público, e não é mixagem: o jogo abre o controle como um SEGUNDO dispositivo de
+áudio**, além da saída principal. `ValveSoftware/Proton#5900` (a issue de
+compatibilidade das features avançadas do DualSense) lista as três formas com
+que os jogos de Windows acham esse dispositivo:
+
+| forma | quem usa, segundo a issue |
+|---|---|
+| nome do dispositivo de áudio contém `Wireless Controller` | Final Fantasy XIV, FF7R |
+| `BaseContainerID` do HID → primeiro `MMDevice` com o mesmo `ContainerID` | Ghostwire: Tokyo, Deathloop |
+| `BaseContainerID` do HID → `SetupDi` até achar o áudio | Deathloop (alto-falante) |
+
+As três precisam da mesma coisa: **o dispositivo de áudio de 4 canais e o HID
+casados pela mesma identidade de container**. Era isso que faltava sob Proton, e
+é isso que o **GE-Proton 11-4** fechou; o **11-6** refez o caminho pelo `dsound`.
+Os dois requisitos que a issue põe em cima: **USB antes de abrir o jogo** (o
+rádio não publica placa de som) e **Steam Input desligado para controles
+PlayStation**.
+
+**O que isto significa para esta casa:** o canal sempre esteve no aparelho —
+faltava o Proton achá-lo, e desde 16/09/2026 o pino do produto é o
+`GE-Proton11-6-x86_64` exatamente por isso (`install.sh:3927-3934`). Num jogo
+que fale DualSense nativamente, **o alto-falante não passa pelo Hefesto**: o
+jogo abre o sink do controle sozinho. O nó `hefesto_som_<hex6>` e o `mix`/`sfx`
+de `integrations/alto_falante_bt` são para o resto — o jogo que não sabe o que é
+um DualSense.
+
 ### O que isso corrige na medição desta casa
 
 Em 01/08 mediu-se a curva do volume do alto-falante: **mudo até 38, satura em
