@@ -1324,12 +1324,97 @@ async def mic_button_loop(daemon: DaemonProtocol) -> None:
             if _borda_e_eco_do_ato(uniq, mudo):
                 logger.debug("mic_da_mesa_eco_do_ato_engolido", uniq=uniq, mudo=mudo)
                 continue
+            # A FASE DO TOGGLE DO KERNEL NÃO É A INTENÇÃO DELA — MIC-FASE-01.
+            # Aqui estava `ligado=not mudo`, uma tradução de uma linha que dava
+            # ao bit do firmware o poder de dizer o que ela quis. Ver
+            # `_o_que_a_borda_pede`.
+            ligado = _o_que_a_borda_pede(daemon, uniq, mudo)
             try:
-                await ligar_o_microfone(daemon, uniq, ligado=not mudo)
+                await ligar_o_microfone(daemon, uniq, ligado=ligado)
             except Exception as exc:
                 logger.warning("mic_hotkey_falhou", err=str(exc))
     finally:
         daemon.bus.unsubscribe(EventTopic.MIC_DA_MESA, queue)
+
+
+def _o_que_a_borda_pede(daemon: DaemonProtocol, uniq: str, mudo: bool) -> bool:
+    """A borda do plástico traduzida em ATO. MIC-FASE-01 (17/09/2026).
+
+    **O DEFEITO, medido no journal DELA às 01:47:13 de 17/09/2026.** O
+    `hid-playstation` não entrega o botão do microfone como evento: ele
+    CONSOME a borda e faz um toggle cego do próprio estado —
+    ``ds->mic_muted = !ds->mic_muted`` (`assets/dkms/hid-playstation/
+    hid-playstation.c:1673`), sobre um campo que vive numa struct zerada e
+    portanto **nasce `false` = NÃO-mudo** (`:279`).
+
+    A consequência é aritmética: o **primeiro** aperto depois de cada conexão
+    chega sempre como ``mudo=True``. E a tradução que estava escrita aqui era
+    ``ligado = not mudo`` — isto é, DESLIGAR. Ela apertou para falar e o
+    produto leu "me cale"::
+
+        01:47:13  mic_da_mesa_borda  mudo=True seq=1
+                  mic_da_mesa_mudo_de_quem_nao_elegeu  dono=None eleito=None
+                  mic_ato  canal=False feito=False ligado=False
+        01:52:42  mic_da_mesa_borda  mudo=False seq=2      (o SEGUNDO aperto)
+                  eleicao_mic_ok  alvo=hefesto_mic_e64203
+                  mic_ato  canal=True feito=True firmware=True ligado=True
+
+    Ela precisou apertar duas vezes, e a primeira ainda apagou o LED que o
+    kernel acabara de acender. A queixa dela chegou como
+    *"o mic se eu apertar o botao fisico de ligar ele ele  # (noqa-acento) dela
+    tem que ligar o canal lá"*.
+
+    **O CONTRATO É DELA, de 17/09/2026:** o botão físico *"alterna o mudo"*
+    DESTE controle. E a frase seguinte dela — *"A ideia é termos 4 controles
+    BT cada qual com seu Mic ligado"* — descreve o desenho que JÁ é o de hoje
+    (OS-QUATRO-NO-AR-01, 13/09/2026). São DUAS perguntas distintas, e
+    confundi-las é a raiz da fase errada: *"está no ar"* é de cada controle,
+    até quatro; *"é a fonte padrão"* é de um só. O botão responde à primeira.
+
+    **A REGRA, e ela se justifica sozinha:**
+
+    ==============  ==============  ====================================
+    borda           está no ar?     o gesto significa
+    ==============  ==============  ====================================
+    ``mudo=True``   **não**         **LIGAR** — o kernel virou o bit, mas
+                                    não há canal dela para calar
+    ``mudo=True``   sim             sair do ar (o que já fazia, e certo)
+    ``mudo=False``  qualquer        ligar / entrar no ar (já funcionava)
+    ==============  ==============  ====================================
+
+    **A CONDIÇÃO NÃO É NOVA, e isso é o ponto.** ``fora_do_padrao and not
+    no_ar.esta(uniq)`` é a MESMA de `_eleger_ou_devolver`, onde ela escolhe a
+    recusa. Reusá-la é o que garante que a linha do meio da tabela não se mexa:
+    quem está no ar continua caindo no ramo que o tira do ar.
+
+    **O RISCO DE PRIVACIDADE SE DESFAZ NESTE RECORTE, não é ignorado.**
+    Inverter o ramo da recusa SEM distinguir faria um aperto de calar virar um
+    aperto de ligar — o defeito de privacidade com o sinal trocado. Mas quem
+    não está no ar **não está sendo ouvido**, logo não há nada a calar:
+    apertar só pode significar *"quero entrar"*. O caso perigoso é o inverso —
+    ligar o microfone de quem pediu silêncio — e esse é a segunda linha da
+    tabela, que não muda uma vírgula.
+
+    **E SÓ A BORDA DO PLÁSTICO PASSA POR AQUI.** O 🎙 da tela chama
+    `ligar_o_microfone` com o `ligado` que ela clicou, e um clique não tem fase
+    para reancorar: ele JÁ é a intenção. Costurar isto dentro de
+    `_eleger_ou_devolver` alcançaria os dois chamadores e reabriria o risco de
+    cima pela porta da tela, onde o *"me cale"* de quem nunca elegeu é um
+    gesto legítimo com frase de recusa escrita por ela.
+
+    **O QUE NÃO SE FEZ, e foi medido:** normalizar a fase escrevendo o bit do
+    mudo na CONEXÃO. Escrever ``common[9]`` toma a posse do campo do
+    `hid-playstation` (`core/backend_pydualsense.set_microphone_mute`), e
+    enquanto a posse for nossa o botão dela **deixa de valer** — a cura mataria
+    o botão que ela veio consertar.
+    """
+    if not mudo:
+        return True
+    fora_do_padrao = not _mesmo_controle(_eleitor(daemon).eleito, uniq)
+    if fora_do_padrao and not _no_ar_da_sessao(daemon).esta(uniq):
+        logger.info("mic_da_mesa_fase_reancorada", uniq=uniq)
+        return True
+    return False
 
 
 # ---------------------------------------------------------------------------
