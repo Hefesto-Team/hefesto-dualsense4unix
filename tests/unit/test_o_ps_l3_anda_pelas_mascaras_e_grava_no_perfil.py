@@ -94,6 +94,14 @@ class _Daemon:
             gamepad_flavor="dualsense",
             gamepad_emulation_enabled=False,
             gamepad_caminho="dualsense",
+            # O-CAMINHO-NAO-VAZA-01 (17/09/2026) — A ESCOLHA DELA MUDOU DE SLOT.
+            # `gamepad_caminho` é o caminho DESTA sessão e acompanha o start;
+            # o que vale em todo jogo (a flag que o boot relê) mora agora em
+            # `gamepad_caminho_global`. A bancada representa *"ela escolheu
+            # dualsense"*, então os dois nascem preenchidos — é o que o produto
+            # faz num gesto manual. Sem esta linha o start sem opinião limparia
+            # o slot e a asserção de baixo acusaria o gesto de máscara.
+            gamepad_caminho_global="dualsense",
             coop_enabled=True,
             rumble_active=(0, 0),
         )
