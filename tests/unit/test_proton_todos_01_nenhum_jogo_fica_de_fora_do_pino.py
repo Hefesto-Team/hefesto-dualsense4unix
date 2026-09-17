@@ -65,6 +65,27 @@ def _nomes(texto: str) -> dict[str, str]:
     return {a: n for a, n in re.findall(r'"(\d+|0)"\s*\{[^}]*?"name"\s*"([^"]*)"', texto, re.S)}
 
 
+
+# ---------------------------------------------------------------------------
+# A MÁQUINA NÃO É O PRODUTO — e esta casa já pagou por confundir os dois
+# ---------------------------------------------------------------------------
+@pytest.fixture(autouse=True)
+def _a_steam_dela_nao_decide_o_resultado(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Neutraliza o gate da Steam VIVA nas réguas que chamam a função pública.
+
+    MEDIDO EM 17/09/2026, na suíte inteira: com a Steam dela aberta,
+    `TestOCaminhoDaFlag` e `TestAEntradaOrfa` reprovavam com
+    ``{'status': 'recusado', 'reason': 'steam_aberta'}`` — **sem uma linha de
+    produto errada**. A régua estava medindo se ela estava jogando.
+
+    É a armadilha que a casa já tem nomeada (*régua que depende de app aberto
+    mede a máquina*), e eu a repeti no mesmo dia em que a citei. O gate é
+    comportamento real e tem régua PRÓPRIA em
+    `test_proton_pin_gate_da_steam`; aqui ele é ruído, e silenciá-lo é o que
+    faz estas réguas responderem sobre o produto.
+    """
+    monkeypatch.setattr(proton_pin, "_steam_gate", lambda: None)
+
 # ---------------------------------------------------------------------------
 # 1 — a decisão dela
 # ---------------------------------------------------------------------------
