@@ -262,8 +262,18 @@ class TestOsSelos:
 
 class TestOSufixoDoCanal:
     def test_os_dois_estados_entram_no_rotulo(self) -> None:
-        assert mod.sufixo_do_canal(audio_saida.CANAL_ACORDADO) == "· acordado"
-        assert mod.sufixo_do_canal(audio_saida.CANAL_DORMINDO) == "· dormindo"
+        """A palavra é a do dono, INTEIRA e sozinha — sem separador colado.
+
+        **O `·` SAIU EM 17/09/2026**, quando o sufixo virou chip por ordem dela:
+        um separador dentro de uma pílula lê como sujeira, porque a pílula já é
+        a separação. Ver `test_o_chip_do_alto_falante_tem_a_cara_do_chip_do_...`.
+
+        MORDE: devolva o `·` ao valor e o chip volta a dizer `· ACORDADO`.
+        """
+        assert mod.sufixo_do_canal(audio_saida.CANAL_ACORDADO) == (
+            audio_saida.CANAL_ACORDADO)
+        assert mod.sufixo_do_canal(audio_saida.CANAL_DORMINDO) == (
+            audio_saida.CANAL_DORMINDO)
 
     def test_sem_leitura_o_rotulo_nao_afirma_nada(self) -> None:
         """`""` é NÃO SEI, e não "acordado".
@@ -421,7 +431,7 @@ class TestOsSelosNoCartao:
         sono_lido(audio_saida.CANAL_DORMINDO, False)
         card = _card(_entrada())
         assert card["alto-selo"] == TEXTO_SELO_CANAL_DORMINDO
-        assert card["alto-canal"] == "· dormindo"
+        assert card["alto-canal"] == audio_saida.CANAL_DORMINDO
         # O TERCEIRO CAMPO É O RÓTULO DO ESTADO desde 13/09/2026 — ver
         # `TestADicaDoCanal`. A regra do sono fora do lugar não chega à dica.
         assert card["alto-canal-porque"] == mod.dica_do_canal(
@@ -581,11 +591,12 @@ class TestODesenho:
         no_cabo = [c for c in MESA_DO_DESENHO if c.get("transporte") == "usb"]
         no_radio = [c for c in MESA_DO_DESENHO if c.get("transporte") == "bt"]
         assert no_cabo and no_radio, "a cena precisa dos dois transportes"
-        assert all("· acordado" in aba02.sufixo_do_canal(c) for c in no_cabo)
+        assert all(audio_saida.CANAL_ACORDADO in aba02.sufixo_do_canal(c)
+                   for c in no_cabo)
         assert all(mod.NADA_A_DIZER in aba02.sufixo_do_canal(c) for c in no_radio)
 
     def test_a_palavra_do_sufixo_vem_do_produto(self) -> None:
-        """O gerador não digita `· acordado`: ele chama o dono.
+        """O gerador não digita a palavra do canal: ele chama o dono.
 
         Se digitasse, a cena e a tela viva divergiriam CALADAS na primeira troca
         de palavra do `audio_saida` — um texto que não casa não dá erro nenhum.

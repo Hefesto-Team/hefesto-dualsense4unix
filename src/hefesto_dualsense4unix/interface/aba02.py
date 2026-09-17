@@ -55,9 +55,9 @@ from pacotes.a02_controles import (DICA_ALTO_SEM_POSSE,
                                    DICA_DA_LUZ as DE_QUEM_E_A_LUZ)
 # O SUFIXO DO CANAL, pela mesma lei: `sufixo_do_canal` é quem o produto chama a
 # cada tique, e a cena do desenho tem de dizer a MESMA coisa. Digitar
-# `· acordado` aqui seria a segunda gramática do mesmo fato — e ela divergiria
-# em silêncio no dia em que o dono (`audio_saida.estado_do_canal`) trocasse de
-# palavra, porque um texto que não casa não dá erro nenhum.
+# a palavra do canal aqui seria a segunda gramática do mesmo fato — e ela
+# divergiria em silêncio no dia em que o dono (`audio_saida.estado_do_canal`)
+# trocasse de palavra, porque um texto que não casa não dá erro nenhum.
 from pacotes.a02_controles import sufixo_do_canal as _sufixo_do_canal
 # A GEOMETRIA DO PONTINHO TAMBÉM É DO PACOTE, e pela mesma razão do
 # `ROTULO_DO_CLIQUE`: a folha que o produto escreve a cada tique
@@ -841,10 +841,24 @@ CSS = CSS_GLIFO + CSS_LUZINHAS + """
 
      O contraste do apagado continua o medido (3,47:1 sobre o próprio fundo ->
      9,3:1): a regra é a mesma, só trocou de lado. */
-  .selo-ativo{font-size:9.5px;font-family:'JetBrains Mono',monospace;padding:1px 6px;
-              border-radius:3px;background:var(--border-forte);color:var(--texto-suave);
-              font-weight:600;display:inline-flex;align-items:center;gap:3px;
-              vertical-align:middle;line-height:1.5}
+  /* A GEOMETRIA DO CHIP MORA AQUI, UMA VEZ SÓ, PARA OS TRÊS — 17/09/2026.
+     Ela era DUAS cópias digitadas à mão (este selo e o `.rot .selo-som`, lá
+     embaixo), com as mesmas seis declarações repetidas; o pedido dela de hoje
+     — o sufixo do canal com a cara do chip do microfone, e a citação está no
+     bloco "OS SELOS DO SOM" — pedia a TERCEIRA. Três cópias divergem no
+     primeiro dia em que alguém ajustar uma, e esta casa já pagou onze vezes por
+     régua e por regra que DIGITAM o que deviam LER. Então a cara de chip é UMA
+     declaração com os três seletores, e o que sobra por regra é só o que os
+     SEPARA: a cor de cada estado, o alinhamento e a margem.
+     `tests/unit/test_o_chip_do_alto_falante_tem_a_cara_do_chip_do_microfone.py`
+     lê os três nomes de classe da MARCAÇÃO e cobra que a declaração que os
+     veste seja a mesma. */
+  .selo-ativo,.rot .selo-som,.rot .canal{font-size:9.5px;
+              font-family:'JetBrains Mono',monospace;padding:1px 6px;
+              border-radius:3px;font-weight:600;line-height:1.5}
+  .selo-ativo{background:var(--border-forte);color:var(--texto-suave);
+              display:inline-flex;align-items:center;gap:3px;
+              vertical-align:middle}
   .selo-ativo.on{background:var(--green);color:var(--app-bg)}
   /* O ÍCONE E O RISCO — a segunda metade da escolha dela, para quem não
      distingue cor. O risco é um `::after` do PRÓPRIO glifo, e não do selo: ele
@@ -946,6 +960,36 @@ CSS = CSS_GLIFO + CSS_LUZINHAS + """
      ALARME, e por isso existe só no estado ruim. Um selo dizendo "acordado" em
      toda sessão normal gastaria pixel para não informar nada.
 
+     O SUFIXO VIROU CHIP EM 17/09/2026, POR ORDEM DELA, e a decisão de cima
+     continua de pé: quem existe só no estado ruim é o ALARME, e ele continua
+     assim. O que mudou é a CARA do sufixo — *"deixar esse acordado com o mesmo
+     estilo do botão que tá MUDO acima"*. Ele era três declarações (peso 400,
+     cinza, uma margem) ao lado de um chip, no mesmo rótulo, e lia como sobra de
+     texto. Agora veste a mesma pílula do selo do microfone, pela declaração
+     agrupada lá de cima.
+
+     A CAIXA NÃO SOBE, E ISSO FOI MEDIDO CONTRA UMA ORDEM DELA DE SEIS DIAS
+     ANTES. A primeira tentativa desta leva pôs `text-transform` no chip do
+     canal, para o par ficar idêntico ao chip do microfone — que diz a palavra
+     dele em caixa alta. O portão `maiuscula-decorativa` reprovou, e ele carrega
+     a palavra dela de 11/09/2026, que cita ESTA palavra pelo nome: *"Leia o
+     cabo e acordado (ambos minusculo sem iniciar de forma capitular). Esse
+     tipo de coisa nao pode se repetir na interface."* <!-- noqa-acento: citação literal dela -->
+
+     AS DUAS ORDENS NÃO SE CONTRADIZEM, e é o que resolve o caso: o que ela
+     pediu hoje foi o ESTILO — a pílula —, e a caixa do chip do microfone não é
+     estilo, é o TEXTO que `mesa_viva.selo_do_mic` devolve. A palavra do canal
+     vem minúscula do daemon e continua minúscula na tela, que é o que ela
+     mandou. Subir a caixa aqui seria a mesma palavra com duas grafias no
+     produto — o defeito que aquele portão existe para matar.
+
+     O CUSTO DE ALTURA É ZERO, e não por analogia com o chip do microfone — que
+     mora num `.rot-linha` flex, onde a conta é outra. É por analogia com o
+     VIZINHO: o alarme já tem esta geometria, neste mesmo rótulo, desde 16/08, e
+     é `vertical-align` INLINE. Em caixa inline o `padding` não entra na altura
+     da linha, e por isso o chip do canal também toma `vertical-align:1px` em
+     vez do `inline-flex` do selo do microfone.
+
      A COR DO SELO É A `--orange`, e não a `--red`: as duas palavras que ele
      pode dizer descrevem estados do SISTEMA que explicam um silêncio, não
      falhas do produto. `--red` nesta casa é a cor da falha, e ela já saiu do ♪
@@ -961,11 +1005,10 @@ CSS = CSS_GLIFO + CSS_LUZINHAS + """
      `.nada` que o pacote manda em TODO tique, a dica vazia, e o `:empty`. O
      marcador é preciso porque `escrever()` troca valor vazio por travessão —
      sem ele, "não há canal a descrever" vira um `—` solto no rótulo. */
-  .rot .canal{font-weight:400;color:var(--texto-mudo);margin-left:2px}
-  .rot .selo-som{font-size:9.5px;font-family:'JetBrains Mono',monospace;
-    padding:1px 6px;border-radius:3px;background:var(--orange);
-    color:var(--app-bg);font-weight:600;vertical-align:1px;line-height:1.5;
-    margin-left:3px}
+  .rot .canal{background:var(--border-forte);color:var(--texto-suave);
+    vertical-align:1px;margin-left:5px}
+  .rot .selo-som{background:var(--orange);color:var(--app-bg);
+    vertical-align:1px;margin-left:3px}
   .rot .canal:has(.nada),.rot .selo-som:has(.nada){display:none}
   .rot .canal:empty,.rot .selo-som:empty{display:none}
 
@@ -2024,7 +2067,8 @@ def linha_de_volume(campo, razao=""):
 # sprint cobra que as duas apaguem juntas.
 #
 # A CENA DO DESENHO É O CASO NORMAL: no cabo o sink existe e o drop-in 54 o
-# mantém acordado, então `· acordado` é o que ela vê na maioria das sessões.
+# mantém acordado, então o chip do canal aceso é o que ela vê na maioria das
+# sessões.
 # **No rádio não entra sufixo nenhum** — o DualSense não publica placa ALSA por
 # rádio (medido em 15/08/2026: a placa segue o transporte), e escrever
 # "acordado" a partir de ausência prometeria que o som sai inteiro num controle
@@ -2035,7 +2079,14 @@ def linha_de_volume(campo, razao=""):
 # `Canal dormindo`), e um alarme cravado no desenho acenderia sobre um controle
 # que ninguém mediu. O produto o acende no primeiro tique em que houver o quê.
 def sufixo_do_canal(c):
-    """O sufixo `· acordado` do rótulo da moldura, na cena aprovada.
+    """O CHIP do canal no rótulo da moldura, na cena aprovada.
+
+    **ERA UM SUFIXO DE TEXTO ATÉ 17/09/2026** — `· acordado`, peso 400, cinza,
+    ao lado do nome da moldura. Por ordem dela virou pílula, com a mesma cara
+    do selo do microfone; o `·` saiu do valor no dono, porque um separador
+    dentro de uma pílula lê como sujeira. A MARCAÇÃO não mudou uma letra: o
+    `<span class="canal">` já tinha classe própria, `data-campo` com dono e
+    alvo de pintura. O que mudou foi a pintura, e ela está no CSS lá em cima.
 
     A PALAVRA VEM DO PRODUTO (`a02_controles.sufixo_do_canal`), não daqui — ver
     o bloco acima. O que este arquivo decide é a CENA: qual controle aparece
@@ -4081,8 +4132,34 @@ def _conferir(doc):
            f"`{SELO_MUDO}` — a palavra deixou de vir de "
            f"`mesa_viva.selo_do_mic` e o CSS parou de casar, sem barulho")
 
-    # 3. O "· 100 % · Acordado" saiu do rótulo do alto-falante.
-    exigir("Acordado" not in corpo, "o estado do alto-falante voltou ao rótulo")
+    # 3. O VOLUME DUPLICADO saiu do rótulo do alto-falante — item 2.3 da lista
+    #    dela. O que saiu foi o número que a linha de baixo já mostra; o ESTADO
+    #    do canal ficou, e desde 17/09 ele é um chip.
+    #
+    #    FATO SUBSTITUÍDO — 17/09/2026. Esta régua dizia *"o estado do
+    #    alto-falante voltou ao rótulo"* e media `"Acordado"` com A maiúsculo,
+    #    enquanto o gerador nunca escreveu senão minúsculo: ela estava VERDE
+    #    com o estado no rótulo desde que nasceu, e continuaria verde depois de
+    #    qualquer mudança nele. Duas coisas erradas numa linha — a palavra
+    #    medida e a frase que a explicava. Agora ela mede o que o item 2.3
+    #    tirou, e PERGUNTA a unidade ao dono em vez de digitá-la.
+    rotulos_do_alto = re.findall(r'<div class="rot">Alto-falante.*?</div>',
+                                 corpo, flags=re.S)
+    # UM POR CARD, E OS VAZIOS TAMBÉM TÊM — desde 07/09 o lugar vazio é o mesmo
+    # cartão do cheio. A régua é sobre o CONTEÚDO do rótulo, não sobre a conta.
+    exigir(len(rotulos_do_alto) == len(MESA),
+           f"o rótulo da moldura do alto-falante aparece "
+           f"{len(rotulos_do_alto)} vez(es) e a mesa tem {len(MESA)} lugar(es)")
+    for _rotulo in rotulos_do_alto:
+        # A DICA SAI DA CONTA: ela é prosa fechada atrás do `?`, e prosa pode
+        # ganhar número por motivo legítimo. O que o item 2.3 tirou é o que
+        # fica À VISTA no rótulo.
+        visivel = re.sub(r"<[^>]+>", "", re.sub(
+            r'<span class="ajuda".*?</span></span>', "", _rotulo, flags=re.S))
+        exigir(not re.search(r"\d", visivel),
+               f"um número voltou ao rótulo do alto-falante ({visivel.strip()!r}): "
+               f"a linha de baixo já mostra o volume no `alto-num`, e o item 2.3 "
+               f"da lista dela tirou a segunda cópia")
 
     # 4. TRÊS molduras, e as unidades fora. *"É pra ser 3: um Giroscópio, outra
     #    Acelerômetro e outra gatilhos."*

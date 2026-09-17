@@ -1883,17 +1883,26 @@ def selo_do_som(saida_muda: bool | None, sono: str) -> str:
 
 
 def sufixo_do_canal(sono: str) -> str:
-    """`"· acordado"`, `"· dormindo"` ou `""` — o sufixo do rótulo da moldura.
+    """A palavra do canal para o rótulo da moldura — `""` quando não há leitura.
 
     A PALAVRA NÃO SE DIGITA: ela é a que `audio_saida.estado_do_canal` devolveu,
-    e é a mesma que a moldura da GTK escreve. O separador é o `·` que o rótulo
-    do card já usa entre nome e valor.
+    e é a mesma que a moldura da GTK escreve.
+
+    **O `·` SAIU EM 17/09/2026, e a razão é de forma.** Ele era o separador que
+    o rótulo do card usa entre nome e valor, e fazia sentido enquanto o sufixo
+    era TEXTO solto ao lado do nome da moldura. Por ordem dela, o sufixo passou
+    a ser um CHIP — a mesma pílula do selo do microfone —, e um separador colado
+    dentro de uma pílula lê como sujeira: a pílula já é a separação. O `·`
+    continua onde sempre esteve nos rótulos que são texto; o que ele não é mais
+    é parte do VALOR deste campo. Esta função tem um consumidor só, a tela nova;
+    a moldura da GTK usa as constantes próprias dela
+    (`controller_card.SUFIXO_CANAL_*`) e não passa por aqui.
 
     `""` É "NÃO SEI", E NÃO "ACORDADO". Sem placa de som — o caso do rádio — a
     tela não tem o que afirmar, e escrever "acordado" a partir de ausência seria
     prometer que o som sai inteiro num controle que não tem por onde tocá-lo.
     """
-    return f"· {sono}" if sono else ""
+    return sono
 
 
 def dica_do_canal(sono: str) -> str:
