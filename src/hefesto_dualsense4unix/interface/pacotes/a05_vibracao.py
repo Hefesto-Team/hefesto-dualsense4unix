@@ -937,7 +937,7 @@ _O_PULSO_SAIU = "07/09/2026 — o Testar virou estado; ver `_EM_TESTE`"
 #: O TESTE EM CURSO, para que o seguinte o CANCELE — 03/09/2026.
 #:
 #: A janela estável tem isto e a aba nova não tinha: `_cancel_rumble_test_timer`
-#: (`app/actions/rumble_actions.py:1041-1046`) remove a fonte GLib pendente e é
+#: (`app/actions/rumble_actions.py:1196-1201`) remove a fonte GLib pendente e é
 #: chamado no começo do "Testar", do "Aplicar", do "Parar" e do "Devolver" —
 #: *"senão o `_rumble_test_stop` pendente desfaria a ação seguinte"*, que é o
 #: defeito M6, nomeado lá.
@@ -2122,14 +2122,14 @@ def testar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
 
     1. `controller.target.set` — sem ele o par iria para os quatro (`_mirar`);
     2. `rumble_set_checked` — a mesma função do `on_rumble_test_500ms`
-       (`app/actions/rumble_actions.py:1073`). A CHECADA, e não a crua: a
+       (`app/actions/rumble_actions.py:1228`). A CHECADA, e não a crua: a
        recusa do Modo Nativo vem no CORPO da resposta, não como erro JSON-RPC
        (`app/ipc_bridge.py:597`), e foi por não a ler que a aba anunciou
        "vibração travada" com o motor parado — NATIVO-RUMBLE-01.
 
     O `rumble_stop` E O `rumble_passthrough(True)` NÃO SUMIRAM DO PRODUTO —
     mudaram de dono. Eles são o "Parar", e continuam sendo os dois passos
-    exatos do `_rumble_test_stop` (`rumble_actions.py:1279-1280`): parar sozinho
+    exatos do `_rumble_test_stop` (`rumble_actions.py:1434-1435`): parar sozinho
     fixa `(0, 0)` e o laço do daemon re-afirma o silêncio, e o jogo ficaria mudo
     depois de um teste (SPRINT-GAME-RUMBLE-01). **A mão só volta ao jogo quando
     ela clicar em Parar** — que é exatamente o que ela pediu, e é o preço
@@ -2191,7 +2191,7 @@ def parar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     ele ainda não existe, e está no relato.
     """
     # O "PARAR" TAMBÉM TOMA A VEZ — é o equivalente da chamada que a janela
-    # estável faz em `on_rumble_stop` (`rumble_actions.py:1129`). Sem ela, um
+    # estável faz em `on_rumble_stop` (`rumble_actions.py:1284`). Sem ela, um
     # "Testar" ainda dormindo acordaria depois deste "Parar" e mandaria
     # `rumble.stop` no alvo de agora: parar o P1 apagaria a vibração do P2.
     _minha_vez()

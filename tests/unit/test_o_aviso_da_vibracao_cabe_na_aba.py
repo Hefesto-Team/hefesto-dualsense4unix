@@ -16,6 +16,14 @@ DECISÃO DELA, 02/09/2026 — *encurtar a frase, em vez de deixar a aba rolar*. 
 ela é uma frase só, com um dono só (``rumble_actions.texto_do_alcance_da_
 intensidade``): encurtar ali muda a janela GTK junto, de propósito.
 
+**A FRASE VIROU TRÊS EM 17/09/2026** (RECADO-VPAD-01), e o dono continua um: a
+segunda metade passou a sair de ``rumble_actions._causa_do_alcance_perdido``,
+porque a anterior mandava pôr em "Ligado" um Status que já estava em Ligado.
+Esta régua roda agora nos DOIS estados alcançáveis
+(:data:`ESTADOS_DO_AVISO`) — a folga de uma sublinha é por RAMO, e medir só um
+deixa o outro nascer largo. Medido na estreia, na caixa de 1119 px: Navegação
+989 px, vpad-não-subiu 961 px.
+
 POR QUE ESTA RÉGUA MEDE NO NAVEGADOR, e não conta caracteres: largura de texto
 não é linear em caracteres — ``"iii"`` e ``"MMM"`` têm o mesmo comprimento e
 larguras diferentes. Um teto de caracteres seria um PROXY, e um proxy fica verde
@@ -106,6 +114,27 @@ SEM_VPAD = {"rumble_policy": "max", "rumble_mult_applied": 1.5,
             "native_mode": False,
             "rumble_ff": {"plays": 0, "nao_nulos": 0, "vpads": 0}}
 
+#: OS DOIS ESTADOS EM QUE O AVISO DO ALCANCE ACENDE — RECADO-VPAD-01
+#: (17/09/2026). Até aqui a régua olhava UM, e a frase era uma só. Depois da
+#: RECADO-VPAD-01 ela é TRÊS: a segunda metade passou a sair de
+#: ``rumble_actions._causa_do_alcance_perdido``, que pergunta ao painel da aba
+#: Jogar onde o interruptor está. Uma régua de largura que mede um dos ramos
+#: deixa os outros nascerem largos — e a frase larga só aparece na máquina
+#: dela, no dia errado.
+#:
+#: O terceiro ramo (o painel dizendo **Desligado**) NÃO entra, e a ausência é
+#: medida, não esquecimento: ele é **inalcançável** pela porta deste aviso. O
+#: quadrante do ``sem_dono_do_rumble`` exige ``native_mode`` falso, e com ele
+#: falso ``mode_of_state`` só devolve ``gamepad`` ou ``desktop`` — os dois
+#: membros de ``MODOS_LIGADOS``. Não há estado a montar aqui.
+ESTADOS_DO_AVISO: dict[str, dict] = {
+    # O da máquina dela: o chip «Navegação» aceso, que é o `desktop`.
+    "navegacao": SEM_VPAD,
+    # VPAD-09, a falha TOTAL: o interruptor em pé e nenhum gamepad virtual —
+    # `/dev/uhid` e `/dev/uinput` sem a ACL do `uaccess` no boot.
+    "vpad-nao-subiu": {**SEM_VPAD, "gamepad_emulation": {"enabled": True}},
+}
+
 #: O MIOLO da janela do produto — o que a página realmente recebe. É importado
 #: de ``gui/ponte_da_tela`` porque **o que tem dono não se digita**: a conta
 #: (``TAMANHO_NA_TELA`` menos a ``HeaderBar``) mora lá, e um número copiado para
@@ -147,7 +176,7 @@ MEDIDA = r"""
 """
 
 
-def _carga() -> dict:
+def _carga(estado: dict) -> dict:
     """A carga do tique, montada pelo PACOTE da aba — nunca HTML digitado aqui.
 
     Um dublê de bloco mediria a régua contra ela mesma: o que tem de caber é o
@@ -160,13 +189,14 @@ def _carga() -> dict:
     mesa = [{"pref": "p1", "jogador": 1, "uniq": UNIQ, "nome": "Régua",
              "via": "USB", "cor": "starlight-blue", "plastico": "#123456",
              "conectado": True}]
-    ctx = pacotes.Contexto(state=dict(SEM_VPAD), mesa=mesa,
+    ctx = pacotes.Contexto(state=dict(estado), mesa=mesa,
                            conectados=[falso], estados={})
     return pacotes.pacote_da_pagina(PAGINA, ctx) or {}
 
 
-@pytest.fixture(scope="module")
-def medido() -> dict:
+@pytest.fixture(scope="module", params=sorted(ESTADOS_DO_AVISO),
+                ids=sorted(ESTADOS_DO_AVISO))
+def medido(request) -> dict:
     """Abre a aba publicada num WebKit offscreen, pinta a carga e mede o DOM.
 
     O ORÇAMENTO É INJETADO: ``_orcamento_da_maquina`` lê o ``maquina.json`` da
@@ -187,7 +217,7 @@ def medido() -> dict:
     original = _tela._orcamento_da_maquina
     _tela._orcamento_da_maquina = lambda: None
     try:
-        carga = _carga()
+        carga = _carga(ESTADOS_DO_AVISO[request.param])
     finally:
         _tela._orcamento_da_maquina = original
     pintar = hefesto_vivo.PEDIR_A_PINTURA.replace(
@@ -251,8 +281,10 @@ def medido() -> dict:
     assert lido["tem_miolo"] and lido["tem_estado"], (
         f"a página perdeu o miolo ou o #vib-estado: {lido}")
     assert lido["linhas"], (
-        "a linha do estado ficou MUDA no estado sem gamepad virtual — não há o "
-        "que medir, e a régua daria verde por vacuidade")
+        f"a linha do estado ficou MUDA no estado «{request.param}», que é um "
+        "dos sem gamepad virtual — não há o que medir, e a régua daria verde "
+        "por vacuidade")
+    lido["estado"] = request.param
     return lido
 
 
