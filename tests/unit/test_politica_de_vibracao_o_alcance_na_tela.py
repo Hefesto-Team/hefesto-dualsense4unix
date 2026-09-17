@@ -246,7 +246,20 @@ def test_sem_gamepad_virtual_a_tela_diz_que_a_intensidade_nao_alcanca() -> None:
     # `tests/unit/test_a_vibracao_nao_manda_num_botao_que_nao_existe.py`, que
     # pergunta às páginas em vez de decorar.
     assert "aba Jogar" in texto, "a frase tem de dizer ONDE fica o gesto que cura"
-    assert "Ligado" in texto, "a frase tem de dizer QUAL gesto cura"
+    # A LINHA QUE EXIGIA `"Ligado" in texto` SAIU — RECADO-VPAD-01, 17/09/2026,
+    # e o fato que a derruba está medido: NESTE estado o painel da aba Jogar já
+    # mostra o Status em **Ligado**. `sem_dono_do_rumble` exige `native=False`,
+    # e com ele falso `mode_of_state` só devolve `gamepad` ou `desktop` — os
+    # dois membros de `MODOS_LIGADOS`. A frase mandava pôr em Ligado o que já
+    # estava em Ligado, e esta linha era a régua que a mantinha lá: ela exigia
+    # a palavra do gesto ERRADO, e ficou verde por um mês sobre um no-op que
+    # ela viu na tela.
+    #
+    # O gesto que cura depende do CAMINHO (Navegação → trocar o Modo; vpad que
+    # não subiu → nenhum, a causa é permissão do sistema), e quem mede isso é
+    # `tests/unit/test_recado_vpad_01_a_tela_e_o_recado_perguntam_no_mesmo_lugar.py`,
+    # perguntando ao `jogar.painel` em vez de digitar a palavra. O que sobra
+    # aqui é o requisito que NÃO mudou: a frase diz ONDE.
     # `.lower()` desde 02/09/2026: a frase encurtou (decisão dela — ver
     # `texto_do_alcance_da_intensidade`) e "Aqui embaixo" passou a ABRIR a
     # última oração, com maiúscula. A régua mede a INFORMAÇÃO, não a caixa da

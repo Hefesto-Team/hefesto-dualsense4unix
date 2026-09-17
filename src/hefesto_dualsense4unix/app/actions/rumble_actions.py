@@ -33,7 +33,12 @@ gi.require_version("Gtk", "3.0")
 from gi.repository import GLib, Gtk
 
 from hefesto_dualsense4unix.app.actions.base import WidgetAccessMixin
-from hefesto_dualsense4unix.app.actions.mode_transition import STATE_IPC_TIMEOUT_S
+from hefesto_dualsense4unix.app.actions.jogar.painel import hefesto_ligado, modo_vivo
+from hefesto_dualsense4unix.app.actions.mode_transition import (
+    MODE_DESKTOP,
+    MODE_GAMEPAD,
+    STATE_IPC_TIMEOUT_S,
+)
 from hefesto_dualsense4unix.app.alvo_de_edicao import (
     AlvoDeEdicao,
     EstadoDoAlvo,
@@ -314,6 +319,150 @@ def texto_dos_pedidos_de_vibracao(state: dict[str, Any]) -> str | None:
     return "o jogo ainda não pediu vibração nenhuma"
 
 
+#: A PRIMEIRA METADE DO AVISO DO ALCANCE, e ela NÃO muda com o caso: é estado
+#: presente do sistema, e a pessoa precisa saber. A regra da casa (decisão dela,
+#: 07/09/2026) julga a SEGUNDA — a instrução.
+_ALCANCE_O_QUE_ACONTECE = "A intensidade não está chegando a jogo nenhum: "
+
+#: A ÚLTIMA ORAÇÃO, e ela também não muda: sem dizer o que a intensidade AINDA
+#: faz, o aviso vira "esta parte da tela não serve para nada", que é falso — ela
+#: vale para a vibração fixada em "Testar motores" (`reassert_rumble` /
+#: `apply_rumble_policy`, que não dependem de gamepad virtual nenhum).
+_ALCANCE_O_QUE_SOBRA = " Aqui embaixo ela ainda vale."
+
+#: O INTERRUPTOR NÃO DIZ "Ligado" — e é a ÚNICA posição em que mandar ligá-lo
+#: não contradiz o que ela está vendo na aba Jogar.
+_CAUSA_O_INTERRUPTOR_NAO_DIZ_LIGADO = (
+    "falta o gamepad virtual, por onde ela passa. Ponha o Status em “Ligado” "
+    "na aba Jogar."
+)
+
+#: NAVEGAÇÃO (``desktop``) — o chip que mora DENTRO do lado Ligado. Não é
+#: defeito: é o modo entregando teclado e mouse, como ela pediu. A frase nomeia
+#: o modo e diz por onde se troca, no molde da frase do nativo.
+_CAUSA_O_CAMINHO_E_A_NAVEGACAO = (
+    "na Navegação o controle é teclado e mouse, não um gamepad. Troque o Modo "
+    "na aba Jogar."
+)
+
+#: VPAD-09, a falha TOTAL: o interruptor em pé e ``make_virtual_pad``
+#: devolvendo ``None``. Seguir a instrução velha aqui nunca resolvia.
+_CAUSA_O_GAMEPAD_VIRTUAL_NAO_SUBIU = (
+    "o Status já está em “Ligado”, e o sistema não deixou o Hefesto criar o "
+    "gamepad virtual."
+)
+
+#: CAMINHO QUE ESTA JANELA NÃO CONHECE — um modo novo em ``MODOS_LIGADOS``,
+#: vindo de um daemon mais novo. Diz o fato e não manda mexer em nada:
+#: inventar um gesto para um caminho que não se leu é o defeito que a
+#: RECADO-VPAD-01 existe para matar. **Não é prefixo de nenhuma das outras
+#: três**, de propósito — a régua distingue os ramos pela frase.
+_CAUSA_O_CAMINHO_E_DESCONHECIDO = (
+    "o caminho de agora não tem gamepad virtual, e é por ele que ela passa."
+)
+
+#: AS QUATRO SEGUNDAS METADES, pelo nome do ramo. Existe para a régua da
+#: RECADO-VPAD-01 poder perguntar *qual ramo saiu* sem digitar uma frase de
+#: tela — foi digitando o texto que a régua velha ficou verde sobre a
+#: instrução errada.
+CAUSAS_DO_ALCANCE_PERDIDO: dict[str, str] = {
+    "interruptor-nao-diz-ligado": _CAUSA_O_INTERRUPTOR_NAO_DIZ_LIGADO,
+    "navegacao": _CAUSA_O_CAMINHO_E_A_NAVEGACAO,
+    "vpad-nao-subiu": _CAUSA_O_GAMEPAD_VIRTUAL_NAO_SUBIU,
+    "caminho-desconhecido": _CAUSA_O_CAMINHO_E_DESCONHECIDO,
+}
+
+
+def _causa_do_alcance_perdido(state: dict[str, Any]) -> str:
+    """A segunda metade do aviso, perguntada a QUEM PINTA O STATUS DA ABA JOGAR.
+
+    RECADO-VPAD-01 (17/09/2026), e o defeito é a terceira aparição do mesmo
+    padrão nesta casa: **duas leituras paralelas da mesma pergunta**. A primeira
+    foi a borda do `launch_env` contra esta tela (11/08, curada pelo
+    `sem_dono_do_rumble` logo abaixo); a segunda, a tela contra o journal. Esta
+    é entre esta linha e o **interruptor da aba Jogar**:
+
+    ===============  ==========================================  ==============
+    quem             pergunta                                    onde
+    ===============  ==========================================  ==============
+    este aviso       ``native_mode`` + ``rumble_ff.vpads``       aqui
+    o interruptor    ``mode_of_state`` → ``MODOS_LIGADOS``      `jogar/painel`
+    ===============  ==========================================  ==============
+
+    **O QUE ELA VIU, em 17/09/2026:** o rodapé da aba Vibração mandando *"Ponha
+    o Status em «Ligado» na aba Jogar"* com o Status **já aceso**. No journal
+    dela, 1 min 59 s de ``rumble_sem_dono backends=[] emulacao=False`` enquanto
+    o modo vivo era ``mouse_teclado`` — o ``desktop`` do produto, o chip
+    «Navegação», que mora DENTRO do lado Ligado do interruptor.
+
+    **E A INSTRUÇÃO NUNCA PODIA ESTAR CERTA**, medido: o quadrante
+    ``sem_dono_do_rumble`` exige ``native=False``, e com ``native`` falso
+    ``mode_of_state`` só devolve ``gamepad`` ou ``desktop`` — os DOIS membros de
+    ``MODOS_LIGADOS``. Logo ``hefesto_ligado`` é ``True`` em **100% dos estados
+    em que este aviso aparece**, e o único estado em que ele seria ``False`` (o
+    nativo) é exatamente aquele em que o aviso não sai. A ordem de ligar era
+    inalcançável-correta desde que nasceu, e nenhuma régua viu porque as réguas
+    mediam o TEXTO.
+
+    A cura é a mesma das outras duas: **um dono só para a pergunta**. Quem
+    responde "o Hefesto está no meio?" é ``jogar.painel.hefesto_ligado``, o
+    mesmo leitor que acende o interruptor; quem responde "por qual caminho" é
+    ``jogar.painel.modo_vivo``. Esta função não tem uma linha de regra própria.
+
+    Os três casos, na ordem em que a função pergunta:
+
+    1. **o painel NÃO diz Ligado** — a ordem de ligar é legítima, e é a única
+       posição em que ela pode sair sem contradizer o que ela está vendo;
+    2. **Navegação** (``desktop``): o controle é teclado e mouse por escolha
+       dela, e nesse caminho jogo nenhum recebe um gamepad. Não é defeito — é o
+       modo funcionando —, então a frase NOMEIA o modo e diz por onde se troca,
+       no molde da frase do nativo logo abaixo;
+    3. **Ligado no caminho de jogo, e o gamepad virtual não existe**
+       (``enabled=True`` com ``vpads=0``): é a falha TOTAL do VPAD-09 —
+       ``make_virtual_pad`` devolveu ``None`` porque ``/dev/uhid`` **e**
+       ``/dev/uinput`` estavam sem a ACL do ``uaccess`` (o daemon de sessão sobe
+       no login e o logind aplica a ACL instantes depois;
+       `daemon/subsystems/gamepad.py`, "VPAD-09 (falha TOTAL)"). Aqui o Status
+       já está exatamente onde a instrução velha mandava pôr, e segui-la **nunca
+       resolve**: a causa é a permissão do sistema, e é ela que a frase nomeia.
+
+    **POR QUE O CASO 3 NÃO CONFESSA DÍVIDA NOSSA** (a régua é
+    `scripts/check_a_tela_nao_confessa.py`): o sujeito da frase é o SISTEMA, não
+    o Hefesto. "o sistema não deixou" é limite da máquina, da mesma família das
+    frases que ela aprovou em 07/09 — e é o que a pessoa precisa saber para
+    parar de repetir um gesto que não muda nada.
+
+    **POR QUE O CASO 3 NÃO TRAZ O GESTO DE ATUALIZAR.** Ele seria o ponteiro
+    certo (`utils/repo_files.FRASE_DE_ATUALIZAR`, o mesmo que o ``sem_device``
+    do mouse interpola), mas não cabe: a frase mais curta dos dois gestos tem 41
+    caracteres e levaria esta linha a ~200, contra o teto medido de uma sublinha
+    da `.vib-estado` — e uma segunda sublinha aqui faz o quadro rolar e CORTA o
+    fim do aviso, que foi o defeito de 02/09 que fez ela mandar encurtar. O
+    ponteiro da aba Sistema está fora por decisão medida: a BG-NAV-01 (26/08)
+    tirou exatamente esse ponteiro do bloqueio irmão do mouse porque os botões
+    de lá não escrevem a regra udev do ``uinput`` — *ponteiro que não leva ao
+    conserto é ponteiro errado*.
+
+    **AS DUAS FRASES FORAM MEDIDAS NO WEBKIT**, não contadas em caracteres, por
+    ``tests/unit/test_o_aviso_da_vibracao_cabe_na_aba.py`` — que passou a rodar
+    nos DOIS estados por causa desta mudança. Na caixa de 1119 px da
+    ``.vib-estado``: Navegação **989 px** (163 caracteres) e vpad-não-subiu
+    **961 px** (164). A primeira volta desta cura escrevia *"…, e jogo nenhum
+    vê um gamepad"* e mediu **1067 px**: cabia, com 52 px de folga contra os
+    162 px da frase que ela aprovou em 02/09. Encurtou — folga de uma sublinha
+    não é asseio, é o que separa o aviso de ser CORTADO pela borda do miolo na
+    máquina dela.
+    """
+    if hefesto_ligado(state) is not True:
+        return _CAUSA_O_INTERRUPTOR_NAO_DIZ_LIGADO
+    caminho = modo_vivo(state)
+    if caminho == MODE_DESKTOP:
+        return _CAUSA_O_CAMINHO_E_A_NAVEGACAO
+    if caminho == MODE_GAMEPAD:
+        return _CAUSA_O_GAMEPAD_VIRTUAL_NAO_SUBIU
+    return _CAUSA_O_CAMINHO_E_DESCONHECIDO
+
+
 def texto_do_alcance_da_intensidade(state: dict[str, Any]) -> str | None:
     """O aviso de que a intensidade escolhida NÃO chega à vibração dos jogos.
 
@@ -412,10 +561,16 @@ def texto_do_alcance_da_intensidade(state: dict[str, Any]) -> str | None:
         # nova tem 161 caracteres contra os 162 da anterior, e quem mede de
         # verdade é `tests/unit/test_o_aviso_da_vibracao_cabe_na_aba.py`, no
         # navegador — contar caractere é proxy, e proxy fica verde na hora errada.
+        #
+        # A SEGUNDA METADE DEIXOU DE SER DIGITADA AQUI — RECADO-VPAD-01
+        # (17/09/2026). Ela mandava pôr em "Ligado" um Status que já estava em
+        # Ligado nos DOIS caminhos em que este aviso aparece; quem responde onde
+        # o interruptor está é o painel da aba Jogar, e é a ele que se pergunta.
+        # A razão inteira, com a medição, está em `_causa_do_alcance_perdido`.
         return (
-            "A intensidade não está chegando a jogo nenhum: falta o gamepad "
-            "virtual, por onde ela passa. Ponha o Status em “Ligado” na aba "
-            "Jogar. Aqui embaixo ela ainda vale."
+            _ALCANCE_O_QUE_ACONTECE
+            + _causa_do_alcance_perdido(state)
+            + _ALCANCE_O_QUE_SOBRA
         )
     if vpads == 0 and native:
         # NATIVO-RUMBLE-01 (19/08/2026): a oração final desta frase dizia "Ela
