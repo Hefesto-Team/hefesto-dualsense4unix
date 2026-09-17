@@ -3057,6 +3057,35 @@ class IpcHandlersMixin:
                         motivo = getattr(gp_dev, "fallback_motivo", None)
                         if isinstance(motivo, str) and motivo:
                             result["gamepad_emulation"]["degraded_motivo"] = motivo
+                # CANAL-SEM-VOZ-01 (17/09/2026) — CAMPO NOVO, DONO NOVO.
+                #
+                # `degraded` acima e `dedup_ok` abaixo respondem *"o canal caiu
+                # sem ela pedir?"*, e a resposta para o caminho Xbox é NÃO —
+                # PS-L3-MASCARA-01, 14/09/2026, decisão dela: o uinput do
+                # caminho Xbox é ESCOLHA, não degradação. Os dois continuam
+                # dizendo íntegro, como ela decidiu.
+                #
+                # ESTE CAMPO RESPONDE OUTRA PERGUNTA, que nenhum dos dois
+                # respondia: *"o jogo está vendo um DualSense por um canal que
+                # não carrega as dez linhas `uhid` do mapa?"*. Com a máscara
+                # DualSense de pé e o caminho Xbox, a tela diz «Sony DualSense»
+                # e o giroscópio não existe — foi o que ela mediu no PRAGMATA
+                # em 17/09, e o produto não tinha onde dizer isso.
+                #
+                # A FRASE NA TELA NÃO É DAQUI. Ordem dela de 07/09 (portão
+                # `scripts/check_a_tela_nao_confessa.py`): aqui sai o DADO, e a
+                # redação de qualquer aviso é dela.
+                with contextlib.suppress(Exception):
+                    from hefesto_dualsense4unix.integrations import (
+                        canal_sem_imu as _sem_imu,
+                    )
+
+                    sem_imu = _sem_imu.canal_sem_imu_do_vpad(gp_dev)
+                    result["gamepad_emulation"]["canal_sem_imu"] = sem_imu
+                    if sem_imu:
+                        result["gamepad_emulation"]["canal_sem_imu_linhas"] = list(
+                            _sem_imu.chaves_fora_do_ar()
+                        )
             # DEDUP-06 — guard anti-veneno: `dedup_ok` agregado POR JOGADOR
             # (P1 + todos os vpads do co-op). `degraded` acima fala SÓ pelo
             # primário; um jogador do co-op em uinput com o IGNORE congelado
