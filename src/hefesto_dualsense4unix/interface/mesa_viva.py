@@ -435,7 +435,40 @@ def texto_da_contagem(mesa: list[dict[str, Any]]) -> tuple[str, str]:
     usb = sum(1 for c in mesa if str(c.get("transporte") or "").strip().lower() == "usb")
     bt = n - usb
     palavra = "controle" if n == 1 else "controles"
-    return (f"● {n} {palavra}: ", f"{usb} USB · {bt} BT")
+    return (f"● {n} {palavra}: ", frase_dos_transportes(usb, bt))
+
+
+def frase_dos_transportes(usb: int, bt: int) -> str:
+    """`1 BT` · `2 USB` · `2 USB · 1 BT` — o transporte VAZIO não aparece.
+
+    DECISÃO DELA, 17/09/2026, com um controle só no rádio na mesa: *"só tem 1
+    controle conectado ainda assim aparece no canto superior direito 0 usb 1 bt
+    deveria mostrar só o que tá conectado que é 1 bt nesse caso"*.
+
+    Ela REFINA a decisão de 06/09 e não a contradiz: aquela escolheu a PALAVRA
+    (`USB`/`BT` em vez de `cabo`/`rádio`, porque *"2 cabo · 0 rádio"* não é
+    português, e é a única exceção declarada da língua desta casa). Esta
+    escolhe o que se OMITE. A palavra continua a mesma.
+
+    O `0 USB ·` custava uma leitura a cada olhada — a pessoa tinha de somar
+    para descobrir que o zero não queria dizer nada. O produto é de
+    acessibilidade: o que não está lá não se escreve.
+
+    A FUNÇÃO É PÚBLICA porque a frase tem DOIS escritores — esta, viva, e o
+    `interface/monta.py`, que a grava no esqueleto das dez páginas. Enquanto
+    cada um formatava por conta própria, uma mudança aqui deixava o esqueleto
+    dizendo outra coisa até o piloto repintar.
+
+    Com os dois zerados devolve string vazia: o `● 0 controles:` ao lado já diz
+    tudo, e `0 USB · 0 BT` era a frase que a tela mostrava quando o daemon nem
+    tinha respondido.
+    """
+    pedacos = []
+    if usb:
+        pedacos.append(f"{usb} USB")
+    if bt:
+        pedacos.append(f"{bt} BT")
+    return " · ".join(pedacos)
 
 
 # ---------------------------------------------------------------------------

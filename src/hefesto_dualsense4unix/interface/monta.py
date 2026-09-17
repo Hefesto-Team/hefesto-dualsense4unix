@@ -1809,8 +1809,20 @@ def monta(arq: str, titulo_aba: str, miolo: str, css_extra: str = "",
     # aqui faria a janela anunciar quatro e desenhar dois acesos, que é a mesma
     # divergência que esta linha nasceu para matar.
     # A CONTAGEM DO TOPO SOMA A CHAVE CRUA, e a palavra fica com a tela — costura
-    # da ONDA B, 06/09/2026. A contagem continua dizendo `2 USB · 0 BT` por decisão
-    # dela; o que mudou é que ela não depende mais da palavra que a `via` carrega.
+    # da ONDA B, 06/09/2026. A palavra não depende mais do que a `via` carrega.
+    #
+    # E O TRANSPORTE VAZIO NÃO APARECE — decisão dela de 17/09/2026, que refina
+    # a de 06/09 sem contradizê-la: aquela escolheu a PALAVRA, esta escolhe o
+    # que se OMITE. A formatação saiu daqui e foi para
+    # `mesa_viva.frase_dos_transportes`, que é o dono ÚNICO da frase: enquanto
+    # este arquivo e o `mesa_viva` formatavam cada um por si, uma mudança num
+    # deles deixava o esqueleto dizendo outra coisa até o piloto repintar — e o
+    # esqueleto é o que ela vê no primeiro quadro, antes do primeiro tique.
+    #
+    # Import LAZY porque este módulo tem ordem de import própria (os `noqa:
+    # E402` acima) e `mesa_viva` puxa a árvore do app inteira.
+    from hefesto_dualsense4unix.interface import mesa_viva as _mesa_viva
+
     usb = sum(1 for c in CONECTADOS if str(c.get("transporte") or "").lower() == "usb")
     bt = sum(1 for c in CONECTADOS if str(c.get("transporte") or "").lower() == "bt")
     # OS DOIS `data-campo` SÃO O ENDEREÇO DA PINTURA, e eles valem para as DEZ
@@ -1825,7 +1837,8 @@ def monta(arq: str, titulo_aba: str, miolo: str, css_extra: str = "",
     # ao produto final"* — comparar o que se VÊ, não o andaime.
     t = re.sub(r'(<div class="conectado"><span class="bolinha">●</span> )[^<]*<b>[^<]*</b>',
                rf'\g<1><span data-campo="conta">{len(CONECTADOS)} controles:</span> '
-               rf'<b data-campo="conta-b">{usb} USB · {bt} BT</b>', t, count=1)
+               rf'<b data-campo="conta-b">{_mesa_viva.frase_dos_transportes(usb, bt)}</b>',
+               t, count=1)
 
     # O PERFIL ATIVO, mesma razão: o nome vem do daemon (`active_profile`) e a
     # página tinha o texto do mockup ("Mortal Kombat") sem endereço nenhum.

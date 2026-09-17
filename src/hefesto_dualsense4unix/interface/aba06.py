@@ -289,25 +289,50 @@ CSS = CSS_GLIFO + """
      classe são os glifos L/R/PS, e eles só aparecem em desenho GRANDE: aqui ele
      tem 111px, contra os 62 da aba Jogar. O que muda com o TAMANHO tem de ser
      medido no tamanho em que é desenhado. */
-  .nav-ctl.vazia{border:1px solid var(--border-forte);background:transparent}
-  .nav-ctl.vazia .nav-rot,
-  .nav-ctl.vazia .nav-est{color:var(--linha)}
-  .nav-ctl.vazia .ds-svg .peca,
-  .nav-ctl.vazia .ds-svg .corpo,
-  .nav-ctl.vazia .ds-svg .miolo *{fill:var(--linha) !important}
-  .nav-ctl.vazia .ds-svg .corpo{stroke:var(--border-forte) !important}
-  .nav-ctl.vazia .ds-svg text{fill:var(--linha) !important}
-  .nav-ctl.vazia .ds-svg line{stroke:var(--linha) !important}
-  .nav-ctl.vazia .ds-svg path:not(.peca):not(.corpo){fill:var(--linha) !important;
+  /* AS DUAS PALAVRAS PARA O MESMO ESTADO FINALMENTE SE ENCONTRAM — 17/09/2026.
+
+     Queixa dela, com a foto da Navegação: *"vê que o campo de p2 de desativado
+     é diferente do campo p3 e p4? eu preciso que todos os campos desativados
+     fiquem iguais pra todos"*.
+
+     A causa estava NOMEADA nesta casa desde 04/09, no `a06_navegacao.py`: o P3
+     e o P4 nascem `class="nav-ctl vazia"` no esqueleto; o P2 nasce OCUPADO (é
+     o mockup de dois controles) e é esvaziado em tempo de execução — e quem o
+     esvazia escreve a classe **`off`** (`hefesto_vivo.py:1257`), *"que folha de
+     estilo nenhuma menciona"*. A cura daquele dia alcançou a COR, por outro
+     caminho (`folha_do_plastico`), e a MOLDURA ficou: `.vazia` põe borda e
+     fundo transparente, `off` não põe nada. Por isso o P2 desligado tinha
+     caixa diferente da do P3 e do P4.
+
+     A cura é o seletor de classe `.esvaziado`, que as duas palavras produzem.
+     Não renomeei o `off` do piloto: ele é escrito pelo passo `vazios` para as
+     CINCO abas, e trocá-lo aqui mudaria o contrato de todas. Não renomeei o
+     `vazia` do esqueleto: ele é o que o desenho aprovado carrega.
+
+     A régua que cobra o encontro é
+     `tests/unit/test_nav_vazio_01_os_lugares_desligados_sao_iguais.py` — e ela
+     mede a FOLHA contra a palavra que o PILOTO escreve, lida do fonte dele.
+     Uma régua que digitasse "off" repetiria o defeito que ela existe para
+     matar: duas cópias da mesma palavra, livres para divergir. */
+  :is(.nav-ctl.vazia, .nav-ctl.off){border:1px solid var(--border-forte);background:transparent}
+  :is(.nav-ctl.vazia, .nav-ctl.off) .nav-rot,
+  :is(.nav-ctl.vazia, .nav-ctl.off) .nav-est{color:var(--linha)}
+  :is(.nav-ctl.vazia, .nav-ctl.off) .ds-svg .peca,
+  :is(.nav-ctl.vazia, .nav-ctl.off) .ds-svg .corpo,
+  :is(.nav-ctl.vazia, .nav-ctl.off) .ds-svg .miolo *{fill:var(--linha) !important}
+  :is(.nav-ctl.vazia, .nav-ctl.off) .ds-svg .corpo{stroke:var(--border-forte) !important}
+  :is(.nav-ctl.vazia, .nav-ctl.off) .ds-svg text{fill:var(--linha) !important}
+  :is(.nav-ctl.vazia, .nav-ctl.off) .ds-svg line{stroke:var(--linha) !important}
+  :is(.nav-ctl.vazia, .nav-ctl.off) .ds-svg path:not(.peca):not(.corpo){fill:var(--linha) !important;
                                                      stroke:var(--linha) !important}
-  .nav-ctl.vazia .ds-svg rect:not([fill="none"]),
-  .nav-ctl.vazia .ds-svg circle:not([fill="none"]),
-  .nav-ctl.vazia .ds-svg polygon:not([fill="none"]),
-  .nav-ctl.vazia .ds-svg ellipse:not([fill="none"]){fill:var(--linha) !important}
-  .nav-ctl.vazia .ds-svg rect,
-  .nav-ctl.vazia .ds-svg circle,
-  .nav-ctl.vazia .ds-svg polygon,
-  .nav-ctl.vazia .ds-svg ellipse{stroke:var(--border-forte) !important}
+  :is(.nav-ctl.vazia, .nav-ctl.off) .ds-svg rect:not([fill="none"]),
+  :is(.nav-ctl.vazia, .nav-ctl.off) .ds-svg circle:not([fill="none"]),
+  :is(.nav-ctl.vazia, .nav-ctl.off) .ds-svg polygon:not([fill="none"]),
+  :is(.nav-ctl.vazia, .nav-ctl.off) .ds-svg ellipse:not([fill="none"]){fill:var(--linha) !important}
+  :is(.nav-ctl.vazia, .nav-ctl.off) .ds-svg rect,
+  :is(.nav-ctl.vazia, .nav-ctl.off) .ds-svg circle,
+  :is(.nav-ctl.vazia, .nav-ctl.off) .ds-svg polygon,
+  :is(.nav-ctl.vazia, .nav-ctl.off) .ds-svg ellipse{stroke:var(--border-forte) !important}
   .nav-ctl .ds-svg{width:100%}
   /* a barra de luz acesa na cor automática do jogador. Sem esta regra o `--luz`
      que o `monta.svg()` escreve não pinta NADA: as duas tiras são `.peca`, e a
@@ -3238,9 +3263,21 @@ def _conferir(doc):
     #    `border-color` que alguém escreveu ali intacto e inútil.
     #    Isto já me pegou duas vezes hoje (Controles e Gatilhos), e a mordida
     #    mostrou que nenhuma régua via. Agora vê.
-    exigir(".nav-ctl.vazia{border:1px solid var(--border-forte)" in doc,
+    #    E A REGRA COBRE AS DUAS PALAVRAS desde 17/09/2026: o P3/P4 nascem
+    #    `vazia` no esqueleto, o P2 é esvaziado em execução com `off`, e a
+    #    folha tem de desenhar os três iguais — queixa dela, com a foto.
+    #    A verificação é por PADRÃO e não por texto digitado: o seletor pode
+    #    crescer, o que não pode é a borda voltar a depender de `--plastico`.
+    borda_do_vazio = re.search(
+        r"border\s*:\s*1px\s+solid\s+var\(--border-forte\)", doc)
+    exigir(bool(borda_do_vazio),
            "a borda do lugar vazio voltou a ser só COR — com `var(--plastico)` "
            "indefinido, a declaração inteira cai e o lugar fica sem caixa")
+    for palavra in ("vazia", "off"):
+        exigir(f".nav-ctl.{palavra}" in doc,
+               f"a folha parou de desenhar o lugar `{palavra}` — o P2 "
+               f"(esvaziado em execução, classe `off`) e o P3/P4 (`vazia` no "
+               f"esqueleto) têm de ficar IGUAIS, e é a queixa dela de 17/09")
     # 3. QUEM NAVEGA ESTÁ NA MESA. Apontar o cursor para um aparelho que não está
     #    aqui é a mesma mentira que o nome do plástico num lugar vazio.
     exigir(QUEM_NAVEGA.get("conectado", True),
