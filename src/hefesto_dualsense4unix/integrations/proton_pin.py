@@ -675,6 +675,22 @@ def build_compat_tool_mapping(
         raise ValueError("config.vdf sem bloco Software/Valve/Steam")
 
     targets = ["0", *[a for a in appids if a != "0"]]
+    if atropelar_escolha_dela:
+        # "TODO O RESTO" INCLUI A ENTRADA ÓRFÃ — e ela é o caso que faz a ordem
+        # dela valer "de agora em diante". Medido em 17/09/2026, logo depois do
+        # primeiro `--lock --todos`: três entradas ficaram em `proton_11` e no
+        # `GE-Proton10-34` porque os jogos NÃO ESTÃO INSTALADOS, e `appids` nasce
+        # de `list_installed_appids`. A escolha velha continua no mapa; quando
+        # ela reinstalar, é ELA que a Steam lê, e o jogo nasce fora do pino sem
+        # que ninguém veja.
+        #
+        # Sem `--todos` isto não muda nada: a guarda `preservado` é o padrão da
+        # função, e quem não pede continua protegido.
+        ja_no_mapa = sorted(
+            (a for a in layout.entries if a != "0" and a not in targets),
+            key=lambda s: (int(s) if s.isdigit() else 0, s),
+        )
+        targets.extend(ja_no_mapa)
     changes: dict[str, dict[str, str]] = {}
     replacements: dict[int, str] = {}
     new_entries: list[str] = []
@@ -875,6 +891,11 @@ def lock_games_to_pinned_proton(
     *"ele e todo o resto de agora em diante."* Sem ele, a guarda `preservado`
     continua valendo, e ela é o padrão da função de propósito: quem chamar sem
     pedir não atropela ninguém.
+
+    E ele alcança a entrada ÓRFÃ: a escolha que ficou no `CompatToolMapping`
+    de um jogo que não está mais instalado. `appids` vem de
+    `list_installed_appids`, então a primeira corrida de `--todos` deixou três
+    de fora — e são justamente as que a Steam vai ler quando ela reinstalar.
 
     Retorna ``{"status": "locked"|"noop"|"recusado"|"erro", "reason": …,
     "vdf": …, "changes": {...}, "backup": …}``. O registro (estado local em

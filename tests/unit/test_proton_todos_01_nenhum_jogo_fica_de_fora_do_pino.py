@@ -253,3 +253,96 @@ class TestOCaminhoDaFlag:
             "o padrão deixou de preservar: alguém grudou o `todos` em True"
         )
         assert vdf.read_text(encoding="utf-8") == antes
+
+
+# ---------------------------------------------------------------------------
+# 5 — A ENTRADA ÓRFÃ (o que a primeira corrida de `--todos` deixou de fora)
+# ---------------------------------------------------------------------------
+#
+# MEDIDO EM 17/09/2026, com o install já rodado e `lock: noop (ja_travado)` na
+# saída: das 29 entradas do `CompatToolMapping` dela, TRÊS continuaram fora do
+# pino — duas em `proton_11` e uma no `GE-Proton10-34`. Nenhuma delas é escolha
+# preservada: elas ficaram de fora porque `appids` nasce de
+# `list_installed_appids`, e os três jogos **não estão instalados**.
+#
+# A escolha velha, porém, continua no mapa. Quando ela reinstalar, é ELA que a
+# Steam lê — e o jogo nasce fora do pino, em silêncio, que é exatamente o
+# defeito que a ordem dela nomeia. "De agora em diante" não é só o jogo NOVO:
+# é também o jogo que VOLTA.
+class TestAEntradaOrfa:
+    """O jogo desinstalado cuja escolha ficou no `config.vdf`."""
+
+    def test_com_todos_a_entrada_orfa_tambem_migra(self) -> None:
+        """A cena medida: o alvo não está em `appids` porque não está instalado."""
+        original = _vdf({"0": PINO, "1245620": "proton_11", "2369580": "GE-Proton10-34"})
+
+        novo, mudancas = proton_pin.build_compat_tool_mapping(
+            original,
+            tool_name=PINO,
+            appids=[],  # nada instalado — é o que `list_installed_appids` devolveu
+            pinos_nossos=(PINO,),
+            atropelar_escolha_dela=True,
+        )
+
+        nomes = _nomes(novo)
+        assert nomes["1245620"] == PINO, (
+            "a entrada órfã continuou no `proton_11`: o `--todos` só olhou os "
+            "appids passados, e o jogo volta fora do pino quando for reinstalado"
+        )
+        assert nomes["2369580"] == PINO
+        assert mudancas["1245620"]["previous_name"] == "proton_11", (
+            "o caminho de volta some: sem `previous_name` o `--unlock` não "
+            "devolve a órfã ao que era"
+        )
+
+    def test_sem_todos_a_orfa_nao_e_tocada(self) -> None:
+        """A MORDIDA do outro lado — e ela prova que o alcance é da FLAG.
+
+        Sem `todos`, a entrada que não está em `appids` não é sequer mirada: o
+        arquivo tem de sair byte a byte igual.
+        """
+        original = _vdf({"0": PINO, "1245620": "proton_11"})
+
+        novo, mudancas = proton_pin.build_compat_tool_mapping(
+            original, tool_name=PINO, appids=[], pinos_nossos=(PINO,),
+        )
+        assert novo == original, "o padrão passou a mexer em entrada não mirada"
+        assert mudancas == {}
+
+    def test_o_lock_inteiro_alcanca_a_orfa(self, tmp_path: pathlib.Path) -> None:
+        """Fim a fim pela função pública — o CAMINHO, não o método.
+
+        É a mesma lição de `TestOCaminhoDaFlag`: a régua que chama só
+        `build_compat_tool_mapping` não vê o repasse se perder no meio.
+        """
+        vdf = tmp_path / "config.vdf"
+        vdf.write_text(_vdf({"0": PINO, "1245620": "proton_11"}), encoding="utf-8")
+
+        r = proton_pin.lock_games_to_pinned_proton(
+            tool_name=PINO,
+            appids=[],
+            config_vdf=vdf,
+            state_path=tmp_path / "estado.json",
+            todos=True,
+        )
+        assert r["status"] in ("locked", "noop"), r
+        assert _nomes(vdf.read_text(encoding="utf-8"))["1245620"] == PINO, (
+            "o `todos=True` não alcançou a órfã pelo caminho de produção"
+        )
+
+    def test_a_orfa_nao_inventa_entrada(self, tmp_path: pathlib.Path) -> None:
+        """`--todos` alcança o que JÁ ESTÁ no mapa — nunca cria jogo do nada.
+
+        Sem esta régua, uma cura que enfiasse todos os appids conhecidos no
+        arquivo passaria despercebida, e o `config.vdf` dela cresceria com
+        entradas para jogos que ela nunca abriu.
+        """
+        original = _vdf({"0": PINO, "111": "proton_11"})
+        novo, _ = proton_pin.build_compat_tool_mapping(
+            original, tool_name=PINO, appids=[], pinos_nossos=(PINO,),
+            atropelar_escolha_dela=True,
+        )
+        assert set(_nomes(novo)) == {"0", "111"}, (
+            "o `--todos` inventou entrada: ele só pode alcançar quem já está "
+            "no `CompatToolMapping`"
+        )
