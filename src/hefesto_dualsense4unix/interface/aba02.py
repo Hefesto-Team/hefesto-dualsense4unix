@@ -4137,7 +4137,7 @@ def _conferir(doc):
     #    do canal ficou, e desde 17/09 ele é um chip.
     #
     #    FATO SUBSTITUÍDO — 17/09/2026. Esta régua dizia *"o estado do
-    #    alto-falante voltou ao rótulo"* e media `"Acordado"` com A maiúsculo,
+    #    alto-falante voltou ao rótulo"* e comparava com `"Acordado"`, de A maiúsculo,
     #    enquanto o gerador nunca escreveu senão minúsculo: ela estava VERDE
     #    com o estado no rótulo desde que nasceu, e continuaria verde depois de
     #    qualquer mudança nele. Duas coisas erradas numa linha — a palavra
