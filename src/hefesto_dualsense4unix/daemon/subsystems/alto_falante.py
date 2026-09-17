@@ -191,20 +191,117 @@ class GerenciadorDeNosDeSom:
         from hefesto_dualsense4unix.integrations.alto_falante_bt import (
             SinkVirtualPipeWire,
             descricao_do_alto_falante,
-            rota_do_no,
         )
 
         return SinkVirtualPipeWire(
             uniq=uniq,
             descricao=descricao_do_alto_falante(uniq),
-            rota=rota_do_no(
-                uniq,
-                transporte,
-                mesa,
-                fonte=self._fonte_do_no(uniq),
-                ponte_do_radio=self._ponte_do_radio(uniq),
-            ),
+            rota=self._rota_de_agora(uniq, transporte, mesa),
         )
+
+    def _rota_de_agora(self, uniq: str, transporte: str, mesa: tuple[str, ...]) -> Any:
+        """A rota que este controle teria se o nó nascesse AGORA.
+
+        Um lugar só para a pergunta, porque ela tem DOIS chamadores desde
+        SOM-JUNTO-01: :meth:`_construir`, para o nó que nasce, e
+        :meth:`_reafinar`, para o que já está de pé. Duas cópias divergiriam no
+        dia em que alguém acrescentasse um ingrediente a uma delas — e a que
+        ficasse para trás seria justamente a do nó vivo, que é a que some sem
+        sintoma.
+        """
+        from hefesto_dualsense4unix.integrations.alto_falante_bt import rota_do_no
+
+        return rota_do_no(
+            uniq,
+            transporte,
+            mesa,
+            fonte=self._fonte_do_no(uniq),
+            ponte_do_radio=self._ponte_do_radio(uniq),
+        )
+
+    # -----------------------------------------------------------------
+    # SOM-JUNTO-01 (17/09/2026) — a escolha dela chega ao nó que JÁ ESTÁ DE PÉ
+    # -----------------------------------------------------------------
+    # A queixa dela: *"o som se eu clicar em um dos 3 botões ele tem que sair o
+    # som via canal de audio externo do controle"*.  # (noqa-acento): a digitação é dela
+    #
+    # Dos três botões do card Alto-falante, o do meio — «No
+    # controle e na TV» — grava `speaker.fonte="mix"` no perfil e NUNCA chegava
+    # ao aparelho: a fonte só era resolvida ao CONSTRUIR o nó, e a varredura
+    # fechava a porta antes de perguntar qualquer coisa (`if uniq in self._nos:
+    # continue`). Medido com quatro varreduras trocando a fonte no meio: uma
+    # construção, nó vivo em `sfx`, perfil em `mix`, zero `module-loopback`.
+    #
+    # O QUE NÃO SE PODE FAZER PARA CURAR ISSO, e é decisão dela:
+    # `D-0809-O-NO-DE-SOM-POR-CONTROLE-VIVE-SEMPRE` proíbe derrubar o nó por
+    # varredura — o jogo escolheu `hefesto_som_<hex6>`, e tirá-lo do servidor
+    # tira o dispositivo debaixo dele. Por isso a cura NÃO reconstrói o nó:
+    # `SinkVirtualPipeWire.religar` troca só os `module-loopback`, e o
+    # `module-null-sink` fica com o mesmo id e o mesmo nome.
+
+    def _reafinar(
+        self, uniq: str, no: Any, transporte: str, mesa: tuple[str, ...]
+    ) -> None:
+        """A rota do nó VIVO passa a ser a de agora — e o nó não sai do lugar.
+
+        **O QUE ISTO CUSTA, medido e escrito para ninguém se assustar depois:**
+        um :func:`rota_do_no` por nó de pé, por varredura. No cabo isso é um
+        ``pactl list sinks short`` (mais o longo, quando há placa de DualSense
+        na lista) e, em ``mix``, um ``pactl get-default-sink``. Com a mesa de
+        quatro cheia e :data:`RECONCILIA_S` em 5 s, são menos de um subprocesso
+        por segundo. **Não é a tempestade de syscalls do mapa de motores do
+        `gamepad.py`**, e o preço de não pagá-lo é a escolha dela presa até o
+        daemon reiniciar, que é o defeito que esta sprint fechou.
+
+        O que NÃO se lê aqui é o perfil: a fonte vem do cache por
+        ``(nome, mtime)`` de :meth:`AltoFalanteSubsystem._fontes_do_perfil`.
+        """
+        religar = getattr(no, "religar", None)
+        if self._fabrica is not None or not callable(religar):
+            # Com fábrica injetada o dono do nó é quem a injetou, e perguntar
+            # `rota_do_no` aqui mandaria um `pactl` de verdade para a máquina
+            # de quem roda a suíte.
+            return
+        try:
+            rota = self._rota_de_agora(uniq, transporte, mesa)
+        except Exception:  # nunca derruba a varredura
+            logger.debug("som_rota_de_agora_ilegivel", uniq=uniq, exc_info=True)
+            return
+        if not self._vale_religar(uniq, rota):
+            return
+        try:
+            religar(rota)
+        except Exception:  # nunca derruba a varredura
+            logger.debug("som_religacao_falhou", uniq=uniq, exc_info=True)
+
+    def _vale_religar(self, uniq: str, rota: Any) -> bool:
+        """Esta rota nova merece encostar num nó que está tocando?
+
+        DUAS recusas, e cada uma é um jeito de a varredura estragar o que
+        funciona:
+
+        * **perder a rota nunca desliga o que está ligado.** ``tem_rota=False``
+          é *"agora não sei para onde"* — o servidor em recuo, a placa que
+          ainda não enumerou, a ponte que caiu — e responder a isso arrancando
+          o ``module-loopback`` é trocar um silêncio de cinco segundos por um
+          permanente. Quando souber de novo, a assinatura volta a bater e nada
+          acontece;
+        * **o nó nunca vira alvo de si mesmo.** ``sink_do_controle`` devolve o
+          PRÓPRIO ``hefesto_som_<hex6>`` como recuo quando não acha placa da
+          Sony — e o nó, estando VIVO, aparece nessa lista. Sem esta recusa a
+          varredura montaria ``source=X.monitor sink=X``, e pior: a assinatura
+          passaria a depender de o nó estar de pé, que é a receita exata do nó
+          que renasce a cada varredura.
+        """
+        from hefesto_dualsense4unix.integrations.alto_falante_bt import nome_do_sink
+
+        if rota is None or not getattr(rota, "tem_rota", False):
+            return False
+        alvo = str(getattr(rota, "sink", "") or "")
+        if alvo and alvo == nome_do_sink(uniq):
+            logger.debug("som_rota_para_si_mesma", uniq=uniq, sink=alvo)
+            return False
+        return True
 
     def _ponte_do_radio(self, uniq: str) -> Any:
         """O callable que diz se a ponte DESTE controle está no ar — ou `None`.
@@ -249,6 +346,12 @@ class GerenciadorDeNosDeSom:
         exatamente o defeito de "a rota some debaixo do jogo", só que causado
         por nós.
 
+        **E QUEM JÁ ESTÁ DE PÉ TEM A ROTA REAFINADA — SOM-JUNTO-01.** O nó não
+        renasce; o que vai e volta é a rota, por
+        :meth:`~integrations.alto_falante_bt.SinkVirtualPipeWire.religar`.
+        Rota de assinatura igual não custa um ``pactl``, e é por isso que esta
+        varredura pode rodar de 5 em 5 s sem mexer em nada.
+
         Aceita ``str`` (só o ``uniq``) e :class:`ControleNaLista` (o ``uniq``
         **e** o transporte). A segunda forma é a que resolve rota; a primeira
         sobrevive porque as réguas de ciclo de vida a usam, e trocá-las por
@@ -269,9 +372,16 @@ class GerenciadorDeNosDeSom:
             if uniq not in alvos:
                 self._derrubar(uniq)
         for uniq in alvos:
+            transporte = vistos[uniq] or TRANSPORTE_CABO
             if uniq in self._nos:
+                # **NÃO É MAIS UM `continue` SECO — SOM-JUNTO-01, 17/09/2026.**
+                # Esta linha fechava a porta antes de perguntar qualquer coisa,
+                # e era ela que prendia a escolha dela no disco: a fonte só era
+                # resolvida ao CONSTRUIR, e o nó nunca renascia. O nó continua
+                # sem renascer — quem vai e volta é a ROTA.
+                self._reafinar(uniq, self._nos[uniq], transporte, mesa)
                 continue
-            no = self._construir(uniq, vistos[uniq] or TRANSPORTE_CABO, mesa)
+            no = self._construir(uniq, transporte, mesa)
             # SEM ROTA, SEM NÓ — e a razão está na invariante 4 de
             # `app/audio_saida.py`: *"um `module-null-sink` sozinho seria
             # exatamente o sink que aceita o áudio e o joga fora"*. Publicar

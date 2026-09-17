@@ -32,8 +32,8 @@ O QUE ESTE ARQUIVO TRAVA
 2. quem não declarou fica com o padrão — `None` é *"sem opinião"*, não `sfx`;
 3. a grafia do `uniq` casa: o sysfs dá `aa:bb:…` e o perfil guarda `aabb…`;
 4. o `mix` de um NÃO vira `mix` do vizinho — é o «sem impactar os demais»;
-5. o perfil não é relido a cada varredura, e a escolha dela vale na varredura
-   seguinte ao "Salvar" (cache por `(nome, mtime)`);
+5. o perfil não é relido a cada varredura, e a escolha dela vale — **no NÓ
+   VIVO** — na varredura seguinte ao "Salvar" (cache por `(nome, mtime)`);
 6. e o `start()` de produção injeta o callable — sem isso nada acima existe.
 
 A MORDIDA: tire `fonte_por_controle=` do `start()` e o teste 6 reprova; troque
@@ -50,11 +50,13 @@ from typing import Any
 import pytest
 
 from hefesto_dualsense4unix.daemon.subsystems import alto_falante as mod
+from hefesto_dualsense4unix.integrations import alto_falante_bt as som
 from hefesto_dualsense4unix.integrations.alto_falante_bt import (
     FONTE_MIX,
     FONTE_PADRAO,
     FONTE_SFX,
 )
+from tests.unit import bancada_do_som_junto as bancada
 
 #: MACs FORJADOS, da faixa sintética que o portão de fixtures permite.
 _P1 = "aa:bb:cc:00:00:b1"
@@ -187,34 +189,50 @@ def test_o_perfil_nao_e_relido_a_cada_varredura(
 
 
 def test_a_escolha_dela_vale_na_varredura_seguinte(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """O outro lado do cache: gravar o perfil TEM de chegar ao nó.
+    """O outro lado do cache: gravar o perfil TEM de chegar ao NÓ VIVO.
 
     Um cache que nunca invalida é pior que ler sempre — a escolha dela ficaria
     presa até o daemon reiniciar, que é o defeito-mãe desta casa (*a escolha
     gravada no disco e nenhum efeito na mesa*).
+
+    **ESTA RÉGUA ERA FALSA, E FOI CORRIGIDA NA SOM-JUNTO-01 (17/09/2026).**
+    Ela prometia no docstring exatamente o que está escrito acima e olhava o
+    CACHE — a única asserção era
+    ``sub._fonte_do_controle(_P1) == FONTE_MIX``. O cache invalidava certinho,
+    o nó continuava com a fonte de antes, e ela passava: a escolha dela morria
+    entre o cache e o `pactl`, no `if uniq in self._nos: continue` da
+    varredura. Medido: com a cura arrancada, a versão antiga desta régua fica
+    VERDE. *Uma régua que ocupa o lugar da que faltava é pior que régua
+    nenhuma.*
+
+    Agora ela mede o ``module-loopback`` que ficou CARREGADO. A bateria inteira
+    do nó vivo — o nó que não renasce, a estabilidade da comparação, as duas
+    recusas — está em ``test_som_junto_01_a_fonte_chega_ao_no_vivo.py``.
+
+    MORDIDA: troque `self._reafinar(...)` por um `continue` seco em
+    `GerenciadorDeNosDeSom.reconciliar` e esta régua reprova.
     """
-    from hefesto_dualsense4unix.profiles.loader import profiles_dir
+    pactl = bancada.Pactl()
+    monkeypatch.setattr(som, "_rodar", pactl)
 
-    nome = _perfil_com_fontes(tmp_path, {_P1: FONTE_SFX})
-    sub = _subsystem(nome)
-    assert sub._fonte_do_controle(_P1) == FONTE_SFX
-
-    alvo = Path(profiles_dir(ensure=True)) / f"{nome}.json"
-    corpo = json.loads(alvo.read_text(encoding="utf-8"))
-    corpo["controllers"][mod._uniq_de_perfil(_P1)]["speaker"]["fonte"] = FONTE_MIX
-    alvo.write_text(json.dumps(corpo), encoding="utf-8")
-    # O carimbo é `mtime_ns`; duas escritas no mesmo nanossegundo não existem
-    # nesta máquina, mas a régua não pode depender disso.
-    import os
-
-    agora = alvo.stat().st_mtime_ns + 1_000_000
-    os.utime(alvo, ns=(agora, agora))
-
-    assert sub._fonte_do_controle(_P1) == FONTE_MIX, (
-        "ela salvou e o nó continuou com a fonte de antes"
+    nome = bancada.escrever_perfil({_P1: FONTE_SFX})
+    sub, ger = bancada.subsystem_e_gerenciador(
+        nome, ponte_do_radio_por_controle=lambda _uniq: (lambda: True)
     )
+    ger.reconciliar([bancada.radio(_P1)])
+    no = ger.nos[_P1]
+    assert pactl.loopbacks == [], "o nó nasceu com o mix sem ela ter pedido"
+
+    bancada.ela_clica(_P1, FONTE_MIX)
+    ger.reconciliar([bancada.radio(_P1)])
+
+    assert pactl.loopbacks == [(f"{bancada.HDMI}.monitor", no.nome)], (
+        "ela salvou e o nó VIVO continuou com a fonte de antes — "
+        f"loopbacks de pé: {pactl.loopbacks}"
+    )
+    assert sub._fonte_do_controle(_P1) == FONTE_MIX
 
 
 def test_o_gerenciador_de_producao_recebe_a_fonte_por_controle() -> None:
