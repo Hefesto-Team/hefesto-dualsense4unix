@@ -1650,6 +1650,39 @@ class ProfileManager:
         O `volume` atravessa dos dois jeitos e sempre atravessou: ele é ganho de
         captura, não mexe no LED nem tira o botão físico de ninguém.
         """
+        lido = self._mic_do_perfil_ativo(uniq)
+        if lido is None:
+            return None
+        profile, global_, override = lido
+        estado = None
+        if global_ is not None:
+            estado = self.apply_mic(profile, origin="replug", uniq=uniq)
+        if override is not None:
+            vista = profile.model_copy(update={"mic": override})
+            estado = self.apply_mic(vista, origin="replug", uniq=uniq)
+        return estado
+
+    def _mic_do_perfil_ativo(
+        self, uniq: str | None = None
+    ) -> tuple[Any, Any, Any] | None:
+        """`(perfil, mic_global, mic_da_peça)` do perfil ATIVO, ou `None`.
+
+        UM DONO SÓ PARA A RESOLUÇÃO, e é por isso que ela saiu de dentro de
+        `reapply_mic_on_connect` em 17/09/2026: o nascimento do microfone
+        (`daemon/subsystems/hotkey.nascer_no_ar`) precisa da MESMA pergunta —
+        *"o perfil ativo diz alguma coisa sobre o microfone desta peça?"* — e
+        uma segunda escrita dela seria a terceira cópia do mapa de
+        `controllers`, que é a família de defeito que esta casa já pagou onze
+        vezes. Aqui não há política nenhuma: a política do `replug` continua
+        inteira em `apply_mic`, e a do nascimento em `o_perfil_pede_silencio`.
+
+        `None` = não há perfil ativo, ele não carrega, ou ele não tem opinião
+        sobre microfone (nem global, nem da peça).
+
+        O `norm_mac` é o MESMO que o esquema usa para canonizar as chaves de
+        `controllers` (schema.py): o mapa guarda 12 hex, e `aa:bb:…` não bate
+        com `aabb…` — sem ele a busca falha em SILÊNCIO.
+        """
         nome = getattr(getattr(self, "store", None), "active_profile", None)
         if not nome:
             return None
@@ -1670,13 +1703,52 @@ class ProfileManager:
         global_ = getattr(profile, "mic", None)
         if override is None and global_ is None:
             return None
-        estado = None
-        if global_ is not None:
-            estado = self.apply_mic(profile, origin="replug", uniq=uniq)
-        if override is not None:
-            vista = profile.model_copy(update={"mic": override})
-            estado = self.apply_mic(vista, origin="replug", uniq=uniq)
-        return estado
+        return profile, global_, override
+
+    def o_perfil_pede_silencio(self, uniq: str | None = None) -> bool:
+        """O perfil ATIVO manda calar o microfone DESTA peça? (NASCE-LIGADO-MIC-01)
+
+        Existe para UMA pergunta, a do nascimento: *"posso pôr este microfone
+        no ar sem passar por cima de um silêncio que ela pediu?"*.
+
+        **POR QUE O NASCIMENTO PERGUNTA EM VEZ DE CONFIAR NA ORDEM.** O
+        `reapply_mic_on_connect` acima também carrega o `muted: true` do perfil
+        para o aparelho, e bastaria correr ANTES do nascimento para o byte
+        ficar certo. Só que os dois lados não escrevem a mesma camada: o
+        `replug` escreve o `common[9]` do FIRMWARE, e o nascimento levanta o
+        CANAL e o `0x32` do rádio — deixar a ordem decidir entregaria o canal
+        no ar de quem pediu silêncio, que é o defeito da SOM-MIC-REPLUG-01
+        (*"o silêncio que o produto promete e não entrega"*) voltando pela
+        porta da frente. E a confirmação do byte leva ~550 ms: ler o aparelho
+        logo depois do replug devolveria o valor VELHO. O perfil é a única
+        fonte que responde na hora.
+
+        A PRECEDÊNCIA É A DE `reapply_mic_on_connect`: o global escreve e a
+        peça reescreve por cima, então a peça vence quando diz alguma coisa.
+        `muted=None` é *"não tenho opinião"* e NÃO é silêncio — quem não diz
+        nada nasce ligado, que é a ordem dela de 17/09/2026: *"os jogos e
+        perfis tem que iniciar com todas as features ativadas por default."*
+        (noqa-acento: citação dela)
+
+        Nunca levanta: um perfil que não carrega vale como *"não pediu
+        silêncio"*, e o nascimento segue. O lado inseguro seria o contrário —
+        a conexão de um controle virando traceback no laço do daemon.
+        """
+        try:
+            lido = self._mic_do_perfil_ativo(uniq)
+        except Exception:  # pragma: no cover - defensivo
+            logger.debug("profile_mic_silencio_falhou", exc_info=True)
+            return False
+        if lido is None:
+            return False
+        _perfil, global_, override = lido
+        for secao in (override, global_):
+            if secao is None:
+                continue
+            mudo = getattr(secao, "muted", None)
+            if mudo is not None:
+                return bool(mudo)
+        return False
 
     def select_for_window(self, window_info: dict[str, object]) -> Profile | None:
         """Escolhe o perfil MAIS ESPECÍFICO que case com a janela.

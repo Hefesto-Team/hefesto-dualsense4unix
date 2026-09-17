@@ -18,7 +18,7 @@ aqui NÃO o liga**: a lista e o `run()` têm de andar juntos, e o teste
 `tests/unit/test_bt_mic_subsystem_registrado.py` trava exatamente isso.
 
 SÃO **TRÊS** LUGARES, E ESTE AVISO DIZIA DOIS (medido em 07/09/2026). O
-desligamento não passa pela lista tampouco: `daemon/connection.py:1368,1386`
+desligamento não passa pela lista tampouco: `daemon/connection.py:1460,1488`
 chama `_stop_bt_mic` e `_stop_metrics` **pelo nome**. Quem seguir a receita de
 duas metades sobe o subsystem e nunca o para — e, no caso do som, o nó fica na
 lista de saída dela depois de o daemon morrer. A receita completa é: a lista
@@ -50,7 +50,7 @@ A receita completa das TRÊS pontas foi cumprida: a lista aqui,
 
 POR QUE `HotkeySubsystem` NÃO ESTÁ NA LISTA — e não é esquecimento:
 
-* `HotkeySubsystem` (`hotkey.py:2726`) é uma **lápide, não um órfão**: os dois
+* `HotkeySubsystem` (`hotkey.py:3015`) é uma **lápide, não um órfão**: os dois
   métodos são `noop` declarados, e a hotkey já está viva no `run()` desde
   sempre, por FUNÇÃO — `lifecycle.py:972` (`start_hotkey_manager`) e `:974`
   (`start_mic_hotkey`). Registrá-lo não acende nada; só acrescenta duas linhas

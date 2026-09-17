@@ -214,6 +214,45 @@ async def reapply_mic_after_connect(
         logger.info("mic_reaplicado_no_connect", estado=estado, uniq=uniq)
 
 
+def nascer_o_microfone_ao_conectar(
+    daemon: DaemonProtocol, *, uniq: str | None = None
+) -> asyncio.Task[bool] | None:
+    """O microfone daquela peça NASCE NO AR no (re)connect (NASCE-LIGADO-MIC-01).
+
+    A terceira irmã das duas acima, e ela fecha o outro lado do mesmo estado.
+    A de cima devolve o SILÊNCIO que ela pediu; esta devolve o microfone que
+    ela nunca deveria ter precisado pedir:
+
+        *"segue por default mudo. eu preciso lembrar de clicar no icon do mic
+        pra ativar e ele ser reconhecido. isso deveria ta  # (noqa-acento) dela
+        ativado por padrao"*  # (noqa-acento) dela, 17/09/2026
+
+    **AQUI, PELA MESMA RAZÃO DAS OUTRAS DUAS:** este é o ponto UNIVERSAL. Os
+    três caminhos de conexão do daemon passam por `reaplicar_som_em_todos_os_alvos`
+    ou por `anunciar_bordas_por_alvo` — o primeiro connect, o hotplug e o alvo
+    que nasce —, então a regra da casa de que a cura cobre TODOS os chamadores
+    sai de graça, sem um `if` de transporte e sem um ramo por jogo.
+
+    **NÃO ESPERA**, e isso é medição: eleger custa `pactl` mais até três
+    segundos de espera pela source da ponte, e esse orçamento dentro de
+    `connect_with_retry` seria a partida do daemon parada atrás do microfone.
+    `hotkey.agendar_o_nascimento_do_microfone` põe o ato num fio próprio e
+    devolve a tarefa — que este caminho não espera, e os testes esperam.
+
+    Toda a política mora em `hotkey.nascer_no_ar`: as três escritas do sistema,
+    a eleição só com a mesa sem dono, e as duas perguntas que fazem o silêncio
+    dela vencer. Aqui não há regra nenhuma a repetir.
+
+    O import é PREGUIÇOSO de propósito: `daemon/subsystems/hotkey` é a camada
+    de cima e importar daqui no topo faria a conexão depender dela para subir.
+    """
+    from hefesto_dualsense4unix.daemon.subsystems.hotkey import (
+        agendar_o_nascimento_do_microfone,
+    )
+
+    return agendar_o_nascimento_do_microfone(daemon, uniq=uniq)
+
+
 def alvos_conectados_de(daemon: DaemonProtocol) -> dict[str, str | None] | None:
     """`{key: uniq}` dos controles conectados AGORA, ou None se ninguém sabe.
 
@@ -274,6 +313,9 @@ async def reaplicar_som_em_todos_os_alvos(daemon: DaemonProtocol) -> None:
         # alto-falante falhar não pode custar o mudo do microfone dela.
         with contextlib.suppress(Exception):
             await reapply_mic_after_connect(daemon, uniq=uniq)
+        # NASCE-LIGADO-MIC-01: e o terceiro `suppress`, pela mesma razão.
+        with contextlib.suppress(Exception):
+            nascer_o_microfone_ao_conectar(daemon, uniq=uniq)
 
 
 async def anunciar_bordas_por_alvo(
@@ -315,6 +357,8 @@ async def anunciar_bordas_por_alvo(
             await reapply_speaker_after_connect(daemon, uniq=agora[key])
         with contextlib.suppress(Exception):
             await reapply_mic_after_connect(daemon, uniq=agora[key])
+        with contextlib.suppress(Exception):
+            nascer_o_microfone_ao_conectar(daemon, uniq=agora[key])
 
 
 async def restore_last_profile(daemon: DaemonProtocol) -> None:

@@ -26,11 +26,19 @@ NÃO muda** — o esquema continua `Literal["economia", "balanceado", "max",
 já está gravado.
 
 **2. O microfone fica FORA do perfil.** Ele é o único que **capta a sala**, e
-o mapa de canais registra que ele nasce desligado por privacidade **e** banda.
-Perfil que liga microfone sozinho transforma uma escolha de desempenho numa
-escolha de privacidade feita pelas costas. O que esta seção mostra dele é o
-**preço** (:func:`plano_de_radio.frase_do_preco_por_controle`) — o número que
-a `D-O-MIC-LIGADO-VALE-NO-RADIO` (aberta) precisa ter na mesa.
+um perfil de DESEMPENHO que o ligasse ou o calasse transformaria uma escolha
+de bateria numa escolha de privacidade feita pelas costas. A decisão é dela
+(`D-PERFIL-DE-DESEMPENHO`, 24/08/2026) e continua inteira.
+
+**A RAZÃO CITADA CADUCOU — NASCE-LIGADO-MIC-01, 17/09/2026.** Aqui se lia que
+*"o mapa de canais registra que ele nasce desligado por privacidade e banda"*.
+Ele nasce LIGADO desde 17/09: a chegada do controle põe o microfone no ar
+(`daemon/subsystems/hotkey.nascer_no_ar`), que é a `D-O-MIC-LIGADO-VALE-NO-RADIO`
+(decisoes-dela.csv id 38) finalmente implementada. **A decisão de 24/08 não
+depende disso** — ela é sobre o perfil não ser o dono do microfone, e isso vale
+igual com o microfone nascendo ligado. O que esta seção mostra dele continua
+sendo o **preço** (:func:`plano_de_radio.frase_do_preco_por_controle`), que é a
+condição que ela mesma pôs: *"LIGADO SEMPRE… COM A TELA DIZENDO O PREÇO"*.
 
 **3. A tabela tem UMA linha com ponto de aplicação, e diz as outras quatro.**
 :data:`LINHAS_DO_TETO` é o dono único da lista, e :func:`alcance_de_hoje`

@@ -413,8 +413,15 @@ class EsperaPeloPS:
 #    independentes. Não existe chave de mesa inteira, e o daemon acompanha: o
 #    gate deixou de ser um `bool` e passou a ser um CONJUNTO de `uniq`
 #    (`daemon/subsystems/bt_mic.py`, que explica por que o `bool` não servia);
-# 2. **nasce desligado**, sempre. Ausência é desligado, e é por isso que
-#    desligar volta a "não sei" em vez de gravar um `false`;
+# 2. **a DECLARAÇÃO nasce ausente**, sempre. Ausência deixa a ponte no chão, e
+#    é por isso que desligar volta a "não sei" em vez de gravar um `false`.
+#    PRECISÃO DE 17/09/2026 (NASCE-LIGADO-MIC-01): esta regra dizia "nasce
+#    desligado", e a frase ficou ambígua quando o MICROFONE passou a nascer
+#    LIGADO na chegada do controle (`daemon/subsystems/hotkey.nascer_no_ar`,
+#    a `D-O-MIC-LIGADO-VALE-NO-RADIO` implementada). São DOIS eixos: o
+#    interruptor deste card é a declaração, que continua nascendo ausente —
+#    e tem de continuar, porque é `None` que carrega o gesto de DESLIGAR dela;
+#    o padrão do produto é o nascimento, e ele é LIGADO;
 # 3. **sempre visível, e acionável nos DOIS transportes** — REESCRITA em
 #    04/09/2026 (D-12). Ela dizia *"só acionável no rádio"*, e a queixa 15 dela
 #    <!-- noqa-acento: citação literal dela -->
