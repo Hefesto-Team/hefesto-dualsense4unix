@@ -60,10 +60,17 @@ def test_o_asset_real_do_repo_parseia_e_pina_a_versao_validada():
 
     16/09/2026: o pino subiu de `GE-Proton10-34` para `GE-Proton11-6-x86_64`,
     pela feature que a versão nova traz — o áudio do alto-falante do controle e
-    as haptics de voice-coil DENTRO do jogo (GE-Proton 11-4 fechou o casamento
-    do `ContainerId` com o MMDevice; o 11-6 refez o caminho pelo `dsound`). A
-    razão do pino não mudou: sem ele um upgrade automático de Proton pode
-    reintroduzir o controle duplicado do winebus.
+    as haptics de voice-coil DENTRO do jogo (o 11-4 "finalized … haptics,
+    controller-speaker audio, and hotplug handling"; o 11-6 "reworked …
+    audio/haptic routing, endpoint identity"). A razão do pino não mudou: sem
+    ele um upgrade automático de Proton pode reintroduzir o controle duplicado
+    do winebus.
+
+    CORREÇÃO DE FATO, 17/09/2026: esta docstring dizia que o 11-4 "fechou o
+    casamento do ContainerId com o MMDevice" e que o 11-6 "refez o caminho pelo
+    dsound". As notas de release do 11-4 ao 11-7 não dizem isso, e o dsound.dll
+    do pino velho tem os mesmos símbolos — ver
+    docs/protocol/proton-o-pino-desta-casa-e-a-subida-para-o-11-7.md, §7.1.
 
     O SUFIXO `-x86_64` FAZ PARTE DO NOME, e é a armadilha desta subida: a partir
     do 11-4 o release publica `GE-Proton11-N-x86_64.tar.gz`, a raiz do tarball é
