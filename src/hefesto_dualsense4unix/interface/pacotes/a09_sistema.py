@@ -1995,8 +1995,8 @@ def atualizar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     O QUE ELE FAZ DE VERDADE, medido no fonte do daemon em 05/09/2026, e é
     MENOS do que "recarregar a configuração" dá a entender: o clique manda
     `daemon.reload` **sem `config_overrides`**, então `overrides` chega `{}`
-    (`daemon/ipc_handlers.py:5509`) e `new_cfg = replace(self.daemon.config)` é
-    uma cópia de valor igual (`:5462`). Os dois ramos que reaplicariam mouse e
+    (`daemon/ipc_handlers.py:5753`) e `new_cfg = replace(self.daemon.config)` é
+    uma cópia de valor igual (`:5765`). Os dois ramos que reaplicariam mouse e
     teclado comparam `old` com `new` (`daemon/lifecycle.py:1353` e `:1361`) e
     **nunca disparam** — o registro sai com `keys_changed=[]` (`:1366-1370`).
     Duas coisas acontecem, e são estas: `lifecycle.py:1351-1352` derruba e sobe
@@ -2119,7 +2119,7 @@ def perfil_da_mesa(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     `ipc_bridge`. Não é uma segunda porta para o disco.
 
     E ELE PEGA NA HORA, sem reiniciar nada: o `_handle_machine_declare`
-    (`daemon/ipc_handlers.py:6760`) relê o `maquina.json` e **rebinda**
+    (`daemon/ipc_handlers.py:6789`) relê o `maquina.json` e **rebinda**
     `daemon._maquina`; o `_orcamento_declarado` (`core/rumble.py:167`) lê a
     fonte a cada pedido de vibração, e não uma cópia do boot. Está escrito lá
     com todas as letras: *"uma cópia feita no boot ficaria velha exatamente no
