@@ -419,6 +419,80 @@ def ponte_do_carimbo(carimbo: Any) -> Ponte | None:
     )
 
 
+def caminho_do_perfil(profile: Any) -> str | None:
+    """O CAMINHO que ESTE perfil declara — `None` é *"ele não declara nenhum"*.
+
+    SEM o ramo de queda para `mode.gamepad_flavor` que :func:`ponte_do_perfil`
+    tem. Lá a queda é certa e datada (*"nenhum perfil muda de degrau no dia da
+    cura"*); aqui ela seria a própria troca de vocabulário que esta função
+    existe para não deixar acontecer.
+
+    A ARMADILHA, e é por isso que ela não se vê a olho nu: os dois vocabulários
+    usam AS MESMAS DUAS PALAVRAS. `mode.caminho` vale ``"dualsense"``/``"xbox"``
+    e `mode.gamepad_flavor` também — só que o primeiro diz por qual CANAL o
+    controle chega e o segundo diz que par VID/PID o jogo VÊ. Trocar um pelo
+    outro não produz erro de tipo, não produz valor estranho, e produz um
+    alarme que afirma uma divergência inteira sobre nada.
+    """
+    mode = getattr(profile, "mode", None)
+    if mode is None or getattr(mode, "kind", None) != KIND_GAMEPAD:
+        return None
+    caminho = getattr(mode, "caminho", None)
+    if caminho in (MASCARA_DUALSENSE, MASCARA_XBOX):
+        return str(caminho)
+    return None
+
+
+def divergencia_com_o_carimbo(
+    profile: Any, carimbo: Ponte | None, *, na_allowlist: bool
+) -> tuple[str, str, str] | None:
+    """Em QUE termo o perfil discorda do carimbo — `(termo, perfil, gravado)`.
+
+    ``None`` quando não discordam, **ou quando não há o que comparar**, que é o
+    caso que esta função nasceu para separar.
+
+    O DEFEITO QUE ELA CURA, medido no journal dela em 17/09/2026 às 10:45:02:
+
+        ``ponte_confirmada_diverge_do_perfil ponte_do_perfil=gamepad/xbox
+        ponte_gravada=gamepad/dualsense``
+
+    Os dois lados daquela comparação falavam línguas diferentes. O lado do
+    perfil saía de :func:`ponte_do_perfil`, que lê `mode.caminho` e, **na falta
+    dele, cai para `mode.gamepad_flavor`** — a MÁSCARA. O lado gravado saía de
+    :func:`ponte_do_carimbo`, e o que o carimbo guarda em `gamepad_flavor`
+    desde MODO-DE-CONEXAO-01 (13/09/2026) é o CAMINHO: o único escritor,
+    `launch_env.tique_da_escada`, passa `gamepad_flavor=ponte.mascara` com a
+    `ponte` sendo o degrau ao vivo, que é um caminho.
+
+    Então um perfil SEM `caminho` — e o do PRAGMATA é um deles — tinha a
+    própria máscara comparada com o caminho carimbado, e o alarme disparava
+    sobre uma discordância que não existia. Pior: ele soava como o aviso mais
+    grave da casa e mandava quem lesse procurar defeito em lugar nenhum.
+
+    A REGRA, e ela é uma só: **só se compara termo com termo.** `kind` e
+    `steam_input` existem dos dois lados e são comparados como sempre. O termo
+    do meio só é comparado quando OS DOIS lados o declaram — perfil sem
+    `caminho` é silêncio sobre o canal, e silêncio não diverge de nada.
+    """
+    if carimbo is None:
+        return None
+    perfil = ponte_do_perfil(profile, na_allowlist=na_allowlist)
+    if perfil is None:
+        return None
+    if perfil.kind != carimbo.kind:
+        return ("kind", perfil.kind, carimbo.kind)
+    if perfil.steam_input != carimbo.steam_input:
+        return (
+            "steam_input",
+            "sim" if perfil.steam_input else "não",
+            "sim" if carimbo.steam_input else "não",
+        )
+    do_perfil = caminho_do_perfil(profile)
+    if do_perfil is not None and carimbo.mascara and do_perfil != carimbo.mascara:
+        return ("caminho", do_perfil, str(carimbo.mascara))
+    return None
+
+
 def proximo_degrau(
     *, ponte_atual: Ponte | None, confirmada: Ponte | None = None
 ) -> Degrau | None:

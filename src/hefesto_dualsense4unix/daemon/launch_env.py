@@ -1365,22 +1365,35 @@ def arm_launch_profile(
             "escada": comeco.motivo,
         }
 
-    if (
-        ponte_gravada is not None
-        and not veio_do_carimbo
-        and ponte_perfil is not None
-        and ponte_perfil != ponte_gravada
-    ):
-        # NÃO se resolve aqui: o perfil manda, e a discordância aparece inteira
-        # para quem tem a palavra (a aba de perfil, e ela). Resolver em silêncio
-        # é como o produto passa a discordar de si mesmo sem ninguém ver.
-        logger.warning(
-            "ponte_confirmada_diverge_do_perfil",
-            appid=appid,
-            profile=getattr(profile, "name", None),
-            ponte_do_perfil=ponte_perfil.chave,
-            ponte_gravada=ponte_gravada.chave,
+    # NÃO se resolve aqui: o perfil manda, e a discordância aparece inteira
+    # para quem tem a palavra (a aba de perfil, e ela). Resolver em silêncio
+    # é como o produto passa a discordar de si mesmo sem ninguém ver.
+    #
+    # CANAL-SEM-VOZ-01 (17/09/2026) — ESTE AVISO DIZIA A COISA ERRADA, e a
+    # conta estava aqui: ele comparava `ponte_perfil != ponte_gravada`, duas
+    # `Ponte` cujo termo do meio vinha de VOCABULÁRIOS DIFERENTES — um CAMINHO
+    # de um lado, uma MÁSCARA do outro. Era ele que saía no journal dela às
+    # 10:45:02 de 17/09 dizendo `ponte_do_perfil=gamepad/xbox` contra
+    # `ponte_gravada=gamepad/dualsense` sobre um perfil que não escolheu
+    # caminho nenhum. A conta mudou de lugar e ganhou dono:
+    # `ponte_escada.divergencia_com_o_carimbo`, onde a tradução entre os dois
+    # vocabulários já morava. O payload deixou de publicar uma chave de ponte
+    # inteira — que era a forma de misturar os dois sem ninguém ver — e passa a
+    # nomear O TERMO que divergiu.
+    if ponte_gravada is not None and not veio_do_carimbo:
+        discordancia = ponte_escada.divergencia_com_o_carimbo(
+            profile, ponte_gravada, na_allowlist=na_allowlist
         )
+        if discordancia is not None:
+            termo, do_perfil, gravado = discordancia
+            logger.warning(
+                "ponte_confirmada_diverge_do_perfil",
+                appid=appid,
+                profile=getattr(profile, "name", None),
+                termo=termo,
+                do_perfil=do_perfil,
+                gravado=gravado,
+            )
 
     applier = getattr(daemon, "apply_profile_mode", None)
     if not callable(applier):
@@ -2264,6 +2277,70 @@ def _write_atomic(path: Path, content: str) -> None:
     tmp.replace(path)
 
 
+def _jogadores_sem_imu(daemon: DaemonProtocol) -> list[str]:
+    """Quem está com o par «máscara DualSense + caminho Xbox» AGORA.
+
+    Nomeia, nunca só conta (WRAPPER-EM-TODOS-01): `"1"` é o primário, e os
+    demais são o `player_index` de cada vpad do co-op. O contágio leva os
+    quatro jogadores juntos porque o caminho é da SESSÃO, e um evento que
+    dissesse só «o P1» faria a mesa de quatro parecer um caso isolado.
+
+    SÓ LEITURA, e nunca levanta: este é um diagnóstico dentro de uma
+    materialização que não pode derrubar o start da emulação.
+    """
+    from hefesto_dualsense4unix.integrations.canal_sem_imu import canal_sem_imu_do_vpad
+
+    fora: list[str] = []
+    if canal_sem_imu_do_vpad(getattr(daemon, "_gamepad_device", None)):
+        fora.append("1")
+    coop = getattr(daemon, "_coop_manager", None)
+    jogadores = getattr(coop, "_players", None)
+    if isinstance(jogadores, dict):
+        for jogador in jogadores.values():
+            if not canal_sem_imu_do_vpad(getattr(jogador, "vpad", None)):
+                continue
+            indice = getattr(jogador, "player_index", None)
+            fora.append(str(indice) if isinstance(indice, int) else "?")
+    return fora
+
+
+def _avisar_canal_sem_imu(
+    daemon: DaemonProtocol, *, native: bool, enabled: bool
+) -> None:
+    """Registra `canal_sem_imu` no journal do launch. CANAL-SEM-VOZ-01.
+
+    Os gates são os mesmos do `dedup_broken` ao lado, e pela mesma razão: em
+    Modo Nativo o jogo fala com o DualSense físico (a IMU está no ar, e por
+    outro fio), e com a emulação desligada não há vpad sobre o que falar. Fora
+    esses dois, o evento sai sempre que o par estiver de pé — a borda de
+    materialização já é a transição, e é por isso que ele mora aqui e não no
+    `state_full` de 20 Hz, que viraria enxurrada.
+
+    `linhas` sai com as chaves do mapa, em ordem estável, porque é por elas que
+    se procura: `movimento.giroscopio.jogo` é greppável no mapa, na suíte e no
+    journal, e uma frase bonita não é.
+    """
+    if native or not enabled:
+        return
+    with contextlib.suppress(Exception):
+        from hefesto_dualsense4unix.integrations import canal_sem_imu as sem_imu
+        from hefesto_dualsense4unix.integrations.virtual_pad import CAMINHO_XBOX
+
+        jogadores = _jogadores_sem_imu(daemon)
+        if not jogadores:
+            return
+        linhas = sem_imu.chaves_fora_do_ar()
+        logger.warning(
+            sem_imu.EVENTO,
+            jogadores=jogadores,
+            mascara=sem_imu.MASCARA_QUE_PROMETE,
+            caminho=CAMINHO_XBOX,
+            backend="uinput",
+            quantas=len(linhas),
+            linhas=list(linhas),
+        )
+
+
 def materialize_launch_env(daemon: DaemonProtocol) -> None:
     """Regrava `default.env` + `steam_app_<appid>.env` com o estado REAL.
 
@@ -2293,6 +2370,22 @@ def materialize_launch_env(daemon: DaemonProtocol) -> None:
         dedup_ok, dedup_motivos = dedup_status(daemon)
         if not dedup_ok and not native and enabled and backends:
             logger.warning("dedup_broken", motivos=dedup_motivos, backends=backends)
+        # CANAL-SEM-VOZ-01 (17/09/2026): a amputação deixa de cair calada.
+        #
+        # EVENTO PRÓPRIO, DONO PRÓPRIO, e a separação é decisão DELA: o
+        # `dedup_broken` acima fala de DEGRADAÇÃO, e o uinput do caminho Xbox
+        # NÃO é degradação (PS-L3-MASCARA-01, 14/09/2026) — `dedup_status` o
+        # isenta desde então, e continua isentando. Pendurar esta voz naquele
+        # aviso reabriria uma decisão medida; decisão medida não se apaga.
+        #
+        # O QUE ELE DIZ QUE NINGUÉM DIZIA: com a máscara DualSense de pé, o
+        # jogo vê o par VID/PID da Sony por um canal `uinput` — e dez linhas do
+        # `docs/data/mapa-controles.csv` saem do ar juntas. O preço estava
+        # escrito desde 19/08 num COMENTÁRIO de `ponte_escada.py` (*"errar para
+        # Xbox custa as dez, e custa em silêncio"*), e em 17/09 ela jogou o
+        # PRAGMATA com controle por movimento e o controle não respondeu.
+        # As dez são LIDAS do mapa, nunca digitadas aqui.
+        _avisar_canal_sem_imu(daemon, native=native, enabled=enabled)
         # RUMBLE-SEM-DONO-01 (11/08/2026): o mesmo raciocínio do `dedup_broken`
         # acima — o aviso mora na BORDA de materialização, que é o único ponto
         # com o estado real da mesa, e não no state_full de 20 Hz. Sem vpad e
