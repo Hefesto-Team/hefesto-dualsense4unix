@@ -441,10 +441,38 @@ def _forca_da_coluna(overrides: dict[str, Any], uniq: str,
     `aa:bb:…` — que o loader só canoniza quando alguém o CARREGA. É o mesmo
     cuidado do `a08_conexoes._teto_do_controle`.
     """
+    politica, custom, _ = _forca_em_vigor(overrides, uniq, state)
+    return politica, custom
+
+
+def _forca_em_vigor(overrides: dict[str, Any], uniq: str,
+                    state: dict[str, Any]) -> tuple[str, Any, bool]:
+    """`(policy, custom_mult, é dela?)` — **o dono único de "qual degrau vale"**.
+
+    **NASCEU DA VIBRA-ACESA-01, 17/09/2026, e o defeito que ela fecha é de
+    DUPLICIDADE.** A mesma pergunta tinha duas bocas: `pacote_da_coluna`
+    repetia o desvio de :func:`_forca_propria` na própria linha em que montava a
+    coluna, e :func:`_forca_da_coluna` o montava de novo para o gesto. As duas
+    respondiam a mesma coisa por caminhos separados, e
+    :func:`_aplicar_a_forca` comparava UMA com a OUTRA — que é a forma clássica
+    desta casa de fabricar um buraco.
+
+    A TERCEIRA CASA DA TUPLA É O QUE FALTAVA À TELA: a precedência já era
+    conhecida, mas a PROCEDÊNCIA morria dentro da função. Quem pinta precisa
+    saber se aquele degrau é escolha dela para este controle ou herança do
+    ajuste geral — são coisas diferentes e tinham a mesma cara.
+
+    A REGRA É A DO PRODUTO, e continua sendo um campo só: override com `policy`
+    escrita vence; sem ela, herda o global. É o mesmo desvio de
+    `app/draft_config.effective_rumble_for` e de
+    `profiles/manager._controllers_to_rumble_scales`.
+    """
     propria = _forca_propria(overrides, uniq)
     if propria is not None:
-        return propria
-    return str(state.get("rumble_policy") or ""), state.get("rumble_mult_applied")
+        politica, custom = propria
+        return politica, custom, True
+    return (str(state.get("rumble_policy") or ""),
+            state.get("rumble_mult_applied"), False)
 
 
 def _pct_da_coluna(policy: str, custom: Any) -> dict[str, str]:
@@ -620,10 +648,7 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
         # da mesa — as quatro medições que derrubaram aquele campo estão em
         # :func:`_pct_da_coluna`, que é quem faz a conta para a coluna e para a
         # mesa (é dela que a coluna herda quando não tem opinião própria).
-        propria = _forca_propria(overrides, uniq)
-        politica, custom = (propria if propria is not None else
-                            (str(ctx.state.get("rumble_policy") or ""),
-                             ctx.state.get("rumble_mult_applied")))
+        politica, custom, propria = _forca_em_vigor(overrides, uniq, ctx.state)
         pct = _pct_da_coluna(politica, custom)
         barras = _barras_dos_motores(ctx.state, uniq)
         plano = {
@@ -704,13 +729,43 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
             # não é um dos quatro botões, é a barra — e o `classe` do pintor
             # apaga os quatro quando o valor não casa com nenhum
             # `data-hef-quando`, que é a resposta certa.
-            # E ELE SÓ ACENDE QUANDO A FORÇA É DESTA PEÇA — decisão [05] dela,
-            # 04/09/2026. Vazio quando a coluna HERDA: o alvo `classe` apaga os
-            # quatro, e o único degrau aceso na tela passa a ser o da LINHA DE
-            # MESA — que é, literalmente, o que o produto está usando aqui.
-            # Antes as duas coisas tinham a mesma cara, e ela não tinha como
-            # saber se aquele degrau era escolha dela ou herança.
-            "degrau": politica if propria is not None else "",
+            # ELE ACENDE SEMPRE — E ISTO SUBSTITUI A METADE DE 04/09 QUE FICOU
+            # SEM CONTRAPESO (VIBRA-ACESA-01, 17/09/2026).
+            #
+            # Aqui o degrau só saía quando a coluna tinha ajuste PRÓPRIO, e
+            # herdar emitia vazio. A decisão [05] dela estava escrita ao lado:
+            # *"a coluna sem ajuste próprio deixa de acender degrau e passa a
+            # apontar para essa linha"*. A
+            # LINHA era a de mesa, e ela foi apagada UM DIA DEPOIS, em 05/09,
+            # por outra decisão dela (*"não é pra ter mesa em nada da
+            # interface"*). O vazio ficou, o lugar para onde ele apontava não —
+            # e o alvo `classe` apaga os três botões.
+            #
+            # O QUE ELA VIU, 17/09/2026, com o DON'T SCREAM aberto (global
+            # `max`, zero override): *"o botão não tá ativo"*. Nenhum dos três
+            # aceso, e `150%` na coluna ao lado — a tela negando a força que a
+            # mão dela sentia.
+            #
+            # A PROCEDÊNCIA NÃO SE PERDE, e é o que a decisão [05] queria de
+            # verdade: ela sai no campo ao lado (`degrau-herdado`), e o botão
+            # herdado ganha uma marca própria em vez de ficar apagado. Herdado
+            # continua diferente de escolhido; o que deixou de existir é o
+            # "herdado = nada na tela".
+            "degrau": politica,
+            # DE ONDE VEM O DEGRAU ACESO — o par do campo acima, e sem ele a
+            # cura seria pior que o defeito: um degrau herdado com a MESMA cara
+            # de um escolhido é a mentira que a decisão [05] nasceu para matar.
+            # Booleano (`"1"`/`""`), o mesmo vocabulário do `mult-teto` e do
+            # `lado-<sigla>`: o alvo `classe` sem `data-hef-quando` acende por
+            # si. O endereço é a caixa dos três botões (`aba05._coluna`), não
+            # cada botão: a marca é da COLUNA — "o que vale aqui veio de fora" —
+            # e repeti-la em três elementos seria a mesma verdade em três
+            # lugares para divergir no primeiro degrau novo.
+            #
+            # VAZIO QUANDO NÃO HÁ DEGRAU NENHUM: sem política conhecida não há
+            # herança a confessar, e marcar a coluna ali afirmaria procedência
+            # de um valor que a tela não está mostrando.
+            "degrau-herdado": "1" if politica and not propria else "",
             # O `Máx` AO LADO DO NÚMERO — decisão 11 dela. Booleano: o alvo
             # `classe` sem `data-hef-quando` acende por si.
             "mult-teto": _no_teto(pct),
@@ -1480,6 +1535,19 @@ FRASE_DO_QUE_A_COLUNA_MOSTRA = (
 #: a coluna vai acender.
 FRASE_DO_AJUSTE_GERAL = FATO_DO_AJUSTE_GERAL + ", e esta coluna vai mostrar %s."
 
+#: A FRASE DO CLIQUE NO DEGRAU QUE ESTA COLUNA JÁ ESCOLHEU — 17/09/2026,
+#: VIBRA-ACESA-01. O `%s` é o degrau.
+#:
+#: POR QUE ELA NÃO É A :data:`FRASE_DO_QUE_A_COLUNA_MOSTRA`, e a diferença é de
+#: FATO: aquela diz *"a sua escolha é igual à força geral"*, e isso é verdade
+#: só quando a coluna HERDA. Com um override próprio que já vale — `max` na
+#: coluna, `balanceado` na força geral — a mesma frase afirmaria uma igualdade
+#: que não existe. Duas frases porque são dois estados, e nenhuma delas fala do
+#: nosso código: as duas dizem o que está valendo naquela coluna.
+FRASE_JA_E_A_ESCOLHA_DESTA_COLUNA = (
+    "esta coluna já está em %s — foi o que você escolheu para ela."
+)
+
 
 def _fator_no_motor(global_do_perfil: Any, policy: str | None,
                     custom: float | None) -> float | None:
@@ -1515,19 +1583,29 @@ def _aplicar_a_forca(ctx: Contexto, p: Any, uniq: str,
     havia uma letra explicando. É a família de defeito que esta casa persegue:
     *grava e não aplica, sem uma palavra*.
 
-    OS TRÊS DESFECHOS, e o terceiro é o que ninguém tinha medido:
+    OS QUATRO DESFECHOS, e o quarto é a queixa dela de 17/09/2026:
 
     1. **a escolha vira escala** (o caso comum) — silêncio, que é o certo: o
        tique seguinte acende o degrau e a barra, e uma frase por clique bem
-       sucedido é ruído crônico;
+       sucedido é ruído crônico. **O silêncio só é resposta quando a TELA
+       responde** — e era essa condição que faltava até 17/09: o desfecho 4
+       caía aqui, num tique que não acendia nada;
     2. **a mesa está em `Auto`** — o produto PULA a peça, com log e razão
        escrita, e a escolha fica esperando no disco. :data:`FRASE_DA_MESA_EM_AUTO`;
     3. **a coluna vai mostrar OUTRO degrau** — e este só aparece LENDO DE VOLTA.
        `with_controller_rumble` limpa o override em três casos (igual ao global
        do perfil, `policy=None`, `auto`), e a coluna sem override cai no
-       `rumble_policy` da MESA (:func:`_forca_da_coluna`). Clicar "Auto" no P2
+       `rumble_policy` da MESA (:func:`_forca_em_vigor`). Clicar "Auto" no P2
        apagava o `max` dele e acendia "Balanceado" um tique depois, calado — o
-       botão que ela clicou não é o que fica aceso.
+       botão que ela clicou não é o que fica aceso;
+    4. **o clique NÃO MUDOU NADA** — 17/09/2026, e é a queixa *"o botão não tá
+       ativo"*. O degrau que ela clicou já era o que valia naquela coluna, o
+       perfil não recebeu um byte, e o produto não dizia uma palavra. São dois
+       estados por baixo (a coluna HERDA o degrau, ou ele já é o override dela)
+       e por isso duas frases — :data:`FRASE_DO_QUE_A_COLUNA_MOSTRA` e
+       :data:`FRASE_JA_E_A_ESCOLHA_DESTA_COLUNA`. Quem conta que nada foi
+       escrito é o terceiro item de :func:`_gravar_a_forca`, e não uma segunda
+       leitura das regras do produto.
 
     A CONFERÊNCIA É POR LEITURA DE VOLTA, e não por uma segunda cópia das regras
     do produto: depois de gravar, esta função relê o mapa RESULTANTE pela MESMA
@@ -1581,7 +1659,7 @@ def _aplicar_a_forca(ctx: Contexto, p: Any, uniq: str,
     `("recusou dizendo", …)` — o desfecho que a régua lê deixa de contradizer o
     disco.
     """
-    global_do_perfil, depois = _gravar_a_forca(ctx, p, uniq, policy, custom)
+    global_do_perfil, depois, mudou = _gravar_a_forca(ctx, p, uniq, policy, custom)
     # E O TESTE VIVO SEGUE O DEGRAU — E A CONTA TEM DOIS DONOS (09/09/2026,
     # VIBRA-MULT-01). O que a mão dela sente é `base x barra x degrau`, e cada
     # fator é aplicado por um lado diferente: a BARRA é a metade DESTA ABA,
@@ -1614,9 +1692,46 @@ def _aplicar_a_forca(ctx: Contexto, p: Any, uniq: str,
     # JSON. Reler o disco aqui custaria uma leitura a mais por clique e abriria
     # uma corrida com o `gravar_e_reaplicar` que acabou de escrever — e o
     # `source_controllers` do rascunho É o que foi para o arquivo.
-    mostra, _ = _forca_da_coluna(depois, uniq, ctx.state)
+    mostra, _, propria = _forca_em_vigor(depois, uniq, ctx.state)
     if mostra != policy:
         modelo = (FRASE_DO_AJUSTE_GERAL if policy == "auto"
+                  else FRASE_DO_QUE_A_COLUNA_MOSTRA)
+        return {"recado": _na_faixa(ctx, uniq,
+                                    modelo % _nome_do_degrau(mostra))}
+    # O DESFECHO 4 — O CLIQUE QUE JÁ VALIA, e ele era o SILÊNCIO que ela leu
+    # como defeito (VIBRA-ACESA-01, 17/09/2026).
+    #
+    # Medido no perfil dela (DON'T SCREAM, força geral `max`, zero override):
+    # clicar "Máximo" não gravava (`with_controller_rumble` limpa o override
+    # igual ao global), não acendia (o degrau herdado saía vazio) e não dizia
+    # nada — as três de uma vez. Ela clicou três vezes achando que estava
+    # quebrado.
+    #
+    # A DECISÃO É *RESPONDER*, NÃO GRAVAR, e ela tem razão medida. Forçar o
+    # override faria a tela parecer viva escrevendo no disco um valor que NÃO
+    # muda um byte do que chega ao motor — a peça já vibra em Máximo — e
+    # quebraria a COR-04 (`with_controller_rumble`: *"o override guarda só o que
+    # DIVERGE do global"*), que é a regra que faz "voltei os dois para
+    # Balanceado" deixar o perfil limpo. Escrever estado falso para simular
+    # resposta é a família de defeito que esta aba passou 04/09 arrancando:
+    # *grava e não aplica*. O que faltava não era gravação — era a frase.
+    #
+    # A FRASE DO CASO HERDADO JÁ EXISTIA E NUNCA TINHA RODADO. A
+    # :data:`FRASE_DO_QUE_A_COLUNA_MOSTRA` foi escrita em 04/09 para dizer
+    # exatamente *"a sua escolha é igual à força geral"*, e o `if mostra !=
+    # policy` acima a tornava INALCANÇÁVEL: quando a escolha é igual ao global,
+    # o override é limpo e a coluna passa a mostrar o próprio global — logo
+    # `mostra == policy`, e o `if` nunca entrava. Uma frase com o `%s` certo,
+    # sem um caminho que a produzisse.
+    #
+    # `custom` FICA DE FORA, e não é esquecimento: a barra do "Personalizado"
+    # chega DUAS VEZES por arraste (o ouvinte escuta `change` e `click`, e
+    # soltar o polegar dispara os dois com o mesmo valor — está escrito em
+    # :func:`intensidade`). A segunda passagem é sempre um não-mudou, e um
+    # recibo por arraste seria ruído que ela não pediu. O buraco que esta
+    # sprint fecha é o dos três BOTÕES.
+    if not mudou and policy != "custom":
+        modelo = (FRASE_JA_E_A_ESCOLHA_DESTA_COLUNA if propria
                   else FRASE_DO_QUE_A_COLUNA_MOSTRA)
         return {"recado": _na_faixa(ctx, uniq,
                                     modelo % _nome_do_degrau(mostra))}
@@ -1748,10 +1863,11 @@ def _como_a_tela_le(mapa: Any) -> dict[str, Any]:
 
 
 def _gravar_a_forca(ctx: Contexto, p: Any, uniq: str, policy: str | None,
-                    custom: float | None = None) -> tuple[Any, dict[str, Any]]:
+                    custom: float | None = None
+                    ) -> tuple[Any, dict[str, Any], bool]:
     """Grava a força DAQUELE controle no perfil ativo, e manda reaplicar.
 
-    Devolve `(global_do_perfil, overrides_depois)`:
+    Devolve `(global_do_perfil, overrides_depois, mudou)`:
 
     * o **global de vibração do PERFIL** que serviu de denominador — o
       `draft.rumble`. Quem chama precisa dele para saber se a escolha vira
@@ -1760,7 +1876,12 @@ def _gravar_a_forca(ctx: Contexto, p: Any, uniq: str, policy: str | None,
       função já sabia;
     * o mapa `controllers` **depois** da mudança, na forma que a pintura lê
       (:func:`_como_a_tela_le`) — para que quem chama possa conferir, com a
-      MESMA função que pinta, o que a coluna vai mostrar.
+      MESMA função que pinta, o que a coluna vai mostrar;
+    * **se alguma coisa foi escrita** — 17/09/2026, VIBRA-ACESA-01. A guarda que
+      pula o `profile.switch` quando o mapa não mudou é de 03/09 e sempre soube
+      disto; o que faltava era CONTAR. Sem este item, quem chama não distingue
+      "gravei o que você pediu" de "não havia o que gravar", e os dois desfechos
+      saíam iguais: calados.
 
     **É A DECISÃO DELA DE 03/09/2026** — *"construir por controle"* — e a
     cadeia inteira já existia (`POR-UNIDADE-01`, 10/08): o que este gesto
@@ -1836,13 +1957,20 @@ def _gravar_a_forca(ctx: Contexto, p: Any, uniq: str, policy: str | None,
             {**draft.rumble.model_dump(), "policy": policy, "custom_mult": custom})
         novo = draft.with_controller_rumble(chave, pedido)
         if novo.source_controllers == draft.source_controllers:
-            return draft.rumble, _como_a_tela_le(draft.source_controllers)
+            # NADA MUDOU NO DISCO, E O TERCEIRO ITEM DIZ ISSO ALTO —
+            # VIBRA-ACESA-01, 17/09/2026. Esta guarda já existia e já SABIA do
+            # clique que não vira nada; o que ela fazia era devolver a mesma
+            # tupla do caminho que gravou, e o fato morria aqui. Quem chama
+            # ficava sem como distinguir "gravei" de "não havia o que gravar",
+            # e o desfecho era o silêncio que ela leu como defeito. Ver
+            # :func:`_aplicar_a_forca`.
+            return draft.rumble, _como_a_tela_le(draft.source_controllers), False
         adiante = novo.to_profile(nome, priority=prof.priority)
     except Exception as erro:
         raise RuntimeError(
             f"o produto recusou essa força para este controle: {erro}") from erro
     _perfil.gravar_e_reaplicar(adiante, ctx, p)
-    return draft.rumble, _como_a_tela_le(novo.source_controllers)
+    return draft.rumble, _como_a_tela_le(novo.source_controllers), True
 
 
 @gesto("05-vibracao.html", "forca", grava="_gravar_a_forca")

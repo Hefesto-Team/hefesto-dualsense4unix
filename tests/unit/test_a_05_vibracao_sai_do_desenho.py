@@ -226,32 +226,44 @@ def test_o_degrau_aceso_e_o_da_mesa_e_nao_o_do_mockup(regua, cravados,
     alimentada com o mesmo degrau que o mockup cravou, os oito ficariam iguais e
     o verde não diria nada.
 
-    **E O QUE O DAEMON DIZ MUDOU EM 04/09/2026 — decisão [05] dela.** Nenhum
-    dos dois controles desta cena tem override no perfil, então os dois HERDAM:
-    o campo da coluna sai VAZIO e os quatro botões apagam. Quem acende é a
-    LINHA DE MESA, e é ela que diz o degrau que o produto está usando. A
-    divergência com o desenho ficou MAIOR, não menor: o mockup crava um aceso
-    onde a tela viva não acende nenhum.
+    **A RÉGUA VOLTOU A MEDIR O DEGRAU ACESO — 17/09/2026, VIBRA-ACESA-01.**
+
+    De 04/09 a 17/09 ela mediu o APAGÃO: a decisão [05] dela mandava a coluna
+    sem ajuste próprio não acender nada *"e passar a apontar para essa linha"*,
+    a linha de mesa. A linha foi apagada em 05/09 por outra decisão dela, e o
+    vazio ficou sem destino — a tela parou de dizer qual força estava valendo.
+    Ela leu isso como defeito: *"o botão não tá ativo"*.
+
+    HOJE A COLUNA HERDADA ACENDE o degrau em vigor, com a marca
+    `degrau-herdado` dizendo que ele veio de fora. **E é uma divergência mais
+    forte que a de ontem, não mais fraca:** o mockup crava `max` no P1 e a tela
+    viva acende OUTRO degrau — o do daemon. Um aceso contra um aceso diferente
+    prova que a tela saiu do desenho; um aceso contra nenhum aceso também
+    provava, mas provava junto uma decisão que já tinha caducado.
     """
     cena = {(c.dono, c.quando) for c in cravados
             if c.chave == "degrau" and c.valor}
     assert ("p1", "max") in cena, (
         "a cena do mockup deixou de acender `max` no P1 — a razão desta régua "
         "mudou, e ela virou vácuo")
-    assert declarados[("p1", "degrau")] == "", (
-        f"a coluna do P1 declarou {declarados[('p1', 'degrau')]!r} sem ter "
-        f"ajuste próprio — o degrau herdado é o da linha de mesa")
-    # A LINHA DE MESA SAIU EM 05/09/2026, e com ela o `degrau-mesa`. O que esta
-    # régua ainda mede é o que importava: a coluna sem ajuste próprio declara
-    # vazio e não acende degrau nenhum.
+    assert declarados[("p1", "degrau")] == POLITICA, (
+        f"a coluna do P1 declarou {declarados[('p1', 'degrau')]!r} e o daemon "
+        f"de mentira responde {POLITICA!r} — sem ajuste próprio a coluna HERDA "
+        f"esse degrau, e herdar não é motivo para apagar os três botões")
+    assert declarados[("p1", "degrau-herdado")] == "1", (
+        "a coluna do P1 acendeu sem dizer que o degrau é HERDADO — aceso igual "
+        "ao escolhido é o que a decisão [05] dela nasceu para impedir")
 
     vivos, _ = _a_tela_depois_da_pintura(regua, cravados, declarados)
     acesos = {(c.dono, c.quando) for c, v in zip(cravados, vivos, strict=True)
               if c.chave == "degrau" and v}
-    assert not acesos, (
-        f"depois do tique os acesos das colunas são {sorted(acesos)} — nenhuma "
-        f"das duas tem ajuste próprio, e acender um degrau ali seria a coluna "
-        f"afirmando uma escolha dela que não existe no disco")
+    assert acesos == {("p1", POLITICA), ("p2", POLITICA)}, (
+        f"depois do tique os acesos das colunas são {sorted(acesos)} — as duas "
+        f"herdam {POLITICA!r} do daemon, e é esse degrau que tem de acender. O "
+        f"`max` do P1 é o que o MOCKUP cravou, e ele tinha de sair")
+    assert ("p1", "max") not in acesos, (
+        "o P1 continuou aceso no `max` que o mockup cravou — a tela não saiu "
+        "do desenho")
     assert not [c for c in cravados if c.chave == "degrau-mesa"], (
         "o `degrau-mesa` voltou ao desenho — a linha que ele pintava saiu em "
         "05/09/2026 por decisão dela")
