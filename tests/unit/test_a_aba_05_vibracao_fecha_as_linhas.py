@@ -588,24 +588,34 @@ def test_a_coluna_oferece_os_tres_modos(bancada: str) -> None:
             f"o degrau {chave!r} não está no desenho")
 
 
-def test_a_coluna_sem_ajuste_proprio_nao_acende_degrau() -> None:
-    """"Herdado" fica óbvio sem palavra nova — e é a decisão [05] dela.
+def test_a_coluna_sem_ajuste_proprio_acende_e_diz_que_herdou() -> None:
+    """"Herdado" fica óbvio — e agora sem apagar a tela. Decisão [05] dela, 17/09.
 
-    O perfil desta cena não tem override nenhum, então a coluna HERDA: o campo
-    sai vazio, o alvo `classe` apaga os quatro, e o único degrau aceso na tela é
-    o da linha de mesa.
+    **ESTA RÉGUA INVERTEU EM 17/09/2026 (VIBRA-ACESA-01), e o que ela guardava
+    era meia decisão.** Ela exigia que a coluna herdada NÃO acendesse, e a
+    [05] de 04/09 mandava a coluna *"apontar para essa linha"* — a LINHA DE
+    MESA, que acenderia o degrau em vigor. A linha de mesa foi apagada um dia
+    depois, em 05/09, por outra decisão dela; o `""` ficou apontando para o
+    nada, e a tela parou de dizer qual força estava valendo. Ela leu isso como
+    defeito: *"o botão não tá ativo"*.
 
-    MORDIDA: em `a05_vibracao.pacote`, volte a emitir o degrau da coluna sem a
-    guarda do ajuste próprio (`"degrau": <a força efetiva>`) — este
-    caso reprova, e a tela volta a ter a mesma cara para "escolha dela" e para
-    "o que o Hefesto está usando".
+    O QUE A [05] QUERIA CONTINUA MEDIDO AQUI — herdado ≠ escolhido. O que mudou
+    é o ENDEREÇO da distinção: saiu do apagão e virou a marca `degrau-herdado`.
+
+    MORDIDA: em `a05_vibracao.pacote`, volte a emitir `""` no `degrau` quando a
+    coluna herda — este caso reprova, e a tela dela volta a ficar com os três
+    botões apagados sobre uma vibração que está acontecendo.
     """
     import pacotes
 
     carga = pacotes.pacote_da_pagina(PAGINA, _ctx())
     col = next(iter(carga["colunas"].values()))
-    assert col["degrau"] == "", (
-        f"a coluna acendeu {col['degrau']!r} sem ter ajuste próprio")
+    assert col["degrau"] == "balanceado", (
+        f"a coluna emitiu {col['degrau']!r} — sem ajuste próprio ela HERDA o "
+        f"degrau da força geral, e herdar não é motivo para apagar os três")
+    assert col["degrau-herdado"] == "1", (
+        "a coluna acendeu sem dizer que o degrau é herdado — a tela volta a "
+        "ter a mesma cara para 'escolha dela' e para 'o que o Hefesto usa'")
     # A MESA NÃO EMITE MAIS CAMPO NENHUM — 05/09/2026. Ela emitiu
     # `degrau-mesa` entre 04/09 e 05/09, enquanto a linha existiu na tela; com
     # ela fora, um campo emitido para endereço que a página não tem seria
