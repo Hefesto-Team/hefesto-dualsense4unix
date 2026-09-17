@@ -19,6 +19,9 @@ DEPOIS que ele sai do driver e ANTES de o jogo lê-lo.**
   dela como aceite. Cada linha de lá tem ensaio em `docs/data/ensaios.csv`.
   **A seção 5-bis, de 13/09/2026, é sonda só-leitura** com o vpad vivo: nenhuma
   biblioteca abriu `hidraw`, e nenhum contêiner da Steam foi iniciado.
+  **A seção 5-ter, de 17/09/2026, é leitura passiva com o JOGO FECHADO:** nós
+  evdev e `hidraw` do vpad abertos só para ler, sem `EVIOCGRAB`; o binário do
+  jogo varrido no disco; nada escrito em perfil, em `.vdf` ou em `launch_env`.
 - **Documentos irmãos:** a
   [referência canônica do DualSense](dualsense-referencia-canonica.md) (o
   aparelho da Sony), a
@@ -554,8 +557,8 @@ desta casa afirmava por medição indireta; agora está lido no fonte.
 4. A variável é consultada **antes** da lista de registro e antes de
    `PROTON_ENABLE_HIDRAW` (`main.c:571-578`), então negar vence.
 
-**Isto CONFIRMA, por leitura de fonte, o que `daemon/launch_env.py:180-189`
-registrava como MEDIDO por `strings(1)`.** As mesmas cadeias estão no binário
+**Isto CONFIRMA, por leitura de fonte, o que `daemon/launch_env.py:193-201`
+(a docstring de `compor_lista_vidpid`) registrava como MEDIDO por `strings(1)`.** As mesmas cadeias estão no binário
 dela: `strings -a -el` no
 `Proton 10.0/files/lib/wine/x86_64-windows/winebus.sys` devolve
 `PROTON_DISABLE_HIDRAW`, `PROTON_ENABLE_HIDRAW` e `0x%04X/0x%04X`
@@ -592,7 +595,7 @@ Três leituras, e a terceira é a que importa:
    wrapper exportou.
 2. A lista inclui `0x054C/0x0DF2` — o PID do nosso vpad. Se disparar, o vpad
    perde `hidraw`, e com ele rumble, gatilhos e lightbar do jogo. É precisamente
-   o que `daemon/launch_env.py:293-299` proíbe em letras maiúsculas
+   o que `daemon/launch_env.py:310` proíbe em letras maiúsculas
    (*"NUNCA incluir 0x0DF2"*).
 3. **Ela não pode disparar nesta máquina**: exige `SteamDeck == "1"`, e este PC
    não é um Deck. **GRAU: ALTA** — a condição está no fonte, lida.
@@ -604,7 +607,7 @@ ambiente, não hardware.
 ### 3.5 A escolha do PID `0x0DF2` — os efeitos colaterais que EXISTEM
 
 O vpad se declara **DualSense Edge** (`VPAD_PRODUCT = 0x0DF2`,
-`integrations/uhid_gamepad.py:123`) para se distinguir do físico `0x0CE6` e
+`integrations/uhid_gamepad.py:126`) para se distinguir do físico `0x0CE6` e
 poder ser separado por VID/PID. A pergunta é: **o SDL trata o Edge diferente do
 DualSense comum?**
 
@@ -631,13 +634,21 @@ entrada, e ela é de Bluetooth**:
 
 enquanto o DualSense comum tem cinco (`030000004c050000e60c...` para USB e
 `050000004c050000e60c...` para BT). O vpad nasce `BUS_USB`
-(`integrations/uhid_gamepad.py:94`), então **não casa com entrada nenhuma do
+(`integrations/uhid_gamepad.py:97`), então **não casa com entrada nenhuma do
 banco**. Isso não é defeito enquanto o caminho for HIDAPI (o driver PS5
 sintetiza o mapeamento), mas passa a importar se algum dia o vpad DualSense for
 lido pelo caminho evdev — que é o que `SDL_JOYSTICK_HIDAPI=0` faz, e é o que
-este projeto já emite na máscara **Xbox** (`daemon/launch_env.py:957`).
+este projeto já emite na máscara **Xbox** (`daemon/launch_env.py:1570`,
+declarado em `:1511`).
 **GRAU: MEDIDO AQUI** para o conteúdo do banco; **BAIXA** para a consequência,
 que não foi exercitada.
+
+**E há um QUINTO, medido em 17/09/2026 e maior que os outros quatro: o jogo
+pode ter um ramo próprio para o Edge.** No `PRAGMATA.exe` dela há uma cadeia de
+`cmp` que classifica o aparelho por VID/PID, e `054c:0df2` cai num ramo com
+código de classe **diferente** do `054c:0ce6` — ver 5-ter.4. O que esse ramo
+muda no motor não foi lido; que ele EXISTE, foi. Quem escolher o PID Edge está
+escolhendo, sem saber, o ramo de código que cada jogo reservou ao Edge.
 
 **Balanço honesto:** a escolha do PID Edge continua certa pelo motivo pelo qual
 foi feita (é o que permite ao `IGNORE_DEVICES` separar físico de virtual, e o
@@ -893,6 +904,275 @@ MEDIDO**.
   2.30.x.
 
 **GRAU: NÃO MEDIDO** nas quatro. É a linha 10 da seção 7.
+
+---
+
+## 5-ter. O caminho do PROTON para a IMU — medido com o jogo dela (17/09/2026)
+
+**Acrescentada em 17/09/2026**, depois da queixa dela: *"joguei um jogo com
+controle por movimento e na hora do vamos ver o controle não deu resposta
+(pragmata)"*.
+
+A 5-bis mede o **SDL do host**. O PRAGMATA não carrega SDL nenhum — não há
+`SDL2.dll` nem `SDL3.dll` na pasta do jogo e nenhuma cadeia `SDL_Joystick` no
+executável — e é um jogo Windows sob Proton. O caminho dele é outro, e é este.
+
+**A régua desta seção.** Leitura passiva no host, com o daemon dela vivo, o
+controle no rádio e **o jogo fechado**: nenhuma janela abriu, nenhum serviço
+reiniciou, nenhum `EVIOCGRAB`, nenhuma escrita em perfil, em `.vdf` ou em
+`launch_env`. As fontes são `/proc/bus/input/devices`, `/sys`, `open()` em modo
+leitura nos nós evdev e no `hidraw` do NOSSO vpad, `daemon.state_full` pelo
+socket de IPC, `journalctl --user` e busca de agulhas em binário por blocos. A
+única escrita de fio foi **um** `HIDIOCGFEATURE` do report `0x05` no `hidraw`
+do nosso vpad — o mesmo GET_REPORT que o probe do driver e o jogo já fazem.
+
+### 5-ter.1 O caminho do byte, ponta a ponta
+
+**GRAU: MEDIDO AQUI** em cada degrau, com a medição do degrau ao lado.
+
+| # | degrau | o que se mediu |
+|---|---|---|
+| 1 | DualSense físico no rádio → `hid_playstation` | `054c:0ce6`, bus `0x0005`; nós `event12` (gamepad), **`event13` (Motion Sensors)**, `event14` (Touchpad) e `hidraw0` |
+| 2 | o daemon lê o `hidraw` cru pelo broker e copia `raw[base+15 : base+40]` VERBATIM | `journal`: `motion_reader_started path=/dev/hidraw0` + `uhid_motion_streaming on=True` |
+| 3 | `forward_motion` escreve a janela em `payload[15:40]` do report `0x01` e emite no `/dev/uhid` | `integrations/uhid_gamepad.py`, `_MOTION_WINDOW` e `forward_motion` |
+| 4 | `hid_playstation` faz bind no vpad e publica os nós dele | `054c:0df2`, bus `0x0003`; `event11`, **`event16` (Motion Sensors)**, `event17`, `event29` e **`hidraw5`** |
+| 5 | `winebus.sys` do Proton prefere `hidraw` para a família Sony e entrega o device ao lado Windows | o predicado está lido em 3.2; o carimbo, em 5-ter.3 |
+| 6 | o jogo lê o report cru pela `HID.DLL` | as importações estão em 5-ter.4 |
+
+**A permissão decide quem o Proton alcança, e ela é assimétrica:** `hidraw0`
+(o FÍSICO) está `crw------- root root`, sem ACL; `hidraw5` (o VPAD) está
+`crw-rw----` **com** a ACL da sessão. Quem roda como ela abre o segundo e não
+abre o primeiro. É o mesmo `0600` que a 5-bis.3 já tinha registrado como a
+razão de o físico sumir da lista do HIDAPI da SDL2 clássica.
+
+**Os dois nós de movimento têm descritor idêntico**, medido pelo `evdev`:
+`ABS_X/Y/Z` em ±32768 com `resolution` 8192 (LSB por g) e `ABS_RX/RY/RZ` em
+±2097152 com `resolution` 1024 (LSB por grau/s). Nada de escala se perde no
+espelho.
+
+### 5-ter.2 As três taxas, na MESMA janela — e os 37% que ficavam em aberto
+
+Três instrumentos passivos abertos ao mesmo tempo, `select()` num laço só,
+janela de **12,02 s**, controle parado no rádio. **GRAU: MEDIDO AQUI,
+17/09/2026.**
+
+| o que se contou | conta | taxa |
+|---|---|---|
+| `SYN_REPORT` no «Motion Sensors» do FÍSICO (`event13`) | 8.124 | **675,8 Hz** |
+| `SYN_REPORT` no «Motion Sensors» do VPAD (`event16`) | 2.986 | **248,4 Hz** |
+| pacotes no `hidraw` do VPAD (`hidraw5`) | 2.986 | **248,4 Hz** |
+
+**Os dois canais do vpad entregam o MESMO número** — 2.986 contra 2.986. Não há
+perda entre o espelho e o jogo: o evdev e o `hidraw` do vpad são a mesma
+emissão vista de dois lados.
+
+E 248,4 Hz é o teto: `MOTION_EMIT_MAX_HZ = 250.0`
+(`core/physical_report_reader.py`). A razão 248,4/675,8 dá **36,8%** — que é o
+mesmo "~37%" que a bancada de 16/08/2026 achou (7.231 contra 19.435) e deixou
+escrito no `mapa-controles.csv` como *"ninguém sabe se é decimação legítima ou
+perda"*. **É decimação legítima, e é a que ela decidiu manter em 19/08**, com o
+preço na mesa: sem o teto, quatro vpads em co-op seriam ~3.200 `writes/s` no
+`/dev/uhid`. A linha do mapa foi substituída.
+
+Na mesma janela, 3 s de `hidraw5` isolados: **747 pacotes, todos report `0x01`**,
+com **211** tuplas de giro distintas, **745** de acelerômetro e **747**
+`sensor_timestamp` distintos. O dado é vivo, não é cache.
+
+### 5-ter.3 O que o `winebus` recebe — o carimbo
+
+`/sys/class/hidraw/hidraw5/device/uevent`, **MEDIDO AQUI**:
+
+```
+DRIVER=playstation
+HID_ID=0003:0000054C:00000DF2
+HID_NAME=DualSense Wireless Controller (Hefesto P1)
+HID_PHYS=hefesto-vpad
+```
+
+É exatamente o par que `scripts/ensaios/o_jogo_no_log_do_proton.py` procura no
+log do Wine (rota A). E o **report descriptor** do vpad (289 bytes, lido em
+`/sys/class/hidraw/hidraw5/device/report_descriptor`) é o canônico do DualSense
+USB: report `0x01` com seis eixos de 8 bits, o hat, quinze botões e um bloco
+**vendor `0x22` de 52 bytes**. A IMU viaja dentro desse bloco opaco — não há
+usage HID de sensor no descritor, exatamente como no DualSense de verdade.
+Quem ler o report por offset acha o giroscópio; quem esperar um sensor
+declarado não acha. **GRAU: MEDIDO AQUI** para os bytes.
+
+### 5-ter.4 O que o PRAGMATA faz com ele — lido no binário dela
+
+`PRAGMATA.exe`, 378.448.800 bytes, varredura de agulhas por blocos.
+**GRAU: MEDIDO AQUI, 17/09/2026.**
+
+| agulha | n | leitura |
+|---|---|---|
+| `HID.DLL`, `HidD_GetAttributes`, `HidD_GetPreparsedData`, `HidP_GetCaps`, `HidD_GetFeature` | 1 cada | **lê o report CRU** |
+| `SetupDiGetClassDevs`, `SetupDiEnumDeviceInterfaces` | 2 cada | enumera pela interface HID |
+| `DirectInput8Create`, `GetRawInputData` | 1 cada | os dois caminhos velhos também estão |
+| `XInputGetState`, `XInputGetCapabilities`, `xinput1_3/1_4/9_1_0` | **0** | **não importa XInput** |
+| `SDL_Joystick` | 0 | não embute SDL |
+| `SteamInput006` | 1 | fala Steam Input — mas o `localconfig.vdf` dela tem `UseSteamControllerConfig` **0** para o appid |
+| `Gyroscope` · `MotionSensor` · `Accelerometer` · `PS5` | 9 · 14 · 12 · 509 | o motor tem movimento e conhece o aparelho |
+
+**E ele tem uma tabela de VID/PID, com o PID do NOSSO vpad dentro.** Em
+`0x05960ec3` há uma cadeia de comparação: `mov eax, [r8+0x14]` seguido de seis
+`cmp eax, imm32` — `054c:05c4`, `054c:09cc`, `054c:0ba0` (a família DS4, que
+recebe `mov ebx, 1`), `054c:0ce6` e `054c:0e5f` (que recebem `mov ebx, 2`) e
+**`054c:0df2`**, o DualSense Edge, que recebe **`mov ebx, 4`** e um
+`or [rsi+8], ebx`.
+
+Duas leituras, e a segunda é uma ressalva:
+
+1. **O jogo RECONHECE o vpad.** O PID Edge que esta casa escolheu não cai no
+   genérico: ele casa uma entrada própria. **GRAU: MEDIDO AQUI** para os bytes.
+2. **Ele o põe numa CLASSE só dele** — `4`, diferente da do DualSense comum. O
+   que essa classe muda no motor **não foi lido**: seria preciso desmontar o
+   consumidor do `ebx`, ou abrir o jogo. **GRAU: NÃO MEDIDO.** É a linha 11 da
+   seção 7, e ela nasce desta seção.
+
+**O jogo ABRIU o nosso vpad, e escreveu nele.** Journal do daemon dela, dentro
+da sessão do PRAGMATA (01:39:08 → 01:47:01 de 17/09): às 01:39:38,
+`uhid_replica_ativa categoria=trigger_right` e `categoria=trigger_left`. Isso
+só acontece quando o jogo manda output report de gatilho adaptativo no
+`hidraw` do vpad. Logo, no instante da queixa dela, **o jogo tinha o nosso
+aparelho na mão e falava DualSense com ele** — e a janela de motion estava
+fluindo (`uhid_motion_streaming on=True` desde 01:38:08, `on=False` só às
+01:50:12). **GRAU: MEDIDO AQUI**, no journal.
+
+### 5-ter.5 A calibração canônica NÃO é a causa — a hipótese caiu
+
+O vpad responde o feature `0x05` (calibração da IMU) e o `hid_playstation`
+usa os campos como divisores. Quando o backend sabe ler o `0x05` da unidade
+física, o vpad carimba o dela no lugar do canônico do blueprint
+(`uhid_calibration_por_unidade` no journal). **O vpad que serviu a sessão de
+01:39 nasceu às 00:54:51 SEM esse carimbo** — respondeu o canônico.
+
+Era um suspeito. Medido, ele cai. `HIDIOCGFEATURE` do `0x05` no `hidraw5` de
+agora (que tem o carimbo por unidade) contra o `CANONICAL_FEATURE_0X05` do
+`integrations/uhid_blueprint.py`:
+
+| campo | dela | canônico | delta |
+|---|---|---|---|
+| `gyro_pitch_bias` | 5 | 23 | −18 |
+| `gyro_yaw_bias` | 13 | −3 | +16 |
+| `gyro_roll_bias` | 1 | −4 | +5 |
+| `gyro_pitch_plus` | 8.856 | 8.867 | −11 |
+| `gyro_speed_plus` / `minus` | 540 | 540 | 0 |
+| `acc_y_plus` | 8.095 | 8.049 | +46 |
+
+O maior desvio de giro é **23 LSB sobre um span de ~8.850** — menos de 0,3% —
+e os dois divisores de velocidade angular são **idênticos**. A calibração por
+unidade é um refinamento de mira, não a diferença entre haver e não haver
+movimento. **GRAU: MEDIDO AQUI.**
+
+### 5-ter.6 O caminho `xbox` é ZERO IMU — e é a única forma medida de perdê-la
+
+Não é novidade de mecanismo (a 1.5 já explica por que o pacote do Xbox 360 não
+tem onde pôr um giroscópio); é o tamanho do buraco no produto que precisa estar
+escrito aqui.
+
+O vpad `uinput` declara **oito** eixos e nada mais: `ABS_X`, `ABS_Y`, `ABS_RX`,
+`ABS_RY`, `ABS_Z`, `ABS_RZ`, `ABS_HAT0X`, `ABS_HAT0Y`
+(`integrations/uinput_gamepad.py`, `_capacidades_padrao`). Não há nó «Motion
+Sensors», não há `hidraw`, não há report `0x01`. Quem cai nesse canal perde a
+IMU **inteira**, e o `PROTON_DISABLE_HIDRAW` não tem o que negar porque não há
+`hidraw` nenhum.
+
+E o canal não sai só da máscara: sai do PAR. `quer_uhid`
+(`integrations/virtual_pad.py`) exige máscara `dualsense` **e** caminho
+`dualsense`. Com o caminho `xbox`, a máscara `dualsense` **também** cai no
+`uinput` — e o `state_full` não chama isso de degradado, porque é escolha.
+
+**Medido na máquina dela, 17/09/2026:** entre `01:54:48` e `03:32:23` o journal
+registra `gamepad_emulation_started caminho=xbox` — **1 h 37 min** em que
+nenhum jogo teria recebido giroscópio, e nada na tela diz isso. E o disco
+guarda a escolha: `~/.config/hefesto-dualsense4unix/gamepad_caminho.flag`
+contém `xbox`, gravada às 01:54, enquanto o `daemon.state_full` de agora
+responde `caminho: dualsense`.
+
+**A divergência é DESENHO, não defeito:** `_guardar_o_caminho`
+(`daemon/subsystems/gamepad.py`) só persiste com `origin == "manual"`, e a volta
+das 03:32 veio de `origin=launch` — *"um perfil trocando de caminho não vira a
+escolha dela em disco"*. A consequência, que é o que importa aqui, é que o
+**próximo boot do daemon** relê a flag (`daemon/lifecycle.py`, de
+`utils/session.load_gamepad_caminho`) e sobe o vpad no `uinput`: o giroscópio
+some sem que ninguém tenha mexido em nada, até um jogo com ponte confirmada em
+`gamepad/dualsense` reabrir o canal.
+
+### 5-ter.7 O que o GE-Proton 11-6 faz por appid — e o que ele não faz aqui
+
+O PRAGMATA roda em `GE-Proton11-6-x86_64`
+(`~/.steam/steam/logs/compat_log.txt`: *"Mapping AppID 3357650 to tool
+GE-Proton11-6-x86_64 with priority 250"*, 17/09 01:51). O script `proton` dele
+tem três listas por appid que mexem em entrada, e **o PRAGMATA não está em
+nenhuma**. **GRAU: MEDIDO AQUI**, no arquivo instalado:
+
+| variável | o que ela faz | quantos appids | o PRAGMATA? |
+|---|---|---|---|
+| `PROTON_SONY_HIDRAW_XINPUT` | remapeia o `hidraw` Sony para XInput *"para imitar o Xbox"* | 18 | não |
+| `PROTON_SONY_DUALSENSE_AS_DUALSHOCK4` | finge um DS4 em jogos que não sabem DualSense/Edge | 21 | não |
+| `PROTON_STEAMINPUT_FALLBACK` (+ `PROTON_SONY_HIDRAW_XINPUT`) | para jogos que *"dependem de action manifests do Steam Input"* | 3 | não |
+
+**A terceira lista é a que importa para esta queixa**, e o motivo é de
+parentesco: ela contém **Monster Hunter Wilds (2246340)**, que é a MESMA RE
+Engine do PRAGMATA. O comentário do GE diz, com todas as letras, que esses
+jogos dependem do Steam Input e precisam da ponte XInput para funcionar; e o
+`localconfig.vdf` dela tem `UseSteamControllerConfig = 0` para o PRAGMATA.
+**Isto é indício, não medição** — nenhum ensaio ligou as duas coisas neste
+jogo. **GRAU: BAIXA.**
+
+O bloco da Valve que zeraria o `hidraw` do `0x0DF2` (3.4) continua exigindo
+`SteamDeck == "1"` no GE-Proton 11-6 também, e não dispara nesta máquina.
+**GRAU: ALTA**, lido no arquivo.
+
+**Não existe "Proton 11.7" nesta máquina.** Os compat tools instalados são
+`Proton 10.0` (`proton-10.0-4b`), `Proton 11.0` (`proton-11.0-2c-x86_64`),
+`Proton - Experimental` (`experimental-11.0-20260910b`), `Proton Hotfix` e
+`GE-Proton` 10-34, 11-1, 11-3 e **11-6**. Quem for medir "a 11.7" diga primeiro
+qual é: **NÃO MEDIDO**.
+
+### 5-ter.8 A env por appid do PRAGMATA está ATRASADA — medido, e é nosso
+
+`~/.local/state/hefesto-dualsense4unix/launch_env/steam_app_3357650.env`, no
+disco dela às 03:39:57 e não reescrito desde:
+
+```
+# estado: perfil nativo | native=True emulacao=False mascara=dualsense backends=[]
+#         | vivo: native=False emulacao=True mascara=dualsense backends=['uhid']
+__GL_SHADER_DISK_CACHE=1
+__GL_SHADER_DISK_CACHE_SKIP_CLEANUP=1
+SDL_GAMECONTROLLER_USE_BUTTON_LABELS=0
+SDL_ACCELEROMETER_AS_JOYSTICK=0
+```
+
+O `pragmata.json` dela voltou de `kind: native` para `kind: gamepad` às
+**03:42:55** (há cópia datada em `.historico/pragmata/`), e o journal **não tem
+nenhum `launch_env_materializado` depois de 03:39:57.749**. Os outros três
+arquivos por appid do mesmo instante trazem
+`PROTON_DISABLE_HIDRAW=0x054C/0x0CE6` e
+`SDL_GAMECONTROLLER_IGNORE_DEVICES=0x054c/0x0ce6,0x28de/0x11ff`; o do PRAGMATA
+**não traz nenhum dos dois**, porque foi escrito a partir do perfil Nativo.
+
+Consequência, pela divisão de trabalho da 3.3: no próximo lançamento o jogo
+**não** recebe a negação de `hidraw` do físico. Aqui isso é inerte pela
+permissão (`hidraw0` é `0600`), mas a env que o wrapper exporta deixou de
+descrever o aparelho — e é exatamente o caso de *"o instrumento responde sobre
+outra coisa que não o produto"*. **GRAU: MEDIDO AQUI** para a divergência;
+**NÃO MEDIDO** de quem é a materialização que faltou.
+
+### 5-ter.9 O que esta seção NÃO mede
+
+- **o jogo aberto.** Tudo aqui foi medido com o PRAGMATA fechado, por ordem: a
+  prova final é abrir o jogo e contar `process_hid_report` no log do Wine
+  (`scripts/ensaios/o_jogo_no_log_do_proton.py`) com `PROTON_LOG=+hid`;
+- **o que a classe `4` do Edge muda dentro do motor** (5-ter.4);
+- **se o `hidraw` do físico, negado, reaparece pelo caminho evdev do
+  `winebus`.** O `SDL_GAMECONTROLLER_IGNORE_DEVICES` não alcança o `winebus`
+  (3.2, por ausência conferida) e o `PROTON_DISABLE_HIDRAW` só tira o `hidraw`.
+  Se o `winebus` enumera os nós evdev do físico assim mesmo, o jogo vê um
+  segundo controle — sem giroscópio e mudo, porque o daemon o tem em
+  `EVIOCGRAB`. Ninguém mediu;
+- **o transporte.** Tudo aqui é o controle no RÁDIO. No cabo o físico entrega
+  250,88 Hz contra os 675,8 Hz medidos aqui, e a razão contra o teto muda.
 
 ---
 
@@ -1236,6 +1516,9 @@ Uma variável por linha, que é como se ataca isto.
 | 7 | **que report** a Steam manda nos 98 pacotes da rajada, e algum deles pede a barra apagada? | decodificar o payload das capturas em `/tmp/hefesto-probe-lightbar/` — o parser escrito em 12/08 não venceu o formato do `btmon` | 6-bis.2 |
 | 8 | **o que decide qual controle** a Steam repinta depois de perder a cor? | repetir a escrita por `hidraw` nos três e observar qual volta ao padrão dela | 6-bis.5 |
 | 9 | a **volta** do ensaio da lightbar: subir os controles com a Steam viva na probe, **de propósito**, e ver o defeito voltar | o mesmo desenho de 6-bis.2, com o braço sujo provocado | 6-bis |
+| 11 | o que a **classe própria do Edge** muda no motor do jogo — o consumidor do `ebx` da cadeia de `cmp` | desmontar o ramo, ou abrir o jogo com `PROTON_LOG=+hid` | 5-ter.4 |
+| 12 | o `winebus` enumera os nós **evdev** do físico quando o `hidraw` dele está negado/inacessível? | `PROTON_LOG=+hid` com o jogo aberto, contando `udev_add_device` por nó | 5-ter.9 |
+| 13 | a queixa do PRAGMATA se cura com `PROTON_SONY_HIDRAW_XINPUT=1` ou com o Steam Input ligado, como o GE faz para o Monster Hunter Wilds? | abrir o jogo com a variável e sem ela, um gesto de movimento em cada | 5-ter.7 |
 | 10 | o giroscópio do vpad **no jogo**, com a biblioteca que o jogo carrega: HIDAPI ligado no SDL3 e no sdl2-compat, o contêiner do sniper por dentro, o vpad que nasce com o jogo aberto na 2.32.10, e qual SDL cada jogo carrega (`/proc/<pid>/maps`) | a MESA-DE-QUATRO-01, com o jogo aberto | 5-bis |
 
 Os itens 1, 2 e 6 saem **do mesmo comando**, custam trinta segundos e fecham
