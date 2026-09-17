@@ -54,22 +54,39 @@ CAMPOS = (
 #: aqui de propósito: a cura fácil seria somar 59 a tudo, e somar nelas
 #: QUEBRARIA duas referências que estavam certas.
 ANCORAS: tuple[tuple[str, str], ...] = (
-    (":1595-1596", "VALID_FLAG1_MIC_MUTE_LED_CONTROL_ENABLE"),
-    (":1639-1645", "common[8] = int(mic_led) & 0xFF"),
-    (":1407-1434", "def set_microphone_led"),
-    (":4787", "def set_mic_led"),
-    (":4794-4795", "report[11] no rádio"),
-    (":4796-4800", "CORRIGIDO em 15/08/2026"),
-    (":1704-1705", "build_bt_report"),
-    (":1766-1773", "self.device.write"),
-    (":3203-3216", "should_reclaim_on_wake"),
+    (":1679-1680", "VALID_FLAG1_MIC_MUTE_LED_CONTROL_ENABLE"),
+    (":1722-1728", "common[8] = int(mic_led) & 0xFF"),
+    (":1490-1517", "def set_microphone_led"),
+    (":4870", "def set_mic_led"),
+    (":4877-4878", "report[11] no rádio"),
+    (":4879-4883", "CORRIGIDO em 15/08/2026"),
+    (":1787-1788", "build_bt_report"),
+    (":1849-1856", "self.device.write"),
+    (":3286-3299", "should_reclaim_on_wake"),
     (":441-454", "def _escrever_led_do_mic"),
-    (":923", "_audio_status"),
+    (":933", "_audio_status"),
 )
 
 #: Os endereços que a auditoria aposentou. Se um deles voltar à célula, ou a
 #: deriva voltou, ou alguém somou 59 no lugar errado.
 APOSENTADOS = (
+    # AS DEZ DE BAIXO SE APOSENTARAM EM 17/09/2026, pela
+    # BATERIA-QUE-PULA-01: a guarda `eh_report_de_estado` e o par
+    # `_consumir_report`/`_recusar_report` entraram no meio do arquivo.
+    # A deriva NÃO é uniforme — nove desceram 83 linhas e `:923` desceu
+    # 10, porque os defaults de classe entraram acima dela e os métodos
+    # novos abaixo. Somar 83 em todas apontaria `_audio_status` para
+    # outra coisa; cada uma foi remedida pela ÂNCORA.
+    ":1595-1596",
+    ":1639-1645",
+    ":1407-1434",
+    ":4787",
+    ":4794-4795",
+    ":4796-4800",
+    ":1704-1705",
+    ":1766-1773",
+    ":3203-3216",
+    ":923",
     # AS DUAS DE BAIXO SE APOSENTARAM EM 16/09/2026: a SOM-ROTA-02 deu dono à
     # rota de saída (`common[7]`) na adoção do controle e acrescentou a
     # constante `ROTA_PADRAO_DO_SOM` com a medição que a justifica. As duas

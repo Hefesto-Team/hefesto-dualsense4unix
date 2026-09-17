@@ -559,11 +559,24 @@ class ProfileSpeakerConfig(BaseModel):
     com a rota escrita, *"Saiu som"*.
 
     O que mudou não é este campo, é quem responde quando ele cala: o controle
-    passou a NASCER em ``ROTA_PADRAO_DO_SOM`` («Sons do jogo») na adoção, do
-    mesmo jeito que já nascia com vibração balanceada e gatilho rígido — um
+    passou a NASCER em ``ROTA_PADRAO_DO_SOM`` («Sons do jogo») na adoção — um
     ponto de partida até alguém mudar, palavra dela no mesmo dia. Perfil sem
     rota herda esse nascimento em vez de herdar o fone vazio; perfil COM rota
     continua mandando, e é ele quem escreve por último.
+
+    **FATO ERRADO, SUBSTITUÍDO — 17/09/2026.** Esta passagem dizia que a rota
+    nascia *"do mesmo jeito que já nascia com vibração balanceada e gatilho
+    rígido"*. Medido: nenhum dos dois nasce assim. A vibração nasce
+    ``policy=None`` — perfil SEM opinião, o default de ``RumbleConfig`` — e os
+    gatilhos nascem ``TriggerConfig(mode="Off")``, os dois em
+    ``TriggersConfig``. A rota do som é, até aqui, o ÚNICO campo com
+    nascimento preparado.
+
+    Que os outros dois passem a ter é decisão DELA, de 16/09/2026: o botão de
+    balanceado pré-setado em todo perfil sem configuração alterada, os
+    gatilhos nascendo rígidos e os controles com tudo ativado por padrão.
+    Isso é trabalho a fazer, não o estado de hoje — e escrever aqui que já
+    era verdade custou a esta casa uma sessão de diagnóstico do lado errado.
 
     A rota não pode vir SOZINHA porque a seção inteira exige ``volume``: quem
     escreve o byte é o mesmo ``set_speaker_volume`` que escreve o volume, e é

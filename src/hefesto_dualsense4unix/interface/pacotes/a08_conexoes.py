@@ -4420,7 +4420,7 @@ def _chave_no_perfil(ctx: Contexto, uniq: str) -> str:
     """A chave deste controle em ``Profile.controllers`` — doze hexa, ou ``""``.
 
     DUAS RÉGUAS, E AS DUAS TÊM DE CONCORDAR. A do PERFIL é `norm_mac` do
-    esquema (`profiles/schema.py:1207`), que canoniza `aa:bb:…` em `aabbcc…`; a
+    esquema (`profiles/schema.py:1808`), que canoniza `aa:bb:…` em `aabbcc…`; a
     do `maquina.json` é `app.actions.external_controllers.chave_de_maquina`, que
     faz o mesmo e ainda RECUSA o MAC forjado que começa em `02` — o que o
     `usb_probe_degrade` inventa somando VID, PID e bus, e que dois clones do

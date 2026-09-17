@@ -457,7 +457,7 @@ def _pacote_do_editor(profile: Any) -> dict[str, Any]:
     match = getattr(profile, "match", None)
     # A LARGURA DO TRILHO SAI DE `PRIORIDADE_MAXIMA`, e não de 100. O mockup
     # desenha `width:90%` para a prioridade 90, o que só fecha se o teto fosse
-    # 100 — e o teto do produto é 200 (`profiles/schema.py:970`, com portão
+    # 100 — e o teto do produto é 200 (`profiles/schema.py:1509`, com portão
     # próprio: `test_teto_da_prioridade_tem_uma_fonte_so.py`). Pintar 90% seria
     # a tela dizendo "quase no máximo" sobre um perfil que está na metade.
     if PRIORIDADE_MAXIMA <= 0:  # pragma: no cover — defesa contra teto zerado
