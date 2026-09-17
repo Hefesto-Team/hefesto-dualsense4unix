@@ -3984,11 +3984,26 @@ else
             printf '      Para ficar com a cópia que nós verificamos: tire o diretório do compatibilitytools.d do caminho e rode o instalador outra vez.\n'
         fi
         _pl_rc=0
-        python3 "${PROTON_PIN_PY}" --lock || _pl_rc=$?
+        # `--todos` É ORDEM DELA, 17/09/2026. Vendo o DON'T SCREAM ficar no
+        # `proton_11` enquanto os outros 24 subiam para o GE-Proton 11-7, ela
+        # perguntou *"mas não era pra todos ficarem sobre o novo proton?"* e
+        # decidiu: *"ele e todo o resto de agora em diante."*
+        #
+        # Sem a flag, a guarda `preservado` pula toda entrada de jogo que
+        # aponte para outra ferramenta — e ela pula por FORMA, não por saber
+        # que houve escolha. Era conservadora de propósito (nasceu do dano de
+        # 14/08, quando a trava apagou três escolhas dela), e a função continua
+        # tendo a guarda como PADRÃO: quem chamar sem pedir não atropela
+        # ninguém. É o produto que passou a pedir.
+        #
+        # Daqui em diante, exceção tem de ser NOMEADA e DATADA por ela, e a
+        # volta continua sendo `proton_pin.py --unlock`, que reverte só o que
+        # este lock registrou.
+        python3 "${PROTON_PIN_PY}" --lock --todos || _pl_rc=$?
         if [[ "${_pl_rc}" -eq 0 ]]; then
             printf '      jogos travados na versão pinada (backup do config.vdf ao lado; reverter: uninstall)\n'
         elif [[ "${_pl_rc}" -eq 3 ]]; then
-            warn "Steam (ou um jogo) aberta — trava ADIADA; feche a Steam e rode: python3 ${PROTON_PIN_PY} --lock"
+            warn "Steam (ou um jogo) aberta — trava ADIADA; feche a Steam e rode: python3 ${PROTON_PIN_PY} --lock --todos"
             warn "  (ou use o botão 'Travar Proton validado' na aba Sistema da GUI)"
         else
             warn "trava do Proton falhou — rode manualmente: python3 ${PROTON_PIN_PY} --lock"

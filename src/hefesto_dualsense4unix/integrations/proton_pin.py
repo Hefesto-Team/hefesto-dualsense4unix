@@ -618,9 +618,30 @@ def build_compat_tool_mapping(
     ``previous_name`` do ``"0"`` sobrevive a re-locks e o uninstall o restaura).
     O dano de 14/08 foi por jogo, não no global.
 
-    ``atropelar_escolha_dela=True`` restaura o comportamento antigo. Nada no
-    produto passa isso hoje; existe para o caso em que ELA peça, explicitamente,
-    "troque tudo para o Proton validado" — e aí a palavra é dela.
+    ``atropelar_escolha_dela=True`` restaura o comportamento antigo. Ele existia
+    para o caso em que ELA pedisse, explicitamente, "troque tudo para o Proton
+    validado" — e aí a palavra seria dela.
+
+    **ELA PEDIU, EM 17/09/2026**, vendo o DON'T SCREAM ficar no ``proton_11``
+    enquanto os outros 24 subiam para o ``GE-Proton11-7-x86_64``: *"mas não era
+    pra todos ficarem sobre o novo proton?"*, e em seguida *"ele e todo o resto
+    de agora em diante."*
+
+    O CLI expõe isso como ``--todos``, e o ``install.sh`` passa a usá-lo. A
+    guarda continua no código, e continua sendo o padrão da função: ela protege
+    quem chamar sem pedir. O que mudou é que o PRODUTO agora pede, porque essa
+    é a ordem dela — e uma exceção, daqui em diante, tem de ser NOMEADA e
+    DATADA por ela, nunca inferida da forma do arquivo.
+
+    **O QUE ELA PRECISA SABER, e está medido aqui embaixo:** o dano de 14/08
+    foi num appid que ela usa (o DON'T SCREAM, cujo jogo inteiro é o microfone)
+    e a queixa foi *"não anda. nem o microfone."*. A sprint que o registrou
+    guarda uma ressalva do próprio autor — *"que a troca de Proton tenha sido o
+    que matou o microfone NÃO está provado pelos logs"* —, e eram TRÊS portões
+    em série, dos quais dois já foram curados. Mais: o microfone dela hoje sai
+    pelo nó ``hefesto_mic_*`` do PipeWire (report ``0x32``, medido em 03/09 e
+    06/09), caminho que não passa pelo Proton. O risco é menor do que era e
+    continua existindo; a volta é ``--unlock``.
 
     ``pinos_nossos`` — O PINO VELHO NÃO É ESCOLHA DELA (16/09/2026), e esta é a
     diferença entre preservar e ficar parado. MEDIDO na máquina dela no dia em
@@ -845,8 +866,15 @@ def lock_games_to_pinned_proton(
     home: Path | None = None,
     dry_run: bool = False,
     migrar_de: Sequence[str] = (),
+    todos: bool = False,
 ) -> dict[str, object]:
     """Trava global + appids no pin, com gate de Steam fechada e registro.
+
+    ``todos=True`` alcança TODO jogo, inclusive o que aponta para uma
+    ferramenta que o Hefesto nunca escreveu — ordem dela de 17/09/2026:
+    *"ele e todo o resto de agora em diante."* Sem ele, a guarda `preservado`
+    continua valendo, e ela é o padrão da função de propósito: quem chamar sem
+    pedir não atropela ninguém.
 
     Retorna ``{"status": "locked"|"noop"|"recusado"|"erro", "reason": …,
     "vdf": …, "changes": {...}, "backup": …}``. O registro (estado local em
@@ -884,6 +912,7 @@ def lock_games_to_pinned_proton(
             tool_name=tool_name,
             appids=appids,
             pinos_nossos=pinos_nossos,
+            atropelar_escolha_dela=todos,
         )
     except (OSError, ValueError) as exc:
         result["reason"] = str(exc)
@@ -1345,6 +1374,7 @@ def _cmd_lock(args: argparse.Namespace) -> int:
         state_path=args.state,
         dry_run=args.dry_run,
         migrar_de=migrar_de,
+        todos=args.todos,
     )
     # A LINHA DIZ O QUE ACONTECEU, NÃO O QUE FOI MIRADO — 16/09/2026. Ela
     # imprimia `len(appids)`, o tamanho do ALVO: no dia em que o pino subiu,
@@ -1455,6 +1485,11 @@ def main(argv: list[str] | None = None) -> int:
                              "que devem migrar para o pino de hoje (o histórico "
                              "do registro já entra sozinho; isto é a semente da "
                              "primeira subida)")
+    parser.add_argument(
+        "--todos", action="store_true",
+        help="--lock alcança TODO jogo, inclusive os que apontam para outra "
+             "ferramenta (ordem dela, 17/09/2026). Sem isto, entrada de jogo "
+             "que aponta para fora do pino é preservada.")
     parser.add_argument("--offline", action="store_true",
                         help="--ensure sem rede (só cache; ausente = pendente)")
     parser.add_argument("--dry-run", action="store_true",
