@@ -229,15 +229,33 @@ def test_o_pacote_emite_o_degrau_que_o_produto_calculou(pacote) -> None:
     """
     colunas = pacote["colunas"]
     assert len(colunas) == 2, f"a mesa de mentira tem dois controles: {list(colunas)}"
-    # A COLUNA SÓ ACENDE O QUE É DELA — 04/09/2026, decisão [05] dela. Nesta
-    # cena nenhum dos dois controles tem override no perfil, então os dois
-    # HERDAM: o campo da coluna sai vazio (os quatro apagam) e quem acende é a
-    # LINHA DE MESA. Antes as duas coisas tinham a mesma cara, e ela não tinha
-    # como saber se aquele degrau era escolha dela ou herança.
+    # A COLUNA HERDADA ACENDE, E A MARCA DIZ DE ONDE VEM — 17/09/2026,
+    # VIBRA-ACESA-01.
+    #
+    # ESTA RÉGUA PEDIA O CONTRÁRIO ATÉ HOJE, e o que ela guardava era meia
+    # decisão. A decisão [05] dela (04/09) mandava a coluna sem ajuste próprio
+    # NÃO acender, *"e passar a apontar para essa linha"* — a LINHA DE MESA,
+    # que acenderia o degrau em vigor. A linha de mesa foi apagada UM DIA
+    # DEPOIS, em 05/09, por outra decisão dela (*"não é pra ter mesa em nada da
+    # interface"*), e o `""` ficou apontando para o nada: os três botões
+    # apagados, sem nenhum outro lugar dizendo qual força vale.
+    #
+    # O PREÇO, medido na tela dela em 17/09 com o DON'T SCREAM aberto (global
+    # `max`, zero override): *"o botão não tá ativo"* — nenhum dos três aceso,
+    # e `150%` na coluna ao lado.
+    #
+    # O QUE A DECISÃO [05] QUERIA CONTINUA DE PÉ e é o que se mede abaixo:
+    # herdado ≠ escolhido. O que mudou é o ENDEREÇO da distinção — ela saiu do
+    # apagão e foi para a marca `degrau-herdado`, na caixa dos três botões.
     for uniq, col in colunas.items():
-        assert col["degrau"] == "", (
-            f"a coluna {uniq} acendeu {col.get('degrau')!r} sem ter ajuste "
-            f"próprio — o degrau herdado é o da linha de mesa")
+        assert col["degrau"] == "balanceado", (
+            f"a coluna {uniq} não acendeu o degrau que está valendo — sem "
+            f"ajuste próprio ela HERDA o da força geral, e herdar não é motivo "
+            f"para a tela apagar os três botões")
+        assert col["degrau-herdado"] == "1", (
+            f"a coluna {uniq} acendeu {col['degrau']!r} sem dizer que é "
+            f"HERDADO — aceso igual ao escolhido é a mentira que a decisão "
+            f"[05] dela nasceu para matar")
     assert pacote["mesa"] == {}, (
         f"a mesa desta aba voltou a emitir {sorted(pacote['mesa'])}")
     assert {c for _, c in _aba05.FORCA} >= {"balanceado"}, (

@@ -677,6 +677,28 @@ CSS = """
   .vib .seg button:last-child{grid-column:1 / -1}
   .vib .seg button{min-width:0;padding:0 8px;font-size:12px}
 
+  /* O DEGRAU HERDADO TEM CARA PRÓPRIA — VIBRA-ACESA-01, 17/09/2026.
+
+     A coluna que NÃO tem ajuste próprio herda a força geral, e até hoje isso
+     aparecia como NADA: o pacote emitia `degrau=""`, o alvo `classe` apagava os
+     três, e ela leu o resultado como defeito — *"o botão não tá ativo"*, com a
+     coluna ao lado marcando 150%.
+
+     A decisão [05] dela (04/09) mandava o herdado acender na LINHA DE MESA, e a
+     linha de mesa foi apagada em 05/09 pela decisão dela de não ter mesa em
+     nada da interface. O herdado ficou sem lugar. Aqui ele ganha o lugar que
+     sobrou, que é o botão: ACESO, porque é a força que a mão dela sente, e
+     DIFERENTE do escolhido, porque procedência é informação — foi exatamente
+     isso que a decisão [05] pediu, e só o endereço dela é que mudou.
+
+     A MARCA É O TRAÇO, NÃO A COR: o preenchimento de `.seg button.on` continua
+     dizendo "ligado" e a borda tracejada diz "veio de fora". Trocar a cor faria
+     o olho ler outro ESTADO; trocar o traço faz ele ler a mesma força com outra
+     origem. E o peso volta ao normal — negrito é o que ela escolheu para esta
+     coluna. */
+  .vib .seg.herdado button.on{background:transparent;border-style:dashed;
+                              font-weight:500}
+
   /* AS TRÊS BARRAS DE UM CONTROLE NA MESMA GRADE — a Força e os dois motores.
      Quatro colunas fixas: interruptor · trilho · número · sufixo. A da Força não
      tem interruptor, e a célula fica vazia de propósito: é o que faz os três
@@ -1724,7 +1746,8 @@ def _coluna(c, e=None, conectado=None):
             <div class="moldura" data-hef="desenho" data-campo="plastico"
                  data-hef-alvo="plastico"{tinta}>{desenho}</div>
             <div class="rot-ctrl" data-hef="identidade">{rotulo}
-            <div class="seg">{degraus}</div>
+            <div class="seg" data-campo="degrau-herdado" data-hef-alvo="classe"
+                 data-hef-classe="herdado">{degraus}</div>
             {_barra(e["pct"], TETO, "", papel="", campo_num="mult",
                     arrasta=True, campo_trilho="mult-pos",
                     sufixo_html=_teto_do_multiplicador(e["pct"] == TETO),
