@@ -864,11 +864,17 @@ o produto não toma. Cancelar não reconecta nada.
 > física, escolhida por combo de botões ao ligar; o que esta seção acrescenta é
 > nomeá-lo — antes desta aba o produto nem sabia dizer "D-input" ou "Apple".
 
-**O microfone nasce desligado, e ligá-lo é um gesto seu.** Um microfone que
-sobe sozinho junto com o Hefesto é inaceitável, por melhor que seja a intenção —
-por isso não há chave de mesa inteira, só uma por card. O interruptor fica
-**sempre visível** e só é acionável no rádio: pelo cabo o microfone do DualSense
-é uma placa de som USB e já funciona sem ponte nenhuma.
+**O microfone nasce LIGADO, e calá-lo é que é um gesto seu.** Assim que o
+controle conecta — no cabo ou no rádio, no primeiro ou no quarto —, o canal
+dele sobe e o microfone entra no ar sem você clicar em nada; o primeiro
+controle da mesa vira também a fonte de captura padrão do sistema, e os
+seguintes ficam no ar sem tirar a fonte de quem já a tem. Dois casos recuam, e
+os dois são você pedindo silêncio: quando o perfil ativo traz o microfone mudo
+para aquele controle, e quando o botão do plástico já está com o mudo aceso.
+
+Não há chave de mesa inteira, só uma por card. O interruptor fica **sempre
+visível** e só é acionável no rádio: pelo cabo o microfone do DualSense é uma
+placa de som USB e já funciona sem ponte nenhuma.
 
 Como o resto desta aba, o clique **espera o "Aplicar"** do rodapé. Desligar não
 grava "não quero": volta para "nunca pedi", que é o mesmo lugar de onde ele

@@ -535,19 +535,29 @@ def frase_da_extrapolacao() -> str:
 
 
 def microfone_nasce_ligado() -> bool:
-    """O microfone nasce ligado? Lê o DONO do padrão, e não opina.
+    """O microfone nasce ligado? **Sim, desde 17/09/2026.**
 
-    O dono é ``ControleDeclarado.microfone`` (``utils/maquina.py``), cujo
-    ``default`` de hoje é ``None`` — "ninguém declarou", que deixa a ponte no
-    chão. Quando a ``D-O-MIC-LIGADO-VALE-NO-RADIO`` for decidida, quem muda é
-    aquele campo, e a frase desta tela acompanha sozinha.
+    A ``D-O-MIC-LIGADO-VALE-NO-RADIO`` FOI IMPLEMENTADA (NASCE-LIGADO-MIC-01), e
+    o dono do padrão é ``daemon/subsystems/hotkey.nascer_no_ar``, chamado pelo
+    gancho de conexão do daemon: a chegada de cada controle põe o microfone
+    dele no ar, nos dois transportes, sem gesto nenhum dela. A régua é
+    ``tests/unit/test_nasce_ligado_mic_01_o_microfone_nasce_no_ar.py``.
 
-    Import tardio: ``utils.maquina`` puxa pydantic, e este módulo é importado
-    por caminhos que não precisam dele.
+    **SUBSTITUÍDO O DONO, E A SUBSTITUIÇÃO É A CURA.** Aqui se lia o ``default``
+    de ``ControleDeclarado.microfone`` (``utils/maquina.py``), com a promessa de
+    que *"quando a decisão for tomada, quem muda é aquele campo"*. Aquele campo
+    **não pode** mudar: ``utils/maquina.py`` diz que só ``True`` chega ao disco
+    e que DESLIGAR grava ``None``, então ``None`` é ao mesmo tempo *"nunca
+    pedi"* e *"não quero"*. Um ``default=True`` ali deixaria o gesto de
+    desligar do card dela sem como se escrever — a cura mataria o interruptor
+    que ela usa. São DOIS eixos: a declaração é o interruptor por card, o
+    nascimento é o padrão; e este módulo fala do segundo.
+
+    Não há valor a ler porque não há valor: o padrão virou COMPORTAMENTO, e
+    derivá-lo de um campo que não o governa mais seria o instrumento apontando
+    para outra coisa — a armadilha nº 1 desta casa.
     """
-    from hefesto_dualsense4unix.utils.maquina import ControleDeclarado
-
-    return bool(ControleDeclarado.model_fields["microfone"].default)
+    return True
 
 
 def frase_do_preco_por_controle() -> str:
@@ -562,7 +572,7 @@ def frase_do_preco_por_controle() -> str:
     """
     total_com_mic = HZ_INPUT_COM_MIC + HZ_AUDIO_COM_MIC
     hoje = (
-        "Hoje ele nasce ligado."
+        "Hoje ele nasce ligado assim que o controle conecta."
         if microfone_nasce_ligado()
         else "Hoje ele nasce desligado, e só você o liga."
     )

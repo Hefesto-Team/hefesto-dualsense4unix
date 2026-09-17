@@ -65,12 +65,40 @@ captura nada: sem pedido e sem declaração, `alvos()` devolve `[]`, nenhuma
 ponte sobe, nenhum `0x32` é escrito e a libopus nem é importada. O custo em
 repouso é uma varredura de sysfs a cada `RECONCILIA_S`.
 
-**Por que ele não sobe SOZINHO, e a razão continua de pé.** Ligar o mic
-significa mandar o controle capturar áudio o tempo todo, e isso tem dois preços
-que só a usuária pode aceitar:
+**ELE SOBE SOZINHO DESDE 17/09/2026, E A RAZÃO DE NÃO SUBIR CADUCOU.** Aqui
+estava escrito, no presente, *"por que ele não sobe SOZINHO, e a razão continua
+de pé"* — privacidade e banda, as duas abaixo. **Ela revogou as duas em
+25/08/2026, por escrito**, em `docs/data/decisoes-dela.csv`: a id 37
+(D-AUDIO-E-GIRO-NASCEM-LIGADOS) e a id 38 (D-O-MIC-LIGADO-VALE-NO-RADIO), esta
+com as palavras dela — *"LIGADO SEMPRE, NOS DOIS TRANSPORTES, COM A TELA DIZENDO
+O PREÇO… o que caduca é o padrão desligado"*. A decisão nunca foi implementada,
+e em 17/09/2026 ela pediu a mesma coisa pela TERCEIRA vez:
 
-1. **Privacidade.** Um microfone que liga sozinho quando o daemon sobe é
-   inaceitável, por melhor que seja a intenção. A ponte é um gesto explícito.
+    *"segue por default mudo. eu preciso lembrar de clicar no icon do mic pra
+    ativar e ele ser reconhecido. isso deveria ta  # (noqa-acento) dela
+    ativado por padrao"*  # (noqa-acento) dela, 17/09/2026
+
+**O QUE MUDOU, E O QUE NÃO MUDOU.** Quem diz a palavra na CHEGADA do controle é
+`daemon/subsystems/hotkey.nascer_no_ar`, chamado pelo gancho de conexão
+(`daemon/connection.nascer_o_microfone_ao_conectar`) — NASCE-LIGADO-MIC-01.
+Nada aqui virou persistência: as portas de saída do latch continuam todas de
+pé, quem sai da mesa perde o pedido e a palavra, e nada volta do disco. O que
+mudou é que a chegada volta a dizer a palavra — e é por isso que ela não
+clicava uma vez, clicava *toda vez*.
+
+**E O SILÊNCIO DELA CONTINUA VENCENDO.** O nascimento recua diante das duas
+formas de ela ter pedido para calar: `mic.muted: true` no perfil ativo (a
+`ProfileManager.o_perfil_pede_silencio`) e o bit do mudo já aceso no aparelho.
+Sem isso a SOM-MIC-REPLUG-01 — *"o silêncio que o produto promete e não
+entrega"* — voltaria pela porta da frente.
+
+**AS DUAS RAZÕES QUE ELA REVOGOU FICAM ESCRITAS**, porque a segunda continua
+sendo a CONTA que diz quantos microfones cabem numa mesa, e porque apagá-las
+deixaria a próxima pessoa sem saber que o padrão desligado já foi política:
+
+1. **Privacidade.** Era: *"um microfone que liga sozinho quando o daemon sobe é
+   inaceitável, por melhor que seja a intenção"*. Revogada por ela — e o que
+   sobrou da preocupação é o recuo diante do silêncio pedido, acima.
 2. **Banda do rádio.** Medido ao vivo (2026-07-25, DualSense por BT nesta
    máquina): com o mic desligado o controle entrega ~260 reports de input/s;
    com o mic ligado a MESMA banda passa a carregar ~106 quadros de áudio/s e

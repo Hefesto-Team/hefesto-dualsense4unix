@@ -2940,7 +2940,7 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
 # não pela COISA que os dois botões descrevem. A coisa tem dono desde 22/08/2026
 # e é a ponte de microfone por Bluetooth (`QUATRO-MICROFONES-01`, decisão dela:
 # *"por controle"*), com o gesto vivo na GUI estável
-# (`app/actions/config/secao_controles.py:1113`). Ver o gesto `mic-modo`.
+# (`app/actions/config/secao_controles.py:1138`). Ver `_pendurar_o_microfone`.
 #
 # O QUE NÃO TEM, e o motivo de cada um está no `sem_dono` do gesto que o recusa
 # ou na conferência abaixo:
@@ -4191,7 +4191,7 @@ def mic_modo(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
 
     QUEM LIGA NÃO É A JANELA, e isso é uma cicatriz, não um detalhe de desenho.
     A GUI estável escreve a DECLARAÇÃO (`machine.declare`) e quem sobe a ponte é
-    o daemon; o comentário de `secao_controles.py:1107` diz por quê: *"o
+    o daemon; o `_ao_alternar_o_microfone` de `secao_controles.py:1168` diz por quê: *"o
     processo da janela não pode ter esse gesto ao alcance de um clique enquanto
     a posse do hidraw não for arbitrada — o susto de 16/08/2026"*. Aqui é igual:
     este gesto DECLARA, e o `bt_mic` do daemon reconcilia sozinho — a fonte dele

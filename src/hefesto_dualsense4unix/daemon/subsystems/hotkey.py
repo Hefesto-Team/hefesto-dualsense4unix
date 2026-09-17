@@ -2367,9 +2367,16 @@ class MicrofonesNoAr:
     canal sumindo de fato, e nos dois a palavra muda no mesmo gesto.
 
     Vive na SESSÃO do daemon e não vai ao disco: *"nada novo vai ao disco"* é o
-    critério da sprint, e um microfone não pode voltar ao ar num boot sem gesto.
-    Só a corrotina do laço do daemon a toca — o gesto e o laço do canal —, então
-    não há lock.
+    critério da sprint. Só a corrotina do laço do daemon a toca — o gesto, o
+    laço do canal e o nascimento —, então não há lock.
+
+    **QUEM A ESCREVE PASSOU A SER TRÊS — NASCE-LIGADO-MIC-01 (17/09/2026).**
+    Aqui estava escrito que *"um microfone não pode voltar ao ar num boot sem
+    gesto"*, e essa regra é dela e ela a REVOGOU: `docs/data/decisoes-dela.csv`
+    id 37 e id 38 (25/08/2026), reafirmadas em 17/09. Hoje `nascer_no_ar`
+    escreve aqui na CHEGADA do controle, sem gesto nenhum. O que continua de
+    pé é o resto do contrato — não há persistência, a lista morre com a sessão,
+    e sair do ar continua sendo o canal sumir de fato.
     """
 
     #: Quantas leituras SEGUIDAS sem canal publicado tiram um microfone do ar.
@@ -2440,6 +2447,288 @@ def _no_ar_da_sessao(daemon: Any) -> MicrofonesNoAr:
         no_ar = MicrofonesNoAr()
         daemon._microfones_no_ar = no_ar
     return no_ar
+
+
+# ---------------------------------------------------------------------------
+# O NASCIMENTO DO MICROFONE — NASCE-LIGADO-MIC-01 (17/09/2026)
+# ---------------------------------------------------------------------------
+#
+# A QUEIXA, com as palavras dela e sem corrigi-las:
+#
+#     *"segue por default mudo. eu preciso lembrar de clicar no icon do mic pra
+#     ativar e ele ser reconhecido. isso deveria ta  # (noqa-acento) dela
+#     ativado por padrao"*  # (noqa-acento) dela, 17/09/2026
+#
+# E É A TERCEIRA VEZ QUE ELA PEDE. A decisão já estava assinada havia 23 dias,
+# duas vezes, em `docs/data/decisoes-dela.csv`: a id 37
+# (D-AUDIO-E-GIRO-NASCEM-LIGADOS) e a id 38 (D-O-MIC-LIGADO-VALE-NO-RADIO,
+# 25/08/2026) — *"LIGADO SEMPRE, NOS DOIS TRANSPORTES, COM A TELA DIZENDO O
+# PREÇO… o que caduca é o padrão desligado"*. Nunca foi implementada.
+#
+# O QUE ESTAVA MUDO NÃO ERA O APARELHO. Medido no journal dela em 17/09/2026,
+# às 10:33:27, na partida do daemon::
+#
+#     bt_mic_subsystem_iniciado declarados=2 pedidos=0
+#     bt_mic_source_publicada   source=hefesto_mic_e64203     (+30 ms)
+#     bt_mic_pedido             ligar=False seq=1             (+34 ms)
+#
+# O nó SOBE e o `0x32` sai DESLIGADO na mesma respiração. O firmware está
+# ABERTO no nascimento (`microphone_led_repintado mudo=False` no mesmo journal,
+# e `profiles/manager.apply_mic` recusa `muted=False` justamente por ser *"já o
+# default do firmware"*). Quem estava calado era a metade do SISTEMA: quatro
+# estados de sessão que nascem vazios e que só a MÃO DELA escrevia — os dois do
+# `RegistroDePedidosDeCanal`, o `MicrofonesNoAr` daqui e o `_pedido_dela` da
+# ponte. Com os quatro vazios `canal_ativo` é `False`, o selo pinta MUDO, e o
+# 🎙 vira o único caminho — TODA VEZ, porque o registro morre com a saída do
+# controle (`bt_mic.esquecer_ausentes`) e com o daemon.
+#
+# POR QUE AQUI, E NÃO NO PERFIL. Os perfis dela JÁ trazem `mic.muted: false` e
+# não adianta: `apply_mic` zera o `muted` em todo `origin` que não seja um
+# clique, e o journal prova (jogo aberto às 10:45:02, `origin=launch`, só o
+# volume passou). E mesmo que atravessasse, `mic.muted` fala com o `common[9]`
+# do FIRMWARE — a camada que já nasce aberta. O ponto UNIVERSAL é a conexão do
+# controle: vale para o 1º e para o 4º, no cabo e no rádio, no boot e no
+# hotplug. É a mesma razão escrita em
+# `core/backend_pydualsense.assumir_volume_padrao_na_adocao`.
+#
+# POR QUE NÃO NA TELA. `interface/pacotes/a02_controles._faces_do_microfone` e
+# `app/widgets/controller_card.acao_mic` são LEITURA pura do que o `state_full`
+# publica — não há byte a escrever ali, e o nascimento acontece com o daemon,
+# janela aberta ou não.
+#
+# O QUE NÃO SE FAZ AQUI, e a trava é medida: escrever o `common[9]`. Tomar a
+# posse do bit do mudo mata o botão físico dela enquanto a posse durar
+# (`_metade_do_firmware`, e `_o_que_a_borda_pede` diz o mesmo). E é
+# desnecessário: o firmware já nasce ABERTO.
+
+
+def _o_firmware_esta_mudo(daemon: DaemonProtocol, uniq: str) -> bool:
+    """O bit do mudo DESTE controle está ligado agora? `None` não é silêncio.
+
+    O segundo cinto do nascimento, e ele cobre o que o perfil não cobre: ela
+    apertou o botão do plástico, o daemon reabriu o handle, e o controle volta
+    com o mudo aceso. Pôr esse microfone no ar seria a mesma mentira de sinal
+    trocado que a SOM-MIC-REPLUG-01 fechou.
+
+    *"Não sei"* (backend enxuto, leitura que explode, controle sem status) vale
+    como *"não pediu silêncio"* — do contrário o nascimento não aconteceria em
+    nenhum dublê, e a régua ficaria verde sobre nada.
+    """
+    leitor = getattr(getattr(daemon, "controller", None), "audio_status_for", None)
+    if not callable(leitor):
+        return False
+    try:
+        estado = leitor(uniq)
+    except Exception:  # best-effort: a conexão dela não vira traceback
+        logger.debug("mic_nascimento_leitura_do_mudo_falhou", exc_info=True)
+        return False
+    mudo = estado.get("mic_mudo") if isinstance(estado, dict) else None
+    return mudo is True
+
+
+async def _o_perfil_pede_silencio(daemon: DaemonProtocol, uniq: str) -> bool:
+    """O perfil ativo manda calar ESTE microfone? Pergunta ao dono da resposta.
+
+    Nenhuma régua nova sobre `controllers[…].mic` nasce aqui: quem responde é
+    `profiles/manager.ProfileManager.o_perfil_pede_silencio`, que resolve a
+    peça sobre o global com a MESMA ordem de `reapply_mic_on_connect` e a
+    mesma canonização de chave. Uma segunda leitura desse mapa seria a terceira
+    cópia dele.
+
+    Vai por `_run_blocking` quando o daemon tem um: `load_profile` é disco, e
+    disco dentro do laço do daemon é a família REVIEW-M5-PGREP-BLOCK-01.
+    """
+    store = getattr(daemon, "store", None)
+    controller = getattr(daemon, "controller", None)
+    if store is None or controller is None:
+        return False
+    try:
+        from hefesto_dualsense4unix.profiles.manager import ProfileManager
+
+        manager = ProfileManager(controller=controller, store=store)
+        correr = getattr(daemon, "_run_blocking", None)
+        if callable(correr):
+            return bool(await correr(manager.o_perfil_pede_silencio, uniq))
+        return bool(manager.o_perfil_pede_silencio(uniq))
+    except Exception:  # best-effort: a conexão dela não vira traceback
+        logger.debug("mic_nascimento_leitura_do_perfil_falhou", exc_info=True)
+        return False
+
+
+def _fila_do_nascimento(daemon: Any) -> asyncio.Lock:
+    """UM nascimento por vez nesta sessão do daemon. Molde de `_eleitor`.
+
+    **A FILA NÃO É ZELO — ELA É O DEFEITO DE PRIVACIDADE, MEDIDO.** O caminho
+    da conexão solta um nascimento POR ALVO no mesmo tique, e os dois correm
+    soltos. Sem fila, os dois leem `eleitor.eleito is None` antes de qualquer
+    um escrever, os DOIS elegem, e o último a responder fica com a fonte
+    padrão da máquina — que é exatamente o que a condição *"a mesa sem dono"*
+    existe para impedir, acontecendo por corrida em vez de por regra.
+
+    Medido pela régua desta cura, com a mesa de dois::
+
+        mic_da_mesa_eleicao  uniq=…0011 ok=True
+        mic_da_mesa_eleicao  uniq=…0022 ok=True      ← os dois elegeram
+        eleitor.eleito == …0022                      ← o último venceu
+
+    O `asyncio.Lock` é FIFO, então a ordem de chegada da mesa é a ordem em que
+    os microfones nascem — e o primeiro controle é o que fica com o padrão.
+    """
+    fila = getattr(daemon, "_fila_do_nascimento_do_mic", None)
+    if not isinstance(fila, asyncio.Lock):
+        fila = asyncio.Lock()
+        daemon._fila_do_nascimento_do_mic = fila
+    return fila
+
+
+async def nascer_no_ar(daemon: DaemonProtocol, uniq: str) -> bool:
+    """O microfone deste controle NASCE NO AR, sem gesto nenhum dela.
+
+    As DUAS ESCRITAS do sistema, e nenhuma no firmware:
+
+    1. `dizer_no_ar(uniq, True)` — a PALAVRA, que acende o `0x32` sem esperar
+       um aplicativo gravando. Sem ela o nó sobe e o aparelho fica mudo, que é
+       exatamente o `bt_mic_pedido ligar=False seq=1` do journal dela. **E ela
+       traz o PEDIDO DE CANAL junto**, por dentro de `BtMicSubsystem.no_ar` —
+       que é o que levanta a ponte no rádio e põe o `uniq` no registro lido
+       por `bt_mic._reconciliar_o_cabo` para publicar o `hefesto_mic_<hex6>`
+       do fio. Uma palavra, os dois transportes;
+    2. `MicrofonesNoAr.entrou` — é ele que faz `_ler_o_canal_deste` publicar
+       `canal_ativo=True`, e é o `canal_ativo` que o selo da aba Controles lê.
+       As duas têm de andar juntas: sem a 2 o chip continua dizendo MUDO sobre
+       um microfone no ar; sem a 1 a tela diz ATIVO sobre zeros.
+
+    **ESTAR NO AR E SER A FONTE PADRÃO SÃO COISAS DIFERENTES** — é a separação
+    que o commit `ec2309c92` nomeou como *"o que falta"*, e o nascimento é
+    quem precisava dela. Estar no ar é de cada controle, os quatro juntos
+    (OS-QUATRO-NO-AR-01); a fonte padrão da máquina é de UM só. Então a eleição
+    só acontece **com a mesa sem dono**, e a condição não é escrita aqui: é a
+    mesma `_eleitor(daemon).eleito is None` que `_o_que_a_borda_pede` já usa.
+    Com dono, os outros nascem no ar e não roubam nada — sem isso, o quarto
+    controle a conectar tomaria a fonte padrão da máquina dela sem ela ter
+    tocado em coisa alguma.
+
+    **E ELEGER É O CAMINHO DE SEMPRE, NÃO UMA CÓPIA.** Com a mesa sem dono
+    quem elege é `_metade_do_canal` — a mesma metade por onde passam o 🎙 da
+    tela e a borda do plástico —, com a palavra dita antes, o LED seguindo a
+    leitura conferida, o recado na tela e a SEXTA PORTA desfazendo a palavra se
+    a eleição recusar. O nascimento é o TERCEIRO chamador do ato, e escrever
+    aqui uma segunda eleição é o defeito que esta casa já pagou onze vezes.
+
+    **O SILÊNCIO DELA VENCE, e por isso há duas perguntas antes das escritas.**
+    O perfil que diz `mic.muted: true` (o `pragmata.json` dela diz) e o bit do
+    mudo já aceso no aparelho são as duas formas de ela ter pedido silêncio; o
+    nascimento recua nas duas. Deixar a ORDEM contra o `reapply_mic_after_connect`
+    resolver isso não bastaria: aquele caminho escreve o FIRMWARE, e este
+    levanta o CANAL — o microfone de quem pediu silêncio iria ao ar do mesmo
+    jeito, que é a SOM-MIC-REPLUG-01 voltando pela porta da frente.
+
+    **NÃO HÁ PERSISTÊNCIA NOVA.** As portas de saída do latch continuam todas
+    de pé — quem sai da mesa perde o pedido e a palavra, e nada volta do disco.
+    O que muda é que a CHEGADA volta a dizer a palavra, e é isso que responde
+    ao *"toda vez"* da queixa dela.
+
+    **UM POR VEZ**, e a razão está em `_fila_do_nascimento`: a conexão solta um
+    nascimento por alvo no mesmo tique, e sem fila os dois leem *"a mesa está
+    sem dono"* antes de qualquer um escrever.
+
+    Devolve `True` quando este microfone ficou no ar por causa desta chamada.
+    """
+    if not uniq or not norm_mac(str(uniq)):
+        logger.debug("mic_nascimento_sem_endereco", uniq=uniq)
+        return False
+    async with _fila_do_nascimento(daemon):
+        return await _nascer_no_ar_na_vez(daemon, uniq)
+
+
+async def _nascer_no_ar_na_vez(daemon: DaemonProtocol, uniq: str) -> bool:
+    """O corpo de `nascer_no_ar`, já com a vez na fila. Ver o docstring de lá."""
+    if await _o_perfil_pede_silencio(daemon, uniq):
+        logger.info("mic_nasce_calado_por_perfil", uniq=uniq)
+        return False
+    if _o_firmware_esta_mudo(daemon, uniq):
+        logger.info("mic_nasce_calado_por_gesto", uniq=uniq)
+        return False
+    # AS ESCRITAS SÃO IDEMPOTENTES DE PROPÓSITO, e não é zelo: a reconexão
+    # rápida devolve um controle que o `esquecer_ausentes` já apagou do
+    # registro mas que o `MicrofonesNoAr` ainda não tirou do ar (ele espera
+    # DUAS leituras sem canal). Sair cedo por "já está no ar" deixaria o pedido
+    # e a palavra no chão, com a tela dizendo ATIVO — a mentira de segunda
+    # geração que o `_apagar_a_luz_de_quem_perdeu_o_canal` fecha do outro lado.
+    #
+    # O PEDIDO DE CANAL NÃO É CHAMADO AQUI, e isso foi MEDIDO: a mordida desta
+    # cura arrancou um `pedir_canal(uniq)` que existia nesta linha e NENHUMA
+    # régua reprovou. A razão está escrita no dono — `BtMicSubsystem.no_ar`
+    # pede o canal junto quando a palavra é `True` (*"sem ponte de pé não há a
+    # quem entregar a palavra"*) —, então a chamada daqui era uma segunda porta
+    # para o mesmo ato. `dizer_no_ar` cobre os dois ramos abaixo: o de eleição
+    # pelo `_metade_do_canal`, e o outro por si mesmo.
+    no_ar = _no_ar_da_sessao(daemon)
+    if _eleitor(daemon).eleito is None:
+        metade, ativo = await _metade_do_canal(daemon, uniq, True)
+        logger.info(
+            "mic_nasceu_no_ar",
+            uniq=uniq,
+            padrao_da_maquina=True,
+            feito=metade.feita,
+            ativo=ativo,
+            motivo=metade.motivo,
+        )
+        return bool(metade.feita)
+    dizer_no_ar(uniq, True)
+    # `entrou` MOVE para o fim da ordem de chegada, e a ordem decide para quem
+    # o padrão passa quando o dono sair. Repetir isso a cada reconexão
+    # reescreveria a fila sem ninguém ter ligado nada.
+    if not no_ar.esta(uniq):
+        no_ar.entrou(uniq)
+    logger.info("mic_nasceu_no_ar", uniq=uniq, padrao_da_maquina=False, feito=True)
+    return True
+
+
+#: As tarefas de nascimento em voo. O `create_task` devolve uma referência
+#: FRACA no coletor: sem guardá-las, um nascimento pode ser colhido no meio.
+#: Mesmo molde de estado-de-processo do `_ECO_DO_ATO`.
+_NASCIMENTOS_EM_VOO: set[asyncio.Task[bool]] = set()
+
+
+async def _nascimento_best_effort(daemon: DaemonProtocol, uniq: str) -> bool:
+    """`nascer_no_ar` que nunca levanta — ele corre solto, sem ninguém esperando."""
+    try:
+        return await nascer_no_ar(daemon, uniq)
+    except Exception:
+        logger.warning("mic_nascimento_falhou", uniq=uniq, exc_info=True)
+        return False
+
+
+def agendar_o_nascimento_do_microfone(
+    daemon: DaemonProtocol, *, uniq: str | None
+) -> asyncio.Task[bool] | None:
+    """Põe o nascimento NUM FIO PRÓPRIO. Devolve a tarefa, ou `None`.
+
+    **POR QUE NÃO AWAIT NO CAMINHO DA CONEXÃO.** Eleger custa um `pactl
+    set-default-source`, o assentamento do grafo e — quando o canal ainda não
+    subiu — até três segundos esperando o PipeWire publicar a source da ponte
+    (`eleicao_de_microfone.ESPERA_DO_CANAL_PASSOS`). Esse orçamento dentro de
+    `connect_with_retry` seria a partida do daemon inteira parada atrás do
+    microfone, vezes o número de controles na mesa. É a mesma família do
+    travamento que a leva de 15/09 mediu na janela: *"as DUAS VIAGENS de IPC
+    são SÍNCRONAS — elas seguram o laço do GTK inteiro"*.
+
+    Sem laço rodando (CLI, dublê síncrono) devolve `None` em vez de explodir: o
+    nascimento é um acréscimo, e nunca pode derrubar o caminho que reconecta o
+    controle dela.
+    """
+    if not uniq:
+        return None
+    try:
+        laco = asyncio.get_running_loop()
+    except RuntimeError:
+        logger.debug("mic_nascimento_sem_laco", uniq=uniq)
+        return None
+    tarefa = laco.create_task(_nascimento_best_effort(daemon, uniq))
+    _NASCIMENTOS_EM_VOO.add(tarefa)
+    tarefa.add_done_callback(_NASCIMENTOS_EM_VOO.discard)
+    return tarefa
 
 
 async def _passar_o_padrao_ou_devolver(

@@ -561,28 +561,40 @@ def test_o_preco_por_controle_esta_na_tela_com_os_dois_numeros() -> None:
     assert str(SLOTS_POR_SEGUNDO) in frase
 
 
-def test_o_padrao_do_microfone_e_lido_do_dono_e_nao_opinado(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """A linha que fica PRONTA para receber a decisão dela — e é derivada.
+def test_a_tela_diz_o_padrao_de_hoje_e_ele_e_ligado() -> None:
+    """A linha que a `D-O-MIC-LIGADO-VALE-NO-RADIO` exigia — e ela fechou.
 
-    `microfone_nasce_ligado` lê o `default` de `ControleDeclarado.microfone`, o
-    dono único do padrão. Hoje ele é `None`, e a frase diz "nasce desligado".
-    Quando a `D-O-MIC-LIGADO-VALE-NO-RADIO` for decidida, quem muda é aquele
-    campo — e esta frase acompanha sozinha, sem ninguém precisar lembrar.
+    **CONTRATO SUBSTITUÍDO — NASCE-LIGADO-MIC-01, 17/09/2026.** Este nó dizia:
+    *"`microfone_nasce_ligado` lê o `default` de `ControleDeclarado.microfone`,
+    o dono único do padrão. Hoje ele é `None`, e a frase diz 'nasce
+    desligado'"*, e afirmava que remexer aquele campo mudaria a frase.
 
-    Arrancar a derivação (escrever "nasce desligado" como literal): este nó
-    reprova, porque o padrão remexido não muda a frase.
+    **A DECISÃO DELA FOI IMPLEMENTADA, E POR OUTRO CAMINHO.** Aquele campo é o
+    INTERRUPTOR POR CARD, não o padrão: `utils/maquina.py` diz que só `True`
+    chega ao disco e que DESLIGAR grava `None`, então um `default=True` ali
+    deixaria o gesto de desligar dela sem como se escrever. Quem põe o
+    microfone no ar é a CHEGADA do controle
+    (`daemon/subsystems/hotkey.nascer_no_ar`), e a régua que a prova é
+    `test_nasce_ligado_mic_01_o_microfone_nasce_no_ar.py`.
+
+    O que sobrevive inteiro é a exigência dela — *"COM A TELA DIZENDO O
+    PREÇO"* (decisoes-dela.csv id 38) —, e é isto que este nó trava: os dois
+    números e o padrão de hoje, na mesma frase.
+
+    MORDIDA: faça `microfone_nasce_ligado` devolver `False`. A frase volta a
+    dizer "nasce desligado" à pessoa cujo microfone acabou de subir sozinho, e
+    este nó reprova.
     """
-    from hefesto_dualsense4unix.utils.maquina import ControleDeclarado
-
-    assert plano_de_radio.microfone_nasce_ligado() is False
-    assert "nasce desligado" in plano_de_radio.frase_do_preco_por_controle()
-
-    campo = ControleDeclarado.model_fields["microfone"]
-    monkeypatch.setattr(campo, "default", True)
     assert plano_de_radio.microfone_nasce_ligado() is True
-    assert "nasce ligado" in plano_de_radio.frase_do_preco_por_controle()
+    frase = plano_de_radio.frase_do_preco_por_controle()
+    assert "nasce ligado" in frase
+    assert "nasce desligado" not in frase, (
+        "a tela diz à pessoa que o microfone nasce desligado depois de ele "
+        "ter subido sozinho na conexão"
+    )
+    assert "260,4" in frase and "276,7" in frase, (
+        "o preço saiu da frase — a condição dela era o padrão COM o preço"
+    )
 
 
 # ---------------------------------------------------------------------------
