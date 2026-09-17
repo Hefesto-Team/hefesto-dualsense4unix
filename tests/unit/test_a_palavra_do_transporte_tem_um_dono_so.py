@@ -119,7 +119,7 @@ def test_a_contagem_do_cabecalho_nao_se_mexe_quando_a_palavra_muda(monkeypatch) 
     `0 USB · 2 BT` e os dois controles no CABO.
     """
     _, mesa = _mesa("usb", "usb")
-    assert mesa_viva.texto_da_contagem(mesa) == ("● 2 controles: ", "2 USB · 0 BT")
+    assert mesa_viva.texto_da_contagem(mesa) == ("● 2 controles: ", "2 USB")
 
     # O PONTO DE INJEÇÃO MUDOU NA COSTURA DA ONDA B (06/09/2026), e a PERGUNTA
     # não. A `via` deixou de vir da tabela `VIA_DO_TRANSPORTE` e passou a vir da
@@ -133,7 +133,7 @@ def test_a_contagem_do_cabecalho_nao_se_mexe_quando_a_palavra_muda(monkeypatch) 
     _, mesa_depois = _mesa("usb", "usb")
     assert [c["via"] for c in mesa_depois] == [SENTINELA, SENTINELA], (
         "a troca não chegou à mesa — a mordida não estaria mordendo nada")
-    assert mesa_viva.texto_da_contagem(mesa_depois) == ("● 2 controles: ", "2 USB · 0 BT"), (
+    assert mesa_viva.texto_da_contagem(mesa_depois) == ("● 2 controles: ", "2 USB"), (
         "a contagem do cabeçalho seguiu a PALAVRA da tela. Ela tem de somar "
         "`transporte`, a chave crua do daemon: a palavra é decisão dela e pode "
         "mudar de novo — a conta, não")
@@ -144,7 +144,7 @@ def test_a_contagem_do_cabecalho_separa_os_dois_transportes() -> None:
     _, mesa = _mesa("usb", "bt")
     assert mesa_viva.texto_da_contagem(mesa)[1] == "1 USB · 1 BT"
     _, so_radio = _mesa("bt", "bt")
-    assert mesa_viva.texto_da_contagem(so_radio)[1] == "0 USB · 2 BT"
+    assert mesa_viva.texto_da_contagem(so_radio)[1] == "2 BT"
 
 
 def test_a_mesa_do_desenho_tambem_publica_a_chave_crua() -> None:
