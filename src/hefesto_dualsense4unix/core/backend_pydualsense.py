@@ -788,6 +788,16 @@ class _PinnedPyDualSense(pydualsense):  # type: ignore[misc]
     #: Um aviso por episódio, não um por ciclo.
     _leitura_vazia_avisada: bool = False
 
+    #: BATERIA-QUE-PULA-01 (16/09/2026) — quantos reports este handle ACEITOU e
+    #: quantos RECUSOU por não serem estado de input. `_reports_aceitos` subindo
+    #: é a prova viva de que a guarda não congelou a entrada, e é o que a régua
+    #: mede. Default de CLASSE pela mesma razão dos dois de cima: dezesseis
+    #: dublês desta suíte constroem `_PinnedPyDualSense` por `__new__`, e um
+    #: dublê mais POBRE que o produto esconde defeito em vez de revelar.
+    _reports_aceitos: int = 0
+    _reports_recusados: int = 0
+    _recusa_avisada: bool = False
+
     def __init__(self, path: bytes, *, is_edge: bool) -> None:
         super().__init__()
         self._pinned_path = path
@@ -1035,9 +1045,12 @@ class _PinnedPyDualSense(pydualsense):  # type: ignore[misc]
                 if in_report is None:
                     self._registrar_leitura_vazia()
                 else:
+                    # O `_registrar_leitura_viva` fica FORA da guarda de
+                    # propósito: um report de áudio é prova de que o aparelho
+                    # está falando. Pô-lo depois faria um controle com a ponte
+                    # do microfone de pé ser anunciado como «entrada muda».
                     self._registrar_leitura_viva()
-                    self.readInput(in_report)
-                    self._captura_status_audio(in_report)
+                    self._consumir_report(in_report)
                 # FEAT-NATIVE-OUTPUT-MUTE-01: mutado (Modo Nativo) = NENHUM
                 # write; o jogo é o dono do output deste controle.
                 if not self._output_muted:
@@ -1210,6 +1223,76 @@ class _PinnedPyDualSense(pydualsense):  # type: ignore[misc]
     # trade-off que o `HANG-01` já escreveu por extenso nos dois executores do
     # `shutdown` (`wait=False`) — *"uma thread wedged não impede o processo de
     # encerrar"*. Aqui ela vale para o handle, que era o furo que faltava.
+    def _consumir_report(self, in_report: Any) -> None:
+        """Entrega o report cru aos dois consumidores — e SÓ se ele for ESTADO.
+
+        BATERIA-QUE-PULA-01, 16/09/2026, e a queixa dela foi: *"esse numero da
+        bateria fica oscilando sem parar de 75 a 0 a 90 a 100"*.
+
+        **O `readInput` da pydualsense não confere NADA.** Ele começa em
+        `list(inReport)` e escreve direto em `self.states`, `self.state` e
+        `self.battery`: id, tamanho, CRC e o bit de áudio nunca são olhados. Com
+        a ponte de microfone por BT de pé, o DualSense manda Opus no MESMO
+        report `0x31`, com os MESMOS 78 bytes — e `states[53]`, o byte de
+        bateria, cai dentro da janela do Opus.
+
+        MEDIDO no aparelho: 600 amostras de `daemon.state_full` em 61 s deram
+        **14,8% dos valores diferentes de 75**, com o sysfs do kernel estável em
+        75 nas 300 leituras. O `battery_state` trouxe 58 leituras fora dos seis
+        valores que existem — só byte aleatório faz isso.
+
+        **E A BATERIA É O MENOR DOS CAMPOS.** Tudo que o `readInput` escreve
+        aceitava Opus como estado, e o pior é o `state.micBtn` (bit `0x04` do
+        `misc2`): ele fecha um LAÇO, porque o botão do microfone liga e desliga
+        a ponte que produz o áudio que o envenena.
+
+        A vizinha desta linha já era guardada desde 01/09 — o
+        `_captura_status_audio` confere antes de ler. O `readInput` ficou de
+        fora. *Quando a cura conhece a causa, ela cobre TODOS os chamadores*, e
+        este é o único que existe: `readInput` tem UM chamador em todo o `src/`.
+        """
+        from hefesto_dualsense4unix.core.physical_report_reader import (
+            eh_report_de_estado,
+        )
+
+        try:
+            cru = bytes(in_report)
+        except (TypeError, ValueError):
+            return
+        if not eh_report_de_estado(cru):
+            self._recusar_report(cru)
+            return
+        self._reports_aceitos += 1
+        self.readInput(in_report)
+        self._captura_status_audio(cru)
+
+    def _recusar_report(self, cru: bytes) -> None:
+        """DESCARTA o report que não é estado — e CONTA.
+
+        Descartar, nunca "consertar": num report de áudio não há metade
+        aproveitável, o payload inteiro é Opus.
+
+        **Conta** porque o número é a régua — `_reports_aceitos` subindo é a
+        prova de que a guarda não congelou o controle. **Avisa uma vez por
+        HANDLE**, não por report: com a ponte de pé o rádio entrega mais de cem
+        reports de áudio por segundo, e um aviso por report afogaria o journal
+        exatamente quando ele precisa ser lido.
+        """
+        self._reports_recusados += 1
+        if self._recusa_avisada:
+            return
+        self._recusa_avisada = True
+        logger.info(
+            "report_recusado_nao_e_estado",
+            path=getattr(self, "_pinned_path", None),
+            report_id=cru[0] if cru else None,
+            tamanho=len(cru),
+            detalhe=(
+                "áudio ou pacote corrompido; não vai ao `readInput` "
+                "(BATERIA-QUE-PULA-01)"
+            ),
+        )
+
     def close(self) -> None:
         """Igual ao upstream, mas o join tem TETO e o fd fecha de todo jeito."""
         self.ds_thread = False
@@ -6929,6 +7012,28 @@ class PyDualSenseController(IController):
         extra; seguro fora do `_io_lock`, mesmo cuidado do `read_state`).
         Preserva a distinção "sem dado ainda" (None) de "0%": a GUI não deve
         mostrar 0% falso num controle recém-plugado.
+
+        **ESTA DOCSTRING PROMETIA O QUE A FUNÇÃO NÃO FAZIA — curado em
+        16/09/2026 (BATERIA-QUE-PULA-01).** Ela devolvia `None` só quando
+        `level is None`, nunca quando `level == 0`. E `DSBattery.__init__` nasce
+        com `Level = 0`: todo handle recém-aberto — ou seja, **toda reconexão de
+        rádio** — publicava `battery_pct = 0` até o primeiro report chegar, e o
+        cartão pintava isso como «0%». É a origem do zero que ela viu no meio do
+        75/0/90/100, e o único caminho que o explica.
+
+        A função IRMÃ logo abaixo (`_read_battery_state_opt`) já tinha a guarda
+        e a explicava por extenso: *"Level 0 é 'ninguém reportou ainda'"*. Duas
+        funções gêmeas, uma com a disciplina e a outra sem — e a que faltava era
+        a que a tela lê.
+
+        **O contrato legado NÃO muda:** `_read_battery_raw` continua convertendo
+        `None` em `0` de propósito, porque `core/controller.py` valida `0` como
+        legal e há consumidores que contam com um `int` sempre. Quem quer saber
+        se HÁ dado pergunta a esta função; quem quer um número sempre pergunta
+        àquela. A distinção é o ponto.
+
+        Um DualSense de verdade nunca reporta 0: o nibble mínimo dá
+        `0*10+5 = 5`, e em 600 amostras medidas o menor valor foi 5.
         """
         # HOTFIX-1: battery vive em `ds.battery` (top-level), não em ds.state.
         # DSBattery expõe `Level` (0-100) e `State` (enum BatteryState).
@@ -6939,6 +7044,9 @@ class PyDualSenseController(IController):
         try:
             value = int(level)
         except (TypeError, ValueError):
+            return None
+        if value <= 0:
+            # "Ninguém reportou ainda", e não "a bateria acabou".
             return None
         return max(0, min(100, value))
 
