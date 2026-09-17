@@ -56,16 +56,53 @@ class TestOCancelamentoDeEcoNasceLigado:
         """
         assert rep.AUDIO_CONTROL_BASE_SEGURA & rep.AUDIO_CONTROL_FORCE_INTERNAL_MIC
 
-    def test_o_cancelamento_de_ruido_fica_de_fora(self) -> None:
-        """Decisão de 16/09/2026, e ela é sobre quem decide.
+    def test_o_cancelamento_de_ruido_esta_ligado(self) -> None:
+        """Decisão dela, 17/09/2026, diante do microfone do cabo.
 
-        `NOISE_CANCEL` mexe na qualidade da CAPTURA. Ligá-lo por conta própria
-        decidiria por ela uma coisa que ela não pediu — o eco é defeito, o
-        ruído é gosto.
+            "sobre o mic do cabo ficar limpo igual o do mic no bt"
 
-        MORDIDA: acrescentar `AUDIO_CONTROL_NOISE_CANCEL` à base.
+        `NOISE_CANCEL` mexe na qualidade da CAPTURA, e por isso ficou desligado
+        até ela pedir. Ela pediu, e mandou valer nos DOIS transportes — ordem de
+        16/09: trave a classe, não a instância.
+
+        MORDIDA: tire `AUDIO_CONTROL_NOISE_CANCEL` da base e isto reprova.
         """
-        assert not rep.AUDIO_CONTROL_BASE_SEGURA & rep.AUDIO_CONTROL_NOISE_CANCEL
+        assert rep.AUDIO_CONTROL_BASE_SEGURA & rep.AUDIO_CONTROL_NOISE_CANCEL, (
+            "o cancelamento de ruído saiu da base — é a decisão dela de "
+            "17/09/2026, e sem ele o microfone dela volta a não ficar limpo"
+        )
+
+    def test_o_bit_de_ruido_vale_nos_dois_transportes(self) -> None:
+        """A CLASSE, não a instância: há UMA base, e os dois caminhos a usam.
+
+        O rádio escreve `common[7]` em todo report 0x35
+        (`alto_falante_bt.common_de_audio`); o cabo escreve pelo
+        `_byte_da_rota` do backend. Se alguém criar uma segunda base para um
+        transporte só, esta régua reprova — foi assim que o cabo passou dois
+        meses sem o que o rádio tinha.
+        """
+        import pathlib
+        import re
+
+        import hefesto_dualsense4unix as pacote
+
+        # O caminho sai do PACOTE, nunca digitado a partir da raiz: um arquivo
+        # que mude de lugar tem de quebrar aqui, não passar em silêncio.
+        raiz = pathlib.Path(pacote.__file__).parent
+        bases = set()
+        for relativo in (
+            "integrations/alto_falante_bt.py",
+            "core/backend_pydualsense.py",
+        ):
+            arq = raiz / relativo
+            assert arq.is_file(), f"o escritor do byte 7 não está em {arq}"
+            achadas = re.findall(r"AUDIO_CONTROL_BASE_\w+", arq.read_text(encoding="utf-8"))
+            assert achadas, f"{relativo} parou de usar uma base nomeada do byte 7"
+            bases.update(achadas)
+        assert bases == {"AUDIO_CONTROL_BASE_SEGURA"}, (
+            f"há mais de uma base do byte 7 em uso: {sorted(bases)} — os dois "
+            "transportes têm de partir da mesma, senão um deles fica para trás"
+        )
 
     def test_a_base_nao_invade_os_bits_da_rota(self) -> None:
         """Os bits 4-5 são da rota e têm dono próprio (`_byte_da_rota`).

@@ -145,53 +145,37 @@ SAIDA_SO_NO_ALTO_FALANTE = 3
 OUTPUT_PATH_SEL_SHIFT = 4
 OUTPUT_PATH_SEL_MASK = 0x30
 
-#: Os bits do MICROFONE dentro do `common[7]`, e o valor que preserva o
-#: microfone interno funcionando quando assumimos a posse do byte.
+#: Os bits do MICROFONE dentro do `common[7]`, e a base que se escreve ao
+#: assumir a posse do byte.
 #:
-#: SOM-CANAL-01, REGRESSÃO MEDIDA em 02/08/2026 e curada no mesmo dia: ao pedir
-#: uma rota de saída, o `common[7]` era escrito com base ZERO — porque ninguém
-#: tinha posse dele antes e não há como LER o valor que o firmware usava. O
-#: microfone do controle parou de captar: o `parec` passou de 131072 bytes para
-#: **zero**, e voltou assim que a posse foi devolvida.
+#: **ZERO NÃO É NEUTRO EM NENHUM DESTES BITS**, e cada metade da frase custou
+#: uma regressão medida:
 #:
-#: É exatamente a armadilha 2 da sprint dela — *"o common[7] carrega a rota E o
-#: caminho do microfone; escrever meio byte muda o outro meio"* — e o
-#: `_byte_da_rota` só preservava o outro meio quando JÁ havia posse.
+#: * bit0 zerado **mata a captação** — o `parec` foi de 131072 bytes para ZERO
+#:   (SOM-CANAL-01, 02/08/2026);
+#: * bit2 zerado **desliga o cancelamento de eco** do firmware e a voz dela
+#:   volta pelo alto-falante com atraso audível (SOM-ECO-01, 16/09/2026).
 #:
-#: `FORCE_INTERNAL_MIC` (bit0) diz ao firmware para usar o microfone interno,
-#: que é o que o DualSense tem quando não há headset.
+#: Não há como LER o `common[7]` vigente: não existe report de entrada nem
+#: feature que o devolva. Por isso a base é escrita inteira, e escrevê-la pela
+#: metade muda a outra metade em silêncio — o byte carrega a rota (bits 4-5) E
+#: o caminho do mic (bits 0-3, 6-7).
 #:
-#: **"OS DEMAIS BITS FICAM EM ZERO, QUE É O NEUTRO DELES" CAIU EM 16/09/2026 —
-#: SOM-ECO-01, e a regressão foi NOSSA, do mesmo dia.** Esta linha dizia isso, e
-#: a base era só o bit0. Zero NÃO é o neutro do bit2: ele é `ECHO_CANCEL`, e
-#: zero o DESLIGA (`docs/protocol/dualsense-referencia-canonica.md:668`).
-#:
-#: Enquanto ninguém escrevia o `common[7]` na adoção, o firmware ficava com o
-#: default DELE — com o cancelamento ligado — e não havia eco. A `SOM-ROTA-02`,
-#: de algumas horas antes, passou a escrever o byte para que o alto-falante
-#: nascesse roteado, e levou o bit2 a zero junto.
-#:
-#: MEDIDO com ela, no RÁDIO, com o jogo FECHADO: a voz dela saía pelo
-#: alto-falante do controle com atraso audível. **No CABO, o mesmo controle e o
-#: mesmo jogo não ecoavam** — foi ela quem apontou isso, e é o que derruba a
-#: hipótese de o jogo ser o culpado: pelo rádio a volta é lenta o bastante para
-#: virar eco, pelo cabo não.
-#:
-#: **A LIÇÃO É A MESMA DA SOM-ROTA-02, VIRADA DO AVESSO.** Lá se aprendeu que
-#: *não escrever não é o lado neutro*; aqui, que **escrever ZERO também não é**.
-#: Byte de firmware com bits de dono desconhecido não tem lado seguro por
-#: omissão: cada bit é uma decisão, e decidir por default é decidir.
-#:
-#: `NOISE_CANCEL` (bit3) fica FORA de propósito: ele mexe na qualidade da
-#: CAPTURA, e ligá-lo por conta própria decidiria por ela uma coisa que ela não
-#: pediu. O eco é defeito; o ruído é gosto.
+#: `FORCE_INTERNAL_MIC` (bit0), `ECHO_CANCEL` (bit2) e `NOISE_CANCEL` (bit3)
+#: ficam LIGADOS. O bit3 entrou em 17/09/2026, por decisão dela diante do
+#: microfone do cabo — *"sobre o mic do cabo ficar limpo igual o do mic no
+#: bt"* — e vale nos DOIS transportes, que é a ordem de 16/09: trave a classe.
+#: Se no rádio soar pior, tire o bit3 daqui; nada mais depende dele.
 AUDIO_CONTROL_FORCE_INTERNAL_MIC = 0x01
 #: `ECHO_CANCEL`, bit2 — o cancelamento de eco do FIRMWARE.
 AUDIO_CONTROL_ECHO_CANCEL = 0x04
-#: `NOISE_CANCEL`, bit3 — fora da base por decisão (ver acima).
+#: `NOISE_CANCEL`, bit3 — o cancelamento de RUÍDO da captura. Na base desde
+#: 17/09/2026, por decisão dela (ver acima).
 AUDIO_CONTROL_NOISE_CANCEL = 0x08
 AUDIO_CONTROL_BASE_SEGURA = (
-    AUDIO_CONTROL_FORCE_INTERNAL_MIC | AUDIO_CONTROL_ECHO_CANCEL
+    AUDIO_CONTROL_FORCE_INTERNAL_MIC
+    | AUDIO_CONTROL_ECHO_CANCEL
+    | AUDIO_CONTROL_NOISE_CANCEL
 )
 
 #: O ganho do pré-amplificador do alto-falante, nos bits 0-2 de `common[37]`.
