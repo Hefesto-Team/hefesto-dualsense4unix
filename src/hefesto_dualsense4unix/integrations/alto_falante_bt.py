@@ -1262,6 +1262,51 @@ class SinkVirtualPipeWire:
             self._rotas.append(linhas[-1])
             logger.info("som_rota_ligada", sink=self.nome, module_id=linhas[-1])
 
+    def religar(self, rota: RotaDoNo | None) -> bool:
+        """Troca a ROTA deste nó **sem tirar o nó do lugar**. ``True`` = mexeu.
+
+        É ``D-0809-O-NO-DE-SOM-POR-CONTROLE-VIVE-SEMPRE`` escrita em código:
+        *"o que vai e volta é a ROTA, e o nó fica"*. O ``module-null-sink`` não
+        é tocado — ele guarda o nome, o id e o lugar na lista de saída dela —,
+        e o que desce e sobe são os ``module-loopback``.
+
+        **POR QUE NÃO DERRUBAR E REFAZER O NÓ**, que seria uma linha mais
+        curta: o jogo escolheu ``hefesto_som_<hex6>``. Tirá-lo do servidor por
+        um instante é tirar o dispositivo debaixo dele — o defeito que este
+        módulo inteiro existe para matar. Quem chama isto é a varredura, de 5
+        em 5 s; um nó que renasce a cada varredura é pior que a escolha presa
+        que este método existe para soltar.
+
+        **A COMPARAÇÃO É POR :func:`assinatura_da_rota`**, e o que ela deixa de
+        fora é metade do valor — leia lá. Rota de assinatura igual não mexe em
+        nada, e é por isso que a varredura pode chamar isto sempre.
+
+        Com o nó ainda no chão a rota só é GUARDADA: :meth:`iniciar` a liga
+        quando ele subir, e carregar um ``module-loopback`` para um sink que
+        não existe é o ``paplay --device=`` que esta casa já pagou.
+        """
+        if rota is None or assinatura_da_rota(rota) == assinatura_da_rota(self.rota):
+            return False
+        if self._module_id is None:
+            self.rota = rota
+            return False
+        anterior = self.rota
+        # A rota velha cai ANTES da nova subir, e só a que ESTE nó carregou —
+        # a mesma regra de `parar`. Deixar as duas de pé somaria o mix ao mix.
+        for module_id in reversed(self._rotas):
+            self.runner(["pactl", "unload-module", module_id])
+        self._rotas.clear()
+        self.rota = rota
+        logger.info(
+            "som_rota_religada",
+            sink=self.nome,
+            de=(anterior.fonte if anterior is not None else "?"),
+            para=rota.fonte,
+            por_onde=rota.por_onde,
+        )
+        self._ligar_a_rota()
+        return True
+
     def parar(self) -> None:
         """Descarrega a rota e o módulo, nessa ordem. Idempotente.
 
@@ -2589,6 +2634,42 @@ class RotaDoNo:
     monitor_do_mix: str = ""
 
 
+def assinatura_da_rota(rota: RotaDoNo | None) -> tuple[bool, str, str, str]:
+    """A identidade ESTÁVEL de uma rota: mudou isto, a fiação é outra.
+
+    Quem a usa é :meth:`SinkVirtualPipeWire.religar`, para responder *"o que
+    está ligado ainda é o que o perfil pede?"* sem tocar no nó quando a
+    resposta é sim.
+
+    **O QUE FICA DE FORA É METADE DO VALOR DESTA FUNÇÃO.**
+
+    ``monitor_do_mix`` fica de fora, e a razão é medida: ele é o monitor da
+    SAÍDA PADRÃO do sistema. Muda quando ela troca o som da TV para o fone, e
+    vira ``""`` sempre que o servidor de som hesita
+    (:func:`monitor_da_saida_padrao` recusa em recuo). Compará-lo poria a
+    varredura a religar o nó a cada troca de saída dela — e, com o servidor
+    soluçando, a derrubar o ``module-loopback`` que estava funcionando por
+    causa de um ``""`` de dois segundos.
+
+    ``motivo`` fica de fora pela mesma família: é TEXTO para a tela, e frase
+    nova não é fiação nova.
+
+    **O QUE ISSO DEIXA ABERTO, escrito para ninguém descobrir sozinho:** um nó
+    que nasceu em ``mix`` com o servidor mudo não achou monitor, logo não ligou
+    o loopback do mix, e a assinatura dele já diz ``mix`` — a varredura não vai
+    religá-lo. Ele espera a próxima troca dela. O preço do contrário seria
+    religar a cada soluço do servidor, que custa o som que está tocando.
+    """
+    if rota is None:
+        return (False, "", "", "")
+    return (
+        bool(rota.tem_rota),
+        str(rota.por_onde or ""),
+        str(rota.sink or ""),
+        str(rota.fonte or ""),
+    )
+
+
 def _sink_proprio_vivo(uniq: str, saida_curta: str) -> str:
     """``hefesto_som_<hex6>`` deste controle, se ele estiver na lista viva.
 
@@ -2977,6 +3058,7 @@ __all__ = [
     "argv_do_gravador",
     "argv_para_ligar_o_mix",
     "argv_para_ligar_o_no",
+    "assinatura_da_rota",
     "common_de_audio",
     "conferir_o_alvo_do_gravador",
     "controle_de_audio_035",
