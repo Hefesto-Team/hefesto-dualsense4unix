@@ -279,9 +279,9 @@ class TestACaixaNaoSobe:
     A primeira tentativa desta frente pôs `text-transform:uppercase` no chip do
     canal, para o par ficar idêntico ao do microfone. O portão
     `maiuscula-decorativa` reprovou, e ele carrega a palavra dela citando ESTA
-    palavra pelo nome: *"Leia o cabo e acordado (ambos minusculo sem iniciar de
-    forma capitular). Esse tipo de coisa nao pode se repetir na interface."*
-    <!-- noqa-acento: citação literal dela -->
+    palavra pelo nome: *"Leia o cabo e acordado (ambos minusculo sem
+    iniciar de forma capitular). Esse tipo de coisa
+    nao pode se repetir na interface."*  # noqa-acento: citação dela
 
     AS DUAS ORDENS DELA NÃO BRIGAM: ela pediu o ESTILO, e a caixa do chip do
     microfone não é estilo — é o TEXTO que `mesa_viva.selo_do_mic` devolve. Este
