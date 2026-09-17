@@ -1072,7 +1072,7 @@ def rota_na_tela(entry: Any) -> str:
     valor vazio, e no alvo `classe` com `data-hef-quando` nenhum dos dois casa
     com `—`: os dois botões ficam apagados, que é o que a tela pode afirmar
     quando o daemon nunca publicou `speaker` para este controle — o estado real
-    de quem nunca recebeu um `speaker.set` (`ipc_handlers.py:4694`).
+    de quem nunca recebeu um `speaker.set` (`ipc_handlers.py:4212`).
 
     ELE TAMBÉM APAGA OS DOIS NAS ROTAS 0 E 1 (tudo no fone, mono no fone), e
     isso é de propósito: são rotas legítimas do protocolo que estes dois botões
@@ -2274,7 +2274,7 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
         #
         # `None` = o daemon nunca publicou `speaker` para este controle, que é o
         # estado real de quem nunca recebeu um `speaker.set` — o registrador não
-        # se lê, só se escreve (`ipc_handlers.py:4694`).
+        # se lê, só se escreve (`ipc_handlers.py:4212`).
         sp_lido = speaker_do_entry(c)
         # A COR DA BARRA DE LUZ, pelo dono das CINCO situações. **Os DOIS
         # valores são usados**: o rótulo é o discriminador e a base é a cor.
@@ -2533,7 +2533,7 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
             #      comando): `texto_volume(102, False)` = **"100 %"**;
             #   2. `sp.get('volume', 0)` transformava AUSÊNCIA em **zero**. O
             #      daemon só publica `speaker` depois do primeiro `speaker.set`
-            #      (`ipc_handlers.py:4694`) — antes dele a tela afirmava "0%"
+            #      (`ipc_handlers.py:4212`) — antes dele a tela afirmava "0%"
             #      sobre um alto-falante que ninguém mediu, que é o gêmeo exato
             #      do "Sem toque" logo abaixo. `speaker_do_entry` devolve `None`
             #      nesse caso, e `None` é o travessão.
@@ -3103,7 +3103,7 @@ def _volume_conhecido(dele: dict[str, Any]) -> dict[str, Any]:
 
     ELE NÃO SE INVENTA, e a razão é do aparelho: o DualSense **não devolve** o
     registrador de volume, então `daemon.state_full` só publica a chave
-    `speaker` depois do primeiro `speaker.set` (`ipc_handlers.py:4694`). Mandar
+    `speaker` depois do primeiro `speaker.set` (`ipc_handlers.py:4212`). Mandar
     um número de palpite tomaria a posse com o valor errado.
 
     E MANDÁ-LO QUANDO SE SABE É O QUE A GUI ESTÁVEL FAZ, pela cura de
@@ -3614,7 +3614,7 @@ def mudo(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
         #
         # O QUE O DAEMON DESTA ÁRVORE RESPONDE, medido em 06/09/2026: o corpo
         # de `mic.canal.set` NÃO traz `por_uniq` — quem o traz é o
-        # `mic.volume.set` (`daemon/ipc_handlers.py:6198`). O ato do microfone
+        # `mic.volume.set` (`daemon/ipc_handlers.py:6192`). O ato do microfone
         # monta a resposta em `AtoDoMicrofone.como_corpo`
         # (`daemon/subsystems/hotkey.py:1567`), e lá o campo não existe. Então
         # `alvo_honrado` devolve `None` aqui, esta linha fica CALADA contra o
@@ -4017,7 +4017,7 @@ def volume(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
 
     **E A FALTA DELES TRANCAVA O ♪.** O DualSense não devolve o volume do
     alto-falante, então o daemon só publica a chave `speaker` **depois** de
-    alguém ESCREVER um (`ipc_handlers.py:4694`); sem escritor nesta tela, o ♪
+    alguém ESCREVER um (`ipc_handlers.py:4212`); sem escritor nesta tela, o ♪
     recusava para sempre num controle cujo volume nunca foi ajustado por outro
     caminho — e a frase de recusa original mandava *"use o controle deslizante
     primeiro"*, sobre um deslizante que não existia. Este gesto é o escritor que
@@ -4324,7 +4324,7 @@ METODOS: set[str] = set()
 #: sozinha que o gesto pegou.
 #:
 #: O `machine.declare` está **fora do `daemon.state_full` de propósito**, e o
-#: handler diz a razão (`ipc_handlers.py:5588`): *"aquilo é o tique de 20 Hz, e
+#: handler diz a razão (`ipc_handlers.py:6832`): *"aquilo é o tique de 20 Hz, e
 #: a declaração muda por gesto dela, não por quadro"*. Ele grava em disco
 #: (`maquina.json`), e a única confirmação é o `(ok, motivo)` da chamada — que é
 #: exatamente por que o gesto levanta com o motivo em vez de voltar calado.

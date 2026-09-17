@@ -4963,7 +4963,7 @@ def ignorar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
 # OS CINCO QUE GRAVAM SÃO **SEM ECO**, e isso foi MEDIDO em 02/09/2026, não
 # deduzido: as chaves de topo do `state_full` do daemon vivo são 47, e nenhuma
 # delas é `mapa` nem `maquina`. O caminho é `machine_declare` →
-# `_handle_machine_declare` (`daemon/ipc_handlers.py:6760`) → `maquina.json`, e
+# `_handle_machine_declare` (`daemon/ipc_handlers.py:6789`) → `maquina.json`, e
 # ali ele PARA. Nada volta pelo estado. Ver a nota do `SEM_ECO`, no fim deste
 # arquivo, para o que isso significa para quem lê a régua do piloto.
 
