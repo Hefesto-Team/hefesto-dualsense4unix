@@ -206,9 +206,19 @@ class DaemonConfig:
     # dela: `"dualsense"` (o canal próprio do DualSense, vpad uhid) ou `"xbox"`
     # (o canal comum, vpad uinput). `None` = ninguém escolheu, e o caminho sai da
     # máscara como saía antes (`virtual_pad.caminho_resolvido`). Quem escreve é
-    # `gamepad._guardar_o_caminho`, depois de o aparelho alcançar o pedido; o
-    # boot relê a escolha dela de `gamepad_caminho.flag`.
+    # `gamepad._guardar_o_caminho`, depois de o aparelho alcançar o pedido.
+    #
+    # O-CAMINHO-NAO-VAZA-01 (17/09/2026) — ESTE É O CANAL VIVO, o que o vpad do
+    # P1 está VESTINDO. Quem lê (tela, `launch_env`, `hotkey._ponte_viva`, o
+    # co-op) quer o de pé, e por isso ele acompanha TODO start. Ele NÃO é
+    # herança: um jogo sem opinião que o lesse pegaria o canal do jogo anterior.
     gamepad_caminho: str | None = None
+    # A ESCOLHA DELA, e ela vale em todo jogo: só o gesto MANUAL escreve aqui, e
+    # é a única herança de um start sem opinião (`gamepad.py`, o `caminho_pedido`).
+    # O boot a relê de `gamepad_caminho.flag`. Perfil, autoswitch, hotplug e o
+    # restore do boot nunca a tocam — era isso que fazia o `"xbox"` de UM jogo
+    # virar lei sobre os que não opinam.
+    gamepad_caminho_global: str | None = None
     # FEAT-DSX-COOP-LOCAL-01 — co-op local: cada controle físico vira um jogador
     # (P1, P2, …) com seu próprio gamepad virtual, em vez do modo "N controles, 1
     # player" (broadcast). Só tem efeito com a emulação de gamepad ligada + 2+
@@ -940,7 +950,13 @@ class Daemon:
         from hefesto_dualsense4unix.integrations.virtual_pad import normalizar_caminho
         from hefesto_dualsense4unix.utils.session import load_gamepad_caminho
 
-        self.config.gamepad_caminho = normalizar_caminho(load_gamepad_caminho())
+        # O-CAMINHO-NAO-VAZA-01: a flag é a ESCOLHA DELA, e vai para o slot da
+        # escolha. O `gamepad_caminho` (o canal VIVO) acompanha junto porque no
+        # boot, antes de qualquer perfil, os dois são a mesma coisa — e a tela
+        # tem de ter o que dizer antes de o primeiro vpad nascer.
+        escolha_dela = normalizar_caminho(load_gamepad_caminho())
+        self.config.gamepad_caminho_global = escolha_dela
+        self.config.gamepad_caminho = escolha_dela
         # EMULACAO-NO-JOGO-01: restaura a PREFERÊNCIA de teclado emulado. Ao lado
         # do mouse e do gamepad de propósito — é a superfície que faltava (o
         # teclado era o único dos três sem flag em disco, e por isso o único que

@@ -2082,31 +2082,94 @@ def _deve_promover_backend(
     return True
 
 
-def _guardar_o_caminho(
-    daemon: DaemonProtocol, caminho: str | None, *, origin: OrigemEmulacao
-) -> None:
-    """Anota o CAMINHO que ficou valendo. MODO-DE-CONEXAO-01, 13/09/2026.
+def _caminho_a_herdar(daemon: DaemonProtocol) -> str | None:
+    """De onde um start SEM opinião herda o caminho — e é UM lugar só.
 
-    Só quando o chamador escolheu um (o chip de modo, o PS + R3, a seção `mode`
-    de um perfil): quem não manda caminho — a CLI, o boot, o autoswitch sem
-    opinião — não apaga o que estava. É a mesma disciplina do `flavor`: gravado
-    DEPOIS de o aparelho alcançar o pedido, nunca antes (o bloqueio da R-04 sai
-    antes daqui, e a config não avança sobre uma troca recusada).
+    O-CAMINHO-NAO-VAZA-01, 17/09/2026. A herança é a ESCOLHA DELA
+    (`config.gamepad_caminho_global`, o que o boot relê de
+    `gamepad_caminho.flag`), nunca o caminho da sessão que está correndo.
 
-    Só o gesto manual PERSISTE, pela R-07 que já governa o liga/desliga logo
-    abaixo: um perfil trocando de caminho não vira a escolha dela em disco.
+    ATÉ 17/09 ESTA RESPOSTA SAÍA DE `config.gamepad_caminho` — o slot da SESSÃO
+    —, e era o vazamento inteiro: o `"xbox"` que o perfil do DON'T SCREAM pede
+    ficava lá e virava lei sobre os 29 perfis que não opinam. O PRAGMATA, que
+    não tem sequer seção `mode`, abria em uinput, e com ele iam embora as dez
+    linhas do mapa que só existem no caminho DualSense — a IMU entre elas. A
+    queixa dela: *"joguei um jogo com controle por movimento e na hora do vamos
+    ver o controle não deu resposta"*.
+
+    É função nomeada, e não uma linha embutida, para a régua poder MORDER o
+    ponto exato: `test_o_caminho_nao_vaza_entre_jogos` repõe aqui a leitura
+    velha e o laço de produção inteiro roda por cima dela.
     """
     from hefesto_dualsense4unix.integrations.virtual_pad import normalizar_caminho
 
-    escolhido = normalizar_caminho(caminho)
-    if escolhido is None:
-        return
-    daemon.config.gamepad_caminho = escolhido
-    if origin == "manual":
-        with contextlib.suppress(Exception):
-            from hefesto_dualsense4unix.utils.session import save_gamepad_caminho
+    return normalizar_caminho(getattr(daemon.config, "gamepad_caminho_global", None))
 
-            save_gamepad_caminho(escolhido)
+
+#: Sentinela de `_guardar_o_caminho`: *"o da sessão é o que o chamador pediu"*.
+#: Existe porque ``None`` é um VALOR aqui — *"ninguém escolheu"* — e precisa
+#: chegar ao slot para limpá-lo. Um default ``None`` engoliria a limpeza.
+_O_MESMO_QUE_O_PEDIDO: Any = object()
+
+
+def _guardar_o_caminho(
+    daemon: DaemonProtocol,
+    caminho: str | None,
+    *,
+    origin: OrigemEmulacao,
+    da_sessao: Any = _O_MESMO_QUE_O_PEDIDO,
+) -> None:
+    """Anota o CAMINHO — e são DOIS lugares, porque são DUAS perguntas.
+
+    MODO-DE-CONEXAO-01, 13/09/2026, corrigido pela O-CAMINHO-NAO-VAZA-01
+    (17/09/2026).
+
+    `config.gamepad_caminho` responde *"qual caminho vale NESTA sessão"* — é dele
+    que vivem a tela (`ipc_handlers._caminho_publicado`), as envs do wrapper
+    (`launch_env`), o ciclo do PS + R3 (`hotkey._ponte_viva`) e os secundários
+    (`coop._caminho`). Guarda o caminho ESCOLHIDO, nunca um derivado da máscara:
+    ``None`` é o valor *"ninguém escolheu"*, e quem lê aplica
+    `virtual_pad.caminho_resolvido` por conta própria.
+
+    `config.gamepad_caminho_global` responde *"o que ELA escolheu, para valer em
+    todo jogo"* — é o que o boot relê de `gamepad_caminho.flag`, e é o único
+    lugar de onde um start sem opinião pode herdar. Só o gesto MANUAL escreve
+    aqui, pela mesma R-07 que governa o liga/desliga logo abaixo.
+
+    A SEPARAÇÃO É A CURA, e o defeito que ela mata foi medido no disco dela em
+    17/09/2026: `dont_scream.json` e `future_knight.json` pedem
+    `"caminho": "xbox"`; `pragmata.json` não tem seção `mode` nenhuma; e o
+    `gamepad_caminho.flag` diz `dualsense` — a escolha dela nunca foi xbox. Com
+    UM slot só, o apply do DON'T SCREAM carimbava `"xbox"` e o PRAGMATA o
+    herdava na volta seguinte, caía em uinput e perdia a IMU inteira, que é a
+    queixa *"joguei um jogo com controle por movimento e na hora do vamos ver o
+    controle não deu resposta"*. Decisão dela ao ver a causa: *"deveria ficar só
+    pra aquele jogo do perfil não?"*
+
+    NOTA DATADA — 17/09/2026, e ela CADUCA meia linha de 13/09. Esta docstring
+    dizia *"quem não manda caminho não apaga o que estava"*, e o corpo obedecia:
+    um pedido sem opinião retornava cedo e deixava o slot intacto. Era certo num
+    mundo de UM slot — apagar ali teria apagado a escolha dela junto. Com a
+    escolha dela morando em `gamepad_caminho_global`, o retorno cedo virou
+    exatamente o vazamento: era ele que segurava o `"xbox"` do jogo anterior
+    para o jogo seguinte e para os três secundários. Agora o slot ACOMPANHA a
+    sessão, e limpar não perde nada.
+    """
+    from hefesto_dualsense4unix.integrations.virtual_pad import normalizar_caminho
+
+    # O DA SESSÃO — sempre, e para qualquer origem, INCLUSIVE para limpar.
+    pedido = caminho if da_sessao is _O_MESMO_QUE_O_PEDIDO else da_sessao
+    daemon.config.gamepad_caminho = normalizar_caminho(pedido)
+    # A ESCOLHA DELA — só o gesto manual, e é a única herança de um start sem
+    # opinião. Perfil, boot, autoswitch e hotplug nunca escrevem aqui.
+    escolhido = normalizar_caminho(caminho)
+    if escolhido is None or origin != "manual":
+        return
+    daemon.config.gamepad_caminho_global = escolhido
+    with contextlib.suppress(Exception):
+        from hefesto_dualsense4unix.utils.session import save_gamepad_caminho
+
+        save_gamepad_caminho(escolhido)
 
 
 def start_gamepad_emulation(
@@ -2146,8 +2209,10 @@ def start_gamepad_emulation_desfecho(
 
     MODO-DE-CONEXAO-01 (13/09/2026): `caminho` é o MODO de conexão
     (`virtual_pad.CAMINHO_DUALSENSE` · `CAMINHO_XBOX`), e ele NÃO é a máscara.
-    ``None`` = o chamador não opina, e vale o que já estava escolhido
-    (`config.gamepad_caminho`) ou, sem escolha nenhuma, o que sai da máscara.
+    ``None`` = o chamador não opina, e vale a ESCOLHA DELA
+    (`config.gamepad_caminho_global`, o que o boot relê de `gamepad_caminho.flag`)
+    ou, sem escolha nenhuma, o que sai da máscara. Nunca o canal que o jogo
+    anterior deixou de pé — O-CAMINHO-NAO-VAZA-01, 17/09/2026.
     A idempotência compara (máscara efetiva, canal): trocar de caminho com a
     mesma máscara RECRIA o vpad no outro canal — era o `ja_estava` desta função
     que fazia o chip «Xbox» dizer «aplicado» sem mudar nada.
@@ -2215,9 +2280,7 @@ def start_gamepad_emulation_desfecho(
     # O caminho pedido é o do chamador; sem ele, o que ela já escolheu. O canal
     # (`uhid` ou `uinput`) sai do PAR caminho + máscara efetiva
     # (`virtual_pad.quer_uhid`), num dono só para o P1 e os secundários.
-    caminho_pedido = normalizar_caminho(caminho) or normalizar_caminho(
-        getattr(daemon.config, "gamepad_caminho", None)
-    )
+    caminho_pedido = normalizar_caminho(caminho) or _caminho_a_herdar(daemon)
     uhid_pedido = quer_uhid(caminho_pedido, mascara_do_p1)
 
     if steam_input_vpad_suspenso(daemon):
@@ -2279,7 +2342,12 @@ def start_gamepad_emulation_desfecho(
                 and _deve_promover_backend(daemon, existing, mascara_do_p1, origin)
             )
         ):
-            _guardar_o_caminho(daemon, caminho, origin=origin)
+            # `caminho_pedido`, e não `caminho`: o da sessão é o que o perfil
+            # opinou OU, sem opinião, a escolha dela — e ``None`` quando não há
+            # nem uma nem outra, o que LIMPA o slot (O-CAMINHO-NAO-VAZA-01).
+            _guardar_o_caminho(
+                daemon, caminho, origin=origin, da_sessao=caminho_pedido
+            )
             return EMU_JA_ESTAVA
         # R-04: daqui para baixo o vpad VIVO seria destruído e recriado. Com o
         # jogo segurando a autoridade de exibição isso arranca o controle da
@@ -2395,7 +2463,7 @@ def start_gamepad_emulation_desfecho(
     daemon.config.gamepad_flavor = key
     # MODO-DE-CONEXAO-01: o caminho, e não a máscara do chip. `key` segue sendo a
     # máscara da sessão — o chip de modo não a manda mais.
-    _guardar_o_caminho(daemon, caminho, origin=origin)
+    _guardar_o_caminho(daemon, caminho, origin=origin, da_sessao=caminho_pedido)
     _set_controller_grab(daemon, True)
     # R-07 (auditoria 23/07): SÓ gesto manual persiste a preferência em disco.
     # A regra já estava escrita em dois lugares deste mesmo módulo/eixo —

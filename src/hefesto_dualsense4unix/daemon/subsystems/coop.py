@@ -828,7 +828,24 @@ class CoopManager:
         return normalize_flavor(getattr(cfg, "gamepad_flavor", None))
 
     def _caminho(self) -> str | None:
-        """O caminho escolhido (MODO-DE-CONEXAO-01), ou ``None`` = ninguém escolheu."""
+        """O caminho escolhido (MODO-DE-CONEXAO-01), ou ``None`` = ninguém escolheu.
+
+        O-CAMINHO-NAO-VAZA-01 (17/09/2026) — ESTA LINHA NÃO MUDOU, e a razão
+        está aqui porque a leva chegou querendo mudá-la. O vazamento que levava
+        a mesa inteira para o `xbox` do jogo anterior era o SLOT que ela lê
+        ficar rançoso: `gamepad._guardar_o_caminho` nunca o limpava, então o
+        jogo sem opinião herdava o canal do anterior e os três secundários
+        nasciam em uinput atrás de um P1 já em uhid — sem
+        `_start_player_motion_reader`, isto é, sem giroscópio para ninguém além
+        do jogador 1, e sem uma linha de log dizendo por quê. Com o slot
+        acompanhando a sessão, ler daqui voltou a ser correto.
+
+        E NÃO se pergunta o canal ao vpad do P1 (`caminho_do_vpad`): a resposta
+        dele é DERIVADA da máscara quando ninguém escolheu, e um P1 com cartão
+        `xbox` passaria a derrubar todo secundário `dualsense` a cada tique — a
+        MÁSCARA-POR-JOGADOR-01 virada do avesso. Medido: foi o que aconteceu ao
+        tentar, e `test_a_mascara_do_cartao_vale_com_o_vpad_de_pe` reprovou.
+        """
         from hefesto_dualsense4unix.integrations.virtual_pad import normalizar_caminho
 
         cfg = getattr(self._daemon, "config", None)
@@ -2162,7 +2179,7 @@ def _numeros_sem_vpad(
     vpad por jogador* (``_spawn_player``), e pôr-se no meio é exatamente o que a
     Conexão Nativa dispensa — abrir aquele gate **desfaria o modo que ela
     pediu**, pela mesma razão que já mantém a exceção de
-    ``lifecycle.py:1873-1874``. Ou o jogo conta os dois físicos sozinho, ou
+    ``lifecycle.py:1888-1889``. Ou o jogo conta os dois físicos sozinho, ou
     alguém tem de estar no meio (o Caminho D, que é oferta e continua sem a
     palavra dela). A régua que trava isto é
     ``tests/unit/test_o_coop_vive_na_conexao_nativa.py``.
