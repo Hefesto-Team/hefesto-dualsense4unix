@@ -3152,12 +3152,27 @@ def html_da_regua_do_radio(
 #     → `core/backend_pydualsense._escalar_rumble:3797`        multiplica o
 #       que vai ao motor, nas DUAS rotas de escrita (broadcast e por MAC)
 #
-# A CONTA, medida no disco dela em 01/09/2026: os 33 perfis têm
-# `rumble.policy = None` e ZERO têm `controllers[*].rumble`. Sem opinião
-# global, a base de `_controllers_to_rumble_scales` é o
-# `_RUMBLE_POLICY_PADRAO = "balanceado"` (mult 1,0), então um override
-# `economia` publica `0.3 / 1.0 = 0.3` — exatamente os "30% da força" que o
-# rótulo promete, derivados do mesmo dono (`RUMBLE_POLICY_MULT["economia"]`).
+# A CONTA, remedida no disco dela em 17/09/2026 (VIBRA-ACESA-01). Aqui estava,
+# de 01/09: *"os 33 perfis têm `rumble.policy = None` e ZERO têm
+# `controllers[*].rumble`"*. As duas metades caducaram, e a feature desta seção
+# é justamente o que as derrubou — ela passou a ser usada.
+#
+#   29 perfis em `~/.config/hefesto-dualsense4unix/profiles/`
+#    6 com `rumble.policy` global escrita (`max`, `balanceado`)
+#    5 perfis com override por controle — 9 ENTRADAS `controllers[*].rumble`
+#    4 perfis com override de gatilho — 8 entradas `controllers[*].triggers`
+#
+# A UNIDADE ESTÁ DITA DE PROPÓSITO: perfil e ENTRADA são contas diferentes, e
+# confundi-las foi o que fez o número "9 perfis" circular — são 9 controles
+# dentro de 5 arquivos, porque um perfil guarda um override por peça.
+#
+# O QUE MUDA NA CONTA DE BAIXO: com 6 perfis opinando globalmente, a base de
+# `_controllers_to_rumble_scales` nem sempre é o `_RUMBLE_POLICY_PADRAO =
+# "balanceado"` (mult 1,0). No DON'T SCREAM dela, com o global em `max`
+# (mult 1,5), um override `economia` publica `0.3 / 1.5 = 0.2` — e não os 0,3
+# que a linha antiga fazia parecer fixo. O fator é RELATIVO ao global do perfil,
+# que é o que `fator_da_unidade` sempre calculou; o exemplo é que supunha um
+# global que hoje não é o único.
 #
 # O QUE A RECUSA DIZIA ESTAVA ERRADO NAS DUAS METADES, e a regra desta casa
 # manda substituir o fato errado, não anotá-lo. Ela dizia que *"o produto
