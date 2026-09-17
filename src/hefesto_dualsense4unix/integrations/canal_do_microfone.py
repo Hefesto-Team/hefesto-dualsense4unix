@@ -151,6 +151,10 @@ import threading
 from typing import Any
 
 from hefesto_dualsense4unix.integrations.dualsense_bt_audio import (
+    MIC_AMOSTRAS_POR_QUADRO,
+    MIC_BYTES_POR_AMOSTRA,
+    MIC_CANAIS,
+    MIC_TAXA_HZ,
     PRIORIDADE_SESSAO_DA_PONTE,
     SourceVirtualPipeWire,
 )
@@ -204,10 +208,53 @@ _ALIMENTADOR = "parec"
 #: é aquilo — foi o que custou uma hora em 25/07 do outro lado.
 NOME_DO_CLIENTE_ALIMENTADOR = "hefesto-canal-do-microfone"
 
-#: Quanto o bombeador lê por vez. 4 KiB a 48 kHz mono s16 é ~42 ms — menos que
-#: o fifo de 8 KiB do outro lado, para nunca ser ele o gargalo, e grande o
-#: bastante para o laço acordar ~24 vezes por segundo em vez de mil.
-_PEDACO_BYTES = 4096
+#: **FATO SUBSTITUÍDO — MIC-CABO-PEDACO-01, 17/09/2026.** Esta constante era
+#: ``_PEDACO_BYTES = 4096``, e a razão escrita era *"4 KiB a 48 kHz mono s16 é
+#: ~42 ms — menos que o fifo de 8 KiB do outro lado, para nunca ser ele o
+#: gargalo"*. A segunda metade da frase é falsa, e o custo dela cai inteiro no
+#: CABO — que é o transporte de que ela reclamou: *"sobre o mic do cabo ficar
+#: limpo igual o do mic no bt"* (17/09/2026).
+#:
+#: ``SourceVirtualPipeWire.escrever`` escreve num fifo ``O_NONBLOCK`` e, quando
+#: não cabe, **descarta o pedaço INTEIRO** (`dualsense_bt_audio.py`, o
+#: ``except BlockingIOError``). E 4096 é exatamente o ``PIPE_BUF`` do Linux:
+#: abaixo ou igual a ele o ``write`` num cano é ATÔMICO — ou entra tudo, ou não
+#: entra nada. Um pedaço de 4096 B é o maior tamanho possível que ainda é
+#: tudo-ou-nada.
+#:
+#: MEDIDO em 17/09/2026, num fifo de verdade de 8 KiB com 2000 B livres — o
+#: estado normal quando o leitor fica uma volta atrás do cristal da placa USB::
+#:
+#:     pedaço 4096 B (42,7 ms) → entraram     0 B; UM descarte levou 42,7 ms
+#:     pedaço  960 B (10,0 ms) → entraram  1920 B; UM descarte levou 10,0 ms
+#:
+#: O pedaço grande perde MAIS voz por descarte **e** deixa de aproveitar o
+#: espaço que estava livre. O rádio nunca pagou isso: ele entrega quadros de
+#: :data:`~hefesto_dualsense4unix.integrations.dualsense_bt_audio.MIC_BYTES_POR_QUADRO`
+#: (960 B = 10 ms), e é por isso que a docstring de ``escrever`` justifica o
+#: descarte dizendo *"perder 10 ms é invisível"* — o número dela é o do rádio.
+#: O cabo perdia 42,7 ms por vez sob a mesma justificativa.
+#:
+#: Então o pedaço do cabo passa a ser a MESMA DURAÇÃO do quadro do rádio, e a
+#: duração é LIDA do dono (`MIC_AMOSTRAS_POR_QUADRO` / `MIC_TAXA_HZ`), nunca
+#: digitada aqui. O laço acorda ~100 vezes por segundo, que é a mesma cadência
+#: do decodificador do rádio — e não as "mil" que a razão velha temia.
+def pedaco_do_bombeador(*, taxa_hz: int, canais: int) -> int:
+    """Quanto o bombeador lê por vez, na duração do quadro do RÁDIO.
+
+    A duração vem do dono do mecanismo — o rádio manda quadros de
+    ``MIC_AMOSTRAS_POR_QUADRO`` amostras a ``MIC_TAXA_HZ`` —, e o TAMANHO em
+    bytes vem do formato deste nó, que é o mesmo que o ``parec`` recebeu em
+    ``--rate``/``--channels``. Um número digitado aqui seria um segundo dono da
+    mesma duração, e divergiria do rádio na primeira vez que alguém mexesse lá.
+
+    Alinhado ao quadro de propósito: meio quadro no fifo é meia amostra quando
+    ``canais`` é ímpar, e meia amostra s16 desalinha tudo o que vem depois.
+    """
+    taxa = max(1, int(taxa_hz))
+    canais_n = max(1, int(canais))
+    amostras = max(1, round(taxa * MIC_AMOSTRAS_POR_QUADRO / MIC_TAXA_HZ))
+    return amostras * canais_n * MIC_BYTES_POR_AMOSTRA
 
 #: A LATÊNCIA QUE SE PEDE AO LEITOR, e ela não é afinação — é conserto.
 #:
@@ -361,15 +408,35 @@ class _Alimentador:
         self.source = source
         self._lancar = lancar or _lancar_processo
         self._proc: Any = None
+        #: Quanto o laço lê por vez. Nasce do formato do nó em `iniciar`; o
+        #: valor de partida é o do quadro do rádio, que é o mesmo caso.
+        self._pedaco = pedaco_do_bombeador(taxa_hz=MIC_TAXA_HZ, canais=MIC_CANAIS)
         self._bomba: threading.Thread | None = None
         self._parando = threading.Event()
 
+    def _formato_do_no(self) -> tuple[int, int]:
+        """A taxa e os canais com que o nó foi carregado — PERGUNTADOS a ele.
+
+        O default é o do DONO do mecanismo (`MIC_TAXA_HZ`/`MIC_CANAIS`) e não um
+        par de literais: um `48000` digitado aqui seria um segundo dono do mesmo
+        número, e divergiria na primeira vez que o formato do nó mudasse lá.
+        """
+        return (
+            int(getattr(self.source, "taxa_hz", MIC_TAXA_HZ)),
+            int(getattr(self.source, "canais", MIC_CANAIS)),
+        )
+
     def iniciar(self) -> bool:
+        taxa_hz, canais = self._formato_do_no()
+        # O pedaço sai do MESMO formato que o `parec` recebe — ver
+        # `pedaco_do_bombeador`. Lê-lo aqui, uma vez, evita que o laço pergunte
+        # ao nó cem vezes por segundo.
+        self._pedaco = pedaco_do_bombeador(taxa_hz=taxa_hz, canais=canais)
         argv = argv_do_alimentador(
             self.uniq,
             self.fonte,
-            taxa_hz=getattr(self.source, "taxa_hz", 48000),
-            canais=getattr(self.source, "canais", 1),
+            taxa_hz=taxa_hz,
+            canais=canais,
         )
         try:
             self._proc = self._lancar(argv)
@@ -391,7 +458,7 @@ class _Alimentador:
         fluxo = self._proc.stdout
         try:
             while not self._parando.is_set():
-                pedaco = fluxo.read(_PEDACO_BYTES)
+                pedaco = fluxo.read(self._pedaco)
                 if not pedaco:
                     break
                 self.source.escrever(pedaco)

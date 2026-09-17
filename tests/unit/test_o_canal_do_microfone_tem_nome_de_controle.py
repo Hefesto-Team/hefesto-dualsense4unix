@@ -23,13 +23,16 @@ carregasse `module-pipe-source` de verdade mexeria no áudio dela.
 
 from __future__ import annotations
 
+import fcntl
 import io
+import os
 import time
 from typing import ClassVar
 
 import pytest
 
 from hefesto_dualsense4unix.integrations import canal_do_microfone as canal
+from hefesto_dualsense4unix.integrations import dualsense_bt_audio as canal_bt
 from hefesto_dualsense4unix.integrations.dualsense_bt_audio import (
     PRIORIDADE_SESSAO_DA_PONTE,
 )
@@ -433,6 +436,142 @@ def test_o_leitor_que_nao_lanca_nao_derruba_o_canal() -> None:
     assert source is not None
     assert canal.de_pe() == {P1: "hefesto_mic_000001"}
     assert canal.alimentando() == {}
+
+
+# ---------------------------------------------------------------------------
+# 4-B. O PEDAÇO DO CABO — MIC-CABO-PEDACO-01, 17/09/2026
+#
+# A queixa dela: *"sobre o mic do cabo ficar limpo igual o do mic no bt"*.
+#
+# O que estas réguas guardam NÃO é qualidade — qualidade é bancada, e a orelha
+# é dela. É a ASSIMETRIA entre os dois transportes que ninguém escolheu: os
+# dois enchem o MESMO fifo pela MESMA porta (`escrever`), e o fifo descarta o
+# pedaço INTEIRO quando não cabe. O rádio entrega quadros de 10 ms; o cabo
+# entregava 4096 B = 42,7 ms. Quatro vezes mais voz por descarte, sob uma
+# justificativa — *"perder 10 ms é invisível"* — que foi escrita para o rádio.
+# ---------------------------------------------------------------------------
+def _fifo_com_livre(caminho: str, livre: int) -> tuple[int, int]:
+    """Um fifo de VERDADE, de `_FIFO_BYTES`, com só `livre` bytes de espaço.
+
+    É o estado normal do nó quando o leitor do `module-pipe-source` fica uma
+    volta atrás do cristal da placa USB. Nada de PipeWire: `os.mkfifo` num
+    `tmp_path`, as duas pontas nossas, e o tamanho pedido ao kernel pelo mesmo
+    `F_SETPIPE_SZ` que o dono usa.
+    """
+    os.mkfifo(caminho)
+    r = os.open(caminho, os.O_RDONLY | os.O_NONBLOCK)
+    w = os.open(caminho, os.O_WRONLY | os.O_NONBLOCK)
+    tamanho = fcntl.fcntl(w, canal_bt._F_SETPIPE_SZ, canal_bt._FIFO_BYTES)
+    os.write(w, b"\x00" * (tamanho - livre))
+    return r, w
+
+
+def _quanto_entra(caminho: str, *, pedaco: int, livre: int) -> tuple[int, int]:
+    """Oferece voz em pedaços de `pedaco` até o fifo recusar.
+
+    Devolve (bytes que ENTRARAM, bytes que UM descarte levou). O descarte é
+    tudo-ou-nada por contrato do kernel: um `write` de até `PIPE_BUF` (4096)
+    num cano `O_NONBLOCK` ou entra inteiro ou devolve EAGAIN.
+    """
+    r, w = _fifo_com_livre(caminho, livre)
+    entrou = perdido = 0
+    bloco = b"\x01" * pedaco
+    try:
+        while True:
+            try:
+                n = os.write(w, bloco)
+            except BlockingIOError:
+                perdido = pedaco
+                break
+            entrou += n
+            if n != pedaco:
+                perdido = pedaco - n
+                break
+    finally:
+        os.close(r)
+        os.close(w)
+    return entrou, perdido
+
+
+def test_o_pedaco_do_cabo_tem_a_duracao_do_quadro_do_radio() -> None:
+    """Os dois transportes perdem voz no MESMO tamanho — lido dos dois donos.
+
+    Nada digitado: a duração vem de `MIC_AMOSTRAS_POR_QUADRO`/`MIC_TAXA_HZ` e o
+    tamanho em bytes, do formato do nó. Se o rádio mudar de quadro, o cabo vai
+    junto — que é o ponto de ler em vez de digitar.
+    """
+    assert canal.pedaco_do_bombeador(
+        taxa_hz=canal_bt.MIC_TAXA_HZ, canais=canal_bt.MIC_CANAIS
+    ) == canal_bt.MIC_BYTES_POR_QUADRO
+
+
+def test_o_pedaco_acompanha_o_formato_do_no_e_nunca_desalinha_a_amostra() -> None:
+    """Meia amostra s16 no fifo desalinha tudo o que vem depois dela.
+
+    O pedaço é sempre um número inteiro de quadros DAQUELE nó — inclusive num
+    nó estéreo ou a outra taxa, que é o que aconteceria se o perfil da placa
+    mudasse debaixo de nós.
+    """
+    quadro = canal_bt.MIC_BYTES_POR_AMOSTRA
+    for taxa, canais in ((48000, 1), (48000, 2), (16000, 1), (44100, 2)):
+        pedaco = canal.pedaco_do_bombeador(taxa_hz=taxa, canais=canais)
+        assert pedaco % (quadro * canais) == 0, (taxa, canais, pedaco)
+        # e a DURAÇÃO continua sendo a do quadro do rádio, com 1 ms de folga
+        ms = pedaco / (taxa * canais * quadro) * 1000
+        alvo = canal_bt.MIC_AMOSTRAS_POR_QUADRO / canal_bt.MIC_TAXA_HZ * 1000
+        assert abs(ms - alvo) < 1.0, (taxa, canais, ms, alvo)
+
+
+def test_um_descarte_no_cabo_nao_custa_mais_voz_que_um_no_radio(tmp_path) -> None:
+    """A MORDIDA, num fifo de verdade e sem aparelho nenhum na mesa.
+
+    MEDIDO em 17/09/2026, com `_FIFO_BYTES` e 1/4 dele livre::
+
+        pedaço 4096 B (42,7 ms) → entraram     0 B; o descarte levou 42,7 ms
+        pedaço  960 B (10,0 ms) → entraram  1920 B; o descarte levou 10,0 ms
+
+    O pedaço grande perde mais voz por descarte **e** deixa de aproveitar o
+    espaço que estava livre — 4096 é exatamente o `PIPE_BUF` do Linux, o maior
+    tamanho que ainda é tudo-ou-nada.
+
+    ARRANQUE PARA VER VERMELHO: devolva `4096` em `pedaco_do_bombeador`.
+    """
+    pedaco = canal.pedaco_do_bombeador(
+        taxa_hz=canal_bt.MIC_TAXA_HZ, canais=canal_bt.MIC_CANAIS
+    )
+    livre = canal_bt._FIFO_BYTES // 4
+    entrou, perdido = _quanto_entra(
+        str(tmp_path / "cabo.fifo"), pedaco=pedaco, livre=livre
+    )
+    assert entrou > 0, (
+        f"com {livre} B livres no fifo, um pedaço de {pedaco} B não entregou "
+        "UM BYTE de voz — o cabo descarta o que caberia")
+    assert perdido <= canal_bt.MIC_BYTES_POR_QUADRO, (
+        f"um descarte no CABO levou {perdido} B de voz, e no rádio leva "
+        f"{canal_bt.MIC_BYTES_POR_QUADRO} B — é a assimetria que a frase dela "
+        "«ficar limpo igual o do mic no bt» aponta")
+
+
+def test_o_bombeador_le_o_pedaco_do_no_e_nao_de_um_literal() -> None:
+    """Quem decide o tamanho é o formato do nó, atravessando o `_Alimentador`.
+
+    ARRANQUE PARA VER VERMELHO: volte a `fluxo.read(4096)` no `_bombear`.
+    """
+
+    no = SourceQueGuardaOPcm(nome="hefesto_mic_000001", descricao="P1")
+    no.canais = 2
+    alim = canal._Alimentador(P1, CABO_1, no, lancar=ProcessoDeMentira)
+    assert alim.iniciar() is True
+    alim.parar()
+
+    esperado = canal.pedaco_do_bombeador(taxa_hz=no.taxa_hz, canais=no.canais)
+    assert alim._pedaco == esperado, (
+        "o `_Alimentador` não releu o formato do nó — um literal voltou ao laço")
+    assert esperado != canal.pedaco_do_bombeador(
+        taxa_hz=canal_bt.MIC_TAXA_HZ, canais=canal_bt.MIC_CANAIS
+    ), "o nó estéreo e o mono deram o mesmo pedaço: o número parou de acompanhar"
+    assert "--channels=2" in ProcessoDeMentira.lancados[-1], (
+        "o `parec` e o laço deixaram de falar do MESMO formato")
 
 
 # ---------------------------------------------------------------------------
