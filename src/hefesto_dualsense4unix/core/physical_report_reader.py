@@ -433,6 +433,17 @@ def _struct_base(report: bytes) -> int | None:
     if not report:
         return None
     if report[0] == INPUT_REPORT_USB:
+        #: BATERIA-QUE-PULA-01 (16/09/2026) — o tamanho passou a ser conferido
+        #: TAMBÉM no cabo. Esta linha era um `return` seco, e um `0x01` de dez
+        #: bytes atravessava: medido, `_struct_base(bytes([0x01]) + bytes(9))`
+        #: devolvia 1. Quem chamasse `extract_battery_status` em cima disso
+        #: leria além do fim e o `IndexError` viraria campo vazio ou pior.
+        #: O piso é o último byte que este arquivo lê a partir da base USB
+        #: (`JACK_STATUS_OFFSET`, o maior dos quatro), e não os 64 do report
+        #: cheio: recusar um report curto porém SUFICIENTE calaria o cabo por
+        #: rigor que nada protege.
+        if len(report) <= _USB_STRUCT_BASE + JACK_STATUS_OFFSET:
+            return None
         return _USB_STRUCT_BASE
     if report[0] == INPUT_REPORT_BT:
         if len(report) != INPUT_REPORT_BT_SIZE:
@@ -445,6 +456,22 @@ def _struct_base(report: bytes) -> int | None:
             return None
         return _BT_STRUCT_BASE
     return None
+
+
+def eh_report_de_estado(report: bytes) -> bool:
+    """Este report cru é ESTADO DE INPUT? — a porta pública do `_struct_base`.
+
+    BATERIA-QUE-PULA-01, 16/09/2026. **Não é régua nova**: é o MESMO
+    `_struct_base` (id, tamanho, o bit `INPUT_FLAG_AUDIO` e o CRC-32 do BT) com
+    uma porta para quem precisa só do SIM/NÃO e de campo nenhum.
+
+    Quem precisa é o laço de leitura do `core/backend_pydualsense`, que entrega
+    o report ao `readInput` da pydualsense — e o `readInput` **não confere
+    nada**: nem id, nem tamanho, nem CRC, nem o bit de áudio. Escrever a
+    conferência lá seria a SEGUNDA cópia desta régua, e duas cópias que podem
+    divergir é a família de defeito que esta casa nomeia.
+    """
+    return _struct_base(report) is not None
 
 
 # --- os quatro campos, JÁ com a base na mão ---------------------------------
@@ -1255,6 +1282,7 @@ __all__ = [
     "TOUCHPAD_CLICK_BIT",
     "PhysicalReportReader",
     "decodificar_bateria",
+    "eh_report_de_estado",
     "extract_battery_status",
     "extract_jack_status",
     "extract_motion_window",
