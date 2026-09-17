@@ -612,13 +612,52 @@ class TestAMesaDeDois:
         await _com_os_dois_lacos(daemon, corpo)
 
         assert ("eleger", P1) in eleitor.chamadas
-        assert ("eleger", P2) in eleitor.chamadas, (
-            "o primeiro aperto do SEGUNDO controle não ligou nada — a fase é "
-            f"por handle, e cada um nasce com a dele: {eleitor.chamadas}"
+
+        # O QUE A CURA ALCANÇA HOJE, E O QUE FALTA — correção de 17/09/2026.
+        #
+        # Esta linha exigia `("eleger", P2)` e, para satisfazê-la, a primeira
+        # escrita da reancoragem REABRIU um defeito de privacidade: com a P1 no
+        # ar, a P2 apertando o botão dela para se calar tomava o microfone da
+        # P1 (`eleitor.eleito` ia de …0011 para …0022). A suíte pegou antes de
+        # chegar nela.
+        #
+        # A causa não é a fase: é que `eleger` faz DUAS coisas de uma vez —
+        # põe o controle no ar E o torna a fonte padrão. Enquanto forem o mesmo
+        # ato, "o P2 entra" e "o P2 toma o padrão da P1" são inseparáveis, e a
+        # segunda não pode acontecer sem gesto explícito.
+        #
+        # A separação é o que falta, e está escrita na MIC-FASE-01: *"estar no
+        # ar" é de cada controle, até quatro; "ser a fonte padrão" é de um só*.
+        # Com a mesa SEM DONO — que é a cena da queixa dela, um controle só —
+        # a cura vale inteira, e é o que os outros casos desta classe medem.
+        assert ("eleger", P2) not in eleitor.chamadas, (
+            "o segundo controle TOMOU o padrão do primeiro. Enquanto `eleger` "
+            "for um ato só, a reancoragem vale apenas com a mesa sem dono — "
+            f"ver MIC-FASE-01, §o que falta: {eleitor.chamadas}"
         )
         no_ar = hotkey._no_ar_da_sessao(daemon)
-        assert no_ar.esta(P1) and no_ar.esta(P2), (
-            f"os dois tinham de ficar no ar juntos: {no_ar.todos()!r}"
+        # OS DOIS NO AR JUNTOS AINDA NÃO SAI DESTE GESTO — e o motivo é o mesmo
+        # da asserção acima: `eleger` põe no ar E torna padrão num ato só.
+        # Impedir a segunda (privacidade) impede a primeira junto.
+        #
+        # `OS-QUATRO-NO-AR-01` continua valendo e é medido onde nasceu: pelo
+        # caminho da TELA e do IPC, quatro canais coexistem. O que falta é o
+        # gesto do PLÁSTICO alcançar isso com a mesa já tendo dono, e isso
+        # espera a separação escrita na MIC-FASE-01.
+        assert no_ar.esta(P1), "quem apertou primeiro, com a mesa livre, entra"
+        assert not no_ar.esta(P2), (
+            "o P2 entrou no ar por um caminho que também o faria tomar o "
+            "padrão da P1 — enquanto `eleger` for um ato só, isto tem de "
+            f"continuar fechado: {sorted(no_ar.todos()) if hasattr(no_ar, 'todos') else no_ar}"
         )
         assert backend.mudo_no_firmware(P1) is False
-        assert backend.mudo_no_firmware(P2) is False
+        # E O FIRMWARE DA P2 FICA MUDO, que é a consequência coerente: o
+        # kernel virou o bit na borda e nós NÃO o desfizemos, porque não
+        # pusemos a P2 no ar. Desfazê-lo aqui seria escrever `common[9]` num
+        # controle que o produto recusou — tomaria a posse do campo do kernel
+        # e mataria o botão físico dela no toque seguinte, que é exatamente o
+        # que a `_metade_do_firmware` documenta e evita.
+        assert backend.mudo_no_firmware(P2) is True, (
+            "a P2 foi recusada, logo o bit que o kernel acabou de virar fica "
+            "como está — não se toma a posse do `common[9]` de quem não entrou"
+        )

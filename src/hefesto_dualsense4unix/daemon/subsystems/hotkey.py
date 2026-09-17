@@ -1410,8 +1410,33 @@ def _o_que_a_borda_pede(daemon: DaemonProtocol, uniq: str, mudo: bool) -> bool:
     """
     if not mudo:
         return True
-    fora_do_padrao = not _mesmo_controle(_eleitor(daemon).eleito, uniq)
-    if fora_do_padrao and not _no_ar_da_sessao(daemon).esta(uniq):
+
+    # A RECANCORAGEM VALE SÓ COM A MESA SEM DONO — correção de 17/09/2026,
+    # apanhada pela suíte antes de chegar nela.
+    #
+    # A primeira escrita desta regra perguntava apenas "este controle é o
+    # padrão?", e com isso REABRIU o defeito de privacidade que o ramo de
+    # recusa existe para fechar: com a J1 no ar, a J2 apertando o botão DELA
+    # para se calar entrava no ar e **tomava o microfone da J1**. Medido:
+    # `eleitor.eleito` ia de `…0011` para `…0022`
+    # (`test_mic_da_mesa_o_ipc_a_tela_e_o_gesto`).
+    #
+    # A pergunta certa é sobre a MESA, não sobre este controle: quando NINGUÉM
+    # está com o microfone, uma borda de `mudo=True` de quem não está no ar não
+    # pode ser "me cale" — não há o que calar —, logo é "quero entrar", que é a
+    # queixa dela. Quando OUTRO está com o microfone, a mesma borda volta a
+    # significar o que sempre significou, e o ramo de recusa segue intacto com
+    # a frase dela.
+    #
+    # ISTO NÃO CONTRADIZ A RÉGUA DE 02/09 (`test_sem_ninguem_eleito_o_mudo_nao_
+    # reelege_a_melhor_fonte`): o que ela proibia era a eleição CEGA — o
+    # `devolver_o_microfone()` global escolhendo "a melhor fonte elegível" e
+    # trocando o padrão do sistema sem ninguém ter pedido. Aqui quem é eleito é
+    # QUEM APERTOU, que é escolha explícita de uma pessoa no plástico. A régua
+    # de 02/09 é reapontada junto, para medir a eleição cega e não esta.
+    if _eleitor(daemon).eleito is not None:
+        return False
+    if not _no_ar_da_sessao(daemon).esta(uniq):
         logger.info("mic_da_mesa_fase_reancorada", uniq=uniq)
         return True
     return False

@@ -594,7 +594,33 @@ async def test_sem_ninguem_eleito_o_mudo_nao_reelege_a_melhor_fonte() -> None:
 
     await _rodar_o_gesto(daemon, [{"uniq": _J2, "mudo": True}])
 
-    assert daemon._eleitor_de_microfone.chamadas == [], (
-        "um mudo sem eleição prévia mexeu no microfone padrão do sistema"
+    # REAPONTADA EM 17/09/2026, e a pergunta dela NÃO mudou.
+    #
+    # O que esta régua sempre proibiu é a eleição CEGA: `devolver_o_microfone()`
+    # é GLOBAL, não recebe `uniq`, e escolhia "a melhor fonte elegível" — o
+    # padrão do sistema dela trocava sem que ninguém tivesse pedido. Isso
+    # continua proibido, e é o que a asserção abaixo mede.
+    #
+    # O que passou a ser permitido é outra coisa: com a mesa SEM DONO, uma
+    # borda de `mudo=True` de quem não está no ar elege QUEM APERTOU — escolha
+    # explícita de uma pessoa no plástico, não um palpite do produto. É a
+    # MIC-FASE-01, e sem ela o primeiro aperto depois de conectar significava
+    # DESLIGAR (medido no journal dela às 01:47:13 de 17/09).
+    cegas = [c for c in daemon._eleitor_de_microfone.chamadas if c[0] == "devolver"]
+    assert cegas == [], (
+        "um mudo sem eleição prévia caiu em `devolver_o_microfone()`, que "
+        f"escolhe a melhor fonte sozinho e troca o padrão dela: {cegas}"
     )
-    assert backend.leds == {_J2: False}, "só a luz de quem apertou"
+    escolhidos = {c[1] for c in daemon._eleitor_de_microfone.chamadas if c[0] == "eleger"}
+    assert escolhidos <= {_J2}, (
+        "a eleição alcançou um controle que NÃO apertou o botão: "
+        f"{escolhidos - {_J2}}"
+    )
+    # A LUZ ACENDE, e isso é a cura e não um efeito colateral: com a mesa sem
+    # dono o gesto PÔS a J2 no ar, e o contrato do LED desta casa (01/09) é
+    # "aceso = este mic está no ar". Antes da MIC-FASE-01 a luz apagava — o
+    # kernel acendia na borda e o ramo de recusa a apagava logo em seguida, que
+    # é o pisca que ela via sem entender.
+    assert backend.leds == {_J2: True}, (
+        "só a luz de quem apertou, e ACESA: ele acabou de entrar no ar"
+    )
