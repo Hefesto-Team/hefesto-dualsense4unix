@@ -1593,7 +1593,7 @@ class ProfileManager:
         override = None
         if uniq:
             # O MESMO `norm_mac` que o esquema usa para canonizar as chaves de
-            # `controllers` (schema.py:1795). Sem ele a busca falha em SILÊNCIO
+            # `controllers` (schema.py:1808). Sem ele a busca falha em SILÊNCIO
             # para qualquer chamador que passe o MAC com dois-pontos — o mapa
             # guarda 12 hex, e `aa:bb:…` não bate com `aabb…`. Pego pela régua
             # desta cura, não por leitura: a primeira versão procurava cru.
