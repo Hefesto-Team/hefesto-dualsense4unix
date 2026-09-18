@@ -258,3 +258,72 @@ def test_a_fila_podre_desta_regua_e_a_fila_medida() -> None:
         assert oui not in bruto, f"OUI desta bancada na prova: {oui}"
     assert bruto.count("aabbcc") == 4, "os quatro fantasmas medidos, e só eles"
     assert bruto.count(_REAL) == 4, "os quatro reais, na faixa que não identifica"
+
+
+# ---------------------------------------------------------------------------
+# PONTA 1b — o expurgo CHEGA AO DISCO, e esta régua nasceu de um defeito meu
+# ---------------------------------------------------------------------------
+# Eu afirmei que o arquivo se curaria sozinho porque o save lê por
+# `order_entries`. Faltava metade: o save só roda quando o mapa MUDOU, e
+# carregar não muda nada. MEDIDO no primeiro restart do daemon dela com a cura
+# instalada — os quatro fantasmas continuavam no disco, expurgados a cada
+# leitura e nunca reescritos.
+
+
+def test_o_load_regrava_o_arquivo_quando_expurga(tmp_path, monkeypatch) -> None:
+    """Um restart basta: o arquivo sai limpo do disco, sem gesto de ninguém."""
+    from hefesto_dualsense4unix.daemon.subsystems import identity as mod
+
+    alvo = tmp_path / "controllers.json"
+    alvo.write_text(json.dumps(_FILA_PODRE), encoding="utf-8")
+    monkeypatch.setattr(mod.ControllerIdentityRegistry, "_path", staticmethod(lambda: alvo))
+
+    mod.ControllerIdentityRegistry().load()
+
+    gravado = json.loads(alvo.read_text(encoding="utf-8"))
+    endereços = [e["addr"] for e in gravado[ORDER_FIELD]]
+    assert len(endereços) == 4, endereços
+    assert not any(e_endereco_sintetico(a) for a in endereços)
+
+
+def test_load_sem_lixo_nao_toca_o_disco(tmp_path, monkeypatch) -> None:
+    """A CONTRAPARTIDA: arquivo limpo não é reescrito — leitura não é gesto.
+
+    Sem esta régua, a cura acima viraria uma escrita por boot em toda máquina
+    do mundo, e um `os.replace` a cada partida é como se perde um arquivo numa
+    queda de energia.
+    """
+    from hefesto_dualsense4unix.daemon.subsystems import identity as mod
+
+    limpo = {
+        "version": mod.CONTROLLERS_SCHEMA_VERSION,
+        ORDER_FIELD: [
+            {"addr": f"{_REAL}0{n}", "kind": KIND_DUALSENSE, "rank": n}
+            for n in (1, 2, 3)
+        ],
+    }
+    alvo = tmp_path / "controllers.json"
+    alvo.write_text(json.dumps(limpo), encoding="utf-8")
+    monkeypatch.setattr(mod.ControllerIdentityRegistry, "_path", staticmethod(lambda: alvo))
+    antes = alvo.stat().st_mtime_ns
+
+    mod.ControllerIdentityRegistry().load()
+
+    assert alvo.stat().st_mtime_ns == antes, "leitura reescreveu arquivo são"
+
+
+def test_mordida_da_ponta_1b_sem_a_contagem_o_disco_fica_podre(
+    tmp_path, monkeypatch
+) -> None:
+    """Arranca a contagem: a leitura limpa, o disco continua sujo."""
+    from hefesto_dualsense4unix.daemon.subsystems import identity as mod
+
+    alvo = tmp_path / "controllers.json"
+    alvo.write_text(json.dumps(_FILA_PODRE), encoding="utf-8")
+    monkeypatch.setattr(mod.ControllerIdentityRegistry, "_path", staticmethod(lambda: alvo))
+    monkeypatch.setattr(mod, "_entradas_expurgadas", lambda _data: [])
+
+    mod.ControllerIdentityRegistry().load()
+
+    gravado = json.loads(alvo.read_text(encoding="utf-8"))
+    assert len(gravado[ORDER_FIELD]) == 8, "a mordida não morde"
