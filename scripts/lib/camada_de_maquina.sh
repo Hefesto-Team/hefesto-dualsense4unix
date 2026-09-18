@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# camada_de_maquina.sh — as ONZE curas de HOST, em casa própria.
+# camada_de_maquina.sh — as DOZE curas de HOST, em casa própria.
 #
 # POR QUE ESTE ARQUIVO NASCEU (31/08/2026)
 # ========================================
@@ -58,6 +58,7 @@ declare -F step >/dev/null 2>&1 || step() { printf '\n[%s] %s\n' "$1" "$2"; }
 : "${SKIP_UDEV:=0}"
 : "${NO_OSK:=0}"
 : "${NO_DKMS:=0}"
+: "${NO_UCM:=0}"
 : "${AUTO_YES:=0}"
 
 # Render das units do broker root hide-hidraw (BROKER-01/Onda S): substitui
@@ -132,6 +133,27 @@ install_osk_host() {
         bash "${ROOT_DIR}/scripts/install_osk.sh" --yes || true
     else
         bash "${ROOT_DIR}/scripts/install_osk.sh" || true
+    fi
+}
+
+# HAPTICA-NATIVA-01 (18/09/2026): o perfil UCM do DualSense no cabo. Sem ele o
+# PipeWire abre a placa do controle sem dispositivo nomeado, e o GE-Proton não
+# acha o sink `…HiFi__Speaker__sink` por onde a vibração dos jogos da Sony
+# viaja. É trabalho de HOST e ortogonal ao formato do app: o verbo vai para
+# /usr/share/alsa/ucm2/USB-Audio/Hefesto/ e um gancho por controlador USB para
+# /usr/share/alsa/ucm2/conf.d/USB-Audio/, sem tocar arquivo do alsa-ucm-conf.
+# Opt-out: --no-ucm; e o --no-udev, como toda escrita no sistema.
+install_ucm_dualsense_host() {
+    if [[ "${NO_UCM}" -eq 1 ]]; then
+        printf '      perfil UCM do DualSense pulado (--no-ucm) — a vibração dos jogos da Sony não chega pelo cabo\n'
+        return 0
+    fi
+    if [[ "${SKIP_UDEV}" -eq 1 ]]; then
+        printf '      perfil UCM do DualSense pulado (--no-udev) — rode depois: bash scripts/install_ucm_dualsense.sh\n'
+        return 0
+    fi
+    if ! bash "${ROOT_DIR}/scripts/install_ucm_dualsense.sh"; then
+        warn "install_ucm_dualsense.sh falhou — rode: bash scripts/install_ucm_dualsense.sh"
     fi
 }
 

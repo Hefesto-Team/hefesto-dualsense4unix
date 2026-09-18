@@ -19,6 +19,13 @@ _UDEV_RULES = (
     "/etc/udev/rules.d/74-ps5-controller-hotplug-bt.rules",
 )
 
+# HAPTICA-NATIVA-01: onde o kernel lista as placas de som (o nome longo vem na
+# segunda linha de cada uma) e onde mora a árvore UCM. Lidos NA CHAMADA, porque
+# a suíte aponta os dois para o vazio.
+_PROC_CARDS = "/proc/asound/cards"
+_RAIZ_UCM = "/usr/share/alsa/ucm2"
+_NOME_DO_DUALSENSE = "Sony Interactive Entertainment DualSense"
+
 
 def _udev_hotplug_outdated() -> bool:
     """True se alguma regra 73/74 instalada cita a unit de hotplug ERRADA."""
@@ -114,6 +121,32 @@ def _dualsense_mic_intended() -> bool:
     return _marca_do_gesto_do_mic().exists()
 
 
+def _dualsenses_no_cabo_sem_ucm() -> list[str]:
+    """Os nomes longos das placas de DualSense no cabo que o UCM não alcança.
+
+    O mesmo teste do `check_ucm_do_dualsense` do `doctor.sh`: o
+    `scripts/install_ucm_dualsense.sh` grava um gancho por controlador USB em
+    `conf.d/USB-Audio/<nome longo>.conf`, e uma placa sem o gancho abre sem o
+    sink `…HiFi__Speaker__sink` — o jogo da Sony pelo Proton não vibra. Uma
+    distro sem `ucm.conf` não tem o que armar, e fica calada.
+    """
+    raiz = Path(_RAIZ_UCM)
+    if not (raiz / "ucm.conf").is_file():
+        return []
+    try:
+        linhas = Path(_PROC_CARDS).read_text(encoding="utf-8").splitlines()
+    except OSError:
+        return []
+    sem = []
+    for linha in linhas:
+        nome = linha.strip()
+        if not nome.startswith(_NOME_DO_DUALSENSE):
+            continue
+        if not (raiz / "conf.d" / "USB-Audio" / f"{nome}.conf").is_file():
+            sem.append(nome)
+    return sem
+
+
 def system_warnings() -> list[str]:
     """Avisos de infra para o boot. Read-only; nunca levanta, nunca usa sudo."""
     warnings: list[str] = []
@@ -127,6 +160,11 @@ def system_warnings() -> list[str]:
             warnings.append(
                 "WirePlumber fixou o DualSense como microfone padrão — "
                 "rode: scripts/doctor.sh --fix"
+            )
+        if _dualsenses_no_cabo_sem_ucm():
+            warnings.append(
+                "DualSense no cabo sem o perfil UCM — a vibração dos jogos da "
+                "Sony não chega pelo cabo; rode: bash scripts/install_ucm_dualsense.sh"
             )
     except Exception:
         return warnings

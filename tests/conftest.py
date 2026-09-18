@@ -2757,6 +2757,38 @@ def _nenhum_hidraw_vivo_na_varredura_de_som(
         dualsense_bt_audio._SYSFS_HIDRAW = antes
 
 
+@pytest.fixture(autouse=True, scope="session")
+def _nenhuma_placa_de_som_viva_no_aviso_do_ucm(
+    tmp_path_factory: pytest.TempPathFactory,
+) -> Iterator[None]:
+    """O aviso do UCM no boot lê uma lista de placas VAZIA (HAPTICA-NATIVA-01).
+
+    `system_check._dualsenses_no_cabo_sem_ucm` lê `/proc/asound/cards` e a
+    árvore UCM da máquina. Sem esta fixture, `system_warnings() == []` passaria
+    ou reprovaria conforme o DualSense estivesse no cabo e o install tivesse
+    rodado — uma régua que mede a máquina, não o código. Vazio, pela razão das
+    irmãs acima: *"não achei placa nenhuma"* é a resposta de quem não tem
+    controle. Quem precisa de placas forjadas aponta as constantes com
+    `monkeypatch` de escopo de função.
+    """
+    vazio = tmp_path_factory.mktemp("asound-sem-placa")
+    (vazio / "cards").write_text("--- no soundcards ---\n", encoding="utf-8")
+    try:
+        from hefesto_dualsense4unix.core import system_check
+    except ModuleNotFoundError as erro:  # pragma: no cover - só no job leve do CI
+        if (erro.name or "").split(".")[0] != "hefesto_dualsense4unix":
+            raise
+        yield
+        return
+
+    antes = system_check._PROC_CARDS
+    system_check._PROC_CARDS = str(vazio / "cards")
+    try:
+        yield
+    finally:
+        system_check._PROC_CARDS = antes
+
+
 # ---------------------------------------------------------------------------
 # BINARIO-QUE-SO-EXISTE-NA-ARVORE-DELA-01 (25/08/2026)
 # ---------------------------------------------------------------------------
