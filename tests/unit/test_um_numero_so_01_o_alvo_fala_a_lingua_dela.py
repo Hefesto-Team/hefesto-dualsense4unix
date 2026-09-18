@@ -304,3 +304,73 @@ def test_a_fila_podre_desta_regua_e_a_fila_medida() -> None:
         assert oui not in bruto, f"OUI desta bancada na prova: {oui}"
     assert bruto.count("aabbcc") == 4, "os quatro fantasmas medidos, e só eles"
     assert bruto.count(_REAL) == 4, "os quatro reais, na faixa que não identifica"
+
+
+# ---------------------------------------------------------------------------
+# PONTA 4 — o roteador do BACKEND, que é onde a classe fecha
+# ---------------------------------------------------------------------------
+# Os nove chamadores de `_handle_for` são os atos de ÁUDIO por controle, e
+# todos caíam no primário sem endereço — enquanto `led.set`, `rumble.set` e
+# `trigger.*` obedeciam ao seletor. MEDIDO na mesa dela: `mic.set`,
+# `mic.led.set` e `speaker.set` respondiam `ok` para o jogador 3 mexendo no 1.
+
+
+class _BackendDeMentira:
+    """O `_handle_for` real, com os handles e os locks de mentira."""
+
+    def __init__(self) -> None:
+        import threading
+
+        self._io_lock = threading.Lock()
+        self._handles = {"k1": "handle-do-1", "k2": "handle-do-2"}
+        self._primary_key = "k1"
+        self._output_target_key: str | None = None
+
+    def _key_to_uniq(self, key: str) -> str:
+        return {"k1": f"{_REAL}01", "k2": f"{_REAL}02"}[key]
+
+    _handle_for = None  # preenchido abaixo
+
+
+def _backend():
+    from hefesto_dualsense4unix.core.backend_pydualsense import PyDualSenseController
+
+    b = _BackendDeMentira()
+    b._handle_for = PyDualSenseController._handle_for.__get__(b)  # type: ignore[method-assign]
+    return b
+
+
+def test_sem_endereco_e_sem_alvo_cai_no_primario() -> None:
+    """O caso de quem tem um controle só — e ele NÃO pode mudar."""
+    b = _backend()
+    assert b._handle_for(None) == "handle-do-1"
+
+
+def test_sem_endereco_o_alvo_de_saida_ganha_do_primario() -> None:
+    """A CURA: apontar para o jogador 2 e mandar `mic.set` mexe no 2."""
+    b = _backend()
+    b._output_target_key = "k2"
+    assert b._handle_for(None) == "handle-do-2"
+
+
+def test_o_endereco_explicito_continua_vencendo_tudo() -> None:
+    b = _backend()
+    b._output_target_key = "k2"
+    assert b._handle_for(f"{_REAL}01") == "handle-do-1"
+
+
+def test_alvo_que_saiu_da_mesa_cai_no_primario_em_vez_de_sumir() -> None:
+    """O controle apontado caiu do rádio: o ato vai para o primário, não some."""
+    b = _backend()
+    b._output_target_key = "k9-que-nao-existe"
+    assert b._handle_for(None) == "handle-do-1"
+
+
+def test_mordida_da_ponta_4_sem_o_alvo_o_ato_vai_para_o_primario() -> None:
+    """Arranca a consulta ao alvo: volta o defeito medido na mesa dela."""
+    b = _backend()
+    b._output_target_key = "k2"
+    # o que a versão de antes fazia, em duas linhas:
+    antigo = b._handles.get(b._primary_key)
+    assert antigo == "handle-do-1"
+    assert b._handle_for(None) == "handle-do-2", "a cura não está no lugar"

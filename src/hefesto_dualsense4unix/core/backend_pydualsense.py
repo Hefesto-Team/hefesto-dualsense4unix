@@ -5737,12 +5737,41 @@ class PyDualSenseController(IController):
         return valor if isinstance(valor, int) else None
 
     def _handle_for(self, uniq: str | None) -> Any:
-        """Handle do controle `uniq` (MAC normalizado) ou o primário se None."""
+        """Handle do controle `uniq`; sem endereço, o ALVO DE SAÍDA — e só
+        então o primário.
+
+        **O ALVO ENTROU EM 18/09/2026, e ele fecha a classe inteira.** Os nove
+        chamadores deste roteador são os atos de ÁUDIO por controle
+        (`set_speaker_volume`, `set_microphone_mute`, `set_microphone_led`,
+        `set_microphone_volume`, os três `release_*` e as duas leituras), e
+        todos caíam no primário quando a interface não mandava endereço —
+        enquanto `led.set`, `rumble.set` e `trigger.*` obedeciam ao seletor.
+        Duas línguas de alvo dentro do mesmo backend, e a queixa dela nomeava o
+        efeito: *"a mudança dos leds e afins não foram aplicadas pros demais
+        controles do app (deveriam ser 4)"*.
+
+        A ordem vai do mais explícito ao menos, e é a MESMA de
+        `ipc_handlers._uniq_do_primario`, de propósito — duas contas para "em
+        quem isto cai" seria o defeito que esta casa já pagou três vezes.
+
+        **AS LEITURAS NÃO SE MEXEM, e isso foi medido antes:** quem monta o
+        `state_full` chama `audio_status_for`/`speaker_state_for` com o `uniq`
+        de cada controle, explícito, entrada por entrada. Nenhum caminho quente
+        passa `None` esperando o primário.
+
+        **O `_output_target_key` é lido DENTRO do lock que já está aberto**, e
+        não por `get_output_target_uniq()`: aquele método toma o mesmo
+        `_io_lock`, e chamá-lo daqui seria um deadlock com o backend inteiro
+        parado — o `_io_lock` não é reentrante.
+        """
         from hefesto_dualsense4unix.core.sysfs_leds import norm_mac
 
         alvo = norm_mac(uniq) if uniq else None
         with self._io_lock:
             if alvo is None:
+                escolhido = self._output_target_key
+                if escolhido is not None and escolhido in self._handles:
+                    return self._handles[escolhido]
                 key = self._primary_key
                 return self._handles.get(key) if key is not None else None
             for key, handle in self._handles.items():
