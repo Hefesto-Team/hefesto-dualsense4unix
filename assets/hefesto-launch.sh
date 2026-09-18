@@ -180,6 +180,38 @@ record_last_exit() {
     return 0
 }
 
+registrar_audio_ks() {
+    # O rastro do curador do device KS (INSTALL-UNIVERSAL, 18/09/2026). A
+    # saída do curador vai para /dev/null — é o jogo que está abrindo —, e sem
+    # este arquivo a vibração que não chegou numa máquina de outra pessoa não
+    # deixava sinal nenhum: nem o doctor nem o daemon olhavam o curador.
+    #
+    # Arquivo: $XDG_STATE_HOME/hefesto-dualsense4unix/launch_env/audio_ks_ultimo
+    # Formato (chave=valor, uma por linha; lido pelo `doctor.sh`):
+    #   appid=<SteamAppId, só dígitos>   epoch=<unix epoch do lançamento>
+    #   rc=<saída do curador>            tentativas=<quantas vezes rodou>
+    #   motivo=ok | ocupado | erro | sem-registro | desligado | sem-curador
+    #
+    # Mesma disciplina do `record_last_run`: best-effort ABSOLUTO, e tmp+mv
+    # para o leitor nunca pegar metade. O tmp leva o PID porque dois jogos
+    # abrindo juntos escreveriam o MESMO tmp.
+    ra_appid="${SteamAppId:-}"
+    case "$ra_appid" in
+        *[!0-9]*) ra_appid="" ;;
+    esac
+    ra_dir="${XDG_STATE_HOME:-$HOME/.local/state}/hefesto-dualsense4unix/launch_env"
+    mkdir -p "$ra_dir" 2>/dev/null || return 0
+    {
+        printf 'appid=%s\n' "$ra_appid"
+        printf 'epoch=%s\n' "$(date +%s 2>/dev/null)"
+        printf 'rc=%s\n' "$1"
+        printf 'motivo=%s\n' "$2"
+        printf 'tentativas=%s\n' "$3"
+    } > "$ra_dir/audio_ks_ultimo.$$" 2>/dev/null || return 0
+    mv -f "$ra_dir/audio_ks_ultimo.$$" "$ra_dir/audio_ks_ultimo" 2>/dev/null || true
+    return 0
+}
+
 # NUMA-01: handler ÚNICO de trap EXIT deste wrapper. Combina o restaurador
 # de Game Mode (só ativo se `enter_game_mode` alterou o perfil — guardado
 # pela variável `hefesto_gm_prev`, setada ABAIXO em vez de `enter_game_mode`
@@ -454,25 +486,61 @@ curar_audio_ks() {
     prefixo="${STEAM_COMPAT_DATA_PATH:-}"
     [ -n "$prefixo" ] || return 0
     reg="$prefixo/pfx/system.reg"
-    [ -f "$reg" ] || return 0
     case "$hefesto_envs" in
         *PROTON_ENABLE_MHWILDS_USB_AUDIO=1*) ks_modo="" ;;
         *)
-            grep -qF 'HEFESTOKS' "$reg" 2>/dev/null || return 0
+            # Sem a opção só há trabalho se houver bloco nosso a limpar.
+            if [ ! -f "$reg" ] || ! grep -qF 'HEFESTOKS' "$reg" 2>/dev/null; then
+                registrar_audio_ks 0 desligado 0
+                return 0
+            fi
             ks_modo="--remover"
             ;;
     esac
+    # A PRIMEIRA SESSÃO DE TODO JOGO NOVO cai aqui: o proton cria o prefixo
+    # (copy_pfx, que traz o system.reg) DENTRO do %command%, depois deste
+    # wrapper. Não há cura barata — criar o prefixo antes do jogo pede medição
+    # —, e a sessão deixa o registro no disco: o lançamento seguinte grava. O
+    # que não pode é ficar calado, e o doctor lê este rastro.
+    if [ ! -f "$reg" ]; then
+        registrar_audio_ks 0 sem-registro 0
+        return 0
+    fi
     curador="$HOME/.local/share/hefesto-dualsense4unix/bin/hefesto-audio-ks"
-    [ -x "$curador" ] || return 0
+    if [ ! -x "$curador" ]; then
+        registrar_audio_ks 0 sem-curador 0
+        return 0
+    fi
     command -v python3 >/dev/null 2>&1 || return 0
     if command -v timeout >/dev/null 2>&1; then
         ks_run="timeout 10"
     else
         ks_run=""
     fi
-    LD_LIBRARY_PATH= LD_PRELOAD= PYTHONPATH= PYTHONHOME= \
-        $ks_run python3 "$curador" --prefixo "$prefixo" \
-        --sysfs "${HEFESTO_SYSFS:-/sys}" $ks_modo >/dev/null 2>&1
+    # O `ocupado` (saída 3) é o wineserver DESTE prefixo ainda vivo — o do
+    # install script da Steam (redistribuíveis, EOS), ou o da sessão que acabou
+    # de fechar. Esperar custa zero: o `proton waitforexitandrun` roda
+    # `wineserver -w` sobre o MESMO servidor antes de abrir o jogo. Até cinco
+    # novas tentativas, com o mesmo `sleep` do restaurador do Game Mode; sem
+    # `sleep` no PATH, desiste na primeira (shell puro, nada novo é exigido).
+    # HEFESTO_KS_ESPERA_SECS existe para a suíte não esperar segundos reais.
+    ks_tentativas=1
+    while :; do
+        LD_LIBRARY_PATH= LD_PRELOAD= PYTHONPATH= PYTHONHOME= \
+            $ks_run python3 "$curador" --prefixo "$prefixo" \
+            --sysfs "${HEFESTO_SYSFS:-/sys}" $ks_modo >/dev/null 2>&1
+        ks_rc=$?
+        [ "$ks_rc" -eq 3 ] || break
+        [ "$ks_tentativas" -le 5 ] || break
+        sleep "${HEFESTO_KS_ESPERA_SECS:-1}" 2>/dev/null || break
+        ks_tentativas=$((ks_tentativas + 1))
+    done
+    case "$ks_rc" in
+        0) ks_motivo="ok" ;;
+        3) ks_motivo="ocupado" ;;
+        *) ks_motivo="erro" ;;
+    esac
+    registrar_audio_ks "$ks_rc" "$ks_motivo" "$ks_tentativas"
     return 0
 }
 

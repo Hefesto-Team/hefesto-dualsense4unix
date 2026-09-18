@@ -279,7 +279,8 @@ def limpar(diretorio: Path) -> list[str]:
     dados["order"] = depois
     # Escrita atômica, no molde do produto (`identity._save_locked`): um
     # `controllers.json` truncado por queda de energia custaria a numeração da
-    # mesa inteira, e este gesto roda dentro do install.
+    # mesa inteira, e este gesto roda no `doctor --fix` de qualquer máquina
+    # (`fix_fila_sem_fixture`) — nunca no install, que não passa `--fix`.
     tmp = alvo.with_suffix(".json.tmp")
     tmp.write_text(json.dumps(dados, indent=1, ensure_ascii=False), encoding="utf-8")
     tmp.replace(alvo)

@@ -300,10 +300,20 @@ check_daemon_installed() {
 # As duas perguntam pelo EFEITO, nunca pelo nome do pacote — é a mesma
 # disciplina que o `install.sh` declara na `_dep_presente`, e a que sobrevive a
 # distro que empacota com outro nome.
+#
+# A ORDEM DOS CANDIDATOS (INSTALL-UNIVERSAL, 18/09/2026): a venv do produto é a
+# que o install cria AO LADO deste script (`VENV_DIR="${ROOT_DIR}/.venv"`, a
+# mesma do lançador em ~/.local/bin), e ela vem PRIMEIRO. Aqui havia um
+# `${HOME}/.venv/bin/python` antes dela — numa máquina de outra pessoa, é o
+# nome mais comum de venv que existe, e qualquer uma servia de "python do
+# produto": sem `platformdirs`, sem `gi`, e o check respondia sobre ela. O
+# `/opt/...` é a venv que o `.deb` traz (`scripts/build_deb.sh`, FINAL_VENV):
+# lá este script mora longe dela e não há `.venv` ao lado.
 _python_do_produto() {
     local py
-    for py in "${HOME}/.local/share/hefesto-dualsense4unix/venv/bin/python" \
-              "${HOME}/.venv/bin/python" "$(dirname "$0")/../.venv/bin/python"; do
+    for py in "${ROOT_DIR}/.venv/bin/python" \
+              "${HOME}/.local/share/hefesto-dualsense4unix/venv/bin/python" \
+              "/opt/hefesto-dualsense4unix/venv/bin/python"; do
         [[ -x "${py}" ]] && { printf '%s\n' "${py}"; return 0; }
     done
     command -v python3 2>/dev/null
@@ -1489,24 +1499,41 @@ check_dualsense_sink_disabled() {
 # ele, porque o gancho só vale no próximo replug. A primeira metade é a mesma
 # pergunta do `_dualsenses_no_cabo_sem_ucm` do `core/system_check.py`, que a faz
 # no boot do daemon. As duas variáveis de ambiente existem para os testes.
+#
+# SEM `ucm.conf` E COM DUALSENSE NO CABO É AVISO, não informação
+# (INSTALL-UNIVERSAL, 18/09/2026). Aqui saía "esta distro não usa UCM" mesmo
+# com o controle plugado: numa instalação sem `Recommends` (o `alsa-ucm-conf`
+# vem como recomendação do `libasound2-data` no apt), a vibração pelo cabo
+# sumia e o doctor a dava como escolha da distro. Sem controle no cabo, a
+# frase antiga continua certa.
 check_ucm_do_dualsense() {
     local raiz="${HEFESTO_RAIZ_UCM:-/usr/share/alsa/ucm2}"
     local cards="${HEFESTO_PROC_CARDS:-/proc/asound/cards}"
+    local linha nome placas=0 sem=0
+    local -a placas_no_cabo=()
+    if [[ -r "${cards}" ]]; then
+        while IFS= read -r linha; do
+            nome="${linha#"${linha%%[![:space:]]*}"}"
+            [[ "${nome}" == "Sony Interactive Entertainment DualSense"* ]] || continue
+            placas_no_cabo+=("${nome}")
+        done < "${cards}"
+    fi
     if [[ ! -f "${raiz}/ucm.conf" ]]; then
-        info "sem ${raiz}/ucm.conf — esta distro não usa UCM; perfil do DualSense não conferido"
+        if [[ "${#placas_no_cabo[@]}" -gt 0 ]]; then
+            warn "DualSense no cabo e sem ${raiz}/ucm.conf — sem o UCM do sistema (o pacote alsa-ucm-conf; no Fedora, alsa-ucm) a placa do controle não abre pelo perfil e a vibração dos jogos da Sony não chega pelo cabo. Instale o pacote e rode: bash scripts/install_ucm_dualsense.sh (ou scripts/doctor.sh --fix)"
+        else
+            info "sem ${raiz}/ucm.conf — esta distro não usa UCM; perfil do DualSense não conferido"
+        fi
         return
     fi
     [[ -r "${cards}" ]] || return
-    local linha nome placas=0 sem=0
-    while IFS= read -r linha; do
-        nome="${linha#"${linha%%[![:space:]]*}"}"
-        [[ "${nome}" == "Sony Interactive Entertainment DualSense"* ]] || continue
+    for nome in ${placas_no_cabo[@]+"${placas_no_cabo[@]}"}; do
         placas=$((placas + 1))
         if [[ ! -f "${raiz}/conf.d/USB-Audio/${nome}.conf" ]]; then
             sem=$((sem + 1))
-            warn "DualSense no cabo sem o perfil UCM (${nome}) — a vibração dos jogos da Sony não chega pelo cabo. Rode: bash scripts/install_ucm_dualsense.sh"
+            warn "DualSense no cabo sem o perfil UCM (${nome}) — a vibração dos jogos da Sony não chega pelo cabo. Rode: bash scripts/install_ucm_dualsense.sh (ou scripts/doctor.sh --fix)"
         fi
-    done < "${cards}"
+    done
     if [[ "${placas}" -eq 0 ]]; then
         info "nenhum DualSense no cabo — perfil UCM não conferido"
         return
@@ -1520,6 +1547,61 @@ check_ucm_do_dualsense() {
         warn "o gancho UCM existe, mas $((total - hifi)) placa(s) do DualSense abriram sem ele — replugue o controle (ou: systemctl --user restart wireplumber)"
     else
         pass "perfil UCM do DualSense armado (${placas} placa(s) no cabo)"
+    fi
+}
+
+# HAPTICA-POR-RADIO-01 — AS ÂNCORAS USB (INSTALL-UNIVERSAL, 18/09/2026).
+#
+# Pelo rádio o controle não tem placa de som, e o endpoint que o jogo acha é um
+# nó nosso que declara o `sysfs.path` de um aparelho USB SEM placa de som — a
+# âncora de onde o Wine tira o ContainerId. É uma âncora por controle (duas
+# iguais seriam dois endpoints com o mesmo ContainerId), e o daemon só entrega
+# enquanto houver: o controle que sobra fica sem vibração, calado. Num desktop
+# sobram âncoras (o próprio adaptador Bluetooth e os hubs internos); num
+# notebook com a mesa de quatro, podem faltar.
+#
+# A pergunta é a MESMA do daemon, importada e não redigitada:
+# `endpoint_de_haptica.ancoras` e a lista dos DualSense no rádio do
+# `dualsense_bt_audio` (o mesmo filtro que o `alto_falante.controles_na_lista`
+# aplica com `e_radio`, sem arrastar o pacote do daemon). Sem o pacote ao
+# alcance (python sem as dependências), o check se declara incapaz em vez de
+# responder. HEFESTO_SYSFS existe para os testes.
+check_ancoras_da_haptica_por_radio() {
+    local py saida radio ancoras
+    py="$(_python_do_produto)"
+    [[ -n "${py}" ]] || { info "sem python para conferir as âncoras da vibração pelo rádio"; return; }
+    saida="$(HEFESTO_SRC="${ROOT_DIR}/src" HEFESTO_SYSFS="${HEFESTO_SYSFS:-/sys}" \
+        "${py}" - <<'PY' 2>/dev/null
+import os
+import sys
+from pathlib import Path
+
+src = os.environ.get("HEFESTO_SRC", "")
+if src and os.path.isdir(src):
+    sys.path.insert(0, src)
+try:
+    from hefesto_dualsense4unix.integrations.dualsense_bt_audio import nos_dualsense_bluetooth
+    from hefesto_dualsense4unix.integrations.endpoint_de_haptica import ancoras
+except Exception:  # noqa: BLE001 - qualquer falha de import é "não sei"
+    print("sem-produto")
+    raise SystemExit(0)
+sysfs = Path(os.environ.get("HEFESTO_SYSFS") or "/sys")
+radio = {n.uniq for n in nos_dualsense_bluetooth(str(sysfs / "class" / "hidraw")) if n.uniq}
+print(len(radio), len(ancoras(sysfs)))
+PY
+)" || saida=""
+    if [[ ! "${saida}" =~ ^[0-9]+\ [0-9]+$ ]]; then
+        info "âncoras da vibração pelo rádio não conferidas (o pacote não está ao alcance do python ${py})"
+        return
+    fi
+    radio="${saida% *}"
+    ancoras="${saida#* }"
+    if [[ "${radio}" -eq 0 ]]; then
+        info "nenhum DualSense no rádio — âncoras da vibração pelo rádio não conferidas (${ancoras} disponível(is))"
+    elif [[ "${ancoras}" -ge "${radio}" ]]; then
+        pass "âncoras USB da vibração pelo rádio: ${ancoras} para ${radio} controle(s)"
+    else
+        warn "a vibração pelo rádio precisa de um aparelho USB sem som por controle; ligue um hub ou um dongle — há ${ancoras} para ${radio} DualSense no rádio, e $((radio - ancoras)) fica(m) sem vibração nos jogos"
     fi
 }
 
@@ -1943,6 +2025,105 @@ check_launch_wrapper() {
     # censo, e o censo os nomeia.
     info "controle DOBRANDO no jogo? use o botão 'Copiar opções p/ jogos' da GUI (string constante do wrapper) ou 'Aplicar aos jogos da Steam' (aplica o wrapper aos jogos, preservando as opções existentes)."
     check_sentinela_wrapper
+}
+
+# AS TRÊS CÓPIAS EM bin/ (INSTALL-UNIVERSAL, 18/09/2026). O wrapper chama dois
+# curadores em Python — `hefesto-camadas` (ENGASGO-VULKAN-01) e
+# `hefesto-audio-ks` (HAPTICA-NATIVA-01) — que o install MATERIALIZA ao lado
+# dele, porque o lançamento não pode depender do checkout. Materializar tem um
+# preço: as três cópias só se refazem no install, e um `git pull` sem
+# reinstalar deixa o wrapper rodando a versão velha, sem aviso. O
+# `check_launch_wrapper` só conferia a presença do `hefesto-launch`.
+#
+# É a CLASSE e não um curador: os três pares são o mesmo defeito, e o
+# `cmp` só roda num checkout — fora dele não há fonte ao lado para comparar.
+check_copias_do_wrapper() {
+    local bin="${HOME}/.local/share/hefesto-dualsense4unix/bin"
+    local par nome fonte alvo razao velhas="" instaladas=0
+    for par in \
+        "hefesto-launch|assets/hefesto-launch.sh|" \
+        "hefesto-camadas|src/hefesto_dualsense4unix/integrations/camadas_vulkan.py|a cura do engasgo por camada Vulkan não roda no lançamento" \
+        "hefesto-audio-ks|src/hefesto_dualsense4unix/integrations/audio_ks_dualsense.py|a vibração dos jogos da Sony pelo DualSense não chega ao jogo sob Proton"; do
+        IFS='|' read -r nome fonte razao <<<"${par}"
+        alvo="${bin}/${nome}"
+        if [[ ! -x "${alvo}" ]]; then
+            # O `hefesto-launch` ausente já é FAIL no `check_launch_wrapper`.
+            [[ -n "${razao}" ]] && warn "curador ${nome} ausente ou sem permissão de execução em ${bin} — ${razao}; $(conselho_de_instalacao)"
+            continue
+        fi
+        instaladas=$((instaladas + 1))
+        esta_instalacao_e_um_checkout || continue
+        command -v cmp >/dev/null 2>&1 || continue
+        [[ -f "${ROOT_DIR}/${fonte}" ]] || continue
+        cmp -s "${ROOT_DIR}/${fonte}" "${alvo}" || velhas="${velhas}${velhas:+, }${nome}"
+    done
+    if [[ -n "${velhas}" ]]; then
+        warn "cópia em ${bin} diferente deste checkout: ${velhas} — o lançamento roda a versão velha até reinstalar; $(conselho_de_instalacao) (as cópias em bin/ só se refazem no install)"
+    elif [[ "${instaladas}" -eq 3 ]]; then
+        if esta_instalacao_e_um_checkout; then
+            pass "wrapper e curadores do lançamento instalados e iguais a este checkout"
+        else
+            pass "wrapper e curadores do lançamento instalados (${bin})"
+        fi
+    fi
+}
+
+# O ÚLTIMO LANÇAMENTO DO DEVICE KS (INSTALL-UNIVERSAL, 18/09/2026). O curador
+# roda dentro do lançamento, com a saída em /dev/null — é o jogo que está
+# abrindo. O wrapper deixa uma linha de rastro em
+# `launch_env/audio_ks_ultimo`, e é ela que se lê aqui:
+#
+#   sem-registro -> INFO. Todo jogo NOVO passa por aí: o prefixo nasce dentro
+#                   do %command%, depois do wrapper, e o lançamento seguinte
+#                   grava. Um aviso ali seria ruído a cada jogo instalado.
+#   ocupado      -> WARN. O wineserver daquele prefixo continuou vivo mesmo
+#                   depois da espera do wrapper (até cinco segundos).
+#   erro         -> WARN, com o código de saída.
+check_ultimo_device_ks() {
+    local arq="${XDG_STATE_HOME:-${HOME}/.local/state}/hefesto-dualsense4unix/launch_env/audio_ks_ultimo"
+    if [[ ! -f "${arq}" ]]; then
+        info "device KS do DualSense: nenhum lançamento pelo Proton registrado ainda"
+        return
+    fi
+    local chave valor appid="" epoch="" rc="" motivo="" tentativas=""
+    while IFS='=' read -r chave valor; do
+        case "${chave}" in
+            appid)      appid="${valor}" ;;
+            epoch)      epoch="${valor}" ;;
+            rc)         rc="${valor}" ;;
+            motivo)     motivo="${valor}" ;;
+            tentativas) tentativas="${valor}" ;;
+        esac
+    done < "${arq}"
+    local jogo="um jogo sem appid" quando="" agora
+    [[ "${appid}" =~ ^[0-9]+$ ]] && jogo="$(_rotulo_do_appid "${appid}")"
+    agora="$(date +%s 2>/dev/null || true)"
+    if [[ "${epoch}" =~ ^[0-9]+$ && "${agora}" =~ ^[0-9]+$ && "${agora}" -ge "${epoch}" ]]; then
+        local seg=$((agora - epoch))
+        if [[ "${seg}" -lt 3600 ]]; then
+            quando=", há $((seg / 60)) min"
+        elif [[ "${seg}" -lt 172800 ]]; then
+            quando=", há $((seg / 3600)) h"
+        else
+            quando=", há $((seg / 86400)) dia(s)"
+        fi
+    fi
+    case "${motivo}" in
+        ok)
+            pass "device KS do DualSense conferido no último lançamento pelo Proton (${jogo}${quando})" ;;
+        sem-registro)
+            info "o jogo ${jogo} abriu antes de o prefixo existir${quando}; a vibração do DualSense nele vale a partir do próximo lançamento" ;;
+        ocupado)
+            warn "device KS do DualSense NÃO gravado no último lançamento (${jogo}${quando}): o wineserver daquele prefixo continuou vivo depois de ${tentativas:-?} tentativa(s) — feche o jogo por completo e abra de novo" ;;
+        erro)
+            warn "o curador do device KS falhou no último lançamento (${jogo}${quando}, código ${rc:-?}) — a vibração dos jogos da Sony pode não chegar; rode à mão para ver o erro: python3 ${HOME}/.local/share/hefesto-dualsense4unix/bin/hefesto-audio-ks --prefixo <compatdata do jogo>" ;;
+        sem-curador)
+            warn "o último lançamento (${jogo}${quando}) não achou o curador do device KS — $(conselho_de_instalacao)" ;;
+        desligado)
+            info "último lançamento pelo Proton (${jogo}${quando}) sem a opção da vibração: sem DualSense com endpoint de som, ou com o daemon fora do ar" ;;
+        *)
+            info "rastro do device KS ilegível em ${arq}" ;;
+    esac
 }
 
 # SENTINELA-WRAPPER-01 (16/08/2026): o contador acima diz QUANTOS jogos têm o
@@ -6119,6 +6300,75 @@ _dono_das_regras_udev() {
     return 1
 }
 
+# A FILA DE NUMERAÇÃO, LIMPA DE ENDEREÇO DE FIXTURE — 18/09/2026.
+#
+# MEDIDO na mesa dela: quatro endereços `aa:bb:cc:00:00:0{1..4}` moravam no
+# `controllers.json` desde 22/08, ocupando os postos 4 a 7 da fila e
+# empurrando um DualSense REAL para o oitavo. A causa (a suíte escrevendo no
+# `~/.config` real) foi fechada em 25/08 pelo lar de mentira de sessão; a
+# SUJEIRA ficou, e nada a limpava: o `check_faixa_sintetica.py` acusava desde
+# 24/08 e não tinha como curar.
+#
+# AQUI E NÃO NO PRODUTO, e a razão é medida: a primeira cura descartava a
+# faixa dentro do `identity.order_entries` e foi recuada no mesmo dia — duas
+# dezenas de réguas desta casa usam `aa:bb:cc` como endereço de controle de
+# verdade. Expurgar no produto é regra sobre a nossa suíte, não sobre o
+# aparelho. O `--fix` é onde esta casa conserta MÁQUINA, e é um gesto que a
+# pessoa pede — que é o que a mensagem do portão exige: "a decisão sobre o que
+# já está gravado é de quem é dono da máquina".
+#
+# TRÊS FUROS FECHADOS (INSTALL-UNIVERSAL, 18/09/2026), todos de máquina alheia:
+#
+#   1. O PYTHON. Rodava o `python3` do sistema com o erro jogado fora, e o
+#      `--casa` importa `platformdirs`, que só a venv do produto garante — na
+#      bancada dela ele existia por acaso (o pacote do pipx). Sem ele o script
+#      morria no import e esta linha dizia "sem endereço de fixture" sem ter
+#      lido o arquivo. Agora é o `_python_do_produto`, e o veredito sai da
+#      primeira palavra da resposta: `OK:` passa, `LIMPO:` segue, qualquer
+#      outra coisa (vazio, traceback) é AVISO com a última linha.
+#   2. O DAEMON DE PÉ REGRAVAVA A FILA. O `load` põe a fila do disco na
+#      memória uma vez só, e o `_save_locked` a regrava inteira quando um
+#      controle chega ou muda de número — por cima do que se acabou de tirar.
+#      Só quando houve limpeza, o serviço é reiniciado (`try-restart`: nada
+#      acontece se ele não estiver rodando). Um daemon aberto fora do systemd
+#      não é alcançável daqui, e isso é dito.
+#   3. A FAIXA DE ENDEREÇO UNIVERSAL. Com o furo 2 fechado, a remoção passa a
+#      ficar — e o `e_endereco_sintetico` respondia sim para `e8:47:3a`, uma
+#      faixa sem o bit de administração local: espaço que a IEEE atribui a
+#      fabricante. A cura é no dono (`core/faixa_sintetica.py`): só faixa de
+#      endereço LOCAL é lixo por construção. Os dois furos entram juntos.
+fix_fila_sem_fixture() {
+    [[ -f "${ROOT_DIR}/scripts/check_faixa_sintetica.py" ]] || return 0
+    local py saida fecho estado
+    py="$(_python_do_produto)"
+    if [[ -z "${py}" ]]; then
+        warn "limpeza da fila não rodou: sem python para o check_faixa_sintetica.py"
+        return
+    fi
+    saida="$("${py}" "${ROOT_DIR}/scripts/check_faixa_sintetica.py" --casa --limpar 2>&1)" || true
+    if [[ $'\n'"${saida}" == *$'\n'"OK:"* ]]; then
+        pass "fila de numeração: sem endereço de fixture"
+        return
+    fi
+    if [[ $'\n'"${saida}" != *$'\n'"LIMPO:"* ]]; then
+        fecho="${saida##*$'\n'}"
+        warn "limpeza da fila não rodou: ${fecho:-o check_faixa_sintetica.py não respondeu} (python: ${py})"
+        return
+    fi
+    pass "fila de numeração: endereços de fixture retirados"
+    if ! command -v systemctl >/dev/null 2>&1; then
+        [[ -S "$(runtime_socket)" ]] && warn "sem systemctl para reiniciar o daemon: ele guarda a fila antiga na memória e a regrava quando um controle chegar — feche-o e rode --fix de novo"
+        return
+    fi
+    systemctl --user try-restart "${APP_ID}.service" >/dev/null 2>&1 || true
+    estado="$(systemctl --user is-active "${APP_ID}.service" 2>/dev/null || true)"
+    if [[ "${estado}" == "active" ]]; then
+        pass "daemon reiniciado para ler a fila limpa (${APP_ID}.service)"
+    elif [[ -S "$(runtime_socket)" ]]; then
+        warn "o socket do daemon está de pé sem o ${APP_ID}.service: um daemon aberto fora do systemd guarda a fila antiga na memória e a regrava quando um controle chegar — feche-o e rode --fix de novo"
+    fi
+}
+
 apply_fixes() {
     hdr "aplicando correções (--fix)"
     local _udev_dono=""
@@ -6133,6 +6383,20 @@ apply_fixes() {
         fi
     else
         warn "sudo ausente — não reapliquei udev"
+    fi
+    # HAPTICA-NATIVA-01 — o gancho UCM do DualSense no cabo (INSTALL-UNIVERSAL,
+    # 18/09/2026). Sai um gancho por controlador USB PRESENTE na hora; um
+    # controlador que chega depois (uma dock, uma placa USB) ficava sem, e o
+    # doctor só acusava. ANTES do fix do WirePlumber logo abaixo, de propósito:
+    # o `--install` dele reinicia o WirePlumber, e é esse restart que reabre a
+    # placa pelo gancho — outro `systemctl` aqui seria o mesmo gesto duas vezes.
+    # O roteiro é idempotente e pede sudo por dentro.
+    if [[ -f "${ROOT_DIR}/scripts/install_ucm_dualsense.sh" ]]; then
+        if bash "${ROOT_DIR}/scripts/install_ucm_dualsense.sh" >/dev/null 2>&1; then
+            pass "perfil UCM do DualSense conferido (um gancho por controlador USB)"
+        else
+            warn "install_ucm_dualsense.sh falhou — rode: bash scripts/install_ucm_dualsense.sh"
+        fi
     fi
     if bash "${ROOT_DIR}/scripts/fix_wireplumber_default_source.sh" --install >/dev/null 2>&1; then
         pass "fix de áudio do WirePlumber aplicado"
@@ -6150,33 +6414,7 @@ apply_fixes() {
     # que pode reinstalar o drop-in e reiniciar o WirePlumber — o perfil da placa
     # e o mute da source precisam ser conferidos com o serviço já de pé.
     fix_mic_dualsense
-    # A FILA DE NUMERAÇÃO, LIMPA DE ENDEREÇO DE FIXTURE — 18/09/2026.
-    #
-    # MEDIDO na mesa dela: quatro endereços `aa:bb:cc:00:00:0{1..4}` moravam no
-    # `controllers.json` desde 22/08, ocupando os postos 4 a 7 da fila e
-    # empurrando um DualSense REAL para o oitavo. A causa (a suíte escrevendo
-    # no `~/.config` real) foi fechada em 25/08 pelo lar de mentira de sessão;
-    # a SUJEIRA ficou, e nada a limpava: o `check_faixa_sintetica.py` acusava
-    # desde 24/08 e não tinha como curar.
-    #
-    # AQUI E NÃO NO PRODUTO, e a razão é medida: a primeira cura descartava a
-    # faixa dentro do `identity.order_entries` e foi recuada no mesmo dia —
-    # duas dezenas de réguas desta casa usam `aa:bb:cc` como endereço de
-    # controle de verdade. Expurgar no produto é regra sobre a nossa suíte, não
-    # sobre o aparelho. O `--fix` é onde esta casa conserta MÁQUINA, e é um
-    # gesto que a pessoa pede — que é o que a mensagem do portão exige: "a
-    # decisão sobre o que já está gravado é de quem é dono da máquina".
-    if [[ -x "${ROOT_DIR}/scripts/check_faixa_sintetica.py" ]] \
-       || [[ -f "${ROOT_DIR}/scripts/check_faixa_sintetica.py" ]]; then
-        local _limpeza=""
-        _limpeza="$(python3 "${ROOT_DIR}/scripts/check_faixa_sintetica.py" \
-                    --casa --limpar 2>/dev/null || true)"
-        if printf '%s' "${_limpeza}" | grep -q '^LIMPO:'; then
-            pass "fila de numeração: endereços de fixture retirados"
-        else
-            pass "fila de numeração: sem endereço de fixture"
-        fi
-    fi
+    fix_fila_sem_fixture
     # AUSÊNCIA DELIBERADA — RESTAURO-SO-COM-SINTOMA-01, decisão dela de
     # 07/08/2026: `restaurar_hidraw_uaccess` NÃO é chamado aqui. O `--fix` roda
     # tudo de uma vez e roda ANTES dos checks, então chamá-lo daqui seria agir
@@ -6269,6 +6507,7 @@ main() {
     check_default_source_monitor
     check_dualsense_sink_disabled
     check_ucm_do_dualsense
+    check_ancoras_da_haptica_por_radio
     check_audio_sink_muted
     check_mic_mute_persistido
     check_mic_perfil_sem_sinal
@@ -6277,6 +6516,8 @@ main() {
     check_steam_input_allowlist
     hdr "controle no jogo (duplicação / wrapper de launch)"
     check_launch_wrapper
+    check_copias_do_wrapper
+    check_ultimo_device_ks
     check_vdf_poison
     check_dedup_ipc
     check_display_authority

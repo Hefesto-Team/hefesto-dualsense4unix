@@ -109,6 +109,17 @@ ganchos_esperados() {
     done < <(controladores) | sort -u
 }
 
+# A pergunta é ao `findmnt`, pelo ponto de montagem que CONTÉM a árvore UCM:
+# `-w` não serve, porque sem root o diretório nunca é gravável e é o sudo
+# que escreve. Sem `findmnt` (util-linux), a resposta é "não sei", e o roteiro
+# segue como antes.
+usr_so_leitura() {
+    command -v findmnt >/dev/null 2>&1 || return 1
+    local opcoes
+    opcoes="$(findmnt -n -o OPTIONS --target "${RAIZ_UCM}" 2>/dev/null)" || return 1
+    [[ ",${opcoes}," == *",ro,"* ]]
+}
+
 nossos_no_disco() {
     [[ -d "${GANCHOS}" ]] || return 0
     grep -l -F -- "${MARCADOR}" "${GANCHOS}"/*.conf 2>/dev/null | while IFS= read -r f; do
@@ -124,6 +135,14 @@ do_aplicar() {
     fi
     if ! grep -q 'conf\.d' "${RAIZ_UCM}/ucm.conf"; then
         warn "o ucm.conf desta distro não procura conf.d/ — o gancho não seria lido"
+        return 0
+    fi
+    # DISTRO IMUTÁVEL (Silverblue, Kinoite, Bazzite, SteamOS): o /usr é só de
+    # leitura, o `install -D` falha, e o install mandava rodar de novo um
+    # roteiro que ali nunca vai funcionar. O que vale nessas distros é o UCM
+    # que ela mesma traz — dizer isso e sair limpo é a resposta honesta.
+    if usr_so_leitura; then
+        info "${RAIZ_UCM} está num sistema de arquivos só de leitura (distro imutável) — nada gravado; vale o perfil UCM que a própria distro traz"
         return 0
     fi
     local -a esperados=()
