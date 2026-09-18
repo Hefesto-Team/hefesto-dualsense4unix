@@ -40,6 +40,23 @@ _PREFIXOS_FORJADOS = (
     "e8473a",
     "ffffff",
     "000000",
+    # NOTA DATADA — 18/09/2026, UM-NUMERO-SO-01, e ela nasce de uma TENSÃO
+    # REAL entre duas réguas desta casa, não de conveniência.
+    #
+    # Neste dia o PRODUTO passou a EXPURGAR endereço de faixa sintética da fila
+    # de numeração (`identity.order_entries`), porque quatro endereços `aabbcc`
+    # moraram no `controllers.json` VIVO dela de 22/08 a 18/09, empurrando um
+    # DualSense real para o oitavo posto. A partir daí, um controle de prova
+    # escrito numa faixa sintética é COMIDO pela própria cura — e a régua que
+    # deveria medir o expurgo mediria o nada.
+    #
+    # Então a prova precisa de endereços que o produto trate como REAIS e que
+    # não identifiquem ninguém. `02:` é o bit localmente administrado: por
+    # construção nenhum fabricante o recebe. CONFERIDA pelo critério escrito
+    # abaixo em 18/09/2026: `grep -ic 02001A /usr/share/ieee-data/oui.csv` deu
+    # ZERO, e não está em `_OUIS_REAIS_OCTETOS`. Fica longe do `02fe00` do
+    # vpad por três octetos.
+    "02001a",
     # Segunda faixa sintética da casa, para provar que não há nada de especial
     # na primeira (`test_uma_faixa_nao_e_um_fabricante.py`). CONFERIDA em
     # 22/08/2026 contra `/usr/share/ieee-data/oui.csv`: não é atribuída a
