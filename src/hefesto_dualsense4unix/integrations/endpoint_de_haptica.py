@@ -78,6 +78,12 @@ MOLDE_DO_NOME = (
     "alsa_output.usb-Sony_Interactive_Entertainment_"
     "DualSense_Wireless_Controller_HEFESTO{marca}-00.HiFi__Speaker__sink"
 )
+#: A MARCA que separa os nós DESTA casa dos de um DualSense por cabo de
+#: verdade — o `HEFESTO` no meio do nome. A varredura de órfãos a exige: sem
+#: ela, um `unload-module` nosso poderia derrubar o sink que o `pipewire`
+#: publicou para um controle plugado, que não é nosso para derrubar.
+MARCA_DO_NOME = "HEFESTO"
+
 AGULHAS = (
     "alsa_output.usb-Sony_Interactive_Entertainment_",
     "Wireless_Controller",
@@ -219,6 +225,78 @@ def propriedades_do_endpoint(uniq: str, ancora: Ancora) -> str:
     return 'sink_properties="' + " ".join(campos) + '"'
 
 
+def endpoints_de_pe(
+    runner: Callable[[list[str]], str | None] | None = None,
+) -> dict[str, list[tuple[str, str]]]:
+    """Os endpoints DESTA casa que estão de pé NO SERVIDOR, por nome de sink.
+
+    **O DEFEITO QUE ISTO CURA, medido na mesa dela em 18/09/2026:** vinte e dois
+    ``module-null-sink`` carregados onde deviam existir QUATRO — cinco para um
+    mesmo controle. A idempotência do :meth:`EndpointDeHaptica.iniciar` era
+    contra a MEMÓRIA DO PROCESSO (``self._module_id``), e o servidor de som é
+    outro processo: um restart do daemon deixa todos os módulos de pé, e o
+    daemon novo nasce sem saber deles. A troca de âncora fazia o resto — dois
+    endpoints do mesmo controle com ``sysfs.path`` diferentes
+    (``3-4.1:1.0`` e ``3-4:1.0``), porque a âncora escolhida muda entre
+    reconciliações e o nome do sink não.
+
+    É a mesma classe do canal ÓRFÃO que o ``bt_mic`` já cura
+    (``VarredorDeCanaisOrfaos``, MIC-O-CANAL-DO-OUTRO-01), e a cura é a mesma:
+    **perguntar ao servidor, nunca à lembrança**.
+
+    Devolve ``{sink_name: [(module_id, sysfs_path), …]}``. A lista é lista de
+    propósito: quando há mais de um, o vazamento já aconteceu, e quem chama
+    precisa ver todos para derrubar os que sobram.
+    """
+    chamar = runner or rodar_pactl
+    saida = chamar(["pactl", "list", "short", "modules"]) or ""
+    de_pe: dict[str, list[tuple[str, str]]] = {}
+    for linha in saida.splitlines():
+        if _MODULO_NULL_SINK not in linha or MARCA_DO_NOME not in linha:
+            continue
+        partes = linha.split("\t")
+        if len(partes) < 3 or not partes[0].strip().isdigit():
+            continue
+        argv = partes[2]
+        nome = ""
+        caminho = ""
+        for pedaco in argv.split():
+            if pedaco.startswith("sink_name="):
+                nome = pedaco[len("sink_name=") :]
+            elif pedaco.startswith("sysfs.path="):
+                caminho = pedaco[len("sysfs.path=") :]
+        if nome:
+            de_pe.setdefault(nome, []).append((partes[0].strip(), caminho))
+    return de_pe
+
+
+def varrer_endpoints_orfaos(
+    vivos: Iterable[str],
+    runner: Callable[[list[str]], str | None] | None = None,
+) -> list[str]:
+    """Derruba todo endpoint desta casa que não pertence a um controle vivo.
+
+    ``vivos`` são os ``uniq`` que estão na mesa AGORA. O que sobra é resto de
+    sessão anterior — e resto de sessão anterior não é inofensivo: ele entra na
+    lista de saídas de som da pessoa com o mesmo nome do endpoint bom, e o jogo
+    que procura o alto-falante do DualSense pode achar o morto.
+
+    Devolve os ``module_id`` derrubados, para o log e para a régua.
+    """
+    chamar = runner or rodar_pactl
+    esperados = {nome_do_endpoint(u) for u in vivos} - {""}
+    caidos: list[str] = []
+    for nome, instancias in endpoints_de_pe(chamar).items():
+        if nome in esperados:
+            continue
+        for module_id, _caminho in instancias:
+            chamar(["pactl", "unload-module", module_id])
+            caidos.append(module_id)
+    if caidos:
+        logger.info("haptica_endpoints_orfaos_derrubados", quantos=len(caidos))
+    return caidos
+
+
 class EndpointDeHaptica:
     """O nó de quatro canais que o JOGO enxerga como alto-falante do DualSense.
 
@@ -256,12 +334,51 @@ class EndpointDeHaptica:
         return f"{self.nome}.monitor" if self.nome else ""
 
     def iniciar(self) -> bool:
-        """Publica o nó. Idempotente; False quando não deu."""
+        """Publica o nó. Idempotente CONTRA O SERVIDOR; False quando não deu.
+
+        **A idempotência mudou de alvo em 18/09/2026**, e a razão está em
+        :func:`endpoints_de_pe`: guardar só ``self._module_id`` fazia cada
+        restart do daemon somar um módulo novo ao servidor. Na mesa dela eram
+        vinte e dois.
+
+        Três casos, e o terceiro é o que o vazamento pedia:
+
+        * nenhum de pé com este nome → carrega, como sempre;
+        * um de pé com a MESMA âncora → **adota o id** e não carrega nada. É o
+          restart do daemon com o controle no lugar, e recarregar trocaria um
+          nó vivo (com o jogo talvez já ligado nele) por outro idêntico;
+        * um ou mais de pé com âncora DIFERENTE → derruba todos e carrega um.
+          A âncora é o que o jogo lê para calcular o ``ContainerId``; um nó com
+          a âncora velha responde a pergunta errada.
+        """
         if self._module_id is not None:
             return True
         if not self.nome:
             logger.info("haptica_endpoint_sem_identidade", uniq=self.uniq)
             return False
+        instancias = endpoints_de_pe(self.runner).get(self.nome, [])
+        iguais = [m for m, caminho in instancias if caminho == self.ancora.declarado]
+        if iguais:
+            # Adota o primeiro e derruba o resto: mais de um com a mesma âncora
+            # já é o vazamento, e deixá-lo de pé o perpetuaria.
+            self._module_id = iguais[0]
+            for sobrando in [m for m, _ in instancias if m != iguais[0]]:
+                self.runner(["pactl", "unload-module", sobrando])
+            logger.info(
+                "haptica_endpoint_adotado",
+                uniq=self.uniq,
+                sink=self.nome,
+                derrubados=len(instancias) - 1,
+            )
+            return True
+        for velho, _caminho in instancias:
+            self.runner(["pactl", "unload-module", velho])
+        if instancias:
+            logger.info(
+                "haptica_endpoint_de_ancora_velha_derrubado",
+                uniq=self.uniq,
+                quantos=len(instancias),
+            )
         saida = self.runner(
             [
                 "pactl",
@@ -313,7 +430,9 @@ __all__ = [
     "EndpointDeHaptica",
     "ancoras",
     "distribuir_ancoras",
+    "endpoints_de_pe",
     "marca_do_controle",
     "nome_do_endpoint",
     "propriedades_do_endpoint",
+    "varrer_endpoints_orfaos",
 ]

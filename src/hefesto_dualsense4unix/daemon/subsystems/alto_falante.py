@@ -802,6 +802,7 @@ class AltoFalanteSubsystem:
             EndpointDeHaptica,
             ancoras,
             distribuir_ancoras,
+            varrer_endpoints_orfaos,
         )
 
         vivos: dict[str, str] = {}
@@ -830,6 +831,15 @@ class AltoFalanteSubsystem:
             endpoint = self._endpoints.pop(uniq, None)
             if endpoint is not None:
                 endpoint.parar()
+        # O QUE O PROCESSO ANTERIOR DEIXOU — 18/09/2026, e ele não é teórico:
+        # na mesa dela havia VINTE E DOIS `module-null-sink` onde deviam existir
+        # quatro. O laço acima só alcança o que ESTE processo criou; o servidor
+        # de som é outro processo e sobrevive ao restart do daemon. Sem esta
+        # varredura, cada reinício somava mais um nó com o mesmo nome à lista de
+        # saídas de som dela. É a mesma classe — e a mesma cura — do canal órfão
+        # do microfone (`bt_mic.VarredorDeCanaisOrfaos`).
+        with contextlib.suppress(Exception):
+            varrer_endpoints_orfaos(vivos)
 
         # O ENDPOINT DA HÁPTICA — um por controle no rádio, e ele VIVE ENQUANTO
         # O CONTROLE EXISTIR. É a mesma decisão dela de 08/09 para o nó do som

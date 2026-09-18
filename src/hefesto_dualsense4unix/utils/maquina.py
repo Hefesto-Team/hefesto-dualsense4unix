@@ -547,12 +547,26 @@ class ControleDeclarado(BaseModel):
     ``daemon/subsystems/bt_mic.py``: um microfone que liga ao trocar de jogo é
     exatamente a surpresa que aquele módulo recusa.
 
-    **Só ``True`` chega ao disco.** Desligar escreve ``None``, porque "nunca
-    pedi" e "não quero" deixam a ponte no chão do mesmo jeito — e um ``false``
-    gravado seria um valor de catálogo para o silêncio, que é a porta pela qual o
-    default entra disfarçado de escolha dela (a regra está no cabeçalho deste
-    módulo). O campo aceita ``bool`` porque um ``false`` que já esteja em disco,
-    escrito à mão, tem de ser LIDO em vez de derrubar o documento inteiro.
+    **OS TRÊS VALORES MUDARAM DE SIGNIFICADO EM 18/09/2026**, por ordem dela:
+    *"todos os controles tem que nascer com tudo mic, giroscopio e afins"*.
+
+    ==========  =====================================================
+    ``None``    ninguém disse nada → **o microfone LIGA**. É um
+                DualSense; ter microfone é fato do aparelho.
+    ``False``   ela desligou. É o ÚNICO registro de que disse não, e
+                é o que impede o produto de religar no próximo boot.
+    ``True``    ligado — como sempre foi, para quem já declarou.
+    ==========  =====================================================
+
+    **FATO SUBSTITUÍDO, e a razão dele continua de pé com outro nome.** Esta
+    linha dizia *"Só ``True`` chega ao disco; desligar escreve ``None``, porque
+    'nunca pedi' e 'não quero' deixam a ponte no chão do mesmo jeito — e um
+    ``false`` gravado seria um valor de catálogo para o silêncio"*. Era verdade
+    enquanto o default FOSSE o silêncio. Invertido o default, ``None`` deixou
+    de ser um jeito de desligar: seria o botão que não desliga. O medo que a
+    regra velha protegia — o default entrando disfarçado de escolha dela — hoje
+    se protege pelo outro lado: é o ``false`` no disco que impede o produto de
+    decidir sozinho por cima dela.
     """
 
     model_config = ConfigDict(extra="forbid")

@@ -141,10 +141,14 @@ Três razões, e a terceira é a que fecha a escolha:
 * a chave é o `uniq` — endereço de hardware, doze hex — porque ele é o que
   sobrevive a hotplug, a renumeração de jogador e à troca do nó `hidrawN`. O
   número de jogador não sobrevive a nenhum dos três;
-* **conjunto, e não `dict[uniq, bool]`**: um `false` gravado é um valor de
-  catálogo para o silêncio, e é por essa porta que o default entra disfarçado de
-  escolha dela (a regra é do `utils/maquina.py`). Ausente = desligado dá o
-  "nasce desligado" de graça, em máquina nova e em controle novo;
+* **eram DOIS conjuntos desde 18/09/2026**, e o segundo é o que a inversão
+  pediu: `bt_mic_uniqs` (quem ela ligou) e `bt_mic_recusados` (quem ela
+  desligou). Até aqui havia um só, e o comentário nesta linha dizia que um
+  `false` gravado *"é um valor de catálogo para o silêncio, e é por essa porta
+  que o default entra disfarçado de escolha dela"*. Isso valia com o default
+  sendo o silêncio; com a ordem dela — *"todos os controles tem que nascer com
+  tudo mic, giroscopio e afins"* — o `false` virou a ÚNICA forma de ela dizer
+  não, e não gravá-lo é que deixaria o produto decidir por cima dela;
 * a fonte é **chamável**, nunca uma cópia: o `machine.declare` relê o
   `maquina.json` e REBINDA `daemon._maquina` no "Aplicar" (`ipc_handlers.py`),
   então uma cópia tirada no boot ficaria velha no instante exato em que ela
@@ -402,6 +406,66 @@ def uniqs_declarados(maquina: MaquinaConfig | None) -> frozenset[str]:
     return frozenset(ligados)
 
 
+def uniqs_recusados(maquina: MaquinaConfig | None) -> frozenset[str]:
+    """Os `uniq` que ela DESLIGOU — a única coisa que tira um microfone do ar.
+
+    **A INVERSÃO — 18/09/2026, ordem dela:** *"todos os controles tem que
+    nascer com tudo mic, giroscopio e afins"*. Até aqui o microfone era
+    opt-in: um DualSense novo na mesa nascia sem canal, e a aba respondia *"o
+    sistema não vê um microfone neste controle"* — uma recusa que a pessoa não
+    tinha como resolver, porque o botão que a resolveria estava atrás de uma
+    declaração que ninguém sabia existir. MEDIDO na mesa dela no mesmo dia:
+    dos quatro DualSense ligados, DOIS tinham microfone; os outros dois nunca
+    haviam sido declarados.
+
+    **O QUE ISSO CUSTOU, e fica escrito porque era uma decisão fundamentada:**
+    o cabeçalho deste módulo dizia *"um microfone que sobe sozinho com o
+    daemon é inaceitável"*, e o `_start_alto_falante` do `lifecycle` explica o
+    contraste — *"um alto-falante não escuta, e a privacidade não entra nesta
+    conta"*. A ordem dela substitui esse default, e a contrapartida é o que
+    NÃO existia antes: um jeito de dizer NÃO. Até hoje só havia "não pedi",
+    que não é a mesma coisa que "não quero" — e era por isso que o `False` não
+    chegava ao disco.
+
+    `None` (ausente) = **nasce ligado**. `False` = ela desligou, e a ponte fica
+    no chão. `True` = ligado, como sempre foi — quem já declarou não perde nada.
+    """
+    if maquina is None:
+        return frozenset()
+    controles = getattr(maquina, "controles", None)
+    if not isinstance(controles, dict):
+        return frozenset()
+    desligados: set[str] = set()
+    for chave, declarado in controles.items():
+        if getattr(declarado, "microfone", None) is not False:
+            continue
+        normalizado = norm_mac(str(chave)) or ""
+        if normalizado:
+            desligados.add(normalizado)
+    return frozenset(desligados)
+
+
+def uniqs_negados(config: DaemonConfig | Any) -> frozenset[str]:
+    """O conjunto RECUSADO agora, lido da fonte chamável do `DaemonConfig`.
+
+    Irmã de :func:`uniqs_pedidos`, e o lado seguro é o INVERSO do dela: uma
+    fonte que exploda vale como *"ninguém desligou"*. Aqui o lado inseguro
+    seria um microfone que some por causa de um erro de leitura — depois da
+    inversão de 18/09, a ausência de opinião liga.
+    """
+    fonte = getattr(config, "bt_mic_recusados", None)
+    if not callable(fonte):
+        return frozenset()
+    try:
+        negados = fonte()
+    except Exception:  # best-effort: a fonte não derruba o boot do daemon
+        logger.debug("bt_mic_fonte_de_recusa_falhou", exc_info=True)
+        return frozenset()
+    if not isinstance(negados, (set, frozenset, list, tuple)):
+        return frozenset()
+    return frozenset(norm_mac(str(u)) or "" for u in negados) - {""}
+
+
 def uniqs_pedidos(config: DaemonConfig | Any) -> frozenset[str]:
     """O conjunto pedido AGORA, lido da fonte chamável do `DaemonConfig`.
 
@@ -502,19 +566,40 @@ class BtMicSubsystem:
         return True
 
     def alvos(self, nos: list[Any]) -> list[Any]:
-        """Os nós de BT cujo canal alguém procura, declarou, ou a env pediu.
+        """Os nós de BT que ganham ponte: TODOS, menos os que ela desligou.
 
-        A env é o caminho à mão e não filtra nada — quem a exporta está pedindo
-        a mesa inteira (ver o cabeçalho). Sem env, um nó sem `HID_UNIQ` legível
-        NUNCA entra: sem endereço não há como saber de quem é o microfone, e
-        subir a ponte no escuro é o oposto do gesto explícito.
+        **A INVERSÃO DE 18/09/2026** (ver :func:`uniqs_recusados` para a ordem
+        dela e o que ela substitui). Antes a lista era a UNIÃO de quem pediu
+        com quem foi declarado, e um controle fora das duas ficava sem
+        microfone para sempre. Agora a régua é a recusa: um DualSense TEM
+        microfone, e isso é fato do aparelho, não escolha de configuração.
+
+        O pedido e a declaração continuam somando, e não é redundância: eles
+        alcançam o `uniq` que a varredura de sysfs ainda não viu e o que entrou
+        pelo cabo. O que mudou é que a ausência dos dois deixou de significar
+        silêncio.
+
+        Um nó sem `HID_UNIQ` legível continua NUNCA entrando: sem endereço não
+        há como saber de quem é o microfone, nem como ela o desligaria depois.
         """
         if habilitado_por_env():
             return list(nos)
+        negados = uniqs_negados(self._config)
         querem = uniqs_pedidos(self._config) | self._registro.abertos()
-        if not querem:
-            return []
-        return [no for no in nos if (norm_mac(str(getattr(no, "uniq", ""))) or "") in querem]
+        alvos: list[Any] = []
+        for no in nos:
+            chave = norm_mac(str(getattr(no, "uniq", ""))) or ""
+            if not chave or chave in negados:
+                continue
+            alvos.append(no)
+        # A união ainda vale para quem não está entre os `nos` desta varredura.
+        vistos = {norm_mac(str(getattr(no, "uniq", ""))) or "" for no in alvos}
+        alvos.extend(
+            no
+            for no in nos
+            if (norm_mac(str(getattr(no, "uniq", ""))) or "") in querem - vistos - negados
+        )
+        return alvos
 
     def pedir_canal(self, uniq: str) -> bool:
         """Alguém quer o canal de captura DESTE controle. Porta pública.
@@ -792,6 +877,7 @@ class BtMicSubsystem:
         if self._varredor_injetado is None and self._gerenciador_injetado is None:
             self._varredor = VarredorDeCanaisOrfaos()
         self._declarados_antes = uniqs_pedidos(self._config)
+        self._negados_antes = uniqs_negados(self._config)
         self._instalar_o_gancho_da_procura()
         self._parar.clear()
         self._registro.novidade.clear()
@@ -1142,10 +1228,19 @@ class BtMicSubsystem:
         procura manteria de pé o que ela acabou de desligar. O que decide é a
         borda de DESCIDA da declaração — quem estava declarado e não está mais.
         """
+        # A BORDA MUDOU DE LADO — 18/09/2026. Até a inversão, o gesto que
+        # desligava era SAIR da declaração, e era a borda de DESCIDA que
+        # soltava o pedido. Agora sair da declaração volta a ligar (a ausência
+        # de opinião liga), e quem desliga é ENTRAR na recusa: é a borda de
+        # SUBIDA dela que tem de soltar o pedido aberto, senão um toque de
+        # botão de minutos antes venceria o interruptor — que continua sendo o
+        # oposto de quem manda.
         agora = uniqs_pedidos(self._config)
-        for uniq in self._declarados_antes - agora:
+        negados = uniqs_negados(self._config)
+        for uniq in negados - self._negados_antes:
             self._registro.soltar(uniq)
         self._declarados_antes = agora
+        self._negados_antes = negados
 
     # -- o canal ÓRFÃO -----------------------------------------------------
 
@@ -1160,10 +1255,16 @@ class BtMicSubsystem:
         varredor = self._varredor
         if varredor is None:
             return []
-        querem = uniqs_pedidos(self._config) | self._registro.abertos()
-        if habilitado_por_env():
-            do_radio = frozenset((norm_mac(str(getattr(no, "uniq", ""))) or "") for no in nos)
-            querem = querem | (do_radio - {""})
+        # A MESMA RÉGUA DE `alvos()`, e ela tem de ser a mesma: um canal só é
+        # órfão se ninguém o quer por NENHUMA porta. Depois da inversão de
+        # 18/09 todo controle do rádio quer o seu — senão o varredor derrubaria
+        # no tique seguinte exatamente as pontes que `alvos()` acabou de subir.
+        do_radio = frozenset((norm_mac(str(getattr(no, "uniq", ""))) or "") for no in nos)
+        querem = (
+            uniqs_pedidos(self._config)
+            | self._registro.abertos()
+            | (do_radio - {""})
+        ) - uniqs_negados(self._config)
         return list(varredor.varrer(querem=querem, de_pe=self._nomes_de_pe()))
 
     def _nomes_de_pe(self) -> frozenset[str]:
@@ -1297,5 +1398,7 @@ __all__ = [
     "VarredorDeCanaisOrfaos",
     "habilitado_por_env",
     "uniqs_declarados",
+    "uniqs_negados",
     "uniqs_pedidos",
+    "uniqs_recusados",
 ]
