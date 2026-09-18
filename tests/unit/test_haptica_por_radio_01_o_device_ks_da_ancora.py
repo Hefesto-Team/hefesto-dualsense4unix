@@ -38,6 +38,13 @@ _OUTRO = """Sink #37984
 \t\tsysfs.path = "/devices/pci0000:00/0000:0c:00.4/sound/card1"
 """
 
+#: O `USEC_INITIALIZED` da âncora, e o NÚMERO É ESCOLHIDO: os oito bytes dele
+#: viram os últimos campos do GUID, e um valor qualquer sai como doze hex
+#: seguidos — que a régua do anonimato lê como endereço de rádio, com razão.
+#: Este cai na faixa sintética da casa (`aabbcc…`) e continua sendo um tempo de
+#: máquina plausível (≈10 dias de `uptime` em µs).
+_USEC_DA_ANCORA = 0xCCBBAA0000
+
 _NOME_DO_NO = (
     "alsa_output.usb-Sony_Interactive_Entertainment_"
     "DualSense_Wireless_Controller_HEFESTOaabbcc-00.HiFi__Speaker__sink"
@@ -82,7 +89,7 @@ def sysfs(tmp_path: Path) -> Path:
 def udev(tmp_path: Path) -> Path:
     banco = tmp_path / "udev"
     banco.mkdir()
-    (banco / "c189:284").write_text("I:1758160000000000\nE:FOO=1\n")
+    (banco / "c189:284").write_text(f"I:{_USEC_DA_ANCORA}\nE:FOO=1\n")
     return banco
 
 
@@ -136,13 +143,13 @@ def test_o_container_id_e_o_da_ancora_nao_o_do_controle(sysfs: Path, udev: Path)
     # `Data1 = MAKELONG(vid, pid)` da ÂNCORA (2357/0604), não da Sony.
     assert controle.prefixo_do_container() == "{06042357-0003-001d-"
     assert controle.pid == 0x0CE6, "o nome e o HardwareID continuam do controle"
-    assert controle.usec == 1758160000000000
+    assert controle.usec == _USEC_DA_ANCORA
 
 
 def test_a_conta_bate_com_a_do_wine_byte_a_byte(sysfs: Path, udev: Path) -> None:
     (controle,) = ks.controles_no_radio(sysfs, udev, _dubles(_sinks()))
-    d4 = (1758160000000000).to_bytes(8, "little")
-    assert ks.container_id(controle, d4) == "{06042357-0003-001d-0020-4286093f0600}"
+    d4 = (_USEC_DA_ANCORA).to_bytes(8, "little")
+    assert ks.container_id(controle, d4) == "{06042357-0003-001d-0000-aabbcc000000}"
 
 
 def test_o_barramento_acima_de_255_dobra_como_no_c(sysfs: Path, udev: Path) -> None:
@@ -163,7 +170,7 @@ def test_as_duas_variantes_de_data4_saem_no_radio(sysfs: Path, udev: Path) -> No
     (controle,) = ks.controles_no_radio(sysfs, udev, _dubles(_sinks()))
     assert ks.variantes_de_data4(controle, []) == [
         bytes(8),
-        (1758160000000000).to_bytes(8, "little"),
+        (_USEC_DA_ANCORA).to_bytes(8, "little"),
     ]
 
 

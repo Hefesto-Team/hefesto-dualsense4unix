@@ -386,8 +386,80 @@ def _sysfs_com_dualsense(raiz: Path) -> Path:
     return raiz
 
 
-def _lancar(tmp_path: Path, *, sysfs: Path, env_do_daemon: str, registro: str) -> tuple[str, str]:
-    """Roda o wrapper; devolve (o valor da opção do MHWilds no jogo, o system.reg)."""
+def _pactl_de_mentira(caminho: Path, sinks: str) -> None:
+    """Um `pactl` que responde às DUAS perguntas que o produto faz.
+
+    O gancho pergunta `list short sinks` (uma linha por nó) e o curador
+    pergunta `list sinks` (o bloco com o proplist). Um dublê que só responde a
+    uma delas daria verde sobre metade do caminho.
+
+    **Só `printf`, que é builtin**: o PATH deste teste é o mínimo do produto, e
+    nele não há `cat` — um dublê que precisasse dele sairia com rc=1 e a régua
+    leria "não há endpoint" onde havia.
+    """
+    nomes = [ln.split("Name: ")[1] for ln in sinks.splitlines() if "Name: " in ln]
+    curto = [f"{i}\t{nome}\tPipeWire\tfloat32le 4ch 48000Hz\tIDLE" for i, nome in enumerate(nomes)]
+
+    def imprime(linhas: list[str]) -> str:
+        return "printf '%s\\n' " + " ".join(f"'{ln}'" for ln in linhas)
+
+    caminho.write_text(
+        "#!/bin/sh\n"
+        'case "$*" in\n'
+        f"    'list short sinks') {imprime(curto)} ;;\n"
+        f"    'list sinks') {imprime(sinks.splitlines())} ;;\n"
+        "    *) exit 1 ;;\n"
+        "esac\n",
+        encoding="utf-8",
+    )
+    caminho.chmod(0o755)
+
+
+def _sysfs_com_ancora(raiz: Path) -> Path:
+    """Um hub USB: a âncora de onde o ContainerId do rádio sai."""
+    d = raiz / "devices" / "pci0000:00" / "usb3" / "3-4"
+    d.mkdir(parents=True)
+    (raiz / "bus" / "usb" / "devices").mkdir(parents=True)
+    for nome, valor in {
+        "idVendor": "2357", "idProduct": "0604", "busnum": "3", "devnum": "29",
+    }.items():
+        (d / nome).write_text(valor + "\n")
+    return raiz
+
+
+#: O nome tem de carregar as três agulhas dos patches do GE, e ele é longo
+#: por isso: `Sony_Interactive_Entertainment`, `Wireless_Controller`,
+#: `Speaker__sink` — mais o marcador da casa e o rabo do `uniq`.
+_NOME_DO_NO_DO_RADIO = (
+    "alsa_output.usb-Sony_Interactive_Entertainment_"
+    "DualSense_Wireless_Controller_HEFESTOaabbcc-00.HiFi__Speaker__sink"
+)
+
+_SINK_DO_RADIO = f"""Sink #7
+\tState: IDLE
+\tName: {_NOME_DO_NO_DO_RADIO}
+\tProperties:
+\t\tdevice.bus = "usb"
+\t\tdevice.vendor.id = "054c"
+\t\tdevice.product.id = "0ce6"
+\t\tsysfs.path = "/devices/pci0000:00/usb3/3-4"
+"""
+
+
+def _lancar(
+    tmp_path: Path,
+    *,
+    sysfs: Path,
+    env_do_daemon: str,
+    registro: str,
+    sinks: str | None = None,
+) -> tuple[str, str]:
+    """Roda o wrapper; devolve (o valor da opção do MHWilds no jogo, o system.reg).
+
+    `sinks` põe um `pactl` de mentira no PATH, e é assim que o caso do RÁDIO se
+    mede: sem ele o `command -v pactl` falha e a sondagem do endpoint responde
+    "não há" — que é o comportamento certo numa máquina sem servidor de som.
+    """
     home = tmp_path / "home"
     binario = home / ".local" / "share" / "hefesto-dualsense4unix" / "bin"
     binario.mkdir(parents=True)
@@ -399,6 +471,9 @@ def _lancar(tmp_path: Path, *, sysfs: Path, env_do_daemon: str, registro: str) -
     pasta.mkdir(parents=True)
     (pasta / "default.env").write_text(env_do_daemon, encoding="utf-8")
     compat = _prefixo(tmp_path, registro)
+    caminho = _path_minimo(tmp_path / "bin")
+    if sinks is not None:
+        _pactl_de_mentira(Path(caminho) / "pactl", sinks)
     runtime = Path(tempfile.mkdtemp(prefix="hefks-"))  # AF_UNIX: caminho curto
     (runtime / "hefesto-dualsense4unix").mkdir()
     daemon = _DaemonQueResponde(runtime / "hefesto-dualsense4unix" / "hefesto-dualsense4unix.sock")
@@ -407,7 +482,7 @@ def _lancar(tmp_path: Path, *, sysfs: Path, env_do_daemon: str, registro: str) -
             ["sh", str(_WRAPPER), "sh", "-c",
              'printf "%s\\n" "${PROTON_ENABLE_MHWILDS_USB_AUDIO:-ausente}"'],
             env={
-                "PATH": _path_minimo(tmp_path / "bin"),
+                "PATH": caminho,
                 "HOME": str(home),
                 "XDG_RUNTIME_DIR": str(runtime),
                 "XDG_STATE_HOME": str(estado),
@@ -473,3 +548,40 @@ def test_sem_a_opcao_o_gancho_so_limpa_o_que_e_nosso(tmp_path: Path) -> None:
     assert valor == "0"
     assert "HEFESTOKS" not in registro
     assert "512&256&3&3" in registro
+
+
+# -- o rádio (HAPTICA-POR-RADIO-01, P3c) --------------------------------------
+
+
+def test_com_o_endpoint_do_radio_vivo_a_opcao_chega_ao_jogo(tmp_path: Path) -> None:
+    """Sem DualSense no cabo, mas com o nó do rádio de pé: o caminho tem de abrir.
+
+    Sem a opção o `setupapi` não publica interface KSCATEGORY_AUDIO nenhuma
+    (patch 0103, `devinst.c`) e o jogo desiste antes de olhar o registro.
+    """
+    valor, registro = _lancar(
+        tmp_path,
+        sysfs=_sysfs_com_ancora(tmp_path / "sys"),
+        env_do_daemon=_ENV_LIGADO,
+        registro=_registro(),
+        sinks=_SINK_DO_RADIO,
+    )
+    assert valor == "1"
+    # O ContainerId é o da ÂNCORA (2357/0604, bus 3, dev 29), não o da Sony.
+    assert '"ContainerId"="{06042357-0003-001d-0000-000000000000}"' in registro
+    assert "HEFESTOKS&003&029&0" in registro
+    assert "VID_054C&PID_0CE6" in registro, "o HardwareID continua sendo o do controle"
+
+
+def test_sem_no_do_radio_nem_cabo_nada_muda(tmp_path: Path) -> None:
+    """Um `pactl` que responde, e nenhum nó nosso na lista: a opção sai zero."""
+    outro = 'Sink #3\n\tState: IDLE\n\tName: alsa_output.pci-0000_0a_00.1.hdmi-stereo\n'
+    valor, registro = _lancar(
+        tmp_path,
+        sysfs=_sysfs_com_ancora(tmp_path / "sys"),
+        env_do_daemon=_ENV_LIGADO,
+        registro=_registro(),
+        sinks=outro,
+    )
+    assert valor == "0"
+    assert "HEFESTOKS" not in registro
