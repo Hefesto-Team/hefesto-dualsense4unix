@@ -2606,7 +2606,9 @@ async def nascer_no_ar(daemon: DaemonProtocol, uniq: str) -> bool:
     mesma `_eleitor(daemon).eleito is None` que `_o_que_a_borda_pede` já usa.
     Com dono, os outros nascem no ar e não roubam nada — sem isso, o quarto
     controle a conectar tomaria a fonte padrão da máquina dela sem ela ter
-    tocado em coisa alguma.
+    tocado em coisa alguma. E a mesa sem dono não basta desde 18/09/2026: a
+    máquina também tem de não ter OUTRO microfone que a pessoa não trocou pelo
+    do controle (`_microfone_que_ja_e_da_maquina`).
 
     **E ELEGER É O CAMINHO DE SEMPRE, NÃO UMA CÓPIA.** Com a mesa sem dono
     quem elege é `_metade_do_canal` — a mesma metade por onde passam o 🎙 da
@@ -2615,13 +2617,15 @@ async def nascer_no_ar(daemon: DaemonProtocol, uniq: str) -> bool:
     a eleição recusar. O nascimento é o TERCEIRO chamador do ato, e escrever
     aqui uma segunda eleição é o defeito que esta casa já pagou onze vezes.
 
-    **O SILÊNCIO DELA VENCE, e por isso há duas perguntas antes das escritas.**
-    O perfil que diz `mic.muted: true` (o `pragmata.json` dela diz) e o bit do
-    mudo já aceso no aparelho são as duas formas de ela ter pedido silêncio; o
-    nascimento recua nas duas. Deixar a ORDEM contra o `reapply_mic_after_connect`
-    resolver isso não bastaria: aquele caminho escreve o FIRMWARE, e este
-    levanta o CANAL — o microfone de quem pediu silêncio iria ao ar do mesmo
-    jeito, que é a SOM-MIC-REPLUG-01 voltando pela porta da frente.
+    **O SILÊNCIO DELA VENCE, e por isso há três perguntas antes das escritas.**
+    O `microfone: false` do `maquina.json` (o "Desligar" dela, que vence
+    qualquer pedido), o perfil que diz `mic.muted: true` (o `pragmata.json`
+    dela diz) e o bit do mudo já aceso no aparelho são as três formas de ela
+    ter pedido silêncio; o nascimento recua nas três. Deixar a ORDEM contra o
+    `reapply_mic_after_connect` resolver isso não bastaria: aquele caminho
+    escreve o FIRMWARE, e este levanta o CANAL — o microfone de quem pediu
+    silêncio iria ao ar do mesmo jeito, que é a SOM-MIC-REPLUG-01 voltando pela
+    porta da frente.
 
     **NÃO HÁ PERSISTÊNCIA NOVA.** As portas de saída do latch continuam todas
     de pé — quem sai da mesa perde o pedido e a palavra, e nada volta do disco.
@@ -2641,8 +2645,98 @@ async def nascer_no_ar(daemon: DaemonProtocol, uniq: str) -> bool:
         return await _nascer_no_ar_na_vez(daemon, uniq)
 
 
+def _ela_desligou_este_microfone(daemon: DaemonProtocol, uniq: str) -> bool:
+    """O `maquina.json` diz `microfone: false` para ESTE controle?
+
+    A ordem dela de 18/09/2026 tem duas metades: todo controle nasce com o
+    microfone (a ausência de opinião liga), e **só o `False` gravado no disco
+    desliga — e a recusa vence qualquer pedido**. A primeira metade chegou ao
+    nascimento; a segunda não: ele perguntava ao perfil e ao bit do firmware, e
+    nunca à recusa. No hotplug seguinte ao "Desligar" dela, a palavra era dita e
+    o canal pedido para o controle que ela tinha acabado de calar — no cabo isso
+    reabria o `hefesto_mic_<hex6>` dele, e com a mesa sem dono ainda o elegia
+    fonte padrão da máquina.
+
+    Quem responde é `bt_mic.uniqs_negados`, a MESMA régua que `alvos()` e
+    `_varrer_os_orfaos` já usam — uma leitura nova do `maquina.json` aqui seria
+    a terceira cópia dela. O import é PREGUIÇOSO no molde das outras pontes
+    entre as camadas deste arquivo.
+    """
+    from hefesto_dualsense4unix.daemon.subsystems.bt_mic import uniqs_negados
+
+    chave = norm_mac(str(uniq)) or ""
+    return bool(chave) and chave in uniqs_negados(getattr(daemon, "config", None))
+
+
+def _microfone_que_ja_e_da_maquina() -> str | None:
+    """A captura que NÃO é o controle e que o nascimento não pode desalojar.
+
+    `None` = o controle PODE virar a fonte padrão ao nascer. Um nome = existe
+    outro microfone de verdade (headset, webcam, a entrada da placa) e a pessoa
+    não pediu o do controle como padrão.
+
+    **O DEFEITO, e ele só não aparecia na máquina dela.** Com a mesa sem dono o
+    nascimento elegia pelo caminho de sempre, e eleger é `pactl
+    set-default-source` — que vira o default CONFIGURADO do WirePlumber e vence
+    a prioridade 1500 do drop-in 51. Numa máquina com headset, o primeiro
+    DualSense de cada sessão do daemon tomava o microfone da pessoa, o contrário
+    do que o passo 10/11 do `install.sh` promete. Na mesa dela o único
+    microfone com porta usável é o do controle, e por isso nunca se viu.
+
+    **DUAS PERGUNTAS, E AS DUAS TÊM DONO.** *"O controle como padrão foi
+    pedido?"* é `system_check._dualsense_mic_intended` — os cinco degraus do
+    `_prefere_mic_do_dualsense` do `doctor.sh`, inclusive a marca que o
+    `install.sh --keep-dualsense-mic` grava. *"Existe outra captura?"* é
+    `eleicao_de_microfone.outra_captura_elegivel`, o critério de porta usável do
+    `doctor.sh` pelo mesmo script do caminho de volta. Ler a marca ou o `pactl`
+    à mão daqui seria uma segunda régua sobre cada uma.
+
+    **E NÃO É `melhor_fonte_elegivel`**, que foi a primeira escrita desta cura:
+    aquela lista deixa o canal por controle (`hefesto_mic_<hex6>`) entrar de
+    propósito (§D.2 da MIC-PADRAO-NO-CABO-01), e com ela o canal do primeiro
+    controle passaria por headset. Lido no código, não medido: na mesa dela,
+    com os canais do rádio de pé desde a partida, nenhum controle elegeria mais.
+
+    Bloqueia (disco e um `pactl` pelo script do WirePlumber): rode em worker.
+    """
+    from hefesto_dualsense4unix.core import system_check
+    from hefesto_dualsense4unix.integrations import eleicao_de_microfone
+
+    if system_check._dualsense_mic_intended():
+        return None
+    return eleicao_de_microfone.outra_captura_elegivel()
+
+
+async def _o_nascimento_pode_tomar_o_padrao(daemon: DaemonProtocol, uniq: str) -> bool:
+    """`True` = este nascimento pode eleger o controle fonte padrão da máquina.
+
+    Na dúvida (a pergunta explodiu) a resposta é NÃO: não eleger deixa o
+    microfone no ar e custa um toque no 🎙; eleger por engano troca o microfone
+    de quem tem headset e o WirePlumber GRAVA a troca.
+    """
+    correr = getattr(daemon, "_run_blocking", None)
+    try:
+        if callable(correr):
+            outro = await correr(_microfone_que_ja_e_da_maquina)
+        else:
+            outro = _microfone_que_ja_e_da_maquina()
+    except Exception:  # best-effort: a conexão dela não vira traceback
+        logger.warning("mic_nascimento_pergunta_do_padrao_falhou", uniq=uniq, exc_info=True)
+        return False
+    if outro:
+        logger.info("mic_nasce_sem_tomar_o_padrao", uniq=uniq, microfone_da_maquina=outro)
+        return False
+    return True
+
+
 async def _nascer_no_ar_na_vez(daemon: DaemonProtocol, uniq: str) -> bool:
     """O corpo de `nascer_no_ar`, já com a vez na fila. Ver o docstring de lá."""
+    # A RECUSA VEM PRIMEIRO, e antes de qualquer escrita: com ela nenhuma
+    # palavra, nenhum pedido de canal, nenhum `MicrofonesNoAr.entrou` e nenhuma
+    # eleição acontecem. Ver `_ela_desligou_este_microfone`.
+    if _ela_desligou_este_microfone(daemon, uniq):
+        logger.info("mic_nasce_calado_por_recusa", uniq=uniq)
+        return False
     if await _o_perfil_pede_silencio(daemon, uniq):
         logger.info("mic_nasce_calado_por_perfil", uniq=uniq)
         return False
@@ -2664,7 +2758,13 @@ async def _nascer_no_ar_na_vez(daemon: DaemonProtocol, uniq: str) -> bool:
     # para o mesmo ato. `dizer_no_ar` cobre os dois ramos abaixo: o de eleição
     # pelo `_metade_do_canal`, e o outro por si mesmo.
     no_ar = _no_ar_da_sessao(daemon)
-    if _eleitor(daemon).eleito is None:
+    # A MESA SEM DONO JÁ NÃO BASTA PARA ELEGER (18/09/2026): a máquina também
+    # tem de não ter OUTRO microfone que a pessoa usa. Sem isso, o ramo de baixo
+    # é o de sempre — no ar, sem tomar o padrão. Ver
+    # `_microfone_que_ja_e_da_maquina`.
+    if _eleitor(daemon).eleito is None and await _o_nascimento_pode_tomar_o_padrao(
+        daemon, uniq
+    ):
         metade, ativo = await _metade_do_canal(daemon, uniq, True)
         logger.info(
             "mic_nasceu_no_ar",

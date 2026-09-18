@@ -1123,7 +1123,15 @@ class BtMicSubsystem:
         do_radio = frozenset(
             (norm_mac(str(getattr(no, "uniq", ""))) or "") for no in nos
         ) - {""}
-        querem = self._registro.abertos() - do_radio
+        # A RECUSA SAI DAQUI TAMBÉM (18/09/2026), e é a mesma régua de
+        # `alvos()` e de `_varrer_os_orfaos`: o que ela desligou não é
+        # protegido por porta nenhuma. Este era o terceiro leitor do registro,
+        # e o único que abria canal para todo pedido — um pedido que chegasse
+        # depois da borda de `_soltar_os_que_ela_desmarcou` (o nascimento no
+        # hotplug, um gesto velho na fila) erguia o `hefesto_mic_<hex6>` de um
+        # controle declarado Desligado. O 🎙 explícito no cabo continua podendo
+        # eleger pelo `alsa_input` dele: some só o canal com nome de controle.
+        querem = (self._registro.abertos() - do_radio) - uniqs_negados(self._config)
         for uniq in list(self._canais_do_cabo):
             if uniq not in querem:
                 self._fechar_o_canal_do_cabo(uniq)

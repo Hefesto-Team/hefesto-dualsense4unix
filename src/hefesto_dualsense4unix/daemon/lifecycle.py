@@ -1092,11 +1092,23 @@ class Daemon:
                         )
                         notify_controller_connected(transport or "usb")
                     from hefesto_dualsense4unix.daemon.connection import (
+                        reaplicar_som_em_todos_os_alvos,
                         restore_last_profile,
                     )
 
                     with contextlib.suppress(Exception):
                         await restore_last_profile(self)
+                    # O CONTROLE QUE JÁ ESTAVA NA MESA (18/09/2026): o único
+                    # caminho de conexão sem `reaplicar_som_em_todos_os_alvos`.
+                    # O `reconnect_loop` tira a foto DEPOIS deste connect, e
+                    # quem já estava aqui nunca vira borda — no journal dela,
+                    # nenhuma partida de 18/09 teve `mic_nasceu_no_ar`. Numa
+                    # máquina nova é o primeiro caso: o `install.sh` reinicia o
+                    # daemon com o controle plugado e o microfone ficava MUDO.
+                    # Mesmo gesto e mesma idempotência da primeira conexão do
+                    # `reconnect_loop`; o nascimento não segura a partida.
+                    with contextlib.suppress(Exception):
+                        await reaplicar_som_em_todos_os_alvos(self)
             except Exception as exc:
                 logger.warning(
                     "controller_initial_connect_failed",
