@@ -734,7 +734,14 @@ def test_a_aba_chama_o_motor_em_vez_de_reescreve_lo(a02, motor):
         # calar, que este arquivo decidia sozinho; `percentual_do_volume` é a
         # curva medida no hardware, e sem ela o número e a barra do volume
         # seriam uma segunda conta ao lado da do `texto_volume`.
-        "touchpad_do_inputs": motor.touchpad_do_inputs,
+        #
+        # O DONO DO TOUCHPAD PASSOU A SER `dedos_do_inputs` EM 18/09/2026
+        # (MULTITOQUE-01): a aba desenha os DOIS dedos que o DualSense
+        # entrega, e quem lê o bloco agora é a função de N dedos do motor — que
+        # por sua vez cai em `touchpad_do_inputs` quando o daemon é anterior à
+        # chave `pontos`. A régua continua pedindo a mesma coisa: a aba chama
+        # o motor em vez de reescrever a leitura.
+        "dedos_do_inputs": motor.dedos_do_inputs,
         "acao_mic": motor.acao_mic,
         "acao_speaker_mudo": motor.acao_speaker_mudo,
         "percentual_do_volume": percentual_do_volume,

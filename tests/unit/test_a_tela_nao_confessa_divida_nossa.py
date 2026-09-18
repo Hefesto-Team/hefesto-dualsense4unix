@@ -93,20 +93,47 @@ def test_a_frase_que_ela_marcou_saiu_dos_dois_lados(pagina: str, frase: str) -> 
             f"defeitos")
 
 
-def test_a_divida_do_alto_falante_continua_no_mapa() -> None:
-    """A tela calou; a dívida NÃO fechou — e virar a célula seria mentir.
+def test_a_celula_do_alto_falante_so_diz_sim_com_prova() -> None:
+    """A tela calou; a célula só VIRA com a prova escrita ao lado.
 
     É a metade que separa *"tiramos da tela"* de *"fingimos que fechou"*, e ela
-    é ordem dela por escrito: *"NÃO vire a célula — o canal continua fechado e
-    virar seria mentir ao contrário."*
+    nasceu de uma ordem dela por escrito, em 07/09/2026: *"NÃO vire a célula —
+    o canal continua fechado e virar seria mentir ao contrário."*
+
+    **A RAZÃO DA ORDEM ERA UM FATO, E O FATO CAIU.** Até 18/09/2026 esta régua
+    se chamava `test_a_divida_do_alto_falante_continua_no_mapa` e exigia
+    `aciona != "sim"`. Em 10/09 o som saiu do plástico pelo rádio, 70 s
+    contínuos, com a orelha dela (report `0x35`); em 18/09 a háptica passou pelo
+    MESMO fio, com a mão dela. Manter a célula em `não` passou a ser a mentira
+    ao contrário que a ordem proibia — e a regra desta casa é substituir o fato
+    errado, não guardá-lo ao lado do certo.
+
+    O QUE FICA DA ORDEM é o que ela protegia: a célula não vira no grito. Ela
+    só pode dizer `sim` se a linha do mapa trouxer a procedência `medido`, a
+    evidência escrita e a régua que morde. Tirar qualquer uma das três com a
+    célula em `sim` reprova aqui.
     """
+    import csv
+    import pathlib
+
     from hefesto_dualsense4unix.app.fatos_do_mapa import FATOS
 
     celula = FATOS["audio.alto_falante@dualsense"]["radio"]
     assert isinstance(celula, dict)
-    assert celula["aciona"] != "sim", (
-        "a célula do alto-falante no rádio virou para `sim`. Calar a tela é "
-        "ordem dela; virar a célula não é — o canal continua fechado")
+    if celula["aciona"] != "sim":
+        return
+    mapa = pathlib.Path(__file__).resolve().parents[2] / "docs/data/mapa-controles.csv"
+    with mapa.open(newline="", encoding="utf-8") as f:
+        linha = next(
+            ln for ln in csv.DictReader(f)
+            if ln["chave"] == "audio.alto_falante" and ln["controle"] == "dualsense"
+        )
+    assert linha["radio_de_onde_sei"] == "medido", (
+        "a célula do alto-falante no rádio diz `sim` sem procedência `medido`")
+    assert linha["radio_evidencia"].strip(), (
+        "a célula do alto-falante no rádio diz `sim` sem a evidência escrita")
+    assert linha["teste_que_morde"].strip(), (
+        "a célula do alto-falante no rádio diz `sim` sem a régua que morde")
 
 
 # ---------------------------------------------------------------------------
