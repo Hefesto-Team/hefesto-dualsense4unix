@@ -299,6 +299,8 @@ _NEEDS_SUDO=0
 # BUG-UNINSTALL-STORM-CONF-ORPHAN-KEEP-UDEV-01: storm.conf sai SEMPRE (mesmo
 # com --keep-udev) — precisa entrar na priming independente do REMOVE_UDEV.
 [[ -e /etc/modprobe.d/hefesto-dualsense-storm.conf ]] && _NEEDS_SUDO=1
+# HAPTICA-NATIVA-01: o verbo UCM do DualSense mora em /usr/share, de root.
+[[ -e /usr/share/alsa/ucm2/USB-Audio/Hefesto/DualSense-HiFi.conf ]] && _NEEDS_SUDO=1
 [[ -e /etc/bluetooth/main.conf.d/hefesto-fastconnectable.conf ]] && _NEEDS_SUDO=1
 # BUG-UNINSTALL-PRIMING-CEGO-AO-BLOCO-UNIFICADO-01 (RADIO-ABERTO-01/E1-bis,
 # 06/08/2026): esta lista primava a credencial pelos sentinelas LEGADOS e pelos
@@ -643,6 +645,24 @@ if sudo -n true 2>/dev/null; then
 elif [[ -e /etc/modprobe.d/hefesto-dualsense-storm.conf ]]; then
     log "sudo indisponível — cura de raiz do storm (modprobe.d) NÃO removida"
     log "  sudo rm /etc/modprobe.d/hefesto-dualsense-storm.conf"
+fi
+
+# ---------------------------------------------------------------------------
+# HAPTICA-NATIVA-01: o perfil UCM do DualSense — simétrico ao passo 3c-bis do
+# install, e pelo MESMO dono: scripts/install_ucm_dualsense.sh --remover tira o
+# verbo e só os ganchos que levam a marca dele. O alsa-ucm-conf nunca foi
+# tocado, então não há nada a restaurar.
+# ---------------------------------------------------------------------------
+UCM_VERBO=/usr/share/alsa/ucm2/USB-Audio/Hefesto/DualSense-HiFi.conf
+if [[ -e "${UCM_VERBO}" ]]; then
+    if sudo -n true 2>/dev/null; then
+        log "removendo o perfil UCM do DualSense"
+        bash "${ROOT_DIR}/scripts/install_ucm_dualsense.sh" --remover || \
+            log "  ERRO: remoção adiada — rode: bash scripts/install_ucm_dualsense.sh --remover"
+    else
+        log "sudo indisponível — perfil UCM do DualSense NÃO removido"
+        log "  bash scripts/install_ucm_dualsense.sh --remover"
+    fi
 fi
 
 # ---------------------------------------------------------------------------

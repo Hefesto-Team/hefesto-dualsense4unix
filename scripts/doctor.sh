@@ -1480,6 +1480,49 @@ check_dualsense_sink_disabled() {
     fi
 }
 
+# HAPTICA-NATIVA-01 (18/09/2026): a vibração dos jogos da Sony pelo Proton
+# viaja pelos canais 3 e 4 do sink `…HiFi__Speaker__sink`, e esse nome só
+# existe com a placa do controle aberta por UCM. O
+# `scripts/install_ucm_dualsense.sh` grava um gancho por controlador USB em
+# `conf.d/USB-Audio/<nome longo da placa>.conf`; aqui se confere, placa por
+# placa, que o gancho do nome dela existe — e depois que o PipeWire a abriu por
+# ele, porque o gancho só vale no próximo replug. A primeira metade é a mesma
+# pergunta do `_dualsenses_no_cabo_sem_ucm` do `core/system_check.py`, que a faz
+# no boot do daemon. As duas variáveis de ambiente existem para os testes.
+check_ucm_do_dualsense() {
+    local raiz="${HEFESTO_RAIZ_UCM:-/usr/share/alsa/ucm2}"
+    local cards="${HEFESTO_PROC_CARDS:-/proc/asound/cards}"
+    if [[ ! -f "${raiz}/ucm.conf" ]]; then
+        info "sem ${raiz}/ucm.conf — esta distro não usa UCM; perfil do DualSense não conferido"
+        return
+    fi
+    [[ -r "${cards}" ]] || return
+    local linha nome placas=0 sem=0
+    while IFS= read -r linha; do
+        nome="${linha#"${linha%%[![:space:]]*}"}"
+        [[ "${nome}" == "Sony Interactive Entertainment DualSense"* ]] || continue
+        placas=$((placas + 1))
+        if [[ ! -f "${raiz}/conf.d/USB-Audio/${nome}.conf" ]]; then
+            sem=$((sem + 1))
+            warn "DualSense no cabo sem o perfil UCM (${nome}) — a vibração dos jogos da Sony não chega pelo cabo. Rode: bash scripts/install_ucm_dualsense.sh"
+        fi
+    done < "${cards}"
+    if [[ "${placas}" -eq 0 ]]; then
+        info "nenhum DualSense no cabo — perfil UCM não conferido"
+        return
+    fi
+    [[ "${sem}" -eq 0 ]] || return
+    local sinks total hifi
+    sinks="$(timeout 5 pactl list short sinks 2>/dev/null)" || sinks=""
+    total="$(printf '%s\n' "${sinks}" | grep -ci 'alsa_output[^[:space:]]*dualsense' || true)"
+    hifi="$(printf '%s\n' "${sinks}" | grep -ci 'alsa_output[^[:space:]]*dualsense[^[:space:]]*Speaker__sink' || true)"
+    if [[ "${total}" -gt "${hifi}" ]]; then
+        warn "o gancho UCM existe, mas $((total - hifi)) placa(s) do DualSense abriram sem ele — replugue o controle (ou: systemctl --user restart wireplumber)"
+    else
+        pass "perfil UCM do DualSense armado (${placas} placa(s) no cabo)"
+    fi
+}
+
 # G2 item 5: sink de áudio PADRÃO mudo — sintoma do incidente U12 de hoje
 # (mute global escondia áudio/haptic de todo mundo, não só do DualSense).
 # Função PURA (_wpctl_volume_muted) só interpreta o texto do `wpctl
@@ -6198,6 +6241,7 @@ main() {
     check_dropin_do_mic_armado
     check_default_source_monitor
     check_dualsense_sink_disabled
+    check_ucm_do_dualsense
     check_audio_sink_muted
     check_mic_mute_persistido
     check_mic_perfil_sem_sinal

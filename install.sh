@@ -47,6 +47,11 @@
 #                         camada de ÁUDIO, que PRESERVA mic e fone (ao contrário
 #                         da regra 75). Use em CI/sem hardware; --no-udev também
 #                         pula este passo.
+#   --no-ucm              OPT-OUT do perfil UCM do DualSense (DEFAULT ON, passo
+#                         3c-bis): grava o verbo HiFi e um gancho por controlador
+#                         USB em /usr/share/alsa/ucm2, sem tocar o alsa-ucm-conf.
+#                         Sem ele o GE-Proton não acha a vibração dos jogos da
+#                         Sony pelo cabo. --no-udev também pula este passo.
 #   --no-kernel-watch     OPT-OUT do kernel-watch (DEFAULT ON): serviço de
 #                         usuário que vigia o ecossistema USB/BT/xHCI no journal
 #                         (storm -71, rate-limit do 8BitDo BT, erros de hci/xHCI
@@ -248,6 +253,7 @@ NO_DKMS=0
 SKIP_KERNEL_WATCH=0
 NO_PROTON_PIN=0
 SKIP_SND_QUIRK=0
+NO_UCM=0
 KEEP_STEAM_INPUT=0
 # CONFERENCIA-FINAL-01: o doctor roda no fim, por padrão. `--no-doctor` pula.
 RUN_DOCTOR=1
@@ -285,6 +291,7 @@ for arg in "$@"; do
         --with-usb-quirk)     WITH_USB_QUIRK=1 ;;
         --no-dkms)            NO_DKMS=1 ;;
         --no-snd-quirk)       SKIP_SND_QUIRK=1 ;;
+        --no-ucm)             NO_UCM=1 ;;
         --no-kernel-watch)    SKIP_KERNEL_WATCH=1 ;;
         --with-storm-watch)   : ;;  # deprecated: o kernel-watch já é DEFAULT
         --no-proton-pin)      NO_PROTON_PIN=1 ;;
@@ -1160,7 +1167,7 @@ source "${ROOT_DIR}/scripts/lib/camada_de_maquina.sh"
 # ---------------------------------------------------------------------------
 # O ENSAIO DAS CURAS DE HOST — o que cada `*_host` escreveria
 # ---------------------------------------------------------------------------
-# As onze curas moram na lib acima, e o ensaio NÃO PODE CHAMÁ-LAS: elas
+# As doze curas moram na lib acima, e o ensaio NÃO PODE CHAMÁ-LAS: elas
 # escrevem em `/etc`, compilam módulo de kernel e sobem serviço de sistema.
 # Então elas são DESCRITAS aqui, e a descrição é uma cópia de conhecimento —
 # exatamente o tipo de coisa que envelhece calada.
@@ -1213,13 +1220,16 @@ _ensaio_camada() {
             _faria_root "compilar e instalar o módulo DKMS hefesto-hid-playstation (retry de feature report na contenção BT)"
             _faria_root "instalar /etc/modprobe.d/hefesto-hid-playstation.conf (feature_retries=2 + ds4_* do clone no cabo)"
             ;;
+        ucm)
+            _faria_root "gravar o verbo HiFi do DualSense em /usr/share/alsa/ucm2/USB-Audio/Hefesto/ e um gancho por controlador USB em /usr/share/alsa/ucm2/conf.d/USB-Audio/ (o pacote alsa-ucm-conf fica intacto; scripts/install_ucm_dualsense.sh)"
+            ;;
         initramfs)
             _faria_root "regenerar o initramfs UMA vez, e só se algum módulo DKMS acima tiver mudado (update-initramfs)"
             ;;
     esac
 }
 
-# NO ENSAIO, AS ONZE CURAS VIRAM DESCRIÇÃO — e a troca é feita AQUI, num lugar
+# NO ENSAIO, AS DOZE CURAS VIRAM DESCRIÇÃO — e a troca é feita AQUI, num lugar
 # só, trocando o corpo das funções que a lib acabou de definir.
 #
 # POR QUE TROCAR O NOME, e não pôr um `if` em cada chamada: elas são VINTE, e
@@ -1255,6 +1265,7 @@ _ENSAIO_CURAS_DE_HOST=(
     "install_dkms_hid_nintendo_host:dkms-nintendo"
     "install_dkms_rtw88_usb_host:dkms-rtw88"
     "install_dkms_hid_playstation_host:dkms-playstation"
+    "install_ucm_dualsense_host:ucm"
     "flush_initramfs_host:initramfs"
 )
 if [[ "${DRY_RUN:-0}" -eq 1 ]]; then
@@ -1541,6 +1552,11 @@ if [[ "${FORMAT}" != "native" ]]; then
             warn "install_snd_quirk.sh falhou — rode: sudo bash scripts/install_snd_quirk.sh"
         fi
     fi
+    # HAPTICA-NATIVA-01: a vibração dos jogos da Sony pelo cabo depende do
+    # perfil UCM da placa do controle, e a placa é do HOST — mesma função do
+    # passo 3c-bis do fluxo native. Opt-out: --no-ucm.
+    step "ucm" "perfil UCM do DualSense (HAPTICA-NATIVA-01 — DEFAULT em todo formato)"
+    install_ucm_dualsense_host
     # BROKER-01 (Onda S — achado #7): o broker hide-hidraw é DEFAULT em TODO
     # formato (regra da casa: install SEM FLAGS). Antes, flatpak/appimage/deb
     # saíam daqui sem o broker e sem nenhum aviso — o P2 duplicado voltava em
@@ -2040,6 +2056,17 @@ if [[ "${SKIP_SND_QUIRK}" -eq 0 && "${SKIP_UDEV}" -eq 0 ]]; then
         warn "rode manualmente: sudo bash scripts/install_snd_quirk.sh"
     fi
 fi
+
+# ---------------------------------------------------------------------------
+# 3c-bis. Perfil UCM do DualSense (HAPTICA-NATIVA-01) — DEFAULT, opt-out --no-ucm
+# ---------------------------------------------------------------------------
+# O GE-Proton manda a vibração dos jogos da Sony pelos canais 3 e 4 do sink
+# `…HiFi__Speaker__sink`, e esse nome só existe com a placa do controle aberta
+# por UCM. O `alsa-ucm-conf` do Ubuntu 24.04 não conhece o DualSense; o gancho
+# em conf.d/ é lido antes dele e deixa o pacote intacto. Vale no próximo
+# replug do controle.
+step "3c-bis" "perfil UCM do DualSense (a vibração dos jogos da Sony pelo cabo)"
+install_ucm_dualsense_host
 
 # ---------------------------------------------------------------------------
 # 3d. Bluetooth no máximo (PLAT-04) — DEFAULT, sem flag
