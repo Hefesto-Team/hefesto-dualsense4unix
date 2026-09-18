@@ -526,6 +526,14 @@ class BtMicSubsystem:
         #: O que a declaração pedia na varredura anterior, para enxergar a
         #: BORDA de descida — ver `_soltar_os_que_ela_desmarcou`.
         self._declarados_antes: frozenset[str] = frozenset()
+        #: A RECUSA DA VOLTA ANTERIOR — 18/09/2026. Nasce aqui e não só no
+        #: `start()` porque o `_loop` a lê, e um subsystem construído sem
+        #: passar pelo `start` (é o que as réguas fazem) levantaria
+        #: `AttributeError` ANTES do `reconciliar` — o laço inteiro morreria
+        #: antes de subir ponte nenhuma. Foi assim que a suíte pegou esta:
+        #: `test_os_quatro_microfones_ficam_no_ar` mediu ZERO pontes onde
+        #: esperava quatro, e o sintoma não falava de recusa nenhuma.
+        self._negados_antes: frozenset[str] = frozenset()
         self._pedidor_anterior: Any = None
         #: `(dizedor, esquecedor, leitor)` que estava instalado antes de nós.
         self._dizedor_anterior: tuple[Any, Any, Any] | None = None
@@ -979,6 +987,7 @@ class BtMicSubsystem:
         # sozinho quando o daemon sobe"* que o cabeçalho recusa.
         self._registro.limpar()
         self._declarados_antes = frozenset()
+        self._negados_antes = frozenset()
         logger.info("bt_mic_subsystem_parado")
 
     def _desinstalar_o_gancho_da_procura(self) -> None:

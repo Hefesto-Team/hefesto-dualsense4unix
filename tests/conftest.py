@@ -2577,10 +2577,20 @@ def _nenhuma_ancora_de_usb_viva_na_suite(tmp_path_factory: pytest.TempPathFactor
     forma do defeito que a memória "subsystem novo faz a suíte tocar o aparelho
     dela" registra — e a cura é a mesma: a raiz se resolve na chamada, e aqui
     ela aponta para um sysfs vazio.
-    """
-    from hefesto_dualsense4unix.integrations import endpoint_de_haptica
 
+    **O `try` NÃO é zelo, e o portão que o cobra tem nome.** Fixture autouse de
+    escopo de SESSÃO roda em TODA execução de pytest, inclusive nos jobs leves
+    do `ci.yml` (`anonymity`, `mapa-de-canais`, `promessa-sem-caminho`,
+    `referencias-docs`), que instalam só o pytest e não o produto. Um import
+    duro aqui derruba a coleta INTEIRA desses jobs — e o erro não fala de
+    fixture nenhuma. `tests/unit/test_o_conftest_roda_onde_o_produto_nao_esta_instalado.py`
+    é quem cobra, e foi ele que pegou esta.
+    """
     vazio = tmp_path_factory.mktemp("sysfs-sem-usb")
+    try:
+        from hefesto_dualsense4unix.integrations import endpoint_de_haptica
+    except ModuleNotFoundError:
+        return  # job leve, sem o produto: não há o que desviar
     endpoint_de_haptica.RAIZ_DO_SYSFS = vazio
 
 

@@ -187,32 +187,45 @@ class TestOGate:
     microfone caía no vazio. Agora `is_enabled` é sempre `True` — o supervisor
     tem de estar de pé para atender o pedido.
 
-    **O que eles mediam continua medido, e no lugar certo:** quem responde
-    "ninguém pediu, então nada sobe" é `alvos()`, e é ele que estas linhas
-    checam agora. O `is_enabled` verdadeiro sem `alvos()` vazio seria o
-    microfone ligando sozinho — é essa a dupla que a privacidade exige.
+    **E O GATE VIROU DE LADO EM 18/09/2026**, por ordem dela: *"todos os
+    controles tem que nascer com tudo mic, giroscopio e afins"*. Até aqui
+    `alvos()` respondia `[]` para quem não tinha declaração, e era ele que
+    guardava a privacidade. MEDIDO na mesa dela no mesmo dia: dos quatro
+    DualSense ligados, DOIS tinham microfone — os outros dois nunca haviam sido
+    declarados, e a aba respondia *"o sistema não vê um microfone neste
+    controle"*, recusa que a pessoa não tinha como resolver.
+
+    O que guarda a escolha dela agora é a RECUSA (`uniqs_recusados`), e ela é
+    mais forte do que a ausência era: `false` no disco é um registro do que ela
+    disse, e sobrevive ao boot. Antes só havia "não pedi".
     """
 
-    def test_conjunto_vazio_nao_sobe_ponte_nenhuma(self) -> None:
+    def test_conjunto_vazio_agora_sobe_a_mesa_inteira(self) -> None:
+        """A INVERSÃO, no ponto exato: isto respondia `[]` até 18/09/2026."""
         subsystem = BtMicSubsystem(registro=RegistroDePedidosDeCanal())
         config = _config(bt_mic_uniqs=frozenset)
         assert subsystem.is_enabled(config) is True
         subsystem._config = config
-        assert subsystem.alvos([_No(UM), _No(DOIS)]) == []
+        assert sorted(n.uniq for n in subsystem.alvos([_No(UM), _No(DOIS)])) == [UM, DOIS]
 
     def test_um_uniq_basta_para_subir_o_subsystem(self) -> None:
         config = _config(bt_mic_uniqs=lambda: frozenset({UM}))
         assert BtMicSubsystem().is_enabled(config) is True
 
-    def test_sem_fonte_nenhuma_nao_sobe_ponte_nenhuma(
+    def test_sem_fonte_nenhuma_o_controle_ainda_ganha_canal(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """`None` é o contrato de "não há fonte", e vale como ninguém pediu."""
+        """Fonte ausente é *"ninguém declarou"*, e isso deixou de calar.
+
+        O lado seguro INVERTEU junto com o default: com a ausência LIGANDO, um
+        erro de leitura que responda "vazio" não pode mais apagar o microfone
+        de ninguém.
+        """
         monkeypatch.delenv("HEFESTO_DUALSENSE4UNIX_BT_MIC", raising=False)
         subsystem = BtMicSubsystem(registro=RegistroDePedidosDeCanal())
         assert subsystem.is_enabled(_config()) is True
         subsystem._config = _config()
-        assert subsystem.alvos([_No(UM), _No(DOIS)]) == []
+        assert len(subsystem.alvos([_No(UM), _No(DOIS)])) == 2
 
 
 # ===========================================================================
@@ -221,34 +234,36 @@ class TestOGate:
 
 
 class TestPorControle:
-    def test_so_o_controle_que_ela_ligou_ganha_ponte(self) -> None:
-        """A decisão dela, exercida contra a mesa cheia.
+    def test_so_o_controle_que_ela_desligou_fica_sem_ponte(self) -> None:
+        """A decisão dela, exercida contra a mesa cheia — pelo outro lado.
 
-        Quatro DualSense no rádio, UM declarado. O gerenciador tem de receber um
-        nó — e o nó certo. Sem o filtro de `alvos`, ele recebe os quatro, e o
-        interruptor "por controle" vira uma chave de mesa inteira que mente
-        sobre ser por controle.
+        **O SENTIDO VIROU EM 18/09/2026, o TESTE não.** Esta régua sempre
+        mediu a mesma coisa: que o interruptor é POR CONTROLE e não uma chave
+        de mesa inteira. O que mudou é qual gesto é o singular — era "ligar um",
+        passou a ser "desligar um". Quatro DualSense no rádio, UM desligado: o
+        gerenciador recebe TRÊS, e o que ficou de fora é o dela.
         """
         subsystem = BtMicSubsystem()
-        subsystem._config = _config(bt_mic_uniqs=lambda: frozenset({TRES}))
+        subsystem._config = _config(bt_mic_recusados=lambda: frozenset({TRES}))
         nos = [_No(UM), _No(DOIS), _No(TRES), _No(QUATRO)]
 
         escolhidos = subsystem.alvos(nos)
 
-        assert [no.uniq for no in escolhidos] == [TRES]
+        assert sorted(no.uniq for no in escolhidos) == sorted([UM, DOIS, QUATRO])
 
-    def test_dois_ligados_sobem_dois_e_os_outros_dois_ficam_no_chao(self) -> None:
+    def test_dois_desligados_ficam_no_chao_e_os_outros_dois_sobem(self) -> None:
         """O caso do adaptador de DOIS controles da mesa dela."""
         subsystem = BtMicSubsystem()
-        subsystem._config = _config(bt_mic_uniqs=lambda: frozenset({UM, QUATRO}))
+        subsystem._config = _config(bt_mic_recusados=lambda: frozenset({DOIS, TRES}))
 
         escolhidos = subsystem.alvos([_No(UM), _No(DOIS), _No(TRES), _No(QUATRO)])
 
-        assert sorted(no.uniq for no in escolhidos) == [UM, QUATRO]
+        assert sorted(no.uniq for no in escolhidos) == sorted([UM, QUATRO])
 
-    def test_nenhum_ligado_nao_entrega_no_nenhum(self) -> None:
+    def test_todos_desligados_nao_entrega_no_nenhum(self) -> None:
+        """Desligar os quatro tem de calar os quatro — o oposto exato."""
         subsystem = BtMicSubsystem()
-        subsystem._config = _config(bt_mic_uniqs=frozenset)
+        subsystem._config = _config(bt_mic_recusados=lambda: frozenset({UM, DOIS}))
         assert subsystem.alvos([_No(UM), _No(DOIS)]) == []
 
     def test_o_no_sem_endereco_nunca_entra(self) -> None:
@@ -388,10 +403,19 @@ class TestAlguemEscreve:
             "de novo, e a ponte só sobe por variável de ambiente"
         )
         assert config.bt_mic_uniqs() == frozenset({DOIS})
-        # E o "por controle" chegou até o gerenciador: dois nós no rádio, um só
-        # declarado, uma ponte.
+        # E A FONTE DA RECUSA FOI FIADA JUNTO — 18/09/2026. É ela que o
+        # "por controle" usa depois da inversão, e é o campo que nasceu órfão
+        # se ninguém o amarrar no `run()` (o mesmo defeito que esta régua já
+        # cobrava do `bt_mic_uniqs`).
+        assert config.bt_mic_recusados is not None, (
+            "`bt_mic_recusados` continua `None` depois do boot: ela não teria "
+            "como desligar microfone nenhum"
+        )
+        assert config.bt_mic_recusados() == frozenset()
+        # E o "por controle" chegou até o gerenciador: dois nós no rádio,
+        # nenhum RECUSADO, duas pontes — a inversão, medida na ponta do laço.
         assert gerenciador.chamadas, "o laço nunca reconciliou"
-        assert [no.uniq for no in gerenciador.chamadas[0]] == [DOIS]
+        assert sorted(no.uniq for no in gerenciador.chamadas[0]) == sorted([UM, DOIS])
 
     @pytest.mark.asyncio
     async def test_uma_fonte_ja_montada_nao_e_sobrescrita(

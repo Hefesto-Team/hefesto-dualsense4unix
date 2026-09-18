@@ -6150,6 +6150,33 @@ apply_fixes() {
     # que pode reinstalar o drop-in e reiniciar o WirePlumber — o perfil da placa
     # e o mute da source precisam ser conferidos com o serviço já de pé.
     fix_mic_dualsense
+    # A FILA DE NUMERAÇÃO, LIMPA DE ENDEREÇO DE FIXTURE — 18/09/2026.
+    #
+    # MEDIDO na mesa dela: quatro endereços `aa:bb:cc:00:00:0{1..4}` moravam no
+    # `controllers.json` desde 22/08, ocupando os postos 4 a 7 da fila e
+    # empurrando um DualSense REAL para o oitavo. A causa (a suíte escrevendo
+    # no `~/.config` real) foi fechada em 25/08 pelo lar de mentira de sessão;
+    # a SUJEIRA ficou, e nada a limpava: o `check_faixa_sintetica.py` acusava
+    # desde 24/08 e não tinha como curar.
+    #
+    # AQUI E NÃO NO PRODUTO, e a razão é medida: a primeira cura descartava a
+    # faixa dentro do `identity.order_entries` e foi recuada no mesmo dia —
+    # duas dezenas de réguas desta casa usam `aa:bb:cc` como endereço de
+    # controle de verdade. Expurgar no produto é regra sobre a nossa suíte, não
+    # sobre o aparelho. O `--fix` é onde esta casa conserta MÁQUINA, e é um
+    # gesto que a pessoa pede — que é o que a mensagem do portão exige: "a
+    # decisão sobre o que já está gravado é de quem é dono da máquina".
+    if [[ -x "${ROOT_DIR}/scripts/check_faixa_sintetica.py" ]] \
+       || [[ -f "${ROOT_DIR}/scripts/check_faixa_sintetica.py" ]]; then
+        local _limpeza=""
+        _limpeza="$(python3 "${ROOT_DIR}/scripts/check_faixa_sintetica.py" \
+                    --casa --limpar 2>/dev/null || true)"
+        if printf '%s' "${_limpeza}" | grep -q '^LIMPO:'; then
+            pass "fila de numeração: endereços de fixture retirados"
+        else
+            pass "fila de numeração: sem endereço de fixture"
+        fi
+    fi
     # AUSÊNCIA DELIBERADA — RESTAURO-SO-COM-SINTOMA-01, decisão dela de
     # 07/08/2026: `restaurar_hidraw_uaccess` NÃO é chamado aqui. O `--fix` roda
     # tudo de uma vez e roda ANTES dos checks, então chamá-lo daqui seria agir

@@ -820,6 +820,22 @@ _SEM_MAO_HOJE: dict[str, str] = {
 #: Não é dívida: é classificação. A razão CITA a evidência que a sustenta,
 #: porque "confie em mim" não é razão.
 _NAO_E_PROMESSA: dict[str, str] = {
+    "core/faixa_sintetica.py::e_endereco_sintetico": (
+        "18/09/2026, UM-NUMERO-SO-01 — é a leitura da lista de faixas de teste "
+        "desta casa, e o dono dela existe para o PORTÃO, não para o produto. "
+        "As três faixas moravam digitadas dentro de "
+        "`scripts/check_faixa_sintetica.py`, que não é pacote; quando o "
+        "produto precisou da mesma lista, a alternativa era digitá-la de novo "
+        "do outro lado — duas definições de \"é lixo\", que é como esta casa "
+        "fabrica divergência. Quem a chama é `check_faixa_sintetica.py` (o "
+        "`--limpar`, que o `doctor --fix` roda), e `scripts/` não conta para "
+        "este portão. **E a ausência de chamador em produção é MEDIDA, não "
+        "descuido:** a primeira cura de 18/09 expurgava a faixa dentro do "
+        "`identity.order_entries` e foi RECUADA pela suíte no mesmo dia — 27 "
+        "réguas desta casa usam `aa:bb:cc` como endereço de controle de "
+        "verdade, e 236 arquivos a citam. Expurgar no produto é regra sobre a "
+        "nossa suíte, não sobre o aparelho."
+    ),
     "integrations/censo_dos_lancadores.py::sabe_ler": (
         "09/09/2026, LANCADORES-ZERO-01 — é a pergunta que uma RÉGUA faz ao "
         "módulo, e não uma promessa ao produto: a tela nunca a chama, porque "

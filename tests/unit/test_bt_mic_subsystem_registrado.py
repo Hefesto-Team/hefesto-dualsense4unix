@@ -73,13 +73,31 @@ def test_bt_mic_sobe_antes_dos_plugins_no_registry() -> None:
 
 
 @pytest.mark.asyncio
-async def test_boot_nao_sobe_bt_mic_por_padrao(
+async def test_o_supervisor_sobe_sem_declaracao_e_o_boot_nao_falha(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Sem opt-in, o subsystem fica INERTE — e o boot não registra falha.
+    """Em máquina NOVA, o supervisor sobe — e é isso que faz a inversão valer.
 
-    Um microfone que liga sozinho com o daemon é inaceitável; o default tem de
-    ser "não sobe" e não "sobe e falha".
+    **DOIS FATOS MUDARAM AQUI, e o segundo é um instrumento falso.**
+
+    (1) O CONTRATO, 18/09/2026, ordem dela: *"todos os controles tem que nascer
+    com tudo mic, giroscopio e afins"*. Este teste se chamava
+    `test_boot_nao_sobe_bt_mic_por_padrao` e dizia *"um microfone que liga
+    sozinho com o daemon é inaceitável"*. Era o desenho da casa, e o preço dele
+    foi medido: numa máquina onde ninguém declarou nada — que é TODA máquina
+    nova — o microfone do DualSense simplesmente não existia, e a aba dizia
+    *"o sistema não vê um microfone neste controle"*.
+
+    (2) **ELE NÃO MEDIA O QUE PROMETIA.** A asserção era
+    `daemon._bt_mic_subsystem is None` DEPOIS de `_roda_ate_o_1o_tick`, que
+    chama `daemon.stop()` — e o stop zera esse atributo sempre. O teste dava
+    verde com o subsystem subindo e com ele não subindo: o irmão de baixo
+    (`test_boot_sobe_bt_mic_com_opt_in`) captura o valor ANTES do stop
+    justamente por isso, e a diferença entre os dois passou um mês sem
+    ninguém ver. Aqui a captura passou a ser antes também.
+
+    **Ligado não quer dizer capturando**, e essa parte não mudou: sem nó de
+    rádio na varredura não há ponte, não há `0x32` e a libopus nem é importada.
     """
     monkeypatch.delenv("HEFESTO_DUALSENSE4UNIX_BT_MIC", raising=False)
     monkeypatch.setattr(
@@ -90,10 +108,21 @@ async def test_boot_nao_sobe_bt_mic_por_padrao(
         controller=FakeController(transport="usb", states=[_state()]),
         bus=EventBus(), store=store, config=_config(),
     )
-    await _roda_ate_o_1o_tick(daemon, store)
+    run_task = asyncio.create_task(daemon.run())
+    for _ in range(500):
+        if daemon._bt_mic_subsystem is not None:
+            break
+        await asyncio.sleep(0.01)
+    subiu = daemon._bt_mic_subsystem is not None
+    daemon.stop()
+    await run_task
 
-    assert daemon._bt_mic_subsystem is None
+    assert subiu, (
+        "sem declaração nenhuma o supervisor não subiu: "
+        "a inversão não alcança máquina nova"
+    )
     assert "bt_mic" not in daemon._failed_subsystems
+    assert daemon._bt_mic_subsystem is None, "o stop tem de derrubar a ponte"
 
 
 @pytest.mark.asyncio
@@ -186,10 +215,18 @@ def test_o_supervisor_fica_de_pe_e_quem_filtra_e_o_alvos(
     não havia a quem PEDIR canal, e o primeiro toque no botão do microfone caía
     no vazio.
 
-    **O "nasce desligado" continua inteiro, e mudou de método:** o supervisor
-    fica de pé e não captura nada, porque `alvos()` devolve `[]` enquanto
-    ninguém pedir, ninguém declarar e a env estiver fora. Sem ponte não há
-    `0x32`, não há libopus e não há microfone.
+    **E O "NASCE DESLIGADO" CAIU EM 18/09/2026**, por ordem dela: *"todos os
+    controles tem que nascer com tudo mic, giroscopio e afins"*. Ele foi o
+    desenho desta casa por um mês e tinha razão escrita — *"um microfone que
+    sobe sozinho com o daemon é inaceitável"* —, e o preço dele foi medido no
+    mesmo dia: dos quatro DualSense da mesa dela, DOIS não tinham microfone,
+    porque ninguém sabia que era preciso declarar. Vinte e sete recusas *"o
+    sistema não vê um microfone neste controle"* no diário.
+
+    **O que esta régua mede agora é o par que substituiu o gate:** o supervisor
+    fica de pé, `alvos()` devolve os nós do rádio, e quem cala é a RECUSA — que
+    é mais forte do que a ausência era, porque `false` no disco sobrevive ao
+    boot e "não pedi" nunca sobreviveu a nada.
     """
     from hefesto_dualsense4unix.daemon.subsystems.bt_mic import (
         RegistroDePedidosDeCanal,
@@ -207,10 +244,14 @@ def test_o_supervisor_fica_de_pe_e_quem_filtra_e_o_alvos(
         caminho = "/dev/hidraw9"
 
     subsystem._config = _config()
+    # A INVERSÃO, no ponto exato: isto era `== []` até 18/09/2026.
+    assert [n.uniq for n in subsystem.alvos([_No()])] == ["aabbcc000001"]
+    # E A RECUSA CALA, que é o par que guarda a escolha dela.
+    subsystem._config = _config(bt_mic_recusados=lambda: frozenset({"aabbcc000001"}))
     assert subsystem.alvos([_No()]) == []
     subsystem._config = _config(bt_mic_uniqs=lambda: frozenset({"aabbcc000001"}))
     assert [no.uniq for no in subsystem.alvos([_No()])] == ["aabbcc000001"]
-    # A env continua sendo o caminho à mão e vale por TODOS os controles.
-    subsystem._config = _config()
+    # A env continua sendo o caminho à mão e vale por TODOS os controles —
+    # inclusive por cima de uma RECUSA, que é o que "à mão" significa.
     monkeypatch.setenv("HEFESTO_DUALSENSE4UNIX_BT_MIC", "1")
     assert len(subsystem.alvos([_No()])) == 1
