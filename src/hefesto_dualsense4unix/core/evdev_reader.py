@@ -1815,6 +1815,23 @@ def find_dualsense_touchpad_evdev(target_uniq: str | None = None) -> Path | None
 
 
 @dataclass(frozen=True)
+class PontoDeToque:
+    """Um dedo apoiado no touchpad, nas unidades absolutas do kernel.
+
+    `slot` é o índice do slot multitouch do kernel (0 ou 1 no DualSense) e
+    NÃO é ordem de chegada: levantar o primeiro dedo e apoiar outro reusa o
+    slot 0 com `identidade` nova. Quem desenha usa `slot` para não trocar as
+    bolinhas de lugar entre um quadro e o seguinte; quem conta gesto usa
+    `identidade` (o `ABS_MT_TRACKING_ID`), que é única por dedo.
+    """
+
+    slot: int = 0
+    x: int = 0
+    y: int = 0
+    identidade: int = -1
+
+
+@dataclass(frozen=True)
 class TouchState:
     """Estado de toque do touchpad num instante (leitura NÃO-destrutiva).
 
@@ -1822,6 +1839,22 @@ class TouchState:
     junto para quem desenha não precisar hardcodar 1920x1080). Sem dedo
     apoiado, `x`/`y` guardam a ÚLTIMA posição vista — quem renderiza só deve
     desenhar o ponto quando `touching` for True.
+
+    **MULTITOQUE-01 (18/09/2026) — `pontos` é a verdade, `x`/`y` é o resumo.**
+    Ela perguntou por que o desenho mostra UM dedo num touchpad que faz
+    rolagem de dois e pinça: *"NA INTERFACE NA ABA CONTROLES SÓ MOSTRA UM
+    TOQUE NO DESENHO DO SVG APESAR DO TOUCH SER MULTITOQUE"*.
+    <!-- noqa-acento: citação literal dela -->
+    Medido no mesmo dia com os dedos dela no controle azul: o nó do kernel
+    declara `ABS_MT_SLOT 0..1` — DOIS dedos, e o libinput emitiu 8 pinças e
+    922 eventos de rolagem, todos com `2`. O terceiro dedo não existe para o
+    aparelho (zero `GESTURE_SWIPE` em 45 s), e o zoom com três funciona
+    porque pinça só precisa de dois.
+
+    O que faltava era nosso: este reader lia `ABS_X`/`ABS_Y`/`BTN_TOUCH` — o
+    caminho de UM dedo — e o segundo nunca saía do kernel. `x`/`y` continuam
+    sendo o dedo que o kernel elege como principal (é o que move o cursor, e
+    todo consumidor de antes depende dele); `pontos` traz os dois.
     """
 
     touching: bool = False
@@ -1829,6 +1862,10 @@ class TouchState:
     y: int = 0
     largura: int = 1920
     altura: int = 1080
+    #: Os dedos apoiados AGORA, em ordem de slot. Vazio sem toque. Nunca
+    #: cai para `[(x, y)]` quando não há leitura MT: inventar um ponto a
+    #: partir do resumo desenharia um dedo que o kernel não confirmou.
+    pontos: tuple[PontoDeToque, ...] = ()
 
 
 class TouchpadReader(_EvdevReconnectLoop):
@@ -1922,6 +1959,14 @@ class TouchpadReader(_EvdevReconnectLoop):
         self._motion_last_y: int | None = None
         self._accum_dx: int = 0
         self._accum_dy: int = 0
+        # MULTITOQUE-01: os slots do kernel, por índice. `identidade` -1 é o
+        # slot VAZIO (o `ABS_MT_TRACKING_ID` que o kernel manda ao levantar o
+        # dedo), e é por isso que o dicionário não é limpo: o slot continua
+        # existindo, sem dedo. O tamanho não é fixado em 2 de propósito — quem
+        # declara quantos slots há é o nó, e um modelo com três não ficaria
+        # com o terceiro mudo por causa de um número escrito aqui.
+        self._mt_slot: int = 0
+        self._mt_slots: dict[int, dict[str, int | None]] = {}
         # TOUCHPAD-DO-SISTEMA-01: quem move o cursor com este nó. Nasce False
         # (o hefesto é o dono) e é decidido de verdade no `_on_device_opened`,
         # que o loop base SEMPRE chama antes do primeiro evento — nenhum evento
@@ -1960,6 +2005,7 @@ class TouchpadReader(_EvdevReconnectLoop):
                 y=self._last_abs_y,
                 largura=self._TOUCHPAD_WIDTH,
                 altura=self._TOUCHPAD_HEIGHT,
+                pontos=self._pontos_agora(),
             )
 
     def consume_motion(self) -> tuple[int, int]:
@@ -2027,6 +2073,8 @@ class TouchpadReader(_EvdevReconnectLoop):
                 with self._lock:
                     self._last_abs_y = int(event.value)
                     self._accumulate_axis_y(int(event.value))
+            else:
+                self._handle_multitoque(event, ecodes)
         elif event.type == ecodes.EV_KEY:
             if event.code == ecodes.BTN_LEFT:
                 with self._lock:
@@ -2043,6 +2091,65 @@ class TouchpadReader(_EvdevReconnectLoop):
                     self._touching = event.value == 1
                     self._motion_last_x = None
                     self._motion_last_y = None
+
+    def _handle_multitoque(self, event: Any, ecodes: Any) -> None:
+        """Os slots MT do kernel — o SEGUNDO dedo (MULTITOQUE-01).
+
+        Deliberadamente separado do `ABS_X`/`ABS_Y` acima, e a razão é o
+        cursor: aqueles dois alimentam `_accumulate_axis_*`, que é o
+        movimento do mouse. Somar o segundo dedo ali faria o cursor pular
+        para o meio do caminho entre os dedos a cada rolagem. Aqui só se
+        OBSERVA — nenhum byte deste método chega ao `consume_motion`.
+
+        `getattr` e não `ecodes.ABS_MT_SLOT` direto: o `ecodes` chega como
+        PARÂMETRO e as réguas passam dublês. Um dublê sem os códigos MT
+        continua exercitando o caminho de um dedo em vez de levantar
+        `AttributeError` no meio do laço de eventos do produto.
+        """
+        cod_slot = getattr(ecodes, "ABS_MT_SLOT", None)
+        cod_id = getattr(ecodes, "ABS_MT_TRACKING_ID", None)
+        cod_x = getattr(ecodes, "ABS_MT_POSITION_X", None)
+        cod_y = getattr(ecodes, "ABS_MT_POSITION_Y", None)
+        codigo = event.code
+        if codigo is None or codigo not in (cod_slot, cod_id, cod_x, cod_y):
+            return
+        with self._lock:
+            if codigo == cod_slot:
+                # O kernel só reanuncia o slot quando ELE muda: fora deste
+                # evento, todo ABS_MT_* que chega é do slot corrente.
+                self._mt_slot = int(event.value)
+                return
+            slot = self._mt_slots.setdefault(
+                self._mt_slot, {"identidade": -1, "x": None, "y": None}
+            )
+            if codigo == cod_id:
+                slot["identidade"] = int(event.value)
+                if int(event.value) == -1:
+                    # Dedo levantado: a posição sai junto. Guardá-la faria o
+                    # slot ressuscitar com a coordenada velha no próximo
+                    # toque, antes de o kernel dizer onde o dedo está agora.
+                    slot["x"] = None
+                    slot["y"] = None
+            elif codigo == cod_x:
+                slot["x"] = int(event.value)
+            elif codigo == cod_y:
+                slot["y"] = int(event.value)
+
+    def _pontos_agora(self) -> tuple[PontoDeToque, ...]:
+        """Os dedos apoiados, em ordem de slot. Chamado COM o lock tomado."""
+        saida = []
+        for indice in sorted(self._mt_slots):
+            slot = self._mt_slots[indice]
+            identidade = slot.get("identidade", -1)
+            x, y = slot.get("x"), slot.get("y")
+            if identidade is None or identidade == -1 or x is None or y is None:
+                continue
+            saida.append(
+                PontoDeToque(
+                    slot=indice, x=int(x), y=int(y), identidade=int(identidade)
+                )
+            )
+        return tuple(saida)
 
     def _acumula_agora(self) -> bool:
         """Se este reader pode acumular movimento para o cursor do hefesto.
@@ -2069,6 +2176,10 @@ class TouchpadReader(_EvdevReconnectLoop):
         with self._lock:
             self._regions = frozenset()
             self._touching = False
+            # Os slots vão junto: um dedo "apoiado" que sobrevivesse à queda
+            # do controle desenharia toque num aparelho que saiu da mesa.
+            self._mt_slots.clear()
+            self._mt_slot = 0
             self._motion_last_x = None
             self._motion_last_y = None
             self._accum_dx = 0
@@ -2303,6 +2414,7 @@ __all__ = [
     "GamepadDescoberto",
     "GyroSnapshot",
     "MotionSensorReader",
+    "PontoDeToque",
     "TouchState",
     "TouchpadReader",
     "discover_dualsense_motion_evdevs",

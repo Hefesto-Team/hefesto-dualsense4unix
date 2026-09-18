@@ -133,18 +133,54 @@ def test_a_posicao_do_dedo_chega_a_folha(pac, a02, monkeypatch):
     `controller_card.touchpad_do_inputs` — *"já normalizados 0..1 pelos limites
     que o PRÓPRIO payload declara"* — e `toque_do_controle` os jogava fora.
 
-    MORDE: voltar `toque_do_controle` a devolver o par (só `palavra` e `ponto`,
+    MORDE: voltar `dedos_do_controle` a devolver o par (só `palavra` e `ponto`,
     sem a posição) rebenta a desempacotação em `pacote()`; devolver `None` no
-    terceiro item — a forma silenciosa do mesmo estrago — apaga a regra e
+    lugar da posição — a forma silenciosa do mesmo estrago — apaga a regra e
     reprova aqui, porque a folha volta a ter só o piso.
+
+    **O SELETOR GANHOU SUFIXO EM 18/09/2026** (MULTITOQUE-01): `.ponto` virou
+    `.ponto-1`, porque agora são DUAS bolinhas por card e um seletor sem
+    sufixo escreveria a posição do dedo 1 em cima da do dedo 2. O que este
+    teste mede não mudou — é o dado do aparelho chegando à folha.
     """
     folha = _folha(pac, a02, {**BASE, "inputs": {"touchpad": DEDO}}, monkeypatch)
     x, y = DEDO_EM_POR_CENTO
-    assert f'.ctl[data-controle="p1"] .touch .ponto{{left:{x}%;top:{y}%}}' in folha, (
+    assert f'.ctl[data-controle="p1"] .touch .ponto-1{{left:{x}%;top:{y}%}}' in folha, (
         f"a posição do dedo não chegou à folha:\n{folha}")
     assert "62%" not in folha, (
         "a folha carrega o `left:62%` que o mockup cravou — o pontinho continua "
         "aceso no lugar do desenho")
+
+
+def test_o_segundo_dedo_tem_regra_propria_na_folha(pac, a02, monkeypatch):
+    """MULTITOQUE-01: dois dedos no pad, duas regras na folha — distintas.
+
+    O DualSense entrega dois pontos de toque (`ABS_MT_SLOT 0..1`, medido no
+    aparelho dela em 18/09/2026) e a tela mostrava um. Esta régua trava o
+    elo de baixo: se as duas bolinhas voltarem a dividir o mesmo seletor, a
+    segunda regra sobrescreve a primeira e os dois dedos aparecem colados.
+
+    MORDE: tirar `"touch2"` de `ALVOS_DA_POSICAO` derruba com `KeyError`;
+    apontar os dois alvos para `.touch .ponto` faz a segunda asserção casar
+    a primeira string e reprovar na comparação de regras distintas.
+    """
+    dois = {**DEDO, "pontos": [{"slot": 0, "x": 1440, "y": 270, "id": 7},
+                               {"slot": 1, "x": 480, "y": 810, "id": 8}]}
+    folha = _folha(pac, a02, {**BASE, "inputs": {"touchpad": dois}}, monkeypatch)
+    assert '.ctl[data-controle="p1"] .touch .ponto-1{left:75.0%;top:25.0%}' in folha
+    assert '.ctl[data-controle="p1"] .touch .ponto-2{left:25.0%;top:75.0%}' in folha, (
+        f"o segundo dedo não chegou à folha:\n{folha}")
+
+
+def test_sem_segundo_dedo_a_bolinha_dois_nao_ganha_regra(pac, a02, monkeypatch):
+    """Um dedo só: a bolinha 2 cai no PISO, e não numa posição inventada.
+
+    É a diferença entre "não sei onde ele está" e "ele está no centro" — a
+    mesma disciplina do `gyro` ausente, que a casa já paga desde 04/09.
+    """
+    folha = _folha(pac, a02, {**BASE, "inputs": {"touchpad": DEDO}}, monkeypatch)
+    assert '.touch .ponto-2{' not in folha, (
+        f"a folha escreveu posição para um dedo que não está lá:\n{folha}")
 
 
 def test_a_posicao_dos_polegares_chega_a_folha(pac, a02, monkeypatch):

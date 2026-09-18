@@ -105,6 +105,7 @@ from hefesto_dualsense4unix.app.widgets.controller_card import (
     acao_mic,
     acao_speaker_mudo,
     accel_do_inputs,
+    dedos_do_inputs,
     dica_do_titulo,
     frase_do_alvo_do_mic,
     gyro_do_inputs,
@@ -112,7 +113,6 @@ from hefesto_dualsense4unix.app.widgets.controller_card import (
     saida_muda_do_entry,
     speaker_do_entry,
     texto_motion,
-    touchpad_do_inputs,
     uniq_do_entry,
 )
 from hefesto_dualsense4unix.app.widgets.sensor_widgets import (
@@ -252,40 +252,54 @@ from . import (
 # segundo dedo, a palavra sai daqui sem ninguém tocar nesta aba.
 
 
-def toque_do_controle(inputs: Any) -> tuple[str, str, tuple[float, float] | None]:
-    """`(palavra, ponto, onde)` do touchpad — as TRÊS linhas da GTK, num terno.
+# `toque_do_controle` MORREU EM 18/09/2026 — MULTITOQUE-01, e não é resto:
+# `dedos_do_controle`, logo abaixo, faz o que ela fazia e mais um dedo. Ela
+# devolvia `(palavra, ponto, onde)` para UMA bolinha, e mantê-la ao lado
+# deixaria dois donos da mesma pergunta — o defeito que esta aba já pagou
+# quando a palavra "Sem toque" vivia redigitada aqui e no produto.
+#
+# O QUE ELA GUARDAVA E A HERDEIRA HERDOU, inteiro: a posição sai mesmo sem
+# toque (a bolinha é invisível sem a classe `on`, decisão dela de 02/09 item
+# 15, e assim o dedo nasce no lugar certo em vez de piscar um quadro no
+# lugar anterior); e sem leitura os três dizem "não sei" — travessão, ponto
+# apagado, posição ausente —, que é a única coisa que esta tela pode fazer
+# sem inventar uma posição.
 
-    `palavra` é o `touch-estado`; `ponto` é o `touch-ponto`, que o desenho lê
-    como CLASSE (`data-hef-alvo="classe"`): `""` apaga o pontinho e qualquer
-    outra coisa o acende (`hefesto_vivo.BOOTSTRAP::ligado`); `onde` é a POSIÇÃO
-    do dedo em POR CENTO da superfície, ou `None` quando não houve leitura.
 
-    O TERCEIRO ERA JOGADO FORA, e ele é a queixa dela — *"não funciona o touch,
-    analogicos"*. `touchpad_do_inputs` devolve `(tocando, fx, fy)` com os dois
-    últimos já normalizados 0..1 pelos limites que o PRÓPRIO payload declara
-    (`sensor_widgets.posicao_normalizada`), e esta função lia só `lido[0]`: o
-    pontinho acendia e apagava certo, e ficava parado onde o mockup o cravou —
-    `left:62%;top:44%`. Acender no lugar errado é a mesma família de defeito que
-    esta aba já pagou duas vezes: **ter dono não é dizer a verdade**.
+def dedos_do_controle(
+    inputs: Any,
+) -> tuple[str, tuple[tuple[str, tuple[float, float] | None], ...]]:
+    """`(palavra, ((ponto, onde), …))` do touchpad — MULTITOQUE-01.
 
-    A POSIÇÃO VEM MESMO SEM TOQUE, e é de propósito: o pontinho está invisível
-    (`opacity:0` sem a classe `on`, decisão dela de 02/09 item 15), então
-    escrevê-la não afirma nada na tela — e quando o dedo pousa ele já nasce no
-    lugar certo, em vez de piscar um quadro na posição anterior.
+    A versão de DOIS dedos de `toque_do_controle`, e ela substitui aquela na
+    pintura desta aba. O DualSense tem dois pontos de toque no hardware
+    (`ABS_MT_SLOT 0..1`, medido no controle dela em 18/09/2026), e até esta
+    data a tela mostrava um: não por erro de desenho, mas porque o payload
+    trazia um — a queixa dela foi *"SÓ MOSTRA UM TOQUE NO DESENHO DO SVG
+    APESAR DO TOUCH SER MULTITOQUE"*.  <!-- noqa-acento: citação literal dela -->
 
-    Sem leitura, os TRÊS dizem "não sei": a palavra vira o travessão, o ponto
-    apaga e a posição some. Apagar aqui não é afirmar "ninguém está tocando" — é
-    a mesma recusa que a GTK faz escondendo o bloco inteiro, e é a única coisa
-    que esta tela pode fazer sem inventar uma posição.
+    A tupla tem SEMPRE `MAX_DEDOS` entradas, uma por bolinha do desenho, na
+    ordem dos slots do kernel. Um slot sem dedo devolve `("", None)`: a
+    bolinha apaga e a posição não é escrita — nunca uma coordenada inventada
+    para um dedo que não está lá.
+
+    A palavra é a do produto (`texto_toques`), agora com a contagem de
+    verdade: *Sem toque* · *1 toque* · *2 toques*.
     """
-    lido = touchpad_do_inputs(inputs)
-    if lido is None:
+    dedos = dedos_do_inputs(inputs)
+    if dedos is None:
         import mesa_viva
 
-        return (str(mesa_viva.SEM_LEITOR), "", None)
-    tocando = bool(lido[0])
-    return (texto_toques(1 if tocando else 0), "sim" if tocando else "",
-            (round(lido[1] * 100, 1), round(lido[2] * 100, 1)))
+        return (str(mesa_viva.SEM_LEITOR),
+                tuple(("", None) for _ in range(MAX_DEDOS)))
+    saida: list[tuple[str, tuple[float, float] | None]] = []
+    for indice in range(MAX_DEDOS):
+        if indice < len(dedos):
+            fx, fy = dedos[indice]
+            saida.append(("sim", (round(fx * 100, 1), round(fy * 100, 1))))
+        else:
+            saida.append(("", None))
+    return (texto_toques(len(dedos)), tuple(saida))
 
 
 # ---------------------------------------------------------------------------
@@ -439,8 +453,27 @@ def pos_do_analogico(v: Any) -> float:
 #: `folha_das_posicoes` os usa para a folha VIVA. Duas gramáticas para a mesma
 #: regra é o que faz as duas folhas divergirem sem ninguém ver — foi a lição do
 #: `seletor_do_plastico`.
+#: Quantos dedos o desenho tem bolinha para mostrar (MULTITOQUE-01).
+#:
+#: DOIS, e o número é do APARELHO, não de gosto: o nó de touchpad do
+#: DualSense declara `ABS_MT_SLOT min=0 max=1` — medido nos quatro controles
+#: dela em 18/09/2026. Um terceiro dedo não chega nem ao kernel (zero
+#: `GESTURE_SWIPE` em 45 s de gesto), e o zoom com três dedos funciona porque
+#: a pinça do libinput só precisa de dois.
+#:
+#: Ele mora AQUI e não no gerador da página porque quem escreve as bolinhas
+#: (`aba02.py`) e quem as pinta (esta aba) têm de concordar no número; dois
+#: literais em dois arquivos é como uma bolinha fica órfã de endereço.
+MAX_DEDOS: int = 2
+
 ALVOS_DA_POSICAO: dict[str, str] = {
-    "touch": ".touch .ponto",
+    # MULTITOQUE-01 (18/09/2026): DOIS dedos, um seletor cada. `.ponto` sem
+    # sufixo pegaria os dois e a folha viva escreveria a posição do dedo 1
+    # em cima do dedo 2 — as classes `ponto-1`/`ponto-2` existem para isso,
+    # e a classe `ponto` fica nas duas porque é ela que o piso e o CSS de
+    # aparência usam.
+    "touch": ".touch .ponto-1",
+    "touch2": ".touch .ponto-2",
     "ana-e": '.stick[data-stick="l"] .p',
     "ana-d": '.stick[data-stick="r"] .p',
 }
@@ -475,13 +508,22 @@ PISO_DAS_POSICOES = (
 
 
 def posicoes_do_controle(
-    inputs: Any, tem_leitor: bool, onde_o_dedo: tuple[float, float] | None
+    inputs: Any,
+    tem_leitor: bool,
+    onde_o_dedo: tuple[float, float] | None,
+    onde_o_dedo2: tuple[float, float] | None = None,
 ) -> dict[str, tuple[float, float] | None]:
-    """Os TRÊS pontinhos de um controle, em % — `None` no que não se leu.
+    """Os QUATRO pontinhos de um controle, em % — `None` no que não se leu.
 
-    `onde_o_dedo` vem de :func:`toque_do_controle`, que já perguntou ao dono
-    (`touchpad_do_inputs`); pedi-lo de novo aqui seria ler o mesmo bloco duas
-    vezes por tique e abrir a porta para as duas leituras discordarem.
+    `onde_o_dedo`/`onde_o_dedo2` vêm de :func:`dedos_do_controle`, que já
+    perguntou ao dono (`dedos_do_inputs`); pedi-los de novo aqui seria ler o
+    mesmo bloco duas vezes por tique e abrir a porta para as duas leituras
+    discordarem.
+
+    **O SEGUNDO DEDO É OPCIONAL na assinatura, e não no produto**
+    (MULTITOQUE-01, 18/09/2026): o default `None` existe para os chamadores
+    de um dedo só — que escrevem a bolinha 2 como "sem leitura", e é isso
+    que ela é para eles. Quem pinta esta aba passa os dois.
 
     OS ANALÓGICOS SÓ SAEM COM LEITOR. `tem_leitor` é o mesmo `isinstance(...,
     dict)` que o `pacote()` usa para os outros 46 campos: sem ele o repouso (128)
@@ -494,6 +536,7 @@ def posicoes_do_controle(
     e: dict[str, Any] = inputs if isinstance(inputs, dict) else {}
     return {
         "touch": onde_o_dedo,
+        "touch2": onde_o_dedo2,
         **{
             alvo: (
                 (pos_do_analogico(mesa_viva._eixo_do_analogico(e, cx)),
@@ -552,7 +595,7 @@ def leitura_viva(entrada: dict[str, Any]) -> dict[str, Any]:
     """Tudo o que o card LÊ do aparelho: glifos, gatilhos, analógicos, sensores.
 
     SEM LEITOR, TUDO VOLTA AO REPOUSO — e não ao último valor nem ao desenho. É
-    o `_reset_inputs_render` da GTK (`controller_card.py:5489`), linha por
+    o `_reset_inputs_render` da GTK (`controller_card.py:5542`), linha por
     linha: gatilhos em `0 / 255` com a barra vazia, analógicos no centro, os
     dezesseis glifos apagados e os sensores no travessão. Vale para METADE da
     mesa dela agora: o daemon só publica `inputs` para o `is_primary`.
@@ -1021,7 +1064,7 @@ def _bloco_do_speaker(entry: Any) -> dict[str, Any] | None:
     """O bloco `speaker` cru do controle, nas DUAS posições em que ele chega.
 
     ELE É A SEGUNDA LEITURA DA MESMA REGRA, e isso está declarado em vez de
-    escondido: o dono é `speaker_do_entry` (`controller_card.py:1936`), que
+    escondido: o dono é `speaker_do_entry` (`controller_card.py:1989`), que
     conhece as duas posições — `entry["speaker"]` e `entry["inputs"]["speaker"]`
     — mas devolve só `(volume, muted)`. A ROTA não passa por ele, e alargar a
     assinatura do widget da GTK a partir daqui não é trabalho desta aba.
@@ -2266,7 +2309,7 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
         #   1. o bloco chega em DUAS posições. `speaker_do_entry` aceita
         #      `entry["speaker"]` **e** `entry["inputs"]["speaker"]` porque
         #      *"quem publica é o daemon, e o widget não pode quebrar por causa
-        #      de onde o dado mora"* (`controller_card.py:1936`). Medido na mesa
+        #      de onde o dado mora"* (`controller_card.py:1989`). Medido na mesa
         #      dela em 02/09/2026 às 16h: o daemon publica nas DUAS. No dia em
         #      que ele publicar só na de dentro, esta aba ficava cega e a de
         #      cima continuava dizendo um número;
@@ -2327,12 +2370,17 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
         # dentro de `touchpad_do_inputs`, e a razão de a recusa anterior ter
         # caído está no bloco `O TOUCHPAD` no topo deste arquivo, com as 60
         # leituras que a mediram.
-        toque_txt, toque_ponto, onde_o_dedo = toque_do_controle(e)
+        # MULTITOQUE-01 (18/09/2026): `dedos_do_controle` no lugar de
+        # `toque_do_controle`. A palavra agora conta os dedos de verdade
+        # ("2 toques"), e cada bolinha tem o seu par (classe, posição).
+        toque_txt, dedos = dedos_do_controle(e)
+        toque_ponto, onde_o_dedo = dedos[0]
+        toque_ponto2, onde_o_dedo2 = dedos[1]
         # A POSIÇÃO DOS TRÊS PONTINHOS, pelo `pref` do assento — que é o que o
         # `data-controle` das páginas traz, e o mesmo endereço que a
         # `folha_do_plastico` usa. Sem `pref` na mesa não há seletor a escrever.
         posicoes[str(casa.get("pref") or "")] = posicoes_do_controle(
-            e, tem_leitor, onde_o_dedo)
+            e, tem_leitor, onde_o_dedo, onde_o_dedo2)
         # A IDENTIDADE DO CABEÇALHO, pelos donos: a ordem das quatro fontes é de
         # `identidade_de`, e a tradução do transporte é a MESMA que a mesa usa.
         #
@@ -2585,6 +2633,10 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
                 # tá carregando tambem"*.  # noqa-acento: citação literal dela
                 "bateria-carga": carga_na_tela(c.get("battery_state")),
                 "touch-ponto": toque_ponto,
+                # A SEGUNDA BOLINHA — MULTITOQUE-01. Ela acende pela mesma
+                # via da primeira (classe), e não por `style`: o `style` de
+                # posição é da FOLHA VIVA, que `folha_das_posicoes` escreve.
+                "touch-ponto-2": toque_ponto2,
                 # O `alto-estado` DESCEU PARA CÁ — 04/09/2026, decisão [09]
                 # resolvida. Ele era emitido SEMPRE, para um `<span
                 # class="mudo" data-campo="alto-estado" hidden>` que o piloto
@@ -3606,7 +3658,7 @@ def mudo(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
         # que o deslizante do volume já faz, e a resposta vem do MESMO dono.
         #
         # A FRASE É DO PRODUTO, e nenhuma nasce aqui: `frase_do_alvo_do_mic`
-        # (`app/widgets/controller_card.py:2191`) é a dona dos três estados, e
+        # (`app/widgets/controller_card.py:2244`) é a dona dos três estados, e
         # `alvo_honrado` (`app/ipc_bridge.py:1160`) é quem os lê do corpo. Os
         # dois devolvem "nada a dizer" para `True` e para `None` de propósito —
         # *"não sei" não é "não honrei"*, e inventar a confissão por ausência de
