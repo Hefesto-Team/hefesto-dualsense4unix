@@ -375,6 +375,32 @@ def melhor_fonte_elegivel() -> str | None:
     return nome or None
 
 
+def outra_captura_elegivel() -> str | None:
+    """A melhor captura com porta usável que não é CONTROLE NENHUM, ou `None`.
+
+    Irmã de :func:`melhor_fonte_elegivel`, e a diferença é o canal por controle
+    (``hefesto_mic_<hex6>``): lá ele entra de propósito — é o §D.2 da
+    MIC-PADRAO-NO-CABO-01, em que pelo rádio o eleito do install é o microfone
+    virtual do controle —, e aqui ele é controle. Quem pergunta é o nascimento
+    do microfone (`daemon/subsystems/hotkey._microfone_que_ja_e_da_maquina`):
+    *"esta máquina tem um microfone que a pessoa usa e que não é um DualSense?"*.
+    Com a pergunta de lá, o canal do primeiro controle da mesa passaria por
+    headset e o segundo nunca elegeria na máquina que só tem os controles.
+
+    `None` também quando o script não conhece a pergunta (produto instalado
+    mais velho que o pacote): é o comportamento de antes desta função, e nunca
+    uma instalação silenciosa — ver :func:`_script_conhece`.
+    """
+    script = _script_do_wireplumber()
+    if script is None or not _script_conhece(script, "--outra-captura-elegivel"):
+        return None
+    rc, saida = _rodar(["bash", str(script), "--outra-captura-elegivel"])
+    if rc != 0:
+        return None
+    nome = saida.strip().splitlines()[-1].strip() if saida.strip() else ""
+    return nome or None
+
+
 def fonte_ativa() -> str | None:
     """`pactl get-default-source`, ou `None` quando a resposta não significa nada.
 
@@ -962,6 +988,7 @@ __all__ = [
     "fonte_se_sustenta",
     "fontes_de_captura_agora",
     "melhor_fonte_elegivel",
+    "outra_captura_elegivel",
     "palavra_no_ar",
     "pedir_canal",
     "recusa_de_quem_nao_elegeu",

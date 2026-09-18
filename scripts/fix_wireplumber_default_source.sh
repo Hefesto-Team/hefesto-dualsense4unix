@@ -159,6 +159,7 @@ for arg in "$@"; do
     esac
     case "$arg" in
         --melhor-fonte-elegivel) MODE="melhor-fonte-elegivel" ;;
+        --outra-captura-elegivel) MODE="outra-captura-elegivel" ;;
         --install)        MODE="install" ;;
         --disable-source) MODE="disable" ;;
         --reset-only)     MODE="reset" ;;
@@ -277,6 +278,10 @@ pick_target_source_id() {
 # passava a contar dois monitores como "outras fontes disponíveis" — e voltava a
 # acusar o drop-in. Uma lista que não significa o próprio nome vira duas
 # verdades assim que ganha o segundo leitor.
+#
+# O CANAL POR CONTROLE (`hefesto_mic_…`) FICA NA LISTA DE PROPÓSITO: é o §D.2 da
+# MIC-PADRAO-NO-CABO-01 — pelo rádio, o eleito do install é o microfone virtual
+# do controle. Quem precisa da pergunta sem ele é `outra_captura_elegivel`.
 fontes_elegiveis() {
     [[ -r "${DOCTOR_SH}" ]] || return 1
     command -v pactl >/dev/null 2>&1 || return 1
@@ -346,6 +351,35 @@ pick_target_source_name() {
     # "não há fonte elegível".
     local elegiveis
     elegiveis="$(fontes_elegiveis)" || return 1
+    [[ -n "${elegiveis}" ]] || return 0
+    printf '%s\n' "${elegiveis}" | bash -c '
+        doutor="$1"
+        set --
+        source "${doutor}" >/dev/null 2>&1 || exit 0
+        _melhor_source_de_captura 0
+    ' -- "${DOCTOR_SH}" 2>/dev/null || true
+}
+
+# NASCE-NO-BOOT (18/09/2026) — "EXISTE UM MICROFONE QUE NÃO É CONTROLE NENHUM?"
+#
+# É a pergunta do NASCIMENTO do microfone (`hotkey._microfone_que_ja_e_da_maquina`,
+# no daemon): com a mesa sem dono ele elegia o controle fonte padrão da máquina,
+# e numa máquina com headset isso tomava o microfone da pessoa a cada partida
+# do daemon. Ele só pode eleger quando a resposta daqui é VAZIA.
+#
+# NÃO É `pick_target_source_name`, e a diferença é uma linha: aquela lista deixa
+# o canal por controle (`hefesto_mic_…`) entrar, pelo §D.2 da
+# MIC-PADRAO-NO-CABO-01. Para o nascimento o canal de outro controle é CONTROLE:
+# com dois DualSense na mesa, o canal do primeiro não pode passar por headset e
+# impedir a eleição na máquina que só tem os controles. O prefixo é o de
+# `fontes_de_captura.PREFIXO_SOURCE_CANAL_DO_MIC`, e há régua sobre os dois lados.
+#
+# Mesmo contrato de saída de `pick_target_source_name`: exit 1 = não deu para
+# consultar; exit 0 vazio = não há; exit 0 com nome = a melhor que há.
+outra_captura_elegivel() {
+    local elegiveis
+    elegiveis="$(fontes_elegiveis)" || return 1
+    elegiveis="$(printf '%s\n' "${elegiveis}" | awk 'tolower($2) !~ /^hefesto_mic_/')"
     [[ -n "${elegiveis}" ]] || return 0
     printf '%s\n' "${elegiveis}" | bash -c '
         doutor="$1"
@@ -982,7 +1016,8 @@ ACORDADO_MUDOU=1
 # no `case` abaixo.
 if [[ "${MODE}" != "status" && "${MODE}" != "marcar-gesto" \
    && "${MODE}" != "apagar-gesto" && "${MODE}" != "fonte-se-sustenta" \
-   && "${MODE}" != "melhor-fonte-elegivel" ]]; then
+   && "${MODE}" != "melhor-fonte-elegivel" \
+   && "${MODE}" != "outra-captura-elegivel" ]]; then
     rc_acordado=0
     install_dropin_acordado || rc_acordado=$?
     case "${rc_acordado}" in
@@ -1026,6 +1061,13 @@ case "${MODE}" in
         # ele é pintado da RELEITURA do ativo, nunca do que mandamos.
         rc_consulta=0
         pick_target_source_name || rc_consulta=$?
+        exit "${rc_consulta}"
+        ;;
+    outra-captura-elegivel)
+        # Consulta pura, irmã da de cima: nada de drop-in, restart ou `pactl`
+        # que escreva. Ver `outra_captura_elegivel`.
+        rc_consulta=0
+        outra_captura_elegivel || rc_consulta=$?
         exit "${rc_consulta}"
         ;;
     nunca-dorme)

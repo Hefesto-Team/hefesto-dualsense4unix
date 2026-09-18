@@ -296,3 +296,152 @@ def test_sem_elegivel_a_funcao_devolve_vazio_e_nao_erro(tmp_path) -> None:
     r = subprocess.run(["bash", str(roteiro)], capture_output=True, text=True)
     assert r.returncode == 0, f"devolveu erro em vez de vazio: {r.stderr}"
     assert r.stdout.strip() == "", f"sobrou algo que não devia: {r.stdout!r}"
+
+
+# --------------------------------------------------------------------------
+# 5. "Existe um microfone que NÃO é controle nenhum?" (18/09/2026)
+# --------------------------------------------------------------------------
+#: O canal que o daemon publica por controle — `hefesto_mic_<hex6>`, sufixo
+#: sintético. O nome dele NÃO tem a palavra `dualsense`.
+NO_DO_CANAL = "hefesto_mic_0000b1"
+
+
+def _rodar_a_consulta(tmp_path: pathlib.Path, curta: str, funcao: str) -> str:
+    """Uma consulta REAL do wp-fix contra um `pactl` e um doctor de mentira.
+
+    O doctor de mentira deixa toda porta passar e traz o ranqueador REAL do
+    `doctor.sh` — assim o que sobra é exatamente o que as funções do wp-fix
+    decidem, e o ranqueamento é o do produto.
+    """
+    falso_bin = tmp_path / "bin"
+    falso_bin.mkdir()
+    (falso_bin / "pactl").write_text(
+        "#!/usr/bin/env bash\n"
+        'if [[ "$*" == *short* ]]; then cat "$PACTL_CURTA"; else echo "(longo)"; fi\n',
+        encoding="utf-8",
+    )
+    (falso_bin / "pactl").chmod(0o755)
+    doutor = tmp_path / "doctor.sh"
+    doutor.write_text(
+        "_sources_com_porta_usavel() { cat; }\n"
+        + _corpo(DOCTOR.read_text(encoding="utf-8"), "_melhor_source_de_captura")
+        + "\n}\n",
+        encoding="utf-8",
+    )
+    entrada = tmp_path / "curta.txt"
+    entrada.write_text(curta, encoding="utf-8")
+    roteiro = tmp_path / "roda.sh"
+    fontes = "".join(
+        f"source <(sed -n '/^{nome}()/,/^}}/p' '{FIX}')\n"
+        for nome in ("fontes_elegiveis", funcao)
+    )
+    roteiro.write_text(
+        "set -uo pipefail\n"
+        f'DOCTOR_SH="{doutor}"\n'
+        f'export PATH="{falso_bin}:$PATH" PACTL_CURTA="{entrada}"\n'
+        f"{fontes}{funcao}\n",
+        encoding="utf-8",
+    )
+    r = subprocess.run(["bash", str(roteiro)], capture_output=True, text=True)
+    assert r.returncode == 0, r.stderr
+    return r.stdout.strip()
+
+
+def test_so_os_controles_na_maquina_nao_ha_outra_captura(tmp_path) -> None:
+    """A mesa dela: o microfone do cabo e o canal do rádio, e nada mais.
+
+    O nascimento do microfone (`hotkey._microfone_que_ja_e_da_maquina`) só
+    elege o controle fonte padrão quando esta resposta é VAZIA. Se o canal de
+    um controle passasse por outra captura, na mesa dela — os canais do rádio
+    de pé desde a partida — nenhum controle elegeria mais.
+
+    MORDIDA: tire o `awk ... !~ /^hefesto_mic_/` de `outra_captura_elegivel`.
+    """
+    curta = (
+        f"1027\t{NO_DO_MIC}\tPipeWire\ts32le 2ch\tSUSPENDED\n"
+        f"1040\t{NO_DO_CANAL}\tPipeWire\ts16le 1ch\tRUNNING\n"
+    )
+
+    assert _rodar_a_consulta(tmp_path, curta, "outra_captura_elegivel") == "", (
+        "o canal por controle passou como microfone que NÃO é controle"
+    )
+
+
+def test_o_d2_continua_valendo_para_o_install(tmp_path) -> None:
+    """O contraste: a lista do install mantém o canal, pelo §D.2.
+
+    MIC-PADRAO-NO-CABO-01, §D.2: *"Pelo rádio, o eleito é o `hefesto_mic_…`"*.
+    A pergunta do nascimento é outra função justamente para não desfazer esta.
+    """
+    curta = (
+        f"1027\t{NO_DO_MIC}\tPipeWire\ts32le 2ch\tSUSPENDED\n"
+        f"1040\t{NO_DO_CANAL}\tPipeWire\ts16le 1ch\tRUNNING\n"
+    )
+
+    assert _rodar_a_consulta(tmp_path, curta, "pick_target_source_name") == NO_DO_CANAL
+
+
+def test_com_o_canal_de_pe_o_headset_continua_sendo_a_resposta(tmp_path) -> None:
+    """O canal vem ANTES na lista e mesmo assim não esconde a webcam."""
+    curta = (
+        f"1040\t{NO_DO_CANAL}\tPipeWire\ts16le 1ch\tRUNNING\n"
+        f"1030\t{NO_DA_WEBCAM}\tPipeWire\ts16le 2ch\tSUSPENDED\n"
+    )
+
+    assert _rodar_a_consulta(tmp_path, curta, "outra_captura_elegivel") == NO_DA_WEBCAM
+
+
+def test_o_prefixo_do_shell_e_o_do_dono_python(fix: str) -> None:
+    """Duas grafias do mesmo nome; o dono é `PREFIXO_SOURCE_CANAL_DO_MIC`.
+
+    Se o prefixo mudar no Python e não aqui, a consulta volta a contar o canal
+    como microfone da máquina — calada, porque nada no shell importa o Python.
+    """
+    from hefesto_dualsense4unix.integrations.fontes_de_captura import (
+        PREFIXO_SOURCE_CANAL_DO_MIC,
+    )
+
+    corpo = _corpo(fix, "outra_captura_elegivel")
+    assert f"/^{PREFIXO_SOURCE_CANAL_DO_MIC}/" in corpo
+
+
+def test_a_consulta_nova_e_consulta_e_nao_escreve(fix: str) -> None:
+    """O modo tem de estar na lista dos que NÃO instalam drop-in.
+
+    O despacho do wp-fix instala o drop-in 54 em todo modo fora dessa lista. Uma
+    consulta que o daemon faz a cada nascimento de microfone escreveria na
+    configuração do WirePlumber de quem conecta um controle.
+    """
+    inicio = fix.index("ACORDADO_MUDOU=1")
+    guarda = fix[inicio : fix.index("install_dropin_acordado ||", inicio)]
+    assert '"${MODE}" != "outra-captura-elegivel"' in guarda, (
+        "a consulta nova caiu fora da lista de consultas — ela instalaria drop-in"
+    )
+    assert "--outra-captura-elegivel) MODE=" in fix
+    assert "    outra-captura-elegivel)\n" in fix
+
+
+def test_o_daemon_alcanca_a_consulta_nova(monkeypatch: pytest.MonkeyPatch) -> None:
+    """O lado Python pergunta ao script DESTA árvore, e o script conhece a flag.
+
+    Sem isto `outra_captura_elegivel` devolveria `None` sempre — "não há outro
+    microfone" — e o nascimento voltaria a tomar o microfone de quem tem
+    headset, com todas as réguas de cima verdes.
+    """
+    from hefesto_dualsense4unix.integrations import eleicao_de_microfone as elm
+
+    assert elm._script_do_wireplumber() == FIX
+    assert elm._script_conhece(FIX, "--outra-captura-elegivel")
+
+    pedidos: list[list[str]] = []
+
+    def _rodar(argv: list[str]) -> tuple[int, str]:
+        pedidos.append(argv)
+        return (0, f"{NO_DA_WEBCAM}\n")
+
+    monkeypatch.setattr(elm, "_rodar", _rodar)
+    assert elm.outra_captura_elegivel() == NO_DA_WEBCAM
+    assert pedidos == [["bash", str(FIX), "--outra-captura-elegivel"]]
+
+    monkeypatch.setattr(elm, "_rodar", lambda argv: (1, ""))
+    assert elm.outra_captura_elegivel() is None, "consulta que falhou virou nome"
