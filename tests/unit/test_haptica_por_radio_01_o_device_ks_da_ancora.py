@@ -200,3 +200,21 @@ def test_a_instancia_do_radio_e_reconhecida_como_nossa(sysfs: Path, udev: Path) 
     (controle,) = ks.controles_no_radio(sysfs, udev, _dubles(_sinks()))
     for bloco in ks.blocos_do_controle(controle, [bytes(8)], 1758000000):
         assert ks.e_bloco_nosso(bloco), bloco.split("\n", 1)[0]
+
+
+def test_o_pactl_e_perguntado_na_locale_c_porque_o_desta_casa_traduz(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """O `pactl` desta máquina responde em português — e o leitor fica CEGO.
+
+    Medido em 18/09/2026, numa prova de ponta a ponta que voltou vazia: sem
+    `LC_ALL=C` a saída vem com `Nome:` e `Destino #`, nenhum campo casa, e o
+    produto responde "não há endpoint" com o endpoint de pé. A casa já tinha
+    pago por isto em 15/08/2026, do outro lado do mesmo comando.
+    """
+    falso = tmp_path / "pactl"
+    falso.write_text('#!/bin/sh\nprintf "LC_ALL=%s\\n" "${LC_ALL:-vazio}"\n', encoding="utf-8")
+    falso.chmod(0o755)
+    monkeypatch.setenv("PATH", str(tmp_path))
+    monkeypatch.setenv("LC_ALL", "pt_BR.UTF-8")
+    assert ks._pactl(["pactl", "list", "sinks"]) == "LC_ALL=C\n"
