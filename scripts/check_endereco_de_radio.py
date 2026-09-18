@@ -137,6 +137,23 @@ MAC = re.compile(r"\b([0-9A-Fa-f]{2}):([0-9A-Fa-f]{2}):([0-9A-Fa-f]{2}):"
 ISENCAO = re.compile(r"<!--\s*endereco-de-mentira\s*:\s*\S")
 SERIAL = re.compile(r"(?<![0-9A-Fa-f])([0-9A-Fa-f]{12})(?![0-9A-Fa-f])")
 
+#: Sufixos de GUID PÚBLICO que parecem serial, um por um e com a origem.
+#:
+#: Não se pula "todo fim de GUID", e o motivo é medido: GUID de versão 1 guarda
+#: no último grupo o MAC da máquina que o gerou (o `uuid.uuid1()` do Python faz
+#: isso até hoje). O próprio KSCATEGORY_AUDIO é versão 1 (`11D0`) e o
+#: `00A0C9` dele é um OUI de verdade — de uma máquina da Microsoft em 1996, não
+#: de quem joga. Constante do SDK é pública; o GUID gerado aqui não seria.
+CONSTANTES_DE_ESPECIFICACAO = {
+    # UUID BASE do Bluetooth SIG (`00001101-0000-1000-8000-00805F9B34FB`),
+    # que aparece em todo lugar que fala de perfil BT.
+    "00805F9B34FB",
+    # KSCATEGORY_AUDIO (`{6994AD04-93EF-11D0-A3CC-00A0C9223196}`), a classe de
+    # interface que a RE Engine enumera para achar a háptica do DualSense
+    # (`integrations/audio_ks_dualsense.py`).
+    "00A0C9223196",
+}
+
 
 def mascarado(o4: str, o5: str) -> bool:
     """A máscara da casa: octetos 4 e 5 zerados."""
@@ -188,10 +205,7 @@ def acusa_serial(linha: str) -> list[str]:
             continue
         if s[:4] == "AABB":            # o didático
             continue
-        # `00805F9B34FB` é o sufixo do UUID BASE do Bluetooth SIG
-        # (`00001101-0000-1000-8000-00805F9B34FB`), que aparece em todo lugar
-        # que fala de perfil BT. É constante da especificação, não endereço.
-        if s == "00805F9B34FB":
+        if s in CONSTANTES_DE_ESPECIFICACAO:
             continue
         achados.append(m.group(1))
     return achados

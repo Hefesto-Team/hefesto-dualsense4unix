@@ -329,6 +329,14 @@ _PONTOS_DE_ENTRADA: dict[str, tuple[str, str, str]] = {
         "install.sh:3950 (--ensure) e uninstall.sh:1444 o rodam; "
         "doctor.sh:3995 (check_proton_pin, --report) também",
     ),
+    "integrations/audio_ks_dualsense.py": (
+        "install.sh",
+        "src/hefesto_dualsense4unix/integrations/audio_ks_dualsense.py",
+        "install.sh:2970 o copia para ~/.local/share/hefesto-dualsense4unix/"
+        "bin/hefesto-audio-ks, e o assets/hefesto-launch.sh:445 "
+        "(curar_audio_ks) o roda a cada jogo lançado; uninstall.sh:1589 o "
+        "roda com --remover-de-todos",
+    ),
     "integrations/exame_da_mesa.py": (
         "scripts/doctor.sh",
         "src/hefesto_dualsense4unix/integrations/exame_da_mesa.py",

@@ -101,6 +101,14 @@ _HASHES_UPSTREAM_DOCUMENTADOS = frozenset(
         # aparecem em qualquer fixture que reproduza o `Services=` do BlueZ
         # (test_bt_sdp_cache.py). Mesma natureza dos hashes upstream acima.
         "00805f9b34fb",
+        # Dois GUIDs do SDK do Windows, mesma natureza do UUID base do SIG:
+        # o device KS da háptica (test_haptica_nativa_01_…) é gravado com a
+        # classe USB e lido pelo ContainerId do endpoint, e as duas chaves
+        # são constantes públicas que todo registro Wine carrega.
+        # GUID_DEVCLASS_USB {36FC9E60-C465-11CF-8056-444553540000}.
+        "444553540000",
+        # PKEY_Device_ContainerId {8c7ed206-3f8a-4827-b3ab-ae9e1faefc6c},2.
+        "ae9e1faefc6c",
     }
 )
 

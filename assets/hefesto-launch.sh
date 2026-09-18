@@ -96,6 +96,8 @@ PYEOF
             PROTON_DISABLE_HIDRAW=*)             printf '%s\n' "$line" ;;
             __GL_SHADER_DISK_CACHE=*)            printf '%s\n' "$line" ;;
             __GL_SHADER_DISK_CACHE_SKIP_CLEANUP=*) printf '%s\n' "$line" ;;
+            PROTON_KEEP_SONY_AUDIO_ENDPOINT_VISIBLE=*) printf '%s\n' "$line" ;;
+            PROTON_ENABLE_MHWILDS_USB_AUDIO=*)   printf '%s\n' "$line" ;;
         esac
     done < "$envfile"
     return 0
@@ -391,9 +393,92 @@ curar_camadas_vulkan() {
     return 0
 }
 
+# HAPTICA-NATIVA-01 (17/09/2026) — a vibração da Sony, que viaja como ÁUDIO.
+#
+# O PRAGMATA acha o alvo da vibração perguntando ao `setupapi` por um device
+# `KSCATEGORY_AUDIO` com o mesmo ContainerId do alto-falante do controle. O
+# GE-Proton não cria esse device para o DualSense; o curador
+# `hefesto-audio-ks` o grava no `system.reg` do prefixo, antes do `wineserver`
+# subir. Vibrou na mão dela, com o físico direto e em modo produto.
+#
+# Há DualSense no CABO, com placa de som? Por Bluetooth não há placa de áudio,
+# e sem o controle a opção do MHWilds só expõe KS falso de headset USB — a
+# classe de defeito que quebrou o Black Desert Online no GE. Raiz injetável
+# (`HEFESTO_SYSFS`) para a suíte nunca ler o controle dela.
+#
+# SÓ SHELL PURO, sem `cat` nem `sed`: medido na suíte, com um PATH mínimo a
+# troca por `sed` devolvia VAZIO e o jogo perdia TODAS as variáveis, não só
+# esta. Um passo novo do wrapper nunca pode custar as envs que já funcionavam.
+dualsense_no_cabo() {
+    for d in "${HEFESTO_SYSFS:-/sys}"/bus/usb/devices/*; do
+        [ -r "$d/idVendor" ] && [ -r "$d/idProduct" ] || continue
+        IFS= read -r ks_vid 2>/dev/null <"$d/idVendor" || continue
+        [ "$ks_vid" = "054c" ] || continue
+        IFS= read -r ks_pid 2>/dev/null <"$d/idProduct" || continue
+        case "$ks_pid" in
+            0ce6|0df2) ;;
+            *) continue ;;
+        esac
+        for s in "$d"/*/sound/card*; do
+            [ -e "$s" ] && return 0
+        done
+    done
+    return 1
+}
+
+# O device KS é refeito A CADA LANÇAMENTO: o DEVNUM muda a cada replug, e uma
+# sessão sem a opção apaga os valores da chave. O curador só escreve quando algo
+# mudou. Sem a opção ligada, só limpa o que for nosso (portão barato de 2 ms).
+# À prova de falha, como a cura das camadas.
+curar_audio_ks() {
+    prefixo="${STEAM_COMPAT_DATA_PATH:-}"
+    [ -n "$prefixo" ] || return 0
+    reg="$prefixo/pfx/system.reg"
+    [ -f "$reg" ] || return 0
+    case "$hefesto_envs" in
+        *PROTON_ENABLE_MHWILDS_USB_AUDIO=1*) ks_modo="" ;;
+        *)
+            grep -qF 'HEFESTOKS' "$reg" 2>/dev/null || return 0
+            ks_modo="--remover"
+            ;;
+    esac
+    curador="$HOME/.local/share/hefesto-dualsense4unix/bin/hefesto-audio-ks"
+    [ -x "$curador" ] || return 0
+    command -v python3 >/dev/null 2>&1 || return 0
+    if command -v timeout >/dev/null 2>&1; then
+        ks_run="timeout 10"
+    else
+        ks_run=""
+    fi
+    LD_LIBRARY_PATH= LD_PRELOAD= PYTHONPATH= PYTHONHOME= \
+        $ks_run python3 "$curador" --prefixo "$prefixo" \
+        --sysfs "${HEFESTO_SYSFS:-/sys}" $ks_modo >/dev/null 2>&1
+    return 0
+}
+
 record_last_run || true
 
 hefesto_envs="$(decide_envs)" || hefesto_envs=""
+
+# Sem DualSense no cabo, a opção do MHWilds sai como "0" ESCRITO — omitir não
+# desliga, porque o `proton` preenche do `user_settings.py` toda chave ausente.
+case "$hefesto_envs" in
+    *PROTON_ENABLE_MHWILDS_USB_AUDIO=1*)
+        if ! dualsense_no_cabo; then
+            ks_envs=""
+            while IFS= read -r kv; do
+                case "$kv" in
+                    PROTON_ENABLE_MHWILDS_USB_AUDIO=1) kv="PROTON_ENABLE_MHWILDS_USB_AUDIO=0" ;;
+                esac
+                ks_envs="${ks_envs}${kv}
+"
+            done <<HEFESTO_KS_EOF
+$hefesto_envs
+HEFESTO_KS_EOF
+            hefesto_envs="$ks_envs"
+        fi
+        ;;
+esac
 
 if [ -n "$hefesto_envs" ]; then
     # Prependa cada VAR=VAL como argumento do env(1) — assignments precisam
@@ -410,6 +495,10 @@ fi
 # `wineserver` deste prefixo só sobe DEPOIS — e é ele quem lê o registro. À
 # prova de falha, mesma disciplina do Game Mode.
 curar_camadas_vulkan || true
+
+# O device de áudio KS do DualSense (HAPTICA-NATIVA-01): também antes do exec,
+# pelo mesmo motivo — o `wineserver` deste prefixo ainda não subiu.
+curar_audio_ks || true
 
 # Game Mode COSMIC (PLAT-05): DEPOIS das envs decididas, ANTES do exec — e à
 # prova de falha: o jogo abre mesmo se nada disso funcionar.

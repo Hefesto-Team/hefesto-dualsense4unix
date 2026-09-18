@@ -2954,6 +2954,25 @@ else
 fi
 
 # ---------------------------------------------------------------------------
+# 4b-4. Device de áudio KS do DualSense (HAPTICA-NATIVA-01) — DEFAULT, sem flag
+# ---------------------------------------------------------------------------
+# O PRAGMATA (RE Engine) acha o alvo da vibração perguntando ao `setupapi` por
+# um device KSCATEGORY_AUDIO com o ContainerId do alto-falante do controle, e o
+# GE-Proton não o cria para o DualSense. O `hefesto-launch` chama este curador
+# em todo jogo com DualSense no cabo, antes do `wineserver` subir. Mesmo
+# tratamento do curador de camadas acima: stdlib, materializado ao lado do
+# wrapper, a fonte da verdade continua UMA.
+readonly AUDIO_KS_SRC="${ROOT_DIR}/src/hefesto_dualsense4unix/integrations/audio_ks_dualsense.py"
+readonly AUDIO_KS_TARGET="${HOME}/.local/share/hefesto-dualsense4unix/bin/hefesto-audio-ks"
+if [[ "${DRY_RUN:-0}" -eq 1 && -f "${AUDIO_KS_SRC}" ]]; then
+    _faria "instalar o curador do device de áudio KS em ${AUDIO_KS_TARGET}"
+elif [[ -f "${AUDIO_KS_SRC}" ]]; then
+    install -Dm755 "${AUDIO_KS_SRC}" "${AUDIO_KS_TARGET}"
+else
+    warn "audio_ks_dualsense.py ausente — a háptica nativa do DualSense não chega aos jogos RE Engine"
+fi
+
+# ---------------------------------------------------------------------------
 # 4c. Perfis default (primeira instalação copia; reinstalação preserva)
 # ---------------------------------------------------------------------------
 if [[ "${DRY_RUN:-0}" -eq 1 && -f "${ROOT_DIR}/scripts/install_profiles.sh" ]]; then
