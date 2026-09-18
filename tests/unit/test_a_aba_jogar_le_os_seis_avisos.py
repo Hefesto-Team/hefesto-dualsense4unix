@@ -144,13 +144,29 @@ def test_a_porta_do_markup_e_uma_so() -> None:
         f"contagem de um par declarado sobe — use `_sem_markup`.")
 
 
-def test_todo_selo_novo_esta_na_escada_da_gravidade() -> None:
+def test_todo_selo_novo_esta_na_escada_da_gravidade(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     """Selo fora de `ORDEM_DA_GRAVIDADE` é selo que a máquina cheia esconde.
 
     `a01_jogar._coluna_de_avisos` põe o que não está na tupla DEPOIS DE TUDO, e
     a coluna mostra `AVISOS_NA_COLUNA` de cada vez. Um selo nomeado neste
     arquivo e ausente da escada nasce condenado ao `+N`.
+
+    **O EXAME DA MÁQUINA FICA DE FORA, e esta régua media a máquina até
+    18/09/2026.** Os achados de `a08_conexoes._exame` ficam fora da escada POR
+    CONTRATO — o comentário de `ORDEM_DA_GRAVIDADE` diz *"O QUE NÃO ESTÁ AQUI
+    VAI DEPOIS (...) são os achados do exame da mesa, que já vêm ordenados pelo
+    dono deles"* —, e esta régua chamava o exame DE VERDADE. Ela só passava
+    enquanto o computador de quem roda estava todo verde: depois de uma queda
+    de energia, com os controles descarregados, o exame "Suporte ao controle"
+    deu atenção, o selo `AJUSTAR` entrou na conta e a régua reprovou código
+    correto. Em qualquer outro computador, com um exame em atenção, seria o
+    mesmo vermelho falso. Desligar o exame aqui não esconde nada que a régua
+    devesse ver: o `ERRO` que o exame produz quando FALHA é nomeado neste
+    arquivo e já está na escada.
     """
+    monkeypatch.setattr(aba, "_do_exame", lambda: [])
     selos = [a.selo for a in painel.AVISOS_DA_TELA]
     selos += [str(a["selo"]) for a in aba._avisos(
         Contexto(state=_com_divergencia(), mesa=[], conectados=[], estados={}))]
