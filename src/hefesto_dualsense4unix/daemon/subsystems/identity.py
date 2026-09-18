@@ -506,6 +506,31 @@ def order_entries(data: Any) -> list[tuple[str, str, int]]:
     return entradas
 
 
+def _entradas_expurgadas(data: Any) -> list[str]:
+    """Os endereços de faixa sintética que ``order_entries`` acabou de comer.
+
+    Existe para o ``load`` saber que o arquivo do disco está SUJO e ter o que
+    regravar. Sem ela o expurgo seria eterno e inútil: a leitura limparia, o
+    save nunca rodaria (nada mudou no mapa vivo) e o próximo boot repetiria o
+    trabalho sobre a mesma fila podre.
+
+    Devolve os endereços ANONIMIZADOS? Não — eles são de faixa sintética por
+    definição, que é o que os torna publicáveis no log sem máscara nenhuma.
+    """
+    if not isinstance(data, dict):
+        return []
+    bruto = data.get(ORDER_FIELD)
+    if not isinstance(bruto, list):
+        return []
+    return [
+        item["addr"]
+        for item in bruto
+        if isinstance(item, dict)
+        and isinstance(item.get("addr"), str)
+        and e_endereco_sintetico(item["addr"])
+    ]
+
+
 def merged_order_payload(
     existente: Any, kind: str, ranks: dict[str, int]
 ) -> list[dict[str, Any]]:
@@ -1688,7 +1713,26 @@ class ControllerIdentityRegistry:
                 for addr, kind, rank in order_entries(data)
                 if kind == KIND_DUALSENSE
             ]
+            # O EXPURGO CHEGA AO DISCO — 18/09/2026, e esta é a metade que
+            # faltava. `order_entries` deixa de devolver a faixa sintética,
+            # mas o save só roda quando algo MUDOU: carregar não muda nada, e
+            # a fila podre ficava no arquivo dela para sempre, expurgada a
+            # cada leitura e regravada igual à seguinte. MEDIDO no primeiro
+            # restart do daemon com a cura: os quatro fantasmas continuavam
+            # lá. Contar o que o arquivo trazia contra o que sobreviveu é o
+            # que transforma a leitura defensiva em CURA.
+            expurgadas = _entradas_expurgadas(data)
+            if expurgadas:
+                logger.info(
+                    "identity_faixa_sintetica_expurgada",
+                    quantas=len(expurgadas),
+                    enderecos=expurgadas,
+                )
+                self._dirty = True
             if not entradas:
+                if expurgadas:
+                    self._save_locked()
+                    self._dirty = False
                 return
             anchor = _session_anchor()
             if anchor is not None and data.get("boot_id") != anchor:
@@ -1717,6 +1761,10 @@ class ControllerIdentityRegistry:
                 usados.add(raw_rank)
             if self._ordem:
                 logger.info("identity_fila_restaurada", ordem=dict(self._ordem))
+            if self._dirty:
+                # A escrita do boot: uma só, e só quando houve o que limpar.
+                self._save_locked()
+                self._dirty = False
 
     @staticmethod
     def _path() -> Path:
