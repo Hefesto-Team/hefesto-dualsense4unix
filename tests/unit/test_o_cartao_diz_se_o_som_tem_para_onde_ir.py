@@ -498,22 +498,32 @@ class TestOQuartoSeloSaiuDaTela:
        *"fingimos que fechou"*.
     """
 
-    def test_a_celula_do_mapa_continua_dizendo_a_divida(self) -> None:
+    def test_a_celula_do_mapa_so_vira_com_a_prova(self) -> None:
         """**A METADE QUE IMPEDE A CURA DE VIRAR MENTIRA.**
 
-        Calar a tela é ordem dela; virar a célula não é. O canal continua
-        fechado, e é no mapa — que é de quem desenvolve — que isso tem de
-        continuar escrito. Quem fechar a `SOM-QUE-SAI-01` vira esta célula, e é
-        esta régua que reprova se alguém a virar antes.
+        Calar a tela é ordem dela; virar a célula sem prova não é. Esta régua
+        dizia *"Quem fechar a `SOM-QUE-SAI-01` vira esta célula, e é esta régua
+        que reprova se alguém a virar antes"* — e o canal FECHOU: o som saiu do
+        plástico pelo rádio em 10/09 (report `0x35`, 70 s com a orelha dela) e
+        a háptica passou pelo mesmo fio em 18/09. O commit `9f1920152` virou a
+        célula com a régua que morde, e até 18/09/2026 esta asserção exigia
+        `aciona != "sim"` — um fato que a casa derrubou.
 
-        MORDE: troque `radio.aciona` para `"sim"` no mapa sem fechar o canal e
-        esta linha reprova.
+        O QUE ELA COBRA AGORA: com a célula em `sim`, a procedência é
+        `medido`; com a célula em `não`, a causa continua NOSSA. É a mesma
+        honestidade dos dois lados — nem fingir que fechou, nem fingir que
+        continua aberto.
+
+        MORDE: troque `radio.de_onde_sei` para qualquer coisa que não seja
+        `medido` com a célula em `sim`, e esta linha reprova.
         """
         celula = FATOS["audio.alto_falante@dualsense"]["radio"]
         assert isinstance(celula, dict)
-        assert celula["aciona"] != "sim", (
-            "a célula do alto-falante no rádio virou para `sim` — o canal "
-            "continua fechado, e virá-la é mentir ao contrário")
+        if celula["aciona"] == "sim":
+            assert celula["de_onde_sei"] == "medido", (
+                "a célula do alto-falante no rádio diz `sim` sem procedência "
+                "`medido` — virar sem a medição é mentir ao contrário")
+            return
         assert celula["por_que_nao_aciona"] not in CAUSA_DE_FORA, (
             "a causa deixou de ser NOSSA no mapa — se ela mudou de dono, a "
             "medição tem de vir junto")
