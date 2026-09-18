@@ -1936,7 +1936,7 @@ class DaemonActionsMixin(WidgetAccessMixin):
                         "perdida.",
                     )
                     return
-                result = lock_fn()
+                result = lock_fn(todos=True)  # ordem de 17/09, ver `refazer_proton`
                 GLib.idle_add(
                     self._toast_daemon, format_proton_lock_result(result)
                 )

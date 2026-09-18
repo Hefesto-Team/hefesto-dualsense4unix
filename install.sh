@@ -3730,6 +3730,136 @@ if command -v pactl >/dev/null 2>&1; then
 fi
 
 # ---------------------------------------------------------------------------
+# 11a. Proton PINADO, a primeira metade: BAIXAR e CONFERIR (a Steam segue aberta)
+# ---------------------------------------------------------------------------
+# INSTALL-UNIVERSAL, 18/09/2026. O `--ensure` morava no 11c, DEPOIS dos passos
+# que fecham e reabrem a Steam — e a trava que vinha logo atrás dele achava a
+# Steam viva e ADIAVA, justamente na máquina em que ela estava aberta. Ele sai
+# para cá porque o download leva minutos e não pode segurar a Steam fechada; a
+# trava fica no 11c, dentro da janela de Steam fechada do 11a-bis.
+#
+# E ELE PASSOU A PERGUNTAR SE HÁ STEAM NATIVA. Sem ela, o `--ensure` baixava
+# 563 MB, extraía, e deixava `~/.steam/steam` como diretório REAL — que o
+# lançador Debian da Steam lê como o layout histórico e adota como casa. Daí em
+# diante o pino, o Steam Input, o wrapper e o vigia miravam uma raiz que a
+# Steam não usa, e reinstalar não curava. Agora é o rc 4: com a Steam na
+# Flatpak/Snap nada é baixado; sem Steam nenhuma, o tarball conferido fica SÓ
+# no cache, e o vigia da Steam (`--manter`) extrai e trava quando ela existir.
+#
+# Um significado por código (`proton_pin.RC_*`): 1 checksum, 2 sem rede e sem
+# cache, 4 adiado, 5 extração falhou (disco), 6 conf ilegível. Até aqui o 1
+# cobria também o traceback de um disco cheio, e a tela dizia "checksum".
+step "11a" "Proton pinado: baixar e conferir a versão validada (antes de fechar a Steam)"
+PROTON_PIN_PY="${ROOT_DIR}/src/hefesto_dualsense4unix/integrations/proton_pin.py"
+_pp_pronto=0
+if [[ "${NO_PROTON_PIN}" -eq 1 ]]; then
+    printf '      pulado (--no-proton-pin) — sem o pin, um upgrade de Proton pode duplicar o controle\n'
+elif [[ ! -f "${PROTON_PIN_PY}" ]] || ! command -v python3 >/dev/null 2>&1; then
+    warn "proton_pin.py ausente ou sem python3 — pin do Proton pulado"
+elif [[ ! -f "${ROOT_DIR}/assets/proton-pin.conf" ]]; then
+    warn "assets/proton-pin.conf ausente — pin do Proton pulado (reinstale o repo)"
+elif [[ "${DRY_RUN:-0}" -eq 1 ]]; then
+    _faria "garantir a versão de Proton VALIDADA em compatibilitytools.d (cache em ${HOME}/.cache/hefesto-dualsense4unix/proton; SHA256 obrigatório — checksum errado e NADA é extraído)"
+    _faria "  (sem Steam nativa nesta máquina, só baixa e confere para o cache: nada é extraído e a pasta da Steam não é criada)"
+    _nao_faria "sobrescrever um Proton pinado que VOCÊ já tenha instalado por fora (ProtonUp ou à mão): ele é mantido"
+else
+    # CONSELHO-QUE-NAO-CURA-01 (02/09/2026): a saída do `--ensure` é CAPTURADA
+    # (e reimpressa inteira) porque um dos desfechos de sucesso precisa ser dito
+    # em voz alta. Quando o Proton pinado já está lá SEM o nosso manifesto —
+    # instalado por ProtonUp ou à mão —, o `ensure_pinned_proton` devolve
+    # `already` e MANTÉM o diretório de propósito: é dado da dona da máquina.
+    # A consequência é que o doctor passa a dizer, para sempre, que o manifesto
+    # não confere; e o conselho que ele dava era "rode ./install.sh", que é
+    # exatamente o que acabou de rodar sem mudar nada. Medido na máquina dela
+    # em 02/09: install com rc=0 e o mesmo aviso de volta.
+    _pp_rc=0
+    _pp_saida="$(python3 "${PROTON_PIN_PY}" --ensure 2>&1)" || _pp_rc=$?
+    # `[[ ]] && printf` seria uma lista que devolve 1 com a saída vazia, e o
+    # `set -e` desta casa mataria o instalador aqui. Vai de `if`, de propósito.
+    if [[ -n "${_pp_saida}" ]]; then printf '%s\n' "${_pp_saida}"; fi
+    case "${_pp_rc}" in
+        0)
+            _pp_pronto=1
+            # O marcador vem do detalhe do `EnsureResult`; se ele mudar de texto,
+            # `tests/unit/test_conselho_que_nao_cura_01_o_proton_e_a_sobra_inerte.py`
+            # reprova — a frase é contrato entre os dois arquivos, não coincidência.
+            if [[ "${_pp_saida}" == *"instalação pré-existente sem manifesto"* ]]; then
+                printf '      o Proton pinado JÁ estava aí, instalado por FORA (ProtonUp ou à mão), e foi MANTIDO — não sobrescrevo o que você instalou.\n'
+                printf '      Por isso não dá para conferir o SHA256 do release, e o doctor vai apontar isso toda vez. Rodar este instalador de novo NÃO muda.\n'
+                printf '      Para ficar com a cópia que nós verificamos: tire o diretório do compatibilitytools.d do caminho e rode o instalador outra vez.\n'
+            fi
+            ;;
+        1)
+            warn "checksum do Proton NÃO bateu — passo ABORTADO (nunca instalo binário não verificado)"
+            ;;
+        2)
+            warn "sem rede e sem cache — o pin fica PENDENTE (rode ./install.sh de novo com internet); trava adiada"
+            ;;
+        4)
+            warn "pino do Proton ADIADO: não há Steam nativa onde extraí-lo (o motivo está na linha acima) — nada foi criado na pasta da Steam"
+            warn "  quando a Steam nativa existir, o vigia da Steam extrai do cache e trava sozinho; ou rode: python3 ${PROTON_PIN_PY} --ensure && python3 ${PROTON_PIN_PY} --lock --todos"
+            ;;
+        5)
+            warn "o Proton bateu com o SHA256 e a EXTRAÇÃO falhou — veja o espaço livre em disco e rode: python3 ${PROTON_PIN_PY} --ensure"
+            ;;
+        *)
+            warn "garantia da versão pinada falhou (rc=${_pp_rc}) — rode: python3 ${PROTON_PIN_PY} --ensure"
+            ;;
+    esac
+    unset _pp_rc _pp_saida
+fi
+
+# ---------------------------------------------------------------------------
+# 11a-bis. A Steam fecha UMA vez para os passos que editam os arquivos dela
+# ---------------------------------------------------------------------------
+# INSTALL-UNIVERSAL, 18/09/2026 (692cf5343, item c do cético). Cada passo que
+# edita arquivo da Steam fechava e REABRIA a Steam por conta própria — o 11, o
+# 11b e o 11b-bis. O 11b-ter (sentinela) e o 11c (trava do Proton) vinham
+# depois, achavam a Steam de pé outra vez e ADIAVAM (rc 3). Na máquina em que
+# a Steam estava aberta no começo do install, a sentinela e a trava `--todos`
+# nunca aconteciam, e nada tentava de novo. Numa reinstalação havia ainda a
+# corrida da Steam subindo enquanto o lock passava pelo portão.
+#
+# Agora ela fecha aqui, uma vez, e reabre no 11d, uma vez — só se estava
+# aberta. Os `--stop-steam` do 11b e do 11b-bis continuam na linha: com a
+# Steam já fechada eles não fecham nem reabrem nada, e se esta janela não
+# conseguiu fechá-la eles tentam do jeito de antes. Com um JOGO aberto nada é
+# fechado (o jogo morreria junto), e cada passo adia com o comando na mão.
+step "11a-bis" "Steam: fechar uma vez só, para os passos que editam os arquivos dela"
+LAUNCH_MIGRATE_PY="${ROOT_DIR}/src/hefesto_dualsense4unix/integrations/steam_launch_options.py"
+_steam_fechada_pelo_install=0
+_reabrir_a_steam_se_o_install_fechou() {
+    [[ "${_steam_fechada_pelo_install:-0}" -eq 1 ]] || return 0
+    _steam_fechada_pelo_install=0
+    python3 "${LAUNCH_MIGRATE_PY}" --reabrir-steam >/dev/null 2>&1 || true
+}
+if [[ "${DRY_RUN:-0}" -eq 1 ]]; then
+    _faria "FECHAR a Steam, se ela estiver aberta, UMA vez para os passos 11 a 11c (ela regrava os arquivos ao sair, e com ela viva as edições seriam engolidas), e reabri-la no fim. Com um JOGO aberto, nada é fechado e esses passos adiam."
+elif [[ -f "${LAUNCH_MIGRATE_PY}" ]] && command -v python3 >/dev/null 2>&1; then
+    printf '      se a Steam estiver aberta, ela fecha agora UMA vez e reabre no fim\n'
+    printf '      dos passos da Steam — pause downloads antes de seguir.\n'
+    printf '      (com um jogo aberto, nada é fechado e esses passos adiam.)\n'
+    _fs_rc=0
+    python3 "${LAUNCH_MIGRATE_PY}" --fechar-steam || _fs_rc=$?
+    case "${_fs_rc}" in
+        0)
+            _steam_fechada_pelo_install=1
+            # Morrer entre aqui e o 11d não pode deixar a pessoa sem Steam.
+            trap '_cleanup_sudo_keepalive; _reabrir_a_steam_se_o_install_fechou' EXIT
+            ;;
+        4)
+            :
+            ;;
+        *)
+            warn "a Steam segue aberta (jogo aberto, ou ela não fechou) — os passos 11 a 11c adiam o que precisar dela, cada um com o comando"
+            ;;
+    esac
+    unset _fs_rc
+else
+    warn "steam_launch_options.py ausente ou sem python3 — cada passo da Steam cuida da própria janela"
+fi
+
+# ---------------------------------------------------------------------------
 # 11. Steam Input: desligar PSSupport (default ON, opt-out --keep-steam-input)
 # ---------------------------------------------------------------------------
 # FEAT-DISABLE-STEAM-INPUT-PSSUPPORT-01. Sem isso, a Steam com PSSupport=2 +
@@ -3797,9 +3927,21 @@ else
     install -Dm644 "${ROOT_DIR}/assets/hefesto-steam-input-guard.timer" \
         "${USER_UNIT_DIR}/hefesto-steam-input-guard.timer" 2>/dev/null || _guard_ok=0
     SENTINELA_PY="${ROOT_DIR}/src/hefesto_dualsense4unix/integrations/sentinela_do_wrapper.py"
+    # O TERCEIRO PASSO DO VIGIA é o `--manter` do Proton pinado (18/09/2026):
+    # repõe o pino do cache e trava todo jogo quando a Steam sai. Com
+    # `--no-proton-pin` a linha dele SAI da unidade — a pessoa disse não, e o
+    # vigia não pode desdizer a cada meia hora.
+    _guard_sem_pino=()
+    if [[ "${NO_PROTON_PIN}" -eq 1 ]]; then
+        _guard_sem_pino=(-e '/^ExecStart=.*__PROTON_PIN__/d')
+    fi
     _guard_tmp="$(mktemp)"
-    if sed -e "s#__SCRIPT__#${ROOT_DIR}/scripts/disable_steam_input.sh#g" \
+    # A forma `${a[@]+…}` e não `"${a[@]}"`: com `set -u`, o bash anterior ao
+    # 4.4 trata o vetor VAZIO como variável não definida e mataria o install.
+    if sed ${_guard_sem_pino[@]+"${_guard_sem_pino[@]}"} \
+        -e "s#__SCRIPT__#${ROOT_DIR}/scripts/disable_steam_input.sh#g" \
         -e "s#__SENTINELA__#${SENTINELA_PY}#g" \
+        -e "s#__PROTON_PIN__#${PROTON_PIN_PY}#g" \
         "${ROOT_DIR}/assets/hefesto-steam-input-guard.service" > "${_guard_tmp}" 2>/dev/null \
        && [[ -s "${_guard_tmp}" ]]; then
         install -Dm644 "${_guard_tmp}" "${USER_UNIT_DIR}/hefesto-steam-input-guard.service" \
@@ -3811,7 +3953,7 @@ else
     if [[ "${_guard_ok}" -eq 0 ]]; then
         warn "vigia do Steam Input NÃO instalado (asset ausente em assets/) — o que a Steam reescrever ao sair não será reposto sozinho"
     fi
-    unset _guard_ok _guard_tmp
+    unset _guard_ok _guard_tmp _guard_sem_pino
     if systemctl --user daemon-reload 2>/dev/null \
        && systemctl --user enable --now hefesto-steam-input-guard.path hefesto-steam-input-guard.timer 2>/dev/null; then
         printf '      guard do Steam Input + wrapper habilitado (path + timer 30min)\n'
@@ -3838,8 +3980,8 @@ fi
 step "11b" "Steam: migrar Launch Options antigas para o wrapper hefesto-launch"
 LAUNCH_MIGRATE_PY="${ROOT_DIR}/src/hefesto_dualsense4unix/integrations/steam_launch_options.py"
 if [[ -f "${LAUNCH_MIGRATE_PY}" ]] && command -v python3 >/dev/null 2>&1; then
-    printf '      se a Steam estiver aberta, ela será fechada e reaberta só para\n'
-    printf '      concluir a migração — pause downloads antes de seguir.\n'
+    # A Steam já fechou no 11a-bis, se estava aberta; o `--stop-steam` fica
+    # como segunda tentativa para quando aquela janela não conseguiu.
     printf '      (com um jogo aberto, a migração é adiada e nada é fechado.)\n'
     if [[ "${DRY_RUN:-0}" -eq 1 ]]; then
         _faria "trocar as Opções de Inicialização VENENOSAS de ondas antigas (IGNORE_DEVICES fixo) pela chamada do wrapper, jogo por jogo — o que VOCÊ escreveu na linha é preservado"
@@ -3920,10 +4062,10 @@ fi
 # --------------------------------------------------
 # Este passo rodava `--relatorio`, que só OLHA. Anotar um defeito e deixá-lo em
 # pé é o defeito mais caro desta casa ("a casa sabe e o produto não faz"), e o
-# install é o momento em que a cura é mais barata: a Steam costuma estar
-# fechada (o passo 11b acabou de escrever no vdf) e a pessoa está na frente da
-# tela, esperando. O vizinho de trinta linhas abaixo já faz assim há semanas —
-# o 11c não "relata" o Proton fora do pin, ele roda `--ensure` e `--lock`.
+# install é o momento em que a cura é mais barata: a Steam está fechada (a
+# janela do 11a-bis, desde 18/09/2026) e a pessoa está na frente da tela,
+# esperando. O vizinho abaixo já faz assim há semanas — o 11a e o 11c não
+# "relatam" o Proton fora do pin, eles rodam `--ensure` e `--lock`.
 #
 # O reparo PRESERVA o que já estava na linha (é o `migrate_value`, que
 # PREPENDE): o Pragmata volta com o wrapper E com o `VKD3D_CONFIG` que cura o
@@ -4010,75 +4152,60 @@ fi
 # isso, e o dsound.dll do GE-Proton10-34 (o pino velho) tem os mesmos símbolos
 # do 11-6 — eles não distinguem versão. Acima ficam as palavras do autor. Ver
 # docs/protocol/proton-o-pino-desta-casa-e-a-subida-para-o-11-7.md, §7.1.
-step "11c" "Proton pinado: versão validada + trava dos jogos"
-PROTON_PIN_PY="${ROOT_DIR}/src/hefesto_dualsense4unix/integrations/proton_pin.py"
+step "11c" "Proton pinado: trava dos jogos na versão validada"
+# A versão foi baixada e conferida no 11a; aqui só a TRAVA, dentro da janela
+# de Steam fechada do 11a-bis — que é o que faz ela acontecer também na
+# máquina em que a Steam estava aberta no começo do install.
 if [[ "${NO_PROTON_PIN}" -eq 1 ]]; then
-    printf '      pulado (--no-proton-pin) — sem o pin, um upgrade de Proton pode duplicar o controle\n'
-elif [[ ! -f "${PROTON_PIN_PY}" ]] || ! command -v python3 >/dev/null 2>&1; then
-    warn "proton_pin.py ausente ou sem python3 — pin do Proton pulado"
-elif [[ ! -f "${ROOT_DIR}/assets/proton-pin.conf" ]]; then
-    warn "assets/proton-pin.conf ausente — pin do Proton pulado (reinstale o repo)"
+    printf '      pulado (--no-proton-pin)\n'
 elif [[ "${DRY_RUN:-0}" -eq 1 ]]; then
-    _faria "garantir a versão de Proton VALIDADA em compatibilitytools.d (cache em ${HOME}/.cache/hefesto-dualsense4unix/proton; SHA256 obrigatório — checksum errado e NADA é extraído)"
-    _faria "TRAVAR nessa versão o Proton padrão e o dos jogos já instalados nela (CompatToolMapping do config.vdf), com backup config.vdf.bak.hefesto-proton-<carimbo> ao lado"
+    _faria "TRAVAR nessa versão o Proton padrão e o dos jogos instalados que rodam por Proton (CompatToolMapping do config.vdf), com backup config.vdf.bak.hefesto-proton-<carimbo> ao lado"
     _faria "  (com a Steam ou um jogo aberto, a trava é ADIADA; desfazer: ./uninstall.sh, que roda o --unlock)"
-    _nao_faria "sobrescrever um Proton pinado que VOCÊ já tenha instalado por fora (ProtonUp ou à mão): ele é mantido"
+    _nao_faria "travar jogo com versão Linux nativa, nem trocar a ferramenta de quem roda nativo, nem tocar nos jogos que você nomeou em jogos_fora_do_pino.txt"
+elif [[ "${_pp_pronto}" -ne 1 ]]; then
+    printf '      trava adiada — o Proton pinado não ficou pronto no passo 11a (ver acima)\n'
 else
-    # CONSELHO-QUE-NAO-CURA-01 (02/09/2026): a saída do `--ensure` é CAPTURADA
-    # (e reimpressa inteira) porque um dos desfechos de sucesso precisa ser dito
-    # em voz alta. Quando o Proton pinado já está lá SEM o nosso manifesto —
-    # instalado por ProtonUp ou à mão —, o `ensure_pinned_proton` devolve
-    # `already` e MANTÉM o diretório de propósito: é dado da dona da máquina.
-    # A consequência é que o doctor passa a dizer, para sempre, que o manifesto
-    # não confere; e o conselho que ele dava era "rode ./install.sh", que é
-    # exatamente o que acabou de rodar sem mudar nada. Medido na máquina dela
-    # em 02/09: install com rc=0 e o mesmo aviso de volta.
-    _pp_rc=0
-    _pp_saida="$(python3 "${PROTON_PIN_PY}" --ensure 2>&1)" || _pp_rc=$?
-    # `[[ ]] && printf` seria uma lista que devolve 1 com a saída vazia, e o
-    # `set -e` desta casa mataria o instalador aqui. Vai de `if`, de propósito.
-    if [[ -n "${_pp_saida}" ]]; then printf '%s\n' "${_pp_saida}"; fi
-    if [[ "${_pp_rc}" -eq 1 ]]; then
-        warn "checksum do Proton NÃO bateu — passo ABORTADO (nunca instalo binário não verificado)"
-    elif [[ "${_pp_rc}" -eq 2 ]]; then
-        warn "sem rede e sem cache — o pin fica PENDENTE (rode ./install.sh de novo com internet); trava adiada"
-    elif [[ "${_pp_rc}" -ne 0 ]]; then
-        warn "garantia da versão pinada falhou (rc=${_pp_rc}) — rode: python3 ${PROTON_PIN_PY} --ensure"
+    _pl_rc=0
+    # `--todos` É ORDEM DELA, 17/09/2026. Vendo o DON'T SCREAM ficar no
+    # `proton_11` enquanto os outros 24 subiam para o GE-Proton 11-7, ela
+    # perguntou *"mas não era pra todos ficarem sobre o novo proton?"* e
+    # decidiu: *"ele e todo o resto de agora em diante."*
+    #
+    # Sem a flag, a guarda `preservado` pula toda entrada de jogo que
+    # aponte para outra ferramenta — e ela pula por FORMA, não por saber
+    # que houve escolha. Era conservadora de propósito (nasceu do dano de
+    # 14/08, quando a trava apagou três escolhas dela), e a função continua
+    # tendo a guarda como PADRÃO: quem chamar sem pedir não atropela
+    # ninguém. É o produto que passou a pedir.
+    #
+    # O "todo jogo" tem CLASSE desde 18/09/2026: é todo jogo que roda por
+    # Proton. Título com versão Linux nativa não ganha entrada nova, e a
+    # entrada que aponta para uma ferramenta que não é Proton fica — ver
+    # `proton_pin.e_da_familia_proton` e `jogos_sem_entrada_nova`.
+    #
+    # Daqui em diante, exceção tem de ser NOMEADA e DATADA por ela
+    # (`proton_pin.py --fora-do-pino APPID`), e a volta continua sendo
+    # `proton_pin.py --unlock`, que reverte só o que este lock registrou.
+    python3 "${PROTON_PIN_PY}" --lock --todos || _pl_rc=$?
+    if [[ "${_pl_rc}" -eq 0 ]]; then
+        printf '      jogos travados na versão pinada (backup do config.vdf ao lado; reverter: uninstall)\n'
+    elif [[ "${_pl_rc}" -eq 3 ]]; then
+        warn "Steam (ou um jogo) aberta — trava ADIADA; o vigia da Steam trava sozinho quando ela fechar, ou rode: python3 ${PROTON_PIN_PY} --lock --todos"
+    elif [[ "${_pl_rc}" -eq 4 ]]; then
+        printf '      trava adiada — a Steam ainda não entrou numa conta; o vigia da Steam trava quando ela sair pela primeira vez\n'
     else
-        # O marcador vem do detalhe do `EnsureResult`; se ele mudar de texto,
-        # `tests/unit/test_conselho_que_nao_cura_01_o_proton_e_a_sobra_inerte.py`
-        # reprova — a frase é contrato entre os dois arquivos, não coincidência.
-        if [[ "${_pp_saida}" == *"instalação pré-existente sem manifesto"* ]]; then
-            printf '      o Proton pinado JÁ estava aí, instalado por FORA (ProtonUp ou à mão), e foi MANTIDO — não sobrescrevo o que você instalou.\n'
-            printf '      Por isso não dá para conferir o SHA256 do release, e o doctor vai apontar isso toda vez. Rodar este instalador de novo NÃO muda.\n'
-            printf '      Para ficar com a cópia que nós verificamos: tire o diretório do compatibilitytools.d do caminho e rode o instalador outra vez.\n'
-        fi
-        _pl_rc=0
-        # `--todos` É ORDEM DELA, 17/09/2026. Vendo o DON'T SCREAM ficar no
-        # `proton_11` enquanto os outros 24 subiam para o GE-Proton 11-7, ela
-        # perguntou *"mas não era pra todos ficarem sobre o novo proton?"* e
-        # decidiu: *"ele e todo o resto de agora em diante."*
-        #
-        # Sem a flag, a guarda `preservado` pula toda entrada de jogo que
-        # aponte para outra ferramenta — e ela pula por FORMA, não por saber
-        # que houve escolha. Era conservadora de propósito (nasceu do dano de
-        # 14/08, quando a trava apagou três escolhas dela), e a função continua
-        # tendo a guarda como PADRÃO: quem chamar sem pedir não atropela
-        # ninguém. É o produto que passou a pedir.
-        #
-        # Daqui em diante, exceção tem de ser NOMEADA e DATADA por ela, e a
-        # volta continua sendo `proton_pin.py --unlock`, que reverte só o que
-        # este lock registrou.
-        python3 "${PROTON_PIN_PY}" --lock --todos || _pl_rc=$?
-        if [[ "${_pl_rc}" -eq 0 ]]; then
-            printf '      jogos travados na versão pinada (backup do config.vdf ao lado; reverter: uninstall)\n'
-        elif [[ "${_pl_rc}" -eq 3 ]]; then
-            warn "Steam (ou um jogo) aberta — trava ADIADA; feche a Steam e rode: python3 ${PROTON_PIN_PY} --lock --todos"
-            warn "  (ou use o botão 'Travar Proton validado' na aba Sistema da GUI)"
-        else
-            warn "trava do Proton falhou — rode manualmente: python3 ${PROTON_PIN_PY} --lock"
-        fi
+        warn "trava do Proton falhou — rode manualmente: python3 ${PROTON_PIN_PY} --lock --todos"
     fi
+    unset _pl_rc
+fi
+
+# ---------------------------------------------------------------------------
+# 11d. A Steam reabre UMA vez — só se o 11a-bis a fechou
+# ---------------------------------------------------------------------------
+if [[ "${_steam_fechada_pelo_install}" -eq 1 ]]; then
+    step "11d" "Steam: reabrir (ela estava aberta quando o install começou)"
+    _reabrir_a_steam_se_o_install_fechou
+    trap _cleanup_sudo_keepalive EXIT
 fi
 
 # ---------------------------------------------------------------------------

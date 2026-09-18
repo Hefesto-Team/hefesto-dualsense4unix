@@ -227,8 +227,9 @@ def _dubla_proton(monkeypatch) -> tuple[Any, str]:
     from hefesto_dualsense4unix.integrations import proton_pin
 
     travados = {"locked": 2, "skipped": 0, "errors": 0}
+    # `**_k`: o botão pede `todos=True` desde 18/09/2026 (ordem de 17/09).
     monkeypatch.setattr(proton_pin, "lock_proton_for_all_games",
-                        lambda: dict(travados), raising=False)
+                        lambda **_k: dict(travados), raising=False)
     monkeypatch.setattr(proton_pin, "steam_running", lambda: False, raising=False)
     return a09.refazer_proton, a09._daemon.format_proton_lock_result(travados)
 

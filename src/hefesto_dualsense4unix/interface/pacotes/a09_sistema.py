@@ -2962,8 +2962,13 @@ def refazer_proton(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
             _pergunta_do_botao("refazer-proton"), pergunta_de="refazer-proton"))
     _limpar_o_painel()
     _recusa_se_nao_da()
+    # `todos=True` — 18/09/2026. É o botão que o install manda usar quando a
+    # trava é adiada, e ele rodava com a guarda `preservado` que a ordem dela
+    # de 17/09 revogou: o terminal dizia `--lock --todos` e o botão fazia
+    # outra coisa. Com a Steam aberta ele continua recusando (a pergunta dele
+    # não pede para fechá-la); quem trava quando ela sai é o vigia.
     _relatar_o_recibo("refazer-proton",
-                      _daemon.format_proton_lock_result(travar()))
+                      _daemon.format_proton_lock_result(travar(todos=True)))
     return {"blocos": blocos_dos_botoes(_de_pe(ctx))}
 
 

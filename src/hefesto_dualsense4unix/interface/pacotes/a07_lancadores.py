@@ -2445,6 +2445,39 @@ def este_jogo_nao_funciona(ctx: Contexto, o: dict[str, Any],
     return {**_resposta(VIGIA.ler(), ctx.state), "recado": frase}
 
 
+def _travar_o_proton_na_mesma_janela() -> object:
+    """A trava do Proton pinado, dentro da janela de Steam fechada do «tudo pronto».
+
+    INSTALL-UNIVERSAL, 18/09/2026 (692cf5343, item a do cético). O botão
+    fechava a Steam para as duas coisas que brigam com o controle — e deixava
+    de fora a terceira que também só se escreve com ela fechada: o Proton de
+    cada jogo, que é "como cada jogo é aberto" tanto quanto o atalho. A frase
+    do consentimento já cobre isto; nenhuma palavra de tela muda.
+
+    Best-effort, e nunca levanta: uma instalação sem o módulo ou sem o
+    `proton-pin.conf` (pacote) devolve ``None``, e o atalho e o Steam Input
+    que já rodaram não podem ser desfeitos por um Proton que não há. O que
+    aconteceu vai ao log, com o dict inteiro.
+    """
+    import importlib
+
+    try:
+        pin: Any = importlib.import_module(
+            "hefesto_dualsense4unix.integrations.proton_pin")
+    except ImportError:
+        return None
+    travar = getattr(pin, "lock_proton_for_all_games", None)
+    if travar is None:
+        return None
+    try:
+        resultado = travar(todos=True)
+    except Exception as exc:  # conf ausente, disco: o atalho e o Steam Input já rodaram
+        _LOG.warning("tudo pronto: a trava do Proton pinado falhou: %s", exc)
+        return None
+    _LOG.info("tudo pronto: trava do Proton pinado: %s", resultado)
+    return resultado
+
+
 # `grava="with_steam_closed"` E NÃO `apply_wrapper_to_all_games`, que é
 # quem de fato reescreve a linha de TODOS os jogos: ele chega aqui por
 # `getattr(slo, …)` e a árvore não o enxerga. A direção B da régua
@@ -2498,6 +2531,7 @@ def deixar_tudo_pronto(ctx: Contexto, o: dict[str, Any],
             saida["script"] = _rodar_o_script(script)
         if aplicar is not None:
             saida["wrapper"] = aplicar()
+        saida["proton"] = _travar_o_proton_na_mesma_janela()
         return saida
 
     janela, dados = slo.with_steam_closed(_acao)

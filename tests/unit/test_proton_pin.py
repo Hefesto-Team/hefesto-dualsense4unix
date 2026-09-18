@@ -543,6 +543,11 @@ def test_lock_proton_for_all_games_zero_arg_traduz_o_contrato_da_gui(
         '"AppState"\n{\n\t"appid"\t\t"1599660"\n\t"name"\t\t"Sackboy"\n}\n',
         encoding="utf-8",
     )
+    # A PEGADA DO PROTON (18/09/2026): sem `appinfo.vdf` legível, só ganha
+    # entrada nova o jogo que já rodou pelo Proton — e o Sackboy, que só tem
+    # versão Windows, rodou. Sem esta pasta a régua mediria um jogo que pode
+    # ser nativo do Linux, e o lock certo é não criar entrada para ele.
+    (steamapps / "compatdata" / "1599660").mkdir(parents=True)
     vdf = tmp_path / "config.vdf"
     vdf.write_text(_config_vdf(None), encoding="utf-8")
     state = tmp_path / "state" / "proton-pin-lock.json"

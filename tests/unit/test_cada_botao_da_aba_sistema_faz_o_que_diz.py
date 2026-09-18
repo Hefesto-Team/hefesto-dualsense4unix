@@ -142,12 +142,14 @@ def pin(monkeypatch, tmp_path):
 
     conf = tmp_path / "proton-pin.conf"
     conf.write_text("# conf de prova\n", encoding="utf-8")
-    estado: dict[str, Any] = {"steam": False, "conf": lambda: conf, "travou": []}
+    estado: dict[str, Any] = {"steam": False, "conf": lambda: conf, "travou": [],
+                              "com": []}
     monkeypatch.setattr(proton_pin, "default_pin_conf_path",
                         lambda: estado["conf"]())
     monkeypatch.setattr(proton_pin, "steam_running", lambda: estado["steam"])
     monkeypatch.setattr(proton_pin, "lock_proton_for_all_games",
-                        lambda *a, **k: estado["travou"].append(a) or {})
+                        lambda *a, **k: (estado["travou"].append(a),
+                                         estado["com"].append(k))[0] or {})
     return estado
 
 
@@ -356,6 +358,23 @@ def test_o_proton_confere_a_steam_de_novo_no_clique_2(a09, ctx, pin):
         a09.refazer_proton(ctx, _clique(a09.CONFIRMA), None)
 
     assert pin["travou"] == []
+
+
+def test_o_proton_no_clique_2_trava_todo_jogo(a09, ctx, pin):
+    """A ordem dela de 17/09 chega ao botão — INSTALL-UNIVERSAL, 18/09/2026.
+
+    O install, quando adia a trava, manda usar este botão; e o botão travava
+    com a guarda `preservado` que a ordem revogou (o terminal dizia
+    `--lock --todos`, o botão fazia outra coisa).
+
+    MORDIDA: volte `travar(todos=True)` para `travar()` em `refazer_proton`.
+    """
+    a09.refazer_proton(ctx, _clique(a09._rotulo_do_desenho("refazer-proton")), None)
+    with contextlib.redirect_stderr(io.StringIO()):
+        a09.refazer_proton(ctx, _clique(a09.CONFIRMA), None)
+
+    assert len(pin["travou"]) == 1, pin
+    assert pin["com"][0].get("todos") is True, pin["com"]
 
 
 def _sem_caminho() -> None:
