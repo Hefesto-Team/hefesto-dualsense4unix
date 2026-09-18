@@ -64,7 +64,8 @@ from pacotes.a02_controles import sufixo_do_canal as _sufixo_do_canal
 # (`a02_controles.folha_das_posicoes`) e a folha que este gerador escreve uma
 # vez têm de falar a MESMA gramática de seletor — duas cópias divergem calada, e
 # esta casa já pagou isso com o `--plastico`. O `pos` era daqui e mudou de lado.
-from pacotes.a02_controles import (ALVOS_DA_POSICAO, PISO_DAS_POSICOES,
+from pacotes.a02_controles import (ALVOS_DA_POSICAO, MAX_DEDOS,
+                                   PISO_DAS_POSICOES,
                                    pos_do_analogico as pos, regra_da_posicao,
                                    seletor_da_posicao)
 
@@ -2223,6 +2224,7 @@ DICA_MIC_NATIVO = ("O microfone deste controle entra sozinho, sem o Hefesto no "
 
 
 def bloco(c, *, bat, carga=None, glifos_on, l2, r2, touch, sticks,
+          touch2=None, tocando2=False,
           # `estado_alto` NÃO DESENHA NADA DESDE 04/09/2026 (decisão [09]): o
           # `<span class="mudo" data-campo="alto-estado" hidden>` que o recebia
           # saiu do desenho, e quem mostra o mudo do alto-falante é o próprio ♪,
@@ -2337,7 +2339,7 @@ def bloco(c, *, bat, carga=None, glifos_on, l2, r2, touch, sticks,
     # `texto_toques(1 if tocando else 0)`). Ela era `COM_TOQUE`/`SEM_TOQUE`,
     # duas constantes do pacote, e o "Tocando" era palavra do desenho: ela
     # decidiu em 02/09/2026 (item 15) que o touchpad usa a do produto.
-    toque_txt = texto_toques(1 if tocando else 0)
+    toque_txt = texto_toques((1 if tocando else 0) + (1 if tocando2 else 0))
     # O `disabled` DO ♪ SAIU — 04/09/2026, decisão [04]. Estas duas variáveis
     # escolhiam entre `disabled`+dica-da-recusa e nada+dica-do-preço, e o
     # `disabled` matava o clique: o PO decidiu o contrário para esta família
@@ -2349,6 +2351,13 @@ def bloco(c, *, bat, carga=None, glifos_on, l2, r2, touch, sticks,
     # alcança (`data-hef-alvo="classe"`) e o que faz o desenho parar de
     # contradizer o campo ao lado dele.
     ponto_on = " on" if tocando else ""
+    ponto2_on = " on" if tocando2 else ""
+    # MULTITOQUE-01: a SEGUNDA bolinha existe em todo card, e no desenho ela
+    # nasce APAGADA (`opacity:0` sem a classe `on`) — a cena fixa do mockup
+    # não muda de aparência. A posição default é o espelho da primeira, e
+    # não o mesmo ponto: duas bolinhas empilhadas no mesmo pixel seriam
+    # indistinguíveis no dia em que as duas acendessem.
+    touch2 = touch2 or (round(100 - touch[0], 1), round(100 - touch[1], 1))
     def gx(fam, e, v, cor):
         # OS TRÊS ENDEREÇOS DE UM EIXO — 03/09/2026. Antes daqui a linha inteira
         # era desenho: `data-eixo` é vocabulário do CSS e o piloto não o lê, e
@@ -2401,7 +2410,8 @@ def bloco(c, *, bat, carga=None, glifos_on, l2, r2, touch, sticks,
             <div class="rot rot-linha">Touchpad
               <span class="de-quem" data-campo="touch-estado" title="{DICA_TOQUE}">{toque_txt}</span></div>
             <div class="touch">
-              <span class="ponto{ponto_on}" data-campo="touch-ponto" data-hef-alvo="classe"{onde_esta(touch[0], touch[1], chr(10) + " " * 16)}></span></div>
+              <span class="ponto ponto-1{ponto_on}" data-campo="touch-ponto" data-hef-alvo="classe"{onde_esta(touch[0], touch[1], chr(10) + " " * 16)}></span>
+              <span class="ponto ponto-2{ponto2_on}" data-campo="touch-ponto-2" data-hef-alvo="classe"{onde_esta(touch2[0], touch2[1], chr(10) + " " * 16)}></span></div>
           </div>
           <!-- O TRAVESSÃO VIROU PALAVRA — decisão dela, 04/09/2026 [02]:
                *"palavra curta no lugar do travessão, frase inteira no hover"*,
@@ -3727,8 +3737,8 @@ CARD_DA_MESA = re.compile(r'<div class="ctl card" data-controle="([^"]+)">')
 #: O pontinho do touchpad. A âncora é o `data-campo` — a classe muda (`ponto` ou
 #: `ponto on`) e o `style` está na linha SEGUINTE, dentro da mesma tag.
 PONTO_DO_TOUCH = re.compile(
-    r'(?P<antes><span class="ponto[^"]*" data-campo="touch-ponto"[^>]*?)'
-    r'\s*style="left:(?P<x>[0-9.]+)%;top:(?P<y>[0-9.]+)%"')
+    r'(?P<antes><span class="ponto[^"]*" data-campo="touch-ponto(?P<segundo>-2)?"'
+    r'[^>]*?)\s*style="left:(?P<x>[0-9.]+)%;top:(?P<y>[0-9.]+)%"')
 #: A bolinha de um analógico. Quem diz QUAL é o `data-stick` da moldura, e não a
 #: ordem em que ela aparece: contar na ordem é a família de régua que esta casa
 #: já pagou.
@@ -3767,14 +3777,18 @@ def posicao_por_regra(doc):
             return m.group("antes")
 
         trecho, toques = PONTO_DO_TOUCH.subn(
-            lambda m: _guardar(m, "touch"), trecho)
+            lambda m: _guardar(m, "touch2" if m.group("segundo") else "touch"),
+            trecho)
         trecho, polegares = PONTO_DO_STICK.subn(_guardar, trecho)
         # A ÂNCORA, e ela é por CARD: um card que mude de forma casaria zero e a
         # página sairia com a posição congelada de volta, verde em todo portão.
-        if (toques, polegares) != (1, 2):
+        # DOIS de touchpad desde 18/09/2026 (MULTITOQUE-01) — era 1, e o
+        # aparelho tem dois pontos de toque (`ABS_MT_SLOT 0..1`).
+        if (toques, polegares) != (MAX_DEDOS, 2):
             raise SystemExit(
                 f"ERRO na posição: o card `{pref}` tem {toques} pontinho(s) de "
-                f"touchpad e {polegares} de analógico — esperados 1 e 2.")
+                f"touchpad e {polegares} de analógico — "
+                f"esperados {MAX_DEDOS} e 2.")
         pedacos.append(trecho)
     doc = "".join(pedacos)
     if re.search(r'style="left:[0-9.]+%;top:[0-9.]+%"', doc):
@@ -4051,7 +4065,8 @@ def _conferir(doc):
     for campo, alvos in (("bateria-barra", ("largura",)),
                          ("alto-barra", ("largura", "valor")),
                          ("mic-barra", ("largura", "valor")),
-                         ("luz-cor", ("cor", "cor")), ("touch-ponto", ("classe",))):
+                         ("luz-cor", ("cor", "cor")), ("touch-ponto", ("classe",)),
+                         ("touch-ponto-2", ("classe",))):
         tags = re.findall(r'<[^>]*data-campo="' + re.escape(campo) + r'"[^>]*>', corpo)
         exigir(len(tags) == len(MESA) * len(alvos),
                f"o endereço `{campo}` não está nos {len(MESA)} lugares "

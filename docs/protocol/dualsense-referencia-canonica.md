@@ -1490,6 +1490,48 @@ começa pela esquerda ou pela direita?"* não muda nenhuma das cinco, e por isso
 > escreveria código para APAGAR a barra achando que a acendia. GRAU: MEDIDO
 > AQUI.
 
+### O touchpad são DOIS dedos, e o terceiro não existe — medido em 18/09/2026
+
+**Grau: MEDIDO AQUI**, com os quatro DualSense dela no rádio.
+
+O nó evdev `DualSense Wireless Controller Touchpad` declara, nos quatro
+controles:
+
+| eixo | faixa |
+|---|---|
+| `ABS_MT_SLOT` | **0 a 1** — dois dedos, e é o teto do aparelho |
+| `ABS_MT_POSITION_X` / `ABS_X` | 0 a 1919 |
+| `ABS_MT_POSITION_Y` / `ABS_Y` | 0 a 1079 |
+| `ABS_MT_TRACKING_ID` | 0 a 65535 |
+
+O `1920x1080` do payload não é número escolhido: é a faixa que o kernel
+declara. E o libinput vê o mesmo nó como touchpad de notebook —
+`Capabilities: pointer gesture`, `Size: 71x51mm`.
+
+**O GESTO DE TRÊS DEDOS NÃO EXISTE, e o de dois faz o trabalho dos dois.**
+Ela levantou a pergunta com a mão no aparelho — *"SE EU USAR 3 DEDOS DOU ZOOM
+E 2 DEDOS USO O SCROLL ENTÃO ELE LÊ MUITITOQUE"* <!-- noqa-acento: citação literal dela --> —
+e 45 s de gesto contra `libinput debug-events` devolveram:
+
+| evento do libinput | quantos | dedos |
+|---|---|---|
+| `POINTER_SCROLL_FINGER` (rolagem) | 922 | 2 |
+| `GESTURE_PINCH_BEGIN`/`_UPDATE`/`_END` (zoom) | 8 pinças | **2** |
+| `GESTURE_SWIPE_*` (o gesto de 3+ dedos) | **0** | — |
+
+O zoom feito com três dedos funciona porque a **pinça só precisa de dois**: o
+libinput pega os dois primeiros contatos e o terceiro nunca chega ao kernel.
+Quem escrever gesto de três dedos para este aparelho escreve código morto.
+
+**O QUE ISSO CUSTOU AO PRODUTO, e é a lição que fica:** até esta data o
+`TouchpadReader` lia `ABS_X`/`ABS_Y`/`BTN_TOUCH` — o caminho **single-touch**
+que o kernel emula para o contato principal —, e o segundo dedo morria ali.
+O daemon publicava um ponto, e a aba Controles desenhava um ponto. *O desenho
+não estava errado: ele era fiel a um payload pobre.* A cura foi ler os slots
+(`MULTITOQUE-01`), e ela tem uma regra dentro: **o caminho single-touch de um
+nó multitouch é um resumo, não o dado** — quem precisa dos dedos pede os
+slots.
+
 ---
 
 ## 6. O que o report de ENTRADA carrega — e o byte que este projeto esquece

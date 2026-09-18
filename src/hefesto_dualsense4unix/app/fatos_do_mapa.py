@@ -5414,6 +5414,25 @@ FATOS: Final[dict[str, dict[str, object]]] = {
             'por_que_nao_aciona': 'nada-a-acionar',
         },
     },
+    'toque.touchpad.dedos@dualsense': {
+        'existe': 'tem',
+        'cabo': {
+            'aceita': 'sim',
+            'aciona': 'sim',
+            'ate_onde_foi': 'MONTOU',
+            'canal': 'evdev',
+            'de_onde_sei': 'medido',
+            'por_que_nao_aciona': '',
+        },
+        'radio': {
+            'aceita': 'sim',
+            'aciona': 'sim',
+            'ate_onde_foi': 'MONTOU',
+            'canal': 'evdev',
+            'de_onde_sei': 'medido',
+            'por_que_nao_aciona': '',
+        },
+    },
     'toque.touchpad.escrita@dualsense': {
         'existe': 'nao-tem',
         'cabo': {

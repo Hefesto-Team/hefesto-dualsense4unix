@@ -218,6 +218,22 @@ class SensorHub:
                     "y": int(estado.y),
                     "width": int(estado.largura),
                     "height": int(estado.altura),
+                    # MULTITOQUE-01 (18/09/2026): os dedos, um por slot do
+                    # kernel. `x`/`y` acima continuam sendo o dedo principal
+                    # — quem conhecia só eles não muda de comportamento.
+                    # Lista VAZIA quer dizer "nenhum dedo agora", e é
+                    # diferente da chave AUSENTE, que quer dizer "este
+                    # reader não sabe ler dedo por slot": a tela desenha o
+                    # resumo no segundo caso e a verdade no primeiro.
+                    "pontos": [
+                        {
+                            "slot": int(ponto.slot),
+                            "x": int(ponto.x),
+                            "y": int(ponto.y),
+                            "id": int(ponto.identidade),
+                        }
+                        for ponto in getattr(estado, "pontos", ())
+                    ],
                 }
         return out
 

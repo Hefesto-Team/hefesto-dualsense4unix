@@ -322,6 +322,12 @@ def test_hub_abre_sob_demanda_e_entrega_os_dois_sensores() -> None:
         "y": 540,
         "width": 1920,
         "height": 1080,
+        # `pontos` ENTROU EM 18/09/2026 (MULTITOQUE-01), e a lista vazia aqui
+        # é o dublê falando a verdade: o `_TouchFalso` desta régua não tem o
+        # atributo, e o hub lê `getattr(estado, "pontos", ())` — um reader
+        # que não sabe ler dedo por slot não afirma dedo nenhum. Com o reader
+        # de verdade, os dois dedos do DualSense saem aqui.
+        "pontos": [],
     }
 
 

@@ -649,10 +649,17 @@ def test_o_pontinho_so_acende_com_toque(a02):
     MORDE: mandar `"sim"` sempre (ou voltar o `style` do gerador) reprova nas
     duas primeiras linhas.
     """
-    solto = a02.toque_do_controle({"touchpad": TOUCHPAD_COMO_O_DAEMON_PUBLICA})[1]
-    tocando = a02.toque_do_controle(
-        {"touchpad": {**TOUCHPAD_COMO_O_DAEMON_PUBLICA, "touching": True}})[1]
-    sem_leitor = a02.toque_do_controle({})[1]
+    # A FONTE MUDOU DE NOME EM 18/09/2026 (MULTITOQUE-01): `toque_do_controle`
+    # virou `dedos_do_controle`, que devolve um par por bolinha em vez de um
+    # terno para uma só. O que esta régua mede não mudou — é o vocabulário do
+    # alvo `classe`, e ele continua sendo `""` apaga / qualquer coisa acende.
+    solto = a02.dedos_do_controle(
+        {"touchpad": TOUCHPAD_COMO_O_DAEMON_PUBLICA})[1][0][0]
+    tocando = a02.dedos_do_controle(
+        {"touchpad": {**TOUCHPAD_COMO_O_DAEMON_PUBLICA, "touching": True,
+                      "pontos": [{"slot": 0, "x": 960, "y": 540, "id": 1}]}}
+    )[1][0][0]
+    sem_leitor = a02.dedos_do_controle({})[1][0][0]
     assert solto == "", "o ponto fica aceso com o dedo fora do pad"
     assert tocando, "o ponto não acende com o dedo no pad"
     assert sem_leitor == "", "o ponto acende sem leitura nenhuma"
@@ -680,7 +687,7 @@ def test_o_rotulo_do_sem_toque_nao_e_digitado_aqui(a02):
 
     assert a02.texto_toques is texto_toques, (
         "a aba deixou de importar o dono da palavra e voltou a digitá-la")
-    assert a02.toque_do_controle(
+    assert a02.dedos_do_controle(
         {"touchpad": TOUCHPAD_COMO_O_DAEMON_PUBLICA})[0] == texto_toques(0)
 
 

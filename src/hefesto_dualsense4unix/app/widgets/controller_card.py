@@ -1915,6 +1915,13 @@ def touchpad_do_inputs(inputs: Any) -> tuple[bool, float, float] | None:
 
     ``fx``/``fy`` já normalizados 0..1 pelos limites que o PRÓPRIO payload
     declara (``width``/``height``) — ver `posicao_normalizada`.
+
+    **UM dedo, de propósito** — é o dedo PRINCIPAL, o que o kernel elege e o
+    que move o cursor. Quem desenha o touchpad inteiro chama
+    `dedos_do_inputs`, que devolve os dois (MULTITOQUE-01). Esta função fica
+    porque os seus quatro chamadores querem exatamente um ponto, e trocar o
+    tipo de retorno deles para "às vezes um, às vezes dois" empurraria a
+    escolha para cada um deles.
     """
     if not isinstance(inputs, dict):
         return None
@@ -1931,6 +1938,52 @@ def touchpad_do_inputs(inputs: Any) -> tuple[bool, float, float] | None:
     except (KeyError, TypeError, ValueError):
         return None
     return (bool(bloco.get("touching")), fx, fy)
+
+
+def dedos_do_inputs(inputs: Any) -> tuple[tuple[float, float], ...] | None:
+    """Os dedos apoiados AGORA, normalizados 0..1; ``None`` = sem sensor.
+
+    MULTITOQUE-01 (18/09/2026). O DualSense tem DOIS pontos de toque no
+    hardware (`ABS_MT_SLOT 0..1`, medido no aparelho dela), e o payload os
+    traz em ``touchpad.pontos``. Três respostas, e as três são diferentes:
+
+    - ``None`` — não há bloco de touchpad: **não sei**, o desenho some.
+    - ``()`` — há bloco e nenhum dedo: **ninguém está tocando**.
+    - N tuplas — os dedos, em ordem de slot do kernel.
+
+    **O caso do payload VELHO, e ele é o que evita o dedo fantasma:** um
+    daemon anterior a esta data publica ``touching``/``x``/``y`` e NÃO
+    publica ``pontos``. Aí o resumo vira um dedo só — a verdade que aquele
+    daemon sabe dizer —, em vez de "nenhum dedo", que apagaria o toque na
+    tela de quem ainda não atualizou o serviço.
+    """
+    if not isinstance(inputs, dict):
+        return None
+    bloco = inputs.get("touchpad")
+    if not isinstance(bloco, dict):
+        return None
+    largura = int(bloco.get("width", 1920) or 1920)
+    altura = int(bloco.get("height", 1080) or 1080)
+    pontos = bloco.get("pontos")
+    if isinstance(pontos, list):
+        saida: list[tuple[float, float]] = []
+        for ponto in pontos:
+            if not isinstance(ponto, dict):
+                continue
+            try:
+                saida.append(
+                    posicao_normalizada(
+                        int(ponto["x"]), int(ponto["y"]), largura, altura
+                    )
+                )
+            except (KeyError, TypeError, ValueError):
+                continue
+        return tuple(saida)
+    # Payload sem `pontos`: cai para o resumo (ver a docstring).
+    lido = touchpad_do_inputs(inputs)
+    if lido is None:
+        return None
+    return ((lido[1], lido[2]),) if lido[0] else ()
 
 
 def speaker_do_entry(entry: Any) -> tuple[int, bool | None] | None:
@@ -5933,6 +5986,7 @@ __all__ = [
     "accent_do_card",
     "audio_sem_endereco",
     "cor_do_swatch",
+    "dedos_do_inputs",
     "desenhar_swatch",
     "dica_do_titulo",
     "frase_do_alvo_do_mic",
