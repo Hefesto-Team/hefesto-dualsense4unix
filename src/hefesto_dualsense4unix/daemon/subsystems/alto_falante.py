@@ -828,6 +828,7 @@ class AltoFalanteSubsystem:
             EndpointDeHaptica,
             ancoras,
             distribuir_ancoras,
+            endpoints_de_pe,
             varrer_endpoints_orfaos,
         )
 
@@ -864,8 +865,14 @@ class AltoFalanteSubsystem:
         # varredura, cada reinício somava mais um nó com o mesmo nome à lista de
         # saídas de som dela. É a mesma classe — e a mesma cura — do canal órfão
         # do microfone (`bt_mic.VarredorDeCanaisOrfaos`).
+        #
+        # UMA pergunta ao servidor por volta, e ela serve às duas coisas: à
+        # varredura e à semente das âncoras logo abaixo.
+        de_pe: dict[str, list[tuple[str, str]]] | None = None
         with contextlib.suppress(Exception):
-            varrer_endpoints_orfaos(vivos)
+            de_pe = endpoints_de_pe()
+        with contextlib.suppress(Exception):
+            varrer_endpoints_orfaos(vivos, de_pe=de_pe)
 
         # O ENDPOINT DA HÁPTICA — um por controle no rádio, e ele VIVE ENQUANTO
         # O CONTROLE EXISTIR. É a mesma decisão dela de 08/09 para o nó do som
@@ -873,12 +880,33 @@ class AltoFalanteSubsystem:
         # o nó cair no meio da partida, o endpoint da háptica morre com o jogo
         # aberto. Cada controle ganha uma âncora PRÓPRIA — âncoras iguais são
         # ContainerIds iguais, e aí a háptica do jogador 2 iria para o device do
-        # jogador 1.
-        postas = distribuir_ancoras(list(vivos), ancoras())
+        # jogador 1. A distribuição respeita a POSSE — a memória deste processo
+        # e o que o servidor já tem de pé — e só as livres vão para quem chega:
+        # por ordem pura, o controle que chegava depois com o `uniq` menor
+        # herdava a âncora de quem já estava (INSTALL-UNIVERSAL, 18/09/2026).
+        postas = distribuir_ancoras(
+            vivos, ancoras(), de_pe,
+            ja_postas={u: e.ancora for u, e in self._endpoints.items()},
+        )
         for uniq in vivos:
-            if uniq in self._endpoints or uniq not in postas:
+            posta = postas.get(uniq)
+            atual = self._endpoints.get(uniq)
+            if atual is not None:
+                if posta is None or posta.syspath == atual.ancora.syspath:
+                    continue
+                # O APARELHO DA ÂNCORA SAIU DO BARRAMENTO: o nó declara um
+                # caminho que o Wine já não resolve, e o próximo jogo não casa
+                # o device KS. Troca-se a âncora — mas nunca com o jogo tocando
+                # no nó, que morreria no meio da partida; a troca espera a
+                # próxima volta sem stream.
+                if uniq in self._pontes and self._modo_da_ponte.get(uniq) == "haptica":
+                    continue
+                self._endpoints.pop(uniq, None)
+                atual.parar()
+                logger.info("haptica_endpoint_reancorado", uniq=uniq, ancora=posta.syspath)
+            if posta is None:
                 continue
-            endpoint = EndpointDeHaptica(uniq=uniq, ancora=postas[uniq])
+            endpoint = EndpointDeHaptica(uniq=uniq, ancora=posta)
             if endpoint.iniciar():
                 self._endpoints[uniq] = endpoint
         self._avisar_ancoras_que_faltam(

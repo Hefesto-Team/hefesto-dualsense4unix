@@ -1513,6 +1513,31 @@ def serial_do_no(nome: str) -> int | None:
     return None
 
 
+def o_servidor_e_o_pipewire(
+    runner: Callable[[list[str]], str | None] | None = None,
+) -> bool:
+    """Quem responde ao ``pactl`` é o ``pipewire-pulse``? ``False`` se não sei.
+
+    INSTALL-UNIVERSAL (18/09/2026). :func:`serial_do_no` lê o índice da coluna 1
+    do ``pactl`` e o entrega ao ``pw-record`` como ``object.serial`` — o que só
+    é verdade no ``pipewire-pulse``. Numa máquina com PulseAudio no som e o
+    PipeWire rodando ao lado para a tela, com o ``pw-record`` instalado (arranjo
+    plausível de distro LTS; NÃO medido nesta casa), o índice do PulseAudio
+    mira um nó qualquer do grafo do PipeWire, ou nenhum — e alvo que não
+    resolve cai na fonte PADRÃO, que é a forma exata do eco da SOM-ECO-02. Ali
+    o ``parec`` acerta pelo nome.
+
+    Pergunta em ``LC_ALL=C`` (o :func:`rodar_pactl` garante): a chave
+    ``Server Name`` é traduzida. Sem resposta é ``False``, e o ``parec`` assume.
+    """
+    correr: Any = runner or rodar_pactl
+    for linha in (correr(["pactl", "info"]) or "").splitlines():
+        chave, _, valor = linha.partition(":")
+        if chave.strip() == "Server Name":
+            return "pipewire" in valor.lower()
+    return False
+
+
 def rotulo_do_gravador(id_do_no: str) -> str:
     """O nome que damos ao NOSSO nó de gravação. Único por controle.
 
@@ -1580,12 +1605,15 @@ def argv_do_gravador(
     """
     if not fonte:
         return []
-    serial = serial_do_no(fonte)
     for binario, modelo in GRAVADORES_DO_MONITOR:
         if shutil.which(binario) is None:
             continue
-        # `pw-record` SÓ com o serial; sem ele, deixa o `parec` assumir.
+        # `pw-record` SÓ com o serial; sem ele, deixa o `parec` assumir. E o
+        # serial SÓ quando quem responde ao `pactl` é o `pipewire-pulse`: o
+        # índice do `pactl` é o `object.serial` do PipeWire ali e em nenhum
+        # outro lugar — ver :func:`o_servidor_e_o_pipewire`.
         if binario == "pw-record":
+            serial = serial_do_no(fonte) if o_servidor_e_o_pipewire() else None
             if serial is None:
                 continue
             return [binario, *(m.format(fonte=str(serial), taxa=taxa,
@@ -2349,16 +2377,34 @@ def sink_esta_tocando(nome: str, runner: Callable[[list[str]], str | None] | Non
     O endpoint da háptica fica publicado o tempo todo — nó que some quebra o
     jogo que o escolheu, decisão dela de 08/09 —, mas o escritor do controle é
     UM SÓ: enquanto o jogo não estiver tocando nele, quem manda no fio é o
-    caminho do alto-falante. `RUNNING` é o estado que o servidor dá a um sink
-    com stream vivo; `IDLE` e `SUSPENDED` são "ninguém está usando".
+    caminho do alto-falante.
+
+    **QUEM TOCA É UM SINK-INPUT, NÃO O ESTADO DO SINK — 18/09/2026.** A
+    pergunta era o `RUNNING` do sink, e no PipeWire um LEITOR segura o nó em
+    `RUNNING` — a casa mediu isso com o `parec` na source do cabo
+    (`canal_do_microfone`), e o monitor de um sink é lido do mesmo jeito. No
+    modo háptica a própria ponte lê o monitor deste endpoint: fechado o jogo, o
+    sink seguia `RUNNING` por nossa causa, a ponte nunca voltava ao som e o
+    alto-falante do controle ficava mudo até reconectar. O nosso gravador é
+    source-output; stream TOCANDO no sink é sink-input, e só o jogo o cria. A
+    coluna 2 de `list short sink-inputs` é o índice do sink, o mesmo da coluna
+    1 de `list short sinks`, no `pipewire-pulse` e no PulseAudio.
     """
     if not nome:
         return False
     correr: Any = runner or rodar_pactl
+    indice = ""
     for linha in (correr(["pactl", "list", "short", "sinks"]) or "").splitlines():
         campos = linha.split("\t")
-        if len(campos) > 4 and campos[1] == nome:
-            return campos[4].strip().upper() == "RUNNING"
+        if len(campos) > 1 and campos[1] == nome:
+            indice = campos[0].strip()
+            break
+    if not indice:
+        return False
+    for linha in (correr(["pactl", "list", "short", "sink-inputs"]) or "").splitlines():
+        campos = linha.split("\t")
+        if len(campos) > 1 and campos[1].strip() == indice:
+            return True
     return False
 
 
@@ -3248,6 +3294,7 @@ __all__ = [
     "montar_com_o_common_preservado",
     "montar_pelos_dois_arranjos",
     "nome_do_sink",
+    "o_servidor_e_o_pipewire",
     "orcamento_do_degrau",
     "propriedades_do_sink",
     "rodar_pactl",

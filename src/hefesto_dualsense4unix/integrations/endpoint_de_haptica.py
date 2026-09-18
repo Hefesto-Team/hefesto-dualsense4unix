@@ -50,7 +50,7 @@ números.
 
 from __future__ import annotations
 
-from collections.abc import Callable, Iterable, Sequence
+from collections.abc import Callable, Iterable, Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -168,16 +168,76 @@ def ancoras(sysfs: Path | None = None) -> list[Ancora]:
     return achadas
 
 
-def distribuir_ancoras(uniqs: Sequence[str], disponiveis: Iterable[Ancora]) -> dict[str, Ancora]:
-    """Uma âncora por controle, sempre a mesma para o mesmo ``uniq``.
+def distribuir_ancoras(
+    uniqs: Iterable[str],
+    disponiveis: Iterable[Ancora],
+    de_pe: Mapping[str, Sequence[tuple[str, str]]] | None = None,
+    *,
+    ja_postas: Mapping[str, Ancora] | None = None,
+) -> dict[str, Ancora]:
+    """Uma âncora por controle, e NUNCA a mesma para dois. Função pura.
 
     **Duas âncoras iguais são dois endpoints com o mesmo ``ContainerId``**, e
     aí o jogo não distingue os controles — a háptica do jogador 2 iria para o
-    device KS do jogador 1. A distribuição é por ordem dos dois lados, que é
-    determinística e não depende de quando cada controle conectou.
+    device KS do jogador 1.
+
+    **A DISTRIBUIÇÃO ERA POR ORDEM, E A ORDEM REPETIA ÂNCORA — 18/09/2026.** Ela
+    ordenava TODOS os controles vivos e dava a i-ésima âncora ao i-ésimo; quem
+    já tinha endpoint era só pulado depois. B conecta sozinho e fica com a
+    âncora 0; A chega, com A < B, e a ordenação dá a âncora 0 a A também. O
+    mesmo com o adaptador que cai e devolve os controles em outra ordem, e com
+    um aparelho USB novo que muda a lista. Nada disso depende da máquina dela.
+
+    Agora a posse é respeitada, em três passos e nesta ordem:
+
+    1. ``ja_postas`` — a memória do processo: quem já tem endpoint fica com a
+       âncora dele, enquanto o aparelho existir em ``disponiveis``;
+    2. ``de_pe`` — o SERVIDOR, no formato de :func:`endpoints_de_pe`: quem não
+       tem endpoint neste processo, mas tem o nó de pé (o restart do daemon),
+       adota o ``sysfs.path`` que o nó já declara. Sem isso a ordenação voltava
+       a mandar depois de cada restart e :meth:`EndpointDeHaptica.iniciar`
+       derrubava e recarregava um nó vivo — com o jogo talvez aberto nele;
+    3. os que sobram, em ordem, recebem as âncoras ainda LIVRES.
+
+    A identidade de uma âncora é o ``syspath`` do aparelho, não a interface
+    declarada: o Wine sobe ao pai do caminho, então duas interfaces do mesmo
+    aparelho dariam o mesmo ``ContainerId``. Faltando âncora, o controle fica
+    de fora — repetir seria pior que faltar.
     """
     lista = list(disponiveis)
-    return {uniq: lista[i] for i, uniq in enumerate(sorted(set(uniqs))) if i < len(lista)}
+    por_aparelho = {a.syspath: a for a in lista}
+    por_declarado = {a.declarado: a for a in lista}
+    ordem = sorted({str(u) for u in uniqs})
+    postas: dict[str, Ancora] = {}
+    tomadas: set[str] = set()
+
+    def tomar(uniq: str, ancora: Ancora | None) -> bool:
+        if ancora is None or ancora.syspath in tomadas:
+            return False
+        postas[uniq] = ancora
+        tomadas.add(ancora.syspath)
+        return True
+
+    lembradas = ja_postas or {}
+    for uniq in ordem:
+        lembrada = lembradas.get(uniq)
+        if lembrada is not None and lembrada.syspath in por_aparelho:
+            tomar(uniq, lembrada)
+    servidor = de_pe or {}
+    for uniq in ordem:
+        if uniq in postas:
+            continue
+        for _module_id, caminho in servidor.get(nome_do_endpoint(uniq), ()):
+            if tomar(uniq, por_declarado.get(caminho)):
+                break
+    livres = (a for a in lista if a.syspath not in tomadas)
+    for uniq in ordem:
+        if uniq in postas:
+            continue
+        for ancora in livres:
+            if tomar(uniq, ancora):
+                break
+    return postas
 
 
 def marca_do_controle(uniq: str) -> str:
@@ -273,6 +333,8 @@ def endpoints_de_pe(
 def varrer_endpoints_orfaos(
     vivos: Iterable[str],
     runner: Callable[[list[str]], str | None] | None = None,
+    *,
+    de_pe: Mapping[str, Sequence[tuple[str, str]]] | None = None,
 ) -> list[str]:
     """Derruba todo endpoint desta casa que não pertence a um controle vivo.
 
@@ -281,12 +343,17 @@ def varrer_endpoints_orfaos(
     lista de saídas de som da pessoa com o mesmo nome do endpoint bom, e o jogo
     que procura o alto-falante do DualSense pode achar o morto.
 
+    ``de_pe`` é a resposta de :func:`endpoints_de_pe` que quem chama já tem: a
+    mesma pergunta semeia :func:`distribuir_ancoras`, e fazê-la duas vezes por
+    volta seria um ``pactl`` a mais a cada reconciliação. Sem ela, pergunta.
+
     Devolve os ``module_id`` derrubados, para o log e para a régua.
     """
     chamar = runner or rodar_pactl
     esperados = {nome_do_endpoint(u) for u in vivos} - {""}
     caidos: list[str] = []
-    for nome, instancias in endpoints_de_pe(chamar).items():
+    servidor = endpoints_de_pe(chamar) if de_pe is None else de_pe
+    for nome, instancias in servidor.items():
         if nome in esperados:
             continue
         for module_id, _caminho in instancias:
