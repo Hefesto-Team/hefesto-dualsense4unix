@@ -512,6 +512,12 @@ class Arranjo:
     #: mandar o mesmo `controle` fixo — sem isso o contador ficaria em zero e o
     #: firmware perderia a conta dos quadros.
     controle_conta_quadros: bool = False
+    #: O bloco háptico vai com a tag DUPLA (dois sub-blocos de
+    #: :attr:`len_haptico`) ou com a simples (um bloco de :attr:`len_haptico`)?
+    #: As duas fontes externas descrevem o dobro; **o que VIBROU nesta bancada
+    #: em 18/09/2026 foi o simples** — tag ``0x92``, ``len`` 64, 64 bytes. Quem
+    #: mede ganha o default do seu arranjo, não do campo.
+    haptico_duplo: bool = True
     #: Este corpo PRESERVA o ``common`` em [3..49] e o ``[2] = 0x10``, em vez de
     #: pôr a tag do AudioControl no byte [2]. Ver
     #: :func:`montar_com_o_common_preservado` — e note que ele não é leitura de
@@ -586,11 +592,21 @@ class Arranjo:
         # id errado, o firmware o descartaria calado, e o sintoma seria o
         # silêncio de sempre — indistinguível de payload errado.
         if self.len_haptico:
-            pkt[self.pos_tag_haptico] = tag_tlv(BLOCO_HAPTICS, duplo=True)
+            pkt[self.pos_tag_haptico] = tag_tlv(BLOCO_HAPTICS, duplo=self.haptico_duplo)
             pkt[self.pos_tag_haptico + 1] = self.len_haptico
-            corpo = haptico[: self.len_haptico * 2]
+            quantos = 2 if self.haptico_duplo else 1
+            corpo = haptico[: self.len_haptico * quantos]
             pkt[self.pos_haptico : self.pos_haptico + len(corpo)] = corpo
-        # Áudio.
+        # Áudio — SÓ SE O ARRANJO O DECLARAR, pela mesma razão da guarda do
+        # háptico: um arranjo sem áudio traz `pos_tag_audio=0`, e escrever a
+        # tag ali sobrescreveria o BYTE DE ID em [0]. O report sairia com o id
+        # errado, o firmware o descartaria calado, e o sintoma seria o silêncio
+        # — indistinguível de payload errado. O arranjo da háptica (0x32) é o
+        # primeiro que não leva áudio nenhum.
+        if not self.quadros_de_audio:
+            crc_so_haptico = bt_crc32(pkt[: self.tamanho - CRC_BYTES], seed=BT_CRC_SEED)
+            pkt[self.tamanho - CRC_BYTES :] = crc_so_haptico.to_bytes(4, "little")
+            return bytes(pkt)
         pkt[self.pos_tag_audio] = tag_tlv(tag_audio, duplo=self.quadros_de_audio > 1)
         pkt[self.pos_tag_audio + 1] = self.len_audio
         for i, quadro in enumerate(quadros):
@@ -698,6 +714,17 @@ ARRANJO_COMMON_PRIMEIRO = Arranjo(
 #: `audio_buffer_length`, um de contador de quadros.
 BYTES_DO_CONTROLE_035 = 7
 
+#: Os 64 bytes do bloco háptico: 32 amostras por canal, int8, estéreo, a 3 kHz.
+#: O dono da CONTA que os produz é :mod:`integrations.haptica_bt`; aqui só o
+#: tamanho, porque é ele que dimensiona o report.
+BYTES_DO_BLOCO_HAPTICO = 64
+
+#: Os quadros de 48 kHz que um bloco de 3 kHz consome: 512, os mesmos 10,667 ms
+#: do quadro Opus. É a conta de :mod:`integrations.haptica_bt` (FATOR vezes 32).
+QUADROS_POR_BLOCO_HAPTICO = 512
+#: O endpoint da háptica tem QUATRO canais: 1-2 a voz, 3-4 os motores.
+CANAIS_DA_HAPTICA = 4
+
 #: O primeiro byte do bloco `0x11`: sete bits de enable. **O bit 0 é o
 #: MICROFONE** — `0xFE` o deixa de fora, `0xFF` o liga junto. Medido em
 #: 10/09/2026: com `0xFF` o microfone entra no mesmo report que leva o som.
@@ -786,6 +813,49 @@ ARRANJO_035 = Arranjo(
 #: O terceiro entra AQUI e não em :data:`ARRANJOS` para que `--arranjo
 #: common-preservado` exista sem que `montar_pelos_dois_arranjos` deixe de ser
 #: sobre os dois.
+#: (E) **O ARRANJO QUE FEZ O MOTOR VIBRAR PELO RÁDIO** — 18/09/2026, com a mão
+#: dela: primeiro com senoide, depois com o PCM do PRAGMATA saindo do endpoint
+#: de 4 canais ("se eu atirei x vezes vibrou x vezes", 2161 reports, zero
+#: recusas).
+#:
+#: **ELE NÃO ENTRA EM** :data:`ARRANJOS` pela mesma razão do `0x35`: aquela
+#: tupla guarda os candidatos de fonte externa registrados sem escolher. Este é
+#: o medido.
+#:
+#: O layout, byte a byte: ``[0]`` id `0x32`, ``[1]`` seq<<4, ``[2]`` tag `0x91`
+#: com ``len`` 7 e os sete bytes do AudioControl em [4..10], ``[11]`` tag
+#: `0x92` com ``len`` 64 e o bloco em [13..76], CRC-32 nos quatro últimos.
+#:
+#: **SEM O BLOCO `0x91` NÃO VIBRA** — medido na mesma bancada, e é por isso que
+#: o arranjo declara o controle. E o bloco háptico é o SIMPLES (64 bytes), não
+#: o dobrado que as duas fontes externas descrevem.
+#:
+#: **ELE NÃO LEVA ÁUDIO, e isso é uma limitação declarada:** pôr voz e vibração
+#: no MESMO report do rádio é coisa que esta casa ainda não mediu. Pelo cabo os
+#: dois viajam juntos (é um stream de quatro canais); pelo rádio, enquanto
+#: ninguém medir, o escritor manda um ou outro.
+ARRANJO_HAPTICA_032 = Arranjo(
+    nome="0x32-háptica",
+    fonte=(
+        "ESTA BANCADA, 18/09/2026 — o motor voice-coil vibrou por rádio, com a "
+        "mão dela, primeiro com senoide e depois com o PCM do PRAGMATA."
+    ),
+    degrau=0x32,
+    pos_tag_controle=2,
+    len_controle=BYTES_DO_CONTROLE_035,
+    pos_tag_audio=0,
+    len_audio=0,
+    pos_audio=0,
+    quadros_de_audio=0,
+    pos_tag_haptico=11,
+    len_haptico=BYTES_DO_BLOCO_HAPTICO,
+    pos_haptico=13,
+    haptico_duplo=False,
+    intervalo_de_envio_s=INTERVALO_DE_ENVIO_035,
+    controle_conta_quadros=True,
+)
+
+
 ARRANJO_POR_NOME: dict[str, Arranjo] = {
     a.nome: a for a in (*ARRANJOS, ARRANJO_COMMON_PRIMEIRO, ARRANJO_035)
 }
@@ -1621,6 +1691,13 @@ class ContagemDaBomba:
     escritas_recusadas: int = 0
     bytes_escritos: int = 0
     segundos: float = 0.0
+    #: Blocos hápticos montados, e quantos deles saíram MUDOS (todas as
+    #: amostras em zero). A distinção é o que separa *"a ponte não roda"* de
+    #: *"o jogo não mandou vibração"* — os dois se leem como "não vibrou".
+    blocos_hapticos: int = 0
+    hapticos_mudos: int = 0
+    #: O maior valor absoluto que já foi para um motor, em int8 (0..127).
+    pico_haptico: int = 0
 
     @property
     def reports_por_segundo(self) -> float:
@@ -1639,6 +1716,8 @@ class ContagemDaBomba:
             f"  leituras curtas (completadas com silêncio) {self.pcm_curto}",
             f"  quadros Opus ............... {self.quadros_opus}",
             f"  quadros que o encoder recusou {self.quadros_recusados}",
+            f"  blocos hápticos ............ {self.blocos_hapticos}"
+            f" ({self.hapticos_mudos} mudos, pico {self.pico_haptico}/127)",
             f"  reports montados ........... {self.reports_montados}"
             f"  ({self.reports_por_segundo:.1f}/s)",
             f"  escritas ACEITAS PELO KERNEL {self.escritas_aceitas_pelo_kernel}",
@@ -1692,6 +1771,8 @@ class BombaDeSomPeloRadio:
         seco: bool = True,
         common: bytes | None = None,
         com_microfone: bool | Callable[[], bool] = False,
+        fonte_haptica: Callable[[int], bytes] | None = None,
+        conversor: Any = None,
     ) -> None:
         # O `common` É OBRIGATÓRIO PARA O CORPO QUE O PRESERVA — 08/09/2026.
         #
@@ -1740,6 +1821,15 @@ class BombaDeSomPeloRadio:
         #: 93,75 reports por segundo, um `0xFE` congelado é o microfone sendo
         #: desligado noventa e três vezes por segundo.
         self.com_microfone = com_microfone
+        #: A fonte do PCM da HÁPTICA — o monitor do endpoint de quatro canais
+        #: que o jogo abre. Separada da fonte do som de propósito: são dois
+        #: nós diferentes, com donos diferentes (a saída da máquina para o
+        #: controle CONTRA o alto-falante que o JOGO enxerga).
+        self.fonte_haptica = fonte_haptica
+        #: O conversor 48 kHz/4 canais → bloco de 64 B. Preguiçoso: uma bomba
+        #: montada e nunca rodada não precisa dele.
+        self._conversor = conversor
+        self._blocos: list[bytes] = []
         self.contagem = ContagemDaBomba()
 
     # -- a conta ----------------------------------------------------------
@@ -1799,9 +1889,15 @@ class BombaDeSomPeloRadio:
         Descartar faria o fim de todo fluxo sumir sem número; completar em
         silêncio, sem contar, faria a bomba parecer sã com a fonte agonizando.
         """
+        haptico = b""
+        if self.arranjo.len_haptico and self.fonte_haptica is not None:
+            bloco = self._bloco_haptico()
+            if bloco is None:
+                return None
+            haptico = bloco
         pedido = self.bytes_de_pcm_por_report
-        pcm = self.fonte(pedido)
-        if not pcm:
+        pcm = self.fonte(pedido) if pedido else b""
+        if not pcm and pedido:
             return None
         self.contagem.pcm_lido += len(pcm)
         if len(pcm) < pedido:
@@ -1827,11 +1923,49 @@ class BombaDeSomPeloRadio:
             tag_audio=self.tag_audio,
             common=self.common,
             controle=self._controle_deste_report(),
+            haptico=haptico,
         )
         self._seq = (self._seq + 1) % VOLTA_DA_SEQUENCIA
-        self._quadros_mandados += self.arranjo.quadros_de_audio
+        # Sem áudio, o contador do bloco `0x11` anda por REPORT: ele existe
+        # para o firmware não perder a conta dos quadros que consome, e no
+        # arranjo da háptica cada report É um quadro de 10,667 ms.
+        self._quadros_mandados += self.arranjo.quadros_de_audio or 1
         self.contagem.reports_montados += 1
         return report
+
+    @property
+    def bytes_de_pcm_da_haptica(self) -> int:
+        """O PCM cru de UM bloco háptico: 512 quadros de 4 canais s16le."""
+        return QUADROS_POR_BLOCO_HAPTICO * 2 * CANAIS_DA_HAPTICA
+
+    def _bloco_haptico(self) -> bytes | None:
+        """O próximo bloco de 64 B, ou None quando a fonte secou.
+
+        **A FONTE DA HÁPTICA É O RELÓGIO QUANDO NÃO HÁ ÁUDIO**, e isso não é
+        detalhe de implementação: a leitura do monitor bloqueia até existirem
+        512 quadros, que são os 10,667 ms de um report. Quem dá o ritmo é o
+        jogo. Um `sleep` nosso em cima disso só acrescentaria deriva.
+        """
+        if self._conversor is None:
+            from hefesto_dualsense4unix.integrations.haptica_bt import ConversorDeHaptica
+
+            self._conversor = ConversorDeHaptica()
+        while not self._blocos:
+            if self.fonte_haptica is None:
+                return None
+            pcm = self.fonte_haptica(self.bytes_de_pcm_da_haptica)
+            if not pcm:
+                return None
+            self._blocos.extend(self._conversor.alimentar(pcm))
+        bloco = self._blocos.pop(0)
+        self.contagem.blocos_hapticos += 1
+        pico = max((b - 256 if b > 127 else b) for b in bloco) if bloco else 0
+        pico = max(pico, -min((b - 256 if b > 127 else b) for b in bloco)) if bloco else 0
+        if pico == 0:
+            self.contagem.hapticos_mudos += 1
+        elif pico > self.contagem.pico_haptico:
+            self.contagem.pico_haptico = pico
+        return bloco
 
     def _controle_deste_report(self) -> bytes:
         """Os bytes do bloco de controle, montados por report quando ele conta.
