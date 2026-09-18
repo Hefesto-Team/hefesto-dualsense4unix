@@ -545,19 +545,26 @@ def _radios_declarados(declaracao: Any) -> dict[str, str]:
 
 
 def _mic_declarado(declaracao: Any, uniq: str) -> bool:
-    """A ponte de microfone DESTE controle está declarada?
+    """O microfone DESTE controle está ligado?
 
-    **Só `True` conta**, e é regra do produto (`bt_mic.uniqs_declarados`):
-    ausência e `False` deixam a ponte no chão do mesmo jeito. Ler `False` como
-    "desligado" e ausência como "não sei" daria à tela um terceiro estado que o
-    produto não tem.
+    **A REGRA INVERTEU EM 18/09/2026** (ordem dela: *"todos os controles tem
+    que nascer com tudo mic, giroscopio e afins"*). Antes só `True` contava, e
+    ausência era silêncio; agora só `False` desliga, e a ausência LIGA — que é
+    o que o daemon faz desde a mesma data (`bt_mic.uniqs_recusados`).
+
+    Continuam sendo DOIS estados na tela, não três: o que mudou é para que lado
+    cai o controle sobre o qual ninguém disse nada. Ele agora cai para o lado
+    do aparelho — um DualSense tem microfone.
+
+    Erro de leitura responde `True` pela mesma razão que a fonte do daemon: com
+    o default invertido, o lado seguro é não calar um microfone por engano.
     """
     try:
         chave = _so_hex(uniq)
         declarado = (declaracao.controles or {}).get(chave)
-        return getattr(declarado, "microfone", None) is True
+        return getattr(declarado, "microfone", None) is not False
     except Exception:
-        return False
+        return True
 
 
 def _so_hex(uniq: str) -> str:
@@ -4398,11 +4405,17 @@ def mic_existe(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     agora"*. Sem essa parte, a escolha dela só valeria no próximo início do
     daemon.
 
-    **DESLIGAR GRAVA `None`, NÃO `False`.** É regra do produto e está no
-    `secao_controles._ao_alternar_o_microfone`: *"nunca pedi" e "não quero"
-    deixam a ponte no chão do mesmo jeito, e um `false` em disco seria um valor
-    de catálogo para o silêncio — a porta pela qual o default entra disfarçado
-    de escolha dela*.
+    **DESLIGAR GRAVA `False` — MUDOU EM 18/09/2026, e a razão é a inversão.**
+    Até aqui gravava `None`, e a regra era boa enquanto o default fosse o
+    silêncio: *"nunca pedi" e "não quero" deixam a ponte no chão do mesmo
+    jeito*. Com a ordem dela — *"todos os controles tem que nascer com tudo mic,
+    giroscopio e afins"* — a ausência passou a LIGAR, e aí `None` deixou de ser
+    um jeito de desligar: seria o botão que não desliga.
+
+    O medo que a regra velha protegia continua real e agora tem outro nome: um
+    `false` no disco é o **único** registro de que ela disse não, e é o que
+    impede o produto de religar sozinho no próximo boot. Ver
+    `bt_mic.uniqs_recusados`.
 
     O QUE ESTE GESTO **NÃO** ENTREGA, e a tela precisa dizer um dia: pelo CABO
     o microfone não passa por esta ponte. A frase é do produto
@@ -4425,7 +4438,7 @@ def mic_existe(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
         raise ValueError(f"mic-existe: {escolha!r} não é resposta desta lista")
     ligado = escolha == "Ligado"
     ok, motivo = _resposta(
-        p.machine_declare({"controles": {chave: {"microfone": True if ligado else None}}}))
+        p.machine_declare({"controles": {chave: {"microfone": bool(ligado)}}}))
     if not ok:
         raise RuntimeError(motivo or "não consegui gravar o que você declarou")
     _reler_a_declaracao()
@@ -5220,10 +5233,11 @@ PROVAS = [
                 [{"controles": {"aabbcc000001": {"microfone": True}}}], {})]},
     # DESLIGAR GRAVA `None`, NUNCA `False`, e é a prova de que a regra do
     # produto atravessou: um `false` em disco seria um valor de catálogo para o
-    # silêncio (`ControleDeclarado`, `secao_controles._ao_alternar_o_microfone`).
+    # DESLIGAR GRAVA `False` desde 18/09/2026: com o default invertido (a
+    # ausência LIGA), `None` seria o botão que não desliga. Ver `mic_existe`.
     {"pagina": PAGINA, "gesto": "mic-existe", "clique": {"valor": "Desligado"},  # (noqa-acento) id
      "chama": [("machine_declare",
-                [{"controles": {"aabbcc000001": {"microfone": None}}}], {})]},
+                [{"controles": {"aabbcc000001": {"microfone": False}}}], {})]},
 ]
 
 #: OS GESTOS SEM PROVA AQUI, e o motivo é o limite desta régua — não é

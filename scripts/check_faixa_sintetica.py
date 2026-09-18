@@ -68,7 +68,7 @@ from pathlib import Path
 # O dono é `core/faixa_sintetica.py`. Este portão pergunta a ele.
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
-from hefesto_dualsense4unix.core.faixa_sintetica import (  # noqa: E402
+from hefesto_dualsense4unix.core.faixa_sintetica import (
     FAIXAS_SINTETICAS,
 )
 

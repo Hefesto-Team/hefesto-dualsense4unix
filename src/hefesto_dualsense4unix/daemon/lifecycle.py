@@ -385,6 +385,12 @@ class DaemonConfig:
     # `HEFESTO_DUALSENSE4UNIX_BT_MIC=1` continua valendo, e vale para TODOS os
     # controles: é o caminho à mão, e quem o exporta pede a mesa inteira.
     bt_mic_uniqs: Callable[[], frozenset[str]] | None = None
+    #: Os `uniq` que ela DESLIGOU — a única coisa que tira um microfone do ar
+    #: depois da inversão de 18/09/2026 (ordem dela: *"todos os controles tem
+    #: que nascer com tudo mic, giroscopio e afins"*). Chamável pela MESMA razão
+    #: da irmã acima: o `machine.declare` rebinda `daemon._maquina` no "Aplicar",
+    #: e uma cópia tirada no boot ficaria velha no instante da escolha.
+    bt_mic_recusados: Callable[[], frozenset[str]] | None = None
     # FEAT-METRICS-01
     metrics_enabled: bool = False
     metrics_port: int = 9090
@@ -888,7 +894,10 @@ class Daemon:
         # arquivo é da mesa, muda por gesto dela e nunca por trás do daemon.
         # A leitura nunca levanta (ver `carregar_maquina`), então não precisa de
         # `_safe_start` nem de try — arquivo corrompido sobe como "não sei".
-        from hefesto_dualsense4unix.daemon.subsystems.bt_mic import uniqs_declarados
+        from hefesto_dualsense4unix.daemon.subsystems.bt_mic import (
+            uniqs_declarados,
+            uniqs_recusados,
+        )
         from hefesto_dualsense4unix.utils.maquina import carregar_maquina
         self._maquina = carregar_maquina()
         # CONFIG-05 (22/08/2026): o primeiro consumidor da declaração, e é o
@@ -908,6 +917,11 @@ class Daemon:
         # teto tem valor de catálogo; um microfone não tem — ele tem endereço.
         if self.config.bt_mic_uniqs is None:
             self.config.bt_mic_uniqs = lambda: uniqs_declarados(self._maquina)
+        # A RECUSA, fiada do mesmo jeito e pela mesma razão (18/09/2026). A
+        # guarda do `None` também é a mesma: quem já montou a própria fonte
+        # está exercendo o gate sem escrever um `maquina.json` no disco.
+        if self.config.bt_mic_recusados is None:
+            self.config.bt_mic_recusados = lambda: uniqs_recusados(self._maquina)
         if self._native_mode:
             # O gate de dispatch é o próprio _native_mode (consultado no poll
             # loop); não força _paused (evita conflatar com o pause manual).
