@@ -87,6 +87,8 @@ ENV_ALLOWLIST = (
     "__GL_SHADER_DISK_CACHE",
     "__GL_SHADER_DISK_CACHE_SKIP_CLEANUP",
     "SDL_ACCELEROMETER_AS_JOYSTICK",
+    "PROTON_KEEP_SONY_AUDIO_ENDPOINT_VISIBLE",
+    "PROTON_ENABLE_MHWILDS_USB_AUDIO",
 )
 
 #: MÁSCARA-01, entrega 3 — METADE SEGURA (07/08/2026): o par VID/PID do
@@ -1612,25 +1614,25 @@ def compose_env(
     # nas bibliotecas dos runtimes da Steam (2.32.10, SDL3 3.4.14, sdl2-compat
     # 2.32.70), a dica em 0 é inócua. Entra em toda variante, como a de cima.
     env["SDL_ACCELEROMETER_AS_JOYSTICK"] = "0"
-    # HAPTICA-POR-AUDIO-01 — A VARIÁVEL FOI ARRANCADA NA MESMA NOITE, 17/09/2026.
+    # HAPTICA-NATIVA-01 (17/09/2026): a vibração do DualSense viaja como ÁUDIO —
+    # os canais 3 e 4 do endpoint de 4 canais são os dois motores. O PRAGMATA
+    # VIBROU, na mão dela, com estas duas opções individuais do GE-Proton mais
+    # o device KS que o `hefesto-launch` grava no prefixo
+    # (`integrations/audio_ks_dualsense.py`):
     #
-    # `PROTON_DEATH_STRANDING_CONTROLLER_EFFECTS=1` liga cinco comportamentos do
-    # caminho de áudio do controle no GE-Proton (patch 0164), e **um deles mata o
-    # PRAGMATA**: `0xc0000005` dentro de `mmdevapi!init_driver`, chamado pelo
-    # `CoCreateInstance(MMDeviceEnumerator)` do jogo, ~10 s depois do launch.
+    # - KEEP_SONY mantém o endpoint do controle visível depois da ativação e
+    #   liga o fallback do ContainerId pelo pai USB (patches 0110/0112/0121);
+    # - MHWILDS faz o `setupapi` listar interfaces `KSCATEGORY_AUDIO` — é essa
+    #   a pergunta que a RE Engine faz para achar o alvo (0103). Sem DualSense
+    #   no CABO o wrapper a troca por "0" no lançamento: ela expõe KS falso de
+    #   headset USB, e foi isso que quebrou o Black Desert Online no GE.
     #
-    # Medido com a Launch Option limpa pela mão dela: sem a variável o jogo abre;
-    # com ela, cai. Dez rodadas anteriores tinham "inocentado" a variável — todas
-    # inválidas, porque o `localconfig.vdf` foi editado com a STEAM ABERTA e ela
-    # reescreve o arquivo por cima, mantendo a sua cópia em memória. O `grep` no
-    # disco dizia 0 e o `environ` do jogo dizia 1, ao mesmo tempo.
-    #
-    # ELA NÃO VOLTA COMO GUARDA-CHUVA. O caminho de háptica continua valendo —
-    # são 182 patches em `patches/proton-ds5-haptic/` e nove variáveis vivas nos
-    # binários —, mas ligar as cinco de uma vez é grosso demais: basta uma
-    # quebrar para o jogo não abrir. O que entra no produto tem de ser a opção
-    # individual que sobreviver ao aparelho, jogo a jogo se for preciso, e nunca
-    # antes de passar por um teste cuja PREMISSA esteja provada no `environ`.
+    # O guarda-chuva `PROTON_DEATH_STRANDING_CONTROLLER_EFFECTS` NÃO volta:
+    # derrubava o PRAGMATA (a8cf590a0). Entram em toda variante, pela regra de
+    # jogo nascer com tudo ligado; desligar um jogo é
+    # `PROTON_ENABLE_MHWILDS_USB_AUDIO=0 %command%` na Launch Option, que vence.
+    env["PROTON_KEEP_SONY_AUDIO_ENDPOINT_VISIBLE"] = "1"
+    env["PROTON_ENABLE_MHWILDS_USB_AUDIO"] = "1"
     return env
 
 

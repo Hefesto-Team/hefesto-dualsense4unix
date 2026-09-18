@@ -1580,6 +1580,23 @@ if [[ -f "${HOME}/.local/state/hefesto-dualsense4unix/camadas-vulkan.json" ]]; t
     rm -f "${HOME}/.local/state/hefesto-dualsense4unix/camadas-vulkan.json"
 fi
 
+# HAPTICA-NATIVA-01: o device de áudio KS que gravamos no prefixo de cada jogo
+# sai ANTES do curador, pelo mesmo motivo das camadas — é dado nosso dentro do
+# registro dela. Só os blocos com o nosso marcador (HEFESTOKS) saem.
+AUDIO_KS_PY="${ROOT_DIR}/src/hefesto_dualsense4unix/integrations/audio_ks_dualsense.py"
+if [[ -f "${AUDIO_KS_PY}" ]] && command -v python3 >/dev/null 2>&1; then
+    log "tirando o device de áudio KS do DualSense dos prefixos dos jogos"
+    python3 "${AUDIO_KS_PY}" --remover-de-todos || \
+        log "  ERRO: remoção adiada — rode: python3 ${AUDIO_KS_PY} --remover-de-todos"
+else
+    log "audio_ks_dualsense.py ausente ou sem python3 — pulei a remoção do device KS"
+fi
+readonly AUDIO_KS_TARGET="${HOME}/.local/share/hefesto-dualsense4unix/bin/hefesto-audio-ks"
+if [[ -e "${AUDIO_KS_TARGET}" ]]; then
+    log "removendo o curador do device KS ${AUDIO_KS_TARGET}"
+    rm -f "${AUDIO_KS_TARGET}"
+fi
+
 # Só DEPOIS do vdf limpo o wrapper pode sair (simetria com o passo 4b-2 do
 # install.sh). O launch_env/ é materialização volátil do daemon — sai junto.
 readonly LAUNCH_WRAPPER="${HOME}/.local/share/hefesto-dualsense4unix/bin/hefesto-launch"
