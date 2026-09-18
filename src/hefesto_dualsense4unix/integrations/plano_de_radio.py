@@ -662,23 +662,29 @@ def linha_do_cabe_mais_um(plano: PlanoDoAdaptador, *, com_mic: bool = True) -> s
 
 
 def linha_do_declarado_que_nao_subiu(plano: PlanoDoAdaptador) -> str | None:
-    """A segunda linha, quando o que ela marcou não é o que está de pé.
+    """A segunda linha, quando o que ela quer não é o que está de pé.
 
     ``None`` quando as duas contas coincidem — e aí a linha não aparece,
     porque a tela não tem nada a corrigir.
+
+    **A FRASE PERDEU O "VOCÊ MARCOU" EM 18/09/2026, e ela estava mentindo.**
+    Dizia *"Você marcou o microfone de um controle deste adaptador"*, e era
+    verdade enquanto o microfone fosse opt-in. Com a ordem dela — *"todos os
+    controles tem que nascer com tudo mic, giroscopio e afins"* — o produto
+    liga por padrão, e a tela passaria a atribuir a ela um ato que ela não fez:
+    o caso mais comum agora é justamente o do controle que ela nunca tocou.
+
+    É a regra da casa sobre a tela: o produto não diz que ela fez o que ele
+    fez sozinho.
     """
     pendentes = plano.declarado_que_nao_subiu
     if not pendentes:
         return None
     quantos = len(pendentes)
     if quantos == 1:
-        return (
-            "Você marcou o microfone de um controle deste adaptador, e ele "
-            "ainda não subiu."
-        )
+        return "O microfone de um controle deste adaptador ainda não subiu."
     return (
-        f"Você marcou o microfone de {quantos} controles deste adaptador, e "
-        "eles ainda não subiram."
+        f"O microfone de {quantos} controles deste adaptador ainda não subiu."
     )
 
 
