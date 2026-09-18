@@ -1555,19 +1555,6 @@ _SEM_CAMINHO_HOJE: dict[str, str] = {
         "`subsystems/__init__.py` avisa que acrescentar à lista NÃO liga nada, e "
         "foi assim que o `BtMicSubsystem` nasceu órfão em 25/07/2026. 06/09/2026."
     ),
-    'integrations/alto_falante_bt.py::rodar_pactl': (
-        "SOM-QUE-SAI-01, 06/09/2026 — a porta pública que deixa o ensaio "
-        "PERGUNTAR ao servidor (`pactl list sinks`, `get-default-sink`) em vez de "
-        "montar o próprio `subprocess` com outra política de idioma e de timeout. "
-        "Hoje só `scripts/ensaios/o_som_que_sai.py` a chama, e `scripts/` não "
-        "conta para esta régua. ONDE O CAMINHO SE PERDE: o `AltoFalanteSubsystem` "
-        "não está no `run()` de `daemon/lifecycle.py` nem na lista de "
-        "`daemon/subsystems/__init__.py`, e os dois estão FORA da posse desta "
-        "sprint (o frontmatter dá três arquivos). O QUE FECHA: registrar o "
-        "subsystem nos DOIS lugares — o próprio `subsystems/__init__.py` avisa "
-        "que acrescentar à lista NÃO liga nada, e foi assim que o "
-        "`BtMicSubsystem` nasceu órfão em 25/07/2026. 06/09/2026."
-    ),
     'integrations/alto_falante_bt.py::diagnosticar': (
         "SOM-QUE-SAI-01, 06/09/2026 — fotografa as pré-condições do nó sem mexer "
         "em nada (só leitura). O chamador natural é o `doctor` e a tela de "

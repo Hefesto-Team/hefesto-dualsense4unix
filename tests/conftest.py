@@ -2568,6 +2568,23 @@ def ds5_de_bancada(
 
 
 @pytest.fixture(autouse=True, scope="session")
+def _nenhuma_ancora_de_usb_viva_na_suite(tmp_path_factory: pytest.TempPathFactory) -> None:
+    """A suíte não enxerga o barramento USB DELA.
+
+    Sem isto, `endpoint_de_haptica.ancoras()` leria `/sys` de verdade, o
+    subsystem distribuiria âncoras e o `EndpointDeHaptica.iniciar()` publicaria
+    um `module-null-sink` NA MÁQUINA DELA a cada corrida da suíte. É a mesma
+    forma do defeito que a memória "subsystem novo faz a suíte tocar o aparelho
+    dela" registra — e a cura é a mesma: a raiz se resolve na chamada, e aqui
+    ela aponta para um sysfs vazio.
+    """
+    from hefesto_dualsense4unix.integrations import endpoint_de_haptica
+
+    vazio = tmp_path_factory.mktemp("sysfs-sem-usb")
+    endpoint_de_haptica.RAIZ_DO_SYSFS = vazio
+
+
+@pytest.fixture(autouse=True, scope="session")
 def _nenhum_uinput_de_verdade() -> Iterator[None]:
     """A suíte NÃO cria aparelho de entrada no kernel de quem a roda.
 
