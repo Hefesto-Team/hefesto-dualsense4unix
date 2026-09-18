@@ -55,9 +55,16 @@ def _venv_python_ao_alcance() -> str:
 
 
 def _corpo_do_python_do_produto() -> str:
-    return _funcao("_python_do_produto").replace(
-        '"$(dirname "$0")/../.venv/bin/python"', f'"{_venv_python_ao_alcance()}"'
-    )
+    """O corpo do doctor com a venv DESTA árvore no lugar da do produto.
+
+    O candidato substituído é o PRIMEIRO da lista desde 18/09/2026
+    (INSTALL-UNIVERSAL): a venv ao lado do script. Se a substituição não
+    casar, a régua para aqui — e não roda com um `ROOT_DIR` indefinido.
+    """
+    corpo = _funcao("_python_do_produto")
+    alvo = '"${ROOT_DIR}/.venv/bin/python"'
+    assert alvo in corpo, "o candidato da venv do produto mudou de grafia"
+    return corpo.replace(alvo, f'"{_venv_python_ao_alcance()}"')
 
 
 def _python_que_o_doctor_usa() -> str:

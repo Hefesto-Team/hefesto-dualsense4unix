@@ -566,6 +566,9 @@ class AltoFalanteSubsystem:
         #: mandando AGORA. O escritor é um só, e trocar de arranjo exige
         #: derrubar e subir — é por isso que o modo é lembrado.
         self._modo_da_ponte: dict[str, str] = {}
+        #: Quantos controles no rádio ficaram sem âncora USB na última volta —
+        #: lembrado para o aviso sair na MUDANÇA, e não a cada `RECONCILIA_S`.
+        self._faltam_ancoras = 0
         #: `({uniq: fonte}, (nome do perfil, carimbo))` — SFX-POR-CONTROLE-01.
         self._fontes_em_cache: tuple[dict[str, str], Any] = ({}, None)
         #: O `StateStore` do daemon, que sabe o perfil ATIVO agora.
@@ -779,6 +782,29 @@ class AltoFalanteSubsystem:
             return None
         return ponte.esta_de_pe
 
+    def _avisar_ancoras_que_faltam(self, faltam: int, controles: int) -> None:
+        """O controle no rádio sem âncora USB fica sem vibração — e diz isso.
+
+        **INSTALL-UNIVERSAL, 18/09/2026.** O endpoint da háptica precisa de uma
+        âncora por controle (um aparelho USB com interface e sem placa de som),
+        e o :func:`distribuir_ancoras` só entrega enquanto houver: o que sobra
+        era pulado por um ``continue`` mudo. Num desktop sobram âncoras; num
+        notebook com a mesa de quatro, podem faltar — e a vibração de um
+        jogador sumia sem rastro.
+
+        O aviso sai **na mudança**, porque esta volta roda a cada
+        :data:`RECONCILIA_S`, e um aviso por volta encheria o journal. Nada vai
+        para a tela (a dívida é nossa, não dela): o ``doctor.sh`` conta as
+        mesmas âncoras e diz o gesto.
+        """
+        if faltam == self._faltam_ancoras:
+            return
+        if faltam > 0:
+            logger.warning("haptica_sem_ancora", faltam=faltam, controles=controles)
+        else:
+            logger.info("haptica_ancoras_bastam", controles=controles)
+        self._faltam_ancoras = faltam
+
     def _casar_as_pontes(self, controles: list[Any]) -> None:
         """Sobe uma ponte por controle NO RÁDIO, e derruba a de quem saiu.
 
@@ -855,6 +881,10 @@ class AltoFalanteSubsystem:
             endpoint = EndpointDeHaptica(uniq=uniq, ancora=postas[uniq])
             if endpoint.iniciar():
                 self._endpoints[uniq] = endpoint
+        self._avisar_ancoras_que_faltam(
+            sum(1 for u in vivos if u not in self._endpoints and u not in postas),
+            len(vivos),
+        )
 
         for uniq, caminho in vivos.items():
             # O MODO PODE MUDAR COM A PONTE DE PÉ: o jogo abre o endpoint no

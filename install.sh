@@ -592,6 +592,13 @@ _pkg_nome() {
         pactl)
             _apt="pulseaudio-utils";  _dnf="pulseaudio-utils"
             _pacman="libpulse" ;;
+        # A árvore UCM do sistema (`/usr/share/alsa/ucm2/ucm.conf`), onde mora o
+        # gancho do DualSense (HAPTICA-NATIVA-01). O Fedora a empacota como
+        # subpacote do `alsa-lib`, com outro nome. Nomes dos repositórios de
+        # cada família; o contêiner do `smoke-multi-distro` é quem os mede.
+        alsa-ucm)
+            _apt="alsa-ucm-conf";     _dnf="alsa-ucm"
+            _pacman="alsa-ucm-conf" ;;
         bluez)
             _apt="bluez";             _dnf="bluez"
             _pacman="bluez bluez-utils" ;;
@@ -769,6 +776,13 @@ _DEPS_DE_SISTEMA=(
     # apagada, que é um estado válido do contrato. Morrer o install por causa
     # disso cobraria o preço errado.
     "pactl|importante|cmd:pactl,parec|a luz do microfone do controle fica apagada para sempre: sem o pactl ninguém sabe QUEM está ouvindo, sem o parec ninguém sabe se está entrando som (LUZ-DO-MIC-01) — e o microfone por Bluetooth também não sobe"
+    # HAPTICA-NATIVA-01 (INSTALL-UNIVERSAL, 18/09/2026). O passo 3c-bis grava o
+    # gancho UCM do DualSense em `conf.d/USB-Audio/`, e quem o LÊ é o
+    # `ucm.conf` do pacote. No apt ele chega como `Recommends` do
+    # `libasound2-data`: numa instalação sem recomendações ele falta, o
+    # roteiro só avisa, e a vibração pelo cabo sumia calada. A checagem é o
+    # próprio arquivo — é ele, e não o nome do pacote, que o ALSA procura.
+    "alsa-ucm|importante|arquivo:/usr/share/alsa/ucm2/ucm.conf|a vibração dos jogos da Sony pelo DualSense no cabo não chega: sem o UCM do sistema a placa do controle não abre pelo perfil HiFi"
     # MIGRACAO-BLUEZ-DEPRECIADOS-01 (19/08/2026): a régua pedia SÓ o
     # `bluetoothctl`, e desde a migração o produto também chama o `btmgmt`
     # (`bt_active_mode.sh`, `doctor.sh`, `uninstall.sh`). Os dois entram, e a
@@ -852,6 +866,12 @@ _dep_presente() {
                 command -v "${_bin}" >/dev/null 2>&1 || return 1
             done
             return 0
+            ;;
+        arquivo:*)
+            # O EFEITO é o arquivo existir onde a biblioteca o procura. Tem de
+            # estar aqui, e não cair no `*)` de baixo: aquele responde
+            # "presente" para toda checagem que não conhece.
+            [[ -f "${_checagem#arquivo:}" ]]
             ;;
         svg)
             # A pergunta certa não é "o pacote está instalado?", e sim "o

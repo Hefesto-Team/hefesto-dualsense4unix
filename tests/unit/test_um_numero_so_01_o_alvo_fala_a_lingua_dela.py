@@ -85,13 +85,55 @@ _FILA_PODRE = {
 # tinha como curar — `A-CASA-SABE-E-O-PRODUTO-NÃO-FAZ` na forma mais pura.
 
 
-def test_o_dono_conhece_as_tres_faixas_nas_duas_grafias() -> None:
+def test_o_dono_conhece_as_faixas_locais_nas_duas_grafias() -> None:
+    """As três faixas continuam na lista; só as de endereço LOCAL são lixo.
+
+    INSTALL-UNIVERSAL, 18/09/2026: esta régua exigia que ``e8473a`` fosse
+    tratada como lixo — e é a pergunta que o ``--limpar`` do ``doctor --fix``
+    faz antes de TIRAR uma entrada da fila, na máquina de qualquer pessoa.
+    ``e8`` não tem o bit de administração local: é espaço que a IEEE dá a
+    fabricante. Os varredores de texto continuam acusando as três.
+    """
     assert FAIXAS_SINTETICAS == ("aabbcc", "02fe00", "e8473a")
-    for faixa in FAIXAS_SINTETICAS:
+    for faixa in ("aabbcc", "02fe00"):
         colada = f"{faixa}000001"
         separada = ":".join(colada[i : i + 2] for i in range(0, 12, 2))
         assert e_endereco_sintetico(colada), colada
         assert e_endereco_sintetico(separada.upper()), separada
+    assert not e_endereco_sintetico("e8473a000001")
+    assert not e_endereco_sintetico("E8:47:3A:00:00:01")
+
+
+def test_o_gesto_nao_tira_da_fila_o_endereco_universal(tmp_path) -> None:
+    """A MORDIDA da faixa universal: um controle em ``e8:47:3a`` sobrevive.
+
+    Com o daemon reiniciado depois da limpeza (o ``fix_fila_sem_fixture`` do
+    doctor), a remoção de um controle de verdade passa a ficar — por isso as
+    duas curas entram juntas. Devolva ``e8473a`` à pergunta do dono e esta
+    régua reprova.
+    """
+    import json as _json
+    import sys
+
+    sys.path.insert(0, str(_RAIZ / "scripts"))
+    from check_faixa_sintetica import limpar
+
+    fila = {
+        "version": 3,
+        ORDER_FIELD: [
+            {"addr": f"{_REAL}01", "kind": KIND_DUALSENSE, "rank": 1},
+            {"addr": "e8:47:3a:00:00:07", "kind": KIND_DUALSENSE, "rank": 2},
+            {"addr": "aabbcc000001", "kind": KIND_DUALSENSE, "rank": 3},
+        ],
+    }
+    alvo = tmp_path / "controllers.json"
+    alvo.write_text(_json.dumps(fila), encoding="utf-8")
+
+    relato = limpar(tmp_path)
+
+    enderecos = [e["addr"] for e in _json.loads(alvo.read_text(encoding="utf-8"))[ORDER_FIELD]]
+    assert relato == ["  tirado da fila: aabbcc000001"], relato
+    assert enderecos == [f"{_REAL}01", "e8:47:3a:00:00:07"], enderecos
 
 
 def test_endereco_real_nunca_e_lixo() -> None:
