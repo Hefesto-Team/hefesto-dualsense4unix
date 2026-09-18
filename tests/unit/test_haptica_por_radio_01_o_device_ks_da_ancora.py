@@ -49,14 +49,18 @@ _NOME_DO_NO = (
     "alsa_output.usb-Sony_Interactive_Entertainment_"
     "DualSense_Wireless_Controller_HEFESTOaabbcc-00.HiFi__Speaker__sink"
 )
-_CAMINHO_DA_ANCORA = "/devices/pci0000:00/0000:00:08.1/usb3/3-4"
+#: A ÂNCORA é o `usb_device`; o nó declara a INTERFACE dela. O
+#: `udev_device_get_parent_with_subsystem_devtype` devolve um ancestral, nunca
+#: o próprio device — declarar a âncora nua faz o GUID subir para o hub raiz.
+_ANCORA = "/devices/pci0000:00/0000:00:08.1/usb3/3-4"
+_CAMINHO_DECLARADO = _ANCORA + "/3-4:1.0"
 
 
 def _sinks(
     *,
     vid: str = "054c",
     pid: str = "0ce6",
-    caminho: str | None = _CAMINHO_DA_ANCORA,
+    caminho: str | None = _CAMINHO_DECLARADO,
     nome: str = _NOME_DO_NO,
 ) -> str:
     sysfs = f'sysfs.path = "{caminho}"' if caminho is not None else 'device.icon_name = "x"'
@@ -75,8 +79,8 @@ def _dubles(saida: str):
 def sysfs(tmp_path: Path) -> Path:
     """Um sysfs de mentira com a âncora (um hub, sem placa de som)."""
     raiz = tmp_path / "sys"
-    ancora = raiz / _CAMINHO_DA_ANCORA.lstrip("/")
-    ancora.mkdir(parents=True)
+    ancora = raiz / _ANCORA.lstrip("/")
+    (raiz / _CAMINHO_DECLARADO.lstrip("/")).mkdir(parents=True)
     (ancora / "idVendor").write_text("2357\n")
     (ancora / "idProduct").write_text("0604\n")
     (ancora / "busnum").write_text("3\n")
@@ -97,7 +101,7 @@ def udev(tmp_path: Path) -> Path:
 
 
 def test_o_no_vestido_de_dualsense_e_lido() -> None:
-    assert ks.endpoints_de_mentira(_dubles(_sinks())) == [(0x0CE6, _CAMINHO_DA_ANCORA)]
+    assert ks.endpoints_de_mentira(_dubles(_sinks())) == [(0x0CE6, _CAMINHO_DECLARADO)]
 
 
 def test_o_no_sem_sysfs_path_fica_de_fora() -> None:
@@ -118,10 +122,28 @@ def test_sem_pactl_nao_ha_endpoint() -> None:
 
 
 def test_o_pai_usb_device_e_o_primeiro_com_busnum_e_devnum(sysfs: Path) -> None:
-    fundo = sysfs / _CAMINHO_DA_ANCORA.lstrip("/") / "3-4:1.0" / "sound" / "card9"
+    fundo = sysfs / _CAMINHO_DECLARADO.lstrip("/") / "sound" / "card9"
     fundo.mkdir(parents=True)
-    achado = ks.pai_usb_device(f"{_CAMINHO_DA_ANCORA}/3-4:1.0/sound/card9", sysfs)
-    assert achado == (sysfs / _CAMINHO_DA_ANCORA.lstrip("/")).resolve()
+    achado = ks.pai_usb_device(f"{_CAMINHO_DECLARADO}/sound/card9", sysfs)
+    assert achado == (sysfs / _ANCORA.lstrip("/")).resolve()
+
+
+def test_o_caminho_que_ja_e_usb_device_devolve_o_pai(sysfs: Path) -> None:
+    """A régua que faltava, e que custou um lançamento inteiro.
+
+    O `udev_device_get_parent_with_subsystem_devtype` devolve um ANCESTRAL,
+    nunca o próprio device. Medido no PRAGMATA em 18/09/2026 às 03h40: com o
+    nó declarando a âncora nua, o jogo gravou
+    `ContainerId={00021d6b-0003-0001-…}` — o `1d6b:0002`, o hub raiz, PAI da
+    âncora. O device KS declarava a âncora, e os dois nunca casaram.
+    """
+    avo = sysfs / "devices" / "pci0000:00" / "0000:00:08.1" / "usb3"
+    avo.mkdir(parents=True, exist_ok=True)
+    (avo / "idVendor").write_text("1d6b\n")
+    (avo / "idProduct").write_text("0002\n")
+    (avo / "busnum").write_text("3\n")
+    (avo / "devnum").write_text("1\n")
+    assert ks.pai_usb_device(_ANCORA, sysfs) == avo.resolve()
 
 
 def test_caminho_sem_pai_usb_nao_inventa_ancora(sysfs: Path) -> None:
@@ -154,7 +176,7 @@ def test_a_conta_bate_com_a_do_wine_byte_a_byte(sysfs: Path, udev: Path) -> None
 
 def test_o_barramento_acima_de_255_dobra_como_no_c(sysfs: Path, udev: Path) -> None:
     """Na origem `bus_num` e `dev_num` são `uint8_t`. 260 & 0xFF == 4."""
-    (sysfs / _CAMINHO_DA_ANCORA.lstrip("/") / "devnum").write_text("260\n")
+    (sysfs / _ANCORA.lstrip("/") / "devnum").write_text("260\n")
     (controle,) = ks.controles_no_radio(sysfs, udev, _dubles(_sinks()))
     assert controle.prefixo_do_container().endswith("-0004-")
 
@@ -183,7 +205,7 @@ def test_ancora_com_placa_de_som_e_o_cabo_e_nao_entra(sysfs: Path, udev: Path) -
     Sem esta recusa o mesmo aparelho sairia nas duas listas, e as duas
     gravariam a MESMA chave do registro.
     """
-    (sysfs / _CAMINHO_DA_ANCORA.lstrip("/") / "3-4:1.0" / "sound" / "card3").mkdir(parents=True)
+    (sysfs / _CAMINHO_DECLARADO.lstrip("/") / "sound" / "card3").mkdir(parents=True)
     assert ks.controles_no_radio(sysfs, udev, _dubles(_sinks())) == []
 
 

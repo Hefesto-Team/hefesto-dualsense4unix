@@ -306,11 +306,26 @@ def endpoints_de_mentira(
 
 
 def pai_usb_device(sysfs_path: str, sysfs: Path = Path("/sys")) -> Path | None:
-    """O `usb_device` acima de um caminho do sysfs — o que o udev acharia.
+    """O `usb_device` ACIMA de um caminho do sysfs — o que o udev acharia.
 
     É a tradução de `udev_device_get_parent_with_subsystem_devtype(…, "usb",
-    "usb_device")`: sobe até o primeiro pai que tem `busnum` e `devnum`, que é
-    o que distingue um `usb_device` de uma interface. Nada é escrito ali.
+    "usb_device")`, e o detalhe que decide está no nome: ele devolve um
+    ANCESTRAL, nunca o próprio device. Por isso a subida começa no PAI.
+
+    **MEDIDO NO JOGO, 18/09/2026, 03h40.** A primeira versão desta função
+    começava no próprio caminho, e o endpoint saiu no prefixo do PRAGMATA com
+    `ContainerId={00021d6b-0003-0001-…}` — o `1d6b:0002`, que é o HUB RAIZ,
+    pai da âncora que tínhamos escolhido. O device KS declarava a âncora, o
+    jogo calculava o pai dela, os dois não casavam e o jogo desistia. Um nível
+    de árvore.
+
+    A consequência para quem publica o nó: o `sysfs.path` declarado tem de ser
+    um FILHO da âncora (a interface `<bus>-<porta>:1.0`), como é o de uma placa
+    de som de verdade — o caminho dela é o do `sound/card`, cujo pai é o
+    aparelho. Declarar a âncora nua faz o GUID subir para o hub raiz, e aí
+    todos os controles do mesmo barramento casariam com o mesmo container.
+
+    Nada é escrito no caminho.
     """
     try:
         raiz = sysfs.resolve()
@@ -319,12 +334,11 @@ def pai_usb_device(sysfs_path: str, sysfs: Path = Path("/sys")) -> Path | None:
         return None
     if atual != raiz and raiz not in atual.parents:
         return None
-    while True:
+    while atual != raiz:
+        atual = atual.parent
         if (atual / "busnum").is_file() and (atual / "devnum").is_file():
             return atual
-        if atual == raiz:
-            return None
-        atual = atual.parent
+    return None
 
 
 def controles_no_radio(
