@@ -201,11 +201,11 @@ FATOS: Final[dict[str, dict[str, object]]] = {
         },
         'radio': {
             'aceita': 'sim',
-            'aciona': 'não',
+            'aciona': 'sim',
             'ate_onde_foi': 'SAIU NO FIO',
             'canal': 'hidraw',
             'de_onde_sei': 'medido',
-            'por_que_nao_aciona': 'divida',
+            'por_que_nao_aciona': '',
         },
     },
     'audio.alto_falante@pro': {
