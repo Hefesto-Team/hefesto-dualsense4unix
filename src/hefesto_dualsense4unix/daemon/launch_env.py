@@ -87,6 +87,7 @@ ENV_ALLOWLIST = (
     "__GL_SHADER_DISK_CACHE",
     "__GL_SHADER_DISK_CACHE_SKIP_CLEANUP",
     "SDL_ACCELEROMETER_AS_JOYSTICK",
+    "PROTON_DEATH_STRANDING_CONTROLLER_EFFECTS",
 )
 
 #: MÁSCARA-01, entrega 3 — METADE SEGURA (07/08/2026): o par VID/PID do
@@ -1612,6 +1613,33 @@ def compose_env(
     # nas bibliotecas dos runtimes da Steam (2.32.10, SDL3 3.4.14, sdl2-compat
     # 2.32.70), a dica em 0 é inócua. Entra em toda variante, como a de cima.
     env["SDL_ACCELEROMETER_AS_JOYSTICK"] = "0"
+    # HAPTICA-POR-AUDIO-01 (17/09/2026): a vibração do DualSense viaja como
+    # ÁUDIO — os canais 3 e 4 do endpoint de 4 canais SÃO os dois motores. O
+    # GE-Proton traz esse caminho pronto em `patches/proton-ds5-haptic/` (182
+    # patches), mas DESLIGADO: sem opt-in o endpoint do controle é escondido
+    # das coleções logo após a ativação, para que jogo nenhum mande o som do
+    # jogo pelo alto-falante do controle.
+    #
+    # O NOME ENGANA E ISSO ESTÁ NO PATCH 0164: `PROTON_DEATH_STRANDING_...` é o
+    # GUARDA-CHUVA de cinco comportamentos — nomes Sony do Windows, publicação
+    # persistente do endpoint, roteamento háptico por PipeWire, áudio dividido
+    # em quatro canais, e emulação de modo compartilhado —, e o próprio patch
+    # diz que as opções individuais ficam «as aliases for manual testing **and
+    # other games**». Não é do Death Stranding; é o interruptor do caminho.
+    #
+    # ENTRA EM TODA VARIANTE, como as duas de cima, e por dois motivos: as
+    # funções que ela liga testam `is_dualsense_device_path` antes de agir, de
+    # modo que sem um Sony na mesa ela não faz nada; e a ordem dela de
+    # 17/09/2026 é que jogo e perfil nasçam com tudo ligado. Ligar só para a
+    # máscara `dualsense` deixaria de fora justamente a mesa de quatro, em que
+    # um jogador pode estar noutra máscara.
+    #
+    # O QUE ELA NÃO É: o `PROTON_SONY_HIDRAW_XINPUT`, que também faz a vibração
+    # chegar, CONVERTE o controle num descritor Xbox de 92 bytes sem sensores —
+    # e mata o giroscópio. Esta não toca no caminho de entrada: o vpad segue
+    # `uhid`, a IMU segue no ar, e a háptica vem pelo canal por onde ela sempre
+    # viajou. É a diferença entre acrescentar e trocar.
+    env["PROTON_DEATH_STRANDING_CONTROLLER_EFFECTS"] = "1"
     return env
 
 
