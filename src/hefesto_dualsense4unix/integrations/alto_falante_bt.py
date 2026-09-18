@@ -3007,6 +3007,56 @@ def monitor_da_saida_padrao(
     return f"{padrao}.monitor"
 
 
+def o_mix_fecha_laco(id_do_no: str, sink: str, monitor: str) -> bool:
+    """Ligar o mix deste monitor ao nó realimentaria o próprio som? PURA.
+
+    O «No controle e na TV» é um ``module-loopback`` do monitor da SAÍDA PADRÃO
+    para o nó. Na máquina dela a saída padrão é o HDMI e o fio é inofensivo;
+    numa máquina em que a saída padrão é o PRÓPRIO controle, o fio fecha um
+    laço de realimentação, e não havia trava em lugar nenhum:
+
+    * no rádio, ``hefesto_som_X.monitor → hefesto_som_X`` — a saída padrão é o
+      nó (ela escolheu «Alto-falante do Controle N» nas configurações de som);
+    * no cabo, ``D.monitor → hefesto_som_X → D`` — a saída padrão é a placa USB
+      do controle, que o WirePlumber elege sozinho (``priority.session`` 1109,
+      acima do HDMI e da placa-mãe) ou que vence quando o fone está plugado nele.
+
+    **SÓ ESSES DOIS FECHAM CICLO**, e a trava não vai além deles: o monitor do
+    nó ou da placa de OUTRO controle termina no alto-falante DESTE, sem voltar.
+    Recusar ``hefesto_som_*`` ou qualquer placa de DualSense tiraria o mix de
+    quem joga com a saída num controle e o som no outro.
+
+    Inferido da leitura do código, não medido na orelha — a mesa dela não
+    reproduz o caso, porque a saída padrão lá é o HDMI.
+    """
+    if not monitor:
+        return False
+    if id_do_no and monitor == f"{id_do_no}.monitor":
+        return True
+    return bool(sink) and monitor == f"{sink}.monitor"
+
+
+#: O último monitor recusado por laço, por controle. Existe só para o aviso sair
+#: UMA vez por mudança: :func:`rota_do_no` roda a cada varredura de nó vivo
+#: (``RECONCILIA_S``), e a mesma linha a cada cinco segundos enterraria o resto
+#: do journal enquanto a saída padrão dela continuar sendo o controle.
+_LACO_AVISADO: dict[str, str] = {}
+
+
+def _mix_sem_laco(uniq: str, sink: str, monitor: str) -> str:
+    """O monitor do mix, ou ``""`` quando ele fecharia laço com este nó."""
+    chave = so_hex(str(uniq)) or str(uniq)
+    if not o_mix_fecha_laco(nome_do_sink(uniq), sink, monitor):
+        _LACO_AVISADO.pop(chave, None)
+        return monitor
+    if _LACO_AVISADO.get(chave) != monitor:
+        _LACO_AVISADO[chave] = monitor
+        logger.info(
+            "som_mix_recusado_por_laco", uniq=uniq, monitor=monitor, sink=sink or None
+        )
+    return ""
+
+
 def rota_do_no(
     uniq: str,
     transporte: str = TRANSPORTE_CABO,
@@ -3037,8 +3087,14 @@ def rota_do_no(
         return RotaDoNo(False, motivo=MOTIVO_NO_SEM_ASSENTO, fonte=fonte)
     if e_radio(transporte):
         if ponte_do_radio is not None and ponte_do_radio():
+            # O mix que fecharia laço sai daqui com o monitor VAZIO e um aviso
+            # no log, sem frase nova para a tela: `motivo` é texto dela. Ver
+            # `o_mix_fecha_laco`, e a limitação herdada em `argv_das_rotas`.
             return RotaDoNo(
-                True, por_onde=POR_RADIO, fonte=fonte, monitor_do_mix=monitor
+                True,
+                por_onde=POR_RADIO,
+                fonte=fonte,
+                monitor_do_mix=_mix_sem_laco(uniq, "", monitor),
             )
         # DOIS «NÃO» DIFERENTES, E A TELA TEM DE SABER QUAL É — 10/09/2026.
         # *"não sei montar o pacote"* e *"sei, e a ponte deste controle não
@@ -3055,7 +3111,11 @@ def rota_do_no(
     if not alvo:
         return RotaDoNo(False, motivo=MOTIVO_NO_SEM_PLACA_NO_CABO, fonte=fonte)
     return RotaDoNo(
-        True, sink=alvo, por_onde=POR_CABO, fonte=fonte, monitor_do_mix=monitor
+        True,
+        sink=alvo,
+        por_onde=POR_CABO,
+        fonte=fonte,
+        monitor_do_mix=_mix_sem_laco(uniq, alvo, monitor),
     )
 
 
@@ -3095,13 +3155,29 @@ def argv_das_rotas(id_do_no: str, rota: RotaDoNo) -> tuple[tuple[str, ...], ...]
     o mix entrando antes de haver por onde sair, o PCM do sistema inteiro fica
     parado no nó por um instante. Sem rota, tupla vazia — o nó existe e não
     engole nada de ninguém.
+
+    **A TRAVA DO LAÇO MORA AQUI**, e não só em :func:`rota_do_no`: esta é a
+    função pura por onde passam os DOIS chamadores — o daemon
+    (:meth:`SinkVirtualPipeWire._ligar_a_rota`) e o plano da janela
+    (``app/audio_saida.plano_de_publicacao``) —, e uma ``RotaDoNo`` montada à
+    mão chega aqui sem ter passado por lá. Ver :func:`o_mix_fecha_laco`.
+
+    **A LIMITAÇÃO HERDADA, escrita para ninguém descobrir sozinho:**
+    :func:`assinatura_da_rota` ignora ``monitor_do_mix``, então um nó que foi
+    religado com o mix recusado por laço não religa sozinho quando ela devolve a
+    saída padrão à TV — ele espera a próxima troca de fonte dela. É o mesmo
+    caso, já documentado lá, do nó que nasceu em ``mix`` com o servidor mudo.
     """
     if not id_do_no or not rota.tem_rota:
         return ()
     comandos: list[tuple[str, ...]] = []
     if rota.sink:
         comandos.append(argv_para_ligar_o_no(id_do_no, rota.sink))
-    if rota.fonte == FONTE_MIX and rota.monitor_do_mix:
+    if (
+        rota.fonte == FONTE_MIX
+        and rota.monitor_do_mix
+        and not o_mix_fecha_laco(id_do_no, rota.sink, rota.monitor_do_mix)
+    ):
         comandos.append(argv_para_ligar_o_mix(id_do_no, rota.monitor_do_mix))
     return tuple(comandos)
 
@@ -3313,6 +3389,7 @@ __all__ = [
     "montar_com_o_common_preservado",
     "montar_pelos_dois_arranjos",
     "nome_do_sink",
+    "o_mix_fecha_laco",
     "o_servidor_e_o_pipewire",
     "orcamento_do_degrau",
     "propriedades_do_sink",
