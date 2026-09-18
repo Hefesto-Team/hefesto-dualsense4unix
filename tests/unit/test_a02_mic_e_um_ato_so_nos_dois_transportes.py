@@ -113,19 +113,34 @@ def test_o_csv_diz_que_quem_e_parcial_no_microfone_e_o_radio() -> None:
         )
 
 
-def test_a_unica_assimetria_real_do_bloco_de_som_e_o_alto_falante() -> None:
-    """A frase de transporte que SOBREVIVE, e por que ela sobrevive.
+def test_o_alto_falante_age_pelo_radio_e_o_canal_continua_declarado() -> None:
+    """No rádio o alto-falante AGE — e a diferença de canal continua declarada.
 
-    Toda frase que condiciona o microfone ao transporte caiu nesta leva. Esta
-    NÃO cai: o alto-falante por rádio é `radio_aciona=não`, com a assimetria
-    declarada no próprio CSV (*"o descritor de cabo não tem report de saída de
-    áudio"*, medido no aparelho dela em 11/08/2026).
+    Toda frase que condiciona o microfone ao transporte caiu nesta leva. O
+    alto-falante era a exceção: até 18/09/2026 esta régua se chamava
+    `test_a_unica_assimetria_real_do_bloco_de_som_e_o_alto_falante` e exigia
+    `radio_aciona == "não"`. **O fato caiu:** o som saiu do plástico pelo rádio
+    em 10/09 (report `0x35`, 70 s com a orelha dela), a háptica passou pelo
+    mesmo fio em 18/09, e o commit `9f1920152` virou a célula com a régua que
+    morde.
+
+    O QUE CONTINUA VERDADEIRO é a declaração do CSV (*"o descritor de cabo não
+    tem report de saída de áudio"*, medido no aparelho dela em 11/08/2026): o
+    MECANISMO difere — no cabo o som vai pelo ALSA/PipeWire, no rádio pelo HID
+    `0x35` —, e é essa declaração que explica ao portão de paridade por que os
+    dois canais não são o mesmo. A régua cobra as duas metades: o rádio
+    aciona, e a diferença de canal continua declarada. O CABO fica de fora de
+    propósito: ele é `parcial` por uma ressalva medida (a rota "Sons do jogo"
+    não foi medida lá), e esta régua não afirma mais do que o mapa sabe.
     """
     linha = _linha_do_csv("audio.alto_falante")
-    assert linha["radio_aciona"] == "não"
+    assert linha["radio_aciona"] == "sim", (
+        "o alto-falante voltou a não acionar no rádio — o `0x35` e a háptica "
+        "pelo `0x32` provaram o canal em 10/09 e 18/09")
+    assert linha["cabo_canal"] != linha["radio_canal"]
     assert linha["assimetria_declarada"].strip(), (
-        "a assimetria do alto-falante perdeu a declaração — sem ela a frase de "
-        "transporte que sobrou fica sem testemunha"
+        "a assimetria de CANAL do alto-falante perdeu a declaração — sem ela o "
+        "portão de paridade não sabe por que cabo e rádio usam canais diferentes"
     )
 
 

@@ -17,7 +17,14 @@ não mudou. As duas células entraram com `nada-a-acionar`, que é DECISÃO: nã
 o que acionar porque não existe comando de ligar a IMU e o sensor emite sempre.
 O contador de dívida deste arquivo não se moveu.)
 
-**RECONTADO EM 10/09/2026: são 47** — 23 no cabo, 24 no rádio. As DUAS que
+**RECONTADO EM 18/09/2026: são 46** — 23 no cabo, 23 no rádio. A que SAIU
+saiu PELO MOTIVO CERTO, e é a mesma que entrou por honestidade em 10/09:
+`audio.alto_falante@dualsense` no rádio passou a ser ACIONADA pelo produto. O
+som pelo `0x35` e a háptica pelo `0x32` fecharam o contrato da célula, e o
+commit `9f1920152` a virou para `sim` com a régua que morde. *A dívida foi paga,
+e o número desceu — que é para isso que ele está aqui.*
+
+**RECONTADO EM 10/09/2026: eram 47** — 23 no cabo, 24 no rádio. As DUAS que
 entraram são do lado do RÁDIO, e a subida é de HONESTIDADE pela quarta vez
 neste arquivo: `audio.alto_falante@dualsense` e
 `audio.saida_dedicada.payload_do_degrau@dualsense` subiram para `medido`
@@ -313,7 +320,19 @@ DOMINIO = _DOMINIO_DO_PORTAO["por_que_nao_aciona"]
 #: teto volta a ser a conta de hoje, que é o que o
 #: `test_o_teto_e_um_numero_deste_arquivo_e_nao_do_csv` cobra — e um teto que
 #: não bate transforma a régua inteira em ruído que se aprende a ignorar.
-TETO_DA_DIVIDA = 24
+#:
+#: ─────────────────────────────────────────────────────────────────────────
+#: DESCEU PARA 23 EM 18/09/2026 — uma dívida PAGA, e é para isto que ele existe
+#: ─────────────────────────────────────────────────────────────────────────
+#: SAIU `audio.alto_falante@dualsense`, rádio. O canal abriu: o som saiu do
+#: plástico pelo rádio em 10/09 (report `0x35`, 70 s com a orelha dela) e a
+#: háptica passou pelo MESMO fio em 18/09 (`0x32` com o bloco `0x91` antes do
+#: `0x92`, com a mão dela). O commit `9f1920152` virou a célula para `sim` com a
+#: régua que morde; o teto não desceu junto porque a suíte daquela leva rodou
+#: antes dele — e o `test_o_teto_e_um_numero_deste_arquivo_e_nao_do_csv`
+#: reprovou na suíte seguinte, que é exatamente o serviço dele. Nenhuma célula
+#: entrou.
+TETO_DA_DIVIDA = 23
 
 
 def _linhas(caminho: Path | str) -> list[dict[str, str]]:
@@ -490,8 +509,8 @@ def test_a_populacao_nao_depende_da_coluna_que_ela_confere() -> None:
         "que ela é derivada da própria coluna, e o portão ficaria verde "
         "justamente quando alguém esquecesse de responder"
     )
-    assert len(antes) == 47, (
-        f"o recorte de 10/09/2026 tinha 47 células medidas e não "
+    assert len(antes) == 46, (
+        f"o recorte de 18/09/2026 tinha 46 células medidas e não "
         f"acionadas, e agora tem {len(antes)}. Não é reprovação de defeito: é "
         "aviso de que o retrato deste arquivo envelheceu e o texto precisa ser "
         "recontado — leia o cabeçalho deste arquivo, que diz como"
