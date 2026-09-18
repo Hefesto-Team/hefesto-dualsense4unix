@@ -202,13 +202,60 @@ steam_game_running() {
     pgrep -f 'SteamLaunch[ ]AppId=[0-9]' >/dev/null 2>&1
 }
 
+# AMBIENTE-DO-JOGO-01 (18/09/2026): o install roda este roteiro (`--apply`)
+# de dentro do terminal da pessoa, e a Steam que ele reabre herdava a venv, o
+# conda ou o pyenv ativo ali — e todo jogo da sessão com ela, porque o `proton`
+# é script Python (`#!/usr/bin/env python3`). A lista é a do dono,
+# `integrations/ambiente_do_jogo.py`; o corpo é o mesmo do
+# `assets/hefesto-launch.sh`, e a régua
+# `test_ambiente_do_jogo_01_o_terminal_nao_vai_junto.py` confere os três.
+# Chame SEMPRE dentro de um subshell `( ... )`: o `unset` vale para o resto do
+# processo, e o resto deste roteiro não tem por que perder o ambiente.
+limpar_ambiente_do_interpretador() {
+    la_bin_venv=""
+    la_bin_conda=""
+    la_base="${VIRTUAL_ENV:-}"
+    la_base="${la_base%/}"
+    [ -n "$la_base" ] && la_bin_venv="$la_base/bin"
+    la_base="${CONDA_PREFIX:-}"
+    la_base="${la_base%/}"
+    [ -n "$la_base" ] && la_bin_conda="$la_base/bin"
+    unset VIRTUAL_ENV CONDA_PREFIX CONDA_DEFAULT_ENV CONDA_SHLVL PYTHONHOME PYTHONPATH PYENV_VERSION
+    [ -n "$la_bin_venv$la_bin_conda" ] || return 0
+    [ -n "${PATH:-}" ] || return 0
+    la_resto="$PATH:"
+    la_novo=""
+    la_primeiro=1
+    while [ -n "$la_resto" ]; do
+        la_dir="${la_resto%%:*}"
+        la_resto="${la_resto#*:}"
+        la_cmp="${la_dir%/}"
+        if [ -n "$la_cmp" ]; then
+            [ "$la_cmp" = "$la_bin_venv" ] && continue
+            [ "$la_cmp" = "$la_bin_conda" ] && continue
+        fi
+        if [ "$la_primeiro" = 1 ]; then
+            la_novo="$la_dir"
+            la_primeiro=0
+        else
+            la_novo="$la_novo:$la_dir"
+        fi
+    done
+    [ -n "$la_novo" ] && PATH="$la_novo"
+    return 0
+}
+
 stop_steam() {
     if ! steam_running; then
         return 0
     fi
     log "fechando Steam (steam -shutdown)..."
     if command -v steam >/dev/null 2>&1; then
-        steam -shutdown >/dev/null 2>&1 &
+        # O mesmo ambiente da reabertura: toda chamada à Steam daqui sai limpa.
+        (
+            limpar_ambiente_do_interpretador
+            exec steam -shutdown
+        ) >/dev/null 2>&1 &
         # Aguarda Steam realmente sair (até 30s). Polling barato.
         local i
         for i in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15; do
@@ -240,7 +287,10 @@ reopen_steam() {
         return 0
     fi
     log "reabrindo Steam"
-    setsid nohup steam </dev/null >/dev/null 2>&1 &
+    (
+        limpar_ambiente_do_interpretador
+        exec setsid nohup steam
+    ) </dev/null >/dev/null 2>&1 &
     disown 2>/dev/null || true
 }
 
