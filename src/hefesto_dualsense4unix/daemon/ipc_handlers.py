@@ -4839,6 +4839,28 @@ class IpcHandlersMixin:
         Resposta com opt-in: chave nova `external` = lista de
         `{name, vid, pid, bus, uniq, driver, evdev_path, hidraw[, holders]}`.
         Sem opt-in, a chave nem aparece (payload byte-idêntico ao legado).
+
+        **O NÚMERO ENTRA — 18/09/2026, UM-NUMERO-SO-01.** Até aqui esta lista
+        publicava o ``index`` e mais nada sobre quem é quem, enquanto o
+        ``daemon.state_full`` (o mesmo daemon, a mesma mesa) publicava
+        ``player_slot`` e ``player``. As duas listas discordavam, e a discordância
+        foi MEDIDA na mesa dela com os quatro DualSense ligados::
+
+            controller.list   índices  0=vermelho 1=azul  2=roxo 3=branco
+            as lâmpadas       jogador  2=vermelho 1=azul  3=roxo 4=branco
+
+        Quem lesse só esta lista chamaria de "Controle 1" o controle que acende
+        **jogador 2** na mão dela. O ``index`` não é um número de jogador: é a
+        ordem dos HANDLES, e a fila de identidade é outra lista sobre a mesma
+        mesa (o bloco *"Listas diferentes sobre a mesma mesa"* em
+        ``daemon/subsystems/base.numero_do_assento_na_mesa`` mede a mesma
+        divergência pelo lado do som).
+
+        ``player_slot`` e ``numero`` saem pelos MESMOS donos do ``state_full``
+        (:meth:`_player_slot_for` e :func:`_numero_de_exibicao`) — nunca uma
+        conta nova aqui, que seria a quarta. Leitura pura (``assign=False``):
+        listar controle jamais aloca lugar na fila. Sem registry, ``player_slot``
+        é ``None`` e ``numero`` cai no ``index + 1``, que é a regra da casa.
         """
         external_raw = params.get("external", False)
         if not isinstance(external_raw, bool):
@@ -4846,6 +4868,7 @@ class IpcHandlersMixin:
         describe = getattr(self.controller, "describe_controllers", None)
         if callable(describe):
             result: dict[str, Any] = {"controllers": describe()}
+            self._carimbar_o_numero(result["controllers"])
         else:
             connected = self.controller.is_connected()
             result = {
@@ -4881,6 +4904,76 @@ class IpcHandlersMixin:
             )
         return result
 
+    def _indice_do_alvo(self, *, jogador: int | None, uniq: str | None) -> int:
+        """Traduz «jogador N» / endereço para o índice dos handles.
+
+        UM-NUMERO-SO-01. A tradução mora no DAEMON porque as duas listas são
+        dele: a dos handles (``describe_controllers``) e a da fila de
+        identidade (``identity_registry``). Ver a docstring de
+        :meth:`_handle_controller_target_set` para o que custava não traduzir.
+
+        RECUSA com frase quando o alvo não está na mesa. A alternativa — cair
+        no broadcast — pintaria os quatro controles no gesto em que ela pediu
+        UM, que é exatamente o defeito que o seletor existe para matar.
+        """
+        describe = getattr(self.controller, "describe_controllers", None)
+        entradas = describe() if callable(describe) else []
+        if not isinstance(entradas, list):
+            entradas = []
+        entradas = [e for e in entradas if isinstance(e, dict)]
+        self._carimbar_o_numero(entradas)
+        if uniq is not None:
+            from hefesto_dualsense4unix.core.sysfs_leds import norm_mac
+
+            procurado = (norm_mac(uniq) or "").lower()
+            for entrada in entradas:
+                if (norm_mac(str(entrada.get("uniq") or "")) or "").lower() == procurado:
+                    indice = entrada.get("index")
+                    if isinstance(indice, int) and not isinstance(indice, bool):
+                        return indice
+            raise ValueError(
+                "controller.target.set: este controle não está na mesa"
+            )
+        for entrada in entradas:
+            if entrada.get("numero") == jogador:
+                indice = entrada.get("index")
+                if isinstance(indice, int) and not isinstance(indice, bool):
+                    return indice
+        na_mesa = sorted(
+            n for n in (e.get("numero") for e in entradas) if isinstance(n, int)
+        )
+        raise ValueError(
+            f"controller.target.set: não há Controle {jogador} na mesa"
+            + (f" — há {na_mesa}" if na_mesa else "")
+        )
+
+    def _carimbar_o_numero(self, entries: Any) -> None:
+        """Põe ``player_slot`` e ``numero`` em cada entrada — UM-NUMERO-SO-01.
+
+        Os dois donos são os do ``state_full``; aqui não há conta nenhuma. O
+        ``numero`` é o carimbo que faltava: ``player_slot`` pode ser ``None``
+        (registry ausente, controle que ainda não estreou na fila) e quem lê
+        precisaria repetir a regra de queda para saber o "Controle N". Repetir
+        é como nasceram as três contas que a MESA-CHEIA-11 matou.
+
+        Defensivo por inteiro: esta lista é publicada para a GUI, a CLI e o
+        applet, e nenhum deles pode ficar sem mesa porque um registry dublado
+        levantou.
+        """
+        if not isinstance(entries, list):
+            return
+        for entrada in entries:
+            if not isinstance(entrada, dict):
+                continue
+            with contextlib.suppress(Exception):
+                if not isinstance(entrada.get("player_slot"), int) or isinstance(
+                    entrada.get("player_slot"), bool
+                ):
+                    entrada["player_slot"] = self._player_slot_for(
+                        entrada.get("uniq")
+                    )
+                entrada["numero"] = _numero_de_exibicao(entrada)
+
     async def _handle_controller_target_set(
         self, params: dict[str, Any]
     ) -> dict[str, Any]:
@@ -4888,16 +4981,52 @@ class IpcHandlersMixin:
 
         Params:
             index: int (posição em `controllers`, 0 = primário) ou null (TODOS).
+            jogador: int (o número que ela VÊ — 1..N) — UM-NUMERO-SO-01.
+            uniq: str (o endereço do controle) — UM-NUMERO-SO-01.
 
         Com o alvo setado, lightbar/gatilhos/player-LED/rumble/mic-LED passam a
         mirar SÓ aquele controle — resolve o "ambos mostram Player 1". `index`
         null volta ao broadcast (padrão). Backends sem o método (FakeController,
         single-instance) são tolerados via getattr e tratados como broadcast.
+
+        **AS DUAS PORTAS NOVAS, e a razão é a mesma queixa — 18/09/2026.** Este
+        método falava só a língua dos HANDLES, e a pessoa fala a língua das
+        LÂMPADAS. Na mesa dela, com os quatro ligados, ``index=0`` mira o
+        controle que acende **jogador 2**: quem traduzisse "o Controle 1 dela"
+        para ``index=0`` mandaria a cor para o controle errado, e a queixa
+        chegaria como *"mudei a cor do 1 e mudou a do 2"*. Quem tinha de
+        traduzir era o daemon, que é o dono das duas listas — não cada
+        chamador, cada um com a sua cópia da conta.
+
+        ``jogador`` e ``uniq`` resolvem para o índice interno AQUI, pelos
+        mesmos donos do resto da casa (:func:`_numero_de_exibicao` sobre a
+        lista carimbada por :meth:`_carimbar_o_numero`). Os três são
+        MUTUAMENTE EXCLUSIVOS: mandar dois seria mandar o daemon escolher em
+        que acreditar, e "escolher em silêncio" é como um clique dela vai parar
+        no aparelho errado. Número que não está na mesa RECUSA com frase — não
+        cai no broadcast, que pintaria os quatro quando ela pediu um.
         """
         index = params.get("index")
+        jogador = params.get("jogador")
+        uniq = params.get("uniq")
         # bool é subclasse de int — rejeitar True/False como índice.
         if index is not None and (isinstance(index, bool) or not isinstance(index, int)):
             raise ValueError("controller.target.set: 'index' precisa ser int ou null")
+        if jogador is not None and (
+            isinstance(jogador, bool) or not isinstance(jogador, int)
+        ):
+            raise ValueError("controller.target.set: 'jogador' precisa ser int ou null")
+        if uniq is not None and not isinstance(uniq, str):
+            raise ValueError("controller.target.set: 'uniq' precisa ser texto ou null")
+        dados = [p for p in ("index", "jogador", "uniq") if params.get(p) is not None]
+        if len(dados) > 1:
+            raise ValueError(
+                "controller.target.set: mande UM alvo só — "
+                + ", ".join(dados)
+                + " vieram juntos"
+            )
+        if jogador is not None or uniq is not None:
+            index = self._indice_do_alvo(jogador=jogador, uniq=uniq)
         setter = getattr(self.controller, "set_output_target", None)
         if not callable(setter):
             return {"status": "ok", "target_index": None}

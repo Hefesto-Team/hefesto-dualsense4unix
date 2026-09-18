@@ -278,6 +278,7 @@ import time
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
+from hefesto_dualsense4unix.core.faixa_sintetica import e_endereco_sintetico
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 
 if TYPE_CHECKING:
@@ -455,6 +456,27 @@ def order_entries(data: Any) -> list[tuple[str, str, int]]:
     Ordenar aqui por ``rank`` é contrato, não conveniência: quem carrega
     aplica o teto :data:`_MAX_PERSISTED_SLOTS` cortando pelo FIM da fila, e
     "o fim" só existe se a lista chegar ordenada.
+
+    **O EXPURGO DA FAIXA SINTÉTICA — 18/09/2026, e ele é a cura de um defeito
+    que morou um mês na mesa dela.** Entrada cujo endereço é de faixa
+    sintética (:func:`core.faixa_sintetica.e_endereco_sintetico`) é descartada
+    aqui, do mesmo jeito silencioso que a malformada: um ``aa:bb:cc:00:00:01``
+    não é uma numeração a preservar, é um aparelho que nunca existiu.
+
+    **E ELA SE CURA SOZINHA, sem ninguém editar JSON à mão** — que é o ponto
+    de fazer isto AQUI e não no ``load``. Esta função é a fonte única de
+    leitura da fila, e o save é read-modify-write POR CIMA dela
+    (:func:`merged_order_payload` a chama para preservar o outro ``kind``):
+    o que ela deixa de devolver deixa de ser regravado. Uma leitura e um save
+    do ciclo normal bastam, e o arquivo sai limpo.
+
+    O QUE ISSO CUSTOU, medido no ``controllers.json`` dela em 18/09/2026:
+    quatro endereços ``aa:bb:cc:00:00:0{1..4}`` escritos por uma corrida da
+    suíte em 22/08 ocupavam os postos 4 a 7 e empurravam o DualSense de casca
+    branca para o **oitavo**. A colocação entre PRESENTES
+    (:meth:`IdentityRegistry.slot_for`) escondia o estrago enquanto a mesa
+    tinha quatro controles — e ``core/led_control`` só tem cor de PS5 para
+    1..4, então o quinto a ligar cairia fora da tabela.
     """
     if not isinstance(data, dict):
         return []
@@ -471,6 +493,11 @@ def order_entries(data: Any) -> list[tuple[str, str, int]]:
         if not isinstance(addr, str) or not addr:
             continue
         if kind not in (KIND_DUALSENSE, KIND_EXTERNAL):
+            continue
+        # O EXPURGO (18/09/2026): faixa sintética nunca foi aparelho. Ver a
+        # docstring — descartar aqui é o que faz o arquivo se limpar sozinho
+        # no próximo save, porque `merged_order_payload` lê por esta função.
+        if e_endereco_sintetico(addr):
             continue
         if not isinstance(rank, int) or isinstance(rank, bool) or rank < 1:
             continue

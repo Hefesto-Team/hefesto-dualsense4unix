@@ -56,10 +56,21 @@ import re
 import sys
 from pathlib import Path
 
-# As três faixas sintéticas da casa. Cada uma casa nas DUAS grafias: com ':'
-# entre os três primeiros octetos (aa:bb:cc...) e sem (aabbcc...) — o
-# `controllers.json` medido em 23/08 usava a grafia sem ':'.
-FAIXAS_SINTETICAS = ("aabbcc", "02fe00", "e8473a")
+# AS TRÊS FAIXAS TÊM UM DONO, E ELE NÃO É ESTE ARQUIVO — 18/09/2026.
+#
+# Elas moravam aqui, digitadas. Em 18/09 o PRODUTO passou a precisar da mesma
+# lista — o `identity.order_entries` EXPURGA endereço de faixa sintética da
+# fila de numeração, porque quatro deles moraram na mesa dela de 22/08 a 18/09
+# —, e `scripts/` não é pacote: o daemon não tem como importar daqui. Digitar
+# os seis dígitos de novo do outro lado seria a régua e o produto com
+# definições próprias do que é lixo, que é como esta casa perde um dia.
+#
+# O dono é `core/faixa_sintetica.py`. Este portão pergunta a ele.
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
+
+from hefesto_dualsense4unix.core.faixa_sintetica import (  # noqa: E402
+    FAIXAS_SINTETICAS,
+)
 
 
 def _padrao_para(faixa: str) -> re.Pattern[str]:
