@@ -8,7 +8,8 @@ Contrato:
   - Se `pgrep -x steam` localiza PID, usa `wmctrl -lx` para achar a janela
     com WM_CLASS casando `steam.Steam` e chama `wmctrl -ia <id>`.
   - Se o processo não esta rodando, faz `Popen(["steam"], start_new_session=True,
-    stdin/out/err=DEVNULL)` e desprende do daemon.
+    stdin/out/err=DEVNULL)` e desprende do daemon, com o ambiente de
+    `ambiente_do_jogo.ambiente_limpo` (AMBIENTE-DO-JOGO-01).
   - NUNCA usa `shell=True`.
   - Execução em thread worker e responsabilidade do chamador; a função em si
     faz chamadas subprocess sincronas de curta duracao (pgrep/wmctrl) e um
@@ -16,12 +17,14 @@ Contrato:
 """
 from __future__ import annotations
 
+import os
 import shutil
 import subprocess
 import threading
 from collections.abc import Callable
 from typing import Any
 
+from hefesto_dualsense4unix.integrations.ambiente_do_jogo import ambiente_limpo
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 
 logger = get_logger(__name__)
@@ -125,7 +128,15 @@ def _default_wmctrl(cmd: list[str]) -> subprocess.CompletedProcess[str]:
 def _spawn_steam(
     popen_runner: Callable[..., object] | None = None,
 ) -> bool:
-    """Dispara Steam em sessão nova, desprendida do daemon."""
+    """Dispara Steam em sessão nova, desprendida do daemon.
+
+    AMBIENTE-DO-JOGO-01 (18/09/2026): sob a unit `systemd --user` o daemon já
+    nasce sem venv nem conda (medido no `environ` dele: zero variáveis da
+    classe), então aqui não há vetor hoje. O `ambiente_limpo` entra porque o
+    daemon também sobe fora da unit — pelo terminal de quem desenvolve, ou
+    pelo `Popen` da janela quando o `systemctl` falta —, e a Steam que nasce
+    daqui é a que todo jogo da sessão herda.
+    """
     runner = popen_runner or _default_popen
     try:
         runner(
@@ -134,6 +145,7 @@ def _spawn_steam(
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
             start_new_session=True,
+            env=ambiente_limpo(os.environ),
         )
     except FileNotFoundError:
         _warn_steam_missing_once()
@@ -146,7 +158,7 @@ def _spawn_steam(
 
 
 def _default_popen(cmd: list[str], **kwargs: Any) -> subprocess.Popen[bytes]:
-    # kwargs aceita stdin/stdout/stderr/start_new_session — tipagem livre para
+    # kwargs aceita stdin/stdout/stderr/start_new_session/env — tipagem livre para
     # permitir injecao de fakes nos testes sem duplicar a assinatura.
     return subprocess.Popen(cmd, **kwargs)
 

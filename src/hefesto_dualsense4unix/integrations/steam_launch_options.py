@@ -65,6 +65,11 @@ from collections.abc import Callable, Sequence
 from pathlib import Path
 from typing import Any
 
+try:  # importado como módulo do pacote (GUI/daemon/testes)
+    from .ambiente_do_jogo import ambiente_limpo
+except ImportError:  # pragma: no cover - executado como script avulso pelo install/uninstall
+    from ambiente_do_jogo import ambiente_limpo  # type: ignore[no-redef]
+
 #: Caminho estável do wrapper no $HOME (passo de USUÁRIO do install.sh, sem
 #: sudo, sem flag; uninstall simétrico). Mudar aqui exige mudar install.sh,
 #: uninstall.sh, doctor.sh e assets/hefesto-launch.sh juntos.
@@ -1282,6 +1287,10 @@ def start_steam_game(appid: int) -> bool:
     cache, atualização), e bloquear a janela por isso seria pior que o defeito.
     O True diz "o pedido saiu", nunca "o jogo abriu" — e o texto da tela precisa
     dizer a mesma coisa, sob pena de mentir.
+
+    Com a Steam fechada, este pedido É a Steam que nasce, e ela nasce sem o
+    ambiente de interpretador de quem chamou (AMBIENTE-DO-JOGO-01, ver
+    `ambiente_do_jogo`): o jogo a herda.
     """
     url = f"steam://rungameid/{int(appid)}"
     for cmd in (["steam", url], ["xdg-open", url]):
@@ -1289,7 +1298,10 @@ def start_steam_game(appid: int) -> bool:
             continue
         try:
             subprocess.Popen(
-                cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
+                cmd,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                env=ambiente_limpo(os.environ),
             )
             return True
         except (OSError, subprocess.SubprocessError):
@@ -1302,10 +1314,14 @@ def stop_steam() -> bool:
     if not steam_running():
         return True
     if shutil.which("steam") is not None:
+        # O mesmo ambiente das outras chamadas à Steam: toda chamada a ela sai
+        # deste módulo sem o interpretador de quem chamou, e a régua de
+        # AMBIENTE-DO-JOGO-01 cobra isso de cada `Popen` do arquivo.
         subprocess.Popen(
             ["steam", "-shutdown"],
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
+            env=ambiente_limpo(os.environ),
         )
         for _ in range(15):
             time.sleep(2)
@@ -1345,6 +1361,12 @@ def reopen_steam() -> bool:
     ainda o ignoram, e enquanto ignorarem a Steam pode ficar fechada sem uma
     palavra na tela. Fechar esse último palmo é mudar o contrato de
     `with_steam_closed`, que mora em `app/actions/daemon_actions.py` também.
+
+    AMBIENTE-DO-JOGO-01 (18/09/2026): o install chama isto de dentro do
+    terminal da pessoa (`--migrate/--apply --stop-steam`), e a Steam reaberta
+    herdava daquele terminal a venv, o conda ou o pyenv ativo — e todo jogo da
+    sessão com ela. Ela nasce agora com `ambiente_limpo`, que tira só essa
+    classe e deixa a tela e o barramento de sessão como estão.
     """
     for cmd in (["steam"], ["xdg-open", "steam://open/main"]):
         if shutil.which(cmd[0]) is None:
@@ -1356,6 +1378,7 @@ def reopen_steam() -> bool:
                 stderr=subprocess.DEVNULL,
                 stdin=subprocess.DEVNULL,
                 start_new_session=True,
+                env=ambiente_limpo(os.environ),
             )
             return True
         except (OSError, subprocess.SubprocessError):
