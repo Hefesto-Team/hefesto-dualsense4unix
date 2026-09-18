@@ -72,7 +72,7 @@ class ConversorDeHaptica:
 
     def alimentar(self, pcm: bytes | bytearray | memoryview) -> list[bytes]:
         """PCM s16le entrelaçado → blocos de 64 B prontos para o report."""
-        dados = self._resto + bytes(pcm)
+        dados = bytes(self._resto) + bytes(pcm)
         largura = 2 * self.canais
         quadros = len(dados) // largura
         sobra = quadros % FATOR
