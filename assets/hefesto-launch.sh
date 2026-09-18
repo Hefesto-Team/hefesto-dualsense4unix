@@ -469,9 +469,34 @@ dualsense_no_cabo() {
 # procura (`Sony_Interactive_Entertainment`, `Speaker__sink`) e o marcador da
 # casa. Sem `pactl` a resposta é "não há", como em toda sondagem desta casa.
 endpoint_de_mentira_vivo() {
+    # A MESMA DISCIPLINA DOS VIZINHOS, que esta sonda nasceu sem (18/09/2026):
+    #   - TETO DE TEMPO. Esta pergunta roda em TODO lançamento com o daemon vivo
+    #     e sem DualSense no cabo. Um `pipewire-pulse` travado — medido nesta
+    #     casa, 3 h 44 min sem responder depois da queda de um controle BT —
+    #     deixava o `pactl` preso e o wrapper nunca chegava ao `exec`: nenhum
+    #     jogo da Steam abria, em qualquer máquina. Estourado o prazo, a
+    #     resposta é "não há", e a opção do MHWilds sai "0" como sem o nó.
+    #   - O AMBIENTE LIMPO SÓ PARA O HELPER: o env herdado traz o
+    #     LD_LIBRARY_PATH/LD_PRELOAD do runtime da Steam, que carrega uma
+    #     libpulse própria. `LC_ALL=C` porque o `pactl` desta casa TRADUZ.
+    #   - SEM PIPE para `grep -q` (CORRIDA-DO-PIPEFAIL-01): a lista entra numa
+    #     variável e o `case` procura, linha a linha como o `grep` fazia.
     command -v pactl >/dev/null 2>&1 || return 1
-    pactl list short sinks 2>/dev/null \
-        | grep -q 'Sony_Interactive_Entertainment.*HEFESTO.*Speaker__sink'
+    if command -v timeout >/dev/null 2>&1; then
+        ep_run="timeout 2"
+    else
+        ep_run=""
+    fi
+    ep_sinks="$(LD_LIBRARY_PATH= LD_PRELOAD= LC_ALL=C \
+        $ep_run pactl list short sinks 2>/dev/null)" || return 1
+    while IFS= read -r ep_linha; do
+        case "$ep_linha" in
+            *Sony_Interactive_Entertainment*HEFESTO*Speaker__sink*) return 0 ;;
+        esac
+    done <<HEFESTO_EP_EOF
+$ep_sinks
+HEFESTO_EP_EOF
+    return 1
 }
 
 # O jogo acha a háptica por um endpoint de áudio, e não pergunta como o

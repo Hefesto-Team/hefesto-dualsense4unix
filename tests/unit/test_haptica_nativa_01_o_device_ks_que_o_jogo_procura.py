@@ -369,8 +369,10 @@ def _path_minimo(pasta: Path) -> str:
     pasta.mkdir()
     # O PATH mínimo do teste do acelerômetro, mais o `grep` da limpeza: o
     # passo novo não pode depender de `cat` nem de `sed` (medido: sem `sed` o
-    # jogo perdia TODAS as variáveis).
-    for ferramenta in ("sh", "python3", "env", "date", "mkdir", "mv", "grep"):
+    # jogo perdia TODAS as variáveis). E o `timeout` do coreutils, que está em
+    # toda máquina: sem ele o wrapper cai no ramo sem teto, e a régua do
+    # `pactl` travado mediria o ramo errado.
+    for ferramenta in ("sh", "python3", "env", "date", "mkdir", "mv", "grep", "timeout"):
         real = shutil.which(ferramenta)
         assert real is not None, f"ferramenta de teste ausente: {ferramenta}"
         (pasta / ferramenta).symlink_to(real)
@@ -589,3 +591,137 @@ def test_sem_no_do_radio_nem_cabo_nada_muda(tmp_path: Path) -> None:
     )
     assert valor == "0"
     assert "HEFESTOKS" not in registro
+
+
+# -- a sonda do nó do rádio não segura o jogo (INSTALL-UNIVERSAL, 18/09) -------
+#
+# `endpoint_de_mentira_vivo` roda em TODO lançamento com o daemon vivo e sem
+# DualSense no cabo. Nasceu sem teto de tempo e com o ambiente do runtime da
+# Steam, ao contrário de todo vizinho do arquivo. Um `pipewire-pulse` travado —
+# medido nesta casa por horas depois da queda de um controle BT — deixava o
+# `pactl` preso e o wrapper nunca chegava ao `exec`: nenhum jogo abria.
+
+import contextlib
+import os
+import signal
+
+
+def _lancar_com_o_pactl(
+    tmp_path: Path,
+    *,
+    corpo_do_pactl: str,
+    env_extra: dict[str, str] | None = None,
+    prazo_s: float = 30.0,
+    eco: str = "${PROTON_ENABLE_MHWILDS_USB_AUDIO:-ausente}",
+) -> str:
+    """Roda o wrapper com um `pactl` escrito à mão; devolve o que o jogo viu.
+
+    Separado de :func:`_lancar` por um motivo só: o `pactl` daqui pode TRAVAR, e
+    quem estoura o prazo tem de levar junto o processo preso. O wrapper nasce
+    numa sessão própria e, se o prazo estourar, o grupo inteiro morre — sem isso
+    a régua reprovaria e deixaria um `pactl` pendurado na máquina.
+    """
+    home = tmp_path / "home"
+    (home / ".local" / "share" / "hefesto-dualsense4unix" / "bin").mkdir(parents=True)
+    estado = tmp_path / "estado"
+    pasta = estado / "hefesto-dualsense4unix" / "launch_env"
+    pasta.mkdir(parents=True)
+    (pasta / "default.env").write_text(_ENV_LIGADO, encoding="utf-8")
+    compat = _prefixo(tmp_path, _registro())
+    vazio = tmp_path / "sys"
+    (vazio / "bus" / "usb" / "devices").mkdir(parents=True)
+    caminho = _path_minimo(tmp_path / "bin")
+    pactl = Path(caminho) / "pactl"
+    pactl.write_text("#!/bin/sh\n" + corpo_do_pactl, encoding="utf-8")
+    pactl.chmod(0o755)
+    runtime = Path(tempfile.mkdtemp(prefix="hefks-"))  # AF_UNIX: caminho curto
+    (runtime / "hefesto-dualsense4unix").mkdir()
+    daemon = _DaemonQueResponde(runtime / "hefesto-dualsense4unix" / "hefesto-dualsense4unix.sock")
+    env = {
+        "PATH": caminho,
+        "HOME": str(home),
+        "XDG_RUNTIME_DIR": str(runtime),
+        "XDG_STATE_HOME": str(estado),
+        "SteamAppId": "3357650",
+        "STEAM_COMPAT_DATA_PATH": str(compat),
+        "HEFESTO_SYSFS": str(vazio),
+        **(env_extra or {}),
+    }
+    try:
+        proc = subprocess.Popen(
+            ["sh", str(_WRAPPER), "sh", "-c", f'printf "%s\\n" "{eco}"'],
+            env=env,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            start_new_session=True,
+        )
+        try:
+            saida, erro = proc.communicate(timeout=prazo_s)
+        except subprocess.TimeoutExpired:
+            with contextlib.suppress(ProcessLookupError):
+                os.killpg(proc.pid, signal.SIGKILL)
+            proc.communicate()
+            raise AssertionError(
+                f"o wrapper não chegou ao `exec` em {prazo_s:.0f} s: um `pactl` "
+                "travado segurou o lançamento do jogo"
+            ) from None
+    finally:
+        daemon.parar()
+        shutil.rmtree(runtime, ignore_errors=True)
+    assert proc.returncode == 0, erro
+    return saida.strip()
+
+
+def test_o_pactl_travado_nao_segura_o_jogo(tmp_path: Path) -> None:
+    """O servidor de som que não responde vira "não há nó", e o jogo abre.
+
+    O `pactl` dublê bloqueia para sempre abrindo um fifo que ninguém escreve —
+    sem gastar CPU e sem `sleep`, que o PATH mínimo não tem. O prazo de 8 s não
+    é relógio cravado: o wrapper ainda gasta até ~1 s no gate de vida, e o teto
+    do `pactl` é de 2 s. O que a régua exige é que ele TERMINE, e com a opção
+    do MHWilds escrita "0", como numa máquina sem o nó do rádio.
+
+    MORDIDA: arrancar o `timeout 2` de `endpoint_de_mentira_vivo`, e o wrapper
+    fica preso até o prazo estourar.
+    """
+    trava = tmp_path / "trava"
+    os.mkfifo(trava)
+    valor = _lancar_com_o_pactl(
+        tmp_path,
+        corpo_do_pactl=f"read -r _ < '{trava}'\nexit 1\n",
+        prazo_s=8.0,
+    )
+    assert valor == "0"
+
+
+def test_a_sonda_pergunta_em_c_e_sem_o_loader_da_steam(tmp_path: Path) -> None:
+    """O `pactl` recebe `LC_ALL=C` e as variáveis do loader limpas; o jogo não.
+
+    O env que chega ao wrapper é o do runtime da Steam, com uma libpulse própria
+    no LD_LIBRARY_PATH. O dublê só responde quando as três condições valem — e o
+    jogo, no fim, tem de receber o LD_LIBRARY_PATH e o LD_PRELOAD intactos.
+
+    MORDIDA: tirar o `LC_ALL=C` (ou uma das duas limpezas) da sonda, e a opção
+    do MHWilds sai "0" com o nó do rádio de pé.
+    """
+    loader = tmp_path / "runtime-da-steam"
+    loader.mkdir()
+    preload = str(tmp_path / "nao-existe.so")  # o ld.so avisa e ignora
+    linha = f"7\t{_NOME_DO_NO_DO_RADIO}\tPipeWire\tfloat32le 4ch 48000Hz\tIDLE"
+    corpo = (
+        '[ -z "${LD_LIBRARY_PATH:-}" ] || exit 1\n'
+        '[ -z "${LD_PRELOAD:-}" ] || exit 1\n'
+        '[ "${LC_ALL:-}" = C ] || exit 1\n'
+        'case "$*" in\n'
+        f"    'list short sinks') printf '%s\\n' '{linha}' ;;\n"
+        "    *) exit 1 ;;\n"
+        "esac\n"
+    )
+    visto = _lancar_com_o_pactl(
+        tmp_path,
+        corpo_do_pactl=corpo,
+        env_extra={"LD_LIBRARY_PATH": str(loader), "LD_PRELOAD": preload},
+        eco="${PROTON_ENABLE_MHWILDS_USB_AUDIO:-ausente}|${LD_LIBRARY_PATH:-}|${LD_PRELOAD:-}",
+    )
+    assert visto == f"1|{loader}|{preload}"
