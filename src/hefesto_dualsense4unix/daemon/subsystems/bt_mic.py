@@ -582,10 +582,18 @@ class BtMicSubsystem:
         microfone para sempre. Agora a régua é a recusa: um DualSense TEM
         microfone, e isso é fato do aparelho, não escolha de configuração.
 
-        O pedido e a declaração continuam somando, e não é redundância: eles
-        alcançam o `uniq` que a varredura de sysfs ainda não viu e o que entrou
-        pelo cabo. O que mudou é que a ausência dos dois deixou de significar
-        silêncio.
+        **O PEDIDO E A DECLARAÇÃO SAÍRAM DA CONTA, e a razão é aritmética.** A
+        primeira escrita desta função de 18/09 mantinha a união
+        (`uniqs_pedidos | _registro.abertos()`) num segundo laço "para alcançar
+        quem não está entre os `nos`" — e o laço iterava sobre os PRÓPRIOS
+        `nos`, então todo nó legível e não-recusado já havia entrado no
+        primeiro. Era código morto com um comentário que prometia o contrário,
+        e isso é pior que o código morto sozinho: a próxima pessoa confiaria na
+        promessa. `alvos()` só pode entregar o que está na lista que recebe.
+
+        Quem trata do pedido continua sendo o `_soltar_os_que_ela_desmarcou`
+        (a borda de subida da recusa solta o pedido) e o
+        `_esquecer_quem_saiu_da_mesa`.
 
         Um nó sem `HID_UNIQ` legível continua NUNCA entrando: sem endereço não
         há como saber de quem é o microfone, nem como ela o desligaria depois.
@@ -593,21 +601,12 @@ class BtMicSubsystem:
         if habilitado_por_env():
             return list(nos)
         negados = uniqs_negados(self._config)
-        querem = uniqs_pedidos(self._config) | self._registro.abertos()
-        alvos: list[Any] = []
-        for no in nos:
-            chave = norm_mac(str(getattr(no, "uniq", ""))) or ""
-            if not chave or chave in negados:
-                continue
-            alvos.append(no)
-        # A união ainda vale para quem não está entre os `nos` desta varredura.
-        vistos = {norm_mac(str(getattr(no, "uniq", ""))) or "" for no in alvos}
-        alvos.extend(
+        return [
             no
             for no in nos
-            if (norm_mac(str(getattr(no, "uniq", ""))) or "") in querem - vistos - negados
-        )
-        return alvos
+            if (chave := norm_mac(str(getattr(no, "uniq", ""))) or "")
+            and chave not in negados
+        ]
 
     def pedir_canal(self, uniq: str) -> bool:
         """Alguém quer o canal de captura DESTE controle. Porta pública.
@@ -1264,10 +1263,14 @@ class BtMicSubsystem:
         varredor = self._varredor
         if varredor is None:
             return []
-        # A MESMA RÉGUA DE `alvos()`, e ela tem de ser a mesma: um canal só é
-        # órfão se ninguém o quer por NENHUMA porta. Depois da inversão de
-        # 18/09 todo controle do rádio quer o seu — senão o varredor derrubaria
-        # no tique seguinte exatamente as pontes que `alvos()` acabou de subir.
+        # MAIS LARGA QUE `alvos()` DE PROPÓSITO, e a diferença é conservadora.
+        # `alvos()` sobe o que está NESTA varredura e não foi recusado; aqui
+        # entram também o pedido aberto e a declaração, que podem apontar para
+        # um `uniq` que a varredura de agora não viu (ele acabou de sair, ou
+        # entrou pelo cabo). Proteger a mais nunca derruba ponte viva; a régua
+        # estreita derrubaria, no tique seguinte, exatamente o que `alvos()`
+        # acabou de subir. O que as duas COMPARTILHAM é a recusa: o que ela
+        # desligou não é protegido por porta nenhuma.
         do_radio = frozenset((norm_mac(str(getattr(no, "uniq", ""))) or "") for no in nos)
         querem = (
             uniqs_pedidos(self._config)

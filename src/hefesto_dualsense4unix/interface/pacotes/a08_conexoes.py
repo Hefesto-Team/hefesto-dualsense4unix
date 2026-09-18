@@ -2764,7 +2764,9 @@ def _conta_de_slots(ctx: Contexto) -> str:
             [c for c in (st.get("controllers") or []) if isinstance(c, dict)],
             com_ponte_de_mic=((bt_mic.get("uniqs") or [])
                               if isinstance(bt_mic, dict) else ()),
-            mic_declarado=_mics_declarados(),
+            mic_declarado=_mics_que_ela_quer(
+                [c for c in (st.get("controllers") or []) if isinstance(c, dict)]
+            ),
             apelidos=_apelidos_por_endereco(),
         )
     if not planos:
@@ -2779,24 +2781,42 @@ def _conta_de_slots(ctx: Contexto) -> str:
     return "<br>".join(linhas)
 
 
-def _mics_declarados() -> tuple[str, ...]:
-    """Os `uniq` cujo microfone ELA marcou no `maquina.json`.
+def _mics_que_ela_quer(conectados: list[dict[str, Any]]) -> tuple[str, ...]:
+    """Os `uniq` cujo microfone ELA quer no ar — TODOS, menos os que desligou.
 
     É a metade que separa as duas contas do dono (`plano_de_radio`, regra 1): o
-    que SUBIU vem do daemon (`bt_mic.uniqs`), o que ela QUER vem do disco. Sem
-    esta lista a tela mostraria "está tudo certo" sobre uma ponte no chão — o
-    padrão que a queixa do Sackboy revelou.
+    que SUBIU vem do daemon (`bt_mic.uniqs`), o que ela QUER sai daqui. Sem esta
+    lista a tela mostraria "está tudo certo" sobre uma ponte no chão — o padrão
+    que a queixa do Sackboy revelou.
+
+    **A CONTA VIROU EM 18/09/2026**, e ela tinha de virar junto com o default do
+    daemon (ordem dela: *"todos os controles tem que nascer com tudo mic,
+    giroscopio e afins"*). Esta função se chamava `_mics_declarados` e devolvia
+    só quem tinha `microfone: true` no `maquina.json`. Com o produto ligando por
+    ausência, ela passaria a mentir do lado mais caro: um controle que ela nunca
+    declarou e cuja ponte não subiu ficaria FORA da lista, e o aviso *"o
+    microfone deste controle não está de pé"* nunca apareceria — a tela diria
+    "está tudo certo" exatamente no caso novo.
+
+    A régua é a do daemon, lida do mesmo lugar: `microfone is False` é a recusa;
+    ausência e `True` querem a ponte. Só controles CONECTADOS entram, porque a
+    conta é sobre a mesa de agora.
     """
     declarada = _declaracao()
-    if declarada is None:
-        return ()
-    with contextlib.suppress(Exception):
-        return tuple(
-            chave
-            for chave, valor in (getattr(declarada, "controles", {}) or {}).items()
-            if getattr(valor, "microfone", None)
-        )
-    return ()
+    recusados: set[str] = set()
+    if declarada is not None:
+        with contextlib.suppress(Exception):
+            recusados = {
+                _so_hex(str(chave))
+                for chave, valor in (getattr(declarada, "controles", {}) or {}).items()
+                if getattr(valor, "microfone", None) is False
+            }
+    querido: list[str] = []
+    for entrada in conectados:
+        chave = _so_hex(str(entrada.get("uniq") or ""))
+        if chave and chave not in recusados:
+            querido.append(chave)
+    return tuple(querido)
 
 
 def _apelidos_por_endereco() -> dict[str, str]:
