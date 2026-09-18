@@ -2343,10 +2343,31 @@ def a_ponte_do_radio_pode_subir() -> tuple[bool, str]:
     return True, ""
 
 
+def sink_esta_tocando(nome: str, runner: Callable[[list[str]], str | None] | None = None) -> bool:
+    """O sink tem stream tocando AGORA? É por aqui que se sabe se o jogo usa.
+
+    O endpoint da háptica fica publicado o tempo todo — nó que some quebra o
+    jogo que o escolheu, decisão dela de 08/09 —, mas o escritor do controle é
+    UM SÓ: enquanto o jogo não estiver tocando nele, quem manda no fio é o
+    caminho do alto-falante. `RUNNING` é o estado que o servidor dá a um sink
+    com stream vivo; `IDLE` e `SUSPENDED` são "ninguém está usando".
+    """
+    if not nome:
+        return False
+    correr: Any = runner or rodar_pactl
+    for linha in (correr(["pactl", "list", "short", "sinks"]) or "").splitlines():
+        campos = linha.split("\t")
+        if len(campos) > 4 and campos[1] == nome:
+            return campos[4].strip().upper() == "RUNNING"
+    return False
+
+
 def fonte_do_monitor_do_no(
     id_do_no: str,
     *,
     abrir: Callable[[list[str]], Any] | None = None,
+    taxa: int = TAXA_DO_ENCODER,
+    canais: int = CANAIS_DO_ENCODER,
 ) -> tuple[Callable[[int], bytes] | None, Any, str]:
     """`(fonte de PCM, processo, motivo)` lendo o monitor do nó DAQUELE controle.
 
@@ -2373,7 +2394,7 @@ def fonte_do_monitor_do_no(
     if not id_do_no:
         return None, None, "o controle não tem nó de som publicado"
     rotulo = rotulo_do_gravador(id_do_no)
-    argv = argv_do_gravador(f"{id_do_no}.monitor", rotulo=rotulo)
+    argv = argv_do_gravador(f"{id_do_no}.monitor", rotulo=rotulo, taxa=taxa, canais=canais)
     if not argv:
         return None, None, "nem `pw-record` nem `parec` nesta máquina"
     lancar = abrir or lancar_leitor
@@ -2457,10 +2478,19 @@ class PonteDeSomPorRadio:
         com_microfone: bool | Callable[[], bool] = False,
         seco: bool = False,
         gravador: Any | None = None,
+        fonte_de_haptica: Callable[[int], bytes] | None = None,
+        gravador_da_haptica: Any | None = None,
     ) -> None:
         self.uniq = uniq
         self._abrir_hidraw = abrir_hidraw
         self._fonte = fonte_de_pcm
+        #: A fonte da HÁPTICA, quando este controle tem endpoint publicado. Ela
+        #: entra na MESMA bomba de propósito: dois escritores no mesmo controle
+        #: disputam o nibble de sequência e os enables, e foi assim que o
+        #: microfone ficou desligado 93 vezes por segundo em 10/09.
+        self._fonte_da_haptica = fonte_de_haptica
+        #: O `pw-record` do monitor da háptica, colhido junto com o do som.
+        self._gravador_da_haptica = gravador_da_haptica
         self.arranjo = arranjo or ARRANJO_PADRAO
         self.rota = rota
         #: Repassado à bomba sem `bool()`: um chamável tem de chegar VIVO lá,
@@ -2545,6 +2575,7 @@ class PonteDeSomPorRadio:
             tag_audio=self.rota,
             seco=self._seco,
             com_microfone=self.com_microfone,
+            fonte_haptica=self._fonte_da_haptica,
         )
         # O fd e o sinal VÃO COM A THREAD, e é isso que impede a corrida velha
         # de escrever (ou de fechar) o descritor da corrida nova.
@@ -2628,6 +2659,15 @@ class PonteDeSomPorRadio:
         if parar is not None:
             parar.set()
         gravador, self._gravador = self._gravador, None
+        # O GRAVADOR DA HÁPTICA MORRE JUNTO, e pela mesma razão do outro: um
+        # `pw-record` órfão continua lendo o monitor depois de a ponte cair, e
+        # o próximo `subir()` acharia a fonte já consumida. Ele é colhido
+        # ANTES, porque quem segura a thread é a leitura bloqueante — e no
+        # arranjo da háptica a fonte que bloqueia é esta.
+        haptico, self._gravador_da_haptica = self._gravador_da_haptica, None
+        if haptico is not None:
+            derrubar_leitor_de_pipe(haptico, junta_s=esperar_s)
+            logger.info("haptica_radio_gravador_colhido", uniq=self.uniq)
         thread = self._thread
         if gravador is not None:
             como = derrubar_leitor_de_pipe(gravador, leitor=thread, junta_s=esperar_s)

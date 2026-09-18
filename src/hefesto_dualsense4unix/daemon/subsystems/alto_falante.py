@@ -558,6 +558,14 @@ class AltoFalanteSubsystem:
         self._gerenciador: Any = None
         #: UMA ponte por controle no rádio, pelo `uniq`.
         self._pontes: dict[str, Any] = {}
+        #: O endpoint de mentira por controle no rádio — o alto-falante de
+        #: quatro canais que o JOGO enxerga. Ele não é o `hefesto_som_<hex6>`:
+        #: aquele é a saída da MÁQUINA para o controle, e a pessoa o escolhe.
+        self._endpoints: dict[str, Any] = {}
+        #: "som" ou "haptica": qual arranjo a ponte daquele controle está
+        #: mandando AGORA. O escritor é um só, e trocar de arranjo exige
+        #: derrubar e subir — é por isso que o modo é lembrado.
+        self._modo_da_ponte: dict[str, str] = {}
         #: `({uniq: fonte}, (nome do perfil, carimbo))` — SFX-POR-CONTROLE-01.
         self._fontes_em_cache: tuple[dict[str, str], Any] = ({}, None)
         #: O `StateStore` do daemon, que sabe o perfil ATIVO agora.
@@ -779,13 +787,21 @@ class AltoFalanteSubsystem:
         existe e a ponte não (ou o contrário).
         """
         from hefesto_dualsense4unix.integrations.alto_falante_bt import (
+            ARRANJO_HAPTICA_032,
+            CANAIS_DA_HAPTICA,
             PonteDeSomPorRadio,
             e_radio,
             fonte_do_monitor_do_no,
             nome_do_sink,
+            sink_esta_tocando,
         )
         from hefesto_dualsense4unix.integrations.dualsense_bt_audio import (
             o_microfone_esta_no_ar,
+        )
+        from hefesto_dualsense4unix.integrations.endpoint_de_haptica import (
+            EndpointDeHaptica,
+            ancoras,
+            distribuir_ancoras,
         )
 
         vivos: dict[str, str] = {}
@@ -808,10 +824,41 @@ class AltoFalanteSubsystem:
             if ponte is not None:
                 ponte.descer()
                 logger.info("som_ponte_derrubada", uniq=uniq)
+        # O ENDPOINT DA HÁPTICA CAI DEPOIS DA PONTE, nunca antes: a ponte lê o
+        # monitor dele, e derrubar o nó primeiro deixaria a leitura pendurada.
+        for uniq in [u for u in self._endpoints if u not in vivos]:
+            endpoint = self._endpoints.pop(uniq, None)
+            if endpoint is not None:
+                endpoint.parar()
+
+        # O ENDPOINT DA HÁPTICA — um por controle no rádio, e ele VIVE ENQUANTO
+        # O CONTROLE EXISTIR. É a mesma decisão dela de 08/09 para o nó do som
+        # ("nó que some quebra o jogo que o escolheu"), e aqui ela pesa mais: se
+        # o nó cair no meio da partida, o endpoint da háptica morre com o jogo
+        # aberto. Cada controle ganha uma âncora PRÓPRIA — âncoras iguais são
+        # ContainerIds iguais, e aí a háptica do jogador 2 iria para o device do
+        # jogador 1.
+        postas = distribuir_ancoras(list(vivos), ancoras())
+        for uniq in vivos:
+            if uniq in self._endpoints or uniq not in postas:
+                continue
+            endpoint = EndpointDeHaptica(uniq=uniq, ancora=postas[uniq])
+            if endpoint.iniciar():
+                self._endpoints[uniq] = endpoint
 
         for uniq, caminho in vivos.items():
+            # O MODO PODE MUDAR COM A PONTE DE PÉ: o jogo abre o endpoint no
+            # meio da partida, e é aí que a háptica passa a valer. Quem muda de
+            # modo desce e sobe de novo — o escritor é UM SÓ, e trocar o
+            # arranjo com a bomba rodando mudaria o corpo do report no meio.
+            endpoint = self._endpoints.get(uniq)
+            modo = "haptica" if (endpoint and sink_esta_tocando(endpoint.nome)) else "som"
             if uniq in self._pontes:
-                continue
+                if self._modo_da_ponte.get(uniq) == modo:
+                    continue
+                anterior = self._pontes.pop(uniq)
+                anterior.descer()
+                logger.info("som_ponte_troca_de_modo", uniq=uniq, modo=modo)
             if not caminho:
                 continue
             fonte, gravador, motivo = fonte_do_monitor_do_no(nome_do_sink(uniq))
@@ -833,15 +880,33 @@ class AltoFalanteSubsystem:
             # `BtMicSubsystem`, pelo gancho — nenhum subsystem importa o
             # outro. `functools.partial` e não `lambda` pela mesma razão do
             # `abrir_hidraw` acima: o mypy infere o tipo do primeiro.
+            # A FONTE DA HÁPTICA SÓ SOBE NO MODO DELA: um `pw-record` lendo o
+            # monitor sem ninguém consumir enche o cano e trava o processo.
+            fonte_h: Any = None
+            gravador_h: Any = None
+            if modo == "haptica" and endpoint is not None:
+                fonte_h, gravador_h, motivo_h = fonte_do_monitor_do_no(
+                    endpoint.nome, canais=CANAIS_DA_HAPTICA
+                )
+                if fonte_h is None:
+                    if gravador_h is not None:
+                        derrubar_leitor_de_pipe(gravador_h)
+                    gravador_h = None
+                    modo = "som"
+                    logger.info("haptica_sem_fonte", uniq=uniq, motivo=motivo_h)
             ponte = PonteDeSomPorRadio(
                 uniq=uniq,
                 abrir_hidraw=functools.partial(self._abrir_hidraw, caminho),
                 fonte_de_pcm=fonte,
                 com_microfone=functools.partial(o_microfone_esta_no_ar, uniq),
                 gravador=gravador,
+                arranjo=ARRANJO_HAPTICA_032 if modo == "haptica" else None,
+                fonte_de_haptica=fonte_h,
+                gravador_da_haptica=gravador_h,
             )
             if ponte.subir():
                 self._pontes[uniq] = ponte
+                self._modo_da_ponte[uniq] = modo
             else:
                 ponte.descer()
                 logger.info("som_ponte_nao_subiu", uniq=uniq, motivo=ponte.motivo)
