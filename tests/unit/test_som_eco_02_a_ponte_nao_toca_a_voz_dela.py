@@ -58,13 +58,31 @@ SINKS_SHORT = (
 )
 
 
-def _pactl(monkeypatch: pytest.MonkeyPatch, *, saida: str = SINKS_SHORT, rc: int = 0):
-    """Dubla só o `pactl list sinks short`; o resto passa reto."""
+#: O `Server Name` do `pipewire-pulse`, como o `pactl info` o diz em `LC_ALL=C`.
+PIPEWIRE_PULSE = "PulseAudio (on PipeWire 1.0.5)"
+
+
+def _pactl(
+    monkeypatch: pytest.MonkeyPatch,
+    *,
+    saida: str = SINKS_SHORT,
+    rc: int = 0,
+    servidor: str = PIPEWIRE_PULSE,
+):
+    """Dubla o `pactl list sinks short` e o `pactl info`; o resto passa reto.
+
+    O `info` entra porque o `pw-record` só é escolhido quando quem responde ao
+    `pactl` é o `pipewire-pulse` — um dublê que não o respondesse mediria só a
+    máquina com PulseAudio.
+    """
     real = subprocess.run
 
     def run(argv, *a, **k):
         if list(argv[:4]) == ["pactl", "list", "sinks", "short"]:
             return SimpleNamespace(returncode=rc, stdout=saida, stderr="")
+        if list(argv[:2]) == ["pactl", "info"]:
+            texto = f"Server String: /run/user/1000/pulse/native\nServer Name: {servidor}\n"
+            return SimpleNamespace(returncode=0, stdout=texto, stderr="")
         return real(argv, *a, **k)
 
     monkeypatch.setattr(afb.subprocess, "run", run)
@@ -143,6 +161,32 @@ class TestOAlvoVaiPorSerial:
         )
         argv = afb.argv_do_gravador("hefesto_som_e64203.monitor")
         assert argv[0] == "parec"
+
+    def test_no_pulseaudio_o_indice_nao_vira_serial_do_pipewire(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """PulseAudio no som e `pw-record` instalado: o `parec` assume.
+
+        O índice `75833` é do PulseAudio; dado ao `pw-record` como
+        `object.serial`, ele mira um nó qualquer do grafo do PipeWire, ou
+        nenhum, e alvo que não resolve cai na fonte padrão — o eco de novo.
+
+        MORDIDA: tirar o `o_servidor_e_o_pipewire()` do `argv_do_gravador`, e o
+        `pw-record` volta com o índice do servidor errado.
+        """
+        _pactl(monkeypatch, servidor="pulseaudio")
+        monkeypatch.setattr(afb.shutil, "which", lambda b: f"/usr/bin/{b}")
+        argv = afb.argv_do_gravador("hefesto_som_e64203.monitor")
+        assert argv[0] == "parec", f"o índice do PulseAudio foi ao pw-record: {argv}"
+        assert "--device=hefesto_som_e64203.monitor" in argv
+
+    def test_o_servidor_sem_resposta_nao_e_pipewire(self) -> None:
+        """Sem `pactl info`, a dúvida vai para o gravador que acerta pelo nome."""
+        assert afb.o_servidor_e_o_pipewire(lambda _argv: None) is False
+        assert afb.o_servidor_e_o_pipewire(
+            lambda _argv: f"Server Name: {PIPEWIRE_PULSE}\n"
+        ) is True
+        assert afb.o_servidor_e_o_pipewire(lambda _argv: "Server Name: pulseaudio\n") is False
 
 
 def _dump(origem: str, *, rotulo: str = "hefesto-ponte-e64203",
