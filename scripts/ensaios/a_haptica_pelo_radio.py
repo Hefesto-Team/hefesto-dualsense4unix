@@ -56,6 +56,7 @@ from __future__ import annotations
 import argparse
 import math
 import os
+import subprocess
 import sys
 import time
 
@@ -68,6 +69,7 @@ if os.path.isdir(_SRC) and _SRC not in sys.path:
 
 import hefesto_dualsense4unix.core.ds_output_report as rep
 from hefesto_dualsense4unix.core.lightbar_gatilho import build_bt_lightbar_report
+from hefesto_dualsense4unix.integrations.haptica_bt import ConversorDeHaptica
 from comum import (
     RADIO,
     abrir_no_hidraw,
@@ -93,6 +95,9 @@ VARIANTES = {
 #: A taxa do bloco e o tamanho dele: 32 amostras por canal a 3 kHz são os
 #: 10,667 ms do quadro Opus — a cadência que o firmware consome no rádio.
 TAXA_HAPTICA = 3000
+#: Os quadros de 48 kHz que cabem num bloco de 3 kHz: 512, que são os 10,667 ms
+#: do report. É a mesma conta do :mod:`integrations.haptica_bt` (FATOR × 32).
+QUADROS_POR_BLOCO = 512
 AMOSTRAS_POR_CANAL = 32
 BYTES_DO_BLOCO = AMOSTRAS_POR_CANAL * 2
 INTERVALO = 512 / 48000
@@ -130,6 +135,85 @@ def blocos_da_senoide(segundos: float, *, frequencia: float, amplitude: int,
             n += 1
         blocos.append(bytes(corpo))
     return blocos
+
+
+def monitor_do_endpoint() -> str:
+    """O monitor do nó de mentira publicado para este controle, ou "".
+
+    **`LC_ALL=C`**: o `pactl` desta casa traduz, e um leitor que procura em
+    inglês responde "não há" sobre um nó de pé (medido em 15/08 e de novo em
+    18/09).
+    """
+    try:
+        saida = subprocess.run(
+            ["pactl", "list", "short", "sinks"],
+            capture_output=True, text=True, timeout=5, check=False,
+            env={**os.environ, "LC_ALL": "C"},
+        ).stdout
+    except (OSError, subprocess.SubprocessError):
+        return ""
+    for linha in saida.splitlines():
+        campos = linha.split("\t")
+        if len(campos) > 1 and "HEFESTO" in campos[1] and "Speaker__sink" in campos[1]:
+            return campos[1] + ".monitor"
+    return ""
+
+
+def blocos_do_jogo(monitor: str, segundos: float, *, ganho: float):
+    """Os blocos que o JOGO manda, lidos do monitor do endpoint de mentira.
+
+    O `parec` é o relógio: 512 quadros a 48 kHz são os 10,667 ms de um report,
+    e a leitura bloqueia até eles existirem. Quem dá o ritmo é o jogo, que é
+    exatamente o que se quer medir — nenhum `sleep` nosso entra no caminho.
+
+    Entram quatro canais s16le; o :class:`ConversorDeHaptica` descarta 1 e 2
+    (a voz) e leva 3 e 4 (os motores) para 3 kHz em int8.
+    """
+    conv = ConversorDeHaptica(ganho=ganho)
+    proc = subprocess.Popen(
+        ["parec", f"--device={monitor}", "--format=s16le", "--rate=48000",
+         "--channels=4", "--raw"],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.DEVNULL,
+    )
+    fim = time.monotonic() + segundos
+    try:
+        while time.monotonic() < fim:
+            pedaco = proc.stdout.read(QUADROS_POR_BLOCO * 8) if proc.stdout else b""
+            if not pedaco:
+                break
+            yield from conv.alimentar(pedaco)
+    finally:
+        proc.terminate()
+        proc.wait(timeout=2)
+
+
+def tocar_em_regime(fd: int, report_id: int, com_11: bool, gerador, args,
+                    seq: int) -> tuple[int, int, int]:
+    """Escreve cada bloco assim que ele nasce. O ritmo é o do jogo."""
+    enviados = recusas = contador = 0
+    picos: list[int] = []
+    for bloco in gerador:
+        seq = (seq + 1) & 0x0F
+        contador = (contador + 1) & 0xFF
+        picos.append(max((b - 256 if b > 127 else b) for b in bloco) if bloco else 0)
+        pkt = montar(report_id, com_11, bloco, seq=seq, contador=contador,
+                     duplo=args.duplo, tag_errada=args.tag_errada,
+                     crc_errado=args.crc_errado)
+        try:
+            os.write(fd, pkt)
+            enviados += 1
+        except OSError as erro:
+            recusas += 1
+            print(f"  RECUSA na escrita {enviados + 1}: "
+                  f"{erro.__class__.__name__} {erro.errno} — {erro.strerror}")
+            break
+        if enviados % 94 == 0:
+            print(f"  {enviados // 94:3d}s  pico do último segundo: "
+                  f"{max(picos[-94:]) if picos else 0:4d}/127", flush=True)
+    if picos and max(picos) == 0:
+        print("  O JOGO MANDOU SILÊNCIO o tempo todo — nada a vibrar.")
+    return seq, enviados, recusas
 
 
 def montar(report_id: int, com_11: bool, bloco: bytes, *, seq: int, contador: int,
@@ -216,6 +300,10 @@ def main() -> int:
     ap.add_argument("--amplitude", type=int, default=100, help="pico int8 (1..127)")
     ap.add_argument("--segundos", type=float, default=3.0)
     ap.add_argument("--exigir-mac", default="", help="endereço do controle, com dois no rádio")
+    ap.add_argument("--do-jogo", action="store_true",
+                    help="o PCM vem do JOGO (monitor do endpoint de mentira), não da senoide")
+    ap.add_argument("--monitor", default="", help="o monitor a ler (o padrão é descobrir)")
+    ap.add_argument("--ganho", type=float, default=1.0, help="multiplica o PCM do jogo")
     ap.add_argument("--com-daemon", action="store_true",
                     help="roda mesmo com o daemon vivo (dois escritores — não é a medida)")
     args = ap.parse_args()
@@ -242,6 +330,16 @@ def main() -> int:
     print(f"os 24 primeiros bytes: {exemplo[:24].hex(' ')}")
     print(f"blocos: {len(blocos)} ({args.segundos:g} s a 10,667 ms cada)")
     print(f"mordida: {', '.join(mordidas) if mordidas else 'nenhuma — é a passada que pode vibrar'}")
+
+    monitor = ""
+    if args.do_jogo:
+        monitor = args.monitor or monitor_do_endpoint()
+        if not monitor:
+            print(resumo("nenhum endpoint de mentira publicado — suba-o com "
+                         "scripts/ensaios/o_endpoint_de_mentira.py --montar."))
+            return 1
+        print(f"\nO PCM VEM DO JOGO, não da senoide: {monitor}")
+        print("  os canais 1-2 (a voz) são descartados; 3-4 são os motores")
 
     if not args.tocar:
         print(resumo("leitura pura — nenhuma porta aberta, nenhum byte escrito."))
@@ -273,10 +371,17 @@ def main() -> int:
                       flush=True)
                 time.sleep(2.0)
             else:
-                print(f"\n  >>> SEGURE O CONTROLE DO RÁDIO — {args.segundos:g} s"
+                alvo_txt = "o JOGO manda" if args.do_jogo else "senoide"
+                print(f"\n  >>> SEGURE O CONTROLE DO RÁDIO — {args.segundos:g} s ({alvo_txt})"
                       f"{' · ' + ', '.join(mordidas) + ' (tem de CALAR)' if mordidas else ''}",
                       flush=True)
-            seq, enviados, recusas = tocar(no.fd, rid, c11, blocos, args, seq)
+            if args.do_jogo:
+                seq, enviados, recusas = tocar_em_regime(
+                    no.fd, rid, c11,
+                    blocos_do_jogo(monitor, args.segundos, ganho=args.ganho),
+                    args, seq)
+            else:
+                seq, enviados, recusas = tocar(no.fd, rid, c11, blocos, args, seq)
             print(f"  {nome}: {enviados} report(s) enviados, {recusas} recusa(s)")
             if args.sequencia:
                 seq = (seq + 1) & 0x0F
