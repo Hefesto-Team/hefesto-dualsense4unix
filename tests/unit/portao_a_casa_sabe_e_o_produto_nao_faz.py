@@ -1212,6 +1212,25 @@ _NAO_E_PROMESSA: dict[str, str] = {
 #: No dia em que o caminho nascer, a entrada deixa de bater com a árvore e
 #: ``test_a_lista_de_lacunas_nao_envelhece_calada`` cobra que ela seja apagada.
 _SEM_CAMINHO_HOJE: dict[str, str] = {
+    "integrations/haptica_bt.py::ConversorDeHaptica":
+        "HAPTICA-POR-RADIO-01 (P2), 18/09/2026. A conta que transforma o PCM "
+        "de 48 kHz em blocos de 64 B a 3 kHz — o formato que o motor "
+        "voice-coil aceita pelo rádio, MEDIDO com a mão dela em 18/09 "
+        "(`scripts/ensaios/a_haptica_pelo_radio.py`: o report 0x32 com o "
+        "bloco 0x91 antes do 0x92 vibra; com as amostras em zero, cala). "
+        "ONDE O CAMINHO SE PERDE: falta a FONTE do PCM. Pelo rádio o "
+        "DualSense não tem placa de áudio, então o jogo não abre endpoint de "
+        "quatro canais e não há o que converter — o P3 da sprint decide se "
+        "essa fonte é um gadget USB virtual ou outro caminho. O que FECHA: o "
+        "P4, a ponte, que põe o bloco no mesmo report 0x35 que a "
+        "`PonteDeSomPorRadio` já escreve (um escritor por controle). "
+        "Enquanto isso, a conta fica medida e provada em "
+        "`tests/unit/test_haptica_por_radio_01_o_pcm_vira_bloco.py`.",
+    "integrations/haptica_bt.py::bloco_de_silencio":
+        "Irmã da entrada acima, mesma sprint e mesma lacuna: o bloco zerado é "
+        "o que a ponte manda quando o jogo cala, e é a MORDIDA da bancada — "
+        "com ele o controle parou, e foi isso que separou o voice-coil do "
+        "rumble clássico em 18/09/2026.",
     "integrations/cura_por_estrada.py::Estrada":
         "O BOTÃO «Consertar» DOS CARTÕES SEM CENSO SAIU EM 10/09/2026 "
         "(LANCADOR-LOCALIZAR-01), por palavra dela — 'se tenho tudo "
