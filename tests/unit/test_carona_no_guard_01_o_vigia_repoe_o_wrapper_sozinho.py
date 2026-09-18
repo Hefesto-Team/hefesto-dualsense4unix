@@ -60,8 +60,15 @@ def execstarts(service: str) -> list[str]:
 
 class TestOSegundoPasso:
     def test_o_guard_repoe_o_wrapper(self, execstarts: list[str]) -> None:
-        """A MORDIDA. Sem este passo, o Pragmata volta a ficar quebrado calado."""
-        assert len(execstarts) == 2, execstarts
+        """A MORDIDA. Sem este passo, o Pragmata volta a ficar quebrado calado.
+
+        `>= 2` e não `== 2` desde 18/09/2026: o vigia ganhou um TERCEIRO passo
+        (o `--manter` do Proton pinado), e quem o cobra é
+        `test_o_pino_chega_a_qualquer_computador.py`. O que esta régua tranca
+        continua sendo o SEGUNDO — tirá-lo põe o `--manter` na posição dele, e
+        o `__SENTINELA__` some de `execstarts[1]`.
+        """
+        assert len(execstarts) >= 2, execstarts
         assert "__SENTINELA__" in execstarts[1]
         assert "--reparar" in execstarts[1]
 

@@ -34,7 +34,8 @@
 #   --fix             aplica correções seguras: reaplica udev, instala/reseta o
 #                     fix de áudio do WirePlumber e cura as camadas 1 e 2 do
 #                     microfone mudo (MIC-USB-01: mute persistido por rota e
-#                     perfil da placa numa entrada sem porta de captura).
+#                     perfil da placa numa entrada sem porta de captura); trava
+#                     os jogos no Proton pinado (adia com a Steam aberta).
 #   --fix-mic         SÓ o microfone (camadas 1 e 2) — cura, mostra o veredito
 #                     das duas e sai. Rota curta de quem quer o mic de volta.
 #   --restaurar-hidraw-uaccess
@@ -4211,11 +4212,44 @@ print("naosei=" + rot("nao_sei"))
 #    `build_compat_tool_mapping` preserva escolha por jogo e registra
 #    `action="preservado"` no `proton-pin-lock.json`. Esse registro é lido
 #    aqui: escolha respeitada é INFO com o nome do jogo, não WARN sem nome.
+#
+#    NOTA DATADA, 18/09/2026: a ordem dela de 17/09 (`--lock --todos`) revogou
+#    a guarda `preservado` para jogo que roda por Proton, e o DON'T SCREAM foi
+#    junto para o pino a pedido dela. Escolha, agora, é só o que tem prova —
+#    o `jogos_fora_do_pino.txt` e a ferramenta que não é Proton —, e o resto
+#    volta a ser WARN, com o `--fix` que trava.
 check_proton_pin() {
     local py="${ROOT_DIR}/src/hefesto_dualsense4unix/integrations/proton_pin.py"
     local conf="${ROOT_DIR}/assets/proton-pin.conf"
     if [[ ! -f "${py}" || ! -f "${conf}" ]] || ! command -v python3 >/dev/null 2>&1; then
         info "proton_pin.py/proton-pin.conf ausentes ou sem python3 — pulo o check do Proton pinado"
+        return
+    fi
+    # A RAIZ ENVENENADA — 18/09/2026, INSTALL-UNIVERSAL. O `--ensure` de antes
+    # da cura, rodado numa máquina SEM Steam, deixava `~/.steam/steam` como
+    # diretório real só com o nosso Proton dentro. O lançador Debian lê isso
+    # como o layout histórico e adota `~/.steam` como casa da Steam — e aí o
+    # pino, o Steam Input, o wrapper e o vigia miram uma raiz que ela não usa.
+    # Até aqui o doctor dizia só "Steam não detectada" e calava. A régua
+    # (`raiz_envenenada`) é estreita: só reprova quando TUDO lá dentro é nosso.
+    local envenenada
+    envenenada="$(HEFESTO_PP="${py}" python3 - <<'PY' 2>/dev/null
+import os
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(os.environ.get("HEFESTO_PP", "")).parent))
+try:
+    import proton_pin as pp
+except Exception:  # noqa: BLE001 - sem o módulo, a checagem some e o resto segue
+    sys.exit(0)
+alvo = getattr(pp, "raiz_envenenada", lambda: None)()
+if alvo is not None:
+    print(alvo)
+PY
+)"
+    if [[ -n "${envenenada}" ]]; then
+        fail "${envenenada} é uma pasta que um instalador antigo do Hefesto criou antes de existir Steam aqui (só tem o Proton pinado dentro): com ela no caminho, a Steam adota ${HOME}/.steam como casa e o Hefesto deixa de achá-la. Com a Steam FECHADA, rode: mv \"${envenenada}\" \"${envenenada}.sobra-do-hefesto\" — na próxima abertura a Steam recria o atalho, e o vigia da Steam reextrai o Proton pinado do cache"
         return
     fi
     # T-08 (ONDA0-Z7): os quatro layouts de check_vdf_poison — antes só os
@@ -4311,25 +4345,55 @@ except Exception:  # noqa: BLE001 - sem rótulo o appid ainda nomeia o jogo
     def rotulo_do_jogo(appid, home=None):
         return f"appid {appid}"
 
-respeitados = []
-desconhecidos = []
+# TRÊS BALDES, e o que separa é a ORDEM DELA de 17/09/2026 (*"ele e todo o
+# resto de agora em diante"*), não o registro `preservado` de antes dela:
+#   - NOMEADO: está no `jogos_fora_do_pino.txt` — a exceção que ela escreveu;
+#   - NATIVO: a ferramenta dele não é Proton (steamlinuxruntime e afins) — a
+#     escolha de rodar nativo, que o `--todos` não troca desde 18/09/2026;
+#   - FORA: está num OUTRO Proton — o que a ordem manda travar.
+try:
+    nomeados = set(pp.ler_jogos_fora_do_pino())
+    arquivo = pp.fora_do_pino_path()
+except AttributeError:  # módulo de antes de 18/09
+    nomeados, arquivo = set(), None
+try:
+    mapa = pp.extract_compat_tool_mapping(
+        pp.default_config_vdf().read_text(encoding="utf-8")
+    )
+except (OSError, ValueError):
+    mapa = {}
+da_familia = getattr(pp, "e_da_familia_proton", lambda n: "proton" in n.lower())
+nomeado, nativo, fora = [], [], []
 for appid in (os.environ.get("HEFESTO_OFF") or "").split():
-    marca = registro.get(appid) or {}
-    if marca.get("action") == "preservado":
-        respeitados.append(
-            f"{rotulo_do_jogo(appid)} em {marca.get('previous_name') or '?'}"
-        )
+    atual = mapa.get(appid) or mapa.get("0") or (
+        (registro.get(appid) or {}).get("previous_name") or "?"
+    )
+    if appid in nomeados:
+        nomeado.append(rotulo_do_jogo(appid))
+    elif atual != "?" and not da_familia(atual):
+        nativo.append(f"{rotulo_do_jogo(appid)} em {atual}")
     else:
-        desconhecidos.append(rotulo_do_jogo(appid))
-print("respeitados=" + "; ".join(respeitados))
-print("desconhecidos=" + "; ".join(desconhecidos))
+        fora.append(f"{rotulo_do_jogo(appid)} em {atual}")
+print("nomeados=" + "; ".join(nomeado))
+print("nativos=" + "; ".join(nativo))
+print("fora=" + "; ".join(fora))
+if nomeado and arquivo is not None:
+    import time
+
+    try:
+        quando = time.strftime("%d/%m/%Y", time.localtime(arquivo.stat().st_mtime))
+    except OSError:
+        quando = "?"
+    print(f"arquivo_nomeados={arquivo} (alterado em {quando})")
 PY
 )"
-    local raiz_do_pin manifesto respeitados desconhecidos
+    local raiz_do_pin manifesto nomeados nativos fora arquivo_nomeados
     raiz_do_pin="$(sed -n 's/^compat=//p' <<<"${detalhe}")"
     manifesto="$(sed -n 's/^manifesto=//p' <<<"${detalhe}")"
-    respeitados="$(sed -n 's/^respeitados=//p' <<<"${detalhe}")"
-    desconhecidos="$(sed -n 's/^desconhecidos=//p' <<<"${detalhe}")"
+    nomeados="$(sed -n 's/^nomeados=//p' <<<"${detalhe}")"
+    nativos="$(sed -n 's/^nativos=//p' <<<"${detalhe}")"
+    fora="$(sed -n 's/^fora=//p' <<<"${detalhe}")"
+    arquivo_nomeados="$(sed -n 's/^arquivo_nomeados=//p' <<<"${detalhe}")"
 
     if [[ "${present}" == "1" && "${manifest}" == "1" ]]; then
         pass "Proton pinado presente e íntegro (${nome})"
@@ -4347,11 +4411,18 @@ PY
     if [[ "${glob}" == "1" && "${off:-0}" -eq 0 ]]; then
         pass "todos os jogos travados no Proton pinado (default global + por jogo)"
     else
-        [[ "${glob}" != "1" ]] && warn "default global da Steam NÃO aponta pro Proton pinado — use o botão 'Travar Proton validado' (aba Sistema da GUI, com a Steam fechada); ou, para refazer pela linha de comando, $(conselho_de_instalacao)"
-        [[ -n "${respeitados}" ]] && info "fora do Proton pinado por ESCOLHA SUA, e o produto respeitou: ${respeitados} — está assim no registro do lock, como 'preservado'. Não há o que consertar: trocar Proton por baixo já matou o microfone de um jogo aqui (14/08/2026). Se quiser mesmo travá-los, mude o Proton pela janela da Steam"
-        [[ -n "${desconhecidos}" ]] && warn "jogo(s) fora do Proton pinado sem registro de escolha sua: ${desconhecidos} — um upgrade de Proton pode reintroduzir o controle duplicado neles; trave pelo botão 'Travar Proton validado' (aba Sistema da GUI, com a Steam fechada)"
-        if [[ "${off:-0}" -gt 0 && -z "${respeitados}" && -z "${desconhecidos}" ]]; then
-            warn "${off} jogo(s) fora do Proton pinado — um upgrade de Proton pode reintroduzir o controle duplicado nesses jogos"
+        [[ "${glob}" != "1" ]] && warn "default global da Steam NÃO aponta pro Proton pinado — rode: scripts/doctor.sh --fix (trava com a Steam fechada; o vigia da Steam também trava sozinho quando ela sai); ou, para refazer tudo, $(conselho_de_instalacao)"
+        # FATO QUE CAIU, SUBSTITUÍDO — 18/09/2026. Aqui se dizia *"fora do
+        # Proton pinado por ESCOLHA SUA (…) Não há o que consertar"* sobre todo
+        # jogo com `preservado` no registro. A ordem dela de 17/09 revogou essa
+        # guarda para jogo que roda por Proton, e a frase passou a dizer o
+        # contrário do que ela mandou. Sobram como escolha só as duas que têm
+        # prova: a exceção que ela NOMEOU, e a ferramenta que não é Proton.
+        [[ -n "${nomeados}" ]] && info "fora do Proton pinado por exceção que você nomeou em ${arquivo_nomeados:-jogos_fora_do_pino.txt}: ${nomeados} — o install, o vigia da Steam e o botão não tocam nestes; para devolver um: python3 ${py} --de-volta-ao-pino APPID"
+        [[ -n "${nativos}" ]] && info "rodando por uma ferramenta que não é Proton, a escolha de rodar nativo, que o produto não troca: ${nativos} — o pino existe por causa do Wine, e estes não passam por ele"
+        [[ -n "${fora}" ]] && warn "jogo(s) fora do Proton pinado, em outro Proton: ${fora} — a ordem de 17/09/2026 é todo jogo que roda por Proton no pino, e um upgrade de Proton pode trazer de volta o controle duplicado neles; rode: scripts/doctor.sh --fix (trava com a Steam fechada; o vigia da Steam também trava sozinho quando ela sai). Para deixar um de fora: python3 ${py} --fora-do-pino APPID"
+        if [[ "${off:-0}" -gt 0 && -z "${nomeados}" && -z "${nativos}" && -z "${fora}" ]]; then
+            warn "${off} jogo(s) fora do Proton pinado — um upgrade de Proton pode reintroduzir o controle duplicado nesses jogos; rode: scripts/doctor.sh --fix"
         fi
     fi
     if [[ -n "${leaky}" ]]; then
@@ -6415,6 +6486,30 @@ fix_ucm_do_dualsense() {
     fi
 }
 
+# A trava do Proton pinado, pela linha que o próprio doctor aconselha — 18/09.
+#
+# O check dizia "Não há o que consertar" sobre o jogo fora do pino, e o `--fix`
+# não tinha o que fazer por ele. Agora é o mesmo `--lock --todos` do install,
+# com o mesmo portão: com a Steam ou um jogo abertos ele ADIA (rc 3) e nunca
+# fecha nada — quem fecha a Steam é o install, que pergunta antes. Sem Steam
+# nativa com `config.vdf`, não há onde travar e o passo cala.
+fix_proton_pinado() {
+    local py="${ROOT_DIR}/src/hefesto_dualsense4unix/integrations/proton_pin.py"
+    [[ -f "${py}" && -f "${ROOT_DIR}/assets/proton-pin.conf" ]] || return 0
+    command -v python3 >/dev/null 2>&1 || return 0
+    if [[ ! -f "${HOME}/.steam/steam/config/config.vdf" \
+          && ! -f "${HOME}/.local/share/Steam/config/config.vdf" ]]; then
+        return 0
+    fi
+    local rc=0
+    python3 "${py}" --lock --todos >/dev/null 2>&1 || rc=$?
+    case "${rc}" in
+        0) pass "jogos travados no Proton pinado (--lock --todos)" ;;
+        3) warn "trava do Proton pinado ADIADA — a Steam (ou um jogo) está aberta; feche e rode de novo: scripts/doctor.sh --fix" ;;
+        *) warn "trava do Proton pinado falhou (rc=${rc}) — rode: python3 ${py} --lock --todos" ;;
+    esac
+}
+
 apply_fixes() {
     hdr "aplicando correções (--fix)"
     local _udev_dono=""
@@ -6451,6 +6546,7 @@ apply_fixes() {
     # que pode reinstalar o drop-in e reiniciar o WirePlumber — o perfil da placa
     # e o mute da source precisam ser conferidos com o serviço já de pé.
     fix_mic_dualsense
+    fix_proton_pinado
     fix_fila_sem_fixture
     # AUSÊNCIA DELIBERADA — RESTAURO-SO-COM-SINTOMA-01, decisão dela de
     # 07/08/2026: `restaurar_hidraw_uaccess` NÃO é chamado aqui. O `--fix` roda

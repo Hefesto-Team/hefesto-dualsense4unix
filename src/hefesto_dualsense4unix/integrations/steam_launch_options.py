@@ -2046,6 +2046,46 @@ def _report_apply(
     return rc
 
 
+#: Os três desfechos do `--fechar-steam`, e o install decide por eles.
+RC_STEAM_FECHADA_AGORA = 0
+RC_STEAM_JA_FECHADA = 4
+RC_STEAM_NAO_FECHOU = 3
+
+
+def _fechar_a_steam_uma_vez() -> int:
+    """A janela de Steam fechada do install, aberta UMA vez para todos os passos.
+
+    692cf5343, item (c) do cético (18/09/2026). O install fechava e reabria a
+    Steam em cada passo que edita os arquivos dela (11, 11b, 11b-bis) — e a
+    reabria ANTES do 11b-ter e do 11c. Resultado medido no código: numa máquina
+    em que a Steam estava aberta, a sentinela e a trava `--todos` do Proton
+    ADIAVAM sempre (rc 3), e nada tentava de novo. Com a janela única, os
+    passos rodam com a Steam fechada e ela reabre uma vez, no fim.
+
+    Mesma ordem do `main` e do `with_steam_closed`: o jogo aberto vem ANTES de
+    qualquer decisão — fechar a Steam com um jogo aberto o mataria.
+    """
+    invalidar_varredura_de_proc()  # BG-03: gesto destrutivo — varre de verdade
+    if steam_game_running():
+        print(
+            "[launch-options] há um JOGO da Steam aberto — não fecho a Steam "
+            "(o jogo morreria com ela); os passos que editam os arquivos dela "
+            "vão adiar, cada um com o comando para depois."
+        )
+        return RC_STEAM_NAO_FECHOU
+    if not steam_running():
+        print("[launch-options] a Steam já está fechada — nada a reabrir no fim")
+        return RC_STEAM_JA_FECHADA
+    if not stop_steam():
+        print(
+            "[launch-options] a Steam não fechou — os passos que editam os "
+            "arquivos dela vão adiar (editar com ela viva seria edição perdida)."
+        )
+        return RC_STEAM_NAO_FECHOU
+    print("[launch-options] Steam fechada — ela reabre no fim do install")
+    return RC_STEAM_FECHADA_AGORA
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         prog="steam_launch_options",
@@ -2088,6 +2128,20 @@ def main(argv: list[str] | None = None) -> int:
             "escritor nosso sem âncora que as pôs lá (exige Steam fechada)"
         ),
     )
+    group.add_argument(
+        "--fechar-steam",
+        action="store_true",
+        help=(
+            "fecha a Steam UMA vez para os passos do install que editam os "
+            "arquivos dela (rc 0 = fechei, reabra no fim; 4 = já estava "
+            "fechada; 3 = jogo aberto ou ela não fechou, nada foi fechado)"
+        ),
+    )
+    group.add_argument(
+        "--reabrir-steam",
+        action="store_true",
+        help="reabre a Steam desanexada (o par do --fechar-steam)",
+    )
     parser.add_argument(
         "--dry-run",
         action="store_true",
@@ -2107,6 +2161,11 @@ def main(argv: list[str] | None = None) -> int:
         help="localconfig.vdf explícito (repetível; default: descoberta automática)",
     )
     args = parser.parse_args(argv)
+
+    if args.fechar_steam:
+        return _fechar_a_steam_uma_vez()
+    if args.reabrir_steam:
+        return 0 if reopen_steam() else 1
 
     vdfs = args.vdf if args.vdf else discover_vdfs()
     if not vdfs:

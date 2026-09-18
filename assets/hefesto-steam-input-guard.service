@@ -5,7 +5,7 @@ Description=Hefesto — devolve a configuração que a Steam reescreve (Steam In
 
 [Service]
 Type=oneshot
-# __SCRIPT__ e __SENTINELA__ são substituídos pelo install.sh/dsx.sh com o
+# __SCRIPT__, __SENTINELA__ e __PROTON_PIN__ são substituídos pelo install.sh com o
 # caminho absoluto do repo.
 #
 # 1) Steam Input: --apply-quiet NUNCA fecha a Steam: se ela estiver viva, adia.
@@ -27,3 +27,16 @@ ExecStart=/usr/bin/env bash __SCRIPT__ --apply-quiet
 #    jogo abertos), que é o caso comum e não é falha. Sem ele o guard inteiro
 #    entraria em `failed` toda vez que ela estivesse jogando.
 ExecStart=-/usr/bin/env python3 __SENTINELA__ --reparar
+#
+# 3) O Proton pinado, na mesma carona (18/09/2026, INSTALL-UNIVERSAL). A trava
+#    `--lock --todos` só acontecia no passo 11c do install, e só com a Steam
+#    fechada: numa máquina em que a Steam estava aberta ela ADIAVA, e nada
+#    tentava de novo — nem jogo instalado depois ganhava a entrada. O
+#    `--manter` repõe o pino do CACHE (nunca baixa; o install adianta o
+#    download mesmo sem Steam) e trava todo jogo que roda por Proton, sem
+#    tocar no que ela nomeou em `jogos_fora_do_pino.txt`.
+#
+#    O `-` pelo mesmo motivo do passo 2: com a Steam ou um jogo abertos ele
+#    adia (rc 3), e isso não é falha. Com `--no-proton-pin` o install apaga
+#    esta linha da unidade.
+ExecStart=-/usr/bin/env python3 __PROTON_PIN__ --manter

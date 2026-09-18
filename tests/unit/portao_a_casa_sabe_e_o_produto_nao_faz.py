@@ -2844,16 +2844,6 @@ _SEM_CAMINHO_HOJE: dict[str, str] = {
         "é o do mockup. Chamador: `src/hefesto_dualsense4unix/interface/jogar_vivo.py`:814. ONDE "
         "O CAMINHO SE PERDE: no enxerto da aba, ver o bloco acima."
     ),
-    "integrations/proton_pin.py::steam_root_ou_recusa": (
-        "ENTREGUE em 24/08/2026 (T-09, ONDA0-Z7). `default_steam_root` "
-        "continua excluindo Flatpak/Snap por decisão medida; esta função "
-        "acrescenta o MOTIVO para a tela, no formato de recusa da Z1. ONDE O "
-        "CAMINHO SE PERDE: Z7-C não toca `app/actions/emulation_actions.py` "
-        "(posse declarada em §5) — o botão 'Travar Proton validado' ainda "
-        "chama só `default_steam_root`. O QUE FECHA: a Onda 5 · Emulação liga "
-        "o botão a esta função e decide a frase final com a Z1 (§10 da "
-        "sprint)."
-    ),
 
     # ------------------------------------------------------------------
     # O ARRANQUE DO PROCESSO — 06/09/2026, sprint `GTK-3`

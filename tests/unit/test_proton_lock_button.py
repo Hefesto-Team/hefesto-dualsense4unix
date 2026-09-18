@@ -209,8 +209,9 @@ def pp_fake(monkeypatch: pytest.MonkeyPatch) -> dict[str, Any]:
 
     mod = types.ModuleType(_PP_MODNAME)
 
-    def fake_lock() -> Any:
+    def fake_lock(**kwargs: Any) -> Any:
         caixa["chamadas"] += 1
+        caixa["kwargs"] = kwargs
         resultado = caixa["result"]
         if isinstance(resultado, Exception):
             raise resultado
@@ -246,6 +247,10 @@ class TestWorker:
         assert pp_fake["chamadas"] == 1
         assert any("2 jogo(s)" in t for t in stub.toasts)
         assert any("GE-Proton10-34" in t for t in stub.toasts)
+        # A ORDEM DE 17/09 CHEGA AO BOTÃO (18/09/2026): ele travava com a
+        # guarda `preservado`, e o conselho do install dizia `--todos`. A
+        # MORDIDA: volte a chamada para `lock_fn()` e isto reprova.
+        assert pp_fake["kwargs"].get("todos") is True, pp_fake["kwargs"]
 
     def test_modulo_ausente_recusa_com_o_caminho_do_install(
         self, sincrono: None, monkeypatch: pytest.MonkeyPatch

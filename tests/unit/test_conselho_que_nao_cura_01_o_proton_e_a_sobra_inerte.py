@@ -227,7 +227,18 @@ class TestOManifestoAusenteNaoPedeOInstaladorDeNovo:
 
 
 class TestOJogoForaDoPinTemNomeERazao:
-    def test_escolha_preservada_e_informativa_com_o_nome_do_jogo(self, tmp_path: Path) -> None:
+    def test_o_preservado_de_antes_da_ordem_volta_a_ser_aviso_com_o_fix(
+        self, tmp_path: Path
+    ) -> None:
+        """FATO QUE CAIU, SUBSTITUÍDO — 18/09/2026.
+
+        Esta régua cobrava *"fora do Proton pinado por ESCOLHA SUA (…) Não há o
+        que consertar"* para o DON'T SCREAM em `proton_11` com `preservado` no
+        registro. A ordem dela de 17/09 (*"ele e todo o resto de agora em
+        diante"*) revogou essa guarda para jogo que roda por Proton, e o doctor
+        passou a dizer o contrário do que ela mandou. Agora é aviso, com o nome,
+        com o Proton em que ele está e com o `--fix` que trava.
+        """
         lar = _lar_do_proton(
             tmp_path,
             manifesto="ok",
@@ -237,10 +248,13 @@ class TestOJogoForaDoPinTemNomeERazao:
             },
         )
         saida = _rodar("check_proton_pin", lar)
-        rotulo, linha = _mensagem(saida, "ESCOLHA SUA")
-        assert rotulo == "[INFO]", linha
+        rotulo, linha = _mensagem(saida, "em outro Proton")
+        assert rotulo == "[WARN]", linha
         assert "DON'T SCREAM" in linha, linha
         assert "proton_11" in linha, linha
+        assert "doctor.sh --fix" in linha, linha
+        assert "ESCOLHA SUA" not in saida, saida
+        assert "Não há o que consertar" not in saida, saida
         # O aviso cego, sem nome e sem razão, não pode reaparecer.
         assert "1 jogo(s) fora do Proton pinado" not in saida, saida
 
@@ -252,7 +266,7 @@ class TestOJogoForaDoPinTemNomeERazao:
             tmp_path, manifesto="ok", por_jogo={"2497900": "proton_11"}, registro={}
         )
         saida = _rodar("check_proton_pin", lar)
-        rotulo, linha = _mensagem(saida, "sem registro de escolha")
+        rotulo, linha = _mensagem(saida, "em outro Proton")
         assert rotulo == "[WARN]", linha
         assert "DON'T SCREAM" in linha, linha
 
