@@ -52,6 +52,7 @@ Uso:
 from __future__ import annotations
 
 import argparse
+import json
 import re
 import sys
 from pathlib import Path
@@ -70,6 +71,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
 from hefesto_dualsense4unix.core.faixa_sintetica import (
     FAIXAS_SINTETICAS,
+    e_endereco_sintetico,
 )
 
 
@@ -223,6 +225,67 @@ def achados_na_arvore(raiz: Path) -> list[str]:
     return linhas
 
 
+def limpar(diretorio: Path) -> list[str]:
+    """Tira a faixa sintética da FILA do ``controllers.json`` — gesto explícito.
+
+    **O QUE ISTO CURA, medido na mesa dela em 18/09/2026:** quatro endereços
+    ``aa:bb:cc:00:00:0{1..4}`` moravam na fila de numeração desde 22/08,
+    ocupando os postos 4 a 7 e empurrando um DualSense real para o **oitavo**.
+    A causa (a suíte escrevendo no ``~/.config`` real) foi fechada em 25/08
+    pelo lar de mentira de sessão; o que ficou foi a sujeira, e ninguém a
+    limpava. Este portão ACUSAVA desde 24/08 e não tinha como curar — que é o
+    defeito `A-CASA-SABE-E-O-PRODUTO-NÃO-FAZ` na sua forma mais pura.
+
+    **POR QUE AQUI, e não dentro do produto.** A primeira cura escrita
+    descartava a faixa no ``identity.order_entries``, e foi recuada no mesmo
+    dia: duas dezenas de réguas desta casa usam ``aa:bb:cc`` como endereço de
+    controle de verdade, e 236 arquivos de teste a citam. Expurgá-la no
+    produto é uma regra sobre a NOSSA suíte, não sobre o aparelho. Aqui é o
+    lugar certo: um gesto EXPLÍCITO, com dono, que o ``doctor`` chama — e a
+    própria mensagem do ``--casa`` já dizia que *"a decisão sobre o que já
+    está gravado é de quem é dono da máquina"*.
+
+    Mexe só na FILA (o campo ``order``), e só nas entradas cujo endereço é de
+    faixa sintética. Preserva o resto do documento byte a byte — o ``version``,
+    o ``boot_id`` e qualquer campo que uma versão futura tenha posto lá.
+
+    Devolve as linhas do relato, vazio quando não havia o que limpar.
+    """
+    alvo = diretorio / "controllers.json"
+    if not alvo.is_file():
+        return []
+    try:
+        dados = json.loads(alvo.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return []
+    if not isinstance(dados, dict) or not isinstance(dados.get("order"), list):
+        return []
+    antes = dados["order"]
+    # A PERGUNTA É DO DONO, não deste arquivo: `_PADROES` existe para varrer
+    # TEXTO (onde o endereço aparece no meio de uma linha de log), e um campo
+    # `addr` de JSON é um endereço inteiro. Usar o regex de varredura aqui
+    # seria uma segunda definição de "é lixo" — o defeito que o dono único
+    # nasceu para matar.
+    depois = [
+        e
+        for e in antes
+        if not (isinstance(e, dict) and e_endereco_sintetico(e.get("addr")))
+    ]
+    if len(depois) == len(antes):
+        return []
+    tirados = [
+        e["addr"] for e in antes if e not in depois and isinstance(e, dict)
+    ]
+    dados["order"] = depois
+    # Escrita atômica, no molde do produto (`identity._save_locked`): um
+    # `controllers.json` truncado por queda de energia custaria a numeração da
+    # mesa inteira, e este gesto roda dentro do install.
+    tmp = alvo.with_suffix(".json.tmp")
+    tmp.write_text(json.dumps(dados, indent=1, ensure_ascii=False), encoding="utf-8")
+    tmp.replace(alvo)
+    return [f"  tirado da fila: {a}" for a in tirados]
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
@@ -240,6 +303,11 @@ def main(argv: list[str] | None = None) -> int:
         "--arvore",
         action="store_true",
         help="varre a árvore versionada (é o DEFAULT quando nada é pedido)",
+    )
+    parser.add_argument(
+        "--limpar",
+        action="store_true",
+        help="TIRA a faixa sintética da fila do controllers.json (com --casa)",
     )
     parser.add_argument(
         "--raiz",
@@ -270,6 +338,14 @@ def main(argv: list[str] | None = None) -> int:
         return 0
 
     diretorio = args.config_dir if args.config_dir is not None else _config_dir()
+    if args.limpar:
+        tirados = limpar(diretorio)
+        if tirados:
+            print(f"LIMPO: faixa sintética tirada da fila em '{diretorio}':")
+            print("\n".join(tirados))
+        else:
+            print(f"OK: nada a limpar em '{diretorio}'.")
+        return 0
     encontrados = achados(diretorio)
 
     if encontrados:

@@ -2210,7 +2210,7 @@ def _recusa_do_teclado(resposta: Any) -> str:
 
     `keyboard.emulation.set` responde com o bloco `keyboard_emulation` inteiro —
     *"para a janela não precisar de uma segunda chamada só para saber se o
-    device subiu"* (`daemon/ipc_handlers.py:6451`). Quem o traduz é
+    device subiu"* (`daemon/ipc_handlers.py:6653`). Quem o traduz é
     `emulation_actions.descrever_teclado_emulado`, o mesmo dono da linha de
     estado desta aba.
 

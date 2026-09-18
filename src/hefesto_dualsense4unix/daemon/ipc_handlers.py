@@ -6224,13 +6224,63 @@ class IpcHandlersMixin:
         ato = await ligar_o_microfone(self.daemon, alvo, ligado=ligado)
         return ato.como_corpo()
 
-    def _uniq_do_primario(self) -> str | None:
-        """O endereço do controle primário, ou `None` quando a mesa está vazia.
+    def _uniq_do_alvo_de_saida(self) -> str | None:
+        """O endereço do alvo de `controller.target.set`, ou `None` para TODOS.
 
-        O ato EXIGE endereço (a mesa de quatro é a razão), e `uniq` omitido é a
-        conveniência de quem tem um controle só. Resolver aqui, e não dentro do
-        ato, mantém o ato com uma regra só.
+        Dono único da pergunta *"ela apontou para alguém?"*, e ele existe
+        separado de :meth:`_uniq_do_primario` porque os dois caminhos que o
+        consultam querem quedas DIFERENTES quando a resposta é `None`:
+
+        * os atos por controle (`sensor.set`, `mic.canal.set`,
+          `rumble.motores.set`) caem no primário — a conveniência de quem tem
+          um controle só;
+        * o `mic.volume.set` cai na ROTA GLOBAL do servidor de som, que não é
+          a mesma coisa: é a fonte padrão do sistema, e trocá-la pelo primário
+          mudaria o gesto de quem tem um controle só (ver a docstring dele).
+
+        Misturar os dois seria a cura larga demais — a que conserta a queixa e
+        quebra o caso de um controle.
         """
+        alvo = getattr(self.controller, "get_output_target_uniq", None)
+        if not callable(alvo):
+            return None
+        with contextlib.suppress(Exception):
+            escolhido = alvo()
+            if isinstance(escolhido, str) and escolhido:
+                return escolhido
+        return None
+
+    def _uniq_do_primario(self) -> str | None:
+        """Em quem o ato cai quando ela não disse o endereço.
+
+        **O ALVO DE SAÍDA ENTROU — 18/09/2026, UM-NUMERO-SO-01, e ele vem
+        primeiro.** MEDIDO na mesa dela com os quatro DualSense: mandar
+        `controller.target.set` e depois `sensor.set` devolvia o MESMO `uniq`
+        as quatro vezes — o do primário. O seletor não alcançava este caminho,
+        e a queixa dela foi exatamente essa: *"a mudança dos leds e afins não
+        foram aplicadas pros demais controles do app (deveriam ser 4)"*.
+
+        **Havia DUAS línguas de alvo dentro do mesmo daemon**, e a pessoa não
+        tinha como saber qual botão falava qual:
+
+        =============================================  ===================
+        `led.set` · `rumble.set` · `trigger.*`         o alvo de saída
+        `speaker.set`
+        `sensor.set` · `mic.canal.set`                 **o primário, sempre**
+        `rumble.motores.set`
+        =============================================  ===================
+
+        A ordem agora é uma só, e ela vai do mais explícito ao menos: o `uniq`
+        do próprio pedido (resolvido pelo chamador), depois o alvo de saída
+        DESTA sessão, e só então o primário — que continua sendo a conveniência
+        de quem tem um controle só, que é como este método nasceu.
+
+        Resolver aqui, e não dentro de cada ato, mantém cada ato com uma regra
+        só — e é o que fez esta cura alcançar os três chamadores de uma vez.
+        """
+        escolhido = self._uniq_do_alvo_de_saida()
+        if escolhido:
+            return escolhido
         listar = getattr(self.controller, "describe_controllers", None)
         if not callable(listar):
             return None
@@ -6413,6 +6463,13 @@ class IpcHandlersMixin:
         uniq = params.get("uniq")
         if uniq is not None and not isinstance(uniq, str):
             raise ValueError("mic.volume.set: 'uniq' precisa ser string ou omitido")
+        # O ALVO DE SAÍDA, quando ela não mandou endereço — 18/09/2026. MEDIDO
+        # na mesa dela: com os quatro ligados, este ato devolvia a MESMA fonte
+        # as quatro vezes, porque sem `uniq` ele ia direto à rota global. O
+        # seletor não alcançava daqui. **A queda sem alvo NÃO muda**: continua
+        # sendo a rota global, que é o gesto de quem tem um controle só.
+        if not uniq:
+            uniq = self._uniq_do_alvo_de_saida()
 
         from hefesto_dualsense4unix.integrations.audio_control import (
             definir_volume_da_captura,

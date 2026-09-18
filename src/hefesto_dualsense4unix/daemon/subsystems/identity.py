@@ -278,7 +278,6 @@ import time
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
-from hefesto_dualsense4unix.core.faixa_sintetica import e_endereco_sintetico
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 
 if TYPE_CHECKING:
@@ -457,26 +456,19 @@ def order_entries(data: Any) -> list[tuple[str, str, int]]:
     aplica o teto :data:`_MAX_PERSISTED_SLOTS` cortando pelo FIM da fila, e
     "o fim" só existe se a lista chegar ordenada.
 
-    **O EXPURGO DA FAIXA SINTÉTICA — 18/09/2026, e ele é a cura de um defeito
-    que morou um mês na mesa dela.** Entrada cujo endereço é de faixa
-    sintética (:func:`core.faixa_sintetica.e_endereco_sintetico`) é descartada
-    aqui, do mesmo jeito silencioso que a malformada: um ``aa:bb:cc:00:00:01``
-    não é uma numeração a preservar, é um aparelho que nunca existiu.
+    **A FAIXA SINTÉTICA NÃO É EXPURGADA AQUI, e a decisão é de 18/09/2026.**
+    Na mesa dela havia quatro endereços ``aa:bb:cc:00:00:0{1..4}`` na fila,
+    escritos por uma corrida da suíte em 22/08, ocupando os postos 4 a 7 e
+    empurrando um DualSense real para o **oitavo**. A primeira cura escrita
+    descartava-os aqui — e foi RECUADA no mesmo dia, medida contra a suíte:
+    duas dezenas de réguas desta casa usam ``aa:bb:cc`` como endereço de
+    controle de verdade, e 236 arquivos de teste a citam. Expurgá-la no
+    produto é uma regra sobre a NOSSA suíte, não sobre o aparelho — o alcance
+    universal é só o do vpad (``02:fe``), que o ``load`` já recusa.
 
-    **E ELA SE CURA SOZINHA, sem ninguém editar JSON à mão** — que é o ponto
-    de fazer isto AQUI e não no ``load``. Esta função é a fonte única de
-    leitura da fila, e o save é read-modify-write POR CIMA dela
-    (:func:`merged_order_payload` a chama para preservar o outro ``kind``):
-    o que ela deixa de devolver deixa de ser regravado. Uma leitura e um save
-    do ciclo normal bastam, e o arquivo sai limpo.
-
-    O QUE ISSO CUSTOU, medido no ``controllers.json`` dela em 18/09/2026:
-    quatro endereços ``aa:bb:cc:00:00:0{1..4}`` escritos por uma corrida da
-    suíte em 22/08 ocupavam os postos 4 a 7 e empurravam o DualSense de casca
-    branca para o **oitavo**. A colocação entre PRESENTES
-    (:meth:`IdentityRegistry.slot_for`) escondia o estrago enquanto a mesa
-    tinha quatro controles — e ``core/led_control`` só tem cor de PS5 para
-    1..4, então o quinto a ligar cairia fora da tabela.
+    Quem cura a máquina que já tem a sujeira é
+    ``scripts/check_faixa_sintetica.py --limpar``, gesto explícito e com dono,
+    chamado pelo ``doctor``. É o lugar onde esta casa conserta máquina.
     """
     if not isinstance(data, dict):
         return []
@@ -494,41 +486,11 @@ def order_entries(data: Any) -> list[tuple[str, str, int]]:
             continue
         if kind not in (KIND_DUALSENSE, KIND_EXTERNAL):
             continue
-        # O EXPURGO (18/09/2026): faixa sintética nunca foi aparelho. Ver a
-        # docstring — descartar aqui é o que faz o arquivo se limpar sozinho
-        # no próximo save, porque `merged_order_payload` lê por esta função.
-        if e_endereco_sintetico(addr):
-            continue
         if not isinstance(rank, int) or isinstance(rank, bool) or rank < 1:
             continue
         entradas.append((addr, kind, rank))
     entradas.sort(key=lambda e: (e[2], 0 if e[1] == KIND_DUALSENSE else 1, e[0]))
     return entradas
-
-
-def _entradas_expurgadas(data: Any) -> list[str]:
-    """Os endereços de faixa sintética que ``order_entries`` acabou de comer.
-
-    Existe para o ``load`` saber que o arquivo do disco está SUJO e ter o que
-    regravar. Sem ela o expurgo seria eterno e inútil: a leitura limparia, o
-    save nunca rodaria (nada mudou no mapa vivo) e o próximo boot repetiria o
-    trabalho sobre a mesma fila podre.
-
-    Devolve os endereços ANONIMIZADOS? Não — eles são de faixa sintética por
-    definição, que é o que os torna publicáveis no log sem máscara nenhuma.
-    """
-    if not isinstance(data, dict):
-        return []
-    bruto = data.get(ORDER_FIELD)
-    if not isinstance(bruto, list):
-        return []
-    return [
-        item["addr"]
-        for item in bruto
-        if isinstance(item, dict)
-        and isinstance(item.get("addr"), str)
-        and e_endereco_sintetico(item["addr"])
-    ]
 
 
 def merged_order_payload(
@@ -1713,26 +1675,7 @@ class ControllerIdentityRegistry:
                 for addr, kind, rank in order_entries(data)
                 if kind == KIND_DUALSENSE
             ]
-            # O EXPURGO CHEGA AO DISCO — 18/09/2026, e esta é a metade que
-            # faltava. `order_entries` deixa de devolver a faixa sintética,
-            # mas o save só roda quando algo MUDOU: carregar não muda nada, e
-            # a fila podre ficava no arquivo dela para sempre, expurgada a
-            # cada leitura e regravada igual à seguinte. MEDIDO no primeiro
-            # restart do daemon com a cura: os quatro fantasmas continuavam
-            # lá. Contar o que o arquivo trazia contra o que sobreviveu é o
-            # que transforma a leitura defensiva em CURA.
-            expurgadas = _entradas_expurgadas(data)
-            if expurgadas:
-                logger.info(
-                    "identity_faixa_sintetica_expurgada",
-                    quantas=len(expurgadas),
-                    enderecos=expurgadas,
-                )
-                self._dirty = True
             if not entradas:
-                if expurgadas:
-                    self._save_locked()
-                    self._dirty = False
                 return
             anchor = _session_anchor()
             if anchor is not None and data.get("boot_id") != anchor:
@@ -1761,10 +1704,6 @@ class ControllerIdentityRegistry:
                 usados.add(raw_rank)
             if self._ordem:
                 logger.info("identity_fila_restaurada", ordem=dict(self._ordem))
-            if self._dirty:
-                # A escrita do boot: uma só, e só quando houve o que limpar.
-                self._save_locked()
-                self._dirty = False
 
     @staticmethod
     def _path() -> Path:

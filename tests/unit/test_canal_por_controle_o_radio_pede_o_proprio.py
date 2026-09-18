@@ -156,41 +156,67 @@ class TestORegistro:
 
 
 class TestAsDuasMetades:
-    def test_sem_pedido_nada_sobe_e_a_privacidade_fica_de_pe(self) -> None:
-        """A metade que as duas travas protegiam, e que NÃO saiu.
+    def test_sem_pedido_a_mesa_do_radio_ganha_canal(self) -> None:
+        """**A INVERSÃO — 18/09/2026**, e é aqui que ela se vê melhor.
 
-        `is_enabled` verdadeiro é o supervisor de pé para atender o primeiro
-        toque. Ligado não é capturando: sem ponte não há `0x32`, não há libopus
-        e não há microfone.
+        Este teste dizia *"sem pedido nada sobe e a privacidade fica de pé"*, e
+        a trava era `alvos() == []`. A ordem dela derrubou o default: *"todos
+        os controles tem que nascer com tudo mic, giroscopio e afins"*. Quem
+        guarda a escolha dela agora é a RECUSA, medida na régua de baixo.
+
+        `is_enabled` verdadeiro continua sendo o supervisor de pé, e "ligado"
+        continua não sendo "capturando": sem nó de rádio na varredura não há
+        ponte, não há `0x32` e a libopus nem é importada.
         """
         subsystem = BtMicSubsystem(registro=RegistroDePedidosDeCanal())
         config = _config()
         assert subsystem.is_enabled(config) is True
         subsystem._config = config
-        assert subsystem.alvos([_No(UM), _No(DOIS)]) == []
+        assert sorted(n.uniq for n in subsystem.alvos([_No(UM), _No(DOIS)])) == [UM, DOIS]
 
-    def test_quem_pediu_ganha_a_ponte_dele(self) -> None:
-        """A CURA. Sem a união com o registro, o pedido não vale nada."""
+    def test_a_recusa_dela_cala_e_o_resto_continua(self) -> None:
+        """O par que substituiu o gate: o `false` no disco é a palavra dela."""
+        subsystem = BtMicSubsystem(registro=RegistroDePedidosDeCanal())
+        subsystem._config = _config(bt_mic_recusados=lambda: frozenset({UM}))
+        assert [n.uniq for n in subsystem.alvos([_No(UM), _No(DOIS)])] == [DOIS]
+
+    def test_a_recusa_vence_o_pedido_porque_o_interruptor_manda(self) -> None:
+        """A REGRA DA CASA, e ela NÃO mudou com a inversão — só mudou de lado.
+
+        O cabeçalho do `bt_mic` a escreve: *"desligar continua desligando (…)
+        sem isso o gesto mais explícito que ela tem — o interruptor — perderia
+        para um toque de botão feito minutos antes, que é o oposto de quem
+        manda"*. Antes o gesto explícito era TIRAR a marca; agora é PÔR a
+        recusa. A hierarquia é a mesma.
+
+        Esta régua nasceu ERRADA na primeira escrita de 18/09 — afirmava que o
+        pedido vencia — e a suíte a derrubou. Fica assim, com a nota, porque a
+        tentação de inverter a hierarquia junto com o default é real.
+        """
         registro = RegistroDePedidosDeCanal()
         subsystem = BtMicSubsystem(registro=registro)
-        subsystem._config = _config()
+        subsystem._config = _config(bt_mic_recusados=lambda: frozenset({UM}))
         assert subsystem.pedir_canal(UM) is True
-        assert [no.uniq for no in subsystem.alvos([_No(UM), _No(DOIS)])] == [UM]
+        assert [no.uniq for no in subsystem.alvos([_No(UM), _No(DOIS)])] == [DOIS]
 
-    def test_pedir_um_nao_liga_os_quatro(self) -> None:
-        """O coração do "por controle", agora pelo caminho da procura."""
+    def test_recusar_um_nao_cala_os_quatro(self) -> None:
+        """O coração do "por controle", pelo lado que a inversão deixou."""
         registro = RegistroDePedidosDeCanal()
         subsystem = BtMicSubsystem(registro=registro)
-        subsystem._config = _config()
-        subsystem.pedir_canal(DOIS)
+        subsystem._config = _config(bt_mic_recusados=lambda: frozenset({UM}))
         escolhidos = [no.uniq for no in subsystem.alvos([_No(UM), _No(DOIS)])]
         assert escolhidos == [DOIS]
 
     def test_a_declaracao_antiga_continua_valendo(self) -> None:
-        """Quem já marcou o controle no card não perde nada com a procura."""
+        """Quem já marcou o controle no card não perde nada com a inversão.
+
+        O `True` no disco virou redundância — a ausência já liga —, e é por
+        isso que esta régua mede que ele não ATRAPALHA: a mesa dela tem dois
+        controles declarados e dois não, e os quatro têm de ter microfone.
+        """
         subsystem = BtMicSubsystem(registro=RegistroDePedidosDeCanal())
         subsystem._config = _config(bt_mic_uniqs=lambda: frozenset({UM}))
-        assert [no.uniq for no in subsystem.alvos([_No(UM), _No(DOIS)])] == [UM]
+        assert sorted(n.uniq for n in subsystem.alvos([_No(UM), _No(DOIS)])) == [UM, DOIS]
 
     def test_declarado_e_pedido_somam_sem_se_atropelar(self) -> None:
         registro = RegistroDePedidosDeCanal()
@@ -221,37 +247,52 @@ class TestAVidaDoPedido:
         subsystem._esquecer_quem_saiu_da_mesa([_No(DOIS)])
         assert registro.abertos() == frozenset({DOIS})
 
-    def test_desmarcar_no_aplicar_vence_o_pedido(self) -> None:
+    def test_desligar_no_aplicar_vence_o_pedido(self) -> None:
         """O interruptor do card é o gesto mais explícito que ela tem.
 
-        Ler só o estado ATUAL não bastaria: `alvos()` une os dois conjuntos e a
-        procura manteria de pé o que ela acabou de desligar. O que decide é a
-        BORDA de descida da declaração.
+        **A BORDA TROCOU DE LADO — 18/09/2026.** Ler só o estado ATUAL nunca
+        bastou: `alvos()` une os conjuntos e a procura manteria de pé o que ela
+        acabou de desligar. Até a inversão, o gesto que desligava era SAIR da
+        declaração, e o que decidia era a borda de DESCIDA dela. Agora sair da
+        declaração volta a LIGAR — a ausência de opinião liga —, e quem desliga
+        é ENTRAR na recusa: é a borda de SUBIDA dela que solta o pedido.
+
+        A hierarquia é a de sempre, e é ela que esta régua trava: o interruptor
+        não perde para um toque de botão feito minutos antes.
         """
         registro = RegistroDePedidosDeCanal()
         subsystem = BtMicSubsystem(registro=registro)
-        declarados = {UM}
-        subsystem._config = _config(bt_mic_uniqs=lambda: frozenset(declarados))
-        subsystem._declarados_antes = frozenset(declarados)
+        recusados: set[str] = set()
+        subsystem._config = _config(bt_mic_recusados=lambda: frozenset(recusados))
+        subsystem._negados_antes = frozenset(recusados)
         registro.pedir(UM)
 
-        # Ela desmarca o microfone deste controle no "Aplicar".
-        declarados.clear()
+        # Ela desliga o microfone deste controle no "Aplicar".
+        recusados.add(UM)
         subsystem._soltar_os_que_ela_desmarcou()
 
         assert registro.abertos() == frozenset()
         assert subsystem.alvos([_No(UM)]) == []
 
-    def test_desmarcar_um_nao_solta_o_pedido_do_outro(self) -> None:
+    def test_desligar_um_nao_solta_o_pedido_do_outro(self) -> None:
+        """A recusa é por controle também na hora de soltar o pedido."""
         registro = RegistroDePedidosDeCanal()
         subsystem = BtMicSubsystem(registro=registro)
-        declarados = {UM, DOIS}
-        subsystem._config = _config(bt_mic_uniqs=lambda: frozenset(declarados))
-        subsystem._declarados_antes = frozenset(declarados)
+        recusados: set[str] = set()
+        subsystem._config = _config(bt_mic_recusados=lambda: frozenset(recusados))
+        subsystem._negados_antes = frozenset(recusados)
         registro.pedir(UM)
         registro.pedir(DOIS)
 
-        declarados.discard(UM)
+        recusados.add(UM)
+        subsystem._soltar_os_que_ela_desmarcou()
+
+        assert registro.abertos() == frozenset({DOIS})
+        assert [n.uniq for n in subsystem.alvos([_No(UM), _No(DOIS)])] == [DOIS]
+
+        # E a segunda volta do laço não solta mais nada: o que decide é a
+        # BORDA, não o estado. Sem isso, um controle recusado soltaria o pedido
+        # dos outros a cada varredura.
         subsystem._soltar_os_que_ela_desmarcou()
 
         assert registro.abertos() == frozenset({DOIS})

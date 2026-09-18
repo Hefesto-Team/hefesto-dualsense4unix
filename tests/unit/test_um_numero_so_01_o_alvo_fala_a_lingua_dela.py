@@ -19,6 +19,7 @@ a faixa sintética que morava na fila dela desde 22/08, o número que o
 from __future__ import annotations
 
 import json
+from pathlib import Path
 
 import pytest
 
@@ -45,6 +46,8 @@ from hefesto_dualsense4unix.daemon.subsystems.identity import (
 #: o isenta por isso mesmo (``sintetico``: *"fabricado pelo driver"*). Do lado
 #: do produto ele é um endereço como outro qualquer, que é o que a prova pede.
 #: O ``02:fe:00`` do vpad fica de fora por três octetos.
+_RAIZ = Path(__file__).resolve().parents[2]
+
 _REAL = "02001a0000"
 
 
@@ -67,8 +70,19 @@ _FILA_PODRE = {
 
 
 # ---------------------------------------------------------------------------
-# PONTA 1 — a faixa sintética sai da fila, e o arquivo se limpa sozinho
+# PONTA 1 — a fila de fixture sai da máquina, e o gesto tem dono
 # ---------------------------------------------------------------------------
+# **A CURA RECUOU NO MESMO DIA, e o recuo é o achado.** A primeira versão
+# descartava a faixa sintética dentro do `identity.order_entries` — a fonte
+# única de leitura da fila —, e a suíte mediu o preço: VINTE E SETE réguas
+# desta casa usam `aa:bb:cc` como endereço de controle de verdade, e 236
+# arquivos de teste a citam. Expurgá-la no produto é uma regra sobre a NOSSA
+# suíte, não sobre o aparelho; o único alcance universal é o do vpad
+# (`02:fe`), que o `load` já recusava.
+#
+# O gesto ficou onde esta casa conserta máquina: `check_faixa_sintetica.py
+# --limpar`, chamado pelo `doctor --fix`. O portão acusava desde 24/08 e não
+# tinha como curar — `A-CASA-SABE-E-O-PRODUTO-NÃO-FAZ` na forma mais pura.
 
 
 def test_o_dono_conhece_as_tres_faixas_nas_duas_grafias() -> None:
@@ -88,37 +102,69 @@ def test_endereco_real_nunca_e_lixo() -> None:
     assert not e_endereco_sintetico(None)
 
 
-def test_a_fila_dela_sai_com_os_quatro_reais_e_nenhum_fantasma() -> None:
-    """A régua sobre o arquivo MEDIDO — oito entram, quatro saem."""
-    saiu = order_entries(_FILA_PODRE)
-    assert len(saiu) == 4, saiu
-    assert [addr for addr, _, _ in saiu] == [f"{_REAL}0{n}" for n in (1, 2, 3, 4)]
+def test_o_produto_nao_expurga_a_faixa_na_leitura_da_fila() -> None:
+    """O RECUO, travado: `order_entries` devolve tudo, inclusive a fixture.
 
-
-def test_o_save_seguinte_regrava_o_arquivo_limpo() -> None:
-    """A CURA SOZINHA: o expurgo é na leitura, e o save lê por ela.
-
-    Esta é a régua que prova que ninguém precisa editar JSON à mão. O
-    ``merged_order_payload`` preserva o outro ``kind`` lendo por
-    ``order_entries`` — então o que o expurgo não devolve não é regravado.
+    Esta régua existe para a próxima pessoa não refazer o caminho que a suíte
+    já reprovou. Se um dia o expurgo voltar para dentro do produto, ela cai — e
+    o vermelho é o aviso certo.
     """
+    assert len(order_entries(_FILA_PODRE)) == 8
     payload = merged_order_payload(_FILA_PODRE, "external", {f"{_REAL}e1": 1})
-    dualsense = [e for e in payload if e["kind"] == KIND_DUALSENSE]
-    assert len(dualsense) == 4, payload
-    assert not any(e_endereco_sintetico(e["addr"]) for e in dualsense)
+    assert len([e for e in payload if e["kind"] == KIND_DUALSENSE]) == 8
 
 
-def test_mordida_da_ponta_1_sem_o_expurgo_os_oito_ficam() -> None:
-    """Arranca a cura: sem a pergunta ao dono, a fila podre passa inteira."""
-    bruto = _FILA_PODRE[ORDER_FIELD]
-    assert isinstance(bruto, list)
-    sem_a_cura = [
-        item
-        for item in bruto
-        if item["kind"] in (KIND_DUALSENSE, "external") and item["rank"] >= 1
-    ]
-    assert len(sem_a_cura) == 8, "a mordida não morde: a fila de prova não tem lixo"
-    assert len(order_entries(_FILA_PODRE)) == 4
+def test_o_gesto_do_portao_tira_a_fixture_e_preserva_o_resto(tmp_path) -> None:
+    """A CURA, onde ela ficou: um gesto explícito, com dono."""
+    import json as _json
+    import sys
+
+    sys.path.insert(0, str(_RAIZ / "scripts"))
+    from check_faixa_sintetica import limpar
+
+    alvo = tmp_path / "controllers.json"
+    alvo.write_text(_json.dumps(_FILA_PODRE), encoding="utf-8")
+
+    relato = limpar(tmp_path)
+
+    gravado = _json.loads(alvo.read_text(encoding="utf-8"))
+    assert len(relato) == 4, relato
+    assert len(gravado[ORDER_FIELD]) == 4
+    assert not any(e_endereco_sintetico(e["addr"]) for e in gravado[ORDER_FIELD])
+    assert gravado["version"] == _FILA_PODRE["version"], "o resto do documento mudou"
+
+
+def test_o_gesto_nao_toca_arquivo_limpo(tmp_path) -> None:
+    """Sem sujeira, nenhuma escrita: um os.replace por boot perde arquivo."""
+    import json as _json
+    import sys
+
+    sys.path.insert(0, str(_RAIZ / "scripts"))
+    from check_faixa_sintetica import limpar
+
+    limpo = {
+        "version": 3,
+        ORDER_FIELD: [
+            {"addr": f"{_REAL}0{n}", "kind": KIND_DUALSENSE, "rank": n}
+            for n in (1, 2, 3)
+        ],
+    }
+    alvo = tmp_path / "controllers.json"
+    alvo.write_text(_json.dumps(limpo), encoding="utf-8")
+    antes = alvo.stat().st_mtime_ns
+
+    assert limpar(tmp_path) == []
+    assert alvo.stat().st_mtime_ns == antes
+
+
+def test_mordida_da_ponta_1_sem_o_gesto_a_fila_podre_fica(tmp_path) -> None:
+    """Arranca o gesto: o arquivo continua com os oito, como estava na mesa dela."""
+    import json as _json
+
+    alvo = tmp_path / "controllers.json"
+    alvo.write_text(_json.dumps(_FILA_PODRE), encoding="utf-8")
+    gravado = _json.loads(alvo.read_text(encoding="utf-8"))
+    assert len(gravado[ORDER_FIELD]) == 8, "a mordida não morde"
 
 
 # ---------------------------------------------------------------------------
@@ -258,72 +304,3 @@ def test_a_fila_podre_desta_regua_e_a_fila_medida() -> None:
         assert oui not in bruto, f"OUI desta bancada na prova: {oui}"
     assert bruto.count("aabbcc") == 4, "os quatro fantasmas medidos, e só eles"
     assert bruto.count(_REAL) == 4, "os quatro reais, na faixa que não identifica"
-
-
-# ---------------------------------------------------------------------------
-# PONTA 1b — o expurgo CHEGA AO DISCO, e esta régua nasceu de um defeito meu
-# ---------------------------------------------------------------------------
-# Eu afirmei que o arquivo se curaria sozinho porque o save lê por
-# `order_entries`. Faltava metade: o save só roda quando o mapa MUDOU, e
-# carregar não muda nada. MEDIDO no primeiro restart do daemon dela com a cura
-# instalada — os quatro fantasmas continuavam no disco, expurgados a cada
-# leitura e nunca reescritos.
-
-
-def test_o_load_regrava_o_arquivo_quando_expurga(tmp_path, monkeypatch) -> None:
-    """Um restart basta: o arquivo sai limpo do disco, sem gesto de ninguém."""
-    from hefesto_dualsense4unix.daemon.subsystems import identity as mod
-
-    alvo = tmp_path / "controllers.json"
-    alvo.write_text(json.dumps(_FILA_PODRE), encoding="utf-8")
-    monkeypatch.setattr(mod.ControllerIdentityRegistry, "_path", staticmethod(lambda: alvo))
-
-    mod.ControllerIdentityRegistry().load()
-
-    gravado = json.loads(alvo.read_text(encoding="utf-8"))
-    endereços = [e["addr"] for e in gravado[ORDER_FIELD]]
-    assert len(endereços) == 4, endereços
-    assert not any(e_endereco_sintetico(a) for a in endereços)
-
-
-def test_load_sem_lixo_nao_toca_o_disco(tmp_path, monkeypatch) -> None:
-    """A CONTRAPARTIDA: arquivo limpo não é reescrito — leitura não é gesto.
-
-    Sem esta régua, a cura acima viraria uma escrita por boot em toda máquina
-    do mundo, e um `os.replace` a cada partida é como se perde um arquivo numa
-    queda de energia.
-    """
-    from hefesto_dualsense4unix.daemon.subsystems import identity as mod
-
-    limpo = {
-        "version": mod.CONTROLLERS_SCHEMA_VERSION,
-        ORDER_FIELD: [
-            {"addr": f"{_REAL}0{n}", "kind": KIND_DUALSENSE, "rank": n}
-            for n in (1, 2, 3)
-        ],
-    }
-    alvo = tmp_path / "controllers.json"
-    alvo.write_text(json.dumps(limpo), encoding="utf-8")
-    monkeypatch.setattr(mod.ControllerIdentityRegistry, "_path", staticmethod(lambda: alvo))
-    antes = alvo.stat().st_mtime_ns
-
-    mod.ControllerIdentityRegistry().load()
-
-    assert alvo.stat().st_mtime_ns == antes, "leitura reescreveu arquivo são"
-
-
-def test_mordida_da_ponta_1b_sem_a_contagem_o_disco_fica_podre(
-    tmp_path, monkeypatch
-) -> None:
-    """Arranca a contagem: a leitura limpa, o disco continua sujo."""
-    from hefesto_dualsense4unix.daemon.subsystems import identity as mod
-
-    alvo = tmp_path / "controllers.json"
-    alvo.write_text(json.dumps(_FILA_PODRE), encoding="utf-8")
-    monkeypatch.setattr(mod.ControllerIdentityRegistry, "_path", staticmethod(lambda: alvo))
-    monkeypatch.setattr(mod, "_entradas_expurgadas", lambda _data: [])
-
-    mod.ControllerIdentityRegistry().load()
-
-    gravado = json.loads(alvo.read_text(encoding="utf-8"))
-    assert len(gravado[ORDER_FIELD]) == 8, "a mordida não morde"

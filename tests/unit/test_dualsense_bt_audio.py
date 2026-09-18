@@ -750,15 +750,23 @@ class _GerenciadorFalso:
         self._evt.set()
 
 
-def test_subsystem_nasce_sem_capturar_nada() -> None:
-    """Microfone que liga sozinho no boot do daemon é inaceitável.
+def test_o_microfone_do_controle_nasce_no_ar_e_a_recusa_o_cala() -> None:
+    """**CONTRATO SUBSTITUÍDO DUAS VEZES, e a segunda é de 18/09/2026.**
 
-    CONTRATO SUBSTITUÍDO — CANAL-POR-CONTROLE-01, 03/09/2026. A régua era
-    `is_enabled`, e era ela que trancava o rádio: sem declaração o subsystem
-    não existia, então não havia a quem PEDIR canal. Agora o supervisor fica de
-    pé — e **a promessa desta linha é a mesma**, medida onde ela mora de fato:
-    sem pedido e sem declaração `alvos()` devolve `[]`, e sem ponte não há
-    `0x32`, não há libopus e não há microfone.
+    Esta régua se chamava `test_subsystem_nasce_sem_capturar_nada` e dizia
+    *"microfone que liga sozinho no boot do daemon é inaceitável"*. Foi o
+    desenho desta casa por um mês, com razão escrita no cabeçalho do `bt_mic`.
+
+    A ordem dela o derrubou: *"todos os controles tem que nascer com tudo mic,
+    giroscopio e afins"*. O preço do desenho antigo tinha sido medido na mesma
+    manhã — dos quatro DualSense da mesa dela, DOIS não tinham microfone,
+    porque ninguém sabia que era preciso declarar, e a aba respondia *"o
+    sistema não vê um microfone neste controle"*.
+
+    **O que a linha antiga protegia não sumiu: mudou de dono.** Era a ausência
+    que calava, e ausência não é escolha de ninguém — agora é a RECUSA, que é
+    um `false` no disco, sobrevive ao boot e é a primeira forma que ela tem de
+    dizer "não quero" em vez de só "não pedi".
     """
     from hefesto_dualsense4unix.daemon.subsystems.bt_mic import (
         BtMicSubsystem,
@@ -771,7 +779,13 @@ def test_subsystem_nasce_sem_capturar_nada() -> None:
 
     subsystem = BtMicSubsystem(registro=RegistroDePedidosDeCanal())
     subsystem._config = _ConfigFalsa()
-    assert subsystem.alvos([_No()]) == []
+    assert [n.uniq for n in subsystem.alvos([_No()])] == ["aabbcc000001"]
+
+    calado = BtMicSubsystem(registro=RegistroDePedidosDeCanal())
+    calado._config = _ConfigFalsa(
+        bt_mic_recusados=lambda: frozenset({"aabbcc000001"})
+    )
+    assert calado.alvos([_No()]) == []
 
 
 def test_subsystem_liga_por_env(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -781,15 +795,17 @@ def test_subsystem_liga_por_env(monkeypatch: pytest.MonkeyPatch) -> None:
     assert bt_mic.BtMicSubsystem().is_enabled(_ConfigFalsa()) is True
 
 
-def test_subsystem_liga_por_campo_de_config() -> None:
+def test_o_por_controle_vale_pelo_lado_da_recusa() -> None:
     """O gate é um CONJUNTO de `uniq`, não um `bool` (QUATRO-MICROFONES-01).
 
     O `bool` só sabia dizer "todos" ou "nenhum", e a decisão dela de 22/08/2026
-    é literal: *"por controle"*. Conjunto vazio não sobe ponte nenhuma; um
-    `uniq` na fonte sobe a DELE, e só a dele.
+    é literal: *"por controle"*. Isso não mudou em 18/09 — o que mudou foi QUAL
+    conjunto carrega a escolha dela. Era o dos ligados; passou a ser o dos
+    DESLIGADOS, porque a ausência de opinião agora liga.
 
-    CONTRATO SUBSTITUÍDO — CANAL-POR-CONTROLE-01, 03/09/2026: a régua era
-    `is_enabled` e passou a ser `alvos()`, que é onde o "por controle" mora.
+    CONTRATO SUBSTITUÍDO DUAS VEZES: a régua era `is_enabled`
+    (CANAL-POR-CONTROLE-01, 03/09), passou a ser `alvos()` sobre os declarados,
+    e hoje é `alvos()` sobre os recusados.
     """
     from hefesto_dualsense4unix.daemon.subsystems.bt_mic import (
         BtMicSubsystem,
@@ -803,12 +819,16 @@ def test_subsystem_liga_por_campo_de_config() -> None:
 
     nos = [_No("aabbcc000001"), _No("aabbcc000002")]
 
-    vazio = BtMicSubsystem(registro=RegistroDePedidosDeCanal())
-    vazio._config = _ConfigFalsa(bt_mic_uniqs=frozenset)
-    assert vazio.alvos(nos) == []
+    todos = BtMicSubsystem(registro=RegistroDePedidosDeCanal())
+    todos._config = _ConfigFalsa(bt_mic_recusados=frozenset)
+    assert sorted(n.uniq for n in todos.alvos(nos)) == [
+        "aabbcc000001", "aabbcc000002",
+    ]
 
     um = BtMicSubsystem(registro=RegistroDePedidosDeCanal())
-    um._config = _ConfigFalsa(bt_mic_uniqs=lambda: frozenset({"aabbcc000001"}))
+    um._config = _ConfigFalsa(
+        bt_mic_recusados=lambda: frozenset({"aabbcc000002"})
+    )
     assert [no.uniq for no in um.alvos(nos)] == ["aabbcc000001"]
 
 

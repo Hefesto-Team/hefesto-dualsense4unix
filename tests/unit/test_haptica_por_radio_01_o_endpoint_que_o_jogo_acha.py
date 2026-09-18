@@ -127,11 +127,23 @@ def test_o_sysfs_path_declarado_e_o_filho_nao_a_ancora(ancora: eh.Ancora) -> Non
 # -- o nó ----------------------------------------------------------------------
 
 
+def _o_load(chamadas: list[list[str]]) -> list[str]:
+    """O `load-module` entre as chamadas — a consulta ao servidor vem antes.
+
+    Desde 18/09/2026 o `iniciar()` pergunta ao servidor quem já está de pé
+    (`endpoints_de_pe`) antes de carregar: a idempotência deixou de ser da
+    memória do processo, porque o servidor de som sobrevive ao restart do
+    daemon e a mesa dela acumulou VINTE E DOIS módulos onde cabiam quatro.
+    Estas réguas medem o que o nó VIRA, não em que posição o comando saiu.
+    """
+    return next(a for a in chamadas if a[:2] == ["pactl", "load-module"])
+
+
 def test_o_no_sobe_com_quatro_canais_em_float32(ancora: eh.Ancora) -> None:
     correr, chamadas = _runner_que_grava()
     no = eh.EndpointDeHaptica(uniq=_UNIQ, ancora=ancora, runner=correr)
     assert no.iniciar() is True
-    argv = chamadas[0]
+    argv = _o_load(chamadas)
     assert "channels=4" in argv
     assert "format=float32le" in argv
     assert "rate=48000" in argv
@@ -143,7 +155,8 @@ def test_subir_duas_vezes_nao_publica_dois(ancora: eh.Ancora) -> None:
     no = eh.EndpointDeHaptica(uniq=_UNIQ, ancora=ancora, runner=correr)
     no.iniciar()
     no.iniciar()
-    assert len(chamadas) == 1
+    cargas = [a for a in chamadas if a[:2] == ["pactl", "load-module"]]
+    assert len(cargas) == 1
 
 
 def test_o_no_desce_pelo_id_que_ele_subiu(ancora: eh.Ancora) -> None:
