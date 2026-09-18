@@ -430,6 +430,26 @@ dualsense_no_cabo() {
 # sessão sem a opção apaga os valores da chave. O curador só escreve quando algo
 # mudou. Sem a opção ligada, só limpa o que for nosso (portão barato de 2 ms).
 # À prova de falha, como a cura das camadas.
+# O endpoint que o produto publica por controle NO RÁDIO (HAPTICA-POR-RADIO-01).
+# Pelo rádio o controle não tem placa de som, e quem publica o alto-falante do
+# DualSense é um nó nosso do PipeWire — o nome dele carrega as agulhas que o GE
+# procura (`Sony_Interactive_Entertainment`, `Speaker__sink`) e o marcador da
+# casa. Sem `pactl` a resposta é "não há", como em toda sondagem desta casa.
+endpoint_de_mentira_vivo() {
+    command -v pactl >/dev/null 2>&1 || return 1
+    pactl list short sinks 2>/dev/null \
+        | grep -q 'Sony_Interactive_Entertainment.*HEFESTO.*Speaker__sink'
+}
+
+# O jogo acha a háptica por um endpoint de áudio, e não pergunta como o
+# CONTROLE está ligado: no cabo o endpoint é a placa de som do DualSense; no
+# rádio é o nó que nós publicamos. Para a opção do MHWilds, os dois valem — e a
+# razão de ela existir é o Black Desert, que quebra quando o KS falso aparece
+# SEM nenhum endpoint de DualSense por trás.
+dualsense_com_endpoint() {
+    dualsense_no_cabo || endpoint_de_mentira_vivo
+}
+
 curar_audio_ks() {
     prefixo="${STEAM_COMPAT_DATA_PATH:-}"
     [ -n "$prefixo" ] || return 0
@@ -460,11 +480,15 @@ record_last_run || true
 
 hefesto_envs="$(decide_envs)" || hefesto_envs=""
 
-# Sem DualSense no cabo, a opção do MHWilds sai como "0" ESCRITO — omitir não
-# desliga, porque o `proton` preenche do `user_settings.py` toda chave ausente.
+# Sem endpoint de DualSense NENHUM — nem a placa de som do cabo, nem o nó do
+# rádio —, a opção do MHWilds sai como "0" ESCRITO: omitir não desliga, porque o
+# `proton` preenche do `user_settings.py` toda chave ausente. E ela precisa
+# mesmo estar ligada: sem ela o `setupapi` não publica interface
+# KSCATEGORY_AUDIO nenhuma (patch 0103, `devinst.c`), e o jogo desiste antes de
+# olhar o registro.
 case "$hefesto_envs" in
     *PROTON_ENABLE_MHWILDS_USB_AUDIO=1*)
-        if ! dualsense_no_cabo; then
+        if ! dualsense_com_endpoint; then
             ks_envs=""
             while IFS= read -r kv; do
                 case "$kv" in
