@@ -249,11 +249,24 @@ _NOME_DO_SINK = re.compile(r"^\tName: (.+)$", re.M)
 
 
 def _pactl(argv: list[str]) -> str | None:
-    """Roda um `pactl` curto. None em qualquer falha — ausência é resposta."""
+    """Roda um `pactl` curto. None em qualquer falha — ausência é resposta.
+
+    **`LC_ALL=C` porque o `pactl` desta máquina TRADUZ.** Medido em 18/09/2026:
+    sem isso a saída vem com `Nome:` e `Destino #`, o leitor não acha nenhum
+    campo e o produto responde "não há endpoint" com o endpoint de pé. É a
+    mesma armadilha que esta casa já pagou em 15/08/2026, do outro lado do
+    mesmo comando (`alto_falante_bt._rodar`) — e a segunda vez custou uma prova
+    de ponta a ponta que voltou vazia.
+    """
     try:
         # argv fixo e sem shell: o único argumento é literal.
         proc = subprocess.run(
-            argv, capture_output=True, text=True, timeout=5, check=False
+            argv,
+            capture_output=True,
+            text=True,
+            timeout=5,
+            check=False,
+            env={**os.environ, "LC_ALL": "C"},
         )
     except (OSError, subprocess.SubprocessError):
         return None
