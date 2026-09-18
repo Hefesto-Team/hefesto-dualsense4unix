@@ -416,9 +416,13 @@ def _pactl_de_mentira(caminho: Path, sinks: str) -> None:
 
 
 def _sysfs_com_ancora(raiz: Path) -> Path:
-    """Um hub USB: a âncora de onde o ContainerId do rádio sai."""
+    """Um hub USB com a interface dele: a âncora de onde o ContainerId sai.
+
+    O nó declara a INTERFACE (`3-4:1.0`) e o GUID sai do PAI dela — o udev
+    devolve um ancestral, nunca o próprio device.
+    """
     d = raiz / "devices" / "pci0000:00" / "usb3" / "3-4"
-    d.mkdir(parents=True)
+    (d / "3-4:1.0").mkdir(parents=True)
     (raiz / "bus" / "usb" / "devices").mkdir(parents=True)
     for nome, valor in {
         "idVendor": "2357", "idProduct": "0604", "busnum": "3", "devnum": "29",
@@ -442,7 +446,7 @@ _SINK_DO_RADIO = f"""Sink #7
 \t\tdevice.bus = "usb"
 \t\tdevice.vendor.id = "054c"
 \t\tdevice.product.id = "0ce6"
-\t\tsysfs.path = "/devices/pci0000:00/usb3/3-4"
+\t\tsysfs.path = "/devices/pci0000:00/usb3/3-4/3-4:1.0"
 """
 
 

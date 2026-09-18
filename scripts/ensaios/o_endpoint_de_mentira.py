@@ -68,6 +68,11 @@ if str(_RAIZ / "src") not in sys.path:
     sys.path.insert(0, str(_RAIZ / "src"))
 
 from hefesto_dualsense4unix.integrations.alto_falante_bt import rodar_pactl
+from hefesto_dualsense4unix.integrations.audio_ks_dualsense import (
+    container_id,
+    controles_no_radio,
+    variantes_de_data4,
+)
 
 #: O VID/PID que o GE exige NO PROPLIST — não no aparelho.
 VID_SONY = "054c"
@@ -98,9 +103,21 @@ _PRIORIDADE = 0
 
 @dataclass(frozen=True)
 class Ancora:
-    """Um ``usb_device`` de onde o ``winepulse`` tira o ``ContainerId``."""
+    """Um ``usb_device`` de onde o ``winepulse`` tira o ``ContainerId``.
+
+    **O nó declara o FILHO, e o GUID sai do PAI.** O
+    ``udev_device_get_parent_with_subsystem_devtype`` devolve um ancestral,
+    nunca o próprio device: declarar a âncora nua faz o Wine subir ao hub raiz
+    e todos os controles do mesmo barramento casarem com o mesmo container.
+    Medido no jogo em 18/09/2026 — o endpoint saiu com o GUID do `1d6b:0002`.
+    Por isso :attr:`declarado` é a interface (``<bus>-<porta>:1.0``), que é a
+    forma de uma placa de som de verdade: o caminho dela é o do ``sound/card``,
+    cujo pai é o aparelho.
+    """
 
     syspath: str
+    #: O que vai no ``sysfs.path`` do nó: um filho de :attr:`syspath`.
+    declarado: str
     vid: int
     pid: int
     bus: int
@@ -169,13 +186,20 @@ def ancoras(
             continue
         if any(dev.glob("*/sound/card*")):
             continue
+        # A interface que o nó vai declarar. Sem nenhuma, o aparelho não está
+        # configurado e não serve de âncora: o Wine subiria ao hub raiz.
+        interface = next((i for i in sorted(dev.glob(f"{dev.name}:*")) if (i / "uevent").is_file()), None)
+        if interface is None:
+            continue
         try:
             vid, pid = int(vendor, 16), int(produto, 16)
         except ValueError:
             continue
+        raiz_txt = str(sysfs.resolve())
         achadas.append(
             Ancora(
-                syspath=str(dev.resolve()).replace(str(sysfs.resolve()), "", 1),
+                syspath=str(dev.resolve()).replace(raiz_txt, "", 1),
+                declarado=str(interface.resolve()).replace(raiz_txt, "", 1),
                 vid=vid,
                 pid=pid,
                 bus=int(bus),
@@ -206,7 +230,7 @@ def propriedades(ancora: Ancora, marca: str) -> str:
         "device.bus=usb",
         f"device.vendor.id={VID_SONY}",
         f"device.product.id={PID_DUALSENSE}",
-        f"sysfs.path={ancora.syspath}",
+        f"sysfs.path={ancora.declarado}",
         "device.vendor.name='Sony Interactive Entertainment'",
         f"device.description='DualSense {marca} (háptica pelo rádio)'",
         f"priority.session={_PRIORIDADE}",
@@ -303,6 +327,7 @@ def montar(marca: str, ancora: Ancora) -> int:
     print(f"montado  module #{linhas[-1]}")
     print(f"nome     {nome}")
     print(f"âncora   {ancora.nome}  {ancora.syspath}")
+    print(f"declara  {ancora.declarado}   ← o pai DISTO é a âncora")
     print(f"Container{ancora.container_id()}   ← é ISTO que o device KS tem de declarar")
     depois = _default_sink()
     if depois != antes and antes:
@@ -334,6 +359,12 @@ def status() -> int:
         print(f"  {sink['espec']}")
         for ok, frase in _laudo(sink):
             print(f"  [{'x' if ok else ' '}] {frase}")
+    # O FECHO DO CÍRCULO: o que o curador vai gravar sai da MESMA função que
+    # lê os nós vivos. Se estas linhas não aparecerem, o device KS não sairá —
+    # e foi assim que o erro de um nível na árvore do USB se escondeu.
+    for controle in controles_no_radio():
+        guids = " · ".join(container_id(controle, d4) for d4 in variantes_de_data4(controle, []))
+        print(f"\n  o device KS vai declarar: {guids}")
     return 0
 
 
