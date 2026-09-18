@@ -87,7 +87,6 @@ ENV_ALLOWLIST = (
     "__GL_SHADER_DISK_CACHE",
     "__GL_SHADER_DISK_CACHE_SKIP_CLEANUP",
     "SDL_ACCELEROMETER_AS_JOYSTICK",
-    "PROTON_DEATH_STRANDING_CONTROLLER_EFFECTS",
 )
 
 #: MÁSCARA-01, entrega 3 — METADE SEGURA (07/08/2026): o par VID/PID do
@@ -1613,33 +1612,25 @@ def compose_env(
     # nas bibliotecas dos runtimes da Steam (2.32.10, SDL3 3.4.14, sdl2-compat
     # 2.32.70), a dica em 0 é inócua. Entra em toda variante, como a de cima.
     env["SDL_ACCELEROMETER_AS_JOYSTICK"] = "0"
-    # HAPTICA-POR-AUDIO-01 (17/09/2026): a vibração do DualSense viaja como
-    # ÁUDIO — os canais 3 e 4 do endpoint de 4 canais SÃO os dois motores. O
-    # GE-Proton traz esse caminho pronto em `patches/proton-ds5-haptic/` (182
-    # patches), mas DESLIGADO: sem opt-in o endpoint do controle é escondido
-    # das coleções logo após a ativação, para que jogo nenhum mande o som do
-    # jogo pelo alto-falante do controle.
+    # HAPTICA-POR-AUDIO-01 — A VARIÁVEL FOI ARRANCADA NA MESMA NOITE, 17/09/2026.
     #
-    # O NOME ENGANA E ISSO ESTÁ NO PATCH 0164: `PROTON_DEATH_STRANDING_...` é o
-    # GUARDA-CHUVA de cinco comportamentos — nomes Sony do Windows, publicação
-    # persistente do endpoint, roteamento háptico por PipeWire, áudio dividido
-    # em quatro canais, e emulação de modo compartilhado —, e o próprio patch
-    # diz que as opções individuais ficam «as aliases for manual testing **and
-    # other games**». Não é do Death Stranding; é o interruptor do caminho.
+    # `PROTON_DEATH_STRANDING_CONTROLLER_EFFECTS=1` liga cinco comportamentos do
+    # caminho de áudio do controle no GE-Proton (patch 0164), e **um deles mata o
+    # PRAGMATA**: `0xc0000005` dentro de `mmdevapi!init_driver`, chamado pelo
+    # `CoCreateInstance(MMDeviceEnumerator)` do jogo, ~10 s depois do launch.
     #
-    # ENTRA EM TODA VARIANTE, como as duas de cima, e por dois motivos: as
-    # funções que ela liga testam `is_dualsense_device_path` antes de agir, de
-    # modo que sem um Sony na mesa ela não faz nada; e a ordem dela de
-    # 17/09/2026 é que jogo e perfil nasçam com tudo ligado. Ligar só para a
-    # máscara `dualsense` deixaria de fora justamente a mesa de quatro, em que
-    # um jogador pode estar noutra máscara.
+    # Medido com a Launch Option limpa pela mão dela: sem a variável o jogo abre;
+    # com ela, cai. Dez rodadas anteriores tinham "inocentado" a variável — todas
+    # inválidas, porque o `localconfig.vdf` foi editado com a STEAM ABERTA e ela
+    # reescreve o arquivo por cima, mantendo a sua cópia em memória. O `grep` no
+    # disco dizia 0 e o `environ` do jogo dizia 1, ao mesmo tempo.
     #
-    # O QUE ELA NÃO É: o `PROTON_SONY_HIDRAW_XINPUT`, que também faz a vibração
-    # chegar, CONVERTE o controle num descritor Xbox de 92 bytes sem sensores —
-    # e mata o giroscópio. Esta não toca no caminho de entrada: o vpad segue
-    # `uhid`, a IMU segue no ar, e a háptica vem pelo canal por onde ela sempre
-    # viajou. É a diferença entre acrescentar e trocar.
-    env["PROTON_DEATH_STRANDING_CONTROLLER_EFFECTS"] = "1"
+    # ELA NÃO VOLTA COMO GUARDA-CHUVA. O caminho de háptica continua valendo —
+    # são 182 patches em `patches/proton-ds5-haptic/` e nove variáveis vivas nos
+    # binários —, mas ligar as cinco de uma vez é grosso demais: basta uma
+    # quebrar para o jogo não abrir. O que entra no produto tem de ser a opção
+    # individual que sobreviver ao aparelho, jogo a jogo se for preciso, e nunca
+    # antes de passar por um teste cuja PREMISSA esteja provada no `environ`.
     return env
 
 
