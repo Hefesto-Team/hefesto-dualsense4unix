@@ -2427,6 +2427,95 @@ def sink_esta_tocando(
     return nome in tocando
 
 
+#: O PISO DOS MOTORES no sink de 4 canais do DualSense — HAPTICA-CABO-VOLUME-01
+#: (Z2), medido no aparelho dela em 19/09/2026 com o controle NO CABO:
+#:
+#:     repouso            tremor =   20
+#:     40% (como nasce)   tremor =   67
+#:     100%               tremor = 1093     <- 16x mais forte
+#:
+#: O WirePlumber dá **40% nos quatro canais** a todo sink novo (-23,88 dB), e
+#: os canais 3-4 são os MOTORES: a háptica do DualSense viaja como áudio nos
+#: traseiros. Nenhuma linha do produto pedia outra coisa, então a vibração dos
+#: jogos da Sony saía 16x mais fraca — **em qualquer computador**, porque o
+#: valor vem do servidor de som e não do nosso código.
+PISO_DOS_MOTORES = 100
+
+
+def volumes_do_sink(nome: str, runner: Callable[[list[str]], str | None] | None = None
+                    ) -> list[int] | None:
+    """Os volumes por canal deste sink, em por cento. ``None`` = não se sabe."""
+    correr: Any = runner or rodar_pactl
+    saida = correr(["pactl", "list", "sinks"])
+    if saida is None:
+        return None
+    dentro = False
+    for linha in saida.splitlines():
+        crua = linha.strip()
+        if crua.startswith("Name:"):
+            dentro = crua.split(":", 1)[1].strip() == nome
+            continue
+        if dentro and crua.startswith("Volume:"):
+            achados = []
+            for parte in crua.split(":", 1)[1].split(","):
+                for pedaco in parte.split("/"):
+                    pedaco = pedaco.strip()
+                    if pedaco.endswith("%"):
+                        with contextlib.suppress(ValueError):
+                            achados.append(int(pedaco[:-1]))
+                        break
+            return achados or None
+    return None
+
+
+def garantir_motores_audiveis(
+    nome: str, runner: Callable[[list[str]], str | None] | None = None
+) -> bool:
+    """Levanta os canais TRASEIROS do sink ao piso. True = havia o que levantar.
+
+    HAPTICA-CABO-VOLUME-01 (Z2), 19/09/2026 — o espelho de
+    `audio_saida.garantir_saida_audivel`, que faz o mesmo para o MUTE e nasceu
+    do mesmo tipo de achado: o produto obedecia e o servidor de som calava.
+
+    **SÓ OS TRASEIROS, E OS DA FRENTE NUNCA SÃO TOCADOS**, e a razão não é
+    cautela — é que são coisas diferentes:
+
+    ===============  ==========================  =============================
+    canais           o que são                   quem escolhe o valor
+    ===============  ==========================  =============================
+    1-2 (frente)     o alto-falante do controle  **ELA**, e o produto respeita
+    3-4 (traseiros)  os MOTORES da vibração      a aba Vibração, por HID
+    ===============  ==========================  =============================
+
+    Ninguém escolhe "o volume dos motores" no mixer do sistema: a intensidade
+    da vibração tem dono próprio no produto. Levantar os traseiros não atropela
+    escolha nenhuma — é o mesmo raciocínio do mute de 04/08, onde um estado
+    herdado de outra sessão não é uma opinião sobre o pedido de agora.
+
+    **NÃO É IDEMPOTENTE POR TEIMOSIA:** só escreve quando algum traseiro está
+    ABAIXO do piso. O valor persiste no WirePlumber, então age uma vez por
+    sink e cala. Sem essa guarda, uma reconciliação a cada 5 s viraria uma
+    escrita a cada 5 s.
+    """
+    volumes = volumes_do_sink(nome, runner)
+    if not volumes or len(volumes) < 4:
+        return False  # sink estéreo ou servidor mudo: não é caso deste piso
+    frente, traseiros = volumes[:2], volumes[2:4]
+    if min(traseiros) >= PISO_DOS_MOTORES:
+        return False
+    correr: Any = runner or rodar_pactl
+    correr([
+        "pactl", "set-sink-volume", nome,
+        f"{frente[0]}%", f"{frente[1]}%",
+        f"{PISO_DOS_MOTORES}%", f"{PISO_DOS_MOTORES}%",
+    ])
+    logger.info(
+        "haptica_motores_levantados",
+        sink=nome, eram=traseiros, agora=PISO_DOS_MOTORES, frente=frente,
+    )
+    return True
+
+
 def sinks_que_tocam(
     nomes: Iterable[str],
     runner: Callable[[list[str]], str | None] | None = None,

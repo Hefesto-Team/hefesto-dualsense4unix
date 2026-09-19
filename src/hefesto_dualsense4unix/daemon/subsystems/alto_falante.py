@@ -838,6 +838,7 @@ class AltoFalanteSubsystem:
             PonteDeSomPorRadio,
             e_radio,
             fonte_do_monitor_do_no,
+            garantir_motores_audiveis,
             nome_do_sink,
             sink_esta_tocando,
         )
@@ -951,6 +952,22 @@ class AltoFalanteSubsystem:
             sum(1 for u in vivos if u not in self._endpoints and u not in postas),
             len(vivos),
         )
+
+        for uniq in vivos:
+            # OS MOTORES DO SINK DE 4 CANAIS — HAPTICA-CABO-VOLUME-01 (Z2),
+            # 19/09/2026, medido no aparelho dela com o controle NO CABO:
+            #
+            #     repouso 20  ·  40% (como nasce) 67  ·  100% 1093
+            #
+            # O WirePlumber dá 40% aos quatro canais de todo sink novo, e os
+            # 3-4 são os MOTORES. A vibração dos jogos da Sony saía 16x mais
+            # fraca, em qualquer computador. Só os TRASEIROS sobem: os da
+            # frente são o alto-falante, e aquele volume é escolha dela.
+            #
+            # Custa UMA leitura por volta e só escreve quando está abaixo do
+            # piso — o valor persiste no WirePlumber, então age uma vez e cala.
+            with contextlib.suppress(Exception):
+                garantir_motores_audiveis(nome_do_sink(uniq))
 
         for uniq, caminho in vivos.items():
             # O MODO PODE MUDAR COM A PONTE DE PÉ: o jogo abre o endpoint no
