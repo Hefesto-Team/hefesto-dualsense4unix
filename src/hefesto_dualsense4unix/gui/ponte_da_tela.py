@@ -218,6 +218,17 @@ ALTURA_DO_DESENHO = PISO_DA_VISTA
 #: altura do desenho MAIS ela.
 ALTURA_DA_BARRA = 46
 
+#: OS TRÊS BOTÕES DA BARRA, na ordem em que `pack_end` os empilha da direita
+#: para a esquerda — logo a tupla é lida ao contrário do que aparece na tela.
+#: O lado é o do COSMIC (`theme.LADO_DO_COSMIC` = `:minimize,maximize,close`),
+#: que crava os três à direita; o produto não pergunta à sessão porque a
+#: resposta dela produziu o defeito (a medição está em `app/theme.py`).
+BOTOES_DA_BARRA = (
+    ("window-close-symbolic", "fechar", "Fechar"),
+    ("window-maximize-symbolic", "maximizar", "Maximizar"),
+    ("window-minimize-symbolic", "minimizar", "Minimizar"),
+)
+
 #: O tamanho da janela na tela dela, e o da janela oculta. São diferentes de
 #: propósito: a janela na tela carrega a ``HeaderBar``, a oculta
 #: (``Gtk.OffscreenWindow``) não tem barra nenhuma.
@@ -595,7 +606,37 @@ class JanelaDaAba:
             # enfeite: a barra de título do sistema não segue a decoração do
             # tema, e a janela nasce com fechar/minimizar espelhados.
             barra = Gtk.HeaderBar()
-            barra.set_show_close_button(True)
+            # OS BOTÕES SÃO NOSSOS — 4ª volta da BARRA-MAXIMIZADA-01, 19/09.
+            #
+            # `set_show_close_button(True)` delega os três à decoração do tema,
+            # e eles nascem **filhos internos** da HeaderBar: `get_children()`
+            # não os vê, só `forall()`. Sob o cosmic-comp maximizado, some o que
+            # eles desenham — enquanto o TÍTULO, que é filho normal, continua na
+            # tela. Esse contraste é a prova: o fluxo normal da barra pinta; o
+            # caminho da decoração, não.
+            #
+            # O QUE TRÊS VOLTAS DE CURA DE PINTURA MEDIRAM, e é por isso que
+            # esta volta muda de assunto: maximizada, os três botões respondem
+            # visíveis em x=1806, 1844 e 1882, 32 px cada, y=11 (a margem de
+            # sombra CSD corretamente removida), com `gtk-decoration-layout`
+            # intacto em `:minimize,maximize,close`. O GTK entrega três; a tela
+            # dela mostra um. Pedir `queue_resize`, `queue_draw`,
+            # `invalidate_rect` e `hide`+`show` não muda nada, porque não há
+            # nada errado do lado que esses gestos alcançam.
+            #
+            # Botão nosso é `Gtk.Button` comum em `pack_end`: mesmo fluxo de
+            # desenho do título. Não depende do tema, não depende do compositor,
+            # e serve igual em qualquer máquina — que é o contrato deste produto.
+            barra.set_show_close_button(False)
+            for nome_do_icone, gesto, dica in BOTOES_DA_BARRA:
+                botao = Gtk.Button()
+                botao.set_image(Gtk.Image.new_from_icon_name(
+                    nome_do_icone, Gtk.IconSize.MENU))
+                botao.set_relief(Gtk.ReliefStyle.NONE)
+                botao.set_tooltip_text(dica)
+                botao.get_style_context().add_class("titlebutton")
+                botao.connect("clicked", self._gesto_da_barra, gesto)
+                barra.pack_end(botao)
             barra.set_title(titulo)
             if subtitulo:
                 barra.set_subtitle(subtitulo)
@@ -657,6 +698,22 @@ class JanelaDaAba:
         for atraso in self.ATRASOS_DO_REDESENHO_MS:
             GLib.timeout_add(atraso, self._repintar_a_decoracao)
         return False
+
+    def _gesto_da_barra(self, _botao: Any, gesto: str) -> None:
+        """Minimizar, maximizar/restaurar ou fechar, pelos botões desta casa.
+
+        `maximizar` alterna: janela já maximizada volta ao tamanho de antes, que
+        é o que o botão do sistema faz e o que ela espera dele.
+        """
+        if gesto == "fechar":
+            self.janela.close()
+        elif gesto == "minimizar":
+            self.janela.iconify()
+        elif gesto == "maximizar":
+            if self.janela.is_maximized():
+                self.janela.unmaximize()
+            else:
+                self.janela.maximize()
 
     def _repintar_a_decoracao(self) -> bool:
         """O gesto que o screenshot dela fazia de graça.
