@@ -1038,7 +1038,7 @@ check_bandeja() {
     # passo 9), e um binário parado não se anuncia sozinho: sem esta linha ela
     # veria dois ícones na barra um dia e leria como defeito novo.
     if [[ -e "${APPLET_DESKTOP}" || -e "/usr/local/bin/hefesto-dualsense4unix-applet" ]]; then
-        info "há um applet COSMIC instalado de antes — ele foi APOSENTADO em 19/09/2026 e o tray o substitui. Para removê-lo: ./uninstall.sh"
+        info "há um applet COSMIC instalado de antes — ele foi APOSENTADO em 19/09/2026 e o tray o substitui. Para removê-lo sem tocar em mais nada: ./uninstall.sh --so-o-applet"
     fi
 }
 

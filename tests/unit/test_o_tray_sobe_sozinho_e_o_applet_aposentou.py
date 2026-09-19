@@ -206,3 +206,73 @@ def test_o_applet_parado_e_recado_e_nunca_falha() -> None:
     assert "./uninstall.sh" in trecho, (
         "o recado tem de dizer COMO remover; binário parado não se anuncia."
     )
+
+
+# ---------------------------------------------------------------------------
+# A FLAG QUE TIRA SÓ O RESTO — `--so-o-applet`, 19/09/2026
+# ---------------------------------------------------------------------------
+# Pedido dela depois de o passo 9 do install passar a apenas ANUNCIAR o binário
+# parado: *"Cria a flag"*. Sem ela, tirar 23 MB de applet exigia o uninstall
+# INTEIRO — que para o daemon, apaga as regras udev, desliga o Steam Input e
+# derruba o DKMS. Pagar o preço do wipe por um resto é o que faz a pessoa
+# deixar o resto lá.
+
+
+def test_a_flag_do_applet_existe_e_e_anunciada() -> None:
+    texto = UNINSTALL.read_text(encoding="utf-8")
+    assert "--so-o-applet)" in texto, "o parser não conhece --so-o-applet"
+    assert "SO_O_APPLET=0" in texto, (
+        "a flag precisa de default explícito; sob `set -u` uma variável não "
+        "declarada mata o script em quem NÃO passou a flag."
+    )
+    ajuda = texto.split("FIM\n}", 1)[0]
+    assert "--so-o-applet" in ajuda, "a flag não aparece no --help"
+
+
+def test_a_flag_sai_antes_de_o_wipe_comecar() -> None:
+    texto = UNINSTALL.read_text(encoding="utf-8")
+    saida = texto.index('if [[ "${SO_O_APPLET}" -eq 1 ]]; then')
+    for marco, porque in (
+        ('log "parando daemon', "o daemon dela seria parado"),
+        ('log "matando processos hefesto', "os processos seriam mortos"),
+        ("removendo ${path}", "os arquivos dela sairiam do disco"),
+    ):
+        onde = texto.index(marco)
+        assert saida < onde, (
+            f"o early-exit de --so-o-applet vem DEPOIS de {marco!r}: {porque}. "
+            "Meio wipe é pior que wipe nenhum."
+        )
+
+
+def test_a_flag_e_o_wipe_usam_a_mesma_funcao() -> None:
+    texto = UNINSTALL.read_text(encoding="utf-8")
+    assert texto.count("remover_o_applet() {") == 1, (
+        "duas definições de remover_o_applet — uma delas vai divergir"
+    )
+    chamadas = len(
+        [
+            linha
+            for linha in texto.splitlines()
+            if linha.strip() == "remover_o_applet"
+        ]
+    )
+    assert chamadas == 2, (
+        f"remover_o_applet é chamada {chamadas}x; esperadas 2 (o --so-o-applet "
+        "e o wipe completo). Duplicar a lista dos cinco caminhos é como o "
+        "ícone simbólico já ficou para trás uma vez."
+    )
+
+
+def test_o_painel_so_e_derrubado_se_o_applet_estiver_na_lista() -> None:
+    texto = UNINSTALL.read_text(encoding="utf-8")
+    corpo = texto.split("remover_o_applet() {", 1)[-1].split("\n}\n", 1)[0]
+    assert "killall cosmic-panel" in corpo, (
+        "sem recarregar o painel, o applet fica fantasma na lista de "
+        "Miniaplicativos mesmo depois de os arquivos saírem."
+    )
+    guarda = corpo.split("killall cosmic-panel", 1)[0]
+    assert "esta_na_lista" in guarda, (
+        "o painel dela é derrubado CEGO: bastava o binário existir. Na máquina "
+        "dela o applet nunca esteve na lista, então não há fantasma a limpar — "
+        "e derrubar o painel de quem está usando a máquina é caro."
+    )
