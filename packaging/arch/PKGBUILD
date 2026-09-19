@@ -73,6 +73,11 @@ optdepends=(
     # Wayland, só alcança janelas XWayland — abre e não digita.
     'wvkbd: teclado na tela do L3 em sessão Wayland (cliente Wayland nativo)'
     'onboard: teclado na tela do L3 em sessão X11 (injeta por XTEST)'
+    # INSTALL-UNIVERSAL (18/09/2026): o UCM do sistema — o ucm.conf dele lê o
+    # gancho do DualSense no cabo que o install.sh grava. No Arch o alsa-lib já
+    # depende dele; aqui ele fica nomeado, com o nome do `_pkg_nome alsa-ucm
+    # pacman`.
+    'alsa-ucm-conf: vibração dos jogos da Sony pelo DualSense no cabo (perfil UCM)'
     'dkms: módulos patchados hid-nintendo (Onda T — probe BT Nintendo/8BitDo) e rtw88_usb (Onda W — fantasma USB do dongle WiFi)'
     'linux-headers: build dos módulos DKMS patchados (hid-nintendo, rtw88-usb)'
 )

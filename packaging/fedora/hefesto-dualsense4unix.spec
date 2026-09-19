@@ -69,6 +69,12 @@ Recommends:     wlrctl
 # Onda T: modulo hid-nintendo patchado via DKMS (cura de raiz do probe BT
 # dos controles Nintendo/8BitDo) — o install-host-udev.sh roda o build.
 Recommends:     dkms
+# INSTALL-UNIVERSAL (18/09/2026): o UCM do sistema. O ucm.conf dele é quem lê
+# o gancho do DualSense no cabo que o install.sh grava; sem ele a vibração dos
+# jogos da Sony pelo cabo não chega. Dependência fraca pelo mesmo critério do
+# censo do install.sh (importante, não obrigatória), e o nome é o do
+# `_pkg_nome alsa-ucm dnf`.
+Recommends:     alsa-ucm
 # TECLADO-QUE-NAO-DIGITA-01: o teclado na tela que o L3 do controle abre.
 # Sem ele nenhum atalho de fabrica digita LETRA (os nove sao Super,
 # PrintScreen, Alt+Tab, Alt+Shift+Tab, Enter, Delete, Backspace e os dois
