@@ -841,6 +841,7 @@ class AltoFalanteSubsystem:
             garantir_motores_audiveis,
             nome_do_sink,
             sink_esta_tocando,
+            sinks_com_motores,
         )
         from hefesto_dualsense4unix.integrations.dualsense_bt_audio import (
             o_microfone_esta_no_ar,
@@ -953,8 +954,7 @@ class AltoFalanteSubsystem:
             len(vivos),
         )
 
-        for uniq in vivos:
-            # OS MOTORES DO SINK DE 4 CANAIS — HAPTICA-CABO-VOLUME-01 (Z2),
+        # OS MOTORES DOS SINKS DE 4 CANAIS — HAPTICA-CABO-VOLUME-01 (Z2),
             # 19/09/2026, medido no aparelho dela com o controle NO CABO:
             #
             #     repouso 20  ·  40% (como nasce) 67  ·  100% 1093
@@ -966,8 +966,16 @@ class AltoFalanteSubsystem:
             #
             # Custa UMA leitura por volta e só escreve quando está abaixo do
             # piso — o valor persiste no WirePlumber, então age uma vez e cala.
-            with contextlib.suppress(Exception):
-                garantir_motores_audiveis(nome_do_sink(uniq))
+        #
+        # PELO SERVIDOR, E NÃO PELO `uniq`: a primeira volta desta cura chamou
+        # `nome_do_sink(uniq)`, que devolve o null-sink de SOM por rádio — dois
+        # canais, motor nenhum. A cura rodou e não mexeu em nada. Os sinks que
+        # têm motores vêm de duas origens diferentes (o ALSA, no cabo; e o
+        # `EndpointDeHaptica`, para o Wine) e nenhum dos dois nomes se deriva do
+        # `uniq`.
+        with contextlib.suppress(Exception):
+            for sink_com_motor in sinks_com_motores():
+                garantir_motores_audiveis(sink_com_motor)
 
         for uniq, caminho in vivos.items():
             # O MODO PODE MUDAR COM A PONTE DE PÉ: o jogo abre o endpoint no
