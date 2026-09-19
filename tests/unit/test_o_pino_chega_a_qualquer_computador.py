@@ -646,7 +646,7 @@ class TestOVigiaTravaSozinho:
     @pytest.mark.parametrize(
         ("keep", "no_pin", "esperado"),
         [(0, 0, 3), (1, 0, 2), (0, 1, 2), (1, 1, 1)],
-        ids=["padrao", "keep-steam-input", "no-proton-pin", "os-dois"],
+        ids=["padrão", "keep-steam-input", "no-proton-pin", "os-dois"],
     )
     def test_o_trecho_do_install_renderiza_a_unidade_de_cada_escolha(
         self, tmp_path: Path, keep: int, no_pin: int, esperado: int
