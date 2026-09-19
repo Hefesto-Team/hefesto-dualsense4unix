@@ -3189,6 +3189,14 @@ def html_da_regua_do_radio(
 #    5 perfis com override por controle — 9 ENTRADAS `controllers[*].rumble`
 #    4 perfis com override de gatilho — 8 entradas `controllers[*].triggers`
 #
+# REMEDIDO EM 19/09/2026, e a conta SUBIU — ela continua usando a feature:
+#    6 perfis com override por controle — 11 ENTRADAS `controllers[*].rumble`
+#    5 perfis com override de gatilho   — 10 entradas `controllers[*].triggers`
+#
+# A conta de 17/09 fica porque é o que derrubou a de 01/09; esta é a de hoje.
+# Quem remedir de novo acrescenta a sua e não apaga estas duas: a SEQUÊNCIA é
+# que mostra que a feature está sendo usada, e é ela que sustenta a decisão.
+#
 # A UNIDADE ESTÁ DITA DE PROPÓSITO: perfil e ENTRADA são contas diferentes, e
 # confundi-las foi o que fez o número "9 perfis" circular — são 9 controles
 # dentro de 5 arquivos, porque um perfil guarda um override por peça.
@@ -3265,9 +3273,24 @@ def _teto_do_controle(
     quatro políticas; só o `economia` tem opção no campo
     (`gui.aba_conexoes.rotulo_da_politica` diz por quê). Um perfil escrito pela
     janela estável — `app/actions/rumble_actions.py:947` — ou editado à mão
-    guarda uma das outras três. Medido em 01/09/2026: zero dos 33 perfis dela
-    têm `controllers[*].rumble`, então o caso é hoje inalcançável — e é por isso
-    mesmo que ele tem de estar escrito, e não descoberto pela próxima pessoa.
+    guarda uma das outras três.
+
+    FATO SUBSTITUÍDO — 19/09/2026. Aqui estava: *"Medido em 01/09/2026: zero dos
+    33 perfis dela têm `controllers[*].rumble`, então o caso é hoje
+    inalcançável"*. **Deixou de ser verdade, e o próprio arquivo já dizia**: o
+    bloco de :3183, remedido em 17/09 pela VIBRA-ACESA-01, conta 5 perfis com
+    override por controle. Duas afirmações opostas no mesmo arquivo obrigam
+    quem lê a escolher, que é o defeito que a regra do fato-substituído existe
+    para matar.
+
+    **Remedido no disco dela em 19/09/2026, e o número CRESCEU de novo:**
+
+        29 perfis
+         6 com override de rumble por controle  ·  11 entradas
+         5 com override de gatilho              ·  10 entradas
+
+    O caso **é alcançável hoje**, e por isso continua tendo de estar escrito —
+    a razão da nota não mudou, só o fato que a sustentava.
     """
     from hefesto_dualsense4unix.gui import aba_conexoes as _tela
 
