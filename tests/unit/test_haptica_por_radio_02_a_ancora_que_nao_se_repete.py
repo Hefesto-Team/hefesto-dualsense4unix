@@ -349,6 +349,144 @@ def test_com_o_jogo_tocando_a_ancora_nao_troca(mesa: _Mesa) -> None:
     assert mesa.servidor.caminho_de(_A) == antes
 
 
+def test_o_servidor_mudo_numa_volta_nao_reancora_quem_ja_estava(
+    mesa: _Mesa, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A memória do processo segura o nó na volta em que o servidor não responde.
+
+    Uma volta com `list short modules` sem resposta (prazo estourado, um
+    `pipewire-pulse` lento) e um controle chegando nela. O servidor não semeia
+    nada; quem sabe que B já tem âncora é só a memória deste processo.
+
+    MORDIDA: arrancar o ``ja_postas=`` da chamada em ``_casar_as_pontes``. A
+    distribuição volta à ordem pura, A < B leva a âncora de B, e o nó de B é
+    derrubado e recarregado noutra.
+    """
+    mesa.casar(_B)
+    de_b = mesa.servidor.caminho_de(_B)
+    servidor = mesa.servidor
+    monkeypatch.setattr(
+        eh,
+        "rodar_pactl",
+        lambda argv: None if argv[:4] == ["pactl", "list", "short", "modules"] else servidor(argv),
+    )
+    mesa.casar(_A, _B)
+    assert mesa.servidor.caminho_de(_B) == de_b, "o nó de quem já estava trocou de âncora"
+    assert mesa.servidor.quedas == []
+    caminhos = [c for _n, c in mesa.servidor.modulos.values()]
+    assert len(set(caminhos)) == 2, caminhos
+
+
+# -- a troca de âncora pergunta ao SERVIDOR se o jogo toca --------------------
+#
+# A guarda lia só o modo da ponte, e o modo é o da volta ANTERIOR. Três formas
+# de o nó cair com o jogo aberto nele passavam por ela, e cada uma tem régua
+# abaixo. MORDIDA das três: a guarda de volta a
+# `uniq in self._pontes and self._modo_da_ponte.get(uniq) == "haptica"`, sem
+# `sink_esta_tocando`.
+
+
+def _o_aparelho_da_ancora_sai(mesa: _Mesa, antes: list[str]) -> None:
+    mesa.ancoras.remove(next(a for a in _QUATRO if a.declarado == antes[0]))
+
+
+def test_o_jogo_que_abre_na_mesma_volta_segura_o_no(mesa: _Mesa) -> None:
+    """O jogo abre o nó na volta em que o aparelho da âncora sai do barramento.
+
+    A ponte ainda é a do som, porque o modo é o da volta anterior; só o
+    servidor sabe que o jogo já toca.
+    """
+    mesa.casar(_A)
+    antes = mesa.servidor.caminho_de(_A)
+    mesa.servidor.jogo_em.add(eh.nome_do_endpoint(_A))
+    _o_aparelho_da_ancora_sai(mesa, antes)
+    mesa.casar(_A)
+    assert mesa.servidor.caminho_de(_A) == antes, "o nó caiu com o jogo tocando nele"
+    assert mesa.servidor.quedas == []
+
+
+def test_a_fonte_da_haptica_que_nao_sobe_nao_derruba_o_no(
+    mesa: _Mesa, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Sem a fonte da háptica, a ponte fica no som com o jogo tocando no nó."""
+
+    def _fonte(no: str, **kw: Any) -> tuple[Any, Any, str]:
+        if kw.get("canais") == af.CANAIS_DA_HAPTICA:
+            return None, None, "sem_monitor"
+        return (lambda _n: b""), f"gravador:{no}", ""
+
+    monkeypatch.setattr(af, "fonte_do_monitor_do_no", _fonte)
+    mesa.casar(_A)
+    antes = mesa.servidor.caminho_de(_A)
+    mesa.servidor.jogo_em.add(eh.nome_do_endpoint(_A))
+    mesa.casar(_A)
+    assert _PonteDeMentira.criadas[-1].arranjo is None, "a ponte devia ter ficado no som"
+    _o_aparelho_da_ancora_sai(mesa, antes)
+    mesa.casar(_A)
+    assert mesa.servidor.caminho_de(_A) == antes, "o nó caiu com o jogo tocando nele"
+    assert mesa.servidor.quedas == []
+
+
+def test_o_controle_sem_ponte_nao_perde_o_no_com_o_jogo_aberto(mesa: _Mesa) -> None:
+    """Sem ponte (hidraw que não abre, sem `caminho`), o nó continua do jogo."""
+    sem_ponte = [_Controle(_A, caminho="")]
+    mesa.sub._casar_as_pontes(sem_ponte)
+    assert _PonteDeMentira.criadas == []
+    antes = mesa.servidor.caminho_de(_A)
+    assert len(antes) == 1
+    mesa.servidor.jogo_em.add(eh.nome_do_endpoint(_A))
+    _o_aparelho_da_ancora_sai(mesa, antes)
+    mesa.sub._casar_as_pontes(sem_ponte)
+    assert mesa.servidor.caminho_de(_A) == antes, "o nó caiu com o jogo tocando nele"
+    assert mesa.servidor.quedas == []
+
+
+def test_o_servidor_mudo_nao_e_ninguem_tocando(
+    mesa: _Mesa, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Na volta em que o servidor não responde, o nó fica e a troca espera.
+
+    E ela espera só o que precisa: fechado o jogo, a âncora troca.
+
+    MORDIDA: ``na_duvida=False`` na guarda. A volta muda lê "ninguém toca" e
+    derruba o nó com o jogo aberto.
+    """
+    mesa.casar(_A)
+    antes = mesa.servidor.caminho_de(_A)
+    mesa.servidor.jogo_em.add(eh.nome_do_endpoint(_A))
+    _o_aparelho_da_ancora_sai(mesa, antes)
+    with monkeypatch.context() as mudo:
+        mudo.setattr(eh, "rodar_pactl", lambda _argv: None)
+        mudo.setattr(af, "rodar_pactl", lambda _argv: None)
+        mesa.casar(_A)
+    assert mesa.servidor.caminho_de(_A) == antes, "o nó caiu na volta muda"
+    assert mesa.servidor.quedas == []
+    mesa.casar(_A)  # o servidor voltou, e o jogo segue tocando
+    assert mesa.servidor.caminho_de(_A) == antes
+    mesa.servidor.jogo_em.clear()
+    mesa.casar(_A)  # a ponte sai da háptica
+    mesa.casar(_A)  # e a troca acontece
+    depois = mesa.servidor.caminho_de(_A)
+    assert len(depois) == 1
+    assert depois != antes
+
+
+def test_na_duvida_e_resposta_so_do_servidor_mudo() -> None:
+    """Resposta VAZIA é resposta: sem sink ou sem stream, ninguém toca."""
+    servidor = _Servidor()
+    servidor.por(_A, _QUATRO[0])
+    nome = eh.nome_do_endpoint(_A)
+    assert af.sink_esta_tocando(nome, lambda _argv: None) is False
+    assert af.sink_esta_tocando(nome, lambda _argv: None, na_duvida=True) is True
+    assert af.sink_esta_tocando(nome, servidor, na_duvida=True) is False
+    assert af.sink_esta_tocando(nome, lambda _argv: "", na_duvida=True) is False
+
+    def _sem_resposta_das_entradas(argv: list[str]) -> str | None:
+        return None if argv[:4] == ["pactl", "list", "short", "sink-inputs"] else servidor(argv)
+
+    assert af.sink_esta_tocando(nome, _sem_resposta_das_entradas, na_duvida=True) is True
+
+
 # ---------------------------------------------------------------------------
 # 3. O MODO — quem toca é um sink-input
 # ---------------------------------------------------------------------------

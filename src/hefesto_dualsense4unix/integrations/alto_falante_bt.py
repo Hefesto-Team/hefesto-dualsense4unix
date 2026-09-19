@@ -2371,7 +2371,12 @@ def a_ponte_do_radio_pode_subir() -> tuple[bool, str]:
     return True, ""
 
 
-def sink_esta_tocando(nome: str, runner: Callable[[list[str]], str | None] | None = None) -> bool:
+def sink_esta_tocando(
+    nome: str,
+    runner: Callable[[list[str]], str | None] | None = None,
+    *,
+    na_duvida: bool = False,
+) -> bool:
     """O sink tem stream tocando AGORA? É por aqui que se sabe se o jogo usa.
 
     O endpoint da háptica fica publicado o tempo todo — nó que some quebra o
@@ -2389,19 +2394,33 @@ def sink_esta_tocando(nome: str, runner: Callable[[list[str]], str | None] | Non
     source-output; stream TOCANDO no sink é sink-input, e só o jogo o cria. A
     coluna 2 de `list short sink-inputs` é o índice do sink, o mesmo da coluna
     1 de `list short sinks`, no `pipewire-pulse` e no PulseAudio.
+
+    **SERVIDOR MUDO NÃO É "NINGUÉM TOCA".** O ``None`` do runner é o prazo
+    estourado ou o `pactl` que falhou: não se sabe. ``na_duvida`` é a
+    resposta nesse caso. O modo da ponte usa o padrão, ``False``: na dúvida, o
+    fio volta ao alto-falante. Quem pergunta para DERRUBAR o nó (a reancoragem
+    do subsystem) passa ``True``: na dúvida, o nó fica, porque derrubá-lo com o
+    jogo aberto nele é o que a decisão de 08/09 proíbe. Resposta VAZIA não é
+    dúvida: o servidor respondeu que não há sink ou que não há stream.
     """
     if not nome:
         return False
     correr: Any = runner or rodar_pactl
+    sinks = correr(["pactl", "list", "short", "sinks"])
+    if sinks is None:
+        return na_duvida
     indice = ""
-    for linha in (correr(["pactl", "list", "short", "sinks"]) or "").splitlines():
+    for linha in sinks.splitlines():
         campos = linha.split("\t")
         if len(campos) > 1 and campos[1] == nome:
             indice = campos[0].strip()
             break
     if not indice:
         return False
-    for linha in (correr(["pactl", "list", "short", "sink-inputs"]) or "").splitlines():
+    entradas = correr(["pactl", "list", "short", "sink-inputs"])
+    if entradas is None:
+        return na_duvida
+    for linha in entradas.splitlines():
         campos = linha.split("\t")
         if len(campos) > 1 and campos[1].strip() == indice:
             return True
