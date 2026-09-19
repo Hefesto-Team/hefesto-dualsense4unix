@@ -38,7 +38,9 @@ Tire o `reaplicar_som_em_todos_os_alvos` do connect de boot em
 `hotkey._nascer_no_ar_na_vez` de volta para só `eleito is None` e o segundo
 reprova — que é o que o cético avisou: curar a partida sem curar a eleição faria
 CADA partida do daemon tomar o microfone de quem tem headset. Tire a guarda da
-recusa e o terceiro reprova.
+recusa e o terceiro reprova. Tire a pergunta pela escolha gravada
+(`hotkey._a_escolha_gravada_e_de_outro_controle`) e o quarto reprova: a partida
+com dois controles voltaria a sobrescrever o microfone que ela escolheu.
 """
 
 from __future__ import annotations
@@ -67,6 +69,11 @@ P1 = "aabbcc0000b1"
 HEADSET = "alsa_input.usb-Fabricante_Headset_USB-00.mono-fallback"
 
 
+#: O segundo controle da mesa — a partida com dois é o que separa "o primeiro da
+#: fila" de "o que ela escolheu".
+P2 = "aabbcc0000b2"
+
+
 class _ControleNaMesa(FakeController):
     """O `FakeController` que sabe dizer QUEM está conectado.
 
@@ -74,15 +81,17 @@ class _ControleNaMesa(FakeController):
     que o nascimento usa; `set_mic_led` aceita o `uniq` como o backend real.
     """
 
-    def __init__(self, uniq: str) -> None:
+    def __init__(self, *uniqs: str) -> None:
         super().__init__(transport="usb")
-        self.uniq = uniq
+        self.uniqs = list(uniqs)
 
     def alvos_conectados(self) -> dict[str, str | None]:
-        return {"hidraw0": self.uniq} if self.is_connected() else {}
+        if not self.is_connected():
+            return {}
+        return {f"hidraw{i}": u for i, u in enumerate(self.uniqs)}
 
     def describe_controllers(self) -> list[dict[str, Any]]:
-        return [{"uniq": self.uniq, "connected": self.is_connected()}]
+        return [{"uniq": u, "connected": self.is_connected()} for u in self.uniqs]
 
     def set_mic_led(self, aceso: bool, *, uniq: str | None = None) -> None:  # type: ignore[override]
         del uniq
@@ -153,14 +162,16 @@ def mesa(monkeypatch: pytest.MonkeyPatch) -> Iterator[_Mesa]:
         elm.registrar_dizedor_do_no_ar(*anteriores_palavra)
 
 
-async def _subir_e_esperar_a_partida(mesa: _Mesa, config: DaemonConfig) -> Daemon:
+async def _subir_e_esperar_a_partida(
+    mesa: _Mesa, config: DaemonConfig, uniqs: tuple[str, ...] = (P1,)
+) -> Daemon:
     """Sobe o `Daemon` com o controle JÁ plugado e espera a partida acabar.
 
     "Acabou" é o poll loop ter dado um tique — o connect de boot vem antes
     dele — e as tarefas de nascimento em voo terem terminado. Um `sleep`
     solto mediria um instante e daria verde intermitente.
     """
-    controle = _ControleNaMesa(P1)
+    controle = _ControleNaMesa(*uniqs)
     store = StateStore()
     daemon = Daemon(controller=controle, bus=EventBus(), store=store, config=config)
     daemon._eleitor_de_microfone = mesa.eleitor  # type: ignore[attr-defined]
@@ -238,3 +249,45 @@ async def test_a_recusa_dela_vale_na_partida(mesa: _Mesa) -> None:
     assert mesa.registro.no_ar() == {}, "a palavra foi dita a quem ela calou"
     assert mesa.registro.abertos() == frozenset(), "o canal foi pedido mesmo assim"
     assert mesa.eleitor.chamadas == []
+
+
+@pytest.mark.asyncio
+async def test_a_partida_nao_passa_por_cima_do_controle_que_ela_escolheu(
+    mesa: _Mesa, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Dois controles na mesa, e ela escolheu o SEGUNDO como microfone padrão.
+
+    O `default.configured.audio.source` do WirePlumber diz o canal do P2. A
+    partida solta um nascimento por controle em ordem de `alvos_conectados`, e
+    o P1 vem primeiro: com a mesa sem dono ele elegia e sobrescrevia a escolha
+    dela — a cada restart do `install.sh`, a cada atualização, a cada login.
+
+    MORDIDA: tire a pergunta `_a_escolha_gravada_e_de_outro_controle` de
+    `hotkey._o_nascimento_pode_tomar_o_padrao` e o P1 aparece nas chamadas.
+    """
+    from pathlib import Path
+
+    estado = Path.home() / ".local" / "state" / "wireplumber"
+    estado.mkdir(parents=True, exist_ok=True)
+    (estado / "default-nodes").write_text(
+        f"[default-nodes]\ndefault.configured.audio.source=hefesto_mic_{P2[-6:]}\n",
+        encoding="utf-8",
+    )
+
+    # A AUTO-01.1 sai da partida de dois: dois controles na mesa ligam a
+    # emulação sozinhos no poll loop, o vpad nasce por `evdev.UInput`, e a
+    # VIGIA-DE-APARELHO-01 reprova a sessão (medido: dois nós recusados). A
+    # emulação não é desta régua.
+    monkeypatch.setattr(
+        Daemon, "aplicar_gamepad_para_multiplos_controles", lambda self: None
+    )
+    daemon = await _subir_e_esperar_a_partida(mesa, _config(), (P1, P2))
+
+    assert mesa.eleitor.chamadas == [P2], (
+        "a partida do daemon elegeu outro controle por cima da escolha gravada "
+        f"dela: {mesa.eleitor.chamadas}"
+    )
+    no_ar = hotkey._no_ar_da_sessao(daemon)
+    assert no_ar.esta(P1) and no_ar.esta(P2), (
+        "respeitar a escolha dela custou o AR de um dos dois"
+    )

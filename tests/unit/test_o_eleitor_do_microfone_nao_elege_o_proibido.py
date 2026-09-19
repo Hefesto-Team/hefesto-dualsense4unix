@@ -443,5 +443,58 @@ def test_o_daemon_alcanca_a_consulta_nova(monkeypatch: pytest.MonkeyPatch) -> No
     assert elm.outra_captura_elegivel() == NO_DA_WEBCAM
     assert pedidos == [["bash", str(FIX), "--outra-captura-elegivel"]]
 
-    monkeypatch.setattr(elm, "_rodar", lambda argv: (1, ""))
-    assert elm.outra_captura_elegivel() is None, "consulta que falhou virou nome"
+    # CONSULTA QUE FALHOU NÃO É "NÃO HÁ" (18/09/2026). O `rc=1` é o "não deu
+    # para consultar" do contrato do shell, e o `127` é o `_rodar` estourando o
+    # `_TIMEOUT_S`. Devolver `None` aqui fazia o nascimento eleger na dúvida.
+    for rc in (1, 127):
+        monkeypatch.setattr(elm, "_rodar", lambda argv, rc=rc: (rc, ""))
+        with pytest.raises(elm.ConsultaIndisponivelError):
+            elm.outra_captura_elegivel()
+
+    # E o "consultei e não há" continua sendo `None`: é a mesa dela.
+    monkeypatch.setattr(elm, "_rodar", lambda argv: (0, ""))
+    assert elm.outra_captura_elegivel() is None
+
+
+def test_a_instalacao_nativa_alcanca_o_script(
+    tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """No `.deb`, no Fedora, no Arch e no Nix o script mora no `share/`.
+
+    `packaging/fedora/…spec`, `packaging/arch/PKGBUILD`, `packaging/nix/package.nix`
+    e `scripts/build_deb.sh` o instalam em `share/hefesto-dualsense4unix/scripts/`
+    — nenhum desses é pai do pacote Python. A busca antiga subia pelos pais
+    deste pacote e pelo `PATH`, então fora do checkout ela devolvia `None`: a
+    eleição inteira recusava e o microfone que nasce no ar ficava MUDO.
+
+    A instalação de mentira tem SÓ o script, numa base do `share/`; o checkout
+    sai da lista de bases, e o `PATH` fica vazio. MORDIDA: volte
+    `_script_do_wireplumber` a subir pelos pais do pacote — ele acha o script
+    do checkout em vez do da instalação, e a régua reprova.
+    """
+    from hefesto_dualsense4unix.integrations import eleicao_de_microfone as elm
+    from hefesto_dualsense4unix.utils import repo_files
+
+    share = tmp_path / "usr" / "share" / "hefesto-dualsense4unix"
+    instalado = share / "scripts" / "fix_wireplumber_default_source.sh"
+    instalado.parent.mkdir(parents=True)
+    instalado.write_text(
+        "#!/usr/bin/env bash\n--outra-captura-elegivel) MODE=outra-captura-elegivel ;;\n",
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(repo_files, "bases_de_instalacao", lambda: (share,))
+    monkeypatch.setenv("PATH", str(tmp_path / "sem-nada"))
+
+    assert elm._script_do_wireplumber() == instalado
+
+    pedidos: list[list[str]] = []
+
+    def _rodar(argv: list[str]) -> tuple[int, str]:
+        pedidos.append(argv)
+        return (0, "")
+
+    monkeypatch.setattr(elm, "_rodar", _rodar)
+    assert elm.outra_captura_elegivel() is None
+    assert pedidos == [["bash", str(instalado), "--outra-captura-elegivel"]], (
+        "a consulta não chegou ao script da instalação nativa"
+    )

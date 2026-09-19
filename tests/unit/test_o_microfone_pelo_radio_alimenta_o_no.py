@@ -696,10 +696,15 @@ def test_a_eleicao_nao_muda_quem_e_ouvido_no_canal_de_cada_um(pactl, monkeypatch
 
 #: OS CHAMADORES DE `escolher_fonte`, MEDIDOS por AST em 06/09/2026.
 #:
-#: **SÃO SETE desde 09/09/2026** — `daemon/subsystems/bt_mic.py` entrou com a
+#: **SÃO OITO desde 18/09/2026** — `daemon/subsystems/hotkey.py` entrou com o
+#: nascimento do microfone que não passa por cima da escolha gravada dela: ele
+#: pergunta ao dono DE QUE CONTROLE é o nó que o WirePlumber guarda como padrão.
+#: Ver a dirigida 8/8.
+#:
+#: **ERAM SETE desde 09/09/2026** — `daemon/subsystems/bt_mic.py` entrou com a
 #: MIC-OS-QUATRO-01, e ele é o único que PERGUNTA AO DONO PARA RECUSAR a
 #: resposta da regra 0: o supervisor do canal do cabo quer *"de onde eu leio"*,
-#: e a regra 0 responde *"qual é o microfone dele"*. Ver a dirigida 7/7.
+#: e a regra 0 responde *"qual é o microfone dele"*. Ver a dirigida 7/8.
 #:
 #: **ERAM SEIS, e não quatro.** O enunciado da MIC-VIRTUAL-02 diz "os quatro
 #: chamadores", herdando o número do docstring de `escolher_fonte`, que lista
@@ -715,6 +720,7 @@ CHAMADORES_MEDIDOS = frozenset(
     {
         "app/mic_monitor.py",
         "daemon/subsystems/bt_mic.py",
+        "daemon/subsystems/hotkey.py",
         "daemon/subsystems/luz_do_mic.py",
         "integrations/audio_control.py",
         "integrations/eleicao_de_microfone.py",
@@ -785,7 +791,7 @@ def test_o_censo_dos_chamadores_de_escolher_fonte_nao_envelhece() -> None:
 
 
 def test_a_regra_0_alcanca_a_eleicao(pactl, monkeypatch) -> None:  # type: ignore[no-untyped-def]
-    """Chamador 1/7 — `integrations/eleicao_de_microfone.py`."""
+    """Chamador 1/8 — `integrations/eleicao_de_microfone.py`."""
     from hefesto_dualsense4unix.integrations import eleicao_de_microfone as el
 
     canal.abrir(P1, "Microfone do P1")
@@ -800,7 +806,7 @@ def test_a_regra_0_alcanca_a_eleicao(pactl, monkeypatch) -> None:  # type: ignor
 
 
 def test_a_regra_0_alcanca_o_volume_por_controle(pactl, monkeypatch) -> None:  # type: ignore[no-untyped-def]
-    """Chamador 2/7 — `integrations/audio_control.py`.
+    """Chamador 2/8 — `integrations/audio_control.py`.
 
     É o caminho do controle deslizante do microfone. Até 03/09 ele tinha régua
     própria e só enxergava o cabo; hoje pergunta ao dono, e é por isso que a
@@ -837,7 +843,7 @@ def _dois_canais() -> dict[str, str]:
 
 
 def test_a_regra_0_alcanca_quem_ouve(pactl, monkeypatch) -> None:  # type: ignore[no-untyped-def]
-    """Chamador 3/7 — `integrations/quem_ouve_o_microfone.py` (QUEM ouve)."""
+    """Chamador 3/8 — `integrations/quem_ouve_o_microfone.py` (QUEM ouve)."""
     from hefesto_dualsense4unix.integrations import quem_ouve_o_microfone as qo
 
     canais = _dois_canais()
@@ -860,7 +866,7 @@ def test_a_regra_0_alcanca_quem_ouve(pactl, monkeypatch) -> None:  # type: ignor
 
 
 def test_a_regra_0_alcanca_a_luz(pactl, monkeypatch) -> None:  # type: ignore[no-untyped-def]
-    """Chamador 4/7 — `daemon/subsystems/luz_do_mic.py` (POR ONDE)."""
+    """Chamador 4/8 — `daemon/subsystems/luz_do_mic.py` (POR ONDE)."""
     from hefesto_dualsense4unix.daemon.subsystems import luz_do_mic as luz
     from hefesto_dualsense4unix.integrations import eleicao_de_microfone as el
 
@@ -871,7 +877,7 @@ def test_a_regra_0_alcanca_a_luz(pactl, monkeypatch) -> None:  # type: ignore[no
 
 
 def test_a_regra_0_alcanca_o_medidor_da_janela(pactl, monkeypatch) -> None:  # type: ignore[no-untyped-def]
-    """Chamador 5/7 — `app/mic_monitor.py` (o medidor de nível de cada card)."""
+    """Chamador 5/8 — `app/mic_monitor.py` (o medidor de nível de cada card)."""
     from hefesto_dualsense4unix.app import mic_monitor as mm
 
     canais = _dois_canais()
@@ -894,7 +900,7 @@ def test_a_regra_0_alcanca_o_medidor_da_janela(pactl, monkeypatch) -> None:  # t
 
 
 def test_a_regra_0_e_inerte_no_escolher_sink_por_construcao(pactl) -> None:  # type: ignore[no-untyped-def]
-    """Chamador 6/7 — `integrations/fontes_de_captura.py::escolher_sink`.
+    """Chamador 6/8 — `integrations/fontes_de_captura.py::escolher_sink`.
 
     Aqui a regra 0 é INERTE **de propósito, e o corte é a montante**: um
     `hefesto_mic_<hex6>` é nó de CAPTURA e `sinks_dualsense` nunca o devolve. O
@@ -911,7 +917,7 @@ def test_a_regra_0_e_inerte_no_escolher_sink_por_construcao(pactl) -> None:  # t
 
 
 def test_a_regra_0_e_recusada_no_supervisor_do_cabo(pactl, monkeypatch) -> None:  # type: ignore[no-untyped-def]
-    """Chamador 7/7 — `daemon/subsystems/bt_mic.py`, e ele é o avesso dos seis.
+    """Chamador 7/8 — `daemon/subsystems/bt_mic.py`, e ele é o avesso dos seis.
 
     MIC-OS-QUATRO-01 (09/09/2026). O supervisor do canal do CABO pergunta ao
     dono — `escolher_fonte` — e **recusa** a resposta da regra 0, porque a
@@ -955,6 +961,33 @@ def test_a_regra_0_e_recusada_no_supervisor_do_cabo(pactl, monkeypatch) -> None:
         "o supervisor mandou o canal se alimentar de SI MESMO: a regra 0 "
         f"venceu onde ela tinha de ser recusada — fonte={pedidos[0][2]!r}"
     )
+
+
+def test_a_regra_0_alcanca_a_escolha_gravada_do_nascimento(pactl) -> None:  # type: ignore[no-untyped-def]
+    """Chamador 8/8 — `daemon/subsystems/hotkey.py`, no nascimento do microfone.
+
+    18/09/2026. A partida do daemon solta um nascimento por controle na mesa, e
+    o primeiro da fila elegia por cima da escolha gravada dela. A pergunta que
+    o impede é *"de que controle é o nó que o WirePlumber guarda como padrão?"*
+    — e quem responde é o dono, pela regra 0 quando o nó é o canal por
+    controle. A escolha gravada é o canal do P2; para o P1 ela é do vizinho,
+    para o P2 ela é dele mesmo.
+    """
+    from hefesto_dualsense4unix.daemon.subsystems import hotkey
+
+    canal.abrir(P2, "Microfone do P2")
+    o_do_p2 = canal.de_pe()[P2]
+    estado = Path.home() / ".local" / "state" / "wireplumber"
+    estado.mkdir(parents=True, exist_ok=True)
+    (estado / "default-nodes").write_text(
+        f"[default-nodes]\ndefault.configured.audio.source={o_do_p2}\n", encoding="utf-8"
+    )
+
+    assert hotkey._a_escolha_gravada_e_de_outro_controle(P1, [P1, P2]) == o_do_p2, (
+        "o nascimento do P1 não reconheceu o canal do P2 como a escolha gravada "
+        "de outro controle — a partida passaria por cima dela"
+    )
+    assert hotkey._a_escolha_gravada_e_de_outro_controle(P2, [P1, P2]) is None
 
 
 def bt_mic_eleicao():  # type: ignore[no-untyped-def]
