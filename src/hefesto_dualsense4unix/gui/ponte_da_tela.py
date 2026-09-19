@@ -639,7 +639,7 @@ class JanelaDaAba:
     #: geometria nova do compositor ainda não foi aplicada — o redesenho de lá
     #: repinta a decoração para a largura VELHA, que é o defeito original.
     #: Uma volta do laço principal depois, a janela já tem o tamanho de verdade.
-    ATRASO_DO_REDESENHO_MS = 60
+    ATRASOS_DO_REDESENHO_MS = (60, 300)
 
     def _a_barra_se_refaz(self, _janela: Any, _evento: Any) -> bool:
         """Agenda o redesenho da decoração para DEPOIS da geometria nova.
@@ -649,7 +649,13 @@ class JanelaDaAba:
         escute — um `True` aqui engoliria a notificação de maximizar para o
         resto da janela.
         """
-        GLib.timeout_add(self.ATRASO_DO_REDESENHO_MS, self._repintar_a_decoracao)
+        # DOIS TIQUES, E NÃO UM — 3ª volta, 19/09/2026. A sequência de quatro
+        # fotos dela isolou o gatilho: abrir certo, ladrilhar certo, **clicar em
+        # maximizar** quebra, print conserta. Um tique só a 60 ms pegava cedo
+        # demais para o gesto de maximizar, que troca a geometria DUAS vezes (o
+        # estado primeiro, o tamanho depois). O segundo tique é a rede.
+        for atraso in self.ATRASOS_DO_REDESENHO_MS:
+            GLib.timeout_add(atraso, self._repintar_a_decoracao)
         return False
 
     def _repintar_a_decoracao(self) -> bool:
@@ -666,8 +672,30 @@ class JanelaDaAba:
 
         `False` para o timeout não se repetir: é um gesto por mudança de estado.
         """
+        # A JANELA TAMBÉM, e ela é a que faltava — 3ª volta. As duas primeiras
+        # curas refaziam o layout da BARRA, e a barra obedece: ela já entregava
+        # os três botões em todos os instantes medidos. Quem chega torto ao
+        # compositor é a GEOMETRIA DA JANELA — sob Wayland com decoração do
+        # cliente, o GTK declara uma área útil que exclui a sombra, e é esse
+        # número que desloca o conteúdo ~35 px (a largura da sombra) nas fotos
+        # dela. Só um `queue_resize` na própria janela o recalcula.
+        self.janela.queue_resize()
         barra = self.janela.get_titlebar()
         if barra is not None:
+            # ESCONDER E MOSTRAR, E NÃO SÓ PEDIR REDESENHO — 3ª volta, 19/09.
+            # As duas curas anteriores pediram `queue_resize`/`queue_draw` e a
+            # tela não mudou. O número que explica está na medição dela: um
+            # botão, e **175 px de barra vazia à direita dele**, com um
+            # fragmento do segundo. Isso não é decoração desenhada pequena: é
+            # uma FAIXA repintada e o resto da barra mostrando o quadro velho.
+            #
+            # Um `queue_draw` só marca sujo o que o GTK julga ter mudado, e ele
+            # julga que nada mudou — por isso a faixa. `hide()` seguido de
+            # `show_all()` tira o widget da cena e o devolve: a região inteira
+            # nasce suja, sem julgamento, e o quadro novo cobre o velho. É o que
+            # o print dela consegue de graça pelo portal de captura.
+            barra.hide()
+            barra.show_all()
             barra.queue_resize()
         gdk = self.janela.get_window()
         if gdk is not None:
