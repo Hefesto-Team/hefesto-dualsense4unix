@@ -1464,14 +1464,28 @@ GRAVADORES_DO_MONITOR: tuple[tuple[str, tuple[str, ...]], ...] = (
     (
         "pw-record",
         ("--target={fonte}", "--rate={taxa}", "--channels={canais}",
-         "--format=s16", "-P", "node.name={rotulo}", "-"),
+         "--format=s16", "--latency={latencia_ms}ms", "-P", "node.name={rotulo}",
+         "-"),
     ),
     (
         "parec",
         ("--device={fonte}", "--rate={taxa}", "--channels={canais}",
-         "--format=s16le", "--raw", "--client-name={rotulo}"),
+         "--format=s16le", "--raw", "--latency-msec={latencia_ms}",
+         "--client-name={rotulo}"),
     ),
 )
+
+#: A LATÊNCIA QUE SE PEDE AO GRAVADOR DO MONITOR — medida em 18/09/2026, com os
+#: três controles no rádio e o tom tocando num nó só, pelas escritas do daemon:
+#:
+#:     parec sem --latency-msec  → o som sai no rádio 1,79 a 2,04 s depois do jogo
+#:
+#: É o fragmento padrão do `parec` (quase dois segundos), o mesmo que a casa
+#: mediu no microfone em 06/09 (`canal_do_microfone._LATENCIA_DO_ALIMENTADOR_MS`).
+#: Num jogo, o tiro soava dois segundos depois do tiro, e a vibração por áudio
+#: passa por esta mesma tabela. O `pw-record` nasce com 100 ms, e o número vai
+#: explícito nos dois para que o caminho escolhido não mude o atraso.
+LATENCIA_DO_GRAVADOR_MS = 40
 
 
 def serial_do_no(nome: str) -> int | None:
@@ -1617,10 +1631,12 @@ def argv_do_gravador(
             if serial is None:
                 continue
             return [binario, *(m.format(fonte=str(serial), taxa=taxa,
-                                        canais=canais, rotulo=rotulo)
+                                        canais=canais, rotulo=rotulo,
+                                        latencia_ms=LATENCIA_DO_GRAVADOR_MS)
                                for m in modelo)]
         return [binario, *(m.format(fonte=fonte, taxa=taxa, canais=canais,
-                                    rotulo=rotulo)
+                                    rotulo=rotulo,
+                                    latencia_ms=LATENCIA_DO_GRAVADOR_MS)
                            for m in modelo)]
     return []
 
@@ -3340,6 +3356,7 @@ __all__ = [
     "GRAVADORES_DO_MONITOR",
     "HEX_DO_SUFIXO",
     "INTERVALO_DE_ENVIO_035",
+    "LATENCIA_DO_GRAVADOR_MS",
     "MOTIVO_NO_SEM_ASSENTO",
     "MOTIVO_NO_SEM_PLACA_NO_CABO",
     "MOTIVO_NO_SEM_PONTE_NO_RADIO",
