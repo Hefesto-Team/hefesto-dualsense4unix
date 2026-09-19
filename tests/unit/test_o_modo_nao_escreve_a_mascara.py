@@ -492,7 +492,22 @@ def test_o_caminho_escolhido_volta_com_o_boot_e_a_flag_velha_nao_muda(
                 pool = getattr(daemon, nome, None)
                 if pool is not None:
                     pool.shutdown(wait=False)
-        assert daemon.config.gamepad_caminho == "xbox", "o boot não leu o caminho dela"
+        # NOTA DATADA — 19/09/2026, CAMINHO-CONTAGIO-01, ponto 3. Esta linha
+        # exigia `"xbox"`, e agora o boot DEVOLVE esse valor ao default: o
+        # `gamepad_caminho.flag` da máquina dela dizia `xbox` desde 18/09 às
+        # 11:18 porque o PS + R3 dentro do DON'T SCREAM gravava nos dois
+        # lugares, e não por escolha dela para todos os jogos.
+        #
+        # O que este teste promete no NOME continua medido, e melhor: o boot
+        # LEU o arquivo — se não tivesse lido, `gamepad_caminho` teria ficado
+        # em `None`, o default da config, e não em `dualsense`. A devolução só
+        # acontece para quem leu `xbox`.
+        assert daemon.config.gamepad_caminho == "dualsense", (
+            "o boot não leu o caminho dela — sem leitura o slot fica em None"
+        )
+        assert session.load_gamepad_caminho() == "dualsense", (
+            "a devolução não chegou ao disco: o boot seguinte leria `xbox` de novo"
+        )
         if not daemon._native_mode:
             assert (daemon.config.gamepad_emulation_enabled, daemon.config.gamepad_flavor) == (
                 True, "dualsense"), "o boot passou a ler a flag velha de outro jeito"

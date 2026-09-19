@@ -423,6 +423,52 @@ APLICADO = "aplicado"
 ADIADO_LOCK_MANUAL = "adiado_lock_manual"
 IGNORADO_CATCH_ALL = "ignorado_catch_all"
 IGNORADO_JANELA_DE_JOGO = "ignorado_janela_de_jogo"
+
+
+def _a_escolha_dela_sem_o_vazamento(do_disco: object) -> str | None:
+    """A escolha dela lida do disco, com o `xbox` do vazamento devolvido.
+
+    CAMINHO-CONTAGIO-01, ponto 3 do escopo de 19/09/2026.
+
+    O `gamepad_caminho.flag` da máquina dela diz `xbox` desde 18/09 às 11:18 —
+    e não por escolha dela para todos os jogos, mas porque o PS + R3 dentro do
+    DON'T SCREAM gravava nos dois lugares (o ponto 1 desta sprint fechou a
+    porta). O arquivo ficou com um valor que ninguém pediu, e o ponto 2 já fez
+    com que ninguém NASÇA dele — mas a tela continua mostrando `xbox` como
+    «a escolha dela», que é uma afirmação falsa sobre a pessoa.
+
+    **SÓ O VALOR QUE O VAZAMENTO ESCREVE É DEVOLVIDO**, e a assimetria é de
+    propósito: `xbox` é o único caminho que o gesto carimbava globalmente sem
+    ela pedir, e é o que desliga giroscópio, acelerômetro e touchpad. Um
+    `dualsense` no arquivo não precisa de conserto — ele já é o default —, e
+    apagar um valor que ela tenha escolhido de propósito seria atropelar a
+    escolha em nome de consertá-la.
+
+    **UMA VEZ, e não a cada boot:** quem devolve escreve o arquivo, então a
+    volta seguinte lê `dualsense` e esta função não faz nada. É o que a torna
+    uma migração, e não uma regra permanente que impediria ela de escolher
+    Xbox para tudo se quiser — pelo caminho normal, com jogo nenhum em foco.
+    """
+    from hefesto_dualsense4unix.integrations.virtual_pad import (
+        CAMINHO_DUALSENSE,
+        CAMINHO_XBOX,
+        normalizar_caminho,
+    )
+
+    lido = normalizar_caminho(do_disco)
+    if lido != CAMINHO_XBOX:
+        return lido
+    with contextlib.suppress(Exception):
+        from hefesto_dualsense4unix.utils.session import save_gamepad_caminho
+
+        save_gamepad_caminho(CAMINHO_DUALSENSE)
+    logger.info(
+        "caminho_global_devolvido_ao_default",
+        era=lido,
+        agora=CAMINHO_DUALSENSE,
+        motivo="escrito_pelo_vazamento_do_gesto_no_jogo",
+    )
+    return CAMINHO_DUALSENSE
 FALHOU = "falhou"
 
 #: SOM-02/E4: a seção não foi escrita porque NÃO HÁ controle para escrever
@@ -960,15 +1006,16 @@ class Daemon:
                 self.config.gamepad_flavor = gp_flavor
             self.config.mouse_emulation_enabled = False
         # MODO-DE-CONEXAO-01: o CAMINHO que ela escolheu volta com o boot, lido
-        # do arquivo ao lado da flag (o formato da flag não mudou).
-        from hefesto_dualsense4unix.integrations.virtual_pad import normalizar_caminho
+        # do arquivo ao lado da flag (o formato da flag não mudou). A
+        # normalização mora em `_a_escolha_dela_sem_o_vazamento` desde 19/09,
+        # junto com a devolução do `xbox` que o gesto no jogo carimbava.
         from hefesto_dualsense4unix.utils.session import load_gamepad_caminho
 
         # O-CAMINHO-NAO-VAZA-01: a flag é a ESCOLHA DELA, e vai para o slot da
         # escolha. O `gamepad_caminho` (o canal VIVO) acompanha junto porque no
         # boot, antes de qualquer perfil, os dois são a mesma coisa — e a tela
         # tem de ter o que dizer antes de o primeiro vpad nascer.
-        escolha_dela = normalizar_caminho(load_gamepad_caminho())
+        escolha_dela = _a_escolha_dela_sem_o_vazamento(load_gamepad_caminho())
         self.config.gamepad_caminho_global = escolha_dela
         self.config.gamepad_caminho = escolha_dela
         # EMULACAO-NO-JOGO-01: restaura a PREFERÊNCIA de teclado emulado. Ao lado

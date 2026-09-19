@@ -2100,10 +2100,72 @@ def _caminho_a_herdar(daemon: DaemonProtocol) -> str | None:
     É função nomeada, e não uma linha embutida, para a régua poder MORDER o
     ponto exato: `test_o_caminho_nao_vaza_entre_jogos` repõe aqui a leitura
     velha e o laço de produção inteiro roda por cima dela.
-    """
-    from hefesto_dualsense4unix.integrations.virtual_pad import normalizar_caminho
 
-    return normalizar_caminho(getattr(daemon.config, "gamepad_caminho_global", None))
+    E AGORA NÃO HERDA DE LUGAR NENHUM — CAMINHO-CONTAGIO-01, ponto 2 do escopo
+    de 19/09/2026, e é ordem dela:
+
+        *"sim tudo dualsense, tudo ligado mascara dualsense por default mas
+        esse vazamento me preocupa"*  <!-- noqa-acento: citação literal dela -->
+
+    A O-CAMINHO-NAO-VAZA-01 mudou a FONTE da herança — do slot da sessão para a
+    escolha dela — e o vazamento voltou por outra porta: o `gamepad_caminho.flag`
+    é escrito por TODO gesto manual, e o PS + R3 dentro de um jogo é manual.
+    Medido em 18/09: um aperto no DON'T SCREAM carimbou `xbox` no arquivo
+    global, e **26 dos 29 perfis não têm `mode.caminho`** — herdaram todos, o
+    PRAGMATA entre eles, com giroscópio e touchpad fora do jogo.
+
+    **A CURA NÃO É UMA FONTE MELHOR, É NENHUMA FONTE.** Enquanto um start sem
+    opinião herdar de qualquer lugar, existe um lugar a envenenar; a terceira
+    porta seria achada pela terceira vez. O caminho DualSense é o que tem TODAS
+    as features (UHID: giroscópio, acelerômetro e touchpad chegam ao jogo), e é
+    o default que a ordem dela de 17/09 já pedia — *"os jogos e perfis tem que
+    iniciar com todas as features ativadas por default"*.
+
+    O `gamepad_caminho_global` CONTINUA EXISTINDO e continua sendo escrito: ele
+    é o que a tela mostra como escolha dela e o que o `--status` relata. O que
+    mudou é que ninguém NASCE dele.
+
+    **DEVOLVER ``None`` É O QUE ENTREGA «TUDO DUALSENSE», E NÃO CRAVAR
+    `dualsense`** — medido em 19/09, e a diferença aparece num caso só, que é
+    justamente o dela. ``None`` significa *"ninguém escolheu"*, e quem lê
+    aplica `virtual_pad.caminho_resolvido`, que responde pela MÁSCARA:
+
+        caminho_resolvido(None, "dualsense")  ->  dualsense   (UHID: tudo ligado)
+        caminho_resolvido(None, "xbox")       ->  xbox
+
+    A máscara nasce `dualsense`, então o default É DualSense para todo perfil
+    que não opina — que é o PRAGMATA e os outros 25. Cravar `dualsense` aqui
+    daria o mesmo resultado nesse caso e um resultado ERRADO no outro: com o
+    cartão do P1 em «Xbox 360» (escolha dela, máscara `xbox`), o slot passaria
+    a dizer `dualsense` sobre um aparelho que `quer_uhid` mantém em uinput — a
+    tela afirmando DualSense sobre um vpad Xbox. É o F7 desta casa, o produto
+    dizendo uma coisa e fazendo outra, e foi a premissa de
+    `test_com_o_cartao_em_xbox_360_o_chip_acende_o_escolhido_e_nao_a_mascara`
+    que o revelou.
+    """
+    return None
+
+
+def _ha_jogo_em_foco(daemon: DaemonProtocol) -> bool:
+    """Há uma janela de jogo em foco AGORA? — CAMINHO-CONTAGIO-01, 19/09/2026.
+
+    Fachada sobre `lifecycle._janela_de_jogo_em_foco`, que é quem tem o
+    detector (e reconhece o cliente Steam junto dos `steam_app_<id>`, pela
+    VPAD-NA-JANELA-DA-STEAM-01). Existe como função nomeada pela mesma razão do
+    `_caminho_a_herdar` logo acima: a régua morde o ponto exato.
+
+    **NUNCA LEVANTA, e falha para `False`** — quem chama é a rota de escrita de
+    um gesto dela, e o lado seguro aqui é ESCREVER o global. Perder uma escolha
+    dela é pior que um vazamento que o ponto 2 já tornou inofensivo.
+    """
+    olhar = getattr(daemon, "_janela_de_jogo_em_foco", None)
+    if not callable(olhar):
+        return False
+    try:
+        return bool(olhar())
+    except Exception as exc:  # pragma: no cover — detector de janela é frágil
+        logger.debug("jogo_em_foco_indisponivel", err=str(exc))
+        return False
 
 
 #: Sentinela de `_guardar_o_caminho`: *"o da sessão é o que o chamador pediu"*.
@@ -2160,10 +2222,36 @@ def _guardar_o_caminho(
     # O DA SESSÃO — sempre, e para qualquer origem, INCLUSIVE para limpar.
     pedido = caminho if da_sessao is _O_MESMO_QUE_O_PEDIDO else da_sessao
     daemon.config.gamepad_caminho = normalizar_caminho(pedido)
-    # A ESCOLHA DELA — só o gesto manual, e é a única herança de um start sem
-    # opinião. Perfil, boot, autoswitch e hotplug nunca escrevem aqui.
+    # A ESCOLHA DELA — só o gesto manual. Perfil, boot, autoswitch e hotplug
+    # nunca escrevem aqui.
     escolhido = normalizar_caminho(caminho)
     if escolhido is None or origin != "manual":
+        return
+    # E O GESTO DENTRO DE UM JOGO FICA NO JOGO — CAMINHO-CONTAGIO-01, ponto 1
+    # do escopo de 19/09/2026. Decisão dela: *"tá mas isso é claramente um
+    # vazamento."*  <!-- noqa-acento: citação literal dela -->
+    #
+    # O PS + R3 num jogo grava DUAS vezes: no perfil daquele jogo, que é a
+    # decisão dela, e neste arquivo global, que vale para todos. Medido no log
+    # de 18/09, 11:18:21 — um aperto no DON'T SCREAM virou lei sobre 26 jogos.
+    #
+    # A GUARDA É A JANELA, e não "gravou num perfil": o gesto no desktop também
+    # grava num perfil (o da área de trabalho), e ali escrever no global é o
+    # comportamento certo — é onde ela escolhe para valer em todo jogo. A
+    # pergunta que separa os dois é *"há um jogo aberto agora?"*, e ela já tem
+    # dono nesta casa: `lifecycle._janela_de_jogo_em_foco`, leitura CRUA da
+    # janela em foco (o sticky de 30 s congelaria o desktop logo após fechar o
+    # jogo).
+    #
+    # FALHA PARA O LADO DE ESCREVER: sem o detector, ou com ele levantando, o
+    # global é escrito como antes. A perda de uma escolha dela é pior que um
+    # vazamento que o ponto 2 já tornou inofensivo — ninguém mais nasce daqui.
+    if _ha_jogo_em_foco(daemon):
+        logger.info(
+            "caminho_do_gesto_ficou_no_jogo",
+            caminho=escolhido,
+            motivo="janela_de_jogo_em_foco",
+        )
         return
     daemon.config.gamepad_caminho_global = escolhido
     with contextlib.suppress(Exception):

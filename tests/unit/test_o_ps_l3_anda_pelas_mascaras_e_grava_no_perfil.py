@@ -217,6 +217,14 @@ async def test_tres_apertos_andam_pelas_mascaras_com_o_jogo_aberto(
     assert gp.start_gamepad_emulation_desfecho(d, None, origin="profile") == gp.EMU_APLICADO
     assert d._gamepad_device.backend == "uhid", "premissa: Sony DualSense com cartão DualSense"
     d.display_authority = "game"
+    # LIDO, E NÃO DIGITADO — 19/09/2026. Esta prova cravava `"dualsense"`, que
+    # era o que a herança pelo arquivo global punha no slot. A
+    # CAMINHO-CONTAGIO-01 tirou a herança (um start sem opinião não nasce de
+    # lugar nenhum, e a máscara decide), então o valor de referência mudou e a
+    # régua reprovou a cura em vez do defeito. O que ela promete no texto — *o
+    # gesto de MÁSCARA não mexe no MODO* — continua medido, e melhor: agora
+    # contra o que estava lá, qualquer que seja.
+    caminho_antes = d.config.gamepad_caminho
 
     gesto = hotkey.build_next_mask_callback(d)  # type: ignore[arg-type]
     #: (a máscara que o vpad veste, o canal) depois de cada aperto.
@@ -230,7 +238,10 @@ async def test_tres_apertos_andam_pelas_mascaras_com_o_jogo_aberto(
             f"aperto {aperto}: o cartão do perfil ativo ficou em {_mascara_gravada()!r}"
         )
         assert em.registro_de_mascaras().mask_for(P1) == mascara, f"aperto {aperto}"
-        assert d.config.gamepad_caminho == "dualsense", f"aperto {aperto}: o gesto mexeu no modo"
+        assert d.config.gamepad_caminho == caminho_antes, (
+            f"aperto {aperto}: o gesto de máscara mexeu no modo "
+            f"({caminho_antes!r} -> {d.config.gamepad_caminho!r})"
+        )
         modo = loader.load_profile(PERFIL).mode
         assert modo is not None and (modo.kind, modo.caminho) == ("gamepad", "dualsense")
 
