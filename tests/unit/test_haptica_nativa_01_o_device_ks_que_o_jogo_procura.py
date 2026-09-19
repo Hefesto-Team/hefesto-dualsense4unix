@@ -21,9 +21,12 @@ seriais das instâncias do winebus estão na faixa sintética `aa:bb:cc`.
 """
 from __future__ import annotations
 
+import contextlib
 import json
+import os
 import re
 import shutil
+import signal
 import socket
 import subprocess
 import tempfile
@@ -600,11 +603,6 @@ def test_sem_no_do_radio_nem_cabo_nada_muda(tmp_path: Path) -> None:
 # Steam, ao contrário de todo vizinho do arquivo. Um `pipewire-pulse` travado —
 # medido nesta casa por horas depois da queda de um controle BT — deixava o
 # `pactl` preso e o wrapper nunca chegava ao `exec`: nenhum jogo abria.
-
-import contextlib
-import os
-import signal
-
 
 def _lancar_com_o_pactl(
     tmp_path: Path,
