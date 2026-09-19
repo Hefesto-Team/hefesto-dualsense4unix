@@ -299,16 +299,30 @@ def _rodar(argv: list[str]) -> tuple[int, str]:
 def _script_do_wireplumber() -> Path | None:
     """O script que é DONO do critério de fonte que se sustenta.
 
-    Procurado ao lado do pacote (árvore de desenvolvimento) e no `PATH`
-    (instalado). `None` = não dá para consultar, e nesse caso a eleição RECUSA
-    em vez de inventar um critério próprio.
+    Procurado onde ESTA instalação pôs o `share/` do Hefesto, pela busca única
+    da casa (`utils/repo_files.encontrar_arquivo_do_repo`), e por último no
+    `PATH`. `None` = não dá para consultar, e nesse caso a eleição RECUSA em
+    vez de inventar um critério próprio.
+
+    **ESTA BUSCA SÓ VIA O CHECKOUT até 18/09/2026.** Ela subia pelos pais
+    deste arquivo, o que acha `scripts/` na instalação editável do
+    `install.sh` e em mais nenhuma: o `.deb`, o Fedora, o Arch e o Nix põem o
+    script em `share/hefesto-dualsense4unix/scripts/`, e o Flatpak em
+    `/app/share/…` — nenhum deles é pai do pacote Python. Nessas máquinas a
+    eleição inteira recusava; e o microfone que nasce no ar tentava eleger, era
+    recusado e a sexta porta desfazia a palavra — MUDO, no hotplug e em toda
+    partida do daemon. A BG-BASES-01 levou as outras listas de bases para a
+    busca única pelo mesmo motivo; esta escapou por morar em `integrations/`.
+
+    O import é PREGUIÇOSO para não mexer no topo do módulo: o mapa de canais
+    cita linhas deste arquivo por número.
     """
+    from hefesto_dualsense4unix.utils.repo_files import encontrar_arquivo_do_repo
+
     nome = "fix_wireplumber_default_source.sh"
-    aqui = Path(__file__).resolve()
-    for pai in aqui.parents:
-        candidato = pai / "scripts" / nome
-        if candidato.is_file():
-            return candidato
+    achado_na_instalacao = encontrar_arquivo_do_repo(f"scripts/{nome}")
+    if achado_na_instalacao is not None:
+        return achado_na_instalacao
     achado = shutil.which(nome)
     return Path(achado) if achado else None
 
@@ -375,6 +389,18 @@ def melhor_fonte_elegivel() -> str | None:
     return nome or None
 
 
+class ConsultaIndisponivelError(RuntimeError):
+    """Não deu para PERGUNTAR ao dono do critério — e isso não é a resposta.
+
+    É o terceiro estado de :func:`outra_captura_elegivel`, e ele existe porque
+    nenhum dos outros dois o diz: `None` é *"consultei, e não há"*, um nome é
+    *"consultei, e há este"*. Sem script, com um script mais velho que não
+    conhece a pergunta, com o `bash` respondendo erro ou estourando o
+    `_TIMEOUT_S`, a verdade é *"não sei"* — e devolvê-la como `None` fazia o
+    nascimento do microfone ELEGER na dúvida, o contrário do que ele promete.
+    """
+
+
 def outra_captura_elegivel() -> str | None:
     """A melhor captura com porta usável que não é CONTROLE NENHUM, ou `None`.
 
@@ -387,16 +413,33 @@ def outra_captura_elegivel() -> str | None:
     Com a pergunta de lá, o canal do primeiro controle da mesa passaria por
     headset e o segundo nunca elegeria na máquina que só tem os controles.
 
-    `None` também quando o script não conhece a pergunta (produto instalado
-    mais velho que o pacote): é o comportamento de antes desta função, e nunca
-    uma instalação silenciosa — ver :func:`_script_conhece`.
+    **TRÊS RESPOSTAS, E A TERCEIRA LEVANTA** (18/09/2026): um nome, `None`
+    (consultei e não há) ou :class:`ConsultaIndisponivelError` (não deu para
+    consultar). Até esta data o *"não deu"* voltava como `None`, e o nascimento
+    lia *"não há outro microfone"* e elegia: com a consulta estourando o tempo
+    enquanto o `--fonte-se-sustenta` ainda respondia, o controle tomava o
+    headset; sem o script, a eleição recusava e a sexta porta deixava o
+    microfone MUDO. Levantar em vez de devolver é o que obriga quem pergunta a
+    tratar o *"não sei"* — e o único que pergunta trata como *"não eleja"*.
+
+    O script que não conhece a pergunta (produto instalado mais velho que o
+    pacote) também levanta, e nunca é chamado: chamar seria uma instalação
+    silenciosa — ver :func:`_script_conhece`.
     """
     script = _script_do_wireplumber()
-    if script is None or not _script_conhece(script, "--outra-captura-elegivel"):
-        return None
+    if script is None:
+        raise ConsultaIndisponivelError(
+            "o script do WirePlumber não está nesta instalação"
+        )
+    if not _script_conhece(script, "--outra-captura-elegivel"):
+        raise ConsultaIndisponivelError(
+            f"{script} não conhece --outra-captura-elegivel (é mais velho que o pacote)"
+        )
     rc, saida = _rodar(["bash", str(script), "--outra-captura-elegivel"])
     if rc != 0:
-        return None
+        raise ConsultaIndisponivelError(
+            f"--outra-captura-elegivel não respondeu (rc={rc})"
+        )
     nome = saida.strip().splitlines()[-1].strip() if saida.strip() else ""
     return nome or None
 
@@ -977,6 +1020,7 @@ def casamento_usb_agora(uniqs: list[str]) -> CasamentoUSB | None:
 __all__ = [
     "ESPERA_DO_CANAL_PASSOS",
     "ESPERA_DO_CANAL_PASSO_S",
+    "ConsultaIndisponivelError",
     "EleitorDeMicrofone",
     "ResultadoDaEleicao",
     "_script_conhece",

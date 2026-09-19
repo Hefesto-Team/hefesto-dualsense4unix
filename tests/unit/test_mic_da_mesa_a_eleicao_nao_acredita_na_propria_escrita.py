@@ -172,6 +172,12 @@ def test_flag_que_o_script_do_disco_nao_conhece_nao_e_chamada(
 
     CURA A ARRANCAR: tirar o `_script_conhece` e chamar o script direto — a
     régua reprova, porque o dublê registra a chamada que não podia acontecer.
+
+    **AS TRÊS PERGUNTAS, e a terceira é a mais cara** (18/09/2026): a
+    `--outra-captura-elegivel` é feita pelo NASCIMENTO do microfone, a cada
+    controle que conecta com a mesa sem dono — sem pedido nenhum dela. Uma
+    guarda arrancada ali roda o instalador a cada conexão. E o script velho
+    não é "não há outro microfone": é *"não deu para perguntar"*, que levanta.
     """
     script = tmp_path / "fix_wireplumber_default_source.sh"
     script.write_text("#!/usr/bin/env bash\n# um script velho, sem as flags novas\n")
@@ -186,6 +192,8 @@ def test_flag_que_o_script_do_disco_nao_conhece_nao_e_chamada(
 
     assert elm.fonte_se_sustenta(_ALVO) is None
     assert elm.melhor_fonte_elegivel() is None
+    with pytest.raises(elm.ConsultaIndisponivelError):
+        elm.outra_captura_elegivel()
     assert chamadas == [], "o script velho não pode ser chamado nem uma vez"
 
 

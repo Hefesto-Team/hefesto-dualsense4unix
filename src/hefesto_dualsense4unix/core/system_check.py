@@ -39,17 +39,47 @@ def _udev_hotplug_outdated() -> bool:
     return False
 
 
+#: A chave EXATA do padrão de captura que alguém escolheu. As irmãs com sufixo
+#: (`…source.0=`, `…source.1=`) são a PILHA do que foi escolhido antes
+#: (`state-default-nodes.lua` do WirePlumber) — não são a escolha de agora.
+_CHAVE_DA_FONTE_CONFIGURADA = "default.configured.audio.source"
+
+
+def fonte_configurada_do_wireplumber() -> str | None:
+    """O microfone padrão que alguém ESCOLHEU e o WirePlumber gravou, ou `None`.
+
+    É o `default.configured.audio.source` do `default-nodes`: o que um
+    `pactl set-default-source` (nosso ou de qualquer outro programa) ou a
+    escolha nas configurações de som deixou gravado. O WirePlumber o devolve
+    sozinho quando aquele nó reaparece — é por isso que ele é a escolha dela,
+    e não o ativo de agora.
+
+    **UM LEITOR SÓ DESTE ARQUIVO no lado Python.** O aviso de boot
+    (`_wireplumber_hijacks_mic`) e o nascimento do microfone
+    (`daemon/subsystems/hotkey._a_escolha_gravada_e_de_outro_controle`) fazem
+    a mesma pergunta ao mesmo disco; duas leituras seriam duas réguas sobre o
+    mesmo estado. O caminho é o mesmo dos donos do shell (`doctor.sh`,
+    `fix_wireplumber_default_source.sh`: `${HOME}/.local/state/...`).
+
+    `None` quando não há escolha gravada (a máquina nova, que nunca escolheu),
+    ou quando o arquivo não se deixa ler. Nunca levanta.
+    """
+    estado = Path.home() / ".local/state/wireplumber/default-nodes"
+    try:
+        linhas = estado.read_text(encoding="utf-8", errors="replace").splitlines()
+    except OSError:
+        return None
+    for linha in linhas:
+        chave, igual, valor = linha.partition("=")
+        if igual and chave.strip().lower() == _CHAVE_DA_FONTE_CONFIGURADA:
+            return valor.strip() or None
+    return None
+
+
 def _wireplumber_hijacks_mic() -> bool:
     """True se o WirePlumber fixou o DualSense como fonte de áudio padrão."""
-    state = Path.home() / ".local/state/wireplumber/default-nodes"
-    try:
-        for line in state.read_text(encoding="utf-8").splitlines():
-            low = line.lower()
-            if low.startswith("default.configured.audio.source=") and "dualsense" in low:
-                return True
-    except OSError:
-        pass
-    return False
+    fonte = fonte_configurada_do_wireplumber()
+    return fonte is not None and "dualsense" in fonte.lower()
 
 
 def _dir_dos_dropins() -> Path:
@@ -171,4 +201,4 @@ def system_warnings() -> list[str]:
     return warnings
 
 
-__all__ = ["system_warnings"]
+__all__ = ["fonte_configurada_do_wireplumber", "system_warnings"]

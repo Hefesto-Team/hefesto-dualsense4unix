@@ -121,6 +121,10 @@ P1 = "aabbcc000011"
 #: O segundo — a mesa de dois é o que separa "no ar" de "fonte padrão".
 P2 = "aabbcc000022"
 
+#: A consulta de VERDADE, guardada antes de a fixture `mesa` dublá-la: as
+#: réguas do "não deu para perguntar" precisam do dono, não do dublê.
+_OUTRA_CAPTURA_DE_VERDADE = elm.outra_captura_elegivel
+
 
 # ---------------------------------------------------------------------------
 # Os dublês
@@ -905,6 +909,256 @@ class TestAMaquinaComOutroMicrofone:
         assert await hotkey.nascer_no_ar(daemon, P1) is True
         assert mesa.eleitor.chamadas == []
         assert hotkey._no_ar_da_sessao(daemon).esta(P1)
+
+    @pytest.mark.parametrize(
+        "como", ["sem_o_script", "script_velho", "rc_de_erro", "estourou_o_tempo"]
+    )
+    @pytest.mark.asyncio
+    async def test_consulta_que_nao_respondeu_nao_toma_o_padrao(
+        self, mesa, monkeypatch: pytest.MonkeyPatch, tmp_path, como: str
+    ) -> None:
+        """"Não deu para perguntar" não é "não há outro microfone" (18/09/2026).
+
+        A consulta de VERDADE, com o dono do critério inalcançável de quatro
+        jeitos: sem o script (a instalação que não o traz), com um script mais
+        velho que não conhece a pergunta, com o `bash` respondendo erro, e com o
+        `_rodar` estourando o `_TIMEOUT_S`. Até esta data os quatro voltavam
+        como `None`, e o nascimento ELEGIA: numa máquina com headset, a
+        consulta lenta tomava o microfone da pessoa; sem o script, a eleição
+        recusava e a sexta porta deixava o microfone MUDO.
+
+        MORDIDA: devolva `None` em qualquer dos três `raise` de
+        `eleicao_de_microfone.outra_captura_elegivel` e o caso dele reprova.
+        """
+        chamadas: list[list[str]] = []
+        script = tmp_path / "fix_wireplumber_default_source.sh"
+        if como == "script_velho":
+            script.write_text("#!/usr/bin/env bash\n# sem as perguntas novas\n")
+        else:
+            script.write_text("#!/usr/bin/env bash\n--outra-captura-elegivel) :;;\n")
+        rc = {"rc_de_erro": 1, "estourou_o_tempo": 127}.get(como, 0)
+
+        def _rodar(argv: list[str]) -> tuple[int, str]:
+            chamadas.append(argv)
+            return (rc, "")
+
+        monkeypatch.setattr(elm, "outra_captura_elegivel", _OUTRA_CAPTURA_DE_VERDADE)
+        monkeypatch.setattr(
+            elm, "_script_do_wireplumber", lambda: None if como == "sem_o_script" else script
+        )
+        monkeypatch.setattr(elm, "_rodar", _rodar)
+        daemon = mesa.daemon()
+
+        assert await hotkey.nascer_no_ar(daemon, P1) is True
+
+        assert mesa.eleitor.chamadas == [], (
+            f"com a consulta inalcançável ({como}) o nascimento elegeu mesmo assim"
+        )
+        assert mesa.eleitor.eleito is None
+        assert hotkey._no_ar_da_sessao(daemon).esta(P1), (
+            "não poder perguntar custou o AR — o microfone tem de nascer ligado"
+        )
+        assert mesa.registro.no_ar().get(P1) is True, "a palavra não foi dita"
+        if como in ("sem_o_script", "script_velho"):
+            assert chamadas == [], "o script que não conhece a pergunta foi chamado"
+
+
+# ===========================================================================
+# 5b. A ESCOLHA GRAVADA DELA — a partida não passa por cima dela
+# ===========================================================================
+
+
+def _gravar_a_escolha(fonte: str) -> None:
+    """O `default-nodes` do WirePlumber, no lar de mentira da suíte.
+
+    Com a `.0` da pilha junto, como o WirePlumber escreve: a pilha é o que foi
+    escolhido ANTES, e não pode ser lida como a escolha de agora.
+    """
+    from pathlib import Path
+
+    estado = Path.home() / ".local" / "state" / "wireplumber"
+    estado.mkdir(parents=True, exist_ok=True)
+    (estado / "default-nodes").write_text(
+        "[default-nodes]\n"
+        f"default.configured.audio.source={fonte}\n"
+        "default.configured.audio.source.0=hefesto_mic_000011\n",
+        encoding="utf-8",
+    )
+
+
+#: O nó ALSA do DualSense no cabo: NENHUMA identidade no nome — o `-00.2` é o
+#: desempate posicional do PipeWire. De quem ele é, só o dispositivo USB diz.
+NO_DO_CABO_SEM_NOME = (
+    "alsa_input.usb-Sony_Interactive_Entertainment_"
+    "DualSense_Wireless_Controller-00.2.mono-fallback"
+)
+
+
+class TestAEscolhaGravadaDela:
+    """A partida do daemon não sobrescreve o microfone que ela escolheu.
+
+    Toda partida — o restart do `install.sh`, uma atualização, um tombo, o
+    login — solta um nascimento por controle na mesa, e o PRIMEIRO, com a mesa
+    sem dono, elegia. Com ela tendo escolhido o Controle 2, o
+    `default.configured.audio.source` do WirePlumber dizia o canal dele — e o
+    Controle 1 o sobrescrevia a cada restart. Antes de a partida nascer no ar,
+    essa escolha voltava sozinha quando o canal do Controle 2 subia.
+
+    MORDIDA: tire a pergunta `_a_escolha_gravada_e_de_outro_controle` de
+    `hotkey._o_nascimento_pode_tomar_o_padrao` e os casos do "outro controle"
+    reprovam; tire o casamento USB dela e o do cabo reprova.
+    """
+
+    @pytest.mark.parametrize(
+        "gravada",
+        [
+            f"hefesto_mic_{P2[-6:]}",
+            f"hefesto_dualsense_bt_{P2[-6:]}",
+            "bluez_input.AA_BB_CC_00_00_22.0",
+        ],
+        ids=["canal_por_controle", "ponte_do_radio", "bluez_com_o_endereco"],
+    )
+    @pytest.mark.asyncio
+    async def test_a_escolha_do_controle_2_nao_e_sobrescrita_pelo_1(
+        self, mesa, gravada: str
+    ) -> None:
+        _gravar_a_escolha(gravada)
+        daemon = mesa.daemon((P1, P2))
+
+        await hotkey.nascer_no_ar(daemon, P1)
+        await hotkey.nascer_no_ar(daemon, P2)
+
+        assert mesa.eleitor.chamadas == [("eleger", P2)], (
+            f"com {gravada} gravado, quem elegeu foi {mesa.eleitor.chamadas} — o "
+            "Controle 1 passou por cima da escolha dela"
+        )
+        assert mesa.eleitor.eleito == P2
+        no_ar = hotkey._no_ar_da_sessao(daemon)
+        assert no_ar.esta(P1) and no_ar.esta(P2), (
+            "respeitar a escolha custou o AR do Controle 1"
+        )
+
+    @pytest.mark.asyncio
+    async def test_o_no_do_cabo_sem_nome_e_resolvido_pelo_usb(
+        self, mesa, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """O nó do cabo não diz de quem é; o dispositivo USB diz.
+
+        É o nó que a eleição grava no cabo quando o canal por controle ainda não
+        subiu, e o que as configurações de som gravam quando ela escolhe o
+        "DualSense" na lista. Um teste de prefixo pegaria o canal e deixaria
+        este de fora.
+        """
+        from hefesto_dualsense4unix.integrations.fontes_de_captura import CasamentoUSB
+
+        pedidos: list[list[str]] = []
+
+        def _casamento(uniqs: list[str]) -> CasamentoUSB:
+            pedidos.append(list(uniqs))
+            return CasamentoUSB(
+                por_uniq={P1: "1-1", P2: "1-2"}, por_no={NO_DO_CABO_SEM_NOME: "1-2"}
+            )
+
+        monkeypatch.setattr(elm, "casamento_usb_agora", _casamento)
+        _gravar_a_escolha(NO_DO_CABO_SEM_NOME)
+        daemon = mesa.daemon((P1, P2))
+
+        await hotkey.nascer_no_ar(daemon, P1)
+        await hotkey.nascer_no_ar(daemon, P2)
+
+        assert mesa.eleitor.chamadas == [("eleger", P2)], mesa.eleitor.chamadas
+        assert pedidos and all(set(p) == {P1, P2} for p in pedidos), pedidos
+
+    @pytest.mark.asyncio
+    async def test_a_escolha_gravada_do_proprio_controle_elege(self, mesa) -> None:
+        _gravar_a_escolha(f"hefesto_mic_{P1[-6:]}")
+        daemon = mesa.daemon((P1, P2))
+
+        await hotkey.nascer_no_ar(daemon, P1)
+        await hotkey.nascer_no_ar(daemon, P2)
+
+        assert mesa.eleitor.chamadas == [("eleger", P1)]
+
+    @pytest.mark.asyncio
+    async def test_a_escolha_de_um_controle_fora_da_mesa_nao_segura_a_vez(
+        self, mesa
+    ) -> None:
+        """Decisão: só quem ESTÁ na mesa segura a vez.
+
+        Recusar por um controle que não veio hoje deixaria o microfone de quem
+        está aqui sem ser o padrão até um toque no 🎙 — e o nascimento existe
+        para funcionar sem gesto.
+        """
+        _gravar_a_escolha("hefesto_mic_000033")
+        daemon = mesa.daemon((P1, P2))
+
+        await hotkey.nascer_no_ar(daemon, P1)
+        await hotkey.nascer_no_ar(daemon, P2)
+
+        assert mesa.eleitor.chamadas == [("eleger", P1)]
+
+    @pytest.mark.asyncio
+    async def test_a_escolha_de_quem_ja_largou_a_mesa_nao_segura_a_vez(
+        self, mesa
+    ) -> None:
+        """O handle de quem saiu fica com o `uniq` e `connected: False`.
+
+        É o que o backend real faz, e é por isso que quem está na mesa é
+        `recado_do_microfone.mesa_de_agora`, e não `_uniqs_conectados`. Com a
+        lista errada, a escolha gravada do controle que foi embora seguraria a
+        vez do que ficou — no ar, mas nunca o padrão. MORDIDA: troque
+        `mesa_de_agora(daemon)` por `_uniqs_conectados(daemon)` em
+        `_o_nascimento_pode_tomar_o_padrao`.
+        """
+        _gravar_a_escolha(f"hefesto_mic_{P2[-6:]}")
+        daemon = mesa.daemon((P1, P2))
+        mesa.backend.describe_controllers = lambda: [
+            {"uniq": P1, "connected": True},
+            {"uniq": P2, "connected": False},
+        ]
+
+        await hotkey.nascer_no_ar(daemon, P1)
+
+        assert mesa.eleitor.chamadas == [("eleger", P1)], mesa.eleitor.chamadas
+
+    def test_sem_prova_o_no_do_cabo_nao_e_do_vizinho(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """A lista da mesa ainda sem este controle não entrega o nó ao outro.
+
+        `_uniqs_conectados` lê o backend na hora, e o controle que está
+        nascendo pode ainda não constar. Com um só na lista, a regra do "um
+        para um" de `escolher_fonte` daria o nó do cabo — que não diz de quem é
+        — ao vizinho sem prova nenhuma, e este nascimento deixaria de eleger
+        por uma escolha que talvez seja DELE. MORDIDA: passe `conectados` cru
+        como a mesa em `_a_escolha_gravada_e_de_outro_controle`.
+        """
+        monkeypatch.setattr(elm, "casamento_usb_agora", lambda uniqs: None)
+        _gravar_a_escolha(NO_DO_CABO_SEM_NOME)
+
+        assert hotkey._a_escolha_gravada_e_de_outro_controle(P1, [P2]) is None
+
+    @pytest.mark.asyncio
+    async def test_um_microfone_que_nao_e_dualsense_nao_pergunta_ao_usb(
+        self, mesa, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Headset gravado e fora da tomada: esta pergunta não o segura.
+
+        Quem responde por outro microfone é `outra_captura_elegivel` (e ela diz
+        que ele não está aqui). E o nome sem cara de DualSense não custa um
+        `pactl` ao nascimento.
+        """
+
+        def _nao_pode(uniqs: list[str]) -> None:
+            raise AssertionError("perguntou ao USB sobre um nó que não é DualSense")
+
+        monkeypatch.setattr(elm, "casamento_usb_agora", _nao_pode)
+        _gravar_a_escolha(HEADSET)
+        daemon = mesa.daemon((P1, P2))
+
+        await hotkey.nascer_no_ar(daemon, P1)
+
+        assert mesa.eleitor.chamadas == [("eleger", P1)]
 
 
 # ===========================================================================

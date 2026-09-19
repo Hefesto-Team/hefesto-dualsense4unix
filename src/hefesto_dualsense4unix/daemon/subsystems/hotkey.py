@@ -591,7 +591,7 @@ def _aplicar_ponte(daemon: DaemonProtocol, alvo: str) -> bool:
     aberto, e a casa já decidiu por escrito que "trocar de máscara com o jogo
     aberto é uma escolha legítima dela; a última palavra é sempre da usuária".
     O kwarg é chamado por `getattr` porque o `DaemonProtocol` ainda não o
-    declara (existe no Daemon real — `lifecycle.py:1572`) e o Protocol é
+    declara (existe no Daemon real — `lifecycle.py:1584`) e o Protocol é
     arquivo de outra frente nesta leva.
     """
     setter = getattr(daemon, "set_gamepad_emulation", None)
@@ -2606,9 +2606,11 @@ async def nascer_no_ar(daemon: DaemonProtocol, uniq: str) -> bool:
     mesma `_eleitor(daemon).eleito is None` que `_o_que_a_borda_pede` já usa.
     Com dono, os outros nascem no ar e não roubam nada — sem isso, o quarto
     controle a conectar tomaria a fonte padrão da máquina dela sem ela ter
-    tocado em coisa alguma. E a mesa sem dono não basta desde 18/09/2026: a
-    máquina também tem de não ter OUTRO microfone que a pessoa não trocou pelo
-    do controle (`_microfone_que_ja_e_da_maquina`).
+    tocado em coisa alguma. E a mesa sem dono não basta desde 18/09/2026: o
+    microfone padrão que ela GRAVOU não pode ser o de outro controle da mesa
+    (`_a_escolha_gravada_e_de_outro_controle`), e a máquina tem de não ter
+    OUTRO microfone que a pessoa não trocou pelo do controle
+    (`_microfone_que_ja_e_da_maquina`).
 
     **E ELEGER É O CAMINHO DE SEMPRE, NÃO UMA CÓPIA.** Com a mesa sem dono
     quem elege é `_metade_do_canal` — a mesma metade por onde passam o 🎙 da
@@ -2697,6 +2699,12 @@ def _microfone_que_ja_e_da_maquina() -> str | None:
     controle passaria por headset. Lido no código, não medido: na mesa dela,
     com os canais do rádio de pé desde a partida, nenhum controle elegeria mais.
 
+    **"NÃO DEU PARA PERGUNTAR" LEVANTA** `ConsultaIndisponivelError`, e não volta
+    como `None`: `None` aqui quer dizer *"pode eleger"*, e o nascimento elegia
+    na dúvida — sem o script, com um script velho, com a consulta estourando o
+    tempo. Quem trata a exceção é `_o_nascimento_pode_tomar_o_padrao`, como
+    *"não eleja"*.
+
     Bloqueia (disco e um `pactl` pelo script do WirePlumber): rode em worker.
     """
     from hefesto_dualsense4unix.core import system_check
@@ -2707,19 +2715,110 @@ def _microfone_que_ja_e_da_maquina() -> str | None:
     return eleicao_de_microfone.outra_captura_elegivel()
 
 
+def _a_escolha_gravada_e_de_outro_controle(uniq: str, conectados: list[str]) -> str | None:
+    """O microfone padrão que ela GRAVOU é o de OUTRO controle que está na mesa?
+
+    Devolve o nome gravado quando é, e `None` quando o nascimento de `uniq`
+    pode seguir para as outras perguntas.
+
+    **O DEFEITO, e ele nasceu com a partida que nasce no ar** (18/09/2026).
+    Toda partida do daemon — o restart do `install.sh`, uma atualização, um
+    tombo, o login — solta um nascimento por controle já na mesa, em ordem de
+    `alvos_conectados`, e o primeiro, com a mesa sem dono, elegia. Com ela
+    tendo escolhido o Controle 2, o `default.configured.audio.source` do
+    WirePlumber dizia o canal DELE — e antes da partida nascer no ar essa
+    escolha voltava sozinha quando o canal do Controle 2 subia. Com a partida
+    nascendo, o Controle 1 a sobrescrevia a cada restart: a escolha dela
+    morrendo antes do aparelho.
+
+    **QUEM RESPONDE É O DONO DE CADA METADE.** O valor gravado é
+    `system_check.fonte_configurada_do_wireplumber` — o mesmo leitor do aviso
+    de boot. *"De que controle é este nó?"* é `escolher_fonte`, a mesma
+    resolução da eleição: a identidade no nome (o canal por controle, a ponte
+    do rádio, o `bluez_input` com o endereço) e, para o nó ALSA do cabo, que
+    não traz identidade nenhuma no nome, o casamento pelo dispositivo USB. Um
+    teste de prefixo escrito aqui pegaria o canal e deixaria o cabo de fora.
+
+    **SÓ O CONTROLE QUE ESTÁ NA MESA SEGURA A VEZ, e é decisão.** Se a escolha
+    gravada é de um controle que não veio hoje, recusar deixaria o microfone
+    de quem está aqui sem ser o padrão da máquina até um toque no 🎙, e o
+    nascimento existe para o microfone funcionar sem gesto. A escolha
+    gravada de quem está na mesa, ao contrário, não custa nada a ninguém: o
+    nascimento DELE vem na mesma fila e elege.
+
+    Bloqueia (disco; e, só quando o nome gravado é de um DualSense sem
+    identidade no nome, um `pactl list sources` e o sysfs): rode em worker.
+    """
+    from hefesto_dualsense4unix.core import system_check
+    from hefesto_dualsense4unix.integrations import eleicao_de_microfone
+    from hefesto_dualsense4unix.integrations.fontes_de_captura import (
+        MARCADORES_DUALSENSE,
+        escolher_fonte,
+        identidade_no_nome,
+    )
+
+    gravada = system_check.fonte_configurada_do_wireplumber()
+    if not gravada:
+        return None
+    outros = [c for c in conectados if c and not _mesmo_controle(c, uniq)]
+    if not outros:
+        return None
+    # A mesa INTEIRA vai como `uniqs_com_audio`, com este controle dentro
+    # mesmo que a lista ainda não o traga: com um só na lista, a regra do "um
+    # para um" de `escolher_fonte` entregaria o nó ao vizinho sem prova.
+    mesa = [*outros, uniq]
+    usb = None
+    baixa = gravada.lower()
+    if not identidade_no_nome(gravada) and any(m in baixa for m in MARCADORES_DUALSENSE):
+        usb = eleicao_de_microfone.casamento_usb_agora(mesa)
+    for outro in outros:
+        if escolher_fonte([gravada], outro, mesa, usb) == gravada:
+            return gravada
+    return None
+
+
 async def _o_nascimento_pode_tomar_o_padrao(daemon: DaemonProtocol, uniq: str) -> bool:
     """`True` = este nascimento pode eleger o controle fonte padrão da máquina.
 
-    Na dúvida (a pergunta explodiu) a resposta é NÃO: não eleger deixa o
-    microfone no ar e custa um toque no 🎙; eleger por engano troca o microfone
-    de quem tem headset e o WirePlumber GRAVA a troca.
+    DUAS PERGUNTAS, em ordem: a escolha gravada dela é de outro controle da
+    mesa (`_a_escolha_gravada_e_de_outro_controle`)? a máquina tem outro
+    microfone (`_microfone_que_ja_e_da_maquina`)? Qualquer SIM deixa este
+    microfone no ar sem tomar o padrão.
+
+    Na dúvida a resposta é NÃO — a pergunta explodiu, ou o dono do critério não
+    pôde ser consultado (`ConsultaIndisponivelError`): não eleger deixa o microfone
+    no ar e custa um toque no 🎙; eleger por engano troca o microfone de quem
+    tem headset e o WirePlumber GRAVA a troca.
     """
+    from hefesto_dualsense4unix.integrations.eleicao_de_microfone import (
+        ConsultaIndisponivelError,
+    )
+
     correr = getattr(daemon, "_run_blocking", None)
-    try:
+
+    async def _perguntar(pergunta: Any, *args: Any) -> Any:
         if callable(correr):
-            outro = await correr(_microfone_que_ja_e_da_maquina)
-        else:
-            outro = _microfone_que_ja_e_da_maquina()
+            return await correr(pergunta, *args)
+        return pergunta(*args)
+
+    try:
+        # "QUEM ESTÁ NA MESA" é `mesa_de_agora`, que exige o `connected`, e não
+        # `_uniqs_conectados`: o backend real mantém o handle de quem saiu com
+        # o `uniq` preenchido, e a escolha gravada de um controle que já largou
+        # a mesa seguraria a vez para sempre. `None` (backend que não sabe
+        # listar) não sabe de vizinho nenhum.
+        gravada = await _perguntar(
+            _a_escolha_gravada_e_de_outro_controle,
+            uniq,
+            recado_do_microfone.mesa_de_agora(daemon) or [],
+        )
+        if gravada:
+            logger.info("mic_nasce_sem_tomar_o_padrao", uniq=uniq, escolha_gravada=gravada)
+            return False
+        outro = await _perguntar(_microfone_que_ja_e_da_maquina)
+    except ConsultaIndisponivelError as exc:
+        logger.info("mic_nasce_sem_tomar_o_padrao", uniq=uniq, consulta_indisponivel=str(exc))
+        return False
     except Exception:  # best-effort: a conexão dela não vira traceback
         logger.warning("mic_nascimento_pergunta_do_padrao_falhou", uniq=uniq, exc_info=True)
         return False
@@ -2758,10 +2857,10 @@ async def _nascer_no_ar_na_vez(daemon: DaemonProtocol, uniq: str) -> bool:
     # para o mesmo ato. `dizer_no_ar` cobre os dois ramos abaixo: o de eleição
     # pelo `_metade_do_canal`, e o outro por si mesmo.
     no_ar = _no_ar_da_sessao(daemon)
-    # A MESA SEM DONO JÁ NÃO BASTA PARA ELEGER (18/09/2026): a máquina também
-    # tem de não ter OUTRO microfone que a pessoa usa. Sem isso, o ramo de baixo
-    # é o de sempre — no ar, sem tomar o padrão. Ver
-    # `_microfone_que_ja_e_da_maquina`.
+    # A MESA SEM DONO JÁ NÃO BASTA PARA ELEGER (18/09/2026): a escolha gravada
+    # dela não pode ser de outro controle da mesa, e a máquina tem de não ter
+    # OUTRO microfone que a pessoa usa. Sem isso, o ramo de baixo é o de sempre
+    # — no ar, sem tomar o padrão. Ver `_o_nascimento_pode_tomar_o_padrao`.
     if _eleitor(daemon).eleito is None and await _o_nascimento_pode_tomar_o_padrao(
         daemon, uniq
     ):
