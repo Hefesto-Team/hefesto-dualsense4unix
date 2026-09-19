@@ -867,23 +867,24 @@ def test_deixar_tudo_pronto_faz_os_dois_dentro_de_um_consentimento_so(
                "steam_input_jogos": ["Um Jogo"]})
 
 
-def test_deixar_tudo_pronto_trava_o_proton_dentro_da_mesma_janela(
+def test_deixar_tudo_pronto_nao_trava_o_proton_calado(
         a07, ctx, desenho, monkeypatch):
-    """O Proton de cada jogo entra na MESMA janela — INSTALL-UNIVERSAL, 18/09/2026.
+    """O «tudo pronto» faz os DOIS atos que o consentimento nomeia, e só eles.
 
-    O «tudo pronto» fechava a Steam para o Steam Input e o atalho, e deixava de
-    fora a terceira coisa que só se escreve com ela fechada: a trava do Proton
-    pinado. E com a ordem de 17/09 — `todos=True`.
+    INSTALL-UNIVERSAL, 18/09/2026. Uma leva pôs aqui um terceiro efeito, a
+    trava do Proton de todo jogo, debaixo de um consentimento que anuncia *"as
+    duas coisas que costumam brigar com o controle"* e de um recibo que nunca
+    fala do Proton — e ele travava até sem o Proton pinado instalado. Saiu no
+    mesmo dia: a trava é do vigia da Steam, que dispara nesta mesma saída dela.
+    Pôr de volta pede o OK dela sobre a frase do consentimento.
 
-    MORDIDA: tire a linha `saida["proton"] = …` de `deixar_tudo_pronto`, ou o
-    `todos=True` de `_travar_o_proton_na_mesma_janela`.
+    MORDIDA: devolva a chamada a `lock_proton_for_all_games` ao `_acao`.
     """
     from hefesto_dualsense4unix.app.actions import daemon_actions as da
     from hefesto_dualsense4unix.integrations import proton_pin
     from hefesto_dualsense4unix.integrations import steam_launch_options as slo
 
     ordem: list[str] = []
-    pedidos: list[dict] = []
     monkeypatch.setattr(a07, "_o_script_que_desliga", lambda: "/bin/true")
     monkeypatch.setattr(a07, "_rodar_o_script",
                         lambda s: (ordem.append("script"), (0, ""))[1])
@@ -891,36 +892,20 @@ def test_deixar_tudo_pronto_trava_o_proton_dentro_da_mesma_janela(
                         lambda *a, **kw: (ordem.append("wrapper"),
                                           {"applied": ["9990001"]})[1])
     monkeypatch.setattr(proton_pin, "lock_proton_for_all_games",
-                        lambda **kw: (ordem.append("proton"), pedidos.append(kw),
-                                      {"locked": 1, "status": "locked"})[2])
+                        lambda **kw: (ordem.append("proton"),
+                                      {"locked": 1, "status": "locked"})[1])
     monkeypatch.setattr(da, "medir_jogos_com_steam_input", lambda: ["Um Jogo"])
     monkeypatch.setattr(a07, "_o_steam_input_continua_ligado", lambda: False)
     monkeypatch.setattr(a07.VIGIA, "agora", lambda: _com_steam_input(desenho))
     monkeypatch.setattr(a07.VIGIA, "ler", lambda: None)
-
-    dentro: list[bool] = []
-
-    def _janela(tarefa, **kw):
-        dentro.append(True)
-        resultado = tarefa()
-        dentro.append(False)
-        return slo.STEAM_JANELA_OK, resultado
-
-    monkeypatch.setattr(slo, "with_steam_closed", _janela)
+    monkeypatch.setattr(slo, "with_steam_closed",
+                        lambda tarefa, **kw: (slo.STEAM_JANELA_OK, tarefa()))
 
     a07._desarmar()
     a07.deixar_tudo_pronto(ctx, {"v": desenho.STEAM}, None)
-    carga = a07.deixar_tudo_pronto(
-        ctx, {"v": a07._confirmo(desenho.TUDO_PRONTO)}, None)
+    a07.deixar_tudo_pronto(ctx, {"v": a07._confirmo(desenho.TUDO_PRONTO)}, None)
 
-    assert dentro == [True, False], "mais de uma janela de Steam fechada"
-    assert ordem == ["script", "wrapper", "proton"], ordem
-    assert pedidos == [{"todos": True}], pedidos
-    # A frase da tela não muda: o recibo do «tudo pronto» é o do dono.
-    assert carga["recado"] == da.format_steam_ready_result(
-        janela=slo.STEAM_JANELA_OK,
-        dados={"script": (0, ""), "wrapper": {"applied": ["9990001"]},
-               "steam_input_jogos": ["Um Jogo"]})
+    assert ordem == ["script", "wrapper"], ordem
 
 
 def test_deixar_tudo_pronto_so_nasce_quando_os_dois_tem_trabalho(a07, desenho):
