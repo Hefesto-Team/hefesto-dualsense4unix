@@ -677,12 +677,51 @@ CSS = """
      O `white-space:nowrap` + `flex:0 0 auto` são o par que impede o rótulo de
      quebrar em duas linhas quando a janela encolhe para o piso de 1212px — e
      duas linhas aqui estouram os 17px e derrubam a conta acima. */
-  .cadeado{display:flex;align-items:center;gap:6px;margin-left:auto;
-           height:17px;line-height:17px;flex:0 0 auto;white-space:nowrap;
-           color:var(--texto-mudo);font-size:11px;cursor:pointer}
-  .cadeado input{margin:0;width:13px;height:13px;accent-color:var(--purple);
-                 flex:0 0 auto;cursor:pointer}
-  .cadeado:hover{color:var(--fg)}
+  /* A CAIXA VIROU PÍLULA — 19/09/2026, `TRAVA-PILULA-01`, pedido dela com as
+     duas abas abertas lado a lado: *"vê os botões do giroscopio e acelerometro
+     queria esse tipo de botão ali no Trava o perfil Ativo."*
+
+     O MODELO É O `.sensores-peca .sw` DA ABA CONTROLES, e as cores vêm dele
+     inteiras: borda e texto no `--green`, fundo em 9% dele, e a bolinha `.p`
+     de 6px com o brilho. Uma segunda gramática de interruptor nesta casa seria
+     a segunda verdade que ela mata.
+
+     **MAS A POLARIDADE É INVERTIDA, e isso é medido, não estilo.** O `.sw`
+     está ACESO em repouso e ganha `.off` quando desliga, porque o default dos
+     sensores é LIGADO — ordem dela de 17/09, *"tudo DualSense, tudo ligado"*.
+     O default desta trava é o oposto: **destravada**. Copiar a polaridade do
+     modelo faria a pílula nascer verde, e o pior caso não é o default — é o
+     TRAVESSÃO, quando o daemon não respondeu: com `.off` acendendo só no
+     `DESLIGADO`, um estado que ninguém leu ficaria verde, e a tela afirmaria
+     uma escolha dela que ela não fez.
+
+     A nota do `a01_jogar._cadeado` já tinha decidido isso por escrito, para a
+     caixa de antes: *"Marcar sobre um estado que ninguém leu seria a tela
+     afirmando uma escolha dela que ela não fez; o inverso apenas mostra o
+     padrão do produto, que é destravado."* A classe `.ligada` (e não `.off`)
+     é o que honra essa decisão: **só o `LIGADO` literal acende**, e tanto o
+     `DESLIGADO` quanto o travessão mostram o padrão.
+
+     A ALTURA **NÃO** VEM DO MODELO, e é a única diferença: o `.sw` mede 26px e
+     esta linha mora no `.quadro-topo`, que é `align-items:center` e tem a
+     altura do filho mais alto. Os 17px são medidos e já foram pagos — a porta
+     da Navegação subiu 2px uma vez e **663 caixas da aba desceram junto**. O
+     comentário do bloco, logo abaixo, guarda essa conta.
+
+     O PADDING ENCOLHE COM A ALTURA: o `.sw` usa `0 10px` numa caixa de 26px;
+     aqui são `0 8px` em 17px, que é o que mantém a pílula com a mesma
+     proporção sem estourar a linha do título. */
+  .cadeado{display:inline-flex;align-items:center;justify-content:center;gap:6px;
+           margin-left:auto;height:17px;flex:0 0 auto;white-space:nowrap;
+           border-radius:6px;padding:0 8px;font-size:10.5px;font-family:inherit;
+           cursor:pointer;
+           border:1px solid var(--border-forte);background:var(--app-bg);
+           color:var(--texto-mudo)}
+  .cadeado .p{width:6px;height:6px;border-radius:50%;flex:0 0 auto;
+              background:var(--border-forte);box-shadow:none}
+  .cadeado.ligada{border-color:var(--green);background:rgba(80,250,123,.09);
+                  color:var(--green)}
+  .cadeado.ligada .p{background:var(--green);box-shadow:0 0 6px var(--green)}
   .cartao .bat{color:var(--green);font-family:'JetBrains Mono',monospace;font-size:11px;
                display:inline-flex;align-items:center;gap:3px;
                line-height:1;vertical-align:-2px}
@@ -1596,11 +1635,7 @@ MIOLO = f'''
              linha de título sem quebrar o quadro na única máquina em que ela
              aparece — a que tem o detector cego. Os dois seguem no mesmo bloco,
              a um palmo um do outro. -->
-        <label class="cadeado" title="{CADEADO_DICA}">
-          <input type="checkbox" data-gesto="cadeado"
-                 data-campo="cadeado" data-hef-alvo="marcado">
-          <span>{CADEADO_ROTULO}</span>
-        </label>
+        <button class="cadeado" data-gesto="cadeado" data-campo="cadeado" data-hef-alvo="classe" data-hef-classe="ligada" data-hef-quando="LIGADO" title="{CADEADO_DICA}"><span class="p"></span>{CADEADO_ROTULO}</button>
       </div>
       <div class="quadro-corpo hef">
 
@@ -2483,13 +2518,27 @@ def _conferir(doc):
     #    pedido nomeado dela de 23/07.
     #
     #    OS DOIS LADOS, e são o mesmo par de sempre: `data-campo` é por onde a
-    #    verdade CHEGA (o alvo `marcado`, o décimo, é o único que escreve
-    #    `el.checked`) e `data-gesto` é por onde o dedo dela SAI. Um sem o outro
-    #    é uma caixa que mostra e não deixa mudar, ou que deixa mudar e não
+    #    verdade CHEGA e `data-gesto` é por onde o dedo dela SAI. Um sem o outro
+    #    é uma trava que mostra e não deixa mudar, ou que deixa mudar e não
     #    mostra o que o daemon guardou.
-    exigir(corpo.count('data-campo="cadeado" data-hef-alvo="marcado"') == 1,
+    #
+    #    **O ALVO MUDOU EM 19/09/2026 — `TRAVA-PILULA-01`, pedido dela.** Esta
+    #    guarda exigia `data-hef-alvo="marcado"`, o décimo alvo e o único que
+    #    escreve `el.checked`. A trava virou `<button class="cadeado">` com a
+    #    gramática do `.sw` da aba Controles, e um botão não tem `checked`: o
+    #    alvo é `classe` + `data-hef-quando`, como o do Giroscópio.
+    #
+    #    **O `data-hef-quando` ENTRA NA CONTA, e não é zelo.** Sem ele o alvo
+    #    `classe` cai no ramo booleano e a pílula nasce ACESA e nunca apaga —
+    #    o defeito que esta casa mediu na `a02` em 19/09 (o R2 que nascia
+    #    pintado). A guarda que só conta o `data-campo` passaria por cima dele.
+    exigir(corpo.count('data-campo="cadeado" data-hef-alvo="classe"') == 1,
            "o cadeado perdeu o endereço de pintura (`cadeado` com alvo "
-           "`marcado`) — a caixa deixaria de dizer o que o daemon guardou")
+           "`classe`) — a trava deixaria de dizer o que o daemon guardou")
+    exigir(corpo.count('data-hef-classe="ligada" data-hef-quando="LIGADO"') == 1,
+           "a pílula da trava perdeu a polaridade (`ligada` no `LIGADO`) — com "
+           "`off` no `DESLIGADO` ela nasce VERDE, e o travessão de um daemon "
+           "que não respondeu vira a tela afirmando uma escolha dela")
     exigir(corpo.count('data-gesto="cadeado"') == 1,
            "o cadeado perdeu o endereço do clique — a caixa mudaria de marca e "
            "não mudaria nada no produto")
