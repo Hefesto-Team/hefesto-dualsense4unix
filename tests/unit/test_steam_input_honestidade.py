@@ -70,11 +70,20 @@ _VDF = (
 
 @pytest.fixture()
 def ambiente(tmp_path: Path) -> dict[str, Any]:
-    """HOME falso com um localconfig.vdf + stubs de pgrep/steam/sleep no PATH.
+    """HOME falso com um localconfig.vdf + stubs de pgrep/steam/pkill/sleep no PATH.
 
-    `sleep` vira no-op para o `stop_steam` (loop de 15 voltas de 2 s + margem) não
-    custar 30 s de suíte; `steam` só registra o que foi pedido — nada na
-    máquina é fechado.
+    `sleep` vira uma espera de 0,05 s para o `stop_steam` (loop de 15 voltas de
+    2 s + margem) não custar 30 s de suíte; `steam` só registra o que foi
+    pedido — nada na máquina é fechado.
+
+    O `pkill` é dublê, e não por capricho: o `steam -shutdown` do roteiro roda
+    em fundo, e se a espera perder a corrida para ele o roteiro cai no
+    fallback `pkill -TERM/-KILL -f steamrt64/steam` e `-x steamwebhelper`. Com
+    o `pkill` da máquina, isso mataria a Steam de quem roda a suíte. O dublê
+    anota o pedido, e os testes que fecham a Steam exigem que ele não tenha
+    sido chamado. Pelo mesmo motivo o `sleep` espera de verdade: um `sleep`
+    que sai na hora deixava as 15 voltas passarem antes de o `steam` de fundo
+    rodar.
     """
     home = tmp_path / "home"
     vdf = home / ".steam" / "steam" / "userdata" / "1234" / "config" / "localconfig.vdf"
@@ -85,6 +94,8 @@ def ambiente(tmp_path: Path) -> dict[str, Any]:
     estado.mkdir()
     stubs = tmp_path / "stubs"
     stubs.mkdir()
+    runtime = tmp_path / "run"
+    runtime.mkdir()
 
     def _stub(nome: str, corpo: str) -> None:
         caminho = stubs / nome
@@ -108,9 +119,11 @@ def ambiente(tmp_path: Path) -> dict[str, Any]:
         'case "$1" in -shutdown) touch "$FAKE_STATE/steam_down" ;; esac\n'
         "exit 0",
     )
-    _stub("sleep", "exit 0")
+    _stub("pkill", 'printf "%s\\n" "$*" >> "$FAKE_STATE/pkill"\nexit 0')
+    dorme = shutil.which("sleep", path="/usr/bin:/bin") or "/bin/sleep"
+    _stub("sleep", f"exec {dorme} 0.05")
 
-    return {"home": home, "vdf": vdf, "estado": estado, "stubs": stubs}
+    return {"home": home, "vdf": vdf, "estado": estado, "stubs": stubs, "runtime": runtime}
 
 
 def _roda(
@@ -124,6 +137,13 @@ def _roda(
     # allowlist REAL da mantenedora — o resultado do teste passaria a depender
     # do disco dela. Fixar é o que mantém o HOME falso valendo de ponta a ponta.
     env["XDG_CONFIG_HOME"] = str(ambiente["home"] / ".config")
+    # A `conftest` não isola o XDG_RUNTIME_DIR (os testes de instância única
+    # precisam do de verdade), e ele é a porta do daemon de quem roda a suíte;
+    # o barramento de sessão também. O roteiro não usa nenhum dos dois hoje, e
+    # é justamente por isso que eles vão para o tmp: se um dia usar, a bancada
+    # fala com o nada, e não com o daemon de quem a roda.
+    env["XDG_RUNTIME_DIR"] = str(ambiente["runtime"])
+    env["DBUS_SESSION_BUS_ADDRESS"] = f"unix:path={ambiente['runtime'] / 'bus'}"
     env["PATH"] = f"{ambiente['stubs']}:/usr/bin:/bin"
     env["FAKE_STATE"] = str(ambiente["estado"])
     if steam:
@@ -218,6 +238,8 @@ class TestContratoDoScript:
         assert _tag(proc) == "aplicado"
         chamadas = (ambiente["estado"] / "steam_calls").read_text(encoding="utf-8")
         assert "-shutdown" in chamadas
+        # A Steam fechou pelo `-shutdown`, e não pelo fallback do `pkill`.
+        assert not (ambiente["estado"] / "pkill").exists()
         # A reabertura é DESANEXADA (`setsid nohup steam &`), então checá-la
         # pelo arquivo do stub seria corrida — o sinal determinístico é o log.
         assert "reabrindo Steam" in proc.stdout
@@ -347,6 +369,7 @@ class TestPreVooNaoFechaSteamAToa:
             encoding="utf-8"
         )
         assert "-shutdown" in chamadas
+        assert not (bancada_allowlist["estado"] / "pkill").exists()
         texto = bancada_allowlist["vdf"].read_text(encoding="utf-8")
         # O de fora foi zerado; o da allowlist ficou de pé.
         assert texto.count('"UseSteamControllerConfig"\t\t"0"') == 1
