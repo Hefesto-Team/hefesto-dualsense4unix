@@ -231,6 +231,10 @@ def _dubla_proton(monkeypatch) -> tuple[Any, str]:
     monkeypatch.setattr(proton_pin, "lock_proton_for_all_games",
                         lambda **_k: dict(travados), raising=False)
     monkeypatch.setattr(proton_pin, "steam_running", lambda: False, raising=False)
+    # O clique 1 pergunta pelo pino no disco desde 18/09/2026, e o HOME de
+    # mentira não tem Steam: sem este dublê o botão recusa, com razão.
+    monkeypatch.setattr(proton_pin, "pino_instalado_nesta_maquina", lambda: True,
+                        raising=False)
     return a09.refazer_proton, a09._daemon.format_proton_lock_result(travados)
 
 

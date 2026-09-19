@@ -304,6 +304,10 @@ def test_armar_o_segundo_repoe_o_primeiro(a09, ctx, monkeypatch):
     conferir a Steam no clique 1, e esta régua lia a Steam de quem a roda — na
     máquina dela, aberta, e o clique recusava em vez de armar.
 
+    O PINO TAMBÉM, DESDE 18/09/2026 (INSTALL-UNIVERSAL): o clique 1 passou a
+    perguntar se o Proton pinado está no disco, e o HOME de mentira do
+    `conftest.py` não tem Steam — o clique recusava, com razão.
+
     A MORDIDA: troque o `if gesto == _armado_agora()` de `_rotulo_de_agora` por
     `if _armado_agora()`. Reprova dizendo que os dois botões vestiram a pergunta.
     Executada: 2 reprovaram (este e o `..._veste_a_palavra_dela`).
@@ -318,6 +322,7 @@ def test_armar_o_segundo_repoe_o_primeiro(a09, ctx, monkeypatch):
     from hefesto_dualsense4unix.integrations import proton_pin
 
     monkeypatch.setattr(proton_pin, "steam_running", lambda: False)
+    monkeypatch.setattr(proton_pin, "pino_instalado_nesta_maquina", lambda: True)
     a09.desligar(ctx, _clique("Parar o serviço"), None)
     carga = a09.refazer_proton(ctx, _clique("Refazer a fixação do Proton"), None)
 
